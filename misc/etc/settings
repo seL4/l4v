@@ -1,0 +1,26 @@
+#
+# Copyright 2014, NICTA
+#
+# This software may be distributed and modified according to the terms of
+# the BSD 2-Clause license. Note that NO WARRANTY is provided.
+# See "LICENSE_BSD2.txt" for details.
+#
+# @TAG(NICTA_BSD)
+#
+
+# --- L4.verified repository settings ---
+
+# Setup components.
+init_components "$USER_HOME/.isabelle/contrib" "$ISABELLE_HOME/Admin/components/main"
+init_components "$USER_HOME/.isabelle/contrib" "$ISABELLE_HOME/Admin/components/bundled"
+
+# Heap input locations. We have a unique set of heap files for each copy of
+# Isabelle the user has checked out, so that users can have multiple sessions
+# running at the same time without too many problems.
+USER_HEAPS=${OVERRIDE_USER_HEAPS:-"$ISABELLE_HOME_USER/heaps${ISABELLE_HOME//\//-}"}
+ISABELLE_OUTPUT=${OVERRIDE_ISABELLE_OUTPUT:-"$USER_HEAPS"}
+ISABELLE_PATH=${OVERRIDE_ISABELLE_PATH:-"$USER_HEAPS"}
+ISABELLE_BROWSER_INFO=${OVERRIDE_ISABELLE_BROWSER_INFO:-"$ISABELLE_HOME_USER/browser_info"}
+
+# --- end L4.verified repository settings ---
+

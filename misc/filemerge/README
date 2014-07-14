@@ -1,0 +1,61 @@
+#
+# Copyright 2014, NICTA
+#
+# This software may be distributed and modified according to the terms of
+# the BSD 2-Clause license. Note that NO WARRANTY is provided.
+# See "LICENSE_BSD2.txt" for details.
+#
+# @TAG(NICTA_BSD)
+#
+
+============================
+Graphical Diff for Mercurial
+============================
+
+This code lets you do a graphical diff in mercurial of Isabelle files
+using FileMerge, a OS X merge program.
+
+There are two parts:
+1. Setting up mercurial to use FileMerge
+2. Running a preprocessor script over the Isabelle files to produce Unicode.
+
+======
+Usage
+======
+
+hg opendiff
+
+=====================================
+Setting up mercurial to use FileMerge
+=====================================
+
+As documented at
+http://mercurial.selenic.com/wiki/TipsAndTricks#Using_FileMerge.app.2BAC8-opendiff_as_the_diff_program_.28OS_X.29
+
+1. Add the below to your .hgrc file
+
+[extensions]
+hgext.extdiff =
+
+[extdiff]
+cmd.opendiff =  fmdiff
+
+2. Add fmdiff to a folder somewhere in your path.
+http://soft.vub.ac.be/svn-gen/bdefrain/fmscripts/
+
+=======================================
+Setting up a predecessor for  FileMerge
+=======================================
+
+FileMerge doesn't understand x-symbols, but can run a preprocessor over
+files first before it does a diff. (It appears as though you can't use
+FileMerge to merge files when you do this.)
+
+Thus, symbols.py does a find/replace on various x-symbols and replaces
+them with their Unicode equivalents.
+
+In FileMerge, go to FileMerge->Preferences…->Filters
+Below the current filters, double-click and add:
+thy	~/xsymbol.py $(FILE)	Filtered	No
+
+Change the location to where the xsymbol script is located.

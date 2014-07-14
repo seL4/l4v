@@ -1,0 +1,22 @@
+Processing rtos.txt
+
+C Parser CPU Time : 11748 ms
+C Parser Real Time : 11499 ms
+AutoCorres CPU Time : 62816 ms
+AutoCorres Real Time : 58717 ms
+
+563 input line(s) of code
+40 function(s)
+
+Phase             LoS  Term Size
+CParser           715        180
+L1               1113        184
+L1except          861        143
+L1peep            954        145
+L2               1089        317
+L2simp            604        170
+HL               1071        246
+HLsimp            593        174
+TS                580        112
+polish            537        108
+

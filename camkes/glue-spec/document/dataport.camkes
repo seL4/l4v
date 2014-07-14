@@ -1,0 +1,15 @@
+component DataportTest {
+  control;
+  dataport Buf d1;
+  dataport Buf d2;
+}
+
+assembly {
+  composition {
+    component DataportTest comp1;
+    component DataportTest comp2;
+
+    connection seL4SharedData simple1(from comp1.d1, to comp2.d2);
+    connection seL4SharedData simple2(from comp2.d1, to comp1.d2);
+  }
+}

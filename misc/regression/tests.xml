@@ -1,0 +1,54 @@
+<?xml version="1.0"?>
+<!--
+     Copyright 2014, NICTA
+
+     This software may be distributed and modified according to the terms of
+     the BSD 2-Clause license. Note that NO WARRANTY is provided.
+     See "LICENSE_BSD2.txt" for details.
+
+     @TAG(NICTA_BSD)
+  -->
+
+<!--
+
+     Regression Specification File
+     =============================
+
+     This file contains names of tests and their associated commands
+     that should be run by the regression system.
+
+     The file also contains dependencies between tests. If test "B" is
+     dependent on test "A", then regression will not attempt to run "B"
+     before "A" has finished. Additionally, "B" will not be run if "A"
+     fails.
+
+     There are two main groupings in the file: "sets" and "sequences":
+
+        * A "set" is an unordered grouping of tests. If one test in the
+          set fails, the remainder will still be run. The set is
+          considered to have passed if every test inside the set passed.
+
+        * A "sequence" is an ordered grouping of tests. The tests are run
+          in order. If one test fails, the remainder of the group will
+          be skipped. The group is considered to have passed if every
+          test inside the group passed.
+
+     Sets and sequences may be arbitrarily nested, and a "testsuite" is
+     just a "set".
+
+     Tags may have the attributes "cwd" (current working directory),
+     "timeout" (real-time timeout in seconds) or "depends" (a
+     space-separated list of tests that the current test depends on).
+
+  -->
+<testsuite timeout="3600">
+
+    <!-- Build Isabelle. -->
+    <test name="isabelle" cwd="../../">isabelle build -b -v HOL-Word</test>
+
+    <!-- Ensure that all of our XML files are strictly correct. -->
+    <test name="tests-xml-correct" cwd="../../">
+        bash -O globstar -c 'python ./misc/regression/testspec.py **/tests.xml'
+    </test>
+
+</testsuite>

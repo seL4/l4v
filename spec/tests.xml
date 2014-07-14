@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<!--
+     Copyright 2014, General Dynamics C4 Systems
+
+     This software may be distributed and modified according to the terms of
+     the GNU General Public License version 2. Note that NO WARRANTY is provided.
+     See "LICENSE_GPLv2.txt" for details.
+
+     @TAG(GD_GPL)
+  -->
+
+<!--
+
+     Regression Specification File
+
+     See "misc/regression/tests.xml" for a description of the file
+     format.
+
+-->
+<testsuite timeout="3600" depends="isabelle">
+
+    <!-- Various seL4 specifications. -->
+    <test name="ASpec">make ASpec</test>
+    <test name="ExecSpec">make ExecSpec</test>
+    <test name="DSpec">make DSpec</test>
+    <test name="TakeGrant">make TakeGrant</test>
+
+    <!-- Ensure Haskell spec and generated Isabelle theories match. -->
+    <test name="SpecCheck">make spec-check</test>
+
+</testsuite>

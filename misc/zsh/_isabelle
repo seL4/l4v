@@ -1,0 +1,216 @@
+#compdef isabelle
+
+#
+# Copyright 2014, NICTA
+#
+# This software may be distributed and modified according to the terms of
+# the BSD 2-Clause license. Note that NO WARRANTY is provided.
+# See "LICENSE_BSD2.txt" for details.
+#
+# @TAG(NICTA_BSD)
+#
+#
+# Isabelle completion script for zsh.
+#
+# Caution
+# ----
+# This is a slow, shoddy, and possibly unsafe script that gets its completions by
+#            *** running isabelle and parsing the output ***
+# so it may break and do strange things, especially if your Isabelle is not
+# configured properly, or its version has changed since this script
+# was written (Isabelle 2013-2).
+#
+#
+# Report bugs to: Japheth
+
+_isabelle() {
+    local -x _isabelle_path
+    _isabelle_path="${words[1]}"
+    if (( CURRENT == 2 )); then
+        # completing isabelle subcommand
+        # Isabelle's top-level command description has the format
+        #   command_name - command description
+        local allcmds="$("$_isabelle_path" | sed -e '/^  [a-zA-Z_]\+ - / !d' -e 's/^  \([a-zA-Z_]\+\) - .*$/\1/')"
+        _arguments -s ':Isabelle command:('"$allcmds"')'
+    else
+        # completing options for subcommand
+        cmd="$words[2]"
+        # shift "isabelle" word away
+        shift words
+        (( CURRENT-- ))
+        case "$cmd" in
+            # Isabelle forwards these commands to external programs,
+            # so run the completions for those programs.
+            make)
+		# Trick _make into getting completions for IsaMakefile
+		if [[ ! "$words" =~ '-f' ]]; then
+		    words=(make -f IsaMakefile "${(@)words[2,$#words]}")
+		    (( CURRENT += 2 ))
+		fi
+		_dispatch :complete:make make -default-
+                ;;
+            env)
+		_dispatch :complete:env env -default-
+                ;;
+	    # NB: these programs are internal to the Isabelle distribution,
+	    #     so there may not be completions for them
+            java)
+		_dispatch :complete:java java -default-
+                ;;
+	    scala)
+		_dispatch :complete:scala scala -default-
+		;;
+	    scalac)
+		_dispatch :complete:scalac scalac -default-
+		;;
+
+            # These are unsafe for running in _isabelle_usage_to_completion
+            # because they do not parse options properly. Skip them.
+            tptp_*|unsymbolize|update_*)
+                ;;
+
+            # Isabelle has its own option parsing wrapper for most commands.
+            # Grab completion information from there.
+            *)
+                _isabelle_usage_to_completion "$cmd"
+        esac
+    fi
+}
+
+_isabelle_usage_to_completion() {
+    # Ugly hack that takes advantage of the fact that
+    # isabelle "usage" messages are fairly uniform.
+    # The typical usage message looks like:
+    #
+    # Usage: blah [OPTIONS] [ARGS]
+    #   Options are:
+    #     -a        aaaa
+    #     -b LAH    blablablah
+    #
+    # We parse this usage message to get:
+    # * The option information (-a, -b, etc.)
+    # * Whether ARGS involves completing filenames
+
+    local cmd="$1"
+    local usage="$("$_isabelle_path" "$cmd" --no-such-option 2>/dev/null)"
+    # sanity check
+    if [[ ! "$usage" =~ "Usage: isabelle $cmd" ]]; then
+        return
+    fi
+
+    # parse option list
+    local opt line allopts fileopts
+    allopts=()
+    # some option descriptions are multi-line; join them
+    echo "$usage" | sed -e '/Options are:/,/^$/ !d' -e '/Options are:/ d' | \
+        {
+        while read -r line; do
+            line="$(echo "$line" | sed -e 's/^ *//' -e 's/ *$//')"
+            if [[ "$line" =~ '^ *-' ]]; then
+                if [[ "$opt" =~ '^ *-' ]]; then
+                    optspec="$(_isabelle_parse_option "$opt")"
+                    allopts+="$optspec"
+                fi
+                opt=
+            fi
+            opt+=" $line"
+        done
+    }
+    if [[ "$opt" =~ '^ *-' ]]; then
+        optspec="$(_isabelle_parse_option "$opt")"
+        allopts+="$optspec"
+    fi
+
+    # non-OPTION arguments
+    if [[ ${words[CURRENT][1]} != '-' ]]; then
+	opt=( $(echo "$usage" | \
+            sed -e "/Usage: isabelle $cmd/ !d" \
+            -e 's/Usage: isabelle '$cmd' \([][A-Z_]\+ *\)*.*$/\1/' \
+            -e 's/[][]//g' -e 's/OPTION\(S\)\?//g') )
+
+        # file and directory arguments
+	if [[ "$opt" =~ .*FILE.* ]]; then
+            fileopts=($(echo "$opt" | grep -Eo '[A-Z_]*FILE[A-Z_]*'))
+            opt=($(echo "$opt" | sed -e 's/[A-Z_]*FILE[A-Z_]*//g'))
+            allopts+='*:'"${(j., .)fileopts}:_files"
+	fi
+	if [[ "$opt" =~ .*DIR.* ]]; then
+            fileopts=($(echo "$opt" | grep -Eo '[A-Z_]*DIR[A-Z_]*'))
+            opt=($(echo "$opt" | sed -e 's/[A-Z_]*DIR[A-Z_]*//g'))
+            allopts+='*:'"${(j., .)fileopts}:_files -/"
+	fi
+
+	# session names
+	if [[ "$opt" =~ .*SESSION.* ]]; then
+            fileopts=($(echo "$opt" | grep -Eo '[A-Z_]*SESSION[A-Z_]*'))
+            opt=($(echo "$opt" | sed -e 's/[A-Z_]*SESSION[A-Z_]*//g'))
+            allopts+='*:'"${(j., .)fileopts}:_isabelle_session_name"
+	fi
+
+        # remaining arguments -- we don't understand them,
+        # but we can print what they are called
+	if [[ $#opt > 0 ]]; then
+            allopts+='*:'"${(j., .)opt}"
+	fi
+    fi
+
+    if [[ $#allopts > 0 ]]; then
+        _arguments -s $allopts
+    fi
+}
+
+_isabelle_parse_option() {
+    local opt="$1"
+
+    # Parse option:
+    #     "   -a   ARG    description of a (and more stuff)"
+    # -->  [name] [arg]   [             help              ]
+    #                     [   shorthelp  ]
+
+    # FIXME? we only parse single-letter options,
+    #        because isabelle only uses single-letter options
+    local name="$(echo "$opt" | sed -e 's/^ *-\(.\).*$/\1/')"
+    local arg="$(echo "$opt" | sed -e 's/^ *-. \+\([A-Z_]\+\)\?.*$/\1/')"
+    local help="$(echo "$opt" | sed -e 's/^ *-. \+\([A-Z_]\+ \+\)\?\(.*[^ ]\) *$/\2/')"
+
+    local optspec="-${name}[$help]"
+
+    if [[ -n "$arg" ]]; then
+        # short version for tab completing argument
+	local shorthelp="$(echo "$help" | sed -e 's/ \?([^)]*\()\|$\)//g')"
+        # if it mentions $arg, prepend $arg
+	if echo "$shorthelp" | grep -qF "$arg"; then
+	    shorthelp="$arg: $shorthelp"
+	fi
+        optspec+=":${shorthelp/:/\:}"
+    fi
+    case "$arg" in
+        # some argument types that we can complete easily
+        BOOL)
+            optspec+=":(false true)"
+            ;;
+        *FILE*)
+            optspec+=":_files"
+            ;;
+        *DIR*)
+            optspec+=":_files -/"
+            ;;
+	*)
+            # we can also complete session names
+	    if [[ "$shorthelp" =~ 'logic (image|session) name' ]]; then
+		optspec+=':_isabelle_session_name'
+	    fi
+    esac
+
+    # return to caller
+    echo "$optspec"
+}
+
+_isabelle_session_name() {
+    # FIXME: for isabelle build, we need session names from ROOT files
+    _tags sessions
+    _requested sessions expl 'session name' \
+	compadd -- $("$_isabelle_path" findlogics)
+}
+
+_isabelle "$@"

@@ -1,0 +1,23 @@
+procedure Simple {
+  smallstring echo_string(in smallstring s);
+  int echo_int(in int i);
+  int echo_parameter(in int pin, out int pout);
+};
+
+component Client {
+  control;
+  uses Simple s;
+}
+
+component Echo {
+  provides Simple s;
+}
+
+assembly {
+  composition {
+    component Echo echo;
+    component Client client;
+
+    connection seL4RPC simple(from client.s, to echo.s);
+  }
+}

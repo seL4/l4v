@@ -1,0 +1,28 @@
+procedure Lookup {
+  smallstring get_value(in smallstring id);
+};
+
+component Client {
+  control;
+  uses Lookup l;
+}
+
+component Store {
+  provides Lookup l;
+}
+
+component Filter {
+  provides Lookup external;
+  uses Lookup backing;
+}
+
+assembly {
+  composition {
+    component Filter filter;
+    component Client client;
+    component Store store;
+
+    connection seL4RPC one(from client.l, to filter.external);
+    connection seL4RPC two(from filter.backing, to store.l);
+  }
+}

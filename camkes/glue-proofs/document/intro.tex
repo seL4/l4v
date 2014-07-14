@@ -1,0 +1,74 @@
+%
+% Copyright 2014, NICTA
+%
+% This software may be distributed and modified according to the terms of
+% the GNU General Public License version 2. Note that NO WARRANTY is provided.
+% See "LICENSE_GPLv2.txt" for details.
+%
+% @TAG(NICTA_GPL)
+%
+
+\chapter{Introduction}
+
+This document provides formal proofs in the interactive theorem prover
+Isabelle/HOL~\cite{Nipkow_PW:Isabelle} of certain correctness properties of
+generated communication code of the \camkes platform~\cite{Kuz_LGH_07}.
+These proofs are example output of a generalised proof generation tool and
+are intended to extend previous reports that describe the
+static~\cite{Fernandez_KKM_13:tr} and dynamic~\cite{Fernandez_GAKK_13:tr}
+semantics of \camkes systems.
+The previous formalisms gave a high-level specification of the behaviour of
+\camkes systems, while the current proofs reason about the behaviour of the
+glue code at the level of C, targeting the seL4
+microkernel~\cite{Klein_EHACDEEKNSTW_09}.
+
+The proofs that follow are constructed on an abstraction of C code.
+This abstraction process is performed by two existing
+tools, a translation from C to the generic imperative language
+SIMPL~\cite{Winwood_KSACN_09}, and a further abstraction by the tool
+AutoCorres~\cite{Greenaway_LAK_14}, neither of which are specific
+to \camkes.
+These tools lift a C translation unit into monadic specifications of the
+contained functions.
+Alongside the generated code, we automate the production of proofs of
+correctness properties of these specifications.
+These proofs leverage an Isabelle
+tactic that performs weakest pre-condition reasoning.
+
+\camkes has three different communication modes: synchronous, asynchronous and
+shared memory.
+These are implemented as three \camkes primitives, remote procedure calls
+(RPCs), events and dataports, respectively.
+The desirable correctness property of connector glue code is dependent on which
+of these the connector implements.
+For example, remote procedure call connectors should ensure, among other
+things, that the function call and parameters that are sent by the caller are
+correctly received and decoded by the callee.
+A common requirement for all the glue code is safe execution with respect to
+the C standard and the state of the system at runtime.
+The generated proofs given in the following chapters show this for three
+specific connectors, one for each \camkes communication primitive, but the
+proof generation process generalises to other \camkes connectors as well.
+This property requires that the glue code only accesses valid memory, that it
+obeys the restrictions of the C99 standard~\cite{C99} and that it always
+terminates.
+
+In proving this behaviour of the glue code, we rely on some explicit
+assumptions on user code within the system.
+In particular, we assume that the user code also obeys the C99 standard and
+does not modify any glue code state.
+The glue code state covers memory regions relevant for communication with seL4,
+thread identification and thread-local storage.
+This state is disjoint from the expected user state; that is, non-malicious
+user code should never have cause to modify any of the glue code state.
+As for the seL4 proofs, the generated proofs of CAmkES glue code are intended
+to apply to an ARM, unicore platform and may not hold in other operating
+environments.
+
+The connectors on which the generated proofs below are based have some
+limitations that we make explicit here.
+The event connector used does not support callbacks --
+events can only be waited on or polled for.
+The RPC connector used does not support array parameters, strings or
+user-defined data types (e.g. C structs).
+These are limitations that will be lifted in future.

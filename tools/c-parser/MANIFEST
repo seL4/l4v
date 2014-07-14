@@ -1,0 +1,328 @@
+This file describes each file in the c-parser directory
+
+Absyn-CType.ML, Absyn-Expr.ML, Absyn-StmtDecl.ML, Absyn.ML
+  Code implementing an "abstract syntax" for C programs, along with a
+  few functions for performing simple analyses of that syntax.  For
+  example, there is a (polymorphic) type 'a ctype that corresponds to
+  the possible types in a C program.  For example, Signed Int is a
+  ctype, as is Pointer Void.  The ctype is polymorphic because the
+  result of parsing an array results in a constant expression being
+  used as the size of the array.  For example
+
+    int array[1 << SOME_CONST];
+
+  The parser is not capable of calculating the value of this constant,
+  so the abstract syntax it produces is an expr ctype.  Later, when
+  the technology is in place to evaluate constant expressions, the
+  expression will turn into a number, and the value will be of type
+  int ctype.
+
+basics.ML
+  Some declarations of useful functions, mostly bound up in the
+  L4Basics structure.  Some of these depend on the standard Isabelle
+  library.  For this reason, the standalone-parser code has its own
+  version of this file.
+
+Binaryset.ML
+  An implementation of an ordered set with a binary tree.  Ultimately
+  from the SML/NJ library (via Moscow ML in this case).
+
+calculate_state.ML
+  Responsible for making the Isabelle type declarations to set up the
+  program state in the Hoare environment.  For example, if the C
+  program declares a struct-type, there has to be a corresponding type
+  available in the Hoare environment.  Declaring such a type is
+  ultimately an operation on Isabelle theories.  Additionally, all
+  non-basic types (arrays, and structs), have to be shown to be "mem
+  types" (our basic axiomatic type class).  This module is responsible
+  for making the calls to the proof routines for doing this.
+
+complit.ML
+  Code for analysing compound literal expressions and initialisors.
+  These are inordinately complicated because of the way it is
+  permitted to switch from "labelled" mode, where you write things
+  like
+
+    (struct foo){.fld = 3, ...}
+
+  into specifying things in order of layout.  Thus:
+
+    (struct foo){.fld = 3, 4, 5, 6}
+
+  will stick 4, 5 and 6 into the fields following fld.  This doesn't
+  respect hierarchical boundaries either, so that if you have
+
+    struct foo { int fld1, fld2; };
+    struct bar { char c; struct foo f; int z; };
+
+  It's legitimate to write
+
+    struct bar b = {.f.fld2 = 3, 4};
+
+  with the result being that b's z field gets value 4.
+
+CProof.thy
+  The first Isabelle theory with a connection to the c-parser.  Some
+  print translations, some theorems, and declarations of the
+  "exception" (Break, Return and Continue) and "guard" (Div_0,
+  ArrayBounds etc) types.
+
+CTranslation.thy
+  The master theory for the c-parser.  Uses all the necessary ML code,
+  references the appropriate ancestor theories, including CProof.
+  Includes a couple of random theorems.
+
+doc/
+  Contains an as-yet incomplete detailed description of the
+  translation process.
+
+expression_translation.ML
+  Code handling the translation of expressions in the C abstract
+  syntax into Isabelle expressions.  These expressions are encapsulated in
+  the expr_info (for which see the comment at the top of the file).
+  C expressions have to turn into Isabelle terms of type ``:state ->
+  value_type``, where value_types depend on the form of the
+  expression.
+
+expression_typing.ML
+  Code to assign types to C expressions.  Most uses go via the
+  cse_typing function of the ProgramAnalysis module.
+
+Feedback.ML
+  Simple routines for emitting feedback to the user as translation is
+  performed.  There is a reference variable verbosity_level, which
+  controls the degree to which output is produced.  This use of a
+  reference is bad style, and will probably get fixed.
+
+FunctionalRecordUpdate.ML
+  Implementation, from the mlton.org website, of a method for
+  generating functional record updates within core SML.  Works well,
+  even though it's completely incomprehensible.
+
+General.ML
+  Adjusts the standard "top-level" Isabelle/ML environment to look a
+  little more like the Basis-specified SML top-level.
+
+globalmakevars
+  For inclusion in Makefiles.  This file specifies defaults for some
+  standard Make variables.
+
+heapstatetype.ML
+  Code that proves a record of global variables is indeed an instance
+  of the typeclass SepFrame.heap_state_type
+
+hoare-package/
+  Directory containing a version of Norbert Schirmer's SIMPL-based VCG
+  environment.  We use record-based states rather than Schirmer's
+  statespace approach.
+
+HPInter.ML
+  Code controlling the translation of a series of functions into the
+  VCG environment.  This code sets up the various locales and calls
+  the translation function in stmt_translation.  It also manages the
+  automatic proofs that functions only modify certain elements of the
+  global state.
+
+hp_termstypes.ML
+  ML bindings for creating and taking apart Isabelle terms and types.
+  This module includes terms and types that are specific to Schirmer's
+  "Hoare Package", hence the "hp" prefix.
+
+INSTALL
+  Installation instructions, mainly on how to invoke isabelle make.
+
+IsaMakefile
+  The top-level IsaMakefile for this code.  It recursively includes
+  makefiles for building versions of ml-yacc and ml-lex, as well as
+  the L4 word extensions.
+
+isar_install.ML
+  The top-level SML code, implementing the Isar command
+  "install_C_file" with its various options, and coordinating the
+  calls to the lower level functions.  The basic flow is
+
+    1. parse C file                                (StrictCParser.ML)
+    2. do "program analysis"                    (program_analysis.ML)
+    3. Isabelle declarations for file's types    (calculate_state.ML)
+    4. make declarations for functions                   (HPInter.ML)
+
+isa_termstypes.ML
+  ML bindings for creating and taking apart Isabelle terms and types.
+  This module includes terms and types for core Isabelle.
+
+StrictC.grm
+  ml-yacc grammar for our subset of C.  ml-yacc generates
+  StrictC.grm.{desc,sig,sml} files when run on this.
+
+StrictC.lex
+  ml-lex file for C tokens. ml-lex generates StrictC.lex.sml. There is
+  considerable complexity in handling the standard ambiguity between
+  type-names (as introduced by typedef) and normal identifiers. This
+  is more complicated than usual because of the desire to keep the
+  ml-yacc grammar side-effect free in its effects. This enables the
+  %pure annotation in StrictC.grm, and nice error reports for parse
+  errors.
+
+StrictCParser.ML
+  This includes the standard functor-heavy ml-lex/ml-yacc boilerplate
+  for producing a parser out of the products of ml-lex and ml-yacc.
+
+recursive_records/
+  A directory containing a bare-bones implementation of a record
+  package suitable for modelling C structs.  In particular, C structs
+  can be mutually recursive (as long as the recursion is via a pointer
+  type of course).  The standard Isabelle record package does not
+  allow this, so we use this package instead.
+
+MANIFEST
+  This file.  Recursion, whee!
+
+MemoryModelExtras.ML
+  The standard instantiation of the signature in
+  MemoryModelExtras-sig.ML. This instantiation sets up new types in
+  accordance with the Isabelle theories in the umm_heap directory.
+
+MemoryModelExtras-sig.ML
+  A specification of the interface that a memory model implementation
+  must provide.  The translation process is supposed to be agnostic
+  about the way in which values are laid out in the heap, rather
+  making calls to appropriate functions as necessary.  The comments in
+  this file detail the necessary functionality.
+
+MLton-LICENSE
+  A copy of the MLton source-code license (BSDish).  We use MLton
+  derived source code in Region.ML, SourceFile.ML and SourcePos.ML
+
+modifies_proofs.ML
+  Code for automatically proving that functions do only modify the
+  globals that the ProgramAnalysis claims.
+
+name_generation.ML
+  Code designed to collect up all those places where translation has
+  to generate names for various forms of entity.  For example,
+  translation has to create Isabelle types corresponding to structs.
+  This module embodies the decision that such types should have the
+  same name with a _C appended.
+
+openUnsynch.ML
+  A source file that does "open Unsynchronized" at the top-level.
+  This gives subsequent Isabelle/ML code access to the reference type
+  constructor "ref", which is otherwise inaccessible.
+
+PackedTypes.thy
+  A theory about "packed types", i.e. those structs that do not have
+  any padding.
+
+PrettyProgs.thy
+  Isabelle syntax to make C/SIMPL programs print prettily.
+
+program_analysis.ML
+  A module for performing the most important analyses over C source
+  code.  The results of most of these are stored in the csenv ("C
+  state environment") type.  A value of this type is produced through
+  the call process_decls.  It can then be queried in a number of
+  different ways.
+
+Region.ML
+  Code from the MLton compiler for representing regions of text in a
+  source-file.  Important for the production of good error messages.
+
+RegionExtras.ML
+  Some extra code for combining region/position information with
+  abstract syntax trees.
+
+smlnj-license.ML
+  A copy of the (BSD-ish) copyright notice for SML/NJ code.  SML/NJ is
+  the source of the Binaryset.ML code.
+
+SourceFile.ML, SourcePos.ML
+  Files from the MLton compiler implementing the notion of positions
+  within source-files.  Used by Region.ML
+
+standalone-parser/
+  Directory containing code implementing a "standalone" parser for our
+  C subset.  In its default mode, the parser just checks that code is
+  syntactically OK.  It can also be asked to report on various of the
+  analyses performed by program_analysis.ML.  This parser uses a
+  substantial amount of code from the c-parser directory, pretty well
+  all that which is not Isabelle specific.
+
+static-fun.ML, StaticFun.thy
+  Used to create a balanced binary tree mapping function identifiers
+  to their bodies.  This is used in HPInter.ML to create the
+  characterisation of the \<Gamma> variable that is part of the
+  standard VCG environment locale.
+
+stmt_translation.ML
+  Used to turn C statement values (of type Absyn.stmt) into statements
+  of Schirmer's Hoare package.  Calls out to the
+  expression_translation.ML code as necessary.  Function calls are
+  handled here because they are statement forms in our dialect.
+
+syntax_transforms.ML
+  Implementation of two important transformations on abstract syntax:
+  expansion of typedefs and removal of embedded function calls.
+  Handling embedded function calls is more complicated because it can
+  call for the creation of new (local) variables in which to store the
+  results of function calls.
+
+Target-ARM32.ML
+  Implementation numbers (principally type sizes, but also the
+  signedness of the char type) for 32-bit ARM targets (char is unsigned;
+  chars are 8 bits wide, shorts are 16 bit, ints and longs are 32 bit,
+  and long longs are 64 bits.  Strictly speaking this is not just a
+  function of the architecture but the compiler as well.
+
+Target-generic32.ML
+  Implementation numbers for a "generic" 32 bit architecture.  For the
+  moment, this is the same as ARM32 except that char is signed.
+
+TargetNumbers-sig.ML
+  A signature specifying the values that a Target file should provide
+  to describe an architecture's important values.
+
+termstypes.ML
+  ML bindings for creating and taking apart Isabelle terms and types.
+  This module combines other termstypes modules
+  (isa_termstypes and hp_termstypes), and adds in code that is core to
+  the translation, such as manipulations for creating terms of UMM
+  pointer types.  It also includes an IntInfo substructure for
+  dealing with Isabelle-analogues of C's various integral types.  This
+  latter builds on numbers in the appropriate TargetNumbers module.
+  (This dependency could be expressed with a functor, but isn't.)
+
+termstypes-sig.ML
+  Specifies the interface that termstypes.ML must export.
+
+testfiles/
+  Lots of regression tests.  Most just check that an install_C_file
+  call succeeds.  A theory file foo.thy checks that install_C_file
+  "foo.c" succeeds, and may also perform other tests, such as proving
+  simple theorems.
+
+tools/
+  Implementations of ml-lex and ml-yacc that build into standalone
+  executables when using either Poly/ML or MLton.
+
+topo_sort.ML
+  An implementation of Tarjan's algorithm for finding strongly
+  connected components, which also provides a topological sort of the
+  given graph.
+
+umm_heap/
+  This directory contains the theories implementing the "unified
+  memory model".  Most of this work is described in fair detail by
+  Harvey Tuch's PhD.
+
+UMM_Proofs.ML
+  Code implementing automatic proofs that types (arrays, and structs)
+  are indeed in the relevant typeclasses.
+
+UMM_termstypes.ML
+  ML bindings for creating and taking apart Isabelle terms and types.
+  The terms and types here are those specific to details of the code
+  in UMM_Proofs.ML and heapstatetype.ML
+
+use.ML
+  The little ML script that arranges for CTranslation.thy to be loaded
+  when the vcg heap is built.

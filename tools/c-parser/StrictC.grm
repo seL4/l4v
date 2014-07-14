@@ -1,0 +1,1895 @@
+(**
+ ** Copyright 2014, NICTA
+ **
+ ** This software may be distributed and modified according to the terms of
+ ** the BSD 2-Clause license. Note that NO WARRANTY is provided.
+ ** See "LICENSE_BSD2.txt" for details.
+ **
+ ** @TAG(NICTA_BSD)
+ **)
+
+open Absyn NameGeneration
+val errorStr' = Feedback.errorStr'
+val warnStr' = Feedback.warnStr'
+val bogus = SourcePos.bogus
+
+fun lleft [] = bogus
+  | lleft (h :: t) = left h
+fun lright [] = bogus
+  | lright x = right (List.last x)
+type adecl = (expr ctype -> expr ctype) wrap
+type 'a ddecl = string wrap
+                * adecl
+                * (expr ctype * string wrap option) wrap list option
+                * 'a list
+type addecl = gcc_attribute ddecl
+infix ood  (* composition of declarators *)
+fun ooa(adec1, adec2) = let
+  (* composition of abstract declarators *)
+  val a1 = node adec1
+  val a2 = node adec2
+in
+  wrap(a1 o a2, left adec1, right adec2)
+end
+
+fun ood(ddw, adec) = let
+  val (nm, adec0, params, data) = node ddw
+in
+  wrap((nm, ooa(adec0,adec), params, data), left ddw, right adec)
+end
+
+fun add_attributes(ddw, attrs) = let
+  val (nm, adec, ps, data0) = node ddw
+in
+  wrap((nm, adec, ps, attrs @ data0), left ddw, right ddw)
+end
+
+
+fun addparams(dw : 'a ddecl wrap, ps) : 'a ddecl wrap = let
+  val (nm, a, pso, data) = node dw
+in
+  case pso of
+    SOME _ => dw
+  | NONE => wrap((nm,a,SOME ps,data), left dw, right dw)
+end
+
+fun check_params
+      (plist : (expr ctype * string wrap option) wrap list wrap)
+      : (expr ctype * string wrap option) wrap list =
+    case node plist of
+      [] => (Feedback.warnStr'(left plist, right plist,
+                               "Avoid empty parameter lists in C; \
+                               \prefer \"(void)\"");
+             [])
+    | x as [tysw] => (case node tysw of
+                        (Void, NONE) => []
+                      | _ => x)
+    | x => x
+
+
+
+fun fndecl l r (ps : expr ctype list) =
+    wrap((fn ty => Function(ty, ps)), l, r)
+fun ptrdecl l r = wrap (Ptr, l, r)
+fun arraydecl l r n = wrap ((fn ty => Array (ty, n)), l, r)
+
+val one_const = expr_int 1
+val zero_const = expr_int 0
+fun postinc e = Assign(e,ebogwrap(BinOp(Plus,e,one_const)))
+fun postdec e = Assign(e,ebogwrap(BinOp(Minus,e,one_const)))
+
+
+fun resolve_fnname e =
+    case enode e of
+      Var (s,_) => s
+    | _ => (errorStr'(eleft e, eright e,
+                      "Can't use this expression as function name");
+            "_bad name_")
+
+
+fun handle_builtin_fns e =
+    case enode e of
+      EFnCall (fn_e, args) => let
+      in
+        case enode fn_e of
+          Var(s,_) =>
+          if s = NameGeneration.mkIdentUScoreSafe "__builtin_expect" then
+            case args of
+              [x,y] => x
+            | _ => (Feedback.errorStr'(eleft e, eright e,
+                                       "__builtin_expect must take 2 args.");
+                    expr_int 0)
+          else e
+        | _ => e
+      end
+    | _ => e
+
+fun delvoidcasts e =
+    case enode e of
+      TypeCast (tywrap, e0) => let
+      in
+        case node tywrap of
+          Void => e0
+        | _ => e
+      end
+    | _ => e
+
+
+fun parse_stdassignop (e1,opn,e2) = let
+  val e2 = handle_builtin_fns e2
+  val r_e = case opn of
+              NONE => e2
+            | SOME abop => ewrap(BinOp(abop,e1,e2), eleft e2, eright e2)
+in
+  case enode e2 of
+    EFnCall (f_e, args) => let
+      fun e_ok e =
+          case enode e of
+            Var _ => true
+          | StructDot(e0, fld) => e_ok e0
+          | _ => false
+    in
+      if e_ok e1 andalso opn = NONE then
+        AssignFnCall(SOME e1, f_e, args)
+      else
+        Assign(e1,r_e)
+    end
+  | _ => Assign(e1,r_e)
+end
+
+fun check_names (fname:string) plist = let
+  fun check i ps =
+      case ps of
+        [] => []
+      | pw :: rest =>
+          (case node pw of
+             (ty, SOME nm) => (ty,nm) :: check (i + 1) rest
+           | (ty, NONE) => (errorStr'(left pw, right pw,
+                                      "Parameter #"^Int.toString i^
+                                      " of function "^fname^
+                                      " has no name");
+                            (ty, wrap("__fake", bogus, bogus)) ::
+                            check (i + 1) rest))
+in
+  check 1 plist
+end
+
+type struct_field = (expr ctype * string wrap * expr option)
+type struct_fields = struct_field list
+type struct_id_decl = string wrap * struct_fields
+
+local val scount = ref 0
+in
+fun gen_struct_id () = (scount := !scount + 1;
+                        "ISA_anon_struct___"^Int.toString (!scount))
+fun gen_enum_name () = (scount := !scount + 1;
+                        wrap("ISA_anon_enum___" ^ Int.toString (!scount),
+                             SourcePos.bogus, SourcePos.bogus))
+end
+
+datatype storage_class_specifier = TypeDef | Extern | Static | Auto | Register
+datatype type_qualifier = Const | Volatile | Restrict
+datatype typespectok = ts_unsigned
+                     | ts_signed
+                     | ts_bool
+                     | ts_char
+                     | ts_int
+                     | ts_long
+                     | ts_longlong
+                     | ts_short
+                     | ts_void
+type struct_or_union_specifier = expr ctype wrap * struct_id_decl wrap list
+type enum_specifier = (string option wrap *
+                       (string wrap * expr option) list) wrap
+datatype type_specifier = Tstok of typespectok wrap
+                        | Tsstruct of struct_or_union_specifier
+                        | Tsenum of enum_specifier
+                        | Tstypeid of string wrap
+fun tsleft (Tstok tok) = left tok
+  | tsleft (Tsstruct (ty, _)) = left ty
+  | tsleft (Tstypeid s) = left s
+  | tsleft (Tsenum es) = left es
+fun tsright (Tstok tok) = right tok
+  | tsright (Tsstruct (ty, _)) = right ty
+  | tsright (Tstypeid s) = right s
+  | tsright (Tsenum es) = right es
+
+datatype decl_specifier = Storage of storage_class_specifier wrap
+                        | TypeQual of type_qualifier wrap
+                        | TypeSpec of type_specifier
+                        | FunSpec of Absyn.fnspec wrap
+
+fun dslleft [] = raise Fail "dslleft: nil"
+  | dslleft (h :: t) =
+    case h of
+      Storage s => left s
+    | TypeQual s => left s
+    | FunSpec s => left s
+    | TypeSpec ts => tsleft ts
+fun dslright dsl =
+    case dsl of
+      [] => raise Fail "dslright: nil"
+    | [h] => (case h of
+                Storage s => right s
+              | TypeQual s => right s
+              | FunSpec s => right s
+              | TypeSpec ts => tsright ts)
+    | h::t => dslright t
+
+
+fun parse_siddecl (s : struct_id_decl wrap) : declaration wrap = let
+  val (nm, fields) = node s
+  fun ok_inttype ity = (ity = Int)
+  fun f (ty : expr ctype, s : string wrap, opbit : expr option) = let
+    fun error r = (errorStr'(left s, r, "Bad base-type for bitfield");
+                   Bitfield(true, one_const))
+    val ty' : expr ctype =
+        case opbit of
+          NONE => ty
+        | SOME e => (case ty of
+                       Signed ity =>
+                       if ok_inttype ity then
+                         Bitfield(true, e)
+                       else error (eright e)
+                     | Unsigned ity =>
+                       if ok_inttype ity then
+                         Bitfield(false, e)
+                       else error (eright e)
+                     | _ => error (eright e))
+  in
+    (ty',s)
+  end
+  val fields' = map f fields
+in
+  wrap(StructDecl(nm, fields'), left s, right s)
+end
+
+fun empty_enumspec es = [wrap(EnumDecl (node es), left es, right es)]
+
+fun empty_declarator (ds : decl_specifier list) : declaration wrap list =
+    case ds of
+      [] => raise Fail "empty_declarator: nil"
+    | Storage x :: rest =>
+                (errorStr'(left x, right x,
+                           "Storage class qualifier not accompanied by \
+                           \declarator");
+                 empty_declarator rest)
+    | TypeQual tq :: rest =>
+                 (errorStr'(left tq, right tq,
+                            "Type-qualifier not accompanied by declarator");
+                  empty_declarator rest)
+    | FunSpec fs :: rest =>
+                 (errorStr'(left fs, right fs,
+                            "Function-specifier not accompanied by declarator");
+                  empty_declarator rest)
+    | TypeSpec (Tstok tok) :: rest =>
+                 (errorStr'(left tok, right tok,
+                            "Type not accompanied by declarator");
+                  empty_declarator rest)
+    | TypeSpec (Tstypeid s) :: rest =>
+                 (errorStr'(left s, right s,
+                            "Type-id ("^node s^ ") not accompanied by declarator");
+                  empty_declarator rest)
+    | [TypeSpec (Tsstruct (_, siddecls))] => map parse_siddecl siddecls
+    | TypeSpec (Tsstruct s) :: rest =>
+                 (errorStr'(dslleft rest, dslright rest,
+                            "Extraneous crap after struct declaration");
+                  empty_declarator [TypeSpec (Tsstruct s)])
+    | [TypeSpec (Tsenum es)] => empty_enumspec es
+    | TypeSpec (Tsenum es) :: rest =>
+                 (errorStr'(dslleft rest, dslright rest,
+                            "Extraneous crap after enum declaration");
+                  empty_enumspec es)
+
+fun ity_of_tok tstok =
+    case node tstok of
+      ts_int => Int
+    | ts_char => Char
+    | ts_short => Short
+    | ts_long => Long
+    | ts_longlong => LongLong
+    | x => raise Fail "ty_of_tok: invariant failure"
+
+fun sort_toks (bases, sgnmods) dsl =
+    case dsl of
+      [] => (bases, sgnmods)
+    | TypeSpec (Tstok tk) :: r =>
+            (case node tk of
+               ts_unsigned => sort_toks (bases, tk :: sgnmods) r
+             | ts_signed => sort_toks (bases, tk :: sgnmods) r
+             | _ => sort_toks (wrap(Tstok tk, left tk, right tk) :: bases,
+                               sgnmods) r)
+    | TypeSpec (x as Tsstruct (ty,_)) :: r =>
+        sort_toks (wrap(x, left ty, right ty)::bases, sgnmods) r
+    | TypeSpec (x as Tstypeid sw) :: r =>
+        sort_toks (wrap(x,left sw,right sw)::bases, sgnmods) r
+    | TypeSpec (x as Tsenum es) :: r =>
+        sort_toks (wrap(x,left es, right es)::bases, sgnmods) r
+    | _ :: r => sort_toks (bases, sgnmods) r
+
+fun extract_fnspecs (dsl : decl_specifier list) : fnspec list =
+    List.mapPartial (fn FunSpec fs => SOME (node fs) | _ => NONE) dsl
+
+fun extract_type (dsl : decl_specifier list wrap) : expr ctype wrap = let
+  val (bases : type_specifier wrap list,
+       sgnmods : typespectok wrap list) = sort_toks ([], []) (node dsl)
+  fun is_base b (tn : type_specifier wrap) =
+      case node tn of
+          Tstok t => node t = b
+        | _ => false
+  fun is_intmod (tn : type_specifier wrap) =
+      case node tn of
+          Tstok t => (case node t of
+                          ts_short => true
+                        | ts_long => true
+                        | _ => false)
+        | _ => false
+  fun handle_integral_remainder had_int list =
+      case list of
+          [] => NONE
+        | [x] => if had_int then
+                   if is_intmod x then SOME x
+                   else
+                     (errorStr'(left x, right x, "Bad combination with 'int'");
+                      SOME x)
+                 else SOME x
+        | [x,y] => (case (node x, node y) of
+                        (Tstok k1, Tstok k2) => let
+                          (* order here is reverse of occurrence in input *)
+                          val l = left y and r = right x
+                        in
+                          if node k1 = ts_long andalso node k2 = ts_long then
+                            SOME (wrap (Tstok (wrap(ts_longlong, l, r)), l, r))
+                          else
+                            (errorStr'(l, r, "Two type-specifiers"); SOME x)
+                        end
+                      | _ => (errorStr'(left x, right x, "Two type-specifiers");
+                              SOME x))
+        | h::t => (errorStr'(left h, right h, "Too many type-specifiers");
+                   SOME h)
+
+  fun check_baseclashes list =
+      case list of
+        [] => NONE
+      | [x] => SOME x
+      | _ =>
+        case List.partition (is_base ts_int) list of
+            ([], _) => handle_integral_remainder false list
+          | ([_], rest) => handle_integral_remainder true rest
+          | (t::_, _) => (errorStr'(left t, right t, "Too many 'int' specifiers");
+                          SOME t)
+
+  fun check_modclashes list =
+      case list of
+        [] => NONE
+      | [x] => SOME x
+      | h :: t => (errorStr'(left h, right h, "Multiple type-specifiers");
+                   SOME h)
+  val basety = check_baseclashes bases
+  val sgnmod = check_modclashes sgnmods
+in
+  case (basety, sgnmod) of
+    (NONE, NONE) => (errorStr'(left dsl, right dsl,
+                               "No base type in declaration");
+                     wrap(Signed Int, bogus, bogus))
+  | (SOME b, NONE) => let
+    in
+      case node b of
+        Tstok tk => (case node tk of
+                       ts_void => wrap(Void, left tk, right tk)
+                     | ts_char => wrap(PlainChar, left tk, right tk)
+                     | ts_bool => wrap(Bool, left tk, right tk)
+                     | x => wrap(Signed (ity_of_tok tk),
+                                 left tk, right tk))
+      | Tsstruct (ty, _) => ty
+      | Tstypeid s => wrap(Ident (node s), left s, right s)
+      | Tsenum e => wrap (EnumTy (node (#1 (node e))), left e, right e)
+    end
+  | (NONE, SOME m) =>
+    (case node m of
+       ts_unsigned => wrap(Unsigned Int, left m, right m)
+     | ts_signed => wrap (Signed Int, left m, right m)
+     | x => raise Fail "finalty2: inv failure")
+  | (SOME b, SOME m) =>
+     case node b of
+       Tstok tk =>
+       (case node tk of
+            ts_void => (errorStr'(left m, right m,
+                                  "Signedness modifier on void");
+                        wrap(Void, left tk, right tk))
+          | ts_bool => (errorStr'(left m, right m,
+                                  "Signedness modifier on _Bool");
+                        wrap(Bool, left tk, right tk))
+          | _ =>
+            let
+            in
+              case node m of
+                  ts_unsigned => wrap(Unsigned (ity_of_tok tk),
+                                      left m, right tk)
+                | ts_signed => wrap(Signed (ity_of_tok tk),
+                                    left m, right tk)
+                | x => raise Fail "finalty3: inv failure"
+            end)
+     | Tstypeid s => (errorStr'(left m, right m,
+                                "Signedness modifier on typedef id");
+                      wrap(Ident (node s), left s, right s))
+     | Tsstruct(ty,_) => (errorStr'(left m, right m,
+                                    "Signedness modifier on struct");
+                          ty)
+     | Tsenum e => (errorStr'(left m, right m, "Signedness modifier on enum");
+                    wrap(EnumTy (node (#1 (node e))), left e, right e))
+end
+
+(* returns a (SourcePos.t * SourcePos.t) option *)
+fun has_typedef (dsl : decl_specifier list wrap) = let
+  fun check dsls =
+      case dsls of
+        [] => NONE
+      | Storage s :: rest =>
+                (case node s of TypeDef => SOME (left s, right s)
+                              | _ => check rest)
+      | _ :: rest => check rest
+in
+  check (node dsl)
+end
+
+(* returns a (SourcePos.t * SourcePos.t) option *)
+fun has_extern (dsl : decl_specifier list wrap) = let
+  fun check dsls =
+      case dsls of
+        [] => NONE
+      | Storage s :: rest => (case node s of Extern => SOME (left s, right s)
+                                           | _ => check rest)
+      | _ :: rest => check rest
+in
+  check (node dsl)
+end
+
+fun first_sdecls (dsl : decl_specifier list) =
+    case dsl of
+      [] => []
+    | TypeSpec (Tsstruct(ty, sdecls)) :: _ => sdecls
+    | _ :: rest => first_sdecls rest
+
+fun first_enum_dec (dsl : decl_specifier list) =
+    case dsl of
+      [] => NONE
+    | TypeSpec (Tsenum es) :: rest => if null (#2 (node es)) then
+                                        first_enum_dec rest
+                                      else SOME es
+    | _ :: rest => first_enum_dec rest
+
+fun wonky_pdec_check dsl = let
+  val _ =
+      case has_typedef dsl of
+        NONE => ()
+      | SOME (l,r) => errorStr'(l, r, "Typedefs forbidden in parameters")
+  val _ =
+      case has_extern dsl of
+        NONE => ()
+      | SOME (l,r) => errorStr'(l,r, "Extern forbidden in parameters")
+  val _ = case first_sdecls (node dsl) of
+            [] => ()
+          | sd :: _ => let
+              val sw = #1 (node sd)
+            in
+              errorStr' (left sw, right sw,
+                         "Don't declare structs in parameters")
+            end
+  val _ = case first_enum_dec (node dsl) of
+            NONE => ()
+          | SOME es  => errorStr'(left es, right es,
+                                  "Don't declare enumerations in parameters")
+in
+  ()
+end
+
+fun unwrap_params pms =
+    map (fn w => apsnd (Option.map node) (node w)) (valOf pms)
+
+
+(* is not a function definition, is at least one declarator
+   This means this could be a
+     a) list of variable/function declarations (initialised or not)
+     b) list of typedefs
+ *)
+fun make_declaration (dsl : decl_specifier list wrap)
+                     (idl : (addecl wrap * initializer option) wrap list) =
+let
+  val basetype = extract_type dsl
+  val is_typedef = isSome (has_typedef dsl)
+  val is_extern = isSome (has_extern dsl)
+  val sdecls = first_sdecls (node dsl)
+  val endecs = case first_enum_dec (node dsl) of
+                 NONE => []
+               | SOME es => [wrap(EnumDecl (node es), left es, right es)]
+  val fnspecs = extract_fnspecs (node dsl)
+
+  fun handle_declarator idw = let
+    val (d : addecl wrap, iopt : initializer option) = node idw
+    val (nm, a : adecl, params, attrs) = node d
+    val finaltype = (node a) (node basetype)
+  in
+    if is_typedef then let
+        val _ = case iopt of
+                  SOME i => errorStr'(left idw, right idw,
+                                      "Can't initialise a typedef")
+                | _ => ()
+      in
+        wrap(TypeDecl[(finaltype,nm)], left idw, right idw)
+      end
+    else
+      case finaltype of
+        Function(rettype, ptys) => let
+          val _ = case iopt of
+                    SOME _ => errorStr'(left idw, right idw,
+                                        "Can't initialise a function!")
+                  | NONE => ()
+        in
+          wrap(ExtFnDecl { rettype = rettype, name = nm,
+                           params = unwrap_params params,
+                           specs = merge_specs [gcc_attribs attrs] fnspecs},
+               left idw, right idw)
+        end
+      | _ => let
+          val _ =
+              if is_extern andalso isSome iopt then
+                errorStr'(left idw, right idw, "Don't initialise externs")
+              else ()
+        in
+          wrap(VarDecl(finaltype, nm, not is_extern, iopt, attrs),
+               left idw, right idw)
+        end
+  end
+in
+  endecs @
+  map handle_declarator idl @
+  map parse_siddecl sdecls
+end
+
+fun last_blockitem (bilist : block_item list) = let
+  val bi = List.last bilist
+  fun recurse bi =
+    case bi of
+      BI_Stmt st => (case snode st of
+                       Block bilist => last_blockitem bilist
+                     | _ => bi)
+    | _ => bi
+in
+  recurse bi
+end
+
+fun CaseEndBI bi =
+    case bi of
+      BI_Stmt st => CaseEndStmt st
+    | BI_Decl d => false
+and CaseEndStmt st =
+    case snode st of
+      Break => true
+    | Return _ => true
+    | ReturnFnCall _ => true
+    | IfStmt(g, t, e) => CaseEndStmt t andalso CaseEndStmt e
+    | Block bilist => CaseEndBI (last_blockitem bilist)
+    | _ => false
+
+fun front [] = []
+  | front [h] = []
+  | front (x::xs) = x :: front xs
+
+fun removelast_if_break bilist = let
+  fun singcase bi =
+      case bi of
+        BI_Stmt st => let
+        in
+          case snode st of
+            Break => []
+          | Block bilist => [BI_Stmt
+                                 (swrap (Block (removelast_if_break bilist),
+                                         sleft st, sright st))]
+          | _ => [bi]
+        end
+      | _ => [bi]
+in
+  case bilist of
+    [] => []
+  | [bi] => singcase bi
+  | bi :: bis => bi :: removelast_if_break bis
+end
+
+fun mk_defaultcase_last caselist = let
+  fun extract_default caselist =
+      case caselist of
+        [] => (NONE, [])
+      | (c as (labs, bilist)) :: rest => let
+          fun is_dflt lab =
+              case node lab of
+                NONE => true
+              | _ => false
+        in
+          case List.find is_dflt (node labs) of
+            NONE => let
+              val (df, rest) = extract_default rest
+            in
+              (df, c::rest)
+            end
+          | SOME d => let
+            in
+              if length (node labs) > 1 then
+                warnStr'(left d, right d,
+                         "This default: label should be the only label\
+                         \ associated with this case")
+              else ();
+              (SOME (wrap([d], left labs, right labs), bilist), rest)
+            end
+        end
+  val (dflt, rest) = extract_default caselist
+in
+  case dflt of
+    NONE => caselist @ [(bogwrap [bogwrap NONE],
+                         [BI_Stmt (swrap(EmptyStmt, bogus, bogus))])]
+  | SOME d => rest @ [d]
+end
+
+
+fun switch_check scaselist leftp rightp = let
+  val _ = case length scaselist of
+            0 => errorStr'(leftp, rightp, "Switch has no cases")
+          | 1 => errorStr'(leftp, rightp, "Switch has only one case")
+          | _ => ()
+  fun check_for_breaks (labs, bilist) =
+      if not (CaseEndBI (last_blockitem bilist)) then
+        errorStr'(left labs, right labs,
+                  "Switch case beginning here does not end with a break \
+                  \or return")
+      else ()
+  val _ = app check_for_breaks (front scaselist)
+          (* only check front of list, allowing for last case to fall through
+             to end without a break *)
+  val scaselist = mk_defaultcase_last scaselist
+  fun striplabwrap (lab : expr option wrap) = node lab
+  fun striplablist llist = map striplabwrap (node llist)
+in
+  map (fn (labs,bod) => (striplablist labs, removelast_if_break bod)) scaselist
+end
+
+
+fun check_for_proto d = let
+  val dec = node d
+in
+  case dec of
+    ExtFnDecl _ => (errorStr'(left d, right d,
+                              "Don't put function prototypes other than at \
+                              \top level"); d)
+  | _ => d
+end
+
+%%
+%name StrictC
+%arg (source) : SourceFile.t
+%nodefault
+
+%keyword YWHILE YDO YIF STRUCT YRETURN YELSE INT CHAR LONG SHORT UNSIGNED TYPEDEF YSEMI LCURLY RCURLY
+%change -> YSEMI
+
+%nonterm  begin of ext_decl list
+	| translation_unit of ext_decl list
+	| external_declaration of ext_decl list
+        | optfnspec of string option wrap
+        | optvolatile of bool
+
+        | storage_class_specifier of storage_class_specifier wrap
+        | enum_specifier of enum_specifier
+        | enumerator_list of (string wrap * expr option) list
+        | enumerator of (string wrap * expr option)
+        | type_qualifier of type_qualifier wrap
+        | type_qualifier_list of type_qualifier wrap list
+        | function_specifiers of fnspec wrap list wrap
+        | special_function_spec of fnspec wrap
+        | special_function_specs of fnspec wrap list wrap
+        | fnspecs of string wrap
+        | rel_spec of string wrap
+        | modlist of string wrap list
+        | invariant of string wrap
+        | invariant_option of string wrap option
+        | declaration_specifiers of decl_specifier list wrap
+        | specifier_qualifier_list of decl_specifier list wrap
+
+        | initializer_list of (designator list * initializer) list
+        | dinitializer of (designator list * initializer)
+        | initializer of initializer wrap
+        | designation of designator list
+        | designator_list of designator list
+        | designator of designator
+
+	| declaration of declaration wrap list
+        | struct_declaration_list of
+            struct_fields wrap * struct_id_decl wrap list
+        | struct_declaration of struct_fields wrap * struct_id_decl wrap list
+	| type_definition  of declaration
+        | elementary_type of expr ctype
+        | integral_type of inttype wrap
+        | type_name of expr ctype wrap
+        | block_item_list of block_item list
+        | block_item of block_item list
+
+	| parameter_declaration of (expr ctype * string wrap option) wrap
+	| parameter_list of (expr ctype * string wrap option) wrap list wrap
+        | parameter_list1 of (expr ctype  * string wrap option) wrap list wrap
+	| function_definition of ext_decl
+	| compound_statement of block_item list wrap
+	| statement  of statement
+        | statement_list of statement list
+        | statement_list1 of statement list
+        | switchcase_list of (expr option wrap list wrap * block_item list) list
+        | switchcase of (expr option wrap list wrap * block_item list)
+        | labellist of expr option wrap list wrap
+        | label of expr option wrap
+        | opt_for1_bitem of block_item list
+        | opt_for1_expr of statement
+        | opt_for1_expr0 of statement list
+        | opt_for1_exprbase of statement
+        | opt_for2_expr of expr
+        | opt_for3_expr of statement
+        | opt_for3_expr0 of statement list
+        | opt_for3_exprbase of statement
+        | assignop of binoptype option
+
+        | pointer of adecl
+	| declarator  of addecl wrap
+        | abstract_declarator of adecl
+        | direct_abstract_declarator of adecl
+        | struct_declarator of (addecl wrap * expr option) wrap
+        | struct_declarator_list of (addecl wrap * expr option) list wrap
+        | init_declarator of (addecl wrap * initializer option) wrap
+        | init_declarator_list of (addecl wrap * initializer option) wrap list
+        | direct_declarator of addecl wrap
+        | asm_declarator_mod of unit
+	| type_specifier of type_specifier
+        | struct_or_union_specifier of struct_or_union_specifier
+        | struct_id of string wrap
+
+
+	| lexpression  of expr
+	| rexpression  of expr
+	| rexpr_list   of expr list wrap
+	| opt_rexpr_list   of expr list wrap
+	| logical_AND_expression   of expr
+	| logical_OR_expression   of expr
+        | inclusive_OR_expression of expr
+        | exclusive_OR_expression of expr
+	| AND_expression   of expr
+	| equality_expression  of expr
+	| relational_expression  of expr
+	| additive_expression  of expr
+	| shift_expression  of expr
+	| multiplicative_expression of expr
+	| unary_expression    of expr
+        | cast_expression of expr
+	| postfix_expression of expr
+        | primary_expression of expr
+	| constant   of literalconstant
+        | idlist of string wrap list
+
+        | attribute of gcc_attribute option
+        | attribute_specifier of gcc_attribute list wrap
+        | attribute_list of gcc_attribute list
+        | attribute_parameter_list1 of expr list
+        | asmblock of asmblock
+        | asmmod1 of namedstringexp list * namedstringexp list * string list
+        | asmmod2 of namedstringexp list * string list
+        | asmmod3 of string list
+        | cstring_literal of string wrap
+        | stringlist1 of string list
+        | namedstringexp of namedstringexp
+        | namedstringexplist of namedstringexp list
+        | namedstringexplist1 of namedstringexp list
+        | calls_block of string wrap list option
+
+
+
+
+
+%term EOF
+    | YSTAR | SLASH | MOD
+    | LPAREN | RPAREN | LCURLY | RCURLY | LBRACKET | RBRACKET
+    | YCOMMA | YSEMI | YCOLON | QMARK
+    | YEQ | YDOT | YPLUS | YMINUS | YAND | YNOT | YAMPERSAND | YBITNOT
+    | PLUSPLUS | MINUSMINUS
+    | PLUSEQ | MINUSEQ | BANDEQ | BOREQ | MULEQ
+    | DIVEQ | MODEQ | BXOREQ | LSHIFTEQ | RSHIFTEQ
+    | YENUM
+    | YIF | YELSE | YWHILE | YDO | YRETURN | YBREAK | YCONTINUE | YFOR
+    | SWITCH | CASE | DEFAULT
+    | YSIZEOF
+    | LOGICALOR | LOGICALAND | BITWISEOR | BITWISEXOR
+    | EQUALS | NOTEQUALS
+    | YLE | YGE  | YLESS | YGREATER | LEFTSHIFT | RIGHTSHIFT
+    | INT | BOOL | CHAR | LONG | SHORT | SIGNED | UNSIGNED | VOID
+    | ARROW
+    | ID of string | TYPEID of string
+    | NUMERIC_CONSTANT of Absyn.numliteral_info
+    | STRUCT | UNION | TYPEDEF | EXTERN | CONST | VOLATILE | RESTRICT
+    | INVARIANT
+    | INLINE | STATIC
+    | FNSPEC
+    | RELSPEC
+    | AUXUPD
+    | GHOSTUPD
+    | MODIFIES
+    | CALLS
+    | OWNED_BY
+    | SPEC_BEGIN
+    | SPEC_END
+    | DONT_TRANSLATE
+    | STRING_LITERAL of string
+    | SPEC_BLOCKEND
+    | GCC_ATTRIBUTE
+    | YASM
+    | YREGISTER
+
+
+%eop EOF
+%pos SourcePos.t
+%noshift EOF
+
+%start begin
+
+%verbose
+
+%%
+begin : translation_unit (translation_unit)
+
+translation_unit
+: external_declaration
+                (external_declaration)
+| external_declaration translation_unit
+                (external_declaration @ translation_unit)
+
+external_declaration
+: function_definition
+                ([function_definition])
+| declaration
+                (map Decl declaration)
+
+storage_class_specifier : TYPEDEF (wrap(TypeDef, TYPEDEFleft, TYPEDEFright))
+                        | EXTERN (wrap(Extern, EXTERNleft, EXTERNright))
+                        | STATIC (wrap(Static, STATICleft, STATICright))
+                        | YREGISTER (wrap(Register, YREGISTERleft, YREGISTERright))
+
+function_specifiers
+: INLINE        (wrap([], INLINEleft, INLINEright)) (* totally ignored by us *)
+| special_function_specs SPEC_BLOCKEND
+                (special_function_specs)
+| attribute_specifier
+                (wrap ([apnode gcc_attribs attribute_specifier],
+                       left attribute_specifier,
+                       right attribute_specifier))
+
+attribute_specifier
+: GCC_ATTRIBUTE LPAREN LPAREN attribute_list RPAREN RPAREN
+                (wrap(attribute_list, GCC_ATTRIBUTEleft, RPAREN2right))
+| OWNED_BY ID SPEC_BLOCKEND
+                (wrap([OWNED_BY ID], OWNED_BYleft, SPEC_BLOCKENDright))
+
+attribute_list
+:               ([])
+| attribute     (case attribute of NONE => [] | SOME a => [a])
+| attribute YCOMMA attribute_list
+                (case attribute of NONE => attribute_list
+                                 | SOME a => a :: attribute_list)
+
+
+attribute
+: ID            (let val idstr = if String.isPrefix "__" ID andalso
+                                    String.sub(ID,size ID - 1) = #"_" andalso
+                                    String.sub(ID,size ID - 2) = #"_" andalso
+                                    size ID > 4
+                                 then
+                                   String.substring(ID,2,size ID - 4)
+                                 else ID
+                 in
+                   SOME (GCC_AttribID idstr)
+                 end)
+| ID LPAREN RPAREN
+                (SOME (GCC_AttribFn (ID, [])))
+| ID LPAREN attribute_parameter_list1 RPAREN
+                (SOME (GCC_AttribFn (ID, attribute_parameter_list1)))
+
+attribute_parameter_list1
+: rexpression   ([rexpression])
+| rexpression YCOMMA attribute_parameter_list1
+                (rexpression :: attribute_parameter_list1)
+
+
+special_function_specs
+: special_function_spec
+                (wrap([special_function_spec], left special_function_spec,
+                      right special_function_spec))
+| special_function_spec special_function_specs
+                (wrap (special_function_spec :: node special_function_specs,
+                       left special_function_spec,
+                       right special_function_specs))
+
+special_function_spec
+: MODIFIES idlist
+                (case idlist of
+                     [] => wrap(fn_modifies [], MODIFIESleft, MODIFIESright)
+                   | _ => wrap(fn_modifies (map node idlist),
+                               MODIFIESleft,
+                               right (List.last idlist)))
+| FNSPEC fnspecs
+                (wrap(fnspec fnspecs, FNSPECleft, right fnspecs))
+| RELSPEC rel_spec
+                (wrap(relspec rel_spec, RELSPECleft, right rel_spec))
+| DONT_TRANSLATE
+                (wrap(didnt_translate, DONT_TRANSLATEleft, DONT_TRANSLATEright))
+
+fnspecs
+: ID YCOLON STRING_LITERAL
+                (wrap(ID ^ ": \"" ^ STRING_LITERAL ^ "\"", IDleft,
+                      STRING_LITERALright))
+| ID YCOLON STRING_LITERAL fnspecs
+                (wrap((ID ^ ": \"" ^ STRING_LITERAL ^ "\"\n" ^ node fnspecs,
+                      IDleft,
+                      right fnspecs)))
+
+rel_spec
+: STRING_LITERAL (wrap("\"" ^ STRING_LITERAL ^ "\"", STRING_LITERALleft,
+                       STRING_LITERALright))
+
+
+idlist
+:               ([])
+| ID idlist
+                (wrap(ID,IDleft,IDright) :: idlist)
+| LBRACKET YSTAR RBRACKET idlist
+                (wrap(NameGeneration.phantom_state_name, LBRACKETleft,
+                      RBRACKETright) :: idlist)
+
+(* there's ridiculous magic happening here to cope with the fact that
+   typedefs can happen just a token away from a use of the same identifier
+   as a new type.
+   For example
+     typedef int * intptr ;
+     intptr y;
+   That "intptr" has to change its lexical status from normal id to typename
+   id in the space of one semi-colon.
+*)
+declaration
+: declaration_specifiers YSEMI
+                (empty_declarator (node declaration_specifiers))
+(*| declaration_specifiers init_declarator_list attribute_specifier YSEMI
+                (let
+                   val dspecs' = FunSpec
+                                     (apnode GCC_Attributes
+                                             attribute_specifier) ::
+                                 node declaration_specifiers
+                   val ds_w = wrap(dspecs',
+                                   left declaration_specifiers,
+                                   right attribute_specifier)
+                 in
+                   make_declaration ds_w init_declarator_list
+                 end) *)
+| declaration_specifiers init_declarator_list YSEMI
+                (make_declaration declaration_specifiers init_declarator_list)
+
+declaration_specifiers
+: storage_class_specifier
+                (wrap([Storage storage_class_specifier],
+                      left storage_class_specifier,
+                      right storage_class_specifier))
+| storage_class_specifier declaration_specifiers
+                (wrap(Storage storage_class_specifier ::
+                      node declaration_specifiers,
+                      left storage_class_specifier,
+                      right declaration_specifiers))
+| type_specifier
+                (wrap([TypeSpec type_specifier], tsleft type_specifier,
+                      tsright type_specifier))
+| type_specifier declaration_specifiers
+                (wrap(TypeSpec type_specifier :: node declaration_specifiers,
+                      tsleft type_specifier,
+                      right declaration_specifiers))
+| type_qualifier
+                (wrap([TypeQual type_qualifier],
+                      left type_qualifier,
+                      right type_qualifier))
+| type_qualifier declaration_specifiers
+                (wrap(TypeQual type_qualifier :: node declaration_specifiers,
+                      left type_qualifier,
+                      right declaration_specifiers))
+| function_specifiers
+                (wrap(map FunSpec (node function_specifiers),
+                      left function_specifiers,
+                      right function_specifiers))
+| function_specifiers declaration_specifiers
+                (wrap(map FunSpec (node function_specifiers) @
+                      node declaration_specifiers,
+                      left function_specifiers,
+                      right declaration_specifiers))
+
+function_definition
+: declaration_specifiers declarator compound_statement
+        (let val basetype = extract_type declaration_specifiers
+             val fnspecs = extract_fnspecs (node declaration_specifiers)
+             val _ =
+                 case has_typedef declaration_specifiers of
+                   NONE => ()
+                 | SOME (l,r) =>
+                    errorStr'(l, r, "Typedef illegal in function def")
+             val (nm, ad, params0, attrs) = node declarator
+             val params =
+                 case params0 of
+                   NONE => (errorStr'(left declarator,
+                                      right declarator,
+                                      "Function def with no params!");
+                            [])
+                 | SOME ps => check_names (node nm) ps
+             val rettype = case (node ad) (node basetype) of
+                             Function(retty, _) => retty
+                           | _ => (errorStr'(left declarator,
+                                             right compound_statement,
+                                             "Attempted fn def with bad \
+                                             \declarator");
+                                   node basetype)
+             val fnspecs = merge_specs [gcc_attribs attrs] fnspecs
+         in
+           if List.exists (fn fs => fs = didnt_translate) fnspecs then
+             Decl (wrap(ExtFnDecl{rettype = rettype,
+                                  params = unwrap_params params0,
+                                  name = nm,
+                                  specs = fnspecs},
+                        declaration_specifiersleft,
+                        declaratorright))
+           else
+             FnDefn((rettype, nm), params, fnspecs, compound_statement)
+         end)
+
+(* diff from ISO: there parameter-lists are non-empty *)
+parameter_list : (wrap([], defaultPos, defaultPos))
+               | parameter_list1 (parameter_list1)
+
+parameter_list1
+: parameter_declaration
+                (wrap([parameter_declaration], left parameter_declaration,
+                      right parameter_declaration))
+| parameter_declaration YCOMMA parameter_list1
+                (wrap(parameter_declaration :: node parameter_list1,
+                      left parameter_declaration, right parameter_list1))
+
+parameter_declaration
+: declaration_specifiers declarator
+                (let val basety = extract_type declaration_specifiers
+                     val _ = wonky_pdec_check declaration_specifiers
+                     val (nm, a, _, _) = node declarator
+                 in
+                   wrap((node a (node basety), SOME nm),
+                        left declaration_specifiers,
+                        right declarator)
+                 end)
+| declaration_specifiers abstract_declarator
+                (let val basety = extract_type declaration_specifiers
+                     val _ = wonky_pdec_check declaration_specifiers
+                     val a = node abstract_declarator
+                 in
+                   wrap((a (node basety), NONE),
+                        left declaration_specifiers,
+                        right abstract_declarator)
+                 end)
+| declaration_specifiers
+                (let val basety = extract_type declaration_specifiers
+                     val _ = wonky_pdec_check declaration_specifiers
+                 in
+                   wrap((node basety, NONE),
+                        left declaration_specifiers,
+                        right declaration_specifiers)
+                 end)
+
+(* difference from C99 grammar- block_item_list can be empty *)
+compound_statement
+: LCURLY block_item_list RCURLY
+                (wrap(block_item_list, LCURLYleft, RCURLYright))
+
+block_item_list
+:               ([])
+| block_item block_item_list
+                (block_item @ block_item_list)
+
+block_item
+: declaration   (map BI_Decl declaration)
+| statement     ([BI_Stmt statement])
+
+statement_list : ([])
+               | statement_list1 (statement_list1)
+
+statement_list1 : statement ([statement])
+                | statement statement_list1 (statement::statement_list1)
+
+
+struct_declaration_list
+: struct_declaration
+                (struct_declaration)
+| struct_declaration struct_declaration_list
+                (let val (sflds1, siddecls1) = struct_declaration
+                     val (sflds2, siddecls2) = struct_declaration_list
+                 in
+                   (wrap(node sflds1 @ node sflds2, left sflds1, right sflds2),
+                    siddecls1 @ siddecls2)
+                 end)
+
+specifier_qualifier_list
+: type_specifier
+                (wrap([TypeSpec type_specifier],
+                      tsleft type_specifier,
+                      tsright type_specifier))
+| type_specifier specifier_qualifier_list
+                (wrap(TypeSpec type_specifier :: node specifier_qualifier_list,
+                      tsleft type_specifier, right specifier_qualifier_list))
+| type_qualifier
+                (wrap([TypeQual type_qualifier],
+                      left type_qualifier, right type_qualifier))
+| type_qualifier specifier_qualifier_list
+                (wrap(TypeQual type_qualifier :: node specifier_qualifier_list,
+                      left type_qualifier, right specifier_qualifier_list))
+
+type_qualifier
+: CONST (wrap(Const, CONSTleft, CONSTright))
+| VOLATILE (wrap(Volatile, VOLATILEleft, VOLATILEright))
+| RESTRICT (wrap(Restrict, RESTRICTleft, RESTRICTright))
+
+type_qualifier_list
+: type_qualifier ([type_qualifier])
+| type_qualifier type_qualifier_list (type_qualifier::type_qualifier_list)
+
+
+struct_declaration
+: specifier_qualifier_list struct_declarator_list YSEMI
+                (let val basetype = extract_type specifier_qualifier_list
+                     val sdecls = first_sdecls (node specifier_qualifier_list)
+                     val _ = case first_enum_dec (node specifier_qualifier_list) of
+                               NONE => ()
+                             | SOME es => errorStr'(left es, right es,
+                                                    "Don't declare enumerations\
+                                                    \ inside structs")
+                     fun apply_decltor sd = let
+                       val (ddw, eop) = sd
+                       val (nm,ad,_,_) = node ddw
+                     in
+                       (node ad (node basetype), apnode C_field_name nm, eop)
+                     end
+                 in
+                   (wrap(map apply_decltor (node struct_declarator_list),
+                         left basetype, right struct_declarator_list),
+                    sdecls)
+                 end)
+
+struct_declarator_list :
+   struct_declarator (wrap ([node struct_declarator], left struct_declarator,
+                            right struct_declarator))
+ | struct_declarator YCOMMA struct_declarator_list
+                (wrap (node struct_declarator::node struct_declarator_list,
+                       left struct_declarator, right struct_declarator_list))
+
+struct_declarator
+: declarator
+                (wrap((declarator, NONE), left declarator, right declarator))
+| declarator YCOLON rexpression
+                (wrap((declarator, SOME rexpression), left declarator,
+                      eright rexpression))
+(*
+| YCOLON rexpression
+                (((fn t => (t, "")), SOME rexpression))
+*)
+
+init_declarator_list
+: init_declarator
+                ([init_declarator])
+| init_declarator YCOMMA init_declarator_list
+                (init_declarator :: init_declarator_list)
+
+init_declarator
+: declarator
+                (wrap((declarator, NONE), left declarator, right declarator))
+| declarator YEQ initializer
+                (wrap((declarator, SOME (node initializer)),
+                      left declarator, right initializer))
+
+(* notice how the type_qualifiers are completely ignored *)
+pointer
+: YSTAR
+                (ptrdecl YSTARleft YSTARright)
+| YSTAR type_qualifier_list
+                (ptrdecl YSTARleft (right (List.last type_qualifier_list)))
+| YSTAR pointer (ooa(ptrdecl YSTARleft YSTARright, pointer))
+| YSTAR type_qualifier_list pointer
+                (ooa(ptrdecl YSTARleft (right (List.last type_qualifier_list)),
+                     pointer))
+
+
+declarator : pointer direct_declarator
+                (ood(direct_declarator, pointer))
+           | pointer attribute_specifier direct_declarator
+                (ood(add_attributes(direct_declarator,
+                                    node attribute_specifier),
+                     pointer))
+           | direct_declarator (direct_declarator)
+
+calls_block
+: CALLS idlist SPEC_BLOCKEND
+                (SOME idlist)
+|
+                (NONE)
+
+
+direct_declarator
+: ID
+                (wrap((wrap(ID, IDleft, IDright),
+                       wrap((fn t => t), IDleft, IDright),
+                       NONE,
+                       []),
+                      IDleft, IDright))
+| direct_declarator LBRACKET rexpression RBRACKET
+                (ood(direct_declarator,
+                     arraydecl LBRACKETleft RBRACKETright (SOME rexpression)))
+| direct_declarator LBRACKET RBRACKET
+                (ood(direct_declarator,
+                     arraydecl LBRACKETleft RBRACKETright NONE))
+| LPAREN declarator RPAREN
+                (wrap(node declarator, LPARENleft, RPARENright))
+| direct_declarator LPAREN parameter_list RPAREN calls_block
+                (let val ps = check_params parameter_list
+                 in
+                   addparams(ood(direct_declarator,
+                                 fndecl (left direct_declarator)
+                                        (right direct_declarator)
+                                        (map (#1 o node) ps)),
+                             ps)
+                 end)
+| direct_declarator attribute_specifier
+                (add_attributes(direct_declarator,
+                                node attribute_specifier))
+| direct_declarator asm_declarator_mod (direct_declarator)
+
+asm_declarator_mod
+: YASM LPAREN cstring_literal RPAREN (())
+
+
+struct_id : ID (wrap(ID, IDleft, IDright))
+          | TYPEID (wrap(TYPEID, TYPEIDleft, TYPEIDright))
+
+(* no unions for the moment *)
+struct_or_union_specifier
+: STRUCT struct_id
+                ((wrap(StructTy
+                           (C_struct_name (node struct_id)),
+                       STRUCTleft,
+                       right struct_id),
+                  []))
+| STRUCT struct_id LCURLY struct_declaration_list RCURLY
+                (let val (flds, decls) = struct_declaration_list
+                     val raw_s_name = node struct_id
+                     val munged_name = C_struct_name raw_s_name
+                     val sname_w = wrap(munged_name, left struct_id,
+                                        right struct_id)
+                 in
+                   (wrap(StructTy munged_name, STRUCTleft, right struct_id),
+                    wrap((sname_w, node flds),
+                         STRUCTleft, RCURLYright) :: decls)
+                 end)
+| STRUCT LCURLY struct_declaration_list RCURLY
+                (let
+                   val (flds, decls) = struct_declaration_list
+                   val anonid = gen_struct_id ()
+                   val anonw = wrap(anonid, STRUCTright, LCURLYleft)
+                 in
+                   (wrap(StructTy anonid, STRUCTleft, LCURLYleft),
+                    wrap((anonw, node flds), STRUCTleft, RCURLYright) ::
+                    decls)
+                 end)
+
+
+type_specifier
+: INT
+                (Tstok(wrap(ts_int, INTleft, INTright)))
+| CHAR
+                (Tstok(wrap(ts_char, CHARleft, CHARright)))
+| SHORT
+                (Tstok(wrap(ts_short, SHORTleft, SHORTright)))
+| LONG
+                (Tstok(wrap(ts_long, LONGleft, LONGright)))
+| VOID
+                (Tstok(wrap(ts_void, VOIDleft, VOIDright)))
+| SIGNED
+                (Tstok(wrap(ts_signed, SIGNEDleft, SIGNEDright)))
+| UNSIGNED
+                (Tstok(wrap(ts_unsigned, UNSIGNEDleft, UNSIGNEDright)))
+| BOOL
+                (Tstok(wrap(ts_bool, BOOLleft, BOOLright)))
+| struct_or_union_specifier
+                (Tsstruct struct_or_union_specifier)
+| enum_specifier
+                (Tsenum enum_specifier)
+| TYPEID
+                (Tstypeid(wrap(TYPEID, TYPEIDleft, TYPEIDright)))
+
+enum_specifier
+: YENUM LCURLY enumerator_list RCURLY
+                (wrap((wrap(NONE, YENUMleft, YENUMright), enumerator_list),
+                      YENUMleft, RCURLYright))
+| YENUM struct_id LCURLY enumerator_list RCURLY
+                (wrap((apnode SOME struct_id, enumerator_list),
+                      YENUMleft, RCURLYright))
+| YENUM LCURLY enumerator_list YCOMMA RCURLY
+                (wrap((wrap(NONE, YENUMleft, YENUMright), enumerator_list),
+                      YENUMleft, RCURLYright))
+| YENUM struct_id LCURLY enumerator_list YCOMMA RCURLY
+                (wrap((apnode SOME struct_id, enumerator_list),
+                      YENUMleft, RCURLYright))
+| YENUM struct_id
+                (wrap((apnode SOME struct_id, []), YENUMleft, struct_idright))
+
+enumerator_list
+: enumerator
+                ([enumerator])
+| enumerator_list YCOMMA enumerator
+                (enumerator_list @ [enumerator])
+
+enumerator
+: ID
+                ((wrap(ID,IDleft,IDright), NONE))
+| ID YEQ rexpression
+                ((wrap(ID,IDleft,IDright), SOME rexpression))
+
+
+abstract_declarator : pointer (pointer)
+                    | pointer direct_abstract_declarator
+                              (wrap (node direct_abstract_declarator o
+                                     node pointer,
+                                     left pointer,
+                                     right direct_abstract_declarator))
+                    | direct_abstract_declarator (direct_abstract_declarator)
+
+direct_abstract_declarator
+: LPAREN abstract_declarator RPAREN
+                (wrap(node abstract_declarator, LPARENleft, RPARENright))
+| LBRACKET rexpression RBRACKET
+                (arraydecl LBRACKETleft RBRACKETright (SOME rexpression))
+| LBRACKET RBRACKET
+                (ptrdecl LBRACKETleft RBRACKETright)
+| direct_abstract_declarator LBRACKET rexpression RBRACKET
+                (ooa(direct_abstract_declarator,
+                     arraydecl LBRACKETleft RBRACKETright (SOME rexpression)))
+| LPAREN parameter_list RPAREN
+                (let val ps = check_params parameter_list
+                 in
+                   fndecl LPARENleft RPARENright (map (#1 o node) ps)
+                 end)
+| direct_abstract_declarator LPAREN parameter_list RPAREN
+                (let val ps = check_params parameter_list
+                 in
+                   ooa(direct_abstract_declarator,
+                       fndecl LPARENleft RPARENright (map (#1 o node) ps))
+                 end)
+
+type_name
+: specifier_qualifier_list abstract_declarator
+                (let
+                   val sql = specifier_qualifier_list
+                   val basety = extract_type sql
+                   val _ = case has_typedef sql of
+                             NONE => ()
+                           | SOME (l,r) =>
+                               errorStr'(l,r, "Typedef illegal here")
+                 in
+                   wrap(node abstract_declarator (node basety),
+                        left specifier_qualifier_list,
+                        right abstract_declarator)
+                 end)
+| specifier_qualifier_list
+                (let
+                   val sql = specifier_qualifier_list
+                   val basety = extract_type sql
+                   val _ = case has_typedef sql of
+                             NONE => ()
+                             | SOME (l,r) =>
+                                 errorStr'(l,r, "Typedef illegal here")
+                 in
+                   basety
+                 end)
+
+initializer_list
+: dinitializer    ([dinitializer])
+| dinitializer YCOMMA
+                  ([dinitializer])
+| dinitializer YCOMMA initializer_list
+                  (dinitializer :: initializer_list)
+
+dinitializer
+: designation initializer ((designation, node initializer))
+| initializer             (([], node initializer))
+
+designation
+: designator_list YEQ (designator_list)
+
+designator_list
+: designator ([designator])
+| designator designator_list (designator :: designator_list)
+
+designator
+: LBRACKET rexpression RBRACKET  (DesignE rexpression)
+| YDOT ID                        (DesignFld (C_field_name ID))
+
+initializer
+: rexpression
+      (wrap(InitE rexpression, eleft rexpression, eright rexpression))
+| LCURLY initializer_list RCURLY
+      (wrap(InitList initializer_list, LCURLYleft, RCURLYright))
+
+
+assignop
+: YEQ       (NONE)
+| PLUSEQ    (SOME Plus)
+| MINUSEQ   (SOME Minus)
+| BOREQ     (SOME BitwiseOr)
+| BANDEQ    (SOME BitwiseAnd)
+| BXOREQ    (SOME BitwiseXOr)
+| MULEQ     (SOME Times)
+| DIVEQ     (SOME Divides)
+| MODEQ     (SOME Modulus)
+| LSHIFTEQ  (SOME LShift)
+| RSHIFTEQ  (SOME RShift)
+
+statement
+: lexpression assignop rexpression YSEMI
+      (swrap(parse_stdassignop(lexpression, assignop, rexpression),
+             eleft lexpression, YSEMIright))
+| rexpression YSEMI
+      (let val e = delvoidcasts (handle_builtin_fns rexpression)
+           val l = eleft rexpression and r = YSEMIright
+           val empty = swrap (EmptyStmt, l, r)
+       in
+         case enode e of
+           EFnCall(fn_e, args) => swrap(AssignFnCall(NONE, fn_e, args),l,r)
+         | _ => if is_number e then empty
+                else if fncall_free e then
+                  (warnStr'(l, r,
+                            "Ignoring (oddly expressed) expression without \
+                            \side effect");
+                   empty)
+                else
+                  (errorStr'(l, r, "Illegal bare expression containing \
+                                   \function calls");
+                   empty)
+       end)
+| YWHILE LPAREN rexpression RPAREN invariant_option statement
+      (let val body = swrap(Trap(ContinueT, statement), sleft statement,
+                            sright statement)
+           val loop = swrap(While(rexpression, invariant_option, body),
+                            YWHILEleft, sright statement)
+       in
+         swrap(Trap(BreakT, loop), YWHILEleft, sright statement)
+       end)
+| YDO invariant_option statement YWHILE LPAREN rexpression RPAREN YSEMI
+      (let val body = swrap (Trap(ContinueT, statement),
+                             sleft statement, sright statement)
+           val loop = swrap(While(rexpression, invariant_option, body),
+                            YDOleft, YSEMIright)
+       in
+         swrap(Trap(BreakT,
+                    swrap(Block [BI_Stmt body, BI_Stmt loop],
+                          sleft statement, YSEMIright)),
+               YDOleft, YSEMIright)
+       end)
+| YFOR LPAREN opt_for1_bitem opt_for2_expr YSEMI opt_for3_expr RPAREN
+       invariant_option statement
+      (let val body0 = swrap(Trap(ContinueT, statement),
+                             sleft statement, sright statement)
+           val body = swrap(Block [BI_Stmt body0, BI_Stmt opt_for3_expr],
+                            sleft statement, sright statement)
+           val loop = swrap(While(opt_for2_expr, invariant_option, body),
+                            YFORleft, sright statement)
+           val tp_loop = swrap(Trap(BreakT, loop), YFORleft, sright statement)
+       in
+         swrap(Block (opt_for1_bitem @ [BI_Stmt tp_loop]),
+               YFORleft, sright statement)
+       end)
+| YRETURN rexpression YSEMI
+      (case enode (handle_builtin_fns rexpression) of
+         EFnCall(fn_e, args) =>
+           swrap(ReturnFnCall (fn_e, args), YRETURNleft, YSEMIright)
+       | e => swrap(Return (SOME rexpression),YRETURNleft,YSEMIright))
+| YRETURN YSEMI
+      (swrap(Return NONE, YRETURNleft, YSEMIright))
+| YBREAK YSEMI
+      (swrap(Break, YBREAKleft, YSEMIright))
+| YCONTINUE YSEMI
+      (swrap(Continue,YCONTINUEleft,YSEMIright))
+| YIF LPAREN rexpression RPAREN statement
+      (swrap(IfStmt (rexpression, statement,
+                     swrap(EmptyStmt, defaultPos, defaultPos)),
+             YIFleft,
+             sright statement))
+| YIF LPAREN rexpression RPAREN statement YELSE statement
+      (swrap(IfStmt(rexpression, statement1, statement2), YIFleft,
+             sright statement2))
+| YSEMI
+      (swrap(EmptyStmt,YSEMIleft,YSEMIright))
+| lexpression PLUSPLUS YSEMI
+      (swrap(postinc lexpression, eleft lexpression, YSEMIright))
+| lexpression MINUSMINUS YSEMI
+      (swrap(postdec lexpression, eleft lexpression, YSEMIright))
+| SWITCH LPAREN rexpression RPAREN LCURLY switchcase_list RCURLY
+      (swrap(Trap(BreakT,
+                  swrap(Switch(rexpression,
+                               switch_check switchcase_list
+                                            SWITCHleft RCURLYright),
+                        SWITCHleft, RCURLYright)),
+             SWITCHleft, RCURLYright))
+ | compound_statement
+      (swrap(Block (node compound_statement), left compound_statement,
+             right compound_statement))
+ | AUXUPD STRING_LITERAL SPEC_BLOCKEND
+      (swrap(Auxupd STRING_LITERAL, AUXUPDleft, STRING_LITERALright))
+ | GHOSTUPD STRING_LITERAL SPEC_BLOCKEND
+      (swrap(Ghostupd STRING_LITERAL, GHOSTUPDleft, STRING_LITERALright))
+ | SPEC_BEGIN STRING_LITERAL SPEC_BLOCKEND statement_list
+   SPEC_END STRING_LITERAL SPEC_BLOCKEND
+     (let
+        open Substring
+        val ss = full STRING_LITERAL1
+        val (before_fullstop, inc_stop) = splitl (fn c => c <> #".") ss
+        val after_stop = triml 1 inc_stop
+      in
+        swrap(Spec((string before_fullstop, string after_stop),
+                   statement_list,STRING_LITERAL2),
+            SPEC_BEGINleft,
+            SPEC_ENDright)
+      end)
+  | YASM optvolatile LPAREN asmblock RPAREN YSEMI
+      (swrap(AsmStmt({volatilep = optvolatile, asmblock = asmblock}),
+             YASMleft, YSEMIright))
+
+optvolatile
+:     (false)
+| VOLATILE
+      (true)
+
+asmblock
+: cstring_literal asmmod1 ({head = node cstring_literal,
+                            mod1 = #1 asmmod1,
+                            mod2 = #2 asmmod1,
+                            mod3 = #3 asmmod1})
+
+asmmod1
+:     ([], [], [])
+| YCOLON namedstringexplist asmmod2
+      (namedstringexplist, #1 asmmod2, #2 asmmod2)
+
+asmmod2
+:     ([], [])
+| YCOLON namedstringexplist asmmod3
+      ((namedstringexplist, asmmod3))
+
+asmmod3
+:     ([])
+| YCOLON stringlist1
+      (stringlist1)
+
+stringlist1
+: cstring_literal
+      ([node cstring_literal])
+| cstring_literal YCOMMA stringlist1
+      (node cstring_literal :: stringlist1)
+
+namedstringexplist
+:     ([])
+| namedstringexplist1
+      (namedstringexplist1)
+
+namedstringexplist1
+: namedstringexp
+      ([namedstringexp])
+| namedstringexp YCOMMA namedstringexplist1
+      (namedstringexp :: namedstringexplist1)
+
+namedstringexp
+: cstring_literal LPAREN rexpression RPAREN
+      ((NONE, node cstring_literal, rexpression))
+| LBRACKET ID RBRACKET cstring_literal LPAREN rexpression RPAREN
+      ((SOME ID, node cstring_literal, rexpression))
+
+invariant
+: INVARIANT STRING_LITERAL SPEC_BLOCKEND
+      (wrap(STRING_LITERAL, STRING_LITERALleft, STRING_LITERALright))
+
+invariant_option
+:     (NONE)
+| invariant
+      (SOME invariant)
+
+switchcase_list
+:
+      ([])
+| switchcase switchcase_list
+      (switchcase :: switchcase_list)
+
+switchcase
+: labellist statement block_item_list
+      ((labellist, BI_Stmt statement :: block_item_list))
+
+labellist
+: label
+      (wrap([label], left label, right label))
+| label labellist
+      (wrap(label::node labellist, left label, right labellist))
+
+label
+: CASE rexpression YCOLON
+      (wrap(SOME rexpression, CASEleft, YCOLONright))
+| DEFAULT YCOLON
+      (wrap(NONE, DEFAULTleft, YCOLONright))
+
+
+opt_for1_bitem
+: opt_for1_expr YSEMI
+      ([BI_Stmt opt_for1_expr])
+| declaration
+      (map BI_Decl declaration)
+
+opt_for1_expr
+:
+      (swrap(EmptyStmt, defaultPos, defaultPos))
+| opt_for1_expr0
+      (if length opt_for1_expr0 = 1 then
+         hd opt_for1_expr0
+       else swrap(Block(map BI_Stmt opt_for1_expr0),
+                  sleft (hd opt_for1_expr0),
+                  sright (List.last opt_for1_expr0)))
+
+opt_for1_expr0
+: opt_for1_exprbase
+      ([opt_for1_exprbase])
+| opt_for1_exprbase YCOMMA opt_for1_expr0
+      (opt_for1_exprbase::opt_for1_expr0)
+
+opt_for1_exprbase
+: lexpression YEQ rexpression
+      (swrap(Assign(lexpression,rexpression),
+             eleft lexpression, eright rexpression))
+
+opt_for2_expr
+:     (expr_int 1)
+| rexpression
+      (rexpression)
+
+opt_for3_expr
+:     (swrap(EmptyStmt,defaultPos,defaultPos))
+| opt_for3_expr0
+      (if length opt_for3_expr0 = 1 then
+         hd opt_for3_expr0
+       else swrap(Block(map BI_Stmt opt_for3_expr0),
+                  sleft (hd opt_for3_expr0),
+                  sright (List.last opt_for3_expr0)))
+
+opt_for3_expr0 : opt_for3_exprbase ([opt_for3_exprbase])
+               | opt_for3_exprbase AUXUPD STRING_LITERAL SPEC_BLOCKEND
+                ([opt_for3_exprbase, swrap(Auxupd STRING_LITERAL, AUXUPDleft,
+                                           STRING_LITERALright)])
+               | opt_for3_exprbase YCOMMA opt_for3_expr0
+                                   (opt_for3_exprbase::opt_for3_expr0)
+
+opt_for3_exprbase :
+   lexpression assignop rexpression
+      (swrap(parse_stdassignop(lexpression, assignop, rexpression),
+             eleft lexpression, eright rexpression))
+ | lexpression PLUSPLUS
+                (swrap(postinc lexpression, eleft lexpression,
+                       PLUSPLUSright))
+ | lexpression MINUSMINUS
+                (swrap(postdec lexpression, eleft lexpression,
+                       MINUSMINUSright))
+
+opt_rexpr_list : (wrap([], defaultPos, defaultPos))
+               | rexpr_list (rexpr_list)
+
+rexpr_list : rexpression (wrap([rexpression], eleft rexpression,
+                               eright rexpression))
+           | rexpression YCOMMA rexpr_list
+                (wrap (rexpression :: node rexpr_list,
+                       eleft rexpression, right rexpr_list))
+
+rexpression : logical_OR_expression (logical_OR_expression)
+            | logical_OR_expression QMARK rexpression YCOLON rexpression
+                (ewrap(CondExp(logical_OR_expression, rexpression1,
+                               rexpression2),
+                       eleft logical_OR_expression,
+                       eright rexpression2))
+
+logical_OR_expression :
+   logical_AND_expression (logical_AND_expression)
+ | logical_OR_expression LOGICALOR logical_AND_expression
+                (ewrap(BinOp(LogOr, logical_OR_expression,
+                             logical_AND_expression),
+                       eleft logical_OR_expression,
+                       eright logical_AND_expression))
+
+logical_AND_expression :
+    inclusive_OR_expression (inclusive_OR_expression)
+  | logical_AND_expression LOGICALAND inclusive_OR_expression
+                (ewrap(BinOp(LogAnd, logical_AND_expression, inclusive_OR_expression),
+                       eleft logical_AND_expression,
+                       eright inclusive_OR_expression))
+
+inclusive_OR_expression :
+     exclusive_OR_expression (exclusive_OR_expression)
+   | inclusive_OR_expression BITWISEOR exclusive_OR_expression
+                 (ewrap(BinOp(BitwiseOr, inclusive_OR_expression,
+                              exclusive_OR_expression),
+                        eleft inclusive_OR_expression,
+                        eright exclusive_OR_expression))
+
+exclusive_OR_expression :
+     AND_expression (AND_expression)
+   | exclusive_OR_expression BITWISEXOR AND_expression
+                 (ewrap(BinOp(BitwiseXOr, exclusive_OR_expression,
+                              AND_expression),
+                        eleft exclusive_OR_expression,
+                        eright AND_expression))
+
+AND_expression :
+   equality_expression (equality_expression)
+ | AND_expression YAMPERSAND equality_expression
+                (ewrap(BinOp(BitwiseAnd, AND_expression, equality_expression),
+                       eleft AND_expression,
+                       eright equality_expression))
+
+equality_expression :
+   relational_expression (relational_expression)
+ | equality_expression EQUALS relational_expression
+                (ewrap(BinOp(Equals, equality_expression, relational_expression),
+                       eleft equality_expression,
+                       eright relational_expression))
+ | equality_expression NOTEQUALS relational_expression
+                (ewrap(BinOp(NotEquals, equality_expression, relational_expression),
+                       eleft equality_expression,
+                       eright relational_expression))
+
+relational_expression : shift_expression (shift_expression)
+          | relational_expression YLESS shift_expression
+                (ewrap(BinOp(Lt, relational_expression, shift_expression),
+                       eleft relational_expression,
+                       eright shift_expression))
+          | relational_expression YGREATER shift_expression
+                (ewrap(BinOp(Gt, relational_expression, shift_expression),
+                       eleft relational_expression,
+                       eright shift_expression))
+          | relational_expression YLE shift_expression
+                (ewrap(BinOp(Leq, relational_expression, shift_expression),
+                       eleft relational_expression,
+                       eright shift_expression))
+          | relational_expression YGE shift_expression
+                (ewrap(BinOp(Geq, relational_expression, shift_expression),
+                       eleft relational_expression,
+                       eright shift_expression))
+
+shift_expression :
+            additive_expression (additive_expression)
+          | shift_expression LEFTSHIFT additive_expression
+                 (ewrap(BinOp(LShift, shift_expression, additive_expression),
+                        eleft shift_expression,
+                        eright additive_expression))
+          | shift_expression RIGHTSHIFT additive_expression
+                 (ewrap(BinOp(RShift, shift_expression, additive_expression),
+                        eleft shift_expression,
+                        eright additive_expression))
+
+additive_expression :
+            multiplicative_expression (multiplicative_expression)
+          | additive_expression YPLUS multiplicative_expression
+              (ewrap(BinOp(Plus, additive_expression, multiplicative_expression),
+                     eleft additive_expression,
+                     eright multiplicative_expression))
+          | additive_expression YMINUS multiplicative_expression
+              (ewrap(BinOp(Minus, additive_expression, multiplicative_expression),
+                     eleft additive_expression,
+                     eright multiplicative_expression))
+
+multiplicative_expression : cast_expression (cast_expression)
+     | multiplicative_expression YSTAR cast_expression
+         (ewrap(BinOp(Times, multiplicative_expression, cast_expression),
+                eleft multiplicative_expression,
+                eright cast_expression))
+     | multiplicative_expression SLASH cast_expression
+         (ewrap(BinOp(Divides, multiplicative_expression, cast_expression),
+                eleft multiplicative_expression,
+                eright cast_expression))
+     | multiplicative_expression MOD cast_expression
+         (ewrap(BinOp(Modulus, multiplicative_expression, cast_expression),
+                eleft multiplicative_expression,
+                eright cast_expression))
+
+cast_expression : unary_expression (unary_expression)
+   | LPAREN type_name RPAREN cast_expression
+       (ewrap(TypeCast(type_name, cast_expression), LPARENleft,
+              eright cast_expression))
+
+
+unary_expression : postfix_expression (postfix_expression)
+       | YMINUS cast_expression
+                (ewrap(UnOp(Negate, cast_expression), YMINUSleft,
+                       eright cast_expression))
+       | YNOT cast_expression
+                (ewrap(UnOp(Not, cast_expression),
+                       YNOTleft, eright cast_expression))
+       | YBITNOT cast_expression
+                (ewrap(UnOp(BitNegate, cast_expression),
+                       YBITNOTleft, eright cast_expression))
+       | YAMPERSAND cast_expression
+                (ewrap(UnOp(Addr, cast_expression),
+                       YAMPERSANDleft, eright cast_expression))
+       | YSTAR cast_expression
+                (ewrap(Deref cast_expression, YSTARleft,
+                       eright cast_expression))
+       | YSIZEOF unary_expression
+                (ewrap(Sizeof unary_expression, YSIZEOFleft,
+                       eright unary_expression))
+       | YSIZEOF LPAREN type_name RPAREN
+                (ewrap(SizeofTy type_name, YSIZEOFleft, RPARENright))
+
+postfix_expression
+: primary_expression
+        (primary_expression)
+| postfix_expression LBRACKET rexpression RBRACKET
+        (ewrap(ArrayDeref(postfix_expression, rexpression),
+               eleft postfix_expression,
+               RBRACKETright))
+| postfix_expression LPAREN  opt_rexpr_list RPAREN
+        (let
+           val e = ewrap(EFnCall(postfix_expression, node opt_rexpr_list),
+                         eleft postfix_expression,
+                         RPARENright)
+         in
+           handle_builtin_fns e
+         end)
+| postfix_expression YDOT ID
+        (ewrap(StructDot(postfix_expression, C_field_name ID),
+               eleft postfix_expression,
+               IDright))
+| postfix_expression ARROW ID
+        (ewrap(StructDot(ewrap(Deref postfix_expression,
+                               eleft postfix_expression,
+                               eright postfix_expression),
+                         C_field_name ID),
+               eleft postfix_expression,
+               IDright))
+| LPAREN type_name RPAREN LCURLY initializer_list RCURLY
+         (ewrap(CompLiteral(node type_name, initializer_list),
+                LPARENleft, RCURLYright))
+
+primary_expression
+: ID
+       (ewrap(Var (ID, ref NONE), IDleft, IDright))
+| constant
+       (ewrap(Constant constant, left constant, right constant))
+| LPAREN rexpression RPAREN
+       (ewrap(enode rexpression, LPARENleft, RPARENright))
+| cstring_literal
+       (let val l = left cstring_literal  and r = right cstring_literal
+        in
+          ewrap(Constant (wrap (STRING_LIT (node cstring_literal), l, r)), l, r)
+        end)
+
+cstring_literal
+: cstring_literal STRING_LITERAL
+       (wrap(node cstring_literal ^ STRING_LITERAL, left cstring_literal,
+             STRING_LITERALright))
+| STRING_LITERAL
+       (wrap(STRING_LITERAL, STRING_LITERALleft, STRING_LITERALright))
+
+constant : NUMERIC_CONSTANT (wrap(NUMCONST NUMERIC_CONSTANT,
+                                  NUMERIC_CONSTANTleft,
+                                  NUMERIC_CONSTANTright))
+
+lexpression : postfix_expression (postfix_expression)
+            | YSTAR cast_expression (ewrap(Deref cast_expression, YSTARleft,
+                                      eright cast_expression))

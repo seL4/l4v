@@ -1,0 +1,18 @@
+component Emitter {
+  control;
+  emits SomethingHappenedEvent ev;
+}
+
+component Collector {
+  control;
+  consumes SomethingHappenedEvent ev;
+}
+
+assembly {
+  composition {
+    component Emitter source;
+    component Collector sink;
+
+    connection seL4Asynch simpleEvent1(from source.ev, to sink.ev);
+  }
+}

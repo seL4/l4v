@@ -1,0 +1,59 @@
+# this file is a -*- makefile -*-
+#
+# Copyright 2014, NICTA
+#
+# This software may be distributed and modified according to the terms of
+# the BSD 2-Clause license. Note that NO WARRANTY is provided.
+# See "LICENSE_BSD2.txt" for details.
+#
+# @TAG(NICTA_BSD)
+#
+
+ifndef GLOBAL_MAKES_INCLUDED
+
+GLOB_PFX := $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
+
+# user can use the globalmakevars.local file to provide their own definitions for
+# variables
+-include $(GLOB_PFX)/globalmakevars.local
+CC ?= gcc
+
+SML_COMPILER ?= poly
+#ifndef SML_COMPILER
+#SML_COMPILER := $(if $(shell which mlton),mlton,poly)
+#endif
+
+ifndef ML_HOME
+ML_HOME := $(shell $(GLOB_PFX)/../isabelle/bin/isabelle getenv ML_HOME | \
+	           perl -ne 'print (substr($$_,8))')
+endif
+
+ifndef LIBPOLY_DIR
+LIBPOLY_DIR := $(ML_HOME)
+endif
+
+
+
+
+OS := $(shell uname)
+MACOSP := $(findstring Darwin,$(OS))
+DYLIB := $(if $(MACOSP),DYLD_LIBRARY_PATH,LD_LIBRARY_PATH)
+DYLIB_SFX := $(if $(MACOSP),dylib,so)
+
+POLY_MACHINE_LDFLAGS := $(if $(MACOSP),-segprot POLY rwx rwx,)
+
+POLYCC := $(CC) $(POLY_CC_FLAGS) -L$(LIBPOLY_DIR) -lgmp -lpolymain -lpolyml -lstdc++ -lpthread -ldl $(POLY_MACHINE_LDFLAGS)
+
+
+ifndef LIBPOLYML
+LIBPOLYML := $(LIBPOLY_DIR)/libpolyml.$(DYLIB_SFX)
+endif
+
+DYLIB_VAL := $($(DYLIB))
+SETDYLIB := $(DYLIB)=$(LIBPOLY_DIR)$(if $(DYLIB_VAL),:$(DYLIB_VAL),)
+TOOLRUN_PFX := $(if $(findstring poly,$(SML_COMPILER)),$(SETDYLIB) ,)
+POLY := $(SETDYLIB) $(ML_HOME)/poly
+
+GLOBAL_MAKES_INCLUDED=true
+
+endif

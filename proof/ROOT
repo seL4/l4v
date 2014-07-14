@@ -1,0 +1,175 @@
+(*
+ * Copyright 2014, General Dynamics C4 Systems
+ *
+ * This software may be distributed and modified according to the terms of
+ * the GNU General Public License version 2. Note that NO WARRANTY is provided.
+ * See "LICENSE_GPLv2.txt" for details.
+ *
+ * @TAG(GD_GPL)
+ *)
+
+chapter "Proofs"
+
+(*
+ * List of rules to make various images.
+ *
+ * Some rules have duplicate targets of the form:
+ *
+ *    theories [condition = "MOO", quick_and_dirty]
+ *       "foo"
+ *    theories
+ *       "foo"
+ *
+ * The idea is that if the environment variable "MOO" is defined we
+ * execute the first rule (doing the proof in quick-and-dirty mode), and
+ * then find we need not take any action for the second. Otherwise, we
+ * skip the first rule and only perform the second.
+ *)
+
+(*
+ * Refinement proof.
+ *)
+
+session Refine = BaseRefine +
+  description {* Refinement between Haskell and Abstract spec. *}
+  options [timeout=3600]
+  theories
+    "refine/Refine"
+    "refine/Orphanage"
+
+session BaseRefine = AInvs +
+  description {* Background theory and libraries for refinement proof. *}
+  options [timeout=600]
+  theories
+    "refine/Include"
+
+session AInvs = ASpec +
+  options [timeout=3600]
+  theories
+    "invariant-abstract/AInvs"
+    "invariant-abstract/EmptyFail_AI"
+    "invariant-abstract/KernelInit_AI"
+    "invariant-abstract/DetSchedSchedule_AI"
+
+
+(*
+ * C Refinement proof.
+ *)
+
+session CRefine = CBaseRefine +
+  theories
+    "crefine/Refine_C"
+
+session CBaseRefine = CSpec +
+  theories [condition = "SKIP_REFINE_PROOFS", quick_and_dirty, skip_proofs]
+    "crefine/Include_C"
+  theories
+    "crefine/Include_C"
+
+
+(*
+ * CapDL Refinement
+ *)
+
+session DBaseRefine = Refine +
+  theories
+    "drefine/Include_D"
+
+session DRefine = DBaseRefine +
+  theories
+    "drefine/Refine_D"
+
+session DPolicy = DRefine +
+  theories
+    "access-control/Dpolicy"
+
+(*
+ * Infoflow and Access
+ *)
+
+session Access in "access-control" = AInvs +
+  options [timeout=3600]
+  theories
+    "Syscall_AC"
+    "ExampleSystem"
+
+session InfoFlow in "infoflow" = Access +
+  theories
+    "Noninterference"
+  theories
+    "Noninterference_Base_Refinement"
+    "PolicyExample"
+    "PolicySystemSAC"
+    "ExampleSystemPolicyFlows"
+    "Example_Valid_State"
+
+session InfoFlowC = CRefine +
+  theories
+    "infoflow/Noninterference_Refinement"
+    
+session InfoFlowCCount = InfoFlowC +
+  theories
+    "../lib/proof_counting/ProofGraph_Serialize_InfoflowC"
+
+
+
+(*
+ * Separation Kernel
+ *)
+
+(*
+session SepASpec = AInvs +
+  theories
+    "sep-abstract/Syscall_SA"
+
+session BiSim in "bisim" = AInvs +
+  options [document = pdf]
+  theories
+    "../sep-abstract/Syscall_SA"
+    "Syscall_S"
+  files
+    "document/root.tex"
+*)
+
+
+(*
+ * capDL
+ *)
+
+session SepDSpec = DSpec +
+  theories
+    "sep-capDL/Frame_SD"
+
+session DSpecProofs in "capDL-api" = SepDSpec +
+  theories
+    "Invocation_DP"
+    "Arch_DP"
+    "TCB_DP"
+    "CNode_DP"
+
+
+(*
+ * Separation Logic
+ *)
+
+session SepTactics = Word +
+  theories
+    "../lib/Hoare_Sep_Tactics/Hoare_Sep_Tactics"
+
+session SepTacticsExamples = SepTactics +
+  theories [quick_and_dirty]
+    "capDL-api/Sep_Tactic_Examples"
+
+
+(*
+ * Libraries
+ *)
+
+session AutoLevity = AutoLevity_Base +
+  theories
+   "../lib/autolevity_buckets/AutoLevity_Top"
+
+session AutoLevity_Base = Word + 
+  theories
+    "../lib/autolevity_buckets/AutoLevity_Base"
+

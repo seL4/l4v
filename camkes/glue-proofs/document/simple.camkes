@@ -1,0 +1,8 @@
+procedure s {
+    int echo_int(in int i);
+    int echo_parameter(in int pin, out int pout);
+    int echo_char(in char i);
+    void increment_char(inout char x);
+    void increment_parameter(inout int x);
+    void increment_64(inout uint64_t x);
+}

@@ -1,0 +1,28 @@
+$(SML_LIB)/basis/basis.mlb
+$(SML_LIB)/mlyacc-lib/mlyacc-lib.mlb
+$(SML_LIB)/basis/mlton.mlb (* for pointer equality *)
+../TargetNumbers-sig.ML
+../Target-ARM32.ML
+../SourcePos.ML
+../SourceFile.ML
+../Region.ML
+../Feedback.ML
+../Binaryset.ML
+basics.sml
+../topo_sort.ML
+ann
+  "nonexhaustiveMatch ignore"
+in
+  table.ML
+end
+../RegionExtras.ML
+../Absyn-CType.ML
+../Absyn-Expr.ML
+../Absyn-StmtDecl.ML
+../Absyn.ML
+../name_generation.ML
+../StrictC.grm.sig
+../StrictC.grm.sml
+../StrictC.lex.sml
+tokenizer.sml
+mlton-tokenizer.sml

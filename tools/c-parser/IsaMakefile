@@ -1,0 +1,65 @@
+#
+# Copyright 2014, NICTA
+#
+# This software may be distributed and modified according to the terms of
+# the BSD 2-Clause license. Note that NO WARRANTY is provided.
+# See "LICENSE_BSD2.txt" for details.
+#
+# @TAG(NICTA_BSD)
+#
+
+# Path to our directory.
+ifndef CPARSER_PFX
+CPARSER_PFX := $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
+endif
+
+# Path to "map_sep" directory.
+ifndef MAPPED_SEP_PFX
+MAPPED_SEP_PFX = $(realpath $(CPARSER_PFX)/../map_sep/logic)
+endif
+
+# Include SML compiler configuration.
+include $(CPARSER_PFX)/globalmakevars
+
+# All targets.
+all: CParser cparser_test cparser_tools
+
+# Build tools
+cparser_tools: $(CPARSER_PFX)/standalone-parser/c-parser \
+	$(CPARSER_PFX)/standalone-parser/tokenizer
+
+# Setup heaps we use.
+HEAPS += Simpl-VCG CParser
+
+# Setup rules for the heaps.
+$(HEAPS): .FORCE
+	$(ISABELLE_TOOL) build -d ../.. -b -v $@
+.PHONY: $(HEAPS)
+
+#
+# cparser_test: Execute a large number of testcases in the "testfiles"
+# directory.
+#
+# We dynamically generate a ROOT file containing all the test files, and
+# then build it using Isabelle.
+#
+cparser_test: testfiles/ROOT .FORCE
+	$(ISABELLE_TOOL) build -d ../.. -d testfiles -b -v CParserTest
+testfiles/ROOT: testfiles testfiles/*.c testfiles/*.thy ../../misc/scripts/gen_isabelle_root.py
+	python ../../misc/scripts/gen_isabelle_root.py -i testfiles -o testfiles/ROOT -s CParserTest -b CParser
+all_tests.thy: testfiles testfiles/*.c ../misc/gen_isabelle_root.py
+	python ../../misc/scripts/gen_isabelle_root.py -T -o $@ -b CParser -i testfiles
+
+GRAMMAR_PRODUCTS = l4c.lex.sml l4c.grm.sml l4c.grm.sig
+
+include $(CPARSER_PFX)/standalone-parser/Makefile
+include $(CPARSER_PFX)/Makefile
+
+# Regression targets.
+report-regression:
+	@echo CParser cparser_test cparser_tools
+
+.FORCE:
+
+.PHONY: all cparser_test .FORCE report_regression cparser_tools
+

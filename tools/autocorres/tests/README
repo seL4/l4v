@@ -1,0 +1,25 @@
+#
+# Copyright 2014, NICTA
+#
+# This software may be distributed and modified according to the terms of
+# the BSD 2-Clause license. Note that NO WARRANTY is provided.
+# See "LICENSE_BSD2.txt" for details.
+#
+# @TAG(NICTA_BSD)
+#
+
+parse-tests/
+
+    Contains tests that are only checked to ensure that they parse and run
+    through AutoCorres without error.
+
+proof-tests/
+
+    Contains tests with a hand-written Isabelle theory file. We ensure that
+    these theory files correctly execute.
+
+examples/
+
+    As above, but these are considered "nicer" examples which we are happy
+    to release.
+

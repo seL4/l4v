@@ -1,0 +1,22 @@
+Processing piccolo.txt
+
+C Parser CPU Time : 37644 ms
+C Parser Real Time : 36916 ms
+AutoCorres CPU Time : 214884 ms
+AutoCorres Real Time : 200486 ms
+
+936 input line(s) of code
+56 function(s)
+
+Phase             LoS  Term Size
+CParser          1748        372
+L1               2909        378
+L1except         2197        320
+L1peep           2471        326
+L2               3803        931
+L2simp           1546        398
+HL               2278        422
+HLsimp           1504        349
+TS               1352        188
+polish           1198        182
+

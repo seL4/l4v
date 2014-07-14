@@ -1,0 +1,104 @@
+(*
+ * Copyright 2014, NICTA
+ *
+ * This software may be distributed and modified according to the terms of
+ * the BSD 2-Clause license. Note that NO WARRANTY is provided.
+ * See "LICENSE_BSD2.txt" for details.
+ *
+ * @TAG(NICTA_BSD)
+ *)
+
+theory SimpStrategy
+imports "~~/src/HOL/Main"
+begin
+
+text {*
+Support for defining alternative simplifier strategies for some parts of terms
+or some premises of rewrite rules. The "name" parameter to the simp_strategy
+constant is used to identify which simplification strategy should be used on
+this term. Note that, although names have type nat, it is safe for them to all
+be defined as 0. The important thing is that the simplifier doesn't know they're
+equal.
+*}
+
+definition
+  simp_strategy :: "nat \<Rightarrow> ('a :: {}) \<Rightarrow> 'a"
+where
+  "simp_strategy name x \<equiv> x"
+
+text {*
+This congruence rule forbids the simplifier from simplifying the arguments of
+simp_strategy normally.
+*}
+
+lemma simp_strategy_cong[cong]:
+  "simp_strategy name x = simp_strategy name x"
+  by simp
+
+text {*
+This strategy, or rather lack thereof, can be used to forbid simplification.
+*}
+
+definition
+  NoSimp :: nat
+where "NoSimp = 0"
+
+text {*
+This strategy indicates that a boolean subterm should be simplified only by
+using explicit assumptions of the simpset.
+*}
+
+definition
+  ByAssum :: nat
+where "ByAssum = 0"
+
+lemma Eq_TrueI_ByAssum:
+  "P \<Longrightarrow> simp_strategy ByAssum P \<equiv> True"
+  by (simp add: simp_strategy_def)
+
+simproc_setup simp_strategy_ByAssum ("simp_strategy ByAssum b") =
+  {* K (fn ss => fn ct => let
+      val b = Thm.dest_arg ct
+      val t = cterm_instantiate [(@{cpat "?P :: bool"}, b)]
+        @{thm Eq_TrueI_ByAssum}
+      val prems = Raw_Simplifier.prems_of ss
+    in get_first (try (fn p => p RS t)) prems end) *}
+
+lemma ByAssum:
+  "simp_strategy ByAssum P \<Longrightarrow> P"
+  by (simp add: simp_strategy_def)
+
+lemma simp_ByAssum_test:
+  "P \<Longrightarrow> simp_strategy ByAssum P"
+  by simp
+
+text {*
+Generic framework for instantiating a simproc which simplifies within a
+simp_strategy with a given simpset.
+
+The boolean determines whether simp_strategy Name True should be rewritten
+to True.
+*}
+
+lemma simp_strategy_Eq_True:
+  "simp_strategy name True \<equiv> True"
+  by (simp add: simp_strategy_def)
+
+ML {*
+fun simp_strategy_True_conv ct = case term_of ct of
+    (Const (@{const_name simp_strategy}, _) $ _ $ @{term True})
+      => cterm_instantiate [(@{cpat "?name :: nat"}, Thm.dest_arg1 ct)]
+          @{thm simp_strategy_Eq_True}
+  | _ => Conv.all_conv ct
+
+fun new_simp_strategy thy (name : term) ss rewr_True =
+  Simplifier.simproc_global_i thy ("simp_strategy_" ^ fst (dest_Const name))
+    [@{term simp_strategy} $ name $ @{term x}]
+    (fn ctxt => fn t => cterm_of (Proof_Context.theory_of ctxt) t
+        |> (Conv.arg_conv (Simplifier.rewrite (put_simpset ss ctxt))
+          then_conv (if rewr_True then simp_strategy_True_conv
+                      else Conv.all_conv))
+        |> (fn c => if Thm.is_reflexive c then NONE else SOME c))
+*}
+
+end

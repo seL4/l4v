@@ -1,0 +1,9 @@
+#
+# Paths to "ROOT" files associated with L4.verified
+#
+spec
+proof
+tools
+camkes
+sys-init
+internal

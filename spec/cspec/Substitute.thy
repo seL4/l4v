@@ -1,0 +1,348 @@
+(*
+ * Copyright 2014, NICTA
+ *
+ * This software may be distributed and modified according to the terms of
+ * the GNU General Public License version 2. Note that NO WARRANTY is provided.
+ * See "LICENSE_GPLv2.txt" for details.
+ *
+ * @TAG(NICTA_GPL)
+ *)
+
+theory Substitute
+
+imports    "Kernel_C"
+    "../../tools/asmrefine/GlobalsSwap"
+
+begin
+
+ML {*
+
+structure SubstituteSpecs = struct
+
+val list_abs = uncurry (fold_rev (fn (x, T) => fn t => Abs (x, T, t)));
+
+fun get_rhs thm =
+    snd (Logic.dest_equals (Thm.concl_of thm))
+    handle TYPE _ =>
+      snd (HOLogic.dest_eq (Thm.concl_of thm));
+
+fun get_lhs thm =
+    fst (Logic.dest_equals (Thm.concl_of thm))
+    handle TYPE _ =>
+      fst (HOLogic.dest_eq (Thm.concl_of thm));
+
+fun term_convert prefix convs (tm as Const (name, _)) =
+    if not (String.isPrefix prefix name) then tm
+    else the (Termtab.lookup convs tm)
+  | term_convert _ _ tm = tm;
+
+fun suspicious_term ctxt s t = if Term.add_var_names t [] = [] then ()
+  else (tracing ("suspicious " ^ s);
+    Syntax.pretty_term ctxt t |> Pretty.string_of |> tracing;
+    ())
+
+val debug_trace = ref (Bound 0);
+
+(*
+fun add_conv tm tm' convs = let
+    val argTs = pairself (fst o strip_type o fastype_of) (tm, tm');
+    val argLs = pairself length argTs
+    val tm'' = if fst argLs > snd argLs
+      then list_abs (map (pair "_") (take (fst argLs - snd argLs) (fst argTs)),
+          tm') else tm';
+  in Termtab.insert (K true) (tm, tm'') convs end
+*)
+
+fun convert prefix src_ctxt proc (tm as Const (name, _)) (convs, ctxt) =
+  (term_convert prefix convs tm; (convs, ctxt))
+  handle Option =>
+ let
+    val cname = unprefix prefix name;
+    val def_thm = Proof_Context.get_thm src_ctxt (cname ^ "_def")
+    val rhs = get_rhs def_thm;
+    val _ = suspicious_term ctxt "init rhs" rhs;
+    val consts = Term.add_consts rhs [];
+    val (convs, ctxt) = fold (convert prefix src_ctxt proc o Const)
+        consts (convs, ctxt);
+    val rhs' = map_aterms (term_convert prefix convs) rhs;
+    val rhs'' = proc ctxt cname rhs';
+    val _ = suspicious_term ctxt "adjusted rhs" rhs'';
+
+  in if rhs'' aconv rhs
+    then (Termtab.insert (K true) (tm, tm) convs,
+      Local_Theory.abbrev Syntax.mode_default
+          ((Binding.name cname, NoSyn), get_lhs def_thm) ctxt
+        |> snd |> Local_Theory.note ((Binding.name (cname ^ "_def"), []), [def_thm])
+        |> snd |> Local_Theory.restore
+    )
+
+  else let
+      val _ = tracing ("Defining " ^ cname);
+
+      val pre_def_ctxt = ctxt
+      val b = Binding.name cname
+      val ((tm', _), ctxt) = Local_Theory.define
+          ((b, NoSyn), ((Thm.def_binding b, []), rhs'')) ctxt
+      val tm'' = Morphism.term (Proof_Context.export_morphism ctxt pre_def_ctxt) tm'
+      val ctxt = Local_Theory.restore ctxt
+
+      val lhs_argTs = get_lhs def_thm |> strip_comb |> snd |> map fastype_of;
+      val abs_tm = list_abs (map (pair "_") lhs_argTs, tm'')
+
+    in (Termtab.insert (K true) (tm, abs_tm) convs, ctxt) end
+  end
+
+fun prove_impl_tac ctxt ss =
+    SUBGOAL (fn (t, n) => let
+        val lhs = t |> HOLogic.dest_Trueprop |> HOLogic.dest_eq |> fst;
+        val cnames = Term.add_const_names lhs []
+          |> filter (String.isSuffix "_'proc");
+        val unfolds = map (Proof_Context.get_thm ctxt o suffix "_def"
+          o Long_Name.base_name) cnames;
+      in simp_tac (put_simpset ss ctxt addsimps unfolds) n
+      end);
+
+fun convert_impls prefix src_ctxt convs ctxt = let
+
+    val tree_lemmata = StaticFun.prove_tree_lemmata ctxt
+      (Proof_Context.get_thm ctxt "\<Gamma>_def");
+
+    val ss = simpset_of (put_simpset HOL_ss ctxt addsimps tree_lemmata);
+
+    fun convert_impl (impl, long_name) = let
+        val prop = Thm.prop_of impl;
+        val conv_prop = map_aterms (term_convert prefix convs) prop
+          |> Envir.beta_eta_contract;
+        val name = Long_Name.base_name long_name;
+      in
+        (name, Goal.prove ctxt [] [] conv_prop
+             (fn v => prove_impl_tac (#context v) ss 1))
+      end
+
+    val impls = Termtab.keys convs
+      |> map (dest_Const #> fst #> Long_Name.base_name)
+      |> filter (String.isSuffix "_body")
+      |> map (suffix "_impl" o unsuffix "_body")
+      |> map_filter (try (` (Proof_Context.get_thm src_ctxt)))
+      |> map convert_impl;
+
+  in Local_Theory.notes (map (fn (n, t) => ((Binding.name n, []), [([t], [])])) impls)
+    ctxt |> snd end
+
+fun take_all_actions prefix src_ctxt proc tm csenv
+      styargs loc_name ctxt = let
+    val (convs, ctxt) = convert prefix src_ctxt proc tm (Termtab.empty, ctxt);
+  in ctxt
+    |> convert_impls prefix src_ctxt convs
+    |> Modifies_Proofs.prove_all_modifies_goals_local csenv (fn _ => true) styargs
+  end
+
+end
+
+*}
+
+ML {*
+fun com_rewrite f t = case fastype_of t of
+    (comT as Type (@{type_name com}, [s, _, ft]))
+      => let
+    val gd = Const (@{const_name Guard},
+                ft --> (HOLogic.mk_setT s) --> comT --> comT)
+    fun add_guard ((f, gd_s), c) = gd $ f $ gd_s $ c;
+
+    val seq = Const (@{const_name Seq}, comT --> comT --> comT);
+    val skip = Const (@{const_name Skip}, comT);
+    fun add_guards_to_seq gs (Const (@{const_name Seq}, _) $ a $ b)
+        = seq $ add_guards_to_seq gs a $ b
+      | add_guards_to_seq gs c
+        = seq $ foldr add_guard skip gs $ c;
+
+    fun add_guards c [] = c
+      | add_guards ((w as Const (@{const_name While}, _)) $ S $ c) gs
+        = seq $ (w $ S $ add_guards_to_seq gs c) $ foldr add_guard skip gs
+      | add_guards (call as (Const (@{const_name call}, _) $ _ $ _ $ _ $ _)) gs
+        = foldr add_guard (seq $ call $ foldr add_guard skip gs) gs
+      | add_guards c gs = foldr add_guard c gs;
+
+    fun inner t = case t of
+      (Const (@{const_name "switch"}, T) $ v $ set_com_list) => let
+        val (ss, cs) = map_split HOLogic.dest_prod
+          (HOLogic.dest_list set_com_list);
+        val cs' = map inner cs;
+        val (v', gs) = f v;
+        val (ss', gss) = map_split f ss;
+        val listT = HOLogic.mk_prodT
+          (HOLogic.mk_setT (range_type (domain_type T)), comT);
+      in foldr add_guard (head_of t $ v' $ HOLogic.mk_list listT
+            (map HOLogic.mk_prod (ss' ~~ cs')))
+          (gs @ flat gss)
+      end
+      | _ => let
+        val (h, xs) = strip_comb t;
+        (* assumption: we can only get into the com type with one of the
+           constructors or pseudo-constructors, which don't need rewriting,
+           so we can ignore h *)
+        val xTs = xs ~~ (fastype_of h |> strip_type |> fst);
+        fun upd_arg (x, T) = if T = comT then (inner x, []) else f x;
+        val (ys, gss) = map_split upd_arg xTs;
+      in add_guards (list_comb (h, ys)) (flat gss) end
+  in inner (Envir.beta_eta_contract t) end
+  | _ => t;
+
+*}
+
+setup {* DefineGlobalsList.define_globals_list_i
+  "c/kernel_all.c_pp" @{typ globals} *}
+
+locale substitute_pre
+  = fixes symbol_table :: "string \<Rightarrow> word32"
+      and domain :: "word32 set"
+
+begin
+
+abbreviation
+ "globals_list \<equiv> kernel_all_global_addresses.global_data_list"
+
+end
+
+locale kernel_all_substitute = substitute_pre
+begin
+
+ML {*
+fun mk_rew (t as Abs (s, T, _)) = mk_rew (betapply (t, Var ((s, 0), T)))
+  | mk_rew t = HOLogic.dest_eq t
+
+val mk_varifyT = Term.map_types Logic.varifyT_global
+
+local
+val c_guard_rew =
+  @{term "\<lambda>p b. Guard C_Guard {s. c_guard (p s)} b
+     = Guard C_Guard {s. h_t_valid (hrs_htd (t_hrs_' (globals s))) c_guard (p s)} b"}
+  |> mk_varifyT |> mk_rew
+
+val c_guard_rew_weak =
+  @{term "\<lambda>p b. Guard C_Guard {s. c_guard (p s)} b
+         = Guard C_Guard {s. ptr_safe (p s) (hrs_htd (t_hrs_' (globals s)))
+            \<and> c_guard (p s)} b"}
+      |> mk_varifyT |> mk_rew
+
+in
+fun strengthen_c_guards ss thy s =
+  if (exists (curry (op =) s) ss)
+  then Pattern.rewrite_term thy [c_guard_rew_weak] []
+  else Pattern.rewrite_term thy [c_guard_rew] []
+end;
+*}
+
+lemmas global_data_defs
+    = kernel_all_global_addresses.global_data_defs
+
+lemmas globals_list_def
+    = kernel_all_global_addresses.global_data_list_def
+
+ML {*
+
+(* the unvarify sets ?symbol_table back to symbol_table. be careful *)
+val global_datas = @{thms global_data_defs}
+  |> map (concl_of #> Logic.unvarify_global
+        #> Logic.dest_equals #> snd #> Envir.beta_eta_contract)
+
+val const_globals = map_filter
+    (fn (Const (@{const_name const_global_data}, _) $ nm $ t)
+        => SOME (HOLogic.dest_string nm, t)
+        | _ => NONE) global_datas
+
+local
+
+val hrs_htd_update_guard_rew1 =
+    @{term "\<lambda>u. Basic (\<lambda>s. globals_update (t_hrs_'_update (hrs_htd_update (u s))) s)
+         = Guard C_Guard {s. globals_list_distinct (fst ` dom_s (u s (hrs_htd (t_hrs_' (globals s)))))
+                         symbol_table globals_list}
+           (Basic (\<lambda>s. globals_update (t_hrs_'_update (id hrs_htd_update (u s))) s))"}
+        |> mk_rew
+
+val hrs_htd_update_guard_rew2 =
+  @{term "t_hrs_'_update (id hrs_htd_update f) = t_hrs_'_update (hrs_htd_update f)"}
+  |> Logic.varify_global |> HOLogic.dest_eq;
+
+val consts = map snd const_globals
+
+val index_eq_set_helper
+  = Syntax.parse_term @{context} (String.concat
+    ["\<lambda>str t n c. {s :: globals myvars. c \<longrightarrow>",
+        "h_val (hrs_mem (t_hrs_' (globals s)))",
+        " (CTypesDefs.ptr_add (Ptr (symbol_table str)) (of_nat (n s)))",
+        " = t s}"])
+
+val eq_set_helper
+  = Syntax.parse_term @{context} (String.concat
+    ["\<lambda>str t c. {s :: globals myvars. c \<longrightarrow>",
+        "h_val (hrs_mem (t_hrs_' (globals s)))",
+        " (Ptr (symbol_table str)) = t}"])
+
+val s = @{term "s :: globals myvars"}
+
+val grab_name_str = head_of #> dest_Const #> fst #> Long_Name.base_name
+    #> HOLogic.mk_string
+
+in
+
+fun const_global_asserts ctxt cond
+  (t as (Const (@{const_name index}, T) $ arr $ n)) = if member op= consts arr
+    then [(index_eq_set_helper $ grab_name_str arr
+        $ lambda s t $ lambda s n $ cond) |> Syntax.check_term ctxt]
+    else []
+  | const_global_asserts ctxt cond (Const c) = if member op= consts (Const c)
+    then [(eq_set_helper $ grab_name_str (Const c) $ Const c $ cond)
+        |> Syntax.check_term ctxt]
+    else []
+  | const_global_asserts ctxt cond (f $ x) = if member op= consts (f $ x)
+    then [(eq_set_helper $ grab_name_str (f $ x) $ (f $ x) $ cond)
+        |> Syntax.check_term ctxt]
+    else const_global_asserts ctxt cond f @ const_global_asserts ctxt cond x
+  | const_global_asserts ctxt cond (a as Abs (_, @{typ "globals myvars"}, t))
+    = const_global_asserts ctxt cond (betapply (a, s))
+  | const_global_asserts ctxt cond (Abs (s, T, t))
+    = const_global_asserts ctxt cond t
+  | const_global_asserts _ _ _ = []
+
+fun guard_rewritable_globals const_cond ctxt =
+  Pattern.rewrite_term @{theory} [hrs_htd_update_guard_rew2] []
+  o Pattern.rewrite_term @{theory} [hrs_htd_update_guard_rew1] []
+  o com_rewrite (fn t => let
+    val cns = Term.add_const_names t [];
+  in (t, map (pair @{term C_Guard})
+        (case const_cond of SOME cond => const_global_asserts ctxt cond t
+                | NONE => []))
+  end)
+
+val guard_htd_updates_with_domain = com_rewrite 
+  (fn t => if fastype_of t = @{typ "globals myvars \<Rightarrow> globals myvars"}
+        andalso Term.exists_Const (fn (s, _) => s = @{const_name "hrs_htd_update"}) t
+        then (t, [(@{term MemorySafety}, betapply (@{term "\<lambda>f :: globals myvars \<Rightarrow> globals myvars.
+                {s. htd_safe domain (hrs_htd (t_hrs_' (globals s)))
+              \<and> htd_safe domain (hrs_htd (t_hrs_' (globals (f s))))}"}, t))])
+        else (t, []))
+
+end
+
+*}
+
+ML {* Modifies_Proofs.sorry_modifies_proofs := true *}
+
+local_setup {*
+SubstituteSpecs.take_all_actions
+  "Kernel_C.kernel_all_global_addresses."
+  (Locale.init "Kernel_C.kernel_all_global_addresses" @{theory})
+  (fn ctxt => fn s => guard_rewritable_globals NONE ctxt
+    o (strengthen_c_guards ["memset_body", "memcpy_body", "memzero_body"]
+          (Proof_Context.theory_of ctxt) s)
+    o guard_htd_updates_with_domain)
+  @{term kernel_all_global_addresses.\<Gamma>}
+  (CalculateState.get_csenv @{theory} "c/kernel_all.c_pp" |> the)
+  [@{typ "globals myvars"}, @{typ int}, @{typ strictc_errortype}]
+  "kernel_all_substitute"
+*}
+
+end
+
+end

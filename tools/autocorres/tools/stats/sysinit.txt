@@ -1,0 +1,22 @@
+Processing sysinit.txt
+
+C Parser CPU Time : 130916 ms
+C Parser Real Time : 125569 ms
+AutoCorres CPU Time : 743328 ms
+AutoCorres Real Time : 715383 ms
+
+2079 input line(s) of code
+163 function(s)
+
+Phase             LoS  Term Size
+CParser          3353        184
+L1               5405        190
+L1except         4067        148
+L1peep           4368        150
+L2               6600        499
+L2simp           2476        189
+HL               3953        206
+HLsimp           2435        160
+TS               2300         74
+polish           2183         72
+

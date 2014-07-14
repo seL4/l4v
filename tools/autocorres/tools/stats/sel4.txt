@@ -1,0 +1,22 @@
+Processing sel4.txt
+
+C Parser CPU Time : 1443632 ms
+C Parser Real Time : 1308845 ms
+AutoCorres CPU Time : 2368100 ms
+AutoCorres Real Time : 2048777 ms
+
+10121 input line(s) of code
+551 function(s)
+
+Phase             LoS  Term Size
+CParser         20576        318
+L1              36196        327
+L1except        28029        243
+L1peep          30450        248
+L2              47649       1003
+L2simp          17677        330
+HL              21086        362
+HLsimp          15910        302
+TS              12976        121
+polish          11928        112
+

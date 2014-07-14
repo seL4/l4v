@@ -1,0 +1,31 @@
+<!--
+     Copyright 2014, NICTA
+
+     This software may be distributed and modified according to the terms of
+     the BSD 2-Clause license. Note that NO WARRANTY is provided.
+     See "LICENSE_BSD2.txt" for details.
+
+     @TAG(NICTA_BSD)
+  -->
+
+<!ELEMENT testsuite (set|sequence|test)+>
+<!ATTLIST testsuite cwd CDATA #IMPLIED>
+<!ATTLIST testsuite timeout CDATA #IMPLIED>
+<!ATTLIST testsuite depends NMTOKENS #IMPLIED>
+
+<!ELEMENT set (set|sequence|test)+>
+<!ATTLIST set cwd CDATA #IMPLIED>
+<!ATTLIST set timeout CDATA #IMPLIED>
+<!ATTLIST set depends NMTOKENS #IMPLIED>
+
+<!ELEMENT sequence (set|sequence|test)+>
+<!ATTLIST sequence cwd CDATA #IMPLIED>
+<!ATTLIST sequence timeout CDATA #IMPLIED>
+<!ATTLIST sequence depends NMTOKENS #IMPLIED>
+
+<!ELEMENT test ANY>
+<!ATTLIST test name ID #REQUIRED>
+<!ATTLIST test cwd CDATA #IMPLIED>
+<!ATTLIST test timeout CDATA #IMPLIED>
+<!ATTLIST test depends NMTOKENS #IMPLIED>
+

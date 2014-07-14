@@ -1,0 +1,76 @@
+
+BenchBasics Benchmark Results
+=============================
+
+Tactic Benchmarks (Prove '5 < 10')
+----------------------------------
+
+    Arith_Data.arith_tac            :    1938.2 us (sd   0.4%,       515.9 op/s)
+    Lin_Arith.simple_tac            :    1563.1 us (sd   0.2%,       639.7 op/s)
+    simp_tac (full simpset)         :    1172.8 us (sd   0.2%,       852.6 op/s)
+    simp_tac (with precise lemma)   :     170.0 us (sd   0.3%,      5883.6 op/s)
+    rtac (with precise lemma)       :      58.7 us (sd   0.1%,     17049.7 op/s)
+    cheat_tac                       :      53.0 us (sd   0.1%,     18880.8 op/s)
+    Skip_Proof.make_thm             :      38.1 us (sd   0.3%,     26268.4 op/s)
+
+Term Simplification
+-------------------
+
+    rewrite                         :      74.3 us (sd   0.2%,     13458.6 op/s)
+    rewrite (full simpset)          :     120.1 us (sd   0.2%,      8324.8 op/s)
+    failing rewrite                 :      73.7 us (sd   0.3%,     13571.3 op/s)
+    failing rewrite (full simpset)  :      94.7 us (sd   0.4%,     10565.2 op/s)
+
+Resolution
+----------
+
+    'OF' theorem resolution         :      13.9 us (sd   0.3%,     71959.8 op/s)
+    rtac (16)                       :       1.8 us (sd   0.2%,    554574.7 op/s)
+    rtac (142)                      :      11.9 us (sd   0.2%,     83889.2 op/s)
+    rtac (1402)                     :     111.8 us (sd   0.1%,      8946.1 op/s)
+    rtac (14002)                    :    1114.5 us (sd   0.5%,       897.3 op/s)
+
+Syntax
+------
+
+    Syntax.parse_term (16)          :     523.0 us (sd   3.2%,      1911.9 op/s)
+    Syntax.parse_term (142)         :    3674.8 us (sd   0.3%,       272.1 op/s)
+    Syntax.parse_term (1402)        :   67928.2 us (sd   0.5%,        14.7 op/s)
+    Syntax.parse_term (14002)       : 6233333.3 us (sd   0.4%,         0.2 op/s)
+    Syntax.type_constraint (16)     :       0.0 us (sd   0.5%,  30829433.9 op/s)
+    Syntax.type_constraint (142)    :       0.0 us (sd   1.5%,  30465542.4 op/s)
+    Syntax.type_constraint (1402)   :       0.0 us (sd   0.4%,  30782928.7 op/s)
+    Syntax.type_constraint (14002)  :       0.0 us (sd   0.5%,  30802393.4 op/s)
+    Syntax.check_term (16)          :     140.7 us (sd   0.3%,      7108.2 op/s)
+    Syntax.check_term (142)         :    1241.5 us (sd   0.7%,       805.5 op/s)
+    Syntax.check_term (1402)        :   14439.1 us (sd   0.9%,        69.3 op/s)
+    Syntax.check_term (14002)       :  209593.5 us (sd   0.8%,         4.8 op/s)
+
+Term Certification and Typing
+-----------------------------
+
+    size_of_term (16)               :       0.2 us (sd   0.0%,   5231650.0 op/s)
+    size_of_term (142)              :       1.8 us (sd   0.0%,    565787.9 op/s)
+    size_of_term (1402)             :      16.9 us (sd   0.1%,     59014.7 op/s)
+    size_of_term (14002)            :     170.9 us (sd   0.1%,      5849.8 op/s)
+    term_of (16)                    :       0.0 us (sd   0.0%, 132104334.6 op/s)
+    term_of (142)                   :       0.0 us (sd   2.3%, 130729509.2 op/s)
+    term_of (1402)                  :       0.0 us (sd   6.8%, 128099301.7 op/s)
+    term_of (14002)                 :       0.0 us (sd   0.0%, 132097957.3 op/s)
+    cterm_of (16)                   :      46.2 us (sd   0.3%,     21656.7 op/s)
+    cterm_of (142)                  :     420.0 us (sd   0.3%,      2380.7 op/s)
+    cterm_of (1402)                 :    4176.4 us (sd   0.2%,       239.4 op/s)
+    cterm_of (14002)                :   48858.9 us (sd   0.6%,        20.5 op/s)
+    fastype_of (16)                 :       0.1 us (sd   0.0%,  17320627.6 op/s)
+    fastype_of (142)                :       0.1 us (sd   0.0%,  17323211.6 op/s)
+    fastype_of (1402)               :       0.1 us (sd   0.0%,  17324650.0 op/s)
+    fastype_of (14002)              :       0.1 us (sd   0.1%,  17047475.5 op/s)
+    type_of (16)                    :       2.1 us (sd   0.2%,    476998.9 op/s)
+    type_of (142)                   :      19.7 us (sd   0.3%,     50834.7 op/s)
+    type_of (1402)                  :     194.8 us (sd   0.7%,      5133.7 op/s)
+    type_of (14002)                 :    1935.5 us (sd   0.7%,       516.7 op/s)
+
+Miscellaneous
+-------------
+
+    serial                          :       0.4 us (sd   0.5%,   2802049.8 op/s)

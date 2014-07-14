@@ -1,0 +1,123 @@
+(*
+ * Copyright 2014, General Dynamics C4 Systems
+ *
+ * This software may be distributed and modified according to the terms of
+ * the GNU General Public License version 2. Note that NO WARRANTY is provided.
+ * See "LICENSE_GPLv2.txt" for details.
+ *
+ * @TAG(GD_GPL)
+ *)
+
+chapter "Specifications"
+
+(*
+ * List of rules to make various images.
+ *
+ * Some rules have duplicate targets of the form:
+ *
+ *    theories [condition = "MOO", quick_and_dirty]
+ *       "foo"
+ *    theories
+ *       "foo"
+ *
+ * The idea is that if the environment variable "MOO" is defined we
+ * execute the first rule (doing the proof in quick-and-dirty mode), and
+ * then find we need not take any action for the second. Otherwise, we
+ * skip the first rule and only perform the second.
+ *)
+
+(*
+ * Abstract Specification
+ *)
+
+session ASpec in "abstract" = Word +
+  options [document=pdf, document_graph, timeout=600]
+  theories [document = false]
+    "../../lib/NICTACompat"
+    "../../lib/Lib"
+    "../../lib/DistinctProp"
+    "../../lib/List_Lib"
+  theories
+    "Intro_Doc"
+    "../../lib/wp/NonDetMonad"
+  theories [document = false]
+    "../../lib/wp/NonDetMonadLemmas"
+  theories
+    "Syscall_A"
+    "Glossary_Doc"
+  files
+	"document/VERSION"
+    "document/root.tex"
+    "document/root.bib"
+    "document/defs.bib"
+    "document/comment.sty"
+
+(*
+ * Executable/Design Specification
+ *)
+
+session ExecSpec = Word +
+  options [document = false, timeout=600]
+  theories
+    "design/API_H"
+    "design/Intermediate_H"
+
+
+(*
+ * C Kernel
+ *)
+
+session CSpec = CKernel +
+  theories [condition = "SORRY_BITFIELD_PROOFS", quick_and_dirty]
+    "cspec/KernelInc_C"
+  theories
+    "cspec/KernelInc_C"
+    "cspec/KernelState_C"
+
+session CKernel = CParser +
+  theories [condition = "SORRY_MODIFIES_PROOFS", quick_and_dirty]
+    "cspec/Kernel_C"
+  theories
+    "cspec/Kernel_C"
+  theories [condition = "COUNT_PROOFS"]
+    "../lib/proof_counting/ProofCount"
+  files
+    "cspec/c/kernel_all.c_pp"
+
+session SimplExport = CSpec +
+  theories "cspec/SimplExport"
+
+
+(*
+ * CapDL
+ *)
+
+session DSpec = Word +
+  theories
+    "capDL/Syscall_D"
+
+
+(*
+ * Take-Grant.
+ *)
+
+session TakeGrant in "take-grant" = "HOL-Word" +
+  theories
+    "System_S"
+    "Isolation_S"
+    "Example"
+    "Example2"
+
+
+(*
+ * Libraries
+ *)
+
+session Word = "HOL-Word" +
+  theories [condition = "USE_RICH_METHODS"]
+    "../lib/eisbach/Focus"
+  theories [condition = "COUNT_PROOFS"]
+    "../lib/proof_counting/ProofCount"
+  theories
+    "../lib/NICTACompat"
+

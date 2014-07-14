@@ -1,0 +1,40 @@
+%
+% Copyright 2014, NICTA
+%
+% This software may be distributed and modified according to the terms of
+% the GNU General Public License version 2. Note that NO WARRANTY is provided.
+% See "LICENSE_GPLv2.txt" for details.
+%
+% @TAG(NICTA_GPL)
+%
+
+\chapter{Introduction}
+% FIXME: This needs a cleanup and extension to further describe CAmkES. Lift
+% from CAmkES paper/intro?
+CAmkES is a component platform for embedded microkernel-based systems, offering
+many of the standard features available in component platforms.
+% TODO: Maybe reference that component book here.
+Some relevant features of CAmkES that are not common to all component platforms
+are:
+\begin{itemize}
+  \item \emph{Explicit composite components.} CAmkES components can be
+    assembled to form a re-usable composite, that can then be referenced within
+    a containing system.
+% FIXME: This is listed in future work, but also discussed in relation to export
+% connectors. Needs to be made consistent.
+  \item \emph{Multiple instantiation of a single component.} Multiple copies of
+    a component can exist within a system, distinguished by different
+    identifiers.
+  \item \emph{Multiple implementations of an interface.} A single component can
+    implement an interface more than once. This can be useful for providing a
+    dedicated interface for each client or functionally different
+    implementations.
+  \item \emph{Distinction between active and passive components.} Components
+    can have a thread of control or be invoked via an event loop. CAmkES
+    distinguishes these modes of operation at an architectural level.
+  \item \emph{``Provides'' interfaces can be left unsatisfied at runtime.} When
+    a component implements a given interface, it does not have to be connected
+    to a component that uses that interface. The converse is not true.
+  \item \emph{Hardware devices are components.} Hardware devices can be
+    specified in ADL that generates interface methods for accessing the device.
+\end{itemize}

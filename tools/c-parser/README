@@ -1,0 +1,50 @@
+#
+# Copyright 2014, NICTA
+#
+# This software may be distributed and modified according to the terms of
+# the BSD 2-Clause license. Note that NO WARRANTY is provided.
+# See "LICENSE_BSD2.txt" for details.
+#
+# @TAG(NICTA_BSD)
+#
+
+This is the NICTA StrictC translation tool.
+
+To install, see the file INSTALL in the src/c-parser directory.
+
+To use:
+
+1. Use the heap CParser that is created by installation
+2. Import the theory CTranslation
+3. Load ('install') C files into your theories with the Isar command
+   install_C_file.
+
+See many examples in the testfiles directory.  For example,
+breakcontinue.thy is a fairly involved demonstration of doing things
+the hard way.
+
+----------------------------------------------------------------------
+The translation tool builds on various open source projects by others.
+
+1. Norbert Schirmer's Simpl language and associated VCG tool.
+
+   Sources for this are found in the hoare_package directory.  The
+   code is covered by an LGPL licence.
+
+   See http://afp.sourceforge.net/entries/Simpl.shtml
+
+2. Code from SML/NJ:
+   - an implementation of binary sets (Binaryset.ML)
+   - the mllex and mlyacc tools (tools/{mllex,mlyacc})
+
+   This code is covered by SML/NJ's BSD-ish licence.
+
+   See http://www.smlnj.org
+
+3. Code from the mlton compiler:
+   - regions during lexing and parsing (Region.ML, SourceFile.ML and
+     SourcePos.ML)
+
+   This code is governed by a BSD licence.
+
+   See http://mlton.org

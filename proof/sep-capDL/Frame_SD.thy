@@ -1,0 +1,523 @@
+(*
+ * Copyright 2014, NICTA
+ *
+ * This software may be distributed and modified according to the terms of
+ * the GNU General Public License version 2. Note that NO WARRANTY is provided.
+ * See "LICENSE_GPLv2.txt" for details.
+ *
+ * @TAG(NICTA_GPL)
+ *)
+
+(*
+ * Proofs of the frame rules for leaf functions of the kernel.
+ *
+ * The frame rule for a function is the rule that shows the
+ * function affects only local state.
+ *
+ *)
+
+theory Frame_SD
+imports Separation_SD
+begin
+
+(***********************************
+ * Frame rules for leaf functions. *
+ ***********************************)
+
+lemma dom_obj_to_sep_state:
+  "dom (obj_to_sep_state ptr cmp obj) = {ptr} \<times> cmp"
+  apply (clarsimp simp:obj_to_sep_state_def split:if_splits)
+  apply (auto simp:object_project_def split:if_splits cdl_component.splits)
+  done
+
+lemma obj_to_sep_state_restrict:
+  "obj_to_sep_state obj_id M obj |` ({obj_id} \<times> m) = obj_to_sep_state obj_id (M \<inter> m) obj"
+  by (rule ext,
+    clarsimp simp:obj_to_sep_state_def restrict_map_def
+    split:if_splits)
+
+lemma obj_to_sep_state_add:
+  "\<lbrakk>{obj_id} \<times> m \<inter> dom M = {};b\<in> m\<rbrakk> \<Longrightarrow>
+   (obj_to_sep_state obj_id m obj ++ M) (obj_id, b)
+   = Some (object_project b obj)"
+  apply (subgoal_tac "(obj_id, b)\<in> {obj_id} \<times> m")
+  apply (drule(1) inter_empty_not_both)
+   apply (clarsimp simp:obj_to_sep_state_def map_add_def
+     dom_def)
+  apply fastforce
+  done
+
+lemma singleton_intersect:
+  "({x} \<times> UNIV \<inter> A = {}) = (\<forall>y. (x,y) \<notin> A)"
+  by blast
+
+
+lemma set_object_wp:
+  "\<lbrace>< (obj_id \<mapsto>o -) \<and>* R>\<rbrace>
+   set_object obj_id obj
+   \<lbrace>\<lambda>rv. <obj_id \<mapsto>o obj \<and>* R>\<rbrace>"
+  apply (clarsimp simp: set_object_def state_sep_projection_def)
+  apply (clarsimp simp: sep_conj_def)
+  apply (simp add:sep_map_o_def sep_map_general_def)
+  apply (rule_tac x = "SepState (obj_to_sep_state obj_id UNIV obj) empty" in exI)
+  apply (rule_tac x=y in exI)
+  apply (clarsimp simp: plus_sep_state_def sep_disj_sep_state_def
+    sep_state_disj_def sep_any_def map_disj_def
+    sep_map_o_def sep_map_general_def)
+  apply (frule disjoint_subset[OF
+    dom_map_restrict,rotated,where a1 = "{obj_id} \<times> UNIV"])
+  apply (clarsimp simp:dom_obj_to_sep_state obj_to_sep_state_restrict)
+  apply (clarsimp simp:sep_state_add_def)
+  apply (rule ext, rename_tac sep_id)
+  apply (case_tac sep_id, rename_tac ptr component, clarsimp)
+  apply (clarsimp simp:obj_to_sep_state_add)
+  apply (clarsimp simp:obj_to_sep_state_def)
+  apply (drule_tac x = "(ptr,component)" in fun_cong)+
+  apply (simp add:map_add_def)
+  apply (clarsimp split:option.splits)
+  done
+
+lemma intent_reset_object_clean_fields_some [simp]:
+  "intent_reset (object_clean_fields obj {Slot slot}) =
+   object_clean_fields obj {Slot slot}"
+  by (clarsimp simp: intent_reset_def object_clean_fields_def
+              split: cdl_object.splits)
+
+lemma intent_reset_object_clean_fields_empty [simp]:
+  "intent_reset (object_clean_fields obj {}) =
+   object_clean_fields obj {}"
+  by (clarsimp simp: intent_reset_def object_clean_fields_def
+              split: cdl_object.splits)
+
+lemma intent_reset_object_clean_some [simp]:
+  "intent_reset (object_clean obj {Slot slot}) =
+   object_clean obj {Slot slot}"
+  apply (clarsimp simp: object_clean_def)
+  apply (case_tac obj,simp_all add:intent_reset_def)
+  apply (simp add:object_clean_fields_def)
+  done
+
+lemma map_add_self:
+  "m ++ m = m"
+  by (auto simp add:map_add_def split:option.splits)
+
+definition "object_fields \<equiv> \<lambda>obj. object_clean_slots obj {Fields}"
+
+lemma object_eqI:
+  "\<lbrakk>object_fields obj = object_fields obj'; object_slots obj = object_slots obj'\<rbrakk>
+  \<Longrightarrow> obj = obj'"
+  by (simp add: object_slots_def object_fields_def
+                object_clean_slots_def update_slots_def
+                cdl_tcb.splits cdl_cnode.splits
+         split: cdl_object.splits)
+
+lemma object_filds_update_slots[simp]:
+  "object_fields (update_slots slots obj) = object_fields obj"
+  apply (simp add:update_slots_def split:cdl_object.splits)
+  apply (simp add:object_fields_def object_clean_slots_def update_slots_def)
+  done
+
+lemma object_fields_clean_slots[simp]:
+  "object_fields (object_clean_slots obj cmps) = object_fields obj"
+  by (case_tac obj,simp_all add:object_clean_slots_def object_fields_def object_slots_def
+    clean_slots_def update_slots_def)
+
+lemma object_slots_update_slots[simp]:
+  "\<lbrakk>has_slots obj'; object_type obj = object_type obj'\<rbrakk>
+  \<Longrightarrow> object_slots (update_slots slots obj) slot = slots slot"
+  by (clarsimp simp:has_slots_def object_type_def split:cdl_object.splits)
+
+
+lemmas object_clean_fields_simps = object_clean_fields_def[split_simps cdl_object.split]
+lemmas object_clean_slots_simps = object_clean_slots_def[split_simps cdl_object.split]
+
+lemma disjoint_union_diff:
+  "a \<inter> b = {} \<Longrightarrow> a \<union> b - a = b"
+  by auto
+
+lemma intent_reset_update_slots_single:
+  "intent_reset (update_slots (object_slots obj(slot \<mapsto> cap)) obj)
+  = update_slots (object_slots (intent_reset obj)(slot \<mapsto> cap)) (intent_reset obj)"
+  apply (clarsimp simp:intent_reset_def update_slots_def split:cdl_object.splits)
+  apply (case_tac cdl_tcb_ext)
+  apply (auto simp:object_slots_def)
+  done
+
+lemma object_lift_update_slots_single:
+  "object_lift (update_slots (object_slots obj(slot \<mapsto> cap)) obj)
+  = update_slots (object_slots (object_lift obj)(slot \<mapsto> reset_cap_asid cap)) (object_lift obj)"
+  by (auto simp: object_lift_def intent_reset_def asid_reset_def
+                 update_slots_def object_slots_def fun_eq_iff
+          split: cdl_object.splits)
+
+lemma ptr_in_obj_to_sep_dom:
+  "(ptr,Slot y) \<in> dom (obj_to_sep_state ptr {Slot y} obj)"
+  by (simp add:dom_obj_to_sep_state)
+
+lemma sep_any_exist:
+  "( sep_any m p \<and>* R ) s = (\<exists>x. ( m p x \<and>* R ) s)"
+  by (auto simp:state_sep_projection_def
+    sep_any_def sep_conj_def)
+
+lemma sep_map_c_conj:
+  "(ptr \<mapsto>c cap \<and>* R) s =
+  (let slot = (fst ptr,Slot (snd ptr))
+  in (sep_heap s) slot  = Some (CDL_Cap (Some (reset_cap_asid cap))) \<and>
+     R (SepState ((sep_heap s)(slot:= None)) (sep_irq_node s)))"
+  apply (clarsimp simp:sep_conj_def Let_def plus_sep_state_def sep_state_add_def)
+  apply (rule iffI)
+   apply (clarsimp simp:sep_map_c_def sep_disj_sep_state_def
+     sep_map_general_def sep_state_disj_def map_disj_def)
+   apply (subst obj_to_sep_state_add)
+    apply (simp add:dom_obj_to_sep_state singleton_iff)+
+   apply (simp add:object_project_def object_slots_object_lift)
+   apply (erule arg_cong[where f = R,THEN iffD1,rotated])
+   apply (case_tac y)
+    apply simp
+    apply (rule ext)
+    apply (clarsimp simp: dom_def map_add_def obj_to_sep_state_def
+                   split: split_if_asm option.splits)
+  apply (clarsimp simp:sep_map_c_def)
+  apply (rule_tac x = "SepState [(fst ptr,Slot (snd ptr))\<mapsto> (CDL_Cap (Some (reset_cap_asid cap)))]
+                                empty" in exI)
+  apply (rule_tac x = "(SepState ((sep_heap s)((fst ptr,Slot (snd ptr)):= None)))
+                                 (sep_irq_node s) " in exI)
+  apply (clarsimp simp: sep_map_c_def sep_disj_sep_state_def
+                        sep_map_general_def sep_state_disj_def map_disj_def)
+  apply (intro conjI)
+   apply (case_tac s,simp)
+   apply (rule ext)
+   apply (clarsimp simp:map_add_def split:option.splits)
+  apply (clarsimp simp:obj_to_sep_state_def split:if_splits)
+  apply (rule_tac x = "CNode \<lparr>cdl_cnode_caps = [b\<mapsto> cap],
+    cdl_cnode_size_bits = of_nat b\<rparr>" in exI)
+  apply (clarsimp simp:object_slots_def)
+  apply (rule ext)
+  apply (clarsimp simp:object_project_def object_slots_def
+    object_lift_def asid_reset_def update_slots_def
+    intent_reset_def split:if_splits option.splits)
+  done
+
+lemma sep_map_f_conj:
+  "(ptr \<mapsto>f obj \<and>* R) s =
+  (let slot = (ptr,Fields)
+  in (sep_heap s) slot  = Some (CDL_Object (object_clean_slots (object_lift obj) {})) \<and>
+     R (SepState ((sep_heap s)(slot:= None)) (sep_irq_node s)))"
+  apply (clarsimp simp:sep_conj_def Let_def plus_sep_state_def sep_state_add_def)
+  apply (rule iffI)
+   apply (clarsimp simp:sep_map_f_def sep_disj_sep_state_def
+     sep_map_general_def sep_state_disj_def map_disj_def)
+   apply (subst obj_to_sep_state_add)
+    apply (simp add:dom_obj_to_sep_state singleton_iff)+
+   apply (simp add:object_project_def)
+   apply (erule arg_cong[where f = R,THEN iffD1,rotated])
+   apply (case_tac y)
+   apply simp
+   apply (rule ext)
+   apply (clarsimp simp:dom_def map_add_def
+     obj_to_sep_state_def split:if_splits option.splits)
+  apply (clarsimp simp:sep_map_c_def)
+  apply (rule_tac x = "SepState [(ptr,Fields)\<mapsto> (CDL_Object (object_clean_slots (object_lift obj) {}))]
+                                empty" in exI)
+  apply (rule_tac x = "SepState ((sep_heap s)((ptr,Fields):= None))
+                                (sep_irq_node s)" in exI)
+  apply (clarsimp simp:sep_map_f_def sep_disj_sep_state_def
+     sep_map_general_def sep_state_disj_def map_disj_def)
+  apply (intro conjI)
+   apply (case_tac s,simp)
+   apply (rule ext)
+   apply (clarsimp simp:map_add_def split:option.splits)
+  apply (clarsimp simp:obj_to_sep_state_def split:if_splits)
+  apply (rule ext)
+  apply (clarsimp simp:object_project_def split:if_splits)
+  done
+
+lemma object_project_slot:
+  "object_project (Slot slot) obj =
+   CDL_Cap (object_slots (object_lift obj) slot)"
+  by (clarsimp simp:object_project_def)
+
+lemma intent_reset_has_slots:
+  "intent_reset obj = intent_reset obj' \<Longrightarrow> has_slots obj = has_slots obj'"
+  by (clarsimp simp:intent_reset_def  has_slots_def
+    split:cdl_object.splits)
+
+lemma asid_reset_has_slots:
+  "asid_reset obj = asid_reset obj' \<Longrightarrow>
+    has_slots obj = has_slots obj'"
+  by (clarsimp simp:asid_reset_def
+    has_slots_def update_slots_def
+    split:cdl_object.splits)
+
+lemma object_lift_has_slots:
+  "object_lift obj = object_lift obj' \<Longrightarrow> has_slots obj = has_slots obj'"
+  by (clarsimp simp:object_lift_def2
+    dest!: asid_reset_has_slots intent_reset_has_slots)
+
+lemma set_object_slot_wp_helper:
+ "\<lbrace>\<lambda>s. <(obj_id, slot) \<mapsto>c - \<and>* R> s \<and> cdl_objects s obj_id = Some obj
+  \<and> object_lift obj = object_lift obj'\<rbrace>
+  set_object obj_id (update_slots (object_slots obj' (slot \<mapsto> cap)) obj')
+  \<lbrace>\<lambda>rv. <(obj_id, slot) \<mapsto>c cap \<and>* R>\<rbrace>"
+  apply (clarsimp simp: set_object_def sep_any_def)
+  apply (clarsimp simp: sep_map_c_conj sep_conj_exists Let_def)
+  apply (clarsimp simp: lift_def state_sep_projection_def
+    sep_conj_def object_project_slot object_slots_object_lift)
+  apply (case_tac "has_slots obj")
+   apply (frule object_lift_has_slots)
+   apply (simp add: object_slots_update_slots[where obj' = obj'])
+   apply (erule arg_cong[where f = R,THEN iffD1,rotated])
+   apply clarsimp
+   apply (rule ext)
+   apply (clarsimp split:if_splits option.splits)
+   apply (clarsimp simp:object_project_def
+     object_clean_slots_def clean_slots_def
+     object_slots_object_lift object_lift_update_slots_single
+     split:cdl_component.splits if_splits)
+  apply (frule object_lift_has_slots)
+  apply (clarsimp simp:has_slots_def
+    object_lift_update_slots_single split:option.splits)
+  done
+
+lemma set_object_slot_wp:
+ "\<lbrace>\<lambda>s. <(obj_id, slot) \<mapsto>c - \<and>* R> s \<and>
+       cdl_objects s obj_id = Some obj \<and>
+       (\<exists>obj'. object_lift obj = object_lift obj' \<and>
+       nobj = (update_slots (object_slots obj' (slot \<mapsto> cap)) obj'))\<rbrace>
+  set_object obj_id nobj
+  \<lbrace>\<lambda>rv. <(obj_id, slot) \<mapsto>c cap \<and>* R>\<rbrace>"
+  apply (rule hoare_name_pre_state)
+  apply clarsimp
+  apply (rule hoare_weaken_pre)
+   apply (rule set_object_slot_wp_helper)
+  apply auto
+  done
+
+lemma object_fields_object_lift:
+  "object_fields (object_lift obj) = object_lift (object_fields obj)"
+  apply (case_tac obj, simp_all add: object_fields_def object_lift_def
+                       intent_reset_def asid_reset_def object_clean_slots_def
+                       update_slots_def object_slots_def)
+  done
+
+lemma object_fields_intent_reset:
+  "object_fields (intent_reset obj) = intent_reset (object_fields obj)"
+  by (case_tac obj,simp_all add:object_fields_def object_clean_slots_def update_slots_def
+    intent_reset_def)
+
+abbreviation
+  "tcb_at' P ptr s \<equiv> object_at (\<lambda>obj. \<exists>tcb. obj = Tcb tcb \<and> P tcb) ptr s"
+
+lemma sep_map_f_tcb_at:
+  "\<lbrakk><ptr \<mapsto>f tcb \<and>* R> s ; is_tcb tcb\<rbrakk>
+  \<Longrightarrow> tcb_at'
+  (\<lambda>t. object_lift (object_fields (Tcb t)) = object_lift (object_fields tcb))
+  ptr s"
+  apply (simp add:state_sep_projection_def)
+  apply (clarsimp simp:sep_map_f_conj
+    object_project_def is_tcb_def
+    split:option.splits cdl_object.splits)
+  apply (case_tac z,
+    simp_all add:object_clean_slots_def
+    object_lift_def asid_reset_def object_fields_def
+      update_slots_def intent_reset_def)
+  apply (simp add:object_at_def opt_object_def object_slots_def
+    object_fields_def object_clean_slots_def update_slots_def)
+  apply (case_tac cdl_tcb_ext)
+  apply clarsimp
+  apply (case_tac cdl_tcb_exta)
+  apply clarsimp
+  done
+
+lemma set_object_cdl_field_wp:
+  assumes slot: "object_slots obj_n = object_slots obj"
+  and type: "object_type obj_n = object_type obj"
+            "object_type obj_np = object_type obj"
+            "object_type obj_p = object_type obj"
+  and fields: "object_fields (object_lift obj_np) = object_fields (object_lift obj_n)"
+  shows
+  "\<lbrace>\<lambda>s. <obj_id \<mapsto>f obj_p \<and>* R> s \<and> object_at (op = obj) obj_id s\<rbrace>
+  set_object obj_id obj_n
+  \<lbrace>\<lambda>rv. <obj_id \<mapsto>f obj_np \<and>* R>\<rbrace>"
+  apply (clarsimp simp: set_object_def)
+  apply (clarsimp simp: state_sep_projection_def
+    sep_map_f_conj)
+  apply (rule conjI)
+   apply (simp add:object_project_def)
+   apply (rule object_eqI)
+    apply (cut_tac fields)
+    apply (simp add:object_fields_object_lift)
+   apply (rule ext)
+   apply (simp add:object_type_simps type)
+   apply (cut_tac slot)
+   apply (clarsimp split:if_splits simp:clean_slots_def )
+  apply (erule arg_cong[where f = R, THEN iffD1,rotated])
+  apply (clarsimp simp:opt_object_def object_at_def)
+  apply (rule ext)
+  apply (clarsimp split:if_splits option.splits)
+  apply (cut_tac slot)
+  apply (rule ccontr)
+  apply (clarsimp simp:object_project_def
+    object_slots_object_lift
+    split:cdl_component.splits)
+  done
+
+lemma set_cap_wp:
+  "\<lbrace>\<lambda>s. <ptr \<mapsto>c - \<and>* R> s\<rbrace>
+    set_cap ptr cap
+   \<lbrace>\<lambda>rv s. <ptr \<mapsto>c cap \<and>* R> s\<rbrace>"
+  apply (clarsimp simp: set_cap_def)
+  apply (case_tac ptr, rename_tac obj_id slot, clarsimp)
+  apply (wp|wpc)+
+     apply (rule_tac obj = obj in set_object_slot_wp)
+    apply (wp select_wp |wpc)+
+  apply (clarsimp simp: opt_object_def)
+  apply (clarsimp simp: update_slots_def has_slots_def
+                 split: cdl_object.splits)
+      apply (rename_tac tcb)
+      apply (rule conjI, clarsimp)
+       apply (rename_tac intent)
+       apply (rule_tac x = "Tcb (tcb\<lparr>cdl_tcb_intent := intent\<rparr>)" in exI)
+       apply (clarsimp simp: object_lift_def intent_reset_def asid_reset_def
+                             update_slots_def object_slots_def)
+      apply clarsimp
+      apply (rule_tac x = "Tcb tcb" in exI)
+      apply (clarsimp simp: fun_eq_iff)
+     apply (fastforce simp: cdl_cnode.splits fun_eq_iff)+
+  done
+
+(* General version of setting fields in a TCB.
+ * Probably not practical to ever use.
+ *)
+lemma set_cdl_tcb_field_wp:
+  assumes fields_cong:
+  "\<And>tcb tcb'. object_lift (object_fields (Tcb tcb)) = object_lift (object_fields (Tcb tcb'))
+  \<Longrightarrow> object_lift (object_fields (Tcb (f tcb))) = object_lift (object_fields (Tcb (f tcb')))"
+  assumes slots_simp:
+  "\<And>tcb. object_slots (Tcb (f tcb)) = object_slots (Tcb tcb)"
+  shows
+  "\<lbrace>\<lambda>s. <obj_id \<mapsto>f Tcb tcb \<and>* R> s\<rbrace>
+    update_thread obj_id f
+   \<lbrace>\<lambda>rv s. <obj_id \<mapsto>f Tcb (f tcb) \<and>* R> s\<rbrace>"
+  apply (rule hoare_name_pre_state)
+  apply (clarsimp simp: update_thread_def get_thread_def)
+  apply (frule sep_map_f_tcb_at)
+   apply simp
+  apply (clarsimp simp:object_at_def)
+  apply (wp|wpc|simp)+
+        apply (rule_tac P =
+          "object_lift (object_fields (Tcb cdl_tcb_ext)) = object_lift (object_fields (Tcb tcb))"
+          in hoare_gen_asm)
+         apply (rule_tac obj_p = "Tcb tcb" in set_object_cdl_field_wp[OF slots_simp  ])
+            apply (simp add:object_type_simps object_fields_object_lift)+
+       apply (drule_tac tcb = cdl_tcb_ext in fields_cong)
+       apply simp
+     apply wp
+  apply (clarsimp simp:opt_object_def object_at_def)
+  done
+
+(* Specialised (and useful) versions of the above rule. *)
+lemma set_cdl_tcb_intent_wp:
+  "\<lbrace>\<lambda>s. <obj_id \<mapsto>f Tcb tcb \<and>* R> s\<rbrace>
+    update_thread obj_id (\<lambda>tcb. tcb\<lparr>cdl_tcb_intent := x\<rparr>)
+   \<lbrace>\<lambda>rv s. <obj_id \<mapsto>f Tcb (tcb\<lparr>cdl_tcb_intent := x\<rparr>) \<and>* R> s\<rbrace>"
+  apply (rule hoare_weaken_pre)
+   apply (wp set_cdl_tcb_field_wp)
+    apply (clarsimp simp:object_fields_def object_lift_def
+      update_slots_def asid_reset_def object_slots_def
+      intent_reset_def object_clean_slots_def)
+   apply (clarsimp simp:object_slots_def)
+  apply simp
+  done
+
+lemma set_cdl_tcb_fault_endpoint_wp:
+  "\<lbrace>\<lambda>s. <obj_id \<mapsto>f Tcb tcb \<and>* R> s\<rbrace>
+    update_thread obj_id (\<lambda>tcb. tcb\<lparr>cdl_tcb_fault_endpoint := x\<rparr>)
+   \<lbrace>\<lambda>rv s. <obj_id \<mapsto>f Tcb (tcb\<lparr>cdl_tcb_fault_endpoint := x\<rparr>) \<and>* R> s\<rbrace>"
+  apply (rule hoare_weaken_pre)
+   apply (wp set_cdl_tcb_field_wp)
+    apply (clarsimp simp:object_fields_def asid_reset_def
+      update_slots_def object_lift_def object_slots_def
+      intent_reset_def object_clean_slots_def)
+    apply (case_tac tcb,case_tac tcb',simp)
+   apply (clarsimp simp:object_slots_def)
+  apply simp
+  done
+
+lemma sep_map_o_conj:
+  "(ptr \<mapsto>o obj \<and>* R) s = (( (sep_heap s) |` ({ptr} \<times> UNIV)
+  = obj_to_sep_state ptr UNIV obj )
+  \<and> R (SepState (sep_heap s |` (UNIV - {ptr}\<times>UNIV))
+                (sep_irq_node s)))"
+  apply (clarsimp simp:sep_conj_def Let_def plus_sep_state_def sep_state_add_def
+    sep_map_general_def sep_map_o_def)
+  apply (rule iffI)
+   apply (clarsimp simp:sep_map_c_def sep_disj_sep_state_def
+     sep_map_general_def sep_state_disj_def map_disj_def)
+   apply (subst dom_obj_to_sep_state[where obj = obj,symmetric])
+   apply (subst map_add_restrict_dom_left)
+    apply (simp add:map_disj_def)
+   apply simp
+   apply (erule arg_cong[where f = R,THEN iffD1,rotated])
+   apply (case_tac y,clarsimp)
+   apply (rule ext)
+   apply (clarsimp simp: map_add_restrict
+     split:option.splits)
+   apply (simp add:dom_obj_to_sep_state[where obj = obj,symmetric])
+   apply (subst restrict_map_univ_disj_eq)
+    apply (fastforce simp:map_disj_def)
+   apply simp
+  apply (rule_tac x = "SepState (obj_to_sep_state ptr UNIV obj) empty" in exI)
+  apply (rule_tac x = "SepState (sep_heap s |` (UNIV - {ptr}\<times>UNIV))
+                                (sep_irq_node s) " in exI)
+  apply (clarsimp simp:sep_map_c_def sep_disj_sep_state_def
+     sep_map_general_def sep_state_disj_def map_disj_def)
+  apply (clarsimp simp:dom_obj_to_sep_state)
+  apply (rule conjI)
+   apply blast
+  apply (case_tac s,simp)
+  apply (rule ext)
+  apply (case_tac "x \<in> {ptr}\<times>UNIV")
+   apply (drule_tac x = x in fun_cong)
+   apply (clarsimp simp:map_add_def restrict_map_def)
+  apply (clarsimp simp:map_add_def split:option.splits)
+  apply (clarsimp simp:obj_to_sep_state_def split:if_splits)
+  done
+
+lemma detype_one_wp:
+  "\<lbrace><obj_id \<mapsto>o obj \<and>* R>\<rbrace>
+    modify (detype {obj_id})
+   \<lbrace>\<lambda>_. <obj_id \<mapsto>o Untyped \<and>* R>\<rbrace>"
+  apply (clarsimp simp: modify_def detype_def)
+  apply wp
+  apply (clarsimp simp: state_sep_projection_def sep_map_o_conj)
+  apply (rule conjI)
+   apply (rule ext)
+    apply (clarsimp simp:object_project_def
+      restrict_map_def obj_to_sep_state_def)
+  apply (erule arg_cong[where f = R,THEN iffD1,rotated])
+  apply clarsimp
+  apply (rule ext)
+  apply (clarsimp simp:restrict_map_def split:if_splits)
+  done
+
+(* What is the go with create_objects? Is is passed a list of singletons? *)
+lemma create_one_wp:
+  "\<lbrace><obj_id \<mapsto>o - \<and>* R>\<rbrace>
+    Untyped_D.create_objects [{obj_id}] (Some obj)
+   \<lbrace>\<lambda>_. <obj_id \<mapsto>o obj \<and>* R>\<rbrace>"
+  apply (clarsimp simp: modify_def sep_any_exist create_objects_def)
+  apply wp
+  apply (clarsimp simp: state_sep_projection_def sep_map_o_conj)
+  apply (intro conjI ext)
+   apply (drule_tac x = xa in fun_cong)
+   apply (clarsimp simp: object_at_def Let_unfold heap_lift_def
+                  split: option.splits)
+    apply (clarsimp simp:object_project_def
+      restrict_map_def obj_to_sep_state_def)
+  apply (erule arg_cong[where f = R,THEN iffD1,rotated])
+  apply clarsimp
+  apply (rule ext)
+  apply (clarsimp simp:restrict_map_def split:if_splits)
+  done
+end

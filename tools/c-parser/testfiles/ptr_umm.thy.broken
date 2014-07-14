@@ -1,0 +1,53 @@
+(*
+ * Copyright 2014, NICTA
+ *
+ * This software may be distributed and modified according to the terms of
+ * the BSD 2-Clause license. Note that NO WARRANTY is provided.
+ * See "LICENSE_BSD2.txt" for details.
+ *
+ * @TAG(NICTA_BSD)
+ *)
+
+theory ptr_umm imports "../CTranslation" begin
+
+declare sep_conj_ac [simp add]
+install_C_file "ptr_umm.c"
+
+thm swap_body_def
+
+lemma
+  "\<forall>\<sigma>. \<Gamma>\<turnstile>
+    \<lbrace>\<sigma>. \<turnstile>\<^sub>t \<acute>j \<and> \<turnstile>\<^sub>t \<acute>i \<rbrace>
+      swap_body
+    \<lbrace> \<star>\<acute>i = \<^bsup>\<sigma>\<^esup>\<star>\<^bsup>\<sigma>\<^esup>j \<and> \<star>\<acute>j = \<^bsup>\<sigma>\<^esup>\<star>\<^bsup>\<sigma>\<^esup>i \<rbrace>"
+apply(unfold swap_body_def)
+by vcgp
+
+
+lemma
+  "\<forall>x y. \<Gamma>\<turnstile>
+    \<lbrace>(\<acute>i \<mapsto> x \<and>\<^sup>* \<acute>j \<mapsto> y)\<^bsup>sep\<^esup>\<rbrace>
+      swap_body
+    \<lbrace>(\<acute>i \<mapsto> y \<and>\<^sup>* \<acute>j \<mapsto> x)\<^bsup>sep\<^esup> \<rbrace>"
+apply(unfold swap_body_def)
+apply vcg
+apply clarsimp
+apply(rule sep_heap_update_global, assumption)
+ apply(rule_tac d=t_d in sep_map'_lift)
+ apply(erule sep_map'_conjE2)
+ apply(simp add: sep_map_sep_map')
+apply(subst sep_conj_com)
+apply(rule sep_heap_update_global, assumption)
+ apply(rule_tac d=t_d in sep_map'_lift)
+ apply(erule sep_map'_conjE1)
+ apply(simp add: sep_map_sep_map')
+apply simp
+apply(erule sep_conj_impl)
+apply simp+
+done
+
+end
+
+
+
+

@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+<!--
+     Copyright 2014, NICTA
+
+     This software may be distributed and modified according to the terms of
+     the BSD 2-Clause license. Note that NO WARRANTY is provided.
+     See "LICENSE_BSD2.txt" for details.
+
+     @TAG(NICTA_BSD)
+  -->
+
+<!--
+
+     Regression Specification File
+
+     See "misc/regression/tests.xml" for a description of the file
+     format.
+
+-->
+<testsuite timeout="3600" depends="isabelle">
+
+    <!-- C Parser -->
+    <set cwd="c-parser">
+        <sequence>
+            <test name="CParser">isabelle env make -f IsaMakefile CParser</test>
+            <test name="CParserTest">isabelle env make -f IsaMakefile cparser_test</test>
+        </sequence>
+        <test name="CParserTools">isabelle env make -f IsaMakefile cparser_tools</test>
+    </set>
+
+    <!-- AutoCorres -->
+    <set depends="CParser" cwd="autocorres">
+        <test name="AutoCorres">make AutoCorres</test>
+
+        <set depends="AutoCorres">
+            <test name="AutoCorresDoc">make AutoCorresDoc</test>
+            <test name="AutoCorresTest">make AutoCorresTest</test>
+            <test name="AutoCorresSEL4" depends="CBaseRefine" timeout="14400">
+                make AutoCorresSEL4
+            </test>
+        </set>
+    </set>
+
+</testsuite>

@@ -1,0 +1,31 @@
+#
+# Copyright 2014, NICTA
+#
+# This software may be distributed and modified according to the terms of
+# the GNU General Public License version 2. Note that NO WARRANTY is provided.
+# See "LICENSE_GPLv2.txt" for details.
+#
+# @TAG(NICTA_GPL)
+#
+
+CAmkES is a component platform for seL4. This directory contains files related
+to a formal Isabelle model of CAmkES.
+
+ adl-spec/ - Architectural model.
+ code/ - AutoCorres-based work (bottom-up approach to glue code).
+ glue-spec/ - Behavioural model (top-down approach to glue code).
+ misc/ - What it says on the box.
+
+FIXME:
+ - I removed CAmkES exceptions from the model. Not sure if they really make
+   sense, but if they do they'll need to be re-introduced.
+ - The explicit concept of a connector is absent from the types. It may
+   help to add this later.
+ - Unidirectional shared memory communication and more than two parties should
+   be supported.
+ - Components should be allowed to have a configuration as well.
+ - Attributes need some work. They basically have no type information at the
+   implementation level which is a bit of a minefield.
+ - There needs to be a nice way of hiding arch-specific connectors. Perhaps
+   this should be generalised into a way of fail-stopping assemblies that
+   involve platform connectors that are unavailable.

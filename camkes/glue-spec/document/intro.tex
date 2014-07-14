@@ -1,0 +1,76 @@
+%
+% Copyright 2014, NICTA
+%
+% This software may be distributed and modified according to the terms of
+% the GNU General Public License version 2. Note that NO WARRANTY is provided.
+% See "LICENSE_GPLv2.txt" for details.
+%
+% @TAG(NICTA_GPL)
+%
+
+\chapter{Introduction}
+\label{s:intro}
+
+This document shows the formal Isabelle/HOL~\cite{Nipkow_PW:Isabelle}
+specification of the behaviour of \camkes
+component systems defined by ADL descriptions \cite{Kuz_LGH_07}.
+This formal specification is intended to apply to the glue code; the generated
+communication stubs that are provided to the user by the \camkes platform.
+It extends and supplements the previous
+report which described the static semantics of component and system
+specifications \cite{Kuz_FKM_12}.
+Together these two reports form the formal specification of the \camkes ADL.
+Although this is its most interesting part, the specification presented here
+goes beyond providing just the glue code semantics. Instead we provide an
+abstract high-level specification of the behaviour of an entire \camkes
+component system.
+
+The specification is high-level, because it abstracts from the underlying
+kernel mechanisms and message formats. Instead, it is based on a general
+concurrent message passing framework that can transmit messages of arbitrary
+high-level types. Instantiating this framework we restrict it to the kinds of
+message types of the ADL description and map \camkes mechanisms to the
+message passing primitives. Showing that the kernel and glue code indeed
+implement this high-level semantic view is the main proof obligation of the
+future glue code correctness proof.
+
+The idea of the specification is to provide a high-level view of the behaviour
+of a component system using semantic mechanisms that nevertheless map
+reasonably easily to the glue code implementation and the underlying kernel
+mechanisms that provide architecture and communication boundary enforcement.
+The basic communication principle of the underlying semantic framework is
+synchronous message passing. This is presented in a way that makes it convenient to
+additionally model atomic asynchronous events and shared memory reads/writes by
+adding intermediate simulated components. These intermediate model processes map to
+kernel event buffers and the usual behaviour of shared memory
+pages. At the expense of making the shared memory component more complex, it
+would be feasible to explicitly include the effects of
+weak memory models. We do not do this here, because the intended application
+scenario is a unicore setting.
+
+Similar to how the instantiation of a component system is generated from its
+ADL description in conjunction with provided user code, we generate
+the formal specification of a complete \camkes component system from the same
+ADL description together with a set of generic base definitions in this
+document and a set of user-provided behaviour definitions for trusted
+components. Trusted components are those that are claimed to be more
+constrained in their behaviour than the architecture boundaries enforce.
+
+The remainder of this report is structured as follows. We first introduce the
+semantic concurrency framework the glue code definitions are based on, in
+\autoref{s:cimp}. We then
+proceed to define the basic data types that instantiate this semantic
+framework to \camkes systems, in \autoref{h:types}. After this, in
+\autoref{h:abbreviations} we can define
+the building blocks
+that the generated glue code specifications will further instantiate and use.
+\autoref{h:connector} defines the intermediate event and memory components
+mentioned above and \autoref{h:userstubs} provides default instantiations of
+types and definitions that the user may choose to override.
+
+\autoref{h:procbase}, \autoref{s:eventbase} and \autoref{h:dataportbase}
+show example specifications produced from a number of small \camkes ADL
+descriptions, illustrating the output of the generation phase. These examples
+show the actual glue code specifications that fit the corresponding generated
+C code. A more detailed system is presented in \autoref{h:filter} to
+illustrate how to define and use trusted components.

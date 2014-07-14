@@ -1,0 +1,248 @@
+%
+% Copyright 2014, NICTA
+%
+% This software may be distributed and modified according to the terms of
+% the GNU General Public License version 2. Note that NO WARRANTY is provided.
+% See "LICENSE_GPLv2.txt" for details.
+%
+% @TAG(NICTA_GPL)
+%
+
+\documentclass[11pt,a4paper]{scrreprt}
+
+\newif \ifDraft         \Draftfalse
+
+\usepackage{isabelle,isabellesym}
+
+% further packages required for unusual symbols (see also
+% isabellesym.sty), use only when needed
+
+%\usepackage{amssymb}
+  %for \<leadsto>, \<box>, \<diamond>, \<sqsupset>, \<mho>, \<Join>,
+  %\<lhd>, \<lesssim>, \<greatersim>, \<lessapprox>, \<greaterapprox>,
+  %\<triangleq>, \<yen>, \<lozenge>
+
+\usepackage[english]{babel}
+  %option greek for \<euro>
+  %option english (default language) for \<guillemotleft>, \<guillemotright>
+
+%\usepackage[only,bigsqcap]{stmaryrd}
+  %for \<Sqinter>
+
+%\usepackage{eufrak}
+  %for \<AA> ... \<ZZ>, \<aa> ... \<zz> (also included in amssymb)
+
+%\usepackage{textcomp}
+  %for \<onequarter>, \<onehalf>, \<threequarters>, \<degree>, \<cent>,
+  %\<currency>
+
+
+% Extra CAmkES bits.
+\usepackage{graphicx}
+\usepackage{enumerate}
+
+% From ERTOS setup
+\setkeys{Gin}{keepaspectratio=true,clip=true,draft=false,width=\linewidth}
+\usepackage{times,cite,url,fancyhdr,microtype,color,geometry}
+
+\renewcommand{\ttdefault}{cmtt}	% CM rather than courier for \tt
+
+\usepackage{xspace}
+\usepackage{listings}
+\newcommand{\camkeslisting}[1]{{\lstset{basicstyle=\small\ttfamily,keywordstyle=\bf,morekeywords={assembly,component,composition,connection,control,consumes,dataport,emits,event,from,in,inout,int,out,procedure,provides,smallstring,to,uses}}\lstinputlisting{#1}}}
+
+
+\ifDraft
+\usepackage{draftcopy}
+\newcommand{\Comment}[1]{\textbf{\textsl{#1}}}
+\newcommand{\FIXME}[1]{\textbf{\textsl{FIXME: #1}}}
+\newcommand{\todo}[1]{\textbf{TODO: \textsl{#1}}}
+\date{\small\today}
+\else
+\newcommand{\Comment}[1]{\relax}
+\newcommand{\FIXME}[1]{\relax}
+\newcommand{\todo}[1]{\relax}
+\date{}
+\fi
+
+
+% From camkes manual
+\newcommand{\selfour}{seL4\xspace}
+\newcommand{\Selfour}{SeL4\xspace}
+\newcommand{\camkes}{CAmkES\xspace}
+
+\newcommand{\code}[1]{\texttt{#1}}
+
+
+\newcommand{\titl}{CAmkES Glue Code Semantics}
+\newcommand{\authors}{Matthew Fernandez, Peter Gammie, June Andronick, Gerwin Klein, Ihor Kuz}
+
+\definecolor{lcol}{rgb}{0,0,0.5}
+\usepackage[bookmarks,hyperindex,pdftex,
+            colorlinks=true,linkcolor=lcol,citecolor=lcol,
+            filecolor=lcol,urlcolor=lcol,
+            pdfauthor={\authors},
+            pdftitle={\titl},
+            plainpages=false]{hyperref}
+
+
+\addto\extrasenglish{%
+\renewcommand{\chapterautorefname}{Chapter}
+\renewcommand{\sectionautorefname}{Section}
+\renewcommand{\subsectionautorefname}{Section}
+\renewcommand{\subsubsectionautorefname}{Section}
+\renewcommand{\appendixautorefname}{Appendix}
+\renewcommand{\Hfootnoteautorefname}{Footnote}
+}
+
+% urls in roman style
+\urlstyle{rm}
+
+\lstset{basicstyle=\small\tt}
+
+% isabelle style
+\isabellestyle{tt}
+
+% for uniform isabelle font size
+\renewcommand{\isastyle}{\isastyleminor}
+
+% Abstract various things that might change.
+\newcommand{\ccode}[1]{\texttt{#1}}
+\newcommand{\isabelletype}[1]{\emph{#1}}
+\newcommand{\isabelleterm}[1]{\emph{#1}}
+
+\renewcommand{\isamarkupheader}[1]{\chapter{#1}}
+\renewcommand{\isamarkupchapter}[1]{\chapter{#1}}
+\renewcommand{\isamarkupsection}[1]{\section{#1}}
+\renewcommand{\isamarkupsubsection}[1]{\section{#1}}
+\renewcommand{\isamarkupsubsubsection}[1]{\subsection{#1}}
+
+\newcommand{\nictafundingacknowledgement}{%
+% Lifted from http://wiki.inside.nicta.com.au/display/CHNOPSR/Funding+Acknowledgement 28-10-2013
+NICTA is funded by the Australian Government through the Department of Communications and the Australian Research Council through the ICT Centre of Excellence Program. NICTA is also funded and supported by the Australian Capital Territory, the New South Wales, Queensland and Victorian Governments, the Australian National University, the University of New South Wales, the University of Melbourne, the University of Queensland, the University of Sydney, Griffith University, Queensland University of Technology, Monash University and other university partners.}
+
+\newcommand{\govrights}{%
+The Government may use, modify, reproduce, release, perform, display or
+disclose these data within the Government without restriction, and may release
+or disclose outside the Government and authorize persons to whom such release
+or disclosure has been made to use, modify, reproduce, release, perform,
+display or disclose that data for United States Government purposes, including
+competitive procurement.}
+
+\newcommand{\ABN}{ABN 62 102 206 173}
+\newcommand{\agreement}{Agreement No.: FA8750-12-9-0179}
+\newcommand{\addr}{Level 5, 13 Garden Street, Eveleigh, New South Wales,
+Australia}
+
+\newcommand{\cpright}{Copyright \copyright\ 2013 NICTA, \ABN.  All rights reserved except those specified herein.}
+\newcommand{\disclaimer}{%
+\cpright\\
+Government Purpose Rights\\
+\agreement;
+Recipient's Name: NICTA;
+Recipient's Address: \addr.\\
+\govrights}
+
+\newcommand{\trdisclaimer}{%
+This material is based on research sponsored by Air Force Research Laboratory
+and the Defense Advanced Research Projects Agency (DARPA) under agreement number
+FA8750-12-9-0179. The U.S. Government is authorized to reproduce and distribute
+reprints for Governmental purposes notwithstanding any copyright notation
+thereon.
+
+The views and conclusions contained herein are those of the authors and should
+not be interpreted as necessarily representing the official policies or
+endorsements, either expressed or implied, of Air Force Research Laboratory,
+the Defense Advanced Research Projects Agency or the U.S.Government.}
+
+\newcommand{\smalldisclaimer}{}
+\newcommand{\bigdisclaimer}{%
+\nictafundingacknowledgement\\
+
+\cpright\\
+
+\vspace{2ex}
+\noindent\trdisclaimer}
+
+\newcommand{\pgstyle}{%
+\fancyhf{}%
+\renewcommand{\headrulewidth}{0pt}%
+\fancyfoot[C]{}%
+\fancyfoot[L]{\smalldisclaimer}%
+\fancyfoot[R]{\sl\thepage}}
+
+\fancypagestyle{plain}{\pgstyle}
+
+
+\begin{document}
+
+\parindent 0pt\parskip 0.5ex plus 0.2ex minus 0.1ex
+
+%--------- title page
+\newgeometry{left=25mm,right=25mm,top=35mm,bottom=35mm}
+
+\begin{center}
+ \includegraphics[width=0.2\textwidth]{imgs/NICTA_logo}
+\end{center}
+	
+\vspace{14ex}
+\textsf{\huge \titl}
+
+%\vspace{2ex}
+%\textsf{\huge \subtitl}
+
+\vspace{4ex}
+\rule{0.85\textwidth}{5pt}
+\vspace{4ex}
+  
+{\large \authors 
+
+\vspace{2ex}
+April 2013}
+
+\vfill
+{\small
+\bigdisclaimer
+}
+
+\thispagestyle{empty}
+\newpage
+~
+\restoregeometry
+
+\fancypagestyle{empty}{\pgstyle}
+\pagestyle{empty}
+
+%--------- end title page
+
+\cleardoublepage
+
+\chapter*{Abstract}
+
+This document describes the formal dynamic semantics of \camkes glue code, in
+particular of the communication stubs generated for components at compile
+time. The semantics is based on a simple concurrent imperative language with
+message passing that is easy to extend and instantiate for specific
+applications. Instead of one generic semantics for all systems, we take the
+approach of generating a high-level semantic description for each specific
+ADL component specification to ease verification of specific systems in
+the future.
+
+We show the definitions and types for expressing components and glue code, and
+provide some examples of generated Isabelle theories with synchronous,
+asynchronous, and shared memory communication.
+
+
+\cleardoublepage
+\tableofcontents
+
+\input{intro}
+
+% generated text of all theories
+\input{session}
+
+% optional bibliography
+\bibliographystyle{plain}
+\bibliography{root}
+
+\end{document}

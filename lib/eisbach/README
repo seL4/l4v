@@ -1,0 +1,204 @@
+#
+# Copyright 2014, NICTA
+#
+# This software may be distributed and modified according to the terms of
+# the BSD 2-Clause license. Note that NO WARRANTY is provided.
+# See "LICENSE_BSD2.txt" for details.
+#
+# @TAG(NICTA_BSD)
+#
+
+Author: Daniel Matichuk
+
+Method_Definition.thy
+- method_definition: defines a new method, syntax is using Isar-style combinators with an additional "match" construct
+- ML_method_definition: using the same signature as method_definition allows for ML methods to be easily written
+
+Implementation Details:
+
+- rich-method: The main data structure representing a parsed rich method. 
+The rich method collection attempts to be properly localized but I haven't
+put much effort into maintaining this so it is likely broken.
+
+Parsing and closing:
+	Step 1: Shallow Parse
+	Methods are first parsed into a shallow rich_method using "parse_rich_method"
+	Combinators are pulled from a global data structure and left uninterpreted.
+	
+	Step 2: Collect values
+	Method is "run" with fake semantics. i.e. each method is executed
+	against a dummy thm. This causes its parser to execute, which populates
+	the token list with values (Terms, Facts and Types).
+	
+	Each "match" branch is executed in a context where Vars in its pattern
+	are bound.
+
+	Step 3: Implicit focus
+
+	The resulting token list is inspected for any uses of "prems" or "concl",
+	and surrounds them in a Focus. This is used during actual execution
+	which does subgoal focusing and binds prems/concl appropriately.
+
+	Step 4: Export
+
+	All terms are now exported to the outer context, turning the free
+	fixed terms into vars which are instantiated during execution.
+
+Notes:
+	map_methods is the workhorse for collecting and exporting. Its main
+	feature is executing a map over a rich method, while
+	providing the map function with a context where
+	the variables from matches are all bound appropriately.
+
+Execution:
+	
+	Execution works via in-place term and fact replacement. Passed or matched
+	parameters are replaced in the token list before it is re-interpreted.
+
+	Term replacement is done via "burrowing" which flattens all terms/facts
+	of a rich_method into a list, maps the list, and then unflattens back into the rich_method.
+	
+	Fact replacement is done using a tagged dummy_thm which all parameterized facts
+	are parsed in as (known as free_thm). During fact instantiation all tokens with
+	free_thms inside are examined to determine if they should be replaced.
+	Currently there are unresolved scoping issues with this method (the obvious
+	fix is to go back to how it used to work, using fixed terms as fact identifiers).
+
+	The fact space and term space are kept entirely separate while burrowing.
+	This is sound because attributes 
+	are currently left uninterpreted in the token list. That is to say if we
+	write conjI[where P="x"] in a rich method (where x is a parameter)
+	, we re-interpret the attribute
+	with the original fact, and thus do not need to replace "P" with "x" in conjI
+	during parameter passing.
+
+Notes:
+	seq_methods is the workhorse for execution, but is abstracted over
+	several interpretation functions. This is because in the end it ends up
+	being mutually recursive with these fuctions and is thus easier to 
+	state abstractly.
+
+	Someone with more familiarity with Isabelle's type system should
+	probably look at how term instantiation is done currently (instantiate_values)
+	as it seems a bit ham-fisted to me.
+
+Design Notes:
+
+	The over-reliance on the token-value mechanism is apparent. The 
+	rich_methods data structure has multiple interpretations that
+	should likely be put into separate datatypes. Currently the
+	method arguments, rich method arguments and match patterns
+	are all stored as token lists and are re-parsed several times.
+	Wherever possible this should be done with more explicit data
+	structures (lists of terms, etc).
+
+	
+
+
+Isabelle Mods:
+	Since attributes can error when executed in this dummy context
+	(for example, when applied to a free_thm or using a method parameter
+	 as an argument) they need special treatment. 
+
+	Mod 1: A universal attribute morphism was added to the proof context.
+	This allows an attribute -> attribute function to be applied before all
+	attribute executions in a given context. This morphism catches
+	all attribute errors and produces a free_thm in place of the actual
+	attribute output.
+	
+	Mod 2: The "where" attribute was partially re-written to defer
+	"instantiating" its parameter tokens until after it has done all
+	type checking/inference. Previously parameters were passed in
+	as strings. This is a very messy solution and requires more careful
+	thought about how this attribute should work.
+
+		Note 1: If implemented in the obvious way, i.e. parsing
+		terms in as the most general polymorphic type, there
+		are compatibility issues with constant overloading.
+
+		Note 2: As a result of the current implementation,
+		there is an edge case where "where" is applied
+		against a multi_thm and has its argument
+		parsed as multiple types. Currently this is
+		resolved by re-parsing the term (ignoring the internal
+		value) if there is a type mismatch. Obviously
+		there are significant problems with this approach.
+
+	Mod 3: The "apply" and "by" commands are replaced by Method_Definition.thy.
+	This grants them any additional combinators that are defined as well as access
+	to rich methods. Currently rich method execution throws away rule cases, so
+	the "proof" command is left unchanged (and thus has no access to rich methods).
+
+	
+Subgoal.thy:
+
+A significantly rewritten version of of subgoal.ML, which is used for subgoal
+focusing. Traditionally focusing lifts all local premeses into local facts
+and fixes meta-quantified variables. FOCUS_KEEP does the same, however premeses
+are still left in the goal (and are not folded back on re-apply). This means
+that drule/erule can still be applied and successfully remove assumptions while focused,
+while still providing local facts.
+
+Normally subgoal focusing fixes/freezes all schematics. Now
+schematics are left as schematics in the user-facing part of the goal. However, 
+due to limitations with the assumption mechanism in the proof kernel, any premeses with schematics are turned into
+fixed variables when lifted into local facts. Schematics then have 2 representations: 
+the user-facing schematic and the fixed term in the local facts. 
+Meta-equalities pairing user-facing schematics
+with their fixed versions are hidden in the protected portion of the goal and resolved when unfocusing.
+
+There are logical issues with doing this: "!!x. Q x ==> ?P" is not solvable,
+however focusing fixes x and thus "Q x ==> ?P" is solved with the trivial instantiation.
+
+To get around this, there is a new "check_focus" function which checks for inconsistent
+instantiations and is run after every method invocation while focused.
+The performance impact of constantly checking focus has not been evaluated, however
+it is easy to imagine cases where this causes divergence.
+
+Update: 2014-03-20
+
+Dealing with a long-standing issue of flex-flex pairs being spuriously produced and
+not being handled properly during unfocusing. Restrictions in the proof kernel
+disallow direct manipulation of flex-flex pairs, and resolution fails in the presence
+of any unresolvable pairs. This complicates the fine-grained manipulations required for
+unfocusing, because resolution cannot be applied while any schematics are fixed which are
+discussed in flex-flex pairs.
+
+Step 1: Remove spurious flex-flex pairs. A flex-flex pair is spurious in this context
+if it mentions a param which was originally meta-quantified. To remove these we
+produce and solve meta-equalities which are abstracted over these params.
+
+Step 2: Clear assumptions: This step is simplified when we are not required to push
+the assumptions back into the subgoals, as it can be done through simple goal rotations.
+Additionally the fixed versions of schematics are replaced in the assumptions (which 
+appear as the result of explicitly referencing the focused premeses).
+
+Step 3: Lifting: Schematics in the goal are given two fixed representations:
+u and u'. We instantiate the goal with u and then rewrite u into u', adding
+u == u' as an assumption. flex-flex pairs now mention u.
+
+Step 4: Subgoal lifting: Lift subgoals as explicit assumptions and appropriately quantify
+over params.
+
+Step 5: Unlifting: Push subgoals back onto goal, push u == u' onto goal.
+Generalise over u, which is only mentioned in the flex-flex pair. This is now
+a resolvable pair and can be pushed through resolution.
+
+Step 6: Bicompose/cleanup: Compose this rule with original goal. Result
+should instantiate goal schematics with u'. Abstract over u' and resolve
+the now ?u == ?u' pairs in the goal through reflexivity.
+
+
+
+
+Focus.thy:
+
+Exposes subgoal focusing as an explicit Isar command. This is necessary to pass
+meta quantified variables as parameters to rich methods.
+
+Currently there is a stateful hack which avoids the destructive smashing
+of flex-flex pairs between before_qed and after_qed. Eventually this will
+need to be removed.
+
+Alternatively focusing could be done implicitly to attempt to capture these variables.
+

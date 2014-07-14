@@ -1,0 +1,22 @@
+Processing schorr_waite.txt
+
+C Parser CPU Time : 2904 ms
+C Parser Real Time : 2858 ms
+AutoCorres CPU Time : 8744 ms
+AutoCorres Real Time : 8769 ms
+
+19 input line(s) of code
+1 function(s)
+
+Phase             LoS  Term Size
+CParser           120        766
+L1                161        789
+L1except          143        734
+L1peep            147        736
+L2                158       1415
+L2simp            100        965
+HL                152       1189
+HLsimp             74        742
+TS                 78        322
+polish             57        311
+

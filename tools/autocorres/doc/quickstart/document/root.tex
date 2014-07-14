@@ -1,0 +1,57 @@
+%
+% Copyright 2014, NICTA
+%
+% This software may be distributed and modified according to the terms of
+% the BSD 2-Clause license. Note that NO WARRANTY is provided.
+% See "LICENSE_BSD2.txt" for details.
+%
+% @TAG(NICTA_BSD)
+%
+
+\documentclass[11pt,a4paper]{article}
+
+\usepackage{isabelle,isabellesym}
+\usepackage{color}
+
+\usepackage{listings}
+\definecolor{grey}{rgb}{0.9,0.9,0.9}
+\lstset{%
+    language=C,
+    basicstyle=\small\sffamily,
+    columns=fullflexible,
+    showstringspaces=false,
+    xleftmargin=24pt,
+    xrightmargin=24pt
+    }
+
+% this should be the last package used
+\usepackage{pdfsetup}
+
+% urls in roman style, theory text in math-similar italics
+\urlstyle{rm}
+\isabellestyle{it}
+
+% for uniform font size
+%\renewcommand{\isastyle}{\isastyleminor}
+
+\begin{document}
+
+\title{Getting Started with AutoCorres}
+\author{Japheth Lim \and David Greenaway}
+\maketitle
+
+\tableofcontents
+\clearpage
+
+% sane default for proof documents
+\parindent 0pt\parskip 0.5ex
+
+% generated text of all theories
+\input{session}
+
+% optional bibliography
+%\bibliographystyle{abbrv}
+%\bibliography{root}
+
+\end{document}
+

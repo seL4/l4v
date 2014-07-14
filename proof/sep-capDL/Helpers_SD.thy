@@ -1,0 +1,932 @@
+(*
+ * Copyright 2014, NICTA
+ *
+ * This software may be distributed and modified according to the terms of
+ * the GNU General Public License version 2. Note that NO WARRANTY is provided.
+ * See "LICENSE_GPLv2.txt" for details.
+ *
+ * @TAG(NICTA_GPL)
+ *)
+
+theory Helpers_SD
+imports
+  "Lookups_D"
+  "../../lib/SimpStrategy"
+  "../../lib/LemmaBucket"
+  "../../lib/sep_algebra/Map_Extra"
+begin
+
+(* Functions we need from capDL, but can't have yet (until we change capDL).
+ * Maybe they aren't actually needed for the proof.
+ * (If capDL doesn't have them, then we might not need them to prove conformance.)
+ *)
+
+consts tcb_priority :: "cdl_tcb \<Rightarrow> word8"
+consts tcb_ip :: "cdl_tcb \<Rightarrow> word32"
+consts tcb_sp :: "cdl_tcb \<Rightarrow> word32"
+consts opt_vmattribs :: "cdl_object \<Rightarrow> cdl_raw_vmattrs option"
+
+(* We don't need to know anything about this except that it isn't 0. *)
+definition tcb_ipc_buffer_address :: "cdl_tcb \<Rightarrow> word32"
+where "tcb_ipc_buffer_address tcb = 1"
+
+lemma tcb_ipc_buffer_address_non_zero:
+  "tcb_ipc_buffer_address tcb \<noteq> 0"
+  by (clarsimp simp: tcb_ipc_buffer_address_def)
+
+(* Helper funtions. These possibly should be moved somewhere else. *)
+
+
+(***************************************************
+ * Generic Isabelle lemmas. Could be moved to lib. *
+ ***************************************************)
+lemma map_upd_nonempty' [simp]: "empty \<noteq> t(k\<mapsto>x)"
+  by (rule not_sym, simp)
+
+lemma insert_unit_set [simp]:
+  "insert () A = UNIV"
+  by auto
+
+lemma restrict_map_not_empty [simp]:
+  "f p = Some v \<Longrightarrow> f |` {p} \<noteq> empty"
+  "f p = Some v \<Longrightarrow> empty \<noteq> f |` {p}"
+  by (clarsimp simp: restrict_map_def fun_eq_iff split: split_if_asm)+
+
+(* This lets us compose a total and a partial function in the obvious manner. *)
+definition
+  map_comp' :: "('b \<Rightarrow> 'c) \<Rightarrow> ('a \<rightharpoonup> 'b) \<Rightarrow> 'a \<rightharpoonup> 'c"  (infixl "o'_M" 55) where
+  "f o_M g = (\<lambda>k. case g k of None \<Rightarrow> None | Some v \<Rightarrow> Some (f v))"
+
+notation (xsymbols)
+  map_comp'  (infixl "\<circ>\<^sub>M" 55)
+
+lemma map_comp'_apply [simp]: "(f \<circ>\<^sub>M g) x = option_case None (\<lambda>x. Some (f x)) (g x)"
+  by (clarsimp simp: map_comp'_def)
+
+lemma map_comp'_empty [simp]:
+  "m \<circ>\<^sub>M empty = empty"
+  by auto
+
+lemma dom_map_comp' [simp]:
+  "dom (f \<circ>\<^sub>M m) = dom m"
+  by (clarsimp simp: dom_def split: option.splits)
+
+
+(**************************
+ * Rules about intervals. *
+ **************************)
+
+lemma nat_list_not_UNIV [simp]:
+  "set (xs::nat list) \<noteq> UNIV"
+  by (metis finite'_code(1) finite'_def infinite_UNIV_nat)
+
+(***********************************
+ * End of generic Isabelle lemmas. *
+ ***********************************)
+
+
+(**********************************************************
+ * CapDL specific lemmas, that could be moved into capDL. *
+ * These have nothing to do with the separation logic.    *
+ **********************************************************)
+
+definition
+  all_caps :: "cdl_state \<Rightarrow> cdl_cap set"
+where
+"all_caps spec = {cap. \<exists>obj_id slot. opt_cap (obj_id,slot) spec = Some cap \<and> cap \<noteq> NullCap}"
+
+lemma all_capsE [elim!]:
+  "\<lbrakk>opt_cap (obj_id, slot) spec = Some cap; cap \<noteq> NullCap\<rbrakk> \<Longrightarrow> cap \<in> all_caps spec"
+  "\<lbrakk>opt_cap cap_ref spec = Some cap; cap \<noteq> NullCap\<rbrakk> \<Longrightarrow> cap \<in> all_caps spec"
+  apply (clarsimp simp: all_caps_def|fast)+
+  by (metis surj_pair)
+
+definition
+  irq_cnodes :: "cdl_state \<Rightarrow> cdl_object_id set"
+where
+  "irq_cnodes \<equiv> \<lambda>s. range (cdl_irq_node s)"
+
+definition
+  bound_irqs :: "cdl_state \<Rightarrow> cdl_irq set"
+where
+  "bound_irqs \<equiv> \<lambda>s. {irq. \<exists>cap. slots_of (cdl_irq_node s irq) s 0 = Some cap \<and> cap \<noteq> NullCap}"
+
+definition
+  bound_irq_list :: "cdl_state \<Rightarrow> cdl_irq list"
+where
+  "bound_irq_list \<equiv> \<lambda>s. sorted_list_of_set (bound_irqs s)"
+
+definition
+  used_irqs :: "cdl_state \<Rightarrow> cdl_irq set"
+where
+  "used_irqs \<equiv> \<lambda>s. {irq. \<exists>cap. cap \<in> all_caps s \<and> is_irqhandler_cap cap \<and> cap_irq cap = irq}"
+
+definition
+  used_irq_list :: "cdl_state \<Rightarrow> cdl_irq list"
+where
+  "used_irq_list \<equiv> \<lambda>s. sorted_list_of_set (used_irqs s)"
+
+definition
+  used_irq_cnodes :: "cdl_state \<Rightarrow> cdl_object_id set"
+where
+  "used_irq_cnodes \<equiv> \<lambda>s. cdl_irq_node s ` used_irqs s"
+
+lemma length_sorted_list_of_set [simp]:
+  "finite A \<Longrightarrow> length (sorted_list_of_set A) = card A"
+  by (metis sorted_list_of_set distinct_card)
+
+lemma length_used_irq_list [simp]:
+  "length (used_irq_list spec) = card (used_irqs spec)"
+  by (clarsimp simp: used_irq_list_def)
+
+lemma distinct_used_irq_list [simp]:
+  "distinct (used_irq_list spec)"
+  by (simp add: used_irq_list_def)
+
+lemma set_used_irq_list [simp]:
+  "set (used_irq_list spec) = used_irqs spec"
+  by (simp add: used_irq_list_def)
+
+
+lemma default_tcb_slots:
+ "[0..<tcb_pending_op_slot] = [0,1,2,3,4]"
+  by (clarsimp simp: tcb_pending_op_slot_def upt_rec)
+
+definition "update_tcb_fault_endpoint fault_ep = cdl_tcb_fault_endpoint_update (\<lambda>_. fault_ep)"
+
+lemma update_tcb_fault_endpoint_id [simp]:
+  "cdl_tcb_fault_endpoint tcb = fault_ep
+  \<Longrightarrow> update_tcb_fault_endpoint fault_ep tcb = tcb"
+  by (clarsimp simp: update_tcb_fault_endpoint_def)
+
+definition tcb_has_fault :: "cdl_object \<Rightarrow> bool"
+where
+  "tcb_has_fault obj \<equiv> case obj of Tcb tcb \<Rightarrow> cdl_tcb_has_fault tcb | _ \<Rightarrow> False"
+
+definition tcb_domain :: "cdl_object \<Rightarrow> word8"
+where
+  "tcb_domain obj \<equiv> case obj of Tcb tcb \<Rightarrow> cdl_tcb_domain tcb | _ \<Rightarrow> 0"
+
+definition update_cap_object :: "cdl_object_id \<Rightarrow> cdl_cap \<Rightarrow> cdl_cap"
+where
+  "update_cap_object obj_id cap \<equiv> case cap of
+    IOPageTableCap _ \<Rightarrow> IOPageTableCap obj_id
+  | IOSpaceCap _ \<Rightarrow> IOSpaceCap obj_id
+  | IOPortsCap _ f2 \<Rightarrow> IOPortsCap obj_id f2
+  | AsidPoolCap _ f2 \<Rightarrow> AsidPoolCap obj_id f2
+  | PageDirectoryCap _ f2 f3 \<Rightarrow> PageDirectoryCap obj_id f2 f3
+  | PageTableCap _ f2 f3 \<Rightarrow> PageTableCap obj_id f2 f3
+  | FrameCap _ f2 f3 f4 f5 \<Rightarrow> FrameCap obj_id f2 f3 f4 f5
+  | TcbCap _ \<Rightarrow> TcbCap obj_id
+  | CNodeCap _ f2 f3 f4 \<Rightarrow> CNodeCap obj_id f2 f3 f4
+  | MasterReplyCap _ \<Rightarrow> MasterReplyCap obj_id
+  | ReplyCap _ \<Rightarrow> ReplyCap obj_id
+  | AsyncEndpointCap _ f2 f3 \<Rightarrow> AsyncEndpointCap obj_id f2 f3
+  | EndpointCap _ f2 f3 \<Rightarrow> EndpointCap obj_id f2 f3
+  | ZombieCap _ \<Rightarrow> ZombieCap obj_id
+  | PendingSyncSendCap _ f2 f3 f4 f5 \<Rightarrow> PendingSyncSendCap obj_id f2 f3 f4 f5
+  | PendingSyncRecvCap _ f2 \<Rightarrow> PendingSyncRecvCap obj_id f2
+  | PendingAsyncRecvCap _ \<Rightarrow> PendingAsyncRecvCap obj_id
+  | _ \<Rightarrow> cap"
+
+definition update_cap_objects :: "cdl_object_id set \<Rightarrow> cdl_cap \<Rightarrow> cdl_cap"
+where
+    "update_cap_objects obj_ids cap \<equiv> case cap of
+    UntypedCap _ a \<Rightarrow> UntypedCap obj_ids a
+  | _ \<Rightarrow> cap"
+
+lemma slots_of_cdl_objects:
+  "slots_of obj_id s slot = Some cap \<Longrightarrow> \<exists>obj. cdl_objects s obj_id = Some obj"
+  by (clarsimp simp: slots_of_def opt_object_def split: option.splits)
+
+lemma opt_cap_cdl_objects:
+  "opt_cap (obj_id, slot) s = Some cap \<Longrightarrow> \<exists>obj. cdl_objects s obj_id = Some obj"
+  by (clarsimp simp: opt_cap_def slots_of_cdl_objects)
+
+lemma object_slots_slots_of:
+  "\<lbrakk>slots_of obj_id spec slot = Some cap; cdl_objects spec obj_id = Some obj\<rbrakk>
+  \<Longrightarrow> object_slots obj slot = Some cap"
+  by (clarsimp simp: slots_of_def opt_object_def)
+
+lemma object_slots_opt_cap:
+  "\<lbrakk>opt_cap cap_ref spec = Some cap; cdl_objects spec obj_id = Some obj; cap_ref = (obj_id, slot)\<rbrakk>
+  \<Longrightarrow> object_slots obj slot = Some cap"
+  by (clarsimp simp: opt_cap_def object_slots_slots_of split: prod.split_asm)+
+
+lemma object_slots_opt_capI:
+  "\<lbrakk>opt_cap (obj_id, slot) spec = Some cap; cdl_objects spec obj_id = Some obj\<rbrakk>
+  \<Longrightarrow> object_slots obj slot = Some cap"
+  by (clarsimp simp: opt_cap_def object_slots_slots_of split: prod.split_asm)
+
+lemma object_slots_opt_capD:
+  "\<lbrakk>opt_cap cap_ref spec = Some cap; cdl_objects spec (fst cap_ref) = Some obj\<rbrakk>
+  \<Longrightarrow> object_slots obj (snd cap_ref) = Some cap"
+  by (clarsimp simp: opt_cap_def object_slots_slots_of split: prod.split_asm)
+
+lemma object_slots_has_slots:
+  "object_slots obj \<noteq> empty \<Longrightarrow> has_slots obj"
+  by (clarsimp simp: has_slots_def object_slots_def split: cdl_object.splits)
+
+lemma opt_object_dom_cdl_objects [elim!]:
+  "opt_object obj_id spec = Some obj \<Longrightarrow> obj_id \<in> dom (cdl_objects spec)"
+  "opt_object obj_id spec = Some obj \<Longrightarrow> \<exists>slot. cdl_objects spec obj_id = Some slot"
+  by (clarsimp simp: opt_object_def)+
+
+lemma slots_of_dom_cdl_objects [elim!]:
+  "slots_of obj_id spec slot = Some cap \<Longrightarrow> obj_id \<in> dom (cdl_objects spec)"
+  "slots_of obj_id spec slot = Some cap \<Longrightarrow> \<exists>slot. cdl_objects spec obj_id = Some slot"
+ by (clarsimp simp: slots_of_def split:option.splits)+
+
+lemma opt_cap_dom_cdl_objects [elim]:
+  "opt_cap (obj_id, slot) spec = Some cap \<Longrightarrow> obj_id \<in> dom (cdl_objects spec)"
+  "opt_cap cap_ref spec = Some cap \<Longrightarrow> fst cap_ref \<in> dom (cdl_objects spec)"
+  by (clarsimp simp: opt_cap_def split: prod.split_asm)+
+
+lemma opt_cap_dom_slots_of [elim]:
+  "opt_cap (obj_id, slot) spec = Some cap \<Longrightarrow> slot \<in> dom (slots_of obj_id spec)"
+  "opt_cap cap_ref spec = Some cap \<Longrightarrow> snd cap_ref \<in> dom (slots_of (fst cap_ref) spec)"
+  by (clarsimp simp: opt_cap_def split: prod.split_asm)+
+
+(*
+ * Untyped cap rules.
+ *)
+
+definition
+  well_formed_untyped_cap :: "cdl_cap \<Rightarrow> bool"
+where
+  "well_formed_untyped_cap cap \<equiv> case cap of
+    UntypedCap cover_ids available_ids \<Rightarrow> available_ids \<subseteq> cover_ids
+  | _ \<Rightarrow> True"
+
+lemma cap_free_ids_simps:
+  "cap_free_ids (UntypedCap cover_ids available_ids) = available_ids"
+  by (clarsimp simp: cap_free_ids_def)
+
+
+lemma cap_objects_remove_free_ids [simp]:
+  "cap_objects (remove_free_ids cap obj_ids) = cap_objects cap"
+  by (clarsimp simp: cap_objects_def remove_free_ids_def
+              split: cdl_cap.splits)
+
+lemma cap_free_ids_remove_free_ids:
+  "cap_free_ids (remove_free_ids cap obj_ids) = cap_free_ids cap - obj_ids"
+  by (clarsimp simp: remove_free_ids_def cap_free_ids_def
+              split: cdl_cap.splits)
+
+lemma cap_type_remove_free_ids [simp]:
+  "cap_type (remove_free_ids cap obj_ids) = cap_type cap"
+  by (clarsimp simp: cap_type_def remove_free_ids_def
+              split: cdl_cap.splits)
+
+lemma remove_free_ids_simps:
+  "\<lbrakk>is_untyped_cap cap; available_ids \<subseteq> cap_free_ids cap\<rbrakk>
+  \<Longrightarrow> remove_free_ids cap (cap_free_ids cap - available_ids)
+    = UntypedCap (cap_objects cap) available_ids"
+  by (auto simp: remove_free_ids_def cap_free_ids_def cap_type_def
+          split: cdl_cap.splits)
+
+definition
+  is_full_untyped_cap :: "cdl_cap \<Rightarrow> bool"
+where
+  "is_full_untyped_cap cap \<equiv> case cap of
+     UntypedCap cover_ids available_ids \<Rightarrow> cover_ids = available_ids
+   | _ \<Rightarrow> False"
+
+lemma is_full_untyped_cap_is_untyped_cap:
+  "is_full_untyped_cap cap \<Longrightarrow> is_untyped_cap cap"
+  by (clarsimp simp: is_full_untyped_cap_def split: cdl_cap.splits)
+
+lemma is_full_untyped_cap_simps:
+  "is_full_untyped_cap cap \<Longrightarrow> cap_objects cap = cap_free_ids cap"
+  by (auto simp: is_full_untyped_cap_def cap_free_ids_def
+          split: cdl_cap.splits)
+
+lemma is_full_untyped_cap_eq:
+  "is_untyped_cap cap
+  \<Longrightarrow> is_full_untyped_cap cap = (cap_objects cap = cap_free_ids cap)"
+  by (auto simp: is_full_untyped_cap_def cap_free_ids_def
+                 cap_objects_def cap_type_def
+          split: cdl_cap.splits)
+
+lemma well_formed_untyped_cap_remove_free_ids:
+  "well_formed_untyped_cap cap
+  \<Longrightarrow> well_formed_untyped_cap (remove_free_ids cap obj_ids)"
+  by (auto simp: well_formed_untyped_cap_def remove_free_ids_def
+          split: cdl_cap.splits)
+
+lemma well_formed_untyped_cap_simps:
+  "is_untyped_cap cap
+  \<Longrightarrow> well_formed_untyped_cap cap = (cap_free_ids cap \<subseteq> cap_objects cap)"
+  by (clarsimp simp: well_formed_untyped_cap_def cap_free_ids_def
+                     cap_objects_def cap_type_def
+              split: cdl_cap.splits)
+
+
+definition
+  some_nat :: "nat option \<Rightarrow> nat"
+where
+  "some_nat n \<equiv> case n of Some n \<Rightarrow> n | None \<Rightarrow> 0"
+
+lemma some_nat_Some [simp]:
+  "some_nat (Some n) = n"
+  by (simp add: some_nat_def)
+
+lemma some_nat_None [simp]:
+  "some_nat None = 0"
+  by (simp add: some_nat_def)
+
+definition
+  is_untyped :: "cdl_object \<Rightarrow> bool" where
+ "is_untyped v \<equiv> case v of Untyped \<Rightarrow> True | _ \<Rightarrow> False"
+
+definition
+  is_ep :: "cdl_object \<Rightarrow> bool" where
+ "is_ep v \<equiv> case v of Endpoint \<Rightarrow> True | _ \<Rightarrow> False"
+
+definition
+  is_aep :: "cdl_object \<Rightarrow> bool" where
+ "is_aep v \<equiv> case v of AsyncEndpoint \<Rightarrow> True | _ \<Rightarrow> False"
+
+definition
+  is_tcb :: "cdl_object \<Rightarrow> bool" where
+ "is_tcb v \<equiv> case v of Tcb _ \<Rightarrow> True | _ \<Rightarrow> False"
+
+definition
+  is_cnode :: "cdl_object \<Rightarrow> bool" where
+ "is_cnode v \<equiv> case v of CNode _ \<Rightarrow> True | _ \<Rightarrow> False"
+
+definition
+  is_asidpool :: "cdl_object \<Rightarrow> bool" where
+ "is_asidpool v \<equiv> case v of AsidPool _ \<Rightarrow> True | _ \<Rightarrow> False"
+
+definition
+  is_pt :: "cdl_object \<Rightarrow> bool" where
+ "is_pt v \<equiv> case v of PageTable _ \<Rightarrow> True | _ \<Rightarrow> False"
+
+definition
+  is_pd :: "cdl_object \<Rightarrow> bool" where
+ "is_pd v \<equiv> case v of PageDirectory _ \<Rightarrow> True | _ \<Rightarrow> False"
+
+definition
+  is_frame :: "cdl_object \<Rightarrow> bool" where
+ "is_frame v \<equiv> case v of Frame _ \<Rightarrow> True | _ \<Rightarrow> False"
+
+
+definition
+  object_domain :: "cdl_object \<Rightarrow> word8"
+where
+  "object_domain obj \<equiv> case obj of
+      Tcb tcb \<Rightarrow> cdl_tcb_domain tcb
+    | _ \<Rightarrow> 0"
+
+lemma is_object_simps [simp]:
+  "is_untyped Untyped"
+  "is_ep Endpoint"
+  "is_aep AsyncEndpoint"
+  "is_tcb (Tcb tcb)"
+  "is_cnode (CNode c)"
+  "is_asidpool (AsidPool a)"
+  "is_pd (PageDirectory pd)"
+  "is_pt (PageTable pt)"
+  "is_frame (Frame f)"
+  by (clarsimp simp: is_untyped_def is_ep_def is_aep_def is_tcb_def is_cnode_def
+                     is_asidpool_def is_pt_def is_pd_def is_frame_def)+
+
+
+(* These sizes are needed for ARM *)
+definition pt_size :: nat
+where
+  "pt_size = 8"
+
+definition pd_size :: nat
+where
+  "pd_size = 12"
+
+definition small_frame_size :: nat
+where
+  "small_frame_size = 12"
+
+definition
+  object_size_bits :: "cdl_object \<Rightarrow> cdl_size_bits"
+where
+  "object_size_bits obj \<equiv> case obj of
+      CNode cnode \<Rightarrow> cdl_cnode_size_bits cnode
+    | AsidPool ap \<Rightarrow> asid_low_bits
+    | Frame frame \<Rightarrow> cdl_frame_size_bits frame
+    | PageTable cdl_page_table \<Rightarrow> pt_size
+    | PageDirectory cdl_page_directory \<Rightarrow> pd_size
+    | _ \<Rightarrow> 0"
+
+lemma object_size_bits_default_tcb [simp]:
+  "object_size_bits (Tcb (default_tcb domain)) = 0"
+  by (clarsimp simp: object_size_bits_def default_tcb_def)
+
+lemma object_size_bits_empty_cnode [simp]:
+  "object_size_bits (CNode (empty_cnode sz)) = sz"
+  by (clarsimp simp: object_size_bits_def empty_cnode_def)
+
+definition
+  object_at_pointer_size_bits :: "cdl_state \<Rightarrow> cdl_object_id \<Rightarrow> cdl_size_bits"
+where
+  "object_at_pointer_size_bits spec obj_id \<equiv>
+   some_nat (option_map object_size_bits (cdl_objects spec obj_id))"
+
+lemma object_at_pointer_size_bits_simp [simp]:
+  "cdl_objects spec obj_id = Some object
+  \<Longrightarrow> object_at_pointer_size_bits spec obj_id = object_size_bits object"
+  by (simp add: object_at_pointer_size_bits_def)
+
+definition
+  object_at :: "(cdl_object \<Rightarrow> bool) \<Rightarrow> cdl_object_id \<Rightarrow> cdl_state \<Rightarrow> bool"
+where
+  "object_at P obj_id s \<equiv> \<exists>object. cdl_objects s obj_id = Some object \<and> P object"
+
+abbreviation
+  "untyped_at \<equiv> object_at is_untyped"
+abbreviation
+  "ep_at \<equiv> object_at is_ep"
+abbreviation
+  "aep_at \<equiv> object_at is_aep"
+abbreviation
+  "tcb_at \<equiv> object_at is_tcb"
+abbreviation
+  "cnode_at \<equiv> object_at is_cnode"
+abbreviation
+  "asidpool_at \<equiv> object_at is_asidpool"
+abbreviation
+  "pt_at \<equiv> object_at is_pt"
+abbreviation
+  "pd_at \<equiv> object_at is_pd"
+abbreviation
+  "frame_at \<equiv> object_at is_frame"
+
+
+(* Distinctions between "real objects" and IRQ objects. *)
+definition
+  "real_object_at \<equiv> \<lambda> obj_id s. obj_id \<in> dom (cdl_objects s) \<and> obj_id \<notin> irq_cnodes s"
+definition
+  "real_cnode_at  \<equiv> \<lambda>obj_id s. obj_id \<notin> irq_cnodes s \<and> cnode_at obj_id s"
+
+
+(* Agregate object types. *)
+abbreviation
+  "table_at \<equiv> \<lambda>obj_id s. pt_at obj_id s \<or> pd_at obj_id s"
+abbreviation
+  "capless_at \<equiv> \<lambda>obj_id s. untyped_at obj_id s \<or> ep_at obj_id s \<or> aep_at obj_id s \<or> frame_at obj_id s"
+abbreviation
+  "cnode_or_tcb_at \<equiv> \<lambda>obj_id spec. cnode_at obj_id spec \<or> tcb_at obj_id spec"
+abbreviation
+  "memory_object_at \<equiv> \<lambda>obj_id spec. pt_at obj_id spec \<or> pd_at obj_id spec \<or> frame_at obj_id spec"
+abbreviation
+  "real_cnode_or_tcb_at \<equiv> \<lambda>obj_id spec. real_cnode_at obj_id spec \<or> tcb_at obj_id spec"
+
+lemma capless_at_def2:
+  "capless_at p s = object_at (\<lambda>obj. \<not> (has_slots obj)) p s"
+  apply (clarsimp simp: has_slots_def object_at_def)
+  apply (fastforce simp: is_untyped_def is_ep_def is_aep_def is_frame_def
+                 split: cdl_object.splits)
+  done
+
+abbreviation
+  "ko_at k \<equiv> object_at (op = k)"
+
+lemma ko_at_tcb_at:
+  "ko_at (Tcb t) p s \<Longrightarrow> tcb_at p s"
+  by (simp add: object_at_def is_tcb_def)
+
+abbreviation
+  "type_at T \<equiv> object_at (\<lambda>ob. object_type ob = T)"
+
+lemma object_type_is_object:
+  "is_untyped obj  = (object_type obj = UntypedType)"
+  "is_ep obj       = (object_type obj = EndpointType)"
+  "is_aep obj      = (object_type obj = AsyncEndpointType)"
+  "is_tcb obj      = (object_type obj = TcbType)"
+  "is_cnode obj    = (object_type obj = CNodeType)"
+  "is_asidpool obj = (object_type obj = AsidPoolType)"
+  "is_pt obj       = (object_type obj = PageTableType)"
+  "is_pd obj       = (object_type obj = PageDirectoryType)"
+  "is_frame obj    = (\<exists>n. object_type obj = FrameType n)"
+  by (simp_all add: object_type_def is_untyped_def is_ep_def is_aep_def is_tcb_def
+                    is_cnode_def is_asidpool_def is_pt_def is_pd_def is_frame_def
+             split: cdl_object.splits)
+
+lemma object_at_object_type:
+  "\<lbrakk>cdl_objects spec obj_id = Some obj; untyped_at obj_id spec\<rbrakk> \<Longrightarrow> object_type obj = UntypedType"
+  "\<lbrakk>cdl_objects spec obj_id = Some obj; ep_at obj_id spec\<rbrakk> \<Longrightarrow> object_type obj = EndpointType"
+  "\<lbrakk>cdl_objects spec obj_id = Some obj; aep_at obj_id spec\<rbrakk> \<Longrightarrow> object_type obj = AsyncEndpointType"
+  "\<lbrakk>cdl_objects spec obj_id = Some obj; tcb_at obj_id spec\<rbrakk> \<Longrightarrow> object_type obj = TcbType"
+  "\<lbrakk>cdl_objects spec obj_id = Some obj; cnode_at obj_id spec\<rbrakk> \<Longrightarrow> object_type obj = CNodeType"
+  "\<lbrakk>cdl_objects spec obj_id = Some obj; asidpool_at obj_id spec\<rbrakk> \<Longrightarrow> object_type obj = AsidPoolType"
+  "\<lbrakk>cdl_objects spec obj_id = Some obj; pt_at obj_id spec\<rbrakk> \<Longrightarrow> object_type obj = PageTableType"
+  "\<lbrakk>cdl_objects spec obj_id = Some obj; pd_at obj_id spec\<rbrakk> \<Longrightarrow> object_type obj = PageDirectoryType"
+  by (simp_all add: object_at_def object_type_is_object)
+
+lemma object_type_object_at:
+  "\<lbrakk>cdl_objects spec obj_id = Some obj; object_type obj = UntypedType\<rbrakk> \<Longrightarrow> untyped_at obj_id spec"
+  "\<lbrakk>cdl_objects spec obj_id = Some obj; object_type obj = EndpointType\<rbrakk> \<Longrightarrow> ep_at obj_id spec"
+  "\<lbrakk>cdl_objects spec obj_id = Some obj; object_type obj = AsyncEndpointType\<rbrakk> \<Longrightarrow> aep_at obj_id spec"
+  "\<lbrakk>cdl_objects spec obj_id = Some obj; object_type obj = TcbType\<rbrakk> \<Longrightarrow> tcb_at obj_id spec"
+  "\<lbrakk>cdl_objects spec obj_id = Some obj; object_type obj = CNodeType\<rbrakk> \<Longrightarrow> cnode_at obj_id spec"
+  "\<lbrakk>cdl_objects spec obj_id = Some obj; object_type obj = AsidPoolType\<rbrakk> \<Longrightarrow> asidpool_at obj_id spec"
+  "\<lbrakk>cdl_objects spec obj_id = Some obj; object_type obj = PageTableType\<rbrakk> \<Longrightarrow> pt_at obj_id spec"
+  "\<lbrakk>cdl_objects spec obj_id = Some obj; object_type obj = PageDirectoryType\<rbrakk> \<Longrightarrow> pd_at obj_id spec"
+  by (simp_all add: object_at_def object_type_is_object)
+
+lemma set_object_type [simp]:
+  "{obj_id \<in> dom (cdl_objects spec). object_at P obj_id spec} = {obj_id. object_at P obj_id spec}"
+  "{obj_id \<in> dom (cdl_objects spec). table_at obj_id spec} = {obj_id. table_at obj_id spec}"
+  "{obj_id \<in> dom (cdl_objects spec). capless_at obj_id spec} = {obj_id. capless_at obj_id spec}"
+  "{obj_id \<in> dom (cdl_objects spec). cnode_or_tcb_at obj_id spec} = {obj_id. cnode_or_tcb_at obj_id spec}"
+  "{obj_id \<in> dom (cdl_objects spec). real_cnode_at obj_id spec} = {obj_id. real_cnode_at obj_id spec}"
+  "{obj_id \<in> dom (cdl_objects spec). real_object_at obj_id spec} = {obj_id. real_object_at obj_id spec}"
+  "{obj_id \<in> dom (cdl_objects spec). real_cnode_at obj_id spec} = {obj_id. real_cnode_at obj_id spec}"
+  "{obj_id \<in> dom (cdl_objects spec). real_cnode_or_tcb_at obj_id spec} = {obj_id. real_cnode_or_tcb_at obj_id spec}"
+  by (auto simp: object_at_def real_cnode_at_def real_object_at_def)
+
+
+definition
+  real_objects :: "cdl_state \<Rightarrow> cdl_object_id set"
+where
+  "real_objects \<equiv> \<lambda>s. {obj_id. real_object_at obj_id s}"
+
+lemma real_cnode_at_cnode_at [elim]:
+  "real_cnode_at obj_id s \<Longrightarrow> cnode_at obj_id s"
+  by (clarsimp simp: real_cnode_at_def)
+
+lemma real_cnode_at_real_object_at:
+  "real_cnode_at obj_id s \<Longrightarrow> real_object_at obj_id s"
+  by (clarsimp simp: real_cnode_at_def real_object_at_def object_at_def)
+
+
+lemma real_cnode_at_simps:
+  "(real_object_at obj_id spec \<and> cnode_at obj_id spec) = real_cnode_at obj_id spec"
+  by (auto simp: real_object_at_def real_cnode_at_def object_at_def)
+
+lemma real_cnode_or_tcb_at_simps:
+  "(real_cnode_or_tcb_at obj_id spec \<and> real_cnode_at obj_id spec) = real_cnode_at obj_id spec"
+  "(real_cnode_or_tcb_at obj_id spec \<and> \<not> real_cnode_at obj_id spec) = tcb_at obj_id spec"
+  by (auto simp: real_object_at_def real_cnode_at_def object_at_def
+                 object_type_is_object)
+
+lemma cnode_or_tcb_at_simps:
+  "(cnode_or_tcb_at obj_id spec \<and> cnode_at obj_id spec) = cnode_at obj_id spec"
+  "(cnode_or_tcb_at obj_id spec \<and> \<not> cnode_at obj_id spec) = tcb_at obj_id spec"
+  by (auto simp: object_at_def object_type_is_object)+
+
+lemmas object_at_simps = real_cnode_at_simps real_cnode_or_tcb_at_simps cnode_or_tcb_at_simps
+
+
+(******************************
+ * Cap types and default caps *
+ ******************************)
+definition cap_at :: "(cdl_cap \<Rightarrow> bool) \<Rightarrow> cdl_cap_ref \<Rightarrow> cdl_state \<Rightarrow> bool"
+where
+  "cap_at P ref s \<equiv> \<exists>cap. opt_cap ref s = Some cap \<and> P cap"
+
+definition is_fake_pt_cap :: "cdl_cap \<Rightarrow> bool"
+where "is_fake_pt_cap cap \<equiv> case cap of
+    PageTableCap _ Fake _ \<Rightarrow> True
+  | _ \<Rightarrow> False"
+
+lemma is_fake_pt_cap_is_pt_cap [elim!]:
+  "is_fake_pt_cap cap \<Longrightarrow> is_pt_cap cap"
+  by (clarsimp simp: is_fake_pt_cap_def split: cdl_cap.splits)
+
+abbreviation "pd_cap_at \<equiv> cap_at is_pd_cap"
+abbreviation "pt_cap_at \<equiv> cap_at is_pt_cap"
+abbreviation "fake_pt_cap_at \<equiv> cap_at is_fake_pt_cap"
+abbreviation "irqhandler_cap_at \<equiv> cap_at is_irqhandler_cap"
+
+lemma is_cnode_cap_simps:
+  "is_cnode_cap (UntypedCap ids ids') = False"
+  "is_cnode_cap (IOPageTableCap x) = False"
+  "is_cnode_cap (IOSpaceCap x) = False"
+  "is_cnode_cap (IOPortsCap x a) = False"
+  "is_cnode_cap (AsidPoolCap x b) = False"
+  "is_cnode_cap (PageDirectoryCap x c d) = False"
+  "is_cnode_cap (PageTableCap x e f) = False"
+  "is_cnode_cap (FrameCap x g h i j) = False"
+  "is_cnode_cap (TcbCap x) = False"
+  "is_cnode_cap (MasterReplyCap x) = False"
+  "is_cnode_cap (ReplyCap x) = False"
+  "is_cnode_cap (AsyncEndpointCap x m n) = False"
+  "is_cnode_cap (EndpointCap x p q) = False"
+  "is_cnode_cap (ZombieCap x) = False"
+  "is_cnode_cap (PendingSyncSendCap x s t u v) = False"
+  "is_cnode_cap (PendingSyncRecvCap x t) = False"
+  "is_cnode_cap (PendingAsyncRecvCap x) = False"
+
+  "is_cnode_cap (CNodeCap x k l sz) = True"
+  by (unfold cap_type_def, simp_all split: cdl_object_type.splits)
+
+(* This is to be rarely used. original_cap_at is what you probably want. *)
+definition cap_at_has_no_parents_in_cdt :: "cdl_cap_ref \<Rightarrow> cdl_state \<Rightarrow> bool"
+where
+  "cap_at_has_no_parents_in_cdt cap_ref \<equiv> \<lambda>spec. opt_parent cap_ref spec = None"
+
+(* This predicate decides which capabilities should be moved, or copied.
+ * The actual definition of this function is rarely used by the initialiser,
+ * only to know that IRQ Handler caps are move, and so the definition can be
+ * updated if newer caps are added that need to be moved.
+ *)
+definition
+  original_cap_at :: "cdl_cap_ref \<Rightarrow> cdl_state \<Rightarrow> bool"
+where
+  "original_cap_at cap_ref \<equiv> \<lambda>spec. cap_at_has_no_parents_in_cdt cap_ref spec \<or>
+                                     irqhandler_cap_at cap_ref spec"
+
+definition is_default_cap :: "cdl_cap \<Rightarrow> bool"
+where
+  "is_default_cap cap \<equiv>
+  (\<exists>type. cap_type cap = Some type \<and>
+   cap = default_cap type (cap_objects cap) (cnode_cap_size cap)) \<or>
+   is_irqhandler_cap cap"
+
+lemma default_cap_eq:
+  "\<lbrakk>is_default_cap cap; is_default_cap cap';
+    cap_type cap = cap_type cap'; cap_objects cap = cap_objects cap';
+    cnode_cap_size cap = cnode_cap_size cap';
+    cap_irq cap = cap_irq cap'\<rbrakk>
+  \<Longrightarrow> cap = cap'"
+  by (auto simp: is_default_cap_def is_irqhandler_cap_def cap_type_def cap_irq_def
+          split: cdl_cap.splits)
+
+
+lemma cnode_cap_size_non_cnode [simp]:
+  "\<not> is_cnode_cap cap \<Longrightarrow> cnode_cap_size cap = 0"
+  by (clarsimp simp: cap_type_def cnode_cap_size_def split: cdl_cap.splits)
+
+lemma irqhandler_cap_irq_non_irqhandler [simp]:
+  "\<not> is_irqhandler_cap cap \<Longrightarrow> cap_irq cap = undefined"
+  by (clarsimp simp: is_irqhandler_cap_def cap_irq_def split: cdl_cap.splits)
+
+lemma default_cap_eq_non_cnode:
+  "\<lbrakk>is_default_cap cap; is_default_cap cap';
+   \<not> is_cnode_cap cap; \<not> is_irqhandler_cap cap;
+    cap_type cap = cap_type cap'; cap_objects cap = cap_objects cap'\<rbrakk>
+  \<Longrightarrow> cap = cap'"
+  apply (frule (1) default_cap_eq, simp+)
+  apply (clarsimp simp: is_default_cap_def cap_type_def)
+  apply (auto simp: is_irqhandler_cap_def
+             split: cdl_cap.splits)
+  done
+
+lemma cap_type_default_cap [simp]:
+  "cap_type (default_cap type {obj_id} sz) = Some type"
+  by (clarsimp simp: default_cap_def cap_type_def split: cdl_object_type.splits)
+
+lemma is_tcb_update_slots [simp]:
+  "is_tcb (update_slots slots obj) = is_tcb obj"
+  by (clarsimp simp: is_tcb_def update_slots_def split: cdl_object.splits)
+
+lemma tcb_has_slots [elim!]:
+  "is_tcb obj \<Longrightarrow> has_slots obj"
+  by (clarsimp simp: is_tcb_def has_slots_def split: cdl_object.splits)
+
+lemma cnode_has_slots [elim!]:
+  "is_cnode obj \<Longrightarrow> has_slots obj"
+  by (clarsimp simp: is_cnode_def has_slots_def split: cdl_object.splits)
+
+lemma pt_has_slots [elim!]:
+  "is_pt obj \<Longrightarrow> has_slots obj"
+  by (clarsimp simp: is_pt_def has_slots_def split: cdl_object.splits)
+
+lemma pd_has_slots [elim!]:
+  "is_pd obj \<Longrightarrow> has_slots obj"
+  by (clarsimp simp: is_pd_def has_slots_def split: cdl_object.splits)
+
+lemma asidpool_has_slots [elim!]:
+  "is_asidpool obj \<Longrightarrow> has_slots obj"
+  by (clarsimp simp: is_asidpool_def has_slots_def split: cdl_object.splits)
+
+lemma object_type_has_slots [elim!]:
+  "object_type obj = TcbType \<Longrightarrow> has_slots obj"
+  "object_type obj = CNodeType \<Longrightarrow> has_slots obj"
+  "object_type obj = PageTableType \<Longrightarrow> has_slots obj"
+  "object_type obj = PageDirectoryType \<Longrightarrow> has_slots obj"
+  "object_type obj = AsidPoolType \<Longrightarrow> has_slots obj"
+  by (clarsimp simp: object_type_def has_slots_def split: cdl_object.splits)+
+
+lemma cap_type_update_cap_objects [simp]:
+  "cap_type (update_cap_objects x cap) = cap_type cap"
+  apply (clarsimp simp: cap_type_def update_cap_objects_def)
+  apply (cases cap, simp_all)
+  done
+
+lemma cap_type_update_cap_object [simp]:
+  "cap_type (update_cap_object x cap) = cap_type cap"
+  by (clarsimp simp: update_cap_object_def cap_type_def
+              split: cdl_cap.splits)
+
+lemma cap_has_object_update_cap_objects [simp]:
+  "cap_has_object (update_cap_objects x cap) = cap_has_object cap"
+  apply (clarsimp simp: update_cap_object_def
+                        cap_has_object_def update_cap_objects_def)
+  apply (cases cap, simp_all)
+  done
+
+lemma cap_has_object_update_cap_object [simp]:
+  "cap_has_object (update_cap_object x cap) = cap_has_object cap"
+  by (clarsimp simp: update_cap_object_def cap_has_object_def
+              split: cdl_cap.splits)
+
+lemma cap_object_default_cap' [simp]:
+  "\<not>is_untyped obj \<Longrightarrow> cap_object (default_cap (object_type obj) {obj_id} sz) = obj_id"
+  by (clarsimp simp: default_cap_def  object_type_def is_untyped_def cap_object_simps
+              split: cdl_object_type.splits cdl_object.splits)
+
+lemma cap_object_default_cap [simp]:
+  "type \<noteq> UntypedType \<Longrightarrow> cap_object (default_cap type {obj_id} sz) = obj_id"
+  by (clarsimp simp: default_cap_def  object_type_def is_untyped_def cap_object_simps
+              split: cdl_object_type.splits cdl_object.splits)
+
+lemma cap_object_default_cap_frame:
+  "is_frame_cap cap \<Longrightarrow> cap_object (default_cap (the (cap_type cap)) {obj_id} sz) = obj_id"
+  by clarsimp
+
+lemma default_cap_not_null [elim!]:
+  "default_cap type obj_ids sz = NullCap \<Longrightarrow> False"
+  "NullCap = default_cap type obj_ids sz\<Longrightarrow> False"
+  by (simp add: default_cap_def split: cdl_object_type.splits)+
+
+lemma cap_objects_update_cap_object [simp]:
+  "\<lbrakk>cap_has_object cap; \<not>is_untyped_cap cap\<rbrakk>
+  \<Longrightarrow> cap_objects (update_cap_object obj_id cap) = {obj_id}"
+  by (clarsimp simp: cap_has_object_def update_cap_object_def
+              split: cdl_cap.splits)
+
+lemma  cap_has_object_default_cap [simp]:
+  "cap_has_object (default_cap type ids sz)"
+  by (clarsimp simp: default_cap_def cap_has_object_def split: cdl_object_type.splits)
+
+lemma cap_rights_default_cap_cnode [simp]:
+  "cap_rights (default_cap CNodeType ids sz) = UNIV"
+  by (clarsimp simp: cap_rights_def default_cap_def)
+
+lemma cap_rights_cnode_cap [simp]:
+  "is_cnode_cap cap \<Longrightarrow> cap_rights cap = UNIV"
+  by (clarsimp simp: cap_type_def cap_rights_def
+              split: cdl_cap.splits)
+
+lemma cap_has_object_simps [simp]:
+  "cap_has_object (IOPageTableCap x)"
+  "cap_has_object (IOSpaceCap x)"
+  "cap_has_object (IOPortsCap x a)"
+  "cap_has_object (AsidPoolCap x b)"
+  "cap_has_object (PageDirectoryCap x c d)"
+  "cap_has_object (PageTableCap x e f)"
+  "cap_has_object (FrameCap x g h i j)"
+  "cap_has_object (TcbCap x)"
+  "cap_has_object (CNodeCap x k l sz)"
+  "cap_has_object (MasterReplyCap x)"
+  "cap_has_object (ReplyCap x)"
+  "cap_has_object (AsyncEndpointCap x m n)"
+  "cap_has_object (EndpointCap x p q)"
+  "cap_has_object (ZombieCap x)"
+  "cap_has_object (PendingSyncSendCap x s t u v)"
+  "cap_has_object (PendingSyncRecvCap x t)"
+  "cap_has_object (PendingAsyncRecvCap x)"
+  "cap_has_object (UntypedCap ids ids') = True"
+  by (simp_all add:cap_has_object_def)
+
+lemma is_cap_NullCap [simp]:
+  "\<not> is_untyped_cap NullCap"
+  "\<not> is_ep_cap NullCap"
+  "\<not> is_aep_cap NullCap"
+  "\<not> is_cnode_cap NullCap"
+  "\<not> is_tcb_cap NullCap"
+  "\<not> is_asidpool_cap NullCap"
+  "\<not> is_pt_cap NullCap"
+  "\<not> is_pd_cap NullCap"
+  "\<not> is_frame_cap NullCap"
+  "\<not> is_fake_pt_cap NullCap"
+  "\<not> is_irqhandler_cap NullCap"
+  by (clarsimp simp: cap_type_def is_fake_pt_cap_def is_irqhandler_cap_def)+
+
+(* The slots of an object, returns an empty list for non-existing objects
+   or objects that do not have caps *)
+definition
+  slots_of_list :: "cdl_state \<Rightarrow> cdl_object_id \<Rightarrow> cdl_cnode_index list"
+where
+  "slots_of_list spec obj_id \<equiv> sorted_list_of_set $ dom $ slots_of obj_id spec"
+
+(* Encode the guard and guard size for passing to the kernel. *)
+definition guard_as_rawdata :: "cdl_cap \<Rightarrow> cdl_raw_capdata"
+where
+  "guard_as_rawdata cap \<equiv>
+  let
+    reserved_bits = 3;
+    guard_size_bits = 5
+  in
+    (cap_guard cap << (reserved_bits + guard_size_bits))
+    + (of_nat (cap_guard_size cap) << reserved_bits)"
+
+definition cap_data :: "cdl_cap \<Rightarrow> cdl_raw_capdata"
+where
+  "cap_data cap \<equiv>
+  if (is_ep_cap cap) then
+    cap_badge cap
+  else if (is_aep_cap cap) then
+    cap_badge cap
+  else
+    guard_as_rawdata cap"
+
+(*
+ * Deterministic version of update_cap_data used by the capDL kernel.
+ * This is used in the specification of the CSpace kernel calls.
+ *)
+definition guard_update :: "cdl_cap \<Rightarrow> word32 \<Rightarrow> cdl_cap"
+where "guard_update cap data  \<equiv>
+  case cap of cdl_cap.CNodeCap oid _ _ sz \<Rightarrow>
+    (let reserved_bits = 3; guard_bits = 18; guard_size_bits = 5; new_guard_size = unat ((data >> reserved_bits) && mask guard_size_bits);
+        new_guard =
+          (data >> reserved_bits + guard_size_bits) && mask (min (unat ((data >> reserved_bits) && mask guard_size_bits)) guard_bits)
+    in CNodeCap oid new_guard new_guard_size sz)
+  | _ \<Rightarrow> cap"
+
+definition
+  update_cap_data_det :: "cdl_raw_capdata \<Rightarrow> cdl_cap \<Rightarrow> cdl_cap"
+where
+  "update_cap_data_det raw_data cap \<equiv>
+   case cap of
+        EndpointCap _ b _      \<Rightarrow> badge_update raw_data cap
+      | AsyncEndpointCap _ b _ \<Rightarrow> badge_update raw_data cap
+      | CNodeCap object g gs _  \<Rightarrow> guard_update cap raw_data
+      | _ \<Rightarrow> cap"
+
+definition "valid_src_cap cap data \<equiv>
+   is_cnode_cap cap \<longrightarrow> (
+         unat ((data >> 3) && mask 5) + cnode_cap_size cap \<le> word_bits)"
+
+(* MOVE TO KHeap.thy in capDL and fix get_thread *)
+(* Get a thread from the given pointer. *)
+definition
+  opt_thread :: "cdl_object_id \<Rightarrow> cdl_state \<Rightarrow> cdl_tcb option"
+where
+  "opt_thread p s \<equiv>
+      case opt_object p s of
+          Some (Tcb tcb) \<Rightarrow> (Some tcb)
+        | _ \<Rightarrow> None"
+
+
+
+definition derived_cap :: "cdl_cap \<Rightarrow> cdl_cap"
+where "derived_cap cap \<equiv> case cap of
+          ReplyCap _ \<Rightarrow> NullCap
+        | MasterReplyCap _ \<Rightarrow> NullCap
+        | IrqControlCap \<Rightarrow> NullCap
+        | FrameCap p r sz b x \<Rightarrow> FrameCap p r sz b None
+        | ZombieCap _ \<Rightarrow> NullCap
+        | _ \<Rightarrow> cap "
+
+lemma derive_cap_wp:
+  "\<lbrace> P (derived_cap cap) \<rbrace> derive_cap slot cap \<lbrace>P\<rbrace>, -"
+  apply (clarsimp simp: derive_cap_def derived_cap_def)
+  apply (clarsimp simp: validE_R_def derive_cap_def split:cdl_cap.splits)
+  apply (safe, (wp alternative_wp alternativeE_wp hoare_whenE_wp |
+                clarsimp simp: ensure_no_children_def)+ )
+  done
+
+definition safe_for_derive :: "cdl_cap \<Rightarrow> bool"
+where "safe_for_derive cap \<equiv> case cap of
+    NullCap \<Rightarrow> False
+  | UntypedCap _ _ \<Rightarrow> False
+  | PageTableCap _ _ _ \<Rightarrow> False
+  | PageDirectoryCap _ _ _ \<Rightarrow> False
+  | ReplyCap _ \<Rightarrow> False
+  | MasterReplyCap _ \<Rightarrow> False
+  | IrqControlCap \<Rightarrow> False
+  | ZombieCap _ \<Rightarrow> False
+  | _ \<Rightarrow> True"
+
+lemma is_exclusive_cap_update_cap_rights [simp]:
+  "safe_for_derive (update_cap_rights rights cap) = safe_for_derive cap"
+  by (clarsimp simp: update_cap_rights_def safe_for_derive_def
+              split: cdl_cap.splits)
+
+lemma derive_cap_non_exclusive:
+  "\<lbrace> P (derived_cap cap) and K (safe_for_derive cap) \<rbrace> derive_cap slot cap \<lbrace>P\<rbrace>, \<lbrace>Q\<rbrace>"
+  apply (clarsimp simp: derive_cap_def derived_cap_def)
+  apply (clarsimp simp: validE_R_def derive_cap_def
+    safe_for_derive_def
+    split:cdl_cap.splits)
+  apply (intro conjI allI impI,wp)
+  done
+
+lemma derived_cap_safe_for_derive[simp]:
+  "safe_for_derive (derived_cap cap) = safe_for_derive cap"
+  apply (case_tac cap)
+  apply (simp_all add:derived_cap_def safe_for_derive_def)
+  done
+
+lemma safe_for_derive_not_non:
+  "safe_for_derive cap \<Longrightarrow> cap \<noteq> NullCap"
+  by (simp add:safe_for_derive_def split:cdl_cap.splits)
+
+
+
+
+
+
+end

@@ -1,0 +1,355 @@
+(*
+ * Copyright 2014, NICTA
+ *
+ * This software may be distributed and modified according to the terms of
+ * the GNU General Public License version 2. Note that NO WARRANTY is provided.
+ * See "LICENSE_GPLv2.txt" for details.
+ *
+ * @TAG(NICTA_GPL)
+ *)
+
+(*
+ * Proofs regarding the State Translation.
+ *)
+
+theory StateTranslationProofs_DR
+imports StateTranslation_D
+begin
+
+declare transform_current_domain_def [simp]
+
+lemma asid_high_bits [simp]:
+  "Types_D.asid_high_bits = asid_high_bits"
+  by (simp add:Types_D.asid_high_bits_def asid_high_bits_def)
+
+lemma asid_low_bits [simp]:
+  "Types_D.asid_low_bits = asid_low_bits"
+  by (simp add:Types_D.asid_low_bits_def asid_low_bits_def)
+
+lemma asid_bits [simp]:
+  "Types_D.asid_bits = asid_bits"
+  by (simp add:Types_D.asid_bits_def asid_bits_def)
+
+lemma get_obj_simps [simp]:
+  "get_obj (s\<lparr>cur_thread := a\<rparr>) = get_obj s"
+  apply (rule ext)
+  apply (clarsimp simp: get_obj_def)
+  done
+
+lemma transform_objects_simps [simp]:
+  "transform_objects (s\<lparr>cur_thread := a\<rparr>) = transform_objects s"
+  apply (rule ext)
+  apply (clarsimp simp: transform_objects_def transform_object_def)
+  done
+
+lemma transform_cdt_simps [simp]:
+  "transform_cdt (s\<lparr>cur_thread := a\<rparr>) = transform_cdt s"
+  apply (rule ext)+
+  apply (clarsimp simp: transform_cdt_def split_def)
+  done
+
+(* Aggressive simp rules, using explictly *)
+abbreviation
+"update_machine ms s \<equiv> machine_state_update (\<lambda>_. ms) s"
+
+abbreviation
+"update_kheap kh s \<equiv> kheap_update (\<lambda>_. kh) s"
+
+abbreviation
+"tcb_set_mi tcb msg \<equiv> tcb \<lparr>tcb_context := (tcb_context tcb)(msg_info_register := msg)\<rparr>"
+
+abbreviation
+"update_tcb_cxt_badge msg tcb\<equiv> tcb \<lparr>tcb_context := (tcb_context tcb)(badge_register := msg)\<rparr>"
+
+abbreviation
+"update_tcb_state state tcb \<equiv> tcb \<lparr>tcb_state := state\<rparr>"
+
+abbreviation
+"dupdate_cdl_object ptr obj s \<equiv>  cdl_objects_update (\<lambda>_. cdl_objects s(ptr \<mapsto> obj)) s"
+
+abbreviation
+"dupdate_tcb_intent intent tcb\<equiv> tcb \<lparr>cdl_tcb_intent := intent\<rparr>"
+
+(* FIXME: name *)
+lemma dummy_update_state[simp]:
+  "kheap s y = Some obj\<Longrightarrow> update_kheap ((kheap s)(y \<mapsto> obj)) s = s"
+  apply (case_tac s,clarsimp)
+  apply (rule ext,clarsimp)
+done
+
+lemma msg_registers_lt_msg_max_length [simp]:
+  "length msg_registers < msg_max_length"
+  by (simp add: msg_registers_def msgRegisters_unfold msg_max_length_def )
+
+lemma get_tcb_mrs_update_state :
+  "get_tcb_mrs ms (tcb_state_update f tcb) = get_tcb_mrs ms tcb"
+  by (clarsimp simp:get_tcb_mrs_def Suc_le_eq get_tcb_message_info_def get_ipc_buffer_words_def)
+
+lemma msg_info_badge_register_no_overlap:
+  "badge_register \<noteq> msg_info_register"
+  by (clarsimp simp:badge_register_def msg_info_register_def
+    ARMMachineTypes.badgeRegister_def
+                  ARMMachineTypes.msgInfoRegister_def)
+
+lemma badge_cap_register_overlap:
+  "badge_register = cap_register"
+by (clarsimp simp:badge_register_def cap_register_def
+                  ARMMachineTypes.badgeRegister_def
+                  ARMMachineTypes.capRegister_def)
+
+lemma cap_msg_info_register_no_overlap:
+  "cap_register \<noteq> msg_info_register"
+by (clarsimp simp:msg_info_register_def cap_register_def
+                  ARMMachineTypes.msgInfoRegister_def
+                  ARMMachineTypes.capRegister_def)
+
+lemmas register_overlap_check = msg_info_badge_register_no_overlap
+                                cap_msg_info_register_no_overlap
+                                badge_cap_register_overlap
+
+(* These should be cong rules ...
+lemma get_tcb_message_info_update_heap [simp]:
+  "get_tcb_message_info (update_kheap ptr obj s) = get_tcb_message_info s"
+  by (rule ext) (simp add: get_tcb_message_info_def)
+
+lemma get_tcb_mrs_update_heap [simp]:
+  "get_tcb_mrs (update_kheap ptr obj' s) = get_tcb_mrs s"
+  by (rule ext) (simp add: Let_def get_tcb_mrs_def get_tcb_mem_mrs_def)
+
+lemma transform_full_intent_update_heap [simp]:
+  "transform_full_intent (update_kheap ptr obj s) = transform_full_intent s"
+  by (rule ext)+ (simp add: transform_full_intent_def)
+*)
+
+lemma transform_full_intent_cong:
+  "\<lbrakk>ms = ms'; ptr = ptr'; tcb_context tcb = tcb_context tcb'; tcb_ipc_buffer tcb = tcb_ipc_buffer tcb'; tcb_ipcframe tcb = tcb_ipcframe tcb'\<rbrakk>
+  \<Longrightarrow> transform_full_intent ms ptr tcb = transform_full_intent ms' ptr' tcb'"
+  by (simp add: transform_full_intent_def get_tcb_message_info_def get_tcb_mrs_def Suc_le_eq get_ipc_buffer_words_def)
+
+
+(* FIXME: Move *)
+lemma set_neg_inter: "- A \<inter> - B = - A - B"
+  by auto
+
+(* FIXME: Move *)
+lemma restrict_restrict2: "x \<noteq> b \<Longrightarrow> (m |` (- A - {b})) x = (m |` (- A)) x"
+  apply (cut_tac m="(m |` (- A))" and x=x and A = "-{b}" in restrict_in)
+   apply simp
+  apply (cut_tac m=m and A="- A" and B = "-{b}" in restrict_restrict)
+  apply (fastforce simp: set_neg_inter)
+  done
+
+lemma caps_of_state_eq_lift:
+    "\<forall>cap. cte_wp_at (op=cap) p s = cte_wp_at (op=cap) p s' \<Longrightarrow>  caps_of_state s p = caps_of_state s' p"
+  apply (simp add:cte_wp_at_def caps_of_state_def)
+  done
+
+lemma caps_of_state_irrelavent_simp:
+  "ref \<noteq> epptr \<Longrightarrow> caps_of_state (update_kheap (kh(epptr \<mapsto> obj)) s) (ref, cref) = caps_of_state (update_kheap kh s) (ref, cref)"
+  apply (rule caps_of_state_eq_lift)
+  apply (clarsimp simp: cte_wp_at_cases)
+  done
+
+(* This doesn't satisfy the obvious transformation into capDL because of
+   pagetables etc. *)
+fun
+   caps_of_object :: "kernel_object \<Rightarrow> (bool list \<rightharpoonup> cap)"
+where
+  "caps_of_object (Structures_A.CNode sz c) = (if well_formed_cnode_n sz c then c else empty)"
+  | "caps_of_object (Structures_A.TCB t) = (\<lambda>n. option_map (\<lambda>(f, _). f t) (tcb_cap_cases n))"
+  | "caps_of_object _                    = empty"
+
+lemma caps_of_state_def2:
+  "caps_of_state s = (\<lambda>ptr. case (option_map caps_of_object (kheap s (fst ptr))) of
+                                None \<Rightarrow> None
+                              | Some f \<Rightarrow> f (snd ptr))"
+  unfolding caps_of_state_def get_cap_def tcb_cnode_map_def
+  apply (rule ext)
+  apply (clarsimp simp add: split_def get_object_def bind_def gets_def get_def return_def assert_def fail_def)
+  apply (case_tac y, simp_all add: bind_def assert_def return_def assert_opt_def fail_def tcb_cap_cases_def
+                              split: option.splits)
+  done
+
+lemma caps_of_state_update_same_caps:
+  assumes kh: "kh ptr = Some ko"
+  and    coo: "caps_of_object ko' = caps_of_object ko"
+  shows  "caps_of_state (update_kheap (kh(ptr \<mapsto> ko')) s) = caps_of_state (update_kheap kh s)"
+  using kh coo
+  apply -
+  apply (rule ext)
+  apply (clarsimp simp add: caps_of_state_def2)
+  done
+
+lemma caps_of_state_update_tcb:
+  "\<lbrakk> kh thread = Some (TCB tcb);
+     (tcb_ctable tcb) =  (tcb_ctable (f tcb));
+     (tcb_vtable tcb) =  (tcb_vtable (f tcb));
+     (tcb_reply tcb) =  (tcb_reply (f tcb));
+     (tcb_caller tcb) =  (tcb_caller (f tcb));
+     (tcb_ipcframe tcb) =  (tcb_ipcframe (f tcb)) \<rbrakk>
+    \<Longrightarrow>
+      caps_of_state (update_kheap (kh(thread \<mapsto> (TCB (f tcb)))) s) =
+      caps_of_state (update_kheap kh s)"
+  apply (erule caps_of_state_update_same_caps)
+  apply (rule ext)
+  apply (simp add: tcb_cap_cases_def split: split_if)
+  done
+
+lemmas caps_of_state_upds = caps_of_state_update_tcb caps_of_state_update_same_caps
+
+(* weak because we don't look at the contents *)
+
+lemma transform_cdt_kheap_update [simp]:
+  "transform_cdt (kheap_update f s) = transform_cdt s"
+  by (clarsimp simp: transform_cdt_def cong: if_cong)
+
+lemma transform_cdt_update_machine [simp]:
+  "transform_cdt (update_machine ms s) = transform_cdt s "
+  by (clarsimp simp: transform_cdt_def cong: if_cong)
+
+lemma transform_cdt_update_original_cap [simp]:
+  "transform_cdt (b\<lparr>is_original_cap := x\<rparr>) = transform_cdt b"
+  by (clarsimp simp: transform_cdt_def cong: if_cong)
+
+lemma transform_asid_table_kheap_update [simp]:
+  "transform_asid_table (kheap_update f s) = transform_asid_table s"
+  by (clarsimp simp: transform_asid_table_def cong: if_cong)
+
+lemma transform_asid_table_update_machine [simp]:
+  "transform_asid_table (update_machine ms s) = transform_asid_table s "
+  by (clarsimp simp: transform_asid_table_def cong: if_cong)
+
+lemma transform_asid_table_update_original_cap [simp]:
+  "transform_asid_table (b\<lparr>is_original_cap := x\<rparr>) = transform_asid_table b"
+  by (clarsimp simp: transform_asid_table_def cong: if_cong)
+
+lemma transform_objects_update_kheap_same_caps:
+  "\<lbrakk> kh ptr = Some ko; caps_of_object ko' = caps_of_object ko; a_type ko' = a_type ko\<rbrakk> \<Longrightarrow>
+  transform_objects (update_kheap (kh(ptr \<mapsto> ko')) s) =
+  (if ptr = idle_thread s then
+         transform_objects (update_kheap kh s)
+  else
+         (transform_objects (update_kheap kh s))(ptr \<mapsto> transform_object (machine_state s) ptr (ekheap s ptr) ko'))"
+  unfolding transform_objects_def
+  apply (rule ext)
+  apply (simp add: option_map_def restrict_map_def map_add_def )
+  done
+
+text {* Facts about map_lift_over *}
+
+lemma map_lift_over_eq_Some:
+  "(map_lift_over f m x = Some y)
+         = (\<exists>x' y'. x = f x' \<and> y = f y' \<and> inj_on f (dom m \<union> ran m)
+                   \<and> m x' = Some y')"
+proof -
+  have P: "inj_on f (dom m \<union> ran m) \<longrightarrow> inj_on f (dom m)"
+    by (auto elim: subset_inj_on)
+  have Q: "\<And>x y. \<lbrakk> m x = Some y; inj_on f (dom m \<union> ran m) \<rbrakk>
+                  \<Longrightarrow> inv_into (dom m) f (f x) = x"
+    using P
+    by (blast intro: inv_into_f_f)
+  show ?thesis
+    by (auto simp add: map_lift_over_def Q)
+qed
+
+lemma map_lift_over_eq_None:
+  "(map_lift_over f m x = None)
+         = (inj_on f (dom m \<union> ran m) \<longrightarrow>
+                (\<forall>x'. x = f x' \<longrightarrow> m x' = None))"
+proof -
+  have P: "inj_on f (dom m \<union> ran m) \<Longrightarrow> inj_on f (dom m)"
+    by (auto elim: subset_inj_on)
+  show ?thesis
+    by (auto simp add: map_lift_over_def P[THEN inv_into_f_f] domI
+                       inj_on_iff[where f=f]
+           | rule ccontr[where P="v = None", standard])+
+qed
+
+lemma map_lift_over_f_eq:
+  "inj_on f ({x} \<union> dom m \<union> ran m) \<Longrightarrow>
+   (map_lift_over f m (f x) = v) = (v = Option.map f (m x))"
+  apply (cases v, simp_all add: map_lift_over_eq_None map_lift_over_eq_Some)
+   apply (auto simp: Option.map_def split: option.split)
+  done
+
+lemma map_lift_over_eq_cases[unfolded map_lift_over_eq_None map_lift_over_eq_Some]:
+  "(map_lift_over f m x = v)
+       = (case v of None \<Rightarrow> map_lift_over f m x = None
+                | Some z \<Rightarrow> map_lift_over f m x = Some z)"
+  by (simp split: option.split)
+
+lemma map_lift_over_upd:
+  assumes inj_f: "inj_on f ({x} \<union> Option.set y \<union> dom m \<union> ran m)"
+  shows "(map_lift_over f (m(x := y)))
+           = ((map_lift_over f m) (f x := Option.map f y))"
+proof -
+  have Q: "inj_on f (dom m \<union> ran m)"
+      "inj_on f (insert x (dom m \<union> ran (m(x := y))))"
+      "inj_on f (dom m)"
+      "inj_on f (insert x (dom m))"
+      "inj_on f (dom m - {x} \<union> ran (m(x := None)))"
+      "inj_on f (dom m - {x})"
+    apply (safe intro!: subset_inj_on[OF inj_f])
+    apply (auto simp: ran_def split: split_if_asm)
+    done
+  show ?thesis
+    apply (simp add: map_lift_over_def Q del: inj_on_insert)
+    apply (safe intro!: ext)
+     apply (simp_all add: Q[THEN inv_into_f_f] domI
+                cong del: imp_cong)
+    apply (auto simp add: Q[THEN inv_into_f_f] domI
+                          inj_on_iff[OF inj_f] ranI
+                simp del: inj_on_insert)
+    done
+qed
+
+lemma map_lift_over_if_eq_twice:
+  assumes inj_f: "inj_on f (dom m \<union> ran m \<union> {y, y'} \<union> Option.set z \<union> Option.set z')"
+  shows
+  "map_lift_over f (\<lambda>x. if m x = Some y then z else if m x = Some y' then z' else m x)
+       = (\<lambda>x. if map_lift_over f m x = Some (f y) then Option.map f z
+              else if map_lift_over f m x = Some (f y') then Option.map f z'
+              else map_lift_over f m x)"
+  (is "map_lift_over f ?ifeq = ?rhs")
+proof -
+  from inj_f
+  have 1: "inj_on f (dom m \<union> ran m)" "inj_on f (dom m)"
+    by (auto simp: inj_on_Un)
+  have "dom ?ifeq \<subseteq> dom m"
+    by (auto split: split_if_asm)
+  with inj_f
+  have 2: "inj_on f (dom ?ifeq)"
+    by (auto elim!: subset_inj_on)
+  have "dom ?ifeq \<union> ran ?ifeq \<subseteq> dom m \<union> ran m \<union> Option.set z \<union> Option.set z'"
+    by (auto simp: ran_def)
+  with inj_f
+  have "inj_on f (dom ?ifeq \<union> ran ?ifeq)"
+    by (auto elim!: subset_inj_on)
+  note Q = 1 2 this
+  note split_if[split del]
+  show ?thesis
+    apply (simp add: map_lift_over_def Q)
+    apply (rule ext)
+    apply (case_tac "x \<in> f ` dom ?ifeq")
+     apply clarsimp
+     apply (subst if_P, fastforce split: split_if_asm)+
+     apply (simp add: Q[THEN inv_into_f_f] domI ranI inj_on_iff[OF inj_f]
+               split: split_if_asm)
+    apply (subst if_not_P, simp, rule allI, fastforce)+
+    apply (auto simp: Option.map_def Q[THEN inv_into_f_f] domI ranI
+                      inj_on_iff[OF inj_f]
+               split: split_if option.split)
+    done
+qed
+
+lemma map_lift_over_if_eq:
+  assumes inj_f: "inj_on f (dom m \<union> ran m \<union> {y} \<union> Option.set z)"
+  shows
+  "map_lift_over f (\<lambda>x. if m x = Some y then z else m x)
+       = (\<lambda>x. if map_lift_over f m x = Some (f y) then Option.map f z
+              else map_lift_over f m x)"
+  using inj_f map_lift_over_if_eq_twice[where f=f and m=m and y=y and z=z and y'=y and z'=z]
+  apply (simp del: inj_on_insert)
+  done
+
+end

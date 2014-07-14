@@ -1,0 +1,125 @@
+/*
+ * Copyright 2014, NICTA
+ *
+ * This software may be distributed and modified according to the terms of
+ * the BSD 2-Clause license. Note that NO WARRANTY is provided.
+ * See "LICENSE_BSD2.txt" for details.
+ *
+ * @TAG(NICTA_BSD)
+ */
+
+/*
+ * Indent Isabelle apply-style proofs.
+ *
+ * 2013 David Greenaway.
+ */
+
+import isabelle.*;
+import isabelle.jedit.*;
+
+/* Get the number of pending subgoals in the given state. */
+int num_subgoals(Command.State state)
+{
+    status_nodes = cmd_state.status();
+
+    /* Find the "PROOF_STATE" node. */
+    proof_state = null;
+    for (node_list = cmd_state.status();
+            node_list.nonEmpty(); node_list = node_list.tail()) {
+        n = node_list.head();
+        if (n.name().equals(Markup.PROOF_STATE())) {
+            proof_state = n;
+            break;
+        }
+    }
+    if (proof_state == null)
+      return -1;
+
+    /* Find the "subgoals" node. */
+    for (state_nodes_list = proof_state.properties();
+            state_nodes_list.nonEmpty(); state_nodes_list = state_nodes_list.tail()) {
+        n = state_nodes_list.head();
+        if (n._1.equals(Markup.SUBGOALS())) {
+            return Integer.parseInt(n._2);
+        }
+    }
+
+    /* No node found. */
+    return -1;
+}
+
+/* Pad the given string to have "n" spaces. */
+String pad(String input, int n)
+{
+    if (input.equals(""))
+        return "";
+  char[] spaces = new char[n];
+  Arrays.fill(spaces, ' ');
+  return new String(spaces) + input;
+}
+
+/* Determine if the given command should be indented. */
+Boolean shouldIndent(Command cmd)
+{
+    /* FIXME */
+    return true;
+}
+
+/* Setup. */
+model = PIDE.document_model(textArea.buffer).get();
+model.update_perspective();
+snapshot = model.snapshot();
+
+/* Setup array of pre-calculated indents. */
+selectedLines = textArea.getSelectedLines();
+int[] padding = new int[selectedLines.length];
+Arrays.fill(padding, -1);
+
+/*
+ * Iterate over selected lines, calculating indents.
+ *
+ * We calculate all indents prior to actually touching anything so that
+ * Isabelle doesn't attempt to re-prove the lines we are trying to query at the
+ * same time.
+ */
+for (i = 0; i < selectedLines.length; i++) {
+    line = selectedLines[i];
+    lineStart = textArea.getLineStartOffset(line);
+    lineEnd = textArea.getLineEndOffset(line);
+
+    /* Fetch the Isabelle state for this line. */
+    cmd_range = snapshot.node().command_range(lineStart - 1);
+    if (!cmd_range.hasNext())
+        continue;
+    cmd = cmd_range.next()._1;
+
+    /* Get the number of subgoals of this line. */
+    cmd_state = snapshot.state().command_state(snapshot.version(), cmd);
+    subgoals = num_subgoals(cmd_state);
+    if (shouldIndent(cmd) && subgoals > 0) {
+        padding[i] = subgoals + 1;
+    }
+}
+
+/* Actually perform the updates. */
+buffer.beginCompoundEdit();
+try {
+    for (i = selectedLines.length - 1; i >= 0; i--) {
+        line = selectedLines[i];
+        lineStart = textArea.getLineStartOffset(line);
+        lineEnd = textArea.getLineEndOffset(line);
+
+        /* Skip lines that shouldn't be indented. */
+        if (padding[i] < 0)
+            continue;
+
+        /* Pad out this line. */
+        text = pad(textArea.getLineText(line).trim(), padding[i]) + "\n";
+
+        /* Insert new line. */
+        textArea.setSelectedText(new Selection.Range(lineStart, lineEnd), text);
+    }
+} finally {
+    buffer.endCompoundEdit();
+}
+

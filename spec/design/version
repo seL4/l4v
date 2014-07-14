@@ -1,0 +1,10 @@
+Built from hg repo at ../haskell on xinmac-204.keg.ertos.in.nicta.com.au by xgao
+
+Generated from changeset:
+
+changeset:   3a9f1ef9bd4b
+branch:      default
+user:        Xin Gao <Xin.Gao@nicta.com.au>
+date:        Fri, 23 May 2014 20:46:23 +1000
+description: fix (start,end) checking when decoding armPageDirectory invocation
+

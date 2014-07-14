@@ -1,0 +1,1321 @@
+case \x of 0 -> 1 -> _ ->  ---> if \x = 0
+ then ->1 else if \x = 1 then ->2 else ->3
+
+case \x of nodeCap@(CNodeCap {}) -> _ ->  ---> let nodeCap = \x in
+ if isCNodeCap nodeCap
+ then ->1 else ->2
+
+case \x of root@(CNodeCap {}) -> _ ->  ---> let root = \x in
+ if isCNodeCap root
+ then ->1 else ->2
+
+case \x of cap@(EndpointCap { capEPCanSend = True }) -> cap@(AsyncEndpointCap { capAEPCanSend = True }) -> cap ->  ---> let cap = \x in
+ if isEndpointCap cap \<and> capEPCanSend cap
+ then ->1 else if isAsyncEndpointCap cap \<and> capAEPCanSend cap
+ then ->2 else ->3
+
+case \x of EndpointCap { \v0\EPCanReceive = True } -> AsyncEndpointCap { \v0\AEPCanReceive = True } -> _ ->  ---> let \v0\ = \x in
+ if isEndpointCap \v0\ \<and> \v0\EPCanReceive \v0
+ then ->1 else if isAsyncEndpointCap \v0\ \<and> \v0\AEPCanReceive \v0
+ then ->2 else ->3
+
+case \x of (_, _, cap@(ThreadCap {capTCBCanWrite = True})) -> (_, _, cap@(CNodeCap {})) -> (_, capIndex, cap@(UntypedCap {})) -> (blocking, capIndex, cap@(ArchObjectCap {})) -> (True, ptr, cap) -> (False, _, _) ->  ---> let (blocking, capIndex, cap) = \x in if isThreadCap cap \<and> capTCBCanWrite cap
+ then ->1 else if isCNodeCap cap
+ then ->2 else if isUntypedCap cap
+ then ->3 else if isArchObjectCap cap
+ then ->4 else if blocking
+ then ->5 else ->6
+
+case \x of (index:bits:args, cap@(CNodeCap {capCNodeCanModify=True})) -> (_, CNodeCap {capCNodeCanModify=True}) -> (_, _) ->  ---> let (\v0\, cap) = \x in
+ if length (\v0\) > 1 \<and> isCNodeCap cap \<and> capCNodeCanModify cap then let index = \v0\ !! 0;
+ bits = \v0\ !! 1;
+ args = drop 2 \v0
+ in ->1 else if isCNodeCap cap \<and> capCNodeCanModify cap then ->2 else ->3
+
+case \x of (_, _, cap@(ThreadCap {capTCBCanWrite = True})) -> (_, _, cap@(CNodeCap {capCNodeCanModify = True})) -> (_, capIndex, cap@(UntypedCap {})) -> (blocking, capIndex, cap@(ArchObjectCap {})) -> (True, ptr, cap) -> (False, _, _) ->  ---> let (blocking, capIndex, cap) = \x in if isThreadCap cap \<and> capTCBCanWrite cap
+ then ->1 else if isCNodeCap cap \<and> capCNodeCanModify cap
+ then ->2 else if isUntypedCap cap
+ then ->3 else if isArchObjectCap cap
+ then ->4 else if blocking
+ then let ptr = capIndex in ->5 else ->6
+
+case \x of (capPtr, cap@(ThreadCap{capTCBCanWrite = True})) -> (_, cap@(CNodeCap {capCNodeCanModify = True})) -> (capIndex, cap@(UntypedCap {})) -> (capIndex, cap@(ArchObjectCap {})) -> (capPtr, cap) ->  ---> let (capPtr, cap) = \x; capIndex = capPtr in
+ if isThreadCap cap \<and> capTCBCanWrite cap
+ then ->1 else if isCNodeCap cap \<and> capCNodeCanModify cap
+ then ->2 else if isUntypedCap cap
+ then ->3 else if isArchObjectCap cap
+ then ->4 else ->5
+
+case \x of (capPtr, cap@(ThreadCap{capTCBCanWrite = True})) -> (_, cap@(CNodeCap {capCNodeCanModify = True})) -> (_, cap@(UntypedCap {})) -> (capIndex, cap@(ArchObjectCap {})) -> (capPtr, cap) ->  ---> let (capPtr, cap) = \x; capIndex = capPtr in
+ if isThreadCap cap \<and> capTCBCanWrite cap
+ then ->1 else if isCNodeCap cap \<and> capCNodeCanModify cap
+ then ->2 else if isUntypedCap cap
+ then ->3 else if isArchObjectCap cap
+ then ->4 else ->5
+
+case \x of Just (slot, 0, rights) -> _ ->  ---> case \x of
+ Some \v0\ \<Rightarrow> let (slot, \v1\, rights) = \v0\ in
+ if \v1\ = 0 then ->1 else ->2 | None \<Rightarrow> ->2
+
+case \x of (slot, 0, rights) -> (_, bitsLeft, _) ->  ---> let (slot, bitsLeft, rights) = \x in
+ if bitsLeft = 0
+ then ->1 else ->2
+
+case \x of (index:bits:args, cnode@(CNodeCap {})) -> (_, _) ->  ---> let (L, cnode) = \x in
+ if isCNodeCap cnode \<and> length L > 1 then
+ let index = L !! 0;
+ bits = L !! 1;
+ args = drop 2 L
+ in ->1 else ->2
+
+case \x of (index:bits:args, cnode@(CNodeCap { capCNodeCanModify = True })) -> (_, CNodeCap { capCNodeCanModify = True }) -> (_, _) ->  ---> let (L, cnode) = \x in
+ if isCNodeCap cnode \<and> capCNodeCanModify cnode then
+ if length L > 1 then
+ let index = L !! 0;
+ bits = L !! 1;
+ args = drop 2 L
+ in ->1 else ->2 else ->3
+
+case \x of (YieldToCall, _, thread) -> (call@(ThreadControlCall {}), faultep:replyep:priority:cRoot:cRootData:vRoot:vRootData:buffer:_, target) -> (call@(ExchangeRegistersCall {}), src:save:_, dest) -> (_, _, _) ->  ---> let (call, L, \v0\) = \x in
+ if isYieldToCall call
+ then let thread = \v0\ in ->1 else if isThreadControlCall call \<and> length L > 6
+ then let target = \v0\;
+ faultep = L !! 0;
+ replyep = L !! 1;
+ priority = L !! 2;
+ cRoot = L !! 3;
+ cRootData = L !! 4;
+ vRoot = L !! 5;
+ vRootData = L !! 6;
+ buffer = L !! 7
+ in ->2 else if isExchangeRegistersCall call \<and> length L > 1
+ then let dest = \v0\;
+ src = L !! 0;
+ save = L !! 1
+ in ->3 else ->4
+
+case \x of (call@(ThreadControlCall{threadSetCRoot = True}), False) -> (call@(ThreadControlCall{threadSetVRoot = True}), False) -> (_,_) ->  ---> let (call, \v0\) = \x in
+ if isThreadControlCall call \<and> threadSetCRoot call \<and> \<not> \v0
+ then ->1 else if isThreadControlCall call \<and> threadSetVRoot call \<and> \<not> \v0
+ then ->2 else ->3
+
+case \x of (call@(ThreadControlCall{threadSetCRoot = True}), False) -> (call@(ThreadControlCall{threadSetVRoot = True}), False) -> _ ->  ---> let (call, \v0\) = \x in
+ if isThreadControlCall call \<and> threadSetCRoot call \<and> \<not> \v0
+ then ->1 else if isThreadControlCall call \<and> threadSetVRoot call \<and> \<not> \v0
+ then ->2 else ->3
+
+case \x of untypedCap@(UntypedCap {}) -> _ ->  ---> let untypedCap = \x in
+ if isUntypedCap untypedCap
+ then ->1
+ else ->1
+
+case \x of ex2@(UserHandledFault {}) -> ex2 ->  ---> let ex2 = \x in
+ if isUserHandledFault ex2
+ then ->1 else ->2
+
+case \x of 0 -> size ->  ---> let size = \x in if size = 0
+ then ->1 else ->2
+
+case \x of 0 -> ctePtr ->  ---> let ctePtr = \x in if ctePtr = 0
+ then ->1 else ->2
+
+case \x of (first:rest,_) -> ([], 0) -> ([], _) ->  ---> let \v0\ = \x in case fst \v0\ of
+ first#rest \<Rightarrow> ->1 | [] \<Rightarrow> if snd \v0\ = 0
+ then ->2 else ->3
+
+case \x of Just x@(CNodeData {}) -> _ ->  ---> let \v0\ = \x in
+ if \v0\ \<noteq> None \<and> isCNodeData (the \v0\)
+ then let x = the \v0\ in ->1 else ->2
+
+case \x of (Just new, EndpointData 0) -> (Just _, EndpointData _) -> (Just new, AsyncEndpointData 0) -> (Just _, AsyncEndpointData _) -> (Nothing, old@(CNodeData {})) -> (Just new, old@(CNodeData {})) -> (_, old) ->  ---> let (\v0\, old) = \x; new = the \v0\; \v1\ = (\v0\ \<noteq> None) in
+ if \v1\ \<and> old = EndpointData 0
+ then ->1 else if \v1\ \<and> isEndpointData old
+ then ->2 else if \v1\ \<and> old = AsyncEndpointData 0
+ then ->3 else if \v1\ \<and> isAsyncEndpointData old
+ then ->4 else if (\<not> \v1\) \<and> isCNodeData old
+ then ->5 else if \v1\ \<and> isCNodeData old
+ then ->6 else ->7
+
+case \x of 0 -> slot ->  ---> let slot = \x in
+ if slot = 0 then ->1 else ->2
+
+case \x of CTE { cteCap = UntypedCap {} } -> cte@(CTE { cteMDBNode = mdb }) ->  ---> let cte = \x in
+ if isUntypedCap (cteCap cte)
+ then ->1 else let mdb = cteMDBNode cte
+ in ->2
+
+case \x of cap@(EndpointCap {}) -> _ ->  ---> let cap = \x in
+ if isEndpointCap cap
+ then ->1 else ->2
+
+case \x of (a@UntypedCap {}, b@UntypedCap {}) -> (a@EndpointCap {}, b@EndpointCap {}) -> (a@AsyncEndpointCap {}, b@AsyncEndpointCap {}) -> (a@CNodeCap {}, b@CNodeCap {}) -> (a@ThreadCap {}, b@ThreadCap {}) -> (a@FrameCap {}, b@FrameCap {}) -> (ArchObjectCap a, ArchObjectCap b) -> (_, _) ->  ---> let (a, b) = \x in
+ if isUntypedCap a \<and> isUntypedCap b
+ then ->1 else if isEndpointCap a \<and> isEndpointCap b
+ then ->2 else if isAsyncEndpointCap a \<and> isAsyncEndpointCap b
+ then ->3 else if isCNodeCap a \<and> isCNodeCap b
+ then ->4 else if isThreadCap a \<and> isThreadCap b
+ then ->5 else if isFrameCap a \<and> isFrameCap b
+ then ->6 else if isArchObjectCap a \<and> isArchObjectCap b
+ then let a = capCap a; b = capCap b in ->7 else ->8
+
+case \x of cap@(EndpointCap {capEPCanSend=True}) -> cap@(AsyncEndpointCap {capAEPCanSend=True}) -> cap@(ThreadCap {capTCBCanWrite=True}) -> cap@(CNodeCap {capCNodeCanModify=True}) -> cap@(UntypedCap {}) -> cap@(ArchObjectCap {}) -> _ ->  ---> let cap = \x in
+ if isEndpointCap cap \<and> capEPCanSend cap
+ then ->1 else if isAsyncEndpointCap cap \<and> capAEPCanSend cap
+ then ->2 else if isThreadCap cap \<and> capTCBCanWrite cap
+ then ->3 else if isCNodeCap cap \<and> capCNodeCanModify cap
+ then ->4 else if isUntypedCap cap
+ then ->5 else if isArchObjectCap cap
+ then ->6 else ->7
+
+case \x of 0 -> 1 -> 2 -> _ ->  ---> let \v0\ = \x in
+ if \v0\ = 0 then ->1 else if \v0\ = 1 then ->2 else if \v0\ = 2 then ->3 else ->4
+
+case \x of (CTE a@(UntypedCap {}) _, CTE b _) -> (CTE a mdbA, CTE b mdbB) ->  ---> let (\v0\, \v1\) = \x in
+ case \v0\ of CTE a mdbA \<Rightarrow> (
+ case \v1\ of CTE b mdbB \<Rightarrow> (
+ if isUntypedCap a
+ then ->1 else ->2 ))
+
+case \x of EndpointCap { capEPBadge = 0 } -> AsyncEndpointCap { capAEPBadge = 0 } -> EndpointCap {} -> (AsyncEndpointCap {}) -> _ ->  ---> let \v0\ = \x in
+ if isEndpointCap \v0\ \<and> capEPBadge \v0\ = 0
+ then ->1 else if isAsyncEndpointCap \v0\ \<and> capAEPBadge \v0\ = 0
+ then ->2 else if isEndpointCap \v0
+ then ->3 else if isAsyncEndpointCap \v0
+ then ->4 else ->5
+
+case \x of (EndpointCap { capEPPtr = ptr }, True, _) -> (AsyncEndpointCap { capAEPPtr = ptr }, True, _) -> (cap@(CNodeCap {}), True, True) -> (ThreadCap { capTCBPtr = tcb }, True, True) -> (CNodeCap { capCNodePtr = cn }, True, False) -> (Zombie { zombieObject = Left (cn, n+1) }, _, False) -> (ThreadCap { capTCBPtr = tcb }, True, False) -> (Zombie { zombieObject = Right tcb }, True, False) -> (Zombie { zombieObject = Left (cn, n+1) }, _, True) -> (Zombie { zombieObject = Left (_, 0) }, True, _) -> (Zombie { zombieObject = Right tcb }, True, True) -> (ArchObjectCap { capCap = cap }, final, exposed) -> (FrameCap {}, _, _) -> (NullCap, _, _) -> (Zombie {}, False, _) -> (_, _, _) ->  ---> let (\v0\, \v1\, \v2\) = \x in
+ if isEndpointCap \v0\ \<and> \v1
+ then let ptr = capEPPtr \v0
+ in ->1 else if isAsyncEndpointCap \v0\ \<and> \v1
+ then let ptr = capAEPPtr \v0
+ in ->2 else if isCNodeCap \v0\ \<and> \v1\ \<and> \v2
+ then let cap = \v0
+ in ->3 else if isThreadCap \v0\ \<and> \v1\ \<and> \v2
+ then let tcb = capTCBPtr \v0
+ in ->4 else if isCNodeCap \v0\ \<and> \v1\ \<and> (\<not> \v2\)
+ then let cn = capCNodePtr \v0
+ in ->5 else if isZombie \v0\ \<and> (\<not> \v2\) \<and> (\<exists>cn n. zombieObject \v0\ = Left (cn, n + 1))
+ then let (cn, \v3\) = theLeft (zombieObject \v0\); n = \v3\ - 1
+ in ->6 else if isThreadCap \v0\ \<and> \v1\ \<and> (\<not> \v2\)
+ then let tcb = capTCBPtr \v0
+ in ->7 else if isZombie \v0\ \<and> \v1\ \<and> (\<not> \v2\) \<and> isRight (zombieObject \v0\)
+ then let tcb = theRight (zombieObject \v0\)
+ in ->8 else if isZombie \v0\ \<and> \v2\ \<and> (\<exists>cn n. zombieObject \v0\ = Left (cn, n + 1))
+ then let (cn, \v3\) = theLeft (zombieObject \v0\); n = \v3\ - 1
+ in ->9 else if isZombie \v0\ \<and> \v1\ \<and> (\<exists>\v3\. zombieObject \v0\ = Left (\v3\, 0))
+ then ->10 else if isZombie \v0\ \<and> isRight (zombieObject \v0\) \<and> \v1\ \<and> \v2
+ then let tcb = theRight (zombieObject \v0\)
+ in ->11 else if isArchObjectCap \v0
+ then let (cap, final, exposed) = (capCap \v0\, \v1\, \v2\)
+ in ->12 else if isFrameCap \v0
+ then ->13 else if isNullCap \v0
+ then ->14 else if isZombie \v0\ \<and> (\<not> \v1\)
+ then ->15 else ->16
+
+case \x of (new, cap@(EndpointCap {})) -> (new, cap@(AsyncEndpointCap {})) -> (w, cap@(CNodeCap {})) -> (w, ArchObjectCap { capCap = aoCap }) -> (_, cap) ->  ---> let (new, cap) = \x;
+     w = new in
+ if isEndpointCap cap
+ then ->1 else if isAsyncEndpointCap cap
+ then ->2 else if isCNodeCap cap
+ then ->3 else if isArchObjectCap cap
+ then let aoCap = capCap cap
+ in ->4 else ->5
+
+case \x of cap@(EndpointCap { capEPCanSend = True }) -> _ ->  ---> let cap = \x in
+ if isEndpointCap cap \<and> capEPCanSend cap
+ then ->1 else ->2
+
+case \x of (EndpointCap { capEPPtr = ptr }, True, _) -> (AsyncEndpointCap { capAEPPtr = ptr }, True, _) -> (cap@(CNodeCap {}), True, exposed) -> (ThreadCap { capTCBPtr = tcb }, True, exposed) -> (Zombie { capCTEPtr = ptr, capNumber = n+1 }, _, False) -> (Zombie { capCTEPtr = ptr, capNumber = n+1 }, _, True) -> (Zombie { capNumber = 0 }, True, _) -> (ArchObjectCap { capCap = cap }, final, exposed) -> (FrameCap {}, _, _) -> (NullCap, _, _) -> (Zombie {}, False, _) -> (_, _, _) ->  ---> let (\v0\, \v1\, \v2\) = \x in
+ if isEndpointCap \v0\ \<and> \v1
+ then let ptr = capEPPtr \v0
+ in ->1 else if isAsyncEndpointCap \v0\ \<and> \v1
+ then let ptr = capAEPPtr \v0
+ in ->2 else if isCNodeCap \v0\ \<and> \v1
+ then let cap = \v0\; exposed = \v2
+ in ->3 else if isThreadCap \v0\ \<and> \v1
+ then let tcb = capTCBPtr \v0\; exposed = \v2
+ in ->4 else if isZombie \v0\ \<and> (\<not> \v2\) \<and> capNumber \v0\ \<noteq> 0
+ then let ptr = capCTEPtr \v0\;
+ n = capNumber \v0\ - 1
+ in ->5 else if isZombie \v0\ \<and> \v2\ \<and> capNumber \v0\ \<noteq> 0
+ then let ptr = capCTEPtr \v0\;
+ n = capNumber \v0\ - 1
+ in ->6 else if isZombie \v0\ \<and> capNumber \v0\ = 0
+ then ->7 else if isArchObjectCap \v0
+ then let (cap, final, exposed) = (capCap \v0\, \v1\, \v2\)
+ in ->8 else if isFrameCap \v0
+ then ->9 else if isNullCap \v0
+ then ->10 else if isZombie \v0\ \<and> (\<not> \v1\)
+ then ->11 else ->12
+
+case \x of (index:bits:args, cap@(CNodeCap {capCNodeCanModify=True})) -> (_, CNodeCap {capCNodeCanModify=False}) -> (_, _) ->  ---> let (\v0\, cap) = \x in
+ if length (\v0\) > 1 \<and> isCNodeCap cap \<and> capCNodeCanModify cap then let index = \v0\ !! 0;
+ bits = \v0\ !! 1;
+ args = drop 2 \v0
+ in ->1 else if isCNodeCap cap \<and> (\<not> capCNodeCanModify cap) then ->2 else ->3
+
+case \x of 32 -> 64 -> _ ->  ---> if \x = 32
+ then ->1 else if \x = 64
+ then ->2 else ->3
+
+case \x of NullCap -> c@(UntypedCap {}) -> c@(EndpointCap {}) -> c@(AsyncEndpointCap {}) -> c@(CNodeCap {}) -> c@(ThreadCap {}) -> c@(FrameCap {}) -> ArchObjectCap {capCap = aoCap} -> c@(Zombie {}) ->  ---> let c = \x in
+ if isNullCap c
+ then ->1 else if isUntypedCap c
+ then ->2 else if isEndpointCap c
+ then ->3 else if isAsyncEndpointCap c
+ then ->4 else if isCNodeCap c
+ then ->5 else if isThreadCap c
+ then ->6 else if isFrameCap c
+ then ->7 else if isArchObjectCap c
+ then let aoCap = capCap c
+ in ->8 else (* assuming Zombie *) ->9
+
+case \x of (src@EndpointCap {}, new@EndpointCap {}) -> (src@AsyncEndpointCap {}, new@AsyncEndpointCap {}) -> (_, _) ->  ---> let (src, new) = \x in
+ if (isEndpointCap src \<and> isEndpointCap new)
+ then ->1 else if (isAsyncEndpointCap src \<and> isAsyncEndpointCap new)
+ then ->2 else ->3
+
+case \x of c2@(Zombie { capCTEPtr = ptr2 }) -> _ ->  ---> let c2 = \x;
+ ptr2 = capCTEPtr c2 in
+ if isZombie c2
+ then ->1 else ->2
+
+case \x of (EndpointCap { capEPPtr = ptr }, True, _) -> (AsyncEndpointCap { capAEPPtr = ptr }, True, _) -> (cap@(CNodeCap {}), True, exposed) -> (ThreadCap { capTCBPtr = tcb }, True, exposed) -> (Zombie { capCTEPtr = ptr, capNumber = n+1 }, True, False) -> (Zombie { capCTEPtr = ptr, capNumber = n+1 }, True, True) -> (Zombie { capNumber = 0 }, True, _) -> (ArchObjectCap { capCap = cap }, final, exposed) -> (FrameCap {}, _, _) -> (NullCap, _, _) -> (Zombie {}, False, _) -> (_, _, _) ->  ---> let (\v0\, \v1\, \v2\) = \x in
+ if isEndpointCap \v0\ \<and> \v1
+ then let ptr = capEPPtr \v0
+ in ->1 else if isAsyncEndpointCap \v0\ \<and> \v1
+ then let ptr = capAEPPtr \v0
+ in ->2 else if isCNodeCap \v0\ \<and> \v1
+ then let cap = \v0\; exposed = \v2
+ in ->3 else if isThreadCap \v0\ \<and> \v1
+ then let tcb = capTCBPtr \v0\; exposed = \v2
+ in ->4 else if isZombie \v0\ \<and> \v1\ \<and> (\<not> \v2\) \<and> capNumber \v0\ \<noteq> 0
+ then let ptr = capCTEPtr \v0\;
+ n = capNumber \v0\ - 1
+ in ->5 else if isZombie \v0\ \<and> \v1\ \<and> \v2\ \<and> capNumber \v0\ \<noteq> 0
+ then let ptr = capCTEPtr \v0\;
+ n = capNumber \v0\ - 1;
+ c = \v0
+ in ->6 else if isZombie \v0\ \<and> \v1\ \<and> capNumber \v0\ = 0
+ then ->7 else if isArchObjectCap \v0
+ then let (cap, final, exposed) = (capCap \v0\, \v1\, \v2\)
+ in ->8 else if isFrameCap \v0
+ then ->9 else if isNullCap \v0
+ then ->10 else if isZombie \v0\ \<and> (\<not> \v1\)
+ then ->11 else ->12
+
+case \x of (src@EndpointCap {}, new@EndpointCap {}) -> (src@AsyncEndpointCap {}, new@AsyncEndpointCap {}) -> (_, _) ->  ---> let (src,new) = \x in
+ if isEndpointCap src & isEndpointCap new
+ then ->1
+ else if isAsyncEndpointCap src & isAsyncEndpointCap new
+ then ->2
+ else ->3
+
+case \x of EndpointCap { capEPBadge = 0 } -> AsyncEndpointCap { capAEPBadge = 0 } -> EndpointCap {} -> AsyncEndpointCap {} -> _ ->  ---> if isEndpointCap \x \<and> capEPBadge \x = 0
+ then ->1 else if isAsyncEndpointCap \x \<and> capAEPBadge \x = 0
+ then ->2 else if isEndpointCap \x then ->3 else if isAsyncEndpointCap \x
+ then ->4 else ->5
+
+case \x of (_, cap@(EndpointCap {capEPCanSend=True})) -> (_, cap@(AsyncEndpointCap {capAEPCanSend=True})) -> (sl, cap@(ThreadCap {capTCBCanWrite=True})) -> (_, cap@(CNodeCap {capCNodeCanModify=True})) -> (slot, cap@(UntypedCap {})) -> (slot, cap@(ArchObjectCap {})) -> (_, _) ->  ---> let (slot, cap) = \x in
+ if isEndpointCap cap \<and> capEPCanSend cap
+ then ->1 else if isAsyncEndpointCap cap \<and> capAEPCanSend cap
+ then ->2 else if isThreadCap cap \<and> capTCBCanWrite cap
+ then let sl = slot
+ in ->3 else if isCNodeCap cap \<and> capCNodeCanModify cap
+ then ->4 else if isUntypedCap cap
+ then ->5 else if isArchObjectCap cap
+ then ->6 else ->7
+
+case \x of EndpointCap { capEPBadge = 0 } -> AsyncEndpointCap { capAEPBadge = 0 } -> EndpointCap { capEPBadge = badge } | badge /= 0 -> AsyncEndpointCap { capAEPBadge = badge } | badge /= 0 -> _ ->  ---> if isEndpointCap \x & capEPBadge \x = 0
+ then ->1
+ else if isAsyncEndpointCap \x & capAEPBadge \x = 0
+ then ->2
+ else if isEndpointCap \x
+ then let badge = capEPBadge \x in
+ ->3
+ else if isAsyncEndpointCap \x
+ then let badge = capAEPBadge \x in
+ ->4
+ else ->5
+
+case \x of (_, NullCap) -> (a@(UntypedCap {}), b) -> (a@EndpointCap {}, b@EndpointCap {}) -> (a@AsyncEndpointCap {}, b@AsyncEndpointCap {}) -> (a@CNodeCap {}, b@CNodeCap {}) -> (a@ThreadCap {}, b@ThreadCap {}) -> (a@FrameCap {}, b@FrameCap {}) -> (ArchObjectCap a, ArchObjectCap b) -> (_, _) ->  ---> let (a,b) = \x in
+ if b = NullCap
+ then ->1
+ else if isUntypedCap a
+ then ->2
+ else if isEndpointCap a & isEndpointCap b
+ then ->3
+ else if isAsyncEndpointCap a & isAsyncEndpointCap b
+ then ->4
+ else if isCNodeCap a & isCNodeCap b
+ then ->5
+ else if isThreadCap a & isThreadCap b
+ then ->6
+ else if isFrameCap a & isFrameCap b
+ then ->7
+ else if isArchObjectCap a & isArchObjectCap b
+ then let a = capCap a; b = capCap b in
+ ->8
+ else ->9
+
+case \x of EndpointCap { capEPBadge = badge } | badge /= 0 -> AsyncEndpointCap { capAEPBadge = badge } | badge /= 0 -> _ ->  ---> if isEndpointCap \x & capEPBadge \x ~= 0
+ then let badge = capEPBadge \x in
+ ->1
+ else if isAsyncEndpointCap \x & capAEPBadge \x ~= 0
+ then let badge = capAEPBadge \x in
+ ->2
+ else ->3
+
+case \x of (EndpointCap { capEPPtr = ptr }, True, _) -> (AsyncEndpointCap { capAEPPtr = ptr }, True, _) -> (cap@(CNodeCap {}), True, exposed) -> (ThreadCap { capTCBPtr = tcb }, True, exposed) -> (Zombie { capCTEPtr = ptr, capNumber = n+1 }, True, False) -> (z@(Zombie { capCTEPtr = ptr, capNumber = n+1 }), True, True) -> (Zombie { capNumber = 0 }, True, _) -> (ArchObjectCap { capCap = cap }, final, exposed) -> (FrameCap {}, _, _) -> (NullCap, _, _) -> (Zombie {}, False, _) -> (_, _, _) ->  ---> let (\v0\, \v1\, \v2\) = \x in
+ if isEndpointCap \v0\ \<and> \v1
+ then let ptr = capEPPtr \v0
+ in ->1 else if isAsyncEndpointCap \v0\ \<and> \v1
+ then let ptr = capAEPPtr \v0
+ in ->2 else if isCNodeCap \v0\ \<and> \v1
+ then let cap = \v0\; exposed = \v2
+ in ->3 else if isThreadCap \v0\ \<and> \v1
+ then let tcb = capTCBPtr \v0\; exposed = \v2
+ in ->4 else if isZombie \v0\ \<and> \v1\ \<and> (\<not> \v2\) \<and> capNumber \v0\ \<noteq> 0
+ then let ptr = capCTEPtr \v0\;
+ n = capNumber \v0\ - 1
+ in ->5 else if isZombie \v0\ \<and> \v1\ \<and> \v2\ \<and> capNumber \v0\ \<noteq> 0
+ then let z = \v0\;
+ ptr = capCTEPtr \v0\;
+ n = capNumber \v0\ - 1;
+ c = \v0
+ in ->6 else if isZombie \v0\ \<and> \v1\ \<and> capNumber \v0\ = 0
+ then ->7 else if isArchObjectCap \v0
+ then let (cap, final, exposed) = (capCap \v0\, \v1\, \v2\)
+ in ->8 else if isFrameCap \v0
+ then ->9 else if isNullCap \v0
+ then ->10 else if isZombie \v0\ \<and> (\<not> \v1\)
+ then ->11 else ->12
+
+case \x of (srcIndex:srcDepth:args, srcRootCap:_) | label < 4 -> (_, _) | label == 4 -> (_, _) | label == 5 -> (pivotNewData:pivotIndex:pivotDepth:srcNewData:srcIndex:srcDepth:_, pivotRootCap:srcRootCap:_) | label == 6 -> (_, _) | label > 6 -> _ ->  ---> let (\v0\, \v1\) = \x
+ in if length \v0\ >= 2 & length \v1\ >= 1 & label < 4 then let srcIndex = \v0\ !! 0; srcDepth = \v0\ !! 1; args = drop 2 \v0\; srcRootCap = \v1\ !! 0 in ->1 else if label = 4 then ->2 else if label = 5 then ->3 else if length \v0\ >= 6 & length \v1\ >= 2 & label = 6 then let pivotNewData = \v0\ !! 0; pivotIndex = \v0\ !! 1; pivotDepth = \v0\ !! 2; srcNewData = \v0\ !! 3; srcIndex = \v0\ !! 4; srcDepth = \v0\ !! 5; pivotRootCap = \v1\ !! 0; srcRootCap = \v1\ !! 1 in ->4 else if label > 6 then ->5 else ->6
+
+case \x of Zombie {} -> cap@(UntypedCap {}) -> ArchObjectCap cap -> cap ->  ---> let cap = \x
+ in case cap of Zombie \v0\ \v1\ \v2\ \<Rightarrow> ->1 | UntypedCap \v0\ \v1\ \<Rightarrow> ->2 | ArchObjectCap cap \<Rightarrow> ->3 | _ \<Rightarrow> ->4
+
+case \x of 0 -> 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> _ ->  ---> let \v0\ = \x
+ in if \v0\ = 0 then ->1 else if \v0\ = 1 then ->2 else if \v0\ = 2 then ->3 else if \v0\ = 3 then ->4 else if \v0\ = 4 then ->5 else if \v0\ = 5 then ->6 else if \v0\ = 6 then ->7 else if \v0\ = 7 then ->8 else ->9
+
+case \x of MI { msgExtraCaps = 0 } -> MI { msgExtraCaps = count } ->  ---> let \v0\ = \x
+ in if msgExtraCaps \v0\ = 0 then ->1 else let count = msgExtraCaps \v0\ in ->2
+
+case \x of c@PageTableCap { capPTMappedAddress = Just _ } -> PageTableCap { capPTMappedAddress = Nothing } -> c@PageDirectoryCap { capPDMappedASID = Just _ } -> PageDirectoryCap { capPDMappedASID = Nothing } -> c@PageCap {} -> c@ASIDControlCap -> c@ASIDPoolCap {} ->  ---> let c = \x
+ in case c of
+ PageTableCap \v0\ \v1\ \<Rightarrow> if \v1\ = None then ->2 else ->1
+ | PageDirectoryCap \v0\ \v1\ \<Rightarrow> if \v1\ = None then ->4 else ->3
+ | PageCap \v0\ \v1\ \v2\ \v3\ \<Rightarrow> ->5
+ | ASIDControlCap \<Rightarrow> ->6
+ | ASIDPoolCap \v0\ \v1\ \<Rightarrow> ->7
+
+case \x of c@(PageCap {}) -> c ->  ---> let c = \x in
+ case c of
+ PageCap \v0\ \v1\ \v2\ \v3\ \<Rightarrow> ->1 | _ \<Rightarrow> ->2
+
+case \x of (a@PageCap {}, b@PageCap {}) -> (a@PageTableCap {}, b@PageTableCap {}) -> (a@PageDirectoryCap {}, b@PageDirectoryCap {}) -> (ASIDControlCap, ASIDControlCap) -> (a@ASIDPoolCap {}, b@ASIDPoolCap {}) -> (_, _) ->  ---> let (a, b) = \x in
+ if (isPageCap a & isPageCap b) then ->1 else if (isPageTableCap a & isPageTableCap b) then ->2 else if (isPageDirectoryCap a & isPageDirectoryCap b) then ->3 else if (isASIDControlCap a & isASIDControlCap b) then ->4 else if (isASIDPoolCap a & isASIDPoolCap b) then ->5 else ->6
+
+case \x of Arch.Types.APIObjectType _ -> Arch.Types.SmallPageObject -> Arch.Types.LargePageObject -> Arch.Types.SectionObject -> Arch.Types.SuperSectionObject -> Arch.Types.PageTableObject -> Arch.Types.PageDirectoryObject ->  ---> case \x of
+ Arch.Types.APIObjectType \v0\ \<Rightarrow> ->1 | Arch.Types.SmallPageObject \<Rightarrow> ->2 | Arch.Types.LargePageObject \<Rightarrow> ->3 | Arch.Types.SectionObject \<Rightarrow> ->4 | Arch.Types.SuperSectionObject \<Rightarrow> ->5 | Arch.Types.PageTableObject \<Rightarrow> ->6 | Arch.Types.PageDirectoryObject \<Rightarrow> ->7
+
+case \x of (srcIndex:srcDepth:args, srcRootCap:_) | label < 4 -> (_, _) | label == 4 -> (_, _) | label == 5 -> (_, _) | label == 6 -> (pivotNewData:pivotIndex:pivotDepth:srcNewData:srcIndex:srcDepth:_, pivotRootCap:srcRootCap:_) | label == 7 -> (_, _) | label > 7 -> _ ->  ---> let (\v0\, \v1\) = \x
+ in if length \v0\ >= 2 & length \v1\ >= 1 & label < 4 then let srcIndex = \v0\ !! 0; srcDepth = \v0\ !! 1; args = drop 2 \v0\; srcRootCap = \v1\ !! 0 in ->1 else if label = 4 then ->2 else if label = 5 then ->3 else if label = 6 then ->4 else if length \v0\ >= 6 & length \v1\ >= 2 & label = 7 then let pivotNewData = \v0\ !! 0; pivotIndex = \v0\ !! 1; pivotDepth = \v0\ !! 2; srcNewData = \v0\ !! 3; srcIndex = \v0\ !! 4; srcDepth = \v0\ !! 5; pivotRootCap = \v1\ !! 0; srcRootCap = \v1\ !! 1 in ->5 else if label > 7 then ->6 else ->7
+
+case \x of IdleEP | blocking -> SendEP queue | blocking -> IdleEP -> SendEP _ -> RecvEP (dest:queue) -> RecvEP [] ->  ---> case \x of
+ IdleEP \<Rightarrow> if blocking then ->1 else ->3 | SendEP queue \<Rightarrow> if blocking then ->2 else ->4 | RecvEP \v0\ \<Rightarrow> (case \v0\ of dest # queue \<Rightarrow> ->5 | [] \<Rightarrow> ->6 )
+
+case \x of Zombie {} -> cap@(UntypedCap {}) -> ReplyCap {} -> ArchObjectCap cap -> cap ->  --->     let cap = \x
+      in case cap of
+         Zombie \v0\ \v1\ \v2\ \<Rightarrow> ->1
+         | UntypedCap \v0\ \v1\ \<Rightarrow> ->2
+         | ReplyCap \v0\ \v1\ \<Rightarrow> ->3
+         | ArchObjectCap cap \<Rightarrow> ->4
+         | _ \<Rightarrow> ->5
+
+case \x of (EndpointCap { capEPPtr = ptr }, True, _) -> (AsyncEndpointCap { capAEPPtr = ptr }, True, _) -> (cap@(CNodeCap {}), True, exposed) -> (ThreadCap { capTCBPtr = tcb }, True, exposed) -> (Zombie { capCTEPtr = ptr, capNumber = n+1 }, True, False) -> (z@(Zombie { capCTEPtr = ptr, capNumber = n+1 }), True, True) -> (Zombie { capNumber = 0 }, True, _) -> (IRQHandlerCap { capIRQ = irq }, True, _) -> (ArchObjectCap { capCap = cap }, final, exposed) -> (NullCap, _, _) -> (Zombie {}, False, _) -> (_, _, _) ->  --->     let (\v0\, \v1\, \v2\) = \x in
+     if isEndpointCap \v0\ \<and> \v1\
+     then let ptr = capEPPtr \v0
+ in ->1
+     else if isAsyncEndpointCap \v0\ \<and> \v1\
+     then let ptr = capAEPPtr \v0
+ in ->2
+     else if isCNodeCap \v0\ \<and> \v1\
+     then let cap = \v0\; exposed = \v2\ in ->3
+     else if isThreadCap \v0\ \<and> \v1\
+     then let tcb = capTCBPtr \v0\; exposed = \v2\ in ->4
+     else if isZombie \v0\ \<and> \v1\ \<and> (\<not> \v2\) \<and> capNumber \v0\ \<noteq> 0
+     then let ptr = capCTEPtr \v0\;
+              n = capNumber \v0\ - 1
+          in ->5
+     else if isZombie \v0\ \<and> \v1\ \<and> \v2\ \<and> capNumber \v0\ \<noteq> 0
+     then let z = \v0\;
+              ptr = capCTEPtr \v0\;
+              n = capNumber \v0\ - 1;
+              c = \v0\
+          in ->6
+     else if isZombie \v0\ \<and> \v1\ \<and> capNumber \v0\ = 0
+     then ->7
+     else if isIRQHandlerCap \v0\ \<and> \v1\
+     then let irq = capIRQ \v0\ in ->8
+     else if isArchObjectCap \v0\
+     then let (cap, final, exposed) = (capCap \v0\, \v1\, \v2\) in ->9
+     else if isNullCap \v0\
+     then ->10
+     else if isZombie \v0\ \<and> (\<not> \v1\)
+     then ->11
+     else ->12
+
+case \x of (_, NullCap) -> (a@(UntypedCap {}), b) -> (a@EndpointCap {}, b@EndpointCap {}) -> (a@AsyncEndpointCap {}, b@AsyncEndpointCap {}) -> (a@CNodeCap {}, b@CNodeCap {}) -> (a@ThreadCap {}, b@ThreadCap {}) -> (IRQControlCap, IRQControlCap) -> (IRQHandlerCap a, IRQHandlerCap b) -> (ArchObjectCap a, ArchObjectCap b) -> (_, _) ->  --->let (a,b) = \x in
+    if b = NullCap
+    then ->1
+    else if isUntypedCap a
+    then ->2
+    else if isEndpointCap a & isEndpointCap b
+    then ->3
+    else if isAsyncEndpointCap a & isAsyncEndpointCap b
+    then ->4
+    else if isCNodeCap a & isCNodeCap b
+    then ->5
+    else if isThreadCap a & isThreadCap b
+    then ->6
+    else if a = IRQControlCap & b = IRQControlCap
+    then ->7
+    else if isIRQHandlerCap a & isIRQHandlerCap b
+    then let a = capIRQ a; b = capIRQ b in ->8
+    else if isArchObjectCap a & isArchObjectCap b
+    then let a = capCap a; b = capCap b in
+          ->9
+    else ->10
+
+case \x of (preserve, new, cap@(EndpointCap {})) -> (preserve, new, cap@(AsyncEndpointCap {})) -> (_, w, cap@(CNodeCap {})) -> (p, w, ArchObjectCap { capCap = aoCap }) -> (_, _, cap) ->  --->let (\v0\, \v1\, \v2\ ) = \x in
+    if isEndpointCap \v2\
+    then let preserve = \v0\; new = \v1\; cap = \v2\ in ->1
+    else if isAsyncEndpointCap \v2\
+    then let preserve = \v0\; new = \v1\; cap = \v2\ in ->2
+    else if isCNodeCap \v2\
+    then let w = \v1\; cap = \v2\ in ->3
+    else if isArchObjectCap \v2\
+    then let p = \v0\; w = \v1\; aoCap = capCap \v2\ in ->4
+    else let cap = \v2\ in ->5
+
+case \x of NullCap -> c@(UntypedCap {}) -> c@(EndpointCap {}) -> c@(AsyncEndpointCap {}) -> c@(ReplyCap {}) -> c@(CNodeCap {}) -> c@(ThreadCap {}) -> c@IRQControlCap -> c@(IRQHandlerCap {}) -> ArchObjectCap {capCap = aoCap} -> c@(Zombie {}) ->  --->let c = \x in
+    if isNullCap c then ->1
+    else if isUntypedCap c then ->2
+    else if isEndpointCap c then ->3
+    else if isAsyncEndpointCap c then ->4
+    else if isReplyCap c then ->5
+    else if isCNodeCap c then ->6
+    else if isThreadCap c then ->7
+    else if isIRQControlCap c then ->8
+    else if isIRQHandlerCap c then ->9
+    else if isArchObjectCap c then let aoCap = capCap c in ->10
+    else (* assuming Zombie *) ->11
+
+case \x of 0 -> 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> _ ->  --->let \v0\ = \x
+ in if \v0\ = 0 then ->1 else if \v0\ = 1 then ->2 else if \v0\ = 2 then ->3 else if \v0\ = 3 then ->4 else if \v0\ = 4 then ->5 else if \v0\ = 5 then ->6 else if \v0\ = 6 then ->7 else if \v0\ = 7 then ->8 else if \v0\ = 8 then ->9 else if \v0\ = 9 then ->10 else ->11
+
+case \x of ArchObjectCap (pageCap@PageCap {}) -> _ ->  ---> let \v0\ = \x in
+    if isArchObjectCap \v0\ \<and> isPageCap (capCap \v0\)
+    then
+        let pageCap = capCap \v0\
+        in ->1
+    else ->2
+
+case \x of ArchObjectCap (frameCap@PageCap {}) -> _ ->  ---> let \v0\ = \x in
+    if isArchObjectCap \v0\ \<and> isPageCap (capCap \v0\)
+    then
+        let frameCap = capCap \v0\
+        in ->1
+    else ->2
+
+case \x of ((Zombie { capCTEPtr = ptr, capNumber = n+1 }), False) -> (z@(Zombie { capCTEPtr = ptr, capNumber = n+1 }), True) -> (_, _) ->  ---> let (\v0\, \v1\) = \x in
+     if isZombie \v0\ \<and> (\<not> \v1\) \<and> capNumber \v0\ \<noteq> 0
+     then let ptr = capCTEPtr \v0\;
+              n = capNumber \v0\ - 1
+          in ->1
+     else if isZombie \v0\ \<and> \v1\ \<and> capNumber \v0\ \<noteq> 0
+     then let z = \v0\;
+              ptr = capCTEPtr \v0\;
+              n = capNumber \v0\ - 1
+          in ->2
+     else ->3
+
+case \x of (c@PageTableCap { capPTMappedAddress = Just _ }) -> (PageTableCap { capPTMappedAddress = Nothing }) -> (c@PageDirectoryCap { capPDMappedASID = Just _ }) -> (PageDirectoryCap { capPDMappedASID = Nothing }) -> (c@PageCap {}) -> c@ASIDControlCap -> (c@ASIDPoolCap {}) ->  ---> let c = \x in
+    if isPageTableCap c \<and> capPTMappedAddress c \<noteq> None
+    then ->1
+    else if isPageTableCap c \<and> capPTMappedAddress c = None
+    then ->2
+    else if isPageDirectoryCap c \<and> capPDMappedASID c \<noteq> None
+    then ->3
+    else if isPageDirectoryCap c \<and> capPDMappedASID c = None
+    then ->4
+    else if isPageCap c
+    then ->5
+    else if isASIDControlCap c
+    then ->6
+    else if isASIDPoolCap c
+    then ->7
+    else undefined
+
+case \x of ((a@PageCap {}), (b@PageCap {})) -> ((a@PageTableCap {}), (b@PageTableCap {})) -> ((a@PageDirectoryCap {}), (b@PageDirectoryCap {})) -> (ASIDControlCap, ASIDControlCap) -> ((a@ASIDPoolCap {}), (b@ASIDPoolCap {})) -> (_, _) ->  ---> let (a, b) = \x in
+    if isPageCap a \<and> isPageCap b
+    then ->1
+    else if isPageTableCap a \<and> isPageTableCap b
+    then ->2
+    else if isPageDirectoryCap a \<and> isPageDirectoryCap b
+    then ->3
+    else if isASIDControlCap a \<and> isASIDControlCap b
+    then ->4
+    else if isASIDPoolCap a \<and> isASIDPoolCap b
+    then ->5
+    else ->6
+
+case \x of ArchObjectCap (frame@PageCap {}) -> _ ->  ---> let \v0\ = \x in
+	if isArchObjectCap \v0\ \<and> isPageCap (capCap \v0\)
+	then let frame = capCap \v0\
+	in ->1
+	else ->2
+
+case \x of ArchObjectCap (PageDirectoryCap { capPDMappedASID = Just _, capPDBasePtr = cur_pd }) | cur_pd == pd -> _ ->  ---> let \v0\ = \x in
+    if isArchObjectCap \v0\ \<and> isPageDirectoryCap (capCap \v0\) \<and> capPDMappedASID (capCap \v0\) \<noteq> None \<and> capPDBasePtr (capCap \v0\) = pd
+    then let cur_pd = pd in ->1
+    else ->2
+
+case \x of (0, vaddr:attr:_, (pdCap,_):_) -> (0, _, _) -> _ ->  ---> let (\v0\, \v1\, \v2\) = \x in
+    if \v0\ = 0 then
+        if length \v1\ > 1 \<and> length \v2\ > 0
+        then let vaddr = \v1\ !! 0;
+            attr = \v1\ !! 1;
+            pdCap = fst (\v2\ !! 0)
+        in ->1
+        else ->2
+    else ->3
+
+case \x of (0, vaddr:rightsMask:attr:_, (pdCap,_):_) -> (0, _, _) -> (1, rightsMask:attr:_, _) -> (1, _, _) -> (2, _, _) -> (3, _, _) -> _ ->  ---> let (\v0\, \v1\, \v2\) = \x in
+    if \v0\ = 0 then
+        if length \v1\ > 2 \<and> length \v2\ > 0
+        then let vaddr = \v1\ !! 0;
+            rightsMask = \v1\ !! 1;
+            attr = \v1\ !! 2;
+            pdCap = fst (\v2\ !! 0)
+        in ->1
+        else ->2
+    else if \v0\ = 1 then
+        if length \v1\ > 1
+        then let rightsMask = \v1\ !! 0;
+            attr = \v1\ !! 1
+        in ->3
+        else ->4
+    else if \v0\ = 2
+    then ->5
+    else if \v0\ = 3
+    then ->6
+    else ->7
+
+case \x of UntypedCap {} | capBlockSize untyped == objBits pool -> _ ->  ---> let \v0\ = \x in
+    if isUntypedCap \v0\ \<and> capBlockSize \v0\ == objBits pool
+    then ->1
+    else ->2
+
+case \x of (0, index:depth:_, (untyped,parentSlot):(root,_):_) -> (0, _, _) -> _ ->  ---> let (\v0\, \v1\, \v2\) = \x in
+    if \v0\ = 0 then
+        if length \v1\ > 1 \<and> length \v2\ > 1
+        then let index = \v1\ !! 0;
+            depth = \v1\ !! 1;
+            (untyped, parentSlot) = \v2\ !! 0;
+            root = fst (\v2\ !! 1)
+        in ->1
+        else ->2
+    else ->3
+
+case \x of (0, (pdCap,pdCapSlot):_) -> (0, _) -> _ ->  ---> let (\v0\, \v1\) = \x in
+    if \v0\ = 0 then
+        if length \v1\ > 0
+        then let (pdCap, pdCapSlot) = \v1\ !! 0
+        in ->1
+        else ->2
+    else ->3
+
+case \x of (PageDirectoryCap {}) -> cap@(PageTableCap {}) -> cap@(PageCap {}) -> ASIDControlCap -> cap@(ASIDPoolCap {}) ->  ---> let cap = \x in
+    if isPageDirectoryCap cap
+    then ->1
+    else if isPageTableCap cap
+    then ->2
+    else if isPageCap cap
+    then ->3
+    else if isASIDControlCap cap
+    then ->4
+    else if isASIDPoolCap cap
+    then ->5
+    else undefined
+
+case \x of ((index:bits:args), cap@(CNodeCap {capCNodeCanModify=True})) -> (_, (CNodeCap {capCNodeCanModify=True})) -> (_, _) ->  ---> let (\v0\, cap) = \x in
+    if isCNodeCap cap \<and> capCNodeCanModify cap
+    then
+        (case \v0\ of
+            (index # bits # args) \<Rightarrow> ->1
+          | _ \<Rightarrow> ->2
+    )
+    else ->3
+
+case \x of ((src@EndpointCap {}), (new@EndpointCap {})) -> ((src@AsyncEndpointCap {}), (new@AsyncEndpointCap {})) -> (_, _) ->  ---> let (src, new) = \x in
+    if isEndpointCap src \<and> isEndpointCap new
+    then ->1
+    else if isAsyncEndpointCap src \<and> isAsyncEndpointCap new
+    then ->2
+    else ->3
+
+case \x of (CTE { cteCap = UntypedCap {} }) -> cte@(CTE { cteMDBNode = mdb }) ->  ---> let \v0\ = \x in
+    if isUntypedCap (cteCap \v0\)
+    then ->1
+    else let cte = \v0\;
+        mdb = cteMDBNode cte
+    in ->2
+
+case \x of 0 | length msg >= length syscallMessage -> _ ->  ---> if \x = 0 \<and> length msg \<ge> length syscallMessage
+    then ->1
+    else ->2
+
+case \x of 0 | length msg >= length exceptionMessage -> _ ->  ---> if \x = 0 \<and> length msg \<ge> length exceptionMessage
+    then ->1
+    else ->2
+
+case \x of (0,irqW:index:depth:_,cnode:_) -> (0,_,_) -> (1,_,_) -> _ ->  ---> let (\v0\, \v1\, \v2\) = \x in
+    if \v0\ = 0 then
+        if length \v1\ > 2 \<and> length \v2\ > 0
+        then let irqW = \v1\ !! 0;
+            index = \v1\ !! 1;
+            depth = \v1\ !! 2;
+            cnode = \v2\ !! 0
+        in ->1
+        else ->2
+    else if \v0\ = 1
+    then ->3
+    else ->4
+
+case \x of (0,_) -> (1,(cap,slot):_) -> (1,_) -> (2,_) -> _ ->  ---> let (\v0\, \v1\) = \x in
+    if \v0\ = 0
+    then ->1
+    else if \v0\ = 1
+    then if length \v1\ > 0
+        then let (cap, slot) = \v1\ !! 0
+        in ->2
+        else ->3
+    else if \v0\ = 2
+    then ->4
+    else ->5
+
+case \x of (Zombie {}) -> cap@(UntypedCap {}) -> (ReplyCap {}) -> (ArchObjectCap cap) -> cap ->  ---> let cap = \x in
+    if isZombie cap
+    then ->1
+    else if isUntypedCap cap
+    then ->2
+    else if isReplyCap cap
+    then ->3
+    else if isArchObjectCap cap
+    then let cap = capCap cap
+        in ->4
+    else ->5
+
+case \x of ((EndpointCap { capEPPtr = ptr }), True) -> ((AsyncEndpointCap { capAEPPtr = ptr }), True) -> ((CNodeCap { capCNodePtr = ptr, capCNodeBits = bits }), True) -> ((ThreadCap { capTCBPtr = tcb}), True) -> (z@(Zombie {}), True) -> ((ArchObjectCap { capCap = cap }), final) -> ((IRQHandlerCap { capIRQ = irq }), True) -> (NullCap, _) -> ((Zombie {}), False) -> (_, _) ->  ---> let (\v0\, \v1\) = \x in
+    if isEndpointCap \v0\ \<and> \v1\
+    then let ptr = capEPPtr \v0\
+        in ->1
+    else if isAsyncEndpointCap \v0\ \<and> \v1\
+    then let ptr = capAEPPtr \v0\
+        in ->2
+    else if isCNodeCap \v0\ \<and> \v1\
+    then let ptr = capCNodePtr \v0\; bits = capCNodeBits \v0\
+        in ->3
+    else if isThreadCap \v0\ \<and> \v1\
+    then let tcb = capTCBPtr \v0\
+        in ->4
+    else if isZombie \v0\ \<and> \v1\
+    then let z = \v0\
+        in ->5
+    else if isArchObjectCap \v0\
+    then let cap = capCap \v0\; final = \v1\
+        in ->6
+    else if isIRQHandlerCap \v0\ \<and> \v1\
+    then let irq = capIRQ \v0\
+        in ->7
+    else if isNullCap \v0\
+    then ->8
+    else if isZombie \v0\ \<and> \<not> \v1\
+    then ->9
+    else ->10
+
+case \x of (_, NullCap) -> (a@(UntypedCap {}), b) -> ((a@EndpointCap {}), (b@EndpointCap {})) -> ((a@AsyncEndpointCap {}), (b@AsyncEndpointCap {})) -> ((a@CNodeCap {}), (b@CNodeCap {})) -> ((a@ThreadCap {}), (b@ThreadCap {})) -> (IRQControlCap, IRQControlCap) -> ((IRQHandlerCap a), (IRQHandlerCap b)) -> ((ArchObjectCap a), (ArchObjectCap b)) -> (_, _) ->  ---> let (a, b) = \x in
+    if isNullCap b
+    then ->1
+    else if isUntypedCap a
+    then ->2
+    else if isEndpointCap a \<and> isEndpointCap b
+    then ->3
+    else if isAsyncEndpointCap a \<and> isAsyncEndpointCap b
+    then ->4
+    else if isCNodeCap a \<and> isCNodeCap b
+    then ->5
+    else if isThreadCap a \<and> isThreadCap b
+    then ->6
+    else if isIRQControlCap a \<and> isIRQControlCap b
+    then ->7
+    else if isIRQHandlerCap a \<and> isIRQHandlerCap b
+    then (case (a, b) of
+        (IRQHandlerCap a, IRQHandlerCap b) \<Rightarrow> ->8
+        )
+    else if isArchObjectCap a \<and> isArchObjectCap b
+    then (case (a, b) of
+        (ArchObjectCap a, ArchObjectCap b) \<Rightarrow> ->9
+        )
+    else ->10
+
+case \x of (preserve, new, cap@(EndpointCap {})) -> (preserve, new, cap@(AsyncEndpointCap {})) -> (_, w, cap@(CNodeCap {})) -> (p, w, (ArchObjectCap { capCap = aoCap })) -> (_, _, cap) ->  ---> let (\v0\, \v1\, \v2\) = \x in
+    if isEndpointCap \v2\
+    then let preserve = \v0\; new = \v1\; cap = \v2\
+        in ->1
+    else if isAsyncEndpointCap \v2\
+    then let preserve = \v0\; new = \v1\; cap = \v2\
+        in ->2
+    else if isCNodeCap \v2\
+    then let w = \v1\; cap = \v2\
+        in ->3
+    else if isArchObjectCap \v2\
+    then let p = \v0\; w = \v1\; aoCap = capCap \v2\
+        in ->4
+    else let cap = \v2\
+    in ->5
+
+case \x of NullCap -> c@(UntypedCap {}) -> c@(EndpointCap {}) -> c@(AsyncEndpointCap {}) -> c@(ReplyCap {}) -> c@(CNodeCap {}) -> c@(ThreadCap {}) -> c@IRQControlCap -> c@(IRQHandlerCap {}) -> (ArchObjectCap {capCap = aoCap}) -> c@(Zombie {}) ->  ---> let c = \x; aoCap = capCap \x in
+    if isNullCap c
+    then ->1
+    else if isUntypedCap c
+    then ->2
+    else if isEndpointCap c
+    then ->3
+    else if isAsyncEndpointCap c
+    then ->4
+    else if isReplyCap c
+    then ->5
+    else if isCNodeCap c
+    then ->6
+    else if isThreadCap c
+    then ->7
+    else if isIRQControlCap c
+    then ->8
+    else if isIRQHandlerCap c
+    then ->9
+    else if isArchObjectCap c
+    then ->10
+    else if isZombie c
+    then ->11
+    else undefined
+
+case \x of cap@(EndpointCap {capEPCanSend=True}) -> cap@(AsyncEndpointCap {capAEPCanSend=True}) -> cap@(ReplyCap {capReplyMaster=False}) -> cap@(ThreadCap {capTCBCanWrite=True}) -> cap@(CNodeCap {capCNodeCanModify=True}) -> cap@(UntypedCap {}) -> IRQControlCap -> (IRQHandlerCap { capIRQ = irq }) -> (ArchObjectCap cap) -> _ ->  ---> let cap = \x in
+    if isEndpointCap cap \<and> capEPCanSend cap
+    then ->1
+    else if isAsyncEndpointCap cap \<and> capAEPCanSend cap
+    then ->2
+    else if isReplyCap cap \<and> \<not> capReplyMaster cap
+    then ->3
+    else if isThreadCap cap \<and> capTCBCanWrite cap
+    then ->4
+    else if isCNodeCap cap \<and> capCNodeCanModify cap
+    then ->5
+    else if isUntypedCap cap
+    then ->6
+    else if isIRQControlCap cap
+    then ->7
+    else if isIRQHandlerCap cap
+    then let irq = capIRQ cap
+        in ->8
+    else if isArchObjectCap cap
+    then let cap = capCap cap
+        in ->9
+    else ->10
+
+case \x of (EndpointCap { capEPPtr = p1 }, Just p2, _) | p1 == p2 -> (_, _, destSlot:slots') -> _ ->  ---> let (\v0\, \v1\, \v2\) = \x in
+    if isEndpointCap \v0\ \<and> \v1\ \<noteq> None \<and> capEPPtr \v0\ = the \v1\
+    then let p1 = capEPPtr \v0\; p2 = p1
+        in ->1
+    else (case \v2\ of
+        destSlot # slots' \<Rightarrow> ->2
+      | _ \<Rightarrow> ->3
+    )
+
+case \x of ((EndpointCap { capEPPtr = ptr }), final, _) -> ((AsyncEndpointCap { capAEPPtr = ptr }), final, _) -> ((ReplyCap {}), _, _) -> (_, _, True) -> ((CNodeCap { capCNodePtr = ptr, capCNodeBits = bits }), True, _) -> ((ThreadCap { capTCBPtr = tcb}), True, _) -> (z@(Zombie {}), True, _) -> ((ArchObjectCap { capCap = cap }), final, _) -> ((IRQHandlerCap { capIRQ = irq }), True, _) -> (NullCap, _, _) -> ((Zombie {}), False, _) -> (_, _, _) ->  ---> let (\v0\, \v1\, \v2\) = \x in
+    if isEndpointCap \v0\
+    then let ptr = capEPPtr \v0\; final = \v1\
+        in ->1
+    else if isAsyncEndpointCap \v0\
+    then let ptr = capAEPPtr \v0\; final = \v1\
+        in ->2
+    else if isReplyCap \v0\
+    then ->3
+    else if \v2\
+    then ->4
+    else if isCNodeCap \v0\ \<and> \v1\
+    then let ptr = capCNodePtr \v0\; bits = capCNodeBits \v0\
+        in ->5
+    else if isThreadCap \v0\ \<and> \v1\
+    then let tcb = capTCBPtr \v0\
+        in ->6
+    else if isZombie \v0\ \<and> \v1\
+    then let z = \v0\
+        in ->7
+    else if isArchObjectCap \v0\
+    then let cap = capCap \v0\; final = \v1\
+        in ->8
+    else if isIRQHandlerCap \v0\ \<and> \v1\
+    then let irq = capIRQ \v0\
+        in ->9
+    else if isNullCap \v0\
+    then ->10
+    else if isZombie \v0\ \<and> \<not> \v1\
+    then ->11
+    else ->12
+
+case \x of (cap@PageCap {}) -> (cap@PageTableCap { capPTBasePtr = ptr }) -> (cap@PageDirectoryCap { capPDBasePtr = ptr }) -> ASIDControlCap -> (cap@ASIDPoolCap { capASIDBase = base, capASIDPool = ptr }) ->  ---> let cap = \x in
+    if isPageCap cap
+    then ->1
+    else if isPageTableCap cap
+    then let ptr = capPTBasePtr cap
+        in ->2
+    else if isPageDirectoryCap cap
+    then let ptr = capPDBasePtr cap
+        in ->3
+    else if isASIDControlCap cap
+    then ->4
+    else if isASIDPoolCap cap
+    then let base = capASIDBase cap; ptr = capASIDPool cap
+        in ->5
+    else undefined
+
+case \x of (srcIndex:srcDepth:args, srcRootCap:_) | label < 4 -> (_, _) | label == 4 -> (_, _) | label == 5 -> (_, _) | label == 6 -> (_, _) | label == 7 -> (pivotNewData:pivotIndex:pivotDepth:srcNewData:srcIndex:srcDepth:_, pivotRootCap:srcRootCap:_) | label == 8 -> (_, _) | label > 8 -> _ ->  ---> let (\v0\, \v1\) = \x in
+    case (if label < 4 then 1
+          else if label = 4 then 2
+          else if label = 5 then 3
+          else if label = 6 then 4
+          else if label = 7 then 5
+          else if label = 8 then 6
+          else if label > 8 then 7 else 0, \v0\, \v1\) of
+    (Suc 0, srcIndex # srcDepth # args, srcRootCap # _)
+        \<Rightarrow> ->1
+  | (Suc (Suc 0), _, _)
+        \<Rightarrow> ->2
+  | (Suc (Suc (Suc 0)), _, _)
+        \<Rightarrow> ->3
+  | (Suc (Suc (Suc (Suc 0))), _, _)
+        \<Rightarrow> ->4
+  | (Suc (Suc (Suc (Suc (Suc 0)))), _, _)
+        \<Rightarrow> ->5
+  | (Suc (Suc (Suc (Suc (Suc (Suc 0))))),
+     pivotNewData#pivotIndex#pivotDepth#srcNewData#srcIndex#srcDepth#_,
+     pivotRootCap#srcRootCap#_)
+        \<Rightarrow> ->6
+  | (Suc (Suc (Suc (Suc (Suc (Suc (Suc 0)))))), _, _)
+        \<Rightarrow> ->7
+  | _ \<Rightarrow> ->8
+
+case \x of c2@(Zombie { capZombiePtr = ptr2 }) -> _ ->  ---> let \v0\ = \x in
+    if isZombie \v0\
+    then let c2 = \v0\; ptr2 = capZombiePtr c2
+        in ->1
+    else ->2
+
+case \x of ((Zombie { capZombieNumber = 0 }), _) -> ((Zombie { capZombiePtr = ptr }), False) -> (z@(Zombie { capZombiePtr = ptr, capZombieNumber = n+1 }), True) -> (_, _) ->  ---> let (\v0\, \v1\) = \x in
+    if isZombie \v0\ \<and> capZombieNumber \v0\ = 0
+    then ->1
+    else if isZombie \v0\ \<and> \<not> \v1\
+    then let ptr = capZombiePtr \v0\
+        in ->2
+    else if isZombie \v0\ \<and> \v1\
+    then let z = \v0\; ptr = capZombiePtr z; n = capZombieNumber z - 1
+        in ->3
+    else ->4
+
+case \x of NullCap -> (CNodeCap {}) -> (ThreadCap {}) -> (Zombie { capZombiePtr = ptr, capZombieType = tp, capZombieNumber = n}) -> (cap@EndpointCap { capEPPtr = ep, capEPBadge = b }) -> (ArchObjectCap cap) -> cap ->  ---> let cap = \x in
+    if isNullCap cap
+    then ->1
+    else if isCNodeCap cap
+    then ->2
+    else if isThreadCap cap
+    then ->3
+    else if isZombie cap
+    then let ptr = capZombiePtr cap; tp = capZombieType cap;
+             n = capZombieNumber cap
+        in ->4
+    else if isEndpointCap cap
+    then let ep = capEPPtr cap; b = capEPBadge cap
+        in ->5
+    else if isArchObjectCap cap
+    then let cap = capCap cap
+        in ->6
+    else ->7
+
+case \x of (_, NullCap) -> (a@(UntypedCap {}), b) -> ((a@EndpointCap {}), (b@EndpointCap {})) -> ((a@AsyncEndpointCap {}), (b@AsyncEndpointCap {})) -> ((a@CNodeCap {}), (b@CNodeCap {})) -> ((a@ThreadCap {}), (b@ThreadCap {})) -> (IRQControlCap, IRQControlCap) -> (IRQControlCap, (IRQHandlerCap {})) -> ((IRQHandlerCap a), (IRQHandlerCap b)) -> ((ArchObjectCap a), (ArchObjectCap b)) -> (_, _) ->  ---> let (a, b) = \x in
+    if isNullCap b
+    then ->1
+    else if isUntypedCap a
+    then ->2
+    else if isEndpointCap a \<and> isEndpointCap b
+    then ->3
+    else if isAsyncEndpointCap a \<and> isAsyncEndpointCap b
+    then ->4
+    else if isCNodeCap a \<and> isCNodeCap b
+    then ->5
+    else if isThreadCap a \<and> isThreadCap b
+    then ->6
+    else if isIRQControlCap a \<and> isIRQControlCap b
+    then ->7
+    else if isIRQControlCap a \<and> isIRQHandlerCap b
+    then ->8
+    else if isIRQHandlerCap a \<and> isIRQHandlerCap b
+    then (case (a, b) of
+        (IRQHandlerCap a, IRQHandlerCap b) \<Rightarrow> ->9
+        )
+    else if isArchObjectCap a \<and> isArchObjectCap b
+    then (case (a, b) of
+        (ArchObjectCap a, ArchObjectCap b) \<Rightarrow> ->10
+        )
+    else ->11
+
+case \x of (a@(UntypedCap {}), b) -> ((a@EndpointCap {}), (b@EndpointCap {})) -> ((a@AsyncEndpointCap {}), (b@AsyncEndpointCap {})) -> ((a@CNodeCap {}), (b@CNodeCap {})) -> ((a@ThreadCap {}), (b@ThreadCap {})) -> ((a@ReplyCap {}), (b@ReplyCap {})) -> (IRQControlCap, IRQControlCap) -> (IRQControlCap, (IRQHandlerCap {})) -> ((IRQHandlerCap a), (IRQHandlerCap b)) -> ((ArchObjectCap a), (ArchObjectCap b)) -> (_, _) ->  ---> let (a, b) = \x in
+    if isUntypedCap a
+    then ->1
+    else if isEndpointCap a \<and> isEndpointCap b
+    then ->2
+    else if isAsyncEndpointCap a \<and> isAsyncEndpointCap b
+    then ->3
+    else if isCNodeCap a \<and> isCNodeCap b
+    then ->4
+    else if isThreadCap a \<and> isThreadCap b
+    then ->5
+    else if isReplyCap a \<and> isReplyCap b
+    then ->6
+    else if isIRQControlCap a \<and> isIRQControlCap b
+    then ->7
+    else if isIRQControlCap a \<and> isIRQHandlerCap b
+    then ->8
+    else if isIRQHandlerCap a \<and> isIRQHandlerCap b
+    then (case (a, b) of
+        (IRQHandlerCap a, IRQHandlerCap b) \<Rightarrow> ->9
+        )
+    else if isArchObjectCap a \<and> isArchObjectCap b
+    then (case (a, b) of
+        (ArchObjectCap a, ArchObjectCap b) \<Rightarrow> ->10
+        )
+    else ->11
+
+case \x of ((a@PageCap {}), (b@PageCap {})) -> (a, b) ->  ---> let (a, b) = \x in
+    if isPageCap a \<and> isPageCap b
+    then ->1
+    else ->2
+
+case \x of ((a@PageCap { capVPBasePtr = ptrA }), (b@PageCap {})) -> (a, b) ->  ---> let (a, b) = \x in
+    if isPageCap a \<and> isPageCap b
+    then let ptrA = capVPBasePtr a
+        in ->1
+    else ->2
+
+case \x of NullCap -> c2@(Zombie { capZombiePtr = ptr2 }) -> _ ->  ---> let c2 = \x in
+    if isNullCap c2
+    then ->1
+    else if isZombie c2
+    then let ptr2 = capZombiePtr c2
+        in ->2
+    else ->3
+
+case \x of ((EndpointCap { capEPPtr = ptr }), final, _) -> ((AsyncEndpointCap { capAEPPtr = ptr }), final, _) -> ((ReplyCap {}), _, _) -> (NullCap, _, _) -> (_, _, True) -> ((CNodeCap { capCNodePtr = ptr, capCNodeBits = bits }), True, _) -> ((ThreadCap { capTCBPtr = tcb}), True, _) -> (z@(Zombie {}), True, _) -> ((ArchObjectCap { capCap = cap }), final, _) -> ((IRQHandlerCap { capIRQ = irq }), True, _) -> ((Zombie {}), False, _) -> (_, _, _) ->  ---> let (\v0\, \v1\, \v2\) = \x in
+    if isEndpointCap \v0\
+    then let ptr = capEPPtr \v0\; final = \v1\
+        in ->1
+    else if isAsyncEndpointCap \v0\
+    then let ptr = capAEPPtr \v0\; final = \v1\
+        in ->2
+    else if isReplyCap \v0\
+    then ->3
+    else if isNullCap \v0\
+    then ->4
+    else if \v2\
+    then ->5
+    else if isCNodeCap \v0\ \<and> \v1\
+    then let ptr = capCNodePtr \v0\; bits = capCNodeBits \v0\
+        in ->6
+    else if isThreadCap \v0\ \<and> \v1\
+    then let tcb = capTCBPtr \v0\
+        in ->7
+    else if isZombie \v0\ \<and> \v1\
+    then let z = \v0\
+        in ->8
+    else if isArchObjectCap \v0\
+    then let cap = capCap \v0\; final = \v1\
+        in ->9
+    else if isIRQHandlerCap \v0\ \<and> \v1\
+    then let irq = capIRQ \v0\
+        in ->10
+    else if isZombie \v0\ \<and> \<not> \v1\
+    then ->11
+    else ->12
+
+case \x of (cap@CNodeCap {}) -> (cap@Zombie {}) -> (cap@ThreadCap {}) -> _ ->  --->    let cap = \x in
+    if isCNodeCap cap then ->1
+    else if isZombie cap then ->2
+    else if isThreadCap cap then ->3
+    else ->4
+
+case \x of (Zombie {}) -> (IRQControlCap) -> cap@(UntypedCap {}) -> (ReplyCap {}) -> (ArchObjectCap cap) -> cap ->  ---> let cap = \x in
+    if isZombie cap
+    then ->1
+    else if isIRQControlCap cap
+    then ->2
+    else if isUntypedCap cap
+    then ->3
+    else if isReplyCap cap
+    then ->4
+    else if isArchObjectCap cap
+    then let cap = capCap cap
+        in ->5
+    else ->6
+
+case \x of NullCap -> (Zombie { capZombiePtr = ptr, capZombieType = tp }) -> (cap@EndpointCap { capEPPtr = ep, capEPBadge = b }) -> (ArchObjectCap cap) -> cap ->  ---> let cap = \x in
+    if isNullCap cap
+    then ->1
+    else if isZombie cap
+    then let ptr = capZombiePtr cap; tp = capZombieType cap;
+             n = capZombieNumber cap
+        in ->2
+    else if isEndpointCap cap
+    then let ep = capEPPtr cap; b = capEPBadge cap
+        in ->3
+    else if isArchObjectCap cap
+    then let cap = capCap cap
+        in ->4
+    else ->5
+
+case \x of cte@(CTE { cteMDBNode = mdb }) ->  ---> let cte = \x; mdb = cteMDBNode cte
+ in ->1
+
+case \x of (0, vaddr:attr:_, (pdCap,_):_) -> (0, _, _) -> (1, _, _) -> _ ->  ---> let (\v0\, \v1\, \v2\) = \x in
+    if \v0\ = 0 then
+        if length \v1\ > 1 \<and> length \v2\ > 0
+        then let vaddr = \v1\ !! 0;
+            attr = \v1\ !! 1;
+            pdCap = fst (\v2\ !! 0)
+        in ->1
+        else ->2
+    else if \v0\ = 1 then ->3
+    else ->4
+
+case \x of (slot, 0) -> (_, bitsLeft) ->  ---> let (slot, bitsLeft) = \x in
+ if bitsLeft = 0
+ then ->1 else ->2
+
+case \x of ((index:bits:args), cap@(CNodeCap {})) -> (_, (CNodeCap {})) -> (_, _) ->  ---> let (\v0\, cap) = \x in
+    if isCNodeCap cap
+    then
+        (case \v0\ of
+            (index # bits # args) \<Rightarrow> ->1
+          | _ \<Rightarrow> ->2
+    )
+    else ->3
+
+case \x of cap@(EndpointCap {capEPCanSend=True}) -> cap@(AsyncEndpointCap {capAEPCanSend=True}) -> cap@(ReplyCap {capReplyMaster=False}) -> cap@(ThreadCap {}) -> cap@(CNodeCap {}) -> cap@(UntypedCap {}) -> IRQControlCap -> (IRQHandlerCap { capIRQ = irq }) -> (ArchObjectCap cap) -> _ ->  ---> let cap = \x in
+    if isEndpointCap cap \<and> capEPCanSend cap
+    then ->1
+    else if isAsyncEndpointCap cap \<and> capAEPCanSend cap
+    then ->2
+    else if isReplyCap cap \<and> \<not> capReplyMaster cap
+    then ->3
+    else if isThreadCap cap
+    then ->4
+    else if isCNodeCap cap
+    then ->5
+    else if isUntypedCap cap
+    then ->6
+    else if isIRQControlCap cap
+    then ->7
+    else if isIRQHandlerCap cap
+    then let irq = capIRQ cap
+        in ->8
+    else if isArchObjectCap cap
+    then let cap = capCap cap
+        in ->9
+    else ->10
+
+case \x of (Zombie {}) -> (IRQControlCap) -> cap@(UntypedCap { capBlockSize = b }) -> (ReplyCap {}) -> (ArchObjectCap cap) -> cap ->  ---> let cap = \x in
+    if isZombie cap
+    then ->1
+    else if isIRQControlCap cap
+    then ->2
+    else if isUntypedCap cap
+    then let b = capBlockSize cap
+        in ->3
+    else if isReplyCap cap
+    then ->4
+    else if isArchObjectCap cap
+    then let cap = capCap cap
+        in ->5
+    else ->6
+    
+case \x of ((Zombie { capZombieNumber = 0 }), _) -> ((Zombie { capZombiePtr = ptr }), False) -> (z@(Zombie { capZombiePtr = ptr, capZombieNumber = n }), True) -> (_, _) ->  ---> let (\v0\, \v1\) = \x in
+    if isZombie \v0\ \<and> capZombieNumber \v0\ = 0
+    then ->1
+    else if isZombie \v0\ \<and> \<not> \v1\
+    then let ptr = capZombiePtr \v0\
+        in ->2
+    else if isZombie \v0\ \<and> \v1\
+    then let z = \v0\; ptr = capZombiePtr z; n = capZombieNumber z
+        in ->3
+    else ->4
+
+case \x of ((EndpointCap { capEPPtr = ptr }), final, _) -> ((AsyncEndpointCap { capAEPPtr = ptr }), final, _) -> ((ReplyCap {}), _, _) -> (NullCap, _, _) -> (DomainCap, _, _) -> (_, _, True) -> ((CNodeCap { capCNodePtr = ptr, capCNodeBits = bits }), True, _) -> ((ThreadCap { capTCBPtr = tcb}), True, _) -> (z@(Zombie {}), True, _) -> ((ArchObjectCap { capCap = cap }), final, _) -> ((IRQHandlerCap { capIRQ = irq }), True, _) -> ((Zombie {}), False, _) -> (_, _, _) ->  ---> let (\v0\, \v1\, \v2\) = \x in
+    if isEndpointCap \v0\
+    then let ptr = capEPPtr \v0\; final = \v1\
+        in ->1
+    else if isAsyncEndpointCap \v0\
+    then let ptr = capAEPPtr \v0\; final = \v1\
+        in ->2
+    else if isReplyCap \v0\
+    then ->3
+    else if isNullCap \v0\
+    then ->4
+    else if isDomainCap \v0\
+    then ->5
+    else if \v2\
+    then ->6
+    else if isCNodeCap \v0\ \<and> \v1\
+    then let ptr = capCNodePtr \v0\; bits = capCNodeBits \v0\
+        in ->7
+    else if isThreadCap \v0\ \<and> \v1\
+    then let tcb = capTCBPtr \v0\
+        in ->8
+    else if isZombie \v0\ \<and> \v1\
+    then let z = \v0\
+        in ->9
+    else if isArchObjectCap \v0\
+    then let cap = capCap \v0\; final = \v1\
+        in ->10
+    else if isIRQHandlerCap \v0\ \<and> \v1\
+    then let irq = capIRQ \v0\
+        in ->11
+    else if isZombie \v0\ \<and> \<not> \v1\
+    then ->12
+    else ->13
+
+case \x of NullCap -> DomainCap -> (Zombie { capZombiePtr = ptr, capZombieType = tp }) -> (cap@EndpointCap { capEPPtr = ep, capEPBadge = b }) -> (ArchObjectCap cap) -> cap ->  ---> let cap = \x in
+    if isNullCap cap
+    then ->1
+    else if isDomainCap cap
+    then ->2
+    else if isZombie cap
+    then let ptr = capZombiePtr cap; tp = capZombieType cap;
+             n = capZombieNumber cap
+        in ->3
+    else if isEndpointCap cap
+    then let ep = capEPPtr cap; b = capEPBadge cap
+        in ->4
+    else if isArchObjectCap cap
+    then let cap = capCap cap
+        in ->5
+    else ->6
+
+case \x of NullCap -> DomainCap -> c@(UntypedCap {}) -> c@(EndpointCap {}) -> c@(AsyncEndpointCap {}) -> c@(ReplyCap {}) -> c@(CNodeCap {}) -> c@(ThreadCap {}) -> c@IRQControlCap -> c@(IRQHandlerCap {}) -> (ArchObjectCap {capCap = aoCap}) -> c@(Zombie {}) ->  ---> let c = \x; aoCap = capCap \x in
+    if isNullCap c
+    then ->1
+    else if isDomainCap c
+    then ->2
+    else if isUntypedCap c
+    then ->3
+    else if isEndpointCap c
+    then ->4
+    else if isAsyncEndpointCap c
+    then ->5
+    else if isReplyCap c
+    then ->6
+    else if isCNodeCap c
+    then ->7
+    else if isThreadCap c
+    then ->8
+    else if isIRQControlCap c
+    then ->9
+    else if isIRQHandlerCap c
+    then ->10
+    else if isArchObjectCap c
+    then ->11
+    else if isZombie c
+    then ->12
+    else undefined
+
+case \x of cap@(EndpointCap {capEPCanSend=True}) -> cap@(AsyncEndpointCap {capAEPCanSend=True}) -> cap@(ReplyCap {capReplyMaster=False}) -> cap@(ThreadCap {}) -> DomainCap -> cap@(CNodeCap {}) -> cap@(UntypedCap {}) -> IRQControlCap -> (IRQHandlerCap { capIRQ = irq }) -> (ArchObjectCap cap) -> _ ->  ---> let cap = \x in
+    if isEndpointCap cap \<and> capEPCanSend cap
+    then ->1
+    else if isAsyncEndpointCap cap \<and> capAEPCanSend cap
+    then ->2
+    else if isReplyCap cap \<and> \<not> capReplyMaster cap
+    then ->3
+    else if isThreadCap cap
+    then ->4
+    else if isDomainCap cap
+    then ->5
+    else if isCNodeCap cap
+    then ->6
+    else if isUntypedCap cap
+    then ->7
+    else if isIRQControlCap cap
+    then ->8
+    else if isIRQHandlerCap cap
+    then let irq = capIRQ cap
+        in ->9
+    else if isArchObjectCap cap
+    then let cap = capCap cap
+        in ->10
+    else ->11
+
+
+case \x of (a@(UntypedCap {}), b) -> ((a@EndpointCap {}), (b@EndpointCap {})) -> ((a@AsyncEndpointCap {}), (b@AsyncEndpointCap {})) -> ((a@CNodeCap {}), (b@CNodeCap {})) -> ((a@ThreadCap {}), (b@ThreadCap {})) -> ((a@ReplyCap {}), (b@ReplyCap {})) -> (DomainCap, DomainCap) -> (IRQControlCap, IRQControlCap) -> (IRQControlCap, (IRQHandlerCap {})) -> ((IRQHandlerCap a), (IRQHandlerCap b)) -> ((ArchObjectCap a), (ArchObjectCap b)) -> (_, _) ->  ---> let (a, b) = \x in
+    if isUntypedCap a
+    then ->1
+    else if isEndpointCap a \<and> isEndpointCap b
+    then ->2
+    else if isAsyncEndpointCap a \<and> isAsyncEndpointCap b
+    then ->3
+    else if isCNodeCap a \<and> isCNodeCap b
+    then ->4
+    else if isThreadCap a \<and> isThreadCap b
+    then ->5
+    else if isReplyCap a \<and> isReplyCap b
+    then ->6
+    else if isDomainCap a \<and> isDomainCap b
+    then ->7
+    else if isIRQControlCap a \<and> isIRQControlCap b
+    then ->8
+    else if isIRQControlCap a \<and> isIRQHandlerCap b
+    then ->9
+    else if isIRQHandlerCap a \<and> isIRQHandlerCap b
+    then (case (a, b) of
+        (IRQHandlerCap a, IRQHandlerCap b) \<Rightarrow> ->10
+        )
+    else if isArchObjectCap a \<and> isArchObjectCap b
+    then (case (a, b) of
+        (ArchObjectCap a, ArchObjectCap b) \<Rightarrow> ->11
+        )
+    else ->12
+
+case \x of cap@(PageDirectoryCap {}) -> cap@(PageTableCap {}) -> cap@(PageCap {}) -> ASIDControlCap -> cap@(ASIDPoolCap {}) ->  ---> let cap = \x in
+    if isPageDirectoryCap cap
+    then ->1
+    else if isPageTableCap cap
+    then ->2
+    else if isPageCap cap
+    then ->3
+    else if isASIDControlCap cap
+    then ->4
+    else if isASIDPoolCap cap
+    then ->5
+    else undefined
+
+

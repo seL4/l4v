@@ -1,0 +1,450 @@
+(*
+ * Copyright 2014, NICTA
+ *
+ * This software may be distributed and modified according to the terms of
+ * the BSD 2-Clause license. Note that NO WARRANTY is provided.
+ * See "LICENSE_BSD2.txt" for details.
+ *
+ * @TAG(NICTA_BSD)
+ *)
+
+signature ISAR_INSTALL =
+sig
+
+  type additional_options
+  val GhostState : string -> additional_options
+  val get_Csyntax : theory -> string -> Absyn.ext_decl list
+  val gen_umm_types_file : string -> string -> theory -> theory
+  val install_C_file : (((bool option * bool option) * bool option) * string) *
+                       additional_options list option ->
+                       theory -> theory
+  val interactive_install : string -> theory -> theory
+  val mk_thy_relative : theory -> string -> string
+
+end
+
+structure IsarInstall : ISAR_INSTALL =
+struct
+
+type 'a wrap = 'a Region.Wrap.t
+val bogus = SourcePos.bogus
+
+
+val _ = Feedback.errorf := (ignore o error)
+val _ = Feedback.warnf := warning
+val _ = Feedback.informf := (Output.writeln o Feedback.timestamp)
+
+structure C_Includes = Theory_Data
+(struct
+   type T = string list
+   val empty = []
+   val extend = I
+   val merge = Library.merge (op =)
+end);
+
+datatype additional_options = MachineState of string | GhostState of string | CRoots of string list
+
+structure IsaPath = Path
+
+val get_Cdir = Thy_Load.master_directory
+
+fun mk_thy_relative thy s =
+    if OS.Path.isRelative s then OS.Path.concat(Path.implode (get_Cdir thy), s)
+    else s
+
+fun get_Csyntax thy s = let
+  val (ast0, _) =
+      StrictCParser.parse 15 (C_Includes.get thy) (mk_thy_relative thy s)
+      handle IO.Io {name, ...} => error ("I/O error on "^name)
+in
+  SyntaxTransforms.remove_typedefs ast0
+end
+
+fun define_naming_scheme [] _ = I
+  | define_naming_scheme fninfo nmdefs = let
+  fun name_term fni = SOME (HOLogic.mk_string (#fname fni))
+  fun name_name fni = #fname fni ^ "_name"
+
+  in StaticFun.define_tree_and_thms NameGeneration.naming_scheme_name
+      ((map name_term fninfo ~~ nmdefs) ~~ map name_name fninfo)
+    #> snd end
+
+fun define_function_names fninfo thy = let
+  open Feedback
+  fun decl1 (fni, (n, defs, lthy)) = let
+    open TermsTypes
+    val cname = suffix HoarePackage.proc_deco (#fname fni)
+    val _ = informStr (4, "Adding ("^cname^" :: int) = "^Int.toString n)
+    val b = Binding.name cname
+    val ((_, (_, th)), lthy) =
+        Local_Theory.define ((b, NoSyn),
+                             ((Thm.def_binding b, []), mk_int_numeral n))
+                            lthy
+    val lthy' = Local_Theory.restore lthy
+    val morph  = Proof_Context.export_morphism lthy lthy'
+    val th'     = Morphism.thm morph th
+
+  in
+    (n + 1, th' :: defs, lthy')
+  end
+  val (_, defs, lthy) =
+      List.foldl decl1 (1, [], Named_Target.theory_init thy) fninfo
+  val lthy' = define_naming_scheme fninfo (List.rev defs) lthy
+in
+  (defs, lthy' |> Local_Theory.exit |> Proof_Context.theory_of)
+end
+
+
+fun print_addressed_vars cse = let
+  open ProgramAnalysis Feedback
+  val globs = get_globals cse
+  val _ = informStr (0, "There are "^Int.toString (length globs)^" globals: "^
+                        commas_quote (map srcname globs))
+  val addressed = get_addressed cse
+  val addr_vars = Symtab.keys addressed
+  val _ = informStr (0, "There are "^Int.toString (length addr_vars)^
+                        " addressed variables: "^ commas_quote addr_vars)
+in
+  ()
+end
+
+fun define_global_initializers globloc msgpfx name_munger mungedb cse globs thy = let
+  open ProgramAnalysis Absyn
+  val lthy = Named_Target.init I globloc thy
+  val globinits = let
+    val inittab = get_globinits cse
+    fun foldthis (gnm, gty) defs = let
+      val rhs_opt = Symtab.lookup inittab gnm
+      val rhs_t =
+          case  rhs_opt of
+            NONE => ExpressionTranslation.zero_term thy (get_senv cse) gty
+          | SOME rhs => let
+              open ExpressionTranslation
+              fun error _ = (Feedback.errorStr'(eleft rhs, eright rhs,
+                                                "Illegal form in initialisor for\
+                                                \ global");
+                             raise Fail "Bad global initialisation")
+              val fakeTB = TermsTypes.TB {var_updator = error, var_accessor = error,
+                                          rcd_updator = error, rcd_accessor = error}
+              fun varinfo s = stmt_translation.state_varlookup "" s mungedb
+              val ei = expr_term lthy cse fakeTB varinfo rhs
+              val ei = case gty of
+                         Array _ => ei
+                       | _ => typecast(thy,gty,ei)
+            in
+              rval_of ei (Free("x", TermsTypes.bool))
+               (* the Free("x",bool) is arbitrary as the constant
+                  expression should be ignoring the state argument *)
+            end
+    in
+      (gnm, gty, rhs_t) :: defs
+    end
+  in
+    Symtab.fold foldthis globs []
+  end
+  fun define1 ((nm, ty, value), lthy) = let
+    open Feedback
+    val _ = informStr(2,
+                      msgpfx ^ nm ^ " (of C type "^
+                      Absyn.tyname ty ^") to have value "^
+                      Syntax.string_of_term lthy value)
+    val b = Binding.name (name_munger nm)
+    val (_, lthy) =
+        Local_Theory.define
+            ((b, NoSyn), ((Thm.def_binding b, []), value))
+            lthy
+  in
+    lthy
+  end
+in
+  List.foldl define1 lthy globinits
+             |> Local_Theory.exit
+             |> Proof_Context.theory_of
+end
+
+val use_anon_vars = let
+  val (uavconfig, uavsetup) = Attrib.config_bool (Binding.name "use_anonymous_local_variables") (K false)
+in
+  Context.>>(Context.map_theory uavsetup);
+  uavconfig
+end
+
+val allow_underscore_idents = let
+  val (auiconfig, auisetup) = Attrib.config_bool (Binding.name "allow_underscore_idents") (K false)
+in
+  Context.>>(Context.map_theory auisetup);
+  auiconfig
+end
+
+fun get_callees cse slist = let
+  val {callgraph = cg,...} = ProgramAnalysis.compute_callgraphs cse
+  fun recurse acc worklist =
+      case worklist of
+          [] => acc
+        | fnname :: rest =>
+          if Binaryset.member(acc, fnname) then recurse acc rest
+          else
+            case Symtab.lookup cg fnname of
+                NONE => recurse (Binaryset.add(acc, fnname)) rest
+              | SOME set => recurse (Binaryset.add(acc, fnname))
+                                    (Binaryset.listItems set @ rest)
+in
+  recurse (Binaryset.empty String.compare) slist
+end
+
+fun install_C_file0 (((((memsafe),ctyps),cdefs),s),statetylist_opt) thy = let
+  val statetylist = case statetylist_opt of NONE => [] | SOME l => List.rev l
+  val mstate_ty =
+      case get_first (fn (MachineState s) => SOME s | _ => NONE) statetylist of
+        NONE => TermsTypes.nat
+      | SOME s => Syntax.read_typ_global thy s
+  val roots_opt =
+      get_first (fn CRoots slist => SOME slist | _ => NONE) statetylist
+  val gstate_ty =
+      case get_first (fn (GhostState s) => SOME s | _ => NONE) statetylist of
+        NONE => TermsTypes.unit
+      | SOME s => Syntax.read_typ_global thy s
+  val thy = Config.put_global CalculateState.current_C_filename s thy
+  val thy = CalculateState.store_ghostty (s, gstate_ty) thy
+  val anon_vars = Config.get_global thy use_anon_vars
+  val uscore_idents = Config.get_global thy allow_underscore_idents
+
+  val o2b = isSome
+  val install_typs = not (o2b cdefs) orelse (o2b ctyps)
+  val install_defs = not (o2b ctyps) orelse (o2b cdefs)
+  val ms = o2b memsafe
+  val ast = get_Csyntax thy s
+  open ProgramAnalysis CalculateState Feedback
+  val owners =
+      (* non-null if there are any globals that have owned_by annotations *)
+      let
+        open StmtDecl RegionExtras
+        fun getowner d =
+            case d of
+                Decl d =>
+                (case node d of
+                     VarDecl (_, _, _, _, attrs) => get_owned_by attrs
+                   | _ => NONE)
+              | _ => NONE
+      in
+        List.mapPartial getowner ast
+      end
+  val ((ast, _ (* init_stmts *)), cse) =
+      process_decls {anon_vars=anon_vars,owners = owners,
+                     allow_underscore_idents = uscore_idents}
+                    ast
+  val thy = store_csenv (s, cse) thy
+
+  val _ = print_addressed_vars cse
+  val ecenv = cse2ecenv cse
+  val thy = define_enum_consts ecenv thy
+  val state = create_state cse
+  val (thy, rcdinfo) = mk_thy_types cse install_typs thy
+  val ast = SyntaxTransforms.remove_embedded_fncalls cse ast
+in
+  if install_defs then let
+      val {base = localename,...} = OS.Path.splitBaseExt (OS.Path.file s)
+      val (thy, vdecls, globs) =
+          mk_thy_decls
+            state {owners=owners,gstate_ty=gstate_ty,mstate_ty=mstate_ty} thy
+      val loc_b = Binding.name (suffix HPInter.globalsN localename)
+      val (globloc, ctxt) =
+          Expression.add_locale I loc_b loc_b ([], []) globs thy
+      val thy = Proof_Context.theory_of ctxt
+      val _ = writeln ("Created locale for globals (" ^ Binding.print loc_b ^
+                       ")- with " ^ Int.toString (length globs) ^
+                       " globals elements")
+      val _ = app (fn e => writeln ("-- " ^
+                                    HPInter.asm_to_string
+                                        (Syntax.string_of_term ctxt)
+                                        e))
+                  globs
+      val mungedb = mk_mungedb vdecls
+      val thy = CalculateState.store_mungedb (s, mungedb) thy
+      val thy =
+          define_global_initializers globloc "Defining untouched global constant "
+                                     NameGeneration.untouched_global_name
+                                     mungedb
+                                     cse
+                                     (calc_untouched_globals cse)
+                                     thy
+      val thy =
+          if Config.get_global thy CalculateState.record_globinits then let
+              val globs0 = get_globals cse
+              val globs_types = map (fn vi => (srcname vi, get_vi_type vi)) globs0
+              val glob_table = Symtab.make globs_types
+            in
+              define_global_initializers
+                  globloc "Defining initializers for all globals "
+                  NameGeneration.global_initializer_name
+                  mungedb
+                  cse
+                  glob_table
+                  thy
+            end
+          else (warnStr'(bogus, bogus,
+                         "Ignoring initialisations of modified globals");
+                thy)
+      val _ = writeln "Declared state."
+      open TermsTypes
+      val (globty, styargs) = let
+        val globty0 = Type(Sign.intern_type thy
+                                            NameGeneration.global_rcd_name, [])
+        val globty = expand_tyabbrevs thy globty0
+        val statetype0 =
+            Type(Sign.intern_type thy NameGeneration.local_rcd_name, [globty])
+        val statetype = expand_tyabbrevs thy statetype0
+            (* only happens if no local variables, = no functions declared,
+               = pretty bogus
+               (decl_only and bigstruct test cases are like this though) *)
+            handle TYPE _  => alpha
+      in
+        (globty, [statetype, int, StrictC_errortype_ty])
+      end
+      val toTranslate = Option.map (get_callees cse) roots_opt
+      val toTranslate_s =
+          case toTranslate of
+              NONE => "all functions"
+            | SOME set => "functions " ^
+                          String.concatWith ", " (Binaryset.listItems set) ^
+                          " (derived from "^
+                          String.concatWith ", " (valOf roots_opt) ^ ")"
+      val _ =
+          writeln ("Beginning function translation for " ^
+                   toTranslate_s)
+      val toTranslateP =
+          case toTranslate of
+              NONE => (fn _ => true)
+            | SOME set => (fn s => Binaryset.member(set,s))
+      val fninfo : HPInter.fninfo list = HPInter.mk_fninfo thy cse toTranslateP ast
+      val (nmdefs, thy) = define_function_names fninfo thy
+      val compile_bodies =
+          stmt_translation.define_functions (globty, styargs)
+                                            mungedb
+                                            cse
+                                            fninfo
+                                            rcdinfo
+                                            ms
+      val (globloc, _ (* binding list *), thy) =
+          HPInter.make_function_definitions localename
+                                            cse
+                                            styargs
+                                            (List.rev nmdefs)
+                                            fninfo
+                                            compile_bodies
+                                            globloc
+                                            globs
+                                            thy
+      val thy =
+          if not (Symtab.is_empty (get_defined_functions cse)) then
+            Modifies_Proofs.prove_all_modifies_goals thy cse toTranslateP styargs globloc
+          else thy (* like this is ever going to happen *)
+    in
+      thy
+    end
+  else
+    thy
+end handle e as TYPE (s,tys,tms) =>
+         (writeln (s ^ "\n" ^
+                   Int.toString (length tms) ^ " term(s): " ^
+                   String.concatWith
+                       ", "
+                       (map (Syntax.string_of_term @{context}) tms) ^ "\n" ^
+                   Int.toString (length tys) ^ " type(s): "^
+                   String.concatWith
+                       ", "
+                       (map (Syntax.string_of_typ @{context}) tys));
+          raise e)
+
+fun install_C_file args thy =
+    thy |> install_C_file0 args
+        |> Config.put_global CalculateState.current_C_filename ""
+
+(* for interactive debugging/testing *)
+fun interactive_install s thy =
+  install_C_file ((((NONE, NONE), NONE), s), NONE) thy
+  handle TYPE (s,tys,tms) =>
+         (writeln (s ^ "\n" ^
+                   Int.toString (length tms) ^ " term(s): " ^
+                   String.concatWith
+                       ", "
+                       (map (Syntax.string_of_term @{context}) tms) ^ "\n" ^
+                   Int.toString (length tys) ^ " type(s): "^
+                   String.concatWith
+                       ", "
+                       (map (Syntax.string_of_typ @{context}) tys));
+          thy);
+
+
+fun install_C_types s thy = let
+  open CalculateState ProgramAnalysis
+  val ast = get_Csyntax thy s
+  val (_, cse) =
+      process_decls {
+        anon_vars = Config.get_global thy use_anon_vars,
+        allow_underscore_idents = Config.get_global thy allow_underscore_idents,
+        owners = []} ast
+  val (thy, _) = mk_thy_types cse true thy
+in
+  thy
+end
+
+fun gen_umm_types_file inputfile outputfile thy = let
+  open ProgramAnalysis
+  val ast = get_Csyntax thy inputfile
+  val (_, cse) =
+      process_decls {
+        anon_vars = Config.get_global thy use_anon_vars,
+        allow_underscore_idents = Config.get_global thy allow_underscore_idents,
+        owners = []} ast
+  val _ = CalculateState.gen_umm_types_file cse outputfile
+in
+  thy
+end
+
+val memsafeN = "memsafe"
+val typesN = "c_types"
+val defsN = "c_defs"
+val mtypN = "machinety"
+val ghosttypN = "ghostty"
+val rootsN = "roots"
+
+local
+  structure P = Parse
+  structure K = Keyword
+in
+fun new_include s thy = C_Includes.map (fn sl => mk_thy_relative thy s::sl) thy
+
+val _ = Outer_Syntax.command @{command_spec "new_C_include_dir"}
+                            "add a directory to the include path"
+                            (P.text >> (Toplevel.theory o new_include))
+
+val file_inclusion = let
+  val typoptions =
+      P.reserved mtypN |-- (P.$$$ "=" |-- P.text >> MachineState) ||
+      P.reserved ghosttypN |-- (P.$$$ "=" |-- P.text >> GhostState) ||
+      P.reserved rootsN |-- (P.$$$ "=" |-- (P.$$$ "[" |-- P.enum1 "," P.text --| P.$$$ "]") >> CRoots)
+in
+    ((Scan.option (P.$$$ memsafeN)) --
+     (Scan.option (P.$$$ typesN)) --
+     (Scan.option (P.$$$ defsN)) -- P.text --
+     (Scan.option
+          (P.$$$ "[" |-- P.enum1 "," typoptions --| P.$$$ "]"))) >>
+    (Toplevel.theory o install_C_file)
+end
+
+val _ =
+    Outer_Syntax.command
+      @{command_spec "install_C_file"}
+      "import a C file"
+      file_inclusion
+
+val _ =
+    Outer_Syntax.command
+      @{command_spec "install_C_types"}
+      "install types from a C file"
+      (P.text >> (Toplevel.theory o install_C_types))
+
+end
+
+end; (* struct *)
