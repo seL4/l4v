@@ -1123,7 +1123,7 @@ lemma inv_arch_corres:
   "archinv_relation ai ai' \<Longrightarrow>
    corres (intr \<oplus> op=)
      (einvs and ct_active and valid_arch_inv ai) 
-     (invs' and ct_active' and valid_arch_inv' ai')
+     (invs' and ct_active' and valid_arch_inv' ai' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)))
      (arch_perform_invocation ai) (ArchRetypeDecls_H.performInvocation ai')"
   apply (clarsimp simp: arch_perform_invocation_def 
                         ArchRetype_H.performInvocation_def 

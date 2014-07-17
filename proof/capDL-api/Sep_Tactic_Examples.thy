@@ -63,8 +63,7 @@ done
 lemma example_drule:
   "(ptr \<mapsto>o obj) s
   \<Longrightarrow> (ptr \<mapsto>S obj \<and>* ptr \<mapsto>f obj) s"
-  by (metis sep_conj_commute sep_conj_left_commute
-            sep_map_o_decomp)
+  by (metis sep_conj_commute sep_map_o_decomp)
 
 lemma sep_drule_example:
   "(ptr \<mapsto>o obj \<and>* A \<and>* B ) s
@@ -78,8 +77,7 @@ done
 lemma example_rule:
   "(ptr \<mapsto>f obj \<and>* ptr \<mapsto>S obj) s
   \<Longrightarrow> (ptr \<mapsto>o obj) s"
-  by (metis sep_conj_commute sep_conj_left_commute
-            sep_map_o_decomp)
+  by (metis sep_map_o_decomp)
 
 lemma sep_rule_example: "(ptr \<mapsto>f obj \<and>* A \<and>* B \<and>* ptr \<mapsto>S obj ) s \<Longrightarrow> (ptr \<mapsto>o obj \<and>* A \<and>* B) s"
   apply (sep_rule example_rule)
@@ -277,7 +275,7 @@ lemma sep_rule_double_conjunct_example:
   "\<lbrakk>((obj_id, slot) \<mapsto>c cap \<and>* obj_id \<mapsto>f obj) s;
     object_slots obj slot = Some cap\<rbrakk>
   \<Longrightarrow> ((obj_id, slot) \<mapsto>s obj \<and>* obj_id \<mapsto>f obj) s"
-  apply (sep_drule sep_map_s_sep_map_c')
+  apply (sep_drule sep_map_s_sep_map_c)
    apply assumption
   apply (sep_cancel)+
   done

@@ -24,6 +24,11 @@ lemma get_object_inv [wp]: "\<lbrace>P\<rbrace> get_object t \<lbrace>\<lambda>r
   by (wp get_object_wp) simp
 
 
+lemma get_tcb_rev:
+  "kheap s p = Some (TCB t)\<Longrightarrow> get_tcb p s = Some t"
+  by (clarsimp simp:get_tcb_def)
+
+
 lemma get_tcb_SomeD: "get_tcb t s = Some v \<Longrightarrow> kheap s t = Some (TCB v)"
   apply (case_tac "kheap s t", simp_all add: get_tcb_def)
   apply (case_tac a, simp_all)
@@ -824,47 +829,6 @@ lemma get_object_ret:
   "\<lbrace>obj_at P addr\<rbrace> get_object addr \<lbrace>\<lambda>r s. P r\<rbrace>"
   unfolding get_object_def
   by (wp, clarsimp elim!: obj_atE)+
-
-
-lemma aligned_less_plus_1:
-  "\<lbrakk> is_aligned x n; n > 0 \<rbrakk> \<Longrightarrow> x < x + 1"
-  apply (rule plus_one_helper2)
-   apply (rule order_refl)
-  apply (clarsimp simp: field_simps)
-  apply (drule arg_cong[where f="\<lambda>x. x - 1"])
-  apply (clarsimp simp: is_aligned_mask)
-  apply (drule word_eqD[where x=0])
-  apply simp
-  done
-
-
-lemma is_aligned_add_helper:
-  "\<lbrakk> is_aligned p n; d < 2 ^ n \<rbrakk>
-     \<Longrightarrow> (p + d && mask n = d) \<and> (p + d && (~~ mask n) = p)"
-  apply (subst(asm) is_aligned_mask)
-  apply (drule less_mask_eq)
-  apply (rule context_conjI)
-   apply (subst word_plus_and_or_coroll)
-    apply (rule word_eqI)
-    apply (drule_tac x=na in word_eqD)+
-    apply (simp add: word_size)
-    apply blast
-   apply (rule word_eqI)
-   apply (drule_tac x=na in word_eqD)+
-   apply (simp add: word_ops_nth_size word_size)
-   apply blast
-  apply (insert word_plus_and_or_coroll2[where x="p + d" and w="mask n"])
-  apply simp
-  done
-
-
-lemma is_aligned_sub_helper:
-  "\<lbrakk> is_aligned (p - d) n; d < 2 ^ n \<rbrakk>
-     \<Longrightarrow> (p && mask n = d) \<and> (p && (~~ mask n) = p - d)"
-  by (drule(1) is_aligned_add_helper, simp)
-
-
-lemmas n1_ge_32[simp] = word_n1_ge[where 'a=32, simplified]
 
 
 lemma mask_in_range:

@@ -70,8 +70,7 @@ abbreviation
 abbreviation
 "dupdate_tcb_intent intent tcb\<equiv> tcb \<lparr>cdl_tcb_intent := intent\<rparr>"
 
-(* FIXME: name *)
-lemma dummy_update_state[simp]:
+lemma update_kheap_triv[simp]:
   "kheap s y = Some obj\<Longrightarrow> update_kheap ((kheap s)(y \<mapsto> obj)) s = s"
   apply (case_tac s,clarsimp)
   apply (rule ext,clarsimp)
@@ -107,37 +106,10 @@ lemmas register_overlap_check = msg_info_badge_register_no_overlap
                                 cap_msg_info_register_no_overlap
                                 badge_cap_register_overlap
 
-(* These should be cong rules ...
-lemma get_tcb_message_info_update_heap [simp]:
-  "get_tcb_message_info (update_kheap ptr obj s) = get_tcb_message_info s"
-  by (rule ext) (simp add: get_tcb_message_info_def)
-
-lemma get_tcb_mrs_update_heap [simp]:
-  "get_tcb_mrs (update_kheap ptr obj' s) = get_tcb_mrs s"
-  by (rule ext) (simp add: Let_def get_tcb_mrs_def get_tcb_mem_mrs_def)
-
-lemma transform_full_intent_update_heap [simp]:
-  "transform_full_intent (update_kheap ptr obj s) = transform_full_intent s"
-  by (rule ext)+ (simp add: transform_full_intent_def)
-*)
-
 lemma transform_full_intent_cong:
   "\<lbrakk>ms = ms'; ptr = ptr'; tcb_context tcb = tcb_context tcb'; tcb_ipc_buffer tcb = tcb_ipc_buffer tcb'; tcb_ipcframe tcb = tcb_ipcframe tcb'\<rbrakk>
   \<Longrightarrow> transform_full_intent ms ptr tcb = transform_full_intent ms' ptr' tcb'"
   by (simp add: transform_full_intent_def get_tcb_message_info_def get_tcb_mrs_def Suc_le_eq get_ipc_buffer_words_def)
-
-
-(* FIXME: Move *)
-lemma set_neg_inter: "- A \<inter> - B = - A - B"
-  by auto
-
-(* FIXME: Move *)
-lemma restrict_restrict2: "x \<noteq> b \<Longrightarrow> (m |` (- A - {b})) x = (m |` (- A)) x"
-  apply (cut_tac m="(m |` (- A))" and x=x and A = "-{b}" in restrict_in)
-   apply simp
-  apply (cut_tac m=m and A="- A" and B = "-{b}" in restrict_restrict)
-  apply (fastforce simp: set_neg_inter)
-  done
 
 lemma caps_of_state_eq_lift:
     "\<forall>cap. cte_wp_at (op=cap) p s = cte_wp_at (op=cap) p s' \<Longrightarrow>  caps_of_state s p = caps_of_state s' p"
@@ -197,8 +169,6 @@ lemma caps_of_state_update_tcb:
 
 lemmas caps_of_state_upds = caps_of_state_update_tcb caps_of_state_update_same_caps
 
-(* weak because we don't look at the contents *)
-
 lemma transform_cdt_kheap_update [simp]:
   "transform_cdt (kheap_update f s) = transform_cdt s"
   by (clarsimp simp: transform_cdt_def cong: if_cong)
@@ -234,6 +204,12 @@ lemma transform_objects_update_kheap_same_caps:
   apply (rule ext)
   apply (simp add: option_map_def restrict_map_def map_add_def )
   done
+
+lemma transform_objects_update_same:
+  "\<lbrakk> kheap s ptr = Some ko; transform_object (machine_state s) ptr (ekheap s ptr) ko = ko'; ptr \<noteq> idle_thread s \<rbrakk>
+  \<Longrightarrow> (transform_objects s)(ptr \<mapsto> ko') = transform_objects s"
+  unfolding transform_objects_def
+  by (rule ext) (simp)
 
 text {* Facts about map_lift_over *}
 

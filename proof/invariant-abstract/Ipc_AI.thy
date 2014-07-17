@@ -1261,19 +1261,6 @@ lemma transfer_caps_loop_vms[wp]:
    \<lbrace>\<lambda>_. valid_machine_state\<rbrace>"
   by (wp transfer_caps_loop_pres)
 
-lemma storeWord_valid_irq_states:
-  "\<lbrace>\<lambda>m. valid_irq_states (s\<lparr>machine_state := m\<rparr>)\<rbrace> storeWord x y
-   \<lbrace>\<lambda>a b. valid_irq_states (s\<lparr>machine_state := b\<rparr>)\<rbrace>"
-  apply(simp add: valid_irq_states_def | wp | simp add: no_irq_storeWord)+  
-  done
-
-lemma dmo_storeWord_valid_irq_states[wp]:
-  "\<lbrace>valid_irq_states\<rbrace> do_machine_op (storeWord x y) \<lbrace>\<lambda>_. valid_irq_states\<rbrace>"
-  apply(simp add: do_machine_op_def |  wp | wpc)+
-  apply clarsimp
-  apply(erule use_valid[OF _ storeWord_valid_irq_states])
-  by simp
-
 crunch valid_irq_states[wp]: set_extra_badge "valid_irq_states"
   (ignore: do_machine_op)
 
@@ -2374,22 +2361,6 @@ lemma is_derived_ReplyCap [simp]:
                                    vs_cap_ref_def)
   done
 
-
-lemma not_waiting_reply_slot_no_descendants:
-  "\<lbrakk> st_tcb_at (Not \<circ> awaiting_reply) t s; 
-     st_tcb_at (Not \<circ> halted) t s;
-     valid_reply_caps s; valid_objs s; valid_mdb s \<rbrakk>
-       \<Longrightarrow> descendants_of (t, tcb_cnode_index 2) (cdt s) = {}"
-  apply (rule ccontr, erule nonemptyE)
-  apply (clarsimp simp: valid_mdb_def reply_mdb_def reply_masters_mdb_def)
-  apply (frule(1) st_tcb_at_reply_cap_valid[where P="Not \<circ> halted"], clarsimp+)
-  apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps)
-  apply (elim allE, drule(1) mp, clarsimp)
-  apply (drule(1) bspec)
-  apply (drule has_reply_cap_cte_wpD[OF caps_of_state_cteD])
-  apply (erule notE[rotated], strengthen reply_cap_doesnt_exist_strg)
-  apply simp
-  done
 
 
 lemma do_normal_transfer_tcb_caps:

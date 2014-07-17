@@ -936,6 +936,31 @@ lemma mdb_Null_None:
   apply (erule(1) mdb_cte_at_Null_None)
   done
 
+lemma not_waiting_reply_slot_no_descendants:
+  "\<lbrakk> st_tcb_at (Not \<circ> awaiting_reply) t s;
+     valid_reply_caps s; valid_objs s; valid_mdb s \<rbrakk>
+       \<Longrightarrow> descendants_of (t, tcb_cnode_index 2) (cdt s) = {}"
+  apply (rule ccontr, erule nonemptyE)
+  apply (clarsimp simp: valid_mdb_def reply_mdb_def reply_masters_mdb_def)
+  apply (frule_tac ref="tcb_cnode_index 2" in tcb_at_cte_at[OF st_tcb_at_tcb_at])
+   apply (simp add: domI)
+  apply (clarsimp simp: cte_wp_at_caps_of_state)
+  apply (frule(1) tcb_cap_valid_caps_of_stateD)
+  apply (clarsimp simp: tcb_cap_valid_def st_tcb_at_tcb_at)
+  apply (clarsimp simp: st_tcb_def2)
+  apply (erule disjE)
+   apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps)
+   apply (elim allE, drule(1) mp, clarsimp)
+   apply (drule(1) bspec)
+   apply (drule has_reply_cap_cte_wpD[OF caps_of_state_cteD])
+   apply (erule notE[rotated], strengthen reply_cap_doesnt_exist_strg)
+   apply (simp add: st_tcb_def2)
+  apply clarsimp
+  apply (frule mdb_Null_descendants[OF caps_of_state_cteD])
+   apply (simp add: valid_mdb_def reply_mdb_def reply_masters_mdb_def)
+  apply simp
+  done
+
 lemma more_revokables[simp]:
   "pspace_distinct (is_original_cap_update f s) = pspace_distinct s"
   "pspace_aligned (is_original_cap_update f s) = pspace_aligned s"

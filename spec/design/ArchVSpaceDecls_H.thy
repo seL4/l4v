@@ -225,6 +225,12 @@ consts
 performPageTableInvocation :: "page_table_invocation \<Rightarrow> unit kernel"
 
 consts
+pteCheckIfMapped :: "machine_word \<Rightarrow> bool kernel"
+
+consts
+pdeCheckIfMapped :: "machine_word \<Rightarrow> bool kernel"
+
+consts
 performPageInvocation :: "page_invocation \<Rightarrow> unit kernel"
 
 consts

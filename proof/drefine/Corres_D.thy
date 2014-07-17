@@ -46,7 +46,6 @@ lemma OR_choiceE_OR[simp]: "(OR_choiceE c (f :: ('a + 'b,unit) s_monad) g) = (f 
   done
 
 (* state relation as set, in (simp split_def) normal form *)
-
 abbreviation
 dcorres ::
     "('a\<Colon>type \<Rightarrow> 'b\<Colon>type \<Rightarrow> bool)
@@ -59,11 +58,6 @@ dcorres ::
              \<Rightarrow> bool"
 where
   "dcorres\<equiv> corres_underlying {ss'. transform (snd ss') = fst ss'} False"
-
-(* FIXME: need to move all these corres lemmas from everywhere into
-          one theory that is included here *)
-
-(* Some lemma that trying not involving too much trivial wp rules *)
 
 (* Some obvious corres lemmas *)
 lemma corres_group_bind_rhs:
@@ -114,6 +108,10 @@ lemma corres_dummy_return_pr:
   "dcorres c P P' f (do return b; g od)  \<Longrightarrow> dcorres c P P' f g"
   by (fastforce simp: corres_underlying_def bind_def return_def)
 
+lemma corres_dummy_returnOk_r:
+  "dcorres c P P' f (g >>=E returnOk) \<Longrightarrow> dcorres c P P' f g"
+  by simp
+
 lemma corres_dummy_get_pr:
   "dcorres c P P' f (do s\<leftarrow>get;g od)\<Longrightarrow> dcorres c P P' f g"
   by (fastforce simp: corres_underlying_def bind_def get_def)
@@ -138,18 +136,12 @@ lemma absorb_imp:"B \<and> A \<Longrightarrow>  (a\<longrightarrow>A) \<and> B "
 
 (* This lemma is convienent if you want keep the prefix while split *)
 
-
 lemma  corres_split_keep_pfx:
   assumes x: "corres_underlying sr nf r' P P' a c"
   assumes y: "\<And>rv rv'. r' rv rv' \<Longrightarrow> corres_underlying sr nf r (P and (Q rv)) (P' and (Q' rv')) (b rv) (d rv')"
   assumes    "\<lbrace>P\<rbrace> a \<lbrace>\<lambda>x. P and (Q x)\<rbrace>" "\<lbrace>P'\<rbrace> c \<lbrace>\<lambda>x. P' and (Q' x)\<rbrace>"
   shows      "corres_underlying sr nf r P P' (a >>= (\<lambda>rv. b rv)) (c >>= (\<lambda>rv'. d rv'))"
   using assms by (rule corres_split')
-
-lemma dcorres_test:
-  "\<lbrakk>dcorres r P (P' and G) a b ; G x\<rbrakk>\<Longrightarrow> dcorres r P (P' and (op = x)) a b"
-  by (fastforce simp:corres_underlying_def)
-
 
 (* Following 2 lemmas allows you to get rid of the get function and move the prefix outside *)
 
@@ -256,18 +248,6 @@ lemma wpc_helper_dcorres:
 
 wpc_setup "\<lambda>m. dcorres r P P' a m" wpc_helper_dcorres
 wpc_setup "\<lambda>m. dcorres r P P' a (m >>= c)" wpc_helper_dcorres
-
-lemma UNIV_apply: "x \<in> UNIV"
-  by (simp add:top_fun_def)
-
-lemma dcorres_wpc_test2:
-  "dcorres dc P P' (return ()) ((case c of ThreadCap p \<Rightarrow> return () | _ \<Rightarrow> return ()))"
-  apply (rule corres_guard_imp)
-  apply wpc
-  apply (rule corres_free_return [where P = "\<lambda>_. True" and P' =  "\<lambda>_. True"])+
-  apply simp
-  apply (simp add: )
-  done
 
 (* Shorthand to say that a TCB is at the given location in the given state. *)
 definition "cdl_tcb_at x \<equiv> \<lambda>s. \<exists>tcb . cdl_objects s x = Some (Tcb tcb)"
@@ -479,6 +459,14 @@ lemma dcorres_to_wp:
   "dcorres dc \<top> Q (return x) g \<Longrightarrow> \<lbrace>\<lambda>s. Q s \<and> transform s = cs\<rbrace>g\<lbrace>\<lambda>r s. transform s = cs\<rbrace>"
   by (fastforce simp:corres_underlying_def valid_def return_def)
 
+lemma wp_to_dcorres:
+  "(\<And>cs. \<lbrace>\<lambda>s. Q s \<and> transform s = cs\<rbrace> g \<lbrace>\<lambda>r s. transform s = cs\<rbrace>) \<Longrightarrow>  dcorres dc (\<lambda>_. True) Q (return x) g"
+  apply (clarsimp simp:corres_underlying_def valid_def return_def)
+  apply (drule_tac x = "transform b" in meta_spec)
+  apply (drule_tac x = b in spec)
+  apply fastforce
+done
+
 lemma dcorres_symb_exec_rE:
   "\<lbrakk>\<And>rv. dcorres r P (Q' rv) h (g rv); \<lbrace>P'\<rbrace> f \<lbrace>Q'\<rbrace>; \<And>cs. \<lbrace>\<lambda>ps. transform ps = cs\<rbrace> f \<lbrace>\<lambda>r s. transform s = cs\<rbrace>\<rbrakk>
   \<Longrightarrow> dcorres r P P' h (liftE f >>=E g)"
@@ -526,26 +514,6 @@ lemma corres_handle2':
   apply (drule (1) bspec, clarsimp)
   apply (fastforce simp: return_def throwError_def split: sum.splits)
   done 
-
-
-(* FIXME: move *)
-lemma corres_underlyingD:
-  "\<lbrakk> corres_underlying R z rs P P' f f'; (s,s') \<in> R; P s; P' s' \<rbrakk>
-  \<Longrightarrow> (\<forall>(r',t')\<in>fst (f' s'). \<exists>(r,t)\<in>fst (f s). (t, t') \<in> R \<and> rs r r') \<and> (z \<longrightarrow> \<not> snd (f' s'))"
-  by (fastforce simp: corres_underlying_def)
-
-(* FIXME: move *)
-lemma corres_underlyingD2:
-  "\<lbrakk> corres_underlying R z rs P P' f f'; (s,s') \<in> R; P s; P' s'; (r',t')\<in>fst (f' s') \<rbrakk>
-  \<Longrightarrow> \<exists>(r,t)\<in>fst (f s). (t, t') \<in> R \<and> rs r r'"
-  by (fastforce dest: corres_underlyingD)
-
-
-(* FIXME: move *)
-lemma in_alternative:
-  "(r,s') \<in> fst ((f \<sqinter> g) s) = ((r,s') \<in> fst (f s) \<or> (r,s') \<in> fst (g s))"
-  by (simp add: alternative_def)
-
 
 lemma corres_alternative_throw_splitE:
   assumes a: "corres_underlying R z (dc \<oplus> r') P P' (f \<sqinter> Monads_D.throw) f'"
@@ -617,7 +585,6 @@ lemma corres_alternative_throw_splitE:
   apply (simp add: alternative_def throwError_def return_def)
   done
 
-
 lemma corres_throw_skip_r:
   assumes c: "corres_underlying R z (dc \<oplus> r) P P' (f \<sqinter> Monads_D.throw) g'"
   assumes eq: "\<And>s. \<lbrace>op = s\<rbrace> f' \<lbrace>\<lambda>_. op = s\<rbrace>"
@@ -665,5 +632,32 @@ lemmas dcorres_rhs_noop_below_True = dcorres_rhs_noop_below[OF _ _ hoare_TrueI h
 lemmas dcorres_rhs_noop_above_True = dcorres_rhs_noop_above[OF _ _ hoare_TrueI hoare_TrueI]
 
 declare hoare_TrueI[simp]
+
+lemma dcorres_dc_rhs_noop_below_gen:
+  "\<lbrakk> \<forall>rv'. dcorres dc (Q ()) (Q' rv') (return ()) (m rv');
+              dcorres dc P P' f g;
+     \<lbrace> P \<rbrace> f \<lbrace> Q \<rbrace>; \<lbrace> P' \<rbrace> g \<lbrace> Q' \<rbrace> \<rbrakk>
+   \<Longrightarrow> dcorres dc P P' f (g >>= m)"
+  apply (rule corres_add_noop_lhs2)
+  apply (rule corres_underlying_split)
+  apply (assumption | clarsimp)+
+  done
+
+lemma dcorres_dc_rhs_noop_below_2: "\<lbrakk> \<forall>rv'. dcorres dc (Q ()) (Q' rv') (return ()) m;
+         dcorres dc P P' f (g >>= h);
+         \<lbrace> P \<rbrace> f \<lbrace> Q \<rbrace>;
+         \<lbrace> P' \<rbrace> g \<lbrace> R'\<rbrace>;
+         (\<And>y. \<lbrace> R' y \<rbrace> h y \<lbrace> Q' \<rbrace>)
+          \<rbrakk>
+       \<Longrightarrow> dcorres dc P P' f (do x \<leftarrow> g;
+                                   _ \<leftarrow> h x;
+                                   m
+                                 od)"
+  apply (simp add: bind_assoc[symmetric])
+  apply (rule dcorres_dc_rhs_noop_below_gen)
+  apply (wp | simp | assumption)+
+  done
+
+lemmas dcorres_dc_rhs_noop_below_2_True = dcorres_dc_rhs_noop_below_2[OF _ _ hoare_TrueI hoare_TrueI hoare_TrueI]
 
 end

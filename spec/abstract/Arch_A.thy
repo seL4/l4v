@@ -104,6 +104,22 @@ where
         od
      | PageDirectoryNothing \<Rightarrow> return ()"
 
+definition
+  pte_check_if_mapped :: "32 word \<Rightarrow> (bool, 'z::state_ext) s_monad"
+where
+  "pte_check_if_mapped slot \<equiv> do
+     pt \<leftarrow> get_master_pte slot;
+     return (pt \<noteq> InvalidPTE)
+  od"
+
+definition
+  pde_check_if_mapped :: "32 word \<Rightarrow> (bool, 'z::state_ext) s_monad"
+where
+  "pde_check_if_mapped slot \<equiv> do
+     pd \<leftarrow> get_master_pde slot;
+     return (pd \<noteq> InvalidPDE)
+  od"
+
 text {* The Page capability confers the authority to map, unmap and flush the
 memory page. The remap system call is a convenience operation that ensures the
 page is mapped in the same location as this cap was previously used to map it
@@ -111,33 +127,41 @@ in. *}
 definition
 perform_page_invocation :: "page_invocation \<Rightarrow> (unit,'z::state_ext) s_monad" where
 "perform_page_invocation iv \<equiv> case iv of
-  PageMap cap ct_slot entries \<Rightarrow> do
+  PageMap asid cap ct_slot entries \<Rightarrow> do
     set_cap cap ct_slot;
     case entries of
           Inl (pte, slots) \<Rightarrow> do
+            flush \<leftarrow> pte_check_if_mapped (hd slots);
             store_pte (hd slots) pte;
             mapM (swp store_pte InvalidPTE) (tl slots);
             do_machine_op $ cleanCacheRange_PoU (hd slots) (last_byte_pte (last slots))
-                                                (addrFromPPtr (hd slots))
+                                                (addrFromPPtr (hd slots));
+            if flush then (invalidate_tlb_by_asid asid) else return ()
           od
         | Inr (pde, slots) \<Rightarrow> do
+            flush \<leftarrow> pde_check_if_mapped (hd slots);
             store_pde (hd slots) pde;
             mapM (swp store_pde InvalidPDE) (tl slots);
             do_machine_op $ cleanCacheRange_PoU (hd slots) (last_byte_pde (last slots))
-                                                (addrFromPPtr (hd slots))
+                                                (addrFromPPtr (hd slots));
+            if flush then (invalidate_tlb_by_asid asid) else return ()
         od
     od
-| PageRemap (Inl (pte, slots)) \<Rightarrow> do
+| PageRemap asid (Inl (pte, slots)) \<Rightarrow> do
+    flush \<leftarrow> pte_check_if_mapped (hd slots);
     store_pte (hd slots) pte;
     mapM_x (swp store_pte InvalidPTE) (tl slots);
     do_machine_op $ cleanCacheRange_PoU (hd slots) (last_byte_pte (last slots))
-                                        (addrFromPPtr (hd slots))
+                                        (addrFromPPtr (hd slots));
+    if flush then (invalidate_tlb_by_asid asid) else return ()
   od
-| PageRemap (Inr (pde, slots)) \<Rightarrow> do
+| PageRemap asid (Inr (pde, slots)) \<Rightarrow> do
+    flush \<leftarrow> pde_check_if_mapped (hd slots);
     store_pde (hd slots) pde;
     mapM_x (swp store_pde InvalidPDE) (tl slots);
     do_machine_op $ cleanCacheRange_PoU (hd slots) (last_byte_pde (last slots))
-                                        (addrFromPPtr (hd slots))
+                                        (addrFromPPtr (hd slots));
+    if flush then (invalidate_tlb_by_asid asid) else return ()
   od
 | PageUnmap cap ct_slot \<Rightarrow> 
     case cap of

@@ -219,26 +219,6 @@ lemma set_scheduler_action_dcorres:
    "dcorres dc \<top> \<top> (return ()) (set_scheduler_action sa)"
   by (clarsimp simp: corres_underlying_def set_scheduler_action_def modify_def get_def put_def bind_def return_def)
 
-(* FIXME: Move to lib/Corres_UL.thy : Hard to believe this rule doesn't exist already *)
-lemma corres_either_alternate2:
-  "\<lbrakk> corres_underlying sr nf r P R a c; corres_underlying sr nf r Q R b c \<rbrakk>
-   \<Longrightarrow> corres_underlying sr nf r (P or Q) R (a \<sqinter> b) c"
-  apply (simp add: corres_underlying_def alternative_def)
-  apply clarsimp
-  apply (drule (1) bspec, clarsimp)+
-   apply (erule disjE)
-   apply clarsimp
-   apply (drule(1) bspec, clarsimp)
-   apply (rule rev_bexI)
-    apply (erule UnI1)
-   apply simp
-   apply clarsimp
-  apply (drule(1) bspec, clarsimp)
-  apply (rule rev_bexI)
-   apply (erule UnI2)
-  apply simp
-  done
-
 lemma switch_to_thread_None_dcorres_L:
    "dcorres dc (\<lambda>s. cdl_current_thread s = None) \<top>
                (do _ \<leftarrow> change_current_domain;
@@ -338,14 +318,6 @@ lemma schedule_switch_thread_helper:
                         map_add_def restrict_map_def Option.map_def transform_object_def transform_tcb_def valid_idle_def st_tcb_def2 get_tcb_def
                         transform_cnode_contents_def infer_tcb_pending_op_def transform_cap_def domIff st_tcb_at_kh_def obj_at_def only_idle_def
                   split: option.splits split_if Structures_A.kernel_object.splits Structures_A.thread_state.splits)
-  done
-
-(* FIXME: Move *)
-lemma idle_thread_idle[wp]:
-  "\<lbrace>\<lambda>s. valid_idle s \<and> t = idle_thread s\<rbrace> get_thread_state t \<lbrace>\<lambda>r s. idle r\<rbrace>"
-  apply (clarsimp simp: valid_def get_thread_state_def thread_get_def bind_def return_def gets_the_def gets_def get_def assert_opt_def get_tcb_def
-                        fail_def valid_idle_def st_tcb_at_def obj_at_def
-                  split: option.splits Structures_A.kernel_object.splits)
   done
 
 lemma schedule_switch_thread_dcorres:

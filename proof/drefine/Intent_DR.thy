@@ -16,22 +16,15 @@ begin
    Lift the property from abstract spec to capdl model
  *)
 
-(* MOVE to top level *)
+(* FIXME: MOVE to top level *)
+
 declare fun_upd_restrict_conv[simp del]
 
 
 definition not_idle_thread:: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
-where "not_idle_thread x \<equiv> (%s. x\<noteq> idle_thread s)"
+where "not_idle_thread x \<equiv> (\<lambda>s. x \<noteq> idle_thread s)"
 
 (*Some trivial lemmas rule out irq_node and idle_thread*)
-
-lemma get_tcb_rev:
-  "kheap s p = Some (TCB t)\<Longrightarrow> get_tcb p s = Some t"
-  by (clarsimp simp:get_tcb_def)
-
-lemma get_etcb_rev:
-  "ekheap s p = Some etcb \<Longrightarrow> get_etcb p s = Some etcb"
-   by (clarsimp simp: get_etcb_def)
 
 lemma ep_not_idle:
   "\<lbrakk>valid_idle s;obj_at is_ep epptr s\<rbrakk> \<Longrightarrow> not_idle_thread epptr s"
@@ -40,6 +33,11 @@ lemma ep_not_idle:
 lemma aep_not_idle:
   "\<lbrakk>valid_idle s;obj_at is_aep epptr s\<rbrakk> \<Longrightarrow> not_idle_thread epptr s"
   by (clarsimp simp:valid_idle_def obj_at_def is_cap_table_def st_tcb_at_def is_aep_def not_idle_thread_def)
+
+lemma cte_wp_at_zombie_not_idle:
+  "\<lbrakk>cte_wp_at (op = (cap.Zombie ptr' zbits n)) ptr s; invs s\<rbrakk> \<Longrightarrow> not_idle_thread (fst ptr) s"
+  "\<lbrakk>cte_wp_at (op = (cap.Zombie ptr' zbits n)) ptr s; invs s\<rbrakk> \<Longrightarrow> not_idle_thread ptr' s"
+  by (auto dest!: zombie_cap_two_nonidles simp: cte_wp_at_caps_of_state not_idle_thread_def)
 
 lemmas tcb_slots = Types_D.tcb_caller_slot_def Types_D.tcb_cspace_slot_def Types_D.tcb_ipcbuffer_slot_def
   Types_D.tcb_pending_op_slot_def Types_D.tcb_replycap_slot_def Types_D.tcb_vspace_slot_def
@@ -85,11 +83,6 @@ lemma transform_objects_kheap:
   unfolding transform_objects_def
   by (simp)
 
-(* FIXME: move *)
-lemma get_etcb_SomeD: "get_etcb ptr s = Some v \<Longrightarrow> ekheap s ptr = Some v"
-  apply (case_tac "ekheap s ptr", simp_all add: get_etcb_def)
-  done
-
 lemma transform_objects_tcb:
   "\<lbrakk> get_tcb ptr s = Some tcb; get_etcb ptr s = Some etcb; ptr \<noteq> idle_thread s\<rbrakk>
     \<Longrightarrow> transform_objects s ptr = Some (transform_tcb (machine_state s) ptr tcb etcb)"
@@ -100,23 +93,6 @@ lemma opt_object_tcb:
   "\<lbrakk> get_tcb ptr s = Some tcb; get_etcb ptr s = Some etcb; ptr \<noteq> idle_thread s \<rbrakk> \<Longrightarrow>
   opt_object ptr (transform s) = Some (transform_tcb (machine_state s) ptr tcb etcb)"
   by (clarsimp simp: opt_object_def transform_def transform_objects_tcb dest!: get_tcb_SomeD)
-
-(* MOVE *)
-lemma inj_on_tcb_cnode_index:
-  "inj_on tcb_cnode_index {n. n < 8}"
-proof (rule inj_onI)
-  fix x y
-
-  note [simp del] = bin_to_bl_def
-
-  assume "x \<in> {n. n < 8}" and "y \<in> {n. n < 8}" and tci: "tcb_cnode_index x = tcb_cnode_index y"
-  hence "x < 8" and "y < 8" by auto
-  thus "x = y" using tci
-    apply (simp add: tcb_cnode_index_def)
-    apply (erule inj_onD [OF word_unat.Abs_inj_on])
-    apply (simp_all add: unats_def)
-    done
-qed
 
 abbreviation
   "tcb_abstract_slots \<equiv> {tcb_caller_slot, tcb_cspace_slot, tcb_ipcbuffer_slot, tcb_replycap_slot, tcb_vspace_slot}"
@@ -186,18 +162,6 @@ lemma caps_of_object_update_context [simp]:
   apply (simp add: tcb_cap_cases_def split: split_if)
   done
 
-
-(* MOVE *)
-(* The equality is here so that any transform_object rewrites can fire and are confluent
-   FIXME: remove the transform_obj_ptr?
-*)
-lemma transform_objects_update_same:
-  "\<lbrakk> kheap s ptr = Some ko; transform_object (machine_state s) ptr (ekheap s ptr) ko = ko'; ptr \<noteq> idle_thread s \<rbrakk>
-  \<Longrightarrow> (transform_objects s)(ptr \<mapsto> ko') = transform_objects s"
-  unfolding transform_objects_def
-  by (rule ext) (simp)
-
-(* FIXME: add simp rules *)
 definition
   generates_pending :: "Structures_A.thread_state \<Rightarrow> bool"
 where
@@ -278,26 +242,11 @@ lemma duplicate_corrupt_tcb_intent:
           split:option.splits cdl_object.splits)
   done
 
-
-(* FIXME: Move *)
-lemma valid_etcbs_tcb_etcb: "\<And>s. \<lbrakk> valid_etcbs s; kheap s ptr = Some (TCB tcb) \<rbrakk> \<Longrightarrow> \<exists>etcb. ekheap s ptr = Some etcb"
-  apply (clarsimp simp: valid_etcbs_def valid_etcbs_def st_tcb_at_def obj_at_def is_etcb_at_def)
-  apply (erule_tac x=ptr in allE)
-  apply clarsimp
-  done
-
-lemma valid_etcbs_get_tcb_get_etcb: "\<And>s. \<lbrakk> valid_etcbs s; get_tcb ptr s = Some tcb \<rbrakk> \<Longrightarrow> \<exists>etcb. get_etcb ptr s = Some etcb"
-  apply (clarsimp simp:  valid_etcbs_def valid_etcbs_def st_tcb_at_def obj_at_def is_etcb_at_def get_etcb_def get_tcb_def split: option.splits split_if)
-  apply (erule_tac x=ptr in allE)
-  apply (case_tac a)
-  apply (clarsimp simp: get_etcb_def split: option.splits kernel_object.splits)+
-  done
-
-lemma valid_etcbs_ko_etcb: "\<And>s. \<lbrakk> valid_etcbs s; kheap s ptr = Some ko \<rbrakk> \<Longrightarrow> \<exists>tcb. (ko = TCB tcb = (\<exists>etcb. ekheap s ptr = Some etcb))"
-  apply (clarsimp simp: valid_etcbs_def valid_etcbs_def st_tcb_at_def obj_at_def is_etcb_at_def)
-  apply (erule_tac x="ptr" in allE)
-  apply auto
-  done
+(* Corrupting a register several times is the same as corrupting it once. *)
+lemma corres_corrupt_tcb_intent_dupl:
+  "\<lbrakk> dcorres dc P P' (do corrupt_tcb_intent x; corrupt_tcb_intent x od) g \<rbrakk> \<Longrightarrow>
+   dcorres dc P P' (corrupt_tcb_intent x) g"
+  by (subst duplicate_corrupt_tcb_intent[symmetric], simp)
 
 (*
  * Doing nothing at the abstract level corresponds to corrupting a TCB intent.
@@ -1327,23 +1276,6 @@ lemma ipc_frame_ptr_at_frame_at:
   apply (clarsimp split:Structures_A.kernel_object.splits if_splits arch_kernel_obj.splits)
 done
 
-lemma distinct_element:
-  "\<lbrakk>b\<inter>d = {};a\<in> b;c\<in>d\<rbrakk>\<Longrightarrow> a\<noteq>c"
-  by auto
-
-(* FIXME: lemma and_neg_mask_plus_mask_mono generalizes this lemma. *)
-lemma word_neg_and_le:
-  shows "n<32 \<Longrightarrow> (ptr::word32) \<le> (ptr && ~~ mask n) + ((2::word32) ^ n - 1)"
-  apply (subst add_commute)
-  apply (rule word_le_minus_cancel[where x = "ptr && ~~ mask n"])
-  apply (clarsimp simp:subtract_mask)
-  using word_and_le1[where a = "mask n" and y = ptr]
-  apply (clarsimp simp:mask_def word_le_less_eq plus_minus_one_rewrite32)
-  apply (subst add_commute)
-  apply (rule is_aligned_no_overflow')
-  apply (clarsimp simp: is_aligned_neg_mask)
-  done
-
 lemma ipc_buffer_within_frame:
   "\<lbrakk>
     pspace_aligned s;
@@ -1356,34 +1288,25 @@ lemma ipc_buffer_within_frame:
    \<Longrightarrow> ptr \<noteq> ptr'"
   apply (simp add:pspace_aligned_def obj_at_def)
   apply (frule_tac x = buf in bspec)
-    apply (simp add:domI obj_at_def)
+   apply (simp add:domI obj_at_def)
   apply (drule_tac x = buf' in bspec)
-    apply (clarsimp simp:domI obj_at_def)
+   apply (clarsimp simp:domI obj_at_def)
   apply (unfold pspace_distinct_def)
   apply (drule_tac x = buf in spec)
   apply (drule_tac x = buf' in spec)
   apply (drule_tac x = "ArchObj (DataPage sz)" in spec)
   apply (drule_tac x = "ArchObj (DataPage sz')" in spec)
   apply (rule distinct_element)
-  apply (rule mp)
-    apply (assumption)
+    apply (rule mp)
+     apply (assumption)
     apply simp
-  apply (clarsimp simp:is_aligned_def)
-    apply (simp add:word_and_le2)
-    apply (rule word_neg_and_le)
-    apply (simp add:pageBitsForSize_def,case_tac sz,simp+)
-  apply (clarsimp simp:word_and_le2)
-  apply (rule word_neg_and_le)
-  apply (simp add:pageBitsForSize_def,case_tac sz',clarsimp+)
+   apply (clarsimp simp:is_aligned_def word_and_le2 word_neg_and_le)
+  apply (clarsimp simp:word_and_le2 word_neg_and_le)
 done
 
 definition
 within_page :: "word32 \<Rightarrow> word32 \<Rightarrow> vmpage_size \<Rightarrow> bool"
 where "within_page buf ptr sz \<equiv> (ptr && ~~ mask (pageBitsForSize sz) = buf)"
-
-lemma is_aligned_after_mask:
-  "\<lbrakk>is_aligned k m;m\<le> n\<rbrakk> \<Longrightarrow> is_aligned (k && mask n) m"
-  by (metis is_aligned_andI1)
 
 lemma valid_tcb_obj_ipc_align_etc:
   "\<lbrakk>valid_objs s;pspace_aligned s;ipc_frame_ptr_at buf thread s;ipc_frame_sz_at pgsz thread s;
@@ -1860,14 +1783,6 @@ lemma store_word_corres:
 lemma store_word_offs_ipc_frame_wp:
   "\<lbrace>ipc_frame_wp_at P s_id\<rbrace> store_word_offs base a aa \<lbrace>\<lambda>rv. ipc_frame_wp_at P s_id\<rbrace>"
   by (wp | simp add: ipc_frame_wp_at_def store_word_offs_def)+
-
-(* FIXME: move *)
-lemma corres_state_assert:
-  "corres_underlying sr nf rr P Q f (g ()) \<Longrightarrow>
-   (\<And>s. Q s \<Longrightarrow> R s) \<Longrightarrow>
-   corres_underlying sr nf rr P Q f (state_assert R >>= g)"
-  by (clarsimp simp: corres_underlying_def state_assert_def get_def assert_def
-                     return_def bind_def)
 
 lemma zip_cpy_word_corres:
   "\<forall>x\<in> set xs. within_page buf (base + of_nat(x*word_size)) sz

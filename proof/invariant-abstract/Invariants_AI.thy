@@ -1900,6 +1900,11 @@ lemma asid_pool_at_ko:
   apply (case_tac arch_kernel_obj, auto)
   done
 
+lemma typ_at_pg:
+  "typ_at (AArch (AIntData sz)) buf s = ko_at (ArchObj (DataPage sz)) buf s"
+  unfolding obj_at_def
+  by (auto simp: a_type_def split: Structures_A.kernel_object.split_asm arch_kernel_obj.split_asm split_if_asm)
+
 lemma symreftype_inverse[simp]:
   "symreftype (symreftype t) = t"
   by (cases t, simp+)
@@ -4948,6 +4953,26 @@ lemma invs_valid_asid_map[elim!]:
 lemma invs_equal_kernel_mappings[elim!]:
   "invs s \<Longrightarrow> equal_kernel_mappings s"
   by (simp add:invs_def valid_state_def)
+
+lemma invs_valid_irq_node[elim!]:
+  "invs s \<Longrightarrow> valid_irq_node s"
+  by (simp add: invs_def valid_state_def)
+
+lemma invs_ifunsafe[elim!]:
+  "invs s \<Longrightarrow> if_unsafe_then_cap s"
+  by (simp add: invs_def valid_state_def valid_pspace_def)
+
+lemma cte_wp_at_cap_aligned:
+  "\<lbrakk>cte_wp_at P p s; invs s\<rbrakk> \<Longrightarrow> \<exists>c. P c \<and> cap_aligned c"
+  apply (drule (1) cte_wp_at_valid_objs_valid_cap [OF _ invs_valid_objs])
+  apply (fastforce simp: valid_cap_def)
+  done
+
+lemma cte_wp_at_cap_aligned':
+  "\<lbrakk>cte_wp_at (op = cap) p s; invs s\<rbrakk> \<Longrightarrow> cap_aligned cap"
+  apply (drule (1) cte_wp_at_valid_objs_valid_cap [OF _ invs_valid_objs])
+  apply (fastforce simp: valid_cap_def)
+  done
 
 locale invs_locale =
   fixes ex_inv :: "'z::state_ext state \<Rightarrow> bool"

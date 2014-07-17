@@ -1231,7 +1231,7 @@ lemma (in kernel_m) cDomScheduleIdx_to_H_correct:
   assumes ms: "cstate_to_machine_H cs = ksMachineState as"
   shows "unat (ksDomScheduleIdx_' cs) = ksDomScheduleIdx as"
 using assms
-by (clarsimp simp: cstate_relation_def Let_def valid_state'_def newKernelState_def unat_of_nat_eq)
+by (clarsimp simp: cstate_relation_def Let_def valid_state'_def newKernelState_def unat_of_nat_eq cdom_schedule_relation_def)
 
 definition cDomSchedule_to_H :: "(dschedule_C['b :: finite]) \<Rightarrow> (8 word \<times> 32 word) list" where
   "cDomSchedule_to_H cs \<equiv> THE as. cdom_schedule_relation as cs"

@@ -11,6 +11,7 @@
 theory IRQMasks_IF
 imports "../access-control/DomainSepInv"
 begin
+
 abbreviation irq_masks_of_state :: "det_ext state \<Rightarrow> irq \<Rightarrow> bool" where
   "irq_masks_of_state s \<equiv> irq_masks (machine_state s)"
 
@@ -181,7 +182,7 @@ lemma no_irq_do_flush:
      done
       
 crunch irq_masks[wp]: arch_perform_invocation "\<lambda>s. P (irq_masks_of_state s)"
-  (wp: dmo_wp crunch_wps simp: crunch_simps no_irq_cleanByVA_PoU no_irq_do_flush)
+  (wp: dmo_wp crunch_wps simp: crunch_simps no_irq_cleanByVA_PoU no_irq_invalidateTLB_ASID no_irq_do_flush)
 
 crunch irq_masks[wp]: restart "\<lambda>s. P (irq_masks_of_state s)"
 

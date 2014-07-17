@@ -134,8 +134,8 @@ lemmas globals_list_mems = kernel_all_global_addresses.global_data_mems
 ML {*
 val globals_swap_rewrites = @{thms globals_list_mems[unfolded global_data_defs]}
     RL @{thms
-        globals_swap_update_mem[OF _ global_acc_valid globals_list_valid]
-        globals_swap_access_mem[OF _ global_acc_valid globals_list_valid]}
+        globals_swap_update_mem2[OF _ global_acc_valid globals_list_valid]
+        globals_swap_access_mem2[OF _ global_acc_valid globals_list_valid]}
 *}
 
 end

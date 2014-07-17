@@ -43,18 +43,11 @@ lemma tcb_decomp:
     apply (force simp: default_tcb_def object_slots_def)
    apply clarsimp
   apply clarsimp
-  apply (clarsimp simp: sep_list_conj_def)
-  apply (subst default_tcb_slots)
-  apply (unfold map.simps)
-  apply (clarsimp simp: tcb_slot_defs object_domain_def)
-  apply (clarsimp simp: sep_conj_assoc)
-  apply rule
-   apply (sep_drule sep_map_c_sep_map_s,
-          fastforce simp: default_tcb_def object_slots_def tcb_pending_op_slot_def)+
-   apply sep_solve
-  apply (sep_drule sep_map_s_sep_map_c',
-         simp add: default_tcb_def object_slots_def tcb_pending_op_slot_def)+
-  apply sep_solve
+  apply (clarsimp simp: sep_list_conj_def default_tcb_slots sep_conj_ac
+                        tcb_slot_defs object_domain_def)
+  apply (subst sep_map_s_sep_map_c_eq,
+         simp add: default_tcb_def object_slots_def tcb_pending_op_slot_def,
+         clarsimp simp:  sep_conj_ac)+
   done
 
 
@@ -90,26 +83,12 @@ lemma tcb_decomp2:
     apply (drule (1) well_formed_object_slots, simp)
     apply (force simp: object_default_state_def2 default_tcb_def object_slots_def split: cdl_object.splits)
    apply clarsimp
-  apply (clarsimp simp: sep_list_conj_def)
-  apply (subst default_tcb_slots)
-  apply (clarsimp simp: tcb_slot_defs sep_conj_assoc)
-  apply (rule ext, rule)
-   apply (sep_drule sep_map_c_sep_map_s, rule object_slots_spec2s', fastforce simp: opt_cap_def slots_of_def opt_object_def)+
-   apply (subst (asm) sep_map_E_eq [where obj'="Tcb (default_tcb minBound)"])
-     apply (clarsimp simp: object_type_def)
-    apply simp
-   apply clarsimp
-   apply sep_solve
-  apply (subst sep_map_f_spec2s [where t=t, THEN sym])
-  apply (subst (asm) sep_map_f_spec2s [where t=t, THEN sym])
-  apply (sep_drule sep_map_s_sep_map_c',
-         clarsimp simp: object_slots_def update_slots_def spec2s_def opt_object_def
-                        opt_cap_def slots_of_def)+
-  apply (subst sep_map_E_eq [where obj'="Tcb (default_tcb minBound)"])
-    apply (clarsimp simp: object_type_def)
-    apply (clarsimp simp:  object_slots_def update_slots_def spec2s_def
-                        opt_object_def opt_cap_def slots_of_def)
-  apply sep_solve
+  apply (clarsimp simp: sep_list_conj_def default_tcb_slots tcb_slot_defs)
+  apply (drule_tac obj'="Tcb (default_tcb minBound)" and p = k_obj_id in sep_map_E_eq [rotated], simp add: object_type_def)
+  apply (subst sep_map_s_sep_map_c_eq,
+         rule object_slots_spec2s',
+         simp add: opt_cap_def slots_of_def object_slots_def opt_object_def)+
+  apply (clarsimp simp: sep_conj_ac)
   done
 
 lemma default_cap_size_0:

@@ -497,7 +497,7 @@ lemma pinv_corres:
             and simple_sched_action
             and ct_active
             and (\<lambda>s. (\<exists>w w2 b. i = Invocations_A.InvokeEndpoint w w2 b) \<longrightarrow> st_tcb_at simple (cur_thread s) s))
-     (invs' and sch_act_simple and valid_invocation' i' and ct_active')
+     (invs' and sch_act_simple and valid_invocation' i' and ct_active' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)))
      (perform_invocation block call i) (performInvocation block call i')"
   apply (simp add: performInvocation_def)
   apply (case_tac i)
@@ -1308,6 +1308,35 @@ done
 lemmas set_thread_state_active_valid_sched =
   set_thread_state_runnable_valid_sched[simplified runnable_eq_active]
 
+lemma setTCB_valid_duplicates'[wp]:
+ "\<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s)\<rbrace>
+  setObject a (tcb::tcb) \<lbrace>\<lambda>rv s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
+  apply (clarsimp simp: setObject_def split_def valid_def in_monad
+                        projectKOs pspace_aligned'_def ps_clear_upd'
+                        objBits_def[symmetric] lookupAround2_char1
+                 split: split_if_asm)
+  apply (frule pspace_storable_class.updateObject_type[where v = tcb,simplified])
+  apply (clarsimp simp:updateObject_default_def assert_def bind_def 
+    alignCheck_def in_monad when_def alignError_def magnitudeCheck_def
+    assert_opt_def return_def fail_def typeError_def
+    split:if_splits option.splits Structures_H.kernel_object.splits)
+     apply (erule valid_duplicates'_non_pd_pt_I[rotated 3],simp+)+
+  done
+
+crunch valid_duplicates'[wp]: threadSet "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+(ignore: getObject setObject wp: setObject_ksInterrupt updateObject_default_inv)
+
+lemma tcbSchedEnqueue_valid_duplicates'[wp]:
+ "\<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s)\<rbrace>
+  tcbSchedEnqueue a \<lbrace>\<lambda>rv s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
+  by (simp add:tcbSchedEnqueue_def unless_def setQueue_def | wp | wpc)+
+
+crunch valid_duplicates'[wp]: rescheduleRequired "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+(ignore: getObject setObject wp: setObject_ksInterrupt updateObject_default_inv)
+
+crunch valid_duplicates'[wp]: setThreadState "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+  (ignore: getObject setObject)
+
 (*FIXME: move to NonDetMonadVCG.valid_validE_R *)
 lemma hinv_corres:
   "c \<longrightarrow> b \<Longrightarrow>
@@ -1371,7 +1400,8 @@ lemma hinv_corres:
               apply (rule_tac Q="\<lambda>rv. invs' and valid_invocation' rve'
                                       and (\<lambda>s. thread = ksCurThread s)
                                       and st_tcb_at' active' thread
-                                      and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)"
+                                      and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)
+                                      and (\<lambda>s. vs_valid_duplicates' (ksPSpace s))"
                          in hoare_post_imp)
                apply (clarsimp simp: ct_in_state'_def)
                apply (frule(1) ct_not_ksQ)

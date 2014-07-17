@@ -113,12 +113,6 @@ where
 
 (* --- caps --- *)
 
-(* FIXME: It is unclear whether this definition is precise enough. 
-  We might need to make the type "cdl_cap option lookup" to
-  distinguish between caps that are not present (NullCap) and
-  caps that can't exist at the specificied location. 
-  At the moment these two outcomes are identified. *)
-
 (* The slots of an object, returns an empty map for non-existing objects 
    or objects that do not have caps *)
 definition

@@ -482,6 +482,12 @@ defs isAligned_def:
 "isAligned x n \<equiv> x && mask n = 0"
 
 
+consts
+  newKSDomSchedule :: "(domain \<times> machine_word) list"
+  newKSDomScheduleIdx :: nat
+  newKSCurDomain :: domain
+  newKSDomainTime :: machine_word
+ 
 definition
   newKernelState :: "machine_word \<Rightarrow> kernel_state"
 where
@@ -489,10 +495,10 @@ where
         ksPSpace= newPSpace,
         gsUserPages= (\<lambda>x. None),
         gsCNodes= (\<lambda>x. None),
-        ksDomScheduleIdx = 0,
-        ksDomSchedule = [(0, 15), (2, 42), (1, 73)],
-        ksCurDomain = 0,
-        ksDomainTime = 15,
+        ksDomScheduleIdx = newKSDomScheduleIdx,
+        ksDomSchedule = newKSDomSchedule,
+        ksCurDomain = newKSCurDomain,
+        ksDomainTime = newKSDomainTime,
         ksReadyQueues= const [],
         ksCurThread= error [],
         ksIdleThread= error [],

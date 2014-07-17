@@ -744,6 +744,13 @@ lemma gts_wf[wp]: "\<lbrace>tcb_at t and invs\<rbrace> get_thread_state t \<lbra
   apply (clarsimp simp: valid_obj_def valid_tcb_def)
   done
 
+lemma idle_thread_idle[wp]:
+  "\<lbrace>\<lambda>s. valid_idle s \<and> t = idle_thread s\<rbrace> get_thread_state t \<lbrace>\<lambda>r s. idle r\<rbrace>"
+  apply (clarsimp simp: valid_def get_thread_state_def thread_get_def bind_def return_def gets_the_def gets_def get_def assert_opt_def get_tcb_def
+                        fail_def valid_idle_def st_tcb_at_def obj_at_def
+                  split: option.splits Structures_A.kernel_object.splits)
+  done
+
 lemma set_thread_state_valid_objs[wp]:
  "\<lbrace>valid_objs and valid_tcb_state st and
    (\<lambda>s. (\<forall>a b. st = Structures_A.BlockedOnReceive a b \<longrightarrow>

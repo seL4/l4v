@@ -288,22 +288,6 @@ lemma decode_irq_handler_invocation_rev:
   done
 
 
-lemma get_master_pte_reads_respects:
-  "reads_respects aag l (K (is_subject aag (p && ~~ mask pt_bits))) (get_master_pte p)"
-  unfolding get_master_pte_def
-  apply(wp get_pte_reads_respects | wpc | simp
-       | wp_once hoare_drop_imps)+
-  apply(fastforce simp: pt_bits_def pageBits_def mask_lower_twice)
-  done
-
-
-lemma get_master_pde_reads_respects:
-  "reads_respects aag l (K (is_subject aag (x && ~~ mask pd_bits))) (get_master_pde x)"
-  unfolding get_master_pde_def
-  apply(wp get_pde_rev | wpc | simp
-       | wp_once hoare_drop_imps)+
-  apply(fastforce simp: pd_bits_def pageBits_def mask_lower_twice)
-  done
 
 
 (* FIXME: cleanup this proof *)

@@ -93,128 +93,7 @@ lemma handle_reply_cur_thread_idle_thread:
     apply simp+
 done
 
-lemma word_of_nat_less:
-  "\<lbrakk> n < unat x \<rbrakk> \<Longrightarrow> of_nat n < x"
-  apply (simp add: word_less_nat_alt)
-  apply (erule order_le_less_trans[rotated])
-  apply (simp add: unat_of_nat)
-  done
-
-lemma word_shift:
-  "\<lbrakk>is_aligned (ptr :: word32) 2; s \<le> mask 2\<rbrakk>\<Longrightarrow>((ptr + s) >> 2) = (ptr >> 2)"
-apply (simp add: le_mask_iff_lt_2n[THEN iffD1])
-apply (rule sym)
-apply (rule subst[OF mask_shift])
-apply (simp add: is_aligned_add_helper[THEN conjunct2,where d1=s and n1=2 and p1=ptr,simplified])
-done
-
-
-(* MOVE *)
-lemma is_aligned_shiftr_shiftl:
-  "is_aligned w n \<Longrightarrow> w >> n << n = w"
-  apply (simp add: shiftr_shiftl1)
-  apply (erule is_aligned_neg_mask_eq)
-  done
-
 declare pbfs_atleast_pageBits [simp]
-
-(* MOVE *)
-lemma corres_symb_gets:
-  "(\<And>v. corres_underlying sr nf r P (Q v) a (g v)) \<Longrightarrow>
-  corres_underlying sr nf r P (\<lambda>s. Q (f s) s) a (gets f >>= g)"
-  apply (rule corres_symb_exec_r)
-  apply assumption
-  apply (wp)
-  apply (rule no_fail_pre [OF non_fail_gets])
-  apply simp
-  done
-
-lemma dcorres_from_vcg:
-  assumes v: "\<And>s. \<lbrace>(op = s) and P' and (P o transform)\<rbrace> f' \<lbrace>\<lambda>rv' s'. \<exists>rv. (rv, transform s') \<in> fst (f (transform s)) \<and> r rv rv'\<rbrace>"
-  shows "dcorres r P P' f f'"
-  unfolding corres_underlying_def
-  apply (clarsimp simp: split_def)
-  apply (drule use_valid [OF _ v])
-   apply simp
-  apply (clarsimp elim!: bexI [rotated])
-done
-
-lemma dcorres_from_vcg_dc:
-  assumes v: "\<And>s. \<lbrace>(op = s) and P' and (P o transform)\<rbrace> f' \<lbrace>\<lambda>_ s'. transform s' \<in> snd ` fst (f (transform s))\<rbrace>"
-  shows "dcorres dc P P' f f'"
-  apply (rule dcorres_from_vcg)
-  apply (rule hoare_strengthen_post [OF v])
-  apply fastforce
-  done
-
-lemma corres_underlying_split2:
-  assumes ac: "corres_underlying s nf r' G G' a c"
-  assumes valid: "\<lbrace>G\<rbrace> a \<lbrace>\<lambda>rv s. \<forall>rv'. r' rv rv' \<longrightarrow> P rv rv' s\<rbrace>" "\<lbrace>G'\<rbrace> c \<lbrace>\<lambda>rv' s. \<forall>rv. r' rv rv' \<longrightarrow> P' rv rv' s\<rbrace>"
-  assumes bd: "\<forall>rv rv'. r' rv rv' \<longrightarrow>
-                        corres_underlying s nf r (P rv rv') (P' rv rv') (b rv) (d rv')"
-  shows "corres_underlying s nf r G G' (a >>= (\<lambda>rv. b rv)) (c >>= (\<lambda>rv'. d rv'))"
-  using ac bd valid
-  apply (clarsimp simp: corres_underlying_def bind_def)
-  apply (drule (1) bspec, clarsimp simp: split_def)
-  apply (rule conjI)
-   apply clarsimp
-   apply (drule (1) bspec, erule bexE)
-   apply clarsimp
-   apply (erule allE)+
-   apply (erule (1) impE)
-   apply (subgoal_tac "P ac aaa bc \<and> P' ac aaa baa")
-    prefer 2
-    apply (simp add: valid_def)
-    apply (erule allE)+
-    apply (erule (1) impE)+
-    apply blast
-   apply (drule_tac x="(bc, baa)" in bspec, assumption)
-   apply simp
-   apply (clarsimp simp: split_def)
-   apply (rule bexI)
-    prefer 2
-    apply assumption
-   apply clarsimp
-   apply (drule (1) bspec, erule bexE)
-   apply auto[1]
-  apply clarsimp
-  apply (drule (1) bspec, clarsimp)
-  apply (erule allE)+
-  apply (erule (1) impE)
-  apply (clarsimp simp: valid_def)
-  apply force
-  done
-
-text {* Derivative splitting rules *}
-
-lemma corres_split2:
-  assumes y: "\<And>rv rv'. r' rv rv' \<Longrightarrow> corres_underlying sr nf r (R rv rv') (R' rv rv') (b rv) (d rv')"
-  assumes x: "corres_underlying sr nf r' P P' a c"
-  assumes valid: "\<lbrace>P\<rbrace> a \<lbrace>\<lambda>rv s. \<forall>rv'. r' rv rv' \<longrightarrow> R rv rv' s\<rbrace>" "\<lbrace>P'\<rbrace> c \<lbrace>\<lambda>rv' s. \<forall>rv. r' rv rv' \<longrightarrow> R' rv rv' s\<rbrace>"
-  shows      "corres_underlying sr nf r (P and Q) (P' and Q') (a >>= (\<lambda>rv. b rv)) (c >>= (\<lambda>rv'. d rv'))"
-  using assms
-  apply -
-  apply (rule corres_underlying_split2)
-     apply (rule corres_guard_imp, rule x, simp_all)
-    apply (rule hoare_weaken_pre, assumption)
-    apply simp
-   apply (rule hoare_weaken_pre, assumption)
-   apply simp
-  apply clarsimp
-  done
-
-lemma corres_underlying_sndE:
-  assumes cul: "corres_underlying R F r P P' a c"
-  and      sr: "(s, s') \<in> R" "P s" "P' s'"
-  and      rl: "\<lbrakk>F \<longrightarrow> \<not> snd (c s')\<rbrakk> \<Longrightarrow> Q"
-  shows   "Q"
-  using cul sr
-  unfolding corres_underlying_def
-  apply clarsimp
-  apply (rule rl)
-  apply (drule (1) bspec)
-  apply clarsimp
-  done
 
 lemma dcorres_move_guard:
   "dcorres r P P' a c \<Longrightarrow> dcorres r \<top> (P' and (P o transform)) a c"
@@ -237,11 +116,6 @@ lemma dcorres_move_guard_iff:
    apply (erule dcorres_move_guard)
   apply (erule dcorres_move_guard_back)
   done
-
-(* MOVE *)
-lemma option_map_cong:
-  "\<lbrakk>(\<And>x. f x = f' x); v = v' \<rbrakk> \<Longrightarrow> option_map f v = option_map f' v'"
-  unfolding option_map_def by (cases v, auto)
 
 lemma transform_cdt_cong:
   "\<lbrakk> cdt s = cdt s'; interrupt_irq_node s = interrupt_irq_node s' \<rbrakk> \<Longrightarrow> transform_cdt s = transform_cdt s'"
@@ -382,8 +256,6 @@ lemma evalMonad_singleton [simp]:
 lemma mi_length_dest : "of_nat (unat (mi_length rva)) = mi_length rva"
   by (rule word_unat.Rep_inverse)
 
-(* Some map we need to talk about the retrun value and pre condition have been moved to KHeap_DR *)
-
 (* CORRES RULES *)
 
 lemma no_pending_cap_when_active_corres:
@@ -469,18 +341,6 @@ lemma meqv_sym:
   "meqv P a a' \<Longrightarrow> meqv P a' a"
   unfolding monadic_rewrite_def
   by fastforce
-
-(* MOVE *)
-lemma wpc_helper_monadic_rewrite:
-  "monadic_rewrite F E Q' m m'
-   \<Longrightarrow> wpc_helper (P, P') (Q, {s. Q' s}) (monadic_rewrite F E (\<lambda>s. s \<in> P') m m')"
-  apply (clarsimp simp: wpc_helper_def)
-  apply (erule monadic_rewrite_imp)
-   apply auto
-  done
-
-wpc_setup "\<lambda>m. monadic_rewrite F E Q' m m'" wpc_helper_monadic_rewrite
-wpc_setup "\<lambda>m. monadic_rewrite F E Q' (m >>= c) m'" wpc_helper_monadic_rewrite
 
 lemma monadic_rewrite_modify_remove_stateful:
   assumes "\<And>v. meqv (P v) m (modify (\<lambda>s. f v s))"
@@ -631,22 +491,6 @@ done
 lemma corres_ignore_ret_lhs: "dcorres rv P P' (do f;g od) f' \<Longrightarrow> dcorres rv P P' (do a\<leftarrow>f;g od) f'"
  by (clarsimp simp:corres_underlying_def)
 
-(* FIXME: Move to Intent_DR
- * Corrupting a register several times is the same as corrupting it once.
- *)
-lemma corres_corrupt_tcb_intent_dupl:
-  "\<lbrakk> dcorres dc P P' (do corrupt_tcb_intent x; corrupt_tcb_intent x od) g \<rbrakk> \<Longrightarrow>
-   dcorres dc P P' (corrupt_tcb_intent x) g"
-  by (subst duplicate_corrupt_tcb_intent[symmetric], simp)
-
-(* FIXME: sseefried: Move to Intent_DR.thy *)
-lemma valid_etcbs_tcb_at_is_etcb_at: "\<And>s. \<lbrakk> valid_etcbs s; tcb_at ptr s  \<rbrakk> \<Longrightarrow> is_etcb_at ptr s"
-  apply (clarsimp simp: valid_etcbs_def valid_etcbs_def st_tcb_at_def obj_at_def is_etcb_at_def is_tcb_def)
-  apply (erule_tac x=ptr in allE)
-  apply (case_tac "ko")
-  apply auto
-  done
-
 lemma dcorres_do_async_transfer:
   "dcorres dc \<top>
     (valid_objs and pspace_aligned and pspace_distinct and valid_idle and tcb_at oid and not_idle_thread oid and valid_etcbs)
@@ -658,7 +502,7 @@ lemma dcorres_do_async_transfer:
       in corres_symb_exec_r)
   apply (rule dcorres_expand_pfx)
   apply (clarsimp)
-  apply (frule(1) valid_etcbs_tcb_at_is_etcb_at)
+  apply (frule(1) tcb_at_is_etcb_at)
   apply (case_tac rv)
     apply (rule corres_symb_exec_l)
     apply (rule_tac F="rva = None" in corres_gen_asm)
@@ -780,36 +624,6 @@ lemma attempt_switch_to_dcorres: "dcorres dc P P' (return ()) (attempt_switch_to
   apply (clarsimp simp: attempt_switch_to_def)
   apply (rule possible_switch_to_dcorres)
   done
-
-lemma dcorres_dc_rhs_noop_below_gen:
-  "\<lbrakk> \<forall>rv'. dcorres dc (Q ()) (Q' rv') (return ()) (m rv');
-              dcorres dc P P' f g;
-     \<lbrace> P \<rbrace> f \<lbrace> Q \<rbrace>; \<lbrace> P' \<rbrace> g \<lbrace> Q' \<rbrace> \<rbrakk>
-   \<Longrightarrow> dcorres dc P P' f (g >>= m)"
-  apply (rule corres_add_noop_lhs2)
-  apply (rule corres_underlying_split)
-  apply (assumption | clarsimp)+
-  done
-
-(* FIXME: sseefried: Move to Corres_D.thy *)
-
-
-lemma dcorres_dc_rhs_noop_below_2: "\<lbrakk> \<forall>rv'. dcorres dc (Q ()) (Q' rv') (return ()) m;
-         dcorres dc P P' f (g >>= h);
-         \<lbrace> P \<rbrace> f \<lbrace> Q \<rbrace>;
-         \<lbrace> P' \<rbrace> g \<lbrace> R'\<rbrace>;
-         (\<And>y. \<lbrace> R' y \<rbrace> h y \<lbrace> Q' \<rbrace>)
-          \<rbrakk>
-       \<Longrightarrow> dcorres dc P P' f (do x \<leftarrow> g;
-                                   _ \<leftarrow> h x;
-                                   m
-                                 od)"
-  apply (simp add: bind_assoc[symmetric])
-  apply (rule dcorres_dc_rhs_noop_below_gen)
-  apply (wp | simp | assumption)+
-  done
-
-lemmas dcorres_dc_rhs_noop_below_2_True = dcorres_dc_rhs_noop_below_2[OF _ _ hoare_TrueI hoare_TrueI hoare_TrueI]
 
 lemma corres_update_waiting_aep_do_async_transfer:
   "dcorres dc \<top>
@@ -1524,7 +1338,6 @@ lemma dcorres_return:
   by (clarsimp simp:return_def corres_underlying_def)
 
 
-(* will need more preconds *)
 lemma get_receive_slot_dcorres:
   "dcorres (\<lambda>d d'. d = dest_of d') \<top>
            ((\<lambda>s. evalMonad (lookup_ipc_buffer True t) s = Some buffer) and not_idle_thread t and valid_objs
@@ -1799,7 +1612,7 @@ lemma dcorres_copy_mrs':
         apply (wp|clarsimp simp:option.cases split:option.splits)+
       apply (clarsimp simp:get_ipc_buffer_def gets_the_def exs_valid_def gets_def
         get_def bind_def return_def assert_opt_def fail_def split:option.splits | rule conjI)+
-      apply (frule(1) valid_etcbs_tcb_at_is_etcb_at, clarsimp simp: is_etcb_at_def, fold get_etcb_def)
+      apply (frule(1) tcb_at_is_etcb_at, clarsimp simp: is_etcb_at_def, fold get_etcb_def)
       apply (clarsimp simp:not_idle_thread_def tcb_at_def opt_cap_tcb)+
     apply (simp split:cdl_cap.splits)
       apply (wp cdl_get_ipc_buffer_None)

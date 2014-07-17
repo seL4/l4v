@@ -1701,12 +1701,6 @@ lemma threadGet_obj_at':
   "\<lbrace>obj_at' (\<lambda>t. P (f t) t) t\<rbrace> threadGet f t \<lbrace>\<lambda>rv. obj_at' (P rv) t\<rbrace>"
   by (simp add: threadGet_def o_def | wp getObject_obj_at_tcb)+
 
-lemma tcb_at_ekheap_dom:
-  "\<lbrakk>tcb_at x s; valid_etcbs s\<rbrakk> \<Longrightarrow> (\<exists>etcb. ekheap s x = Some etcb)"
-  apply (clarsimp simp: obj_at_def is_tcb)
-  apply (erule (1) kheap_ekheap_dom)
-  done
-
 lemma fun_if_triv[simp]:
   "(\<lambda>x. if x = y then f y else f x) = f"
   by (force intro: ext)

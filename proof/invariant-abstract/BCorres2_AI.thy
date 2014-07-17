@@ -481,16 +481,6 @@ lemma create_mapping_entries_bcorres[wp]: "bcorres (create_mapping_entries a b c
   apply (wp | simp)+
   done
 
-lemma get_master_pte_bcorres[wp]: "bcorres (get_master_pte x) (get_master_pte x)"
-  apply (simp add:get_master_pte_def)
-  apply (wp | wpc | simp)+
-  done
-
-lemma get_master_pde_bcorres[wp]: "bcorres (get_master_pde x) (get_master_pde x)"
-  apply (simp add:get_master_pde_def)
-  apply (wp | wpc | simp)+
-  done
-
 lemma ensure_safe_mapping_bcorres[wp]: "bcorres (ensure_safe_mapping a) (ensure_safe_mapping a)"
   apply (induct rule: ensure_safe_mapping.induct)
   apply (wp | wpc | simp)+

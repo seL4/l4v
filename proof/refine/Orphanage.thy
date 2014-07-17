@@ -2137,7 +2137,7 @@ lemma performPageInvocation_no_orphans [wp]:
   apply (simp add: performPageInvocation_def
               cong: page_invocation.case_cong)
   apply (rule hoare_pre)
-   apply (wp mapM_x_wp' mapM_wp' static_imp_wp | wpc | clarsimp)+
+   apply (wp mapM_x_wp' mapM_wp' static_imp_wp | wpc | clarsimp simp: pdeCheckIfMapped_def pteCheckIfMapped_def)+
   done
 
 lemma performASIDControlInvocation_no_orphans [wp]:

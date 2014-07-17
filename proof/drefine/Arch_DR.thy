@@ -57,13 +57,13 @@ where "transform_page_dir_inv invok \<equiv> case invok of
 
 definition transform_page_inv :: "ArchInvocation_A.page_invocation \<Rightarrow> cdl_page_invocation option"
 where "transform_page_inv invok \<equiv> case invok of
-  ArchInvocation_A.page_invocation.PageMap cap ct_slot entries \<Rightarrow>
+  ArchInvocation_A.page_invocation.PageMap asid cap ct_slot entries \<Rightarrow>
    Some (cdl_page_invocation.PageMap (transform_cap cap)
         (sum_case (transform_pte \<circ> fst) (transform_pde \<circ> fst) entries)
         (transform_cslot_ptr ct_slot)
         (sum_case (\<lambda>pair. [ (transform_pt_slot_ref \<circ> hd \<circ> snd) pair])
           (\<lambda>pair. [(transform_pd_slot_ref \<circ> hd \<circ> snd) pair]) entries))
-| ArchInvocation_A.page_invocation.PageRemap entries \<Rightarrow>
+| ArchInvocation_A.page_invocation.PageRemap asid entries \<Rightarrow>
    Some (cdl_page_invocation.PageRemap
         (sum_case (transform_pte \<circ> fst) (transform_pde \<circ> fst) entries)
         (sum_case (\<lambda>pair. [ (transform_pt_slot_ref \<circ> hd \<circ> snd) pair])
@@ -1639,13 +1639,56 @@ lemma invoke_page_directory_corres:
    apply (clarsimp simp: perform_page_directory_invocation_def)
 done 
 
+(* NOONE EVER SEES THIS OK *)
+lemma pte_check_if_mapped_corres:
+  "dcorres dc \<top> \<top> (return a) (pte_check_if_mapped pte)"
+  apply (clarsimp simp add: pte_check_if_mapped_def get_master_pte_def get_pte_def get_pt_def bind_assoc  in_monad get_object_def corres_underlying_def)
+  apply (case_tac y, simp_all add: in_monad)
+  apply (case_tac arch_kernel_obj, simp_all add: in_monad)
+  apply (clarsimp split: ARM_Structs_A.pte.splits)
+    apply (simp_all add: get_pte_def get_pt_def get_object_def in_monad bind_assoc split: kernel_object.splits arch_kernel_obj.splits)
+    apply clarsimp
+    apply (case_tac y, simp_all add: in_monad)
+    apply (case_tac arch_kernel_obj, simp_all add: in_monad)
+    apply (auto simp: in_monad)[2]
+  apply clarsimp
+  apply (case_tac y, simp_all add: in_monad, case_tac arch_kernel_obj, simp_all add: in_monad, auto simp: in_monad)
+  done
+
+lemma pde_check_if_mapped_corres:
+  "dcorres dc \<top> \<top> (return a) (pde_check_if_mapped pde)"
+  apply (clarsimp simp add: pde_check_if_mapped_def get_master_pde_def get_pde_def get_pd_def bind_assoc  in_monad get_object_def corres_underlying_def)
+  apply (case_tac y, simp_all add: in_monad)
+  apply (case_tac arch_kernel_obj, simp_all add: in_monad)
+  apply (clarsimp split: ARM_Structs_A.pde.splits)
+     apply (simp_all add: get_pde_def get_pd_def get_object_def in_monad bind_assoc)
+     apply clarsimp
+     apply (case_tac y, simp_all add: in_monad)
+     apply (case_tac arch_kernel_obj, simp_all add: in_monad)
+     apply (auto simp: in_monad)[1]
+    apply clarsimp
+    apply (case_tac y, simp_all add: in_monad)
+    apply (case_tac arch_kernel_obj, simp_all add: in_monad)
+    apply (auto simp: in_monad)[1]
+   apply clarsimp
+   apply (case_tac y, simp_all add: in_monad, case_tac arch_kernel_obj, simp_all add: in_monad, auto simp: in_monad)
+  done
+
+lemma if_invalidate_equiv_return:
+  "dcorres dc \<top> \<top> (return a) (if b then invalidate_tlb_by_asid asid else return ())"
+  apply (cases b, simp_all)
+  apply (rule wp_to_dcorres)
+  apply (wp invalidate_tlb_by_asid_dwp)
+  apply clarsimp
+  done
+
 lemma invoke_page_corres:
   "transform_page_inv ip' = Some ip  \<Longrightarrow>
    dcorres dc \<top> (valid_page_inv ip' and invs and page_inv_duplicates_valid ip' and valid_pdpt_objs and valid_etcbs)
     (invoke_page ip) (perform_page_invocation ip')"
   apply (clarsimp simp:invoke_page_def)
   apply (case_tac ip')
-  apply (simp_all add:perform_page_invocation_def)
+     apply (simp_all add:perform_page_invocation_def)
      apply (simp_all add:perform_page_invocation_def transform_page_inv_def)
      apply (rule dcorres_expand_pfx)
      apply (clarsimp simp:valid_page_inv_def)
@@ -1656,28 +1699,38 @@ lemma invoke_page_corres:
           split:if_splits)
       apply (rule corres_guard_imp)
         apply (rule corres_split [OF _ set_cap_corres])
-            apply (rule corres_dummy_return_l)
-            apply (rule corres_split[OF _ store_pte_set_cap_corres])
-                apply (rule corres_dummy_return_l)
-                apply (rule_tac corres_split[OF _ dcorres_store_invalid_pte_tail_large_page])
-                 apply (rule wp_to_dcorres[where Q=\<top>])
-                 apply (wp do_machine_op_wp mapM_wp' set_cap_idle
-                    store_pte_page_inv_entries_safe set_cap_page_inv_entries_safe
-                    | clarsimp simp:cleanCacheRange_PoU_def)+
+            apply (rule corres_dummy_return_pl[where b ="()"])
+            apply (rule corres_split[OF _ pte_check_if_mapped_corres])
+              apply (simp split del: split_if)
+              apply (rule corres_dummy_return_l)
+              apply (rule corres_split[OF _ store_pte_set_cap_corres])
+                  apply (rule corres_dummy_return_l)
+                  apply (rule_tac corres_split[OF _ dcorres_store_invalid_pte_tail_large_page])
+                    apply (rule corres_dummy_return_l)
+                    apply (rule corres_split[OF if_invalidate_equiv_return])
+                      apply (rule wp_to_dcorres[where Q=\<top>])
+                      apply (wp do_machine_op_wp mapM_wp' set_cap_idle
+                         store_pte_page_inv_entries_safe set_cap_page_inv_entries_safe
+                         | clarsimp simp:cleanCacheRange_PoU_def)+
       apply (clarsimp simp:invs_def valid_state_def cte_wp_at_caps_of_state)
       apply (frule_tac v = b in valid_idle_has_null_cap,simp+)
       apply (clarsimp simp:is_arch_update_def is_arch_cap_def cap_master_cap_def split:cap.split_asm)
      apply (clarsimp simp:mapM_x_singleton)
      apply (rule corres_guard_imp)
        apply (rule corres_split [OF _ set_cap_corres])
-           apply (rule corres_dummy_return_l)
-           apply (rule corres_split[OF _ store_pde_set_cap_corres])
-                apply (rule corres_dummy_return_l)
-                apply (rule_tac corres_split[OF _ dcorres_store_invalid_pde_tail_super_section])
-                  apply (rule wp_to_dcorres[where Q=\<top>])
-                  apply (wp do_machine_op_wp mapM_wp' set_cap_idle
-                      set_cap_page_inv_entries_safe store_pde_page_inv_entries_safe
-                    | clarsimp simp:cleanCacheRange_PoU_def valid_slots_def)+
+           apply (rule corres_dummy_return_pl[where b="()"])
+           apply (rule corres_split[OF _ pde_check_if_mapped_corres])
+             apply (simp split del: split_if)
+             apply (rule corres_dummy_return_l)
+             apply (rule corres_split[OF _ store_pde_set_cap_corres])
+                  apply (rule corres_dummy_return_l)
+                  apply (rule_tac corres_split[OF _ dcorres_store_invalid_pde_tail_super_section])
+                    apply (rule corres_dummy_return_l)
+                    apply (rule corres_split[OF if_invalidate_equiv_return])
+                      apply (rule wp_to_dcorres[where Q=\<top>])
+                      apply (wp do_machine_op_wp mapM_wp' set_cap_idle
+                          set_cap_page_inv_entries_safe store_pde_page_inv_entries_safe
+                        | clarsimp simp:cleanCacheRange_PoU_def valid_slots_def)+
      apply (simp add:page_inv_duplicates_valid_def valid_slots_def
                      page_inv_entries_safe_def split:if_splits)
       apply (clarsimp simp:invs_def valid_state_def cte_wp_at_caps_of_state)
@@ -1686,46 +1739,58 @@ lemma invoke_page_corres:
      apply (clarsimp simp:invs_def valid_state_def cte_wp_at_caps_of_state)
      apply (frule_tac v = b in valid_idle_has_null_cap,simp+)
      apply (clarsimp simp:is_arch_update_def is_arch_cap_def cap_master_cap_def split:cap.split_asm)
+   -- "PageRemap"
     apply (case_tac sum)
      apply (clarsimp simp: mapM_singleton mapM_x_mapM)
      apply (simp add:page_inv_duplicates_valid_def
           split:if_splits)
      apply (rule corres_guard_imp)
-       apply (rule corres_dummy_return_l)
-       apply (rule corres_split[OF _ store_pte_set_cap_corres])
-           apply (rule corres_dummy_return_l)
-           apply (rule_tac corres_split[OF _ dcorres_store_invalid_pte_tail_large_page])
-             apply (rule wp_to_dcorres[where Q=\<top>])
-             apply (wp do_machine_op_wp mapM_wp' set_cap_idle
-               store_pte_page_inv_entries_safe set_cap_page_inv_entries_safe
-               | clarsimp simp:cleanCacheRange_PoU_def)+
+       apply (rule corres_dummy_return_pl[where b="()"])
+       apply (rule corres_split[OF _ pte_check_if_mapped_corres])
+         apply (simp split del: split_if)
+         apply (rule corres_dummy_return_l)
+         apply (rule corres_split[OF _ store_pte_set_cap_corres])
+             apply (rule corres_dummy_return_l)
+             apply (rule_tac corres_split[OF _ dcorres_store_invalid_pte_tail_large_page])
+               apply (rule corres_dummy_return_l)
+               apply (rule corres_split[OF if_invalidate_equiv_return])
+                 apply (rule wp_to_dcorres[where Q=\<top>])
+                 apply (wp do_machine_op_wp mapM_wp' set_cap_idle
+                   store_pte_page_inv_entries_safe set_cap_page_inv_entries_safe
+                   | clarsimp simp:cleanCacheRange_PoU_def)+
     apply (rule dcorres_expand_pfx)
     apply (clarsimp simp:mapM_singleton mapM_x_mapM valid_page_inv_def)
     apply (rule corres_guard_imp)
-      apply (rule corres_dummy_return_l)
-      apply (rule corres_split[OF _ store_pde_set_cap_corres])
-           apply (rule corres_dummy_return_l)
-           apply (rule_tac corres_split[OF _ dcorres_store_invalid_pde_tail_super_section])
-             apply (rule wp_to_dcorres[where Q=\<top>])
-             apply (wp do_machine_op_wp mapM_wp' set_cap_idle
-               set_cap_page_inv_entries_safe store_pde_page_inv_entries_safe
-               | clarsimp simp:cleanCacheRange_PoU_def valid_slots_def
-             )+
+      apply (rule corres_dummy_return_pl[where b="()"])
+      apply (rule corres_split[OF _ pde_check_if_mapped_corres])
+        apply (simp split del: split_if)
+        apply (rule corres_dummy_return_l)
+        apply (rule corres_split[OF _ store_pde_set_cap_corres])
+             apply (rule corres_dummy_return_l)
+             apply (rule_tac corres_split[OF _ dcorres_store_invalid_pde_tail_super_section])
+               apply (rule corres_dummy_return_l)
+               apply (rule corres_split[OF if_invalidate_equiv_return])
+                 apply (rule wp_to_dcorres[where Q=\<top>])
+                 apply (wp do_machine_op_wp mapM_wp' set_cap_idle
+                   set_cap_page_inv_entries_safe store_pde_page_inv_entries_safe
+                   | clarsimp simp:cleanCacheRange_PoU_def valid_slots_def
+                 )+
     apply (clarsimp simp:invs_def valid_state_def
       cte_wp_at_caps_of_state page_inv_duplicates_valid_def)
+   -- "PageUnmap"
    apply (rule dcorres_expand_pfx)
    apply (clarsimp simp: valid_page_inv_def liftM_def
      split:arch_cap.splits option.splits)
-     apply (simp add:alternative_bind_distrib)
-     apply (rule corres_alternate2)
-     apply (rule corres_guard_imp)
-       apply (rule corres_split[OF _ get_cap_corres])
-          apply (rule_tac P="\<lambda>y s. cte_wp_at (op = x) (a,b) s \<and> s = s'" in set_cap_corres_stronger)
-           apply clarsimp
-           apply (drule cte_wp_at_eqD2, simp)
-           apply (clarsimp simp:is_arch_diminished_def transform_mapping_def update_map_data_def
-                             dest!:diminished_page_is_page)
-          apply (wp get_cap_cte_wp_at_rv | clarsimp)+
+    apply (simp add:alternative_bind_distrib)
+    apply (rule corres_alternate2)
+    apply (rule corres_guard_imp)
+      apply (rule corres_split[OF _ get_cap_corres])
+         apply (rule_tac P="\<lambda>y s. cte_wp_at (op = x) (a,b) s \<and> s = s'" in set_cap_corres_stronger)
+          apply clarsimp
+          apply (drule cte_wp_at_eqD2, simp)
+          apply (clarsimp simp:is_arch_diminished_def transform_mapping_def update_map_data_def
+                            dest!:diminished_page_is_page)
+         apply (wp get_cap_cte_wp_at_rv | clarsimp)+
     apply (clarsimp simp:cte_wp_at_def is_arch_diminished_def is_arch_cap_def is_pt_cap_def
                     dest!:diminished_page_is_page)
     apply (clarsimp simp:invs_def valid_state_def not_idle_thread_def)
@@ -1750,7 +1815,7 @@ lemma invoke_page_corres:
                     dest!:diminished_page_is_page)
    apply (rule conjI, simp)
    apply (rule conjI, simp add:invs_def valid_state_def valid_idle_def)
-   apply (clarsimp simp:invs_def valid_state_def not_idle_thread_def)
+    apply (clarsimp simp:invs_def valid_state_def not_idle_thread_def)
    apply (clarsimp simp:invs_def valid_state_def not_idle_thread_def valid_idle_def)
    apply (frule valid_idle_has_null_cap, (simp add: valid_idle_def)+)
     apply (rule sym)
@@ -1758,15 +1823,15 @@ lemma invoke_page_corres:
   apply (clarsimp simp:invoke_page_def)
   apply (clarsimp simp: when_def split: if_splits)
   apply (rule corres_guard_imp)
-  apply (rule dcorres_symb_exec_r)+
-  apply (simp only: split_if_asm)
-  apply (safe)
-  apply (erule notE)
-  apply (rule dcorres_symb_exec_r)+
-   apply (rule dcorres_set_vm_root)
-   apply (wp)
-   apply (erule notE)+
-   apply (clarsimp)
+    apply (rule dcorres_symb_exec_r)+
+        apply (simp only: split_if_asm)
+        apply (safe)
+         apply (erule notE)
+         apply (rule dcorres_symb_exec_r)+
+           apply (rule dcorres_set_vm_root)
+          apply (wp)
+        apply (erule notE)+
+        apply (clarsimp)
        apply (wp do_machine_op_wp | clarsimp)+
  done
 
@@ -1981,12 +2046,6 @@ lemma dcorres_assert_assume:
   "\<lbrakk> P' \<Longrightarrow> dcorres rr P Q f (g ()) \<rbrakk> \<Longrightarrow> dcorres rr P Q f (assert P' >>= g)"
   apply (clarsimp simp: assert_def)
   apply (rule corres_free_fail)
-  done
-
-lemma option_map_cong: "\<lbrakk> x \<noteq> None \<Longrightarrow> a = b \<rbrakk> \<Longrightarrow> Option.map a x = Option.map b x"
-  apply (case_tac x)
-   apply clarsimp
-  apply clarsimp
   done
 
 lemma invoke_asid_pool_corres:

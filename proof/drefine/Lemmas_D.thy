@@ -28,10 +28,16 @@ begin
 no_notation bind_drop (infixl ">>" 60)
 
 (* FIXME: move *)
-lemma alternative_com:
-  "(f \<sqinter> g) = (g \<sqinter> f)"
-  apply (rule ext)
-  apply (auto simp: alternative_def)
+lemma nonempty_pick_in:
+  "a \<noteq> {} \<Longrightarrow> pick a \<in> a"
+  by (metis all_not_in_conv someI_ex)
+
+lemma pick_singleton[simp]:
+  "pick {a} = a"
+  apply (rule ccontr)
+  apply (cut_tac nonempty_pick_in)
+   apply fastforce
+  apply fastforce
   done
 
 end

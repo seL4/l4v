@@ -206,6 +206,11 @@ lemma sequence_x_Cons: "\<And>x xs. sequence_x (x # xs) = (x >>= (\<lambda>_. se
 lemma mapM_Cons: "mapM m (x # xs) = (do y \<leftarrow> m x; ys \<leftarrow> (mapM m xs); return (y # ys) od)"
   by (simp add: mapM_def sequence_def Let_def)
 
+lemma mapM_simps:
+  "mapM m [] = return []"
+  "mapM m (x#xs) = do r \<leftarrow> m x; rs \<leftarrow> (mapM m xs); return (r#rs) od"
+  by (simp_all add: mapM_def sequence_def)
+
 lemma zipWithM_x_mapM:
  "zipWithM_x f as bs = (mapM (split f) (zip as bs) >>= (\<lambda>_. return ()))"
   apply (simp add: zipWithM_x_def zipWith_def)
@@ -621,6 +626,14 @@ lemma no_fail_liftE [wp]:
   apply simp
   done
 
+lemma bind_return_eq:
+  "(a >>= return) = (b >>= return) \<Longrightarrow> a = b"
+  apply (clarsimp simp:bind_def)
+  apply (rule ext)
+  apply (drule_tac x= x in fun_cong)
+  apply (auto simp:return_def split_def)
+  done
+
 lemma bindE_bind_linearise:
   "((f >>=E g) >>= h) =
    (f >>= sum_case (h o Inl) (\<lambda>rv. g rv >>= h))"
@@ -898,6 +911,12 @@ lemma alternative_bind:
 lemma alternative_refl:
   "(a \<sqinter> a) = a"
   by (rule ext, simp add: alternative_def)
+
+lemma alternative_com:
+  "(f \<sqinter> g) = (g \<sqinter> f)"
+  apply (rule ext)
+  apply (auto simp: alternative_def)
+  done
 
 lemma liftE_alternative:
   "liftE (a \<sqinter> b) = (liftE a \<sqinter> liftE b)"

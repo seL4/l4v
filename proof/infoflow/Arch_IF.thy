@@ -976,6 +976,42 @@ lemma tl_subseteq:
   "set (tl xs) \<subseteq> set xs"
   by (induct xs, auto)
 
+
+crunch states_equiv_for: invalidate_tlb_by_asid "states_equiv_for P Q R S X st"
+  (wp: do_machine_op_mol_states_equiv_for ignore: do_machine_op simp: invalidateTLB_ASID_def)
+
+
+crunch cur_thread[wp]: invalidate_tlb_by_asid "\<lambda>s. P (cur_thread s)"
+crunch cur_domain[wp]: invalidate_tlb_by_asid "\<lambda>s. P (cur_domain s)"
+crunch sched_act[wp]: invalidate_tlb_by_asid "\<lambda>s. P (scheduler_action s)"
+crunch wuc[wp]: invalidate_tlb_by_asid "\<lambda>s. P (work_units_completed s)"
+
+lemma invalidate_tlb_by_asid_reads_respects:
+  "reads_respects aag l (\<lambda>_. True) (invalidate_tlb_by_asid asid)"
+  apply(rule reads_respects_unobservable_unit_return)
+      apply (rule invalidate_tlb_by_asid_states_equiv_for)
+     apply wp
+  done
+
+
+
+lemma get_master_pte_reads_respects:
+  "reads_respects aag l (K (is_subject aag (p && ~~ mask pt_bits))) (get_master_pte p)"
+  unfolding get_master_pte_def
+  apply(wp get_pte_reads_respects | wpc | simp
+       | wp_once hoare_drop_imps)+
+  apply(fastforce simp: pt_bits_def pageBits_def mask_lower_twice)
+  done
+
+
+lemma get_master_pde_reads_respects:
+  "reads_respects aag l (K (is_subject aag (x && ~~ mask pd_bits))) (get_master_pde x)"
+  unfolding get_master_pde_def
+  apply(wp get_pde_rev | wpc | simp
+       | wp_once hoare_drop_imps)+
+  apply(fastforce simp: pd_bits_def pageBits_def mask_lower_twice)
+  done
+
 lemma perform_page_invocation_reads_respects:
   "reads_respects aag l (pas_refined aag and K (authorised_page_inv aag pi) and valid_page_inv pi and valid_arch_objs and pspace_aligned and is_subject aag \<circ> cur_thread) (perform_page_invocation pi)"
   unfolding perform_page_invocation_def fun_app_def when_def cleanCacheRange_PoU_def
@@ -987,8 +1023,9 @@ lemma perform_page_invocation_reads_respects:
                 set_cap_reads_respects mapM_ev'' store_pde_reads_respects 
                 unmap_page_reads_respects set_vm_root_reads_respects 
                 dmo_mol_2_reads_respects set_vm_root_for_flush_reads_respects get_cap_rev
-                do_flush_reads_respects
-            | simp add: cleanByVA_PoU_def | wpc | wp_once hoare_drop_imps[where R="\<lambda> r s. r"])+
+                do_flush_reads_respects invalidate_tlb_by_asid_reads_respects
+                get_master_pte_reads_respects get_master_pde_reads_respects
+            | simp add: cleanByVA_PoU_def pte_check_if_mapped_def pde_check_if_mapped_def  | wpc | wp_once hoare_drop_imps[where R="\<lambda> r s. r"])+
   apply(clarsimp simp: authorised_page_inv_def valid_page_inv_def)
   apply (auto simp: cte_wp_at_caps_of_state is_arch_diminished_def valid_slots_def
                     cap_auth_conferred_def cap_rights_update_def acap_rights_update_def
@@ -1853,8 +1890,8 @@ done
 
 definition authorised_for_globals_page_inv :: "page_invocation \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
   where "authorised_for_globals_page_inv pi \<equiv>
-    \<lambda>s. case pi of PageMap cap ptr m \<Rightarrow>
-  \<exists>slot. cte_wp_at (parent_for_refs m) slot s | PageRemap m \<Rightarrow>
+    \<lambda>s. case pi of PageMap asid cap ptr m \<Rightarrow>
+  \<exists>slot. cte_wp_at (parent_for_refs m) slot s | PageRemap asid m \<Rightarrow>
   \<exists>slot. cte_wp_at (parent_for_refs m) slot s | _ \<Rightarrow> True"
 
 lemma set_cap_valid_ko_at_arm[wp]:
@@ -2360,19 +2397,5 @@ lemma mapM_x_swp_store_pde_pas_refined_simple:
   apply (wp store_pde_pas_refined_simple)
 done
 
-crunch states_equiv_for: invalidate_tlb_by_asid "states_equiv_for P Q R S X st"
-  (wp: do_machine_op_mol_states_equiv_for ignore: do_machine_op simp: invalidateTLB_ASID_def)
-
-crunch cur_thread[wp]: invalidate_tlb_by_asid "\<lambda>s. P (cur_thread s)"
-crunch cur_domain[wp]: invalidate_tlb_by_asid "\<lambda>s. P (cur_domain s)"
-crunch sched_act[wp]: invalidate_tlb_by_asid "\<lambda>s. P (scheduler_action s)"
-crunch wuc[wp]: invalidate_tlb_by_asid "\<lambda>s. P (work_units_completed s)"
-
-lemma invalidate_tlb_by_asid_reads_respects:
-  "reads_respects aag l (\<lambda>_. True) (invalidate_tlb_by_asid asid)"
-  apply(rule reads_respects_unobservable_unit_return)
-      apply (rule invalidate_tlb_by_asid_states_equiv_for)
-     apply wp
-  done
 
 end

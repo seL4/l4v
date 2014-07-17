@@ -60,11 +60,6 @@ val hints = UseHints.mk_var_deps_hints funs @{context} @{typ "globals myvars"} n
 *}
 
 ML {* init_graph_refines_proof funs nm @{context} *}
-thm c_guard_to_word_ineq
-find_theorems name: twice
-find_theorems globals_list_valid
-
-find_theorems name: ptr_inverse
 
 ML {*
 
@@ -93,6 +88,12 @@ schematic_lemma "PROP ?P"
   apply (tactic {* ALLGOALS (nth (graph_refine_proof_tacs @{context}) 0) *})
   apply (tactic {* ALLGOALS (nth (graph_refine_proof_tacs @{context}) 1) *})
   apply (tactic {* ALLGOALS (nth (graph_refine_proof_tacs @{context}) 2) *})
+
+  apply (tactic {* ALLGOALS (simp_tac (@{context} addsimps @{thms
+                       hrs_mem_update
+                       hrs_htd_globals_swap mex_def meq_def}
+                       addsimps globals_swap_rewrites2)) *})
+
   apply (tactic {* ALLGOALS (nth (graph_refine_proof_tacs @{context}) 3) *})
   apply (tactic {* ALLGOALS (nth (graph_refine_proof_tacs @{context}) 4) *})
   apply (tactic {* ALLGOALS (nth (graph_refine_proof_tacs @{context}) 5) *})
@@ -101,9 +102,12 @@ schematic_lemma "PROP ?P"
   apply (simp_all add: field_h_val_rewrites field_to_bytes_rewrites heap_update_def
                        to_bytes_array upt_rec take_heap_list_min drop_heap_list_general
                        heap_update_list_append heap_list_update_ptr heap_list_update_word32
-                       store_store_word32_commute_offset
+                       store_store_word32_commute_offset field_simps
                        heap_access_Array_element h_val_word32 h_val_ptr
                        field_lvalue_offset_eq)
+
+
+
   apply (auto simp: mex_def meq_def)
   done
 

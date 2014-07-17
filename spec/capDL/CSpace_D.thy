@@ -58,18 +58,18 @@ where
 
 
 
-primrec avaiable_range :: "cdl_cap \<Rightarrow> cdl_object_id set"
-  where "avaiable_range (UntypedCap r avaiable) = avaiable"
+primrec available_range :: "cdl_cap \<Rightarrow> cdl_object_id set"
+  where "available_range (UntypedCap r available) = available"
 
-primrec set_avaiable_range :: "cdl_cap \<Rightarrow> cdl_object_id set \<Rightarrow> cdl_cap"
-  where "set_avaiable_range (UntypedCap r avaiable) nrange = UntypedCap r nrange"
+primrec set_available_range :: "cdl_cap \<Rightarrow> cdl_object_id set \<Rightarrow> cdl_cap"
+  where "set_available_range (UntypedCap r available) nrange = UntypedCap r nrange"
 
 definition
   set_untyped_cap_as_full :: "cdl_cap \<Rightarrow> cdl_cap \<Rightarrow> cdl_cap_ref \<Rightarrow> unit k_monad"
 where "set_untyped_cap_as_full src_cap new_cap src_slot \<equiv>
   if (is_untyped_cap src_cap \<and> is_untyped_cap new_cap
      \<and> cap_objects src_cap = cap_objects new_cap) then
-     (set_cap src_slot (set_avaiable_range src_cap {}))
+     (set_cap src_slot (set_available_range src_cap {}))
      else return ()"
 
 (* Insert a new cap into an object. The cap will be a sibling. *)

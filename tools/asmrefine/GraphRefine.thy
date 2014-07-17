@@ -1182,12 +1182,12 @@ lemma heap_update_word32:
   by (simp add: heap_update_def to_bytes_def typ_info_word store_word32_def)
 
 lemma heap_list_update_word32:
-  "heap_update_list addr (to_bytes w (heap_list hp' 4 addr)) hp
+  "heap_update_list addr (to_bytes w (heap_list hp' 4 addr')) hp
     = store_word32 addr w hp"
   by (simp add: to_bytes_def store_word32_def typ_info_word)
 
 lemma heap_list_update_ptr:
-  "heap_update_list addr (to_bytes p (heap_list hp' 4 addr)) hp
+  "heap_update_list addr (to_bytes p (heap_list hp' 4 addr')) hp
     = store_word32 addr (ptr_val (p :: ('a :: c_type) ptr)) hp"
   by (simp add: to_bytes_def store_word32_def typ_info_ptr)
 

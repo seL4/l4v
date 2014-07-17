@@ -71,6 +71,10 @@ lemma dom_map_comp' [simp]:
   "dom (f \<circ>\<^sub>M m) = dom m"
   by (clarsimp simp: dom_def split: option.splits)
 
+lemma restrict_map_comp' [simp]:
+  "f \<circ>\<^sub>M g |` S = (f \<circ>\<^sub>M g) |` S"
+  by (rule ext, clarsimp simp: map_comp'_def restrict_map_def)
+
 
 (**************************
  * Rules about intervals. *
@@ -83,6 +87,59 @@ lemma nat_list_not_UNIV [simp]:
 (***********************************
  * End of generic Isabelle lemmas. *
  ***********************************)
+
+
+(*************************************
+ * Rules that should go in MapExtra. *
+ *************************************)
+
+lemma map_add_self:
+  "m ++ m = m"
+  by (auto simp add:map_add_def split:option.splits)
+
+(* This lemma is strictly weaker than restrict_map_disj. *)
+lemma restrict_map_disj':
+  "S \<inter> T = {} \<Longrightarrow> h |` S \<bottom> h' |` T"
+  by (auto simp: map_disj_def restrict_map_def dom_def)
+
+lemma map_add_restrict_comm:
+  "S \<inter> T = {} \<Longrightarrow> h |` S ++ h' |` T = h' |` T ++ h |` S"
+  apply (drule restrict_map_disj')
+  apply (erule map_add_com)
+  done
+
+lemma restrict_map_not_self_UNIV [simp]:
+  "h |` (UNIV - dom h) = empty"
+  by (rule ext, clarsimp simp: restrict_map_def)
+
+lemma map_add_emptyE [elim!]:
+  "\<lbrakk>a ++ b = empty; \<lbrakk>a = empty; b = empty\<rbrakk> \<Longrightarrow> R\<rbrakk> \<Longrightarrow> R"
+  by (metis map_add_None)
+
+lemma restrict_map_sub_singleton [simp]:
+  "s \<noteq> t \<Longrightarrow> h `- {t} |` {s} = h |` {s}"
+  by (rule ext)(clarsimp simp: restrict_map_def sub_restrict_map_def)
+
+lemma restrict_map_sub_add': "h `- S ++ h |` S = h"
+  by (fastforce simp: sub_restrict_map_def map_add_def
+               split: option.splits)
+
+lemma map_add_restrict_singleton:
+  "s \<noteq> t \<Longrightarrow> (m |` {s} ++ m' |` {t}) |` {s} = m |` {s}"
+  apply (rule ext)
+  apply (clarsimp simp: map_add_def restrict_map_def split: option.splits)
+  done
+
+lemma map_add_restrict_singleton':
+  "s \<noteq> t \<Longrightarrow> (m |` {s} ++ m' |` {t}) |` {t} = m' |` {t}"
+  apply (rule ext)
+  apply (clarsimp simp: map_add_def restrict_map_def split: option.splits)
+  done
+
+(********************************************
+ * End of rules that should go in MapExtra. *
+ ********************************************)
+
 
 
 (**********************************************************
@@ -927,6 +984,118 @@ lemma safe_for_derive_not_non:
 
 
 
+(* Given an object, this returns what the default state is for the object.
+ * This should be the same as what is created by a retype operation.
+ *)
+definition
+  object_default_state :: "cdl_object \<Rightarrow> cdl_object"
+where
+  "object_default_state object \<equiv>
+  the $ default_object (object_type object)
+                       (object_size_bits object)
+                       (object_domain object)"
 
+lemma object_default_state_def2:
+  "object_default_state obj = (
+    case obj of
+        Untyped \<Rightarrow> Untyped
+      | Endpoint \<Rightarrow> Endpoint
+      | AsyncEndpoint \<Rightarrow> AsyncEndpoint
+      | Tcb tcb \<Rightarrow> Tcb (default_tcb (cdl_tcb_domain tcb))
+      | CNode cnode \<Rightarrow> CNode (empty_cnode (cdl_cnode_size_bits cnode))
+      | AsidPool ap \<Rightarrow> AsidPool \<lparr>cdl_asid_pool_caps = empty_cap_map asid_low_bits\<rparr>
+      | PageTable pt \<Rightarrow> PageTable \<lparr> cdl_page_table_caps = empty_cap_map 8 \<rparr>
+      | PageDirectory pd \<Rightarrow> PageDirectory \<lparr> cdl_page_directory_caps = empty_cap_map 12 \<rparr>
+      | Frame frame \<Rightarrow> Frame \<lparr> cdl_frame_size_bits = (cdl_frame_size_bits frame) \<rparr>)"
+  by (clarsimp simp: object_default_state_def object_type_def default_object_def
+                     object_size_bits_def object_domain_def
+              split: cdl_object.splits)
+
+(******************************************************
+ * More rules, that should be put in the right place. *
+ ******************************************************)
+
+lemma object_type_update_slots [simp]:
+  "object_type (update_slots slots x) = object_type x"
+  by (clarsimp simp: object_type_def update_slots_def split: cdl_object.splits)
+
+lemma object_slots_empty [simp]:
+  "\<not> has_slots obj \<Longrightarrow> object_slots obj = empty"
+  by (clarsimp simp: object_slots_def has_slots_def split: cdl_object.splits)
+
+lemma object_slots_update_slots [simp]:
+  "has_slots obj \<Longrightarrow> object_slots (update_slots slots obj) = slots"
+  by (clarsimp simp: object_slots_def update_slots_def has_slots_def
+              split: cdl_object.splits)
+
+lemma object_slots_update_slots_empty [simp]:
+  "\<not>has_slots obj \<Longrightarrow> object_slots (update_slots slots obj) = empty"
+  by (clarsimp simp: object_slots_def update_slots_def has_slots_def
+                 split: cdl_object.splits)
+
+lemma update_slots_no_slots [simp]:
+  "\<not>has_slots obj \<Longrightarrow> update_slots slots obj = obj"
+  by (clarsimp simp: update_slots_def has_slots_def split: cdl_object.splits)
+
+lemma update_slots_update_slots [simp]:
+  "update_slots slots (update_slots slots' obj) = update_slots slots obj"
+  by (clarsimp simp: update_slots_def split: cdl_object.splits)
+
+lemma update_slots_same_object:
+  "a = b \<Longrightarrow> update_slots a obj = update_slots b obj"
+  by (erule arg_cong)
+
+lemma update_slots_eq_slots:
+  "\<lbrakk>has_slots obj; update_slots slots obj = update_slots slots' obj'\<rbrakk> \<Longrightarrow> slots = slots'"
+  by (clarsimp simp: update_slots_def has_slots_def cdl_tcb.splits cdl_cnode.splits
+                     cdl_asid_pool.splits cdl_page_table.splits cdl_page_directory.splits
+              split: cdl_object.splits)
+
+lemma has_slots_object_type_has_slots:
+  "\<lbrakk>has_slots x; object_type x = object_type y\<rbrakk> \<Longrightarrow> has_slots y"
+  by (clarsimp simp: object_type_def has_slots_def split: cdl_object.splits)
+
+lemma object_type_has_slots_eq:
+  "object_type y = object_type x \<Longrightarrow> has_slots x = has_slots y"
+  by (clarsimp simp: object_type_def has_slots_def split: cdl_object.splits)
+
+
+lemma object_type_object_default_state [simp]:
+  "object_type (object_default_state obj) = object_type obj"
+  by (clarsimp simp: object_default_state_def2 object_type_def split: cdl_object.splits)
+
+lemma is_cnode_object_default_state [simp]:
+  "is_cnode (object_default_state obj) = is_cnode obj"
+  by (clarsimp simp: object_default_state_def2 is_cnode_def split: cdl_object.splits)
+
+(* FIXME, is this a bad idea to add to the simpset? *)
+lemma range_Slot [simp]:
+  "(range Slot) = (UNIV - {Fields})"
+   apply (clarsimp simp: image_def)
+   apply rule
+    apply clarsimp+
+   apply (case_tac x)
+    apply auto
+   done
+
+lemma update_slots_same [simp]:
+  "object_slots obj = cap_map \<Longrightarrow> update_slots cap_map obj = obj"
+  by (clarsimp simp: update_slots_def object_slots_def split: cdl_object.splits)
+
+lemma dom_sub_restrict [simp]:
+  "dom (m `- A) = dom m \<inter> -A"
+  by (auto simp: sub_restrict_map_def dom_def split: split_if_asm)
+
+lemma Slot_slot_union:
+  "insert (Slot slot) (Slot ` (UNIV - {slot})) = UNIV - {Fields}"
+   apply rule
+    apply clarsimp+
+   apply (case_tac x)
+    apply auto
+   done
+
+lemma inter_empty_not_both:
+"\<lbrakk>x \<in> A; A \<inter> B = {}\<rbrakk> \<Longrightarrow> x \<notin> B"
+  by fastforce
 
 end

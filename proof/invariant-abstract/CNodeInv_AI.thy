@@ -2510,11 +2510,6 @@ lemma final_zombie_not_live:
   done
 
 
-lemma invs_ifunsafe[elim!]:
-  "invs s \<Longrightarrow> if_unsafe_then_cap s"
-  by (simp add: invs_def valid_state_def valid_pspace_def)
-
-
 lemma suspend_ex_cte_cap[wp]:
   "\<lbrace>ex_cte_cap_wp_to P p\<rbrace> IpcCancel_A.suspend t \<lbrace>\<lambda>rv. ex_cte_cap_wp_to P p\<rbrace>"
   apply (simp add: ex_cte_cap_wp_to_def cte_wp_at_caps_of_state

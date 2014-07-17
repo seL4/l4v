@@ -77,7 +77,7 @@ where
                None)
       | _ \<Rightarrow> None)"
 
-(* FIXME: arch flags always set to 0 here for now. *)
+(* Arch flags always set to 0 here as they have no meaning on ARM. *)
 definition
   transform_intent_tcb_read_registers :: "word32 list \<Rightarrow> cdl_tcb_intent option"
 where
@@ -86,7 +86,7 @@ where
     Some (TcbReadRegistersIntent (flags !! 0) 0 n)
    | _ \<Rightarrow> None)"
 
-(* FIXME: arch flags always set to 0 here for now. *)
+(* Arch flags always set to 0 here as they have no meaning on ARM. *)
 definition
   transform_intent_tcb_write_registers :: "word32 list \<Rightarrow> cdl_tcb_intent option"
 where
@@ -95,8 +95,7 @@ where
     Some (TcbWriteRegistersIntent (flags !! 0) 0 n values)
    | _ \<Rightarrow> None)"
 
-
-(* FIXME: arch flags always set to 0 here for now. *)
+(* Arch flags always set to 0 here as they have no meaning on ARM. *)
 definition
   transform_intent_tcb_copy_registers :: "word32 list \<Rightarrow> cdl_tcb_intent option"
 where
@@ -105,11 +104,8 @@ where
     Some (TcbCopyRegistersIntent (flags !! 0) (flags !! 1) (flags !! 2) (flags !! 3) 0)
    | _ \<Rightarrow> None)"
 
-
-
-(* FIXME: priority set to 0 here always for now. Seems to be ignored even in the
- *        abstract spec, so whatever we choose is irrelevant. However, it would
- *        surely be nicer to reflect the
+(* Priority always set to 0 here. This should change if priorities
+ * are ever added to the capDL spec.
  *)
 definition
   transform_priority :: "word32 \<Rightarrow> word8"
@@ -626,7 +622,7 @@ lemma nat_to_bl_id [simp]: "nat_to_bl (size (x :: (('a::len) word))) (unat x) = 
   apply (auto simp: uint_nat le_def word_size)
   done
 
-(* MOVE *)
+(* FIXME: MOVE *)
 definition
   option_join :: "'a option option \<Rightarrow> 'a option"
 where
@@ -634,7 +630,6 @@ where
                       Some (Some y) \<Rightarrow> Some y
                     | _             \<Rightarrow> None"
 
-(* MOVE *)
 definition
   option_map_join :: "('a \<Rightarrow> 'b option) \<Rightarrow> 'a option \<Rightarrow> 'b option"
 where
@@ -681,8 +676,7 @@ where
       | _ \<Rightarrow> Types_D.NullCap
    "
 
-
-(* MOVE *)
+(* FIXME: MOVE *)
 definition
   evalMonad :: "('s, 'a) nondet_monad \<Rightarrow> 's \<Rightarrow> 'a option"
 where

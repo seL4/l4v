@@ -12,6 +12,14 @@ theory DetSchedInvs_AI
 imports Deterministic_AI
 begin
 
+lemma get_etcb_rev:
+  "ekheap s p = Some etcb \<Longrightarrow> get_etcb p s = Some etcb"
+   by (clarsimp simp: get_etcb_def)
+
+lemma get_etcb_SomeD: "get_etcb ptr s = Some v \<Longrightarrow> ekheap s ptr = Some v"
+  apply (case_tac "ekheap s ptr", simp_all add: get_etcb_def)
+  done
+
 definition obj_at_kh where
 "obj_at_kh P ref kh \<equiv> obj_at P ref ((undefined :: det_ext state)\<lparr>kheap := kh\<rparr>)"
 
@@ -392,5 +400,41 @@ lemma valid_sched_lift:
   apply (intro hoare_vcg_conj_lift)
      apply (wp valid_etcbs_lift valid_queues_lift ct_not_in_q_lift ct_in_cur_domain_lift valid_sched_action_lift valid_blocked_lift a b c d e f g h i)
   done
+
+lemma valid_etcbs_tcb_etcb:
+  "\<lbrakk> valid_etcbs s; kheap s ptr = Some (TCB tcb) \<rbrakk> \<Longrightarrow> \<exists>etcb. ekheap s ptr = Some etcb"
+  by (force simp: valid_etcbs_def is_etcb_at_def st_tcb_at_def obj_at_def)
+
+lemma valid_etcbs_get_tcb_get_etcb:
+  "\<lbrakk> valid_etcbs s; get_tcb ptr s = Some tcb \<rbrakk> \<Longrightarrow> \<exists>etcb. get_etcb ptr s = Some etcb"
+  apply (clarsimp simp:  valid_etcbs_def valid_etcbs_def st_tcb_at_def obj_at_def is_etcb_at_def get_etcb_def get_tcb_def split: option.splits split_if)
+  apply (erule_tac x=ptr in allE)
+  apply (case_tac a)
+  apply (clarsimp simp: get_etcb_def split: option.splits kernel_object.splits)+
+  done
+
+lemma valid_etcbs_ko_etcb:
+  "\<lbrakk> valid_etcbs s; kheap s ptr = Some ko \<rbrakk> \<Longrightarrow> \<exists>tcb. (ko = TCB tcb = (\<exists>etcb. ekheap s ptr = Some etcb))"
+  apply (clarsimp simp: valid_etcbs_def valid_etcbs_def st_tcb_at_def obj_at_def is_etcb_at_def)
+  apply (erule_tac x="ptr" in allE)
+  apply auto
+  done
+
+lemma ekheap_tcb_at:
+  "\<lbrakk>ekheap s x = Some y; valid_etcbs s\<rbrakk> \<Longrightarrow> tcb_at x s"
+  by (fastforce simp: valid_etcbs_def is_etcb_at_def st_tcb_at_def obj_at_def is_tcb_def)
+
+lemma tcb_at_is_etcb_at:
+  "\<lbrakk>tcb_at t s; valid_etcbs s\<rbrakk> \<Longrightarrow> is_etcb_at t s"
+  by (simp add: valid_etcbs_def tcb_at_st_tcb_at)
+
+lemma tcb_at_ekheap_dom:
+  "\<lbrakk>tcb_at x s; valid_etcbs s\<rbrakk> \<Longrightarrow> (\<exists>etcb. ekheap s x = Some etcb)"
+  by (auto simp: is_etcb_at_def dest: tcb_at_is_etcb_at)
+
+lemma ekheap_kheap_dom:
+  "\<lbrakk>ekheap s x = Some etcb; valid_etcbs s\<rbrakk>
+    \<Longrightarrow> \<exists>tcb. kheap s x = Some (TCB tcb)"
+  by (fastforce simp: valid_etcbs_def st_tcb_at_def obj_at_def is_etcb_at_def)
 
 end

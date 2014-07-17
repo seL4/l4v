@@ -1206,9 +1206,9 @@ definition
 
 definition
   "page_inv_duplicates_valid iv \<equiv> case iv of
-         ArchInvocation_A.PageMap cap ct_slot entries \<Rightarrow>
+         ArchInvocation_A.PageMap asid cap ct_slot entries \<Rightarrow>
             page_inv_entries_safe entries
-       | ArchInvocation_A.page_invocation.PageRemap entries \<Rightarrow>
+       | ArchInvocation_A.page_invocation.PageRemap asid entries \<Rightarrow>
             page_inv_entries_safe entries
        | _ \<Rightarrow> \<top>"
 
@@ -1484,6 +1484,8 @@ lemma set_cap_page_inv_entries_safe:
     Let_def split:if_splits option.splits)
   done
 
+crunch valid_pdpt[wp]: pte_check_if_mapped, pde_check_if_mapped "valid_pdpt_objects"
+
 lemma perform_page_valid_pdpt[wp]:
   "\<lbrace>valid_pdpt_objs and valid_page_inv pinv and page_inv_duplicates_valid pinv\<rbrace>
         perform_page_invocation pinv \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
@@ -1493,7 +1495,7 @@ lemma perform_page_valid_pdpt[wp]:
             split: sum.split arch_cap.split option.split,
          safe intro!: hoare_gen_asm hoare_gen_asm[unfolded K_def],
          simp_all add: mapM_x_Nil mapM_x_Cons mapM_x_map)
-            apply (wp store_pte_valid_pdpt store_pde_valid_pdpt
+            apply (wp store_pte_valid_pdpt store_pde_valid_pdpt get_master_pte_wp get_master_pde_wp
                       store_pte_non_master_valid_pdpt store_pde_non_master_valid_pdpt
                       mapM_x_wp'[OF store_invalid_pte_valid_pdpt
                         [where pte=ARM_Structs_A.pte.InvalidPTE, simplified]]
@@ -1503,9 +1505,11 @@ lemma perform_page_valid_pdpt[wp]:
                       hoare_vcg_imp_lift[OF set_cap_arch_obj_neg] hoare_vcg_all_lift
                  | clarsimp simp: valid_page_inv_def cte_wp_at_weakenE[OF _ TrueI] obj_at_def
                                   pte_range_sz_def pde_range_sz_def swp_def valid_page_inv_def
-                                  valid_slots_def page_inv_entries_safe_def
-                           split: ARM_Structs_A.pte.splits ARM_Structs_A.pde.splits)+
-            done
+                                  valid_slots_def page_inv_entries_safe_def pte_check_if_mapped_def
+                                  pde_check_if_mapped_def
+                           split: ARM_Structs_A.pte.splits ARM_Structs_A.pde.splits
+                 | wp_once hoare_drop_imps)+
+  done
 
 definition
   "pti_duplicates_valid iv \<equiv>

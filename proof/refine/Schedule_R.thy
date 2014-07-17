@@ -800,10 +800,6 @@ lemma return_wp_exs_valid [wp]: "\<lbrace> P x \<rbrace> return x \<exists>\<lbr
 lemma get_exs_valid [wp]: "\<lbrace>op = s\<rbrace> get \<exists>\<lbrace>\<lambda>r. op = s\<rbrace>"
   by (simp add: get_def exs_valid_def)
 
-lemma tcb_at_is_etcb_at:
-  "\<lbrakk>tcb_at t s; valid_etcbs s\<rbrakk> \<Longrightarrow> is_etcb_at t s"
-  by (simp add: valid_etcbs_def tcb_at_st_tcb_at)
-
 lemma switch_thread_corres:
   "corres dc (valid_arch_state and valid_objs and valid_asid_map 
                 and valid_arch_objs and pspace_aligned and pspace_distinct 

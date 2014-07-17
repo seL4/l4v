@@ -936,7 +936,7 @@ lemma dcorres_set_intent_error:
   apply (rule dcorres_absorb_get_l)
   apply (clarsimp simp: not_idle_thread_def)
   apply (frule ko_at_tcb_at)
-  apply (frule(1) valid_etcbs_tcb_at_is_etcb_at)
+  apply (frule(1) tcb_at_is_etcb_at)
   apply (clarsimp simp:tcb_at_def is_etcb_at_def, fold get_etcb_def)
   apply (clarsimp simp:opt_object_tcb assert_opt_def transform_tcb_def
     KHeap_D.set_object_def simpler_modify_def corres_underlying_def)

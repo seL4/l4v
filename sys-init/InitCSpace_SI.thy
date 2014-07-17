@@ -214,7 +214,7 @@ lemma object_slots_cnode_half:
   \<Longrightarrow> object_slots (cnode_half spec obj_id obj) slot =
       object_slots obj slot"
   apply (case_tac "has_slots obj")
-   apply (clarsimp simp: cnode_half_def clean_slots_def restrict_map_def)
+   apply (clarsimp simp: cnode_half_def restrict_map_def)
   apply (clarsimp simp: cnode_half_def)
   done
 
@@ -228,7 +228,7 @@ lemma cnode_slot_half_initialised_not_original_slot:
    apply (clarsimp simp: sep_map_s_def sep_map_general_def)
    apply (rule ext)
    apply (clarsimp simp: obj_to_sep_state_def object_project_def
-                         object_slots_object_lift
+                         object_slots_object_clean
                   split: option.splits)
    apply (cut_tac obj = "cnode_half spec obj_id spec_object" and
                  obj' = spec_object and slot=slot and t=t in object_slot_spec2s)
@@ -237,7 +237,7 @@ lemma cnode_slot_half_initialised_not_original_slot:
   apply (clarsimp simp: sep_map_s_def sep_map_general_def)
   apply (rule ext)
   apply (clarsimp simp: obj_to_sep_state_def object_project_def
-                        object_slots_object_lift
+                        object_slots_object_clean
                  split: option.splits)
   apply (cut_tac obj = "cnode_half spec obj_id spec_object" and
                 obj' = spec_object and slot=slot and t=t in object_slot_spec2s)
@@ -249,27 +249,26 @@ lemma slots_empty_cnode1:
   "slot < 2 ^ sz
   \<Longrightarrow> object_slots (CNode (empty_cnode sz)) slot = Some NullCap"
   by (fastforce simp: object_slots_def empty_cnode_def empty_cap_map_def
-                      clean_slots_def restrict_map_def cdl_cnode.splits)
+                      restrict_map_def cdl_cnode.splits)
 
 lemma slots_empty_cnode2:
   "\<not> slot < 2 ^ sz
   \<Longrightarrow> object_slots (CNode (empty_cnode sz)) slot = None"
   by (fastforce simp: object_slots_def empty_cnode_def empty_cap_map_def
-                      clean_slots_def restrict_map_def cdl_cnode.splits)
+                      restrict_map_def cdl_cnode.splits)
 
 lemma slots_spec2s_cnode_half1:
   "\<lbrakk>slot < 2 ^ sz; original_cap_at (obj_id, slot) spec; (cdl_cnode_caps cnode slot) \<noteq> None\<rbrakk>
   \<Longrightarrow> object_slots (spec2s t (cnode_half spec obj_id (CNode cnode))) slot
       = Some NullCap"
-  by (fastforce simp: object_slots_def cnode_half_def spec2s_def update_slots_def
-                      clean_slots_def)
+  by (fastforce simp: object_slots_def cnode_half_def spec2s_def update_slots_def)
 
 lemma slots_spec2s_cnode_half2:
   "\<lbrakk>\<not> slot < 2 ^ sz; original_cap_at (obj_id, slot) spec; (cdl_cnode_caps cnode slot) = None\<rbrakk>
   \<Longrightarrow> object_slots (spec2s t (cnode_half spec obj_id (CNode cnode))) slot
       = None"
   by (fastforce simp: object_slots_def cnode_half_def spec2s_def update_slots_def
-                      clean_slots_def restrict_map_def)
+                      restrict_map_def)
 
 lemma object_slots_spec2s_cnode_half_object_default_state:
   "\<lbrakk>well_formed spec; original_cap_at (obj_id, slot) spec;
@@ -305,13 +304,13 @@ lemma cnode_slot_half_initialised_original_slot:
   apply (rule ext, rule iffI)
    apply (clarsimp simp: sep_map_s_def sep_map_general_def)
    apply (rule ext, clarsimp simp:obj_to_sep_state_def
-     object_project_def object_slots_object_lift)
+     object_project_def object_slots_object_clean)
    apply (subst object_slots_spec2s_cnode_half_object_default_state)
     apply simp+
     apply (clarsimp simp: object_at_def)+
   apply (clarsimp simp: sep_map_s_def sep_map_general_def)
   apply (rule ext)
-  apply (clarsimp simp:obj_to_sep_state_def object_project_def object_slots_object_lift)
+  apply (clarsimp simp:obj_to_sep_state_def object_project_def object_slots_object_clean)
   apply (subst object_slots_spec2s_cnode_half_object_default_state, simp+)
   apply (clarsimp split: option.splits)
   done
@@ -604,22 +603,15 @@ lemma mint_post:
   apply (clarsimp simp: object_at_def object_type_is_object cap_has_object_cap_type')
   apply (frule_tac obj_id=dest_id in empty_cnode_object_size_bits, clarsimp)
   apply (cut_tac slot=slot in offset_slot, assumption, simp, simp)
-  apply (sep_select_asm 3)
-  apply (sep_select_asm 9)
-  apply (sep_drule sep_map_s_sep_map_c [where slot=slot], (clarsimp simp: sep_conj_exists)+)
-  apply (cut_tac slot=slot and obj_id=dest_id and obj=obj and obj'="spec2s t spec_obj"
-              in sep_map_s_object_slots_equal)
-    apply (clarsimp simp: opt_cap_def slots_of_def opt_object_def)
-    apply (subst object_slots_spec2s [rotated],assumption+,clarsimp+)
-    apply (subgoal_tac "Some (object_type spec_cap_object) = cap_type spec_cap", clarsimp)
-     apply (frule (2) well_formed_well_formed_cap, clarsimp simp: cap_has_object_def)
-     apply (frule (2) well_formed_vm_cap_has_asid)
-     apply (frule (1) well_formed_is_fake_vm_cap,
-            (assumption|simp add: object_type_is_object)+)
-     apply (clarsimp simp: cap_rights_inter_default_cap_rights)
-     apply (subst update_cap_rights_and_data,(assumption|clarsimp)+)
-  apply (subst (asm) offset_slot', assumption)
-  apply (subst (asm) offset_slot', assumption)
+  apply (subst sep_map_s_sep_map_c_eq [where cap="update_cap_object client_object_id spec_cap"])
+   apply (rule object_slots_spec2s, (clarsimp simp: opt_cap_def slots_of_def opt_object_def)+)
+  apply (frule (2) well_formed_well_formed_cap, clarsimp simp: cap_has_object_def)
+  apply (frule (2) well_formed_vm_cap_has_asid)
+  apply (frule (1) well_formed_is_fake_vm_cap,
+         (assumption|simp add: object_type_is_object)+)
+  apply (clarsimp simp: cap_rights_inter_default_cap_rights)
+  apply (subst (asm) update_cap_rights_and_data,(assumption|clarsimp)+)
+  apply (subst (asm) offset_slot', assumption)+
   apply sep_solve
   done
 
@@ -670,26 +662,16 @@ lemma mutate_post:
   apply (clarsimp simp: object_at_def object_type_is_object cap_has_object_cap_type')
   apply (frule_tac obj_id=dest_id in empty_cnode_object_size_bits, clarsimp)
   apply (cut_tac slot=slot in offset_slot, assumption, simp, simp)
-  apply (sep_select_asm 3)
-  apply (sep_select_asm 9)
-  apply (sep_drule sep_map_s_sep_map_c [where slot=slot])
-   apply (clarsimp simp: sep_conj_exists)+
-  apply (subst (asm) offset_slot', assumption)
-  apply (subst (asm) offset_slot', assumption)
-  apply sep_cancel+
-  apply (cut_tac slot=slot and obj_id=dest_id and obj=obj and obj'="spec2s t spec_obj"
-              in sep_map_s_object_slots_equal)
-    apply (clarsimp simp: opt_cap_def slots_of_def opt_object_def)
-    apply (subst object_slots_spec2s [rotated], assumption+, clarsimp+)
-    apply (subgoal_tac "Some (object_type spec_cap_object) = cap_type spec_cap", clarsimp)
-     apply (frule (2) well_formed_well_formed_cap, clarsimp simp: cap_has_object_def)
-     apply (frule (2) well_formed_vm_cap_has_asid)
-     apply (frule (1) well_formed_is_fake_vm_cap,
-            (assumption|simp add: object_type_is_object)+)
-    apply (subst update_cap_data, (assumption|clarsimp)+)
-      apply (subst well_formed_orig_caps, assumption+)
-        apply (simp add: slots_of_def opt_object_def split: option.splits)
-       apply simp+
+  apply (subst sep_map_s_sep_map_c_eq [where cap="update_cap_object client_object_id spec_cap"])
+   apply (rule object_slots_spec2s, (clarsimp simp: opt_cap_def slots_of_def opt_object_def)+)
+  apply (frule (2) well_formed_well_formed_cap, clarsimp simp: cap_has_object_def)
+  apply (frule (2) well_formed_vm_cap_has_asid)
+  apply (frule (1) well_formed_is_fake_vm_cap,
+         (assumption|simp add: object_type_is_object)+)
+  apply (subst update_cap_data [symmetric], simp+)
+   apply (erule well_formed_orig_caps, (simp add: slots_of_def opt_object_def)+)
+  apply (subst (asm) offset_slot', assumption)+
+  apply sep_solve
   done
 
 lemma move_post:
@@ -736,22 +718,10 @@ lemma move_post:
   apply (clarsimp simp: object_at_def object_type_is_object cap_has_object_cap_type')
   apply (frule_tac obj_id=dest_id in empty_cnode_object_size_bits, clarsimp)
   apply (cut_tac slot=slot in offset_slot, assumption, simp, simp)
-  apply (sep_select_asm 3)
-  apply (sep_select_asm 9)
-  apply (sep_drule sep_map_s_sep_map_c [where slot=slot])
-   apply (clarsimp simp: sep_conj_exists)+
-  apply (subst (asm) offset_slot', assumption)
-  apply (subst (asm) offset_slot', assumption)
-  apply sep_cancel+
-  apply (cut_tac slot=slot and obj_id=dest_id and obj=obj and obj'="spec2s t spec_obj"
-              in sep_map_s_object_slots_equal)
-    apply (clarsimp simp: opt_cap_def slots_of_def opt_object_def)
-    apply (subst object_slots_spec2s [rotated], assumption+, clarsimp)
-    apply (subgoal_tac "Some (object_type spec_cap_object) = cap_type spec_cap", clarsimp)
-    apply (frule (2) well_formed_well_formed_cap, clarsimp simp: cap_has_object_def)
-    apply (frule (2) well_formed_vm_cap_has_asid)
-    apply (frule (1) well_formed_is_fake_vm_cap,
-           (assumption|simp add: object_type_is_object)+)
+  apply (subst sep_map_s_sep_map_c_eq [where cap="update_cap_object client_object_id spec_cap"])
+   apply (rule object_slots_spec2s, (clarsimp simp: opt_cap_def slots_of_def opt_object_def)+)
+  apply (subst (asm) offset_slot', assumption)+
+  apply sep_solve
   done
 
 lemma move_post_irq_handler:
@@ -792,17 +762,9 @@ lemma move_post_irq_handler:
   apply (clarsimp simp: object_at_def object_type_is_object cap_has_object_cap_type')
   apply (frule_tac obj_id=dest_id in empty_cnode_object_size_bits, clarsimp)
   apply (cut_tac slot=slot in offset_slot, assumption, simp, simp)
-  apply (sep_select_asm 3)
-  apply (sep_select_asm 9)
-  apply (sep_drule sep_map_s_sep_map_c [where slot=slot], clarsimp+)
-   apply (clarsimp simp: sep_conj_exists)
-  apply (subst (asm) offset_slot', assumption)
-  apply (subst (asm) offset_slot', assumption)
-  apply (cut_tac slot=slot and obj_id=dest_id and obj=obj and obj'="spec2s t spec_obj"
-              in sep_map_s_object_slots_equal)
-    apply (clarsimp simp: opt_cap_def slots_of_def opt_object_def)
-   apply simp
-  apply simp
+  apply (subst sep_map_s_sep_map_c_eq [where cap=spec_cap],
+         (clarsimp simp: opt_cap_def slots_of_def opt_object_def)+)
+  apply (subst (asm) offset_slot', assumption)+
   apply sep_solve
   done
 

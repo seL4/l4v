@@ -40,7 +40,7 @@ where
          target_slot \<leftarrow> lookup_slot_for_cnode_op cspace_cap index (unat depth);
          ensure_empty target_slot;
 
-         returnOk $ MakePool (set_avaiable_range untyped_cap {}) untyped_cap_ref
+         returnOk $ MakePool (set_available_range untyped_cap {}) untyped_cap_ref
            (cap_objects untyped_cap) target_slot (base, 0)
        odE \<sqinter> throw"
 

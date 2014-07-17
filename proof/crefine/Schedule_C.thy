@@ -524,6 +524,16 @@ lemma chooseThread_ccorres:
   apply (clarsimp simp: all_invs_but_ct_idle_or_in_cur_domain'_def newKernelState_def)
   done
 
+lemma ksDomSched_length_relation[simp]:
+  "\<lbrakk>cstate_relation s s'\<rbrakk> \<Longrightarrow> length (kernel_state.ksDomSchedule s) = unat (ksDomScheduleLength)"
+  apply (auto simp: cstate_relation_def cdom_schedule_relation_def Let_def ksDomScheduleLength_def)
+  done
+
+lemma ksDomSched_length_dom_relation[simp]:
+  "\<lbrakk>cdom_schedule_relation (kernel_state.ksDomSchedule s) kernel_all_global_addresses.ksDomSchedule \<rbrakk> \<Longrightarrow> length (kernel_state.ksDomSchedule s) = unat (ksDomScheduleLength)"
+  apply (auto simp: cstate_relation_def cdom_schedule_relation_def Let_def ksDomScheduleLength_def)
+  done
+
 lemma nextDomain_ccorres:
   "ccorres dc xfdc invs' UNIV [] nextDomain (Call nextDomain_'proc)"
   apply (cinit)
@@ -536,24 +546,29 @@ lemma nextDomain_ccorres:
    apply (rule conjI)
     apply clarsimp
     apply (subgoal_tac "ksDomScheduleIdx \<sigma> = unat (ksDomScheduleLength - 1)")
-     apply (fastforce simp: cdom_schedule_relation_def dom_schedule_entry_relation_def dschDomain_def dschLength_def ksDomScheduleLength_def sdiv_word_def sdiv_int_def)
-     apply (simp add: ksDomScheduleLength_def)
+     apply (fastforce simp add: cdom_schedule_relation_def dom_schedule_entry_relation_def dschDomain_def dschLength_def ksDomScheduleLength_def sdiv_word_def sdiv_int_def simp del: ksDomSched_length_dom_relation)
+    apply (simp add: ksDomScheduleLength_def)
     apply (frule invs'_ksDomScheduleIdx)
     apply (simp add: invs'_ksDomSchedule newKernelState_def)
     apply (simp only: Abs_fnat_hom_1 Abs_fnat_hom_add)
     apply (drule unat_le_helper)
     apply (simp add: sdiv_int_def sdiv_word_def)
-   apply clarsimp
+    apply (clarsimp simp: cdom_schedule_relation_def)
    apply (simp only: Abs_fnat_hom_1 Abs_fnat_hom_add word_not_le)
+   apply clarsimp
+   apply (subst (asm) of_nat_Suc[symmetric])
    apply (drule iffD1[OF of_nat_mono_maybe'[where X=3, simplified, symmetric], rotated 2])
      apply simp
-    apply (drule invs'_ksDomScheduleIdx)
+    apply (frule invs'_ksDomScheduleIdx)
     apply (simp add: invs'_ksDomSchedule newKernelState_def)
+    apply (clarsimp simp: cdom_schedule_relation_def)
+   apply (clarsimp simp: ksDomScheduleLength_def)
+   apply (subst of_nat_Suc[symmetric])+
    apply (subst unat_of_nat32)
     apply (simp add: word_bits_def)
    apply (subst unat_of_nat32)
     apply (simp add: word_bits_def)
-   apply (fastforce simp: cdom_schedule_relation_def dom_schedule_entry_relation_def dschDomain_def dschLength_def)
+   apply (fastforce simp add: cdom_schedule_relation_def dom_schedule_entry_relation_def dschDomain_def dschLength_def simp del: ksDomSched_length_dom_relation)
   apply simp
   done
 

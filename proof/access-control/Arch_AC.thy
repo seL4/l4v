@@ -248,9 +248,9 @@ definition
   authorised_page_inv :: "'a PAS \<Rightarrow> ArchInvocation_A.page_invocation \<Rightarrow> bool"
 where
   "authorised_page_inv aag pi \<equiv> case pi of
-     ArchInvocation_A.PageMap cap ptr slots \<Rightarrow>
+     ArchInvocation_A.PageMap asid cap ptr slots \<Rightarrow>
        pas_cap_cur_auth aag cap \<and> is_subject aag (fst ptr) \<and> authorised_slots aag slots
-   | ArchInvocation_A.PageRemap slots \<Rightarrow> authorised_slots aag slots
+   | ArchInvocation_A.PageRemap asid slots \<Rightarrow> authorised_slots aag slots
    | ArchInvocation_A.PageUnmap cap ptr \<Rightarrow> pas_cap_cur_auth aag (Structures_A.ArchObjectCap cap) \<and> is_subject aag (fst ptr)
    | ArchInvocation_A.PageFlush typ start end pstart pd asid \<Rightarrow> True"
 
@@ -476,6 +476,17 @@ lemma do_flush_respects[wp]:
 
 crunch pspace_aligned[wp]: flush_page "pspace_aligned"
 
+lemma invalidate_tlb_by_asid_respects[wp]:
+  "\<lbrace>integrity aag X st\<rbrace> invalidate_tlb_by_asid asid
+    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
+  apply (simp add: invalidate_tlb_by_asid_def)
+  apply (wp dmo_no_mem_respects | wpc | simp add: invalidateTLB_ASID_def )+
+  done
+
+lemma invalidate_tlb_by_asid_pas_refined[wp]:
+  "\<lbrace>pas_refined aag\<rbrace> invalidate_tlb_by_asid asid \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
+  by (wp dmo_no_mem_respects | wpc | simp add: invalidate_tlb_by_asid_def invalidateTLB_ASID_def)+
+
 lemma perform_page_invocation_respects:
   "\<lbrace>integrity aag X st and pas_refined aag and K (authorised_page_inv aag pi) and valid_page_inv pi and valid_arch_objs and pspace_aligned\<rbrace>
      perform_page_invocation pi
@@ -490,16 +501,17 @@ proof -
 
   show ?thesis
   apply (simp add: perform_page_invocation_def mapM_discarded swp_def
-                   valid_page_inv_def valid_unmap_def
-                   authorised_page_inv_def authorised_slots_def
+                   valid_page_inv_def valid_unmap_def 
+                   authorised_page_inv_def authorised_slots_def 
             split: ArchInvocation_A.page_invocation.split sum.split
                    arch_cap.split option.split,
          safe)
-        apply (wp set_cap_integrity_autarch unmap_page_respects
+        apply (wp set_cap_integrity_autarch unmap_page_respects 
                   mapM_x_and_const_wp[OF store_pte_respects] store_pte_respects
                   mapM_x_and_const_wp[OF store_pde_respects] store_pde_respects
              | elim conjE hd_valid_slots[THEN bspec[rotated]]
-             | clarsimp dest!:set_tl_subset_mp )+
+             | clarsimp dest!:set_tl_subset_mp
+             | wpc )+
    apply (clarsimp simp: cte_wp_at_caps_of_state is_arch_diminished_def
               cap_auth_conferred_def cap_rights_update_def
               acap_rights_update_def update_map_data_def is_pg_cap_def

@@ -435,4 +435,15 @@ next
     by (fastforce simp: corres_underlying_def split_def)
 qed
 
+lemma wpc_helper_monadic_rewrite:
+  "monadic_rewrite F E Q' m m'
+   \<Longrightarrow> wpc_helper (P, P') (Q, {s. Q' s}) (monadic_rewrite F E (\<lambda>s. s \<in> P') m m')"
+  apply (clarsimp simp: wpc_helper_def)
+  apply (erule monadic_rewrite_imp)
+   apply auto
+  done
+
+wpc_setup "\<lambda>m. monadic_rewrite F E Q' m m'" wpc_helper_monadic_rewrite
+wpc_setup "\<lambda>m. monadic_rewrite F E Q' (m >>= c) m'" wpc_helper_monadic_rewrite
+
 end

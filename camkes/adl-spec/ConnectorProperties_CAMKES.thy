@@ -58,13 +58,6 @@ lemma "(CommunicationBi s f t \<longrightarrow> \<not> (CommunicationNone s f t)
        (CommunicationNone s f t \<longrightarrow> \<not> (CommunicationBi s f t))"
   by (clarsimp simp:CommunicationBi_def CommunicationNone_def)
 
-(* FIXME: Even with this lemma, showing information flow properties
- * on a concrete input specification is tantalisingly out of reach
- * of eval. I'm not entirely sure why as eval can operate over all
- * the defs, but still can't show something that can be done with
- * unfolding and the axioms. Perhaps the axiom gets in the way
- * despite this lemma's attempt to conceal it.
- *)
 lemma blah[code]:"communication_mode = (\<lambda>s. if s = seL4Asynch then Outgoing else communication_mode s)"
   by (rule ext, clarsimp simp:seL4AsynchMode)
 

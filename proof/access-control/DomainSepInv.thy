@@ -778,7 +778,7 @@ lemma perform_page_invocation_domain_sep_inv:
 
         | simp add: perform_page_invocation_def o_def | wpc)+
   apply(clarsimp simp: valid_page_inv_def)
-  apply(case_tac x, simp_all add: domain_sep_inv_cap_def is_pg_cap_def)
+  apply(case_tac xa, simp_all add: domain_sep_inv_cap_def is_pg_cap_def)
   done
 
 lemma perform_page_table_invocation_domain_sep_inv:

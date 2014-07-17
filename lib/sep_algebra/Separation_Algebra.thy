@@ -966,17 +966,27 @@ lemma sep_list_conj_eq:
   apply simp
   done
 
+lemma sep_list_conj_impl:
+  "\<lbrakk> list_all2 (\<lambda>x y. \<forall>s. x s \<longrightarrow> y s) xs ys; (\<And>* xs) s \<rbrakk> \<Longrightarrow> (\<And>* ys) s"
+  apply (induct arbitrary: s rule: list_all2_induct)
+   apply simp
+  apply simp
+  apply (erule sep_conj_impl, simp_all)
+  done
+
+lemma sep_list_conj_exists:
+  "(\<exists>x. (\<And>* map (\<lambda>y s. P x y s) ys) s) \<Longrightarrow> ((\<And>* map (\<lambda>y s. \<exists>x. P x y s) ys) s)"
+  apply clarsimp
+  apply (erule sep_list_conj_impl[rotated])
+  apply (rule list_all2I, simp_all)
+  by (fastforce simp: in_set_zip)
+
 lemma sep_list_conj_map_impl:
   "\<lbrakk>\<And>s x. \<lbrakk>x \<in> set xs; P x s\<rbrakk> \<Longrightarrow> Q x s; (\<And>* map P xs) s\<rbrakk>
   \<Longrightarrow> (\<And>* map Q xs) s"
-  apply (clarsimp simp: sep_list_conj_def)
-  apply (induct xs arbitrary: s)
-   apply clarsimp
-  apply clarsimp
-  apply (subst sep.foldl_absorb1[symmetric])
-  apply (subst (asm) sep.foldl_absorb1[symmetric],
-         erule sep_conj_impl, simp+)
-  done
+  apply (erule sep_list_conj_impl[rotated])
+  apply (rule list_all2I, simp_all)
+  by (fastforce simp: in_set_zip)
 
 lemma sep_map_set_conj_impl:
   "\<lbrakk>sep_map_set_conj P A s; \<And>s x. \<lbrakk>x \<in> A; P x s\<rbrakk> \<Longrightarrow> Q x s; finite A\<rbrakk>

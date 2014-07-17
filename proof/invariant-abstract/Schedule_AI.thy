@@ -100,6 +100,37 @@ proof -
     done
 qed
 
+lemma storeWord_valid_irq_states:
+  "\<lbrace>\<lambda>m. valid_irq_states (s\<lparr>machine_state := m\<rparr>)\<rbrace> storeWord x y
+   \<lbrace>\<lambda>a b. valid_irq_states (s\<lparr>machine_state := b\<rparr>)\<rbrace>"
+  apply(simp add: valid_irq_states_def | wp | simp add: no_irq_storeWord)+  
+  done
+
+lemma dmo_storeWord_valid_irq_states[wp]:
+  "\<lbrace>valid_irq_states\<rbrace> do_machine_op (storeWord x y) \<lbrace>\<lambda>_. valid_irq_states\<rbrace>"
+  apply(simp add: do_machine_op_def |  wp | wpc)+
+  apply clarsimp
+  apply(erule use_valid[OF _ storeWord_valid_irq_states])
+  by simp
+
+lemma dmo_mapM_storeWord_0_invs[wp]:
+  "valid invs (do_machine_op (mapM (\<lambda>p. storeWord p 0) S)) (\<lambda>_. invs)"
+  apply (simp add: dom_mapM ef_storeWord)
+  apply (rule mapM_UNIV_wp)
+  apply (simp add: do_machine_op_def split_def)
+  apply wp
+  apply (clarsimp simp: invs_def valid_state_def cur_tcb_def
+                        valid_machine_state_def)
+  apply (rule conjI)
+   apply(erule use_valid[OF _ storeWord_valid_irq_states], simp)
+  apply (clarsimp simp: disj_commute[of "in_user_frame p s", standard])
+  apply (drule_tac x=p in spec, simp)
+  apply (erule use_valid)
+   apply (simp add: storeWord_def word_rsplit_0)
+   apply wp
+  apply simp
+  done
+
 lemma dmo_kheap_arch_state[wp]:
   "\<lbrace>\<lambda>s. P (kheap s) (arch_state s)\<rbrace>
    do_machine_op a

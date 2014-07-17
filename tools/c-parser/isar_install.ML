@@ -250,7 +250,7 @@ in
       val loc_b = Binding.name (suffix HPInter.globalsN localename)
       val (globloc, ctxt) =
           Expression.add_locale I loc_b loc_b ([], []) globs thy
-      val thy = Proof_Context.theory_of ctxt
+      val thy = Local_Theory.exit_global ctxt
       val _ = writeln ("Created locale for globals (" ^ Binding.print loc_b ^
                        ")- with " ^ Int.toString (length globs) ^
                        " globals elements")

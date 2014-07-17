@@ -198,14 +198,14 @@ where
 
 datatype page_invocation =
     PageFlush flush_type vptr vptr paddr machine_word asid
-  | PageRemap "(pte * machine_word list) + (pde * machine_word list)"
-  | PageMap capability machine_word "(pte * machine_word list) + (pde * machine_word list)"
+  | PageRemap asid "(pte * machine_word list) + (pde * machine_word list)"
+  | PageMap asid capability machine_word "(pte * machine_word list) + (pde * machine_word list)"
   | PageUnmap arch_capability machine_word
 
 primrec
   pageMapCap :: "page_invocation \<Rightarrow> capability"
 where
-  "pageMapCap (PageMap v0 v1 v2) = v0"
+  "pageMapCap (PageMap v0 v1 v2 v3) = v1"
 
 primrec
   pageUnmapCapSlot :: "page_invocation \<Rightarrow> machine_word"
@@ -245,12 +245,12 @@ where
 primrec
   pageRemapEntries :: "page_invocation \<Rightarrow> (pte * machine_word list) + (pde * machine_word list)"
 where
-  "pageRemapEntries (PageRemap v0) = v0"
+  "pageRemapEntries (PageRemap v0 v1) = v1"
 
 primrec
-  pageMapCTSlot :: "page_invocation \<Rightarrow> machine_word"
+  pageMapASID :: "page_invocation \<Rightarrow> asid"
 where
-  "pageMapCTSlot (PageMap v0 v1 v2) = v1"
+  "pageMapASID (PageMap v0 v1 v2 v3) = v0"
 
 primrec
   pageFlushEnd :: "page_invocation \<Rightarrow> vptr"
@@ -260,12 +260,22 @@ where
 primrec
   pageMapEntries :: "page_invocation \<Rightarrow> (pte * machine_word list) + (pde * machine_word list)"
 where
-  "pageMapEntries (PageMap v0 v1 v2) = v2"
+  "pageMapEntries (PageMap v0 v1 v2 v3) = v3"
+
+primrec
+  pageRemapASID :: "page_invocation \<Rightarrow> asid"
+where
+  "pageRemapASID (PageRemap v0 v1) = v0"
+
+primrec
+  pageMapCTSlot :: "page_invocation \<Rightarrow> machine_word"
+where
+  "pageMapCTSlot (PageMap v0 v1 v2 v3) = v2"
 
 primrec
   pageMapCap_update :: "(capability \<Rightarrow> capability) \<Rightarrow> page_invocation \<Rightarrow> page_invocation"
 where
-  "pageMapCap_update f (PageMap v0 v1 v2) = PageMap (f v0) v1 v2"
+  "pageMapCap_update f (PageMap v0 v1 v2 v3) = PageMap v0 (f v1) v2 v3"
 
 primrec
   pageUnmapCapSlot_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> page_invocation \<Rightarrow> page_invocation"
@@ -305,12 +315,12 @@ where
 primrec
   pageRemapEntries_update :: "(((pte * machine_word list) + (pde * machine_word list)) \<Rightarrow> ((pte * machine_word list) + (pde * machine_word list))) \<Rightarrow> page_invocation \<Rightarrow> page_invocation"
 where
-  "pageRemapEntries_update f (PageRemap v0) = PageRemap (f v0)"
+  "pageRemapEntries_update f (PageRemap v0 v1) = PageRemap v0 (f v1)"
 
 primrec
-  pageMapCTSlot_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> page_invocation \<Rightarrow> page_invocation"
+  pageMapASID_update :: "(asid \<Rightarrow> asid) \<Rightarrow> page_invocation \<Rightarrow> page_invocation"
 where
-  "pageMapCTSlot_update f (PageMap v0 v1 v2) = PageMap v0 (f v1) v2"
+  "pageMapASID_update f (PageMap v0 v1 v2 v3) = PageMap (f v0) v1 v2 v3"
 
 primrec
   pageFlushEnd_update :: "(vptr \<Rightarrow> vptr) \<Rightarrow> page_invocation \<Rightarrow> page_invocation"
@@ -320,7 +330,17 @@ where
 primrec
   pageMapEntries_update :: "(((pte * machine_word list) + (pde * machine_word list)) \<Rightarrow> ((pte * machine_word list) + (pde * machine_word list))) \<Rightarrow> page_invocation \<Rightarrow> page_invocation"
 where
-  "pageMapEntries_update f (PageMap v0 v1 v2) = PageMap v0 v1 (f v2)"
+  "pageMapEntries_update f (PageMap v0 v1 v2 v3) = PageMap v0 v1 v2 (f v3)"
+
+primrec
+  pageRemapASID_update :: "(asid \<Rightarrow> asid) \<Rightarrow> page_invocation \<Rightarrow> page_invocation"
+where
+  "pageRemapASID_update f (PageRemap v0 v1) = PageRemap (f v0) v1"
+
+primrec
+  pageMapCTSlot_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> page_invocation \<Rightarrow> page_invocation"
+where
+  "pageMapCTSlot_update f (PageMap v0 v1 v2 v3) = PageMap v0 v1 (f v2) v3"
 
 abbreviation (input)
   PageFlush_trans :: "(flush_type) \<Rightarrow> (vptr) \<Rightarrow> (vptr) \<Rightarrow> (paddr) \<Rightarrow> (machine_word) \<Rightarrow> (asid) \<Rightarrow> page_invocation" ("PageFlush'_ \<lparr> pageFlushType= _, pageFlushStart= _, pageFlushEnd= _, pageFlushPStart= _, pageFlushPD= _, pageFlushASID= _ \<rparr>")
@@ -328,14 +348,14 @@ where
   "PageFlush_ \<lparr> pageFlushType= v0, pageFlushStart= v1, pageFlushEnd= v2, pageFlushPStart= v3, pageFlushPD= v4, pageFlushASID= v5 \<rparr> == PageFlush v0 v1 v2 v3 v4 v5"
 
 abbreviation (input)
-  PageRemap_trans :: "((pte * machine_word list) + (pde * machine_word list)) \<Rightarrow> page_invocation" ("PageRemap'_ \<lparr> pageRemapEntries= _ \<rparr>")
+  PageRemap_trans :: "(asid) \<Rightarrow> ((pte * machine_word list) + (pde * machine_word list)) \<Rightarrow> page_invocation" ("PageRemap'_ \<lparr> pageRemapASID= _, pageRemapEntries= _ \<rparr>")
 where
-  "PageRemap_ \<lparr> pageRemapEntries= v0 \<rparr> == PageRemap v0"
+  "PageRemap_ \<lparr> pageRemapASID= v0, pageRemapEntries= v1 \<rparr> == PageRemap v0 v1"
 
 abbreviation (input)
-  PageMap_trans :: "(capability) \<Rightarrow> (machine_word) \<Rightarrow> ((pte * machine_word list) + (pde * machine_word list)) \<Rightarrow> page_invocation" ("PageMap'_ \<lparr> pageMapCap= _, pageMapCTSlot= _, pageMapEntries= _ \<rparr>")
+  PageMap_trans :: "(asid) \<Rightarrow> (capability) \<Rightarrow> (machine_word) \<Rightarrow> ((pte * machine_word list) + (pde * machine_word list)) \<Rightarrow> page_invocation" ("PageMap'_ \<lparr> pageMapASID= _, pageMapCap= _, pageMapCTSlot= _, pageMapEntries= _ \<rparr>")
 where
-  "PageMap_ \<lparr> pageMapCap= v0, pageMapCTSlot= v1, pageMapEntries= v2 \<rparr> == PageMap v0 v1 v2"
+  "PageMap_ \<lparr> pageMapASID= v0, pageMapCap= v1, pageMapCTSlot= v2, pageMapEntries= v3 \<rparr> == PageMap v0 v1 v2 v3"
 
 abbreviation (input)
   PageUnmap_trans :: "(arch_capability) \<Rightarrow> (machine_word) \<Rightarrow> page_invocation" ("PageUnmap'_ \<lparr> pageUnmapCap= _, pageUnmapCapSlot= _ \<rparr>")
@@ -353,14 +373,14 @@ definition
   isPageRemap :: "page_invocation \<Rightarrow> bool"
 where
  "isPageRemap v \<equiv> case v of
-    PageRemap v0 \<Rightarrow> True
+    PageRemap v0 v1 \<Rightarrow> True
   | _ \<Rightarrow> False"
 
 definition
   isPageMap :: "page_invocation \<Rightarrow> bool"
 where
  "isPageMap v \<equiv> case v of
-    PageMap v0 v1 v2 \<Rightarrow> True
+    PageMap v0 v1 v2 v3 \<Rightarrow> True
   | _ \<Rightarrow> False"
 
 definition

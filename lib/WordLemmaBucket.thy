@@ -221,27 +221,12 @@ lemma neq_into_nprefixeq:
   "\<lbrakk> x \<noteq> take (length x) y \<rbrakk> \<Longrightarrow> \<not> x \<le> y"
   by (clarsimp simp: prefixeq_def less_eq_list_def)
 
-lemma distinct_suffixeq:
-  assumes dx: "distinct xs"
-  and     pf: "suffixeq ys xs"
-  shows   "distinct ys"
-  using dx pf by (clarsimp elim!: suffixeqE)
-
-lemma suffixeq_map:
-  assumes pf: "suffixeq ys xs"
-  shows   "suffixeq (map f ys) (map f xs)"
-  using pf by (auto elim!: suffixeqE intro: suffixeqI)
-
 lemma suffixeq_drop [simp]:
   "suffixeq (drop n as) as"
   unfolding suffixeq_def
   apply (rule exI [where x = "take n as"])
   apply simp
   done
-
-lemma suffixeq_take:
-  "suffixeq ys xs \<Longrightarrow> xs = take (length xs - length ys) xs @ ys"
-  by (clarsimp elim!: suffixeqE)
 
 lemma suffixeq_eqI:
   "\<lbrakk> suffixeq xs as; suffixeq xs bs; length as = length bs;
@@ -253,6 +238,10 @@ lemma suffixeq_Cons_mem:
   apply (drule suffixeq_set_subset)
   apply simp
   done
+
+lemma distinct_imply_not_in_tail:
+  "\<lbrakk> distinct list; suffixeq (y # ys) list\<rbrakk> \<Longrightarrow> y \<notin> set ys"
+  by (clarsimp simp:suffixeq_def)
 
 lemma list_induct_suffixeq [case_names Nil Cons]:
   assumes nilr: "P []"
@@ -2103,6 +2092,12 @@ lemma is_aligned_neg_mask_eq:
   apply (rule word_eqI)
   apply (clarsimp simp: word_size word_ops_nth_size)
   apply fastforce
+  done
+
+lemma is_aligned_shiftr_shiftl:
+  "is_aligned w n \<Longrightarrow> w >> n << n = w"
+  apply (simp add: shiftr_shiftl1)
+  apply (erule is_aligned_neg_mask_eq)
   done
 
 lemma rtrancl_insert:
@@ -5891,6 +5886,172 @@ lemma word_rsplit_upt:
    apply (simp add: nth_ucast nth_shiftr nth_rev field_simps)
   apply (simp add: length_word_rsplit_exp_size)
   apply (metis mult_commute given_quot_alt word_size word_size_gt_0)
+  done
+
+lemma aligned_shift:
+  "\<lbrakk>x < 2 ^ n; is_aligned (y :: 'a :: len word) n;n \<le> len_of TYPE('a)\<rbrakk>
+   \<Longrightarrow> x + y >> n = y >> n"
+  apply (subst word_plus_and_or_coroll)
+   apply (rule word_eqI)
+   apply (clarsimp simp: is_aligned_nth)
+   apply (drule(1) nth_bounded)
+    apply simp
+   apply simp
+  apply (rule word_eqI)
+  apply (simp add: nth_shiftr)
+  apply safe
+  apply (drule(1) nth_bounded)
+  apply simp+
+  done
+
+lemma aligned_shift':
+  "\<lbrakk>x < 2 ^ n; is_aligned (y :: 'a :: len word) n;n \<le> len_of TYPE('a)\<rbrakk>
+   \<Longrightarrow> y + x >> n = y >> n"
+  apply (subst word_plus_and_or_coroll)
+   apply (rule word_eqI)
+   apply (clarsimp simp: is_aligned_nth)
+   apply (drule(1) nth_bounded)
+    apply simp
+   apply simp
+  apply (rule word_eqI)
+  apply (simp add: nth_shiftr)
+  apply safe
+  apply (drule(1) nth_bounded)
+  apply simp+
+done
+
+lemma neg_mask_add_mask:
+  "((x:: 'a :: len word) && ~~ mask n) + (2 ^ n - 1) = x || mask n"
+  apply (simp add:mask_2pm1[symmetric])
+  apply (rule word_eqI)
+  apply (rule iffI)
+    apply (clarsimp simp:word_size not_less)
+    apply (cut_tac w = "((x && ~~ mask n) + mask n)" and
+      m = n and n = "na - n" in nth_shiftr[symmetric])
+    apply clarsimp
+    apply (subst (asm) aligned_shift')
+  apply (simp add:mask_lt_2pn nth_shiftr is_aligned_neg_mask word_size word_bits_def )+
+  apply (case_tac "na<n")
+    apply clarsimp
+    apply (subst word_plus_and_or_coroll)
+    apply (rule iffD1[OF is_aligned_mask])
+    apply (simp add:is_aligned_neg_mask word_or_nth word_size not_less)+
+  apply (cut_tac w = "((x && ~~ mask n) + mask n)" and
+      m = n and n = "na - n" in nth_shiftr[symmetric])
+  apply clarsimp
+  apply (subst (asm) aligned_shift')
+  apply (simp add:mask_lt_2pn is_aligned_neg_mask word_bits_def nth_shiftr neg_mask_bang)+
+done
+
+lemma subtract_mask:
+  "p - (p && mask n) = (p && ~~ mask n)"
+  "p - (p && ~~ mask n) = (p && mask n)"
+  by (simp add: field_simps word_plus_and_or_coroll2)+
+
+lemma and_neg_mask_plus_mask_mono: "(p && ~~ mask n) + mask n \<ge> p"
+  apply (subst add_commute)
+  apply (rule word_le_minus_cancel[where x = "p && ~~ mask n"])
+   apply (clarsimp simp: subtract_mask)
+   using word_and_le1[where a = "mask n" and y = p]
+   apply (clarsimp simp: mask_def word_le_less_eq)
+  apply (subst add_commute)
+  apply (rule is_aligned_no_overflow'[folded mask_2pm1])
+  apply (clarsimp simp: is_aligned_neg_mask)
+  done
+
+lemma word_neg_and_le:
+  "ptr \<le> (ptr && ~~ mask n) + (2 ^ n - 1)"
+  by (simp add: and_neg_mask_plus_mask_mono mask_2pm1[symmetric])
+
+lemma aligned_less_plus_1:
+  "\<lbrakk> is_aligned x n; n > 0 \<rbrakk> \<Longrightarrow> x < x + 1"
+  apply (rule plus_one_helper2)
+   apply (rule order_refl)
+  apply (clarsimp simp: field_simps)
+  apply (drule arg_cong[where f="\<lambda>x. x - 1"])
+  apply (clarsimp simp: is_aligned_mask)
+  apply (drule word_eqD[where x=0])
+  apply simp
+  done
+
+lemma aligned_add_offset_less:
+  "\<lbrakk>is_aligned x n; is_aligned y n; x < y; z < 2 ^ n\<rbrakk> \<Longrightarrow> x + z < y"
+  apply (cases "y = 0")
+   apply simp
+  apply (erule is_aligned_get_word_bits[where p=y], simp_all)
+  apply (cases "z = 0", simp_all)
+  apply (drule(2) aligned_at_least_t2n_diff[rotated -1])
+  apply (drule plus_one_helper2)
+   apply (rule less_is_non_zero_p1)
+   apply (rule aligned_less_plus_1)
+    apply (erule aligned_sub_aligned[OF _ _ order_refl],
+           simp_all add: is_aligned_triv)[1]
+   apply (cases n, simp_all)[1]
+  apply (simp only: trans[OF diff_add_eq diff_diff_eq2[symmetric]])
+  apply (drule word_less_add_right)
+   apply (rule ccontr, simp add: linorder_not_le)
+   apply (drule aligned_small_is_0, erule order_less_trans)
+    apply (clarsimp simp: power_overflow)
+   apply simp
+  apply (erule order_le_less_trans[rotated],
+         rule word_plus_mono_right)
+   apply (erule minus_one_helper3)
+  apply (simp add: is_aligned_no_wrap' is_aligned_no_overflow field_simps)
+  done
+
+lemma is_aligned_add_helper:
+  "\<lbrakk> is_aligned p n; d < 2 ^ n \<rbrakk>
+     \<Longrightarrow> (p + d && mask n = d) \<and> (p + d && (~~ mask n) = p)"
+  apply (subst(asm) is_aligned_mask)
+  apply (drule less_mask_eq)
+  apply (rule context_conjI)
+   apply (subst word_plus_and_or_coroll)
+    apply (rule word_eqI)
+    apply (drule_tac x=na in word_eqD)+
+    apply (simp add: word_size)
+    apply blast
+   apply (rule word_eqI)
+   apply (drule_tac x=na in word_eqD)+
+   apply (simp add: word_ops_nth_size word_size)
+   apply blast
+  apply (insert word_plus_and_or_coroll2[where x="p + d" and w="mask n"])
+  apply simp
+  done
+
+lemma is_aligned_sub_helper:
+  "\<lbrakk> is_aligned (p - d) n; d < 2 ^ n \<rbrakk>
+     \<Longrightarrow> (p && mask n = d) \<and> (p && (~~ mask n) = p - d)"
+  by (drule(1) is_aligned_add_helper, simp)
+
+lemma mask_twice:
+  "(x && mask n) && mask m = x && mask (min m n)"
+  apply (rule word_eqI)
+  apply (simp add: word_size conj_ac)
+  done
+
+lemma is_aligned_after_mask:
+  "\<lbrakk>is_aligned k m;m\<le> n\<rbrakk> \<Longrightarrow> is_aligned (k && mask n) m"
+  by (metis is_aligned_andI1)
+
+lemma and_mask_plus:
+  "\<lbrakk>is_aligned ptr m; m \<le> n; n < 32; a < 2 ^ m\<rbrakk>
+   \<Longrightarrow> (ptr) + a && mask n = (ptr && mask n) + a"
+  apply (rule mask_eqI[where n = m])
+   apply (simp add:mask_twice min_def)
+    apply (simp add:is_aligned_add_helper)
+    apply (subst is_aligned_add_helper[THEN conjunct1])
+      apply (erule is_aligned_after_mask)
+     apply simp
+    apply simp
+   apply simp
+  apply (subgoal_tac "(ptr + a && mask n) && ~~ mask m
+     = (ptr + a && ~~ mask m ) && mask n")
+   apply (simp add:is_aligned_add_helper)
+   apply (subst is_aligned_add_helper[THEN conjunct2])
+     apply (simp add:is_aligned_after_mask)
+    apply simp
+   apply simp
+  apply (simp add:word_bw_comms word_bw_lcs)
   done
 
 end

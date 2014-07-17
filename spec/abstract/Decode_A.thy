@@ -176,7 +176,7 @@ where
                                               vaddr pgsz vm_rights 
                                               (attribs_from_word attr) pd;
             ensure_safe_mapping entries;
-            returnOk $ InvokePage $ PageMap
+            returnOk $ InvokePage $ PageMap asid
                 (ArchObjectCap $ PageCap p R pgsz (Some (asid, vaddr))) 
                 cte entries
         odE
@@ -202,7 +202,7 @@ where
                                               vaddr pgsz vm_rights 
                                               (attribs_from_word attr) pd;
             ensure_safe_mapping entries;
-            returnOk $ InvokePage $ PageRemap entries
+            returnOk $ InvokePage $ PageRemap asid' entries
         odE
     else  throwError TruncatedMessage
     else if invocation_type label = ARMPageUnmap

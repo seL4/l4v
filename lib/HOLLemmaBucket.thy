@@ -219,6 +219,10 @@ lemma orthD1:
 lemma orthD2:
   "\<lbrakk> S \<inter> S' = {}; x \<in> S'\<rbrakk> \<Longrightarrow> x \<notin> S" by auto
 
+lemma distinct_element:
+  "\<lbrakk> b \<inter> d = {}; a \<in> b; c \<in> d\<rbrakk>\<Longrightarrow> a \<noteq> c"
+  by auto
+
 lemma ranE:
   "\<lbrakk> v \<in> ran f; \<And>x. f x = Some v \<Longrightarrow> R\<rbrakk> \<Longrightarrow> R"
   by (auto simp: ran_def)
@@ -598,6 +602,10 @@ lemma union_trans:
   apply (blast intro: in_rtrancl_UnI rtrancl_trans)
   done
 
+lemma trancl_trancl:
+  "(R\<^sup>+)\<^sup>+ = R\<^sup>+"
+  by auto
+
 lemma if_1_0_0:
   "((if P then 1 else 0) = (0 :: ('a :: zero_neq_one))) = (\<not> P)"
   by (simp split: split_if)
@@ -615,6 +623,10 @@ lemma ex_with_length:
 lemma in_singleton:
   "S = {x} \<Longrightarrow> x \<in> S"
   by simp
+
+lemma singleton_set:
+ "x \<in> set [a] \<Longrightarrow> x = a"
+  by auto
 
 lemma take_drop_eqI:
   assumes t: "take n xs = take n ys"

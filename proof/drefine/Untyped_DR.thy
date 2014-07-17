@@ -12,21 +12,6 @@ theory Untyped_DR
 imports CNode_DR
 begin
 
-lemma is_None_eq_split:
-  "\<lbrakk> (opt = None) = (opt' = None);
-      opt \<noteq> None \<and> opt' \<noteq> None \<longrightarrow> the opt = the opt' \<rbrakk>
-         \<Longrightarrow> opt = opt'"
-  by (cases opt, auto)
-
-(* FIXME: move? *)
-lemma trancl_trancl:
-  "(R\<^sup>+)\<^sup>+ = R\<^sup>+"
-  by auto
-
-lemma minus_Id_Image_singleton:
-  "((S - Id) `` {x}) = ((S `` {x}) - {x})"
-  by blast
-
 lemma detype_dcorres:
   "S = {ptr..ptr + 2 ^ sz - 1}
  \<Longrightarrow> dcorres dc \<top> (\<lambda>s. invs s \<and> (\<exists>cref. cte_wp_at (op = (cap.UntypedCap ptr sz idx)) cref s) \<and> valid_etcbs s)
@@ -47,12 +32,6 @@ lemma detype_dcorres:
    apply clarsimp
   apply (clarsimp simp: global_refs_def transform_object_def detype_ext_def)
   done
-
-(* FIXME: move? *)
-lemma mapM_simps:
-  "mapM m [] = return []"
-  "mapM m (x#xs) = do r \<leftarrow> m x; rs \<leftarrow> (mapM m xs); return (r#rs) od"
-  by (simp_all add: mapM_def sequence_def)
 
 (* FIXME: move? *)
 lemma evalMonad_loadWords:
@@ -329,7 +308,6 @@ lemma freeMemory_dcorres:
    apply (rule_tac y = p in order_trans)
     apply simp
    apply (cut_tac ptr = p and n = "pageBitsForSize sz" in word_neg_and_le)
-    apply (simp add:pbfs_less_wb'[unfolded word_bits_def,simplified])
    apply (simp add:mask_def[unfolded shiftl_t2n,simplified,symmetric] p_assoc_help)
   apply (thin_tac "?x\<noteq>?y")
   apply (erule notE)
@@ -337,12 +315,6 @@ lemma freeMemory_dcorres:
    apply (rule le_refl)
   apply (simp add:mask_def not_le pbfs_less_wb'[unfolded word_bits_def, simplified])
   done
-
-(* FIXME: move *)
-lemma corres_bind_return:
- "corres_underlying sr nf r P P' (f >>= return) g \<Longrightarrow>
-  corres_underlying sr nf r P P' f g"
-  by (simp add: corres_underlying_def)
 
 (* FIXME: strictly speaking, we would not need ct_active, here.  Proving that,
      however, requires a stronger version of lemma detype_invariants. *)
@@ -494,9 +466,6 @@ lemma obj_bits_bound4:
      default_arch_object_def pageBits_def)
   done
 
-    (* FIXME: replacee of_nat_inj32 in Detype_R with this one *)
-lemmas of_nat_inj32 = of_nat_inj[where 'a=32, folded word_bits_def]
-
 lemma distinct_retype_addrs:
   "\<lbrakk>type = Invariants_AI.Untyped \<longrightarrow> 4 \<le> us;
     range_cover ptr sz (obj_bits_api type us) n\<rbrakk>
@@ -547,7 +516,7 @@ lemma transform_none_to_untyped:
   done
 
 
-lemma retype_transform_obj_ref_avaiable:
+lemma retype_transform_obj_ref_available:
   notes blah[simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
           Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
   shows
@@ -872,16 +841,6 @@ lemma init_arch_objects_corres_noop:
         apply (wp mapM_wp' dmo_dwp | simp)+
   done
 
-
-(* FIXME: move to Detype *)
-lemma monad_commute_pre:
-  "(a >>= return ) = ( b >>= return ) \<Longrightarrow> a = b"
-  apply (clarsimp simp:bind_def)
-  apply (rule ext)
-  apply (drule_tac x= x in fun_cong)
-  apply (auto simp:return_def split_def)
-  done
-
 lemma monad_commute_set_cap_cdt:
   "monad_commute \<top> (KHeap_D.set_cap ptr cap) (modify (\<lambda>s. s\<lparr>cdl_cdt := cdl_cdt s(ptr2 \<mapsto> ptr3)\<rparr>))"
   apply (clarsimp simp:monad_commute_def)
@@ -934,7 +893,7 @@ lemma monad_commute_set_cap_gets_cdt:
 lemma set_cap_set_parent_swap:
   "do _ \<leftarrow> KHeap_D.set_cap ptr cap; set_parent ptr2 ptr3 od
    = do _ \<leftarrow> set_parent ptr2 ptr3; KHeap_D.set_cap ptr cap od"
-  apply (rule monad_commute_pre)
+  apply (rule bind_return_eq)
   apply (subst bind_assoc)+
   apply (rule ext)
   apply (subst monad_commute_simple)
@@ -1039,20 +998,6 @@ lemma neg_mask_add_2p_helper:
   apply (rule is_aligned_add_helper[THEN conjunct2])
   apply (simp add:less_1_helper)
   apply (simp add:word_power_less_1)
-  done
-
-
-(* FIXME: move *)
-lemma nonempty_pick_in:
-  "a\<noteq>{} \<Longrightarrow> pick a \<in> a"
-  by (metis all_not_in_conv someI_ex)
-
-lemma pick_singleton[simp]:
-  "pick {a} = a"
-  apply (rule ccontr)
-  apply (cut_tac nonempty_pick_in)
-   apply fastforce
-  apply fastforce
   done
 
 lemma retype_transform_ref_subseteq_strong:
@@ -1201,7 +1146,7 @@ lemma generate_object_ids_exec:
        apply (erule range_cover.sz)
       apply (simp add:obj_bits_api_def)
       apply (erule(2) subset_trans[OF retype_transform_ref_subseteq_strong])
-    apply (rule retype_transform_obj_ref_avaiable)
+    apply (rule retype_transform_obj_ref_available)
          apply simp+
    apply (clarsimp simp:retype_transform_obj_ref_def translate_object_type_def)
   apply simp
@@ -1257,7 +1202,7 @@ lemma update_available_range_dcorres:
   apply (rule corres_guard_imp)
    apply (rule select_pick_corres)
     apply (rule set_cap_corres)
-    apply (clarsimp simp:set_avaiable_range_def)
+    apply clarsimp
     apply simp+
   done
 

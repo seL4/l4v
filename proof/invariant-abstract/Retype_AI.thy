@@ -392,14 +392,7 @@ lemma (in pspace_update_eq) pspace_no_overlap_update [simp]:
   "pspace_no_overlap ptr bits (f s) = pspace_no_overlap ptr bits s"
   by (simp add: pspace_no_overlap_def pspace)
 
-
 (* FIXME: Move *)
-lemma mask_twice:
-  "(x && mask n) && mask m = x && mask (min m n)"
-  apply (rule word_eqI)
-  apply (simp add: word_size conj_ac)
-  done
-
 lemma multi_lessD:
   "\<lbrakk>(a::nat)*b < c;0<a;0<b\<rbrakk> \<Longrightarrow> a < c \<and> b < c"
   by (cases a, simp_all,cases b,simp_all)
@@ -936,70 +929,6 @@ lemma null_filter_caps_of_state_foldr:
   done
 
 
-lemma aligned_shift:
-  "\<lbrakk>x < 2 ^ n; is_aligned (y :: 'a :: len word) n;n \<le> len_of TYPE('a)\<rbrakk>
-   \<Longrightarrow> x + y >> n = y >> n"
-  apply (subst word_plus_and_or_coroll)
-   apply (rule word_eqI)
-   apply (clarsimp simp: is_aligned_nth)
-   apply (drule(1) nth_bounded)
-    apply simp
-   apply simp
-  apply (rule word_eqI)
-  apply (simp add: nth_shiftr)
-  apply safe
-  apply (drule(1) nth_bounded)
-  apply simp+
-  done
-
-
-lemma aligned_shift':
-  "\<lbrakk>x < 2 ^ n; is_aligned (y :: 'a :: len word) n;n \<le> len_of TYPE('a)\<rbrakk>
-   \<Longrightarrow> y + x >> n = y >> n"
-  apply (subst word_plus_and_or_coroll)
-   apply (rule word_eqI)
-   apply (clarsimp simp: is_aligned_nth)
-   apply (drule(1) nth_bounded)
-    apply simp
-   apply simp
-  apply (rule word_eqI)
-  apply (simp add: nth_shiftr)
-  apply safe
-  apply (drule(1) nth_bounded)
-  apply simp+
-done
-
-
-lemma neg_mask_add_mask:
-  "((x:: 'a :: len word) && ~~ mask n) + (2 ^ n - 1) = x || mask n"
-  apply (simp add:mask_2pm1[symmetric])
-  apply (rule word_eqI)
-  apply (rule iffI)
-    apply (clarsimp simp:word_size not_less)
-    apply (cut_tac w = "((x && ~~ mask n) + mask n)" and
-      m = n and n = "na - n" in nth_shiftr[symmetric])
-    apply clarsimp
-    apply (subst (asm) aligned_shift')
-  apply (simp add:mask_lt_2pn nth_shiftr is_aligned_neg_mask word_size word_bits_def )+
-  apply (case_tac "na<n")
-    apply clarsimp
-    apply (subst word_plus_and_or_coroll)
-    apply (rule iffD1[OF is_aligned_mask])
-    apply (simp add:is_aligned_neg_mask word_or_nth word_size not_less)+
-  apply (cut_tac w = "((x && ~~ mask n) + mask n)" and
-      m = n and n = "na - n" in nth_shiftr[symmetric])
-  apply clarsimp
-  apply (subst (asm) aligned_shift')
-  apply (simp add:mask_lt_2pn is_aligned_neg_mask word_bits_def nth_shiftr neg_mask_bang)+
-done
-
-(* FIXME: move *)
-lemma subtract_mask:
-  "p - (p && mask n) = (p && ~~ mask n)"
-  "p - (p && ~~ mask n) = (p && mask n)"
-  by (simp add: field_simps word_plus_and_or_coroll2)+
-
-
 lemma retype_addrs_fold:
   " map (\<lambda>p. ptr_add ptr' (p * 2 ^ obj_bits_api ty us)) [0..< n ]
   = retype_addrs ptr' ty n us"
@@ -1289,6 +1218,15 @@ crunch cte_wp_at[wp]: init_arch_objects "\<lambda>s. P (cte_wp_at P' p s)"
   (ignore: clearMemory wp: crunch_wps)
 crunch typ_at[wp]: init_arch_objects "\<lambda>s. P (typ_at T p s)"
   (ignore: clearMemory wp: crunch_wps)
+
+lemma mdb_cte_at_store_pde[wp]:
+  "\<lbrace>\<lambda>s. mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) (cdt s)\<rbrace>
+   store_pde y pde
+   \<lbrace>\<lambda>r s. mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) (cdt s)\<rbrace>"
+  apply (clarsimp simp:mdb_cte_at_def)
+  apply (simp only: imp_conv_disj)
+  apply (wp hoare_vcg_disj_lift hoare_vcg_all_lift)
+done
 
 (*
    FIXME: This didn't used to assume the slot wasn't in kernel_mapping_slots.

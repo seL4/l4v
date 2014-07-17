@@ -2331,6 +2331,18 @@ lemma invokeCNode_valid_duplicates'[wp]:
   apply (simp add:invs_valid_objs' invs_pspace_aligned')
   done
 
+lemma getObject_pte_sp:
+  "\<lbrace>P\<rbrace> getObject r \<lbrace>\<lambda>t::pte. P and ko_at' t r\<rbrace>"
+  apply (wp getObject_ko_at)
+  apply (auto simp: objBits_simps archObjSize_def)
+  done
+
+lemma getObject_pde_sp:
+  "\<lbrace>P\<rbrace> getObject r \<lbrace>\<lambda>t::pde. P and ko_at' t r\<rbrace>"
+  apply (wp getObject_ko_at)
+  apply (auto simp: objBits_simps archObjSize_def)
+  done
+
 lemma performPageInvocation_valid_duplicates'[wp]:
   "\<lbrace>invs' and valid_arch_inv' (invocation.InvokePage page_invocation) 
   and (\<lambda>s. vs_valid_duplicates' (ksPSpace s))\<rbrace>
@@ -2338,46 +2350,61 @@ lemma performPageInvocation_valid_duplicates'[wp]:
     \<lbrace>\<lambda>y a. vs_valid_duplicates' (ksPSpace a)\<rbrace>"
   apply (rule hoare_name_pre_state)
   apply (case_tac page_invocation)
-  apply (simp_all add:performPageInvocation_def)
+  -- "PageFlush"
+     apply (simp_all add:performPageInvocation_def pteCheckIfMapped_def pdeCheckIfMapped_def)
      apply (wp|simp|wpc)+
-     apply (case_tac sum)
+     -- "PageRemap"
+    apply (case_tac sum)
      apply (case_tac a)
      apply (case_tac aa)
        apply (clarsimp simp:valid_arch_inv'_def
           valid_page_inv'_def valid_slots'_def
-          valid_slots_duplicated'_def mapM_x_singleton)
-       apply (wp PageTableDuplicates.storePTE_no_duplicates')
+          valid_slots_duplicated'_def mapM_singleton)
+       apply (wp PageTableDuplicates.storePTE_no_duplicates' getPTE_wp | simp add: if_cancel)+
        apply (simp add:vs_entry_align_def)
-      apply (wp|wpc|simp)+
+      apply (subst mapM_discarded)
+      apply simp
+      apply (rule hoare_seq_ext[OF _ getObject_pte_sp])
+      apply (wp|simp)+
       apply (clarsimp simp:valid_arch_inv'_def
         valid_page_inv'_def valid_slots'_def
         valid_slots_duplicated'_def)
       apply (rule hoare_pre)
        apply (rule_tac sz = 6 and ptr = "p && ~~ mask ptBits" and word = p 
          in mapM_x_storePTE_update_helper)
-       apply (simp add:invs_pspace_aligned' pageBits_def ptBits_def)
+      apply (simp add:invs_pspace_aligned' pageBits_def ptBits_def)
+     apply (subst mapM_discarded)
      apply (clarsimp simp:valid_arch_inv'_def
           valid_page_inv'_def valid_slots'_def
           valid_slots_duplicated'_def mapM_x_singleton)
-     apply (wp PageTableDuplicates.storePTE_no_duplicates')
+     apply (rule hoare_seq_ext[OF _ getObject_pte_sp])
+     apply (wp PageTableDuplicates.storePTE_no_duplicates' | simp)+
      apply (simp add:vs_entry_align_def)
+    apply (subst mapM_discarded)+
     apply (case_tac b)
     apply (case_tac a)
        apply (clarsimp simp:valid_arch_inv'_def
           valid_page_inv'_def valid_slots'_def
           valid_slots_duplicated'_def mapM_x_singleton)
-       apply (wp PageTableDuplicates.storePDE_no_duplicates')
-       apply (wp|wpc|simp add:vs_entry_align_def)+
+       apply (rule hoare_seq_ext[OF _ getObject_pde_sp])
+       apply (wp PageTableDuplicates.storePDE_no_duplicates' | simp add: when_def)+
+       apply (simp add: vs_entry_align_def)+
+      apply (rule hoare_seq_ext[OF _ getObject_pde_sp])
+      apply (wp|wpc|simp add:vs_entry_align_def)+
       apply (clarsimp simp:valid_arch_inv'_def vs_entry_align_def
           valid_page_inv'_def valid_slots'_def
           valid_slots_duplicated'_def mapM_x_singleton)
-      apply (wp PageTableDuplicates.storePDE_no_duplicates' | wpc | simp)+
-      apply (wp|wpc|simp add:vs_entry_align_def)+
+      apply ((wp PageTableDuplicates.storePDE_no_duplicates' | wpc | simp)+)[1]
+      apply (simp add: vs_entry_align_def)+
+     apply (rule hoare_seq_ext[OF _ getObject_pde_sp])
+     apply (wp|wpc|simp add:vs_entry_align_def)+
      apply (clarsimp simp:valid_arch_inv'_def
           valid_page_inv'_def valid_slots'_def
           valid_slots_duplicated'_def mapM_x_singleton)
      apply (wp PageTableDuplicates.storePDE_no_duplicates')
-     apply (wp|wpc|simp add:vs_entry_align_def)+
+     apply (simp add: vs_entry_align_def)+
+    apply (rule hoare_seq_ext[OF _ getObject_pde_sp])
+    apply (wp|wpc|simp add:vs_entry_align_def)+
     apply (clarsimp simp:valid_arch_inv'_def
           valid_page_inv'_def valid_slots'_def
           valid_slots_duplicated'_def mapM_x_singleton)
@@ -2387,53 +2414,55 @@ lemma performPageInvocation_valid_duplicates'[wp]:
     apply clarsimp
     apply (simp add:invs_pspace_aligned' ptBits_def
       pdBits_def field_simps pageBits_def)+
+   -- "PageMap"
+   apply (clarsimp simp: pteCheckIfMapped_def pdeCheckIfMapped_def)
    apply (clarsimp simp:valid_pde_slots'_def valid_page_inv'_def
-       valid_slots_duplicated'_def valid_arch_inv'_def)
+       valid_slots_duplicated'_def valid_arch_inv'_def )
    apply (case_tac sum)
     apply (case_tac a)
     apply (case_tac aa)
-      apply clarsimp
+      apply (clarsimp simp: pteCheckIfMapped_def)
       apply (wp mapM_x_mapM_valid |wpc
         | simp)+
-       apply (clarsimp simp:valid_slots_duplicated'_def mapM_x_singleton)+
-       apply (rule PageTableDuplicates.storePTE_no_duplicates')
-      apply wp
-        apply (simp add:vs_entry_align_def)+
-     apply clarsimp
-     apply (wp mapM_x_mapM_valid)
-      apply (rule_tac sz = 6 and ptr = "p && ~~ mask ptBits" and word = p in
-        mapM_x_storePTE_update_helper)
-     apply wp
-        apply (simp add:ptBits_def pageBits_def)+
-      apply (simp add:invs_pspace_aligned')
-     apply simp
-    apply (clarsimp simp:mapM_singleton)
-    apply (wp PageTableDuplicates.storePTE_no_duplicates')
+        apply (clarsimp simp:valid_slots_duplicated'_def mapM_x_singleton)+
+        apply (rule PageTableDuplicates.storePTE_no_duplicates', rule getPTE_wp)
+      apply (wp hoare_vcg_all_lift hoare_drop_imps)
       apply (simp add:vs_entry_align_def)+
-   apply clarsimp
+     apply (clarsimp simp: pteCheckIfMapped_def)
+     apply (wp mapM_x_mapM_valid | simp)+
+       apply (rule_tac sz = 6 and ptr = "p && ~~ mask ptBits" and word = p in
+         mapM_x_storePTE_update_helper)
+      apply (wp getPTE_wp hoare_vcg_all_lift hoare_drop_imps)
+     apply (simp add:ptBits_def pageBits_def)+
+     apply (simp add:invs_pspace_aligned')
+    apply simp
+    apply (clarsimp simp:mapM_singleton pteCheckIfMapped_def)
+    apply (wp PageTableDuplicates.storePTE_no_duplicates' getPTE_wp hoare_drop_imps | simp)+
+      apply (simp add:vs_entry_align_def)+
+   apply (clarsimp simp: pdeCheckIfMapped_def)
    apply (case_tac a)
       apply (clarsimp simp:valid_arch_inv'_def
           valid_page_inv'_def valid_slots'_def
           valid_slots_duplicated'_def mapM_singleton)
-      apply (wp PageTableDuplicates.storePDE_no_duplicates')
+      apply (wp PageTableDuplicates.storePDE_no_duplicates' getPDE_wp hoare_drop_imps | simp)+
         apply (simp add:vs_entry_align_def)+
      apply (clarsimp simp:valid_arch_inv'_def
           valid_page_inv'_def valid_slots'_def
           valid_slots_duplicated'_def mapM_singleton)
-     apply (wp PageTableDuplicates.storePDE_no_duplicates')
+     apply (wp PageTableDuplicates.storePDE_no_duplicates' getPDE_wp hoare_drop_imps | simp)+
        apply (simp add:vs_entry_align_def)+
     apply (clarsimp simp:valid_arch_inv'_def
           valid_page_inv'_def valid_slots'_def
           valid_slots_duplicated'_def mapM_singleton)
-    apply (wp PageTableDuplicates.storePDE_no_duplicates')
+    apply (wp PageTableDuplicates.storePDE_no_duplicates' getPDE_wp hoare_drop_imps | simp)+
       apply (simp add:vs_entry_align_def)+
    apply (clarsimp simp:valid_arch_inv'_def
           valid_page_inv'_def valid_slots'_def
           valid_slots_duplicated'_def mapM_x_singleton)
-   apply (wp mapM_x_mapM_valid)
-    apply (rule_tac sz = 6 and ptr = "p && ~~ mask pdBits" and word = p
-         in mapM_x_storePDE_update_helper)
-   apply wp
+   apply (wp mapM_x_mapM_valid | simp)+
+     apply (rule_tac sz = 6 and ptr = "p && ~~ mask pdBits" and word = p
+          in mapM_x_storePDE_update_helper)
+    apply wp
       apply (simp add:pageBits_def pdBits_def ptBits_def)+
     apply (simp add:invs_pspace_aligned')+
   apply clarsimp

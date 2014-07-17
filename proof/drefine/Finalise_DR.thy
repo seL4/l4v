@@ -12,6 +12,7 @@ theory Finalise_DR
 imports
   KHeap_DR
   "../invariant-abstract/PDPTEntries_AI"
+  "../../lib/Apply_Trace"
 begin
 
 declare dxo_wp_weak[wp del]
@@ -102,33 +103,6 @@ lemma dcorres_revoke_cap_no_descendants:
    apply clarsimp
   apply (clarsimp simp:descendants_of_eqv valid_mdb_def)
   done
-
-(* FIXME: replace version in Ipc_R with this *)
-lemma not_waiting_reply_slot_no_descendants:
-  "\<lbrakk> st_tcb_at (Not \<circ> awaiting_reply) t s;
-     valid_reply_caps s; valid_objs s; valid_mdb s \<rbrakk>
-       \<Longrightarrow> descendants_of (t, tcb_cnode_index 2) (cdt s) = {}"
-  apply (rule ccontr, erule nonemptyE)
-  apply (clarsimp simp: valid_mdb_def reply_mdb_def reply_masters_mdb_def)
-  apply (frule_tac ref="tcb_cnode_index 2" in tcb_at_cte_at[OF st_tcb_at_tcb_at])
-   apply (simp add: domI)
-  apply (clarsimp simp: cte_wp_at_caps_of_state)
-  apply (frule(1) tcb_cap_valid_caps_of_stateD)
-  apply (clarsimp simp: tcb_cap_valid_def st_tcb_at_tcb_at)
-  apply (clarsimp simp: st_tcb_def2)
-  apply (erule disjE)
-   apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps)
-   apply (elim allE, drule(1) mp, clarsimp)
-   apply (drule(1) bspec)
-   apply (drule has_reply_cap_cte_wpD[OF caps_of_state_cteD])
-   apply (erule notE[rotated], strengthen reply_cap_doesnt_exist_strg)
-   apply (simp add: st_tcb_def2)
-  apply clarsimp
-  apply (frule mdb_Null_descendants[OF caps_of_state_cteD])
-   apply (simp add: valid_mdb_def reply_mdb_def reply_masters_mdb_def)
-  apply simp
-  done
-
 
 lemma dcorres_revoke_cap_unnecessary:
   "dcorres dc \<top> (valid_reply_caps and valid_objs and only_idle and valid_mdb and st_tcb_at (Not \<circ> awaiting_reply) ptr
@@ -512,6 +486,8 @@ lemma do_machine_op_wp:
   apply (simp add: transform_objects_def2)
   done
 
+lemmas dmo_dwp = do_machine_op_wp [OF allI]
+
 lemma machine_op_lift[wp]:
   "\<lbrace>\<lambda>ms. underlying_memory ms = m\<rbrace> machine_op_lift x \<lbrace>\<lambda>rv ms. underlying_memory ms = m\<rbrace>"
   apply (clarsimp simp:machine_rest_lift_def ignore_failure_def machine_op_lift_def)
@@ -521,17 +497,6 @@ lemma machine_op_lift[wp]:
   apply wp
   apply clarsimp
 done
-
-(*
-
-lemma  cleanCache_unerlying_memory[wp]:
-  "\<lbrace>\<lambda>ms. underlying_memory ms = m\<rbrace> cleanCache  \<lbrace>\<lambda>rv ms. underlying_memory ms = m\<rbrace>"
-  by (clarsimp simp:cleanCache_def,wp)
-
-lemma invalidateHWASID_underlying_memory[wp]:
-  "\<lbrace>\<lambda>ms. underlying_memory ms = m\<rbrace> invalidateHWASID a \<lbrace>\<lambda>rv ms. underlying_memory ms = m\<rbrace>"
-  by (clarsimp simp:invalidateHWASID_def,wp)
-*)
 
 lemma invalidateTLB_ASID_underlying_memory[wp]:
   "\<lbrace>\<lambda>ms. underlying_memory ms = m\<rbrace> invalidateTLB_ASID a \<lbrace>\<lambda>rv ms. underlying_memory ms = m\<rbrace>"
@@ -619,15 +584,6 @@ lemma set_hardware_asid_dwp[wp]:
   " \<lbrace>\<lambda>ms. underlying_memory ms = m\<rbrace> setHardwareASID hw_asid \<lbrace>\<lambda>rv ms. underlying_memory ms = m\<rbrace>"
   by (clarsimp simp:setHardwareASID_def,wp)
 
-(*
-
-lemma invalidateMVA_dwp[wp]:
-  "\<lbrace>\<lambda> ms. underlying_memory ms = m\<rbrace> invalidateMVA x \<lbrace>\<lambda>rv ms. underlying_memory ms = m\<rbrace>"
- by (clarsimp simp:invalidateMVA_def,wp)
-
-*)
-
-
 lemma store_hardware_asid_dwp[wp]:
   "\<lbrace>\<lambda>s. transform s = cs\<rbrace> store_hw_asid a xa \<lbrace>\<lambda>xb a. transform a = cs\<rbrace>"
   apply (clarsimp simp:store_hw_asid_def)
@@ -638,21 +594,6 @@ lemma store_hardware_asid_dwp[wp]:
   apply (wp|wpc)+
   apply (clarsimp simp:transform_def transform_objects_def2 transform_current_thread_def transform_cdt_def transform_asid_table_def)
 done
-
-(*
-
-lemma invalidateHWASID_dwp[wp]:
-  "\<lbrace>\<lambda>ms. underlying_memory ms = m\<rbrace> invalidateHWASID next_asid \<lbrace>\<lambda>rv ms. underlying_memory ms = m\<rbrace>"
-  apply (clarsimp simp:invalidateHWASID_def)
-  apply (clarsimp simp:machine_op_lift_def machine_rest_lift_def)
-    apply wp
-    apply (clarsimp simp:valid_def in_monad)
-    apply (assumption)
-  apply wp
-  apply (simp add:ignore_failure_def)
-done
-
-*)
 
 lemma  transform_arch_state:
   "\<lbrakk> arm_globals_frame (arch_state a) = arm_globals_frame x;
@@ -1507,10 +1448,6 @@ lemma mask_compare_imply:
   apply (auto simp:word_size)
 done
 
-lemma distinct_imply_not_in_tail:
-  "\<lbrakk>distinct list;suffixeq (y # ys) list\<rbrakk> \<Longrightarrow>y\<notin> set ys "
-  by (clarsimp simp:suffixeq_def)
-
 lemma aligned_in_step_up_to:
   "\<lbrakk>x\<in> set (map (\<lambda>x. x + ptr) [0 , (2^t) .e. up]);t< WordSetup.word_bits; is_aligned ptr t\<rbrakk>
   \<Longrightarrow> is_aligned x t"
@@ -1620,83 +1557,6 @@ lemma remain_pd_either_section_relation:
   apply (rule hoare_strengthen_post[OF remain_pd_section_relation])
   apply fastforce+
 done
-
-(* Should this be in VSpace_AI.thy *)
-lemmas set_asid_pool_cte_wp_at1[wp]
-    = hoare_cte_wp_caps_of_state_lift [OF set_asid_pool_caps_of_state]
-
-lemma mdb_cte_at_set_asid_pool[wp]:
-  "\<lbrace>\<lambda>s. mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) (cdt s)\<rbrace>
-   set_asid_pool y pool
-   \<lbrace>\<lambda>r s. mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) (cdt s)\<rbrace>"
-  apply (clarsimp simp:mdb_cte_at_def)
-  apply (simp only: imp_conv_disj)
-  apply (wp hoare_vcg_disj_lift hoare_vcg_all_lift)
-done
-
-lemma mdb_cte_at_store_pte[wp]:
-  "\<lbrace>\<lambda>s. mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) (cdt s)\<rbrace>
-   store_pte y pte
-   \<lbrace>\<lambda>r s. mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) (cdt s)\<rbrace>"
-  apply (clarsimp simp:mdb_cte_at_def)
-  apply (simp only: imp_conv_disj)
-  apply (wp hoare_vcg_disj_lift hoare_vcg_all_lift)
-    apply (simp add:store_pte_def set_pt_def)
-    apply wp
-    apply (rule hoare_drop_imp)
-    apply (wp|simp)+
-done
-
-lemma mdb_cte_at_store_pde[wp]:
-  "\<lbrace>\<lambda>s. mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) (cdt s)\<rbrace>
-   store_pde y pde
-   \<lbrace>\<lambda>r s. mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) (cdt s)\<rbrace>"
-  apply (clarsimp simp:mdb_cte_at_def)
-  apply (simp only: imp_conv_disj)
-  apply (wp hoare_vcg_disj_lift hoare_vcg_all_lift)
-done
-
-lemma valid_idle_store_pte[wp]:
-  "\<lbrace>valid_idle\<rbrace> store_pte y pte \<lbrace>\<lambda>rv. valid_idle\<rbrace>"
-  apply (simp add:store_pte_def)
-  apply wp
-  apply (rule hoare_vcg_precond_imp[where Q="valid_idle"])
-  apply (simp add:set_pt_def)
-  apply wp
-  apply (simp add:get_object_def)
-  apply wp
-  apply (clarsimp simp:obj_at_def
-    split:Structures_A.kernel_object.splits arch_kernel_obj.splits)
-  apply (fastforce simp:is_tcb_def)
-  apply (assumption)
-  apply (wp|simp)+
-done
-
-(* FIXME: move *)
-lemma aligned_add_offset_less:
-  "\<lbrakk>is_aligned x n; is_aligned y n; x < y; z < 2 ^ n\<rbrakk> \<Longrightarrow> x + z < y"
-  apply (cases "y = 0")
-   apply simp
-  apply (erule is_aligned_get_word_bits[where p=y], simp_all)
-  apply (cases "z = 0", simp_all)
-  apply (drule(2) aligned_at_least_t2n_diff[rotated -1])
-  apply (drule plus_one_helper2)
-   apply (rule less_is_non_zero_p1)
-   apply (rule aligned_less_plus_1)
-    apply (erule aligned_sub_aligned[OF _ _ order_refl],
-           simp_all add: is_aligned_triv)[1]
-   apply (cases n, simp_all)[1]
-  apply (simp only: trans[OF diff_add_eq diff_diff_eq2[symmetric]])
-  apply (drule word_less_add_right)
-   apply (rule ccontr, simp add: linorder_not_le)
-   apply (drule aligned_small_is_0, erule order_less_trans)
-    apply (clarsimp simp: power_overflow)
-   apply simp
-  apply (erule order_le_less_trans[rotated],
-         rule word_plus_mono_right)
-   apply (erule minus_one_helper3)
-  apply (simp add: is_aligned_no_wrap' field_simps)
-  done
 
 lemma is_aligned_less_kernel_base_helper:
   "\<lbrakk>is_aligned (ptr :: word32) 6;
@@ -1821,9 +1681,6 @@ lemma dcorres_store_pte_non_sense:
     not_idle_thread_def obj_at_def)
   done
 
-(* It is disappointing that I need to produce similar proof
-   for store_pde and store_pte seperately, Xin. *)
-
 lemma store_pde_non_sense_wp:
   "\<lbrace>\<lambda>s. (\<exists>f. ko_at (ArchObj (arch_kernel_obj.PageDirectory f)) (slot && ~~ mask pd_bits) s
     \<and> (\<forall>slot\<in>set xs. f (ucast (slot && mask pd_bits >> 2)) = ARM_Structs_A.pde.InvalidPDE)) \<rbrace>
@@ -1907,28 +1764,6 @@ lemma dcorres_store_invalid_pte_tail_large_page:
    apply (clarsimp simp:obj_at_def)
   done
 qed
-
-
-lemma and_mask_plus:
-  "\<lbrakk>is_aligned ptr m; m \<le> n; n < 32; a < 2 ^m\<rbrakk>
-   \<Longrightarrow> (ptr::word32) + a && mask n = (ptr && mask n) + a"
-  apply (rule mask_eqI[where n = m])
-   apply (simp add:mask_twice min_def)
-    apply (simp add:is_aligned_add_helper)
-    apply (subst is_aligned_add_helper[THEN conjunct1])
-      apply (erule is_aligned_after_mask)
-     apply simp
-    apply simp
-   apply simp
-  apply (subgoal_tac "(ptr + a && mask n) && ~~ mask m
-     = (ptr + a && ~~ mask m ) && mask n")
-   apply (simp add:is_aligned_add_helper)
-   apply (subst is_aligned_add_helper[THEN conjunct2])
-     apply (simp add:is_aligned_after_mask)
-    apply simp
-   apply simp
-  apply (simp add:word_bw_comms word_bw_lcs)
-  done
 
 lemma dcorres_unmap_sections:
   "\<lbrakk>is_aligned ptr 6;ucast (ptr && mask pd_bits >> 2) \<notin> kernel_mapping_slots\<rbrakk>
@@ -2041,7 +1876,7 @@ lemma dcorres_unmap_sections:
      apply (rule shiftl_less_t2n[where m = 6,simplified])
       apply (simp add:word_of_nat_less)
      apply simp+
-done
+  done
 
 lemma pt_page_relation_weaken:
   "\<lbrakk> pt_page_relation a b c S s; S \<subseteq> T \<rbrakk> \<Longrightarrow> pt_page_relation a b c T s"
@@ -2067,33 +1902,32 @@ lemma dcorres_unmap_pages:
     apply (simp add:mapM_x_singleton)
     apply (rule corres_dummy_return_l)
     apply (rule corres_guard_imp)
-     apply (rule corres_split[OF _ dcorres_store_invalid_pte])
-       apply(rule corres_dummy_return_l)
-       apply (rule_tac r'=dc
-         in corres_split[OF corres_free_return[where P=\<top> and P'=\<top>]])
+      apply (rule corres_split[OF _ dcorres_store_invalid_pte])
+        apply(rule corres_dummy_return_l)
+        apply (rule_tac r'=dc
+          in corres_split[OF corres_free_return[where P=\<top> and P'=\<top>]])
           apply (rule dcorres_store_invalid_pte_tail_large_page[where slot = ptr])
          apply wp
       apply (wp store_pte_non_sense_wp)
      apply simp
     apply simp+
-     apply (simp add: hd_map_simp upto_enum_step_def upto_enum_def)
-    apply (clarsimp simp:unat_def)
-    apply (rule slot_with_pt_frame_relation)
-      apply (simp add:invs_valid_idle)
-     apply (fastforce simp:pt_page_relation_def)
-    apply simp
-   apply (simp add:obj_at_def hd_map_simp upto_enum_step_def upto_enum_def
-     pt_page_relation_def)
-   apply (rule conjI,simp)
-   apply (rule conjI,fastforce)
- (* FIXME : clag from store_pde_super_section *)
-   apply (subst conj_ac)
-   apply (rule context_conjI)
-    apply (clarsimp simp:tl_map drop_map)
-    apply (simp add:field_simps)
-    apply (subst mask_lower_twice[symmetric,where n = 6])
-     apply (simp add:pt_bits_def pageBits_def)
-    apply (subst is_aligned_add_helper)
+   apply (simp add: hd_map_simp upto_enum_step_def upto_enum_def)
+   apply (clarsimp simp:unat_def)
+   apply (rule slot_with_pt_frame_relation)
+    apply (simp add:invs_valid_idle)
+   apply (fastforce simp:pt_page_relation_def)
+  apply simp
+  apply (simp add:obj_at_def hd_map_simp upto_enum_step_def upto_enum_def
+    pt_page_relation_def)
+  apply (rule conjI,simp)
+  apply (rule conjI,fastforce)
+  apply (subst conj_ac)
+  apply (rule context_conjI)
+   apply (clarsimp simp:tl_map drop_map)
+   apply (simp add:field_simps)
+   apply (subst mask_lower_twice[symmetric,where n = 6])
+    apply (simp add:pt_bits_def pageBits_def)
+   apply (subst is_aligned_add_helper)
      apply simp
     apply (simp add:upto_0_to_n)
     apply (rule word_less_power_trans_ofnat[where k = 2 and m = 6,simplified])
@@ -2186,21 +2020,6 @@ lemma dcorres_unmap_page_table_store_pde:
        apply clarsimp
    apply(clarsimp simp:pd_pt_relation_def unat_def obj_at_def)+
 done
-
-(*
-
-lemma cleanCacheMVA_underlying_memory[wp]:
-  " \<lbrace>\<lambda>ms. underlying_memory ms = m\<rbrace> cleanCacheMVA c
-              \<lbrace>\<lambda>rv ms. underlying_memory ms = m\<rbrace>"
-  apply (simp add:cleanCacheMVA_def)
-  apply (simp add:machine_op_lift_def machine_rest_lift_def)
-  apply wp
-  apply (clarsimp simp: valid_def simpler_modify_def)
-  apply (assumption)
-  apply wp
-  apply (simp add:ignore_failure_def)
-done
-*)
 
 lemma (in pspace_update_eq) pd_pt_relation_update[iff]:
   "pd_pt_relation a b c (f s) = pd_pt_relation a b c s"
@@ -3072,16 +2891,6 @@ lemma swap_for_delete_corres:
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   done
 
-
-lemma invs_valid_irq_node[elim!]:
-  "invs s \<Longrightarrow> valid_irq_node s"
-  by (simp add: invs_def valid_state_def)
-
-lemma corres_assert_rhs_both_sides:
-  "(F \<Longrightarrow> corres_underlying sr False r P P' f (g ()))
-    \<Longrightarrow> corres_underlying sr False r (\<lambda>s. F \<longrightarrow> P s) (\<lambda>s. F \<longrightarrow> P' s) f (assert F >>= g)"
-  by (cases F, simp_all add: corres_fail)
-
 definition
   "arch_page_vmpage_size cap \<equiv>
    case cap of cap.ArchObjectCap (arch_cap.PageCap _ _ sz _) \<Rightarrow> sz
@@ -3120,14 +2929,6 @@ lemma set_cap_noop_dcorres3:
   apply clarsimp
   apply (simp add: transform_cap_def split: cap.split_asm arch_cap.split_asm split_if_asm,
          simp_all add: get_ipc_buffer_words_def)
-  done
-
-lemma zombie_cap_two_nonidles:
-  "\<lbrakk> caps_of_state s ptr = Some (cap.Zombie ptr' zbits n); invs s \<rbrakk>
-       \<Longrightarrow> fst ptr \<noteq> idle_thread s \<and> ptr' \<noteq> idle_thread s"
-  apply (frule valid_global_refsD2, clarsimp+)
-  apply (simp add: cap_range_def global_refs_def)
-  apply (cases ptr, auto dest: valid_idle_has_null_cap[rotated -1])[1]
   done
 
 lemma finalise_zombie:
@@ -3276,7 +3077,6 @@ lemma throw_or_return_preemption_corres:
                     update_work_units_def wrap_ext_bool_det_ext_ext_def work_units_limit_def
                     work_units_limit_reached_def OR_choiceE_def reset_work_units_def mk_ef_def
            split: option.splits kernel_object.splits)
-  (* sseefried: Wait, what? Who says we don't do automatic proofs! *)
   done
 
 lemma cutMon_fail:

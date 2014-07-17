@@ -70,10 +70,12 @@ datatype asid_pool_invocation =
 
 datatype page_invocation
      = PageMap 
+         asid
          cap
          cslot_ptr
          "pte \<times> (obj_ref list) + pde \<times> (obj_ref list)"
-     | PageRemap 
+     | PageRemap
+         asid 
          "pte \<times> (obj_ref list) + pde \<times> (obj_ref list)"
      | PageUnmap 
          arch_cap
@@ -89,20 +91,30 @@ datatype page_invocation
 primrec
   page_map_cap :: "page_invocation \<Rightarrow> cap"
 where
-  "page_map_cap (PageMap c p x) = c"
+  "page_map_cap (PageMap a c p x) = c"
+
+primrec
+  page_map_asid :: "page_invocation \<Rightarrow> asid"
+where
+  "page_map_asid (PageMap a c p x) = a"
 primrec
   page_map_ct_slot :: "page_invocation \<Rightarrow> cslot_ptr"
 where
-  "page_map_ct_slot (PageMap c p x) = p"
+  "page_map_ct_slot (PageMap a c p x) = p"
 primrec
   page_map_entries :: "page_invocation \<Rightarrow> pte \<times> (obj_ref list) + pde \<times> (obj_ref list)"
 where
-  "page_map_entries (PageMap c p x) = x"
+  "page_map_entries (PageMap a c p x) = x"
 
 primrec
   page_remap_entries :: "page_invocation \<Rightarrow> pte \<times> (obj_ref list) + pde \<times> (obj_ref list)"
 where
-  "page_remap_entries (PageRemap x) = x"
+  "page_remap_entries (PageRemap a x) = x"
+
+primrec
+  page_remap_asid :: "page_invocation \<Rightarrow> asid"
+where
+  "page_remap_asid (PageRemap a x) = a"
 
 primrec
   page_unmap_cap :: "page_invocation \<Rightarrow> arch_cap"

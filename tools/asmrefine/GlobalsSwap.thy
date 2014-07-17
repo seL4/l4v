@@ -471,6 +471,15 @@ lemma globals_swap_access_mem:
     \<Longrightarrow> g (globals_swap g_hrs g_hrs_upd symtab xs gs) = h_val (hrs_mem (g_hrs gs)) (Ptr (symtab nm))"
   by (simp add: global_data_def globals_swap_access_mem_raw)
 
+lemma globals_swap_access_mem2:
+  "\<lbrakk> global_data nm g u \<in> set xs;
+     global_acc_valid g_hrs g_hrs_upd;
+     globals_list_valid g_hrs g_hrs_upd xs; 
+     globals_list_distinct D symtab xs \<rbrakk>
+    \<Longrightarrow> g gs = h_val (hrs_mem (g_hrs (globals_swap g_hrs g_hrs_upd symtab xs gs))) (Ptr (symtab nm))"
+  using globals_swap_twice_helper globals_swap_access_mem
+  by metis
+
 lemma globals_swap_update_mem_raw:
   "\<lbrakk> global_acc_valid g_hrs g_hrs_upd;
      \<forall>hmem. (v hmem) = v'; length v' = m;
@@ -510,6 +519,17 @@ lemma globals_swap_update_mem:
   apply clarsimp
   apply (rule to_bytes_p_from_bytes_eq[symmetric], simp+)
   done
+
+lemma globals_swap_update_mem2:
+  assumes prems: "global_data nm g u \<in> set xs"
+     "global_acc_valid g_hrs g_hrs_upd"
+     "globals_list_valid g_hrs g_hrs_upd xs"
+     "globals_list_distinct D symtab xs"
+  shows "globals_swap g_hrs g_hrs_upd symtab xs (u (\<lambda>_. v) gs)
+        = g_hrs_upd (hrs_mem_update (\<lambda>hrs. heap_update (Ptr (symtab nm)) v hrs))
+            (globals_swap g_hrs g_hrs_upd symtab xs gs)"
+  using prems globals_swap_twice_helper globals_swap_update_mem
+  by metis
 
 lemma globals_swap_hrs_htd_update:
   "\<lbrakk> global_acc_valid g_hrs g_hrs_upd;
@@ -669,7 +689,6 @@ fun define_globals_list mungedb globloc globty thy = let
     open CalculateState NameGeneration
 
     val sT = @{typ string}
-    val wT = @{typ word32}
     val gdT = Type (@{type_name global_data}, [globty])
 
     val ctxt = Named_Target.context_cmd (globloc,Position.none) thy
@@ -732,7 +751,6 @@ fun define_globals_list mungedb globloc globty thy = let
   in Local_Theory.exit_global ctxt end
 
 fun define_globals_list_i s globty thy = let
-    val mungedb = CalculateState.get_mungedb thy s |> the
     val {base = localename,...} = OS.Path.splitBaseExt (OS.Path.file s)
     val globloc = suffix HPInter.globalsN localename
   in define_globals_list (CalculateState.get_mungedb thy s |> the)

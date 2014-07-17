@@ -727,11 +727,6 @@ lemma pt_slot_eq:
   apply clarsimp
   done
 
-lemma  ekheap_kheap_dom:
-  "\<lbrakk>ekheap s x = Some etcb; valid_etcbs s\<rbrakk>
-    \<Longrightarrow> \<exists>tcb. kheap s x = Some (TCB tcb)"
-  by (fastforce simp: valid_etcbs_def st_tcb_at_def obj_at_def is_etcb_at_def)
-
 -- "set_other_obj_corres unfortunately doesn't work here"
 lemma set_pd_corres:
   "pde_relation_aligned (p>>2) pde pde' \<Longrightarrow>

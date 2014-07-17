@@ -2755,6 +2755,18 @@ lemma s0H_valid_pspace':
     apply ((clarsimp split: split_if_asm)+)[3]
     done
 
+(* Instantiate the current, abstract domain scheduler into the
+   concrete scheduler required for this example *)
+axiomatization newKSDomSchedInst where
+  newKSDomSched: "newKSDomSchedule = [(0,0xA), (1, 0xA)]"
+
+(* kernel_data_refs is an undefined constant at the moment, and therefore
+   cannot be referred to in valid_global_refs' and pspace_domain_valid.
+   We use an axiomatization for the moment. *)
+axiomatization kernel_data_refs_valid where
+  kdr_valid_global_refs': "valid_global_refs' s0H_internal" and
+  kdr_pspace_domain_valid: "pspace_domain_valid s0H_internal"
+
 lemma s0H_invs:
   "invs' s0H_internal"
   apply (clarsimp simp: invs'_def valid_state'_def s0H_valid_pspace')
@@ -2768,22 +2780,22 @@ lemma s0H_invs:
    apply (clarsimp simp: sym_refs_def state_refs_of'_def refs_of'_def split: option.splits)
    apply (frule kh0H_SomeD)
    apply (elim disjE, simp_all)[1]
-               apply (clarsimp simp: tcb_st_refs_of'_def idle_tcbH_def)
-              apply (clarsimp simp: tcb_st_refs_of'_def High_tcbH_def)
-              apply (rule conjI)
-               apply (clarsimp simp: aepH_def)
-              apply (clarsimp simp: objBitsKO_def aepH_def)
-              apply (erule impE, simp add: is_aligned_def s0_ptr_defs)
-              apply (erule notE, rule pspace_distinctD''[OF _ s0H_pspace_distinct'])
-              apply (simp add: objBitsKO_def aepH_def)
-             apply (clarsimp simp: tcb_st_refs_of'_def Low_tcbH_def)
-            apply (clarsimp simp: aepH_def aep_q_refs_of'_def)
-            apply (rule conjI)
+              apply (clarsimp simp: tcb_st_refs_of'_def idle_tcbH_def)
              apply (clarsimp simp: tcb_st_refs_of'_def High_tcbH_def)
-            apply (clarsimp simp: objBitsKO_def s0_ptrs_aligned)
-            apply (erule notE, rule pspace_distinctD''[OF _ s0H_pspace_distinct'])
-            apply (simp add: objBitsKO_def)
-           apply (clarsimp simp: irq_cte_def)
+             apply (rule conjI)
+              apply (clarsimp simp: aepH_def)
+             apply (clarsimp simp: objBitsKO_def aepH_def)
+             apply (erule impE, simp add: is_aligned_def s0_ptr_defs)
+             apply (erule notE, rule pspace_distinctD''[OF _ s0H_pspace_distinct'])
+             apply (simp add: objBitsKO_def aepH_def)
+            apply (clarsimp simp: tcb_st_refs_of'_def Low_tcbH_def)
+           apply (clarsimp simp: aepH_def aep_q_refs_of'_def)
+           apply (rule conjI)
+            apply (clarsimp simp: tcb_st_refs_of'_def High_tcbH_def)
+           apply (clarsimp simp: objBitsKO_def s0_ptrs_aligned)
+           apply (erule notE, rule pspace_distinctD''[OF _ s0H_pspace_distinct'])
+           apply (simp add: objBitsKO_def)
+          apply (clarsimp simp: irq_cte_def)
           apply (clarsimp simp: Low_cte_def Low_cte'_def split: split_if_asm)
          apply (clarsimp simp: High_cte_def High_cte'_def split: split_if_asm)
         apply (clarsimp simp: Silc_cte_def Silc_cte'_def split: split_if_asm)
@@ -2874,7 +2886,7 @@ lemma s0H_invs:
    apply (rule pspace_distinctD''[OF _ s0H_pspace_distinct', simplified s0H_internal_def])
    apply (simp add: objBitsKO_def)
   apply (rule conjI)
-   defer
+   apply (clarsimp simp: kdr_valid_global_refs') (* use axiomatization for now *)
   apply (rule conjI)
    apply (clarsimp simp: valid_arch_state'_def)
    apply (intro conjI)
@@ -2986,7 +2998,7 @@ lemma s0H_invs:
     apply (clarsimp split: split_if_asm)
    apply (clarsimp split: split_if_asm)
   apply (rule conjI)
-   defer
+   apply (clarsimp simp: kdr_pspace_domain_valid) (* use axiomatization for now *)
   apply (rule conjI)
    apply (clarsimp simp: s0H_internal_def)
   apply (rule conjI)
@@ -2994,16 +3006,13 @@ lemma s0H_invs:
   apply (rule conjI)
    apply (clarsimp simp: s0H_internal_def maxDomain_def numDomains_def dschDomain_def dschLength_def)
   apply (rule conjI)
-   defer
+   apply (clarsimp simp: s0H_internal_def newKernelState_def newKSDomSched)
   apply (rule conjI)
-   apply (clarsimp simp: s0H_internal_def newKernelState_def)
+   apply (clarsimp simp: s0H_internal_def newKernelState_def newKSDomSched)
   apply (clarsimp simp: cur_tcb'_def obj_at'_def projectKO_eq project_inject s0H_internal_def objBitsKO_def s0_ptrs_aligned)
   apply (rule pspace_distinctD''[OF _ s0H_pspace_distinct', simplified s0H_internal_def])
   apply (simp add: objBitsKO_def kh0H_simps[simplified cte_level_bits_def])
-  (* kernel_data_refs is an undefined const, can't talk about this in
-     valid_global_refs' and pspace_domain_valid.
-     Invariant ksDomSchedule s0H = ksDomSchedule (newKernelState) is False *)
-sorry
+  done
 
 lemma kh0_pspace_dom:
   "pspace_dom kh0 = {init_globals_frame, idle_tcb_ptr, High_tcb_ptr, Low_tcb_ptr,

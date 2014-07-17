@@ -1083,18 +1083,6 @@ section "Lemmas"
 lemmas objBits_simps = objBits_def objBitsKO_def word_size_def
 lemmas objBitsKO_simps = objBitsKO_def word_size_def objBits_simps
 
-(* FIXME: move *)
-lemma and_neg_mask_plus_mask_mono: "(p && ~~ mask n) + mask n \<ge> (p::word32)"
-  apply (subst add_commute)
-  apply (rule word_le_minus_cancel[where x = "p && ~~ mask n"])
-   apply (clarsimp simp: subtract_mask)
-   using word_and_le1[where a = "mask n" and y = p]
-   apply (clarsimp simp: mask_def word_le_less_eq)
-  apply (subst add_commute)
-  apply (rule is_aligned_no_overflow'[folded mask_2pm1])
-  apply (clarsimp simp: is_aligned_neg_mask)
-  done
-
 lemma valid_duplicates'_D:
   "\<lbrakk>vs_valid_duplicates' m; m (p::word32) = Some ko;is_aligned p' 2;
   p && ~~ mask (vs_ptr_align ko) = p' && ~~ mask (vs_ptr_align ko)\<rbrakk>

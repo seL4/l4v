@@ -2605,14 +2605,6 @@ lemma setupCallerCap_tcb_at'[wp]:
 crunch ct'[wp]: setupCallerCap "\<lambda>s. P (ksCurThread s)"
   (wp: crunch_wps)
 
-lemma corres_symmetric_bool_cases:
-  "\<lbrakk> P = P'; \<lbrakk> P; P' \<rbrakk> \<Longrightarrow> corres r Q Q' f g;
-        \<lbrakk> \<not> P; \<not> P' \<rbrakk> \<Longrightarrow> corres r R R' f g \<rbrakk>
-      \<Longrightarrow> corres r (\<lambda>s. (P \<longrightarrow> Q s) \<and> (\<not> P \<longrightarrow> R s))
-                   (\<lambda>s. (P' \<longrightarrow> Q' s) \<and> (\<not> P' \<longrightarrow> R' s))
-                   f g"
-  by (cases P, simp_all)
-
 lemma cteInsert_sch_act_wf[wp]:
   "\<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s\<rbrace>
      cteInsert newCap srcSlot destSlot

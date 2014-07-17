@@ -28,6 +28,16 @@ where
 
 text {* Base case facts about correspondence *}
 
+lemma corres_underlyingD:
+  "\<lbrakk> corres_underlying R z rs P P' f f'; (s,s') \<in> R; P s; P' s' \<rbrakk>
+  \<Longrightarrow> (\<forall>(r',t')\<in>fst (f' s'). \<exists>(r,t)\<in>fst (f s). (t, t') \<in> R \<and> rs r r') \<and> (z \<longrightarrow> \<not> snd (f' s'))"
+  by (fastforce simp: corres_underlying_def)
+
+lemma corres_underlyingD2:
+  "\<lbrakk> corres_underlying R z rs P P' f f'; (s,s') \<in> R; P s; P' s'; (r',t')\<in>fst (f' s') \<rbrakk>
+  \<Longrightarrow> \<exists>(r,t)\<in>fst (f s). (t, t') \<in> R \<and> rs r r'"
+  by (fastforce dest: corres_underlyingD)
+
 lemma propagate_no_fail:
   "\<lbrakk> corres_underlying S True R P P' f f';
         no_fail P f; \<forall>s'. P' s' \<longrightarrow> (\<exists>s. P s \<and> (s,s') \<in> S) \<rbrakk> 
@@ -472,6 +482,14 @@ lemma corres_weaker_disj_division:
       apply simp+
   done
 
+lemma corres_symmetric_bool_cases:
+  "\<lbrakk> P = P'; \<lbrakk> P; P' \<rbrakk> \<Longrightarrow> corres_underlying srel nf r Q Q' f g;
+        \<lbrakk> \<not> P; \<not> P' \<rbrakk> \<Longrightarrow> corres_underlying srel nf r R R' f g \<rbrakk>
+      \<Longrightarrow> corres_underlying srel nf r (\<lambda>s. (P \<longrightarrow> Q s) \<and> (\<not> P \<longrightarrow> R s))
+                                      (\<lambda>s. (P' \<longrightarrow> Q' s) \<and> (\<not> P' \<longrightarrow> R' s))
+                                      f g"
+  by (cases P, simp_all)
+
 text {* Support for symbolically executing into the guards
         and manipulating them *}
 
@@ -629,6 +647,13 @@ lemma corres_assert_assume:
   corres_underlying sr nf r P Q f (assert P' >>= g)"
   by (auto simp: bind_def assert_def fail_def return_def 
                  corres_underlying_def)
+
+lemma corres_state_assert:
+  "corres_underlying sr nf rr P Q f (g ()) \<Longrightarrow>
+   (\<And>s. Q s \<Longrightarrow> R s) \<Longrightarrow>
+   corres_underlying sr nf rr P Q f (state_assert R >>= g)"
+  by (clarsimp simp: corres_underlying_def state_assert_def get_def assert_def
+                     return_def bind_def)
 
 lemma corres_stateAssert_assume:
   "\<lbrakk> corres_underlying sr nf r P Q f (g ()); \<And>s. Q s \<Longrightarrow> P' s \<rbrakk> \<Longrightarrow>
@@ -1001,6 +1026,25 @@ lemma corres_either_alternate:
   apply simp
   done
 
+lemma corres_either_alternate2:
+  "\<lbrakk> corres_underlying sr nf r P R a c; corres_underlying sr nf r Q R b c \<rbrakk>
+   \<Longrightarrow> corres_underlying sr nf r (P or Q) R (a \<sqinter> b) c"
+  apply (simp add: corres_underlying_def alternative_def)
+  apply clarsimp
+  apply (drule (1) bspec, clarsimp)+
+   apply (erule disjE)
+   apply clarsimp
+   apply (drule(1) bspec, clarsimp)
+   apply (rule rev_bexI)
+    apply (erule UnI1)
+   apply simp
+   apply clarsimp
+  apply (drule(1) bspec, clarsimp)
+  apply (rule rev_bexI)
+   apply (erule UnI2)
+  apply simp
+  done
+
 lemma option_corres:
   assumes "x = None \<Longrightarrow> corres_underlying sr nf r P P' (A None) (C None)"
   assumes "\<And>z. x = Some z \<Longrightarrow> corres_underlying sr nf r (Q z) (Q' z) (A (Some z)) (C (Some z))"
@@ -1008,6 +1052,11 @@ lemma option_corres:
                   (\<lambda>s. (x = None \<longrightarrow> P' s) \<and> (\<forall>z. x = Some z \<longrightarrow> Q' z s)) 
                   (A x) (C x)"
   by (cases x) (auto simp: assms)
+
+lemma corres_bind_return:
+ "corres_underlying sr nf r P P' (f >>= return) g \<Longrightarrow>
+  corres_underlying sr nf r P P' f g"
+  by (simp add: corres_underlying_def)
 
 lemma corres_bind_return2:
   "corres_underlying sr nf r P P' f (g >>= return) \<Longrightarrow> corres_underlying sr nf r P P' f g"

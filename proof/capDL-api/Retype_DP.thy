@@ -215,16 +215,16 @@ lemma dummy_detype_if_untyped:
   apply (drule_tac x = "(x,Fields)" in fun_cong)+
   apply (case_tac xa,case_tac y)
   apply (clarsimp simp:plus_sep_state_def sep_state_add_def asid_reset_def
-    intent_reset_def update_slots_def object_clean_slots_def sep_disj_sep_state_def
-    obj_to_sep_state_def object_project_def object_lift_def
+    intent_reset_def update_slots_def object_wipe_slots_def sep_disj_sep_state_def
+    obj_to_sep_state_def object_project_def object_clean_def
     sep_state_disj_def)
   apply (drule map_disj_None_right'[rotated])
    apply simp
   apply (clarsimp simp: map_add_def split:option.splits)
   apply (case_tac z)
     apply (clarsimp simp:plus_sep_state_def sep_state_add_def asid_reset_def
-    intent_reset_def update_slots_def object_clean_slots_def sep_disj_sep_state_def
-    obj_to_sep_state_def object_project_def object_lift_def
+    intent_reset_def update_slots_def object_wipe_slots_def sep_disj_sep_state_def
+    obj_to_sep_state_def object_project_def object_clean_def
     sep_state_disj_def)+
   done
 

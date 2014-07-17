@@ -169,8 +169,8 @@ val crunchP =
                (fn lthy =>
                  (case get_crunch_instance crunch_instance (Proof_Context.theory_of lthy) of
                      NONE => error ("Crunch has not been defined for " ^ crunch_instance)
-                   | SOME (crunch_x, _) => crunch_x)
-                 att_srcs extra prp_name wpigs consts lthy)));
+                   | SOME (crunch_x, _) =>
+                       crunch_x att_srcs extra prp_name wpigs consts lthy))));
 
 val add_sect = "add";
 val del_sect = "del";
@@ -189,12 +189,12 @@ val crunch_ignoreP =
                                    |> map (const_name o #2);
                    val del = wpigs |> filter (fn (s,_) => s = del_sect)
                                    |> map (const_name o #2);
-               in
-               (case get_crunch_instance crunch_instance (Proof_Context.theory_of lthy) of
+                   val crunch_ignore_add_del = (case get_crunch_instance crunch_instance (Proof_Context.theory_of lthy) of
                      NONE => error ("Crunch has not been defined for " ^ crunch_instance)
-                   | SOME (_, crunch_ignore_add_del) =>
-                       Local_Theory.raw_theory (crunch_ignore_add_del add del) lthy
-                       |> (fn lthy => Named_Target.reinit lthy lthy))
+                   | SOME x => snd x);
+               in
+                  Local_Theory.raw_theory (crunch_ignore_add_del add del) lthy
+                  |> (fn lthy => Named_Target.reinit lthy lthy)
                end));
 
 end;

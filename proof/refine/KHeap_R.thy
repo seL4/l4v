@@ -1062,14 +1062,6 @@ lemma set_other_obj_corres:
   apply (clarsimp simp: a_type_def other_obj_relation_def etcb_relation_def is_other_obj_relation_type t exst_same_def split: Structures_A.kernel_object.splits Structures_H.kernel_object.splits ARM_Structs_A.arch_kernel_obj.splits)
   done
 
-lemma ekheap_tcb_at:
-  "\<lbrakk>ekheap s x = Some y; valid_etcbs s\<rbrakk> \<Longrightarrow> tcb_at x s"
-  by (fastforce simp: valid_etcbs_def is_etcb_at_def st_tcb_at_def obj_at_def is_tcb_def)
-
-lemma kheap_ekheap_dom:
-  "\<lbrakk>kheap s x = Some (TCB tcb); valid_etcbs s\<rbrakk> \<Longrightarrow> \<exists>etcb. ekheap s x = Some etcb"
-  by (force simp: valid_etcbs_def is_etcb_at_def st_tcb_at_def obj_at_def)
-
 lemma set_ep_corres:
   "ep_relation e e' \<Longrightarrow>
   corres dc (ep_at ptr) (ep_at' ptr) 

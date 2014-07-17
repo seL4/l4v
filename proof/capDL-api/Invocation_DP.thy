@@ -50,9 +50,9 @@ lemma intent_reset_projection[simp]:
 
 lemma asid_reset_intent_reset_switch:
   "asid_reset (intent_reset x) = intent_reset (asid_reset x)"
-  apply (cut_tac object_lift_def2[unfolded Fun.comp_def,simplified,symmetric])
+  apply (cut_tac object_clean_def2[unfolded Fun.comp_def,simplified,symmetric])
   apply (drule_tac x = x in fun_cong)
-  apply (simp add:object_lift_def)
+  apply (simp add:object_clean_def)
   done
 
 lemma reset_cap_twice[simp]:
@@ -69,16 +69,16 @@ lemma asid_reset_twice[simp]:
     simp_all add:asid_reset_def
     update_slots_def object_slots_def)
 
-lemma object_lift_twice[simp]:
-  "object_lift (object_lift x) = object_lift x"
-  by (clarsimp simp:object_lift_def asid_reset_intent_reset_switch)
+lemma object_clean_twice[simp]:
+  "object_clean (object_clean x) = object_clean x"
+  by (clarsimp simp:object_clean_def asid_reset_intent_reset_switch)
 
 
 (* The following should be correct once we rule the intent out of our lift function *)
 lemma sep_nonimpact_valid_lift:
   assumes non_intent_impact:
-   "\<And>ptr P A. \<lbrace>\<lambda>s. A (object_at (\<lambda>obj. P (object_lift obj)) ptr s)\<rbrace>
-    f \<lbrace>\<lambda>rv s. A (object_at (\<lambda>obj. P (object_lift obj)) ptr s)\<rbrace>"
+   "\<And>ptr P A. \<lbrace>\<lambda>s. A (object_at (\<lambda>obj. P (object_clean obj)) ptr s)\<rbrace>
+    f \<lbrace>\<lambda>rv s. A (object_at (\<lambda>obj. P (object_clean obj)) ptr s)\<rbrace>"
   assumes non_irq_node_impact:
    "\<And>ptr P A. \<lbrace>\<lambda>s. A (cdl_irq_node s)\<rbrace> f \<lbrace>\<lambda>rv s. A (cdl_irq_node s)\<rbrace>"
   shows
@@ -97,10 +97,10 @@ lemma sep_nonimpact_valid_lift:
      apply (simp add:object_at_def opt_object_def)+
     apply (drule_tac P1 ="\<lambda>x. True" and A1 = "\<lambda>x. x" in use_valid[OF _ non_intent_impact])
     apply (fastforce simp:object_at_def opt_object_def)+
-   apply (drule_tac P1 ="\<lambda>x. object_lift x = object_lift ab" and
+   apply (drule_tac P1 ="\<lambda>x. object_clean x = object_clean ab" and
                     A1 = "\<lambda>x. x" in use_valid[OF _ non_intent_impact])
     apply (fastforce simp:object_at_def opt_object_def)
-   apply (clarsimp simp: object_at_def opt_object_def object_slots_object_lift
+   apply (clarsimp simp: object_at_def opt_object_def object_slots_object_clean
                          object_project_def
                   split: cdl_component.splits)
   apply (rule ext)+
@@ -118,19 +118,19 @@ lemma mark_tcb_intent_error_sep_inv[wp]:
    apply (simp add:mark_tcb_intent_error_def update_thread_def
      set_object_def)
    apply (wp | wpc | simp add:set_object_def)+
-   apply (clarsimp simp: object_at_def opt_object_def object_lift_def intent_reset_def
+   apply (clarsimp simp: object_at_def opt_object_def object_clean_def intent_reset_def
                          object_slots_def asid_reset_def update_slots_def)
   apply wp
   done
 
 lemma corrupt_tcb_intent_sep_helper[wp]:
-  "\<lbrace>\<lambda>s. A (object_at (\<lambda>obj. P (object_lift obj)) ptr s)\<rbrace> corrupt_tcb_intent thread
-  \<lbrace>\<lambda>rv s. A (object_at (\<lambda>obj. P (object_lift obj)) ptr s)\<rbrace>"
+  "\<lbrace>\<lambda>s. A (object_at (\<lambda>obj. P (object_clean obj)) ptr s)\<rbrace> corrupt_tcb_intent thread
+  \<lbrace>\<lambda>rv s. A (object_at (\<lambda>obj. P (object_clean obj)) ptr s)\<rbrace>"
    apply (simp add:corrupt_tcb_intent_def update_thread_def
      set_object_def)
    apply (wp select_wp | wpc | simp add:set_object_def)+
    apply (clarsimp simp:object_at_def opt_object_def)
-   apply (simp add:object_lift_def intent_reset_def
+   apply (simp add:object_clean_def intent_reset_def
      object_slots_def asid_reset_def update_slots_def)
   done
 
@@ -144,13 +144,13 @@ lemma corrupt_tcb_intent_sep_inv[wp]:
   done
 
 lemma corrupt_frame_sep_helper[wp]:
-  "\<lbrace>\<lambda>s. A (object_at (\<lambda>obj. P (object_lift obj)) ptr s)\<rbrace>
-  corrupt_frame a \<lbrace>\<lambda>rv s. A (object_at (\<lambda>obj. P (object_lift obj)) ptr s)\<rbrace>"
+  "\<lbrace>\<lambda>s. A (object_at (\<lambda>obj. P (object_clean obj)) ptr s)\<rbrace>
+  corrupt_frame a \<lbrace>\<lambda>rv s. A (object_at (\<lambda>obj. P (object_clean obj)) ptr s)\<rbrace>"
   apply (simp add:corrupt_frame_def)
   apply (wp select_wp)
   apply (clarsimp simp:corrupt_intents_def object_at_def
     opt_object_def map_add_def split:option.splits cdl_object.splits)
-  apply (simp add:object_lift_def intent_reset_def
+  apply (simp add:object_clean_def intent_reset_def
      object_slots_def asid_reset_def update_slots_def)
   done
 
@@ -174,7 +174,7 @@ lemma update_thread_intent_update:
    apply (simp add:update_thread_def set_object_def get_thread_def)
    apply (wp  | wpc | simp add:object_at_def opt_object_def
      intent_reset_def set_object_def)+
-   apply (simp add:object_lift_def intent_reset_def
+   apply (simp add:object_clean_def intent_reset_def
      object_slots_def asid_reset_def update_slots_def)
    apply fastforce
   apply wp
@@ -573,18 +573,6 @@ lemma call_kernel_with_intent_no_fault_helper:
   apply auto
   done
 
-lemma opt_cap_Some_sep:
-  "opt_cap dest_slot s = Some cap
-   \<Longrightarrow> object_at_heap
-  (\<lambda>obj. \<exists>cap. object_slots (object_clean obj {Slot (snd dest_slot)}) = [snd dest_slot \<mapsto> cap])
-  (fst dest_slot) (cdl_objects s)"
-  apply (clarsimp simp:opt_cap_def split_def restrict_map_def
-    object_at_heap_def opt_object_def clean_slots_def
-    slots_of_def split:option.splits)
-  apply (rule_tac x = cap in exI)
-  apply auto
-  done
-
 
 lemma invoke_cnode_insert_cap:
   "\<lbrace>\<lambda>s. < dest_slot \<mapsto>c - \<and>* R> s \<and> \<not> is_untyped_cap cap'  \<rbrace>
@@ -601,14 +589,6 @@ lemma invoke_cnode_insert_cap:
    apply (rule insert_cap_child_wp)
   apply simp
   done
-
-lemma object_clean_slots_CNode:
-  "(object_clean_slots (object_lift (CNode fs)) {})
-  = CNode (fs\<lparr>cdl_cnode_caps := Map.empty\<rparr>)"
-  by (clarsimp simp:object_lift_def intent_reset_def
-    update_slots_def object_clean_slots_def
-    clean_slots_def
-    asid_reset_def object_slots_def)
 
 lemma invoke_cnode_move_wp:
   "\<lbrace><dest \<mapsto>c - \<and>* src \<mapsto>c cap \<and>* R>\<rbrace> invoke_cnode (MoveCall cap' src dest)
@@ -1104,11 +1084,11 @@ lemma invoke_cnode_insert_cap':
   done
 
 lemma object_to_sep_state_slot:
-  "obj_to_sep_state (fst ptr) {Slot (snd ptr)} obj = [(fst ptr, Slot (snd ptr)) \<mapsto>
+  "obj_to_sep_state (fst ptr) obj {Slot (snd ptr)} = [(fst ptr, Slot (snd ptr)) \<mapsto>
   (CDL_Cap ((reset_cap_asid \<circ>\<^sub>M object_slots obj) (snd ptr)))]"
   apply (rule ext)
   apply (clarsimp simp:obj_to_sep_state_def
-    object_project_slot object_slots_object_lift
+    object_project_slot object_slots_object_clean
     split:if_splits)
   done
 

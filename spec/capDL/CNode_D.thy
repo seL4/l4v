@@ -165,7 +165,6 @@ where
   "invoke_cnode params \<equiv> case params of
     (* Insert a new cap. *)
       InsertCall cap src_slot dest_slot \<Rightarrow>
-        (* FIXME: probably want to be more precise here *)
         liftE $ 
           insert_cap_sibling cap src_slot dest_slot
           \<sqinter>

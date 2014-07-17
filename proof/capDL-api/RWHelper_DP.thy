@@ -261,7 +261,7 @@ lemma sep_spec_simps:
   apply (case_tac s')
   apply (clarsimp simp:obj_to_sep_state_def)
   apply (rule ext)
-  apply (clarsimp simp: object_project_def object_slots_object_lift
+  apply (clarsimp simp: object_project_def object_slots_object_clean
                  split: split_if_asm)
   done
 
@@ -409,16 +409,16 @@ lemma all_scheduable_tcbs_rewrite:
   apply (clarsimp simp:all_scheduable_tcbs_def state_sep_projection_def
     sep_all_scheduable_tcbs_def object_at_heap_def object_project_def
     is_tcb_obj_type)
-  apply (clarsimp simp:object_type_def object_slots_object_lift
+  apply (clarsimp simp:object_type_def object_slots_object_clean
     tcb_scheduable_def object_slots_def scheduable_cap_def)
-  apply (fastforce simp:object_lift_def asid_reset_def update_slots_def
+  apply (fastforce simp:object_clean_def asid_reset_def update_slots_def
     reset_cap_asid_def intent_reset_def object_slots_def
     split:if_splits)
  apply (clarsimp simp:all_scheduable_tcbs_def state_sep_projection_def
     sep_all_scheduable_tcbs_def object_at_heap_def object_project_def
     is_tcb_obj_type split:option.splits)
  apply (clarsimp simp:object_type_def tcb_scheduable_def
-   scheduable_cap_def object_slots_def object_lift_def asid_reset_def
+   scheduable_cap_def object_slots_def object_clean_def asid_reset_def
    update_slots_def intent_reset_def reset_cap_asid_def
    split:cdl_object.splits cdl_cap.splits option.splits)
  done
@@ -428,12 +428,6 @@ lemma update_slots_rev:
   obj = update_slots (object_slots obj) obj'"
   by (clarsimp simp:update_slots_def object_slots_def
     split:cdl_object.splits)
-
-lemma object_clean_rev:
- "\<lbrakk>object_clean obj cmps = obj'; Fields \<in> cmps\<rbrakk> \<Longrightarrow>
-  \<exists>slots. obj = update_slots (object_slots obj) obj' "
-  by (clarsimp simp:object_clean_def)
-
 
 lemma all_scheduable_tcbsD:
   "ptr \<in> all_scheduable_tcbs (cdl_objects s)
@@ -470,7 +464,7 @@ lemma set_cap_all_scheduable_tcbs:
    apply (clarsimp simp:object_at_heap_def tcb_scheduable_def
      state_sep_projection_def object_project_def)
    apply (rule conjI)
-    apply (clarsimp simp:object_slots_def object_lift_def
+    apply (clarsimp simp:object_slots_def object_clean_def
       update_slots_def intent_reset_def asid_reset_def
       split:option.splits)
     apply fastforce+

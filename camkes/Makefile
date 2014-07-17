@@ -9,20 +9,19 @@
 #
 
 ## Targets
-images: Camkes CamkesARMModel
+images: Camkes
 default: images test
 test: 
 all: images test
 report-regression:
-	@echo Camkes CamkesARMModel
+	@echo Camkes
 
 #
 # Setup heaps.
 #
 
 # CAmkES
-HEAPS += CamkesAdlSpec CamkesAutomaton CamkesGlueSpec CamkesCode CamkesARMModel \
-    CamkesGlueProofs
+HEAPS += CamkesAdlSpec CamkesGlueSpec CamkesGlueProofs
 GROUPS += Camkes
 
 # Clean

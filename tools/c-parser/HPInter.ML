@@ -413,7 +413,7 @@ let
                             (Proof_Context.theory_of ctxt)
 
 in
-  (globloc, defs, Proof_Context.theory_of ctxt)
+  (globloc, defs, Local_Theory.exit_global ctxt)
 end
 
 

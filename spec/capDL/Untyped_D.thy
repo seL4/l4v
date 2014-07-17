@@ -88,7 +88,6 @@ where
 
 
 (* Insert a cap for a new object in the given location. *)
-(* FIXME: we do not do update_untyped_as_full here for refinedment ? *)
 definition
   create_cap :: "cdl_object_type \<Rightarrow> nat \<Rightarrow> cdl_cap_ref \<Rightarrow> (cdl_cap_ref \<times> cdl_object_id set) \<Rightarrow> unit k_monad"
 where
@@ -106,7 +105,7 @@ definition
 where "update_available_range orange newids cap_ref cap \<equiv>
   do
      new_range  \<leftarrow> select {x. x \<subseteq> orange - set newids};
-     set_cap cap_ref $ set_avaiable_range cap new_range
+     set_cap cap_ref $ set_available_range cap new_range
   od"
 
 
@@ -143,7 +142,7 @@ where
          (* If the untyped hasn't already been typed into something we reuse our names. *)
          unless has_kids $ modify (detype (cap_objects untyped_cap));
 
-         new_range \<leftarrow> return $ if has_kids then (avaiable_range untyped_cap) else (cap_objects untyped_cap);
+         new_range \<leftarrow> return $ if has_kids then (available_range untyped_cap) else (cap_objects untyped_cap);
          new_obj_refs \<leftarrow> generate_object_ids num_objects new_type new_range;
 
          update_available_range new_range (map (\<lambda>s. pick s) new_obj_refs) untyped_ref untyped_cap;

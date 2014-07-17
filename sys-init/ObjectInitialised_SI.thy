@@ -489,12 +489,11 @@ lemma update_slots_empty_spec2s [simp]:
   by (clarsimp simp: spec2s_def)
 
 lemma obj_to_sep_state_fields_spec2s [simp]:
-  "obj_to_sep_state obj_id {Fields} (spec2s t obj)
-  = obj_to_sep_state obj_id {Fields} obj"
+  "obj_to_sep_state obj_id (spec2s t obj) {Fields}
+  = obj_to_sep_state obj_id obj {Fields}"
   apply (rule ext)
-  apply (clarsimp simp: obj_to_sep_state_def object_project_def object_lift_def
-                        object_clean_slots_def asid_reset_def spec2s_def
-                        clean_slots_def)
+  apply (clarsimp simp: obj_to_sep_state_def object_project_def object_clean_def
+                        asid_reset_def spec2s_def object_wipe_slots_def)
   done
 
 lemma sep_map_f_spec2s [simp]:
@@ -510,19 +509,6 @@ lemma object_slots_cnode_half [simp]:
   apply (clarsimp simp: cnode_half_def)
   apply (case_tac "has_slots obj")
    apply (auto simp: dom_def)
-  done
-
-lemma intent_reset_object_clean_fields:
-  "\<lbrakk>intent_reset obj = intent_reset obj'; Fields \<notin> cmps\<rbrakk>
-  \<Longrightarrow> object_clean_fields obj cmps = object_clean_fields obj' cmps"
-  by (force simp: object_clean_fields_def intent_reset_def cdl_tcb.splits
-           split: cdl_object.splits)
-
-lemma intent_reset_object_clean:
-  "\<lbrakk>intent_reset obj = intent_reset obj'; Fields \<notin> cmps\<rbrakk>
-  \<Longrightarrow> object_clean obj cmps = object_clean obj' cmps"
-  apply (clarsimp simp: object_clean_def)
-  apply (drule_tac obj1=obj and obj'1=obj' in trans [OF intent_reset_object_clean_fields], fastforce+)
   done
 
 lemma intent_reset_object_type:
@@ -588,11 +574,11 @@ lemma sep_map_E_eq:
   \<Longrightarrow> (p \<mapsto>E obj) = (p \<mapsto>E obj')"
   apply (clarsimp simp: sep_map_E_def sep_map_S'_def sep_map_general_def)
   apply (rule ext)
-  apply (subgoal_tac "obj_to_sep_state p (Slot ` (UNIV - dom (object_slots obj'))) obj
-    = obj_to_sep_state p (Slot ` (UNIV - dom (object_slots obj'))) obj'")
+  apply (subgoal_tac "obj_to_sep_state p obj (Slot ` (UNIV - dom (object_slots obj')))
+    = obj_to_sep_state p obj' (Slot ` (UNIV - dom (object_slots obj')))")
    apply simp
   apply (fastforce simp: obj_to_sep_state_def split_def
-                         object_project_def object_slots_object_lift
+                         object_project_def object_slots_object_clean
                   split: option.splits)
   done
 
@@ -623,12 +609,12 @@ lemma obj_to_sep_state_fields_tcb_eq:
   "\<lbrakk>cdl_tcb_fault_endpoint tcb = cdl_tcb_fault_endpoint tcb';
     cdl_tcb_has_fault tcb = cdl_tcb_has_fault tcb';
     cdl_tcb_domain tcb = cdl_tcb_domain tcb'\<rbrakk>
-  \<Longrightarrow> obj_to_sep_state obj_id {Fields} (Tcb tcb)
-  = obj_to_sep_state obj_id {Fields} (Tcb tcb')"
+  \<Longrightarrow> obj_to_sep_state obj_id (Tcb tcb) {Fields}
+  = obj_to_sep_state obj_id (Tcb tcb') {Fields}"
   apply (rule ext)
-  apply (clarsimp simp: obj_to_sep_state_def object_project_def object_lift_def
-                        object_clean_slots_def asid_reset_def spec2s_def
-                        clean_slots_def update_slots_def intent_reset_def cdl_tcb.splits)
+  apply (clarsimp simp: obj_to_sep_state_def object_project_def object_clean_def
+                        asid_reset_def spec2s_def object_wipe_slots_def
+                        update_slots_def intent_reset_def cdl_tcb.splits)
   done
 
 lemma sep_map_f_eq_tcb:
@@ -637,8 +623,7 @@ lemma sep_map_f_eq_tcb:
     cdl_tcb_domain tcb = cdl_tcb_domain tcb'\<rbrakk>
   \<Longrightarrow> obj_id \<mapsto>f Tcb tcb = obj_id \<mapsto>f Tcb tcb'"
   apply (clarsimp simp: sep_map_f_def sep_map_general_def object_slots_def
-                      object_lift_def intent_reset_def asid_reset_def
-                      object_clean_def object_clean_slots_def update_slots_def)
+                      object_clean_def intent_reset_def asid_reset_def update_slots_def)
   apply (subst obj_to_sep_state_fields_tcb_eq [where tcb'=tcb'], simp_all)
   done
 
@@ -647,7 +632,7 @@ lemma sep_map_f_intent_reset_cnode:
   \<Longrightarrow> obj_id \<mapsto>f obj = obj_id \<mapsto>f obj'"
   apply (clarsimp simp: sep_map_f_def sep_map_general_def split: sep_state.splits)
   apply (rule ext)
-  apply (clarsimp simp: object_clean_slots_def intent_reset_def object_type_def
+  apply (clarsimp simp: intent_reset_def object_type_def
                  split: cdl_object.splits)
   done
 
@@ -657,9 +642,9 @@ lemma sep_map_f_empty_cnode:
   apply (rule ext, rename_tac s)
   apply (clarsimp simp: sep_map_f_def sep_map_general_def split: sep_state.splits)
   apply (intro iffI ext |
-         clarsimp simp: obj_to_sep_state_def object_lift_def
-                        object_project_def object_slots_object_lift asid_reset_def
-                        intent_reset_def object_clean_slots_def clean_slots_def
+         clarsimp simp: obj_to_sep_state_def object_clean_def
+                        object_project_def object_slots_object_clean asid_reset_def
+                        intent_reset_def object_wipe_slots_def
                         update_slots_def empty_cnode_def)+
   done
 
@@ -669,10 +654,10 @@ lemma empty_cnode_object_size_bits:
   apply (rule ext)
   apply (clarsimp simp: sep_map_f_def sep_map_general_def split: sep_state.splits)
 apply (intro iffI ext |
-       clarsimp simp: object_type_def object_clean_def object_size_bits_def
-                      object_lift_def reset_cap_asid_def asid_reset_def
-                      obj_to_sep_state_def object_project_def intent_reset_def clean_slots_def
-                      object_clean_slots_def update_slots_def cdl_cnode.splits
+       clarsimp simp: object_type_def object_size_bits_def
+                      object_clean_def reset_cap_asid_def asid_reset_def
+                      obj_to_sep_state_def object_project_def intent_reset_def
+                      object_wipe_slots_def update_slots_def cdl_cnode.splits
                split: cdl_object.splits)+
   done
 
@@ -683,10 +668,10 @@ lemma sep_map_f_object_size_bits_cnode:
   apply (clarsimp simp: sep_map_f_def sep_map_general_def split: sep_state.splits)
   apply (rule ext)
   apply (intro iffI ext |
-         clarsimp simp: object_type_def object_clean_def object_size_bits_def
+         clarsimp simp: object_type_def object_size_bits_def
                         obj_to_sep_state_def object_project_def intent_reset_def
-                        clean_slots_def object_clean_slots_def update_slots_def
-                        cdl_cnode.splits object_lift_def asid_reset_def
+                        object_wipe_slots_def update_slots_def
+                        cdl_cnode.splits object_clean_def asid_reset_def
                  split: cdl_object.splits)+
   done
 
@@ -696,9 +681,9 @@ lemma sep_map_f_object_size_bits_pt:
   apply (clarsimp simp: sep_map_f_def sep_map_general_def split: sep_state.splits)
   apply (rule ext)
   apply (intro iffI ext |
-         clarsimp simp: object_type_def object_clean_def object_size_bits_def
-                        obj_to_sep_state_def object_project_def intent_reset_def clean_slots_def
-                        object_clean_slots_def update_slots_def object_lift_def asid_reset_def
+         clarsimp simp: object_type_def object_size_bits_def
+                        obj_to_sep_state_def object_project_def intent_reset_def
+                        object_wipe_slots_def update_slots_def object_clean_def asid_reset_def
                  split: cdl_object.splits)+
   done
 
@@ -708,9 +693,9 @@ lemma sep_map_f_object_size_bits_pd:
   apply (clarsimp simp: sep_map_f_def sep_map_general_def split: sep_state.splits)
   apply (rule ext)
 apply (intro iffI ext |
-       clarsimp simp: object_type_def object_clean_def object_size_bits_def
-                      obj_to_sep_state_def object_project_def intent_reset_def clean_slots_def
-                      object_clean_slots_def update_slots_def object_lift_def asid_reset_def
+       clarsimp simp: object_type_def object_size_bits_def
+                      obj_to_sep_state_def object_project_def intent_reset_def
+                      object_wipe_slots_def update_slots_def object_clean_def asid_reset_def
                split: cdl_object.splits)+
   done
 
@@ -826,14 +811,13 @@ lemma sep_map_exists_rewrite':
   apply (clarsimp simp: intent_reset_def sep_map_S'_def sep_map_general_def
     split: cdl_object.splits)
   apply (rule ext)
-  apply (clarsimp simp: sep_map_S'_def sep_map_general_def
-    object_clean_def intent_reset_def
-    object_slots_object_lift
-    obj_to_sep_state_def object_project_def split: split_if_asm)
+  apply (clarsimp simp: sep_map_S'_def sep_map_general_def intent_reset_def
+                        object_slots_object_clean obj_to_sep_state_def object_project_def
+                 split: split_if_asm)
   apply (case_tac cdl_tcb_ext,clarsimp)
   apply (case_tac cdl_tcb_exta,clarsimp simp:object_slots_def)
   apply (intro conjI |
-        clarsimp simp: object_slots_object_lift |
+        clarsimp simp: object_slots_object_clean |
         clarsimp simp: object_slots_def)+
   done
 
@@ -1029,20 +1013,13 @@ lemma well_formed_has_slots:
   apply (drule object_default_state_has_slots_not_empty, simp)
   done
 
-lemma object_clean_object_default_state_no_slots:
- "\<not> has_slots obj
-  \<Longrightarrow> object_clean (object_default_state obj) (UNIV - {Fields}) = object_clean obj (UNIV - {Fields})"
-  apply (clarsimp simp: has_slots_def object_default_state_def2 split: cdl_object.splits)
-  apply (clarsimp simp: object_clean_def object_clean_fields_def object_clean_slots_def object_slots_def)
-  done
-
 lemma sep_map_S_object_default_state_no_slots:
   "\<not> has_slots obj \<Longrightarrow> (obj_id \<mapsto>S object_default_state obj) = (obj_id \<mapsto>S obj)"
   apply (clarsimp simp: sep_map_S_def sep_map_general_def)
   apply (intro ext conjI iffI |
          clarsimp simp: obj_to_sep_state_def object_project_def
                         update_slots_def empty_cnode_def
-                        object_slots_object_lift
+                        object_slots_object_clean
                         object_default_state_def default_object_def
                         object_type_def has_slots_def
                  split: cdl_component.splits option.splits cdl_object.splits)+
@@ -1054,7 +1031,7 @@ lemma sep_map_s_object_default_state_no_slots:
   apply (intro ext conjI iffI |
          clarsimp simp: obj_to_sep_state_def object_project_def
                         update_slots_def empty_cnode_def
-                        object_slots_object_lift
+                        object_slots_object_clean
                         object_default_state_def default_object_def
                         object_type_def has_slots_def
                  split: cdl_component.splits option.splits cdl_object.splits)+
@@ -1247,13 +1224,6 @@ lemma irq_empty_decomp_total:
  * These show that the fields of a CNode are already initialised correctly. *
  ****************************************************************************)
 
-lemma object_default_state_clean [simp]:
-  "object_clean (object_default_state (CNode cnode)) {Fields} =
-   object_clean (CNode cnode) {Fields}"
-  by (clarsimp simp: object_clean_def object_clean_fields_def object_clean_slots_def
-                     object_default_state_def default_object_def object_type_def
-                     empty_cnode_def clean_slots_def update_slots_def object_size_bits_def)
-
 lemma sep_map_f_object_default_state_cnode [simp]:
   "object_type obj = CNodeType \<Longrightarrow> obj_id \<mapsto>f object_default_state obj = obj_id \<mapsto>f obj"
   apply (clarsimp simp: sep_map_f_def sep_map_general_def split: sep_state.splits)
@@ -1261,26 +1231,25 @@ lemma sep_map_f_object_default_state_cnode [simp]:
   apply (clarsimp simp: object_type_def split: cdl_object.splits)
   apply (intro ext conjI iffI |
          clarsimp simp: obj_to_sep_state_def object_project_def
-                        intent_reset_def object_clean_slots_def clean_slots_def
+                        intent_reset_def object_wipe_slots_def
                         object_default_state_def default_object_def
                         asid_reset_def object_type_def update_slots_def
-                        empty_cnode_def object_size_bits_def object_lift_def)+
+                        empty_cnode_def object_size_bits_def object_clean_def)+
   done
 
 lemma obj_to_sep_state_fields[simp]:
-  "obj_to_sep_state obj_id {Fields} (update_slots slot obj) = obj_to_sep_state obj_id {Fields} obj"
+  "obj_to_sep_state obj_id (update_slots slot obj) {Fields} = obj_to_sep_state obj_id obj {Fields}"
   apply (rule ext)
   apply (case_tac obj,
     simp_all add:obj_to_sep_state_def update_slots_def split_def
-    object_project_def object_lift_def asid_reset_def
-    intent_reset_def object_clean_slots_def object_slots_def clean_slots_def)
+    object_project_def object_clean_def asid_reset_def
+    object_wipe_slots_def intent_reset_def object_slots_def)
   done
 
 lemma sep_map_f_cnode_half [simp]:
   "obj_id \<mapsto>f cnode_half spec obj_id' obj = obj_id \<mapsto>f obj "
   apply (rule ext)
-  apply (clarsimp simp: cnode_half_def sep_map_f_def sep_map_general_def
-                        object_clean_def object_clean_slots_def)
+  apply (clarsimp simp: cnode_half_def sep_map_f_def sep_map_general_def)
   done
 
 lemma cnode_fields_empty_initialised:

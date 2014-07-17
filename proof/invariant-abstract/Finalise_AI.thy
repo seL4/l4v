@@ -3163,7 +3163,7 @@ crunch aligned[wp]: invalidate_tlb_by_asid "pspace_aligned"
 
 crunch valid_arch_state[wp]: invalidate_tlb_by_asid "valid_arch_state"
 
-
+(*FIXME: move *)
 lemma corres_option_split:
   "\<lbrakk>v = v'; corres_underlying sr nf r P P' a c; (\<And>x. v = Some x \<Longrightarrow> corres_underlying sr nf r (Q x) (Q' x) (b x) (d x))\<rbrakk>
   \<Longrightarrow> corres_underlying sr nf r (option_case P Q v) (option_case P' Q' v') (option_case a b v) (option_case c d v')"
@@ -3193,6 +3193,34 @@ lemma zombie_not_ex_cap_to:
   apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps)
   apply fastforce
   done
+
+lemma valid_idle_has_null_cap:
+  "\<lbrakk> if_unsafe_then_cap s; valid_global_refs s;valid_idle s;valid_irq_node s\<rbrakk>
+   \<Longrightarrow> caps_of_state s (idle_thread s, v) = Some cap
+   \<Longrightarrow> cap = cap.NullCap"
+  apply (rule ccontr)
+  apply (drule(1) if_unsafe_then_capD[OF caps_of_state_cteD])
+   apply clarsimp
+  apply (clarsimp simp: ex_cte_cap_wp_to_def cte_wp_at_caps_of_state)
+  apply (frule(1) valid_global_refsD2)
+  apply (case_tac capa, simp_all add: cap_range_def global_refs_def)[1]
+  apply (clarsimp simp: valid_irq_node_def valid_idle_def st_tcb_at_def
+                        obj_at_def is_cap_table_def)
+  apply (drule_tac x=word in spec, simp)
+  done
+
+lemma zombie_cap_two_nonidles:
+  "\<lbrakk> caps_of_state s ptr = Some (cap.Zombie ptr' zbits n); invs s \<rbrakk>
+       \<Longrightarrow> fst ptr \<noteq> idle_thread s \<and> ptr' \<noteq> idle_thread s"
+  apply (frule valid_global_refsD2, clarsimp+)
+  apply (simp add: cap_range_def global_refs_def)
+  apply (cases ptr, auto dest: valid_idle_has_null_cap[rotated -1])[1]
+  done
+
+lemma is_cap_tableE:
+  "\<lbrakk> is_cap_table sz ko; \<And>cs. \<lbrakk> ko = kernel_object.CNode sz cs; well_formed_cnode_n sz cs\<rbrakk> \<Longrightarrow> P \<rbrakk> \<Longrightarrow> P"
+  unfolding is_cap_table_def
+  by (auto split: Structures_A.kernel_object.split_asm)
 
 lemma recycle_cap_Null[wp]: "\<lbrace>\<top>\<rbrace> recycle_cap is_final cap \<lbrace>\<lambda>rv s. rv \<noteq> cap.NullCap\<rbrace>"
   apply (simp add: recycle_cap_def)

@@ -83,9 +83,8 @@ lemma seL4_IRQHandler_SetEndpoint_irq_initialised_helper_sep:
   apply (clarsimp simp: object_type_is_object default_cap_def)
   apply (subst (asm) cnode_fields_empty_initialised)
    apply (simp add: object_type_object_at)
-  apply (unfold object_fields_initialised_def object_initialised_general_def)
-  apply (simp del: ObjectInitialised_SI.sep_map_f_spec2s)
-  apply (sep_drule sep_map_s_sep_map_c' [where obj_id = kernel_irq_id
+  apply (simp add: object_fields_initialised_def object_initialised_general_def)
+  apply (sep_drule sep_map_s_sep_map_c [where obj_id = kernel_irq_id
          and cap = "AsyncEndpointCap kernel_aep_id 0 {AllowRead, AllowWrite}"
          and obj = "spec2s t spec_irq"])
    apply simp

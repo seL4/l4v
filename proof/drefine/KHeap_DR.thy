@@ -462,21 +462,6 @@ lemma eq_singleton_set: "\<lbrakk>A = f` B; \<forall>x\<in>B. \<forall>y\<in> B.
     apply clarsimp
 done
 
-lemma valid_idle_has_null_cap:
-  "\<lbrakk> if_unsafe_then_cap s; valid_global_refs s;valid_idle s;valid_irq_node s\<rbrakk>
-   \<Longrightarrow> caps_of_state s (idle_thread s, v) = Some cap
-   \<Longrightarrow> cap = cap.NullCap"
-  apply (rule ccontr)
-  apply (drule(1) if_unsafe_then_capD[OF caps_of_state_cteD])
-   apply clarsimp
-  apply (clarsimp simp: ex_cte_cap_wp_to_def cte_wp_at_caps_of_state)
-  apply (frule(1) valid_global_refsD2)
-  apply (case_tac capa, simp_all add: cap_range_def global_refs_def)[1]
-  apply (clarsimp simp: valid_irq_node_def valid_idle_def st_tcb_at_def
-                        obj_at_def is_cap_table_def)
-  apply (drule_tac x=word in spec, simp)
-  done
-
 lemma final_cap_set_map:
   "\<lbrakk>valid_idle s'; valid_irq_node s';valid_objs s';if_unsafe_then_cap s'; valid_global_refs s'; cap_counts (transform_cap cap); valid_etcbs s'\<rbrakk>
     \<Longrightarrow> {cref. opt_cap_wp_at (\<lambda>cap'. cap_object (transform_cap cap) = cap_object cap'
@@ -739,7 +724,6 @@ lemma transform_full_intent_caps_cong_weak:
   transform_full_intent ms p tcb = transform_full_intent ms p tcb'"
   by (rule transform_full_intent_caps_cong) auto
 
-(* FIXME: sseefried: Not sure whether I need tcb_domain etcb = tcb_domain etcb'. If not then make both etcb and etcb' the same *)
 lemma transform_full_intent_same_cap:
   "\<lbrakk> transform_cap (tcb_ipcframe tcb) = transform_cap cap' \<rbrakk>
   \<Longrightarrow> transform_full_intent ms p' (tcb\<lparr>tcb_ipcframe := cap'\<rparr>) =
@@ -1277,15 +1261,6 @@ lemma transform_cdt_single_remove_helper:
   "s'= transform s \<Longrightarrow> cdl_cdt (cdl_cdt_single_remove s' a) = transform_cdt (abs_cdt_single_remove s a') \<Longrightarrow> (cdl_cdt_single_remove (transform s) a) = transform (abs_cdt_single_remove s a')"
   by (clarsimp simp:cdl_cdt_single_remove_def abs_cdt_single_remove_def transform_def transform_current_thread_def transform_asid_table_def)
 
-
-(* FIXME: sseefried: This just isn't true anymore.
-   trans_state is used to translate extended state. Now that 'transform' depends on extended state this lemma is no longer true *)
-(*lemma transform_extended:
-  "transform (trans_state ba b) = transform b"
-  apply (simp add: transform_def transform_objects_def transform_cdt_def
-                   transform_current_thread_def transform_asid_table_def)
-  done *)
-
 lemma remove_parent_corres:
   "dcorres dc \<top> (cte_at slot and weak_valid_mdb)
    (remove_parent (transform_cslot_ptr slot))
@@ -1343,19 +1318,6 @@ defer
   apply (rule transform_cdt_some)
     apply simp+
 done
-
-
-(*FIXME: Move up.*)
-lemma
-corres_bind_return_r2:
-"corres_underlying S nf dc P Q f (do x \<leftarrow> ga; (fa x) od) \<Longrightarrow>
-       corres_underlying S nf dc P Q f (do x \<leftarrow> ga;
-                                   y \<leftarrow> fa x;
-                                   return (h x)
-                                od)"
-  apply (fastforce simp: corres_underlying_def bind_def return_def)
-  done
-
 
 lemma dmo_maskIRQ_dcorres:
   "dcorres dc \<top> \<top> (return ()) (do_machine_op (maskInterrupt b st))"
@@ -2493,14 +2455,6 @@ lemma set_parent_corres:
   apply (clarsimp split:if_splits)
 done
 
-(* FIXME: move *)
-lemma dcorres_symmetric_bool_cases:
-  "\<lbrakk>P = P'; \<lbrakk>P; P'\<rbrakk> \<Longrightarrow> dcorres r Q Q' f g; \<lbrakk>\<not> P; \<not> P'\<rbrakk> \<Longrightarrow> dcorres r R R' f g\<rbrakk>
-  \<Longrightarrow> dcorres r (\<lambda>s. (P \<longrightarrow> Q s) \<and> (\<not> P \<longrightarrow> R s)) (\<lambda>s. (P' \<longrightarrow> Q' s) \<and> (\<not> P' \<longrightarrow> R' s)) f g"
-apply (cases P)
-apply simp+
-done
-
 lemma set_tcb_capslot_weak_valid_mdb:
   "\<lbrace>weak_valid_mdb and cte_wp_at (op=cap.NullCap) slot\<rbrace> set_cap cap slot \<lbrace>\<lambda>r s. weak_valid_mdb s\<rbrace> "
   apply (simp add: weak_valid_mdb_def cte_wp_at_caps_of_state swp_def)
@@ -2586,15 +2540,6 @@ lemma tcb_reply_cap_cte_wp_at:
     apply (clarsimp simp:st_tcb_at_def obj_at_def)
   apply (clarsimp simp:cte_wp_at_cases st_tcb_at_def obj_at_def valid_obj_def valid_tcb_def)
   apply (clarsimp simp:tcb_cap_cases_def split:Structures_A.thread_state.splits)
-done
-
-(* FIX ME: move to dcorres_D *)
-lemma wp_to_dcorres:
-  "(\<And>cs. \<lbrace>\<lambda>s. Q s \<and> transform s = cs\<rbrace> g \<lbrace>\<lambda>r s. transform s = cs\<rbrace>) \<Longrightarrow>  dcorres dc (\<lambda>_. True) Q (return x) g"
-  apply (clarsimp simp:corres_underlying_def valid_def return_def)
-  apply (drule_tac x = "transform b" in meta_spec)
-  apply (drule_tac x = b in spec)
-  apply fastforce
 done
 
 lemma transform_objects_update_kheap_simp:
@@ -3191,11 +3136,6 @@ done
 lemma cdl_current_thread:
   "(cdl_current_thread (transform s')) = transform_current_thread s'"
   by (clarsimp simp:transform_def )
-
-(* FIXME: move *)
-lemma corres_dummy_returnOk_r:
-  "dcorres c P P' f (g >>=E returnOk) \<Longrightarrow> dcorres c P P' f g"
-  by simp
 
 lemma get_cap_get_tcb_dcorres:
   "dcorres (\<lambda>r t. r = transform_cap (tcb_ctable t)) \<top> (not_idle_thread thread and valid_etcbs)

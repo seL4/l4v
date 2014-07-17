@@ -34,167 +34,6 @@ lemma word_bits_eq [simp]:
 
 hide_const (open) Types_D.word_bits
 
-lemma restrict_map_comp' [simp]:
-  "f \<circ>\<^sub>M g |` S = (f \<circ>\<^sub>M g) |` S"
-  by (rule ext, clarsimp simp: map_comp'_def restrict_map_def)
-
-(********************
-* Move to elsewhere *
-*********************)
-
-lemma sep_list_conj_impl:
-  "\<lbrakk> list_all2 (\<lambda>x y. \<forall>s. x s \<longrightarrow> y s) xs ys; (\<And>* xs) s \<rbrakk> \<Longrightarrow> (\<And>* ys) s"
-  apply (induct arbitrary: s rule: list_all2_induct)
-   apply simp
-  apply simp
-  apply (erule sep_conj_impl, simp_all)
-  done
-
-lemma sep_list_conj_exists:
-  "(\<exists>x. (\<And>* map (\<lambda>y s. P x y s) ys) s) \<Longrightarrow> ((\<And>* map (\<lambda>y s. \<exists>x. P x y s) ys) s)"
-  apply clarsimp
-  apply (erule sep_list_conj_impl[rotated])
-  apply (rule list_all2I)
-  apply simp_all
-  apply (fastforce simp add: zip_map1 zip_map2 set_zip_same)
-  done
-
-(* Given an object, this returns what the default state is for the object.
- * This should be the same as what is created by a retype operation.
- *)
-definition
-  object_default_state :: "cdl_object \<Rightarrow> cdl_object"
-where
-  "object_default_state object \<equiv>
-  the $ default_object (object_type object)
-                       (object_size_bits object)
-                       (object_domain object)"
-
-lemma object_default_state_def2:
-  "object_default_state obj = (
-    case obj of
-        Untyped \<Rightarrow> Untyped
-      | Endpoint \<Rightarrow> Endpoint
-      | AsyncEndpoint \<Rightarrow> AsyncEndpoint
-      | Tcb tcb \<Rightarrow> Tcb (default_tcb (cdl_tcb_domain tcb))
-      | CNode cnode \<Rightarrow> CNode (empty_cnode (cdl_cnode_size_bits cnode))
-      | AsidPool ap \<Rightarrow> AsidPool \<lparr>cdl_asid_pool_caps = empty_cap_map asid_low_bits\<rparr>
-      | PageTable pt \<Rightarrow> PageTable \<lparr> cdl_page_table_caps = empty_cap_map 8 \<rparr>
-      | PageDirectory pd \<Rightarrow> PageDirectory \<lparr> cdl_page_directory_caps = empty_cap_map 12 \<rparr>
-      | Frame frame \<Rightarrow> Frame \<lparr> cdl_frame_size_bits = (cdl_frame_size_bits frame) \<rparr>)"
-  by (clarsimp simp: object_default_state_def object_type_def default_object_def
-                     object_size_bits_def object_domain_def
-              split: cdl_object.splits)
-
-lemma object_type_object_default_state [simp]:
-  "object_type (object_default_state obj) = object_type obj"
-  by (clarsimp simp: object_default_state_def2 object_type_def split: cdl_object.splits)
-
-lemma is_cnode_object_default_state [simp]:
-  "is_cnode (object_default_state obj) = is_cnode obj"
-  by (clarsimp simp: object_default_state_def2 is_cnode_def split: cdl_object.splits)
-
-(* FIXME, is this a bad idea to add to the simpset? *)
-lemma range_Slot [simp]:
-  "(range Slot) = (UNIV - {Fields})"
-   apply (clarsimp simp: image_def)
-   apply rule
-    apply clarsimp+
-   apply (case_tac x)
-    apply auto
-   done
-
-lemma update_slots_same [simp]:
-  "object_slots obj = cap_map \<Longrightarrow> update_slots cap_map obj = obj"
-  by (clarsimp simp: update_slots_def object_slots_def split: cdl_object.splits)
-
-lemma dom_sub_restrict [simp]:
-  "dom (m `- A) = dom m \<inter> -A"
-  by (auto simp: sub_restrict_map_def dom_def split: split_if_asm)
-
-lemma Slot_slot_union:
-  "insert (Slot slot) (Slot ` (UNIV - {slot})) = UNIV - {Fields}"
-   apply rule
-    apply clarsimp+
-   apply (case_tac x)
-    apply auto
-   done
-
-lemma restrict_map_sub_singleton [simp]:
-  "s \<noteq> t \<Longrightarrow> h `- {t} |` {s} = h |` {s}"
-  by (rule ext)(clarsimp simp: restrict_map_def sub_restrict_map_def)
-
-lemma restrict_map_sub_add': "h `- S ++ h |` S = h"
-  by (fastforce simp: sub_restrict_map_def map_add_def
-               split: option.splits)
-
-lemma map_add_restrict_singleton:
-  "s \<noteq> t \<Longrightarrow> (m |` {s} ++ m' |` {t}) |` {s} = m |` {s}"
-  apply (rule ext)
-  apply (clarsimp simp: map_add_def restrict_map_def split: option.splits)
-  done
-
-lemma map_add_restrict_singleton':
-  "s \<noteq> t \<Longrightarrow> (m |` {s} ++ m' |` {t}) |` {t} = m' |` {t}"
-  apply (rule ext)
-  apply (clarsimp simp: map_add_def restrict_map_def split: option.splits)
-  done
-
-lemma object_clean_fields_fields [simp]:
-  "Fields \<in> cmps \<Longrightarrow> (object_clean_fields obj cmps) = obj"
-  by (clarsimp simp: object_clean_fields_def)
-
-lemma object_clean_fields_not_none_eq:
-  "\<lbrakk>Fields \<notin> cmps; Fields \<notin> cmps'\<rbrakk>
-  \<Longrightarrow> object_clean_fields obj cmps = object_clean_fields obj cmps'"
-  by (clarsimp simp: object_clean_fields_def)
-
-lemma clean_slots_map_addL [simp]:
-  "cmps \<inter> cmps' = {}
-  \<Longrightarrow> clean_slots (clean_slots slots cmps ++ clean_slots slots' cmps') cmps = clean_slots slots cmps"
-  by (force simp: clean_slots_def map_add_def restrict_map_def)
-
-lemma clean_slots_map_addR [simp]:
-  "cmps \<inter> cmps' = {}
-  \<Longrightarrow> clean_slots (clean_slots slots cmps ++ clean_slots slots' cmps') cmps' = clean_slots slots' cmps'"
-  by (force simp: clean_slots_def map_add_def restrict_map_def
-           split: option.splits)
-
-lemma empty_fun_upd [simp]:
-  "(\<lambda>x. {})(obj_id := {}) = (\<lambda>x. {})"
-  by clarsimp
-
-lemma clean_slots_UNIV [simp]:
-  "clean_slots slots UNIV = slots"
-  by (clarsimp simp: clean_slots_def)
-
-lemma object_clean_slots_UNIV [simp]:
-  "object_clean_slots obj UNIV = obj"
-  by (clarsimp simp: object_clean_slots_def)
-
-lemma object_clean_UNIV [simp]:
-  "object_clean obj UNIV = obj"
-  by (clarsimp simp: object_clean_def)
-
-lemma object_clean_fields_object_clean:
-  "object_clean_fields obj {Slot slot} = object_clean_fields obj' {Slot slot}
-  \<Longrightarrow> object_clean obj {Slot slot} = object_clean obj' {Slot slot}"
-  by (clarsimp simp: object_clean_def)
-
-lemma object_clean_slots_object_clean:
-  "object_clean_slots obj {Slot slot} = object_clean_slots obj' {Slot slot}
-  \<Longrightarrow> object_clean obj {Slot slot} = object_clean obj' {Slot slot}"
-  apply (subgoal_tac "object_type obj = object_type obj'")
-   apply (clarsimp simp: object_clean_def object_clean_fields_def)
-   apply (fastforce simp: object_clean_slots_def object_type_def object_slots_def
-                          update_slots_def cdl_tcb.splits cdl_cnode.splits
-                   split: cdl_object.splits)+
-  done
-
-(************************
-* End of things to move *
-*************************)
-
 
 
 definition
@@ -238,27 +77,29 @@ where
 (* intent_reset is easier to bubble through object_slots,
    so is put on the outside. *)
 definition
-  object_lift :: "cdl_object \<Rightarrow> cdl_object"
+  object_clean :: "cdl_object \<Rightarrow> cdl_object"
 where
-  "object_lift \<equiv> intent_reset \<circ> asid_reset"
+  "object_clean \<equiv> intent_reset \<circ> asid_reset"
 
-lemma object_lift_def2:
-  "object_lift = asid_reset \<circ> intent_reset"
+lemma object_clean_def2:
+  "object_clean = asid_reset \<circ> intent_reset"
   apply (rule ext)
-  apply (clarsimp simp: object_lift_def intent_reset_def asid_reset_def
+  apply (clarsimp simp: object_clean_def intent_reset_def asid_reset_def
                         map_comp'_def object_slots_def update_slots_def
                  split:  cdl_object.splits)
   done
 
+
+(* Clears the capability slots of an object. *)
 definition
-  heap_lift :: "cdl_heap \<Rightarrow> cdl_heap"
+  object_wipe_slots :: "cdl_object \<Rightarrow> cdl_object"
 where
-  "heap_lift heap \<equiv> \<lambda>obj_id. option_map object_lift (heap obj_id)"
+  "object_wipe_slots obj \<equiv> update_slots empty obj"
 
 definition object_project :: "cdl_component \<Rightarrow> cdl_object \<Rightarrow> sep_entity"
   where "object_project component obj \<equiv> case component of
-     Fields \<Rightarrow> CDL_Object (object_clean_slots (object_lift obj) {})
-   | Slot slot \<Rightarrow> CDL_Cap (object_slots (object_lift obj) slot)"
+     Fields \<Rightarrow> CDL_Object (object_wipe_slots (object_clean obj))
+   | Slot slot \<Rightarrow> CDL_Cap (object_slots (object_clean obj) slot)"
 
 definition
   state_sep_projection :: "cdl_state \<Rightarrow> sep_state"
@@ -294,11 +135,11 @@ where
   else None"
 
 definition
- obj_to_sep_state :: "cdl_object_id \<Rightarrow> cdl_components \<Rightarrow> cdl_object \<Rightarrow> sep_state_heap"
+ obj_to_sep_state :: "cdl_object_id \<Rightarrow> cdl_object \<Rightarrow> cdl_components \<Rightarrow> sep_state_heap"
 where
-  "obj_to_sep_state p cmp obj \<equiv> \<lambda>(ptr,component).
-  if p = ptr \<and> component \<in> cmp
-  then Some (object_project component obj)
+  "obj_to_sep_state obj_id object components  \<equiv> \<lambda>(obj_id',component).
+  if obj_id = obj_id' \<and> component \<in> components
+  then Some (object_project component object)
   else None"
 
 (*********************
@@ -310,45 +151,53 @@ where
 definition
   sep_map_general :: "cdl_object_id \<Rightarrow> cdl_object \<Rightarrow> cdl_components \<Rightarrow> sep_pred"
 where
-  "sep_map_general p obj cmps \<equiv> \<lambda>s.
-    sep_heap s = (obj_to_sep_state p cmps obj) \<and>
+  "sep_map_general obj_id object components \<equiv> \<lambda>s.
+    sep_heap s = (obj_to_sep_state obj_id object components) \<and>
     sep_irq_node s = empty"
 
 (* There is an object there. *)
 definition
   sep_map_o :: "cdl_object_id \<Rightarrow> cdl_object \<Rightarrow> sep_pred" ("_ \<mapsto>o _" [76,71] 76)
 where
-  "p \<mapsto>o obj \<equiv> sep_map_general p obj UNIV"
+  "obj_id \<mapsto>o object \<equiv> sep_map_general obj_id object UNIV"
 
 (* The fields are there (and there are no caps). *)
 definition
   sep_map_f :: "cdl_object_id \<Rightarrow> cdl_object \<Rightarrow> sep_pred" ("_ \<mapsto>f _" [76,71] 76)
 where
-  "p \<mapsto>f obj \<equiv> sep_map_general p obj {Fields}"
+  "obj_id \<mapsto>f object \<equiv> sep_map_general obj_id object {Fields}"
 
 (* There is a clean object there that has the same caps in the same slots. *)
 definition
   sep_map_S :: "cdl_object_id \<Rightarrow> cdl_object \<Rightarrow> sep_pred" ("_ \<mapsto>S _" [76,71] 76)
 where
-  "p \<mapsto>S obj \<equiv> sep_map_general p obj (UNIV - {Fields})"
+  "obj_id \<mapsto>S object \<equiv> sep_map_general obj_id object (UNIV - {Fields})"
 
 (* There is a clean object there that has the same caps in the same slots, restricted to the slots "slots" *)
 definition
   sep_map_S' :: "(cdl_object_id \<times> cdl_cnode_index set) \<Rightarrow> cdl_object \<Rightarrow> sep_pred" ("_ \<mapsto>S' _" [76,71] 76)
 where
-  "p \<mapsto>S' obj \<equiv> let (obj_id, slots) = p in sep_map_general obj_id obj (Slot ` slots)"
+  "p \<mapsto>S' object \<equiv> let (obj_id, slots) = p in sep_map_general obj_id object (Slot ` slots)"
+
+lemma sep_map_S'_def2:
+  "(obj_id, slots) \<mapsto>S' object \<equiv> sep_map_general obj_id object (Slot ` slots)"
+  by (simp add: sep_map_S'_def)
 
 (* Consumes the ownership of the empty slots of an object. *)
 definition
   sep_map_E :: "cdl_object_id \<Rightarrow> cdl_object \<Rightarrow> sep_pred" ("_ \<mapsto>E _" [76,71] 76)
 where
-  "p \<mapsto>E obj \<equiv> (p, UNIV- dom (object_slots obj)) \<mapsto>S' obj"
+  "obj_id \<mapsto>E object \<equiv> (obj_id, UNIV- dom (object_slots object)) \<mapsto>S' object"
 
 (* There is a clean object there that has the same cap in the same slot. *)
 definition
   sep_map_s :: "cdl_cap_ref \<Rightarrow> cdl_object \<Rightarrow> sep_pred" ("_ \<mapsto>s _" [76,71] 76)
 where
-  "p \<mapsto>s obj \<equiv> let (obj_id, slot) = p in sep_map_general obj_id obj {Slot slot}"
+  "p \<mapsto>s object \<equiv> let (obj_id, slot) = p in sep_map_general obj_id object {Slot slot}"
+
+lemma sep_map_s_def2:
+  "(obj_id, slot) \<mapsto>s object \<equiv> sep_map_general obj_id object {Slot slot}"
+  by (simp add: sep_map_s_def)
 
 (* There is that cap there. *)
 definition
@@ -464,9 +313,9 @@ lemma offset_slot:
 (* sep_map predcates are injective. *)
 
 lemma sep_map_general_inj:
-  "cmps \<noteq> {} \<Longrightarrow> inj (\<lambda>obj_id. sep_map_general obj_id obj cmps)"
+  "cmps \<noteq> {} \<Longrightarrow> inj (\<lambda>obj_id. sep_map_general obj_id object cmps)"
   apply (clarsimp simp: inj_on_def fun_eq_iff sep_map_general_def)
-  apply (erule_tac x="SepState (obj_to_sep_state x cmps obj) empty" in allE)
+  apply (erule_tac x="SepState (obj_to_sep_state x object cmps) empty" in allE)
   apply (fastforce simp: obj_to_sep_state_def
                   split: split_if_asm)
   done
@@ -482,7 +331,7 @@ lemma sep_map_f_inj:
 lemma sep_map_s_inj:
   "inj (\<lambda>obj_id. obj_id \<mapsto>s obj)"
   apply (clarsimp simp: inj_on_def fun_eq_iff sep_map_s_def sep_map_general_def)
-  apply (erule_tac x="SepState (obj_to_sep_state a {Slot b} obj) empty" in allE)
+  apply (erule_tac x="SepState (obj_to_sep_state a obj {Slot b}) empty" in allE)
   apply (fastforce simp: obj_to_sep_state_def
                   split: split_if_asm)
   done
@@ -490,9 +339,10 @@ lemma sep_map_s_inj:
 lemma sep_map_c_inj:
   "inj (\<lambda>(obj_id,slot). (obj_id,slot) \<mapsto>c cap)"
   apply (clarsimp simp: inj_on_def fun_eq_iff sep_map_c_def sep_map_general_def)
-  apply (erule_tac x="SepState (obj_to_sep_state a {Slot b}
+  apply (erule_tac x="SepState (obj_to_sep_state a
                                                  (CNode \<lparr> cdl_cnode_caps = [b \<mapsto> cap],
-                                                          cdl_cnode_size_bits = 0 \<rparr>))
+                                                          cdl_cnode_size_bits = 0 \<rparr>)
+                                                 {Slot b})
                                 empty" in allE)
   apply (auto simp: obj_to_sep_state_def object_project_def object_slots_def
              split: split_if_asm)
@@ -511,9 +361,9 @@ lemma object_type_asid_reset [simp]:
   "object_type (asid_reset obj) = object_type obj"
   by (clarsimp simp: asid_reset_def)
 
-lemma object_type_object_lift [simp]:
-  "object_type (object_lift obj) = object_type obj"
-  by (clarsimp simp: object_lift_def)
+lemma object_type_object_clean [simp]:
+  "object_type (object_clean obj) = object_type obj"
+  by (clarsimp simp: object_clean_def)
 
 lemma dom_map_restrict:
   "dom (f |` a) \<subseteq> dom f"
@@ -540,6 +390,10 @@ lemma sep_map_general_disjoint:
  * Object_empty predicate decomposition *
  ****************************************)
 
+lemma object_type_object_wipe_slots[simp]:
+  "object_type (object_wipe_slots obj) = object_type obj"
+  by (clarsimp simp: object_wipe_slots_def)
+
 lemma object_slots_intent_reset [simp]:
   "object_slots (intent_reset obj) = object_slots obj"
   by (clarsimp simp: intent_reset_def object_slots_def split: cdl_object.splits)
@@ -548,46 +402,20 @@ lemma update_slots_intent_reset [simp]:
   "intent_reset (update_slots slots obj) = update_slots slots (intent_reset obj)"
   by (clarsimp simp: intent_reset_def update_slots_def split: cdl_object.splits)
 
-lemma object_clean_fields_intent_reset [simp]:
-  "intent_reset (object_clean_fields obj cmps) =
-  object_clean_fields (intent_reset obj) cmps"
-  by (clarsimp simp: intent_reset_def object_clean_fields_def split: cdl_object.splits)
+lemma object_wipe_slots_intent_reset [simp]:
+  "intent_reset (object_wipe_slots obj)
+  = object_wipe_slots (intent_reset obj)"
+  by (clarsimp simp: object_wipe_slots_def)
 
-lemma object_clean_fields_asid_reset [simp]:
-  "object_clean_fields (asid_reset obj) cmps = asid_reset (object_clean_fields obj cmps)"
-  by (clarsimp simp: asid_reset_def)
-
-lemma object_clean_slots_intent_reset [simp]:
-  "intent_reset (object_clean_slots obj cmps)
-  = object_clean_slots (intent_reset obj) cmps"
-  by (clarsimp simp: object_clean_slots_def)
-
-lemma object_clean_fields_object_lift [simp]:
-  "object_clean_fields (object_lift obj) cmps = object_lift (object_clean_fields obj cmps)"
-  by (clarsimp simp: object_lift_def2)
-
-lemma object_clean_slots_asid_reset [simp]:
-  "object_clean_slots (asid_reset obj) cmps = asid_reset (object_clean_slots obj cmps)"
-  apply (clarsimp simp: object_clean_slots_def asid_reset_def clean_slots_def)
+lemma object_wipe_slots_asid_reset [simp]:
+  "object_wipe_slots (asid_reset obj) = asid_reset (object_wipe_slots obj)"
+  apply (clarsimp simp: object_wipe_slots_def asid_reset_def)
   apply (case_tac "has_slots obj", simp_all)
   done
 
-lemma object_clean_intent_reset [simp]:
-  "intent_reset (object_clean obj cmps) =
-  object_clean (intent_reset obj) cmps"
-  by (clarsimp simp: object_clean_def)
-
-lemma object_clean_asid_reset [simp]:
-  "object_clean (asid_reset obj) cmps = asid_reset (object_clean obj cmps)"
-  by (clarsimp simp: object_clean_def)
-
-lemma object_clean_object_lift [simp]:
-  "object_clean (object_lift obj) cmps = object_lift (object_clean obj cmps)"
-  by (clarsimp simp: object_lift_def2)
-
-lemma object_slots_object_lift:
-  "object_slots (object_lift obj) = reset_cap_asid \<circ>\<^sub>M object_slots obj"
-  apply (clarsimp simp: object_lift_def)
+lemma object_slots_object_clean:
+  "object_slots (object_clean obj) = reset_cap_asid \<circ>\<^sub>M object_slots obj"
+  apply (clarsimp simp: object_clean_def)
   apply (clarsimp simp: asid_reset_def object_slots_def update_slots_def
                  split: cdl_object.splits)
   done
@@ -601,29 +429,13 @@ lemma restrict_map_remerge':
   done
 
 
-lemma "((reset_cap_asid \<circ>\<^sub>M object_slots obj |` the_set cmps) ++
-           (reset_cap_asid \<circ>\<^sub>M object_slots obj |` the_set cmps'))
-=
-(reset_cap_asid \<circ>\<^sub>M
-           object_slots
-            (update_slots (object_slots obj |` (the_set cmps \<union> the_set cmps'))
-              obj))"
-  apply (case_tac "has_slots obj", simp_all)
-  apply (rule restrict_map_remerge')
-  done
-
-lemma object_clean_fields_union [simp]:
-  "Fields \<notin> cmps'
-  \<Longrightarrow> object_clean_fields obj (cmps \<union> cmps') = object_clean_fields obj cmps"
-  by (clarsimp simp: object_clean_fields_def)
-
 lemma product_union:
   "{p} \<times> (cmps \<union> cmps') = ({p} \<times> cmps) \<union> ({p} \<times> cmps')"
   by (rule Sigma_Un_distrib2)
 
 lemma obj_to_sep_state_add:
-  "obj_to_sep_state p cmps obj ++ obj_to_sep_state p cmps' obj =
-  obj_to_sep_state p (cmps \<union> cmps') obj"
+  "obj_to_sep_state p obj cmps ++ obj_to_sep_state p obj cmps' =
+  obj_to_sep_state p obj (cmps \<union> cmps')"
   apply (rule ext)
   apply (clarsimp simp:obj_to_sep_state_def split_def
     map_add_def split:if_splits option.splits)
@@ -640,8 +452,8 @@ lemma sep_map_decomp:
    apply (clarsimp simp: sep_map_general_def plus_sep_state_def
      sep_state_add_def obj_to_sep_state_add)
   apply (clarsimp simp:sep_map_general_def)
-  apply (rule_tac x = "SepState (obj_to_sep_state p cmps obj) empty" in exI)
-  apply (rule_tac x = "SepState (obj_to_sep_state p cmps' obj) empty" in exI)
+  apply (rule_tac x = "SepState (obj_to_sep_state p obj cmps) empty" in exI)
+  apply (rule_tac x = "SepState (obj_to_sep_state p obj cmps') empty" in exI)
   apply (clarsimp simp: plus_sep_state_def sep_state_add_def obj_to_sep_state_add)
   apply (intro conjI disjointI)
    apply (clarsimp simp:dom_def obj_to_sep_state_def
@@ -659,11 +471,19 @@ lemma sep_map_o_decomp:
   done
 
 lemma sep_map_c_def2:
-  "((obj_id,slot) \<mapsto>c cap) s \<Longrightarrow> \<exists>obj. ((obj_id,slot) \<mapsto>s obj) s \<and> ((object_slots obj) slot = Some cap)"
+  "((obj_id,slot) \<mapsto>c cap) s \<Longrightarrow>
+  \<exists>obj. ((obj_id,slot) \<mapsto>s obj) s \<and> ((object_slots obj) slot = Some cap)"
   apply (clarsimp simp: sep_map_c_def sep_map_s_def sep_map_S_def sep_map_general_def)
   apply (rule_tac x="update_slots [slot \<mapsto> cap] obj" in exI)
   apply (case_tac "has_slots obj")
-   apply (clarsimp simp: object_clean_def object_clean_slots_def)+
+   apply (clarsimp simp: object_wipe_slots_def)+
+  done
+
+lemma intent_reset_has_slots[simp]:
+  "has_slots (intent_reset obj) = has_slots obj"
+  apply (simp add:intent_reset_def
+    split:cdl_object.splits)
+  apply (simp add:has_slots_def)
   done
 
 lemma sep_map_c_sep_map_s:
@@ -676,38 +496,27 @@ lemma sep_map_c_sep_map_s:
    apply (case_tac obj)
    apply (clarsimp simp:obj_to_sep_state_def
      object_project_def update_slots_def
-     object_lift_def intent_reset_def
+     object_clean_def intent_reset_def
      asid_reset_def object_slots_def)+
   apply (rule ext)
   apply (clarsimp simp: update_slots_def object_slots_def
                  split: cdl_object.splits)
   done
 
-lemma intent_reset_has_slots[simp]:
-  "has_slots (intent_reset obj) = has_slots obj"
-  apply (simp add:intent_reset_def
-    split:cdl_object.splits)
-  apply (simp add:has_slots_def)
+(* Fastforce doesn't seem to be able to prove this is if the assumptions are in the other order. *)
+lemma sep_map_s_sep_map_c [rotated]:
+  "\<lbrakk>object_slots obj slot = Some cap; ((obj_id, slot) \<mapsto>c cap) s\<rbrakk> \<Longrightarrow>
+    ((obj_id, slot) \<mapsto>s obj) s"
+  apply (fastforce simp: sep_map_c_def sep_map_s_def sep_map_S_def sep_map_general_def
+                         obj_to_sep_state_def object_project_def update_slots_def
+                         object_clean_def intent_reset_def asid_reset_def object_slots_def
+                  split: cdl_object.splits)
   done
 
-lemma sep_map_s_sep_map_c:
-  "\<lbrakk>((obj_id, slot) \<mapsto>c cap \<and>* obj_id \<mapsto>f obj') s;has_slots obj'\<rbrakk> \<Longrightarrow>
-    \<exists>obj. ((obj_id, slot) \<mapsto>s obj \<and>* obj_id \<mapsto>f obj') s \<and>
-          object_slots obj slot = Some cap \<and>
-          object_type obj = object_type obj'"
-  apply (rule_tac x="update_slots [slot \<mapsto> cap] obj'" in exI)
-  apply (clarsimp simp: sep_map_c_def sep_map_f_def sep_conj_exists)
-  apply (frule sep_map_general_disjoint)
-  apply (clarsimp simp: sep_map_c_def sep_map_s_def sep_map_S_def sep_map_general_def)
-  apply (clarsimp simp: sep_conj_def)
-  apply (clarsimp simp: sep_disj_sep_state_def sep_state_disj_def)
-  apply (rule_tac x = x in exI)
-  apply (rule_tac x = y in exI)
-  apply clarsimp
-  apply (rule ext)
-  apply (clarsimp simp:obj_to_sep_state_def
-    object_project_def asid_reset_def object_slots_object_lift)
-  done
+lemma sep_map_s_sep_map_c_eq:
+  "\<lbrakk>object_slots obj slot = Some cap\<rbrakk> \<Longrightarrow>
+  (obj_id, slot) \<mapsto>s obj = (obj_id, slot) \<mapsto>c cap"
+  by (fastforce simp: sep_map_c_sep_map_s sep_map_s_sep_map_c)
 
 
 lemma sep_map_s_object_slots_equal:
@@ -716,25 +525,14 @@ lemma sep_map_s_object_slots_equal:
   apply (clarsimp simp: sep_map_s_def sep_map_general_def split: sep_state.splits)
   apply (intro iffI ext conjI |
          clarsimp simp: obj_to_sep_state_def object_project_def
-                        object_slots_object_lift)+
-  done
-
-lemma sep_map_s_sep_map_c':
-  "\<lbrakk>((obj_id, slot) \<mapsto>c cap \<and>* obj_id \<mapsto>f obj) s;
-    object_slots obj slot = Some cap\<rbrakk>
-  \<Longrightarrow> ((obj_id, slot) \<mapsto>s obj \<and>* obj_id \<mapsto>f obj) s"
-  apply (drule sep_map_s_sep_map_c)
-   apply (rule object_slots_has_slots, clarsimp)
-  apply clarsimp
-  apply (cut_tac obj=obja and obj'=obj and obj_id=obj_id and slot=slot in
-         sep_map_s_object_slots_equal, simp+)
+                        object_slots_object_clean)+
   done
 
 lemma sep_map_S_def2:
   "(obj_id \<mapsto>S obj) = ((obj_id,UNIV) \<mapsto>S' obj)"
   by (clarsimp simp: sep_map_S_def sep_map_S'_def)
 
-lemma sep_map_S'_def2:
+lemma sep_map_S'_def_singleton:
   "(obj_id, {slot}) \<mapsto>S' obj = (obj_id, slot) \<mapsto>s obj"
   by (rule ext)(clarsimp simp: sep_map_S'_def sep_map_s_def)
 

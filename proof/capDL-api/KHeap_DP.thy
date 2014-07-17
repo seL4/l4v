@@ -159,7 +159,7 @@ lemma sep_any_map_c_imp: "(dest \<mapsto>c cap) s \<Longrightarrow> (dest \<maps
 
 lemma obj_exists_map_i:
   "<obj_id \<mapsto>o obj \<and>* R> s \<Longrightarrow> \<exists>obj'. (opt_object obj_id s = Some obj'
-  \<and> object_lift obj = object_lift obj')"
+  \<and> object_clean obj = object_clean obj')"
   apply (clarsimp simp: opt_object_def sep_map_o_conj)
   apply (case_tac "cdl_objects s obj_id")
    apply (drule_tac x = "(obj_id,Fields)" in fun_cong)
@@ -172,8 +172,6 @@ lemma obj_exists_map_i:
    apply (clarsimp simp: lift_def obj_to_sep_state_def object_project_def
       object_at_heap_def state_sep_projection_def
       Let_unfold)
-   apply (drule_tac f = object_fields in arg_cong)
-   apply simp
   apply (rule ext)
   apply (drule_tac x= "(obj_id,Slot x)" in fun_cong)
   apply (clarsimp simp: lift_def obj_to_sep_state_def
@@ -197,10 +195,6 @@ lemma obj_exists_map_f:
   apply simp
   done
 
-lemma object_clean_slots_no_slots [simp]:
-  "\<not> has_slots obj \<Longrightarrow> object_clean_slots obj cmp = obj"
-  by (clarsimp simp: object_clean_slots_def)
-
 lemma object_slots_asid_reset:
   "object_slots (asid_reset obj) = reset_cap_asid \<circ>\<^sub>M (object_slots obj)"
   by (clarsimp simp: object_slots_def asid_reset_def update_slots_def
@@ -210,28 +204,6 @@ lemma reset_cap_asid_idem [simp]:
   "reset_cap_asid (reset_cap_asid cap) = reset_cap_asid cap"
   by (simp add: reset_cap_asid_def split: cdl_cap.splits)
 
-lemma opt_cap_sep_imp_helper:
-  "\<lbrakk>object_slots obj = [slot \<mapsto> cap];
-    heap_lift (cdl_objects s) obj_id = Some obj';
-    object_slots obj' slot = object_slots (object_lift (object_clean obj {Slot slot})) slot;
-    object_type obj = object_type obj'\<rbrakk>
-  \<Longrightarrow> \<exists>cap'. opt_cap (obj_id, slot) s = Some cap' \<and>
-             reset_cap_asid cap' = reset_cap_asid cap"
-  apply (case_tac "has_slots obj", simp_all)
-  apply (clarsimp simp: heap_lift_def object_lift_def)
-  apply (rename_tac obj')
-  apply (rule_tac x="the (object_slots obj' slot)" in exI)
-  apply (clarsimp simp: opt_cap_def slots_of_def opt_object_def)
-  apply (clarsimp simp: object_type_def
-                 split: cdl_object.splits)
-       apply (clarsimp simp: object_clean_def object_clean_fields_def object_clean_slots_def
-                             update_slots_def object_slots_def intent_reset_def asid_reset_def
-                             clean_slots_def cdl_tcb.splits map_comp'_def restrict_map_def
-                             has_slots_def
-                      split: option.splits)+
-  done
-
-
 lemma opt_cap_sep_imp:
   "\<lbrakk><p \<mapsto>c cap \<and>* R> s\<rbrakk>
   \<Longrightarrow> \<exists>cap'. opt_cap p s = Some cap' \<and> reset_cap_asid cap' = reset_cap_asid cap"
@@ -240,7 +212,7 @@ lemma opt_cap_sep_imp:
     opt_object_def split_def
     sep_any_def sep_map_general_def slots_of_def
     state_sep_projection_def object_project_def
-    object_slots_object_lift
+    object_slots_object_clean
     Let_unfold split:sep_state.splits option.splits)
 done
 
@@ -249,7 +221,7 @@ lemma opt_cap_sep_any_imp:
   apply (clarsimp simp: sep_any_exist
     opt_cap_def sep_map_c_conj Let_def)
   apply (clarsimp simp:  sep_map_c_def lift_def
-    opt_object_def split_def object_slots_object_lift
+    opt_object_def split_def object_slots_object_clean
     sep_any_def sep_map_general_def slots_of_def
     state_sep_projection_def object_project_def
     Let_unfold split:sep_state.splits option.splits)
@@ -263,8 +235,8 @@ lemma sep_f_size_opt_cnode:
   apply (case_tac obj)
   apply (auto simp: intent_reset_def empty_cnode_def
     opt_cnode_def update_slots_def state_sep_projection_def
-    opt_object_def object_clean_def object_clean_slots_def
-    object_project_def object_lift_def asid_reset_def
+    opt_object_def object_wipe_slots_def
+    object_project_def object_clean_def asid_reset_def
     split:cdl_cap.splits cdl_object.splits)
   done
 

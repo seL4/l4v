@@ -105,7 +105,7 @@ lemma object_slot_initialised_lookup:
     sep_map_general_def obj_to_sep_state_def)
   apply (rule ext)
   apply (clarsimp simp:object_project_def
-    object_slots_object_lift)
+    object_slots_object_clean)
   apply (clarsimp simp:update_slots_def
     object_slots_def split:cdl_object.splits)
   done

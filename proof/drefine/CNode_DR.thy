@@ -319,7 +319,7 @@ lemma insert_cap_child_corres:
   apply (rule stronger_corres_guard_imp)
     apply (rule corres_split[OF _ get_cap_corres])+
           apply (rule_tac P="old_cap \<noteq> cdl_cap.NullCap" and P'="rv' \<noteq> cap.NullCap"
-            in dcorres_symmetric_bool_cases)
+            in corres_symmetric_bool_cases)
            apply (clarsimp simp :transform_cap_def split:cap.splits arch_cap.splits)
            apply (simp add:assert_def)
            apply (rule corres_trivial)
@@ -761,7 +761,6 @@ lemma cap_revoke_corres_helper:
   apply (rule_tac Q'="\<lambda>cap. op = sfix and cte_wp_at (\<lambda>x. x = cap) slot'" in corres_symb_exec_r)
      apply (rule dcorres_expand_pfx)
      apply (rule_tac Q'="\<lambda>cdt' s. s = sfix \<and> cdt' = cdt sfix" in corres_symb_exec_r)
-(*        apply (rule_tac Q'="\<lambda>ext s. s = sfix \<and> rva = cdt sfix \<and> ext = (exst sfix)" in corres_symb_exec_r) *)
            apply clarsimp
            apply (rule dcorres_expand_pfx)
            apply clarsimp
@@ -1478,22 +1477,10 @@ lemma arch_recycle_cap_idle[wp]:
 lemma arch_recycle_cap_st_tcb_at[wp]:
   "\<lbrace>st_tcb_at P thread\<rbrace> arch_recycle_cap is_final arch_cap \<lbrace>\<lambda>r. st_tcb_at P thread\<rbrace>"
   apply (case_tac arch_cap)
-  apply (simp_all add:arch_recycle_cap_def)
-  apply (wp mapM_x_wp set_asid_pool_st_tcb_at static_imp_wp
-         | wpc | clarsimp| intro conjI impI | force)+
+  apply (simp_all add:arch_recycle_cap_def split del: split_if)
+  apply (wp mapM_x_wp set_asid_pool_st_tcb_at static_imp_wp invalidate_tlb_by_asid_st_tcb_at
+         | wpc | clarsimp| intro conjI impI | fastforce)+
   done
-
-(*
-lemma arch_recycle_cap_r[wp]:
-  "\<lbrace>\<lambda>s. P cap\<rbrace> arch_recycle_cap is_final cap \<lbrace>\<lambda>r s. P r\<rbrace>"
-  apply (clarsimp simp:arch_recycle_cap_def)
-  apply (case_tac cap)
-    apply simp_all
-    apply (wp | clarsimp)+
-    apply (simp add:no_irq_clearMemory)
-    apply wp
-done
-*)
 
 lemma dcorres_storeWord_mapM_x_cvt:
   "\<forall>x\<in>set ls. within_page buf x sz
@@ -1531,50 +1518,6 @@ lemma dcorres_storeWord_mapM_x_cvt:
       apply (wp|clarsimp)+
    done
 qed
-
-(* MOVE *)
-lemma cte_wp_at_cap_aligned:
-  "\<lbrakk>cte_wp_at P p s; invs s\<rbrakk> \<Longrightarrow> \<exists>c. P c \<and> cap_aligned c"
-  apply (drule (1) cte_wp_at_valid_objs_valid_cap [OF _ invs_valid_objs])
-  apply (fastforce simp: valid_cap_def)
-  done
-
-lemma cte_wp_at_cap_aligned':
-  "\<lbrakk>cte_wp_at (op = cap) p s; invs s\<rbrakk> \<Longrightarrow> cap_aligned cap"
-  apply (drule (1) cte_wp_at_valid_objs_valid_cap [OF _ invs_valid_objs])
-  apply (fastforce simp: valid_cap_def)
-  done
-
-lemma typ_at_pg:
-  "typ_at (AArch (AIntData sz)) buf s = ko_at (ArchObj (DataPage sz)) buf s"
-  unfolding obj_at_def
-  by (auto simp: a_type_def split: Structures_A.kernel_object.split_asm arch_kernel_obj.split_asm split_if_asm)
-
-lemmas dmo_dwp = do_machine_op_wp [OF allI]
-
-(* FIXME: move *)
-lemma dmo_mapM_storeWord_0_invs[wp]:
-  "valid invs (do_machine_op (mapM (\<lambda>p. storeWord p 0) S)) (\<lambda>_. invs)"
-  apply (simp add: dom_mapM ef_storeWord)
-  apply (rule mapM_UNIV_wp)
-  apply (simp add: do_machine_op_def split_def)
-  apply wp
-  apply (clarsimp simp: invs_def valid_state_def cur_tcb_def
-                        valid_machine_state_def)
-  apply (rule conjI)
-   apply(erule use_valid[OF _ storeWord_valid_irq_states], simp)
-  apply (clarsimp simp: disj_commute[of "in_user_frame p s", standard])
-  apply (drule_tac x=p in spec, simp)
-  apply (erule use_valid)
-   apply (simp add: storeWord_def word_rsplit_0)
-   apply wp
-  apply simp
-  done
-
-lemma cleanCacheRange_PoU_underlying_memory[wp]:
-  "\<lbrace>\<lambda>ms. underlying_memory ms = m\<rbrace> cleanCacheRange_PoU buf (buf + 2 ^ pageBitsForSize sz - 1) (addrFromPPtr buf) \<lbrace>\<lambda>rv ms. underlying_memory ms = m\<rbrace>"
-   apply (clarsimp simp: cleanCacheRange_PoU_def, wp)
-done
 
 lemma dcorres_arch_recycle_cap_page_cap:
   notes CSpace_D.finalise_cap.simps [simp del]
@@ -2319,6 +2262,11 @@ lemma get_cnode'D:
   "get_cnode' ptr s = Some (sz,cn) \<Longrightarrow> kheap s ptr = Some (Structures_A.CNode sz cn)"
   unfolding get_cnode'_def by (clarsimp split: Structures_A.kernel_object.splits option.splits)
 
+lemma zombie_get_cnode:
+  "\<lbrakk>cte_wp_at (op = (cap.Zombie x (Some xc) xb)) slot s; invs s\<rbrakk> \<Longrightarrow> get_cnode' x s \<noteq> None"
+  by (clarsimp dest!: cte_wp_at_valid_objs_valid_cap [OF _ invs_valid_objs] simp: valid_cap_simps get_cnode'_def obj_at_def
+    elim!: is_cap_tableE)
+
 (* MOVE *)
 definition
   "transform_cnode sz cn \<equiv> Types_D.CNode \<lparr>
@@ -2378,25 +2326,6 @@ lemma recycle_cap_idle_thread: "\<lbrace> \<lambda>s. P (idle_thread s) \<rbrace
   apply (case_tac option)
   apply (wp get_thread_state_it dxo_wp_weak | rule hoare_drop_imps | simp)+
   done
-
-
-
-(* MOVE *)
-lemma cte_wp_at_zombie_not_idle:
-  "\<lbrakk>cte_wp_at (op = (cap.Zombie ptr' zbits n)) ptr s; invs s\<rbrakk> \<Longrightarrow> not_idle_thread (fst ptr) s"
-  "\<lbrakk>cte_wp_at (op = (cap.Zombie ptr' zbits n)) ptr s; invs s\<rbrakk> \<Longrightarrow> not_idle_thread ptr' s"
-  by (auto dest!: zombie_cap_two_nonidles simp: cte_wp_at_caps_of_state not_idle_thread_def)
-
-(* MOVE *)
-lemma is_cap_tableE:
-  "\<lbrakk> is_cap_table sz ko; \<And>cs. \<lbrakk> ko = kernel_object.CNode sz cs; well_formed_cnode_n sz cs\<rbrakk> \<Longrightarrow> P \<rbrakk> \<Longrightarrow> P"
-  unfolding is_cap_table_def
-  by (auto split: Structures_A.kernel_object.split_asm)
-
-lemma zombie_get_cnode:
-  "\<lbrakk>cte_wp_at (op = (cap.Zombie x (Some xc) xb)) slot s; invs s\<rbrakk> \<Longrightarrow> get_cnode' x s \<noteq> None"
-  by (clarsimp dest!: cte_wp_at_valid_objs_valid_cap [OF _ invs_valid_objs] simp: valid_cap_simps get_cnode'_def obj_at_def
-    elim!: is_cap_tableE)
 
 lemma recycle_cap_corres_pre:
   "dcorres (\<lambda>x x'. x = transform_cap x') \<top>
@@ -2752,20 +2681,6 @@ lemma ensure_no_children_dummy:
   apply fastforce
   done
 
-(* FIXME: move *)
-lemma corres_dummy_skip:
-  "\<lbrakk> corres_underlying sr nf dc \<top> \<top> (return x) f;
-  \<And>x. corres_underlying sr nf r P (P' x) g (g' x); \<lbrace>Q'\<rbrace> f \<lbrace>P'\<rbrace> \<rbrakk> \<Longrightarrow>
-   corres_underlying sr nf r P Q' g (f >>= g')"
-  apply (subst return_bind [of x, symmetric])
-  apply (rule corres_guard_imp)
-    apply (rule corres_split, assumption, assumption)
-     apply wp
-    apply assumption
-   apply simp
-  apply simp
-  done
-
 lemma derive_cap_dummy:
   "dcorres dc \<top> \<top> (return x) (derive_cap slot cap)"
   apply (simp add: derive_cap_def)
@@ -2994,20 +2909,6 @@ lemma corres_bindE_throwError:
   apply (simp add: no_fail_def)
   apply (clarsimp simp: bindE_def bind_def throwError_def return_def lift_def split: sum.splits)
   done
-
-(* FIXME: move *)
-lemma get_cap_wellformed:
-  "\<lbrace>valid_objs\<rbrace> get_cap slot \<lbrace>\<lambda>cap s. wellformed_cap cap\<rbrace>"
-  apply (rule hoare_strengthen_post, rule get_cap_valid)
-  apply (simp add: valid_cap_def2)
-  done
-
-(*
-lemma update_cap_rights_same[simp]:
-  "update_cap_rights (Structures_A.cap_rights cap) (transform_cap cap) =  transform_cap cap"
-  apply (case_tac cap,simp_all add:update_cap_rights_def)
-*)
-
 
 lemma decode_cnode_corres:
   "\<lbrakk> Some (CNodeIntent ui) = transform_intent (invocation_type label') args';
@@ -3404,10 +3305,6 @@ lemma decode_cnode_corres:
   apply (simp add: Decode_A.decode_cnode_invocation_def unlessE_whenE)
   apply (rule corres_bindE_throwError, wp, simp)
   done
-
-lemma singleton_set:
- "x\<in> set[a] \<Longrightarrow> x = a"
-  by auto
 
 lemma decode_cnode_label_not_match:
   "\<lbrakk>Some intent = transform_intent (invocation_type label) args; \<forall>ui. intent \<noteq> CNodeIntent ui\<rbrakk>

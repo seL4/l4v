@@ -75,11 +75,8 @@ where
 (* FrameCaps, PageTableCaps and PageDirectoryCaps can either be
  * "real" cap or "fake" cap. Real caps are installed in CNodes,
  * and fake caps represent a page table mapping.
- *
- * The cdl_cap_ref for fake caps point to the real cap it was installed from.
- * TODO: This is not currently implemented.
  *)
-datatype cdl_frame_cap_type = Real | Fake (* cdl_cap_ref *)
+datatype cdl_frame_cap_type = Real | Fake
 
 (*
  * Kernel capabilities.

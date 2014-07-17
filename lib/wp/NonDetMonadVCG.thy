@@ -692,11 +692,16 @@ lemma gets_the_in_monad:
   "((v, s') \<in> fst (gets_the f s)) = (s' = s \<and> f s = Some v)"
   by (auto simp: gets_the_def in_bind in_gets in_assert_opt split: option.split)
 
+lemma in_alternative:
+  "(r,s') \<in> fst ((f \<sqinter> g) s) = ((r,s') \<in> fst (f s) \<or> (r,s') \<in> fst (g s))"
+  by (simp add: alternative_def)
+
 lemmas in_monad = inl_whenE in_whenE in_liftE in_bind in_bindE_L
                   in_bindE_R in_returnOk in_throwError in_fail
                   in_assertE in_assert in_return in_assert_opt
                   in_get in_gets in_put in_when unlessE_whenE
                   unless_when in_modify gets_the_in_monad
+                  in_alternative
 
 subsection "Non-Failure"
 

@@ -20,6 +20,12 @@ begin
 
 #INCLUDE_HASKELL SEL4/Kernel/Init.lhs bodies_only NOT funArray newKernelState distinct rangesBy InitData doKernelOp runInit
 
+consts
+  newKSDomSchedule :: "(domain \<times> machine_word) list"
+  newKSDomScheduleIdx :: nat
+  newKSCurDomain :: domain
+  newKSDomainTime :: machine_word
+ 
 definition
   newKernelState :: "machine_word \<Rightarrow> kernel_state"
 where
@@ -27,10 +33,10 @@ where
         ksPSpace= newPSpace,
         gsUserPages= (\<lambda>x. None),
         gsCNodes= (\<lambda>x. None),
-        ksDomScheduleIdx = 0,
-        ksDomSchedule = [(0, 15), (2, 42), (1, 73)],
-        ksCurDomain = 0,
-        ksDomainTime = 15,
+        ksDomScheduleIdx = newKSDomScheduleIdx,
+        ksDomSchedule = newKSDomSchedule,
+        ksCurDomain = newKSCurDomain,
+        ksDomainTime = newKSDomainTime,
         ksReadyQueues= const [],
         ksCurThread= error [],
         ksIdleThread= error [],

@@ -2362,6 +2362,19 @@ lemma set_asid_pool_invs_restrict:
   done
 
 
+lemmas set_asid_pool_cte_wp_at1[wp]
+    = hoare_cte_wp_caps_of_state_lift [OF set_asid_pool_caps_of_state]
+
+
+lemma mdb_cte_at_set_asid_pool[wp]:
+  "\<lbrace>\<lambda>s. mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) (cdt s)\<rbrace>
+   set_asid_pool y pool
+   \<lbrace>\<lambda>r s. mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) (cdt s)\<rbrace>"
+  apply (clarsimp simp:mdb_cte_at_def)
+  apply (simp only: imp_conv_disj)
+  apply (wp hoare_vcg_disj_lift hoare_vcg_all_lift)
+done
+
 lemma set_asid_pool_invs_unmap:
   "\<lbrace>invs and ko_at (ArchObj (ARM_Structs_A.ASIDPool ap)) p and
     (\<lambda>s. \<forall>asid. asid \<le> mask asid_bits \<longrightarrow> ucast asid = x \<longrightarrow>

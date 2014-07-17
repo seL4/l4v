@@ -107,13 +107,17 @@ lemma valid_cap_machine_state [iff]:
   "machine_state_update f s \<turnstile> c = s \<turnstile> c"
   by (fastforce intro: valid_cap_pspaceI)
 
-
 lemma get_cap_valid [wp]:
   "\<lbrace> valid_objs \<rbrace> get_cap addr \<lbrace> valid_cap \<rbrace>"
   apply (wp get_cap_wp)
   apply (auto dest: cte_wp_at_valid_objs_valid_cap)
   done
 
+lemma get_cap_wellformed:
+  "\<lbrace>valid_objs\<rbrace> get_cap slot \<lbrace>\<lambda>cap s. wellformed_cap cap\<rbrace>"
+  apply (rule hoare_strengthen_post, rule get_cap_valid)
+  apply (simp add: valid_cap_def2)
+  done
 
 lemma update_cdt_cdt:
   "\<lbrace>\<lambda>s. valid_mdb (cdt_update (\<lambda>_. (m (cdt s))) s)\<rbrace> update_cdt m \<lbrace>\<lambda>_. valid_mdb\<rbrace>"
