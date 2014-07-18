@@ -87,6 +87,8 @@ datatype page_invocation
          word32
          obj_ref
          asid
+     | PageGetAddr
+         obj_ref
 
 primrec
   page_map_cap :: "page_invocation \<Rightarrow> cap"
@@ -155,6 +157,11 @@ primrec
   page_flush_pstart :: "page_invocation \<Rightarrow> word32"
 where
   "page_flush_pstart (PageFlush typ start end pstart pd asid) = pstart"
+
+primrec
+  page_get_paddr :: "page_invocation \<Rightarrow> obj_ref"
+where
+  "page_get_paddr (PageGetAddr ptr) = ptr"
 
 datatype arch_invocation
      = InvokePageTable page_table_invocation

@@ -2272,6 +2272,64 @@ lemma perform_page_directory_invocation_silc_inv:
    apply (wp | simp)+
    done
 
+
+lemma as_user_silc_inv[wp]:
+  "\<lbrace>silc_inv aag st\<rbrace>
+   as_user t f 
+   \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
+  unfolding as_user_def
+  apply(rule silc_inv_pres)
+   apply(wp set_object_wp | simp add: split_def)+
+   apply (clarsimp)
+   apply(fastforce simp: silc_inv_def dest: get_tcb_SomeD simp: obj_at_def is_cap_table_def)
+  apply(wp set_object_wp | simp add: split_def)+
+  apply(case_tac "t = fst slot")
+   apply(clarsimp split: kernel_object.splits)
+   apply(erule notE)
+   apply(erule cte_wp_atE)
+    apply(fastforce simp: obj_at_def)
+   apply(drule get_tcb_SomeD)
+   apply(rule cte_wp_at_tcbI)
+     apply(simp)
+    apply assumption
+   apply (fastforce simp: tcb_cap_cases_def split: if_splits)
+  apply(fastforce elim: cte_wp_atE intro: cte_wp_at_cteI cte_wp_at_tcbI)
+  done
+
+crunch silc_inv[wp]: store_word_offs "silc_inv aag st"
+
+crunch kheap[wp]: store_word_offs "\<lambda> s. P (kheap s x)"
+
+crunch cte_wp_at'[wp]: store_word_offs "\<lambda> s. Q (cte_wp_at P slot s)"
+  (wp: crunch_wps simp: crunch_simps)
+  
+
+lemma set_mrs_silc_inv[wp]:
+  "\<lbrace>silc_inv aag st\<rbrace>
+   set_mrs a b c
+   \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
+  unfolding set_mrs_def
+  apply(rule silc_inv_pres)
+   apply(wp crunch_wps set_object_wp | wpc | simp add: crunch_simps split del: split_if)+
+   apply (clarsimp)
+   apply(fastforce simp: silc_inv_def dest: get_tcb_SomeD simp: obj_at_def is_cap_table_def)
+  apply(wp crunch_wps set_object_wp | wpc | simp add: crunch_simps split del: split_if)+
+  apply(case_tac "a = fst slot")
+   apply(clarsimp split: kernel_object.splits cong: conj_cong)
+   apply(erule notE)
+   apply(erule cte_wp_atE)
+    apply(fastforce simp: obj_at_def)
+   apply(drule get_tcb_SomeD)
+   apply(rule cte_wp_at_tcbI)
+     apply(simp)
+    apply assumption
+   apply (fastforce simp: tcb_cap_cases_def split: if_splits)
+  apply(fastforce elim: cte_wp_atE intro: cte_wp_at_cteI cte_wp_at_tcbI)
+  done
+
+
+crunch silc_inv[wp]: send_async_ipc "silc_inv aag st"
+
 lemma perform_page_invocation_silc_inv:
   "\<lbrace>silc_inv aag st and valid_page_inv blah and K (authorised_page_inv aag blah)\<rbrace>
    perform_page_invocation blah
@@ -2559,62 +2617,8 @@ lemma invoke_irq_control_silc_inv:
   apply(wp | simp)+
   done
 
-lemma as_user_silc_inv[wp]:
-  "\<lbrace>silc_inv aag st\<rbrace>
-   as_user t f 
-   \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
-  unfolding as_user_def
-  apply(rule silc_inv_pres)
-   apply(wp set_object_wp | simp add: split_def)+
-   apply (clarsimp)
-   apply(fastforce simp: silc_inv_def dest: get_tcb_SomeD simp: obj_at_def is_cap_table_def)
-  apply(wp set_object_wp | simp add: split_def)+
-  apply(case_tac "t = fst slot")
-   apply(clarsimp split: kernel_object.splits)
-   apply(erule notE)
-   apply(erule cte_wp_atE)
-    apply(fastforce simp: obj_at_def)
-   apply(drule get_tcb_SomeD)
-   apply(rule cte_wp_at_tcbI)
-     apply(simp)
-    apply assumption
-   apply (fastforce simp: tcb_cap_cases_def split: if_splits)
-  apply(fastforce elim: cte_wp_atE intro: cte_wp_at_cteI cte_wp_at_tcbI)
-  done
-
-crunch silc_inv[wp]: store_word_offs "silc_inv aag st"
-
-crunch kheap[wp]: store_word_offs "\<lambda> s. P (kheap s x)"
-
-crunch cte_wp_at'[wp]: store_word_offs "\<lambda> s. Q (cte_wp_at P slot s)"
-  (wp: crunch_wps simp: crunch_simps)
-  
-
-lemma set_mrs_silc_inv[wp]:
-  "\<lbrace>silc_inv aag st\<rbrace>
-   set_mrs a b c
-   \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
-  unfolding set_mrs_def
-  apply(rule silc_inv_pres)
-   apply(wp crunch_wps set_object_wp | wpc | simp add: crunch_simps split del: split_if)+
-   apply (clarsimp)
-   apply(fastforce simp: silc_inv_def dest: get_tcb_SomeD simp: obj_at_def is_cap_table_def)
-  apply(wp crunch_wps set_object_wp | wpc | simp add: crunch_simps split del: split_if)+
-  apply(case_tac "a = fst slot")
-   apply(clarsimp split: kernel_object.splits cong: conj_cong)
-   apply(erule notE)
-   apply(erule cte_wp_atE)
-    apply(fastforce simp: obj_at_def)
-   apply(drule get_tcb_SomeD)
-   apply(rule cte_wp_at_tcbI)
-     apply(simp)
-    apply assumption
-   apply (fastforce simp: tcb_cap_cases_def split: if_splits)
-  apply(fastforce elim: cte_wp_atE intro: cte_wp_at_cteI cte_wp_at_tcbI)
-  done
 
 
-crunch silc_inv[wp]: send_async_ipc "silc_inv aag st"
 
 crunch silc_inv[wp]: receive_async_ipc "silc_inv aag st"
 

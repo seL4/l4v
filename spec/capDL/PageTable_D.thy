@@ -188,6 +188,7 @@ where
        (returnOk $ PageFlushCaches Unify)  \<sqinter>  (returnOk $ PageFlushCaches Clean)  \<sqinter> 
       (returnOk $ PageFlushCaches CleanInvalidate )  \<sqinter> (returnOk $ PageFlushCaches Invalidate)
       \<sqinter> throw
+    | PageGetAddressIntent \<Rightarrow> returnOk PageGetAddress
   "
 
 (* Invoke a page table. *)
@@ -245,6 +246,12 @@ where
         od
 
     | PageFlushCaches flush \<Rightarrow> return ()
+    
+    | PageGetAddress \<Rightarrow> 
+        do
+          ct \<leftarrow> gets_the cdl_current_thread;
+          corrupt_tcb_intent ct
+        od
   "
 
 end

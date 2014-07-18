@@ -166,15 +166,6 @@ where
   odE"
 
 
-(* Modify the TCB's IpcBuffer or Registers in an arbitrary fashion. *)
-definition
-  corrupt_tcb_intent :: "cdl_object_id \<Rightarrow> unit k_monad"
-where
-  "corrupt_tcb_intent target_tcb \<equiv>
-    do
-      new_intent \<leftarrow> select UNIV;
-      update_thread target_tcb (\<lambda>t. t\<lparr>cdl_tcb_intent := new_intent\<rparr>)
-    od"
 
 (* Modify the TCB's intent to indicate an error during decode. *)
 definition

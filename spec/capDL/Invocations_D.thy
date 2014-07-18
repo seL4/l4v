@@ -79,6 +79,7 @@ datatype cdl_page_invocation =
   | PageRemap cdl_cap "cdl_cap_ref list"
   | PageUnmap cdl_object_id cdl_cap_ref
   | PageFlushCaches flush
+  | PageGetAddress 
 
 
 datatype cdl_page_directory_invocation =

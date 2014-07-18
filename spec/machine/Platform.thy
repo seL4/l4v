@@ -27,6 +27,7 @@ type_synonym irq = word8
 type_synonym paddr = word32
 
 abbreviation "toPAddr \<equiv> id"
+abbreviation "fromPAddr \<equiv> id"
 
 definition
   pageColourBits :: nat where

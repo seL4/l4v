@@ -120,6 +120,54 @@ where
      return (pd \<noteq> InvalidPDE)
   od"
 
+text {*
+  A pointer is inside a user frame if its top bits point to a @{text DataPage}.
+*}
+definition
+  in_user_frame :: "word32 \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
+  "in_user_frame p s \<equiv>
+   \<exists>sz. kheap s (p && ~~ mask (pageBitsForSize sz)) =
+        Some (ArchObj (DataPage sz))"
+
+
+text {* Store or load a word at an offset from an IPC buffer. *}
+definition
+  store_word_offs :: "obj_ref \<Rightarrow> nat \<Rightarrow> machine_word \<Rightarrow> (unit,'z::state_ext) s_monad" where
+ "store_word_offs ptr offs v \<equiv>
+    do s \<leftarrow> get;
+       assert (in_user_frame (ptr + of_nat (offs * word_size)) s);
+       do_machine_op $ storeWord (ptr + of_nat (offs * word_size)) v
+    od"
+
+text {* Set the message registers of a thread. *}
+definition
+  set_mrs :: "obj_ref \<Rightarrow> obj_ref option \<Rightarrow> message list \<Rightarrow> (length_type,'z::state_ext) s_monad" where
+  "set_mrs thread buf msgs \<equiv>
+   do
+     tcb \<leftarrow> gets_the $ get_tcb thread;
+     context \<leftarrow> return (tcb_context tcb);
+     new_regs \<leftarrow> return (\<lambda>reg. if reg \<in> set (take (length msgs) msg_registers)
+                              then msgs ! (the_index msg_registers reg)
+                              else context reg);
+     set_object thread (TCB (tcb \<lparr> tcb_context := new_regs \<rparr>));
+     remaining_msgs \<leftarrow> return (drop (length msg_registers) msgs);
+     case buf of
+     None      \<Rightarrow> return $ nat_to_len (min (length msg_registers) (length msgs))
+   | Some pptr \<Rightarrow> do
+       zipWithM_x (\<lambda>x. store_word_offs pptr x)
+          [length msg_registers + 1 ..< Suc msg_max_length] remaining_msgs;
+       return $ nat_to_len $ min (length msgs) msg_max_length
+     od
+   od"
+
+definition
+  set_message_info :: "obj_ref \<Rightarrow> message_info \<Rightarrow> (unit,'z::state_ext) s_monad"
+where
+  "set_message_info thread info \<equiv>
+     as_user thread $ set_register msg_info_register $
+                      message_info_to_data info"
+
+
 text {* The Page capability confers the authority to map, unmap and flush the
 memory page. The remap system call is a convenience operation that ensures the
 page is mapped in the same location as this cap was previously used to map it
@@ -181,6 +229,11 @@ perform_page_invocation :: "page_invocation \<Rightarrow> (unit,'z::state_ext) s
         tcb \<leftarrow> gets cur_thread;
         set_vm_root tcb
       od
+   od
+| PageGetAddr ptr \<Rightarrow> do
+    ct \<leftarrow> gets cur_thread;
+    n_msg \<leftarrow> set_mrs ct None [addrFromPPtr ptr];
+    set_message_info ct $ MI n_msg 0 0 0
   od"
 
 text {* PageTable capabilities confer the authority to map and unmap page

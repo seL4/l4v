@@ -996,6 +996,10 @@ shows
         apply (rule dec_arch_inv_page_flush_corres,
                clarsimp simp: InvocationLabels_H.isPageFlush_def)+
     apply (clarsimp simp: InvocationLabels_H.isPageFlush_def split del: split_if)
+    apply (cases "invocation_type (mi_label mi) = ARMPageGetAddress")
+     apply simp
+     apply (rule corres_returnOk)
+     apply (clarsimp simp: archinv_relation_def page_invocation_map_def)
     apply (clarsimp split: invocation_label.splits split del: split_if)
    apply (simp add: isCap_simps split del: split_if)
    apply (simp split: invocation_label.split split del: split_if)
@@ -1725,6 +1729,10 @@ lemma arch_decodeInvocation_wf[wp]:
      apply (clarsimp simp: InvocationLabels_H.isPageFlush_def split: invocation_label.splits)
         apply (rule arch_decodeARMPageFlush_wf,
                clarsimp simp: InvocationLabels_H.isPageFlush_def)+
+    apply (cases "invocation_type label = ARMPageGetAddress")
+     apply (simp split del: split_if)
+     apply (rule hoare_pre, wp)
+     apply (clarsimp simp: valid_arch_inv'_def valid_page_inv'_def)
     apply (simp add: InvocationLabels_H.isPageFlush_def throwError_R'
               split: invocation_label.split_asm)
    apply (simp add: decodeARMMMUInvocation_def ArchRetype_H.decodeInvocation_def 
@@ -1757,7 +1765,7 @@ lemma arch_decodeInvocation_wf[wp]:
                arch_kernel_object.splits)
             apply ((wp whenE_throwError_wp isFinalCapability_inv
                 | wpc |simp add: valid_arch_inv'_def valid_pti'_def unlessE_whenE |
-                rule_tac x="fst p" in hoare_imp_eq_substR | rule hoare_drop_imp)+)[13]
+                rule_tac x="fst p" in hoare_imp_eq_substR | rule hoare_drop_imp)+)[14]
    apply (clarsimp simp: linorder_not_le isCap_simps
                          cte_wp_at_ctes_of diminished_arch_update')
    apply (simp add: valid_cap'_def capAligned_def)
@@ -1820,6 +1828,12 @@ lemma setObject_pde_nosch [wp]:
   apply wp
   apply simp
   done
+
+crunch nosch[wp]: setMRs "\<lambda>s. P (ksSchedulerAction s)"
+    (ignore: getRestartPC setRegister transferCapsToSlots
+   wp: hoare_drop_imps hoare_vcg_split_option_case
+        mapM_wp'
+   simp: split_def zipWithM_x_mapM)
 
 crunch nosch [wp]: performARMMMUInvocation "\<lambda>s. P (ksSchedulerAction s)"
   (ignore: getObject setObject

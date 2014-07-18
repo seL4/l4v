@@ -15,20 +15,6 @@ begin
 lemmas lookup_slot_wrapper_defs'[simp] =
    lookupSourceSlot_def lookupTargetSlot_def lookupPivotSlot_def
 
-lemma message_info_from_data_eqv: 
-  "message_info_map (data_to_message_info rv) = messageInfoFromWord rv"
-  by (simp add: data_to_message_info_def messageInfoFromWord_def 
-    msgLengthBits_def msgExtraCapBits_def msgMaxExtraCaps_def
-    shiftL_nat Let_def not_less msgMaxLength_def)
-
-lemma message_info_to_data_eqv:
-  "wordFromMessageInfo (message_info_map mi) = message_info_to_data mi"
-  apply (cases mi)
-  apply (simp add: wordFromMessageInfo_def
-    msgLengthBits_def msgExtraCapBits_def msgMaxExtraCaps_def
-    shiftL_nat)
-  done
-
 lemma get_mi_corres: "corres (op = \<circ> message_info_map)
                       (tcb_at t) (tcb_at' t)
                       (get_message_info t) (getMessageInfo t)"
@@ -41,27 +27,9 @@ lemma get_mi_corres: "corres (op = \<circ> message_info_map)
       apply (wp | simp)+
   done
 
-lemma set_mi_corres:
- "mi' = message_info_map mi \<Longrightarrow>
-  corres dc (tcb_at t) (tcb_at' t)
-         (set_message_info t mi) (setMessageInfo t mi')"
-  apply (simp add: setMessageInfo_def set_message_info_def)
-  apply (subgoal_tac "wordFromMessageInfo (message_info_map mi) = 
-                      message_info_to_data mi")
-   apply (simp add: user_setreg_corres msg_info_register_def 
-                    msgInfoRegister_def)
-  apply (simp add: message_info_to_data_eqv)
-  done
 
 lemma get_mi_inv'[wp]: "\<lbrace>I\<rbrace> getMessageInfo a \<lbrace>\<lambda>x. I\<rbrace>"
   by (simp add: getMessageInfo_def, wp)
-
-lemma set_mi_invs'[wp]: "\<lbrace>invs' and tcb_at' t\<rbrace> setMessageInfo t a \<lbrace>\<lambda>x. invs'\<rbrace>"
-  by (simp add: setMessageInfo_def) wp
-
-lemma set_mi_tcb' [wp]:
-  "\<lbrace> tcb_at' t \<rbrace> setMessageInfo receiver msg \<lbrace>\<lambda>rv. tcb_at' t\<rbrace>"
-  by (simp add: setMessageInfo_def) wp
 
 definition
   "get_send_cap_relation rv rv' \<equiv> 
@@ -1485,18 +1453,6 @@ lemma get_mrs_inv'[wp]:
           | wp dmo_inv' loadWord_inv mapM_wp'
             asUser_inv det_mapM[where S=UNIV] | wpc)+
 
-lemma setMRs_typ_at':
-  "\<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> setMRs receiver recv_buf mrs \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
-  by (simp add: setMRs_def zipWithM_x_mapM split_def, wp crunch_wps)
-
-lemmas setMRs_typ_at_lifts[wp] = typ_at_lifts [OF setMRs_typ_at']
-
-lemma set_mrs_invs'[wp]:
-  "\<lbrace> invs' and tcb_at' receiver \<rbrace> setMRs receiver recv_buf mrs \<lbrace>\<lambda>rv. invs' \<rbrace>"
-  apply (simp add: setMRs_def)
-  apply (wp dmo_invs' no_irq_mapM no_irq_storeWord crunch_wps|
-         simp add: zipWithM_x_mapM split_def)+
-  done
 
 lemma copyMRs_typ_at':
   "\<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> copyMRs s sb r rb n \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"

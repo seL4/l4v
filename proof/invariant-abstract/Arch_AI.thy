@@ -1727,8 +1727,13 @@ lemma arch_decode_inv_wf[wp]:
         apply (simp add: valid_arch_inv_def valid_page_inv_def)
         apply (wp find_pd_for_asid_pd_at_asid | wpc)+
      apply (clarsimp simp: valid_cap_def mask_def)
-    apply simp
+    apply (simp split del: split_if)
+    apply (cases "invocation_type label = ARMPageGetAddress")
+     apply (simp split del: split_if)
+     apply (rule hoare_pre, wp)
+     apply (clarsimp simp: valid_arch_inv_def valid_page_inv_def)
     apply (rule hoare_pre, wp)
+   apply (simp)
    apply (simp add: arch_decode_invocation_def Let_def split_def
                     is_final_cap_def
                cong: if_cong split del: split_if)
@@ -1820,7 +1825,7 @@ declare word_less_sub_le [simp]
 
 crunch st_tcb_at: perform_page_table_invocation, perform_page_invocation,
            perform_asid_pool_invocation, perform_page_directory_invocation "st_tcb_at P t"
-  (wp: crunch_wps simp: crunch_simps)
+  (wp: crunch_wps set_mrs_st_tcb simp: crunch_simps)
 
 lemma delete_objects_st_tcb_at:
   "\<lbrace>st_tcb_at P t and invs and K (t \<notin> {ptr .. ptr + 2 ^ bits - 1})\<rbrace> 

@@ -2061,6 +2061,7 @@ lemma ivc_label_flush_case:
   |  invocation_label.ARMPageCleanInvalidate_Data \<Rightarrow> D
   |  invocation_label.ARMPageInvalidate_Data \<Rightarrow> D
   |  invocation_label.ARMPageClean_Data \<Rightarrow> D
+  |  invocation_label.ARMPageGetAddress \<Rightarrow> E
   |  _  \<Rightarrow> H)
   = D"
   by (case_tac label,simp_all)
@@ -2346,12 +2347,23 @@ lemma decodeARMFrameInvocation_ccorres:
                     if_cong invocation_label.case_cong list.case_cong)
 
    apply (rule ccorres_Cond_rhs[rotated])+
-        apply (rule ccorres_inst[where P=\<top> and P'=UNIV], simp)
-       apply (rule ccorres_equals_throwError)
-        apply (fastforce simp: throwError_bind invocationCatch_def
-                       split: invocation_label.split)
-       apply (rule syscall_error_throwError_ccorres_n)
-       apply (simp add: syscall_error_to_H_cases)
+         apply (rule ccorres_inst[where P=\<top> and P'=UNIV], simp)
+        apply (rule ccorres_equals_throwError)
+         apply (fastforce simp: throwError_bind invocationCatch_def
+                        split: invocation_label.split)
+        apply (rule syscall_error_throwError_ccorres_n)
+        apply (simp add: syscall_error_to_H_cases)
+       apply (simp add: returnOk_bind bindE_assoc performARMMMUInvocations)
+       apply (rule ccorres_rhs_assoc)+
+       apply simp
+       apply (ctac add: setThreadState_ccorres)
+         apply csymbr
+         apply (ctac(no_vcg) add: performPageGetAddress_ccorres)
+           apply (rule ccorres_alternative2)
+           apply (rule ccorres_return_CE, simp+)[1]
+          apply (rule ccorres_inst[where P=\<top> and P'=UNIV], simp)
+         apply wp
+       apply (vcg exspec=setThreadState_modifies)
       apply (rule ccorres_rhs_assoc)+
       apply csymbr+
       apply (simp add: ivc_label_flush_case decodeARMPageFlush_def
@@ -2510,7 +2522,7 @@ lemma decodeARMFrameInvocation_ccorres:
                                   cap_get_tag_isCap_ArchObject2
                                   word_sless_def word_sle_def
                            dest!: ccte_relation_ccap_relation)
-            apply (simp add:sless_positive)
+           apply (simp add:sless_positive)
            apply ceqv
           apply (rule ccorres_assert2)
           apply csymbr+
@@ -2750,7 +2762,7 @@ lemma decodeARMFrameInvocation_ccorres:
                                    cap_get_tag_isCap_ArchObject2
                                    word_sle_def word_sless_def
                             dest!: ccte_relation_ccap_relation)
-             apply (simp add:sless_positive)
+            apply (simp add:sless_positive)
             apply ceqv
            apply (rule ccorres_assert2)
            apply csymbr+

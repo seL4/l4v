@@ -197,7 +197,8 @@ where
   | _ \<Rightarrow> False"
 
 datatype page_invocation =
-    PageFlush flush_type vptr vptr paddr machine_word asid
+    PageGetAddr machine_word
+  | PageFlush flush_type vptr vptr paddr machine_word asid
   | PageRemap asid "(pte * machine_word list) + (pde * machine_word list)"
   | PageMap asid capability machine_word "(pte * machine_word list) + (pde * machine_word list)"
   | PageUnmap arch_capability machine_word
@@ -238,6 +239,11 @@ where
   "pageFlushType (PageFlush v0 v1 v2 v3 v4 v5) = v0"
 
 primrec
+  pageFlushEnd :: "page_invocation \<Rightarrow> vptr"
+where
+  "pageFlushEnd (PageFlush v0 v1 v2 v3 v4 v5) = v2"
+
+primrec
   pageFlushPStart :: "page_invocation \<Rightarrow> paddr"
 where
   "pageFlushPStart (PageFlush v0 v1 v2 v3 v4 v5) = v3"
@@ -253,9 +259,9 @@ where
   "pageMapASID (PageMap v0 v1 v2 v3) = v0"
 
 primrec
-  pageFlushEnd :: "page_invocation \<Rightarrow> vptr"
+  pageGetBasePtr :: "page_invocation \<Rightarrow> machine_word"
 where
-  "pageFlushEnd (PageFlush v0 v1 v2 v3 v4 v5) = v2"
+  "pageGetBasePtr (PageGetAddr v0) = v0"
 
 primrec
   pageMapEntries :: "page_invocation \<Rightarrow> (pte * machine_word list) + (pde * machine_word list)"
@@ -308,6 +314,11 @@ where
   "pageFlushType_update f (PageFlush v0 v1 v2 v3 v4 v5) = PageFlush (f v0) v1 v2 v3 v4 v5"
 
 primrec
+  pageFlushEnd_update :: "(vptr \<Rightarrow> vptr) \<Rightarrow> page_invocation \<Rightarrow> page_invocation"
+where
+  "pageFlushEnd_update f (PageFlush v0 v1 v2 v3 v4 v5) = PageFlush v0 v1 (f v2) v3 v4 v5"
+
+primrec
   pageFlushPStart_update :: "(paddr \<Rightarrow> paddr) \<Rightarrow> page_invocation \<Rightarrow> page_invocation"
 where
   "pageFlushPStart_update f (PageFlush v0 v1 v2 v3 v4 v5) = PageFlush v0 v1 v2 (f v3) v4 v5"
@@ -323,9 +334,9 @@ where
   "pageMapASID_update f (PageMap v0 v1 v2 v3) = PageMap (f v0) v1 v2 v3"
 
 primrec
-  pageFlushEnd_update :: "(vptr \<Rightarrow> vptr) \<Rightarrow> page_invocation \<Rightarrow> page_invocation"
+  pageGetBasePtr_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> page_invocation \<Rightarrow> page_invocation"
 where
-  "pageFlushEnd_update f (PageFlush v0 v1 v2 v3 v4 v5) = PageFlush v0 v1 (f v2) v3 v4 v5"
+  "pageGetBasePtr_update f (PageGetAddr v0) = PageGetAddr (f v0)"
 
 primrec
   pageMapEntries_update :: "(((pte * machine_word list) + (pde * machine_word list)) \<Rightarrow> ((pte * machine_word list) + (pde * machine_word list))) \<Rightarrow> page_invocation \<Rightarrow> page_invocation"
@@ -341,6 +352,11 @@ primrec
   pageMapCTSlot_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> page_invocation \<Rightarrow> page_invocation"
 where
   "pageMapCTSlot_update f (PageMap v0 v1 v2 v3) = PageMap v0 v1 (f v2) v3"
+
+abbreviation (input)
+  PageGetAddr_trans :: "(machine_word) \<Rightarrow> page_invocation" ("PageGetAddr'_ \<lparr> pageGetBasePtr= _ \<rparr>")
+where
+  "PageGetAddr_ \<lparr> pageGetBasePtr= v0 \<rparr> == PageGetAddr v0"
 
 abbreviation (input)
   PageFlush_trans :: "(flush_type) \<Rightarrow> (vptr) \<Rightarrow> (vptr) \<Rightarrow> (paddr) \<Rightarrow> (machine_word) \<Rightarrow> (asid) \<Rightarrow> page_invocation" ("PageFlush'_ \<lparr> pageFlushType= _, pageFlushStart= _, pageFlushEnd= _, pageFlushPStart= _, pageFlushPD= _, pageFlushASID= _ \<rparr>")
@@ -361,6 +377,13 @@ abbreviation (input)
   PageUnmap_trans :: "(arch_capability) \<Rightarrow> (machine_word) \<Rightarrow> page_invocation" ("PageUnmap'_ \<lparr> pageUnmapCap= _, pageUnmapCapSlot= _ \<rparr>")
 where
   "PageUnmap_ \<lparr> pageUnmapCap= v0, pageUnmapCapSlot= v1 \<rparr> == PageUnmap v0 v1"
+
+definition
+  isPageGetAddr :: "page_invocation \<Rightarrow> bool"
+where
+ "isPageGetAddr v \<equiv> case v of
+    PageGetAddr v0 \<Rightarrow> True
+  | _ \<Rightarrow> False"
 
 definition
   isPageFlush :: "page_invocation \<Rightarrow> bool"

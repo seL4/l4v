@@ -21,8 +21,7 @@ lemmas lookup_slot_wrapper_defs[simp] =
 lemma get_mi_inv[wp]: "\<lbrace>I\<rbrace> get_message_info a \<lbrace>\<lambda>x. I\<rbrace>"
   by (simp add: get_message_info_def user_getreg_inv | wp)+
 
-lemma set_mi_invs[wp]: "\<lbrace>invs\<rbrace> set_message_info t a \<lbrace>\<lambda>x. invs\<rbrace>"
-  by (simp add: set_message_info_def, wp)
+
 
 lemma set_mi_tcb [wp]:
   "\<lbrace> tcb_at t \<rbrace> set_message_info receiver msg \<lbrace>\<lambda>rv. tcb_at t\<rbrace>"
@@ -1461,51 +1460,6 @@ lemma get_mrs_inv[wp]:
           | wp dmo_inv loadWord_inv mapM_wp' | wpc)+
 
 
-lemma set_mrs_typ_at[wp]:
-  "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> set_mrs t buf mrs \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
-  apply (simp add: set_mrs_def zipWithM_x_mapM split_def
-                   store_word_offs_def set_object_def
-              cong: option.case_cong
-              split del: split_if)
-  apply (wp hoare_vcg_split_option_case)
-    apply (rule mapM_wp [where S=UNIV, simplified])
-    apply (wp | simp)+
-  apply (clarsimp simp: obj_at_def a_type_def
-                  dest!: get_tcb_SomeD)
-  done
-
-
-lemma set_mrs_tcb[wp]:
-  "\<lbrace> tcb_at t \<rbrace> set_mrs receiver recv_buf mrs \<lbrace>\<lambda>rv. tcb_at t \<rbrace>"
-  by (simp add: tcb_at_typ, wp)
-
-
-lemma set_mrs_aep_at[wp]:
-  "\<lbrace> aep_at p \<rbrace> set_mrs receiver recv_buf mrs \<lbrace>\<lambda>rv. aep_at p \<rbrace>"
-  by (simp add: aep_at_typ, wp)
-
-
-lemmas set_mrs_redux =
-   set_mrs_def bind_assoc[symmetric]
-   thread_set_def[simplified, symmetric]
-
-lemma set_mrs_invs[wp]:
-  "\<lbrace> invs and tcb_at receiver \<rbrace> set_mrs receiver recv_buf mrs \<lbrace>\<lambda>rv. invs \<rbrace>"
-  apply (simp add: set_mrs_redux)
-  apply wp
-   apply (rule_tac P="invs" in hoare_triv)
-   apply (case_tac recv_buf)
-    apply simp
-   apply (simp add: zipWithM_x_mapM split del: split_if)
-   apply wp
-   apply (rule mapM_wp)
-    apply (simp add: split_def store_word_offs_def)
-    apply (wp storeWord_invs)
-    apply simp
-   apply blast
-  apply (wp thread_set_invs_trivial)
-  apply (auto simp: tcb_cap_cases_def)
-  done
 
 lemma copy_mrs_typ_at[wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> copy_mrs s sb r rb n \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
@@ -1782,22 +1736,7 @@ crunch vmdb[wp]: do_ipc_transfer "valid_mdb"
   (ignore: as_user simp: crunch_simps ball_conj_distrib
        wp: crunch_wps hoare_vcg_const_Ball_lift transfer_caps_loop_valid_mdb)
 
-lemma set_mrs_thread_set_dmo:
-  assumes ts: "\<And>c. \<lbrace>P\<rbrace> thread_set (\<lambda>tcb. tcb\<lparr>tcb_context := c tcb\<rparr>) r \<lbrace>\<lambda>rv. Q\<rbrace>"
-  assumes dmo: "\<And>x y. \<lbrace>Q\<rbrace> do_machine_op (storeWord x y) \<lbrace>\<lambda>rv. Q\<rbrace>"
-  shows "\<lbrace>P\<rbrace> set_mrs r t mrs \<lbrace>\<lambda>rv. Q\<rbrace>"
-  apply (simp add: set_mrs_redux)
-  apply (case_tac t)
-   apply simp
-   apply wp
-   apply (rule ts)
-  apply (simp add: zipWithM_x_mapM store_word_offs_def split_def
-              split del: split_if)
-  apply (wp mapM_wp dmo)
-    apply simp
-   apply blast
-  apply (rule ts)
-  done
+
 
 
 lemma copy_mrs_thread_set_dmo:
@@ -2389,13 +2328,7 @@ lemma do_ipc_transfer_tcb_caps:
   done
 
 
-lemma set_mrs_st_tcb [wp]:
-  "\<lbrace>st_tcb_at P t\<rbrace> set_mrs r t' mrs \<lbrace>\<lambda>rv. st_tcb_at P t\<rbrace>"
-  apply (rule set_mrs_thread_set_dmo) 
-   apply (rule thread_set_no_change_tcb_state)
-   apply simp
-  apply wp
-  done
+
 
 
 crunch st_tcb[wp]: do_ipc_transfer "st_tcb_at P t"

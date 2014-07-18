@@ -224,6 +224,8 @@ where
                 (end + vaddr - 1) (addrFromPPtr p + start) pd asid
     odE
     else throwError TruncatedMessage
+    else if invocation_type label = ARMPageGetAddress
+    then returnOk $ InvokePage $ PageGetAddr p
   else  throwError IllegalOperation
 
 | ASIDControlCap \<Rightarrow>

@@ -387,7 +387,7 @@ lemma arch_perform_invocation_reads_respects_g:
    apply (rule doesnt_touch_globalsI)
    apply (wp arch_perform_invocation_globals_equiv)
    apply (simp add: invs_valid_vs_lookup invs_def valid_state_def valid_pspace_def)+
-done
+  done
 
 definition authorised_for_globals_inv :: "invocation \<Rightarrow> ('z::state_ext) state \<Rightarrow> bool" where
   "authorised_for_globals_inv oper \<equiv> \<lambda>s. case oper of InvokeArchObject ai \<Rightarrow> authorised_for_globals_arch_inv ai s | _ \<Rightarrow> True"

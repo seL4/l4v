@@ -767,6 +767,59 @@ lemma perform_page_invocation_domain_sep_inv_get_cap_helper:
   apply(rule wp_post_taut)
   done
 
+
+lemma set_object_tcb_context_update_neg_cte_wp_at:
+  "\<lbrace>\<lambda>s. \<not> cte_wp_at P slot s \<and> obj_at (op = (TCB tcb)) ptr s\<rbrace>
+   set_object ptr (TCB (tcb\<lparr>tcb_context := X\<rparr>))
+   \<lbrace>\<lambda>_ s. \<not> cte_wp_at P slot s\<rbrace>"
+  apply(wp set_object_wp)
+  apply clarsimp
+  apply(case_tac "ptr = fst slot")
+   apply(erule cte_wp_atE)
+    apply(fastforce simp: obj_at_def)
+   apply(erule notE)
+   apply(clarsimp simp: obj_at_def)
+   apply(rule cte_wp_at_tcbI)
+      apply(simp)
+     apply(fastforce)
+    apply(fastforce simp: tcb_cap_cases_def split: if_splits)
+  apply(fastforce elim: cte_wp_atE intro: cte_wp_at_cteI cte_wp_at_tcbI)
+  done
+
+lemma as_user_neg_cte_wp_at[wp]:
+  "\<lbrace>\<lambda>s. \<not> cte_wp_at P slot s\<rbrace>
+   as_user t f
+   \<lbrace>\<lambda>_ s. \<not> cte_wp_at P slot s\<rbrace>"
+  unfolding as_user_def
+  apply(wp set_object_tcb_context_update_neg_cte_wp_at | simp add: split_def)+
+  apply(fastforce simp: obj_at_def)
+  done
+
+crunch domain_sep_inv[wp]: as_user "domain_sep_inv irqs st"
+  (wp: domain_sep_inv_triv)
+
+lemma set_object_tcb_context_update_domain_sep_inv:
+  "\<lbrace>\<lambda>s. domain_sep_inv irqs st s \<and> obj_at (op = (TCB tcb)) ptr s\<rbrace>
+   set_object ptr (TCB (tcb\<lparr>tcb_context := X\<rparr>))
+   \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
+  apply(rule hoare_pre)
+   apply(rule domain_sep_inv_wp)
+    apply(rule hoare_pre)
+     apply(rule set_object_tcb_context_update_neg_cte_wp_at)
+    apply(fastforce)
+   apply(wp | simp | elim conjE | assumption)+
+  apply blast
+  done
+
+crunch domain_sep_inv[wp]: set_mrs "domain_sep_inv irqs st"
+  (ignore: set_object
+   wp: crunch_wps set_object_tcb_context_update_domain_sep_inv
+   simp: crunch_simps)
+
+
+crunch domain_sep_inv[wp]: send_async_ipc "domain_sep_inv irqs st" (wp: dxo_wp_weak ignore:  switch_if_required_to)
+
+
 lemma perform_page_invocation_domain_sep_inv:
   "\<lbrace>domain_sep_inv irqs st and valid_page_inv pi\<rbrace>
   perform_page_invocation pi
@@ -887,55 +940,7 @@ lemma invoke_control_domain_sep_inv:
   apply(wp | simp )+
   done
 
-lemma set_object_tcb_context_update_neg_cte_wp_at:
-  "\<lbrace>\<lambda>s. \<not> cte_wp_at P slot s \<and> obj_at (op = (TCB tcb)) ptr s\<rbrace>
-   set_object ptr (TCB (tcb\<lparr>tcb_context := X\<rparr>))
-   \<lbrace>\<lambda>_ s. \<not> cte_wp_at P slot s\<rbrace>"
-  apply(wp set_object_wp)
-  apply clarsimp
-  apply(case_tac "ptr = fst slot")
-   apply(erule cte_wp_atE)
-    apply(fastforce simp: obj_at_def)
-   apply(erule notE)
-   apply(clarsimp simp: obj_at_def)
-   apply(rule cte_wp_at_tcbI)
-      apply(simp)
-     apply(fastforce)
-    apply(fastforce simp: tcb_cap_cases_def split: if_splits)
-  apply(fastforce elim: cte_wp_atE intro: cte_wp_at_cteI cte_wp_at_tcbI)
-  done
 
-lemma as_user_neg_cte_wp_at[wp]:
-  "\<lbrace>\<lambda>s. \<not> cte_wp_at P slot s\<rbrace>
-   as_user t f
-   \<lbrace>\<lambda>_ s. \<not> cte_wp_at P slot s\<rbrace>"
-  unfolding as_user_def
-  apply(wp set_object_tcb_context_update_neg_cte_wp_at | simp add: split_def)+
-  apply(fastforce simp: obj_at_def)
-  done
-
-crunch domain_sep_inv[wp]: as_user "domain_sep_inv irqs st"
-  (wp: domain_sep_inv_triv)
-
-lemma set_object_tcb_context_update_domain_sep_inv:
-  "\<lbrace>\<lambda>s. domain_sep_inv irqs st s \<and> obj_at (op = (TCB tcb)) ptr s\<rbrace>
-   set_object ptr (TCB (tcb\<lparr>tcb_context := X\<rparr>))
-   \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
-  apply(rule hoare_pre)
-   apply(rule domain_sep_inv_wp)
-    apply(rule hoare_pre)
-     apply(rule set_object_tcb_context_update_neg_cte_wp_at)
-    apply(fastforce)
-   apply(wp | simp | elim conjE | assumption)+
-  apply blast
-  done
-
-crunch domain_sep_inv[wp]: set_mrs "domain_sep_inv irqs st"
-  (ignore: set_object
-   wp: crunch_wps set_object_tcb_context_update_domain_sep_inv
-   simp: crunch_simps)
-
-crunch domain_sep_inv[wp]: send_async_ipc "domain_sep_inv irqs st" (wp: dxo_wp_weak ignore:  switch_if_required_to)
 
 crunch domain_sep_inv[wp]: receive_async_ipc "domain_sep_inv irqs st"
 

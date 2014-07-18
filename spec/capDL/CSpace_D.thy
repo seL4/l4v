@@ -720,4 +720,18 @@ where
    | PageDirectoryCap _ _ _ \<Rightarrow> throw \<sqinter> returnOk cap
    | _ \<Rightarrow> returnOk cap"
 
+
+(* This function is here to make it available in both Tcb_D and
+   PageTable_D *)
+
+(* Modify the TCB's IpcBuffer or Registers in an arbitrary fashion. *)
+definition
+  corrupt_tcb_intent :: "cdl_object_id \<Rightarrow> unit k_monad"
+where
+  "corrupt_tcb_intent target_tcb \<equiv>
+    do
+      new_intent \<leftarrow> select UNIV;
+      update_thread target_tcb (\<lambda>t. t\<lparr>cdl_tcb_intent := new_intent\<rparr>)
+    od"
+
 end
