@@ -4084,7 +4084,7 @@ lemma perform_page_invocation_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> perform_page_invocation a \<lbrace>\<lambda>_.valid_list\<rbrace>"
   apply (simp add: perform_page_invocation_def)
   apply (cases a,simp_all)
-  apply (wp mapM_x_wp' mapM_wp' crunch_wps | intro impI conjI allI | wpc | simp split: cap.splits arch_cap.splits option.splits sum.splits)+
+  apply (wp mapM_x_wp' mapM_wp' crunch_wps | intro impI conjI allI | wpc | simp add: set_message_info_def set_mrs_def split: cap.splits arch_cap.splits option.splits sum.splits)+
   done
 
 crunch valid_list[wp]: attempt_switch_to "valid_list"

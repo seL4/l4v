@@ -1106,6 +1106,7 @@ defs decodeARMMMUInvocation_def:
         | (ARMPageInvalidate_Data, _, _) \<Rightarrow>   decodeARMPageFlush label args cap
         | (ARMPageCleanInvalidate_Data, _, _) \<Rightarrow>   decodeARMPageFlush label args cap
         | (ARMPageUnify_Instruction, _, _) \<Rightarrow>   decodeARMPageFlush label args cap
+        | (ARMPageGetAddress, _, _) \<Rightarrow>   returnOk $ InvokePage $ PageGetAddr (capVPBasePtr cap)
         | _ \<Rightarrow>   throw IllegalOperation
         )
   else if isASIDControlCap cap
@@ -1325,6 +1326,17 @@ defs performPageInvocation_def:
             setVMRoot tcb
         od)
     od)
+  | (PageGetAddr ptr) \<Rightarrow>    (do
+    paddr \<leftarrow> return ( fromPAddr $ addrFromPPtr ptr);
+    ct \<leftarrow> getCurThread;
+    msgTransferred \<leftarrow> setMRs ct Nothing [paddr];
+    msgInfo \<leftarrow> return $ MI_ \<lparr>
+            msgLength= msgTransferred,
+            msgExtraCaps= 0,
+            msgCapsUnwrapped= 0,
+            msgLabel= 0 \<rparr>;
+    setMessageInfo ct msgInfo
+  od)
   )"
 
 defs performASIDControlInvocation_def:

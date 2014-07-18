@@ -334,6 +334,7 @@ definition
     | ARMPageInvalidate_Data  \<Rightarrow> Some (PageIntent PageFlushCachesIntent )
     | ARMPageCleanInvalidate_Data \<Rightarrow> Some (PageIntent PageFlushCachesIntent )
     | ARMPageUnify_Instruction \<Rightarrow> Some (PageIntent PageFlushCachesIntent )
+    | ARMPageGetAddress \<Rightarrow> Some (PageIntent PageGetAddressIntent )
     | ARMPDClean_Data \<Rightarrow> Some (PageDirectoryIntent PageDirectoryFlushIntent )
     | ARMPDInvalidate_Data \<Rightarrow>  Some (PageDirectoryIntent PageDirectoryFlushIntent )
     | ARMPDCleanInvalidate_Data \<Rightarrow>  Some (PageDirectoryIntent PageDirectoryFlushIntent)
@@ -390,6 +391,7 @@ lemma transform_tcb_intent_invocation:
     label \<noteq> ARMPageInvalidate_Data \<and>
     label \<noteq> ARMPageCleanInvalidate_Data \<and>
     label \<noteq> ARMPageUnify_Instruction \<and>
+    label \<noteq> ARMPageGetAddress \<and>
     label \<noteq> ARMPDClean_Data \<and>
     label \<noteq> ARMPDInvalidate_Data \<and>
     label \<noteq> ARMPDCleanInvalidate_Data \<and>

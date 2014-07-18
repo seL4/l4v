@@ -1531,7 +1531,8 @@ definition
          s \<turnstile> (cap.ArchObjectCap cap)
 (*FIXME sprint*)
   | ArchInvocation_A.PageFlush typ start end pstart pd asid \<Rightarrow>
-      pd_at_asid asid pd and K (asid \<le> mask asid_bits \<and> asid \<noteq> 0)"
+      pd_at_asid asid pd and K (asid \<le> mask asid_bits \<and> asid \<noteq> 0)
+  | ArchInvocation_A.PageGetAddr ptr \<Rightarrow> \<top>"
 
 definition 
   "valid_pdi pdi \<equiv> case pdi of
@@ -4806,6 +4807,108 @@ crunch vs_lookup[wp]: pte_check_if_mapped, pde_check_if_mapped "\<lambda>s. P (v
 
 crunch valid_pte[wp]: pte_check_if_mapped "\<lambda>s. P (valid_pte p s)"
 
+lemma set_mi_invs[wp]: "\<lbrace>invs\<rbrace> set_message_info t a \<lbrace>\<lambda>x. invs\<rbrace>"
+  by (simp add: set_message_info_def, wp)
+
+
+lemma set_mrs_typ_at[wp]:
+  "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> set_mrs t buf mrs \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
+  apply (simp add: set_mrs_def zipWithM_x_mapM split_def
+                   store_word_offs_def set_object_def
+              cong: option.case_cong
+              split del: split_if)
+  apply (wp hoare_vcg_split_option_case)
+    apply (rule mapM_wp [where S=UNIV, simplified])
+    apply (wp | simp)+
+  apply (clarsimp simp: obj_at_def a_type_def
+                  dest!: get_tcb_SomeD)
+  done
+
+
+lemma set_mrs_tcb[wp]:
+  "\<lbrace> tcb_at t \<rbrace> set_mrs receiver recv_buf mrs \<lbrace>\<lambda>rv. tcb_at t \<rbrace>"
+  by (simp add: tcb_at_typ, wp)
+
+
+lemma set_mrs_aep_at[wp]:
+  "\<lbrace> aep_at p \<rbrace> set_mrs receiver recv_buf mrs \<lbrace>\<lambda>rv. aep_at p \<rbrace>"
+  by (simp add: aep_at_typ, wp)
+
+
+lemmas set_mrs_redux =
+   set_mrs_def bind_assoc[symmetric]
+   thread_set_def[simplified, symmetric]
+
+lemma storeWord_invs[wp]:
+  "\<lbrace>in_user_frame p and invs\<rbrace> do_machine_op (storeWord p w) \<lbrace>\<lambda>rv. invs\<rbrace>"
+proof -
+  have aligned_offset_ignore:
+    "\<And>l sz. l<4 \<Longrightarrow> p && mask 2 = 0 \<Longrightarrow>
+       p+l && ~~ mask (pageBitsForSize sz) = p && ~~ mask (pageBitsForSize sz)"
+  proof -
+    fix l sz
+    assume al: "p && mask 2 = 0"
+    assume "(l::word32) < 4" hence less: "l<2^2" by simp
+    have le: "2 \<le> pageBitsForSize sz" by (case_tac sz, simp_all)
+    show "?thesis l sz"
+      by (rule is_aligned_add_helper[simplified is_aligned_mask,
+          THEN conjunct2, THEN mask_out_first_mask_some,
+          where n=2, OF al less le])
+  qed
+
+  show ?thesis
+    apply (wp dmo_invs)
+    apply (clarsimp simp: storeWord_def invs_def valid_state_def)
+    apply (fastforce simp: valid_machine_state_def in_user_frame_def
+               assert_def simpler_modify_def fail_def bind_def return_def
+               pageBits_def aligned_offset_ignore
+             split: split_if_asm)
+    done
+qed
+
+lemma set_mrs_invs[wp]:
+  "\<lbrace> invs and tcb_at receiver \<rbrace> set_mrs receiver recv_buf mrs \<lbrace>\<lambda>rv. invs \<rbrace>"
+  apply (simp add: set_mrs_redux)
+  apply wp
+   apply (rule_tac P="invs" in hoare_triv)
+   apply (case_tac recv_buf)
+    apply simp
+   apply (simp add: zipWithM_x_mapM split del: split_if)
+   apply wp
+   apply (rule mapM_wp)
+    apply (simp add: split_def store_word_offs_def)
+    apply (wp storeWord_invs)
+    apply simp
+   apply blast
+  apply (wp thread_set_invs_trivial)
+  apply (auto simp: tcb_cap_cases_def)
+  done
+
+lemma set_mrs_thread_set_dmo:
+  assumes ts: "\<And>c. \<lbrace>P\<rbrace> thread_set (\<lambda>tcb. tcb\<lparr>tcb_context := c tcb\<rparr>) r \<lbrace>\<lambda>rv. Q\<rbrace>"
+  assumes dmo: "\<And>x y. \<lbrace>Q\<rbrace> do_machine_op (storeWord x y) \<lbrace>\<lambda>rv. Q\<rbrace>"
+  shows "\<lbrace>P\<rbrace> set_mrs r t mrs \<lbrace>\<lambda>rv. Q\<rbrace>"
+  apply (simp add: set_mrs_redux)
+  apply (case_tac t)
+   apply simp
+   apply wp
+   apply (rule ts)
+  apply (simp add: zipWithM_x_mapM store_word_offs_def split_def
+              split del: split_if)
+  apply (wp mapM_wp dmo)
+    apply simp
+   apply blast
+  apply (rule ts)
+  done
+
+lemma set_mrs_st_tcb [wp]:
+  "\<lbrace>st_tcb_at P t\<rbrace> set_mrs r t' mrs \<lbrace>\<lambda>rv. st_tcb_at P t\<rbrace>"
+  apply (rule set_mrs_thread_set_dmo) 
+   apply (rule thread_set_no_change_tcb_state)
+   apply simp
+  apply wp
+  done
+
 lemma perform_page_invs [wp]:
   "\<lbrace>invs and valid_page_inv pi\<rbrace> perform_page_invocation pi \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: perform_page_invocation_def)
@@ -4985,7 +5088,7 @@ lemma perform_page_invs [wp]:
             in use_valid)
        apply ((clarsimp | wp)+)[3]
     apply(erule use_valid, wp no_irq_do_flush, assumption)
-   apply(wp set_vm_root_for_flush_invs | simp add: valid_page_inv_def)+
+   apply(wp set_vm_root_for_flush_invs | simp add: valid_page_inv_def tcb_at_invs)+
   done
 
 locale asid_pool_map =

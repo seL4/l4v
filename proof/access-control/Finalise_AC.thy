@@ -568,12 +568,6 @@ lemma store_pte_respects:
   apply simp
   done
 
-lemma storeWord_respects:
-  "\<lbrace>\<lambda>ms. integrity aag X st (s\<lparr>machine_state := ms\<rparr>) \<and> (\<forall>p' \<in> ptr_range p 2. aag_has_auth_to aag Write p')\<rbrace> storeWord p v \<lbrace>\<lambda>a b. integrity aag X st (s\<lparr>machine_state := b\<rparr>)\<rbrace>"
-  unfolding storeWord_def
-  apply wp
-  apply (auto simp: integrity_def is_aligned_mask [symmetric] intro!: trm_write ptr_range_memI ptr_range_add_memI)
-  done
 
 lemma dmo_clearMemory_respects':
   "\<lbrace>integrity aag X st and K (is_aligned ptr bits \<and> bits < word_bits \<and> 2 \<le> bits \<and> (\<forall>p \<in> ptr_range ptr bits. aag_has_auth_to aag Write p))\<rbrace>

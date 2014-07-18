@@ -15,60 +15,8 @@ begin
 section "reads_respects"
 subsection "Async IPC"
 
-lemma modify_det:
-  "det (modify f)"
-  apply(clarsimp simp: det_def modify_def get_def put_def bind_def)
-  done
 
-lemma set_register_det:
-  "det (set_register a b)"
-  unfolding set_register_def
-  apply(rule modify_det)
-  done
 
-lemma as_user_set_register_ev2:
-  "labels_are_invisible aag l (pasObjectAbs aag ` {thread,thread'}) \<Longrightarrow>
-   equiv_valid_2 (reads_equiv aag) (affects_equiv aag l) (affects_equiv aag l) (op =) \<top> \<top> (as_user thread (set_register x y)) (as_user thread' (set_register a b))"
-  apply(simp add: as_user_def)
-  apply(rule equiv_valid_2_guard_imp)
-   apply(rule_tac L="{pasObjectAbs aag thread}" and L'="{pasObjectAbs aag thread'}" and Q="\<top>" and Q'="\<top>" in ev2_invisible)
-        apply(simp add: labels_are_invisible_def)+
-      apply((rule modifies_at_mostI | wp set_object_equiv_but_for_labels | simp add: split_def | fastforce dest: get_tcb_not_asid_pool_at)+)[2]
-    apply(auto intro!: TrueI)
-  done
-
-lemma as_user_set_register_reads_respects':
-  "reads_respects aag l \<top> (as_user thread (set_register x y))"
-  apply (case_tac "aag_can_read aag thread \<or> aag_can_affect aag l thread") 
-   apply (simp add: as_user_def fun_app_def split_def)
-   apply (rule gen_asm_ev)
-   apply (wp set_object_reads_respects select_f_ev gets_the_ev)
-   apply (auto intro: reads_affects_equiv_get_tcb_eq set_register_det)[1]
-  apply(simp add: equiv_valid_def2)
-  apply(rule as_user_set_register_ev2)
-  apply(simp add: labels_are_invisible_def)
-  done
-
-lemma set_message_info_reads_respects:
-  "reads_respects aag l \<top>
-    (set_message_info thread info)"
-  unfolding set_message_info_def fun_app_def
-  apply(rule as_user_set_register_reads_respects')
-  done
-
-lemma equiv_valid_get_assert:
-  "equiv_valid_inv I A P f \<Longrightarrow>
-   equiv_valid_inv I A P (get >>= (\<lambda> s. assert (g s) >>= (\<lambda> y. f)))"
-  apply(subst equiv_valid_def2)
-  apply(rule_tac W="\<top>\<top>" in equiv_valid_rv_bind)
-    apply(rule equiv_valid_rv_guard_imp)
-     apply(rule equiv_valid_rv_trivial)
-     apply wp
-   apply(rule_tac R'="\<top>\<top>" in equiv_valid_2_bind)
-      apply(simp add: equiv_valid_def2)
-     apply(rule assert_ev2)
-     apply (wp | simp)+
-  done
 
 lemma equiv_valid_2_get_assert:
   "equiv_valid_2 I A A R P P' f f' \<Longrightarrow>
@@ -107,29 +55,6 @@ lemma dmo_storeWord_modifies_at_most:
 
 
 
-lemma store_word_offs_reads_respects:
-  "reads_respects aag l \<top> (store_word_offs ptr offs v)"
-  apply(simp add: store_word_offs_def fun_app_def)
-  apply(rule equiv_valid_get_assert)
-  apply(simp add: storeWord_def)
-  apply(simp add: do_machine_op_bind)
-  apply(wp)
-     apply(rule use_spec_ev)
-     apply(rule do_machine_op_spec_reads_respects)
-     apply(clarsimp simp: equiv_valid_def2 equiv_valid_2_def in_monad)
-     apply(fastforce intro: equiv_forI elim: equiv_forE)
-    apply(rule use_spec_ev | rule do_machine_op_spec_reads_respects 
-         | simp add: spec_equiv_valid_def | rule assert_ev2 | wp modify_wp)+
-  done
-
-
-lemma set_mrs_reads_respects:
-  "reads_respects aag l (K (aag_can_read aag thread \<or> aag_can_affect aag l thread)) (set_mrs thread buf msgs)"
-  apply(simp add: set_mrs_def)
-  apply(wp mapM_x_ev' store_word_offs_reads_respects set_object_reads_respects
-       | wpc | simp add: split_def split del: split_if add: zipWithM_x_mapM_x)+
-  apply(auto intro: reads_affects_equiv_get_tcb_eq)
-  done
 
 lemma thread_get_reads_respects:
   "reads_respects aag l (K (aag_can_read aag thread \<or> aag_can_affect aag l thread)) (thread_get f thread)"
@@ -1872,25 +1797,6 @@ lemma setup_caller_cap_globals_equiv:
 
 
 
-lemma set_message_info_globals_equiv:
-  "\<lbrace>globals_equiv s and valid_ko_at_arm and (\<lambda>s. thread \<noteq> idle_thread s)\<rbrace> set_message_info thread info \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
-  unfolding set_message_info_def
-  apply(wp as_user_globals_equiv)
-  done
-
-lemma store_word_offs_globals_equiv:
-  "\<lbrace>globals_equiv s and
-    (\<lambda>sa. ptr_range (ptr + of_nat offs * of_nat word_size) 2 \<inter>
-          range_of_arm_globals_frame sa = {})\<rbrace>
-    store_word_offs ptr offs v
-    \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
-  unfolding store_word_offs_def fun_app_def
-  apply (wp do_machine_op_globals_equiv)
-    apply clarsimp
-    apply (erule use_valid[OF _ storeWord_globals_equiv])
-    apply (wp | simp)+
-  done
-
 lemma set_extra_badge_globals_equiv:
   "\<lbrace>globals_equiv s and (\<lambda>sa. ptr_range (buffer + (of_nat buffer_cptr_index
       + of_nat n) * of_nat word_size) 2 \<inter> range_of_arm_globals_frame sa = {})\<rbrace>
@@ -2031,42 +1937,7 @@ lemma do_normal_transfer_globals_equiv:
   apply(fastforce)
   done
 
-lemma length_msg_lt_msg_max:
-  "length msg_registers < msg_max_length"
-  apply(simp add: length_msg_registers msg_max_length_def)
-  done
 
-lemma set_mrs_globals_equiv:
-  "\<lbrace>globals_equiv s and valid_ko_at_arm and (\<lambda>sa. thread \<noteq> idle_thread sa) and (\<lambda>sa. \<forall>x pptr. buf = Some pptr \<and>     x\<in>set [Suc (length msg_registers)..<Suc msg_max_length] \<longrightarrow>
-    ptr_range (pptr + of_nat x * of_nat word_size) 2 \<inter>
-    range_of_arm_globals_frame sa = {})\<rbrace>
-      set_mrs thread buf msgs
-    \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
-  unfolding set_mrs_def
-  apply(wp | wpc)+
-       apply(simp add: zipWithM_x_mapM_x)
-       apply(rule conjI)
-        apply(rule impI)
-        apply(rule_tac Q="\<lambda>_. globals_equiv s and (\<lambda>sa. \<forall>rb x. (buf = Some rb \<and> x\<in>set ([Suc (length msg_registers)..<msg_max_length] @ [msg_max_length])) \<longrightarrow> ptr_range (rb + of_nat x * of_nat word_size) 2 \<inter> range_of_arm_globals_frame sa = {})"
-          in hoare_strengthen_post)
-         apply(wp mapM_x_wp')
-         apply(simp add: split_def)
-         apply(wp store_word_offs_globals_equiv)
-          apply(simp)
-         apply(clarsimp)         
-         apply(erule_tac x=aa in allE)
-         apply(clarsimp)
-         apply(erule in_set_zipE)
-         apply(clarsimp)
-         apply(fastforce)
-        apply(simp)
-       apply(clarsimp)
-       apply(insert length_msg_lt_msg_max)
-       apply(simp)
-      apply(wp set_object_globals_equiv static_imp_wp)
-     apply(wp hoare_vcg_all_lift set_object_globals_equiv static_imp_wp)
-   apply(clarsimp simp:arm_global_pd_not_tcb)+
-  done
 
 
 

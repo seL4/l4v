@@ -1735,7 +1735,9 @@ definition
       \<exists>c'. pi' = PageUnmap c' (cte_map ptr) \<and> 
          acap_relation c c' 
   | ArchInvocation_A.PageFlush typ start end pstart pd asid \<Rightarrow>
-      pi' = PageFlush (flush_type_map typ) start end pstart pd asid"
+      pi' = PageFlush (flush_type_map typ) start end pstart pd asid
+  | ArchInvocation_A.PageGetAddr ptr \<Rightarrow>
+      pi' = PageGetAddr ptr"
 
 definition
   "valid_pde_slots' m \<equiv> case m of Inl (pte, xs) \<Rightarrow> True
@@ -1903,7 +1905,8 @@ definition
       \<lambda>s. \<exists>r R sz m. cap = PageCap r R sz m \<and> 
           cte_wp_at' (is_arch_update' (ArchObjectCap cap)) ptr s \<and>
           s \<turnstile>' (ArchObjectCap cap)
-  | PageFlush typ start end pstart pd asid \<Rightarrow> \<top>"
+  | PageFlush typ start end pstart pd asid \<Rightarrow> \<top>
+  | PageGetAddr ptr \<Rightarrow> \<top>"
 
 crunch ctes [wp]: unmapPage "\<lambda>s. P (ctes_of s)" 
   (wp: crunch_wps simp: crunch_simps ignore: getObject)
@@ -2083,6 +2086,56 @@ crunch valid_duplicates'[wp]: updateCap "\<lambda>s. vs_valid_duplicates' (ksPSp
   (wp: crunch_wps  
    simp: crunch_simps unless_def
    ignore: getObject setObject)
+
+
+lemma message_info_to_data_eqv:
+  "wordFromMessageInfo (message_info_map mi) = message_info_to_data mi"
+  apply (cases mi)
+  apply (simp add: wordFromMessageInfo_def
+    msgLengthBits_def msgExtraCapBits_def msgMaxExtraCaps_def
+    shiftL_nat)
+  done
+
+lemma message_info_from_data_eqv: 
+  "message_info_map (data_to_message_info rv) = messageInfoFromWord rv"
+  apply (auto simp add: data_to_message_info_def messageInfoFromWord_def 
+    msgLengthBits_def msgExtraCapBits_def msgMaxExtraCaps_def
+    shiftL_nat Let_def not_less msgMaxLength_def)
+  done
+
+lemma set_mi_corres:
+ "mi' = message_info_map mi \<Longrightarrow>
+  corres dc (tcb_at t) (tcb_at' t)
+         (set_message_info t mi) (setMessageInfo t mi')"
+  apply (simp add: setMessageInfo_def set_message_info_def)
+  apply (subgoal_tac "wordFromMessageInfo (message_info_map mi) = 
+                      message_info_to_data mi")
+   apply (simp add: user_setreg_corres msg_info_register_def 
+                    msgInfoRegister_def)
+  apply (simp add: message_info_to_data_eqv)
+  done
+
+
+lemma set_mi_invs'[wp]: "\<lbrace>invs' and tcb_at' t\<rbrace> setMessageInfo t a \<lbrace>\<lambda>x. invs'\<rbrace>"
+  by (simp add: setMessageInfo_def) wp
+
+lemma set_mi_tcb' [wp]:
+  "\<lbrace> tcb_at' t \<rbrace> setMessageInfo receiver msg \<lbrace>\<lambda>rv. tcb_at' t\<rbrace>"
+  by (simp add: setMessageInfo_def) wp
+
+
+lemma setMRs_typ_at':
+  "\<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> setMRs receiver recv_buf mrs \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
+  by (simp add: setMRs_def zipWithM_x_mapM split_def, wp crunch_wps)
+
+lemmas setMRs_typ_at_lifts[wp] = typ_at_lifts [OF setMRs_typ_at']
+
+lemma set_mrs_invs'[wp]:
+  "\<lbrace> invs' and tcb_at' receiver \<rbrace> setMRs receiver recv_buf mrs \<lbrace>\<lambda>rv. invs' \<rbrace>"
+  apply (simp add: setMRs_def)
+  apply (wp dmo_invs' no_irq_mapM no_irq_storeWord crunch_wps|
+         simp add: zipWithM_x_mapM split_def)+
+  done
 
 lemma perform_page_corres:
   assumes "page_invocation_map pi pi'"
@@ -2391,7 +2444,18 @@ apply clarsimp
          apply (wp hoare_drop_imps)
         apply (simp add: cur_tcb_def [symmetric] cur_tcb'_def [symmetric])
         apply (wp hoare_drop_imps)
-     apply (auto simp: valid_page_inv_def)
+     apply (auto simp: valid_page_inv_def)[2]
+  -- "PageGetAddr"
+  apply (clarsimp simp: perform_page_invocation_def performPageInvocation_def page_invocation_map_def fromPAddr_def)
+  apply (rule corres_guard_imp)
+    apply (rule corres_split[OF _ gct_corres])
+      apply simp
+      apply (rule corres_split[OF set_mi_corres set_mrs_corres])
+         apply (simp add: message_info_map_def)
+        apply clarsimp
+       apply (wp)
+   apply (clarsimp simp: tcb_at_invs)
+  apply (clarsimp simp: tcb_at_invs')
   done
 qed
 
@@ -3530,7 +3594,7 @@ lemma perform_pt_invs [wp]:
   apply (simp add: performPageInvocation_def)
   apply (cases pt)
      apply clarsimp
-     apply ((wp dmo_invs' hoare_vcg_all_lift setVMRootForFlush_invs' | simp)+)[1]
+     apply ((wp dmo_invs' hoare_vcg_all_lift setVMRootForFlush_invs' | simp add: tcb_at_invs')+)[2]
        apply (rule hoare_pre_imp[of _ \<top>], assumption)
        apply (clarsimp simp: valid_def
                              disj_commute[of "pointerInUserData p s", standard])

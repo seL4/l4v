@@ -83,87 +83,8 @@ lemma requiv_the_get_tcb_eq':
 
 (* FIXME: move *)
 
-abbreviation aag_can_read_label where
-  "aag_can_read_label aag l \<equiv> l \<in> subjectReads (pasPolicy aag) (pasSubject aag)"
-
-definition labels_are_invisible where
-  "labels_are_invisible aag l L \<equiv>
-         (\<forall> d \<in> L. \<not> aag_can_read_label aag d) \<and>
-         (aag_can_affect_label aag l \<longrightarrow>
-              (\<forall> d \<in> L. d \<notin> subjectReads (pasPolicy aag) l))"
 
 
-lemma equiv_but_for_reads_equiv:
-  "\<lbrakk>labels_are_invisible aag l L; equiv_but_for_labels aag L s s'\<rbrakk> \<Longrightarrow>
-   reads_equiv aag s s'"
-  apply(simp add: reads_equiv_def2)
-  apply(rule conjI)
-   apply(clarsimp simp: labels_are_invisible_def equiv_but_for_labels_def)
-   apply(rule states_equiv_forI)
-             apply(fastforce intro: equiv_forI elim: states_equiv_forE equiv_forD)+
-       apply((auto intro!: equiv_forI elim!: states_equiv_forE elim!: equiv_forD
-             |clarsimp simp: o_def)+)[1]
-      apply(fastforce intro: equiv_forI elim: states_equiv_forE equiv_forD)+
-    apply(fastforce simp: equiv_asids_def elim: states_equiv_forE elim: equiv_forD)
-   apply(fastforce intro: equiv_forI elim: states_equiv_forE equiv_forD)
-  apply(fastforce simp: equiv_but_for_labels_def)
-  done
-
-lemma equiv_but_for_affects_equiv:
-  "\<lbrakk>labels_are_invisible aag l L; equiv_but_for_labels aag L s s'\<rbrakk> \<Longrightarrow>
-   affects_equiv aag l s s'"
-  apply(subst affects_equiv_def2)
-  apply(clarsimp simp: labels_are_invisible_def equiv_but_for_labels_def aag_can_affect_label_def)
-  apply(rule states_equiv_forI)
-         apply(fastforce intro!: equiv_forI elim!: states_equiv_forE equiv_forD)+
-   apply(fastforce simp: equiv_asids_def elim!: states_equiv_forE elim!: equiv_forD)
-  apply(fastforce intro!: equiv_forI elim!: states_equiv_forE equiv_forD)
-  done
-
-(* consider rewriting the return-value assumption using equiv_valid_rv_inv *)
-lemma ev2_invisible:
-  "\<lbrakk>labels_are_invisible aag l L;
-    labels_are_invisible aag l L';
-    modifies_at_most aag L Q f;
-    modifies_at_most aag L' Q' g;
-    \<forall> s t. P s \<and> P' t \<longrightarrow> (\<forall>(rva,s') \<in> fst (f s). \<forall>(rvb,t') \<in> fst (g t). W rva rvb)\<rbrakk>
-  \<Longrightarrow>
-  equiv_valid_2 (reads_equiv aag) (affects_equiv aag l) (affects_equiv aag l)
-    W (P and Q) (P' and Q') f g"
-  apply(clarsimp simp: equiv_valid_2_def)
-  apply(rule conjI)
-   apply blast
-  apply(drule_tac s=s in modifies_at_mostD, assumption+)
-  apply(drule_tac s=t in modifies_at_mostD, assumption+)
-  apply(frule (1) equiv_but_for_reads_equiv)
-  apply(frule_tac s=t in equiv_but_for_reads_equiv, assumption)
-  apply(drule (1) equiv_but_for_affects_equiv)
-  apply(drule_tac s=t in equiv_but_for_affects_equiv, assumption)
-  apply(blast intro: reads_equiv_trans reads_equiv_sym affects_equiv_trans affects_equiv_sym)
-  done
-
-
-lemma dummy_kheap_update:
-  "st = st\<lparr> kheap := kheap st \<rparr>"
-  by simp
-
-(* we need to know we're not doing an asid pool update, or else this could affect
-   what some other domain sees *)
-lemma set_object_equiv_but_for_labels:
-  "\<lbrace>equiv_but_for_labels aag L st and (\<lambda> s. \<not> asid_pool_at ptr s) and
-    K ((\<forall> asid_pool. obj \<noteq> ArchObj (ASIDPool asid_pool)) \<and> pasObjectAbs aag ptr \<in> L)\<rbrace>
-   set_object ptr obj
-   \<lbrace>\<lambda>_. equiv_but_for_labels aag L st\<rbrace>"
-  unfolding set_object_def
-  apply wp
-  apply(clarsimp simp: equiv_but_for_labels_def)
-  apply(subst dummy_kheap_update[where st=st])
-  apply(rule states_equiv_for_non_asid_pool_kheap_update)
-     apply assumption
-    apply(fastforce intro: equiv_forI elim: states_equiv_forE equiv_forE)
-   apply(fastforce simp: non_asid_pool_kheap_update_def)
-  apply(clarsimp simp: non_asid_pool_kheap_update_def asid_pool_at_kheap)
-  done
 
 lemma set_object_modifies_at_most:
   "modifies_at_most aag {pasObjectAbs aag ptr} (\<lambda> s. \<not> asid_pool_at ptr s \<and> (\<forall> asid_pool. obj \<noteq> ArchObj (ASIDPool asid_pool))) (set_object ptr obj)"
@@ -172,9 +93,6 @@ lemma set_object_modifies_at_most:
   apply clarsimp
   done
 
-lemma get_tcb_not_asid_pool_at:
-  "get_tcb ref s = Some y \<Longrightarrow> \<not> asid_pool_at ref s"
-  by(fastforce simp: get_tcb_def asid_pool_at_kheap)
 
 
 
@@ -389,14 +307,6 @@ lemma obj_eq_st_tcb_at:
   apply(clarsimp simp: st_tcb_at_def obj_at_def)
   done
 
-lemma reads_affects_equiv_kheap_eq:
-  "\<lbrakk>reads_equiv aag s s'; affects_equiv aag l s s';
-    aag_can_affect aag l x \<or> aag_can_read aag x\<rbrakk> \<Longrightarrow>
-   kheap s x = kheap s' x"
-  apply(erule disjE)
-   apply(fastforce elim: affects_equivE equiv_forE)
-  apply(fastforce elim: reads_equivE equiv_forE)
-  done
 
 lemma send_blocked_on_tcb_st_to_auth:
   "send_blocked_on epptr ts
@@ -1321,12 +1231,6 @@ lemma thread_set_fault_empty_invs:
   apply(wp itr_wps(27) | simp)+
   done
 
-lemma reads_affects_equiv_get_tcb_eq:
-  "\<lbrakk>aag_can_read aag thread \<or> aag_can_affect aag l thread;
-    reads_equiv aag s t; affects_equiv aag l s t\<rbrakk> \<Longrightarrow>
-   get_tcb thread s = get_tcb thread t"
-  apply (fastforce simp: get_tcb_def split: kernel_object.splits option.splits simp: reads_affects_equiv_kheap_eq)
-  done
 
 lemma thread_set_reads_respects:
   "reads_respects aag l \<top> (thread_set x y)"

@@ -607,13 +607,6 @@ lemma ct_running_not_idle_etc:
   apply (clarsimp simp: invs_def valid_state_def)
   done
 
-lemma ct_active_not_idle_etc:
-  "\<lbrakk> invs s; ct_active s \<rbrakk> \<Longrightarrow> not_idle_thread (cur_thread s) s"
-  apply (simp add: not_idle_thread_def ct_in_state_def)
-  apply (subgoal_tac "valid_idle s")
-   apply (clarsimp simp: valid_idle_def st_tcb_at_def obj_at_def)
-  apply (clarsimp simp: invs_def valid_state_def)
-  done
 
 
 lemma dcorres_set_eobject_tcb:

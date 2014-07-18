@@ -286,6 +286,11 @@ lemma armPageCacheable_armPageCacheable_update [simp]:
   by (cases v) simp
 
 definition
+fromPAddr :: "paddr \<Rightarrow> machine_word"
+where
+"fromPAddr \<equiv> Platform.fromPAddr"
+
+definition
 pageColourBits :: "nat"
 where
 "pageColourBits \<equiv> Platform.pageColourBits"
@@ -351,6 +356,8 @@ instance by (intro_classes, simp add: enum_alt_vmrights)
 end
 
 (*>*)
+
+
 
 
 

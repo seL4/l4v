@@ -9,7 +9,7 @@
  *)
 
 theory VSpace_C
-imports TcbAcc_C CSpace_C PSpace_C
+imports TcbAcc_C CSpace_C PSpace_C TcbQueue_C
 begin
 
 
@@ -1847,6 +1847,156 @@ lemma performPageFlush_ccorres:
    apply (clarsimp simp: return_def)
   apply (clarsimp simp: order_less_imp_le)
   done
+
+lemma length_of_msgRegisters:
+  "length State_H.msgRegisters = 4"
+  by (auto simp: State_H.msgRegisters_def msgRegisters_unfold)
+
+
+(* FIXME: move *)
+lemma register_from_H_bound[simp]:
+  "unat (register_from_H v) < 18"
+  by (cases v, simp_all add: "StrictC'_register_defs")
+
+(* FIXME: move *)
+lemma register_from_H_inj:
+  "inj register_from_H"
+  apply (rule inj_onI)
+  apply (case_tac x)
+  apply (case_tac y, simp_all add: "StrictC'_register_defs")+
+  done
+
+(* FIXME: move *)
+lemmas register_from_H_eq_iff[simp]
+    = inj_on_iff [OF register_from_H_inj, simplified]
+
+
+lemma setRegister_ccorres:
+  "ccorres dc xfdc \<top>
+       (UNIV \<inter> \<lbrace>\<acute>thread = tcb_ptr_to_ctcb_ptr thread\<rbrace> \<inter> \<lbrace>\<acute>reg = register_from_H reg\<rbrace>
+             \<inter> {s. w_' s = val}) []
+       (asUser thread (setRegister reg val))
+       (Call setRegister_'proc)"
+  apply (cinit' lift: thread_' reg_' w_')
+   apply (simp add: asUser_def dc_def[symmetric] split_def split del: split_if)
+   apply (rule ccorres_pre_threadGet)
+   apply (rule ccorres_Guard)
+   apply (simp add: setRegister_def simpler_modify_def exec_select_f_singleton)
+   apply (rule_tac P="\<lambda>tcb. tcbContext tcb = rv"
+                in threadSet_ccorres_lemma2 [unfolded dc_def])
+    apply vcg
+   apply (clarsimp simp: setRegister_def HaskellLib_H.runState_def
+                         simpler_modify_def typ_heap_simps)
+   apply (subst StateSpace.state.fold_congs[OF refl refl])
+    apply (rule globals.fold_congs[OF refl refl])
+    apply (rule heap_update_field_hrs, simp)
+     apply (fastforce intro: typ_heap_simps)
+    apply simp
+   apply (erule(1) rf_sr_tcb_update_no_queue2,
+               (simp add: typ_heap_simps)+)
+    apply (rule ball_tcb_cte_casesI, simp+)
+   apply (clarsimp simp: ctcb_relation_def ccontext_relation_def
+                  split: split_if)
+  apply (clarsimp simp: Collect_const_mem register_from_H_sless
+                        register_from_H_less)
+  apply (auto intro: typ_heap_simps elim: obj_at'_weakenE)
+  done
+
+lemma wordFromMessageInfo_spec:
+  defines "mil s \<equiv> message_info_lift \<^bsup>s\<^esup>mi"
+  shows "\<forall>s. \<Gamma> \<turnstile> {s} Call wordFromMessageInfo_'proc
+                  \<lbrace>\<acute>ret__unsigned_long = (msgLabel_CL (mil s) << 12)
+                                      || (msgCapsUnwrapped_CL (mil s) << 9)
+                                      || (msgExtraCaps_CL (mil s) << 7)
+                                      || msgLength_CL (mil s)\<rbrace>"
+  unfolding mil_def
+  apply vcg
+  apply (simp add: message_info_lift_def mask_shift_simps word_sless_def word_sle_def)
+  apply word_bitwise
+  done
+
+lemmas wordFromMessageInfo_spec2 = wordFromMessageInfo_spec
+
+lemma wordFromMessageInfo_ccorres [corres]:
+  "\<And>mi. ccorres (op =) ret__unsigned_long_' \<top> {s. mi = message_info_to_H (mi_' s)} []
+           (return (wordFromMessageInfo mi)) (Call wordFromMessageInfo_'proc)"
+  apply (rule ccorres_from_spec_modifies [where P = \<top>, simplified])
+     apply (rule wordFromMessageInfo_spec)
+    apply (rule wordFromMessageInfo_modifies)
+   apply simp
+  apply simp
+  apply (simp add: return_def wordFromMessageInfo_def Let_def message_info_to_H_def 
+    Types_H.msgLengthBits_def Types_H.msgExtraCapBits_def
+    Types_H.msgMaxExtraCaps_def shiftL_nat word_bw_assocs word_bw_comms word_bw_lcs)
+  done
+
+(* FIXME move *)
+lemma unat_register_from_H_range:
+  "unat (register_from_H r) < 18"
+  by (case_tac r, simp_all add: C_register_defs)
+
+(* FIXME move *)
+lemma register_from_H_eq:
+  "(r = r') = (register_from_H r = register_from_H r')"
+  apply (case_tac r, simp_all add: C_register_defs)
+                   apply (case_tac r', simp_all add: C_register_defs)+
+  done
+
+lemma setMessageInfo_ccorres:
+  "ccorres dc xfdc (tcb_at' thread)
+           (UNIV \<inter> \<lbrace>mi = message_info_to_H mi'\<rbrace>) hs
+           (setMessageInfo thread mi)
+           (\<acute>ret__unsigned_long :== CALL wordFromMessageInfo(mi');;
+            CALL setRegister(tcb_ptr_to_ctcb_ptr thread, scast Kernel_C.msgInfoRegister, \<acute>ret__unsigned_long))"
+  unfolding setMessageInfo_def
+  apply (rule ccorres_guard_imp2)
+   apply ctac
+     apply simp
+     apply (ctac add: setRegister_ccorres)
+    apply wp
+   apply vcg
+  apply (simp add: State_H.msgInfoRegister_def ARMMachineTypes.msgInfoRegister_def
+                   Kernel_C.msgInfoRegister_def Kernel_C.R1_def)
+  done
+
+lemma performPageGetAddress_ccorres:
+  "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
+      \<top>
+      (UNIV \<inter> {s. vbase_ptr_' s = Ptr ptr}) []
+      (liftE (performPageInvocation (PageGetAddr ptr)))
+      (Call performPageGetAddress_'proc)"
+  apply (simp only: liftE_liftM ccorres_liftM_simp)
+  apply (cinit lift: vbase_ptr_')
+   apply csymbr
+   apply (rule ccorres_pre_getCurThread)
+   apply (clarsimp simp add: setMRs_def zipWithM_x_mapM_x mapM_x_Nil length_of_msgRegisters zip_singleton msgRegisters_unfold mapM_x_singleton)
+   apply (rule ccorres_Guard_Seq)+
+   apply (ctac add: setRegister_ccorres)
+     apply csymbr
+     apply (rule ccorres_add_return2)
+     apply (rule ccorres_rhs_assoc2)
+     apply (rule ccorres_split_nothrow_novcg[where r'=dc and xf'=xfdc])
+         apply (unfold setMessageInfo_def)
+         apply ctac
+           apply (simp only: fun_app_def)
+           apply (ctac add: setRegister_ccorres)
+          apply wp
+         apply vcg
+        apply ceqv
+       apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
+        apply (rule allI, rule conseqPre, vcg)
+        apply (clarsimp simp: return_def)
+      apply wp
+     apply (simp add: guard_is_UNIV_def)
+    apply wp
+   apply vcg
+  apply (auto simp: Hardware_H.fromPAddr_def message_info_to_H_def mask_def State_H.msgInfoRegister_def
+                    ARMMachineTypes.msgInfoRegister_def Kernel_C.msgInfoRegister_def Kernel_C.R1_def 
+                    word_sle_def word_sless_def Kernel_C.R2_def 
+                    kernel_all_global_addresses.msgRegisters_def fupdate_def Arrays.update_def 
+                    fcp_beta)
+  done
+  
 
 lemma performPageDirectoryInvocationFlush_ccorres:
   "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')

@@ -58,6 +58,7 @@ datatype invocation_label =
   | ARMPageInvalidate_Data
   | ARMPageCleanInvalidate_Data
   | ARMPageUnify_Instruction
+  | ARMPageGetAddress
   | ARMASIDControlMakePool
   | ARMASIDPoolAssign
 
@@ -128,6 +129,7 @@ definition
       ARMPageInvalidate_Data,
       ARMPageCleanInvalidate_Data,
       ARMPageUnify_Instruction,
+      ARMPageGetAddress,
       ARMASIDControlMakePool,
       ARMASIDPoolAssign
     ]"
