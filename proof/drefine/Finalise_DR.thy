@@ -2783,13 +2783,6 @@ lemma dcorres_get_cap_symb_exec:
    apply (wp | simp)+
   done
 
-lemma gets_fold_into_modify:
-  "do x \<leftarrow> gets f; modify (g x) od = modify (\<lambda>s. g (f s) s)"
-  "do x \<leftarrow> gets f; _ \<leftarrow> modify (g x); h od
-     = do modify (\<lambda>s. g (f s) s); h od"
-  by (simp_all add: fun_eq_iff modify_def bind_assoc exec_gets
-                    exec_get exec_put)
-
 lemma set_cdt_modify:
   "set_cdt c = modify (\<lambda>s. s \<lparr> cdt := c \<rparr>)"
   by (simp add: set_cdt_def modify_def)

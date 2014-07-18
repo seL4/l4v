@@ -4393,18 +4393,6 @@ crunch pd_at: flush_page "\<lambda>s. P (ko_at (ArchObj (PageDirectory pd)) x s)
 crunch pt_at: flush_page "\<lambda>s. P (ko_at (ArchObj (PageTable pt)) x s)"
   (wp: crunch_wps simp: crunch_simps)
 
-(* FIXME: move *)
-lemma ucast_less_ucast:
-  "len_of TYPE('a) < len_of TYPE('b) \<Longrightarrow> 
-   (ucast x < ((ucast (y :: ('a::len) word)) :: ('b::len) word)) = (x < y)"
-  apply (simp add: word_less_nat_alt unat_ucast)
-  apply (subst mod_less) 
-   apply(rule less_le_trans[OF unat_lt2p], simp) 
-  apply (subst mod_less)
-   apply(rule less_le_trans[OF unat_lt2p], simp)
-  apply simp
-  done
-
 lemma vs_lookup_pages_pteD:
   "([VSRef ((vaddr >> 12) && mask 8) (Some APageTable),
      VSRef (vaddr >> 20) (Some APageDirectory),

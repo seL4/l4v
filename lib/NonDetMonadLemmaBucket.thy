@@ -232,6 +232,16 @@ lemma mapM_wp:
   apply (simp add: x)
   done
 
+lemma mapM_x_wp:
+  assumes x: "\<And>x. x \<in> S \<Longrightarrow> \<lbrace>P\<rbrace> f x \<lbrace>\<lambda>rv. P\<rbrace>"
+  shows      "set xs \<subseteq> S \<Longrightarrow> \<lbrace>P\<rbrace> mapM_x f xs \<lbrace>\<lambda>rv. P\<rbrace>"
+  apply (subst mapM_x_mapM)
+  apply wp
+  apply (rule mapM_wp)
+   apply (rule x)
+   apply assumption+
+  done
+
 lemma mapM_x_mapM:
   "mapM_x m l = (mapM m l >>= (\<lambda>x. return ()))"
   apply (simp add: mapM_x_def sequence_x_def mapM_def sequence_def)
@@ -2316,6 +2326,13 @@ lemma modify_assert:
     = (do v1 \<leftarrow> assert v; v2 \<leftarrow> modify f; c v1 od)"
   by (simp add: simpler_modify_def return_def assert_def fail_def bind_def
          split: split_if)
+
+lemma gets_fold_into_modify:
+  "do x \<leftarrow> gets f; modify (g x) od = modify (\<lambda>s. g (f s) s)"
+  "do x \<leftarrow> gets f; _ \<leftarrow> modify (g x); h od
+     = do modify (\<lambda>s. g (f s) s); h od"
+  by (simp_all add: fun_eq_iff modify_def bind_assoc exec_gets
+                    exec_get exec_put)
 
 lemma bind_assoc2:
   "(do x \<leftarrow> a; _ \<leftarrow> b; c x od) = (do x \<leftarrow> (do x' \<leftarrow> a; _ \<leftarrow> b; return x' od); c x od)"
