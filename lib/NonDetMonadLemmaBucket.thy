@@ -232,6 +232,12 @@ lemma mapM_wp:
   apply (simp add: x)
   done
 
+lemma mapM_x_mapM:
+  "mapM_x m l = (mapM m l >>= (\<lambda>x. return ()))"
+  apply (simp add: mapM_x_def sequence_x_def mapM_def sequence_def)
+  apply (induct l, simp_all add: Let_def bind_assoc)
+  done
+
 lemma mapM_x_wp:
   assumes x: "\<And>x. x \<in> S \<Longrightarrow> \<lbrace>P\<rbrace> f x \<lbrace>\<lambda>rv. P\<rbrace>"
   shows      "set xs \<subseteq> S \<Longrightarrow> \<lbrace>P\<rbrace> mapM_x f xs \<lbrace>\<lambda>rv. P\<rbrace>"
@@ -240,12 +246,6 @@ lemma mapM_x_wp:
   apply (rule mapM_wp)
    apply (rule x)
    apply assumption+
-  done
-
-lemma mapM_x_mapM:
-  "mapM_x m l = (mapM m l >>= (\<lambda>x. return ()))"
-  apply (simp add: mapM_x_def sequence_x_def mapM_def sequence_def)
-  apply (induct l, simp_all add: Let_def bind_assoc)
   done
 
 lemma mapM_x_Nil:

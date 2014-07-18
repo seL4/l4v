@@ -1537,17 +1537,6 @@ lemma ucast_less:
   apply (simp add: test_bit.Rep[simplified])
   done
 
-lemma ucast_less_ucast:
-  "len_of TYPE('a) < len_of TYPE('b) \<Longrightarrow>
-   (ucast x < ((ucast (y :: ('a::len) word)) :: ('b::len) word)) = (x < y)"
-  apply (simp add: word_less_nat_alt unat_ucast)
-  apply (subst mod_less)
-   apply(rule less_le_trans[OF unat_lt2p], simp)
-  apply (subst mod_less)
-   apply(rule less_le_trans[OF unat_lt2p], simp)
-  apply simp
-  done
-
 lemma ucast_less_shiftl_helper:
   "\<lbrakk> len_of TYPE('b) + 2 < word_bits;
      2 ^ (len_of TYPE('b) + 2) \<le> n\<rbrakk>
@@ -2295,6 +2284,17 @@ lemma unat_ucast: "unat (ucast x :: ('a :: len0) word) = unat x mod 2 ^ (len_of 
    apply simp
   apply (subst nat_power_eq)
    apply simp
+  apply simp
+  done
+
+lemma ucast_less_ucast:
+  "len_of TYPE('a) < len_of TYPE('b) \<Longrightarrow>
+   (ucast x < ((ucast (y :: ('a::len) word)) :: ('b::len) word)) = (x < y)"
+  apply (simp add: word_less_nat_alt unat_ucast)
+  apply (subst mod_less)
+   apply(rule less_le_trans[OF unat_lt2p], simp)
+  apply (subst mod_less)
+   apply(rule less_le_trans[OF unat_lt2p], simp)
   apply simp
   done
 
