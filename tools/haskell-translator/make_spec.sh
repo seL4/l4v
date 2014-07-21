@@ -34,10 +34,10 @@ then
 	exit
 fi
 
-echo Built from git repo at $L4CAP on `uname -n` by $USER > $SPEC/version
+echo Built from git repo at $L4CAP by $USER > $SPEC/version
 echo >> $SPEC/version
 echo Generated from changeset: >> $SPEC/version
-(cd $L4CAP && git show --oneline | head -1 >> $SPEC/version)
+(cd $L4CAP && git show --oneline | head -1) >> $SPEC/version
 echo >> $SPEC/version
 if [ "$(cd $L4CAP && git status --short)" != "" ]
 then

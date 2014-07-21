@@ -1,4 +1,5 @@
-Built from git repo at ../../../seL4/haskell on squires by jbeeren
+Built from git repo at ../../../seL4/haskell by kleing
 
 Generated from changeset:
+3ffeaac Retire old dft package; resurrect Haskell manual.
 
