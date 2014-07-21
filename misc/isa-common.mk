@@ -17,6 +17,9 @@
 # Get path to the base of the repository.
 L4V_REPO_PATH := $(realpath $(dir $(lastword $(MAKEFILE_LIST)))..)
 
+ROOT_ADD ?= ""
+ROOT_PATH := $(L4V_REPO_PATH)$(ROOT_ADD)
+
 # Ensure "ISABELLE_*" environment variables are setup.
 ifndef ISABELLE_HOME
   export ISABELLE_HOME=${L4V_REPO_PATH}/isabelle
@@ -30,11 +33,11 @@ endif
 
 # Setup rules for the heaps.
 $(HEAPS): .FORCE
-	$(ISABELLE_TOOL) build -b -v -d $(L4V_REPO_PATH) $@
+	$(ISABELLE_TOOL) build -b -v -d $(ROOT_PATH) $@
 .PHONY: $(HEAPS)
 
 $(GROUPS): .FORCE
-	$(ISABELLE_TOOL) build -b -v -d $(L4V_REPO_PATH) -g $@
+	$(ISABELLE_TOOL) build -b -v -d $(ROOT_PATH) -g $@
 .PHONY: $(GROUPS)
 
 clean: clean-images
