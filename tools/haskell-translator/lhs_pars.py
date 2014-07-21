@@ -479,7 +479,6 @@ def type_conv (string):
 	elif string[0].islower():
 		result = "'%s" % string
 	elif string[0] == '[' and string[-1] == ']':
-		print "---- don't think this is even SEEN ----"
 		inner = type_conv (string[1:-1])
 		result = '%s list' % inner
 	elif str(string) in conv_table:
@@ -576,7 +575,7 @@ def typename_transform (line, header, d):
 	try:
 		[oldtype] = line.split()
 	except:
-		sys.stderr.write ('BARF: type assignment %s\n' % d['body'])
+		sys.stderr.write ('Warning: type assignment %s\n' % d['body'])
 		return
 	if oldtype.startswith('Data.Word.Word'):
 		oldtype = oldtype[10:]
@@ -1859,7 +1858,7 @@ def case_clauses_transform ((line, children)):
 			x = str(bits[0]) + ':: ' + type_transform (str(bits[1]))
 
 	if children and children[-1][0].strip().startswith('where'):
-		sys.stderr.write ('BARF: where clause in case: %r\n' \
+		sys.stderr.write ('Warning: where clause in case: %r\n' \
 					% line)
 		return (beforecase + '(* case removed *) undefined', [])
 		where_clause = where_clause_transform (children[-1])
@@ -1901,10 +1900,10 @@ def case_clauses_transform ((line, children)):
 		print line
 	conv = get_case_conv(cases)
 	if conv == '<X>':
-		sys.stderr.write ('BARF: blanked case in caseconvs\n')
+		sys.stderr.write ('Warning: blanked case in caseconvs\n')
 		return (beforecase + '(* case removed *) undefined', [])
 	if not conv:
-		sys.stderr.write ('BARF: case %r\n' % (cases,))
+		sys.stderr.write ('Warning: case %r\n' % (cases,))
 		if cases not in cases_added:
 			casestr = 'case \\x of ' + ' -> '.join(cases) + ' -> '
 			
