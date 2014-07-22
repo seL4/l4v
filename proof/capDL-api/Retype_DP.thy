@@ -207,7 +207,7 @@ lemma dummy_detype_if_untyped:
   \<Longrightarrow> (detype obj_range s) = s"
   apply (case_tac s,clarsimp simp:detype_def sep_set_conj_def)
   apply (rule ext)
-  apply (clarsimp simp:state_sep_projection_def sep_conj_def)
+  apply (clarsimp simp:sep_state_projection_def sep_conj_def)
   apply (subst (asm) sep.setprod.remove)
    apply simp+
   apply (clarsimp simp:sep_map_o_conj image_def)
@@ -216,7 +216,7 @@ lemma dummy_detype_if_untyped:
   apply (case_tac xa,case_tac y)
   apply (clarsimp simp:plus_sep_state_def sep_state_add_def asid_reset_def
     intent_reset_def update_slots_def object_wipe_slots_def sep_disj_sep_state_def
-    obj_to_sep_state_def object_project_def object_clean_def
+    object_to_sep_state_def object_project_def object_clean_def
     sep_state_disj_def)
   apply (drule map_disj_None_right'[rotated])
    apply simp
@@ -224,7 +224,7 @@ lemma dummy_detype_if_untyped:
   apply (case_tac z)
     apply (clarsimp simp:plus_sep_state_def sep_state_add_def asid_reset_def
     intent_reset_def update_slots_def object_wipe_slots_def sep_disj_sep_state_def
-    obj_to_sep_state_def object_project_def object_clean_def
+    object_to_sep_state_def object_project_def object_clean_def
     sep_state_disj_def)+
   done
 
@@ -527,7 +527,7 @@ lemma seL4_Untyped_Retype_sep:
   \<and>* (cap_object root_cnode_cap, offset root root_size) \<mapsto>c root_cnode_cap
   \<and>* P \<guillemotright> s )
   \<and> (\<not>has_children (root_cnode,ucptr_slot) (kernel_state s) \<longrightarrow> obj_range = free_range))  \<rbrace>"
-  apply (simp add:seL4_Untyped_Retype_def state_sep_projection2_def)
+  apply (simp add:seL4_Untyped_Retype_def sep_state_projection2_def)
   apply (rule hoare_name_pre_state)
   apply (rule hoare_pre)
    apply (rule do_kernel_op_pull_back)
@@ -859,7 +859,7 @@ lemma seL4_Untyped_Retype_cdt_inc:
     apply sep_solve
    apply clarsimp
    apply wp
-  apply (clarsimp simp:state_sep_projection2_def)
+  apply (clarsimp simp:sep_state_projection2_def)
   apply (drule obj_exists_map_f)
   apply (clarsimp simp:object_at_def opt_object_def
     object_type_def)

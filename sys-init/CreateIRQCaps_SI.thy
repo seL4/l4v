@@ -44,14 +44,14 @@ lemma sep_map_irq_sep_irq_node:
 
 lemma sep_map_o_distinct:
   "(obj_id \<mapsto>o obj \<and>* obj_id' \<mapsto>o obj') s \<Longrightarrow> obj_id \<noteq> obj_id'"
-  by (fastforce simp: sep_map_o_def sep_map_general_def sep_conj_def obj_to_sep_state_def
+  by (fastforce simp: sep_map_o_def sep_map_general_def sep_conj_def object_to_sep_state_def
                       sep_disj_sep_state_def sep_state_disj_def
                       map_disj_def dom_def disjoint_iff_not_equal)
 
 lemma sep_any_map_o_false_eq:
   "(obj_id \<mapsto>o - \<and>* obj_id \<mapsto>o -) = sep_false"
   by (fastforce simp: sep_any_def sep_map_o_def sep_map_general_def sep_conj_def
-                      obj_to_sep_state_def sep_disj_sep_state_def sep_state_disj_def
+                      object_to_sep_state_def sep_disj_sep_state_def sep_state_disj_def
                       map_disj_def dom_def disjoint_iff_not_equal)
 
 lemma sep_any_map_o_false:

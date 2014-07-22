@@ -104,14 +104,14 @@ lemma invoke_page_wp:
   apply (simp add:invoke_page_def)
   apply wp
   apply (rule sep_lifted.mapM_x_sep_inv
-    [where lft = state_sep_projection and I' = \<top>,simplified])
+    [where lft = sep_state_projection and I' = \<top>,simplified])
    apply (simp add:swp_def)
    apply (rule hoare_pre)
     apply (rule set_cap_wp)
    apply simp
   apply (wp sep_wp: set_cap_wp, sep_solve)
 done
-  
+
 
 lemma invoke_page_table_wp:
   "pinv = PageTableMap real_pt_cap pt_cap pt_cap_ref pt_target_slot \<Longrightarrow>
@@ -184,7 +184,7 @@ lemma seL4_Page_Table_Map:
   \<and>* root_tcb_id \<mapsto>f (Tcb tcb)
   \<and>* cnode_id \<mapsto>f CNode (empty_cnode root_size)
   \<and>*R \<guillemotright> s \<rbrace>"
-  apply (simp add:seL4_PageTable_Map_def state_sep_projection2_def)
+  apply (simp add:seL4_PageTable_Map_def sep_state_projection2_def)
   apply (rule hoare_name_pre_state)
   apply (rule hoare_pre)
    apply (rule do_kernel_op_pull_back)
@@ -322,7 +322,7 @@ lemma seL4_Section_Map_wp:
     \<and>* (cnode_id, pd_offset) \<mapsto>c (PageDirectoryCap pd_ptr real None)
     \<and>* cnode_id \<mapsto>f CNode (empty_cnode root_size)
     \<and>* R \<guillemotright> s \<rbrace>"
-  apply (simp add:seL4_Page_Map_def state_sep_projection2_def
+  apply (simp add:seL4_Page_Map_def sep_state_projection2_def
    del:split_paired_Ex)
   apply (rule hoare_name_pre_state)
   apply (rule hoare_pre)
@@ -470,7 +470,7 @@ lemma seL4_Page_Map_wp:
     \<and>* cnode_id \<mapsto>f CNode (empty_cnode root_size)
     \<and>* cdl_lookup_pd_slot pd_ptr vaddr \<mapsto>c PageTableCap pt_ptr Fake None
     \<and>* R \<guillemotright> s \<rbrace>"
-  apply (simp add:seL4_Page_Map_def state_sep_projection2_def)
+  apply (simp add:seL4_Page_Map_def sep_state_projection2_def)
   apply (rule hoare_name_pre_state)
   apply (rule hoare_pre)
    apply (rule do_kernel_op_pull_back)
@@ -685,7 +685,7 @@ lemma seL4_ASIDPool_Assign_wp:
   \<and>* cnode_id \<mapsto>f CNode (empty_cnode root_size)
   \<and>* (root_tcb_id, tcb_cspace_slot) \<mapsto>c cnode_cap
   \<and>* R\<guillemotright> \<rbrace>"
-  apply (simp add:seL4_ASIDPool_Assign_def state_sep_projection2_def
+  apply (simp add:seL4_ASIDPool_Assign_def sep_state_projection2_def
     | wp do_kernel_op_wp)+
    apply (rule call_kernel_with_intent_allow_error_helper[where check = True and Perror = \<top>,simplified])
                 apply fastforce

@@ -1068,15 +1068,6 @@ lemma is_cnode_object_default_state [simp]:
   "is_cnode (object_default_state obj) = is_cnode obj"
   by (clarsimp simp: object_default_state_def2 is_cnode_def split: cdl_object.splits)
 
-(* FIXME, is this a bad idea to add to the simpset? *)
-lemma range_Slot [simp]:
-  "(range Slot) = (UNIV - {Fields})"
-   apply (clarsimp simp: image_def)
-   apply rule
-    apply clarsimp+
-   apply (case_tac x)
-    apply auto
-   done
 
 lemma update_slots_same [simp]:
   "object_slots obj = cap_map \<Longrightarrow> update_slots cap_map obj = obj"
@@ -1085,14 +1076,6 @@ lemma update_slots_same [simp]:
 lemma dom_sub_restrict [simp]:
   "dom (m `- A) = dom m \<inter> -A"
   by (auto simp: sub_restrict_map_def dom_def split: split_if_asm)
-
-lemma Slot_slot_union:
-  "insert (Slot slot) (Slot ` (UNIV - {slot})) = UNIV - {Fields}"
-   apply rule
-    apply clarsimp+
-   apply (case_tac x)
-    apply auto
-   done
 
 lemma inter_empty_not_both:
 "\<lbrakk>x \<in> A; A \<inter> B = {}\<rbrakk> \<Longrightarrow> x \<notin> B"

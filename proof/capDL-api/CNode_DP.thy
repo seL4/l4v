@@ -143,7 +143,7 @@ lemma seL4_CNode_Mint_sep:
        (cnode_id, cnode_cap_slot) \<mapsto>c cnode_cap' \<and>*
        (cnode_id, src_slot) \<mapsto>c src_cap \<and>*
        (dest_id, dest_slot) \<mapsto>c derived_cap cap' \<and>* R\<guillemotright>\<rbrace>"
-  apply (simp add:seL4_CNode_Mint_def state_sep_projection2_def)
+  apply (simp add:seL4_CNode_Mint_def sep_state_projection2_def)
   apply (rule do_kernel_op_pull_back)
   apply (rule hoare_name_pre_state)
   apply (simp add:is_tcb_def split:cdl_object.split_asm)
@@ -207,8 +207,7 @@ lemma seL4_CNode_Mint_sep:
           apply (simp add:cap_type_update_cap_data_det)
          apply (rule_tac x = cap'' in exI)
          apply (simp add:reset_cap_asid_derived)
-        apply (wp set_cap_wp set_cap_all_scheduable_tcbs
-       set_pending_cap_cdl_tcb_at)[1]
+        apply (wp set_cap_wp set_cap_all_scheduable_tcbs)[1]
        apply (rule_tac P = "is_cnode_cap (fst (c,ref))" in hoare_gen_asmEx)
        apply (clarsimp simp: decode_invocation_simps split_def)
        apply (rule liftME_wp)
@@ -239,7 +238,7 @@ lemma seL4_CNode_Mint_sep:
      apply (sep_solve)
     apply sep_solve
    apply (clarsimp simp:conj_ac cnode_non_ep)
-   apply (thin_tac " (?P \<and>* ?Q) (state_sep_projection sa)")
+   apply (thin_tac " (?P \<and>* ?Q) (sep_state_projection sa)")
    apply (clarsimp simp:user_pointer_at_def Let_def word_bits_def)
    apply (intro conjI impI allI, simp_all)
                     apply (clarsimp simp:sep_conj_assoc)
@@ -335,7 +334,7 @@ lemma seL4_CNode_Mutate_sep:
        (cnode_id, cnode_cap_slot) \<mapsto>c cnode_cap' \<and>*
        (cnode_id, src_slot) \<mapsto>c NullCap \<and>*
        (dest_id, dest_slot) \<mapsto>c cap' \<and>* R\<guillemotright>\<rbrace>"
-  apply (simp add:seL4_CNode_Mutate_def state_sep_projection2_def)
+  apply (simp add:seL4_CNode_Mutate_def sep_state_projection2_def)
   apply (rule do_kernel_op_pull_back)
    apply (rule hoare_pre)
    apply (rule_tac
@@ -385,8 +384,7 @@ lemma seL4_CNode_Mutate_sep:
           apply (clarsimp simp:sep_any_exist sep_conj_assoc
             sep_map_c_conj sep_map_f_conj Let_def
             split:if_splits option.splits,fastforce)
-        apply (wp set_cap_wp set_cap_all_scheduable_tcbs
-           set_pending_cap_cdl_tcb_at)[1]
+        apply (wp set_cap_wp set_cap_all_scheduable_tcbs)[1]
        apply (rule_tac P = "is_cnode_cap c" in hoare_gen_asmEx)
        apply (simp add:decode_invocation_simps)
        apply (rule liftME_wp)
@@ -499,7 +497,7 @@ lemma seL4_CNode_Move_sep:
        (cnode_id, cnode_cap_slot) \<mapsto>c cnode_cap' \<and>*
        (cnode_id, src_slot) \<mapsto>c NullCap \<and>*
        (dest_id, dest_slot) \<mapsto>c src_cap \<and>* R\<guillemotright>\<rbrace>"
-  apply (simp add:seL4_CNode_Move_def state_sep_projection2_def)
+  apply (simp add:seL4_CNode_Move_def sep_state_projection2_def)
   apply (rule do_kernel_op_pull_back)
    apply (rule hoare_pre)
    apply (rule_tac
@@ -542,8 +540,7 @@ lemma seL4_CNode_Move_sep:
           in hoare_strengthen_post[rotated])
          apply (clarsimp)
            apply (sep_select 3,assumption)
-        apply (wp set_cap_wp set_cap_all_scheduable_tcbs
-           set_pending_cap_cdl_tcb_at)[1]
+        apply (wp set_cap_wp set_cap_all_scheduable_tcbs)[1]
        apply (rule_tac P = "is_cnode_cap c" in hoare_gen_asmEx)
        apply (simp add:decode_invocation_simps)
        apply (rule liftME_wp)
@@ -643,7 +640,7 @@ lemma seL4_CNode_Copy_sep:
          (cnode_id, cnode_cap_slot) \<mapsto>c cnode_cap' \<and>*
          (cnode_id, src_slot) \<mapsto>c src_cap \<and>*
          (cnode_id, dest_slot) \<mapsto>c derived_cap (update_cap_rights (cap_rights src_cap) src_cap) \<and>* R\<guillemotright>\<rbrace>"
-  apply (simp add:seL4_CNode_Copy_def state_sep_projection2_def)
+  apply (simp add:seL4_CNode_Copy_def sep_state_projection2_def)
   apply (rule do_kernel_op_pull_back)
   apply (rule hoare_name_pre_state)
   apply (simp add:is_tcb_def split:cdl_object.split_asm)
@@ -706,8 +703,7 @@ lemma seL4_CNode_Copy_sep:
            apply (simp add:cap_type_update_cap_data_det)
           apply (rule_tac x = cap'' in exI)
           apply (simp add:reset_cap_asid_derived)
-        apply (wp set_cap_wp set_cap_all_scheduable_tcbs
-           set_pending_cap_cdl_tcb_at)[1]
+        apply (wp set_cap_wp set_cap_all_scheduable_tcbs)[1]
        apply (rule_tac P = "(fst (c,ref)) = cnode_cap'
          \<and> get_index cs 0 = Some (cnode_cap',(cap_object cnode_cap',
           offset src_root root_size))" in hoare_gen_asmEx)
@@ -743,7 +739,7 @@ lemma seL4_CNode_Copy_sep:
     apply sep_solve
    apply sep_solve
    apply (clarsimp simp:conj_ac)
-  apply (thin_tac " (?P \<and>* ?Q) (state_sep_projection sa)")
+  apply (thin_tac " (?P \<and>* ?Q) (sep_state_projection sa)")
   apply (rule conjI)
    apply (clarsimp simp:user_pointer_at_def Let_def word_bits_def)
    apply (intro conjI,simp+)
@@ -773,5 +769,6 @@ lemma seL4_CNode_Copy_sep:
    apply simp
   apply simp
   done
+
 end
 

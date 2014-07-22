@@ -192,16 +192,16 @@ lemma sep_heap_dom_sep_map_predicate:
   "m = {ptr}\<times> cmps \<Longrightarrow>
   sep_heap_dom (sep_map_predicate ptr P cmps) m"
   apply (clarsimp simp: sep_map_general_def
-    obj_to_sep_state_def
+    object_to_sep_state_def
     sep_heap_dom_def sep_map_predicate_def
     split:sep_state.splits if_splits)
   apply (rule set_eqI)
-  apply (clarsimp simp:dom_def object_project_def split:cdl_component.splits)
+  apply (clarsimp simp:dom_def object_project_def split:cdl_component_id.splits)
   done
 
 lemma sep_irq_node_dom_sep_map_predicate:
   "sep_irq_node_dom (sep_map_predicate ptr P cmps) {}"
-  apply (clarsimp simp: sep_map_general_def obj_to_sep_state_def
+  apply (clarsimp simp: sep_map_general_def object_to_sep_state_def
     sep_irq_node_dom_def sep_map_predicate_def
     split:sep_state.splits split_if_asm)
   done
@@ -259,7 +259,7 @@ lemma sep_spec_simps:
             empty)"
   apply (clarsimp simp:sep_map_spec_def sep_map_c_def sep_map_general_def)
   apply (case_tac s')
-  apply (clarsimp simp:obj_to_sep_state_def)
+  apply (clarsimp simp:object_to_sep_state_def)
   apply (rule ext)
   apply (clarsimp simp: object_project_def object_slots_object_clean
                  split: split_if_asm)
@@ -268,14 +268,14 @@ lemma sep_spec_simps:
 lemma sep_conj_spec:
   "\<lbrakk> < P \<and>* Q > s\<rbrakk>
    \<Longrightarrow> \<exists>s'. < P \<and>* op = s' > s"
-  by (auto simp:state_sep_projection_def sep_conj_def
+  by (auto simp:sep_state_projection_def sep_conj_def
     sep_disj_sep_state_def sep_state_disj_def)
 
 
 lemma sep_conj_spec_value:
   "\<lbrakk> < P \<and>* op = s' > s; sep_heap_dom P m; p \<notin> m\<rbrakk>
-  \<Longrightarrow> (sep_heap s') p = (sep_heap (state_sep_projection s) |` (UNIV - m)) p"
-  apply (clarsimp simp:state_sep_projection_def sep_conj_def
+  \<Longrightarrow> (sep_heap s') p = (sep_heap (sep_state_projection s) |` (UNIV - m)) p"
+  apply (clarsimp simp:sep_state_projection_def sep_conj_def
     sep_disj_sep_state_def sep_state_disj_def)
   apply (drule(2) sep_heap_domD)
   apply (simp add: plus_sep_state_def sep_state_add_def
@@ -290,7 +290,7 @@ lemma write_estimate_via_sep:
   and sep_heap_dom: "sep_heap_dom P m"
   and sep_heap_dom': "sep_heap_dom P' m"
   shows "IsSepWritingEstimateOf f (\<lambda>s. < P \<and>* Q> s)
-    (\<lambda>s.  sep_heap (state_sep_projection s)) m"
+    (\<lambda>s.  sep_heap (sep_state_projection s)) m"
   apply (clarsimp simp: valid_def IsSepWritingEstimateOf_def)
   apply (drule sep_conj_spec)
   apply clarsimp
@@ -304,15 +304,15 @@ lemma write_estimate_via_sep:
 lemma sep_map_dom_predicate:
   "\<lbrakk>sep_heap_dom P m; sep_irq_node_dom P m';
     <P \<and>* P'> b\<rbrakk>
-  \<Longrightarrow> P (SepState (sep_heap (state_sep_projection b) |` m)
-                  (sep_irq_node (state_sep_projection b) |` m'))"
-  apply (clarsimp simp: state_sep_projection_def sep_conj_def
+  \<Longrightarrow> P (SepState (sep_heap (sep_state_projection b) |` m)
+                  (sep_irq_node (sep_state_projection b) |` m'))"
+  apply (clarsimp simp: sep_state_projection_def sep_conj_def
                         plus_sep_state_def sep_state_add_def)
   apply (drule(1) sep_heap_domD')
   apply (drule(1) sep_irq_node_domD')
   apply simp
   apply (case_tac x,case_tac y)
-  apply (clarsimp simp: state_sep_projection_def sep_conj_def
+  apply (clarsimp simp: sep_state_projection_def sep_conj_def
                         sep_disj_sep_state_def sep_state_disj_def)
   apply (simp add: map_add_restrict_dom_left)
   done
@@ -325,7 +325,7 @@ lemma strong_write_estimate_via_sep:
   and sep_irq_node_dom' : "sep_irq_node_dom P' m'"
   and sep_spec: "sep_map_spec P' state"
   shows "IsStrongSepWritingEstimateOf f (\<lambda>s. < P \<and>* Q> s)
-    (\<lambda>s.  sep_heap (state_sep_projection s)) m (\<lambda>s. sep_heap state)"
+    (\<lambda>s.  sep_heap (sep_state_projection s)) m (\<lambda>s. sep_heap state)"
   apply (clarsimp simp: valid_def IsStrongSepWritingEstimateOf_def)
   apply (drule sep_conj_spec)
   apply clarsimp
@@ -394,7 +394,7 @@ abbreviation "tcb_at_heap \<equiv> \<lambda>P ptr heap.
 definition all_scheduable_tcbs :: "(word32 \<Rightarrow> cdl_object option) \<Rightarrow> cdl_object_id set"
 where  "all_scheduable_tcbs \<equiv> \<lambda>m. {ptr. tcb_at_heap tcb_scheduable ptr m}"
 
-definition sep_all_scheduable_tcbs :: "(32 word \<times> cdl_component \<Rightarrow> sep_entity option) \<Rightarrow> cdl_object_id set"
+definition sep_all_scheduable_tcbs :: "(32 word \<times> cdl_component_id \<Rightarrow> cdl_component option) \<Rightarrow> cdl_object_id set"
 where "sep_all_scheduable_tcbs m \<equiv> {ptr. \<exists>obj cap. m (ptr,Fields) = Some (CDL_Object obj) \<and> is_tcb obj
   \<and> m (ptr,Slot tcb_pending_op_slot) = Some (CDL_Cap (Some cap)) \<and> scheduable_cap cap}"
 
@@ -404,9 +404,9 @@ lemma is_tcb_obj_type:
 
 lemma all_scheduable_tcbs_rewrite:
   "all_scheduable_tcbs (cdl_objects s) =
-  sep_all_scheduable_tcbs (sep_heap (state_sep_projection s))"
+  sep_all_scheduable_tcbs (sep_heap (sep_state_projection s))"
  apply (intro set_eqI iffI)
-  apply (clarsimp simp:all_scheduable_tcbs_def state_sep_projection_def
+  apply (clarsimp simp:all_scheduable_tcbs_def sep_state_projection_def
     sep_all_scheduable_tcbs_def object_at_heap_def object_project_def
     is_tcb_obj_type)
   apply (clarsimp simp:object_type_def object_slots_object_clean
@@ -414,7 +414,7 @@ lemma all_scheduable_tcbs_rewrite:
   apply (fastforce simp:object_clean_def asid_reset_def update_slots_def
     reset_cap_asid_def intent_reset_def object_slots_def
     split:if_splits)
- apply (clarsimp simp:all_scheduable_tcbs_def state_sep_projection_def
+ apply (clarsimp simp:all_scheduable_tcbs_def sep_state_projection_def
     sep_all_scheduable_tcbs_def object_at_heap_def object_project_def
     is_tcb_obj_type split:option.splits)
  apply (clarsimp simp:object_type_def tcb_scheduable_def
@@ -454,7 +454,7 @@ lemma set_cap_all_scheduable_tcbs:
   apply (clarsimp simp:all_scheduable_tcbs_rewrite)
   apply (rule hoare_pre)
    apply (rule using_strong_writing_estimate
-     [where proj = "(\<lambda>a. sep_heap (state_sep_projection a))"])
+     [where proj = "(\<lambda>a. sep_heap (sep_state_projection a))"])
    apply (rule strong_write_estimate_via_sep[OF set_cap_wp])
      apply (rule sep_heap_dom_simps sep_irq_node_dom_simps sep_spec_simps)+
   apply (rule conjI)
@@ -462,7 +462,7 @@ lemma set_cap_all_scheduable_tcbs:
      Let_def sep_any_exist all_scheduable_tcbs_rewrite[symmetric]
      dest!:in_singleton)
    apply (clarsimp simp:object_at_heap_def tcb_scheduable_def
-     state_sep_projection_def object_project_def)
+     sep_state_projection_def object_project_def)
    apply (rule conjI)
     apply (clarsimp simp:object_slots_def object_clean_def
       update_slots_def intent_reset_def asid_reset_def
@@ -471,10 +471,10 @@ lemma set_cap_all_scheduable_tcbs:
   apply (rule subst,assumption)
   apply (drule in_singleton)
   apply (intro set_eqI iffI)
-   apply (clarsimp simp: sep_all_scheduable_tcbs_def state_sep_projection_def
+   apply (clarsimp simp: sep_all_scheduable_tcbs_def sep_state_projection_def
                   split: split_if_asm option.splits)
   apply (fastforce simp: sep_all_scheduable_tcbs_def map_add_def
-                         state_sep_projection_def scheduable_cap_def
+                         sep_state_projection_def scheduable_cap_def
                  split: option.splits)
   done
 

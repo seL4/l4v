@@ -1017,7 +1017,7 @@ shows
        (tcb_id, tcb_ipcbuffer_slot) \<mapsto>c buffer_frame_cap \<and>*
        R\<guillemotright> s\<rbrace>"
   using unify
-  apply (simp add: seL4_TCB_Configure_def state_sep_projection2_def)
+  apply (simp add: seL4_TCB_Configure_def sep_state_projection2_def)
   apply (simp only: is_tcb_def split:cdl_object.splits)
   apply (rule hoare_pre)
    apply (wp do_kernel_op_pull_back)
@@ -1185,7 +1185,7 @@ crunch current_domain[wp]: set_cap "\<lambda>s. P (cdl_current_domain s)"
 
 
 lemma restart_cdl_current_domain:
-  "\<lbrace>\<lambda>s. <(ptr,tcb_pending_op_slot) \<mapsto>c cap \<and>* \<top> > s \<and> \<not> is_pending_cap cap 
+  "\<lbrace>\<lambda>s. <(ptr,tcb_pending_op_slot) \<mapsto>c cap \<and>* \<top> > s \<and> \<not> is_pending_cap cap
       \<and> P (cdl_current_domain s)\<rbrace> restart ptr \<lbrace>\<lambda>r s. P (cdl_current_domain s)\<rbrace>"
   apply (simp add:restart_def)
   apply (wp alternative_wp)
@@ -1199,10 +1199,10 @@ lemma restart_cdl_current_domain:
   apply (simp add:reset_cap_asid_def
     split:cdl_cap.splits)
   done
-    
+
 
 lemma restart_cdl_current_thread:
-  "\<lbrace>\<lambda>s. <(ptr,tcb_pending_op_slot) \<mapsto>c cap \<and>* \<top> > s \<and> \<not> is_pending_cap cap 
+  "\<lbrace>\<lambda>s. <(ptr,tcb_pending_op_slot) \<mapsto>c cap \<and>* \<top> > s \<and> \<not> is_pending_cap cap
       \<and> P (cdl_current_thread s)\<rbrace> restart ptr \<lbrace>\<lambda>r s. P (cdl_current_thread s)\<rbrace>"
   apply (simp add:restart_def)
   apply (wp alternative_wp)
@@ -1217,7 +1217,7 @@ lemma restart_cdl_current_thread:
     split:cdl_cap.splits)
   done
 
-lemma seL4_TCB_WriteRegisters_wp: 
+lemma seL4_TCB_WriteRegisters_wp:
 assumes unify: "cnode_id = cap_object cnode_cap \<and>
      tcb_id = cap_object tcb_cap \<and>
      offset tcb_root root_size = tcb_cap_slot \<and>
@@ -1236,15 +1236,15 @@ shows
      \<and>* (root_tcb_id, tcb_cspace_slot) \<mapsto>c cnode_cap
      \<and>* cap_object cnode_cap \<mapsto>f CNode (empty_cnode root_size)
      \<and>* (cap_object cnode_cap, offset tcb_ref root_size) \<mapsto>c tcb_cap
-     \<and>* R \<guillemotright> \<rbrace> 
+     \<and>* R \<guillemotright> \<rbrace>
   seL4_TCB_WriteRegisters tcb_ref True 0 2 regs
-  \<lbrace>\<lambda>_.  \<guillemotleft> root_tcb_id \<mapsto>f root_tcb 
-    \<and>* (root_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap 
+  \<lbrace>\<lambda>_.  \<guillemotleft> root_tcb_id \<mapsto>f root_tcb
+    \<and>* (root_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap
     \<and>* (root_tcb_id, tcb_cspace_slot) \<mapsto>c cnode_cap
     \<and>* cap_object cnode_cap \<mapsto>f CNode (empty_cnode root_size)
     \<and>* (cap_object cnode_cap, offset tcb_ref root_size) \<mapsto>c tcb_cap
     \<and>* R \<guillemotright> \<rbrace>"
-  apply (simp add:seL4_TCB_WriteRegisters_def state_sep_projection2_def 
+  apply (simp add:seL4_TCB_WriteRegisters_def sep_state_projection2_def
     is_tcb_def split:cdl_object.splits)
   apply (rule hoare_pre)
   apply (wp do_kernel_op_pull_back)
@@ -1257,7 +1257,7 @@ shows
                apply (sep_select 2,sep_cancel)
               apply wp[4]
          apply (rule_tac P= "
-           \<exists>cap_obj resume. 
+           \<exists>cap_obj resume.
            iv = (InvokeTcb $ WriteRegisters root_tcb_id resume [0] 0)" in hoare_gen_asmEx)
         apply (clarsimp simp:invoke_tcb_def)
         apply (wp alternative_wp restart_cdl_current_thread[where cap = RestartCap]
@@ -1269,17 +1269,17 @@ shows
           apply wp
         apply (simp add:is_pending_cap_def conj_ac)
         apply (wp set_cap_wp)
-        apply (rule_tac R1="root_tcb_id \<mapsto>f root_tcb \<and>* ?Q \<and>* R" in 
+        apply (rule_tac R1="root_tcb_id \<mapsto>f root_tcb \<and>* ?Q \<and>* R" in
           hoare_post_imp[OF _ set_cap_wp])
         apply (rule conjI,sep_solve+)
-        apply (rule_tac P = "c = TcbCap root_tcb_id " 
+        apply (rule_tac P = "c = TcbCap root_tcb_id "
           in hoare_gen_asmEx)
         apply (simp add: decode_invocation_def
           throw_opt_def get_tcb_intent_def decode_tcb_invocation_def)
         apply wp
         apply (rule alternativeE_wp)
          apply wp[2]
-       apply (clarsimp simp:conj_ac lookup_extra_caps_def 
+       apply (clarsimp simp:conj_ac lookup_extra_caps_def
          mapME_def sequenceE_def)
        apply (rule returnOk_wp)
       apply (rule lookup_cap_and_slot_rvu

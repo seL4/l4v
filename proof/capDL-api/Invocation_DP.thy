@@ -83,7 +83,7 @@ lemma sep_nonimpact_valid_lift:
    "\<And>ptr P A. \<lbrace>\<lambda>s. A (cdl_irq_node s)\<rbrace> f \<lbrace>\<lambda>rv s. A (cdl_irq_node s)\<rbrace>"
   shows
    "\<lbrace>\<lambda>s. < Q >  s\<rbrace> f \<lbrace>\<lambda>rv s. < Q > s\<rbrace>"
-  apply (clarsimp simp: valid_def state_sep_projection_def Let_def
+  apply (clarsimp simp: valid_def sep_state_projection_def Let_def
                         sep_state_add_def sep_disj_sep_state_def
                         sep_state_disj_def Option.map_def
                  split: split_if_asm option.splits sep_state.splits)
@@ -102,7 +102,7 @@ lemma sep_nonimpact_valid_lift:
     apply (fastforce simp:object_at_def opt_object_def)
    apply (clarsimp simp: object_at_def opt_object_def object_slots_object_clean
                          object_project_def
-                  split: cdl_component.splits)
+                  split: cdl_component_id.splits)
   apply (rule ext)+
   apply (clarsimp split:option.splits)
   apply (drule_tac A1 = "\<lambda>x. x = (cdl_irq_node s)" in use_valid[OF _ non_irq_node_impact])
@@ -220,21 +220,6 @@ lemma syscall_valid_helper:
     apply fastforce
    apply (rule hoare_FalseE)
   apply auto
-  done
-
-
-
-(* FIXME: the following lemma is too specific, but however it is intuitively correct *)
-lemma set_pending_cap_cdl_tcb_at:
-  "\<lbrace>tcb_at' (\<lambda>tcb. True) y\<rbrace>
-    set_cap (y, tcb_pending_op_slot) RestartCap
-   \<lbrace>\<lambda>r. tcb_at' (\<lambda>tcb. cdl_tcb_caps tcb tcb_pending_op_slot = Some RestartCap) y\<rbrace>"
-  apply (clarsimp simp: set_cap_def object_at_def set_object_def)
-  apply (wp)
-  apply (wp set_object_wp select_wp|wpc)+
-  apply (clarsimp simp: sep_any_def sep_conj_exists tcb_slot_defs)
-  apply (auto simp: object_slots_def opt_object_def
-    update_slots_def)+
   done
 
 lemma no_exception_conj:
@@ -408,8 +393,7 @@ lemma handle_event_syscall_no_exception:
        apply (rule perform_invocation_hold)
       apply (rule_tac P = "y = cur_thread" in hoare_gen_asm)
       apply simp
-      apply (wp hoare_vcg_conj_lift set_pending_cap_cdl_tcb_at
-        set_restart_cap_hold)[1]
+      apply (wp hoare_vcg_conj_lift set_restart_cap_hold)[1]
      apply (rule_tac P = " \<not> ep_related_cap (fst yb)
        \<and> cdl_intent_op (cdl_tcb_intent ya) = Some intent_op \<and> y = cur_thread"
        in hoare_gen_asmEx)
@@ -563,7 +547,7 @@ lemma call_kernel_with_intent_no_fault_helper:
        apply ((wp corrupt_ipc_buffer_sep_inv corrupt_ipc_buffer_active_tcbs
          mark_tcb_intent_error_hold corrupt_ipc_buffer_hold | simp)+)[2]
      apply (rule hoare_post_impErr[OF perform_invocation_hold])
-      apply (fastforce simp:state_sep_projection_def sep_any_def
+      apply (fastforce simp:sep_state_projection_def sep_any_def
        sep_map_c_def sep_conj_def)
      apply simp
     apply (wp set_restart_cap_hold)
@@ -907,8 +891,7 @@ lemma handle_event_syscall_allow_error:
        apply (rule perform_invocation_hold)
       apply (rule_tac P = "y = cur_thread" in hoare_gen_asm)
       apply simp
-      apply (wp hoare_vcg_conj_lift set_pending_cap_cdl_tcb_at
-        set_restart_cap_hold)[1]
+      apply (wp hoare_vcg_conj_lift set_restart_cap_hold)[1]
      apply simp
      apply (rule_tac P = " \<not> ep_related_cap (fst r)
        \<and> cdl_intent_op (cdl_tcb_intent ya) = Some intent_op"
@@ -1046,7 +1029,7 @@ lemma call_kernel_with_intent_allow_error_helper:
        apply ((wp corrupt_ipc_buffer_sep_inv corrupt_ipc_buffer_active_tcbs
          mark_tcb_intent_error_hold corrupt_ipc_buffer_hold | simp)+)[4]
      apply (rule hoare_post_impErr[OF perform_invocation_hold])
-       apply (fastforce simp:state_sep_projection_def sep_any_def
+       apply (fastforce simp:sep_state_projection_def sep_any_def
          sep_map_c_def sep_conj_def)
       apply simp
      apply (wp set_restart_cap_hold)
@@ -1057,7 +1040,7 @@ lemma call_kernel_with_intent_allow_error_helper:
    apply (wp upd_thread update_thread_wp)
   apply (clarsimp)
   apply (clarsimp simp:sep_map_c_conj sep_map_f_conj object_at_def
-    object_project_def state_sep_projection_def
+    object_project_def sep_state_projection_def
     split:option.splits cdl_object.split)
   apply (case_tac z)
     apply (clarsimp dest!:arg_cong[where f= object_type],simp add:object_type_def)+
@@ -1084,10 +1067,10 @@ lemma invoke_cnode_insert_cap':
   done
 
 lemma object_to_sep_state_slot:
-  "obj_to_sep_state (fst ptr) obj {Slot (snd ptr)} = [(fst ptr, Slot (snd ptr)) \<mapsto>
+  "object_to_sep_state (fst ptr) obj {Slot (snd ptr)} = [(fst ptr, Slot (snd ptr)) \<mapsto>
   (CDL_Cap ((reset_cap_asid \<circ>\<^sub>M object_slots obj) (snd ptr)))]"
   apply (rule ext)
-  apply (clarsimp simp:obj_to_sep_state_def
+  apply (clarsimp simp:object_to_sep_state_def
     object_project_slot object_slots_object_clean
     split:if_splits)
   done

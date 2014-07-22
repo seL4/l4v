@@ -90,7 +90,7 @@ lemma sep_map_c_any:
 
 lemma pure_extract:
   "\<lbrakk> <P \<and>* Q> s; pure P \<rbrakk> \<Longrightarrow> <P> s"
-  by (fastforce simp: pure_def state_sep_projection_def sep_conj_def)
+  by (fastforce simp: pure_def sep_state_projection_def sep_conj_def)
 
 lemma throw_on_none_rv:
   "\<lbrace>\<lambda>s. case x of Some y \<Rightarrow> P y s | otherwise \<Rightarrow> False\<rbrace> throw_on_none x \<lbrace>P\<rbrace>, \<lbrace>Q\<rbrace>"
@@ -163,19 +163,19 @@ lemma obj_exists_map_i:
   apply (clarsimp simp: opt_object_def sep_map_o_conj)
   apply (case_tac "cdl_objects s obj_id")
    apply (drule_tac x = "(obj_id,Fields)" in fun_cong)
-    apply (clarsimp simp: lift_def obj_to_sep_state_def object_project_def
-      object_at_heap_def state_sep_projection_def
+    apply (clarsimp simp: lift_def object_to_sep_state_def object_project_def
+      object_at_heap_def sep_state_projection_def
       sep_conj_def Let_unfold)
   apply (rule_tac x = a in exI,simp)
   apply (rule object_eqI)
    apply (drule_tac x = "(obj_id,Fields)" in fun_cong)
-   apply (clarsimp simp: lift_def obj_to_sep_state_def object_project_def
-      object_at_heap_def state_sep_projection_def
+   apply (clarsimp simp: lift_def object_to_sep_state_def object_project_def
+      object_at_heap_def sep_state_projection_def
       Let_unfold)
   apply (rule ext)
   apply (drule_tac x= "(obj_id,Slot x)" in fun_cong)
-  apply (clarsimp simp: lift_def obj_to_sep_state_def
-      object_project_def state_sep_projection_def
+  apply (clarsimp simp: lift_def object_to_sep_state_def
+      object_project_def sep_state_projection_def
       Let_unfold)
   done
 
@@ -184,12 +184,12 @@ lemma obj_exists_map_f:
   \<exists>obj'. (opt_object obj_id s = Some obj' \<and> object_type obj = object_type obj')"
   apply (clarsimp simp: opt_object_def sep_map_f_conj Let_def)
   apply (case_tac "cdl_objects s obj_id")
-   apply (clarsimp simp: lift_def obj_to_sep_state_def object_project_def
-      object_at_heap_def state_sep_projection_def
+   apply (clarsimp simp: lift_def object_to_sep_state_def object_project_def
+      object_at_heap_def sep_state_projection_def
       sep_conj_def Let_unfold)
   apply (rule_tac x = a in exI,simp)
-  apply (clarsimp simp: lift_def obj_to_sep_state_def object_project_def
-      object_at_heap_def state_sep_projection_def
+  apply (clarsimp simp: lift_def object_to_sep_state_def object_project_def
+      object_at_heap_def sep_state_projection_def
       Let_unfold)
   apply (drule_tac f = object_type in arg_cong)
   apply simp
@@ -211,7 +211,7 @@ lemma opt_cap_sep_imp:
   apply (clarsimp simp:  sep_map_c_def lift_def
     opt_object_def split_def
     sep_any_def sep_map_general_def slots_of_def
-    state_sep_projection_def object_project_def
+    sep_state_projection_def object_project_def
     object_slots_object_clean
     Let_unfold split:sep_state.splits option.splits)
 done
@@ -223,7 +223,7 @@ lemma opt_cap_sep_any_imp:
   apply (clarsimp simp:  sep_map_c_def lift_def
     opt_object_def split_def object_slots_object_clean
     sep_any_def sep_map_general_def slots_of_def
-    state_sep_projection_def object_project_def
+    sep_state_projection_def object_project_def
     Let_unfold split:sep_state.splits option.splits)
 done
 
@@ -234,7 +234,7 @@ lemma sep_f_size_opt_cnode:
   apply (clarsimp simp:sep_map_f_conj Let_def)
   apply (case_tac obj)
   apply (auto simp: intent_reset_def empty_cnode_def
-    opt_cnode_def update_slots_def state_sep_projection_def
+    opt_cnode_def update_slots_def sep_state_projection_def
     opt_object_def object_wipe_slots_def
     object_project_def object_clean_def asid_reset_def
     split:cdl_cap.splits cdl_object.splits)
@@ -248,7 +248,7 @@ lemma swap_parents_wp:
   "\<lbrace><R>\<rbrace>
    swap_parents src dest
   \<lbrace>\<lambda>_.  <R>\<rbrace>"
-  by (clarsimp simp: swap_parents_def lift_def state_sep_projection_def)
+  by (clarsimp simp: swap_parents_def lift_def sep_state_projection_def)
 
 lemma insert_cap_orphan_wp:
    "\<lbrace><dest \<mapsto>c - \<and>* R>\<rbrace>
@@ -282,7 +282,7 @@ lemma set_parent_wp:
   "\<lbrace><P>\<rbrace>
     set_parent child parent
    \<lbrace>\<lambda>_.<P>\<rbrace>"
-  apply (clarsimp simp: set_parent_def state_sep_projection_def)
+  apply (clarsimp simp: set_parent_def sep_state_projection_def)
   apply wp
   apply clarsimp
   done
@@ -316,7 +316,7 @@ lemma remove_parent_wp:
   "\<lbrace><P>\<rbrace>
    remove_parent obj
    \<lbrace>\<lambda>_.  <P>\<rbrace>"
-   by (clarsimp simp: remove_parent_def lift_def state_sep_projection_def)
+   by (clarsimp simp: remove_parent_def lift_def sep_state_projection_def)
 
 lemma get_cap_wp:
   "\<lbrace>P\<rbrace>

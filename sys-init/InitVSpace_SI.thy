@@ -99,10 +99,10 @@ lemma object_slot_initialised_lookup:
     apply (simp add:spec2s_def update_slots_def object_slots_def
       split:cdl_object.splits)
    apply simp
-  apply (drule sep_map_c_def2)
+  apply (subst (asm) sep_map_c_def2)
   apply (clarsimp simp:spec2s_def)
   apply (clarsimp simp:sep_map_s_def
-    sep_map_general_def obj_to_sep_state_def)
+    sep_map_general_def object_to_sep_state_def)
   apply (rule ext)
   apply (clarsimp simp:object_project_def
     object_slots_object_clean)
@@ -144,7 +144,7 @@ lemma seL4_PageTable_Map_object_initialised_sep:
       and root_size = si_cnode_size and ptr = pt_ptr and pd_ptr = pd_ptr])
           apply (simp add:word_bits_def guard_equal_si_cspace_cap)+
   prefer 2
-   apply (clarsimp simp:si_objects_def sep_conj_assoc state_sep_projection2_def)
+   apply (clarsimp simp:si_objects_def sep_conj_assoc sep_state_projection2_def)
    apply (clarsimp simp: object_slot_initialised_def cdl_lookup_pd_slot_def
      object_fields_empty_def object_initialised_general_def)
     apply (clarsimp simp:root_tcb_def sep_conj_assoc update_slots_def)
@@ -198,7 +198,7 @@ lemma seL4_Section_Map_object_initialised_sep:
   prefer 2
    apply (clarsimp simp: object_slot_initialised_def cdl_lookup_pd_slot_def
      object_fields_empty_def object_initialised_general_def)
-   apply (clarsimp simp:si_objects_def sep_conj_assoc state_sep_projection2_def)
+   apply (clarsimp simp:si_objects_def sep_conj_assoc sep_state_projection2_def)
    apply (clarsimp simp:root_tcb_def sep_conj_assoc update_slots_def valid_vm_rights_rw)
    apply (sep_erule_concl refl_imp)+
    apply (assumption)

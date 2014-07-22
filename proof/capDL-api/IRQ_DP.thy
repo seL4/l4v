@@ -19,21 +19,23 @@ lemma delete_cap_simple_format:
 done
 
 lemma sep_map_i_cdl_irq: "<irq \<mapsto>irq irq_obj \<and>* R> s \<Longrightarrow> cdl_irq_node s irq = irq_obj"
-  apply (clarsimp simp: sep_map_c_def sep_map_irq_def sep_conj_def state_sep_projection_def plus_sep_state_def sep_state_add_def)
+  apply (clarsimp simp: sep_map_c_def sep_map_irq_def sep_conj_def sep_state_projection_def plus_sep_state_def sep_state_add_def)
   apply (clarsimp simp: map_add_def)
   apply (drule fun_cong[where x=irq])
   apply (clarsimp split: option.splits)
   apply (clarsimp simp: sep_disj_sep_state_def sep_state_disj_def)
-  by (metis map_disj_None_right' option.distinct(1))
+  by (metis (lifting) fun_upd_same map_disj_None_left' option.distinct(1))
 
-lemma sep_map_i_map_c: "<irq \<mapsto>irq irq_obj \<and>* (irq_obj, 0) \<mapsto>c cap \<and>* R> s \<Longrightarrow> <irq \<mapsto>irq irq_obj \<and>* (get_irq_slot irq s \<mapsto>c cap) \<and>* R> s"
+lemma sep_map_i_map_c:
+  "<irq \<mapsto>irq irq_obj \<and>* (irq_obj, 0) \<mapsto>c cap \<and>* R> s \<Longrightarrow>
+   <irq \<mapsto>irq irq_obj \<and>* (get_irq_slot irq s \<mapsto>c cap) \<and>* R> s"
  by (frule sep_map_i_cdl_irq, clarsimp simp: get_irq_slot_def)
 
 
 lemma invoke_irq_handler_clear_handler_wp:
-      "\<lbrace>< irq \<mapsto>irq obj \<and>* (obj, 0) \<mapsto>c cap \<and>* R> and K (\<not> ep_related_cap cap)\<rbrace>
-        invoke_irq_handler (ClearIrqHandler irq)
-       \<lbrace>\<lambda>_. < irq \<mapsto>irq obj \<and>* (obj, 0) \<mapsto>c NullCap \<and>* R> \<rbrace>"
+  "\<lbrace>< irq \<mapsto>irq obj \<and>* (obj, 0) \<mapsto>c cap \<and>* R> and K (\<not> ep_related_cap cap)\<rbrace>
+      invoke_irq_handler (ClearIrqHandler irq)
+   \<lbrace>\<lambda>_. < irq \<mapsto>irq obj \<and>* (obj, 0) \<mapsto>c NullCap \<and>* R> \<rbrace>"
   apply (clarsimp simp: invoke_irq_handler_def, wp )
    apply (sep_wp delete_cap_simple_format[where cap=cap])
   apply (safe)
@@ -178,7 +180,7 @@ shows "\<lbrace>\<guillemotleft>root_tcb_id \<mapsto>f root_tcb  \<and>* (root_t
        (* Cap to the root CNode. *)
        (root_tcb_id, tcb_cspace_slot) \<mapsto>c root_cap \<and>*
        irq \<mapsto>irq obj \<and>* control_ptr \<mapsto>c c_cap \<and>* target_ptr \<mapsto>c irq_cap \<and>* root_ptr \<mapsto>c root_cap \<and>* R\<guillemotright> s\<rbrace>"
-  apply (simp add: seL4_IRQControl_Get_def state_sep_projection2_def)
+  apply (simp add: seL4_IRQControl_Get_def sep_state_projection2_def)
   apply (rule hoare_pre)
    apply (wp do_kernel_op_pull_back)
    apply (rule call_kernel_with_intent_allow_error_helper
@@ -337,7 +339,7 @@ shows "\<lbrace>\<guillemotleft>root_tcb_id \<mapsto>f root_tcb  \<and>* (root_t
        (root_tcb_id, tcb_cspace_slot) \<mapsto>c cnode_cap \<and>*
        (endpoint_ptr) \<mapsto>c endpoint_cap \<and>*
        irq \<mapsto>irq obj \<and>* (obj, 0) \<mapsto>c endpoint_cap \<and>* irq_ptr \<mapsto>c irq_cap \<and>* R\<guillemotright> s\<rbrace>"
-  apply (simp add: seL4_IRQHandler_SetEndpoint_def state_sep_projection2_def)
+  apply (simp add: seL4_IRQHandler_SetEndpoint_def sep_state_projection2_def)
   apply (rule hoare_pre)
    apply (wp do_kernel_op_pull_back)
    apply (rule call_kernel_with_intent_allow_error_helper

@@ -50,7 +50,7 @@ lemma parse_spec_inv:
   "\<lbrace>\<lambda>s. \<guillemotleft>R\<guillemotright> s\<rbrace>
      parse_spec spec obj_ids
    \<lbrace>\<lambda>rv s. \<guillemotleft>R\<guillemotright> s\<rbrace>"
-  apply (clarsimp simp: parse_spec_def state_sep_projection2_def)
+  apply (clarsimp simp: parse_spec_def sep_state_projection2_def)
   apply (wp)
   apply clarsimp
   done

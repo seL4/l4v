@@ -213,17 +213,8 @@ datatype cdl_arch = IA32 | ARM11
 (* The map of objects that are in the system. *)
 type_synonym cdl_heap = "cdl_object_id \<Rightarrow> cdl_object option"
 
-(* The component map tracks which components (fields and slots) are owned by an object.
- * Fields + slots are encoded as None + Some nat.
- *)
-datatype cdl_component  = Slot nat | Fields
-type_synonym cdl_components = "cdl_component set"
-type_synonym cdl_component_map = "cdl_object_id \<Rightarrow> cdl_components"
-
 translations
   (type) "cdl_heap" <=(type) "32 word \<Rightarrow> cdl_object option"
-  (type) "cdl_components" <=(type) "cdl_component set"
-  (type) "cdl_component_map" <=(type) "32 word \<Rightarrow> cdl_components"
 
 
 (*
@@ -248,10 +239,6 @@ translations
  *
  * irq_node:
  *   Which IRQs are mapped to which async endpoints.
- *
- * object_ownerships: (Ghost state, used for separation logic)
- *   Which components (fields and slots) are owned by an object.
- *   In any concrete state, this will be all of the fields and slots.
  *
  *)
 record cdl_state =

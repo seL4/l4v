@@ -227,7 +227,7 @@ lemma cnode_slot_half_initialised_not_original_slot:
   apply (rule ext, rule iffI)
    apply (clarsimp simp: sep_map_s_def sep_map_general_def)
    apply (rule ext)
-   apply (clarsimp simp: obj_to_sep_state_def object_project_def
+   apply (clarsimp simp: object_to_sep_state_def object_project_def
                          object_slots_object_clean
                   split: option.splits)
    apply (cut_tac obj = "cnode_half spec obj_id spec_object" and
@@ -236,7 +236,7 @@ lemma cnode_slot_half_initialised_not_original_slot:
    apply clarsimp
   apply (clarsimp simp: sep_map_s_def sep_map_general_def)
   apply (rule ext)
-  apply (clarsimp simp: obj_to_sep_state_def object_project_def
+  apply (clarsimp simp: object_to_sep_state_def object_project_def
                         object_slots_object_clean
                  split: option.splits)
   apply (cut_tac obj = "cnode_half spec obj_id spec_object" and
@@ -303,14 +303,14 @@ lemma cnode_slot_half_initialised_original_slot:
   apply (clarsimp simp: object_initialised_general_def)
   apply (rule ext, rule iffI)
    apply (clarsimp simp: sep_map_s_def sep_map_general_def)
-   apply (rule ext, clarsimp simp:obj_to_sep_state_def
+   apply (rule ext, clarsimp simp:object_to_sep_state_def
      object_project_def object_slots_object_clean)
    apply (subst object_slots_spec2s_cnode_half_object_default_state)
     apply simp+
     apply (clarsimp simp: object_at_def)+
   apply (clarsimp simp: sep_map_s_def sep_map_general_def)
   apply (rule ext)
-  apply (clarsimp simp:obj_to_sep_state_def object_project_def object_slots_object_clean)
+  apply (clarsimp simp:object_to_sep_state_def object_project_def object_slots_object_clean)
   apply (subst object_slots_spec2s_cnode_half_object_default_state, simp+)
   apply (clarsimp split: option.splits)
   done
