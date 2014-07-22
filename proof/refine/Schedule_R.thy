@@ -2629,7 +2629,6 @@ lemma schedule_ct_activatable'[wp]: "\<lbrace>invs'\<rbrace> ThreadDecls_H.sched
   apply (auto elim!: obj_at'_weakenE simp: st_tcb_at'_def )
   done
 
-(* Levity: moved from IpcCancel_R (20090723 09:16:50) *)
 lemma threadSet_sch_act_sane:
   "\<lbrace>sch_act_sane\<rbrace> threadSet f t \<lbrace>\<lambda>_. sch_act_sane\<rbrace>"
   by (wp sch_act_sane_lift)
@@ -2644,7 +2643,6 @@ lemma tcbSchedDequeue_sch_act_sane[wp]:
   "\<lbrace>sch_act_sane\<rbrace> tcbSchedDequeue t \<lbrace>\<lambda>_. sch_act_sane\<rbrace>"
   by (wp sch_act_sane_lift)
 
-(* Levity: moved from IpcCancel_R (20090725 09:07:52) *)
 lemma sts_sch_act_sane:
   "\<lbrace>sch_act_sane\<rbrace> setThreadState st t \<lbrace>\<lambda>_. sch_act_sane\<rbrace>"
   apply (simp add: setThreadState_def)

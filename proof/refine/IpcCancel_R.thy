@@ -115,7 +115,6 @@ end
 
 declare if_weak_cong [cong]
 
-(* Annotation added by Simon Winwood (Thu Jul  1 20:43:09 2010) using taint-mode *)
 declare delete_remove1[simp]
 
 declare delete.simps [simp del]
@@ -597,7 +596,6 @@ lemma valid_ep_remove:
 (* Levity: added (20090201 10:50:13) *)
 declare cart_singleton_empty [simp]
 
-(* Annotation added by Simon Winwood (Thu Jul  1 20:29:10 2010) using taint-mode *)
 declare cart_singleton_empty2[simp]
 
 crunch ksQ[wp]: setAsyncEP "\<lambda>s. P (ksReadyQueues s p)"
@@ -2515,7 +2513,6 @@ lemma ep_cancel_badged_sends_corres:
                         invs'_def valid_state'_def)
   done
 
-(* Levity: moved from Finalise_R (20090126 19:32:22) *)
 lemma suspend_unqueued:
   "\<lbrace>\<top>\<rbrace> suspend t \<lbrace>\<lambda>rv. obj_at' (Not \<circ> tcbQueued) t\<rbrace>"
   apply (simp add: suspend_def unless_def tcbSchedDequeue_def)

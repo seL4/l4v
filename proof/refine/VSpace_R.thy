@@ -816,7 +816,6 @@ lemma invalidate_asid_entry_corres:
   apply simp
   done
 
-(* Annotation added by Simon Winwood (Thu Jul  1 21:44:19 2010) using taint-mode *)
 crunch aligned'[wp]: invalidateASID "pspace_aligned'"
 crunch distinct'[wp]: invalidateASID "pspace_distinct'"
 
@@ -3663,17 +3662,14 @@ lemma perform_aci_invs [wp]:
   apply (auto elim!: invs_no_0_obj')
   done
 
-(* Levity: moved from Untyped_R (20090722 14:05:03) *)
 lemma capMaster_isPDCap:
   "capMasterCap cap' = capMasterCap cap \<Longrightarrow> isPDCap cap' = isPDCap cap"
   by (simp add: capMasterCap_def isPDCap_def split: capability.splits arch_capability.splits)
 
-(* Levity: moved from Untyped_R (20090722 14:05:03) *)
 lemma isPDCap_PD :
   "isPDCap (ArchObjectCap (PageDirectoryCap r m))"
   by (simp add: isPDCap_def)
 
-(* Levity: moved from Untyped_R (20090722 14:05:05) *)
 lemma diminished_valid':
   "diminished' cap cap' \<Longrightarrow> valid_cap' cap = valid_cap' cap'"
   apply (clarsimp simp add: diminished'_def)
@@ -3684,7 +3680,6 @@ lemma diminished_valid':
   apply (simp add: ArchRetype_H.maskCapRights_def Let_def split del: split_if split: arch_capability.splits)
   done
 
-(* Levity: moved from Untyped_R (20090723 10:34:20) *)
 lemma diminished_isPDCap:
   "diminished' cap cap' \<Longrightarrow> isPDCap cap' = isPDCap cap"
   by (blast dest: diminished_capMaster capMaster_isPDCap)

@@ -56,8 +56,7 @@ lemma alignCheck_assert:
   by (simp add: is_aligned_mask alignCheck_def assert_def
                 alignError_def unless_def when_def)
 
-lemma magnitudeCheck_inv: (* Levity: moved from KHeap_R (20090723 14:45:24) *)
-  "\<lbrace>P\<rbrace> magnitudeCheck x y n \<lbrace>\<lambda>rv. P\<rbrace>"
+lemma magnitudeCheck_inv:   "\<lbrace>P\<rbrace> magnitudeCheck x y n \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (clarsimp simp add: magnitudeCheck_def split: option.splits)
   apply (wp hoare_when_wp)
   apply simp

@@ -117,7 +117,6 @@ lemma activate_invs':
 crunch nosch[wp]: activateIdleThread "\<lambda>s. P (ksSchedulerAction s)"
   (ignore: setNextPC)
 
-(* Annotation added by Simon Winwood (Thu Jul  1 21:30:30 2010) using taint-mode *)
 declare not_psubset_eq[dest!]
 
 lemma setThreadState_runnable_simp:

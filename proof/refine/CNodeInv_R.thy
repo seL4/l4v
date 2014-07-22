@@ -949,7 +949,6 @@ lemma updateCap_cap_inv_lift:
   apply (simp add: inv)
   done
 
-(* Annotation added by Simon Winwood (Thu Jul  1 19:09:02 2010) using taint-mode *)
 declare modify_map_dom[simp]
 
 (* subsumes  update_prev_next_trancl *)
@@ -1472,7 +1471,6 @@ proof -
     done
 qed
 
-(* Annotation added by Simon Winwood (Thu Jul  1 19:09:03 2010) using taint-mode *)
 declare modify_map_ndom[simp]
 
 lemma mdb_trancl_other_update_iff:
@@ -1754,7 +1752,6 @@ lemma neg_next_trancl_trancl:
   apply (erule (1) next_trancl_split_tt [OF _ _ ab])
   done
 
-(* Annotation added by Simon Winwood (Thu Jul  1 19:00:38 2010) using taint-mode *)
 declare domE[elim?]
 
 lemma ndom_is_0D:
@@ -6375,7 +6372,6 @@ lemma ex_Zombie_to2:
   apply (erule valid_cap'_handy_bits)
   done
 
-(* Annotation added by Simon Winwood (Thu Jul  1 19:14:25 2010) using taint-mode *)
 declare word_to_1_set[simp]
 
 lemmas finalise_spec_induct2 = finaliseSlot'.induct[where P=
@@ -6754,7 +6750,6 @@ lemma cteDelete_invs':
   apply simp
   done
 
-(* Annotation added by Simon Winwood (Thu Jul  1 19:00:07 2010) using taint-mode *)
 declare cases_simp_conj[simp]
 
 crunch typ_at'[wp]: capSwapForDelete "\<lambda>s. P (typ_at' T p s)"

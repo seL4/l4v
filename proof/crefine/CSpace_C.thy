@@ -1589,7 +1589,6 @@ lemma ccorres_return_cte_mdbnode_safer:
 (* lemmas about map and hrs_mem -----------------------------------------*)
 (*-----------------------------------------------------------------------*)
 
-(* Annotation added by Simon Winwood (Mon Jul  5 18:01:20 2010) using taint-mode *)
 declare modify_map_exists_cte[simp]
 
 
@@ -4133,7 +4132,6 @@ done
 
 
 
-(* Levity: moved from Retype_C (20090302 11:23:26) *)
 lemma (in kernel_m) updateMDB_set_mdbPrev:
  "ccorres dc xfdc 
      ( \<lambda>s. is_aligned ptr 3 \<and> (slota\<noteq>0 \<longrightarrow> is_aligned slota 3))
@@ -4157,7 +4155,6 @@ lemma (in kernel_m) updateMDB_set_mdbPrev:
   apply (simp  add: Collect_const_mem)
   done
 
-(* Levity: moved from Retype_C (20090302 11:32:20) *)
 lemma (in kernel_m) updateMDB_set_mdbNext:
  "ccorres dc xfdc 
      ( \<lambda>s. is_aligned ptr 3 \<and> (slota\<noteq>0 \<longrightarrow> is_aligned slota 3))

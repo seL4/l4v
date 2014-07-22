@@ -987,10 +987,8 @@ proof -
   qed (simp_all add: casync_endpoint_relation_def Let_def)
 qed
 
-(* Annotation added by Simon Winwood (Mon Jul  5 18:26:06 2010) using taint-mode *)
 declare surj_Ptr[simp]
 
-(* Annotation added by Simon Winwood (Mon Jul  5 18:25:51 2010) using taint-mode *)
 declare bij_Ptr[simp]
 
 lemma surj_tcb_ptr_to_ctcb_ptr [simp]:
@@ -1044,7 +1042,6 @@ lemma cmap_relation_restrict_both_proj:
   apply simp
   done
 
-(* Annotation added by Simon Winwood (Mon Jul  5 18:26:04 2010) using taint-mode *)
 declare not_snd_assert[simp]
 
 lemma ccorres_stateAssert_fwd:

@@ -92,7 +92,6 @@ lemma more_pageBits_inner_beauty:
   apply (clarsimp simp: pageBits_def)
   done
 
-(* Annotation added by Simon Winwood (Mon Jul  5 19:20:15 2010) using taint-mode *)
 declare unat_ucast_10_32[simp]
 
 lemma byte_to_word_heap_upd_outside_range:

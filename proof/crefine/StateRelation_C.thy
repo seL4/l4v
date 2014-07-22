@@ -751,7 +751,6 @@ definition
 definition
   "ccap_rights_relation cr cr' \<equiv> cr = cap_rights_to_H (cap_rights_lift cr')"
 
-(* Levity: moved from Ipc_C (20090302 10:55:29) *)
 lemma (in kernel) syscall_error_to_H_cases_rev:
   "\<And>n. syscall_error_to_H e lf = Some (InvalidArgument n) \<Longrightarrow>
         type_C e = scast seL4_InvalidArgument"
@@ -786,7 +785,6 @@ where
   | SysReplyWait \<Rightarrow> scast Kernel_C.SysReplyWait
   | SysYield \<Rightarrow> scast Kernel_C.SysYield"
 
-(* Levity: moved from Refine_C (20090417 11:00:20) *)
 lemma (in kernel) cmap_relation_cs_atD:
   "\<lbrakk> cmap_relation as cs addr_fun rel; cs (addr_fun x) = Some y; inj addr_fun \<rbrakk> \<Longrightarrow>
   \<exists>ko. as x = Some ko \<and> rel ko y"

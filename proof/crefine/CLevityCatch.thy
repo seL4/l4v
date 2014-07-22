@@ -25,28 +25,22 @@ lemmas typ_heap_simps' = typ_heap_simps c_guard_clift
 
 lemmas asUser_return = submonad.return [OF submonad_asUser]
 
-(* Levity: moved from Ipc_C (20090301 10:47:47) *)
 lemma setMRs_Nil:
   "setMRs thread buffer [] = stateAssert (tcb_at' thread) [] >>= (\<lambda>_. return 0)"
   unfolding setMRs_def
   by (simp add: zipWithM_x_def sequence_x_def zipWith_def
                 asUser_return)
 
-(* Levity: moved from Ipc_C (20090301 10:47:47) *)
 lemmas asUser_bind_distrib =
   submonad_bind [OF submonad_asUser submonad_asUser submonad_asUser]
 
-(* Levity: moved from Ipc_C (20090417 10:56:01) *)
 lemma ps_clear_upd_None:
   "ksPSpace s y = None \<Longrightarrow>
     ps_clear x n (ksPSpace_update (\<lambda>a. (ksPSpace s)(y := None)) s') = ps_clear x n s"
   by (rule iffI | clarsimp elim!: ps_clear_domE | fastforce)+
 
-(* Levity: moved from Ipc_C (20090417 10:56:01) *)
-(* Annotation added by Simon Winwood (Mon Jul  5 17:40:40 2010) using taint-mode *)
 declare empty_fail_mapM_x[intro!,simp]
 
-(* Levity: moved from SR_lemmas_C (20090419 09:44:27) *)
 lemma aepQueue_head_mask_4 :
   "aepQueue_head_CL (async_endpoint_lift ko') && ~~ mask 4 = aepQueue_head_CL (async_endpoint_lift ko')"
   unfolding async_endpoint_lift_def
@@ -69,7 +63,6 @@ lemmas C_register_defs =
   Kernel_C.R12_def Kernel_C.SP_def Kernel_C.LR_def Kernel_C.LR_svc_def
   Kernel_C.CPSR_def Kernel_C.FaultInstruction_def
 
-(* Levity: moved from Retype_C (20090419 09:44:37) *)
 (* Levity: moved from Retype_C (20090419 09:44:41) *)  
 lemma no_overlap_new_cap_addrs_disjoint:
   "\<lbrakk> range_cover ptr sz (objBitsKO ko) n;

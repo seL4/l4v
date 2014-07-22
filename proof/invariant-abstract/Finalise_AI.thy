@@ -3298,8 +3298,7 @@ lemma recycle_cap_cases:
   done
 
 
-lemma emptyable_cte_wp_atD: (* Levity: moved from Ipc_R (20090126 19:32:27) *)
-  "\<lbrakk> cte_wp_at P sl s; valid_objs s;
+lemma emptyable_cte_wp_atD:   "\<lbrakk> cte_wp_at P sl s; valid_objs s;
      \<forall>cap. P cap \<longrightarrow> \<not> is_master_reply_cap cap \<rbrakk>
    \<Longrightarrow> emptyable sl s"
   apply (clarsimp simp: emptyable_def st_tcb_at_def obj_at_def

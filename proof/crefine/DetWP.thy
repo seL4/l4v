@@ -38,16 +38,12 @@ lemma getRegister_inv:
   "\<lbrace>P\<rbrace> getRegister r \<lbrace>\<lambda>_. P\<rbrace>"
   by (simp add: getRegister_def)
 
-(* Annotation added by Simon Winwood (Mon Jul  5 17:43:04 2010) using taint-mode *)
 declare det_wp_liftM[wp]
 
-(* Annotation added by Simon Winwood (Mon Jul  5 17:43:03 2010) using taint-mode *)
 declare det_wp_assert_opt[wp]
 
-(* Annotation added by Simon Winwood (Mon Jul  5 17:43:06 2010) using taint-mode *)
 declare det_wp_when[wp]
 
-(* Annotation added by Simon Winwood (Mon Jul  5 17:43:04 2010) using taint-mode *)
 declare det_wp_unless[wp]
 
 declare word_neq_0_conv [simp del]

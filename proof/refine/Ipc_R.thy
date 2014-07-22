@@ -2878,7 +2878,6 @@ lemma doAsyncTransfer_cur_tcb'[wp]:
   "\<lbrace>cur_tcb'\<rbrace> doAsyncTransfer badge msgWord thread \<lbrace>\<lambda>_. cur_tcb'\<rbrace>"
   by (simp add: doAsyncTransfer_def, wp)
 
-(* Annotation added by Simon Winwood (Thu Jul  1 20:54:41 2010) using taint-mode *)
 declare tl_drop_1[simp]
 
 crunch tcb_at'[wp]: doAsyncTransfer "tcb_at' t"
@@ -3574,14 +3573,12 @@ crunch typ_at'[wp]: receiveAsyncIPC "\<lambda>s. P (typ_at' T p s)"
 
 lemmas receiveAIPC_typ_ats[wp] = typ_at_lifts [OF receiveAsyncIPC_typ_at']
 
-(* Annotation added by Simon Winwood (Thu Jul  1 20:44:51 2010) using taint-mode *)
 declare cart_singleton_empty[simp]
 
 lemma cte_wp_at_queues[simp]:
   "cte_wp_at' P p (ksReadyQueues_update f s) = cte_wp_at' P p s"
   by (fastforce intro: cte_wp_at'_pspaceI)
 
-(* Annotation added by Simon Winwood (Thu Jul  1 20:44:51 2010) using taint-mode *)
 declare cart_singleton_empty2[simp]
 
 crunch aligned'[wp]: setupCallerCap "pspace_aligned'"
@@ -4481,7 +4478,6 @@ lemma sai_st_tcb':
   apply (fastforce intro!: exI[where x=P] ext)
   done
 
-(* Levity: moved from Interrupt_R (20090201 10:50:27) *)
 lemma ensureEmptySlot_stronger :
   "\<lbrace>\<lambda>s. cte_wp_at' (\<lambda>c. cteCap c = NullCap) p s \<longrightarrow> P s\<rbrace> ensureEmptySlot p \<lbrace>\<lambda>rv. P\<rbrace>, -"
   apply (simp add: ensureEmptySlot_def whenE_def unlessE_whenE)

@@ -38,7 +38,6 @@ lemma rights_mask_map_UNIV [simp]:
   "rights_mask_map UNIV = allRights"
   by (simp add: rights_mask_map_def allRights_def)
 
-(* Annotation added by Simon Winwood (Thu Jul  1 19:24:35 2010) using taint-mode *)
 declare insert_UNIV[simp]
 
 lemma maskCapRights_allRights [simp]:
@@ -2283,7 +2282,6 @@ lemma insertInitCap_valid_pspace:
   done
 
 
-(* Annotation added by Simon Winwood (Thu Jul  1 19:24:39 2010) using taint-mode *)
 declare mresults_fail[simp]
 
 crunch idle[wp]: get_object "valid_idle"

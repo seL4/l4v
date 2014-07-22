@@ -630,7 +630,6 @@ lemmas check_cap_inv
     = check_cap_inv2[where P=P and Q="\<lambda>rv. P", simplified pred_conj_def,
                      simplified, standard]
 
-(* Annotation added by Simon Winwood (Thu Jul  1 21:33:18 2010) using taint-mode *)
 declare in_image_op_plus[simp]
 
 lemma tcb_cap_always_valid_strg:

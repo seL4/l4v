@@ -289,7 +289,6 @@ proof -
   qed
 qed
 
-(* Annotation added by Simon Winwood (Thu Jul  1 20:09:55 2010) using taint-mode *)
 declare plus_Collect_helper2[simp]
 
 lemma objBits_bounded[simp]:
@@ -1832,7 +1831,6 @@ lemma deleteObjects_nosch:
    \<lbrace>\<lambda>rv s. P (ksSchedulerAction s)\<rbrace>"
   by (simp add: deleteObjects_def3 | wp hoare_drop_imp)+
 
-(* Levity: moved from Untyped_R (20090126 19:32:33) *)
 lemma deleteObjects_valid_arch_state':
   "\<lbrace>cte_wp_at' (\<lambda>c. cteCap c = UntypedCap ptr bits idx) p
      and invs' and ct_active' and sch_act_simple

@@ -487,8 +487,6 @@ lemma withoutPreemption_R:
   "\<lbrace>\<top>\<rbrace> withoutPreemption f -, \<lbrace>Q\<rbrace>"
   by (wp withoutPreemption_lift)
 
-(* Levity: moved from CSpace_R (20090126 19:32:14) *)
-(* Levity: moved from CSpace_I (20090721 10:55:47) *)
 lemma ko_at_cte_ipcbuffer:
   "ko_at' tcb p s \<Longrightarrow> cte_wp_at' (\<lambda>x. x = tcbIPCBufferFrame tcb) (p + tcbIPCBufferSlot * 0x10) s"
   apply (clarsimp simp: obj_at'_def projectKOs objBits_simps)
@@ -497,7 +495,6 @@ lemma ko_at_cte_ipcbuffer:
   apply simp
   done
 
-(* Levity: moved from CSpace_R (20090722 10:36:36) *)
 lemma tcb_at_cte_offset_unique:
   assumes tat: "tcb_at' t s"
   and      vo: "valid_objs' s"
@@ -529,8 +526,7 @@ next
   thus "tcb_at' (t + x - y) s" using tat by simp
 qed
 
-lemma set_ep_arch' : (* Levity: moved from KHeap_R (20090724 11:48:06) *)
-  "\<lbrace>\<lambda>s. P (ksArchState s)\<rbrace> setEndpoint aep p \<lbrace>\<lambda>_ s. P (ksArchState s)\<rbrace>"
+lemma set_ep_arch' :   "\<lbrace>\<lambda>s. P (ksArchState s)\<rbrace> setEndpoint aep p \<lbrace>\<lambda>_ s. P (ksArchState s)\<rbrace>"
   apply (simp add: setEndpoint_def setObject_def split_def)
   apply (wp updateObject_default_inv|simp)+
   done

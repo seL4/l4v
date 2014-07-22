@@ -817,7 +817,6 @@ lemma cmap_relation_updI:
   apply fact
   done
 
-(* Annotation added by Simon Winwood (Mon Jul  5 18:28:33 2010) using taint-mode *)
 declare inj_Ptr[simp]
 
 (* Ugh *)  
@@ -1751,7 +1750,6 @@ lemma frame_cap_is_mapped_alt:
   apply (clarsimp simp add: word_ops_nth_size asid_low_bits_def nth_shiftl nth_shiftr)
   done
 
-(* Levity: moved from Retype_C (20090302 11:35:00) *)
 lemma cmap_relation_updI2:
   fixes am :: "word32 \<rightharpoonup> 'a" and cm :: "'b typ_heap"
   assumes cr: "cmap_relation am cm f rel"

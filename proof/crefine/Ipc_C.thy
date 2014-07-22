@@ -1397,10 +1397,8 @@ lemma copyMRs_ccorres [corres]:
                         msgLengthBits_def min_def word_bits_def)
   done
 
-(* Annotation added by Simon Winwood (Mon Jul  5 18:45:17 2010) using taint-mode *)
 declare zipWith_Nil2[simp]
 
-(* Annotation added by Simon Winwood (Mon Jul  5 18:45:17 2010) using taint-mode *)
 declare zipWithM_x_Nil2[simp]
 
 lemma getRestartPC_ccorres [corres]:

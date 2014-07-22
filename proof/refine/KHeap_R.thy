@@ -503,10 +503,8 @@ lemma getObject_valid_obj:
   apply (clarsimp simp: project_inject)
   done
 
-(* Annotation added by Simon Winwood (Thu Jul  1 20:55:27 2010) using taint-mode *)
 declare fail_inv[simp]
 
-(* Annotation added by Simon Winwood (Thu Jul  1 21:11:35 2010) using taint-mode *)
 declare return_inv[simp]
 
 lemma typeError_inv [wp]:
@@ -760,7 +758,6 @@ lemma map_to_ctes_upd_cte:
               add: dom_fun_upd2 field_simps objBits_simps)
   done
 
-(* Annotation added by Simon Winwood (Thu Jul  1 20:55:54 2010) using taint-mode *)
 declare overflow_plus_one_self[simp]
 
 lemma map_to_ctes_upd_tcb:
@@ -860,7 +857,6 @@ lemma ctes_of_setObject_cte:
                         cte_level_bits_def)
   done
 
-(* Annotation added by Simon Winwood (Thu Jul  1 20:55:29 2010) using taint-mode *)
 declare foldl_True[simp]
 
 lemma real_cte_at':

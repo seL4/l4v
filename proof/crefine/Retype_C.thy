@@ -345,10 +345,8 @@ lemma is_aligned_power2: "b \<le> a \<Longrightarrow> is_aligned (2 ^ a) b"
       is_aligned_weaken le_def power_overflow)
   done
 
-(* Annotation added by Simon Winwood (Mon Jul  5 19:13:39 2010) using taint-mode *)
 declare snd_get[simp]
 
-(* Annotation added by Simon Winwood (Mon Jul  5 19:13:39 2010) using taint-mode *)
 declare snd_gets[simp]
 
 lemma snd_when_aligneError[simp]:  

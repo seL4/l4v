@@ -423,7 +423,6 @@ lemma  c_valid_cap_simps [simp]:
   unfolding c_valid_cap_def  cap_lift_def cap_tag_defs
   by (simp add: cl_valid_cap_def)+
 
-(* Levity: moved from Invoke_C (20090417 10:59:51) *)
 lemma ptr_val_tcb_ptr_mask2:
   "is_aligned thread 9
       \<Longrightarrow> ptr_val (tcb_ptr_to_ctcb_ptr thread) && (~~ mask 9)

@@ -282,7 +282,6 @@ lemma threadget_corres:
 lemma threadGet_inv [wp]: "\<lbrace>P\<rbrace> threadGet f t \<lbrace>\<lambda>rv. P\<rbrace>"
   by (simp add: threadGet_def getObject_inv_tcb | wp)+
 
-(* Annotation added by Simon Winwood (Thu Jul  1 21:27:51 2010) using taint-mode *)
 declare result_in_set_wp[wp]
 
 lemma ball_tcb_cte_casesI:
@@ -1355,7 +1354,6 @@ lemma corres_as_user:
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
   done
 
-(* Annotation added by Simon Winwood (Thu Jul  1 21:21:13 2010) using taint-mode *)
 declare hoare_in_monad_post[wp]
 
 lemma asUser_inv:
@@ -2904,7 +2902,6 @@ lemma doMachineOp_bind:
  "\<lbrakk> empty_fail a; \<And>x. empty_fail (b x) \<rbrakk> \<Longrightarrow> doMachineOp (a >>= b) = (doMachineOp a >>= (\<lambda>rv. doMachineOp (b rv)))"
   by (blast intro: submonad_bind submonad_doMachineOp)
 
-(* Annotation added by Simon Winwood (Thu Jul  1 21:21:12 2010) using taint-mode *)
 declare empty_fail_sequence_x[simp]
 
 lemma zipWithM_x_doMachineOp:
@@ -3840,8 +3837,7 @@ lemma threadSet_ct_running':
   apply wp
   done
 
-lemma asUser_global_refs': (* Levity: moved from Ipc_R (20090126 19:32:26) *)
-  "\<lbrace>valid_global_refs'\<rbrace> asUser t f \<lbrace>\<lambda>rv. valid_global_refs'\<rbrace>"
+lemma asUser_global_refs':   "\<lbrace>valid_global_refs'\<rbrace> asUser t f \<lbrace>\<lambda>rv. valid_global_refs'\<rbrace>"
   apply (simp add: asUser_def split_def)
   apply (wp threadSet_global_refs)
        apply simp+
@@ -3950,7 +3946,6 @@ lemma get_cap_corres_all_rights_P:
   apply (insert cap_relation_masks, simp)
   done
 
-(* Levity: moved from Ipc_R (20090723 09:17:04) *)
 lemma asUser_irq_handlers':
   "\<lbrace>valid_irq_handlers'\<rbrace> asUser t f \<lbrace>\<lambda>rv. valid_irq_handlers'\<rbrace>"
   apply (simp add: asUser_def split_def)

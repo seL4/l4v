@@ -366,7 +366,6 @@ lemma decodeUntyped_inv[wp]:
   done
 
 
-(* Annotation added by Simon Winwood (Thu Jul  1 21:42:31 2010) using taint-mode *)
 declare inj_Pair[simp]
 
 declare upt_Suc[simp del]
@@ -883,7 +882,6 @@ lemma getCTE_valid_cap2[wp]:
   apply simp
   done
 
-(* Annotation added by Simon Winwood (Mon Jul  5 15:50:07 2010) using taint-mode *)
 declare is_aligned_0[simp]
 
 lemma corres_list_all2_mapM_':
@@ -915,7 +913,6 @@ lemma corres_list_all2_mapM_':
 lemmas corres_list_all2_mapM_
      = corres_list_all2_mapM_' [OF suffixeq_refl suffixeq_refl]
 
-(* Annotation added by Simon Winwood (Thu Jul  1 21:42:33 2010) using taint-mode *)
 declare modify_map_id[simp]
 
 lemma valid_mdbD3':
@@ -3131,10 +3128,8 @@ lemma createNewCaps_valid_pspace_extras:
     apply (simp add:valid_pspace'_def)+
   done
 
-(* Annotation added by Simon Winwood (Thu Jul  1 21:42:33 2010) using taint-mode *)
 declare map_fst_zip_prefix[simp]
 
-(* Annotation added by Simon Winwood (Thu Jul  1 21:42:33 2010) using taint-mode *)
 declare map_snd_zip_prefix[simp]
 
 declare word_unat_power [symmetric, simp del]

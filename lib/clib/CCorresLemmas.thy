@@ -864,7 +864,6 @@ lemma ccorres_expand_while_iff_Seq2:
               | erule exec_elim_cases)+
   done
 
-(* Levity: moved from Ipc_C (20090417 10:56:37) *)
 lemma ccorres_seq_skip':
   "ccorres_underlying sr \<Gamma> r xf arrel axf G G' hs a (c ;; Skip)
        = ccorres_underlying sr \<Gamma> r xf arrel axf G G' hs a c"
@@ -874,7 +873,6 @@ lemma ccorres_seq_skip':
   done
 
 
-(* Levity: moved from Retype_C (20090417 10:59:21) *)
 lemma ccorres_cond2':
   "\<lbrakk>\<forall>s s'. (s, s') \<in> sr \<and> R s \<longrightarrow> (\<not> P) = (s' \<in> P');
      ccorres_underlying sr \<Gamma> r xf ar axf Pt Rt hs a c;

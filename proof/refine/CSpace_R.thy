@@ -8647,7 +8647,6 @@ lemma updateCap_dynamic_duo:
    apply (erule use_valid | wp | assumption)+
   done
 
-(* Annotation added by Simon Winwood (Thu Jul  1 20:01:03 2010) using taint-mode *)
 declare const_apply[simp]
 
 lemma next_slot_eq2:
