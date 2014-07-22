@@ -162,11 +162,8 @@ lemma le_32_mask_eq:
 done
 
 
-
-
 declare scast_id [simp]
-declare Kernel_C.cte_C_size[simp del] (* FIXME: changes in arraysizes branch add extraneous stuff to the
-                                          simp set which breaks the proof. *)
+declare Kernel_C.cte_C_size[simp del] 
 
 lemma resolveAddressBits_ccorres [corres]:
   shows "ccorres (lookup_failure_rel \<currency> 

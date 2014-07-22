@@ -532,7 +532,7 @@ lemma exs_valid_condition [wp]:
           \<lbrace> \<lambda>s. (C s \<and> P s) \<or> (\<not> C s \<and> P' s) \<rbrace> condition C L R \<exists>\<lbrace> Q \<rbrace>"
   by (clarsimp simp: condition_def exs_valid_def split: sum.splits)
 
-(* FIXME *)
+
 subsection MISC
 
 lemma hoare_return_simp:
@@ -1562,7 +1562,6 @@ wpc_setup "\<lambda>m. \<lbrace>P\<rbrace> m \<lbrace>Q\<rbrace>,-" wpc_helper_v
 wpc_setup "\<lambda>m. \<lbrace>P\<rbrace> m -,\<lbrace>E\<rbrace>" wpc_helper_validR_R
 wpc_setup "\<lambda>m. no_fail P m" wpc_helper_no_fail_final
 
-section "FIXME: More Hoare Rules"
 
 lemma in_liftM:
  "((r, s') \<in> fst (liftM t f s)) = (\<exists>r'. (r', s') \<in> fst (f s) \<and> r = t r')"

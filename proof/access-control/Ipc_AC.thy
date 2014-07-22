@@ -1852,7 +1852,6 @@ lemma thread_set_tcb_fault_update_valid_mdb:
   done
 
 
-(* FIXME grotty proof and grotty pre-condition: no EPs can change back to time dot. *)
 lemma send_fault_ipc_integrity_autarch:
   "\<lbrace>pas_refined aag
           and valid_objs and sym_refs \<circ> state_refs_of and valid_mdb

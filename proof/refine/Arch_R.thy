@@ -682,8 +682,8 @@ lemma dec_arch_inv_page_flush_corres:
 
 lemma dec_arch_inv_corres:
 notes check_vp_inv[wp del] check_vp_wpR[wp]
-  (* <FIXME: mean. Somehow, check_vp_inv shadowed check_vp_wpR.  Instead,
-        check_vp_wpR should probably be generalised to replace check_vp_inv. *)
+  (* FIXME: check_vp_inv shadowed check_vp_wpR.  Instead,
+     check_vp_wpR should probably be generalised to replace check_vp_inv. *)
 shows
   "\<lbrakk> acap_relation arch_cap arch_cap';
      list_all2 cap_relation (map fst excaps) (map fst excaps');
@@ -1952,7 +1952,6 @@ crunch typ_at' [wp]: "ArchRetypeDecls_H.finaliseCap" "\<lambda>s. P (typ_at' T p
 crunch cte_wp_at':  "ArchRetypeDecls_H.finaliseCap" "cte_wp_at' P p"
   (ignore: getObject setObject wp: crunch_wps getASID_wp simp: crunch_simps)
 
-(* FIXME will probably need more for new asid invariant *)
 lemma invs_asid_table_strenghten':
   "invs' s \<and> asid_pool_at' ap s \<and> asid \<le> 2 ^ asid_high_bits - 1 \<longrightarrow>
    invs' (s\<lparr>ksArchState :=
@@ -2102,14 +2101,14 @@ lemma doFlush_underlying_memory[wp]:
    \<lbrace> \<lambda>_ m'. underlying_memory m' p = um \<rbrace>"
   unfolding doFlush_def by(cases flush_type, simp_all, wp)
 
-(* XXX - move *)
+(* FIXME: move *)
 lemma dmo_invs'_simple:
   "no_irq f \<Longrightarrow>
    (\<And>p um. \<lbrace>\<lambda>m'. underlying_memory m' p = um\<rbrace> f \<lbrace>\<lambda>_ m'. underlying_memory m' p = um\<rbrace>) \<Longrightarrow>
    \<lbrace> invs' \<rbrace> doMachineOp f \<lbrace> \<lambda>y. invs' \<rbrace>"
   by(rule hoare_pre, rule dmo_invs', wp, simp_all add:valid_def split_def)
 
-(* XXX - move *)
+(* FIXME: move *)
 lemma doFlush_invs[wp]:
   "\<lbrace> invs' \<rbrace> doMachineOp (doFlush flush_type vstart vend pstart) \<lbrace> \<lambda>y. invs' \<rbrace>"
   by(wp dmo_invs'_simple)

@@ -1507,7 +1507,6 @@ definition
                         vs_cap_ref cap = Some (VSRef (x && mask pd_bits >> 2) (Some APageDirectory) # ref))"
 
 
-(* FIXME cache-sprint: we didn't need any new invariants for PageFlush - is this bad? *)
 definition
   "valid_page_inv pi \<equiv> case pi of
     ArchInvocation_A.PageMap asid cap ptr m \<Rightarrow>
@@ -1529,7 +1528,6 @@ definition
          option_case True (valid_unmap sz) m \<and>
          cte_wp_at (is_arch_diminished (cap.ArchObjectCap cap)) ptr s \<and>
          s \<turnstile> (cap.ArchObjectCap cap)
-(*FIXME sprint*)
   | ArchInvocation_A.PageFlush typ start end pstart pd asid \<Rightarrow>
       pd_at_asid asid pd and K (asid \<le> mask asid_bits \<and> asid \<noteq> 0)
   | ArchInvocation_A.PageGetAddr ptr \<Rightarrow> \<top>"
@@ -1716,7 +1714,7 @@ lemma set_current_asid_invs [wp]:
    apply(wp | simp add: no_irq_setHardwareASID)+
   done
 
-(* FIXME: move to theory wp/NondetMonadVCG? *)
+(* FIXME: move *)
 lemma returnOk_E': "\<lbrace>P\<rbrace> returnOk r -,\<lbrace>E\<rbrace>"
   by (clarsimp simp: returnOk_def validE_E_def validE_def valid_def return_def)
 lemma throwError_R': "\<lbrace>P\<rbrace> throwError e \<lbrace>Q\<rbrace>,-"
@@ -1742,12 +1740,10 @@ lemma svr_invs [wp]:
              apply ((wp | simp)+)[3]
           apply(erule use_valid, wp no_irq_setCurrentPD, assumption)
          apply(wp dmo_invs | clarsimp)+
-              (* FIXME: need rule for "\<lbrace>_\<rbrace> whenE _ (throwError _) -,\<lbrace>_\<rbrace>" *)
       apply (simp add: whenE_def)
       apply (intro conjI impI)
        apply wp
       apply (simp add: returnOk_E')
-       (* FIXME: need rule for "\<lbrace>_\<rbrace> whenE _ (throwError _) \<lbrace>_\<rbrace>,-" *)
      apply (simp add: whenE_def)
      apply (intro conjI[rotated] impI)
       apply wp
@@ -2059,7 +2055,6 @@ lemma simpler_set_pd_def:
           split: Structures_A.kernel_object.split arch_kernel_obj.split)
 
 
-(* FIXME: the precondition is slightly bulky *)
 lemma set_pd_valid_vs_lookup_map:
   "\<lbrace>valid_vs_lookup and valid_arch_state and valid_arch_objs and
     obj_at (\<lambda>ko. vs_refs (ArchObj (PageDirectory pd)) =
@@ -2142,8 +2137,6 @@ lemma set_pd_valid_vs_lookup_map:
   done
 
 
-(* FIXME: the precondition is slightly bulky *)
-(* FIXME: the proof of valid_vs_lookup is a bit ugly *)
 lemma set_pd_valid_arch_caps:
   "\<lbrace>valid_arch_caps and valid_arch_state and valid_arch_objs and
     valid_objs and
@@ -2278,15 +2271,11 @@ lemma glob_vs_refs_subset:
   apply (simp add: graph_of_def split:split_if_asm)
   done
 
-(* FIXME: Move to Invariants_AI
-   FIXME: Nelson tried and claims it didn't work. *)
 lemma vs_refs_pages_pdI:
   "\<lbrakk>pde_ref_pages (pd x) = Some a; x \<notin> kernel_mapping_slots\<rbrakk>
     \<Longrightarrow> (VSRef (ucast x) (Some APageDirectory), a) \<in> vs_refs_pages (ArchObj (PageDirectory pd))"
   by (auto simp: pde_ref_pages_def vs_refs_pages_def graph_of_def image_def split: ARM_Structs_A.pde.splits)
 
-(* FIXME: Move to Invariants_AI
-   FIXME: Nelson tried and claims it didn't work. *)
 lemma pde_ref_pde_ref_pagesI[elim!]:
   "pde_ref (pd x) = Some a \<Longrightarrow> pde_ref_pages (pd x) = Some a"
   by (auto simp: pde_ref_def pde_ref_pages_def split: ARM_Structs_A.pde.splits)
@@ -2296,7 +2285,6 @@ lemma vs_refs_pdI2:
    \<Longrightarrow> (VSRef (ucast r) (Some APageDirectory), Platform.ptrFromPAddr x) \<in> vs_refs (ArchObj (PageDirectory pd))"
   by (auto simp: vs_refs_def pde_ref_def graph_of_def)
 
-(* FIXME: so, so ugly *)
 lemma set_pd_invs_map:
   "\<lbrace>invs and (%s. \<forall>i. wellformed_pde (pd i)) and
              (%s. \<forall>i. executable_pde (pd i)) and
@@ -2868,8 +2856,7 @@ lemma vs_refs_pdI3:
    \<Longrightarrow> (VSRef (ucast x) (Some APageDirectory), p) \<in> vs_refs (ArchObj (PageDirectory pd))"
   by (auto simp: pde_ref_def vs_refs_def graph_of_def)
 
-(* FIXME: changed subset to a = b - c, should not make anything higher up break 
-          but make sure it doesn't *)
+
 lemma set_pd_invs_unmap':
   "\<lbrace>invs and (\<lambda>s. \<forall>i. wellformed_pde (pd i)) and
              (\<lambda>s. \<forall>i. executable_pde (pd i)) and
@@ -3050,7 +3037,6 @@ lemma update_self_reachable:
   apply (rule_tac ap=ap and pd=pd in vs_lookup_pdI, auto simp: obj_at_def)[1]
   done
 
-(* FIXME: Is this lemma still helpful in this form? *)
 lemma update_self_reachable_pages:
   "\<lbrakk>(ref \<unrhd> p) s; valid_asid_table (arm_asid_table (arch_state s)) s;
     valid_arch_objs s\<rbrakk>
@@ -3087,7 +3073,7 @@ lemma pd_slots_helper:
   apply force
   done
 
-(* FIXME: move? *)
+(* FIXME: move *)
 lemma simpler_store_pde_def:
   "store_pde p pde s =
     (case kheap s (p && ~~ mask pd_bits) of
@@ -3141,7 +3127,7 @@ lemma mapM_x_swp_store_pde_invs_unmap:
   mapM_x (swp store_pde pde) slots \<lbrace>\<lambda>_. invs\<rbrace>"
   by (simp add: mapM_x_mapM | wp mapM_swp_store_pde_invs_unmap)+
 
-(* FIXME: move *)(* FIXME: useful? *)
+(* FIXME: move *)
 lemma vs_cap_ref_table_cap_ref_None:
   "vs_cap_ref x = None \<Longrightarrow> table_cap_ref x = None"
   by (simp add: vs_cap_ref_def table_cap_ref_simps
@@ -3610,7 +3596,7 @@ lemma store_pde_unmap_page:
   apply (simp add: up_ucast_inj_eq)
   done
 
-(* FIXME: move to KHeap_R? *)
+(* FIXME: move to KHeap_R *)
 crunch vs_lookup_pages[wp]: do_machine_op "\<lambda>s. P (vs_lookup_pages s)"
 
 (* FIXME: move to Invariants_A *)
@@ -3618,7 +3604,6 @@ lemma pte_ref_pages_invalid_None[simp]:
   "pte_ref_pages ARM_Structs_A.InvalidPTE = None"
   by (simp add: pte_ref_pages_def)
 
-(* NOTE: beware, this is not the weakest precondition! *)
 lemma store_pte_no_lookup_pages:
   "\<lbrace>\<lambda>s. \<not> (r \<unrhd> q) s\<rbrace>
    store_pte p ARM_Structs_A.InvalidPTE
@@ -3640,7 +3625,6 @@ lemma pde_ref_pages_invalid_None[simp]:
   "pde_ref_pages ARM_Structs_A.InvalidPDE = None"
   by (simp add: pde_ref_pages_def)
 
-(* NOTE: beware, this is not the weakest precondition! *)
 lemma store_pde_no_lookup_pages:
   "\<lbrace>\<lambda>s. \<not> (r \<unrhd> q) s\<rbrace> store_pde p ARM_Structs_A.InvalidPDE \<lbrace>\<lambda>_ s. \<not> (r \<unrhd> q) s\<rbrace>"
   apply (simp add: store_pde_def set_pd_def set_object_def)
@@ -3965,7 +3949,6 @@ lemma flush_page_invs:
       apply (wp set_vm_root_for_flush_invs hoare_drop_imps, simp)
   done
 
-(* FIXME: these are cruft, should be a simpler way *)
 lemma find_pd_for_asid_lookup_slot [wp]:
   "\<lbrace>pspace_aligned and valid_arch_objs\<rbrace> find_pd_for_asid asid  
   \<lbrace>\<lambda>rv. \<exists>\<rhd> (lookup_pd_slot rv vptr && ~~ mask pd_bits)\<rbrace>, -"

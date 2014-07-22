@@ -456,7 +456,7 @@ apply (case_tac vmpage_size, simp_all add: pageBits_def)
 apply (frule_tac i=n and k="0x1000" in word_mult_less_mono1, simp+)+
 done
 
-(* FIXME: move? *)
+(* FIXME: move *)
 lemma unaligned_helper:
   "\<lbrakk>is_aligned x n; y\<noteq>0; y < 2 ^ n\<rbrakk> \<Longrightarrow> \<not> is_aligned (x + y) n"
 apply (simp (no_asm_simp) add: is_aligned_mask)
@@ -466,7 +466,6 @@ apply (rule ccontr)
 apply (simp add: not_less power_overflow word_bits_conv)
 done
 
-(* FIXME: the proof is slightly rotten *)
 lemma
   (* NOTE: life would be easier if pspace_aligned and pspace_distinct were defined on PSpace instead of the whole kernel state. *)
 assumes pspace_aligned: 
@@ -1224,8 +1223,6 @@ definition
   "parent_of' ds \<equiv> %x.
    if \<forall>p. \<not> ds p x then None
    else Some (THE p. ds p x \<and> (\<forall>q. ds p q \<and> ds q x \<longrightarrow> p = q))"
-   (* FIXME: subtree is not reflexive, thus we could probably write:
-             "\<dots> \<and> (\<forall>q. ds p q \<longrightarrow> \<not> ds q x)" *)
 
 definition
   "absCDT cnp h \<equiv>
@@ -1249,8 +1246,6 @@ lemma ctes_of_cte_wp_atD:
   "ctes_of s p = Some cte \<Longrightarrow> cte_wp_at' (op = cte) p s"
 by (simp add: KHeap_R.cte_wp_at_ctes_of)
 
-
-(*FIXME: Some laziness to recycle reasoning*)
 
 lemma absCDT_correct':
 assumes pspace_aligned: "pspace_aligned s"

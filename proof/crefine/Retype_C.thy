@@ -1406,8 +1406,6 @@ lemma cslift_ptr_retyp_memset_same':
   done
 
 
-(* FIXME: Probably need to add the "range_cover" assumption, and
- * propagate through. *)
 lemma projectKO_opt_retyp_other:
   assumes cover: "range_cover ptr sz (objBitsKO ko) n"
   assumes pal: "pspace_aligned' \<sigma>"
@@ -2850,7 +2848,6 @@ lemma object_type_from_H_toAPIType_simps:
                  object_type_from_H_def "StrictC'_object_defs" api_object_defs
           split: object_type.splits ArchTypes_H.apiobject_type.splits)
 
-(* FIXME *)
 declare Collect_const_mem [simp]
   
 lemma createNewCaps_untyped_if_helper:
@@ -5452,7 +5449,6 @@ lemma threadSet_domain_ccorres [corres]:
   apply simp
   done
 
-(* FIXME: Big ugly proof. *)
 lemma createObject_ccorres:
   notes APITypecapBits_simps[simp] =
           APIType_capBits_def[split_simps

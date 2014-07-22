@@ -2050,7 +2050,6 @@ lemma cap_refs_in_kernel_windowD:
   done
 
 
-(* FIXME: hideous proof *)
 lemma set_cap_valid_ioc[wp]:
   "\<lbrace>valid_ioc and (\<lambda>s. p = cap.NullCap \<longrightarrow> \<not> is_original_cap s pt)\<rbrace>
    set_cap p pt

@@ -325,7 +325,6 @@ definition (in state_rel)
 definition (in state_rel)
   "ptable_xn_s'' s \<equiv> ptable_xn (cur_thread (cstate_to_A s)) (cstate_to_A s)"
 
-(* FIXME - is this right? *)
 definition (in state_rel)
   doMachineOp_C :: "(machine_state, 'a) nondet_monad \<Rightarrow> (cstate, 'a) nondet_monad"
 where

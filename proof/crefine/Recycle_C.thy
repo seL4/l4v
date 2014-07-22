@@ -1390,9 +1390,6 @@ lemma epCancelBadgedSends_ccorres:
                    apply (clarsimp simp: ball_Un)
                    apply (rule exI, rule conjI)
                     apply (rule exI, erule conjI)
-                    (* FIXME: Isabelle2013-1 bug? Converting the "fastforce+" into an
-                     * "auto" mucks up schematics in other subgoals, despite this goal
-                     * not containing a schematic. *)
                     apply (intro conjI[rotated], assumption, (fastforce intro: intro: st_tcb_at_tcb_at')+)[1]
                    apply (clarsimp simp: return_def rf_sr_def cstate_relation_def Let_def)
                    apply (rule conjI)

@@ -46,7 +46,7 @@ lemma asid_low_bits_pageBits:
   "Suc (Suc asid_low_bits) = pageBits"
   by (simp add: pageBits_def asid_low_bits_def)
 
-(* FIXME: 32-bit version of Detype_AI.range_cover_full *)
+(* 32-bit instance of Detype_AI.range_cover_full *)
 lemma range_cover_full:
   "\<lbrakk>is_aligned ptr sz;sz<word_bits\<rbrakk> \<Longrightarrow> range_cover (ptr::word32) sz sz (Suc 0)"
    by (clarsimp simp:range_cover_def unat_eq_0 le_mask_iff[symmetric] word_and_le1 word_bits_def)

@@ -288,7 +288,7 @@ lemma detype_clear_um_independent:
   by (auto simp add: detype_def clear_um_def ext)
 
 
-(* FIXME: move up? *)
+(* FIXME: move *)
 lemma (in pspace_update_eq) zombies_final_eq[iff]:
   "zombies_final (f s) = zombies_final s"
   by (simp add: zombies_final_def is_final_cap'_def)
@@ -463,8 +463,6 @@ lemma valid_cap2:
     apply (fastforce dest: live_okE)
     done
 
-(* FIXME: The following lemma does not fit that nicely into the nondet_monad
-     framework that we use everywhere. *)
 lemma invariants:
   assumes ct_act: "ct_active s"
   shows "(invs and untyped_children_in_mdb)
@@ -1328,13 +1326,14 @@ lemma intvl_range_conv':
   done
 
 (* FIXME: The following lemma is similar to StoreWord_C.intvl_range_conv *)
+(* FIXME: move *) 
 lemma intvl_range_conv:
   "\<lbrakk>is_aligned (ptr :: 'a :: len word) bits; bits \<le> len_of TYPE('a)\<rbrakk> \<Longrightarrow>
    {x. \<exists>k. x = ptr + of_nat k \<and> k < 2 ^ bits} = {ptr .. ptr + 2 ^ bits - 1}"
   by (rule set_eqI) (simp add: intvl_range_conv')
 
 
-(* FIXME: move? *)
+(* FIXME: move *)
 lemma gets_modify_def:
   "gets f >>= (\<lambda>x. modify (g x)) = modify (\<lambda>s. g (f s) s)"
 by (simp add: simpler_gets_def simpler_modify_def bind_def)
@@ -1505,7 +1504,6 @@ lemma cte_map_not_null_outside':
    \<Longrightarrow> fst p \<notin> untyped_range (cap.UntypedCap q n m)"
   by (erule (1) cte_map_not_null_outside, simp_all)
 
-(*FIXME:name*)
 lemma refl_spec[simp]:
   "\<not> (\<forall>x. x \<noteq> y)"
   by clarsimp

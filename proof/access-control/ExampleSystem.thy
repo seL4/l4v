@@ -235,7 +235,6 @@ definition
   pt1_3072 :: "word8 \<Rightarrow> ARM_Structs_A.pte " 
 where
   "pt1_3072 \<equiv> (\<lambda>_. ARM_Structs_A.InvalidPTE)" 
-(* FIXME            (0 := ARM_Structs_A.SmallPagePTE undefined undefined undefined)" *)
 
 definition 
   obj1_3072 :: Structures_A.kernel_object 
@@ -270,9 +269,7 @@ definition
 where
   "pt1_3077 \<equiv> 
     (\<lambda>_. ARM_Structs_A.InvalidPTE)"
-(* FIXME
-     (0 := ARM_Structs_A.SmallPagePTE undefined undefined undefined)"
-*)
+
 
 definition
   obj1_3077 :: Structures_A.kernel_object 
@@ -766,9 +763,7 @@ text {* UT2's VSpace (PageDirectory)*}
 definition
   pt2_3072 :: "word8 \<Rightarrow> ARM_Structs_A.pte " 
 where
-  "pt2_3072 \<equiv> (\<lambda>_. ARM_Structs_A.InvalidPTE)
-(* FIXME
-             (0 := ARM_Structs_A.SmallPagePTE undefined undefined undefined) *)"
+  "pt2_3072 \<equiv> (\<lambda>_. ARM_Structs_A.InvalidPTE)"
 
 definition 
   obj2_3072 :: Structures_A.kernel_object 
@@ -802,9 +797,7 @@ definition
   pt2_3077 :: "word8 \<Rightarrow> ARM_Structs_A.pte " 
 where
   "pt2_3077 \<equiv> 
-    (\<lambda>_. ARM_Structs_A.InvalidPTE)
-  (* FIXME
-     (0 := ARM_Structs_A.SmallPagePTE undefined undefined undefined) *)"
+    (\<lambda>_. ARM_Structs_A.InvalidPTE)"
 
 definition
   obj2_3077 :: Structures_A.kernel_object 

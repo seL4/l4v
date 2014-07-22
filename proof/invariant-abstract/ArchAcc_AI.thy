@@ -3499,8 +3499,8 @@ lemma set_pd_vms[wp]:
   apply (clarsimp simp: a_type_simps)
   done
 
-    (* FIXME: Move to Invariants_A *)
-
+    
+(* FIXME: Move to Invariants_A *)
 lemma vs_refs_pages_subset: "vs_refs ko \<subseteq> vs_refs_pages ko"
   apply (clarsimp simp: vs_refs_pages_def vs_refs_def graph_of_def pde_ref_def pde_ref_pages_def
                   split: Structures_A.kernel_object.splits arch_kernel_obj.splits ARM_Structs_A.pde.splits)
@@ -3539,8 +3539,6 @@ lemma vs_refs_pages_subset2:
   done
 
 
-(* FIXME: I changed vs_refs to vs_refs_pages in the precondition on this one,
-          I think that's correct but not totally sure *)
 lemma set_pd_invs_unmap:
   "\<lbrace>invs and (%s. \<forall>i. wellformed_pde (pd i)) and
              (%s. \<forall>i. executable_pde (pd i)) and

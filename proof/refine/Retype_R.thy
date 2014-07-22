@@ -1491,8 +1491,6 @@ lemma retype_state_relation:
 
   show "ghost_relation ?ps (gsUserPages ?t') (gsCNodes ?t')"
   proof (cases ?tp)
-    (*<FIXME: with a more sophisticated case distinction,
-              we might be able to avoid some duplication (see no_gs_types) *)
     case Untyped thus ?thesis by (simp add: not_unt)
   next
   note data_map_insert_def[simp]
@@ -5549,7 +5547,6 @@ lemma createObjects'_typ_at:
     apply (wpc|wp)+
   apply (subst data_map_insert_def[symmetric])
   apply clarsimp
-(* FIXME: Following is duplicated proof *)
   apply (subgoal_tac "range_cover ptr sz (objBitsKO val) (unat (of_nat n << gbits))")
     apply (subst data_map_insert_def[symmetric])+
     apply (subst retype_ko_wp_at',simp+)+
@@ -6133,8 +6130,6 @@ lemma corres_retype_region_createNewCaps:
         APIType_map2_def default_arch_object_def default_object_def archObjSize_def pd_bits_def
       fromIntegral_def toInteger_nat fromInteger_nat)
  done
-
-(* FIXME stuff shuffled up; can probably be shuffled further *)
 
 lemma createObjects'_wp_subst:
   "\<lbrakk>c' = injectKO c; \<lbrace>P\<rbrace>createObjects a b c d\<lbrace>\<lambda>r. Q\<rbrace>\<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace>createObjects' a b c' d\<lbrace>\<lambda>r. Q\<rbrace>" 

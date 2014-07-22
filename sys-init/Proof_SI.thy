@@ -287,7 +287,7 @@ lemma small_one:
   apply (erule (1) le_list_all)
   done
 
-(* FIXME, make the aquiring of the object_ids part of sys_init, not a parameter. *)
+(* FIXME, make the acquiring of the object_ids part of sys_init, not a parameter. *)
 
 
 

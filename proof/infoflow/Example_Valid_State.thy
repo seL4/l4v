@@ -775,7 +775,7 @@ where
 
 subsubsection {* Defining the policy graph *}
 
-(* FIXME: need to incorporate SharedPage above *)
+(* FIXME: should incorporate SharedPage above *)
 
 (* There is an AEP in the High label, a SharedPage in the Low label *)
 

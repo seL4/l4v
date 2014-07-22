@@ -1877,7 +1877,7 @@ lemma cap_refs_in_kernel_windowD2:
   apply fastforce
   done
 
-(* FIXME: move? *)
+(* FIXME: move *)
 lemma delete_objects_pspace_no_overlap[wp]:
   "\<lbrace>valid_cap (cap.UntypedCap ptr bits idx) and pspace_aligned and valid_objs\<rbrace>
    delete_objects ptr bits
@@ -3597,7 +3597,6 @@ lemma init_arch_objects_excap[wp]:
 crunch nonempty_table[wp]: do_machine_op
   "\<lambda>s. P' (obj_at (nonempty_table (set (arm_global_pts (arch_state s)))) r s)"
 
-(* FIXME: somehow rotten. *)
 lemma store_pde_weaken:
   "\<lbrace>\<lambda>s. page_directory_at (p && ~~ mask pd_bits) s \<longrightarrow> P s\<rbrace> store_pde p e \<lbrace>Q\<rbrace> =
    \<lbrace>P\<rbrace> store_pde p e \<lbrace>Q\<rbrace>"

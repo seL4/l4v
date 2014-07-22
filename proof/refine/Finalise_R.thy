@@ -3342,8 +3342,6 @@ lemma arch_recycleCap_invs:
          simp_all add: isCap_simps)
   done
 
-(* FIXME TcbAcc_R.threadSet_invs_trivialT_P_Qf is out of control. *)
-
 lemma threadSet_ct_idle_or_in_cur_domain':
   "\<lbrace>ct_idle_or_in_cur_domain' and (\<lambda>s. \<forall>tcb. tcbDomain tcb = ksCurDomain s \<longrightarrow> tcbDomain (F tcb) = ksCurDomain s)\<rbrace>
     threadSet F t

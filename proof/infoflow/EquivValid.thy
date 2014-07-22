@@ -354,7 +354,6 @@ lemma assert_opt_ev2:
   apply(rule assms, assumption+)
   done
 
-(* FIXME this one is a bit restricted. *)
 lemma select_f_ev:
   "equiv_valid_inv I A (K (det f)) (select_f (f x))"
   apply (rule gen_asm_ev)
@@ -487,7 +486,7 @@ lemma liftME_ev:
   apply(simp add: liftME_def)
   apply (rule bindE_ev_pre[OF returnOk_ev reads_res])
   apply (rule hoare_True_E_R)
-  apply fast (* FIXME schematic *)
+  apply fast
   done
 
 lemma whenE_ev:
@@ -544,12 +543,6 @@ subsection{* crunch setup *}
 lemmas pre_ev =
   hoare_pre
   equiv_valid_guard_imp
-(* FIXME we don't have equivalents of these yet: these deal with other monads.
-  hoare_weaken_pre
-  hoare_weaken_preE
-  hoare_vcg_precond_impE_R
-  hoare_weaken_preE_E
-*)
 
 subsection{* Tom instantiates wpc *}
 

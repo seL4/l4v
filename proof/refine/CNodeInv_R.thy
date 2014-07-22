@@ -597,7 +597,7 @@ declare of_nat_power [simp del]
 (* FIXME: pull up *)
 declare word_unat_power [symmetric, simp del]
 
-(* FIXME: move to invariant-abstract ? *)
+(* FIXME: move *)
 lemma finalise_cap_not_reachable_pg_cap:
   "\<lbrace>pspace_aligned and
        valid_arch_objs and
@@ -6877,8 +6877,7 @@ lemma updateCap_st_tcb_at'[wp]:
 (* FIXME: move to Finalise_R *)
 crunch st_tcb_at'[wp]: "ArchRetypeDecls_H.finaliseCap" "st_tcb_at' P t"
   (ignore: getObject setObject simp: crunch_simps
-   wp: crunch_wps getObject_inv loadObject_default_inv
-       )
+   wp: crunch_wps getObject_inv loadObject_default_inv)
 
 lemma finaliseCap2_st_tcb_at':
   assumes x[simp]: "\<And>st. simple' st \<Longrightarrow> P st"
@@ -8041,7 +8040,7 @@ lemma select_bind_spec_corres:
   apply (rule select_bind_spec_corres',assumption+)
   done
 
-(*DETFIXME: Move up*)
+(* FIXME: move *)
 lemma next_child_child_set:
   "\<lbrakk>next_child slot (cdt_list s) = Some child; valid_list s\<rbrakk>
     \<Longrightarrow> child \<in> (case next_child slot (cdt_list s) of None \<Rightarrow> {} | Some n \<Rightarrow> {n})"

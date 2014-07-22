@@ -101,7 +101,6 @@ fun simps_of n = n ^ simps_sfx;
 
 fun num_args t = length (binder_types t) - 1;
 
-(* FIXME we expect a local theory here *)
 fun real_const_from_name const nmspce lthy =
     let
       val qual::locale::nm::nil = Long_Name.explode const;
@@ -132,7 +131,6 @@ fun get_monad lthy f xs = if is_Const f then
     end
   else [];
 
-(* FIXME lthy *)
 fun monads_of lthy t = case strip_comb t of
     (Const f, xs) => get_monad lthy (Const f) xs @ maps (monads_of lthy) xs
   | (Abs (_, _, t), []) => monads_of lthy t
@@ -172,7 +170,6 @@ fun mapM _ [] y = y
 fun dest_equals t = t |> Logic.dest_equals
   handle TERM _ => t |> HOLogic.dest_Trueprop |> HOLogic.dest_eq;
 
-(* FIXME expect lthy here *)
 fun const_is_lhs const nmspce lthy def =
     let
       val (lhs, _) = def |> prop_of |> dest_equals;
@@ -262,8 +259,8 @@ fun induct_inst lthy const goal nmspce =
       val const_term = read_const lthy const |> map_unvarifyT;
       val n = const_term |> fastype_of |> num_args;
       val t = mk_abs (Instance.magic $ mk_apps const_term n 0) n
-              |> Syntax.check_term lthy |> Logic.varify_global |> cterm_of (Proof_Context.theory_of lthy); (* FIXME likely wrong *)
-      val P = Thm.concl_of induct_thm |> HOLogic.dest_Trueprop |> head_of |> cterm_of (Proof_Context.theory_of lthy); (* FIXME likely wrong *)
+              |> Syntax.check_term lthy |> Logic.varify_global |> cterm_of (Proof_Context.theory_of lthy);
+      val P = Thm.concl_of induct_thm |> HOLogic.dest_Trueprop |> head_of |> cterm_of (Proof_Context.theory_of lthy);
       val trivial_rule = Thm.trivial goal;
       val induct_inst = Thm.instantiate ([], [(P, t)]) induct_thm
                         RS trivial_rule;
@@ -382,7 +379,7 @@ fun crunch cfg pre extra stack const' thms =
   let 
     val lthy = #lthy cfg;
     val const = real_const_from_name const' (#nmspce cfg) lthy;
-    val empty_ref = Unsynchronized.ref [] : thm list Unsynchronized.ref (* FIXME *)
+    val empty_ref = Unsynchronized.ref [] : thm list Unsynchronized.ref (* FIXME: avoid refs *)
   in
     let
       val _ = "crunching constant: " ^ const |> tracing;
@@ -398,7 +395,7 @@ fun crunch cfg pre extra stack const' thms =
         (SOME (get_stored cfg const), [])
       handle exn => handle_int exn
       let val const_long_name = real_const_term |> dest_Const |> fst;
-        val cgoal_prop = cterm_of (Proof_Context.theory_of lthy) goal_prop; (* FIXME likely wrong *)
+        val cgoal_prop = cterm_of (Proof_Context.theory_of lthy) goal_prop;
         val v = find_first (fn (s, t) => s = const_long_name andalso
                     (is_some o SINGLE (WeakestPre.apply_rules_tac_n false lthy [t] empty_ref 1)) (Goal.init cgoal_prop)) (#wps cfg)
       in (SOME (snd (the v)), []) end
@@ -416,7 +413,7 @@ fun crunch cfg pre extra stack const' thms =
           handle exn => handle_int exn
             let
               val lthy' = Variable.auto_fixes goal lthy;
-              val cgoal = goal |> var_precond |> HOLogic.mk_Trueprop |> cterm_of (Proof_Context.theory_of lthy'); (* FIXME likely wrong *)
+              val cgoal = goal |> var_precond |> HOLogic.mk_Trueprop |> cterm_of (Proof_Context.theory_of lthy');
               val unfolds' = filter (fn (a, _) => a = const) (#unfolds cfg)
               val (ms, unfold_rule) = unfold_data lthy' const cgoal (#nmspce cfg) unfolds'
                 |>> map (fn t => (real_const_from_name (fst (dest_Const (head_of t))) (#nmspce cfg) lthy', t))

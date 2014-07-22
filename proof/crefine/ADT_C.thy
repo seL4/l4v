@@ -1203,8 +1203,8 @@ lemma ksPSpace_eq_imp_valid_pspace'_eq:
         pspace_distinct'_def ps_clear_def no_0_obj'_def valid_mdb'_def
         ksPSpace_eq_imp_valid_objs'_eq[OF ksPSpace])
 
-(* FIXME: The awkwardness of this definition is only caused by the fact
-          that valid_pspace' is defined over the complete state. *)
+(* The awkwardness of this definition is only caused by the fact
+   that valid_pspace' is defined over the complete state. *)
 definition
   cstate_to_pspace_H :: "globals \<Rightarrow> word32 \<rightharpoonup> kernel_object"
 where

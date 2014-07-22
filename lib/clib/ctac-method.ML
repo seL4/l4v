@@ -13,7 +13,7 @@ struct
 
 exception TACTIC of string;
 
-(* FIXME *)
+(* FIXME: avoid refs *)
 val time_ctac = ref false
 
 type trace_opts = {

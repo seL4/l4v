@@ -757,11 +757,6 @@ definition
 definition
  "ct_not_inQ \<equiv> \<lambda>s. ksSchedulerAction s = ResumeCurrentThread
                      \<longrightarrow> obj_at' (Not \<circ> tcbQueued) (ksCurThread s) s"
-(* FIXME what about the converse?
-
-ksSchedulerAction s = ResumeCurrentThread \<longrightarrow> \<forall>d p. t \<notin> set (ksReadyQueues s (d, p)
-
-*)
 
 abbreviation
   "idle' \<equiv> \<lambda>st. st = Structures_H.IdleThreadState"
@@ -924,7 +919,7 @@ definition
   "valid_machine_state' \<equiv>
    \<lambda>s. \<forall>p. pointerInUserData p s \<or> underlying_memory (ksMachineState s) p = 0"
 
-(* FIXME this really should be a definition like the above. *)
+(* FIXME: this really should be a definition like the above. *)
 (* The schedule is invariant. *)
 abbreviation
   "valid_dom_schedule' \<equiv>

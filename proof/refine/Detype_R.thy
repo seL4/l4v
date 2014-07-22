@@ -560,7 +560,6 @@ lemma ksASIDMapSafeI:
   done
 
 (* FIXME: generalizes lemma SubMonadLib.corres_submonad *)
-(* FIXME: generalizes lemma SubMonadLib.corres_submonad *)
 (* FIXME: generalizes lemma SubMonad_R.corres_machine_op *)
 lemma corres_machine_op:
   assumes P: "corres_underlying Id True r P Q x x'"
@@ -675,7 +674,6 @@ lemma detype_corres:
 
 text {* Invariant preservation across concrete deletion *}
 
-(*FIXME:name*)
 lemma caps_containedD':
   "\<lbrakk> ctes_of s p = Some cte; ctes_of s p' = Some cte';
      \<not> isUntypedCap (cteCap cte); capRange (cteCap cte) \<inter> untypedRange (cteCap cte') \<noteq> {};
@@ -1514,7 +1512,6 @@ proof (simp add: invs'_def valid_state'_def valid_pspace'_def
     apply (clarsimp dest!: ex_nonz_cap_notRange elim!: ko_wp_at'_weakenE)
     done
 
-(* FIXME valid_dom_schedule' is an abbreviation, and safe ate it. *)
   from cdm show "ksCurDomain s \<le> maxDomain" .
   from vds show "ksDomSchedule s = [] \<Longrightarrow> False" by clarsimp
 qed (clarsimp)
@@ -1550,8 +1547,6 @@ lemma (in delete_locale) delete_ex_cte_cap_to':
   using exc
   by (clarsimp elim!: cte_cap)
 
-
-(* FIXME: may be redundent *)
 
 lemma deleteObjects_null_filter:
   "\<lbrace>cte_wp_at' (\<lambda>c. cteCap c = UntypedCap ptr bits idx) p
@@ -3232,7 +3227,7 @@ lemma placeNewObject_gets_globalPD_commute:
   apply clarsimp
   done
 
-(* FIXME: move to genericlib *)
+(* FIXME: move  *)
 lemmas of_nat_inj32 = of_nat_inj[where 'a=32, folded word_bits_def]
 
 lemma copyGlobalMappings_setCTE_commute:
@@ -4473,13 +4468,13 @@ lemma gsUserPages_upd_createObjects'_comm:
           simpler_modify_def bind_def
         split: option.splits)
 
-(* FIXME: move (or find where already proven) *)
+(* FIXME: move *)
 lemma ef_dmo':
   "empty_fail f \<Longrightarrow> empty_fail (doMachineOp f)"
   by (auto simp: empty_fail_def doMachineOp_def split_def select_f_def
            simpler_modify_def simpler_gets_def return_def bind_def image_def)
 
-(* FIXME: generalise?  move?  integrate with monad_commute? *)
+(* FIXME: move *)
 lemma dmo'_when_fail_comm:
   assumes "empty_fail f"
   shows "doMachineOp f >>= (\<lambda>x. when P fail >>= (\<lambda>_. m x)) =
@@ -4490,7 +4485,7 @@ lemma dmo'_when_fail_comm:
                         bind_def split_def image_def, fastforce)
   done
 
-(* FIXME: generalise?  move?  integrate with monad_commute? *)
+(* FIXME: move *)
 lemma dmo'_gets_ksPSpace_comm:
   "doMachineOp f >>= (\<lambda>_. gets ksPSpace >>= m) =
    gets ksPSpace >>= (\<lambda>x. doMachineOp f >>= (\<lambda>_. m x))"
@@ -4770,7 +4765,6 @@ lemma createTCBs_tcb_at':
   apply (simp add:objBits_simps shiftl_t2n)
   done
 
-(* FIXME: move to GenericLib *)
  
 lemma createNewCaps_Cons:
   assumes cover:"range_cover ptr sz (Types_H.getObjectSize ty us) (Suc (Suc n))"

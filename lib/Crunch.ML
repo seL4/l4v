@@ -123,7 +123,7 @@ struct
 
 local structure P = Parse and K = Keyword in
 
-(* FIXME *)
+(* FIXME: Slightly outdated: *)
 (*
  example: crunch inv[wp]: f P (wp: h_P simp: .. ignore: ..)
 

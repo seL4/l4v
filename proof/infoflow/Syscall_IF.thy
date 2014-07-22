@@ -359,22 +359,6 @@ lemma invoke_cnode_reads_respects_f_g:
    apply force+
   done
 
-(* FIXME discard
-
-(*This is getting big*)
-interpretation delete_conf: delete_confidentiality
-  apply unfold_locales
-  apply (rule
-    rec_del_reads_respects_f
-    ep_cancel_badged_sends_reads_respects
-    thread_set_reads_respects
-    ethread_set_reads_respects
-    get_thread_state_rev
-    arch_recycle_cap_reads_respects
-    is_final_cap_reads_respects
-    invoke_cnode_globals_equiv)+
-done
-*)
 
 lemma arch_perform_invocation_reads_respects_g:
   "reads_respects_g aag l (ct_active and K (authorised_arch_inv aag ai)
@@ -481,7 +465,7 @@ lemma syscall_reads_respects_f_g:
        | fastforce)+
   done
 
-(*FIXME: Move to base?*)
+(*FIXME: move *)
 lemma syscall_requiv_f_g: "
   \<lbrakk>reads_respects_f_g aag l P m_fault;
  \<And>v. reads_respects_f_g aag l (R' v) (h_error v);

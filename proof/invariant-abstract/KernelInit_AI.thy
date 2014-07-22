@@ -189,7 +189,6 @@ lemma pspace_aligned_init_A:
            simp_all add: is_aligned_def word_bits_def kernel_base_def)[1]
   done
 
-(* FIXME: horrible proof -- but it works. *)
 lemma pspace_distinct_init_A:
   "pspace_distinct init_A_st"
   apply (clarsimp simp: pspace_distinct_def state_defs pageBits_def

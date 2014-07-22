@@ -94,7 +94,7 @@ crunch valid_duplicates'[wp]: setupReplyMaster "(\<lambda>s. vs_valid_duplicates
   (wp: crunch_wps)
 
 
-(* FIXME: we need the following lemma in Syscall_R *)
+(* we need the following lemma in Syscall_R *)
 crunch inv[wp]: getRegister "P"
 
 lemma doMachineOp_ksPSpace_inv[wp]:

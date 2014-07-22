@@ -234,14 +234,13 @@ definition
 where "invalidateTLB_ASID a \<equiv> machine_op_lift (invalidateTLB_ASID_impl a)"
 
 
-(*FIXME c implementation takes one argument, which is w || a*)
+(* C implementation takes one argument, which is w || a *)
 consts
   invalidateTLB_VAASID_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
 definition
   invalidateTLB_VAASID :: "machine_word \<Rightarrow> unit machine_monad"
 where "invalidateTLB_VAASID w \<equiv> machine_op_lift (invalidateTLB_VAASID_impl w)"
 
-(*FIXME: first argument should be vspace_ref?*)
 consts
   cleanByVA_impl :: "machine_word \<Rightarrow> paddr \<Rightarrow> unit machine_rest_monad"
 definition

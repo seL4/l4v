@@ -89,10 +89,6 @@ let
 in [("_heap",K heap_assert_tr)] end;
 *}
 
-(* FIXME: scrap these syntax tricks? not really much use anyway\<dots>
-  "_sep_conj" :: "bool \<Rightarrow> bool \<Rightarrow> bool" (infixr "_ \<and>\<^sup>* _" 35)
-  "_sep_impl" :: "bool \<Rightarrow> bool \<Rightarrow> bool" (infixr "_ \<longrightarrow>\<^sup>* _" 25)
-*)
 
 (* Separation logic assertion parse translation *)
 parse_translation {*

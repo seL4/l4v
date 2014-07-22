@@ -329,7 +329,6 @@ lemma get_master_pde_corres:
     apply (clarsimp simp: pde_at_def obj_at_def)
     apply (clarsimp split:ARM_Structs_A.pde.splits)
     apply (intro conjI impI)
-      (*FIXME: Now comes the interesting part,it was ugly to duplicate the proof ... *)
   -- "master_pde = InvaliatePTE"
        apply (clarsimp simp add: a_type_def return_def get_pd_def
                   bind_def get_pde_def get_object_def gets_def get_def
@@ -598,7 +597,6 @@ lemma get_master_pte_corres:
     apply (clarsimp simp: pte_at_def obj_at_def)
     apply (clarsimp split:ARM_Structs_A.pte.splits)
     apply (intro conjI impI)
-      (*FIXME: Now comes the interesting part,it was ugly to duplicate the proof ... *)
   -- "master_pde = InvaliatePTE"
       apply (clarsimp simp add: a_type_def return_def get_pt_def
                   bind_def get_pte_def get_object_def gets_def get_def
@@ -709,7 +707,7 @@ lemma get_master_pte_corres':
    apply auto
   done
 
-(* FIXME: move to invariant-abstract? *)
+(* FIXME: move *)
 lemma pd_slot_eq:
   "((p::word32) && ~~ mask pd_bits) + (ucast x << 2) = p \<Longrightarrow>
     (x::12 word) = ucast (p && mask pd_bits >> 2)"
@@ -718,7 +716,7 @@ lemma pd_slot_eq:
   apply clarsimp
   done
 
-(* FIXME: move to invariant-abstract? *)
+(* FIXME: move *)
 lemma pt_slot_eq:
   "((p::word32) && ~~ mask pt_bits) + (ucast x << 2) = p \<Longrightarrow>
     (x::word8) = ucast (p && mask pt_bits >> 2)"

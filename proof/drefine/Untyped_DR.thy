@@ -33,7 +33,7 @@ lemma detype_dcorres:
   apply (clarsimp simp: global_refs_def transform_object_def detype_ext_def)
   done
 
-(* FIXME: move? *)
+(* FIXME: move *)
 lemma evalMonad_loadWords:
   "evalMonad (mapM loadWord xs) ms =
   (if (\<forall>x\<in>set xs. is_aligned x 2) then
@@ -316,8 +316,8 @@ lemma freeMemory_dcorres:
   apply (simp add:mask_def not_le pbfs_less_wb'[unfolded word_bits_def, simplified])
   done
 
-(* FIXME: strictly speaking, we would not need ct_active, here.  Proving that,
-     however, requires a stronger version of lemma detype_invariants. *)
+(* Strictly speaking, we would not need ct_active, here.  Proving that,
+   however, requires a stronger version of lemma detype_invariants. *)
 lemma delete_objects_dcorres:
   notes order_class.Icc_eq_Icc [simp del]
   assumes S: "S = {ptr..ptr + 2 ^ bits - 1}"

@@ -21,7 +21,4 @@ imports
   "../../lib/MonadicRewrite"
 begin
 
-(* FIXME: Refine may be a bit much. Might want to tease out
-          abstract-only parts *)
-
 end

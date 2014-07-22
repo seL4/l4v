@@ -3425,7 +3425,6 @@ lemma setVMRootForFlush_invs'[wp]: "\<lbrace>invs'\<rbrace> setVMRootForFlush a 
   done
 
 
-(*FIXME sprint: probably need more lemmas here *)
 lemma dmo_invalidateTLB_VAASID_invs'[wp]:
   "\<lbrace>invs'\<rbrace> doMachineOp (invalidateTLB_VAASID x) \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (wp dmo_invs' no_irq_invalidateTLB_VAASID)
@@ -3456,7 +3455,7 @@ lemma dmo_ccr_PoU_invs'[wp]:
                           machine_rest_lift_def split_def | wp)+
   done
 
-(* FIXME: Move From Finalise_R *)
+(* FIXME: Move *)
 lemma dmo_invalidateTLB_ASID_invs'[wp]:
   "\<lbrace>invs'\<rbrace> doMachineOp (invalidateTLB_ASID a) \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (wp dmo_invs' no_irq_invalidateTLB_ASID)

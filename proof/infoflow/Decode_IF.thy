@@ -288,9 +288,6 @@ lemma decode_irq_handler_invocation_rev:
   done
 
 
-
-
-(* FIXME: cleanup this proof *)
 lemma ensure_safe_mapping_reads_respects:
   "reads_respects aag l (K (authorised_slots aag entries)) (ensure_safe_mapping entries)"
   apply(rule gen_asm_ev)

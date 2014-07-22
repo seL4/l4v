@@ -499,8 +499,6 @@ lemma cnode_cap_case_if:
   "(case c of CNodeCap _ _ _ _ \<Rightarrow> f | _ \<Rightarrow> g) = (if isCNodeCap c then f else g)"
   by (auto simp: isCap_simps split: capability.splits)
 
-(* FIXME: that got removed at other places, already --
-          how does it reappear in the simpset? *)
 declare resolve_address_bits'.simps[simp del]
 
 lemma rab_corres':
@@ -8999,10 +8997,6 @@ lemma cap_move_corres:
   apply(clarsimp simp: cte_map_inj_eq valid_pspace_def split: split_if_asm)
   done
 
-(* Levity: added (20090126 19:32:14) *)
-(* FIX ME: MOVE *)
-(* Moved To CSpaceI *)
-(* FIXME: we could weaken this. *)
 lemmas cur_tcb_lift =
   hoare_lift_Pf [where f = ksCurThread and P = tcb_at', folded cur_tcb'_def]
 
@@ -9952,7 +9946,7 @@ lemma setUntypedCapAsFull_ctes_of_no_0':
     apply (auto simp:cte_wp_at_ctes_of)
 done
 
-(* FIXME: MOVE TO THE TOP *)
+(* FIXME: move *)
 lemma mdb_inv_preserve_update_cap_same:
   "mdb_inv_preserve m m'
    \<Longrightarrow> mdb_inv_preserve (modify_map m dest (cteCap_update (\<lambda>_. cap)))
@@ -11198,7 +11192,6 @@ lemma cap_relation_update_masks:
   apply (drule_tac rmask="UNIV - {AllowWrite}" in cap_relation_masks)
   by (simp add: rights_mask_map_def allRights_def)
 
-(* Annotation added by Simon Winwood (Thu Jul  1 20:01:08 2010) using taint-mode *)
 declare if_option_Some[simp]
 
 lemma lookup_cap_corres:
@@ -11302,7 +11295,7 @@ lemma set_cap_pspace_corres:
   apply fastforce
   done
 
-(* FIXME: move to StateRelation? *)
+(* FIXME: move to StateRelation *)
 lemma ghost_relation_of_heap:
   "ghost_relation h ups cns \<longleftrightarrow> ups_of_heap h = ups \<and> cns_of_heap h = cns"
   apply (rule iffI)
@@ -12236,7 +12229,7 @@ definition
   \<not> isArchPageCap cap"
 
 
-(* FIXME: complete clag from mdb_insert_der. Should move up, factor out common stuff *)
+(* FIXME: duplicated *)
 locale mdb_insert_simple = mdb_insert +
   assumes safe_parent: "safe_parent_for' m src c'"
   assumes simple: "is_simple_cap' c'"
@@ -12542,7 +12535,6 @@ lemma cins_corres_simple:
         apply (thin_tac "ksIdleThread ?t = ?p")+
         apply (thin_tac "ksReadyQueues ?t = ?p")+
         apply (thin_tac "ksSchedulerAction ?t = ?p")+
-(* FIXME: Following Step is Ugly *)
         apply (subgoal_tac "should_be_parent_of src_cap (is_original_cap a src) c (revokable src_cap c) = True")
          prefer 2
          apply (subst should_be_parent_of_masked_as_full[symmetric])

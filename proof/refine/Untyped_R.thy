@@ -24,7 +24,6 @@ where
        (map cte_map cl))
            \<and> ao = APIType_map2 (Inr ao'))"
 
-(* FIXME : needs adjustment. *)
 primrec
   valid_untyped_inv' :: "Invocations_H.untyped_invocation \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
@@ -113,7 +112,7 @@ proof (cases "6 \<le> length args \<and> cs \<noteq> []
     done
 next
   case True
-    have val_le_length_Cons: (* FIXME: clagged from Tcb_R *)
+    have val_le_length_Cons: (* clagged from Tcb_R *)
       "\<And>n xs. n \<noteq> 0 \<Longrightarrow> (n \<le> length xs) = (\<exists>y ys. xs = y # ys \<and> (n - 1) \<le> length ys)"
       apply (case_tac xs, simp_all)
       apply (case_tac n, simp_all)
@@ -2900,7 +2899,7 @@ lemma insertNewCap_valid_mdb:
   apply (simp add:Int_ac)
   done
 
-(* FIXME: Move to top *)
+(* FIXME: move *)
 lemma no_default_zombie:
   "cap_relation (default_cap tp p sz) cap \<Longrightarrow> \<not>isZombie cap"
   by (cases tp, auto simp: isCap_simps)

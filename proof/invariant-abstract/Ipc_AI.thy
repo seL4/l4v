@@ -2061,7 +2061,6 @@ lemma as_user_vms[wp]:
   by (simp add: valid_machine_state_def)
      (wp hoare_vcg_all_lift hoare_vcg_disj_lift)
 
-(* FIXME: should we not consistently use thread_set instead of set_object? *)
 lemma set_mrs_def2:
   "set_mrs thread buf msgs \<equiv>
    do thread_set

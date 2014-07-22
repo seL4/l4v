@@ -620,7 +620,7 @@ lemma schedule_ccorres:
              apply (wp nextDomain_invs_no_cicd')
              apply clarsimp
              apply assumption
-(* FIXME else branch for rvb *)
+(* else branch for rvb *)
               apply clarsimp
               apply (rule ccorres_guard_imp2)
                apply (rule ccorres_cond_false_seq)
@@ -634,7 +634,7 @@ lemma schedule_ccorres:
            apply clarsimp
            apply vcg
           apply auto[1]
-(* FIXME else branch for rva *)
+(* else branch for rva *)
           apply (rule ccorres_guard_imp2)
            apply (clarsimp simp: to_bool_def ccorres_seq_cond_univ)
              apply (rule_tac P'="\<lambda>rv. {s. ksDomainTime_' (globals s) = rv}"
@@ -650,7 +650,7 @@ lemma schedule_ccorres:
              apply (wp nextDomain_invs_no_cicd')
              apply clarsimp
              apply assumption
-(* FIXME else branch for rv *)
+(* else branch for rv *)
               apply clarsimp
               apply (rule ccorres_guard_imp2)
                apply (rule ccorres_cond_false_seq)

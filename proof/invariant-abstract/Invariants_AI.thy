@@ -443,7 +443,6 @@ where
          \<and> ko_at (ArchObj (PageDirectory pd')) y s
        \<longrightarrow> (\<forall>w \<in> kernel_mapping_slots. pd w = pd' w)"
 
-(* FIXME: is_aligned is redundant if we already require typ_at and have pspace_aligned *)
 primrec
   valid_pte :: "ARM_Structs_A.pte \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
@@ -455,7 +454,6 @@ where
    (\<lambda>s. is_aligned ptr pageBits \<and>
         typ_at (AArch (AIntData ARMSmallPage)) (Platform.ptrFromPAddr ptr) s)"
 
-(* FIXME: is_aligned is redundant if we already require typ_at and have pspace_aligned *)
 primrec
   valid_pde :: "ARM_Structs_A.pde \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
@@ -765,7 +763,6 @@ definition
                   \<longrightarrow> ((r \<in> S) = (x \<in> kernel_mapping_slots))
   | _ \<Rightarrow> True"
 
-(* FIXME: we could roll the property below into wellformed_pte. *)
 definition
   "aligned_pte pte \<equiv>
      case pte of
@@ -797,8 +794,8 @@ definition
 where
   "valid_global_pts \<equiv> \<lambda>s.
    \<forall>p \<in> set (arm_global_pts (arch_state s)). typ_at (AArch APageTable) p s"
-(*< FIXME: this property now follows from valid_global_objs:
-    "valid_global_objs s \<Longrightarrow> valid_global_pts s" *)
+(* this property now follows from valid_global_objs:
+   "valid_global_objs s \<Longrightarrow> valid_global_pts s" *)
 
 definition
   valid_arch_state :: "'z::state_ext state \<Rightarrow> bool"

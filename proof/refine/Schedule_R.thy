@@ -1257,7 +1257,6 @@ crunch ksRQ[wp]: threadSet "\<lambda>s. P (ksReadyQueues s)"
   (ignore: setObject getObject
        wp: updateObject_default_inv)
 
-(* Annotation added by Simon Winwood (Thu Jul  1 21:16:37 2010) using taint-mode *)
 declare Cons_eq_tails[simp]
 
 lemma invs_ksReadyQueues_update_triv:
@@ -1281,9 +1280,6 @@ lemma tcbSchedDequeue_ksReadyQueues_eq:
   apply (simp add: eq_commute)
   done
 
-(* FIXME: reluctantly added in IpcCancel_AI.thy.
-   It breaks the proof below because for "valid ?P f (%_ _. False \<longrightarrow> False)",
-   a proof obligation: "valid ?Q f (%_ _. False)" is created. *)
 declare static_imp_wp[wp_split del]
 
 lemma hd_ksReadyQueues_runnable:
@@ -1506,10 +1502,6 @@ lemma switchToIdleThread_activatable[wp]:
                         st_tcb_at'_def obj_at'_def)
   done
 
-(* FIXME: reluctantly added in IpcCancel_AI.thy.
-   It breaks the proof below because for
-     "valid ?P f (%_ _. (False \<longrightarrow> False) \<and> (True \<longrightarrow> True))"
-   a proof obligation: "valid ?Q f (%_ _. False)" is created. *)
 declare static_imp_conj_wp[wp_split del]
 
 lemma valid_queues_obj_at'_imp:
@@ -1693,7 +1685,7 @@ lemma corres_assert_assume_l:
 crunch cur[wp]: tcbSchedEnqueue cur_tcb'
   (simp: unless_def)
 
-(* FIXME - move *)
+(* FIXME: move *)
 lemma corres_noop3:
   assumes x: "\<And>s s'. \<lbrakk>P s; P' s'; (s, s') \<in> sr\<rbrakk>  \<Longrightarrow> \<lbrace>op = s\<rbrace> f \<exists>\<lbrace>\<lambda>r. op = s\<rbrace>"
   assumes y: "\<And>s s'. \<lbrakk>P s; P' s'; (s, s') \<in> sr\<rbrakk> \<Longrightarrow> \<lbrace>op = s'\<rbrace> g \<lbrace>\<lambda>r. op = s'\<rbrace>"
@@ -1863,11 +1855,6 @@ lemma corres_gets_queues_blah:
   "corres (ready_queues_relation_in_domain) \<top> \<top> (gets (\<lambda>s. ready_queues s d)) (gets (\<lambda>s p. ksReadyQueues s (d, p)))"
   by (auto simp: state_relation_def ready_queues_relation_def ready_queues_relation_in_domain_def)
 
-(* FIXME: Remove
-lemma minBound_max_enum: "[(minBound :: word8).e.maxBound] = enum"
-  apply (simp add: minBound_word)
-  apply (clarsimp simp add: enum_word_def upto_enum_word maxBound_max_word max_word_def)
-  done *)
 
 lemma Max_lt_set: "\<forall>y\<in>A. Max B < (y::word8) \<Longrightarrow> \<forall>y\<in>A. y \<notin> B"
   apply clarsimp
@@ -2009,7 +1996,6 @@ lemma domain_time_corres:
   "corres (op =) \<top> \<top> (gets domain_time) getDomainTime"
   by (simp add: getDomainTime_def state_relation_def)
 
-(* The break through in this proof was applying "Let_def" *)
 lemma next_domain_corres:
   "corres dc \<top> \<top> next_domain nextDomain"
   apply (simp add: next_domain_def nextDomain_def)
@@ -2017,7 +2003,7 @@ lemma next_domain_corres:
   apply (simp add: state_relation_def Let_def dschLength_def dschDomain_def)
   done
 
-(* FIXME: Move to Invariants_H. Think about turning valid_queues' and valid_queues lemmas into locale *)
+(* FIXME: Move to Invariants_H. *)
 
 interpretation ksCurDomain:
   P_Arch_Idle_Int_update_eq "ksCurDomain_update f"
@@ -2706,7 +2692,6 @@ lemma possibleSwitchTo_corres:
    apply clarsimp
    apply (frule_tac x="cur_thread s" in tcb_at_ekheap_dom, simp)
    apply (clarsimp simp: is_etcb_at_def valid_sched_action_def weak_valid_sched_action_def)
-  (* FIXME futz needs a cleaning *)
   apply (clarsimp simp: cur_tcb'_def)
   apply (frule (1) valid_objs'_maxDomain)
   apply (frule (1) valid_objs'_maxDomain) back

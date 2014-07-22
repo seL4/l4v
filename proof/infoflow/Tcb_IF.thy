@@ -97,7 +97,6 @@ lemma as_user_valid_ko_at_arm[wp]:
   apply(fastforce simp: valid_ko_at_arm_def get_tcb_ko_at obj_at_def)
 done
 
-(* FIXME: maybe not need here anymore, but probably useful in arch *)
 lemma cap_ne_global_pd : "ex_nonz_cap_to word s \<Longrightarrow> valid_global_refs s \<Longrightarrow> word \<noteq> arm_global_pd (arch_state s)"
   unfolding ex_nonz_cap_to_def
   apply (simp only : cte_wp_at_caps_of_state zobj_refs_to_obj_refs)

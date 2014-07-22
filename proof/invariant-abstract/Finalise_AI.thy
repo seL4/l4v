@@ -314,15 +314,6 @@ lemma replaceable_more_update[simp]:
   "replaceable (trans_state f s) sl cap cap' = replaceable s sl cap cap'"
   by (simp add: replaceable_def)
 
-(*
-lemma cdt_more_swap[simp]: "
-    s'\<lparr>exst := sa',
-         cdt := sa\<rparr> =
-    s'\<lparr>cdt := sa,
-         exst := sa'\<rparr>"
-  apply simp
-  done
-*)
 
 (* FIXME: move *)
 lemma obj_ref_ofI: "obj_refs cap = {x} \<Longrightarrow> obj_ref_of cap = x"
@@ -343,13 +334,6 @@ lemma vs_lookup_pages_eq:
   apply (erule vs_lookup_vs_lookup_pagesI', clarsimp+)
   done
 
-(*
-lemma "tcb_cap_valid NullCap sl (trans_state (f :: 'b::state_ext \<Rightarrow> 'a::state_ext) s\<lparr>is_original_cap := b\<rparr>)"
-thm trans_state_update
-apply (simp only: trans_state_update[symmetric] tcb_cap_valid_more_update)
-thm tcb_cap_valid_more_update
-
-  apply (subst tcb_cap_valid_more_update)*)
 
 lemma empty_slot_invs:
   "\<lbrace>\<lambda>s. invs s \<and> cte_wp_at (replaceable s sl cap.NullCap) sl s \<and>
@@ -1004,7 +988,6 @@ lemma imp_and_strg: "Q \<and> C \<longrightarrow> (A \<longrightarrow> Q \<and> 
 
 lemma and_not_not_or_imp: "(~ A & ~ B | C) = ((A | B) \<longrightarrow> C)" by blast
 
-(* FIXME: the proof could be engineered better. *)
 lemma arch_finalise_cap_replaceable[wp]:
   notes strg = tcb_cap_valid_imp_NullCap
                obj_at_not_live_valid_arch_cap_strg[where cap=cap]
@@ -1720,8 +1703,6 @@ lemma invs_pspace_alignedI:
   apply (simp add: invs_def valid_state_def valid_pspace_def)
   done
 
-
-(* FIXME: the name became misleading; is this definition helpful, anymore? *)
 definition
   replaceable_or_arch_update
 where
@@ -2740,7 +2721,7 @@ lemma vs_lookup_pages_empty_table:
   done
 
 
-(* FIXME: yes, it's ugly, but it works.. *)
+(* yes, it's ugly, but it works.. *)
 lemma set_asid_pool_empty_table_objs:
   "\<lbrace>valid_arch_objs and asid_pool_at p\<rbrace>
   set_asid_pool p empty

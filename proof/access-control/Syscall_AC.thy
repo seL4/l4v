@@ -85,8 +85,7 @@ lemma perform_invocation_respects:
           and authorised_invocation aag oper
           and is_subject aag \<circ> cur_thread
           and (\<lambda>s. \<forall>p ko. kheap s p = Some ko \<longrightarrow> \<not> (is_tcb ko \<and> p = cur_thread st)  \<longrightarrow> kheap st p = Some ko)
-          (* umm, ugly
-          and (\<lambda>s. s = st\<lparr>kheap := (kheap st)(cur_thread st \<mapsto> TCB ((the (get_tcb (cur_thread st) st))\<lparr>tcb_state := Structures_A.thread_state.Restart\<rparr>))\<rparr>)  *)\<rbrace>
+          \<rbrace>
     perform_invocation blocking calling oper
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply (subst pi_cases)

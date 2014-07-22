@@ -1239,7 +1239,7 @@ lemma pde_range_interD:
   apply (case_tac pde', simp_all split:if_splits)
   done
 
-(* FIXME: So ugly *)
+(* FIXME: move *)
 lemma upto_0_to_n:
   "0 < n \<Longrightarrow> tl [0..<n] = [1..<n]"
   apply (erule(1) impE[rotated])
@@ -1248,6 +1248,7 @@ lemma upto_0_to_n:
   apply simp
   done
 
+(* FIXME: move *)
 lemma upto_0_to_n2:
   "0 < n \<Longrightarrow> [0..<n] = 0 # [1..<n]"
   apply (erule(1) impE[rotated])
@@ -1256,6 +1257,7 @@ lemma upto_0_to_n2:
   apply simp
   done
 
+(* FIXME: move *)
 lemma neg_mask_add_mask:
   "((a && ~~ mask b) + c && mask b) = c && mask b"
   by (subst mask_add_aligned[OF is_aligned_neg_mask],simp+)

@@ -392,7 +392,7 @@ lemma (in pspace_update_eq) pspace_no_overlap_update [simp]:
   "pspace_no_overlap ptr bits (f s) = pspace_no_overlap ptr bits s"
   by (simp add: pspace_no_overlap_def pspace)
 
-(* FIXME: Move *)
+(* FIXME: move *)
 lemma multi_lessD:
   "\<lbrakk>(a::nat)*b < c;0<a;0<b\<rbrakk> \<Longrightarrow> a < c \<and> b < c"
   by (cases a, simp_all,cases b,simp_all)
@@ -1228,15 +1228,6 @@ lemma mdb_cte_at_store_pde[wp]:
   apply (wp hoare_vcg_disj_lift hoare_vcg_all_lift)
 done
 
-(*
-   FIXME: This didn't used to assume the slot wasn't in kernel_mapping_slots.
-          It may be necessary to put another rule in the wp set that says
-          get_pde returns an aligned pde instead of valid_pde, since that is
-          what valid_pde used to say about sections/supersecions. Pagetables 
-          in the kernel_mapping_slots have the same properties as `valid_pde'
-          Pagetable entries via valid_global_objs or somesuch. So morally this
-          is still true.
-*)
 lemma get_pde_valid[wp]:
   "\<lbrace>valid_arch_objs 
     and \<exists>\<rhd> (x && ~~mask pd_bits) 
@@ -1451,7 +1442,7 @@ crunch cap_refs_in_kernel_window[wp]: copy_global_mappings "cap_refs_in_kernel_w
   (wp: crunch_wps)
 
 
-(* FIXME: move to VSpace_R? *)
+(* FIXME: move to VSpace_R *)
 lemma vs_refs_add_one'':
   "p \<in> kernel_mapping_slots \<Longrightarrow>
    vs_refs (ArchObj (PageDirectory (pd(p := pde)))) =
@@ -1817,18 +1808,6 @@ where
     if tp = ArchObject PageDirectoryObj
     then all_invs_but_equal_kernel_mappings_restricted (set refs)
     else invs"
-
-(*FIXME sprint*)
-(* lemma dmo_ccr_vms[wp]: *)
-(*   "\<lbrace>valid_machine_state\<rbrace> *)
-(*    do_machine_op (cleanCacheRange_PoU s e p) *)
-(*    \<lbrace>\<lambda>rv. valid_machine_state\<rbrace>" *)
-(*   apply (simp add: valid_machine_state_def in_user_frame_def) *)
-(*   apply (wp hoare_vcg_ex_lift hoare_vcg_all_lift hoare_vcg_disj_lift) *)
-(*   by (clarsimp simp: do_machine_op_def simpler_gets_def simpler_modify_def *)
-(*           select_f_def bind_def return_def valid_def cleanCacheRange_PoU_def *)
-(*           machine_op_lift_def machine_rest_lift_def cacheRangeOp_def in_monad *)
-(*           mapM_x_mapM cleanByVA_PoU_def lineStart_def cacheLineBits_def cacheLine_def) *)
 
 
 lemma dmo_mapM_x_ccr_invs[wp]:
@@ -3508,19 +3487,19 @@ lemma swp_clearMemoryVM [simp]:
   by (rule ext,simp)
 
 
-(* FIXME: move? *)
+(* FIXME: move *)
 lemma bind_assoc_reverse:
   "(do x \<leftarrow> A; _ \<leftarrow> B x; C x od) =
    (do x \<leftarrow> do x \<leftarrow> A; _ \<leftarrow> B x; return x od; C x od)"
 by (simp only: bind_assoc return_bind)
 
 
-(* FIXME: move? *)
+(* FIXME: move *)
 lemmas do_machine_op_bind =
     submonad_bind [OF submonad_do_machine_op submonad_do_machine_op
                       submonad_do_machine_op]
 
-(* FIXME: move? *)
+(* FIXME: move *)
 lemmas do_machine_op_return =
     submonad_do_machine_op.return
 

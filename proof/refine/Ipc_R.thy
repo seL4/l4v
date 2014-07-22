@@ -2325,7 +2325,7 @@ lemma as_user_valid_etcbs[wp]:
 crunch valid_queues'[wp]: cteDeleteOne valid_queues'
   (simp: crunch_simps unless_def wp: crunch_wps sts_st_tcb')
 
-(* FIXME move to AINVS, and don't mention the eta-expansion *)
+(* FIXME move *)
 lemma cap_delete_one_cur_tcb[wp]:
   "\<lbrace>\<lambda>s. cur_tcb s\<rbrace> cap_delete_one slot \<lbrace>\<lambda>_ s. cur_tcb s\<rbrace>"
 apply (simp add: cur_tcb_def)
@@ -3613,7 +3613,6 @@ lemma setupCallerCap_state_refs_of[wp]:
   apply (simp add: fun_upd_def cong: if_cong)
   done
 
-(*FIXME: corey: I ignored setObject so that it will build with skip_proofs *)
 crunch sch_act_wf: setupCallerCap
   "\<lambda>s. sch_act_wf (ksSchedulerAction s) s"
   (wp: crunch_wps ssa_sch_act sts_sch_act lift: sch_act_wf_lift ignore:setObject)

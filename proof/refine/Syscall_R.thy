@@ -131,7 +131,7 @@ where
 | "valid_invocation' (Invocations_H.InvokeArchObject i) = valid_arch_inv' i"
 
 
-(* FIXME: sseefried: Clean up proof and move to Tcb_R.thy *)
+(* FIXME: move *)
 lemma dec_domain_inv_corres:
   shows "\<lbrakk> list_all2 cap_relation (map fst cs) (map fst cs');
            list_all2 (\<lambda>p pa. snd pa = cte_map (snd p)) cs cs' \<rbrakk> \<Longrightarrow>
@@ -147,7 +147,6 @@ lemma dec_domain_inv_corres:
        apply (rule whenE_throwError_corres_initial)
          apply simp
          apply (case_tac "cs")
-         (* sseefried: There must be a better way to do this. This case_tac approach is inelegant*)
        apply ((case_tac "cs'", ((simp add: null_def)+)[2])+)[2]
         apply (subgoal_tac "cap_relation (fst (hd cs)) (fst (hd cs'))")
         apply (case_tac "fst (hd cs)")
@@ -332,7 +331,7 @@ lemma msg_from_syserr_map[simp]:
   apply (case_tac err,clarsimp+)
   done
 
-(* FIXME futz move to TCB *)
+(* FIXME: move *)
 lemma non_exst_same_timeSlice_upd[simp]:
   "non_exst_same tcb (tcbDomain_update f tcb)"
   by (cases tcb, simp add: non_exst_same_def)
@@ -359,7 +358,7 @@ lemma threadSet_tcbDomain_update_ct_not_inQ:
    apply (clarsimp simp: obj_at'_def)+
   done
 
-(* FIXME: sseefried: Move back to TcbAcc_R.thy *)
+(* FIXME: move *)
 lemma setObject_F_ct_activatable':
   "\<lbrakk>\<And>tcb f. tcbState (F f tcb) = tcbState tcb \<rbrakk> \<Longrightarrow>  \<lbrace>ct_in_state' activatable' and obj_at' (op = tcb) t\<rbrace>
     setObject t (F f tcb)
@@ -373,7 +372,7 @@ lemma setObject_F_ct_activatable':
 
 lemmas setObject_tcbDomain_update_ct_activatable'[wp] = setObject_F_ct_activatable'[where F="tcbDomain_update", simplified]
 
-(* FIXME: sseefried: Move back to TcbAcc_R.thy *)
+(* FIXME: move *)
 lemma setObject_F_st_tcb_at':
   "\<lbrakk>\<And>tcb f. tcbState (F f tcb) = tcbState tcb \<rbrakk> \<Longrightarrow> \<lbrace>st_tcb_at' P t' and obj_at' (op = tcb) t\<rbrace>
     setObject t (F f tcb)
@@ -441,7 +440,6 @@ lemma threadSet_tcbDomain_update_invs':
   apply (auto simp: inQ_def obj_at'_def)
 done
 
-(* FIXME: sseefried: Clean up proof *)
 lemma set_domain_setDomain_corres:
   "corres dc
      (valid_etcbs and valid_sched and tcb_at tptr)
@@ -489,7 +487,6 @@ lemma set_domain_setDomain_corres:
 done
 
 
-(* FIXME end move *)
 lemma pinv_corres:
   "\<lbrakk> inv_relation i i'; call \<longrightarrow> block \<rbrakk> \<Longrightarrow>
    corres (intr \<oplus> op=)
@@ -656,7 +653,7 @@ lemma sts_valid_inv'[wp]:
   apply (wp hoare_vcg_ex_lift ex_cte_cap_to'_pres | simp)+
   done
 
-(* FIXME futz move to TCB *)
+(* FIXME: move to TCB *)
 crunch inv[wp]: decodeDomainInvocation P
   (wp: crunch_wps simp: crunch_simps)
 
@@ -696,7 +693,7 @@ lemma diminished_IRQControlCap' [simp]:
   apply (simp add: diminished'_def maskCapRights_def isCap_simps Let_def)
   done
 
-(* FIXME: sseefried:  futz strengthen precondition, move to TCB *)
+(* FIXME: move to TCB *)
 lemma dec_dom_inv_wf[wp]:
   "\<lbrace>invs' and (\<lambda>s. \<forall>x \<in> set excaps. s \<turnstile>' fst x)\<rbrace>
   decodeDomainInvocation label args excaps 
@@ -1187,8 +1184,7 @@ lemma lec_ex_nonz_cap_to' [wp]:
    apply (wp mapME_set | simp)+
   done
 
-(* FIXME: move / generalize lemma in GenericLib *)
-(* FIXME: move to CSpace_R *)
+(* FIXME: move *)
 lemma getSlotCap_diminished' [wp]:
   "\<lbrace>\<top>\<rbrace> getSlotCap slot
   \<lbrace>\<lambda>cap. cte_wp_at' (diminished' cap \<circ> cteCap) slot\<rbrace>"
@@ -1204,8 +1200,6 @@ lemma lcs_diminished' [wp]:
    apply (wp | simp add: split_def)+
   done
 
-
-(* FIXME: could prove most (all?) of the other lec stuff in terms of this *) 
 lemma lec_dimished'[wp]:
   "\<lbrace>\<top>\<rbrace>
      lookupExtraCaps t buffer info 
@@ -2166,7 +2160,7 @@ lemma hrw_corres:
   done
 
 
-(* FIXME: move *) (* FIXME: should we add this to the simpset? *)
+(* FIXME: move *)
 lemma he_corres: 
   "corres (intr \<oplus> dc) (einvs and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running s) and
                        (\<lambda>s. scheduler_action s = resume_cur_thread))

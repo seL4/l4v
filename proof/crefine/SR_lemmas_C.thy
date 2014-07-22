@@ -861,7 +861,7 @@ lemma cspace_cte_relation_upd_mdbI:
   apply simp
 done
 
-(* FIXME: generic *)
+(* FIXME: move, generic *)
 lemma aligned_neg_mask [simp]:
   "is_aligned x n \<Longrightarrow> x && ~~ mask n = x"
   apply (erule is_aligned_get_word_bits)
@@ -1694,7 +1694,6 @@ definition
       capAllowRead_CL = from_bool (wd !! 1),
       capAllowWrite_CL = from_bool (wd !! 0)\<rparr>"
 
-(* FIXME? *)
 definition 
   cap_rights_from_word :: "word32 \<Rightarrow> cap_rights_CL"
   where
@@ -1855,7 +1854,7 @@ lemma user_word_at_cross_over:
   apply (simp add: aligned_shiftr_mask_shiftl)
   done
 
-    (* FIXME: move to GenericLib *)
+(* FIXME: move to GenericLib *)
 lemmas unat32_eq_of_nat = unat_eq_of_nat[where 'a=32, folded word_bits_def]
 
 lemma user_memory_cross_over:

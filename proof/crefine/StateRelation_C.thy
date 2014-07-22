@@ -176,7 +176,7 @@ where
   exclusive_state s = exclusive_state (phantom_machine_state_' s') \<and>
   machine_state_rest s = machine_state_rest (phantom_machine_state_' s')"
 
-(* FIXME: ptr_range uses the wrong set construct for h_t_valid stuff *)
+(* ptr_range uses the wrong set construct for h_t_valid stuff *)
 definition
   ptr_span :: "'a::mem_type ptr \<Rightarrow> word32 set" where
   "ptr_span p \<equiv> {ptr_val p ..+ size_of TYPE('a)}"
@@ -314,7 +314,6 @@ lemma is_cap_fault_simp: "is_cap_fault cf = (\<exists> x. cf=Fault_cap_fault x)"
   by (simp add: is_cap_fault_def split:fault_CL.splits)
 
 
-(* FIXME: make a _to_H file? *)
 definition
   message_info_to_H :: "message_info_C \<Rightarrow> Types_H.message_info"
   where

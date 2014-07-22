@@ -1082,7 +1082,6 @@ lemma findPDForASID_ccorres:
 done
 
 
-(* FIXME: no need to specify type of Ptr?  *)
 lemma ccorres_pre_gets_armKSGlobalPD_ksArchState:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
   shows   "ccorres r xf 
@@ -1452,14 +1451,9 @@ lemma ptr_val_tcb_ptr_mask:
   apply (simp add: is_aligned_add_helper ctcb_offset_def objBits_simps)
   done
 
-(* FIXME: move *)
-
-
-
 lemmas ptr_val_tcb_ptr_mask'
     = ptr_val_tcb_ptr_mask[unfolded mask_def, simplified]
 
-(* FIME: adding h_t_valid of armKSGlobal into state_relation *)
 lemma ccorres_h_t_valid_armKSGlobalPD:
   "ccorres r xf P P' hs f (f' ;; g') \<Longrightarrow>
    ccorres r xf P P' hs f 
@@ -1472,24 +1466,6 @@ lemma ccorres_h_t_valid_armKSGlobalPD:
    apply simp
   apply (simp add:rf_sr_def cstate_relation_def Let_def)
   done
-
-(* FIXME: This may not be required.
-
-lemma armv_contextSwitch_ccorres:
-  "ccorres dc xfdc (invs' and K (asid \<le> mask asid_bits))
-          (UNIV \<inter> {s. cap_pd_' s = pde_Ptr (Hardware_H.ptrFromPAddr pd)} \<inter> {s. asid_' s = asid}) []
-        (do x \<leftarrow> doMachineOp (setCurrentPD pd);
-                setCurrentASID asid
-             od)
-        (Call armv_contextSwitch_'proc)"
-  apply (cinit' lift: cap_pd_' asid_')
-   apply (simp only: ) 
-   apply csymbr
-   apply (ctac(no_vcg) add: setCurrentPD_ccorres)
-    apply (ctac add: setCurrentASID_ccorres)
-   apply (wp dmo_setCurrentPD_invs')
-  apply (simp add: Collect_const_mem)
-  done *)
 
 lemma setVMRoot_ccorres:
   "ccorres dc xfdc (all_invs_but_ct_idle_or_in_cur_domain' and tcb_at' thread) (UNIV \<inter> {s. tcb_' s = tcb_ptr_to_ctcb_ptr thread}) []
@@ -3028,8 +3004,6 @@ lemma word_le_mask_eq:
   "\<lbrakk> x \<le> mask n; n < word_bits \<rbrakk> \<Longrightarrow> x && mask n = (x::word32)"
   by (rule less_mask_eq) (simp add: mask_def)
 
-(* FIXME: move *)
-(* Annotation added by Simon Winwood (Tue Jul  6 11:24:46 2010) using taint-mode *)
 declare mask_Suc_0[simp]
 
 (* FIXME: move *)

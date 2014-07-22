@@ -2789,9 +2789,6 @@ next
              apply (clarsimp simp: ccap_relation_def option_map_Some_eq2)
              apply (simp add: message_info_to_H_def word_ao_dist)
              apply (fold shiftl_1)[1]
-             (* FIXME: sseefried: Possibly use
-               apply (simp add: message_info_lift_def word_bw_assocs
-                              word_sle_def t2n_mask_eq_if)*)
              apply (subst and_mask_eq_iff_shiftr_0[THEN iffD2],
                   subst shiftl_shiftr2, simp, simp)
              apply (simp add: message_info_lift_def word_bw_assocs

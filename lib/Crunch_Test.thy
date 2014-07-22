@@ -161,8 +161,6 @@ crunch test[wp]: crunch_foo8 P
 
 end
 
-(* FIXME old-school consts and defs in separate files still works, we think. *)
-
 (* check that qualified names are handled properly. *)
 
 consts foo_const :: "(unit, unit) nondet_monad"

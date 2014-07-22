@@ -258,7 +258,7 @@ struct
         = v $ extra $ body $ body'
     | put_precond _ _ = error "put_precond: not an bcorres term";
   val pre_thms = [];
-  val wpc_tactic = WeakestPreCases.wp_cases_tac @{thms wpc_processors}; (*FIXME?*)
+  val wpc_tactic = WeakestPreCases.wp_cases_tac @{thms wpc_processors};
   fun parse_extra ctxt extra
         = case extra of
              "" => error "bcorres needs truncate function"

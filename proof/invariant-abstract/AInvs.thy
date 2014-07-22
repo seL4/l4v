@@ -71,8 +71,6 @@ lemma Collect_subseteq:
   "{x. P x} <= {x. Q x} \<longleftrightarrow> (\<forall>x. P x \<longrightarrow> Q x)"
   by auto
 
-(* FIXME: not sure whether we need kernel_mappings or should just write
-          "p \<ge> kernel_base" instead of "p \<in> kernel_mappings" *)
 definition
   "kernel_mappings \<equiv> {x. x \<ge> kernel_base}"
 

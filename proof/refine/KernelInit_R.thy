@@ -22,11 +22,6 @@ axiomatization where
   init_refinement:
   "Init_H a b c d e f \<subseteq> lift_state_relation state_relation `` Init_A"
 
-  (* NOTE: this assumption became necessary after removal of duplicate
-           page table and page directory entries (for large pages and
-           super sections) in abstract.
-    FIXME: should we prove the existence of a Haskell state that
-           satisfies invs' and vs_valid_duplicates'? *)
 axiomatization where
   ckernel_init_valid_duplicates':
   "\<forall>((tc,s),x) \<in> (Init_H a b c d e f). vs_valid_duplicates' (ksPSpace s)"

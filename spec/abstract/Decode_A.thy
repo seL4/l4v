@@ -14,8 +14,6 @@ Decoding system calls
 
 header "Decoding System Calls"
 
-(* FIXME: GenericLib for alignUp, remove *)
-
 theory Decode_A
 imports
   Interrupt_A

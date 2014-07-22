@@ -198,7 +198,7 @@ vmrights_to_H :: "word32 \<Rightarrow> vmrights" where
   else if c = scast Kernel_C.VMReadOnly then VMReadOnly
   else VMReadWrite"
 
-(* FIXME: name collisions suck *)
+(* Force clarity over name collisions *)
 abbreviation
   ARMSmallPage :: "vmpage_size" where
  "ARMSmallPage == ARMMachineTypes.ARMSmallPage"
@@ -214,7 +214,6 @@ abbreviation
 
 -- "ARMSmallFrame is treated in a separate cap in C,
     so needs special treatment in ccap_relation"
-(* FIXME: should really be option? *)
 definition
 framesize_to_H:: "word32 \<Rightarrow> vmpage_size" where
 "framesize_to_H c \<equiv>

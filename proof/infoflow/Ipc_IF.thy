@@ -142,7 +142,6 @@ where
     option_case True (\<lambda>buf'. is_aligned buf' msg_align_bits \<and> (\<forall>x \<in> ptr_range buf' msg_align_bits. (l,Read,pasObjectAbs aag x) \<in> (pasPolicy aag)))"
 
 
-(* FIXME: ouch -- factor out the word-proof in the middle *)
 lemma set_mrs_equiv_but_for_labels:
   "\<lbrace> equiv_but_for_labels aag L st and K (pasObjectAbs aag thread \<in> L \<and> 
        (case buf of (Some buf') \<Rightarrow>

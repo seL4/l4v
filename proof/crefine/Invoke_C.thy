@@ -490,7 +490,7 @@ lemma ccorres_add_specific_return:
    \<Longrightarrow> ccorres_underlying sr \<Gamma> r xf arrel axf P P' hs (f val) c"
   by simp
 
-(* FIXME: also in Tcb_C, and painfully ugly *)
+(* FIXME: also in Tcb_C *)
 lemma ccorres_subgoal_tailE:
   "\<lbrakk> ccorres rvr xf Q Q' hs (b ()) d;
       ccorres rvr xf Q Q' hs (b ()) d \<Longrightarrow> ccorres rvr xf P P' hs (a >>=E b) (c ;; d) \<rbrakk>
