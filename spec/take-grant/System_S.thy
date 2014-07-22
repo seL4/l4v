@@ -214,7 +214,7 @@ definition
 lemma takeOperation_def2:
   "takeOperation e c\<^sub>1 c\<^sub>2 R s \<equiv>
   s (e \<mapsto> Entity ({diminish R c\<^sub>2} \<union> direct_caps_of s e))"
-  by (rule eq_reflection, simp add: takeOperation_def caps_of_def)
+  by (clarsimp simp: takeOperation_def caps_of_def)
 
 definition
   grantOperation ::
@@ -225,7 +225,7 @@ definition
 lemma grantOperation_def2:
   "grantOperation e c\<^sub>1 c\<^sub>2 R s \<equiv>
   s (target c\<^sub>1 \<mapsto> Entity ( {diminish R c\<^sub>2} \<union> direct_caps_of s (target c\<^sub>1)))"
-  by (rule eq_reflection, simp add: grantOperation_def caps_of_def)
+  by (clarsimp simp: grantOperation_def caps_of_def)
 
 definition
   copyOperation ::
