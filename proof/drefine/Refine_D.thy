@@ -22,12 +22,6 @@ text {*
 
 lemma valid_etcbs_sched: "valid_sched s \<longrightarrow> valid_etcbs s" by fastforce
 
-(* FIXME: move *)
-lemma hoare_valid_validE2:
-  "\<lbrakk> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. Q'\<rbrace>; \<And>s. Q' s \<Longrightarrow> Q s; \<And>s. Q' s \<Longrightarrow> E s \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. Q\<rbrace>,\<lbrace>\<lambda>_. E\<rbrace>"
-  unfolding valid_def validE_def
-  by (clarsimp split: sum.splits) blast
-
 lemma handle_event_invs_and_valid_sched:
   "\<lbrace>invs and valid_sched and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_active s) and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace> Syscall_A.handle_event e
   \<lbrace>\<lambda>rv. invs and valid_sched\<rbrace>"
@@ -60,7 +54,7 @@ lemma dcorres_call_kernel:
      apply (wp hoare_vcg_if_lift2 hoare_drop_imp he_invs
             | strengthen valid_etcbs_sched valid_idle_invs_strg
             | simp add: conj_ac cong: conj_cong)+
-    apply (rule hoare_valid_validE2)
+    apply (rule valid_validE2)
       apply (rule hoare_vcg_conj_lift)
        apply (rule he_invs)
       apply (rule handle_event_valid_sched)

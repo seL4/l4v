@@ -12,15 +12,6 @@ theory Intent_DR
 imports Corres_D
 begin
 
-(* LIFT LEMMAS:
-   Lift the property from abstract spec to capdl model
- *)
-
-(* FIXME: MOVE to top level *)
-
-declare fun_upd_restrict_conv[simp del]
-
-
 definition not_idle_thread:: "obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where "not_idle_thread x \<equiv> (\<lambda>s. x \<noteq> idle_thread s)"
 
@@ -76,6 +67,10 @@ lemma bl_to_bin_tcb_cnode_index:
   apply (fold unat_def)
   apply (simp add: unat_of_nat)
   done
+
+(* LIFT LEMMAS:
+   Lift the property from abstract spec to capdl model
+ *)
 
 lemma transform_objects_kheap:
   "\<lbrakk> kheap s p = Some ko; p \<noteq> idle_thread s \<rbrakk>

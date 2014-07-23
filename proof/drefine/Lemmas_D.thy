@@ -27,6 +27,8 @@ begin
 
 no_notation bind_drop (infixl ">>" 60)
 
+declare fun_upd_restrict_conv[simp del]
+
 (* FIXME: move *)
 lemma nonempty_pick_in:
   "a \<noteq> {} \<Longrightarrow> pick a \<in> a"

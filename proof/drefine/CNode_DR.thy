@@ -124,46 +124,6 @@ lemma dcorres_set_untyped_cap_as_full:
   apply auto
   done
 
-(*FIXME: Move up*)
-
-lemma cap_insert_swap_ext_def: "(cap_insert new_cap src_slot dest_slot :: (unit,unit) s_monad )
- = do src_cap \<leftarrow> CSpaceAcc_A.get_cap src_slot;
-   dest_original \<leftarrow>
-   return
-    (if is_ep_cap new_cap
-     then cap_ep_badge new_cap \<noteq> cap_ep_badge src_cap
-     else if is_aep_cap new_cap
-          then cap_ep_badge new_cap \<noteq> cap_ep_badge src_cap
-          else if \<exists>irq. new_cap = cap.IRQHandlerCap irq
-               then src_cap = cap.IRQControlCap
-               else is_untyped_cap new_cap);
-   old_cap \<leftarrow> CSpaceAcc_A.get_cap dest_slot;
-   assert (old_cap = cap.NullCap);
-   set_untyped_cap_as_full src_cap new_cap src_slot;
-   CSpaceAcc_A.set_cap new_cap dest_slot;
-   is_original \<leftarrow> gets is_original_cap;
-   src_parent \<leftarrow>
-   return $
-   should_be_parent_of src_cap (is_original src_slot) new_cap
-    dest_original;
-   src_p \<leftarrow> gets (\<lambda>s. cdt s src_slot);
-   dest_p \<leftarrow> gets (\<lambda>s. cdt s dest_slot);
-   update_cdt
-    (\<lambda>cdt. cdt
-        (dest_slot :=
-           if src_parent then Some src_slot
-           else cdt src_slot));
-   set_original dest_slot dest_original;
-   do_extended_op
-    (cap_insert_ext src_parent src_slot dest_slot src_p
-      dest_p)
-
-od"
-  unfolding cap_insert_def
-  apply (fold cap_insert_dest_original_def)
-  apply simp
-  done
-
 lemma dcorres_opt_parent_set_parent_helper:
   "dcorres dc \<top> P
   (gets (opt_parent (transform_cslot_ptr src)) >>=
