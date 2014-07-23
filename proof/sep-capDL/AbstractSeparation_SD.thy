@@ -91,9 +91,9 @@ definition "(op +) \<equiv> sep_state_add"
 
 
 
-(**********************************************
- * The proof that this is a separation logic. *
- **********************************************)
+(************************************************
+ * The proof that this is a separation algebra. *
+ ************************************************)
 
 instance
   apply default
@@ -112,8 +112,23 @@ instance
    apply (simp add: plus_sep_state_def sep_state_add_def)+
 (* x ## y + z = (x ## y \<and> x ## z) *)
    apply (clarsimp simp: sep_disj_sep_state_def)
-   apply (auto simp:map_disj_def sep_state_disj_def)
+   apply (auto simp: map_disj_def sep_state_disj_def)
   done
 end
 
+(*************************************************************
+ * The proof that this is a cancellative separation algebra. *
+ *************************************************************)
+
+instantiation "sep_state" :: cancellative_sep_algebra
+begin
+
+instance
+  apply default
+  apply (simp add: sep_disj_sep_state_def sep_state_disj_def zero_sep_state_def
+                   plus_sep_state_def sep_state_add_def)
+  by (metis map_add_left_eq sep_heap.simps sep_irq_node.simps sep_state.exhaust)
 end
+
+end
+

@@ -323,7 +323,9 @@ lemma offset_slot:
   apply simp
   done
 
-(* sep_map predcates are injective. *)
+(************************************
+ * sep_map predcates are injective. *
+ ************************************)
 
 lemma sep_map_general_inj:
   "cmps \<noteq> {} \<Longrightarrow> inj (\<lambda>obj_id. sep_map_general obj_id object cmps)"
@@ -687,5 +689,40 @@ lemma sep_map_S_decomp_list:
   "\<lbrakk>dom (object_slots obj) = set slots; distinct slots\<rbrakk> \<Longrightarrow>
    (obj_id \<mapsto>S obj) = (\<And>* map (\<lambda>slot. (obj_id,slot) \<mapsto>s obj) slots  \<and>* obj_id \<mapsto>E obj)"
   by (metis sep_list_conj_sep_map_set_conj sep_map_S_decomp List.finite_set)
+
+(*****************************************************
+ * sep_map predcates are strictly_exact and precise. *
+ *****************************************************)
+
+lemma sep_map_general_strictly_exact:
+  "strictly_exact (sep_map_general obj_id obj comp_ids)"
+  apply (clarsimp simp: strictly_exact_def sep_map_general_def)
+  apply (case_tac h, case_tac h', clarsimp)
+  done
+
+lemma sep_map_general_precise:
+  "precise (sep_map_general obj_id obj comp_ids)"
+  by (rule strictly_precise, rule sep_map_general_strictly_exact)
+
+lemma sep_map_c_strictly_exact:
+  "strictly_exact (ptr \<mapsto>c cap)"
+  apply (case_tac ptr)
+  apply (clarsimp simp: strictly_exact_def sep_map_c_def_alt)
+  apply (case_tac h, case_tac h', clarsimp)
+  done
+
+lemma sep_map_c_precise:
+  "precise (ptr \<mapsto>c cap)"
+  by (rule strictly_precise, rule sep_map_c_strictly_exact)
+
+lemma sep_map_irq_strictly_exact:
+  "strictly_exact (irq \<mapsto>irq obj_id)"
+  apply (clarsimp simp: strictly_exact_def sep_map_irq_def)
+  apply (case_tac h, case_tac h', clarsimp)
+  done
+
+lemma sep_map_irq_precise:
+  "precise (irq \<mapsto>irq obb_id)"
+  by (rule strictly_precise, rule sep_map_irq_strictly_exact)
 
 end
