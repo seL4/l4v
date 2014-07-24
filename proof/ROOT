@@ -142,10 +142,7 @@ session SepDSpec = DSpec +
 
 session DSpecProofs in "capDL-api" = SepDSpec +
   theories
-    "Invocation_DP"
-    "Arch_DP"
-    "TCB_DP"
-    "CNode_DP"
+    "API_DP"
 
 
 (*
