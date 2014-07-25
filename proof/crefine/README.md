@@ -9,7 +9,7 @@ its [abstract specification](../../spec/abstract/). In other words,
 this proof establishes that seL4's C code correctly implements its abstract
 specification.
 
-The proof is described in the TPHOLS '09 [paper][5].
+The approach used for the proof is described in the TPHOLS '09 [paper][5].
 
 ## Building
 
@@ -22,6 +22,14 @@ To build from the `l4v/proof` directory, run:
 The top-level theory where the refinement statement is established over
 the entire kernel is [`Refine_C`](Refine_C.thy); the state-relation that relates the state-spaces
 of the two specifications is defined in [`StateRelation_C`](StateRelation_C.thy).
+
+Note that this proof deals with two C-level semantics of seL4: one produced
+directly by the C parser from the kernel's C code, and another produced by
+the C spec's [`Substitute`](../../spec/cspec/Substitute.thy) theory.
+These proofs largely operate on the latter, proving that it corresponds to
+the design spec. Refinement between the two C-level specs is proved in
+the [`CToCRefine`](../../lib/clib/CToCRefine.thy) theory. The
+top-level [`Refine_C`](Refine_C.thy) theory quotes both refinement properties.
 
 [5]: http://www.nicta.com.au/pub?id=1842  " Mind the gap: A verification framework for low-level C"
 
