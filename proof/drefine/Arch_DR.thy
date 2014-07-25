@@ -415,29 +415,6 @@ proof -
      apply (simp_all add: word_bits_conv)
     done
 
-  have blah_blah_mask_2[simp]:
-    "\<And>pt_ptr x. is_aligned pt_ptr 10
-        \<Longrightarrow> pt_ptr + ((vptr >> 12) && 0xFF << 2) + of_nat x * 4 && mask 2 = 0"
-    apply (subst is_aligned_mask[symmetric])
-    apply (rule aligned_add_aligned[where n=2],
-           simp_all add: word_bits_conv word32_shift_by_2 is_aligned_shiftl)
-    apply (erule aligned_add_aligned,
-           simp_all add: word_bits_conv is_aligned_shiftl)
-    done
-
-  have inj_on_pt:
-    "\<And>pt_ptr. \<lbrakk> is_aligned pt_ptr pt_bits \<rbrakk> \<Longrightarrow>
-      inj_on (\<lambda>x. transform_pt_slot_ref (pt_ptr + ((vptr >> 12) && 0xFF << 2) + toEnum x * 4)) {0..<16}"
-    apply (rule inj_onI, clarsimp simp: transform_pt_slot_ref_def)
-    apply (simp add: pt_bits_def pageBits_def mask_twice)
-    apply (drule bits_low_high_eq[rotated])
-     apply (simp add: mask_twice)
-    apply (drule(1) mask_eqI[rotated])
-    apply (simp add: word32_shift_by_2)
-    apply (rule ccontr, erule(3) of_nat_shift_distinct_helper)
-     apply (simp_all add: word_bits_conv)
-    done
-
   have map_includedI:
    "\<And>S g xs. \<lbrakk>set (map g xs) \<subseteq> S;xs \<noteq> []\<rbrakk> \<Longrightarrow> g (hd xs) \<in> S"
     by (clarsimp simp:hd_map_simp neq_Nil_conv)
@@ -1886,7 +1863,7 @@ proof -
           unfolded translate_object_type_def, simplified]
   note insert_dc = insert_cap_child_corres[where cap="cap.ArchObjectCap (arch_cap.ASIDPoolCap x y)",
                             simplified transform_cap_simps, standard]
-  note blah[simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
+  note [simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
           Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
 
   have p2bits: "2 ^ pageBits \<le> 2 ^ pageBits - Suc 0 \<Longrightarrow> False"

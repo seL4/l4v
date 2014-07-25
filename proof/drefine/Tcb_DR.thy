@@ -859,10 +859,6 @@ lemma not_idle_after_suspend [wp]:
   apply (simp add:not_idle_thread_def invs_def valid_state_def)+
 done
 
-lemma moo: "\<lbrakk> b \<Longrightarrow> \<lbrace> P' \<rbrace> A \<lbrace> Q \<rbrace>; \<not>b \<Longrightarrow> \<lbrace> P'' \<rbrace> A \<lbrace> Q \<rbrace>; \<And>s. P s \<Longrightarrow> (P' and P'') s \<rbrakk> \<Longrightarrow> \<lbrace> P \<rbrace> A \<lbrace> Q \<rbrace>"
-  apply (auto simp: valid_def)
-  done
-
 crunch valid_etcbs[wp]:  "switch_if_required_to", "Tcb_A.restart"  "valid_etcbs"
 
 (* Copy registers from one thread to another. *)
@@ -924,10 +920,7 @@ lemma invoke_tcb_corres_copy_regs:
 
       apply clarsimp
       apply (wp alternative_wp)
-     apply (rule moo [where b=b])
-       apply (clarsimp simp:not_idle_thread_def | wp)+
-     apply assumption
-    apply (auto simp:not_idle_thread_def)
+       apply (clarsimp simp:not_idle_thread_def | wp | rule conjI)+
   done
 
 lemma cnode_cap_unique_bits:
