@@ -1,13 +1,3 @@
-(*
- * Copyright 2014, NICTA
- *
- * This software may be distributed and modified according to the terms of
- * the BSD 2-Clause license. Note that NO WARRANTY is provided.
- * See "LICENSE_BSD2.txt" for details.
- *
- * @TAG(NICTA_BSD)
- *)
-
 functor StrictCLrValsFun(structure Token : TOKEN)
  : sig structure ParserData : PARSER_DATA
        structure Tokens : StrictC_TOKENS
@@ -18,7 +8,15 @@ structure ParserData=
 struct
 structure Header = 
 struct
-(** @LICENSE(NICTA_OKL_EXCLUSIVE) **)
+(**
+ ** Copyright 2014, NICTA
+ **
+ ** This software may be distributed and modified according to the terms of
+ ** the BSD 2-Clause license. Note that NO WARRANTY is provided.
+ ** See "LICENSE_BSD2.txt" for details.
+ **
+ ** @TAG(NICTA_BSD)
+ **)
 
 open Absyn NameGeneration
 val errorStr' = Feedback.errorStr'

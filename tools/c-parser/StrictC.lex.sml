@@ -1,3 +1,8 @@
+functor StrictCLexFun(structure Tokens: StrictC_TOKENS)=
+   struct
+    type int = Int.int
+    structure UserDeclarations =
+      struct
 (*
  * Copyright 2014, NICTA
  *
@@ -7,13 +12,6 @@
  *
  * @TAG(NICTA_BSD)
  *)
-
-functor StrictCLexFun(structure Tokens: StrictC_TOKENS)=
-   struct
-    type int = Int.int
-    structure UserDeclarations =
-      struct
-(* @LICENSE(NICTA_OKL_EXCLUSIVE) *)
 
 structure Tokens = Tokens
 
