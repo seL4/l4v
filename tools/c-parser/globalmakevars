@@ -18,7 +18,7 @@ GLOB_PFX := $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 -include $(GLOB_PFX)/globalmakevars.local
 CC ?= gcc
 
-SML_COMPILER ?= poly
+SML_COMPILER ?= mlton
 #ifndef SML_COMPILER
 #SML_COMPILER := $(if $(shell which mlton),mlton,poly)
 #endif
