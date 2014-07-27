@@ -14,7 +14,7 @@
 
 STP_PFX := $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 
-ISABELLE_HOME ?= $(STP_PFX)/../../isabelle
+ISABELLE_HOME ?= $(STP_PFX)/../../../isabelle
 
 ifndef STP_INCLUDED
 STP_INCLUDED=true
