@@ -9,7 +9,7 @@
  *)
 
 theory AutoCorresSimpset
-imports WordLib
+imports "../../lib/WordLib"
 begin
 
 (*
