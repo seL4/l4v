@@ -15,11 +15,10 @@ more pleasant to reason about.
 Quickstart
 ----------
 
-To use AutoCorres, you need to (i) run the C parser, and
-then (ii) run AutoCorres. For example, assume you want
-to parse a file `myfile.c` containing a function `foo`.
-Start by creating an Isabelle theory file `Example.thy` as
-follows:
+To use AutoCorres, you need to (i) run the C parser, and then (ii) run
+AutoCorres. For example, assume you want to parse a file `myfile.c`
+containing a function `foo`. Start by creating an Isabelle theory file
+`Example.thy` as follows:
 
     theory Example
     imports AutoCorres
@@ -44,18 +43,16 @@ follows:
 
     end
 
-Each function `foo` in your input file will have
-a definition in Isabelle/HOL with the name `foo'`.
+Each function `foo` in your input file will have a definition in
+Isabelle/HOL with the name `foo'`.
 
-You can perform some basic reasoning using the Hoare
-framework and associated tools developed by NICTA and
-distributed with AutoCorres.
+You can perform some basic reasoning using the Hoare framework and
+associated tools developed by NICTA and distributed with AutoCorres.
 
 Options
 -------
 
-AutoCorres supports a variety of options, which are used as
-follows:
+AutoCorres supports a variety of options, which are used as follows:
 
     autocorres [option, key=val, list=a b c d] "file.c"
 
@@ -111,11 +108,11 @@ Examples
 
 Some basic examples are in the `tests/examples` directory.
 
-Many of these examples are quick-and-dirty proofs, and
-should not neccessary be considered the best style.
+Many of these examples are quick-and-dirty proofs, and should not
+necessary be considered the best style.
 
-None-the-less, some of the examples available are, in
-approximate increasing level of difficulty:
+None-the-less, some of the examples available are, in approximate
+increasing level of difficulty:
 
   * `Simple.thy`: Proofs of some simple functions, including
     `max` and `gcd`.
@@ -128,7 +125,7 @@ approximate increasing level of difficulty:
   * `Factorial.thy`: Proof of a factorial function, using
     several different methods.
 
-  * `FibProof.thy`: Proof of the fibonacci function, using
+  * `FibProof.thy`: Proof of the Fibonacci function, using
     several different methods.
 
   * `ListRev.thy`: Proof of a function that carries out an
@@ -141,7 +138,7 @@ approximate increasing level of difficulty:
 
   * `MemSet.thy`: Proof of a C `memset` implementation.
 
-  * `Quicksort.thy`: Proof of a simple quicksort
+  * `Quicksort.thy`: Proof of a simple QuickSort
     implementation on an array of `int`s.
 
   * `BinarySearch.thy`: Proof of a function that determines
@@ -156,8 +153,8 @@ approximate increasing level of difficulty:
 Papers
 ------
 
-AutoCorres is an ongoing research project. Papers related to the
-project are:
+AutoCorres is an ongoing research project. Papers related to the project
+are:
 
   * David Greenaway, June Andronick, and Gerwin Klein.
     [_"Bridging the gap: Automatic verified abstraction of C."_][3]

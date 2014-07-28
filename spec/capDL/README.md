@@ -1,6 +1,7 @@
-# The capDL Specification of seL4
+The capDL Specification of seL4
+===============================
 
-	l4v/spec/capDL/
+    l4v/spec/capDL/
 
 This directory contains the Isabelle sources of the seL4 behaviour
 specification on the capDL abstraction level. The key features of this
@@ -18,13 +19,15 @@ There is a refinement proof between the abstract specification and the capDL
 specification in `proof/drefine/`. The capDL spec also forms the basis of the
 system initialiser proofs.
 
-## Top-Level Theory
+Top-Level Theory
+----------------
 
 The top-level theory file in the specification is `Syscall_D`, the top-level
 function in that theory is `call_kernel`.
 
 
-## Entry Points 
+Entry Points
+------------
 
 A key theory in the capDL spec is `Types_D` which defines a new capability
 type that in addition to the seL4 capabilities contains 'virtual' capabilities
@@ -32,9 +35,11 @@ which store protection state information. For instance, the state of MMU page
 tables is uniformly modelled as capabilities.
 
 
-## Building
+Building
+--------
 
 The corresponding Isabelle session is `DSpec`. To build, run in directory
 `l4v/spec`:
 
-	make DSpec
+    make DSpec
+

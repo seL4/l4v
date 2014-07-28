@@ -1,4 +1,5 @@
-# Formal Proofs about seL4
+Formal Proofs about seL4
+========================
 
 This directory contains the formal proofs about seL4, which mostly prove
 properties about the various seL4 [specifications](../spec/).
@@ -14,7 +15,4 @@ Each such proof lives in its own subdirectory:
   * [`invariant-abstract`](invariant-abstract/) - Abstract Spec Invariant Proof
   * [`refine`](refine/) - Design Spec Refinement Proof
   * [`sep-capDL`](sep-capDL/) - CapDL Separation Logic Proof
-
-
-
 

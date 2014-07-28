@@ -1,6 +1,7 @@
-# The C Semantics of seL4
+The C Semantics of seL4
+=======================
 
-	l4v/spec/cspec/
+    l4v/spec/cspec/
 
 This directory contains the entry point for the automatic translation of
 the seL4 source code into Isabelle/HOL.
@@ -13,14 +14,16 @@ To inspect the output of this translation, build the image `CSpec` and
 interactively inspect the constants the parser has defined.
 
 
-## Top-Level Theory
+Top-Level Theory
+----------------
 
 The top-level theory file for this module is `Kernel_C` for the bare
 translation of seL4 into Isabelle, and `KernelInc_C` for additional automatic
 proofs about generated bitfield functions.
 
 
-## Building
+Building
+--------
 
 The corresponding Isabelle sessions for this module are `CKernel` and `CSpec`.
 `CSpec` contains `CKernel` plus automated bitfield proofs.
@@ -28,7 +31,7 @@ The corresponding Isabelle sessions for this module are `CKernel` and `CSpec`.
 To build the image, run the corresponding session in directory `l4v/spec`,
 e.g.:
 
-	make CSpec
+    make CSpec
 
 This will also configure and preprocess the kernel sources.
 
@@ -38,10 +41,11 @@ usually at least 16GB of main memory are required together with a 64-bit setup
 of Isabelle.
 
 
-## Remarks
-  
+Remarks
+-------
+
 To speed up interactive development, the bitfield code generator can be
-configured to skip the corresponding proofs and produce sorried property
-statements only. To achieve this, set the environment variable
-`SORRY_BITFIELD_PROOFS` to `yes`.
+configured to skip the corresponding proofs and produce sorried
+(unproven) property statements only. To achieve this, set the
+environment variable `SORRY_BITFIELD_PROOFS` to `yes`.
 
