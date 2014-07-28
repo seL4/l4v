@@ -17,6 +17,11 @@ tools/autocorres/tests/parse-tests/*.thy
 tools/autocorres/tests/umm_types.txt
 
 tools/c-parser/standalone-parser/table.ML
+tools/c-parser/StrictC.grm.desc
+tools/c-parser/standalone-parser/c-parser
+tools/c-parser/tools/mllex/mllex
+tools/c-parser/tools/mlyacc/mlyacc
+tools/c-parser/tools/mlyacc/src/yacc.lex.sml
 tools/c-parser/testfiles/ROOT
 tools/c-parser/testfiles/umm_types.txt
 
