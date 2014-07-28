@@ -94,10 +94,10 @@ The proofs in this repository use `Isabelle2013-2`. A copy of Isabelle
 is included in the repository setup.
 
 The dependencies for installing Isabelle are
-  * Perl 5.x with `libwww`
-  * Python 2.x
-  * LaTeX (e.g. `texlive`)
-  * 32-bit C/C++ standard libraries on 64-bit platforms (optional)
+ * Perl 5.x with `libwww`
+ * Python 2.x
+ * LaTeX (e.g. `texlive` with `texlive-bibtex-extra` + `texlive-latex-extra`)
+ * 32-bit C/C++ standard libraries on 64-bit platforms (optional)
 
 After the repository is set up in Google repo, you should have following
 directory structure, where `l4v` is the repository you are currently looking
