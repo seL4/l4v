@@ -109,7 +109,7 @@ installation of Isabelle, run the following commands in the directory
     cp -i misc/etc/settings ~/.isabelle/etc/settings
     ./isabelle/bin/isabelle components -a
     ./isabelle/bin/isabelle jedit -bf
-    ./isabelle/bin/isabelle build HOL-Word
+    ./isabelle/bin/isabelle build -bv HOL-Word
 
 These commands perform the following steps:
 
