@@ -240,6 +240,12 @@ translations
  * irq_node:
  *   Which IRQs are mapped to which async endpoints.
  *
+ * asid_table:
+ *   The first level of the asid table, containing capabilities to all
+ *   of the ASIDPools.
+ *
+ * current_domain:
+ *   The currently running domain.
  *)
 record cdl_state =
   cdl_arch           :: cdl_arch
