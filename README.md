@@ -98,6 +98,7 @@ The dependencies for installing Isabelle are
  * Python 2.x
  * LaTeX (e.g. `texlive` with `texlive-bibtex-extra` + `texlive-latex-extra`)
  * 32-bit C/C++ standard libraries on 64-bit platforms (optional)
+ * [MLton](http://www.mlton.org/)
 
 After the repository is set up in Google repo, you should have following
 directory structure, where `l4v` is the repository you are currently looking
