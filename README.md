@@ -123,8 +123,8 @@ need a gcc-compatible C pre-processor and python. Try the following steps:
     installation of the command line tools.
   * install `Tempita`, for instance using `sudo easy_install tempita`.
     `easy_install` is part of Python's [`setuptools`][8].
-  * install the [`cpp`](misc/scripts/cpp) wrapper for clang, by putting it 
-    in `~/bin`, or somewhere else in your `PATH`.
+  * install the [`misc/scripts/cpp`](misc/scripts/cpp) wrapper for clang, 
+    by putting it in `~/bin`, or somewhere else in your `PATH`.
   * set `export TOOLPREFIX=""` to tell the seL4 build not to use a cross
     compiler.
 
