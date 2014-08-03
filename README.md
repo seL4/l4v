@@ -21,8 +21,8 @@ and follow the instructions there:
 
    https://github.com/seL4/verification-manifest
 
-For setting up the theorem prover, please see the section
-[Isabelle Setup](#isabelle-setup) below.
+For setting up the theorem prover and other dependencies, please see the
+section [Dependencies](#dependencies) below.
 
   [4]: http://source.android.com/source/downloading.html#installing-repo     "google repo installation"
 
@@ -87,17 +87,55 @@ The repository is organised as follows.
   [5]: http://www.nicta.com.au/pub?id=7847           "An Isabelle Proof Method Language"
 
 
-Isabelle Setup
---------------
+Dependencies
+------------
 
 The proofs in this repository use `Isabelle2013-2`. A copy of Isabelle
 is included in the repository setup.
 
 The dependencies for installing Isabelle are
- * Perl 5.x with `libwww`
+
+ * Perl 5.x with `libwww-perl`
  * Python 2.x
  * LaTeX (e.g. `texlive` with `texlive-bibtex-extra` + `texlive-latex-extra`)
  * 32-bit C/C++ standard libraries on 64-bit platforms (optional)
+
+For running the standalone version of the C Parser you will additionally need
+
+ * [MLton][6] ML compiler (package `mlton-compiler` on Ubuntu)
+
+For running the C proofs, you need a working C preprocessor setup for the seL4
+repository. 
+
+*On Linux*: the best way to make sure you have everything is to install the
+full build environment for seL4:
+
+  * seL4 [development tool chain][7] on Debian and Ubuntu
+
+*On MacOS*: here it is harder to get a full cross-compiler setup going. For
+normal proof development, a full setup is not necessary, though. You mostly
+need a gcc-compatible C pre-processor and python. Try the following steps:
+
+  * install `XCode` from the AppStore and its command line tools. If you are
+    running MacPorts, you have these already. Otherwise, after you have
+    XCode installed, run `gcc --version` in a terminal window. If it reports a
+    version, you're set. Otherwise it should pop up a window and prompt for
+    installation of the command line tools.
+  * install `Tempita`, for instance using `sudo easy_install tempita`.
+    `easy_install` is part of Python's [`setuptools`][8].
+  * install the [`cpp`](misc/scripts/cpp) wrapper for clang, by putting it 
+    in `~/bin`, or somewhere else in your `PATH`.
+  * set `export TOOLPREFIX=""` to tell the seL4 build not to use a cross
+    compiler.
+
+
+[6]: http://mlton.org                               "MLton ML compiler"
+[7]: http://sel4.systems/Download/DebianToolChain   "seL4 tool chain setup"
+[8]: https://pypi.python.org/pypi/setuptools        "python package installer"
+
+
+Isabelle Setup
+--------------
 
 After the repository is set up in Google repo, you should have following
 directory structure, where `l4v` is the repository you are currently looking
