@@ -36,6 +36,7 @@ order).
 * Toby Murray, NICTA & UNSW
 * Magnus Myreen, University of Cambridge & NICTA
 * Michael Norrish, NICTA & ANU
+* Lars Noschinski
 * Liam O'Connor, NICTA
 * Sean Seefried, NICTA
 * Thomas Sewell, NICTA & UNSW
