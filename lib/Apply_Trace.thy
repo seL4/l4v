@@ -23,7 +23,7 @@ val apply_results :
   (Proof.context -> Method.text -> thm -> (string * term) list -> unit) -> 
   Method.text_range -> Proof.state -> Proof.state Seq.result Seq.seq
 
-val mentioned_facts: Method.text -> thm list
+val mentioned_facts: Proof.context -> Method.text -> thm list
 
 end
 
@@ -72,12 +72,11 @@ fun fold_map_src f m =
 let
   fun fold_map' m' a = case m' of
    Method.Source src => let val (src',a') = (f src a) in (Method.Source src',a') end
- | (Method.Source_i src) => let val (src',a') = (f src a) in (Method.Source_i src',a') end
- | (Method.Then ms) => let val (ms',a') = fold_map fold_map' ms a in (Method.Then ms',a') end
- | (Method.Orelse ms) => let val (ms',a') = fold_map fold_map' ms a in (Method.Orelse ms',a') end
- | (Method.Try m) => let val (m',a') = fold_map' m a in (Method.Try m',a') end
- | (Method.Repeat1 m) => let val (m',a') = fold_map' m a in (Method.Repeat1 m',a') end
- | (Method.Select_Goals (i,m)) => let val (m',a') = fold_map' m a in (Method.Select_Goals (i,m'),a') end
+ | (Method.Then (ci,ms)) => let val (ms',a') = fold_map fold_map' ms a in (Method.Then (ci,ms'),a') end
+ | (Method.Orelse (ci,ms)) => let val (ms',a') = fold_map fold_map' ms a in (Method.Orelse (ci,ms'),a') end
+ | (Method.Try (ci,m)) => let val (m',a') = fold_map' m a in (Method.Try (ci,m'),a') end
+ | (Method.Repeat1 (ci,m)) => let val (m',a') = fold_map' m a in (Method.Repeat1 (ci,m'),a') end
+ | (Method.Select_Goals (ci,i,m)) => let val (m',a') = fold_map' m a in (Method.Select_Goals (ci,i,m'),a') end
  | (Method.Basic g) => (Method.Basic g,a)
 in
   fold_map' m end
@@ -86,15 +85,17 @@ fun map_src f text = fold_map_src (fn src => fn () => (f src,())) text () |> fst
 
 fun fold_src f text a = fold_map_src (fn src => fn a => (src,f src a)) text a |> snd
 
-fun mentioned_facts_src src = 
+fun mentioned_facts_src ctxt src = 
 let
-  val ((name,toks),pos) = Args.dest_src src
-  val thms = fold ((fn (SOME (Token.Fact f)) => append f | _ => I) o Token.get_value) toks []
-in
-  thms end
+  val (thmss, _) =
+    let fun sel t = case Token.get_value t of
+        SOME (Token.Fact f) => SOME f
+      | _ => NONE
+    in Args.syntax (Scan.lift (Scan.repeat (Scan.some sel))) src ctxt end
+in flat thmss end
 
 
-fun mentioned_facts text = fold_src (append o mentioned_facts_src) text []
+fun mentioned_facts ctxt text = fold_src (append o mentioned_facts_src ctxt) text []
 
 (*Give local facts (from "have" or locale assumptions)
   the most local name possible before processing method*)
@@ -104,7 +105,7 @@ let
   fun name_thm thm = Thm.name_derivation (Thm.get_name_hint thm) thm
 
   fun name_fact (name,fact) = (Facts.extern ctxt facts name,SOME (map name_thm fact))
-  val facts' = map name_fact (facts |> Facts.dest_static [])
+  val facts' = map name_fact (facts |> Facts.dest_static true [])
 in
   fold (Proof_Context.put_thms true) facts' ctxt end
 
@@ -118,14 +119,14 @@ let
 
   val thm = Proof.simple_goal state |> #goal
 
-  val text' = map_src Args.assignable text
+  val text' = map_src Args.init_assignable text
 
   fun save_deps deps = f (Proof.context_of state) (map_src Args.closure text') thm deps
   
 in
  if (can_clear (Proof.theory_of state')) then  
-   Proof.refine (Method.Then [raw_primitive_text clear_deps,text',
-	raw_primitive_text (fn thm' => (save_deps (used_facts thm');join_deps thm thm'))]) state'
+   Proof.refine (Method.Then (Method.no_combinator_info, [raw_primitive_text clear_deps,text',
+	raw_primitive_text (fn thm' => (save_deps (used_facts thm');join_deps thm thm'))])) state'
  else
    (if (#silent_fail args) then (save_deps [];Proof.refine text state) else error "Apply_Trace theory must be imported to trace applies")
 end

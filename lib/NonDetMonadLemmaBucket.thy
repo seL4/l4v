@@ -149,7 +149,7 @@ lemma hoare_vcg_ex_lift_R:
 
 lemma hoare_option_case_wpR:
   "\<lbrakk>\<lbrace>P\<rbrace> f None \<lbrace>Q\<rbrace>,-; \<And>x. \<lbrace>P' x\<rbrace> f (Some x) \<lbrace>Q' x\<rbrace>,-\<rbrakk> \<Longrightarrow>
-  \<lbrace>option_case P P' v\<rbrace> f v \<lbrace>\<lambda>rv. case v of None \<Rightarrow> Q rv | Some x \<Rightarrow> Q' x rv\<rbrace>,-"
+  \<lbrace>case_option P P' v\<rbrace> f v \<lbrace>\<lambda>rv. case v of None \<Rightarrow> Q rv | Some x \<Rightarrow> Q' x rv\<rbrace>,-"
   by (cases v) auto
 
 
@@ -370,7 +370,7 @@ lemma hoare_split_bind_sum_case:
   assumes x: "\<And>rv. \<lbrace>R rv\<rbrace> g rv \<lbrace>Q\<rbrace>"
              "\<And>rv. \<lbrace>S rv\<rbrace> h rv \<lbrace>Q\<rbrace>"
   assumes y: "\<lbrace>P\<rbrace> f \<lbrace>S\<rbrace>,\<lbrace>R\<rbrace>"
-  shows      "\<lbrace>P\<rbrace> f >>= sum_case g h \<lbrace>Q\<rbrace>"
+  shows      "\<lbrace>P\<rbrace> f >>= case_sum g h \<lbrace>Q\<rbrace>"
   apply (rule hoare_seq_ext [OF _ y[unfolded validE_def]])
   apply (case_tac x, simp_all add: x)
   done
@@ -379,7 +379,7 @@ lemma hoare_split_bind_sum_caseE:
   assumes x: "\<And>rv. \<lbrace>R rv\<rbrace> g rv \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
              "\<And>rv. \<lbrace>S rv\<rbrace> h rv \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
   assumes y: "\<lbrace>P\<rbrace> f \<lbrace>S\<rbrace>,\<lbrace>R\<rbrace>"
-  shows      "\<lbrace>P\<rbrace> f >>= sum_case g h \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
+  shows      "\<lbrace>P\<rbrace> f >>= case_sum g h \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
   apply (unfold validE_def)
   apply (rule hoare_seq_ext [OF _ y[unfolded validE_def]])
   apply (case_tac x, simp_all add: x [unfolded validE_def])
@@ -646,7 +646,7 @@ lemma bind_return_eq:
 
 lemma bindE_bind_linearise:
   "((f >>=E g) >>= h) =
-   (f >>= sum_case (h o Inl) (\<lambda>rv. g rv >>= h))"
+   (f >>= case_sum (h o Inl) (\<lambda>rv. g rv >>= h))"
   apply (simp add: bindE_def bind_assoc)
   apply (rule ext, rule bind_apply_cong, rule refl)
   apply (simp add: lift_def throwError_def split: sum.split)
@@ -1040,13 +1040,13 @@ lemma zipWithM_If_cut:
   apply (cases "n < m")
    apply (cut_tac i=0 and j=n and k="m - n" in upt_add_eq_append)
     apply simp
-   apply (simp add: min_max.inf_absorb1 zipWithM_mapM)
+   apply (simp add: min.absorb1 zipWithM_mapM)
    apply (simp add: zip_append1 mapM_append zip_take_triv2 split_def)
    apply (intro bind_cong bind_apply_cong refl mapM_length_cong
                 fun_cong[OF mapM_length_cong])
     apply (clarsimp simp: set_zip)
    apply (clarsimp simp: set_zip)
-  apply (simp add: min_max.inf_absorb2 zipWithM_mapM mapM_Nil)
+  apply (simp add: min.absorb2 zipWithM_mapM mapM_Nil)
   apply (intro mapM_length_cong refl)
   apply (clarsimp simp: set_zip)
   done
@@ -1148,7 +1148,7 @@ lemma injection_liftE:
 lemma id_injection:
   "id = injection_handler id"
 proof -
-  have P: "sum_case throwError (\<lambda>v. return (Inr v)) = return"
+  have P: "case_sum throwError (\<lambda>v. return (Inr v)) = return"
     by (clarsimp simp: throwError_def
                 split: sum.splits
                intro!: ext)
@@ -1235,8 +1235,8 @@ lemma doesn't_grow_proof:
   done
 
 lemma fold_bindE_into_list_case:
-  "(doE v \<leftarrow> f; list_case (g v) (h v) x odE)
-      = (list_case (doE v \<leftarrow> f; g v odE) (\<lambda>x xs. doE v \<leftarrow> f; h v x xs odE) x)"
+  "(doE v \<leftarrow> f; case_list (g v) (h v) x odE)
+      = (case_list (doE v \<leftarrow> f; g v odE) (\<lambda>x xs. doE v \<leftarrow> f; h v x xs odE) x)"
   by (simp split: list.split)
 
 lemma hoare_vcg_propE_R:
@@ -1313,7 +1313,7 @@ lemma valid_preservation_ex:
   apply simp
   done
 
-lemmas valid_prove_more' = valid_prove_more[where Q="\<lambda>rv. Q", standard]
+lemmas valid_prove_more' = valid_prove_more[where Q="\<lambda>rv. Q" for Q]
 
 lemma whenE_inv:
   assumes a: "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>_. P\<rbrace>"
@@ -1598,7 +1598,7 @@ next
 qed
 
 lemma option_case_fail_return_val:
-  "(fst (option_case fail return v s) = {(rv, s')}) = (v = Some rv \<and> s = s')"
+  "(fst (case_option fail return v s) = {(rv, s')}) = (v = Some rv \<and> s = s')"
   by (cases v, simp_all add: fail_def return_def)
 
 lemma return_expanded_inv:
@@ -2476,7 +2476,7 @@ lemma hoare_rv_split:
   done
 
 lemma option_case_find_give_me_a_map:
-  "option_case a return (find f xs)
+  "case_option a return (find f xs)
     = liftM theLeft
       (mapME (\<lambda>x. if (f x) then throwError x else returnOk ()) xs
         >>=E (\<lambda>x. assert (\<forall>x \<in> set xs. \<not> f x)
@@ -2530,7 +2530,7 @@ lemma snd_handleE' [monad_eq]:
     "snd ((A <handle2> B) s) = (snd (A s) \<or> (\<exists>r s'. (r, s')\<in>fst (A s) \<and> (\<exists>a. r = Inl a \<and> snd (B a s'))))"
   apply (clarsimp simp: handleE'_def)
   apply (monad_eq simp: Bex_def split: sum.splits)
-  apply (metis Projl_Inl sum.distinct(1) sumE)
+  apply (metis sum.sel(1) sum.distinct(1) sumE)
   done
 
 lemma snd_handleE [monad_eq]:
@@ -2702,7 +2702,7 @@ lemma in_catch [monad_eq]:
    apply (clarsimp simp: catch_def in_bind in_return split: sum.splits)
    apply (metis sumE)
   apply (clarsimp simp: catch_def in_bind in_return split: sum.splits)
-  apply (metis Projl_Inl sum.distinct(1) sum.inject(2))
+  apply (metis sum.sel(1) sum.distinct(1) sum.inject(2))
   done
 
 lemma snd_catch [monad_eq]:
@@ -2853,11 +2853,11 @@ lemma simple_bind_fail [simp]:
   done
 
 lemma valid_prod_case:
-  "\<lbrakk> \<And>x y. valid (P x y) (f x y) Q \<rbrakk> \<Longrightarrow> valid (prod_case P v) (prod_case (\<lambda>x y. f x y) v) Q"
+  "\<lbrakk> \<And>x y. valid (P x y) (f x y) Q \<rbrakk> \<Longrightarrow> valid (case_prod P v) (case_prod (\<lambda>x y. f x y) v) Q"
   by (simp add: split_def)
 
 lemma validE_prod_case:
-  "\<lbrakk> \<And>x y. validE (P x y) (f x y) Q E \<rbrakk> \<Longrightarrow> validE (prod_case P v) (prod_case (\<lambda>x y. f x y) v) Q E"
+  "\<lbrakk> \<And>x y. validE (P x y) (f x y) Q E \<rbrakk> \<Longrightarrow> validE (case_prod P v) (case_prod (\<lambda>x y. f x y) v) Q E"
   by (simp add: split_def)
 
 lemma in_select [monad_eq]:

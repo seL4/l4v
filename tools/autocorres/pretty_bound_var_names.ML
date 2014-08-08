@@ -26,9 +26,9 @@ fun try_both a b =
 fun get_var_names_ret t =
   case t of
     (Abs (_, _, V)) => get_var_names_ret V
-  | (Const (@{const_name "prod_case"}, _) $ M $ _) =>
+  | (Const (@{const_name "case_prod"}, _) $ M $ _) =>
       get_var_names_ret M
-  | (Const (@{const_name "prod_case"}, _) $ M) =>
+  | (Const (@{const_name "case_prod"}, _) $ M) =>
       get_var_names_ret M
   | (Const (@{const_name "L2_gets"}, _) $ _ $ v) =>
       SOME (Utils.isa_str_list_to_ml v)
@@ -62,9 +62,9 @@ fun get_var_names_ret t =
 fun get_var_names_throw t =
   case t of
     (Abs (_, _, V)) => get_var_names_throw V
-  | (Const (@{const_name "prod_case"}, _) $ M $ _) =>
+  | (Const (@{const_name "case_prod"}, _) $ M $ _) =>
       get_var_names_throw M
-  | (Const (@{const_name "prod_case"}, _) $ M) =>
+  | (Const (@{const_name "case_prod"}, _) $ M) =>
       get_var_names_throw M
   | (Const (@{const_name "L2_gets"}, _) $ _ $ v) =>
       NONE
@@ -91,10 +91,10 @@ fun pretty_split_vars (SOME (x::xs)) (Abs (_, T, R))
       = Abs (x, T, R)
   | pretty_split_vars _ (Abs (_, T, R))
       = Abs (Name.uu_, T, R)
-  | pretty_split_vars (SOME (x::xs)) (Const (@{const_name "prod_case"}, T) $ Abs (_, T', R))
-      = (Const (@{const_name "prod_case"}, T) $ Abs (x, T', (pretty_split_vars (SOME xs) R)))
-  | pretty_split_vars _ (Const (@{const_name "prod_case"}, T) $ Abs (_, T', R))
-      = (Const (@{const_name "prod_case"}, T) $ Abs (Name.uu_, T', (pretty_split_vars NONE R)))
+  | pretty_split_vars (SOME (x::xs)) (Const (@{const_name "case_prod"}, T) $ Abs (_, T', R))
+      = (Const (@{const_name "case_prod"}, T) $ Abs (x, T', (pretty_split_vars (SOME xs) R)))
+  | pretty_split_vars _ (Const (@{const_name "case_prod"}, T) $ Abs (_, T', R))
+      = (Const (@{const_name "case_prod"}, T) $ Abs (Name.uu_, T', (pretty_split_vars NONE R)))
   | pretty_split_vars _ t = t
 
 (* Add state variable "s" for L2_while,
@@ -136,7 +136,7 @@ let
   val thy = Proof_Context.theory_of ctxt
   val input_type = fastype_of (term_of ct_l)
   val eq_op = cterm_of thy (
-      Const (@{const_name "=="}, input_type --> input_type --> @{typ prop}))
+      Const (@{const_name "Pure.eq"}, input_type --> input_type --> @{typ prop}))
   val result = Drule.list_comb (eq_op, [ct_l, ct_r])
 in
   Goal.init result

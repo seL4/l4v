@@ -537,7 +537,7 @@ lemma L2_call_L2_gets [simp]: "L2_call (L2_gets x n) = L2_gets x n"
   done
 
 (*
- * Rules for adjusting prod_case statements after transformations.
+ * Rules for adjusting case_prod statements after transformations.
  *
  * c.f. fix_L2_while_loop_splits_conv
  *)
@@ -553,14 +553,14 @@ lemma L2_split_fixup_3:
   "(case (x, y) of (a, b) \<Rightarrow> P a b) = P x y"
        by (auto simp: split_def)
 lemma L2_split_fixup_4:
-  "prod_case (\<lambda>a (b :: 'a \<times> 'b). P a ) = prod_case (\<lambda>a. prod_case (\<lambda>(x :: 'a) (y :: 'b). P a ))"
+  "case_prod (\<lambda>a (b :: 'a \<times> 'b). P a ) = case_prod (\<lambda>a. case_prod (\<lambda>(x :: 'a) (y :: 'b). P a ))"
        by (auto simp: split_def)
 lemma L2_split_fixup_f:
   "(f (case y of (a, b) \<Rightarrow> G a b) =
            (case y of (a, b) \<Rightarrow> f (G a b)))"
        by (auto simp: split_def)
 lemma L2_split_fixup_g:
-  "prod_case (\<lambda>a (b :: 'a \<times> 'b). P a b) = prod_case (\<lambda>a. prod_case (\<lambda>(x :: 'a) (y :: 'b). P a (x, y)))"
+  "case_prod (\<lambda>a (b :: 'a \<times> 'b). P a b) = case_prod (\<lambda>a. case_prod (\<lambda>(x :: 'a) (y :: 'b). P a (x, y)))"
        by (auto simp: split_def)
 
 lemmas L2_split_fixups =
@@ -573,18 +573,18 @@ lemmas L2_split_fixups =
   L2_split_fixup_f [where f=L2_gets]
   L2_split_fixup_f [where f=L2_modify]
 
-  L2_split_fixup_g [where P="\<lambda>a b. L2_gets (P a b) n", standard]
-  L2_split_fixup_g [where P="\<lambda>a b. L2_guard (P a b)", standard]
-  L2_split_fixup_g [where P="\<lambda>a b. L2_modify (P a b)", standard]
-  L2_split_fixup_g [where P="\<lambda>a b. L2_spec (P a b)", standard]
-  L2_split_fixup_g [where P="\<lambda>a b. L2_throw (P a b) n", standard]
+  L2_split_fixup_g [where P="\<lambda>a b. L2_gets (P a b) n" for P n]
+  L2_split_fixup_g [where P="\<lambda>a b. L2_guard (P a b)" for P]
+  L2_split_fixup_g [where P="\<lambda>a b. L2_modify (P a b)" for P]
+  L2_split_fixup_g [where P="\<lambda>a b. L2_spec (P a b)" for P]
+  L2_split_fixup_g [where P="\<lambda>a b. L2_throw (P a b) n" for P n]
 
-  L2_split_fixup_g [where P="\<lambda>a b. L2_seq (L a b) (R a b)", standard]
-  L2_split_fixup_g [where P="\<lambda>a b. L2_while (C a b) (B a b) (I a b) n", standard]
-  L2_split_fixup_g [where P="\<lambda>a b. L2_unknown n", standard]
-  L2_split_fixup_g [where P="\<lambda>a b. L2_catch (L a b) (R a b)", standard]
-  L2_split_fixup_g [where P="\<lambda>a b. L2_condition (C a b) (L a b) (R a b)", standard]
-  L2_split_fixup_g [where P="\<lambda>a b. L2_call (M a b)", standard]
+  L2_split_fixup_g [where P="\<lambda>a b. L2_seq (L a b) (R a b)" for L R]
+  L2_split_fixup_g [where P="\<lambda>a b. L2_while (C a b) (B a b) (I a b) n" for C B I n]
+  L2_split_fixup_g [where P="\<lambda>a b. L2_unknown n" for n]
+  L2_split_fixup_g [where P="\<lambda>a b. L2_catch (L a b) (R a b)" for L R]
+  L2_split_fixup_g [where P="\<lambda>a b. L2_condition (C a b) (L a b) (R a b)" for C L R]
+  L2_split_fixup_g [where P="\<lambda>a b. L2_call (M a b)" for M]
 
 lemmas L2_split_fixups_congs =
   prod.case_cong

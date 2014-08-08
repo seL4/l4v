@@ -1097,8 +1097,8 @@ next
 qed
 
 ML {*
-  bind_thm ("tranclp_induct2", Split_Rule.split_rule @{context}
-    (read_instantiate @{context} [(("a", 0), "(aa,ab)"), (("b", 0), "(ba,bb)")] @{thm tranclp_induct}));
+  ML_Thms.bind_thm ("tranclp_induct2", Split_Rule.split_rule @{context}
+    (Rule_Insts.read_instantiate @{context} [(("a", 0), "(aa,ab)"), (("b", 0), "(ba,bb)")] [] @{thm tranclp_induct}));
 *}
 
 lemma steps_preserves_termination': 
@@ -2164,8 +2164,8 @@ next
 qed
 
 ML {*
-  bind_thm ("trancl_induct2", Split_Rule.split_rule @{context}
-    (read_instantiate @{context} [(("a", 0), "(aa,ab)"), (("b", 0), "(ba,bb)")] @{thm trancl_induct}));
+  ML_Thms.bind_thm ("trancl_induct2", Split_Rule.split_rule @{context}
+    (Rule_Insts.read_instantiate @{context} [(("a", 0), "(aa,ab)"), (("b", 0), "(ba,bb)")] [] @{thm trancl_induct}));
 *}
 
 lemma steps_redex':

@@ -190,7 +190,7 @@ proof (induct n)
   case 0 thus ?case by simp
 next
   case (Suc n) thus ?case
-    by (cases k, auto simp: add_ac)
+    by (cases k, auto simp: ac_simps)
 qed
 
 lemma heap_list_split2:

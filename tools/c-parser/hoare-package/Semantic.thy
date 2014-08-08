@@ -843,7 +843,7 @@ next
   then have 
     "\<Gamma>\<turnstile>\<langle>c1,Normal s\<rangle> =max n m\<Rightarrow>  s'" 
     "\<Gamma>\<turnstile>\<langle>c2,s'\<rangle> =max n m\<Rightarrow>  s''"
-    by (auto elim!: execn_mono intro: le_maxI1 le_maxI2)
+    by (auto elim!: execn_mono intro: max.cobounded1 max.cobounded2)
   thus ?case 
     by (iprover intro: execn.intros)
 next
@@ -857,7 +857,7 @@ next
     by blast
   then have 
     "\<Gamma>\<turnstile>\<langle>c,Normal s\<rangle> =max n m\<Rightarrow>  s'" "\<Gamma>\<turnstile>\<langle>While b c,s'\<rangle> =max n m\<Rightarrow>  s''"
-    by (auto elim!: execn_mono intro: le_maxI1 le_maxI2)
+    by (auto elim!: execn_mono intro: max.cobounded1 max.cobounded2)
   with WhileTrue
   show ?case
     by (iprover intro: execn.intros)
@@ -883,7 +883,7 @@ next
   then have 
     "\<Gamma>\<turnstile>\<langle>c1,Normal s\<rangle> =max n m\<Rightarrow>  Abrupt s'" 
     "\<Gamma>\<turnstile>\<langle>c2,Normal s'\<rangle> =max n m\<Rightarrow>  s''"
-    by (auto elim!: execn_mono intro: le_maxI1 le_maxI2)
+    by (auto elim!: execn_mono intro: max.cobounded1 max.cobounded2)
   with CatchMatch.hyps show ?case 
     by (iprover intro: execn.intros)
 next
@@ -1478,7 +1478,7 @@ proof -
   with execn_xs obtain
     "\<Gamma>\<turnstile>\<langle>sequence Seq xs,Normal s\<rangle> =max n m\<Rightarrow> s'"
     "\<Gamma>\<turnstile>\<langle>sequence Seq ys,s'\<rangle> =max n m\<Rightarrow> t"
-    by (auto intro: execn_mono le_maxI1 le_maxI2)
+    by (auto intro: execn_mono max.cobounded1 max.cobounded2)
   from execn_sequence_app [OF this]
   have "\<Gamma>\<turnstile>\<langle>sequence Seq (xs @ ys),Normal s\<rangle> =max n m\<Rightarrow> t" .
   thus ?thesis

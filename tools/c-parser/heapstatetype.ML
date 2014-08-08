@@ -50,7 +50,7 @@ fun hst_prove_globals fullrecname thy = let
       Logic.mk_of_class(recty, "SepFrame.heap_state_type'")
   val hst'_instance_ct = cterm_of thy hst'_instance_t
   val is_hst'_thm =
-      Goal.prove_internal [] hst'_instance_ct
+      Goal.prove_internal (thy2ctxt thy) [] hst'_instance_ct
                           (fn _ => Class.intro_classes_tac [])
   val thy = Axclass.add_arity is_hst'_thm thy
   val recty' =  Type(fullrecname, [alpha])
@@ -72,7 +72,7 @@ fun hst_prove_globals fullrecname thy = let
   val hst_instance_ct = cterm_of thy' hst_instance_t
   val hst_thms = @{thms "hrs_simps"} @ [@{thm "split_def"}]
   val is_hst_thm =
-      Goal.prove_internal
+      Goal.prove_internal (thy2ctxt thy)
           [] hst_instance_ct
           (fn _ =>
               Class.intro_classes_tac [] THEN

@@ -40,7 +40,7 @@ apply(subst mod_if [where m="x - y mod x"])
 apply(clarsimp split: split_if_asm)
 apply(rule conjI)
  apply clarsimp
- apply(subst add_ac)
+ apply(subst ac_simps)
  apply(subst diff_add_assoc)
   apply(rule mod_triv_le)
   apply simp
@@ -48,7 +48,7 @@ apply(rule conjI)
   apply simp
  apply(subst mod_div_equality')
  apply(subst diff_diff_right)
-  apply(subst mult_ac)
+  apply(subst ac_simps)
   apply(subst mult_div_cancel)
   apply simp
  apply simp

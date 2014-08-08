@@ -266,13 +266,13 @@ fun schems (Abs (_,_,t)) = schems t
   | schems (Var _)       = 1
   | schems _             = 0
 
-fun hrs_mem_update (Const ("HeapRawState.hrs_mem_update",_)$_$s) = SOME s
+fun hrs_mem_update (Const (@{const_name "HeapRawState.hrs_mem_update"},_)$_$s) = SOME s
   | hrs_mem_update _                                             = NONE
 
-fun hrs_htd_update (Const ("HeapRawState.hrs_htd_update",_)$_$s) = SOME s
+fun hrs_htd_update (Const (@{const_name "HeapRawState.hrs_htd_update"},_)$_$s) = SOME s
   | hrs_htd_update _                                             = NONE
 
-fun lift_state_arg thy nc (Const ("TypHeap.lift_state",_)$s) = SOME s
+fun lift_state_arg thy nc (Const (@{const_name "TypHeap.lift_state"},_)$s) = SOME s
   | lift_state_arg thy nc (l$r)                              =
         (case lift_state_arg thy nc r of
           SOME s => if nc orelse hrs_mem_update s <> NONE orelse

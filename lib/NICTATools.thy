@@ -27,7 +27,7 @@ ML {*
 
 (* Return a list of meta-forall variable names that appear
  * to be unused in the input term. *)
-fun find_unused_metaall (Const ("all", _) $ Abs (n, _, t)) =
+fun find_unused_metaall (Const (@{const_name "Pure.all"}, _) $ Abs (n, _, t)) =
       (if not (Term.is_dependent t) then [n] else []) @ find_unused_metaall t
   | find_unused_metaall (Abs (_, _, t)) =
       find_unused_metaall t
@@ -56,7 +56,7 @@ let
     ]
 
   (* We use a warning instead of the standard mechanisms so that
-   * we can produce a "warning" icon in Isabele/jEdit. *)
+   * we can produce a "warning" icon in Isabelle/jEdit. *)
   val _ =
     if length results > 0 then
       warning (message results |> Pretty.str_of)
@@ -67,7 +67,7 @@ end
 
 (* Setup the tool, stealing the "auto_solve_direct" option. *)
 val _ = Try.tool_setup ("unused_meta_forall",
-    (1, @{option auto_solve_direct}, detect_unused_meta_forall))
+    (1, @{system_option auto_solve_direct}, detect_unused_meta_forall))
 
 *}
 

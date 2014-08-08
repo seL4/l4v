@@ -402,9 +402,9 @@ end
 
 fun mk_corresXF_thm' ctxt prog_info name_map return_vars except_vars precond_vars l2_term l1_term thm =
   mk_corresXF_thm ctxt prog_info name_map return_vars except_vars precond_vars l2_term l1_term (
-    (rewrite_goal_tac [mk_meta_eq @{thm split_def}] 1)
+    (rewrite_goal_tac ctxt [mk_meta_eq @{thm split_def}] 1)
     THEN
-    (rtac (rewrite_rule [mk_meta_eq @{thm split_def}] thm) 1)
+    (rtac (rewrite_rule ctxt [mk_meta_eq @{thm split_def}] thm) 1)
     THEN
     (REPEAT (CHANGED (asm_full_simp_tac (setup_l2_ss ctxt) 1)))
   )
@@ -695,7 +695,7 @@ let
 in
   Goal.init new_thm
   |> asm_full_simp_tac (put_simpset HOL_basic_ss ctxt addsimps [mk_meta_eq @{thm split_def}]) 1 |> Seq.hd
-  |> rtac (rewrite_rule [mk_meta_eq @{thm split_def}] thm) 1 |> Seq.hd
+  |> rtac (rewrite_rule ctxt [mk_meta_eq @{thm split_def}] thm) 1 |> Seq.hd
   |> REPEAT (atac 1) |> Seq.hd
   |> Goal.finish ctxt
 end
@@ -1175,7 +1175,7 @@ in
           val read_vars = union_sets (map #2 expr_list) UNION ret_read_vars
 
           (* Generate a proof. *)
-          val my_debug_tac = if false then print_tac else fn _ => all_tac
+          val my_debug_tac = if false then print_tac ctxt else fn _ => all_tac
           val L2_call_thms = @{thms L2corres_returncall L2corres_voidcall L2corres_modifycall}
           val L2_reccall_thms = @{thms L2corres_recursive_returncall L2corres_recursive_voidcall L2corres_recursive_modifycall}
           val thm =
@@ -1275,7 +1275,7 @@ fun get_l2corres_thm ctxt prog_info fn_info fn_name
   val l2_unfolds = map (fn x => (mk_meta_eq x) handle (THM _) => x) (L2UnfoldThms.get ctxt)
   val init_rule = cterm_of thy l1_term
     |> (Conv.rewr_conv (safe_mk_meta_eq init_unfold)
-        then_conv Raw_Simplifier.rewrite false l2_unfolds)
+        then_conv Raw_Simplifier.rewrite ctxt false l2_unfolds)
 
   (* Extract the term we will be working with. *)
   val source_term = Thm.concl_of init_rule |> Logic.dest_equals |> snd
@@ -1360,9 +1360,9 @@ fun get_l2corres_thm ctxt prog_info fn_info fn_name
   val new_thm = Conv.fconv_rule (
       Utils.remove_meta_conv (fn ctxt =>
         Utils.nth_arg_conv 5 (
-          Raw_Simplifier.rewrite false @{thms L2_remove_scaffolding_1}
+          Raw_Simplifier.rewrite ctxt false @{thms L2_remove_scaffolding_1}
           then_conv
-          Raw_Simplifier.rewrite false @{thms L2_remove_scaffolding_2})) ctxt) new_thm
+          Raw_Simplifier.rewrite ctxt false @{thms L2_remove_scaffolding_2})) ctxt) new_thm
 
   (* Gather statistics. *)
   val _ = Statistics.gather ctxt "L2" fn_name

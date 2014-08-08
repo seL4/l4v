@@ -23,8 +23,8 @@ struct
 val tracing_str =
   "(fn x => (Pretty.writeln (Pretty.enum \" \" \"\" \"\" ["
     ^ "Pretty.str \"Trace:\", (Pretty.from_ML (pretty_ml ("
-      ^ "PolyML.prettyRepresentation (x, get_print_depth ()))))])))"
+      ^ "PolyML.prettyRepresentation (x, ML_Options.get_print_depth ()))))])))"
 
-val _ = Theory.setup (ML_Antiquote.inline (Binding.name "trace") (Scan.succeed tracing_str))
+val _ = Theory.setup (ML_Antiquotation.inline (Binding.name "trace") (Scan.succeed tracing_str))
 
 end

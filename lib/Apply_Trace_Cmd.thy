@@ -65,7 +65,7 @@ end
 (* Render the given fact. *)
 fun pretty_fact ctxt (FoundName ((name, idx), thm)) =
       Pretty.block
-        [Pretty.mark (Proof_Context.markup_fact ctxt name) (Pretty.str name),
+        [Pretty.mark_str (Facts.markup_extern ctxt (Proof_Context.facts_of ctxt) name),
           case idx of
             SOME n => Pretty.str ("(" ^ string_of_int (n + 1) ^ "):")
           | NONE => Pretty.str ":",
@@ -82,7 +82,7 @@ let
   val deps = sort_distinct (prod_ord string_ord Term_Ord.term_ord) deps
 
   (* Retrieve facts which are explicitly mentioned in the method invocation. *)
-  val mentioned_facts = Apply_Trace.mentioned_facts text
+  val mentioned_facts = Apply_Trace.mentioned_facts ctxt text
   |> map (fn thm => (Thm.get_name_hint thm, prop_of thm))
 
   (* Fetch canonical names and theorems. *)
@@ -111,7 +111,7 @@ end
 
 val _ =
   Outer_Syntax.command @{command_spec "apply_trace"} "initial refinement step (unstructured)"
-    (Method.parse >> (Toplevel.print oo (Toplevel.proofs o (Apply_Trace.apply_results {localize_facts = true, silent_fail = false} print_deps))));
+    (Method.parse >> (Toplevel.proofs o (Apply_Trace.apply_results {localize_facts = true, silent_fail = false} print_deps)));
 
 *}
 

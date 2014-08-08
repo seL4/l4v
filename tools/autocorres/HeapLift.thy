@@ -631,7 +631,7 @@ lemma valid_typ_heap_signed_word:
               (\<lambda>f. (vsetter ((\<lambda>x. cast_f' (f (cast_f' x))))))
               t_hrs t_hrs_update"
   apply (clarsimp simp: valid_typ_heap_def
-          Option.map.compositionality o_def c_guard_ptr_coerce)
+          map.compositionality o_def c_guard_ptr_coerce)
   apply (rule read_write_validE_weak [where r=getter], assumption)
   apply (rule read_write_validE_weak [where r=vgetter], assumption)
   apply (rule read_write_validE_weak [where r=t_hrs], assumption)
@@ -928,7 +928,7 @@ lemma array_update_split:
   apply (clarsimp simp: heap_update_def[abs_def])
   apply (subst coerce_heap_update_to_heap_updates[unfolded foldl_conv_fold,
            where chunk = "size_of TYPE('a)" and m = "CARD('b)"])
-    apply (rule size_of_array[unfolded mult_commute])
+    apply (rule size_of_array[unfolded mult.commute])
    apply simp
 
   (* remove false dependency *)
@@ -957,7 +957,7 @@ lemma array_update_split:
    prefer 2
    apply (subst le_diff_conv2)
     apply simp
-   apply (subst mult_commute, subst mult_Suc[symmetric])
+   apply (subst mult.commute, subst mult_Suc[symmetric])
    apply (rule mult_le_mono1)
    apply simp
 
@@ -973,7 +973,7 @@ lemma array_update_split:
   apply (subst take_heap_list_le)
    apply (simp add: size_of_def)
   apply (clarsimp simp: size_of_def)
-  apply (subst mult_commute, rule refl)
+  apply (subst mult.commute, rule refl)
   done
 
 lemma fold_update_id:

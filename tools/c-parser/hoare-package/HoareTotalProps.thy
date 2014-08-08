@@ -374,7 +374,7 @@ next
               fix bdy 
               assume bdy: "\<Gamma> q = Some bdy"
               assume exec_bdy: "\<Gamma>\<turnstile>\<langle>bdy,Normal s\<rangle> \<Rightarrow> t"
-              from valid_bdy [simplified bdy the.simps]  t_notin_F exec_bdy Pre'
+              from valid_bdy [simplified bdy option.sel]  t_notin_F exec_bdy Pre'
               have "t \<in> Normal ` Q' \<union> Abrupt ` A'"
                 by (auto simp add: validt_def valid_def)
               with Pre q 

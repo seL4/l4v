@@ -102,7 +102,7 @@ lemma liftE_liftM: "liftE = liftM Inr"
   apply (simp add: liftE_def liftM_def)
   done
 
-lemma liftME_liftM: "liftME f = liftM (sum_case Inl (Inr \<circ> f))"
+lemma liftME_liftM: "liftME f = liftM (case_sum Inl (Inr \<circ> f))"
   apply (rule ext)
   apply (simp add: liftME_def liftM_def bindE_def returnOk_def lift_def)
   apply (rule_tac f="bind x" in arg_cong)
@@ -595,7 +595,7 @@ lemma validE_impI:
 lemma hoare_option_case_wp:
   "\<lbrakk> \<lbrace>P\<rbrace> f None \<lbrace>Q\<rbrace>;
      \<And>x.  \<lbrace>P' x\<rbrace> f (Some x) \<lbrace>Q' x\<rbrace> \<rbrakk>
-  \<Longrightarrow> \<lbrace>option_case P P' v\<rbrace> f v \<lbrace>\<lambda>rv. case v of None \<Rightarrow> Q rv | Some x \<Rightarrow> Q' x rv\<rbrace>"
+  \<Longrightarrow> \<lbrace>case_option P P' v\<rbrace> f v \<lbrace>\<lambda>rv. case v of None \<Rightarrow> Q rv | Some x \<Rightarrow> Q' x rv\<rbrace>"
   by (cases v) auto
 
 subsection "Reasoning directly about states"
@@ -766,7 +766,7 @@ lemma no_fail_assert_opt [simp, wp]:
 lemma no_fail_option_case [wp]:
   assumes f: "no_fail P f"
   assumes g: "\<And>x. no_fail (Q x) (g x)"
-  shows "no_fail (if x = None then P else Q (the x)) (option_case f g x)"
+  shows "no_fail (if x = None then P else Q (the x)) (case_option f g x)"
   by (clarsimp simp add: f g)
 
 lemma no_fail_if [wp]:
@@ -1679,7 +1679,7 @@ lemma option_case_wp:
   assumes x: "\<And>x. \<lbrace>P x\<rbrace> m x \<lbrace>Q\<rbrace>"
   assumes y: "\<lbrace>P'\<rbrace> m' \<lbrace>Q\<rbrace>"
   shows      "\<lbrace>\<lambda>s. (x = None \<longrightarrow> P' s) \<and> (x \<noteq> None \<longrightarrow> P (the x) s)\<rbrace>
-                option_case m' m x \<lbrace>Q\<rbrace>"
+                case_option m' m x \<lbrace>Q\<rbrace>"
   apply (cases x, simp_all)
    apply (rule y)
   apply (rule x)
@@ -1689,7 +1689,7 @@ lemma option_case_wpE:
   assumes x: "\<And>x. \<lbrace>P x\<rbrace> m x \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
   assumes y: "\<lbrace>P'\<rbrace> m' \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
   shows      "\<lbrace>\<lambda>s. (x = None \<longrightarrow> P' s) \<and> (x \<noteq> None \<longrightarrow> P (the x) s)\<rbrace>
-                option_case m' m x \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
+                case_option m' m x \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
   apply (cases x, simp_all)
    apply (rule y)
   apply (rule x)
@@ -1727,7 +1727,7 @@ lemma assert_wp [wp]: "\<lbrace>\<lambda>s. P \<longrightarrow> Q () s\<rbrace> 
 lemma list_cases_wp:
   assumes a: "\<lbrace>P_A\<rbrace> a \<lbrace>Q\<rbrace>"
   assumes b: "\<And>x xs. ts = x#xs \<Longrightarrow> \<lbrace>P_B x xs\<rbrace> b x xs \<lbrace>Q\<rbrace>"
-  shows "\<lbrace>list_case P_A P_B ts\<rbrace> case ts of [] \<Rightarrow> a | x # xs \<Rightarrow> b x xs \<lbrace>Q\<rbrace>"
+  shows "\<lbrace>case_list P_A P_B ts\<rbrace> case ts of [] \<Rightarrow> a | x # xs \<Rightarrow> b x xs \<lbrace>Q\<rbrace>"
   by (cases ts, auto simp: a b)
 
 (* FIXME: make wp *)
@@ -1959,7 +1959,7 @@ lemma validNF_chain:
   done
 
 lemma validNF_prod_case [wp]:
-  "\<lbrakk> \<And>x y. validNF (P x y) (B x y) Q \<rbrakk> \<Longrightarrow> validNF (prod_case P v) (prod_case (\<lambda>x y. B x y) v) Q"
+  "\<lbrakk> \<And>x y. validNF (P x y) (B x y) Q \<rbrakk> \<Longrightarrow> validNF (case_prod P v) (case_prod (\<lambda>x y. B x y) v) Q"
   by (metis prod.exhaust split_conv)
 
 lemma validE_NF_prod_case [wp]:

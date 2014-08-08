@@ -219,7 +219,6 @@ proof (rule iffI)
      defer
      apply assumption
     apply (clarsimp simp: validNF_def no_fail_def valid_def)
-    apply blast
     done
 next
   assume no_fail: "?LHS"

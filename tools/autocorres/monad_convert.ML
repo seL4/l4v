@@ -137,7 +137,7 @@ let
   val simp_conv =
       Simplifier.rewrite (put_simpset (#polish_rules mt) ctxt addsimps simps)
 
-  (* eta-contract "prod_case" clauses, so that they render as:
+  (* eta-contract "case_prod clauses, so that they render as:
    * "%(a, b). P a b" instead of "case x of (a, b) => P a b". *)
   val prod_case_conv =
     Conv.bottom_conv (
@@ -207,7 +207,7 @@ fun monad_convert_tac (ctxt : Proof.context) (monad_name : string)
 val _ = Context.>> (Context.map_theory
           (Method.setup (Binding.name "monad_convert")
             (* Based on subgoal_tac parser *)
-            (Args.goal_spec -- Scan.lift (Parse.name -- Args.name_source) >>
+            (Args.goal_spec -- Scan.lift (Parse.name -- Args.name_inner_syntax) >>
             (fn (quant, (monad_name, term_str)) => fn ctxt =>
                 SIMPLE_METHOD'' quant (monad_convert_tac ctxt monad_name term_str)))
            "autocorres monad conversion"))

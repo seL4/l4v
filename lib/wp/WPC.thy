@@ -78,10 +78,10 @@ signature WPC = sig
   val detect_term: theory -> thm -> cterm -> (cterm * term) list;
   val detect_terms: theory -> (term -> cterm -> thm -> tactic) -> tactic;
 
-  val split_term: thm list -> theory -> term -> cterm -> thm -> tactic;
+  val split_term: thm list -> Proof.context -> term -> cterm -> thm -> tactic;
 
-  val wp_cases_tac: thm list -> theory -> tactic;
-  val wp_debug_tac: thm list -> theory -> tactic;
+  val wp_cases_tac: thm list -> Proof.context -> tactic;
+  val wp_debug_tac: thm list -> Proof.context -> tactic;
   val wp_cases_method: thm list -> (Proof.context -> Method.method) Parse.context_parser;
 
 end;
@@ -165,18 +165,16 @@ fun resolve_single_tac rules n thm =
                          [], thm :: rules)
    | ([x], seq) => Seq.single x;
 
-fun split_term processors thy target pred fin t =
+fun split_term processors ctxt target pred fin t =
 let
   val hdTarget      = head_of target;
-  val (constNm, T)  = dest_Const hdTarget handle TERM (_, tms)
+  val (constNm, _)  = dest_Const hdTarget handle TERM (_, tms)
                        => raise WPCFailed ("split_term: couldn't dest_Const", tms, []);
-  val constNm_fds   = if String.isSuffix "_case" constNm
-                      then (String.fields (fn c => c = #".") constNm)
-		      else raise WPCFailed ("split_term: not _case", [hdTarget], []);
-  val typeNm        = (String.concatWith "." o rev o tl o rev) constNm_fds;
-  val split         = Global_Theory.get_thm thy (typeNm ^ ".split");
+  val split = case (Ctr_Sugar.ctr_sugar_of_case ctxt constNm) of
+      SOME sugar => #split sugar
+    | _ => raise WPCFailed ("split_term: not a case", [hdTarget], []);
   val subst         = split RS iffd2_thm;
-  val subst2        = instantiate_concl_pred thy pred subst;
+  val subst2        = instantiate_concl_pred (Proof_Context.theory_of ctxt) pred subst;
 in
  ((resolve_tac [subst2] 1)
     THEN
@@ -190,16 +188,16 @@ end;
 
 (* n.b. need to concretise the lazy sequence via a list to ensure exceptions
   have been raised already and catch them *)
-fun wp_cases_tac processors thy thm =
-  detect_terms thy (split_term processors thy) thm
+fun wp_cases_tac processors ctxt thm =
+  detect_terms (Proof_Context.theory_of ctxt) (split_term processors ctxt) thm
       |> Seq.list_of |> Seq.of_list
     handle WPCFailed _ => no_tac thm;
 
-fun wp_debug_tac processors thy  =
-  detect_terms thy (split_term processors thy);
+fun wp_debug_tac processors ctxt  =
+  detect_terms (Proof_Context.theory_of ctxt)  (split_term processors ctxt);
 
-fun wp_cases_method processors = Scan.succeed (fn context =>
-  Method.SIMPLE_METHOD (wp_cases_tac processors (Proof_Context.theory_of context)));
+fun wp_cases_method processors = Scan.succeed (fn ctxt =>
+  Method.SIMPLE_METHOD (wp_cases_tac processors ctxt));
 
 local structure P = Parse and K = Keyword in
 
@@ -265,7 +263,7 @@ lemma set_conj_Int_simp:
   "{s \<in> S. P s} = S \<inter> {s. P s}"
   by auto
 
-lemma option_cases_weak_wp:
+lemma case_options_weak_wp:
   "\<lbrakk> wpc_test P R S; \<And>x. wpc_test P' (R' x) S \<rbrakk>
     \<Longrightarrow> wpc_test (P \<inter> P') (case opt of None \<Rightarrow> R | Some x \<Rightarrow> R' x) S"
   apply (rule wpc_test_weaken)

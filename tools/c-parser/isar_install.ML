@@ -46,7 +46,7 @@ datatype additional_options = MachineState of string | GhostState of string | CR
 
 structure IsaPath = Path
 
-val get_Cdir = Thy_Load.master_directory
+val get_Cdir = Resources.master_directory
 
 fun mk_thy_relative thy s =
     if OS.Path.isRelative s then OS.Path.concat(Path.implode (get_Cdir thy), s)
@@ -110,7 +110,7 @@ end
 
 fun define_global_initializers globloc msgpfx name_munger mungedb cse globs thy = let
   open ProgramAnalysis Absyn
-  val lthy = Named_Target.init I globloc thy
+  val lthy = Named_Target.init globloc thy
   val globinits = let
     val inittab = get_globinits cse
     fun foldthis (gnm, gty) defs = let

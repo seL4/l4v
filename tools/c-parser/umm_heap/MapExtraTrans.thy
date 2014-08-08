@@ -21,7 +21,7 @@ lemmas heap_disj_com = map_disj_com
 lemmas heap_disj_dom = map_disjD
 lemmas heap_merge_com = map_add_com
 lemmas heap_merge_ac = map_add_left_commute
-lemmas heap_merge = map_add_ac
+lemmas heap_merge = map_ac_simps
 lemmas heap_merge_disj = map_add_disj
 lemmas heap_disj_map_le = map_disj_map_le
 lemmas heap_merge_dom_exact = map_disj_add_eq_dom_right_eq
@@ -34,7 +34,7 @@ restrict_map_dom \<rightarrow> restrict_map_subdom
 
 (* XXX: in Misc of map_sep *)
 lemma option_case_None_Some [simp]:
-  "option_case None Some P = P"
+  "case_option None Some P = P"
   by (simp split: option.splits)
 
 (* XXX: when I redefine a lemma using lemmas, it doesn't show up in

@@ -309,7 +309,7 @@ let
           fninfo
   val name_specs = map (fn {fname,spec,...} => (fname,spec)) fninfo
   val thy = List.foldr (uncurry add_syntax) thy name_pars
-  val lthy = Named_Target.init I globloc thy
+  val lthy = Named_Target.init globloc thy
   val name_body = compile_fninfos cse styargs compfn lthy fninfo
   val _ = writeln "Translated all functions"
   val globs = extract_fixes globals_elems
@@ -333,7 +333,7 @@ let
   val (defs, ctxt) =
       if List.exists (isSome o #body) fninfo then let
           val lthy =
-              Named_Target.init I globloc (Proof_Context.theory_of ctxt)
+              Named_Target.init globloc (Proof_Context.theory_of ctxt)
           fun expfname fni = let
             val nm = #fname fni
           in
@@ -387,7 +387,7 @@ let
                                             else s)
                                    speclocalename_b
         val (locname, ctxt') =
-            Expression.add_locale I
+            Expression.add_locale
                 speclocalename_b
                 speclocalename_b
                 globloc_expr

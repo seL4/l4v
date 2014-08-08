@@ -158,17 +158,17 @@ fun dest_Un (Const (@{const_name Lattices.sup}, _) $ t1 $ t2) = dest_Un t1 @ des
   | dest_Un t = [t]
 
 fun UN_const (dT as (Type (@{type_name set}, [dT']))) rT =
-      Const (@{const_name Complete_Lattices.SUPR}, dT --> (dT' --> rT) --> rT) $ Const (@{const_name Orderings.top}, dT)
+      Const (@{const_name Complete_Lattices.SUPREMUM}, dT --> (dT' --> rT) --> rT) $ Const (@{const_name Orderings.top}, dT)
   | UN_const _ _ = raise Match;
 
 fun mk_UN (x, T, P) = UN_const (HOLogic.mk_setT T) (fastype_of P) $ absfree (x, T) P;
 
-fun dest_UN (Const (@{const_name Complete_Lattices.SUPR}, _) $ Const (@{const_name Orderings.top}, _) $ Abs (x, T, t)) =
+fun dest_UN (Const (@{const_name Complete_Lattices.SUPREMUM}, _) $ Const (@{const_name Orderings.top}, _) $ Abs (x, T, t)) =
       let val (vars, body) = dest_UN t
       in ((x, T) :: vars, body) end
   | dest_UN t = ([], t);
 
-fun tap_UN (Const (@{const_name Complete_Lattices.SUPR}, _) $ Const (@{const_name Orderings.top}, _) $ t) = SOME t
+fun tap_UN (Const (@{const_name Complete_Lattices.SUPREMUM}, _) $ Const (@{const_name Orderings.top}, _) $ t) = SOME t
   | tap_UN _ = NONE;
 
 
@@ -516,7 +516,7 @@ val conj_assoc = @{thm HOL.conj_assoc};
 val snd_guaranteeStripPair = @{thm Language.snd_guaranteeStripPair};
 val lookup_Some_in_dom = @{thm Hoare.lookup_Some_in_dom};
 val strip_simps =
-  @{thm Language.strip_simp} :: @{thm option_map_Some} :: @{thms Language.strip_guards_simps};
+  @{thm Language.strip_simp} :: @{thm Option.option.map(2)} :: @{thms Language.strip_guards_simps};
 val normalize_simps =
  [while_def, @{thm Language.bseq_def}, @{thm List.append_Nil}, @{thm List.append_Cons}] @
   @{thms List.list.cases} @
@@ -531,8 +531,8 @@ val guards_simps = @{thms Language.guards.simps};
 val strip_guards_simps = @{thms Language.strip_guards_simps};
 val dest_Guard_simps = @{thms Language.dest_Guard_simps};
 val is_Guard_simps = @{thms Language.is_Guard_simps};
-val com_cases_simps = @{thms Language.com.cases};
-val the_simps = @{thms the.simps};
+val com_cases_simps = @{thms Language.com.case};
+val the_simps = @{thms option.sel};
 val strip_idem = @{thm strip_idem};
 val dom_strip = @{thm dom_strip};
 val Ex_True = @{thm Ex_True};
@@ -634,8 +634,8 @@ fun but_last [] = raise Empty
   | but_last [x] = []
   | but_last (x::xs) = x::but_last xs;
 
-fun dest_splits (Const (@{const_name prod_case},_)$Abs (n,T,t)) = (n,T)::dest_splits t
-  | dest_splits (Const (@{const_name prod_case},_)$Abs (n,T,t)$_) = (n,T)::dest_splits t
+fun dest_splits (Const (@{const_name case_prod},_)$Abs (n,T,t)) = (n,T)::dest_splits t
+  | dest_splits (Const (@{const_name case_prod},_)$Abs (n,T,t)$_) = (n,T)::dest_splits t
   | dest_splits (Abs (n,T,_)) = [(n,T)]
   | dest_splits _ = [];
 
@@ -818,7 +818,7 @@ fun dest_Guard (Const (@{const_name Language.com.Guard},_)$f$g$c) = (f,g,c,false
 
 fun add_declaration name decl thy =
   thy
-  |> Named_Target.init I name
+  |> Named_Target.init name
   |> Local_Theory.declaration {syntax = false, pervasive = false} decl
   |> Local_Theory.exit
   |> Proof_Context.theory_of;
@@ -1104,18 +1104,18 @@ fun expression_no_pos (expr, fixes) : Expression.expression =
 
 fun add_locale name expr elems thy =
   thy
-  |> Expression.add_locale I (Binding.name name) (Binding.name name) expr elems
+  |> Expression.add_locale (Binding.name name) (Binding.name name) expr elems
   |> snd
   |> Local_Theory.exit;
 
 fun add_locale' name expr elems thy =
   thy
-  |> Expression.add_locale I (Binding.name name) (Binding.name name) expr elems
+  |> Expression.add_locale (Binding.name name) (Binding.name name) expr elems
   ||> Local_Theory.exit;
 
 fun add_locale_cmd name expr elems thy =
   thy
-  |> Expression.add_locale_cmd I (Binding.name name) (Binding.name name)
+  |> Expression.add_locale_cmd (Binding.name name) (Binding.name name)
     (expression_no_pos expr) elems
   |> snd
   |> Local_Theory.exit;
@@ -1176,7 +1176,7 @@ fun apply_in_context thy lexp f t =
 
 fun add_abbrev loc mode name spec thy =
   thy
-  |> Named_Target.init I loc
+  |> Named_Target.init loc
   |> (fn lthy => let val t = Syntax.read_term (Local_Theory.target_of lthy) spec;
       in Local_Theory.abbrev mode ((Binding.name name, NoSyn), t) lthy end)
   |> #2
@@ -1356,7 +1356,7 @@ fun procedures_definition locname procs thy =
         fun add_decl_and_def lname ctxt =
             ctxt
             |> Proof_Context.theory_of
-            |> Named_Target.init I lname
+            |> Named_Target.init lname
             |> Local_Theory.declaration {syntax = false, pervasive = false} parameter_info_decl
             |> (fn lthy => if has_body name
                            then snd (Local_Theory.define (def lthy) lthy)
@@ -1421,7 +1421,7 @@ fun procedures_definition locname procs thy =
           in thy
              |> add_locale_cmd implN parent []
              |> Proof_Context.theory_of
-             |> (fn thy => Expression.sublocale_global I parentN
+             |> (fn thy => Expression.sublocale_global parentN
                   (mk_loc_exp [Locale.intern thy implN]) [] thy)
              |> Proof.global_terminal_proof
                  ((Method.Basic (fn ctxt => Method.SIMPLE_METHOD
@@ -2073,7 +2073,7 @@ fun dest_hoare t =
     let
       val triple =
         (strip_qnt_body @{const_name "All"} o
-          HOLogic.dest_Trueprop o strip_qnt_body @{const_name all}) t;
+          HOLogic.dest_Trueprop o strip_qnt_body @{const_name Pure.all}) t;
     in
       dest_hoare_raw triple
     end;
@@ -2101,7 +2101,7 @@ fun get_aux_tvar rule =
 fun strip_vars t =
   let
     val bdy = (HOLogic.dest_Trueprop o Logic.strip_assums_concl) t;
-  in strip_qnt_vars @{const_name all} t @ strip_qnt_vars @{const_name All} bdy end;
+  in strip_qnt_vars @{const_name Pure.all} t @ strip_qnt_vars @{const_name All} bdy end;
 
 
 local
@@ -2803,7 +2803,7 @@ fun while_tac ctxt state_kind inv cont_tac tac mode t i=
 fun dest_split (Abs (x,T,t)) =
      let val (vs,recomb,bdy) = dest_split t;
      in ((x,T)::vs,fn t' => Abs (x,T,recomb t'),bdy) end
-  | dest_split (c as Const (@{const_name prod_case},_)$Abs(x,T,t)) =
+  | dest_split (c as Const (@{const_name case_prod},_)$Abs(x,T,t)) =
      let val (vs,recomb,bdy) = dest_split t;
      in ((x,T)::vs,fn t' => c$Abs (x,T,recomb t'),bdy) end
   | dest_split t = ([],I,t);
@@ -3545,14 +3545,14 @@ in
 fun solve_modifies_tac ctxt state_kind state_space i st =
   let
     val thy = Proof_Context.theory_of ctxt;
-    fun is_split_state (trm as (Const (@{const_name all},_)$Abs(x,T,t))) =
+    fun is_split_state (trm as (Const (@{const_name Pure.all},_)$Abs(x,T,t))) =
       if state_space trm <> 0 then
         try (fn () =>
           let
             fun seed (upd$v$st) = seed st
               | seed (globals$t) = (1,t) (* split only state pair *)
               | seed t = (~1,t) (* split globals completely *)
-            val all_vars = strip_qnt_vars @{const_name all} t;
+            val all_vars = strip_qnt_vars @{const_name Pure.all} t;
             val concl = HOLogic.dest_Trueprop (Logic.strip_assums_concl t);
             val ex_vars = strip_qnt_vars @{const_name Ex} concl;
             val state = Bound (length all_vars + length ex_vars);
@@ -3726,7 +3726,7 @@ fun get_state_space_in_subset_eq thy t =
   try (fn () =>
     let
       val (subset_eq,_) =
-        (strip_comb o HOLogic.dest_Trueprop o strip_qnt_body @{const_name all}) t;
+        (strip_comb o HOLogic.dest_Trueprop o strip_qnt_body @{const_name Pure.all}) t;
       val Ts = map snd (strip_vars t);
       val T = fastype_of1 (Ts,subset_eq);
       val Type (_, [_,Type (_, [Type (_, [state_spaceT]), _])]) = T;

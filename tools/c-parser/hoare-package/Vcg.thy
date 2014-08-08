@@ -38,6 +38,7 @@ begin
 axiomatization NoBody::"('s,'p,'f) com"
 
 ML_file "hoare.ML"
+find_theorems name:"Language.com."
 setup Hoare.setup
 
 method_setup hoare = "Hoare.hoare"

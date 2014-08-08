@@ -363,7 +363,7 @@ lemma Suc_0_eq_1 [polish]: "Suc 0 = 1"
   by simp
 
 (*
- * Return / prod_case combinations.
+ * Return / case_prod combinations.
  *
  * These can probably be improved to avoid duplication.
  *)

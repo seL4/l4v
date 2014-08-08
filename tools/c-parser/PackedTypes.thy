@@ -310,7 +310,7 @@ lemma dvd_div_mult_id:
   fixes x :: "'a :: semiring_div"
   shows "\<lbrakk>x \<noteq> 0; x dvd y\<rbrakk> \<Longrightarrow> y div x * x = y"
   unfolding dvd_def
-  by (clarsimp simp add:  mult_commute div_mult_self2_is_id)
+  by (clarsimp simp add:  mult.commute div_mult_self2_is_id)
 
 lemma td_fafu_idem_final_pad:
   "padup (2 ^ align_td t) (size_td t) = 0
@@ -635,7 +635,7 @@ lemma access_ti_append':
 proof(induct xs)
   case Nil show ?case by simp
 next
-  case (Cons x xs) thus ?case by (simp add: min_def add_ac drop_take)
+  case (Cons x xs) thus ?case by (simp add: min_def ac_simps drop_take)
 qed
 
 section {* Instances *}
@@ -790,7 +790,7 @@ next
     case (Suc n'')
     hence "m' < n''" using `Suc m' < n'` by simp
     thus ?thesis using Suc
-      by (simp add: Suc.hyps add_ac)
+      by (simp add: Suc.hyps ac_simps)
   qed
 qed
 
@@ -893,7 +893,7 @@ proof (simp add: packed_type_access_ti, rule ext)
 
   have szt: "n + size_td t \<le> size_of TYPE('b)"
     unfolding size_of_def
-    by (subst add_commute, rule field_lookup_offset_size [OF fl])
+    by (subst add.commute, rule field_lookup_offset_size [OF fl])
   moreover have t0: "0 < size_td t" using fl wf_size_desc
     by (rule field_lookup_wf_size_desc_gt)
   ultimately have szn: "n < size_of TYPE('b)" by simp
@@ -954,14 +954,14 @@ proof (simp add: packed_type_access_ti, rule ext)
 	unfolding field_lvalue_def field_lookup_offset_eq [OF fl]
 	apply -
 	apply (drule (2) intvl_less_upper)
-	apply (simp add: add_assoc)
+	apply (simp add: add.assoc)
 	done
       moreover have "x \<in> {ptr_val p..+size_of TYPE('b)}" using fl xin
 	by (rule subsetD [OF field_tag_sub])
       ultimately have "x - ptr_val p \<le> (of_nat n + of_nat (size_td t - 1))" using al szb
 	apply -
-	apply (rule word_diff_ls(4)[where xa=x and x=x, simplified, standard])
-     apply (metis (hide_lams, mono_tags) nat_add_commute of_nat_add word_unat.Rep_inverse)
+	apply (rule word_diff_ls(4)[where xa=x and x=x for x, simplified])
+     apply (metis (hide_lams, mono_tags) add.commute of_nat_add)
 	apply (erule (2) intvl_le_lower)
 	done
       moreover have "unat (of_nat n + of_nat (size_td t - 1) :: 32 word) = n + size_td t - 1"
@@ -1019,9 +1019,9 @@ proof (simp add: packed_type_access_ti, rule ext)
 	(replicate (size_of TYPE('b)) 0) ! unat (x - ptr_val p) = hp x"
       proof (subst field_access_update_nth_disjD [OF fl])
 	have "x - ptr_val p \<le> of_nat (size_of TYPE('b) - 1)"
-	proof (rule word_diff_ls(4)[where xa=x and x=x, simplified, standard])
+	proof (rule word_diff_ls(4)[where xa=x and x=x for x, simplified])
       	  from xin show "x \<le> of_nat (size_of TYPE('b) - 1) + ptr_val p" using al szb
-	    by (subst add_commute, rule intvl_less_upper)
+	    by (subst add.commute, rule intvl_less_upper)
 	  show "ptr_val p \<le> x" using xin al szb
 	    by (rule intvl_le_lower)
 	qed
