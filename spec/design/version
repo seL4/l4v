@@ -1,5 +1,5 @@
 Built from git repo at ../../../seL4/haskell by kleing
 
 Generated from changeset:
-3ffeaac Retire old dft package; resurrect Haskell manual.
+2261557 Fix IFC6410 build
 

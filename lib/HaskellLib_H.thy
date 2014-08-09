@@ -30,7 +30,7 @@ abbreviation(input) bind_drop :: "('a, 'c) nondet_monad \<Rightarrow> ('a, 'b) n
   where "bind_drop \<equiv> (\<lambda>x y. bind x (K_bind y))"
 
 lemma bind_drop_test:
-  "foldr (op >>) x (return ()) = sequence_x x"
+  "foldr bind_drop x (return ()) = sequence_x x"
   by (rule ext, simp add: sequence_x_def)
 
 (* If the given monad is deterministic, this function converts
@@ -266,6 +266,8 @@ definition
   bit_def[simp]:
  "bit x \<equiv> shiftL 1 x"
 
+definition
+"isAligned x n \<equiv> x && mask n = 0"
 
 class integral = ord +
   fixes fromInteger :: "nat \<Rightarrow> 'a"

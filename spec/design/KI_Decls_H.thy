@@ -97,8 +97,5 @@ createFreeSlotRegions :: "unit kernel_init"
 consts
 createEmptyRegions :: "unit kernel_init"
 
-consts
-isAligned :: "('a :: {minus, one, zero, plus, numeral, HS_bit}) \<Rightarrow> nat \<Rightarrow> bool"
-
 
 end

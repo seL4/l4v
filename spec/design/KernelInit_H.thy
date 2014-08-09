@@ -478,9 +478,6 @@ defs createEmptyRegions_def:
     provideRegion $ BootRegion l1magnitude maxBound BREmpty 0
 od)"
 
-defs isAligned_def:
-"isAligned x n \<equiv> x && mask n = 0"
-
 
 consts
   newKSDomSchedule :: "(domain \<times> machine_word) list"

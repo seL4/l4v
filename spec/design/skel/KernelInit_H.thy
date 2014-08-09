@@ -18,7 +18,7 @@ imports
   Config_H
 begin
 
-#INCLUDE_HASKELL SEL4/Kernel/Init.lhs bodies_only NOT funArray newKernelState distinct rangesBy InitData doKernelOp runInit
+#INCLUDE_HASKELL SEL4/Kernel/Init.lhs bodies_only NOT isAligned funArray newKernelState distinct rangesBy InitData doKernelOp runInit
 
 consts
   newKSDomSchedule :: "(domain \<times> machine_word) list"
