@@ -2851,7 +2851,7 @@ lemmas msgRegisters_unfold
 
 lemma get_mrs_corres:
   "corres op= (tcb_at t)
-              (tcb_at' t and option_case \<top> valid_ipc_buffer_ptr' buf)
+              (tcb_at' t and case_option \<top> valid_ipc_buffer_ptr' buf)
               (get_mrs t buf mi) (getMRs t buf (message_info_map mi))"
   proof -
   have S: "get = gets id"
@@ -2960,8 +2960,8 @@ declare word_neq_0_conv [simp del]
 lemma set_mrs_corres:
   assumes m: "mrs' = mrs"
   shows 
-  "corres op= (tcb_at t and option_case \<top> in_user_frame buf)
-              (tcb_at' t and option_case \<top> valid_ipc_buffer_ptr' buf)
+  "corres op= (tcb_at t and case_option \<top> in_user_frame buf)
+              (tcb_at' t and case_option \<top> valid_ipc_buffer_ptr' buf)
               (set_mrs t buf mrs) (setMRs t buf mrs')"
 proof -
   have setRegister_def2: "setRegister = (\<lambda>r v. modify (\<lambda>s. s ( r := v )))"
@@ -3058,12 +3058,12 @@ qed
 
 lemma copy_mrs_corres:
   "corres op= (tcb_at s and tcb_at r
-               and option_case \<top> in_user_frame sb
-               and option_case \<top> in_user_frame rb
+               and case_option \<top> in_user_frame sb
+               and case_option \<top> in_user_frame rb
                and K (unat n \<le> msg_max_length))
               (tcb_at' s and tcb_at' r
-               and option_case \<top> valid_ipc_buffer_ptr' sb
-               and option_case \<top> valid_ipc_buffer_ptr' rb)
+               and case_option \<top> valid_ipc_buffer_ptr' sb
+               and case_option \<top> valid_ipc_buffer_ptr' rb)
               (copy_mrs s sb r rb n) (copyMRs s sb r rb n)"
 proof -
   have U: "unat n \<le> msg_max_length \<Longrightarrow>

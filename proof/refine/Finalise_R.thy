@@ -3541,18 +3541,18 @@ lemma arch_recycle_cap_corres:
                apply (rule page_table_mapped_corres)
               apply (wp page_table_mapped_wp)
              apply (rule hoare_drop_imps, wp)
-            apply (simp add: prod_case_beta option_case_If2 split del: split_if)
+            apply (simp add: case_prod_beta case_option_If2 split del: split_if)
             apply (wp  invalidate_tlb_by_asid_valid_cap final_cap_lift page_table_mapped_wp)
-           apply (simp add: prod_case_beta option_case_If2 split del: split_if)
+           apply (simp add: case_prod_beta case_option_If2 split del: split_if)
            apply (wp invalidateTLBByASID_cteCaps_of | simp)+
           apply (rule corres_machine_op)
           apply (rule corres_Id)
             apply simp
            apply simp
           apply (rule no_fail_cleanCacheRange_PoU)
-         apply (simp add: option_case_If2 if_apply_def2 split del: split_if)
+         apply (simp add: case_option_If2 if_apply_def2 split del: split_if)
          apply (wp do_machine_op_valid_cap | wp_once hoare_drop_imps)+
-        apply (simp add: option_case_If2 if_apply_def2 split del: split_if)
+        apply (simp add: case_option_If2 if_apply_def2 split del: split_if)
         apply (wp do_machine_op_valid_cap hoare_vcg_all_lift
                   no_irq_cleanCacheRange_PoU hoare_vcg_const_imp_lift)
        apply (rule_tac r'=dc and S="op ="
@@ -3648,7 +3648,7 @@ lemma arch_recycle_cap_corres:
         apply ((wp no_fail_cleanCacheRange_PoU no_irq_cleanCacheRange_PoU
                    do_machine_op_valid_cap do_machine_op_valid_arch
                    hoare_vcg_const_imp_lift hoare_vcg_all_lift hoare_vcg_disj_lift
-                | simp add: option_case_If2 if_apply_def2
+                | simp add: case_option_If2 if_apply_def2
                        split del: split_if)+)[3]
      apply (rule hoare_strengthen_post)
       apply (rule_tac 
@@ -3905,7 +3905,7 @@ lemma recycle_cap_corres:
          apply (rule thread_set_all_corres, simp_all add: tcb_registers_caps_merge_def)[1]
             apply (simp add: tcb_relation_def default_tcb_def makeObject_tcb
                              new_context_def newContext_def
-                             fault_option_relation_def initContext_def)
+                             fault_rel_optionation_def initContext_def)
            apply (simp add: etcb_relation_def default_etcb_def makeObject_tcb timeSlice_def
                             minBound_word default_priority_def time_slice_def)
           apply (wp gets_wp)

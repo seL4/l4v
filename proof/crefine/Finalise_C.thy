@@ -1110,7 +1110,7 @@ lemma pageTableMapped_ccorres:
    apply (simp add: ignoreFailure_def catch_def
                     bindE_bind_linearise liftE_def
                del: Collect_const cong: call_ignore_cong)
-   apply (rule ccorres_split_nothrow_novcg_sum_case)
+   apply (rule ccorres_split_nothrow_novcg_case_sum)
          apply clarsimp
          apply (ctac (no_vcg) add: findPDForASID_ccorres)
         apply ceqv
@@ -1253,7 +1253,7 @@ lemma Arch_finaliseCap_ccorres:
       apply (frule(1) cap_get_tag_isCap_unfolded_H_cap)
       apply (frule small_frame_cap_is_mapped_alt)
       apply (clarsimp simp: cap_small_frame_cap_lift cap_to_H_def
-                            option_case_over_if
+                            case_option_over_if
                      elim!: ccap_relationE simp del: Collect_const)
       apply (rule ccorres_rhs_assoc)+
       apply csymbr
@@ -1271,7 +1271,7 @@ lemma Arch_finaliseCap_ccorres:
      apply (frule(1) cap_get_tag_isCap_unfolded_H_cap)
      apply (frule frame_cap_is_mapped_alt)
      apply (clarsimp simp: cap_frame_cap_lift cap_to_H_def
-                           option_case_over_if
+                           case_option_over_if
                     elim!: ccap_relationE simp del: Collect_const)
      apply (rule ccorres_Cond_rhs_Seq, simp_all del: Collect_const)[1]
       apply (rule ccorres_rhs_assoc)+
@@ -1289,7 +1289,7 @@ lemma Arch_finaliseCap_ccorres:
      apply csymbr
      apply (frule cap_get_tag_isCap_unfolded_H_cap)
      apply (clarsimp simp: cap_page_table_cap_lift cap_to_H_def
-                           option_case_over_if if_1_0_0
+                           case_option_over_if if_1_0_0
                     elim!: ccap_relationE
                  simp del: Collect_const)
      apply (rule ccorres_Cond_rhs_Seq)
@@ -1305,7 +1305,7 @@ lemma Arch_finaliseCap_ccorres:
      apply (rule return_Null_ccorres)
     apply (simp only: bool.simps)
     apply (simp cong: option.case_cong
-                 add: option_case_If)
+                 add: case_option_If)
     apply (rule ccorres_cond_false_seq)
     apply simp
     apply (rule return_Null_ccorres)
@@ -1318,7 +1318,7 @@ lemma Arch_finaliseCap_ccorres:
     apply (simp only: if_1_0_0 simp_thms)
     apply (frule cap_get_tag_isCap_unfolded_H_cap)
     apply (clarsimp simp: cap_page_directory_cap_lift cap_to_H_def
-                          option_case_over_if
+                          case_option_over_if
                    elim!: ccap_relationE simp del: Collect_const)
      apply (rule ccorres_Cond_rhs_Seq)
      apply (rule ccorres_rhs_assoc)+
@@ -1330,7 +1330,7 @@ lemma Arch_finaliseCap_ccorres:
      apply wp
     apply simp
     apply (rule return_Null_ccorres)
-   apply (simp cong: option.case_cong add: option_case_If)
+   apply (simp cong: option.case_cong add: case_option_If)
    apply (rule ccorres_cond_false_seq, simp)
    apply (rule return_Null_ccorres)
   apply (clarsimp simp: from_bool_0 Collect_const_mem)

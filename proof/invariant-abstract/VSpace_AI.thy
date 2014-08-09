@@ -1525,7 +1525,7 @@ definition
       and (\<lambda>s. \<exists>pd. pd_at_asid asid pd s)
   | ArchInvocation_A.PageUnmap cap ptr \<Rightarrow>
      \<lambda>s. \<exists>r R sz m. cap = ARM_Structs_A.PageCap r R sz m \<and>
-         option_case True (valid_unmap sz) m \<and>
+         case_option True (valid_unmap sz) m \<and>
          cte_wp_at (is_arch_diminished (cap.ArchObjectCap cap)) ptr s \<and>
          s \<turnstile> (cap.ArchObjectCap cap)
   | ArchInvocation_A.PageFlush typ start end pstart pd asid \<Rightarrow>
@@ -2409,8 +2409,8 @@ lemma vs_refs_add_one':
   "p \<notin> kernel_mapping_slots \<Longrightarrow>
    vs_refs (ArchObj (PageDirectory (pd (p := pde)))) =
    vs_refs (ArchObj (PageDirectory pd))
-       - Pair (VSRef (ucast p) (Some APageDirectory)) ` Option.set (pde_ref (pd p))
-       \<union> Pair (VSRef (ucast p) (Some APageDirectory)) ` Option.set (pde_ref pde)"
+       - Pair (VSRef (ucast p) (Some APageDirectory)) ` set_option (pde_ref (pd p))
+       \<union> Pair (VSRef (ucast p) (Some APageDirectory)) ` set_option (pde_ref pde)"
   apply (simp add: vs_refs_def)
   apply (rule set_eqI)
   apply clarsimp
@@ -2437,15 +2437,15 @@ lemma vs_refs_add_one:
   "\<lbrakk>pde_ref (pd p) = None; p \<notin> kernel_mapping_slots\<rbrakk> \<Longrightarrow>
    vs_refs (ArchObj (PageDirectory (pd (p := pde)))) =
    vs_refs (ArchObj (PageDirectory pd))
-       \<union> Pair (VSRef (ucast p) (Some APageDirectory)) ` Option.set (pde_ref pde)"
+       \<union> Pair (VSRef (ucast p) (Some APageDirectory)) ` set_option (pde_ref pde)"
   by (simp add: vs_refs_add_one')
 
 lemma vs_refs_pages_add_one':
   "p \<notin> kernel_mapping_slots \<Longrightarrow>
    vs_refs_pages (ArchObj (PageDirectory (pd (p := pde)))) =
    vs_refs_pages (ArchObj (PageDirectory pd))
-       - Pair (VSRef (ucast p) (Some APageDirectory)) ` Option.set (pde_ref_pages (pd p))
-       \<union> Pair (VSRef (ucast p) (Some APageDirectory)) ` Option.set (pde_ref_pages pde)"
+       - Pair (VSRef (ucast p) (Some APageDirectory)) ` set_option (pde_ref_pages (pd p))
+       \<union> Pair (VSRef (ucast p) (Some APageDirectory)) ` set_option (pde_ref_pages pde)"
   apply (simp add: vs_refs_pages_def)
   apply (rule set_eqI)
   apply clarsimp
@@ -2472,7 +2472,7 @@ lemma vs_refs_pages_add_one:
   "\<lbrakk>pde_ref_pages (pd p) = None; p \<notin> kernel_mapping_slots\<rbrakk> \<Longrightarrow>
    vs_refs_pages (ArchObj (PageDirectory (pd (p := pde)))) =
    vs_refs_pages (ArchObj (PageDirectory pd))
-       \<union> Pair (VSRef (ucast p) (Some APageDirectory)) ` Option.set (pde_ref_pages pde)"
+       \<union> Pair (VSRef (ucast p) (Some APageDirectory)) ` set_option (pde_ref_pages pde)"
   by (simp add: vs_refs_pages_add_one')
 
 definition is_asid_pool_cap :: "cap \<Rightarrow> bool"
@@ -2954,11 +2954,11 @@ lemma store_pde_invs_unmap':
   apply (rule hoare_name_pre_state)
    apply (clarsimp simp: store_pde_def | wp)+ 
     apply (rule_tac T ="  Pair (VSRef (p && mask pd_bits >> 2) (Some APageDirectory))
-                        ` Option.set (pde_ref (pd (ucast (p && mask pd_bits >> 2))))"
+                        ` set_option (pde_ref (pd (ucast (p && mask pd_bits >> 2))))"
                 and T'="  Pair (VSRef (p && mask pd_bits >> 2) (Some APageDirectory))
-                        ` Option.set (pde_ref_pages (pd (ucast (p && mask pd_bits >> 2))))"
+                        ` set_option (pde_ref_pages (pd (ucast (p && mask pd_bits >> 2))))"
                 and S'="  Pair (VSRef (p && mask pd_bits >> 2) (Some APageDirectory))
-                        ` Option.set (pde_ref_pages pde)" in set_pd_invs_unmap')
+                        ` set_option (pde_ref_pages pde)" in set_pd_invs_unmap')
   apply wp
   apply (clarsimp simp: obj_at_def)
   apply (rule conjI)
@@ -4800,7 +4800,7 @@ lemma set_mrs_typ_at[wp]:
                    store_word_offs_def set_object_def
               cong: option.case_cong
               split del: split_if)
-  apply (wp hoare_vcg_split_option_case)
+  apply (wp hoare_vcg_split_case_option)
     apply (rule mapM_wp [where S=UNIV, simplified])
     apply (wp | simp)+
   apply (clarsimp simp: obj_at_def a_type_def

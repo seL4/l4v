@@ -65,9 +65,9 @@ lemma syscall_valid:
   shows "\<lbrace>P\<rbrace> Syscall_A.syscall m_flt h_flt m_err h_err m_fin \<lbrace>Q\<rbrace>, \<lbrace>E\<rbrace>"
   apply (simp add: Syscall_A.syscall_def liftE_bindE
              cong: sum.case_cong)
-  apply (rule hoare_split_bind_sum_caseE)
+  apply (rule hoare_split_bind_case_sumE)
     apply (wp x)[1]
-   apply (rule hoare_split_bind_sum_caseE)
+   apply (rule hoare_split_bind_case_sumE)
      apply (wp x|simp)+
   done
 
@@ -609,7 +609,7 @@ lemma lookup_extras_real_ctes[wp]:
   apply (rule hoare_pre)
    apply (wp mapME_set)
       apply (simp add: lookup_cap_and_slot_def split_def)
-      apply (wp option_cases_weak_wp mapM_wp'
+      apply (wp case_options_weak_wp mapM_wp'
                  | simp add: load_word_offs_word_def)+
   done
 

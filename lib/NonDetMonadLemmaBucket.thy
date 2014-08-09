@@ -147,7 +147,7 @@ lemma hoare_vcg_ex_lift_R:
   apply (auto split: sum.split)
   done
 
-lemma hoare_option_case_wpR:
+lemma hoare_case_option_wpR:
   "\<lbrakk>\<lbrace>P\<rbrace> f None \<lbrace>Q\<rbrace>,-; \<And>x. \<lbrace>P' x\<rbrace> f (Some x) \<lbrace>Q' x\<rbrace>,-\<rbrakk> \<Longrightarrow>
   \<lbrace>case_option P P' v\<rbrace> f v \<lbrace>\<lambda>rv. case v of None \<Rightarrow> Q rv | Some x \<Rightarrow> Q' x rv\<rbrace>,-"
   by (cases v) auto
@@ -366,7 +366,7 @@ lemma hoare_imp_eq_substR:
   "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,- \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv s. rv = x \<longrightarrow> Q x s\<rbrace>,-"
   by (fastforce simp add: valid_def validE_R_def validE_def split: sum.splits)
 
-lemma hoare_split_bind_sum_case:
+lemma hoare_split_bind_case_sum:
   assumes x: "\<And>rv. \<lbrace>R rv\<rbrace> g rv \<lbrace>Q\<rbrace>"
              "\<And>rv. \<lbrace>S rv\<rbrace> h rv \<lbrace>Q\<rbrace>"
   assumes y: "\<lbrace>P\<rbrace> f \<lbrace>S\<rbrace>,\<lbrace>R\<rbrace>"
@@ -375,7 +375,7 @@ lemma hoare_split_bind_sum_case:
   apply (case_tac x, simp_all add: x)
   done
 
-lemma hoare_split_bind_sum_caseE:
+lemma hoare_split_bind_case_sumE:
   assumes x: "\<And>rv. \<lbrace>R rv\<rbrace> g rv \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
              "\<And>rv. \<lbrace>S rv\<rbrace> h rv \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
   assumes y: "\<lbrace>P\<rbrace> f \<lbrace>S\<rbrace>,\<lbrace>R\<rbrace>"
@@ -1159,7 +1159,7 @@ proof -
 qed
 
 
-lemma option_cases_weak_wp:
+lemma case_options_weak_wp:
   "\<lbrakk> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>; \<And>x. \<lbrace>P'\<rbrace> g x \<lbrace>Q\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>P and P'\<rbrace> case opt of None \<Rightarrow> f | Some x \<Rightarrow> g x \<lbrace>Q\<rbrace>"
   apply (cases opt)
    apply (clarsimp elim!: hoare_weaken_pre)
@@ -1510,7 +1510,7 @@ lemma hoare_vcg_const_imp_lift_R:
 
 lemmas throwError_validE_R = throwError_wp [where E="\<top>\<top>", folded validE_R_def]
 
-lemma valid_option_case_post_wp:
+lemma valid_case_option_post_wp:
   "(\<And>x. \<lbrace>P x\<rbrace> f \<lbrace>\<lambda>rv. Q x\<rbrace>) \<Longrightarrow>
     \<lbrace>\<lambda>s. case ep of Some x \<Rightarrow> P x s | _ \<Rightarrow> True\<rbrace>
        f \<lbrace>\<lambda>rv s. case ep of Some x \<Rightarrow> Q x s | _ \<Rightarrow> True\<rbrace>"
@@ -1597,7 +1597,7 @@ next
     done
 qed
 
-lemma option_case_fail_return_val:
+lemma case_option_fail_return_val:
   "(fst (case_option fail return v s) = {(rv, s')}) = (v = Some rv \<and> s = s')"
   by (cases v, simp_all add: fail_def return_def)
 
@@ -2475,7 +2475,7 @@ lemma hoare_rv_split:
   apply (case_tac a, fastforce+)
   done
 
-lemma option_case_find_give_me_a_map:
+lemma case_option_find_give_me_a_map:
   "case_option a return (find f xs)
     = liftM theLeft
       (mapME (\<lambda>x. if (f x) then throwError x else returnOk ()) xs
@@ -2852,11 +2852,11 @@ lemma simple_bind_fail [simp]:
   apply (auto intro!: bind_fail_propagates)
   done
 
-lemma valid_prod_case:
+lemma valid_case_prod:
   "\<lbrakk> \<And>x y. valid (P x y) (f x y) Q \<rbrakk> \<Longrightarrow> valid (case_prod P v) (case_prod (\<lambda>x y. f x y) v) Q"
   by (simp add: split_def)
 
-lemma validE_prod_case:
+lemma validE_case_prod:
   "\<lbrakk> \<And>x y. validE (P x y) (f x y) Q E \<rbrakk> \<Longrightarrow> validE (case_prod P v) (case_prod (\<lambda>x y. f x y) v) Q E"
   by (simp add: split_def)
 

@@ -856,9 +856,9 @@ lemma tcl_it[wp]:
 
 
 lemma arch_derive_cap_objrefs_iszombie:
-  "\<lbrace>\<lambda>s . P (Option.set (aobj_ref cap)) False s\<rbrace>
+  "\<lbrace>\<lambda>s . P (set_option (aobj_ref cap)) False s\<rbrace>
      arch_derive_cap cap
-   \<lbrace>\<lambda>rv s. P (Option.set (aobj_ref rv)) False s\<rbrace>,-"
+   \<lbrace>\<lambda>rv s. P (set_option (aobj_ref rv)) False s\<rbrace>,-"
   apply(cases cap, simp_all add: is_zombie_def arch_derive_cap_def)
       apply(rule hoare_pre, wpc?, wp, simp)+
   done
@@ -1445,8 +1445,8 @@ lemma cte_wp_at_orth:
 declare sym_ex_elim[elim!]
 
 
-lemma no_irq_option_case:
-  "\<lbrakk> no_irq f; \<And>x. no_irq (g x) \<rbrakk> \<Longrightarrow> no_irq (option_case f g x)"
+lemma no_irq_case_option:
+  "\<lbrakk> no_irq f; \<And>x. no_irq (g x) \<rbrakk> \<Longrightarrow> no_irq (case_option f g x)"
   apply (subst no_irq_def)
   apply clarsimp
   apply (rule hoare_pre)
@@ -1467,7 +1467,7 @@ lemma copy_mrs_typ_at[wp]:
                    store_word_offs_def set_object_def
               cong: option.case_cong
               split del: split_if)
-  apply (wp hoare_vcg_split_option_case mapM_wp')
+  apply (wp hoare_vcg_split_case_option mapM_wp')
    apply (wp hoare_drop_imps mapM_wp')
    apply simp_all
   done
@@ -1560,7 +1560,7 @@ lemmas get_tcb_ko_atI = get_tcb_ko_at [THEN iffD1]
 
 
 crunch "distinct" [wp]: set_mrs pspace_distinct
-  (wp: select_wp hoare_vcg_split_option_case mapM_wp 
+  (wp: select_wp hoare_vcg_split_case_option mapM_wp 
        hoare_drop_imps  refl
    simp: zipWithM_x_mapM)
 
@@ -1696,7 +1696,7 @@ lemma valid_recv_ep_tcb:
 
 lemma lookup_ipc_buffer_in_user_frame[wp]:
   "\<lbrace>valid_objs and tcb_at t\<rbrace> lookup_ipc_buffer b t
-   \<lbrace>option_case (\<lambda>_. True) in_user_frame\<rbrace>"
+   \<lbrace>case_option (\<lambda>_. True) in_user_frame\<rbrace>"
   apply (simp add: lookup_ipc_buffer_def)
   apply (wp get_cap_wp thread_get_wp | wpc | simp)+
   apply (clarsimp simp add: obj_at_def is_tcb)
@@ -1704,7 +1704,7 @@ lemma lookup_ipc_buffer_in_user_frame[wp]:
                                            mask (pageBitsForSize xc))) s", simp)
   apply (drule (1) cte_wp_valid_cap)
   apply (clarsimp simp add: valid_cap_def cap_aligned_def in_user_frame_def)
-  apply (thin_tac "option_case ?a ?b ?c")
+  apply (thin_tac "case_option ?a ?b ?c")
   apply (rule_tac x=xc in exI)
   apply (subgoal_tac "(xa + (tcb_ipc_buffer tcb && mask (pageBitsForSize xc)) &&
             ~~ mask (pageBitsForSize xc)) = xa", simp)
@@ -3224,7 +3224,7 @@ lemma rai_st_tcb_neq:
 
 
 crunch ct[wp]: set_mrs "\<lambda>s. P (cur_thread s)" 
-  (wp: option_case_wp mapM_wp)
+  (wp: case_option_wp mapM_wp)
 
 
 lemma get_ep_ko [wp]:

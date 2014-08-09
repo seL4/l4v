@@ -493,10 +493,10 @@ crunch inv [wp]: "ArchRetypeDecls_H.decodeInvocation" "P"
    ignore: forME_x getObject)
 
 (* FIXME: Move *)
-lemma option_case_corres:
+lemma case_option_corres:
   assumes nonec: "corres r Pn Qn (nc >>= f) (nc' >>= g)"
   and     somec: "\<And>v'. corres r (Ps v') (Qs v') (sc v' >>= f) (sc' v' >>= g)"
-  shows "corres r (option_case Pn Ps v) (option_case Qn Qs v) (option_case nc sc v >>= f) (option_case nc' sc' v >>= g)"
+  shows "corres r (case_option Pn Ps v) (case_option Qn Qs v) (case_option nc sc v >>= f) (case_option nc' sc' v >>= g)"
   apply (cases v)
    apply simp  
    apply (rule nonec)
@@ -504,10 +504,10 @@ lemma option_case_corres:
   apply (rule somec)
   done
 
-lemma option_case_corresE:
+lemma case_option_corresE:
   assumes nonec: "corres r Pn Qn (nc >>=E f) (nc' >>=E g)"
   and     somec: "\<And>v'. corres r (Ps v') (Qs v') (sc v' >>=E f) (sc' v' >>=E g)"
-  shows "corres r (option_case Pn Ps v) (option_case Qn Qs v) (option_case nc sc v >>=E f) (option_case nc' sc' v >>=E g)"
+  shows "corres r (case_option Pn Ps v) (case_option Qn Qs v) (case_option nc sc v >>=E f) (case_option nc' sc' v >>=E g)"
   apply (cases v)
    apply simp  
    apply (rule nonec)
@@ -762,7 +762,7 @@ shows
       apply (simp split: invocation_label.split)
      apply (subgoal_tac "length excaps' = length excaps")
       prefer 2
-      apply (simp add: list_all2_def)
+      apply (simp add: list_all2_iff)
      apply (cases args, simp)
      apply (rename_tac a0 as)
      apply (case_tac as, simp)
@@ -936,7 +936,7 @@ shows
           apply (rule corres_returnOkTT)
           apply simp
          apply (simp add: Let_def split: list.split)
-         apply (rule option_case_corresE)
+         apply (rule case_option_corresE)
           apply (rule corres_trivial)
           apply simp
          apply simp
@@ -1086,7 +1086,7 @@ shows
       apply clarsimp
      apply (rule whenE_throwError_corres, simp)
       apply (clarsimp simp: kernel_base_def kernelBase_def)
-     apply (rule option_case_corresE)
+     apply (rule case_option_corresE)
       apply (rule corres_trivial)
       apply clarsimp
      apply clarsimp
@@ -1831,7 +1831,7 @@ lemma setObject_pde_nosch [wp]:
 
 crunch nosch[wp]: setMRs "\<lambda>s. P (ksSchedulerAction s)"
     (ignore: getRestartPC setRegister transferCapsToSlots
-   wp: hoare_drop_imps hoare_vcg_split_option_case
+   wp: hoare_drop_imps hoare_vcg_split_case_option
         mapM_wp'
    simp: split_def zipWithM_x_mapM)
 

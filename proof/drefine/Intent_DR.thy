@@ -144,15 +144,15 @@ lemma transform_objects_update_other:
                                cap_installed_at_irq_def map_add_def)
 
 lemma caps_of_object_update_state [simp]:
-  "(\<lambda>n. Option.map (\<lambda>(f, _). f (tcb_state_update stf tcb)) (tcb_cap_cases n)) =
-   (\<lambda>n. Option.map (\<lambda>(f, _). f tcb) (tcb_cap_cases n))"
+  "(\<lambda>n. map_option (\<lambda>(f, _). f (tcb_state_update stf tcb)) (tcb_cap_cases n)) =
+   (\<lambda>n. map_option (\<lambda>(f, _). f tcb) (tcb_cap_cases n))"
   apply (rule ext)
   apply (simp add: tcb_cap_cases_def split: split_if)
   done
 
 lemma caps_of_object_update_context [simp]:
-  "(\<lambda>n. Option.map (\<lambda>(f, _). f (tcb_context_update stf tcb)) (tcb_cap_cases n)) =
-   (\<lambda>n. Option.map (\<lambda>(f, _). f tcb) (tcb_cap_cases n))"
+  "(\<lambda>n. map_option (\<lambda>(f, _). f (tcb_context_update stf tcb)) (tcb_cap_cases n)) =
+   (\<lambda>n. map_option (\<lambda>(f, _). f tcb) (tcb_cap_cases n))"
   apply (rule ext)
   apply (simp add: tcb_cap_cases_def split: split_if)
   done
@@ -278,7 +278,7 @@ lemma dcorres_set_object_tcb:
   apply (clarsimp simp: transform_objects_def)
   apply (rule ext)
   apply clarsimp
-  apply (clarsimp simp: Option.map_def restrict_map_def map_add_def)
+  apply (clarsimp simp: map_option_def restrict_map_def map_add_def)
   done
 
 lemma set_cxt_none_det_intent_corres:
@@ -1538,7 +1538,7 @@ lemma store_word_corres_helper:
   apply (rule exI)
   apply (rule ext)
   apply (rename_tac thread)
-  apply (clarsimp simp: map_add_def split: option.splits simp del: Option.option_case_map)
+  apply (clarsimp simp: map_add_def split: option.splits simp del: Option.case_option_map)
   apply (rule conjI)
    apply (clarsimp simp:restrict_map_def map_add_def)
   apply clarsimp
@@ -1669,7 +1669,7 @@ lemma dcorres_store_word_safe:
   apply (clarsimp simp: transform_def transform_current_thread_def)
   apply (rule ext)
   apply (rename_tac thread)
-   apply (clarsimp simp:transform_objects_def restrict_map_def Option.map_def map_add_def split:option.splits)
+   apply (clarsimp simp:transform_objects_def restrict_map_def map_option_def map_add_def split:option.splits)
    apply (clarsimp simp:transform_object_def split:Structures_A.kernel_object.splits)
    apply (clarsimp simp:transform_tcb_def transform_full_intent_def Let_def)
    apply (clarsimp simp del:upt.simps

@@ -229,9 +229,9 @@ lemma decode_domain_corres:
   apply (unfold transform_cap_list_def)
   apply (case_tac "invocation_type label'")
    apply simp_all
-   apply (clarsimp simp: transform_intent_def Option.map_def split: option.splits)+
+   apply (clarsimp simp: transform_intent_def map_option_def split: option.splits)+
    defer
-   apply (clarsimp simp: transform_intent_def Option.map_def split: option.splits)+
+   apply (clarsimp simp: transform_intent_def map_option_def split: option.splits)+
   apply (clarsimp simp: transform_intent_domain_def)
   apply (case_tac "args'")
    apply simp
@@ -621,7 +621,7 @@ lemma dcorres_set_eobject_tcb:
   apply (clarsimp simp: transform_objects_def)
   apply (rule ext)
   apply clarsimp
-  apply (clarsimp simp: Option.map_def restrict_map_def map_add_def)
+  apply (clarsimp simp: map_option_def restrict_map_def map_add_def)
   done
 
 lemma invoke_domain_corres:
@@ -1011,7 +1011,7 @@ lemma decode_invocation_corres':
     \<and> (\<forall>e\<in> set excaps. s \<turnstile> fst e) \<and> cte_wp_at (Not \<circ> is_master_reply_cap) slot s \<and> cte_wp_at (diminished cap) slot s
     \<and> (\<forall>e\<in> set excaps. cte_wp_at (diminished (fst e)) (snd e) s)) rv')
      ((\<lambda>(cap, cap_ref, extra_caps).
-          option_case (if ep_related_cap cap then Decode_D.decode_invocation cap cap_ref extra_caps undefined else Monads_D.throw)
+          case_option (if ep_related_cap cap then Decode_D.decode_invocation cap cap_ref extra_caps undefined else Monads_D.throw)
           (Decode_D.decode_invocation cap cap_ref extra_caps)
           (cdl_intent_op (transform_full_intent (machine_state s) (cur_thread s) ctcb)))
      rv)
@@ -1325,7 +1325,7 @@ lemma handle_invocation_corres:
            and  Q' = "op = s'a" and Q=\<top>
            and rr="\<lambda>(cap,slot,extra) (slot',cap',extra',buffer).
          cap = transform_cap cap' \<and> slot = transform_cslot_ptr slot'
-         \<and> extra = transform_cap_list extra'"  in  corres_split_bind_sum_case)
+         \<and> extra = transform_cap_list extra'"  in  corres_split_bind_case_sum)
         apply (rule_tac Q = "\<lambda>x. \<top>" and Q'="\<lambda>x. op = s'a" in corres_initial_splitE)
            apply (clarsimp simp: transform_full_intent_def Let_def)
            apply (rule corres_guard_imp[OF dcorres_lookup_cap_and_slot[simplified]])
@@ -1348,7 +1348,7 @@ lemma handle_invocation_corres:
        apply (simp add:liftE_bindE)
        apply (rule corres_when,simp)
        apply (rule handle_fault_corres)
-      apply (rule corres_split_bind_sum_case)
+      apply (rule corres_split_bind_case_sum)
           apply (rule decode_invocation_corres')
              apply (simp add: split_def)+
          apply (rule dcorres_when_r)

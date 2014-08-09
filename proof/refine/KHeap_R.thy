@@ -33,7 +33,7 @@ lemma loadObject_default_inv:
   "\<lbrace>P\<rbrace> loadObject_default addr addr' next obj \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (simp add: loadObject_default_def magnitudeCheck_def
                    alignCheck_def unless_def alignError_def
-          | wp hoare_vcg_split_option_case
+          | wp hoare_vcg_split_case_option
                hoare_drop_imps hoare_vcg_all_lift)+
   done
 
@@ -55,13 +55,13 @@ translations
 lemma no_fail_loadObject_default [wp]:
   "no_fail (\<lambda>s. \<exists>obj. projectKO_opt ko = Some (obj::'a) \<and> 
                       is_aligned p (objBits obj) \<and> q = p
-                      \<and> option_case True (\<lambda>x. 2 ^ (objBits obj) \<le> x - p) n)
+                      \<and> case_option True (\<lambda>x. 2 ^ (objBits obj) \<le> x - p) n)
            (loadObject_default p q n ko :: ('a::pre_storable) kernel)"
   apply (simp add: loadObject_default_def split_def projectKO_def
                    alignCheck_def alignError_def magnitudeCheck_def
                    unless_def)
   apply (rule no_fail_pre)
-   apply (wp option_case_wp)
+   apply (wp case_option_wp)
   apply (clarsimp simp: is_aligned_mask)
   apply (clarsimp split: option.split_asm)
   apply (clarsimp simp: is_aligned_mask[symmetric])

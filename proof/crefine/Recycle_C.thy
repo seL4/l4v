@@ -445,7 +445,7 @@ lemma invalidateTLBByASID_ccorres:
   apply (cinit lift: asid_')
    apply (ctac(no_vcg) add: loadHWASID_ccorres)
     apply csymbr
-    apply (simp add: option_case_If2 del: Collect_const)
+    apply (simp add: case_option_If2 del: Collect_const)
     apply (rule ccorres_if_cond_throws2[where Q=\<top> and Q'=\<top>])
        apply (clarsimp simp: pde_stored_asid_def to_bool_def split: split_if)
       apply (rule ccorres_return_void_C[unfolded dc_def])
@@ -740,7 +740,7 @@ lemma arch_recycleCap_ccorres:
       apply csymbr
       apply csymbr
       apply (ctac(no_vcg) add: pageTableMapped_ccorres)
-       apply (simp add: option_case_If del: Collect_const)
+       apply (simp add: case_option_If del: Collect_const)
        apply (ctac (no_vcg, no_simp) add: ccorres_when [where R = \<top>]) -- "leave guard = goal and a call to invalidateTLB"
            apply (simp add: option_to_0_def option_to_ptr_def
                      split: option.splits)

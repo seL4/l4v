@@ -332,7 +332,7 @@ where valid_cap'_def:
             0 < asid \<and> asid \<le> 2^asid_bits - 1 \<and> ref < kernelBase)
   | ARMStructures_H.PageDirectoryCap ref mapdata \<Rightarrow>
     page_directory_at' ref s \<and>
-    option_case True (\<lambda>asid. 0 < asid \<and> asid \<le> 2^asid_bits - 1) mapdata))"
+    case_option True (\<lambda>asid. 0 < asid \<and> asid \<le> 2^asid_bits - 1) mapdata))"
 
 abbreviation (input)
   valid_cap'_syn :: "kernel_state \<Rightarrow> capability \<Rightarrow> bool" ("_ \<turnstile>' _" [60, 60] 61)
@@ -1747,7 +1747,7 @@ lemma ps_clear_lookupAround2:
   "\<lbrakk> ps_clear p' n s; ksPSpace s p' = Some x;
      p' \<le> p; p \<le> p' + 2 ^ n - 1;
      \<lbrakk> fst (lookupAround2 p (ksPSpace s)) = Some (p', x);
-       option_case True (\<lambda>x. x - p' >= 2 ^ n) (snd (lookupAround2 p (ksPSpace s)))
+       case_option True (\<lambda>x. x - p' >= 2 ^ n) (snd (lookupAround2 p (ksPSpace s)))
       \<rbrakk> \<Longrightarrow> P (lookupAround2 p (ksPSpace s)) \<rbrakk> \<Longrightarrow> P (lookupAround2 p (ksPSpace s))"
   apply (drule meta_mp)
    apply (cases "fst (lookupAround2 p (ksPSpace s))")

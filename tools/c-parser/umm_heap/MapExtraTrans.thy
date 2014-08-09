@@ -33,7 +33,7 @@ restrict_map_dom \<rightarrow> restrict_map_subdom
 *)
 
 (* XXX: in Misc of map_sep *)
-lemma option_case_None_Some [simp]:
+lemma case_option_None_Some [simp]:
   "case_option None Some P = P"
   by (simp split: option.splits)
 

@@ -88,7 +88,7 @@ lemma performPageTableInvocationUnmap_ccorres:
                       elim!: ccap_relationE)
        apply (subst cteCap_update_cte_to_H)
          apply (clarsimp simp: option_map_Some_eq2)
-         apply (rule trans, rule sym, rule the.simps, rule sym, erule arg_cong)
+         apply (rule trans, rule sym, rule option.sel, rule sym, erule arg_cong)
         apply (erule iffD1[OF cap_page_table_cap_lift])
        apply (clarsimp simp: option_map_Some_eq2 cap_get_tag_isCap_ArchObject[symmetric]
                              cap_lift_page_table_cap cap_to_H_def
@@ -693,7 +693,7 @@ lemma decodeARMPageTableInvocation_ccorres:
          apply (rule ccorres_rhs_assoc)+
          apply csymbr
          apply csymbr
-         apply (simp add: option_case_If2 if_1_0_0 if_to_top_of_bind
+         apply (simp add: case_option_If2 if_1_0_0 if_to_top_of_bind
                           if_to_top_of_bindE hd_conv_nth del: Collect_const)
          apply (rule ccorres_if_cond_throws2[rotated -1, where Q=\<top> and Q'=\<top>])
             apply vcg
@@ -2231,7 +2231,7 @@ definition
   resolve_ret_rel :: "(vmpage_size \<times> 32 word) option \<Rightarrow> resolve_ret_C \<Rightarrow> bool"
 where
   "resolve_ret_rel \<equiv>
-     \<lambda>x y. option_rel (\<lambda>rv rv'. resolve_ret_C.frameSize_C rv' = framesize_from_H (fst rv)
+     \<lambda>x y. rel_option (\<lambda>rv rv'. resolve_ret_C.frameSize_C rv' = framesize_from_H (fst rv)
                               \<and> snd rv = resolve_ret_C.frameBase_C rv')
                       x (to_option (to_bool \<circ> resolve_ret_C.valid_C) y)"
 
@@ -2371,7 +2371,7 @@ lemma decodeARMFrameInvocation_ccorres:
                   del: Collect_const
                  cong: StateSpace.state.fold_congs globals.fold_congs
                       if_cong invocation_label.case_cong list.case_cong)
-      apply (simp add: if_1_0_0 split_def option_case_If2 if_to_top_of_bind
+      apply (simp add: if_1_0_0 split_def case_option_If2 if_to_top_of_bind
                   del: Collect_const cong: if_cong)
       apply (rule ccorres_if_cond_throws[rotated -1, where Q=\<top> and Q'=\<top>])
          apply vcg
@@ -2540,7 +2540,7 @@ lemma decodeARMFrameInvocation_ccorres:
            apply vcg
           apply (rule ccorres_rhs_assoc)+
           apply csymbr+
-          apply (simp add: option_case_If2 if_to_top_of_bind if_to_top_of_bindE
+          apply (simp add: case_option_If2 if_to_top_of_bind if_to_top_of_bindE
                            hd_conv_nth
                       del: Collect_const cong: conj_cong)
           apply (rule ccorres_if_cond_throws2[rotated -1, where Q=\<top> and Q'=\<top>])
@@ -2791,7 +2791,7 @@ lemma decodeARMFrameInvocation_ccorres:
             apply vcg
            apply (rule ccorres_rhs_assoc)+
            apply csymbr+
-           apply (simp add: option_case_If2 if_to_top_of_bind if_to_top_of_bindE
+           apply (simp add: case_option_If2 if_to_top_of_bind if_to_top_of_bindE
                             hd_conv_nth
                        del: Collect_const cong: conj_cong)
            apply (rule ccorres_if_cond_throws2[rotated -1, where Q=\<top> and Q'=\<top>])
@@ -3076,8 +3076,8 @@ lemma pageBase_spec:
   apply (simp add:pageBitsForSize_def split:vmpage_size.splits)
   done
 
-lemma liftE_sum_case:
-  "liftE f >>= sum_case (throwError \<circ> Inr) g = f >>= g"
+lemma liftE_case_sum:
+  "liftE f >>= case_sum (throwError \<circ> Inr) g = f >>= g"
   by (simp add:liftE_def)
 
 crunch inv': resolveVAddr "P"
@@ -3212,7 +3212,7 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
          apply (simp add:injection_handler_throwError)
          apply (rule syscall_error_throwError_ccorres_n)
          apply (simp add: syscall_error_to_H_cases)
-        apply (simp add:option_case_If2[unfolded if_swap[symmetric]])
+        apply (simp add:case_option_If2[unfolded if_swap[symmetric]])
         apply (simp only: injection_handler_if_returnOk)
         apply csymbr
         apply csymbr
@@ -3266,11 +3266,11 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
              apply (rule_tac Q=\<top> and Q'=\<top> in ccorres_if_cond_throws[rotated -1])
                 apply vcg
                apply (simp add:resolve_ret_rel_def to_option_def to_bool_def
-                 option_rel_def split:option.splits if_splits)
+                 rel_option_def split:option.splits if_splits)
               apply (simp add:invocationCatch_def ArchRetype_H.performInvocation_def
                 performInvocation_def performARMMMUInvocation_def)
               apply (simp add:performPageDirectoryInvocation_def 
-                liftE_sum_case liftE_bindE liftE_alternative)
+                liftE_case_sum liftE_bindE liftE_alternative)
               apply (ctac add: setThreadState_ccorres)
               apply (rule ccorres_alternative2)
               apply (simp add:returnOk_liftE[symmetric])
@@ -3287,7 +3287,7 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
              apply (rule_tac Q=\<top> and Q'=\<top> in ccorres_if_cond_throws[rotated -1])
                 apply vcg
                apply (clarsimp simp add:page_base_def resolve_ret_rel_def
-                 option_rel_def to_option_def
+                 rel_option_def to_option_def
                  mask_def[unfolded Word.shiftl_1,symmetric]
                  split:option.splits if_splits)
                apply (simp add: framesize_from_to_H)
@@ -3297,7 +3297,7 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
                 syscall_error_rel_def exception_defs
                 syscall_error_to_H_cases false_def)
               apply (clarsimp simp add:page_base_def resolve_ret_rel_def
-                option_rel_def to_option_def
+                rel_option_def to_option_def
                 mask_def[unfolded Word.shiftl_1,symmetric]
                 split:option.splits if_splits)
               apply (cut_tac sz = a in pbfs_less_wb')
@@ -3409,7 +3409,7 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
      apply (intro conjI impI allI)
       apply (clarsimp simp:ThreadState_Restart_def less_mask_eq rf_sr_ksCurThread
         resolve_ret_rel_def framesize_from_to_H framesize_from_H_mask2
-        to_option_def option_rel_def to_bool_def
+        to_option_def rel_option_def to_bool_def
         split:option.splits if_splits
       | fastforce simp: mask_def
       | rule flushtype_relation_triv,simp add:isPageFlush_def isPDFlush_def
@@ -3424,7 +3424,7 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
     apply (intro conjI impI allI)
      apply (clarsimp simp:ThreadState_Restart_def less_mask_eq rf_sr_ksCurThread
         resolve_ret_rel_def framesize_from_to_H framesize_from_H_mask2
-        to_option_def option_rel_def to_bool_def
+        to_option_def rel_option_def to_bool_def
         split:option.splits if_splits
       | fastforce simp: mask_def
       | rule flushtype_relation_triv,simp add:isPageFlush_def isPDFlush_def
@@ -3439,7 +3439,7 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
    apply (intro conjI impI allI)
     apply (clarsimp simp:ThreadState_Restart_def less_mask_eq rf_sr_ksCurThread
       resolve_ret_rel_def framesize_from_to_H framesize_from_H_mask2
-      to_option_def option_rel_def to_bool_def
+      to_option_def rel_option_def to_bool_def
       split:option.splits if_splits
       | fastforce simp: mask_def
       | rule flushtype_relation_triv,simp add:isPageFlush_def isPDFlush_def
@@ -3454,7 +3454,7 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
   apply (intro conjI impI allI)
    apply (clarsimp simp:ThreadState_Restart_def less_mask_eq rf_sr_ksCurThread
      resolve_ret_rel_def framesize_from_to_H framesize_from_H_mask2
-     to_option_def option_rel_def to_bool_def
+     to_option_def rel_option_def to_bool_def
      split:option.splits if_splits
      | fastforce simp: mask_def
      | rule flushtype_relation_triv,simp add:isPageFlush_def isPDFlush_def

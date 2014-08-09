@@ -3347,9 +3347,9 @@ crunch rvk_prog: deleting_irq_handler "\<lambda>s. revoke_progress_ord m (\<lamb
      wp: crunch_wps empty_slot_rvk_prog' select_wp)
 
 lemma finalise_cap_rvk_prog:
-   "\<lbrace>\<lambda>s. revoke_progress_ord m (\<lambda>x. Option.map cap_to_rpo (caps_of_state s x))\<rbrace>
+   "\<lbrace>\<lambda>s. revoke_progress_ord m (\<lambda>x. map_option cap_to_rpo (caps_of_state s x))\<rbrace>
    finalise_cap a b 
-   \<lbrace>\<lambda>_ s. revoke_progress_ord m (\<lambda>x. Option.map cap_to_rpo (caps_of_state s x))\<rbrace>"
+   \<lbrace>\<lambda>_ s. revoke_progress_ord m (\<lambda>x. map_option cap_to_rpo (caps_of_state s x))\<rbrace>"
   apply (case_tac a,simp_all add:liftM_def)
     apply (wp ep_cancel_all_rvk_prog aep_cancel_all_rvk_prog
       suspend_rvk_prog deleting_irq_handler_rvk_prog

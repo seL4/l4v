@@ -1868,7 +1868,7 @@ fun init_graph_refines_proof funs nm ctxt = let
         THEN graph_gamma_tac ctxt 1
         THEN ALLGOALS (simp_tac (put_simpset HOL_basic_ss ctxt addsimps [body_thm]
             addsimps @{thms entry_point.simps function_inputs.simps
-                            function_outputs.simps map.simps list.simps}))
+                            function_outputs.simps list.map list.simps}))
         THEN TRY ((rtac @{thm simpl_to_graph_noop_same_eqs}
             THEN' inst_graph_tac ctxt) 1)
     )

@@ -280,7 +280,7 @@ lemma send_upd_ctxintegrity:
 lemma set_mrs_respects_in_async_ipc':
   "\<lbrace>integrity aag X st and st_tcb_at (op = Structures_A.Running) thread and
     K ((\<not> is_subject aag thread \<longrightarrow> st_tcb_at (receive_blocked_on ep) thread st
-        \<and> option_case True (\<lambda>buf'. auth_ipc_buffers st thread = ptr_range buf' msg_align_bits) buf) 
+        \<and> case_option True (\<lambda>buf'. auth_ipc_buffers st thread = ptr_range buf' msg_align_bits) buf) 
         \<and> aag_has_auth_to aag AsyncSend ep \<and> ipc_buffer_has_auth aag thread buf) \<rbrace>
      set_mrs thread buf msgs
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>" 
@@ -1351,7 +1351,7 @@ lemma set_original_respects_in_ipc_autarch:
   apply (wp set_original_wp)
   apply (clarsimp simp: integrity_tcb_in_ipc_def)
   apply (simp add: integrity_def
-                   tcb_states_of_state_def get_tcb_def Option.map_def
+                   tcb_states_of_state_def get_tcb_def map_option_def
                  split del: split_if cong: if_cong)
   apply simp
   apply (clarsimp simp: integrity_cdt_def)
@@ -1451,8 +1451,8 @@ lemma transfer_caps_respects_in_ipc:
          and (\<lambda>s. (\<forall>x \<in> set caps. s \<turnstile> fst x) \<and> (\<forall>x \<in> set caps. cte_wp_at (\<lambda>cp. fst x \<noteq> cap.NullCap \<longrightarrow> cp = fst x) (snd x) s \<and> real_cte_at (snd x) s))
          and K ((\<not> null caps \<longrightarrow> is_subject aag receiver)
               \<and> (\<forall>cap \<in> set caps. is_subject aag (fst (snd cap)))
-              \<and> (\<not> is_subject aag receiver \<longrightarrow> option_case True (\<lambda>buf'. auth_ipc_buffers st receiver = ptr_range buf' msg_align_bits) recv_buf)
-              \<and> (option_case True (\<lambda>buf'. is_aligned buf' msg_align_bits) recv_buf)
+              \<and> (\<not> is_subject aag receiver \<longrightarrow> case_option True (\<lambda>buf'. auth_ipc_buffers st receiver = ptr_range buf' msg_align_bits) recv_buf)
+              \<and> (case_option True (\<lambda>buf'. is_aligned buf' msg_align_bits) recv_buf)
               \<and> length caps < 6)\<rbrace>
      transfer_caps mi caps endpoint receiver recv_buf diminish
    \<lbrace>\<lambda>rv. integrity_tcb_in_ipc aag X receiver epptr TRContext st\<rbrace>"
@@ -1473,8 +1473,8 @@ lemma transfer_caps_respects_in_ipc:
 lemma copy_mrs_respects_in_ipc:
   "\<lbrace>integrity_tcb_in_ipc aag X receiver epptr TRContext st
         and st_tcb_at (receive_blocked_on epptr) receiver
-        and K ((\<not> is_subject aag receiver \<longrightarrow> option_case True (\<lambda>buf'. auth_ipc_buffers st receiver = ptr_range buf' msg_align_bits) rbuf)
-              \<and> (option_case True (\<lambda>buf'. is_aligned buf' msg_align_bits) rbuf) \<and> unat n < 2 ^ (msg_align_bits - 2))\<rbrace>
+        and K ((\<not> is_subject aag receiver \<longrightarrow> case_option True (\<lambda>buf'. auth_ipc_buffers st receiver = ptr_range buf' msg_align_bits) rbuf)
+              \<and> (case_option True (\<lambda>buf'. is_aligned buf' msg_align_bits) rbuf) \<and> unat n < 2 ^ (msg_align_bits - 2))\<rbrace>
      copy_mrs sender sbuf receiver rbuf n
    \<lbrace>\<lambda>rv. integrity_tcb_in_ipc aag X receiver epptr TRContext st\<rbrace>"
   apply (rule hoare_gen_asm)

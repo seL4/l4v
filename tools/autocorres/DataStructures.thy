@@ -111,7 +111,7 @@ lemma list_last_is_NULL:
     "\<lbrakk> is_list s p; the_list s p = l; p \<noteq> NULL \<rbrakk> \<Longrightarrow> list_next (the (s (last l))) = NULL"
   apply (induct l arbitrary: p)
    apply clarsimp
-  apply (metis is_list_non_NULL last_ConsL last_ConsR linked_list.the_list_non_NULL the.simps the_list_empty' tl.simps(2))
+  apply (metis is_list_non_NULL last_ConsL last_ConsR linked_list.the_list_non_NULL option.sel the_list_empty' list.sel(3))
   done
 
 lemma list_in_Some:

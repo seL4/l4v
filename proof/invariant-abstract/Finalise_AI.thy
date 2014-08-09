@@ -2354,7 +2354,7 @@ lemma arch_cap_recycle_replaceable:
             (cap.ArchObjectCap rv) (cap.ArchObjectCap cap)\<rbrace>"
   apply (simp add: arch_recycle_cap_def)
   apply (rule hoare_pre)
-   apply (wpc, simp_all only: prod_case_beta cong: option.case_cong imp_cong)
+   apply (wpc, simp_all only: case_prod_beta cong: option.case_cong imp_cong)
        apply ((wp | simp add: replaceable_or_arch_update_same
                               arch_reset_mem_mapping.simps)+)[3]
       -- "PageCase"
@@ -2363,7 +2363,7 @@ lemma arch_cap_recycle_replaceable:
             arch_finalise_pt_pd_empty page_table_mapped_inv
             invalidate_tlb_by_asid_pspace_aligned
             invalidate_tlb_by_asid_valid_cap do_machine_op_valid_cap
-            final_cap_lift option_cases_weak_wp
+            final_cap_lift case_options_weak_wp
             mapM_x_wp' [OF store_pte_caps_of_state]
             mapM_x_wp' [OF store_pte_cte_wp_at]
             mapM_x_wp' [OF store_pte_aligned]
@@ -2377,14 +2377,14 @@ lemma arch_cap_recycle_replaceable:
                    if_apply_def2
        | wp_once hoare_drop_imps )+)[1]
       apply (simp add:arch_finalise_cap_def)
-      apply ((wpc | wp valid_option_case_post_wp unmap_page_unmapped
+      apply ((wpc | wp valid_case_option_post_wp unmap_page_unmapped
                       hoare_vcg_all_lift hoare_vcg_imp_lift K_valid)+)[2]
       -- "PagetableCap case"
     apply ((simp only: replaceable_or_arch_update_pg
        | wp arch_finalise_case_no_lookup arch_finalise_pt_pd_empty
             page_table_mapped_inv invalidate_tlb_by_asid_pspace_aligned
             invalidate_tlb_by_asid_valid_cap do_machine_op_valid_cap
-            final_cap_lift option_cases_weak_wp
+            final_cap_lift case_options_weak_wp
             mapM_x_swp_store_invalid_pte_invs
             mapM_x_wp' [OF store_pte_caps_of_state]
             mapM_x_wp' [OF store_pte_cte_wp_at]
@@ -2402,7 +2402,7 @@ lemma arch_cap_recycle_replaceable:
    apply ((wp arch_finalise_case_no_lookup arch_finalise_pt_pd_empty
       invalidate_tlb_by_asid_pspace_aligned invalidate_tlb_by_asid_valid_cap
       do_machine_op_valid_cap find_pd_for_asid_inv mapM_x_swp_store_invalid_pde_invs
-      final_cap_lift option_cases_weak_wp
+      final_cap_lift case_options_weak_wp
       mapM_x_wp' [OF store_pde_caps_of_state]
       mapM_x_wp' [OF store_pde_cte_wp_at]
       mapM_x_wp' [OF store_pde_aligned]
@@ -2840,7 +2840,7 @@ lemma set_asid_pool_invs_table:
    apply clarsimp
    apply (drule obj_ref_elemD)
    apply (frule(2) unique_table_refsD,
-          unfold obj_refs.simps aobj_ref.simps Option.set.simps,
+          unfold obj_refs.simps aobj_ref.simps set_option.simps,
           assumption)
    apply (clarsimp simp:vs_cap_ref_def table_cap_ref_def
      split:cap.split_asm arch_cap.split_asm)
@@ -3147,12 +3147,12 @@ crunch valid_arch_state[wp]: invalidate_tlb_by_asid "valid_arch_state"
 (*FIXME: move *)
 lemma corres_option_split:
   "\<lbrakk>v = v'; corres_underlying sr nf r P P' a c; (\<And>x. v = Some x \<Longrightarrow> corres_underlying sr nf r (Q x) (Q' x) (b x) (d x))\<rbrakk>
-  \<Longrightarrow> corres_underlying sr nf r (option_case P Q v) (option_case P' Q' v') (option_case a b v) (option_case c d v')"
+  \<Longrightarrow> corres_underlying sr nf r (case_option P Q v) (case_option P' Q' v') (case_option a b v) (case_option c d v')"
   by (cases v', simp_all)
 
 
-lemma hoare_post_option_case_ext:
-  "\<lbrace>R\<rbrace> f \<lbrace>\<lambda>rv s. option_case (P s) (\<lambda>rv'. Q rv' s) rv\<rbrace> \<Longrightarrow> \<lbrace>R\<rbrace> f \<lbrace>option_case P Q\<rbrace>"
+lemma hoare_post_case_option_ext:
+  "\<lbrace>R\<rbrace> f \<lbrace>\<lambda>rv s. case_option (P s) (\<lambda>rv'. Q rv' s) rv\<rbrace> \<Longrightarrow> \<lbrace>R\<rbrace> f \<lbrace>case_option P Q\<rbrace>"
   by (erule hoare_post_imp [rotated], simp split: option.splits)
 
 

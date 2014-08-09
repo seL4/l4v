@@ -194,7 +194,7 @@ locale lift_state_space =
   assumes proj_inj_commute: "\<And>S s.  project (inject S s) = s"
   defines "lift\<^sub>c \<equiv> Compose.lift\<^sub>c project inject"
   defines "project\<^sub>x \<equiv> xstate_map project"
-  defines "lift\<^sub>e \<equiv> (\<lambda>\<Gamma> p. Option.map lift\<^sub>c (\<Gamma> p))"
+  defines "lift\<^sub>e \<equiv> (\<lambda>\<Gamma> p. map_option lift\<^sub>c (\<Gamma> p))"
   defines "lift\<^sub>f \<equiv> Compose.lift\<^sub>f project inject"
   defines "lift\<^sub>s \<equiv> Compose.lift\<^sub>s project"
   defines "lift\<^sub>r \<equiv> Compose.lift\<^sub>r project inject"
@@ -268,7 +268,7 @@ lemma (in lift_state_space) project\<^sub>x_def':
 
 lemma (in lift_state_space) lift\<^sub>e_def': 
   "lift\<^sub>e \<Gamma> p \<equiv> (case \<Gamma> p of Some bdy \<Rightarrow> Some (lift\<^sub>c bdy) | None \<Rightarrow> None)"  
-  by (simp add: lift\<^sub>e_def Option.map_def)
+  by (simp add: lift\<^sub>e_def map_option_def)
 
 
 

@@ -1971,11 +1971,11 @@ lemma case_bool_If:
   "case_bool P Q b = (if b then P else Q)"
   by simp
 
-lemma option_case_If:
+lemma case_option_If:
   "case_option P (\<lambda>x. Q) v = (if v = None then P else Q)"
   by clarsimp
 
-lemma option_case_If2:
+lemma case_option_If2:
   "case_option P Q v = If (v \<noteq> None) (Q (the v)) P"
   by (simp split: option.split)
 
@@ -2732,7 +2732,7 @@ lemmas limited_and_simps = limited_and_simps1
        compl_of_1 shiftl_shiftr1[unfolded word_size mask_def]
        shiftl_shiftr2[unfolded word_size mask_def]
 
-lemma isRight_sum_case: "isRight x \<Longrightarrow> case_sum f g x = g (theRight x)"
+lemma isRight_case_sum: "isRight x \<Longrightarrow> case_sum f g x = g (theRight x)"
   by (clarsimp simp add: isRight_def)
 
 lemma split_word_eq_on_mask:
@@ -3880,7 +3880,7 @@ lemma strengthen_ignore_if:
   "A s \<and> B s \<longrightarrow> (if P then A else B) s"
   by clarsimp
 
-lemma sum_case_True :
+lemma case_sum_True :
   "(case r of Inl a \<Rightarrow> True | Inr b \<Rightarrow> f b)
   = (\<forall>b. r = Inr b \<longrightarrow> f b)"
   by (cases r) auto
@@ -4417,7 +4417,7 @@ lemma range_subsetD:
   apply simp
   done
 
-lemma option_case_dom:
+lemma case_option_dom:
   "(case f x of None \<Rightarrow> a | Some v \<Rightarrow> b v)
       = (if x \<in> dom f then b (the (f x)) else a)"
   by (auto split: split_if option.split)
@@ -4885,7 +4885,7 @@ lemma bool_mask [simp]:
   apply simp
   done
 
-lemma option_case_over_if:
+lemma case_option_over_if:
   "case_option P Q (if G then None else Some v)
         = (if G then P else Q v)"
   "case_option P Q (if G then Some v else None)

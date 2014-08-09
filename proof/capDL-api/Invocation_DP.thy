@@ -85,7 +85,7 @@ lemma sep_nonimpact_valid_lift:
    "\<lbrace>\<lambda>s. < Q >  s\<rbrace> f \<lbrace>\<lambda>rv s. < Q > s\<rbrace>"
   apply (clarsimp simp: valid_def sep_state_projection_def Let_def
                         sep_state_add_def sep_disj_sep_state_def
-                        sep_state_disj_def Option.map_def
+                        sep_state_disj_def map_option_def
                  split: split_if_asm option.splits sep_state.splits)
   apply (erule rsubst [where P=Q])
   apply clarsimp

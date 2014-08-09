@@ -1409,7 +1409,7 @@ lemma find_pd_for_asid_corres'':
   apply (simp add: liftE_bindE)
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ get_asid_pool_corres'])
-      apply (rule_tac P="option_case \<top> page_directory_at (pool (ucast asid)) and pspace_aligned"
+      apply (rule_tac P="case_option \<top> page_directory_at (pool (ucast asid)) and pspace_aligned"
                  and P'="no_0_obj' and pspace_distinct'" in corres_inst)
       apply (rule_tac F="pool (ucast asid) \<noteq> Some 0" in corres_req)
        apply (clarsimp simp: obj_at_def no_0_obj'_def state_relation_def

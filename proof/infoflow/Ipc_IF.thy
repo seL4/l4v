@@ -139,7 +139,7 @@ definition
   ipc_buffer_has_read_auth :: "'a PAS \<Rightarrow> 'a \<Rightarrow> word32 option \<Rightarrow> bool"
 where
 "ipc_buffer_has_read_auth aag l \<equiv>
-    option_case True (\<lambda>buf'. is_aligned buf' msg_align_bits \<and> (\<forall>x \<in> ptr_range buf' msg_align_bits. (l,Read,pasObjectAbs aag x) \<in> (pasPolicy aag)))"
+    case_option True (\<lambda>buf'. is_aligned buf' msg_align_bits \<and> (\<forall>x \<in> ptr_range buf' msg_align_bits. (l,Read,pasObjectAbs aag x) \<in> (pasPolicy aag)))"
 
 
 lemma set_mrs_equiv_but_for_labels:
@@ -558,7 +558,7 @@ definition
   aag_can_read_or_affect_ipc_buffer :: "'a PAS \<Rightarrow> 'a \<Rightarrow> word32 option \<Rightarrow> bool"
 where
 "aag_can_read_or_affect_ipc_buffer aag l \<equiv>
-    option_case True (\<lambda>buf'. is_aligned buf' msg_align_bits \<and> (\<forall>x \<in> ptr_range buf' msg_align_bits. aag_can_read aag x \<or> aag_can_affect aag l x))"
+    case_option True (\<lambda>buf'. is_aligned buf' msg_align_bits \<and> (\<forall>x \<in> ptr_range buf' msg_align_bits. aag_can_read aag x \<or> aag_can_affect aag l x))"
 
 
 lemma lookup_ipc_buffer_aag_can_read_or_affect:
@@ -616,7 +616,7 @@ definition
   ipc_buffer_disjoint_from :: "word32 set \<Rightarrow> word32 option \<Rightarrow> bool"
 where
 "ipc_buffer_disjoint_from X  \<equiv>
-    option_case True (\<lambda>buf'. is_aligned buf' msg_align_bits \<and> (ptr_range buf' msg_align_bits) \<inter> X = {})"
+    case_option True (\<lambda>buf'. is_aligned buf' msg_align_bits \<and> (ptr_range buf' msg_align_bits) \<inter> X = {})"
 
 lemma get_extra_cptrs_rev:
   "reads_equiv_valid_inv A aag ((\<lambda> s. ipc_buffer_disjoint_from (range_of_arm_globals_frame s) buffer) and K (ipc_buffer_has_read_auth aag (pasSubject aag) buffer \<and> (buffer_cptr_index + unat (mi_extra_caps mi) < 2 ^ (msg_align_bits - 2))))

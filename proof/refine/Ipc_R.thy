@@ -139,7 +139,7 @@ lemma get_recv_slot_corres:
   "corres (\<lambda>xs ys. ys = map cte_map xs)
     (tcb_at receiver and valid_objs and pspace_aligned)
     (tcb_at' receiver and valid_objs' and pspace_aligned' and pspace_distinct' and
-     option_case \<top> valid_ipc_buffer_ptr' recv_buf)
+     case_option \<top> valid_ipc_buffer_ptr' recv_buf)
     (get_receive_slots receiver recv_buf)
     (getReceiveSlots receiver recv_buf)"
   apply (cases recv_buf)
@@ -256,7 +256,7 @@ declare loadWordUser_inv [wp]
 
 lemma get_extra_cptrs_corres:
   "corres (\<lambda>xs ys. xs = map to_bl ys) (\<lambda>_. valid_message_info mi) 
-      (option_case \<top> valid_ipc_buffer_ptr' buf)
+      (case_option \<top> valid_ipc_buffer_ptr' buf)
       (get_extra_cptrs buf mi) (getExtraCPtrs buf (message_info_map mi))"
   apply (rule corres_gen_asm [where P = \<top>, simplified])
   apply (cases mi, cases buf, simp_all add: getExtraCPtrs_def
@@ -602,15 +602,15 @@ next
               apply (rule cins_corres, simp_all add: hd_map)[1]
              apply (simp add: tl_map)
              apply (rule corres_rel_imp, rule Cons.hyps, simp_all)[1]
-            apply (wp valid_option_case_post_wp hoare_vcg_const_Ball_lift
+            apply (wp valid_case_option_post_wp hoare_vcg_const_Ball_lift
                         hoare_vcg_const_Ball_lift cap_insert_weak_cte_wp_at)
              apply (wp hoare_vcg_const_Ball_lift | simp add:split_def del: imp_disj1)+
              apply (wp cap_insert_cte_wp_at)
-           apply (wp valid_option_case_post_wp hoare_vcg_const_Ball_lift
+           apply (wp valid_case_option_post_wp hoare_vcg_const_Ball_lift
                      cteInsert_valid_pspace
                      | simp add: split_def)+
            apply (wp cteInsert_weak_cte_wp_at hoare_valid_ipc_buffer_ptr_typ_at')
-           apply (wp hoare_vcg_const_Ball_lift cteInsert_cte_wp_at  valid_option_case_post_wp
+           apply (wp hoare_vcg_const_Ball_lift cteInsert_cte_wp_at  valid_case_option_post_wp
              | simp add:split_def)+
           apply (rule corres_whenE)
             apply (case_tac cap', auto)[1]
@@ -1220,7 +1220,7 @@ lemma set_extra_badges_flags_eq:
   "length badges \<le> msgMaxExtraCaps \<Longrightarrow>
    of_bl (rev (map (\<lambda>x. x = None) badges)) =
           foldl op + (0::word32)
-           (zipWith (\<lambda>n. option_case (2 ^ n) (\<lambda>v5. 0)) [0..< Suc msgMaxExtraCaps]
+           (zipWith (\<lambda>n. case_option (2 ^ n) (\<lambda>v5. 0)) [0..< Suc msgMaxExtraCaps]
              badges)"
   apply (induct badges rule: rev_induct)
    apply (simp add: zipWith_def)
@@ -1264,13 +1264,13 @@ lemma tc_corres:
     pspace_aligned and pspace_distinct and valid_mdb
     and valid_list
     and (\<lambda>s. case ep of Some x \<Rightarrow> ep_at x s | _ \<Rightarrow> True)
-    and option_case \<top> in_user_frame recv_buf
+    and case_option \<top> in_user_frame recv_buf
     and (\<lambda>s. valid_message_info info)
     and transfer_caps_srcs caps)
    (tcb_at' receiver and valid_objs' and
     pspace_aligned' and pspace_distinct' and no_0_obj' and valid_mdb'
     and (\<lambda>s. case ep of Some x \<Rightarrow> ep_at' x s | _ \<Rightarrow> True)
-    and option_case \<top> valid_ipc_buffer_ptr' recv_buf
+    and case_option \<top> valid_ipc_buffer_ptr' recv_buf
     and transferCaps_srcs caps'
     and (\<lambda>s. length caps' \<le> msgMaxExtraCaps))
    (transfer_caps info caps ep receiver recv_buf diminish)
@@ -1619,7 +1619,7 @@ lemma lec_corres:
   corres (fr \<oplus> list_all2 (\<lambda>x y. cap_relation (fst x) (fst y) \<and> snd y = cte_map (snd x)))
    (valid_objs and pspace_aligned and tcb_at thread and (\<lambda>_. valid_message_info info))
    (valid_objs' and pspace_distinct' and pspace_aligned' and tcb_at' thread
-        and option_case \<top> valid_ipc_buffer_ptr' buffer')
+        and case_option \<top> valid_ipc_buffer_ptr' buffer')
    (lookup_extra_caps thread buffer info) (lookupExtraCaps thread buffer' info')"
   unfolding lookupExtraCaps_def lookup_extra_caps_def
   apply (rule corres_gen_asm)
@@ -1648,7 +1648,7 @@ lemma lec_corres:
                in corres_mapM_list_all2
          [where Q = "\<lambda>_. valid_objs and pspace_aligned and tcb_at thread" and r = "op ="
             and Q' = "\<lambda>_. valid_objs' and pspace_aligned' and pspace_distinct' and tcb_at' thread
-              and option_case \<top> valid_ipc_buffer_ptr' buffer'" and r'="op =" ])
+              and case_option \<top> valid_ipc_buffer_ptr' buffer'" and r'="op =" ])
             apply simp
            apply simp
           apply simp
@@ -1690,14 +1690,14 @@ lemma do_normal_transfer_corres:
   (tcb_at sender and tcb_at receiver and (pspace_aligned:: det_state \<Rightarrow> bool)
    and valid_objs and cur_tcb and valid_mdb and valid_list and pspace_distinct
    and (\<lambda>s. case ep of Some x \<Rightarrow> ep_at x s | _ \<Rightarrow> True)
-   and option_case \<top> in_user_frame send_buf
-   and option_case \<top> in_user_frame recv_buf)
+   and case_option \<top> in_user_frame send_buf
+   and case_option \<top> in_user_frame recv_buf)
   (tcb_at' sender and tcb_at' receiver and valid_objs'
    and pspace_aligned' and pspace_distinct' and cur_tcb'
    and valid_mdb' and no_0_obj'
    and (\<lambda>s. case ep of Some x \<Rightarrow> ep_at' x s | _ \<Rightarrow> True)
-   and option_case \<top> valid_ipc_buffer_ptr' send_buf
-   and option_case \<top> valid_ipc_buffer_ptr' recv_buf)
+   and case_option \<top> valid_ipc_buffer_ptr' send_buf
+   and case_option \<top> valid_ipc_buffer_ptr' recv_buf)
   (do_normal_transfer sender send_buf ep badge can_grant receiver recv_buf diminish)
   (doNormalTransfer sender send_buf ep badge can_grant receiver recv_buf diminish)"
   apply (simp add: do_normal_transfer_def doNormalTransfer_def)
@@ -1727,8 +1727,8 @@ lemma do_normal_transfer_corres:
                 apply (case_tac mi', clarsimp)
                apply wp
              apply simp+
-           apply ((wp valid_option_case_post_wp hoare_vcg_const_Ball_lift
-                     hoare_option_case_wp
+           apply ((wp valid_case_option_post_wp hoare_vcg_const_Ball_lift
+                     hoare_case_option_wp
                      hoare_valid_ipc_buffer_ptr_typ_at' copyMRs_typ_at'
                      hoare_vcg_const_Ball_lift lookupExtraCaps_length
                    | simp add: if_apply_def2)+)
@@ -1823,25 +1823,25 @@ lemma makeFaultMessage_inv[wp]:
   done
 
 lemmas threadget_fault_corres =
-          threadget_corres [where r = fault_option_relation
+          threadget_corres [where r = fault_rel_optionation
                               and f = tcb_fault and f' = tcbFault,
                             simplified tcb_relation_def, simplified]
 
 lemma do_fault_transfer_corres:
   "corres dc
     (obj_at (\<lambda>ko. \<exists>tcb ft. ko = TCB tcb \<and> tcb_fault tcb = Some ft) sender
-     and tcb_at receiver and option_case \<top> in_user_frame recv_buf)
+     and tcb_at receiver and case_option \<top> in_user_frame recv_buf)
     (tcb_at' sender and tcb_at' receiver and
-     option_case \<top> valid_ipc_buffer_ptr' recv_buf)
+     case_option \<top> valid_ipc_buffer_ptr' recv_buf)
     (do_fault_transfer badge sender receiver recv_buf)
     (doFaultTransfer badge sender receiver recv_buf)"
   apply (clarsimp simp: do_fault_transfer_def doFaultTransfer_def split_def
                         State_H.badgeRegister_def badge_register_def)
   apply (rule_tac Q="\<lambda>fault. K (\<exists>f. fault = Some f) and
                              tcb_at sender and tcb_at receiver and
-                             option_case \<top> in_user_frame recv_buf"
+                             case_option \<top> in_user_frame recv_buf"
               and Q'="\<lambda>fault'. tcb_at' sender and tcb_at' receiver and
-                               option_case \<top> valid_ipc_buffer_ptr' recv_buf"
+                               case_option \<top> valid_ipc_buffer_ptr' recv_buf"
                in corres_split')
      apply (rule corres_guard_imp)
        apply (rule threadget_fault_corres)
@@ -1850,11 +1850,11 @@ lemma do_fault_transfer_corres:
     apply (fold assert_opt_def | unfold haskell_fail_def)+
     apply (rule corres_assert_opt_assume)
      apply (clarsimp split: option.splits
-                      simp: fault_option_relation_def assert_opt_def
+                      simp: fault_rel_optionation_def assert_opt_def
                             option_map_def)
      defer
      defer
-     apply (clarsimp simp: fault_option_relation_def)
+     apply (clarsimp simp: fault_rel_optionation_def)
     apply (wp thread_get_wp)
     apply (clarsimp simp: obj_at_def is_tcb)
    apply wp
@@ -1894,7 +1894,7 @@ lemma invs_mdb_absorb'_ac [simp]:
   by (simp add: invs'_def valid_state'_def valid_pspace'_def conj_ac)
 
 lemma lookupIPCBuffer_valid_ipc_buffer [wp]:
-  "\<lbrace>valid_objs'\<rbrace> VSpace_H.lookupIPCBuffer b s \<lbrace>option_case \<top> valid_ipc_buffer_ptr'\<rbrace>"
+  "\<lbrace>valid_objs'\<rbrace> VSpace_H.lookupIPCBuffer b s \<lbrace>case_option \<top> valid_ipc_buffer_ptr'\<rbrace>"
   unfolding lookupIPCBuffer_def ArchVSpace_H.lookupIPCBuffer_def
   apply (simp add: Let_def getSlotCap_def getThreadBufferSlot_def
                    locateSlot_conv threadGet_def comp_def)
@@ -1948,7 +1948,7 @@ lemma dit_corres:
                        pspace_aligned sa \<and> tcb_at r sa \<and>
                        cur_tcb sa \<and> valid_mdb sa \<and> valid_list sa \<and> pspace_distinct sa \<and>
                        (case ep of None \<Rightarrow> True | Some x \<Rightarrow> ep_at x sa) \<and>
-                       option_case (\<lambda>_. True) in_user_frame receiveBuffer sa \<and>
+                       case_option (\<lambda>_. True) in_user_frame receiveBuffer sa \<and>
                        obj_at (\<lambda>ko. \<exists>tcb. ko = TCB tcb 
                                     (*\<exists>ft. tcb_fault tcb = Some ft*)) s sa"
                in corres_split')
@@ -1961,9 +1961,9 @@ lemma dit_corres:
       apply simp
      defer
      apply (rule corres_guard_imp)
-       apply (subst option_case_If)+
+       apply (subst case_option_If)+
        apply (rule corres_if2)
-         apply (simp add: fault_option_relation_def)
+         apply (simp add: fault_rel_optionation_def)
         apply (rule corres_split_eqr [OF _ lipcb_corres'])
           apply (simp add: dc_def[symmetric])
           apply (rule do_normal_transfer_corres)
@@ -2047,7 +2047,7 @@ crunch irq_handlers'[wp]: doIPCTransfer "valid_irq_handlers'"
 
 crunch irq_states'[wp]: doIPCTransfer "valid_irq_states'"
   (wp: crunch_wps no_irq_mapM no_irq_storeWord no_irq_loadWord
-       no_irq_option_case simp: crunch_simps zipWithM_x_mapM)
+       no_irq_case_option simp: crunch_simps zipWithM_x_mapM)
 
 crunch pde_mappings'[wp]: doIPCTransfer "valid_pde_mappings'"
   (wp: crunch_wps simp: crunch_simps)
@@ -2068,7 +2068,7 @@ lemma doIPCTransfer_invs[wp]:
 
 crunch nosch[wp]: doIPCTransfer "\<lambda>s. P (ksSchedulerAction s)" 
   (ignore: getRestartPC setRegister transferCapsToSlots
-   wp: hoare_drop_imps hoare_vcg_split_option_case
+   wp: hoare_drop_imps hoare_vcg_split_case_option
        transferCapsToSlots_pres1 mapM_wp'
    simp: split_def zipWithM_x_mapM)
 
@@ -2378,7 +2378,7 @@ lemma do_reply_transfer_corres:
    apply (clarsimp simp: cte_wp_at_ctes_of)
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ threadget_fault_corres])
-      apply (case_tac rv, simp_all add: fault_option_relation_def bind_assoc)[1]
+      apply (case_tac rv, simp_all add: fault_rel_optionation_def bind_assoc)[1]
        apply (rule corres_split [OF _ dit_corres])
          apply (rule corres_split [OF _ cap_delete_one_corres])
            apply (rule corres_split [OF _ sts_corres])
@@ -2433,7 +2433,7 @@ lemma do_reply_transfer_corres:
                        apply (rule corres_guard_imp)
                          apply (rule sts_corres)
                          apply (simp_all)[20]
-                   apply (clarsimp simp add: tcb_relation_def fault_option_relation_def
+                   apply (clarsimp simp add: tcb_relation_def fault_rel_optionation_def
                                              tcb_cap_cases_def tcb_cte_cases_def exst_same_def)+
                   apply (wp threadSet_cur weak_sch_act_wf_lift_linear threadSet_st_tcb_no_state
                             thread_set_not_state_valid_sched threadSet_valid_queues threadSet_valid_queues'
@@ -2663,7 +2663,7 @@ proof -
            apply (rule corres_split [OF _ sts_corres])
               apply (rule set_ep_corres)
               apply (simp add: ep_relation_def)
-             apply (simp add: fault_option_relation_def)
+             apply (simp add: fault_rel_optionation_def)
             apply wp
           apply (clarsimp simp: st_tcb_at_tcb_at valid_tcb_state_def)
          apply clarsimp
@@ -2673,7 +2673,7 @@ proof -
           apply (rule corres_split [OF _ sts_corres])
              apply (rule set_ep_corres)
              apply (simp add: ep_relation_def)
-            apply (simp add: fault_option_relation_def)
+            apply (simp add: fault_rel_optionation_def)
            apply wp
          apply (clarsimp simp: st_tcb_at_tcb_at valid_tcb_state_def)
         apply clarsimp
@@ -2691,7 +2691,7 @@ proof -
               apply (rule_tac 
                      F="\<exists>x. recv_state = Structures_A.BlockedOnReceive ep x" 
                      in corres_gen_asm)
-              apply (clarsimp simp: bool_case_If  option_case_If if3_fold
+              apply (clarsimp simp: bool_case_If  case_option_If if3_fold
                           simp del: dc_simp split del: split_if cong: if_cong)
               apply (rule corres_split [OF _ dit_corres])
                 apply (rule corres_split [OF _ sts_corres])
@@ -2702,7 +2702,7 @@ proof -
                        apply (rule_tac P="call \<or> fault \<noteq> None"
                                   and P'="call \<or> fault' \<noteq> None"
                                    in corres_symmetric_bool_cases)
-                         apply (auto simp: fault_option_relation_def)[1]
+                         apply (auto simp: fault_rel_optionation_def)[1]
                         apply (simp add: when_def dc_def[symmetric] split del: split_if)
                         apply (rule corres_if2, simp)
                          apply (rule setup_caller_corres)
@@ -2780,8 +2780,8 @@ proof -
                    apply (rule corres_split [OF _ threadget_fault_corres])
                      apply (rename_tac rv rv')
                      apply (case_tac rv)
-                      apply (clarsimp simp: fault_option_relation_def when_def split del: split_if)
-                     apply (clarsimp simp: fault_option_relation_def when_def
+                      apply (clarsimp simp: fault_rel_optionation_def when_def split del: split_if)
+                     apply (clarsimp simp: fault_rel_optionation_def when_def
                                            bool_case_If
                                 split del: split_if)
                      apply (fold dc_def)[1]
@@ -2840,7 +2840,7 @@ lemma dat_corres:
     apply (rule corres_split_eqr [OF _ lipcb_corres'])
        apply (rule corres_split [OF _ set_mrs_corres])
           apply (rule corres_split [OF set_mi_corres])
-             apply (simp add: message_info_map.simps)
+             apply (simp add: message_info_list.map)
             apply (clarsimp simp: badge_register_def badgeRegister_def)
             apply (rule user_setreg_corres)
            apply wp
@@ -3276,7 +3276,7 @@ lemma rfk_corres:
       apply (rule corres_split [OF _ user_setreg_corres])
         apply (rule corres_split_eqr [OF _ set_mrs_corres])
            apply (rule set_mi_corres)
-           apply (wp hoare_option_case_wp hoare_valid_ipc_buffer_ptr_typ_at'
+           apply (wp hoare_case_option_wp hoare_valid_ipc_buffer_ptr_typ_at'
                   | clarsimp)+
   done
 
@@ -3339,7 +3339,7 @@ lemma receive_ipc_corres:
                            Structures_A.thread_state.BlockedOnSend word1 data"
                        in corres_gen_asm)
               apply (clarsimp simp: isSend_def bool_case_If
-                                    option_case_If if3_fold
+                                    case_option_If if3_fold
                          split del: split_if cong: if_cong)
               apply (rule corres_split [OF _ dit_corres])
                 apply (simp split del: split_if cong: if_cong)
@@ -3363,7 +3363,7 @@ lemma receive_ipc_corres:
                                               and valid_objs'
                                         and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s)"
                              in corres_guard_imp [OF corres_if])
-                    apply (simp add: fault_option_relation_def)
+                    apply (simp add: fault_rel_optionation_def)
                    apply (rule corres_if2 [OF _ setup_caller_corres sts_corres])
                     apply simp
                    apply simp
@@ -3501,7 +3501,7 @@ lemma send_fault_ipc_corres:
             apply (rule corres_if2 [OF refl])
              apply (simp add: dc_def[symmetric])
              apply (rule corres_split [OF send_ipc_corres threadset_corres], simp_all)[1]
-               apply (simp add: tcb_relation_def fault_option_relation_def exst_same_def)+
+               apply (simp add: tcb_relation_def fault_rel_optionation_def exst_same_def)+
               apply (wp thread_set_invs_trivial thread_set_no_change_tcb_state
                         thread_set_typ_at ep_at_typ_at ex_nonz_cap_to_pres
                         thread_set_cte_wp_at_trivial thread_set_not_state_valid_sched
@@ -3824,13 +3824,13 @@ crunch ksQ[wp]: copyMRs "\<lambda>s. P (ksReadyQueues s)"
 
 crunch ksQ[wp]: doIPCTransfer "\<lambda>s. P (ksReadyQueues s)"
   (ignore: getRestartPC setRegister transferCapsToSlots
-   wp: hoare_drop_imps hoare_vcg_split_option_case
+   wp: hoare_drop_imps hoare_vcg_split_case_option
        transferCapsToSlots_pres1 mapM_wp'
    simp: split_def zipWithM_x_mapM)
 
 crunch ct'[wp]: doIPCTransfer "\<lambda>s. P (ksCurThread s)"
   (ignore: getRestartPC setRegister transferCapsToSlots
-   wp: hoare_drop_imps hoare_vcg_split_option_case
+   wp: hoare_drop_imps hoare_vcg_split_case_option
        transferCapsToSlots_pres1 mapM_wp'
    simp: split_def zipWithM_x_mapM)
 
@@ -3845,7 +3845,7 @@ crunch ct_not_inQ[wp]: copyMRs "ct_not_inQ"
 
 crunch ct_not_inQ[wp]: doIPCTransfer "ct_not_inQ"
   (ignore: getRestartPC setRegister transferCapsToSlots
-   wp: hoare_drop_imps hoare_vcg_split_option_case
+   wp: hoare_drop_imps hoare_vcg_split_case_option
        transferCapsToSlots_pres1 mapM_wp'
    simp: split_def zipWithM_x_mapM)
 
@@ -3910,7 +3910,7 @@ lemma ri_invs' [wp]:
              switchIfRequiredTo_ct_not_inQ
              setEndpoint_ksQ setEndpoint_ct'
         | simp add: valid_tcb_state'_def bool_case_If
-                    option_case_If
+                    case_option_If
              split del: split_if cong: if_cong
         | wp_once sch_act_sane_lift hoare_vcg_conj_lift hoare_vcg_all_lift)+
   apply (clarsimp split del: split_if simp: st_tcb_at_tcb_at')
@@ -4136,7 +4136,7 @@ lemma si_invs'[wp]:
                hoare_drop_imp [where f="threadGet tcbFault t"]
              | rule_tac f="getThreadState a" in hoare_drop_imp
              | simp    add: valid_tcb_state'_def bool_case_If
-                            option_case_If
+                            case_option_If
                       cong: if_cong
                  split del: split_if
              | wp_once sch_act_sane_lift tcb_in_cur_domain'_lift)+
@@ -4352,7 +4352,7 @@ lemma si_blk_makes_simple':
   apply (simp add: sendIPC_def)
   apply (rule hoare_seq_ext [OF _ get_ep_inv'])
   apply (case_tac xa, simp_all)
-    apply (case_tac list, simp_all add: bool_case_If option_case_If
+    apply (case_tac list, simp_all add: bool_case_If case_option_If
                              split del: split_if cong: if_cong)
     apply (rule hoare_pre)
      apply (wp sts_st_tcb_at'_cases setupCallerCap_st_tcb_unchanged
@@ -4371,7 +4371,7 @@ lemma si_blk_makes_runnable':
   apply (simp add: sendIPC_def)
   apply (rule hoare_seq_ext [OF _ get_ep_inv'])
   apply (case_tac xa, simp_all)
-    apply (case_tac list, simp_all add: bool_case_If option_case_If
+    apply (case_tac list, simp_all add: bool_case_If case_option_If
                              split del: split_if cong: if_cong)
     apply (rule hoare_pre)
      apply (wp sts_st_tcb_at'_cases setupCallerCap_st_tcb_unchanged
@@ -4431,7 +4431,7 @@ lemma ri_makes_runnable_simple':
     apply clarsimp
    apply (wp sts_st_tcb_at'_cases)
    apply clarsimp
-  apply (case_tac list, simp_all add: bool_case_If option_case_If
+  apply (case_tac list, simp_all add: bool_case_If case_option_If
                            split del: split_if cong: if_cong)
   apply (rule hoare_pre)
    apply (wp sts_st_tcb_at'_cases setupCallerCap_st_tcb_unchanged

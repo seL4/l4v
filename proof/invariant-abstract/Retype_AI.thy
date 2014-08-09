@@ -1132,7 +1132,7 @@ lemma range_cover_subset_not_empty:
 
 lemma list_all2_same:
   "list_all2 P xs xs = (\<forall>x \<in> set xs. P x x)"
-  apply (simp add: list_all2_def set_zip in_set_conv_nth Ball_def)
+  apply (simp add: list_all2_iff set_zip in_set_conv_nth Ball_def)
   apply fastforce
   done
 
@@ -1453,8 +1453,8 @@ lemma vs_refs_add_one'':
 lemma glob_vs_refs_add_one':
   "glob_vs_refs (ArchObj (PageDirectory (pd(p := pde)))) =
    glob_vs_refs (ArchObj (PageDirectory pd)) 
-   - Pair (VSRef (ucast p) (Some APageDirectory)) ` Option.set (pde_ref (pd p)) 
-   \<union> Pair (VSRef (ucast p) (Some APageDirectory)) ` Option.set (pde_ref pde)"
+   - Pair (VSRef (ucast p) (Some APageDirectory)) ` set_option (pde_ref (pd p)) 
+   \<union> Pair (VSRef (ucast p) (Some APageDirectory)) ` set_option (pde_ref pde)"
   apply (simp add: glob_vs_refs_def)
   apply (rule set_eqI)
   apply clarsimp

@@ -195,10 +195,10 @@ lemma preemptionPoint_ccorres:
 definition
   "invocationCatch thread isBlocking isCall inject
    \<equiv>
-   sum.sum_case (throwError \<circ> Inl)
+   sum.case_sum (throwError \<circ> Inl)
     (\<lambda>oper. doE y \<leftarrow> liftE (setThreadState Structures_H.thread_state.Restart thread);
              reply \<leftarrow> RetypeDecls_H.performInvocation isBlocking isCall (inject oper)
-                           >>= sum.sum_case (throwError \<circ> Inr) returnOk;
+                           >>= sum.case_sum (throwError \<circ> Inr) returnOk;
              liftE (if reply = [] then replyOnRestart thread [] isCall \<sqinter> return ()
                         else replyOnRestart thread reply isCall)
        odE)"
@@ -290,7 +290,7 @@ lemma ccorres_alternative2:
   done
 
 lemma o_xo_injector:
-  "((f o f') \<currency> r) = ((f \<currency> r) o sum_case (Inl o f') Inr)"
+  "((f o f') \<currency> r) = ((f \<currency> r) o case_sum (Inl o f') Inr)"
   by (intro ext, simp split: sum.split)
 
 lemma ccorres_invocationCatch_Inr:
@@ -625,7 +625,7 @@ lemma no_fail_loadWordUser:
   done
 
 lemma no_fail_getMRs:
-  "no_fail (tcb_at' thread and option_case \<top> valid_ipc_buffer_ptr' buffer)
+  "no_fail (tcb_at' thread and case_option \<top> valid_ipc_buffer_ptr' buffer)
            (getMRs thread buffer info)"
   apply (rule det_wp_no_fail)
   apply (rule det_wp_getMRs)
@@ -1024,7 +1024,7 @@ definition
 definition
   "sysargs_rel args buffer \<equiv> 
           cur_tcb'
-          and option_case \<top> valid_ipc_buffer_ptr' buffer
+          and case_option \<top> valid_ipc_buffer_ptr' buffer
           and getMRs_rel args buffer
           and (\<lambda>_. length args > unat (scast n_msgRegisters :: word32) \<longrightarrow> buffer \<noteq> None)"
 
@@ -1037,7 +1037,7 @@ lemma sysargs_rel_to_n:
 
 lemma getMRs_rel:
   "\<lbrace>\<lambda>s. msgLength mi \<le> msgMaxLength \<and> thread = ksCurThread s \<and> 
-        option_case \<top> valid_ipc_buffer_ptr' buffer s \<and>
+        case_option \<top> valid_ipc_buffer_ptr' buffer s \<and>
         cur_tcb' s\<rbrace> 
   getMRs thread buffer mi \<lbrace>\<lambda>args. getMRs_rel args buffer\<rbrace>"
   apply (simp add: getMRs_rel_def)
@@ -1063,7 +1063,7 @@ lemma getMRs_len[simplified]:
   done
 
 lemma getMRs_sysargs_rel:  
-  "\<lbrace>(\<lambda>s. thread = ksCurThread s) and cur_tcb' and option_case \<top> valid_ipc_buffer_ptr' buffer and K (msgLength mi \<le> msgMaxLength)\<rbrace> 
+  "\<lbrace>(\<lambda>s. thread = ksCurThread s) and cur_tcb' and case_option \<top> valid_ipc_buffer_ptr' buffer and K (msgLength mi \<le> msgMaxLength)\<rbrace> 
   getMRs thread buffer mi \<lbrace>\<lambda>args. sysargs_rel args buffer\<rbrace>"
   apply (simp add: sysargs_rel_def)
   apply (wp getMRs_rel getMRs_len|simp)+

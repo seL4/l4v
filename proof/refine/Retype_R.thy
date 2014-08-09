@@ -2616,7 +2616,7 @@ lemma other_objs_default_relation:
                         makeObject_cte new_context_def newContext_def
                         default_ep_def makeObject_endpoint default_async_ep_def
                         makeObject_async_endpoint
-                        fault_option_relation_def
+                        fault_rel_optionation_def
                         initContext_def
                  split: Structures_A.apiobject_type.split_asm)
   done
@@ -3753,7 +3753,7 @@ lemma createObjects_orig_obj_at2':
       \<and> range_cover ptr sz (objBitsKO val + gbits) n
       \<and> pspace_aligned' s \<and> pspace_distinct' s
       \<and> P (obj_at' P' p s)
-      \<and> \<not> (option_case False P' (projectKO_opt val))
+      \<and> \<not> (case_option False P' (projectKO_opt val))
       \<and> pspace_no_overlap' ptr sz s\<rbrace>
   createObjects' ptr n val gbits \<lbrace>\<lambda>r s. P (obj_at' P' p s)\<rbrace>"
   unfolding obj_at'_real_def
@@ -3767,9 +3767,9 @@ lemma createObjects_orig_cte_wp_at2':
       \<and> n \<noteq> 0
       \<and> range_cover ptr sz (objBitsKO val + gbits) n
       \<and> pspace_aligned' s \<and> pspace_distinct' s
-      \<and> \<not> (option_case False P' (projectKO_opt val))
+      \<and> \<not> (case_option False P' (projectKO_opt val))
       \<and> (\<forall>(getF, setF) \<in> ran tcb_cte_cases.
-              \<not> (option_case False (P' \<circ> getF) (projectKO_opt val)))
+              \<not> (case_option False (P' \<circ> getF) (projectKO_opt val)))
       \<and> pspace_no_overlap' ptr sz s\<rbrace>
   createObjects' ptr n val gbits \<lbrace>\<lambda>r s. P (cte_wp_at' P' p s)\<rbrace>"
   apply (simp add: cte_wp_at'_obj_at')
@@ -4658,10 +4658,10 @@ crunch it[wp]: createObjects "\<lambda>s. P (ksIdleThread s)"
 
 lemma createObjects_idle':
   "\<lbrace>valid_idle' and valid_pspace' and pspace_no_overlap' ptr sz
-        and (\<lambda>s. \<not> option_case False (\<lambda>cte. ksIdleThread s \<in> capRange (cteCap cte))
+        and (\<lambda>s. \<not> case_option False (\<lambda>cte. ksIdleThread s \<in> capRange (cteCap cte))
                         (projectKO_opt val)
                \<and> (\<forall>(getF, setF) \<in> ran tcb_cte_cases.
-                 \<not> option_case False (\<lambda>tcb. ksIdleThread s \<in> capRange (cteCap (getF tcb)))
+                 \<not> case_option False (\<lambda>tcb. ksIdleThread s \<in> capRange (cteCap (getF tcb)))
                         (projectKO_opt val)))
         and K (range_cover ptr sz (objBitsKO val + gbits) n  \<and> n \<noteq> 0)\<rbrace>
   createObjects' ptr n val gbits 

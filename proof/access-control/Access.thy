@@ -371,11 +371,11 @@ fun
   cap_asid' :: "cap \<Rightarrow> asid set"
 where
   "cap_asid' (Structures_A.ArchObjectCap (ARM_Structs_A.PageCap _ _ _ mapping))
-      = fst ` Option.set mapping"
+      = fst ` set_option mapping"
   | "cap_asid' (Structures_A.ArchObjectCap (ARM_Structs_A.PageTableCap _ mapping))
-      = fst ` Option.set mapping"
+      = fst ` set_option mapping"
   | "cap_asid' (Structures_A.ArchObjectCap (ARM_Structs_A.PageDirectoryCap _ asid_opt))
-      = Option.set asid_opt"
+      = set_option asid_opt"
   | "cap_asid' (Structures_A.ArchObjectCap (ARM_Structs_A.ASIDPoolCap _ asid))
           = {x. asid_high_bits_of x = asid_high_bits_of asid \<and> x \<noteq> 0}"
   | "cap_asid' (Structures_A.ArchObjectCap ARM_Structs_A.ASIDControlCap) = UNIV"
@@ -418,7 +418,7 @@ abbreviation
   "irq_map_wellformed aag s \<equiv> irq_map_wellformed_aux aag (interrupt_irq_node s)"
 
 definition
- "state_vrefs s = option_case {} vs_refs_no_global_pts o kheap s"
+ "state_vrefs s = case_option {} vs_refs_no_global_pts o kheap s"
 
 abbreviation
   "state_asids_to_policy aag s \<equiv> state_asids_to_policy_aux aag (caps_of_state s)
@@ -428,7 +428,7 @@ definition
   "tcb_states_of_state s \<equiv> \<lambda>p. option_map tcb_state (get_tcb p s)"
 
 definition
-  "thread_states s = option_case {} tcb_st_to_auth \<circ> tcb_states_of_state s"
+  "thread_states s = case_option {} tcb_st_to_auth \<circ> tcb_states_of_state s"
 
 definition
   "state_objs_to_policy s = state_bits_to_policy (caps_of_state s) (thread_states s) (cdt s) (state_vrefs s)"
@@ -811,7 +811,7 @@ where
   | trm_orefl: "\<lbrakk> w = w' \<rbrakk> \<Longrightarrow> integrity_mem aag subjects p ts ts' ipcbufs globals w w'"
   | trm_write: "\<lbrakk> aag_subjects_have_auth_to subjects aag Write p \<rbrakk> \<Longrightarrow> integrity_mem aag subjects p ts ts' ipcbufs globals w w'"
   | trm_globals: "\<lbrakk> p \<in> globals \<rbrakk> \<Longrightarrow> integrity_mem aag subjects p ts ts' ipcbufs globals w w'"
-  | trm_ipc: "\<lbrakk> option_case False (receive_blocked_on ep) (ts p'); ts' p' = Some Structures_A.Running;
+  | trm_ipc: "\<lbrakk> case_option False (receive_blocked_on ep) (ts p'); ts' p' = Some Structures_A.Running;
                 p \<in> ipcbufs p'; pasObjectAbs aag p' \<notin> subjects
         \<rbrakk> \<Longrightarrow> integrity_mem aag subjects p ts ts' ipcbufs globals w w'"
 
@@ -1051,7 +1051,7 @@ proof -
 
         show ?thesis
         proof (rule integrity_mem.trm_ipc)
-          from trm_ipc show "option_case False (receive_blocked_on ep) (tcb_states_of_state s p')"
+          from trm_ipc show "case_option False (receive_blocked_on ep) (tcb_states_of_state s p')"
             by (fastforce split: option.splits dest: tsos_tro [OF tro1])
 
           from trm_ipc show "x \<in> auth_ipc_buffers s p'"
@@ -1383,16 +1383,16 @@ lemma aep_queued_st_tcb_at':
   done
 
 (* FIXME: move *)
-lemma prod_case_wp:
+lemma case_prod_wp:
   "(\<And>a b. x = (a, b) \<Longrightarrow> \<lbrace>P a b\<rbrace> f a b \<lbrace>Q\<rbrace>)
-  \<Longrightarrow> \<lbrace>P (fst x) (snd x)\<rbrace> prod_case f x \<lbrace>Q\<rbrace>"
+  \<Longrightarrow> \<lbrace>P (fst x) (snd x)\<rbrace> case_prod f x \<lbrace>Q\<rbrace>"
  by (cases x, simp)
 
 (* FIXME: move *)
-lemma sum_case_wp:
+lemma case_sum_wp:
   "\<lbrakk> (\<And>a. x = Inl a \<Longrightarrow> \<lbrace>P a\<rbrace> f a \<lbrace>Q\<rbrace>);
      (\<And>a. x = Inr a \<Longrightarrow> \<lbrace>P' a\<rbrace> g a \<lbrace>Q\<rbrace>) \<rbrakk>
-  \<Longrightarrow> \<lbrace>\<lambda>s. (\<forall>a. x = Inl a \<longrightarrow> P a s) \<and> (\<forall>a. x = Inr a \<longrightarrow> P' a s)\<rbrace> sum_case f g x \<lbrace>Q\<rbrace>"
+  \<Longrightarrow> \<lbrace>\<lambda>s. (\<forall>a. x = Inl a \<longrightarrow> P a s) \<and> (\<forall>a. x = Inr a \<longrightarrow> P' a s)\<rbrace> case_sum f g x \<lbrace>Q\<rbrace>"
   by (cases x, simp_all)
 
 (* MOVE *)
@@ -1527,7 +1527,7 @@ lemma ipcframe_subset_page:
   done
 
 lemma trm_ipc':
-  "\<lbrakk> pas_refined aag s; valid_objs s; option_case False (receive_blocked_on ep) (tcb_states_of_state s p');
+  "\<lbrakk> pas_refined aag s; valid_objs s; case_option False (receive_blocked_on ep) (tcb_states_of_state s p');
      (tcb_states_of_state s' p') = Some Structures_A.Running;
      p \<in> auth_ipc_buffers s p' \<rbrakk> \<Longrightarrow>
     integrity_mem aag subjects p

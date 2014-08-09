@@ -319,7 +319,7 @@ lemma exec_statefn_simulates_Seq:
        apply (auto intro: exec.Seq)[1]
       apply ((force elim: exec.Seq exec.cases notE)+)[4]
   apply clarsimp
-  apply (rule ccontr, frule_tac \<Gamma>="Option.map (add_statefn (inv f)) \<circ> \<Gamma>"
+  apply (rule ccontr, frule_tac \<Gamma>="map_option (add_statefn (inv f)) \<circ> \<Gamma>"
             in exec_not_in_initial_guards, clarsimp)
   apply (blast intro: exec.Seq)
   done
@@ -392,7 +392,7 @@ lemma exec_statefn_simulates_While_lemma:
     apply (blast intro: exec.WhileTrue)
 
    apply (clarsimp simp: Bex_def exec_in_final_guards[THEN subsetD[OF subs]])
-   apply (drule_tac \<Gamma>="Option.map (add_statefn (inv f)) \<circ> \<Gamma>"
+   apply (drule_tac \<Gamma>="map_option (add_statefn (inv f)) \<circ> \<Gamma>"
              in exec_not_in_initial_guards)
    apply (clarsimp simp: o_def)
    apply (blast intro: exec.WhileTrue exec.WhileFalse)

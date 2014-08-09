@@ -260,59 +260,59 @@ definition
     case label of
       InvalidInvocation \<Rightarrow> None
     | UntypedRetype \<Rightarrow>
-        Option.map UntypedIntent (transform_intent_untyped_retype args)
+        map_option UntypedIntent (transform_intent_untyped_retype args)
     | TCBReadRegisters \<Rightarrow>
-        Option.map TcbIntent
+        map_option TcbIntent
                    (transform_intent_tcb_read_registers args)
     | TCBWriteRegisters \<Rightarrow>
-        Option.map TcbIntent
+        map_option TcbIntent
                    (transform_intent_tcb_write_registers args)
     | TCBCopyRegisters \<Rightarrow>
-         Option.map TcbIntent
+         map_option TcbIntent
                    (transform_intent_tcb_copy_registers args)
     | TCBConfigure \<Rightarrow>
-         Option.map TcbIntent
+         map_option TcbIntent
                    (transform_intent_tcb_configure args)
     | TCBSetPriority \<Rightarrow>
-         Option.map TcbIntent
+         map_option TcbIntent
                    (transform_intent_tcb_set_priority args)
     | TCBSetIPCBuffer \<Rightarrow>
-          Option.map TcbIntent
+          map_option TcbIntent
                    (transform_intent_tcb_set_ipc_buffer args)
     | TCBSetSpace \<Rightarrow>
-          Option.map TcbIntent
+          map_option TcbIntent
                    (transform_intent_tcb_set_space args)
     | TCBSuspend \<Rightarrow> Some (TcbIntent TcbSuspendIntent)
     | TCBResume \<Rightarrow> Some (TcbIntent TcbResumeIntent)
     | CNodeRevoke \<Rightarrow>
-          Option.map CNodeIntent
+          map_option CNodeIntent
                    (transform_cnode_index_and_depth CNodeRevokeIntent args)
     | CNodeDelete \<Rightarrow>
-          Option.map CNodeIntent
+          map_option CNodeIntent
                    (transform_cnode_index_and_depth CNodeDeleteIntent args)
     | CNodeRecycle \<Rightarrow>
-          Option.map CNodeIntent
+          map_option CNodeIntent
                    (transform_cnode_index_and_depth CNodeRecycleIntent args)
     | CNodeCopy \<Rightarrow>
-          Option.map CNodeIntent
+          map_option CNodeIntent
                    (transform_intent_cnode_copy args)
     | CNodeMint \<Rightarrow>
-          Option.map CNodeIntent
+          map_option CNodeIntent
                    (transform_intent_cnode_mint args)
     | CNodeMove \<Rightarrow>
-          Option.map CNodeIntent
+          map_option CNodeIntent
                    (transform_intent_cnode_move args)
     | CNodeMutate \<Rightarrow>
-          Option.map CNodeIntent
+          map_option CNodeIntent
                    (transform_intent_cnode_mutate args)
     | CNodeRotate \<Rightarrow>
-          Option.map CNodeIntent
+          map_option CNodeIntent
                    (transform_intent_cnode_rotate args)
     | CNodeSaveCaller \<Rightarrow>
-          Option.map CNodeIntent
+          map_option CNodeIntent
                    (transform_cnode_index_and_depth CNodeSaveCallerIntent args)
     | IRQIssueIRQHandler \<Rightarrow>
-          Option.map IrqControlIntent
+          map_option IrqControlIntent
                    (transform_intent_issue_irq_handler args)
     | IRQInterruptControl \<Rightarrow>
           Some (IrqControlIntent IrqControlInterruptControlIntent)
@@ -320,14 +320,14 @@ definition
     | IRQSetIRQHandler \<Rightarrow> Some (IrqHandlerIntent IrqHandlerSetEndpointIntent)
     | IRQClearIRQHandler \<Rightarrow> Some (IrqHandlerIntent IrqHandlerClearIntent)
     | ARMPageTableMap \<Rightarrow>
-          Option.map PageTableIntent
+          map_option PageTableIntent
                    (transform_intent_page_table_map args)
     | ARMPageTableUnmap \<Rightarrow> Some (PageTableIntent PageTableUnmapIntent)
     | ARMPageMap \<Rightarrow>
-          Option.map PageIntent
+          map_option PageIntent
                    (transform_intent_page_map args)
     | ARMPageRemap \<Rightarrow>
-          Option.map PageIntent
+          map_option PageIntent
                    (transform_intent_page_remap args)
     | ARMPageUnmap \<Rightarrow> Some (PageIntent PageUnmapIntent)
     | ARMPageClean_Data \<Rightarrow> Some (PageIntent PageFlushCachesIntent )
@@ -340,10 +340,10 @@ definition
     | ARMPDCleanInvalidate_Data \<Rightarrow>  Some (PageDirectoryIntent PageDirectoryFlushIntent)
     | ARMPDUnify_Instruction \<Rightarrow>  Some (PageDirectoryIntent PageDirectoryFlushIntent )
     | ARMASIDControlMakePool \<Rightarrow>
-          Option.map AsidControlIntent
+          map_option AsidControlIntent
                    (transform_cnode_index_and_depth AsidControlMakePoolIntent args)
     | ARMASIDPoolAssign \<Rightarrow> Some (AsidPoolIntent AsidPoolAssignIntent)
-    | DomainSetSet \<Rightarrow> Option.map DomainIntent (transform_intent_domain args)"
+    | DomainSetSet \<Rightarrow> map_option DomainIntent (transform_intent_domain args)"
 
 lemmas transform_intent_tcb_defs =
   transform_intent_tcb_read_registers_def
@@ -420,23 +420,23 @@ lemma transform_intent_isnot_UntypedIntent:
    apply (simp add: linorder_not_less eval_nat_numeral word_le_nat_alt
                     le_Suc_eq unat_arith_simps)
   apply(erule disjE)
-   apply(auto simp: transform_intent_def Option.map_def split: invocation_label.split option.split_asm)[1]
+   apply(auto simp: transform_intent_def map_option_def split: invocation_label.split option.split_asm)[1]
   apply (erule disjE)
    apply (auto simp: transform_intent_def transform_intent_untyped_retype_def
-         Option.map_def split: invocation_label.split option.split_asm list.split)[1]
+         map_option_def split: invocation_label.split option.split_asm list.split)[1]
   apply clarsimp
   apply (clarsimp simp: transform_intent_def transform_type_def transform_intent_untyped_retype_def)
-  apply (clarsimp simp: Option.map_def split: invocation_label.splits option.splits list.splits)
+  apply (clarsimp simp: map_option_def split: invocation_label.splits option.splits list.splits)
   apply (clarsimp simp: transform_type_def split: split_if_asm)
   done
 
 lemma transform_cnode_index_and_depth_success:
        "(\<exists>ci. Some (C ci) =
-            Option.map C
+            map_option C
              (transform_cnode_index_and_depth C2 args)) =
        (\<not> length args < 2)"
 apply(rule iffI)
- apply(unfold Option.map_def transform_cnode_index_and_depth_def)
+ apply(unfold map_option_def transform_cnode_index_and_depth_def)
  apply(case_tac args)
  apply(auto split: list.split)
 done
@@ -466,13 +466,13 @@ lemma transform_intent_isnot_CNodeIntent:
    apply(case_tac label)
                                   apply(simp_all)
         apply(simp_all add: transform_intent_cnode_defs
-                            Option.map_def
+                            map_option_def
                             split: list.split)
            prefer 10
            apply(clarify)
            apply(case_tac label)
            apply(clarsimp simp: transform_intent_def
-                      Option.map_def transform_intent_cnode_defs
+                      map_option_def transform_intent_cnode_defs
                       split: list.split_asm option.split_asm)+
   apply(auto)
 done
@@ -496,10 +496,10 @@ lemma transform_intent_isnot_TcbIntent:
    apply(case_tac label)
                                     apply(simp_all)
          apply(fastforce simp: transform_intent_tcb_defs
-                              Option.map_def
+                              map_option_def
                         split: list.split)+
   apply(unfold transform_intent_def)
-  apply(case_tac label, simp_all add: Option.map_def split: option.split)
+  apply(case_tac label, simp_all add: map_option_def split: option.split)
   apply (auto simp: transform_intent_tcb_defs
                  split:  list.splits)
 done
@@ -877,7 +877,7 @@ definition
 where
  "map_lift_over f m = (if inj_on f (dom m \<union> ran m)
     then (\<lambda>x. if \<exists>y. f y = x \<and> y \<in> dom m
-              then Option.map f (m (inv_into (dom m) f x)) else None)
+              then map_option f (m (inv_into (dom m) f x)) else None)
     else Map.empty)"
 
 (* Transform the CDT. *)
@@ -916,7 +916,7 @@ definition
   transform_objects :: "det_ext state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_object option)"
 where
    "transform_objects s = (\<lambda>ptr. Some Types_D.Untyped) |` (- {idle_thread s}) ++
-                           (\<lambda>ptr. Option.map (transform_object (machine_state s) ptr ((ekheap s |` (- {idle_thread s})) ptr))
+                           (\<lambda>ptr. map_option (transform_object (machine_state s) ptr ((ekheap s |` (- {idle_thread s})) ptr))
                                 ((kheap s  |` (- {idle_thread s})) ptr))"
 
 lemma evalMonad_return [simp]:
@@ -1037,7 +1037,7 @@ lemma transform_objects_ms_underlying_mem:
    transform_objects (s \<lparr> machine_state :=
      undefined \<lparr> underlying_memory := underlying_memory (machine_state s) \<rparr> \<rparr>)"
   apply (rule ext)
-  apply (simp add: transform_objects_def map_add_def Option.map_def
+  apply (simp add: transform_objects_def map_add_def map_option_def
             split: option.split)
   apply (simp add: transform_object_def transform_tcb_def
                    transform_full_intent_def Let_def

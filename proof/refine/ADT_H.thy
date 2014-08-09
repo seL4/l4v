@@ -150,7 +150,7 @@ lemma
     "pspace_relation
      (%x. case ksPSpace \<sigma> x of
             Some (KOArch ako) \<Rightarrow>
-              Option.map ArchObj (absHeapArch (ksPSpace \<sigma>) x ako)
+              map_option ArchObj (absHeapArch (ksPSpace \<sigma>) x ako)
           | _ \<Rightarrow> None)
      (%x. case ksPSpace \<sigma> x of Some (KOArch _) \<Rightarrow> ksPSpace \<sigma> x | _ \<Rightarrow> None)"
   apply (clarsimp simp add: pspace_relation_def dom_def)
@@ -412,7 +412,7 @@ definition
       tcb_fault_handler = to_bl (tcbFaultHandler tcb),
       tcb_ipc_buffer = tcbIPCBuffer tcb,
       tcb_context = tcbContext tcb,
-      tcb_fault = Option.map FaultMap (tcbFault tcb)\<rparr>"
+      tcb_fault = map_option FaultMap (tcbFault tcb)\<rparr>"
 
 definition
  "absCNode sz h a \<equiv> CNode sz (%bl.
@@ -430,10 +430,10 @@ definition
        Some (KOEndpoint ep) \<Rightarrow> Some (Endpoint (EndpointMap ep))
      | Some (KOAEndpoint aep) \<Rightarrow> Some (AsyncEndpoint (AEndpointMap aep))
      | Some KOKernelData \<Rightarrow> undefined (* forbidden by pspace_relation *)
-     | Some KOUserData \<Rightarrow> Option.map (ArchObj \<circ> DataPage) (ups x)
+     | Some KOUserData \<Rightarrow> map_option (ArchObj \<circ> DataPage) (ups x)
      | Some (KOTCB tcb) \<Rightarrow> Some (TCB (TcbMap tcb))
-     | Some (KOCTE cte) \<Rightarrow> Option.map (%sz. absCNode sz h x) (cns x)
-     | Some (KOArch ako) \<Rightarrow> Option.map ArchObj (absHeapArch h x ako)
+     | Some (KOCTE cte) \<Rightarrow> map_option (%sz. absCNode sz h x) (cns x)
+     | Some (KOArch ako) \<Rightarrow> map_option ArchObj (absHeapArch h x ako)
      | None \<Rightarrow> None"
 
 lemma unaligned_page_offsets_helper:
@@ -667,9 +667,9 @@ proof -
        apply (case_tac tcb, clarsimp)
        apply (case_tac tcb_exta, clarsimp)
        apply (simp add: thread_state_relation_imp_ThStateMap)
-       apply (subgoal_tac "Option.map FaultMap option = tcb_fault")
+       apply (subgoal_tac "map_option FaultMap option = tcb_fault")
         prefer 2
-        apply (simp add: fault_option_relation_def)
+        apply (simp add: fault_rel_optionation_def)
         using valid_objs[simplified valid_objs_def dom_def fun_app_def,
                          simplified]
         apply (erule_tac x=y in allE)
@@ -1228,7 +1228,7 @@ definition
   "absCDT cnp h \<equiv>
    %(oref,cref).
    if cnp (cte_map (oref, cref)) = (oref, cref)
-     then Option.map cnp (parent_of' (subtree h) (cte_map (oref, cref)))
+     then map_option cnp (parent_of' (subtree h) (cte_map (oref, cref)))
    else None"
 
 lemma valid_mdb_mdb_cte_at:

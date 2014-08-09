@@ -446,7 +446,7 @@ lemma trace_end_NoneD:
   apply (simp add: trace_end_def split: split_if_asm)
    apply (metis nat_trace_Max_dom_None not_None_eq)
   apply (rule_tac x="the o tr" in exI, simp)
-  apply (metis the.simps)
+  apply (metis option.sel)
   done
 
 lemma trace_end_SomeD:
@@ -456,7 +456,7 @@ lemma trace_end_SomeD:
   apply (rule exI, rule conjI, assumption)
   apply (case_tac "tr (Suc (Max (dom tr)))")
    apply (simp add: nat_trace_rel_def)
-   apply (metis the.simps option.simps)
+   apply (metis option.sel option.simps)
   apply (cut_tac x="Suc ?y" in Max_ge[OF finite_subset domI])
      apply (erule(1) trace_None_dom_subset[rotated])
     apply simp+

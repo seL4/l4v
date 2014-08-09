@@ -1907,7 +1907,7 @@ lemma arch_finalise_cap_globals_equiv:
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   apply (induct cap)
   apply (simp_all add:arch_finalise_cap_def)
-  apply (wp delete_asid_pool_globals_equiv option_case_wp unmap_page_globals_equiv
+  apply (wp delete_asid_pool_globals_equiv case_option_wp unmap_page_globals_equiv
             unmap_page_table_globals_equiv delete_asid_globals_equiv |
          wpc | clarsimp split: bool.splits option.splits | intro impI conjI)+
 done

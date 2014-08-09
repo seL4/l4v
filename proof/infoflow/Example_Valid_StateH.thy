@@ -52,13 +52,13 @@ where
 definition
   Low_cte' :: "10 word \<Rightarrow> Structures_H.cte option"
 where
-  "Low_cte' \<equiv> (Option.map (\<lambda>(cap, mdb). CTE cap mdb)) \<circ> Low_capsH \<circ> to_bl"
+  "Low_cte' \<equiv> (map_option (\<lambda>(cap, mdb). CTE cap mdb)) \<circ> Low_capsH \<circ> to_bl"
 
 definition
   Low_cte :: "word32 \<Rightarrow> word32 \<Rightarrow> Structures_H.kernel_object option"
 where
   "Low_cte \<equiv> \<lambda>base offs. if is_aligned offs cte_level_bits \<and> base \<le> offs \<and> offs \<le> base + 2 ^ 14 - 1
-                         then Option.map (\<lambda>cte. KOCTE cte) (Low_cte' (ucast (offs - base >> cte_level_bits))) else None"
+                         then map_option (\<lambda>cte. KOCTE cte) (Low_cte' (ucast (offs - base >> cte_level_bits))) else None"
 
 
 text {* High's Cspace *}
@@ -82,13 +82,13 @@ where
 definition
   High_cte' :: "10 word \<Rightarrow> Structures_H.cte option"
 where
-  "High_cte' \<equiv> (Option.map (\<lambda>(cap, mdb). CTE cap mdb)) \<circ> High_capsH \<circ> to_bl"
+  "High_cte' \<equiv> (map_option (\<lambda>(cap, mdb). CTE cap mdb)) \<circ> High_capsH \<circ> to_bl"
 
 definition
   High_cte :: "word32 \<Rightarrow> word32 \<Rightarrow> Structures_H.kernel_object option"
 where
   "High_cte \<equiv> \<lambda>base offs. if is_aligned offs cte_level_bits \<and> base \<le> offs \<and> offs \<le> base + 2 ^ 14 - 1
-                          then Option.map (\<lambda>cte. KOCTE cte) (High_cte' (ucast (offs - base >> cte_level_bits))) else None"
+                          then map_option (\<lambda>cte. KOCTE cte) (High_cte' (ucast (offs - base >> cte_level_bits))) else None"
 
 text {* We need a copy of boundary crossing caps owned by SilcLabel.
         The only such cap is Low's cap to the async endpoint *}
@@ -107,13 +107,13 @@ where
 definition
   Silc_cte' :: "10 word \<Rightarrow> Structures_H.cte option"
 where
-  "Silc_cte' \<equiv> (Option.map (\<lambda>(cap, mdb). CTE cap mdb)) \<circ> Silc_capsH \<circ> to_bl"
+  "Silc_cte' \<equiv> (map_option (\<lambda>(cap, mdb). CTE cap mdb)) \<circ> Silc_capsH \<circ> to_bl"
 
 definition
   Silc_cte :: "word32 \<Rightarrow> word32 \<Rightarrow> Structures_H.kernel_object option"
 where
   "Silc_cte \<equiv> \<lambda>base offs. if is_aligned offs cte_level_bits \<and> base \<le> offs \<and> offs \<le> base + 2 ^ 14 - 1
-                          then Option.map (\<lambda>cte. KOCTE cte) (Silc_cte' (ucast (offs - base >> cte_level_bits))) else None"
+                          then map_option (\<lambda>cte. KOCTE cte) (Silc_cte' (ucast (offs - base >> cte_level_bits))) else None"
 
 text {* async endpoint between Low and High *}
 
@@ -135,7 +135,7 @@ definition
   Low_ptH :: "word32 \<Rightarrow> word32 \<Rightarrow> Structures_H.kernel_object option"
 where
   "Low_ptH \<equiv>
-     \<lambda>base. (Option.map (\<lambda>x. Structures_H.KOArch (ARMStructures_H.KOPTE (Low_pt'H x)))) \<circ>
+     \<lambda>base. (map_option (\<lambda>x. Structures_H.KOArch (ARMStructures_H.KOPTE (Low_pt'H x)))) \<circ>
             (\<lambda>offs. if is_aligned offs 2 \<and> base \<le> offs \<and> offs \<le> base + 2 ^ 10 - 1
                     then Some (ucast (offs - base >> 2)) else None)"
 
@@ -161,7 +161,7 @@ definition
   Low_pdH :: "word32 \<Rightarrow> word32 \<Rightarrow> Structures_H.kernel_object option"
 where
   "Low_pdH \<equiv>
-     \<lambda>base. (Option.map (\<lambda>x. Structures_H.KOArch (ARMStructures_H.KOPDE (Low_pd'H x)))) \<circ>
+     \<lambda>base. (map_option (\<lambda>x. Structures_H.KOArch (ARMStructures_H.KOPDE (Low_pd'H x)))) \<circ>
             (\<lambda>offs. if is_aligned offs 2 \<and> base \<le> offs \<and> offs \<le> base + 2 ^ 14 - 1
                     then Some (ucast (offs - base >> 2)) else None)"
 
@@ -181,7 +181,7 @@ definition
   High_ptH :: "word32 \<Rightarrow> word32 \<Rightarrow> Structures_H.kernel_object option"
 where
   "High_ptH \<equiv>
-     \<lambda>base. (Option.map (\<lambda>x. Structures_H.KOArch (ARMStructures_H.KOPTE (High_pt'H x)))) \<circ>
+     \<lambda>base. (map_option (\<lambda>x. Structures_H.KOArch (ARMStructures_H.KOPTE (High_pt'H x)))) \<circ>
             (\<lambda>offs. if is_aligned offs 2 \<and> base \<le> offs \<and> offs \<le> base + 2 ^ 10 - 1
                     then Some (ucast (offs - base >> 2)) else None)"
 
@@ -203,7 +203,7 @@ definition
   High_pdH :: "word32 \<Rightarrow> word32 \<Rightarrow> Structures_H.kernel_object option" 
 where
   "High_pdH \<equiv>
-     \<lambda>base. (Option.map (\<lambda>x. Structures_H.KOArch (ARMStructures_H.KOPDE (High_pd'H x)))) \<circ>
+     \<lambda>base. (map_option (\<lambda>x. Structures_H.KOArch (ARMStructures_H.KOPDE (High_pd'H x)))) \<circ>
             (\<lambda>offs. if is_aligned offs 2 \<and> base \<le> offs \<and> offs \<le> base + 2 ^ 14 - 1
                     then Some (ucast (offs - base >> 2)) else None)"
 
@@ -289,7 +289,7 @@ definition
   global_pdH' :: "word32 \<Rightarrow> word32 \<Rightarrow> Structures_H.kernel_object option"
 where
   "global_pdH' \<equiv> \<lambda>base.
-     (Option.map (\<lambda>x. Structures_H.KOArch (ARMStructures_H.KOPDE (global_pdH (x::12 word))))) \<circ>
+     (map_option (\<lambda>x. Structures_H.KOArch (ARMStructures_H.KOPDE (global_pdH (x::12 word))))) \<circ>
      (\<lambda>offs. if is_aligned offs 2 \<and> base \<le> offs \<and> offs \<le> base + 2 ^ 14 - 1
              then Some (ucast (offs - base >> 2)) else None)"
 
@@ -3152,9 +3152,9 @@ lemma s0_pspace_rel:
                apply (clarsimp simp: kh0H_obj_def split del: split_if)
                apply (cut_tac x=ya in pd_offs_in_range(3))
                apply (clarsimp simp: pd_offs_range_def pde_relation_def pde_relation_aligned_def)
-              apply (clarsimp simp: kh0H_obj_def kh0_obj_def other_obj_relation_def tcb_relation_def fault_option_relation_def word_bits_def)
-             apply (clarsimp simp: kh0H_all_obj_def kh0_obj_def other_obj_relation_def tcb_relation_def fault_option_relation_def word_bits_def the_nat_to_bl_10_def the_nat_to_bl_def nat_to_bl_def)
-            apply (clarsimp simp: kh0H_all_obj_def kh0_obj_def other_obj_relation_def tcb_relation_def fault_option_relation_def word_bits_def the_nat_to_bl_10_def the_nat_to_bl_def nat_to_bl_def)
+              apply (clarsimp simp: kh0H_obj_def kh0_obj_def other_obj_relation_def tcb_relation_def fault_rel_optionation_def word_bits_def)
+             apply (clarsimp simp: kh0H_all_obj_def kh0_obj_def other_obj_relation_def tcb_relation_def fault_rel_optionation_def word_bits_def the_nat_to_bl_10_def the_nat_to_bl_def nat_to_bl_def)
+            apply (clarsimp simp: kh0H_all_obj_def kh0_obj_def other_obj_relation_def tcb_relation_def fault_rel_optionation_def word_bits_def the_nat_to_bl_10_def the_nat_to_bl_def nat_to_bl_def)
            apply (clarsimp simp: kh0H_obj_def High_pt_def High_pt'H_def High_pt'_def split del: split_if)
            apply (cut_tac x=ya in pt_offs_in_range(2))
            apply (clarsimp simp: pt_offs_range_def pte_relation_def pte_relation_aligned_def pte_relation'_def)

@@ -2164,7 +2164,7 @@ proof -
   apply (clarsimp simp:valid_cap'_def 
     objBits_simps archObjSize_def)
   apply (subst vs_valid_duplicates'_def)
-  apply (thin_tac "option_case ?x ?y ?z")
+  apply (thin_tac "case_option ?x ?y ?z")
   apply (clarsimp simp: dom_def vs_ptr_align_def capAligned_def)
   apply (intro conjI impI)
    apply (clarsimp simp:image_def split:option.splits)
@@ -2608,14 +2608,14 @@ crunch inv [wp]: getThreadBufferSlot P
 
 lemma tc_valid_duplicates':
   "\<lbrace>invs' and sch_act_simple and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and tcb_at' a and ex_nonz_cap_to' a and
-    option_case \<top> (valid_cap' o fst) e' and 
-    K (option_case True (isCNodeCap o fst) e') and
-    option_case \<top> (valid_cap' o fst) f' and
-    K (option_case True (isValidVTableRoot o fst) f') and
-    option_case \<top> (valid_cap') (option_case None (option_case None (Some o fst) o snd) g) and
-    K (option_case True (\<lambda>x. x \<le> maxPriority) d) and 
-    K (option_case True isArchObjectCap (option_case None (option_case None (Some o fst) o snd) g))
-    and K (option_case True (swp is_aligned msg_align_bits o fst) g)\<rbrace>
+    case_option \<top> (valid_cap' o fst) e' and 
+    K (case_option True (isCNodeCap o fst) e') and
+    case_option \<top> (valid_cap' o fst) f' and
+    K (case_option True (isValidVTableRoot o fst) f') and
+    case_option \<top> (valid_cap') (case_option None (case_option None (Some o fst) o snd) g) and
+    K (case_option True (\<lambda>x. x \<le> maxPriority) d) and 
+    K (case_option True isArchObjectCap (case_option None (case_option None (Some o fst) o snd) g))
+    and K (case_option True (swp is_aligned msg_align_bits o fst) g)\<rbrace>
       invokeTCB (tcbinvocation.ThreadControl a sl b' d e' f' g)
    \<lbrace>\<lambda>rv s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
   apply (rule hoare_gen_asm)
@@ -2624,11 +2624,11 @@ lemma tc_valid_duplicates':
              cong: option.case_cong)
   apply (rule hoare_walk_assmsE)
     apply (clarsimp simp: pred_conj_def option.splits [where P="\<lambda>x. x s", standard])
-    apply ((wp option_case_wp threadSet_invs_trivial
+    apply ((wp case_option_wp threadSet_invs_trivial
                hoare_vcg_all_lift threadSet_cap_to' static_imp_wp | simp add: inQ_def | fastforce)+)[2]
   apply (rule hoare_walk_assmsE)
     apply (clarsimp simp: pred_conj_def option.splits [where P="\<lambda>x. x s", standard])
-    apply ((wp option_case_wp threadSet_invs_trivial setP_invs' static_imp_wp
+    apply ((wp case_option_wp threadSet_invs_trivial setP_invs' static_imp_wp
                hoare_vcg_all_lift threadSet_cap_to' | simp add: inQ_def | fastforce)+)[2]
   apply (rule hoare_pre)
    apply ((simp only: simp_thms cases_simp cong: conj_cong

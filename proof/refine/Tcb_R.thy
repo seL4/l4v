@@ -799,8 +799,8 @@ definition
  "out_rel fn fn' v v' \<equiv>
      ((v = None) = (v' = None)) \<and>
      (\<forall>tcb tcb'. tcb_relation tcb tcb' \<longrightarrow>
-                 tcb_relation (option_case id fn v tcb)
-                              (option_case id fn' v' tcb'))"
+                 tcb_relation (case_option id fn v tcb)
+                              (case_option id fn' v' tcb'))"
 
 lemma out_corresT:
   assumes x: "\<And>tcb v. \<forall>(getF, setF)\<in>ran tcb_cap_cases. getF (fn v tcb) = getF tcb"
@@ -811,7 +811,7 @@ lemma out_corresT:
      corres dc (tcb_at t)
                (tcb_at' t)
        (option_update_thread t fn v)
-       (option_case (return ()) (\<lambda>x. threadSet (fn' x) t) v')"
+       (case_option (return ()) (\<lambda>x. threadSet (fn' x) t) v')"
   apply (case_tac v, simp_all add: out_rel_def
                        option_update_thread_def)
   apply clarsimp
@@ -1219,7 +1219,7 @@ lemma inQ_tc_corres_helper:
   "(\<forall>d p. (\<exists>tcb. tcbQueued tcb \<and> tcbPriority tcb = p \<and> tcbDomain tcb = d \<and> (tcbQueued tcb \<longrightarrow> tcbDomain tcb \<noteq> d)) \<longrightarrow> a \<notin> set (ksReadyQueues s (d, p))) = True"
   by clarsimp
 
-abbreviation "valid_option_prio \<equiv> option_case True (\<lambda>p. p \<le> maxPriority)"
+abbreviation "valid_option_prio \<equiv> case_option True (\<lambda>p. p \<le> maxPriority)"
 
 definition valid_tcb_invocation :: "tcbinvocation \<Rightarrow> bool" where
    "valid_tcb_invocation i \<equiv> case i of
@@ -1236,25 +1236,25 @@ lemma tc_corres:
   "corres (intr \<oplus> op =)
     (einvs and simple_sched_action and tcb_at a and
      (\<lambda>s. {e, f, option_map undefined g} \<noteq> {None} \<longrightarrow> cte_at slot s) and
-     option_case \<top> (valid_cap o fst) e and
-     option_case \<top> (cte_at o snd) e and
-     option_case \<top> (no_cap_to_obj_dr_emp o fst) e and
-     K (option_case True (is_cnode_cap o fst) e) and
-     option_case \<top> (valid_cap o fst) f and
-     option_case \<top> (cte_at o snd) f and
-     option_case \<top> (no_cap_to_obj_dr_emp o fst) f and
-     K (option_case True (is_valid_vtable_root o fst) f)
-      and option_case \<top> (option_case \<top> (cte_at o snd) o snd) g
-      and option_case \<top> (option_case \<top> (no_cap_to_obj_dr_emp o fst) o snd) g
-      and option_case \<top> (option_case \<top> (valid_cap o fst) o snd) g
-      and K (option_case True ((\<lambda>v. is_aligned v msg_align_bits) o fst) g)
-      and K (option_case True (option_case True (is_cnode_or_valid_arch o fst) o snd) g))
-    (invs' and sch_act_simple and option_case \<top> (valid_cap' o fst) e' and
+     case_option \<top> (valid_cap o fst) e and
+     case_option \<top> (cte_at o snd) e and
+     case_option \<top> (no_cap_to_obj_dr_emp o fst) e and
+     K (case_option True (is_cnode_cap o fst) e) and
+     case_option \<top> (valid_cap o fst) f and
+     case_option \<top> (cte_at o snd) f and
+     case_option \<top> (no_cap_to_obj_dr_emp o fst) f and
+     K (case_option True (is_valid_vtable_root o fst) f)
+      and case_option \<top> (case_option \<top> (cte_at o snd) o snd) g
+      and case_option \<top> (case_option \<top> (no_cap_to_obj_dr_emp o fst) o snd) g
+      and case_option \<top> (case_option \<top> (valid_cap o fst) o snd) g
+      and K (case_option True ((\<lambda>v. is_aligned v msg_align_bits) o fst) g)
+      and K (case_option True (case_option True (is_cnode_or_valid_arch o fst) o snd) g))
+    (invs' and sch_act_simple and case_option \<top> (valid_cap' o fst) e' and
      (\<lambda>s. {e', f', option_map undefined g'} \<noteq> {None} \<longrightarrow> cte_at' (cte_map slot) s) and
-     K (option_case True (isCNodeCap o fst) e') and
-     option_case \<top> (valid_cap' o fst) f' and
-     K (option_case True (isValidVTableRoot o fst) f') and
-     option_case \<top> (option_case \<top> (valid_cap' o fst) o snd) g' and
+     K (case_option True (isCNodeCap o fst) e') and
+     case_option \<top> (valid_cap' o fst) f' and
+     K (case_option True (isValidVTableRoot o fst) f') and
+     case_option \<top> (case_option \<top> (valid_cap' o fst) o snd) g' and
      tcb_at' a and ex_nonz_cap_to' a and K (valid_option_prio p'))
     (invoke_tcb (tcb_invocation.ThreadControl a slot (option_map to_bl b') p e f g))
     (invokeTCB (tcbinvocation.ThreadControl a sl' b' p' e' f' g'))"
@@ -1282,7 +1282,7 @@ proof -
     done
   have S: "\<And>t x. corres dc (einvs and tcb_at t) (invs' and tcb_at' t and valid_objs' and K (valid_option_prio p'))
     (case p of None \<Rightarrow> return () | Some prio \<Rightarrow> set_priority t prio)
-                     (option_case (return ()) (setPriority t) p')"
+                     (case_option (return ()) (setPriority t) p')"
     apply (case_tac p, simp_all add: sp_corres p)
     done
   have T: "\<And>x x' ref getfn target.
@@ -1298,7 +1298,7 @@ proof -
             (invs' and sch_act_simple and cte_at' (cte_map (target, ref)) and
              (\<lambda>s. \<forall>cp \<in> (case x' of None \<Rightarrow> {} | Some (c, sl) \<Rightarrow> {c}). s \<turnstile>' cp))
          (case x of None \<Rightarrow> returnOk ()
-          | Some pr \<Rightarrow> prod_case (\<lambda>new_cap src_slot.
+          | Some pr \<Rightarrow> case_prod (\<lambda>new_cap src_slot.
               doE cap_delete (target, ref);
                   liftE $ check_cap_at new_cap src_slot $
                           check_cap_at (cap.ThreadCap target) slot $
@@ -1346,14 +1346,14 @@ proof -
      (invs' and sch_act_simple and tcb_at' a and
        (\<lambda>s. \<forall>cp \<in> (case g' of None \<Rightarrow> {} | Some (x, v) \<Rightarrow> (case v of
                               None \<Rightarrow> {} | Some (c, sl) \<Rightarrow> {c})). s \<turnstile>' cp))
-     (option_case (returnOk ())
-       (prod_case
+     (case_option (returnOk ())
+       (case_prod
          (\<lambda>ptr frame.
              doE cap_delete (a, tcb_cnode_index 4);
                  do y \<leftarrow> thread_set (tcb_ipc_buffer_update (\<lambda>_. ptr)) a;
                    liftE $
-                   option_case (return ())
-                   (prod_case
+                   case_option (return ())
+                   (case_prod
                       (\<lambda>new_cap src_slot.
                           check_cap_at new_cap src_slot $
                           check_cap_at (cap.ThreadCap a) slot $
@@ -1362,14 +1362,14 @@ proof -
                  od
              odE))
        g)
-     (option_case (returnOk ())
+     (case_option (returnOk ())
         (\<lambda>(ptr, frame).
             do bufferSlot \<leftarrow> getThreadBufferSlot a;
             doE y \<leftarrow> cteDelete bufferSlot True;
             do y \<leftarrow> threadSet (tcbIPCBuffer_update (\<lambda>_. ptr)) a;
                liftE
-                    (option_case (return ())
-                      (prod_case
+                    (case_option (return ())
+                      (case_prod
                         (\<lambda>newCap srcSlot.
                             checkCapAt newCap srcSlot $
                             checkCapAt
@@ -1442,23 +1442,23 @@ proof -
                      cte_level_bits_def word_bits_def)
     done
   have X: "\<And>x P Q R M. (\<And>y. x = Some y \<Longrightarrow> \<lbrace>P y\<rbrace> M y \<lbrace>Q\<rbrace>,\<lbrace>R\<rbrace>)
-               \<Longrightarrow> \<lbrace>option_case (Q ()) P x\<rbrace> option_case (returnOk ()) M x \<lbrace>Q\<rbrace>,\<lbrace>R\<rbrace>"
+               \<Longrightarrow> \<lbrace>case_option (Q ()) P x\<rbrace> case_option (returnOk ()) M x \<lbrace>Q\<rbrace>,\<lbrace>R\<rbrace>"
     by (case_tac x, simp_all, wp)
   have Y: "\<And>x P Q M. (\<And>y. x = Some y \<Longrightarrow> \<lbrace>P y\<rbrace> M y \<lbrace>Q\<rbrace>,-)
-               \<Longrightarrow> \<lbrace>option_case (Q ()) P x\<rbrace> option_case (returnOk ()) M x \<lbrace>Q\<rbrace>,-"
+               \<Longrightarrow> \<lbrace>case_option (Q ()) P x\<rbrace> case_option (returnOk ()) M x \<lbrace>Q\<rbrace>,-"
     by (case_tac x, simp_all, wp)
-  have Z: "\<And>P f R Q x. \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv. Q and R\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv. option_case Q (\<lambda>y. R) x\<rbrace>"
+  have Z: "\<And>P f R Q x. \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv. Q and R\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>rv. case_option Q (\<lambda>y. R) x\<rbrace>"
     apply (rule hoare_post_imp)
      defer
      apply assumption
     apply (case_tac x, simp_all)
     done
   have A: "\<And>x P Q M. (\<And>y. x = Some y \<Longrightarrow> \<lbrace>P y\<rbrace> M y \<lbrace>Q\<rbrace>)
-               \<Longrightarrow> \<lbrace>option_case (Q ()) P x\<rbrace> option_case (return ()) M x \<lbrace>Q\<rbrace>"
+               \<Longrightarrow> \<lbrace>case_option (Q ()) P x\<rbrace> case_option (return ()) M x \<lbrace>Q\<rbrace>"
     by (case_tac x, simp_all, wp)
   have B: "\<And>t v. \<lbrace>invs' and tcb_at' t\<rbrace> threadSet (tcbFaultHandler_update v) t \<lbrace>\<lambda>rv. invs'\<rbrace>"
     by (wp threadSet_invs_trivial | clarsimp simp: inQ_def)+
-   note stuff = Z B out_invs_trivial hoare_option_case_wp
+   note stuff = Z B out_invs_trivial hoare_case_option_wp
                hoare_vcg_const_Ball_lift hoare_vcg_const_Ball_lift_R
                cap_delete_deletes cap_delete_valid_cap out_valid_objs
                cap_insert_objs
@@ -1532,13 +1532,13 @@ lemma cteInsert_sa_simple[wp]:
 lemma tc_invs':
   "\<lbrace>invs' and sch_act_simple and tcb_at' a and ex_nonz_cap_to' a and
     K (valid_option_prio d) and
-    option_case \<top> (valid_cap' o fst) e' and
-    K (option_case True (isCNodeCap o fst) e') and
-    option_case \<top> (valid_cap' o fst) f' and
-    K (option_case True (isValidVTableRoot o fst) f') and
-    option_case \<top> (valid_cap') (option_case None (option_case None (Some o fst) o snd) g) and
-    K (option_case True isArchObjectCap (option_case None (option_case None (Some o fst) o snd) g))
-    and K (option_case True (swp is_aligned msg_align_bits o fst) g) \<rbrace>
+    case_option \<top> (valid_cap' o fst) e' and
+    K (case_option True (isCNodeCap o fst) e') and
+    case_option \<top> (valid_cap' o fst) f' and
+    K (case_option True (isValidVTableRoot o fst) f') and
+    case_option \<top> (valid_cap') (case_option None (case_option None (Some o fst) o snd) g) and
+    K (case_option True isArchObjectCap (case_option None (case_option None (Some o fst) o snd) g))
+    and K (case_option True (swp is_aligned msg_align_bits o fst) g) \<rbrace>
       invokeTCB (tcbinvocation.ThreadControl a sl b' d e' f' g)
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (rule hoare_gen_asm)
@@ -1547,11 +1547,11 @@ lemma tc_invs':
              cong: option.case_cong)
   apply (rule hoare_walk_assmsE)
     apply (clarsimp simp: pred_conj_def option.splits [where P="\<lambda>x. x s", standard])
-    apply ((wp option_case_wp threadSet_invs_trivial static_imp_wp
+    apply ((wp case_option_wp threadSet_invs_trivial static_imp_wp
                hoare_vcg_all_lift threadSet_cap_to' | clarsimp simp: inQ_def)+)[2]
   apply (rule hoare_walk_assmsE)
     apply (clarsimp simp: pred_conj_def option.splits [where P="\<lambda>x. x s", standard])
-    apply ((wp option_case_wp threadSet_invs_trivial setP_invs' static_imp_wp
+    apply ((wp case_option_wp threadSet_invs_trivial setP_invs' static_imp_wp
                hoare_vcg_all_lift threadSet_cap_to' | clarsimp simp: inQ_def)+)[2]
   apply (rule hoare_pre)
    apply ((simp only: simp_thms cases_simp cong: conj_cong
@@ -1631,14 +1631,14 @@ where
 | "tcb_inv_wf' (tcbinvocation.ThreadControl t sl fe p croot vroot buf)
              = (tcb_at' t and ex_nonz_cap_to' t and
                K (valid_option_prio p) and
-               option_case \<top> (valid_cap' o fst) croot and
-               K (option_case True (isCNodeCap o fst) croot) and
-               option_case \<top> (valid_cap' o fst) vroot and
-               K (option_case True (isValidVTableRoot o fst) vroot) and
-               option_case \<top> (option_case \<top> (valid_cap' o fst) o snd) buf and
-               option_case \<top> (option_case \<top> (cte_at' o snd) o snd) buf and
-               K (option_case True (swp is_aligned msg_align_bits o fst) buf) and
-               K (option_case True (option_case True (isArchObjectCap o fst) o snd) buf) and
+               case_option \<top> (valid_cap' o fst) croot and
+               K (case_option True (isCNodeCap o fst) croot) and
+               case_option \<top> (valid_cap' o fst) vroot and
+               K (case_option True (isValidVTableRoot o fst) vroot) and
+               case_option \<top> (case_option \<top> (valid_cap' o fst) o snd) buf and
+               case_option \<top> (case_option \<top> (cte_at' o snd) o snd) buf and
+               K (case_option True (swp is_aligned msg_align_bits o fst) buf) and
+               K (case_option True (case_option True (isArchObjectCap o fst) o snd) buf) and
                (\<lambda>s. {croot, vroot, option_map undefined buf} \<noteq> {None}
                      \<longrightarrow> cte_at' sl s))"
 | "tcb_inv_wf' (tcbinvocation.ReadRegisters src susp n arch)
@@ -2381,7 +2381,7 @@ lemma invokeTCB_makes_simple':
    apply (simp split del: split_if
             | wp cteDelete_makes_simple' checkCap_inv [where P="st_tcb_at' simple' t"]
               threadSet_st_tcb_no_state mapM_x_wp' suspend_makes_simple'
-            | (wp option_cases_weak_wp)[1])+
+            | (wp case_options_weak_wp)[1])+
   done
 
 crunch irq_states' [wp]: getThreadBufferSlot valid_irq_states'

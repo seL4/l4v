@@ -150,7 +150,7 @@ lemma bisim_split_handle:
   and     v2: "\<lbrace>P'\<rbrace> m' \<lbrace>\<lambda>_ _. True\<rbrace>, \<lbrace>Pf'\<rbrace>"
   shows "bisim (f \<oplus> r) (Pn and P) (Pn' and P') (m <handle> c) (m' <handle> c')"
   unfolding handleE_def handleE'_def
-  apply (rule bisim_split [where Q = "\<lambda>r s. sum_case (\<lambda>l. Pf l s) (\<lambda>_. True) r" and Q' = "\<lambda>r s. sum_case (\<lambda>l. Pf' l s) (\<lambda>_. True) r", OF bm, folded validE_def])
+  apply (rule bisim_split [where Q = "\<lambda>r s. case_sum (\<lambda>l. Pf l s) (\<lambda>_. True) r" and Q' = "\<lambda>r s. case_sum (\<lambda>l. Pf' l s) (\<lambda>_. True) r", OF bm, folded validE_def])
   apply (case_tac ra)
    apply clarsimp
    apply (erule bc)
@@ -201,7 +201,7 @@ lemma bisim_splitE:
   and     v2: "\<lbrace>S'\<rbrace> c \<lbrace>Q'\<rbrace>, -"
   shows "bisim_underlying SR (f \<oplus> R) (P and S) (P' and S') (a >>=E b) (c >>=E d)"  
   apply (simp add: bindE_def lift_def[abs_def])
-  apply (rule bisim_split [where Q = "\<lambda>r s. sum_case  (\<lambda>_. True) (\<lambda>l. Q l s) r" and Q' = "\<lambda>r s. sum_case  (\<lambda>_. True) (\<lambda>l. Q' l s) r", OF ac, folded validE_def, folded validE_R_def])
+  apply (rule bisim_split [where Q = "\<lambda>r s. case_sum  (\<lambda>_. True) (\<lambda>l. Q l s) r" and Q' = "\<lambda>r s. case_sum  (\<lambda>_. True) (\<lambda>l. Q' l s) r", OF ac, folded validE_def, folded validE_R_def])
   apply (case_tac r')
    apply clarsimp
    apply (erule bisim_throwError')
@@ -228,12 +228,12 @@ lemma bisim_split_reflE:
   apply simp+
   done
 
-lemma bisim_split_bind_sum_case:
+lemma bisim_split_bind_case_sum:
   "\<lbrakk>bisim_underlying sr (lr \<oplus> rr) P P' a d;
    \<And>rv rv'. lr rv rv' \<Longrightarrow> bisim_underlying sr r (R rv) (R' rv') (b rv) (e rv');
    \<And>rv rv'. rr rv rv' \<Longrightarrow> bisim_underlying sr r (S rv) (S' rv') (c rv) (f rv'); \<lbrace>Q\<rbrace> a \<lbrace>S\<rbrace>, \<lbrace>R\<rbrace>; \<lbrace>Q'\<rbrace> d \<lbrace>S'\<rbrace>, \<lbrace>R'\<rbrace>\<rbrakk>
-  \<Longrightarrow> bisim_underlying sr r (P and Q) (P' and Q') (a >>= sum_case b c) (d >>= sum_case e f)"
-  apply (erule bisim_split [where Q = "\<lambda>rv s. sum_case (\<lambda>l. R l s) (\<lambda>r. S r s) rv" and Q' = "\<lambda>rv s. sum_case (\<lambda>l. R' l s) (\<lambda>r. S' r s) rv", folded validE_def])
+  \<Longrightarrow> bisim_underlying sr r (P and Q) (P' and Q') (a >>= case_sum b c) (d >>= case_sum e f)"
+  apply (erule bisim_split [where Q = "\<lambda>rv s. case_sum (\<lambda>l. R l s) (\<lambda>r. S r s) rv" and Q' = "\<lambda>rv s. case_sum (\<lambda>l. R' l s) (\<lambda>r. S' r s) rv", folded validE_def])
    apply (case_tac r')
     apply clarsimp
    apply clarsimp
@@ -334,7 +334,7 @@ lemma det_on_liftE [wp]:
   done
 
 lemma det_on_lift [wp]:
-  "(\<And>y. det_on (P y) (m y)) \<Longrightarrow> det_on (sum_case (\<lambda>_. \<top>) P x) (lift m x)"
+  "(\<And>y. det_on (P y) (m y)) \<Longrightarrow> det_on (case_sum (\<lambda>_. \<top>) P x) (lift m x)"
   unfolding lift_def
   by (auto simp: det_on_def throwError_def return_def split: sum.splits)
 
@@ -416,7 +416,7 @@ lemma not_empty_liftE [wp]:
   done
 
 lemma not_empty_lift [wp]:
-  "(\<And>y. not_empty (P y) (m y)) \<Longrightarrow> not_empty (sum_case (\<lambda>_. \<top>) P x) (lift m x)"
+  "(\<And>y. not_empty (P y) (m y)) \<Longrightarrow> not_empty (case_sum (\<lambda>_. \<top>) P x) (lift m x)"
   unfolding lift_def
   by (auto simp: not_empty_def throwError_def return_def split: sum.splits)
 

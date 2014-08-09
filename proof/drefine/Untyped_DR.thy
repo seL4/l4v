@@ -271,7 +271,7 @@ lemma freeMemory_dcorres:
   apply (clarsimp simp: transform_def transform_current_thread_def)
   apply (rule ext)
   apply (clarsimp simp: transform_objects_def map_add_def)
-  apply (clarsimp simp: Option.map_def split: option.splits)
+  apply (clarsimp simp: map_option_def split: option.splits)
   apply (clarsimp simp: transform_object_def transform_tcb_def
                  split: Structures_A.kernel_object.split option.splits)
   apply (rename_tac s ms tref etcb tcb)
@@ -288,7 +288,7 @@ lemma freeMemory_dcorres:
                         \<lambda>_ _. is_arch_cap or op = cap.NullCap)" in bspec)
    apply (simp add: ran_tcb_cap_cases)
   apply clarsimp
-  apply (thin_tac "option_case ?x ?y ?z")
+  apply (thin_tac "case_option ?x ?y ?z")
   apply (simp add: valid_ipc_buffer_cap_def)
   apply (drule valid_page_cap_imp_valid_buf)
   apply (frule_tac transform_full_intent_machine_state_eq, simp_all)

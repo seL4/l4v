@@ -453,9 +453,9 @@ lemma syscall_reads_respects_f_g:
   assumes reads_res_h_error:
     "\<And> v. reads_respects_f_g aag l (R' v) (h_error v)"
   assumes m_fault_hoare:
-    "\<lbrace> P \<rbrace> m_fault \<lbrace> sum_case Q' Q'' \<rbrace>"
+    "\<lbrace> P \<rbrace> m_fault \<lbrace> case_sum Q' Q'' \<rbrace>"
   assumes m_error_hoare:
-    "\<And> v. \<lbrace> Q'' v \<rbrace> m_error v \<lbrace> sum_case R' R'' \<rbrace>"
+    "\<And> v. \<lbrace> Q'' v \<rbrace> m_error v \<lbrace> case_sum R' R'' \<rbrace>"
   shows "reads_respects_f_g aag l P (Syscall_A.syscall m_fault h_fault m_error h_error m_finalise)"
   unfolding Syscall_A.syscall_def without_preemption_def fun_app_def
   apply (wp assms equiv_valid_guard_imp[OF liftE_bindE_ev]

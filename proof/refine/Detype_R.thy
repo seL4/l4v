@@ -1676,7 +1676,7 @@ lemma deleteObjects_st_tcb_at':
   apply (subgoal_tac "delete_locale s ptr bits p idx")
    apply (drule delete_locale.delete_ko_wp_at'
                 [where p = t and
-                       P="option_case False (P \<circ> tcbState) \<circ> projectKO_opt", 
+                       P="case_option False (P \<circ> tcbState) \<circ> projectKO_opt", 
                  simplified eq_commute])
     apply (simp add: st_tcb_at'_def obj_at'_real_def)
     apply (rule conjI)
@@ -4042,8 +4042,8 @@ lemma createNewCaps_ret_len:
 lemma no_overlap_check:
   "\<lbrakk>range_cover ptr sz bits n; pspace_no_overlap' ptr sz s;
     pspace_aligned' s;n\<noteq> 0\<rbrakk>
-   \<Longrightarrow> option_case (return ())
-                   (prod_case (\<lambda>x xa. haskell_assert (x < fromPPtr ptr) []))
+   \<Longrightarrow> case_option (return ())
+                   (case_prod (\<lambda>x xa. haskell_assert (x < fromPPtr ptr) []))
                    (fst (lookupAround2 (ptr + of_nat (shiftL n bits - Suc 0))
                                        (ksPSpace s))) s =
        return () s"

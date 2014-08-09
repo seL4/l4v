@@ -354,7 +354,7 @@ lemma monadic_rewrite_gets_the_walk:
      apply (clarsimp simp: monadic_rewrite_def fail_def snd_bind)
      apply (rule ccontr, drule(1) empty_failD2)
      apply clarsimp
-    apply (simp add: assert_opt_def option_case_If2)
+    apply (simp add: assert_opt_def case_option_If2)
     apply (rule monadic_rewrite_refl)
    apply wp
   apply simp
@@ -373,11 +373,11 @@ lemma monadic_rewrite_weaken2:
   apply auto
   done
 
-lemma monadic_rewrite_sum_case:
+lemma monadic_rewrite_case_sum:
   "\<lbrakk> \<And>v. x = Inl v \<Longrightarrow> monadic_rewrite F E (P v) (a v) (c v);
      \<And>v. x = Inr v \<Longrightarrow> monadic_rewrite F E (Q v) (b v) (d v) \<rbrakk>
     \<Longrightarrow> monadic_rewrite F E (\<lambda>s. (\<not> isRight x \<longrightarrow> P (theLeft x) s) \<and> (isRight x \<longrightarrow> Q (theRight x) s))
-          (sum_case a b x) (sum_case c d x)"
+          (case_sum a b x) (case_sum c d x)"
   by (cases x, simp_all add: isRight_def)
 
 lemma monadic_rewrite_add_gets:

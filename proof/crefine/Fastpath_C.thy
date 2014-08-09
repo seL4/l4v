@@ -676,7 +676,7 @@ qed
 lemmas lookup_fp_ccorres
     = lookup_fp_ccorres'[OF refl, THEN ccorres_use_cutMon]
 
-lemma ccap_relation_sum_case_Null_endpoint:
+lemma ccap_relation_case_sum_Null_endpoint:
   "ccap_relation (case x of Inl v => NullCap | Inr v => v) ccap
      \<Longrightarrow> (cap_get_tag ccap = scast cap_endpoint_cap)
            = (isRight x \<and> isEndpointCap (theRight x))"
@@ -778,7 +778,7 @@ lemma stored_hw_asid_get_ccorres_split':
   shows "ccorres_underlying rf_sr Gamm r xf ar axf
                 (\<lambda>s. page_directory_at' (ptr_val pd) s \<and> valid_pde_mappings' s
                       \<and> (\<forall>shw_asid. asid_map_pd_to_hwasids (armKSASIDMap (ksArchState s)) (ptr_val pd)
-                               = Option.set (pde_stored_asid shw_asid) \<and> pde_get_tag shw_asid = scast pde_pde_invalid
+                               = set_option (pde_stored_asid shw_asid) \<and> pde_get_tag shw_asid = scast pde_pde_invalid
                              \<longrightarrow> P shw_asid \<and> Q shw_asid s))
                 {s. \<forall>stored_hw_asid. P stored_hw_asid \<and> pde_get_tag stored_hw_asid = scast pde_pde_invalid
                             \<and> (cslift s \<circ>\<^sub>m pd_pointer_to_asid_slot) (ptr_val pd) = Some stored_hw_asid
@@ -793,7 +793,7 @@ lemma stored_hw_asid_get_ccorres_split':
    apply (rule ccorres_symb_exec_r)
      apply (rule ccorres_abstract_all[OF ceqv])
      apply (rule_tac A="\<lambda>s. asid_map_pd_to_hwasids (armKSASIDMap (ksArchState s)) (ptr_val pd)
-                               = Option.set (pde_stored_asid rv') \<and> pde_get_tag rv' = scast pde_pde_invalid
+                               = set_option (pde_stored_asid rv') \<and> pde_get_tag rv' = scast pde_pde_invalid
                             \<longrightarrow> P rv' \<and> Q rv' s"
                 and A'="{s. P rv' \<longrightarrow> s \<in> R rv'}
                          \<inter> {s. (cslift s \<circ>\<^sub>m pd_pointer_to_asid_slot) (ptr_val pd)
@@ -1027,7 +1027,7 @@ lemma setCurrentASID_setCurrentHWASID_rewrite:
   "monadic_rewrite True False
     (pd_has_hwasid pd and pd_at_asid' pd asid and
         (\<lambda>s. asid_map_pd_to_hwasids (armKSASIDMap (ksArchState s)) pd
-                                     = Option.set (pde_stored_asid v)))
+                                     = set_option (pde_stored_asid v)))
     (setCurrentASID asid)
     (doMachineOp (setHardwareASID (the (pde_stored_asid v))))"
   apply (simp add: setCurrentASID_def getHWASID_def
@@ -1044,7 +1044,7 @@ lemma setCurrentASID_setCurrentHWASID_rewrite:
     apply (rule monadic_rewrite_assert monadic_rewrite_gets_l)+
     apply (rule_tac P="x asid \<noteq> None \<and> fst (the (x asid)) = the (pde_stored_asid v)"
         in monadic_rewrite_gen_asm)
-    apply (simp only: option_case_If2 simp_thms if_True if_False
+    apply (simp only: case_option_If2 simp_thms if_True if_False
                       split_def, simp)
     apply (rule monadic_rewrite_refl)
    apply (wp findPDForASID_pd_at_wp | simp only: const_def)+
@@ -1073,7 +1073,7 @@ lemma switchToThread_fp_ccorres:
                                          (thread + tcbVTableSlot * 0x10)
                           and pd_has_hwasid pd
                           and (\<lambda>s. asid_map_pd_to_hwasids (armKSASIDMap (ksArchState s)) pd
-                                     = Option.set (pde_stored_asid v)))
+                                     = set_option (pde_stored_asid v)))
                    (UNIV \<inter> {s. thread_' s = tcb_ptr_to_ctcb_ptr thread}
                          \<inter> {s. cap_pd_' s = pde_Ptr pd}
                          \<inter> {s. stored_hw_asid___struct_pde_C_' s = v}) []
@@ -1117,7 +1117,7 @@ lemma switchToThread_fp_ccorres:
         apply (wp doMachineOp_pd_at_asid')
        apply (rule ccorres_bind_assoc_rev)
        apply (ctac add: armv_contextSwitch_fp_ccorres)
-         apply (simp add: storeWordUser_def bind_assoc option_case_If2
+         apply (simp add: storeWordUser_def bind_assoc case_option_If2
                           split_def
                      del: Collect_const)
          apply (rule ccorres_symb_exec_l[OF _ gets_inv _ empty_fail_gets])
@@ -1477,9 +1477,9 @@ lemma ccorres_call_hSkip:
   apply (clarsimp simp: igl)
   done
 
-lemma bind_sum_case_rethrow:
-  "rethrowFailure fl f >>= sum_case e g
-     = f >>= sum_case (e \<circ> fl) g"
+lemma bind_case_sum_rethrow:
+  "rethrowFailure fl f >>= case_sum e g
+     = f >>= case_sum (e \<circ> fl) g"
   apply (simp add: rethrowFailure_def handleE'_def
                    bind_assoc)
   apply (rule bind_cong[OF refl])
@@ -2293,7 +2293,7 @@ lemma fastpath_call_ccorres:
        apply (ctac add: lookup_fp_ccorres)
          apply (rename_tac luRet ep_cap)
          apply (csymbr, csymbr)
-         apply (simp add: ccap_relation_sum_case_Null_endpoint
+         apply (simp add: ccap_relation_case_sum_Null_endpoint
                           of_bl_from_bool from_bool_0
                      del: Collect_const cong: call_ignore_cong)
          apply (rule ccorres_Cond_rhs_Seq)
@@ -2306,7 +2306,7 @@ lemma fastpath_call_ccorres:
           apply (vcg exspec=slowpath_noreturn_spec)
          apply (rule ccorres_rhs_assoc)+
          apply csymbr+
-         apply (simp add: if_1_0_0 isRight_sum_case
+         apply (simp add: if_1_0_0 isRight_case_sum
                      del: Collect_const cong: call_ignore_cong)
          apply (elim conjE)
          apply (frule(1) cap_get_tag_isCap[THEN iffD2])
@@ -2459,7 +2459,7 @@ lemma fastpath_call_ccorres:
                  apply (rule ccorres_symb_exec_l3[OF _ gets_inv _ empty_fail_gets])
                   apply (rename_tac asidMap)
                   apply (rule_tac P="asid_map_pd_to_hwasids asidMap (capPDBasePtr (capCap ((cteCap pd_cap))))
-                                        = Option.set (pde_stored_asid shw_asid)" in ccorres_gen_asm)
+                                        = set_option (pde_stored_asid shw_asid)" in ccorres_gen_asm)
                   apply (simp del: Collect_const cong: call_ignore_cong)
                   apply (rule ccorres_Cond_rhs_Seq)
                    apply (simp add: pde_stored_asid_def asid_map_pd_to_hwasids_def)
@@ -2809,8 +2809,8 @@ lemma fastpath_call_ccorres:
               simp del: Collect_const split del: split_if)
   apply (drule(1) obj_at_cslift_tcb)
   apply (clarsimp simp: ccte_relation_eq_ccap_relation of_bl_from_bool from_bool_0
-                        if_1_0_0 ccap_relation_sum_case_Null_endpoint
-                        isRight_sum_case typ_heap_simps')
+                        if_1_0_0 ccap_relation_case_sum_Null_endpoint
+                        isRight_case_sum typ_heap_simps')
   apply (frule(1) cap_get_tag_isCap[THEN iffD2])
   apply (clarsimp simp: typ_heap_simps' ccap_relation_ep_helpers)
   apply (erule cmap_relationE1[OF cmap_relation_ep],
@@ -2970,7 +2970,7 @@ lemma fastpath_reply_wait_ccorres:
        apply (ctac add: lookup_fp_ccorres)
          apply (rename_tac luRet ep_cap)
          apply (csymbr, csymbr)
-         apply (simp add: ccap_relation_sum_case_Null_endpoint
+         apply (simp add: ccap_relation_case_sum_Null_endpoint
                           of_bl_from_bool from_bool_0
                      del: Collect_const cong: call_ignore_cong)
          apply (rule ccorres_Cond_rhs_Seq)
@@ -2983,7 +2983,7 @@ lemma fastpath_reply_wait_ccorres:
           apply (vcg exspec=slowpath_noreturn_spec)
          apply (rule ccorres_rhs_assoc)+
          apply csymbr+
-         apply (simp add: if_1_0_0 isRight_sum_case
+         apply (simp add: if_1_0_0 isRight_case_sum
                      del: Collect_const cong: call_ignore_cong)
          apply (elim conjE)
          apply (frule(1) cap_get_tag_isCap[THEN iffD2])
@@ -3129,7 +3129,7 @@ lemma fastpath_reply_wait_ccorres:
                  apply (rule ccorres_symb_exec_l3[OF _ gets_inv _ empty_fail_gets])
                   apply (rename_tac asidMap)
                   apply (rule_tac P="asid_map_pd_to_hwasids asidMap (capPDBasePtr (capCap ((cteCap pd_cap))))
-                                        = Option.set (pde_stored_asid shw_asid)" in ccorres_gen_asm)
+                                        = set_option (pde_stored_asid shw_asid)" in ccorres_gen_asm)
                   apply (simp del: Collect_const cong: call_ignore_cong)
                   apply (rule ccorres_Cond_rhs_Seq)
                    apply (simp add: pde_stored_asid_def asid_map_pd_to_hwasids_def)
@@ -3425,8 +3425,8 @@ lemma fastpath_reply_wait_ccorres:
               simp del: Collect_const)
   apply (drule(1) obj_at_cslift_tcb)
   apply (clarsimp simp: ccte_relation_eq_ccap_relation of_bl_from_bool from_bool_0
-                        if_1_0_0 ccap_relation_sum_case_Null_endpoint
-                        isRight_sum_case typ_heap_simps'
+                        if_1_0_0 ccap_relation_case_sum_Null_endpoint
+                        isRight_case_sum typ_heap_simps'
                         cap_get_tag_isCap mi_from_H_def)
   apply (clarsimp simp: isCap_simps capAligned_def objBits_simps
                  dest!: ptr_val_tcb_ptr_mask2[unfolded mask_def])
@@ -4037,7 +4037,7 @@ lemma page_directory_at_partial_overwrite:
 lemma findPDForASID_isolatable:
   "thread_actions_isolatable idx (findPDForASID asid)"
   apply (simp add: findPDForASID_def liftE_bindE liftME_def bindE_assoc
-                   option_case_If2 assertE_def liftE_def checkPDAt_def
+                   case_option_If2 assertE_def liftE_def checkPDAt_def
                    stateAssert_def2
              cong: if_cong)
   apply (intro thread_actions_isolatable_bind[OF _ _ hoare_pre(1)]
@@ -4053,7 +4053,7 @@ lemma getHWASID_isolatable:
   "thread_actions_isolatable idx (getHWASID asid)"
   apply (simp add: getHWASID_def loadHWASID_def
                    findFreeHWASID_def
-                   option_case_If2 findPDForASIDAssert_def
+                   case_option_If2 findPDForASIDAssert_def
                    checkPDAt_def checkPDUniqueToASID_def
                    checkPDASIDMapMembership_def
                    stateAssert_def2 const_def assert_def
@@ -5061,7 +5061,7 @@ lemma fastpath_callKernel_SysCall_corres:
                         capFaultOnFailure_def)
        apply (simp only: bindE_bind_linearise[where f="rethrowFailure fn f'",
                                                       standard]
-                         bind_sum_case_rethrow)
+                         bind_case_sum_rethrow)
        apply (simp add: lookupCapAndSlot_def lookupSlotForThread_def
                         lookupSlotForThread_def bindE_assoc
                         liftE_bind_return_bindE_returnOk split_def
@@ -5073,12 +5073,12 @@ lemma fastpath_callKernel_SysCall_corres:
        apply (rule monadic_rewrite_bind_tail)
         apply (rule monadic_rewrite_rdonly_bind_l)
          apply (wp | simp)+
-        apply (rule_tac fn="sum_case Inl (Inr \<circ> fst)" in monadic_rewrite_split_fn)
+        apply (rule_tac fn="case_sum Inl (Inr \<circ> fst)" in monadic_rewrite_split_fn)
           apply (simp add: liftME_liftM[symmetric] liftME_def bindE_assoc)
           apply (rule monadic_rewrite_refl)
          apply (rule monadic_rewrite_if_rhs[rotated])
           apply (rule monadic_rewrite_alternative_l)
-         apply (simp add: isRight_right_map isRight_sum_case)
+         apply (simp add: isRight_right_map isRight_case_sum)
          apply (rule monadic_rewrite_if_rhs[rotated])
           apply (rule monadic_rewrite_alternative_l)
          apply (rule monadic_rewrite_rdonly_bind_l[OF lookupIPC_inv])
@@ -5103,7 +5103,7 @@ lemma fastpath_callKernel_SysCall_corres:
                apply (rule monadic_rewrite_alternative_l)
               apply (rule monadic_rewrite_if_rhs[rotated])
                apply (rule monadic_rewrite_alternative_l)
-              apply (simp add: isRight_sum_case)
+              apply (simp add: isRight_case_sum)
               apply (rule monadic_rewrite_symb_exec_r [OF gts_inv' no_fail_getThreadState])
                apply (rename_tac "destState")
                apply (rule monadic_rewrite_if_rhs[rotated])
@@ -5197,7 +5197,7 @@ lemma fastpath_callKernel_SysCall_corres:
                                       \<and> tcb_at' thread s"
                              and F=True and E=False in monadic_rewrite_weaken)
                  apply (rule monadic_rewrite_isolate_final)
-                   apply (simp add: isRight_sum_case cong: list.case_cong)
+                   apply (simp add: isRight_case_sum cong: list.case_cong)
                   apply (clarsimp simp: fun_eq_iff if_flip
                                   cong: if_cong)
                   apply (drule obj_at_ko_at', clarsimp)
@@ -5205,7 +5205,7 @@ lemma fastpath_callKernel_SysCall_corres:
                   apply (clarsimp simp: zip_map2 zip_same foldl_map
                                         foldl_fun_upd
                                         foldr_copy_register_tsrs
-                                        isRight_sum_case
+                                        isRight_case_sum
                                   cong: if_cong)
                   apply (simp add: upto_enum_def fromEnum_def
                                    enum_register  toEnum_def
@@ -5983,7 +5983,7 @@ lemma fastpath_callKernel_SysReplyWait_corres:
           apply (case_tac rab_ret, simp_all add: isRight_def)[1]
            apply (rule monadic_rewrite_alternative_l)
           apply clarsimp
-         apply (simp add: isRight_sum_case liftE_bind
+         apply (simp add: isRight_case_sum liftE_bind
                           isRight_def[where x="Inr v", standard])
          apply (rule monadic_rewrite_symb_exec_r, wp)
           apply (rename_tac ep_cap)
@@ -6155,7 +6155,7 @@ lemma fastpath_callKernel_SysReplyWait_corres:
                       apply (clarsimp simp: zip_map2 zip_same foldl_map
                                             foldl_fun_upd
                                             foldr_copy_register_tsrs
-                                            isRight_sum_case
+                                            isRight_case_sum
                                       cong: if_cong)
                       apply (simp add: upto_enum_def fromEnum_def
                                        enum_register toEnum_def

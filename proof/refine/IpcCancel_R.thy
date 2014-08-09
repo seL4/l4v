@@ -492,7 +492,7 @@ lemma (in delete_one) reply_ipc_cancel_corres:
                in corres_split')
      apply (rule corres_guard_imp)
        apply (rule threadset_corresT)
-          apply (simp add: tcb_relation_def fault_option_relation_def)
+          apply (simp add: tcb_relation_def fault_rel_optionation_def)
          apply (simp add: tcb_cap_cases_def)
         apply (simp add: tcb_cte_cases_def)
        apply (simp add: exst_same_def)

@@ -722,7 +722,7 @@ lemma partitionIntegrity_subjectAffects_mem:
    apply(drule subsetD[rotated, OF _ Access.ptr_range_subset[where x="0", simplified]])
       apply(blast intro: arm_globals_frame_aligned[OF invs_arch_state invs_psp_aligned])
      apply simp+
-  apply(erule option_caseE)
+  apply(erule case_optionE)
    apply blast
   (* need to appeal to object_integrity to reason about the tcb state change *)
 

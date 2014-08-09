@@ -136,7 +136,7 @@ definition
  "maybeApply \<equiv> option_map"
 
 definition
- "maybe \<equiv> option_case"
+ "maybe \<equiv> case_option"
 
 definition
  "foldR f init L \<equiv> foldr f L init"
@@ -201,7 +201,7 @@ axiomatization
 definition
  "either f1 f2 c \<equiv> case c of Inl r1 \<Rightarrow> f1 r1 | Inr r2 \<Rightarrow> f2 r2"
 
-lemma either_simp[simp]: "either = sum_case"
+lemma either_simp[simp]: "either = case_sum"
   apply (rule ext)+
   apply (simp add: either_def)
   done

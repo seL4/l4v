@@ -212,7 +212,7 @@ where
      ARM_Structs_A.ASIDPoolCap r as
        \<Rightarrow> is_aligned as asid_low_bits \<and> as \<le> 2^asid_bits - 1
    | ARM_Structs_A.PageCap r rghts sz mapdata \<Rightarrow> rghts \<in> valid_vm_rights \<and>
-     option_case True (wellformed_mapdata sz) mapdata
+     case_option True (wellformed_mapdata sz) mapdata
    | ARM_Structs_A.PageTableCap r (Some mapdata) \<Rightarrow>
      wellformed_mapdata ARMSection mapdata
    | ARM_Structs_A.PageDirectoryCap r (Some asid) \<Rightarrow>
@@ -293,7 +293,7 @@ where
                                 \<and> is_aligned vref (pageBitsForSize ARMSection))
   | ARM_Structs_A.PageDirectoryCap r mapdata \<Rightarrow>
     typ_at (AArch APageDirectory) r s \<and>
-    option_case True (\<lambda>asid. 0 < asid \<and> asid \<le> 2^asid_bits - 1) mapdata))"
+    case_option True (\<lambda>asid. 0 < asid \<and> asid \<le> 2^asid_bits - 1) mapdata))"
 
 abbreviation
   valid_cap_syn :: "'z::state_ext state \<Rightarrow> cap \<Rightarrow> bool" ("_ \<turnstile> _" [60, 60] 61)
@@ -1705,7 +1705,7 @@ lemma ran_tcb_cap_cases:
                 insert_commute)
 
 lemma tcb_cnode_map_tcb_cap_cases:
-  "tcb_cnode_map tcb = (\<lambda>bl. Option.map (\<lambda>x. fst x tcb) (tcb_cap_cases bl))"
+  "tcb_cnode_map tcb = (\<lambda>bl. map_option (\<lambda>x. fst x tcb) (tcb_cap_cases bl))"
   by (rule ext) (simp add: tcb_cnode_map_def tcb_cap_cases_def)
 
 lemma ran_tcb_cnode_map:

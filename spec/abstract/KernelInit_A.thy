@@ -499,7 +499,7 @@ definition
   "create_it_frame_cap pptr vptr asid use_large \<equiv>
    let sz = if use_large then ARMLargePage else ARMSmallPage in
      returnOk $ ArchObjectCap $ PageCap pptr {AllowRead,AllowWrite}
-                                        sz (Option.map (\<lambda>a. (a, vptr)) asid)"
+                                        sz (map_option (\<lambda>a. (a, vptr)) asid)"
 
 definition
   create_ipcbuf_frame :: "cap \<Rightarrow> (vspace_ref \<times> vspace_ref)

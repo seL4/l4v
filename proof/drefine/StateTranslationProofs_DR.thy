@@ -243,9 +243,9 @@ qed
 
 lemma map_lift_over_f_eq:
   "inj_on f ({x} \<union> dom m \<union> ran m) \<Longrightarrow>
-   (map_lift_over f m (f x) = v) = (v = Option.map f (m x))"
+   (map_lift_over f m (f x) = v) = (v = map_option f (m x))"
   apply (cases v, simp_all add: map_lift_over_eq_None map_lift_over_eq_Some)
-   apply (auto simp: Option.map_def split: option.split)
+   apply (auto simp: map_option_def split: option.split)
   done
 
 lemma map_lift_over_eq_cases[unfolded map_lift_over_eq_None map_lift_over_eq_Some]:
@@ -255,9 +255,9 @@ lemma map_lift_over_eq_cases[unfolded map_lift_over_eq_None map_lift_over_eq_Som
   by (simp split: option.split)
 
 lemma map_lift_over_upd:
-  assumes inj_f: "inj_on f ({x} \<union> Option.set y \<union> dom m \<union> ran m)"
+  assumes inj_f: "inj_on f ({x} \<union> set_option y \<union> dom m \<union> ran m)"
   shows "(map_lift_over f (m(x := y)))
-           = ((map_lift_over f m) (f x := Option.map f y))"
+           = ((map_lift_over f m) (f x := map_option f y))"
 proof -
   have Q: "inj_on f (dom m \<union> ran m)"
       "inj_on f (insert x (dom m \<union> ran (m(x := y))))"
@@ -280,11 +280,11 @@ proof -
 qed
 
 lemma map_lift_over_if_eq_twice:
-  assumes inj_f: "inj_on f (dom m \<union> ran m \<union> {y, y'} \<union> Option.set z \<union> Option.set z')"
+  assumes inj_f: "inj_on f (dom m \<union> ran m \<union> {y, y'} \<union> set_option z \<union> set_option z')"
   shows
   "map_lift_over f (\<lambda>x. if m x = Some y then z else if m x = Some y' then z' else m x)
-       = (\<lambda>x. if map_lift_over f m x = Some (f y) then Option.map f z
-              else if map_lift_over f m x = Some (f y') then Option.map f z'
+       = (\<lambda>x. if map_lift_over f m x = Some (f y) then map_option f z
+              else if map_lift_over f m x = Some (f y') then map_option f z'
               else map_lift_over f m x)"
   (is "map_lift_over f ?ifeq = ?rhs")
 proof -
@@ -296,7 +296,7 @@ proof -
   with inj_f
   have 2: "inj_on f (dom ?ifeq)"
     by (auto elim!: subset_inj_on)
-  have "dom ?ifeq \<union> ran ?ifeq \<subseteq> dom m \<union> ran m \<union> Option.set z \<union> Option.set z'"
+  have "dom ?ifeq \<union> ran ?ifeq \<subseteq> dom m \<union> ran m \<union> set_option z \<union> set_option z'"
     by (auto simp: ran_def)
   with inj_f
   have "inj_on f (dom ?ifeq \<union> ran ?ifeq)"
@@ -312,17 +312,17 @@ proof -
      apply (simp add: Q[THEN inv_into_f_f] domI ranI inj_on_iff[OF inj_f]
                split: split_if_asm)
     apply (subst if_not_P, simp, rule allI, fastforce)+
-    apply (auto simp: Option.map_def Q[THEN inv_into_f_f] domI ranI
+    apply (auto simp: map_option_def Q[THEN inv_into_f_f] domI ranI
                       inj_on_iff[OF inj_f]
                split: split_if option.split)
     done
 qed
 
 lemma map_lift_over_if_eq:
-  assumes inj_f: "inj_on f (dom m \<union> ran m \<union> {y} \<union> Option.set z)"
+  assumes inj_f: "inj_on f (dom m \<union> ran m \<union> {y} \<union> set_option z)"
   shows
   "map_lift_over f (\<lambda>x. if m x = Some y then z else m x)
-       = (\<lambda>x. if map_lift_over f m x = Some (f y) then Option.map f z
+       = (\<lambda>x. if map_lift_over f m x = Some (f y) then map_option f z
               else map_lift_over f m x)"
   using inj_f map_lift_over_if_eq_twice[where f=f and m=m and y=y and z=z and y'=y and z'=z]
   apply (simp del: inj_on_insert)

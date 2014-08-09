@@ -20,7 +20,7 @@ where
    | tcb_invocation.Resume t \<Rightarrow> is_subject aag t
    | tcb_invocation.ThreadControl t sl ep priority croot vroot buf
           \<Rightarrow> is_subject aag t \<and>
-            (\<forall>(cap, slot) \<in> (Option.set croot \<union> Option.set vroot \<union> (option_case {} (Option.set \<circ> snd) buf)). pas_cap_cur_auth aag cap \<and> is_subject aag (fst slot))
+            (\<forall>(cap, slot) \<in> (set_option croot \<union> set_option vroot \<union> (case_option {} (set_option \<circ> snd) buf)). pas_cap_cur_auth aag cap \<and> is_subject aag (fst slot))
    | tcb_invocation.ReadRegisters src susp n arch \<Rightarrow> is_subject aag src
    | tcb_invocation.WriteRegisters dest res values arch \<Rightarrow> is_subject aag dest
    | tcb_invocation.CopyRegisters dest src susp res frame int_regs arch \<Rightarrow>
@@ -89,7 +89,7 @@ lemmas itr_wps = restart_integrity_autarch as_user_integrity_autarch thread_set_
               check_cap_inv2[where Q="\<lambda>_. pas_refined aag", standard]
               checked_insert_no_cap_to cap_insert_ex_cap
               cap_delete_valid_cap cap_delete_deletes
-              hoare_option_case_wp thread_set_valid_cap
+              hoare_case_option_wp thread_set_valid_cap
               thread_set_tcb_ipc_buffer_cap_cleared_invs
               thread_set_invs_trivial[OF ball_tcb_cap_casesI]
               thread_set_cte_wp_at_trivial[where Q="\<lambda>x. x", OF ball_tcb_cap_casesI]
@@ -240,7 +240,7 @@ lemma invoke_tcb_tc_respects_aag:
              thread_set_pas_refined cap_delete_pas_refined
              option_update_thread_pas_refined
              check_cap_inv2[where Q="\<lambda>_. pas_refined aag"]
-             out_invs_trivial option_case_wpE cap_delete_deletes
+             out_invs_trivial case_option_wpE cap_delete_deletes
              cap_delete_valid_cap cap_insert_valid_cap out_cte_at
              cap_insert_cte_at cap_delete_cte_at out_valid_cap out_tcb_valid
              hoare_vcg_const_imp_lift_R hoare_vcg_all_lift_R

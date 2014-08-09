@@ -346,7 +346,7 @@ shows "
         | (wp 
              
              check_cap_inv2[where Q="\<lambda>_. pas_refined aag"]
-             out_invs_trivial option_case_wpE cap_delete_deletes
+             out_invs_trivial case_option_wpE cap_delete_deletes
              cap_delete_valid_cap cap_insert_valid_cap out_cte_at
              cap_insert_cte_at cap_delete_cte_at out_valid_cap out_tcb_valid
              hoare_vcg_const_imp_lift_R hoare_vcg_all_lift_R

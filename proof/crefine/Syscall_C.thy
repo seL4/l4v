@@ -762,7 +762,7 @@ lemma handleFault_ccorres:
   apply (cinit lift: tptr_')
    apply (simp add: catch_def)
    apply (rule ccorres_symb_exec_r) 
-     apply (rule ccorres_split_nothrow_novcg_sum_case)
+     apply (rule ccorres_split_nothrow_novcg_case_sum)
            apply (ctac (no_vcg) add: sendFaultIPC_ccorres)
           apply ceqv
          apply clarsimp
@@ -859,7 +859,7 @@ lemma handleInvocation_ccorres:
                         liftE_bindE split_def bindE_bind_linearise
                   cong: call_ignore_cong
                    del: Collect_const)
-       apply (rule_tac ccorres_split_nothrow_sum_case)
+       apply (rule_tac ccorres_split_nothrow_case_sum)
             apply (ctac add: capFaultOnFailure_ccorres
                                  [OF lookupCapAndSlot_ccorres])
            apply ceqv
@@ -873,7 +873,7 @@ lemma handleInvocation_ccorres:
            apply (rule_tac xf'="\<lambda>s. (status_' s,
                                 current_extra_caps_' (globals s))"
                              and ef'=fst and vf'=snd and es=errstate
-                        in ccorres_split_nothrow_novcg_sum_case)
+                        in ccorres_split_nothrow_novcg_case_sum)
                  apply (rule ccorres_call, rule lookupExtraCaps_ccorres, simp+)
                 apply (rule ceqv_tuple2, ceqv, ceqv)
                apply (simp add: returnOk_bind liftE_bindE
@@ -909,7 +909,7 @@ lemma handleInvocation_ccorres:
                   apply ceqv
                  apply csymbr
                  apply (simp only: bind_assoc[symmetric])
-                 apply (rule ccorres_split_nothrow_novcg_sum_case)
+                 apply (rule ccorres_split_nothrow_novcg_case_sum)
                        apply (ctac add: decodeInvocation_ccorres)
                       apply ceqv
                      apply (simp add: Collect_False exception_defs
@@ -965,7 +965,7 @@ lemma handleInvocation_ccorres:
                    apply (rule_tac Q="\<lambda>rv'. invs' and tcb_at' rv"
                                and E="\<lambda>ft. invs' and tcb_at' rv"
                               in hoare_post_impErr)
-                     apply (wp hoare_split_bind_sum_caseE
+                     apply (wp hoare_split_bind_case_sumE
                                alternative_wp hoare_drop_imps
                                setThreadState_nonqueued_state_update
                                ct_in_state'_set setThreadState_st_tcb
@@ -1218,13 +1218,13 @@ lemma cap_case_EndpointCap_AsyncEndpointCap:
 
 
 (* FIXME: MOVE *)
-lemma capFaultOnFailure_if_sum_case:
+lemma capFaultOnFailure_if_case_sum:
   " (capFaultOnFailure epCPtr b (if c then f else g) >>=
-      sum.sum_case (handleFault thread) return) =
+      sum.case_sum (handleFault thread) return) =
     (if c then ((capFaultOnFailure epCPtr b  f) 
-                 >>= sum.sum_case (handleFault thread) return)
+                 >>= sum.case_sum (handleFault thread) return)
           else ((capFaultOnFailure epCPtr b  g) 
-                 >>= sum.sum_case (handleFault thread) return))"
+                 >>= sum.case_sum (handleFault thread) return))"
   by (case_tac c, clarsimp, clarsimp)
 
 
@@ -1265,7 +1265,7 @@ lemma handleWait_ccorres:
        apply (simp add: bindE_bind_linearise)
 
        apply (rule_tac xf'=lu_ret___struct_lookupCap_ret_C_'
-                 in ccorres_split_nothrow_sum_case) 
+                 in ccorres_split_nothrow_case_sum) 
             apply (rule  capFaultOnFailure_ccorres)
             apply (ctac add: lookupCap_ccorres)
            apply ceqv
@@ -1274,13 +1274,13 @@ lemma handleWait_ccorres:
           apply (rule ccorres_Catch)
           apply csymbr
           apply (simp add: cap_get_tag_isCap del: Collect_const) 
-          apply (clarsimp simp: cap_case_EndpointCap_AsyncEndpointCap capFaultOnFailure_if_sum_case)
+          apply (clarsimp simp: cap_case_EndpointCap_AsyncEndpointCap capFaultOnFailure_if_case_sum)
           apply (rule ccorres_cond_both' [where Q=\<top> and Q'=\<top>])
             apply clarsimp
 
            apply (rule ccorres_rhs_assoc)+ 
            apply csymbr
-           apply (simp add: bool_case_If capFaultOnFailure_if_sum_case)
+           apply (simp add: bool_case_If capFaultOnFailure_if_case_sum)
 
            apply (rule ccorres_if_cond_throws_break2 [where Q=\<top> and Q'=\<top>])
               apply clarsimp
@@ -1323,13 +1323,13 @@ lemma handleWait_ccorres:
            apply clarsimp
            apply (vcg exspec=handleFault_modifies)
 
-          apply (clarsimp simp: capFaultOnFailure_if_sum_case bool_case_If)
+          apply (clarsimp simp: capFaultOnFailure_if_case_sum bool_case_If)
           apply (rule ccorres_cond_both' [where Q=\<top> and Q'=\<top>])
             apply clarsimp
 
            apply (rule ccorres_rhs_assoc)+ 
            apply csymbr
-           apply (simp add: bool_case_If capFaultOnFailure_if_sum_case)
+           apply (simp add: bool_case_If capFaultOnFailure_if_case_sum)
 
            apply (rule ccorres_if_cond_throws_break2 [where Q=\<top> and Q'=\<top>])
               apply clarsimp

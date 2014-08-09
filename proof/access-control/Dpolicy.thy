@@ -111,9 +111,9 @@ where
 fun
   cdl_cap_asid' :: "cdl_cap \<Rightarrow> asid set"
 where
-  "cdl_cap_asid' (Types_D.FrameCap _ _ _ _ asid) = transform_asid_rev ` Option.set asid"
-  | "cdl_cap_asid' (Types_D.PageTableCap _ _ asid) = transform_asid_rev ` Option.set asid"
-  | "cdl_cap_asid' (Types_D.PageDirectoryCap _ _ asid) = transform_asid_rev ` Option.set asid"
+  "cdl_cap_asid' (Types_D.FrameCap _ _ _ _ asid) = transform_asid_rev ` set_option asid"
+  | "cdl_cap_asid' (Types_D.PageTableCap _ _ asid) = transform_asid_rev ` set_option asid"
+  | "cdl_cap_asid' (Types_D.PageDirectoryCap _ _ asid) = transform_asid_rev ` set_option asid"
   | "cdl_cap_asid' (Types_D.AsidPoolCap _ asid) =
                                         {x. fst (transform_asid x) = fst asid \<and> x \<noteq> 0}"
   | "cdl_cap_asid' (Types_D.AsidControlCap) = UNIV"
@@ -218,7 +218,7 @@ abbreviation
 
 lemma transform_asid_rev_transform_mapping [simp]:
   "valid_asid_mapping mapping \<Longrightarrow>
-   transform_asid_rev ` Option.set (transform_mapping mapping) = fst ` Option.set mapping"
+   transform_asid_rev ` set_option (transform_mapping mapping) = fst ` set_option mapping"
   apply (simp add:transform_mapping_def option_map_def)
   apply (case_tac mapping)
    apply clarsimp+

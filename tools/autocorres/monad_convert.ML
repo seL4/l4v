@@ -122,8 +122,8 @@ end
  * Return the new theorem.
  *)
 local
-  val prod_case_eta_contract_thm =
-      @{lemma "(%x. (prod_case s) x) == (prod_case s)" by simp}
+  val case_prod_eta_contract_thm =
+      @{lemma "(%x. (case_prod s) x) == (case_prod s)" by simp}
 in
 fun polish ctxt (mt : Monad_Types.monad_type) thm =
 let
@@ -139,13 +139,13 @@ let
 
   (* eta-contract "case_prod clauses, so that they render as:
    * "%(a, b). P a b" instead of "case x of (a, b) => P a b". *)
-  val prod_case_conv =
+  val case_prod_conv =
     Conv.bottom_conv (
-        K (Conv.try_conv (Conv.rewr_conv prod_case_eta_contract_thm))) ctxt
+        K (Conv.try_conv (Conv.rewr_conv case_prod_eta_contract_thm))) ctxt
 
   val thm_p =
     Conv.fconv_rule (Conv.arg_conv (Utils.rhs_conv (
-        simp_conv then_conv prod_case_conv))) thm
+        simp_conv then_conv case_prod_conv))) thm
 in
   thm_p
 end

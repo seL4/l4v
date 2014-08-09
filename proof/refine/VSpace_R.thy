@@ -1424,7 +1424,7 @@ lemma unmap_page_table_corres:
   apply (clarsimp simp: unmapPageTable_def unmap_page_table_def ignoreFailure_def const_def cong: option.case_cong)
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqr [OF _ page_table_mapped_corres])
-      apply (simp add: option_case_If2 split del: split_if)
+      apply (simp add: case_option_If2 split del: split_if)
       apply (rule corres_if2[OF refl])
        apply (rule corres_split [OF _ store_pde_corres'])
           apply (rule corres_split[OF _ corres_machine_op])
@@ -2550,7 +2550,7 @@ lemma perform_page_table_corres:
   apply (clarsimp simp: is_pt_cap_def split_def
                         pt_bits_stuff objBits_simps archObjSize_def
                   cong: option.case_cong)
-  apply (simp add: option_case_If2 getSlotCap_def split del: split_if)
+  apply (simp add: case_option_If2 getSlotCap_def split del: split_if)
   apply (rule corres_guard_imp)
     apply (rule corres_split_nor)
        apply (simp add: liftM_def)

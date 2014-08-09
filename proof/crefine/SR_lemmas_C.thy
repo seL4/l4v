@@ -1049,7 +1049,7 @@ proof -
 qed
 
 lemma c_valid_cte_eq:
- "c_valid_cte c = option_case True cl_valid_cte (cte_lift c)" 
+ "c_valid_cte c = case_option True cl_valid_cte (cte_lift c)" 
  apply (clarsimp simp: c_valid_cte_def cl_valid_cte_def c_valid_cap_def  split: option.splits)
  apply (unfold cte_lift_def)
  apply simp

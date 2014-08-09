@@ -85,7 +85,7 @@ lemma oskip_wp [wp]:
   "ovalid (\<lambda>s. P () s) oskip P"
   by (simp add: ovalid_def oskip_def)
 
-lemma ovalid_prod_case [wp]:
+lemma ovalid_case_prod [wp]:
   assumes "(\<And>x y. ovalid (P x y) (B x y) Q)"
   shows "ovalid (case v of (x, y) \<Rightarrow> P x y) (case v of (x, y) \<Rightarrow> B x y) Q"
   using assms unfolding ovalid_def by auto
@@ -154,7 +154,7 @@ lemma oskip_NF_wp [wp]:
   "ovalidNF (\<lambda>s. P () s) oskip P"
   by (simp add: ovalidNF_def oskip_def)
 
-lemma ovalid_NF_prod_case [wp]:
+lemma ovalid_NF_case_prod [wp]:
   assumes "(\<And>x y. ovalidNF (P x y) (B x y) Q)"
   shows "ovalidNF (case v of (x, y) \<Rightarrow> P x y) (case v of (x, y) \<Rightarrow> B x y) Q"
   using assms unfolding ovalidNF_def by auto

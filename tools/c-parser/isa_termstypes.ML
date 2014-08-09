@@ -95,7 +95,7 @@ sig
   (* -- options *)
   val mk_Some : term -> term (* Some constructor *)
   val mk_the : term -> term
-  val mk_option_case : term * term * term -> term (* none,some,optionvalue *)
+  val mk_case_option : term * term * term -> term (* none,some,optionvalue *)
 
 
   (* -- lists *)
@@ -350,7 +350,7 @@ fun list_mk_pabs (vs, bdy) =
     | [v1, v2] => mk_split(list_mk_abs(vs, bdy))
     | h::t => mk_split(mk_abs(h, list_mk_pabs(t, bdy)))
 
-fun mk_option_case (none_t, some_f, opt) =
+fun mk_case_option (none_t, some_f, opt) =
     Const(@{const_name "Option.case_option"},
           type_of none_t --> type_of some_f --> type_of opt -->
           type_of none_t) $ none_t $ some_f $ opt

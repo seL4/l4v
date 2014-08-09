@@ -147,7 +147,7 @@ where
   "authorised_page_table_inv aag pti \<equiv> case pti of
      ArchInvocation_A.page_table_invocation.PageTableMap cap cslot_ptr pde obj_ref \<Rightarrow>
          is_subject aag (fst cslot_ptr) \<and> is_subject aag (obj_ref && ~~ mask pd_bits)
-       \<and> (option_case True (is_subject aag o fst) (pde_ref2 pde))
+       \<and> (case_option True (is_subject aag o fst) (pde_ref2 pde))
        \<and> pas_cap_cur_auth aag cap
    | ArchInvocation_A.page_table_invocation.PageTableUnmap cap cslot_ptr \<Rightarrow>
        is_subject aag (fst cslot_ptr) \<and> aag_cap_auth aag (pasSubject aag) cap
@@ -552,7 +552,7 @@ definition
   ipc_buffer_has_auth :: "'a PAS \<Rightarrow> word32 \<Rightarrow> word32 option \<Rightarrow> bool"
 where
    "ipc_buffer_has_auth aag thread \<equiv> 
-    option_case True (\<lambda>buf'. is_aligned buf' msg_align_bits \<and> (\<forall>x \<in> ptr_range buf' msg_align_bits. (pasObjectAbs aag thread, Write, pasObjectAbs aag x) \<in> pasPolicy aag))"
+    case_option True (\<lambda>buf'. is_aligned buf' msg_align_bits \<and> (\<forall>x \<in> ptr_range buf' msg_align_bits. (pasObjectAbs aag thread, Write, pasObjectAbs aag x) \<in> pasPolicy aag))"
 
 lemma ipc_buffer_has_auth_wordE:
   "\<lbrakk> ipc_buffer_has_auth aag thread (Some buf); p \<in> ptr_range (buf + off) sz; is_aligned off sz; sz \<le> msg_align_bits; off < 2 ^ msg_align_bits \<rbrakk> 
@@ -659,7 +659,7 @@ lemma perform_page_invocation_pas_refined [wp]:
     cong: ArchInvocation_A.page_invocation.case_cong sum.case_cong)
   apply (rule hoare_pre)
    apply wpc
-      apply (wp set_cap_pas_refined unmap_page_pas_refined sum_case_wp  prod_case_wp
+      apply (wp set_cap_pas_refined unmap_page_pas_refined case_sum_wp  case_prod_wp
                 mapM_x_and_const_wp [OF store_pte_pas_refined] mapM_x_and_const_wp [OF store_pde_pas_refined]
              hoare_vcg_all_lift hoare_vcg_const_imp_lift get_cap_wp
             | (wp hoare_vcg_imp_lift, unfold disj_not1)

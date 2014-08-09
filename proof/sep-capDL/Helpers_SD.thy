@@ -60,7 +60,7 @@ definition
 notation (xsymbols)
   map_comp'  (infixl "\<circ>\<^sub>M" 55)
 
-lemma map_comp'_apply [simp]: "(f \<circ>\<^sub>M g) x = option_case None (\<lambda>x. Some (f x)) (g x)"
+lemma map_comp'_apply [simp]: "(f \<circ>\<^sub>M g) x = case_option None (\<lambda>x. Some (f x)) (g x)"
   by (clarsimp simp: map_comp'_def)
 
 lemma map_comp'_empty [simp]:

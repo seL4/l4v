@@ -59,14 +59,14 @@ definition transform_page_inv :: "ArchInvocation_A.page_invocation \<Rightarrow>
 where "transform_page_inv invok \<equiv> case invok of
   ArchInvocation_A.page_invocation.PageMap asid cap ct_slot entries \<Rightarrow>
    Some (cdl_page_invocation.PageMap (transform_cap cap)
-        (sum_case (transform_pte \<circ> fst) (transform_pde \<circ> fst) entries)
+        (case_sum (transform_pte \<circ> fst) (transform_pde \<circ> fst) entries)
         (transform_cslot_ptr ct_slot)
-        (sum_case (\<lambda>pair. [ (transform_pt_slot_ref \<circ> hd \<circ> snd) pair])
+        (case_sum (\<lambda>pair. [ (transform_pt_slot_ref \<circ> hd \<circ> snd) pair])
           (\<lambda>pair. [(transform_pd_slot_ref \<circ> hd \<circ> snd) pair]) entries))
 | ArchInvocation_A.page_invocation.PageRemap asid entries \<Rightarrow>
    Some (cdl_page_invocation.PageRemap
-        (sum_case (transform_pte \<circ> fst) (transform_pde \<circ> fst) entries)
-        (sum_case (\<lambda>pair. [ (transform_pt_slot_ref \<circ> hd \<circ> snd) pair])
+        (case_sum (transform_pte \<circ> fst) (transform_pde \<circ> fst) entries)
+        (case_sum (\<lambda>pair. [ (transform_pt_slot_ref \<circ> hd \<circ> snd) pair])
           (\<lambda>pair. [(transform_pd_slot_ref \<circ> hd \<circ> snd) pair]) entries))
 | ArchInvocation_A.page_invocation.PageUnmap (arch_cap.PageCap a _ _ _) ref \<Rightarrow>
     Some (cdl_page_invocation.PageUnmap a (transform_cslot_ptr ref))
@@ -262,9 +262,9 @@ lemma create_mapping_entries_dcorres:
       and vp_aligned: "vmsz_aligned vptr pgsz"
       and kb: "vptr < kernel_base"
   shows
-  "dcorres (dc \<oplus> (\<lambda>rv rv'. rv = sum_case (\<lambda>pair. [ (transform_pt_slot_ref \<circ> hd \<circ> snd) pair])
+  "dcorres (dc \<oplus> (\<lambda>rv rv'. rv = case_sum (\<lambda>pair. [ (transform_pt_slot_ref \<circ> hd \<circ> snd) pair])
                                  (\<lambda>pair. [(transform_pd_slot_ref \<circ> hd \<circ> snd) pair]) rv'
-                     \<and> sum_case (transform_pte \<circ> fst) (transform_pde \<circ> fst) rv'
+                     \<and> case_sum (transform_pte \<circ> fst) (transform_pde \<circ> fst) rv'
                            = FrameCap (ptrFromPAddr base)
                                vm_rights (pageBitsForSize pgsz) Fake None))
      \<top>
@@ -383,9 +383,9 @@ lemma create_mapping_entries_dcorres_select:
       and vp_aligned: "vmsz_aligned vptr pgsz"
       and kb: "vptr < kernel_base"
   shows
-  "dcorres (dc \<oplus> (\<lambda>rv rv'. rv = sum_case (\<lambda>pair. [ (transform_pt_slot_ref \<circ> hd \<circ> snd) pair])
+  "dcorres (dc \<oplus> (\<lambda>rv rv'. rv = case_sum (\<lambda>pair. [ (transform_pt_slot_ref \<circ> hd \<circ> snd) pair])
                                  (\<lambda>pair. [(transform_pd_slot_ref \<circ> hd \<circ> snd) pair]) rv'
-                     \<and> sum_case (transform_pte \<circ> fst) (transform_pde \<circ> fst) rv'
+                     \<and> case_sum (transform_pte \<circ> fst) (transform_pde \<circ> fst) rv'
                            = FrameCap (ptrFromPAddr base)
                                vm_rights (pageBitsForSize pgsz) Fake None))
      (\<lambda>s. frslots = all_pd_pt_slots pd pdid s
@@ -1384,7 +1384,7 @@ lemma invoke_page_table_corres:
    apply (rule sym, simp+)
   done
 
-lemma sum_case_eq: "sum_case a a x = a (case x of Inl a \<Rightarrow> a | Inr a \<Rightarrow> a)"
+lemma case_sum_eq: "case_sum a a x = a (case x of Inl a \<Rightarrow> a | Inr a \<Rightarrow> a)"
   apply (case_tac x)
   apply (clarsimp)+
 done

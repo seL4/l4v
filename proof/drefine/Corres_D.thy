@@ -327,8 +327,8 @@ lemma split_return_throw_thingy:
   apply (simp split: sum.split_asm)
   done
 
-lemma sum_case_triv_return:
-  "sum_case throwError returnOk = return"
+lemma case_sum_triv_return:
+  "case_sum throwError returnOk = return"
   apply (intro ext)
   apply (simp add: throwError_def returnOk_def return_def
             split: sum.split)
@@ -336,7 +336,7 @@ lemma sum_case_triv_return:
 
 lemma lift_returnOk_bind_triv:
   "g >>= (lift returnOk) = g"
-  by (simp add: lift_def sum_case_triv_return cong: bind_cong)
+  by (simp add: lift_def case_sum_triv_return cong: bind_cong)
 
 lemma corres_return_throw_thingy:
   "\<lbrakk> \<And>s. \<lbrace>op = s\<rbrace> g \<lbrace>\<lambda>rv s'. s' = s \<and> Q rv\<rbrace>,\<lbrace>\<lambda>ft. op = s\<rbrace>;

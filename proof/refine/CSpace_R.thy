@@ -5237,7 +5237,7 @@ lemma mdb_inv_preserve_modify_map:
   apply (intro conjI)
     apply (clarsimp simp:modify_map_dom)
     apply (clarsimp simp:modify_map_def split:if_splits)+
-    apply (clarsimp simp:Option.map_def split:option.splits if_splits)
+    apply (clarsimp simp:map_option_def split:option.splits if_splits)
     apply (drule_tac x = p in spec)+
     apply (intro conjI allI impI)
       apply (clarsimp simp:mdb_next_def split:if_splits)+
@@ -9959,21 +9959,21 @@ lemma mdb_inv_preserve_update_cap_same:
    apply (clarsimp simp:mdb_inv_preserve.sameRegion
      modify_map_def split:if_splits)+
  apply (case_tac "p = dest")
-   apply (clarsimp simp:mdb_next_def Option.map_def split:option.splits )
+   apply (clarsimp simp:mdb_next_def map_option_def split:option.splits )
    apply (intro conjI allI impI)
      apply (rule ccontr,clarify)
      apply (fastforce dest!:iffD2[OF mdb_inv_preserve.dom,OF _ domI])
      apply (rule ccontr,simp)
      apply (fastforce dest!:iffD1[OF mdb_inv_preserve.dom,OF _ domI])
    apply (drule mdb_inv_preserve.mdb_next[where p = dest])
-   apply (clarsimp simp:mdb_next_def Option.map_def split:option.splits)+
+   apply (clarsimp simp:mdb_next_def map_option_def split:option.splits)+
  apply (intro conjI allI impI)
   apply (rule ccontr,clarify)
   apply (fastforce dest!:iffD2[OF mdb_inv_preserve.dom,OF _ domI])
   apply (rule ccontr,simp)
   apply (fastforce dest!:iffD1[OF mdb_inv_preserve.dom,OF _ domI])
  apply (drule_tac p = p in mdb_inv_preserve.mdb_next)
- apply (clarsimp simp:mdb_next_def Option.map_def split:option.splits)
+ apply (clarsimp simp:mdb_next_def map_option_def split:option.splits)
 done
 
 lemma updateCapFreeIndex_dlist:
@@ -10637,7 +10637,7 @@ lemma ifunsafe'_def3:
   done
 
 lemma tree_cte_cteCap_eq:
-  "cte_wp_at' (P \<circ> cteCap) p s = (option_case False P (cteCaps_of s p))"
+  "cte_wp_at' (P \<circ> cteCap) p s = (case_option False P (cteCaps_of s p))"
   apply (simp add: cte_wp_at_ctes_of cteCaps_of_def)
   apply (cases "ctes_of s p", simp_all)
   done

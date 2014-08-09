@@ -905,22 +905,22 @@ lemma thread_set_ipc_tcb_cap_valid:
 
 lemma tc_invs:
   "\<lbrace>invs and tcb_at a
-       and (option_case \<top> (valid_cap o fst) e)
-       and (option_case \<top> (valid_cap o fst) f)
-       and (option_case \<top> (option_case \<top> (valid_cap o fst) o snd) g)
-       and (option_case \<top> (cte_at o snd) e)
-       and (option_case \<top> (cte_at o snd) f)
-       and (option_case \<top> (option_case \<top> (cte_at o snd) o snd) g)
-       and (option_case \<top> (no_cap_to_obj_dr_emp o fst) e)
-       and (option_case \<top> (no_cap_to_obj_dr_emp o fst) f)
-       and (option_case \<top> (option_case \<top> (no_cap_to_obj_dr_emp o fst) o snd) g)
-       and K (option_case True (is_cnode_cap o fst) e)
-       and K (option_case True (is_valid_vtable_root o fst) f)
-       and K (option_case True (\<lambda>v. option_case True
+       and (case_option \<top> (valid_cap o fst) e)
+       and (case_option \<top> (valid_cap o fst) f)
+       and (case_option \<top> (case_option \<top> (valid_cap o fst) o snd) g)
+       and (case_option \<top> (cte_at o snd) e)
+       and (case_option \<top> (cte_at o snd) f)
+       and (case_option \<top> (case_option \<top> (cte_at o snd) o snd) g)
+       and (case_option \<top> (no_cap_to_obj_dr_emp o fst) e)
+       and (case_option \<top> (no_cap_to_obj_dr_emp o fst) f)
+       and (case_option \<top> (case_option \<top> (no_cap_to_obj_dr_emp o fst) o snd) g)
+       and K (case_option True (is_cnode_cap o fst) e)
+       and K (case_option True (is_valid_vtable_root o fst) f)
+       and K (case_option True (\<lambda>v. case_option True
                           ((swp valid_ipc_buffer_cap (fst v)
                              and is_arch_cap and is_cnode_or_valid_arch)
                                 o fst) (snd v)) g)
-       and K (option_case True (\<lambda>bl. length bl = word_bits) b)\<rbrace>
+       and K (case_option True (\<lambda>bl. length bl = word_bits) b)\<rbrace>
       invoke_tcb (tcb_invocation.ThreadControl a sl b pr e f g)
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (rule hoare_gen_asm)+
@@ -932,7 +932,7 @@ lemma tc_invs:
                    hoare_vcg_all_lift_R
                    hoare_vcg_E_elim hoare_vcg_const_imp_lift_R
                    hoare_vcg_R_conj
-        | (wp out_invs_trivial option_case_wpE cap_delete_deletes
+        | (wp out_invs_trivial case_option_wpE cap_delete_deletes
              cap_delete_valid_cap cap_insert_valid_cap out_cte_at
              cap_insert_cte_at cap_delete_cte_at out_valid_cap
              hoare_vcg_const_imp_lift_R hoare_vcg_all_lift_R
@@ -975,26 +975,26 @@ where
 | "tcb_inv_wf (tcb_invocation.Resume t)
              = (tcb_at t and ex_nonz_cap_to t)"
 | "tcb_inv_wf (tcb_invocation.ThreadControl t sl fe pr croot vroot buf)
-             = (tcb_at t and option_case \<top> (valid_cap \<circ> fst) croot
-                        and K (option_case True (is_cnode_cap \<circ> fst) croot)
-                        and option_case \<top> ((cte_at And ex_cte_cap_to) \<circ> snd) croot
-                        and option_case \<top> (no_cap_to_obj_dr_emp \<circ> fst) croot
-                        and K (option_case True (is_valid_vtable_root \<circ> fst) vroot)
-                        and option_case \<top> (valid_cap \<circ> fst) vroot
-                        and option_case \<top> (no_cap_to_obj_dr_emp \<circ> fst) vroot
-                        and option_case \<top> ((cte_at And ex_cte_cap_to) \<circ> snd) vroot
-                        and (option_case \<top> (option_case \<top> (valid_cap o fst) o snd) buf)
-                        and (option_case \<top> (option_case \<top>
+             = (tcb_at t and case_option \<top> (valid_cap \<circ> fst) croot
+                        and K (case_option True (is_cnode_cap \<circ> fst) croot)
+                        and case_option \<top> ((cte_at And ex_cte_cap_to) \<circ> snd) croot
+                        and case_option \<top> (no_cap_to_obj_dr_emp \<circ> fst) croot
+                        and K (case_option True (is_valid_vtable_root \<circ> fst) vroot)
+                        and case_option \<top> (valid_cap \<circ> fst) vroot
+                        and case_option \<top> (no_cap_to_obj_dr_emp \<circ> fst) vroot
+                        and case_option \<top> ((cte_at And ex_cte_cap_to) \<circ> snd) vroot
+                        and (case_option \<top> (case_option \<top> (valid_cap o fst) o snd) buf)
+                        and (case_option \<top> (case_option \<top>
                               (no_cap_to_obj_dr_emp o fst) o snd) buf)
-                        and K (option_case True ((\<lambda>v. is_aligned v msg_align_bits) o fst) buf)
-                        and K (option_case True (\<lambda>v. option_case True
+                        and K (case_option True ((\<lambda>v. is_aligned v msg_align_bits) o fst) buf)
+                        and K (case_option True (\<lambda>v. case_option True
                                ((swp valid_ipc_buffer_cap (fst v)
                                     and is_arch_cap and is_cnode_or_valid_arch)
                                               o fst) (snd v)) buf)
-                        and (option_case \<top> (option_case \<top> ((cte_at And ex_cte_cap_to) o snd) o snd) buf)
+                        and (case_option \<top> (case_option \<top> ((cte_at And ex_cte_cap_to) o snd) o snd) buf)
                         and (\<lambda>s. {croot, vroot, option_map undefined buf} \<noteq> {None}
                                     \<longrightarrow> cte_at sl s \<and> ex_cte_cap_to sl s)
-                        and K (option_case True (\<lambda>bl. length bl = word_bits) fe)
+                        and K (case_option True (\<lambda>bl. length bl = word_bits) fe)
                         and ex_nonz_cap_to t)"
 | "tcb_inv_wf (tcb_invocation.ReadRegisters src susp n arch)
              = (tcb_at src and ex_nonz_cap_to src)"

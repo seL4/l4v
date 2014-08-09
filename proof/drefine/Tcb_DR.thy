@@ -1083,26 +1083,26 @@ lemma dcorres_tcb_update_ipc_buffer:
          and valid_pdpt_objs
      and
      (\<lambda>y. case ipc_buffer' of None \<Rightarrow> True
-       | Some v \<Rightarrow> option_case True ((swp valid_ipc_buffer_cap (fst v) and is_arch_cap and cap_aligned) \<circ> fst) (snd v)
+       | Some v \<Rightarrow> case_option True ((swp valid_ipc_buffer_cap (fst v) and is_arch_cap and cap_aligned) \<circ> fst) (snd v)
        \<and> (is_aligned (fst v) msg_align_bits) ) and
-    option_case (\<lambda>_. True) (option_case (\<lambda>_. True) (cte_wp_at (\<lambda>_. True) \<circ> snd) \<circ> snd) ipc_buffer'
-    and option_case (\<lambda>_. True) (option_case (\<lambda>_. True) (not_idle_thread \<circ> fst \<circ> snd) \<circ> snd) ipc_buffer' and
-    (\<lambda>s. option_case True (\<lambda>x. not_idle_thread (fst a') s) ipc_buffer') )
-     (option_case
+    case_option (\<lambda>_. True) (case_option (\<lambda>_. True) (cte_wp_at (\<lambda>_. True) \<circ> snd) \<circ> snd) ipc_buffer'
+    and case_option (\<lambda>_. True) (case_option (\<lambda>_. True) (not_idle_thread \<circ> fst \<circ> snd) \<circ> snd) ipc_buffer' and
+    (\<lambda>s. case_option True (\<lambda>x. not_idle_thread (fst a') s) ipc_buffer') )
+     (case_option
          (returnOk () \<sqinter>
            (doE tcb_empty_thread_slot obj_id' tcb_ipcbuffer_slot;
                 liftE $ corrupt_tcb_intent obj_id'
             odE))
            (tcb_update_ipc_buffer obj_id' (transform_cslot_ptr a'))
          (translate_tcb_invocation_thread_ctrl_buffer ipc_buffer'))
-     (doE y \<leftarrow> option_case (returnOk ())
-                       (prod_case
+     (doE y \<leftarrow> case_option (returnOk ())
+                       (case_prod
                          (\<lambda>ptr frame.
                              doE cap_delete (obj_id', tcb_cnode_index 4);
                                  liftE $ thread_set (tcb_ipc_buffer_update (\<lambda>_. ptr)) obj_id';
                                  liftE $
-                                 option_case (return ())
-                                  (prod_case
+                                 case_option (return ())
+                                  (case_prod
                                     (\<lambda>new_cap src_slot.
                                         check_cap_at new_cap src_slot $
                                         check_cap_at (cap.ThreadCap obj_id') a' $ cap_insert new_cap src_slot (obj_id', tcb_cnode_index 4)))
@@ -1202,16 +1202,16 @@ done
 lemma dcorres_tcb_update_vspace_root:
   "dcorres (dc \<oplus> dc) (\<top>) ( invs and valid_etcbs and tcb_at obj_id'
       and not_idle_thread obj_id' and valid_pdpt_objs and
-      (\<lambda>y. option_case True (\<lambda>x. not_idle_thread (fst a') y) vroot') and
-      (\<lambda>y. option_case True (is_valid_vtable_root \<circ> fst) vroot') and
-           option_case (\<lambda>_. True) (valid_cap \<circ> fst) vroot' and
-           option_case (\<lambda>_. True) (not_idle_thread \<circ> fst \<circ> snd ) vroot' and
-           option_case (\<lambda>_. True) (no_cap_to_obj_dr_emp \<circ> fst) vroot' and
-           option_case (\<lambda>_. True) (cte_wp_at (\<lambda>_. True) \<circ> snd) vroot')
-    (option_case (returnOk ()) (tcb_update_vspace_root obj_id' (transform_cslot_ptr a'))
-      (Option.map (\<lambda>r. (transform_cap (fst r), transform_cslot_ptr (snd r))) vroot'))
-    (option_case (returnOk ())
-      (prod_case
+      (\<lambda>y. case_option True (\<lambda>x. not_idle_thread (fst a') y) vroot') and
+      (\<lambda>y. case_option True (is_valid_vtable_root \<circ> fst) vroot') and
+           case_option (\<lambda>_. True) (valid_cap \<circ> fst) vroot' and
+           case_option (\<lambda>_. True) (not_idle_thread \<circ> fst \<circ> snd ) vroot' and
+           case_option (\<lambda>_. True) (no_cap_to_obj_dr_emp \<circ> fst) vroot' and
+           case_option (\<lambda>_. True) (cte_wp_at (\<lambda>_. True) \<circ> snd) vroot')
+    (case_option (returnOk ()) (tcb_update_vspace_root obj_id' (transform_cslot_ptr a'))
+      (map_option (\<lambda>r. (transform_cap (fst r), transform_cslot_ptr (snd r))) vroot'))
+    (case_option (returnOk ())
+      (case_prod
       (\<lambda>new_cap src_slot.
         doE cap_delete (obj_id', tcb_cnode_index 1);
           liftE $
@@ -1280,16 +1280,16 @@ done
 lemma dcorres_tcb_update_cspace_root:
   "dcorres (dc \<oplus> dc) (\<top> ) ( invs and valid_etcbs and valid_pdpt_objs
            and not_idle_thread obj_id' and tcb_at obj_id' and
-           option_case (\<lambda>_. True) (valid_cap \<circ> fst) croot' and
-      (\<lambda>y. option_case True (\<lambda>x. not_idle_thread (fst a') y) croot') and
-      (\<lambda>y. option_case True (Structures_A.is_cnode_cap \<circ> fst) croot') and
-           option_case (\<lambda>_. True) (not_idle_thread \<circ> fst \<circ> snd ) croot' and
-           option_case (\<lambda>_. True) (cte_wp_at (\<lambda>_. True) \<circ> snd) croot' and
-           option_case (\<lambda>_. True) (no_cap_to_obj_dr_emp \<circ> fst) croot')
-    (option_case (returnOk ()) (tcb_update_cspace_root obj_id' (transform_cslot_ptr a'))
-        (Option.map (\<lambda>r. (transform_cap (fst r), transform_cslot_ptr (snd r))) croot'))
-    (option_case (returnOk ())
-        (prod_case
+           case_option (\<lambda>_. True) (valid_cap \<circ> fst) croot' and
+      (\<lambda>y. case_option True (\<lambda>x. not_idle_thread (fst a') y) croot') and
+      (\<lambda>y. case_option True (Structures_A.is_cnode_cap \<circ> fst) croot') and
+           case_option (\<lambda>_. True) (not_idle_thread \<circ> fst \<circ> snd ) croot' and
+           case_option (\<lambda>_. True) (cte_wp_at (\<lambda>_. True) \<circ> snd) croot' and
+           case_option (\<lambda>_. True) (no_cap_to_obj_dr_emp \<circ> fst) croot')
+    (case_option (returnOk ()) (tcb_update_cspace_root obj_id' (transform_cslot_ptr a'))
+        (map_option (\<lambda>r. (transform_cap (fst r), transform_cslot_ptr (snd r))) croot'))
+    (case_option (returnOk ())
+        (case_prod
         (\<lambda>new_cap src_slot.
           doE cap_delete (obj_id', tcb_cnode_index 0);
             liftE $
@@ -1373,7 +1373,7 @@ lemma tcb_fault_fault_handler_upd:
 
 lemma option_update_thread_corres:
   "dcorres (dc \<oplus> dc) \<top> (not_idle_thread obj_id and valid_etcbs)
-       (case Option.map of_bl fault_ep' of None \<Rightarrow> returnOk ()
+       (case map_option of_bl fault_ep' of None \<Rightarrow> returnOk ()
         | Some x \<Rightarrow> liftE $ update_thread obj_id (cdl_tcb_fault_endpoint_update (\<lambda>_. x)))
        (liftE (option_update_thread obj_id (tcb_fault_handler_update \<circ> (\<lambda>x y. x)) fault_ep'))"
   apply (simp add:option_update_thread_def not_idle_thread_def)
@@ -1402,8 +1402,8 @@ lemma check_cap_at_stable:
   apply (wp | simp split:if_splits)+
 done
 
-lemma option_case_wp:
-  "(\<And>x. \<lbrace>P x\<rbrace>a\<lbrace>\<lambda>r. Q x\<rbrace>) \<Longrightarrow> \<lbrace>option_case \<top> P z\<rbrace>a\<lbrace>\<lambda>r. option_case \<top> Q z\<rbrace>"
+lemma case_option_wp:
+  "(\<And>x. \<lbrace>P x\<rbrace>a\<lbrace>\<lambda>r. Q x\<rbrace>) \<Longrightarrow> \<lbrace>case_option \<top> P z\<rbrace>a\<lbrace>\<lambda>r. case_option \<top> Q z\<rbrace>"
   by (clarsimp split:option.splits)
 
 lemma hoare_case_some:
@@ -1420,8 +1420,8 @@ lemma hoare_case_someE:
     apply clarsimp+
 done
 
-lemma option_case_wpE:
-  "(\<And>x. \<lbrace>P x\<rbrace>a\<lbrace>\<lambda>r. Q x\<rbrace>,-) \<Longrightarrow> \<lbrace>option_case \<top> P z\<rbrace>a\<lbrace>\<lambda>r. option_case \<top> Q z\<rbrace>,-"
+lemma case_option_wpE:
+  "(\<And>x. \<lbrace>P x\<rbrace>a\<lbrace>\<lambda>r. Q x\<rbrace>,-) \<Longrightarrow> \<lbrace>case_option \<top> P z\<rbrace>a\<lbrace>\<lambda>r. case_option \<top> Q z\<rbrace>,-"
   by (clarsimp split:option.splits)
 
 lemma option_update_thread_not_idle_thread[wp]:
@@ -1443,7 +1443,7 @@ lemma thread_set_priority_transform: "\<lbrace>\<lambda>ps. transform ps = cs\<r
   apply (clarsimp simp: thread_set_priority_def ethread_set_def set_eobject_def | wp)+
 
   apply (clarsimp simp: transform_def transform_objects_def transform_cdt_def transform_current_thread_def transform_asid_table_def)
-  apply (rule_tac y="\<lambda>ptr. Option.map (transform_object (machine_state s) ptr ((ekheap s |` (- {idle_thread s})) ptr)) ((kheap s |` (- {idle_thread s})) ptr)" in arg_cong)
+  apply (rule_tac y="\<lambda>ptr. map_option (transform_object (machine_state s) ptr ((ekheap s |` (- {idle_thread s})) ptr)) ((kheap s |` (- {idle_thread s})) ptr)" in arg_cong)
   apply (rule ext)
   apply (rule_tac y="transform_object (machine_state s) ptr ((ekheap s |` (- {idle_thread s})) ptr)" in arg_cong)
   apply (rule ext)
@@ -1498,33 +1498,33 @@ crunch valid_etcbs[wp]: option_update_thread "valid_etcbs"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma dcorres_thread_control:
-  notes option_case_map [simp del]
+  notes case_option_map [simp del]
   shows
   "\<lbrakk> t' = tcb_invocation.ThreadControl obj_id' a' fault_ep' prio' croot' vroot' ipc_buffer';
      t = translate_tcb_invocation t' \<rbrakk> \<Longrightarrow>
    dcorres (dc \<oplus> dc) \<top> (\<lambda>s. invs s \<and> valid_etcbs s \<and>
             not_idle_thread obj_id' s \<and>
             tcb_at obj_id' s \<and> valid_pdpt_objs s \<and>
-            option_case (\<lambda>_. True) (valid_cap \<circ> fst) croot' s \<and>
-            option_case True (Structures_A.is_cnode_cap \<circ> fst) croot' \<and>
-            option_case (\<lambda>_. True) (not_idle_thread \<circ> fst \<circ> snd) croot' s \<and>
-      (\<lambda>y.  option_case True (\<lambda>x. not_idle_thread (fst a') y) croot') s \<and>
-            option_case (\<lambda>_. True) (cte_wp_at (\<lambda>_. True) \<circ> snd) croot' s \<and>
-            option_case (\<lambda>_. True) (no_cap_to_obj_dr_emp \<circ> fst) croot' s \<and>
-      (\<lambda>y.  option_case True (\<lambda>x. not_idle_thread (fst a') y) vroot') s \<and>
-            option_case True (is_valid_vtable_root \<circ> fst) vroot' \<and>
-            option_case (\<lambda>_. True) (valid_cap \<circ> fst) vroot' s \<and>
-            option_case (\<lambda>_. True) (not_idle_thread \<circ> fst \<circ> snd) vroot' s \<and>
-            option_case (\<lambda>_. True) (cte_wp_at (\<lambda>_. True) \<circ> snd) vroot' s \<and>
-            option_case (\<lambda>_. True) (no_cap_to_obj_dr_emp \<circ> fst) vroot' s \<and>
-            (\<lambda>s. option_case True (is_valid_vtable_root \<circ> fst) vroot') s \<and>
-      (\<lambda>y.  option_case True (\<lambda>x. not_idle_thread (fst a') y) ipc_buffer') s \<and>
-            option_case (\<lambda>_. True) (option_case (\<lambda>_. True) (not_idle_thread \<circ> fst \<circ> snd) \<circ> snd) ipc_buffer' s \<and>
-            option_case (\<lambda>_. True) (option_case (\<lambda>_. True) (cte_wp_at (\<lambda>_. True) \<circ> snd) \<circ> snd) ipc_buffer' s \<and>
+            case_option (\<lambda>_. True) (valid_cap \<circ> fst) croot' s \<and>
+            case_option True (Structures_A.is_cnode_cap \<circ> fst) croot' \<and>
+            case_option (\<lambda>_. True) (not_idle_thread \<circ> fst \<circ> snd) croot' s \<and>
+      (\<lambda>y.  case_option True (\<lambda>x. not_idle_thread (fst a') y) croot') s \<and>
+            case_option (\<lambda>_. True) (cte_wp_at (\<lambda>_. True) \<circ> snd) croot' s \<and>
+            case_option (\<lambda>_. True) (no_cap_to_obj_dr_emp \<circ> fst) croot' s \<and>
+      (\<lambda>y.  case_option True (\<lambda>x. not_idle_thread (fst a') y) vroot') s \<and>
+            case_option True (is_valid_vtable_root \<circ> fst) vroot' \<and>
+            case_option (\<lambda>_. True) (valid_cap \<circ> fst) vroot' s \<and>
+            case_option (\<lambda>_. True) (not_idle_thread \<circ> fst \<circ> snd) vroot' s \<and>
+            case_option (\<lambda>_. True) (cte_wp_at (\<lambda>_. True) \<circ> snd) vroot' s \<and>
+            case_option (\<lambda>_. True) (no_cap_to_obj_dr_emp \<circ> fst) vroot' s \<and>
+            (\<lambda>s. case_option True (is_valid_vtable_root \<circ> fst) vroot') s \<and>
+      (\<lambda>y.  case_option True (\<lambda>x. not_idle_thread (fst a') y) ipc_buffer') s \<and>
+            case_option (\<lambda>_. True) (case_option (\<lambda>_. True) (not_idle_thread \<circ> fst \<circ> snd) \<circ> snd) ipc_buffer' s \<and>
+            case_option (\<lambda>_. True) (case_option (\<lambda>_. True) (cte_wp_at (\<lambda>_. True) \<circ> snd) \<circ> snd) ipc_buffer' s \<and>
             (case ipc_buffer' of None \<Rightarrow> True
-             | Some v \<Rightarrow> option_case True ((swp valid_ipc_buffer_cap (fst v) and is_arch_cap and cap_aligned) \<circ> fst) (snd v)
+             | Some v \<Rightarrow> case_option True ((swp valid_ipc_buffer_cap (fst v) and is_arch_cap and cap_aligned) \<circ> fst) (snd v)
             \<and> is_aligned (fst v) msg_align_bits)
-          \<and> option_case (\<lambda>_. True) (\<lambda>a. case snd a of None \<Rightarrow> \<lambda>_. True | Some a \<Rightarrow> cte_wp_at (\<lambda>_. True) (snd a)) ipc_buffer' s
+          \<and> case_option (\<lambda>_. True) (\<lambda>a. case snd a of None \<Rightarrow> \<lambda>_. True | Some a \<Rightarrow> cte_wp_at (\<lambda>_. True) (snd a)) ipc_buffer' s
           \<and> (case fault_ep' of None \<Rightarrow> True | Some bl \<Rightarrow> length bl = WordSetup.word_bits))
        (Tcb_D.invoke_tcb t) (Tcb_A.invoke_tcb t')"
   (is "\<lbrakk> ?eq; ?eq' \<rbrakk> \<Longrightarrow> dcorres (dc \<oplus> dc) \<top> ?P ?f ?g")
@@ -1541,10 +1541,10 @@ lemma dcorres_thread_control:
    apply (wp checked_insert_tcb_invs | clarsimp)+
    apply (rule check_cap_at_stable,(clarsimp simp:not_idle_thread_def | wp)+)+
    apply (rule check_cap_at_stable)
-     apply (rule option_case_wp,clarsimp split:option.splits,wp)
-   apply (rule option_case_wp)
+     apply (rule case_option_wp,clarsimp split:option.splits,wp)
+   apply (rule case_option_wp)
    apply simp
-   apply (rule option_case_wp)
+   apply (rule case_option_wp)
    apply (rule check_cap_at_stable,clarsimp simp:not_idle_thread_def split:option.splits,wp)
    apply (simp,rule check_cap_at_stable)
    apply (case_tac ipc_buffer')
@@ -1559,12 +1559,12 @@ lemma dcorres_thread_control:
      apply (wp hoare_case_someE)
        apply (clarsimp simp:not_idle_thread_def)
      apply (wp cap_delete_deletes cap_delete_cte_at cap_delete_valid_cap)
-     apply (wp option_case_wpE)
+     apply (wp case_option_wpE)
        apply simp
-       apply (rule option_case_wpE)
+       apply (rule case_option_wpE)
          apply simp
          apply (wp cap_delete_cte_at)
-     apply (wp option_case_wpE)
+     apply (wp case_option_wpE)
        apply (simp add:not_idle_thread_def)
        apply (wp cap_delete_cte_at cap_delete_valid_cap)
    apply (rule_tac Q'="\<lambda>_. ?P" in hoare_post_imp_R[rotated])
@@ -1577,23 +1577,23 @@ lemma dcorres_thread_control:
    apply (simp,rule check_cap_at_stable,simp add:not_idle_thread_def)
      apply wp
    apply (simp,rule check_cap_at_stable)
-     apply (rule option_case_wp,clarsimp split:option.splits,wp)
-   apply (rule option_case_wp)
+     apply (rule case_option_wp,clarsimp split:option.splits,wp)
+   apply (rule case_option_wp)
    apply simp
    apply (rule check_cap_at_stable,clarsimp simp:not_idle_thread_def split:option.splits,wp)
-   apply (rule option_case_wp)
+   apply (rule case_option_wp)
    apply simp
    apply (rule check_cap_at_stable,wp)
-   apply (rule option_case_wp)
+   apply (rule case_option_wp)
    apply simp
    apply (wp checked_insert_no_cap_to)
    apply (wp hoare_case_some)
    apply (simp, rule check_cap_at_stable,simp add:not_idle_thread_def)
-   apply (wp option_case_wp)
+   apply (wp case_option_wp)
    apply simp
-   apply (rule option_case_wp,simp add:not_idle_thread_def)
+   apply (rule case_option_wp,simp add:not_idle_thread_def)
    apply (rule check_cap_at_stable,wp)
-   apply (wp option_case_wp check_cap_at_stable | simp)+
+   apply (wp case_option_wp check_cap_at_stable | simp)+
      apply (wp cap_delete_deletes cap_delete_valid_cap)
      apply (strengthen tcb_cap_always_valid_strg use_no_cap_to_obj_asid_strg)
      apply (simp add:tcb_cap_cases_def)
@@ -1601,26 +1601,26 @@ lemma dcorres_thread_control:
      apply (strengthen is_cnode_or_valid_arch_cap_asid[simplified,THEN conjunct2,THEN impI])
      apply simp
      apply (wp cap_delete_deletes cap_delete_cte_at cap_delete_valid_cap)
-     apply (wp option_case_wpE cap_delete_valid_cap cap_delete_deletes cap_delete_cte_at hoare_case_someE
+     apply (wp case_option_wpE cap_delete_valid_cap cap_delete_deletes cap_delete_cte_at hoare_case_someE
        | simp add:not_idle_thread_def)+
        apply (case_tac prio', clarsimp, rule return_wp)
        apply clarsimp
-       apply ((wp option_case_wp dxo_wp_weak | clarsimp split: option.splits | rule conjI)+)[1]
+       apply ((wp case_option_wp dxo_wp_weak | clarsimp split: option.splits | rule conjI)+)[1]
       apply ((wp set_priority_transform | clarsimp split: option.splits | rule conjI)+)[1]
-     apply (wp option_case_wpE)
+     apply (wp case_option_wpE)
   apply (rule_tac Q="\<lambda>_. ?P" in hoare_strengthen_post[rotated])
   apply (clarsimp simp:is_valid_vtable_root_def is_cnode_or_valid_arch_def
     is_arch_cap_def not_idle_thread_def emptyable_def split:option.splits)
   apply (rule_tac P = "(case fault_ep' of None \<Rightarrow> True | Some bl \<Rightarrow> length bl = WordSetup.word_bits)" in hoare_gen_asm)
   apply (wp out_invs_trivialT)
     apply (clarsimp simp:tcb_cap_cases_def)+
-  apply (wp option_case_wp out_cte_at out_valid_cap hoare_case_some| simp)+
+  apply (wp case_option_wp out_cte_at out_valid_cap hoare_case_some| simp)+
   apply (wp out_no_cap_to_trivial)
     apply (clarsimp simp:tcb_cap_cases_def)
-  apply (wp option_case_wp out_cte_at out_valid_cap hoare_case_some| simp)+
+  apply (wp case_option_wp out_cte_at out_valid_cap hoare_case_some| simp)+
   apply (wp out_no_cap_to_trivial)
     apply (clarsimp simp:tcb_cap_cases_def)
-  apply (wp option_case_wp out_cte_at out_valid_cap hoare_case_some | simp)+
+  apply (wp case_option_wp out_cte_at out_valid_cap hoare_case_some | simp)+
   apply (clarsimp split:option.splits)
   done
 

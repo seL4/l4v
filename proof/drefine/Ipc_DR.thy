@@ -1413,7 +1413,7 @@ lemma get_receive_slot_dcorres:
                       apply clarsimp+
                  apply (wp|clarsimp)+
           apply (clarsimp simp:handleE'_def Monads_D.unify_failure_def Exceptions_A.unify_failure_def)
-          apply (rule corres_split_bind_sum_case [OF lookup_slot_for_cnode_op_corres])
+          apply (rule corres_split_bind_case_sum [OF lookup_slot_for_cnode_op_corres])
               apply (clarsimp simp:word_bl.Rep_inverse word_size)+
            apply (rule hoareE_TrueI[where P=\<top>])+
         apply clarsimp
@@ -1422,7 +1422,7 @@ lemma get_receive_slot_dcorres:
      apply fastforce
      apply (wp lsfco_not_idle)
     apply (clarsimp simp:handleE'_def Monads_D.unify_failure_def Exceptions_A.unify_failure_def)
-         apply (rule corres_split_bind_sum_case [OF lookup_cap_corres])
+         apply (rule corres_split_bind_case_sum [OF lookup_cap_corres])
         apply (clarsimp simp:word_bl.Rep_inverse word_size Types_D.word_bits_def)+
        apply (rule hoareE_TrueI)+
       apply clarsimp

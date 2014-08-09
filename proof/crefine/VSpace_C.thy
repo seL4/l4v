@@ -160,7 +160,7 @@ lemma asid_high_bits_word_bits:
 lemma rf_sr_asid_map_pd_to_hwasids:
   "(s, s') \<in> rf_sr \<Longrightarrow>
    asid_map_pd_to_hwasids (armKSASIDMap (ksArchState s))
-       = Option.set \<circ> (pde_stored_asid \<circ>\<^sub>m cslift s' \<circ>\<^sub>m pd_pointer_to_asid_slot)"
+       = set_option \<circ> (pde_stored_asid \<circ>\<^sub>m cslift s' \<circ>\<^sub>m pd_pointer_to_asid_slot)"
   by (simp add: rf_sr_def cstate_relation_def Let_def
                 carch_state_relation_def)
 
@@ -1114,7 +1114,7 @@ lemma flushSpace_ccorres:
    apply (ctac (no_vcg) add: loadHWASID_ccorres)
     apply (ctac (no_vcg) add: cleanCaches_PoU_ccorres)
      apply csymbr
-     apply (simp add: option_case_If2)
+     apply (simp add: case_option_If2)
      apply (rule_tac Q=\<top> and Q'=\<top> in ccorres_if_cond_throws2)
         apply (clarsimp simp: Collect_const_mem pde_stored_asid_def)
         apply (simp add: split_if_eq1 to_bool_def)
@@ -1263,7 +1263,7 @@ lemma findFreeHWASID_ccorres:
    apply csymbr
    apply (rule ccorres_pre_gets_armKSHWASIDTable_ksArchState)
    apply (rule ccorres_pre_gets_armKSNextASID_ksArchState)
-   apply (simp add: whileAnno_def option_case_find_give_me_a_map
+   apply (simp add: whileAnno_def case_option_find_give_me_a_map
                     mapME_def 
                del: Collect_const map_append)
    apply (rule ccorres_splitE_novcg)
@@ -1521,7 +1521,7 @@ lemma setVMRoot_ccorres:
 
      apply (rule_tac f'=lookup_failure_rel and r'="\<lambda>pdeptrc pdeptr. pdeptr = pde_Ptr pdeptrc" 
                  and xf'=find_ret_'
-                 in ccorres_split_nothrow_sum_case)
+                 in ccorres_split_nothrow_case_sum)
           apply (ctac add: findPDForASID_ccorres)
          apply ceqv
         apply (rule_tac P="capPDBasePtr_CL (cap_page_directory_cap_lift threadRoot)

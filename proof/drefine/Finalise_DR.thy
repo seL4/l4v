@@ -2645,7 +2645,7 @@ lemma monadic_trancl_f:
   apply (simp add: monadic_rewrite_def monadic_trancl_def
                    bind_def split_def monadic_option_dest_def)
   apply (safe, simp_all)
-   apply (simp add: r_into_rtrancl monadic_option_relation_form_def)+
+   apply (simp add: r_into_rtrancl monadic_rel_optionation_form_def)+
   done
 
 lemma monadic_trancl_step:
@@ -2672,7 +2672,7 @@ lemma monadic_rewrite_if_lhs:
         (if P then b else c) a"
   by (cases P, simp_all)
 
-lemma monadic_rewrite_option_case:
+lemma monadic_rewrite_case_option:
   "\<lbrakk> \<And>y. x = Some y \<Longrightarrow> monadic_rewrite E F (P x) f (g y);
            x = None \<Longrightarrow> monadic_rewrite E F Q f h \<rbrakk>
      \<Longrightarrow> monadic_rewrite E F (\<lambda>s. (\<forall>y. x = Some y \<longrightarrow> P x s) \<and> (x = None \<longrightarrow> Q s))
@@ -2696,7 +2696,7 @@ lemma monadic_trancl_lift_Inl:
   apply (rule ext)
   apply (simp add: throwError_def return_def monadic_trancl_def)
   apply (subst rtrancl_idem)
-   apply (auto simp: monadic_option_relation_form_def lift_def
+   apply (auto simp: monadic_rel_optionation_form_def lift_def
                      throwError_def return_def monadic_option_dest_def)
   done
 

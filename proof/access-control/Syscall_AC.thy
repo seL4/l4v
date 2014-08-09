@@ -221,7 +221,7 @@ lemma set_thread_state_authorised[wp]:
        | simp)+
   apply clarsimp
   apply (case_tac tcb_invocation, simp_all)
-  apply (wp hoare_option_case_wp sts_typ_ats set_thread_state_cte_wp_at
+  apply (wp hoare_case_option_wp sts_typ_ats set_thread_state_cte_wp_at
             hoare_vcg_conj_lift static_imp_wp
        | simp)+
   apply ((clarsimp split: option.splits)+)[3]

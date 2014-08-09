@@ -115,7 +115,7 @@ fun real_const_from_name const nmspce lthy =
 
 fun get_monad lthy f xs = if is_Const f then
     (* we need the type of the underlying constant to avoid polymorphic
-       constants like If, option_case, K_bind being considered monadic *)
+       constants like If, case_option, K_bind being considered monadic *)
     let val T = dest_Const f |> fst |> read_const lthy |> type_of;
 
     fun is_product v (Type ("Product_Type.prod", [Type ("fun", [Type ("Product_Type.prod", [_,v']), Type ("HOL.bool",[])]), Type ("HOL.bool",[])])) = (v = v')

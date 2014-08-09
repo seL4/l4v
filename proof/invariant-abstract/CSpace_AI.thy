@@ -1995,13 +1995,13 @@ lemma cap_insert_mdb_cte_at:
   apply (wp | simp cong: update_original_mdb_cte_at split del: split_if)+
   apply (wp update_cdt_mdb_cte_at set_cap_mdb_cte_at[simplified swp_def] | simp split del: split_if)+
   apply wps
-  apply (wp valid_option_case_post_wp hoare_vcg_if_lift hoare_impI mdb_cte_at_set_untyped_cap_as_full[simplified swp_def] 
+  apply (wp valid_case_option_post_wp hoare_vcg_if_lift hoare_impI mdb_cte_at_set_untyped_cap_as_full[simplified swp_def] 
     set_cap_cte_wp_at get_cap_wp)
   apply (clarsimp simp:free_index_update_def split:cap.splits)
   apply (wp)
   apply (clarsimp simp:if_True conj_ac split del:if_splits cong:split_weak_cong)
   apply (wps)
-  apply (wp valid_option_case_post_wp get_cap_wp hoare_vcg_if_lift
+  apply (wp valid_case_option_post_wp get_cap_wp hoare_vcg_if_lift
     hoare_impI set_untyped_cap_as_full_cte_wp_at )
   apply (unfold swp_def)
   apply (intro conjI | clarify)+

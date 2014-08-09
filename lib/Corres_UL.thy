@@ -273,7 +273,7 @@ lemma corres_split_catch:
   assumes z: "\<lbrace>Q\<rbrace> a \<lbrace>\<top>\<top>\<rbrace>,\<lbrace>E\<rbrace>" "\<lbrace>Q'\<rbrace> c \<lbrace>\<top>\<top>\<rbrace>,\<lbrace>E'\<rbrace>"
   shows      "corres_underlying sr nf r (P and Q) (P' and Q') (a <catch> (\<lambda>ft. b ft)) (c <catch> (\<lambda>ft'. d ft'))"
   apply (simp add: catch_def)
-  apply (rule corres_split [OF _ x, where R="sum_case E \<top>\<top>" and R'="sum_case E' \<top>\<top>"])
+  apply (rule corres_split [OF _ x, where R="case_sum E \<top>\<top>" and R'="case_sum E' \<top>\<top>"])
     apply (case_tac x)
      apply (clarsimp simp: y)
     apply clarsimp
@@ -418,7 +418,7 @@ lemma corres_noopE:
   assumes nf: "\<And>s. \<lbrakk> P s; nf \<rbrakk> \<Longrightarrow> no_fail (\<lambda>s'. (s, s') \<in> sr \<and> P' s') f"
   shows "corres_underlying sr nf (fr \<oplus> r) P P' (returnOk x) f"
 proof -
-  have Q: "\<And>P f Q E. \<lbrace>P\<rbrace>f\<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>r s. sum_case (\<lambda>e. E e s) (\<lambda>r. Q r s) r\<rbrace>"
+  have Q: "\<And>P f Q E. \<lbrace>P\<rbrace>f\<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>r s. case_sum (\<lambda>e. E e s) (\<lambda>r. Q r s) r\<rbrace>"
    by (simp add: validE_def)
   thus ?thesis
   apply (simp add: returnOk_def)
@@ -956,13 +956,13 @@ lemma corres_symb_exec_r_All:
   apply (drule(1) bspec, clarsimp)+
   done
 
-lemma corres_split_bind_sum_case:
+lemma corres_split_bind_case_sum:
   assumes x: "corres_underlying sr nf (lr \<oplus> rr) P P' a d"
   assumes y: "\<And>rv rv'. lr rv rv' \<Longrightarrow> corres_underlying sr nf r (R rv) (R' rv') (b rv) (e rv')"
   assumes z: "\<And>rv rv'. rr rv rv' \<Longrightarrow> corres_underlying sr nf r (S rv) (S' rv') (c rv) (f rv')"
   assumes w: "\<lbrace>Q\<rbrace> a \<lbrace>S\<rbrace>,\<lbrace>R\<rbrace>" "\<lbrace>Q'\<rbrace> d \<lbrace>S'\<rbrace>,\<lbrace>R'\<rbrace>"
   shows "corres_underlying sr nf r (P and Q) (P' and Q')
-            (a >>= (\<lambda>rv. sum_case b c rv)) (d >>= (\<lambda>rv'. sum_case e f rv'))"
+            (a >>= (\<lambda>rv. case_sum b c rv)) (d >>= (\<lambda>rv'. case_sum e f rv'))"
   apply (rule corres_split [OF _ x])
     defer
     apply (insert w)[2]
@@ -1100,7 +1100,7 @@ lemmas corres_split_noop_rhs
 lemmas corres_split_noop_rhs2
   = corres_split_nor[THEN corres_add_noop_lhs2]
 
-lemma isLeft_sum_case:
+lemma isLeft_case_sum:
   "isLeft v \<Longrightarrow> (case v of Inl v' \<Rightarrow> f v' | Inr v' \<Rightarrow> g v') = f (theLeft v)"
   by (clarsimp simp: isLeft_def)
 
@@ -1111,7 +1111,7 @@ lemma corres_symb_exec_catch_r:
   apply (simp add: catch_def)
   apply (rule corres_symb_exec_r, simp_all)
    apply (rule_tac F="isLeft x" in corres_gen_asm2)
-   apply (simp add: isLeft_sum_case)
+   apply (simp add: isLeft_case_sum)
    apply assumption
   apply (simp add: validE_def)
   apply (erule hoare_chain, simp_all)[1]

@@ -368,7 +368,7 @@ lemma Suc_0_eq_1 [polish]: "Suc 0 = 1"
  * These can probably be improved to avoid duplication.
  *)
 
-lemma bind_return_prod_case [polish, simp]:
+lemma bind_return_case_prod [polish, simp]:
   "(do (a) \<leftarrow> A1; return (a) od) = A1"
   "(do (a, b) \<leftarrow> A2; return (a, b) od) = A2"
   "(do (a, b, c) \<leftarrow> A3; return (a, b, c) od) = A3"

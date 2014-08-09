@@ -56,8 +56,8 @@ definition
                 else if \<exists>irq. cap = cap.IRQHandlerCap irq then src_cap = cap.IRQControlCap else is_untyped_cap cap)"
 
 lemma option_return_modify_modify:
-  "option_case (return ()) (\<lambda>x. modify (f x))
-       = (\<lambda>opt. modify (option_case id f opt))"
+  "case_option (return ()) (\<lambda>x. modify (f x))
+       = (\<lambda>opt. modify (case_option id f opt))"
   apply (rule ext)
   by (simp split: option.split add: modify_id_return)
 
@@ -127,13 +127,13 @@ lemma dcorres_set_untyped_cap_as_full:
 lemma dcorres_opt_parent_set_parent_helper:
   "dcorres dc \<top> P
   (gets (opt_parent (transform_cslot_ptr src)) >>=
-  option_case (return ())
+  case_option (return ())
   (\<lambda>parent. modify (\<lambda>s. s\<lparr>cdl_cdt := cdl_cdt s(transform_cslot_ptr child \<mapsto> parent)\<rparr>)))
   g \<Longrightarrow>
   dcorres dc \<top> (\<lambda>s. cdt s child = None \<and> cte_at child s \<and>
    mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) (cdt s) \<and> P s)
   (gets (opt_parent (transform_cslot_ptr src)) >>=
-  option_case (return ()) (set_parent (transform_cslot_ptr child)))
+  case_option (return ()) (set_parent (transform_cslot_ptr child)))
   g"
   apply (clarsimp simp:gets_def set_parent_def bind_def
     return_def get_def assert_def corres_underlying_def
@@ -865,7 +865,7 @@ lemma ep_cancel_badged_sends_def':
   apply (case_tac s)
   apply clarsimp
   apply (rule ext)
-  apply (clarsimp simp:Option.map_def split:option.splits)
+  apply (clarsimp simp:map_option_def split:option.splits)
   apply (case_tac a)
   apply auto
 done
@@ -884,7 +884,7 @@ lemma ep_cancel_badged_sends_def'':
   apply (case_tac s)
   apply clarsimp
   apply (rule ext)
-  apply (clarsimp simp:Option.map_def split:option.splits)
+  apply (clarsimp simp:map_option_def split:option.splits)
   apply (case_tac a)
   apply auto
 done
@@ -1281,7 +1281,7 @@ lemma dcorres_set_asid_pool_empty:
       apply (clarsimp simp:set_map)
      apply (clarsimp simp del:set_map simp:suffixeq_def)
     apply (wp | clarsimp simp:swp_def)+
-   apply (clarsimp simp:list_all2_def transform_asid_def asid_low_bits_def set_zip)
+   apply (clarsimp simp:list_all2_iff transform_asid_def asid_low_bits_def set_zip)
    apply (clarsimp simp:unat_ucast upto_enum_def unat_of_nat)
   done
 
@@ -1842,7 +1842,7 @@ lemma dcorres_recycle_pd_caps:
               apply (rule corres_trivial, simp add: corres_return split: split_if)
              apply simp
             apply wp
-          apply ((wp invalidate_tlb_by_asid_valid_cap option_case_wp invalidate_tlb_by_asid_dwp dmo_dwp
+          apply ((wp invalidate_tlb_by_asid_valid_cap case_option_wp invalidate_tlb_by_asid_dwp dmo_dwp
             machine_op_lift static_imp_wp
             | simp add: if_apply_def2 cleanCacheRange_PoU_def)+)
       apply (simp add: clear_object_caps_def)
@@ -2026,7 +2026,7 @@ lemma dcorres_recycle_pt_caps:
     (CSpace_D.recycle_cap is_final' (transform_cap (cap.ArchObjectCap cap)))
     (arch_recycle_cap is_final' cap)"
   using cap
-  apply (clarsimp simp:arch_recycle_cap_def CSpace_D.recycle_cap_def cleanCacheRange_PoU_def prod_case_beta cong: option.case_cong)
+  apply (clarsimp simp:arch_recycle_cap_def CSpace_D.recycle_cap_def cleanCacheRange_PoU_def case_prod_beta cong: option.case_cong)
   apply (rule corres_guard_imp)
     apply (rule corres_split[OF _ dcorres_clear_object_caps_pt [where a = "fst slot" and b = "snd slot" and option = option]])
       apply (rule dcorres_symb_exec_r)
@@ -2034,7 +2034,7 @@ lemma dcorres_recycle_pt_caps:
           apply (rule corres_split [where Q' = \<top>,OF _ dcorres_arch_finalise_cap [where slot = slot]])
              apply (rule corres_trivial, simp split:split_if, case_tac is_final',
                     (simp add:transform_mapping_def)+)
-           apply ((wp option_cases_weak_wp invalidate_tlb_by_asid_valid_cap page_table_mapped_invs
+           apply ((wp case_options_weak_wp invalidate_tlb_by_asid_valid_cap page_table_mapped_invs
              invalidate_tlb_by_asid_dwp page_table_mapped_dwp dmo_dwp
              mapM_x_store_pte_valid_pdpt2 mapM_x_swp_store_pte_invs [unfolded swp_def]
              mapM_x_wp' [OF store_pte_valid_cap] mapM_x_wp' [OF store_pte_cte_wp_at]

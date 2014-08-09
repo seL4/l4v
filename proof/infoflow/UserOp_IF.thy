@@ -45,7 +45,7 @@ definition  get_page_xn :: "(obj_ref \<rightharpoonup> arch_kernel_obj) \<Righta
 definition
   ptable_xn :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> word32 \<Rightarrow> bool" where
  "ptable_xn tcb s \<equiv> \<lambda>addr.
-  option_case False (\<lambda>x. x)
+  case_option False (\<lambda>x. x)
      (get_page_xn (\<lambda>obj. get_arch_obj (kheap s obj))
         (get_pd_of_thread (kheap s) (arch_state s) tcb) addr)"
 

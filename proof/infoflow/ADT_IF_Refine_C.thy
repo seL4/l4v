@@ -247,7 +247,7 @@ lemma handleEvent_ccorres:
    apply (simp add: catch_def)
    apply (rule ccorres_rhs_assoc2)
    apply (rule ccorres_split_nothrow_novcg)
-       apply (rule ccorres_split_nothrow_sum_case)
+       apply (rule ccorres_split_nothrow_case_sum)
             apply (ctac (no_vcg) add: handleVMFault_ccorres)
            apply ceqv
           apply clarsimp

@@ -632,7 +632,7 @@ lemma corresTA_extract_preconds_of_call_final':
            \<Longrightarrow> corresTA (\<lambda>s. C) rx ex A A'"
   by (clarsimp simp: corresXF_def)
 
-lemma corresTA_prod_case:
+lemma corresTA_case_prod:
  "\<lbrakk> introduce_typ_abs_fn rx1;
     introduce_typ_abs_fn rx2;
     abstract_val (Q x) x (map_prod rx1 rx2) x';
@@ -644,7 +644,7 @@ lemma corresTA_prod_case:
   apply (clarsimp simp: split_def map_prod_def)
   done
 
-lemma abstract_val_prod_case:
+lemma abstract_val_case_prod:
   "\<lbrakk> abstract_val True r (map_prod f g) r';
        \<And>a b a' b'. \<lbrakk>  abs_var a f a'; abs_var  b g b' \<rbrakk>
                      \<Longrightarrow> abstract_val (P a b) (M a b) h (M' a' b') \<rbrakk>
@@ -655,7 +655,7 @@ lemma abstract_val_prod_case:
   apply (clarsimp simp: map_prod_def)
   done
 
-lemma abstract_val_prod_case_fun_app:
+lemma abstract_val_case_prod_fun_app:
   "\<lbrakk> abstract_val True r (map_prod f g) r';
        \<And>a b a' b'. \<lbrakk>  abs_var a f a'; abs_var b g b' \<rbrakk>
                      \<Longrightarrow> abstract_val (P a b) (M a b s) h (M' a' b' s) \<rbrakk>
@@ -821,7 +821,7 @@ lemmas [word_abs] =
   corresTA_L2_condition
   corresTA_L2_unknown
   corresTA_L2_recguard
-  corresTA_prod_case
+  corresTA_case_prod
   corresTA_L2_call_exec_concrete
   corresTA_L2_call_exec_abstract
   corresTA_L2_call'
@@ -832,7 +832,7 @@ lemmas [word_abs] =
   abstract_val_tuple
   abstract_val_conj
   abstract_val_disj
-  abstract_val_prod_case
+  abstract_val_case_prod
   abstract_val_trivial
   abstract_val_of_int
   abstract_val_of_nat
