@@ -157,7 +157,7 @@ definition
 text {* Optionally update the tcb at an address. *}
 definition
   option_update_thread :: "obj_ref \<Rightarrow> ('a \<Rightarrow> tcb \<Rightarrow> tcb) \<Rightarrow> 'a option \<Rightarrow> (unit,'z::state_ext) s_monad" where
- "option_update_thread thread fn \<equiv> option_case (return ()) (\<lambda>v. thread_set (fn v) thread)"
+ "option_update_thread thread fn \<equiv> case_option (return ()) (\<lambda>v. thread_set (fn v) thread)"
 
 text {* Check that a related capability is at an address. This is done before
 calling @{const cap_insert} to avoid a corner case where the would-be parent of

@@ -45,12 +45,18 @@ session ASpec in "abstract" = Word +
   theories
     "Syscall_A"
     "Glossary_Doc"
-  files
-	"document/VERSION"
-    "document/root.tex"
-    "document/root.bib"
-    "document/defs.bib"
-    "document/comment.sty"
+  document_files
+	"VERSION"
+    "root.tex"
+    "root.bib"
+    "defs.bib"
+	"imgs/CDT.pdf"
+	"imgs/seL4-background_01.pdf"
+	"imgs/seL4-background_03.pdf"
+	"imgs/seL4-background_04.pdf"
+	"imgs/sel4objects_01.pdf"
+	"imgs/sel4objects_05.pdf"
+	"imgs/sel4_internals_01.pdf"
 
 (*
  * Executable/Design Specification

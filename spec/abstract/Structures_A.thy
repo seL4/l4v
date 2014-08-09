@@ -533,7 +533,7 @@ where
 | "obj_refs (ThreadCap r) = {r}"
 | "obj_refs DomainCap = {}"
 | "obj_refs (Zombie ptr b n) = {ptr}"
-| "obj_refs (ArchObjectCap x) = Option.set (aobj_ref x)"
+| "obj_refs (ArchObjectCap x) = set_option (aobj_ref x)"
 
 text {*
   The partial definition below is sometimes easier to work with.
