@@ -1851,7 +1851,7 @@ lemma do_fault_transfer_corres:
     apply (rule corres_assert_opt_assume)
      apply (clarsimp split: option.splits
                       simp: fault_rel_optionation_def assert_opt_def
-                            option_map_def)
+                            map_option_case)
      defer
      defer
      apply (clarsimp simp: fault_rel_optionation_def)

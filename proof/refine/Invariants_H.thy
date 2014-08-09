@@ -1697,7 +1697,7 @@ lemma lookupAround2_None2:
   "(snd (lookupAround2 x s) = None) = (\<forall>y. x < y \<longrightarrow> s y = None)"
   apply (simp add: lookupAround2_def Let_def split_def del: maybe_def
                split: option.splits)
-  apply (simp add: o_def option_map_is_None [where f=fst, unfolded option_map_def])
+  apply (simp add: o_def option_map_is_None [where f=fst, unfolded map_option_case])
   apply (simp add: lookupAround_def Let_def)
   apply fastforce
   done
@@ -1707,7 +1707,7 @@ lemma lookupAround2_char2:
   apply (simp add: lookupAround2_def Let_def split_def o_def
               del: maybe_def
               split: option.splits)
-  apply (simp add: o_def option_map_is_None [where f=fst, unfolded option_map_def])
+  apply (simp add: o_def option_map_is_None [where f=fst, unfolded map_option_case])
   apply (simp add: lookupAround_def Let_def)
   apply (rule conjI)
    apply fastforce

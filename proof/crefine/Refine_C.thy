@@ -964,7 +964,7 @@ lemma monadic_rewrite_\<Gamma>:
   using spec_refine
         spec_simulates_to_exec_simulates
   apply (simp add: spec_statefn_simulates_via_statefn
-                   o_def option_map_def)
+                   o_def map_option_case)
   apply (clarsimp simp: monadic_rewrite_def exec_C_def image_def)
   apply blast
   done

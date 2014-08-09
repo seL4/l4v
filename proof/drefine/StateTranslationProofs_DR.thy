@@ -202,7 +202,7 @@ lemma transform_objects_update_kheap_same_caps:
          (transform_objects (update_kheap kh s))(ptr \<mapsto> transform_object (machine_state s) ptr (ekheap s ptr) ko'))"
   unfolding transform_objects_def
   apply (rule ext)
-  apply (simp add: option_map_def restrict_map_def map_add_def )
+  apply (simp add: map_option_case restrict_map_def map_add_def )
   done
 
 lemma transform_objects_update_same:

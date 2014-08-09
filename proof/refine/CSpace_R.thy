@@ -6632,7 +6632,7 @@ lemma revokable:
    apply (simp add: n_def n'_def modify_map_apply)
    apply (simp add: modify_map_def const_def split: split_if_asm)
   apply (clarsimp simp: n_def)
-  apply (clarsimp simp add: modify_map_def option_map_def split: split_if_asm option.splits)
+  apply (clarsimp simp add: modify_map_def map_option_case split: split_if_asm option.splits)
      apply (case_tac aa, clarsimp, erule revokable_n')
     apply (case_tac a, clarsimp, erule revokable_n')
    apply (case_tac a, clarsimp, erule revokable_n')
@@ -6657,7 +6657,7 @@ lemma badge_n:
    apply (simp add: n_def n'_def modify_map_apply)
    apply (simp add: modify_map_def const_def split: split_if_asm)
   apply (clarsimp simp: n_def)
-  apply (clarsimp simp add: modify_map_def option_map_def split: split_if_asm option.splits)
+  apply (clarsimp simp add: modify_map_def map_option_case split: split_if_asm option.splits)
      apply (case_tac aa, clarsimp, erule badge_n')
     apply (case_tac a, clarsimp, erule badge_n')
    apply (case_tac a, clarsimp, erule badge_n')
@@ -11460,7 +11460,7 @@ lemma updateMDB_ctes_of_cases:
      updateMDB p f \<lbrace>\<lambda>rv s. P (ctes_of s)\<rbrace>"
   apply (simp add: updateMDB_def split del: split_if)
   apply (rule hoare_pre, wp getCTE_ctes_of)
-  apply (clarsimp simp: modify_map_def option_map_def
+  apply (clarsimp simp: modify_map_def map_option_case
                  split: option.split
           | rule conjI ext | erule rsubst[where P=P])+
   apply (case_tac y, simp)

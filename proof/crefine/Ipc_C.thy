@@ -3449,7 +3449,7 @@ lemma lookupIPCBuffer_ccorres [corres]:
                            split: split_if_asm split del: split_if)
             apply (frule(1) cap_get_tag_isCap_unfolded_H_cap(17))
             apply (frule capFVMRights_range)
-            apply (clarsimp simp: ccap_relation_def option_map_def
+            apply (clarsimp simp: ccap_relation_def map_option_case
                            split: option.splits)
             apply (simp add: cap_frame_cap_lift
                              generic_frame_cap_get_capFVMRights_CL_def)
@@ -3469,7 +3469,7 @@ lemma lookupIPCBuffer_ccorres [corres]:
         apply (clarsimp simp: pageSize_def option_to_0_def isCap_simps
                        split: split_if_asm)
         apply (frule(1) cap_get_tag_isCap_unfolded_H_cap(17))
-        apply (clarsimp simp: ccap_relation_def option_map_def
+        apply (clarsimp simp: ccap_relation_def map_option_case
                        split: option.splits)
         apply (simp add: cap_frame_cap_lift
                          generic_frame_cap_get_capFSize_CL_def
@@ -3489,7 +3489,7 @@ lemma lookupIPCBuffer_ccorres [corres]:
                           split: split_if_asm split del: split_if)
            apply (frule cap_get_tag_isCap_unfolded_H_cap(16), simp)
            apply (frule capFVMRights_range)
-           apply (clarsimp simp: ccap_relation_def option_map_def
+           apply (clarsimp simp: ccap_relation_def map_option_case
                           split: option.splits)
            apply (simp add: cap_small_frame_cap_lift
                             generic_frame_cap_get_capFVMRights_CL_def)
@@ -3509,7 +3509,7 @@ lemma lookupIPCBuffer_ccorres [corres]:
        apply (clarsimp simp: pageSize_def option_to_0_def isCap_simps
                       split: split_if_asm)
        apply (frule cap_get_tag_isCap_unfolded_H_cap(16), simp)
-       apply (clarsimp simp: ccap_relation_def option_map_def
+       apply (clarsimp simp: ccap_relation_def map_option_case
                       split: option.splits)
        apply (simp add: cap_small_frame_cap_lift
                         generic_frame_cap_get_capFSize_CL_def

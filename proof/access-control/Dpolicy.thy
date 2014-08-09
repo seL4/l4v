@@ -219,7 +219,7 @@ abbreviation
 lemma transform_asid_rev_transform_mapping [simp]:
   "valid_asid_mapping mapping \<Longrightarrow>
    transform_asid_rev ` set_option (transform_mapping mapping) = fst ` set_option mapping"
-  apply (simp add:transform_mapping_def option_map_def)
+  apply (simp add:transform_mapping_def map_option_case)
   apply (case_tac mapping)
    apply clarsimp+
   done

@@ -59,7 +59,7 @@ lemma cteMDBNode_C_update_lift [simp]:
 
 lemma ccap_relationE:
   "\<lbrakk>ccap_relation c v; \<And>vl. \<lbrakk> cap_lift v = Some vl; c = cap_to_H vl; c_valid_cap v\<rbrakk> \<Longrightarrow> P \<rbrakk> \<Longrightarrow> P"
-  unfolding ccap_relation_def option_map_def 
+  unfolding ccap_relation_def map_option_case 
   apply clarsimp
   apply (drule sym)
   apply (clarsimp split: option.splits)

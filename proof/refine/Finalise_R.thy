@@ -2510,7 +2510,7 @@ lemma ipcCancel_cteCaps_of:
   apply (clarsimp simp: cte_wp_at_ctes_of cteCaps_of_def)
   apply (drule_tac x="mdbNext (cteMDBNode x)" in spec)
   apply clarsimp
-  apply (auto simp: o_def option_map_def fun_upd_def[symmetric])
+  apply (auto simp: o_def map_option_case fun_upd_def[symmetric])
   done
 
 lemma ipcCancel_cte_wp_at':

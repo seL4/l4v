@@ -424,7 +424,7 @@ proof (intro allI impI)
     apply clarsimp
     apply (subgoal_tac "Some v = heap_to_page_data (ksPSpace \<sigma>)
                              (underlying_memory (ksMachineState \<sigma>)) x")
-     apply (clarsimp simp: heap_to_page_data_def Let_def option_map_def
+     apply (clarsimp simp: heap_to_page_data_def Let_def map_option_case
                     split: option.split_asm)
      apply (fastforce simp: cmap_relation_def dest: bspec)
     apply (clarsimp simp: heap_to_page_data_def Let_def)

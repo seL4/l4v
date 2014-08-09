@@ -119,7 +119,7 @@ lemma ep_queue_relation_shift:
    apply simp
   apply simp
   apply (simp add: option_map2_def fun_eq_iff
-                   option_map_def)
+                   map_option_case)
   apply (drule_tac x=qHead in spec)+
   apply (clarsimp split: option.split_asm)
   done

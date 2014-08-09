@@ -25,7 +25,7 @@ lemma detype_dcorres:
   apply (simp add: Untyped_D.detype_def transform_def
                    transform_current_thread_def Retype_A.detype_def transform_asid_table_def detype_ext_def)
   apply (rule ext)
-  apply (clarsimp simp: option_map_def restrict_map_def transform_objects_def
+  apply (clarsimp simp: map_option_case restrict_map_def transform_objects_def
                         map_add_def cte_wp_at_caps_of_state
                  split: option.split)
   apply (drule valid_global_refsD2)

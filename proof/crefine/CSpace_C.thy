@@ -119,7 +119,7 @@ lemma Arch_maskCapRights_ccorres [corres]:
     apply (unfold ccap_relation_def)[1] 
     apply (simp add: cap_small_frame_cap_lift [THEN iffD1])
     apply (clarsimp simp: cap_to_H_def)
-    apply (simp add: option_map_def split: option.splits)
+    apply (simp add: map_option_case split: option.splits)
     apply (clarsimp simp add: cap_to_H_def Let_def split: cap_CL.splits split_if_asm)
        apply (simp add: cap_small_frame_cap_lift_def) 
        apply (simp add: ccap_rights_relation_def)
@@ -141,7 +141,7 @@ lemma Arch_maskCapRights_ccorres [corres]:
       apply (unfold ccap_relation_def)[1] 
       apply (simp add: cap_frame_cap_lift [THEN iffD1])
       apply (clarsimp simp: cap_to_H_def)
-      apply (simp add: option_map_def split: option.splits)
+      apply (simp add: map_option_case split: option.splits)
       apply (clarsimp simp add: isCap_simps pageSize_def cap_to_H_def Let_def
                          split: cap_CL.splits split_if_asm)
        apply (simp add: cap_frame_cap_lift_def) 
@@ -267,7 +267,7 @@ lemma maskCapRights_ccorres [corres]:
             apply (unfold ccap_relation_def)[1]
             apply (simp add: cap_async_endpoint_cap_lift [THEN iffD1])
             apply (clarsimp simp: cap_to_H_def)
-            apply (simp add: option_map_def split: option.splits)
+            apply (simp add: map_option_case split: option.splits)
             apply (clarsimp simp add: cap_to_H_def Let_def
                                split: cap_CL.splits split_if_asm)
             apply (simp add: cap_async_endpoint_cap_lift_def)
@@ -303,7 +303,7 @@ lemma maskCapRights_ccorres [corres]:
           apply (unfold ccap_relation_def)[1]
           apply (simp add: cap_endpoint_cap_lift [THEN iffD1])
           apply (clarsimp simp: cap_to_H_def)
-          apply (simp add: option_map_def split: option.splits)
+          apply (simp add: map_option_case split: option.splits)
           apply (clarsimp simp add: cap_to_H_def Let_def
                              split: cap_CL.splits split_if_asm)
           apply (simp add: cap_endpoint_cap_lift_def)
@@ -2711,7 +2711,7 @@ lemma Arch_sameRegionAs_spec:
        apply (frule_tac cap'=cap_a in cap_get_tag_isCap_unfolded_H_cap(13))
        apply (frule_tac cap'=cap_b in cap_get_tag_isCap_unfolded_H_cap(13))
        apply (frule cap_get_tag_isCap_unfolded_H_cap)
-       apply (simp add: ccap_relation_def  option_map_def)
+       apply (simp add: ccap_relation_def  map_option_case)
        apply (simp add: cap_asid_pool_cap_lift)
        apply (simp add: cap_to_H_def)
        apply (case_tac "capASIDPool_CL (cap_asid_pool_cap_lift cap_a) = 
@@ -2905,7 +2905,7 @@ lemma Arch_sameRegionAs_spec:
    apply (frule_tac cap'=cap_a in cap_get_tag_isCap_unfolded_H_cap(14))
    apply (frule_tac cap'=cap_b in cap_get_tag_isCap_unfolded_H_cap(14))
    apply (frule cap_get_tag_isCap_unfolded_H_cap)
-   apply (simp add: ccap_relation_def  option_map_def)
+   apply (simp add: ccap_relation_def  map_option_case)
    apply (simp add: cap_page_table_cap_lift)
    apply (simp add: cap_to_H_def)
    apply (case_tac "capPTBasePtr_CL (cap_page_table_cap_lift cap_a) = 
@@ -2924,7 +2924,7 @@ lemma Arch_sameRegionAs_spec:
   apply (frule_tac cap'=cap_a in cap_get_tag_isCap_unfolded_H_cap(15))
   apply (frule_tac cap'=cap_b in cap_get_tag_isCap_unfolded_H_cap(15))
   apply (frule cap_get_tag_isCap_unfolded_H_cap)
-  apply (simp add: ccap_relation_def  option_map_def)
+  apply (simp add: ccap_relation_def  map_option_case)
   apply (simp add: cap_page_directory_cap_lift)
   apply (simp add: cap_to_H_def)
   apply (case_tac "capPDBasePtr_CL (cap_page_directory_cap_lift cap_a) = 
@@ -3094,7 +3094,7 @@ lemma ccap_relation_get_capSizeBits_untyped:
    get_capSizeBits_CL (cap_lift ccap) = bits"
   apply (frule cap_get_tag_isCap_unfolded_H_cap)
   apply (clarsimp simp: get_capSizeBits_CL_def ccap_relation_def
-                        option_map_def cap_to_H_def cap_lift_def cap_tag_defs)
+                        map_option_case cap_to_H_def cap_lift_def cap_tag_defs)
   done
 
 definition
@@ -3282,7 +3282,7 @@ lemma ccap_relation_get_capPtr_untyped:
    get_capPtr_CL (cap_lift ccap) = Ptr word"
   apply (frule cap_get_tag_isCap_unfolded_H_cap)
   apply (clarsimp simp: get_capPtr_CL_def ccap_relation_def
-                        option_map_def cap_to_H_def cap_lift_def cap_tag_defs)
+                        map_option_case cap_to_H_def cap_lift_def cap_tag_defs)
   done
 
 lemma cap_get_tag_isArchCap_unfolded_H_cap:
@@ -3314,7 +3314,7 @@ lemma sameRegionAs_spec:
                           isCap_simps cap_tag_defs from_bool_def false_def)[1]
               apply (frule_tac cap'=cap_a in cap_get_tag_isCap_unfolded_H_cap(1))
               apply (frule_tac cap'=cap_b in cap_get_tag_isCap_unfolded_H_cap(1))
-              apply (simp add: ccap_relation_def option_map_def)
+              apply (simp add: ccap_relation_def map_option_case)
               apply (simp add: cap_thread_cap_lift)
               apply (simp add: cap_to_H_def)
              apply (clarsimp simp: bool_case_If ctcb_ptr_to_tcb_ptr_def if_distrib
@@ -3328,7 +3328,7 @@ lemma sameRegionAs_spec:
                         isCap_simps cap_tag_defs from_bool_def false_def)[1]
             apply (frule_tac cap'=cap_a in cap_get_tag_isCap_unfolded_H_cap(3))
             apply (frule_tac cap'=cap_b in cap_get_tag_isCap_unfolded_H_cap(3))
-            apply (simp add: ccap_relation_def option_map_def)
+            apply (simp add: ccap_relation_def map_option_case)
             apply (simp add: cap_async_endpoint_cap_lift)
             apply (simp add: cap_to_H_def)
             apply (clarsimp split: split_if)
@@ -3339,7 +3339,7 @@ lemma sameRegionAs_spec:
                       isCap_simps cap_tag_defs from_bool_def false_def)[1]
            apply (frule_tac cap'=cap_a in cap_get_tag_isCap_unfolded_H_cap(5))
            apply (frule_tac cap'=cap_b in cap_get_tag_isCap_unfolded_H_cap(5))
-           apply (simp add: ccap_relation_def option_map_def)
+           apply (simp add: ccap_relation_def map_option_case)
            apply (simp add: cap_irq_handler_cap_lift)
            apply (simp add: cap_to_H_def)
            apply (clarsimp simp: up_ucast_inj_eq c_valid_cap_def
@@ -3354,7 +3354,7 @@ lemma sameRegionAs_spec:
                       isCap_simps cap_tag_defs from_bool_def false_def)[1]
           apply (frule_tac cap'=cap_a in cap_get_tag_isCap_unfolded_H_cap(4))
           apply (frule_tac cap'=cap_b in cap_get_tag_isCap_unfolded_H_cap(4))
-          apply (simp add: ccap_relation_def option_map_def)
+          apply (simp add: ccap_relation_def map_option_case)
           apply (simp add: cap_endpoint_cap_lift)
           apply (simp add: cap_to_H_def)
           apply (clarsimp split: split_if)
@@ -3383,7 +3383,7 @@ lemma sameRegionAs_spec:
       apply (clarsimp simp: isArchCap_tag_def2)     
      apply (frule_tac cap'=cap_a in cap_get_tag_isCap_unfolded_H_cap(8))
      apply (frule_tac cap'=cap_b in cap_get_tag_isCap_unfolded_H_cap(8))
-     apply (simp add: ccap_relation_def option_map_def)
+     apply (simp add: ccap_relation_def map_option_case)
      apply (simp add: cap_reply_cap_lift)
      apply (simp add: cap_to_H_def ctcb_ptr_to_tcb_ptr_def)
      apply (clarsimp split: split_if)
@@ -3410,7 +3410,7 @@ lemma sameRegionAs_spec:
                           ccap_relation_get_capSizeBits_physical
                           ccap_relation_get_capSizeBits_untyped)
     apply (intro conjI impI)
-       apply ((clarsimp simp: ccap_relation_def option_map_def
+       apply ((clarsimp simp: ccap_relation_def map_option_case
                               cap_untyped_cap_lift cap_to_H_def
                               field_simps valid_cap'_def)+)[4]
     apply (case_tac "capClass capb = PhysicalClass")
@@ -3429,7 +3429,7 @@ lemma sameRegionAs_spec:
     apply (clarsimp simp: isArchCap_tag_def2)     
    apply (frule_tac cap'=cap_a in cap_get_tag_isCap_unfolded_H_cap(10))
    apply (frule_tac cap'=cap_b in cap_get_tag_isCap_unfolded_H_cap(10))
-   apply (simp add: ccap_relation_def option_map_def)
+   apply (simp add: ccap_relation_def map_option_case)
    apply (simp add: cap_cnode_cap_lift)
    apply (simp add: cap_to_H_def)
    apply (clarsimp split: split_if bool.split)
@@ -3487,7 +3487,7 @@ lemma Arch_sameObjectAs_spec:
                             false_def from_bool_def)[1]
        apply (frule_tac cap'=cap_a in cap_get_tag_isCap_unfolded_H_cap(16), simp)
        apply (frule_tac cap'=cap_b in cap_get_tag_isCap_unfolded_H_cap(16), simp)
-       apply (simp add: ccap_relation_def option_map_def)
+       apply (simp add: ccap_relation_def map_option_case)
        apply (simp add: cap_small_frame_cap_lift)
        apply (clarsimp simp: cap_to_H_def capAligned_def from_bool_def
                       split: split_if bool.split
@@ -3497,7 +3497,7 @@ lemma Arch_sameObjectAs_spec:
                            false_def from_bool_def)[1]
       apply (frule_tac cap'=cap_a in cap_get_tag_isCap_unfolded_H_cap(17), simp)
       apply (frule_tac cap'=cap_b in cap_get_tag_isCap_unfolded_H_cap(17), simp)
-      apply (simp add: ccap_relation_def option_map_def)
+      apply (simp add: ccap_relation_def map_option_case)
       apply (simp add: cap_frame_cap_lift)
       apply (clarsimp simp: cap_to_H_def capAligned_def from_bool_def
                             c_valid_cap_def cl_valid_cap_def
@@ -3552,7 +3552,7 @@ lemma sameRegionAs_EndpointCap:
          simp_all add: isUntypedCap_def isEndpointCap_def isAsyncEndpointCap_def
              isCNodeCap_def isThreadCap_def isReplyCap_def isIRQControlCap_def
              isIRQHandlerCap_def isArchObjectCap_def)
-  apply (clarsimp simp: ccap_relation_def option_map_def)
+  apply (clarsimp simp: ccap_relation_def map_option_case)
   apply (case_tac "cap_lift capc", simp_all)
   apply (simp add: cap_to_H_def)
   apply (case_tac a, simp_all)
@@ -3575,7 +3575,7 @@ lemma sameRegionAs_AsyncEndpointCap:
          simp_all add: isUntypedCap_def isEndpointCap_def isAsyncEndpointCap_def
              isCNodeCap_def isThreadCap_def isReplyCap_def isIRQControlCap_def
              isIRQHandlerCap_def isArchObjectCap_def)
-  apply (clarsimp simp: ccap_relation_def option_map_def)
+  apply (clarsimp simp: ccap_relation_def map_option_case)
   apply (case_tac "cap_lift capc", simp_all)
   apply (simp add: cap_to_H_def)
   apply (case_tac a, simp_all)
@@ -3605,7 +3605,7 @@ lemma isMDBParentOf_spec:
 
   apply (rule conjI, clarsimp simp: typ_heap_simps dest!: lift_t_g)
   apply (intro conjI impI)
-     apply (simp add: ccte_relation_def option_map_def)
+     apply (simp add: ccte_relation_def map_option_case)
      apply (simp add: cte_lift_def)
      apply (clarsimp simp: cte_to_H_def mdb_node_to_H_def split: option.split_asm)
      apply (clarsimp simp: Let_def false_def from_bool_def to_bool_def
@@ -3617,7 +3617,7 @@ lemma isMDBParentOf_spec:
   apply (rule_tac x="cteCap cteb" in exI, rule conjI)
    apply (clarsimp simp: ccte_relation_ccap_relation typ_heap_simps
                   dest!: lift_t_g)
-  apply (clarsimp simp: ccte_relation_def option_map_def)
+  apply (clarsimp simp: ccte_relation_def map_option_case)
   apply (simp add: cte_lift_def)
   apply (clarsimp simp: cte_to_H_def mdb_node_to_H_def
                  split: option.split_asm)
