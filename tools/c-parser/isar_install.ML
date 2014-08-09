@@ -91,7 +91,7 @@ fun define_function_names fninfo thy = let
       List.foldl decl1 (1, [], Named_Target.theory_init thy) fninfo
   val lthy' = define_naming_scheme fninfo (List.rev defs) lthy
 in
-  (defs, lthy' |> Local_Theory.exit |> Proof_Context.theory_of)
+  (defs, Local_Theory.exit_global lthy')
 end
 
 
@@ -158,8 +158,7 @@ fun define_global_initializers globloc msgpfx name_munger mungedb cse globs thy 
   end
 in
   List.foldl define1 lthy globinits
-             |> Local_Theory.exit
-             |> Proof_Context.theory_of
+             |> Local_Theory.exit_global
 end
 
 val use_anon_vars = let
@@ -249,7 +248,7 @@ in
             state {owners=owners,gstate_ty=gstate_ty,mstate_ty=mstate_ty} thy
       val loc_b = Binding.name (suffix HPInter.globalsN localename)
       val (globloc, ctxt) =
-          Expression.add_locale I loc_b loc_b ([], []) globs thy
+          Expression.add_locale loc_b loc_b ([], []) globs thy
       val thy = Local_Theory.exit_global ctxt
       val _ = writeln ("Created locale for globals (" ^ Binding.print loc_b ^
                        ")- with " ^ Int.toString (length globs) ^

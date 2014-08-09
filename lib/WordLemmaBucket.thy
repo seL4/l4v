@@ -5943,12 +5943,10 @@ lemma subtract_mask:
   by (simp add: field_simps word_plus_and_or_coroll2)+
 
 lemma and_neg_mask_plus_mask_mono: "(p && ~~ mask n) + mask n \<ge> p"
-  apply (subst add_commute)
   apply (rule word_le_minus_cancel[where x = "p && ~~ mask n"])
    apply (clarsimp simp: subtract_mask)
    using word_and_le1[where a = "mask n" and y = p]
    apply (clarsimp simp: mask_def word_le_less_eq)
-  apply (subst add_commute)
   apply (rule is_aligned_no_overflow'[folded mask_2pm1])
   apply (clarsimp simp: is_aligned_neg_mask)
   done

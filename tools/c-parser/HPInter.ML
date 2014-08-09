@@ -409,7 +409,7 @@ let
       List.foldl add_spec_locales (Symtab.empty, ctxt) name_specs
 
   val (globloc, ctxt) =
-      Expression.add_locale I localename_b localename_b globloc_expr []
+      Expression.add_locale localename_b localename_b globloc_expr []
                             (Proof_Context.theory_of ctxt)
 
 in
