@@ -237,10 +237,9 @@ lemma distinct_inj_middle: "distinct list \<Longrightarrow> list = (xa @ x # xb)
    apply clarsimp
   apply clarsimp
   apply (case_tac "ya")
+   apply (simp (no_asm_simp))
    apply simp
-  apply simp
   apply clarsimp
-  apply blast
   done
  
 
@@ -749,39 +748,25 @@ lemma after_in_list_list_in_list:
   apply(case_tac "x=a", simp+)
 done
 
-lemma range_nat_relation_induct :  "\<lbrakk> m = Suc (n + k) ; m < cap ; \<forall> n. Suc n < cap \<longrightarrow> P n (Suc n );  (\<forall>i j k. i < cap \<and> j < cap \<and> k < cap \<longrightarrow> P i j \<longrightarrow> P j k \<longrightarrow> P i k)\<rbrakk> \<Longrightarrow>  P n m"
-  apply (clarify)    
+lemma range_nat_relation_induct: 
+"\<lbrakk> m = Suc (n + k) ; m < cap ; \<forall>n. Suc n < cap \<longrightarrow> P n (Suc n );  
+   \<forall>i j k. i < cap \<and> j < cap \<and> k < cap \<longrightarrow> P i j \<longrightarrow> P j k \<longrightarrow> P i k \<rbrakk> \<Longrightarrow>  P n m"
+  apply (clarify)
+  apply (thin_tac "m = ?t")
   apply (induct k)
-    apply (drule_tac x = "n" in spec)
-    apply (drule mp)
-      apply (simp)
-      apply (simp)
+   apply (drule_tac x = "n" in spec)
+   apply (erule impE, simp, simp)
   apply (frule_tac x = "Suc (n + k)" in spec)
-  apply (drule mp)   
-    apply (simp only: add_Suc_right)
-    apply (rotate_tac 3, frule_tac x = n in spec)
-    apply (rotate_tac 5, drule_tac x = "Suc (n + k)" in spec)
-    apply (rotate_tac 5, drule_tac x = "Suc (n + Suc k) " in spec)
-    apply (drule mp)
-      apply (intro conjI)
-        apply (rule_tac y = "Suc (n + Suc k)" in less_trans)
-          apply (rule less_SucI)
-          apply (simp only: add_Suc_right)
-        apply (simp only: add_Suc_right)
-        apply (simp only: add_Suc_right)
-        apply (simp only: add_Suc_right)
-        apply (drule mp)
-          apply (atomize)
-          apply (drule mp)
-            apply (simp only: add_Suc_right)
-            apply (drule mp)
-              apply (assumption)
-              apply (drule mp)
-                apply (assumption)
-                apply (assumption)
-        apply (drule mp)   
-          apply (simp only: add_Suc_right)
-          apply (assumption)
+  apply (erule impE)   
+   apply (simp only: add_Suc_right)
+  apply (rotate_tac 3, frule_tac x = n in spec)
+  apply (rotate_tac -1, drule_tac x = "Suc (n + k)" in spec)
+  apply (rotate_tac -1, drule_tac x = "Suc (n + Suc k) " in spec)
+  apply (erule impE)
+   apply (intro conjI)
+     apply (rule_tac y = "Suc (n + Suc k)" in less_trans)
+      apply (rule less_SucI)
+      apply (simp only: add_Suc_right)+
 done
 
 lemma indexed_trancl_as_set_helper : "\<lbrakk>p < q; q < length list; list ! p = a; list ! q = b;
@@ -789,14 +774,14 @@ lemma indexed_trancl_as_set_helper : "\<lbrakk>p < q; q < length list; list ! p 
        \<Longrightarrow> (a, b) \<in> {(i, j). \<exists>p. Suc p <length list \<and> list ! p = i \<and> list ! Suc p = j}\<^sup>+"
   apply (induct k arbitrary: p q a b)
    apply (rule r_into_trancl,simp, rule_tac x = p in exI, simp)
-   apply (atomize)
-   apply (erule_tac x = p in allE, erule_tac x = "Suc (p + k)" in allE, erule_tac x = "a" in allE, erule_tac x = "list ! Suc (p + k)" in allE)
-   apply (elim impE)
-     apply (simp)+
-     apply (rule_tac b = "list ! Suc (p + k)" in trancl_into_trancl)
-       apply (simp)+
-       apply (rule_tac x = "Suc (p + k)" in exI, simp)
-done
+  apply (atomize)
+  apply (erule_tac x = p in allE, erule_tac x = "Suc (p + k)" in allE, erule_tac x = "a" in allE, erule_tac x = "list ! Suc (p + k)" in allE)
+  apply (elim impE)
+        apply (simp)+
+  apply (rule_tac b = "list ! Suc (p + k)" in trancl_into_trancl)
+   apply (simp)+
+  apply (rule_tac x = "Suc (p + k)" in exI, simp)
+  done
 
 lemma indexed_trancl_as_set: "distinct list \<Longrightarrow> {(i, j). \<exists> p q. p < q \<and> q < length list \<and> list ! p = i \<and> list ! q = j } 
       = {(i, j). \<exists> p. Suc p < length list \<and> list ! p = i \<and> list ! Suc p = j }\<^sup>+"
@@ -913,7 +898,6 @@ lemma after_in_list_trancl_prepend:
           apply(case_tac "ya=a")
             apply(drule CollectD)
             apply(simp del:after_in_list.simps)
-            find_theorems after_in_list
             apply(drule after_in_list_in_list')
             apply(simp)
             apply(rule_tac b=ya in trancl_into_trancl)

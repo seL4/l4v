@@ -135,6 +135,8 @@ definition
     modify (op + x)
   od"
 
+crunch test[wp]: crunch_foo9 "\<lambda>x. x > y" (ignore: modify)
+
 (* crunch_ignore works within a locale *)
 crunch_ignore (add: modify)
 

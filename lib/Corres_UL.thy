@@ -410,7 +410,6 @@ lemma corres_noop:
   apply (frule P)
   apply (insert nf)
   apply (clarsimp simp: valid_def no_fail_def)
-  apply blast
   done
 
 lemma corres_noopE:

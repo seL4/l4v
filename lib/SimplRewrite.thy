@@ -47,7 +47,7 @@ definition
     Normal s \<Rightarrow> Normal (f s) | Abrupt s \<Rightarrow> Abrupt (f s) | _ \<Rightarrow> xs"
 
 lemmas add_statefn_xstate_simps[simp]
-    = add_statefn_xstate_def[split_simps xstate.split, standard]
+    = add_statefn_xstate_def[split_simps xstate.split]
 
 lemma isAbr_add_statefn_xstate[simp]:
   "isAbr (add_statefn_xstate f xs) = isAbr xs"
@@ -89,11 +89,11 @@ lemma add_statefn_exec:
   apply (drule add_statefn_exec1[OF bij_imp_bij_inv, OF bij])
   apply (simp add: inv_inv_eq bij add_statefn_xstate_comp
                    bij_is_inj[OF bij])
-  apply (simp add: o_def option_map_comp add_statefn_comp
+  apply (simp add: o_def option.map_comp add_statefn_comp
                    surj_iff[THEN iffD1] bij_is_surj[OF bij])
   apply (simp add: add_statefn_comp inj_iff[THEN iffD1]
                    bij_is_inj[OF bij] inv_inv_eq bij)
-  apply (simp add: option_map_def)
+  apply (simp add: map_option_case)
   done
 
 definition
@@ -182,7 +182,7 @@ lemmas exec_statefn_simulatesI
 
 lemma exec_statefn_simulates_refl:
   "exec_statefn_simulates id S T c c"
-  by (simp add: exec_statefn_simulates_def option_map_def o_def)
+  by (simp add: exec_statefn_simulates_def map_option.id)
 
 lemma exec_statefn_simulates_via_statefn:
   "bij f \<Longrightarrow>
@@ -219,10 +219,10 @@ theorem
   apply (clarsimp simp: HoarePartialDef.cvalid_def
                         HoarePartialDef.valid_def
                         add_statefn_exec)
-  apply (simp add: o_def option_map_comp)
+  apply (simp add: o_def option.map_comp)
   apply (simp add: add_statefn_comp surj_iff[THEN iffD1, OF bij_is_surj]
                    inv_inv_eq)
-  apply (simp add: option_map_def)
+  apply (simp add: map_option_case)
   apply (case_tac t, auto)
   done
 
@@ -453,7 +453,7 @@ lemma exec_statefn_simulates_Guard_lhs:
   done
 
 lemmas exec_statefn_simulates_whileAnno
-    = exec_statefn_simulates_While[folded whileAnno_def[where I=I and V=V], standard]
+    = exec_statefn_simulates_While[folded whileAnno_def[where I=I and V=V]] for I V
 
 lemma exec_statefn_simulates_Basic:
   "\<lbrakk> \<And>s. \<lbrakk> s \<in> S; g (fn s) \<notin> fn ` (- T) \<rbrakk> \<Longrightarrow> fn (f s) = g (fn s) \<rbrakk>
@@ -475,11 +475,11 @@ lemma exec_statefn_simulates_Call:
   apply (intro disjI1)
   apply (erule exec.cases, simp_all)
    apply (rule exec.intros, simp)
-   apply (simp add: add_statefn_exec bij_imp_bij_inv option_map_comp o_def
+   apply (simp add: add_statefn_exec bij_imp_bij_inv option.map_comp o_def
                     inv_inv_eq)
    apply (simp add: add_statefn_comp
                     inj_iff[THEN iffD1, OF bij_is_inj] inv_inv_eq bij_imp_bij_inv
-                    option_map_def inv_f_f[OF bij_is_inj] add_statefn_xstate_comp)
+                    map_option_case inv_f_f[OF bij_is_inj] add_statefn_xstate_comp)
   apply (fastforce intro: exec.intros)
   done
 
@@ -660,7 +660,7 @@ where
 
 lemmas xstate_inv_set_simps
     = xstate_inv_set_def[THEN eqset_imp_iff, simplified,
-            split_simps xstate.split, standard]
+            split_simps xstate.split]
 
 lemma xstate_inv_set_UNIV:
   "xstate_inv_set UNIV = UNIV"

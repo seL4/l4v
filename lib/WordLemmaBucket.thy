@@ -3205,7 +3205,7 @@ lemma modify_map_addr_com:
   assumes com: "x \<noteq> y"
   shows "modify_map (modify_map m x g) y f = modify_map (modify_map m y f) x g"
   by (rule ext)
-     (simp add: modify_map_def option_map_def com split: option.splits)
+     (simp add: modify_map_def map_option_case com split: option.splits)
 
 lemma modify_map_dom :
   "dom (modify_map m p f) = dom m"

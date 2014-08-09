@@ -117,7 +117,7 @@ lemma singleton_eq_imp_helper:
 lemmas monadic_rewrite_symb_exec
     = monadic_rewrite_symb_exec_pre [OF _ _ _ singleton_eq_imp_helper,
                                      THEN monadic_rewrite_trans,
-                                     simplified, standard]
+                                     simplified]
 
 lemma eq_UNIV_imp_helper:
   "v \<in> UNIV \<longrightarrow> x = x" by simp

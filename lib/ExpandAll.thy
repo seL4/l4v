@@ -54,14 +54,14 @@ fun expand_forall_pats ctxt pats tac t = let
       | (Const (@{const_name Ex}, T) $ bdy) => (T, bdy, @{thm expand_exists})
       | _ => raise TERM ("expand_forall_pats: not All or Ex", [t])
 
-    val thy = ProofContext.theory_of ctxt
+    val thy = Proof_Context.theory_of ctxt
 
     val x = Variable.variant_frees ctxt [bdy]
         [("x", domain_type (domain_type T))]
       |> the_single |> Free
 
     val bdy_x = betapply (bdy, x)
-    val pat_xs = pats x bdy_x |> sort_distinct TermOrd.fast_term_ord
+    val pat_xs = pats x bdy_x |> sort_distinct Term_Ord.fast_term_ord
 
     val ys = map (fn pat_x => ("y", fastype_of pat_x)) pat_xs
      |> Variable.variant_frees ctxt [bdy_x] |> map Free

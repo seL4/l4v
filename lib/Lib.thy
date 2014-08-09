@@ -152,7 +152,7 @@ lemma wf_sum_wf:
 abbreviation(input)
  "option_map == map_option"
 
-lemmas option_map_def = map_option_def
+lemmas option_map_def = map_option_case
 
 lemma False_implies_equals [simp]:
   "((False \<Longrightarrow> P) \<Longrightarrow> PROP Q) \<equiv> PROP Q"
