@@ -1771,7 +1771,7 @@ lemma valid_sched_valid_queues[intro]: "valid_sched s \<Longrightarrow> valid_qu
 
   
 lemma reads_respects_scheduler_invisible_no_domain_switch: "reads_respects_scheduler aag l (\<lambda>s. pas_refined aag s \<and> invs s \<and> valid_sched s \<and> guarded_pas_domain aag s \<and> domain_time s \<noteq> 0 \<and> pasDomainAbs aag (cur_domain s) \<notin> reads_scheduler aag l) schedule"
-  apply (rule reads_respects_scheduler_unobservable''[where P=Q and P'=Q and Q=Q,standard])
+  apply (rule reads_respects_scheduler_unobservable''[where P=Q and P'=Q and Q=Q for Q])
   apply (rule hoare_pre)
      apply (rule scheduler_equiv_lift'[where P="invs and (\<lambda>s. domain_time s \<noteq> 0)"])
           apply (wp schedule_no_domain_switch schedule_no_domain_fields

@@ -818,7 +818,7 @@ lemma sameRegionAs_def2:
    apply (clarsimp simp: sameRegionAs_def Let_def
                          isCap_Master capRange_Master capClass_Master)
    apply (clarsimp simp: isCap_simps
-                         capMasterCap_def[where cap="UntypedCap p n f", standard])
+                         capMasterCap_def[where cap="UntypedCap p n f" for p n f])
    apply (simp add: capRange_def interval_empty capUntypedSize_capBits)
    apply (intro impI iffI)
     apply (clarsimp del: subsetI intro!: range_subsetI)
@@ -1336,7 +1336,7 @@ lemma cte_refs_capRange:
    apply (simp add: power_add field_simps)
    apply (erule word_mult_less_mono1)
     apply simp
-   apply (frule power_strict_increasing [where a="2 :: nat" and n="y + z", standard])
+   apply (frule power_strict_increasing [where a="2 :: nat" and n="y + z" for y z])
     apply simp
    apply (simp only: power_add)
    apply (simp add: word_bits_def)
@@ -1359,7 +1359,7 @@ lemma cte_refs_capRange:
      apply simp
     apply simp
    apply simp
-  apply (simp add: objBits_simps power_add mult_ac)
+  apply (simp add: objBits_simps power_add mult.commute)
   apply (rule word_mult_less_mono1)
     apply (erule order_less_le_trans)
     apply (simp add: word_le_nat_alt)
@@ -1370,7 +1370,7 @@ lemma cte_refs_capRange:
      apply (simp add: word_bits_def)
     apply (simp add: word_bits_def)
    apply simp
-  apply (frule power_strict_increasing [where a="2 :: nat" and n="y + z", standard])
+  apply (frule power_strict_increasing [where a="2 :: nat" and n="y + z" for y z])
    apply simp
   apply (simp only: power_add)
   apply (simp add: word_bits_def)
@@ -1966,7 +1966,7 @@ lemma distinct_zombies_copyE:
   done
 
 lemmas distinct_zombies_sameE
-    = distinct_zombies_copyE [where y=x and x=x, standard, simplified,
+    = distinct_zombies_copyE [where y=x and x=x for x, simplified,
                               OF _ _ _ _ _ TrueI]
 
 lemma capBits_Master:
@@ -1996,7 +1996,7 @@ lemma distinct_zombies_copyMasterE:
   done
 
 lemmas distinct_zombies_sameMasterE
-    = distinct_zombies_copyMasterE[where x=x and y=x, standard, simplified,
+    = distinct_zombies_copyMasterE[where x=x and y=x for x, simplified,
                                    OF _ _ _ TrueI]
 
 lemma isZombie_capClass: "isZombie cap \<Longrightarrow> capClass cap = PhysicalClass"

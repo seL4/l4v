@@ -3020,7 +3020,7 @@ proof -
     apply (rule corres_guard_imp)
       apply (rule corres_split_nor [OF _ corres_as_user' [OF P]])
  	 apply (rule corres_trivial)
- 	 apply (simp add: min_max.inf_commute msgRegisters_unfold zipWithM_x_Nil)
+ 	 apply (simp add: min.commute msgRegisters_unfold zipWithM_x_Nil)
 	 apply wp
      apply (simp del: upt.simps split del: split_if)+
    -- "buf = Some a"
@@ -3164,7 +3164,7 @@ lemma get_tcb_cap_corres:
                         bind_def assert_opt_def tcb_at_def
                         return_def
                  dest!: get_tcb_SomeD)
-  apply (drule use_valid [OF _ getCTE_sp[where P="op = s'"], OF _ refl, standard])
+  apply (drule use_valid [OF _ getCTE_sp[where P="op = s'" for s'], OF _ refl])
   apply (clarsimp simp: get_tcb_def return_def)
   apply (drule pspace_relation_ctes_ofI[OF state_relation_pspace_relation])
      apply (rule cte_wp_at_tcbI[where t="(t, ref)"], fastforce+)[1]

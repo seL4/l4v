@@ -453,7 +453,7 @@ lemma delete_objects_respects[wp]:
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
    apply (simp add: delete_objects_def)
    apply (rule_tac seq_ext)
-   apply (rule hoare_triv[of P _ "%_. P", standard])
+   apply (rule hoare_triv[of P _ "%_. P" for P])
    apply (wp dmo_freeMemory_respects | simp)+
    apply (clarsimp simp: ptr_range_def intro!: detype_integrity)
    done
@@ -759,7 +759,7 @@ lemma use_retype_region_proofs_ext':
    done
 
 lemmas use_retype_region_proofs_ext
-    = use_retype_region_proofs_ext'[where Q="\<lambda>_. Q" and P=Q, simplified, standard, OF _ _ _ _ TrueI]
+    = use_retype_region_proofs_ext'[where Q="\<lambda>_. Q" and P=Q for Q, simplified, OF _ _ _ _ TrueI]
 
 lemma (in is_extended) pas_refined_tcb_domain_map_wellformed':
   assumes tdmw: "\<lbrace>tcb_domain_map_wellformed aag and P\<rbrace> f \<lbrace>\<lambda>_. tcb_domain_map_wellformed aag\<rbrace>"
@@ -891,10 +891,10 @@ lemma freeMemory_vms:
    \<forall>x\<in>fst (freeMemory ptr bits (machine_state s)).
    valid_machine_state (s\<lparr>machine_state := snd x\<rparr>)"
   apply (clarsimp simp: valid_machine_state_def
-                        disj_commute[of "in_user_frame p s", standard])
+                        disj_commute[of "in_user_frame p s" for p s])
   apply (drule_tac x=p in spec, simp)
   apply (drule_tac P="\<lambda>m'. underlying_memory m' p = 0"
-         in use_valid[where P=P and Q="\<lambda>_. P", standard], simp_all)
+         in use_valid[where P=P and Q="\<lambda>_. P" for P], simp_all)
   apply (simp add: freeMemory_def machine_op_lift_def
                    machine_rest_lift_def split_def)
   apply (wp hoare_drop_imps | simp | wp mapM_x_wp_inv)+

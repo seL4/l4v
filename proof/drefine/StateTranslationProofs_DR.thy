@@ -238,7 +238,7 @@ proof -
   show ?thesis
     by (auto simp add: map_lift_over_def P[THEN inv_into_f_f] domI
                        inj_on_iff[where f=f]
-           | rule ccontr[where P="v = None", standard])+
+           | rule ccontr[where P="v = None" for v])+
 qed
 
 lemma map_lift_over_f_eq:

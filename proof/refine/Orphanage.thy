@@ -1682,7 +1682,7 @@ lemma reduceZombie_no_orphans:
                               \<and> cte_wp_at' (\<lambda>c. c = cte) slot s \<and> invs' s
                               \<and> sch_act_simple s \<and> no_orphans s"
                   in hoare_post_imp)
-       apply (clarsimp simp: cte_wp_at_ctes_of mult_ac dest!: isCapDs)
+       apply (clarsimp simp: cte_wp_at_ctes_of mult.commute mult.left_commute dest!: isCapDs)
        apply (simp add: field_simps)
       apply (wp getCTE_cte_wp_at)
       apply simp
@@ -1801,7 +1801,7 @@ proof (induct arbitrary: P p rule: finalise_spec_induct2)
          apply (rule finaliseCap_cte_refs)
         apply (rule finaliseCap_replaceable[where slot=sl])
        apply clarsimp
-       apply (erule disjE[where P="F \<and> G", standard])
+       apply (erule disjE[where P="F \<and> G" for F G])
         apply (clarsimp simp: capRemovable_def cte_wp_at_ctes_of)
         apply (rule conjI, clarsimp)
         apply (clarsimp simp: final_IRQHandler_no_copy)
@@ -1813,7 +1813,7 @@ proof (induct arbitrary: P p rule: finalise_spec_induct2)
          apply (rule conjI, clarsimp)
          apply (case_tac "cteCap rv",
                 simp_all add: isCap_simps removeable'_def
-                              fun_eq_iff[where f="cte_refs' cap", standard]
+                              fun_eq_iff[where f="cte_refs' cap" for cap]
                               fun_eq_iff[where f=tcb_cte_cases]
                               tcb_cte_cases_def
                               word_neq_0_conv[symmetric])[1]
@@ -1821,7 +1821,7 @@ proof (induct arbitrary: P p rule: finalise_spec_induct2)
         apply (rule conjI, clarsimp)
         apply (case_tac "cteCap rv",
                simp_all add: isCap_simps removeable'_def
-                             fun_eq_iff[where f="cte_refs' cap", standard]
+                             fun_eq_iff[where f="cte_refs' cap" for cap]
                              fun_eq_iff[where f=tcb_cte_cases]
                              tcb_cte_cases_def)[1]
          apply (frule Q)
@@ -2060,18 +2060,18 @@ lemma tc_no_orphans:
   apply (simp add: invokeTCB_def getThreadCSpaceRoot getThreadVSpaceRoot
                    getThreadBufferSlot_def split_def)
   apply (rule hoare_walk_assmsE)
-    apply (clarsimp simp: pred_conj_def option.splits[where P="\<lambda>x. x s", standard])
+    apply (clarsimp simp: pred_conj_def option.splits[where P="\<lambda>x. x s" for s])
     apply ((wp case_option_wp threadSet_no_orphans threadSet_invs_trivial
                threadSet_cap_to' hoare_vcg_all_lift static_imp_wp | clarsimp simp: inQ_def)+)[2]
   apply (rule hoare_walk_assmsE)
-    apply (clarsimp simp: pred_conj_def option.splits[where P="\<lambda>x. x s", standard])
+    apply (clarsimp simp: pred_conj_def option.splits[where P="\<lambda>x. x s" for s])
     apply ((wp case_option_wp hoare_vcg_all_lift static_imp_wp setP_invs' | clarsimp)+)[2]
   apply (rule hoare_pre)
    apply (simp only: simp_thms cong: conj_cong
           | wp cteDelete_deletes cteDelete_invs' cteDelete_sch_act_simple
-               checkCap_inv[where P="valid_cap' c", standard]
-               checkCap_inv[where P=sch_act_simple, standard]
-               checkCap_inv[where P=no_orphans, standard]
+               checkCap_inv[where P="valid_cap' c" for c]
+               checkCap_inv[where P=sch_act_simple]
+               checkCap_inv[where P=no_orphans]
                hoare_vcg_all_lift_R hoare_vcg_all_lift
                threadSet_no_orphans hoare_vcg_const_imp_lift_R
                static_imp_wp

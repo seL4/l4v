@@ -180,13 +180,12 @@ lemma decode_invocation_corres:
       (RetypeDecls_H.decodeInvocation (mi_label mi) args' cptr' slot' cap' excaps')"
   apply (rule corres_gen_asm)
   apply (unfold decode_invocation_def decodeInvocation_def)
-  apply (case_tac cap, simp_all only: cap.cases)
+  apply (case_tac cap, simp_all only: cap.simps)
    --"dammit, simp_all messes things up, must handle cases manually"
              -- "Null"
              apply (simp add: isCap_defs)
             -- "Untyped"
             apply (simp add: isCap_defs Let_def o_def split del: split_if)
-            apply clarsimp
             apply (rule corres_guard_imp, rule dec_untyped_inv_corres)
               apply ((clarsimp simp:cte_wp_at_caps_of_state diminished_def)+)[3]
            -- "(Async)Endpoint"
@@ -575,7 +574,7 @@ lemma sendAsyncIPC_tcb_at'[wp]:
   done
 
 lemmas checkCap_inv_typ_at'
-  = checkCap_inv[where P="\<lambda>s. P (typ_at' T p s)", standard]
+  = checkCap_inv[where P="\<lambda>s. P (typ_at' T p s)" for T p]
 
 crunch typ_at'[wp]: restart "\<lambda>s. P (typ_at' T p s)"
 crunch typ_at'[wp]: performTransfer "\<lambda>s. P (typ_at' T p s)"
@@ -2222,8 +2221,7 @@ proof -
                     elim: st_tcb'_weakenE st_tcb_ex_cap'')[1]
        apply (rule corres_guard_imp)
          apply (rule corres_split_eqr[where R="\<lambda>rv. invs and valid_sched"
-                                      and R'="\<lambda>rv s. \<forall>x. rv = Some x \<longrightarrow> R'' x s",
-                                      standard])
+                                      and R'="\<lambda>rv s. \<forall>x. rv = Some x \<longrightarrow> R'' x s" for R''])
             apply (case_tac rv, simp_all add: doMachineOp_return)[1]
             apply (rule handle_interrupt_corres)
            apply (rule corres_machine_op)

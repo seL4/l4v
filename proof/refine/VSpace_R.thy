@@ -410,7 +410,7 @@ lemma find_free_hw_asid_corres:
           apply (subgoal_tac "take (length [minBound .e. maxBound :: hardware_asid])
                                 ([next_asid .e. maxBound] @ [minBound .e. next_asid])
                                 = [next_asid .e. maxBound] @ init [minBound .e. next_asid]")
-           apply (cut_tac v="find (\<lambda>a. hw_asid_table a = None)
+           apply (cut_tac option="find (\<lambda>a. hw_asid_table a = None)
              ([next_asid .e. maxBound] @ init [minBound .e. next_asid])"
                      in option.nchotomy[rule_format])
            apply (erule corres_disj_division)
@@ -982,7 +982,7 @@ lemma delete_asid_pool_corres:
                 apply (clarsimp simp: mask_def asid_low_bits_word_bits
                                elim!: is_alignedE)
                 apply (subgoal_tac "of_nat q < (2 ^ asid_high_bits :: word32)")
-                 apply (subst mult_ac, rule word_add_offset_less)
+                 apply (subst mult.commute, rule word_add_offset_less)
                      apply assumption
                     apply assumption
                    apply (simp add: asid_bits_def word_bits_def)
@@ -1031,8 +1031,8 @@ lemma delete_asid_pool_corres:
              apply (rule ext)
              apply clarsimp
              apply (erule notE)
-             apply (rule word_eqI) 
-             apply (drule_tac x="ucast xa" in bang_eq [THEN iffD1, standard])
+             apply (rule word_eqI)
+             apply (drule_tac x1="ucast xa" in bang_eq [THEN iffD1])
              apply (erule_tac x=n in allE)
              apply (simp add: word_size nth_ucast)
             apply (rule corres_split)
@@ -2507,9 +2507,8 @@ lemma clear_page_table_corres:
      apply (wp hoare_vcg_const_Ball_lift | simp)+
    apply (simp add: list_all2_refl)
   apply (clarsimp simp: upto_enum_step_def)
-  apply (erule page_table_pte_atI[simplified shiftl_t2n mult_ac, simplified])
-   apply (simp add: ptBits_def pageBits_def pt_bits_def)
-   apply unat_arith
+  apply (erule page_table_pte_atI[simplified shiftl_t2n mult.commute, simplified])
+   apply (simp add: ptBits_def pageBits_def pt_bits_def word_less_nat_alt unat_of_nat)
   apply simp
   done
 
@@ -3459,8 +3458,8 @@ lemma dmo_invalidateTLB_ASID_invs'[wp]:
   "\<lbrace>invs'\<rbrace> doMachineOp (invalidateTLB_ASID a) \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (wp dmo_invs' no_irq_invalidateTLB_ASID)
   apply clarsimp
-  apply (drule_tac P="\<lambda>m'. underlying_memory m' p = underlying_memory m p"
-         in use_valid[where P=P and Q="\<lambda>_. P", standard])
+  apply (drule_tac P4="\<lambda>m'. underlying_memory m' p = underlying_memory m p"
+         in use_valid[where P=P and Q="\<lambda>_. P" for P])
     apply (simp add: invalidateTLB_ASID_def machine_op_lift_def
                      machine_rest_lift_def split_def | wp)+
   done
@@ -3469,8 +3468,8 @@ lemma dmo_cleanCaches_PoU_invs'[wp]:
   "\<lbrace>invs'\<rbrace> doMachineOp cleanCaches_PoU \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (wp dmo_invs' no_irq_cleanCaches_PoU)
   apply clarsimp
-  apply (drule_tac P="\<lambda>m'. underlying_memory m' p = underlying_memory m p"
-         in use_valid[where P=P and Q="\<lambda>_. P", standard])
+  apply (drule_tac P4="\<lambda>m'. underlying_memory m' p = underlying_memory m p"
+         in use_valid[where P=P and Q="\<lambda>_. P" for P])
     apply (simp add: cleanCaches_PoU_def machine_op_lift_def
                      machine_rest_lift_def split_def | wp)+
   done
@@ -3595,7 +3594,7 @@ lemma perform_pt_invs [wp]:
      apply ((wp dmo_invs' hoare_vcg_all_lift setVMRootForFlush_invs' | simp add: tcb_at_invs')+)[2]
        apply (rule hoare_pre_imp[of _ \<top>], assumption)
        apply (clarsimp simp: valid_def
-                             disj_commute[of "pointerInUserData p s", standard])
+                             disj_commute[of "pointerInUserData p s" for p s])
        apply (thin_tac "?x : fst (setVMRootForFlush ?a ?b s)")
        apply (erule use_valid)
         apply (clarsimp simp: doFlush_def split: flush_type.splits)

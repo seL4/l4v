@@ -169,7 +169,7 @@ lemma pac_corres:
                 apply clarsimp
                 apply (erule_tac P = "x = asid_high_bits_of word2" in notE)
                 apply (rule word_eqI)
-                apply (drule_tac x="ucast x" in bang_eq [THEN iffD1,standard])
+                apply (drule_tac x1="ucast x" in bang_eq [THEN iffD1])
                 apply (erule_tac x=n in allE)
                 apply (simp add: word_size nth_ucast)
              apply wp
@@ -712,7 +712,7 @@ shows
       apply (cases "excaps'", simp)
       apply clarsimp
       apply (case_tac a, simp_all)[1]
-      apply (case_tac arch_cap, simp_all)[1]
+      apply (case_tac arch_capa, simp_all)[1]
       apply (case_tac option, simp_all)[1]
       apply (rule corres_guard_imp)
         apply (rule corres_splitEE)
@@ -736,7 +736,6 @@ shows
               apply (rule corres_splitEE)
                  prefer 2
                  apply (rule corres_whenE)
-                   apply (simp)
                    apply (subst conj_assoc [symmetric])
                    apply (subst assocs_empty_dom_comp [symmetric])
                    apply (rule dom_ucast_eq)
@@ -874,9 +873,9 @@ shows
           apply assumption
          apply (rule whenE_throwError_corres, simp, simp)
          apply (rule_tac R="\<lambda>_ s. valid_arch_objs s \<and> pspace_aligned s
-                                  \<and> ab + 2 ^ pageBitsForSize vmpage_size - 1 < kernel_base \<and>
+                                  \<and> hd args + 2 ^ pageBitsForSize vmpage_size - 1 < kernel_base \<and>
                                   valid_arch_state s \<and> equal_kernel_mappings s \<and> valid_global_objs s \<and>
-                                  s \<turnstile> (fst (hd excaps)) \<and> (\<exists>\<rhd> (lookup_pd_slot worda ab && ~~ mask pd_bits)) s \<and>
+                                  s \<turnstile> (fst (hd excaps)) \<and> (\<exists>\<rhd> (lookup_pd_slot (obj_ref_of (fst (hd excaps))) (hd args) && ~~ mask pd_bits)) s \<and>
                                   (\<exists>\<rhd> rv') s \<and> page_directory_at rv' s" 
                      and R'="\<lambda>_ s. s \<turnstile>' (fst (hd excaps')) \<and> valid_objs' s \<and>
                                     pspace_aligned' s \<and> pspace_distinct' s \<and>
@@ -905,7 +904,7 @@ shows
                    apply (clarsimp simp: archinv_relation_def page_invocation_map_def)
                   apply (wp hoare_whenE_wp check_vp_wpR)
             apply (clarsimp simp: valid_cap_def  dest!: vmsz_aligned_less_kernel_base_eq)
-            apply (frule_tac vptr=ab in page_directory_pde_at_lookupI, assumption)
+            apply (frule_tac vptr="hd args" in page_directory_pde_at_lookupI, assumption)
             apply (clarsimp simp: vmsz_aligned_def pageBitsForSize_def page_directory_at_aligned_pd_bits 
               split: vmpage_size.splits)
            apply (clarsimp simp: valid_cap'_def)
@@ -929,9 +928,9 @@ shows
        apply (rule corres_splitEE [where r' = "op ="])
           prefer 2
           apply (clarsimp simp: list_all2_Cons2)
-          apply (case_tac af, simp_all)[1]
+          apply (case_tac "fst (hd excaps)", simp_all)[1]
           apply clarsimp
-          apply (case_tac arch_cap, simp_all)[1]
+          apply (case_tac arch_capa, simp_all)[1]
           apply (case_tac optiona, simp_all)[1]
           apply (rule corres_returnOkTT)
           apply simp
@@ -1745,14 +1744,14 @@ lemma arch_decodeInvocation_wf[wp]:
       simp add: valid_arch_inv'_def valid_pti'_def unlessE_whenE|
       rule_tac x="fst p" in hoare_imp_eq_substR
       )+)
-              apply (rule_tac Q'="\<lambda>b c. ko_at' Hardware_H.pde.InvalidPDE (b + (a >> 20 << 2)) c \<longrightarrow>
+              apply (rule_tac Q'="\<lambda>b c. ko_at' Hardware_H.pde.InvalidPDE (b + (hd args >> 20 << 2)) c \<longrightarrow>
                  cte_wp_at'
                   (is_arch_update'
-                    (capability.ArchObjectCap (arch_capability.PageTableCap word (Some (snd p, a >> 20 << 20)))))
+                    (capability.ArchObjectCap (arch_capability.PageTableCap word (Some (snd p, hd args >> 20 << 20)))))
                   slot c \<and>
-                 c \<turnstile>' capability.ArchObjectCap (arch_capability.PageTableCap word (Some (snd p, a >> 20 << 20))) \<and>
+                 c \<turnstile>' capability.ArchObjectCap (arch_capability.PageTableCap word (Some (snd p, hd args >> 20 << 20))) \<and>
                  is_aligned (addrFromPPtr word) ptBits \<and>
-                 valid_pde_mapping_offset' (b + (a >> 20 << 2) && mask pdBits)
+                 valid_pde_mapping_offset' (b + (hd args >> 20 << 2) && mask pdBits)
                 " in hoare_post_imp_R)
               apply ((wp whenE_throwError_wp isFinalCapability_inv getPDE_wp
                 | wpc |

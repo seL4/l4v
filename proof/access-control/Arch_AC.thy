@@ -850,7 +850,7 @@ lemma perform_asid_control_invocation_pas_refined [wp]:
         | strengthen pas_refined_set_asid_strg
         | wpc
         | simp add: delete_objects_def2 fun_upd_def[symmetric])+
-   (*apply (rule hoare_triv[of P _ "%_. P", standard])*)
+   (*apply (rule hoare_triv[of P _ "%_. P" for P])*)
    apply (wp retype_region_pas_refined'[where sz=pageBits]
              max_index_upd_invs_simple max_index_upd_caps_overlap_reserved
              hoare_vcg_ex_lift set_cap_cte_wp_at hoare_vcg_disj_lift

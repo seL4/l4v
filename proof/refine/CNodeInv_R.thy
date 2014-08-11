@@ -855,11 +855,10 @@ termination finaliseSlot'
   done
 
 lemmas finaliseSlot'_simps_ext =
-    finaliseSlot'.simps [THEN ext [where f="finaliseSlot' slot exp", standard]]
+    finaliseSlot'.simps [THEN ext [where f="finaliseSlot' slot exp" for slot exp]]
 
 lemmas finalise_spec_induct = finaliseSlot'.induct[where P=
-    "\<lambda>sl exp s. s \<turnstile> \<lbrace>P sl exp\<rbrace> finaliseSlot' sl exp \<lbrace>Q sl exp\<rbrace>,\<lbrace>E sl exp\<rbrace>",
-        standard]
+    "\<lambda>sl exp s. s \<turnstile> \<lbrace>P sl exp\<rbrace> finaliseSlot' sl exp \<lbrace>Q sl exp\<rbrace>,\<lbrace>E sl exp\<rbrace>" for P Q E]
 
 lemma finaliseSlot'_preservation:
   assumes wp:
@@ -3530,7 +3529,8 @@ proof
     show ?thesis
     proof (cases rule: swap_cases)
       case dest_src      
-      hence "?mn = src" using p_src_prev dest src np n0 
+      hence "?mn = src" using p_src_prev dest src np n0
+        using [[hypsubst_thin = true]]
         apply clarsimp
         apply (drule n_src_prev)
         apply (clarsimp simp: dest_src )
@@ -3671,7 +3671,8 @@ proof
     show ?thesis
     proof (cases rule: swap_cases)
       case src_dest      
-      hence "?mn = dest" using p_dest_prev src dest np n0 
+      hence "?mn = dest" using p_dest_prev src dest np n0
+        using [[hypsubst_thin = true]]
         apply clarsimp
         apply (drule n_dest_prev)
         apply (clarsimp simp: src_dest )
@@ -5954,7 +5955,7 @@ lemma shrink_zombie_invs':
   apply clarsimp
   apply (rule ccontr, erule notE, rule imageI)
   apply (drule minus_one_helper3)
-  apply (rule ccontr, simp add: linorder_not_less mult_ac)
+  apply (rule ccontr, simp add: linorder_not_less mult.commute mult.left_commute)
   done
 
 lemma setQueue_cte_wp_at':
@@ -6066,7 +6067,7 @@ lemma valid_Zombie_cte_at':
      apply (simp add: word_bits_def)
     apply simp
    apply simp
-  apply (clarsimp simp: mult_ac real_cte_at')
+  apply (clarsimp simp: mult.commute mult.left_commute real_cte_at')
   done
 
 lemma updateCap_final_other:
@@ -6376,7 +6377,7 @@ lemma ex_Zombie_to2:
 declare word_to_1_set[simp]
 
 lemmas finalise_spec_induct2 = finaliseSlot'.induct[where P=
-    "\<lambda>sl exp s. P sl (finaliseSlot' sl exp) (\<lambda>P. exp \<or> P) s", standard]
+    "\<lambda>sl exp s. P sl (finaliseSlot' sl exp) (\<lambda>P. exp \<or> P) s" for P]
 
 lemma cteSwap_sch_act_simple[wp]:
   "\<lbrace>sch_act_simple\<rbrace> cteSwap cap1 slot1 cap2 slot2 \<lbrace>\<lambda>_. sch_act_simple\<rbrace>"
@@ -6434,7 +6435,7 @@ lemma reduceZombie_invs'':
                               \<and> cte_wp_at' (\<lambda>c. c = cte) slot s \<and> invs' s
                               \<and> sch_act_simple s"
                   in hoare_post_imp)
-       apply (clarsimp simp: cte_wp_at_ctes_of mult_ac dest!: isCapDs)
+       apply (clarsimp simp: cte_wp_at_ctes_of mult.commute mult.left_commute dest!: isCapDs)
        apply (simp add: field_simps)
       apply (wp getCTE_cte_wp_at)
       apply simp
@@ -6571,7 +6572,7 @@ proof (induct arbitrary: P p rule: finalise_spec_induct2)
          apply (rule finaliseCap_cte_refs)
         apply (rule finaliseCap_replaceable[where slot=sl])
        apply clarsimp
-       apply (erule disjE[where P="F \<and> G", standard])
+       apply (erule disjE[where P="F \<and> G" for F G])
         apply (clarsimp simp: capRemovable_def cte_wp_at_ctes_of)
         apply (rule conjI, clarsimp)
         apply (clarsimp simp: final_IRQHandler_no_copy)
@@ -6583,7 +6584,7 @@ proof (induct arbitrary: P p rule: finalise_spec_induct2)
          apply (rule conjI, clarsimp)
          apply (case_tac "cteCap rv",
                 simp_all add: isCap_simps removeable'_def
-                              fun_eq_iff[where f="cte_refs' cap", standard]
+                              fun_eq_iff[where f="cte_refs' cap" for cap]
                               fun_eq_iff[where f=tcb_cte_cases]
                               tcb_cte_cases_def
                               word_neq_0_conv[symmetric])[1]
@@ -6591,7 +6592,7 @@ proof (induct arbitrary: P p rule: finalise_spec_induct2)
         apply (rule conjI, clarsimp)
         apply (case_tac "cteCap rv",
                simp_all add: isCap_simps removeable'_def
-                             fun_eq_iff[where f="cte_refs' cap", standard]
+                             fun_eq_iff[where f="cte_refs' cap" for cap]
                              fun_eq_iff[where f=tcb_cte_cases]
                              tcb_cte_cases_def)[1]
          apply (frule Q)
@@ -6982,7 +6983,7 @@ crunch rvk_prog': finaliseCap
       ignore: getObject setObject setCTE)
 
 lemmas finalise_induct3 = finaliseSlot'.induct[where P=
-    "\<lambda>sl exp s. P sl (finaliseSlot' sl exp) s", standard]
+    "\<lambda>sl exp s. P sl (finaliseSlot' sl exp) s" for P]
 
 lemma finaliseSlot_rvk_prog:
   "s \<turnstile> \<lbrace>\<lambda>s. revoke_progress_ord m (option_map capToRPO \<circ> cteCaps_of s)\<rbrace>
@@ -7528,7 +7529,7 @@ next
            apply clarsimp
            apply (frule if_unsafe_then_capD, clarsimp, clarsimp)
            apply (clarsimp simp: cte_wp_at_caps_of_state)
-           apply (erule disjE[where P="c = cap.NullCap \<and> P", standard])
+           apply (erule disjE[where P="c = cap.NullCap \<and> P" for c P])
             apply clarsimp
            apply (clarsimp simp: conj_ac dest!: is_cap_simps' [THEN iffD1])
            apply (frule trans [OF _ appropriate_Zombie, OF sym])
@@ -7545,7 +7546,7 @@ next
             apply (rule finaliseCap_replaceable[where slot="cte_map slot"])
            apply (rule finaliseCap_cte_refs)
           apply clarsimp
-          apply (erule disjE[where P="F \<and> G", standard])
+          apply (erule disjE[where P="F \<and> G" for F G])
            apply (clarsimp simp: capRemovable_def cte_wp_at_ctes_of)
           apply (clarsimp dest!: isCapDs simp: cte_wp_at_ctes_of)
           apply (case_tac "cteCap rv'",
@@ -7556,7 +7557,7 @@ next
       apply (wp get_cap_wp| simp add: conj_ac)+
       apply (wp getCTE_wp')
      apply clarsimp
-     apply (frule cte_wp_at_valid_objs_valid_cap[where P="op = cap", standard])
+     apply (frule cte_wp_at_valid_objs_valid_cap[where P="op = cap" for cap])
       apply fastforce
      apply (fastforce simp: cte_wp_at_caps_of_state)
     apply (clarsimp simp: cte_wp_at_ctes_of)
@@ -7763,12 +7764,12 @@ next
     apply (frule valid_Zombie_cte_at'[where n=n])
      apply (clarsimp simp: valid_cap'_def)
     apply (clarsimp simp: cte_wp_at_ctes_of cte_level_bits_def
-                          mult_ac)
+                          mult.commute mult.left_commute)
     apply (clarsimp simp: ex_cte_cap_to'_def cte_wp_at_ctes_of)
     apply (rule_tac x="cte_map slot" in exI)
     apply (clarsimp simp: image_def)
     apply (rule_tac x="of_nat n" in bexI)
-     apply (simp add: cte_level_bits_def mult_ac)
+     apply (simp add: cte_level_bits_def mult.commute mult.left_commute)
     apply simp
     apply (subst field_simps, rule plus_one_helper2)
      apply simp
@@ -8007,7 +8008,7 @@ lemma cap_revoke_mdb_stuff2:
   apply (subst(asm) cap_revoke_mdb_stuff1)
          apply assumption+
   apply (clarsimp simp: cte_wp_at_ctes_of state_relation_def)
-  apply (drule(1) pspace_relation_cte_wp_atI[where x="mdbNext c", standard])
+  apply (drule(1) pspace_relation_cte_wp_atI[where x="mdbNext c" for c])
    apply clarsimp
   apply clarsimp
   apply (intro exI, rule conjI [OF refl])
@@ -8055,7 +8056,7 @@ lemma cap_revoke_mdb_stuff4:
   apply (subst(asm) cap_revoke_mdb_stuff1)
          apply assumption+
   apply (clarsimp simp: cte_wp_at_ctes_of state_relation_def)
-  apply (drule(1) pspace_relation_cte_wp_atI[where x="mdbNext c", standard])
+  apply (drule(1) pspace_relation_cte_wp_atI[where x="mdbNext c" for c])
    apply clarsimp
   apply clarsimp
   apply (intro exI, rule conjI [OF refl])
@@ -8250,7 +8251,7 @@ lemmas cteRevoke_st_tcb_at'
     = cteRevoke_preservation [OF cteDelete_st_tcb_at']
 lemmas cteRevoke_st_tcb_at_simplish
     = cteRevoke_st_tcb_at'[where P="\<lambda>st. Q st \<or> simple' st",
-                           simplified, standard]
+                           simplified] for Q
 
 lemmas finaliseSlot_st_tcb_at'
     = finaliseSlot_preservation [OF finaliseCap2_st_tcb_at'
@@ -8259,7 +8260,7 @@ lemmas finaliseSlot_st_tcb_at'
                                     updateCap_st_tcb_at']
 lemmas finaliseSlot_st_tcb_at_simplish
     = finaliseSlot_st_tcb_at'[where P="\<lambda>st. Q st \<or> simple' st",
-                              simplified, standard]
+                              simplified] for Q
 
 crunch st_tcb_at_simplish: cteRecycle
             "st_tcb_at' (\<lambda>st. P st \<or> simple' st) t"
@@ -8339,9 +8340,6 @@ lemma (in mdb_move) m'_next:
   apply clarsimp
   apply (case_tac "mdbNext mdbnode = p")
    apply clarsimp
-   apply (erule valid_dlistEn, assumption)
-    apply clarsimp
-   apply (clarsimp simp: prev)
   apply clarsimp
   apply (erule_tac p=p in valid_dlistEn, assumption)
    apply clarsimp
@@ -9099,7 +9097,7 @@ lemmas cteMove_typ_at_lifts [wp] = typ_at_lifts [OF cteMove_typ_at']
 lemmas finalise_slot_corres'
     = rec_del_corres[where args="FinaliseSlotCall slot exp",
                      simplified rec_del_concrete.simps,
-                     simplified, folded finalise_slot_def, standard]
+                     simplified, folded finalise_slot_def] for slot exp
 lemmas finalise_slot_corres = use_spec_corres [OF finalise_slot_corres']
 
 lemma corres_disj_abs:

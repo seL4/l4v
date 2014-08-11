@@ -278,7 +278,7 @@ lemma ccorres_disj_division:
 
 lemma disj_division_bool: "b \<or> \<not> b" by simp
 
-lemmas ccorres_bool_cases2 = ccorres_disj_division [OF disj_division_bool]
+lemmas ccorres_case_bools2 = ccorres_disj_division [OF disj_division_bool]
 
 lemma capMasterCap_NullCap_eq:
   "(capMasterCap c = NullCap) = (c = NullCap)"
@@ -355,7 +355,7 @@ lemma valid_cnode_cap_cte_at':
       \<Longrightarrow> cte_at' (ptr + v * 0x10) s"
   apply (drule less_mask_eq)
   apply (drule(1) valid_cap_cte_at'[where addr=v])
-  apply (simp add: mult_ac)
+  apply (simp add: mult.commute mult.left_commute)
   done
 
 lemma ccorres_abstract_all:
@@ -487,7 +487,7 @@ lemma lookup_fp_ccorres':
      apply (rule ccorres_drop_cutMon_bindE, rule ccorres_assertE)
      apply (rule ccorres_cutMon)
      apply (rule_tac P="abits < capCNodeBits acap + capCNodeGuardSize acap"
-                 in ccorres_bool_cases2)
+                 in ccorres_case_bools2)
       apply (rule ccorres_drop_cutMon)
       apply (simp del: Collect_const cong: call_ignore_cong)
       apply csymbr+
@@ -556,7 +556,7 @@ lemma lookup_fp_ccorres':
        apply (simp add: liftE_bindE locateSlot_conv
                    del: Collect_const cong: call_ignore_cong)
        apply (rule_tac P="abits = capCNodeBits acap + capCNodeGuardSize acap"
-                   in ccorres_bool_cases2)
+                   in ccorres_case_bools2)
         apply (rule ccorres_drop_cutMon)
         apply (simp del: Collect_const)
         apply (simp add: liftE_def getSlotCap_def del: Collect_const)
@@ -909,7 +909,7 @@ lemma heap_relation_user_word_at_cross_over:
             word32_shift_by_2 shiftr_shiftl1 is_aligned_neg_mask_eq is_aligned_andI1)
   apply (drule_tac x="ucast (p >> 2)" in spec)
   apply (simp add: byte_to_word_heap_def Let_def ucast_ucast_mask)
-  apply (fold shiftl_t2n[where n=2, simplified, simplified mult_ac])
+  apply (fold shiftl_t2n[where n=2, simplified, simplified mult.commute mult.left_commute])
   apply (simp add: aligned_shiftr_mask_shiftl pageBits_def)
   apply (rule trans[rotated], rule_tac hp="hrs_mem (t_hrs_' (globals s'))"
                                    and x="Ptr &(Ptr (p && ~~ mask 12) \<rightarrow> [''words_C''])"
@@ -927,7 +927,7 @@ lemma heap_relation_user_word_at_cross_over:
   apply (subst field_lookup_offset_eq)
    apply (fastforce intro: typ_heap_simps)
   apply (simp add: ucast_nat_def ucast_ucast_mask)
-  apply (fold shiftl_t2n[where n=2, simplified, simplified mult_ac])
+  apply (fold shiftl_t2n[where n=2, simplified, simplified mult.commute mult.left_commute])
   apply (simp add: aligned_shiftr_mask_shiftl)
   done
 
@@ -1099,7 +1099,7 @@ lemma switchToThread_fp_ccorres:
             rule empty_fail_findPDForASID)
        apply (rename_tac "pd_found")
        apply (rule_tac P="pd_found \<noteq> pd"
-                    in ccorres_bool_cases2)
+                    in ccorres_case_bools2)
         apply (simp add: bindE_assoc catch_liftE_bindE bind_assoc
                          checkPDNotInASIDMap_def
                          checkPDASIDMapMembership_def
@@ -2782,7 +2782,7 @@ lemma fastpath_call_ccorres:
    apply clarsimp
    apply (safe del: notI)[1]
      apply (rule not_sym, clarsimp)
-     apply (drule aligned_sub_aligned[where x="x + 0x10" and y=x, standard])
+     apply (drule aligned_sub_aligned[where x="x + 0x10" and y=x for x])
        apply (erule tcbs_of_aligned')
        apply (simp add:invs_pspace_aligned')
       apply simp
@@ -5059,8 +5059,7 @@ lemma fastpath_callKernel_SysCall_corres:
        apply (simp add: split_def Syscall_H.syscall_def
                         liftE_bindE_handle bind_assoc
                         capFaultOnFailure_def)
-       apply (simp only: bindE_bind_linearise[where f="rethrowFailure fn f'",
-                                                      standard]
+       apply (simp only: bindE_bind_linearise[where f="rethrowFailure fn f'" for fn f']
                          bind_case_sum_rethrow)
        apply (simp add: lookupCapAndSlot_def lookupSlotForThread_def
                         lookupSlotForThread_def bindE_assoc
@@ -5182,7 +5181,7 @@ lemma fastpath_callKernel_SysCall_corres:
                    apply (simp add: setThreadState_runnable_simp
                                     getThreadCallerSlot_def getThreadReplySlot_def
                                     locateSlot_conv bind_assoc)
-                   apply (rule_tac P="inj (bool_case thread (hd (epQueue send_ep)))"
+                   apply (rule_tac P="inj (case_bool thread (hd (epQueue send_ep)))"
                                 in monadic_rewrite_gen_asm)
                    apply (rule monadic_rewrite_trans[OF _ monadic_rewrite_transverse])
                      apply (rule monadic_rewrite_weaken[where F=False and E=True], simp)
@@ -5248,7 +5247,7 @@ lemma fastpath_callKernel_SysCall_corres:
   apply (frule_tac t="blockedThread" in valid_queues_not_runnable_not_queued)
     apply (simp)
    apply (clarsimp simp: st_tcb_at'_def obj_at'_def objBits_simps projectKOs
-                        valid_mdb'_def valid_mdb_ctes_def inj_bool_case
+                        valid_mdb'_def valid_mdb_ctes_def inj_case_bool
                  split: bool.split)+
   apply (simp(no_asm) add: eq_commute)
   apply (clarsimp simp: sch_act_simple_def)
@@ -5969,9 +5968,9 @@ lemma fastpath_callKernel_SysReplyWait_corres:
                         resolveAddressBits_def_functional
                         getThreadCallerSlot_def bind_assoc
                         getSlotCap_def deleteCallerCap_def
-                        bool_case_If o_def
-                        isRight_def[where x="Inr v", standard]
-                        isRight_def[where x="Inl v", standard]
+                        case_bool_If o_def
+                        isRight_def[where x="Inr v" for v]
+                        isRight_def[where x="Inl v" for v]
                   cong: if_cong)
        apply (rule monadic_rewrite_symb_exec_r, wp)
         apply (rename_tac "cTableCTE")
@@ -5984,7 +5983,7 @@ lemma fastpath_callKernel_SysReplyWait_corres:
            apply (rule monadic_rewrite_alternative_l)
           apply clarsimp
          apply (simp add: isRight_case_sum liftE_bind
-                          isRight_def[where x="Inr v", standard])
+                          isRight_def[where x="Inr v" for v])
          apply (rule monadic_rewrite_symb_exec_r, wp)
           apply (rename_tac ep_cap)
           apply (rule monadic_rewrite_if_rhs[rotated])
@@ -6107,7 +6106,7 @@ lemma fastpath_callKernel_SysReplyWait_corres:
                                     setThreadState_runnable_simp)
                    apply (rule monadic_rewrite_symb_exec_l, wp empty_fail_getThreadState)
                     apply (rule monadic_rewrite_assert)
-                    apply (rule_tac P="inj (bool_case thread (capTCBPtr (cteCap replyCTE)))"
+                    apply (rule_tac P="inj (case_bool thread (capTCBPtr (cteCap replyCTE)))"
                                    in monadic_rewrite_gen_asm)
                     apply (rule monadic_rewrite_trans[OF _ monadic_rewrite_transverse])
                       apply (rule monadic_rewrite_weaken[where F=False and E=True], simp)
@@ -6125,7 +6124,7 @@ lemma fastpath_callKernel_SysReplyWait_corres:
                                           and tcb_at' thread
                                           and (cte_wp_at' (\<lambda>cte. isReplyCap (cteCap cte))
                                                       (thread + 2 ^ cte_level_bits * tcbCallerSlot)
-                                                  and (\<lambda>s. \<forall>x. tcb_at' (bool_case thread (capTCBPtr (cteCap replyCTE)) x) s)
+                                                  and (\<lambda>s. \<forall>x. tcb_at' (case_bool thread (capTCBPtr (cteCap replyCTE)) x) s)
                                                   and valid_mdb')"
                                  and F=True and E=False in monadic_rewrite_weaken)
                     apply (rule monadic_rewrite_isolate_final2)
@@ -6198,7 +6197,7 @@ lemma fastpath_callKernel_SysReplyWait_corres:
   apply (clarsimp simp: valid_cap_simps')
   apply (subst tcb_at_cte_at_offset,
          assumption, simp add: tcb_cte_cases_def cte_level_bits_def tcbSlots)
-  apply (clarsimp simp: inj_bool_case cte_wp_at_ctes_of
+  apply (clarsimp simp: inj_case_bool cte_wp_at_ctes_of
                          length_msgRegisters
                         n_msgRegisters_def order_less_imp_le
                  split: bool.split)

@@ -4178,7 +4178,7 @@ proof (intro impI allI)
 
   have rb': "region_is_bytes ptr (n * 2 ^ gbits * 2 ^ objBitsKO ko) x"
     using empty
-    by (simp add: mult_ac power_add objBits_simps ko_def)
+    by (simp add: mult.commute mult.left_commute power_add objBits_simps ko_def)
 
   note rl' = cslift_ptr_retyp_memset_other_inst[OF rb' rc' szo' szo, simplified]
 
@@ -4455,7 +4455,7 @@ lemma placeNewObject_eq:
   apply (clarsimp simp: data_map_insert_def new_cap_addrs_def)
   apply (subst upto_enum_red2)
    apply (fold word_bits_def, assumption)
-  apply (clarsimp simp: field_simps shiftl_t2n power_add mult_ac
+  apply (clarsimp simp: field_simps shiftl_t2n power_add mult.commute mult.left_commute
            cong: foldr_cong map_cong)
   done
 
@@ -4863,7 +4863,7 @@ lemma placeNewObject_user_data:
    apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                          kernel_data_refs_domain_eq_rotate
                   elim!: ptr_retyps_htd_safe_neg)
-   apply (simp add: size_of_def pageBits_def power_add mult_ac)
+   apply (simp add: size_of_def pageBits_def power_add mult.commute mult.left_commute)
   apply (frule range_cover.unat_of_nat_shift[where gbits = "pageBits + us"])
     apply simp
    apply (clarsimp simp:size_of_def power_add pageBits_def

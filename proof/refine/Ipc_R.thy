@@ -1234,7 +1234,7 @@ lemma grs_distinct'[wp]:
   apply (cases buf, simp_all add: getReceiveSlots_def
                                   split_def unlessE_def)
    apply (wp, simp)
-  apply (wp | simp only: distinct.simps set.simps empty_iff)+
+  apply (wp | simp only: distinct.simps list.simps empty_iff)+
   apply simp
   done
 
@@ -1922,7 +1922,7 @@ lemma lookupIPCBuffer_valid_ipc_buffer [wp]:
   apply (clarsimp simp: capAligned_def)
   apply (drule_tac x = 
     "(tcbIPCBuffer ko && mask (pageBitsForSize v2))  >> pageBits" in spec)
-  apply (subst(asm) mult_ac, subst(asm) shiftl_t2n[symmetric])
+  apply (subst(asm) mult.commute mult.left_commute, subst(asm) shiftl_t2n[symmetric])
   apply (simp add: shiftr_shiftl1)
   apply (subst (asm) mask_out_add_aligned)
    apply (erule is_aligned_weaken [OF _ pbfs_atleast_pageBits])
@@ -2691,7 +2691,7 @@ proof -
               apply (rule_tac 
                      F="\<exists>x. recv_state = Structures_A.BlockedOnReceive ep x" 
                      in corres_gen_asm)
-              apply (clarsimp simp: bool_case_If  case_option_If if3_fold
+              apply (clarsimp simp: case_bool_If  case_option_If if3_fold
                           simp del: dc_simp split del: split_if cong: if_cong)
               apply (rule corres_split [OF _ dit_corres])
                 apply (rule corres_split [OF _ sts_corres])
@@ -2733,7 +2733,7 @@ proof -
          apply (wp weak_sch_act_wf_lift_linear set_ep_valid_objs' setEndpoint_valid_mdb')
         apply (clarsimp simp add: invs_def valid_state_def valid_pspace_def ep_redux_simps
                         ep_redux_simps' st_tcb_at_tcb_at valid_ep_def cong: list.case_cong)
-        apply (drule(1) sym_refs_obj_atD[where P="\<lambda>ob. ob = e", standard])
+        apply (drule(1) sym_refs_obj_atD[where P="\<lambda>ob. ob = e" for e])
         apply (clarsimp simp: st_tcb_at_refs_of_rev st_tcb_at_reply_cap_valid st_tcb_at_caller_cap_null)
         apply (fastforce simp: st_tcb_def2 valid_sched_def valid_sched_action_def)
        apply (auto simp: valid_ep'_def invs'_def valid_state'_def split: list.split)[1]
@@ -2762,7 +2762,7 @@ proof -
       apply (rule_tac F="a \<noteq> t" in corres_req)
        apply (clarsimp simp: invs_def valid_state_def
                              valid_pspace_def)
-       apply (drule(1) sym_refs_obj_atD[where P="\<lambda>ob. ob = e", standard])
+       apply (drule(1) sym_refs_obj_atD[where P="\<lambda>ob. ob = e" for e])
        apply (clarsimp simp: st_tcb_at_def obj_at_def)
        apply fastforce
       apply (clarsimp split del: split_if)
@@ -2772,7 +2772,7 @@ proof -
              apply (rule_tac
                 F="\<exists>x. recv_state = Structures_A.BlockedOnReceive ep x"
                     in corres_gen_asm)
-             apply (clarsimp simp: isReceive_def bool_case_If
+             apply (clarsimp simp: isReceive_def case_bool_If
                         split del: split_if cong: if_cong)
              apply (rule corres_split [OF _ dit_corres])
                apply (rule corres_split [OF _ sts_corres])
@@ -2782,7 +2782,7 @@ proof -
                      apply (case_tac rv)
                       apply (clarsimp simp: fault_rel_optionation_def when_def split del: split_if)
                      apply (clarsimp simp: fault_rel_optionation_def when_def
-                                           bool_case_If
+                                           case_bool_If
                                 split del: split_if)
                      apply (fold dc_def)[1]
                      apply (rule corres_if2, simp)
@@ -2816,7 +2816,7 @@ proof -
                                  st_tcb_at_tcb_at
                            cong: list.case_cong)
        apply (clarsimp simp: valid_ep_def)
-       apply (drule(1) sym_refs_obj_atD[where P="\<lambda>ob. ob = e",standard])
+       apply (drule(1) sym_refs_obj_atD[where P="\<lambda>ob. ob = e" for e])
        apply (clarsimp simp: st_tcb_at_refs_of_rev st_tcb_at_reply_cap_valid
                              st_tcb_at_caller_cap_null)
        apply (fastforce simp: st_tcb_def2 valid_sched_def valid_sched_action_def)
@@ -2840,7 +2840,7 @@ lemma dat_corres:
     apply (rule corres_split_eqr [OF _ lipcb_corres'])
        apply (rule corres_split [OF _ set_mrs_corres])
           apply (rule corres_split [OF set_mi_corres])
-             apply (simp add: message_info_list.map)
+             apply simp
             apply (clarsimp simp: badge_register_def badgeRegister_def)
             apply (rule user_setreg_corres)
            apply wp
@@ -3338,7 +3338,7 @@ lemma receive_ipc_corres:
                            sender_state = 
                            Structures_A.thread_state.BlockedOnSend word1 data"
                        in corres_gen_asm)
-              apply (clarsimp simp: isSend_def bool_case_If
+              apply (clarsimp simp: isSend_def case_bool_If
                                     case_option_If if3_fold
                          split del: split_if cong: if_cong)
               apply (rule corres_split [OF _ dit_corres])
@@ -3387,7 +3387,7 @@ lemma receive_ipc_corres:
         apply (clarsimp split: list.split)
         apply (clarsimp simp add: invs_def valid_state_def st_tcb_at_tcb_at)
         apply (clarsimp simp add: valid_ep_def valid_pspace_def)
-        apply (drule(1) sym_refs_obj_atD[where P="\<lambda>ko. ko = Endpoint e", standard])
+        apply (drule(1) sym_refs_obj_atD[where P="\<lambda>ko. ko = Endpoint e" for e])
         apply (fastforce simp: st_tcb_at_refs_of_rev elim: st_tcb_weakenE)
        apply (auto simp: valid_ep'_def invs'_def valid_state'_def split: list.split)[1]
       -- "RecvEP"
@@ -3494,7 +3494,7 @@ lemma send_fault_ipc_corres:
                      in corres_inst)
          apply (case_tac handler_cap,
                 simp_all add: isCap_defs lookup_failure_map_def
-                              bool_case_If If_rearrage
+                              case_bool_If If_rearrage
                    split del: split_if cong: if_cong)[1]
           apply (rule corres_guard_imp)
             apply (rule corres_if2 [OF refl])
@@ -3908,7 +3908,7 @@ lemma ri_invs' [wp]:
              switchIfRequiredTo_valid_queues'
              switchIfRequiredTo_ct_not_inQ
              setEndpoint_ksQ setEndpoint_ct'
-        | simp add: valid_tcb_state'_def bool_case_If
+        | simp add: valid_tcb_state'_def case_bool_If
                     case_option_If
              split del: split_if cong: if_cong
         | wp_once sch_act_sane_lift hoare_vcg_conj_lift hoare_vcg_all_lift)+
@@ -3928,7 +3928,7 @@ lemma ri_invs' [wp]:
    prefer 2
    apply (clarsimp simp: st_tcb_at'_def obj_at'_def)
   apply (drule st_tcb_at_state_refs_ofD')
-  apply (simp only: conj_ac(1, 2)[where Q="sym_refs R", standard])
+  apply (simp only: conj_ac(1, 2)[where Q="sym_refs R" for R])
   apply (subgoal_tac "distinct (ksIdleThread s # capEPPtr cap # t # sender # queue)")
    apply (rule conjI)
     apply (simp add: ep_redux_simps' cong: if_cong)
@@ -4134,7 +4134,7 @@ lemma si_invs'[wp]:
                hoare_convert_imp [OF setEndpoint_nosch setEndpoint_ct']
                hoare_drop_imp [where f="threadGet tcbFault t"]
              | rule_tac f="getThreadState a" in hoare_drop_imp
-             | simp    add: valid_tcb_state'_def bool_case_If
+             | simp    add: valid_tcb_state'_def case_bool_If
                             case_option_If
                       cong: if_cong
                  split del: split_if
@@ -4351,7 +4351,7 @@ lemma si_blk_makes_simple':
   apply (simp add: sendIPC_def)
   apply (rule hoare_seq_ext [OF _ get_ep_inv'])
   apply (case_tac xa, simp_all)
-    apply (case_tac list, simp_all add: bool_case_If case_option_If
+    apply (case_tac list, simp_all add: case_bool_If case_option_If
                              split del: split_if cong: if_cong)
     apply (rule hoare_pre)
      apply (wp sts_st_tcb_at'_cases setupCallerCap_st_tcb_unchanged
@@ -4370,7 +4370,7 @@ lemma si_blk_makes_runnable':
   apply (simp add: sendIPC_def)
   apply (rule hoare_seq_ext [OF _ get_ep_inv'])
   apply (case_tac xa, simp_all)
-    apply (case_tac list, simp_all add: bool_case_If case_option_If
+    apply (case_tac list, simp_all add: case_bool_If case_option_If
                              split del: split_if cong: if_cong)
     apply (rule hoare_pre)
      apply (wp sts_st_tcb_at'_cases setupCallerCap_st_tcb_unchanged
@@ -4430,7 +4430,7 @@ lemma ri_makes_runnable_simple':
     apply clarsimp
    apply (wp sts_st_tcb_at'_cases)
    apply clarsimp
-  apply (case_tac list, simp_all add: bool_case_If case_option_If
+  apply (case_tac list, simp_all add: case_bool_If case_option_If
                            split del: split_if cong: if_cong)
   apply (rule hoare_pre)
    apply (wp sts_st_tcb_at'_cases setupCallerCap_st_tcb_unchanged

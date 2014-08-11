@@ -1384,8 +1384,7 @@ proof -
     apply -
     apply (rule corres_guard_imp[where P=P and P'=P'
                                   and Q="P and cte_at (a, tcb_cnode_index 4)"
-                                  and Q'="P' and cte_at' (cte_map (a, cap))",
-                                 standard])
+                                  and Q'="P' and cte_at' (cte_map (a, cap))" for P P' a cap])
       apply (cases g)
        apply (simp, simp add: returnOk_def)
       apply (clarsimp simp: liftME_def[symmetric] U2 liftE_bindE)
@@ -1465,14 +1464,14 @@ proof -
                cteDelete_deletes cteDelete_sch_act_simple
                out_valid_cap out_cte_at out_tcb_valid out_emptyable
                CSpaceInv_AI.cap_insert_valid_cap cap_insert_cte_at cap_delete_cte_at
-               cap_delete_tcb cteDelete_invs' checkCap_inv [where P="valid_cap' c0", standard]
-               check_cap_inv[where P="tcb_at p0", standard] checkCap_inv [where P="tcb_at' p0", standard]
-               check_cap_inv[where P="cte_at p0", standard] checkCap_inv [where P="cte_at' p0", standard]
-               check_cap_inv[where P="valid_cap c", standard] checkCap_inv [where P="valid_cap' c", standard]
-               check_cap_inv[where P="tcb_cap_valid c p1", standard]
-               check_cap_inv[where P=valid_sched, standard]
-               check_cap_inv[where P=simple_sched_action, standard]
-               checkCap_inv [where P=sch_act_simple, standard]
+               cap_delete_tcb cteDelete_invs' checkCap_inv [where P="valid_cap' c0" for c0]
+               check_cap_inv[where P="tcb_at p0" for p0] checkCap_inv [where P="tcb_at' p0" for p0]
+               check_cap_inv[where P="cte_at p0" for p0] checkCap_inv [where P="cte_at' p0" for p0]
+               check_cap_inv[where P="valid_cap c" for c] checkCap_inv [where P="valid_cap' c" for c]
+               check_cap_inv[where P="tcb_cap_valid c p1" for c p1]
+               check_cap_inv[where P=valid_sched]
+               check_cap_inv[where P=simple_sched_action]
+               checkCap_inv [where P=sch_act_simple]
                out_no_cap_to_trivial [OF ball_tcb_cap_casesI]
                checked_insert_no_cap_to
   show ?thesis
@@ -1518,9 +1517,8 @@ lemma isReplyCapD:
   by (simp add: isCap_simps)
 
 lemmas threadSet_ipcbuffer_trivial
-    = threadSet_invs_trivial[where F="tcbIPCBuffer_update F'",
-                              simplified inQ_def, simplified,
-                              standard]
+    = threadSet_invs_trivial[where F="tcbIPCBuffer_update F'" for F',
+                              simplified inQ_def, simplified]
 
 crunch cap_to'[wp]: setPriority "ex_nonz_cap_to' a"
   (simp: crunch_simps)
@@ -1546,21 +1544,21 @@ lemma tc_invs':
                    getThreadBufferSlot_def locateSlot_conv
              cong: option.case_cong)
   apply (rule hoare_walk_assmsE)
-    apply (clarsimp simp: pred_conj_def option.splits [where P="\<lambda>x. x s", standard])
+    apply (clarsimp simp: pred_conj_def option.splits [where P="\<lambda>x. x s" for s])
     apply ((wp case_option_wp threadSet_invs_trivial static_imp_wp
                hoare_vcg_all_lift threadSet_cap_to' | clarsimp simp: inQ_def)+)[2]
   apply (rule hoare_walk_assmsE)
-    apply (clarsimp simp: pred_conj_def option.splits [where P="\<lambda>x. x s", standard])
+    apply (clarsimp simp: pred_conj_def option.splits [where P="\<lambda>x. x s" for s])
     apply ((wp case_option_wp threadSet_invs_trivial setP_invs' static_imp_wp
                hoare_vcg_all_lift threadSet_cap_to' | clarsimp simp: inQ_def)+)[2]
   apply (rule hoare_pre)
    apply ((simp only: simp_thms cases_simp cong: conj_cong
          | (wp cteDelete_deletes cteDelete_invs' cteDelete_sch_act_simple
                threadSet_ipcbuffer_trivial
-               checkCap_inv[where P="tcb_at' t", standard]
-               checkCap_inv[where P="valid_cap' c", standard]
-               checkCap_inv[where P="\<lambda>s. P (ksReadyQueues s)", standard]
-               checkCap_inv[where P=sch_act_simple, standard]
+               checkCap_inv[where P="tcb_at' t" for t]
+               checkCap_inv[where P="valid_cap' c" for c]
+               checkCap_inv[where P="\<lambda>s. P (ksReadyQueues s)"]
+               checkCap_inv[where P=sch_act_simple]
                hoare_vcg_const_imp_lift_R
                typ_at_lifts [OF setPriority_typ_at']
                assertDerived_wp
@@ -1820,7 +1818,7 @@ lemma decodeCopyReg_wf:
   apply (rule hoare_pre)
    apply (wp | wpc)+
   apply (clarsimp simp: null_def neq_Nil_conv
-                        valid_cap'_def[where c="ThreadCap t", standard])
+                        valid_cap'_def[where c="ThreadCap t" for t])
   done
 
 lemma OR_choice_decode_sp_simp[simp]:
@@ -1977,7 +1975,7 @@ lemma decodeSetIPCBuffer_is_tc[wp]:
              split del: split_if cong: list.case_cong prod.case_cong)
   apply (rule hoare_pre)
    apply (wp | wpc)+
-   apply (simp only: isThreadControl_def tcbinvocation.cases)
+   apply (simp only: isThreadControl_def tcbinvocation.simps)
    apply wp
   apply (clarsimp simp: isThreadControl_def)
   done
@@ -1988,7 +1986,7 @@ lemma decodeSetPriority_is_tc[wp]:
              split del: split_if cong: list.case_cong prod.case_cong)
   apply (rule hoare_pre)
    apply (wp | wpc)+
-   apply (clarsimp simp: isThreadControl_def tcbinvocation.cases)
+   apply (clarsimp simp: isThreadControl_def tcbinvocation.simps)
   done
 
 crunch inv[wp]: decodeSetIPCBuffer "P"

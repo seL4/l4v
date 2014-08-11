@@ -1861,8 +1861,8 @@ proof -
   fix s s' frame cnode_ref cref base cap idx
   note retype_dc = retype_region_dcorres[where type="ArchObject ASIDPoolObj",
           unfolded translate_object_type_def, simplified]
-  note insert_dc = insert_cap_child_corres[where cap="cap.ArchObjectCap (arch_cap.ASIDPoolCap x y)",
-                            simplified transform_cap_simps, standard]
+  note insert_dc = insert_cap_child_corres[where cap="cap.ArchObjectCap (arch_cap.ASIDPoolCap x y)" for x y,
+                            simplified transform_cap_simps]
   note [simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
           Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
 

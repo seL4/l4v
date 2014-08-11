@@ -124,9 +124,7 @@ next
       and  cs': "cs' = cap' # csmore'"
       and crel: "cap_relation cap cap'"
     using True cap_rel
-    apply (clarsimp simp: neq_Nil_conv list_all2_Cons1 val_le_length_Cons)
-    apply fastforce
-    done
+    by (clarsimp simp: neq_Nil_conv list_all2_Cons1 val_le_length_Cons)
 
   have il: "invocation_type label = UntypedRetype"
     using True by simp
@@ -225,7 +223,7 @@ next
    maybe could seperate out the equality Isar-style? *)
     apply (simp add: decodeUntypedInvocation_def decode_untyped_invocation_def
                      args cs cs' xs[symmetric] il whenE_rangeCheck_eq
-                     cap_case_CNodeCap unlessE_whenE bool_case_If
+                     cap_case_CNodeCap unlessE_whenE case_bool_If
                      lookup_target_slot_def lookupTargetSlot_def
                 split del: split_if cong: if_cong list.case_cong del: upt.simps)
     apply (rule corres_guard_imp)
@@ -621,7 +619,7 @@ lemma mapM_locate_eq:
   "mapM (locateSlot x) xs = return (map (\<lambda>y. x + y * 16) xs)"
   apply (induct xs)
    apply (simp add: mapM_def sequence_def)
-  apply (simp add: mapM_Cons locateSlot_def objBits_simps mult_ac)
+  apply (simp add: mapM_Cons locateSlot_def objBits_simps mult.commute mult.left_commute)
   done
 
 lemma map_ensure_empty':
@@ -644,7 +642,7 @@ lemma map_ensure_empty':
 
 lemma irq_nodes_global:
   "\<forall>irq :: word8. irq_node' s + (ucast irq) * 16 \<in> global_refs' s"
-  by (simp add: global_refs'_def mult_ac)
+  by (simp add: global_refs'_def mult.commute mult.left_commute)
 
 lemma valid_global_refsD2':
   "\<lbrakk>ctes_of s p = Some cte; valid_global_refs' s\<rbrakk> \<Longrightarrow>
@@ -1337,11 +1335,7 @@ lemma mdb_relation_simp:
 lemma revokable_relation_simp:
   "\<lbrakk> (s, s') \<in> state_relation; null_filter (caps_of_state s) p = Some c; ctes_of s' (cte_map p) = Some (CTE cap node) \<rbrakk>
       \<Longrightarrow> mdbRevocable node = is_original_cap s p"
-  apply (cases p, clarsimp simp: state_relation_def revokable_relation_def)
-  apply (elim allE, erule impE, erule exI)
-  apply (elim allE, erule (1) impE)
-  apply simp
-  done
+  by (cases p, clarsimp simp: state_relation_def revokable_relation_def)
 
 lemma in_getCTE2:
   "((cte, s') \<in> fst (getCTE p s)) = (s' = s \<and> cte_wp_at' (op = cte) p s)"
@@ -2423,7 +2417,7 @@ lemma mdb_chunked_n' [simp]:
     apply simp
     apply (erule_tac x=p in allE)
     apply (simp add: descendants_of'_def)
-    apply (drule mp[where P="S \<inter> T \<noteq> {}", standard])
+    apply (drule mp[where P="S \<inter> T \<noteq> {}" for S T])
      apply (frule sameRegionAs_capRange_Int, simp add: phys)
        apply (rule valid_capAligned, erule valid_capI')
       apply (rule valid_capAligned, rule valid_c')
@@ -3038,7 +3032,7 @@ lemma inv_untyped_corres_helper1:
     apply clarsimp
     apply (rule conjI)
      apply (clarsimp simp: cte_wp_at_caps_of_state
-                           cap_range_def[where c="default_cap a b c", standard])
+                           cap_range_def[where c="default_cap a b c" for a b c])
      apply (drule(2) caps_overlap_reservedD[rotated])
      apply (simp add:Int_ac)
     apply (rule conjI)
@@ -3428,7 +3422,6 @@ lemma createNewCaps_not_parents:
     apply (clarsimp split: option.splits)
     apply (erule notE[rotated], erule bspec, erule ranI)
    apply (simp add: makeObject_cte)
-   apply fastforce
   apply fastforce
   done
 
@@ -4932,10 +4925,10 @@ lemma inv_untyped_corres':
                    retype_region_cte_at_other[where sz = sz]
                    retype_region_distinct_sets[where sz = sz]
                  (* retype_region_ranges[where p=cref and sz = sz] *)
-                   retype_region_ranges[where ptr=ptr and sz=sz' and
-                      ptr_base="ptr && ~~mask sz'", standard, where p=cref and sz' = sz]
+                   retype_region_ranges[where ptr=ptr and sz=sz and
+                      ptr_base="ptr && ~~ mask sz", where p=cref]
                    retype_ret_valid_caps [where sz = sz]
-                   retype_region_arch_objs [where sza = sz]
+                   retype_region_arch_objs [where sza = "\<lambda>_. sz"]
                    hoare_vcg_const_Ball_lift
                    set_tuple_pick distinct_tuple_helper
                    retype_region_obj_at_other3[where sz = sz]
@@ -4962,7 +4955,6 @@ lemma inv_untyped_corres':
             apply (clarsimp simp:conj_ac bits_of_def region_in_kernel_window_def)
             apply (wp set_cap_free_index_invs_spec set_cap_caps_no_overlap set_cap_no_overlap)
             apply (rule hoare_vcg_conj_lift)
-stop
              apply (rule hoare_strengthen_post[OF set_cap_sets])
              apply (clarsimp simp:cte_wp_at_caps_of_state)
             apply (wp set_cap_no_overlap hoare_vcg_ball_lift
@@ -5012,7 +5004,7 @@ stop
          apply (clarsimp simp:blah word_and_le2)
         apply (clarsimp simp:usable_untyped_range.simps blah add.assoc[symmetric] add.commute
                         dest!:idx_compare'')
-        apply (metis idx_compare'' nat_mult_commute nidx word_arith_nat_mult word_not_le)
+        apply (metis idx_compare'' mult.commute nidx word_arith_nat_mult word_not_le)
        apply (clarsimp simp:invs_pspace_aligned' invs_pspace_distinct' 
          invs_valid_pspace' maxDomain)
        apply (insert cte_wp_at')
@@ -5068,7 +5060,7 @@ stop
                        retype_region_distinct_sets[where sz = sz]
                        retype_region_ranges[where p=cref and sz = sz]
                        retype_ret_valid_caps [where sz = sz]
-                       retype_region_arch_objs [where sza = sz]
+                       retype_region_arch_objs [where sza = "\<lambda>_. sz"]
                       hoare_vcg_const_Ball_lift
                        set_tuple_pick distinct_tuple_helper
                        retype_region_obj_at_other3[where sz = sz]
@@ -5531,7 +5523,7 @@ lemma insertNewCap_nullcap:
   apply (subgoal_tac "cte_wp_at' (\<lambda>cte. cteCap cte = NullCap) slot s")
    apply fastforce
   apply (clarsimp simp: insertNewCap_def in_monad cte_wp_at_ctes_of liftM_def
-                 dest!: use_valid [OF _ getCTE_sp[where P="op = s",standard], OF _ refl])
+                 dest!: use_valid [OF _ getCTE_sp[where P="op = s" for s], OF _ refl])
   done
 
 crunch idle'[wp]: getCTE "valid_idle'"

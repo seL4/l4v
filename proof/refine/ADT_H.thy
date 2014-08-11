@@ -502,8 +502,8 @@ shows pspace_aligned_distinct_None:
                             and_mask_dvd_nat[symmetric])
   apply (cut_tac x=x in unat_lt2p)
   apply (cut_tac x="mask (obj_bits ko)::word32" in unat_lt2p)
-  apply (simp add: nat_mult_commute
-                   nat_add_commute[of "unat (mask (obj_bits ko))"])
+  apply (simp add: mult.commute
+                   add.commute[of "unat (mask (obj_bits ko))"])
   apply (case_tac "k=0", simp+)
   apply (subgoal_tac "obj_bits ko\<le>32")
    prefer 2
@@ -513,7 +513,7 @@ shows pspace_aligned_distinct_None:
    apply (case_tac "k=1", simp)
    apply (cut_tac m=k and n="2 ^ obj_bits ko" in n_less_n_mult_m,
           (simp(no_asm_simp))+)
-   apply (simp only:nat_mult_commute)
+   apply (simp only: mult.commute)
   apply (thin_tac "?x = ?y")+
   apply (clarsimp simp add: le_less)
   apply (erule disjE)

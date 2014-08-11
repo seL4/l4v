@@ -353,10 +353,10 @@ shows "
              thread_set_tcb_ipc_buffer_cap_cleared_invs
              thread_set_invs_trivial[OF ball_tcb_cap_casesI]
              hoare_vcg_all_lift thread_set_valid_cap out_emptyable
-             check_cap_inv [where P="valid_cap c", standard]
-             check_cap_inv [where P="tcb_cap_valid c p", standard]
-             check_cap_inv[where P="cte_at p0", standard]
-             check_cap_inv[where P="tcb_at p0", standard]
+             check_cap_inv [where P="valid_cap c" for c]
+             check_cap_inv [where P="tcb_cap_valid c p" for c p]
+             check_cap_inv[where P="cte_at p0" for p0]
+             check_cap_inv[where P="tcb_at p0" for p0]
              thread_set_cte_at
              thread_set_cte_wp_at_trivial[where Q="\<lambda>x. x", OF ball_tcb_cap_casesI]
              thread_set_no_cap_to_trivial[OF ball_tcb_cap_casesI]

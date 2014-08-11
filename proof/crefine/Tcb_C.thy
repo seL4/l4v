@@ -726,9 +726,9 @@ lemma invokeTCB_ThreadControl_ccorres:
              apply (simp add: o_def cong: conj_cong option.case_cong)
 
              apply (wp checked_insert_tcb_invs' hoare_case_option_wp
-                       checkCap_inv [where P="tcb_at' p0", standard]
-                       checkCap_inv [where P="cte_at' p0", standard]
-                       checkCap_inv [where P="valid_cap' c", standard]
+                       checkCap_inv [where P="tcb_at' p0" for p0]
+                       checkCap_inv [where P="cte_at' p0" for p0]
+                       checkCap_inv [where P="valid_cap' c" for c]
                        checkCap_inv [where P="sch_act_simple"]
                           | simp)+
             apply (simp add: guard_is_UNIV_def)
@@ -795,9 +795,9 @@ lemma invokeTCB_ThreadControl_ccorres:
             apply (simp add: conj_ac pred_conj_def)
             apply (simp add: o_def cong: conj_cong option.case_cong)
             apply (wp checked_insert_tcb_invs' hoare_case_option_wp
-                      checkCap_inv [where P="tcb_at' p0", standard]
-                      checkCap_inv [where P="cte_at' p0", standard]
-                      checkCap_inv [where P="valid_cap' c", standard]
+                      checkCap_inv [where P="tcb_at' p0" for p0]
+                      checkCap_inv [where P="cte_at' p0" for p0]
+                      checkCap_inv [where P="valid_cap' c" for c]
                       checkCap_inv [where P="sch_act_simple"]
                          | simp)+
            apply (clarsimp simp: guard_is_UNIV_def from_bool_def true_def
@@ -2283,7 +2283,7 @@ lemma decodeCopyRegisters_ccorres:
                  simp add: hd_conv_nth del: Collect_const)
           apply (simp only: cap_get_tag_isCap[symmetric],
                  drule(1) cap_get_tag_to_H)
-          apply (simp add: bool_case_If if_to_top_of_bindE
+          apply (simp add: case_bool_If if_to_top_of_bindE
                            if_to_top_of_bind
                       del: Collect_const cong: if_cong)
           apply (simp add: to_bool_def returnOk_bind Collect_True

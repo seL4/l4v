@@ -34,7 +34,7 @@ lemma getIRQSlot_ccorres:
   apply (simp add: simpler_gets_def bind_def return_def)
   apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                         cinterrupt_relation_def size_of_def
-                        cte_level_bits_def mult_ac ucast_nat_def
+                        cte_level_bits_def mult.commute mult.left_commute ucast_nat_def
                         )
   done
 

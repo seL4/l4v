@@ -1724,7 +1724,7 @@ proof -
                      del: Collect_const upt_rec_numeral)
          apply (simp only: mapM_x_append[where xs="take (unat n_msgRegisters) (zip as bs)"
                                          and ys="drop (unat n_msgRegisters) (zip as bs)",
-                                           simplified, standard] bind_assoc)
+                                         for as bs, simplified] bind_assoc)
          apply (rule ccorres_rhs_assoc)+
          apply csymbr
          apply (simp del: Collect_const)
@@ -1898,7 +1898,7 @@ lemma doFaultTransfer_ccorres [corres]:
    apply wpc
     apply (simp del: Collect_const, rule ccorres_fail)
    apply (simp add: split_def bind_assoc del: Collect_const)
-   apply (simp only: bind_assoc[symmetric, where m="makeFaultMessage ft t", standard])
+   apply (simp only: bind_assoc[symmetric, where m="makeFaultMessage ft t" for ft t])
    apply (ctac(no_vcg) add: setMRs_fault_ccorres)
     apply (rule_tac R="obj_at' (\<lambda>tcb. tcbFault tcb = ft) sender"
               and val="case (the ft) of CapFault _ _ _ \<Rightarrow> 1
@@ -2207,7 +2207,7 @@ lemma ccorres_case_sum_liftE:
   done
 
 (* FIXME: move *)
-lemma ccorres_bool_cases_rhs:
+lemma ccorres_case_bools_rhs:
   assumes P: "ccorres r xf P P' hs a c"
   assumes Q: "ccorres r xf Q Q' hs a c"
   shows "ccorres r xf (P and Q)
@@ -4160,7 +4160,7 @@ lemma ccorres_getCTE_cte_at:
   apply (rule ccorres_guard_imp)
     apply (subst gets_bind_ign[where f="cte_at' p", symmetric],
            rule ccorres_symb_exec_l[OF _ _ gets_wp])
-      apply (rule_tac b=x in ccorres_bool_cases)
+      apply (rule_tac b=x in ccorres_case_bools)
        apply assumption
       apply (rule ccorres_getCTE)
       apply (rule ccorres_False[where P'=UNIV])
@@ -4827,7 +4827,7 @@ lemma sendIPC_ccorres [corres]:
                 apply (rule ccorres_cond_true_seq)
                 apply (simp only: ccorres_seq_skip)
                 apply (rule ccorres_cond_true)
-                apply (simp only: bool_case_If Collect_const[symmetric]) 
+                apply (simp only: case_bool_If Collect_const[symmetric]) 
                 apply (rule_tac R=\<top> in ccorres_cond)
                   apply clarsimp
                  apply (ctac add: setupCallerCap_ccorres)
@@ -4863,7 +4863,7 @@ lemma sendIPC_ccorres [corres]:
                 apply (fold dc_def)[1]
                 apply (rule ccorres_symb_exec_r)
                   apply (rule ccorres_cond_true)
-                  apply (simp only: bool_case_If)
+                  apply (simp only: case_bool_If)
                   apply (rule_tac R=\<top> in ccorres_cond)
                     apply clarsimp
                    apply (ctac add: setupCallerCap_ccorres)
@@ -5464,7 +5464,7 @@ lemma receiveIPC_ccorres [corres]:
                 apply (rule ccorres_cond_true_seq)
                 apply (simp only: ccorres_seq_skip)
                 apply (rule ccorres_cond_true)
-                apply (simp only: bool_case_If)
+                apply (simp only: case_bool_If)
                 apply (rule ccorres_cond)
                   apply (clarsimp simp: to_bool_def)
                  apply ctac
@@ -5503,7 +5503,7 @@ lemma receiveIPC_ccorres [corres]:
                 apply (fold dc_def)[1]
                 apply (rule ccorres_symb_exec_r)
                   apply (rule ccorres_cond_true)
-                  apply (simp only: bool_case_If)
+                  apply (simp only: case_bool_If)
                   apply (rule ccorres_cond)
                     apply (clarsimp simp: to_bool_def)
                    apply ctac

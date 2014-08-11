@@ -1280,7 +1280,7 @@ lemma handleWait_ccorres:
 
            apply (rule ccorres_rhs_assoc)+ 
            apply csymbr
-           apply (simp add: bool_case_If capFaultOnFailure_if_case_sum)
+           apply (simp add: case_bool_If capFaultOnFailure_if_case_sum)
 
            apply (rule ccorres_if_cond_throws_break2 [where Q=\<top> and Q'=\<top>])
               apply clarsimp
@@ -1323,13 +1323,13 @@ lemma handleWait_ccorres:
            apply clarsimp
            apply (vcg exspec=handleFault_modifies)
 
-          apply (clarsimp simp: capFaultOnFailure_if_case_sum bool_case_If)
+          apply (clarsimp simp: capFaultOnFailure_if_case_sum case_bool_If)
           apply (rule ccorres_cond_both' [where Q=\<top> and Q'=\<top>])
             apply clarsimp
 
            apply (rule ccorres_rhs_assoc)+ 
            apply csymbr
-           apply (simp add: bool_case_If capFaultOnFailure_if_case_sum)
+           apply (simp add: case_bool_If capFaultOnFailure_if_case_sum)
 
            apply (rule ccorres_if_cond_throws_break2 [where Q=\<top> and Q'=\<top>])
               apply clarsimp
@@ -1524,7 +1524,7 @@ lemma getIRQSlot_ccorres2:
   apply (simp add: simpler_gets_def bind_def return_def)
   apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                         cinterrupt_relation_def size_of_def
-                        cte_level_bits_def mult_ac ucast_nat_def)
+                        cte_level_bits_def mult.commute mult.left_commute ucast_nat_def)
   done
 
 lemma getIRQSlot_ccorres3:
@@ -1568,7 +1568,7 @@ lemma handleInterrupt_ccorres:
       apply csymbr
       apply (rule ccorres_aep_cases)
        apply (clarsimp cong: call_ignore_cong simp del: Collect_const)
-       apply (rule_tac b=send in ccorres_bool_cases)
+       apply (rule_tac b=send in ccorres_case_bools)
         apply simp
         apply (rule ccorres_cond_true_seq)
         apply (rule ccorres_rhs_assoc)+

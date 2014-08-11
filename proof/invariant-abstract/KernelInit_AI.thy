@@ -221,7 +221,7 @@ lemma caps_of_state_init_A_st_Null:
   done
 
 lemmas cte_wp_at_caps_of_state_eq
-    = cte_wp_at_caps_of_state[where P="op = cap", standard]
+    = cte_wp_at_caps_of_state[where P="op = cap" for cap]
 
 lemma invs_A:
   "invs init_A_st"

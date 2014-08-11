@@ -735,7 +735,7 @@ lemma threadGet_tcbIpcBuffer_ccorres [corres]:
   done 
 
 (* FIXME: move *)
-lemma ccorres_bool_cases:
+lemma ccorres_case_bools:
   assumes P: "ccorres r xf P P' hs (a True) (c True)"
   assumes Q: "ccorres r xf Q Q' hs (a False) (c False)"
   shows "ccorres r xf (\<lambda>s. (b \<longrightarrow> P s) \<and> (\<not>b \<longrightarrow> Q s))
@@ -776,7 +776,7 @@ lemma ccap_relation_frame_tags:
   done
 
 (* FIXME: move *)
-lemma ccorres_bool_cases':
+lemma ccorres_case_bools':
   assumes P: "b \<Longrightarrow> ccorres r xf P P' hs (a True) (c True)"
   assumes Q: "\<not> b \<Longrightarrow> ccorres r xf Q Q' hs (a False) (c False)"
   shows "ccorres r xf (\<lambda>s. (b \<longrightarrow> P s) \<and> (\<not>b \<longrightarrow> Q s))
@@ -804,10 +804,10 @@ lemma lookupIPCBuffer_ccorres:
      apply (rule ccorres_move_c_guard_cte)
      apply (ctac (no_vcg))
        apply csymbr
-       apply (rule_tac b="isArchObjectCap rva \<and> isPageCap (capCap rva)" in ccorres_bool_cases')
+       apply (rule_tac b="isArchObjectCap rva \<and> isPageCap (capCap rva)" in ccorres_case_bools')
         apply simp
         apply (rule ccorres_symb_exec_r)
-          apply (rule_tac b="capVPSize (capCap rva) \<noteq> ARMSmallPage" in ccorres_bool_cases')
+          apply (rule_tac b="capVPSize (capCap rva) \<noteq> ARMSmallPage" in ccorres_case_bools')
            apply (rule ccorres_cond_true_seq)
            apply (rule ccorres_rhs_assoc)+
            apply csymbr
@@ -1013,7 +1013,7 @@ lemma getMRs_user_word:
    apply simp
    apply (drule (1) order_less_le_trans)
    apply (simp add: word_less_nat_alt word_le_nat_alt)
-  apply (simp add: word_le_nat_alt add.commute add.left_commute mult_ac)
+  apply (simp add: word_le_nat_alt add.commute add.left_commute mult.commute mult.left_commute)
   done
 
 declare split_if [split]
@@ -1194,11 +1194,11 @@ lemma getSyscallArg_ccorres_foo:
        apply (clarsimp simp: CTypesDefs.ptr_add_def)
        apply (frule (1) user_word_at_cross_over)
         apply simp
-       apply (clarsimp simp: mult_ac ucast_nat_def')
+       apply (clarsimp simp: mult.commute mult.left_commute ucast_nat_def')
       apply (clarsimp simp: CTypesDefs.ptr_add_def)
       apply (frule (1) user_word_at_cross_over)
        apply simp
-      apply (clarsimp simp: mult_ac ucast_nat_def)
+      apply (clarsimp simp: mult.commute mult.left_commute ucast_nat_def)
      apply wp[1]
     apply (rule_tac P="\<exists>b. buffer = Some b" in hoare_gen_asm)
     apply (clarsimp simp: option_to_ptr_def option_to_0_def)

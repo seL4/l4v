@@ -1237,7 +1237,7 @@ lemma switch_within_domain: "\<lbrakk>scheduler_action s = switch_thread x;valid
 lemma schedule_guarded_pas_domain: "\<lbrace>guarded_pas_domain aag and einvs and pas_refined aag\<rbrace> schedule \<lbrace>\<lambda>_. guarded_pas_domain aag\<rbrace>"
   apply (simp add: schedule_def)
   apply (wp guarded_pas_domain_lift[where f="activate_thread"]
-            guarded_pas_domain_lift[where f="set_scheduler_action f",standard]
+            guarded_pas_domain_lift[where f="set_scheduler_action f" for f]
             guarded_switch_to_lift
             switch_to_thread_guarded_pas_domain
             activate_thread_cur_thread | wpc | simp)+

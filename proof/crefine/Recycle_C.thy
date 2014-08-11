@@ -159,7 +159,7 @@ lemma intvl_2_power_times_decomp:
    apply (rule word_of_nat_less)
    apply (simp add: word_of_nat_less)
   apply (erule subsetD)
-  apply (clarsimp simp: shiftl_t2n[unfolded mult_ac, symmetric]
+  apply (clarsimp simp: shiftl_t2n[unfolded mult.commute mult.left_commute, symmetric]
                         shiftr_shiftl1)
   apply (rule_tac x="unat (of_nat k && mask m :: word32)" in exI)
   apply (simp add: field_simps word_plus_and_or_coroll2)

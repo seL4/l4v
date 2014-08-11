@@ -1830,7 +1830,7 @@ lemma user_word_at_cross_over:
             word32_shift_by_2 shiftr_shiftl1 is_aligned_neg_mask_eq is_aligned_andI1)
   apply (drule_tac x="ucast (p >> 2)" in spec)
   apply (simp add: byte_to_word_heap_def Let_def ucast_ucast_mask)
-  apply (fold shiftl_t2n[where n=2, simplified, simplified mult_ac])
+  apply (fold shiftl_t2n[where n=2, simplified, simplified mult.commute mult.left_commute])
   apply (simp add: aligned_shiftr_mask_shiftl pageBits_def)
   apply (rule trans[rotated], rule_tac hp="hrs_mem (t_hrs_' (globals s'))"
                                    and x="Ptr &(Ptr (p && ~~ mask 12) \<rightarrow> [''words_C''])"
@@ -1848,7 +1848,7 @@ lemma user_word_at_cross_over:
   apply (subst field_lookup_offset_eq)
    apply (fastforce intro: typ_heap_simps)
   apply (simp add: ucast_nat_def ucast_ucast_mask)
-  apply (fold shiftl_t2n[where n=2, simplified, simplified mult_ac])
+  apply (fold shiftl_t2n[where n=2, simplified, simplified mult.commute mult.left_commute])
   apply (simp add: aligned_shiftr_mask_shiftl)
   done
 

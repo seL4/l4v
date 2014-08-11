@@ -862,7 +862,7 @@ lemma asyncIPCCancel_st_tcb_at:
    \<lbrace>\<lambda>rv. st_tcb_at' P t\<rbrace>"
   apply (simp add: asyncIPCCancel_def Let_def list_case_If)
   apply (wp sts_st_tcb_at'_cases hoare_vcg_const_imp_lift
-            hoare_drop_imp[where R="%rv s. P' rv", standard])
+            hoare_drop_imp[where R="%rv s. P' rv" for P'])
    apply clarsimp+
   done
 

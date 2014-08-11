@@ -3039,7 +3039,7 @@ lemma cap_get_capSizeBits_spec:
                                               word_sle_def Let_def mask_def
                                               isZombieTCB_C_def ZombieTCB_C_def
                                               cap_lift_domain_cap
-                                       dest!: sym [where t = "cap_get_tag cap", standard])+
+                                       dest!: sym [where t = "cap_get_tag cap" for cap])+
   (* slow *)
   apply (case_tac "cap_lift cap", simp_all, case_tac "a",
                auto simp: cap_lift_def cap_tag_defs Let_def
@@ -3212,7 +3212,7 @@ lemma cap_get_capPtr_spec:
                                           cap_lift_asid_control_cap word_sle_def
                                           cap_lift_irq_control_cap cap_lift_null_cap
                                           mask_def objBits_simps cap_lift_domain_cap
-                                   dest!: sym [where t = "cap_get_tag cap", standard]
+                                   dest!: sym [where t = "cap_get_tag cap" for cap]
                                    split: vmpage_size.splits)+
   (* XXX: slow. there should be a rule for this *)
   apply (case_tac "cap_lift cap", simp_all, case_tac "a",
@@ -3317,7 +3317,7 @@ lemma sameRegionAs_spec:
               apply (simp add: ccap_relation_def map_option_case)
               apply (simp add: cap_thread_cap_lift)
               apply (simp add: cap_to_H_def)
-             apply (clarsimp simp: bool_case_If ctcb_ptr_to_tcb_ptr_def if_distrib
+             apply (clarsimp simp: case_bool_If ctcb_ptr_to_tcb_ptr_def if_distrib
                               cong: if_cong)
              apply (frule_tac cap'=cap_b in cap_get_tag_isArchCap_unfolded_H_cap)
              apply (clarsimp simp: isArchCap_tag_def2)
@@ -3648,7 +3648,7 @@ lemma isMDBParentOf_spec:
     prefer 2
     apply (rule sameRegionAs_EndpointCap, assumption+)
 
-   apply (clarsimp simp: if_1_0_0 typ_heap_simps'   Let_def bool_case_If)
+   apply (clarsimp simp: if_1_0_0 typ_heap_simps'   Let_def case_bool_If)
    apply (frule_tac cap="(cap_to_H ac)" in cap_get_tag_EndpointCap)
    apply (clarsimp split: split_if_asm simp: if_distrib [where f=scast])
 
@@ -3666,7 +3666,7 @@ lemma isMDBParentOf_spec:
 
    apply (rule conjI, simp)
    apply clarsimp
-   apply (simp add: Let_def bool_case_If)
+   apply (simp add: Let_def case_bool_If)
    apply (frule_tac cap="(cap_to_H ac)" in cap_get_tag_AsyncEndpointCap)
    apply (simp add: if_1_0_0 if_distrib [where f=scast])
 
@@ -3888,7 +3888,7 @@ lemma Arch_deriveCap_ccorres:
   apply (cinit lift: cap_')
    apply csymbr
    apply (unfold ArchRetype_H.deriveCap_def Let_def)
-   apply (fold bool_case_If)
+   apply (fold case_bool_If)
    apply wpc
     apply (clarsimp simp: cap_get_tag_isCap_ArchObject
                           ccorres_cond_iffs)
@@ -3989,7 +3989,7 @@ lemma deriveCap_ccorres':
   (deriveCap slot cap) (Call deriveCap_'proc)"
   apply (cinit lift: cap_' slot_')
    apply csymbr
-   apply (fold bool_case_If)
+   apply (fold case_bool_If)
    apply wpc
     apply (clarsimp simp: cap_get_tag_isCap isCap_simps from_bool_def)
     apply csymbr

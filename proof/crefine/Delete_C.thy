@@ -785,7 +785,7 @@ proof (induct rule: finaliseSlot'.induct[where ?a0.0=slot and ?a1.0=exposed and 
                     apply (simp only: id_apply simp_thms
                                       Collect_False ccorres_seq_cond_empty
                                       ccorres_seq_skip)
-                    apply (rule rsubst[where P="ccorres r xf' P P' hs a", standard])
+                    apply (rule rsubst[where P="ccorres r xf' P P' hs a" for r xf' P P' hs a])
                     apply (rule "1.hyps"[folded reduceZombie_def[unfolded cteDelete_def finaliseSlot_def],
                                          unfolded split_def, unfolded K_def],
                            (simp add: in_monad)+)
@@ -823,7 +823,7 @@ proof (induct rule: finaliseSlot'.induct[where ?a0.0=slot and ?a1.0=exposed and 
            apply (rule finaliseCap_cte_refs)
           apply (rule finaliseCap_replaceable[where slot=slot'])
          apply (clarsimp simp: cte_wp_at_ctes_of)
-         apply (erule disjE[where P="F \<and> G", standard])
+         apply (erule disjE[where P="F \<and> G" for F G])
           apply (clarsimp simp: capRemovable_def cte_wp_at_ctes_of
                          split: option.split)
           apply (auto dest!: ctes_of_valid'
@@ -941,7 +941,7 @@ proof (induct rule: cteRevoke.induct[where ?a0.0=slot and ?a1.0=s])
              apply (simp del: Collect_const add: Collect_False ccorres_cond_iffs
                                                  dc_def[symmetric])
              apply (rule ccorres_cutMon)
-             apply (rule rsubst[where P="ccorres r xf' P P' hs a", standard])
+             apply (rule rsubst[where P="ccorres r xf' P P' hs a" for r xf' P P' hs a])
               apply (rule "1.hyps"[unfolded K_def],
                      (fastforce simp: in_monad)+)[1]
              apply simp

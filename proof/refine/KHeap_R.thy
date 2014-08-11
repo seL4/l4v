@@ -678,7 +678,7 @@ lemma set_aep_tcb' [wp]:
 lemma pspace_dom_update:
   "\<lbrakk> ps ptr = Some x; a_type x = a_type v \<rbrakk> \<Longrightarrow> pspace_dom (ps(ptr \<mapsto> v)) = pspace_dom ps"
   apply (simp add: pspace_dom_def dom_fun_upd2 del: dom_fun_upd)
-  apply (rule UN_cong [OF refl])
+  apply (rule SUP_cong [OF refl])
   apply clarsimp
   apply (simp add: obj_relation_cuts_def3)
   done
@@ -781,7 +781,7 @@ lemma map_to_ctes_upd_tcb:
      apply (simp add: field_simps objBits_simps split del: split_if
                 cong: if_cong option.case_cong)
      apply clarsimp
-    apply (subst(asm) mask_in_range[where bits="objBitsKO v", standard])
+    apply (subst(asm) mask_in_range[where bits="objBitsKO v" for v])
      apply (simp add: objBitsKO_def)
     apply (drule_tac a=x in equals0D)
     apply (simp add: dom_def objBits_simps field_simps)
@@ -791,7 +791,7 @@ lemma map_to_ctes_upd_tcb:
    apply (case_tac "tcb_cte_cases (x - p)")
     apply (simp split del: split_if cong: if_cong option.case_cong)
    apply (rule FalseE)
-   apply (subst(asm) mask_in_range[where bits="objBitsKO v", standard])
+   apply (subst(asm) mask_in_range[where bits="objBitsKO v" for v])
     apply (simp add: objBitsKO_def)
    apply (subgoal_tac "x - p < 2 ^ 9")
     apply (frule minus_one_helper3)

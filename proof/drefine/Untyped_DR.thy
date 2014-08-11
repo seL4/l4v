@@ -120,7 +120,7 @@ proof -
   (* FIXME: extract *)
   have mask_eq:
     "\<And>p q m n. m\<ge>n \<Longrightarrow> p + (q && mask m) && mask n = p + q && mask n"
-    by (subst mask_eqs(2)[of p "q && mask m", standard, symmetric])
+    by (subst mask_eqs(2)[of p "q && mask m" for p q m, symmetric])
        (simp add: mask_twice min_def mask_eqs)
 
   have eq: "\<And>x p b sz. is_aligned (p + (b && mask (pageBitsForSize sz)) +
@@ -262,7 +262,7 @@ lemma freeMemory_dcorres:
                           mapM_x_storeWord_step intvl_range_conv')
     apply (rule conjI, fastforce)
     apply clarsimp
-    apply (erule use_valid[where P=P and Q="%_. P", standard])
+    apply (erule use_valid[where P=P and Q="%_. P" for P])
      apply wp
      apply (clarsimp simp: is_aligned_no_wrap' of_nat_less_pow word_bits_def
                            x_power_minus_1 word_plus_mono_right)
@@ -1030,7 +1030,7 @@ lemma retype_transform_ref_subseteq_strong:
       done
     show  "p + 2 ^ obj_bits_api ty us - 1 \<le> ptr + of_nat n * 2 ^ obj_bits_api ty us - 1"
       apply (subst decomp)
-      apply (simp add:add_assoc[symmetric])
+      apply (simp add:add.assoc[symmetric])
       apply (simp add:p_assoc_help)
       apply (rule order_trans[OF word_plus_mono_left word_plus_mono_right])
        using mem_p not_0

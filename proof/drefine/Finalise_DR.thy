@@ -2942,7 +2942,7 @@ lemma monadic_rewrite_select_x:
 lemmas monadic_rewrite_select_pick_x
     = monadic_rewrite_bind_head
          [OF monadic_rewrite_select_x[where x=x], simplified,
-          THEN monadic_rewrite_trans, standard]
+          THEN monadic_rewrite_trans] for x
 
 lemma finalise_cap_zombie':
   "(case cap of ZombieCap _ \<Rightarrow> True | _ \<Rightarrow> False)
@@ -3150,7 +3150,7 @@ lemma finalise_slot_inner1_add_if_Null:
     apply (rule monadic_rewrite_if_rhs)
      apply (simp add: PageTableUnmap_D.is_final_cap_def)
      apply (rule monadic_rewrite_trans)
-      apply (rule monadic_rewrite_bind_tail[where j="\<lambda>_. j", standard, OF _ gets_wp])+
+      apply (rule monadic_rewrite_bind_tail[where j="\<lambda>_. j" for j, OF _ gets_wp])+
       apply (rename_tac remove, rule_tac P=remove in monadic_rewrite_gen_asm)
       apply simp
       apply (rule monadic_rewrite_refl)
@@ -3567,7 +3567,7 @@ next
            apply (frule if_unsafe_then_capD, clarsimp+)
            apply (clarsimp simp: cte_wp_at_caps_of_state)
            apply (frule valid_global_refsD2, clarsimp+)
-           apply (erule disjE[where P="c = cap.NullCap \<and> P", standard])
+           apply (erule disjE[where P="c = cap.NullCap \<and> P" for P])
             apply clarsimp
            apply (clarsimp simp: conj_ac invs_valid_idle global_refs_def cap_range_def
                           dest!: is_cap_simps' [THEN iffD1])

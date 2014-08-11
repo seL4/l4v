@@ -279,7 +279,7 @@ lemma insert_cap_child_corres:
   apply (rule stronger_corres_guard_imp)
     apply (rule corres_split[OF _ get_cap_corres])+
           apply (rule_tac P="old_cap \<noteq> cdl_cap.NullCap" and P'="rv' \<noteq> cap.NullCap"
-            in corres_symmetric_bool_cases)
+            in corres_symmetric_case_bools)
            apply (clarsimp simp :transform_cap_def split:cap.splits arch_cap.splits)
            apply (simp add:assert_def)
            apply (rule corres_trivial)
@@ -1797,8 +1797,8 @@ lemma dcorres_dummy_empty_slot_pd_mapM_x:
       done
    qed
 
-lemmas dcorres_arch_finalise_cap = dcorres_finalise_cap [where cap = "cap.ArchObjectCap cap",
-  simplified, simplified comp_def, simplified, standard]
+lemmas dcorres_arch_finalise_cap = dcorres_finalise_cap [where cap = "cap.ArchObjectCap cap" for cap,
+  simplified, simplified comp_def, simplified]
 
 lemma cases_simp_imp:
   "((A = None \<longrightarrow> x \<and> a) \<and> ((\<exists>y. A = Some y) \<longrightarrow> x \<and> b)) = (x \<and> ((A = None \<longrightarrow> a) \<and> ((\<exists>y. A = Some y) \<longrightarrow> b)))"
@@ -2501,7 +2501,7 @@ lemma invoke_cnode_corres:
         apply (clarsimp simp:invs_valid_idle)+
      apply (drule valid_idle_has_null_cap[rotated -1],clarsimp+)[1]
     apply (clarsimp simp: transform_cslot_ptr_inj [OF cte_wp_at_cte_at real_cte_at_cte])
-   apply (simp add: cap_null_reply_case_If bool_case_If)
+   apply (simp add: cap_null_reply_case_If case_bool_If)
    apply (rule stronger_corres_guard_imp)
      apply (rule corres_split [OF _ get_cur_thread_corres])
        apply (rule corres_split [OF _ get_cap_corres])

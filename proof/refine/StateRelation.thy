@@ -475,9 +475,9 @@ schematic_lemma cap_relation_case:
   done
 
 lemmas cap_relation_split =
-  eq_trans_helper [where P=P, OF cap_relation_case cap.split[where P=P], standard]
+  eq_trans_helper [where P=P, OF cap_relation_case cap.split[where P=P]] for P
 lemmas cap_relation_split_asm =
-  eq_trans_helper [where P=P, OF cap_relation_case cap.split_asm[where P=P], standard]
+  eq_trans_helper [where P=P, OF cap_relation_case cap.split_asm[where P=P]] for P
 
 
 

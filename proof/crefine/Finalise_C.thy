@@ -635,7 +635,7 @@ lemma finaliseCap_True_cases_ccorres:
   apply (cinit lift: cap_' final_' exposed_' cong: call_ignore_cong)
    apply csymbr
    apply (simp add: cap_get_tag_isCap Collect_False del: Collect_const)
-   apply (fold bool_case_If)
+   apply (fold case_bool_If)
    apply (simp add: false_def)
    apply csymbr
    apply wpc
@@ -1236,7 +1236,7 @@ lemma Arch_finaliseCap_ccorres:
    apply (simp add: ArchRetype_H.finaliseCap_def cap_get_tag_isCap_ArchObject
                del: Collect_const)
    apply (wpc, simp_all add: isCap_simps Collect_False Collect_True
-                             bool_case_If
+                             case_bool_If
                         del: Collect_const)[1]
        apply (rule ccorres_if_lhs)
         apply (simp add: from_bool_0 true_def)
@@ -1548,7 +1548,7 @@ lemma getIRQSlot_ccorres_stuff:
      = Ptr (irq_node' s + 2 ^ objBits (x :: cte) * ucast irq)"
   apply (clarsimp simp add: rf_sr_def cstate_relation_def Let_def
                             cinterrupt_relation_def)
-  apply (simp add: objBits_simps size_of_def mult_ac of_int_uint_ucast )
+  apply (simp add: objBits_simps size_of_def mult.commute mult.left_commute of_int_uint_ucast )
   done
 
 lemma deletingIRQHandler_ccorres:
@@ -1730,7 +1730,7 @@ lemma finaliseCap_ccorres:
                        word_bool_alg.conj_disj_distrib2
                        word_bw_assocs)
       apply (simp add: objBits_simps ctcb_ptr_to_tcb_ptr_def)
-      apply (frule is_aligned_add_helper[where p="tcbptr - ctcb_offset" and d=ctcb_offset, standard])
+      apply (frule is_aligned_add_helper[where p="tcbptr - ctcb_offset" and d=ctcb_offset for tcbptr])
        apply (simp add: ctcb_offset_def)
       apply (simp add: mask_def irq_opt_relation_def)
      apply (simp add: cap_get_tag_isCap)

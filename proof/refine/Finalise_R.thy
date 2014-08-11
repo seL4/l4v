@@ -1828,12 +1828,12 @@ lemma isFinal:
    apply (clarsimp simp: valid_mdb_ctes_def valid_mdb'_def
                          cte_wp_at_ctes_of)
    apply (rule conjI, clarsimp simp: nullPointer_def)
-    apply (erule rsubst[where P="\<lambda>x. Q x s", standard, where Q=Q], simp)
+    apply (erule rsubst[where P="\<lambda>x. Q x s" for s], simp)
     apply (rule classical)
     apply (drule(5) notFinal_prev_or_next)
     apply clarsimp
    apply (clarsimp simp: nullPointer_def)
-   apply (erule rsubst[where P="\<lambda>x. Q x s", standard, where Q=Q])
+   apply (erule rsubst[where P="\<lambda>x. Q x s" for s])
    apply (rule sym, rule iffI)
     apply (rule classical)
     apply (drule(5) notFinal_prev_or_next)
@@ -1858,7 +1858,7 @@ lemma isFinal:
   apply clarsimp
   apply (rule conjI)
    apply clarsimp
-   apply (erule rsubst[where P="\<lambda>x. Q x s", standard, where Q=Q])
+   apply (erule rsubst[where P="\<lambda>x. Q x s" for s])
    apply clarsimp
    apply (clarsimp simp: isFinal_def cteCaps_of_def)
    apply (erule_tac x="mdbPrev node" in allE)
@@ -1876,11 +1876,11 @@ lemma isFinal:
   apply clarsimp
   apply (rule conjI)
    apply clarsimp
-   apply (erule rsubst[where P="\<lambda>x. Q x s", standard, where Q=Q], simp)
+   apply (erule rsubst[where P="\<lambda>x. Q x s" for s], simp)
    apply (rule classical, drule(5) notFinal_prev_or_next)
    apply (clarsimp simp: sameObjectAs_sym nullPointer_def)
   apply (clarsimp simp: nullPointer_def)
-  apply (erule rsubst[where P="\<lambda>x. Q x s", standard, where Q=Q])
+  apply (erule rsubst[where P="\<lambda>x. Q x s" for s])
   apply (rule sym, rule iffI)
    apply (rule classical, drule(5) notFinal_prev_or_next)
    apply (clarsimp simp: sameObjectAs_sym)
@@ -2948,7 +2948,7 @@ lemma cteDeleteOne_invs[wp]:
     apply (erule disjE)
      apply simp
     apply (clarsimp dest!: isCapDs simp: capRemovable_def)
-    apply (clarsimp simp: removeable'_def fun_eq_iff[where f="cte_refs' cap", standard]
+    apply (clarsimp simp: removeable'_def fun_eq_iff[where f="cte_refs' cap" for cap]
                      del: disjCI)
     apply (rule disjI2)
     apply (rule conjI)
@@ -3071,7 +3071,7 @@ lemma arch_finalise_cap_corres:
            (arch_finalise_cap cap final) (ArchRetypeDecls_H.finaliseCap cap' final')"
   apply (cases cap,
          simp_all add: arch_finalise_cap_def ArchRetype_H.finaliseCap_def
-                       final_matters'_def bool_case_If liftM_def[symmetric]
+                       final_matters'_def case_bool_If liftM_def[symmetric]
                        o_def dc_def[symmetric]
                 split: option.split,
          safe)
@@ -3265,10 +3265,10 @@ lemma clearMemory_vms':
    \<forall>x\<in>fst (clearMemory ptr bits (ksMachineState s)).
       valid_machine_state' (s\<lparr>ksMachineState := snd x\<rparr>)"
   apply (clarsimp simp: valid_machine_state'_def
-                        disj_commute[of "pointerInUserData p s", standard])
+                        disj_commute[of "pointerInUserData p s" for p s])
   apply (drule_tac x=p in spec, simp)
-  apply (drule_tac P="\<lambda>m'. underlying_memory m' p = 0"
-         in use_valid[where P=P and Q="\<lambda>_. P", standard], simp_all)
+  apply (drule_tac P4="\<lambda>m'. underlying_memory m' p = 0"
+         in use_valid[where P=P and Q="\<lambda>_. P" for P], simp_all)
   apply (rule clearMemory_um_eq_0)
   done
 
@@ -3439,7 +3439,7 @@ lemma isFinal_lift:
          f 
          \<lbrace>\<lambda>r s. cte_wp_at' (\<lambda>cte. isFinal (cteCap cte) sl (cteCaps_of s)) sl s\<rbrace>"
   apply (subst cte_wp_at_norm_eq')
-  apply (subst cte_wp_at_norm_eq' [where P="\<lambda>cte. isFinal (cteCap cte) sl m", standard]) 
+  apply (subst cte_wp_at_norm_eq' [where P="\<lambda>cte. isFinal (cteCap cte) sl m" for sl m]) 
   apply (simp only: isFinal_cte_wp_def imp_conv_disj de_Morgan_conj)
   apply (wp hoare_vcg_ex_lift hoare_vcg_all_lift x hoare_vcg_disj_lift
             valid_cte_at_neg_typ' [OF y])
@@ -3520,7 +3520,7 @@ lemma arch_recycle_cap_corres:
    apply (rule_tac F="is_aligned word pt_bits" in corres_req)
     apply (clarsimp simp: valid_cap_def cap_aligned_def
                           pt_bits_def pageBits_def)
-   apply (simp add: upto_enum_step_subtract[where x=x and y="x + 4", standard]
+   apply (simp add: upto_enum_step_subtract[where x=x and y="x + 4" for x]
                 is_aligned_no_overflow pt_bits_stuff
                 upto_enum_step_red[where us=2, simplified] split del: split_if)
    apply (rule corres_guard_imp)
@@ -3583,24 +3583,24 @@ lemma arch_recycle_cap_corres:
     apply (clarsimp simp: invs_pspace_alignedI valid_cap_def)
     apply (intro conjI)
      apply (clarsimp simp: upto_enum_step_def)
-     apply (erule page_table_pte_atI[simplified shiftl_t2n mult_ac,simplified])
+     apply (erule page_table_pte_atI[simplified shiftl_t2n mult.commute mult.left_commute,simplified])
       apply (simp add: ptBits_def pageBits_def pt_bits_stuff)
-      apply unat_arith
+      apply (simp add: word_less_nat_alt unat_of_nat)
      apply clarsimp
     apply (cases slot, clarsimp)
     apply (intro exI, erule cte_wp_at_weakenE)
     apply (clarsimp simp: is_cap_simps word32_shift_by_2 upto_enum_step_def)
     apply (rule conjunct2[OF is_aligned_add_helper[OF _ shiftl_less_t2n]],
            simp_all add: pt_bits_def pageBits_def ptBits_def)[1]
-    apply unat_arith
+    apply (simp add: word_less_nat_alt unat_of_nat)
    apply clarsimp
-   apply (clarsimp simp: valid_cap'_def page_table_at'_def shiftl_t2n mult_ac)
+   apply (clarsimp simp: valid_cap'_def page_table_at'_def shiftl_t2n mult.commute mult.left_commute)
    apply (rule conjI[rotated])
     apply auto[1]
    apply (clarsimp simp: upto_enum_step_def)
    apply (drule spec, erule mp)
    apply (simp add: ptBits_def pageBits_def)
-   apply unat_arith
+   apply (simp add: word_less_nat_alt unat_of_nat)
   -- "PageDirectory"
   apply (rule corres_guard_imp)
     apply (rule corres_split) 

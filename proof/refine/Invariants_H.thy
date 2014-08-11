@@ -1257,7 +1257,7 @@ lemma st_tcb_at_refs_of_rev':
   "ko_wp_at' (\<lambda>ko. (x, TCBAsync) \<in> refs_of' ko) t s
      = st_tcb_at' (\<lambda>ts.      ts = BlockedOnAsyncEvent x) t s"
   by (fastforce simp: refs_of_rev' st_tcb_at'_def obj_at'_real_def
-                     projectKO_opt_tcb[where e="KOTCB y",standard]
+                     projectKO_opt_tcb[where e="KOTCB y" for y]
               elim!: ko_wp_at'_weakenE
               dest!: projectKO_opt_tcbD)+
 
@@ -1605,7 +1605,7 @@ lemma lookupBefore_exact2:
   "\<lbrakk> lookupBefore x s = Some v; fst v = x \<rbrakk> \<Longrightarrow> s x = Some (snd v)"
   apply (cases v)
   apply (clarsimp simp add: lookupBefore_def Let_def split: split_if_asm)
-  apply (drule subst[where P="\<lambda>x. x \<in> y", standard, OF _ Max_in])
+  apply (drule subst[where P="\<lambda>x. x \<in> y" for y, OF _ Max_in])
     apply simp
    apply fastforce
   apply clarsimp
@@ -1619,7 +1619,7 @@ lemma lookupBefore_char:
   apply clarsimp
   apply (rule iffI)
    apply (erule conjE)
-   apply (frule subst[where P="\<lambda>x. x \<in> yblah", standard, OF _ Max_in])
+   apply (frule subst[where P="\<lambda>x. x \<in> y'" for y', OF _ Max_in])
      apply simp
     apply fastforce
    apply clarsimp
@@ -1697,7 +1697,7 @@ lemma lookupAround2_None2:
   "(snd (lookupAround2 x s) = None) = (\<forall>y. x < y \<longrightarrow> s y = None)"
   apply (simp add: lookupAround2_def Let_def split_def del: maybe_def
                split: option.splits)
-  apply (simp add: o_def option_map_is_None [where f=fst, unfolded map_option_case])
+  apply (simp add: o_def map_option_is_None [where f=fst, unfolded map_option_case])
   apply (simp add: lookupAround_def Let_def)
   apply fastforce
   done
@@ -1707,13 +1707,13 @@ lemma lookupAround2_char2:
   apply (simp add: lookupAround2_def Let_def split_def o_def
               del: maybe_def
               split: option.splits)
-  apply (simp add: o_def option_map_is_None [where f=fst, unfolded map_option_case])
+  apply (simp add: o_def map_option_is_None [where f=fst, unfolded map_option_case])
   apply (simp add: lookupAround_def Let_def)
   apply (rule conjI)
    apply fastforce
   apply clarsimp
   apply (rule iffI)
-   apply (frule subst[where P="\<lambda>x. x \<in> y2", standard, OF _ Min_in])
+   apply (frule subst[where P="\<lambda>x. x \<in> y2" for y2, OF _ Min_in])
      apply simp
     apply fastforce
    apply clarsimp
@@ -1735,7 +1735,7 @@ lemma ps_clearI:
   apply (subgoal_tac "p \<le> p + 1")
    apply (simp add: ps_clear_def2)
    apply (rule ccontr, erule nonemptyE, clarsimp)
-   apply (drule minus_one_helper[where x="z + 1", standard])
+   apply (drule minus_one_helper[where x="z + 1" for z])
     apply (clarsimp simp del: word_neq_0_conv)
    apply simp
   apply (erule is_aligned_get_word_bits)
@@ -1762,7 +1762,7 @@ lemma ps_clear_lookupAround2:
   apply (erule meta_mp)
   apply (clarsimp split: option.split)
   apply (clarsimp simp: lookupAround2_char2 ps_clear_def)
-  apply (drule_tac a=a in equals0D)
+  apply (drule_tac a=x2 in equals0D)
   apply (simp add: domI)
   apply (subst(asm) order_less_imp_le[OF order_le_less_trans[where y=p]],
          assumption, assumption)
@@ -1821,7 +1821,7 @@ lemma in_magnitude_check3:
     apply (drule(1) range_convergence2)
     apply (erule(1) ps_clearI)
     apply (simp add: linorder_not_less)
-    apply (drule minus_one_helper[where x="2 ^ n", standard], simp)
+    apply (drule minus_one_helper[where x="2 ^ n" for n], simp)
     apply (drule word_l_diffs, simp)
     apply (simp add: field_simps)
    apply (simp add: power_overflow)
@@ -1904,7 +1904,7 @@ lemma cte_wp_at_cases':
                     del: disjCI simp del: word_neq_0_conv)
         apply (subst(asm) in_magnitude_check3, simp+,
                simp split: split_if_asm, (rule disjI2)?, intro exI, rule conjI,
-               erule rsubst[where P="\<lambda>x. ksPSpace s x = v", standard],
+               erule rsubst[where P="\<lambda>x. ksPSpace s x = v" for s v],
                fastforce simp add: field_simps, simp)+
    apply (subst(asm) in_magnitude_check3, simp+)
    apply (simp split: split_if_asm)
@@ -2698,7 +2698,6 @@ lemma untyped_incD':
   apply (drule_tac x = p' in spec)
   apply (elim allE impE)
   apply simp+
-    apply fastforce+
   done
 
 lemma caps_containedD':

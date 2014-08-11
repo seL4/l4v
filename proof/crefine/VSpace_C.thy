@@ -533,7 +533,7 @@ lemma rf_sr_asidTable_None:
   apply (erule_tac x="asid >> asid_low_bits" in allE)
   apply (erule impE)
    prefer 2
-   apply (drule sym [where t="index a b", standard])
+   apply (drule sym [where t="index a b" for a b])
    apply (simp add: option_to_0_def option_to_ptr_def split: option.splits)
    apply (clarsimp simp: valid_arch_state'_def valid_asid_table'_def ran_def)
   apply (simp add: and_mask_eq_iff_le_mask)
@@ -1720,7 +1720,7 @@ lemma framesize_from_H_mask:
 lemma dmo_invalidateCacheRange_RAM_invs'[wp]:
   "valid invs' (doMachineOp (invalidateCacheRange_RAM vs ve ps)) (\<lambda>rv. invs')"
   apply (wp dmo_invs' no_irq_invalidateCacheRange_RAM)
-  apply (clarsimp simp: disj_commute[of "pointerInUserData p s", standard])
+  apply (clarsimp simp: disj_commute[of "pointerInUserData p s" for p s])
   apply (erule use_valid)
    apply (wp, simp)
   done

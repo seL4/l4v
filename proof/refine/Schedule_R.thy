@@ -1293,9 +1293,10 @@ lemma hd_ksReadyQueues_runnable:
    by auto
 
 lemma chooseThread_invs_fragment: "\<lbrace>invs' and (\<lambda>s. ksCurDomain s = d)\<rbrace>
-       getQueue d r >>= list_case (return False) (\<lambda>thread x. do y \<leftarrow> ThreadDecls_H.switchToThread thread;
-                                                              return True
-                                                           od)
+       do x \<leftarrow> getQueue d r;
+        (case x of [] \<Rightarrow> return False
+          | thread # x \<Rightarrow> do y \<leftarrow> ThreadDecls_H.switchToThread thread; return True od)
+       od
        \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (rule seq_ext)
    apply (rule gq_sp)
@@ -1322,9 +1323,10 @@ crunch ksCurDomain[wp]: "ThreadDecls_H.switchToThread" "\<lambda>s. P (ksCurDoma
 
 lemma chooseThread_ksCurDomain_fragment:
   "\<lbrace>\<lambda>s. P (ksCurDomain s)\<rbrace>
-       getQueue d r >>= list_case (return False) (\<lambda>thread x. do y \<leftarrow> ThreadDecls_H.switchToThread thread;
-                                                              return True
-                                                           od)
+       do x \<leftarrow> getQueue d r;
+        (case x of [] \<Rightarrow> return False
+          | thread # x \<Rightarrow> do y \<leftarrow> ThreadDecls_H.switchToThread thread; return True od)
+       od
    \<lbrace>\<lambda>_ s. P (ksCurDomain s)\<rbrace>"
   apply (wp | wpc | clarsimp)+
   done
@@ -1349,8 +1351,6 @@ proof -
     by clarsimp
 
   with oa tp have "obj_at' (inQ d p) t s"
-    apply -
-    apply (drule(1) obj_at_conj')
     by (fastforce simp add: inQ_def obj_at'_def)
   
   with vq' have "t \<in> set (ksReadyQueues s (d, p))"
@@ -2314,7 +2314,7 @@ lemma switchToThread_invs_no_cicd':
   done
 
 lemma chooseThread_invs_no_cicd'_fragment: "\<lbrace>invs_no_cicd' and (\<lambda>s. ksCurDomain s = d)\<rbrace>
-      findM (\<lambda>prio. getQueue d prio >>= list_case (return False) (\<lambda>thread x. do y \<leftarrow> ThreadDecls_H.switchToThread thread;
+      findM (\<lambda>prio. getQueue d prio >>= case_list (return False) (\<lambda>thread x. do y \<leftarrow> ThreadDecls_H.switchToThread thread;
                                                                                            return True
                                                                                          od))
       (rev enumPrio)
