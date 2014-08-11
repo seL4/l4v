@@ -1283,7 +1283,7 @@ lemma heap_to_page_data_update_region:
   apply (simp add: heap_to_page_data_def Let_def
             split: split_if)
   apply (rule conjI)
-   apply (clarsimp simp: byte_to_word_heap_def Let_def add_assoc
+   apply (clarsimp simp: byte_to_word_heap_def Let_def add.assoc
                  intro!: ext)
    apply (subst foo, assumption+,
           (rule word_add_offset_less[where n=2, simplified]
@@ -1295,7 +1295,7 @@ lemma heap_to_page_data_update_region:
   apply clarsimp
   apply (case_tac "map_to_user_data psp x")
    apply simp
-  apply (clarsimp simp: dom_def byte_to_word_heap_def Let_def add_assoc
+  apply (clarsimp simp: dom_def byte_to_word_heap_def Let_def add.assoc
                 intro!: ext)
   apply (subst foo, assumption,
          (rule word_add_offset_less[where n=2, simplified]

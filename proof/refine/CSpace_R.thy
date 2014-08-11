@@ -474,7 +474,7 @@ proof -
   also
   from len_c len_x cref' 32
   have "\<dots> = (replicate (32 - cbits) False) @ take cbits xs"
-    by (simp add: bl_shiftr word_size add_ac)
+    by (simp add: bl_shiftr word_size add.commute add.left_commute)
   also
   from len_x len_c 32
   have "\<dots> = to_bl (of_bl (take cbits (drop (length guard) cref)) :: word32)"
@@ -1769,7 +1769,7 @@ lemma cte_at_cte_map_in_obj_bits:
     apply (rule word_power_less_1)
     apply (simp add: cte_level_bits_def word_bits_def)
    apply (simp add: power_add)
-   apply (subst mult_commute, rule word_mult_less_mono1)
+   apply (subst mult.commute, rule word_mult_less_mono1)
      apply (rule of_bl_length)
      apply (simp add: word_bits_def)
     apply simp
@@ -5265,6 +5265,15 @@ lemma updateCap_ctes_of_wp:
   \<lbrace>\<lambda>r s.  P (ctes_of s)\<rbrace>"
   by (rule validI, simp add: updateCap_stuff)
 
+lemma updateCap_cte_wp_at':
+  "\<lbrace>\<lambda>s. cte_at' ptr s \<longrightarrow> Q (cte_wp_at' (\<lambda>cte. if p = ptr then P' (CTE cap (cteMDBNode cte)) else P' cte) p s)\<rbrace>
+        updateCap ptr cap \<lbrace>\<lambda>rv s. Q (cte_wp_at' P' p s)\<rbrace>"
+  apply (simp add:updateCap_def cte_wp_at_ctes_of)
+  apply (wp setCTE_ctes_of_wp getCTE_wp)
+  apply (clarsimp simp: cte_wp_at_ctes_of split del: split_if)
+  apply (case_tac cte, auto split: split_if)
+  done
+
 lemma updateCapFreeIndex_mdb_chain_0:
   assumes preserve:"\<And>m m'. mdb_inv_preserve m m' \<Longrightarrow> mdb_inv_preserve (Q m) (Q m')"
   shows
@@ -6983,6 +6992,7 @@ lemma next_m_n:
    apply (case_tac "mdbPrev dest_node = p")
     apply (frule dest_prev)
      apply clarsimp
+    apply hypsubst_thin
     apply clarsimp
    apply simp
    apply (case_tac "mdbNext src_node = p")
@@ -7749,7 +7759,6 @@ lemma ensure_no_children_corres:
     apply wp
    apply (rule no_fail_pre, wp)
    apply simp
-  apply clarsimp
   apply (case_tac "mdbNext (cteMDBNode cte) = 0")
    apply (simp add: whenE_def)
    apply (clarsimp simp: returnOk_def corres_underlying_def return_def)

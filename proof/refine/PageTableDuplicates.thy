@@ -683,8 +683,8 @@ lemma globalPDEWindow_neg_mask:
   apply (simp add:and_not_mask_twice max_def
     pdBits_def pageBits_def)
   apply (simp add:mask_def)
-  apply (subst add_commute)
-  apply (subst add_commute[where a = ptr])
+  apply (subst add.commute)
+  apply (subst add.commute[where a = ptr])
   apply (rule word_plus_mono_right)
    apply simp
   apply (rule olen_add_eqv[THEN iffD2])
@@ -994,7 +994,7 @@ lemma copyGlobalMappings_valid_duplicates':
       \<Longrightarrow> x + ptr && ~~ mask (vs_ptr_align a) = (x && ~~ mask (vs_ptr_align a)) 
       + ptr"
         apply (cut_tac a = a in vs_ptr_align_upbound)
-        apply (subst add_commute)
+        apply (subst add.commute)
         apply (subst mask_out_add_aligned[symmetric])
          apply (erule is_aligned_weaken)
          apply (simp add: pdBits_def pageBits_def)+
@@ -1731,7 +1731,7 @@ lemma unmapPage_valid_duplicates'[wp]:
       apply (rule hoare_post_imp_R[OF lookupPTSlot_aligned[where sz= vmpage_size]])
       apply (simp add:pageBitsForSize_def)
       apply (drule upto_enum_step_shift[where n = 6 and m = 2,simplified])
-      apply (clarsimp simp:mask_def add_commute upto_enum_step_def)
+      apply (clarsimp simp:mask_def add.commute upto_enum_step_def)
      apply wp
         apply (wp storePTE_no_duplicates' mapM_x_mapM_valid
           storePDE_no_duplicates' checkMappingPPtr_Section
@@ -1758,7 +1758,7 @@ lemma unmapPage_valid_duplicates'[wp]:
     apply (erule is_aligned_weaken,simp)
    apply simp
    apply (drule upto_enum_step_shift[where n = 6 and m = 2,simplified])
-   apply (clarsimp simp:mask_def add_commute upto_enum_step_def)
+   apply (clarsimp simp:mask_def add.commute upto_enum_step_def)
   apply (clarsimp simp:ptBits_def pageBits_def vs_entry_align_def)
   done
 

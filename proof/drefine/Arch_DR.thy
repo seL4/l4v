@@ -509,7 +509,7 @@ proof -
           apply (clarsimp simp: valid_idle_def st_tcb_at_def obj_at_def)
          apply (clarsimp simp: upto_enum_step_def pt_bits_def pageBits_def
                         split: split_if_asm)
-         apply (subst add_assoc, subst is_aligned_add_helper, assumption)
+         apply (subst add.assoc, subst is_aligned_add_helper, assumption)
           apply (simp only: word32_shift_by_2 word_shiftl_add_distrib[symmetric])
           apply (rule shiftl_less_t2n)
            apply (rule is_aligned_add_less_t2n[where n=4])

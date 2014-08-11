@@ -164,7 +164,7 @@ lemma obj_relation_cuts_in_obj_range:
        kheap s x = Some ko; valid_objs s; pspace_aligned s \<rbrakk> \<Longrightarrow> y \<in> obj_range x ko"
   apply (cases ko, simp_all)
    apply (clarsimp split: split_if_asm)
-   apply (subgoal_tac "cte_at (x, y) s")
+   apply (subgoal_tac "cte_at (x, ya) s")
     apply (drule(2) cte_at_cte_map_in_obj_bits)
     apply (simp add: obj_range_def)
    apply (fastforce intro: cte_wp_at_cteI)
@@ -416,12 +416,12 @@ lemma word_range_card:
      {base..ceil + 1} = {base .. ceil } \<union> {ceil + (1::word32)}"
      by (auto intro:order_antisym simp:not_le inc_le)
    show ?case
-    apply (subst add_commute[where a = 1])
-    apply (subst add_assoc[symmetric])
+    apply (subst add.commute[where a = 1])
+    apply (subst add.assoc[symmetric])
     apply (subst interval_plus_one_word32)
       using 2
       apply (simp add:field_simps)
-     apply (subst add_assoc)
+     apply (subst add.assoc)
      apply (rule word_plus_mono_right)
       using 2 plus_one_helper2[where n = h and x = h,simplified]
       apply (simp add:field_simps)
@@ -1999,8 +1999,7 @@ lemma simpler_updateObject_def:
           tcbIPCBufferSlot_def
           tcbCallerSlot_def tcbReplySlot_def
           tcbCTableSlot_def tcbVTableSlot_def)
-   apply (clarsimp split:split_if_asm)
-    apply (intro conjI impI)
+   apply (intro conjI impI)
      apply simp_all
         apply (clarsimp simp:alignCheck_def unless_def when_def not_less[symmetric]
           alignError_def is_aligned_mask magnitudeCheck_def 
@@ -2742,7 +2741,7 @@ lemma getPDE_det:
   apply (erule_tac x = a in in_empty_interE)
    apply (clarsimp simp:less_imp_le)
    apply (rule conjI)
-    apply (subst add_commute)
+    apply (subst add.commute)
     apply (rule word_diff_ls')
      apply (clarsimp simp:field_simps not_le plus_one_helper)
     apply (simp add:field_simps is_aligned_no_wrap' is_aligned_mask)
@@ -3346,7 +3345,7 @@ lemma getTCB_det:
   apply (erule_tac x = a in in_empty_interE)
    apply (clarsimp simp:less_imp_le)
    apply (rule conjI)
-    apply (subst add_commute)
+    apply (subst add.commute)
     apply (rule word_diff_ls')
      apply (clarsimp simp:field_simps not_le plus_one_helper)
     apply (simp add:field_simps is_aligned_no_wrap' is_aligned_mask)
@@ -4081,7 +4080,7 @@ lemma new_caps_addrs_append:
    new_cap_addrs (unat (((of_nat n)::word32) << us)) ptr val @
    new_cap_addrs (unat ((2::word32) ^ us))
                  ((((of_nat n)::word32) << objBitsKO val + us) + ptr) val"
-  apply (subst add_commute)
+  apply (subst add.commute)
   apply (clarsimp simp:new_cap_addrs_def)
   apply (subst upt_add_eq_append'[where j="unat (((of_nat n)::word32) << us)"])
     prefer 3
@@ -4090,8 +4089,8 @@ lemma new_caps_addrs_append:
     apply (simp add:Fun.comp_def field_simps)
     apply (subst unat_sub[symmetric])
     apply (simp add:shiftl_t2n)
-    apply (subst mult_commute)
-    apply (subst mult_commute[where a = "2 ^ us"])+
+    apply (subst mult.commute)
+    apply (subst mult.commute[where a = "2 ^ us"])+
     apply (rule word_mult_le_mono1)
       apply (simp add:word_le_nat_alt)
       apply (subst of_nat_Suc[symmetric])
@@ -4108,7 +4107,7 @@ lemma new_caps_addrs_append:
      apply (subst unat_power_lower)
       apply (simp add:range_cover_def)
      apply (frule range_cover.range_cover_n_le(2))
-     apply (subst mult_commute)
+     apply (subst mult.commute)
      apply (rule le_less_trans[OF nat_le_power_trans[where m = sz]])
       apply (erule le_trans)
        apply simp
@@ -4154,7 +4153,7 @@ lemma new_cap_addrs_disjoint:
   apply (frule range_cover_rel[where sbit' = "objBitsKO val"])
    apply (simp add:field_simps)+
   apply (frule new_cap_addrs_distinct)
-  apply (subst (asm) add_commute[where b = 2])+
+  apply (subst (asm) add.commute[where b = 2])+
   apply (subst (asm) new_caps_addrs_append[where n = "Suc n",simplified])
   apply (simp add:field_simps)
   apply (clarsimp simp:field_simps Int_ac range_cover_def)
@@ -4821,10 +4820,10 @@ proof -
         apply (rule arg_cong2[where f=If, OF _ refl])
         apply (subgoal_tac "{x. x \<le> (1::word32) + of_nat n} =
                         {1 + of_nat n} \<union> {x. x \<le> of_nat n}")
-        apply (simp add: add_commute)
+        apply (simp add: add.commute)
         apply safe
         apply (clarsimp simp: word_le_less_eq[of _ "1 + of_nat n"])
-        apply (metis plus_one_helper add_commute)
+        apply (metis plus_one_helper add.commute)
         using cover
         apply -
         apply (drule range_cover_le[where n = "Suc n"], simp)
@@ -4987,7 +4986,7 @@ proof -
                         objBits_simps)[6]
        apply (simp add: bind_assoc placeNewObject_def2 objBits_simps 
                         Types_H.getObjectSize_def ArchTypes_H.getObjectSize_def
-                        pageBits_def add_commute append)
+                        pageBits_def add.commute append)
        apply (subst gsUserPages_update gsCNodes_update
                     gsUserPages_upd_createObjects'_comm
                     dmo'_createObjects'_comm dmo'_gsUserPages_upd_comm
@@ -5000,7 +4999,7 @@ proof -
         apply (simp add: append mapM_x_append mapM_x_singleton)
         apply (subst doMachineOp_bind)
           apply (simp add: empty_fail_mapM_x empty_fail_clearMemory
-                           add_commute)+
+                           add.commute)+
       -- "LargePageObject"
       apply (simp add: Arch_createNewCaps_def createWordObjects_def
                        Retype_H.createObject_def createObjects_def bind_assoc
@@ -5012,7 +5011,7 @@ proof -
                        objBits_simps)[6]
       apply (simp add: bind_assoc placeNewObject_def2 objBits_simps 
                        Types_H.getObjectSize_def ArchTypes_H.getObjectSize_def
-                       pageBits_def add_commute append)
+                       pageBits_def add.commute append)
       apply (subst gsUserPages_update gsCNodes_update
                    gsUserPages_upd_createObjects'_comm
                    dmo'_createObjects'_comm dmo'_gsUserPages_upd_comm
@@ -5025,7 +5024,7 @@ proof -
        apply (simp add: append mapM_x_append mapM_x_singleton)
        apply (subst doMachineOp_bind)
          apply (simp add: empty_fail_mapM_x empty_fail_clearMemory
-                          add_commute)+
+                          add.commute)+
      -- "SectionObject"
      apply (simp add: Arch_createNewCaps_def createWordObjects_def
                       Retype_H.createObject_def createObjects_def bind_assoc
@@ -5037,7 +5036,7 @@ proof -
                       objBits_simps)[6]
      apply (simp add: bind_assoc placeNewObject_def2 objBits_simps 
                       Types_H.getObjectSize_def ArchTypes_H.getObjectSize_def
-                      pageBits_def add_commute append)
+                      pageBits_def add.commute append)
      apply (subst gsUserPages_update gsCNodes_update
                   gsUserPages_upd_createObjects'_comm
                   dmo'_createObjects'_comm dmo'_gsUserPages_upd_comm
@@ -5050,7 +5049,7 @@ proof -
       apply (simp add: append mapM_x_append mapM_x_singleton)
       apply (subst doMachineOp_bind)
         apply (simp add: empty_fail_mapM_x empty_fail_clearMemory
-                         add_commute)+
+                         add.commute)+
     -- "SuperSectionObject"
     apply (simp add: Arch_createNewCaps_def createWordObjects_def
                      Retype_H.createObject_def createObjects_def bind_assoc
@@ -5062,7 +5061,7 @@ proof -
                      objBits_simps)[6]
     apply (simp add: bind_assoc placeNewObject_def2 objBits_simps 
                      Types_H.getObjectSize_def ArchTypes_H.getObjectSize_def
-                     pageBits_def add_commute append)
+                     pageBits_def add.commute append)
     apply (subst gsUserPages_update gsCNodes_update
                  gsUserPages_upd_createObjects'_comm
                  dmo'_createObjects'_comm dmo'_gsUserPages_upd_comm
@@ -5075,7 +5074,7 @@ proof -
      apply (simp add: append mapM_x_append mapM_x_singleton)
      apply (subst doMachineOp_bind)
        apply (simp add: empty_fail_mapM_x empty_fail_clearMemory
-                        add_commute)+
+                        add.commute)+
    -- "PageTableObject"
    apply (simp add:Arch_createNewCaps_def createWordObjects_def Retype_H.createObject_def
            createObjects_def bind_assoc Types_H.toAPIType_def ArchTypes_H.toAPIType_def
@@ -5215,7 +5214,7 @@ proof -
                field_simps archObjSize_def word_bits_conv range_cover_full
                aligned_add_aligned range_cover.aligned is_aligned_shiftl_self)
              apply (frule pspace_no_overlap'_le2[where ptr' = "(ptr + (1 + of_nat n << 14))"])
-               apply (subst shiftl_t2n,subst mult_commute, subst suc_of_nat)
+               apply (subst shiftl_t2n,subst mult.commute, subst suc_of_nat)
                apply (rule order_trans[OF range_cover_bound,where n1 = "1 + n"])
                  apply (erule range_cover_le,simp)
                 apply simp
@@ -5224,7 +5223,6 @@ proof -
                 apply simp
                apply simp
               apply (erule(1) range_cover_tail_mask)
-           apply clarsimp
            apply (rule hoare_vcg_conj_lift)
            apply (rule createObjects'_wp_subst[where c = "makeObject::pde"])
              apply simp
@@ -5648,7 +5646,8 @@ lemma createNewObjects_Cons:
     from dlength
     have expand:"dest\<noteq>[] \<longrightarrow> [(0::word32) .e. of_nat (length dest)] 
       = [0.e.of_nat (length dest - 1)] @ [of_nat (length dest)]"
-      apply (cases dest, clarsimp+)
+      apply (cases dest)
+      apply clarsimp+
       apply (rule upto_enum_inc_1)
       apply (rule word_of_nat_less)
       apply (simp add: word_bits_conv minus_one_norm)

@@ -333,7 +333,7 @@ lemma memset_spec:
     apply (subst heap_update_list_append)
     apply (simp add: heap_update_word8)
    apply (subst unatSuc [symmetric])
-    apply (subst add_commute)
+    apply (subst add.commute)
     apply (metis word_neq_0_conv word_sub_plus_one_nonzero)
    apply (simp add: field_simps)
   apply (clarsimp)
@@ -1108,7 +1108,7 @@ next
         apply (elim disjE)
           apply simp
          apply (clarsimp simp: CTypesDefs.ptr_add_def)
-         apply (simp only: Abs_fnat_hom_add Abs_fnat_hom_mult add_assoc)   
+         apply (simp only: Abs_fnat_hom_add Abs_fnat_hom_mult add.assoc)   
          apply (erule aligned_add_aligned)
            apply (subgoal_tac
                     "is_aligned (of_nat (Suc a * size_of TYPE('a))) m")
@@ -1289,7 +1289,7 @@ next
         apply (elim disjE)
           apply simp
          apply (clarsimp simp: CTypesDefs.ptr_add_def)
-         apply (simp only: Abs_fnat_hom_add Abs_fnat_hom_mult add_assoc)   
+         apply (simp only: Abs_fnat_hom_add Abs_fnat_hom_mult add.assoc)   
          apply (erule aligned_add_aligned)
            apply (subgoal_tac
                     "is_aligned (of_nat (Suc a * size_of TYPE('a))) m")
@@ -1616,7 +1616,7 @@ proof (rule allI, rule impI)
 
     have Sucn: "Suc b * 2 ^ objBitsKO ko \<le> 2 ^ sz" using cover nv
       apply -
-      apply (subst mult_commute, rule nat_le_power_trans)
+      apply (subst mult.commute, rule nat_le_power_trans)
       apply (erule le_trans[OF Suc_leI])
        apply (erule range_cover.range_cover_n_le)
       apply (erule range_cover.sz)
@@ -1736,7 +1736,7 @@ lemma cslift_ptr_retyp_memset_other_inst:
    apply (simp add: sz2)
   apply (simp add: sz2)
   apply (rule le_less_trans)
-   apply (subst mult_commute)
+   apply (subst mult.commute)
    apply (rule nat_le_power_trans[OF range_cover.range_cover_n_le(2)[OF cover]])
    apply (rule range_cover.sz[OF cover])
   apply (rule power_strict_increasing)
@@ -4057,7 +4057,7 @@ proof (intro impI allI)
     apply (clarsimp simp: new_cap_addrs_def objBits_simps shiftl_t2n intvl_def)
     apply (rule_tac x = "2 ^ pageBits * pa + unat off * 4 + unat x" in exI)
     apply (simp add: ucast_nat_def power_add)
-    apply (subst mult_commute, subst add_assoc)
+    apply (subst mult.commute, subst add.assoc)
     apply (rule_tac y = "(pa + 1) * 2 ^ pageBits " in less_le_trans)
      apply (simp add:word_less_nat_alt)
     apply (rule_tac y="unat off * 4 + 4" in less_le_trans)
@@ -5737,7 +5737,7 @@ proof -
       apply (frule invs_sym')
       apply (clarsimp simp: getObjectSize_def objBits_simps
                  ArchTypes_H.getObjectSize_def apiGetObjectSize_def
-                 cteSizeBits_def word_bits_conv add_commute createObject_c_preconds_def
+                 cteSizeBits_def word_bits_conv add.commute createObject_c_preconds_def
                 elim!: is_aligned_no_wrap' 
                dest: word_of_nat_le  intro!: range_coverI)[1]
       apply (unat_arith)
@@ -5905,27 +5905,27 @@ lemma ctes_of_ko_at_strong:
   apply (erule order_trans)
   apply (subst word_plus_and_or_coroll2[where x = p and w = "mask 9",symmetric])
   apply (clarsimp simp:tcb_cte_cases_def field_simps split:split_if_asm)
-      apply (subst add_commute)
+      apply (subst add.commute)
        apply (rule word_plus_mono_right[OF _ is_aligned_no_wrap'])
          apply simp
         apply (rule Aligned.is_aligned_neg_mask)
        apply (rule le_refl,simp)
-     apply (subst add_commute)
+     apply (subst add.commute)
      apply (rule word_plus_mono_right[OF _ is_aligned_no_wrap'])
        apply simp
       apply (rule Aligned.is_aligned_neg_mask)
      apply (rule le_refl,simp)
-    apply (subst add_commute)
+    apply (subst add.commute)
     apply (rule word_plus_mono_right[OF _ is_aligned_no_wrap'])
       apply simp
      apply (rule Aligned.is_aligned_neg_mask)
     apply (rule le_refl,simp)
-   apply (subst add_commute)
+   apply (subst add.commute)
    apply (rule word_plus_mono_right[OF _ is_aligned_no_wrap'])
      apply simp
     apply (rule Aligned.is_aligned_neg_mask)
    apply (rule le_refl,simp)
-  apply (subst add_commute)
+  apply (subst add.commute)
   apply (rule word_plus_mono_right[OF _ is_aligned_no_wrap'])
     apply simp
    apply (rule Aligned.is_aligned_neg_mask)

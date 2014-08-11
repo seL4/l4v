@@ -1485,7 +1485,7 @@ lemma performPageInvocationMapPTE_ccorres:
         apply (clarsimp simp:valid_pte_slots'2_def
           objBits_simps archObjSize_def hd_conv_nth)
         apply (clarsimp simp:pte_range_relation_def ptr_range_to_list_def ptr_add_def)
-        apply (simp add:add_assoc[symmetric] add_commute)
+        apply (simp add:add_assoc[symmetric] add.commute)
         apply (simp add: word_add_format)
         apply (frule is_aligned_addrFromPPtr_n,simp)
         apply (cut_tac n = "sz+2" in  power_not_zero[where 'a="32"])
@@ -1715,7 +1715,7 @@ lemma performPageInvocationMapPDE_ccorres:
         apply (clarsimp simp:valid_pde_slots'2_def
           objBits_simps archObjSize_def hd_conv_nth)
         apply (clarsimp simp:pde_range_relation_def ptr_range_to_list_def ptr_add_def)
-        apply (simp add:add_assoc[symmetric] add_commute)
+        apply (simp add:add_assoc[symmetric] add.commute)
         apply (simp add: word_add_format)
         apply (frule is_aligned_addrFromPPtr_n,simp)
         apply (cut_tac n = "sz+2" in  power_not_zero[where 'a="32"])
@@ -1817,7 +1817,7 @@ lemma performPageInvocationRemapPDE_ccorres:
       apply (clarsimp simp:valid_pde_slots'2_def
         objBits_simps archObjSize_def hd_conv_nth)
       apply (clarsimp simp:pde_range_relation_def ptr_range_to_list_def ptr_add_def)
-      apply (simp add:add_assoc[symmetric] add_commute)
+      apply (simp add:add_assoc[symmetric] add.commute)
       apply (simp add: word_add_format)
       apply (frule is_aligned_addrFromPPtr_n,simp)
       apply (cut_tac n = "sz+2" in  power_not_zero[where 'a="32"])
@@ -1915,7 +1915,7 @@ lemma performPageInvocationRemapPTE_ccorres:
       apply (clarsimp simp:valid_pte_slots'2_def
         objBits_simps archObjSize_def hd_conv_nth)
       apply (clarsimp simp:pte_range_relation_def ptr_range_to_list_def ptr_add_def)
-      apply (simp add:add_assoc[symmetric] add_commute)
+      apply (simp add:add_assoc[symmetric] add.commute)
       apply (simp add: word_add_format)
       apply (frule is_aligned_addrFromPPtr_n,simp)
       apply (cut_tac n = "sz+2" in  power_not_zero[where 'a="32"])

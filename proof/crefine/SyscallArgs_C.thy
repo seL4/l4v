@@ -1013,7 +1013,7 @@ lemma getMRs_user_word:
    apply simp
    apply (drule (1) order_less_le_trans)
    apply (simp add: word_less_nat_alt word_le_nat_alt)
-  apply (simp add: word_le_nat_alt add_ac mult_ac)
+  apply (simp add: word_le_nat_alt add.commute add.left_commute mult_ac)
   done
 
 declare split_if [split]

@@ -255,7 +255,7 @@ lemma load_word_offs_word_corres:
     apply (subst word_mult_less_iff)
        apply simp
       apply (unfold word_bits_len_of)
-      apply (simp, subst mult_commute)
+      apply (simp, subst mult.commute)
       apply (rule nat_less_power_trans [where k = 2, simplified])
        apply (rule unat_less_power)
         apply (simp add: word_bits_conv)

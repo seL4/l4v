@@ -321,7 +321,7 @@ lemma perform_asid_control_invocation_tcb_at:
   apply (clarsimp simp: ex_nonz_cap_to_def valid_aci_def)
   apply (frule invs_untyped_children)
   apply (clarsimp simp:cte_wp_at_caps_of_state)
-  apply (erule_tac ptr="(aa,ba)" in untyped_children_in_mdbE[where P="\<lambda>c. t \<in> zobj_refs c", standard])
+  apply (erule_tac ptr="(aa,ba)" in untyped_children_in_mdbE[where P="\<lambda>c. t \<in> zobj_refs c" for t])
       apply (simp add: cte_wp_at_caps_of_state)
      apply simp
     apply (simp add:cte_wp_at_caps_of_state)
@@ -364,7 +364,7 @@ lemma invoke_arch_tcb:
   apply (clarsimp simp: ex_nonz_cap_to_def)
   apply (frule invs_untyped_children)
   apply (clarsimp simp:cte_wp_at_caps_of_state)
-  apply (erule_tac ptr="(aa,ba)" in untyped_children_in_mdbE[where P="\<lambda>c. t \<in> zobj_refs c", standard])
+  apply (erule_tac ptr="(aa,ba)" in untyped_children_in_mdbE[where P="\<lambda>c. t \<in> zobj_refs c" for t])
       apply (simp add: cte_wp_at_caps_of_state)+
      apply fastforce
    apply (clarsimp simp: zobj_refs_to_obj_refs cte_wp_at_caps_of_state)
@@ -772,7 +772,7 @@ lemma cap_insert_ap_invs:
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   apply (drule_tac p="(a,b)" in caps_of_state_valid_cap, fastforce)
   apply (auto simp: obj_at_def is_tcb_def is_cap_table_def 
-                    valid_cap_def [where c="cap.Zombie a b x", standard] 
+                    valid_cap_def [where c="cap.Zombie a b x" for a b x] 
               dest: obj_ref_is_tcb obj_ref_is_cap_table split: option.splits)
   done
 
@@ -857,7 +857,7 @@ lemma perform_asid_control_invocation_st_tcb_at:
    apply (clarsimp simp: ex_nonz_cap_to_def)
    apply (frule invs_untyped_children)
    apply (clarsimp simp:cte_wp_at_caps_of_state)
-   apply (erule_tac ptr="(aa,ba)" in untyped_children_in_mdbE[where P="\<lambda>c. t \<in> zobj_refs c", standard])
+   apply (erule_tac ptr="(aa,ba)" in untyped_children_in_mdbE[where P="\<lambda>c. t \<in> zobj_refs c" for t])
        apply (simp add: cte_wp_at_caps_of_state)+
       apply fastforce
     apply (clarsimp simp: zobj_refs_to_obj_refs)
@@ -933,7 +933,7 @@ lemma aci_invs':
     apply (wp hoare_vcg_const_imp_lift set_free_index_invs
               retype_region_plain_invs[where sz = pageBits]
               retype_cte_wp_at[where sz = pageBits] hoare_vcg_ex_lift
-              retype_region_obj_at_other3[where P="is_cap_table n" and sz = pageBits, standard]
+              retype_region_obj_at_other3[where P="is_cap_table n" and sz = pageBits for n]
               retype_region_ex_cte_cap_to[where sz = pageBits]
               retype_region_ap[simplified]
               retype_region_ap'[simplified] 
@@ -960,7 +960,7 @@ lemma aci_invs':
    apply (simp add:descendants_range_def2 empty_descendants_range_in)
   apply (simp add:invs_mdb invs_valid_pspace invs_psp_aligned invs_valid_objs)
   apply (clarsimp dest!:caps_of_state_cteD)
-  apply (frule(1) unsafe_protected[where p=t and p'=t, standard])
+  apply (frule(1) unsafe_protected[where p=t and p'=t for t])
      apply (simp add:empty_descendants_range_in)+
     apply fastforce
    apply clarsimp
@@ -1005,8 +1005,8 @@ lemma aci_invs':
       apply (clarsimp simp: no_cap_to_obj_with_diff_ref_def)
       apply (thin_tac "cte_wp_at (op = cap.NullCap) ?p ?s")
       apply (subst(asm) eq_commute,
-          erule(1) untyped_children_in_mdbE[where cap="cap.UntypedCap word1 bits idx",
-                                         simplified, standard, rotated])
+          erule(1) untyped_children_in_mdbE[where cap="cap.UntypedCap p bits idx" for p bits idx,
+                                         simplified, rotated])
         apply (simp add: is_aligned_no_overflow)
        apply simp
       apply clarsimp
@@ -1578,7 +1578,7 @@ lemma arch_decode_inv_wf[wp]:
                        cap_rights_update_def acap_rights_update_def 
                 split:option.split vmpage_size.split)
      apply (rule conjI, fastforce dest!: cte_wp_at_page_cap_weaken)+
-     apply (frule diminished_cte_wp_at_valid_cap[where p="(a, b)", standard],
+     apply (frule diminished_cte_wp_at_valid_cap[where p="(a, b)" for a b],
                   clarsimp+)
      apply (clarsimp simp: valid_cap_def
                            cap_aligned_def)
@@ -1769,7 +1769,6 @@ lemma arch_decode_inv_wf[wp]:
     apply (rule conjI, fastforce)
     apply (clarsimp simp: neq_Nil_conv)
     apply (thin_tac "Ball ?S ?P")
-    apply clarsimp
     apply (rule conjI)
      apply (clarsimp simp: valid_cap_def cap_aligned_def)
     apply (rule conjI)
@@ -1813,7 +1812,7 @@ lemma arch_decode_inv_wf[wp]:
           apply (simp add: resolve_vaddr_def)
           apply (wp get_master_pte_wp get_master_pde_wp whenE_throwError_wp | wpc | simp)+
         apply (clarsimp simp: valid_arch_inv_def valid_pdi_def)+
-        apply (rule_tac Q'="\<lambda>pd' s. pd_at_asid ba pd' s \<and> ba \<le> mask asid_bits \<and> ba \<noteq> 0" in hoare_post_imp_R)
+        apply (rule_tac Q'="\<lambda>pd' s. pd_at_asid x2 pd' s \<and> x2 \<le> mask asid_bits \<and> x2 \<noteq> 0" in hoare_post_imp_R)
          apply wp
         apply clarsimp
        apply (wp | wpc)+

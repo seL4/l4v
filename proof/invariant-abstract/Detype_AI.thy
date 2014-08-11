@@ -364,11 +364,8 @@ lemma drange:"descendants_range_in (cap_range cap) ptr s"
 lemma valid_cap:
     "\<And>cap'. \<lbrakk> s \<turnstile> cap'; obj_reply_refs cap' \<subseteq> (UNIV - untyped_range cap) \<rbrakk>
     \<Longrightarrow> detype (untyped_range cap) s \<turnstile> cap'"
-    apply (clarsimp simp: valid_cap_def valid_untyped_def obj_reply_refs_def
-                split: cap.split_asm option.splits arch_cap.split_asm bool.split_asm)
-     apply auto
-    done
-
+  by (clarsimp simp: valid_cap_def valid_untyped_def obj_reply_refs_def
+              split: cap.split_asm option.splits arch_cap.split_asm bool.split_asm)
 
 lemma iflive: "if_live_then_nonz_cap s"
     using invs by (simp add: invs_def valid_state_def valid_pspace_def)
@@ -1112,7 +1109,7 @@ qed
 (* FIXME: move *)
 lemma unat_mask:
   "unat (mask n :: 'a :: len word) = 2 ^ (min n (len_of TYPE('a))) - 1"
-  apply (subst min_max.inf_commute)
+  apply (subst min.commute)
   apply (simp add: mask_def not_less min_def  split: split_if_asm)
   apply (intro conjI impI)
    apply (simp add: unat_sub_if_size)
@@ -1277,7 +1274,6 @@ lemma mapM_x_storeWord_step:
   apply (subst if_not_P)
    apply (subst not_less)
    apply (erule is_aligned_no_overflow)
-  apply (simp add: plus_minus_one_rewrite32)
   apply (simp add: mapM_x_map comp_def upto_enum_word maxword_32_conv del: upt.simps)
   apply (simp add:Suc_unat_mask_div[simplified mask_2pm1 word_size_def] min_def)
   apply (subst mapM_x_storeWord) 
@@ -1397,7 +1393,7 @@ lemma cte_map_not_null_outside:
   apply (drule(1) if_unsafe_then_capD, simp)
   apply (drule ex_cte_cap_to_obj_ref_disj, erule disjE)
    apply (clarsimp simp del:untyped_range.simps)+
-   apply (erule(1) untyped_children_in_mdbEE [where P="\<lambda>c. fst p \<in> f c" , standard])
+   apply (erule(1) untyped_children_in_mdbEE [where P="\<lambda>c. fst p \<in> f c" for f])
       apply simp+
     apply fastforce
     apply (drule(1) descendants_range_inD)
@@ -1671,7 +1667,7 @@ lemma  neg_mask_diff_bound:
 proof -
   assume lt: "sz' \<le> sz"
   hence "?lhs = ptr && (mask sz && (~~ mask sz'))"
-    apply (simp add: mask_out_sub_mask field_simps mask_and_mask min_max.inf_absorb2)
+    apply (simp add: mask_out_sub_mask field_simps mask_and_mask min.absorb2)
     apply (simp add: mask_sub)
     apply (subst word_plus_and_or_coroll)
      apply (rule word_eqI, simp add: word_size word_ops_nth_size)
@@ -1721,8 +1717,8 @@ lemma range_cover_tail_mask:
    \<Longrightarrow> ptr  + ((1::word32) + of_nat n << us)  && ~~ mask sz = ptr && ~~ mask sz"
   apply (frule(1) range_cover_ptr_le)
   apply (subst word_plus_and_or_coroll2[symmetric,where w = "mask sz" and t = ptr])
-  apply (subst add_commute)
-  apply (subst add_assoc)
+  apply (subst add.commute)
+  apply (subst add.assoc)
   apply (subst is_aligned_add_helper[THEN conjunct2,OF is_aligned_neg_mask])
     apply (simp add:range_cover_def)
     apply (simp add:word_less_nat_alt)
@@ -1793,7 +1789,7 @@ lemma range_cover_unat:
        apply (rule le_less_trans)
        apply (frule range_cover.unat_of_nat_shift[OF _ le_refl le_refl])
        apply (simp add:field_simps)
-       apply (subst add_commute)
+       apply (subst add.commute)
        apply (erule range_cover.range_cover_compare_bound)
        apply (rule power_strict_increasing)
        apply (clarsimp simp:range_cover_def)+
@@ -1808,7 +1804,7 @@ lemma range_cover_offset:
   apply (clarsimp simp:range_cover_def)
   apply (intro conjI)
    apply (erule aligned_add_aligned)
-    apply (subst mult_commute)
+    apply (subst mult.commute)
     apply (simp add:is_aligned_shiftl_self[unfolded shiftl_t2n])
    apply simp
   apply (rule nat_mult_le_cancel1[where k = "2^ us",THEN iffD1])

@@ -107,7 +107,7 @@ lemmas cap_irq_opt_simps[simp] =
   cap_irq_opt_def [split_simps cap.split sum.split]
 
 lemmas cap_irqs_simps[simp] =
-    cap_irqs_def [unfolded cap_irq_opt_def, split_simps cap.split sum.split, simplified set_option.simps]
+    cap_irqs_def [unfolded cap_irq_opt_def, split_simps cap.split sum.split, simplified option.simps]
 
 lemma pageBits_less_word_bits [simp]:
   "pageBits < word_bits" by (simp add: pageBits_def word_bits_conv)

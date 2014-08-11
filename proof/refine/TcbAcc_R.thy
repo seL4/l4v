@@ -3026,7 +3026,6 @@ proof -
    -- "buf = Some a"
    apply (rule corres_guard_imp)
      apply (rule corres_split_nor [OF _ corres_as_user'])
-         apply (clarsimp split del: split_if simp del: upt.simps)
          apply (rule corres_split_nor)
             apply (rule corres_trivial, clarsimp)
             apply (rule arg_cong [where f="\<lambda>x. of_nat (min (length mrs) x)"])

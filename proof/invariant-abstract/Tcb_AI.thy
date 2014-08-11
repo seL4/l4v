@@ -601,7 +601,7 @@ lemma checked_insert_tcb_invs[wp]:
    apply (clarsimp simp: cte_wp_at_caps_of_state same_object_as_cte_refs)
    apply (clarsimp simp: same_object_as_def2 cap_master_cap_simps
                   dest!: cap_master_cap_eqDs)
-   apply (clarsimp simp: valid_cap_def[where c="cap.ThreadCap x",standard])
+   apply (clarsimp simp: valid_cap_def[where c="cap.ThreadCap x" for x])
    apply (erule cte_wp_atE[OF caps_of_state_cteD])
     apply (fastforce simp: obj_at_def is_obj_defs)
    apply clarsimp
@@ -627,8 +627,8 @@ lemma check_cap_inv2:
   by (wp x get_cap_wp, clarsimp)
 
 lemmas check_cap_inv
-    = check_cap_inv2[where P=P and Q="\<lambda>rv. P", simplified pred_conj_def,
-                     simplified, standard]
+    = check_cap_inv2[where P=P and Q="\<lambda>rv. P" for P, simplified pred_conj_def,
+                     simplified]
 
 declare in_image_op_plus[simp]
 
@@ -939,10 +939,10 @@ lemma tc_invs:
              thread_set_tcb_ipc_buffer_cap_cleared_invs
              thread_set_invs_trivial[OF ball_tcb_cap_casesI]
              hoare_vcg_all_lift thread_set_valid_cap out_emptyable
-             check_cap_inv [where P="valid_cap c", standard]
-             check_cap_inv [where P="tcb_cap_valid c p", standard]
-             check_cap_inv[where P="cte_at p0", standard]
-             check_cap_inv[where P="tcb_at p0", standard]
+             check_cap_inv [where P="valid_cap c" for c]
+             check_cap_inv [where P="tcb_cap_valid c p" for c p]
+             check_cap_inv[where P="cte_at p0" for p0]
+             check_cap_inv[where P="tcb_at p0" for p0]
              thread_set_cte_at
              thread_set_cte_wp_at_trivial[where Q="\<lambda>x. x", OF ball_tcb_cap_casesI]
              thread_set_no_cap_to_trivial[OF ball_tcb_cap_casesI]
@@ -1093,10 +1093,8 @@ lemma decode_copyreg_wf:
              cong: list.case_cong split del: split_if)
   apply (rule hoare_pre)
    apply (wp | wpc)+
-  apply (clarsimp simp: valid_cap_def[where c="cap.ThreadCap t", standard])
+  apply (clarsimp simp: valid_cap_def[where c="cap.ThreadCap t" for t])
   done
-
-thm alternativeE_R_wp
 
 declare alternativeE_wp[wp]
 declare alternativeE_R_wp[wp]
@@ -1183,7 +1181,7 @@ lemma derive_is_arch[wp]:
   "\<lbrace>\<lambda>s. is_arch_cap c\<rbrace> derive_cap slot c \<lbrace>\<lambda>rv s. is_arch_cap rv\<rbrace>,-"
   apply (simp add: derive_cap_def cong: cap.case_cong)
   apply (rule hoare_pre)
-   apply (wp | wpc | simp only: o_def is_arch_cap_def cap.cases)+
+   apply (wp | wpc | simp only: o_def is_arch_cap_def cap.simps)+
   apply fastforce
   done
 
@@ -1310,7 +1308,6 @@ lemma decode_set_space_is_tc[wp]:
    apply (simp   add: decode_set_space_def whenE_def unlessE_def
            split del: split_if)
    apply (wp | simp only: is_thread_control_true)+
-  apply simp
   done
 
 
@@ -1320,7 +1317,6 @@ lemma decode_set_space_target[wp]:
    apply (simp   add: decode_set_space_def whenE_def unlessE_def
            split del: split_if)
    apply (wp | simp only: thread_control_target.simps)+
-  apply simp
   done
 
 (* FIXME: move *)

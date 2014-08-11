@@ -317,7 +317,7 @@ lemma is_aligned_6_masks:
   apply (drule subsetD[OF upto_enum_step_subset])
   apply (subst mask_lower_twice[symmetric, where n=6])
    apply (auto simp add: pt_bits_def pageBits_def pd_bits_def)[1]
-  apply (subst add_commute, subst is_aligned_add_helper, assumption)
+  apply (subst add.commute, subst is_aligned_add_helper, assumption)
    apply (simp add: order_le_less_trans)
   apply simp
   done
@@ -730,7 +730,7 @@ lemma perform_asid_control_invocation_respects:
    apply (wp set_cap_integrity_autarch cap_insert_integrity_autarch retype_region_integrity[where sz=12] static_imp_wp | simp)+
   apply (clarsimp simp: authorised_asid_control_inv_def
                         ptr_range_def pageBits_def word_bits_def page_bits_def
-                        is_aligned_neg_mask_eq add_commute
+                        is_aligned_neg_mask_eq add.commute
                         range_cover_def obj_bits_api_def default_arch_object_def
                         pageBits_def word_bits_def)
   apply(subst is_aligned_neg_mask_eq[THEN sym], assumption)

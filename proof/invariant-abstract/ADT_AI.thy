@@ -612,7 +612,7 @@ apply (intro conjI impI)
  apply (drule get_pt_entry_None_iff_get_pte_fail[where s=s and vptr=vptr])
  apply (simp add: pt_bits_def pageBits_def mask_def)
 apply clarsimp
-apply (drule_tac x=a in get_pt_entry_Some_eq_get_pte[where s=s and vptr=vptr])
+apply (drule_tac x=x2 in get_pt_entry_Some_eq_get_pte[where s=s and vptr=vptr])
 apply (simp add: pt_bits_def pageBits_def mask_def)
 done
 
@@ -626,7 +626,7 @@ apply (simp add: lookup_pd_slot_def get_page_info_def split: option.splits)
 apply (intro conjI impI allI)
  apply (drule get_pd_entry_None_iff_get_pde_fail[where s=s and vptr=vptr])
  apply (simp split: option.splits)
-apply (drule_tac x=a in get_pd_entry_Some_eq_get_pde[where s=s and vptr=vptr])
+apply (drule_tac x=x2 in get_pd_entry_Some_eq_get_pde[where s=s and vptr=vptr])
 apply clarsimp
 done
 
@@ -640,7 +640,7 @@ apply (simp add: lookup_pd_slot_def get_page_info_def split: option.splits)
 apply (intro conjI impI allI)
  apply (drule get_pd_entry_None_iff_get_pde_fail[where s=s and vptr=vptr])
  apply (simp split: option.splits)
-apply (drule_tac x=a in get_pd_entry_Some_eq_get_pde[where s=s and vptr=vptr])
+apply (drule_tac x=x2 in get_pd_entry_Some_eq_get_pde[where s=s and vptr=vptr])
 apply clarsimp
 done
 

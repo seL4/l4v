@@ -1770,7 +1770,7 @@ lemma ps_clear_lookupAround2:
   apply (erule impCE, simp_all)
   apply (simp add: linorder_not_le)
   apply (subst(asm) add_diff_eq[symmetric],
-         subst(asm) add_commute,
+         subst(asm) add.commute,
          drule word_l_diffs(2),
          fastforce simp only: field_simps)
   apply (rule ccontr, simp add: linorder_not_le)
@@ -1860,7 +1860,6 @@ lemma tcb_space_clear:
    apply (elim exE conjE)
    apply (frule(1) is_aligned_no_wrap'[rotated, rotated])
    apply (simp add: word_bits_conv)
-   apply clarsimp
    apply (erule notE, subst field_simps, rule word_plus_mono_right)
     apply (drule minus_one_helper3,simp,erule is_aligned_no_wrap')
    apply (simp add: word_bits_conv)

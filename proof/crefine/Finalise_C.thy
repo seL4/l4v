@@ -1689,7 +1689,7 @@ lemma finaliseCap_ccorres:
                      less_imp_neq Let_def)
     apply (thin_tac "?a = ?b")+
     apply (subgoal_tac "?P")
-     apply (subst add_commute, subst unatSuc, assumption)+
+     apply (subst add.commute, subst unatSuc, assumption)+
      apply (rule conjI)
       apply (rule word_eqI)
       apply (simp add: word_size word_ops_nth_size nth_w2p
@@ -1702,7 +1702,7 @@ lemma finaliseCap_ccorres:
      apply (simp add: word_size word_ops_nth_size nth_w2p
                       is_aligned_nth less_Suc_eq_le)
      apply (safe, simp_all)[1]
-    apply (subst add_commute, subst eq_diff_eq[symmetric])
+    apply (subst add.commute, subst eq_diff_eq[symmetric])
     apply (clarsimp simp: minus_one_norm)
    apply (rule ccorres_if_lhs)
     apply (simp add: Let_def getThreadCSpaceRoot_def locateSlot_conv

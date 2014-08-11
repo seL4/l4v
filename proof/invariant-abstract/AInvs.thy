@@ -196,7 +196,7 @@ lemma some_get_page_info_umapsD:
      apply (simp add: vs_refs_def pde_ref_def image_def graph_of_def)
      apply (rule exI, rule conjI, simp+)
     apply (frule (1) vs_lookup_step)
-    apply (drule (2) stronger_arch_objsD[where ref="x#xs", standard])
+    apply (drule (2) stronger_arch_objsD[where ref="x # xs" for x xs])
     apply clarsimp
     apply (case_tac ao, simp_all add: a_type_simps obj_at_def)[1]
     apply (simp add: get_pt_info_def get_pt_entry_def)
@@ -254,7 +254,7 @@ lemma ptable_rights_imp_user_frame:
   apply (clarsimp simp: Platform.ptrFromPAddr_def Platform.addrFromPPtr_def
                         field_simps)
   apply (rule_tac x=sz in exI)
-  apply (subst add_assoc[symmetric])
+  apply (subst add.assoc[symmetric])
   apply (subst is_aligned_add_helper)
     apply (erule aligned_add_aligned)
       apply (case_tac sz, simp_all add: physMappingOffset_def

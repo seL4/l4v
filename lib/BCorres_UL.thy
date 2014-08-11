@@ -214,7 +214,9 @@ lemma bcorres_underlying_filterM[wp]:
   apply (wp | simp)+
   done
 
-lemma option_rec_bcorres_underlying[wp_split]: "(\<And>x y. bcorres_underlying t (g x y) (g' x y)) \<Longrightarrow> (\<And>x. bcorres_underlying t (f x) (f' x)) \<Longrightarrow> bcorres_underlying t (option_rec f g a b) (option_rec f' g' a b)"
+lemma option_rec_bcorres_underlying[wp_split]:
+  "(\<And>x y. bcorres_underlying t (g x y) (g' x y)) \<Longrightarrow> (\<And>x. bcorres_underlying t (f x) (f' x))
+    \<Longrightarrow> bcorres_underlying t (rec_option f g a b) (rec_option f' g' a b)"
   apply (cases a,simp+)
   done
 

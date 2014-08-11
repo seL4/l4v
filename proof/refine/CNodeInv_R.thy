@@ -286,7 +286,7 @@ lemma dec_cnode_inv_corres:
                apply (simp add: reycleRightsEq)
                apply (rule corres_trivial, auto simp add: whenE_def returnOk_def)[1]
               apply (wp get_cap_wp getCTE_wp | simp only: whenE_def | clarsimp)+
-       apply (rule hoare_trivE_R[where P="\<top>"], simp add: cte_wp_at_caps_of_state)
+      apply (rule hoare_trivE_R[where P="\<top>"])
       apply (simp add: cte_wp_at_ctes_of pred_conj_def cong: conj_cong)
      apply (fastforce elim!: valid_cnode_capI simp: invs_def valid_state_def valid_pspace_def)
     apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def)
@@ -297,6 +297,7 @@ lemma dec_cnode_inv_corres:
                     isCap_simps Let_def unlessE_whenE whenE_whenE_body
                del: disj_not1 ser_def split del: split_if)
    apply (rule corres_guard_imp, rule corres_splitEE [OF _ lsfc_corres])
+         apply (rename_tac dest_slot destSlot)
          apply (rule corres_splitEE [OF _ lsfc_corres])+
                  apply (rule_tac R = "\<lambda>s. cte_at pivot_slot s \<and> cte_at dest_slot s
                                         \<and> cte_at src_slot s \<and> invs s" in
@@ -7279,7 +7280,7 @@ lemma spec_corres_locate:
     apply simp
    apply (clarsimp simp: valid_cap_def cap_aligned_def word_bits_def
                   split: option.split_asm)
-  apply (simp add: mult_commute)
+  apply (simp add: mult.commute)
   done
 
 lemma spec_corres_req:

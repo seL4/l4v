@@ -1868,15 +1868,15 @@ lemma user_memory_cross_over:
   apply (simp add: word_rsplit_rcat_size word_size)
   apply (drule_tac f="\<lambda>xs. xs ! unat (ptr && mask 2)" in arg_cong)
   apply (simp add: heap_list_nth unat_mask_2_less_4
-                   word_plus_and_or_coroll2 add_commute
+                   word_plus_and_or_coroll2 add.commute
                    hrs_mem_def)
   apply (cut_tac p=ptr in unat_mask_2_less_4)
   apply (subgoal_tac "(ptr && ~~ mask 2) + (ptr && mask 2) = ptr")
    apply (subgoal_tac "!n x. n < 4 \<longrightarrow> (unat (x\<Colon>word32) = n) = (x = of_nat n)")
-    apply (auto simp add: eval_nat_numeral unat_eq_0 add_commute
+    apply (auto simp add: eval_nat_numeral unat_eq_0 add.commute
                 elim!: less_SucE)[1]
     apply (clarsimp simp add: unat32_eq_of_nat word_bits_def)
-  apply (simp add: add_commute word_plus_and_or_coroll2)
+  apply (simp add: add.commute word_plus_and_or_coroll2)
   done
 
 lemma cap_get_tag_isCap_ArchObject0:

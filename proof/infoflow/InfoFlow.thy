@@ -1449,7 +1449,7 @@ lemma dmo_loadWord_rev:
        apply(rule conjI)
         apply fastforce
        apply(erule orthD1)
-       apply(clarsimp simp: ptr_range_def add_commute)
+       apply(clarsimp simp: ptr_range_def add.commute)
       apply (wp wp_post_taut loadWord_inv | simp)+
   done
 

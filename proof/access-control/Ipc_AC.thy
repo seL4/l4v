@@ -1290,7 +1290,7 @@ lemma mul_add_word_size_lt_msg_align_bits_ofnat:
 
 lemmas ptr_range_off_off_mems = 
     ptr_range_add_memI [OF _ mul_word_size_lt_msg_align_bits_ofnat]
-    ptr_range_add_memI [OF _ mul_add_word_size_lt_msg_align_bits_ofnat, simplified add_assoc [symmetric]]
+    ptr_range_add_memI [OF _ mul_add_word_size_lt_msg_align_bits_ofnat, simplified add.assoc [symmetric]]
 
 lemma store_word_offs_respects_in_ipc:
   "\<lbrace>integrity_tcb_in_ipc aag X receiver epptr TRContext st and

@@ -117,7 +117,7 @@ lemma load_ct_corres:
   apply (simp add: load_cap_transfer_def loadCapTransfer_def 
                    captransfer_from_words_def captransfer_size_def 
                    capTransferDataSize_def capTransferFromWords_def
-                   msgExtraCapBits_def word_size add_ac
+                   msgExtraCapBits_def word_size add.commute add.left_commute
                    msg_max_length_def msg_max_extra_caps_def word_size_def
                    msgMaxLength_def msgMaxExtraCaps_def msgLengthBits_def 
               del: upt.simps)
@@ -377,7 +377,7 @@ lemma corres_set_extra_badge:
   apply (simp add: word_size word_size_def
                    bufferCPtrOffset_def buffer_cptr_index_def msgMaxLength_def 
                    msg_max_length_def msgLengthBits_def store_word_offs_def
-                   add_ac)
+                   add.commute add.left_commute)
   done
 
 crunch typ_at': setExtraBadge "\<lambda>s. P (typ_at' T p s)"
@@ -569,7 +569,7 @@ next
     apply (simp add: dc_def[symmetric] split del: split_if)
     apply (rule corres_guard_imp)
       apply (rule corres_if2)
-        apply (case_tac x, auto simp add: isCap_simps)[1]
+        apply (case_tac "fst x", auto simp add: isCap_simps)[1]
        apply (rule corres_split [OF _ corres_set_extra_badge])
           apply (drule conjunct1)
           apply simp
@@ -578,7 +578,7 @@ next
          apply (clarsimp simp: is_cap_simps)
         apply (simp add: split_def)
         apply (wp hoare_vcg_const_Ball_lift)
-       apply (subgoal_tac "obj_ref_of x = capEPPtr xa")
+       apply (subgoal_tac "obj_ref_of (fst x) = capEPPtr (fst y)")
         prefer 2
         apply (clarsimp simp: is_cap_simps)
        apply (simp add: split_def)
@@ -652,7 +652,7 @@ next
      apply (clarsimp simp:conj_ac split del:split_if)
      apply (intro conjI allI)
        apply (clarsimp split:if_splits)
-       apply (case_tac "cap = x",simp+)
+       apply (case_tac "cap = fst x",simp+)
       apply (clarsimp simp:masked_as_full_def is_cap_simps cap_master_cap_simps)
     apply (clarsimp split del:if_splits)
     apply (intro conjI)
@@ -675,18 +675,18 @@ next
      apply (drule(1) bspec,clarsimp)+
     apply (case_tac "capa = aa")
      apply ((clarsimp split:if_splits simp:masked_as_full_def is_cap_simps)+)[2]
-   apply (case_tac  "isEndpointCap xa \<and> capEPPtr xa = the ep \<and> (\<exists>y. ep = Some y)")
+   apply (case_tac  "isEndpointCap (fst y) \<and> capEPPtr (fst y) = the ep \<and> (\<exists>y. ep = Some y)")
     apply (clarsimp simp:conj_ac split del:split_if)
    apply (subst if_not_P)
     apply clarsimp
    apply (clarsimp simp:valid_pspace'_def cte_wp_at_ctes_of split del:if_splits)
    apply (intro conjI)
-    apply (case_tac  "cteCap cte = xa",clarsimp simp: badge_derived'_def)
+    apply (case_tac  "cteCap cte = fst y",clarsimp simp: badge_derived'_def)
     apply (clarsimp simp:maskCapRights_eq_null maskedAsFull_def
        badge_derived'_def isCap_simps
        split:split_if_asm)
   apply (clarsimp split del:if_splits)
-  apply (case_tac "xa = capability.NullCap")
+  apply (case_tac "fst y = capability.NullCap")
     apply (clarsimp simp:neq_Nil_conv split del:if_splits)+
   apply (intro allI impI conjI)
       apply (erule mp)
@@ -3423,7 +3423,6 @@ lemma receive_async_ipc_corres:
                     R'="\<lambda>rv'. invs' and tcb_at' thread and aep_at' word1 and 
                               valid_aep' rv'" 
                     in corres_split [OF _ get_aep_corres])
-      apply clarsimp
       apply (case_tac rv)
         -- "IdleAEP"
         apply (simp add: aep_relation_def)

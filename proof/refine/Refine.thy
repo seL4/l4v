@@ -88,13 +88,13 @@ lemma pointerInUserData_relation:
    apply (case_tac sz, simp_all)[1]
   apply (subgoal_tac "(p && ~~ mask (pageBitsForSize sz)) + (p && mask (pageBitsForSize sz) >> pageBits) * 2 ^ pageBits = (p && ~~ mask pageBits)")
    apply simp
-  apply (subst mult_commute)
+  apply (subst mult.commute)
   apply (subst shiftl_t2n [symmetric])
   apply (simp add: shiftr_shiftl1)
   apply (subst mask_out_add_aligned)
    apply (rule is_aligned_neg_mask)
    apply (simp add: pbfs_atleast_pageBits)
-  apply (subst add_commute)
+  apply (subst add.commute)
   apply (simp add: word_plus_and_or_coroll2)
   done
 

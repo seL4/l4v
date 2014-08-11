@@ -1360,9 +1360,9 @@ lemma get_ipc_buffer_words_helper:
       apply (rule is_aligned_after_mask)
       apply simp+
     apply (rule ipc_buffer_within_frame[where buf =obuf and buf'=buf])
-      apply (simp add:obj_at_def get_tcb_SomeD within_page_def add_assoc)+
+      apply (simp add:obj_at_def get_tcb_SomeD within_page_def add.assoc)+
   apply (rule conjI)
-    apply (subst add_assoc[symmetric])+
+    apply (subst add.assoc[symmetric])+
     apply (rule underlying_memory_storeWord)
       apply (simp_all)
       apply (rule aligned_add_aligned)+
@@ -1370,9 +1370,9 @@ lemma get_ipc_buffer_words_helper:
       apply (subst is_aligned_after_mask)
       apply simp+
     apply (rule ipc_buffer_within_frame[where buf = obuf and buf' = buf])
-      apply (simp add:obj_at_def get_tcb_SomeD within_page_def add_assoc)+
+      apply (simp add:obj_at_def get_tcb_SomeD within_page_def add.assoc)+
   apply (rule conjI)
-    apply (subst add_assoc[symmetric])+
+    apply (subst add.assoc[symmetric])+
     apply (rule underlying_memory_storeWord)
       apply (simp_all)
       apply (rule aligned_add_aligned)+
@@ -1380,8 +1380,8 @@ lemma get_ipc_buffer_words_helper:
       apply (subst is_aligned_after_mask)
       apply simp+
     apply (rule ipc_buffer_within_frame[where buf = obuf and buf' = buf])
-      apply (simp add:obj_at_def get_tcb_SomeD within_page_def add_assoc)+
-  apply (subst add_assoc[symmetric])+
+      apply (simp add:obj_at_def get_tcb_SomeD within_page_def add.assoc)+
+  apply (subst add.assoc[symmetric])+
   apply (rule underlying_memory_storeWord[where n = 0,simplified])
     apply (simp_all)
     apply (rule aligned_add_aligned)+
@@ -1389,7 +1389,7 @@ lemma get_ipc_buffer_words_helper:
     apply (subst is_aligned_after_mask)
     apply simp+
     apply (rule ipc_buffer_within_frame[where buf = obuf and buf' = buf])
-    apply ((simp add:obj_at_def get_tcb_SomeD within_page_def add_assoc)+)[7]
+    apply ((simp add:obj_at_def get_tcb_SomeD within_page_def add.assoc)+)[7]
 done
 
 lemma get_ipc_buffer_words_separate_frame:
@@ -1434,9 +1434,9 @@ lemma get_ipc_buffer_words_separate_frame:
       apply (rule is_aligned_after_mask)
       apply simp+
     apply (rule ipc_buffer_within_frame[where buf =obuf and buf'=buf])
-      apply (simp add:obj_at_def get_tcb_SomeD within_page_def add_assoc)+
+      apply (simp add:obj_at_def get_tcb_SomeD within_page_def add.assoc)+
   apply (rule conjI)
-    apply (subst add_assoc[symmetric])+
+    apply (subst add.assoc[symmetric])+
     apply (rule underlying_memory_storeWord)
       apply (simp_all)
       apply (rule aligned_add_aligned)+
@@ -1444,9 +1444,9 @@ lemma get_ipc_buffer_words_separate_frame:
       apply (subst is_aligned_after_mask)
       apply simp+
     apply (rule ipc_buffer_within_frame[where buf = obuf and buf' = buf])
-      apply (simp add:obj_at_def get_tcb_SomeD within_page_def add_assoc)+
+      apply (simp add:obj_at_def get_tcb_SomeD within_page_def add.assoc)+
   apply (rule conjI)
-    apply (subst add_assoc[symmetric])+
+    apply (subst add.assoc[symmetric])+
     apply (rule underlying_memory_storeWord)
       apply (simp_all)
       apply (rule aligned_add_aligned)+
@@ -1454,8 +1454,8 @@ lemma get_ipc_buffer_words_separate_frame:
       apply (subst is_aligned_after_mask)
       apply simp+
     apply (rule ipc_buffer_within_frame[where buf = obuf and buf' = buf])
-      apply (simp add:obj_at_def get_tcb_SomeD within_page_def add_assoc)+
-  apply (subst add_assoc[symmetric])+
+      apply (simp add:obj_at_def get_tcb_SomeD within_page_def add.assoc)+
+  apply (subst add.assoc[symmetric])+
   apply (rule underlying_memory_storeWord[where n = 0,simplified])
     apply (simp_all)
     apply (rule aligned_add_aligned)+
@@ -1463,7 +1463,7 @@ lemma get_ipc_buffer_words_separate_frame:
     apply (subst is_aligned_after_mask)
     apply simp+
     apply (rule ipc_buffer_within_frame[where buf = obuf and buf' = buf])
-    apply ((simp add:obj_at_def get_tcb_SomeD within_page_def add_assoc)+)[7]
+    apply ((simp add:obj_at_def get_tcb_SomeD within_page_def add.assoc)+)[7]
 done
 
 lemma mask_inj_if:
@@ -1509,7 +1509,7 @@ lemma within_page_ipc_buf:
   apply (clarsimp split: cap.split_asm arch_cap.split_asm)
   apply (frule valid_tcb_objs, erule get_tcb_rev)
   apply (clarsimp simp: valid_tcb_def valid_ipc_buffer_cap_def)
-  apply (subst add_assoc)
+  apply (subst add.assoc)
   apply (erule is_aligned_add_helper[THEN conjunct2])
   apply (rule iffD1[OF le_mask_iff_lt_2n[where n = "pageBitsForSize sz"],THEN iffD1])
     apply (simp add:word_size)

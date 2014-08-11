@@ -58,7 +58,7 @@ lemma cnode_cap_bits_range:
   apply (drule invs_psp_aligned)
   apply (unfold pspace_aligned_def)
   apply (frule domI, drule (1) bspec)
-  apply (clarsimp simp: obj_bits.simps ex_with_length add_commute 
+  apply (clarsimp simp: obj_bits.simps ex_with_length add.commute 
                         cte_level_bits_def 
                   split: split_if_asm)
   apply (clarsimp simp: well_formed_cnode_n_def length_set_helper)
@@ -280,7 +280,7 @@ lemma inj_on_nat_to_cref:
   "bits < 32 \<Longrightarrow> inj_on (nat_to_cref bits) {..< 2 ^ bits}"
   apply (rule inj_onI)
   apply (drule arg_cong[where f="\<lambda>x. replicate (32 - bits) False @ x"]) 
-  apply (subst(asm) word_bl.Abs_inject[where 'a=32, standard, symmetric])
+  apply (subst(asm) word_bl.Abs_inject[where 'a=32, symmetric])
     apply (simp add: nat_to_cref_def word_bits_def)
    apply (simp add: nat_to_cref_def word_bits_def)
   apply (simp add: of_bl_rep_False of_bl_nat_to_cref)
@@ -331,7 +331,7 @@ lemma alignUp_def3:
 
 lemma  alignUp_plus:
   "is_aligned w us \<Longrightarrow> alignUp (w + a) us  = w + alignUp a us"
-  apply (clarsimp simp:alignUp_def2 add_assoc)
+  apply (clarsimp simp:alignUp_def2 add.assoc)
   apply (simp add: mask_out_add_aligned field_simps)
   done
 
@@ -382,13 +382,14 @@ lemma alignUp_distance:
 
 lemma is_aligned_diff_neg_mask:
   "is_aligned p sz \<Longrightarrow> (p - q && ~~ mask sz) = (p - ((alignUp q sz) && ~~ mask sz))"
-  apply (clarsimp simp:word_and_le2 diff_minus)
+  apply (clarsimp simp only:word_and_le2 diff_conv_add_uminus)
   apply (subst mask_out_add_aligned[symmetric])
    apply simp+
   apply (rule sum_to_zero)
-  apply (subst add_commute)
+  apply (subst add.commute)
   apply (subst  mask_out_add_aligned)
-    apply (simp add:is_aligned_neg_mask diff_minus[symmetric])+
+   apply (simp add:is_aligned_neg_mask)
+  apply simp
   apply (subst and_not_mask[where w = "(alignUp q sz && ~~ mask sz) - q "])
   apply (subst le_mask_iff[THEN iffD1])
    apply (simp add:is_aligned_neg_mask_eq)
@@ -447,8 +448,8 @@ proof -
   apply (frule range_cover_le[where n=x])
    apply simp
   apply (subst word_plus_and_or_coroll2[symmetric,where w = "mask sz"])
-  apply (subst add_commute)
-  apply (subst add_assoc)
+  apply (subst add.commute)
+  apply (subst add.assoc)
   apply (subst unat_plus_simple[THEN iffD1])
    apply (rule is_aligned_no_wrap')
    apply (rule is_aligned_neg_mask[OF le_refl])
@@ -456,7 +457,7 @@ proof -
    apply (simp add:word_less_nat_alt)
    apply (rule le_less_trans[OF unat_plus_gt])
    apply (erule range_cover.range_cover_compare[OF cover])
-  apply (subst add_assoc)
+  apply (subst add.assoc)
   apply (rule le_trans[OF _ l])
   apply simp
   apply (simp add: n)
@@ -546,7 +547,7 @@ lemma range_cover_stuff:
      apply (erule le_trans[OF add_le_mono])
       apply (rule le_refl)
      apply (clarsimp simp:power_sub field_simps td_gal[symmetric])
-     apply (subst (2) mult_commute) 
+     apply (subst (2) mult.commute) 
      apply (subst unat_shiftl_absorb)
       apply (rule order_trans[OF le_shiftr])
        apply (rule word_and_le1)
@@ -557,7 +558,7 @@ lemma range_cover_stuff:
      apply (simp add:shiftl_t2n[symmetric] field_simps shiftr_shiftl1)
      apply (subst is_aligned_neg_mask_eq)
       apply (rule is_aligned_andI1,simp)
-     apply (subst mult_commute)
+     apply (subst mult.commute)
      apply (subst unat_shiftl_absorb[where p = "sz - bits"])
         apply (rule order_trans[OF le_shiftr])
          apply (rule space)
@@ -665,7 +666,6 @@ lemma cte_wp_at_caps_descendants_range_inI:
   apply (erule word_of_nat_le)
   done
 
-
 lemma nasty_range:
   fixes word :: "'a :: len word"
   assumes szb: "bz < len_of TYPE('a)"
@@ -688,9 +688,10 @@ proof -
    apply (clarsimp simp:not_le dest!:meta_spec)
    by auto
  have ptr_word: "(ptr - word >> sz) * 2 ^ sz = (ptr &&~~ mask sz) - word"
-  apply (subst mult_commute)
-  apply (clarsimp simp:shiftl_t2n[symmetric] shiftr_shiftl1 word_and_le2 diff_minus)
-  apply (subst add_commute[where a = "ptr && ~~ mask sz"])
+  apply (subst mult.commute)
+  apply (clarsimp simp:shiftl_t2n[symmetric] shiftr_shiftl1 word_and_le2)
+  apply (simp only: diff_conv_add_uminus)
+  apply (subst add.commute[where a = "ptr && ~~ mask sz"])
   apply (subst mask_out_add_aligned)
   defer
   apply (simp add:field_simps)
@@ -707,14 +708,14 @@ proof -
      apply (simp add:offset)
    apply simp
   apply (rule le_plus)
-   apply (subst mult_commute)
+   apply (subst mult.commute)
    apply (simp add: shiftl_t2n[symmetric] shiftr_shiftl1 word_and_le2)
   apply clarsimp
  apply (simp add:ptr_word p_assoc_help)
  apply (rule order_trans[OF _ word_plus_mono_right])
    apply (rule order_eq_refl)
    apply (subst word_plus_and_or_coroll2[where x = "ptr",symmetric])
-   apply (subst add_commute)
+   apply (subst add.commute)
    apply simp
   apply (rule order_trans[OF word_and_le1])
   apply (clarsimp simp:mask_def)
@@ -853,7 +854,7 @@ lemma inj_16:
   "\<lbrakk> of_nat x * 16 = of_nat y * (16 :: word32);
      x < bound; y < bound; bound \<le> 2 ^ (word_bits - 4) \<rbrakk>
      \<Longrightarrow> of_nat x = (of_nat y :: word32)"
-  apply (fold shiftl_t2n [where n=4, simplified, simplified mult_ac])
+  apply (fold shiftl_t2n [where n=4, simplified, simplified mult.commute])
   apply (simp only: word_bl.Rep_inject[symmetric]
                     bl_shiftl)
   apply (drule(1) order_less_le_trans)+
@@ -1577,22 +1578,22 @@ lemma two_power_increasing_less_1:
 
 lemma word_sub_mono3:
   "\<lbrakk> x + y \<le> x + z; (x :: ('a :: len) word) \<le> x + y; x \<le> x + z \<rbrakk> \<Longrightarrow> y \<le> z"
-  apply (subst(asm) add_commute)
-  apply (subst(asm) add_commute,
+  apply (subst(asm) add.commute)
+  apply (subst(asm) add.commute,
          erule word_sub_mono2)
     apply simp
-   apply (subst add_commute, subst olen_add_eqv, simp add: add_commute)
-  apply (subst add_commute, subst olen_add_eqv, simp add: add_commute)
+   apply (subst add.commute, subst olen_add_eqv, simp add: add.commute)
+  apply (subst add.commute, subst olen_add_eqv, simp add: add.commute)
   done
 
 
 lemma word_sub_mono4:
   "\<lbrakk> y + x \<le> z + x; (y :: ('a :: len) word) \<le> y + x; z \<le> z + x \<rbrakk> \<Longrightarrow> y \<le> z"
-  apply (subst(asm) add_commute)
-  apply (subst(asm) add_commute,
+  apply (subst(asm) add.commute)
+  apply (subst(asm) add.commute,
          erule word_sub_mono2)
     apply simp
-   apply (simp add: add_commute)+
+   apply (simp add: add.commute)+
   done
 
 
@@ -1636,7 +1637,7 @@ lemma ptr_add_distinct_helper:
      bound \<le> 2 ^ (word_bits - n) \<rbrakk>
      \<Longrightarrow> P"
   apply (clarsimp simp: ptr_add_def word_unat_power[symmetric]
-                        shiftl_t2n[symmetric, simplified mult_ac])
+                        shiftl_t2n[symmetric, simplified mult.commute])
   apply (erule(5) of_nat_shift_distinct_helper32)
   done
 
@@ -1648,7 +1649,7 @@ lemma ex_cte_cap_protects:
       \<Longrightarrow> fst p \<notin> S"
   apply (drule ex_cte_cap_to_obj_ref_disj, erule disjE)
    apply clarsimp
-   apply (erule(1) untyped_children_in_mdbEE[where P="\<lambda>c. fst p \<in> obj_refs c", standard])
+   apply (erule(1) untyped_children_in_mdbEE[where P="\<lambda>c. fst p \<in> obj_refs c" for c])
       apply simp
      apply assumption
     apply (rule notemptyI[where x="fst p"])
@@ -1700,7 +1701,7 @@ lemma range_cover_subset':
    apply (rule is_aligned_no_wrap'[OF is_aligned_add_multI[OF _ le_refl refl ]])
    apply (fastforce simp:range_cover_def)+
   apply (clarsimp)
-  apply (subst (asm) add_assoc)
+  apply (subst (asm) add.assoc)
   apply (subst (asm) distrib_right[where b = "1::'a::len word",simplified,symmetric])
   apply simp
   done
@@ -1724,15 +1725,15 @@ lemma retype_region_ranges':
     apply simp
   apply (case_tac tp)
       apply (simp_all add:cap_range_def obj_bits_api_def ptr_add_def)+
-      apply (subst add_commute[where a = "0x1FF"])
+      apply (subst add.commute[where a = "0x1FF"])
       apply (rule is_aligned_no_wrap'[OF aligned_add_aligned[OF _ _ le_refl]])
        apply (fastforce simp:range_cover_def)
        apply (simp add:word_bits_def is_aligned_mult_triv2[where n = 9,simplified])+
-     apply (subst add_commute[where a = "0xF"])
+     apply (subst add.commute[where a = "0xF"])
      apply (rule is_aligned_no_wrap'[OF aligned_add_aligned[OF _ _ le_refl]])
       apply (fastforce simp:range_cover_def)
       apply (simp add:word_bits_def is_aligned_mult_triv2[where n = 4,simplified])+
-    apply (subst add_commute[where a = "0xF"])
+    apply (subst add.commute[where a = "0xF"])
     apply (rule is_aligned_no_wrap'[OF aligned_add_aligned[OF _ _ le_refl]])
      apply (fastforce simp:range_cover_def)
      apply (simp add:word_bits_def is_aligned_mult_triv2[where n = 4,simplified])+
@@ -1808,7 +1809,7 @@ lemma retype_region_distinct_sets:
     apply (case_tac aobject_type)
           apply (simp add:ptr_add_def aobj_ref_def arch_default_cap_def)+
    apply (clarsimp simp: ptr_add_def word_unat_power[symmetric]
-                      shiftl_t2n[simplified mult_ac, symmetric])
+                      shiftl_t2n[simplified mult.commute, symmetric])
    apply (erule(2) of_nat_shift_distinct_helper[where 'a=32 and n = "obj_bits_api tp us"])
      apply simp
     apply (simp add:range_cover_def)
@@ -1816,10 +1817,10 @@ lemma retype_region_distinct_sets:
   apply (clarsimp simp: add_diff_eq[symmetric] 
                   simp del: Int_atLeastAtMost 
                   dest!: less_two_pow_divD)
-  apply (simp add: obj_bits_api_def ptr_add_def shiftl_t2n[simplified mult_ac, symmetric] del: Int_atLeastAtMost)
+  apply (simp add: obj_bits_api_def ptr_add_def shiftl_t2n[simplified mult.commute, symmetric] del: Int_atLeastAtMost)
   apply (rule aligned_neq_into_no_overlap)
     apply simp
-   apply (simp_all add:range_cover_def shiftl_t2n mult_ac)
+   apply (simp_all add:range_cover_def shiftl_t2n mult.commute)
    apply (rule is_aligned_add_multI[OF _ le_refl refl])
    apply (simp add:range_cover_def)+
   apply (rule is_aligned_add_multI[OF _ le_refl refl])
@@ -2313,7 +2314,7 @@ lemma caps_of_state_no_overlapD:
   apply (drule(1) IntI)
   unfolding obj_range_def
   apply (drule notemptyI)+
-  apply (simp add: Int_ac p_assoc_help add_commute
+  apply (simp add: Int_ac p_assoc_help add.commute
          del:atLeastAtMost_iff atLeastatMost_subset_iff 
          atLeastLessThan_iff Int_atLeastAtMost)
   done
@@ -2495,9 +2496,9 @@ lemma range_cover_idx_compare:
    \<Longrightarrow> (ptr && ~~ mask sz) + of_nat idx \<le> ptr + (of_nat n << sbit)"
   apply (subst not_less[symmetric])
   apply (subst word_plus_and_or_coroll2[symmetric,where w = "mask sz" and t = ptr])
-  apply (subst add_commute)
+  apply (subst add.commute)
   apply (simp add:not_less)
-  apply (subst add_assoc)
+  apply (subst add.assoc)
   apply (rule word_add_le_mono2)
     apply (rule order_trans[OF word_of_nat_le])
     apply simp
@@ -2506,9 +2507,9 @@ lemma range_cover_idx_compare:
    apply (erule range_cover.range_cover_base_le)
   apply (subst unat_add_lem[THEN iffD1,symmetric])
    apply (frule range_cover.unat_of_nat_shift[OF _ le_refl le_refl])
-   apply (simp add:shiftl_t2n field_simps del:add_commute add_assoc)
+   apply (simp add:shiftl_t2n field_simps del:add.commute add.assoc)
    apply (rule le_less_trans)
-    apply (subst add_commute)
+    apply (subst add.commute)
     apply (erule range_cover.range_cover_compare_bound)
    apply (simp add:range_cover_def)
   apply (rule less_diff_conv[THEN iffD1])
@@ -2516,7 +2517,7 @@ lemma range_cover_idx_compare:
    apply (simp add:shiftl_t2n field_simps)
   apply (subst le_diff_conv2)
    apply (rule less_imp_le[OF unat_lt2p])
-  apply (subst add_commute)
+  apply (subst add.commute)
   apply (subst unat_power_lower[where 'a='a, symmetric])
    apply (simp add:range_cover_def)
   apply (rule is_aligned_no_wrap_le[OF is_aligned_neg_mask[OF le_refl]])
@@ -2790,7 +2791,7 @@ lemma valid_untyped_cap_inc:
    apply (simp add: word_less_nat_alt
                     unat_power_lower[where 'a=32, folded word_bits_def])
   apply (simp add:range_cover_unat range_cover.unat_of_nat_shift shiftl_t2n field_simps)
-  apply (subst add_commute)
+  apply (subst add.commute)
   apply (simp add: range_cover.range_cover_compare_bound)
   done
 
@@ -2955,7 +2956,7 @@ lemma invoke_untyped_st_tcb_at:
       apply simp
      apply simp
     apply (clarsimp simp:cte_wp_at_caps_of_state range_cover.unat_of_nat_n_shift)
-    apply (subst mult_commute)
+    apply (subst mult.commute)
     apply (rule nat_le_power_trans[OF range_cover.range_cover_n_le(2)])
      apply assumption
     apply (erule range_cover.sz(2))
@@ -3536,8 +3537,8 @@ lemma retype_region_refs_distinct[wp]:
   apply (rule distinct_prop_prefixE [OF _ map_snd_zip_prefix [unfolded less_eq_list_def]])
   apply (clarsimp simp: retype_addrs_def distinct_prop_map
                         word_unat_power[symmetric] power_sub[symmetric]
-                        power_add[symmetric] mult_ac
-          | rule conjI distinct_prop_distinct [where xs="upt a b", standard]
+                        power_add[symmetric] mult.commute
+          | rule conjI distinct_prop_distinct [where xs="upt a b" for a b]
                  set_eqI diff_le_mono
           | erule(3) ptr_add_distinct_helper ptr_add_distinct_helper [OF _ not_sym]
           | drule subsetD [OF obj_refs_default_cap]
@@ -3949,7 +3950,7 @@ lemma invoke_untyp_invs':
        apply (case_tac slots)
         apply clarsimp
        apply clarsimp
-       apply (subst add_commute)
+       apply (subst add.commute)
        apply (subst word_le_make_less[symmetric])
        apply (rule less_imp_neq)
        apply (simp add:minus_one_norm)
@@ -4036,9 +4037,9 @@ lemma invoke_untyp_invs':
                        (unat (ptr + (of_nat (length slots) << obj_bits_api tp us) - (ptr && ~~ mask sz))))
                     \<subseteq> usable_untyped_range (cap.UntypedCap (ptr && ~~ mask sz) sz idx)"
       apply (simp_all add:blah field_simps)
-      apply (clarsimp simp:shiftl_t2n  add_assoc[symmetric] neg_mask_add_mask )
+      apply (clarsimp simp:shiftl_t2n  add.assoc[symmetric] neg_mask_add_mask )
       apply (simp add:field_simps)
-      apply (subst add_commute)
+      apply (subst add.commute)
       apply (erule order_trans[OF idx_compare])
       apply (simp add:shiftl_t2n field_simps)+
       done
@@ -4148,9 +4149,9 @@ lemma invoke_untyp_invs':
                    retype_region_ex_cte_cap_to [where sz = sz] 
                    retype_region_obj_ref_range [where sz = sz]
                    hoare_vcg_all_lift
-                     [of _ _ "%a _ p. \<forall>b. ~ cte_wp_at P (a,b) p", standard]
+                     [of _ _ "%a _ p. \<forall>b. ~ cte_wp_at P (a,b) p" for P]
                    hoare_vcg_all_lift
-                     [of _ _ "%b _ p. ~ cte_wp_at P (a,b) p", standard]
+                     [of _ _ "%b _ p. ~ cte_wp_at P (a,b) p" for P a]
                    retype_region_not_cte_wp_at [where sz = sz]
                    init_arch_objects_invs_from_restricted 
                    retype_ret_valid_caps [where sz = sz]
@@ -4164,7 +4165,7 @@ lemma invoke_untyp_invs':
                    create_caps_invs
                    retype_region_descendants_range_ret[where sz = sz]
                    retype_region_obj_at_other2
-                     [where P="is_cap_table n", standard]
+                     [where P="is_cap_table n" for n]
                    distinct_tuple_helper)+
          apply ((wp hoare_vcg_const_imp_lift hoare_drop_imp
                     retype_region_invs_extras[where sz = sz]
@@ -4197,8 +4198,8 @@ lemma invoke_untyp_invs':
             apply (erule subset_trans[OF range_cover_subset'])
              apply (simp add:vslot)
             apply (clarsimp simp:blah word_and_le2)
-           apply (clarsimp simp: blah field_simps add_assoc[symmetric]
-                                 add_commute shiftl_t2n
+           apply (clarsimp simp: blah field_simps add.assoc[symmetric]
+                                 add.commute shiftl_t2n
                           dest!: idx_compare'')
            apply simp+
           apply (simp add:Int_ac)
@@ -4223,9 +4224,9 @@ lemma invoke_untyp_invs':
                   retype_region_ex_cte_cap_to [where sz = sz] 
                   retype_region_obj_ref_range [where sz = sz]
                   hoare_vcg_all_lift
-                    [of _ _ "%a _ p. \<forall>b. ~ cte_wp_at P (a,b) p", standard]
+                    [of _ _ "%a _ p. \<forall>b. ~ cte_wp_at P (a,b) p" for P]
                   hoare_vcg_all_lift
-                    [of _ _ "%b _ p. ~ cte_wp_at P (a,b) p", standard]
+                    [of _ _ "%b _ p. ~ cte_wp_at P (a,b) p" for P a]
                   retype_region_not_cte_wp_at [where sz = sz]
                   init_arch_objects_invs_from_restricted 
                   retype_ret_valid_caps [where sz = sz]
@@ -4239,7 +4240,7 @@ lemma invoke_untyp_invs':
                   create_caps_invs
                   retype_region_descendants_range_ret[where sz = sz]
                   retype_region_obj_at_other2
-                    [where P="is_cap_table n", standard]
+                    [where P="is_cap_table n" for n]
                   distinct_tuple_helper)+
          apply ((wp hoare_vcg_const_imp_lift hoare_drop_imp
                     retype_region_invs_extras[where sz = sz]
@@ -4289,7 +4290,7 @@ lemma invoke_untyp_invs':
               apply (simp add:invs_psp_aligned invs_valid_objs)+
             apply (rule caps_no_overlap_detype[OF caps_no_overlap])
            apply (frule is_aligned_neg_mask_eq'[THEN iffD2])
-           apply (clarsimp simp:blah field_simps add_commute shiftl_t2n is_aligned_mask)
+           apply (clarsimp simp:blah field_simps add.commute shiftl_t2n is_aligned_mask)
            apply (drule idx_compare'''[rotated])
             apply (clarsimp simp:is_aligned_mask)
            apply (simp add:not_less[symmetric])

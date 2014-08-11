@@ -1933,7 +1933,7 @@ lemma get_page_info_is_arm_globals_frame:
    apply blast
   apply(drule_tac y="addrFromPPtr x" and f=ptrFromPAddr in arg_cong)
   apply(simp only: ptrFromPAddr_add_helper)
-  apply(simp add: add_commute)
+  apply(simp add: add.commute)
   done
   
   

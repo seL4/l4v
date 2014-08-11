@@ -714,6 +714,7 @@ lemma decodeUntyped_wf[wp]:
      decodeUntypedInvocation label args slot
        (UntypedCap w sz idx) cs
    \<lbrace>valid_untyped_inv'\<rbrace>,-"
+  using [[ hypsubst_thin = true ]]
   apply (simp add: decodeUntypedInvocation_def unlessE_def[symmetric]
                    unlessE_whenE rangeCheck_def whenE_def[symmetric]
                    mapM_locate_eq returnOk_liftE[symmetric] Let_def
@@ -780,7 +781,7 @@ lemma decodeUntyped_wf[wp]:
    apply (subst Suc_unat_diff_1)
     apply (rule word_le_plus_either,simp)
     apply (subst olen_add_eqv)
-    apply (subst add_commute)
+    apply (subst add.commute)
     apply (erule(1) plus_minus_no_overflow_ab)
    apply (drule(1) le_plus)
    apply (rule unat_le_helper)
@@ -797,11 +798,11 @@ lemma decodeUntyped_wf[wp]:
    apply (subst Suc_unat_diff_1)
     apply (rule word_le_plus_either,simp)
     apply (subst olen_add_eqv)
-    apply (subst add_commute)
+    apply (subst add.commute)
     apply (erule(1) plus_minus_no_overflow_ab)
     apply (rule unat_plus_simple[THEN iffD1])
     apply (subst olen_add_eqv)
-    apply (subst add_commute)
+    apply (subst add.commute)
     apply (erule(1) plus_minus_no_overflow_ab)
   apply clarsimp
   apply (subgoal_tac "(\<forall>x. b \<le> x \<and> x \<le> b + e - 1 \<longrightarrow>
@@ -818,7 +819,7 @@ lemma decodeUntyped_wf[wp]:
     apply (rule word_l_diffs,simp+)
     apply (rule word_le_plus_either,simp)
     apply (subst olen_add_eqv)
-    apply (subst add_commute)
+    apply (subst add.commute)
     apply (erule(1) plus_minus_no_overflow_ab)
    apply (clarsimp simp:ex_cte_cap_wp_to'_def)
    apply (rule_tac x = nodeSlot in exI)
@@ -832,7 +833,7 @@ lemma decodeUntyped_wf[wp]:
    apply (rule word_l_diffs,simp+)
    apply (rule word_le_plus_either,simp)
    apply (subst olen_add_eqv)
-   apply (subst add_commute)
+   apply (subst add.commute)
    apply (erule(1) plus_minus_no_overflow_ab)
   apply (intro conjI)
    apply (clarsimp simp:of_nat_shiftR fromIntegral_def toInteger_nat
@@ -4580,7 +4581,7 @@ lemma inv_untyped_corres':
        apply -
        apply (case_tac slots)
        apply clarsimp+
-       apply (subst add_commute)
+       apply (subst add.commute)
        apply (subst word_le_make_less[symmetric])
        apply (rule less_imp_neq)
        apply (simp add:word_bits_def minus_one_norm)
@@ -4823,13 +4824,13 @@ lemma inv_untyped_corres':
                     \<subseteq> usable_untyped_range (cap.UntypedCap (ptr && ~~ mask sz) sz idx)"
       apply (simp_all add:blah getFreeIndex_def field_simps nidx)
       apply (clarsimp)
-       apply (subst add_commute)
+       apply (subst add.commute)
        apply (erule order_trans[OF idx_compare])
         apply simp
        apply (subst word_plus_and_or_coroll2[symmetric,where w = "mask sz"])
        apply (simp add:shiftl_t2n field_simps)
       apply (clarsimp simp:shiftl_t2n nidx field_simps)
-       apply (subst add_commute)
+       apply (subst add.commute)
        apply (erule order_trans[OF idx_compare])
         apply simp
        apply (simp add:shiftl_t2n field_simps)
@@ -4900,6 +4901,7 @@ lemma inv_untyped_corres':
            (invoke_untyped (Invocations_A.untyped_invocation.Retype cref (ptr && ~~ mask sz) ptr (APIType_map2 (Inr ao')) us slots))
            (invokeUntyped (Invocations_H.untyped_invocation.Retype (cte_map cref) (ptr && ~~ mask sz) ptr ao' us (map cte_map slots)))"
 
+  using [[ hypsubst_thin = true ]]
   apply (case_tac "ptr && ~~ mask sz \<noteq> ptr")
    using misc
    apply (clarsimp simp:invokeUntyped_def getSlotCap_def bind_assoc)
@@ -4949,6 +4951,8 @@ lemma inv_untyped_corres':
                  createNewCaps_caps_overlap_reserved_ret'[where sz = sz])
              apply clarsimp
              apply (erule cte_wp_at_weakenE')
+             apply (case_tac c, simp)
+             apply hypsubst
              apply (case_tac c,clarsimp simp:isCap_simps)
             apply (clarsimp simp: getObjectSize_def_eq
                getFreeIndex_def is_cap_simps bits_of_def shiftL_nat shiftl_t2n)
@@ -4958,6 +4962,7 @@ lemma inv_untyped_corres':
             apply (clarsimp simp:conj_ac bits_of_def region_in_kernel_window_def)
             apply (wp set_cap_free_index_invs_spec set_cap_caps_no_overlap set_cap_no_overlap)
             apply (rule hoare_vcg_conj_lift)
+stop
              apply (rule hoare_strengthen_post[OF set_cap_sets])
              apply (clarsimp simp:cte_wp_at_caps_of_state)
             apply (wp set_cap_no_overlap hoare_vcg_ball_lift
@@ -5001,11 +5006,11 @@ lemma inv_untyped_corres':
             apply (clarsimp dest!:slots_invD)
            apply (clarsimp simp:field_simps range_cover_unat[OF cover]
              range_cover.unat_of_nat_shift[OF cover le_refl le_refl])+
-          apply (subst add_commute)
+          apply (subst add.commute)
           apply (rule range_cover.range_cover_compare_bound[OF cover])
          apply (rule subset_trans[OF subset_stuff])
          apply (clarsimp simp:blah word_and_le2)
-        apply (clarsimp simp:usable_untyped_range.simps blah add_assoc[symmetric] add_commute
+        apply (clarsimp simp:usable_untyped_range.simps blah add.assoc[symmetric] add.commute
                         dest!:idx_compare'')
         apply (metis idx_compare'' nat_mult_commute nidx word_arith_nat_mult word_not_le)
        apply (clarsimp simp:invs_pspace_aligned' invs_pspace_distinct' 
@@ -5015,13 +5020,13 @@ lemma inv_untyped_corres':
               apply (clarsimp simp:cte_wp_at_ctes_of isCap_simps dest!:usable_range_subset(1))+
             apply (clarsimp simp:getFreeIndex_def field_simps range_cover_unat[OF cover]
               range_cover.unat_of_nat_shift[OF cover le_refl le_refl])+
-           apply (subst add_commute)
+           apply (subst add.commute)
            apply (rule range_cover.range_cover_compare_bound[OF cover])
           apply (simp add:getFreeIndex_def field_simps)
           apply (rule aligned_add_aligned[OF aligned_after_mask])
             apply (erule range_cover.aligned)
            apply (rule is_aligned_weaken)
-            apply (subst mult_commute)
+            apply (subst mult.commute)
             apply (rule is_aligned_shiftl_self[unfolded shiftl_t2n])
            apply (simp)
           apply (simp add: range_cover_def)
@@ -5030,8 +5035,8 @@ lemma inv_untyped_corres':
         apply (rule subset_trans[OF subset_stuff])
         apply (clarsimp simp:blah word_and_le2)
        apply simp
-       apply (clarsimp simp:usable_untyped_range.simps add_assoc[symmetric] getFreeIndex_def
-           blah add_commute dest!:idx_compare'')
+       apply (clarsimp simp:usable_untyped_range.simps add.assoc[symmetric] getFreeIndex_def
+           blah add.commute dest!:idx_compare'')
        apply simp
       apply (clarsimp simp:invokeUntyped_def getSlotCap_def bind_assoc)
       apply (case_tac ui')
@@ -5164,7 +5169,7 @@ lemma inv_untyped_corres':
                 apply (clarsimp dest!:slots_invD)
                apply (clarsimp simp:field_simps
                 range_cover.unat_of_nat_shift[OF cover le_refl le_refl])
-               apply (subst mult_commute)
+               apply (subst mult.commute)
                apply (rule nat_le_power_trans)
                 apply (rule range_cover.range_cover_n_le(2)[OF cover])
                apply (erule range_cover.sz)
@@ -5182,7 +5187,7 @@ lemma inv_untyped_corres':
         apply (rule valid_etcbs_detype[OF valid_sched_etcbs[OF misc(12)]])
        apply (clarsimp,drule slots_invD,simp)
        apply (clarsimp simp:field_simps range_cover.unat_of_nat_shift[OF cover le_refl le_refl])
-       apply (subst mult_commute)
+       apply (subst mult.commute)
        apply (rule nat_le_power_trans)
         apply (rule range_cover.range_cover_n_le(2)[OF cover])
        apply (erule range_cover.sz)
@@ -5196,12 +5201,12 @@ lemma inv_untyped_corres':
             apply simp
            apply (simp add:getFreeIndex_def)+
           apply (clarsimp simp:range_cover.unat_of_nat_shift field_simps)
-          apply (subst mult_commute)
+          apply (subst mult.commute)
           apply (rule nat_le_power_trans[OF range_cover.range_cover_n_le(2)[OF cover]])
           apply (rule range_cover.sz(2)[OF cover])
          apply (simp add:getFreeIndex_def)
          apply (rule is_aligned_weaken)
-          apply (subst mult_commute)
+          apply (subst mult.commute)
           apply (rule is_aligned_shiftl_self[unfolded shiftl_t2n])
          apply simp
         apply (rule subset_trans[OF subset_stuff],simp)
@@ -5280,7 +5285,7 @@ proof -
     apply -
     apply (rule aligned_add_aligned[OF aligned_after_mask])
        apply (rule range_cover.aligned[OF cover])
-      apply (subst mult_commute)
+      apply (subst mult.commute)
       apply (rule is_aligned_weaken)
        apply (rule is_aligned_shiftl_self[unfolded shiftl_t2n])
       apply (case_tac tp,(clarsimp simp:APIType_capBits_def objBits_simps
@@ -5859,7 +5864,7 @@ lemma invokeUntyped_invs'':
        apply -
        apply (case_tac slots)
         apply clarsimp+
-       apply (subst add_commute)
+       apply (subst add.commute)
        apply (subst word_le_make_less[symmetric])
        apply (rule less_imp_neq)
        apply (simp add:word_bits_def minus_one_norm)
@@ -5934,16 +5939,16 @@ lemma invokeUntyped_invs'':
                     \<subseteq> usable_untyped_range (cap.UntypedCap (ptr && ~~ mask sz) sz idx)"
       apply (simp_all add:blah getFreeIndex_def field_simps nidx)
       apply (clarsimp)
-       apply (subst add_commute)
+       apply (subst add.commute)
        apply (erule order_trans[OF idx_compare])
         apply simp
        apply (subst word_plus_and_or_coroll2[symmetric,where w = "mask sz"])
        apply (simp add:shiftl_t2n field_simps)
       apply (clarsimp simp:shiftl_t2n nidx field_simps)
-       apply (subst add_commute)
+       apply (subst add.commute)
        apply (erule order_trans[OF idx_compare])
         apply simp
-       apply (clarsimp simp:shiftl_t2n add_assoc[symmetric]
+       apply (clarsimp simp:shiftl_t2n add.assoc[symmetric]
          word_plus_and_or_coroll2[where w = "mask sz"] field_simps)
       done
 
@@ -6117,7 +6122,7 @@ lemma invokeUntyped_invs'':
               apply fastforce+
          apply (clarsimp dest!: slots_invD)
         apply (simp add:range_cover.unat_of_nat_shift[OF cover] size_eq field_simps)+
-       apply (subst mult_commute)
+       apply (subst mult.commute)
        apply (rule nat_le_power_trans)
         apply (rule range_cover.range_cover_n_le[OF cover,unfolded size_eq])
        apply (rule range_cover.sz[OF cover,unfolded size_eq])

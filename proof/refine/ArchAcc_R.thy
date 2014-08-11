@@ -255,7 +255,7 @@ lemma aligned_distinct_relation_pde_atI'[elim]:
   apply (simp add: shiftr_shiftl1)
   apply (subst(asm) is_aligned_neg_mask_eq[where n=2])
    apply (erule is_aligned_andI1)
-  apply (subst(asm) add_commute,
+  apply (subst(asm) add.commute,
          subst(asm) word_plus_and_or_coroll2)
   apply (clarsimp simp: pde_relation_def)
   apply (drule(2) aligned_distinct_pde_atI')
@@ -536,7 +536,7 @@ lemma aligned_distinct_relation_pte_atI'[elim]:
   apply (simp add: shiftr_shiftl1)
   apply (subst(asm) is_aligned_neg_mask_eq[where n=2])
    apply (erule is_aligned_andI1)
-  apply (subst(asm) add_commute,
+  apply (subst(asm) add.commute,
          subst(asm) word_plus_and_or_coroll2)
   apply (clarsimp simp: pte_relation_def)
   apply (drule(2) aligned_distinct_pte_atI')
@@ -1574,10 +1574,10 @@ lemma getASID_wp:
 lemma pde_at_aligned_vptr':
   "\<lbrakk>x \<in> set [0 , 4 .e. 0x3C]; page_directory_at' pd s; is_aligned vptr 24 \<rbrakk> \<Longrightarrow> 
   pde_at' (x + lookup_pd_slot pd vptr) s"
-  apply (simp add: lookup_pd_slot_def Let_def page_directory_at'_def add_ac)
+  apply (simp add: lookup_pd_slot_def Let_def page_directory_at'_def add.commute add.left_commute)
   apply (clarsimp simp: upto_enum_step_def)
   apply (clarsimp simp: shiftl_t2n)
-  apply (subst mult_commute)
+  apply (subst mult.commute)
   apply (subst ring_distribs [symmetric])
   apply (erule allE)
   apply (erule impE)

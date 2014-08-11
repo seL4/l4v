@@ -398,13 +398,10 @@ lemma empty_slot_invs:
    apply (clarsimp simp: mdb_cte_at_def cte_wp_at_caps_of_state)
    apply (cases sl)
    apply (rule conjI, clarsimp)
-    apply (rule conjI)
-     apply clarsimp
-     apply (subgoal_tac "cdt s \<Turnstile> (ab,bb) \<rightarrow> (ab,bb)")
-      apply (simp add: no_mloop_def)
-     apply (rule r_into_trancl)
-     apply (simp add: cdt_parent_of_def)
-    apply fastforce
+    apply (subgoal_tac "cdt s \<Turnstile> (ab,bb) \<rightarrow> (ab,bb)")
+     apply (simp add: no_mloop_def)
+    apply (rule r_into_trancl)
+    apply (simp add: cdt_parent_of_def)
    apply fastforce
   apply (clarsimp simp: cte_wp_at_caps_of_state replaceable_def
                         vs_cap_ref_simps table_cap_ref_simps
@@ -996,7 +993,7 @@ lemma arch_finalise_cap_replaceable[wp]:
                 vs_lookup_pages_eq_ap[THEN fun_cong, symmetric]
                 is_cap_simps vs_cap_ref_def
                 no_cap_to_obj_with_diff_ref_Null o_def
-  notes wps = hoare_drop_imp[where R="%_. is_final_cap' cap", standard]
+  notes wps = hoare_drop_imp[where R="%_. is_final_cap' cap" for cap]
               unmap_page_table_unmapped3 valid_cap_typ
   shows
     "\<lbrace>\<lambda>s. s \<turnstile> cap.ArchObjectCap cap \<and>
@@ -1617,7 +1614,7 @@ crunch cte_wp_at[wp]: invalidate_tlb_by_asid, page_table_mapped
   "\<lambda>s. P (cte_wp_at P' p s)"
 
 
-lemmas cases_simp_option[simp] = cases_simp[where P="x = None", simplified, standard]
+lemmas cases_simp_option[simp] = cases_simp[where P="x = None" for x, simplified]
 
 
 lemma flush_table_empty:
@@ -1915,7 +1912,7 @@ lemma delete_asid_empty_table_pd:
          apply wp
        apply (simp add: set_asid_pool_def)
        apply wp
-         apply (case_tac "aa = word")
+         apply (case_tac "x2 = word")
           defer
           apply wps
           apply (rule set_object_at_obj)
@@ -2011,14 +2008,14 @@ lemma obj_at_empty_tableI:
 
 lemma pd_shifting_again3:
   "is_aligned pd pd_bits \<Longrightarrow> ((ucast (ae :: 12 word) << 2) + (pd :: word32) && ~~ mask pd_bits) = pd"
-  apply (subst add_commute)
+  apply (subst add.commute)
   apply (rule pd_shifting_again)
   apply assumption
   done
 
 lemma pd_shifting_again4: "is_aligned (pd::word32) pd_bits \<Longrightarrow>
   (ucast (ae::12 word) << 2) + pd && mask pd_bits = (ucast ae << 2)"
-  apply (subst add_commute)
+  apply (subst add.commute)
   apply (simp add:shiftl_t2n mask_add_aligned)
   apply (rule less_mask_eq)
   apply (rule word_less_power_trans[where k = 2, simplified])
@@ -2840,7 +2837,7 @@ lemma set_asid_pool_invs_table:
    apply clarsimp
    apply (drule obj_ref_elemD)
    apply (frule(2) unique_table_refsD,
-          unfold obj_refs.simps aobj_ref.simps set_option.simps,
+          unfold obj_refs.simps aobj_ref.simps option.simps,
           assumption)
    apply (clarsimp simp:vs_cap_ref_def table_cap_ref_def
      split:cap.split_asm arch_cap.split_asm)
@@ -2957,8 +2954,8 @@ lemma arch_recycle_cap_invs:
              mapM_x_swp_store_pde_invs_unmap
              hoare_vcg_all_lift delete_asid_pool_unmapped2
              page_table_mapped_wp_weak
-             mapM_x_wp'[where P="\<lambda>s. Q (global_refs s)", standard]
-             mapM_x_wp'[where P="\<lambda>s. Q (typ_at T p s)", standard]
+             mapM_x_wp'[where P="\<lambda>s. Q (global_refs s)" for Q]
+             mapM_x_wp'[where P="\<lambda>s. Q (typ_at T p s)" for Q T p]
              store_pte_typ_at static_imp_wp
            | simp add: fun_upd_def[symmetric] cte_wp_at_caps_of_state
                        valid_cap_simps
@@ -3166,7 +3163,7 @@ lemma zombie_not_ex_cap_to:
          zombies_final s \<rbrakk>
       \<Longrightarrow> \<not> ex_nonz_cap_to ptr s"
   apply (clarsimp simp: ex_nonz_cap_to_def )
-  apply (frule(1) zombies_finalD3[where P="op = c" and P'="\<lambda>c. x \<in> S c", standard])
+  apply (frule(1) zombies_finalD3[where P="op = c" and P'="\<lambda>c. x \<in> S c" for c x S])
      apply (clarsimp simp: cte_wp_at_caps_of_state)
     apply assumption
    apply (rule notI, drule_tac a=ptr in equals0D)

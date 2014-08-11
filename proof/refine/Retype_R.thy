@@ -834,7 +834,7 @@ proof -
   apply (clarsimp simp:ptr_add_def ctoko cte_level_bits_def word_size
      of_drop_to_bl tyct obj_bits_api_def slot_bits_def
      word_bits_def mask_twice)
-  apply (subst mult_commute[where b = "2^(us+4)"])
+  apply (subst mult.commute[where b = "2^(us+4)"])
   apply (subst shiftl_t2n[symmetric])
   apply (subst shiftl_shiftl[symmetric])
   apply (subst and_not_mask[symmetric])
@@ -865,8 +865,8 @@ lemma new_cap_addrs_subset:
     apply (simp add:range_cover_def word_bits_def)
   apply (clarsimp simp:ptr_add_def)
   apply (subst word_plus_and_or_coroll2[symmetric,where w = "mask sz"])
-  apply (subst add_commute)
-  apply (subst add_assoc)
+  apply (subst add.commute)
+  apply (subst add.assoc)
   apply (rule word_plus_mono_right)
   apply (drule(1) range_cover.range_cover_compare)
   apply (rule iffD1[OF le_m1_iff_lt,THEN iffD2])
@@ -1231,9 +1231,9 @@ proof -
     apply (simp add:x_power_minus_1)
     apply (clarsimp simp:new_cap_addrs_def)
    apply (subst word_plus_and_or_coroll2[symmetric,where w = "mask sz"])
-   apply (subst add_commute)
-  apply (subst add_assoc)
-  apply (subst add_assoc)
+   apply (subst add.commute)
+  apply (subst add.assoc)
+  apply (subst add.assoc)
   apply (rule word_plus_mono_right)
   apply (simp add:mask_2pm1[symmetric])
     apply (rule iffD2[OF shiftr_mask_cmp[where c = "objBitsKO ko"]])
@@ -1256,7 +1256,7 @@ proof -
    apply (clarsimp simp:word_less_nat_alt)
    apply (rule le_less_trans[OF unat_plus_gt])
    apply (frule(1) range_cover.range_cover_compare)
-   apply (clarsimp simp:shiftl_t2n mult_commute range_cover_def)
+   apply (clarsimp simp:shiftl_t2n mult.commute range_cover_def)
   apply (rule is_aligned_no_wrap'[OF is_aligned_neg_mask])
     apply (rule le_refl)
    apply (simp add:range_cover_def)
@@ -1913,7 +1913,7 @@ proof -
   have unat_of_nat_shift':
     "unat (((of_nat n)::word32) * 2^(gbits + objBitsKO ko)) =
      n * 2^(gbits + objBitsKO ko)"
-    apply (subst mult_commute)
+    apply (subst mult.commute)
     apply (simp add:shiftl_t2n[symmetric])
     apply (rule range_cover.unat_of_nat_n_shift[OF cover])
     using obj_bits_api
@@ -2021,8 +2021,8 @@ proof -
      apply (erule order_trans)
      apply (subst p_assoc_help)
      apply (subst word_plus_and_or_coroll2[symmetric,where w = "mask sz"])
-     apply (subst add_commute)
-     apply (subst add_assoc)
+     apply (subst add.commute)
+     apply (subst add.assoc)
      apply (rule word_plus_mono_right)
       using cover
       apply -
@@ -2033,7 +2033,7 @@ proof -
       apply (rule le_trans[OF unat_plus_gt])
       apply simp
       apply (subst unat_minus_one)
-       apply (subst mult_commute)
+       apply (subst mult.commute)
        apply (rule word_power_nonzero)
          apply (rule of_nat_less_pow[OF n_estimate])
          apply (simp add:word_bits_def objBitsKO_bounded_low ko)
@@ -2048,7 +2048,7 @@ proof -
       apply (rule diff_le_mono)
       apply (frule range_cover.range_cover_compare_bound)
       apply (cut_tac obj_bits_api unat_of_nat_shift')
-      apply (clarsimp simp:add_commute range_cover_def ko)
+      apply (clarsimp simp:add.commute range_cover_def ko)
      apply (rule is_aligned_no_wrap'[OF is_aligned_neg_mask,OF le_refl ])
      apply (simp add:range_cover_def domI)+
   done
@@ -2144,7 +2144,7 @@ proof -
       apply (insert range_cover_not_zero[OF not_0 cover] not_0)
       apply (clarsimp simp:new_cap_addrs_def image_def)
       apply (rule_tac x ="unat (2 ^ gbits * idx + offs)" in bexI)
-        apply (subst add_commute)
+        apply (subst add.commute)
         apply (simp add:shiftl_shiftl[symmetric])
         apply (simp add:shiftl_t2n distrib_left[symmetric])
       apply simp
@@ -2152,7 +2152,7 @@ proof -
       apply (rule less_le_trans)
        apply (erule word_plus_strict_mono_right)
        apply (subst distrib_left[where c = "1 :: 32 word",symmetric,simplified])
-       apply (subst mult_commute[where a = "2^gbits"])+
+       apply (subst mult.commute[where a = "2^gbits"])+
        apply (insert cover)
        apply (rule word_mult_le_iff[THEN iffD2])
          apply (simp add:p2_gt_0)
@@ -2188,7 +2188,7 @@ proof -
       using range_cover.range_cover_n_less[OF cover]
      apply (simp add:word_bits_def)
     apply (subst distrib_left[where c = "1 :: 32 word",symmetric,simplified])
-   apply (subst mult_commute)
+   apply (subst mult.commute)
    apply simp
    apply (rule word_mult_le_iff[THEN iffD2])
        apply (simp add:p2_gt_0)
@@ -2873,7 +2873,7 @@ lemma corres_create_word_objectsI:
                          [where S = "{(x,y). x = y \<and> is_aligned y 2}"])
                   apply simp+
                  apply (clarsimp simp: objBitsKO_simps shiftL_nat
-                                       add_commute mult_commute)
+                                       add.commute mult.commute)
                  apply (rule corres_guard_imp[OF clearMemory_corres])
                   apply clarsimp+
                 apply (rule hoare_TrueI)+
@@ -3259,7 +3259,7 @@ lemma obj_range'_subset_strong:
        using mem_p not_0
          apply (clarsimp simp:new_cap_addrs_def shiftl_t2n)
          apply (rule word_plus_mono_right)
-          apply (subst mult_commute)
+          apply (subst mult.commute)
           apply (rule word_mult_le_mono1[OF word_of_nat_le])
           using n_less not_0
             apply (simp add:unat_of_nat_minus_1)
@@ -3279,7 +3279,7 @@ lemma obj_range'_subset_strong:
        using cover
        apply (simp add:range_cover_def word_bits_def)
       apply (rule olen_add_eqv[THEN iffD2])
-      apply (subst add_commute[where a = "2^objBitsKO val - 1"])
+      apply (subst add.commute[where a = "2^objBitsKO val - 1"])
      apply (subst p_assoc_help[symmetric])
      apply (rule is_aligned_no_overflow)
      using cover
@@ -3456,7 +3456,7 @@ proof (intro conjI impI)
                       \<Longrightarrow> ?s' \<turnstile>' cap"
      apply (rule valid_untyped'_helper[OF _ _ _ pc _ ad pn ])
           apply simp+
-        apply (subst mult_commute)
+        apply (subst mult.commute)
         apply (rule cover')
        using reserved
      apply (clarsimp simp:caps_overlap_reserved'_def cte_wp_at_ctes_of)
@@ -3478,7 +3478,7 @@ proof (intro conjI impI)
                            kernel_object.split_asm
                            arch_kernel_object.split_asm)
     apply (drule bspec, erule ranI)
-    apply (subst mult_commute)
+    apply (subst mult.commute)
     apply (case_tac obj, simp_all add: valid_obj'_def)
         apply (case_tac endpoint, simp_all add: valid_ep'_def obj_at_disj')
        apply (case_tac async_endpoint, simp_all add: valid_aep'_def obj_at_disj')
@@ -3486,7 +3486,7 @@ proof (intro conjI impI)
       apply (frule pspace_alignedD' [OF _ ad(1)])
       apply (frule pspace_distinctD' [OF _ ad(2)])
       apply (simp add: objBits_simps)
-      apply (subst mult_commute)
+      apply (subst mult.commute)
       apply (intro conjI ballI)
        apply (clarsimp elim!: ranE)
        apply (rule valid_cap[unfolded foldr_upd_app_if[folded data_map_insert_def]])
@@ -3499,7 +3499,7 @@ proof (intro conjI impI)
      apply (frule pspace_alignedD' [OF _ ad(1)])
      apply (frule pspace_distinctD' [OF _ ad(2)])
      apply (simp add: objBits_simps)
-     apply (subst mult_commute)
+     apply (subst mult.commute)
      apply (erule valid_cap[unfolded foldr_upd_app_if[folded data_map_insert_def]])
      apply (erule(2) cte_wp_at_cteI'[unfolded cte_level_bits_def])
      apply simp
@@ -3519,7 +3519,7 @@ proof (intro conjI impI)
     done
   show "valid_mdb' ?s'"
     apply (simp add: valid_mdb'_def foldr_upd_app_if[folded data_map_insert_def])
-    apply (subst mult_commute)
+    apply (subst mult.commute)
     apply (subst ctes_of_retype [OF mko ad])
         apply (rule ad'[unfolded foldr_upd_app_if[folded data_map_insert_def]])+
       apply (simp add: objBits_def[symmetric] new_cap_addrs_aligned [OF al])
@@ -3658,7 +3658,7 @@ proof -
   apply (clarsimp simp:new_cap_addrs_def shiftl_t2n)
   apply (rule word_plus_mono_right)
     apply (rule order_trans)
-    apply (subst mult_commute)
+    apply (subst mult.commute)
     apply (rule word_mult_le_iff[THEN iffD2])
        apply (clarsimp simp:p2_gt_0 range_cover_def word_bits_def)
       apply (drule range_cover_rel[where sbit' = "0"])
@@ -3674,7 +3674,7 @@ proof -
       apply (simp add:range_cover_def word_bits_def)
      apply (rule less_le_trans[OF mult_less_mono1])
        apply (rule unat_mono)
-       apply (rule_tac Y1= "p" in  of_nat_mono_maybe'[THEN iffD1,rotated -1])
+       apply (rule_tac Y1= "pa" in  of_nat_mono_maybe'[THEN iffD1,rotated -1])
          apply (assumption)
         apply (simp add:word_bits_def)
        apply (simp add:word_bits_def)
@@ -3742,7 +3742,7 @@ lemma createObjects_orig_ko_wp_at2':
    apply (fastforce simp:ko_wp_at'_def)
   apply (rule range_cover_rel)
      apply (simp)+
-  apply (subst mult_commute)
+  apply (subst mult.commute)
   apply (erule range_cover.unat_of_nat_n_shift)
   apply simp
   done
@@ -3882,7 +3882,7 @@ lemma createObjects_orig_obj_at':
   apply simp+
   apply (rule range_cover_rel)
      apply (simp)+
-  apply (subst mult_commute)
+  apply (subst mult.commute)
   apply (erule range_cover.unat_of_nat_n_shift)
   apply simp
   done
@@ -4044,7 +4044,7 @@ lemma createObjects_valid_cap':
      apply (erule(4) valid_cap'_range_no_overlap)+
   apply (rule range_cover_rel)
      apply (simp)+
-  apply (subst mult_commute)
+  apply (subst mult.commute)
   apply (erule range_cover.unat_of_nat_n_shift)
   apply simp
 done
@@ -5374,7 +5374,7 @@ lemma createObjects_obj_ranges':
   apply (simp add:Int_commute)
   apply (rule range_cover_rel)
      apply (simp)+
-  apply (subst mult_commute)
+  apply (subst mult.commute)
   apply (erule range_cover.unat_of_nat_n_shift)
   apply simp
 done
@@ -5566,7 +5566,7 @@ lemma createObjects'_typ_at:
    apply (fastforce simp:ko_wp_at'_def)
   apply (rule range_cover_rel)
      apply (simp)+
-  apply (subst mult_commute)
+  apply (subst mult.commute)
   apply (erule range_cover.unat_of_nat_n_shift)
   apply simp
   done

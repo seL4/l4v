@@ -730,7 +730,7 @@ proof -
        apply (rule pspace_aligned_distinct_None'[OF
                    pspace_aligned pspace_distinct], assumption)
        apply (clarsimp simp: obj_bits.simps(1) cte_level_bits_def dom_def
-                  word_neq_0_conv power_add mult_commute[of 16])
+                  word_neq_0_conv power_add mult.commute[of 16])
        apply (simp add: well_formed_cnode_n_def dom_def Collect_eq)
        apply (erule_tac x=ya in allE)+
        apply (rule word_mult_less_mono1)
@@ -949,7 +949,7 @@ by (simp add: tcb_cap_cases_def tcb_cnode_index_def split: split_if_asm)
 lemma of_bl_mult_and_not_mask_eq:
   "\<lbrakk>is_aligned (a :: word32) n; length b + m \<le> n\<rbrakk>
    \<Longrightarrow> a + of_bl b * (2^m) && ~~ mask n = a"
-  apply (simp add: shiftl_t2n[simplified mult_commute, symmetric])
+  apply (simp add: shiftl_t2n[simplified mult.commute, symmetric])
   apply (simp add: mask_out_add_aligned[where q="of_bl b << m", symmetric])
   apply (case_tac "n<32")
    prefer 2
@@ -980,7 +980,7 @@ apply (rule nth_equalityI)
 apply (clarsimp simp only: len_bin_to_bl nth_bin_to_bl
                            word_test_bit_def[symmetric])
 apply (simp add: nth_shiftr nth_shiftl
-                 shiftl_t2n[where n=4, simplified mult_commute,
+                 shiftl_t2n[where n=4, simplified mult.commute,
                             simplified, symmetric])
 apply (simp add: is_aligned_nth[THEN iffD1, rule_format]
                  test_bit_of_bl nth_rev)
@@ -1120,7 +1120,7 @@ proof -
      prefer 2
      apply (simp add: mask_def)
     apply (rule_tac word_random, simp+)
-   apply (simp add: mult_commute[of _ 16]
+   apply (simp add: mult.commute[of _ 16]
                     shiftl_t2n[of _ 4, simplified,symmetric])
    apply word_bitwise
    apply simp

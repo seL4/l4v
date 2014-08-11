@@ -1495,7 +1495,7 @@ next
     apply (intro range_subsetI)
      apply (rule is_aligned_no_wrap' [OF al xsz])
     apply (simp only: add_diff_eq[symmetric])
-    apply (subst add_ac, rule word_plus_mono_right)
+    apply (subst add.commute add.left_commute, rule word_plus_mono_right)
     apply (subst iffD1 [OF le_m1_iff_lt])
     apply (simp add: p2_gt_0 word_bits_conv)
     apply (rule is_aligned_add_less_t2n[OF al' _ szv xsz])

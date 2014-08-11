@@ -1148,7 +1148,7 @@ lemma set_asid_pool_empty'_helper:
    apply (rule word_unat.Rep_eqD)
    apply (simp add: unat_word_ariths unat_ucast unat_of_nat)
   apply (subst word_le_make_less[where y="of_nat n"])
-  apply (auto simp: add_commute)
+  apply (auto simp: add.commute)
   done
 
 lemma set_asid_pool_empty':
@@ -1717,7 +1717,7 @@ lemma copy_global_mappings_dwp:
       apply (simp add:mask_add_aligned)
       apply (subst less_mask_eq,simp)
       apply (simp add:shiftl_t2n)
-      apply (subst mult_commute)
+      apply (subst mult.commute)
       apply (rule div_lt_mult,simp+,unat_arith,simp+)
       apply (simp add:shiftl_shiftr1 word_size)
       apply (subst less_mask_eq,simp)
@@ -1980,7 +1980,7 @@ lemma dcorres_clear_object_caps_pt:
       apply (clarsimp simp:upto_enum_step_def not_idle_thread_def object_slots_def
         transform_page_table_contents_def unat_map_def)
       apply (rule unat_less_helper)
-      apply (subst mult_commute)
+      apply (subst mult.commute)
       apply (simp add:shiftl_t2n[where n= 2,simplified,symmetric])
       apply (simp add:shiftl_shiftr1 word_size)
       apply (subst iffD2[OF mask_eq_iff_w2p])
@@ -2001,7 +2001,7 @@ lemma dcorres_clear_object_caps_pt:
       apply (clarsimp simp: pt_bits_def pageBits_def pageBits_def word_of_nat_le)
       apply (clarsimp simp: distinct_map distinct_enum_upto upto_enum_step_def inj_on_def
         pt_bits_def pageBits_def pageBits_def)
-      apply (subst (asm) mult_commute[where b = 4])+
+      apply (subst (asm) mult.commute[where b = 4])+
       apply (simp add:shiftl_t2n[where n=2,simplified,symmetric] shiftl_shiftr1 word_size)
       apply (subst (asm) iffD2[OF mask_eq_iff_w2p],simp add:word_size)
         apply (erule le_less_trans,simp)

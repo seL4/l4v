@@ -1296,7 +1296,7 @@ lemma invokeUntyped_no_orphans' [wp]:
 
     have us_align[simp]:"is_aligned (of_nat (length slots) * 2 ^ APIType_capBits tp us) 4"
       apply (rule is_aligned_weaken)
-       apply (subst mult_commute)
+       apply (subst mult.commute)
        apply (rule is_aligned_shiftl_self[unfolded shiftl_t2n])
       apply simp
       done

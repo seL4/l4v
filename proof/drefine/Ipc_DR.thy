@@ -1296,7 +1296,7 @@ lemma load_cap_transfer_def':
   apply (clarsimp simp:captransfer_from_words_def)
   apply (simp add:msg_max_length_def msg_max_extra_caps_def cong: if_weak_cong)
   apply (clarsimp simp:load_word_offs_def mapM_def sequence_def bind_assoc)
-  apply (simp add:word_size_def add_commute)
+  apply (simp add:word_size_def add.commute)
 done
 
 lemma get_ipc_buffer_words_receive_slots:
@@ -1312,7 +1312,7 @@ lemma get_ipc_buffer_words_receive_slots:
    using loadWord_functional[unfolded functional_def,simplified]
      apply fastforce
   apply (simp add:evalMonad_loadWord word_size_def mask_add_aligned)
-    apply (subst add_assoc)+
+    apply (subst add.assoc)+
     apply (clarsimp simp: mask_add_aligned)
     apply (drule_tac n1 = "pageBitsForSize sz" and y = 2
       in is_aligned_weaken[OF is_aligned_after_mask])

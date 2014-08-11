@@ -1272,7 +1272,7 @@ lemma large_frame_range_helper:
   "t \<in> set [0 , 4 .e. 0x3C] \<Longrightarrow> t < 0x40"
   apply (clarsimp simp: upto_enum_step_def)
   apply (subgoal_tac "x < 0x10")
-    apply (subst mult_commute)
+    apply (subst mult.commute)
     apply (subst shiftl_t2n[where n =2,simplified,symmetric])
     apply (rule shiftl_less_t2n[where m = 6 and n =2,simplified])
        apply simp+
@@ -1441,7 +1441,7 @@ lemma mask_compare_imply:
     apply clarsimp+
   apply (drule_tac na = "na-l" in test_bits_mask)
   apply (clarsimp simp: linorder_not_le)
-  apply (subst (asm) add_commute[where a = l])+
+  apply (subst (asm) add.commute[where a = l])+
   apply (drule nat_diff_less)
     apply (clarsimp simp:word_size)+
   apply (clarsimp simp:nth_shiftr)
@@ -1568,7 +1568,7 @@ lemma is_aligned_less_kernel_base_helper:
                    unat_ucast_pd_bits_shift)
   apply (fold word_le_nat_alt, unfold linorder_not_le)
   apply (drule minus_one_helper3[where x=x])
-  apply (subst add_commute, subst is_aligned_add_or, assumption)
+  apply (subst add.commute, subst is_aligned_add_or, assumption)
    apply (erule order_le_less_trans, simp)
   apply (simp add: word_ao_dist shiftr_over_or_dist)
   apply (subst less_mask_eq, erule order_le_less_trans)

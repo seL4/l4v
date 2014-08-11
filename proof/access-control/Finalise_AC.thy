@@ -669,7 +669,7 @@ lemma arch_recycle_cap_respects:
     apply clarsimp
     apply (drule valid_global_refsD2, fastforce)
     apply (clarsimp simp: cap_range_def)
-   apply (subst add_commute, subst is_aligned_add_helper, simp add: pd_bits_def)
+   apply (subst add.commute, subst is_aligned_add_helper, simp add: pd_bits_def)
      apply (simp add: pageBits_def)
     apply (rule shiftl_less_t2n)
      apply (simp add: kernel_base_def)

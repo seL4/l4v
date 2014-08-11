@@ -170,7 +170,7 @@ lemma set_mrs_equiv_but_for_labels:
          apply(fastforce simp: msg_max_length_def msg_align_bits)
         apply(erule order_trans)
         apply(subst p_assoc_help)
-        apply(simp add: add_assoc)
+        apply(simp add: add.assoc)
         apply(rule word_plus_mono_right)
          apply(rule word_less_sub_1)
          apply(rule_tac y="of_nat msg_max_length * of_nat word_size + 3" in le_less_trans)
@@ -589,7 +589,7 @@ lemma cptrs_in_ipc_buffer:
 
 lemma for_each_byte_of_word_def2:
   "for_each_byte_of_word P ptr \<equiv> (\<forall> x\<in>ptr_range ptr 2. P x)"
-  apply(simp add: for_each_byte_of_word_def ptr_range_def add_commute)
+  apply(simp add: for_each_byte_of_word_def ptr_range_def add.commute)
   done
 
 lemma aag_has_auth_to_read_cptrs:
@@ -1188,7 +1188,7 @@ lemma dmo_loadWord_reads_respects:
           apply(rule assert_wp)+
         apply simp+
        apply(clarsimp simp: equiv_valid_2_def in_monad for_each_byte_of_word_def)
-       apply(fastforce elim: equiv_forD orthD1 simp: ptr_range_def add_commute)
+       apply(fastforce elim: equiv_forD orthD1 simp: ptr_range_def add.commute)
       apply (wp wp_post_taut loadWord_inv | simp)+
   done
 
@@ -1840,13 +1840,13 @@ next
      apply(rule conjI)
       apply(fastforce)
      apply(clarsimp)
-     apply(simp add: add_assoc[symmetric])
-     apply(subst add_assoc) 
+     apply(simp add: add.assoc[symmetric])
+     apply(subst add.assoc) 
      apply(subst of_nat_Suc[symmetric])
      apply(fastforce)
     apply(clarsimp)
-    apply(simp add: add_assoc[symmetric])
-    apply(subst add_assoc)
+    apply(simp add: add.assoc[symmetric])
+    apply(subst add.assoc)
     apply(subst of_nat_Suc[symmetric])
     apply(fastforce)
     done

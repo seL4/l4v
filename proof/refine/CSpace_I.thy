@@ -559,7 +559,6 @@ proof (unfold valid_badges_def, clarify)
   have "c' \<noteq> p" 
     apply clarsimp
     apply (simp add: mdb_next_unfold split: split_if_asm)
-    apply clarsimp
     apply (erule (1) valid_dlistEn, simp)
     apply (clarsimp simp: no_mdb_def no_0_def)
     done

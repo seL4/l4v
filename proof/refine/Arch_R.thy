@@ -1497,7 +1497,7 @@ lemma is_aligned_ptrFromPAddr_aligned:
   "m \<le> 28 \<Longrightarrow> is_aligned (Platform.ptrFromPAddr p) m = is_aligned p m"
   apply (simp add:Platform.ptrFromPAddr_def is_aligned_mask
     physMappingOffset_def kernelBase_addr_def physBase_def)
-  apply (subst add_commute)
+  apply (subst add.commute)
   apply (subst mask_add_aligned)
    apply (erule is_aligned_weaken[rotated])
    apply (simp add:is_aligned_def)
@@ -1543,7 +1543,7 @@ lemma createMappingEntires_valid_slots_duplicated'[wp]:
      apply (frule is_aligned_no_wrap'[where off = "0x3c"])
       apply simp
      apply (drule upto_enum_step_shift[where n = 6 and m = 2,simplified])
-     apply (clarsimp simp:mask_def add_commute upto_enum_step_def)
+     apply (clarsimp simp:mask_def add.commute upto_enum_step_def)
      apply (drule(1) le_less_trans)
      apply simp
     apply wp
@@ -1560,7 +1560,7 @@ lemma createMappingEntires_valid_slots_duplicated'[wp]:
    apply (frule is_aligned_no_wrap'[where off = "0x3c" and sz = 6])
     apply simp
    apply (drule upto_enum_step_shift[where n = 6 and m = 2,simplified])
-   apply (clarsimp simp:mask_def add_commute upto_enum_step_def)
+   apply (clarsimp simp:mask_def add.commute upto_enum_step_def)
    apply (drule(1) le_less_trans)
    apply simp
    done

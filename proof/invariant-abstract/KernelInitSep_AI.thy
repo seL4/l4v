@@ -114,7 +114,7 @@ proof (rule ccontr, simp)
   assume pin: "p \<in> set (len_seq (p + 1) n)"
   then obtain q where q: "p + 1 + of_nat q = p" and qn: "q < n"
     by (auto simp: len_seq_map_upt_eq)
-  hence "of_nat q + 1 = (0 :: 'a word)" by (simp add: add_commute)
+  hence "of_nat q + 1 = (0 :: 'a word)" by (simp add: add.commute)
 
   moreover
   from qn have "of_nat q + (1::'a word) \<noteq> 0" using sz

@@ -1749,7 +1749,7 @@ lemma svr_invs [wp]:
       apply wp
      apply (simp add: throwError_R')
     apply wp
-    apply (rule_tac Q'="\<lambda>_ s. invs s \<and> a \<le> mask asid_bits" in hoare_post_imp_R)
+    apply (rule_tac Q'="\<lambda>_ s. invs s \<and> x2 \<le> mask asid_bits" in hoare_post_imp_R)
      prefer 2
      apply safe
       apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
@@ -1866,9 +1866,6 @@ lemma arch_update_cap_zombies:
    apply (frule master_cap_obj_refs)
    apply (drule cap_master_cap_zombie)
    apply clarsimp
-  apply (erule_tac x=pa in allE)
-  apply (erule_tac x=p' in allE)
-  apply simp
   done
   
 
@@ -2093,8 +2090,6 @@ lemma set_pd_valid_vs_lookup_map:
       apply (clarsimp simp: valid_arch_state_def valid_asid_table_def
                             fun_upd_def)
      apply (drule_tac x=pa in spec)
-     apply (drule_tac p=pa and x="[VSRef (ucast a) None]"
-                   in spec[of "\<lambda>ref. (ref \<unrhd> p) s \<longrightarrow> P ref" x, standard])
      apply simp
      apply (drule vs_lookup_pages_atI)
      apply simp
@@ -2756,7 +2751,7 @@ lemma no_cap_to_obj_with_diff_ref_map:
   apply (clarsimp simp: no_cap_to_obj_with_diff_ref_def
                         cte_wp_at_caps_of_state)
   apply (frule(1) caps_of_state_valid_cap[where p=p])
-  apply (frule(1) caps_of_state_valid_cap[where p="(a, b)", standard])
+  apply (frule(1) caps_of_state_valid_cap[where p="(a, b)" for a b])
   apply (drule(1) valid_cap_obj_ref_pt_pd, simp)
   apply (drule(1) unique_table_capsD[rotated, where cps="caps_of_state s"])
       apply simp
@@ -3180,12 +3175,12 @@ lemma arch_update_cap_invs_map:
    apply simp
   apply (rule conjI)
    apply (frule master_cap_obj_refs)
-   apply (case_tac "table_cap_ref cap =
+   apply (case_tac "table_cap_ref capa =
                     table_cap_ref (cap.ArchObjectCap a)")
     apply (frule unique_table_refs_no_cap_asidE[where S="{p}"])
      apply (simp add: valid_arch_caps_def)
     apply (simp add: no_cap_to_obj_with_diff_ref_def Ball_def)
-   apply (case_tac "table_cap_ref cap")
+   apply (case_tac "table_cap_ref capa")
     apply clarsimp
     apply (erule no_cap_to_obj_with_diff_ref_map,
            simp_all)[1]
@@ -3284,7 +3279,7 @@ lemma arch_update_cap_invs_unmap_page_table:
   apply (clarsimp simp: cte_wp_at_caps_of_state is_arch_update_def
                         is_cap_simps cap_master_cap_simps
                         appropriate_cte_cap_irqs is_pt_cap_def
-                        fun_eq_iff[where f="cte_refs cap", standard]
+                        fun_eq_iff[where f="cte_refs cap" for cap]
                  dest!: cap_master_cap_eqDs
               simp del: imp_disjL)
   apply (rule conjI)
@@ -4074,7 +4069,7 @@ lemma set_upto_enum_step_4:
   "set [0, 4 .e. x :: word32]
        = (\<lambda>x. x << 2) ` {.. x >> 2}"
   by (auto simp: upto_enum_step_def shiftl_t2n shiftr_div_2n_w
-                 word_size mult_ac)
+                 word_size mult.commute)
 
 lemma lookup_pt_slot_cap_to_multiple1:
   "\<lbrace>invs and \<exists>\<rhd>pd and K (is_aligned pd pd_bits)
@@ -4281,7 +4276,7 @@ lemma unmap_page_invs:
   apply (simp add: unmap_page_def)
   apply (rule hoare_pre)
    apply (wp flush_page_invs hoare_vcg_const_imp_lift)
-   apply (wp hoare_drop_imp[where f="check_mapping_pptr a b c", standard] 
+   apply (wp hoare_drop_imp[where f="check_mapping_pptr a b c" for a b c] 
              lookup_pt_slot_inv lookup_pt_slot_cap_to2'
              lookup_pt_slot_cap_to_multiple2
              store_pde_invs_unmap mapM_swp_store_pde_invs_unmap
@@ -4540,7 +4535,6 @@ lemma vaddr_segment_nonsense4:
 (* FIXME: move near ArchAcc_R.lookup_pt_slot_inv? *)
 lemma lookup_pt_slot_inv_validE:
   "\<lbrace>P\<rbrace> lookup_pt_slot pd vptr \<lbrace>\<lambda>_. P\<rbrace>, \<lbrace>\<lambda>_. P\<rbrace>"
-  apply (rule hoare_vcg_E_elim[where P=P and P'=P, standard, simplified])
   apply (simp add: lookup_pt_slot_def)
   apply (wp get_pde_inv hoare_drop_imp lookup_pt_slot_inv | wpc | simp)+
   done
@@ -4633,7 +4627,6 @@ lemma unmap_page_unmapped:
          | wpc | simp add: swp_def check_mapping_pptr_def)+
   apply clarsimp
   apply (case_tac sz, simp_all)
-     apply clarsimp
      apply (drule vs_lookup_pages_pteD)
      apply (rule conjI[rotated])
       apply (fastforce simp add: vs_lookup_pages_eq_ap[THEN fun_cong, symmetric])
@@ -4670,7 +4663,6 @@ lemma unmap_page_unmapped:
                       split: ARM_Structs_A.pte.splits)
       apply ((clarsimp simp: obj_at_def a_type_def)+)[2]
 
-    apply clarsimp
     apply (drule vs_lookup_pages_pteD)
     apply (rule conjI[rotated])
      apply (fastforce simp add: vs_lookup_pages_eq_ap[THEN fun_cong, symmetric])
@@ -4707,7 +4699,6 @@ lemma unmap_page_unmapped:
                     split: ARM_Structs_A.pte.splits)
      apply ((clarsimp simp: obj_at_def a_type_def)+)[2]
 
-   apply clarsimp
    apply (drule vs_lookup_pages_pdeD)
    apply (rule conjI[rotated])
     apply (fastforce simp add: vs_lookup_pages_eq_ap[THEN fun_cong, symmetric])
@@ -4981,7 +4972,7 @@ lemma perform_page_invs [wp]:
     apply (rule hoare_pre)
      apply (wp get_master_pte_wp get_master_pde_wp hoare_vcg_ex_lift mapM_x_swp_store_pde_invs_unmap
               | wpc | simp add: pte_check_if_mapped_def pde_check_if_mapped_def 
-              | (rule hoare_vcg_conj_lift, rule_tac slots=ba in store_pde_invs_unmap'))+
+              | (rule hoare_vcg_conj_lift, rule_tac slots=x2a in store_pde_invs_unmap'))+
     apply (clarsimp simp: valid_page_inv_def cte_wp_at_caps_of_state
                           valid_slots_def empty_refs_def neq_Nil_conv
                     split: sum.splits)
@@ -5058,7 +5049,6 @@ lemma perform_page_invs [wp]:
    apply (auto simp: valid_cap_def cap_aligned_def mask_def vs_cap_ref_def
                    split: vmpage_size.splits option.splits)[1]
   -- "PageFlush"
-  apply clarsimp
   apply (rule hoare_pre)
    apply (wp dmo_invs set_vm_root_for_flush_invs
              hoare_vcg_const_imp_lift hoare_vcg_all_lift

@@ -30,7 +30,7 @@ lemma collapse_foldl_replicate:
   apply (induct ys rule: rev_induct)
    apply (simp add: replicateHider_def)
   apply (simp add: replicateHider_def)
-  apply (subst add_commute, simp add: replicate_add)
+  apply (subst add.commute, simp add: replicate_add)
   done
 
 lemma coerce_memset_to_heap_update_user_data:

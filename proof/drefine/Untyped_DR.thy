@@ -179,7 +179,7 @@ proof -
     fix x :: nat
     assume x: "x<128"
     have y: "!!y. y<4 \<Longrightarrow> ?p x + y && ~~ mask (pageBitsForSize sz) = buf"
-      apply (simp add: add_assoc)
+      apply (simp add: add.assoc)
       apply (rule is_aligned_add_helper[OF 4, THEN conjunct2])
       apply (rule_tac n=msg_align_bits in is_aligned_add_less_t2n)
          apply (rule is_aligned_andI1[OF 1])
@@ -1061,7 +1061,7 @@ lemma retype_transform_ref_subseteq_strong:
        using cover
        apply (simp add:range_cover_def word_bits_def)
       apply (rule olen_add_eqv[THEN iffD2])
-      apply (subst add_commute[where a = "2^(obj_bits_api ty us) - 1"])
+      apply (subst add.commute[where a = "2^(obj_bits_api ty us) - 1"])
      apply (subst p_assoc_help[symmetric])
      apply (rule is_aligned_no_overflow)
      apply (insert cover)
@@ -1298,14 +1298,14 @@ lemma free_range_of_untyped_pick_retype_addrs:
   apply (frule range_cover_not_zero_shift[rotated,OF _ le_refl])
    apply simp
   apply (thin_tac "\<not> ?P")
-  apply (subst add_assoc[symmetric])
+  apply (subst add.assoc[symmetric])
   apply (subst AND_NOT_mask_plus_AND_mask_eq[symmetric,where n = sz])
-  apply (subst add_commute[where a = "(ptr && mask sz)"])
+  apply (subst add.commute[where a = "(ptr && mask sz)"])
   apply (rule word_plus_strict_mono_right)
    apply (rule minus_one_helper)
     apply simp
    apply (simp add:shiftl_t2n field_simps)
-   apply (subst add_assoc)
+   apply (subst add.assoc)
   apply (rule word_plus_mono_right)
    apply (simp add:word_le_nat_alt)
    apply (simp add: range_cover_unat)

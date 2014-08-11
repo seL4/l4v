@@ -347,7 +347,7 @@ lemma pd_offs_min:
 lemma pd_offs_max':
   "is_aligned ptr 14 \<Longrightarrow> (ptr::word32) + (ucast (x:: 12 word) << 2) \<le> ptr + 0x3fff"
   apply (rule word_plus_mono_right)
-   apply (simp add: shiftl_t2n mult_commute)
+   apply (simp add: shiftl_t2n mult.commute)
    apply (rule div_to_mult_word_lt)
    apply simp
    apply (rule plus_one_helper)
@@ -356,7 +356,7 @@ lemma pd_offs_max':
     apply simp
    apply simp
   apply (drule is_aligned_no_overflow)
-  apply (simp add: add_commute)
+  apply (simp add: add.commute)
   done
 
 lemma pd_offs_max:
@@ -372,7 +372,7 @@ definition pd_offs_range where
 lemma pd_offs_in_range':
   "is_aligned ptr 14 \<Longrightarrow>
      ptr + (ucast (x:: 12 word) << 2) \<in> pd_offs_range ptr"
-  apply (clarsimp simp: pd_offs_min' pd_offs_max' pd_offs_range_def add_commute)
+  apply (clarsimp simp: pd_offs_min' pd_offs_max' pd_offs_range_def add.commute)
   apply (rule is_aligned_add[OF _ is_aligned_shift])
   apply (erule is_aligned_weaken)
   apply simp
@@ -401,7 +401,7 @@ lemma pd_offs_range_correct':
    apply (subst mask_add_aligned)
     apply (simp add: is_aligned_def)
    apply (simp add: mask_twice diff_def)
-   apply (subst add_commute[symmetric])
+   apply (subst add.commute[symmetric])
    apply (subst mask_add_aligned)
     apply (simp add: is_aligned_minus)
    apply simp
@@ -410,10 +410,10 @@ lemma pd_offs_range_correct':
     apply (simp add: is_aligned_def)
    apply clarsimp
   apply (cut_tac x=x and y="ptr + 0x3FFF" and n=14 in neg_mask_mono_le)
-   apply (simp add: add_commute)
+   apply (simp add: add.commute)
   apply (drule_tac n=14 in aligned_le_sharp)
    apply (simp add: is_aligned_def)
-  apply (simp add: add_commute)
+  apply (simp add: add.commute)
   apply (subst(asm) mask_out_add_aligned[symmetric])
    apply (erule is_aligned_weaken)
    apply simp
@@ -442,7 +442,7 @@ lemma pt_offs_min:
 lemma pt_offs_max':
   "is_aligned ptr 10 \<Longrightarrow> (ptr::word32) + (ucast (x:: 8 word) << 2) \<le> ptr + 0x3ff"
   apply (rule word_plus_mono_right)
-   apply (simp add: shiftl_t2n mult_commute)
+   apply (simp add: shiftl_t2n mult.commute)
    apply (rule div_to_mult_word_lt)
    apply simp
    apply (rule plus_one_helper)
@@ -451,7 +451,7 @@ lemma pt_offs_max':
     apply simp
    apply simp
   apply (drule is_aligned_no_overflow)
-  apply (simp add: add_commute)
+  apply (simp add: add.commute)
   done
 
 lemma pt_offs_max:
@@ -466,7 +466,7 @@ definition pt_offs_range where
 lemma pt_offs_in_range':
   "is_aligned ptr 10 \<Longrightarrow>
      ptr + (ucast (x:: 8 word) << 2) \<in> pt_offs_range ptr"
-  apply (clarsimp simp: pt_offs_min' pt_offs_max' pt_offs_range_def add_commute)
+  apply (clarsimp simp: pt_offs_min' pt_offs_max' pt_offs_range_def add.commute)
   apply (rule is_aligned_add[OF _ is_aligned_shift])
   apply (erule is_aligned_weaken)
   apply simp
@@ -494,7 +494,7 @@ lemma pt_offs_range_correct':
    apply (subst mask_add_aligned)
     apply (simp add: is_aligned_def)
    apply (simp add: mask_twice diff_def)
-   apply (subst add_commute[symmetric])
+   apply (subst add.commute[symmetric])
    apply (subst mask_add_aligned)
     apply (simp add: is_aligned_minus)
    apply simp
@@ -503,10 +503,10 @@ lemma pt_offs_range_correct':
     apply (simp add: is_aligned_def)
    apply clarsimp
   apply (cut_tac x=x and y="ptr + 0x3FF" and n=10 in neg_mask_mono_le)
-   apply (simp add: add_commute)
+   apply (simp add: add.commute)
   apply (drule_tac n=10 in aligned_le_sharp)
    apply (simp add: is_aligned_def)
-  apply (simp add: add_commute)
+  apply (simp add: add.commute)
   apply (subst(asm) mask_out_add_aligned[symmetric])
    apply (erule is_aligned_weaken)
    apply simp
@@ -582,7 +582,7 @@ lemma cnode_offs_max':
     apply simp
    apply simp
   apply (drule is_aligned_no_overflow)
-  apply (simp add: add_commute)
+  apply (simp add: add.commute)
   done
 
 lemma cnode_offs_max:
@@ -598,7 +598,7 @@ definition cnode_offs_range where
 lemma cnode_offs_in_range':
   "\<lbrakk>is_aligned ptr 14; length x = 10\<rbrakk> \<Longrightarrow>
      ptr + of_bl x * 0x10 \<in> cnode_offs_range ptr"
-  apply (clarsimp simp: cnode_offs_min' cnode_offs_max' cnode_offs_range_def add_commute cte_level_bits_def)
+  apply (clarsimp simp: cnode_offs_min' cnode_offs_max' cnode_offs_range_def add.commute cte_level_bits_def)
   apply (rule is_aligned_add)
    apply (erule is_aligned_weaken)
    apply simp
@@ -650,7 +650,7 @@ lemma cnode_offs_range_correct':
    apply (rule word_diff_ls')
    apply (drule_tac a=x and n=4 in aligned_le_sharp)
     apply simp
-    apply (simp add: add_commute)
+    apply (simp add: add.commute)
     apply (subst(asm) mask_out_add_aligned[symmetric])
      apply (erule is_aligned_weaken)
      apply simp
@@ -695,7 +695,7 @@ lemma tcb_offs_max':
     apply simp
    apply simp
   apply (drule is_aligned_no_overflow)
-  apply (simp add: add_commute)
+  apply (simp add: add.commute)
   done
 
 lemma tcb_offs_max:
@@ -710,7 +710,7 @@ definition tcb_offs_range where
 lemma tcb_offs_in_range':
   "is_aligned ptr 9 \<Longrightarrow>
      ptr + ucast (x:: 9 word) \<in> tcb_offs_range ptr"
-  by (clarsimp simp: tcb_offs_min' tcb_offs_max' tcb_offs_range_def add_commute)
+  by (clarsimp simp: tcb_offs_min' tcb_offs_max' tcb_offs_range_def add.commute)
 
 lemma tcb_offs_in_range:
   "Low_tcb_ptr + ucast (x:: 9 word) \<in> tcb_offs_range Low_tcb_ptr"
@@ -728,7 +728,7 @@ lemma tcb_offs_range_correct':
    apply (subst mask_add_aligned)
     apply (simp add: is_aligned_def)
    apply (simp add: mask_twice diff_def)
-   apply (subst add_commute[symmetric])
+   apply (subst add.commute[symmetric])
    apply (subst mask_add_aligned)
     apply (simp add: is_aligned_minus)
    apply simp
@@ -737,10 +737,10 @@ lemma tcb_offs_range_correct':
     apply (simp add: is_aligned_def)
    apply clarsimp
   apply (cut_tac x=x and y="ptr + 0x1FF" and n=9 in neg_mask_mono_le)
-   apply (simp add: add_commute)
+   apply (simp add: add.commute)
   apply (drule_tac n=9 in aligned_le_sharp)
    apply (simp add: is_aligned_def)
-  apply (simp add: add_commute)
+  apply (simp add: add.commute)
   apply (subst(asm) mask_out_add_aligned[symmetric])
    apply (erule is_aligned_weaken)
    apply simp
@@ -1198,7 +1198,7 @@ lemma mask_in_tcb_offs_range:
   "x && ~~ mask 9 = ptr \<Longrightarrow> x \<in> tcb_offs_range ptr"
   apply (clarsimp simp: tcb_offs_range_def mask_neg_le objBitsKO_def)
   apply (cut_tac and_neg_mask_plus_mask_mono[where p=x and n=9])
-  apply (simp add: add_commute mask_def)
+  apply (simp add: add.commute mask_def)
   done
 
 lemma set_mem_neq:
@@ -1428,17 +1428,17 @@ lemma map_to_ctes_kh0H:
    apply (elim disjE,
           ((clarsimp,
            drule(1) aligned_le_sharp,
-           clarsimp simp: add_commute,
+           clarsimp simp: add.commute,
            subst(asm) mask_out_add_aligned[symmetric],
             simp add: is_aligned_shiftl,
            simp add: mask_def,
            drule minus_one_helper,
-            subst add_commute,
+            subst add.commute,
             rule neq_0_no_wrap,
              erule word_plus_mono_right2[rotated],
              fastforce,
             fastforce,
-           fastforce simp: add_commute)
+           fastforce simp: add.commute)
            | unat_arith)+)[1]
    apply ((clarsimp simp: map_to_ctes_def Let_def kh0H_obj_def objBitsKO_def split: split_if_asm split del: split_if,
           subst split_if_eq1,
@@ -1465,17 +1465,17 @@ lemma map_to_ctes_kh0H:
            (clarsimp simp: s0_ptr_defs,
            drule_tac b="?x + ?y * 0x10" and n=4 in aligned_le_sharp,
             fastforce simp: is_aligned_def,
-           clarsimp simp: add_commute,
+           clarsimp simp: add.commute,
            subst(asm) mask_out_add_aligned[symmetric],
             simp add: is_aligned_mult_triv2[where n=4, simplified],
            simp add: mask_def,
            drule minus_one_helper,
-            subst add_commute,
+            subst add.commute,
             rule neq_0_no_wrap,
              erule word_plus_mono_right2[rotated],
              fastforce,
             fastforce,
-           fastforce simp: add_commute | unat_arith)+)[1])+)[3]
+           fastforce simp: add.commute | unat_arith)+)[1])+)[3]
    apply ((clarsimp simp: map_to_ctes_def Let_def split del: split_if,
           subst split_if_eq1,
           rule conjI,
@@ -1896,7 +1896,7 @@ lemma map_to_ctes_kh0H_SomeD:
 
 lemma mask_neg_add_aligned:
   "is_aligned q n \<Longrightarrow> p + q && ~~ mask n = (p && ~~ mask n) + q"
-  apply (subst add_commute)
+  apply (subst add.commute)
   apply (simp add: mask_out_add_aligned[symmetric])
   done
 
@@ -1915,11 +1915,11 @@ lemma s0H_pspace_distinct':
         | clarsimp simp: kh0H_dom_sets_distinct[THEN orthD2]
         | fastforce simp: s0_ptr_defs objBitsKO_def pageBits_def kh0H_obj_def
         | clarsimp simp: irq_node_offs_range_def objBitsKO_def s0_ptr_defs,
-          drule_tac x="0xF" in word_plus_strict_mono_right, fastforce, simp add: add_commute,
+          drule_tac x="0xF" in word_plus_strict_mono_right, fastforce, simp add: add.commute,
           drule(1) notE[rotated, OF less_trans, OF _ _ leD, rotated 2], fastforce, simp
         | clarsimp simp: pt_offs_range_def pd_offs_range_def irq_node_offs_range_def cnode_offs_range_def objBitsKO_def archObjSize_def s0_ptr_defs kh0H_obj_def,
           drule(1) aligned_le_sharp, simp add: mask_def,
-          drule_tac x="0x3" in word_plus_mono_right, fastforce, simp add: add_commute,
+          drule_tac x="0x3" in word_plus_mono_right, fastforce, simp add: add.commute,
           (drule(1) notE[rotated, OF le_less_trans, OF _ _ leD, rotated 2], fastforce, simp
           | drule(2) notE[rotated, OF le_less_trans, OF _ _ leD[OF order_trans], rotated 2], fastforce, simp)
         | clarsimp simp: objBitsKO_def pageBits_def cnode_offs_range_def pd_offs_range_def pt_offs_range_def irq_node_offs_range_def s0_ptr_defs kh0H_obj_def,
@@ -1927,14 +1927,14 @@ lemma s0H_pspace_distinct':
                    notE[rotated, OF le_less_trans, OF _ _ leD], fastforce, simp
         | (clarsimp simp: objBitsKO_def pageBits_def cnode_offs_range_def pd_offs_range_def pt_offs_range_def irq_node_offs_range_def s0_ptr_defs kh0H_obj_def Low_cte'_def Low_capsH_def cte_level_bits_def empty_cte_def High_cte'_def High_capsH_def Silc_cte'_def Silc_capsH_def split: split_if_asm,
          (drule(1) aligned_le_sharp, simp add: mask_def,
-          drule_tac x="0xF" in word_plus_mono_right, fastforce, simp add: add_commute,
+          drule_tac x="0xF" in word_plus_mono_right, fastforce, simp add: add.commute,
           (drule(1) notE[rotated, OF le_less_trans, OF _ _ leD, rotated 2]
                     notE[rotated, OF le_less_trans, OF _ _ leD], fastforce, simp
           | drule(2) notE[rotated, OF less_trans, OF _ _ leD[OF order_trans], rotated 2]
                      notE[rotated, OF le_less_trans, OF _ _ leD[OF order_trans], rotated 2],
                fastforce, simp))+)[1]
         | clarsimp simp: objBitsKO_def irq_node_offs_range_def cnode_offs_range_def pd_offs_range_def pt_offs_range_def cte_level_bits_def s0_ptr_defs,
-          drule_tac x="0xF" in word_plus_strict_mono_right, fastforce, simp add: add_commute,
+          drule_tac x="0xF" in word_plus_strict_mono_right, fastforce, simp add: add.commute,
           drule(2) notE[rotated, OF less_trans, OF _ _ leD[OF order_trans], rotated 2]
                    notE[rotated, OF le_less_trans, OF _ _ leD[OF order_trans], rotated 2],
               fastforce, simp
@@ -1953,7 +1953,7 @@ lemma pspace_distinctD'':
 lemma cnode_offs_min2':
   "is_aligned ptr 14 \<Longrightarrow> (ptr::word32) \<le> ptr + 0x10 * (x && mask 10)"
   apply (erule is_aligned_no_wrap')
-  apply (subst mult_commute)
+  apply (subst mult.commute)
   apply (rule div_lt_mult)
    apply (cut_tac and_mask_less'[where n=10])
     apply simp
@@ -1970,7 +1970,7 @@ lemma cnode_offs_min2:
 lemma cnode_offs_max2':
   "is_aligned ptr 14 \<Longrightarrow> (ptr::word32) + 0x10 * (x && mask 10) \<le> ptr + 0x3fff"
   apply (rule word_plus_mono_right)
-   apply (subst mult_commute)
+   apply (subst mult.commute)
    apply (rule div_to_mult_word_lt)
    apply simp
    apply (rule plus_one_helper)
@@ -1979,7 +1979,7 @@ lemma cnode_offs_max2':
     apply simp
    apply simp
   apply (drule is_aligned_no_overflow)
-  apply (simp add: add_commute)
+  apply (simp add: add.commute)
   done
 
 lemma cnode_offs_max2:
@@ -1991,7 +1991,7 @@ lemma cnode_offs_max2:
 lemma cnode_offs_in_range2':
   "\<lbrakk>is_aligned ptr 14\<rbrakk> \<Longrightarrow>
      ptr + 0x10 * (x && mask 10) \<in> cnode_offs_range ptr"
-  apply (clarsimp simp: cnode_offs_min2' cnode_offs_max2' cnode_offs_range_def add_commute cte_level_bits_def)
+  apply (clarsimp simp: cnode_offs_min2' cnode_offs_max2' cnode_offs_range_def add.commute cte_level_bits_def)
   apply (rule is_aligned_add)
    apply (erule is_aligned_weaken)
    apply simp
@@ -2095,37 +2095,37 @@ lemma valid_caps_s0H[simp]:
       apply (simp add: objBitsKO_def s0_ptrs_aligned)
      apply (simp add: objBitsKO_def)
     apply (simp add: objBitsKO_def s0_ptrs_aligned mask_def)
-   apply (clarsimp simp: Low_cte_def Low_cte'_def Low_capsH_def cnode_offs_min2 cnode_offs_max2 cnode_offs_aligned2 add_commute s0_ptrs_aligned cte_level_bits_def objBitsKO_def empty_cte_def)
+   apply (clarsimp simp: Low_cte_def Low_cte'_def Low_capsH_def cnode_offs_min2 cnode_offs_max2 cnode_offs_aligned2 add.commute s0_ptrs_aligned cte_level_bits_def objBitsKO_def empty_cte_def)
    apply (rule pspace_distinctD''[OF _ s0H_pspace_distinct', simplified cte_level_bits_def])
-   apply (simp add: Low_cte_def Low_cte'_def Low_capsH_def empty_cte_def cnode_offs_min2 cnode_offs_max2 cnode_offs_aligned2 add_commute s0_ptrs_aligned cte_level_bits_def objBitsKO_def)
+   apply (simp add: Low_cte_def Low_cte'_def Low_capsH_def empty_cte_def cnode_offs_min2 cnode_offs_max2 cnode_offs_aligned2 add.commute s0_ptrs_aligned cte_level_bits_def objBitsKO_def)
    apply (simp add: valid_cap'_def capAligned_def word_bits_def objBits_def s0_ptrs_aligned obj_at'_def projectKO_eq project_inject)
    apply (intro conjI)
       apply (simp add: objBitsKO_def s0_ptrs_aligned)
      apply (simp add: objBitsKO_def)
     apply (simp add: objBitsKO_def s0_ptrs_aligned mask_def)
-   apply (clarsimp simp: High_cte_def High_cte'_def High_capsH_def cnode_offs_min2 cnode_offs_max2 cnode_offs_aligned2 add_commute s0_ptrs_aligned cte_level_bits_def objBitsKO_def empty_cte_def)
+   apply (clarsimp simp: High_cte_def High_cte'_def High_capsH_def cnode_offs_min2 cnode_offs_max2 cnode_offs_aligned2 add.commute s0_ptrs_aligned cte_level_bits_def objBitsKO_def empty_cte_def)
    apply (rule pspace_distinctD''[OF _ s0H_pspace_distinct', simplified cte_level_bits_def])
-   apply (simp add: High_cte_def High_cte'_def High_capsH_def empty_cte_def cnode_offs_min2 cnode_offs_max2 cnode_offs_aligned2 add_commute s0_ptrs_aligned cte_level_bits_def objBitsKO_def)
+   apply (simp add: High_cte_def High_cte'_def High_capsH_def empty_cte_def cnode_offs_min2 cnode_offs_max2 cnode_offs_aligned2 add.commute s0_ptrs_aligned cte_level_bits_def objBitsKO_def)
    apply (simp add: valid_cap'_def capAligned_def word_bits_def objBits_def s0_ptrs_aligned obj_at'_def projectKO_eq project_inject)
    apply (intro conjI)
       apply (simp add: objBitsKO_def s0_ptrs_aligned)
      apply (simp add: objBitsKO_def)
     apply (simp add: objBitsKO_def s0_ptrs_aligned mask_def)
-   apply (clarsimp simp: Silc_cte_def Silc_cte'_def Silc_capsH_def cnode_offs_min2 cnode_offs_max2 cnode_offs_aligned2 add_commute s0_ptrs_aligned cte_level_bits_def objBitsKO_def empty_cte_def)
+   apply (clarsimp simp: Silc_cte_def Silc_cte'_def Silc_capsH_def cnode_offs_min2 cnode_offs_max2 cnode_offs_aligned2 add.commute s0_ptrs_aligned cte_level_bits_def objBitsKO_def empty_cte_def)
    apply (rule pspace_distinctD''[OF _ s0H_pspace_distinct', simplified cte_level_bits_def])
-   apply (simp add: Silc_cte_def Silc_cte'_def Silc_capsH_def empty_cte_def cnode_offs_min2 cnode_offs_max2 cnode_offs_aligned2 add_commute s0_ptrs_aligned cte_level_bits_def objBitsKO_def)
+   apply (simp add: Silc_cte_def Silc_cte'_def Silc_capsH_def empty_cte_def cnode_offs_min2 cnode_offs_max2 cnode_offs_aligned2 add.commute s0_ptrs_aligned cte_level_bits_def objBitsKO_def)
    apply (simp add: valid_cap'_def capAligned_def word_bits_def Low_asid_def asid_low_bits_def asid_bits_def s0_ptrs_aligned page_directory_at'_def pdBits_def pageBits_def)
    apply (clarsimp simp: typ_at'_def ko_wp_at'_def)
    apply (drule less_t2n_ex_ucast[where n=12 and 'b=12, simplified])
-   apply (clarsimp simp: Low_pdH_def pd_offs_aligned pd_offs_min pd_offs_max s0_ptrs_aligned add_commute objBitsKO_def archObjSize_def)
+   apply (clarsimp simp: Low_pdH_def pd_offs_aligned pd_offs_min pd_offs_max s0_ptrs_aligned add.commute objBitsKO_def archObjSize_def)
    apply (rule pspace_distinctD''[OF _ s0H_pspace_distinct'])
-   apply (simp add: Low_pdH_def pd_offs_aligned pd_offs_min pd_offs_max s0_ptrs_aligned objBitsKO_def archObjSize_def add_commute)
+   apply (simp add: Low_pdH_def pd_offs_aligned pd_offs_min pd_offs_max s0_ptrs_aligned objBitsKO_def archObjSize_def add.commute)
    apply (simp add: valid_cap'_def capAligned_def word_bits_def High_asid_def asid_low_bits_def asid_bits_def s0_ptrs_aligned page_directory_at'_def pdBits_def pageBits_def)
    apply (clarsimp simp: typ_at'_def ko_wp_at'_def)
    apply (drule less_t2n_ex_ucast[where n=12 and 'b=12, simplified])
-   apply (clarsimp simp: High_pdH_def pd_offs_aligned pd_offs_min pd_offs_max s0_ptrs_aligned add_commute objBitsKO_def archObjSize_def)
+   apply (clarsimp simp: High_pdH_def pd_offs_aligned pd_offs_min pd_offs_max s0_ptrs_aligned add.commute objBitsKO_def archObjSize_def)
    apply (rule pspace_distinctD''[OF _ s0H_pspace_distinct'])
-   apply (simp add: High_pdH_def pd_offs_aligned pd_offs_min pd_offs_max s0_ptrs_aligned objBitsKO_def archObjSize_def add_commute)
+   apply (simp add: High_pdH_def pd_offs_aligned pd_offs_min pd_offs_max s0_ptrs_aligned objBitsKO_def archObjSize_def add.commute)
    apply (simp add: valid_cap'_def capAligned_def word_bits_def objBits_def s0_ptrs_aligned obj_at'_def projectKO_eq project_inject Low_asid_def asid_low_bits_def asid_bits_def objBitsKO_def aepH_def)
    apply (rule pspace_distinctD''[OF _ s0H_pspace_distinct', simplified])
    apply (simp add: aepH_def objBitsKO_def)
@@ -3124,7 +3124,7 @@ lemma shiftl_shiftr_2_word8[simp]:
 
 lemma mult_shiftr_id[simp]:
   "length x = 10 \<Longrightarrow> of_bl x * (0x10::word32) >> 4 = of_bl x"
-  apply (simp add: shiftl_t2n[symmetric, where n=4, simplified mult_commute, simplified] )
+  apply (simp add: shiftl_t2n[symmetric, where n=4, simplified mult.commute, simplified] )
   apply (subst shiftl_shiftr_id)
     apply simp
    apply (rule less_trans)

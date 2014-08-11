@@ -396,7 +396,7 @@ lemma sts_nasty_bit:
               \<longrightarrow> cte_wp_at (Not \<circ> is_zombie) (a, b) s \<and> \<not> is_zombie cap\<rbrace>"
   apply (wp hoare_vcg_const_Ball_lift hoare_vcg_all_lift
             hoare_vcg_imp_lift hoare_vcg_disj_lift valid_cte_at_neg_typ
-          | simp add: cte_wp_at_neg2[where P="\<lambda>c. x \<in> obj_refs c", standard])+
+          | simp add: cte_wp_at_neg2[where P="\<lambda>c. x \<in> obj_refs c" for x])+
   apply (clarsimp simp: o_def cte_wp_at_def)
   done
 
@@ -629,7 +629,7 @@ lemma lsft_ex_cte_cap_to:
   apply (wp rab_cte_cap_to)
   apply (clarsimp simp: ex_cte_cap_wp_to_def)
   apply (clarsimp dest!: get_tcb_SomeD)
-  apply (frule cte_wp_at_tcbI[where t="(t', tcb_cnode_index 0)" and P="op = v", standard, simplified])
+  apply (frule cte_wp_at_tcbI[where t="(t', tcb_cnode_index 0)" and P="op = v" for t' v, simplified])
     apply fastforce
    apply fastforce
   apply (intro exI, erule cte_wp_at_weakenE)

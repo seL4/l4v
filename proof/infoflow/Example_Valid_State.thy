@@ -633,7 +633,7 @@ lemma irq_node_offs_range_correct:
    apply (subst mask_add_aligned)
     apply (simp add: is_aligned_def)
    apply (simp add: mask_twice diff_def)
-   apply (subst add_commute[symmetric])
+   apply (subst add.commute[symmetric])
    apply (subst mask_add_aligned)
     apply (simp add: is_aligned_def)
    apply simp
@@ -987,14 +987,14 @@ lemma Sys1_pas_refined:
      apply (drule_tac x=ac in plus_one_helper2)
       apply (simp add: ptrFromPAddr_def physMappingOffset_def kernelBase_addr_def physBase_def
                        s0_ptr_defs)
-     apply (simp add: add_commute)
+     apply (simp add: add.commute)
     apply (erule notE)
     apply (rule Sys1AgentMap_simps(13)[symmetric])
      apply simp
     apply (drule_tac x=ac in plus_one_helper2)
      apply (simp add: ptrFromPAddr_def physMappingOffset_def kernelBase_addr_def physBase_def
                       s0_ptr_defs)
-    apply (simp add: add_commute)
+    apply (simp add: add.commute)
 
    apply (rule subsetI, clarsimp)
    apply (erule state_asids_to_policy_aux.cases)
@@ -1223,7 +1223,7 @@ lemma pspace_distinct_s0:
        apply (cut_tac x=irqa and 'a=32 in ucast_less)
         apply simp
        apply (simp add: word_less_nat_alt)
-      apply (simp add: mult_commute)
+      apply (simp add: mult.commute)
       apply (drule_tac y="0x10" and x="0xF0002FFF" in word_plus_mono_right)
        apply (rule_tac sz=28 in word32_plus_mono_right_split)
         apply (simp add: unat_word_ariths mask_def)
@@ -1269,7 +1269,7 @@ lemma pspace_distinct_s0:
        apply (cut_tac x=irq and 'a=32 in ucast_less)
         apply simp
        apply (simp add: word_less_nat_alt)
-      apply (simp add: mult_commute)
+      apply (simp add: mult.commute)
       apply (drule_tac y="0x10" and x="0xF0002FFF" in word_plus_mono_right)
        apply (rule_tac sz=28 in word32_plus_mono_right_split)
         apply (simp add: unat_word_ariths mask_def)
@@ -1302,7 +1302,7 @@ lemma pspace_distinct_s0:
    apply simp
   apply ((simp | erule disjE | clarsimp simp: kh0_obj_def cte_level_bits_def s0_ptr_defs
         | clarsimp simp: irq_node_offs_range_def s0_ptr_defs,
-          drule_tac x="0xF" in word_plus_strict_mono_right, simp, simp add: add_commute,
+          drule_tac x="0xF" in word_plus_strict_mono_right, simp, simp add: add.commute,
           drule(1) notE[rotated, OF less_trans, OF _ _ leD, rotated 2] |
           drule(1) notE[rotated, OF le_less_trans, OF _ _ leD, rotated 2], simp, assumption)+)[1]
   done
@@ -1581,7 +1581,7 @@ lemma valid_global_pd_mappings_s0[simp]:
      apply (drule_tac y="0xFFFFF + (ucast x << 20)" and z="0xEFFFFFFF::32 word" in order_trans_rules(23))
       apply simp      
      apply ((drule(1) order_trans_rules(23))+, force)
-    apply (simp add: add_commute
+    apply (simp add: add.commute
                word_plus_mono_left[where x="0xFFFFF" and z="0xEFF00000", simplified])
    apply (simp add: shiftl_t2n)
    apply (rule udvd_decr'[where K="0x100000" and q="0xF0000000" and ua=0, simplified])
@@ -1604,7 +1604,7 @@ lemma valid_global_pd_mappings_s0[simp]:
      apply (rule word_sub_le)
      apply (rule order_trans_rules(23)[rotated], assumption)
      apply simp
-    apply (simp add: add_commute)
+    apply (simp add: add.commute)
     apply (rule no_plus_overflow_neg)
     apply simp
     apply (drule_tac x="ucast x << 20" in order_trans_rules(23), assumption)

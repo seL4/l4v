@@ -235,6 +235,7 @@ lemma arch_derive_cap_cte:
   unfolding arch_derive_cap_def
   apply(cases c', simp_all add: is_cap_simps)
       apply(rule hoare_pre, wp ensure_no_children_wp, clarsimp)+
+    apply wp?
     apply(erule cte_wp_at_weakenE)
     apply(case_tac c, (clarsimp simp: is_derived_def cap_master_cap_def is_cap_simps 
                                       cap_asid_def is_pt_cap_def vs_cap_ref_def
@@ -253,7 +254,6 @@ lemma derive_cap_cte:
   unfolding derive_cap_def 
   apply (cases c', simp_all add: is_cap_simps)
           apply ((rule hoare_pre, wp ensure_no_children_wp, simp)+)[11]
-  apply clarsimp
   apply (rule hoare_pre, wp)
    apply (simp add: o_def)
    apply (wp arch_derive_cap_cte)
@@ -2105,7 +2105,7 @@ lemma do_ipc_transfer_invs[wp]:
          apply (subst ball_conj_distrib)
          apply (wp get_rs_cte_at2 thread_get_wp static_imp_wp
                    hoare_vcg_ball_lift hoare_vcg_all_lift hoare_vcg_conj_lift)
-  apply (rule hoare_strengthen_post[of P _ "\<lambda>_. P", standard])
+  apply (rule hoare_strengthen_post[of P _ "\<lambda>_. P" for P])
    apply (wp lookup_ipc_buffer_inv)
   apply (clarsimp simp: obj_at_def is_tcb invs_valid_objs)
   done
@@ -2840,12 +2840,12 @@ lemma ri_invs':
    apply (clarsimp simp: st_tcb_at_refs_of_rev st_tcb_at_tcb_at
                          valid_obj_def ep_redux_simps
                    cong: list.case_cong if_cong)
-   apply (frule(1) st_tcb_ex_cap[where P="\<lambda>ts. \<exists>pl. ts = st pl", standard],
+   apply (frule(1) st_tcb_ex_cap[where P="\<lambda>ts. \<exists>pl. ts = st pl" for st],
           clarsimp+)
    apply (clarsimp simp: valid_ep_def)
    apply (frule active_st_tcb_at_state_refs_ofD)
    apply (frule st_tcb_at_state_refs_ofD
-                [where P="\<lambda>ts. \<exists>pl. ts = st pl", standard])
+                [where P="\<lambda>ts. \<exists>pl. ts = st pl" for st])
    apply (subgoal_tac "y \<noteq> t \<and> y \<noteq> idle_thread s \<and> t \<noteq> idle_thread s \<and>
                        idle_thread s \<notin> set ys")
     apply (clarsimp simp: st_tcb_def2 obj_at_def is_ep_def split: if_splits)
@@ -2939,7 +2939,6 @@ lemma rai_invs':
   apply (simp add: receive_async_ipc_def)
   apply (cases cap, simp_all)
   apply (rule hoare_seq_ext [OF _ get_aep_sp])
-  apply clarsimp
   apply (case_tac x)
     apply (simp add: invs_def valid_state_def valid_pspace_def)
     apply (rule hoare_pre)
@@ -3119,7 +3118,7 @@ lemma si_invs':
                  sts_only_idle hoare_vcg_if_lift hoare_vcg_disj_lift thread_get_wp' hoare_vcg_all_lift
             | clarsimp simp:is_cap_simps  | wpc
             | strengthen reply_cap_doesnt_exist_strg
-                         disjI2_strg[where Q="cte_wp_at (\<lambda>cp. is_master_reply_cap cp \<and> R cp) p s", standard]
+                         disjI2_strg[where Q="cte_wp_at (\<lambda>cp. is_master_reply_cap cp \<and> R cp) p s" for R p s]
             | (wp hoare_vcg_conj_lift static_imp_wp | wp dxo_wp_weak | simp)+)+
   apply (clarsimp simp: ep_redux_simps conj_ac
                   cong: list.case_cong if_cong)
@@ -3208,7 +3207,6 @@ lemma rai_st_tcb_neq:
   apply (simp add: receive_async_ipc_def) 
   apply (cases cap)
    apply simp_all
-  apply clarsimp
   apply (rule hoare_seq_ext [OF _ get_aep_sp])
   apply (case_tac x)
     apply simp

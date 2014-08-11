@@ -4195,7 +4195,7 @@ lemma replicate_minus:
   "k < n \<Longrightarrow> replicate n False = replicate (n - k) False @ replicate k False"
   by (subst replicate_add [symmetric]) simp
 
-lemmas map_pair_split_imageI
+lemmas map_prod_split_imageI
   = map_prod_imageI[where f="split f" and g="split g"
                     and a="(a, b)" and b="(c, d)" for a b c d f g, simplified]
 
@@ -4611,8 +4611,6 @@ lemma neq_0_no_wrap:
 lemma plus_minus_one_rewrite:
   "v + (- 1 :: ('a :: {ring, one, uminus})) \<equiv> v - 1"
   by (simp add: field_simps)
-
-lemmas plus_minus_one_rewrite32 = plus_minus_one_rewrite[where 'a=word32, simplified]
 
 lemma power_minus_is_div:
   "b \<le> a \<Longrightarrow> (2 :: nat) ^ (a - b) = 2 ^ a div 2 ^ b"

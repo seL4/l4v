@@ -123,7 +123,7 @@ lemma word_range_max:
    prefer 2
    apply(rule_tac sz=n in is_aligned_no_wrap')
     apply(rule is_alignedI)
-    apply(subst mult_commute, rule refl)
+    apply(subst mult.commute, rule refl)
    apply simp
   apply(rule word_less_sub_1)
   apply(rule word_mod_less_divisor)
@@ -166,8 +166,8 @@ lemma words_cleared_memory_cleared:
    apply(rule word_diff_ls'(4))
     apply(rule_tac y="ptr + (2 ^ bits - 1 && ~~ mask 2)" in order_trans)
      apply(drule_tac n=2 and q="2 ^ bits - 1" in mask_out_add_aligned)
-     apply(fastforce intro: neg_mask_mono_le simp: x_power_minus_1 add_commute)
-    apply(fastforce simp: add_commute word_order_refl)
+     apply(fastforce intro: neg_mask_mono_le simp: x_power_minus_1 add.commute)
+    apply(fastforce simp: add.commute word_order_refl)
    apply(frule is_aligned_neg_mask_eq[where n=2])
    apply(rule xtr4[rotated], assumption)
    apply(blast intro: neg_mask_mono_le dest: order_trans)
@@ -182,7 +182,7 @@ lemma words_cleared_memory_cleared:
    apply(subgoal_tac "p < (p && ~~ mask 2) + 2", drule word_less_sub_1, simp)
     apply(case_tac "(p && ~~ mask 2) + 1 = p", simp)
     apply(subgoal_tac "p < (p && ~~ mask 2) + 1", drule word_less_sub_1, simp)
-    apply(fastforce simp: word_less_def add_commute)+
+    apply(fastforce simp: word_less_def add.commute)+
   done
 
 

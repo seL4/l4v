@@ -374,6 +374,7 @@ lemma n_next_eq:
    apply (erule n_nextD)   
   apply (clarsimp simp: mdb_next_unfold split: split_if_asm)
     apply (simp add: n_def modify_map_if slot)
+   apply hypsubst_thin
    apply (case_tac z)
    apply simp
    apply (drule m_next)
@@ -401,6 +402,7 @@ lemma n_prev_eq:
    apply (clarsimp simp: mdb_prev_def)
   apply (clarsimp simp: mdb_prev_def split: split_if_asm)
     apply (simp add: n_def modify_map_if slot)
+   apply hypsubst_thin
    apply (case_tac z)
    apply clarsimp
    apply (drule m_prev)
@@ -1882,6 +1884,7 @@ lemma isFinal:
   apply (rule sym, rule iffI)
    apply (rule classical, drule(5) notFinal_prev_or_next)
    apply (clarsimp simp: sameObjectAs_sym)
+   apply auto[1]
   apply (clarsimp simp: isFinal_def cteCaps_of_def)
   apply (case_tac cte)
   apply (erule_tac x="mdbNext node" in allE)
@@ -3879,6 +3882,7 @@ lemma recycle_cap_corres:
                         (\<lambda>s. final_matters' cap' \<longrightarrow>
                              is_final' = isFinal cap' (cte_map slot) (cteCaps_of s)))
     (recycle_cap is_final cap) (recycleCap is_final' cap')"
+  using [[ hypsubst_thin = true ]]
   apply (simp add: recycle_cap_def recycleCap_def split del: split_if)
   apply (cases cap, simp_all split del: split_if add: isCap_simps final_matters'_simps,
                     safe, simp_all)
