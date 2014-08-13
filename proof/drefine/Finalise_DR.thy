@@ -212,8 +212,7 @@ lemma delete_cap_one_shrink_descendants:
            apply (rule delete_cdt_slot_shrink_descendants[where y= "cdt pres" and p = p])
           apply (rule_tac Q="\<lambda>s. mdb_cte_at (swp (cte_wp_at (op\<noteq>cap.NullCap)) s ) xa" in hoare_vcg_precond_imp)
            apply (case_tac slot)
-           apply (clarsimp simp:set_cdt_def get_def put_def bind_def valid_def mdb_cte_at_def | rule conjI)+
-            apply (fastforce,clarsimp,fastforce)
+           apply (clarsimp simp:set_cdt_def get_def put_def bind_def valid_def mdb_cte_at_def)
           apply (assumption)
          apply clarsimp+
        apply (assumption)
@@ -1823,11 +1822,10 @@ lemma dcorres_unmap_sections:
   apply (drule_tac x = "(ucast (ptr + of_nat slot * 4 && mask pd_bits >> 2))"
     and y = "ucast (ptr && mask pd_bits >> 2)"
     in valid_entriesD[rotated])
-   apply (thin_tac "ptr + ?x  && ~~ mask pd_bits = ?y")
    apply (rule ccontr)
    apply simp
-   apply (drule arg_cong[where f = "ucast::(12 word\<Rightarrow>word32)"])
-   apply (drule arg_cong[where f = "\<lambda>x. shiftl x 2"])
+   apply (drule_tac x="ucast ?v" in arg_cong[where f = "ucast::(12 word\<Rightarrow>word32)"])
+   apply (drule_tac x="ucast ?v" in arg_cong[where f = "\<lambda>x. shiftl x 2"])
    apply (subst (asm) ucast_ucast_len)
     apply (rule shiftr_less_t2n)
     apply (rule less_le_trans[OF and_mask_less'])
@@ -1942,11 +1940,10 @@ lemma dcorres_unmap_pages:
   apply (drule_tac x = "(ucast (ptr + of_nat x * 4 && mask pt_bits >> 2))"
     and y = "ucast (ptr && mask pt_bits >> 2)"
     in valid_entriesD[rotated])
-   apply (thin_tac "ptr + ?x  && ~~ mask pt_bits = ?y")
    apply (rule ccontr)
    apply simp
-   apply (drule arg_cong[where f = "ucast::(word8\<Rightarrow>word32)"])
-   apply (drule arg_cong[where f = "\<lambda>x. shiftl x 2"])
+   apply (drule_tac x="ucast ?v" in arg_cong[where f = "ucast::(word8\<Rightarrow>word32)"])
+   apply (drule_tac x="ucast ?v" in arg_cong[where f = "\<lambda>x. shiftl x 2"])
    apply (subst (asm) ucast_ucast_len)
     apply (rule shiftr_less_t2n)
     apply (rule less_le_trans[OF and_mask_less'])
@@ -2392,7 +2389,7 @@ lemma dcorres_delete_asid:
             apply (wp | clarsimp)+
          apply simp
         apply (wp | clarsimp)+
-       apply (subgoal_tac "valid_idle s \<and> ko_at (ArchObj (arch_kernel_obj.ASIDPool rv)) a s")
+       apply (subgoal_tac "valid_idle s \<and> ko_at (ArchObj (arch_kernel_obj.ASIDPool rv)) x2 s")
         apply simp+
      apply (wp | clarsimp)+
     apply (rule corres_alternate2)
@@ -3405,8 +3402,6 @@ next
     apply (clarsimp simp: obj_at_def is_cap_table_def)
     apply (clarsimp simp: opt_cap_cnode
                    split: Structures_A.kernel_object.split_asm)
-    apply (subst (asm) opt_cap_cnode, assumption, simp, simp)
-    apply clarsimp
     apply (rule exI, rule conjI, erule sym)
     apply (rule iffD1[OF cte_wp_at_caps_of_state cte_wp_at_cteI],
              (simp | rule conjI)+)
@@ -3567,7 +3562,7 @@ next
            apply (frule if_unsafe_then_capD, clarsimp+)
            apply (clarsimp simp: cte_wp_at_caps_of_state)
            apply (frule valid_global_refsD2, clarsimp+)
-           apply (erule disjE[where P="c = cap.NullCap \<and> P" for P])
+           apply (erule disjE[where P="c = cap.NullCap \<and> P" for c P])
             apply clarsimp
            apply (clarsimp simp: conj_ac invs_valid_idle global_refs_def cap_range_def
                           dest!: is_cap_simps' [THEN iffD1])

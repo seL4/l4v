@@ -242,7 +242,7 @@ next
 
   case (3 ptr bits n slot s)
   show ?case    
-    apply (simp add: rec_del_call.cases simp_thms spec_validE_def)
+    apply (simp add: rec_del_call.simps simp_thms spec_validE_def)
     apply (rule hoare_pre, wp cap_swap_for_delete_P cap_swap_for_delete_Q)
     apply (clarsimp simp: invs_valid_ko_at_arm)
     done

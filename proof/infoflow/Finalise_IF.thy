@@ -1381,7 +1381,6 @@ lemma finalise_cap_reads_respects:
                   | wp_once reads_respects_f[where st=st] | blast)+)[11]
   apply (rule equiv_valid_guard_imp)
    apply (wp arch_finalise_cap_reads_respects reads_respects_f[where st=st] arch_finalise_cap_silc_inv | simp | elim conjE)+
-  apply auto
   done
 
 lemma cap_swap_for_delete_reads_respects:

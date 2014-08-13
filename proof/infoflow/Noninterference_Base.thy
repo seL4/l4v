@@ -736,7 +736,8 @@ definition confidentiality_u_weak where
 
 lemma confidentiality_u_confidentiality_u_weak:
   "confidentiality_u \<Longrightarrow> confidentiality_u_weak"
-  apply(fastforce simp: confidentiality_u_def confidentiality_u_weak_def)
+  apply (simp add: confidentiality_u_def confidentiality_u_weak_def)
+  apply blast
   done
 
 lemma impCE':

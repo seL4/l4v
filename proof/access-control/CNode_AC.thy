@@ -198,7 +198,7 @@ lemma decode_cnode_inv_authorised:
   apply (rule hoare_pre)
    apply (wp hoare_vcg_all_lift hoare_vcg_const_imp_lift_R hoare_vcg_all_lift_R
              get_cap_prop_imp[where Q=has_recycle_rights] lsfco_cte_at
-        | simp only: simp_thms if_simps fst_conv snd_conv Invocations_A.cnode_invocation.cases
+        | simp only: simp_thms if_simps fst_conv snd_conv Invocations_A.cnode_invocation.simps
         | wpc
         | wp_once hoare_drop_imps)+
   apply clarsimp
@@ -406,9 +406,7 @@ lemma set_irq_state_respects[wp]:
 crunch respects[wp]: deleted_irq_handler "integrity aag X st"
 
 lemmas cases_simp_options
-    = cases_simp_option cases_simp_option[where 'a="'b \<times> 'c", simplified, standard]
-
-
+    = cases_simp_option cases_simp_option[where 'a="'b \<times> 'c", simplified]
 
 lemma empty_slointegrity_spec:
   notes split_paired_All[simp del]

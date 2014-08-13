@@ -230,7 +230,7 @@ proof -
    using 2
    apply (clarsimp simp: buffer_cptr_index_def msg_max_length_def
               valid_message_info_def msg_max_extra_caps_def word_le_nat_alt)
-  apply (rule arg_cong2[where f="list_case None", OF refl])
+  apply (rule arg_cong2[where f="case_list None", OF refl])
   apply (rule map_cong[OF refl])
    apply (rule word_rcat_eq)
   apply (clarsimp simp: atLeastAtMost_upt[symmetric]  simp del: upt_Suc)
@@ -271,7 +271,7 @@ lemma freeMemory_dcorres:
   apply (clarsimp simp: transform_def transform_current_thread_def)
   apply (rule ext)
   apply (clarsimp simp: transform_objects_def map_add_def)
-  apply (clarsimp simp: map_option_def split: option.splits)
+  apply (clarsimp simp: option_map_def split: option.splits)
   apply (clarsimp simp: transform_object_def transform_tcb_def
                  split: Structures_A.kernel_object.split option.splits)
   apply (rename_tac s ms tref etcb tcb)
@@ -1222,7 +1222,7 @@ lemma retype_addrs_range_subset_strong:
   shows "\<lbrakk>p \<in> set (retype_addrs ptr ty n us); range_cover ptr sz (obj_bits_api ty us) n\<rbrakk>
   \<Longrightarrow> {p..p + 2 ^ obj_bits_api ty us - 1} \<subseteq> {ptr..ptr + of_nat n * 2 ^ obj_bits_api ty us - 1}"
   apply (clarsimp simp: retype_addrs_def ptr_add_def)
-  apply (drule_tac p = p in range_cover_subset)
+  apply (drule_tac p = pa in range_cover_subset)
    apply clarsimp+
   apply blast
   done
@@ -1460,7 +1460,7 @@ lemma invoke_untyped_corres:
                 apply ((wp | simp add: mdb_cte_at_def | rule hoare_vcg_conj_lift, wps)+)[2]
                apply (wp retype_region_aligned_for_init[where sz = sz]
                  retype_region_obj_at[THEN hoare_vcg_const_imp_lift]
-                 retype_region_caps_of[where sza = sz]
+                 retype_region_caps_of[where sza = "\<lambda>_. sz"]
               | simp add:misc)+
                apply (rule_tac Q="\<lambda>rv s. cte_wp_at (op \<noteq> cap.NullCap) (cref, oref) s \<and> post_retype_invs tp rv s
                            \<and> idle_thread s \<notin> fst ` set slots
@@ -1577,7 +1577,7 @@ lemma invoke_untyped_corres:
            apply ((wp | simp add: mdb_cte_at_def | rule hoare_vcg_conj_lift, wps)+)[2]
          apply (wp retype_region_aligned_for_init[where sz = sz]
                  retype_region_obj_at[THEN hoare_vcg_const_imp_lift]
-                 retype_region_caps_of[where sza = sz]
+                 retype_region_caps_of[where sza = "\<lambda>_. sz"]
               | simp add:misc)+
          apply (rule_tac Q="\<lambda>rv s. cte_wp_at (op \<noteq> cap.NullCap) (cref, oref) s \<and> post_retype_invs tp rv s
            \<and> idle_thread s \<notin> fst ` set slots
@@ -1923,7 +1923,7 @@ lemma decode_untyped_corres:
       in hoare_post_imp_R)
        apply wp
       apply (clarsimp simp: cte_wp_at_caps_of_state)
-      apply (frule_tac p = "(aa,b)" in caps_of_state_valid[rotated])
+      apply (frule_tac p = "(?x,?y)" in caps_of_state_valid[rotated])
        apply simp
       apply (clarsimp simp:valid_cap_def obj_at_def valid_idle_def st_tcb_at_def
         is_cap_simps not_idle_thread_def is_cap_table_def dest!:invs_valid_idle)

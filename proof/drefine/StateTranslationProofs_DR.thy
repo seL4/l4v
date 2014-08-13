@@ -245,7 +245,7 @@ lemma map_lift_over_f_eq:
   "inj_on f ({x} \<union> dom m \<union> ran m) \<Longrightarrow>
    (map_lift_over f m (f x) = v) = (v = map_option f (m x))"
   apply (cases v, simp_all add: map_lift_over_eq_None map_lift_over_eq_Some)
-   apply (auto simp: map_option_def split: option.split)
+   apply (auto simp: option_map_def split: option.split)
   done
 
 lemma map_lift_over_eq_cases[unfolded map_lift_over_eq_None map_lift_over_eq_Some]:
@@ -312,7 +312,7 @@ proof -
      apply (simp add: Q[THEN inv_into_f_f] domI ranI inj_on_iff[OF inj_f]
                split: split_if_asm)
     apply (subst if_not_P, simp, rule allI, fastforce)+
-    apply (auto simp: map_option_def Q[THEN inv_into_f_f] domI ranI
+    apply (auto simp: option_map_def Q[THEN inv_into_f_f] domI ranI
                       inj_on_iff[OF inj_f]
                split: split_if option.split)
     done

@@ -205,7 +205,6 @@ lemma decode_tcb_cap_label_not_match:
         transform_intent_tcb_copy_registers_def transform_intent_tcb_set_priority_def transform_intent_tcb_set_ipc_buffer_def
     split:option.splits)
     apply (simp_all split:List.list.split list.split_asm option.splits)
-    apply (wp | clarsimp | rule conjI)+
       apply (simp add: decode_read_registers_def decode_write_registers_def decode_set_ipc_buffer_def
           decode_copy_registers_def decode_set_space_def decode_tcb_configure_def decode_set_priority_def | wp)+
   done
@@ -1135,7 +1134,7 @@ lemma dcorres_tcb_update_ipc_buffer:
    apply (simp add:tcb_cap_cases_def)
 (* Main Part *)
   apply (clarsimp simp:tcb_update_ipc_buffer_def tcb_update_thread_slot_def  transform_tcb_slot_simp[symmetric])
-  apply (drule sym)
+  apply (drule_tac s="transform_cslot_ptr ?a" in sym)
   apply (clarsimp simp:check_cap_at_def)
   apply (rule dcorres_expand_pfx)
   apply (subst alternative_com)
@@ -1498,7 +1497,7 @@ crunch valid_etcbs[wp]: option_update_thread "valid_etcbs"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma dcorres_thread_control:
-  notes case_option_map [simp del]
+  notes case_map_option [simp del]
   shows
   "\<lbrakk> t' = tcb_invocation.ThreadControl obj_id' a' fault_ep' prio' croot' vroot' ipc_buffer';
      t = translate_tcb_invocation t' \<rbrakk> \<Longrightarrow>

@@ -773,7 +773,7 @@ where
 lemma caps_of_state_tcb:
   "\<lbrakk> get_tcb p s = Some tcb; option_map fst (tcb_cap_cases idx) = Some getF \<rbrakk> \<Longrightarrow> caps_of_state s (p, idx) = Some (getF tcb)"
   apply (drule get_tcb_SomeD)
-  apply (clarsimp simp: option_map_eq_Some)
+  apply (clarsimp simp: map_option_eq_Some)
   apply (drule (1) cte_wp_at_tcbI [where t = "(p, idx)" and P = "op = (getF tcb)", simplified])
   apply simp
   apply (clarsimp simp: cte_wp_at_caps_of_state)
@@ -1495,7 +1495,7 @@ next
     apply (intro range_subsetI)
      apply (rule is_aligned_no_wrap' [OF al xsz])
     apply (simp only: add_diff_eq[symmetric])
-    apply (subst add.commute add.left_commute, rule word_plus_mono_right)
+    apply (subst add.assoc, rule word_plus_mono_right)
     apply (subst iffD1 [OF le_m1_iff_lt])
     apply (simp add: p2_gt_0 word_bits_conv)
     apply (rule is_aligned_add_less_t2n[OF al' _ szv xsz])

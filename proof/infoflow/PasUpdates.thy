@@ -187,8 +187,7 @@ lemma silc_inv_pasSubject_update:
 
 lemma prop_of_pasMayActivate_update_idemp:
   "\<lbrakk>P aag; pasMayActivate aag = v\<rbrakk> \<Longrightarrow> P (aag\<lparr> pasMayActivate := v \<rparr>)"
-  apply auto
-  done
+  by (hypsubst, auto)
 
 lemma pasObjectAbs_pasMayActivate_update:
   "pasObjectAbs (aag\<lparr> pasMayActivate := x \<rparr>) = pasObjectAbs aag"
@@ -246,8 +245,7 @@ lemma pas_refined_pasMayActivate_update:
 
 lemma prop_of_pasMayEditReadyQueues_update_idemp:
   "\<lbrakk>P aag; pasMayEditReadyQueues aag = v\<rbrakk> \<Longrightarrow> P (aag\<lparr> pasMayEditReadyQueues := v \<rparr>)"
-  apply auto
-  done
+  by clarsimp
 
 lemma pasObjectAbs_pasMayEditReadyQueues_update:
   "pasObjectAbs (aag\<lparr> pasMayEditReadyQueues := x \<rparr>) = pasObjectAbs aag"

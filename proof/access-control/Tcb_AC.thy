@@ -79,14 +79,14 @@ lemmas itr_wps = restart_integrity_autarch as_user_integrity_autarch thread_set_
               option_update_thread_integrity_autarch thread_set_pas_refined_triv
               cap_insert_integrity_autarch cap_insert_pas_refined
               hoare_vcg_all_liftE hoare_weak_lift_impE hoare_weak_lift_imp hoare_vcg_all_lift
-              check_cap_inv[where P="valid_cap c", standard]
-              check_cap_inv[where P="tcb_cap_valid c p", standard]
-              check_cap_inv[where P="cte_at p0", standard]
-              check_cap_inv[where P="tcb_at p0", standard]
-              check_cap_inv[where P="ex_cte_cap_wp_to P p", standard]
-              check_cap_inv[where P="ex_nonz_cap_to p", standard]
-              check_cap_inv2[where Q="\<lambda>_. integrity aag X st", standard]
-              check_cap_inv2[where Q="\<lambda>_. pas_refined aag", standard]
+              check_cap_inv[where P="valid_cap c" for c]
+              check_cap_inv[where P="tcb_cap_valid c p" for c p]
+              check_cap_inv[where P="cte_at p0" for p0]
+              check_cap_inv[where P="tcb_at p0" for p0]
+              check_cap_inv[where P="ex_cte_cap_wp_to P p" for P p]
+              check_cap_inv[where P="ex_nonz_cap_to p" for p]
+              check_cap_inv2[where Q="\<lambda>_. integrity aag X st" for aag X st]
+              check_cap_inv2[where Q="\<lambda>_. pas_refined aag" for aag]
               checked_insert_no_cap_to cap_insert_ex_cap
               cap_delete_valid_cap cap_delete_deletes
               hoare_case_option_wp thread_set_valid_cap
@@ -166,7 +166,7 @@ lemma set_priority_pas_refined[wp]:
   apply (simp add: tcb_sched_action_def | wp)+
   apply (clarsimp simp: etcb_at_def pas_refined_def tcb_domain_map_wellformed_aux_def
           split: option.splits)
-  apply (erule_tac x="(aa, b)" in ballE)
+  apply (erule_tac x="(a, b)" in ballE)
    apply simp
   apply (erule domains_of_state_aux.cases)
   apply (force intro: domtcbs split: split_if_asm)
@@ -247,13 +247,13 @@ lemma invoke_tcb_tc_respects_aag:
              thread_set_tcb_ipc_buffer_cap_cleared_invs
              thread_set_invs_trivial[OF ball_tcb_cap_casesI]
              hoare_vcg_all_lift thread_set_valid_cap out_emptyable
-             check_cap_inv [where P="valid_cap c", standard]
-             check_cap_inv [where P="tcb_cap_valid c p", standard]
-             check_cap_inv[where P="cte_at p0", standard]
-             check_cap_inv[where P="tcb_at p0", standard]
-             check_cap_inv[where P="simple_sched_action", standard]
-             check_cap_inv[where P="valid_list", standard]
-             check_cap_inv[where P="valid_sched", standard]
+             check_cap_inv [where P="valid_cap c" for c]
+             check_cap_inv [where P="tcb_cap_valid c p" for c p]
+             check_cap_inv[where P="cte_at p0" for p0]
+             check_cap_inv[where P="tcb_at p0" for p0]
+             check_cap_inv[where P="simple_sched_action"]
+             check_cap_inv[where P="valid_list"]
+             check_cap_inv[where P="valid_sched"]
              thread_set_cte_at
              thread_set_cte_wp_at_trivial[where Q="\<lambda>x. x", OF ball_tcb_cap_casesI]
              thread_set_no_cap_to_trivial[OF ball_tcb_cap_casesI]

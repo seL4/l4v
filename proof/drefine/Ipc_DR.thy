@@ -524,7 +524,7 @@ lemma dcorres_do_async_transfer:
       apply (subst opt_cap_tcb)
       apply (simp add:return_def is_etcb_at_def get_etcb_def)+
       apply clarsimp
-      apply (drule_tac y = "Some a" in arg_cong[where f  = the])
+      apply (drule_tac y = "Some x2" in arg_cong[where f  = the])
       apply simp
       apply (wp cdl_get_ipc_buffer_None | simp)+
     apply clarsimp
@@ -897,7 +897,7 @@ lemma evalMonad_get_extra_cptrs:
     apply (simp add:weak_det_spec_load_word_offs)
     apply (wp mapM_wp,fastforce)
   apply (clarsimp split:option.splits)
-  apply (rule_tac x = a in arg_cong)
+  apply (rule_tac x = x2 in arg_cong)
   apply (clarsimp simp:transform_full_intent_def Let_def)
   apply (clarsimp simp:get_ipc_buffer_words_def)
   apply (drule lookup_ipc_buffer_SomeB_evalMonad)
@@ -1622,8 +1622,9 @@ lemma dcorres_copy_mrs':
   apply (drule lookup_ipc_buffer_SomeB_evalMonad)
   apply clarsimp
   apply (rule corres_symb_exec_l)
-    apply (rule_tac F = " rv = Some b" in corres_gen_asm)
-    apply (clarsimp simp:option.splits)
+    apply -
+    apply (rule_tac F = "rvb = Some b" in corres_gen_asm)
+    apply clarsimp
     apply (rule corres_guard_imp[OF dcorres_copy_mrs])
       apply (simp add:data_to_message_info_valid)+
     apply (clarsimp simp:ipc_frame_wp_at_def obj_at_def cte_wp_at_cases)
@@ -1675,8 +1676,8 @@ lemma dcorres_set_mrs':
   apply (drule lookup_ipc_buffer_SomeB_evalMonad)
   apply clarsimp
   apply (rule corres_symb_exec_l)
-    apply (rule_tac F = " rv = Some b" in corres_gen_asm)
-    apply (clarsimp simp:option.splits)
+    apply (rule_tac F = "rva = Some b" in corres_gen_asm)
+    apply clarsimp
     apply (rule corrupt_frame_include_self)
     apply (rule corres_guard_imp[OF set_mrs_corres])
       apply (simp add:data_to_message_info_valid)+
@@ -2183,7 +2184,7 @@ lemma recv_sync_ipc_corres:
   apply (clarsimp simp:corres_free_fail cap_ep_ptr_def Ipc_A.receive_ipc_def
                  split:cap.splits Structures_A.endpoint.splits)
   apply (rule dcorres_expand_pfx)
-  apply (rule_tac Q'="\<lambda>ko. op = s' and ko_at (kernel_object.Endpoint ko) word1" in corres_symb_exec_r)
+  apply (rule_tac Q'="\<lambda>ko. op = s' and ko_at (kernel_object.Endpoint ko) epptr" in corres_symb_exec_r)
     apply (simp add:Endpoint_D.receive_ipc_def gets_def)
     apply (rule dcorres_absorb_get_l)
     apply (case_tac rv)
@@ -2253,7 +2254,7 @@ lemma recv_sync_ipc_corres:
               and pspace_distinct and not_idle_thread y and not_idle_thread thread
               and valid_idle and valid_irq_node and (\<lambda>s. cur_thread s \<noteq> idle_thread s)
               and tcb_at y and tcb_at thread
-              and st_tcb_at (\<lambda>rv. rv = Structures_A.thread_state.BlockedOnSend word1 payload) y and valid_etcbs"
+              and st_tcb_at (\<lambda>rv. rv = Structures_A.thread_state.BlockedOnSend epptr payload) y and valid_etcbs"
             in hoare_strengthen_post[rotated])
              apply (clarsimp simp:not_idle_thread_def)
              apply (clarsimp simp:st_tcb_at_def obj_at_def)

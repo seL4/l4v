@@ -41,7 +41,7 @@ lemma objs_valid_tcb_vtable:
   "\<lbrakk>valid_objs s; get_tcb t s = Some tcb\<rbrakk> \<Longrightarrow> s \<turnstile> tcb_vtable tcb"
   apply (clarsimp simp: get_tcb_def split: option.splits Structures_A.kernel_object.splits)
   apply (erule cte_wp_valid_cap[rotated])
-  apply (rule cte_wp_at_tcbI[where t="(a, b)" for a b, where b="tcb_cnode_index 1"])
+  apply (rule cte_wp_at_tcbI[where t="(a, b)" for a b, where b3="tcb_cnode_index 1"])
     apply fastforce+
   done
 
@@ -52,10 +52,9 @@ lemma pd_of_thread_page_directory_at:
   apply (clarsimp simp: get_pd_of_thread_def
                   split: option.splits kernel_object.splits cap.splits arch_cap.splits
                          if_splits)
-  apply (subgoal_tac "s \<turnstile> ArchObjectCap (PageDirectoryCap word (Some aa))")
-   apply (fastforce simp: valid_cap_def2 valid_cap_ref_def)
-  apply (cut_tac s=s and t=tcb and tcb=tcb_ext in objs_valid_tcb_vtable)
-    apply (simp add: invs_valid_objs get_tcb_def)+
+  apply (frule_tac t=tcb in objs_valid_tcb_vtable[OF invs_valid_objs])
+   apply (simp add: get_tcb_def)
+  apply (fastforce simp: valid_cap_def2 valid_cap_ref_def)
   done
 
 lemma ptr_offset_in_ptr_range:

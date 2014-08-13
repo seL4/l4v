@@ -212,7 +212,7 @@ lemma insert_cap_sibling_corres:
               apply (subgoal_tac "inj_on transform_cslot_ptr ({src, sibling} \<union> dom (cdt s') \<union> ran (cdt s'))")
                apply (subst map_lift_over_f_eq map_lift_over_upd,
                  erule subset_inj_on, fastforce)+
-               apply (simp add: option_map_is_None[THEN trans [OF eq_commute]]
+               apply (simp add: map_option_is_None[THEN trans [OF eq_commute]]
                  fun_eq_iff del: inj_on_insert)
                apply (subst eq_commute [where a=None])
                apply (subst map_lift_over_f_eq map_lift_over_upd,
@@ -279,7 +279,7 @@ lemma insert_cap_child_corres:
   apply (rule stronger_corres_guard_imp)
     apply (rule corres_split[OF _ get_cap_corres])+
           apply (rule_tac P="old_cap \<noteq> cdl_cap.NullCap" and P'="rv' \<noteq> cap.NullCap"
-            in corres_symmetric_case_bools)
+            in corres_symmetric_bool_cases)
            apply (clarsimp simp :transform_cap_def split:cap.splits arch_cap.splits)
            apply (simp add:assert_def)
            apply (rule corres_trivial)
@@ -362,7 +362,7 @@ lemma reply_cap_insert_corres:
    apply (drule caps_of_state_cteD)+
    apply (frule(1) cte_wp_tcb_cap_valid)
      apply (clarsimp simp:valid_mdb_def reply_master_revocable_def)
-     apply (drule_tac x = "word" in spec)
+     apply (drule_tac x = "sid" in spec)
      apply (drule_tac x = "tcb_cnode_index 2" in spec)
      apply (clarsimp simp:cte_wp_at_caps_of_state is_master_reply_cap_def)
   apply (drule caps_of_state_cteD)+
@@ -437,9 +437,6 @@ proof -
              apply (clarsimp simp: transform_def transform_current_thread_def
                                    transform_cdt_def transform_asid_table_def
                                    transform_objects_def)
-             apply (subgoal_tac "(\<lambda>r. if r = p' then None else cdt s' r) = cdt s'")
-              apply clarsimp
-             apply fastforce
             apply clarsimp
             apply (rule corres_modify)
             apply (clarsimp simp: transform_def transform_current_thread_def
@@ -461,7 +458,7 @@ proof -
              apply (subst subset_inj_on map_lift_over_f_eq[OF subset_inj_on],
                     assumption, fastforce)+
              apply (simp add: inj_on_iff[where f="transform_cslot_ptr"]
-                              ranI domI option_map_eq_Some[THEN trans [OF eq_commute]])
+                              ranI domI map_option_eq_Some[THEN trans [OF eq_commute]])
              apply (auto simp: inj_on_iff[where f="transform_cslot_ptr"]
                                ranI domI,
                     auto simp: inj_on_iff[where f="transform_cslot_ptr"]
@@ -865,9 +862,7 @@ lemma ep_cancel_badged_sends_def':
   apply (case_tac s)
   apply clarsimp
   apply (rule ext)
-  apply (clarsimp simp:map_option_def split:option.splits)
-  apply (case_tac a)
-  apply auto
+  apply (clarsimp simp:option_map_def split:option.splits cdl_object.split)
 done
 
 lemma ep_cancel_badged_sends_def'':
@@ -884,9 +879,7 @@ lemma ep_cancel_badged_sends_def'':
   apply (case_tac s)
   apply clarsimp
   apply (rule ext)
-  apply (clarsimp simp:map_option_def split:option.splits)
-  apply (case_tac a)
-  apply auto
+  apply (clarsimp simp:option_map_def split:option.splits cdl_object.split)
 done
 
 lemma corres_mapM_to_mapM_x:
@@ -3224,7 +3217,7 @@ lemma decode_cnode_corres:
   apply clarsimp
   apply (erule disjE)
    apply clarsimp
-   apply (case_tac args')
+   apply (case_tac args'a)
     apply clarsimp
     apply (simp add: upto_enum_def toEnum_def fromEnum_def
                      enum_invocation_label)

@@ -759,7 +759,7 @@ lemma use_retype_region_proofs_ext':
    done
 
 lemmas use_retype_region_proofs_ext
-    = use_retype_region_proofs_ext'[where Q="\<lambda>_. Q" and P=Q for Q, simplified, OF _ _ _ _ TrueI]
+    = use_retype_region_proofs_ext'[where Q="\<lambda>_. Q" and P=Q, simplified, OF _ _ _ _ TrueI] for Q
 
 lemma (in is_extended) pas_refined_tcb_domain_map_wellformed':
   assumes tdmw: "\<lbrace>tcb_domain_map_wellformed aag and P\<rbrace> f \<lbrace>\<lambda>_. tcb_domain_map_wellformed aag\<rbrace>"
@@ -797,6 +797,7 @@ lemma retype_region_pas_refined:
    \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (rule hoare_pre)
+thm use_retype_region_proofs_ext
   apply(rule use_retype_region_proofs_ext)
      apply(erule (1) retype_region_proofs'.pas_refined[OF retype_region_proofs'.intro])
     apply (wp retype_region_ext_pas_refined)
@@ -893,7 +894,7 @@ lemma freeMemory_vms:
   apply (clarsimp simp: valid_machine_state_def
                         disj_commute[of "in_user_frame p s" for p s])
   apply (drule_tac x=p in spec, simp)
-  apply (drule_tac P="\<lambda>m'. underlying_memory m' p = 0"
+  apply (drule_tac P4="\<lambda>m'. underlying_memory m' p = 0"
          in use_valid[where P=P and Q="\<lambda>_. P" for P], simp_all)
   apply (simp add: freeMemory_def machine_op_lift_def
                    machine_rest_lift_def split_def)

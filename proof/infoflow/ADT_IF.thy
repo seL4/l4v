@@ -501,7 +501,6 @@ lemma  big_steps_I_holds:
   "\<lbrakk>(xa, x) \<in> big_steps A R exmap j; xa \<in> I; A [> I\<rbrakk>
        \<Longrightarrow> x \<in> I"
   apply (erule big_stepsE)
-  apply clarsimp
   apply (frule sub_big_steps_I_holds, assumption+)
   apply (simp add: inv_holds_def)
   apply blast
@@ -2535,7 +2534,7 @@ lemma next_irq_state_le:
       apply -
       apply(induct rule: inc_induct)
        apply(clarsimp simp: is_irq_at_next_irq_state[OF i])
-      apply(case_tac "is_irq_at s irq i")
+      apply(case_tac "is_irq_at s irq n")
        apply(simp add: is_irq_at_next_irq_state)
       apply(subst next_irq_state.psimps)
        apply(rule is_irq_at_next_irq_state_dom[OF _ i])
@@ -2562,7 +2561,7 @@ lemma next_irq_state_mono:
       apply -
       apply(induct rule: inc_induct)
        apply simp
-      apply(case_tac "is_irq_at s irq i")
+      apply(case_tac "is_irq_at s irq n")
        apply(simp add: is_irq_at_next_irq_state)
        apply(rule less_imp_le_nat)
        apply(erule less_le_trans)
@@ -3624,9 +3623,10 @@ lemma LI_sub_big_steps:
      apply assumption+
   apply (subgoal_tac "Fin A t = Fin C s")
    apply (subgoal_tac "Fin A y = Fin C z")
-    apply (force simp: internal_R_def)
+    apply (simp(no_asm_use) add: internal_R_def)
+    apply metis
    apply force+
-   done
+  done
 
 lemma LI_big_steps:
   "\<lbrakk>(s, s') \<in> big_steps C (internal_R C R) exmap ev;
@@ -3657,9 +3657,9 @@ lemma LI_big_steps:
    apply (subgoal_tac "Fin A t = Fin C s")
     apply (subgoal_tac "s' \<in> Ic")
      apply (subgoal_tac "Fin A y = Fin C s'")
-      apply force
-     apply force
-    apply (clarsimp simp: invariant_holds_def, blast)
+      apply metis
+     apply metis
+    apply (simp(no_asm_use) add: invariant_holds_def, blast)
    apply force
   apply simp
   done

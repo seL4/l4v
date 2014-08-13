@@ -388,7 +388,7 @@ lemma cte_wp_at_diminished_cnode_cap:
    cte_wp_at (op = cap) slot s"
   apply(case_tac cap, simp_all)
   apply(clarsimp simp: cte_wp_at_def diminished_def mask_cap_def)
-  apply(case_tac cap)
+  apply(case_tac capa)
   apply(clarsimp simp: cap_rights_update_def)+
   done
 
@@ -404,7 +404,7 @@ lemma cte_wp_at_diminished_PageDirectoryCap:
   "\<lbrakk>cte_wp_at (diminished cap) slot s; cap = ArchObjectCap (PageDirectoryCap x y)\<rbrakk> \<Longrightarrow>
    cte_wp_at (op = cap) slot s"
   apply(clarsimp simp: cte_wp_at_def diminished_def mask_cap_def)
-  apply(case_tac cap)
+  apply(case_tac capa)
   apply(clarsimp simp: cap_rights_update_def)+
   apply(case_tac arch_cap, simp_all add: acap_rights_update_def)
   done
@@ -413,7 +413,7 @@ lemma cte_wp_at_diminished_PageTableCap:
   "\<lbrakk>cte_wp_at (diminished cap) slot s; cap = ArchObjectCap (PageTableCap x y)\<rbrakk> \<Longrightarrow>
    cte_wp_at (op = cap) slot s"
   apply(clarsimp simp: cte_wp_at_def diminished_def mask_cap_def)
-  apply(case_tac cap)
+  apply(case_tac capa)
   apply(clarsimp simp: cap_rights_update_def)+
   apply(case_tac arch_cap, simp_all add: acap_rights_update_def)
   done
@@ -683,7 +683,6 @@ lemma decode_invocation_reads_respects_f:
        | simp)+
   apply (clarsimp simp: aag_has_Control_iff_owns split_def aag_cap_auth_def)
   apply (cases cap, simp_all)
-  apply fastforce
   apply ((clarsimp simp: valid_cap_def cte_wp_at_eq_simp 
                         is_cap_simps 
                         ex_cte_cap_wp_to_weakenE[OF _ TrueI]

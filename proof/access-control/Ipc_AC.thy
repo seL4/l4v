@@ -59,7 +59,6 @@ lemma receive_async_ipc_pas_refined:
   apply (simp add: receive_async_ipc_def)
   apply (cases cap, simp_all)
   apply (rule hoare_seq_ext [OF _ get_aep_sp])
-  apply clarsimp
   apply (rule hoare_pre)
   apply (wp set_async_ep_pas_refined set_thread_state_pas_refined
        | wpc)+
@@ -237,7 +236,6 @@ lemma receive_async_ipc_integrity_autarch:
   apply (simp add: receive_async_ipc_def)
   apply (cases cap, simp_all)
   apply (rule hoare_seq_ext [OF _ get_aep_sp])
-  apply clarsimp
   apply (rule hoare_pre)
   apply (wp set_async_ep_respects[where auth=Receive] set_thread_state_integrity_autarch
          do_async_transfer_integrity_autarch
@@ -817,12 +815,12 @@ lemma send_ipc_pas_refined:
   apply (wp set_thread_state_pas_refined
        | wpc
        | simp add: hoare_if_r_and)+
-  apply (rule_tac Q="\<lambda>rv. pas_refined aag and K (can_grant \<longrightarrow> is_subject aag a)" in hoare_strengthen_post[rotated])
+  apply (rule_tac Q="\<lambda>rv. pas_refined aag and K (can_grant \<longrightarrow> is_subject aag (hd list))" in hoare_strengthen_post[rotated])
    apply (clarsimp simp: cli_no_irqs pas_refined_refl aag_cap_auth_def clas_no_asid)
   apply (wp set_thread_state_pas_refined do_ipc_transfer_pas_refined static_imp_wp
        | wpc
        | simp add: hoare_if_r_and)+
-  apply (rule_tac Q="\<lambda>rv. valid_objs and  pas_refined aag and K (can_grant \<longrightarrow> is_subject aag a)" in hoare_strengthen_post[rotated])
+  apply (rule_tac Q="\<lambda>rv. valid_objs and  pas_refined aag and K (can_grant \<longrightarrow> is_subject aag (hd list))" in hoare_strengthen_post[rotated])
    apply (clarsimp simp: cli_no_irqs pas_refined_refl aag_cap_auth_def clas_no_asid)
   apply (wp set_thread_state_pas_refined do_ipc_transfer_pas_refined static_imp_wp
        | wpc
@@ -1700,7 +1698,7 @@ lemma send_ipc_integrity_autarch:
    apply (rule hoare_pre)
     apply (wp setup_caller_cap_integrity_autarch set_thread_state_integrity_autarch thread_get_wp'
                   | wpc)+
-          apply (rule_tac Q="\<lambda>rv s. integrity aag X st s\<and> (can_grant \<longrightarrow> is_subject aag a)" in hoare_strengthen_post[rotated])
+          apply (rule_tac Q="\<lambda>rv s. integrity aag X st s\<and> (can_grant \<longrightarrow> is_subject aag (hd list))" in hoare_strengthen_post[rotated])
           apply simp+
           apply (wp set_thread_state_integrity_autarch thread_get_wp' do_ipc_transfer_integrity_autarch
                     hoare_vcg_all_lift hoare_drop_imps set_endpoinintegrity
@@ -1723,7 +1721,7 @@ lemma send_ipc_integrity_autarch:
    apply (wp set_endpoinintegrity set_thread_state_integrity_autarch setup_caller_cap_integrity_autarch
              hoare_vcg_ex_lift sts_typ_ats thread_get_wp'
         | wpc)+
-         apply (rule_tac Q="\<lambda>rv sa. integrity aag X s sa \<and> (can_grant \<longrightarrow> is_subject aag a)" in hoare_strengthen_post[rotated])
+         apply (rule_tac Q="\<lambda>rv sa. integrity aag X s sa \<and> (can_grant \<longrightarrow> is_subject aag (hd list))" in hoare_strengthen_post[rotated])
           apply simp+
          apply (wp thread_get_inv put_wp get_object_wp get_endpoint_wp thread_get_wp'
                    set_thread_state_running_respects_in_ipc[where epptr=epptr]

@@ -632,13 +632,13 @@ lemma irq_node_offs_range_correct:
   apply (rule_tac n=12 in mask_eqI)
    apply (subst mask_add_aligned)
     apply (simp add: is_aligned_def)
-   apply (simp add: mask_twice diff_def)
+   apply (simp add: mask_twice)
+   apply (simp add: diff_conv_add_uminus del: add_uminus_conv_diff)
    apply (subst add.commute[symmetric])
    apply (subst mask_add_aligned)
     apply (simp add: is_aligned_def)
    apply simp
-  apply (simp add: diff_def)
-
+  apply (simp add: diff_conv_add_uminus del: add_uminus_conv_diff)
   apply (subst add_mask_lower_bits)
     apply (simp add: is_aligned_def)
    apply clarsimp

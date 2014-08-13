@@ -289,7 +289,7 @@ proof -
 
 
   show ?thesis using pdid vp_aligned
-    apply clarsimp
+    apply hypsubst_thin
     proof (induct pgsz)
       case ARMSmallPage
       show ?case using ARMSmallPage.prems
@@ -445,7 +445,7 @@ proof -
         apply (cut_tac less_kernel_base_mapping_slots[OF kb pd_aligned])
         apply (drule_tac x="ucast (lookup_pd_slot pd_ptr vptr && mask pd_bits >> 2)" in bspec)
          apply simp
-        apply (drule sym, simp)
+        apply (drule_tac t="pda ?v" in sym, simp)
         apply (clarsimp simp: obj_at_def a_type_def del: disjCI)
         apply (clarsimp split: Structures_A.kernel_object.split_asm split_if_asm
                                arch_kernel_obj.split_asm del: disjCI)
@@ -487,7 +487,7 @@ proof -
         apply (cut_tac less_kernel_base_mapping_slots[OF kb pd_aligned])
         apply (drule_tac x="ucast (lookup_pd_slot pd_ptr vptr && mask pd_bits >> 2)" in bspec)
          apply simp
-        apply (drule sym, simp)
+        apply (drule_tac t="pda ?v" in sym, simp)
         apply (clarsimp simp: obj_at_def a_type_def del: disjCI)
         apply (clarsimp split: Structures_A.kernel_object.split_asm split_if_asm
                                arch_kernel_obj.split_asm del: disjCI)
@@ -764,7 +764,7 @@ next
                                             apply (clarsimp simp: neq_Nil_conv valid_cap_simps obj_at_def
                                                                   opt_object_page_directory invs_valid_idle label_to_flush_type_def InvocationLabels_H.isPageFlush_def
                                                            dest!: a_type_pdD)+
-             apply (rule_tac r'=dc and P'="?I" and Q'="\<lambda>rv. ?I and (\<exists>\<rhd> (lookup_pd_slot rv a && ~~ mask pd_bits))"
+             apply (rule_tac r'=dc and P'="?I" and Q'="\<lambda>rv. ?I and (\<exists>\<rhd> (lookup_pd_slot rv x21 && ~~ mask pd_bits))"
                       in corres_alternative_throw_splitE[OF _ _ returnOk_wp[where x="()"], simplified])
                  apply (rule corres_from_rdonly, simp_all)[1]
                    apply (wp | simp)+
@@ -849,7 +849,6 @@ next
                             translate_arch_invocation_def transform_page_inv_def)
           apply (clarsimp)
           apply (rule corres_from_rdonly)
-             apply (clarsimp)
              apply (wp, clarsimp)
             apply ( simp only: Let_unfold, wp, clarsimp, rule valid_validE, wp whenE_inv, clarsimp, wp)
             apply (assumption)
@@ -861,7 +860,6 @@ next
                   apply blast
                  apply (metis flush.exhaust)
                 apply (rule corres_from_rdonly)
-                   apply (clarsimp)
                    apply (wp, clarsimp)
                   apply ( simp only: Let_unfold, wp, clarsimp, rule valid_validE, wp whenE_inv, clarsimp, wp)
                   apply (assumption)
@@ -873,7 +871,6 @@ next
                  apply blast
                 apply (metis flush.exhaust)
                apply (rule corres_from_rdonly)
-                  apply (clarsimp)
                   apply (wp, clarsimp)
                  apply ( simp only: Let_unfold, wp, clarsimp, rule valid_validE, wp whenE_inv, clarsimp, wp)
                  apply (assumption)
@@ -885,7 +882,6 @@ next
                 apply blast
                apply (metis flush.exhaust)
               apply (rule corres_from_rdonly)
-                 apply (clarsimp)
                  apply (wp, clarsimp)
                 apply ( simp only: Let_unfold, wp, clarsimp, rule valid_validE, wp whenE_inv, clarsimp, wp)
                 apply (assumption)
@@ -1888,6 +1884,7 @@ proof -
     apply (clarsimp simp:perform_asid_control_invocation_def)
     apply (simp add:arch_invocation_relation_def translate_arch_invocation_def)
     apply (cases asid_inv, clarsimp)
+    apply hypsubst_thin
     apply (drule sym)
     apply (drule sym)
     apply (drule sym)

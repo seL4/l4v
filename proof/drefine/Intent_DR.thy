@@ -278,7 +278,7 @@ lemma dcorres_set_object_tcb:
   apply (clarsimp simp: transform_objects_def)
   apply (rule ext)
   apply clarsimp
-  apply (clarsimp simp: map_option_def restrict_map_def map_add_def)
+  apply (clarsimp simp: option_map_def restrict_map_def map_add_def)
   done
 
 lemma set_cxt_none_det_intent_corres:
@@ -1538,7 +1538,7 @@ lemma store_word_corres_helper:
   apply (rule exI)
   apply (rule ext)
   apply (rename_tac thread)
-  apply (clarsimp simp: map_add_def split: option.splits simp del: Option.case_option_map)
+  apply (clarsimp simp: map_add_def split: option.splits simp del: Option.case_map_option)
   apply (rule conjI)
    apply (clarsimp simp:restrict_map_def map_add_def)
   apply clarsimp
@@ -1669,7 +1669,7 @@ lemma dcorres_store_word_safe:
   apply (clarsimp simp: transform_def transform_current_thread_def)
   apply (rule ext)
   apply (rename_tac thread)
-   apply (clarsimp simp:transform_objects_def restrict_map_def map_option_def map_add_def split:option.splits)
+   apply (clarsimp simp:transform_objects_def restrict_map_def option_map_def map_add_def split:option.splits)
    apply (clarsimp simp:transform_object_def split:Structures_A.kernel_object.splits)
    apply (clarsimp simp:transform_tcb_def transform_full_intent_def Let_def)
    apply (clarsimp simp del:upt.simps
@@ -2175,7 +2175,6 @@ lemma dcorres_store_word_conservative:
   apply (frule ipc_frame_ptr_at_sz_at,simp+)
   apply (rule corres_guard_imp[OF store_word_corres])
     apply simp+
-  apply fastforce
 done
 
 end

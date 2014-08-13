@@ -425,16 +425,15 @@ lemma dcorres_symb_exec_r_strong:
     \<And>cs. \<lbrace>\<lambda>ps. P' ps \<and> transform ps = cs\<rbrace> f \<lbrace>\<lambda>r s. transform s = cs\<rbrace>\<rbrakk>
   \<Longrightarrow> dcorres r P P' h (f>>=g)"
   apply (rule corres_dummy_return_pl)
-  apply (rule corres_guard_imp)
-  apply (rule corres_split[where R="\<lambda>rv. P" and P'=P' and R'="\<lambda>rv. Q' rv" and r' = dc])
-    unfolding K_bind_def
-    apply (assumption)
-    defer
-    apply wp
+    apply (rule corres_guard_imp)
+       apply (rule corres_split[where R="\<lambda>rv. P" and P'=P' and R'="\<lambda>rv. Q' rv" and r' = dc])
+       apply (unfold K_bind_def)
+      apply (assumption)
+     defer
+     apply wp
     apply simp+
-    apply (clarsimp simp:valid_def corres_underlying_def return_def)
-apply fastforce
-done
+  apply (clarsimp simp:valid_def corres_underlying_def return_def)
+  done
 
 lemma dcorres_symb_exec_r_catch':
   "\<lbrakk>
@@ -461,11 +460,7 @@ lemma dcorres_to_wp:
 
 lemma wp_to_dcorres:
   "(\<And>cs. \<lbrace>\<lambda>s. Q s \<and> transform s = cs\<rbrace> g \<lbrace>\<lambda>r s. transform s = cs\<rbrace>) \<Longrightarrow>  dcorres dc (\<lambda>_. True) Q (return x) g"
-  apply (clarsimp simp:corres_underlying_def valid_def return_def)
-  apply (drule_tac x = "transform b" in meta_spec)
-  apply (drule_tac x = b in spec)
-  apply fastforce
-done
+  by (clarsimp simp:corres_underlying_def valid_def return_def)
 
 lemma dcorres_symb_exec_rE:
   "\<lbrakk>\<And>rv. dcorres r P (Q' rv) h (g rv); \<lbrace>P'\<rbrace> f \<lbrace>Q'\<rbrace>; \<And>cs. \<lbrace>\<lambda>ps. transform ps = cs\<rbrace> f \<lbrace>\<lambda>r s. transform s = cs\<rbrace>\<rbrakk>

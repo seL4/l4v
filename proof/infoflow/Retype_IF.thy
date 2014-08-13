@@ -452,7 +452,7 @@ lemma ptr_range_subset:
     apply assumption
    apply (fold word_bits_def, assumption)
   apply(erule order_trans)
-  apply(subgoal_tac "ptr + of_nat xa * 4 + 2\<^sup>2 - 1 = ptr + (3 + of_nat xa * 4)")
+  apply(subgoal_tac "ptr + of_nat xaa * 4 + 2\<^sup>2 - 1 = ptr + (3 + of_nat xaa * 4)")
    apply(subgoal_tac "ptr + 2 ^ bits - 1 = ptr + (2 ^ bits - 1)")
     apply(erule ssubst)+
     apply(rule word_plus_mono_right)     
@@ -962,8 +962,7 @@ lemma pspace_distinct_def':
   "pspace_distinct \<equiv> \<lambda>s. \<forall>x y ko ko'.
              kheap s x = Some ko \<and> kheap s y = Some ko' \<and> x \<noteq> y \<longrightarrow>
              obj_range x ko \<inter> obj_range y ko' = {}"
-  apply(fastforce simp: pspace_distinct_def obj_range_def diff_def add.assoc)
-  done
+  by(auto simp: pspace_distinct_def obj_range_def add.assoc field_simps)
 
 lemma page_caps_do_not_overlap_arm_globals_frame:
   "\<lbrakk>cte_wp_at (op = (ArchObjectCap (PageCap word fun vmpage_size option))) slot s; valid_objs s;

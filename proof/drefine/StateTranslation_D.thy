@@ -420,13 +420,13 @@ lemma transform_intent_isnot_UntypedIntent:
    apply (simp add: linorder_not_less eval_nat_numeral word_le_nat_alt
                     le_Suc_eq unat_arith_simps)
   apply(erule disjE)
-   apply(auto simp: transform_intent_def map_option_def split: invocation_label.split option.split_asm)[1]
+   apply(auto simp: transform_intent_def option_map_def split: invocation_label.split option.split_asm)[1]
   apply (erule disjE)
    apply (auto simp: transform_intent_def transform_intent_untyped_retype_def
-         map_option_def split: invocation_label.split option.split_asm list.split)[1]
+         option_map_def split: invocation_label.split option.split_asm list.split)[1]
   apply clarsimp
   apply (clarsimp simp: transform_intent_def transform_type_def transform_intent_untyped_retype_def)
-  apply (clarsimp simp: map_option_def split: invocation_label.splits option.splits list.splits)
+  apply (clarsimp simp: option_map_def split: invocation_label.splits option.splits list.splits)
   apply (clarsimp simp: transform_type_def split: split_if_asm)
   done
 
@@ -436,7 +436,7 @@ lemma transform_cnode_index_and_depth_success:
              (transform_cnode_index_and_depth C2 args)) =
        (\<not> length args < 2)"
 apply(rule iffI)
- apply(unfold map_option_def transform_cnode_index_and_depth_def)
+ apply(unfold option_map_def transform_cnode_index_and_depth_def)
  apply(case_tac args)
  apply(auto split: list.split)
 done
@@ -466,13 +466,13 @@ lemma transform_intent_isnot_CNodeIntent:
    apply(case_tac label)
                                   apply(simp_all)
         apply(simp_all add: transform_intent_cnode_defs
-                            map_option_def
+                            option_map_def
                             split: list.split)
            prefer 10
            apply(clarify)
            apply(case_tac label)
            apply(clarsimp simp: transform_intent_def
-                      map_option_def transform_intent_cnode_defs
+                      option_map_def transform_intent_cnode_defs
                       split: list.split_asm option.split_asm)+
   apply(auto)
 done
@@ -496,10 +496,10 @@ lemma transform_intent_isnot_TcbIntent:
    apply(case_tac label)
                                     apply(simp_all)
          apply(fastforce simp: transform_intent_tcb_defs
-                              map_option_def
+                              option_map_def
                         split: list.split)+
   apply(unfold transform_intent_def)
-  apply(case_tac label, simp_all add: map_option_def split: option.split)
+  apply(case_tac label, simp_all add: option_map_def split: option.split)
   apply (auto simp: transform_intent_tcb_defs
                  split:  list.splits)
 done
@@ -1037,7 +1037,7 @@ lemma transform_objects_ms_underlying_mem:
    transform_objects (s \<lparr> machine_state :=
      undefined \<lparr> underlying_memory := underlying_memory (machine_state s) \<rparr> \<rparr>)"
   apply (rule ext)
-  apply (simp add: transform_objects_def map_add_def map_option_def
+  apply (simp add: transform_objects_def map_add_def option_map_def
             split: option.split)
   apply (simp add: transform_object_def transform_tcb_def
                    transform_full_intent_def Let_def

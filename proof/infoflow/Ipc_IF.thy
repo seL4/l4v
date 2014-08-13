@@ -342,7 +342,7 @@ lemma tcb_sched_action_equiv_but_for_labels:
    apply(fastforce simp: equiv_asids_def equiv_asid_def elim: states_equiv_forE)
   apply (clarsimp simp: pas_refined_def tcb_domain_map_wellformed_aux_def split: option.splits)
   apply (rule equiv_forI)
-  apply (erule_tac x="(thread, tcb_domain a)" in ballE)
+  apply (erule_tac x="(thread, tcb_domain (the (ekheap s thread)))" in ballE)
    apply(fastforce elim: states_equiv_forE intro: equiv_forI dest: equiv_forD[where f=ready_queues])
   apply (force intro: domtcbs)
   done
@@ -1594,7 +1594,7 @@ lemma send_ipc_reads_respects:
   apply (wp set_endpoint_reads_respects set_thread_state_reads_respects 
             when_ev setup_caller_cap_reads_respects thread_get_reads_respects
         | wpc | simp split del: split_if)+
-               apply(rule_tac Q="\<lambda> r s. is_subject aag (cur_thread s) \<and> (can_grant \<longrightarrow> is_subject aag a)" in hoare_strengthen_post)
+               apply(rule_tac Q="\<lambda> r s. is_subject aag (cur_thread s) \<and> (can_grant \<longrightarrow> is_subject aag (hd list))" in hoare_strengthen_post)
                 apply(wp set_thread_state_reads_respects 
                          do_ipc_transfer_reads_respects
                          set_endpoint_reads_respects

@@ -2161,7 +2161,7 @@ lemma set_mrs_globals_equiv:
          apply(wp store_word_offs_globals_equiv)
           apply(simp)
          apply(clarsimp)         
-         apply(erule_tac x=aa in allE)
+         apply(erule_tac x=a in allE)
          apply(clarsimp)
          apply(erule in_set_zipE)
          apply(clarsimp)
