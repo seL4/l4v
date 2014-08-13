@@ -46,7 +46,7 @@ session ASpec in "abstract" = Word +
     "Syscall_A"
     "Glossary_Doc"
   files
-	"document/VERSION"
+    "document/VERSION"
     "document/root.tex"
     "document/root.bib"
     "document/defs.bib"
