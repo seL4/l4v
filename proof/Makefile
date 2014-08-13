@@ -16,7 +16,7 @@ all: images test
 report-regression:
 	@echo Refine Access CBaseRefine CRefine \
 	      DRefine InfoFlow InfoFlowC DPolicy \
-		  DSpecProofs SepTacticsExamples
+		  DSpecProofs SepTacticsExamples Bisim
 
 #
 # Setup heaps.
@@ -33,6 +33,9 @@ HEAPS += DBaseRefine DRefine DPolicy DSpecProofs
 
 # Security Proofs
 HEAPS += Access InfoFlow InfoFlowC
+
+# Separation Kernel Bisimilarity
+HEAPS += Bisim
 
 # Separation Logic Tactics
 HEAPS += SepTactics SepTacticsExamples

@@ -144,6 +144,17 @@ session DSpecProofs in "capDL-api" = SepDSpec +
   theories
     "API_DP"
 
+(*
+ * Static Separation Kernel Bisimilarity
+ *)
+
+session Bisim in bisim = AInvs +
+  theories
+    "Syscall_S"
+  files
+    "document/root.tex"
+    "document/build"
+    "document/Makefile"
 
 (*
  * Separation Logic

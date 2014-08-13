@@ -12,48 +12,51 @@ header "Restricted capabilities in the Separation Kernel Abstract Specification"
 
 theory Separation
 imports
-  "../sep-abstract/Syscall_SA"
+  "../../spec/sep-abstract/Syscall_SA"
   "../invariant-abstract/AInvs"
   "../../lib/Bisim_UL"
   "../../lib/LemmaBucket"
 begin
 
 text {*
+  The seL4 kernel, when appropriately restricted, is a separation kernel. Any
+  two processes in separate domains should behave the same as if they were
+  processes running on two physically separated machines. They should not be
+  aware of each other's existence and should not be able to communicate with
+  each other except through well-defined channels. Importantly, it must be
+  possible to show that there are no back channels through which one process
+  can determine whether another process exists or what it is doing.
 
-  The seL4 kernel, when appropriately restricted, is a separation kernel. Any two processes in
-  separate domains should behave the same as if they were processes running on two physically
-  separated machines. They should not be aware of each other's existence and should not be able to
-  communicate with each other except through well-defined channels. Importantly, it must be possible
-  to show that there are no back channels through which one process can determine whether
-  another process exists or what it is doing.
-
-  In seL4 we achieve this by restricting the capabilities that a thread may possess. The restrictions
-  are summarised in the predicate @{text separate_state} below (which indirectly depends on further 
-  predicates @{text separate_cnode_cap}, @{text separate_cap}, etc).
+  In seL4 we achieve this by restricting the capabilities that a thread may
+  possess. The restrictions are summarised in the predicate @{text
+  separate_state} below (which indirectly depends on further predicates @{text
+  separate_cnode_cap}, @{text separate_cap}, etc).
 
   a) A thread may only possess \emph{asynchronous end-point capabilities}
   (@{text AsyncEndpointCap}).
 
-  b) Threads do not have caller capabilities. (A caller capability is a capability, placed in a
-     special slot in the TCB, to allow replies. Since the @{text Reply} capability is disallowed so
-     is the caller capability.)
+  b) Threads do not have caller capabilities. (A caller capability is a
+  capability, placed in a special slot in the TCB, to allow replies. Since the
+  @{text Reply} capability is disallowed so is the caller capability.)
 
-  c) Pointers to other capability tables are disallowed meaning that the capability tree is flat.
-     i.e. of depth 1
+  c) Pointers to other capability tables are disallowed meaning that the
+  capability tree is flat. i.e. of depth 1
 
-  Initialising the kernel so that these restrictions hold is not covered in the bi-simulation proof,
-  but can be achieved using the capDL initialiser.
+  Initialising the kernel so that these restrictions hold is not covered in
+  the bisimulation proof, but can be achieved using the capDL initialiser.
 
-  Note that this proof does not preclude threads from communicating via shared memory if the threads
-  have been set up accordingly, which again can be done via the capDL initialiser. 
+  Note that this proof does not preclude threads from communicating via shared
+  memory if the threads have been set up accordingly, which again can be done
+  via the capDL initialiser.
 
-  The proof does show that the kernel API after reaching a state
-  that satisifies @{text separate_state} is that of a static separation kernel, that is, it
-  only provides system calls for sending and receiving on asynchronous endpoints and otherwise
-  exhibits no dynamic behaviour.
+  The proof does show that the kernel API after reaching a state that
+  satisifies @{text separate_state} is that of a static separation kernel,
+  that is, it only provides system calls for sending and receiving on
+  asynchronous endpoints and otherwise exhibits no dynamic behaviour.
 
-  Systems with such a setup satisfy the preconditions of our separate non-intereference proof,
-  which shows that information travels only along these authorised channels.
+  Systems with such a setup satisfy the preconditions of our separate
+  non-intereference proof, which shows that information travels only along
+  these authorised channels. 
 *}
 
 definition

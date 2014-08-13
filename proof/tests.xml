@@ -44,6 +44,11 @@
         <test name="InfoFlowC" depends="CBaseRefine">make InfoFlowC</test>
     </sequence>
 
+    <!-- Bisim -->
+    <sequence depends="ASepSpec AInvs">
+        <test name="Bisim">make Bisim</test>
+    </sequence>
+
     <!-- Separation Logic. -->
     <sequence>
         <test name="SepTactics">make SepTactics</test>

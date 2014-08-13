@@ -22,7 +22,7 @@ report-regression:
 #
 
 # Spec heaps.
-HEAPS += ASpec ExecSpec DSpec CKernel CSpec TakeGrant
+HEAPS += ASpec ExecSpec DSpec CKernel CSpec TakeGrant ASepSpec
 
 
 # Additional dependencies
