@@ -19,8 +19,10 @@ begin
 
 ML {* Toplevel.debug := true *}
 
+thm take_heap_list_min
+
 ML {*
-val funs = ParseGraph.funs @{theory} "../../spec/cspec/CFunDump.txt"
+val funs = ParseGraph.funs @{theory} "CFunDump.txt"
 *}
 
 ML {*
@@ -34,13 +36,18 @@ consts
   encode_machine_state :: "machine_state \<Rightarrow> unit \<times> nat"
 
 definition
-  simpl_invariant :: "globals myvars set"
+  at_addr :: "'a \<Rightarrow> bool"
 where
-  "simpl_invariant = UNIV"
+  "at_addr addr = True"
+
+lemma eq_impl_at_addrI:
+  "\<lbrakk> \<And>sst gst. at_addr addr \<Longrightarrow> sst \<in> S \<Longrightarrow> eqs gst sst \<Longrightarrow> eqs2 gst sst \<rbrakk>
+    \<Longrightarrow> eq_impl addr eqs eqs2 S"
+  by (simp add: eq_impl_def at_addr_def)
 
 local_setup {* add_field_h_val_rewrites #> add_field_to_bytes_rewrites *}
 
-ML {* val nm = "Kernel_C.lookupSlotForCNodeOp" *}
+ML {* val nm = "Kernel_C.getSyscallArg" *}
 
 locale graph_refine = kernel_all_substitute
     + assumes globals_list_distinct:
@@ -48,6 +55,13 @@ locale graph_refine = kernel_all_substitute
       assumes halt_halts: "\<exists>ft. (\<forall>s xs. (\<Gamma> \<turnstile> \<langle>com.Call halt_'proc, Normal s\<rangle> \<Rightarrow> xs)
             = (xs = Fault ft))"
 begin
+
+definition
+  simpl_invariant :: "globals myvars set"
+where
+  "simpl_invariant = {s. const_globals_in_memory symbol_table globals_list
+            (hrs_mem (t_hrs_' (globals s)))
+        \<and> htd_safe domain (hrs_htd (t_hrs_' (globals s)))}"
 
 local_setup {* define_graph_fun_short funs nm *}
 
@@ -80,9 +94,21 @@ val globals_swap_rewrites2
 
 *}
 
+ML {*
+mk_graph_refines_proof funs [] hints globals_swap_rewrites2 nm
+  (@{context} addsimps @{thms simpl_invariant_def})
+*}
+
+lemma store_word32s_equality_refl:
+  "store_word32s_equality addr xs xs hp hp"
+  by (simp add: store_word32s_equality_def)
+
 schematic_lemma "PROP ?P"
   apply (tactic {* rtac it 1 *})
   apply (tactic {* full_simpl_to_graph_tac funs [] hints nm @{context} *})
+  apply (tactic {* ALLGOALS (TRY o rtac @{thm eq_impl_at_addrI}) *})
+  apply (tactic {* ALLGOALS (simp_tac ((put_simpset HOL_basic_ss @{context})
+      addsimps @{thms mex_def meq_def simpl_invariant_def})) *})
 
 
   apply (tactic {* ALLGOALS (nth (graph_refine_proof_tacs @{context}) 0) *})
@@ -99,16 +125,21 @@ schematic_lemma "PROP ?P"
   apply (tactic {* ALLGOALS (nth (graph_refine_proof_tacs @{context}) 5) *})
   apply (tactic {* ALLGOALS (nth (graph_refine_proof_tacs @{context}) 6) *})
 
+
   apply (simp_all add: field_h_val_rewrites field_to_bytes_rewrites heap_update_def
                        to_bytes_array upt_rec take_heap_list_min drop_heap_list_general
                        heap_update_list_append heap_list_update_ptr heap_list_update_word32
                        store_store_word32_commute_offset field_simps
                        heap_access_Array_element h_val_word32 h_val_ptr
-                       field_lvalue_offset_eq)
+                       field_lvalue_offset_eq ucast_eq_0s)
 
+  apply (tactic {* simp_tac (@{context} addsimps @{thms store_word32s_equality_fold store_word32s_equality_final add_commute}
+    ) |>ALLGOALS *})
 
+   apply (tactic {* simp_tac (@{context} addsimprocs [store_word32s_equality_simproc]
+    addsimps @{thms store_word32s_equality_final add_commute}
+    ) |>ALLGOALS *})
 
-  apply (auto simp: mex_def meq_def)
   done
 
 

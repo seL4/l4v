@@ -11,6 +11,7 @@
 theory GraphRefine
 
 imports TailrecPre GraphLangLemmas "../../lib/LemmaBucket_C"
+  FieldAccessors
 
 begin
 
@@ -1287,6 +1288,14 @@ lemma is_aligned_intvl_disjoint:
   apply (simp add: field_simps del: Int_atLeastAtMost)
   done
 
+lemma is_aligned_intvl_disjoint_offset:
+  "\<lbrakk> p \<noteq> p'; is_aligned (p - p') n \<rbrakk>
+    \<Longrightarrow> {p ..+ 2 ^ n} \<inter> {p' ..+ 2 ^ n} = {}"
+  apply (rule intvl_disj_offset[where x="- p'", THEN iffD1])
+  apply (rule is_aligned_intvl_disjoint)
+    apply (simp_all del: word_neq_0_conv add: field_simps)
+  done
+
 lemma store_store_word32_commute:
   "\<lbrakk> p \<noteq> p'; is_aligned p 2; is_aligned p' 2 \<rbrakk>
     \<Longrightarrow> store_word32 p w (store_word32 p' w' hp)
@@ -1305,13 +1314,10 @@ lemma store_store_word32_commute_offset:
   using prems
   apply (clarsimp simp: store_word32_def)
   apply (rule heap_list_update_commute)
-  apply (rule intvl_disj_offset[where x="- p'", THEN iffD1])
-  apply (simp add: length_word_rsplit_even_size[OF refl] word_size
-              del: Int_atLeastAtMost)
-  apply (rule is_aligned_intvl_disjoint[where n=2, simplified])
-    apply (simp add: field_simps word_neq_0_conv[symmetric] del: word_neq_0_conv)
-   apply (simp add: field_simps is_aligned_mask mask_def)
-  apply simp
+  apply (simp add: length_word_rsplit_even_size[OF refl] word_size)
+  apply (rule is_aligned_intvl_disjoint_offset[where n=2, simplified])
+   apply (simp add: field_simps word_neq_0_conv[symmetric] del: word_neq_0_conv)
+  apply (simp add: field_simps is_aligned_mask mask_def)
   done
 
 lemma c_guard_to_word_ineq:
@@ -1364,6 +1370,13 @@ lemma store_load_word32:
   apply (simp add: word_rsplit_rcat_size word_size)
   done
 
+lemma load_store_word32:
+  "load_word32 p (store_word32 p v m) = v"
+  using heap_list_update[where p=p and h=m and v="rev (word_rsplit v)"]
+  by (simp add: store_word32_def load_word32_def
+                length_word_rsplit_exp_size' word_size addr_card
+                word_rcat_rsplit)
+
 lemma word32_lt_bounds_reduce:
   "\<lbrakk> n \<noteq> 0; (i \<noteq> (n - 1)) \<rbrakk> \<Longrightarrow> (i < (n :: word32)) = (i < (n - 1))"
   apply (rule sym, rule trans, rule less_le)
@@ -1373,6 +1386,181 @@ lemma word32_lt_bounds_reduce:
 
 lemma length_Cons: "length (x # xs) = Suc (length xs)"
   by simp
+
+lemma ucast_eq_0:
+  "(ucast (x :: ('a :: len) word) = (0 :: ('b :: len) word))
+    = (if len_of TYPE('a) <= len_of TYPE('b)
+        then x = 0 else (x && mask (len_of TYPE('b)) = 0))"
+  by (simp, fastforce intro!: word_eqI dest: word_eqD simp: nth_ucast word_size)+
+
+lemmas ucast_eq_0s = ucast_eq_0 ucast_eq_0[THEN arg_cong[where f=Not], simplified]
+
+text {* Proof process for store_word32 equalities. *}
+
+lemma load_store_word32_offset:
+  "(p - p') AND 3 = 0
+    \<Longrightarrow> load_word32 p (store_word32 p' v hp)
+        = (if p = p' then v else load_word32 p hp)"
+  using is_aligned_intvl_disjoint_offset[where p=p and p'=p' and n=2]
+  apply (clarsimp simp: load_store_word32)
+  apply (simp add: load_word32_def store_word32_def)
+  apply (subst heap_list_update_disjoint_same, simp_all)
+  apply (simp add: length_word_rsplit_exp_size' word_size
+                   is_aligned_mask mask_def Int_commute)
+  done
+
+lemma load_word32_offset_represents:
+  assumes eq: "\<forall>x. x AND 3 = 0 \<longrightarrow> load_word32 (p + x) hp = load_word32 (p + x) hp'"
+  shows "hp = hp'"
+proof (rule ext)
+  fix x
+  let ?p = "p + ((x - p) AND ~~ 3)"
+  have X: "\<And>hp v. store_word32 ?p v hp x = rev (word_rsplit v) ! unat ((x - p) AND 3)"
+    apply (simp add: store_word32_def
+                     mask_out_sub_mask[where n=2 and 'a=32, unfolded mask_def, simplified])
+    apply (subst heap_update_mem_same_point, simp_all add: field_simps
+        length_word_rsplit_exp_size' word_size addr_card)
+    apply (simp add: intvl_def)
+    apply (rule_tac x="unat ((x - p) && 3)" in exI)
+    apply (simp add: algebra_simps unat_mask_2_less_4[unfolded mask_def, simplified])
+    done
+  have "hp x = (store_word32 ?p (load_word32 ?p hp) hp) x"
+    by (simp add: store_load_word32)
+  also have "\<dots> = (store_word32 ?p (load_word32 ?p hp') hp') x"
+    by (simp only: X, simp add: eq word_bw_assocs)
+  also have "\<dots> = hp' x"
+    by (simp add: store_load_word32)
+  finally show "hp x = hp' x" .
+qed
+
+definition
+ "apply_store_word32 p = (\<lambda>(offs, w) hp. if offs AND 3 = 0
+   then store_word32 (p + offs) w hp else hp)"
+
+definition
+  store_word32s_equality :: "word32 \<Rightarrow> (word32 \<times> word32) list
+    \<Rightarrow> (word32 \<times> word32) list \<Rightarrow> (word32 \<Rightarrow> word8) \<Rightarrow> (word32 \<Rightarrow> word8) \<Rightarrow> bool"
+where
+  "store_word32s_equality p xs ys hp hp' \<equiv> 
+    fold (apply_store_word32 p) xs hp = fold (apply_store_word32 p) ys hp'"
+
+lemma store_word32s_equality_fold:                                                                                 
+  "p' - p AND 3 = 0 \<Longrightarrow>
+    (store_word32 p w hp = store_word32 p' w' hp')
+    = store_word32s_equality p [(0, w)] [(p' - p, w')] hp hp'"
+  "p' - p AND 3 = 0 \<Longrightarrow>
+    store_word32s_equality p xs ys (store_word32 p' w' hp) hp'
+        = store_word32s_equality p ((p' - p, w') # xs) ys hp hp'"                                               
+  "p' - p AND 3 = 0 \<Longrightarrow>
+    store_word32s_equality p xs ys hp (store_word32 p' w' hp')
+        = store_word32s_equality p xs ((p' - p, w') # ys) hp hp'"
+  by (simp_all add: store_word32s_equality_def apply_store_word32_def
+                    split_def)
+
+lemma and_3_eq_0_subtract:
+  "x AND 3 = 0 \<Longrightarrow> (y :: ('a :: len) word) AND 3 = 0 \<Longrightarrow> (x - y) AND 3 = 0"
+  apply (rule trans, rule mask_eqs[symmetric, where n=2, unfolded mask_def, simplified])
+  apply simp
+  apply (simp add: mask_eqs[symmetric, where n=2, unfolded mask_def, simplified])
+  done
+
+lemma load_apply_store_word32:
+  "x AND 3 = 0 \<Longrightarrow> load_word32 (p + x) (apply_store_word32 p y hp)
+    = (if x = fst y then snd y else load_word32 (p + x) hp)"
+  apply (simp add: apply_store_word32_def split_def
+                   load_store_word32_offset)
+  apply (simp add: load_store_word32_offset field_simps and_3_eq_0_subtract)
+  apply auto
+  done
+
+lemma load_fold_filter_apply_store_word32:
+  "x AND 3 = 0
+    \<Longrightarrow> load_word32 (p + x) (fold (apply_store_word32 p) (filter (P \<circ> fst) ys) hp)
+        = load_word32 (p + x) (if P x then fold (apply_store_word32 p) ys hp else hp)"
+  apply (induct ys rule: rev_induct)
+   apply simp
+  apply (auto simp add: load_apply_store_word32)
+  done
+
+lemma store_word32s_equality_split:
+  "store_word32s_equality p xs ys hp hp
+    = (store_word32s_equality p (filter (P o fst) xs) (filter (P o fst) ys) hp hp
+        \<and> store_word32s_equality p (filter (Not o P o fst) xs) (filter (Not o P o fst) ys) hp hp)"
+  apply (simp add: store_word32s_equality_def)
+  apply (safe intro!: load_word32_offset_represents[where p=p])
+    apply (simp_all add: load_fold_filter_apply_store_word32)
+  apply (drule_tac f="load_word32 (p + x)" in arg_cong)+
+  apply (simp add: load_fold_filter_apply_store_word32 split: split_if_asm)
+  done
+
+lemma apply_store_word32_over_store:
+  "apply_store_word32 p (x, v') (apply_store_word32 p (x, v) hp)
+      = apply_store_word32 p (x, v') hp"
+  by (clarsimp simp: load_apply_store_word32
+             intro!: load_word32_offset_represents[where p=p])
+
+lemma apply_store_load_word32:
+  "apply_store_word32 p (x, load_word32 (p + x) hp) hp = hp"
+  by (clarsimp simp: load_apply_store_word32
+             intro!: load_word32_offset_represents[where p=p])
+
+lemma store_word32s_equality_final:
+  "store_word32s_equality p ((x, v) # (x, v') # xs) ys hp hp'
+    = store_word32s_equality p ((x, v') # xs) ys hp hp'"
+  "store_word32s_equality p xs ((y, v) # (y, v') # ys) hp hp'
+    = store_word32s_equality p xs ((y, v') # ys) hp hp'"
+  "store_word32s_equality p [(x, v)] [(x, v')] hp hp
+    = (x AND 3 = 0 \<longrightarrow> v = v')"
+  "store_word32s_equality p [(x, v)] [] hp hp
+    = (x AND 3 = 0 \<longrightarrow> v = load_word32 (p + x) hp)"
+  "store_word32s_equality p [] [(x, v')] hp hp
+    = (x AND 3 = 0 \<longrightarrow> v' = load_word32 (p + x) hp)"
+  apply (auto simp add: store_word32s_equality_def
+                        apply_store_word32_over_store
+                        load_apply_store_word32
+                        apply_store_load_word32
+                  dest: arg_cong[where f="load_word32 (p + x)"]
+                 split: split_if_asm simp del: word_neq_0_conv)
+  apply (simp_all add: apply_store_word32_def del: word_neq_0_conv)
+  done
+
+ML {*
+
+val dest_word = HOLogic.dest_number
+  #> snd #> (fn x => x mod 4294967296)
+
+val trace_store_word32s = ref false
+
+fun store_word32_trace s v = if ! trace_store_word32s
+  then (tracing ("store_word32s: " ^ s); v) else v
+
+val store_word32s_equality_simproc = Simplifier.simproc_global_i
+  @{theory} "store_word32s_equality_simproc"
+  [@{term "store_word32s_equality p xs ys hp hp"}]
+  (fn ctxt => fn tm => case tm of (Const (@{const_name store_word32s_equality}, _)
+    $ _ $ xs $ ys $ hp $ hp') => (let
+        val _ = (hp aconv hp') orelse raise TERM ("foo", [])
+        val xs = HOLogic.dest_list xs
+          |> map (HOLogic.dest_prod #> fst #> dest_word)
+        val ys = HOLogic.dest_list ys
+          |> map (HOLogic.dest_prod #> fst #> dest_word)
+        val zs = sort int_ord (xs @ ys)
+        val _ = (not (null zs) andalso hd zs < List.last zs)
+          orelse raise TERM ("foo", [])
+        val pivot = nth zs (length zs div 2)
+        val pred = (if pivot = List.last zs
+                then @{term "op = :: word32 \<Rightarrow> _"}
+                else @{term "op \<ge> :: word32 \<Rightarrow> _"})
+            $ HOLogic.mk_number @{typ word32} pivot 
+      in store_word32_trace "success" (SOME (cterm_instantiate
+          [(@{cpat "?P :: word32 \<Rightarrow> bool"},
+              cterm_of (Proof_Context.theory_of ctxt) pred)]
+          @{thm store_word32s_equality_split}
+              |> mk_meta_eq))
+      end handle TERM _ => store_word32_trace "failed" NONE)
+    | _ => store_word32_trace "mismatch" NONE)
+
+*}
 
 ML {*
 
@@ -1435,8 +1623,9 @@ fun mk_simpl_acc ctxt sT nm = let
       | mk_sst_acc "PMS" = do_pms_encode (pms $ globals_sst)
       | mk_sst_acc nm = if String.isPrefix "rv#space#" nm
               then mk_sst_acc (unprefix "rv#space#" nm)
-              else if String.isSuffix "_'" nm
-              then Syntax.read_term ctxt (nm ^ " :: globals myvars => _") $ sst
+              else if String.isSuffix "#v" nm
+              then Syntax.read_term ctxt
+                  (suffix "_'" (unsuffix "#v" nm) ^ " :: globals myvars => _") $ sst
               else let
                   val (head, tail) = Library.space_explode "." nm
                       |> Library.split_last |> apfst (Library.space_implode ".")
@@ -1540,7 +1729,7 @@ fun mk_graph_refines (funs : ParseGraph.funs) ctxt s = let
         (Long_Name.base_name s ^ "_'proc")
     val gamma = Syntax.read_term ctxt "\<Gamma>"
     val invs = Syntax.read_term ctxt "simpl_invariant"
-    val _ = case invs of Const _ => ()
+    val _ = case head_of invs of Const _ => ()
       | _ => raise TERM ("mk_graph_refines: requires simpl_invariant constant", [])
     val sT = fastype_of gamma |> gammaT_to_stateT
     val (xs, ys, _) = Symtab.lookup funs s |> the
@@ -1791,6 +1980,7 @@ fun get_var_deps nodes ep outputs = let
         val node = Inttab.lookup nodes point |> the
         val conts = map dest_next_node (get_conts node)
         val (lvs, rvs) = get_lvals_rvals node
+          |> pairself (Ord_List.make string_ord)
         val cont_vars = maps (Inttab.lookup_list tab) conts
           |> Ord_List.make string_ord
         val vars = Ord_List.merge string_ord (rvs,
@@ -1889,7 +2079,7 @@ fun full_simpl_to_graph_tac funs noreturns hints nm ctxt =
 fun safe_goal_tac ctxt =
   REPEAT_ALL_NEW (DETERM o CHANGED o safe_steps_tac ctxt)
 
-fun graph_refine_proof_tacs ctxt = [
+fun graph_refine_proof_tacs globals_swap_rewrites2 ctxt = [
         asm_simp_tac ((put_simpset HOL_basic_ss ctxt) addsimps @{thms
               signed_arith_ineq_checks_to_eq_word32
               signed_arith_eq_checks_to_ord
@@ -1899,11 +2089,8 @@ fun graph_refine_proof_tacs ctxt = [
                        var_htd_def var_acc_var_upd
                        pvalid_def var_ms_def init_vars_def
                        return_vars_def upd_vars_def save_vals_def
-                       mem_upd_def mem_acc_def hrs_mem_update}),
-(*        simp_tac ((put_simpset HOL_basic_ss ctxt) addsimps @{thms forall_swap_madness}), *)
-(*        simp_tac (ctxt addsimps @{thms
-                       globals_update_globals_swap_twice globals_swap_twice
-                       hrs_htd_globals_swap mex_def meq_def}), *)
+                       mem_upd_def mem_acc_def hrs_mem_update
+                       mex_def meq_def}),
         TRY o safe_goal_tac ctxt,
         asm_full_simp_tac (ctxt addsimps @{thms
 (*                       h_t_valid_disjoint_globals_swap 
@@ -1919,8 +2106,8 @@ fun graph_refine_proof_tacs ctxt = [
 *)
                        unat_less_helper word32_lt_bounds_reduce
                        palign_valid_def pweak_valid_def}
-         (*       addsimps globals_swap_rewrites2
-                addsimps const_global_simps
+                addsimps globals_swap_rewrites2
+         (*       addsimps const_global_simps
                 addsimps pglobal_valids *) ),
 (*        TRY o REPEAT_ALL_NEW
             (etac @{thm const_globals_in_memory_heap_update_subset[rotated]}
@@ -1952,20 +2139,34 @@ fun graph_refine_proof_tacs ctxt = [
                 addsimps (enum_simps ctxt)
                 addsimprocs [Word_Bitwise_Tac.expand_upt_simproc]
                 delsimps @{thms ptr_val_inj}),
-         asm_full_simp_tac (put_simpset HOL_ss ctxt addsimps @{thms word_neq_0_conv[symmetric]}),
-         asm_full_simp_tac (ctxt addsimps @{thms
+        asm_full_simp_tac (put_simpset HOL_ss ctxt addsimps @{thms word_neq_0_conv[symmetric]}),
+        asm_full_simp_tac (ctxt addsimps @{thms
                         typ_uinfo_t_def c_guard_to_word_ineq bvshl_def
                         bvlshr_def bvashr_def bv_clz_def scast_def mask_def
                         word_sle_def[THEN iffD2] word_sless_alt[THEN iffD2]
                         store_load_word32
-                    })
+                    }),
+        asm_full_simp_tac (ctxt addsimps @{thms
+                        to_bytes_array heap_update_def
+                        upt_rec take_heap_list_min drop_heap_list_general
+                        heap_update_list_append heap_list_update_ptr heap_list_update_word32
+                        store_store_word32_commute_offset field_simps
+                        heap_access_Array_element h_val_word32 h_val_ptr
+                        field_lvalue_offset_eq ucast_eq_0s}
+                    addsimps (Proof_Context.get_thms ctxt "field_h_val_rewrites")
+                    addsimps (Proof_Context.get_thms ctxt "field_to_bytes_rewrites")
+                ),
+        simp_tac (ctxt addsimps @{thms store_word32s_equality_fold
+                store_word32s_equality_final add_commute}),
+        simp_tac (ctxt addsimprocs [store_word32s_equality_simproc]
+            addsimps @{thms store_word32s_equality_final add_commute})
 ]
 
-fun mk_graph_refines_proof funs noreturns hints s ctxt
+fun mk_graph_refines_proof funs noreturns hints globals_swap_rewrites s ctxt
     = init_graph_refines_proof funs s ctxt
         |> full_simpl_to_graph_tac funs noreturns hints s ctxt
         |> Seq.hd
-        |> EVERY (map ALLGOALS (graph_refine_proof_tacs ctxt))
+        |> EVERY (map ALLGOALS (graph_refine_proof_tacs globals_swap_rewrites ctxt))
         |> Seq.hd
 *}
 
