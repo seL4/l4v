@@ -820,8 +820,7 @@ fun add_declaration name decl thy =
   thy
   |> Named_Target.init name
   |> Local_Theory.declaration {syntax = false, pervasive = false} decl
-  |> Local_Theory.exit
-  |> Proof_Context.theory_of;
+  |> Local_Theory.exit_global
 
 (* data kind 'HOL/hoare' *)
 
@@ -1153,8 +1152,8 @@ fun add_variable_statespaces (cname,pars as (inpars,outpars,locvars)) thy =
   in if null inpars' andalso null outpars' andalso null locvars
      then
        thy
-       |> add_locale_cmd parSP ([],[]) [] |> Proof_Context.theory_of
-       |> add_locale_cmd varSP ([],[]) [] |> Proof_Context.theory_of
+       |> add_locale_cmd parSP ([],[]) [] |> Local_Theory.exit_global
+       |> add_locale_cmd varSP ([],[]) [] |> Local_Theory.exit_global
      else
        thy
        |> StateSpace.define_statespace_i (SOME statetypeN) in_out_args parSP [] in_outs'
@@ -1180,8 +1179,7 @@ fun add_abbrev loc mode name spec thy =
   |> (fn lthy => let val t = Syntax.read_term (Local_Theory.target_of lthy) spec;
       in Local_Theory.abbrev mode ((Binding.name name, NoSyn), t) lthy end)
   |> #2
-  |> Local_Theory.exit
-  |> Proof_Context.theory_of;
+  |> Local_Theory.exit_global
 
 
 exception TOPSORT of string
@@ -1318,7 +1316,7 @@ fun procedures_definition locname procs thy =
         val sN = suffix signatureN  name';
       in thy
          |> add_locale sN pE fixes
-         |> Proof_Context.theory_of
+         |> Local_Theory.exit_global
          |> (fn thy => add_declaration (Locale.intern thy sN) parameter_info_decl thy)
       end;
 
@@ -1361,8 +1359,7 @@ fun procedures_definition locname procs thy =
             |> (fn lthy => if has_body name
                            then snd (Local_Theory.define (def lthy) lthy)
                            else lthy)
-            |> Local_Theory.exit
-            |> Proof_Context.theory_of;
+            |> Local_Theory.exit_global
 
       in thy
          |> add_locale' (suffix bodyN name') pE fixes
