@@ -351,8 +351,7 @@ in
   lthy
     |> prove_all_modifies_goals_local csenv includeP tyargs
     |> Local_Theory.restore
-    |> Local_Theory.exit
-    |> Proof_Context.theory_of
+    |> Local_Theory.exit_global
 end
 
 end (* struct *)
