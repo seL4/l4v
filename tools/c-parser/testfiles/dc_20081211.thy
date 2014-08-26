@@ -20,6 +20,7 @@ thm setHardwareASID_modifies
 thm test_body_def
 thm test_modifies
 
+(*
 lemma test_modifies:
   "\<forall>s. \<Gamma> \<turnstile>\<^bsub>/UNIV\<^esub> {s} Call
   test_'proc {t. t may_only_modify_globals s in [x]}"
@@ -29,5 +30,5 @@ lemma test_modifies:
   oops
 
 end
-
+*)
 end
