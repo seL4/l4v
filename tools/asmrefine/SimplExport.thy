@@ -914,7 +914,7 @@ fun emit_body ctxt params (Const (@{const_name Seq}, _) $ a $ b) n c e = let
     = (n, c)
   | emit_body ctxt params (Const (@{const_name whileAnno}, _) $ C $ _ $ _ $ a) n c e = let
     fun sn i = string_of_int (n + i)
-    val lc = "loop#count" ^ sn 0 ^ " Word 32"
+    val lc = "loop#" ^ sn 0 ^ "#count" ^ " Word 32"
     val (n', nm) = emit_body ctxt params a (n + 3) (sn 0) e
     val cond = convert_fetch ctxt params (reduce_set_mem ctxt (s_st ctxt) C)
   in emit (sn 0 ^ " Basic " ^ sn 1 ^ " 1 " ^ lc
