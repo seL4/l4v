@@ -30,7 +30,8 @@ fun
   invoke_irq_control :: "irq_control_invocation \<Rightarrow> (unit,'z::state_ext) p_monad"
 where
   "invoke_irq_control (IRQControl irq handler_slot control_slot) = 
-     liftE (cap_insert (IRQHandlerCap irq) control_slot handler_slot)"
+     liftE (do set_irq_state IRQNotifyAEP irq;
+               cap_insert (IRQHandlerCap irq) control_slot handler_slot od)"
 | "invoke_irq_control (InterruptControl invok) =
      arch_invoke_irq_control invok"
 
@@ -44,7 +45,6 @@ fun
 where
   "invoke_irq_handler (ACKIrq irq) = (do_machine_op $ maskInterrupt False irq)"
 | "invoke_irq_handler (SetIRQHandler irq cap slot) = (do
-     set_irq_state IRQNotifyAEP irq;
      irq_slot \<leftarrow> get_irq_slot irq;
      cap_delete_one irq_slot;
      cap_insert cap slot irq_slot

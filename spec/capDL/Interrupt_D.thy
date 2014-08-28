@@ -27,6 +27,12 @@ where
     od \<sqinter> (return None)
   "
 
+(* IOAPIC *)
+definition
+  set_interrupt_mode :: "cdl_irq \<Rightarrow> bool \<Rightarrow> bool \<Rightarrow> unit k_monad"
+where
+  "set_interrupt_mode _ _ _ = return ()"
+
 definition
   decode_irq_control_invocation :: "cdl_cap \<Rightarrow> cdl_cap_ref \<Rightarrow> (cdl_cap \<times> cdl_cap_ref) list \<Rightarrow>
       cdl_irq_control_intent \<Rightarrow> cdl_irq_control_invocation except_monad"
@@ -75,7 +81,11 @@ where
               | _                    \<Rightarrow> throw;
         returnOk $ SetIrqHandler irq endpoint_cap endpoint_cap_ref
       odE \<sqinter> throw
-
+   (* IOAPIC *)
+   | IrqHandlerSetModeIntent trig pol \<Rightarrow> (doE
+       irq \<leftarrow> liftE $ assert_opt $ cdl_cap_irq target;
+       returnOk (SetMode irq trig pol)
+     odE) \<sqinter> throw 
   "
 
 definition
@@ -108,6 +118,8 @@ where
           irqslot \<leftarrow> gets (get_irq_slot irq);
           delete_cap_simple irqslot
         od
+      (* IOAPIC *)
+    | SetMode irq trig pol \<Rightarrow> set_interrupt_mode irq trig pol
 
   "
 

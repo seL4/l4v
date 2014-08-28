@@ -32,6 +32,7 @@ where
             \<and> (\<exists>ptr'. cte_wp_at (op = (cap.IRQHandlerCap irq)) ptr' s)
             \<and> cte_wp_at (interrupt_derived cap) cte_ptr s
             \<and> s \<turnstile> cap \<and> is_aep_cap cap)"
+| "irq_handler_inv_valid (Invocations_A.SetMode irq trig pol) = \<top>"
 
 primrec
   irq_control_inv_valid :: "irq_control_invocation \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
@@ -57,7 +58,7 @@ lemma decode_irq_handler_valid[wp]:
         \<and> (\<forall>cap \<in> set caps. \<forall>r \<in> cte_refs (fst cap) (interrupt_irq_node s). ex_cte_cap_to r s)
         \<and> (\<forall>cap \<in> set caps. ex_cte_cap_wp_to is_cnode_cap (snd cap) s)
         \<and> (\<forall>cap \<in> set caps. cte_wp_at (interrupt_derived (fst cap)) (snd cap) s)\<rbrace>
-     decode_irq_handler_invocation label irq caps
+     decode_irq_handler_invocation label args irq caps
    \<lbrace>irq_handler_inv_valid\<rbrace>,-"
   apply (simp add: decode_irq_handler_invocation_def Let_def split_def
                   split del: split_if cong: if_cong)
@@ -199,6 +200,53 @@ lemma maskInterrupt_invs:
    apply (clarsimp simp: in_monad invs_def valid_state_def all_invs_but_valid_irq_states_for_def valid_irq_states_but_def valid_irq_masks_but_def valid_machine_state_def cur_tcb_def valid_irq_states_def valid_irq_masks_def)
   done
 
+crunch pspace_aligned[wp]: set_irq_state "pspace_aligned"
+
+crunch pspace_distinct[wp]: set_irq_state "pspace_distinct"
+
+lemma valid_mdb_interrupts[simp]:
+  "valid_mdb (interrupt_states_update f s) = valid_mdb s"
+  by (simp add: valid_mdb_def mdb_cte_at_def)
+
+crunch valid_mdb[wp]: set_irq_state "valid_mdb"
+
+crunch mdb_cte_wp_at[wp]: set_irq_state "\<lambda>s. cte_wp_at (P (cdt s)) p s"
+crunch real_cte_at[wp]: set_irq_state "real_cte_at p"
+
+lemmas set_irq_state_cte_cap_to[wp]
+    = ex_cte_cap_to_pres [OF set_irq_state_mdb_cte_wp_at set_irq_state_irq_node]
+
+lemma set_irq_state_issued[wp]:
+  "\<lbrace>\<top>\<rbrace> set_irq_state irq_state.IRQNotifyAEP irq \<lbrace>\<lambda>rv. irq_issued irq\<rbrace>"
+  apply (simp add: set_irq_state_def irq_issued_def)
+  apply wp
+  apply clarsimp
+  done
+
+lemma IRQHandler_valid:
+  "(s \<turnstile> cap.IRQHandlerCap irq) = (irq \<le> maxIRQ)"
+  by (simp add: valid_cap_def cap_aligned_def word_bits_conv)
+
+
+
+
+lemma no_cap_to_obj_with_diff_IRQHandler[simp]:
+  "no_cap_to_obj_with_diff_ref (cap.IRQHandlerCap irq) S = \<top>"
+  by (rule ext, simp add: no_cap_to_obj_with_diff_ref_def
+                          cte_wp_at_caps_of_state
+                          obj_ref_none_no_asid)
+
+lemma set_irq_state_valid_cap[wp]:
+  "\<lbrace>valid_cap cap\<rbrace> set_irq_state IRQNotifyAEP irq \<lbrace>\<lambda>rv. valid_cap cap\<rbrace>"
+  apply (clarsimp simp: set_irq_state_def)
+  apply (wp do_machine_op_valid_cap)
+  apply (auto simp: valid_cap_def valid_untyped_def 
+             split: cap.splits option.splits arch_cap.splits 
+         split del: split_if)
+  done
+
+crunch valid_global_refs[wp]: set_irq_state "valid_global_refs"
+
 lemma invoke_irq_handler_invs':
    assumes dmo_ex_inv[wp]: "\<And>f. \<lbrace>invs and ex_inv\<rbrace> do_machine_op f \<lbrace>\<lambda>rv::unit. ex_inv\<rbrace>"
   assumes cap_insert_ex_inv[wp]: "\<And>cap src dest.
@@ -247,50 +295,15 @@ lemma invoke_irq_handler_invs':
                      split: option.split_asm dest!:cap_master_cap_eqDs)
      apply (wp cap_delete_one_still_derived)
     apply simp
-    apply (wp get_irq_slot_ex_cte get_irq_slot_different hoare_drop_imps)
-   apply (clarsimp simp: valid_state_def invs_def appropriate_cte_cap_def
-                         is_cap_simps)
-   apply (erule cte_wp_at_weakenE, simp add: is_derived_use_interrupt)
-  apply (wp, simp+)
+        apply (wp get_irq_slot_ex_cte get_irq_slot_different hoare_drop_imps)
+      apply (clarsimp simp: valid_state_def invs_def appropriate_cte_cap_def
+                            is_cap_simps)
+      apply (erule cte_wp_at_weakenE, simp add: is_derived_use_interrupt)
+     apply (wp| simp add: setInterruptMode_def)+
   done
 qed
 
-
 lemmas invoke_irq_handler_invs[wp] = invoke_irq_handler_invs'[where ex_inv=\<top>, simplified hoare_post_taut, OF TrueI TrueI TrueI,simplified]
-
-lemma IRQHandler_valid:
-  "(s \<turnstile> cap.IRQHandlerCap irq) = (irq \<le> maxIRQ)"
-  by (simp add: valid_cap_def cap_aligned_def word_bits_conv)
-
-
-crunch pspace_aligned[wp]: set_irq_state "pspace_aligned"
-
-crunch pspace_distinct[wp]: set_irq_state "pspace_distinct"
-
-lemma valid_mdb_interrupts[simp]:
-  "valid_mdb (interrupt_states_update f s) = valid_mdb s"
-  by (simp add: valid_mdb_def mdb_cte_at_def)
-
-crunch valid_mdb[wp]: set_irq_state "valid_mdb"
-
-crunch mdb_cte_wp_at[wp]: set_irq_state "\<lambda>s. cte_wp_at (P (cdt s)) p s"
-crunch real_cte_at[wp]: set_irq_state "real_cte_at p"
-
-lemmas set_irq_state_cte_cap_to[wp]
-    = ex_cte_cap_to_pres [OF set_irq_state_mdb_cte_wp_at set_irq_state_irq_node]
-
-lemma set_irq_state_issued[wp]:
-  "\<lbrace>\<top>\<rbrace> set_irq_state irq_state.IRQNotifyAEP irq \<lbrace>\<lambda>rv. irq_issued irq\<rbrace>"
-  apply (simp add: set_irq_state_def irq_issued_def)
-  apply wp
-  apply clarsimp
-  done
-
-lemma no_cap_to_obj_with_diff_IRQHandler[simp]:
-  "no_cap_to_obj_with_diff_ref (cap.IRQHandlerCap irq) S = \<top>"
-  by (rule ext, simp add: no_cap_to_obj_with_diff_ref_def
-                          cte_wp_at_caps_of_state
-                          obj_ref_none_no_asid)
 
 lemma invoke_irq_control_invs[wp]:
   "\<lbrace>invs and irq_control_inv_valid i\<rbrace> invoke_irq_control i \<lbrace>\<lambda>rv. invs\<rbrace>"

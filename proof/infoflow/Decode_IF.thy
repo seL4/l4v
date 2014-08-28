@@ -282,7 +282,7 @@ lemma decode_irq_control_invocation_rev:
 (* this one doesn't read from the state at all *)
 lemma decode_irq_handler_invocation_rev:
   "reads_equiv_valid_inv A aag \<top>
-      (decode_irq_handler_invocation label irq cps)"
+      (decode_irq_handler_invocation label args irq cps)"
   unfolding decode_irq_handler_invocation_def
   apply (wp | simp add: split_def Let_def | rule conjI impI)+
   done

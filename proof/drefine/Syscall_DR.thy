@@ -327,7 +327,10 @@ lemma decode_invocation_irqhandlercap_corres:
   apply (clarsimp simp: Decode_A.decode_invocation_def Decode_D.decode_invocation_def)
   apply (clarsimp simp: throw_opt_def get_irq_handler_intent_def split: option.splits)
   apply (rule conjI)
-   apply (auto simp: decode_irq_handler_invocation_def transform_intent_def)[1]
+   apply (auto simp: decode_irq_handler_invocation_def transform_intent_def 
+                     transform_intent_irq_set_mode_def 
+          split del: split_if 
+              split: invocation_label.splits cdl_intent.splits list.splits)[1]
   apply clarsimp
   apply (simp split: cdl_intent.splits)
   apply (rule corres_rel_imp)
@@ -438,7 +441,7 @@ lemma transform_intent_irq_handler_None:
   apply (clarsimp simp:Decode_A.decode_invocation_def)
   apply (wp)
     apply (clarsimp simp:decode_irq_handler_invocation_def|rule conjI)+
-      apply (clarsimp simp:transform_intent_def)
+      apply (clarsimp simp:transform_intent_def transform_intent_irq_set_mode_def split: list.splits)+
     apply (clarsimp simp:transform_intent_def |rule conjI | wp)+
 done
 

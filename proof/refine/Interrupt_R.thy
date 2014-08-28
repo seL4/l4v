@@ -23,6 +23,7 @@ where
 | "irq_handler_inv_relation (Invocations_A.ClearIRQHandler irq) x = (x = ClearIRQHandler irq)"
 | "irq_handler_inv_relation (Invocations_A.SetIRQHandler irq cap ptr) x =
        (\<exists>cap'. x = SetIRQHandler irq cap' (cte_map ptr) \<and> cap_relation cap cap')"
+| "irq_handler_inv_relation (Invocations_A.SetMode irq trig pol) x = (x = SetMode irq trig pol)"
 
 consts
   interrupt_control_relation :: "arch_interrupt_control \<Rightarrow> interrupt_control \<Rightarrow> bool"
@@ -46,6 +47,7 @@ where
            and cte_wp_at' (badge_derived' cap \<circ> cteCap) cte_ptr
            and (\<lambda>s. \<exists>ptr'. cte_wp_at' (\<lambda>cte. cteCap cte = IRQHandlerCap irq) ptr' s)
            and ex_cte_cap_wp_to' isCNodeCap cte_ptr)"
+| "irq_handler_inv_valid' (SetMode irq trig pol) = \<top>"
 
 primrec
   irq_control_inv_valid' :: "irqcontrol_invocation \<Rightarrow> kernel_state \<Rightarrow> bool"
@@ -57,19 +59,22 @@ where
         ex_cte_cap_to' ptr and real_cte_at' ptr and
         (Not o irq_issued' irq) and K (irq \<le> maxIRQ))"
 
+lemma data_to_bool_toBool[simp]:
+  "data_to_bool dat = toBool dat"
+  by (auto simp: data_to_bool_def toBool_def)
 
 lemma decode_irq_handler_corres:
   "\<lbrakk> list_all2 cap_relation (map fst caps) (map fst caps');
     list_all2 (\<lambda>p pa. snd pa = cte_map (snd p)) caps caps' \<rbrakk> \<Longrightarrow>
    corres (ser \<oplus> irq_handler_inv_relation) invs invs'
-     (decode_irq_handler_invocation label irq caps)
-     (decodeIRQHandlerInvocation label irq caps')"
+     (decode_irq_handler_invocation label args irq caps)
+     (decodeIRQHandlerInvocation label args irq caps')"
   apply (simp add: decode_irq_handler_invocation_def decodeIRQHandlerInvocation_def
                  split del: split_if)
   apply (cases caps)
-   apply (simp add: returnOk_def split: invocation_label.split)
+   apply (simp add: returnOk_def split: invocation_label.split list.splits split del: split_if)
   apply (clarsimp simp: list_all2_Cons1 split del: split_if)
-  apply (simp add: returnOk_def split: invocation_label.split)
+  apply (simp add: returnOk_def split: invocation_label.split list.splits)
   apply (clarsimp split: cap_relation_split_asm arch_cap.split_asm simp: returnOk_def)
   done
 
@@ -83,7 +88,7 @@ lemma decode_irq_handler_valid'[wp]:
         \<and> (\<forall>cap \<in> set caps. ex_cte_cap_wp_to' isCNodeCap (snd cap) s)
         \<and> (\<forall>cap \<in> set caps. cte_wp_at' (badge_derived' (fst cap) \<circ> cteCap) (snd cap) s)
         \<and> s \<turnstile>' IRQHandlerCap irq\<rbrace>
-     decodeIRQHandlerInvocation label irq caps
+     decodeIRQHandlerInvocation label args irq caps
    \<lbrace>irq_handler_inv_valid'\<rbrace>,-"
   apply (simp add: decodeIRQHandlerInvocation_def Let_def split_def
                split del: split_if)
@@ -215,6 +220,8 @@ lemma valid_globals_ex_cte_cap_irq:
 lemma vmdb_invs'_strg:
   "invs' s \<longrightarrow> valid_mdb' s"
   by clarsimp
+
+declare setInterruptMode_def[simp] MachineOps.setInterruptMode_def[simp]
 
 lemma invoke_irq_handler_corres:
   "irq_handler_inv_relation i i' \<Longrightarrow>

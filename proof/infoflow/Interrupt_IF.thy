@@ -38,8 +38,10 @@ lemma invoke_irq_handler_reads_respects_f:
     apply(fastforce simp: intra_label_cap_def cap_points_to_label_def interrupt_derived_aep_cap_identical_refs)
    apply(fastforce simp: slots_holding_overlapping_caps_def2 ctes_wp_at_def interrupt_derived_aep_cap_identical_refs)
   apply(clarsimp)
-  apply(wp reads_respects_f[OF get_irq_slot_reads_respects, where Q="\<top>" and st=st] cap_delete_one_reads_respects_f | simp)+
-  apply(auto simp: authorised_irq_hdl_inv_def)
+  apply(wp reads_respects_f[OF get_irq_slot_reads_respects, where Q="\<top>" and st=st] cap_delete_one_reads_respects_f | simp add: setInterruptMode_def)+
+  apply(auto simp: authorised_irq_hdl_inv_def)[1]
+  apply (clarsimp simp: setInterruptMode_def)
+  apply wp
   done
 
 lemma invoke_irq_control_reads_respects:
@@ -71,7 +73,7 @@ lemma invoke_irq_handler_globals_equiv:
     invoke_irq_handler a
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   apply (induct a)
-    apply (wp dmo_no_mem_globals_equiv modify_wp cap_insert_globals_equiv'' cap_delete_one_globals_equiv cap_delete_one_valid_ko_at_arm cap_delete_one_valid_global_objs | simp add: maskInterrupt_def)+
+    apply (wp dmo_no_mem_globals_equiv modify_wp cap_insert_globals_equiv'' cap_delete_one_globals_equiv cap_delete_one_valid_ko_at_arm cap_delete_one_valid_global_objs | simp add: maskInterrupt_def setInterruptMode_def)+
 done
 
 subsection "reads_respects_g"
