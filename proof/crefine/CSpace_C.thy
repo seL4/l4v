@@ -4071,13 +4071,9 @@ lemma deriveCap_ccorres':
    apply (rule allI, rule conseqPre, vcg)
    apply (clarsimp simp: return_def returnOk_def)
   apply (clarsimp simp: errstate_def isCap_simps
-                        Collect_const_mem)
-  apply (simp add: cap_get_tag_isCap_ArchObject[THEN trans[OF eq_commute]]
-                   cap_get_tag_isCap_ArchObject)
-  apply (case_tac v0, simp_all add: isCap_simps from_bool_def
-                                    cap_get_tag_isArchCap_unfolded_H_cap)
+                        Collect_const_mem from_bool_0
+                        cap_get_tag_isArchCap_unfolded_H_cap)
   done
-
 
 
 lemma deriveCap_ccorres:

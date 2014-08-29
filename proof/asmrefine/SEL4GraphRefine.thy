@@ -57,6 +57,10 @@ locale graph_refine_locale = kernel_all_substitute
             = (xs = Fault ft))"
 begin
 
+ML {* SimplToGraphProof.globals_swap
+ := (fn t => @{term "globals_swap t_hrs_' t_hrs_'_update symbol_table globals_list"} $ t)
+*}
+
 local_setup {* add_globals_swap_rewrites @{thms kernel_all_global_addresses.global_data_mems} *}
 
 definition
@@ -66,30 +70,25 @@ where
             (hrs_mem (t_hrs_' (globals s)))
         \<and> htd_safe domain (hrs_htd (t_hrs_' (globals s)))}"
 
-ML {* ProveSimplToGraphGoals.test_afll_graph_refine_proofs_after
-    funs (csenv ()) [] @{context} (SOME "Kernel_C.makeUserPDE")  *} 
+ML {* ProveSimplToGraphGoals.test_all_fgraph_refine_proofs_after
+    funs (csenv ()) @{context} (SOME "Kernel_C.alloc_region")  *} 
 
-ML {* val nm = "Kernel_C.makeUserPDE" *}
+ML {* val nm = "Kernel_C.alloc_region" *}
 
 local_setup {* define_graph_fun_short funs nm *}
-
-ML {* SimplToGraphProof.globals_swap
- := (fn t => @{term "globals_swap t_hrs_' t_hrs_'_update symbol_table globals_list"} $ t)
-*}
 
 ML {*
 val hints = SimplToGraphProof.mk_hints funs @{context} nm
 *}
 
 ML {*
-val init_thm = SimplToGraphProof.simpl_to_graph_upto_subgoals funs [@{thm halt_halts}] hints nm
+val init_thm = SimplToGraphProof.simpl_to_graph_upto_subgoals funs hints nm
     @{context}
 *}
 
 ML {*
-ProveSimplToGraphGoals.simpl_to_graph_thm funs (csenv ()) [@{thm halt_halts}] @{context} nm;
+ProveSimplToGraphGoals.simpl_to_graph_thm funs (csenv ()) @{context} nm;
 *}
-
 
 ML {*
 val tacs = ProveSimplToGraphGoals.graph_refine_proof_tacs (csenv ())
@@ -104,53 +103,19 @@ schematic_lemma "PROP ?P"
   apply (tactic {* rtac init_thm 1 *})
   
 
-  apply (tactic {* ALLGOALS (TRY o (full_goal_tac @{context} THEN_ALL_NEW K no_tac)) *})
+  apply (tactic {* ALLGOALS (fn i => fn t => 
+    let val res = try ((full_goal_tac @{context} THEN_ALL_NEW K no_tac) i #> Seq.hd) t
+    in case res of NONE => Seq.single t | SOME r => Seq.single r
+    end) *})
 
 (*  apply (tactic {* ALLGOALS (TRY o rtac @{thm eq_impl_at_addrI}) *}) *)
+  apply -
 
   apply (tactic {* ALLGOALS (nth (tacs @{context}) 0) *})
-apply simp
   apply (tactic {* ALLGOALS (nth (tacs @{context}) 1) *})
   apply (tactic {* ALLGOALS (nth (tacs @{context}) 2) *})
 
-
-  apply (tactic {* full_tac @{context} *})
-
-  apply (simp_all add: word_sle_def[THEN arg_cong[where f=Not], THEN iffD2])
-
-defer
-
-  apply (tactic {* full_tac @{context} *})[2]
-
-ML_val {* nth (ProveSimplToGraphGoals.graph_refine_proof_tacs (csenv ()) @{context}) 3 *}
-
-  apply (tactic {* (nth (tacs @{contfext}) 3) 1 *})
-
-
-  apply (tactic {* ProveSimplToGraphGoals.decompose_graph_refine_memory_problems false
-          (@{context} |> Splitter.del_split @{thm split_if}
-        (* |> Simplifier.del_cong @{thm if_weak_cong} *)) 1 *})[1]
-
-  apply (tactic {* full_tac @{context} *})[1]
-
-  apply (rule sym, tactic {* ProveSimplToGraphGoals.clean_heap_upd_swap @{context} 1 *})
-
-  apply (tactic {* ProveSimplToGraphGoals.prove_mem_equality @{context} 1 *})
-
-  apply (simp add: heap_update_def to_bytes_array
-               heap_update_list_append heap_list_update_ptr heap_list_update_word32
-               field_lvalue_offset_eq ptr_add_def
-               array_ptr_index_def
-               h_val_word32 h_val_ptr
-               upt_rec take_heap_list_min drop_heap_list_general
-        field_to_bytes_rewrites)
-
-  apply (rule double_heap_update_eq[symmetric])
-
-thm cteInsert_body_def
-
-
-  apply (tafctic {* ALLGOALS (nth (tacs @{context}) 3) *})[1]
+  apply (tactic {* ALLGOALS (nth (tacs @{context}) 3) *})
 
   apply (tactic {* ALLGOALS (nth (tacs @{context}) 4) *})
 
