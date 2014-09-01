@@ -44,7 +44,7 @@ lemma g_result:
 lemma h_result:
   "\<Gamma> \<turnstile> \<lbrace> True \<rbrace> \<acute>ret__int :== CALL h(5, -1) \<lbrace> \<acute>ret__int = 0 \<rbrace>"
   apply vcg
-  apply (clarsimp simp: word_arith_nat_div ucast_def bintr_Min)
+  apply (simp add: word_div_def uint_word_ariths)
   done
 
 lemma i_result:
