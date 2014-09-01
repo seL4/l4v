@@ -3775,10 +3775,10 @@ fun hoare_step_tac spec_sfx strip_guards exnames ctxt i st =
   mk_hoare_tac (K (K HoareStepTac)) (vcg_polish_tac (spec_sfx="_modifies")
      ctxt) false [] (strip_guards="true") spec_sfx ctxt i st;
 
-fun hoare_rule_tac ctxt thms i st =
+fun hoare_rule_tac ctxt thms i st = SUBGOAL (fn _ =>
     (case get_state_space i st of
-       SOME (Tids,_,kind) => HoareCallRuleTac kind (is_state_space_var Tids) ctxt thms i st
-     | NONE => error "could not find proper state space type (structure or record) in goal")
+       SOME (Tids,_,kind) => HoareCallRuleTac kind (is_state_space_var Tids) ctxt thms i
+     | NONE => error "could not find proper state space type (structure or record) in goal")) i st;
 
 
 (*** Methods ***)
