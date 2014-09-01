@@ -326,14 +326,12 @@ let
     List.foldl foldthis lthy elems
   end
   val lthy = List.foldl add_body_defs lthy body_elems
-  val lthy = Local_Theory.exit lthy
-  val ctxt = lthy
+  val thy = Local_Theory.exit_global lthy
 
   (* set up _impl by defining \<Gamma> *)
-  val (defs, ctxt) =
+  val (defs, thy) =
       if List.exists (isSome o #body) fninfo then let
-          val lthy =
-              Named_Target.init globloc (Proof_Context.theory_of ctxt)
+          val lthy = Named_Target.init globloc thy
           fun expfname fni = let
             val nm = #fname fni
           in
@@ -361,21 +359,23 @@ let
                                map (Morphism.thm morph) t))
                           defs
         in
-          (defs', Local_Theory.exit lthy')
+          (defs', Local_Theory.exit_global lthy')
         end
-      else ([], ctxt)
+      else ([], thy)
 
   val globloc_expr = ([(globloc, (("", false), Expression.Named []))], [])
 
   (* three levels of folding - woohoo *)
-  fun add_spec_locales ((name,specs), (localemap, ctxt)) = let
+  fun add_spec_locales ((name,specs), (localemap, thy)) = let
     (* add any spec locales *)
-    fun foldthis ((_, e), (localemap, ctxt)) = let
+    fun foldthis ((_, e), (localemap, thy)) = let
       val lnm_strs = extract_element_asms e
-      fun innerfold (((speclocalename_b,_), tstr), (localemap, ctxt)) = let
+      fun innerfold (((speclocalename_b,_), tstr), (localemap, thy)) = let
         val speclocalename = Binding.name_of speclocalename_b
-        val thy = Proof_Context.theory_of ctxt
-        val t = Syntax.read_term ctxt tstr
+        (* jump into an lthy corresponding to globloc to parse the tstr; this lthy
+           is dropped and not used again *)
+        val lthy = Named_Target.init globloc thy
+        val t = Syntax.read_term lthy tstr
         val _ = writeln ("Adding spec locale "^speclocalename^
                          (if speclocalename = "" then "" else " ")^
                          "for function "^name ^ " (" ^ tstr ^ ")")
@@ -396,21 +396,21 @@ let
         (* localename is the name we wanted, locname is the name Isabelle
            gives back to us.  This will be properly qualified yadda yadda *)
       in
-        (Symtab.update (speclocalename, locname) localemap, ctxt')
+        (Symtab.update (speclocalename, locname) localemap,
+         Local_Theory.exit_global ctxt')
       end
     in
-      List.foldl innerfold (localemap,ctxt) lnm_strs
+      List.foldl innerfold (localemap,thy) lnm_strs
     end
-    val (speclocnames,ctxt) = List.foldl foldthis (localemap, ctxt) specs
+    val (speclocnames,thy) = List.foldl foldthis (localemap, thy) specs
   in
-    (speclocnames, ctxt)
+    (speclocnames, thy)
   end
-  val (_ (* specloc_names *), ctxt) =
-      List.foldl add_spec_locales (Symtab.empty, ctxt) name_specs
+  val (_ (* specloc_names *), thy) =
+      List.foldl add_spec_locales (Symtab.empty, thy) name_specs
 
   val (globloc, ctxt) =
-      Expression.add_locale localename_b localename_b globloc_expr []
-                            (Proof_Context.theory_of ctxt)
+      Expression.add_locale localename_b localename_b globloc_expr [] thy
 
 in
   (globloc, defs, Local_Theory.exit_global ctxt)

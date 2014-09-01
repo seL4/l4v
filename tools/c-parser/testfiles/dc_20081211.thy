@@ -14,8 +14,26 @@ begin
 
 install_C_file "dc_20081211.c"
 
+declare [[show_types]]
+
+context dc_20081211_global_addresses
+begin
+
+thm \<Gamma>_def
+
+end
+
+context setHardwareASID_modifies
+begin
+
+thm \<Gamma>_def
+thm setHardwareASID_modifies
+
+end
+
 context dc_20081211 begin
 
+term "\<Gamma>"
 thm setHardwareASID_modifies
 thm test_body_def
 thm test_modifies
