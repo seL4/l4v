@@ -379,6 +379,7 @@ fun system_heap_lift
     (no_heap_abs : string list)
     (force_heap_abs : string list)
     (heap_abs_syntax : bool)
+    (keep_going : bool)
     lthy =
 let
   val prog_info = ProgramInfo.get_prog_info lthy filename
@@ -510,30 +511,33 @@ let
         |> map_filter I)
 
   (* Generate "valid_struct_field" for each field of each struct. *)
-  fun mk_valid_struct_field_thm typ (field_info : HeapLiftBase.field_info) =
-    @{mk_term "Trueprop (valid_struct_field ?st [?fname] ?fgetter (%v. ?fsetter (%_. v)) ?getter ?setter ?valid_getter ?valid_setter ?t_hrs ?t_hrs_update)"
-        (st, fname, fgetter, fsetter, getter, setter, valid_getter, valid_setter, t_hrs, t_hrs_update) }
+  fun mk_valid_struct_field_thm struct_name typ (field_info : HeapLiftBase.field_info) =
+    @{mk_term "Trueprop (valid_struct_field ?st [?fname] ?fgetter ?fsetter ?t_hrs ?t_hrs_update)"
+        (st, fname, fgetter, fsetter, t_hrs, t_hrs_update) }
       (#lift_fn_full heap_info,
           Utils.encode_isa_string (#name field_info),
           #getter field_info,
           #setter field_info,
-          get_heap_getter heap_info typ,
-          get_heap_setter heap_info typ,
-          get_heap_valid_getter heap_info typ,
-          get_heap_valid_setter heap_info typ,
           #t_hrs_getter prog_info,
           #t_hrs_setter prog_info)
     |> (fn prop => Goal.prove_future lthy [] [] prop
          (fn params =>
-             (rtac @{thm valid_struct_fieldI} 1) THEN (
-                 REPEAT (subgoal_solver_tac (#context params)))))
+             (rtac @{thm valid_struct_fieldI} 1) THEN
+             (* Need some extra thms from the records package for our struct type. *)
+             (EqSubst.eqsubst_tac lthy [0]
+                [hd (Proof_Context.get_thms lthy (struct_name ^ "_idupdates")) RS @{thm sym}] 1
+                THEN asm_full_simp_tac lthy 1) THEN
+             (FIRST (Proof_Context.get_thms lthy (struct_name ^ "_fold_congs")
+                     |> map (fn t => rtac (t OF @{thms refl refl}) 1))
+                THEN asm_full_simp_tac lthy 1) THEN
+             (REPEAT (subgoal_solver_tac (#context params)))))
 
   (* Make thms for all fields of structs in our heap. *)
   fun valid_struct_abs_thms T =
     case (Typtab.lookup (#struct_types heap_info) T) of
       NONE => []
     | SOME struct_info =>
-        map (mk_valid_struct_field_thm T) (#field_info struct_info)
+        map (mk_valid_struct_field_thm (#name struct_info) T) (#field_info struct_info)
   val valid_field_thms =
     map valid_struct_abs_thms heap_types |> List.concat
 
@@ -554,23 +558,21 @@ let
    * "valid_globals_field", "valid_typ_heap" etc with the predicates generated
    * above.
    *)
-  val rules =
-      cross_instantiate (HeapAbsThms.get lthy) [
+  val base_rules = HeapAbsThms.get lthy
+  (* FIXME: make an attribute for these rules? *)
+  val base_nolift_rules = @{thms struct_rewrite_expr_id}
+  val [rules, nolift_rules] =
+    map (fn rules =>
+      cross_instantiate rules [
         valid_typ_heap_thms,
         valid_field_thms,
         valid_global_field_thms]
     |> filter (prop_of #> exists_subterm (fn x => case x of Const (@{const_name "valid_globals_field"}, _) => true | _ => false) #> not)
     |> filter (prop_of #> exists_subterm (fn x => case x of Const (@{const_name "valid_struct_field"}, _) => true | _ => false) #> not)
     |> filter (prop_of #> exists_subterm (fn x => case x of Const (@{const_name "valid_typ_heap"}, _) => true | _ => false) #> not)
+       ) [base_rules, base_nolift_rules]
 
-(*
-  (* Instantiate recursive L2_call rule *)
-  val measure_term = cterm_of (Proof_Context.theory_of lthy)
-                              (@{const "recguard_dec"} $ Free ("rec_measure'", @{typ "nat"}))
-  val L2Tcorres_rec_call_inst = @{thm L2Tcorres_rec_call} WHERE [("m", measure_term)]
-
-  val rules = rules @ [L2Tcorres_rec_call_inst]
-*)
+  (*val _ = map (fn r => @{trace} r) rules*)
 
   (* Convert to new heap format. *)
   fun convert ctxt fn_name callee_terms measure_var fn_args =
@@ -604,14 +606,27 @@ let
                then SOME (FunctionInfo.get_function_def fn_info callee |> #mono_thm)
                else NONE)
     val rules = rules @ (map (snd #> #3) (Symtab.dest callee_terms)) @ callee_mono_thms
+    val rules = if Symset.contains unliftable_functions fn_name
+                then rules @ nolift_rules else rules
     val fo_rules = HeapAbsFOThms.get ctxt
 
-    (* Apply a conversion to the concrete side of the given L2T term. *)
+    (* Apply a conversion to the concrete side of the given L2T term.
+     * By convention, the concrete side is the last argument (index ~1). *)
     fun l2t_conc_body_conv conv =
-      Conv.params_conv (~1) (K (Conv.arg_conv (Utils.nth_arg_conv 4 conv)))
+      Conv.params_conv (~1) (K (Conv.arg_conv (Utils.nth_arg_conv (~1) conv)))
 
     (* Standard tactics. *)
-    fun rtac_all r n = (APPEND_LIST (map (fn thm => rtac thm n) r))
+    val print_debug = fn_name = ""
+    fun rtac_all r n = (APPEND_LIST (map (fn thm =>
+                          rtac thm n THEN (fn x =>
+                            (if print_debug then @{trace} thm else ();
+                            Seq.succeed x))) r))
+
+    fun print1_tac label t =
+      (@{trace} (
+         label ^ ": subgoal 1 of " ^ Int.toString (Logic.count_prems (term_of_thm t)),
+         Logic.get_goal (term_of_thm t) 1 |> cterm_of (Proof_Context.theory_of lthy));
+       all_tac t)
 
     (* Convert the concrete side of the given L2T term to/from first-order form. *)
     val l2t_to_fo_tac = CONVERSION (Drule.beta_eta_conversion then_conv l2t_conc_body_conv (mk_first_order ctxt) ctxt)
@@ -637,11 +652,27 @@ let
      * "good solutions") once we hit an unsolvable subgoal.
      *)
     fun solve_tac n =
+      (if print_debug then print1_tac fn_name else all_tac) THEN
       DETERM ((SOLVES (
           ((K (CHANGED ((rtac_all rules 1) APPEND (fo_tac)))) THEN_ALL_NEW solve_tac) 1))
             ORELSE (print_n_tac error_printed THEN no_tac))
     val thm = Utils.apply_tac "Solve goal" (solve_tac 1) goal
       |> Goal.finish ctxt
+
+    (* DEBUG: make sure that all uses of field_lvalue are rewritten. *)
+    fun contains_const name = let
+          fun check (Const (n, _)) = n = name
+            | check (Abs (_, _, t)) = check t
+            | check (f $ x) = check f orelse check x
+            | check _ = false
+        in check end
+    fun const_gone term name =
+        if not (contains_const name term) then ()
+        else Utils.TERM_non_critical keep_going
+               ("autocorres heap lift: could not remove " ^ name) [term]
+    val _ = if Symset.contains unliftable_functions fn_name then []
+            else map (const_gone (term_of_thm thm))
+                     [@{const_name "field_lvalue"}, @{const_name "c_guard"}]
 
     (* Gather statistics. *)
     val _ = Statistics.gather ctxt "HL" fn_name

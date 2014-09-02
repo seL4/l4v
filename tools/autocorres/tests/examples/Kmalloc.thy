@@ -26,11 +26,15 @@ context kmalloc begin
 
 (* C parser output. *)
 thm alloc_body_def
+thm sep_alloc_body_def
 thm free_body_def
+thm sep_free_body_def
 
 (* Abstracted output. *)
 thm alloc'_def
+thm sep_alloc'_def
 thm free'_def
+thm sep_free'_def
 
 end
 

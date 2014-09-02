@@ -9,16 +9,18 @@
  *)
 
 theory AutoCorresSimpset
-imports "../../lib/WordLib"
+imports SimplBucket
 begin
 
 (*
- * The simpset at the end of  this file determines the
+ * The simpset at the end of this file determines the
  * "full" simpset used internally within AutoCorres during
  * processing.
  *)
 
 lemmas [simp del] =
-  fun_upd_apply
+  fun_upd_apply (* interferes with heap_lift *)
+  ptr_coerce.simps ptr_add_0_id (* interferes with struct_rewrite *)
+  word_neq_0_conv (* affects boolean expressions *)
 
 end

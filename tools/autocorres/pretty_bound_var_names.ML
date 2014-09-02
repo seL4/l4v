@@ -147,7 +147,7 @@ end
 
 (* Generate a thm of the form "A == B", where "B" has pretty bound variable
  * names. *)
-fun pretty_bound_vars_thm ctxt ct =
+fun pretty_bound_vars_thm ctxt ct keep_going =
 let
   val rhs = map_term_bottom pretty_bound_vars (term_of ct)
 
@@ -161,7 +161,7 @@ let
       | _ => ()
   fun barf_uu var typ term =
     if String.isSuffix "_" var
-       then Utils.CTERM_non_critical
+       then Utils.CTERM_non_critical keep_going
                 ("autocorres: Internal var " ^ var ^ "::" ^
                  PolyML.makestring typ ^ " is exposed.")
                 [ct, cterm_of (Proof_Context.theory_of ctxt) rhs]

@@ -227,11 +227,11 @@ in
   instantiate_thm_vars thy (fn ((n, _), _) => Symtab.lookup dict n) thm
 end
 
-(* Apply a conversion to the n'th argument of a term. *)
+(* Apply a conversion to the n'th argument of a term. If n < 0, count from the end. *)
 fun nth_arg_conv n conv c =
 let
   val num_args = Drule.strip_comb c |> snd |> length;
-  val num_strips = num_args - n;
+  val num_strips = num_args - (if n < 0 then num_args + 1 + n else n);
   val new_conv = fold (fn _ => fn x => Conv.fun_conv x) (replicate num_strips ()) (Conv.arg_conv conv)
 in
   new_conv c
@@ -1007,20 +1007,17 @@ val keep_going_instruction =
 val keep_going_info =
   "\nIgnoring this error because keep_going is enabled."
 
-(* FIXME: propagate this value instead of making it a mutable var *)
-val keep_going_option = ref false
-
 (* Raise exceptions unless keep_going is set. *)
-fun TERM_non_critical msg term =
-  if !keep_going_option then warning (msg ^ keep_going_info)
+fun TERM_non_critical keep_going msg term =
+  if keep_going then warning (msg ^ keep_going_info)
   else raise TERM (msg ^ keep_going_instruction, term)
 
-fun CTERM_non_critical msg ct =
-  if !keep_going_option then warning (msg ^ keep_going_info)
+fun CTERM_non_critical keep_going msg ct =
+  if keep_going then warning (msg ^ keep_going_info)
   else raise CTERM (msg ^ keep_going_instruction, ct)
 
-fun THM_non_critical msg n thm =
-  if !keep_going_option then warning (msg ^ keep_going_info)
+fun THM_non_critical keep_going msg n thm =
+  if keep_going then warning (msg ^ keep_going_info)
   else raise THM (msg ^ keep_going_instruction, n, thm)
 
 (* Perform a "Method.trace" on the given list of thms if the given tactic
