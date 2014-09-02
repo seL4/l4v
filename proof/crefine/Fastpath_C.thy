@@ -1116,42 +1116,41 @@ lemma switchToThread_fp_ccorres:
         apply (simp add: pd_has_hwasid_def)
         apply (wp doMachineOp_pd_at_asid')
        apply (rule ccorres_bind_assoc_rev)
-       apply (ctac add: armv_contextSwitch_fp_ccorres)
-         apply (simp add: storeWordUser_def bind_assoc option_case_If2
-                          split_def
-                     del: Collect_const)
-         apply (rule ccorres_symb_exec_l[OF _ gets_inv _ empty_fail_gets])
-          apply (rename_tac "gf")
-          apply (rule ccorres_pre_threadGet)
-          apply (rule ccorres_stateAssert)
-          apply (rule_tac P="pointerInUserData gf and no_0_obj'
-                                and K (is_aligned gf 2)
-                                and (\<lambda>s. gf = armKSGlobalsFrame (ksArchState s))"
-                 in ccorres_cross_over_guard)
-          apply (rule ccorres_Guard_Seq)
-          apply (rule ccorres_Guard_Seq)
-          apply (rule ccorres_move_c_guard_tcb)
-          apply (ctac add: storeWord_ccorres'[unfolded fun_app_def])
-            apply (simp only: dmo_clearExMonitor_setCurThread_swap
-                              dc_def[symmetric])
-            apply (rule ccorres_split_nothrow_novcg_dc)
-               apply (rule ccorres_from_vcg[where P=\<top> and P'=UNIV])
-               apply (rule allI, rule conseqPre, vcg)
-               apply (clarsimp simp del: rf_sr_upd_safe)
-               apply (clarsimp simp: setCurThread_def simpler_modify_def
-                                     rf_sr_def cstate_relation_def Let_def
-                                     carch_state_relation_def cmachine_state_relation_def)
-              apply (ctac add: clearExMonitor_fp_ccorres)
-             apply wp
-            apply (simp add: guard_is_UNIV_def)
-           apply wp
-          apply vcg
-         apply wp
-         apply (simp add: obj_at'_weakenE[OF _ TrueI])
-         apply (wp hoare_drop_imps)[1]
-        apply (wp doMachineOp_no_0')[1]
-       apply (simp del: Collect_const)
-       apply (vcg exspec=armv_contextSwitch_fp_modifies)
+       apply (ctac(no_vcg) add: armv_contextSwitch_fp_ccorres)
+        apply (simp add: storeWordUser_def bind_assoc option_case_If2
+                         split_def
+                    del: Collect_const)
+        apply (rule ccorres_symb_exec_l[OF _ gets_inv _ empty_fail_gets])
+         apply (rename_tac "gf")
+         apply (rule ccorres_pre_threadGet)
+         apply (rule ccorres_stateAssert)
+         apply (rule_tac P="pointerInUserData gf and no_0_obj'
+                               and K (is_aligned gf 2)
+                               and (\<lambda>s. gf = armKSGlobalsFrame (ksArchState s))
+                               and valid_arch_state'"
+                in ccorres_cross_over_guard)
+         apply (rule ccorres_Guard_Seq)
+         apply (rule ccorres_Guard_Seq)
+         apply (rule ccorres_move_c_guard_tcb)
+         apply (ctac add: storeWord_ccorres'[unfolded fun_app_def])
+           apply (simp only: dmo_clearExMonitor_setCurThread_swap
+                             dc_def[symmetric])
+           apply (rule ccorres_split_nothrow_novcg_dc)
+              apply (rule ccorres_from_vcg[where P=\<top> and P'=UNIV])
+              apply (rule allI, rule conseqPre, vcg)
+              apply (clarsimp simp del: rf_sr_upd_safe)
+              apply (clarsimp simp: setCurThread_def simpler_modify_def
+                                    rf_sr_def cstate_relation_def Let_def
+                                    carch_state_relation_def cmachine_state_relation_def)
+             apply (ctac add: clearExMonitor_fp_ccorres)
+            apply wp
+           apply (simp add: guard_is_UNIV_def)
+          apply wp
+         apply vcg
+        apply wp
+        apply (simp add: obj_at'_weakenE[OF _ TrueI])
+        apply (wp hoare_drop_imps)[1]
+       apply (wp doMachineOp_no_0')[1]
       apply (simp add: bind_assoc checkPDNotInASIDMap_def
                        checkPDASIDMapMembership_def)
       apply (rule ccorres_stateAssert)
@@ -1183,8 +1182,6 @@ lemma switchToThread_fp_ccorres:
                           pde_stored_asid_def split: split_if_asm)
    apply (clarsimp simp: singleton_eq_o2s pde_stored_asid_def
                   split: if_splits)
-  apply (frule(1) h_t_valid_armKSGlobalsFrame)
-  apply (frule(1) c_guard_abs_word32_armKSGlobalsFrame)
   apply (clarsimp simp del: rf_sr_upd_safe
     dest!: isValidVTableRootD
     simp: cap_get_tag_isCap_ArchObject2 pde_stored_asid_Some
@@ -1199,7 +1196,8 @@ lemma switchToThread_fp_ccorres:
               simp del: rf_sr_upd_safe)
   apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def
                         carch_globals_def pointerInUserData_c_guard'
-                        pointerInUserData_h_t_valid2 cpspace_relation_def)
+                        pointerInUserData_h_t_valid2 cpspace_relation_def
+                        c_guard_abs_word32_armKSGlobalsFrame)
   done
 
 lemma thread_state_ptr_set_tsType_np_spec:
@@ -2633,7 +2631,7 @@ lemma fastpath_call_ccorres:
                                                        h_t_valid_clift_Some_iff)
                                      apply ceqv
                                     apply (simp only: bind_assoc[symmetric])
-                                    apply (rule ccorres_split_nothrow_dc)
+                                    apply (rule ccorres_split_nothrow_novcg_dc)
                                        apply simp
                                        apply (rule ccorres_call,
                                               rule_tac v=shw_asid and pd="capUntypedPtr (cteCap pd_cap)"
@@ -2652,8 +2650,8 @@ lemma fastpath_call_ccorres:
                                      apply wp
                                      apply (rule_tac P=\<top> in hoare_triv, simp)
                                     apply (simp add: imp_conjL rf_sr_ksCurThread del: all_imp_to_ex)
-                                    apply (simp add: ccap_relation_ep_helpers)
-                                    apply (vcg exspec=switchToThread_fp_modifies)
+                                    apply (clarsimp simp: ccap_relation_ep_helpers guard_is_UNIV_def
+                                                          mi_from_H_def)
                                    apply (simp add: pd_has_hwasid_def)
                                    apply (wp sts_ct_in_state_neq' sts_valid_objs')
                                   apply (simp del: Collect_const)
@@ -3273,7 +3271,7 @@ lemma fastpath_reply_wait_ccorres:
                                                    h_t_valid_clift_Some_iff)
                                  apply ceqv
                                 apply (simp only: bind_assoc[symmetric])
-                                apply (rule ccorres_split_nothrow_dc)
+                                apply (rule ccorres_split_nothrow_novcg_dc)
                                    apply (rule ccorres_call,
                                           rule_tac v=shw_asid and pd="capUntypedPtr (cteCap pd_cap)"
                                                 in switchToThread_fp_ccorres,
@@ -3291,8 +3289,8 @@ lemma fastpath_reply_wait_ccorres:
                                  apply wp
                                  apply (rule_tac P=\<top> in hoare_triv, simp)
                                 apply (simp add: imp_conjL rf_sr_ksCurThread del: all_imp_to_ex)
-                                apply (simp add: ccap_relation_ep_helpers)
-                                apply (vcg exspec=switchToThread_fp_modifies)
+                                apply (clarsimp simp: ccap_relation_ep_helpers guard_is_UNIV_def
+                                                      mi_from_H_def)
                                apply (simp add: pd_has_hwasid_def)
                                apply (wp sts_ct_in_state_neq' sts_valid_objs')
                               apply (simp del: Collect_const)

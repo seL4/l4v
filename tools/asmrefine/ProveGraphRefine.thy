@@ -137,21 +137,12 @@ lemma ptr_equalities_to_ptr_val:
   "(p = Ptr addr) = (ptr_val p = addr)"
   by (simp | cases p)+
 
-(* FIXME move to Lib then to Word *)
-lemmas extra_sle_sless_unfolds
-    = word_sle_def[where a=0 and b=1]
-    word_sle_def[where a=0 and b="numeral n"]
-    word_sle_def[where a=1 and b=0]
-    word_sle_def[where a=1 and b="numeral n"]
-    word_sle_def[where a="numeral n" and b=0]
-    word_sle_def[where a="numeral n" and b=1]
-    word_sless_alt[where a=0 and b=1]
-    word_sless_alt[where a=0 and b="numeral n"]
-    word_sless_alt[where a=1 and b=0]
-    word_sless_alt[where a=1 and b="numeral n"]
-    word_sless_alt[where a="numeral n" and b=0]
-    word_sless_alt[where a="numeral n" and b=1]
-  for n
+lemma unat_ucast_if_up:
+  "unat (ucast (x :: ('a :: len) word) :: ('b :: len) word)
+    = (if len_of TYPE('a) \<le> len_of TYPE('b) then unat x else unat x mod 2 ^ len_of TYPE ('b))"
+  apply (simp, safe intro!: unat_ucast unat_ucast_upcast)
+  apply (simp add: is_up_def source_size_def target_size_def word_size)
+  done
 
 ML {*
 fun wrap_tac tac i t = let
@@ -323,6 +314,7 @@ fun prove_mem_equality ctxt = DETERM o let
                array_ptr_index_def
                h_val_word32 h_val_ptr
                take_heap_list_min drop_heap_list_general
+               ucast_nat_def[symmetric]
         } @ Proof_Context.get_thms ctxt "field_to_bytes_rewrites"
         addsimprocs [Word_Bitwise_Tac.expand_upt_simproc]
       handle ERROR _ => raise THM
@@ -405,7 +397,14 @@ fun unat_mono_tac ctxt = resolve_tac @{thms unat_mono_intro}
                 THEN_ALL_NEW rtac @{thm order_refl})
             THEN_ALL_NEW except_tac ctxt "unat_mono_tac: escaped order_refl")
         ORELSE' except_tac ctxt "unat_mono_tac: couldn't get started")
-    THEN' (asm_full_simp_tac (ctxt addsimps @{thms word_less_nat_alt word_le_nat_alt})
+    THEN' (asm_full_simp_tac (ctxt addsimps @{thms
+            word_sless_to_less word_sle_to_le
+            extra_sle_sless_unfolds
+        })
+        THEN_ALL_NEW asm_full_simp_tac (ctxt addsimps @{thms
+            word_less_nat_alt word_le_nat_alt
+            unat_ucast_if_up extra_sle_sless_unfolds
+        })
         THEN_ALL_NEW except_tac ctxt "unat_mono_tac: unsolved")
 
 fun tactic_check' (ss, t) = (ss, tactic_check (hd ss) t)
@@ -499,30 +498,30 @@ fun graph_refine_proof_full_goal_tac csenv ctxt
     = (foldr1 (op THEN_ALL_NEW)
         (map snd (graph_refine_proof_tacs csenv ctxt)))
 
-fun simpl_to_graph_thm funs csenv noreturns ctxt nm = let
+fun simpl_to_graph_thm funs csenv ctxt nm = let
     val hints = SimplToGraphProof.mk_hints funs ctxt nm
-    val init_thm = SimplToGraphProof.simpl_to_graph_upto_subgoals funs noreturns hints nm
+    val init_thm = SimplToGraphProof.simpl_to_graph_upto_subgoals funs hints nm
         ctxt
     val res_thm = init_thm |> graph_refine_proof_full_tac csenv ctxt |> Seq.hd
     val _ = if Thm.nprems_of res_thm = 0 then ()
         else raise THM ("simpl_to_graph_thm: unsolved subgoals", 1, [res_thm])
-    (* FIXME: make hidden assumptions explicit *)
+    (* FIXME: make the hidden assumptions of the thm appear again *)
   in res_thm end
 
-fun test_graph_refine_proof funs csenv noreturns ctxt nm = case
+fun test_graph_refine_proof funs csenv ctxt nm = case
     Symtab.lookup funs nm of SOME (_, _, NONE) => "skipped " ^ nm
   | _ => let
     val ctxt = define_graph_fun_short funs nm ctxt
-  in simpl_to_graph_thm funs csenv noreturns ctxt nm;
+  in simpl_to_graph_thm funs csenv ctxt nm;
     "success on " ^ nm end
 
-fun test_all_graph_refine_proofs_after funs csenv noreturns ctxt nm = let
+fun test_all_graph_refine_proofs_after funs csenv ctxt nm = let
     val ss = Symtab.keys funs
     val n = case nm of NONE => ~1 | SOME nm' => find_index (fn s => s = nm') ss
     val ss = if n = ~1 then ss else drop (n + 1) ss
     val err = prefix "ERROR for: " #> error
     val _ = map (fn s => (writeln ("testing: " ^ s);
-        writeln (test_graph_refine_proof funs csenv noreturns ctxt s))
+        writeln (test_graph_refine_proof funs csenv ctxt s))
       handle TERM _ => err s | TYPE _ => err s | THM _ => err s) ss
   in "success" end
 

@@ -984,23 +984,6 @@ lemma graph_fun_refines_from_simpl_to_graph:
   apply metis
   done
 
-lemma simpl_to_graph_call_noreturn:
-  "(\<exists>ft. \<forall>s xs. (SGamma \<turnstile> \<langle>com.Call p, Normal s\<rangle> \<Rightarrow> xs)
-            = (xs = Fault ft))
-    \<Longrightarrow> simpl_to_graph SGamma GGamma gf nn
-        (add_cont (call initf p ret (\<lambda>x y. com.Basic (f x y))) con)
-        n Q P I eqs out_eqs"
-  apply (clarsimp simp: call_def block_def)
-  apply (rule simpl_to_graph_steps_Fault)
-  apply clarsimp
-  apply (rule exI)
-  apply (rule exec_impl_steps_Fault)
-  apply (rule exec.DynCom exec.Seq exec.CatchMiss exec.Basic)+
-    apply blast
-   apply simp
-  apply (rule exec.FaultProp)
-  done
-
 lemma simpl_to_graph_name_simpl_state:
   "(\<And>sst. sst \<in> P \<Longrightarrow> simpl_to_graph SGamma GGamma gf nn com n traces {sst} I inp_eqs out_eqs)
     \<Longrightarrow> simpl_to_graph SGamma GGamma gf nn com n traces P I inp_eqs out_eqs"
@@ -1363,6 +1346,12 @@ lemma c_guard_to_word_ineq:
 lemma word_sless_to_less:
   "\<lbrakk> 0 <=s x; 0 <=s y \<rbrakk> \<Longrightarrow> (x <s y) = (x < y)"
   apply (simp add: word_sless_alt word_sle_def word_less_def)
+  apply (simp add: sint_eq_uint word_msb_sint)
+  done
+
+lemma word_sle_to_le:
+  "\<lbrakk> 0 <=s x; 0 <=s y \<rbrakk> \<Longrightarrow> (x <=s y) = (x <= y)"
+  apply (simp add: word_sle_def word_le_def)
   apply (simp add: sint_eq_uint word_msb_sint)
   done
 
@@ -1798,7 +1787,7 @@ fun simpl_ss ctxt = put_simpset HOL_basic_ss ctxt
 val immediates = @{thms
     simpl_to_graph_Skip_immediate simpl_to_graph_Throw_immediate}
 
-fun apply_simpl_to_graph_tac funs (Hints hints) noreturns ctxt =
+fun apply_simpl_to_graph_tac funs (Hints hints) ctxt =
         simp_tac (simpl_ss ctxt
             addsimps @{thms One_nat_def whileAnno_def
                 creturn_def[folded creturn_void_def]})
@@ -1821,8 +1810,6 @@ fun apply_simpl_to_graph_tac funs (Hints hints) noreturns ctxt =
             THEN' inst_graph_tac ctxt,
         rtac @{thm simpl_to_graph_Basic}
             THEN' inst_graph_tac ctxt,
-        rtac @{thm simpl_to_graph_call_noreturn}
-            THEN' resolve_tac noreturns,
         rtac @{thm simpl_to_graph_call_triv[OF refl]}
             THEN' inst_graph_tac ctxt
             THEN' apply_graph_refines_ex_tac funs ctxt
@@ -1843,11 +1830,11 @@ fun trace_cache _ (SOME thm) = tracing
   ("Adding thm to cache with " ^ string_of_int (nprems_of thm) ^ " prems.")
   | trace_cache _ NONE = tracing "Adding NONE to cache."
 
-fun simpl_to_graph_cache_tac funs noreturns hints cache nm ctxt =
+fun simpl_to_graph_cache_tac funs hints cache nm ctxt =
         simp_tac (simpl_ss ctxt)
     THEN_ALL_NEW DETERM o FIRST' [
         SUBGOAL (fn (t, i) => (case
-        with_cache cache (mk_simpl_to_graph_thm funs noreturns hints cache nm ctxt) (K (K ()))
+        with_cache cache (mk_simpl_to_graph_thm funs hints cache nm ctxt) (K (K ()))
             (simpl_to_graph_skel hints nm (HOLogic.dest_Trueprop
                 (Logic.strip_assums_concl (Envir.beta_eta_contract t)))) of
             SOME thm => rtac thm i | _ => no_tac)
@@ -1856,12 +1843,12 @@ fun simpl_to_graph_cache_tac funs noreturns hints cache nm ctxt =
         eq_impl_assume_tac ctxt
     ]
 
-and mk_simpl_to_graph_thm funs noreturns hints cache nm ctxt tm = let
+and mk_simpl_to_graph_thm funs hints cache nm ctxt tm = let
     val thy = Proof_Context.theory_of ctxt
     val ct = cterm_of thy (HOLogic.mk_Trueprop tm)
   in Thm.trivial ct
-    |> (apply_simpl_to_graph_tac funs hints noreturns ctxt
-        THEN_ALL_NEW (TRY o simpl_to_graph_cache_tac funs noreturns hints cache nm ctxt)
+    |> (apply_simpl_to_graph_tac funs hints ctxt
+        THEN_ALL_NEW (TRY o simpl_to_graph_cache_tac funs hints cache nm ctxt)
         THEN_ALL_NEW (TRY o eq_impl_assume_tac ctxt)) 1
     |> Seq.hd
     |> Drule.generalize ([], ["n", "trS"])
@@ -1915,11 +1902,11 @@ fun trace_fail_tac ctxt s = SUBGOAL (fn (t, _) =>
 
 fun trace_fail_tac2 _ = K no_tac
 
-fun simpl_to_graph_tac funs noreturns hints nm ctxt = let
+fun simpl_to_graph_tac funs hints nm ctxt = let
     val cache = ref (Termtab.empty)
   in REPEAT_ALL_NEW (DETERM o (full_simp_tac (simpl_ss ctxt) THEN'
     SUBGOAL (fn (t, i) => fn thm =>
-      ((simpl_to_graph_cache_tac funs noreturns hints cache nm ctxt
+      ((simpl_to_graph_cache_tac funs hints cache nm ctxt
     ORELSE' (etac @{thm use_simpl_to_graph_While_assum}
         THEN' simp_tac ctxt)
     ORELSE' simpl_to_graph_While_tac hints nm ctxt
@@ -1930,13 +1917,12 @@ fun simpl_to_graph_tac funs noreturns hints nm ctxt = let
     ))
   end
 
-fun get_conts norets (@{term node.Basic} $ nn $ _) = [nn]
-  | get_conts norets (@{term node.Cond} $ l $ _ $ Abs (_, _, @{term True})) = [l]
-  | get_conts norets (@{term node.Cond} $ _ $ r $ Abs (_, _, @{term False})) = [r]
-  | get_conts norets (@{term node.Cond} $ l $ r $ _) = [l, r]
-  | get_conts norets (@{term node.Call} $ nn $ s $ _ $ _)
-    = if member (op =) norets (HOLogic.dest_string s) then [] else [nn]
-  | get_conts norets n = raise TERM ("get_conts", [n])
+fun get_conts (@{term node.Basic} $ nn $ _) = [nn]
+  | get_conts (@{term node.Cond} $ l $ _ $ Abs (_, _, @{term True})) = [l]
+  | get_conts (@{term node.Cond} $ _ $ r $ Abs (_, _, @{term False})) = [r]
+  | get_conts (@{term node.Cond} $ l $ r $ _) = [l, r]
+  | get_conts (@{term node.Call} $ nn $ _ $ _ $ _) = [nn]
+  | get_conts n = raise TERM ("get_conts", [n])
 
 fun get_rvals (Abs (_, _, t)) = let
     fun inner (Const _ $ (s as (@{term "op # :: char \<Rightarrow> _"} $ _ $ _)) $ Bound 0)
@@ -1959,12 +1945,12 @@ fun get_lvals_rvals (@{term node.Basic} $ _ $ upds) = let
       HOLogic.dest_list args |> maps get_rvals)
   | get_lvals_rvals n = raise TERM ("get_conts", [n])
 
-fun get_var_deps norets nodes ep outputs = let
+fun get_var_deps nodes ep outputs = let
     fun forward tab (point :: points) = if point < 0
       then forward tab points
       else let
         val node = Inttab.lookup nodes point |> the
-        val conts = map dest_next_node (get_conts norets node)
+        val conts = map dest_next_node (get_conts node)
         val upds = filter_out (Inttab.lookup_list tab #>
           flip (Ord_List.member int_ord) point) conts
         val tab = fold (fn c => Inttab.map_default (c, [])
@@ -1974,7 +1960,7 @@ fun get_var_deps norets nodes ep outputs = let
     val preds = forward (Inttab.make [(ep, [])]) [ep]
     fun backward tab (point :: points) = let
         val node = Inttab.lookup nodes point |> the
-        val conts = map dest_next_node (get_conts norets node)
+        val conts = map dest_next_node (get_conts node)
         val (lvs, rvs) = get_lvals_rvals node
           |> pairself (Ord_List.make string_ord)
         val cont_vars = maps (Inttab.lookup_list tab) conts
@@ -2007,15 +1993,12 @@ fun mk_loop_var_upd_thm ctxt n = let
     |> simplify (simpl_ss ctxt addsimps @{thms One_nat_def})
   end
 
-fun noreturn_thms_call_names noreturn_thms = []
-
-fun mk_hints (funs : ParseGraph.funs) noreturns ctxt nm = case Symtab.lookup funs nm of
+fun mk_hints (funs : ParseGraph.funs) ctxt nm = case Symtab.lookup funs nm of
     NONE => raise TERM ("mk_var_deps_hints: miss " ^ nm, [])
   | SOME (_, _, NONE) => Hints {deps = Inttab.empty, loop_basics = []}
   | SOME (_, outputs, SOME (ep, nodes, _)) => let
-    val norets = noreturn_thms_call_names noreturns
     val sT = Syntax.read_typ ctxt "globals myvars"
-    val deps = snd (get_var_deps norets (Inttab.make nodes) ep outputs)
+    val deps = snd (get_var_deps (Inttab.make nodes) ep outputs)
     val deps_hints = nodes
       |> map (fst #> ` (Inttab.lookup_list deps
           #> filter_out (fn s => String.isSuffix "#count" s)
@@ -2054,9 +2037,9 @@ fun eq_impl_unassume_tac t = let
   in (* tracing ("Restoring " ^ string_of_int (length hyps) ^ " hyps.") ; *)
     fold Thm.implies_intr hyps t |> Seq.single end
 
-fun simpl_to_graph_upto_subgoals funs noreturns hints nm ctxt =
+fun simpl_to_graph_upto_subgoals funs hints nm ctxt =
     init_graph_refines_proof funs nm ctxt
-    |> (simpl_to_graph_tac funs noreturns hints nm ctxt 1
+    |> (simpl_to_graph_tac funs hints nm ctxt 1
         THEN ALLGOALS (TRY o REPEAT_ALL_NEW (etac thin_While_assums_rule))
         THEN eq_impl_unassume_tac
     ) |> Seq.hd
