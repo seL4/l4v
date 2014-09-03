@@ -536,9 +536,9 @@ lemma add_cont_step:
 lemma simpl_to_graph_Cond:
   "\<lbrakk> nn = NextNode m; GGamma gf = Some gfc; function_graph gfc m = Some (Cond l r cond);
         eq_impl nn eqs (\<lambda>gst sst. l \<noteq> r \<longrightarrow> cond gst = (sst \<in> C)) (P \<inter> I);
-        simpl_to_graph SGamma GGamma gf l (add_cont c con) (Suc n) Q P I eqs2 out_eqs;
+        simpl_to_graph SGamma GGamma gf l (add_cont c con) (Suc n) Q (P \<inter> C) I eqs2 out_eqs;
         eq_impl nn eqs eqs2 (P \<inter> I \<inter> C);
-        simpl_to_graph SGamma GGamma gf r (add_cont d con) (Suc n) Q P I eqs3 out_eqs;
+        simpl_to_graph SGamma GGamma gf r (add_cont d con) (Suc n) Q (P \<inter> - C) I eqs3 out_eqs;
         eq_impl nn eqs eqs3 (P \<inter> I \<inter> (- C)) \<rbrakk>
     \<Longrightarrow> simpl_to_graph SGamma GGamma gf nn (add_cont (com.Cond C c d) con) n Q P I eqs out_eqs"
   apply clarsimp
@@ -734,10 +734,10 @@ lemma simpl_to_graph_cbreak:
   done
 
 lemma simpl_to_graph_ccatchbrk_Break:
-  "eq_impl nn eqs eqs2 (upd_range exn_upd Break \<inter> I)
+  "\<forall>f s. exn_var (exn_upd f s) = f (exn_var s)
+    \<Longrightarrow> eq_impl nn eqs eqs2 (upd_range exn_upd Break \<inter> I)
     \<Longrightarrow> simpl_to_graph SGamma GGamma f nn
         (add_cont com.Skip con) n tS (upd_range exn_upd Break) I eqs2 out_eqs
-    \<Longrightarrow> \<forall>f s. exn_var (exn_upd f s) = f (exn_var s)
     \<Longrightarrow> simpl_to_graph SGamma GGamma f nn
         (add_cont (ccatchbrk exn_var) con) n tS (upd_range exn_upd Break) I eqs out_eqs"
   apply (simp add: ccatchbrk_def)
@@ -748,10 +748,10 @@ lemma simpl_to_graph_ccatchbrk_Break:
   done
 
 lemma simpl_to_graph_ccatchbrk_Return:
-  "eq_impl nn eqs eqs2 (upd_range exn_upd Return \<inter> I)
+  "\<forall>f s. exn_var (exn_upd f s) = f (exn_var s)
+    \<Longrightarrow> eq_impl nn eqs eqs2 (upd_range exn_upd Return \<inter> I)
     \<Longrightarrow> simpl_to_graph SGamma GGamma f nn
         (add_cont com.Throw con) n tS (upd_range exn_upd Return) I eqs2 out_eqs
-    \<Longrightarrow> \<forall>f s. exn_var (exn_upd f s) = f (exn_var s)
     \<Longrightarrow> simpl_to_graph SGamma GGamma f nn
         (add_cont (ccatchbrk exn_var) con) n tS (upd_range exn_upd Return) I eqs out_eqs"
   apply (simp add: ccatchbrk_def)
@@ -1174,6 +1174,16 @@ lemma heap_update_word32:
   "heap_update p w hp = store_word32 (ptr_val p) w hp"
   by (simp add: heap_update_def to_bytes_def typ_info_word store_word32_def)
 
+lemma h_val_word8:
+  "h_val hp p = load_word8 (ptr_val p) hp"
+  by (simp add: h_val_def load_word8_def from_bytes_def typ_info_word
+                word_rcat_bl)
+
+lemma heap_update_word8:
+  "heap_update p w hp = store_word8 (ptr_val p) w hp"
+  by (simp add: heap_update_def store_word8_def to_bytes_def typ_info_word
+                word_rsplit_same)
+
 lemma heap_list_update_word32:
   "heap_update_list addr (to_bytes w (heap_list hp' 4 addr')) hp
     = store_word32 addr w hp"
@@ -1183,6 +1193,13 @@ lemma heap_list_update_ptr:
   "heap_update_list addr (to_bytes p (heap_list hp' 4 addr')) hp
     = store_word32 addr (ptr_val (p :: ('a :: c_type) ptr)) hp"
   by (simp add: to_bytes_def store_word32_def typ_info_ptr)
+
+lemma heap_list_update_word8:
+  "heap_update_list addr (to_bytes w (heap_list hp' 1 addr')) hp
+    = store_word8 addr w hp"
+  "heap_update_list addr (to_bytes w [hp' addr']) hp
+    = store_word8 addr w hp"
+  by (simp_all add: to_bytes_def store_word8_def typ_info_word word_rsplit_same)
 
 lemma field_lvalue_offset_eq:
   "field_lookup (typ_info_t TYPE('a :: c_type)) f 0 = Some v
@@ -1207,6 +1224,13 @@ lemma simpl_to_graph_known_extra_check:
     apply simp
    apply (simp add: exec_graph_step_image_node)
    apply (auto dest: eq_implD)
+  done
+
+lemma simpl_to_graph_impossible:
+  "eq_impl nn eqs (\<lambda>_ _. False) (P \<inter> I)
+    \<Longrightarrow> simpl_to_graph SGamma GGamma fname nn com n traces P I eqs out_eqs"
+  apply (rule simpl_to_graphI, clarsimp)
+  apply (drule(1) eq_implD, simp+)
   done
 
 lemma take_1_drop:
@@ -1622,7 +1646,7 @@ fun foldr1_default _ v [] = v
   | foldr1_default f _ xs = foldr1 f xs
 
 datatype hints = Hints of { deps: (string * term) list Inttab.table,
-    loop_basics: thm list }
+    hint_tactics: (Proof.context -> int -> tactic) Inttab.table }
 
 fun mk_graph_eqs Gamma (Hints hints) nm n = let
     val vs = case (Inttab.lookup (#deps hints) n) of
@@ -1787,19 +1811,36 @@ fun simpl_ss ctxt = put_simpset HOL_basic_ss ctxt
 val immediates = @{thms
     simpl_to_graph_Skip_immediate simpl_to_graph_Throw_immediate}
 
-fun apply_simpl_to_graph_tac funs (Hints hints) ctxt =
+fun except_tac ctxt msg = SUBGOAL (fn (t, _) => let
+  in warning msg; Syntax.pretty_term ctxt t |> Pretty.writeln;
+    raise TERM (msg, [t]) end)
+
+fun apply_hint_thm ctxt (Hints hints) = SUBGOAL (fn (t, i) => let
+    val nn = Logic.strip_assums_concl t |> Envir.beta_eta_contract
+        |> HOLogic.dest_Trueprop |> simpl_to_graph_nn
+  in case Inttab.lookup (#hint_tactics hints) nn
+    of SOME tac => tac ctxt i
+      | NONE => no_tac end
+    handle TERM _ => no_tac)
+
+fun apply_simpl_to_graph_tac funs hints ctxt =
         simp_tac (simpl_ss ctxt
             addsimps @{thms One_nat_def whileAnno_def
                 creturn_def[folded creturn_void_def]})
     THEN' DETERM o (FIRST' [
+        apply_hint_thm ctxt hints,
         rtac @{thm simpl_to_graph_Basic_triv},
         resolve_tac @{thms simpl_to_graph_lvar_nondet_init
             simpl_to_graph_Skip
             simpl_to_graph_Throw
             simpl_to_graph_cbreak
-            simpl_to_graph_creturn_void
-            simpl_to_graph_ccatchbrk_Break
-            simpl_to_graph_ccatchbrk_Return},
+            simpl_to_graph_creturn_void},
+        resolve_tac @{thms
+                simpl_to_graph_ccatchbrk_Break
+                simpl_to_graph_ccatchbrk_Return}
+            THEN' (simp_tac ctxt
+                THEN_ALL_NEW except_tac ctxt
+                    "apply_simpl_to_graph_tac: exn eq unsolved"),
         rtac @{thm simpl_to_graph_known_extra_check[OF refl]}
             THEN' inst_graph_tac ctxt
             THEN' check_is_pglobal_valid ctxt,
@@ -1820,8 +1861,6 @@ fun apply_simpl_to_graph_tac funs (Hints hints) ctxt =
             THEN' apply_graph_refines_ex_tac funs ctxt
             THEN' apply_modifies_thm ctxt,
         rtac @{thm simpl_to_graph_nearly_done}
-            THEN' inst_graph_tac ctxt,
-        resolve_tac (#loop_basics hints)
             THEN' inst_graph_tac ctxt
     ] THEN_ALL_NEW (TRY o REPEAT_ALL_NEW
         (resolve_tac immediates)))
@@ -1984,30 +2023,26 @@ fun get_loop_var_upd_nodes nodes =
         #> (fn xs => not (null xs) andalso forall (String.isSuffix "#count") xs))
     |> map fst
 
-fun mk_loop_var_upd_thm ctxt n = let
-    val thy = Proof_Context.theory_of ctxt
-    val n_c = HOLogic.mk_number @{typ nat} n
-        |> cterm_of thy
-  in @{thm simpl_to_graph_noop_Basic}
-    |> cterm_instantiate [(@{cpat "?m :: nat"}, n_c)]
-    |> simplify (simpl_ss ctxt addsimps @{thms One_nat_def})
-  end
-
 fun mk_hints (funs : ParseGraph.funs) ctxt nm = case Symtab.lookup funs nm of
     NONE => raise TERM ("mk_var_deps_hints: miss " ^ nm, [])
-  | SOME (_, _, NONE) => Hints {deps = Inttab.empty, loop_basics = []}
+  | SOME (_, _, NONE) => Hints {deps = Inttab.empty, hint_tactics = Inttab.empty}
   | SOME (_, outputs, SOME (ep, nodes, _)) => let
     val sT = Syntax.read_typ ctxt "globals myvars"
     val deps = snd (get_var_deps (Inttab.make nodes) ep outputs)
-    val deps_hints = nodes
-      |> map (fst #> ` (Inttab.lookup_list deps
-          #> filter_out (fn s => String.isSuffix "#count" s)
-          #> map (fn s => (s, mk_simpl_acc ctxt sT s))))
-      |> map swap |> Inttab.make
-    val loop_thms = get_loop_var_upd_nodes nodes
-        |> map (mk_loop_var_upd_thm ctxt)
-  in Hints {deps = deps_hints,
-    loop_basics = loop_thms} end
+        |> Inttab.map (K (filter_out (fn s => String.isSuffix "#count" s)
+            #> map (fn s => (s, mk_simpl_acc ctxt sT s))))
+    val no_deps_nodes = map fst nodes
+        |> filter_out (Inttab.defined deps)
+    val all_deps = Inttab.join (fn _ => error "mk_hints")
+        (deps, Inttab.make (map (rpair []) no_deps_nodes))
+    val no_deps_tacs = no_deps_nodes
+        |> map (rpair (K (rtac @{thm simpl_to_graph_impossible})))
+    val loop_tacs = get_loop_var_upd_nodes nodes
+        |> map (rpair (fn ctxt => rtac @{thm simpl_to_graph_noop_Basic}
+            THEN' inst_graph_tac ctxt))
+    val all_tacs = Inttab.make (no_deps_tacs @ loop_tacs)
+  in Hints {deps = all_deps,
+    hint_tactics = all_tacs} end
 
 fun init_graph_refines_proof funs nm ctxt = let
     val thy = Proof_Context.theory_of ctxt

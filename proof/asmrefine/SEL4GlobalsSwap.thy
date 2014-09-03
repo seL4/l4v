@@ -38,6 +38,7 @@ lemma involution_member_def:
 
 instance ptr :: (c_type)oneMB_packed ..
 instance tcb_queue_C :: oneMB_packed ..
+instance region_C :: oneMB_packed ..
 
 context substitute_pre begin
 
@@ -67,6 +68,19 @@ lemma globals_swap_twice:
   "globals_list_distinct D symbol_table globals_list
     \<Longrightarrow> gswap (gswap gs) = gs"
   by (intro globals_swap_twice_helper globals_list_valid global_acc_valid)
+
+lemma ghost'state_update_globals_swap:
+  "gswap (ghost'state_'_update f gs) = ghost'state_'_update f (gswap gs)"
+  apply (simp add: globals_swap_def)
+  apply (rule foldr_update_commutes[symmetric])
+  apply (auto simp: globals_list_def global_data_defs global_swap_def
+                    global_data_def const_global_data_def addressed_global_data_def)
+  done
+
+(* FIXME: this has to be done and should be standardised *)
+lemma t_hrs_ghost'state_update_globals_swap[simp]:
+  "t_hrs_' (gswap (ghost'state_'_update f gs)) = t_hrs_' (gswap gs)"
+  by (simp add: ghost'state_update_globals_swap)
 
 lemma globals_swap_bij:
   "globals_list_distinct D symbol_table globals_list

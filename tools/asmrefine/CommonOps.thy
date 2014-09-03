@@ -95,7 +95,7 @@ where
         else if x = 2 then typ_region_bytes y (unat z)
         else ptr_retyps (2 ^ unat z) (Ptr y :: 'a ptr))"
 
-lemma fold_all_htd_updates:
+lemma fold_all_htd_updates':
   "ptr_retyp (p :: ('a :: c_type) ptr)
     = all_htd_updates TYPE('a) 1 (ptr_val p) 1" 
   "\<lbrakk> n < 2 ^ 32 \<rbrakk> \<Longrightarrow>
@@ -107,6 +107,13 @@ lemma fold_all_htd_updates:
   "(if P then (f :: heap_typ_desc \<Rightarrow> heap_typ_desc) else g) s
     = (if P then f s else g s)"
   by (simp_all add: all_htd_updates_def unat_of_nat fun_eq_iff of_nat_neq_0)
+
+lemma unat_lt2p_word32:
+  "unat (w :: word32) < 2 ^ 32"
+  by (rule order_less_le_trans, rule unat_lt2p, simp)
+
+lemmas fold_all_htd_updates
+    = fold_all_htd_updates' fold_all_htd_updates'(2-5)[OF unat_lt2p_word32]
 
 definition
   "pvalid htd (v :: ('a :: c_type) itself) x = h_t_valid htd c_guard (Ptr x :: 'a ptr)"

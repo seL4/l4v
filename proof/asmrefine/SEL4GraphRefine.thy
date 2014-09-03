@@ -70,74 +70,7 @@ where
             (hrs_mem (t_hrs_' (globals s)))
         \<and> htd_safe domain (hrs_htd (t_hrs_' (globals s)))}"
 
-ML {* ProveSimplToGraphGoals.test_all_fgraph_refine_proofs_after
-    funs (csenv ()) @{context} (SOME "Kernel_C.alloc_region")  *} 
-
-ML {* val nm = "Kernel_C.alloc_region" *}
-
-local_setup {* define_graph_fun_short funs nm *}
-
-ML {*
-val hints = SimplToGraphProof.mk_hints funs @{context} nm
-*}
-
-ML {*
-val init_thm = SimplToGraphProof.simpl_to_graph_upto_subgoals funs hints nm
-    @{context}
-*}
-
-ML {*
-ProveSimplToGraphGoals.simpl_to_graph_thm funs (csenv ()) @{context} nm;
-*}
-
-ML {*
-val tacs = ProveSimplToGraphGoals.graph_refine_proof_tacs (csenv ())
-    #> map snd
-val full_tac = ProveSimplToGraphGoals.graph_refine_proof_full_tac
-    (csenv ())
-val full_goal_tac = ProveSimplToGraphGoals.graph_refine_proof_full_goal_tac
-    (csenv ())
-*}
-
-schematic_lemma "PROP ?P"
-  apply (tactic {* rtac init_thm 1 *})
-  
-
-  apply (tactic {* ALLGOALS (fn i => fn t => 
-    let val res = try ((full_goal_tac @{context} THEN_ALL_NEW K no_tac) i #> Seq.hd) t
-    in case res of NONE => Seq.single t | SOME r => Seq.single r
-    end) *})
-
-(*  apply (tactic {* ALLGOALS (TRY o rtac @{thm eq_impl_at_addrI}) *}) *)
-  apply -
-
-  apply (tactic {* ALLGOALS (nth (tacs @{context}) 0) *})
-  apply (tactic {* ALLGOALS (nth (tacs @{context}) 1) *})
-  apply (tactic {* ALLGOALS (nth (tacs @{context}) 2) *})
-
-  apply (tactic {* ALLGOALS (nth (tacs @{context}) 3) *})
-
-  apply (tactic {* ALLGOALS (nth (tacs @{context}) 4) *})
-
-  apply (tactic {* ALLGOALS (nth (tacs @{context}) 5) *})
-
-  apply (tactic {* ALLGOALS (nth (tacs @{context}) 6) *})
-
-  apply (simp_all add: h_val_ptr h_val_word32)
-using [[show_consts]]
-
-term "drop_sign x"
-using [[show_types]]
-thm drop_sign_isomorphism_bitwise(10)[where 'a=32]
-using [[simp_trace]]
-apply (tactic {* ALLGOALS (full_simp_tac (put_simpset HOL_basic_ss @{context}
-      addsimps @{thms drop_sign_isomorphism_bitwise(10)})) *})
-
-
-  apply (tactifc {* ALLGOALS (nth (tacs @{context}) 7) *})
-
-done
-
-
+ML {* ProveSimplToGraphGoals.test_all_graph_refine_proofs_after
+    funs (csenv ()) @{context} NONE  *} 
 
 end
