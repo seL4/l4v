@@ -861,9 +861,9 @@ lemma extra_rights_increases_rights:
   "rights c \<subseteq> rights (extra_rights c)"
   by (simp add: extra_rights_def all_rights_def)
 
-lemma has_at_least_take_cap:
-  "\<lbrakk>create_cap x \<in> caps_of s y\<rbrakk> \<Longrightarrow> take_cap x :< caps_of s y"
-  apply (auto simp:  has_at_least_def caps_of_def extra_rights_take_cap)
+lemma cap_in_caps_take_cap:
+  "\<lbrakk>create_cap x \<in> caps_of s y\<rbrakk> \<Longrightarrow> take_cap x \<in>cap caps_of s y"
+  apply (auto simp: cap_in_caps_def caps_of_def extra_rights_take_cap)
   apply (rule exI, rule conjI, assumption)
   apply (rule rev_bexI, simp)
   apply (rule conjI)
@@ -877,7 +877,7 @@ lemma e0_connected_to:
   apply (rule directly_tgs_connected_comm)
   apply (simp add: directly_tgs_connected_def4)
   apply (rule disjI1)
-  apply (rule has_at_least_take_cap)
+  apply (rule cap_in_caps_take_cap)
   apply (simp add: caps_of_s_e0_caps e0_caps_def create_cap_def)
   done
 
@@ -893,19 +893,19 @@ lemma e0_caps_not_connected_to_e1:
   "\<not> (s \<turnstile> 0 \<leftrightarrow> 1)"
   apply (simp add: directly_tgs_connected_def4)
   apply (rule conjI)
-   apply (simp add: has_at_least_def caps_of_s_e1)
+   apply (simp add: cap_in_caps_def caps_of_s_e1)
   apply (rule conjI)
-   apply (clarsimp simp add: has_at_least_def caps_of_s_e0_caps e0_caps_def)
+   apply (clarsimp simp add: cap_in_caps_def caps_of_s_e0_caps e0_caps_def)
    apply (erule disjE)
     apply (simp add: full_cap_def)
    apply clarsimp
   apply (rule conjI)
-     apply (clarsimp simp add: has_at_least_def caps_of_s_e0_caps e0_caps_def)
+     apply (clarsimp simp add: cap_in_caps_def caps_of_s_e0_caps e0_caps_def)
    apply (erule disjE)
     apply (simp add: full_cap_def)
    apply clarsimp
   apply (rule conjI)
-   apply (simp add: has_at_least_def caps_of_s_e1)
+   apply (simp add: cap_in_caps_def caps_of_s_e1)
   apply (simp add: shares_caps_def)
   apply (simp add: store_connected_s)
   done
@@ -914,19 +914,19 @@ lemma e0_caps_not_connected_to_e2:
   "\<not> (s \<turnstile> 0 \<leftrightarrow> 2)"
   apply (simp add: directly_tgs_connected_def4)
   apply (rule conjI)
-   apply (simp add: has_at_least_def caps_of_s_e2)
+   apply (simp add: cap_in_caps_def caps_of_s_e2)
   apply (rule conjI)
-   apply (clarsimp simp add: has_at_least_def caps_of_s_e0_caps e0_caps_def)
+   apply (clarsimp simp add: cap_in_caps_def caps_of_s_e0_caps e0_caps_def)
    apply (erule disjE)
     apply (simp add: full_cap_def)
    apply clarsimp
   apply (rule conjI)
-     apply (clarsimp simp add: has_at_least_def caps_of_s_e0_caps e0_caps_def)
+     apply (clarsimp simp add: cap_in_caps_def caps_of_s_e0_caps e0_caps_def)
    apply (erule disjE)
     apply (simp add: full_cap_def)
    apply clarsimp
   apply (rule conjI)
-   apply (simp add: has_at_least_def caps_of_s_e2)
+   apply (simp add: cap_in_caps_def caps_of_s_e2)
   apply (simp add: shares_caps_def)
   apply (simp add: store_connected_s)
   done
@@ -964,23 +964,23 @@ lemma caps_of_to_e2:
   apply (fastforce simp: caps_of_s_e3)
   done
 
-lemma has_at_least_caps_of_e1:
-  "c :< caps_of s 1 \<Longrightarrow> target c = 1 \<or> target c = 2"
-  by (clarsimp simp: has_at_least_def caps_of_s_e1)
+lemma cap_in_caps_caps_of_e1:
+  "c \<in>cap caps_of s 1 \<Longrightarrow> target c = 1 \<or> target c = 2"
+  by (clarsimp simp: cap_in_caps_def caps_of_s_e1)
 
-lemma has_at_least_caps_of_e2:
-  "c :< caps_of s 2 \<Longrightarrow> False"
-  by (clarsimp simp: has_at_least_def caps_of_s_e2)
+lemma cap_in_caps_caps_of_e2:
+  "c \<in>cap caps_of s 2 \<Longrightarrow> False"
+  by (clarsimp simp: cap_in_caps_def caps_of_s_e2)
 
-lemma has_at_least_caps_of_to_e1:
-  "\<lbrakk>c :< caps_of s x; target c = 1\<rbrakk> \<Longrightarrow> x = 1 \<or> x = 2"
-  apply (clarsimp simp: has_at_least_def)
+lemma cap_in_caps_caps_of_to_e1:
+  "\<lbrakk>c \<in>cap caps_of s x; target c = 1\<rbrakk> \<Longrightarrow> x = 1 \<or> x = 2"
+  apply (clarsimp simp: cap_in_caps_def)
   apply (drule (1) caps_of_to_e1, simp)
   done
 
-lemma has_at_least_caps_of_to_e2:
-  "\<lbrakk>c :< caps_of s x; target c = 2\<rbrakk> \<Longrightarrow> x = 1"
-  apply (clarsimp simp: has_at_least_def)
+lemma cap_in_caps_caps_of_to_e2:
+  "\<lbrakk>c \<in>cap caps_of s x; target c = 2\<rbrakk> \<Longrightarrow> x = 1"
+  apply (clarsimp simp: cap_in_caps_def)
   apply (erule (1) caps_of_to_e2)
   done
 
@@ -988,13 +988,13 @@ lemma e1_connected_to:
   "s \<turnstile> 1 \<leftrightarrow> x \<Longrightarrow> x = 1 \<or> x = 2"
   apply (simp add: directly_tgs_connected_def4)
   apply (erule disjE)
-   apply (erule has_at_least_caps_of_to_e1, simp)
+   apply (erule cap_in_caps_caps_of_to_e1, simp)
   apply (erule disjE)
-   apply (drule has_at_least_caps_of_e1, simp)
+   apply (drule cap_in_caps_caps_of_e1, simp)
   apply (erule disjE)
-   apply (drule has_at_least_caps_of_e1, simp)
+   apply (drule cap_in_caps_caps_of_e1, simp)
   apply (erule disjE)
-   apply (erule has_at_least_caps_of_to_e1, simp)
+   apply (erule cap_in_caps_caps_of_to_e1, simp)
   apply (fastforce simp: shares_caps_def store_connected_s)
   done
 
@@ -1003,13 +1003,13 @@ lemma e2_connected_to:
   "s \<turnstile> 2 \<leftrightarrow> x \<Longrightarrow> x = 1 \<or> x = 2"
   apply (simp add: directly_tgs_connected_def4)
   apply (erule disjE, rule disjI1)
-   apply (erule has_at_least_caps_of_to_e2, simp)
+   apply (erule cap_in_caps_caps_of_to_e2, simp)
   apply (erule disjE, rule disjI1)
-   apply (drule has_at_least_caps_of_e2, simp)
+   apply (drule cap_in_caps_caps_of_e2, simp)
   apply (erule disjE, rule disjI1)
-   apply (drule has_at_least_caps_of_e2, simp)
+   apply (drule cap_in_caps_caps_of_e2, simp)
   apply (erule disjE, rule disjI1)
-   apply (erule has_at_least_caps_of_to_e2, simp)
+   apply (erule cap_in_caps_caps_of_to_e2, simp)
   apply (clarsimp simp: shares_caps_def store_connected_s)
   done
 
@@ -1081,7 +1081,7 @@ lemma island_e0:
   apply (clarsimp simp: island_def)
   apply (drule (1) e0_connected_to)
   apply (drule directly_tgs_connected_comm)
-  by (metis directly_tgs_connected_def3 tgs_connected_comm leakImplyConnectedTrans)
+  by (metis directly_tgs_connected_def2 tgs_connected_comm leakImplyConnectedTrans)
 
 lemma island_e1:
   "island s 1 = {1,2}"
@@ -1128,11 +1128,11 @@ lemma e1_flow_to:
   apply (clarsimp simp: flow_def set_flow_def island_e1 island_e3)
   apply (erule disjE, clarsimp)
    apply (erule disjE)
-    apply (drule has_at_least_caps_of_to_e1, clarsimp+)
-   apply (drule has_at_least_caps_of_e1, clarsimp+)
+    apply (drule cap_in_caps_caps_of_to_e1, clarsimp+)
+   apply (drule cap_in_caps_caps_of_e1, clarsimp+)
   apply (erule disjE)
-   apply (drule has_at_least_caps_of_to_e2, clarsimp+)
-  apply (drule has_at_least_caps_of_e2, clarsimp+)
+   apply (drule cap_in_caps_caps_of_to_e2, clarsimp+)
+  apply (drule cap_in_caps_caps_of_e2, clarsimp+)
   done
 
 lemma e2_flow_to:
@@ -1141,11 +1141,11 @@ lemma e2_flow_to:
   apply (clarsimp simp: flow_def set_flow_def island_e2 island_e3)
   apply (erule disjE, clarsimp)
    apply (erule disjE)
-    apply (drule has_at_least_caps_of_to_e1, clarsimp+)
-   apply (drule has_at_least_caps_of_e1, clarsimp+)
+    apply (drule cap_in_caps_caps_of_to_e1, clarsimp+)
+   apply (drule cap_in_caps_caps_of_e1, clarsimp+)
   apply (erule disjE)
-   apply (drule has_at_least_caps_of_to_e2, clarsimp+)
-  apply (drule has_at_least_caps_of_e2, clarsimp+)
+   apply (drule cap_in_caps_caps_of_to_e2, clarsimp+)
+  apply (drule cap_in_caps_caps_of_e2, clarsimp+)
   done
 
 lemma flow_to_e1:
@@ -1153,12 +1153,12 @@ lemma flow_to_e1:
   apply (rule ccontr)
   apply (clarsimp simp: flow_def set_flow_def island_e1 island_e3)
   apply (erule disjE)
-   apply (drule has_at_least_caps_of_e1, clarsimp+)
+   apply (drule cap_in_caps_caps_of_e1, clarsimp+)
   apply (erule disjE)
-   apply (drule has_at_least_caps_of_to_e1, clarsimp+)
+   apply (drule cap_in_caps_caps_of_to_e1, clarsimp+)
   apply (erule disjE)
-   apply (drule has_at_least_caps_of_e2, clarsimp+)
-  apply (drule has_at_least_caps_of_to_e2, clarsimp+)
+   apply (drule cap_in_caps_caps_of_e2, clarsimp+)
+  apply (drule cap_in_caps_caps_of_to_e2, clarsimp+)
   done
 
 lemma flow_to_e2:
@@ -1166,12 +1166,12 @@ lemma flow_to_e2:
   apply (rule ccontr)
   apply (clarsimp simp: flow_def set_flow_def island_e2 island_e3)
   apply (erule disjE)
-   apply (drule has_at_least_caps_of_e1, clarsimp+)
+   apply (drule cap_in_caps_caps_of_e1, clarsimp+)
   apply (erule disjE)
-   apply (drule has_at_least_caps_of_to_e1, clarsimp+)
+   apply (drule cap_in_caps_caps_of_to_e1, clarsimp+)
   apply (erule disjE)
-   apply (drule has_at_least_caps_of_e2, clarsimp+)
-  apply (drule has_at_least_caps_of_to_e2, clarsimp+)
+   apply (drule cap_in_caps_caps_of_e2, clarsimp+)
+  apply (drule cap_in_caps_caps_of_to_e2, clarsimp+)
   done
 
 
