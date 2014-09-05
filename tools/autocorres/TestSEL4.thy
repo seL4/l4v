@@ -17,7 +17,7 @@ begin
 (*
  * Test to see if we can parse all of seL4.
  *)
-autocorres "c/kernel_all.c_pp"
+autocorres [keep_going] "c/kernel_all.c_pp"
 
 context kernel_all begin
 
