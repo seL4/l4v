@@ -170,6 +170,14 @@ session SepTacticsExamples = SepTactics +
 
 
 (*
+ * Binary Verification Input Step
+*)
+session SimplExportAndRefine = CSpec +
+  theories
+    "asmrefine/SEL4SimplExport"
+    "asmrefine/SEL4GraphRefine"
+
+(*
  * Libraries
  *)
 

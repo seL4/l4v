@@ -12,11 +12,9 @@ theory SEL4GraphRefine
 
 imports "../../tools/asmrefine/ProveGraphRefine"
   "../../spec/cspec/Substitute"
-  "SEL4GlobalsSwap"
+  "SEL4GlobalsSwap" "SEL4SimplExport"
 
 begin
-
-ML {* Toplevel.debug := true *}
 
 ML {*
 val funs = ParseGraph.funs @{theory} "CFunDump.txt"
@@ -37,16 +35,6 @@ val csenv = let
 
 consts
   encode_machine_state :: "machine_state \<Rightarrow> unit \<times> nat"
-
-definition
-  at_addr :: "'a \<Rightarrow> bool"
-where
-  "at_addr addr = True"
-
-lemma eq_impl_at_addrI:
-  "\<lbrakk> \<And>sst gst. at_addr addr \<Longrightarrow> sst \<in> S \<Longrightarrow> eqs gst sst \<Longrightarrow> eqs2 gst sst \<rbrakk>
-    \<Longrightarrow> eq_impl addr eqs eqs2 S"
-  by (simp add: eq_impl_def at_addr_def)
 
 local_setup {* add_field_h_val_rewrites #> add_field_to_bytes_rewrites *}
 
