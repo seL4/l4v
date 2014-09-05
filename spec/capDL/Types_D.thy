@@ -60,6 +60,9 @@ type_synonym cdl_cap_ref = "cdl_object_id \<times> cdl_cnode_index"
 (* A virtual ASID. *)
 type_synonym cdl_asid = "cdl_cnode_index \<times> cdl_cnode_index"
 
+(* mapped address  *)
+type_synonym cdl_mapped_addr = "(cdl_asid \<times> word32)"
+
 (* Number of bits in a word. *)
 definition
   word_bits
@@ -126,11 +129,11 @@ datatype cdl_cap =
   | IrqHandlerCap cdl_irq
 
   (* Virtual memory capabilties *)
-  | FrameCap cdl_object_id "cdl_right set" nat cdl_frame_cap_type "cdl_asid option"
-  | PageTableCap cdl_object_id cdl_frame_cap_type "cdl_asid option"
+  | FrameCap cdl_object_id "cdl_right set" nat cdl_frame_cap_type "cdl_mapped_addr option"
+  | PageTableCap cdl_object_id cdl_frame_cap_type "cdl_mapped_addr option"
   | PageDirectoryCap cdl_object_id cdl_frame_cap_type "cdl_asid option"
   | AsidControlCap
-  | AsidPoolCap cdl_object_id cdl_asid
+  | AsidPoolCap cdl_object_id "cdl_cnode_index"
 
   (* x86-specific capabilities *)
   | IOPortsCap cdl_object_id "cdl_io_port set"
@@ -215,7 +218,6 @@ type_synonym cdl_heap = "cdl_object_id \<Rightarrow> cdl_object option"
 
 translations
   (type) "cdl_heap" <=(type) "32 word \<Rightarrow> cdl_object option"
-
 
 (*
  * The current state of the system.
@@ -644,7 +646,7 @@ where
       | TcbType \<Rightarrow> TcbCap (pick id_set)
       | CNodeType \<Rightarrow> CNodeCap (pick id_set) 0 0 sz
       | UntypedType \<Rightarrow> UntypedCap id_set id_set
-      | AsidPoolType \<Rightarrow> AsidPoolCap (pick id_set) (0, 0)
+      | AsidPoolType \<Rightarrow> AsidPoolCap (pick id_set) 0
       | PageTableType \<Rightarrow> PageTableCap (pick id_set) Real None
       | PageDirectoryType \<Rightarrow> PageDirectoryCap (pick id_set) Real None
       | FrameType frame_size \<Rightarrow> FrameCap (pick id_set) {Read, Write} frame_size Real None"

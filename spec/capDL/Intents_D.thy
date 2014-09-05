@@ -165,7 +165,7 @@ datatype cdl_asid_control_intent =
 
 datatype cdl_asid_pool_intent =
     (* Assign: (target), (vroot) *)
-    AsidPoolAssignIntent
+    AsidPoolAssignIntent word32
 
 datatype cdl_async_endpoint_intent =
     SendAsyncMessageIntent word32
