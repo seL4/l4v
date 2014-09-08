@@ -26,13 +26,16 @@ report-regression:
 HEAPS += AInvs BaseRefine Refine
 
 # CRefine heaps.
-HEAPS += CBaseRefine CRefine
+HEAPS += CKernel CSpec CBaseRefine CRefine
 
 # capDL heaps.
 HEAPS += DBaseRefine DRefine DPolicy DSpecProofs
 
 # Security Proofs
 HEAPS += Access InfoFlow InfoFlowC
+
+# Binary Verification
+HEAPS += SimplExportAndRefine
 
 # Separation Kernel Bisimilarity
 HEAPS += Bisim
@@ -42,7 +45,7 @@ HEAPS += SepTactics SepTacticsExamples
 
 # Additional dependencies
 
-CBaseRefine CRefine: c-kernel
+CKernel CSpec CBaseRefine CRefine: c-kernel
 
 # Preprocess the kernel's source code and bitfield theory files.
 c-kernel: .FORCE
