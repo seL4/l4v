@@ -52,7 +52,7 @@
     </sequence>
 
     <!-- Binary Verification -->
-    <sequence depends="CSpec">
+    <sequence depends="CSpec" timeout="9000">
         <test name="SimplExportAndRefine">make SimplExportAndRefine</test>
     </sequence>
 

@@ -62,3 +62,5 @@ ML {* ProveSimplToGraphGoals.test_all_graph_refine_proofs_after
     funs (csenv ()) @{context} NONE  *} 
 
 end
+
+end
