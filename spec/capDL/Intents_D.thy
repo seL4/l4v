@@ -65,6 +65,7 @@ datatype cdl_object_type =
   | AsyncEndpointType
   | TcbType
   | CNodeType
+  | IRQNodeType
   | UntypedType
   | AsidPoolType
   | PageTableType

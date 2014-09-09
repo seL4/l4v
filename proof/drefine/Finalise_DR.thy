@@ -260,6 +260,9 @@ lemma cap_delete_one_cte_at:
     apply (wp|clarsimp)+
 done
 
+lemma nat_to_bl_zero_zero:
+  "(nat_to_bl 0 0) = (Some [])"
+  by (clarsimp simp: nat_to_bl_def)
 
 lemma caps_of_state_transform_opt_cap_no_idle:
   "\<lbrakk>caps_of_state s p = Some cap; valid_etcbs s\<rbrakk>
@@ -274,7 +277,10 @@ lemma caps_of_state_transform_opt_cap_no_idle:
                          slots_of_def opt_object_def transform_def transform_objects_def
                          transform_cnode_contents_def well_formed_cnode_n_def
                          restrict_map_def
-                   split: option.splits split_if_asm)
+                   split: option.splits split_if_asm nat.splits)
+    apply (frule(1) eqset_imp_iff[THEN iffD1, OF _ domI])
+    apply (simp add: nat_to_bl_zero_zero option_map_join_def)
+   apply clarsimp
    apply (frule(1) eqset_imp_iff[THEN iffD1, OF _ domI])
    apply (simp add: option_map_join_def nat_to_bl_dest)
    apply (clarsimp simp: cap_installed_at_irq_def valid_irq_node_def
@@ -760,7 +766,7 @@ lemma page_table_aligned:
   apply (simp add:is_aligned_neg_mask_eq)
 done
 
-lemma invalidateTLB_VAASID_underlying_memory[wp]: 
+lemma invalidateTLB_VAASID_underlying_memory[wp]:
     "\<lbrace>\<lambda>ms. underlying_memory ms = m\<rbrace> invalidateTLB_VAASID word \<lbrace>\<lambda>rv ms. underlying_memory ms = m\<rbrace>"
     apply (clarsimp simp: invalidateTLB_VAASID_def, wp)
 done
@@ -2215,7 +2221,7 @@ lemma imp_strength:
 
 lemma cleanCacheRange_PoU_underlying_memory[wp]:
              "\<lbrace>\<lambda>ms. underlying_memory ms = m\<rbrace>
-              cleanCacheRange_PoU a b c 
+              cleanCacheRange_PoU a b c
               \<lbrace>\<lambda>rv ms. underlying_memory ms = m\<rbrace>"
    apply (clarsimp simp: cleanCacheRange_PoU_def, wp)
 done
@@ -2905,7 +2911,7 @@ lemma set_cap_noop_dcorres3:
                del: dom_fun_upd)
    apply (simp add: restrict_map_def transform_cnode_contents_def
                     fun_eq_iff option_map_join_def map_add_def
-             split: option.split)
+             split: option.split nat.split)
   apply (clarsimp simp: transform_def transform_current_thread_def
                         transform_objects_def fun_eq_iff
                         arch_page_vmpage_size_def)
@@ -3253,6 +3259,10 @@ lemma corres_req2:
   apply (erule corres_guard_imp, simp_all)
   done
 
+lemma nat_split_conv_to_if:
+  "(case n of 0 \<Rightarrow> a | Suc nat' \<Rightarrow> f nat') = (if n = 0 then a else f (n - 1))"
+  by (auto split: nat.splits)
+
 lemma opt_cap_cnode:
   "\<lbrakk> kheap s y = Some (CNode sz cn); y \<noteq> idle_thread s; well_formed_cnode_n sz cn \<rbrakk>
     \<Longrightarrow> (opt_cap (y, node) (transform s) = Some cap)
@@ -3263,17 +3273,19 @@ lemma opt_cap_cnode:
                    transform_def transform_objects_def restrict_map_def
                    transform_cnode_contents_def option_map_join_def
                    transform_cslot_ptr_def object_slots_def
+                   nat_split_conv_to_if
             split: option.split)
-  apply safe
-    apply (frule(1) wf_cs_nD[rotated], clarsimp simp: nat_to_bl_id2)
-   apply (frule(1) wf_cs_nD[rotated], clarsimp)
-   apply (frule(1) nat_to_bl_to_bin)
-    apply simp
-   apply (fastforce simp add: nat_to_bl_id2)
-  apply (frule(1) wf_cs_nD[rotated], clarsimp simp: nat_to_bl_id2)
+  apply (case_tac "sz = 0")
+   apply (clarsimp, rule conjI)
+    apply (metis nat_to_bl_id2 option.distinct(1) wf_cs_nD)
+   apply (metis (full_types) nat_to_bl_bl_to_bin nat_to_bl_id2
+                             option.inject wf_cs_nD)
+  (* "sz \<noteq> 0" *)
+  apply (clarsimp, rule conjI)
+   apply (metis nat_to_bl_id2 option.distinct(1) wf_cs_nD)
+  apply (metis (full_types) nat_to_bl_bl_to_bin nat_to_bl_id2
+                            option.inject wf_cs_nD)
   done
-
-
 
 lemma preemption_point_valid_etcbs[wp]: "\<lbrace> valid_etcbs \<rbrace> preemption_point \<lbrace> \<lambda>_. valid_etcbs \<rbrace>"
   apply (clarsimp simp: preemption_point_def)

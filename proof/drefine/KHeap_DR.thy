@@ -276,7 +276,7 @@ lemma nat_bl_to_bin_lt2p: "nat(bl_to_bin b) < 2 ^ length b"
 done
 
 lemma caps_of_state_transform_opt_cap:
-  "\<lbrakk> caps_of_state s p = Some cap; valid_etcbs s; 
+  "\<lbrakk> caps_of_state s p = Some cap; valid_etcbs s;
           fst p \<noteq> idle_thread s \<rbrakk>
        \<Longrightarrow> opt_cap (transform_cslot_ptr p) (transform s)
             = Some (transform_cap cap)"
@@ -286,10 +286,12 @@ lemma caps_of_state_transform_opt_cap:
    apply (clarsimp simp: opt_cap_def transform_cslot_ptr_def
                          slots_of_def opt_object_def transform_objects_def
                          transform_def object_slots_def
-                         transform_cnode_contents_def well_formed_cnode_n_def)
+                         transform_cnode_contents_def well_formed_cnode_n_def
+                  split: nat.splits)
    apply (frule(1) eqset_imp_iff[THEN iffD1, OF _ domI])
    apply (simp add: option_map_join_def nat_to_bl_dest)
-   apply (frule(1) valid_etcbs_tcb_etcb)
+   apply (fastforce simp: nat_to_bl_def split: nat.splits)
+  apply (frule(1) valid_etcbs_tcb_etcb)
   apply (clarsimp simp: opt_cap_def transform_cslot_ptr_def
                         slots_of_def opt_object_def
                         transform_def transform_objects_def object_slots_def
@@ -374,6 +376,14 @@ lemma nat2p: "nat (2^(x::nat)) = 2^(x::nat)"
 
 thm cap_counts_def
 
+lemma nat_to_bl_bl_to_bin:
+  "nat_to_bl bits n = Some xs \<Longrightarrow> n = nat (bl_to_bin xs)"
+  apply (clarsimp simp:nat_to_bl_def bin_bl_bin' bintrunc_mod2p)
+  apply (subst mod_pos_pos_trivial,simp_all)
+  apply (rule iffD1[OF zless_nat_eq_int_zless])
+  apply (simp add:nat2p)
+  done
+
 lemma cap_counts_inv:
 assumes "\<And>cap. P cap\<Longrightarrow> cap_counts cap"
 shows "\<lbrakk>opt_cap_wp_at P slot (transform s);valid_objs s; valid_etcbs s\<rbrakk>
@@ -388,9 +398,9 @@ shows "\<lbrakk>opt_cap_wp_at P slot (transform s);valid_objs s; valid_etcbs s\<
       apply (clarsimp simp:cte_wp_at_cases
         transform_object_def transform_tcb_def
         tcb_pending_op_slot_def
-        split:Structures_A.kernel_object.splits
+        split:Structures_A.kernel_object.splits nat.splits
         arch_kernel_object.splits if_splits | drule(1) valid_etcbs_tcb_etcb)+
-        apply (clarsimp simp:cap_counts_def infer_tcb_pending_op_def split:Structures_A.thread_state.splits)
+        apply (clarsimp simp:cap_counts_def infer_tcb_pending_op_def split:Structures_A.thread_state.splits nat.splits)
         using transform_tcb_slot_simp[simplified,symmetric]
           apply (rule_tac x= "tcb_cnode_index 4" in exI)
           apply (clarsimp)
@@ -408,22 +418,28 @@ shows "\<lbrakk>opt_cap_wp_at P slot (transform s);valid_objs s; valid_etcbs s\<
           apply (clarsimp)
       apply (case_tac arch_kernel_obj,simp_all)
       apply (simp_all add:object_slots_def transform_object_def)
-      apply (clarsimp simp:transform_cnode_contents_def option_map_join_def split:option.splits Structures_A.kernel_object.splits)
+      apply (clarsimp simp:transform_cnode_contents_def option_map_join_def
+                     split:option.splits Structures_A.kernel_object.splits nat.splits)
         apply (clarsimp simp:cte_wp_at_cases well_formed_cnode_invsI transform_cslot_ptr_def split:if_splits)
-        apply (rule_tac x = aa in exI,simp)
-        apply (clarsimp simp:nat_to_bl_def bin_bl_bin' bintrunc_mod2p)
-        apply (subst mod_pos_pos_trivial,simp_all)
-        apply (rule iffD1[OF zless_nat_eq_int_zless])
-        apply (simp add:nat2p)
+        apply (rule_tac x = aa in exI,simp add: nat_to_bl_bl_to_bin)
       apply (drule(1) valid_etcbs_tcb_etcb, simp)
-    apply (frule assms)
-    apply (simp_all add:Let_def cap_counts_def transform_tcb_def
-                    split:option.splits if_splits arch_kernel_obj.splits Structures_A.kernel_object.splits cdl_object.splits |
+      prefer 6 (* IRQ Node *)
+      apply (clarsimp split: Structures_A.kernel_object.splits nat.splits option.splits)
+         apply (clarsimp simp:transform_cnode_contents_def option_map_join_def
+                        split:option.splits Structures_A.kernel_object.splits nat.splits)
+         apply (clarsimp simp:cte_wp_at_cases well_formed_cnode_invsI transform_cslot_ptr_def split:if_splits)
+         apply (rule_tac x = aa in exI,simp add: nat_to_bl_bl_to_bin)
+        apply (frule assms)
+    apply ((simp_all add:Let_def cap_counts_def transform_tcb_def
+                    split:option.splits if_splits arch_kernel_obj.splits
+                          Structures_A.kernel_object.splits cdl_object.splits nat.splits|
            drule(1) valid_etcbs_tcb_etcb |
            clarsimp simp: unat_map_def transform_page_table_contents_def cap_counts_def
                           transform_page_directory_contents_def transform_asid_pool_contents_def
                           transform_pte_def transform_pde_def transform_asid_pool_entry_def
-                    split:option.splits if_splits ARM_Structs_A.pte.splits ARM_Structs_A.pde.splits dest!:assms)+
+
+                    split:option.splits if_splits ARM_Structs_A.pte.splits ARM_Structs_A.pde.splits
+                    dest!:assms)+)
   done
 
 lemma eqset_imp': "A = B \<Longrightarrow> \<forall>x. ((x\<in> A) = (x\<in> B))"
@@ -757,12 +773,22 @@ proof -
   apply (clarsimp simp:assert_def corres_free_fail)
   apply (rename_tac obj')
   apply (case_tac obj', simp_all add:corres_free_fail split del: split_if)
-   -- "cnode case"
+   -- "cnode or IRQ Node case"
    apply (clarsimp simp: corres_free_fail split: split_if)
-   apply (rename_tac cn ocap)
+   apply (rename_tac sz cn ocap)
    apply (clarsimp simp: corres_underlying_def in_monad set_object_def cte_wp_at_cases caps_of_state_cte_wp_at)
    apply (clarsimp simp: opt_object_def)
-   apply (frule (1) cdl_objects_cnode)
+   apply (case_tac sz, simp)
+    apply (frule (1) cdl_objects_irq_node)
+    apply (clarsimp simp: assert_opt_def has_slots_def)
+    apply (clarsimp simp: update_slots_def object_slots_def transform_cnode_contents_upd)
+    apply (clarsimp simp: KHeap_D.set_object_def simpler_modify_def)
+    apply (clarsimp simp: transform_def transform_current_thread_def)
+    apply (clarsimp simp: transform_objects_def)
+    apply (rule ext)
+    apply clarsimp
+    apply (simp add: Option.map_def restrict_map_def map_add_def split: option.splits)
+   apply (frule (1) cdl_objects_cnode, simp)
    apply (clarsimp simp: assert_opt_def has_slots_def)
    apply (clarsimp simp: update_slots_def object_slots_def transform_cnode_contents_upd)
    apply (clarsimp simp: KHeap_D.set_object_def simpler_modify_def)
@@ -1502,7 +1528,7 @@ lemma ep_waiting_set_send_lift:
                          transform_def transform_objects_def restrict_map_Some_iff)
    apply (clarsimp simp: infer_tcb_pending_op_def transform_object_def
                          transform_tcb_def
-                   split: Structures_A.kernel_object.splits
+                   split: Structures_A.kernel_object.splits nat.splits
                           Structures_A.thread_state.splits | drule(1) valid_etcbs_tcb_etcb)+
    apply (simp split: arch_kernel_obj.splits)
   apply (clarsimp simp: ep_waiting_set_send_def map_add_def
@@ -1527,7 +1553,7 @@ lemma ep_waiting_set_recv_lift:
    apply (clarsimp simp: restrict_map_Some_iff)
    apply (clarsimp simp: infer_tcb_pending_op_def transform_object_def
                          transform_tcb_def restrict_map_Some_iff
-                   split: Structures_A.kernel_object.splits
+                   split: Structures_A.kernel_object.splits nat.splits
                           Structures_A.thread_state.splits | drule(1) valid_etcbs_tcb_etcb)+
    apply (simp split:arch_kernel_obj.splits)
   apply (clarsimp simp: ep_waiting_set_recv_def map_add_def
@@ -1549,7 +1575,7 @@ lemma aep_waiting_set_lift:
    apply (clarsimp simp: restrict_map_Some_iff)
    apply (clarsimp simp: infer_tcb_pending_op_def transform_object_def
                          transform_tcb_def restrict_map_Some_iff
-                  split: Structures_A.kernel_object.splits
+                  split: Structures_A.kernel_object.splits nat.splits
                          Structures_A.thread_state.splits | drule(1) valid_etcbs_tcb_etcb)+
     apply (clarsimp simp: aep_waiting_set_def)
    apply(drule(1) valid_etcbs_tcb_etcb, clarsimp)
@@ -2855,10 +2881,11 @@ lemma resolve_address_bits_error_corres:
                              (kernel_object.CNode radix_bits fun) "
                     in corres_symb_exec_l)
       apply (rule dcorres_expand_pfx)
-        apply (clarsimp simp:whenE_def branch_map_simp1|rule conjI)+
-     apply (drule (1) transform_objects_cnode,clarsimp simp:transform_objects_cnode gets_the_def gets_def get_def
+        apply (clarsimp simp:whenE_def branch_map_simp1 split: nat.splits|rule conjI)+
+     apply (drule (1) transform_objects_cnode, simp, clarsimp simp:transform_objects_cnode gets_the_def gets_def get_def
         cap_object_simps bind_def return_def valid_def exs_valid_def
-        assert_opt_def opt_object_def transform_def)+
+        assert_opt_def opt_object_def transform_def
+        split: nat.splits)+
   apply (clarsimp simp: get_cnode_def bind_assoc get_cnode_def liftE_bindE)
     apply (clarsimp simp:valid_cap_def obj_at_def is_cap_table_def)
     apply (clarsimp split:Structures_A.kernel_object.splits)
@@ -2867,9 +2894,10 @@ lemma resolve_address_bits_error_corres:
     apply (rule_tac Q="\<lambda>x y. y = (transform s) \<and> x = (transform_object (machine_state s) oref etcb_opt (kernel_object.CNode radix_bits fun))" in corres_symb_exec_l)
       apply (rule dcorres_expand_pfx)
         apply (clarsimp simp:whenE_def branch_map_simp1|rule conjI)+
-      apply (drule (1) transform_objects_cnode, clarsimp simp:transform_objects_cnode gets_the_def gets_def get_def
+      apply (drule (1) transform_objects_cnode, simp, clarsimp simp:transform_objects_cnode gets_the_def gets_def get_def
         bind_def return_def valid_def exs_valid_def cap_object_simps
-        assert_opt_def opt_object_def transform_def)+
+        assert_opt_def opt_object_def transform_def
+        split: nat.splits)+
 done
 
 lemma resolve_address_bits_terminate_corres:
@@ -2889,20 +2917,22 @@ lemma resolve_address_bits_terminate_corres:
     apply clarsimp
     apply (rule_tac Q="\<lambda>x y. y = (transform s) \<and> x = (transform_object (machine_state s) oref etcb_opt (kernel_object.CNode radix_bits fun))" in corres_symb_exec_l)
        apply (rule dcorres_expand_pfx)
-       apply clarsimp
+       apply (simp add: unat_def split: nat.splits)
        apply (clarsimp simp: returnOk_def return_def corres_underlying_def transform_cslot_ptr_def)
-       defer
-       apply ((drule (1) transform_objects_cnode, clarsimp simp:gets_the_def gets_def get_def cap_object_simps
-        bind_def return_def valid_def exs_valid_def assert_opt_def opt_object_def transform_def)+)[3]
+       apply (subst eq_nat_nat_iff)
+         apply (simp add:bl_to_bin_ge0)+
+       apply (subst to_bl_bin[symmetric])
+       apply (subst bl_and_mask)
+       apply (simp add:word_rep_drop bl_to_bin_rep_F cap_object_simps)
+       apply ((drule (1) transform_objects_cnode,
+               simp,
+               clarsimp simp: gets_the_def gets_def get_def cap_object_simps
+                              bind_def return_def valid_def exs_valid_def assert_opt_def
+                              opt_object_def transform_def
+                       split: nat.splits)+)[3]
     apply fastforce
    apply (frule_tac cref1=ref and cref'1="of_bl ref" in iffD2[OF guard_mask_shift,rotated])
     apply (simp add: word_rep_drop)+
-  apply (simp add:unat_def)
-  apply (subst eq_nat_nat_iff)
-    apply (simp add:bl_to_bin_ge0)+
-  apply (subst to_bl_bin[symmetric])
-  apply (subst bl_and_mask)
-  apply (simp add:word_rep_drop bl_to_bin_rep_F cap_object_simps)
   done
 
 lemma is_cnode_cap_eq:
@@ -2975,6 +3005,13 @@ proof (induct t  arbitrary: a cap cref rule: less_induct)
   done
 qed
 
+lemma nat_case_split:
+  "0 < n \<Longrightarrow> (case n of 0 \<Rightarrow> a | Suc nat' \<Rightarrow> f nat') = f (n - 1)"
+  "0 < n \<Longrightarrow> (case (case n of 0 \<Rightarrow> a' | Suc sz' \<Rightarrow> cdl_object.CNode (f' sz')) of
+                 cdl_object.CNode x \<Rightarrow> return x
+               | _ \<Rightarrow> fail) = return  (f' (n - 1))"
+  by (auto split: nat.splits)
+
 lemma resolve_address_bits_corres':
 shows "\<lbrakk>length cref \<le> n ; length cref \<le> 32; cap = transform_cap cap'; wlen = length cref\<rbrakk> \<Longrightarrow>
   dcorres (dc \<oplus> (\<lambda>x y. fst x = transform_cslot_ptr (fst y) \<and> snd x = length (snd y)))
@@ -3040,16 +3077,16 @@ next
     apply clarsimp
     apply (rule_tac Q="\<lambda>x y. y = (transform s'a) \<and> x = (transform_object (machine_state s'a) word etcb_opt (kernel_object.CNode nata fun))" in corres_symb_exec_l)
       apply (rule dcorres_expand_pfx)
-      apply clarsimp
-      apply (rule corres_underlying_split)
+      apply (clarsimp simp: nat_case_split)
+      apply (rule corres_underlying_split [where P="\<lambda>rv s. True" and
+              P' = "\<lambda>next_cap. valid_objs and (\<lambda>a. a \<turnstile> next_cap) and valid_global_refs and valid_idle and valid_etcbs"])
         apply (rule get_cap_corres[THEN corres_guard_imp])
           apply (clarsimp simp:transform_cslot_ptr_def cap_object_simps)
-defer
+           apply (simp add: branch_map_simp2)
           apply clarsimp
          apply clarsimp
          apply (erule (1) cnode_not_idle)
-defer
-defer
+      apply (wp |simp)+
       apply (clarsimp simp:cdl_resolve_address_bits_eq is_cnode_cap_eq | rule conjI)+
       apply (subst cdl_resolve_address_bits_eq)
       apply (subgoal_tac "?a+?b-?a\<le> ?b")
@@ -3058,13 +3095,12 @@ defer
         apply (rule Suc.hyps[rule_format])
       apply fastforce
       apply (clarsimp simp:returnOk_def transform_cslot_ptr_def cap_object_simps)
-defer
-      apply ((drule (1) transform_objects_cnode, clarsimp simp:transform_objects_cnode gets_the_def gets_def get_def
-        bind_def return_def valid_def exs_valid_def assert_opt_def cap_object_simps
-        opt_object_def transform_def)+)[3]
-defer
-      apply (wp|simp add: branch_map_simp2)+
-done
+      apply (simp add: branch_map_simp2)
+      apply (drule (1) transform_objects_cnode, simp,
+             clarsimp simp: transform_objects_cnode gets_the_def gets_def get_def
+                             bind_def return_def valid_def exs_valid_def assert_opt_def
+                             cap_object_simps opt_object_def transform_def nat_case_split)+
+        done
 qed
 
 lemmas resolve_address_bits_corres = resolve_address_bits_corres' [OF eq_refl, OF refl]

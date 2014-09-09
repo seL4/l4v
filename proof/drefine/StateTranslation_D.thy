@@ -863,7 +863,9 @@ definition
   transform_object :: "machine_state \<Rightarrow> obj_ref \<Rightarrow> etcb option \<Rightarrow> kernel_object \<Rightarrow> cdl_object"
   where
   "transform_object ms ref opt_etcb ko \<equiv> case ko of
-           Structures_A.CNode sz c \<Rightarrow>
+           Structures_A.CNode 0 c \<Rightarrow>
+              Types_D.IRQNode \<lparr>cdl_irq_node_caps = transform_cnode_contents 0 c\<rparr>
+         | Structures_A.CNode sz c \<Rightarrow>
               Types_D.CNode \<lparr>
                 cdl_cnode_caps = transform_cnode_contents sz c,
                 cdl_cnode_size_bits = sz

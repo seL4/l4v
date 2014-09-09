@@ -188,7 +188,7 @@ definition duplicate_caps :: "cdl_state \<Rightarrow> (cdl_object_id \<Rightarro
                                         \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_cptr option) u_monad"
 where
   "duplicate_caps spec orig_caps obj_ids free_slots \<equiv> do
-    obj_ids' \<leftarrow> return [obj_id \<leftarrow> obj_ids. real_cnode_at obj_id spec \<or> tcb_at obj_id spec];
+    obj_ids' \<leftarrow> return [obj_id \<leftarrow> obj_ids. cnode_at obj_id spec \<or> tcb_at obj_id spec];
     assert (length obj_ids' \<le> length free_slots);
     mapM_x (duplicate_cap spec orig_caps) (zip obj_ids' free_slots);
     return $ map_of $ zip obj_ids' free_slots
@@ -436,7 +436,7 @@ definition init_cspace :: "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> 
                                      \<Rightarrow> cdl_object_id list \<Rightarrow> unit u_monad"
 where
   "init_cspace spec orig_caps dup_caps irq_caps obj_ids \<equiv> do
-    cnode_ids \<leftarrow> return [obj_id \<leftarrow> obj_ids. real_cnode_at obj_id spec];
+    cnode_ids \<leftarrow> return [obj_id \<leftarrow> obj_ids. cnode_at obj_id spec];
     mapM_x (init_cnode spec orig_caps dup_caps irq_caps Copy) cnode_ids;
     mapM_x (init_cnode spec orig_caps dup_caps irq_caps Move) cnode_ids
   od"
