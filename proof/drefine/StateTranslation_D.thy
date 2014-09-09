@@ -354,7 +354,7 @@ definition
     | ARMASIDControlMakePool \<Rightarrow>
           Option.map AsidControlIntent
                    (transform_cnode_index_and_depth AsidControlMakePoolIntent args)
-    | ARMASIDPoolAssign \<Rightarrow> Some (AsidPoolIntent (AsidPoolAssignIntent 0))
+    | ARMASIDPoolAssign \<Rightarrow> Some (AsidPoolIntent AsidPoolAssignIntent )
     | Domainsetset \<Rightarrow> Option.map DomainIntent (transform_intent_domain args)"
 
 lemmas transform_intent_tcb_defs =

@@ -49,7 +49,7 @@ definition
       cdl_asid_pool_intent \<Rightarrow> cdl_asid_pool_invocation except_monad"
 where
   "decode_asid_pool_invocation target target_ref caps intent \<equiv> case intent of
-     AsidPoolAssignIntent vaddr \<Rightarrow>
+     AsidPoolAssignIntent \<Rightarrow>
        doE
          (pd_cap, pd_cap_ref) \<leftarrow> throw_on_none $ get_index caps 0;
          (case pd_cap of
