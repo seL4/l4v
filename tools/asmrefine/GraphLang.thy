@@ -446,7 +446,6 @@ lemma trace_end_NoneD:
   apply (simp add: trace_end_def split: split_if_asm)
    apply (metis nat_trace_Max_dom_None not_None_eq)
   apply (rule_tac x="the o tr" in exI, simp)
-  apply (metis option.sel)
   done
 
 lemma trace_end_SomeD:
@@ -721,7 +720,7 @@ fun fun_groups gp ((fs as ("Function" :: _)) :: sss) =
   | fun_groups gp [] = [rev gp]
 
 fun filename_relative thy name = 
-    Path.append (Thy_Load.master_directory thy) (Path.explode name)
+    Path.append (Resources.master_directory thy) (Path.explode name)
     |> Path.implode
 
 fun openIn_relative thy = filename_relative thy #> TextIO.openIn

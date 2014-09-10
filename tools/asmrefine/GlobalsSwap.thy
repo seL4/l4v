@@ -230,7 +230,7 @@ lemma globals_swap_twice_helper:
   apply (induct xs)
    apply simp
   apply (clarsimp simp: globals_list_distinct_def)
-  apply (subst foldr_update_commutes[where f="global_swap g_hrs g_hrs_upd symtab a"])
+  apply (subst foldr_update_commutes[where f="global_swap g_hrs g_hrs_upd symtab v" for v])
    apply (rule global_swap_swap, auto)[1]
   apply (simp add: global_swap_cancel foldr_hrs_htd_global_swap)
   done

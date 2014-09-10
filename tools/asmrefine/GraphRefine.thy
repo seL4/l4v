@@ -501,9 +501,7 @@ lemma simpl_to_graph_cases:
   apply (rule simpl_to_graphI)
   apply (case_tac "sst \<in> S")
    apply (clarsimp simp only: simpl_to_graph_def[where P="P \<inter> S"] Compl_iff Int_iff)
-   apply blast
   apply (clarsimp simp only: simpl_to_graph_def[where P="P \<inter> - S"] Compl_iff Int_iff)
-  apply blast
   done
 
 lemma exec_graph_step_image_node:
@@ -1123,7 +1121,7 @@ lemma simpl_to_graph_call_next_step:
   apply clarsimp
   apply (frule(1) exec_graph_trace_must_take_steps[OF
       _ _ next_step[rule_format, THEN conjunct1]])
-   apply (simp only: next_step, simp)
+   apply (simp only: next_step)
   apply (cut_tac tr=tr and tr'=trace'
       and sst="f' ?a ?b ?c" in simpl_to_graphD[OF cont])
    apply (rule conjI, assumption)
@@ -1445,8 +1443,8 @@ fun mk_simpl_acc ctxt sT nm = let
                   val acc2 = if typ_nm = "Arrays.array"
                     then mk_arr_idx acc (HOLogic.mk_number @{typ nat}
                         (ParseGraph.parse_int tail))
-                    else Proof_Context.read_const_proper
-                        ctxt true (typ_nm ^ "." ^ tail) $ acc
+                    else Proof_Context.read_const {proper = true, strict = true}
+                        ctxt (typ_nm ^ "." ^ tail) $ acc
                 in acc2 end
     fun mk_sst_acc2 nm = let
         val acc = mk_sst_acc nm
