@@ -604,13 +604,10 @@ lemma invoke_tcb_corres_write_regs:
           apply (rule corres_cases [where R=resume])
            apply (clarsimp simp: when_def)
            apply (rule corres_bind_return_r)
-           apply (rule corres_alternate1)
            apply (clarsimp simp: dc_def, rule restart_corres [unfolded dc_def])
           apply (clarsimp simp: when_def)
-          apply (rule corres_alternate2)
-          apply (rule corres_return_dc)
          apply (rule corrupt_tcb_intent_as_user_corres)
-         apply (wp | simp add:invs_def valid_state_def)+
+         apply (wp | simp add:invs_def valid_state_def | fastforce)+
   done
 
 lemma corres_mapM_x_rhs_induct:
@@ -1678,7 +1675,6 @@ lemma invoke_tcb_corres_resume:
    dcorres (dc \<oplus> dc) \<top> (invs and not_idle_thread obj_id' and tcb_at obj_id' and valid_etcbs)
   (Tcb_D.invoke_tcb t) (Tcb_A.invoke_tcb t')"
   apply (clarsimp simp: Tcb_D.invoke_tcb_def translate_tcb_invocation_def)
-  apply (rule corres_alternate1)
   apply (rule corres_bind_ignore_ret_rhs)
   apply (rule corres_return_dc_rhs)
   apply (rule corres_guard_imp[OF restart_corres],clarsimp+)

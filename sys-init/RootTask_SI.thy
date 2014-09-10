@@ -24,7 +24,7 @@ begin
 consts
   si_cnode_id      :: cdl_object_id
   si_asidpool_id   :: cdl_object_id
-  si_asidpool_base :: cdl_asid
+  si_asidpool_base :: nat
 
 definition
   si_cnode_size :: cdl_size_bits
@@ -94,7 +94,7 @@ definition
 where
   "si_asid \<equiv>
   (si_cnode_id, unat seL4_CapInitThreadASIDPool) \<mapsto>c AsidPoolCap si_asidpool_id si_asidpool_base \<and>*
-  si_asidpool_id \<mapsto>f AsidPool empty_asid \<and>*
+    si_asidpool_id \<mapsto>f AsidPool empty_asid \<and>*
    (\<And>* offset\<in>{offset. offset < 2 ^ asid_low_bits}.
                (si_asidpool_id, offset) \<mapsto>c -)"
 

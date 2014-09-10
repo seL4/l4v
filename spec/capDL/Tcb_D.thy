@@ -217,11 +217,11 @@ definition
 where
   "invoke_tcb params \<equiv> case params of
     (* Modify a thread's registers. *)
-      WriteRegisters target_tcb _ _ _ \<Rightarrow>
+      WriteRegisters target_tcb resume _ _ \<Rightarrow>
         liftE $ 
         do
           corrupt_tcb_intent target_tcb;
-          restart target_tcb \<sqinter> return ()
+          when resume $ restart target_tcb
         od
 
     (* Read a thread's registers. *)
@@ -243,7 +243,7 @@ where
 
     (* Resume this thread. *)
     | Resume target_tcb \<Rightarrow>
-        liftE $ restart target_tcb \<sqinter> return ()
+        liftE $ restart target_tcb
 
     (* Update a thread's options. *)
     | ThreadControl target_tcb tcb_cap_slot faultep croot vroot ipc_buffer \<Rightarrow>
