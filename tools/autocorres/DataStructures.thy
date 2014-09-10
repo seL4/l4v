@@ -19,7 +19,7 @@ begin
 
 
 (*
- * Singly-linked list definitions and lemmas adapded from:
+ * Singly-linked list definitions and lemmas adapted from:
  *
  *   "Proving Pointer Programs in Higher-Order Logic"
  *   Farhad Mehta, Tobias Nipkow
@@ -328,8 +328,11 @@ context circ_linked_list begin
 fun
   circ_list_tail :: "('p \<Rightarrow> 'a option) \<Rightarrow> 'p \<Rightarrow> 'p \<Rightarrow> 'p list \<Rightarrow> 'p \<Rightarrow> bool"
 where
-  "circ_list_tail s head prev [] curr = (curr = head)"
-| "circ_list_tail s head prev (x#xs) curr = (curr = x \<and> curr \<noteq> head \<and> (\<exists>a. s x = Some a \<and> list_prev a = prev \<and> circ_list_tail s head x xs (list_next a)))"
+  "circ_list_tail s head prev [] current = (current = head)"
+| "circ_list_tail s head prev (x#xs) current =
+        (current = x \<and> current \<noteq> head \<and>
+          (\<exists>a. s x = Some a \<and> list_prev a = prev
+            \<and> circ_list_tail s head x xs (list_next a)))"
 
 lemma circ_list_defn_test: "
   \<lbrakk> s head = Some headNode;
