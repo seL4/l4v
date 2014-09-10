@@ -164,7 +164,7 @@ def main():
         desired_names = set(args.tests)
         bad_names = desired_names - set([t.name for t in tests])
         if len(bad_names) > 0:
-            args.error("Unknown test names: %s" % (", ".join(sorted(bad_names))))
+            parser.error("Unknown test names: %s" % (", ".join(sorted(bad_names))))
         tests_to_run = [t for t in tests if t.name in desired_names]
 
     # Run the tests.
