@@ -25,11 +25,6 @@ end
 
 context heap_wrap begin
 
-(* simps for working with the new heap wrappers *)
-declare [[show_types]]
-thm heap_abs_simps
-declare [[show_types=false]]
-
 (* overloaded syntax is not scalable *)
 term "s[p\<rightarrow>right := s[q]\<rightarrow>left][q]\<rightarrow>right = s[r] +\<^sub>p uint (s[t]\<rightarrow>x) \<and>
       s[p\<rightarrow>right := s[q]\<rightarrow>left] = s[q\<rightarrow>left := s[p]\<rightarrow>right] \<and>

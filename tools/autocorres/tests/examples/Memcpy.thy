@@ -115,11 +115,7 @@ lemma of_nat_prop_exp: "n < 32 \<Longrightarrow> of_nat (2 ^ n) = 2 ^ (of_nat n)
 lemma neg_mask_add_aligned:
   "\<lbrakk> is_aligned p n; q < 2 ^ n \<rbrakk>
      \<Longrightarrow> (p + q) && ~~ mask n = p && ~~ mask n"
-  apply (subst (asm) is_aligned_mask)
-  apply (metis (hide_lams, no_types) ab_semigroup_add_class.add_ac(1)
-              add_diff_cancel add_diff_cancel2 less_mask_eq mask_inner_mask
-              monoid_add_class.add.right_neutral word_plus_and_or_coroll2)
-   done
+  by (metis is_aligned_add_helper is_aligned_neg_mask_eq)
 
 lemma neq_imp_bytes_disjoint:
   "\<lbrakk> c_guard (x::'a::c_type ptr); c_guard y; unat j < align_of TYPE('a);
