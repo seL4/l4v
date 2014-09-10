@@ -151,6 +151,16 @@ in
 end
 end
 
+(*
+ * Wrap a tactic that doesn't handle invalid subgoal numbers to return
+ * "Seq.empty" when appropriate.
+ *)
+fun handle_invalid_subgoals (tac : int -> tactic) n =
+  fn thm =>
+    if Logic.count_prems (term_of_thm thm) < n then
+      no_tac thm
+    else
+      tac n thm
 
 (*
  * monad_convert tactic.
@@ -209,7 +219,8 @@ val _ = Context.>> (Context.map_theory
             (* Based on subgoal_tac parser *)
             (Args.goal_spec -- Scan.lift (Parse.name -- Args.name_inner_syntax) >>
             (fn (quant, (monad_name, term_str)) => fn ctxt =>
-                SIMPLE_METHOD'' quant (monad_convert_tac ctxt monad_name term_str)))
+                SIMPLE_METHOD'' quant (handle_invalid_subgoals (
+                    monad_convert_tac ctxt monad_name term_str))))
            "autocorres monad conversion"))
 
 end
