@@ -124,9 +124,9 @@ lemma getObject_state:
    apply clarsimp
    apply (simp add: lookupAround2_char2)
    apply (clarsimp split: split_if_asm)
-   apply (erule_tac x=a in allE)
+   apply (erule_tac x=x2 in allE)
    apply (clarsimp simp: ps_clear_def)
-   apply (drule_tac x=a in orthD2)
+   apply (drule_tac x=x2 in orthD2)
     apply fastforce
    apply clarsimp
    apply (erule impE) 
@@ -155,9 +155,9 @@ lemma getObject_state:
     apply unat_arith
    apply (drule is_aligned_no_overflow)
    apply simp
-  apply (erule_tac x=a in allE)
+  apply (erule_tac x=x2 in allE)
   apply (clarsimp simp: ps_clear_def)
-  apply (drule_tac x=a in orthD2)
+  apply (drule_tac x=x2 in orthD2)
    apply fastforce
   apply clarsimp
   apply (erule impE)
@@ -219,10 +219,10 @@ lemma asUser_state:
    apply clarsimp
    apply (rule conjI)
     apply (clarsimp simp add: lookupAround2_char2 split: split_if_asm)
-    apply (erule_tac x=a in allE)
+    apply (erule_tac x=x2 in allE)
     apply simp
     apply (simp add: ps_clear_def)
-    apply (drule_tac x=a in orthD2)
+    apply (drule_tac x=x2 in orthD2)
      apply fastforce
     apply clarsimp
     apply (erule impE, simp)
@@ -257,10 +257,10 @@ lemma asUser_state:
      apply unat_arith
     apply (drule is_aligned_no_overflow)
     apply simp
-   apply (erule_tac x=a in allE)
+   apply (erule_tac x=x2 in allE)
    apply simp
    apply (simp add: ps_clear_def)
-   apply (drule_tac x=a in orthD2)
+   apply (drule_tac x=x2 in orthD2)
     apply fastforce
    apply clarsimp
    apply (erule impE)
@@ -291,7 +291,7 @@ lemma mapM_upd_inv:
   assumes inv: "\<And>x. \<lbrace>op = s\<rbrace> f x \<lbrace>\<lambda>_. op = s\<rbrace>"
   shows "(rv,s) \<in> fst (mapM f xs s) \<Longrightarrow> (rv, g s) \<in> fst (mapM f xs (g s))"
   using f inv
-proof (induct xs arbitrary: rv s s')
+proof (induct xs arbitrary: rv s)
   case Nil
   thus ?case by (simp add: mapM_Nil return_def)
 next
@@ -1145,9 +1145,9 @@ lemma getObject_context:
    apply clarsimp
    apply (simp add: lookupAround2_char2)
    apply (clarsimp split: split_if_asm)
-   apply (erule_tac x=a in allE)
+   apply (erule_tac x=x2 in allE)
    apply (clarsimp simp: ps_clear_def)
-   apply (drule_tac x=a in orthD2)
+   apply (drule_tac x=x2 in orthD2)
     apply fastforce
    apply clarsimp
    apply (erule impE)
@@ -1177,9 +1177,9 @@ lemma getObject_context:
     apply unat_arith
    apply (drule is_aligned_no_overflow)
    apply simp  
-  apply (erule_tac x=a in allE)
+  apply (erule_tac x=x2 in allE)
   apply (clarsimp simp: ps_clear_def)
-  apply (drule_tac x=a in orthD2)
+  apply (drule_tac x=x2 in orthD2)
    apply fastforce
   apply clarsimp
   apply (erule impE)
@@ -1252,10 +1252,10 @@ lemma asUser_context:
      apply unat_arith
     apply (drule is_aligned_no_overflow)
     apply simp
-   apply (erule_tac x=a in allE)
+   apply (erule_tac x=x2 in allE)
    apply simp
    apply (simp add: ps_clear_def)
-   apply (drule_tac x=a in orthD2)
+   apply (drule_tac x=x2 in orthD2)
     apply fastforce
    apply clarsimp
    apply (erule impE)
@@ -1840,7 +1840,7 @@ shows
                                                        n_msgRegisters_def frame_gp_registers_convs
                                                  cong: if_cong split: split_if)
                                  apply (clarsimp simp: frame_gp_registers_convs n_gpRegisters_def
-                                                       min_max.inf_absorb1 unat_of_nat)
+                                                       min.absorb1 unat_of_nat)
                                 apply (clarsimp simp: less_diff_conv)
                                 apply (clarsimp simp: nth_append frame_gp_registers_convs
                                                       n_frameRegisters_def n_gpRegisters_def
@@ -1864,7 +1864,7 @@ shows
                              apply (rule ccorres_return_Skip')
                             apply (simp add: linorder_not_less word_le_nat_alt
                                              drop_zip mapM_x_Nil n_frameRegisters_def
-                                             min_max.inf_absorb1 n_msgRegisters_def)
+                                             min.absorb1 n_msgRegisters_def)
                             apply (rule ccorres_guard_imp2, rule ccorres_return_Skip')
                             apply simp
                            apply ceqv
@@ -2211,13 +2211,7 @@ lemma excaps_map_Nil: "(excaps_map caps = []) = (caps = [])"
 lemma and_eq_0_is_nth:
   fixes x :: "('a :: len) word"
   shows "y = 1 << n \<Longrightarrow> ((x && y) = 0) = (\<not> (x !! n))"
-  apply safe
-   apply (drule_tac x=n in word_eqD)
-   apply (simp add: nth_w2p)
-   apply (simp add: test_bit_bin)
-  apply (rule word_eqI)
-  apply (simp add: nth_w2p)
-  done
+  by (metis (poly_guards_query) and_eq_0_is_nth)
 
 (* FIXME: move *)
 lemmas and_neq_0_is_nth = arg_cong [where f=Not, OF and_eq_0_is_nth, simplified]

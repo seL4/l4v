@@ -2008,7 +2008,7 @@ lemma invokeUntyped_Retype_ccorres:
                                 invokeUntyped_proofs.slots_invD[OF proofs])
                     apply (erule is_aligned_weaken[OF range_cover.aligned])
                     apply (clarsimp simp: APIType_capBits_low)
-                   apply (rule_tac us1="unat us" in is_aligned_weaken
+                   apply (rule_tac us1="unat userSize" in is_aligned_weaken
                             [OF _ APIType_capBits_low[where newType = newType]])
                      apply (simp add: is_aligned_def)
                      apply (drule range_cover.unat_of_nat_n_shift

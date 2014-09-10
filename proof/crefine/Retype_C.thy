@@ -1153,7 +1153,7 @@ next
            apply clarsimp
           apply clarsimp
           done
-        thus ?thesis by (simp add: image_compose)
+        thus ?thesis by (simp add: image_comp [symmetric])
       qed
       finally have "(p' \<in> ?lhs_image) = (p' \<in> \<dots>)" by simp
       also have pin: "\<dots> = (p' \<in> (\<lambda>m. (CTypesDefs.ptr_add p (of_nat m))) ` ({k. k < Suc n}))" using False
@@ -1334,7 +1334,7 @@ next
            apply clarsimp
           apply clarsimp
           done
-        thus ?thesis by (simp add: image_compose)
+        thus ?thesis by (simp add: image_comp [symmetric])
       qed
       finally have "(p' \<in> ?lhs_image) = (p' \<in> \<dots>)" by simp
       also have pin: "\<dots> = (p' \<in> (\<lambda>m. (CTypesDefs.ptr_add p (of_nat m))) ` ({k. k < Suc n}))" using False
@@ -2755,7 +2755,7 @@ lemma createNewCaps_guard_helper:
   fixes x :: word32
   shows "\<lbrakk> unat x = c; b < 2 ^ word_bits \<rbrakk> \<Longrightarrow> (n < of_nat b \<and> n < x) = (n < of_nat (min (min b c) c))"
   apply (erule subst)
-  apply (simp add: min_max.inf_assoc)
+  apply (simp add: min.assoc)
   apply (rule iffI)  
    apply (simp add: min_def word_less_nat_alt split: split_if) 
   apply (simp add: min_def word_less_nat_alt not_le unat_of_nat32 split: split_if_asm) 
@@ -3905,7 +3905,6 @@ lemma mapM_x_storeWord_step:
   apply (subst if_not_P)
    apply (subst not_less)
    apply (erule is_aligned_no_overflow)
-   apply (simp add: plus_minus_one_rewrite32)
    apply (simp add: mapM_x_map comp_def upto_enum_word del: upt.simps)
    apply (subst div_power_helper [OF sz2, simplified])
     apply assumption
@@ -4065,7 +4064,7 @@ proof (intro impI allI)
      apply (simp add:pageBits_def)
      apply (cut_tac x = off in unat_lt2p)
      apply simp
-    apply (subst mult_assoc[symmetric])
+    apply (subst mult.assoc[symmetric])
     apply (rule mult_right_mono)
      apply simp+
     done
@@ -4409,13 +4408,10 @@ lemma upt_enum_offset_trivial:
       apply simp
      apply (simp add:not_less)
      apply (subgoal_tac "x \<le> 2^ word_bits - 1")
-       apply simp
-      apply (simp add:word_bits_def)
-     apply (rule order_trans[OF max_word_max])
+      apply (clarsimp simp: word_bits_def)
      apply (simp add:max_word_def word_bits_def)
      done
    qed
-
 
 lemma getObjectSize_max_size:
   "\<lbrakk> newType =  APIObjectType apiobject_type.Untyped \<longrightarrow> x < 32;
@@ -6008,14 +6004,12 @@ lemma pspace_no_overlap_induce_user_data:
   apply (clarsimp simp:image_def heap_to_page_data_def projectKO_opt_user_data
     map_comp_def split:option.splits kernel_object.splits)
   apply (frule(1) pspace_no_overlapD')
-   apply (subst (asm) intvl_range_conv)
-     apply simp
-    apply (simp add: word_bits_def)
-   apply (subst (asm) intvl_range_conv[where bits = 12,simplified])
+  apply (clarsimp simp: word_bits_def)
+   apply (subst intvl_range_conv[where bits = 12,simplified])
     apply (drule(1) pspace_alignedD')
     apply (simp add:objBits_simps archObjSize_def pageBits_def split:arch_kernel_object.split_asm)
     apply (clarsimp elim!:is_aligned_weaken)
-  apply (simp only:is_aligned_neg_mask_eq)
+  apply (subst intvl_range_conv, simp, simp)
   apply (clarsimp simp:field_simps)
   apply (simp add:p_assoc_help)
   apply (clarsimp simp:objBits_simps archObjSize_def pageBits_def split:arch_kernel_object.split_asm)+

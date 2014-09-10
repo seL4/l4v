@@ -792,8 +792,8 @@ declare word_neq_0_conv [simp del]
 schematic_lemma ccap_relation_tag_Master:
   "\<And>ccap. \<lbrakk> ccap_relation cap ccap \<rbrakk>
       \<Longrightarrow> cap_get_tag ccap = 
-            capability_case ?a ?b ?c ?d ?e ?f ?g
-               (arch_capability_case ?aa ?ab
+            case_capability ?a ?b ?c ?d ?e ?f ?g
+               (case_arch_capability ?aa ?ab
                         (\<lambda>ptr rghts sz data. if sz = ARMSmallPage
                                 then scast cap_small_frame_cap else scast cap_frame_cap)
                            ?ad ?ae) ?h ?i ?j ?k
@@ -3632,7 +3632,7 @@ lemma isMDBParentOf_spec:
 
   -- "sameRegionAs \<noteq> 0"
   apply (clarsimp simp: from_bool_def false_def)
-  apply (case_tac "RetypeDecls_H.sameRegionAs (cap_to_H ab) (cap_to_H ac)")
+  apply (case_tac "RetypeDecls_H.sameRegionAs (cap_to_H x2b) (cap_to_H x2c)")
    prefer 2 apply clarsimp
   apply (clarsimp cong:bool.case_cong if_cong simp: typ_heap_simps)
 
@@ -3649,7 +3649,7 @@ lemma isMDBParentOf_spec:
     apply (rule sameRegionAs_EndpointCap, assumption+)
 
    apply (clarsimp simp: if_1_0_0 typ_heap_simps'   Let_def case_bool_If)
-   apply (frule_tac cap="(cap_to_H ac)" in cap_get_tag_EndpointCap)
+   apply (frule_tac cap="(cap_to_H x2c)" in cap_get_tag_EndpointCap)
    apply (clarsimp split: split_if_asm simp: if_distrib [where f=scast])
 
   apply (clarsimp, rule conjI)
@@ -3667,13 +3667,13 @@ lemma isMDBParentOf_spec:
    apply (rule conjI, simp)
    apply clarsimp
    apply (simp add: Let_def case_bool_If)
-   apply (frule_tac cap="(cap_to_H ac)" in cap_get_tag_AsyncEndpointCap)
+   apply (frule_tac cap="(cap_to_H x2c)" in cap_get_tag_AsyncEndpointCap)
    apply (simp add: if_1_0_0 if_distrib [where f=scast])
 
   -- " main goal"
   apply clarsimp
   apply (simp add: to_bool_def)
-  apply (subgoal_tac "(\<not> (isEndpointCap (cap_to_H ab))) \<and> ( \<not> (isAsyncEndpointCap (cap_to_H ab)))")
+  apply (subgoal_tac "(\<not> (isEndpointCap (cap_to_H x2b))) \<and> ( \<not> (isAsyncEndpointCap (cap_to_H x2b)))")
    apply (clarsimp simp: true_def)
   apply (rule conjI)
    apply (clarsimp simp: cap_get_tag_isCap [symmetric])+

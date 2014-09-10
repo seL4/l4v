@@ -555,6 +555,7 @@ lemma (in kernel_m)
      armKSASIDMap (ksArchState astate)"
   apply (rule ext)
   using valid rel
+  using [[hypsubst_thin]]
   apply (clarsimp simp: valid_arch_state'_def carch_state_relation_def
                         casid_map_to_H_def)
   apply (drule array_relation_map_conv2[OF _ eq_option_to_0_rev])

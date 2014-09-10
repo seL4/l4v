@@ -399,6 +399,12 @@ lemma in_alignCheck':
   "(z \<in> fst (alignCheck x n s)) = (snd z = s \<and> is_aligned x n)"
   by (cases z, simp add: in_alignCheck)
 
+lemma fst_alignCheck_empty [simp]:
+   "(fst (alignCheck x n s) = {}) = (\<not> is_aligned x n)"
+  apply (subst all_not_in_conv [symmetric])
+  apply (clarsimp simp: in_alignCheck')
+  done
+
 lemma fst_setCTE0:
   assumes ct: "cte_at' dest s"
   shows   "\<exists>(v, s') \<in> fst (setCTE dest cte s).
@@ -1845,8 +1851,6 @@ lemma user_word_at_cross_over:
   apply (rule_tac f="h_val ?hp" in arg_cong)
   apply simp
   apply (simp add: field_lvalue_def)
-  apply (subst field_lookup_offset_eq)
-   apply (fastforce intro: typ_heap_simps)
   apply (simp add: ucast_nat_def ucast_ucast_mask)
   apply (fold shiftl_t2n[where n=2, simplified, simplified mult.commute mult.left_commute])
   apply (simp add: aligned_shiftr_mask_shiftl)

@@ -1071,13 +1071,16 @@ lemma ccorres_cond_const:
   apply (fastforce elim: ccorresE [OF c2] elim!: bexI [rotated])
   done
 
-lemmas in_monad_pre' = in_whenE [where v = r, standard] in_liftE [where v = r, standard] 
-                  in_bind in_returnOk [where v' = r, standard] in_throwError [where v = r, standard] 
-                  in_assertE in_assert in_return in_assert_opt
-                  in_get in_gets in_put in_when [where v = r, standard]  
-                  in_modify [where v = r, standard]
 
-lemmas in_monad' = in_monad_pre' [where r = "fst r" and s' = "snd r", simplified surjective_pairing [symmetric], standard]
+
+
+lemmas in_monad_pre' = in_whenE [where v = r for r] in_liftE [where v = r for r]
+                  in_bind in_returnOk [where v' = r for r] in_throwError [where v = r for r]
+                  in_assertE in_assert in_return in_assert_opt
+                  in_get in_gets in_put in_when [where v = r for r]
+                  in_modify [where v = r for r]
+
+lemmas in_monad' = in_monad_pre' [where r = "fst r" and s' = "snd r" for r, simplified surjective_pairing [symmetric]]
 
 declare not_snd_bindI1 [intro?]
 declare not_snd_bindI2 [intro?]

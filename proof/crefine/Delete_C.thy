@@ -239,7 +239,7 @@ lemma zombie_rf_sr_helperE:
                     get_capZombiePtr_CL (cap_zombie_cap_lift ccap)
                             = capZombiePtr cap;
                     capZombieType_CL (cap_zombie_cap_lift ccap)
-                            = (zombie_type_case ZombieTCB_C of_nat (capZombieType cap)) \<rbrakk>
+                            = (case_zombie_type ZombieTCB_C of_nat (capZombieType cap)) \<rbrakk>
                \<Longrightarrow> Q \<rbrakk>
      \<Longrightarrow> Q"
   apply (clarsimp simp: cte_wp_at_ctes_of)
@@ -267,9 +267,9 @@ lemma of_nat_ZombieTCB_C:
   apply (clarsimp simp: ZombieTCB_C_def)
   done
 
-lemma zombie_type_case_map_inj:
-  "zombie_type_case (ZombieTCB_C :: word32) of_nat (capZombieType cap)
-     = zombie_type_case (ZombieTCB_C :: word32) of_nat (capZombieType cap')
+lemma case_zombie_type_map_inj:
+  "case_zombie_type (ZombieTCB_C :: word32) of_nat (capZombieType cap)
+     = case_zombie_type (ZombieTCB_C :: word32) of_nat (capZombieType cap')
     \<Longrightarrow> capAligned cap \<Longrightarrow> capAligned cap'
     \<Longrightarrow> isZombie cap \<Longrightarrow> isZombie cap' \<Longrightarrow>
        capZombieType cap = capZombieType cap'"
@@ -370,7 +370,7 @@ lemma reduceZombie_ccorres1:
        apply fastforce
       apply ceqv
      apply (rule ccorres_move_c_guard_cte)
-     apply (rule_tac xf'=type_' and val="zombie_type_case ZombieTCB_C of_nat (capZombieType cap)"
+     apply (rule_tac xf'=type_' and val="case_zombie_type ZombieTCB_C of_nat (capZombieType cap)"
                  and R="cte_wp_at' (\<lambda>cte. cteCap cte = cap) slot and invs'"
                in ccorres_symb_exec_r_known_rv_UNIV[where R'=UNIV])
         apply vcg
@@ -493,7 +493,7 @@ lemma reduceZombie_ccorres1:
               apply (rule ccorres_rhs_assoc)+
               apply (rule ccorres_move_c_guard_cte)
               apply (rule_tac xf'=ret__unsigned_long_'
-                          and val="zombie_type_case ZombieTCB_C of_nat (capZombieType (cteCap rv))"
+                          and val="case_zombie_type ZombieTCB_C of_nat (capZombieType (cteCap rv))"
                              and R="cte_wp_at' (op = rv) slot and invs'"
                           in ccorres_symb_exec_r_known_rv_UNIV[where R'=UNIV])
                  apply (rule conseqPre, vcg)
@@ -512,7 +512,7 @@ lemma reduceZombie_ccorres1:
                  apply (clarsimp simp: word_unat.Abs_inject
                                        valid_cap_capZombieNumber_unats)
                  apply (drule valid_capAligned)+
-                 apply (drule(4) zombie_type_case_map_inj)
+                 apply (drule(4) case_zombie_type_map_inj)
                  apply simp
                 apply (rule ccorres_rhs_assoc)+
                 apply (simp del: Collect_const)

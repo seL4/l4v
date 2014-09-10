@@ -66,6 +66,7 @@ lemma clift_foldl_hrs_mem_update:
    \<Longrightarrow>
    clift (hrs_mem_update (\<lambda>s. foldl (\<lambda>s x. heap_update (f x) v s) s xs) s)
        = foldl g (clift s :: 'a ptr \<rightharpoonup> 'a) xs"
+  using [[hypsubst_thin]]
   apply (cases s, clarsimp)
   apply (induct xs arbitrary: a b)
    apply (simp add: hrs_mem_update_def)
@@ -112,6 +113,7 @@ lemma coerce_heap_update_to_heap_updates':
   heap_update_list x (replicateHider n 0)
   = (\<lambda>s. foldl (\<lambda>s x. heap_update_list x (replicateHider chunk 0) s) s
     (map (\<lambda>n. x + (of_nat n * of_nat chunk)) [0 ..< m]))"
+  using [[hypsubst_thin]]
   apply clarsimp
   apply (induct m arbitrary: x)
    apply (rule ext, simp)

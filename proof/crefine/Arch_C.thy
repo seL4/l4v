@@ -842,13 +842,14 @@ lemma decodeARMPageTableInvocation_ccorres:
   apply (simp add: cpde_relation_def Let_def pde_lift_pde_coarse
                    pde_pde_coarse_lift_def word_bw_assocs)
   apply (thin_tac "?P")+
-  apply (rule conjI)
-   apply (rule is_aligned_neg_mask [OF _ order_refl])
-   apply (rule is_aligned_addrFromPPtr_n)
-    apply (rule is_aligned_andI2)
-    apply (simp add: is_aligned_def)
-    apply simp+
-  apply (simp add: attribsFromWord_def of_bool_nth)
+  apply (subst is_aligned_neg_mask [OF _ order_refl],
+        rule is_aligned_addrFromPPtr_n,
+        rule is_aligned_andI2,
+        simp add: is_aligned_def,
+        simp)+
+  apply (clarsimp simp: attribsFromWord_def)
+  apply word_bitwise
+  apply clarsimp
   done
 
 lemma checkVPAlignment_spec:
@@ -1485,17 +1486,12 @@ lemma performPageInvocationMapPTE_ccorres:
         apply (clarsimp simp:valid_pte_slots'2_def
           objBits_simps archObjSize_def hd_conv_nth)
         apply (clarsimp simp:pte_range_relation_def ptr_range_to_list_def ptr_add_def)
-        apply (simp add:add.assoc[symmetric] add.commute)
-        apply (simp add: word_add_format)
         apply (frule is_aligned_addrFromPPtr_n,simp)
         apply (cut_tac n = "sz+2" in  power_not_zero[where 'a="32"])
          apply simp
-        apply (rule conjI)
-         apply (erule is_aligned_no_wrap')
-         apply (simp add:mult_commute power_not_zero)
-        apply (rule conjI)
-         apply (erule is_aligned_no_wrap')
-         apply (simp add:mult_commute power_not_zero)
+        apply (subst is_aligned_no_wrap', assumption, fastforce simp: field_simps)
+        apply (subst add_diff_eq [symmetric])
+        apply (subst is_aligned_no_wrap', assumption, fastforce simp: field_simps)
         apply (simp add:addrFromPPtr_mask_5)
        apply (clarsimp simp:pte_range_relation_def ptr_add_def ptr_range_to_list_def)
       apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem hd_conv_nth last_conv_nth ucast_minus)
@@ -1715,17 +1711,12 @@ lemma performPageInvocationMapPDE_ccorres:
         apply (clarsimp simp:valid_pde_slots'2_def
           objBits_simps archObjSize_def hd_conv_nth)
         apply (clarsimp simp:pde_range_relation_def ptr_range_to_list_def ptr_add_def)
-        apply (simp add:add.assoc[symmetric] add.commute)
-        apply (simp add: word_add_format)
         apply (frule is_aligned_addrFromPPtr_n,simp)
         apply (cut_tac n = "sz+2" in  power_not_zero[where 'a="32"])
          apply simp
-        apply (rule conjI)
-         apply (erule is_aligned_no_wrap')
-         apply (simp add:mult_commute power_not_zero)
-        apply (rule conjI)
-         apply (erule is_aligned_no_wrap')
-         apply (simp add:mult_commute power_not_zero)
+        apply (subst is_aligned_no_wrap', assumption, fastforce simp: field_simps)
+        apply (subst add_diff_eq [symmetric])
+        apply (subst is_aligned_no_wrap', assumption, fastforce simp: field_simps)
         apply (simp add:addrFromPPtr_mask_5)
        apply (clarsimp simp: pde_range_relation_def ptr_range_to_list_def CTypesDefs.ptr_add_def)
       apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem hd_conv_nth last_conv_nth)
@@ -1817,17 +1808,12 @@ lemma performPageInvocationRemapPDE_ccorres:
       apply (clarsimp simp:valid_pde_slots'2_def
         objBits_simps archObjSize_def hd_conv_nth)
       apply (clarsimp simp:pde_range_relation_def ptr_range_to_list_def ptr_add_def)
-      apply (simp add:add.assoc[symmetric] add.commute)
-      apply (simp add: word_add_format)
       apply (frule is_aligned_addrFromPPtr_n,simp)
       apply (cut_tac n = "sz+2" in  power_not_zero[where 'a="32"])
        apply simp
-      apply (rule conjI)
-       apply (erule is_aligned_no_wrap')
-       apply (simp add:mult_commute power_not_zero)
-      apply (rule conjI)
-       apply (erule is_aligned_no_wrap')
-       apply (simp add:mult_commute power_not_zero)
+      apply (subst is_aligned_no_wrap', assumption, fastforce simp: field_simps)
+      apply (subst add_diff_eq [symmetric])
+      apply (subst is_aligned_no_wrap', assumption, fastforce simp: field_simps)
       apply (simp add:addrFromPPtr_mask_5)
      apply (clarsimp simp: pde_range_relation_def ptr_range_to_list_def CTypesDefs.ptr_add_def)
     apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem hd_conv_nth last_conv_nth)
@@ -1915,17 +1901,12 @@ lemma performPageInvocationRemapPTE_ccorres:
       apply (clarsimp simp:valid_pte_slots'2_def
         objBits_simps archObjSize_def hd_conv_nth)
       apply (clarsimp simp:pte_range_relation_def ptr_range_to_list_def ptr_add_def)
-      apply (simp add:add.assoc[symmetric] add.commute)
-      apply (simp add: word_add_format)
       apply (frule is_aligned_addrFromPPtr_n,simp)
       apply (cut_tac n = "sz+2" in  power_not_zero[where 'a="32"])
        apply simp
-      apply (rule conjI)
-       apply (erule is_aligned_no_wrap')
-       apply (simp add:mult_commute power_not_zero)
-      apply (rule conjI)
-       apply (erule is_aligned_no_wrap')
-       apply (simp add:mult_commute power_not_zero)
+      apply (subst is_aligned_no_wrap', assumption, fastforce simp: field_simps)
+      apply (subst add_diff_eq [symmetric])
+      apply (subst is_aligned_no_wrap', assumption, fastforce simp: field_simps)
       apply (simp add:addrFromPPtr_mask_5)
      apply (clarsimp simp: pte_range_relation_def ptr_range_to_list_def CTypesDefs.ptr_add_def)
     apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem hd_conv_nth last_conv_nth ucast_minus)
@@ -2947,7 +2928,6 @@ lemma decodeARMFrameInvocation_ccorres:
                            valid_cap'_def page_directory_at'_def 
                            sysargs_rel_to_n linorder_not_less
                            excaps_map_def valid_tcb_state'_def
-                           plus_minus_one_rewrite32
                  simp del: less_1_simp
       | rule conjI | erule st_tcb'_weakenE disjE
       | erule(3) is_aligned_no_overflow3[OF vmsz_aligned_addrFromPPtr(3)[THEN iffD2]]
@@ -3147,6 +3127,15 @@ lemma framesize_from_H_mask2:
       Kernel_C.ARMSuperSection_def)+
   done
 
+lemma rel_option_alt_def:
+  "rel_option f a b = (
+      (a = None \<and>  b = None)
+      \<or> (\<exists>x y. a = Some x \<and>  b = Some y \<and> f x y))"
+  apply (case_tac a, case_tac b, simp, simp, case_tac b, auto)
+  done
+
+declare [[goals_limit=1]]
+
 lemma decodeARMPageDirectoryInvocation_ccorres:
   notes if_cong[cong] tl_drop_1[simp]
   shows
@@ -3256,6 +3245,7 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
            apply (rule ccorres_split_nothrow)
                apply (rule_tac xf'= "resolve_ret_'" in
                  ccorres_call)
+
                   apply (rule resolveVAddr_ccorres)
                  apply simp
                 apply simp
@@ -3265,8 +3255,8 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
                injection_handler_returnOk if_to_top_of_bind if_to_top_of_bindE)
              apply (rule_tac Q=\<top> and Q'=\<top> in ccorres_if_cond_throws[rotated -1])
                 apply vcg
-               apply (simp add:resolve_ret_rel_def to_option_def to_bool_def
-                 rel_option_def split:option.splits if_splits)
+               apply (clarsimp simp:resolve_ret_rel_def to_bool_def to_option_def
+                        rel_option_alt_def not_le split:option.splits if_splits)
               apply (simp add:invocationCatch_def ArchRetype_H.performInvocation_def
                 performInvocation_def performARMMMUInvocation_def)
               apply (simp add:performPageDirectoryInvocation_def 
@@ -3287,7 +3277,7 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
              apply (rule_tac Q=\<top> and Q'=\<top> in ccorres_if_cond_throws[rotated -1])
                 apply vcg
                apply (clarsimp simp add:page_base_def resolve_ret_rel_def
-                 rel_option_def to_option_def
+                 rel_option_alt_def to_option_def
                  mask_def[unfolded Word.shiftl_1,symmetric]
                  split:option.splits if_splits)
                apply (simp add: framesize_from_to_H)
@@ -3297,7 +3287,7 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
                 syscall_error_rel_def exception_defs
                 syscall_error_to_H_cases false_def)
               apply (clarsimp simp add:page_base_def resolve_ret_rel_def
-                rel_option_def to_option_def
+                rel_option_alt_def to_option_def
                 mask_def[unfolded Word.shiftl_1,symmetric]
                 split:option.splits if_splits)
               apply (cut_tac sz = a in pbfs_less_wb')
@@ -3409,7 +3399,7 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
      apply (intro conjI impI allI)
       apply (clarsimp simp:ThreadState_Restart_def less_mask_eq rf_sr_ksCurThread
         resolve_ret_rel_def framesize_from_to_H framesize_from_H_mask2
-        to_option_def rel_option_def to_bool_def
+        to_option_def rel_option_alt_def to_bool_def
         split:option.splits if_splits
       | fastforce simp: mask_def
       | rule flushtype_relation_triv,simp add:isPageFlush_def isPDFlush_def
@@ -3424,7 +3414,7 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
     apply (intro conjI impI allI)
      apply (clarsimp simp:ThreadState_Restart_def less_mask_eq rf_sr_ksCurThread
         resolve_ret_rel_def framesize_from_to_H framesize_from_H_mask2
-        to_option_def rel_option_def to_bool_def
+        to_option_def rel_option_alt_def to_bool_def
         split:option.splits if_splits
       | fastforce simp: mask_def
       | rule flushtype_relation_triv,simp add:isPageFlush_def isPDFlush_def
@@ -3439,7 +3429,7 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
    apply (intro conjI impI allI)
     apply (clarsimp simp:ThreadState_Restart_def less_mask_eq rf_sr_ksCurThread
       resolve_ret_rel_def framesize_from_to_H framesize_from_H_mask2
-      to_option_def rel_option_def to_bool_def
+      to_option_def rel_option_alt_def to_bool_def
       split:option.splits if_splits
       | fastforce simp: mask_def
       | rule flushtype_relation_triv,simp add:isPageFlush_def isPDFlush_def
@@ -3454,7 +3444,7 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
   apply (intro conjI impI allI)
    apply (clarsimp simp:ThreadState_Restart_def less_mask_eq rf_sr_ksCurThread
      resolve_ret_rel_def framesize_from_to_H framesize_from_H_mask2
-     to_option_def rel_option_def to_bool_def
+     to_option_def rel_option_alt_def to_bool_def
      split:option.splits if_splits
      | fastforce simp: mask_def
      | rule flushtype_relation_triv,simp add:isPageFlush_def isPDFlush_def

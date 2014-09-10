@@ -601,7 +601,7 @@ end
 
 
 lemmas in_magnitude_check' =
-  in_magnitude_check [where v = "fst z" and s' = "snd z", folded surjective_pairing, standard]
+  in_magnitude_check [where v = "fst z" and s' = "snd z" for z, folded surjective_pairing]
 
 
 (* Defined in terms of access_ti for convenience *)

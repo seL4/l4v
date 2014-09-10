@@ -1314,9 +1314,9 @@ lemma findFreeHWASID_ccorres:
        apply (simp add: minBound_word init_def maxBound_word minus_one_norm)
        apply (simp add: upto_enum_word)
        apply (rule nth_equalityI)
-        apply (simp add: min_max.inf_absorb2
+        apply (simp add: min.absorb2
                     del: upt.simps)
-       apply (simp add: min_max.inf_absorb2
+       apply (simp add: min.absorb2
                    del: upt.simps)
        apply (simp add: nth_append
                  split: split_if)

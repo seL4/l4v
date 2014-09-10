@@ -179,7 +179,7 @@ proof (cases "isCNodeCap cap'")
     
   show ?thesis using False 
     apply (cinit' lift: nodeCap_' capptr_' n_bits_')
-    apply csymbr+          
+    apply csymbr+
       -- "Exception stuff"
     apply (rule ccorres_split_throws)
     apply (simp add: Collect_const cap_get_tag_isCap isCap_simps ccorres_cond_iffs 

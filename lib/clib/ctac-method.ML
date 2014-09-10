@@ -739,7 +739,7 @@ end;
 fun instantiate_xf_type ctxt tp which thms = let
     val ctp = ctyp_of (Proof_Context.theory_of ctxt) tp
     fun inst_type_vars thm = let
-        val (Const ("all", _) $ Abs (_, tpv, _)) = nth (prems_of thm) which
+        val (Const ("Pure.all", _) $ Abs (_, tpv, _)) = nth (prems_of thm) which
         val ctpv = ctyp_of (Proof_Context.theory_of ctxt) tpv
     in
         Thm.instantiate ([(ctpv, ctp)], []) thm
@@ -795,7 +795,8 @@ in
     resolve_tac match_seq THEN' SUBGOAL tac
 end;
 
-fun corres_symb_rhs_tac (opts : ceqv_opts) ctxt = let
+fun corres_symb_rhs_tac (opts : ceqv_opts) ctxt =
+let
     val trace     = #trace opts
     val depth     = 0
     val depth'    = depth + 1
@@ -1096,6 +1097,5 @@ val corres_print_xf = let
 in
     Args.context >> K method
 end;
-
 
 end;

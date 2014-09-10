@@ -1121,16 +1121,16 @@ lemma ucast_add:
      "ucast (a + (b :: 'a :: len word)) = ucast a + (ucast b :: ('a signed word))"
   apply (case_tac "len_of TYPE('a) = 1")
    apply (clarsimp simp: ucast_def)
-   apply (metis (hide_lams, mono_tags) One_nat_def len_signed plus_word.abs_eq uint_word_arith_bintrs(2) word_ubin.Abs_norm)
+   apply (metis (hide_lams, mono_tags) One_nat_def len_signed plus_word.abs_eq uint_word_arith_bintrs(1) word_ubin.Abs_norm)
   apply (clarsimp simp: ucast_def)
-  apply (metis le_refl len_signed plus_word.abs_eq uint_word_arith_bintrs(2) wi_bintr)
+  apply (metis le_refl len_signed plus_word.abs_eq uint_word_arith_bintrs(1) wi_bintr)
   done
 
 (* FIXME: move *)
 lemma ucast_minus:
      "ucast (a - (b :: 'a :: len word)) = ucast a - (ucast b :: ('a signed word))"
   apply (insert ucast_add [where a=a and b="-b"])
-  apply (metis (hide_lams, no_types) is_num_normalize(10) is_num_normalize(8) is_num_normalize(9) minus_minus ucast_add)
+  apply (metis (no_types, hide_lams) add_diff_eq diff_add_cancel ucast_add is_num_normalize)
   done
 
 (* FIXME : move *)

@@ -1301,7 +1301,7 @@ lemma copyMRs_buffer_loop_ccorres:
        \<acute>i :== \<acute>i + 1))"
   using lt
   apply (case_tac "of_nat (length State_H.msgRegisters) \<le> n")
-   apply (simp only: i0 min_max.inf_absorb1)
+   apply (simp only: i0 min.absorb1)
    apply (rule ccorres_rel_imp)
     apply (rule ccorres_mapM_x_while' [OF copyMRs_buffer_loop_helper])
         apply (clarsimp simp: word_le_nat_alt msgMaxLength_def msgLengthBits_def)
@@ -1723,7 +1723,7 @@ proof -
                           mapM_Cons mapM_Nil mapM_discarded
                      del: Collect_const upt_rec_numeral)
          apply (simp only: mapM_x_append[where xs="take (unat n_msgRegisters) (zip as bs)"
-                                         and ys="drop (unat n_msgRegisters) (zip as bs)",
+                                         and ys="drop (unat n_msgRegisters) (zip as bs)"
                                          for as bs, simplified] bind_assoc)
          apply (rule ccorres_rhs_assoc)+
          apply csymbr
@@ -2349,11 +2349,15 @@ lemma maskedAsFull_again:
 lemma ccap_relation_lift: 
   "ccap_relation cap cap'
    \<Longrightarrow> (cap_to_H (the (cap_lift cap'))) = cap"
-  by (simp add:ccap_relation_def map_option_def split:option.splits)
+  apply (case_tac "cap_lift cap'")
+   apply (auto simp:ccap_relation_def split:option.splits)
+  done
 
 lemma ccap_relation_inject:
   "\<lbrakk>ccap_relation acap cap; ccap_relation bcap cap\<rbrakk> \<Longrightarrow> acap = bcap"
-  by (clarsimp simp:ccap_relation_def map_option_def split:option.splits)
+  apply (case_tac "cap_lift cap")
+   apply (auto simp:ccap_relation_def split:option.splits)
+  done
 
 lemma t2n_mask_eq_if:
   "(2 ^ n && mask m) = (if n < m then 2 ^ n else 0)"
@@ -2690,7 +2694,7 @@ next
                   apply (drule(1) bspec)+
                   apply (rule conjI | clarsimp)+
                    apply (clarsimp simp:is_the_ep_def stable_def split:if_splits)+
-                 apply (case_tac "aa = cteCap cteb",clarsimp)
+                 apply (case_tac "a = cteCap cteb",clarsimp)
                   apply (simp add:maskedAsFull_def split:if_splits)
                  apply (simp add:maskedAsFull_again)
                apply (wp deriveCap_derived is_the_ep_deriveCap)
@@ -2761,7 +2765,7 @@ next
                   apply (drule(1) bspec)+
                   apply (rule conjI | clarsimp)+
                    apply (clarsimp simp:is_the_ep_def stable_def split:if_splits)+
-                 apply (case_tac "aa = cteCap cteb",clarsimp)
+                 apply (case_tac "a = cteCap cteb",clarsimp)
                   apply (simp add:maskedAsFull_def split:if_splits)
                  apply (simp add:maskedAsFull_again)
                apply (wp deriveCap_derived is_the_ep_deriveCap)
@@ -2986,12 +2990,7 @@ lemma transferCaps_ccorres [corres]:
    apply (clarsimp simp: message_info_to_H_def excaps_in_mem_def
                          slotcap_in_mem_def split_def cte_wp_at_ctes_of
                          word_sless_def word_sle_def)
-   apply auto[1]
-   apply (drule(1) bspec)
-   apply clarsimp
-   apply (case_tac cte,clarsimp)
-   apply (erule ctes_of_valid_cap')
-   apply (simp add:valid_pspace_valid_objs')
+   apply fastforce
   apply clarsimp
   done
 
@@ -3133,7 +3132,7 @@ proof -
                        and   Q="UNIV"
                        and   F="\<lambda>n s. valid_pspace' s \<and> tcb_at' thread s \<and>
                                        (\<forall>m < length rv. user_word_at (rv ! m)
-                                                     (a + (of_nat m + (msgMaxLength + 2)) * 4) s)"
+                                                     (x2 + (of_nat m + (msgMaxLength + 2)) * 4) s)"
                           in ccorres_sequenceE_while)
                   apply (simp add: split_def)
                   apply (rule ccorres_rhs_assoc)+
@@ -3212,12 +3211,12 @@ proof -
             apply (rule takeWhile_eq, simp_all)[1]
              apply (drule_tac f="\<lambda>xs. xs ! m" in arg_cong)
              apply (clarsimp simp: split_def NULL_ptr_val[symmetric])
-            apply (simp add: word_less_nat_alt min_max.inf_absorb2)
+            apply (simp add: word_less_nat_alt min.absorb2)
            apply (clarsimp simp: array_to_list_def)
            apply (rule takeWhile_eq, simp_all)[1]
             apply (drule_tac f="\<lambda>xs. xs ! m" in arg_cong)
             apply (clarsimp simp: split_def NULL_ptr_val[symmetric])
-           apply (simp add: min_max.inf_absorb1 word_less_nat_alt)
+           apply (simp add: min.absorb1 word_less_nat_alt)
           apply simp
          apply (simp add: mapME_def[symmetric] split_def
                           liftE_bindE[symmetric])
@@ -3598,8 +3597,8 @@ lemma doIPCTransfer_ccorres [corres]:
   done
 
 lemma fault_case_absorb_bind:
-  "(do x \<leftarrow> f; fault_case (p x) (q x) (r x) (s x) ft od)
-    = fault_case (\<lambda>a b. f >>= (\<lambda>x. p x a b)) (\<lambda>a b. f >>= (\<lambda>x. q x a b))
+  "(do x \<leftarrow> f; case_fault (p x) (q x) (r x) (s x) ft od)
+    = case_fault (\<lambda>a b. f >>= (\<lambda>x. p x a b)) (\<lambda>a b. f >>= (\<lambda>x. q x a b))
           (\<lambda>a b c. f >>= (\<lambda>x. r x a b c)) (\<lambda>a. f >>= (\<lambda>x. s x a)) ft"
   by (simp split: fault.split)
 
@@ -4344,7 +4343,7 @@ lemma sendIPC_dequeue_ccorres_helper:
                                   tcb_queue_relation'_def valid_ep'_def
                            split: endpoint.splits list.splits
                        split del: split_if)
-            apply (subgoal_tac "tcb_at' (if list = [] then a else last list) \<sigma>")
+            apply (subgoal_tac "tcb_at' (if x22 = [] then x21 else last x22) \<sigma>")
              apply (clarsimp simp: is_aligned_neg_mask
                             dest!: is_aligned_tcb_ptr_to_ctcb_ptr
                         split del: split_if)
@@ -5277,7 +5276,7 @@ lemma receiveIPC_dequeue_ccorres_helper:
                                   tcb_queue_relation'_def valid_ep'_def
                            split: endpoint.splits list.splits
                        split del: split_if)
-            apply (subgoal_tac "tcb_at' (if list = [] then a else last list) \<sigma>")
+            apply (subgoal_tac "tcb_at' (if x22 = [] then x21 else last x22) \<sigma>")
              apply (clarsimp simp: is_aligned_neg_mask
                             dest!: is_aligned_tcb_ptr_to_ctcb_ptr
                         split del: split_if)
@@ -5705,7 +5704,7 @@ lemma sendAsyncIPC_dequeue_ccorres_helper:
                                  tcb_queue_relation'_def valid_aep'_def
                           split: async_endpoint.splits list.splits
                       split del: split_if)
-           apply (subgoal_tac "tcb_at' (if list = [] then a else last list) \<sigma>")
+           apply (subgoal_tac "tcb_at' (if x22 = [] then x21 else last x22) \<sigma>")
             apply (clarsimp simp: is_aligned_neg_mask
                            dest!: is_aligned_tcb_ptr_to_ctcb_ptr
                        split del: split_if)

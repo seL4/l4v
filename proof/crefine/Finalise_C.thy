@@ -523,8 +523,6 @@ lemma tcb_fields_ineq_helper:
   apply (clarsimp dest!: tcb_aligned'[OF obj_at'_weakenE, OF _ TrueI]
                          ctcb_ptr_to_tcb_ptr_aligned)
   apply (clarsimp simp: field_lvalue_def)
-  apply (subst(asm) field_lookup_offset_eq, fastforce)+
-  apply simp
   apply (subgoal_tac "is_aligned (ptr_val y - ptr_val x) 8")
    apply (drule sym, fastforce simp: is_aligned_def dvd_def)
   apply (erule(1) aligned_sub_aligned)
@@ -574,6 +572,7 @@ lemma tcb_queue_relation2_cong:
    \<And>p. p \<in> set queue' \<Longrightarrow> mp p = mp' p\<rbrakk>
   \<Longrightarrow> tcb_queue_relation2 getNext getPrev mp queue before after =
      tcb_queue_relation2 getNext getPrev mp' queue' before' after'"
+  using [[hypsubst_thin = true]]
   apply clarsimp
   apply (induct queue' arbitrary: before')
    apply simp+
@@ -973,7 +972,7 @@ lemma deleteASID_ccorres:
      apply (rule_tac xf'=ret__int_'
                  and val="from_bool (inv ASIDPool pool (asid && mask asid_low_bits)
                                             = Some pdPtr)"
-                   and R="ko_at' pool a and K (pdPtr \<noteq> 0)"
+                   and R="ko_at' pool x2 and K (pdPtr \<noteq> 0)"
                 in ccorres_symb_exec_r_known_rv_UNIV[where R'=UNIV])
         apply (vcg, clarsimp)
         apply (clarsimp dest!: rf_sr_cpspace_asidpool_relation)
@@ -998,7 +997,7 @@ lemma deleteASID_ccorres:
          apply (rule ccorres_move_c_guard_ap)
          apply (rule ccorres_Guard_Seq)+
          apply (rule ccorres_split_nothrow_novcg_dc)
-            apply (rule_tac P="ko_at' pool a" in ccorres_from_vcg[where P'=UNIV])
+            apply (rule_tac P="ko_at' pool x2" in ccorres_from_vcg[where P'=UNIV])
             apply (rule allI, rule conseqPre, vcg)
             apply clarsimp
             apply (rule cmap_relationE1[OF rf_sr_cpspace_asidpool_relation],

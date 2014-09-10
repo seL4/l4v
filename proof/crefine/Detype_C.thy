@@ -1088,7 +1088,7 @@ lemma ccorres_name_pre:
 
 lemma tcb_ptr_to_ctcb_ptr_to_Ptr:
   "tcb_ptr_to_ctcb_ptr ` {p..+b} = Ptr ` {p + ctcb_offset..+b}"
-  apply (simp add:  tcb_ptr_to_ctcb_ptr_comp image_compose)
+  apply (simp add:  tcb_ptr_to_ctcb_ptr_comp image_comp [symmetric])
   apply (rule equalityI)
    apply clarsimp
    apply (rule imageI)
