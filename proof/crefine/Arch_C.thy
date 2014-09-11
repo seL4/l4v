@@ -3134,8 +3134,6 @@ lemma rel_option_alt_def:
   apply (case_tac a, case_tac b, simp, simp, case_tac b, auto)
   done
 
-declare [[goals_limit=1]]
-
 lemma decodeARMPageDirectoryInvocation_ccorres:
   notes if_cong[cong] tl_drop_1[simp]
   shows
