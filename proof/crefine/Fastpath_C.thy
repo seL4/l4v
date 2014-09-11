@@ -653,7 +653,7 @@ lemma lookup_fp_ccorres':
                    apply (clarsimp dest!: ctes_of_valid')
                   apply (simp add: cte_level_bits_def size_of_def field_simps)
                   apply (simp add: shiftl_shiftr3 word_size)
-                  apply (simp add: word_bw_assocs mask_and_mask min_max.inf_absorb2)
+                  apply (simp add: word_bw_assocs mask_and_mask min.absorb2)
                  apply (simp_all add: unat_sub word_le_nat_alt unat_eq_0[symmetric])
                apply (simp_all add: unat_plus_if' if_P)
            apply (clarsimp simp: rightsFromWord_and shiftr_over_and_dist
@@ -924,8 +924,6 @@ lemma heap_relation_user_word_at_cross_over:
   apply (rule_tac f="h_val ?hp" in arg_cong)
   apply simp
   apply (simp add: field_lvalue_def)
-  apply (subst field_lookup_offset_eq)
-   apply (fastforce intro: typ_heap_simps)
   apply (simp add: ucast_nat_def ucast_ucast_mask)
   apply (fold shiftl_t2n[where n=2, simplified, simplified mult.commute mult.left_commute])
   apply (simp add: aligned_shiftr_mask_shiftl)
@@ -1628,7 +1626,7 @@ lemma isValidVTableRoot_fp_spec:
   done
 
 lemma isRecvEP_endpoint_case:
-  "isRecvEP ep \<Longrightarrow> endpoint_case f g h ep = f (epQueue ep)"
+  "isRecvEP ep \<Longrightarrow> case_endpoint f g h ep = f (epQueue ep)"
   by (clarsimp simp: isRecvEP_def split: endpoint.split_asm)
 
 lemma ccorres_cond_both_seq:
@@ -2140,7 +2138,7 @@ shows
         apply (drule(1) order_less_le_trans)
         apply (clarsimp simp: "StrictC'_register_defs" msgRegisters_def fupdate_def
           | drule nat_less_cases' | erule disjE)+
-       apply (simp add: min_max.inf_absorb2)
+       apply (simp add: min.absorb2)
       apply (rule allI, rule conseqPre, vcg)
       apply (simp)
      apply (simp add: length_msgRegisters n_msgRegisters_def
@@ -3746,7 +3744,7 @@ lemma getCTE_assert_opt:
    apply (simp add: empty_failD[OF empty_fail_getCTE])
   apply clarsimp
   apply (simp add: no_failD[OF no_fail_getCTE, OF ctes_of_cte_at])
-  apply (subgoal_tac "cte_wp_at' (op = a) p x")
+  apply (subgoal_tac "cte_wp_at' (op = x2) p x")
    apply (clarsimp simp: cte_wp_at'_def getCTE_def)
   apply (simp add: cte_wp_at_ctes_of)
   done
@@ -4645,9 +4643,8 @@ lemma setCTE_isolatable:
     apply (case_tac obj, simp add: projectKO_opt_tcb)
     apply (simp add: tcb_cte_cases_def split: split_if_asm)
    apply (drule_tac x=x in spec)
-   apply (clarsimp simp: obj_at'_def projectKOs objBits_simps)
-   apply (erule notE[rotated], rule tcb_ctes_clear[rotated], assumption+)
-   apply (drule sym, simp, fastforce simp add: subtract_mask)
+   apply (clarsimp simp: obj_at'_def projectKOs objBits_simps subtract_mask(2) [symmetric])
+   apply (erule notE[rotated], erule (3) tcb_ctes_clear[rotated])
   apply (simp add: select_f_returns select_f_asserts split: split_if)
   apply (intro conjI impI)
     apply (clarsimp simp: simpler_modify_def fun_eq_iff

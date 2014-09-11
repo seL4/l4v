@@ -961,11 +961,13 @@ lemma monadic_rewrite_\<Gamma>:
   "monadic_rewrite True False \<top>
     (exec_C \<Gamma> c)
     (exec_C (kernel_all_global_addresses.\<Gamma> symbol_table) c)"
-  using spec_refine
-        spec_simulates_to_exec_simulates
-  apply (simp add: spec_statefn_simulates_via_statefn
-                   o_def map_option_case)
-  apply (clarsimp simp: monadic_rewrite_def exec_C_def image_def)
+  using spec_refine [of symbol_table domain]
+  using spec_simulates_to_exec_simulates
+  apply (clarsimp simp: spec_statefn_simulates_via_statefn
+                   o_def map_option_case
+                   monadic_rewrite_def exec_C_def
+                   split: option.splits
+                   cong: option.case_cong)
   apply blast
   done
 
