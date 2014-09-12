@@ -533,7 +533,6 @@ lemma restart_corres:
             apply (rule dcorres_rhs_noop_below_True[OF dcorres_rhs_noop_below_True])
              apply (rule switch_if_required_to_dcorres)
              apply (rule tcb_sched_action_dcorres)
-             apply (rule corres_alternate1)
              apply (rule dcorres_set_thread_state_Restart2[unfolded tcb_pending_op_slot_def])
             apply wp
            apply (simp add:not_idle_thread_def)

@@ -133,7 +133,7 @@ where
        cdl_intent_error = False,
        cdl_intent_cap = tcb_cap,
        cdl_intent_extras = [],
-       cdl_intent_recv_slot = None\<rparr> False"
+       cdl_intent_recv_slot = None\<rparr> True"
 
 definition seL4_TCB_WriteRegisters :: "cdl_cptr \<Rightarrow> bool \<Rightarrow> word8 \<Rightarrow> word32 \<Rightarrow> cdl_raw_usercontext \<Rightarrow> bool u_monad"
 where

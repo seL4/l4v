@@ -201,7 +201,7 @@ where
      (do
        CSpace_D.ipc_cancel target_tcb;
        KHeap_D.set_cap (target_tcb,tcb_replycap_slot) (cdl_cap.MasterReplyCap target_tcb);
-       KHeap_D.set_cap (target_tcb,tcb_pending_op_slot) (cdl_cap.RestartCap) \<sqinter> return ()
+       KHeap_D.set_cap (target_tcb,tcb_pending_op_slot) (cdl_cap.RestartCap)
       od)
   od"
 

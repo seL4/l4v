@@ -19,6 +19,35 @@ lemma reset_cap_asid_reset_mem_mapping:
   "reset_cap_asid (reset_mem_mapping cap) = reset_cap_asid cap"
   by (clarsimp simp: reset_cap_asid_def cap_type_def split:cdl_cap.splits)
 
+lemma ipc_cancel_return:
+  "\<lbrace>< (tcb, tcb_pending_op_slot) \<mapsto>c NullCap \<and>* (\<lambda>_. True) > and R \<rbrace>ipc_cancel tcb\<lbrace>\<lambda>_. R\<rbrace>"
+  apply (clarsimp simp:ipc_cancel_def)
+  apply wp
+   apply (rule_tac P = "cap = NullCap" in hoare_gen_asm)
+   apply (wp | simp)+
+  apply clarsimp
+  apply (drule opt_cap_sep_imp)
+  apply (clarsimp simp:reset_cap_asid_simps2)
+  done
+
+lemma restart_null_wp:
+  "\<lbrace> <  (tcb,tcb_pending_op_slot) \<mapsto>c NullCap 
+     \<and>*  (tcb, tcb_replycap_slot) \<mapsto>c-
+     \<and>*  R > \<rbrace>
+     restart tcb
+  \<lbrace>\<lambda>_.  < (tcb,tcb_pending_op_slot) \<mapsto>c RestartCap  
+     \<and>* (tcb, tcb_replycap_slot) \<mapsto>c (MasterReplyCap tcb) \<and>* R > \<rbrace>"
+  apply (clarsimp simp:restart_def)
+  apply (wp set_cap_wp[sep_wand_wp])
+  apply (rule hoare_post_imp[OF _ ipc_cancel_return])
+  apply (assumption)
+  apply (wp get_cap_wp)
+  apply (frule opt_cap_sep_imp)
+   apply (clarsimp dest!:reset_cap_asid_simps2)
+  apply (rule conjI)
+   apply sep_solve
+  apply sep_solve
+  done
 
 lemma restart_wp:
   "cap = RunningCap \<or> cap = RestartCap \<Longrightarrow>
@@ -1321,7 +1350,8 @@ shows
      cnode_id = cap_object cnode_cap \<rbrakk> \<Longrightarrow>
    \<lbrace> \<guillemotleft> root_tcb_id \<mapsto>f root_tcb
      \<and>* (root_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap
-     \<and>* (cap_object tcb_cap, tcb_pending_op_slot) \<mapsto>c -
+     \<and>* (cap_object tcb_cap, tcb_pending_op_slot) \<mapsto>c NullCap
+     \<and>* (cap_object tcb_cap, tcb_replycap_slot) \<mapsto>c -
      \<and>* (root_tcb_id, tcb_cspace_slot) \<mapsto>c cnode_cap
      \<and>* cap_object cnode_cap \<mapsto>f CNode (empty_cnode root_size)
      \<and>* (cap_object cnode_cap, offset tcb_ref root_size) \<mapsto>c tcb_cap
@@ -1330,6 +1360,7 @@ shows
   \<lbrace>\<lambda>_.  \<guillemotleft> root_tcb_id \<mapsto>f root_tcb
     \<and>* (root_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap
     \<and>* (cap_object tcb_cap, tcb_pending_op_slot) \<mapsto>c RestartCap
+    \<and>* (cap_object tcb_cap, tcb_replycap_slot) \<mapsto>c MasterReplyCap (cap_object tcb_cap)
     \<and>* (root_tcb_id, tcb_cspace_slot) \<mapsto>c cnode_cap
     \<and>* cap_object cnode_cap \<mapsto>f CNode (empty_cnode root_size)
     \<and>* (cap_object cnode_cap, offset tcb_ref root_size) \<mapsto>c tcb_cap
@@ -1339,38 +1370,35 @@ shows
   apply (rule hoare_pre)
   apply (wp do_kernel_op_pull_back)
   apply (rule hoare_post_imp[OF _ call_kernel_with_intent_allow_error_helper
-     [where check = False,simplified]])
-                 apply clarsimp
-                 apply (case_tac r,(clarsimp,assumption)+)[1]
+     [where check = True,simplified]])
+                 apply simp
                 apply fastforce
                apply (rule hoare_strengthen_post[OF set_cap_wp])
                apply (sep_select 2,sep_cancel)
               apply wp[4]
          apply (rule_tac P= "
            iv = (InvokeTcb $ Resume (cap_object tcb_cap))" in hoare_gen_asmEx)
-        apply (clarsimp simp:invoke_tcb_def)
-sorry (* ipc_cancel 
-        apply (wp restart_cdl_current_thread[where cap = NullCap]
-          restart_cdl_current_domain[where cap = NullCap])
-           apply (rule_tac R1="root_tcb_id \<mapsto>f Tcb cdl_tcb_ext 
+         apply (clarsimp simp:invoke_tcb_def)
+         apply (wp restart_cdl_current_thread[where cap = NullCap]
+           restart_cdl_current_domain[where cap = NullCap])
+         apply (rule_tac R1="root_tcb_id \<mapsto>f Tcb cdl_tcb_ext 
              \<and>* (root_tcb_id, tcb_pending_op_slot) \<mapsto>c RestartCap \<and>* ?Q" in
-             hoare_post_imp[OF _ restart_wp[where cap = RestartCap ]])
-             apply (rule conjI,sep_solve)
-             apply (rule sep_any_imp_c'_conj)
-             apply sep_cancel
-             apply sep_cancel
-            apply simp
-           apply wp
+             hoare_post_imp[OF _ restart_null_wp])
+         apply (rule conjI,sep_solve)
+         apply (rule sep_any_imp_c'_conj)
+         apply sep_cancel
+         apply sep_cancel
+         apply simp
          apply (simp add:is_pending_cap_def conj_ac)
          apply (wp set_cap_wp hoare_vcg_conj_lift)
-         apply (rule_tac R1 ="(cap_object tcb_cap, tcb_pending_op_slot) \<mapsto>c RestartCap \<and>* (\<lambda>_. True)"
+          apply (rule_tac R1 ="(cap_object tcb_cap, tcb_pending_op_slot) \<mapsto>c NullCap \<and>* (\<lambda>_. True)"
            in hoare_post_imp[OF _ set_cap_wp])
           apply sep_cancel
           apply simp
          apply (rule_tac R1="root_tcb_id \<mapsto>f Tcb cdl_tcb_ext  \<and>* ?Q" in
           hoare_post_imp[OF _ set_cap_wp])
+         apply (sep_select 4,sep_cancel)
          apply (sep_select 3,sep_cancel)
-         apply (sep_select 2,sep_cancel)
         apply (rule_tac P = "c = TcbCap (cap_object tcb_cap) "
           in hoare_gen_asmEx)
         apply (simp add: decode_invocation_def
@@ -1413,6 +1441,5 @@ sorry (* ipc_cancel
   apply sep_solve
 done
 
-*)
 end
 
