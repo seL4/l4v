@@ -424,7 +424,6 @@ shows "\<lbrace>\<guillemotleft>root_tcb_id \<mapsto>f root_tcb  \<and>* (root_t
     apply (fastforce)
    apply (erule conjE allE impE)+
     apply (fastforce)
-   apply (clarsimp)
    apply (clarsimp simp: user_pointer_at_def Let_unfold sep_conj_assoc unify)
    apply (intro conjI impI)
       apply (fastforce)

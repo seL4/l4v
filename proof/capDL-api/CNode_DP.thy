@@ -183,7 +183,6 @@ lemma seL4_CNode_Mint_sep:
            apply (rule_tac R = "(root_tcb_id, tcb_pending_op_slot) \<mapsto>c RestartCap \<and>* ?R"
            in invoke_cnode_insert_cap')
            apply simp
-           apply fastforce
           apply (rule conjI[rotated])
            apply (rule sep_any_imp_c'_conj[where cap = RestartCap])
            apply (frule sep_map_c_asid_reset[where ptr = "(cap_object dest_root_cap, offset dest_index dest_size)"
@@ -678,7 +677,6 @@ lemma seL4_CNode_Copy_sep:
            apply (rule_tac R = "(root_tcb_id, tcb_pending_op_slot) \<mapsto>c RestartCap \<and>* ?R"
              in invoke_cnode_insert_cap')
             apply simp
-           apply fastforce
           apply (rule conjI[rotated])
            apply (rule sep_any_imp_c'_conj[where cap = RestartCap])
            apply (frule sep_map_c_asid_reset[where ptr = "(cnode_id, offset dest_index root_size)"

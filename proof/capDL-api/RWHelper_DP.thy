@@ -77,8 +77,8 @@ lemma writing_estimate_pipe:
   apply clarsimp
   apply (rule ccontr)
   apply (drule(1) contra_subsetD)+
-  apply (drule_tac s = "g s" in not_writingD)
-  apply (drule_tac s = s in not_writingD)
+  apply (drule_tac s = "g xa" in not_writingD)
+  apply (drule_tac s = xa in not_writingD)
   apply simp
   done
 

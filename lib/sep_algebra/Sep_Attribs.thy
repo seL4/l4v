@@ -37,7 +37,7 @@ done
 
 ML {* 
 local
-  fun atomize_thm thm = Conv.fconv_rule Object_Logic.atomize thm
+  fun atomize_thm thm = Conv.fconv_rule (Object_Logic.atomize @{context}) thm
   fun setup_simpset ctxt = put_simpset HOL_basic_ss ctxt addsimps [(sym OF [@{thm sep_conj_assoc}])]
   fun simp ctxt thm = simplify (setup_simpset ctxt) thm
   fun REPEAT_TRYOF thm1 thm2 = REPEAT_TRYOF thm1 (thm1 OF [thm2])

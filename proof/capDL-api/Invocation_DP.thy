@@ -73,7 +73,6 @@ lemma object_clean_twice[simp]:
   "object_clean (object_clean x) = object_clean x"
   by (clarsimp simp:object_clean_def asid_reset_intent_reset_switch)
 
-
 (* The following should be correct once we rule the intent out of our lift function *)
 lemma sep_nonimpact_valid_lift:
   assumes non_intent_impact:
@@ -85,7 +84,8 @@ lemma sep_nonimpact_valid_lift:
    "\<lbrace>\<lambda>s. < Q >  s\<rbrace> f \<lbrace>\<lambda>rv s. < Q > s\<rbrace>"
   apply (clarsimp simp: valid_def sep_state_projection_def Let_def
                         sep_state_add_def sep_disj_sep_state_def
-                        sep_state_disj_def map_option_def
+                        sep_state_disj_def
+                        map_option_case
                  split: split_if_asm option.splits sep_state.splits)
   apply (erule rsubst [where P=Q])
   apply clarsimp
@@ -97,7 +97,7 @@ lemma sep_nonimpact_valid_lift:
      apply (simp add:object_at_def opt_object_def)+
     apply (drule_tac P1 ="\<lambda>x. True" and A1 = "\<lambda>x. x" in use_valid[OF _ non_intent_impact])
     apply (fastforce simp:object_at_def opt_object_def)+
-   apply (drule_tac P1 ="\<lambda>x. object_clean x = object_clean ab" and
+   apply (drule_tac P1 ="\<lambda>x. object_clean x = object_clean x2" and
                     A1 = "\<lambda>x. x" in use_valid[OF _ non_intent_impact])
     apply (fastforce simp:object_at_def opt_object_def)
    apply (clarsimp simp: object_at_def opt_object_def object_slots_object_clean
