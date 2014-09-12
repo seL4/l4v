@@ -1247,19 +1247,17 @@ lemma restart_cdl_current_thread:
   done
 
 lemma seL4_TCB_WriteRegisters_wp:
-assumes unify: "cnode_id = cap_object cnode_cap \<and>
-     offset tcb_root root_size = tcb_cap_slot \<and>
-     offset cspace_root root_size = cspace_slot"
-shows
   "\<lbrakk> is_cnode_cap cnode_cap;
     (* Caps point to the right objects. *)
      one_lvl_lookup cnode_cap word_bits root_size;
      guard_equal cnode_cap tcb_ref word_bits;
      is_tcb root_tcb;
      is_tcb_cap tcb_cap;
-     cnode_id = cap_object cnode_cap \<rbrakk> \<Longrightarrow>
+     tcb_id = cap_object tcb_cap \<rbrakk> \<Longrightarrow>
    \<lbrace> \<guillemotleft> root_tcb_id \<mapsto>f root_tcb
      \<and>* (root_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap
+     \<and>* tcb_id \<mapsto>f tcb
+     \<and>* (tcb_id, tcb_pending_op_slot) \<mapsto>c NullCap
      \<and>* (root_tcb_id, tcb_cspace_slot) \<mapsto>c cnode_cap
      \<and>* cap_object cnode_cap \<mapsto>f CNode (empty_cnode root_size)
      \<and>* (cap_object cnode_cap, offset tcb_ref root_size) \<mapsto>c tcb_cap
@@ -1267,12 +1265,14 @@ shows
   seL4_TCB_WriteRegisters tcb_ref False 0 2 regs
   \<lbrace>\<lambda>_.  \<guillemotleft> root_tcb_id \<mapsto>f root_tcb
     \<and>* (root_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap
+    \<and>* tcb_id \<mapsto>f tcb
+    \<and>* (tcb_id, tcb_pending_op_slot) \<mapsto>c NullCap
     \<and>* (root_tcb_id, tcb_cspace_slot) \<mapsto>c cnode_cap
     \<and>* cap_object cnode_cap \<mapsto>f CNode (empty_cnode root_size)
     \<and>* (cap_object cnode_cap, offset tcb_ref root_size) \<mapsto>c tcb_cap
     \<and>* R \<guillemotright> \<rbrace>"
   apply (simp add:seL4_TCB_WriteRegisters_def
-    sep_state_projection2_def 
+    sep_state_projection2_def
     is_tcb_def split:cdl_object.splits)
   apply (rule hoare_pre)
   apply (wp do_kernel_op_pull_back)
@@ -1330,15 +1330,15 @@ shows
           cap_type_def cap_object_def
           split:cdl_cap.splits)
        apply ((rule conjI|sep_solve)+)[1]
-   apply (clarsimp simp: unify user_pointer_at_def
+   apply (clarsimp simp: user_pointer_at_def
      Let_unfold sep_conj_assoc is_tcb_def)
    apply sep_cancel+
   apply sep_solve
 done
 
+
 lemma seL4_TCB_Resume_wp:
-assumes unify: "cnode_id = cap_object cnode_cap \<and>
-     offset tcb_root root_size = tcb_cap_slot \<and>
+assumes unify: "offset tcb_root root_size = tcb_cap_slot \<and>
      offset cspace_root root_size = cspace_slot"
 shows
   "\<lbrakk> is_cnode_cap cnode_cap;
@@ -1406,8 +1406,7 @@ shows
         apply wp
         apply (rule alternativeE_wp)
          apply wp[2]
-       apply (clarsimp simp:conj_ac lookup_extra_caps_def
-         mapME_def sequenceE_def)
+       apply (clarsimp simp: lookup_extra_caps_def mapME_def sequenceE_def)
        apply (rule returnOk_wp)
       apply (rule lookup_cap_and_slot_rvu
         [where r=root_size and cap=cnode_cap and cap'=tcb_cap])
@@ -1420,8 +1419,7 @@ shows
      apply clarify
      apply sep_solve
     apply clarsimp
-    apply (wp hoare_vcg_ball_lift hoare_vcg_conj_lift hoare_vcg_imp_lift
-       hoare_vcg_all_lift)
+    apply (wp hoare_vcg_conj_lift hoare_vcg_imp_lift hoare_vcg_all_lift)
       apply (wp update_thread_intent_update)
    apply clarify
    apply (drule_tac x = tcb_cap in spec)
@@ -1431,9 +1429,8 @@ shows
   apply (intro conjI impI allI)
          apply (clarsimp simp:is_tcb_def reset_cap_asid_tcb
            split:cdl_object.splits cdl_cap.splits)+
-        apply (simp add: ep_related_cap_def
-          cap_type_def cap_object_def
-          split:cdl_cap.splits)
+        apply (simp add: ep_related_cap_def cap_type_def cap_object_def
+                  split: cdl_cap.splits)
        apply ((rule conjI|sep_solve)+)[1]
    apply (clarsimp simp: unify user_pointer_at_def
      Let_unfold sep_conj_assoc is_tcb_def)
