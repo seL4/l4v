@@ -1142,7 +1142,7 @@ lemma cnode_slots_half_initialised_decomp:
 
 lemma distinct_singleton_set:
   "\<lbrakk>distinct xs; set xs = {x}\<rbrakk> \<Longrightarrow> xs = [x]"
-  by (metis set.simps(2) distinct.simps(2) distinct_singleton
+  by (metis set_simps(2) distinct.simps(2) distinct_singleton
             insert_iff insert_not_empty list.exhaust set_empty2)
 
 

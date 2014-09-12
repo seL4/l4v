@@ -1012,7 +1012,6 @@ lemma map_page_table_slots_wp:
   apply (rule hoare_gen_asm)
   apply (clarsimp simp: map_page_table_slots_def)
   apply (wp map_page_table_slots_wp', simp+)
-  apply (clarsimp)
   done
 
 lemma object_initialised_slot_initialised:

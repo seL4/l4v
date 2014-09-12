@@ -814,7 +814,6 @@ lemma seL4_CNode_Mutate_object_slot_initialised_sep_helper:
                 (assumption|simp add: ep_related_cap_default_cap
                  default_cap_has_type valid_src_cap_if_cnode
                  get_index_def)+)
-   apply clarsimp
    apply (frule_tac s=s and dup_caps=dup_caps and
                     t=t and orig_caps=orig_caps
                  in mint_pre,(assumption|rule refl|simp)+)
@@ -879,7 +878,6 @@ lemma seL4_CNode_Move_object_slot_initialised_cap_has_object_sep_helper:
                (assumption|simp add: ep_related_cap_default_cap
                  default_cap_has_type
                  get_index_def)+)
-    apply clarsimp
     apply (frule_tac s=s and t=t and dup_caps=dup_caps and orig_caps=orig_caps
                  in mint_pre,(assumption|rule refl|simp)+)
    apply (elim conjE)
@@ -1372,7 +1370,6 @@ lemma seL4_CNode_Mint_object_slot_initialised_sep_helper:
                in seL4_CNode_Mint_sep,
                (assumption|simp add: ep_related_cap_default_cap get_index_def
                  default_cap_has_type ep_related_cap_badge_of_default)+)
-    apply clarsimp
     apply (frule_tac s=s and t=t and dup_caps=dup_caps and orig_caps=orig_caps
                  in mint_pre,(assumption|rule refl|simp)+)
    apply (elim conjE)
@@ -1748,7 +1745,7 @@ lemma init_cspace_sep:
    apply (metis (no_types) distinct_append distinct_take_strg inf_sup_aci(1) take_add)
   apply (erule sep_map_set_conj_set_cong)
   apply clarsimp
-  apply (subst Un_commute, subst set_take_add, (simp add: nat_add_commute)+)
+  apply (subst Un_commute, subst set_take_add, (simp add: add.commute)+)
   done
 
 end

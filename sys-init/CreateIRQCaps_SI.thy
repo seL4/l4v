@@ -362,7 +362,7 @@ lemma si_objects_extra_caps'_split:
   ((\<And>* cptr \<in> set (take (card (used_irqs spec)) free_cptrs). (si_cnode_id, unat cptr) \<mapsto>c NullCap) \<and>*
    si_objects_extra_caps' (dom (cdl_objects spec)) free_cptrs' untyped_cptrs)"
   apply (frule well_formed_objects_card [symmetric])
-  apply (subst (asm) nat_add_commute)
+  apply (subst (asm) add.commute)
   apply (clarsimp simp: si_objects_extra_caps'_def sep_conj_exists sep_conj_assoc)
   apply (subst take_drop_append [where a="card {obj_id. real_object_at obj_id spec}"
                                    and b="card (used_irqs spec)"])
@@ -402,7 +402,7 @@ lemma create_irq_caps_sep:
   apply (rule hoare_gen_lifted_asm)
   apply (elim conjE)
   apply (subst si_objects_extra_caps'_split, assumption+)
-  apply (rule hoare_chain [OF create_irq_caps_sep_helper, standard, where orig_caps=orig_caps])
+  apply (rule hoare_chain [OF create_irq_caps_sep_helper, where orig_caps1=orig_caps])
    apply (rule pred_andI)
     apply sep_solve
    apply clarsimp

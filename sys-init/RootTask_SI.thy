@@ -887,7 +887,7 @@ lemma si_irq_null_caps_at_simplified:
     apply clarsimp
    apply (rule_tac x="the (map_of (zip irqs free_cptrs) a)" in exI)
    apply clarsimp
-   apply (frule_tac x="(cap_irq (the (opt_cap (aa, b) spec)))" in map_of_zip_is_Some'[THEN iffD1, standard], clarsimp)
+   apply (frule_tac x1="(cap_irq (the (opt_cap (aa, b) spec)))" in map_of_zip_is_Some'[THEN iffD1], clarsimp)
     apply (fastforce simp: cap_at_def used_irqs_def all_caps_def)
    apply (clarsimp simp: cap_ref_irq_def)
   apply simp
