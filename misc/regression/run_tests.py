@@ -209,7 +209,7 @@ def main():
         def print_line():
             print("".join(["-" for x in range(72)]))
         print("")
-        for (failed_test, log) in failed_test_log:
+        for (failed_test, log, _) in failed_test_log:
             print_line()
             print("TEST FAILURE: %s" % failed_test)
             print("")
