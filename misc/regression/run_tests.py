@@ -49,7 +49,10 @@ def which(file):
 #
 # Run a single test.
 #
-# Return if we succeeded and the log of execution (if "verbose" == false).
+# Return a tuple of (success, log).
+#
+# Log only contains the output if verbose is *false*; otherwise, the
+# log is output to stdout where we can't easily get  to it.
 #
 def run_test(test, verbose=False):
     # Construct the base command.
