@@ -111,11 +111,11 @@ definition
     ('cs local_state \<Rightarrow> string \<Rightarrow> 'cs local_state) \<Rightarrow>
     (channel, 'cs) comp"
 where
-  "Call_Client_s_echo_string ch s\<^sub>P embed \<equiv>
+  "Call_Client_s_echo_string ch s\<^sub>P embed_data \<equiv>
     Request (\<lambda>s. {\<lparr>q_channel = ch Client_s,
       q_data = Call 0 (String (s\<^sub>P s) # [])\<rparr>}) discard ;;
     Response (\<lambda>q s. case q_data q of Return xs \<Rightarrow>
-      {(embed s (case hd xs of String v \<Rightarrow> v),
+      {(embed_data s (case hd xs of String v \<Rightarrow> v),
       \<lparr>a_channel = ch Client_s, a_data = Void\<rparr>)} | _ \<Rightarrow> {})"
 
 definition
@@ -124,11 +124,11 @@ definition
     ('cs local_state \<Rightarrow> int \<Rightarrow> 'cs local_state) \<Rightarrow>
     (channel, 'cs) comp"
 where
-  "Call_Client_s_echo_int ch i\<^sub>P embed \<equiv>
+  "Call_Client_s_echo_int ch i\<^sub>P embed_data \<equiv>
     Request (\<lambda>s. {\<lparr>q_channel = ch Client_s,
       q_data = Call 1 (Integer (i\<^sub>P s) # [])\<rparr>}) discard ;;
     Response (\<lambda>q s. case q_data q of Return xs \<Rightarrow>
-      {(embed s (case hd xs of Integer v \<Rightarrow> v),
+      {(embed_data s (case hd xs of Integer v \<Rightarrow> v),
       \<lparr>a_channel = ch Client_s, a_data = Void\<rparr>)} | _ \<Rightarrow> {})"
 
 definition
@@ -137,11 +137,11 @@ definition
     ('cs local_state \<Rightarrow> int \<Rightarrow> int \<Rightarrow> 'cs local_state) \<Rightarrow>
     (channel, 'cs) comp"
 where
-  "Call_Client_s_echo_parameter ch pin\<^sub>P embed \<equiv>
+  "Call_Client_s_echo_parameter ch pin\<^sub>P embed_data \<equiv>
     Request (\<lambda>s. {\<lparr>q_channel = ch Client_s,
       q_data = Call 2 (Integer (pin\<^sub>P s) # [])\<rparr>}) discard ;;
     Response (\<lambda>q s. case q_data q of Return xs \<Rightarrow>
-      {(embed s (case hd xs of Integer v \<Rightarrow> v) (case xs ! 1 of Integer v \<Rightarrow> v),
+      {(embed_data s (case hd xs of Integer v \<Rightarrow> v) (case xs ! 1 of Integer v \<Rightarrow> v),
       \<lparr>a_channel = ch Client_s, a_data = Void\<rparr>)} | _ \<Rightarrow> {})"
 
 text {*

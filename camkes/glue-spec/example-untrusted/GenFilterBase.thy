@@ -78,11 +78,11 @@ definition
     ('cs local_state \<Rightarrow> string) \<Rightarrow>
     ('cs local_state \<Rightarrow> string \<Rightarrow> 'cs local_state) \<Rightarrow> (channel, 'cs) comp"
 where
-  "Call_Client_l_get_value ch id\<^sub>P embed \<equiv>
+  "Call_Client_l_get_value ch id\<^sub>P embed_data \<equiv>
     Request (\<lambda>s. {\<lparr>q_channel = ch Client_l,
       q_data = Call 0 (String (id\<^sub>P s) # [])\<rparr>}) discard ;;
     Response (\<lambda>q s. case q_data q of Return xs \<Rightarrow>
-      {(embed s (case hd xs of String v \<Rightarrow> v),
+      {(embed_data s (case hd xs of String v \<Rightarrow> v),
       \<lparr>a_channel = ch Client_l, a_data = Void\<rparr>)} | _ \<Rightarrow> {})"
 
 (* Filter's interfaces *)
@@ -95,11 +95,11 @@ definition
     ('cs local_state \<Rightarrow> string) \<Rightarrow>
     ('cs local_state \<Rightarrow> string \<Rightarrow> 'cs local_state) \<Rightarrow> (channel, 'cs) comp"
 where
-  "Call_Filter_backing_get_value ch id\<^sub>P embed \<equiv>
+  "Call_Filter_backing_get_value ch id\<^sub>P embed_data \<equiv>
     Request (\<lambda>s. {\<lparr>q_channel = ch Filter_backing,
       q_data = Call 0 (String (id\<^sub>P s) # [])\<rparr>}) discard ;;
     Response (\<lambda>q s. case q_data q of Return xs \<Rightarrow>
-      {(embed s (case hd xs of String v \<Rightarrow> v),
+      {(embed_data s (case hd xs of String v \<Rightarrow> v),
       \<lparr>a_channel = ch Filter_backing, a_data = Void\<rparr>)} | _ \<Rightarrow> {})"
 
 definition
