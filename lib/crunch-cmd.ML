@@ -8,6 +8,14 @@
  * @TAG(NICTA_BSD)
  *)
 
+(* Tracing debug. *)
+val should_debug = Unsynchronized.ref false
+fun debug_trace s =
+  if (!should_debug) then
+    tracing s
+  else
+    ()
+
 fun funkysplit [_,b,c] = [b,c]
         | funkysplit [_,c] = [c]
         | funkysplit l = l
@@ -201,7 +209,7 @@ val unfold_get_params = @{thms Let_def return_bind returnOk_bindE
 
 fun unfold lthy const triple nmspce =
     let
-      val _ = tracing "unfold"
+      val _ = debug_trace "unfold"
       val const_term = read_const lthy const;
       val const_defn = const |> Long_Name.base_name |> def_of;
       val const_def = deep_search_thms lthy const_defn const_term nmspce
@@ -251,11 +259,11 @@ fun map_unvarifyT t = map_types Logic.unvarifyT_global t
 
 fun induct_inst lthy const goal nmspce =
     let
-      val _ = tracing "induct_inst"
+      val _ = debug_trace "induct_inst"
       val base_const = Long_Name.base_name const;
-      val _ = tracing ("base_const: " ^ PolyML.makestring base_const)
+      val _ = debug_trace ("base_const: " ^ PolyML.makestring base_const)
       val induct_thm = base_const |> induct_of |> get_thm lthy;
-      val _ = tracing ("induct_thm: " ^ PolyML.makestring induct_thm)
+      val _ = debug_trace ("induct_thm: " ^ PolyML.makestring induct_thm)
       val const_term = read_const lthy const |> map_unvarifyT;
       val n = const_term |> fastype_of |> num_args;
       val t = mk_abs (Instance.magic $ mk_apps const_term n 0) n
@@ -264,7 +272,7 @@ fun induct_inst lthy const goal nmspce =
       val trivial_rule = Thm.trivial goal;
       val induct_inst = Thm.instantiate ([], [(P, t)]) induct_thm
                         RS trivial_rule;
-      val _ = tracing ("induct_inst" ^ Syntax.string_of_term lthy (Thm.prop_of induct_inst));
+      val _ = debug_trace ("induct_inst" ^ Syntax.string_of_term lthy (Thm.prop_of induct_inst));
       val simp_thms = deep_search_thms lthy (base_const |> simps_of) const_term nmspce;
       val induct_inst_simplified = induct_inst
         |> Simplifier.rewrite_goals_rule (map Simpdata.safe_mk_meta_eq simp_thms);
@@ -382,7 +390,7 @@ fun crunch cfg pre extra stack const' thms =
     val empty_ref = Unsynchronized.ref [] : thm list Unsynchronized.ref (* FIXME: avoid refs *)
   in
     let
-      val _ = "crunching constant: " ^ const |> tracing;
+      val _ = "crunching constant: " ^ const |> writeln;
       val const_term = read_const lthy const;
       val real_const_term = resolve_abbreviated lthy const_term;
       val goal = make_goal const_term const pre extra lthy
@@ -421,8 +429,8 @@ fun crunch cfg pre extra stack const' thms =
                       (subtract (op =) (#ig_dels cfg) (#igs cfg @ CrunchIgnore.get (Context.Proof lthy')));
               val stack' = const :: stack;
               val _ = if (length stack' > 20) then
-                         (tracing "Crunch call stack:";
-                          map tracing (const::stack);
+                         (writeln "Crunch call stack:";
+                          map writeln (const::stack);
                           error("probably infinite loop")) else ();
               val (goals, thms') = funkyfold (crunch cfg pre extra stack') (map fst ms) thms;
               val goals' = map_filter I goals
@@ -437,7 +445,7 @@ fun crunch cfg pre extra stack const' thms =
               val goal_prop2 = if Instance.has_preconds then collect_preconds pre else goal_prop;
 
               val lthy''' = Variable.auto_fixes goal_prop2 lthy''
-              val _ = tracing ("attempting: " ^ Syntax.string_of_term lthy''' goal_prop2);
+              val _ = writeln ("attempting: " ^ Syntax.string_of_term lthy''' goal_prop2);
  
             in (Goal.prove lthy''' [] [] goal_prop2
                   ( (*DupSkip.goal_prove_wrapper *) (fn _ => 
@@ -462,14 +470,14 @@ fun crunch cfg pre extra stack const' thms =
                       CHANGED (simp_tac lthy''' n)
                   )))) |> singleton (Proof_Context.export lthy''' lthy)
                   handle e => 
-                         (tracing "Crunch call stack:";
-                          map tracing (const::stack);
+                         (writeln "Crunch call stack:";
+                          map writeln (const::stack);
                           raise e)
                 , thms') end
         in (SOME thm, (get_thm_name cfg const, thm) :: thms') end
     end
     handle WrongType =>
-      let val _ = tracing ("The constant " ^ const ^ " has the wrong type and is being ignored")
+      let val _ = writeln ("The constant " ^ const ^ " has the wrong type and is being ignored")
       in (NONE, []) end
   end 
 
@@ -500,10 +508,8 @@ fun parse_unfold_pair unfold =
     else error "Could not parse unfold data, expected: (const, thm)" end
 
 fun crunch_x atts extra prp_name wpigs consts lthy =
-    let 
+    let
         fun const_name const = dest_Const (read_const lthy const) |> #1
-(*              handle exn => handle_int exn
-                               strip_comb (Syntax.read_term ctxt const) |> tap (fn x => tracing (PolyML.makestring x)) |> #1 |> dest_Const |> #1;*)
 
         val wps' = wpigs |> filter (fn (s,_) => s = wp_sect) |> map #2
 
