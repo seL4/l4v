@@ -34,8 +34,6 @@ begin
 declare word_neq_0_conv [simp del]
 declare neq0_conv [simp del]
 declare fun_upd_apply[simp del]
-declare ptr_add_0_id[simp del]
-declare ptr_coerce.simps[simp del]
 
 declare hoare_wp_combsE(4) [wp del, wp_comb del]
 declare hoare_wp_combsE(5) [wp del, wp_comb del]

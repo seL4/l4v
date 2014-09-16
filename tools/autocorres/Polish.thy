@@ -448,4 +448,7 @@ declare pred_and_true [L2opt, polish]
 
 lemmas [polish] = rel_simps eq_numeral_extra
 
+declare ptr_add_0_id[polish]
+declare ptr_coerce.simps[polish]
+
 end
