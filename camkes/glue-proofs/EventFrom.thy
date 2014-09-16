@@ -11,9 +11,8 @@
 header {* Event Send *}
 (*<*)
 theory EventFrom imports
-  "../../c-parser/CTranslation"
-  "../../autocorres/AutoCorres"
-  "../../autocorres/NonDetMonadEx"
+  "../../tools/c-parser/CTranslation"
+  "../../tools/autocorres/AutoCorres"
 begin
 
 (* THIS THEORY IS GENERATED. DO NOT EDIT. *)
