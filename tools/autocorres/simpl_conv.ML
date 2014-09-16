@@ -22,7 +22,7 @@ val the' = Utils.the'
 
 exception FunctionNotFound of string
 
-val simpl_conv_ss = simpset_of @{context}
+val simpl_conv_ss = AUTOCORRES_SIMPSET
 
 (*
  * Given a function constant name such as "Blah.foo_'proc", guess the underlying
