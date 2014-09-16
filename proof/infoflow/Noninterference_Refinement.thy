@@ -105,10 +105,7 @@ lemma LI_sub_big_steps':
       apply assumption+
     apply (erule sub_big_steps_I_holds)
      apply assumption+
-  apply (subgoal_tac "Fin A t = Fin C s")
-   apply (subgoal_tac "Fin A y = Fin C z")
-    apply (force simp: internal_R_def)
-   apply force+
+   apply (force simp: internal_R_def)
    done
 
 lemma LI_rel_terminate:
