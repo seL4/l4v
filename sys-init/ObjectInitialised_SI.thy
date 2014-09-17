@@ -198,6 +198,57 @@ where
   object_initialised_general spec t (spec2s t \<circ> cnode_half spec spec_object_id) sep_map_E spec_object_id"
 
 
+(**********************************************
+ * Predicates about CNodes being initialised. *
+ **********************************************)
+
+(* A TCB that isn't set to be schedulable. *)
+definition
+  tcb_half :: "cdl_state \<Rightarrow> cdl_object \<Rightarrow> cdl_object"
+where
+  "tcb_half spec obj = update_slots (\<lambda>slot.
+     if (slot = tcb_pending_op_slot \<or> slot = tcb_replycap_slot) \<and>
+         object_slots obj slot \<noteq> None
+     then Some NullCap else object_slots obj slot) obj"
+
+definition
+  tcb_half_initialised :: "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_object_id option) \<Rightarrow> cdl_object_id \<Rightarrow> sep_pred"
+where
+  "tcb_half_initialised spec t spec_object_id \<equiv>
+  object_initialised_general spec t (spec2s t \<circ> tcb_half spec) sep_map_o spec_object_id"
+
+definition
+  tcbs_half_initialised :: "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_object_id option) \<Rightarrow> cdl_object_id set \<Rightarrow> sep_pred"
+where
+  "tcbs_half_initialised spec t obj_ids \<equiv> \<And>* obj_id \<in> obj_ids. tcb_half_initialised spec t obj_id"
+
+(* The cnode's fields are half done (as per the spec). *)
+definition
+  tcb_fields_half_initialised :: "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_object_id option) \<Rightarrow> cdl_object_id \<Rightarrow> sep_pred"
+where
+  "tcb_fields_half_initialised spec t spec_object_id \<equiv>
+  object_initialised_general spec t (spec2s t \<circ> tcb_half spec) sep_map_f spec_object_id"
+
+(* The cnode's slots are half done (as per the spec). *)
+definition
+  tcb_slots_half_initialised :: "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_object_id option) \<Rightarrow> cdl_object_id \<Rightarrow> sep_pred"
+where
+  "tcb_slots_half_initialised spec t spec_object_id \<equiv>
+  object_initialised_general spec t (spec2s t \<circ> tcb_half spec) sep_map_S spec_object_id"
+
+(* A particular slot of an object is set up (as per the spec). *)
+definition
+  tcb_slot_half_initialised :: "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_object_id option) \<Rightarrow> cdl_object_id \<Rightarrow> cdl_cnode_index \<Rightarrow> sep_pred"
+where
+  "tcb_slot_half_initialised spec t spec_object_id slot \<equiv>
+  object_initialised_general spec t (spec2s t \<circ> tcb_half spec) (\<lambda>p. sep_map_s (p, slot)) spec_object_id"
+
+definition
+  tcb_empty_slots_half_initialised :: "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_object_id option) \<Rightarrow> cdl_object_id \<Rightarrow> sep_pred"
+where
+  "tcb_empty_slots_half_initialised spec t spec_object_id \<equiv>
+  object_initialised_general spec t (spec2s t \<circ> tcb_half spec) sep_map_E spec_object_id"
+
 (********************************************
  * Predicates about IRQs being initialised. *
  ********************************************)
@@ -504,12 +555,30 @@ lemma object_type_cnode_half [simp]:
   "object_type (cnode_half spec obj_id obj) = object_type obj"
   by (clarsimp simp: cnode_half_def)
 
-lemma object_slots_cnode_half [simp]:
+lemma object_type_tcb_half [simp]:
+  "object_type (tcb_half spec tcb) = object_type tcb"
+  by (simp add: tcb_half_def)
+
+lemma dom_object_slots_cnode_half [simp]:
   "dom (object_slots (cnode_half spec obj_id obj)) = dom (object_slots obj)"
   apply (clarsimp simp: cnode_half_def)
   apply (case_tac "has_slots obj")
    apply (auto simp: dom_def)
   done
+
+lemma dom_object_slots_tcb_half [simp]:
+  "dom (object_slots (tcb_half spec tcb)) =
+   dom (object_slots tcb)"
+  apply (clarsimp simp: tcb_half_def)
+  apply (case_tac "has_slots tcb")
+   apply (auto simp: dom_def)
+  done
+
+lemma object_slots_tcb_half:
+  "object_slots (tcb_half spec obj) =
+   (\<lambda>slot. if (slot = tcb_pending_op_slot \<or> slot = tcb_replycap_slot) \<and> object_slots obj slot \<noteq> None
+     then Some NullCap else object_slots obj slot)"
+  by (case_tac "has_slots obj", auto simp: tcb_half_def split: split_if_asm)
 
 lemma intent_reset_object_type:
   "intent_reset obj = intent_reset obj' \<Longrightarrow> object_type obj = object_type obj'"
@@ -604,6 +673,10 @@ lemma sep_map_E_spec2s [simp]:
    apply (case_tac "has_slots obj")
     apply simp+
   done
+
+lemma sep_map_E_tcb_half [simp]:
+  "obj_id \<mapsto>E tcb_half spec tcb = obj_id \<mapsto>E tcb"
+  by (rule sep_map_E_eq, simp+)
 
 lemma object_to_sep_state_fields_tcb_eq:
   "\<lbrakk>cdl_tcb_fault_endpoint tcb = cdl_tcb_fault_endpoint tcb';
@@ -1251,6 +1324,10 @@ lemma sep_map_f_cnode_half [simp]:
   apply (rule ext)
   apply (clarsimp simp: cnode_half_def sep_map_f_def sep_map_general_def)
   done
+
+lemma sep_map_f_tcb_half [simp]:
+  "obj_id \<mapsto>f tcb_half spec tcb = obj_id \<mapsto>f tcb"
+  by (clarsimp simp: tcb_half_def sep_map_f_def sep_map_general_def)
 
 lemma cnode_fields_empty_initialised:
   "cnode_at obj_id spec

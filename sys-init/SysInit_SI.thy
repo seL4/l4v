@@ -468,7 +468,7 @@ definition start_threads :: "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow
                                                                                   \<Rightarrow> unit u_monad"
 where
   "start_threads spec orig_caps obj_ids \<equiv> do
-    tcbs \<leftarrow> return [obj_id \<leftarrow> obj_ids. tcb_at obj_id spec];
+    tcbs \<leftarrow> return [obj_id \<leftarrow> obj_ids. is_waiting_thread_at obj_id spec];
     mapM_x (start_thread spec orig_caps) tcbs
   od"
 

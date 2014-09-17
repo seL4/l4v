@@ -590,7 +590,7 @@ lemma well_formed_irqhandler_cap_in_cnode:
         apply (drule (1) well_formed_well_formed_tcb)
         apply (clarsimp simp: well_formed_tcb_def opt_cap_def slots_of_def opt_object_def)
         apply (erule allE [where x=slot])
-        apply (simp add: tcb_slot_defs tcb_pending_op_slot_def)
+        apply (simp add: tcb_slot_defs cap_type_def is_irqhandler_cap_def split: cdl_cap.splits)
        apply (fastforce simp: opt_cap_def slots_of_def object_slots_def opt_object_def
                               is_cnode_def object_at_def is_asidpool_def)
       apply (frule_tac obj_id=obj_id in well_formed_asidpool_at, simp add: object_at_def)

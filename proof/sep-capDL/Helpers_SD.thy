@@ -206,8 +206,12 @@ lemma set_used_irq_list [simp]:
 
 
 lemma default_tcb_slots:
- "[0..<tcb_pending_op_slot] = [0,1,2,3,4]"
-  by (clarsimp simp: tcb_pending_op_slot_def upt_rec)
+ "[0 ..< tcb_pending_op_slot] = [0,1,2,3,4]"
+ "[0 ..< 5] = [0,1,2,3,4]"
+ "[0 .e. tcb_pending_op_slot] = [0,1,2,3,4,5]"
+ "[0 .e. (5::nat)] = [0,1,2,3,4,5]"
+ "[0..< 6] = [0,1,2,3,4,5]"
+  by (clarsimp simp: tcb_pending_op_slot_def upt_rec)+
 
 definition "update_tcb_fault_endpoint fault_ep = cdl_tcb_fault_endpoint_update (\<lambda>_. fault_ep)"
 
@@ -516,6 +520,15 @@ abbreviation
   "pd_at \<equiv> object_at is_pd"
 abbreviation
   "frame_at \<equiv> object_at is_frame"
+
+(* Threads that are waiting to run. *)
+definition
+  is_waiting_thread :: "cdl_object \<Rightarrow> bool"
+where
+  "is_waiting_thread obj \<equiv> is_tcb obj \<and> object_slots obj tcb_pending_op_slot = Some RestartCap"
+
+abbreviation
+  "is_waiting_thread_at \<equiv> object_at is_waiting_thread"
 
 
 (* Distinctions between "real objects" and IRQ objects. *)
