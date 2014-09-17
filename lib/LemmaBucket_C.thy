@@ -816,7 +816,7 @@ proof -
 
   let ?key_upd = "heap_update (array_ptr_index p False n) v"
   note commute = fold_commute_apply[where h="?key_upd"
-      and xs="[Suc n ..< CARD('b)]", where g=f' and f=f', standard]
+      and xs="[Suc n ..< CARD('b)]", where g=f' and f=f' for f']
 
   show ?thesis using n
     apply (simp add: heap_update_Array split_upt_on_n[OF n]
@@ -926,7 +926,7 @@ lemma h_t_valid_Array_element':
      apply (clarsimp simp: field_simps)
      apply (erule map_le_trans[rotated])
      apply (rule list_map_mono)
-     apply (subst mult_commute, rule typ_slice_t_array[unfolded array_tag_def])
+     apply (subst mult.commute, rule typ_slice_t_array[unfolded array_tag_def])
       apply assumption
      apply (simp add: size_of_def)
     apply (simp add: ptr_aligned_def align_of_def align_td_array
