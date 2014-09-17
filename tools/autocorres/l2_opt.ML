@@ -240,7 +240,7 @@ let
 
   (* Setup basic simplifier. *)
   fun basic_ss ctxt =
-      put_simpset (simpset_of @{theory_context AutoCorresSimpset}) ctxt
+      put_simpset AUTOCORRES_SIMPSET ctxt
       |> (fn ctxt => ctxt addsimps (L2PeepholeThms.get ctxt))
       |> (fn ctxt => ctxt addsimprocs [l2_gets_bind_simproc, l2_guard_simproc (simpset_of ctxt)])
       |> map_opt_simpset false
@@ -263,7 +263,7 @@ let
       Conv.fconv_rule (
         l2conv (fn ctxt =>
           monad_equiv ctxt
-          then_conv (simp_conv ctxt)
+          then_conv (simp_conv (put_simpset AUTOCORRES_SIMPSET ctxt))
         )) new_thm
     else
       new_thm

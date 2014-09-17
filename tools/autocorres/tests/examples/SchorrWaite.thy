@@ -383,7 +383,6 @@ schematic_lemma schorr_waite'_prove_def:
   "schorr_waite' root \<equiv> ?A root (s0 :: lifted_globals) (R :: node_C ptr set)"
   apply (subst schorr_waite'_def[abs_def])
   apply (subst syntax_hack_simp[abs_def])
-  apply (subst ptr_coerce.simps)+
   apply (subst whileLoop_add_inv
            [where I = "\<lambda>(p, cond, t) s. \<exists>stack. schorr_waite'_inv s s0 R p t cond stack"
               and M = "(\<lambda>((p, cond, t), s). schorr_waite'_measure s s0 R p t cond)"])

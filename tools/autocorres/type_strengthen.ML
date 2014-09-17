@@ -20,7 +20,7 @@ exception LiftingFailed of unit
 (* Generate a function name for the lifted function. *)
 fun gen_lifted_fn_name f = f ^ "'"
 
-val ts_simpset = AUTOCORRES_SIMPSET
+val ts_simpset = simpset_of @{context}
 
 (* Misc util functions. *)
 val the' = Utils.the'

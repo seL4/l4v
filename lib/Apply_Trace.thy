@@ -18,13 +18,17 @@ begin
 ML {*
 signature APPLY_TRACE =
 sig
-val apply_results : 
-  {localize_facts : bool, silent_fail : bool} ->
-  (Proof.context -> Method.text -> thm -> (string * term) list -> unit) -> 
-  Method.text_range -> Proof.state -> Proof.state Seq.result Seq.seq
+  val apply_results :
+    {localize_facts : bool, silent_fail : bool} ->
+    (Proof.context -> Method.text -> thm -> (string * term) list -> unit) -> 
+    Method.text_range -> Proof.state -> Proof.state Seq.result Seq.seq
 
-val mentioned_facts: Proof.context -> Method.text -> thm list
+  val mentioned_facts: Proof.context -> Method.text -> thm list
 
+  (* Lower level interface. *)
+  val clear_deps : thm -> thm
+  val join_deps : thm -> thm -> thm
+  val used_facts : thm -> (string * term) list
 end
 
 structure Apply_Trace : APPLY_TRACE =
