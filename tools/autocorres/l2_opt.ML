@@ -263,7 +263,7 @@ let
       Conv.fconv_rule (
         l2conv (fn ctxt =>
           monad_equiv ctxt
-          then_conv (simp_conv ctxt)
+          then_conv (simp_conv (put_simpset AUTOCORRES_SIMPSET ctxt))
         )) new_thm
     else
       new_thm
