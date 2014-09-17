@@ -15,14 +15,18 @@ Most proofs in this repository are conducted in the interactive proof
 assistant [Isabelle/HOL][2]. For an introduction to Isabelle, see its
 [official website][2] and [documentation][3].
 
+DOIs for citing recent releases of this repository:
+  * [![DOI][4]](http://dx.doi.org/10.5281/zenodo.11248)
+
   [1]: https://github.com/seL4/l4v                   "L4.verified Repository"
   [2]: http://isabelle.in.tum.de                     "Isabelle Website"
   [3]: http://isabelle.in.tum.de/documentation.html  "Isabelle Documentation"
+  [4]: https://zenodo.org/badge/doi/10.5281/zenodo.11248.png
 
 Repository Setup
 ----------------
 
-This repository is meant to be used as part of a Google [repo][4] setup.
+This repository is meant to be used as part of a Google [repo][5] setup.
 Instead of cloning it directly, please go to the following repository
 and follow the instructions there:
 
@@ -31,7 +35,7 @@ and follow the instructions there:
 For setting up the theorem prover and other dependencies, please see the
 section [Dependencies](#dependencies) below.
 
-  [4]: http://source.android.com/source/downloading.html#installing-repo     "google repo installation"
+  [5]: http://source.android.com/source/downloading.html#installing-repo     "google repo installation"
 
 Overview
 --------
@@ -67,7 +71,7 @@ The repository is organised as follows.
    further libraries for fixed-size machine words, a formalisation of state
    monads with nondeterminism and exceptions, a generic verification condition
    generator for monads, a recursive invariant prover for these (`crunch`), an
-   abstract separation logic formalisation, a prototype of the [Eisbach][5] proof
+   abstract separation logic formalisation, a prototype of the [Eisbach][6] proof
    method language, a prototype `levity` refactoring tool, and others.
 
  * [`tools`](tools/): larger, self-contained proof tools
@@ -91,7 +95,7 @@ The repository is organised as follows.
     systems.
 
 
-  [5]: http://www.nicta.com.au/pub?id=7847           "An Isabelle Proof Method Language"
+  [6]: http://www.nicta.com.au/pub?id=7847           "An Isabelle Proof Method Language"
 
 
 Dependencies
@@ -109,7 +113,7 @@ The dependencies for installing Isabelle are
 
 For running the standalone version of the C Parser you will additionally need
 
- * [MLton][6] ML compiler (package `mlton-compiler` on Ubuntu)
+ * [MLton][7] ML compiler (package `mlton-compiler` on Ubuntu)
 
 For running the C proofs, you need a working C preprocessor setup for the seL4
 repository. 
@@ -117,7 +121,7 @@ repository.
 *On Linux*: the best way to make sure you have everything is to install the
 full build environment for seL4:
 
-  * seL4 [development tool chain][7] on Debian and Ubuntu
+  * seL4 [development tool chain][8] on Debian and Ubuntu
 
 *On MacOS*: here it is harder to get a full cross-compiler setup going. For
 normal proof development, a full setup is not necessary, though. You mostly
@@ -129,16 +133,16 @@ need a gcc-compatible C pre-processor and python. Try the following steps:
     version, you're set. Otherwise it should pop up a window and prompt for
     installation of the command line tools.
   * install `Tempita`, for instance using `sudo easy_install tempita`.
-    `easy_install` is part of Python's [`setuptools`][8].
+    `easy_install` is part of Python's [`setuptools`][9].
   * install the [`misc/scripts/cpp`](misc/scripts/cpp) wrapper for clang, 
     by putting it in `~/bin`, or somewhere else in your `PATH`.
   * set `export TOOLPREFIX=""` to tell the seL4 build not to use a cross
     compiler.
 
 
-[6]: http://mlton.org                               "MLton ML compiler"
-[7]: http://sel4.systems/Download/DebianToolChain   "seL4 tool chain setup"
-[8]: https://pypi.python.org/pypi/setuptools        "python package installer"
+[7]: http://mlton.org                               "MLton ML compiler"
+[8]: http://sel4.systems/Download/DebianToolChain   "seL4 tool chain setup"
+[9]: https://pypi.python.org/pypi/setuptools        "python package installer"
 
 
 Isabelle Setup

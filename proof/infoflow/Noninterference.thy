@@ -3394,7 +3394,7 @@ lemma cur_domain_reads: "(s,s') \<in> uwr u \<Longrightarrow> is_domain initial_
   apply (simp add: uwr_def sameFor_def sameFor_subject_def)
   apply clarify
   apply (simp(no_asm_use))
-  apply clarify
+  apply simp
   done
 
 lemmas domain_can_read_context = cur_domain_reads[THEN conjunct1]

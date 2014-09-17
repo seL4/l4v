@@ -1,5 +1,4 @@
-Built from git repo at ../../../seL4/haskell by kleing
+Built from git repo at ../../../seL4/haskell by davidg
 
 Generated from changeset:
-2261557 Fix IFC6410 build
-
+(manually merged)

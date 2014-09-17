@@ -49,14 +49,34 @@ lemma rights_extra_rights:
     else rights c)"
   by (simp add: extra_rights_def)
 
-(* These translate Create into all_rights *)
-definition
-  has_at_least :: "cap \<Rightarrow> cap set \<Rightarrow> bool" (infix ":<" 50) where
-  "c :< C \<equiv> \<exists>c' \<in> C. target c = target c' \<and> rights (extra_rights c) \<subseteq> rights (extra_rights c')"
+(* The following two definitions both translate Create into all_rights *)
 
+(* A cap is in a set, or a cap with more access is. *)
 definition
-  has_at_most :: "cap \<Rightarrow> cap set \<Rightarrow> bool" (infix ":>" 50) where
-  "c :> C \<equiv> \<forall>c' \<in> C. target c' = target c \<longrightarrow> rights (extra_rights c') \<subseteq> rights (extra_rights c)"
+  cap_in_caps :: "cap \<Rightarrow> cap set \<Rightarrow> bool" (infix "\<in>cap" 50) where
+  "c \<in>cap C \<equiv> \<exists>c' \<in> C. target c = target c' \<and> rights (extra_rights c) \<subseteq> rights (extra_rights c')"
+
+abbreviation not_cap_in_caps where
+  "not_cap_in_caps x A \<equiv> ~ (x \<in>cap A)" -- "non-membership"
+
+notation (input) cap_in_caps (infix ":cap" 50)
+notation (latex output)  cap_in_caps (infix "\<in>\<^sub>c\<^sub>a\<^sub>p" 50)
+
+notation
+  not_cap_in_caps  ("op \<notin>cap") and
+  not_cap_in_caps  ("(_/ \<notin>cap _)" [51, 51] 50)
+
+notation (latex output)
+  not_cap_in_caps  ("op \<notin>\<^sub>c\<^sub>a\<^sub>p") and
+  not_cap_in_caps  (infix "\<notin>\<^sub>c\<^sub>a\<^sub>p" 50)
+
+(* A set of caps "caps" have less (or equal) access to an entity as "cap" does. *)
+definition
+  caps_dominated_by :: "cap set \<Rightarrow> cap \<Rightarrow> bool" (infix "\<le>cap" 50) where
+  "caps \<le>cap cap \<equiv> \<forall>cap' \<in> caps. target cap' = target cap \<longrightarrow> rights (extra_rights cap') \<subseteq> rights (extra_rights cap)"
+
+notation (input) caps_dominated_by (infix "<=cap" 50)
+notation (latex output) caps_dominated_by (infix "\<unlhd>\<^sub>c\<^sub>a\<^sub>p" 50)
 
 definition
   shares_caps :: "state \<Rightarrow> entity_id \<Rightarrow> entity_id \<Rightarrow> bool" where
@@ -64,7 +84,7 @@ definition
 
 definition
   leak :: "state \<Rightarrow> entity_id \<Rightarrow> entity_id \<Rightarrow> bool" ("_ \<turnstile> _ \<rightarrow> _") where
-  "leak s e\<^sub>x e\<^sub>y \<equiv> take_cap e\<^sub>x :< caps_of s e\<^sub>y \<or> grant_cap e\<^sub>y :< caps_of s e\<^sub>x \<or> shares_caps s e\<^sub>x e\<^sub>y"
+  "leak s e\<^sub>x e\<^sub>y \<equiv> take_cap e\<^sub>x \<in>cap caps_of s e\<^sub>y \<or> grant_cap e\<^sub>y \<in>cap caps_of s e\<^sub>x \<or> shares_caps s e\<^sub>x e\<^sub>y"
 
 
 definition
@@ -96,17 +116,13 @@ translations
   "\<not> (s \<turnstile> x \<leftrightarrow> y)" <= "(x,y) \<notin> CONST directly_tgs_connected s"
   "\<not> (s \<turnstile> x \<leftrightarrow>* y)" <= "(x,y) \<notin> CONST tgs_connected s"
 
-lemma directly_tgs_connected_def3:
-  "s \<turnstile> e\<^sub>x \<leftrightarrow> e\<^sub>y = leak s e\<^sub>x e\<^sub>y \<or> leak s e\<^sub>y e\<^sub>x"
-  by (auto simp: directly_tgs_connected_def)
-
 lemma shares_caps_sym [simp]:
  "shares_caps s y x = shares_caps s x y"
   by (auto simp: shares_caps_def)
 
 lemma directly_tgs_connected_def4:
-  "s \<turnstile> e\<^sub>x \<leftrightarrow> e\<^sub>y = (take_cap e\<^sub>x :< caps_of s e\<^sub>y \<or> take_cap e\<^sub>y :< caps_of s e\<^sub>x \<or>
-                  grant_cap e\<^sub>y :< caps_of s e\<^sub>x \<or> grant_cap e\<^sub>x :< caps_of s e\<^sub>y \<or>
+  "s \<turnstile> e\<^sub>x \<leftrightarrow> e\<^sub>y = (take_cap e\<^sub>x \<in>cap caps_of s e\<^sub>y \<or> take_cap e\<^sub>y \<in>cap caps_of s e\<^sub>x \<or>
+                  grant_cap e\<^sub>y \<in>cap caps_of s e\<^sub>x \<or> grant_cap e\<^sub>x \<in>cap caps_of s e\<^sub>y \<or>
                   shares_caps s e\<^sub>x e\<^sub>y)"
   by (auto simp: directly_tgs_connected_def leak_def)
 
@@ -138,9 +154,9 @@ lemma direct_caps_of_caps_of_eq:
                 direct_caps_of_def)
 
 lemma direct_caps_of_caps_of_eq2:
-  "\<lbrakk>\<forall> e. direct_caps_of s e = direct_caps_of s' e; c :< caps_of s e\<rbrakk> \<Longrightarrow> c :< caps_of s' e"
+  "\<lbrakk>\<forall> e. direct_caps_of s e = direct_caps_of s' e; c \<in>cap caps_of s e\<rbrakk> \<Longrightarrow> c \<in>cap caps_of s' e"
   apply (drule direct_caps_of_caps_of_eq)
-  apply (simp add: has_at_least_def)
+  apply (simp add: cap_in_caps_def)
   by auto
 
 lemma direct_caps_of_directly_tgs_connected_eq:
@@ -265,15 +281,15 @@ lemmas directly_tgs_connected_rtrancl_into_rtrancl =
 
 lemma take_caps_directly_tgs_connected:
   "\<lbrakk>c \<in> caps_of s e; Take \<in> rights c\<rbrakk> \<Longrightarrow> s \<turnstile> e \<leftrightarrow> target c"
-  by (auto simp: directly_tgs_connected_def leak_def take_cap_def has_at_least_def extra_rights_def all_rights_def)
+  by (auto simp: directly_tgs_connected_def leak_def take_cap_def cap_in_caps_def extra_rights_def all_rights_def)
 
 lemma grant_caps_directly_tgs_connected:
   "\<lbrakk>c \<in> caps_of s e; Grant \<in> rights c\<rbrakk> \<Longrightarrow> s \<turnstile> e \<leftrightarrow> target c"
-  by (auto simp: directly_tgs_connected_def leak_def grant_cap_def has_at_least_def extra_rights_def all_rights_def)
+  by (auto simp: directly_tgs_connected_def leak_def grant_cap_def cap_in_caps_def extra_rights_def all_rights_def)
 
 lemma create_caps_directly_tgs_connected:
   "\<lbrakk>c \<in> caps_of s e; Create \<in> rights c\<rbrakk> \<Longrightarrow> s \<turnstile> e \<leftrightarrow> target c"
-  by (auto simp: directly_tgs_connected_def leak_def has_at_least_def rights_extra_rights all_rights_def)
+  by (auto simp: directly_tgs_connected_def leak_def cap_in_caps_def rights_extra_rights all_rights_def)
 
 lemma store_connected_directly_tgs_connected:
   "(x, y) \<in> store_connected s \<Longrightarrow> s \<turnstile> x \<leftrightarrow> y"
@@ -281,18 +297,18 @@ lemma store_connected_directly_tgs_connected:
 
 (* Lemmas on caps *)
 
-lemma has_at_least_insert [simp]:
-  "c :< insert c' S = (target c = target c' \<and>
-  rights (extra_rights c) \<subseteq> rights (extra_rights c') \<or> c :< S)"
-  by (simp add: has_at_least_def)
+lemma cap_in_caps_insert [simp]:
+  "c \<in>cap insert c' S = (target c = target c' \<and>
+  rights (extra_rights c) \<subseteq> rights (extra_rights c') \<or> c \<in>cap S)"
+  by (simp add: cap_in_caps_def)
 
-lemma has_at_least_singleton [simp]:
-  "c :< {c'} = (target c = target c' \<and> rights (extra_rights c) \<subseteq> rights (extra_rights c'))"
-  by (simp add: has_at_least_def)
+lemma cap_in_caps_singleton [simp]:
+  "c \<in>cap {c'} = (target c = target c' \<and> rights (extra_rights c) \<subseteq> rights (extra_rights c'))"
+  by (simp add: cap_in_caps_def)
 
 lemma not_in [simp]:
-  "c :> {}"
-  by(simp add: has_at_most_def)
+  "{} \<le>cap c"
+  by(simp add: caps_dominated_by_def)
 
 lemma extra_rights_diminish:
   "x \<in> rights (extra_rights (diminish r c))
@@ -316,7 +332,7 @@ lemma direct_caps_of_generalOp:
 
 lemma direct_caps_of_generalOp2:
   "\<lbrakk>c' \<in> direct_caps_of (generalOperation e\<^sub>0 e\<^sub>1 c r s) x\<rbrakk> \<Longrightarrow>
-   c' \<in> direct_caps_of s x \<or> (c' :< {c} \<and> x = e\<^sub>1)"
+   c' \<in> direct_caps_of s x \<or> (c' \<in>cap {c} \<and> x = e\<^sub>1)"
   apply (clarsimp simp: direct_caps_of_generalOp extra_rights_diminish
            split:split_if_asm)
   apply (drule extra_rights_diminish)
@@ -401,45 +417,45 @@ lemma shares_caps_of_generalOp:
 lemma caps_of_generalOp:
   "\<lbrakk>c' \<in> caps_of (generalOperation e\<^sub>0 e\<^sub>1 c r s) x;
    c \<in> caps_of s e\<^sub>0; s \<turnstile> e\<^sub>0 \<leftrightarrow> e\<^sub>1\<rbrakk>
-  \<Longrightarrow> \<exists>z. (x,z) \<in> tgs_connected s \<and> c' :< caps_of s z"
+  \<Longrightarrow> \<exists>z. (x,z) \<in> tgs_connected s \<and> c' \<in>cap caps_of s z"
   apply (simp add: caps_of_def[where e=x])
   apply clarsimp
   apply (frule (2) store_connected_generalOp2)
   apply (drule direct_caps_of_generalOp2)
   apply (erule disjE)
    apply (drule direct_cap_in_cap)
-   apply (fastforce simp: has_at_least_def)
+   apply (fastforce simp: cap_in_caps_def)
   apply (subgoal_tac "s \<turnstile> x \<leftrightarrow>* e\<^sub>0")
-   apply (subgoal_tac "c' :< caps_of s e\<^sub>0")
+   apply (subgoal_tac "c' \<in>cap caps_of s e\<^sub>0")
     apply fastforce
-   apply (fastforce simp: has_at_least_def)
+   apply (fastforce simp: cap_in_caps_def)
   apply clarsimp
   apply (drule directly_tgs_connected_comm [where x="e\<^sub>0" and y="e\<^sub>1"])
   apply (simp add: tgs_connected_def)
   done
 
 lemma take_cap_generalOp:
-  "\<lbrakk>take_cap y :< caps_of (generalOperation e\<^sub>0 e\<^sub>1 c r s) x;
+  "\<lbrakk>take_cap y \<in>cap caps_of (generalOperation e\<^sub>0 e\<^sub>1 c r s) x;
    c \<in> caps_of s e\<^sub>0; s \<turnstile> e\<^sub>0 \<leftrightarrow> e\<^sub>1\<rbrakk>
-  \<Longrightarrow> \<exists>z.  s \<turnstile> x \<leftrightarrow>* z \<and> take_cap y :< caps_of s z"
-  apply (simp add: has_at_least_def)
+  \<Longrightarrow> \<exists>z.  s \<turnstile> x \<leftrightarrow>* z \<and> take_cap y \<in>cap caps_of s z"
+  apply (simp add: cap_in_caps_def)
   apply clarsimp
   apply (drule (2) caps_of_generalOp)
-  apply (fastforce simp: has_at_least_def)
+  apply (fastforce simp: cap_in_caps_def)
   done
 
 lemma grant_cap_generalOp:
-  "\<lbrakk>grant_cap y :< caps_of (generalOperation e\<^sub>0 e\<^sub>1 c r s) x;
+  "\<lbrakk>grant_cap y \<in>cap caps_of (generalOperation e\<^sub>0 e\<^sub>1 c r s) x;
    c \<in> caps_of s e\<^sub>0; s \<turnstile> e\<^sub>0 \<leftrightarrow> e\<^sub>1\<rbrakk>
-  \<Longrightarrow> \<exists>z.  s \<turnstile> x \<leftrightarrow>* z \<and> grant_cap y :< caps_of s z"
-  apply (simp add: has_at_least_def)
+  \<Longrightarrow> \<exists>z.  s \<turnstile> x \<leftrightarrow>* z \<and> grant_cap y \<in>cap caps_of s z"
+  apply (simp add: cap_in_caps_def)
   apply clarsimp
   apply (drule (2) caps_of_generalOp)
-  apply (fastforce simp: has_at_least_def)
+  apply (fastforce simp: cap_in_caps_def)
   done
 
 lemma take_cap_generalOp2:
-  "\<lbrakk>take_cap y :< caps_of (generalOperation e\<^sub>0 e\<^sub>1 c r s) x;
+  "\<lbrakk>take_cap y \<in>cap caps_of (generalOperation e\<^sub>0 e\<^sub>1 c r s) x;
    c \<in> caps_of s e\<^sub>0; s \<turnstile> e\<^sub>0 \<leftrightarrow> e\<^sub>1\<rbrakk>
   \<Longrightarrow> (x, y) \<in> tgs_connected s"
   apply (drule (2) take_cap_generalOp)
@@ -450,7 +466,7 @@ lemma take_cap_generalOp2:
   done
 
 lemma grant_cap_generalOp2:
-  "\<lbrakk>grant_cap y :< caps_of (generalOperation e\<^sub>0 e\<^sub>1 c r s) x;
+  "\<lbrakk>grant_cap y \<in>cap caps_of (generalOperation e\<^sub>0 e\<^sub>1 c r s) x;
    c \<in> caps_of s e\<^sub>0; s \<turnstile> e\<^sub>0 \<leftrightarrow> e\<^sub>1\<rbrakk>
   \<Longrightarrow> (x, y) \<in> tgs_connected s"
   apply (drule (2) grant_cap_generalOp)
@@ -511,7 +527,7 @@ lemma copy_legal_directly_tgs_connected:
 
 lemma caps_of_create:
   "\<lbrakk>c' \<in> caps_of (createOperation e c\<^sub>1 c\<^sub>2 s) x; legal (SysCreate e c\<^sub>1 c\<^sub>2) s\<rbrakk>
-  \<Longrightarrow> \<exists>z. (x,z) \<in> tgs_connected s \<and> c' :< caps_of s z"
+  \<Longrightarrow> \<exists>z. (x,z) \<in> tgs_connected s \<and> c' \<in>cap caps_of s z"
   apply (frule create_legal_directly_tgs_connected)
   apply (clarsimp simp: create_general)
   apply (drule caps_of_make_entity2 [rotated], clarsimp)
@@ -521,7 +537,7 @@ lemma caps_of_create:
 
 lemma caps_of_take:
   "\<lbrakk>c' \<in> caps_of (takeOperation e c\<^sub>1 c\<^sub>2 r s) x; legal (SysTake e c\<^sub>1 c\<^sub>2 r) s\<rbrakk>
-  \<Longrightarrow> \<exists>z. (x,z) \<in> tgs_connected s \<and> c' :< caps_of s z"
+  \<Longrightarrow> \<exists>z. (x,z) \<in> tgs_connected s \<and> c' \<in>cap caps_of s z"
   apply (frule take_legal_directly_tgs_connected)
   apply (clarsimp simp: take_general)
   apply (drule (2) caps_of_generalOp)
@@ -530,7 +546,7 @@ lemma caps_of_take:
 
 lemma caps_of_grant:
   "\<lbrakk>c' \<in> caps_of (grantOperation e c\<^sub>1 c\<^sub>2 r s) x; legal (SysGrant e c\<^sub>1 c\<^sub>2 r) s\<rbrakk>
-  \<Longrightarrow> \<exists>z. (x,z) \<in> tgs_connected s \<and> c' :< caps_of s z"
+  \<Longrightarrow> \<exists>z. (x,z) \<in> tgs_connected s \<and> c' \<in>cap caps_of s z"
   apply (frule grant_legal_directly_tgs_connected)
   apply (clarsimp simp: grant_general)
   apply (drule (2) caps_of_generalOp)
@@ -539,7 +555,7 @@ lemma caps_of_grant:
 
 lemma caps_of_copy:
   "\<lbrakk>c' \<in> caps_of (copyOperation e c\<^sub>1 c\<^sub>2 r s) x; legal (SysCopy e c\<^sub>1 c\<^sub>2 r) s\<rbrakk>
-  \<Longrightarrow> \<exists>z. (x,z) \<in> tgs_connected s \<and> c' :< caps_of s z"
+  \<Longrightarrow> \<exists>z. (x,z) \<in> tgs_connected s \<and> c' \<in>cap caps_of s z"
   apply (frule copy_legal_directly_tgs_connected)
   apply (clarsimp simp: copy_general)
   apply (drule (2) caps_of_generalOp)
@@ -661,15 +677,15 @@ lemma destroy_directly_tgs_connected:
   apply(erule disjE, simp)
   apply(simp add: directly_tgs_connected_def leak_def)
   apply (erule disjE)
-   apply(fastforce simp add: has_at_least_def dest!: caps_of_destroy)
+   apply(fastforce simp add: cap_in_caps_def dest!: caps_of_destroy)
   apply (erule disjE)
-   apply(fastforce simp add: has_at_least_def dest!: caps_of_destroy)
+   apply(fastforce simp add: cap_in_caps_def dest!: caps_of_destroy)
   apply (erule disjE)
    apply (drule shares_caps_destroy, simp)
   apply (erule disjE)
-   apply(fastforce simp add: has_at_least_def dest!: caps_of_destroy)
+   apply(fastforce simp add: cap_in_caps_def dest!: caps_of_destroy)
   apply (erule disjE)
-   apply(fastforce simp add: has_at_least_def dest!: caps_of_destroy)
+   apply(fastforce simp add: cap_in_caps_def dest!: caps_of_destroy)
   apply (drule shares_caps_destroy, simp)
   done
 
@@ -745,7 +761,7 @@ lemma remove_directly_tgs_connected:
   apply(simp add: step_def split: split_if_asm)
   apply(erule disjE, simp)
   apply(simp add: directly_tgs_connected_def leak_def)
-  apply(simp add: has_at_least_def)
+  apply(simp add: cap_in_caps_def)
   apply(clarsimp)
   apply safe
      prefer 3
@@ -790,7 +806,7 @@ lemma removeSet_connected:
   apply(simp add: step_def split: split_if_asm)
   apply(erule disjE, simp)
   apply(simp add: directly_tgs_connected_def leak_def)
-  apply(simp add: has_at_least_def)
+  apply(simp add: cap_in_caps_def)
   apply(clarsimp)
   apply safe
      prefer 3
@@ -896,15 +912,15 @@ lemma revoke_directly_tgs_connected:
   apply (erule disjE, simp)
   apply (simp add: directly_tgs_connected_def leak_def)
   apply (erule disjE)
-   apply(auto simp add: has_at_least_def dest!: caps_of_revoke)[1]
+   apply(auto simp add: cap_in_caps_def dest!: caps_of_revoke)[1]
   apply (erule disjE)
-   apply(auto simp add: has_at_least_def dest!: caps_of_revoke)[1]
+   apply(auto simp add: cap_in_caps_def dest!: caps_of_revoke)[1]
   apply (erule disjE)
    apply (drule (1) shares_caps_revoke, simp)
   apply (erule disjE)
-   apply(auto simp add: has_at_least_def dest!: caps_of_revoke)[1]
+   apply(auto simp add: cap_in_caps_def dest!: caps_of_revoke)[1]
   apply (erule disjE)
-   apply(auto simp add: has_at_least_def dest!: caps_of_revoke)[1]
+   apply(auto simp add: cap_in_caps_def dest!: caps_of_revoke)[1]
   apply (drule (1) shares_caps_revoke, simp)
   done
 
@@ -1000,40 +1016,40 @@ lemma leakage_rule:
 
 lemma caps_of_op:
   "\<lbrakk>s' \<in> step cmd s; c' \<in> caps_of s' x\<rbrakk>
-  \<Longrightarrow> \<exists>z. s \<turnstile> x \<leftrightarrow>* z \<and> c' :< caps_of s z"
+  \<Longrightarrow> \<exists>z. s \<turnstile> x \<leftrightarrow>* z \<and> c' \<in>cap caps_of s z"
   apply (simp add: step_def split:split_if_asm)
    prefer 2
-   apply (fastforce simp: has_at_least_def tgs_connected_def rights_extra_rights)
+   apply (fastforce simp: cap_in_caps_def tgs_connected_def rights_extra_rights)
   apply (erule disjE)
-   apply (fastforce simp: has_at_least_def tgs_connected_def rights_extra_rights)
+   apply (fastforce simp: cap_in_caps_def tgs_connected_def rights_extra_rights)
   apply (case_tac cmd)
          apply (simp add: caps_of_create)
         apply (simp add: caps_of_take)
        apply (simp add: caps_of_grant)
       apply (simp add: caps_of_copy)
      apply (clarsimp, drule caps_of_remove)
-     apply (fastforce simp: has_at_least_def tgs_connected_def rights_extra_rights)
+     apply (fastforce simp: cap_in_caps_def tgs_connected_def rights_extra_rights)
     apply (clarsimp, drule caps_of_removeSet)
-    apply (fastforce simp: has_at_least_def tgs_connected_def rights_extra_rights)
+    apply (fastforce simp: cap_in_caps_def tgs_connected_def rights_extra_rights)
    apply (clarsimp, drule (1) caps_of_revoke)
-   apply (fastforce simp: has_at_least_def tgs_connected_def rights_extra_rights)
+   apply (fastforce simp: cap_in_caps_def tgs_connected_def rights_extra_rights)
   apply (clarsimp, drule caps_of_destroy)
-  apply (fastforce simp: has_at_least_def tgs_connected_def rights_extra_rights)
+  apply (fastforce simp: cap_in_caps_def tgs_connected_def rights_extra_rights)
   done
 
 lemma authority_confinement_induct_step:
   "\<lbrakk>s' \<in> step cmd s;
-    \<forall>e\<^sub>i. s \<turnstile> e\<^sub>x \<leftrightarrow>* e\<^sub>i \<longrightarrow> c :> caps_of s e\<^sub>i\<rbrakk>
-  \<Longrightarrow> c :> caps_of s' e\<^sub>x"
-  apply (clarsimp simp: has_at_most_def)
+    \<forall>e\<^sub>i. s \<turnstile> e\<^sub>x \<leftrightarrow>* e\<^sub>i \<longrightarrow> caps_of s e\<^sub>i \<le>cap c\<rbrakk>
+  \<Longrightarrow> caps_of s' e\<^sub>x \<le>cap c"
+  apply (clarsimp simp: caps_dominated_by_def)
   apply (drule (1) caps_of_op)
-  apply (fastforce simp: has_at_least_def)
+  apply (fastforce simp: cap_in_caps_def)
   done
 
 lemma authority_confinement_helper:
   "s' \<in> execute cmds s \<longrightarrow>
-   (\<forall>e\<^sub>i. s \<turnstile> e\<^sub>x \<leftrightarrow>* e\<^sub>i \<longrightarrow> c :> caps_of s e\<^sub>i) \<longrightarrow>
-   (\<forall>e\<^sub>i. s' \<turnstile> e\<^sub>x \<leftrightarrow>* e\<^sub>i \<longrightarrow> c :> caps_of s' e\<^sub>i)"
+   (\<forall>e\<^sub>i. s \<turnstile> e\<^sub>x \<leftrightarrow>* e\<^sub>i \<longrightarrow> caps_of s e\<^sub>i \<le>cap c) \<longrightarrow>
+   (\<forall>e\<^sub>i. s' \<turnstile> e\<^sub>x \<leftrightarrow>* e\<^sub>i \<longrightarrow> caps_of s' e\<^sub>i \<le>cap c)"
 proof (induct cmds arbitrary: s')
 case Nil
   show ?case by clarsimp
@@ -1051,8 +1067,8 @@ qed
 
 lemma authority_confinement:
   "\<lbrakk>s' \<in> execute cmds s;
-    \<forall>e\<^sub>i. s \<turnstile> e\<^sub>x \<leftrightarrow>* e\<^sub>i \<longrightarrow> c :> caps_of s e\<^sub>i\<rbrakk>
-  \<Longrightarrow> c :> caps_of s' e\<^sub>x"
+    \<forall>e\<^sub>i. s \<turnstile> e\<^sub>x \<leftrightarrow>* e\<^sub>i \<longrightarrow> caps_of s e\<^sub>i \<le>cap c\<rbrakk>
+  \<Longrightarrow> caps_of s' e\<^sub>x \<le>cap c"
   by (erule authority_confinement_helper [rule_format, where e\<^sub>x=e\<^sub>x], simp_all)
 
 end

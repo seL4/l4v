@@ -20,7 +20,7 @@ exception LiftingFailed of unit
 (* Generate a function name for the lifted function. *)
 fun gen_lifted_fn_name f = f ^ "'"
 
-val ts_simpset = simpset_of @{context}
+val ts_simpset = AUTOCORRES_SIMPSET
 
 (* Misc util functions. *)
 val the' = Utils.the'
@@ -262,7 +262,7 @@ in (polish_thm, dict) end
  * If the lift does not succeed, the function returns NONE.
  *)
 fun lift_function_rewrite rule_set filename prog_info fn_info
-    all_callee_proofs functions lthy =
+    all_callee_proofs functions keep_going lthy =
 let
   val fn_names = map fst functions
   val fn_defs = map snd functions
@@ -496,7 +496,7 @@ let
         lthy
     end
     handle THM _ =>
-           (Utils.THM_non_critical
+           (Utils.THM_non_critical keep_going
                 ("autocorres: failed to prove ccorres theorem for " ^ fn_name)
                 0 [l1_thm, l2_thm, hl_thm, wa_thm, ts_thm];
             lthy)
@@ -537,14 +537,14 @@ end
 
 (* Lift the given function set, trying each rule until one succeeds. *)
 fun lift_function rules force_lift filename prog_info fn_info
-    all_callee_proofs functions lthy =
+    all_callee_proofs functions keep_going lthy =
 let
   val rules' = compute_lift_rules rules force_lift (map fst functions)
 
   (* Find the first lift that works. *)
   fun first (rule::xs) =
       (lift_function_rewrite rule filename prog_info fn_info
-           all_callee_proofs functions lthy
+           all_callee_proofs functions keep_going lthy
        handle LiftingFailed _ => first xs)
     | first [] = raise AllLiftingFailed functions
 in
@@ -572,7 +572,7 @@ end
 (* Run through every function, attempting to strengthen its type. *)
 fun type_strengthen (rules : Monad_Types.monad_type list)
                     (force_lift : Monad_Types.monad_type Symtab.table)
-                    filename fn_info lthy =
+                    filename fn_info (keep_going : bool) lthy =
 let
   (* Get all function definitions. *)
   val prog_info = ProgramInfo.get_prog_info lthy filename
@@ -588,7 +588,8 @@ let
 
     (* Prettify bound variable names in definition. *)
     val state_typ = get_hl_state_typ lthy prog_info fn_info fn_name
-    val new_def = PrettyBoundVarNames.pretty_bound_vars_thm lthy (Utils.crhs_of (cprop_of def))
+    val new_def = PrettyBoundVarNames.pretty_bound_vars_thm
+                      lthy (Utils.crhs_of (cprop_of def)) keep_going
   in
     Thm.transitive def new_def
   end
@@ -600,7 +601,7 @@ let
     val start_time = Timer.startRealTimer ()
     val (lthy, new_rewrites, monad_name) =
         lift_function rules force_lift filename prog_info fn_info
-                      all_callee_proofs functions lthy
+                      all_callee_proofs functions keep_going lthy
     val _ = writeln ("  --> " ^ monad_name)
     val _ = @{trace} ("Converted (TS) " ^ Utils.commas (map fst functions) ^ " in " ^
                       Time.toString (Timer.checkRealTimer start_time) ^ " s")

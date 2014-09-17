@@ -1194,7 +1194,7 @@ lemma unmapPageTable_ccorres:
       apply (ctac add: cleanByVA_PoU_ccorres)
         apply (ctac(no_vcg) add:flushTable_ccorres)
        apply wp
-      apply vcg
+      apply (vcg exspec=cleanByVA_PoU_modifies)
      apply wp
     apply (fastforce simp: guard_is_UNIV_def Collect_const_mem Let_def
       shiftl_t2n field_simps lookup_pd_slot_def)

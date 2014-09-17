@@ -168,7 +168,7 @@ definition
   "cdl_tcb_domain_map_wellformed_aux aag tcbs_doms \<equiv> \<forall>(ptr, d) \<in> tcbs_doms. pasObjectAbs aag ptr = pasDomainAbs aag d"
 
 abbreviation
-  "cdl_tcb_domain_map_wellformed aag s \<equiv> 
+  "cdl_tcb_domain_map_wellformed aag s \<equiv>
    cdl_tcb_domain_map_wellformed_aux aag (cdl_domains_of_state s)"
 
 definition
@@ -177,7 +177,7 @@ where
  "pcs_refined aag s \<equiv>
      pas_wellformed aag
    \<and> cdl_irq_map_wellformed aag s
-   \<and> cdl_tcb_domain_map_wellformed aag s 
+   \<and> cdl_tcb_domain_map_wellformed aag s
    \<and> auth_graph_map (pasObjectAbs aag) (cdl_state_objs_to_policy s) \<subseteq> (pasPolicy aag)
    \<and> cdl_state_asids_to_policy aag s \<subseteq> pasPolicy aag
    \<and> cdl_state_irqs_to_policy aag s \<subseteq> pasPolicy aag"
@@ -299,7 +299,14 @@ lemma caps_of_state_transform_opt_cap_rev:
   apply (clarsimp simp: map_add_def object_slots_def)
   apply (clarsimp simp:valid_objs_def dom_def)
   apply (drule_tac x=a in spec, clarsimp)
-  apply (case_tac aa, simp_all add:object_slots_def caps_of_state_def2)
+  apply (case_tac aa, simp_all add: object_slots_def caps_of_state_def2 nat_split_conv_to_if
+                             split: split_if_asm)
+     apply (clarsimp simp:valid_obj_def valid_cs_def valid_cs_size_def)
+     apply (clarsimp simp:transform_cnode_contents_def)
+     apply (rule_tac x=z in exI, simp)
+     apply (rule_tac x="the (nat_to_bl 0 b)" in exI)
+     apply (clarsimp simp:option_map_join_def split:option.splits)
+     apply (rule nat_to_bl_to_bin, simp+)
     apply (clarsimp simp:valid_obj_def valid_cs_def valid_cs_size_def)
     apply (clarsimp simp:transform_cnode_contents_def)
     apply (rule_tac x=z in exI, simp)
@@ -345,11 +352,16 @@ lemma opt_cap_None_word_bits:
    apply (clarsimp simp: map_add_def object_slots_def)
   apply (drule invs_valid_objs)
   apply (simp add:object_slots_def valid_objs_def)
-  apply (case_tac aa, simp_all)
+  apply (case_tac aa, simp_all add: nat_split_conv_to_if
+                             split: split_if_asm)
     apply (clarsimp simp:transform_cnode_contents_def object_slots_def)
     apply (drule_tac x=a in bspec)
      apply (simp add:dom_def)+
     apply (clarsimp simp:valid_obj_def valid_cs_def valid_cs_size_def)
+    apply (rule conjI)
+     apply (clarsimp simp:option_map_join_def nat_to_bl_def)
+     apply (metis gr0I le_antisym less_eq_Suc_le less_eq_nat.simps(1)
+                  lt_word_bits_lt_pow zero_less_Suc)
     apply (clarsimp simp:option_map_join_def nat_to_bl_def)
     apply (drule not_leE)
     apply (subgoal_tac "b < 2 ^ WordSetup.word_bits")
@@ -423,7 +435,11 @@ lemma thread_state_cap_transform_tcb:
   apply (case_tac "kheap s (fst ptr)")
    apply (clarsimp simp: map_add_def object_slots_def)
   apply (simp add:get_tcb_def object_slots_def)
-  apply (case_tac aa, simp_all)
+  apply (case_tac aa, simp_all add: nat_split_conv_to_if
+                             split: split_if_asm)
+    apply (clarsimp simp:transform_cnode_contents_def)
+    apply (case_tac z, simp_all add:is_thread_state_cap_def split:split_if_asm)
+    apply (case_tac arch_cap, simp_all)
    apply (clarsimp simp:transform_cnode_contents_def)
    apply (case_tac z, simp_all add:is_thread_state_cap_def split:split_if_asm)
    apply (case_tac arch_cap, simp_all)
@@ -597,7 +613,9 @@ lemma state_vrefs_transform_rev:
    apply (clarsimp simp: map_add_def object_slots_def)
   apply (clarsimp simp:state_vrefs_def transform_def transform_objects_def
                        opt_cap_def slots_of_def opt_object_def)
-  apply (case_tac aa, simp_all add:transform_object_def object_slots_def)
+  apply (case_tac aa, simp_all add: transform_object_def object_slots_def nat_split_conv_to_if
+                             split: split_if_asm)
+     apply (clarsimp simp:transform_cnode_contents_def is_real_cap_transform)
     apply (clarsimp simp:transform_cnode_contents_def is_real_cap_transform)
    apply (frule valid_etcbs_tcb_etcb [rotated], fastforce)
    apply (clarsimp simp:transform_tcb_def is_real_cap_transform is_real_cap_infer_tcb_pending_op
@@ -828,7 +846,9 @@ lemma opt_cap_Some_asid_real:
    apply (clarsimp simp: map_add_def object_slots_def)
   apply (case_tac "kheap s a")
    apply (clarsimp simp: map_add_def object_slots_def)
-  apply (case_tac aa, simp_all add:object_slots_def valid_objs_def)
+  apply (case_tac aa, simp_all add:object_slots_def valid_objs_def nat_split_conv_to_if
+                             split: split_if_asm)
+     apply (clarsimp simp:transform_cnode_contents_def is_real_cap_transform)
     apply (clarsimp simp:transform_cnode_contents_def is_real_cap_transform)
    apply (frule valid_etcbs_tcb_etcb[rotated], fastforce)
    apply (clarsimp simp:transform_tcb_def tcb_slot_defs is_real_cap_transform
@@ -958,7 +978,7 @@ lemma irq_map_wellformed_transform:
                        transform_def)
   done
 
-lemma einvs_idle: 
+lemma einvs_idle:
   "einvs s \<Longrightarrow> idle_thread s = idle_thread_ptr"
   by (simp add: invs_def valid_state_def valid_idle_def)
 
@@ -982,7 +1002,8 @@ proof -
      using e
      apply (clarsimp simp: transform_def transform_objects_def restrict_map_def
                      split: split_if_asm Structures_A.kernel_object.splits)
-     apply (case_tac z, simp_all)
+     apply (case_tac z, simp_all add: nat_split_conv_to_if
+                               split: split_if_asm)
       prefer 2
       apply (case_tac arch_kernel_obj, simp_all)
      apply (drule valid_etcbs_tcb_etcb [rotated], fastforce)

@@ -228,7 +228,7 @@ lemma well_formed_cap_obj_match_frame:
   \<Longrightarrow> \<exists>is_real. cap = FrameCap ptr (validate_vm_rights (cap_rights cap)) (cdl_frame_size_bits frame) is_real None"
   apply (case_tac cap_ref, clarsimp)
   apply (frule (1) well_formed_well_formed_cap', simp)
-  apply (frule (3) well_formed_real_types_match)
+  apply (frule (3) well_formed_types_match)
   apply (fastforce simp: well_formed_cap_def object_type_def cap_type_def cap_object_def cap_has_object_def
                          cap_rights_def validate_vm_rights_def vm_read_write_def  vm_read_only_def
                   split: cdl_cap.splits)
@@ -242,7 +242,7 @@ lemma well_formed_cap_obj_match_pt:
   apply (case_tac cap_ref, clarsimp)
   apply (frule (1) well_formed_well_formed_cap', simp)
   apply (frule (2) well_formed_cap_object, clarsimp)
-  apply (frule (3) well_formed_real_types_match)
+  apply (frule (3) well_formed_types_match)
   apply (clarsimp simp: well_formed_cap_def object_type_def cap_type_def cap_object_def
                         object_at_def is_pt_def
                  split: cdl_object.splits cdl_cap.splits)
@@ -409,7 +409,6 @@ lemma map_page_directory_slot_wp:
      apply (simp add:object_at_def)
     apply (case_tac a,simp_all)
    apply (clarsimp simp:is_fake_vm_cap_def split:cdl_cap.split_asm cdl_frame_cap_type.split_asm)
-   apply (simp add:cap_type_def)
   apply (frule object_slot_empty_initialised_NullCap [where obj_id=spec_pd_ptr and slot=slot and t=t])
     apply (clarsimp simp: object_at_def object_type_is_object)
    apply simp
@@ -643,7 +642,7 @@ lemma fake_pt_cap_rewrite:
   apply (frule (1) well_formed_cap_object, simp)
   apply clarsimp
   apply (drule (2) well_formed_types_match, clarsimp)
-  apply (fastforce simp: object_at_def object_type_is_object is_fake_pt_cap_is_pt_cap cap_has_object_cap_type')
+  apply (fastforce simp: object_at_def object_type_is_object is_fake_pt_cap_is_pt_cap)
   done
 
 lemma cap_transform_empty_cap_map [simp]:
@@ -664,7 +663,8 @@ lemma object_default_state_spec2s:
   "object_default_state obj = obj \<Longrightarrow> spec2s t obj = obj"
   apply (clarsimp simp: object_default_state_def2 split: cdl_object.splits)
       apply (metis spec2s_default_tcb)
-     apply (clarsimp simp: spec2s_def object_slots_def  empty_cnode_def cdl_cnode.splits)+
+     apply (clarsimp simp: spec2s_def object_slots_def empty_cnode_def empty_irq_node_def
+                           cdl_cnode.splits)+
   done
 
 lemma object_empty_initialised_default_state:
@@ -698,7 +698,7 @@ lemma well_formed_pt_default_or_mapped:
    apply (clarsimp simp: object_type_is_object)
    apply (frule_tac obj_id=pd_id in well_formed_pt_cap_is_fake_pt_cap, assumption+)
      apply (clarsimp simp: object_at_def object_type_is_object)
-    apply (simp add: cap_has_object_cap_type')
+    apply simp
    apply (erule_tac x=cap in allE)
    apply (fastforce simp: all_caps_def)
   apply (clarsimp)
@@ -734,7 +734,7 @@ lemma well_formed_pt_cap_pt_at:
   \<Longrightarrow> pt_at (cap_object cap) spec"
   apply (case_tac cap_ref, clarsimp)
   apply (frule (1) well_formed_cap_object, simp, clarsimp)
-  apply (frule (2) well_formed_real_types_match, simp)
+  apply (frule (2) well_formed_types_match, simp)
   apply (clarsimp simp: is_fake_pt_cap_is_pt_cap object_at_def object_type_is_object)
   done
 
@@ -887,7 +887,7 @@ lemma map_page_in_pt_sep:
                  split: cdl_object.split_asm)
   apply (drule (2) well_formed_types_match [where cap = frame_cap])
    apply simp
-  apply (simp add:object_type_simps cap_has_object_cap_type')
+  apply (simp add:object_type_simps)
   done
 
 lemma map_page_table_slot_wp:
@@ -917,7 +917,7 @@ lemma map_page_table_slot_wp:
   apply (clarsimp simp: object_at_def is_fake_pt_cap_def is_pd_def is_tcb_def)
   apply (simp split:cdl_object.splits cdl_cap.splits)
   apply (drule well_formed_types_match[where cap = page_cap],simp_all)
-  apply (simp add:object_type_def cap_has_object_cap_type')
+  apply (simp add:object_type_def)
   done
 
 lemma map_page_table_slots_wp'':
@@ -951,7 +951,7 @@ lemma map_page_table_slots_wp'':
   apply (frule (1) well_formed_cap_object, clarsimp)
   apply clarsimp
   apply (frule (2) well_formed_types_match[where cap = page_cap], clarsimp)
-  apply (clarsimp simp: cap_has_object_cap_type' opt_cap_def)
+  apply (clarsimp simp: opt_cap_def)
   apply (frule (2) well_formed_pd_slot_limited [where slot=pd_slot])
   apply (frule well_formed_pt_slot_limited [where obj_id="cap_object page_cap"],
          clarsimp simp: object_type_object_at, assumption)
@@ -988,7 +988,7 @@ lemma map_page_table_slots_wp':
    apply (frule (1) well_formed_cap_object, clarsimp+)
    apply (drule (2) well_formed_types_match, clarsimp)
    apply (drule is_fake_pt_cap_is_pt_cap)
-   apply (clarsimp simp: object_at_def object_type_is_object cap_ref_object_def cap_type'_def
+   apply (clarsimp simp: object_at_def object_type_is_object cap_ref_object_def
                   split: cdl_cap.splits)
   apply (clarsimp simp: sep_conj_assoc)
   apply (wp sep_wp: map_page_table_slots_wp'' [where t=t], simp+)

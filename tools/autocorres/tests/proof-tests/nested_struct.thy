@@ -23,9 +23,14 @@ thm f'_def test'_def
 
 lemma "\<lbrace> \<lambda>s. is_valid_point1_C s p1 \<and> is_valid_point2_C s p2 \<rbrace>
          test' p1 p2
-       \<lbrace> \<lambda>_ s. num_C.n_C (x_C (heap_point1_C s p1)) =
+       \<lbrace> \<lambda>_ s. num_C.n_C (point1_C.x_C (heap_point1_C s p1)) =
                  index (point2_C.n_C (heap_point2_C s p2)) 0 \<rbrace>!"
-  oops
+  unfolding test'_def f'_def
+  apply wp
+  apply (clarsimp simp: fun_upd_apply)
+  done
+
+thm g'_def
 
 end
 

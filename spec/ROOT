@@ -116,6 +116,16 @@ session TakeGrant in "take-grant" = "HOL-Word" +
 
 
 (*
+ * Separation Kernel Setup Specification
+ *)
+
+session ASepSpec = ASpec +
+  options [document = false, timeout=600]
+  theories
+    "sep-abstract/Syscall_SA"
+
+
+(*
  * Libraries
  *)
 

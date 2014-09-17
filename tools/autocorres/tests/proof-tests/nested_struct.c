@@ -33,3 +33,23 @@ int test(struct point1 *p1, struct point2 *p2) {
   f(p1, p2);
   return p1->x.n == p2->n[0] && p1->y.n == p2->n[1];
 }
+
+struct s1 {
+    unsigned x, y;
+};
+struct s2 {
+    struct s1 x[2];
+};
+struct s3 {
+    struct s2 x, y;
+};
+struct s4 {
+    struct s3 x[2];
+};
+void g(struct s4 *s) {
+    s->x[0].x.x[0].x = s->x[0].x.x[0].y;
+    s->x[0].x.x[0] = s->x[0].x.x[1];
+    s->x[0].x = s->x[0].y;
+    s->x[0] = s->x[1];
+    *s = *s;
+}

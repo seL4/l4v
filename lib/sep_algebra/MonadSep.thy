@@ -15,7 +15,7 @@ imports
 begin
 
 locale sep_lifted =
-  fixes lft :: "'a \<Rightarrow> 's :: stronger_sep_algebra"
+  fixes lft :: "'a \<Rightarrow> 's :: sep_algebra"
 begin
 
 abbreviation

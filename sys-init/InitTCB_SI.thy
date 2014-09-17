@@ -18,7 +18,7 @@ imports
 begin
 
 lemma cap_has_type_cap_has_object [simp]:
-  "cap_has_type cap \<Longrightarrow> cap_has_object cap"
+  "\<lbrakk>cap_has_type cap; \<not> is_irqhandler_cap cap\<rbrakk> \<Longrightarrow> cap_has_object cap"
   by (clarsimp simp: cap_type_def cap_has_object_def split: cdl_cap.splits)
 
 
@@ -191,7 +191,7 @@ lemma tcb_configure_pre:
   apply (frule (2) well_formed_types_match [where cap=cspace_cap], clarsimp)
   apply (frule (2) well_formed_types_match [where cap=vspace_cap], clarsimp)
   apply (frule (2) well_formed_types_match [where cap=buffer_frame_cap], clarsimp simp: cap_type_def)
-  apply (clarsimp simp: object_type_is_object cap_has_type_cap_type')
+  apply (clarsimp simp: object_type_is_object)
   apply (subst (asm) (2) default_cap_size_0 [where type=TcbType], simp)
   apply (subst (asm) (2) default_cap_size_0 [where type=PageDirectoryType], simp)
   apply (cut_tac type="FrameType sz" and sz="(object_size_bits obja)" and
@@ -213,10 +213,10 @@ lemma well_formed_cnode_object_size_bits_eq2:
 
 lemma default_cap_update_cap_object_non_cnode:
   "\<lbrakk>cap_type cap = Some type; is_default_cap cap; cnode_cap_size cap \<le> 32;
-    type \<noteq> UntypedType; type \<noteq> AsidPoolType; type \<noteq> CNodeType\<rbrakk>
+    type \<noteq> UntypedType; type \<noteq> AsidPoolType; type \<noteq> CNodeType; type \<noteq> IRQNodeType\<rbrakk>
   \<Longrightarrow> default_cap type {obj_id} sz =
       update_cap_object obj_id cap"
-  apply (frule (4) default_cap_update_cap_object [where obj_id=obj_id])
+  apply (frule (5) default_cap_update_cap_object [where obj_id=obj_id])
   apply (subst default_cap_size_0, simp+)
   done
 
@@ -338,7 +338,6 @@ lemma tcb_configure_post:
   apply (frule (2) well_formed_vm_cap_has_asid [where cap=spec_vspace_cap])
   apply (frule (1) well_formed_is_fake_vm_cap
          [where cap=spec_vspace_cap], simp+)
-  apply (subst (asm) cap_has_type_cap_type', simp)+
 
   apply (frule (4) well_formed_cnode_object_size_bits_eq2, simp)
   apply (subst (asm) update_cap_data [where spec_cap = spec_cspace_cap],
@@ -736,8 +735,8 @@ lemma init_tcb_sep:
   apply (frule object_at_real_object_at, simp)
   apply (rule_tac xs="{obj_id, cap_object cspace_cap, cap_object vspace_cap,
                        cap_object tcb_ipcbuffer_cap}" in sep_set_conj_subset_wp')
-     apply (frule (2) well_formed_real_types_match [where slot=tcb_vspace_slot], simp+)
-     apply (frule (2) well_formed_real_types_match [where slot=tcb_ipcbuffer_slot], simp+)
+     apply (frule (2) well_formed_types_match [where slot=tcb_vspace_slot], simp+)
+     apply (frule (2) well_formed_types_match [where slot=tcb_ipcbuffer_slot], simp+)
      apply (rule conjI)
       apply (erule object_at_real_object_at, erule (1) object_type_object_at)
      apply (erule object_at_real_object_at, fastforce simp: object_at_def object_type_is_object)
@@ -760,7 +759,7 @@ lemma init_tcb_sep:
   apply (frule (2) well_formed_types_match [where slot=tcb_ipcbuffer_slot],
           clarsimp simp: cap_type_def)
   apply clarsimp
-  apply (fastforce simp: object_type_def object_at_def is_tcb_def cap_has_object_cap_type'
+  apply (fastforce simp: object_type_def object_at_def is_tcb_def
                   split: cdl_object.splits)
   done
 

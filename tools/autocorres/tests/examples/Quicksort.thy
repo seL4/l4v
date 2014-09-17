@@ -25,6 +25,8 @@ declare creturn_def [vcg_simp]
 install_C_file "quicksort.c"
 autocorres "quicksort.c"
 
+declare ptr_add_0_id[simp]
+
 context quicksort begin
 
 thm partition_body_def

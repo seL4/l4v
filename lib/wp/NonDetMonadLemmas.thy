@@ -239,7 +239,7 @@ proof (rule iffI)
 next
   assume "?RHS x"
   thus "?LHS x"
-    by (metis surjective_pairing whileLoop_results.intros(2))
+    by (metis surjective_pairing whileLoop_results.intros(1))
 qed
 
 lemma whileLoop_unroll:

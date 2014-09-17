@@ -50,8 +50,8 @@ lemma seL4_IRQHandler_SetEndpoint_irq_initialised_helper_sep:
   apply (clarsimp simp: irq_slot_initialised_def irq_slot_empty_def irq_initialised_general_def
                         si_cap_at_def si_irq_cap_at_def si_objects_def
                         sep_conj_assoc sep_conj_exists)
-  apply (frule (1) well_formed_irq_is_cnode)
-  apply (frule (1) well_formed_size_irq_cnode)
+  apply (frule (1) well_formed_irq_is_irq_node)
+  apply (frule (1) well_formed_size_irq_node)
   apply (frule (2) well_formed_irq_aep_cap)
   apply (rule hoare_chain)
     apply (wp seL4_IRQHandler_SetEndpoint_wp [where
@@ -81,7 +81,7 @@ lemma seL4_IRQHandler_SetEndpoint_irq_initialised_helper_sep:
    apply (clarsimp simp: ep_related_cap_def offset_slot')
   apply simp
   apply (clarsimp simp: object_type_is_object default_cap_def)
-  apply (subst (asm) cnode_fields_empty_initialised)
+  apply (subst (asm) irq_node_fields_empty_initialised)
    apply (simp add: object_type_object_at)
   apply (simp add: object_fields_initialised_def object_initialised_general_def)
   apply (sep_drule sep_map_s_sep_map_c [where obj_id = kernel_irq_id
@@ -117,7 +117,7 @@ lemma seL4_IRQHandler_SetEndpoint_irq_initialised_sep:
   apply (frule (1) well_formed_cap_object_cdl_irq_node, clarsimp)
   apply (frule object_at_real_object_at [where obj_id = "cap_object (the (opt_cap (cdl_irq_node spec irq, 0) spec))"],
          fastforce simp: object_at_def)
-  apply (frule well_formed_slot_0_of_used_irq_cnode, fast, clarsimp)
+  apply (frule well_formed_slot_0_of_used_irq_node, fast, clarsimp)
   apply (frule slots_of_cdl_objects, clarsimp)
   apply (rule hoare_chain [OF sep_set_conj_map_singleton_wp
          [where P = "irq_empty spec t irq \<and>*
@@ -208,7 +208,7 @@ lemma irq_slot_empty_initialised_NullCap:
   "\<lbrakk>well_formed spec; slots_of (cdl_irq_node spec irq) spec slot = Some NullCap\<rbrakk>
   \<Longrightarrow> irq_slot_empty spec t irq slot = irq_slot_initialised spec t irq slot"
   apply (frule slots_of_cdl_objects, clarsimp)
-  apply (frule (1) well_formed_irq_is_cnode)
+  apply (frule (1) well_formed_irq_is_irq_node)
   apply (frule (1) well_formed_object_slots)
   apply (rule ext)
   apply (clarsimp simp: irq_slot_empty_def irq_slot_initialised_def irq_initialised_general_def slots_of_def opt_object_def
@@ -226,9 +226,9 @@ lemma irq_slot_empty_initialised_NullCap:
 
 lemma irq_slot_empty_initialised:
   "\<lbrakk>well_formed spec; irq \<notin> bound_irqs spec; irq \<in> used_irqs spec;
-    cdl_objects spec (cdl_irq_node spec irq) = Some cnode; is_cnode cnode\<rbrakk>
+    cdl_objects spec (cdl_irq_node spec irq) = Some irq_node\<rbrakk>
    \<Longrightarrow> irq_slot_empty spec t irq 0 = irq_slot_initialised spec t irq 0"
-  apply (frule (1) well_formed_slots_of_used_irq_cnode)
+  apply (frule (1) well_formed_slots_of_used_irq_node)
   apply (erule irq_slot_empty_initialised_NullCap)
   apply (clarsimp simp: bound_irqs_def)
   apply blast
@@ -239,11 +239,11 @@ lemma irq_slot_empty_initialised:
 lemma irq_empty_initialised:
   "\<lbrakk>well_formed spec; irq \<notin> bound_irqs spec; irq \<in> used_irqs spec\<rbrakk>
   \<Longrightarrow> irq_empty spec t irq = irq_initialised spec t irq"
-  apply (frule (1) well_formed_used_irqs_have_cnode, clarsimp)
-  apply (frule (1) well_formed_irq_is_cnode)
+  apply (frule (1) well_formed_used_irqs_have_irq_node, clarsimp)
+  apply (frule (1) well_formed_irq_is_irq_node)
   apply (subst irq_empty_decomp_total, assumption+)
   apply (subst irq_initialised_decomp_total, assumption+)
-  apply (subst cnode_fields_empty_initialised)
+  apply (subst irq_node_fields_empty_initialised)
    apply (simp add: object_type_object_at object_at_def)
   apply (subst irq_slot_empty_initialised, assumption+)
   apply simp

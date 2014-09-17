@@ -15,13 +15,13 @@ begin
 definition
   set_flow :: "state \<Rightarrow> (entity_id set \<times> entity_id set) set" where
   "set_flow s \<equiv> {(X,Y). \<exists>x \<in> X. \<exists>y \<in> Y.
-                        (read_cap x :< caps_of s y \<or>
-                        write_cap y :< caps_of s x)}"
+                        (read_cap x \<in>cap caps_of s y \<or>
+                        write_cap y \<in>cap caps_of s x)}"
 
 lemma set_flow_def2:
   "(X, Y) \<in> set_flow s = (\<exists>x \<in> X. \<exists>y \<in> Y.
-                        (read_cap x :< caps_of s y \<or>
-                        write_cap y :< caps_of s x))"
+                        (read_cap x \<in>cap caps_of s y \<or>
+                        write_cap y \<in>cap caps_of s x))"
   by (simp add: set_flow_def)
 
 definition
@@ -79,15 +79,15 @@ lemma flow_connected_step:
   apply (clarsimp simp: flow_def island_def set_flow_def)
   apply (frule_tac x=y in tgs_connected_preserved_step, simp)
   apply (frule_tac x=z in tgs_connected_preserved_step, simp)
-  apply (clarsimp simp: has_at_least_def)
+  apply (clarsimp simp: cap_in_caps_def)
   apply (erule disjE)
    apply clarsimp
    apply (drule (1) caps_of_op)
-   apply (clarsimp simp: has_at_least_def)
+   apply (clarsimp simp: cap_in_caps_def)
    apply (metis (no_types) tgs_connected_trans subsetD)
   apply clarsimp
   apply (drule (1) caps_of_op)
-  apply (clarsimp simp: has_at_least_def)
+  apply (clarsimp simp: cap_in_caps_def)
   apply (metis (no_types) tgs_connected_trans subsetD)
   done
 

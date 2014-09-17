@@ -508,12 +508,12 @@ defs handleVMFault_def:
     ARMDataAbort \<Rightarrow>    (doE
     addr \<leftarrow> withoutFailure $ doMachineOp getFAR;
     fault \<leftarrow> withoutFailure $ doMachineOp getDFSR;
-    throw $ VMFault addr [0, fault && mask 12]
+    throw $ VMFault addr [0, fault && mask 14]
     odE)
   | ARMPrefetchAbort \<Rightarrow>    (doE
     pc \<leftarrow> withoutFailure $ asUser thread $ getRestartPC;
     fault \<leftarrow> withoutFailure $ doMachineOp getIFSR;
-    throw $ VMFault (VPtr pc) [1, fault && mask 12]
+    throw $ VMFault (VPtr pc) [1, fault && mask 14]
   odE)
   )"
 

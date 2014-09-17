@@ -28,7 +28,7 @@ lemma
    \<lbrace> \<lambda>_ s. heap_w32 s (ptr_coerce (arr +\<^sub>p 4)) = 3 \<rbrace>!"
   unfolding foo'_def bar'_def
   apply wp
-  apply (clarsimp simp: set_array_addrs fun_upd_apply)
+  apply (clarsimp simp: set_array_addrs fun_upd_apply ptr_coerce.simps)
   apply (subgoal_tac "(4 :: nat) < 10")
    apply fastforce
   apply arith

@@ -203,7 +203,7 @@ proof -
       by simp
   qed
 
-  show ?thesis 
+  show ?thesis
   apply (clarsimp simp: transform_full_intent_def Let_def get_tcb_mrs_def
                         get_ipc_buffer_words_def2 3
                         Suc_leI[OF msg_registers_lt_msg_max_length]
@@ -429,10 +429,8 @@ lemma transform_unat_map_empty:
       = empty_cap_map (len_of TYPE('a))"
   by (rule ext, simp add: unat_map_def empty_cap_map_def)
 
-
-
 lemma transform_default_object:
-  "type \<noteq> Structures_A.Untyped \<Longrightarrow>
+  "\<lbrakk>type \<noteq> Structures_A.Untyped; type = Structures_A.CapTableObject \<longrightarrow> 0 < o_bits\<rbrakk> \<Longrightarrow>
    transform_object ms word (default_ext type domain) (Retype_A.default_object type o_bits)
      = the (Types_D.default_object (translate_object_type type) o_bits domain)"
   by (cases type, simp_all add: translate_object_type_def default_object_def
@@ -443,7 +441,7 @@ lemma transform_default_object:
               transform_page_table_contents_def o_def transform_pte_def
               transform_page_directory_contents_def transform_pde_def kernel_pde_mask_def
               transform_asid_pool_contents_def transform_asid_pool_entry_def asid_low_bits_def
-           split: aobject_type.split)
+           split: aobject_type.split nat.splits)
 
 lemma obj_bits_bound32:
   "\<lbrakk>type = Invariants_AI.Untyped \<longrightarrow> us < 32;
@@ -589,7 +587,8 @@ lemma retype_region_dcorres:
        \<top>
   (\<lambda>s. pspace_no_overlap ptr sz s \<and> invs s
   \<and> range_cover ptr sz (obj_bits_api type us) n
-  \<and> (type = Invariants_AI.Untyped \<longrightarrow> 4 \<le> us))
+  \<and> (type = Invariants_AI.Untyped \<longrightarrow> 4 \<le> us)
+  \<and> (type = Structures_A.CapTableObject \<longrightarrow> us \<noteq> 0))
   (Untyped_D.retype_region
   us (translate_object_type type) (map (retype_transform_obj_ref type us) (retype_addrs ptr type n us)))
   (Retype_A.retype_region ptr n us type)"
@@ -617,8 +616,12 @@ lemma retype_region_dcorres:
         apply (clarsimp simp:foldr_upd_app_if foldr_fun_upd_value restrict_map_def map_add_def
                              transform_objects_def retype_transform_obj_ref_def image_def)
         apply (subgoal_tac "idle_thread s' \<notin> set (retype_addrs ptr type n us)")
+        apply (subgoal_tac "type = Structures_A.CapTableObject \<longrightarrow> us \<noteq> 0")
          apply (clarsimp simp:transform_default_object translate_object_type_not_untyped)
+         defer
+        apply clarsimp
         apply (frule invs_valid_idle,clarsimp simp:valid_idle_def st_tcb_at_def obj_at_def)
+
         apply (erule(3) pspace_no_overlapC)
         apply clarsimp
        apply simp
@@ -629,6 +632,10 @@ lemma retype_region_dcorres:
   apply (case_tac type,
     simp_all add:translate_object_type_def)
   apply (case_tac aobject_type,simp_all)
+
+
+
+
   done
 
 lemma page_objects_default_object:

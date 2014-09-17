@@ -484,7 +484,7 @@ lemma cleanCacheRange_PoC_ccorres:
     apply (clarsimp simp: lineStart_def cacheLineBits_def shiftr_shiftl1
                           mask_out_sub_mask)
     apply (drule_tac s="w1 && mask 5" in sym, simp add: cache_range_lineIndex_helper)
-   apply vcg
+   apply (vcg exspec=cleanByVA_modifies)
   apply clarsimp
   done
 
@@ -516,7 +516,7 @@ lemma cleanInvalidateCacheRange_RAM_ccorres:
            apply (clarsimp simp: lineStart_def cacheLineBits_def shiftr_shiftl1
                                  mask_out_sub_mask)
            apply (drule_tac s="w1 && mask 5" in sym, simp add: cache_range_lineIndex_helper)          
-          apply vcg
+          apply (vcg exspec=cleanInvalByVA_modifies)
          apply (rule ceqv_refl)
         apply (ctac (no_vcg) add: dsb_ccorres[simplified dc_def])
        apply (wp | clarsimp simp: guard_is_UNIVI)+
@@ -560,7 +560,7 @@ lemma cleanCacheRange_PoU_ccorres:
     apply (clarsimp simp: lineStart_def cacheLineBits_def shiftr_shiftl1
                           mask_out_sub_mask)
     apply (drule_tac s="w1 && mask 5" in sym, simp add: cache_range_lineIndex_helper)
-   apply vcg
+   apply (vcg exspec=cleanByVA_PoU_modifies)
   apply clarsimp
   done
 
@@ -609,7 +609,7 @@ lemma invalidateCacheRange_RAM_ccorres:
               apply (clarsimp simp: lineStart_def cacheLineBits_def shiftr_shiftl1
                           mask_out_sub_mask)
               apply (drule_tac s="w1 && mask 5" in sym, simp add: cache_range_lineIndex_helper)
-             apply vcg
+             apply (vcg exspec=invalidateByVA_modifies)
             apply ceqv
            apply (ctac add: dsb_ccorres[unfolded dc_def])
           apply wp
@@ -648,7 +648,7 @@ lemma invalidateCacheRange_I_ccorres:
     apply (clarsimp simp: lineStart_def cacheLineBits_def shiftr_shiftl1
                           mask_out_sub_mask)
     apply (drule_tac s="w1 && mask 5" in sym, simp add: cache_range_lineIndex_helper)
-   apply vcg
+   apply (vcg exspec=invalidateByVA_I_modifies)
   apply clarsimp
   done
  
@@ -674,7 +674,7 @@ lemma branchFlushRange_ccorres:
     apply (clarsimp simp: lineStart_def cacheLineBits_def shiftr_shiftl1
                           mask_out_sub_mask)
     apply (drule_tac s="w1 && mask 5" in sym, simp add: cache_range_lineIndex_helper)
-   apply vcg
+   apply (vcg exspec=branchFlush_modifies)
   apply clarsimp
   done
 

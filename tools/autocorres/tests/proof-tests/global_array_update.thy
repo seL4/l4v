@@ -24,7 +24,7 @@ lemma "\<lbrace> \<lambda>s. \<forall>a\<in>set (array_addrs (Ptr (symbol_table 
                                         :: 32 signed word ptr)) = 42 \<rbrace>!"
   unfolding bar'_def
   apply wp
-  apply (clarsimp simp: set_array_addrs fun_upd_apply)
+  apply (clarsimp simp: set_array_addrs fun_upd_apply ptr_coerce.simps)
   done
 
 end

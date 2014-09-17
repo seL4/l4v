@@ -144,6 +144,17 @@ session DSpecProofs in "capDL-api" = SepDSpec +
   theories
     "API_DP"
 
+(*
+ * Static Separation Kernel Bisimilarity
+ *)
+
+session Bisim in bisim = AInvs +
+  theories
+    "Syscall_S"
+  files
+    "document/root.tex"
+    "document/build"
+    "document/Makefile"
 
 (*
  * Separation Logic
@@ -157,6 +168,14 @@ session SepTacticsExamples = SepTactics +
   theories [quick_and_dirty]
     "capDL-api/Sep_Tactic_Examples"
 
+
+(*
+ * Binary Verification Input Step
+*)
+session SimplExportAndRefine = CSpec +
+  theories
+    "asmrefine/SEL4SimplExport"
+    "asmrefine/SEL4GraphRefine"
 
 (*
  * Libraries

@@ -44,6 +44,7 @@ datatype invocation_label =
   | IRQAckIRQ
   | IRQSetIRQHandler
   | IRQClearIRQHandler
+  | IRQSetMode
   | DomainSetSet
   | ARMPDClean_Data
   | ARMPDInvalidate_Data
@@ -115,6 +116,7 @@ definition
       IRQAckIRQ,
       IRQSetIRQHandler,
       IRQClearIRQHandler,
+      IRQSetMode,
       DomainSetSet,
       ARMPDClean_Data,
       ARMPDInvalidate_Data,

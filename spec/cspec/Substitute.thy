@@ -323,6 +323,11 @@ val guard_htd_updates_with_domain = com_rewrite
               \<and> htd_safe domain (hrs_htd (t_hrs_' (globals (f s))))}"}, t))])
         else (t, []))
 
+val guard_halt = com_rewrite
+  (fn t => if t = @{term "halt_'proc"}
+    then (t, [(@{term DontReach}, @{term "{} :: globals myvars set"})])
+    else (t, []))
+
 end
 
 *}
@@ -336,6 +341,7 @@ SubstituteSpecs.take_all_actions
   (fn ctxt => fn s => guard_rewritable_globals NONE ctxt
     o (strengthen_c_guards ["memset_body", "memcpy_body", "memzero_body"]
           (Proof_Context.theory_of ctxt) s)
+    o guard_halt
     o guard_htd_updates_with_domain)
   @{term kernel_all_global_addresses.\<Gamma>}
   (CalculateState.get_csenv @{theory} "c/kernel_all.c_pp" |> the)

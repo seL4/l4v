@@ -235,13 +235,27 @@ lemma drop_heap_list_general:
    apply (simp_all add: drop_heap_list_le)
   done
 
+lemma heap_update_mono_to_field_rewrite:
+  "\<lbrakk> field_lookup (typ_info_t TYPE('a)) [s] 0
+        \<equiv> field_lookup (adjust_ti (typ_info_t TYPE('b)) f upds) [] n;
+      export_uinfo (adjust_ti (typ_info_t TYPE('b)) f upds)
+        = export_uinfo (typ_info_t TYPE('b));
+      align_of TYPE('a) + size_of TYPE('a) < 2 ^ 32; align_of TYPE('a) \<noteq> 0 \<rbrakk>
+    \<Longrightarrow> heap_update (p::'a::packed_type ptr)
+           (update_ti_t (adjust_ti (typ_info_t TYPE('b)) f upds) (to_bytes_p v)
+               str) hp
+         = heap_update (Ptr (&(p\<rightarrow>[s]))::'b::packed_type ptr) v (heap_update p str hp)"
+  by (simp add: typ_uinfo_t_def heap_update_field2
+                packed_heap_update_collapse h_val_heap_update
+                field_ti_def update_ti_t_def size_of_def)
+
 ML {*
 fun get_field_h_val_rewrites lthy =
   (simpset_of lthy |> dest_ss |> #simps |> map snd
     |> map (Thm.transfer (Proof_Context.theory_of lthy))
                RL @{thms h_val_mono_to_field_rewrite
-                         (* heap_update_mono_to_field_rewrite
-                             [unfolded align_of_def size_of_def] *) })
+                         heap_update_mono_to_field_rewrite
+                             [unfolded align_of_def size_of_def] })
     |> map (asm_full_simplify lthy);
 
 fun add_field_h_val_rewrites lthy =

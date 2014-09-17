@@ -39,14 +39,14 @@ lemma island_caps_def3:
   done
 
 lemma island_caps_dom:
-  "c :> island_caps s e\<^sub>x =
-  (\<forall>e\<^sub>i. (e\<^sub>x, e\<^sub>i) \<in> tgs_connected s \<longrightarrow> c :> caps_of s e\<^sub>i)"
-  by (auto simp add: island_caps_def has_at_most_def island_def tgs_connected_comm_eq)
+  "island_caps s e\<^sub>x \<le>cap c =
+  (\<forall>e\<^sub>i. (e\<^sub>x, e\<^sub>i) \<in> tgs_connected s \<longrightarrow> caps_of s e\<^sub>i \<le>cap c)"
+  by (auto simp add: island_caps_def caps_dominated_by_def island_def)
 
 lemma authority_confinement_islands:
   "\<lbrakk>s' \<in> execute cmds s;
-    c :> island_caps s x\<rbrakk>
-  \<Longrightarrow> c :> island_caps s' x"
+    island_caps s x \<le>cap c\<rbrakk>
+  \<Longrightarrow> island_caps s' x \<le>cap c"
   apply (simp add: island_caps_dom)
   apply clarsimp
   apply (frule (1) tgs_connected_preserved)

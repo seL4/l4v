@@ -246,7 +246,19 @@ where
          d#_ \<Rightarrow> Some (DomainSetIntent (ucast d :: word8))
        | _   \<Rightarrow> Nothing)"
 
+(* Added for IOAPIC patch *)
+definition
+  to_bool :: "word32 \<Rightarrow> bool"
+where
+  "to_bool w \<equiv> w \<noteq> 0"
 
+definition
+  transform_intent_irq_set_mode :: "word32 list \<Rightarrow> cdl_irq_handler_intent option"
+where
+  "transform_intent_irq_set_mode args = 
+     (case args of
+       trig#pol#_ \<Rightarrow> Some (IrqHandlerSetModeIntent (to_bool trig) (to_bool pol))
+     | _ \<Rightarrow> Nothing)"
 
 (* A dispatch function that converts the user's message label
  * and IPC buffer into an intent by dispatching on the message label.
@@ -319,6 +331,7 @@ definition
     | IRQAckIRQ \<Rightarrow> Some (IrqHandlerIntent IrqHandlerAckIntent)
     | IRQSetIRQHandler \<Rightarrow> Some (IrqHandlerIntent IrqHandlerSetEndpointIntent)
     | IRQClearIRQHandler \<Rightarrow> Some (IrqHandlerIntent IrqHandlerClearIntent)
+    | IRQSetMode \<Rightarrow> Option.map IrqHandlerIntent (transform_intent_irq_set_mode args)
     | ARMPageTableMap \<Rightarrow>
           map_option PageTableIntent
                    (transform_intent_page_table_map args)
@@ -850,7 +863,9 @@ definition
   transform_object :: "machine_state \<Rightarrow> obj_ref \<Rightarrow> etcb option \<Rightarrow> kernel_object \<Rightarrow> cdl_object"
   where
   "transform_object ms ref opt_etcb ko \<equiv> case ko of
-           Structures_A.CNode sz c \<Rightarrow>
+           Structures_A.CNode 0 c \<Rightarrow>
+              Types_D.IRQNode \<lparr>cdl_irq_node_caps = transform_cnode_contents 0 c\<rparr>
+         | Structures_A.CNode sz c \<Rightarrow>
               Types_D.CNode \<lparr>
                 cdl_cnode_caps = transform_cnode_contents sz c,
                 cdl_cnode_size_bits = sz

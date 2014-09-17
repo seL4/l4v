@@ -32,7 +32,7 @@ lemma is_irqhandler_cap_not_NullCap:
 
 lemma cap_has_object_not_irqhandler_cap:
   "cap_has_object cap \<Longrightarrow> \<not> is_irqhandler_cap cap"
-   by (clarsimp simp: cap_has_object_def is_irqhandler_cap_def
+   by (clarsimp simp: cap_has_object_def cap_type_def
                split: cdl_cap.splits)
 
 lemmas cap_has_object_not_irqhandler_cap_simp[simp] = cap_has_object_not_irqhandler_cap[OF ByAssum]
@@ -58,13 +58,13 @@ where
 definition real_cap_ref :: "cdl_cap_ref \<Rightarrow> cdl_state \<Rightarrow> bool"
 where
   "real_cap_ref cap_ref s \<equiv> \<exists>cap. opt_cap cap_ref s = Some cap \<and> cap \<noteq> NullCap \<and>
-                                  real_cnode_at (fst cap_ref) s"
+                                  cnode_at (fst cap_ref) s"
 
 definition object_cap_ref :: "cdl_cap_ref \<Rightarrow> cdl_state \<Rightarrow> bool"
 where
   "object_cap_ref cap_ref s \<equiv> \<exists>cap. opt_cap cap_ref s = Some cap \<and>
                                      cap_has_object cap \<and>
-                                     real_cnode_at (fst cap_ref) s"
+                                     cnode_at (fst cap_ref) s"
 
 (* MOVE ME *)
 definition "guard_bits = (18::nat)"
@@ -163,10 +163,10 @@ definition
   well_formed_cdt :: "cdl_state \<Rightarrow> cdl_cap_ref \<Rightarrow> cdl_cap \<Rightarrow> bool"
 where
   "well_formed_cdt spec cap_ref cap \<equiv>
-    real_cnode_at (fst cap_ref) spec \<longrightarrow>
+    cnode_at (fst cap_ref) spec \<longrightarrow>
     cap_has_object cap \<longrightarrow>
     (\<exists>orig_obj_id orig_slot orig_cap.
-    real_cnode_at orig_obj_id spec \<and>
+    cnode_at orig_obj_id spec \<and>
     (\<exists>obj. opt_object (cap_object cap) spec = Some obj) \<and>
     original_cap_at (orig_obj_id, orig_slot) spec \<and>
     opt_cap (orig_obj_id, orig_slot) spec = Some orig_cap \<and>
@@ -175,10 +175,8 @@ where
 (* MOVEME *)
 lemma well_formed_cdt_irqhandler_cap:
   "is_irqhandler_cap cap \<Longrightarrow> well_formed_cdt spec cap_ref cap"
-  apply (clarsimp simp: well_formed_cdt_def is_irqhandler_cap_def
-                 split: cdl_cap.splits)
-  apply (clarsimp simp: cap_has_object_def)
-  done
+  by (clarsimp simp: well_formed_cdt_def split: cdl_cap.splits)
+
 
 (* The only thing that points to IRQ objects is the IRQ table (not a cap). *)
 definition
@@ -187,38 +185,17 @@ where
   "well_formed_cap_to_real_object spec cap \<equiv>
     cap_has_object cap \<longrightarrow> real_object_at (cap_object cap) spec"
 
-definition cap_type' :: "cdl_cap \<Rightarrow> cdl_object_type option"
-where
-  "cap_type' cap \<equiv> case cap of
-    IrqHandlerCap _ \<Rightarrow> Some CNodeType
-  | _               \<Rightarrow> cap_type cap"
-
-lemma is_irqhandler_cap_cap_type':
-  "\<not> is_irqhandler_cap cap \<Longrightarrow> cap_type' cap = cap_type cap"
-  "is_irqhandler_cap cap \<Longrightarrow> cap_type' cap = Some CNodeType"
-  by (clarsimp simp: is_irqhandler_cap_def split: cdl_cap.splits |
-      clarsimp simp: cap_type'_def)+
-
-lemma cap_has_object_cap_type':
-  "cap_has_object cap \<Longrightarrow> cap_type' cap = cap_type cap"
-  by (rule is_irqhandler_cap_cap_type', simp)
-
-lemma cap_has_type_cap_type':
-  "cap_has_type cap \<Longrightarrow> cap_type' cap = cap_type cap"
-  by (rule is_irqhandler_cap_cap_type', clarsimp)
-
 definition
   well_formed_cap_types_match :: "cdl_state \<Rightarrow> cdl_cap \<Rightarrow> bool"
 where
   "well_formed_cap_types_match spec cap \<equiv>
     (cap_has_object cap \<longrightarrow>
     (\<exists>cap_obj. cdl_objects spec (cap_object cap) = Some cap_obj \<and>
-               cap_type' cap = Some (object_type cap_obj))) \<and>
+               cap_type cap = Some (object_type cap_obj))) \<and>
     (is_irqhandler_cap cap \<longrightarrow>
     (\<exists>cap_obj. cdl_objects spec (cdl_irq_node spec (cap_irq cap)) = Some cap_obj \<and>
-               cap_type' cap = Some (object_type cap_obj)))"
+               cap_type cap = Some (object_type cap_obj)))"
 
-(* Note that the cap type of an IrqHandlerCap is CNodeType. *)
 definition well_formed_caps :: "cdl_state \<Rightarrow> cdl_object_id \<Rightarrow> cdl_object \<Rightarrow> bool"
 where
   "well_formed_caps spec obj_id obj \<equiv> \<forall>slot cap.
@@ -238,7 +215,7 @@ where
   "well_formed_cap_to_object spec obj_id obj \<equiv> (\<exists>cnode_id slot cap.
     opt_cap (cnode_id, slot) spec = Some cap \<and>
     original_cap_at (cnode_id, slot) spec \<and>
-    real_cnode_at cnode_id spec \<and>
+    cnode_at cnode_id spec \<and>
     (real_object_at obj_id spec \<longrightarrow> cap_object cap = obj_id \<and> cap_has_object cap) \<and>
     (\<not>real_object_at obj_id spec \<longrightarrow> is_irqhandler_cap cap \<and> cdl_irq_node spec (cap_irq cap) = obj_id)) \<and>
 
@@ -262,8 +239,8 @@ definition
   well_formed_orig_caps_unique :: "cdl_state \<Rightarrow> bool"
 where
   "well_formed_orig_caps_unique spec \<equiv> \<forall>obj_id obj_id' slot slot' cap cap'.
-      real_cnode_at obj_id spec \<longrightarrow>
-      real_cnode_at obj_id' spec \<longrightarrow>
+      cnode_at obj_id spec \<longrightarrow>
+      cnode_at obj_id' spec \<longrightarrow>
       cap_has_object cap \<longrightarrow>
       cap_has_object cap' \<longrightarrow>
       opt_cap (obj_id, slot) spec = Some cap \<longrightarrow>
@@ -293,7 +270,7 @@ where
      (\<forall>slot cap. object_slots obj slot = Some cap \<longrightarrow>
      ((slot = tcb_cspace_slot \<longrightarrow> is_cnode_cap cap \<and>
                                   cap_guard_size cap \<noteq> 0 \<and>
-                                  cap_object cap \<notin> irq_cnodes spec) \<and>
+                                  cap_object cap \<notin> irq_nodes spec) \<and>
       (slot = tcb_vspace_slot \<longrightarrow> is_pd_cap cap) \<and>
       (slot = tcb_ipcbuffer_slot \<longrightarrow> is_frame_cap cap \<and> is_default_cap cap) \<and>
       (slot = tcb_replycap_slot \<longrightarrow> cap = NullCap) \<and>
@@ -342,14 +319,16 @@ where
 definition well_formed_irq_node :: "cdl_state \<Rightarrow> cdl_object_id \<Rightarrow> cdl_object \<Rightarrow> bool"
 where
   "well_formed_irq_node spec obj_id obj \<equiv> \<forall>slot cap.
-     obj_id \<in> irq_cnodes spec \<longrightarrow>
+     obj_id \<in> irq_nodes spec \<longrightarrow>
      dom (object_slots obj) = {0} \<and>
      (object_slots obj slot = Some cap \<longrightarrow>
      (cap \<noteq> NullCap \<longrightarrow> (is_aep_cap cap \<and> is_default_cap cap)))"
 
 definition well_formed_irq_table :: "cdl_state \<Rightarrow> bool"
 where
-  "well_formed_irq_table spec \<equiv> inj (cdl_irq_node spec)"
+  "well_formed_irq_table spec \<equiv> inj (cdl_irq_node spec) \<and>
+                                irq_nodes spec = {obj_id. \<exists>irq. cdl_irq_node spec irq = obj_id \<and>
+                                                                obj_id \<in> dom (cdl_objects spec)}"
 
 definition
   well_formed :: "cdl_state \<Rightarrow> bool"
@@ -369,7 +348,7 @@ where
                     object_size_bits obj < word_bits \<and>
                     object_size_bits (object_default_state obj) = object_size_bits obj \<and>
                     dom (object_slots (object_default_state obj)) = dom (object_slots obj) \<and>
-                    (real_cnode_at obj_id spec \<longrightarrow> 0 < object_size_bits obj)
+                    (cnode_at obj_id spec \<longrightarrow> 0 < object_size_bits obj)
       | None \<Rightarrow> True)"
 
 lemma dom_cap_map [simp]:
@@ -399,7 +378,7 @@ lemma well_formed_cap_update_cap_objects [simp]:
 lemma well_formed_cap_update_cap_object [simp]:
   "well_formed_cap (update_cap_object x cap) = well_formed_cap cap"
   apply (clarsimp simp: update_cap_object_def well_formed_cap_def)
-  apply (cases cap, simp_all add:is_default_cap_def cap_type_def cap_badge_def default_cap_def is_irqhandler_cap_def)
+  apply (cases cap, simp_all add:is_default_cap_def cap_type_def cap_badge_def default_cap_def)
   done
 
 lemma cap_rights_inter_default_cap_rights:
@@ -419,6 +398,9 @@ lemma well_formed_cap_derived_cap [simp]:
 (*********************************
  * Rules about well_formed spec. *
  *********************************)
+lemma dom_if_0 [simp]:
+  "dom (\<lambda>a. if a = 0 then Some b else None) = {0}"
+  by (auto split: split_if_asm)
 
 lemma well_formed_finite [elim!]:
   "well_formed spec \<Longrightarrow> finite (dom (slots_of obj_id spec))"
@@ -429,7 +411,7 @@ lemma well_formed_finite [elim!]:
   apply (drule_tac t="dom (object_slots obj)" in sym) (* Makes rewriting work. *)
   apply (clarsimp simp: object_default_state_def2 has_slots_def object_slots_def
                         default_tcb_def tcb_pending_op_slot_def
-                        empty_cnode_def empty_cap_map_def
+                        empty_cnode_def empty_irq_node_def empty_cap_map_def
                  split: cdl_object.splits)
   done
 
@@ -527,7 +509,7 @@ lemma well_formed_cap_object_is_real:
 lemma well_formed_types_match:
   "\<lbrakk>well_formed spec; opt_cap (obj_id, slot) spec = Some cap;
     cdl_objects spec (cap_object cap) = Some cap_obj; cap_has_object cap\<rbrakk>
-  \<Longrightarrow> Some (object_type cap_obj) = cap_type' cap"
+  \<Longrightarrow> Some (object_type cap_obj) = cap_type cap"
   apply (frule cap_has_object_not_NullCap)
   apply (clarsimp simp: well_formed_def)
   apply (erule_tac x=obj_id in allE)
@@ -537,25 +519,6 @@ lemma well_formed_types_match:
   apply (clarsimp simp: well_formed_caps_def well_formed_cap_types_match_def)
   apply (erule_tac x=slot in allE)
   apply (clarsimp)
-  done
-
-lemma well_formed_real_types_match:
-  "\<lbrakk>well_formed spec; opt_cap (obj_id, slot) spec = Some cap;
-    cdl_objects spec (cap_object cap) = Some cap_obj; cap_has_object cap\<rbrakk>
-  \<Longrightarrow> Some (object_type cap_obj) = cap_type cap"
-  apply (subst is_irqhandler_cap_cap_type' [symmetric])
-   apply (clarsimp simp: cap_has_object_def is_irqhandler_cap_def split: cdl_cap.splits)
-  apply (erule (3) well_formed_types_match)
-  done
-
-lemma well_formed_irq_is_cnode:
-  "\<lbrakk>well_formed spec; cdl_objects spec (cdl_irq_node spec irq) = Some obj\<rbrakk>
-  \<Longrightarrow> is_cnode obj"
-  apply (frule (1) well_formed_well_formed_cap_to_object)
-  apply (clarsimp simp: well_formed_cap_to_object_def real_object_at_def real_cnode_at_def irq_cnodes_def object_at_def)
-  apply (frule object_slots_opt_cap, assumption, rule refl)
-  apply (frule well_formed_well_formed_cap_types_match, assumption+, simp)
-  apply (clarsimp simp: well_formed_cap_types_match_def is_irqhandler_cap_cap_type' object_type_is_object)
   done
 
 lemma well_formed_object_slots:
@@ -568,8 +531,8 @@ lemma well_formed_object_slots:
 
 lemma well_formed_slot_object_size_bits:
   "\<lbrakk>well_formed spec; opt_cap (obj_id, slot) spec = Some cap;
-         cdl_objects spec obj_id = Some obj; cnode_at obj_id spec\<rbrakk>
-        \<Longrightarrow> slot < 2 ^ object_size_bits obj"
+    cdl_objects spec obj_id = Some obj; cnode_at obj_id spec\<rbrakk>
+  \<Longrightarrow> slot < 2 ^ object_size_bits obj"
   apply (frule opt_cap_cdl_objects)
   apply (clarsimp simp: well_formed_def object_at_def is_cnode_def)
   apply (erule_tac x=obj_id in allE)
@@ -587,11 +550,11 @@ lemma well_formed_slot_object_size_bits:
   done
 
 lemma well_formed_cnode_object_size_bits:
-  "\<lbrakk>well_formed spec; real_cnode_at obj_id spec; cdl_objects spec obj_id = Some obj\<rbrakk>
+  "\<lbrakk>well_formed spec; cnode_at obj_id spec; cdl_objects spec obj_id = Some obj\<rbrakk>
   \<Longrightarrow> 0 < object_size_bits obj"
-  apply (clarsimp simp: well_formed_def object_at_def)
+  apply (clarsimp simp: well_formed_def)
   apply (erule_tac x=obj_id in allE)
-  apply (clarsimp simp:  is_cnode_def)
+  apply (clarsimp simp: is_cnode_def object_at_def)
   done
 
 lemma well_formed_cnode_object_size_bits_eq:
@@ -638,6 +601,10 @@ lemma well_formed_well_formed_irqhandler_caps:
   "well_formed spec \<Longrightarrow> well_formed_irqhandler_caps spec"
   by (clarsimp simp: well_formed_def)
 
+lemma well_formed_well_formed_irq_table:
+  "well_formed spec \<Longrightarrow> well_formed_irq_table spec"
+  by (clarsimp simp: well_formed_def)
+
 lemma well_formed_inj_cdl_irq_node:
   "well_formed spec \<Longrightarrow> inj (cdl_irq_node spec)"
   by (clarsimp simp: well_formed_def well_formed_irq_table_def)
@@ -660,10 +627,33 @@ lemma is_fake_vm_cap_cap_type:
   by (clarsimp simp: is_fake_vm_cap_def cap_type_def
               split: cdl_cap.splits)
 
+lemma well_formed_irq_node_in_irq_nodes:
+  "\<lbrakk>well_formed spec; cdl_objects spec obj_id = Some obj; is_irq_node obj\<rbrakk>
+  \<Longrightarrow> obj_id \<in> irq_nodes spec"
+  find_theorems irq_nodes
+  oops
+
+term real_object_at
+lemma well_formed_irq_node_cap_is_aep_cap:
+  "\<lbrakk>well_formed spec; cdl_objects spec obj_id = Some obj; is_irq_node obj;
+    object_slots obj slot = Some cap; cap \<noteq> NullCap\<rbrakk>
+  \<Longrightarrow> is_aep_cap cap"
+  apply (frule (3) well_formed_well_formed_cap_types_match)
+
+  apply (clarsimp simp: well_formed_cap_types_match_def)
+
+
+  oops
+
 lemma well_formed_is_fake_vm_cap:
-  "\<lbrakk>well_formed spec; cdl_objects spec obj_id = Some obj; is_cnode obj \<or> is_tcb obj;
+  "\<lbrakk>well_formed spec; cdl_objects spec obj_id = Some obj; is_cnode obj \<or> is_tcb obj \<or> is_irq_node obj;
     object_slots obj slot = Some cap\<rbrakk>
   \<Longrightarrow> \<not>is_fake_vm_cap cap"
+  apply (case_tac "is_irq_node obj")
+   apply (frule (1) well_formed_well_formed_irq_node)
+   apply (clarsimp simp: well_formed_irq_node_def object_at_def irq_nodes_def)
+   apply (drule is_fake_vm_cap_cap_type)
+   apply (cases "cap = NullCap", simp_all)
   apply (clarsimp simp: well_formed_def)
   apply (erule_tac x=obj_id in allE)
   apply (clarsimp simp: well_formed_caps_def)
@@ -712,7 +702,7 @@ lemma well_formed_cap_has_object:
   apply (clarsimp simp: well_formed_caps_def)
   apply (erule_tac x=slot in allE)
   apply (clarsimp simp: domI)
-  apply (clarsimp simp: cap_has_object_def well_formed_cap_def is_irqhandler_cap_def
+  apply (clarsimp simp: cap_has_object_def well_formed_cap_def
                  split: cdl_cap.splits)
   done
 
@@ -838,16 +828,16 @@ lemma well_formed_orig_caps:
 
 lemma well_formed_cdt:
   "\<lbrakk>well_formed spec; opt_cap (obj_id, slot) spec = Some cap; cap_has_object cap;
-    real_cnode_at obj_id spec\<rbrakk> \<Longrightarrow>
+    cnode_at obj_id spec\<rbrakk> \<Longrightarrow>
     \<exists>orig_obj_id orig_slot orig_cap.
-    real_cnode_at orig_obj_id spec \<and>
+    cnode_at orig_obj_id spec \<and>
     original_cap_at (orig_obj_id, orig_slot) spec \<and>
     opt_cap (orig_obj_id, orig_slot) spec = Some orig_cap \<and>
     cap_has_object orig_cap \<and> cap_object orig_cap = cap_object cap"
   apply (clarsimp simp: well_formed_def)
   apply (erule_tac x=obj_id in allE)
   apply (clarsimp simp: split: option.splits)
-   apply (clarsimp simp: real_cnode_at_def object_at_def)
+   apply (clarsimp simp: object_at_def)
   apply (clarsimp simp: well_formed_caps_def)
   apply (erule_tac x=slot in allE)
   apply (clarsimp simp: well_formed_cdt_def object_slots_opt_cap)
@@ -858,7 +848,7 @@ lemma well_formed_cap_to_real_object:
   \<Longrightarrow> \<exists>cnode_id slot cap.
        opt_cap (cnode_id, slot) spec = Some cap \<and>
        original_cap_at (cnode_id, slot) spec \<and>
-       real_cnode_at cnode_id spec \<and>
+       cnode_at cnode_id spec \<and>
        cap_object cap = obj_id \<and>
        cap_has_object cap"
   apply (clarsimp simp: well_formed_def)
@@ -867,11 +857,11 @@ lemma well_formed_cap_to_real_object:
   done
 
 lemma well_formed_cap_to_irq_object:
-  "\<lbrakk>well_formed spec; cdl_objects spec obj_id = Some obj; obj_id \<in> irq_cnodes spec\<rbrakk>
+  "\<lbrakk>well_formed spec; cdl_objects spec obj_id = Some obj; obj_id \<in> irq_nodes spec\<rbrakk>
   \<Longrightarrow> \<exists>cnode_id slot cap.
        opt_cap (cnode_id, slot) spec = Some cap \<and>
        original_cap_at (cnode_id, slot) spec \<and>
-       real_cnode_at cnode_id spec \<and>
+       cnode_at cnode_id spec \<and>
        is_irqhandler_cap cap \<and>
        cdl_irq_node spec (cap_irq cap) = obj_id"
   apply (frule (1) well_formed_well_formed_cap_to_object)
@@ -1051,7 +1041,7 @@ lemma well_formed_tcb_pending_op_cap:
 
 lemma well_formed_orig_caps_unique:
   "\<lbrakk>well_formed spec; original_cap_at (obj_id, slot) spec; original_cap_at (obj_id', slot') spec;
-    real_cnode_at obj_id spec; real_cnode_at obj_id' spec; cap_has_object cap; cap_has_object cap';
+    cnode_at obj_id spec; cnode_at obj_id' spec; cap_has_object cap; cap_has_object cap';
     opt_cap (obj_id, slot) spec = Some cap; opt_cap (obj_id', slot') spec = Some cap';
     cap_object cap = cap_object cap'\<rbrakk>
   \<Longrightarrow> obj_id = obj_id' \<and> slot = slot'"
@@ -1081,7 +1071,7 @@ lemma object_cap_ref_cap_irq:
 
 lemma object_cap_ref_real_cap_ref:
   "object_cap_ref (obj_id, slot) spec \<Longrightarrow> real_cap_ref (obj_id, slot) spec"
-  by (clarsimp simp: object_cap_ref_def real_cap_ref_def real_cnode_at_cnode_at)
+  by (clarsimp simp: object_cap_ref_def real_cap_ref_def)
 
 lemma well_formed_orig_caps_unique_object_cap:
   "\<lbrakk>well_formed spec; original_cap_at (obj_id, slot) spec; original_cap_at (obj_id', slot') spec;
@@ -1148,33 +1138,35 @@ lemma well_formed_pt_cap_is_fake_pt_cap:
  * Rules about IRQ caps and IRQ CNodes. *
  ****************************************)
 
-lemma well_formed_irq_cnodes_object_type:
-  "\<lbrakk>well_formed spec; obj_id \<in> irq_cnodes spec;
+lemma well_formed_irq_nodes_object_type:
+  "\<lbrakk>well_formed spec; obj_id \<in> irq_nodes spec;
     cdl_objects spec obj_id = Some object\<rbrakk>
-   \<Longrightarrow> object_type object = CNodeType"
+   \<Longrightarrow> object_type object = IRQNodeType"
   apply (frule (1) well_formed_well_formed_irq_node)
   apply (frule (2) well_formed_cap_to_irq_object)
   apply (clarsimp simp: opt_cap_def slots_of_def opt_object_def split: option.splits)
   apply (frule (2) well_formed_well_formed_cap_types_match, simp)
-  apply (clarsimp simp:  well_formed_cap_types_match_def is_irqhandler_cap_cap_type')
+  apply (clarsimp simp:  well_formed_cap_types_match_def)
   done
 
-lemma well_formed_object_at_irq_cnode_cnode_at:
-  "\<lbrakk>well_formed spec; object_at P obj_id spec; obj_id \<in> irq_cnodes spec\<rbrakk> \<Longrightarrow> cnode_at obj_id spec"
+lemma well_formed_object_at_irq_node_irq_node_at:
+  "\<lbrakk>well_formed spec; object_at P obj_id spec; obj_id \<in> irq_nodes spec\<rbrakk> \<Longrightarrow> irq_node_at obj_id spec"
   apply (clarsimp simp: object_at_def)
-  apply (frule (2) well_formed_irq_cnodes_object_type)
+  apply (frule (2) well_formed_irq_nodes_object_type)
   apply (simp add: object_type_is_object)
   done
 
-lemma real_object_only_cnode:
+lemma real_object_not_irq_node:
+  "well_formed spec \<Longrightarrow> (real_object_at obj_id spec \<and> cnode_at obj_id spec) = cnode_at obj_id spec"
   "well_formed spec \<Longrightarrow> (real_object_at obj_id spec \<and> tcb_at obj_id spec) = tcb_at obj_id spec"
   "well_formed spec \<Longrightarrow> (real_object_at obj_id spec \<and> table_at obj_id spec) = table_at obj_id spec"
   "well_formed spec \<Longrightarrow> (real_object_at obj_id spec \<and> capless_at obj_id spec) = capless_at obj_id spec"
-  apply (insert well_formed_object_at_irq_cnode_cnode_at [where spec=spec and obj_id=obj_id])
+  apply (insert well_formed_object_at_irq_node_irq_node_at [where spec=spec and obj_id=obj_id])
   apply (fastforce simp: real_object_at_def object_at_def object_type_is_object)+
   done
 
 lemma object_at_real_object_at:
+  "\<lbrakk>well_formed spec; cnode_at obj_id spec\<rbrakk> \<Longrightarrow> real_object_at obj_id spec"
   "\<lbrakk>well_formed spec; tcb_at obj_id spec\<rbrakk> \<Longrightarrow> real_object_at obj_id spec"
   "\<lbrakk>well_formed spec; ep_at obj_id spec\<rbrakk> \<Longrightarrow> real_object_at obj_id spec"
   "\<lbrakk>well_formed spec; aep_at obj_id spec\<rbrakk> \<Longrightarrow> real_object_at obj_id spec"
@@ -1182,22 +1174,12 @@ lemma object_at_real_object_at:
   "\<lbrakk>well_formed spec; pd_at obj_id spec\<rbrakk> \<Longrightarrow> real_object_at obj_id spec"
   "\<lbrakk>well_formed spec; pt_at obj_id spec\<rbrakk> \<Longrightarrow> real_object_at obj_id spec"
   "\<lbrakk>well_formed spec; frame_at obj_id spec\<rbrakk> \<Longrightarrow> real_object_at obj_id spec"
-  apply (insert well_formed_object_at_irq_cnode_cnode_at [where spec=spec and obj_id=obj_id])
+  apply (insert well_formed_object_at_irq_node_irq_node_at [where spec=spec and obj_id=obj_id])
   apply (fastforce simp: real_object_at_def object_at_def object_type_is_object)+
   done
 
-(* MOVE ME *)
-lemma real_cnode_at_def2:
-  "real_cnode_at = (\<lambda>obj_id s. real_object_at obj_id s \<and> cnode_at obj_id s)"
-  by (auto simp: real_cnode_at_def [abs_def] real_object_at_def object_at_def)
-
-lemma real_cnode_or_tcb_at_real_object_simp:
-  "well_formed spec \<Longrightarrow>
-  (real_object_at obj_id spec \<and> real_cnode_or_tcb_at obj_id spec) = real_cnode_or_tcb_at obj_id spec"
-  by (fastforce simp: real_cnode_at_def2 object_at_real_object_at)
-
 lemma well_formed_irq_node_slot_0:
-  "\<lbrakk>well_formed spec; irq_id \<in> irq_cnodes spec;
+  "\<lbrakk>well_formed spec; irq_id \<in> irq_nodes spec;
     opt_cap (irq_id, slot) spec = Some cap\<rbrakk> \<Longrightarrow>
     slot = 0"
   apply (frule opt_cap_cdl_objects, clarsimp)
@@ -1206,11 +1188,31 @@ lemma well_formed_irq_node_slot_0:
   apply (simp add: well_formed_irq_node_def dom_def, blast)
   done
 
-lemma well_formed_object_slots_irq_cnode:
-  "\<lbrakk>well_formed spec; cdl_objects spec (cdl_irq_node spec irq) = Some cnode\<rbrakk>
-  \<Longrightarrow> dom (object_slots cnode) = {0}"
+lemma well_formed_irq_nodes_cdl_irq_node:
+  "cdl_irq_node spec irq \<in> irq_nodes spec \<Longrightarrow> irq_node_at (cdl_irq_node spec irq) spec"
+  by (simp add: irq_nodes_def)
+
+lemma well_formed_cdl_irq_node_irq_nodes:
+  "\<lbrakk>well_formed spec; cdl_objects spec (cdl_irq_node spec irq) = Some irq_node\<rbrakk>
+  \<Longrightarrow> cdl_irq_node spec irq \<in> irq_nodes spec"
+  apply (drule well_formed_well_formed_irq_table)
+  apply (clarsimp simp: well_formed_irq_table_def)
+  apply (fastforce simp: object_at_def)
+  done
+
+lemma well_formed_irq_is_irq_node:
+  "\<lbrakk>well_formed spec; cdl_objects spec (cdl_irq_node spec irq) = Some irq_node\<rbrakk>
+  \<Longrightarrow> is_irq_node irq_node"
+  apply (frule (1) well_formed_cdl_irq_node_irq_nodes)
+  apply (clarsimp simp: irq_nodes_def object_at_def)
+  done
+
+lemma well_formed_object_slots_irq_node:
+  "\<lbrakk>well_formed spec; cdl_objects spec (cdl_irq_node spec irq) = Some irq_node\<rbrakk>
+  \<Longrightarrow> dom (object_slots irq_node) = {0}"
+  apply (frule (1) well_formed_cdl_irq_node_irq_nodes)
   apply (frule (1) well_formed_well_formed_irq_node)
-  apply (clarsimp simp: well_formed_irq_node_def irq_cnodes_def)
+  apply (clarsimp simp: well_formed_irq_node_def)
   done
 
 lemma well_formed_irq_aep_cap:
@@ -1219,15 +1221,16 @@ lemma well_formed_irq_aep_cap:
     opt_cap (cdl_irq_node spec irq, 0) spec = Some aep_cap\<rbrakk>
   \<Longrightarrow> aep_cap = AsyncEndpointCap (cap_object aep_cap) 0 {AllowRead, AllowWrite}"
   apply (frule opt_cap_cdl_objects, clarsimp)
-  apply (frule (1) well_formed_object_slots_irq_cnode [where irq=irq])
+  apply (frule (1) well_formed_object_slots_irq_node [where irq=irq])
   apply (frule (1) well_formed_well_formed_irq_node)
-  apply (clarsimp simp: well_formed_irq_node_def irq_cnodes_def)
+  apply (frule (1) well_formed_cdl_irq_node_irq_nodes)
+  apply (clarsimp simp: well_formed_irq_node_def)
   apply (erule allE [where x=0])
   apply (erule allE [where x=aep_cap])
-  apply (clarsimp simp: bound_irqs_def opt_cap_def slots_of_def opt_object_def
-                        is_default_cap_def default_cap_def cap_object_def
-                        is_irqhandler_cap_def cap_has_object_def
-                 split: cdl_cap.splits)
+  apply (fastforce simp: bound_irqs_def opt_cap_def slots_of_def opt_object_def
+                         is_default_cap_def default_cap_def cap_object_def
+                         cap_has_object_def
+                  split: cdl_cap.splits)
   done
 
 lemma well_formed_bound_irqs_are_used_irqs:
@@ -1236,25 +1239,25 @@ lemma well_formed_bound_irqs_are_used_irqs:
   apply (fastforce simp: well_formed_irqhandler_caps_def used_irqs_def bound_irqs_def all_caps_def)
   done
 
-lemma well_formed_slots_of_used_irq_cnode:
+lemma well_formed_slots_of_used_irq_node:
   "\<lbrakk>well_formed spec; irq \<in> used_irqs spec\<rbrakk>
   \<Longrightarrow> dom (slots_of (cdl_irq_node spec irq) spec) = {0}"
   apply (clarsimp simp: used_irqs_def slots_of_def opt_object_def split: option.splits)
   apply (frule (2) well_formed_all_caps_cap_irq, clarsimp)
-  apply (erule (1) well_formed_object_slots_irq_cnode)
+  apply (erule (1) well_formed_object_slots_irq_node)
   done
 
-lemma well_formed_slot_0_of_used_irq_cnode:
+lemma well_formed_slot_0_of_used_irq_node:
   "\<lbrakk>well_formed spec; irq \<in> used_irqs spec\<rbrakk>
   \<Longrightarrow> \<exists>aep_cap. slots_of (cdl_irq_node spec irq) spec 0 = Some aep_cap"
-  apply (frule (1) well_formed_slots_of_used_irq_cnode)
+  apply (frule (1) well_formed_slots_of_used_irq_node)
   apply (clarsimp simp: dom_eq_singleton_conv)
   done
 
-lemma well_formed_object_slots_default_irq_cnode:
-  "\<lbrakk>well_formed spec; cdl_objects spec (cdl_irq_node spec irq) = Some cnode\<rbrakk>
-  \<Longrightarrow> dom (object_slots (object_default_state cnode)) = {0}"
-  by (metis well_formed_object_slots well_formed_object_slots_irq_cnode)
+lemma well_formed_object_slots_default_irq_node:
+  "\<lbrakk>well_formed spec; cdl_objects spec (cdl_irq_node spec irq) = Some irq_node\<rbrakk>
+  \<Longrightarrow> dom (object_slots (object_default_state irq_node)) = {0}"
+  by (metis well_formed_object_slots well_formed_object_slots_irq_node)
 
 lemma object_slots_empty_cnode:
   "object_slots (CNode (empty_cnode sz)) = empty_cap_map sz"
@@ -1267,37 +1270,37 @@ lemma dom_empty_cap_map_singleton:
   apply (drule atLeastLessThan_inj(2), simp+)
   done
 
-lemma well_formed_size_irq_cnode:
-  "\<lbrakk>well_formed spec; cdl_objects spec (cdl_irq_node spec irq) = Some cnode\<rbrakk>
-  \<Longrightarrow> object_size_bits cnode = 0"
-  apply (frule (1) well_formed_irq_is_cnode)
+lemma well_formed_size_irq_node:
+  "\<lbrakk>well_formed spec; cdl_objects spec (cdl_irq_node spec irq) = Some irq_node\<rbrakk>
+  \<Longrightarrow> object_size_bits irq_node = 0"
+  apply (frule (1) well_formed_irq_is_irq_node)
   apply (frule (1) well_formed_object_slots)
-  apply (drule (1) well_formed_object_slots_default_irq_cnode)
+  apply (drule (1) well_formed_object_slots_default_irq_node)
   apply (clarsimp simp: object_default_state_def2 is_cnode_def object_slots_empty_cnode
-                        object_size_bits_def dom_empty_cap_map_singleton
+                        object_size_bits_def dom_empty_cap_map_singleton is_irq_node_def
                  split: cdl_object.splits)
   done
 
-lemma well_formed_used_irqs_have_cnode:
+lemma well_formed_used_irqs_have_irq_node:
   "\<lbrakk>well_formed spec; irq \<in> used_irqs spec\<rbrakk>
-  \<Longrightarrow> \<exists>cnode. cdl_objects spec (cdl_irq_node spec irq) = Some cnode"
+  \<Longrightarrow> \<exists>irq_node. cdl_objects spec (cdl_irq_node spec irq) = Some irq_node"
   apply (clarsimp simp: used_irqs_def)
   apply (erule (2) well_formed_all_caps_cap_irq)
   done
 
-lemma well_formed_bound_irqs_have_cnode:
+lemma well_formed_bound_irqs_have_irq_node:
   "\<lbrakk>well_formed spec; irq \<in> bound_irqs spec\<rbrakk>
-  \<Longrightarrow> \<exists>cnode. cdl_objects spec (cdl_irq_node spec irq) = Some cnode"
+  \<Longrightarrow> \<exists>irq_node. cdl_objects spec (cdl_irq_node spec irq) = Some irq_node"
   apply (frule well_formed_well_formed_irqhandler_caps)
   apply (clarsimp simp: well_formed_irqhandler_caps_def used_irqs_def bound_irqs_def all_caps_def)
   done
 
-lemma well_formed_irq_cnode_is_bound:
-  "\<lbrakk>well_formed spec; cdl_objects spec (cdl_irq_node spec irq) = Some cnode;
-    object_slots cnode 0 \<noteq> Some NullCap\<rbrakk>
+lemma well_formed_irq_node_is_bound:
+  "\<lbrakk>well_formed spec; cdl_objects spec (cdl_irq_node spec irq) = Some irq_node;
+    object_slots irq_node 0 \<noteq> Some NullCap\<rbrakk>
   \<Longrightarrow> irq \<in> bound_irqs spec"
   apply (frule well_formed_well_formed_irqhandler_caps)
-  apply (frule (1) well_formed_object_slots_default_irq_cnode)
+  apply (frule (1) well_formed_object_slots_default_irq_node)
   apply (frule (1) well_formed_object_slots)
   apply (clarsimp simp: well_formed_irqhandler_caps_def bound_irqs_def
                         dom_eq_singleton_conv slots_of_def opt_object_def)
@@ -1308,15 +1311,15 @@ lemma well_formed_cap_object_cdl_irq_node:
     \<Longrightarrow> \<exists>obj. is_aep obj \<and>
               cdl_objects spec (cap_object (the (opt_cap (cdl_irq_node spec irq, 0) spec))) = Some obj"
   apply (frule well_formed_bound_irqs_are_used_irqs)
-  apply (frule (1) well_formed_bound_irqs_have_cnode, clarsimp)
-  apply (frule well_formed_slot_0_of_used_irq_cnode [where irq=irq], fast)
+  apply (frule (1) well_formed_bound_irqs_have_irq_node, clarsimp)
+  apply (frule well_formed_slot_0_of_used_irq_node [where irq=irq], fast)
   apply (clarsimp simp: opt_cap_def)
   apply (rename_tac cap)
   apply (frule (1) well_formed_irq_aep_cap, simp add: opt_cap_def)
   apply (frule well_formed_cap_object, simp add: opt_cap_def)
    apply (metis cap_has_object_simps)
   apply clarsimp
-  apply (frule well_formed_real_types_match [where obj_id = "cdl_irq_node spec irq" and slot = 0])
+  apply (frule well_formed_types_match [where obj_id = "cdl_irq_node spec irq" and slot = 0])
     apply (simp add: opt_cap_def)
    apply simp
    apply (metis cap_has_object_simps)
@@ -1336,12 +1339,12 @@ lemma well_formed_object_untyped:
    apply clarsimp
    apply (frule (1) well_formed_types_match, simp add: cap_has_object_def)
     apply (clarsimp simp: cap_has_object_def)
-   apply (clarsimp simp: real_cnode_at_def cap_type'_def cap_type_def cap_has_object_def
+   apply (clarsimp simp: cap_type_def cap_has_object_def
                   split: cdl_cap.splits)
    apply (frule (2) well_formed_is_untyped_cap)
    apply (clarsimp simp: cap_type_def)
   apply (clarsimp simp: real_object_at_def dom_def)
-  apply (drule (2) well_formed_irq_cnodes_object_type)
+  apply (drule (2) well_formed_irq_nodes_object_type)
   apply simp
   done
 
@@ -1350,11 +1353,11 @@ lemma well_formed_asidpool_at:
   apply (clarsimp simp: object_at_def object_type_is_object)
   apply (frule well_formed_cap_to_real_object [where obj_id=obj_id])
    apply (clarsimp simp: real_object_at_def dom_def)
-   apply (drule (2) well_formed_irq_cnodes_object_type, simp)
+   apply (drule (2) well_formed_irq_nodes_object_type, simp)
   apply clarsimp
   apply (frule (2) well_formed_types_match [symmetric], clarsimp+)
   apply (frule (1) well_formed_well_formed_cap', clarsimp)
-  apply (clarsimp simp: well_formed_cap_def cap_type'_def cap_type_def
+  apply (clarsimp simp: well_formed_cap_def cap_type_def
                  split: cdl_cap.splits)
   done
 
@@ -1370,7 +1373,7 @@ lemma well_formed_fake_pt_cap_in_pd:
   apply (rename_tac obj)
   apply (frule well_formed_asidpool_at [where obj_id=obj_id])
   apply (frule (1) well_formed_well_formed_vspace)
-  apply (case_tac "is_cnode obj \<or> is_tcb obj")
+  apply (case_tac "is_cnode obj \<or> is_tcb obj \<or> is_irq_node obj")
    apply (frule (3) well_formed_is_fake_vm_cap)
    apply (clarsimp simp: is_fake_vm_cap_def is_fake_pt_cap_def split: cdl_cap.splits)
   apply clarsimp
@@ -1390,8 +1393,8 @@ definition
   cap_at_to_real_object :: "cdl_cap_ref \<Rightarrow> cdl_state \<Rightarrow> bool"
 where
   "cap_at_to_real_object cap_ref s =
-   cap_at (\<lambda>cap. cap_has_object cap \<and> cap_object cap \<notin> irq_cnodes s) cap_ref s"
-
+   cap_at (\<lambda>cap. cap_has_object cap \<and> cap_object cap \<notin> irq_nodes s) cap_ref s"
+(* FIXME: Why doesn't every cap pointing to an object not point to an IRQ Node? *)
 
 (* There is a bijection between objects and orig caps. *)
 lemma well_formed_bij:
@@ -1400,14 +1403,14 @@ lemma well_formed_bij:
        (\<lambda>cap_ref. cap_ref_object cap_ref s)
        {cap_ref. original_cap_at cap_ref s \<and>
                  cap_at_to_real_object cap_ref s \<and>
-                 real_cnode_at (fst cap_ref) s}
+                 cnode_at (fst cap_ref) s}
        ((real_objects s))"
   apply (clarsimp simp: bij_betw_def)
   apply (rule conjI)
   apply (clarsimp simp: inj_on_def real_cap_ref_def cap_ref_object_def
                         object_cap_ref_def cap_at_to_real_object_def cap_at_def)
    apply (erule_tac cap=cap and cap'=capa in well_formed_orig_caps_unique,
-          (assumption|fastforce simp: real_cnode_at_def)+)
+          (assumption|fastforce)+)
   apply (clarsimp simp: image_def)
   apply rule
    apply (clarsimp simp: real_cap_ref_def cap_ref_object_def object_cap_ref_def
@@ -1418,10 +1421,7 @@ lemma well_formed_bij:
   apply (clarsimp simp: real_cap_ref_def cap_ref_object_def
                         real_objects_def real_object_at_def)
   apply (frule_tac well_formed_cap_to_real_object, fastforce simp: real_object_at_def)
-  apply (clarsimp simp: cap_at_to_real_object_def cap_at_def)
-  apply (rule_tac x=cnode_id in exI)
-  apply (rule_tac x=slot in exI)
-  apply (clarsimp simp: real_cnode_at_def)
+  apply (fastforce simp: cap_at_to_real_object_def cap_at_def)
   done
 
 lemma well_formed_irqhandler_bij:
@@ -1515,14 +1515,18 @@ lemma well_formed_objects_real_or_irq:
   apply (rule conjI)
    apply clarsimp
   apply clarsimp
-  apply (frule (1) well_formed_cap_to_irq_object, simp add: irq_cnodes_def)
+  apply (frule (1) well_formed_cap_to_irq_object, simp add: irq_nodes_def)
   apply (fastforce simp: used_irqs_def all_caps_def dest!: injD)
   done
 
 lemma well_formed_objects_only_real_or_irq:
   "well_formed spec \<Longrightarrow>
   {obj_id. real_object_at obj_id spec} \<inter> (cdl_irq_node spec ` used_irqs spec) = {}"
-  by (auto simp: real_object_at_def irq_cnodes_def)
+  apply (subst disjoint_iff_not_equal, clarsimp)
+  apply (frule (1) well_formed_used_irqs_have_irq_node, clarsimp)
+  apply (frule (1) well_formed_cdl_irq_node_irq_nodes)
+  apply (auto simp: real_object_at_def)
+  done
 
 lemma well_formed_objects_card:
   "\<lbrakk>well_formed spec \<rbrakk>
@@ -1530,10 +1534,10 @@ lemma well_formed_objects_card:
   apply (frule well_formed_inj_cdl_irq_node)
   apply (frule well_formed_objects_real_or_irq)
   apply (frule well_formed_objects_only_real_or_irq)
-  apply (subgoal_tac " card (used_irqs spec) =  card (used_irq_cnodes spec)", simp)
+  apply (subgoal_tac " card (used_irqs spec) =  card (used_irq_nodes spec)", simp)
    apply (subst card_Un_Int, simp+)
-   apply (metis Int_commute Nat.add_0_right Un_commute card_empty used_irq_cnodes_def)
-  by (metis card_image inj_inj_on used_irq_cnodes_def)
+   apply (metis Int_commute Nat.add_0_right Un_commute card_empty used_irq_nodes_def)
+  by (metis card_image inj_inj_on used_irq_nodes_def)
 
 
 (****************************************
@@ -1543,7 +1547,7 @@ lemma well_formed_objects_card:
 lemma update_cap_rights_and_data:
   "\<lbrakk>t (cap_object spec_cap) = Some client_object_id; \<not> is_untyped_cap spec_cap;
     well_formed_cap spec_cap; \<not> vm_cap_has_asid spec_cap; \<not> is_fake_vm_cap spec_cap;
-    cap_type spec_cap = Some type\<rbrakk>
+    \<not> is_irqhandler_cap spec_cap; cap_type spec_cap = Some type\<rbrakk>
  \<Longrightarrow> update_cap_data_det
      (cap_data spec_cap)
      (update_cap_rights (cap_rights spec_cap)
@@ -1607,11 +1611,11 @@ lemma update_cap_data:
   "\<lbrakk>t (cap_object spec_cap) = Some client_object_id;
     cap_type spec_cap = Some type; cap_data spec_cap = data;
     well_formed_cap spec_cap; \<not> is_untyped_cap spec_cap;
-    \<not> vm_cap_has_asid spec_cap; \<not> is_fake_vm_cap spec_cap;
+    \<not> vm_cap_has_asid spec_cap; \<not> is_fake_vm_cap spec_cap; \<not> is_irqhandler_cap spec_cap;
     cap_rights (default_cap type {obj_id} sz) = cap_rights spec_cap\<rbrakk>
  \<Longrightarrow> update_cap_data_det data (default_cap type {client_object_id} (cnode_cap_size spec_cap)) =
      update_cap_object client_object_id spec_cap"
-  apply (frule (5) update_cap_rights_and_data)
+  apply (frule (6) update_cap_rights_and_data)
   apply clarsimp
   apply (subgoal_tac "update_cap_rights
                       (cap_rights spec_cap)
@@ -1623,6 +1627,5 @@ lemma update_cap_data:
    apply (subst cap_rights_default_cap_eq, fast)
   apply simp
   done
-
 
 end

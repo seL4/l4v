@@ -2220,29 +2220,49 @@ lemma zombie_get_cnode:
   by (clarsimp dest!: cte_wp_at_valid_objs_valid_cap [OF _ invs_valid_objs] simp: valid_cap_simps get_cnode'_def obj_at_def
     elim!: is_cap_tableE)
 
+definition
+  object_at :: "(cdl_object \<Rightarrow> bool) \<Rightarrow> cdl_object_id \<Rightarrow> cdl_state \<Rightarrow> bool"
+where
+  "object_at P obj_id s \<equiv> \<exists>object. cdl_objects s obj_id = Some object \<and> P object"
+
 (* MOVE *)
 definition
-  "transform_cnode sz cn \<equiv> Types_D.CNode \<lparr>
-                cdl_cnode_caps = transform_cnode_contents sz cn,
-                cdl_cnode_size_bits = sz
-                \<rparr>"
+  "transform_cnode sz cn \<equiv>
+  if sz = 0
+  then IRQNode \<lparr> cdl_irq_node_caps = transform_cnode_contents sz cn \<rparr>
+  else Types_D.CNode \<lparr> cdl_cnode_caps = transform_cnode_contents sz cn,
+                       cdl_cnode_size_bits = sz \<rparr>"
+
+definition
+  cnode_size_bits :: "kernel_object \<Rightarrow> nat"
+where
+  "cnode_size_bits obj \<equiv> case obj of CNode sz cs \<Rightarrow> sz | _ \<Rightarrow> 0"
 
 lemma dcorres_get_object_cnode_split:
   assumes c: "\<And>cnode. dcorres r P (P' cnode) (a (cdl_object.CNode cnode)) c"
   shows   "dcorres r P
-                    (\<lambda>s. (\<forall>sz obj'. get_cnode' ptr s = Some (sz,obj') \<longrightarrow> P' (obj_cnode (transform_cnode sz obj')) s) \<and> get_cnode' ptr s \<noteq> None \<and> valid_idle s)
-                     (KHeap_D.get_object ptr >>= a) c"
-  apply (rule corres_guard_imp)
+                    (\<lambda>s. (\<forall>sz cs. (get_cnode' ptr s = Some (sz,cs)) \<longrightarrow> P' (obj_cnode (transform_cnode sz cs)) s) \<and>
+                         get_cnode' ptr s \<noteq> None \<and>
+                         cnode_size_bits (the (kheap s ptr)) \<noteq> 0 \<and>
+                         valid_idle s)
+                    (KHeap_D.get_object ptr >>= a) c"
+  apply (rule corres_guard_imp [where
+         Q = "\<lambda>s. \<forall>obj. opt_object ptr s = Some (cdl_object.CNode obj) \<longrightarrow> P s" and
+         Q' = "\<lambda>s. (\<forall>obj'. (get_cnode' ptr s = Some obj')\<longrightarrow> (P' (obj_cnode (transform_cnode (fst obj') (snd obj'))) s) ) \<and>
+                    get_cnode' ptr s \<noteq> None \<and> cnode_size_bits (the (kheap s ptr)) \<noteq> 0 \<and> valid_idle s"])
     apply (rule dcorres_get_object_special [where C = "Types_D.CNode" and UN_C = obj_cnode
-           and AP = get_cnode' and AP_LIFT = "\<lambda>cn _. obj_cnode (transform_cnode (fst cn) (snd cn))"
-           and AP_Q = "valid_idle"])
+           and AP = "\<lambda> ptr s. get_cnode' ptr s" and AP_LIFT = "\<lambda>cn _. obj_cnode (transform_cnode (fst cn) (snd cn))"
+           and AP_Q = "\<lambda>s. cnode_size_bits (the (kheap s ptr)) \<noteq> 0 \<and> valid_idle s" and R="\<lambda>obj s. P s"])
       apply simp
      apply (case_tac obj)
-     apply simp
+     apply clarsimp
      apply (drule (1) opt_object_cnode [OF _ get_cnode'D])
-     apply (simp add: transform_cnode_def)
+     apply (simp add: transform_cnode_def) defer
     apply (rule c)
    apply simp_all
+   apply (clarsimp split: nat.splits)
+   apply (clarsimp simp: get_cnode'_def cnode_size_bits_def split:  option.splits kernel_object.split)
+   apply (case_tac a, simp_all)
   done
 
 lemma arch_recycle_cap_ret:
@@ -2322,7 +2342,7 @@ lemma recycle_cap_corres_pre:
     apply fastforce
   apply (clarsimp simp:get_cnode'_def
      valid_cap_def obj_at_def split:Structures_A.kernel_object.splits)
-  apply (simp add:transform_cnode_def is_cap_table_def invs_valid_idle)
+  apply (clarsimp simp:transform_cnode_def is_cap_table_def invs_valid_idle cnode_size_bits_def)
   done
 
 crunch valid_etcbs[wp]: recycle_cap valid_etcbs

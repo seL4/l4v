@@ -627,6 +627,23 @@ lemma less_le_mult_nat':
 
 lemmas less_le_mult_nat = less_le_mult_nat'[simplified distrib_right, simplified]
 
+(* FIXME: these should be moved to Word and declared [simp]
+   but that will probably break everything. *)
+lemmas extra_sle_sless_unfolds
+    = word_sle_def[where a=0 and b=1]
+    word_sle_def[where a=0 and b="numeral n"]
+    word_sle_def[where a=1 and b=0]
+    word_sle_def[where a=1 and b="numeral n"]
+    word_sle_def[where a="numeral n" and b=0]
+    word_sle_def[where a="numeral n" and b=1]
+    word_sless_alt[where a=0 and b=1]
+    word_sless_alt[where a=0 and b="numeral n"]
+    word_sless_alt[where a=1 and b=0]
+    word_sless_alt[where a=1 and b="numeral n"]
+    word_sless_alt[where a="numeral n" and b=0]
+    word_sless_alt[where a="numeral n" and b=1]
+  for n
+
 (*
  * Signed division: when the result of a division is negative,
  * we will round towards zero instead of towards minus infinity.

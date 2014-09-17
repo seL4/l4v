@@ -549,14 +549,12 @@ lemma cap_object_reset_cap_asid:
 
 lemma cap_type_reset_cap_asid[simp]:
   "cap_type (reset_cap_asid cap) = cap_type cap"
-  apply (clarsimp simp: reset_cap_asid_def split: cdl_cap.splits)
-  apply (clarsimp simp: cap_type_def)
-  done
+  by (clarsimp simp: reset_cap_asid_def split: cdl_cap.splits)
 
 lemma cap_guard_reset_cap_asid:
   "is_cnode_cap cap \<Longrightarrow> cap_guard (reset_cap_asid cap) = cap_guard cap"
   "is_cnode_cap cap \<Longrightarrow> cap_guard_size (reset_cap_asid cap) = cap_guard_size cap"
-  by (case_tac cap,simp_all add:reset_cap_asid_def cap_guard_def, simp add: cap_type_def)+
+  by (case_tac cap,simp_all add:reset_cap_asid_def cap_guard_def)+
 
 lemma lookup_slot_for_cnode_op_rvu':
      "\<lbrace>\<lambda>s. Q ((cap_object cnode_cap), offset cap_ptr r) s \<and> remaining_size \<le> word_bits
@@ -653,9 +651,7 @@ lemma ensure_empty_no_exception:
 lemma reset_cap_asid_cap_type:
   "reset_cap_asid cap = reset_cap_asid cap'
   \<Longrightarrow> cap_type cap = cap_type cap'"
-  apply (clarsimp simp: reset_cap_asid_def split: cdl_cap.splits)
-  apply (clarsimp simp: cap_type_def)
-  done
+  by (clarsimp simp: reset_cap_asid_def split: cdl_cap.splits)
 
 lemma ep_related_cap_update_cap_rights[simp]:
   "ep_related_cap (update_cap_rights rights cap) = ep_related_cap cap"

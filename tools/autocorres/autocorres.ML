@@ -246,7 +246,7 @@ let
   val all_functions = Symset.make (Symtab.keys (FunctionInfo.get_functions fn_info))
 
   (* Process autocorres options. *)
-  val _ = Utils.keep_going_option := (!(#keep_going opt) = SOME true)
+  val keep_going = !(#keep_going opt) = SOME true
 
   val _ = if not (!(#unsigned_word_abs opt) = NONE) andalso not (!(#skip_word_abs opt) = NONE) then
               error "autocorres: unsigned_word_abs and skip_word_abs cannot be used together."
@@ -343,13 +343,13 @@ let
     |> (fn (lthy, fn_info) =>
         LocalVarExtract.translate_l2 filename fn_info lthy)
     |> (fn (lthy, fn_info) =>
-        HeapLift.system_heap_lift filename fn_info (these (!(#no_heap_abs opt))) (these (!(#force_heap_abs opt))) heap_abs_syntax lthy)
+        HeapLift.system_heap_lift filename fn_info (these (!(#no_heap_abs opt))) (these (!(#force_heap_abs opt))) heap_abs_syntax keep_going lthy)
     |> (fn (lthy, fn_info) =>
         if skip_word_abs then (lthy, fn_info) else
         WordAbstract.word_abstract filename fn_info (these (!(#unsigned_word_abs opt)))
                                    (these (!(#no_signed_word_abs opt))) lthy)
     |> (fn (lthy, fn_info) =>
-        TypeStrengthen.type_strengthen ts_rules ts_force filename fn_info lthy)
+        TypeStrengthen.type_strengthen ts_rules ts_force filename fn_info keep_going lthy)
     |> (fn (lthy, fn_info) =>
         lthy)
 in

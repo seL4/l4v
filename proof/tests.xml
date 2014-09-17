@@ -27,6 +27,8 @@
 
     <!-- CRefine -->
     <sequence timeout="14400">
+        <test name="CKernel">make CKernel</test>
+        <test name="CSpec">make CSpec</test>
         <test name="CBaseRefine">make CBaseRefine</test>
         <test name="CRefine">make CRefine</test>
     </sequence>
@@ -42,6 +44,16 @@
         <test name="Access">make Access</test>
         <test name="InfoFlow">make InfoFlow</test>
         <test name="InfoFlowC" depends="CBaseRefine">make InfoFlowC</test>
+    </sequence>
+
+    <!-- Bisim -->
+    <sequence depends="ASepSpec AInvs">
+        <test name="Bisim">make Bisim</test>
+    </sequence>
+
+    <!-- Binary Verification -->
+    <sequence depends="CSpec" timeout="9000">
+        <test name="SimplExportAndRefine">make SimplExportAndRefine</test>
     </sequence>
 
     <!-- Separation Logic. -->

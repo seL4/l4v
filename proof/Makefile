@@ -16,7 +16,7 @@ all: images test
 report-regression:
 	@echo Refine Access CBaseRefine CRefine \
 	      DRefine InfoFlow InfoFlowC DPolicy \
-		  DSpecProofs SepTacticsExamples
+		  DSpecProofs SepTacticsExamples Bisim
 
 #
 # Setup heaps.
@@ -26,7 +26,7 @@ report-regression:
 HEAPS += AInvs BaseRefine Refine
 
 # CRefine heaps.
-HEAPS += CBaseRefine CRefine
+HEAPS += CKernel CSpec CBaseRefine CRefine
 
 # capDL heaps.
 HEAPS += DBaseRefine DRefine DPolicy DSpecProofs
@@ -34,12 +34,18 @@ HEAPS += DBaseRefine DRefine DPolicy DSpecProofs
 # Security Proofs
 HEAPS += Access InfoFlow InfoFlowC
 
+# Binary Verification
+HEAPS += SimplExportAndRefine
+
+# Separation Kernel Bisimilarity
+HEAPS += Bisim
+
 # Separation Logic Tactics
 HEAPS += SepTactics SepTacticsExamples
 
 # Additional dependencies
 
-CBaseRefine CRefine: c-kernel
+CKernel CSpec CBaseRefine CRefine: c-kernel
 
 # Preprocess the kernel's source code and bitfield theory files.
 c-kernel: .FORCE

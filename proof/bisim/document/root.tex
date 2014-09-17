@@ -1,0 +1,140 @@
+%
+% Copyright 2014, NICTA
+%
+% This software may be distributed and modified according to the terms of
+% the GNU General Public License version 2. Note that NO WARRANTY is provided.
+% See "LICENSE_GPLv2.txt" for details.
+%
+% @TAG(NICTA_GPL)
+%
+
+% LaTeX master document for abstract spec.
+
+\documentclass[10pt,a4paper]{scrbook}
+\usepackage{isabelle,isabellesym}
+
+% further packages required for unusual symbols (see also isabellesym.sty)
+% use only when needed
+\usepackage{amssymb}                   % for \<leadsto>, \<box>, \<diamond>,
+                                       % \<sqsupset>, \<mho>, \<Join>, 
+                                       % \<lhd>, \<lesssim>, \<greatersim>,
+                                       % \<lessapprox>, \<greaterapprox>,
+                                       % \<triangleq>, \<yen>, \<lozenge>
+\usepackage[english]{babel}            % greek for \<euro>,
+                                       % english for \<guillemotleft>, 
+                                       %             \<guillemotright>
+                                       % default language = last
+%\usepackage[latin1]{inputenc}         % for \<onesuperior>, \<onequarter>,
+                                       % \<twosuperior>, \<onehalf>,
+                                       % \<threesuperior>, \<threequarters>,
+                                       % \<degree>
+%\usepackage[only,bigsqcap]{stmaryrd}  % for \<Sqinter>
+%\usepackage{eufrak}                   % for \<AA> ... \<ZZ>, \<aa> ... \<zz>
+                                       % (only needed if amssymb not used)
+
+\usepackage{graphicx}
+\usepackage[draft]{fixme}
+\usepackage{cite}
+
+% this should be the last package used
+\usepackage{color}
+\definecolor{linkcolor}{rgb}{0,0,0.7}
+\usepackage[colorlinks=true,linkcolor=linkcolor,citecolor=linkcolor,
+            filecolor=linkcolor,pagecolor=linkcolor,urlcolor=linkcolor]{hyperref}
+
+\urlstyle{rm}
+\isabellestyle{tt}
+
+% FIXME: sseefried: change the pdftitle
+\hypersetup
+{
+    pdfauthor={NICTA SSRG Research Group},
+    pdftitle={Bisimlulation proof}
+}
+
+\renewcommand{\isamarkupheader}[1]{\chapter{#1}}
+
+% don't show ML code
+\isadroptag{ML}
+
+% don't show proofs
+\isadroptag{proof}
+
+% do not show confusing double quotes in definitions and lemmas
+%\renewcommand{\isachardoublequote}{}
+%\renewcommand{\isachardoublequoteopen}{}
+%\renewcommand{\isachardoublequoteclose}{}
+
+\parindent 0pt\parskip 0.5ex
+
+\setlength{\oddsidemargin}{0cm}
+\setlength{\evensidemargin}{0cm}
+\setlength{\topmargin}{-1cm}
+\setlength{\textwidth}{15.5cm}
+\setlength{\textheight}{22.5cm}
+
+\newcommand{\meth}[1]{\texttt{#1()}}
+\newcommand{\obj}[1]{\textsf{\small #1}}
+
+\begin{document}
+
+% FIXME: sseefried: Change the title
+\title{Bisimulation Proof}
+
+% FIXME: sseefried: Is this all the authors? 
+\author{%
+Simon Winwood \and
+Gerwin Klein \and
+Sean Seefried \and
+}
+
+
+\maketitle
+
+\thispagestyle{empty}
+
+\vfill
+
+\copyright~2013 National ICT Australia Limited.\\
+% FIXME: sseefried: Should we have a copyright for Open Kernel Labs, Inc as well. Uncomment below if so.
+% \copyright~2013 Open Kernel Labs, Inc.\\
+
+% FIXME: sseefried: This license is almost certainly not correct. Change it.
+\textsc{All rights reserved}. This document is made available under
+the terms of the National ICT Australia Limited
+\textsc{Non-Commercial License Agreement} and Open Kernel Labs,
+Inc.\ \textsc{Non-Commercial License Agreement}. Copies of the
+licenses are available in the top-level directory of this
+distribution.
+
+\clearpage
+
+\chapter*{Abstract}
+% FIXME: sseefried: Write an abstract for the document
+%This document is the text version of the abstract, formal 
+%Isabelle/HOL specification of the seL4 microkernel. It is
+%intended to give a precise, operational definition of the
+%seL4 microkernel on the ARMv6 architecture.
+%The document contains a short overview, followed by 
+%text generated from the formal Isabelle/HOL definitions.
+
+This document is not a tutorial or user manual and is not intended to be read
+as such. Please see the bundled user manual for a higher-level introduction to
+the kernel.
+
+
+\cleardoublepage
+
+\tableofcontents
+
+\input{session}
+
+% \bibliographystyle{plain}
+% \bibliography{defs,root}
+
+\end{document}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: t
+%%% End:

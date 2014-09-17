@@ -116,20 +116,38 @@ lemma opt_cap_tcb:
   by (fastforce simp add: opt_cap_def KHeap_D.slots_of_def opt_object_tcb object_slots_def transform_tcb_def tcb_slots)
 
 lemma cdl_objects_cnode:
-  "\<lbrakk> kheap s' y = Some (CNode sz obj'); valid_idle s' \<rbrakk>
+  "\<lbrakk> kheap s' y = Some (CNode sz obj'); valid_idle s' ; sz \<noteq> 0\<rbrakk>
     \<Longrightarrow> cdl_objects (transform s') y =
     Some (cdl_object.CNode \<lparr>cdl_cnode_caps = transform_cnode_contents sz obj', cdl_cnode_size_bits = sz\<rparr>)"
+  apply (subgoal_tac "y \<noteq> idle_thread s'")
+  apply (auto simp:obj_at_def is_cap_table_def valid_idle_def st_tcb_at_def
+                   transform_def transform_objects_def
+             split:nat.split)
+  done
+
+lemma cdl_objects_irq_node:
+  "\<lbrakk> kheap s' y = Some (CNode 0 obj'); valid_idle s' \<rbrakk>
+    \<Longrightarrow> cdl_objects (transform s') y =
+    Some (cdl_object.IRQNode \<lparr>cdl_irq_node_caps = transform_cnode_contents 0 obj'\<rparr>)"
   apply (subgoal_tac "y \<noteq> idle_thread s'")
   apply (auto simp:obj_at_def is_cap_table_def valid_idle_def st_tcb_at_def
          transform_def transform_objects_def)
   done
 
 lemma transform_objects_cnode:
-  "\<lbrakk> kheap s' y = Some (CNode sz obj'); valid_idle s'\<rbrakk> \<Longrightarrow> transform_objects s' y =
+  "\<lbrakk> kheap s' y = Some (CNode sz obj'); valid_idle s'; sz \<noteq> 0\<rbrakk> \<Longrightarrow> transform_objects s' y =
     Some (cdl_object.CNode \<lparr>cdl_cnode_caps = transform_cnode_contents sz obj', cdl_cnode_size_bits = sz\<rparr>)"
   apply (subgoal_tac "y \<noteq> idle_thread s'")
   apply (simp add: transform_objects_def)
-  apply (clarsimp simp add: valid_idle_def obj_at_def st_tcb_at_def)+
+  apply (clarsimp simp add: valid_idle_def obj_at_def st_tcb_at_def split:nat.split)+
+  done
+
+lemma transform_objects_irq_node:
+  "\<lbrakk> kheap s' y = Some (CNode 0 obj'); valid_idle s'\<rbrakk> \<Longrightarrow> transform_objects s' y =
+    Some (cdl_object.IRQNode \<lparr>cdl_irq_node_caps = transform_cnode_contents 0 obj'\<rparr>)"
+  apply (subgoal_tac "y \<noteq> idle_thread s'")
+  apply (simp add: transform_objects_def)
+  apply (clarsimp simp add: valid_idle_def obj_at_def st_tcb_at_def split:nat.split)+
   done
 
 lemmas lift_simp =
@@ -467,7 +485,7 @@ lemma dcorres_dummy_corrupt_frame: "dcorres dc \<top> valid_etcbs
     apply (rule ext)
     apply (clarsimp split:option.splits simp:restrict_map_def map_add_def)
     apply (clarsimp simp:map_add_def split:option.splits cdl_object.split_asm if_splits)
-    apply (clarsimp simp:transform_object_def split:Structures_A.kernel_object.splits arch_kernel_obj.splits)
+    apply (clarsimp simp:transform_object_def split:Structures_A.kernel_object.splits arch_kernel_obj.splits nat.splits)
     apply (drule(1) valid_etcbs_tcb_etcb)
     apply (clarsimp simp:get_tcb_rev get_etcb_rev transform_tcb_def)
    apply (clarsimp split:option.splits simp:map_add_def)+
@@ -1525,7 +1543,7 @@ lemma within_page_ipc_buf:
     apply (cases sz,auto)
 done
 
-lemma eq_sym_helper: "(A = B)  \<Longrightarrow> (B = A)" 
+lemma eq_sym_helper: "(A = B)  \<Longrightarrow> (B = A)"
   by auto
 
 lemma store_word_corres_helper:
@@ -1604,7 +1622,7 @@ lemma store_word_corres_helper:
      apply (clarsimp simp:msg_align_bits msg_max_length_def msg_max_extra_caps_def)
     apply simp+
    apply (clarsimp simp: tcb_ipcframe_id_def split: cdl_object.splits option.split_asm cdl_cap.split_asm)
-   apply (clarsimp simp:transform_object_def split:Structures_A.kernel_object.split_asm arch_kernel_obj.split_asm)
+   apply (clarsimp simp:transform_object_def split:Structures_A.kernel_object.split_asm arch_kernel_obj.split_asm nat.splits)
    apply (simp add:transform_tcb_def)
    apply (drule sym)
    apply (clarsimp simp:tcb_pending_op_slot_def restrict_map_def tcb_ipcbuffer_slot_def split:if_splits)
