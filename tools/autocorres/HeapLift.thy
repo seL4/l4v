@@ -621,7 +621,7 @@ lemma c_guard_array:
     apply (simp add: field_simps of_nat_nat)
    apply (rule_tac y = "Suc (nat k) * size_of TYPE('a)" in less_le_trans)
     apply simp
-   apply (metis less_eq_Suc_le mult_le_mono2 nat_mult_commute)
+   apply (metis less_eq_Suc_le mult_le_mono2 mult.commute)
   apply (subgoal_tac "ptr_aligned (ptr_coerce p :: 'a ptr)")
    apply (frule_tac p = "ptr_coerce p" and i = "k" in ptr_aligned_plus)
    apply (clarsimp simp: ptr_add_def)
