@@ -659,7 +659,8 @@ let
     val thm = Utils.apply_tac "Solve goal" (solve_tac 1) goal
       |> Goal.finish ctxt
 
-    (* DEBUG: make sure that all uses of field_lvalue are rewritten. *)
+    (* DEBUG: make sure that all uses of field_lvalue and c_guard are rewritten.
+     *        Also make sure that we cleaned up internal constants. *)
     fun contains_const name = let
           fun check (Const (n, _)) = n = name
             | check (Abs (_, _, t)) = check t
@@ -672,7 +673,8 @@ let
                ("autocorres heap lift: could not remove " ^ name) [term]
     val _ = if Symset.contains unliftable_functions fn_name then []
             else map (const_gone (term_of_thm thm))
-                     [@{const_name "field_lvalue"}, @{const_name "c_guard"}]
+                     [@{const_name "field_lvalue"}, @{const_name "c_guard"},
+                      @{const_name "heap_lift__h_val"}]
 
     (* Gather statistics. *)
     val _ = Statistics.gather ctxt "HL" fn_name

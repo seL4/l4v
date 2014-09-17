@@ -58,7 +58,7 @@ autocorres [heap_abs_syntax] "schorr_waite.c"
 
 (* AutoCorres doesn't successfully recognize all boolean variables yet,
    so this saves us some typing *)
-abbreviation Cbool where "Cbool b \<equiv> if b then 1 else (0::int)"
+abbreviation Cbool where "Cbool b \<equiv> if b then 1 else 0"
 
 declare fun_upd_apply [simp]
 
@@ -373,16 +373,9 @@ abbreviation schorr_waite'_measure where
      let stack = (THE stack. schorr_waite'_inv s s0 R p t cond stack)
      in (card {x \<in> R. s[x]\<rightarrow>m = 0}, card {x \<in> set stack. s[x]\<rightarrow>c = 0}, length stack)"
 
-(* FIXME: heap_abs_syntax failure *)
-lemma syntax_hack_simp:
-  "heap_node_C_update (\<lambda>b. b(a := r_C_update (\<lambda>c. l_C (b a)) (b a))) s =
-     update_node_r s a (get_node_l s a)"
-  by (simp add: update_node_r_def get_node_l_def)
-
 schematic_lemma schorr_waite'_prove_def [standard]:
   "schorr_waite' root \<equiv> ?A root (s0 :: lifted_globals) (R :: node_C ptr set)"
   apply (subst schorr_waite'_def[abs_def])
-  apply (subst syntax_hack_simp[abs_def])
   apply (subst whileLoop_add_inv
            [where I = "\<lambda>(p, cond, t) s. \<exists>stack. schorr_waite'_inv s s0 R p t cond stack"
               and M = "(\<lambda>((p, cond, t), s). schorr_waite'_measure s s0 R p t cond)"])

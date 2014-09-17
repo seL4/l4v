@@ -80,7 +80,7 @@ lemma memcpy_char:
       apply wp
 
   (* Finally we're left with the single assignment *)
-  apply (clarsimp simp:hrs_mem_update h_val_heap_update ptr_add_0_id)
+  apply (clarsimp simp:hrs_mem_update h_val_heap_update)
   apply unat_arith
  done
 
