@@ -2262,7 +2262,7 @@ lemma dcorres_get_object_cnode_split:
    apply simp_all
    apply (clarsimp split: nat.splits)
    apply (clarsimp simp: get_cnode'_def cnode_size_bits_def split:  option.splits kernel_object.split)
-   apply (case_tac a, simp_all)
+   apply (case_tac x2, simp_all)
   done
 
 lemma arch_recycle_cap_ret:

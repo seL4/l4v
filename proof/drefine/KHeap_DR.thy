@@ -421,14 +421,14 @@ shows "\<lbrakk>opt_cap_wp_at P slot (transform s);valid_objs s; valid_etcbs s\<
       apply (clarsimp simp:transform_cnode_contents_def option_map_join_def
                      split:option.splits Structures_A.kernel_object.splits nat.splits)
         apply (clarsimp simp:cte_wp_at_cases well_formed_cnode_invsI transform_cslot_ptr_def split:if_splits)
-        apply (rule_tac x = x2a in exI,simp add: nat_to_bl_bl_to_bin)
+        apply (rule_tac x = x2b in exI,simp add: nat_to_bl_bl_to_bin)
       apply (drule(1) valid_etcbs_tcb_etcb, simp)
       prefer 6 (* IRQ Node *)
       apply (clarsimp split: Structures_A.kernel_object.splits nat.splits option.splits)
          apply (clarsimp simp:transform_cnode_contents_def option_map_join_def
                         split:option.splits Structures_A.kernel_object.splits nat.splits)
          apply (clarsimp simp:cte_wp_at_cases well_formed_cnode_invsI transform_cslot_ptr_def split:if_splits)
-         apply (rule_tac x = aa in exI,simp add: nat_to_bl_bl_to_bin)
+         apply (rule_tac x = x2a in exI,simp add: nat_to_bl_bl_to_bin)
         apply (frule assms)
     apply ((simp_all add:Let_def cap_counts_def transform_tcb_def
                     split:option.splits if_splits arch_kernel_obj.splits
@@ -760,7 +760,7 @@ proof -
     apply (clarsimp simp: transform_objects_def)
     apply (rule ext)
     apply clarsimp
-    apply (simp add: Option.map_def restrict_map_def map_add_def split: option.splits)
+    apply (simp add: option_map_def restrict_map_def map_add_def split: option.splits)
    apply (frule (1) cdl_objects_cnode, simp)
    apply (clarsimp simp: assert_opt_def has_slots_def)
    apply (clarsimp simp: update_slots_def object_slots_def transform_cnode_contents_upd)

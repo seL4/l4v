@@ -331,7 +331,7 @@ definition
     | IRQAckIRQ \<Rightarrow> Some (IrqHandlerIntent IrqHandlerAckIntent)
     | IRQSetIRQHandler \<Rightarrow> Some (IrqHandlerIntent IrqHandlerSetEndpointIntent)
     | IRQClearIRQHandler \<Rightarrow> Some (IrqHandlerIntent IrqHandlerClearIntent)
-    | IRQSetMode \<Rightarrow> Option.map IrqHandlerIntent (transform_intent_irq_set_mode args)
+    | IRQSetMode \<Rightarrow> option_map IrqHandlerIntent (transform_intent_irq_set_mode args)
     | ARMPageTableMap \<Rightarrow>
           map_option PageTableIntent
                    (transform_intent_page_table_map args)
