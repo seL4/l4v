@@ -2240,6 +2240,7 @@ lemma fastpath_call_ccorres:
       split: Structures_H.kernel_object.splits)
     done
   show ?thesis
+  using [[goals_limit = 1]]
   apply (cinit lift: cptr_' msgInfo_')
    apply (simp add: catch_liftE_bindE unlessE_throw_catch_If
                     unifyFailure_catch_If catch_liftE
@@ -2872,7 +2873,6 @@ lemma threadSet_tcbState_valid_objs:
   apply (clarsimp simp: valid_tcb'_def tcb_cte_cases_def)
   done
 
-
 lemma fastpath_reply_wait_ccorres:
   notes hoare_TrueI[simp]
   shows "ccorres dc xfdc
@@ -2918,6 +2918,7 @@ lemma fastpath_reply_wait_ccorres:
     done
 
   show ?thesis
+  using [[goals_limit = 1]]
   apply (cinit lift: cptr_' msgInfo_')
    apply (simp add: catch_liftE_bindE unlessE_throw_catch_If
                     unifyFailure_catch_If catch_liftE

@@ -56,6 +56,10 @@ session AInvs = ASpec +
  * C Refinement proof.
  *)
 
+session CRefineSyscall = CBaseRefine +
+  theories
+    "crefine/Syscall_C"
+
 session CRefine = CBaseRefine +
   theories
     "crefine/Refine_C"
