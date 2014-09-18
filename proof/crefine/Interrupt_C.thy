@@ -282,7 +282,7 @@ lemma decodeIRQHandlerInvocation_ccorres:
   apply (clarsimp simp: rf_sr_ksCurThread word_sle_def word_sless_def sysargs_rel_n_def word_less_nat_alt)
   apply (auto simp: cte_wp_at_ctes_of neq_Nil_conv sysargs_rel_def n_msgRegisters_def
                     excaps_map_def excaps_in_mem_def word_less_nat_alt hd_conv_nth
-                    slotcap_in_mem_def valid_tcb_state'_def from_bool_def toBool_def bool_case_If[symmetric]
+                    slotcap_in_mem_def valid_tcb_state'_def from_bool_def toBool_def
              dest!: interpret_excaps_eq split: bool.splits,
          auto dest: st_tcb_at_idle_thread' ctes_of_valid')
   done
