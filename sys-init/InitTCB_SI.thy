@@ -22,7 +22,7 @@ lemma cap_has_type_cap_has_object [simp]:
   by (clarsimp simp: cap_type_def cap_has_object_def split: cdl_cap.splits)
 
 
-lemma tcb_decomp:
+lemma tcb_empty_decomp:
   "is_tcb obj
   \<Longrightarrow>
    (obj_id \<mapsto>o object_default_state obj)
@@ -42,31 +42,55 @@ lemma tcb_decomp:
   apply (subst sep_map_S_decomp_list [where slots = "[0 .e. tcb_pending_op_slot]"])
     apply (force simp: default_tcb_def object_slots_def)
    apply clarsimp
-  apply clarsimp
-  apply (clarsimp simp: sep_list_conj_def default_tcb_slots sep_conj_ac
-                        tcb_slot_defs object_domain_def)
+  apply (clarsimp simp: sep_list_conj_def default_tcb_slots object_domain_def tcb_slot_defs)
   apply (subst sep_map_s_sep_map_c_eq,
          simp add: default_tcb_def object_slots_def tcb_pending_op_slot_def,
-         clarsimp simp:  sep_conj_ac)+
+         clarsimp simp: sep_conj_ac)+
   done
 
-
-lemma pred_subst: "P x = P y \<Longrightarrow> P y = P z \<Longrightarrow> P x = P z" by clarsimp
-
-lemma tcb_decomp2:
-  "\<lbrakk>well_formed spec; cdl_objects spec obj_id = Some obj;
-    is_tcb obj;
-    t obj_id = Some k_obj_id;
-    t (cap_object cspace_cap) = Some cspace_kobj_id;
-
+lemma tcb_decomp':
+  "\<lbrakk>well_formed spec; cdl_objects spec obj_id = Some obj; is_tcb obj;
     opt_cap (obj_id, tcb_cspace_slot) spec = Some cspace_cap;
     opt_cap (obj_id, tcb_vspace_slot) spec = Some vspace_cap;
     opt_cap (obj_id, tcb_ipcbuffer_slot) spec = Some buffer_frame_cap;
-    opt_cap (obj_id, tcb_replycap_slot) spec = Some NullCap;
-    opt_cap (obj_id, tcb_caller_slot) spec = Some NullCap;
-    opt_cap (obj_id, tcb_pending_op_slot) spec = Some NullCap\<rbrakk>
+    opt_cap (obj_id, tcb_replycap_slot) spec = Some reply_cap;
+    opt_cap (obj_id, tcb_pending_op_slot) spec = Some pending_cap\<rbrakk>
   \<Longrightarrow> (k_obj_id \<mapsto>o spec2s t obj) =
-    (k_obj_id \<mapsto>f obj \<and>*
+     (k_obj_id \<mapsto>f obj \<and>*
+     (k_obj_id, tcb_cspace_slot)     \<mapsto>c cap_transform t cspace_cap \<and>*
+     (k_obj_id, tcb_vspace_slot)     \<mapsto>c cap_transform t vspace_cap \<and>*
+     (k_obj_id, tcb_ipcbuffer_slot)  \<mapsto>c cap_transform t buffer_frame_cap \<and>*
+     (k_obj_id, tcb_replycap_slot)   \<mapsto>c cap_transform t reply_cap \<and>*
+     (k_obj_id, tcb_caller_slot)     \<mapsto>c NullCap \<and>*
+     (k_obj_id, tcb_pending_op_slot) \<mapsto>c cap_transform t pending_cap \<and>*
+      k_obj_id \<mapsto>E Tcb (default_tcb minBound))"
+  apply (frule (1) well_formed_object_slots)
+  apply (frule (1) well_formed_object_domain)
+  apply (frule well_formed_tcb_caller_cap [where obj_id=obj_id], simp add: object_at_def)
+  apply (clarsimp simp: is_tcb_def object_domain_def object_default_state_def2)
+  apply (case_tac obj, simp_all)
+  apply (subst sep_map_o_decomp)
+  apply (subst sep_map_S_decomp_list [where slots = "[0 .e. tcb_pending_op_slot]"])
+    apply (drule (1) well_formed_object_slots, simp add: foo)
+    apply (force simp: object_default_state_def2 default_tcb_def object_slots_def
+                split: cdl_object.splits)
+   apply clarsimp
+  apply (clarsimp simp: sep_list_conj_def default_tcb_slots tcb_slot_defs)
+  apply (drule_tac obj'="Tcb (default_tcb minBound)" and p = k_obj_id in sep_map_E_eq [rotated],
+         simp add: object_type_def)
+  apply (subst sep_map_s_sep_map_c_eq,
+         rule object_slots_spec2s',
+         fastforce simp: opt_cap_def slots_of_def object_slots_def opt_object_def)+
+  apply (clarsimp simp: sep_conj_ac)
+  done
+
+lemma tcb_half_decomp':
+  "\<lbrakk>well_formed spec; cdl_objects spec obj_id = Some obj; is_tcb obj;
+    opt_cap (obj_id, tcb_cspace_slot) spec = Some cspace_cap;
+    opt_cap (obj_id, tcb_vspace_slot) spec = Some vspace_cap;
+    opt_cap (obj_id, tcb_ipcbuffer_slot) spec = Some buffer_frame_cap\<rbrakk>
+  \<Longrightarrow> (k_obj_id \<mapsto>o spec2s t (tcb_half spec obj)) =
+     (k_obj_id \<mapsto>f obj \<and>*
      (k_obj_id, tcb_cspace_slot)     \<mapsto>c cap_transform t cspace_cap \<and>*
      (k_obj_id, tcb_vspace_slot)     \<mapsto>c cap_transform t vspace_cap \<and>*
      (k_obj_id, tcb_ipcbuffer_slot)  \<mapsto>c cap_transform t buffer_frame_cap \<and>*
@@ -76,20 +100,83 @@ lemma tcb_decomp2:
       k_obj_id \<mapsto>E Tcb (default_tcb minBound))"
   apply (frule (1) well_formed_object_slots)
   apply (frule (1) well_formed_object_domain)
+  apply (frule well_formed_tcb_replycap_cap [where obj_id=obj_id], simp add: object_at_def)
+  apply (frule well_formed_tcb_caller_cap [where obj_id=obj_id], simp add: object_at_def)
+  apply (frule well_formed_tcb_pending_op_cap [where obj_id=obj_id], simp add: object_at_def)
   apply (clarsimp simp: is_tcb_def object_domain_def object_default_state_def2)
   apply (case_tac obj, simp_all)
   apply (subst sep_map_o_decomp)
   apply (subst sep_map_S_decomp_list [where slots = "[0 .e. tcb_pending_op_slot]"])
-    apply (drule (1) well_formed_object_slots, simp)
-    apply (force simp: object_default_state_def2 default_tcb_def object_slots_def split: cdl_object.splits)
+    apply (drule (1) well_formed_object_slots, simp add: foo)
+    apply (force simp: object_default_state_def2 default_tcb_def object_slots_def
+                split: cdl_object.splits)
    apply clarsimp
   apply (clarsimp simp: sep_list_conj_def default_tcb_slots tcb_slot_defs)
-  apply (drule_tac obj'="Tcb (default_tcb minBound)" and p = k_obj_id in sep_map_E_eq [rotated], simp add: object_type_def)
+  apply (drule_tac obj'="Tcb (default_tcb minBound)" and p = k_obj_id in sep_map_E_eq [rotated],
+         simp add: object_type_def)
   apply (subst sep_map_s_sep_map_c_eq,
          rule object_slots_spec2s',
-         simp add: opt_cap_def slots_of_def object_slots_def opt_object_def)+
+         simp add: object_slots_tcb_half tcb_slot_defs,
+         fastforce simp: opt_cap_def slots_of_def object_slots_def opt_object_def)+
   apply (clarsimp simp: sep_conj_ac)
   done
+
+lemma tcb_decomp [simplified]:
+  "\<lbrakk>well_formed spec; cdl_objects spec obj_id = Some obj; is_tcb obj\<rbrakk>
+  \<Longrightarrow> (k_obj_id \<mapsto>o spec2s t obj) =
+    (k_obj_id \<mapsto>f obj \<and>*
+     (k_obj_id, tcb_cspace_slot)     \<mapsto>c cap_transform t (the $ opt_cap (obj_id, tcb_cspace_slot) spec) \<and>*
+     (k_obj_id, tcb_vspace_slot)     \<mapsto>c cap_transform t (the $ opt_cap (obj_id, tcb_vspace_slot) spec) \<and>*
+     (k_obj_id, tcb_ipcbuffer_slot)  \<mapsto>c cap_transform t (the $ opt_cap (obj_id, tcb_ipcbuffer_slot) spec) \<and>*
+     (k_obj_id, tcb_replycap_slot)   \<mapsto>c cap_transform t (the $ opt_cap (obj_id, tcb_replycap_slot) spec) \<and>*
+     (k_obj_id, tcb_caller_slot)     \<mapsto>c NullCap \<and>*
+     (k_obj_id, tcb_pending_op_slot) \<mapsto>c cap_transform t (the $ opt_cap (obj_id, tcb_pending_op_slot) spec) \<and>*
+      k_obj_id \<mapsto>E Tcb (default_tcb minBound))"
+  apply (simp add: is_tcb_obj_type)
+  apply (frule (1) object_type_object_at)
+  apply (frule (1) well_formed_tcb_cspace_cap)
+  apply (frule (1) well_formed_tcb_vspace_cap)
+  apply (frule (1) well_formed_tcb_ipcbuffer_cap)
+  apply (frule (1) well_formed_tcb_replycap_cap)
+  apply (frule (1) well_formed_tcb_caller_cap)
+  apply (frule (1) well_formed_tcb_pending_op_cap)
+  apply clarsimp
+  apply (subst tcb_decomp'
+         [where cspace_cap = "the $ opt_cap (obj_id, tcb_cspace_slot) spec"
+            and vspace_cap = "the $ opt_cap (obj_id, tcb_vspace_slot) spec"
+            and buffer_frame_cap = "the $ opt_cap (obj_id, tcb_ipcbuffer_slot) spec"
+            and reply_cap = "the $ opt_cap (obj_id, tcb_replycap_slot) spec"
+            and pending_cap = "the $ opt_cap (obj_id, tcb_pending_op_slot) spec"],
+         (fastforce simp: is_tcb_obj_type)+)
+  done
+
+lemma tcb_half_decomp [simplified]:
+  "\<lbrakk>well_formed spec; cdl_objects spec obj_id = Some obj; is_tcb obj\<rbrakk>
+  \<Longrightarrow> (k_obj_id \<mapsto>o spec2s t (tcb_half spec obj)) =
+    (k_obj_id \<mapsto>f obj \<and>*
+     (k_obj_id, tcb_cspace_slot)     \<mapsto>c cap_transform t (the $ opt_cap (obj_id, tcb_cspace_slot) spec) \<and>*
+     (k_obj_id, tcb_vspace_slot)     \<mapsto>c cap_transform t (the $ opt_cap (obj_id, tcb_vspace_slot) spec) \<and>*
+     (k_obj_id, tcb_ipcbuffer_slot)  \<mapsto>c cap_transform t (the $ opt_cap (obj_id, tcb_ipcbuffer_slot) spec) \<and>*
+     (k_obj_id, tcb_replycap_slot)   \<mapsto>c NullCap \<and>*
+     (k_obj_id, tcb_caller_slot)     \<mapsto>c NullCap \<and>*
+     (k_obj_id, tcb_pending_op_slot) \<mapsto>c NullCap \<and>*
+      k_obj_id \<mapsto>E Tcb (default_tcb minBound))"
+  apply (simp add: is_tcb_obj_type)
+  apply (frule (1) object_type_object_at)
+  apply (frule (1) well_formed_tcb_cspace_cap)
+  apply (frule (1) well_formed_tcb_vspace_cap)
+  apply (frule (1) well_formed_tcb_ipcbuffer_cap)
+  apply (frule (1) well_formed_tcb_replycap_cap)
+  apply (frule (1) well_formed_tcb_caller_cap)
+  apply (frule (1) well_formed_tcb_pending_op_cap)
+  apply clarsimp
+  apply (subst tcb_half_decomp'
+         [where cspace_cap = "the $ opt_cap (obj_id, tcb_cspace_slot) spec"
+            and vspace_cap = "the $ opt_cap (obj_id, tcb_vspace_slot) spec"
+            and buffer_frame_cap = "the $ opt_cap (obj_id, tcb_ipcbuffer_slot) spec"],
+         (fastforce simp: is_tcb_obj_type)+)
+  done
+
 
 lemma default_cap_size_0:
   "type \<noteq> CNodeType
@@ -185,7 +272,7 @@ lemma tcb_configure_pre:
   apply (clarsimp simp: sep_conj_exists sep_conj_assoc)
   apply (clarsimp simp: si_cap_at_def sep_conj_assoc sep_conj_exists)
   apply (clarsimp simp: object_at_def)
-  apply (subst (asm) tcb_decomp, assumption)
+  apply (subst (asm) tcb_empty_decomp, assumption)
   apply (subst offset_slot', assumption)+
   apply (frule (1) well_formed_object_domain [where obj_id=obj_id])
   apply (frule (2) well_formed_types_match [where cap=cspace_cap], clarsimp)
@@ -197,7 +284,7 @@ lemma tcb_configure_pre:
   apply (cut_tac type="FrameType sz" and sz="(object_size_bits obja)" and
               obj_id="{buffer_frame_kobj_id}" in default_cap_size_0, simp+)
   apply sep_solve
-done
+  done
 
 (* Replace well_formed_cnode_object_size_bits_eq with this one. *)
 lemma well_formed_cnode_object_size_bits_eq2:
@@ -236,9 +323,6 @@ lemma tcb_configure_post:
     opt_cap (obj_id, tcb_cspace_slot) spec = Some spec_cspace_cap;
     opt_cap (obj_id, tcb_vspace_slot) spec = Some spec_vspace_cap;
     opt_cap (obj_id, tcb_ipcbuffer_slot) spec = Some spec_buffer_frame_cap;
-    opt_cap (obj_id, tcb_replycap_slot) spec = Some NullCap;
-    opt_cap (obj_id, tcb_caller_slot) spec = Some NullCap;
-    opt_cap (obj_id, tcb_pending_op_slot) spec = Some NullCap;
 
     cap_object spec_cspace_cap = cspace_id;
     cap_object spec_vspace_cap = vspace_id;
@@ -298,7 +382,7 @@ lemma tcb_configure_post:
      (k_obj_id, tcb_caller_slot) \<mapsto>c NullCap \<and>*
      (k_obj_id, tcb_pending_op_slot) \<mapsto>c NullCap \<and>*
      k_obj_id \<mapsto>E Tcb (default_tcb minBound) \<and>* R\<guillemotright> s\<rbrakk>
-  \<Longrightarrow> \<guillemotleft>object_initialised spec t obj_id \<and>*
+  \<Longrightarrow> \<guillemotleft>tcb_half_initialised spec t obj_id \<and>*
        si_cap_at t orig_caps spec obj_id \<and>*
        si_cap_at t orig_caps spec cspace_id \<and>*
        si_cap_at t orig_caps spec vspace_id \<and>*
@@ -321,12 +405,12 @@ lemma tcb_configure_post:
   apply (frule (1) well_formed_types_match [where slot=tcb_vspace_slot], fastforce+)
   apply (frule (1) well_formed_types_match [where slot=tcb_ipcbuffer_slot],
          (fastforce simp: cap_type_def)+)
-  apply (clarsimp simp: object_initialised_def object_initialised_general_def)
+  apply (clarsimp simp: tcb_half_initialised_def object_initialised_general_def)
   apply (clarsimp simp: si_objects_def)
   apply (clarsimp simp: sep_conj_exists sep_conj_assoc)
   apply (clarsimp simp: si_cap_at_def sep_conj_assoc sep_conj_exists)
   apply (clarsimp simp: object_at_def)
-  apply (subst tcb_decomp2 [where obj_id=obj_id and k_obj_id=k_obj_id],
+  apply (subst tcb_half_decomp' [where obj_id=obj_id and k_obj_id=k_obj_id],
          (assumption|simp)+)
   apply (subst (asm) sep_map_f_eq_tcb_fault_endpoint, assumption+)
   apply (clarsimp simp: opt_cap_def slots_of_def opt_object_def)
@@ -523,9 +607,6 @@ lemma seL4_TCB_Configure_object_initialised_sep_helper:
     opt_cap (obj_id, tcb_cspace_slot) spec = Some spec_cspace_cap;
     opt_cap (obj_id, tcb_vspace_slot) spec = Some spec_vspace_cap;
     opt_cap (obj_id, tcb_ipcbuffer_slot) spec = Some spec_buffer_frame_cap;
-    opt_cap (obj_id, tcb_replycap_slot) spec = Some NullCap;
-    opt_cap (obj_id, tcb_caller_slot) spec = Some NullCap;
-    opt_cap (obj_id, tcb_pending_op_slot) spec = Some NullCap;
 
     cap_object spec_cspace_cap = cspace_id;
     cap_object spec_vspace_cap = vspace_id;
@@ -567,7 +648,7 @@ lemma seL4_TCB_Configure_object_initialised_sep_helper:
                      cspace_index cspace_root_data
                      vspace_index vspace_root_data
                      buffer_addr buffer_frame_index
-   \<lbrace>\<lambda>_. \<guillemotleft>object_initialised spec t obj_id \<and>*
+   \<lbrace>\<lambda>_. \<guillemotleft>tcb_half_initialised spec t obj_id \<and>*
          si_cap_at t orig_caps spec obj_id \<and>*
          si_cap_at t orig_caps spec cspace_id \<and>*
          si_cap_at t orig_caps spec vspace_id \<and>*
@@ -614,9 +695,6 @@ lemma seL4_TCB_Configure_object_initialised_sep:
         opt_cap (obj_id, tcb_cspace_slot) spec = Some spec_cspace_cap \<and>
         opt_cap (obj_id, tcb_vspace_slot) spec = Some spec_vspace_cap \<and>
         opt_cap (obj_id, tcb_ipcbuffer_slot) spec = Some spec_buffer_frame_cap \<and>
-        opt_cap (obj_id, tcb_replycap_slot) spec = Some NullCap \<and>
-        opt_cap (obj_id, tcb_caller_slot) spec = Some NullCap \<and>
-        opt_cap (obj_id, tcb_pending_op_slot) spec = Some NullCap \<and>
 
         cap_object spec_cspace_cap = cspace_id \<and>
         cap_object spec_vspace_cap = vspace_id \<and>
@@ -645,7 +723,7 @@ lemma seL4_TCB_Configure_object_initialised_sep:
                      cspace_index cspace_root_data
                      vspace_index vspace_root_data
                      buffer_addr buffer_frame_index
-   \<lbrace>\<lambda>_. \<guillemotleft>object_initialised spec t obj_id \<and>*
+   \<lbrace>\<lambda>_. \<guillemotleft>tcb_half_initialised spec t obj_id \<and>*
          si_cap_at t orig_caps spec obj_id \<and>*
          si_cap_at t orig_caps spec cspace_id \<and>*
          si_cap_at t orig_caps spec vspace_id \<and>*
@@ -668,9 +746,6 @@ lemma init_tcb_sep':
     opt_cap (obj_id, tcb_cspace_slot) spec = Some cspace_cap;
     opt_cap (obj_id, tcb_vspace_slot) spec = Some vspace_cap;
     opt_cap (obj_id, tcb_ipcbuffer_slot) spec = Some tcb_ipcbuffer_cap;
-    opt_cap (obj_id, tcb_replycap_slot) spec = Some NullCap;
-    opt_cap (obj_id, tcb_caller_slot) spec = Some NullCap;
-    opt_cap (obj_id, tcb_pending_op_slot) spec = Some NullCap;
     cap_object cspace_cap = cspace_id;
     cap_object vspace_cap = vspace_id;
     cdl_objects spec cspace_id = Some spec_cnode;
@@ -684,7 +759,7 @@ lemma init_tcb_sep':
      si_cap_at t orig_caps spec buffer_frame_id \<and>*
      si_objects \<and>* R\<guillemotright>\<rbrace>
    init_tcb spec orig_caps obj_id
-   \<lbrace>\<lambda>_.\<guillemotleft>object_initialised spec t obj_id \<and>*
+   \<lbrace>\<lambda>_.\<guillemotleft>tcb_half_initialised spec t obj_id \<and>*
         si_cap_at t orig_caps spec obj_id \<and>*
         si_cap_at t orig_caps spec cspace_id \<and>*
         si_cap_at t orig_caps spec vspace_id \<and>*
@@ -714,7 +789,7 @@ lemma init_tcb_sep:
      si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
      si_objects \<and>* R\<guillemotright>\<rbrace>
    init_tcb spec orig_caps obj_id
-   \<lbrace>\<lambda>_.\<guillemotleft>object_initialised spec t obj_id \<and>*
+   \<lbrace>\<lambda>_.\<guillemotleft>tcb_half_initialised spec t obj_id \<and>*
         si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
         si_objects \<and>* R\<guillemotright>\<rbrace>"
   apply (frule well_formed_tcb_cspace_cap, fastforce)
@@ -728,6 +803,7 @@ lemma init_tcb_sep:
   apply (frule (1) well_formed_cap_object [where slot=tcb_vspace_slot], clarsimp)
   apply (frule (1) well_formed_cap_object [where slot=tcb_ipcbuffer_slot],
           clarsimp simp: cap_type_def)
+
   apply clarsimp
   apply (frule object_at_real_object_at, simp)
   apply (rule_tac xs="{obj_id, cap_object cspace_cap, cap_object vspace_cap,
@@ -763,25 +839,89 @@ lemma init_tcb_sep:
 lemma init_tcbs_sep_helper:
   "\<lbrakk>well_formed spec; distinct tcbs;
     set tcbs = {obj_id \<in> dom (cdl_objects spec). tcb_at obj_id spec}\<rbrakk> \<Longrightarrow>
-   \<lbrace>\<guillemotleft>objects_empty spec t (set tcbs) \<and>*
+   \<lbrace>\<guillemotleft>objects_empty spec t {obj_id. tcb_at obj_id spec} \<and>*
      si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
      si_objects \<and>* R\<guillemotright>\<rbrace>
    mapM_x (init_tcb spec orig_caps) tcbs
-   \<lbrace>\<lambda>_.\<guillemotleft>objects_initialised spec t (set tcbs) \<and>*
+   \<lbrace>\<lambda>_.\<guillemotleft>tcbs_half_initialised spec t {obj_id. tcb_at obj_id spec} \<and>*
         si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
         si_objects \<and>* R\<guillemotright>\<rbrace>"
-  apply (clarsimp simp: objects_empty_def objects_initialised_def)
+  apply (clarsimp simp: objects_empty_def tcbs_half_initialised_def)
   apply (rule hoare_name_pre_state)
   apply (rule hoare_chain)
     apply (rule_tac R=R in
                mapM_x_set_sep [where
                P="\<lambda>obj_id. object_empty spec t obj_id" and
-               Q="\<lambda>obj_id. object_initialised spec t obj_id" and
+               Q="\<lambda>obj_id. tcb_half_initialised spec t obj_id" and
                I="si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
                   si_objects" and
                xs="tcbs",
                simplified sep_conj_assoc], simp+)
     apply (wp init_tcb_sep [where t=t and tcbs=tcbs], (assumption|simp)+)
+  done
+
+lemma is_tcb_default_cap:
+  "is_tcb obj \<Longrightarrow> default_cap (object_type obj) {obj_id} sz = TcbCap obj_id"
+  by (clarsimp simp: default_cap_def is_tcb_obj_type)
+
+lemma configure_tcb_sep:
+  "\<lbrace>\<guillemotleft>tcb_half_initialised spec t obj_id \<and>*
+     si_cap_at t orig_caps spec obj_id \<and>*
+     si_objects \<and>* R\<guillemotright> and
+   K(well_formed spec \<and> obj_id \<in> set tcbs \<and> distinct tcbs \<and>
+    set tcbs = {obj_id. tcb_at obj_id spec})\<rbrace>
+   configure_tcb spec orig_caps obj_id
+   \<lbrace>\<lambda>_.\<guillemotleft>tcb_half_initialised spec t obj_id \<and>*
+        si_cap_at t orig_caps spec obj_id \<and>*
+        si_objects \<and>* R\<guillemotright>\<rbrace>"
+  apply (rule hoare_gen_asm)
+  apply (clarsimp simp: configure_tcb_def object_initialised_def tcb_half_initialised_def object_initialised_general_def
+                        si_cap_at_def si_objects_def sep_conj_exists)
+  apply (rule hoare_vcg_ex_lift | rule hoare_grab_asm | simp)+
+  apply (subst tcb_half_decomp, (simp add: object_at_def)+)+
+  apply (wp add: hoare_drop_imps
+         sep_wp: seL4_TCB_WriteRegisters_wp
+         [where root_tcb = root_tcb
+            and cnode_cap = si_cspace_cap
+            and root_size = si_cnode_size
+            and tcb_cap = "TcbCap (the (t obj_id))"
+            and tcb = "spec2s t (the (cdl_objects spec obj_id))"] |
+         simp add: guard_equal_si_cspace_cap' cap_object_simps is_tcb_default_cap)+
+  apply (subst offset_slot_si_cnode_size', assumption)+
+  apply clarsimp
+  apply sep_solve
+  done
+
+lemma configure_tcbs_sep:
+  "\<lbrace>\<guillemotleft>tcbs_half_initialised spec t {obj_id. tcb_at obj_id spec} \<and>*
+     si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
+     si_objects \<and>* R\<guillemotright> and
+   K(well_formed spec \<and> distinct tcbs \<and>
+     set tcbs = {obj_id \<in> dom (cdl_objects spec). tcb_at obj_id spec})\<rbrace>
+   mapM_x (configure_tcb spec orig_caps) tcbs
+   \<lbrace>\<lambda>_.\<guillemotleft>tcbs_half_initialised spec t {obj_id. tcb_at obj_id spec} \<and>*
+        si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
+        si_objects \<and>* R\<guillemotright>\<rbrace>"
+  apply (rule hoare_gen_asm)
+  apply (clarsimp simp: objects_empty_def tcbs_half_initialised_def)
+  apply (rule mapM_x_set_sep' [where
+               P="\<lambda>obj_id. tcb_half_initialised spec t obj_id" and
+               Q="\<lambda>obj_id. tcb_half_initialised spec t obj_id" and
+               I="si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
+                  si_objects" and
+               xs="tcbs" and
+               X="{obj_id. tcb_at obj_id spec}" and
+              R=R, simplified sep_conj_assoc], assumption, simp)
+  apply (clarsimp simp: si_caps_at_def, rename_tac obj_id)
+  apply (rule hoare_chain)
+    apply (rule_tac x = obj_id
+                and xs = "{obj_id. real_object_at obj_id spec}"
+                and P = "tcb_half_initialised spec t obj_id \<and>* si_objects"
+                and Q = "tcb_half_initialised spec t obj_id \<and>* si_objects"
+                and I = "si_cap_at t orig_caps spec"
+                and R=R
+                 in sep_set_conj_map_singleton_wp [simplified], simp_all add: object_at_real_object_at)
+    apply (wp sep_wp: configure_tcb_sep [where t=t and tcbs=tcbs], (simp|sep_solve)+)
   done
 
 lemma init_tcbs_sep:
@@ -790,16 +930,12 @@ lemma init_tcbs_sep:
      si_objects \<and>* R\<guillemotright> and
      K(well_formed spec \<and> set obj_ids = dom (cdl_objects spec) \<and> distinct obj_ids)\<rbrace>
    init_tcbs spec orig_caps obj_ids
-   \<lbrace>\<lambda>_.\<guillemotleft>objects_initialised spec t {obj_id. tcb_at obj_id spec} \<and>*
+   \<lbrace>\<lambda>_.\<guillemotleft>tcbs_half_initialised spec t {obj_id. tcb_at obj_id spec} \<and>*
         si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
         si_objects \<and>* R\<guillemotright>\<rbrace>"
-  apply (rule hoare_gen_asm, clarsimp)
+  apply (rule hoare_gen_asm)
   apply (clarsimp simp: init_tcbs_def)
-  apply (drule init_tcbs_sep_helper [where t=t
-                                       and orig_caps=orig_caps
-                                       and tcbs="[obj\<leftarrow>obj_ids . tcb_at obj spec]"
-                                       and R=R],
-         (assumption|clarsimp)+)
+  apply (wp configure_tcbs_sep init_tcbs_sep_helper | simp)+
   done
 
 end

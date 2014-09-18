@@ -221,12 +221,26 @@ where
     assert (\<not>fail)
   od"
 
+(* Set the registers of a single tcb (cspace, vspace and fault_ep). *)
+definition configure_tcb :: "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_cptr option) \<Rightarrow> cdl_object_id \<Rightarrow> unit u_monad"
+where
+  "configure_tcb spec orig_caps tcb_id \<equiv> do
+    cdl_tcb  \<leftarrow> assert_opt $ opt_thread tcb_id spec;
+    sel4_tcb \<leftarrow> assert_opt $ orig_caps tcb_id;
+    ip \<leftarrow> return $ tcb_ip cdl_tcb;
+    sp \<leftarrow> return $ tcb_sp cdl_tcb;
+    regs \<leftarrow> return [ip, sp];
+    fail \<leftarrow> seL4_TCB_WriteRegisters sel4_tcb False 0 2 regs;
+    assert fail
+  od"
+
 (* Initialise all the tcbs (cspace, vspace and fault_ep). *)
 definition init_tcbs :: "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_cptr option) \<Rightarrow> cdl_object_id list \<Rightarrow> unit u_monad"
 where
   "init_tcbs spec orig_caps objects \<equiv> do
     tcb_ids \<leftarrow> return [obj \<leftarrow> objects. tcb_at obj spec];
-    mapM_x (init_tcb spec orig_caps) tcb_ids
+    mapM_x (init_tcb spec orig_caps) tcb_ids;
+    mapM_x (configure_tcb spec orig_caps) tcb_ids
   od"
 
 
@@ -444,13 +458,9 @@ where
 (* Initialise a single tcb (cspace, vspace and fault_ep). *)
 definition start_thread :: "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow> cdl_cptr option) \<Rightarrow> cdl_object_id \<Rightarrow> unit u_monad"
 where
-  "start_thread spec orig_caps tcb_id \<equiv> do
-    cdl_tcb  \<leftarrow> assert_opt $ opt_thread tcb_id spec;
-    sel4_tcb \<leftarrow> assert_opt $ orig_caps tcb_id;
-    ip \<leftarrow> return $ tcb_ip cdl_tcb;
-    sp \<leftarrow> return $ tcb_sp cdl_tcb;
-    regs \<leftarrow> return [ip, sp];
-    fail \<leftarrow> seL4_TCB_WriteRegisters sel4_tcb True 0 2 regs;
+  "start_thread spec dup_caps tcb_id \<equiv> do
+    sel4_tcb \<leftarrow> assert_opt $ dup_caps tcb_id;
+    fail \<leftarrow> seL4_TCB_Resume sel4_tcb;
     assert fail
   od"
 
@@ -458,7 +468,7 @@ definition start_threads :: "cdl_state \<Rightarrow> (cdl_object_id \<Rightarrow
                                                                                   \<Rightarrow> unit u_monad"
 where
   "start_threads spec orig_caps obj_ids \<equiv> do
-    tcbs \<leftarrow> return [obj_id \<leftarrow> obj_ids. tcb_at obj_id spec];
+    tcbs \<leftarrow> return [obj_id \<leftarrow> obj_ids. is_waiting_thread_at obj_id spec];
     mapM_x (start_thread spec orig_caps) tcbs
   od"
 

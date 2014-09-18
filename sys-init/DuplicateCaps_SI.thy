@@ -249,15 +249,17 @@ lemma duplicate_caps_sep_no_rv:
     apply (rule_tac x=untyped_caps in exI)
     apply (rule_tac x=all_available_ids in exI)
     apply (subst sep_map_zip_snd_take, simp+)
-    apply (subst (asm) drop_take_drop[symmetric, where b="length [obj\<leftarrow>obj_ids. cnode_or_tcb_at obj spec]"])
+    apply (subst (asm) drop_take_drop[symmetric,
+           where a="card (dom (cdl_objects spec))"
+             and b="length [obj\<leftarrow>obj_ids. cnode_or_tcb_at obj spec]"])
     apply (subst take_drop)
     apply clarsimp
     apply (clarsimp simp: distinct_card' distinct_length_filter')
     apply (subst sep_list_conj_sep_map_set_conj, simp)
     apply (subst (asm) sep.setprod.union_disjoint, simp+)
-    apply (simp add: drop_take)
-    apply (subst nat_add_commute)
-    apply (erule distinct_take_drop_append)
+     apply (simp add: drop_take)
+     apply (subst nat_add_commute)
+     apply (erule distinct_take_drop_append)
     apply sep_solve
    apply (subst (asm) distinct_card [symmetric], simp+)+
    apply (subst distinct_card [symmetric], simp+)+

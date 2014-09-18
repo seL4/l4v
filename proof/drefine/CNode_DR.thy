@@ -1348,7 +1348,7 @@ lemma dcorres_recycle_asid_pool_caps:
   apply (rule dcorres_absorb_get_r)
   apply (clarsimp split:split_if)
   apply (intro conjI)
-   apply (clarsimp simp:bind_assoc)
+   apply (clarsimp simp:bind_assoc transform_asid_def)
    apply (rule corres_alternate1)
    apply (rule corres_guard_imp)
      apply (rule corres_split[OF _ dcorres_delete_asid_pool])
@@ -1358,7 +1358,7 @@ lemma dcorres_recycle_asid_pool_caps:
          apply (rule dcorres_absorb_get_l)
          apply (rule corres_guard_imp)
            apply (rule corres_split[where r'=dc and P=\<top> and P'=\<top> and R="\<lambda>s. \<top>" and R'="\<lambda>s. \<top>"])
-              apply clarsimp
+              apply (clarsimp simp:transform_asid_def)
              apply (clarsimp simp:KHeap_D.set_object_def set_object_def simpler_modify_def
                                   get_def put_def bind_def return_def)
              apply (clarsimp simp:corres_underlying_def transform_def transform_current_thread_def
@@ -1538,10 +1538,8 @@ lemma opt_cap_pd_Some:
   apply (clarsimp simp:opt_cap_def slots_of_def
     object_slots_def transform_objects_def  restrict_map_def not_idle_thread_def)
   apply (simp add:opt_object_page_directory object_slots_def)
-  apply (clarsimp simp:transform_page_directory_contents_def transform_pde_def unat_map_def below_kernel_base)
-  apply (clarsimp simp:ucast_def)
-  apply (simp add: word_of_int_nat[OF uint_ge_0,simplified] unat_def)
-  apply (simp add:mask_pd_bits_less)
+  apply (clarsimp simp:transform_page_directory_contents_def 
+    transform_pde_def unat_map_def below_kernel_base)
 done
 
 lemma inj_neq:"\<lbrakk>inj f;a\<noteq> b\<rbrakk> \<Longrightarrow> f a\<noteq> f b"

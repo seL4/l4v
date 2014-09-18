@@ -105,11 +105,11 @@ where
  * Delete an ASID pool.
  *)
 definition
-  delete_asid_pool :: "cdl_asid \<Rightarrow> cdl_object_id \<Rightarrow> unit k_monad"
+  delete_asid_pool :: "cdl_cnode_index \<Rightarrow> cdl_object_id \<Rightarrow> unit k_monad"
 where
   "delete_asid_pool base ptr \<equiv> do
     asid_table \<leftarrow> gets cdl_asid_table;
-    asid_table' \<leftarrow> return $ asid_table (fst base \<mapsto> NullCap);
+    asid_table' \<leftarrow> return $ asid_table (base \<mapsto> NullCap);
     modify (\<lambda>s. s \<lparr>cdl_asid_table := asid_table'\<rparr>)
   od \<sqinter> return ()"
 
@@ -124,7 +124,7 @@ where
     asid_table \<leftarrow> gets cdl_asid_table;
     case asid_table (fst asid) of
        Some NullCap \<Rightarrow> return ()
-     | Some (AsidPoolCap p _) \<Rightarrow> set_cap (p, snd asid) NullCap
+     | Some (AsidPoolCap p _) \<Rightarrow> set_cap (p, (snd asid)) NullCap
      | _ \<Rightarrow> fail
   od \<sqinter> return ()"
 
@@ -209,15 +209,15 @@ where
          return (NullCap, None)
        od
        else return (NullCap, None))"
-| "finalise_cap (PageTableCap ptr x asid)     final = (
+| "finalise_cap (PageTableCap ptr x (Some asid))     final = (
        if (final \<and> x = Real) then do
-         unmap_page_table ptr;
+         unmap_page_table asid ptr;
          return (NullCap, None)
        od
        else return (NullCap, None))"
-| "finalise_cap (FrameCap ptr _ _ x asid)       final = (
+| "finalise_cap (FrameCap ptr _ s x (Some asid))       final = (
        if x = Real then do
-         unmap_page ptr;
+         unmap_page asid ptr s;
          return (NullCap, None)
        od
        else return (NullCap, None))"
@@ -235,8 +235,7 @@ lemma fast_finalise_def2:
      assert (result = (NullCap, None))
    od"
   apply (cases cap, simp_all add: liftM_def assert_def can_fast_finalise_def)
-  apply (case_tac option)
-   apply simp+
+  apply (case_tac option,simp+)+
   done
 
 (*
@@ -541,7 +540,7 @@ where
       delete_asid_pool base ptr;
       clear_object_caps ptr;
       asid_table \<leftarrow> gets cdl_asid_table;
-      asid_table' \<leftarrow> return $ asid_table (fst base \<mapsto> AsidPoolCap ptr (0, 0));
+      asid_table' \<leftarrow> return $ asid_table (base \<mapsto> AsidPoolCap ptr 0);
       modify (\<lambda>s. s \<lparr>cdl_asid_table := asid_table'\<rparr>);
       return cap
     od \<sqinter> return cap

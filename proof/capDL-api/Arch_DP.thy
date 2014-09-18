@@ -47,9 +47,21 @@ lemma decode_invocation_invER[wp]:
   apply (rule hoare_pre, (wp | simp add:throw_opt_def | wpc | intro conjI impI)+)+
   done
 
+definition
+  "cap_mapped cap = (case cap of PageTableCap _ _ asid \<Rightarrow> asid
+  | FrameCap _ _ _ _ asid \<Rightarrow> asid)"
+
+definition
+  "cap_asid cap = (case cap of PageDirectoryCap pd_ptr real' asid' \<Rightarrow> asid')"
+
+definition
+  "get_mapped_asid \<equiv> \<lambda>asid vaddr. option_map (\<lambda>x. (x,vaddr)) asid"
+
+
+
 lemma decode_page_map_intent_rv_20_24:
   "\<lbrakk>n = 20 \<or> n = 24 \<rbrakk>
-  \<Longrightarrow> \<lbrace>\<lambda>s. R (InvokePage (PageMap (FrameCap frame_ptr rights n Real asid')
+  \<Longrightarrow> \<lbrace>\<lambda>s. R (InvokePage (PageMap (FrameCap frame_ptr rights n Real (get_mapped_asid asid' vaddr))
          (FrameCap frame_ptr (validate_vm_rights (rights \<inter> perms)) n Fake None) ref [cdl_lookup_pd_slot ptr vaddr])) \<rbrace>
   decode_invocation (FrameCap frame_ptr rights n real asid) ref
   [(PageDirectoryCap ptr real' asid',pdref)]
@@ -57,18 +69,19 @@ lemma decode_page_map_intent_rv_20_24:
   \<lbrace>\<lambda>r s. R r\<rbrace>, -"
   apply (simp add:decode_invocation_def get_index_def
     get_page_intent_def throw_opt_def cap_rights_def
-    decode_page_invocation_def throw_on_none_def)
-  apply (wp alternativeE_wp select_wp)
+    decode_page_invocation_def throw_on_none_def get_mapped_asid_def)
+  apply (wp alternativeE_wp select_wp | wpc)+
   apply (rule validE_validE_R)
    apply (wp alternativeE_wp)
-    apply (simp add:cdl_create_mapping_entries_def split del:if_splits)
-    apply (wp cdl_lookup_pt_slot_rv)
+    apply (simp add:cdl_page_mapping_entries_def 
+      split del:if_splits | wp | wpc)+
+
    apply auto
   done
 
 lemma decode_page_map_intent_rv_16_12:
   "\<lbrakk>n = 12 \<or> n = 16 \<rbrakk>
-  \<Longrightarrow> \<lbrace>\<lambda>s. R (InvokePage (PageMap (FrameCap frame_ptr rights n Real asid')
+  \<Longrightarrow> \<lbrace>\<lambda>s. R (InvokePage (PageMap (FrameCap frame_ptr rights n Real (get_mapped_asid asid' vaddr))
          (FrameCap frame_ptr (validate_vm_rights (rights \<inter> perms)) n Fake None) ref
          [(p, unat ((vaddr >> 12) && 0xFF))]))
   \<and> <(ptr, unat (vaddr >> 20)) \<mapsto>c PageTableCap p Fake None \<and>* (\<lambda>s. True)> s\<rbrace>
@@ -78,12 +91,13 @@ lemma decode_page_map_intent_rv_16_12:
   \<lbrace>\<lambda>r s. R r\<rbrace>, -"
   apply (simp add:decode_invocation_def get_index_def
     get_page_intent_def throw_opt_def cap_rights_def
-    decode_page_invocation_def throw_on_none_def)
+    decode_page_invocation_def throw_on_none_def
+    get_mapped_asid_def)
   apply (wp alternativeE_wp select_wp)
   apply (rule validE_validE_R)
    apply (wp alternativeE_wp)
-    apply (simp add:cdl_create_mapping_entries_def split del:if_splits)
-    apply (wp cdl_lookup_pt_slot_rv)
+    apply (simp add:cdl_page_mapping_entries_def split del:if_splits)
+    apply (wp cdl_lookup_pt_slot_rv | wpc | simp)+
    apply auto
   done
 
@@ -131,16 +145,12 @@ crunch cdl_cur_thread[wp]: invoke_page_table "\<lambda>s. P (cdl_current_thread 
 crunch cdl_cur_domain[wp]: invoke_page_table, invoke_page "\<lambda>s. P (cdl_current_domain s)"
 (wp: crunch_wps select_wp alternative_wp simp : swp_def unless_def)
 
-definition
-  "cap_asid cap = (case cap of PageTableCap _ _ asid \<Rightarrow> asid
-  | PageDirectoryCap pd_ptr real' asid \<Rightarrow> asid
-  | FrameCap _ _ _ _ asid \<Rightarrow> asid)"
-
 lemmas cap_asid_simps[simp] = cap_asid_def[split_simps cdl_cap.split]
+lemmas cap_mapped_simps[simp] = cap_mapped_def[split_simps cdl_cap.split]
 
 lemma decode_page_table_rv:
   "\<lbrace>Q (InvokePageTable
-               (PageTableMap (PageTableCap ptr Real (cap_asid (fst pd_cap_slot)))
+               (PageTableMap (PageTableCap ptr Real (get_mapped_asid (cap_asid (fst pd_cap_slot)) (vaddr && ~~ mask 20)))
                  (PageTableCap ptr Fake None) ref
                  (cdl_lookup_pd_slot (cap_object (fst pd_cap_slot)) vaddr))) \<rbrace>
   decode_invocation (PageTableCap ptr b asid) ref  [pd_cap_slot]
@@ -152,7 +162,7 @@ lemma decode_page_table_rv:
   apply (rule hoare_pre)
    apply (wp alternativeE_wp  throw_on_none_wp | wpc | simp)+
   apply (clarsimp split:option.splits simp:get_index_def cap_object_def
-    cap_has_object_def)
+    cap_has_object_def get_mapped_asid_def)
   done
 
 lemma seL4_Page_Table_Map:
@@ -227,7 +237,7 @@ lemma seL4_Page_Table_Map:
           \<and>* (cnode_id, pd_offset) \<mapsto>c PageDirectoryCap pd_ptr real None
           \<and>* root_tcb_id \<mapsto>f Tcb tcb
           \<and>* cnode_id \<mapsto>f CNode (empty_cnode root_size) \<and>*  R> s \<and>
-         iv = InvokePageTable (PageTableMap (PageTableCap ptr Real asid') (PageTableCap ptr Fake None)
+         iv = InvokePageTable (PageTableMap (PageTableCap ptr Real (get_mapped_asid asid' (vaddr && ~~ mask 20))) (PageTableCap ptr Fake None)
           (cnode_id,pt_offset) (cdl_lookup_pd_slot pd_ptr vaddr))"
          in hoare_post_impErr[rotated -1])
            apply assumption
@@ -370,7 +380,7 @@ lemma seL4_Section_Map_wp:
           \<and>* root_tcb_id \<mapsto>f Tcb tcb \<and>* (cnode_id, pd_offset) \<mapsto>c PageDirectoryCap pd_ptr real None
           \<and>* cnode_id \<mapsto>f CNode (empty_cnode root_size) \<and>*  R> s \<and>
          iv = InvokePage
-         (PageMap (FrameCap frame_ptr rights n Real asid')
+         (PageMap (FrameCap frame_ptr rights n Real (get_mapped_asid asid' vaddr))
          (FrameCap frame_ptr (validate_vm_rights (rights \<inter> perms)) n Fake None) (cnode_id,frame_offset)
           [cdl_lookup_pd_slot pd_ptr vaddr])"
          in hoare_post_impErr[rotated -1])
@@ -519,7 +529,7 @@ lemma seL4_Page_Map_wp:
           \<and>* cdl_lookup_pd_slot pd_ptr vaddr \<mapsto>c PageTableCap pt_ptr Fake None
           \<and>* cnode_id \<mapsto>f CNode (empty_cnode root_size) \<and>*  R> s \<and>
          iv = InvokePage
-         (PageMap (FrameCap frame_ptr rights n Real asid')
+         (PageMap (FrameCap frame_ptr rights n Real (get_mapped_asid asid' vaddr))
          (FrameCap frame_ptr (validate_vm_rights (rights \<inter> perms)) n Fake None)
              (cnode_id,frame_offset) [ (pt_ptr, unat ((vaddr >> 12) && 0xFF))] )"
          in hoare_post_impErr[rotated -1])
@@ -589,7 +599,7 @@ lemma decode_invocation_asid_pool_assign:
   "\<lbrace> \<lambda>s. (c = AsidPoolCap p base) \<rbrace>
   decode_invocation c ref [(PageDirectoryCap pd is_real sz,pd_ref)]
   (AsidPoolIntent AsidPoolAssignIntent)
-  \<lbrace>\<lambda>iv s. \<exists>x. x < 2 ^ asid_low_bits \<and> iv = InvokeAsidPool (Assign (fst base, x) pd_ref (p, x)) \<rbrace>, -"
+  \<lbrace>\<lambda>iv s. \<exists>x. x < 2 ^ asid_low_bits \<and> iv = InvokeAsidPool (Assign (base, x) pd_ref (p, x)) \<rbrace>, -"
   apply (rule hoare_pre)
    apply (rule hoare_gen_asmE[where P =" c = AsidPoolCap p base"])
    apply (simp add:decode_invocation_def get_asid_pool_intent_def
@@ -652,7 +662,7 @@ lemma invoke_asid_pool_wp:
 lemma sep_map_c_asid_simp:
   "(slot \<mapsto>c FrameCap ptr rights sz real option) = (slot \<mapsto>c FrameCap ptr rights sz real None)"
   "(slot \<mapsto>c PageTableCap ptr real option) = (slot \<mapsto>c PageTableCap ptr real None)"
-  "(slot \<mapsto>c PageDirectoryCap ptr real option) = (slot \<mapsto>c PageDirectoryCap ptr real None)"
+  "(slot \<mapsto>c PageDirectoryCap ptr real option') = (slot \<mapsto>c PageDirectoryCap ptr real None)"
   by (simp_all add:sep_map_c_asid_reset)
 
 
@@ -692,7 +702,7 @@ lemma seL4_ASIDPool_Assign_wp:
                apply (rule set_cap_wp)
              apply wp[4]
             apply (rule_tac P = "\<exists>x. x < 2 ^ asid_low_bits
-              \<and> iv =  (InvokeAsidPool (Assign (fst base, x) (cnode_id,pd_offset) (p, x)))"
+              \<and> iv =  (InvokeAsidPool (Assign (base, x) (cnode_id,pd_offset) (p, x)))"
               in hoare_gen_asmEx)
             apply clarsimp
            apply wp

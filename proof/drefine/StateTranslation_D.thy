@@ -1,4 +1,3 @@
-
 (*
  * Copyright 2014, NICTA
  *
@@ -335,7 +334,7 @@ definition
     | ARMPageTableMap \<Rightarrow>
           Option.map PageTableIntent
                    (transform_intent_page_table_map args)
-    | ARMPageTableUnmap \<Rightarrow> Some (PageTableIntent PageTableUnmapIntent)
+    | ARMPageTableUnmap \<Rightarrow> Some (PageTableIntent PageTableUnmapIntent) 
     | ARMPageMap \<Rightarrow>
           Option.map PageIntent
                    (transform_intent_page_map args)
@@ -355,8 +354,8 @@ definition
     | ARMASIDControlMakePool \<Rightarrow>
           Option.map AsidControlIntent
                    (transform_cnode_index_and_depth AsidControlMakePoolIntent args)
-    | ARMASIDPoolAssign \<Rightarrow> Some (AsidPoolIntent AsidPoolAssignIntent)
-    | DomainSetSet \<Rightarrow> Option.map DomainIntent (transform_intent_domain args)"
+    | ARMASIDPoolAssign \<Rightarrow> Some (AsidPoolIntent AsidPoolAssignIntent )
+    | Domainsetset \<Rightarrow> Option.map DomainIntent (transform_intent_domain args)"
 
 lemmas transform_intent_tcb_defs =
   transform_intent_tcb_read_registers_def
@@ -560,9 +559,9 @@ where
   "transform_asid asid = (unat (asid_high_bits_of asid), unat (ucast asid :: 10 word))"
 
 definition
-  transform_mapping :: "(asid \<times> vspace_ref) option \<Rightarrow> cdl_asid option"
+  transform_mapping :: "(asid \<times> vspace_ref) option \<Rightarrow> cdl_mapped_addr option"
 where
-  " transform_mapping mp = option_map (transform_asid \<circ> fst) mp"
+  " transform_mapping mp = option_map (\<lambda>x. (transform_asid (fst x),snd x)) mp"
 
 (*
  * Transform a cap in the abstract spec to an equivalent
@@ -603,7 +602,7 @@ where
           ARM_Structs_A.ASIDControlCap \<Rightarrow>
             Types_D.AsidControlCap
         | ARM_Structs_A.ASIDPoolCap ptr asid \<Rightarrow>
-            Types_D.AsidPoolCap ptr (transform_asid asid)
+            Types_D.AsidPoolCap ptr (fst $ (transform_asid asid))
         | ARM_Structs_A.PageCap ptr cap_rights_ sz mp \<Rightarrow>
             Types_D.FrameCap ptr cap_rights_ (pageBitsForSize sz) Real (transform_mapping mp)
         | ARM_Structs_A.PageTableCap ptr mp \<Rightarrow>
@@ -1085,7 +1084,7 @@ definition
 where
   "transform_asid_table_entry p \<equiv> case p of
        None \<Rightarrow> Types_D.NullCap
-     | Some p \<Rightarrow> Types_D.AsidPoolCap p (0, 0)"
+     | Some p \<Rightarrow> Types_D.AsidPoolCap p 0"
 
 definition
   transform_asid_table :: "'z::state_ext state \<Rightarrow> cdl_cap_map"

@@ -119,11 +119,22 @@ lemma cnode_id_not_in_irq_cnodes:
   by (clarsimp simp: irq_nodes_def example_spec_def object_at_def
                      is_irq_node_def object_id_defs)
 
+lemma example_spec_is_tcb:
+  "\<lbrakk>cdl_objects example_spec obj_id = Some obj; is_tcb obj\<rbrakk>
+  \<Longrightarrow> obj_id = tcb_id \<and> obj = Tcb example_tcb"
+  by (clarsimp simp: example_spec_def is_tcb_def
+              split: cdl_object.splits split_if_asm)
+
 lemma well_formed_tcb_example:
-  "well_formed_tcb example_spec minBound (Tcb example_tcb)"
-  by (auto simp: well_formed_tcb_def object_slots_def example_tcb_def tcb_slot_defs
-                 tcb_domain_def tcb_pending_op_slot_def tcb_has_fault_def is_default_cap_def
-                 default_cap_def cap_type_def cnode_id_not_in_irq_cnodes)
+  "cdl_objects example_spec obj_id = Some obj
+   \<Longrightarrow> well_formed_tcb example_spec obj_id obj"
+  apply (clarsimp simp: well_formed_tcb_def)
+  apply (drule (1) example_spec_is_tcb, clarsimp)
+  apply (clarsimp simp: example_tcb_def tcb_has_fault_def tcb_domain_def minBound_word
+                        object_slots_def tcb_slot_defs cnode_id_not_in_irq_cnodes
+                        is_default_cap_def cap_type_def default_cap_def
+                 split: split_if_asm)
+  done
 
 lemma well_formed_orig_caps_unique_example:
   "well_formed_orig_caps_unique example_spec"
@@ -331,10 +342,7 @@ lemma well_formed_example:
   apply (clarsimp simp: well_formed_caps_example well_formed_cap_to_object_example
                         well_formed_orig_caps_unique_example)
   apply (rule conjI)
-   apply (case_tac "obj_id = tcb_id")
-    apply (cut_tac well_formed_tcb_example)
-    apply (clarsimp simp: example_spec_def object_id_defs well_formed_tcb_def split: split_if_asm)
-   apply (clarsimp simp: example_spec_def well_formed_tcb_def is_tcb_def split: split_if_asm)
+   apply (erule well_formed_tcb_example)
   apply (rule conjI)
    apply (fact well_formed_vspace_example)
   apply (rule conjI)

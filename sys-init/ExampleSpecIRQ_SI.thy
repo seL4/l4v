@@ -518,17 +518,13 @@ lemma is_orig_cap_example_spec:
 
 lemma well_formed_tcb_a:
   "well_formed_tcb example_spec obj_id (Tcb tcb_a)"
-  by (auto simp: well_formed_tcb_def object_slots_def tcb_a_def tcb_slot_defs
-                 tcb_pending_op_slot_def tcb_has_fault_def is_default_cap_def
-                 default_cap_def cap_type_def irq_nodes_example_spec)
+  by (auto simp: well_formed_tcb_def object_slots_def tcb_a_def tcb_slot_defs tcb_has_fault_def
+                 is_default_cap_def default_cap_def cap_type_def irq_nodes_example_spec)
 
 lemma well_formed_tcb_b:
   "well_formed_tcb example_spec obj_id (Tcb tcb_b)"
-  by (auto simp: well_formed_tcb_def object_slots_def tcb_b_def tcb_slot_defs
-                 tcb_pending_op_slot_def tcb_has_fault_def is_default_cap_def
-                 default_cap_def cap_type_def irq_nodes_example_spec)
-
-
+  by (auto simp: well_formed_tcb_def object_slots_def tcb_b_def tcb_slot_defs tcb_has_fault_def
+                 is_default_cap_def default_cap_def cap_type_def irq_nodes_example_spec)
 
 lemma well_formed_orig_caps_unique_example:
   "well_formed_orig_caps_unique example_spec"
