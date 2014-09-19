@@ -3388,13 +3388,7 @@ lemma scheduler_affects_equiv_uwr:
 
 lemma cur_domain_reads: "(s,s') \<in> uwr u \<Longrightarrow> is_domain initial_aag (label_for_partition u) (internal_state_if s) \<Longrightarrow> (user_modes (sys_mode_of s) \<longrightarrow> user_context_of s = user_context_of s') \<and> sys_mode_of s = sys_mode_of s'"
   apply (case_tac u)
-  prefer 2
-  apply simp
-  apply (simp add: reads_scheduler_def)+
-  apply (simp add: uwr_def sameFor_def sameFor_subject_def)
-  apply clarify
-  apply (simp(no_asm_use))
-  apply simp
+  apply (auto simp: reads_scheduler_def uwr_def sameFor_def sameFor_subject_def)
   done
 
 lemmas domain_can_read_context = cur_domain_reads[THEN conjunct1]
