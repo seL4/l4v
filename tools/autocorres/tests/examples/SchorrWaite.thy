@@ -376,8 +376,8 @@ abbreviation schorr_waite'_measure where
 (* FIXME: heap_abs_syntax failure *)
 lemma syntax_hack_simp:
   "heap_node_C_update (\<lambda>b. b(a := r_C_update (\<lambda>c. l_C (b a)) (b a))) s =
-     update_node_r s a (get_node_l s a)"
-  by (simp add: update_node_r_def get_node_l_def)
+     schorr_waite.update_node_r s a (schorr_waite.get_node_l s a)"
+  by (simp add: schorr_waite.update_node_r_def schorr_waite.get_node_l_def)
 
 schematic_lemma schorr_waite'_prove_def:
   "schorr_waite' root \<equiv> ?A root (s0 :: lifted_globals) (R :: node_C ptr set)"
