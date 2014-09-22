@@ -890,6 +890,7 @@ attribute
                  in
                    SOME (GCC_AttribID idstr)
                  end)
+| CONST         (SOME (GCC_AttribID "const"))
 | ID LPAREN RPAREN
                 (SOME (GCC_AttribFn (ID, [])))
 | ID LPAREN attribute_parameter_list1 RPAREN
