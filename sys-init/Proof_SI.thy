@@ -126,8 +126,7 @@ lemma capdl_objects_by_parts:
   apply (subst (6) sep_map_set_conj_restrict [where t = "(\<lambda>obj. tcb_at obj spec)"], simp)
   apply (subst (7) sep_map_set_conj_restrict [where t = "(\<lambda>obj. table_at obj spec)"], simp)
   apply (subst (8) sep_map_set_conj_restrict [where t = "(\<lambda>obj. capless_at obj spec)"], simp)
-  apply (clarsimp simp: object_types_distinct real_cnode_at_def2 real_object_only_cnode
-                        real_object_not_irq_node real_objects_some_type
+  apply (clarsimp simp: object_types_distinct real_object_not_irq_node real_objects_some_type
                   cong: rev_conj_cong)
   done
 
