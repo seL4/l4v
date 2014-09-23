@@ -43,7 +43,7 @@ sig
       (typ,'a,'b) Element.ctxt list ->
                                  (* globals living in the globals locale *)
       theory ->
-      (string * (binding * thm list) list * theory)
+      (string * theory)
 
 
 end
@@ -329,10 +329,10 @@ let
   val thy = Local_Theory.exit_global lthy
 
   (* set up _impl by defining \<Gamma> *)
-  val (defs, thy) =
+  val thy =
       if List.exists (isSome o #body) fninfo then let
           val lthy = Named_Target.init globloc thy
-          fun expfname fni = let
+          fun get_body fni = let
             val nm = #fname fni
           in
             case (#body fni, #mod_annotated_protop fni) of
@@ -344,24 +344,14 @@ let
                 SOME (Syntax.check_term lthy (Const(realnm, dummyT)))
               end
           end
-          val blist' = map expfname fninfo
-          val bnm = ListPair.zip (blist',nmdefs)
-          val triples =
-              ListPair.zip (bnm,
-                            map (suffix HoarePackage.implementationN o #fname)
-                                fninfo)
-          val (defs, lthy) =
-              StaticFun.define_tree_and_thms "\<Gamma>" triples lthy
-          val lthy' = Local_Theory.restore lthy
-          val morph = Proof_Context.export_morphism lthy lthy'
-          val defs' = map (fn (n, t) =>
-                              (Morphism.binding morph (Binding.name n),
-                               map (Morphism.thm morph) t))
-                          defs
+          (* name for thm, (proc constant, body constant) *)
+          val (_, lthy) = StaticFun.define_tree_and_thms_with_defs
+              @{binding \<Gamma>} (map (suffix HoarePackage.implementationN o #fname) fninfo)
+              nmdefs (map get_body fninfo) @{term "id :: int => int"} lthy
         in
-          (defs', Local_Theory.exit_global lthy')
+          Local_Theory.exit_global lthy
         end
-      else ([], thy)
+      else thy
 
   val globloc_expr = ([(globloc, (("", false), Expression.Named []))], [])
 
@@ -413,7 +403,7 @@ let
       Expression.add_locale localename_b localename_b globloc_expr [] thy
 
 in
-  (globloc, defs, Local_Theory.exit_global ctxt)
+  (globloc, Local_Theory.exit_global ctxt)
 end
 
 

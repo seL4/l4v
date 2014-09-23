@@ -65,9 +65,11 @@ fun define_naming_scheme [] _ = I
   fun name_term fni = SOME (HOLogic.mk_string (#fname fni))
   fun name_name fni = #fname fni ^ "_name"
 
-  in StaticFun.define_tree_and_thms NameGeneration.naming_scheme_name
-      ((map name_term fninfo ~~ nmdefs) ~~ map name_name fninfo)
-    #> snd end
+  in StaticFun.define_tree_and_thms_with_defs
+      (Binding.name NameGeneration.naming_scheme_name)
+      (map name_name fninfo) nmdefs
+      (map name_term fninfo) @{term "id :: int => int"}
+  #> snd end
 
 fun define_function_names fninfo thy = let
   open Feedback
@@ -324,7 +326,7 @@ in
                                             fninfo
                                             rcdinfo
                                             ms
-      val (globloc, _ (* binding list *), thy) =
+      val (globloc, thy) =
           HPInter.make_function_definitions localename
                                             cse
                                             styargs
