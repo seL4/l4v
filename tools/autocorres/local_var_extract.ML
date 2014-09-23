@@ -1370,7 +1370,9 @@ fun get_l2corres_thm ctxt prog_info fn_info fn_name
 
   (* Cleanup. *)
   val _ = writeln ("Simplifying (L2) " ^ fn_name)
-  val new_thm = L2Opt.cleanup_thm ctxt new_thm false 5
+  (* HACK: we need to avoid these simps until heap_lift *)
+  val cleanup_del = @{thms ptr_coerce.simps ptr_add_0_id}
+  val new_thm = L2Opt.cleanup_thm (ctxt delsimps cleanup_del) new_thm false 5
 
   (* Gather post-simplification statistics. *)
   val _ = Statistics.gather ctxt "L2simp" fn_name

@@ -228,7 +228,7 @@ fun fix_L2_while_loop_splits_conv ctxt =
  * Carry out flow-sensitive optimisations on the given 'thm'.
  *
  * 'n' is the argument number to cleanup, counting from 1. So for example, if
- * our input theorem was "corres P A B", an "n" of 3 would simplify "A".
+ * our input theorem was "corres P A B", an "n" of 2 would simplify "A".
  *
  * If "fast_mode" is true, we don't do flow-sensitive optimisations (which tend
  * to be time-consuming).

@@ -125,6 +125,16 @@ where
        cdl_intent_extras = [cspace_root, vspace_root],
        cdl_intent_recv_slot = None\<rparr> False"
 
+definition seL4_TCB_Resume :: "cdl_cptr \<Rightarrow> bool u_monad"
+where
+  "seL4_TCB_Resume tcb_cap \<equiv>
+    do_kernel_op $ call_kernel_with_intent
+      \<lparr>cdl_intent_op = Some $ TcbIntent $ TcbResumeIntent,
+       cdl_intent_error = False,
+       cdl_intent_cap = tcb_cap,
+       cdl_intent_extras = [],
+       cdl_intent_recv_slot = None\<rparr> True"
+
 definition seL4_TCB_WriteRegisters :: "cdl_cptr \<Rightarrow> bool \<Rightarrow> word8 \<Rightarrow> word32 \<Rightarrow> cdl_raw_usercontext \<Rightarrow> bool u_monad"
 where
   "seL4_TCB_WriteRegisters tcb_cap resume_target arch_flags count regs \<equiv>

@@ -99,7 +99,7 @@ lemma (in list_rev) reverse_correct:
     apply (rule_tac x=lista in exI)
     apply (simp add: fun_upd_def)
    apply (clarsimp simp del: distinct_rev)
-  apply (simp add: ptr_coerce.simps)
+  apply simp
   done
 
 end

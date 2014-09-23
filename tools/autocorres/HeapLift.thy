@@ -507,6 +507,9 @@ lemma heap_abs_modifies_heap_update__unused:
   apply (metis valid_typ_heap_t_hrs_updateD)
   done
 
+(* See comment for heap_lift__wrap_h_val. *)
+definition "heap_lift__h_val \<equiv> h_val"
+
 (* See the comment for struct_rewrite_modifies_field.
  * In this case we rely on nice unification for ?c.
  * The heap_abs_syntax generator also relies on this rule
@@ -517,9 +520,10 @@ lemma heap_abs_modifies_heap_update [heap_abs]:
      \<And>v. abs_expr st Pc (c' v) (c v) \<rbrakk> \<Longrightarrow>
       abs_modifies st (\<lambda>s. Pb s \<and> Pc s \<and> vgetter s (b' s))
         (\<lambda>s. setter (\<lambda>x. x(b' s := c' (x (b' s)) s)) s)
-        (\<lambda>s. t_hrs_update (hrs_mem_update (heap_update (b s :: ('a::c_type) ptr)
-                                             (c (h_val (hrs_mem (t_hrs s)) (b s)) s))) s)"
-  apply (clarsimp simp: typ_simple_heap_simps abs_expr_def abs_modifies_def)
+        (\<lambda>s. t_hrs_update (hrs_mem_update
+               (heap_update (b s :: ('a::c_type) ptr)
+                            (c (heap_lift__h_val (hrs_mem (t_hrs s)) (b s)) s))) s)"
+  apply (clarsimp simp: typ_simple_heap_simps abs_expr_def abs_modifies_def heap_lift__h_val_def)
   apply (rule_tac t = "h_val (hrs_mem (t_hrs s)) (b' (st s))"
               and s = "getter (st s) (b' (st s))" in subst)
    apply (clarsimp simp: valid_typ_heap_def)
@@ -569,7 +573,7 @@ lemma abs_expr_field_guard [heap_abs]:
  *   c_guard (p\<rightarrow>a)  \<Longleftarrow>  c_guard p
  *   h_val s (p\<rightarrow>a)   =   p_C.a_C (h_val s p)
  *   heap_update (p\<rightarrow>a) v s   =   heap_update p (p_C.a_C_update (\<lambda>_. v) (h_val s p)) s
- * However, an inner expression may nest these arbitrarily.
+ * However, an inner expression may nest h_vals arbitrarily.
  *
  * Any output of a struct_rewrite rule should be fully rewritten.
  * By doing this, each rule only needs to rewrite the parts of a term that it
@@ -741,7 +745,7 @@ lemma heap_update_field_unpacked:
   "\<lbrakk> field_ti TYPE('a::mem_type) f = Some (t :: 'a field_desc typ_desc);
      c_guard (p :: 'a::mem_type ptr);
      export_uinfo t = export_uinfo (typ_info_t TYPE('b::mem_type)) \<rbrakk> \<Longrightarrow>
-   heap_update (Ptr &(p\<rightarrow>f)) v hp =
+   heap_update (Ptr &(p\<rightarrow>f) :: 'b ptr) v hp =
    heap_update p (update_ti t (to_bytes_p v) (h_val hp p)) hp"
   sorry
 
@@ -785,6 +789,28 @@ lemma read_write_valid_hrs_mem:
  * In case we find out this hack doesn't scale, we can avoid the schematic ?u
  * by traversing the chain and constructing ?u in a separate step.
  *)
+
+(*
+ * There's more. heap_update rewrites for "ptr\<rightarrow>a\<rightarrow>b := RHS" cause a
+ * "h_val s ptr" to appear in the RHS.
+ * When we lift to the typed heap, we want this h_val to be treated
+ * differently to other "h_val s ptr" terms that were already in the RHS.
+ * Thus we define heap_lift__h_val \<equiv> h_val to carry this information around.
+ *)
+definition "heap_lift__wrap_h_val \<equiv> op ="
+
+lemma heap_lift_wrap_h_val [heap_abs]:
+  "heap_lift__wrap_h_val (heap_lift__h_val s p) (h_val s p)"
+  by (simp add: heap_lift__h_val_def heap_lift__wrap_h_val_def)
+
+lemma heap_lift_wrap_h_val_skip [heap_abs]:
+  "heap_lift__wrap_h_val (h_val s (Ptr (field_lvalue p f))) (h_val s (Ptr (field_lvalue p f)))"
+  by (simp add: heap_lift__wrap_h_val_def)
+
+lemma heap_lift_wrap_h_val_skip_array [heap_abs]:
+  "heap_lift__wrap_h_val (h_val s (ptr_coerce p +\<^sub>p k))
+                         (h_val s (ptr_coerce p +\<^sub>p k))"
+  by (simp add: heap_lift__wrap_h_val_def)
 
 (* These are valid rules, but produce redundant output. *)
 lemma struct_rewrite_modifies_field__unused:
@@ -888,18 +914,19 @@ lemma struct_rewrite_modifies_field [heap_abs]:
   "\<lbrakk> valid_struct_field (st :: 's \<Rightarrow> 't) field_name (field_getter :: ('a::mem_type) \<Rightarrow> ('f::mem_type)) field_setter t_hrs t_hrs_update;
      struct_rewrite_expr P p' p;
      struct_rewrite_expr Q f' f;
+     \<And>s. heap_lift__wrap_h_val (h_val_p' s) (h_val (hrs_mem (t_hrs s)) (p' s));
      struct_rewrite_modifies R
        (\<lambda>s. t_hrs_update (hrs_mem_update (heap_update (p'' s)
                 (u s (field_setter (f' s))))) s)
        (\<lambda>s. t_hrs_update (hrs_mem_update (heap_update (p' s)
-                (field_setter (f' s) (h_val (hrs_mem (t_hrs s)) (p' s))))) s);
+                (field_setter (f' s) (h_val_p' s)))) s);
      struct_rewrite_guard S (\<lambda>s. c_guard (p' s)) \<rbrakk> \<Longrightarrow>
    struct_rewrite_modifies (\<lambda>s. P s \<and> Q s \<and> R s \<and> S s)
      (\<lambda>s. t_hrs_update (hrs_mem_update (heap_update (p'' s)
               (u s (field_setter (f' s))))) s)
      (\<lambda>s. t_hrs_update (hrs_mem_update (heap_update (Ptr (field_lvalue (p s) field_name))
               (f s (h_val (hrs_mem (t_hrs s)) (Ptr (field_lvalue (p s) field_name)))))) s)"
-  apply (clarsimp simp: struct_rewrite_expr_def struct_rewrite_guard_def struct_rewrite_modifies_def valid_struct_field_def)
+  apply (clarsimp simp: struct_rewrite_expr_def struct_rewrite_guard_def struct_rewrite_modifies_def valid_struct_field_def heap_lift__wrap_h_val_def)
   apply (erule_tac x = s in allE)+
   apply (erule impE, assumption)+
   apply (erule_tac t = "t_hrs_update (hrs_mem_update (heap_update (p'' s)
@@ -929,12 +956,13 @@ lemma struct_rewrite_modifies_Array_field [heap_abs]:
   "\<lbrakk> valid_struct_field (st :: 's \<Rightarrow> 't) field_name (field_getter :: ('a::mem_type) \<Rightarrow> (('f::oneMB_size)['n::fourthousand_count])) field_setter t_hrs t_hrs_update;
      struct_rewrite_expr P p' p;
      struct_rewrite_expr Q f' f;
+     \<And>s. heap_lift__wrap_h_val (h_val_p' s) (h_val (hrs_mem (t_hrs s)) (p' s));
      struct_rewrite_modifies R
        (\<lambda>s. t_hrs_update (hrs_mem_update (heap_update (p'' s)
                 (u s (field_setter (\<lambda>a. Arrays.update a (nat k) (f' s (index a (nat k)))))))) s)
        (\<lambda>s. t_hrs_update (hrs_mem_update (heap_update (p' s)
                (field_setter (\<lambda>a. Arrays.update a (nat k) (f' s (index a (nat k))))
-                  (h_val (hrs_mem (t_hrs s)) (p' s))))) s);
+                  (h_val_p' s)))) s);
      struct_rewrite_guard S (\<lambda>s. c_guard (p' s)) \<rbrakk> \<Longrightarrow>
    struct_rewrite_modifies (\<lambda>s. P s \<and> Q s \<and> R s \<and> S s \<and> 0 \<le> k \<and> nat k < CARD('n))
      (\<lambda>s. t_hrs_update (hrs_mem_update (heap_update (p'' s)
@@ -943,7 +971,7 @@ lemma struct_rewrite_modifies_Array_field [heap_abs]:
             (ptr_coerce (Ptr (field_lvalue (p s) field_name) :: ('f['n]) ptr) +\<^sub>p k)
                 (f s (h_val (hrs_mem (t_hrs s)) (ptr_coerce (Ptr (field_lvalue (p s) field_name) :: ('f['n]) ptr) +\<^sub>p k :: 'f ptr))))) s)"
   using ptr_coerce.simps[simp del]
-  apply (clarsimp simp: struct_rewrite_expr_def struct_rewrite_guard_def struct_rewrite_modifies_def valid_struct_field_def)
+  apply (clarsimp simp: struct_rewrite_expr_def struct_rewrite_guard_def struct_rewrite_modifies_def valid_struct_field_def heap_lift__wrap_h_val_def)
   apply (erule_tac x = s in allE)+
   apply (erule impE, assumption)+
   apply (erule_tac t = "t_hrs_update (hrs_mem_update (heap_update (p'' s)

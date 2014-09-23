@@ -17,6 +17,7 @@ imports
   InitTCB_SI
   InitCSpace_SI
   InitIRQ_SI
+  StartThreads_SI
 begin
 
 lemma parse_bootinfo_sep:
@@ -63,14 +64,6 @@ lemma parse_spec_sep:
   apply (wp)
   apply clarsimp
   done
-
-(* FIXME, this requires scheduler proofs. *)
-axiomatization where
-  start_threads_sep:
-  "\<lbrace>\<guillemotleft>R\<guillemotright>\<rbrace>
-     start_threads spec dup_caps obj_ids
-   \<lbrace>\<lambda>_. \<guillemotleft>R\<guillemotright>\<rbrace>"
-
 
 (* This isn't actually all the combinations, but enough of them for what I needed. *)
 lemma object_types_distinct:
@@ -195,6 +188,10 @@ lemma dom_map_of_zip':
   apply (subst dom_map_of_zip, simp+)
   done
 
+
+(* Dirty hack that is sadly needed to make the below proof work. *)
+declare [[unify_search_bound = 1000]]
+
 lemma small_one:
   "\<lbrakk>well_formed spec;
    set obj_ids = dom (cdl_objects spec); distinct obj_ids;
@@ -236,8 +233,8 @@ lemma small_one:
   apply (frule well_formed_objects_card)
   apply (insert distinct_card [symmetric, where xs ="[obj\<leftarrow>obj_ids . cnode_or_tcb_at obj spec]"], simp)
   apply (frule distinct_card [symmetric])
-  apply (clarsimp simp: init_system_def, wp valid_case_prod' start_threads_sep)
-  thm init_cspace_sep [sep_wandise]
+  apply (clarsimp simp: init_system_def, wp valid_case_prod')
+           apply (rule hoare_ex_wp, rename_tac t, rule_tac t=t in start_threads_sep [sep_wandise], simp)
           apply (rule hoare_ex_wp, rename_tac t, rule_tac t=t and
                                                  free_cptrs="[fstart .e. fend - 1]" in init_cspace_sep [sep_wandise])
          apply (rule hoare_ex_wp, rename_tac t, rule_tac t=t in init_tcbs_sep [sep_wandise])
@@ -250,7 +247,8 @@ lemma small_one:
      apply (rule create_irq_caps_sep [sep_wandise,
             where free_cptrs_orig = "[fstart .e. fend - 1]"
               and untyped_cptrs = "[ustart .e. uend - 1]"
-              and orig_caps = "map_of (zip [obj\<leftarrow>obj_ids. real_object_at obj spec] [fstart .e. fend - 1])"])
+              and orig_caps = "map_of (zip [obj\<leftarrow>obj_ids. real_object_at obj spec] [fstart .e. fend - 1])"
+              and spec = spec])
     apply (wp sep_wp: create_objects_sep [where untyped_caps = untyped_caps])
     apply (wp sep_wp: parse_bootinfo_sep [where fstart = fstart
                                             and fend = fend

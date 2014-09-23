@@ -496,16 +496,20 @@ lemma transform_intent_arch_cap_None:
       apply wp
       apply (clarsimp | rule conjI)+
       apply (case_tac "excaps ! 0")
-        apply (clarsimp simp:transform_intent_def transform_intent_page_remap_def split:list.split_asm)
+        apply (clarsimp simp:transform_intent_def
+          transform_intent_page_remap_def split:list.split_asm)
         apply ((clarsimp simp:transform_intent_def | wp)+)
     apply (case_tac "invocation_type label")
       apply (simp_all)
       apply (intro conjI impI | wp)+
       apply (clarsimp | rule conjI)+
-        apply (clarsimp simp:transform_intent_def transform_intent_page_table_map_def split:list.split_asm)
-        apply (clarsimp simp:transform_intent_def | wp)+
-     apply (intro conjI impI | wp)+
-     apply (clarsimp simp:transform_intent_def transform_intent_page_table_map_def split:list.split_asm)
+        apply (clarsimp simp:transform_intent_def transform_intent_page_table_map_def
+          split:list.split_asm)
+       apply (intro conjI impI | wp)+
+
+     apply ((clarsimp simp:transform_intent_def 
+       split:list.split_asm
+     | wp)+)[1]
      apply (case_tac "invocation_type label")
       apply (simp_all add: isPDFlush_def)
      apply (wp)
@@ -609,7 +613,6 @@ lemma ct_running_not_idle_etc:
    apply (clarsimp simp: valid_idle_def st_tcb_at_def obj_at_def)
   apply (clarsimp simp: invs_def valid_state_def)
   done
-
 
 
 lemma dcorres_set_eobject_tcb:

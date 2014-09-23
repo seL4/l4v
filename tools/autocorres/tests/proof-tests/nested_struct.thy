@@ -15,7 +15,7 @@
 theory nested_struct imports "../../AutoCorres" begin
 
 install_C_file "nested_struct.c"
-autocorres [keep_going] "nested_struct.c"
+autocorres "nested_struct.c"
 
 context nested_struct begin
 

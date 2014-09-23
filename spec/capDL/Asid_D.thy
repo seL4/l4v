@@ -41,7 +41,7 @@ where
          ensure_empty target_slot;
 
          returnOk $ MakePool (set_available_range untyped_cap {}) untyped_cap_ref
-           (cap_objects untyped_cap) target_slot (base, 0)
+           (cap_objects untyped_cap) target_slot base
        odE \<sqinter> throw"
 
 definition
@@ -57,7 +57,7 @@ where
            | _ \<Rightarrow> throw);
 
          base \<leftarrow> (case target of
-             AsidPoolCap p base \<Rightarrow> returnOk $ fst base
+             AsidPoolCap p base \<Rightarrow> returnOk $ base
            | _ \<Rightarrow> throw);
          offset \<leftarrow> liftE $ select {x. x < 2 ^ asid_low_bits};
          returnOk $ Assign (base, offset) pd_cap_ref (cap_object target, offset)
@@ -86,7 +86,7 @@ where
 
             (* Update the asid table. *)
             asid_table \<leftarrow> gets cdl_asid_table;
-            asid_table' \<leftarrow> return $ asid_table (fst base \<mapsto> AsidPoolCap frame (0, 0));
+            asid_table' \<leftarrow> return $ asid_table (base \<mapsto> AsidPoolCap frame 0);
             modify (\<lambda>s. s \<lparr>cdl_asid_table := asid_table'\<rparr>)
 
           od"
