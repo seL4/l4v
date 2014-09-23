@@ -118,7 +118,7 @@ lemma drop_sign_isomorphism_bitwise:
 
 lemma drop_sign_number[simp]:
   "drop_sign (numeral n) = numeral n"
-  "drop_sign (neg_numeral n) = neg_numeral n"
+  "drop_sign (- numeral n) = - numeral n"
   "drop_sign 0 = 0" "drop_sign 1 = 1"
   by (simp_all add: drop_sign_def ucast_def)
 
@@ -283,7 +283,7 @@ fun enum_simps csenv ctxt = let
        |> map (Proof_Context.get_thm ctxt o suffix "_def" o fst)
   end
 
-fun safe_goal_tac ctxt =
+fun safe_goal_tac_no_iff ctxt =
   REPEAT_ALL_NEW (DETERM o CHANGED o safe_steps_tac ctxt)
 
 fun res_from_ctxt tac_name thm_name ctxt thm = let
@@ -414,9 +414,9 @@ fun prove_mem_equality ctxt = DETERM o let
     THEN_ALL_NEW normalise_mem_accs ctxt
     THEN_ALL_NEW simp_tac unpack_simpset
     THEN_ALL_NEW simp_tac (ctxt addsimps @{thms store_word32s_equality_fold
-        store_word32s_equality_final add_commute})
+        store_word32s_equality_final add.commute})
     THEN_ALL_NEW simp_tac (ctxt addsimprocs [store_word32s_equality_simproc]
-        addsimps @{thms store_word32s_equality_final add_commute})
+        addsimps @{thms store_word32s_equality_final add.commute})
     THEN_ALL_NEW SUBGOAL (fn (t, i) => if exists_Const
             (fn (s, _) => s = @{const_name store_word32}
                 orelse s = @{const_name heap_update}
@@ -554,9 +554,9 @@ fun graph_refine_proof_tacs csenv ctxt = let
             )),
         (["step 3: split into goals with safe steps",
             "also derive ptr_safe assumptions from h_t_valid"],
-        (TRY o safe_goal_tac ctxt)
+        (TRY o safe_goal_tac_no_iff ctxt)
             THEN_ALL_NEW (TRY o DETERM o REPEAT_ALL_NEW (dtac @{thm h_t_valid_orig_and_ptr_safe}))
-            THEN_ALL_NEW (TRY o safe_goal_tac ctxt)),
+            THEN_ALL_NEW (TRY o safe_goal_tac_no_iff ctxt)),
         (["step 4: split up memory write problems."],
         decompose_mem_goals false ctxt),
         (["step 5: normalise memory reads"],

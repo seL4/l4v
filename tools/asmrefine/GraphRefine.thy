@@ -1716,9 +1716,12 @@ fun inst_graph_node_tac ctxt =
         (Envir.beta_eta_contract t))
   of @{term "op = :: node option \<Rightarrow> _"} $ (f $ n) $ _ => (let
     val g = head_of f |> dest_Const |> fst
-    val n = dest_nat n
+    val n' = dest_nat n
     val thm = Proof_Context.get_thm ctxt
-        (Long_Name.base_name g ^ "_" ^ Int.toString n)
+        (Long_Name.base_name g ^ "_" ^ Int.toString n')
+    val thm = if n = @{term "Suc 0"}
+        then simplify (put_simpset HOL_basic_ss ctxt addsimps @{thms One_nat_def}) thm
+        else thm
   in rtac thm i end handle TERM (s, ts) => raise TERM ("inst_graph_node_tac: " ^ s, t :: ts))
   | t => raise TERM ("inst_graph_node_tac", [t]))
 
@@ -1808,7 +1811,7 @@ fun simpl_ss ctxt = put_simpset HOL_basic_ss ctxt
 
 val immediates = @{thms
     simpl_to_graph_Skip_immediate simpl_to_graph_Throw_immediate}
-
+                        
 fun except_tac ctxt msg = SUBGOAL (fn (t, _) => let
   in warning msg; Syntax.pretty_term ctxt t |> Pretty.writeln;
     raise TERM (msg, [t]) end)
@@ -1876,7 +1879,9 @@ fun simpl_to_graph_cache_tac funs hints cache nm ctxt =
                 (Logic.strip_assums_concl (Envir.beta_eta_contract t)))) of
             SOME thm => rtac thm i | _ => no_tac)
             handle TERM _ => no_tac),
-        rtac @{thm simpl_to_graph_done2},
+        resolve_tac @{thms simpl_to_graph_done2
+            simpl_to_graph_Skip_immediate[where nn=Ret]
+            simpl_to_graph_Throw_immediate[where nn=Ret]},
         eq_impl_assume_tac ctxt
     ]
 
@@ -2053,7 +2058,7 @@ fun init_graph_refines_proof funs nm ctxt = let
         THEN graph_gamma_tac ctxt 1
         THEN ALLGOALS (simp_tac (put_simpset HOL_basic_ss ctxt addsimps [body_thm]
             addsimps @{thms entry_point.simps function_inputs.simps
-                            function_outputs.simps list.map list.simps}))
+                            function_outputs.simps list.simps}))
         THEN TRY ((rtac @{thm simpl_to_graph_noop_same_eqs}
             THEN' inst_graph_tac ctxt) 1)
     )

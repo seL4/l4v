@@ -989,8 +989,6 @@ fun emit_C_everything ctxt csenv = let
      app (emit_func_body ctxt params) fs end
 *}
 
-declare [[show_types = true, show_consts = true]]
-
 ML {*
 fun openOut_relative thy = ParseGraph.filename_relative thy #> TextIO.openOut;
 *}

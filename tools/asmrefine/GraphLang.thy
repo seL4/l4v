@@ -738,15 +738,6 @@ fun funs thy file : funs = get_funs thy file
   |> map_filter parse_fun
   |> Symtab.make
 
-structure StaticFunNat = SFun
-(struct
-      val name_ty = @{typ "nat"}
-      val intname_to_term = HOLogic.mk_number @{typ nat}
-      val ord_ty = @{typ "nat"}
-      val ord_term = @{term "id :: nat => nat"}
-      val ordsimps = simpset_of @{theory_context Numeral_Simprocs}
- end);
-
 fun define_graph s nodes = let
     fun eq_nm i = s ^ "_" ^ Int.toString i
     fun eq_bdy i v = ((v, @{thm refl}), eq_nm i)
@@ -756,19 +747,19 @@ fun define_graph s nodes = let
         else error "match_ts: idx too small"
       | match_ts i [] = []
     val nodes = sort (int_ord o pairself fst) nodes
-  in StaticFunNat.define_tree_and_thms s (match_ts 1 nodes) end
+  in StaticFun.define_tree_and_save_thms (Binding.name s) 
+    (map (fst #> Int.toString #> prefix (s ^ "_")) nodes)
+    (map (apfst (HOLogic.mk_number @{typ nat})) nodes)
+    @{term "id :: nat => nat"} []
+  end
 
 fun define_graph_fun (funs : funs) b1 b2 nm ctxt =
         case (Symtab.lookup funs nm) of
     SOME (_, _, SOME (_, g, gf))
     => let
-    val (thms, ctxt) = define_graph b1 g ctxt
-    val g = hd thms |> snd |> hd |> concl_of |> HOLogic.dest_Trueprop
-        |> HOLogic.dest_eq |> fst |> head_of
-    val (_, ctxt) = Local_Theory.notes [((Binding.name (b1 ^ "_nodes"), []),
-        [(maps snd thms, [])])] ctxt
+    val (graph_term, ctxt) = define_graph b1 g ctxt
     val (_, ctxt) = Local_Theory.define ((b2, NoSyn), ((Thm.def_binding b2, []),
-        betapply (gf, g))) ctxt
+        betapply (gf, graph_term))) ctxt
   in ctxt end
   | _ => error ("define_graph_fun: " ^ nm ^ " not in funs")
 
