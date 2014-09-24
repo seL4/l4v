@@ -464,7 +464,7 @@ fun mk_thy_types cse install thy = let
               Logic.mk_of_class(recty, "CTypesDefs.c_type")
           val c_type_instance_ct = cterm_of thy c_type_instance_t
           val is_c_type_thm =
-              Goal.prove_internal [] c_type_instance_ct
+              Goal.prove_internal (thy2ctxt thy) [] c_type_instance_ct
                                   (fn _ => Class.intro_classes_tac [])
           val thy = Axclass.add_arity is_c_type_thm thy
 

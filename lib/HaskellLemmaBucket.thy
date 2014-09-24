@@ -241,11 +241,6 @@ lemma alignUp_idem:
    apply (subst unat_arith_simps)
    apply (simp add: word_bits_def)
   apply (simp add: word_bits_def del: unat_1)
-  apply (subst unat_1)
-  apply (subst add_commute, subst div_mult_self2)
-   apply simp
-  apply (subst div_less)
-   apply simp
   apply simp
   done
 
@@ -342,7 +337,7 @@ next
     apply simp
     apply (subst mult_mod_left)
     apply (simp add: unat_div field_simps power_add[symmetric] mod_mod_power
-                     min_max.inf_absorb2 unat_power_lower)
+                     min.absorb2 unat_power_lower)
     done
   ultimately have lt: "2 ^ n * (unat a div 2 ^ n + 1) < 2 ^ len_of TYPE('a)" by simp
       
@@ -383,7 +378,7 @@ next
     apply (subst unat_of_nat_eq)
      apply (erule order_less_le_trans)
      apply simp
-    apply (subst mult_commute)
+    apply (subst mult.commute)
     apply (simp add: unat_power_lower)
     apply (rule nat_less_power_trans)
      apply simp
@@ -468,7 +463,7 @@ next
       apply (subst (asm) unat_word_ariths)
       apply (subst (asm) unat_word_ariths)
       apply (simp add: unat_div mult_mod_left power_add [symmetric] mod_mod_power
-                       min_max.inf_absorb2)  
+                       min.absorb2)
       apply (clarsimp simp: field_simps)
       apply (rule ccontr)
       apply (drule (1) order_le_neq_trans)

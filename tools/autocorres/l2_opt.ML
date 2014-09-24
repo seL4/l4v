@@ -129,7 +129,7 @@ let
   val num_failures = ref 0
   fun print_failure_tac t =
     if (false andalso !num_failures < 5) then
-      (num_failures := !num_failures + 1; (print_tac "Branch failed" THEN no_tac) t)
+      (num_failures := !num_failures + 1; (print_tac ctxt "Branch failed" THEN no_tac) t)
     else
       (no_tac t)
 
@@ -210,7 +210,7 @@ fun l2_guard_simproc ss =
     [@{cpat "L2_guard ?G"}] (l2_guard_simproc' ss)
 
 (*
- * Adjust "prod_case" commands so that constructs such as:
+ * Adjust "case_prod commands so that constructs such as:
  *
  *    while C (%x. gets (case x of (a, b) => %s. P a b)) ...
  *

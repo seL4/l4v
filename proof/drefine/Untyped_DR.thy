@@ -25,7 +25,7 @@ lemma detype_dcorres:
   apply (simp add: Untyped_D.detype_def transform_def
                    transform_current_thread_def Retype_A.detype_def transform_asid_table_def detype_ext_def)
   apply (rule ext)
-  apply (clarsimp simp: option_map_def restrict_map_def transform_objects_def
+  apply (clarsimp simp: map_option_case restrict_map_def transform_objects_def
                         map_add_def cte_wp_at_caps_of_state
                  split: option.split)
   apply (drule valid_global_refsD2)
@@ -120,7 +120,7 @@ proof -
   (* FIXME: extract *)
   have mask_eq:
     "\<And>p q m n. m\<ge>n \<Longrightarrow> p + (q && mask m) && mask n = p + q && mask n"
-    by (subst mask_eqs(2)[of p "q && mask m", standard, symmetric])
+    by (subst mask_eqs(2)[of p "q && mask m" for p q m, symmetric])
        (simp add: mask_twice min_def mask_eqs)
 
   have eq: "\<And>x p b sz. is_aligned (p + (b && mask (pageBitsForSize sz)) +
@@ -179,7 +179,7 @@ proof -
     fix x :: nat
     assume x: "x<128"
     have y: "!!y. y<4 \<Longrightarrow> ?p x + y && ~~ mask (pageBitsForSize sz) = buf"
-      apply (simp add: add_assoc)
+      apply (simp add: add.assoc)
       apply (rule is_aligned_add_helper[OF 4, THEN conjunct2])
       apply (rule_tac n=msg_align_bits in is_aligned_add_less_t2n)
          apply (rule is_aligned_andI1[OF 1])
@@ -230,7 +230,7 @@ proof -
    using 2
    apply (clarsimp simp: buffer_cptr_index_def msg_max_length_def
               valid_message_info_def msg_max_extra_caps_def word_le_nat_alt)
-  apply (rule arg_cong2[where f="list_case None", OF refl])
+  apply (rule arg_cong2[where f="case_list None", OF refl])
   apply (rule map_cong[OF refl])
    apply (rule word_rcat_eq)
   apply (clarsimp simp: atLeastAtMost_upt[symmetric]  simp del: upt_Suc)
@@ -262,7 +262,7 @@ lemma freeMemory_dcorres:
                           mapM_x_storeWord_step intvl_range_conv')
     apply (rule conjI, fastforce)
     apply clarsimp
-    apply (erule use_valid[where P=P and Q="%_. P", standard])
+    apply (erule use_valid[where P=P and Q="%_. P" for P])
      apply wp
      apply (clarsimp simp: is_aligned_no_wrap' of_nat_less_pow word_bits_def
                            x_power_minus_1 word_plus_mono_right)
@@ -271,7 +271,7 @@ lemma freeMemory_dcorres:
   apply (clarsimp simp: transform_def transform_current_thread_def)
   apply (rule ext)
   apply (clarsimp simp: transform_objects_def map_add_def)
-  apply (clarsimp simp: Option.map_def split: option.splits)
+  apply (clarsimp simp: option_map_def split: option.splits)
   apply (clarsimp simp: transform_object_def transform_tcb_def
                  split: Structures_A.kernel_object.split option.splits)
   apply (rename_tac s ms tref etcb tcb)
@@ -288,7 +288,7 @@ lemma freeMemory_dcorres:
                         \<lambda>_ _. is_arch_cap or op = cap.NullCap)" in bspec)
    apply (simp add: ran_tcb_cap_cases)
   apply clarsimp
-  apply (thin_tac "option_case ?x ?y ?z")
+  apply (thin_tac "case_option ?x ?y ?z")
   apply (simp add: valid_ipc_buffer_cap_def)
   apply (drule valid_page_cap_imp_valid_buf)
   apply (frule_tac transform_full_intent_machine_state_eq, simp_all)
@@ -1037,7 +1037,7 @@ lemma retype_transform_ref_subseteq_strong:
       done
     show  "p + 2 ^ obj_bits_api ty us - 1 \<le> ptr + of_nat n * 2 ^ obj_bits_api ty us - 1"
       apply (subst decomp)
-      apply (simp add:add_assoc[symmetric])
+      apply (simp add:add.assoc[symmetric])
       apply (simp add:p_assoc_help)
       apply (rule order_trans[OF word_plus_mono_left word_plus_mono_right])
        using mem_p not_0
@@ -1068,7 +1068,7 @@ lemma retype_transform_ref_subseteq_strong:
        using cover
        apply (simp add:range_cover_def word_bits_def)
       apply (rule olen_add_eqv[THEN iffD2])
-      apply (subst add_commute[where a = "2^(obj_bits_api ty us) - 1"])
+      apply (subst add.commute[where a = "2^(obj_bits_api ty us) - 1"])
      apply (subst p_assoc_help[symmetric])
      apply (rule is_aligned_no_overflow)
      apply (insert cover)
@@ -1229,7 +1229,7 @@ lemma retype_addrs_range_subset_strong:
   shows "\<lbrakk>p \<in> set (retype_addrs ptr ty n us); range_cover ptr sz (obj_bits_api ty us) n\<rbrakk>
   \<Longrightarrow> {p..p + 2 ^ obj_bits_api ty us - 1} \<subseteq> {ptr..ptr + of_nat n * 2 ^ obj_bits_api ty us - 1}"
   apply (clarsimp simp: retype_addrs_def ptr_add_def)
-  apply (drule_tac p = p in range_cover_subset)
+  apply (drule_tac p = pa in range_cover_subset)
    apply clarsimp+
   apply blast
   done
@@ -1305,14 +1305,14 @@ lemma free_range_of_untyped_pick_retype_addrs:
   apply (frule range_cover_not_zero_shift[rotated,OF _ le_refl])
    apply simp
   apply (thin_tac "\<not> ?P")
-  apply (subst add_assoc[symmetric])
+  apply (subst add.assoc[symmetric])
   apply (subst AND_NOT_mask_plus_AND_mask_eq[symmetric,where n = sz])
-  apply (subst add_commute[where a = "(ptr && mask sz)"])
+  apply (subst add.commute[where a = "(ptr && mask sz)"])
   apply (rule word_plus_strict_mono_right)
    apply (rule minus_one_helper)
     apply simp
    apply (simp add:shiftl_t2n field_simps)
-   apply (subst add_assoc)
+   apply (subst add.assoc)
   apply (rule word_plus_mono_right)
    apply (simp add:word_le_nat_alt)
    apply (simp add: range_cover_unat)
@@ -1467,7 +1467,7 @@ lemma invoke_untyped_corres:
                 apply ((wp | simp add: mdb_cte_at_def | rule hoare_vcg_conj_lift, wps)+)[2]
                apply (wp retype_region_aligned_for_init[where sz = sz]
                  retype_region_obj_at[THEN hoare_vcg_const_imp_lift]
-                 retype_region_caps_of[where sza = sz]
+                 retype_region_caps_of[where sza = "\<lambda>_. sz"]
               | simp add:misc)+
                apply (rule_tac Q="\<lambda>rv s. cte_wp_at (op \<noteq> cap.NullCap) (cref, oref) s \<and> post_retype_invs tp rv s
                            \<and> idle_thread s \<notin> fst ` set slots
@@ -1584,7 +1584,7 @@ lemma invoke_untyped_corres:
            apply ((wp | simp add: mdb_cte_at_def | rule hoare_vcg_conj_lift, wps)+)[2]
          apply (wp retype_region_aligned_for_init[where sz = sz]
                  retype_region_obj_at[THEN hoare_vcg_const_imp_lift]
-                 retype_region_caps_of[where sza = sz]
+                 retype_region_caps_of[where sza = "\<lambda>_. sz"]
               | simp add:misc)+
          apply (rule_tac Q="\<lambda>rv s. cte_wp_at (op \<noteq> cap.NullCap) (cref, oref) s \<and> post_retype_invs tp rv s
            \<and> idle_thread s \<notin> fst ` set slots
@@ -1930,7 +1930,7 @@ lemma decode_untyped_corres:
       in hoare_post_imp_R)
        apply wp
       apply (clarsimp simp: cte_wp_at_caps_of_state)
-      apply (frule_tac p = "(aa,b)" in caps_of_state_valid[rotated])
+      apply (frule_tac p = "(?x,?y)" in caps_of_state_valid[rotated])
        apply simp
       apply (clarsimp simp:valid_cap_def obj_at_def valid_idle_def st_tcb_at_def
         is_cap_simps not_idle_thread_def is_cap_table_def dest!:invs_valid_idle)

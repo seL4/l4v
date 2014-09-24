@@ -277,7 +277,7 @@ lemma image_invert:
   assumes r: "f \<circ> g = id"
   and     g: "B = g ` A"
   shows  "A = f ` B"
-  by (subst image_id' [symmetric], (subst g image_compose [symmetric])+)
+  by (subst image_id' [symmetric], (subst g image_comp)+)
 (rule image_cong [OF _ arg_cong [OF r, symmetric]], rule refl)
 
 lemma Collect_image_fun_cong:
@@ -326,7 +326,7 @@ next
     by (auto simp: le_iff_add)
 
   have "a ^ n * (a ^ m div a ^ n) = a ^ m"
-  proof (subst mult_commute)
+  proof (subst mult.commute)
     have "a ^ m = (a ^ m div a ^ n) * a ^ n + a ^ m mod a ^ n"
       by (rule  mod_div_equality [symmetric])
 
@@ -842,7 +842,7 @@ lemma Union_subset:
 lemma UN_sub_empty:
   "\<lbrakk>list_all P xs; \<And>x. P x \<Longrightarrow> f x = g x\<rbrakk>
   \<Longrightarrow> (\<Union>x\<in>set xs. f x) - (\<Union>x\<in>set xs. g x) = {}"
-  by (metis Ball_set_list_all Diff_cancel UN_cong)
+  by (metis Ball_set_list_all Diff_cancel SUP_cong)
 
 (*******************
  * bij_betw rules. *

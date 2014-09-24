@@ -1381,7 +1381,6 @@ lemma finalise_cap_reads_respects:
                   | wp_once reads_respects_f[where st=st] | blast)+)[11]
   apply (rule equiv_valid_guard_imp)
    apply (wp arch_finalise_cap_reads_respects reads_respects_f[where st=st] arch_finalise_cap_silc_inv | simp | elim conjE)+
-  apply auto
   done
 
 lemma cap_swap_for_delete_reads_respects:
@@ -1907,7 +1906,7 @@ lemma arch_finalise_cap_globals_equiv:
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   apply (induct cap)
   apply (simp_all add:arch_finalise_cap_def)
-  apply (wp delete_asid_pool_globals_equiv option_case_wp unmap_page_globals_equiv
+  apply (wp delete_asid_pool_globals_equiv case_option_wp unmap_page_globals_equiv
             unmap_page_table_globals_equiv delete_asid_globals_equiv |
          wpc | clarsimp split: bool.splits option.splits | intro impI conjI)+
 done

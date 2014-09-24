@@ -150,7 +150,7 @@ lemma
     "pspace_relation
      (%x. case ksPSpace \<sigma> x of
             Some (KOArch ako) \<Rightarrow>
-              Option.map ArchObj (absHeapArch (ksPSpace \<sigma>) x ako)
+              map_option ArchObj (absHeapArch (ksPSpace \<sigma>) x ako)
           | _ \<Rightarrow> None)
      (%x. case ksPSpace \<sigma> x of Some (KOArch _) \<Rightarrow> ksPSpace \<sigma> x | _ \<Rightarrow> None)"
   apply (clarsimp simp add: pspace_relation_def dom_def)
@@ -412,7 +412,7 @@ definition
       tcb_fault_handler = to_bl (tcbFaultHandler tcb),
       tcb_ipc_buffer = tcbIPCBuffer tcb,
       tcb_context = tcbContext tcb,
-      tcb_fault = Option.map FaultMap (tcbFault tcb)\<rparr>"
+      tcb_fault = map_option FaultMap (tcbFault tcb)\<rparr>"
 
 definition
  "absCNode sz h a \<equiv> CNode sz (%bl.
@@ -430,10 +430,10 @@ definition
        Some (KOEndpoint ep) \<Rightarrow> Some (Endpoint (EndpointMap ep))
      | Some (KOAEndpoint aep) \<Rightarrow> Some (AsyncEndpoint (AEndpointMap aep))
      | Some KOKernelData \<Rightarrow> undefined (* forbidden by pspace_relation *)
-     | Some KOUserData \<Rightarrow> Option.map (ArchObj \<circ> DataPage) (ups x)
+     | Some KOUserData \<Rightarrow> map_option (ArchObj \<circ> DataPage) (ups x)
      | Some (KOTCB tcb) \<Rightarrow> Some (TCB (TcbMap tcb))
-     | Some (KOCTE cte) \<Rightarrow> Option.map (%sz. absCNode sz h x) (cns x)
-     | Some (KOArch ako) \<Rightarrow> Option.map ArchObj (absHeapArch h x ako)
+     | Some (KOCTE cte) \<Rightarrow> map_option (%sz. absCNode sz h x) (cns x)
+     | Some (KOArch ako) \<Rightarrow> map_option ArchObj (absHeapArch h x ako)
      | None \<Rightarrow> None"
 
 lemma unaligned_page_offsets_helper:
@@ -502,8 +502,8 @@ shows pspace_aligned_distinct_None:
                             and_mask_dvd_nat[symmetric])
   apply (cut_tac x=x in unat_lt2p)
   apply (cut_tac x="mask (obj_bits ko)::word32" in unat_lt2p)
-  apply (simp add: nat_mult_commute
-                   nat_add_commute[of "unat (mask (obj_bits ko))"])
+  apply (simp add: mult.commute
+                   add.commute[of "unat (mask (obj_bits ko))"])
   apply (case_tac "k=0", simp+)
   apply (subgoal_tac "obj_bits ko\<le>32")
    prefer 2
@@ -513,7 +513,7 @@ shows pspace_aligned_distinct_None:
    apply (case_tac "k=1", simp)
    apply (cut_tac m=k and n="2 ^ obj_bits ko" in n_less_n_mult_m,
           (simp(no_asm_simp))+)
-   apply (simp only:nat_mult_commute)
+   apply (simp only: mult.commute)
   apply (thin_tac "?x = ?y")+
   apply (clarsimp simp add: le_less)
   apply (erule disjE)
@@ -667,9 +667,9 @@ proof -
        apply (case_tac tcb, clarsimp)
        apply (case_tac tcb_exta, clarsimp)
        apply (simp add: thread_state_relation_imp_ThStateMap)
-       apply (subgoal_tac "Option.map FaultMap option = tcb_fault")
+       apply (subgoal_tac "map_option FaultMap option = tcb_fault")
         prefer 2
-        apply (simp add: fault_option_relation_def)
+        apply (simp add: fault_rel_optionation_def)
         using valid_objs[simplified valid_objs_def dom_def fun_app_def,
                          simplified]
         apply (erule_tac x=y in allE)
@@ -730,7 +730,7 @@ proof -
        apply (rule pspace_aligned_distinct_None'[OF
                    pspace_aligned pspace_distinct], assumption)
        apply (clarsimp simp: obj_bits.simps(1) cte_level_bits_def dom_def
-                  word_neq_0_conv power_add mult_commute[of 16])
+                  word_neq_0_conv power_add mult.commute[of 16])
        apply (simp add: well_formed_cnode_n_def dom_def Collect_eq)
        apply (erule_tac x=ya in allE)+
        apply (rule word_mult_less_mono1)
@@ -949,7 +949,7 @@ by (simp add: tcb_cap_cases_def tcb_cnode_index_def split: split_if_asm)
 lemma of_bl_mult_and_not_mask_eq:
   "\<lbrakk>is_aligned (a :: word32) n; length b + m \<le> n\<rbrakk>
    \<Longrightarrow> a + of_bl b * (2^m) && ~~ mask n = a"
-  apply (simp add: shiftl_t2n[simplified mult_commute, symmetric])
+  apply (simp add: shiftl_t2n[simplified mult.commute, symmetric])
   apply (simp add: mask_out_add_aligned[where q="of_bl b << m", symmetric])
   apply (case_tac "n<32")
    prefer 2
@@ -980,7 +980,7 @@ apply (rule nth_equalityI)
 apply (clarsimp simp only: len_bin_to_bl nth_bin_to_bl
                            word_test_bit_def[symmetric])
 apply (simp add: nth_shiftr nth_shiftl
-                 shiftl_t2n[where n=4, simplified mult_commute,
+                 shiftl_t2n[where n=4, simplified mult.commute,
                             simplified, symmetric])
 apply (simp add: is_aligned_nth[THEN iffD1, rule_format]
                  test_bit_of_bl nth_rev)
@@ -1120,7 +1120,7 @@ proof -
      prefer 2
      apply (simp add: mask_def)
     apply (rule_tac word_random, simp+)
-   apply (simp add: mult_commute[of _ 16]
+   apply (simp add: mult.commute[of _ 16]
                     shiftl_t2n[of _ 4, simplified,symmetric])
    apply word_bitwise
    apply simp
@@ -1228,7 +1228,7 @@ definition
   "absCDT cnp h \<equiv>
    %(oref,cref).
    if cnp (cte_map (oref, cref)) = (oref, cref)
-     then Option.map cnp (parent_of' (subtree h) (cte_map (oref, cref)))
+     then map_option cnp (parent_of' (subtree h) (cte_map (oref, cref)))
    else None"
 
 lemma valid_mdb_mdb_cte_at:

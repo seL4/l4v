@@ -29,7 +29,7 @@ sig
                         ProgramAnalysis.modify_var list -> term
   (* [gen_modify_goal thy tys tm fname vs]
      tys is the three types that are parameters to all HoarePackage constants
-     tm is the Γ that houses the lookup table from fn names to bodies
+     tm is the \<Gamma> that houses the lookup table from fn names to bodies
      fname is the name of the function being called
      vs is the list of variables allowed to be modified.
 
@@ -346,13 +346,12 @@ in
 end
 
 fun prove_all_modifies_goals thy csenv includeP tyargs globloc = let
-  val lthy = Named_Target.init I globloc thy
+  val lthy = Named_Target.init globloc thy
 in
   lthy
     |> prove_all_modifies_goals_local csenv includeP tyargs
     |> Local_Theory.restore
-    |> Local_Theory.exit
-    |> Proof_Context.theory_of
+    |> Local_Theory.exit_global
 end
 
 end (* struct *)

@@ -9,10 +9,9 @@
  *)
 
 theory GlobalsSwap
-
-imports    "CTranslation"
-    "PackedTypes"
-
+imports
+  "CTranslation"
+  "PackedTypes"
 begin
 
 datatype 'g global_data =
@@ -231,7 +230,7 @@ lemma globals_swap_twice_helper:
   apply (induct xs)
    apply simp
   apply (clarsimp simp: globals_list_distinct_def)
-  apply (subst foldr_update_commutes[where f="global_swap g_hrs g_hrs_upd symtab v", standard])
+  apply (subst foldr_update_commutes[where f="global_swap g_hrs g_hrs_upd symtab v" for v])
    apply (rule global_swap_swap, auto)[1]
   apply (simp add: global_swap_cancel foldr_hrs_htd_global_swap)
   done
@@ -691,7 +690,7 @@ fun define_globals_list mungedb globloc globty thy = let
     val sT = @{typ string}
     val gdT = Type (@{type_name global_data}, [globty])
 
-    val ctxt = Named_Target.context_cmd (globloc,Position.none) thy
+    val ctxt = Named_Target.begin (globloc, Position.none) thy
 
     fun glob (_, _, _, Local _) = error "define_globals_list: Local"
       | glob (nm, typ, _, UntouchedGlobal) = let
@@ -742,7 +741,7 @@ fun define_globals_list mungedb globloc globty thy = let
                 addsimps [gdl_def]) 1))
 
     val mems = simplify (put_simpset HOL_basic_ss ctxt addsimps
-            @{thms set.simps insert_subset empty_subsetI simp_thms}) thm
+            @{thms set_simps insert_subset empty_subsetI simp_thms}) thm
         |> dest_conjs
 
     val (_, ctxt) = Local_Theory.note ((@{binding "global_data_mems"}, []),

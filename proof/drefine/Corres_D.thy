@@ -327,8 +327,8 @@ lemma split_return_throw_thingy:
   apply (simp split: sum.split_asm)
   done
 
-lemma sum_case_triv_return:
-  "sum_case throwError returnOk = return"
+lemma case_sum_triv_return:
+  "case_sum throwError returnOk = return"
   apply (intro ext)
   apply (simp add: throwError_def returnOk_def return_def
             split: sum.split)
@@ -336,7 +336,7 @@ lemma sum_case_triv_return:
 
 lemma lift_returnOk_bind_triv:
   "g >>= (lift returnOk) = g"
-  by (simp add: lift_def sum_case_triv_return cong: bind_cong)
+  by (simp add: lift_def case_sum_triv_return cong: bind_cong)
 
 lemma corres_return_throw_thingy:
   "\<lbrakk> \<And>s. \<lbrace>op = s\<rbrace> g \<lbrace>\<lambda>rv s'. s' = s \<and> Q rv\<rbrace>,\<lbrace>\<lambda>ft. op = s\<rbrace>;
@@ -425,16 +425,15 @@ lemma dcorres_symb_exec_r_strong:
     \<And>cs. \<lbrace>\<lambda>ps. P' ps \<and> transform ps = cs\<rbrace> f \<lbrace>\<lambda>r s. transform s = cs\<rbrace>\<rbrakk>
   \<Longrightarrow> dcorres r P P' h (f>>=g)"
   apply (rule corres_dummy_return_pl)
-  apply (rule corres_guard_imp)
-  apply (rule corres_split[where R="\<lambda>rv. P" and P'=P' and R'="\<lambda>rv. Q' rv" and r' = dc])
-    unfolding K_bind_def
-    apply (assumption)
-    defer
-    apply wp
+    apply (rule corres_guard_imp)
+       apply (rule corres_split[where R="\<lambda>rv. P" and P'=P' and R'="\<lambda>rv. Q' rv" and r' = dc])
+       apply (unfold K_bind_def)
+      apply (assumption)
+     defer
+     apply wp
     apply simp+
-    apply (clarsimp simp:valid_def corres_underlying_def return_def)
-apply fastforce
-done
+  apply (clarsimp simp:valid_def corres_underlying_def return_def)
+  done
 
 lemma dcorres_symb_exec_r_catch':
   "\<lbrakk>
@@ -461,11 +460,7 @@ lemma dcorres_to_wp:
 
 lemma wp_to_dcorres:
   "(\<And>cs. \<lbrace>\<lambda>s. Q s \<and> transform s = cs\<rbrace> g \<lbrace>\<lambda>r s. transform s = cs\<rbrace>) \<Longrightarrow>  dcorres dc (\<lambda>_. True) Q (return x) g"
-  apply (clarsimp simp:corres_underlying_def valid_def return_def)
-  apply (drule_tac x = "transform b" in meta_spec)
-  apply (drule_tac x = b in spec)
-  apply fastforce
-done
+  by (clarsimp simp:corres_underlying_def valid_def return_def)
 
 lemma dcorres_symb_exec_rE:
   "\<lbrakk>\<And>rv. dcorres r P (Q' rv) h (g rv); \<lbrace>P'\<rbrace> f \<lbrace>Q'\<rbrace>; \<And>cs. \<lbrace>\<lambda>ps. transform ps = cs\<rbrace> f \<lbrace>\<lambda>r s. transform s = cs\<rbrace>\<rbrakk>

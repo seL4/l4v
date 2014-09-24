@@ -421,14 +421,14 @@ shows "\<lbrakk>opt_cap_wp_at P slot (transform s);valid_objs s; valid_etcbs s\<
       apply (clarsimp simp:transform_cnode_contents_def option_map_join_def
                      split:option.splits Structures_A.kernel_object.splits nat.splits)
         apply (clarsimp simp:cte_wp_at_cases well_formed_cnode_invsI transform_cslot_ptr_def split:if_splits)
-        apply (rule_tac x = aa in exI,simp add: nat_to_bl_bl_to_bin)
+        apply (rule_tac x = x2b in exI,simp add: nat_to_bl_bl_to_bin)
       apply (drule(1) valid_etcbs_tcb_etcb, simp)
       prefer 6 (* IRQ Node *)
       apply (clarsimp split: Structures_A.kernel_object.splits nat.splits option.splits)
          apply (clarsimp simp:transform_cnode_contents_def option_map_join_def
                         split:option.splits Structures_A.kernel_object.splits nat.splits)
          apply (clarsimp simp:cte_wp_at_cases well_formed_cnode_invsI transform_cslot_ptr_def split:if_splits)
-         apply (rule_tac x = aa in exI,simp add: nat_to_bl_bl_to_bin)
+         apply (rule_tac x = x2a in exI,simp add: nat_to_bl_bl_to_bin)
         apply (frule assms)
     apply ((simp_all add:Let_def cap_counts_def transform_tcb_def
                     split:option.splits if_splits arch_kernel_obj.splits
@@ -446,37 +446,10 @@ lemma eqset_imp': "A = B \<Longrightarrow> \<forall>x. ((x\<in> A) = (x\<in> B))
 by auto
 
 lemma eq_singleton_set: "\<lbrakk>A = f` B; \<forall>x\<in>B. \<forall>y\<in> B. x\<noteq> y \<longrightarrow> f x\<noteq> f y \<rbrakk>\<Longrightarrow> (\<exists>a. A = {a}) = (\<exists>b. B = {b})"
-  apply clarsimp
-  apply (rule iffI)
-    apply clarsimp
-    apply (subgoal_tac "\<exists>b. f b = a")
-      apply clarsimp
-      apply (subgoal_tac "\<exists>b. b\<in> B")
-        apply clarsimp
-        apply (rule_tac x = ba in exI)
-        apply (rule set_eqI)
-        apply (rule iffI)
-        apply (rule iffD2[OF singleton_iff])
-        apply (rule classical)
-        apply (clarsimp simp:image_def)
-        apply (drule eqset_imp')
-        apply (frule_tac x = "f x" in spec)
-        apply (subgoal_tac "(f x \<in> {y. \<exists>x\<in>B. y = f x})")
-          apply clarsimp
-          apply (frule_tac x = "f ba" in spec)
-          apply (subgoal_tac "(f ba \<in> {y. \<exists>x\<in>B. y = f x})")
-            apply fastforce
-          apply (thin_tac " \<forall>x. (\<exists>xa\<in>B. x = f xa) = (x = f b)")
-          apply fastforce
-        apply (thin_tac  "\<forall>x. (x \<in> {y. \<exists>x\<in>B. y = f x}) = (x \<in> {f b})")
-        apply fastforce
-      apply clarsimp
-      apply fastforce
-      apply (clarsimp simp:image_def)
-      apply (drule_tac eqset_imp',drule_tac x = a in spec)
-      apply (fastforce)
-    apply clarsimp
-done
+  apply (subgoal_tac "card A = card B")
+   apply (auto simp: trans[OF eq_commute card_Suc_eq])[1]
+  apply (metis card_image inj_onI)
+  done
 
 lemma final_cap_set_map:
   "\<lbrakk>valid_idle s'; valid_irq_node s';valid_objs s';if_unsafe_then_cap s'; valid_global_refs s'; cap_counts (transform_cap cap); valid_etcbs s'\<rbrakk>
@@ -541,10 +514,10 @@ lemma is_final_cap_corres:
     apply (clarsimp)
    apply clarsimp
   apply (clarsimp|drule_tac x = "(a,b)" in eqset_imp_iff)+
-  apply (clarsimp simp:cte_wp_at_cases obj_refs_def cap_irqs_def)
+  apply (clarsimp simp:cte_wp_at_cases)
   apply (case_tac cap)
-    apply (clarsimp simp:cap_counts_def Option.set_def cap_irq_opt_def transform_cap_def)+
-    apply (clarsimp split:arch_cap.splits cap.splits)
+    apply (clarsimp simp:cap_counts_def transform_cap_def)+
+  apply (clarsimp split:arch_cap.splits cap.splits)
 done
 
 lemma dcorres_exec_is_final_cap:
@@ -662,10 +635,10 @@ lemma transform_cnode_contents_upd:
   apply clarsimp
   apply (rule conjI)
    prefer 2
-   apply (clarsimp simp: transform_cnode_contents_def Option.map_def
+   apply (clarsimp simp: transform_cnode_contents_def option_map_def
                          option_map_join_def nat_to_bl_to_bin
                    split: option.splits)
-  apply (clarsimp simp: transform_cnode_contents_def Option.map_def
+  apply (clarsimp simp: transform_cnode_contents_def option_map_def
                          option_map_join_def
                    split: option.splits)
   apply (frule (1) wf_cs_nD [symmetric])
@@ -787,7 +760,7 @@ proof -
     apply (clarsimp simp: transform_objects_def)
     apply (rule ext)
     apply clarsimp
-    apply (simp add: Option.map_def restrict_map_def map_add_def split: option.splits)
+    apply (simp add: option_map_def restrict_map_def map_add_def split: option.splits)
    apply (frule (1) cdl_objects_cnode, simp)
    apply (clarsimp simp: assert_opt_def has_slots_def)
    apply (clarsimp simp: update_slots_def object_slots_def transform_cnode_contents_upd)
@@ -796,7 +769,7 @@ proof -
    apply (clarsimp simp: transform_objects_def)
    apply (rule ext)
    apply clarsimp
-   apply (simp add: Option.map_def restrict_map_def map_add_def split: option.splits)
+   apply (simp add: option_map_def restrict_map_def map_add_def split: option.splits)
   -- "tcb case"
   apply (drule(1) valid_etcbs_tcb_etcb)
   apply (clarsimp simp: cdl_objects_tcb opt_object_def
@@ -1066,7 +1039,7 @@ lemma dummy_remove_cdt_pt_slot:
       apply simp
     apply (drule page_table_not_in_cdt)
       apply simp+
-    apply (clarsimp simp: Option.map_def  map_lift_over_def transform_cdt_slot_inj_on_mdb_cte_at
+    apply (clarsimp simp: option_map_def  map_lift_over_def transform_cdt_slot_inj_on_mdb_cte_at
       split:if_splits option.splits| rule conjI)+
     apply (clarsimp simp:transform_cslot_ptr_def)
     apply (frule_tac slot="(a,bc)" in mdb_cte_at_cte_wp_at)
@@ -1098,7 +1071,7 @@ lemma dummy_remove_cdt_pd_slot:
       apply simp
     apply (drule page_directory_not_in_cdt)
       apply simp+
-    apply (clarsimp simp: Option.map_def  map_lift_over_def transform_cdt_slot_inj_on_mdb_cte_at
+    apply (clarsimp simp: option_map_def  map_lift_over_def transform_cdt_slot_inj_on_mdb_cte_at
       split:if_splits option.splits| rule conjI)+
     apply (clarsimp simp:transform_cslot_ptr_def)
     apply (frule_tac slot="(a,bc)" in mdb_cte_at_cte_wp_at)
@@ -1130,7 +1103,7 @@ lemma dummy_remove_cdt_asid_pool_slot:
       apply simp
     apply (drule asid_pool_not_in_cdt)
       apply simp+
-    apply (clarsimp simp: Option.map_def  map_lift_over_def transform_cdt_slot_inj_on_mdb_cte_at
+    apply (clarsimp simp: option_map_def  map_lift_over_def transform_cdt_slot_inj_on_mdb_cte_at
       split:if_splits option.splits| rule conjI)+
     apply (clarsimp simp:transform_cslot_ptr_def)
     apply (frule_tac slot="(a,bc)" in mdb_cte_at_cte_wp_at)
@@ -1207,7 +1180,7 @@ done
 lemma cdt_set_update_eq:
 assumes dom_onto: "df =  transform_cslot_ptr ` dg"
 assumes exc:  "\<forall>x\<in> dg. \<forall>y. transform_cslot_ptr x = transform_cslot_ptr y \<longrightarrow> ((y\<in> dg) \<or> (\<not> cte_at y s))"
-assumes ran_map:"\<forall>x\<in>dg. f (transform_cslot_ptr x) = Option.map transform_cslot_ptr (g x)"
+assumes ran_map:"\<forall>x\<in>dg. f (transform_cslot_ptr x) = map_option transform_cslot_ptr (g x)"
 assumes mdb1:"mdb_cte_at (swp (cte_wp_at (op\<noteq> cap.NullCap)) s) (cdt s)"
 assumes mdb2:"mdb_cte_at (swp (cte_wp_at (op\<noteq> cap.NullCap)) (abs_cdt_set_update s dg g)) (cdt (abs_cdt_set_update s dg g))"
 shows
@@ -1238,7 +1211,7 @@ using exc
 using ran_map
     apply (drule_tac x = "(aa,ba)" in bspec)
       apply simp
-    apply (clarsimp simp:Option.map_def split:option.splits)
+    apply (clarsimp simp:option_map_def split:option.splits)
 using transform_cdt_slot_inj_on_mdb_cte_at[OF mdb2]
       apply (clarsimp simp:domI abs_cdt_set_update_def)
   apply (clarsimp simp:cdl_cdt_set_update_def transform_def transform_cdt_def)
@@ -1334,10 +1307,10 @@ defer
     apply (clarsimp simp:weak_valid_mdb_def)
     apply (subgoal_tac "cte_at (aa,bb) b")
       apply (drule_tac slot = "(aa,bb)" in transform_cdt_some,simp+)
-  apply (clarsimp simp:transform_def Option.map_def split:if_splits option.splits |rule conjI)+
+  apply (clarsimp simp:transform_def option_map_def split:if_splits option.splits |rule conjI)+
     apply (erule mdb_cte_at_cte_wp_at[THEN cte_wp_at_cte_at])
     apply simp
-  apply (clarsimp simp:Option.map_def split:option.splits|rule conjI)+
+  apply (clarsimp simp:option_map_def split:option.splits|rule conjI)+
     apply (drule transform_cdt_none)
       apply (simp add:weak_valid_mdb_def transform_def)+
   apply clarsimp
@@ -1351,7 +1324,7 @@ lemma dmo_maskIRQ_dcorres:
   apply (clarsimp simp: maskInterrupt_def in_monad)
   apply (clarsimp simp: transform_def transform_current_thread_def)
   apply (rule ext)
-  apply (simp add: transform_objects_def Option.map_def map_add_def
+  apply (simp add: transform_objects_def option_map_def map_add_def
             split: option.split)
   apply (simp add: transform_object_def transform_tcb_def
                    transform_full_intent_def Let_def
@@ -1823,7 +1796,7 @@ lemma tcb_filter_modify_decompose:
   apply (rule ext)
   apply (clarsimp simp:tcb_filter_modify_def bind_def simpler_modify_def)
   apply (case_tac s)
-  apply (clarsimp simp:Option.map_def)
+  apply (clarsimp simp:option_map_def)
   apply (rule ext)
   apply (clarsimp split:option.splits|rule conjI)+
     apply (fastforce)
@@ -1886,8 +1859,8 @@ lemma ep_cancel_all_def_alt1: "PageTableUnmap_D.ep_cancel_all ep =
   apply (case_tac s)
   apply clarsimp
   apply (rule ext)
-  apply (clarsimp simp:Option.map_def split:option.splits)
-  apply (case_tac a)
+  apply (clarsimp simp:option_map_def split:option.splits)
+  apply (case_tac x2)
     apply simp_all
 done
 
@@ -2836,9 +2809,9 @@ lemma branch_map_simp2:
 defer
   apply clarsimp
   apply (subgoal_tac "nata\<le> length cref - length list")
-    apply (drule min_max.inf_absorb2[where y = nata])
+    apply (drule min.absorb2[where b = nata])
     apply simp
-    apply (clarsimp simp: nat_add_commute)
+    apply (clarsimp simp: add.commute)
     apply (simp add:unat_def)
     apply (rule iffD2[OF eq_nat_nat_iff])
       apply (simp add:bl_to_bin_ge0 )+

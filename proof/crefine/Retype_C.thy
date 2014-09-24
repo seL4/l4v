@@ -333,7 +333,7 @@ lemma memset_spec:
     apply (subst heap_update_list_append)
     apply (simp add: heap_update_word8)
    apply (subst unatSuc [symmetric])
-    apply (subst add_commute)
+    apply (subst add.commute)
     apply (metis word_neq_0_conv word_sub_plus_one_nonzero)
    apply (simp add: field_simps)
   apply (clarsimp)
@@ -1108,7 +1108,7 @@ next
         apply (elim disjE)
           apply simp
          apply (clarsimp simp: CTypesDefs.ptr_add_def)
-         apply (simp only: Abs_fnat_hom_add Abs_fnat_hom_mult add_assoc)   
+         apply (simp only: Abs_fnat_hom_add Abs_fnat_hom_mult add.assoc)   
          apply (erule aligned_add_aligned)
            apply (subgoal_tac
                     "is_aligned (of_nat (Suc a * size_of TYPE('a))) m")
@@ -1153,7 +1153,7 @@ next
            apply clarsimp
           apply clarsimp
           done
-        thus ?thesis by (simp add: image_compose)
+        thus ?thesis by (simp add: image_comp [symmetric])
       qed
       finally have "(p' \<in> ?lhs_image) = (p' \<in> \<dots>)" by simp
       also have pin: "\<dots> = (p' \<in> (\<lambda>m. (CTypesDefs.ptr_add p (of_nat m))) ` ({k. k < Suc n}))" using False
@@ -1289,7 +1289,7 @@ next
         apply (elim disjE)
           apply simp
          apply (clarsimp simp: CTypesDefs.ptr_add_def)
-         apply (simp only: Abs_fnat_hom_add Abs_fnat_hom_mult add_assoc)   
+         apply (simp only: Abs_fnat_hom_add Abs_fnat_hom_mult add.assoc)   
          apply (erule aligned_add_aligned)
            apply (subgoal_tac
                     "is_aligned (of_nat (Suc a * size_of TYPE('a))) m")
@@ -1334,7 +1334,7 @@ next
            apply clarsimp
           apply clarsimp
           done
-        thus ?thesis by (simp add: image_compose)
+        thus ?thesis by (simp add: image_comp [symmetric])
       qed
       finally have "(p' \<in> ?lhs_image) = (p' \<in> \<dots>)" by simp
       also have pin: "\<dots> = (p' \<in> (\<lambda>m. (CTypesDefs.ptr_add p (of_nat m))) ` ({k. k < Suc n}))" using False
@@ -1616,7 +1616,7 @@ proof (rule allI, rule impI)
 
     have Sucn: "Suc b * 2 ^ objBitsKO ko \<le> 2 ^ sz" using cover nv
       apply -
-      apply (subst mult_commute, rule nat_le_power_trans)
+      apply (subst mult.commute, rule nat_le_power_trans)
       apply (erule le_trans[OF Suc_leI])
        apply (erule range_cover.range_cover_n_le)
       apply (erule range_cover.sz)
@@ -1736,7 +1736,7 @@ lemma cslift_ptr_retyp_memset_other_inst:
    apply (simp add: sz2)
   apply (simp add: sz2)
   apply (rule le_less_trans)
-   apply (subst mult_commute)
+   apply (subst mult.commute)
    apply (rule nat_le_power_trans[OF range_cover.range_cover_n_le(2)[OF cover]])
    apply (rule range_cover.sz[OF cover])
   apply (rule power_strict_increasing)
@@ -2755,7 +2755,7 @@ lemma createNewCaps_guard_helper:
   fixes x :: word32
   shows "\<lbrakk> unat x = c; b < 2 ^ word_bits \<rbrakk> \<Longrightarrow> (n < of_nat b \<and> n < x) = (n < of_nat (min (min b c) c))"
   apply (erule subst)
-  apply (simp add: min_max.inf_assoc)
+  apply (simp add: min.assoc)
   apply (rule iffI)  
    apply (simp add: min_def word_less_nat_alt split: split_if) 
   apply (simp add: min_def word_less_nat_alt not_le unat_of_nat32 split: split_if_asm) 
@@ -3905,7 +3905,6 @@ lemma mapM_x_storeWord_step:
   apply (subst if_not_P)
    apply (subst not_less)
    apply (erule is_aligned_no_overflow)
-   apply (simp add: plus_minus_one_rewrite32)
    apply (simp add: mapM_x_map comp_def upto_enum_word del: upt.simps)
    apply (subst div_power_helper [OF sz2, simplified])
     apply assumption
@@ -4057,7 +4056,7 @@ proof (intro impI allI)
     apply (clarsimp simp: new_cap_addrs_def objBits_simps shiftl_t2n intvl_def)
     apply (rule_tac x = "2 ^ pageBits * pa + unat off * 4 + unat x" in exI)
     apply (simp add: ucast_nat_def power_add)
-    apply (subst mult_commute, subst add_assoc)
+    apply (subst mult.commute, subst add.assoc)
     apply (rule_tac y = "(pa + 1) * 2 ^ pageBits " in less_le_trans)
      apply (simp add:word_less_nat_alt)
     apply (rule_tac y="unat off * 4 + 4" in less_le_trans)
@@ -4065,7 +4064,7 @@ proof (intro impI allI)
      apply (simp add:pageBits_def)
      apply (cut_tac x = off in unat_lt2p)
      apply simp
-    apply (subst mult_assoc[symmetric])
+    apply (subst mult.assoc[symmetric])
     apply (rule mult_right_mono)
      apply simp+
     done
@@ -4178,7 +4177,7 @@ proof (intro impI allI)
 
   have rb': "region_is_bytes ptr (n * 2 ^ gbits * 2 ^ objBitsKO ko) x"
     using empty
-    by (simp add: mult_ac power_add objBits_simps ko_def)
+    by (simp add: mult.commute mult.left_commute power_add objBits_simps ko_def)
 
   note rl' = cslift_ptr_retyp_memset_other_inst[OF rb' rc' szo' szo, simplified]
 
@@ -4409,13 +4408,10 @@ lemma upt_enum_offset_trivial:
       apply simp
      apply (simp add:not_less)
      apply (subgoal_tac "x \<le> 2^ word_bits - 1")
-       apply simp
-      apply (simp add:word_bits_def)
-     apply (rule order_trans[OF max_word_max])
+      apply (clarsimp simp: word_bits_def)
      apply (simp add:max_word_def word_bits_def)
      done
    qed
-
 
 lemma getObjectSize_max_size:
   "\<lbrakk> newType =  APIObjectType apiobject_type.Untyped \<longrightarrow> x < 32;
@@ -4455,7 +4451,7 @@ lemma placeNewObject_eq:
   apply (clarsimp simp: data_map_insert_def new_cap_addrs_def)
   apply (subst upto_enum_red2)
    apply (fold word_bits_def, assumption)
-  apply (clarsimp simp: field_simps shiftl_t2n power_add mult_ac
+  apply (clarsimp simp: field_simps shiftl_t2n power_add mult.commute mult.left_commute
            cong: foldr_cong map_cong)
   done
 
@@ -4863,7 +4859,7 @@ lemma placeNewObject_user_data:
    apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                          kernel_data_refs_domain_eq_rotate
                   elim!: ptr_retyps_htd_safe_neg)
-   apply (simp add: size_of_def pageBits_def power_add mult_ac)
+   apply (simp add: size_of_def pageBits_def power_add mult.commute mult.left_commute)
   apply (frule range_cover.unat_of_nat_shift[where gbits = "pageBits + us"])
     apply simp
    apply (clarsimp simp:size_of_def power_add pageBits_def
@@ -5737,7 +5733,7 @@ proof -
       apply (frule invs_sym')
       apply (clarsimp simp: getObjectSize_def objBits_simps
                  ArchTypes_H.getObjectSize_def apiGetObjectSize_def
-                 cteSizeBits_def word_bits_conv add_commute createObject_c_preconds_def
+                 cteSizeBits_def word_bits_conv add.commute createObject_c_preconds_def
                 elim!: is_aligned_no_wrap' 
                dest: word_of_nat_le  intro!: range_coverI)[1]
       apply (unat_arith)
@@ -5905,27 +5901,27 @@ lemma ctes_of_ko_at_strong:
   apply (erule order_trans)
   apply (subst word_plus_and_or_coroll2[where x = p and w = "mask 9",symmetric])
   apply (clarsimp simp:tcb_cte_cases_def field_simps split:split_if_asm)
-      apply (subst add_commute)
+      apply (subst add.commute)
        apply (rule word_plus_mono_right[OF _ is_aligned_no_wrap'])
          apply simp
         apply (rule Aligned.is_aligned_neg_mask)
        apply (rule le_refl,simp)
-     apply (subst add_commute)
+     apply (subst add.commute)
      apply (rule word_plus_mono_right[OF _ is_aligned_no_wrap'])
        apply simp
       apply (rule Aligned.is_aligned_neg_mask)
      apply (rule le_refl,simp)
-    apply (subst add_commute)
+    apply (subst add.commute)
     apply (rule word_plus_mono_right[OF _ is_aligned_no_wrap'])
       apply simp
      apply (rule Aligned.is_aligned_neg_mask)
     apply (rule le_refl,simp)
-   apply (subst add_commute)
+   apply (subst add.commute)
    apply (rule word_plus_mono_right[OF _ is_aligned_no_wrap'])
      apply simp
     apply (rule Aligned.is_aligned_neg_mask)
    apply (rule le_refl,simp)
-  apply (subst add_commute)
+  apply (subst add.commute)
   apply (rule word_plus_mono_right[OF _ is_aligned_no_wrap'])
     apply simp
    apply (rule Aligned.is_aligned_neg_mask)
@@ -6008,14 +6004,12 @@ lemma pspace_no_overlap_induce_user_data:
   apply (clarsimp simp:image_def heap_to_page_data_def projectKO_opt_user_data
     map_comp_def split:option.splits kernel_object.splits)
   apply (frule(1) pspace_no_overlapD')
-   apply (subst (asm) intvl_range_conv)
-     apply simp
-    apply (simp add: word_bits_def)
-   apply (subst (asm) intvl_range_conv[where bits = 12,simplified])
+  apply (clarsimp simp: word_bits_def)
+   apply (subst intvl_range_conv[where bits = 12,simplified])
     apply (drule(1) pspace_alignedD')
     apply (simp add:objBits_simps archObjSize_def pageBits_def split:arch_kernel_object.split_asm)
     apply (clarsimp elim!:is_aligned_weaken)
-  apply (simp only:is_aligned_neg_mask_eq)
+  apply (subst intvl_range_conv, simp, simp)
   apply (clarsimp simp:field_simps)
   apply (simp add:p_assoc_help)
   apply (clarsimp simp:objBits_simps archObjSize_def pageBits_def split:arch_kernel_object.split_asm)+

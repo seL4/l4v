@@ -161,7 +161,7 @@ lemma create_word_objects_integrity:
     apply assumption
    apply(simp, rule_tac 'a=word32 in of_nat_gt_0)
    apply simp
-  apply(simp add: shiftl_t2n ptr_range_def mult_commute)
+  apply(simp add: shiftl_t2n ptr_range_def mult.commute)
   done
 
 crunch integrity_autarch: set_pd "integrity aag X st"
@@ -453,7 +453,7 @@ lemma delete_objects_respects[wp]:
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
    apply (simp add: delete_objects_def)
    apply (rule_tac seq_ext)
-   apply (rule hoare_triv[of P _ "%_. P", standard])
+   apply (rule hoare_triv[of P _ "%_. P" for P])
    apply (wp dmo_freeMemory_respects | simp)+
    apply (clarsimp simp: ptr_range_def intro!: detype_integrity)
    done
@@ -759,7 +759,7 @@ lemma use_retype_region_proofs_ext':
    done
 
 lemmas use_retype_region_proofs_ext
-    = use_retype_region_proofs_ext'[where Q="\<lambda>_. Q" and P=Q, simplified, standard, OF _ _ _ _ TrueI]
+    = use_retype_region_proofs_ext'[where Q="\<lambda>_. Q" and P=Q, simplified, OF _ _ _ _ TrueI] for Q
 
 lemma (in is_extended) pas_refined_tcb_domain_map_wellformed':
   assumes tdmw: "\<lbrace>tcb_domain_map_wellformed aag and P\<rbrace> f \<lbrace>\<lambda>_. tcb_domain_map_wellformed aag\<rbrace>"
@@ -797,6 +797,7 @@ lemma retype_region_pas_refined:
    \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (rule hoare_pre)
+thm use_retype_region_proofs_ext
   apply(rule use_retype_region_proofs_ext)
      apply(erule (1) retype_region_proofs'.pas_refined[OF retype_region_proofs'.intro])
     apply (wp retype_region_ext_pas_refined)
@@ -891,10 +892,10 @@ lemma freeMemory_vms:
    \<forall>x\<in>fst (freeMemory ptr bits (machine_state s)).
    valid_machine_state (s\<lparr>machine_state := snd x\<rparr>)"
   apply (clarsimp simp: valid_machine_state_def
-                        disj_commute[of "in_user_frame p s", standard])
+                        disj_commute[of "in_user_frame p s" for p s])
   apply (drule_tac x=p in spec, simp)
-  apply (drule_tac P="\<lambda>m'. underlying_memory m' p = 0"
-         in use_valid[where P=P and Q="\<lambda>_. P", standard], simp_all)
+  apply (drule_tac P4="\<lambda>m'. underlying_memory m' p = 0"
+         in use_valid[where P=P and Q="\<lambda>_. P" for P], simp_all)
   apply (simp add: freeMemory_def machine_op_lift_def
                    machine_rest_lift_def split_def)
   apply (wp hoare_drop_imps | simp | wp mapM_x_wp_inv)+
@@ -1376,7 +1377,7 @@ lemma invoke_untyped_pas_refined:
                          apply(simp add: shiftl_t2n)
                          apply(subst unat_mult_power_lem)
                           apply(erule range_cover.string)
-                         apply(simp add: mult_commute)
+                         apply(simp add: mult.commute)
                         apply(fastforce intro!: cte_wp_at_pas_cap_cur_auth_UntypedCap_idx)
 
                          apply (frule retype_addrs_subset_ptr_bits)
@@ -1397,7 +1398,7 @@ lemma invoke_untyped_pas_refined:
                   of_nat (length list) * 2 ^ obj_bits_api apiobject_type nat -
                   1} =
           {}")
-                     apply(subgoal_tac "word2 && mask sz = 0", clarsimp simp: shiftl_t2n mult_commute)
+                     apply(subgoal_tac "word2 && mask sz = 0", clarsimp simp: shiftl_t2n mult.commute)
                     apply(erule subst, rule mask_neg_mask_is_zero)
                    apply(rule usable_range_disjoint, simp+)
                     apply(fastforce elim: ex_cte_cap_wp_to_weakenE)
@@ -1432,10 +1433,10 @@ lemma invoke_untyped_pas_refined:
                 apply (simp add: cte_wp_at_sym)+
             apply(fastforce dest: range_cover_subset')
            (* proof clagged from Untyped_R.invoke_untyped_proofs.idx_compare' *)
-           apply(simp add: mask_out_sub_mask add_commute mult_commute)
+           apply(simp add: mask_out_sub_mask add.commute mult.commute)
            apply (rule le_trans[OF unat_plus_gt])
            apply(subst range_cover.unat_of_nat_n_shift, simp+)
-           apply(simp add: range_cover.range_cover_compare_bound[simplified add_commute])
+           apply(simp add: range_cover.range_cover_compare_bound[simplified add.commute])
 
           apply(clarsimp simp: authorised_untyped_inv_state_def)
           apply(drule_tac x="UntypedCap (word2 && ~~ mask sz) sz idx" in spec, clarsimp simp: cte_wp_at_def ptr_range_def bits_of_UntypedCap pas_refined_refl word_and_le2)
@@ -1443,7 +1444,7 @@ lemma invoke_untyped_pas_refined:
           apply(fastforce simp: word_and_le2)
          apply(fastforce intro!: cte_wp_at_pas_cap_cur_auth_UntypedCap_idx)
         apply(simp add: free_index_of_UntypedCap)
-       apply(simp add: shiftl_t2n mask_out_sub_mask add_commute mult_commute)
+       apply(simp add: shiftl_t2n mask_out_sub_mask add.commute mult.commute)
        apply(simp add: mask_out_sub_mask[symmetric])
        apply(rule usable_range_disjoint, simp+)
         apply(fastforce elim: ex_cte_cap_wp_to_weakenE)
@@ -1452,7 +1453,7 @@ lemma invoke_untyped_pas_refined:
      apply(fastforce dest: range_cover_subset')
     apply(rule disjI1)
     apply(simp add: free_index_of_UntypedCap)
-    apply(simp add: mask_out_sub_mask add_commute mult_commute shiftl_t2n)
+    apply(simp add: mask_out_sub_mask add.commute mult.commute shiftl_t2n)
     apply(erule order_trans)
     apply(simp add: range_cover_unat)
    apply(rule disjI2)

@@ -45,7 +45,7 @@ definition  get_page_xn :: "(obj_ref \<rightharpoonup> arch_kernel_obj) \<Righta
 definition
   ptable_xn :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> word32 \<Rightarrow> bool" where
  "ptable_xn tcb s \<equiv> \<lambda>addr.
-  option_case False (\<lambda>x. x)
+  case_option False (\<lambda>x. x)
      (get_page_xn (\<lambda>obj. get_arch_obj (kheap s obj))
         (get_pd_of_thread (kheap s) (arch_state s) tcb) addr)"
 
@@ -168,10 +168,10 @@ lemma requiv_pd_of_thread_global_pd:
    apply (simp add: reads_lrefl)
   apply (clarsimp simp: get_pd_of_thread_def2
                   split: option.splits kernel_object.splits cap.splits arch_cap.splits)
-  apply (subgoal_tac "aag_can_read_asid aag aa")
-   apply (subgoal_tac "s \<turnstile> ArchObjectCap (PageDirectoryCap word (Some aa))")
+  apply (subgoal_tac "aag_can_read_asid aag x2a")
+   apply (subgoal_tac "s \<turnstile> ArchObjectCap (PageDirectoryCap word (Some x2a))")
     apply (clarsimp simp: equiv_asids_def equiv_asid_def valid_cap_def)
-    apply (drule_tac x=aa in spec)
+    apply (drule_tac x=x2a in spec)
     apply (clarsimp simp: word_gt_0 typ_at_eq_kheap_obj)
     apply (drule invs_valid_global_refs)
     apply (drule_tac ptr="((cur_thread s), tcb_cnode_index 1)" in valid_global_refsD2[rotated])
@@ -183,7 +183,7 @@ lemma requiv_pd_of_thread_global_pd:
 
    apply (cut_tac s=s and t="cur_thread s" and tcb=tcb_ext in objs_valid_tcb_vtable)
      apply (fastforce simp: invs_valid_objs get_tcb_def)+
-  apply (subgoal_tac "(pasObjectAbs aag (cur_thread s), Control, pasASIDAbs aag aa)
+  apply (subgoal_tac "(pasObjectAbs aag (cur_thread s), Control, pasASIDAbs aag x2a)
                           \<in> state_asids_to_policy aag s")
    apply (frule pas_refined_Control_into_is_subject_asid)
     apply (fastforce simp: pas_refined_def)
@@ -551,7 +551,8 @@ lemma do_user_op_reads_respects_g:
       apply (clarsimp simp: requiv_ptable_lift_eq)
      apply (simp add: requiv_cur_thread_eq)
     apply (subst expand_restrict_map_eq)
-    apply (clarsimp simp: restrict_map_def requiv_user_mem_eq)
+    apply (clarsimp simp: restrict_map_def requiv_user_mem_eq
+                          requiv_user_mem_eq[symmetric, OF reads_equiv_sym globals_equiv_sym])
    apply (simp add: context_matches_state_def comp_def)
   apply (erule_tac x=st in allE)+
   apply (simp add: context_matches_state_def reads_equiv_sym globals_equiv_sym affects_equiv_sym comp_def)

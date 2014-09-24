@@ -162,15 +162,15 @@ lemma transform_objects_update_other:
                                cap_installed_at_irq_def map_add_def)
 
 lemma caps_of_object_update_state [simp]:
-  "(\<lambda>n. Option.map (\<lambda>(f, _). f (tcb_state_update stf tcb)) (tcb_cap_cases n)) =
-   (\<lambda>n. Option.map (\<lambda>(f, _). f tcb) (tcb_cap_cases n))"
+  "(\<lambda>n. map_option (\<lambda>(f, _). f (tcb_state_update stf tcb)) (tcb_cap_cases n)) =
+   (\<lambda>n. map_option (\<lambda>(f, _). f tcb) (tcb_cap_cases n))"
   apply (rule ext)
   apply (simp add: tcb_cap_cases_def split: split_if)
   done
 
 lemma caps_of_object_update_context [simp]:
-  "(\<lambda>n. Option.map (\<lambda>(f, _). f (tcb_context_update stf tcb)) (tcb_cap_cases n)) =
-   (\<lambda>n. Option.map (\<lambda>(f, _). f tcb) (tcb_cap_cases n))"
+  "(\<lambda>n. map_option (\<lambda>(f, _). f (tcb_context_update stf tcb)) (tcb_cap_cases n)) =
+   (\<lambda>n. map_option (\<lambda>(f, _). f tcb) (tcb_cap_cases n))"
   apply (rule ext)
   apply (simp add: tcb_cap_cases_def split: split_if)
   done
@@ -296,7 +296,7 @@ lemma dcorres_set_object_tcb:
   apply (clarsimp simp: transform_objects_def)
   apply (rule ext)
   apply clarsimp
-  apply (clarsimp simp: Option.map_def restrict_map_def map_add_def)
+  apply (clarsimp simp: option_map_def restrict_map_def map_add_def)
   done
 
 lemma set_cxt_none_det_intent_corres:
@@ -1378,9 +1378,9 @@ lemma get_ipc_buffer_words_helper:
       apply (rule is_aligned_after_mask)
       apply simp+
     apply (rule ipc_buffer_within_frame[where buf =obuf and buf'=buf])
-      apply (simp add:obj_at_def get_tcb_SomeD within_page_def add_assoc)+
+      apply (simp add:obj_at_def get_tcb_SomeD within_page_def add.assoc)+
   apply (rule conjI)
-    apply (subst add_assoc[symmetric])+
+    apply (subst add.assoc[symmetric])+
     apply (rule underlying_memory_storeWord)
       apply (simp_all)
       apply (rule aligned_add_aligned)+
@@ -1388,9 +1388,9 @@ lemma get_ipc_buffer_words_helper:
       apply (subst is_aligned_after_mask)
       apply simp+
     apply (rule ipc_buffer_within_frame[where buf = obuf and buf' = buf])
-      apply (simp add:obj_at_def get_tcb_SomeD within_page_def add_assoc)+
+      apply (simp add:obj_at_def get_tcb_SomeD within_page_def add.assoc)+
   apply (rule conjI)
-    apply (subst add_assoc[symmetric])+
+    apply (subst add.assoc[symmetric])+
     apply (rule underlying_memory_storeWord)
       apply (simp_all)
       apply (rule aligned_add_aligned)+
@@ -1398,8 +1398,8 @@ lemma get_ipc_buffer_words_helper:
       apply (subst is_aligned_after_mask)
       apply simp+
     apply (rule ipc_buffer_within_frame[where buf = obuf and buf' = buf])
-      apply (simp add:obj_at_def get_tcb_SomeD within_page_def add_assoc)+
-  apply (subst add_assoc[symmetric])+
+      apply (simp add:obj_at_def get_tcb_SomeD within_page_def add.assoc)+
+  apply (subst add.assoc[symmetric])+
   apply (rule underlying_memory_storeWord[where n = 0,simplified])
     apply (simp_all)
     apply (rule aligned_add_aligned)+
@@ -1407,7 +1407,7 @@ lemma get_ipc_buffer_words_helper:
     apply (subst is_aligned_after_mask)
     apply simp+
     apply (rule ipc_buffer_within_frame[where buf = obuf and buf' = buf])
-    apply ((simp add:obj_at_def get_tcb_SomeD within_page_def add_assoc)+)[7]
+    apply ((simp add:obj_at_def get_tcb_SomeD within_page_def add.assoc)+)[7]
 done
 
 lemma get_ipc_buffer_words_separate_frame:
@@ -1452,9 +1452,9 @@ lemma get_ipc_buffer_words_separate_frame:
       apply (rule is_aligned_after_mask)
       apply simp+
     apply (rule ipc_buffer_within_frame[where buf =obuf and buf'=buf])
-      apply (simp add:obj_at_def get_tcb_SomeD within_page_def add_assoc)+
+      apply (simp add:obj_at_def get_tcb_SomeD within_page_def add.assoc)+
   apply (rule conjI)
-    apply (subst add_assoc[symmetric])+
+    apply (subst add.assoc[symmetric])+
     apply (rule underlying_memory_storeWord)
       apply (simp_all)
       apply (rule aligned_add_aligned)+
@@ -1462,9 +1462,9 @@ lemma get_ipc_buffer_words_separate_frame:
       apply (subst is_aligned_after_mask)
       apply simp+
     apply (rule ipc_buffer_within_frame[where buf = obuf and buf' = buf])
-      apply (simp add:obj_at_def get_tcb_SomeD within_page_def add_assoc)+
+      apply (simp add:obj_at_def get_tcb_SomeD within_page_def add.assoc)+
   apply (rule conjI)
-    apply (subst add_assoc[symmetric])+
+    apply (subst add.assoc[symmetric])+
     apply (rule underlying_memory_storeWord)
       apply (simp_all)
       apply (rule aligned_add_aligned)+
@@ -1472,8 +1472,8 @@ lemma get_ipc_buffer_words_separate_frame:
       apply (subst is_aligned_after_mask)
       apply simp+
     apply (rule ipc_buffer_within_frame[where buf = obuf and buf' = buf])
-      apply (simp add:obj_at_def get_tcb_SomeD within_page_def add_assoc)+
-  apply (subst add_assoc[symmetric])+
+      apply (simp add:obj_at_def get_tcb_SomeD within_page_def add.assoc)+
+  apply (subst add.assoc[symmetric])+
   apply (rule underlying_memory_storeWord[where n = 0,simplified])
     apply (simp_all)
     apply (rule aligned_add_aligned)+
@@ -1481,7 +1481,7 @@ lemma get_ipc_buffer_words_separate_frame:
     apply (subst is_aligned_after_mask)
     apply simp+
     apply (rule ipc_buffer_within_frame[where buf = obuf and buf' = buf])
-    apply ((simp add:obj_at_def get_tcb_SomeD within_page_def add_assoc)+)[7]
+    apply ((simp add:obj_at_def get_tcb_SomeD within_page_def add.assoc)+)[7]
 done
 
 lemma mask_inj_if:
@@ -1527,7 +1527,7 @@ lemma within_page_ipc_buf:
   apply (clarsimp split: cap.split_asm arch_cap.split_asm)
   apply (frule valid_tcb_objs, erule get_tcb_rev)
   apply (clarsimp simp: valid_tcb_def valid_ipc_buffer_cap_def)
-  apply (subst add_assoc)
+  apply (subst add.assoc)
   apply (erule is_aligned_add_helper[THEN conjunct2])
   apply (rule iffD1[OF le_mask_iff_lt_2n[where n = "pageBitsForSize sz"],THEN iffD1])
     apply (simp add:word_size)
@@ -1556,7 +1556,7 @@ lemma store_word_corres_helper:
   apply (rule exI)
   apply (rule ext)
   apply (rename_tac thread)
-  apply (clarsimp simp: map_add_def split: option.splits simp del: Option.option_case_map)
+  apply (clarsimp simp: map_add_def split: option.splits simp del: Option.case_map_option)
   apply (rule conjI)
    apply (clarsimp simp:restrict_map_def map_add_def)
   apply clarsimp
@@ -1687,7 +1687,7 @@ lemma dcorres_store_word_safe:
   apply (clarsimp simp: transform_def transform_current_thread_def)
   apply (rule ext)
   apply (rename_tac thread)
-   apply (clarsimp simp:transform_objects_def restrict_map_def Option.map_def map_add_def split:option.splits)
+   apply (clarsimp simp:transform_objects_def restrict_map_def option_map_def map_add_def split:option.splits)
    apply (clarsimp simp:transform_object_def split:Structures_A.kernel_object.splits)
    apply (clarsimp simp:transform_tcb_def transform_full_intent_def Let_def)
    apply (clarsimp simp del:upt.simps
@@ -2193,7 +2193,6 @@ lemma dcorres_store_word_conservative:
   apply (frule ipc_frame_ptr_at_sz_at,simp+)
   apply (rule corres_guard_imp[OF store_word_corres])
     apply simp+
-  apply fastforce
 done
 
 end

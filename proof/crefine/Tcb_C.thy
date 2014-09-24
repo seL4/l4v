@@ -86,7 +86,7 @@ begin
 
 lemma getMRs_rel_sched:
   "\<lbrakk> getMRs_rel args buffer s;
-     (cur_tcb' and option_case \<top> valid_ipc_buffer_ptr' buffer) s \<rbrakk>
+     (cur_tcb' and case_option \<top> valid_ipc_buffer_ptr' buffer) s \<rbrakk>
   \<Longrightarrow> getMRs_rel args buffer (s\<lparr>ksSchedulerAction := ChooseNewThread\<rparr>)"
   apply (clarsimp simp: getMRs_rel_def)
   apply (rule exI, rule conjI, assumption)
@@ -124,9 +124,9 @@ lemma getObject_state:
    apply clarsimp
    apply (simp add: lookupAround2_char2)
    apply (clarsimp split: split_if_asm)
-   apply (erule_tac x=a in allE)
+   apply (erule_tac x=x2 in allE)
    apply (clarsimp simp: ps_clear_def)
-   apply (drule_tac x=a in orthD2)
+   apply (drule_tac x=x2 in orthD2)
     apply fastforce
    apply clarsimp
    apply (erule impE) 
@@ -155,9 +155,9 @@ lemma getObject_state:
     apply unat_arith
    apply (drule is_aligned_no_overflow)
    apply simp
-  apply (erule_tac x=a in allE)
+  apply (erule_tac x=x2 in allE)
   apply (clarsimp simp: ps_clear_def)
-  apply (drule_tac x=a in orthD2)
+  apply (drule_tac x=x2 in orthD2)
    apply fastforce
   apply clarsimp
   apply (erule impE)
@@ -219,10 +219,10 @@ lemma asUser_state:
    apply clarsimp
    apply (rule conjI)
     apply (clarsimp simp add: lookupAround2_char2 split: split_if_asm)
-    apply (erule_tac x=a in allE)
+    apply (erule_tac x=x2 in allE)
     apply simp
     apply (simp add: ps_clear_def)
-    apply (drule_tac x=a in orthD2)
+    apply (drule_tac x=x2 in orthD2)
      apply fastforce
     apply clarsimp
     apply (erule impE, simp)
@@ -257,10 +257,10 @@ lemma asUser_state:
      apply unat_arith
     apply (drule is_aligned_no_overflow)
     apply simp
-   apply (erule_tac x=a in allE)
+   apply (erule_tac x=x2 in allE)
    apply simp
    apply (simp add: ps_clear_def)
-   apply (drule_tac x=a in orthD2)
+   apply (drule_tac x=x2 in orthD2)
     apply fastforce
    apply clarsimp
    apply (erule impE)
@@ -291,7 +291,7 @@ lemma mapM_upd_inv:
   assumes inv: "\<And>x. \<lbrace>op = s\<rbrace> f x \<lbrace>\<lambda>_. op = s\<rbrace>"
   shows "(rv,s) \<in> fst (mapM f xs s) \<Longrightarrow> (rv, g s) \<in> fst (mapM f xs (g s))"
   using f inv
-proof (induct xs arbitrary: rv s s')
+proof (induct xs arbitrary: rv s)
   case Nil
   thus ?case by (simp add: mapM_Nil return_def)
 next
@@ -312,7 +312,7 @@ qed
 
 lemma getMRs_rel_state:
   "\<lbrakk>getMRs_rel args buffer s; 
-    (cur_tcb' and option_case \<top> valid_ipc_buffer_ptr' buffer) s;
+    (cur_tcb' and case_option \<top> valid_ipc_buffer_ptr' buffer) s;
     ko_at' ko t s \<rbrakk> \<Longrightarrow>
   getMRs_rel args buffer (s\<lparr>ksPSpace := ksPSpace s(t \<mapsto> KOTCB (tcbState_update (\<lambda>_. st) ko))\<rparr>)"
   apply (clarsimp simp: getMRs_rel_def)
@@ -362,7 +362,7 @@ lemma setTCB_cur:
   done
 
 lemma setThreadState_getMRs_rel:
-  "\<lbrace>getMRs_rel args buffer and cur_tcb' and option_case \<top> valid_ipc_buffer_ptr' buffer
+  "\<lbrace>getMRs_rel args buffer and cur_tcb' and case_option \<top> valid_ipc_buffer_ptr' buffer
            and (\<lambda>_. runnable' st)\<rbrace> 
       setThreadState st t \<lbrace>\<lambda>_. getMRs_rel args buffer\<rbrace>"
   apply (rule hoare_gen_asm')
@@ -545,7 +545,7 @@ lemma invokeTCB_ThreadControl_ccorres:
    (UNIV \<inter> {s. target_' s = tcb_ptr_to_ctcb_ptr target}
          \<inter> {s. (cRoot \<noteq> None \<or> buf \<noteq> None) \<longrightarrow> slot_' s = cte_Ptr slot}
          \<inter> {s. faultep_' s = option_to_0 faultep}
-         \<inter> {s. priority_' s = option_case 0 ucast priority}
+         \<inter> {s. priority_' s = case_option 0 ucast priority}
          \<inter> {s. case cRoot of None \<Rightarrow> True | Some (cRootCap, cRootSlot) \<Rightarrow> ccap_relation cRootCap (cRoot_newCap_' s)}
          \<inter> {s. cRoot_srcSlot_' s = cte_Ptr (option_to_0 (option_map snd cRoot))}
          \<inter> {s. case vRoot of None \<Rightarrow> True | Some (vRootCap, vRootSlot) \<Rightarrow> ccap_relation vRootCap (vRoot_newCap_' s)}
@@ -565,7 +565,7 @@ lemma invokeTCB_ThreadControl_ccorres:
                      vRoot_newCap_' vRoot_srcSlot_' bufferAddr_' bufferSrcSlot_' bufferCap_'
                      updateFlags_')
    apply csymbr
-   apply (simp add: liftE_bindE option_case_If2 thread_control_flag_defs
+   apply (simp add: liftE_bindE case_option_If2 thread_control_flag_defs
                     word_ao_dist if_and_helper if_n_0_0
                del: Collect_const cong: call_ignore_cong if_cong)
    apply (rule_tac P="ptr_val (tcb_ptr_to_ctcb_ptr target) && ~~ mask 4
@@ -600,10 +600,10 @@ lemma invokeTCB_ThreadControl_ccorres:
        apply (rule ccorres_subgoal_tailE)
         apply (rule ccorres_subgoal_tailE)
          apply (rule_tac A="invs' and sch_act_simple and tcb_at' target
-                          and option_case \<top> (option_case \<top> (valid_cap' \<circ> fst) \<circ> snd) buf
-                          and option_case \<top> (option_case \<top> (cte_at' \<circ> snd) \<circ> snd) buf
-                          and K (option_case True (swp is_aligned msg_align_bits \<circ> fst) buf)
-                          and K (option_case True (option_case True (isArchObjectCap \<circ> fst) \<circ> snd) buf)"
+                          and case_option \<top> (case_option \<top> (valid_cap' \<circ> fst) \<circ> snd) buf
+                          and case_option \<top> (case_option \<top> (cte_at' \<circ> snd) \<circ> snd) buf
+                          and K (case_option True (swp is_aligned msg_align_bits \<circ> fst) buf)
+                          and K (case_option True (case_option True (isArchObjectCap \<circ> fst) \<circ> snd) buf)"
                            (* bits of tcb_inv_wf' *)
                      in ccorres_guard_imp2[where A'=UNIV])
           apply (rule ccorres_Cond_rhs_Seq)
@@ -640,7 +640,7 @@ lemma invokeTCB_ThreadControl_ccorres:
                apply (simp only: if_1_0_0 simp_thms)
                apply (rule ccorres_Cond_rhs_Seq)
                 apply (rule ccorres_rhs_assoc)+
-                apply (simp add: option_case_If2 if_n_0_0 split_def
+                apply (simp add: case_option_If2 if_n_0_0 split_def
                             del: Collect_const)
                 apply (rule checkCapAt_ccorres)
                    apply ceqv
@@ -704,7 +704,7 @@ lemma invokeTCB_ThreadControl_ccorres:
                                exception_defs)
          apply (simp add: tcbBuffer_def tcbIPCBufferSlot_def word_sle_def
                           cte_level_bits_def from_bool_def true_def size_of_def)
-         apply (clarsimp simp: option_case_If2 if_n_0_0)
+         apply (clarsimp simp: case_option_If2 if_n_0_0)
          apply (simp add: valid_cap'_def capAligned_def)
          apply (clarsimp simp: objBits_simps word_bits_conv
                                obj_at'_def projectKOs)
@@ -725,10 +725,10 @@ lemma invokeTCB_ThreadControl_ccorres:
              apply (simp add: conj_ac pred_conj_def)
              apply (simp add: o_def cong: conj_cong option.case_cong)
 
-             apply (wp checked_insert_tcb_invs' hoare_option_case_wp
-                       checkCap_inv [where P="tcb_at' p0", standard]
-                       checkCap_inv [where P="cte_at' p0", standard]
-                       checkCap_inv [where P="valid_cap' c", standard]
+             apply (wp checked_insert_tcb_invs' hoare_case_option_wp
+                       checkCap_inv [where P="tcb_at' p0" for p0]
+                       checkCap_inv [where P="cte_at' p0" for p0]
+                       checkCap_inv [where P="valid_cap' c" for c]
                        checkCap_inv [where P="sch_act_simple"]
                           | simp)+
             apply (simp add: guard_is_UNIV_def)
@@ -750,7 +750,7 @@ lemma invokeTCB_ThreadControl_ccorres:
                apply (rule ccorres_symb_exec_l)
                   apply (ctac add: cteInsert_ccorres)
                  apply (wp empty_fail_stateAssert
-                           hoare_option_case_wp | simp del: Collect_const)+
+                           hoare_case_option_wp | simp del: Collect_const)+
               apply csymbr
               apply (simp add: if_1_0_0 false_def Collect_False ccorres_cond_iffs
                           del: Collect_const)
@@ -771,7 +771,7 @@ lemma invokeTCB_ThreadControl_ccorres:
           apply vcg
          apply (simp add: conj_ac, simp cong: conj_cong add: invs_mdb' invs_pspace_aligned')
          apply (simp add: cte_is_derived_capMasterCap_strg o_def)
-         apply (wp cteDelete_invs' hoare_option_case_wp cteDelete_deletes
+         apply (wp cteDelete_invs' hoare_case_option_wp cteDelete_deletes
                    cteDelete_sch_act_simple
                 | strengthen impI[OF invs_valid_objs'])+
          apply (rule hoare_post_imp_R[where Q' = "\<lambda>r. invs'"])
@@ -794,10 +794,10 @@ lemma invokeTCB_ThreadControl_ccorres:
                   | rule ccorres_rhs_assoc2)+
             apply (simp add: conj_ac pred_conj_def)
             apply (simp add: o_def cong: conj_cong option.case_cong)
-            apply (wp checked_insert_tcb_invs' hoare_option_case_wp
-                      checkCap_inv [where P="tcb_at' p0", standard]
-                      checkCap_inv [where P="cte_at' p0", standard]
-                      checkCap_inv [where P="valid_cap' c", standard]
+            apply (wp checked_insert_tcb_invs' hoare_case_option_wp
+                      checkCap_inv [where P="tcb_at' p0" for p0]
+                      checkCap_inv [where P="cte_at' p0" for p0]
+                      checkCap_inv [where P="valid_cap' c" for c]
                       checkCap_inv [where P="sch_act_simple"]
                          | simp)+
            apply (clarsimp simp: guard_is_UNIV_def from_bool_def true_def
@@ -822,7 +822,7 @@ lemma invokeTCB_ThreadControl_ccorres:
               apply (rule ccorres_symb_exec_l)
                  apply (ctac add: cteInsert_ccorres)
                 apply (wp empty_fail_stateAssert
-                          hoare_option_case_wp | simp del: Collect_const)+
+                          hoare_case_option_wp | simp del: Collect_const)+
              apply csymbr
              apply (simp add: if_1_0_0 false_def Collect_False ccorres_cond_iffs
                          del: Collect_const)
@@ -843,19 +843,19 @@ lemma invokeTCB_ThreadControl_ccorres:
          apply vcg
         apply (simp add: conj_ac, simp cong: conj_cong add: invs_mdb' invs_pspace_aligned')
         apply (simp add: cte_is_derived_capMasterCap_strg o_def)
-        apply (wp cteDelete_invs' hoare_option_case_wp cteDelete_deletes
+        apply (wp cteDelete_invs' hoare_case_option_wp cteDelete_deletes
                   cteDelete_sch_act_simple 
                | strengthen impI[OF invs_valid_objs'])+
         apply (rule hoare_post_imp_R[where Q' = "\<lambda>r. invs'"])
          apply (wp cteDelete_invs')
         apply (clarsimp simp:cte_wp_at_ctes_of)
        apply simp
-      apply (wp hoare_option_case_wp setP_invs' static_imp_wp | simp)+
+      apply (wp hoare_case_option_wp setP_invs' static_imp_wp | simp)+
      apply (clarsimp simp: guard_is_UNIV_def tcbCTableSlot_def Kernel_C.tcbCTable_def
                            cte_level_bits_def size_of_def word_sle_def option_to_0_def
                            true_def from_bool_def cintr_def)
     apply (simp add: conj_ac)
-    apply (wp hoare_option_case_wp threadSet_invs_trivial
+    apply (wp hoare_case_option_wp threadSet_invs_trivial
               threadSet_cap_to' static_imp_wp | simp)+
    apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem)
   apply (clarsimp simp: inQ_def)
@@ -1145,9 +1145,9 @@ lemma getObject_context:
    apply clarsimp
    apply (simp add: lookupAround2_char2)
    apply (clarsimp split: split_if_asm)
-   apply (erule_tac x=a in allE)
+   apply (erule_tac x=x2 in allE)
    apply (clarsimp simp: ps_clear_def)
-   apply (drule_tac x=a in orthD2)
+   apply (drule_tac x=x2 in orthD2)
     apply fastforce
    apply clarsimp
    apply (erule impE)
@@ -1177,9 +1177,9 @@ lemma getObject_context:
     apply unat_arith
    apply (drule is_aligned_no_overflow)
    apply simp  
-  apply (erule_tac x=a in allE)
+  apply (erule_tac x=x2 in allE)
   apply (clarsimp simp: ps_clear_def)
-  apply (drule_tac x=a in orthD2)
+  apply (drule_tac x=x2 in orthD2)
    apply fastforce
   apply clarsimp
   apply (erule impE)
@@ -1252,10 +1252,10 @@ lemma asUser_context:
      apply unat_arith
     apply (drule is_aligned_no_overflow)
     apply simp
-   apply (erule_tac x=a in allE)
+   apply (erule_tac x=x2 in allE)
    apply simp
    apply (simp add: ps_clear_def)
-   apply (drule_tac x=a in orthD2)
+   apply (drule_tac x=x2 in orthD2)
     apply fastforce
    apply clarsimp
    apply (erule impE)
@@ -1276,7 +1276,7 @@ done
 
 lemma getMRs_rel_context:
   "\<lbrakk>getMRs_rel args buffer s; 
-    (cur_tcb' and option_case \<top> valid_ipc_buffer_ptr' buffer) s;
+    (cur_tcb' and case_option \<top> valid_ipc_buffer_ptr' buffer) s;
     ko_at' ko t s ; t \<noteq> ksCurThread s\<rbrakk> \<Longrightarrow>
   getMRs_rel args buffer (s\<lparr>ksPSpace := ksPSpace s(t \<mapsto> KOTCB (tcbContext_update (\<lambda>_. st) ko))\<rparr>)"
   apply (clarsimp simp: getMRs_rel_def)
@@ -1320,7 +1320,7 @@ done
 
 lemma asUser_getMRs_rel:
   "\<lbrace>(\<lambda>s. t \<noteq> ksCurThread s) and getMRs_rel args buffer and cur_tcb' 
-        and option_case \<top> valid_ipc_buffer_ptr' buffer \<rbrace> 
+        and case_option \<top> valid_ipc_buffer_ptr' buffer \<rbrace> 
   asUser t f \<lbrace>\<lambda>_. getMRs_rel args buffer\<rbrace>"
   apply (simp add: asUser_def)
   apply (rule hoare_pre, wp)
@@ -1565,7 +1565,7 @@ lemma ccorres_abstract_cong:
           cong: conj_cong xstate.case_cong)
 
 lemma is_aligned_the_x_strengthen:
-  "x \<noteq> None \<and> option_case \<top> valid_ipc_buffer_ptr' x s \<longrightarrow> is_aligned (the x) msg_align_bits"
+  "x \<noteq> None \<and> case_option \<top> valid_ipc_buffer_ptr' x s \<longrightarrow> is_aligned (the x) msg_align_bits"
   by (clarsimp simp: valid_ipc_buffer_ptr'_def)
 
 lemma lookupIPCBuffer_Some_0:
@@ -1840,7 +1840,7 @@ shows
                                                        n_msgRegisters_def frame_gp_registers_convs
                                                  cong: if_cong split: split_if)
                                  apply (clarsimp simp: frame_gp_registers_convs n_gpRegisters_def
-                                                       min_max.inf_absorb1 unat_of_nat)
+                                                       min.absorb1 unat_of_nat)
                                 apply (clarsimp simp: less_diff_conv)
                                 apply (clarsimp simp: nth_append frame_gp_registers_convs
                                                       n_frameRegisters_def n_gpRegisters_def
@@ -1864,7 +1864,7 @@ shows
                              apply (rule ccorres_return_Skip')
                             apply (simp add: linorder_not_less word_le_nat_alt
                                              drop_zip mapM_x_Nil n_frameRegisters_def
-                                             min_max.inf_absorb1 n_msgRegisters_def)
+                                             min.absorb1 n_msgRegisters_def)
                             apply (rule ccorres_guard_imp2, rule ccorres_return_Skip')
                             apply simp
                            apply ceqv
@@ -2211,13 +2211,7 @@ lemma excaps_map_Nil: "(excaps_map caps = []) = (caps = [])"
 lemma and_eq_0_is_nth:
   fixes x :: "('a :: len) word"
   shows "y = 1 << n \<Longrightarrow> ((x && y) = 0) = (\<not> (x !! n))"
-  apply safe
-   apply (drule_tac x=n in word_eqD)
-   apply (simp add: nth_w2p)
-   apply (simp add: test_bit_bin)
-  apply (rule word_eqI)
-  apply (simp add: nth_w2p)
-  done
+  by (metis (poly_guards_query) and_eq_0_is_nth)
 
 (* FIXME: move *)
 lemmas and_neq_0_is_nth = arg_cong [where f=Not, OF and_eq_0_is_nth, simplified]
@@ -2283,7 +2277,7 @@ lemma decodeCopyRegisters_ccorres:
                  simp add: hd_conv_nth del: Collect_const)
           apply (simp only: cap_get_tag_isCap[symmetric],
                  drule(1) cap_get_tag_to_H)
-          apply (simp add: bool_case_If if_to_top_of_bindE
+          apply (simp add: case_bool_If if_to_top_of_bindE
                            if_to_top_of_bind
                       del: Collect_const cong: if_cong)
           apply (simp add: to_bool_def returnOk_bind Collect_True
@@ -2871,7 +2865,7 @@ lemma decodeTCBConfigure_ccorres:
                                           apply (rule ccorres_return_C_errorE, simp+)[1]
                                          apply wp
                                         apply (simp add: o_def)
-                                        apply (wp sts_invs_minor' hoare_option_case_wp)
+                                        apply (wp sts_invs_minor' hoare_case_option_wp)
                                        apply (simp add: Collect_const_mem cintr_def intr_and_se_rel_def
                                                         exception_defs cong: option.case_cong)
                                        apply (vcg exspec=setThreadState_modifies)
@@ -3185,12 +3179,12 @@ lemma decodeSetIPCBuffer_ccorres:
        apply (rule ccorres_rhs_assoc)+
        apply (csymbr, csymbr)
        apply (simp add: bindE_bind_linearise)
-       apply (rule ccorres_split_nothrow_sum_case)
+       apply (rule ccorres_split_nothrow_case_sum)
             apply (ctac add: deriveCap_ccorres)
            apply ceqv
           apply (simp add: Collect_False del: Collect_const)
           apply csymbr
-          apply (rule ccorres_split_nothrow_sum_case)
+          apply (rule ccorres_split_nothrow_case_sum)
                apply (ctac add: checkValidIPCBuffer_ccorres)
               apply ceqv
              apply (simp add: Collect_False returnOk_bind

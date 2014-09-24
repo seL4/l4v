@@ -501,9 +501,7 @@ lemma simpl_to_graph_cases:
   apply (rule simpl_to_graphI)
   apply (case_tac "sst \<in> S")
    apply (clarsimp simp only: simpl_to_graph_def[where P="P \<inter> S"] Compl_iff Int_iff)
-   apply blast
   apply (clarsimp simp only: simpl_to_graph_def[where P="P \<inter> - S"] Compl_iff Int_iff)
-  apply blast
   done
 
 lemma exec_graph_step_image_node:
@@ -1114,7 +1112,7 @@ lemma simpl_to_graph_call_next_step:
   apply clarsimp
   apply (frule(1) exec_graph_trace_must_take_steps[OF
       _ _ next_step[rule_format, THEN conjunct1]])
-   apply (simp only: next_step, simp)
+   apply (simp only: next_step)
   apply (cut_tac tr=tr and tr'=trace'
       and sst="f' ?a ?b ?c" in simpl_to_graphD[OF cont])
    apply (rule conjI, assumption)
@@ -1633,8 +1631,8 @@ fun mk_simpl_acc ctxt sT nm = let
                   val acc2 = if typ_nm = "Arrays.array"
                     then mk_arr_idx acc (HOLogic.mk_number @{typ nat}
                         (ParseGraph.parse_int tail))
-                    else Proof_Context.read_const_proper
-                        ctxt true (typ_nm ^ "." ^ tail) $ acc
+                    else Proof_Context.read_const {proper = true, strict = true}
+                        ctxt (typ_nm ^ "." ^ tail) $ acc
                 in acc2 end
     fun mk_sst_acc2 nm = let
         val acc = mk_sst_acc nm
@@ -1718,9 +1716,12 @@ fun inst_graph_node_tac ctxt =
         (Envir.beta_eta_contract t))
   of @{term "op = :: node option \<Rightarrow> _"} $ (f $ n) $ _ => (let
     val g = head_of f |> dest_Const |> fst
-    val n = dest_nat n
+    val n' = dest_nat n
     val thm = Proof_Context.get_thm ctxt
-        (Long_Name.base_name g ^ "_" ^ Int.toString n)
+        (Long_Name.base_name g ^ "_" ^ Int.toString n')
+    val thm = if n = @{term "Suc 0"}
+        then simplify (put_simpset HOL_basic_ss ctxt addsimps @{thms One_nat_def}) thm
+        else thm
   in rtac thm i end handle TERM (s, ts) => raise TERM ("inst_graph_node_tac: " ^ s, t :: ts))
   | t => raise TERM ("inst_graph_node_tac", [t]))
 
@@ -1810,7 +1811,7 @@ fun simpl_ss ctxt = put_simpset HOL_basic_ss ctxt
 
 val immediates = @{thms
     simpl_to_graph_Skip_immediate simpl_to_graph_Throw_immediate}
-
+                        
 fun except_tac ctxt msg = SUBGOAL (fn (t, _) => let
   in warning msg; Syntax.pretty_term ctxt t |> Pretty.writeln;
     raise TERM (msg, [t]) end)
@@ -1878,7 +1879,9 @@ fun simpl_to_graph_cache_tac funs hints cache nm ctxt =
                 (Logic.strip_assums_concl (Envir.beta_eta_contract t)))) of
             SOME thm => rtac thm i | _ => no_tac)
             handle TERM _ => no_tac),
-        rtac @{thm simpl_to_graph_done2},
+        resolve_tac @{thms simpl_to_graph_done2
+            simpl_to_graph_Skip_immediate[where nn=Ret]
+            simpl_to_graph_Throw_immediate[where nn=Ret]},
         eq_impl_assume_tac ctxt
     ]
 
@@ -2055,7 +2058,7 @@ fun init_graph_refines_proof funs nm ctxt = let
         THEN graph_gamma_tac ctxt 1
         THEN ALLGOALS (simp_tac (put_simpset HOL_basic_ss ctxt addsimps [body_thm]
             addsimps @{thms entry_point.simps function_inputs.simps
-                            function_outputs.simps map.simps list.simps}))
+                            function_outputs.simps list.simps}))
         THEN TRY ((rtac @{thm simpl_to_graph_noop_same_eqs}
             THEN' inst_graph_tac ctxt) 1)
     )

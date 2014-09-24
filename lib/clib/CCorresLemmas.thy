@@ -259,7 +259,7 @@ lemma ccorres_split_when_throwError_cond:
 
 lemmas ccorres_split_unless_throwError_cond 
   = ccorres_split_when_throwError_cond
-      [where P = "\<not> P", folded unlessE_whenE, simplified not_not, standard]
+      [where P = "\<not> P" for P, folded unlessE_whenE, simplified not_not]
 declare ccorres_split_unless_throwError_cond
 
 lemma ccorres_returnOk_skip:

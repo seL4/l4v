@@ -864,7 +864,6 @@ lemma mask_in_range:
      apply (simp add: word_bits_conv word_size)
     apply (rule minus_one_helper5)
      apply simp
-    apply (erule_tac P="\<lambda>y. x \<le> y" in rsubst)
     apply simp
    apply (simp add: is_aligned_mask)
    apply (rule word_eqI)
@@ -1728,7 +1727,6 @@ lemma set_object_equal_mappings:
   apply (clarsimp simp: equal_kernel_mappings_def obj_at_def
              split del: split_if)
   apply (simp split: split_if_asm)
-  apply blast
   done
 
 

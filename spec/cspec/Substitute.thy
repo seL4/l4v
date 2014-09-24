@@ -102,38 +102,33 @@ fun prove_impl_tac ctxt ss =
       in simp_tac (put_simpset ss ctxt addsimps unfolds) n
       end);
 
-fun convert_impls prefix src_ctxt convs ctxt = let
+fun convert_impls ctxt = let
 
-    val tree_lemmata = StaticFun.prove_tree_lemmata ctxt
-      (Proof_Context.get_thm ctxt "\<Gamma>_def");
+    val thm = Proof_Context.get_thm ctxt "\<Gamma>_def"
 
-    val ss = simpset_of (put_simpset HOL_ss ctxt addsimps tree_lemmata);
+    val proc_defs = (Term.add_const_names (concl_of thm) [])
+      |> filter (String.isSuffix Hoare.proc_deco)
+      |> map (suffix "_def" #> Proof_Context.get_thm ctxt)
 
-    fun convert_impl (impl, long_name) = let
-        val prop = Thm.prop_of impl;
-        val conv_prop = map_aterms (term_convert prefix convs) prop
-          |> Envir.beta_eta_contract;
-        val name = Long_Name.base_name long_name;
-      in
-        (name, Goal.prove ctxt [] [] conv_prop
-             (fn v => prove_impl_tac (#context v) ss 1))
-      end
+    val tree_lemmata = StaticFun.prove_partial_map_thms thm
+        (ctxt addsimps proc_defs)
 
-    val impls = Termtab.keys convs
-      |> map (dest_Const #> fst #> Long_Name.base_name)
-      |> filter (String.isSuffix "_body")
-      |> map (suffix "_impl" o unsuffix "_body")
-      |> map_filter (try (` (Proof_Context.get_thm src_ctxt)))
-      |> map convert_impl;
+    fun impl_name_from_proc (Const (s, _)) = s
+            |> Long_Name.base_name
+            |> unsuffix Hoare.proc_deco
+            |> suffix HoarePackage.implementationN
+      | impl_name_from_proc t = raise TERM ("impl_name_from_proc", [t])
 
-  in Local_Theory.notes (map (fn (n, t) => ((Binding.name n, []), [([t], [])])) impls)
+    val saves = tree_lemmata |> map (apfst (fst #> impl_name_from_proc))
+
+  in Local_Theory.notes (map (fn (n, t) => ((Binding.name n, []), [([t], [])])) saves)
     ctxt |> snd end
 
 fun take_all_actions prefix src_ctxt proc tm csenv
-      styargs loc_name ctxt = let
-    val (convs, ctxt) = convert prefix src_ctxt proc tm (Termtab.empty, ctxt);
+      styargs ctxt = let
+    val (_, ctxt) = convert prefix src_ctxt proc tm (Termtab.empty, ctxt);
   in ctxt
-    |> convert_impls prefix src_ctxt convs
+    |> convert_impls
     |> Modifies_Proofs.prove_all_modifies_goals_local csenv (fn _ => true) styargs
   end
 
@@ -346,7 +341,6 @@ SubstituteSpecs.take_all_actions
   @{term kernel_all_global_addresses.\<Gamma>}
   (CalculateState.get_csenv @{theory} "c/kernel_all.c_pp" |> the)
   [@{typ "globals myvars"}, @{typ int}, @{typ strictc_errortype}]
-  "kernel_all_substitute"
 *}
 
 end

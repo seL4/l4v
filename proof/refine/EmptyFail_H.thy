@@ -187,7 +187,7 @@ crunch (empty_fail) empty_fail[intro!, wp, simp]: finaliseCap, preemptionPoint, 
 (wp: empty_fail_catch simp:  Let_def ignore: cacheRangeOp)
 
 lemmas finalise_spec_empty_fail_induct = finaliseSlot'.induct[where P=
-    "\<lambda>sl exp s. spec_empty_fail (finaliseSlot' sl exp) s", standard]
+    "\<lambda>sl exp s. spec_empty_fail (finaliseSlot' sl exp) s"]
 
 lemma spec_empty_fail_If:
   "\<lbrakk> P \<Longrightarrow> spec_empty_fail f s; \<not> P \<Longrightarrow> spec_empty_fail g s \<rbrakk>

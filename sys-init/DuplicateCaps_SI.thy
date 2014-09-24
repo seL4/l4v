@@ -258,7 +258,7 @@ lemma duplicate_caps_sep_no_rv:
     apply (subst sep_list_conj_sep_map_set_conj, simp)
     apply (subst (asm) sep.setprod.union_disjoint, simp+)
      apply (simp add: drop_take)
-     apply (subst nat_add_commute)
+     apply (subst add.commute)
      apply (erule distinct_take_drop_append)
     apply sep_solve
    apply (subst (asm) distinct_card [symmetric], simp+)+
@@ -267,7 +267,7 @@ lemma duplicate_caps_sep_no_rv:
   apply (clarsimp simp: si_objects_extra_caps_def sep_conj_exists sep_conj_assoc)
   apply (rule_tac x=untyped_caps in exI)
   apply (rule_tac x=all_available_ids in exI)
-  apply (subst nat_add_commute)
+  apply (subst add.commute)
   apply (subst (asm) distinct_card [symmetric], simp)+
    apply (clarsimp simp: distinct_card' distinct_length_filter')
   apply (subst (asm) sep_list_conj_sep_map_set_conj, simp)

@@ -198,7 +198,7 @@ lemma decode_cnode_inv_authorised:
   apply (rule hoare_pre)
    apply (wp hoare_vcg_all_lift hoare_vcg_const_imp_lift_R hoare_vcg_all_lift_R
              get_cap_prop_imp[where Q=has_recycle_rights] lsfco_cte_at
-        | simp only: simp_thms if_simps fst_conv snd_conv Invocations_A.cnode_invocation.cases
+        | simp only: simp_thms if_simps fst_conv snd_conv Invocations_A.cnode_invocation.simps
         | wpc
         | wp_once hoare_drop_imps)+
   apply clarsimp
@@ -406,9 +406,7 @@ lemma set_irq_state_respects[wp]:
 crunch respects[wp]: deleted_irq_handler "integrity aag X st"
 
 lemmas cases_simp_options
-    = cases_simp_option cases_simp_option[where 'a="'b \<times> 'c", simplified, standard]
-
-
+    = cases_simp_option cases_simp_option[where 'a="'b \<times> 'c", simplified]
 
 lemma empty_slointegrity_spec:
   notes split_paired_All[simp del]
@@ -811,7 +809,7 @@ lemma ucast_ucast_mask_pt_bits:
 lemma store_pte_st_vrefs[wp]:
   "\<lbrace>\<lambda>s. \<forall>S. P ((state_vrefs s) (p && ~~ mask pt_bits :=
           (state_vrefs s (p && ~~ mask pt_bits) - S) \<union>
-             (\<Union>(p', sz, auth)\<in>Option.set (pte_ref pte).
+             (\<Union>(p', sz, auth)\<in>set_option (pte_ref pte).
                    (\<lambda>(p'', a). (p'', VSRef ((p && mask pt_bits) >> 2) (Some APageTable), a)) ` (ptr_range p' sz \<times> auth))))\<rbrace>
       store_pte p pte \<lbrace>\<lambda>rv s. P (state_vrefs s)\<rbrace>"
   apply (simp add: store_pte_def set_pt_def set_object_def)
@@ -869,7 +867,7 @@ lemma store_pde_st_vrefs[wp]:
           (state_vrefs s (p && ~~ mask pd_bits) - S) \<union>
            (if ucast (kernel_base >> 20) \<le> (ucast (p && mask pd_bits >> 2)::12 word) then {}
             else
-               (\<Union>(p', sz, auth)\<in>Option.set (pde_ref2 pde).
+               (\<Union>(p', sz, auth)\<in>set_option (pde_ref2 pde).
                    (\<lambda>(p'', a). (p'', VSRef ((p && mask pd_bits) >> 2) (Some APageDirectory), a)) ` (ptr_range p' sz \<times> auth)))))\<rbrace>
       store_pde p pde \<lbrace>\<lambda>rv s. P (state_vrefs s)\<rbrace>"
   apply (simp add: store_pde_def set_pd_def set_object_def split del: split_if)

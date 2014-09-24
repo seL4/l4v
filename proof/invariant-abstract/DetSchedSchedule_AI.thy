@@ -2112,7 +2112,7 @@ lemma send_ipc_valid_sched:
                  set_thread_state_runnable_valid_sched_action
                  set_thread_state_valid_blocked_except sts_st_tcb_at')[1]
       apply simp
-      apply (rule_tac Q="\<lambda>_. valid_sched and scheduler_act_not thread and not_queued thread and (\<lambda>s. a \<noteq> idle_thread s \<and> a \<noteq> thread)" in hoare_strengthen_post)
+      apply (rule_tac Q="\<lambda>_. valid_sched and scheduler_act_not thread and not_queued thread and (\<lambda>s. x21 \<noteq> idle_thread s \<and> x21 \<noteq> thread)" in hoare_strengthen_post)
        apply wp
       apply (clarsimp simp: valid_sched_def)
      apply ((wp | wpc)+)[1]
@@ -2302,12 +2302,10 @@ lemma ep_cancel_all_not_queued:
    apply (drule_tac P="\<lambda>ts. \<not> active ts" and ep="SendEP xa" in ep_queued_st_tcb_at[rotated, rotated])
        apply (simp_all only: st_tcb_at_not)
       apply (simp add: obj_at_def)+
-    apply fastforce
-   apply simp
   apply (drule_tac P="\<lambda>ts. \<not> active ts" and ep="RecvEP xa" in ep_queued_st_tcb_at[rotated, rotated])
       apply (simp_all only: st_tcb_at_not)
      apply (fastforce simp: obj_at_def)+
-     done
+  done
 
 crunch not_queued[wp]: set_async_ep "not_queued t"
   (wp: hoare_drop_imps)
@@ -2722,6 +2720,6 @@ lemma call_kernel_valid_sched:
     apply (rule valid_validE)
     apply (wp handle_event_valid_sched)
      apply (force intro: active_from_running)+
-     done
+  done
 
 end

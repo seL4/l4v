@@ -357,7 +357,7 @@ text {* The following function is used to extract the
   architecture-specific objects from the kernel heap  *}
 definition
   "get_arch_obj ==
-   option_case None (%x. case x of ArchObj a \<Rightarrow> Some a | _ \<Rightarrow> None)"
+   case_option None (%x. case x of ArchObj a \<Rightarrow> Some a | _ \<Rightarrow> None)"
 
 text {* Non-monad versions of @{term get_pte} and @{term get_pde}.
   The parameters are:
@@ -612,7 +612,7 @@ apply (intro conjI impI)
  apply (drule get_pt_entry_None_iff_get_pte_fail[where s=s and vptr=vptr])
  apply (simp add: pt_bits_def pageBits_def mask_def)
 apply clarsimp
-apply (drule_tac x=a in get_pt_entry_Some_eq_get_pte[where s=s and vptr=vptr])
+apply (drule_tac x=x2 in get_pt_entry_Some_eq_get_pte[where s=s and vptr=vptr])
 apply (simp add: pt_bits_def pageBits_def mask_def)
 done
 
@@ -626,7 +626,7 @@ apply (simp add: lookup_pd_slot_def get_page_info_def split: option.splits)
 apply (intro conjI impI allI)
  apply (drule get_pd_entry_None_iff_get_pde_fail[where s=s and vptr=vptr])
  apply (simp split: option.splits)
-apply (drule_tac x=a in get_pd_entry_Some_eq_get_pde[where s=s and vptr=vptr])
+apply (drule_tac x=x2 in get_pd_entry_Some_eq_get_pde[where s=s and vptr=vptr])
 apply clarsimp
 done
 
@@ -640,7 +640,7 @@ apply (simp add: lookup_pd_slot_def get_page_info_def split: option.splits)
 apply (intro conjI impI allI)
  apply (drule get_pd_entry_None_iff_get_pde_fail[where s=s and vptr=vptr])
  apply (simp split: option.splits)
-apply (drule_tac x=a in get_pd_entry_Some_eq_get_pde[where s=s and vptr=vptr])
+apply (drule_tac x=x2 in get_pd_entry_Some_eq_get_pde[where s=s and vptr=vptr])
 apply clarsimp
 done
 
@@ -652,13 +652,13 @@ text {*
 definition
   ptable_lift :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> word32 \<rightharpoonup> word32" where
   "ptable_lift tcb s \<equiv> \<lambda>addr.
-   option_case None (\<lambda>(base, bits, rights). Some (base + (addr && mask bits)))
+   case_option None (\<lambda>(base, bits, rights). Some (base + (addr && mask bits)))
      (get_page_info (\<lambda>obj. get_arch_obj (kheap s obj))
         (get_pd_of_thread (kheap s) (arch_state s) tcb) addr)"
 definition
   ptable_rights :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> word32 \<Rightarrow> vm_rights" where
  "ptable_rights tcb s \<equiv> \<lambda>addr.
-  option_case {} (snd o snd)
+  case_option {} (snd o snd)
      (get_page_info (\<lambda>obj. get_arch_obj (kheap s obj))
         (get_pd_of_thread (kheap s) (arch_state s) tcb) addr)"
 

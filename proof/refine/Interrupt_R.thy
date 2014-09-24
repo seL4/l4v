@@ -667,9 +667,9 @@ lemma updateTimeSlice_sym_refs[wp]:
    apply simp
   apply (erule_tac f1 = sym_refs in arg_cong[THEN iffD1,rotated])
   apply (rule ext)
-  apply (subst the.simps)
+  apply (subst option.sel)
   apply (subst fst_conv)+
-  apply (clarsimp simp:projectKO_eq the.simps
+  apply (clarsimp simp:projectKO_eq option.sel
     projectKO_opt_tcb split:Structures_H.kernel_object.splits)
   apply (simp add:objBits_simps)
   apply (frule_tac s' = s and 

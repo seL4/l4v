@@ -474,7 +474,7 @@ proof -
   also
   from len_c len_x cref' 32
   have "\<dots> = (replicate (32 - cbits) False) @ take cbits xs"
-    by (simp add: bl_shiftr word_size add_ac)
+    by (simp add: bl_shiftr word_size add.commute add.left_commute)
   also
   from len_x len_c 32
   have "\<dots> = to_bl (of_bl (take cbits (drop (length guard) cref)) :: word32)"
@@ -1073,7 +1073,7 @@ lemma prev_next_update:
 
 lemmas modify_map_prev_next_up [simp] =
   modify_map_com [where f="cteMDBNode_update (mdbNext_update f)" and
-                        g="cteMDBNode_update (mdbPrev_update f')", standard,
+                        g="cteMDBNode_update (mdbPrev_update f')" for f f',
                   OF prev_next_update]
 
 lemma update_prev_next_trancl:
@@ -1769,7 +1769,7 @@ lemma cte_at_cte_map_in_obj_bits:
     apply (rule word_power_less_1)
     apply (simp add: cte_level_bits_def word_bits_def)
    apply (simp add: power_add)
-   apply (subst mult_commute, rule word_mult_less_mono1)
+   apply (subst mult.commute, rule word_mult_less_mono1)
      apply (rule of_bl_length)
      apply (simp add: word_bits_def)
     apply simp
@@ -1816,10 +1816,10 @@ lemma cte_map_inj:
   apply (thin_tac "?b \<le> ?a")+
   apply (rule notE[OF neq])
   apply (insert cte_at_length_limit [OF c1 vo])
-  apply (simp add: shiftl_t2n[where n=4, simplified, simplified mult_ac, symmetric]
+  apply (simp add: shiftl_t2n[where n=4, simplified, simplified mult.commute, symmetric]
                    word_bits_def cte_level_bits_def Pair_fst_snd_eq)
   apply (insert cte_at_cref_len[where p="fst p" and c="snd p" and c'="snd p'", simplified, OF c1])
-  apply (simp add: c2)
+  apply (simp add: c2 Pair_fst_snd_eq)
   apply (subst rev_is_rev_conv[symmetric])
   apply (rule nth_equalityI)
    apply simp
@@ -1882,7 +1882,7 @@ lemma cte_map_pulls_tcb_to_abstract:
                         ARM_Structs_A.arch_kernel_obj.split_asm)
   apply (drule tcb_cases_related2)
   apply clarsimp
-  apply (frule(1) cte_wp_at_tcbI [OF _ _ TrueI, where t="(a, b)", standard, simplified])
+  apply (frule(1) cte_wp_at_tcbI [OF _ _ TrueI, where t="(a, b)" for a b, simplified])
   apply (erule(5) cte_map_inj_eq [OF sym])
   done
 
@@ -2081,7 +2081,7 @@ lemma set_cap_not_quite_corres:
              domain_time t = ksDomainTime t'"
   using cr
   apply (clarsimp simp: updateCap_def in_monad)
-  apply (drule use_valid [OF _ getCTE_sp[where P="\<lambda>s. s2 = s"], OF _ refl, standard])
+  apply (drule use_valid [OF _ getCTE_sp[where P="\<lambda>s. s2 = s" for s2], OF _ refl])
   apply clarsimp
   apply (drule(7) set_cap_not_quite_corres_prequel)
     apply simp
@@ -2131,7 +2131,7 @@ lemma updateCap_stuff:
          (pspace_aligned' s' \<longrightarrow> pspace_aligned' s'') \<and>
          (pspace_distinct' s' \<longrightarrow> pspace_distinct' s'')" using assms
   apply (clarsimp simp: updateCap_def in_monad)
-  apply (drule use_valid [where P="\<lambda>s. s2 = s", OF _ getCTE_sp refl, standard])
+  apply (drule use_valid [where P="\<lambda>s. s2 = s" for s2, OF _ getCTE_sp refl])
   apply (rule conjI)
    apply (erule use_valid [OF _ setCTE_ctes_of_wp])
    apply (clarsimp simp: cte_wp_at_ctes_of modify_map_apply)
@@ -2162,7 +2162,7 @@ lemma pspace_relation_cte_wp_atI':
   apply (subgoal_tac "n = x - y", clarsimp)
    apply (drule tcb_cases_related2, clarsimp)
    apply (intro exI, rule conjI)
-    apply (erule(1) cte_wp_at_tcbI[where t="(a, b)", simplified, standard])
+    apply (erule(1) cte_wp_at_tcbI[where t="(a, b)" for a b, simplified])
     apply fastforce
    apply simp
   apply clarsimp
@@ -2547,7 +2547,7 @@ proof (simp add: descendants_of'_def subset_iff,
     have mdb_next_eq: "\<And>x y. m' \<turnstile> x \<leadsto> y = m \<turnstile> x \<leadsto> y"
       by (simp add: mdb_next_unfold m'_def m)
     have mdb_next_eq_trans: "\<And>x y. m' \<turnstile> x \<leadsto>\<^sup>+ y = m \<turnstile> x \<leadsto>\<^sup>+ y"
-      apply (rule arg_cong[where f="\<lambda>S. v \<in> S\<^sup>+", standard])
+      apply (rule arg_cong[where f="\<lambda>S. v \<in> S\<^sup>+" for v])
       apply (simp add: set_eq_iff mdb_next_eq)
       done
 
@@ -2805,7 +2805,7 @@ lemma cap_update_corres:
    apply (simp add: cte_wp_at_caps_of_state del: split_paired_All)
    apply (intro allI impI)
    apply (erule_tac x=c in allE)
-   apply (erule impE[where P="\<exists>y. v = Some y", standard])
+   apply (erule impE[where P="\<exists>y. v = Some y" for v])
     apply (clarsimp simp: null_filter_def is_zombie_def split: split_if_asm)
    apply (auto elim!: modify_map_casesE del: disjE)[1]
   apply (case_tac "ctes_of b (cte_map slot)")
@@ -4222,19 +4222,10 @@ lemma nullMDBNode_pointers[simp]:
 (* Arguments to capability_case need to be in the same order as the constructors in 'capabilility' data type *)
 lemma revokable'_fold:
   "revokable' srcCap cap =
-  (capability_case \<bottom>                                                    (* ThreadCap        *)
-                   False                                                (* NullCap          *)
-                   (\<lambda>x xa xb xc. capAEPBadge cap \<noteq> capAEPBadge srcCap)  (* AsyncEndpointCap *)
-                   (\<lambda>c. isIRQControlCap srcCap)                         (* IRQHandlerCap    *)
-                   (\<lambda>x xa xb xc xd. capEPBadge cap \<noteq> capEPBadge srcCap) (* EndpointCap      *)
-                   False                                                (* DomainCap        *)
-                   (\<lambda>word zombie_type nat. False)                       (* Zombie           *)
-                   \<bottom>                                                    (* ArchObjectCap    *)
-                   (\<lambda>x b. False)                                        (* ReplyCap         *)
-                   (\<lambda>x n1 n2. True)                                     (* UntypedCap       *)
-                   (\<lambda>word1 nat1 word2 nat. False)                       (* CNodeCap         *)
-                   False                                                (* IRQControlCap    *)
-                   cap)"
+  (case cap of capability.AsyncEndpointCap _ _ _ _ \<Rightarrow> capAEPBadge cap \<noteq> capAEPBadge srcCap
+     | capability.IRQHandlerCap _ \<Rightarrow> isIRQControlCap srcCap
+     | capability.EndpointCap _ _ _ _ _ \<Rightarrow> capEPBadge cap \<noteq> capEPBadge srcCap
+     | capability.UntypedCap _ _ _ \<Rightarrow> True | _ \<Rightarrow> False)"
   by (simp add: revokable'_def isCap_simps split: capability.splits)
 
 lemma cap_relation_untyped_free_index_update:
@@ -5235,12 +5226,12 @@ lemma mdb_inv_preserve_modify_map:
                     (modify_map m' slot (cteMDBNode_update f))"
   apply (clarsimp simp:mdb_inv_preserve_def split:if_splits)
   apply (intro conjI)
-    apply (clarsimp simp:modify_map_dom)
+     apply (clarsimp simp:modify_map_dom)
     apply (clarsimp simp:modify_map_def split:if_splits)+
-    apply (clarsimp simp:Option.map_def split:option.splits if_splits)
-    apply (drule_tac x = p in spec)+
-    apply (intro conjI allI impI)
-      apply (clarsimp simp:mdb_next_def split:if_splits)+
+  apply (clarsimp simp:option_map_def o_def split:option.splits if_splits)
+  apply (drule_tac x = p in spec)+
+  apply (intro allI conjI impI)
+     apply (clarsimp simp:mdb_next_def split:if_splits)+
   done
 
 lemma mdb_inv_preserve_updateCap:
@@ -5264,6 +5255,15 @@ lemma updateCap_ctes_of_wp:
   updateCap ptr cap
   \<lbrace>\<lambda>r s.  P (ctes_of s)\<rbrace>"
   by (rule validI, simp add: updateCap_stuff)
+
+lemma updateCap_cte_wp_at':
+  "\<lbrace>\<lambda>s. cte_at' ptr s \<longrightarrow> Q (cte_wp_at' (\<lambda>cte. if p = ptr then P' (CTE cap (cteMDBNode cte)) else P' cte) p s)\<rbrace>
+        updateCap ptr cap \<lbrace>\<lambda>rv s. Q (cte_wp_at' P' p s)\<rbrace>"
+  apply (simp add:updateCap_def cte_wp_at_ctes_of)
+  apply (wp setCTE_ctes_of_wp getCTE_wp)
+  apply (clarsimp simp: cte_wp_at_ctes_of split del: split_if)
+  apply (case_tac cte, auto split: split_if)
+  done
 
 lemma updateCapFreeIndex_mdb_chain_0:
   assumes preserve:"\<And>m m'. mdb_inv_preserve m m' \<Longrightarrow> mdb_inv_preserve (Q m) (Q m')"
@@ -5824,7 +5824,7 @@ lemma cins_corres:
              apply (clarsimp simp: exec_gets update_cdt_def bind_assoc
                               set_cdt_def
                               exec_get exec_put set_original_def modify_def simp del: fun_upd_apply
-                                | (rule bind_execI[where f="cap_insert_ext x y z i p",standard], clarsimp simp: exec_gets exec_get put_def mdb_insert_abs.cap_insert_ext_det_def2 update_cdt_list_def set_cdt_list_def, rule refl))+
+                                | (rule bind_execI[where f="cap_insert_ext x y z i p" for x y z i p], clarsimp simp: exec_gets exec_get put_def mdb_insert_abs.cap_insert_ext_det_def2 update_cdt_list_def set_cdt_list_def, rule refl))+
              apply (clarsimp simp: put_def state_relation_def)
              apply (drule updateCap_stuff)
              apply clarsimp
@@ -6380,7 +6380,7 @@ lemma mdb_cap_update:
 
 lemmas modify_map_mdb_cap =
   modify_map_com [where f="cteMDBNode_update f" and
-                        g="cteCap_update f'", standard,
+                        g="cteCap_update f'" for f f',
                   OF mdb_cap_update]
 
 lemma prev_leadstoD:
@@ -6615,6 +6615,10 @@ lemma badge_n':
    \<exists>cap' node'. m p = Some (CTE cap' node') \<and> mdbFirstBadged node = mdbFirstBadged node'"
   by (fastforce simp add: n'_def elim!: modify_map_casesE)
 
+lemma cteMDBNode_update_split_asm:
+  "P (cteMDBNode_update f cte) = (\<not> (\<exists>cap mdb. cte = CTE cap mdb \<and> \<not> P (CTE cap (f mdb))))"
+  by (cases cte, simp)
+
 lemma revokable:
   "n p = Some (CTE cap node) \<Longrightarrow>
   if p = src then mdbRevocable node = mdbRevocable dest_node
@@ -6632,12 +6636,8 @@ lemma revokable:
    apply (simp add: n_def n'_def modify_map_apply)
    apply (simp add: modify_map_def const_def split: split_if_asm)
   apply (clarsimp simp: n_def)
-  apply (clarsimp simp add: modify_map_def option_map_def split: split_if_asm option.splits)
-     apply (case_tac aa, clarsimp, erule revokable_n')
-    apply (case_tac a, clarsimp, erule revokable_n')
-   apply (case_tac a, clarsimp, erule revokable_n')
-  apply (rule revokable_n')
-  apply (erule sym)
+  apply (clarsimp simp add: modify_map_def map_option_case split: split_if_asm option.splits)
+     apply (auto split: cteMDBNode_update_split_asm elim: revokable_n' revokable_n'[OF sym])
   done
 
 lemma badge_n:
@@ -6657,12 +6657,8 @@ lemma badge_n:
    apply (simp add: n_def n'_def modify_map_apply)
    apply (simp add: modify_map_def const_def split: split_if_asm)
   apply (clarsimp simp: n_def)
-  apply (clarsimp simp add: modify_map_def option_map_def split: split_if_asm option.splits)
-     apply (case_tac aa, clarsimp, erule badge_n')
-    apply (case_tac a, clarsimp, erule badge_n')
-   apply (case_tac a, clarsimp, erule badge_n')
-  apply (rule badge_n')
-  apply (erule sym)
+  apply (clarsimp simp add: modify_map_def map_option_case split: split_if_asm option.splits)
+     apply (auto split: cteMDBNode_update_split_asm elim: badge_n' badge_n'[OF sym])
   done
 
 lemma n'_cap:
@@ -6983,6 +6979,7 @@ lemma next_m_n:
    apply (case_tac "mdbPrev dest_node = p")
     apply (frule dest_prev)
      apply clarsimp
+    apply hypsubst_thin
     apply clarsimp
    apply simp
    apply (case_tac "mdbNext src_node = p")
@@ -7749,7 +7746,6 @@ lemma ensure_no_children_corres:
     apply wp
    apply (rule no_fail_pre, wp)
    apply simp
-  apply clarsimp
   apply (case_tac "mdbNext (cteMDBNode cte) = 0")
    apply (simp add: whenE_def)
    apply (clarsimp simp: returnOk_def corres_underlying_def return_def)
@@ -8817,7 +8813,7 @@ lemma cap_move_corres:
    apply(simp)
   apply (clarsimp simp: exec_gets exec_get exec_put set_cdt_def
                         set_original_def bind_assoc modify_def
-         |(rule bind_execI[where f="cap_move_ext x y z x'",standard], clarsimp simp: mdb_move_abs'.cap_move_ext_det_def2 update_cdt_list_def set_cdt_list_def put_def) | rule refl )+
+         |(rule bind_execI[where f="cap_move_ext x y z x'" for x y z x'], clarsimp simp: mdb_move_abs'.cap_move_ext_det_def2 update_cdt_list_def set_cdt_list_def put_def) | rule refl )+
   apply (clarsimp simp: put_def)
   apply (clarsimp simp: invs'_def valid_state'_def)
   apply (frule updateCap_dynamic_duo, fastforce, fastforce)
@@ -9933,7 +9929,8 @@ lemma distinct_zombies_nonCTE_modify_map:
   apply (simp add: distinct_zombies_def modify_map_def o_def)
   apply (rule_tac f=distinct_zombie_caps in arg_cong)
   apply (rule ext)
-  apply (simp add: option_map_comp o_def)
+  apply simp
+  apply (simp add: map_option.compositionality o_def)
   done
 
 lemma setUntypedCapAsFull_ctes_of_no_0':
@@ -9959,21 +9956,21 @@ lemma mdb_inv_preserve_update_cap_same:
    apply (clarsimp simp:mdb_inv_preserve.sameRegion
      modify_map_def split:if_splits)+
  apply (case_tac "p = dest")
-   apply (clarsimp simp:mdb_next_def Option.map_def split:option.splits )
+   apply (clarsimp simp:mdb_next_def option_map_def split:option.splits )
    apply (intro conjI allI impI)
      apply (rule ccontr,clarify)
      apply (fastforce dest!:iffD2[OF mdb_inv_preserve.dom,OF _ domI])
      apply (rule ccontr,simp)
      apply (fastforce dest!:iffD1[OF mdb_inv_preserve.dom,OF _ domI])
    apply (drule mdb_inv_preserve.mdb_next[where p = dest])
-   apply (clarsimp simp:mdb_next_def Option.map_def split:option.splits)+
+   apply (clarsimp simp:mdb_next_def option_map_def split:option.splits)+
  apply (intro conjI allI impI)
   apply (rule ccontr,clarify)
   apply (fastforce dest!:iffD2[OF mdb_inv_preserve.dom,OF _ domI])
   apply (rule ccontr,simp)
   apply (fastforce dest!:iffD1[OF mdb_inv_preserve.dom,OF _ domI])
  apply (drule_tac p = p in mdb_inv_preserve.mdb_next)
- apply (clarsimp simp:mdb_next_def Option.map_def split:option.splits)
+ apply (clarsimp simp:mdb_next_def option_map_def split:option.splits)
 done
 
 lemma updateCapFreeIndex_dlist:
@@ -10637,7 +10634,7 @@ lemma ifunsafe'_def3:
   done
 
 lemma tree_cte_cteCap_eq:
-  "cte_wp_at' (P \<circ> cteCap) p s = (option_case False P (cteCaps_of s p))"
+  "cte_wp_at' (P \<circ> cteCap) p s = (case_option False P (cteCaps_of s p))"
   apply (simp add: cte_wp_at_ctes_of cteCaps_of_def)
   apply (cases "ctes_of s p", simp_all)
   done
@@ -11460,7 +11457,7 @@ lemma updateMDB_ctes_of_cases:
      updateMDB p f \<lbrace>\<lambda>rv s. P (ctes_of s)\<rbrace>"
   apply (simp add: updateMDB_def split del: split_if)
   apply (rule hoare_pre, wp getCTE_ctes_of)
-  apply (clarsimp simp: modify_map_def option_map_def
+  apply (clarsimp simp: modify_map_def map_option_case
                  split: option.split
           | rule conjI ext | erule rsubst[where P=P])+
   apply (case_tac y, simp)
@@ -11490,11 +11487,7 @@ lemma cte_map_eq_subst:
 lemma revokable_relation_simp:
   "\<lbrakk> (s, s') \<in> state_relation; null_filter (caps_of_state s) p = Some c; ctes_of s' (cte_map p) = Some (CTE cap node) \<rbrakk>
       \<Longrightarrow> mdbRevocable node = is_original_cap s p"
-  apply (cases p, clarsimp simp: state_relation_def revokable_relation_def)
-  apply (elim allE, erule impE, erule exI)
-  apply (elim allE, erule (1) impE)
-  apply simp
-  done
+  by (cases p, clarsimp simp: state_relation_def revokable_relation_def)
 
 lemma setCTE_gsUserPages[wp]:
   "\<lbrace>\<lambda>s. P (gsUserPages s)\<rbrace> setCTE p v \<lbrace>\<lambda>rv s. P (gsUserPages s)\<rbrace>"
@@ -12509,7 +12502,7 @@ lemma cins_corres_simple:
                               exec_get exec_put set_original_def modify_def
                     simp del: fun_upd_apply
 
-               | (rule bind_execI[where f="cap_insert_ext x y z x' y'",standard], clarsimp simp: mdb_insert_abs.cap_insert_ext_det_def2 update_cdt_list_def set_cdt_list_def put_def simp del: fun_upd_apply) | rule refl)+
+               | (rule bind_execI[where f="cap_insert_ext x y z x' y'" for x y z x' y'], clarsimp simp: mdb_insert_abs.cap_insert_ext_det_def2 update_cdt_list_def set_cdt_list_def put_def simp del: fun_upd_apply) | rule refl)+
 
         apply (clarsimp simp: put_def state_relation_def simp del: fun_upd_apply)
         apply (drule updateCap_stuff)
@@ -13710,7 +13703,7 @@ lemma locateSlot_cap_to'[wp]:
   apply (simp add: locateSlot_def)
   apply wp
   apply (clarsimp dest!: isCapDs valid_capAligned
-                   simp: objBits_simps mult_ac capAligned_def)
+                   simp: objBits_simps mult.commute capAligned_def)
   apply (erule bspec)
   apply (case_tac "bits < word_bits")
    apply simp

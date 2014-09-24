@@ -20,14 +20,14 @@ type_synonym caps_observable = "word32 \<times> abstract_cspace \<times> mode \<
 definition monadic_extract_cspace_aobs :: "'z::state_ext state \<Rightarrow> abstract_cspace"
 where "monadic_extract_cspace_aobs s \<equiv> \<lambda>oid cap. 
   (\<exists>ref r.
-    sum_case (\<lambda>x. None) (\<lambda>x. Some x) 
+    case_sum (\<lambda>x. None) (\<lambda>x. Some x) 
       (fst $ the_elem $  fst (lookup_slot_for_thread oid ref s)) = Some r \<and> caps_of_state s (fst r) = Some cap
   )"
 
 definition monadic_extract_cspace_cdlobs :: "cdl_state \<Rightarrow> cdl_cspace"
 where "monadic_extract_cspace_cdlobs s \<equiv> \<lambda>oid cap. 
   (\<exists>ref r.
-    sum_case (\<lambda>x. None) (\<lambda>x. Some x) 
+    case_sum (\<lambda>x. None) (\<lambda>x. Some x) 
       (fst $ the_elem $ fst (lookup_slot oid ref s)) = Some r \<and> opt_cap r s = Some cap
   )"
 
@@ -115,7 +115,7 @@ done
 
 lemma dcorres_dummy_option_corrupt_tcb:
   "dcorres dc \<top> (\<lambda>s. cur_thread s =  cur_thread s' \<and> idle_thread s = idle_thread s' \<and> invs s)
-          (option_case (return ()) corrupt_tcb_intent (transform_current_thread s'))
+          (case_option (return ()) corrupt_tcb_intent (transform_current_thread s'))
           (return x)"
   apply (rule dcorres_expand_pfx)
   apply (clarsimp simp:cdl_current_thread transform_current_thread_def)

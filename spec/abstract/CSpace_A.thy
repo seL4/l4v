@@ -548,29 +548,16 @@ where
  "rec_del (ReduceZombieCall cap slot exposed) s =
   fail s"
   defer
-    apply (simp_all cong: if_cong)[406]
+   apply (simp_all cong: if_cong)[406]
   apply (case_tac x)
   apply (case_tac a)
-    apply (clarsimp simp: False_implies_equals)
-    apply blast
-   apply (clarsimp simp: False_implies_equals)
-   apply blast
+    apply (auto)[2]
   apply (case_tac cap, safe)
-          apply ((force simp: False_implies_equals)+)[10]
+             apply auto[10]
    apply (case_tac bool)
-    apply simp
-    apply (case_tac nat)
-     apply simp
-     apply blast
-    apply simp
-    apply blast
-   apply simp
-   apply (case_tac nat)
-    apply simp
-    apply blast
-   apply simp
-   apply blast
-  apply force
+    apply (case_tac nat, auto)[1]
+   apply (metis (full_types) nat.exhaust)
+  apply simp
   done
 
 text {* Delete a capability by calling the recursive delete operation. *}

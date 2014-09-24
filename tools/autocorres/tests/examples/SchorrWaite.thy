@@ -373,7 +373,7 @@ abbreviation schorr_waite'_measure where
      let stack = (THE stack. schorr_waite'_inv s s0 R p t cond stack)
      in (card {x \<in> R. s[x]\<rightarrow>m = 0}, card {x \<in> set stack. s[x]\<rightarrow>c = 0}, length stack)"
 
-schematic_lemma schorr_waite'_prove_def [standard]:
+schematic_lemma schorr_waite'_prove_def:
   "schorr_waite' root \<equiv> ?A root (s0 :: lifted_globals) (R :: node_C ptr set)"
   apply (subst schorr_waite'_def[abs_def])
   apply (subst whileLoop_add_inv

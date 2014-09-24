@@ -913,7 +913,7 @@ lemma sep_map_take_Suc:
 lemma sep_conj_map_split:
   "(\<And>* map f xs \<and>* f a \<and>* \<And>* map f ys)
   = (\<And>* map f (xs @ a # ys))"
-  by (metis map.simps(2) map_append sep_list_conj_Cons sep_list_conj_append)
+  by (metis list.map(2) map_append sep_list_conj_Cons sep_list_conj_append)
 
 
 (*

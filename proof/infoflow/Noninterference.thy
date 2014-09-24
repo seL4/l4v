@@ -393,8 +393,6 @@ lemma kernel_entry_if_integrity:
    apply simp
    apply(subgoal_tac "kheap st (cur_thread st) \<noteq> None")
     apply clarsimp
-    apply(rule state.equality, simp_all)
-    apply(rule ext, simp_all)
    apply(drule tcb_at_invs, clarsimp simp:  tcb_at_def get_tcb_def split: kernel_object.splits option.splits)
   apply(rule conjI)
    apply assumption
@@ -722,7 +720,7 @@ lemma partitionIntegrity_subjectAffects_mem:
    apply(drule subsetD[rotated, OF _ Access.ptr_range_subset[where x="0", simplified]])
       apply(blast intro: arm_globals_frame_aligned[OF invs_arch_state invs_psp_aligned])
      apply simp+
-  apply(erule option_caseE)
+  apply(erule case_optionE)
    apply blast
   (* need to appeal to object_integrity to reason about the tcb state change *)
 
@@ -1809,7 +1807,7 @@ lemma relation_preserved_across_sub_big_steps:
            (sa,sa') \<in> data_type.Step A () \<and> (ta,ta') \<in> data_type.Step A () \<longrightarrow>
               X sa' ta'\<rbrakk> \<Longrightarrow>
       X s' t'"
-  apply clarsimp
+  apply hypsubst_thin
   apply(induct as arbitrary: s t s' t' rule: rev_induct)
    apply(drule sub_big_steps_Nil)+
    apply simp
@@ -1821,7 +1819,7 @@ lemma relation_preserved_across_sub_big_steps:
   apply(drule_tac x=s'a in meta_spec)
   apply(drule_tac x=s'aa in meta_spec)
   apply simp
-  apply fastforce
+  apply metis
   done
 
 (* FIXME: move these next lemmas culminating in reads_respects_g 
@@ -1850,7 +1848,7 @@ lemma get_thread_state_reads_respects_g:
    apply(drule_tac Q="\<lambda>rv s. s = st \<and> idle rv" in use_valid[OF _ gts_wp])
     apply(simp add: valid_idle_def)
     apply(clarsimp simp: st_tcb_at_def obj_at_def)
-   apply(drule_tac Q="\<lambda>rv s. s = t \<and> idle rv" in use_valid[OF _ gts_wp])
+   apply(drule_tac Q="\<lambda>rv s. s = ta \<and> idle rv" in use_valid[OF _ gts_wp])
     apply(simp add: valid_idle_def)
     apply(fastforce simp: st_tcb_at_def obj_at_def reads_equiv_g_def globals_equiv_idle_thread_ptr)
    apply simp
@@ -2134,7 +2132,7 @@ lemma schedule_def2:
 do cur \<leftarrow> gets cur_thread;
    cur_ts \<leftarrow> get_thread_state cur;
    gets scheduler_action >>=
-   scheduler_action_case
+   case_scheduler_action
     (do id \<leftarrow> gets idle_thread;
         assert (runnable cur_ts \<or> cur = id);
         return ()
@@ -2563,7 +2561,7 @@ lemma kernel_schedule_if_confidentiality:
   apply(simp split: prod.splits)
   apply(case_tac s', case_tac t')
   apply(simp add: split_paired_all)
-  apply(frule_tac s=bba and t=bc and aag1="current_aag bba" in use_ev[OF schedule_if_reads_respects_f_g[where st=s0_internal]])
+  apply(frule_tac s=x2 and t=x2a and aag1="current_aag x2" in use_ev[OF schedule_if_reads_respects_f_g[where st=s0_internal]])
        apply assumption
       apply(clarsimp simp: invs_if_def Invs_def current_aag_def)
      apply(clarsimp simp: invs_if_def Invs_def)
@@ -2814,7 +2812,7 @@ lemma kernel_exit_A_if_confidentiality:
   apply(simp split: prod.splits)
   apply(case_tac "fst s'", simp)
   apply(case_tac "fst t'", simp)
-  apply(frule_tac s=bb and t=bc and aag1="current_aag bb" in use_ev2[OF kernel_exit_if_reads_respects_f_g_2[where st=s0_internal]])
+  apply(frule_tac s=x2 and t=x2a and aag1="current_aag x2" in use_ev2[OF kernel_exit_if_reads_respects_f_g_2[where st=s0_internal]])
        apply assumption
       apply(clarsimp simp: invs_if_def Invs_def current_aag_def guarded_pas_domain_def)
      apply(clarsimp simp: invs_if_def Invs_def)
@@ -2825,7 +2823,7 @@ lemma kernel_exit_A_if_confidentiality:
   apply simp
   apply(elim conjE)
   apply(drule state_unchanged[OF kernel_exit_if_inv])+
-  apply(subgoal_tac "ct_running bd = ct_running be")
+  apply(subgoal_tac "ct_running bb = ct_running bc")
    apply simp
    apply(rule reads_equiv_f_g_affects_equiv_uwr)
             apply simp+
@@ -2837,7 +2835,7 @@ lemma kernel_exit_A_if_confidentiality:
      apply(rule partitionIntegrity_refl)
     apply(simp add: sys_mode_of_def)
    apply(simp add: user_context_of_def)
-  apply(frule_tac bd=bd in reads_equiv_g_ct_running_eq[OF reads_equiv_f_g_reads_equiv_g])
+  apply(frule_tac bd=bb in reads_equiv_g_ct_running_eq[OF reads_equiv_f_g_reads_equiv_g])
      apply(fastforce simp: invs_if_def)
     apply(fastforce simp: invs_if_def)
    apply(fastforce simp: reads_equiv_f_g_def reads_equiv_def current_aag_def)
@@ -3390,13 +3388,7 @@ lemma scheduler_affects_equiv_uwr:
 
 lemma cur_domain_reads: "(s,s') \<in> uwr u \<Longrightarrow> is_domain initial_aag (label_for_partition u) (internal_state_if s) \<Longrightarrow> (user_modes (sys_mode_of s) \<longrightarrow> user_context_of s = user_context_of s') \<and> sys_mode_of s = sys_mode_of s'"
   apply (case_tac u)
-  prefer 2
-  apply simp
-  apply (simp add: reads_scheduler_def)+
-  apply (simp add: uwr_def sameFor_def sameFor_subject_def)
-  apply clarify
-  apply (simp(no_asm_use))
-  apply simp
+  apply (auto simp: reads_scheduler_def uwr_def sameFor_def sameFor_subject_def)
   done
 
 lemmas domain_can_read_context = cur_domain_reads[THEN conjunct1]

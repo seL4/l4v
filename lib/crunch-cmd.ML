@@ -31,7 +31,7 @@ val lift_sect = "lift";
 val ignore_del_sect = "ignore_del";
 val unfold_sect = "unfold";
 
-fun read_const lthy = Proof_Context.read_const_proper lthy false;
+fun read_const ctxt = Proof_Context.read_const {proper = true, strict = false} ctxt;
 
 signature CrunchInstance =
 sig
@@ -42,7 +42,7 @@ sig
     val get_precond : term -> term;
     val put_precond : term -> term -> term;
     val pre_thms : thm list;
-    val wpc_tactic : theory -> tactic;
+    val wpc_tactic : Proof.context -> tactic;
     val parse_extra : Proof.context -> string -> term * extra;
     val magic : term;
 end
@@ -123,7 +123,7 @@ fun real_const_from_name const nmspce lthy =
 
 fun get_monad lthy f xs = if is_Const f then
     (* we need the type of the underlying constant to avoid polymorphic
-       constants like If, option_case, K_bind being considered monadic *)
+       constants like If, case_option, K_bind being considered monadic *)
     let val T = dest_Const f |> fst |> read_const lthy |> type_of;
 
     fun is_product v (Type ("Product_Type.prod", [Type ("fun", [Type ("Product_Type.prod", [_,v']), Type ("HOL.bool",[])]), Type ("HOL.bool",[])])) = (v = v')
@@ -218,10 +218,10 @@ fun unfold lthy const triple nmspce =
       val trivial_rule = Thm.trivial triple
       val _ = Pretty.writeln (Pretty.block [Pretty.str "trivial_rule: ", Display.pretty_thm lthy trivial_rule])
       val unfold_rule = trivial_rule
-        |> Simplifier.rewrite_goals_rule [const_def];
+        |> Simplifier.rewrite_goals_rule lthy [const_def];
       val _ = Pretty.writeln (Pretty.block [Pretty.str "unfold_rule: ", Display.pretty_thm lthy unfold_rule])
       val ms = unfold_rule
-        |> Simplifier.rewrite_goals_rule unfold_get_params
+        |> Simplifier.rewrite_goals_rule lthy unfold_get_params
         |> prems_of |> maps (monads_of lthy);
     in if Thm.eq_thm_prop (trivial_rule, unfold_rule)
        then error ("Unfold rule generated for " ^ const ^ " does not apply")
@@ -275,7 +275,7 @@ fun induct_inst lthy const goal nmspce =
       val _ = debug_trace ("induct_inst" ^ Syntax.string_of_term lthy (Thm.prop_of induct_inst));
       val simp_thms = deep_search_thms lthy (base_const |> simps_of) const_term nmspce;
       val induct_inst_simplified = induct_inst
-        |> Simplifier.rewrite_goals_rule (map Simpdata.safe_mk_meta_eq simp_thms);
+        |> Simplifier.rewrite_goals_rule lthy (map Simpdata.safe_mk_meta_eq simp_thms);
       val ms = maps (monads_of lthy) (prems_of induct_inst_simplified);
       val ms' = filter_out (eq_cname (resolve_abbreviated lthy const_term) o head_of) ms;
     in if Thm.eq_thm_prop (trivial_rule, induct_inst)
@@ -289,9 +289,9 @@ fun unfold_data lthy constn goal nmspce nil = (
   | unfold_data lthy constn goal _ [(_, thm)] =
     let
       val trivial_rule = Thm.trivial goal
-      val unfold_rule = Simplifier.rewrite_goals_rule [safe_mk_meta_eq thm] trivial_rule;
+      val unfold_rule = Simplifier.rewrite_goals_rule lthy [safe_mk_meta_eq thm] trivial_rule;
       val ms = unfold_rule
-        |> Simplifier.rewrite_goals_rule unfold_get_params
+        |> Simplifier.rewrite_goals_rule lthy unfold_get_params
         |> prems_of |> maps (monads_of lthy);
     in if Thm.eq_thm_prop (trivial_rule, unfold_rule)
        then error ("Unfold rule given for " ^ constn ^ " does not apply")
@@ -463,7 +463,7 @@ fun crunch cfg pre extra stack const' thms =
                       ORELSE
                       assume_tac n
                       ORELSE
-                      Instance.wpc_tactic (Proof_Context.theory_of lthy''')
+                      Instance.wpc_tactic lthy'''
                       ORELSE
                       safe_tac lthy'''
                       ORELSE
@@ -554,7 +554,7 @@ fun crunch_x atts extra prp_name wpigs consts lthy =
               wps = wps, igs = igs, simps = simps, ig_dels = ig_dels, unfolds = unfolds} pre' extra' [])
             full_const_names [];
 
-        val atts' = map (Attrib.intern_src (Proof_Context.theory_of lthy)) atts;
+        val atts' = map (Attrib.check_src lthy) atts;
 
         val lthy' = fold (fn (name, thm) => add_thm thm atts' name) thms lthy;
     in

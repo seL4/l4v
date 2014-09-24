@@ -96,8 +96,6 @@ lemma dmo_mapM_storeWord_0_invs[wp]:
                         valid_machine_state_def)
   apply (rule conjI)
    apply(erule use_valid[OF _ storeWord_valid_irq_states], simp)
-  apply (clarsimp simp: disj_commute[of "in_user_frame p s", standard])
-  apply (drule_tac x=p in spec, simp)
   apply (erule use_valid)
    apply (simp add: storeWord_def word_rsplit_0)
    apply wp

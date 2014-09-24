@@ -119,7 +119,7 @@ lemma ep_queue_relation_shift:
    apply simp
   apply simp
   apply (simp add: option_map2_def fun_eq_iff
-                   option_map_def)
+                   map_option_case)
   apply (drule_tac x=qHead in spec)+
   apply (clarsimp split: option.split_asm)
   done
@@ -523,8 +523,6 @@ lemma tcb_fields_ineq_helper:
   apply (clarsimp dest!: tcb_aligned'[OF obj_at'_weakenE, OF _ TrueI]
                          ctcb_ptr_to_tcb_ptr_aligned)
   apply (clarsimp simp: field_lvalue_def)
-  apply (subst(asm) field_lookup_offset_eq, fastforce)+
-  apply simp
   apply (subgoal_tac "is_aligned (ptr_val y - ptr_val x) 8")
    apply (drule sym, fastforce simp: is_aligned_def dvd_def)
   apply (erule(1) aligned_sub_aligned)
@@ -574,6 +572,7 @@ lemma tcb_queue_relation2_cong:
    \<And>p. p \<in> set queue' \<Longrightarrow> mp p = mp' p\<rbrakk>
   \<Longrightarrow> tcb_queue_relation2 getNext getPrev mp queue before after =
      tcb_queue_relation2 getNext getPrev mp' queue' before' after'"
+  using [[hypsubst_thin = true]]
   apply clarsimp
   apply (induct queue' arbitrary: before')
    apply simp+
@@ -635,7 +634,7 @@ lemma finaliseCap_True_cases_ccorres:
   apply (cinit lift: cap_' final_' exposed_' cong: call_ignore_cong)
    apply csymbr
    apply (simp add: cap_get_tag_isCap Collect_False del: Collect_const)
-   apply (fold bool_case_If)
+   apply (fold case_bool_If)
    apply (simp add: false_def)
    apply csymbr
    apply wpc
@@ -973,7 +972,7 @@ lemma deleteASID_ccorres:
      apply (rule_tac xf'=ret__int_'
                  and val="from_bool (inv ASIDPool pool (asid && mask asid_low_bits)
                                             = Some pdPtr)"
-                   and R="ko_at' pool a and K (pdPtr \<noteq> 0)"
+                   and R="ko_at' pool x2 and K (pdPtr \<noteq> 0)"
                 in ccorres_symb_exec_r_known_rv_UNIV[where R'=UNIV])
         apply (vcg, clarsimp)
         apply (clarsimp dest!: rf_sr_cpspace_asidpool_relation)
@@ -998,7 +997,7 @@ lemma deleteASID_ccorres:
          apply (rule ccorres_move_c_guard_ap)
          apply (rule ccorres_Guard_Seq)+
          apply (rule ccorres_split_nothrow_novcg_dc)
-            apply (rule_tac P="ko_at' pool a" in ccorres_from_vcg[where P'=UNIV])
+            apply (rule_tac P="ko_at' pool x2" in ccorres_from_vcg[where P'=UNIV])
             apply (rule allI, rule conseqPre, vcg)
             apply clarsimp
             apply (rule cmap_relationE1[OF rf_sr_cpspace_asidpool_relation],
@@ -1110,7 +1109,7 @@ lemma pageTableMapped_ccorres:
    apply (simp add: ignoreFailure_def catch_def
                     bindE_bind_linearise liftE_def
                del: Collect_const cong: call_ignore_cong)
-   apply (rule ccorres_split_nothrow_novcg_sum_case)
+   apply (rule ccorres_split_nothrow_novcg_case_sum)
          apply clarsimp
          apply (ctac (no_vcg) add: findPDForASID_ccorres)
         apply ceqv
@@ -1236,7 +1235,7 @@ lemma Arch_finaliseCap_ccorres:
    apply (simp add: ArchRetype_H.finaliseCap_def cap_get_tag_isCap_ArchObject
                del: Collect_const)
    apply (wpc, simp_all add: isCap_simps Collect_False Collect_True
-                             bool_case_If
+                             case_bool_If
                         del: Collect_const)[1]
        apply (rule ccorres_if_lhs)
         apply (simp add: from_bool_0 true_def)
@@ -1253,7 +1252,7 @@ lemma Arch_finaliseCap_ccorres:
       apply (frule(1) cap_get_tag_isCap_unfolded_H_cap)
       apply (frule small_frame_cap_is_mapped_alt)
       apply (clarsimp simp: cap_small_frame_cap_lift cap_to_H_def
-                            option_case_over_if
+                            case_option_over_if
                      elim!: ccap_relationE simp del: Collect_const)
       apply (rule ccorres_rhs_assoc)+
       apply csymbr
@@ -1271,7 +1270,7 @@ lemma Arch_finaliseCap_ccorres:
      apply (frule(1) cap_get_tag_isCap_unfolded_H_cap)
      apply (frule frame_cap_is_mapped_alt)
      apply (clarsimp simp: cap_frame_cap_lift cap_to_H_def
-                           option_case_over_if
+                           case_option_over_if
                     elim!: ccap_relationE simp del: Collect_const)
      apply (rule ccorres_Cond_rhs_Seq, simp_all del: Collect_const)[1]
       apply (rule ccorres_rhs_assoc)+
@@ -1289,7 +1288,7 @@ lemma Arch_finaliseCap_ccorres:
      apply csymbr
      apply (frule cap_get_tag_isCap_unfolded_H_cap)
      apply (clarsimp simp: cap_page_table_cap_lift cap_to_H_def
-                           option_case_over_if if_1_0_0
+                           case_option_over_if if_1_0_0
                     elim!: ccap_relationE
                  simp del: Collect_const)
      apply (rule ccorres_Cond_rhs_Seq)
@@ -1305,7 +1304,7 @@ lemma Arch_finaliseCap_ccorres:
      apply (rule return_Null_ccorres)
     apply (simp only: bool.simps)
     apply (simp cong: option.case_cong
-                 add: option_case_If)
+                 add: case_option_If)
     apply (rule ccorres_cond_false_seq)
     apply simp
     apply (rule return_Null_ccorres)
@@ -1318,7 +1317,7 @@ lemma Arch_finaliseCap_ccorres:
     apply (simp only: if_1_0_0 simp_thms)
     apply (frule cap_get_tag_isCap_unfolded_H_cap)
     apply (clarsimp simp: cap_page_directory_cap_lift cap_to_H_def
-                          option_case_over_if
+                          case_option_over_if
                    elim!: ccap_relationE simp del: Collect_const)
      apply (rule ccorres_Cond_rhs_Seq)
      apply (rule ccorres_rhs_assoc)+
@@ -1330,7 +1329,7 @@ lemma Arch_finaliseCap_ccorres:
      apply wp
     apply simp
     apply (rule return_Null_ccorres)
-   apply (simp cong: option.case_cong add: option_case_If)
+   apply (simp cong: option.case_cong add: case_option_If)
    apply (rule ccorres_cond_false_seq, simp)
    apply (rule return_Null_ccorres)
   apply (clarsimp simp: from_bool_0 Collect_const_mem)
@@ -1548,7 +1547,7 @@ lemma getIRQSlot_ccorres_stuff:
      = Ptr (irq_node' s + 2 ^ objBits (x :: cte) * ucast irq)"
   apply (clarsimp simp add: rf_sr_def cstate_relation_def Let_def
                             cinterrupt_relation_def)
-  apply (simp add: objBits_simps size_of_def mult_ac of_int_uint_ucast )
+  apply (simp add: objBits_simps size_of_def mult.commute mult.left_commute of_int_uint_ucast )
   done
 
 lemma deletingIRQHandler_ccorres:
@@ -1689,7 +1688,7 @@ lemma finaliseCap_ccorres:
                      less_imp_neq Let_def)
     apply (thin_tac "?a = ?b")+
     apply (subgoal_tac "?P")
-     apply (subst add_commute, subst unatSuc, assumption)+
+     apply (subst add.commute, subst unatSuc, assumption)+
      apply (rule conjI)
       apply (rule word_eqI)
       apply (simp add: word_size word_ops_nth_size nth_w2p
@@ -1702,7 +1701,7 @@ lemma finaliseCap_ccorres:
      apply (simp add: word_size word_ops_nth_size nth_w2p
                       is_aligned_nth less_Suc_eq_le)
      apply (safe, simp_all)[1]
-    apply (subst add_commute, subst eq_diff_eq[symmetric])
+    apply (subst add.commute, subst eq_diff_eq[symmetric])
     apply (clarsimp simp: minus_one_norm)
    apply (rule ccorres_if_lhs)
     apply (simp add: Let_def getThreadCSpaceRoot_def locateSlot_conv
@@ -1730,7 +1729,7 @@ lemma finaliseCap_ccorres:
                        word_bool_alg.conj_disj_distrib2
                        word_bw_assocs)
       apply (simp add: objBits_simps ctcb_ptr_to_tcb_ptr_def)
-      apply (frule is_aligned_add_helper[where p="tcbptr - ctcb_offset" and d=ctcb_offset, standard])
+      apply (frule is_aligned_add_helper[where p="tcbptr - ctcb_offset" and d=ctcb_offset for tcbptr])
        apply (simp add: ctcb_offset_def)
       apply (simp add: mask_def irq_opt_relation_def)
      apply (simp add: cap_get_tag_isCap)

@@ -265,10 +265,10 @@ where
   od"
 
 definition
-  monadic_option_relation_form :: "('a \<Rightarrow> ('s, 'b) nondet_monad)
+  monadic_rel_optionation_form :: "('a \<Rightarrow> ('s, 'b) nondet_monad)
       \<Rightarrow> (('a \<times> 's) option \<times> ('b \<times> 's) option) set"
 where
- "monadic_option_relation_form f =
+ "monadic_rel_optionation_form f =
     {(x, y). (x \<noteq> None \<and> y \<noteq> None \<and> the y \<in> fst (split f (the x)))
            \<or> (x \<noteq> None \<and> y = None \<and> snd (split f (the x)))
            \<or> (x = None \<and> y = None)}"
@@ -279,8 +279,8 @@ where
  "monadic_option_dest S = (Some -` S, None \<in> S)"
 
 lemma use_option_form:
-  "f x = (\<lambda>s. monadic_option_dest  (monadic_option_relation_form f `` {Some (x, s)}))"
-  by (simp add: monadic_option_relation_form_def monadic_option_dest_def)
+  "f x = (\<lambda>s. monadic_option_dest  (monadic_rel_optionation_form f `` {Some (x, s)}))"
+  by (simp add: monadic_rel_optionation_form_def monadic_option_dest_def)
 
 lemma ex_option: " (\<exists>x. P x) = ((\<exists>y. P (Some y)) \<or> P None)"
   apply safe
@@ -289,9 +289,9 @@ lemma ex_option: " (\<exists>x. P x) = ((\<exists>y. P (Some y)) \<or> P None)"
 
 lemma use_option_form_bind:
   "f x >>= g = (\<lambda>s. monadic_option_dest
-       ((monadic_option_relation_form f O monadic_option_relation_form g) `` {Some (x, s)}))"
+       ((monadic_rel_optionation_form f O monadic_rel_optionation_form g) `` {Some (x, s)}))"
   apply (rule ext)
-  apply (simp add: monadic_option_relation_form_def monadic_option_dest_def
+  apply (simp add: monadic_rel_optionation_form_def monadic_option_dest_def
                    bind_def split_def)
   apply (simp add: relcomp_unfold ex_option image_def Pair_fst_snd_eq Bex_def)
   apply fastforce
@@ -301,7 +301,7 @@ definition
   monadic_trancl :: "('a \<Rightarrow> ('s, 'a) nondet_monad)
        \<Rightarrow> 'a \<Rightarrow> ('s, 'a) nondet_monad"
 where
- "monadic_trancl f x = (\<lambda>s. monadic_option_dest ((monadic_option_relation_form f)\<^sup>* `` {Some (x, s)}))"
+ "monadic_trancl f x = (\<lambda>s. monadic_option_dest ((monadic_rel_optionation_form f)\<^sup>* `` {Some (x, s)}))"
 
 definition
   monadic_trancl_preemptible ::
@@ -432,7 +432,7 @@ definition
   ep_cancel_badged_sends :: "cdl_object_id \<Rightarrow> cdl_badge \<Rightarrow> unit k_monad"
 where
   "ep_cancel_badged_sends ep badge \<equiv>
-    modify (\<lambda>s. s\<lparr>cdl_objects := Option.map
+    modify (\<lambda>s. s\<lparr>cdl_objects := map_option
         (\<lambda>obj. case obj of
             Tcb t \<Rightarrow>
               if (is_thread_blocked_on_endpoint t ep

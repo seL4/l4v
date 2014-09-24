@@ -1099,7 +1099,7 @@ lemma double_pc_reds:
 definition
   merge_opt :: "'a option \<Rightarrow> 'a option \<Rightarrow> 'a option"
 where
-  "merge_opt opt opt' = option_case opt' Some opt"
+  "merge_opt opt opt' = case_option opt' Some opt"
 
 lemma merge_opt_simps[simp]:
   "merge_opt (Some x) v = Some x"

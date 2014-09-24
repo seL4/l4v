@@ -428,7 +428,7 @@ lemma is_aligned_2_upto_enum_step_mem:
   apply(clarsimp simp: upto_enum_step_shift_red[where us=2, simplified] word_size_def)
   apply(erule aligned_add_aligned)
     apply(rule is_alignedI)
-    apply(simp add: mult_commute)
+    apply(simp add: mult.commute)
    apply(simp add: word_bits_conv)
   done
 
@@ -452,7 +452,7 @@ lemma ptr_range_subset:
     apply assumption
    apply (fold word_bits_def, assumption)
   apply(erule order_trans)
-  apply(subgoal_tac "ptr + of_nat xa * 4 + 2\<^sup>2 - 1 = ptr + (3 + of_nat xa * 4)")
+  apply(subgoal_tac "ptr + of_nat xaa * 4 + 2\<^sup>2 - 1 = ptr + (3 + of_nat xaa * 4)")
    apply(subgoal_tac "ptr + 2 ^ bits - 1 = ptr + (2 ^ bits - 1)")
     apply(erule ssubst)+
     apply(rule word_plus_mono_right)     
@@ -464,7 +464,7 @@ lemma ptr_range_subset:
     apply(simp_all)
   apply(drule (2) word_less_power_trans_ofnat[where 'a=32, folded word_bits_def])
   apply simp
-  apply(subst add_commute)
+  apply(subst add.commute)
   apply(erule is_aligned_add_less_t2n)
   apply(simp_all)
   done
@@ -565,7 +565,7 @@ lemma create_word_objects_globals_equiv:
      apply simp
     apply assumption
    apply(fastforce dest: unat_less_helper)
-  apply(clarsimp simp: mult_commute)
+  apply(clarsimp simp: mult.commute)
   done
 
 lemma create_word_objects_reads_respects_g:
@@ -715,7 +715,7 @@ lemma word_range_max:
    prefer 2
    apply(rule_tac sz=n in is_aligned_no_wrap')
     apply(rule is_alignedI)
-    apply(subst mult_commute, rule refl)
+    apply(subst mult.commute, rule refl)
    apply simp
   apply(rule word_less_sub_1)
   apply(rule word_mod_less_divisor)
@@ -962,8 +962,7 @@ lemma pspace_distinct_def':
   "pspace_distinct \<equiv> \<lambda>s. \<forall>x y ko ko'.
              kheap s x = Some ko \<and> kheap s y = Some ko' \<and> x \<noteq> y \<longrightarrow>
              obj_range x ko \<inter> obj_range y ko' = {}"
-  apply(fastforce simp: pspace_distinct_def obj_range_def diff_def add_assoc)
-  done
+  by(auto simp: pspace_distinct_def obj_range_def add.assoc field_simps)
 
 lemma page_caps_do_not_overlap_arm_globals_frame:
   "\<lbrakk>cte_wp_at (op = (ArchObjectCap (PageCap word fun vmpage_size option))) slot s; valid_objs s;
@@ -1250,7 +1249,7 @@ region_in_kernel_window
                                   apply(simp add: shiftl_t2n)
                                   apply(subst unat_mult_power_lem)
                                   apply(erule range_cover.string)
-                                 apply(simp add: mult_commute)
+                                 apply(simp add: mult.commute)
                                 apply(fastforce intro!: word_object_range_cover_globalsI)
                                apply(fastforce simp: ptr_range_def bits_of_UntypedCap p_assoc_help)
                               apply fastforce
@@ -1269,7 +1268,7 @@ region_in_kernel_window
                   of_nat (length list) * 2 ^ obj_bits_api apiobject_type nat -
                   1} =
           {}")
-                         apply(subgoal_tac "word2 && mask sz = 0", clarsimp simp: shiftl_t2n mult_commute)
+                         apply(subgoal_tac "word2 && mask sz = 0", clarsimp simp: shiftl_t2n mult.commute)
                          apply(erule subst, rule mask_neg_mask_is_zero)
                         apply(rule usable_range_disjoint, simp+)
                          apply(fastforce elim: ex_cte_cap_wp_to_weakenE)
@@ -1285,13 +1284,13 @@ region_in_kernel_window
                   apply(fastforce intro!: cte_wp_at_pspace_no_overlapI simp: cte_wp_at_sym)
                  apply(rule disjI1)
                  apply(simp add: free_index_of_UntypedCap)
-                 apply(simp add: mask_out_sub_mask add_commute mult_commute shiftl_t2n)
+                 apply(simp add: mask_out_sub_mask add.commute mult.commute shiftl_t2n)
                  apply(erule order_trans)
                  apply(simp add: range_cover_unat)
-                apply(simp add: mask_out_sub_mask add_commute mult_commute)
+                apply(simp add: mask_out_sub_mask add.commute mult.commute)
                 apply (rule le_trans[OF unat_plus_gt])
                 apply(subst range_cover.unat_of_nat_n_shift, simp+)
-                apply(simp add: range_cover.range_cover_compare_bound[simplified add_commute])
+                apply(simp add: range_cover.range_cover_compare_bound[simplified add.commute])
                apply(simp add: bits_of_UntypedCap)+
             apply(fastforce intro!: word_object_range_cover_globalsI)
            apply(drule_tac x="UntypedCap (word2 && ~~ mask sz) sz idx" in spec)
@@ -1305,7 +1304,7 @@ region_in_kernel_window
        apply(drule range_cover_subset', simp)
        apply(erule subset_trans)
        apply(simp add: blah word_and_le2)
-      apply(simp add: shiftl_t2n mask_out_sub_mask add_commute mult_commute)
+      apply(simp add: shiftl_t2n mask_out_sub_mask add.commute mult.commute)
       apply(simp add: mask_out_sub_mask[symmetric])
       apply(rule usable_range_disjoint, simp+)
        apply(fastforce elim: ex_cte_cap_wp_to_weakenE)
@@ -1461,7 +1460,7 @@ word_object_range_cover_globals apiobject_type word2
                               apply(simp add: shiftl_t2n)
                               apply(subst unat_mult_power_lem)
                               apply(erule range_cover.string)
-                             apply(simp add: mult_commute)
+                             apply(simp add: mult.commute)
                             apply(fastforce intro!: word_object_range_cover_globalsI)
                            apply(fastforce simp: ptr_range_def bits_of_UntypedCap p_assoc_help)
                           apply(fastforce simp: bits_of_UntypedCap)
@@ -1482,7 +1481,7 @@ word_object_range_cover_globals apiobject_type word2
                   of_nat (length list) * 2 ^ obj_bits_api apiobject_type nat -
                   1} =
           {}")
-                   apply(subgoal_tac "word2 && mask sz = 0", clarsimp simp: shiftl_t2n mult_commute)
+                   apply(subgoal_tac "word2 && mask sz = 0", clarsimp simp: shiftl_t2n mult.commute)
                    apply(erule subst, rule mask_neg_mask_is_zero)
                   apply(rule usable_range_disjoint, simp+)
                    apply(fastforce elim: ex_cte_cap_wp_to_weakenE)
@@ -1500,13 +1499,13 @@ word_object_range_cover_globals apiobject_type word2
            apply(rule conjI)
             apply(rule disjI1)
             apply(simp add: free_index_of_UntypedCap)
-            apply(simp add: mask_out_sub_mask add_commute mult_commute shiftl_t2n)
+            apply(simp add: mask_out_sub_mask add.commute mult.commute shiftl_t2n)
             apply(erule order_trans)
             apply(simp add: range_cover_unat)
-           apply(simp add: mask_out_sub_mask add_commute mult_commute bits_of_UntypedCap)
+           apply(simp add: mask_out_sub_mask add.commute mult.commute bits_of_UntypedCap)
            apply (rule le_trans[OF unat_plus_gt])
            apply(subst range_cover.unat_of_nat_n_shift, simp+)
-           apply(simp add: range_cover.range_cover_compare_bound[simplified add_commute])
+           apply(simp add: range_cover.range_cover_compare_bound[simplified add.commute])
           apply(fastforce intro!: word_object_range_cover_globalsI)
          apply(rule conjI)
           apply(fastforce simp: cte_wp_at_def blah)
@@ -1515,7 +1514,7 @@ word_object_range_cover_globals apiobject_type word2
        apply(drule range_cover_subset', simp)
        apply(erule subset_trans)
        apply(simp add: blah word_and_le2)
-      apply(simp add: shiftl_t2n mask_out_sub_mask add_commute mult_commute)
+      apply(simp add: shiftl_t2n mask_out_sub_mask add.commute mult.commute)
       apply(simp add: mask_out_sub_mask[symmetric])
       apply(rule usable_range_disjoint, simp+)
        apply(fastforce elim: ex_cte_cap_wp_to_weakenE)

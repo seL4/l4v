@@ -192,7 +192,7 @@ proof (induct args rule: resolve_address_bits'.induct)
     apply (cases cap)
               defer 6 (* cnode *)
           apply (auto simp: in_monad)[11]
-    apply (simp only: cap.cases)
+    apply (simp only: cap.simps)
     apply (case_tac "nat + length list = 0")
      apply (simp add: fail_def)
     apply (simp only: if_False)
@@ -778,7 +778,7 @@ lemma descendants_of_insert_child:
    apply (simp del: fun_upd_apply)
    apply (rule iffI)
    apply (simp only: disj_imp)
-    apply (erule_tac b="x" in trancl_induct)
+    apply (erule_tac b="xa" in trancl_induct)
      apply fastforce
     apply clarsimp
     apply (erule impE)
@@ -789,12 +789,12 @@ lemma descendants_of_insert_child:
     apply assumption
    apply (erule disjE)
     apply fastforce
-   apply (case_tac "x = dest")
+   apply (case_tac "xa = dest")
     apply fastforce
-   apply (rule_tac P="x \<noteq> dest" in mp)
+   apply (rule_tac P="xa \<noteq> dest" in mp)
     prefer 2
     apply assumption
-   apply (erule_tac b=x in trancl_induct)
+   apply (erule_tac b=xa in trancl_induct)
     apply fastforce
    apply (clarsimp simp del: fun_upd_apply)
    apply (erule impE)
@@ -1749,7 +1749,6 @@ lemma update_cdt_mdb_cte_at:
   apply (clarsimp simp: update_cdt_def gets_def get_def set_cdt_def 
                         put_def bind_def return_def valid_def)
   apply (clarsimp simp: mdb_cte_at_def split:option.splits)+
-  apply auto
   done
 
 
@@ -1995,13 +1994,13 @@ lemma cap_insert_mdb_cte_at:
   apply (wp | simp cong: update_original_mdb_cte_at split del: split_if)+
   apply (wp update_cdt_mdb_cte_at set_cap_mdb_cte_at[simplified swp_def] | simp split del: split_if)+
   apply wps
-  apply (wp valid_option_case_post_wp hoare_vcg_if_lift hoare_impI mdb_cte_at_set_untyped_cap_as_full[simplified swp_def] 
+  apply (wp valid_case_option_post_wp hoare_vcg_if_lift hoare_impI mdb_cte_at_set_untyped_cap_as_full[simplified swp_def] 
     set_cap_cte_wp_at get_cap_wp)
   apply (clarsimp simp:free_index_update_def split:cap.splits)
   apply (wp)
   apply (clarsimp simp:if_True conj_ac split del:if_splits cong:split_weak_cong)
   apply (wps)
-  apply (wp valid_option_case_post_wp get_cap_wp hoare_vcg_if_lift
+  apply (wp valid_case_option_post_wp get_cap_wp hoare_vcg_if_lift
     hoare_impI set_untyped_cap_as_full_cte_wp_at )
   apply (unfold swp_def)
   apply (intro conjI | clarify)+
@@ -3473,14 +3472,12 @@ lemma cap_move_mdb [wp]:
     apply (rule conjI)
      apply fastforce
     apply clarsimp
-    apply fastforce
-   apply clarsimp
+   apply fastforce
   apply (subgoal_tac "mdb_move_abs src dest (cdt s) s")
    prefer 2
    apply (rule mdb_move_abs.intro)
       apply (simp add: valid_mdb_def swp_def cte_wp_at_caps_of_state
                        mdb_cte_at_def)
-      apply fastforce
      apply (simp add: cte_wp_at_caps_of_state)
     apply (rule refl)
    apply (clarsimp simp: cte_wp_at_caps_of_state)
@@ -3656,7 +3653,7 @@ lemma set_free_index_invs:
    apply clarsimp
    apply (clarsimp simp:valid_irq_node_def)
    apply (clarsimp simp:no_cap_to_obj_with_diff_ref_def cte_wp_at_caps_of_state vs_cap_ref_def)
-   apply (case_tac cap)
+   apply (case_tac capa)
     apply (simp_all add:table_cap_ref_def)
    apply (case_tac arch_cap)
     apply simp_all
@@ -5502,8 +5499,8 @@ lemma cap_insert_simple_invs:
    apply (clarsimp simp: is_cap_simps)
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   apply (drule_tac p="(a,b)" in caps_of_state_valid_cap, fastforce)
-  apply (clarsimp dest!: is_cap_simps' [THEN iffD1]) 
-  apply (auto simp add: valid_cap_def [where c="cap.Zombie a b x", standard] 
+  apply (clarsimp dest!: is_cap_simps' [THEN iffD1])
+  apply (auto simp add: valid_cap_def [where c="cap.Zombie a b x" for a b x]
               dest: obj_ref_is_tcb obj_ref_is_cap_table split: option.splits)
   done
 

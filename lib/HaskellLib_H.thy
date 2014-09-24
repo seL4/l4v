@@ -30,7 +30,7 @@ abbreviation(input) bind_drop :: "('a, 'c) nondet_monad \<Rightarrow> ('a, 'b) n
   where "bind_drop \<equiv> (\<lambda>x y. bind x (K_bind y))"
 
 lemma bind_drop_test:
-  "foldr (op >>) x (return ()) = sequence_x x"
+  "foldr bind_drop x (return ()) = sequence_x x"
   by (rule ext, simp add: sequence_x_def)
 
 (* If the given monad is deterministic, this function converts
@@ -136,7 +136,7 @@ definition
  "maybeApply \<equiv> option_map"
 
 definition
- "maybe \<equiv> option_case"
+ "maybe \<equiv> case_option"
 
 definition
  "foldR f init L \<equiv> foldr f L init"
@@ -201,7 +201,7 @@ axiomatization
 definition
  "either f1 f2 c \<equiv> case c of Inl r1 \<Rightarrow> f1 r1 | Inr r2 \<Rightarrow> f2 r2"
 
-lemma either_simp[simp]: "either = sum_case"
+lemma either_simp[simp]: "either = case_sum"
   apply (rule ext)+
   apply (simp add: either_def)
   done
@@ -266,6 +266,8 @@ definition
   bit_def[simp]:
  "bit x \<equiv> shiftL 1 x"
 
+definition
+"isAligned x n \<equiv> x && mask n = 0"
 
 class integral = ord +
   fixes fromInteger :: "nat \<Rightarrow> 'a"

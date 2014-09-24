@@ -88,7 +88,7 @@ lemma create_objects_wp:
   apply (simp add:set_map)
   apply sep_cancel
   apply (erule sep_list_conj_impl[rotated])
-  apply (simp add:list_all2_def)
+  apply (simp add:list_all2_iff)
   apply (clarsimp simp:zip_map1 zip_map2
     set_zip_same
     Fun.comp_def split_def)

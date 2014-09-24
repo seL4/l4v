@@ -122,8 +122,8 @@ end
  * Return the new theorem.
  *)
 local
-  val prod_case_eta_contract_thm =
-      @{lemma "(%x. (prod_case s) x) == (prod_case s)" by simp}
+  val case_prod_eta_contract_thm =
+      @{lemma "(%x. (case_prod s) x) == (case_prod s)" by simp}
 in
 fun polish ctxt (mt : Monad_Types.monad_type) thm =
 let
@@ -137,20 +137,30 @@ let
   val simp_conv =
       Simplifier.rewrite (put_simpset (#polish_rules mt) ctxt addsimps simps)
 
-  (* eta-contract "prod_case" clauses, so that they render as:
+  (* eta-contract "case_prod clauses, so that they render as:
    * "%(a, b). P a b" instead of "case x of (a, b) => P a b". *)
-  val prod_case_conv =
+  val case_prod_conv =
     Conv.bottom_conv (
-        K (Conv.try_conv (Conv.rewr_conv prod_case_eta_contract_thm))) ctxt
+        K (Conv.try_conv (Conv.rewr_conv case_prod_eta_contract_thm))) ctxt
 
   val thm_p =
     Conv.fconv_rule (Conv.arg_conv (Utils.rhs_conv (
-        simp_conv then_conv prod_case_conv))) thm
+        simp_conv then_conv case_prod_conv))) thm
 in
   thm_p
 end
 end
 
+(*
+ * Wrap a tactic that doesn't handle invalid subgoal numbers to return
+ * "Seq.empty" when appropriate.
+ *)
+fun handle_invalid_subgoals (tac : int -> tactic) n =
+  fn thm =>
+    if Logic.count_prems (term_of_thm thm) < n then
+      no_tac thm
+    else
+      tac n thm
 
 (*
  * monad_convert tactic.
@@ -207,9 +217,10 @@ fun monad_convert_tac (ctxt : Proof.context) (monad_name : string)
 val _ = Context.>> (Context.map_theory
           (Method.setup (Binding.name "monad_convert")
             (* Based on subgoal_tac parser *)
-            (Args.goal_spec -- Scan.lift (Parse.name -- Args.name_source) >>
+            (Args.goal_spec -- Scan.lift (Parse.name -- Args.name_inner_syntax) >>
             (fn (quant, (monad_name, term_str)) => fn ctxt =>
-                SIMPLE_METHOD'' quant (monad_convert_tac ctxt monad_name term_str)))
+                SIMPLE_METHOD'' quant (handle_invalid_subgoals (
+                    monad_convert_tac ctxt monad_name term_str))))
            "autocorres monad conversion"))
 
 end

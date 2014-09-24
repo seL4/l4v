@@ -65,9 +65,9 @@ lemma syscall_valid:
   shows "\<lbrace>P\<rbrace> Syscall_A.syscall m_flt h_flt m_err h_err m_fin \<lbrace>Q\<rbrace>, \<lbrace>E\<rbrace>"
   apply (simp add: Syscall_A.syscall_def liftE_bindE
              cong: sum.case_cong)
-  apply (rule hoare_split_bind_sum_caseE)
+  apply (rule hoare_split_bind_case_sumE)
     apply (wp x)[1]
-   apply (rule hoare_split_bind_sum_caseE)
+   apply (rule hoare_split_bind_case_sumE)
      apply (wp x|simp)+
   done
 
@@ -396,7 +396,7 @@ lemma sts_nasty_bit:
               \<longrightarrow> cte_wp_at (Not \<circ> is_zombie) (a, b) s \<and> \<not> is_zombie cap\<rbrace>"
   apply (wp hoare_vcg_const_Ball_lift hoare_vcg_all_lift
             hoare_vcg_imp_lift hoare_vcg_disj_lift valid_cte_at_neg_typ
-          | simp add: cte_wp_at_neg2[where P="\<lambda>c. x \<in> obj_refs c", standard])+
+          | simp add: cte_wp_at_neg2[where P="\<lambda>c. x \<in> obj_refs c" for x])+
   apply (clarsimp simp: o_def cte_wp_at_def)
   done
 
@@ -609,7 +609,7 @@ lemma lookup_extras_real_ctes[wp]:
   apply (rule hoare_pre)
    apply (wp mapME_set)
       apply (simp add: lookup_cap_and_slot_def split_def)
-      apply (wp option_cases_weak_wp mapM_wp'
+      apply (wp case_options_weak_wp mapM_wp'
                  | simp add: load_word_offs_word_def)+
   done
 
@@ -629,7 +629,7 @@ lemma lsft_ex_cte_cap_to:
   apply (wp rab_cte_cap_to)
   apply (clarsimp simp: ex_cte_cap_wp_to_def)
   apply (clarsimp dest!: get_tcb_SomeD)
-  apply (frule cte_wp_at_tcbI[where t="(t', tcb_cnode_index 0)" and P="op = v", standard, simplified])
+  apply (frule cte_wp_at_tcbI[where t="(t', tcb_cnode_index 0)" and P="op = v" for t' v, simplified])
     apply fastforce
    apply fastforce
   apply (intro exI, erule cte_wp_at_weakenE)

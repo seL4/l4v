@@ -212,7 +212,7 @@ where
      ARM_Structs_A.ASIDPoolCap r as
        \<Rightarrow> is_aligned as asid_low_bits \<and> as \<le> 2^asid_bits - 1
    | ARM_Structs_A.PageCap r rghts sz mapdata \<Rightarrow> rghts \<in> valid_vm_rights \<and>
-     option_case True (wellformed_mapdata sz) mapdata
+     case_option True (wellformed_mapdata sz) mapdata
    | ARM_Structs_A.PageTableCap r (Some mapdata) \<Rightarrow>
      wellformed_mapdata ARMSection mapdata
    | ARM_Structs_A.PageDirectoryCap r (Some asid) \<Rightarrow>
@@ -293,7 +293,7 @@ where
                                 \<and> is_aligned vref (pageBitsForSize ARMSection))
   | ARM_Structs_A.PageDirectoryCap r mapdata \<Rightarrow>
     typ_at (AArch APageDirectory) r s \<and>
-    option_case True (\<lambda>asid. 0 < asid \<and> asid \<le> 2^asid_bits - 1) mapdata))"
+    case_option True (\<lambda>asid. 0 < asid \<and> asid \<le> 2^asid_bits - 1) mapdata))"
 
 abbreviation
   valid_cap_syn :: "'z::state_ext state \<Rightarrow> cap \<Rightarrow> bool" ("_ \<turnstile> _" [60, 60] 61)
@@ -1705,7 +1705,7 @@ lemma ran_tcb_cap_cases:
                 insert_commute)
 
 lemma tcb_cnode_map_tcb_cap_cases:
-  "tcb_cnode_map tcb = (\<lambda>bl. Option.map (\<lambda>x. fst x tcb) (tcb_cap_cases bl))"
+  "tcb_cnode_map tcb = (\<lambda>bl. map_option (\<lambda>x. fst x tcb) (tcb_cap_cases bl))"
   by (rule ext) (simp add: tcb_cnode_map_def tcb_cap_cases_def)
 
 lemma ran_tcb_cnode_map:
@@ -2818,7 +2818,7 @@ lemma valid_cte_at_typ:
   apply (rule hoare_vcg_prop)
   done
 
-lemma length_helper [standard]:
+lemma length_helper:
   "\<exists>y. length y = n"
   apply (rule_tac x="replicate n x" in exI)
   apply simp
@@ -3091,7 +3091,6 @@ lemma a_type_AGarbageE:
     (!!n cs. \<lbrakk>ko = CNode n cs; \<not> well_formed_cnode_n n cs\<rbrakk> \<Longrightarrow> R)\<rbrakk>
    \<Longrightarrow> R"
   apply (case_tac ko, simp_all add: a_type_simps split: split_if_asm)
-   apply fastforce
   apply (case_tac arch_kernel_obj, simp_all add: a_type_simps)
   done
 lemma a_type_ATCBE:
@@ -4424,7 +4423,7 @@ lemma vs_ref_order:
    apply (clarsimp simp: valid_arch_state_def valid_asid_table_def
                          ranI)
   apply (clarsimp dest!: vs_lookup1D elim!: obj_atE)
-  apply (clarsimp simp: vs_refs_def a_type_def[where ob="ArchObj ao", standard]
+  apply (clarsimp simp: vs_refs_def a_type_def[where ob="ArchObj ao" for ao]
                  split: Structures_A.kernel_object.split_asm
                         arch_kernel_obj.split_asm
                  dest!: graph_ofD)
@@ -4871,7 +4870,7 @@ lemma objs_valid_tcb_ctable:
   "\<lbrakk>valid_objs s; get_tcb t s = Some tcb\<rbrakk> \<Longrightarrow> s \<turnstile> tcb_ctable tcb"
   apply (clarsimp simp: get_tcb_def split: option.splits Structures_A.kernel_object.splits)
   apply (erule cte_wp_valid_cap[rotated])
-  apply (rule cte_wp_at_tcbI[where t="(a, b)", standard, where b="tcb_cnode_index 0"])
+  apply (rule cte_wp_at_tcbI[where t="(a, b)" for a b, where b3="tcb_cnode_index 0"])
     apply fastforce+
   done
 

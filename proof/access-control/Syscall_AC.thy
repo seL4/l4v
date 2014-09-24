@@ -219,9 +219,8 @@ lemma set_thread_state_authorised[wp]:
             hoare_vcg_ex_lift sts_obj_at_impossible
             set_thread_state_authorised_untyped_inv_state
        | simp)+
-  apply clarsimp
   apply (case_tac tcb_invocation, simp_all)
-  apply (wp hoare_option_case_wp sts_typ_ats set_thread_state_cte_wp_at
+  apply (wp hoare_case_option_wp sts_typ_ats set_thread_state_cte_wp_at
             hoare_vcg_conj_lift static_imp_wp
        | simp)+
   apply ((clarsimp split: option.splits)+)[3]
@@ -891,7 +890,7 @@ lemma schedule_integrity:
           apply (clarsimp simp: valid_sched_def valid_sched_action_def weak_valid_sched_action_2_def switch_in_cur_domain_2_def in_cur_domain_2_def valid_etcbs_def invs_def valid_etcbs_def etcb_at_def st_tcb_at_def obj_at_def is_etcb_at_def split: option.splits)
            apply force
           apply (clarsimp simp: pas_refined_def tcb_domain_map_wellformed_aux_def)
-          apply (drule_tac x="(x, tcb_domain a)" in bspec)
+          apply (drule_tac x="(x, cur_domain s)" in bspec)
            apply (force intro: domtcbs)
           apply force
          prefer 10
@@ -899,7 +898,7 @@ lemma schedule_integrity:
          apply (clarsimp simp: valid_sched_def valid_sched_action_def weak_valid_sched_action_2_def switch_in_cur_domain_2_def in_cur_domain_2_def valid_etcbs_def invs_def valid_etcbs_def etcb_at_def st_tcb_at_def obj_at_def is_etcb_at_def split: option.splits)
           apply force
          apply (clarsimp simp: pas_refined_def tcb_domain_map_wellformed_aux_def)
-         apply (drule_tac x="(x, tcb_domain a)" in bspec)
+         apply (drule_tac x="(x, cur_domain s)" in bspec)
           apply (force intro: domtcbs)
          apply force
         apply (auto simp: obj_at_def st_tcb_at_def not_cur_thread_2_def valid_sched_def)

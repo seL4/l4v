@@ -1199,11 +1199,12 @@ lemma tcb_queue_relation_append:
           (mp (qend \<mapsto> tn_update (\<lambda>_. qend') (the (mp qend)),
                qend' \<mapsto> tn_update (\<lambda>_. NULL) (tp_update (\<lambda>_. qend) tcb)))
           (queue @ [ctcb_ptr_to_tcb_ptr qend']) qprev qhead"
+  using [[hypsubst_thin = true]]
   apply clarsimp
   apply (induct queue' arbitrary: qprev qhead)
    apply clarsimp
   apply clarsimp
-  done  
+  done
 
 lemma tcbSchedAppend_update:
   assumes sr: "sched_queue_relation' mp queue qhead qend"

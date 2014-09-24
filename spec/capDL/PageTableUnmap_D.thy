@@ -53,7 +53,7 @@ definition
   ep_cancel_all :: "cdl_object_id \<Rightarrow> unit k_monad"
 where
   "ep_cancel_all ep \<equiv>
-    modify (\<lambda>s. s\<lparr>cdl_objects :=  Option.map
+    modify (\<lambda>s. s\<lparr>cdl_objects :=  map_option
         (\<lambda>obj. case obj of
             Tcb t \<Rightarrow>
               if (is_thread_blocked_on_endpoint t ep) then

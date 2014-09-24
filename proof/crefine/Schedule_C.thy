@@ -138,13 +138,8 @@ lemma c_guard_abs_word32_armKSGlobalsFrame:
   "\<lbrakk>valid_arch_state' s; (s, s') \<in> rf_sr\<rbrakk>
   \<Longrightarrow> s' \<Turnstile>\<^sub>c (Ptr :: word32 \<Rightarrow> (word32[1024]) ptr) (symbol_table ''armKSGlobalsFrame'')"
   apply (frule(1) h_t_valid_armKSGlobalsFrame)
-  apply (drule h_t_valid_field[where f="[''words_C'']"])
-  apply simp
-  apply simp
+  apply (drule h_t_valid_field[where f="[''words_C'']"], simp, simp)
   apply (simp add: field_lvalue_def field_lookup_offset_eq)
-  apply (subst(asm) field_lookup_offset_eq)
-  apply fastforce
-  apply simp
   done
 
 lemma Arch_switchToIdleThread_ccorres:

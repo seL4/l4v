@@ -125,7 +125,7 @@ lemma handleVMFaultEvent_ccorres:
    apply (simp add: catch_def)
    apply (rule ccorres_rhs_assoc2)
    apply (rule ccorres_split_nothrow_novcg)
-       apply (rule ccorres_split_nothrow_sum_case)
+       apply (rule ccorres_split_nothrow_case_sum)
             apply (ctac (no_vcg) add: handleVMFault_ccorres)
            apply ceqv
           apply clarsimp
@@ -226,7 +226,7 @@ lemma handleSyscall_ccorres:
              apply (clarsimp simp: syscall_from_H_def syscall_defs)
              apply (rule ccorres_cond_empty |rule ccorres_cond_univ)+
              apply (simp add: handleSend_def)
-             apply (rule ccorres_split_nothrow_sum_case)
+             apply (rule ccorres_split_nothrow_case_sum)
                   apply (ctac (no_vcg) add: handleInvocation_ccorres)
                  apply ceqv
                 apply clarsimp
@@ -264,7 +264,7 @@ lemma handleSyscall_ccorres:
             apply (clarsimp simp: syscall_from_H_def syscall_defs)
             apply (rule ccorres_cond_empty |rule ccorres_cond_univ)+
             apply (simp add: handleSend_def)
-            apply (rule ccorres_split_nothrow_sum_case)
+            apply (rule ccorres_split_nothrow_case_sum)
                  apply (ctac (no_vcg) add: handleInvocation_ccorres)
                 apply ceqv
                apply clarsimp
@@ -301,7 +301,7 @@ lemma handleSyscall_ccorres:
            apply (clarsimp simp: syscall_from_H_def syscall_defs)
            apply (rule ccorres_cond_empty |rule ccorres_cond_univ)+
            apply (simp add: handleCall_def)
-           apply (rule ccorres_split_nothrow_sum_case)
+           apply (rule ccorres_split_nothrow_case_sum)
                 apply (ctac (no_vcg) add: handleInvocation_ccorres)
                apply ceqv
               apply clarsimp
@@ -961,11 +961,13 @@ lemma monadic_rewrite_\<Gamma>:
   "monadic_rewrite True False \<top>
     (exec_C \<Gamma> c)
     (exec_C (kernel_all_global_addresses.\<Gamma> symbol_table) c)"
-  using spec_refine
-        spec_simulates_to_exec_simulates
-  apply (simp add: spec_statefn_simulates_via_statefn
-                   o_def option_map_def)
-  apply (clarsimp simp: monadic_rewrite_def exec_C_def image_def)
+  using spec_refine [of symbol_table domain]
+  using spec_simulates_to_exec_simulates
+  apply (clarsimp simp: spec_statefn_simulates_via_statefn
+                   o_def map_option_case
+                   monadic_rewrite_def exec_C_def
+                   split: option.splits
+                   cong: option.case_cong)
   apply blast
   done
 

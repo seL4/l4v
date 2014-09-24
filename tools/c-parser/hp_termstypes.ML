@@ -207,7 +207,7 @@ fun mk_cbreak_const (thy : theory)
 	      (statety : Term.typ) = let
     val exnvar  = mk_global_exn_var_update thy statety
 in
-    Const ("CTranslation.cbreak", (type_of exnvar) --> mk_com_ty tyargs)
+    Const (@{const_name "CTranslation.cbreak"}, (type_of exnvar) --> mk_com_ty tyargs)
 end
 
 fun mk_cbreak (thy : theory)
@@ -230,7 +230,7 @@ fun mk_ccatchbrk (thy : theory)
 		 (statety : Term.typ) = let
     val exnvar  = mk_global_exn_var thy statety
 in
-    Const ("CTranslation.ccatchbrk", (type_of exnvar) --> mk_com_ty tyargs) $ exnvar
+    Const (@{const_name "CTranslation.ccatchbrk"}, (type_of exnvar) --> mk_com_ty tyargs) $ exnvar
 end
 
 val div_0_error      = @{const "Div_0"}

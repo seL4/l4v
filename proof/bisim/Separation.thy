@@ -76,12 +76,12 @@ lemma separate_capE:
 definition
   "separate_cnode_cap cs cap \<equiv> case cap of
                                   CNodeCap p bits guard \<Rightarrow> (bits + length guard = word_bits) \<and>
-                                                           (\<forall>off. option_case True separate_cap (cs (p, off)))
+                                                           (\<forall>off. case_option True separate_cap (cs (p, off)))
                                  | NullCap               \<Rightarrow> True
                                  | _                     \<Rightarrow> False"
 
 definition
-  "separate_tcb p cs \<equiv> option_case True (separate_cnode_cap cs) (cs (p, tcb_cnode_index 0))
+  "separate_tcb p cs \<equiv> case_option True (separate_cnode_cap cs) (cs (p, tcb_cnode_index 0))
                        \<and> cs (p, tcb_cnode_index 3) = Some NullCap" -- "ctable and caller cap"
 
 lemma separate_cnode_cap_rab:
@@ -141,7 +141,7 @@ lemma bisim_separate_cap_cases:
 lemma caps_of_state_tcb:
   "\<lbrakk> get_tcb p s = Some tcb; option_map fst (tcb_cap_cases idx) = Some getF \<rbrakk> \<Longrightarrow> caps_of_state s (p, idx) = Some (getF tcb)"
   apply (drule get_tcb_SomeD)
-  apply (clarsimp simp: option_map_eq_Some)
+  apply clarsimp
   apply (drule (1) cte_wp_at_tcbI [where t = "(p, idx)" and P = "op = (getF tcb)", simplified])
   apply simp
   apply (clarsimp simp: cte_wp_at_caps_of_state)

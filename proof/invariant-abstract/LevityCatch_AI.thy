@@ -107,7 +107,7 @@ lemmas cap_irq_opt_simps[simp] =
   cap_irq_opt_def [split_simps cap.split sum.split]
 
 lemmas cap_irqs_simps[simp] =
-    cap_irqs_def [unfolded cap_irq_opt_def, split_simps cap.split sum.split, simplified Option.set.simps]
+    cap_irqs_def [unfolded cap_irq_opt_def, split_simps cap.split sum.split, simplified option.simps]
 
 lemma pageBits_less_word_bits [simp]:
   "pageBits < word_bits" by (simp add: pageBits_def word_bits_conv)
@@ -168,7 +168,7 @@ lemma ucast_mask_drop:
   done
 
 declare liftE_wp[wp]
-declare sum_case_True[simp]
+declare case_sum_True[simp]
 declare select_singleton[simp]
 
 crunch_ignore (add: cap_swap_ext 

@@ -272,11 +272,11 @@ lemma take_nth_distinct:
 
 lemma take_drop_append:
   "drop a xs = take b (drop a xs) @ drop (a + b) xs"
-  by (metis append_take_drop_id drop_drop nat_add_commute)
+  by (metis append_take_drop_id drop_drop add.commute)
 
 lemma drop_take_drop:
   "drop a (take (b + a) xs) @ drop (b + a) xs = drop a xs"
-  by (metis nat_add_commute take_drop take_drop_append)
+  by (metis add.commute take_drop take_drop_append)
 
 lemma map_fst_zip':
   "length xs \<le> length ys \<Longrightarrow> map fst (zip xs ys) = xs"
@@ -314,7 +314,7 @@ lemma map_of_zip_range:
    apply (frule_tac x=xa in map_of_zip_is_Some, clarsimp)
    apply fast
   apply (clarsimp simp: set_zip)
-  by (metis domI dom_map_of_zip nth_mem ranE ran_map_of_zip the.simps)
+  by (metis domI dom_map_of_zip nth_mem ranE ran_map_of_zip option.sel)
 
 lemma map_zip_fst:
   "length xs = length ys \<Longrightarrow> map (\<lambda>(x, y). f x) (zip xs ys) = map f xs"

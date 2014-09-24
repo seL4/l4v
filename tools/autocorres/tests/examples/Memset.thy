@@ -132,7 +132,7 @@ lemma (in memset) zero_node:
   apply (clarsimp simp: zero_node'_def)
   apply (wp add: memset [THEN validNF_make_schematic_post, simplified])
   apply (fastforce dest: simple_lift_c_guard simp: addr_card lift_global_heap_def
-          heap_update_zero_node update_node_def typ_simple_heap_simps
+          heap_update_zero_node memset.update_node_def typ_simple_heap_simps
           fun_upd_def)
   done
 

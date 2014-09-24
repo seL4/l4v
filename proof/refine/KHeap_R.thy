@@ -33,7 +33,7 @@ lemma loadObject_default_inv:
   "\<lbrace>P\<rbrace> loadObject_default addr addr' next obj \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (simp add: loadObject_default_def magnitudeCheck_def
                    alignCheck_def unless_def alignError_def
-          | wp hoare_vcg_split_option_case
+          | wp hoare_vcg_split_case_option
                hoare_drop_imps hoare_vcg_all_lift)+
   done
 
@@ -55,13 +55,13 @@ translations
 lemma no_fail_loadObject_default [wp]:
   "no_fail (\<lambda>s. \<exists>obj. projectKO_opt ko = Some (obj::'a) \<and> 
                       is_aligned p (objBits obj) \<and> q = p
-                      \<and> option_case True (\<lambda>x. 2 ^ (objBits obj) \<le> x - p) n)
+                      \<and> case_option True (\<lambda>x. 2 ^ (objBits obj) \<le> x - p) n)
            (loadObject_default p q n ko :: ('a::pre_storable) kernel)"
   apply (simp add: loadObject_default_def split_def projectKO_def
                    alignCheck_def alignError_def magnitudeCheck_def
                    unless_def)
   apply (rule no_fail_pre)
-   apply (wp option_case_wp)
+   apply (wp case_option_wp)
   apply (clarsimp simp: is_aligned_mask)
   apply (clarsimp split: option.split_asm)
   apply (clarsimp simp: is_aligned_mask[symmetric])
@@ -678,7 +678,7 @@ lemma set_aep_tcb' [wp]:
 lemma pspace_dom_update:
   "\<lbrakk> ps ptr = Some x; a_type x = a_type v \<rbrakk> \<Longrightarrow> pspace_dom (ps(ptr \<mapsto> v)) = pspace_dom ps"
   apply (simp add: pspace_dom_def dom_fun_upd2 del: dom_fun_upd)
-  apply (rule UN_cong [OF refl])
+  apply (rule SUP_cong [OF refl])
   apply clarsimp
   apply (simp add: obj_relation_cuts_def3)
   done
@@ -781,7 +781,7 @@ lemma map_to_ctes_upd_tcb:
      apply (simp add: field_simps objBits_simps split del: split_if
                 cong: if_cong option.case_cong)
      apply clarsimp
-    apply (subst(asm) mask_in_range[where bits="objBitsKO v", standard])
+    apply (subst(asm) mask_in_range[where bits="objBitsKO v" for v])
      apply (simp add: objBitsKO_def)
     apply (drule_tac a=x in equals0D)
     apply (simp add: dom_def objBits_simps field_simps)
@@ -791,7 +791,7 @@ lemma map_to_ctes_upd_tcb:
    apply (case_tac "tcb_cte_cases (x - p)")
     apply (simp split del: split_if cong: if_cong option.case_cong)
    apply (rule FalseE)
-   apply (subst(asm) mask_in_range[where bits="objBitsKO v", standard])
+   apply (subst(asm) mask_in_range[where bits="objBitsKO v" for v])
     apply (simp add: objBitsKO_def)
    apply (subgoal_tac "x - p < 2 ^ 9")
     apply (frule minus_one_helper3)

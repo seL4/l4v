@@ -104,8 +104,9 @@ lemma sqrt_prime:
   apply (rule ccontr)
   apply (drule not_prime)
    apply clarsimp
-  apply (metis One_nat_def dvd_triv_left less_eq_nat.simps(1)
-        less_not_refl2 mult_eq_self_implies_10 mult_mono nat_mult_commute not_less)
+  apply (metis dvd_triv_right less_le_trans mult.commute mult_le_cancel2
+           One_nat_def less_eq_nat.simps(1) less_not_refl2
+           mult_eq_self_implies_10 not_less)
   done
 
 lemma partial_prime_sqr:

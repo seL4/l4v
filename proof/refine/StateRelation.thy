@@ -138,9 +138,9 @@ where
   | Structures_A.SendEP q \<Rightarrow> ep' = Structures_H.SendEP q"
 
 definition
-  fault_option_relation :: "ExceptionTypes_A.fault option \<Rightarrow> Fault_H.fault option \<Rightarrow> bool"
+  fault_rel_optionation :: "ExceptionTypes_A.fault option \<Rightarrow> Fault_H.fault option \<Rightarrow> bool"
 where
- "fault_option_relation \<equiv> \<lambda>f f'. f' = option_map fault_map f"
+ "fault_rel_optionation \<equiv> \<lambda>f f'. f' = option_map fault_map f"
 
 primrec
   thread_state_relation :: "Structures_A.thread_state \<Rightarrow> Structures_H.thread_state \<Rightarrow> bool"
@@ -171,7 +171,7 @@ where
   \<and> tcb_ipc_buffer tcb = tcbIPCBuffer tcb'
   \<and> tcb_context tcb = tcbContext tcb'
   \<and> thread_state_relation (tcb_state tcb) (tcbState tcb')
-  \<and> fault_option_relation (tcb_fault tcb) (tcbFault tcb')
+  \<and> fault_rel_optionation (tcb_fault tcb) (tcbFault tcb')
   \<and> cap_relation (tcb_ctable tcb) (cteCap (tcbCTable tcb'))
   \<and> cap_relation (tcb_vtable tcb) (cteCap (tcbVTable tcb'))
   \<and> cap_relation (tcb_reply tcb) (cteCap (tcbReply tcb'))
@@ -475,9 +475,9 @@ schematic_lemma cap_relation_case:
   done
 
 lemmas cap_relation_split =
-  eq_trans_helper [where P=P, OF cap_relation_case cap.split[where P=P], standard]
+  eq_trans_helper [where P=P, OF cap_relation_case cap.split[where P=P]] for P
 lemmas cap_relation_split_asm =
-  eq_trans_helper [where P=P, OF cap_relation_case cap.split_asm[where P=P], standard]
+  eq_trans_helper [where P=P, OF cap_relation_case cap.split_asm[where P=P]] for P
 
 
 

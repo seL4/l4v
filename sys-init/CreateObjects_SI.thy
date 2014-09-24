@@ -515,6 +515,7 @@ lemma retype_untyped_loop_inv_pre:
   apply (erule_tac x=untyped_index in allE)
   apply (clarsimp simp: is_full_untyped_cap_simps)
   done
+  declare [[blast_depth_limit  = 1000]]
 
 lemma retype_untyped_loop_inv_post:
   "\<lbrakk>untyped_index < length untyped_caps;
@@ -949,15 +950,15 @@ lemma retype_untyped_loop_inv_fail:
   apply (rule hoare_ex_pre hoare_ex_pre_conj)+
   apply (rule hoare_grab_asm2)+
   apply (rule hoare_chain)
-    apply (rule_tac used_spec_ids = "set (take obj_id_index obj_ids)" and
-                    available_ids = "cap_free_ids (untyped_caps ! untyped_index)" and
-                    all_available_ids = all_available_ids and
-                    used_ids = "ran t" and
-                    cover_ids = "cap_objects (untyped_caps ! untyped_index)" and
-                    free_cptr = free_cptr and
-                    untyped_cptr = untyped_cptr and
-                    t = t and
-                    R = "\<And>* map (\<lambda>(slot, cap). (si_cnode_id, slot) \<mapsto>c cap)
+    apply (rule_tac used_spec_ids1 = "set (take obj_id_index obj_ids)" and
+                    available_ids1 = "cap_free_ids (untyped_caps ! untyped_index)" and
+                    all_available_ids1 = all_available_ids and
+                    used_ids1 = "ran t" and
+                    cover_ids1 = "cap_objects (untyped_caps ! untyped_index)" and
+                    free_cptr1 = free_cptr and
+                    untyped_cptr1 = untyped_cptr and
+                    t1 = t and
+                    R1 = "\<And>* map (\<lambda>(slot, cap). (si_cnode_id, slot) \<mapsto>c cap)
                             (take untyped_index (zip untyped_slots untyped_caps)) \<and>*
                          \<And>* map (\<lambda>(slot, cap). (si_cnode_id, slot) \<mapsto>c cap)
                             (drop (Suc untyped_index) (zip untyped_slots untyped_caps)) \<and>*
@@ -967,13 +968,13 @@ lemma retype_untyped_loop_inv_fail:
                             (take obj_id_index obj_ids) \<and>*
                          \<And>* map (si_cap_at t si_caps spec)
                             (take obj_id_index obj_ids) \<and>* R" and
-                    untyped_slots = untyped_slots and
-                    untyped_caps = untyped_caps and
+                    untyped_slots1 = untyped_slots and
+                    untyped_caps1 = untyped_caps and
                     P' = "\<lambda>s. si_caps = map_of (zip (take obj_id_index obj_ids)
                                                       free_cptrs)" and
                     Q' = "\<lambda>rv s. si_caps = map_of (zip (take obj_id_index obj_ids)
                                                          free_cptrs)"
-                 in hoare_vcg_conj_lift [OF retype_untyped_bij_fail, standard],
+                 in hoare_vcg_conj_lift [OF retype_untyped_bij_fail],
                  (assumption|simp|clarsimp)+)
          apply (drule list_all_nth [where xs=free_slots], simp)
          apply (metis of_nat_less_pow si_cnode_size_less_than_word_size)
@@ -1300,7 +1301,7 @@ lemma retype_untypeds_wp_helper:
                       [0 ..< length untyped_slots] \<and>
              si_caps = map_of (zip (take obj_id_index [obj\<leftarrow>obj_ids. real_object_at obj spec]) free_cptrs)"])
     apply (rule hoare_weaken_pre)
-     apply (wp valid_prod_case)
+     apply (wp valid_case_prod)
            apply (simp add: if_not)
            apply (rule hoare_strengthen_post)
             apply (rule_tac spec=spec and obj_id_index=obj_id_index and

@@ -60,8 +60,8 @@ lemma syscall_corres:
            (Syscall_A.syscall m_flt  h_flt m_err h_err m_fin) 
            (Syscall_H.syscall m_flt' h_flt' m_err' h_err' m_fin')"
   apply (simp add: Syscall_A.syscall_def Syscall_H.syscall_def liftE_bindE)
-  apply (rule corres_split_bind_sum_case)
-      apply (rule corres_split_bind_sum_case | rule corres | rule wp | simp add: liftE_bindE)+
+  apply (rule corres_split_bind_case_sum)
+      apply (rule corres_split_bind_case_sum | rule corres | rule wp | simp add: liftE_bindE)+
   done
 
 lemma syscall_valid':
@@ -74,9 +74,9 @@ lemma syscall_valid':
   shows "\<lbrace>P\<rbrace> Syscall_H.syscall m_flt h_flt m_err h_err m_fin \<lbrace>Q\<rbrace>, \<lbrace>E\<rbrace>"
   apply (simp add: Syscall_H.syscall_def liftE_bindE
              cong: sum.case_cong)
-  apply (rule hoare_split_bind_sum_caseE)
+  apply (rule hoare_split_bind_case_sumE)
     apply (wp x)[1]
-   apply (rule hoare_split_bind_sum_caseE)
+   apply (rule hoare_split_bind_case_sumE)
      apply (wp x|simp)+
   done
 
@@ -180,13 +180,12 @@ lemma decode_invocation_corres:
       (RetypeDecls_H.decodeInvocation (mi_label mi) args' cptr' slot' cap' excaps')"
   apply (rule corres_gen_asm)
   apply (unfold decode_invocation_def decodeInvocation_def)
-  apply (case_tac cap, simp_all only: cap.cases)
+  apply (case_tac cap, simp_all only: cap.simps)
    --"dammit, simp_all messes things up, must handle cases manually"
              -- "Null"
              apply (simp add: isCap_defs)
             -- "Untyped"
             apply (simp add: isCap_defs Let_def o_def split del: split_if)
-            apply clarsimp
             apply (rule corres_guard_imp, rule dec_untyped_inv_corres)
               apply ((clarsimp simp:cte_wp_at_caps_of_state diminished_def)+)[3]
            -- "(Async)Endpoint"
@@ -255,7 +254,7 @@ lemma load_word_offs_word_corres:
     apply (subst word_mult_less_iff)
        apply simp
       apply (unfold word_bits_len_of)
-      apply (simp, subst mult_commute)
+      apply (simp, subst mult.commute)
       apply (rule nat_less_power_trans [where k = 2, simplified])
        apply (rule unat_less_power)
         apply (simp add: word_bits_conv)
@@ -575,7 +574,7 @@ lemma sendAsyncIPC_tcb_at'[wp]:
   done
 
 lemmas checkCap_inv_typ_at'
-  = checkCap_inv[where P="\<lambda>s. P (typ_at' T p s)", standard]
+  = checkCap_inv[where P="\<lambda>s. P (typ_at' T p s)" for T p]
 
 crunch typ_at'[wp]: restart "\<lambda>s. P (typ_at' T p s)"
 crunch typ_at'[wp]: performTransfer "\<lambda>s. P (typ_at' T p s)"
@@ -593,7 +592,7 @@ lemma invokeTCB_typ_at'[wp]:
           | (simp split del: split_if cong: if_cong)
           | (wp mapM_x_wp[where S=UNIV, simplified]
                 checkCap_inv_typ_at'
-                option_cases_weak_wp)[1]
+                case_options_weak_wp)[1]
           | wpcw)+
   done
 
@@ -1215,7 +1214,7 @@ lemma lookupExtras_real_ctes[wp]:
   apply (rule hoare_pre)
    apply (wp mapME_set)
       apply (simp add: lookupCapAndSlot_def split_def)
-      apply (wp option_cases_weak_wp mapM_wp' lsft_real_cte | simp)+
+      apply (wp case_options_weak_wp mapM_wp' lsft_real_cte | simp)+
   done
 
 lemma lookupExtras_ctes[wp]:
@@ -2222,8 +2221,7 @@ proof -
                     elim: st_tcb'_weakenE st_tcb_ex_cap'')[1]
        apply (rule corres_guard_imp)
          apply (rule corres_split_eqr[where R="\<lambda>rv. invs and valid_sched"
-                                      and R'="\<lambda>rv s. \<forall>x. rv = Some x \<longrightarrow> R'' x s",
-                                      standard])
+                                      and R'="\<lambda>rv s. \<forall>x. rv = Some x \<longrightarrow> R'' x s" for R''])
             apply (case_tac rv, simp_all add: doMachineOp_return)[1]
             apply (rule handle_interrupt_corres)
            apply (rule corres_machine_op)

@@ -279,8 +279,8 @@ lemma tcb_configure_pre:
   apply (frule (2) well_formed_types_match [where cap=vspace_cap], clarsimp)
   apply (frule (2) well_formed_types_match [where cap=buffer_frame_cap], clarsimp simp: cap_type_def)
   apply (clarsimp simp: object_type_is_object)
-  apply (subst (asm) default_cap_size_0 [where type=TcbType], simp)
-  apply (subst (asm) default_cap_size_0 [where type=PageDirectoryType], simp)
+  apply (subst (asm) (2) default_cap_size_0 [where type=TcbType], simp)
+  apply (subst (asm) (2) default_cap_size_0 [where type=PageDirectoryType], simp)
   apply (cut_tac type="FrameType sz" and sz="(object_size_bits obja)" and
               obj_id="{buffer_frame_kobj_id}" in default_cap_size_0, simp+)
   apply sep_solve
@@ -443,7 +443,10 @@ lemma tcb_configure_post:
          assumption, assumption, simp+)
   apply (subst default_cap_update_cap_object_pd [THEN sym],
          assumption, assumption, simp+)
-  apply (cut_tac type = "FrameType sz" in default_cap_update_cap_object_non_cnode,
+  apply (cut_tac type = "FrameType sz"
+             and obj_id = buffer_frame_kobj_id
+             and sz = 0
+              in default_cap_update_cap_object_non_cnode,
           (assumption|simp|fastforce)+)
   apply (subst (asm) offset_slot', assumption)+
   apply (clarsimp simp: sep_conj_assoc)

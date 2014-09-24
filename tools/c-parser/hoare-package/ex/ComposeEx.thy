@@ -136,7 +136,7 @@ lemma inject_str_last:
   by (simp add: inject_str_def globals_inject_str_last)
 
 definition
-  "lift\<^sub>e = (\<lambda>\<Gamma> p. Option.map (lift\<^sub>c project_str inject_str) (\<Gamma> p))"
+  "lift\<^sub>e = (\<lambda>\<Gamma> p. map_option (lift\<^sub>c project_str inject_str) (\<Gamma> p))"
 print_locale lift_state_space
 interpretation ex!: lift_state_space project_str inject_str
   "xstate_map project_str" lift\<^sub>e "lift\<^sub>c project_str inject_str"

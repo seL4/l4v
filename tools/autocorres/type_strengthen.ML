@@ -431,7 +431,7 @@ let
         THEN (REPEAT (etac @{thm allE} 1)))
     |> apply_tac "solving goal" (atac 1)
     |> Goal.finish lthy
-    |> Object_Logic.rulify
+    |> Object_Logic.rulify lthy
   val new_thms = map (prove_partial_pred rewrite_thm) final_props
 
   (*

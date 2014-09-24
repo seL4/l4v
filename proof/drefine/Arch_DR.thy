@@ -54,14 +54,14 @@ definition transform_page_inv :: "ArchInvocation_A.page_invocation \<Rightarrow>
 where "transform_page_inv invok \<equiv> case invok of
   ArchInvocation_A.page_invocation.PageMap asid cap ct_slot entries \<Rightarrow>
    Some (cdl_page_invocation.PageMap (transform_cap cap)
-        (sum_case (transform_pte \<circ> fst) (transform_pde \<circ> fst) entries)
+        (case_sum (transform_pte \<circ> fst) (transform_pde \<circ> fst) entries)
         (transform_cslot_ptr ct_slot)
-        (sum_case (\<lambda>pair. [ (transform_pt_slot_ref \<circ> hd \<circ> snd) pair])
+        (case_sum (\<lambda>pair. [ (transform_pt_slot_ref \<circ> hd \<circ> snd) pair])
           (\<lambda>pair. [(transform_pd_slot_ref \<circ> hd \<circ> snd) pair]) entries))
 | ArchInvocation_A.page_invocation.PageRemap asid entries \<Rightarrow>
    Some (cdl_page_invocation.PageRemap
-        (sum_case (transform_pte \<circ> fst) (transform_pde \<circ> fst) entries)
-        (sum_case (\<lambda>pair. [ (transform_pt_slot_ref \<circ> hd \<circ> snd) pair])
+        (case_sum (transform_pte \<circ> fst) (transform_pde \<circ> fst) entries)
+        (case_sum (\<lambda>pair. [ (transform_pt_slot_ref \<circ> hd \<circ> snd) pair])
           (\<lambda>pair. [(transform_pd_slot_ref \<circ> hd \<circ> snd) pair]) entries))
 | ArchInvocation_A.page_invocation.PageUnmap (arch_cap.PageCap a _ sz asid) ref \<Rightarrow>
     Some (cdl_page_invocation.PageUnmap (transform_mapping asid) a (transform_cslot_ptr ref) (pageBitsForSize sz))
@@ -210,9 +210,9 @@ lemma create_mapping_entries_dcorres:
       and vp_aligned: "vmsz_aligned vptr pgsz"
       and kb: "vptr < kernel_base"
   shows
-  "dcorres (dc \<oplus> (\<lambda>rv rv'. rv = sum_case (\<lambda>pair. [ (transform_pt_slot_ref \<circ> hd \<circ> snd) pair])
+  "dcorres (dc \<oplus> (\<lambda>rv rv'. rv = case_sum (\<lambda>pair. [ (transform_pt_slot_ref \<circ> hd \<circ> snd) pair])
                                  (\<lambda>pair. [(transform_pd_slot_ref \<circ> hd \<circ> snd) pair]) rv'
-                     \<and> sum_case (transform_pte \<circ> fst) (transform_pde \<circ> fst) rv'
+                     \<and> case_sum (transform_pte \<circ> fst) (transform_pde \<circ> fst) rv'
                            = FrameCap (ptrFromPAddr base)
                                vm_rights (pageBitsForSize pgsz) Fake None))
      \<top>
@@ -237,7 +237,7 @@ proof -
 
 
   show ?thesis using pdid vp_aligned
-    apply clarsimp
+    apply hypsubst_thin
     proof (induct pgsz)
       case ARMSmallPage
       show ?case using ARMSmallPage.prems
@@ -327,9 +327,9 @@ lemma create_mapping_entries_dcorres_select:
       and vp_aligned: "vmsz_aligned vptr pgsz"
       and kb: "vptr < kernel_base"
   shows
-  "dcorres (dc \<oplus> (\<lambda>rv rv'. rv = sum_case (\<lambda>pair. [ (transform_pt_slot_ref \<circ> hd \<circ> snd) pair])
+  "dcorres (dc \<oplus> (\<lambda>rv rv'. rv = case_sum (\<lambda>pair. [ (transform_pt_slot_ref \<circ> hd \<circ> snd) pair])
                                  (\<lambda>pair. [(transform_pd_slot_ref \<circ> hd \<circ> snd) pair]) rv'
-                     \<and> sum_case (transform_pte \<circ> fst) (transform_pde \<circ> fst) rv'
+                     \<and> case_sum (transform_pte \<circ> fst) (transform_pde \<circ> fst) rv'
                            = FrameCap (ptrFromPAddr base)
                                vm_rights (pageBitsForSize pgsz) Fake None))
      (\<lambda>s. frslots = all_pd_pt_slots pd pdid s
@@ -389,7 +389,7 @@ proof -
         apply (cut_tac less_kernel_base_mapping_slots[OF kb pd_aligned])
         apply (drule_tac x="ucast (lookup_pd_slot pd_ptr vptr && mask pd_bits >> 2)" in bspec)
          apply simp
-        apply (drule sym, simp)
+        apply (drule_tac t="pda ?v" in sym, simp)
         apply (clarsimp simp: obj_at_def a_type_def del: disjCI)
         apply (clarsimp split: Structures_A.kernel_object.split_asm split_if_asm
                                arch_kernel_obj.split_asm del: disjCI)
@@ -431,7 +431,7 @@ proof -
         apply (cut_tac less_kernel_base_mapping_slots[OF kb pd_aligned])
         apply (drule_tac x="ucast (lookup_pd_slot pd_ptr vptr && mask pd_bits >> 2)" in bspec)
          apply simp
-        apply (drule sym, simp)
+        apply (drule_tac t="pda ?v" in sym, simp)
         apply (clarsimp simp: obj_at_def a_type_def del: disjCI)
         apply (clarsimp split: Structures_A.kernel_object.split_asm split_if_asm
                                arch_kernel_obj.split_asm del: disjCI)
@@ -453,7 +453,7 @@ proof -
           apply (clarsimp simp: valid_idle_def st_tcb_at_def obj_at_def)
          apply (clarsimp simp: upto_enum_step_def pt_bits_def pageBits_def
                         split: split_if_asm)
-         apply (subst add_assoc, subst is_aligned_add_helper, assumption)
+         apply (subst add.assoc, subst is_aligned_add_helper, assumption)
           apply (simp only: word32_shift_by_2 word_shiftl_add_distrib[symmetric])
           apply (rule shiftl_less_t2n)
            apply (rule is_aligned_add_less_t2n[where n=4])
@@ -708,7 +708,7 @@ next
         apply (clarsimp simp: neq_Nil_conv valid_cap_simps obj_at_def
                               opt_object_page_directory invs_valid_idle label_to_flush_type_def InvocationLabels_H.isPageFlush_def
                        dest!: a_type_pdD)+
-       apply (rule_tac r'=dc and P'="?I" and Q'="\<lambda>rv. ?I and (\<exists>\<rhd> (lookup_pd_slot rv a && ~~ mask pd_bits))"
+       apply (rule_tac r'=dc and P'="?I" and Q'="\<lambda>rv. ?I and (\<exists>\<rhd> (lookup_pd_slot rv x21 && ~~ mask pd_bits))"
                 in corres_alternative_throw_splitE[OF _ _ returnOk_wp[where x="()"], simplified])
            apply (rule corres_from_rdonly, simp_all)[1]
              apply (wp | simp)+
@@ -794,7 +794,6 @@ next
                       translate_arch_invocation_def transform_page_inv_def)
     apply (clarsimp)
     apply (rule corres_from_rdonly)
-      apply (clarsimp)
     apply (wp, clarsimp)
     apply ( simp only: Let_unfold, wp, clarsimp, rule valid_validE, wp whenE_inv, clarsimp, wp)
     apply (assumption)
@@ -806,7 +805,6 @@ next
     apply blast
     apply (metis flush.exhaust)
     apply (rule corres_from_rdonly)
-      apply (clarsimp)
     apply (wp, clarsimp)
     apply ( simp only: Let_unfold, wp, clarsimp, rule valid_validE, wp whenE_inv, clarsimp, wp)
     apply (assumption)
@@ -818,7 +816,6 @@ next
     apply blast
     apply (metis flush.exhaust)
     apply (rule corres_from_rdonly)
-      apply (clarsimp)
     apply (wp, clarsimp)
     apply ( simp only: Let_unfold, wp, clarsimp, rule valid_validE, wp whenE_inv, clarsimp, wp)
     apply (assumption)
@@ -830,7 +827,6 @@ next
     apply blast
     apply (metis flush.exhaust)
     apply (rule corres_from_rdonly)
-      apply (clarsimp)
     apply (wp, clarsimp)
     apply ( simp only: Let_unfold, wp, clarsimp, rule valid_validE, wp whenE_inv, clarsimp, wp)
     apply (assumption)
@@ -1335,7 +1331,7 @@ lemma invoke_page_table_corres:
    apply (rule sym, simp+)
   done
 
-lemma sum_case_eq: "sum_case a a x = a (case x of Inl a \<Rightarrow> a | Inr a \<Rightarrow> a)"
+lemma case_sum_eq: "case_sum a a x = a (case x of Inl a \<Rightarrow> a | Inr a \<Rightarrow> a)"
   apply (case_tac x)
   apply (clarsimp)+
 done
@@ -1866,8 +1862,8 @@ proof -
   note retype_dc = retype_region_dcorres[where type="ArchObject ASIDPoolObj",
           unfolded translate_object_type_def, simplified]
   note insert_dc = insert_cap_child_corres
-  [where cap="cap.ArchObjectCap (arch_cap.ASIDPoolCap x y)",
-    simplified transform_cap_simps ,standard]
+  [where cap="cap.ArchObjectCap (arch_cap.ASIDPoolCap x y)" for x y,
+    simplified transform_cap_simps]
   note [simp del] = untyped_range.simps usable_untyped_range.simps atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
           Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
 
@@ -1893,6 +1889,7 @@ proof -
     apply (clarsimp simp:perform_asid_control_invocation_def)
     apply (simp add:arch_invocation_relation_def translate_arch_invocation_def)
     apply (cases asid_inv, clarsimp)
+    apply hypsubst_thin
     apply (drule sym)
     apply (drule sym)
     apply clarsimp

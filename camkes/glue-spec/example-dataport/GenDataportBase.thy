@@ -73,8 +73,8 @@ definition
     ('cs local_state \<Rightarrow> nat) \<Rightarrow>
     ('cs local_state \<Rightarrow> variable \<Rightarrow> 'cs local_state) \<Rightarrow> (channel, 'cs) comp"
 where
-  "Read_DataportTest_d2 ch addr embed \<equiv>
-    MemoryRead (ch DataportTest_d2) addr embed"
+  "Read_DataportTest_d2 ch addr embed_data \<equiv>
+    MemoryRead (ch DataportTest_d2) addr embed_data"
 
 definition
   Write_DataportTest_d2 :: "(DataportTest_channel \<Rightarrow> channel) \<Rightarrow>
@@ -89,8 +89,8 @@ definition
     ('cs local_state \<Rightarrow> nat) \<Rightarrow>
     ('cs local_state \<Rightarrow> variable \<Rightarrow> 'cs local_state) \<Rightarrow> (channel, 'cs) comp"
 where
- "Read_DataportTest_d1 ch addr embed \<equiv>
-   MemoryRead (ch DataportTest_d1) addr embed"
+ "Read_DataportTest_d1 ch addr embed_data \<equiv>
+   MemoryRead (ch DataportTest_d1) addr embed_data"
 
 definition
   Write_DataportTest_d1 :: "(DataportTest_channel \<Rightarrow> channel) \<Rightarrow>

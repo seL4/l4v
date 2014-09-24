@@ -452,7 +452,7 @@ lemma array_map_conv_Some[simp]: "array_map_conv Some n c = array_to_map n c"
   by (simp add: array_map_conv_def map_comp_def)
 lemma map_comp_array_map_conv_comm:
  "map_comp f (array_map_conv g n c) = array_map_conv (map_comp f g) n c"
-  by (rule ext) (simp add: array_map_conv_def2 Option.map_def map_comp_def)
+  by (rule ext) (simp add: array_map_conv_def2 map_option_def map_comp_def)
 lemma ran_array_map_conv:
   "ran (array_map_conv f n c) = {y. \<exists>i\<le>n. f (index c (unat i)) = Some y}"
   by (auto simp add: array_map_conv_def2 ran_def Collect_eq)
@@ -509,7 +509,7 @@ definition
   :: "(word32[256]) \<Rightarrow> (pde_C ptr \<rightharpoonup> pde_C) \<Rightarrow> asid \<rightharpoonup> hw_asid \<times> obj_ref"
   where
   "casid_map_to_H hw_asid_table pdes \<equiv>
-   (\<lambda>asid. Option.map
+   (\<lambda>asid. map_option
              (\<lambda>hw_asid. (hw_asid,
                          the (the_inv_map (pde_stored_asid  \<circ>\<^sub>m pdes \<circ>\<^sub>m
                                            pd_pointer_to_asid_slot) hw_asid)))
@@ -526,8 +526,8 @@ lemma ran_map_comp_subset: "ran (map_comp f g) <= (ran f)"
 
 (* FIXME: move *)(* NOTE: unused. *)
 lemma inj_on_option_map:
- "inj_on (Option.map f o m) (dom m) \<Longrightarrow> inj_on m (dom m)"
-  by (auto simp add: inj_on_def Option.map_def dom_def)
+ "inj_on (map_option f o m) (dom m) \<Longrightarrow> inj_on m (dom m)"
+  by (auto simp add: inj_on_def map_option_def dom_def)
 
 lemma eq_option_to_0_rev:
   "Some 0 ~: A \<Longrightarrow> \<forall>x. \<forall>y\<in>A.
@@ -535,9 +535,9 @@ lemma eq_option_to_0_rev:
   by (clarsimp simp: option_to_0_def split: option.splits)
 
 lemma inj_hwasidsI:
-  "asid_map_pd_to_hwasids m = Option.set \<circ> c \<Longrightarrow>
-   inj_on (Option.map snd \<circ> m) (dom m) \<Longrightarrow>
-   inj_on (Option.map fst \<circ> m) (dom m) \<Longrightarrow>
+  "asid_map_pd_to_hwasids m = set_option \<circ> c \<Longrightarrow>
+   inj_on (map_option snd \<circ> m) (dom m) \<Longrightarrow>
+   inj_on (map_option fst \<circ> m) (dom m) \<Longrightarrow>
    inj_on c (dom c)"
   apply (clarsimp simp: asid_map_pd_to_hwasids_def inj_on_def)
   apply (clarsimp simp: fun_eq_iff set_eq_iff)
@@ -555,6 +555,7 @@ lemma (in kernel_m)
      armKSASIDMap (ksArchState astate)"
   apply (rule ext)
   using valid rel
+  using [[hypsubst_thin]]
   apply (clarsimp simp: valid_arch_state'_def carch_state_relation_def
                         casid_map_to_H_def)
   apply (drule array_relation_map_conv2[OF _ eq_option_to_0_rev])

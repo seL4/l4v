@@ -722,7 +722,7 @@ lemma hoare_return_drop_imp[intro!]: "\<lbrakk> \<And>s. P s \<Longrightarrow> Q
  apply(simp add:valid_def return_def)
 done
 
-lemma hoare_option_case_inference:
+lemma hoare_case_option_inference:
  "\<lbrakk> \<And>y. x = Some y \<Longrightarrow> P x; x = None \<Longrightarrow> P x \<rbrakk> \<Longrightarrow> P x"
  apply(case_tac "x", simp_all)
 done

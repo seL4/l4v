@@ -1088,7 +1088,7 @@ lemma ccorres_name_pre:
 
 lemma tcb_ptr_to_ctcb_ptr_to_Ptr:
   "tcb_ptr_to_ctcb_ptr ` {p..+b} = Ptr ` {p + ctcb_offset..+b}"
-  apply (simp add:  tcb_ptr_to_ctcb_ptr_comp image_compose)
+  apply (simp add:  tcb_ptr_to_ctcb_ptr_comp image_comp [symmetric])
   apply (rule equalityI)
    apply clarsimp
    apply (rule imageI)
@@ -1283,7 +1283,7 @@ lemma heap_to_page_data_update_region:
   apply (simp add: heap_to_page_data_def Let_def
             split: split_if)
   apply (rule conjI)
-   apply (clarsimp simp: byte_to_word_heap_def Let_def add_assoc
+   apply (clarsimp simp: byte_to_word_heap_def Let_def add.assoc
                  intro!: ext)
    apply (subst foo, assumption+,
           (rule word_add_offset_less[where n=2, simplified]
@@ -1295,7 +1295,7 @@ lemma heap_to_page_data_update_region:
   apply clarsimp
   apply (case_tac "map_to_user_data psp x")
    apply simp
-  apply (clarsimp simp: dom_def byte_to_word_heap_def Let_def add_assoc
+  apply (clarsimp simp: dom_def byte_to_word_heap_def Let_def add.assoc
                 intro!: ext)
   apply (subst foo, assumption,
          (rule word_add_offset_less[where n=2, simplified]
@@ -1570,7 +1570,7 @@ proof -
 
   { assume asid_map:
     "asid_map_pd_to_hwasids (armKSASIDMap (ksArchState s)) = 
-       Option.set \<circ> (pde_stored_asid \<circ>\<^sub>m cslift s' \<circ>\<^sub>m pd_pointer_to_asid_slot)"
+       set_option \<circ> (pde_stored_asid \<circ>\<^sub>m cslift s' \<circ>\<^sub>m pd_pointer_to_asid_slot)"
     
     hence asid:
       "\<And>p pd_ptr pde. \<lbrakk> cslift s' (pde_Ptr p) = Some pde; 
@@ -1603,8 +1603,8 @@ proof -
       apply (simp add: objBits_simps archObjSize_def) 
       done
 
-    have "Option.set \<circ> (pde_stored_asid \<circ>\<^sub>m cslift s' \<circ>\<^sub>m pd_pointer_to_asid_slot) =
-      Option.set \<circ> (pde_stored_asid \<circ>\<^sub>m clift (hrs_htd_update (typ_region_bytes ptr bits) (t_hrs_' (globals s'))) \<circ>\<^sub>m
+    have "set_option \<circ> (pde_stored_asid \<circ>\<^sub>m cslift s' \<circ>\<^sub>m pd_pointer_to_asid_slot) =
+      set_option \<circ> (pde_stored_asid \<circ>\<^sub>m clift (hrs_htd_update (typ_region_bytes ptr bits) (t_hrs_' (globals s'))) \<circ>\<^sub>m
             pd_pointer_to_asid_slot)"
       apply -
       apply (rule ext)
@@ -1671,7 +1671,7 @@ proof -
      prefer 2
      apply (rule ext)
      apply clarsimp
-    apply (simp add: Option.map_def map_comp_def
+    apply (simp add: map_option_def map_comp_def
               split: split_if_asm option.splits)
     apply (frule pspace_alignedD'[OF _ pspace_aligned'])
     apply (case_tac "pageBits \<le> bits")

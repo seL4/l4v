@@ -44,7 +44,7 @@ apply(subgoal_tac "a div b \<le> k - 1")
   apply arith
  apply(rule le_less_trans)
   apply simp
-  apply(subst nat_mult_commute)
+  apply(subst mult.commute)
   apply(rule div_mult_le)
  apply assumption
 apply clarsimp
@@ -64,6 +64,6 @@ lemma nat_div_same_is_1 [simp]:
 
 lemma int_div_minus_is_minus1 [simp]:
     "a < 0 \<Longrightarrow> ((a :: int) div b = -a) = (b = -1)"
-  by (metis div_minus1_right div_minus_right int_div_same_is_1 minus_minus neg_0_less_iff_less minus_one)
+  by (metis div_minus_right equation_minus_iff int_div_same_is_1 neg_0_less_iff_less)
 
 end

@@ -194,7 +194,7 @@ val crunch_ignoreP =
                    | SOME x => snd x);
                in
                   Local_Theory.raw_theory (crunch_ignore_add_del add del) lthy
-                  |> (fn lthy => Named_Target.reinit lthy lthy)
+                  (* |> (fn lthy => Named_Target.reinit lthy lthy) *)
                end));
 
 end;

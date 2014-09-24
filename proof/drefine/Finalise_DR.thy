@@ -206,8 +206,7 @@ lemma delete_cap_one_shrink_descendants:
            apply (rule delete_cdt_slot_shrink_descendants[where y= "cdt pres" and p = p])
           apply (rule_tac Q="\<lambda>s. mdb_cte_at (swp (cte_wp_at (op\<noteq>cap.NullCap)) s ) xa" in hoare_vcg_precond_imp)
            apply (case_tac slot)
-           apply (clarsimp simp:set_cdt_def get_def put_def bind_def valid_def mdb_cte_at_def | rule conjI)+
-            apply (fastforce,clarsimp,fastforce)
+           apply (clarsimp simp:set_cdt_def get_def put_def bind_def valid_def mdb_cte_at_def)
           apply (assumption)
          apply clarsimp+
        apply (assumption)
@@ -1292,7 +1291,7 @@ lemma large_frame_range_helper:
   "t \<in> set [0 , 4 .e. 0x3C] \<Longrightarrow> t < 0x40"
   apply (clarsimp simp: upto_enum_step_def)
   apply (subgoal_tac "x < 0x10")
-    apply (subst mult_commute)
+    apply (subst mult.commute)
     apply (subst shiftl_t2n[where n =2,simplified,symmetric])
     apply (rule shiftl_less_t2n[where m = 6 and n =2,simplified])
        apply simp+
@@ -1400,7 +1399,7 @@ lemma mask_compare_imply:
     apply clarsimp+
   apply (drule_tac na = "na-l" in test_bits_mask)
   apply (clarsimp simp: linorder_not_le)
-  apply (subst (asm) add_commute[where a = l])+
+  apply (subst (asm) add.commute[where a = l])+
   apply (drule nat_diff_less)
     apply (clarsimp simp:word_size)+
   apply (clarsimp simp:nth_shiftr)
@@ -1527,7 +1526,7 @@ lemma is_aligned_less_kernel_base_helper:
                    unat_ucast_pd_bits_shift)
   apply (fold word_le_nat_alt, unfold linorder_not_le)
   apply (drule minus_one_helper3[where x=x])
-  apply (subst add_commute, subst is_aligned_add_or, assumption)
+  apply (subst add.commute, subst is_aligned_add_or, assumption)
    apply (erule order_le_less_trans, simp)
   apply (simp add: word_ao_dist shiftr_over_or_dist)
   apply (subst less_mask_eq, erule order_le_less_trans)
@@ -1804,11 +1803,10 @@ lemma dcorres_unmap_large_section:
   apply (drule_tac x = "(ucast (lookup_pd_slot ptr v + of_nat slot * 4 && mask pd_bits >> 2))"
     and y = "ucast (lookup_pd_slot ptr v && mask pd_bits >> 2)"
     in valid_entriesD[rotated])
-   apply (thin_tac "lookup_pd_slot ptr v + ?x  && ~~ mask 14 = ?y")
    apply (rule ccontr)
    apply simp
-   apply (drule arg_cong[where f = "ucast::(12 word\<Rightarrow>word32)"])
-   apply (drule arg_cong[where f = "\<lambda>x. shiftl x 2"])
+   apply (drule_tac x="ucast ?v" in arg_cong[where f = "ucast::(12 word\<Rightarrow>word32)"])
+   apply (drule_tac x="ucast ?v" in arg_cong[where f = "\<lambda>x. shiftl x 2"])
    apply (subst (asm) ucast_ucast_len)
     apply (rule shiftr_less_t2n)
     apply (rule less_le_trans[OF and_mask_less'])
@@ -1917,11 +1915,10 @@ lemma dcorres_unmap_large_page:
   apply (drule_tac x = "(ucast (ptr + of_nat x * 4 && mask pt_bits >> 2))"
     and y = "ucast (ptr && mask pt_bits >> 2)"
     in valid_entriesD[rotated])
-   apply (thin_tac "ptr + ?x  && ~~ mask pt_bits = ?y")
    apply (rule ccontr)
    apply simp
-   apply (drule arg_cong[where f = "ucast::(word8\<Rightarrow>word32)"])
-   apply (drule arg_cong[where f = "\<lambda>x. shiftl x 2"])
+   apply (drule_tac x="ucast ?v" in arg_cong[where f = "ucast::(word8\<Rightarrow>word32)"])
+   apply (drule_tac x="ucast ?v" in arg_cong[where f = "\<lambda>x. shiftl x 2"])
    apply (subst (asm) ucast_ucast_len)
     apply (rule shiftr_less_t2n)
     apply (rule less_le_trans[OF and_mask_less'])
@@ -2278,7 +2275,7 @@ lemma dcorres_unmap_page_table:
     apply (rule corres_split[OF _ dcorres_page_table_mapped])
       apply (rule dcorres_option[where P = \<top>])
        apply simp
-      apply (simp add:Option.map_def dc_def[symmetric])
+      apply (simp add: dc_def[symmetric])
       apply (rule corres_dummy_return_l)
        apply (rule corres_split[where r'=dc])
           apply clarify
@@ -2585,7 +2582,7 @@ lemma dcorres_delete_asid:
             apply (wp | clarsimp)+
          apply simp
         apply (wp | clarsimp)+
-       apply (subgoal_tac "valid_idle s \<and> ko_at (ArchObj (arch_kernel_obj.ASIDPool rv)) a s")
+       apply (subgoal_tac "valid_idle s \<and> ko_at (ArchObj (arch_kernel_obj.ASIDPool rv)) x2 s")
         apply simp+
      apply (wp | clarsimp)+
     apply (rule corres_alternate2)
@@ -2828,7 +2825,7 @@ lemma monadic_trancl_f:
   apply (simp add: monadic_rewrite_def monadic_trancl_def
                    bind_def split_def monadic_option_dest_def)
   apply (safe, simp_all)
-   apply (simp add: r_into_rtrancl monadic_option_relation_form_def)+
+   apply (simp add: r_into_rtrancl monadic_rel_optionation_form_def)+
   done
 
 lemma monadic_trancl_step:
@@ -2855,7 +2852,7 @@ lemma monadic_rewrite_if_lhs:
         (if P then b else c) a"
   by (cases P, simp_all)
 
-lemma monadic_rewrite_option_case:
+lemma monadic_rewrite_case_option:
   "\<lbrakk> \<And>y. x = Some y \<Longrightarrow> monadic_rewrite E F (P x) f (g y);
            x = None \<Longrightarrow> monadic_rewrite E F Q f h \<rbrakk>
      \<Longrightarrow> monadic_rewrite E F (\<lambda>s. (\<forall>y. x = Some y \<longrightarrow> P x s) \<and> (x = None \<longrightarrow> Q s))
@@ -2879,7 +2876,7 @@ lemma monadic_trancl_lift_Inl:
   apply (rule ext)
   apply (simp add: throwError_def return_def monadic_trancl_def)
   apply (subst rtrancl_idem)
-   apply (auto simp: monadic_option_relation_form_def lift_def
+   apply (auto simp: monadic_rel_optionation_form_def lift_def
                      throwError_def return_def monadic_option_dest_def)
   done
 
@@ -3125,7 +3122,7 @@ lemma monadic_rewrite_select_x:
 lemmas monadic_rewrite_select_pick_x
     = monadic_rewrite_bind_head
          [OF monadic_rewrite_select_x[where x=x], simplified,
-          THEN monadic_rewrite_trans, standard]
+          THEN monadic_rewrite_trans] for x
 
 lemma finalise_cap_zombie':
   "(case cap of ZombieCap _ \<Rightarrow> True | _ \<Rightarrow> False)
@@ -3333,7 +3330,7 @@ lemma finalise_slot_inner1_add_if_Null:
     apply (rule monadic_rewrite_if_rhs)
      apply (simp add: PageTableUnmap_D.is_final_cap_def)
      apply (rule monadic_rewrite_trans)
-      apply (rule monadic_rewrite_bind_tail[where j="\<lambda>_. j", standard, OF _ gets_wp])+
+      apply (rule monadic_rewrite_bind_tail[where j="\<lambda>_. j" for j, OF _ gets_wp])+
       apply (rename_tac remove, rule_tac P=remove in monadic_rewrite_gen_asm)
       apply simp
       apply (rule monadic_rewrite_refl)
@@ -3594,8 +3591,6 @@ next
     apply (clarsimp simp: obj_at_def is_cap_table_def)
     apply (clarsimp simp: opt_cap_cnode
                    split: Structures_A.kernel_object.split_asm)
-    apply (subst (asm) opt_cap_cnode, assumption, simp, simp)
-    apply clarsimp
     apply (rule exI, rule conjI, erule sym)
     apply (rule iffD1[OF cte_wp_at_caps_of_state cte_wp_at_cteI],
              (simp | rule conjI)+)
@@ -3756,7 +3751,7 @@ next
            apply (frule if_unsafe_then_capD, clarsimp+)
            apply (clarsimp simp: cte_wp_at_caps_of_state)
            apply (frule valid_global_refsD2, clarsimp+)
-           apply (erule disjE[where P="c = cap.NullCap \<and> P", standard])
+           apply (erule disjE[where P="c = cap.NullCap \<and> P" for c P])
             apply clarsimp
            apply (clarsimp simp: conj_ac invs_valid_idle global_refs_def cap_range_def
                           dest!: is_cap_simps' [THEN iffD1])

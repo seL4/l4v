@@ -95,7 +95,7 @@ sig
   (* -- options *)
   val mk_Some : term -> term (* Some constructor *)
   val mk_the : term -> term
-  val mk_option_case : term * term * term -> term (* none,some,optionvalue *)
+  val mk_case_option : term * term * term -> term (* none,some,optionvalue *)
 
 
   (* -- lists *)
@@ -340,7 +340,7 @@ fun mk_split t = let
   val (d1, r1) = dom_rng ty
   val (d2, r) = dom_rng r1
 in
-  Const(@{const_name "prod_case"}, ty --> (mk_prod_ty(d1, d2) --> r)) $ t
+  Const(@{const_name "case_prod"}, ty --> (mk_prod_ty(d1, d2) --> r)) $ t
 end
 
 fun list_mk_pabs (vs, bdy) =
@@ -350,8 +350,8 @@ fun list_mk_pabs (vs, bdy) =
     | [v1, v2] => mk_split(list_mk_abs(vs, bdy))
     | h::t => mk_split(mk_abs(h, list_mk_pabs(t, bdy)))
 
-fun mk_option_case (none_t, some_f, opt) =
-    Const(@{const_name "Option.option_case"},
+fun mk_case_option (none_t, some_f, opt) =
+    Const(@{const_name "Option.case_option"},
           type_of none_t --> type_of some_f --> type_of opt -->
           type_of none_t) $ none_t $ some_f $ opt
 
@@ -400,7 +400,7 @@ fun mk_noteq (t1,t2) = mk_neg(mk_eqt(t1,t2))
 fun mk_defeqn (t1,t2) = let
   val ty1 = type_of t1
 in
-  Const("==", ty1 --> ty1 --> prop) $ t1 $ t2
+  Const(@{const_name "Pure.eq"}, ty1 --> ty1 --> prop) $ t1 $ t2
 end
 
 fun mk_char c = let
@@ -430,7 +430,7 @@ in
   Const(@{const_name "Option.the"}, oty --> ty) $ t
 end
 
-fun mk_TYPE ty = Const(@{const_name "TYPE"}, mk_itself_type ty)
+fun mk_TYPE ty = Const(@{const_name "Pure.type"}, mk_itself_type ty)
 
 (* sets *)
 fun mk_IN(t1, t2) = let
@@ -473,37 +473,13 @@ in
 fun mk_zero ty = Const(@{const_name "Groups.zero_class.zero"}, ty)
 fun mk_one ty = Const(@{const_name "Groups.one_class.one"}, ty)
 
-fun mk_numb i =
-    if i = 1 then pls_t
-    else let
-        val bit1 = if i mod 2 = 1 then bit1_t else bit0_t
-      in
-        bit1 $ mk_numb (i div 2)
-      end
-
-fun mk_numeral typ i = let
-  val inj = Const(@{const_name "Num.numeral_class.numeral"},
-                  numeral_ty --> typ)
-  val neginj = Const(@{const_name "Num.neg_numeral_class.neg_numeral"},
-                     numeral_ty --> typ)
-  val ty =
-      case type_of inj of
-        Type("fun", [dom, rng]) => rng
-      | _ => raise Fail "Bad injection in mk_numeral"
-in
-  if i = 0 then mk_zero ty
-  else if i = 1 then mk_one ty
-  else if i > 1 then inj $ mk_numb i
-  else neginj $ mk_numb (~i)
-end
+val mk_numb = HOLogic.mk_numeral
+val mk_numeral = HOLogic.mk_number
 
 val number_of_name = @{const_name "Num.numeral_class.numeral"}
 val numeral_to_nat = Const(number_of_name, numeral_ty --> nat)
 val numeral_to_int = Const(number_of_name, numeral_ty --> int)
 val int_to_nat = @{term "Int.nat"}
-
-val negnumeral_int = Const(@{const_name "Num.neg_numeral_class.neg_numeral"},
-                           numeral_ty --> int)
 
 val mk_nat_numeral = mk_numeral nat
 val mk_int_numeral = mk_numeral int
@@ -523,8 +499,6 @@ fun numb_to_int t =
     | Const(@{const_name "Suc"}, _) $
            Const(@{const_name "Groups.zero_class.zero"}, _) => 1
     | Const(@{const_name "Num.numeral_class.numeral"}, _) $ t => calc 0 1 t
-    | Const(@{const_name "Num.neg_numeral_class.neg_numeral"}, _) $ t =>
-           ~(calc 0 1 t)
     | t => raise TERM ("TermsTypes.numb_to_int: not a number term", [t])
 
 end (* local *)
@@ -570,12 +544,6 @@ fun mk_uminus t = let
   val ty = type_of t
 in
   Const(@{const_name "uminus"}, ty --> ty) $ t
-end
-
-fun mk_option_map f x = let
-    val ([alpha], beta) = strip_type (type_of f)
-in
-    Const ("Datatype.option_map", (alpha --> beta) --> mk_option_ty alpha --> mk_option_ty beta) $ f $ x
 end
 
 (* ----------------------------------------------------------------------

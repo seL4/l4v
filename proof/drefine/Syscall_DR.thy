@@ -229,9 +229,9 @@ lemma decode_domain_corres:
   apply (unfold transform_cap_list_def)
   apply (case_tac "invocation_type label'")
    apply simp_all
-   apply (clarsimp simp: transform_intent_def Option.map_def split: option.splits)+
+   apply (clarsimp simp: transform_intent_def option_map_def split: option.splits)+
    defer
-   apply (clarsimp simp: transform_intent_def Option.map_def split: option.splits)+
+   apply (clarsimp simp: transform_intent_def option_map_def split: option.splits)+
   apply (clarsimp simp: transform_intent_domain_def)
   apply (case_tac "args'")
    apply simp
@@ -336,7 +336,7 @@ lemma decode_invocation_irqhandlercap_corres:
   apply (rule corres_rel_imp)
    apply (erule decode_irq_handler_corres, simp+)[1]
   apply clarsimp
-  apply (case_tac x, simp)
+  apply (case_tac xa, simp)
   apply (simp add: cdl_invocation_relation_def
                    cdl_irq_handler_invocation_relation_def
                    translate_invocation_def)
@@ -627,7 +627,7 @@ lemma dcorres_set_eobject_tcb:
   apply (clarsimp simp: transform_objects_def)
   apply (rule ext)
   apply clarsimp
-  apply (clarsimp simp: Option.map_def restrict_map_def map_add_def)
+  apply (clarsimp simp: option_map_def restrict_map_def map_add_def)
   done
 
 lemma invoke_domain_corres:
@@ -850,7 +850,21 @@ lemma get_tcb_mrs_wp:
   apply simp
 done
 
+lemma get_ipc_buffer_noop:
+  "\<lbrace>P and (\<lambda>s. \<exists>s'. s = transform s' \<and> tcb_at t s' \<and> valid_etcbs s' \<and> not_idle_thread t s')\<rbrace>
+     get_ipc_buffer t True \<exists>\<lbrace>\<lambda>r. P\<rbrace>"
+  apply (simp add:gets_the_def gets_def bind_assoc get_def split_def get_ipc_buffer_def tcb_at_def
+      exs_valid_def fail_def return_def bind_def assert_opt_def split:cdl_cap.splits)
+  apply clarsimp
+  apply (rule_tac x = "(the (opt_cap (t, tcb_ipcbuffer_slot) ?s),?s)" in bexI)
+   apply (rule conjI|fastforce simp:fail_def return_def split:option.splits)+
+  apply (clarsimp split:option.splits simp:fail_def return_def)
+  apply (frule(1) valid_etcbs_get_tcb_get_etcb)
+  apply (clarsimp simp: opt_cap_tcb not_idle_thread_def)
+  done
+
 lemma dcorres_reply_from_kernel:
+  (* FIXME: this is incomprehensible. fix a bit when auto-indenting is fixed? *)
   "dcorres dc \<top> (invs and tcb_at oid and not_idle_thread oid and valid_etcbs) (corrupt_ipc_buffer oid True) (reply_from_kernel oid msg_rv)"
   apply (simp add:reply_from_kernel_def)
   apply (case_tac msg_rv)
@@ -873,24 +887,15 @@ lemma dcorres_reply_from_kernel:
             unfolding K_bind_def
           apply (rule set_message_info_corres)
       apply (wp | clarsimp simp:not_idle_thread_def)+
-    apply (simp add:gets_the_def gets_def bind_assoc get_def split_def get_ipc_buffer_def tcb_at_def
-      exs_valid_def fail_def return_def bind_def assert_opt_def split:cdl_cap.splits)
-    apply (rule_tac x = "(?a,?b)" in bexI)
-    apply (rule conjI|fastforce simp:fail_def return_def split:option.splits)+
-    apply (clarsimp split:option.splits simp:fail_def | rule conjI)+
-      apply (frule(1) valid_etcbs_get_tcb_get_etcb)
-      apply (subst opt_cap_tcb)
-      apply (simp add:return_def)+
-      apply clarsimp
-      apply (drule_tac y = "Some a" in arg_cong[where f  = the])
-      apply simp
-      apply (wp cdl_get_ipc_buffer_None | simp)+
+     apply (wp get_ipc_buffer_noop, clarsimp)
+     apply (fastforce simp: not_idle_thread_def)
+    apply (wp cdl_get_ipc_buffer_None | simp)+
     apply clarsimp
     apply (drule lookup_ipc_buffer_SomeB_evalMonad)
     apply clarsimp
     apply (rule corres_symb_exec_l)
       apply (rule_tac F = "rv = Some ba" in corres_gen_asm)
-      apply (clarsimp split:option.splits)
+      apply clarsimp
       apply (rule corrupt_frame_include_self[where y = oid])
         apply (rule corres_guard_imp)
           apply (rule corres_split[OF _ set_register_corres])
@@ -900,23 +905,19 @@ lemma dcorres_reply_from_kernel:
               apply (rule corres_split[OF _ dcorres_set_mrs])
               unfolding K_bind_def
                 apply (rule set_message_info_corres)
-              apply (wp|clarsimp simp:not_idle_thread_def)+
-              apply (assumption)
+              apply (wp| simp add:not_idle_thread_def)+
             apply (clarsimp simp:not_idle_thread_def)
-            apply (wp|clarsimp)+
-      apply (clarsimp simp:cte_wp_at_cases obj_at_def)
-      apply (drule sym)
       apply (clarsimp simp:invs_def not_idle_thread_def valid_state_def valid_pspace_def
         ipc_frame_wp_at_def ipc_buffer_wp_at_def obj_at_def)
       apply (clarsimp simp:cte_wp_at_cases obj_at_def)
-      apply (drule sym)
+      apply (drule_tac s="cap.ArchObjectCap ?c" in sym)
       apply (clarsimp simp:ipc_frame_wp_at_def obj_at_def)
-    apply (clarsimp simp:get_ipc_buffer_def gets_the_def gets_def get_def fail_def tcb_at_def
-      bind_def return_def assert_opt_def exs_valid_def split:option.splits cdl_cap.splits)
-    apply (rule exI)
-    apply (frule(1) valid_etcbs_get_tcb_get_etcb)
-    apply (subst opt_cap_tcb)
-      apply (simp add:not_idle_thread_def)+
+     apply (clarsimp simp:ipc_frame_wp_at_def obj_at_def cte_wp_at_cases)
+     apply (drule_tac s="cap.ArchObjectCap ?c" in sym)
+     apply simp
+    apply (wp get_ipc_buffer_noop, clarsimp)
+    apply fastforce
+    apply simp
     apply (rule cdl_get_ipc_buffer_Some)
       apply fastforce
       apply (simp add:tcb_at_def not_idle_thread_def get_tcb_rev)+
@@ -1017,7 +1018,7 @@ lemma decode_invocation_corres':
     \<and> (\<forall>e\<in> set excaps. s \<turnstile> fst e) \<and> cte_wp_at (Not \<circ> is_master_reply_cap) slot s \<and> cte_wp_at (diminished cap) slot s
     \<and> (\<forall>e\<in> set excaps. cte_wp_at (diminished (fst e)) (snd e) s)) rv')
      ((\<lambda>(cap, cap_ref, extra_caps).
-          option_case (if ep_related_cap cap then Decode_D.decode_invocation cap cap_ref extra_caps undefined else Monads_D.throw)
+          case_option (if ep_related_cap cap then Decode_D.decode_invocation cap cap_ref extra_caps undefined else Monads_D.throw)
           (Decode_D.decode_invocation cap cap_ref extra_caps)
           (cdl_intent_op (transform_full_intent (machine_state s) (cur_thread s) ctcb)))
      rv)
@@ -1075,7 +1076,7 @@ lemma reply_from_kernel_error:
   apply clarsimp
   apply (rule conjI)
    apply (rule word_of_nat_le)
-   apply (rule le_trans[OF min_max.inf_le1])
+   apply (rule le_trans[OF min.cobounded1])
    apply (simp add:mask_def)
    apply (rule le_trans)
    apply (rule less_imp_le[OF msg_registers_lt_msg_max_length])
@@ -1331,7 +1332,7 @@ lemma handle_invocation_corres:
            and  Q' = "op = s'a" and Q=\<top>
            and rr="\<lambda>(cap,slot,extra) (slot',cap',extra',buffer).
          cap = transform_cap cap' \<and> slot = transform_cslot_ptr slot'
-         \<and> extra = transform_cap_list extra'"  in  corres_split_bind_sum_case)
+         \<and> extra = transform_cap_list extra'"  in  corres_split_bind_case_sum)
         apply (rule_tac Q = "\<lambda>x. \<top>" and Q'="\<lambda>x. op = s'a" in corres_initial_splitE)
            apply (clarsimp simp: transform_full_intent_def Let_def)
            apply (rule corres_guard_imp[OF dcorres_lookup_cap_and_slot[simplified]])
@@ -1354,7 +1355,7 @@ lemma handle_invocation_corres:
        apply (simp add:liftE_bindE)
        apply (rule corres_when,simp)
        apply (rule handle_fault_corres)
-      apply (rule corres_split_bind_sum_case)
+      apply (rule corres_split_bind_case_sum)
           apply (rule decode_invocation_corres')
              apply (simp add: split_def)+
          apply (rule dcorres_when_r)

@@ -56,8 +56,8 @@ definition
                 else if \<exists>irq. cap = cap.IRQHandlerCap irq then src_cap = cap.IRQControlCap else is_untyped_cap cap)"
 
 lemma option_return_modify_modify:
-  "option_case (return ()) (\<lambda>x. modify (f x))
-       = (\<lambda>opt. modify (option_case id f opt))"
+  "case_option (return ()) (\<lambda>x. modify (f x))
+       = (\<lambda>opt. modify (case_option id f opt))"
   apply (rule ext)
   by (simp split: option.split add: modify_id_return)
 
@@ -127,13 +127,13 @@ lemma dcorres_set_untyped_cap_as_full:
 lemma dcorres_opt_parent_set_parent_helper:
   "dcorres dc \<top> P
   (gets (opt_parent (transform_cslot_ptr src)) >>=
-  option_case (return ())
+  case_option (return ())
   (\<lambda>parent. modify (\<lambda>s. s\<lparr>cdl_cdt := cdl_cdt s(transform_cslot_ptr child \<mapsto> parent)\<rparr>)))
   g \<Longrightarrow>
   dcorres dc \<top> (\<lambda>s. cdt s child = None \<and> cte_at child s \<and>
    mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) (cdt s) \<and> P s)
   (gets (opt_parent (transform_cslot_ptr src)) >>=
-  option_case (return ()) (set_parent (transform_cslot_ptr child)))
+  case_option (return ()) (set_parent (transform_cslot_ptr child)))
   g"
   apply (clarsimp simp:gets_def set_parent_def bind_def
     return_def get_def assert_def corres_underlying_def
@@ -212,7 +212,7 @@ lemma insert_cap_sibling_corres:
               apply (subgoal_tac "inj_on transform_cslot_ptr ({src, sibling} \<union> dom (cdt s') \<union> ran (cdt s'))")
                apply (subst map_lift_over_f_eq map_lift_over_upd,
                  erule subset_inj_on, fastforce)+
-               apply (simp add: option_map_is_None[THEN trans [OF eq_commute]]
+               apply (simp add: map_option_is_None[THEN trans [OF eq_commute]]
                  fun_eq_iff del: inj_on_insert)
                apply (subst eq_commute [where a=None])
                apply (subst map_lift_over_f_eq map_lift_over_upd,
@@ -362,7 +362,7 @@ lemma reply_cap_insert_corres:
    apply (drule caps_of_state_cteD)+
    apply (frule(1) cte_wp_tcb_cap_valid)
      apply (clarsimp simp:valid_mdb_def reply_master_revocable_def)
-     apply (drule_tac x = "word" in spec)
+     apply (drule_tac x = "sid" in spec)
      apply (drule_tac x = "tcb_cnode_index 2" in spec)
      apply (clarsimp simp:cte_wp_at_caps_of_state is_master_reply_cap_def)
   apply (drule caps_of_state_cteD)+
@@ -437,9 +437,6 @@ proof -
              apply (clarsimp simp: transform_def transform_current_thread_def
                                    transform_cdt_def transform_asid_table_def
                                    transform_objects_def)
-             apply (subgoal_tac "(\<lambda>r. if r = p' then None else cdt s' r) = cdt s'")
-              apply clarsimp
-             apply fastforce
             apply clarsimp
             apply (rule corres_modify)
             apply (clarsimp simp: transform_def transform_current_thread_def
@@ -461,7 +458,7 @@ proof -
              apply (subst subset_inj_on map_lift_over_f_eq[OF subset_inj_on],
                     assumption, fastforce)+
              apply (simp add: inj_on_iff[where f="transform_cslot_ptr"]
-                              ranI domI option_map_eq_Some[THEN trans [OF eq_commute]])
+                              ranI domI map_option_eq_Some[THEN trans [OF eq_commute]])
              apply (auto simp: inj_on_iff[where f="transform_cslot_ptr"]
                                ranI domI,
                     auto simp: inj_on_iff[where f="transform_cslot_ptr"]
@@ -865,9 +862,7 @@ lemma ep_cancel_badged_sends_def':
   apply (case_tac s)
   apply clarsimp
   apply (rule ext)
-  apply (clarsimp simp:Option.map_def split:option.splits)
-  apply (case_tac a)
-  apply auto
+  apply (clarsimp simp:option_map_def split:option.splits cdl_object.split)
 done
 
 lemma ep_cancel_badged_sends_def'':
@@ -884,9 +879,7 @@ lemma ep_cancel_badged_sends_def'':
   apply (case_tac s)
   apply clarsimp
   apply (rule ext)
-  apply (clarsimp simp:Option.map_def split:option.splits)
-  apply (case_tac a)
-  apply auto
+  apply (clarsimp simp:option_map_def split:option.splits cdl_object.split)
 done
 
 lemma corres_mapM_to_mapM_x:
@@ -1148,7 +1141,7 @@ lemma set_asid_pool_empty'_helper:
    apply (rule word_unat.Rep_eqD)
    apply (simp add: unat_word_ariths unat_ucast unat_of_nat)
   apply (subst word_le_make_less[where y="of_nat n"])
-  apply (auto simp: add_commute)
+  apply (auto simp: add.commute)
   done
 
 lemma set_asid_pool_empty':
@@ -1281,7 +1274,7 @@ lemma dcorres_set_asid_pool_empty:
       apply (clarsimp simp:set_map)
      apply (clarsimp simp del:set_map simp:suffixeq_def)
     apply (wp | clarsimp simp:swp_def)+
-   apply (clarsimp simp:list_all2_def transform_asid_def asid_low_bits_def set_zip)
+   apply (clarsimp simp:list_all2_iff transform_asid_def asid_low_bits_def set_zip)
    apply (clarsimp simp:unat_ucast upto_enum_def unat_of_nat)
   done
 
@@ -1715,7 +1708,7 @@ lemma copy_global_mappings_dwp:
       apply (simp add:mask_add_aligned)
       apply (subst less_mask_eq,simp)
       apply (simp add:shiftl_t2n)
-      apply (subst mult_commute)
+      apply (subst mult.commute)
       apply (rule div_lt_mult,simp+,unat_arith,simp+)
       apply (simp add:shiftl_shiftr1 word_size)
       apply (subst less_mask_eq,simp)
@@ -1795,8 +1788,8 @@ lemma dcorres_dummy_empty_slot_pd_mapM_x:
       done
    qed
 
-lemmas dcorres_arch_finalise_cap = dcorres_finalise_cap [where cap = "cap.ArchObjectCap cap",
-  simplified, simplified comp_def, simplified, standard]
+lemmas dcorres_arch_finalise_cap = dcorres_finalise_cap [where cap = "cap.ArchObjectCap cap" for cap,
+  simplified, simplified comp_def, simplified]
 
 lemma cases_simp_imp:
   "((A = None \<longrightarrow> x \<and> a) \<and> ((\<exists>y. A = Some y) \<longrightarrow> x \<and> b)) = (x \<and> ((A = None \<longrightarrow> a) \<and> ((\<exists>y. A = Some y) \<longrightarrow> b)))"
@@ -1840,7 +1833,7 @@ lemma dcorres_recycle_pd_caps:
               apply (rule corres_trivial, simp add: corres_return split: split_if)
              apply simp
             apply wp
-          apply ((wp invalidate_tlb_by_asid_valid_cap option_case_wp invalidate_tlb_by_asid_dwp dmo_dwp
+          apply ((wp invalidate_tlb_by_asid_valid_cap case_option_wp invalidate_tlb_by_asid_dwp dmo_dwp
             machine_op_lift static_imp_wp
             | simp add: if_apply_def2 cleanCacheRange_PoU_def)+)
       apply (simp add: clear_object_caps_def)
@@ -1978,7 +1971,7 @@ lemma dcorres_clear_object_caps_pt:
       apply (clarsimp simp:upto_enum_step_def not_idle_thread_def object_slots_def
         transform_page_table_contents_def unat_map_def)
       apply (rule unat_less_helper)
-      apply (subst mult_commute)
+      apply (subst mult.commute)
       apply (simp add:shiftl_t2n[where n= 2,simplified,symmetric])
       apply (simp add:shiftl_shiftr1 word_size)
       apply (subst iffD2[OF mask_eq_iff_w2p])
@@ -1999,7 +1992,7 @@ lemma dcorres_clear_object_caps_pt:
       apply (clarsimp simp: pt_bits_def pageBits_def pageBits_def word_of_nat_le)
       apply (clarsimp simp: distinct_map distinct_enum_upto upto_enum_step_def inj_on_def
         pt_bits_def pageBits_def pageBits_def)
-      apply (subst (asm) mult_commute[where b = 4])+
+      apply (subst (asm) mult.commute[where b = 4])+
       apply (simp add:shiftl_t2n[where n=2,simplified,symmetric] shiftl_shiftr1 word_size)
       apply (subst (asm) iffD2[OF mask_eq_iff_w2p],simp add:word_size)
         apply (erule le_less_trans,simp)
@@ -2024,7 +2017,7 @@ lemma dcorres_recycle_pt_caps:
     (CSpace_D.recycle_cap is_final' (transform_cap (cap.ArchObjectCap cap)))
     (arch_recycle_cap is_final' cap)"
   using cap
-  apply (clarsimp simp:arch_recycle_cap_def CSpace_D.recycle_cap_def cleanCacheRange_PoU_def prod_case_beta cong: option.case_cong)
+  apply (clarsimp simp:arch_recycle_cap_def CSpace_D.recycle_cap_def cleanCacheRange_PoU_def case_prod_beta cong: option.case_cong)
   apply (rule corres_guard_imp)
     apply (rule corres_split[OF _ dcorres_clear_object_caps_pt [where a = "fst slot" and b = "snd slot" and option = option]])
       apply (rule dcorres_symb_exec_r)
@@ -2032,7 +2025,7 @@ lemma dcorres_recycle_pt_caps:
           apply (rule corres_split [where Q' = \<top>,OF _ dcorres_arch_finalise_cap [where slot = slot]])
              apply (rule corres_trivial, simp split:split_if, case_tac is_final',
                     (simp add:transform_mapping_def)+)
-           apply ((wp option_cases_weak_wp invalidate_tlb_by_asid_valid_cap page_table_mapped_invs
+           apply ((wp case_options_weak_wp invalidate_tlb_by_asid_valid_cap page_table_mapped_invs
              invalidate_tlb_by_asid_dwp page_table_mapped_dwp dmo_dwp
              mapM_x_store_pte_valid_pdpt2 mapM_x_swp_store_pte_invs [unfolded swp_def]
              mapM_x_wp' [OF store_pte_valid_cap] mapM_x_wp' [OF store_pte_cte_wp_at]
@@ -2267,7 +2260,7 @@ lemma dcorres_get_object_cnode_split:
    apply simp_all
    apply (clarsimp split: nat.splits)
    apply (clarsimp simp: get_cnode'_def cnode_size_bits_def split:  option.splits kernel_object.split)
-   apply (case_tac a, simp_all)
+   apply (case_tac x2, simp_all)
   done
 
 lemma arch_recycle_cap_ret:
@@ -2519,7 +2512,7 @@ lemma invoke_cnode_corres:
         apply (clarsimp simp:invs_valid_idle)+
      apply (drule valid_idle_has_null_cap[rotated -1],clarsimp+)[1]
     apply (clarsimp simp: transform_cslot_ptr_inj [OF cte_wp_at_cte_at real_cte_at_cte])
-   apply (simp add: cap_null_reply_case_If bool_case_If)
+   apply (simp add: cap_null_reply_case_If case_bool_If)
    apply (rule stronger_corres_guard_imp)
      apply (rule corres_split [OF _ get_cur_thread_corres])
        apply (rule corres_split [OF _ get_cap_corres])
@@ -3242,7 +3235,7 @@ lemma decode_cnode_corres:
   apply clarsimp
   apply (erule disjE)
    apply clarsimp
-   apply (case_tac args')
+   apply (case_tac args'a)
     apply clarsimp
     apply (simp add: upto_enum_def toEnum_def fromEnum_def
                      enum_invocation_label)

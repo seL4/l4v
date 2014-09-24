@@ -20,7 +20,7 @@ apply (simp add: tcb_sched_action_def)
 apply wp
 apply (clarsimp simp: integrity_def integrity_ready_queues_def pas_refined_def tcb_domain_map_wellformed_aux_def etcb_at_def get_etcb_def
            split: option.splits)
-apply (erule_tac x="(thread, tcb_domain a)" in ballE)
+apply (erule_tac x="(thread, tcb_domain (the (ekheap s thread)))" in ballE)
 apply (auto intro: domtcbs)
 done
 
@@ -43,7 +43,7 @@ apply (simp add: tcb_sched_action_def)
 apply wp
 apply (clarsimp simp: integrity_def integrity_ready_queues_def pas_refined_def tcb_domain_map_wellformed_aux_def etcb_at_def get_etcb_def
            split: option.splits)
-apply (erule_tac x="(thread, tcb_domain a)" in ballE)
+apply (erule_tac x="(thread, tcb_domain (the (ekheap s thread)))" in ballE)
 apply (auto intro: domtcbs)
 done
 
@@ -437,7 +437,7 @@ proof (induct arbitrary: st rule: rec_del.induct,
     apply (rule spec_valid_conj_liftE1, rule valid_validE_R, rule rec_del_valid_list, rule preemption_point_inv')
       apply simp
      apply simp
-    apply (rule "1.hyps"[simplified rec_del_call.cases slot_rdcall.simps])
+    apply (rule "1.hyps"[simplified rec_del_call.simps slot_rdcall.simps])
    apply auto
     done
 
@@ -504,7 +504,7 @@ next
    by (clarsimp simp: replicate_not_True)
   case (3 ptr bits n slot s)
   show ?case
-    apply (simp add: rec_del_call.cases simp_thms spec_validE_def)
+    apply (simp add: rec_del_call.simps simp_thms spec_validE_def)
     apply (rule hoare_pre, wp static_imp_wp)
     apply clarsimp
     done
@@ -669,7 +669,7 @@ lemma arch_recycle_cap_respects:
     apply clarsimp
     apply (drule valid_global_refsD2, fastforce)
     apply (clarsimp simp: cap_range_def)
-   apply (subst add_commute, subst is_aligned_add_helper, simp add: pd_bits_def)
+   apply (subst add.commute, subst is_aligned_add_helper, simp add: pd_bits_def)
      apply (simp add: pageBits_def)
     apply (rule shiftl_less_t2n)
      apply (simp add: kernel_base_def)

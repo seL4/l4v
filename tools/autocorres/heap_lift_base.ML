@@ -150,7 +150,7 @@ let
       (* Remove the "void" heap if it exists. *)
       |> Typset.subtract (Typset.make [@{typ "unit"}])
 in
-  Typset.union_sets (AutoCorresUtil.map_all fn_info process)
+  Typset.union_sets (AutoCorresUtil.map_all lthy fn_info process)
 end
 
 (* Get fields from the globals type that should be copied from the
@@ -202,7 +202,7 @@ let
       |> fst |> take (length copied_fields)
 
   (* Hide the constants of existing fields. *)
-  val thy = Isar_Cmd.hide_const false (map fst existing_fields) thy
+  val thy = fold (Sign.hide_const false) (map fst existing_fields) thy
 
   (* Generate a mapping from heap types to the getter/setter for that heap. *)
   val heap_fields =
@@ -417,8 +417,8 @@ let
   (*
    * HACK: Exit and enter the context again, so the simpset created by the new
    * record gets imported in. No idea what the "correct" way of doing this is.
-   *)
-  val lthy = Named_Target.reinit lthy lthy
+   *) 
+  val lthy = Local_Theory.exit_global lthy |> Named_Target.init (the (Named_Target.locale_of lthy))
 
   (* Generate a function mapping old globals to the new globals. *)
   val (lift_name, lift_def, simp_thms, lthy) = gen_heap_abs_fn

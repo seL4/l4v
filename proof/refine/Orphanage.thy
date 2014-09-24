@@ -1094,7 +1094,7 @@ crunch inv [wp]: alignError "P"
 lemma createObjects_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> pspace_aligned' s \<and> pspace_no_overlap' ptr sz s \<and> pspace_distinct' s 
       \<and> n \<noteq> 0 \<and> range_cover ptr sz (objBitsKO (injectKOS val) + gbits) n
-      \<and> \<not> option_case False (is_active_thread_state \<circ> tcbState) (projectKO_opt (injectKOS val)) \<rbrace>
+      \<and> \<not> case_option False (is_active_thread_state \<circ> tcbState) (projectKO_opt (injectKOS val)) \<rbrace>
    createObjects ptr n val gbits
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   apply (clarsimp simp: no_orphans_def all_active_tcb_ptrs_def
@@ -1296,7 +1296,7 @@ lemma invokeUntyped_no_orphans' [wp]:
 
     have us_align[simp]:"is_aligned (of_nat (length slots) * 2 ^ APIType_capBits tp us) 4"
       apply (rule is_aligned_weaken)
-       apply (subst mult_commute)
+       apply (subst mult.commute)
        apply (rule is_aligned_shiftl_self[unfolded shiftl_t2n])
       apply simp
       done
@@ -1682,7 +1682,7 @@ lemma reduceZombie_no_orphans:
                               \<and> cte_wp_at' (\<lambda>c. c = cte) slot s \<and> invs' s
                               \<and> sch_act_simple s \<and> no_orphans s"
                   in hoare_post_imp)
-       apply (clarsimp simp: cte_wp_at_ctes_of mult_ac dest!: isCapDs)
+       apply (clarsimp simp: cte_wp_at_ctes_of mult.commute mult.left_commute dest!: isCapDs)
        apply (simp add: field_simps)
       apply (wp getCTE_cte_wp_at)
       apply simp
@@ -1801,7 +1801,7 @@ proof (induct arbitrary: P p rule: finalise_spec_induct2)
          apply (rule finaliseCap_cte_refs)
         apply (rule finaliseCap_replaceable[where slot=sl])
        apply clarsimp
-       apply (erule disjE[where P="F \<and> G", standard])
+       apply (erule disjE[where P="F \<and> G" for F G])
         apply (clarsimp simp: capRemovable_def cte_wp_at_ctes_of)
         apply (rule conjI, clarsimp)
         apply (clarsimp simp: final_IRQHandler_no_copy)
@@ -1813,7 +1813,7 @@ proof (induct arbitrary: P p rule: finalise_spec_induct2)
          apply (rule conjI, clarsimp)
          apply (case_tac "cteCap rv",
                 simp_all add: isCap_simps removeable'_def
-                              fun_eq_iff[where f="cte_refs' cap", standard]
+                              fun_eq_iff[where f="cte_refs' cap" for cap]
                               fun_eq_iff[where f=tcb_cte_cases]
                               tcb_cte_cases_def
                               word_neq_0_conv[symmetric])[1]
@@ -1821,7 +1821,7 @@ proof (induct arbitrary: P p rule: finalise_spec_induct2)
         apply (rule conjI, clarsimp)
         apply (case_tac "cteCap rv",
                simp_all add: isCap_simps removeable'_def
-                             fun_eq_iff[where f="cte_refs' cap", standard]
+                             fun_eq_iff[where f="cte_refs' cap" for cap]
                              fun_eq_iff[where f=tcb_cte_cases]
                              tcb_cte_cases_def)[1]
          apply (frule Q)
@@ -2046,13 +2046,13 @@ lemma setPriority_no_orphans [wp]:
 
 lemma tc_no_orphans:
   "\<lbrace> no_orphans and invs' and sch_act_simple and tcb_at' a and ex_nonz_cap_to' a and
-    option_case \<top> (valid_cap' o fst) e' and 
-    K (option_case True (isCNodeCap o fst) e') and
-    option_case \<top> (valid_cap' o fst) f' and
-    K (option_case True (isValidVTableRoot o fst) f') and
-    option_case \<top> (valid_cap') (option_case None (option_case None (Some o fst) o snd) g) and
-    K (option_case True isArchObjectCap (option_case None (option_case None (Some o fst) o snd) g))
-    and K (option_case True (swp is_aligned 2 o fst) g) and
+    case_option \<top> (valid_cap' o fst) e' and 
+    K (case_option True (isCNodeCap o fst) e') and
+    case_option \<top> (valid_cap' o fst) f' and
+    K (case_option True (isValidVTableRoot o fst) f') and
+    case_option \<top> (valid_cap') (case_option None (case_option None (Some o fst) o snd) g) and
+    K (case_option True isArchObjectCap (case_option None (case_option None (Some o fst) o snd) g))
+    and K (case_option True (swp is_aligned 2 o fst) g) and
     K (valid_option_prio d) \<rbrace>
       invokeTCB (tcbinvocation.ThreadControl a sl b' d e' f' g)
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
@@ -2060,18 +2060,18 @@ lemma tc_no_orphans:
   apply (simp add: invokeTCB_def getThreadCSpaceRoot getThreadVSpaceRoot
                    getThreadBufferSlot_def split_def)
   apply (rule hoare_walk_assmsE)
-    apply (clarsimp simp: pred_conj_def option.splits[where P="\<lambda>x. x s", standard])
-    apply ((wp option_case_wp threadSet_no_orphans threadSet_invs_trivial
+    apply (clarsimp simp: pred_conj_def option.splits[where P="\<lambda>x. x s" for s])
+    apply ((wp case_option_wp threadSet_no_orphans threadSet_invs_trivial
                threadSet_cap_to' hoare_vcg_all_lift static_imp_wp | clarsimp simp: inQ_def)+)[2]
   apply (rule hoare_walk_assmsE)
-    apply (clarsimp simp: pred_conj_def option.splits[where P="\<lambda>x. x s", standard])
-    apply ((wp option_case_wp hoare_vcg_all_lift static_imp_wp setP_invs' | clarsimp)+)[2]
+    apply (clarsimp simp: pred_conj_def option.splits[where P="\<lambda>x. x s" for s])
+    apply ((wp case_option_wp hoare_vcg_all_lift static_imp_wp setP_invs' | clarsimp)+)[2]
   apply (rule hoare_pre)
    apply (simp only: simp_thms cong: conj_cong
           | wp cteDelete_deletes cteDelete_invs' cteDelete_sch_act_simple
-               checkCap_inv[where P="valid_cap' c", standard]
-               checkCap_inv[where P=sch_act_simple, standard]
-               checkCap_inv[where P=no_orphans, standard]
+               checkCap_inv[where P="valid_cap' c" for c]
+               checkCap_inv[where P=sch_act_simple]
+               checkCap_inv[where P=no_orphans]
                hoare_vcg_all_lift_R hoare_vcg_all_lift
                threadSet_no_orphans hoare_vcg_const_imp_lift_R
                static_imp_wp

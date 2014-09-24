@@ -139,7 +139,7 @@ definition
   ipc_buffer_has_read_auth :: "'a PAS \<Rightarrow> 'a \<Rightarrow> word32 option \<Rightarrow> bool"
 where
 "ipc_buffer_has_read_auth aag l \<equiv>
-    option_case True (\<lambda>buf'. is_aligned buf' msg_align_bits \<and> (\<forall>x \<in> ptr_range buf' msg_align_bits. (l,Read,pasObjectAbs aag x) \<in> (pasPolicy aag)))"
+    case_option True (\<lambda>buf'. is_aligned buf' msg_align_bits \<and> (\<forall>x \<in> ptr_range buf' msg_align_bits. (l,Read,pasObjectAbs aag x) \<in> (pasPolicy aag)))"
 
 
 lemma set_mrs_equiv_but_for_labels:
@@ -170,7 +170,7 @@ lemma set_mrs_equiv_but_for_labels:
          apply(fastforce simp: msg_max_length_def msg_align_bits)
         apply(erule order_trans)
         apply(subst p_assoc_help)
-        apply(simp add: add_assoc)
+        apply(simp add: add.assoc)
         apply(rule word_plus_mono_right)
          apply(rule word_less_sub_1)
          apply(rule_tac y="of_nat msg_max_length * of_nat word_size + 3" in le_less_trans)
@@ -342,7 +342,7 @@ lemma tcb_sched_action_equiv_but_for_labels:
    apply(fastforce simp: equiv_asids_def equiv_asid_def elim: states_equiv_forE)
   apply (clarsimp simp: pas_refined_def tcb_domain_map_wellformed_aux_def split: option.splits)
   apply (rule equiv_forI)
-  apply (erule_tac x="(thread, tcb_domain a)" in ballE)
+  apply (erule_tac x="(thread, tcb_domain (the (ekheap s thread)))" in ballE)
    apply(fastforce elim: states_equiv_forE intro: equiv_forI dest: equiv_forD[where f=ready_queues])
   apply (force intro: domtcbs)
   done
@@ -558,7 +558,7 @@ definition
   aag_can_read_or_affect_ipc_buffer :: "'a PAS \<Rightarrow> 'a \<Rightarrow> word32 option \<Rightarrow> bool"
 where
 "aag_can_read_or_affect_ipc_buffer aag l \<equiv>
-    option_case True (\<lambda>buf'. is_aligned buf' msg_align_bits \<and> (\<forall>x \<in> ptr_range buf' msg_align_bits. aag_can_read aag x \<or> aag_can_affect aag l x))"
+    case_option True (\<lambda>buf'. is_aligned buf' msg_align_bits \<and> (\<forall>x \<in> ptr_range buf' msg_align_bits. aag_can_read aag x \<or> aag_can_affect aag l x))"
 
 
 lemma lookup_ipc_buffer_aag_can_read_or_affect:
@@ -589,7 +589,7 @@ lemma cptrs_in_ipc_buffer:
 
 lemma for_each_byte_of_word_def2:
   "for_each_byte_of_word P ptr \<equiv> (\<forall> x\<in>ptr_range ptr 2. P x)"
-  apply(simp add: for_each_byte_of_word_def ptr_range_def add_commute)
+  apply(simp add: for_each_byte_of_word_def ptr_range_def add.commute)
   done
 
 lemma aag_has_auth_to_read_cptrs:
@@ -616,7 +616,7 @@ definition
   ipc_buffer_disjoint_from :: "word32 set \<Rightarrow> word32 option \<Rightarrow> bool"
 where
 "ipc_buffer_disjoint_from X  \<equiv>
-    option_case True (\<lambda>buf'. is_aligned buf' msg_align_bits \<and> (ptr_range buf' msg_align_bits) \<inter> X = {})"
+    case_option True (\<lambda>buf'. is_aligned buf' msg_align_bits \<and> (ptr_range buf' msg_align_bits) \<inter> X = {})"
 
 lemma get_extra_cptrs_rev:
   "reads_equiv_valid_inv A aag ((\<lambda> s. ipc_buffer_disjoint_from (range_of_arm_globals_frame s) buffer) and K (ipc_buffer_has_read_auth aag (pasSubject aag) buffer \<and> (buffer_cptr_index + unat (mi_extra_caps mi) < 2 ^ (msg_align_bits - 2))))
@@ -1188,7 +1188,7 @@ lemma dmo_loadWord_reads_respects:
           apply(rule assert_wp)+
         apply simp+
        apply(clarsimp simp: equiv_valid_2_def in_monad for_each_byte_of_word_def)
-       apply(fastforce elim: equiv_forD orthD1 simp: ptr_range_def add_commute)
+       apply(fastforce elim: equiv_forD orthD1 simp: ptr_range_def add.commute)
       apply (wp wp_post_taut loadWord_inv | simp)+
   done
 
@@ -1594,7 +1594,7 @@ lemma send_ipc_reads_respects:
   apply (wp set_endpoint_reads_respects set_thread_state_reads_respects 
             when_ev setup_caller_cap_reads_respects thread_get_reads_respects
         | wpc | simp split del: split_if)+
-               apply(rule_tac Q="\<lambda> r s. is_subject aag (cur_thread s) \<and> (can_grant \<longrightarrow> is_subject aag a)" in hoare_strengthen_post)
+               apply(rule_tac Q="\<lambda> r s. is_subject aag (cur_thread s) \<and> (can_grant \<longrightarrow> is_subject aag (hd list))" in hoare_strengthen_post)
                 apply(wp set_thread_state_reads_respects 
                          do_ipc_transfer_reads_respects
                          set_endpoint_reads_respects
@@ -1840,13 +1840,13 @@ next
      apply(rule conjI)
       apply(fastforce)
      apply(clarsimp)
-     apply(simp add: add_assoc[symmetric])
-     apply(subst add_assoc) 
+     apply(simp add: add.assoc[symmetric])
+     apply(subst add.assoc) 
      apply(subst of_nat_Suc[symmetric])
      apply(fastforce)
     apply(clarsimp)
-    apply(simp add: add_assoc[symmetric])
-    apply(subst add_assoc)
+    apply(simp add: add.assoc[symmetric])
+    apply(subst add.assoc)
     apply(subst of_nat_Suc[symmetric])
     apply(fastforce)
     done

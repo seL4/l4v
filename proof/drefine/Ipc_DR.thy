@@ -524,7 +524,7 @@ lemma dcorres_do_async_transfer:
       apply (subst opt_cap_tcb)
       apply (simp add:return_def is_etcb_at_def get_etcb_def)+
       apply clarsimp
-      apply (drule_tac y = "Some a" in arg_cong[where f  = the])
+      apply (drule_tac y = "Some x2" in arg_cong[where f  = the])
       apply simp
       apply (wp cdl_get_ipc_buffer_None | simp)+
     apply clarsimp
@@ -897,7 +897,7 @@ lemma evalMonad_get_extra_cptrs:
     apply (simp add:weak_det_spec_load_word_offs)
     apply (wp mapM_wp,fastforce)
   apply (clarsimp split:option.splits)
-  apply (rule_tac x = a in arg_cong)
+  apply (rule_tac x = x2 in arg_cong)
   apply (clarsimp simp:transform_full_intent_def Let_def)
   apply (clarsimp simp:get_ipc_buffer_words_def)
   apply (drule lookup_ipc_buffer_SomeB_evalMonad)
@@ -1296,7 +1296,7 @@ lemma load_cap_transfer_def':
   apply (clarsimp simp:captransfer_from_words_def)
   apply (simp add:msg_max_length_def msg_max_extra_caps_def cong: if_weak_cong)
   apply (clarsimp simp:load_word_offs_def mapM_def sequence_def bind_assoc)
-  apply (simp add:word_size_def add_commute)
+  apply (simp add:word_size_def add.commute)
 done
 
 lemma get_ipc_buffer_words_receive_slots:
@@ -1312,7 +1312,7 @@ lemma get_ipc_buffer_words_receive_slots:
    using loadWord_functional[unfolded functional_def,simplified]
      apply fastforce
   apply (simp add:evalMonad_loadWord word_size_def mask_add_aligned)
-    apply (subst add_assoc)+
+    apply (subst add.assoc)+
     apply (clarsimp simp: mask_add_aligned)
     apply (drule_tac n1 = "pageBitsForSize sz" and y = 2
       in is_aligned_weaken[OF is_aligned_after_mask])
@@ -1413,7 +1413,7 @@ lemma get_receive_slot_dcorres:
                       apply clarsimp+
                  apply (wp|clarsimp)+
           apply (clarsimp simp:handleE'_def Monads_D.unify_failure_def Exceptions_A.unify_failure_def)
-          apply (rule corres_split_bind_sum_case [OF lookup_slot_for_cnode_op_corres])
+          apply (rule corres_split_bind_case_sum [OF lookup_slot_for_cnode_op_corres])
               apply (clarsimp simp:word_bl.Rep_inverse word_size)+
            apply (rule hoareE_TrueI[where P=\<top>])+
         apply clarsimp
@@ -1422,7 +1422,7 @@ lemma get_receive_slot_dcorres:
      apply fastforce
      apply (wp lsfco_not_idle)
     apply (clarsimp simp:handleE'_def Monads_D.unify_failure_def Exceptions_A.unify_failure_def)
-         apply (rule corres_split_bind_sum_case [OF lookup_cap_corres])
+         apply (rule corres_split_bind_case_sum [OF lookup_cap_corres])
         apply (clarsimp simp:word_bl.Rep_inverse word_size Types_D.word_bits_def)+
        apply (rule hoareE_TrueI)+
       apply clarsimp
@@ -1622,8 +1622,9 @@ lemma dcorres_copy_mrs':
   apply (drule lookup_ipc_buffer_SomeB_evalMonad)
   apply clarsimp
   apply (rule corres_symb_exec_l)
-    apply (rule_tac F = " rv = Some b" in corres_gen_asm)
-    apply (clarsimp simp:option.splits)
+    apply -
+    apply (rule_tac F = "rvb = Some b" in corres_gen_asm)
+    apply clarsimp
     apply (rule corres_guard_imp[OF dcorres_copy_mrs])
       apply (simp add:data_to_message_info_valid)+
     apply (clarsimp simp:ipc_frame_wp_at_def obj_at_def cte_wp_at_cases)
@@ -1675,8 +1676,8 @@ lemma dcorres_set_mrs':
   apply (drule lookup_ipc_buffer_SomeB_evalMonad)
   apply clarsimp
   apply (rule corres_symb_exec_l)
-    apply (rule_tac F = " rv = Some b" in corres_gen_asm)
-    apply (clarsimp simp:option.splits)
+    apply (rule_tac F = "rva = Some b" in corres_gen_asm)
+    apply clarsimp
     apply (rule corrupt_frame_include_self)
     apply (rule corres_guard_imp[OF set_mrs_corres])
       apply (simp add:data_to_message_info_valid)+
@@ -2183,7 +2184,7 @@ lemma recv_sync_ipc_corres:
   apply (clarsimp simp:corres_free_fail cap_ep_ptr_def Ipc_A.receive_ipc_def
                  split:cap.splits Structures_A.endpoint.splits)
   apply (rule dcorres_expand_pfx)
-  apply (rule_tac Q'="\<lambda>ko. op = s' and ko_at (kernel_object.Endpoint ko) word1" in corres_symb_exec_r)
+  apply (rule_tac Q'="\<lambda>ko. op = s' and ko_at (kernel_object.Endpoint ko) epptr" in corres_symb_exec_r)
     apply (simp add:Endpoint_D.receive_ipc_def gets_def)
     apply (rule dcorres_absorb_get_l)
     apply (case_tac rv)
@@ -2253,7 +2254,7 @@ lemma recv_sync_ipc_corres:
               and pspace_distinct and not_idle_thread y and not_idle_thread thread
               and valid_idle and valid_irq_node and (\<lambda>s. cur_thread s \<noteq> idle_thread s)
               and tcb_at y and tcb_at thread
-              and st_tcb_at (\<lambda>rv. rv = Structures_A.thread_state.BlockedOnSend word1 payload) y and valid_etcbs"
+              and st_tcb_at (\<lambda>rv. rv = Structures_A.thread_state.BlockedOnSend epptr payload) y and valid_etcbs"
             in hoare_strengthen_post[rotated])
              apply (clarsimp simp:not_idle_thread_def)
              apply (clarsimp simp:st_tcb_at_def obj_at_def)

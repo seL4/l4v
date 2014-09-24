@@ -12,10 +12,8 @@
   Compatibility theory to recreate syntax for NICTA developments.
 *)
 
-theory NICTACompat imports
-  "~~/src/HOL/Word/WordBitwise"
-  SignedWords
-  NICTATools
+theory NICTACompat
+imports "~~/src/HOL/Word/WordBitwise" SignedWords
 begin
 
 (* all theories should import from NICTACompat rather than any ancestors *)
@@ -89,13 +87,13 @@ in [(@{const_syntax numeral}, num_tr' "")] end
 *}
 
 lemma neg_num_bintr:
-  "(neg_numeral x :: 'a::len word) =
-  word_of_int (bintrunc (len_of TYPE('a)) (neg_numeral x))"
+  "(- numeral x :: 'a::len word) =
+  word_of_int (bintrunc (len_of TYPE('a)) (-numeral x))"
   by (simp only: word_ubin.Abs_norm word_neg_numeral_alt)
 
 (* normalise word numerals to the interval [0..2^len_of 'a) *)
 ML {*
-  fun is_refl (Const ("==", _) $ x $ y) = (x = y)
+  fun is_refl (Const (@{const_name Pure.eq}, _) $ x $ y) = (x = y)
     | is_refl _ = false;
 
   fun typ_size_of t = Word_Lib.dest_wordT (type_of (term_of t));
@@ -104,7 +102,7 @@ ML {*
     | num_len (Const (@{const_name Num.Bit1}, _) $ n) = num_len n + 1
     | num_len (Const (@{const_name Num.One}, _)) = 1
     | num_len (Const (@{const_name numeral}, _) $ t) = num_len t
-    | num_len (Const (@{const_name neg_numeral}, _) $ t) = num_len t
+    | num_len (Const (@{const_name uminus}, _) $ t) = num_len t
     | num_len t = raise TERM ("num_len", [t])
 
   fun unsigned_norm is_neg _ ctxt ct =
@@ -126,16 +124,15 @@ simproc_setup
   unsigned_norm ("numeral n::'a::len word") = {* unsigned_norm false *}
 
 simproc_setup
-  unsigned_norm_neg0 ("neg_numeral (num.Bit0 num)::'a::len word") = {* unsigned_norm true *}
+  unsigned_norm_neg0 ("-numeral (num.Bit0 num)::'a::len word") = {* unsigned_norm true *}
 
 simproc_setup
-  unsigned_norm_neg1 ("neg_numeral (num.Bit1 num)::'a::len word") = {* unsigned_norm true *}
+  unsigned_norm_neg1 ("-numeral (num.Bit1 num)::'a::len word") = {* unsigned_norm true *}
 
 lemma minus_one_norm:
- "(neg_numeral num.One :: ('a :: len) word)
+ "(-1 :: ('a :: len) word)
     = of_nat (2 ^ len_of TYPE('a) - 1)"
   by (simp add:of_nat_diff)
-
 lemma "f (7 :: 2 word) = f 3"
   apply simp
   done
@@ -153,6 +150,7 @@ lemma "f -1 = f (13 :: 'a::len word)"
   oops
 
 lemma "f -2 = f (8589934590 :: word32)"
+  using [[simp_trace]]
   apply simp
   done
 

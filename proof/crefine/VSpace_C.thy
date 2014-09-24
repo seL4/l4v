@@ -160,7 +160,7 @@ lemma asid_high_bits_word_bits:
 lemma rf_sr_asid_map_pd_to_hwasids:
   "(s, s') \<in> rf_sr \<Longrightarrow>
    asid_map_pd_to_hwasids (armKSASIDMap (ksArchState s))
-       = Option.set \<circ> (pde_stored_asid \<circ>\<^sub>m cslift s' \<circ>\<^sub>m pd_pointer_to_asid_slot)"
+       = set_option \<circ> (pde_stored_asid \<circ>\<^sub>m cslift s' \<circ>\<^sub>m pd_pointer_to_asid_slot)"
   by (simp add: rf_sr_def cstate_relation_def Let_def
                 carch_state_relation_def)
 
@@ -533,7 +533,7 @@ lemma rf_sr_asidTable_None:
   apply (erule_tac x="asid >> asid_low_bits" in allE)
   apply (erule impE)
    prefer 2
-   apply (drule sym [where t="index a b", standard])
+   apply (drule sym [where t="index a b" for a b])
    apply (simp add: option_to_0_def option_to_ptr_def split: option.splits)
    apply (clarsimp simp: valid_arch_state'_def valid_asid_table'_def ran_def)
   apply (simp add: and_mask_eq_iff_le_mask)
@@ -1114,7 +1114,7 @@ lemma flushSpace_ccorres:
    apply (ctac (no_vcg) add: loadHWASID_ccorres)
     apply (ctac (no_vcg) add: cleanCaches_PoU_ccorres)
      apply csymbr
-     apply (simp add: option_case_If2)
+     apply (simp add: case_option_If2)
      apply (rule_tac Q=\<top> and Q'=\<top> in ccorres_if_cond_throws2)
         apply (clarsimp simp: Collect_const_mem pde_stored_asid_def)
         apply (simp add: split_if_eq1 to_bool_def)
@@ -1263,7 +1263,7 @@ lemma findFreeHWASID_ccorres:
    apply csymbr
    apply (rule ccorres_pre_gets_armKSHWASIDTable_ksArchState)
    apply (rule ccorres_pre_gets_armKSNextASID_ksArchState)
-   apply (simp add: whileAnno_def option_case_find_give_me_a_map
+   apply (simp add: whileAnno_def case_option_find_give_me_a_map
                     mapME_def 
                del: Collect_const map_append)
    apply (rule ccorres_splitE_novcg)
@@ -1314,9 +1314,9 @@ lemma findFreeHWASID_ccorres:
        apply (simp add: minBound_word init_def maxBound_word minus_one_norm)
        apply (simp add: upto_enum_word)
        apply (rule nth_equalityI)
-        apply (simp add: min_max.inf_absorb2
+        apply (simp add: min.absorb2
                     del: upt.simps)
-       apply (simp add: min_max.inf_absorb2
+       apply (simp add: min.absorb2
                    del: upt.simps)
        apply (simp add: nth_append
                  split: split_if)
@@ -1521,7 +1521,7 @@ lemma setVMRoot_ccorres:
 
      apply (rule_tac f'=lookup_failure_rel and r'="\<lambda>pdeptrc pdeptr. pdeptr = pde_Ptr pdeptrc" 
                  and xf'=find_ret_'
-                 in ccorres_split_nothrow_sum_case)
+                 in ccorres_split_nothrow_case_sum)
           apply (ctac add: findPDForASID_ccorres)
          apply ceqv
         apply (rule_tac P="capPDBasePtr_CL (cap_page_directory_cap_lift threadRoot)
@@ -1720,7 +1720,7 @@ lemma framesize_from_H_mask:
 lemma dmo_invalidateCacheRange_RAM_invs'[wp]:
   "valid invs' (doMachineOp (invalidateCacheRange_RAM vs ve ps)) (\<lambda>rv. invs')"
   apply (wp dmo_invs' no_irq_invalidateCacheRange_RAM)
-  apply (clarsimp simp: disj_commute[of "pointerInUserData p s", standard])
+  apply (clarsimp simp: disj_commute[of "pointerInUserData p s" for p s])
   apply (erule use_valid)
    apply (wp, simp)
   done

@@ -160,7 +160,7 @@ lemma valid_entries_overwrite_groups:
   by (rule valid_entries_partial_copy[where S=S and tab = "\<lambda>x. v",simplified],simp_all)
 
 lemmas valid_entries_overwrite_group
-    = valid_entries_overwrite_groups[where S="{y}", simplified, standard]
+    = valid_entries_overwrite_groups[where S="{y}" for y, simplified]
 
 lemma shift_0x3C_set:
   "\<lbrakk> is_aligned p 6; 8 \<le> bits; bits < 32; len_of TYPE('a) = bits - 2 \<rbrakk> \<Longrightarrow>
@@ -172,7 +172,7 @@ lemma shift_0x3C_set:
      apply (drule plus_one_helper2, simp_all)[1]
     apply (drule minus_one_helper3, simp_all)[1]
    apply (rule_tac f="\<lambda>x. ucast (x && mask bits >> 2)" in arg_cong)
-   apply (rule trans[OF add_commute is_aligned_add_or], assumption)
+   apply (rule trans[OF add.commute is_aligned_add_or], assumption)
    apply (rule shiftl_less_t2n, simp_all)[1]
   apply safe
    apply (frule upper_bits_unset_is_l2p[THEN iffD2, rotated])
@@ -882,7 +882,7 @@ lemma invoke_untyped_valid_pdpt[wp]:
        apply (case_tac slots)
         apply clarsimp
        apply clarsimp
-       apply (subst add_commute)
+       apply (subst add.commute)
        apply (subst word_le_make_less[symmetric])
        apply (rule less_imp_neq)
        apply (simp add:minus_one_norm)
@@ -979,9 +979,9 @@ lemma invoke_untyped_valid_pdpt[wp]:
                        (unat (ptr + (of_nat (length slots) << obj_bits_api tp us) - (ptr && ~~ mask sz))))
                     \<subseteq> usable_untyped_range (cap.UntypedCap (ptr && ~~ mask sz) sz idx)"
       apply (simp_all add:blah field_simps)
-      apply (clarsimp simp:shiftl_t2n  add_assoc[symmetric] neg_mask_add_mask )
+      apply (clarsimp simp:shiftl_t2n  add.assoc[symmetric] neg_mask_add_mask )
       apply (simp add:field_simps)
-      apply (subst add_commute)
+      apply (subst add.commute)
       apply (erule order_trans[OF idx_compare])
       apply (simp add:shiftl_t2n field_simps)+
       done
@@ -1102,7 +1102,7 @@ lemma invoke_untyped_valid_pdpt[wp]:
     apply (erule subset_trans[OF range_cover_subset'])
     apply (simp add:vslot)
    apply (clarsimp simp:blah word_and_le2)
-   apply (clarsimp simp:blah field_simps add_assoc[symmetric] add_commute shiftl_t2n
+   apply (clarsimp simp:blah field_simps add.assoc[symmetric] add.commute shiftl_t2n
                     dest!:idx_compare'')
    apply simp
   apply (wp mapM_x_wp'
@@ -1221,7 +1221,6 @@ lemma pte_range_interD:
    apply (case_tac pte',simp_all split:if_splits)
    apply clarsimp
    apply (case_tac pte',simp_all split:if_splits)
-  apply clarsimp
   apply (case_tac pte', simp_all split:if_splits)
   done
 
@@ -1232,7 +1231,6 @@ lemma pde_range_interD:
   apply (drule WordLemmaBucket.int_not_emptyD)
   apply (case_tac pde,simp_all split:if_splits)
      apply (case_tac pde',simp_all split:if_splits)
-    apply clarsimp
     apply (case_tac pde',simp_all split:if_splits)
    apply clarsimp
    apply (case_tac pde', simp_all split:if_splits)
@@ -1855,10 +1853,10 @@ lemma ensure_safe_mapping_ensures[wp]:
     apply (subst mapME_x_Cons)
     apply simp
     apply wp
-     apply (rule_tac Q' = "\<lambda>r s. \<forall>x \<in> set list. obj_at
+     apply (rule_tac Q' = "\<lambda>r s. \<forall>x \<in> set x22. obj_at
                 (\<lambda>ko. \<exists>pt. ko = ArchObj (PageTable pt) \<and>
                  pt (ucast (x && mask pt_bits >> 2)) = ARM_Structs_A.pte.InvalidPTE)
-                (hd (ab # list) && ~~ mask pt_bits) s" in hoare_post_imp_R)
+                (hd (x21 # x22) && ~~ mask pt_bits) s" in hoare_post_imp_R)
       apply (wp mapME_x_accumulate_checks[where Q = "\<lambda>s. valid_pdpt_objs s"] )
           apply (wp get_master_pte_wp| wpc | simp)+
          apply clarsimp
@@ -1915,10 +1913,10 @@ lemma ensure_safe_mapping_ensures[wp]:
   apply (subst mapME_x_Cons)
   apply simp
   apply wp
-   apply (rule_tac Q' = "\<lambda>r s. \<forall>x \<in> set list. obj_at
+   apply (rule_tac Q' = "\<lambda>r s. \<forall>x \<in> set x22. obj_at
        (\<lambda>ko. \<exists>pd. ko = ArchObj (PageDirectory pd) \<and>
        pd (ucast (x && mask pd_bits >> 2)) = ARM_Structs_A.pde.InvalidPDE)
-       (hd (aa # list) && ~~ mask pd_bits) s" in hoare_post_imp_R)
+       (hd (x21 # x22) && ~~ mask pd_bits) s" in hoare_post_imp_R)
     apply (wp mapME_x_accumulate_checks[where Q = "\<lambda>s. valid_pdpt_objs s"] )
         apply (wp get_master_pde_wp| wpc | simp)+
        apply clarsimp

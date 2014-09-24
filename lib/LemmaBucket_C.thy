@@ -191,8 +191,10 @@ next
     apply (simp add: is_aligned_mask mask_def power_overflow intvl_def)
     apply (rule set_eqI)
     apply clarsimp
-    apply (case_tac x)
-    apply (rule_tac x=na in exI)
+    apply (rename_tac w)
+    apply (case_tac w)
+    apply (rename_tac m)
+    apply (rule_tac x=m in exI)
     apply simp
     apply (erule order_less_le_trans)
     apply simp
@@ -333,7 +335,7 @@ next
     apply (case_tac "x = s")
      apply simp
      apply (subst heap_update_nmem_same)
-     apply (subst add_assoc)
+     apply (subst add.assoc)
      apply (rule intvl_nowrap[OF neq0 order_less_imp_le
                                       [OF lt[unfolded word_bits_def]]])
     apply simp
@@ -505,10 +507,10 @@ lemma Guard_no_cong:
   by simp
 
 lemma heap_update_list_concat_fold:
-  "ptr' = ptr + of_nat (length ys) \<Longrightarrow>
-   heap_update_list ptr' xs (heap_update_list ptr ys s)
+  assumes "ptr' = ptr + of_nat (length ys)" 
+  shows "heap_update_list ptr' xs (heap_update_list ptr ys s)
     = heap_update_list ptr (ys @ xs) s"
-  apply clarsimp
+  unfolding assms
   apply (induct ys arbitrary: ptr s)
    apply simp
   apply simp
@@ -529,12 +531,12 @@ lemmas heap_update_list_concat_unfold
     = heap_update_list_concat_fold[OF refl, symmetric]
 
 lemma coerce_heap_update_to_heap_updates:
-  "\<lbrakk> n = chunk * m; length xs = n \<rbrakk> \<Longrightarrow>
-   heap_update_list x xs
+  assumes n: "n = chunk * m" and len: "length xs = n"
+  shows "heap_update_list x xs
       = (\<lambda>s. foldl (\<lambda>s n. heap_update_list (x + (of_nat n * of_nat chunk))
                                       (take chunk (drop (n * chunk) xs)) s)
                      s [0 ..< m])"
-  apply clarsimp
+  using len[simplified n]
   apply (induct m arbitrary: x xs)
    apply (rule ext, simp)
   apply (rule ext)
@@ -583,7 +585,7 @@ lemma update_ti_list_array':
   apply simp
   apply (rule foldr_cong, (rule refl)+)
   apply (simp add: take_drop)
-  apply (subst min_max.inf_absorb1)
+  apply (subst min.absorb1)
    apply (fold mult_Suc_right, rule mult_le_mono2)
    apply simp
   apply simp
@@ -622,7 +624,7 @@ lemma access_in_array:
     apply (rule refl)
    apply simp
   apply (drule spec, drule(1) mp)
-  apply (simp add: size_of_def mult_ac drop_take)
+  apply (simp add: size_of_def ac_simps drop_take)
   apply (subgoal_tac "length ?v = size_of TYPE('a)")
    apply (subst subst, assumption)
    apply (subst(asm) subst, assumption)
@@ -814,7 +816,7 @@ proof -
 
   let ?key_upd = "heap_update (array_ptr_index p False n) v"
   note commute = fold_commute_apply[where h="?key_upd"
-      and xs="[Suc n ..< CARD('b)]", where g=f' and f=f', standard]
+      and xs="[Suc n ..< CARD('b)]", where g=f' and f=f' for f']
 
   show ?thesis using n
     apply (simp add: heap_update_Array split_upt_on_n[OF n]
@@ -924,7 +926,7 @@ lemma h_t_valid_Array_element':
      apply (clarsimp simp: field_simps)
      apply (erule map_le_trans[rotated])
      apply (rule list_map_mono)
-     apply (subst mult_commute, rule typ_slice_t_array[unfolded array_tag_def])
+     apply (subst mult.commute, rule typ_slice_t_array[unfolded array_tag_def])
       apply assumption
      apply (simp add: size_of_def)
     apply (simp add: ptr_aligned_def align_of_def align_td_array
@@ -1040,12 +1042,12 @@ proof -
   have f2: "\<And>x. a + x < a + of_nat b \<or> \<not> x < of_nat b"
     using no_overflow
     by (metis PackedTypes.of_nat_mono_maybe_le add_lessD1 le_add1
-            nat_add_commute olen_add_eqv unat_of_nat_eq word_arith_nat_add
+            add.commute olen_add_eqv unat_of_nat_eq word_arith_nat_add
             word_plus_strict_mono_right)
 
   have f3: "\<forall>x y. y \<notin> {x..+b} \<or> of_nat (sk y x b) < (of_nat b :: 'a word)"
     using no_overflow f1
-    by (metis add_lessD1 nat_add_commute of_nat_mono_maybe)
+    by (metis add_lessD1 add.commute of_nat_mono_maybe)
 
   have "x < a + of_nat b \<or> \<not> of_nat (sk x a b) < (of_nat b :: 'a word) \<or> ?thesis"
     using f1 f2 by metis
@@ -1061,14 +1063,14 @@ proof -
       apply (cut_tac no_overflow)
       apply (subgoal_tac "k + (b + unat a) < 2 ^ len_of (TYPE('a)) + b")
        apply (subgoal_tac "k + unat a < 2 ^ len_of (TYPE('a))")
-        apply (metis add_lessD1 le_def less_not_refl2 nat_add_commute unat_eq_of_nat word_arith_nat_add)
+        apply (metis add_lessD1 le_def less_not_refl2 add.commute unat_eq_of_nat word_arith_nat_add)
        apply clarsimp
       apply clarsimp
      apply (clarsimp simp: intvl_def)
      apply (rule exI [where x="unat (x  - a)"])
      apply (clarsimp simp: unat_sub_if_size word_le_nat_alt word_less_nat_alt)
      apply (cut_tac no_overflow)
-     apply (metis diff_le_self le_add_diff_inverse le_diff_conv le_eq_less_or_eq le_unat_uoi nat_add_commute nat_neq_iff unat_of_nat_eq word_arith_nat_add)
+     apply (metis diff_le_self le_add_diff_inverse le_diff_conv le_eq_less_or_eq le_unat_uoi add.commute nat_neq_iff unat_of_nat_eq word_arith_nat_add)
     apply simp
     done
 qed

@@ -235,7 +235,6 @@ proof -
         apply metis
        apply simp
       apply (clarsimp simp: exs_valid_def Bex_def)
-      apply blast
       done
   }
   note B = this

@@ -391,7 +391,7 @@ where
 definition
 c_valid_cap :: "cap_C \<Rightarrow> bool"
 where
-"c_valid_cap c \<equiv> option_case True cl_valid_cap (cap_lift c)"
+"c_valid_cap c \<equiv> case_option True cl_valid_cap (cap_lift c)"
 
 
 definition

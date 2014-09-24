@@ -63,10 +63,10 @@ next
   assume induct: "\<And>a. ?LHS a n = ?RHS a n"
   show "?LHS a (Suc n) = ?RHS a (Suc n)"
   apply (subst array_addrs.simps(2))
-  apply (subst set.simps)
+  apply (subst set_simps)
   apply (subst induct [where a="a +\<^sub>p 1"])
   apply (subst array_addrs.simps(2))
-  apply (subst set.simps)
+  apply (subst set_simps)
   apply (clarsimp simp: CTypesDefs.ptr_add_def field_simps insert_commute)
   done
 qed

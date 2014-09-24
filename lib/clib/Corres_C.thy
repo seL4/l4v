@@ -132,8 +132,8 @@ lemma ccorres_split_nothrowE:
   shows "ccorres_underlying sr \<Gamma> r xf arrel axf (P and R) (P' \<inter> R') hs
                (a >>=E (\<lambda>rv. b rv)) (c ;; d)"
   unfolding bindE_def
-  apply (rule_tac R="sum_case QE Q"
-             and R'="\<lambda>rv. {s. s \<in> sum_case ?QE' ?QR' rv (xf' s)}"
+  apply (rule_tac R="case_sum QE Q"
+             and R'="\<lambda>rv. {s. s \<in> case_sum ?QE' ?QR' rv (xf' s)}"
            in ccorres_master_split_hs)
       apply (rule ac)
      apply (rule ccorres_abstract[OF ceqv])
@@ -174,8 +174,8 @@ lemma ccorres_split_nothrow_novcgE:
                               (\<lambda>rv rv'. {s. ef' (xf' s) \<noteq> scast EXCEPTION_NONE \<longrightarrow> s \<in> Q'' err rv rv'})"
   shows "ccorres_underlying sr \<Gamma> r xf arrel axf (P and R) P' hs (a >>=E (\<lambda>rv. b rv)) (c ;; d)"
   unfolding bindE_def
-  apply (rule_tac R="sum_case QE Q"
-             and R'="\<lambda>rv. {s. s \<in> sum_case ?QE' ?QR' rv (xf' s)}"
+  apply (rule_tac R="case_sum QE Q"
+             and R'="\<lambda>rv. {s. s \<in> case_sum ?QE' ?QR' rv (xf' s)}"
            in ccorres_master_split_nohs_UNIV)
      apply (rule ac)
     apply (rule ccorres_abstract[OF ceqv])
@@ -412,8 +412,8 @@ lemma ccorres_split_nothrow_call_novcgE:
   ) hs (a >>=E b) (call i f (\<lambda>s t. s\<lparr>globals := globals t\<rparr>) (\<lambda>x y. Basic (g x y));;
  d)" (is "ccorres_underlying rf_sr \<Gamma> ?r ?xf arrel axf ?P (?Q1 \<inter> ?Q2) hs ?A ?B")
   unfolding bindE_def
-  apply (rule_tac R="sum_case QE Q"
-             and R'="\<lambda>rv. {s. s \<in> sum_case ?QE' ?QR' rv (xf' s)}"
+  apply (rule_tac R="case_sum QE Q"
+             and R'="\<lambda>rv. {s. s \<in> case_sum ?QE' ?QR' rv (xf' s)}"
                in ccorres_master_split_nohs)
      apply (rule ccorres_callE [OF ac])
 	apply (rule gg)
@@ -601,7 +601,7 @@ end
 
 
 lemmas in_magnitude_check' =
-  in_magnitude_check [where v = "fst z" and s' = "snd z", folded surjective_pairing, standard]
+  in_magnitude_check [where v = "fst z" and s' = "snd z" for z, folded surjective_pairing]
 
 
 (* Defined in terms of access_ti for convenience *)
@@ -1206,7 +1206,7 @@ lemma ccorres_sequenceE_while:
 
 context kernel begin
 
-lemma ccorres_split_nothrow_novcg_sum_case:
+lemma ccorres_split_nothrow_novcg_case_sum:
   "\<lbrakk>ccorresG sr \<Gamma> (f' \<currency> r') (liftxf es ef' vf' xf') P P' [] a c;
     \<And>rv' t t'. ceqv \<Gamma> xf' rv' t t' d (d' rv');
     \<And>rv rv'. \<lbrakk> r' rv (vf' rv'); ef' rv' = scast EXCEPTION_NONE \<rbrakk>
@@ -1218,8 +1218,8 @@ lemma ccorres_split_nothrow_novcg_sum_case:
                                (\<lambda>rv rv'. {s. ef' rv' = scast EXCEPTION_NONE \<longrightarrow> s \<in> Q' rv rv'});
     \<And>err. guard_is_UNIV (\<lambda>rv. f' err (ef' rv)) es
              (\<lambda>rv rv'. {s. ef' (xf' s) \<noteq> scast EXCEPTION_NONE \<longrightarrow> s \<in> Q'' err rv rv'})\<rbrakk>
-      \<Longrightarrow> ccorres_underlying sr \<Gamma> r xf arrel axf (P and R) P' hs (a >>= sum_case e b) (c;;d)"
-  apply (rule_tac R="sum_case QE Q" and R'="sum_case ?QE' ?QR'"
+      \<Longrightarrow> ccorres_underlying sr \<Gamma> r xf arrel axf (P and R) P' hs (a >>= case_sum e b) (c;;d)"
+  apply (rule_tac R="case_sum QE Q" and R'="case_sum ?QE' ?QR'"
               in ccorres_master_split_nohs_UNIV)
      apply assumption
     apply (case_tac rv, simp_all)[1]
@@ -1238,7 +1238,7 @@ lemma ccorres_split_nothrow_novcg_sum_case:
                  split: sum.split)
   done
 
-lemma ccorres_split_nothrow_sum_case:
+lemma ccorres_split_nothrow_case_sum:
   "\<lbrakk>ccorresG sr \<Gamma> (f' \<currency> r') (liftxf es ef' vf' xf') P P' hs a c;
     \<And>rv' t t'. ceqv \<Gamma> xf' rv' t t' d (d' rv');
     \<And>rv rv'. \<lbrakk> r' rv (vf' rv'); ef' rv' = scast EXCEPTION_NONE \<rbrakk>
@@ -1250,8 +1250,8 @@ lemma ccorres_split_nothrow_sum_case:
                                                  \<longrightarrow>  s \<in> Q' rv' (xf' s))
                                    \<and> (\<forall>ft. ef' (xf' s) \<noteq> scast EXCEPTION_NONE \<longrightarrow> f' ft (ef' (xf' s)) (es s)
                                                  \<longrightarrow> s \<in> Q'' ft (xf' s) (es s))} \<rbrakk>
-      \<Longrightarrow> ccorres_underlying sr \<Gamma> r xf arrel axf (P and R) (P' \<inter> R') hs (a >>= sum_case e b) (c;;d)"
-  apply (erule_tac R="sum_case QE Q" and R'="sum_case ?QE' ?QR'"
+      \<Longrightarrow> ccorres_underlying sr \<Gamma> r xf arrel axf (P and R) (P' \<inter> R') hs (a >>= case_sum e b) (c;;d)"
+  apply (erule_tac R="case_sum QE Q" and R'="case_sum ?QE' ?QR'"
            in ccorres_master_split_hs)
      apply (case_tac rv, simp_all)[1]
       apply (erule ccorres_abstract)

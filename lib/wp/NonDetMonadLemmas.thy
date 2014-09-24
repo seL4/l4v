@@ -26,7 +26,7 @@ lemma bind_apply_cong [fundef_cong]:
   "\<lbrakk> f s = f' s'; \<And>rv st. (rv, st) \<in> fst (f' s') \<Longrightarrow> g rv st = g' rv st \<rbrakk>
        \<Longrightarrow> (f >>= g) s = (f' >>= g') s'"
   apply (simp add: bind_def)
-  apply (auto simp: split_def intro: UN_cong [OF refl] intro: rev_image_eqI)
+  apply (auto simp: split_def intro: SUP_cong [OF refl] intro: rev_image_eqI)
   done
 
 lemma bindE_cong[fundef_cong]:

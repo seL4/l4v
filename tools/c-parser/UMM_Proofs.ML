@@ -255,7 +255,7 @@ fun umm_mem_type recname recty typtag_thm tag_def_thm thy = let
   val wf_lf_step = force_tac wf_lf_Is 1
 
   (* At Raf's request - important if screwed *)
-  fun dprint_tac s = if !Feedback.verbosity_level > 2 then print_tac s
+  fun dprint_tac s = if !Feedback.verbosity_level > 2 then print_tac ctxt0 s
                      else all_tac
 
   (* fu_eq_mask *)
@@ -299,7 +299,7 @@ fun umm_mem_type recname recty typtag_thm tag_def_thm thy = let
   val _ = writeln "About to mem_type..."
 
   val is_mem_type_thm =
-      Goal.prove_internal [] mem_type_instance_ct
+      Goal.prove_internal ctxt0 [] mem_type_instance_ct
        (fn _ => DETERM ((
                 Class.intro_classes_tac [] THEN
                 dprint_tac "t_def" THEN
@@ -334,7 +334,7 @@ fun umm_packed_type recname recty typtag_thm tag_def_thm fgthms thy = let
   val pt_ss = (ctxt0 addsimps ([typtag_thm, tag_def_thm] @ packed_type_simps @ fgthms))
 
   val is_packed_type_thm =
-      Goal.prove_internal [] packed_type_instance_ct
+      Goal.prove_internal ctxt0 [] packed_type_instance_ct
        (fn _ => DETERM ((
                 ((fn _ => Class.intro_classes_tac []) THEN_ALL_NEW (asm_simp_tac pt_ss)) 1)))
 in
@@ -490,7 +490,7 @@ fun umm_struct_calculation ((recname, flds), st, thy) = let
   val _ = phase "FG"
   val _ = writeln "About to fg..."
   val fgthms = let
-    fun fg_thm f = Goal.prove_internal []
+    fun fg_thm f = Goal.prove_internal (thy2ctxt thy) []
       (cterm_of thy (mk_prop (mk_fg_cons_tm recty (#2 f) (#1 f) thy)))
       (fn _ => asm_full_simp_tac
           ((thy2ctxt thy) addsimps [@{thm "fg_cons_def"}, @{thm comp_def}]) 1)
@@ -583,7 +583,7 @@ in
 
       val instance_t = Logic.mk_of_class(ty, szclass)
       val instance_thm =
-          Goal.prove_internal [] (cterm_of thy instance_t) (tac thy)
+          Goal.prove_internal (thy2ctxt thy) [] (cterm_of thy instance_t) (tac thy)
       val thy = Axclass.add_arity instance_thm thy
       val st = add_szclass_done (tyname, szclass) st
     in

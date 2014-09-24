@@ -1010,8 +1010,8 @@ lemma decodeCNodeInvocation_ccorres:
                        apply (wp getCTE_wp')
                       apply (simp add: Collect_const_mem)
                       apply vcg
-                     apply (simp add: cte_wp_at_ctes_of[where P="op = cte", standard]
-                                      cte_wp_at_ctes_of[where P="\<lambda>cte. Q cte \<and> R cte", standard]
+                     apply (simp add: cte_wp_at_ctes_of[where P="op = cte" for cte]
+                                      cte_wp_at_ctes_of[where P="\<lambda>cte. Q cte \<and> R cte" for Q R]
                                       badge_derived_updateCapData)
                      apply (rule validE_R_validE)
                      apply (rule_tac Q'="\<lambda>a b. cte_wp_at' (\<lambda>x. True) a b \<and> invs' b \<and> 
@@ -2008,7 +2008,7 @@ lemma invokeUntyped_Retype_ccorres:
                                 invokeUntyped_proofs.slots_invD[OF proofs])
                     apply (erule is_aligned_weaken[OF range_cover.aligned])
                     apply (clarsimp simp: APIType_capBits_low)
-                   apply (rule_tac us1="unat us" in is_aligned_weaken
+                   apply (rule_tac us1="unat userSize" in is_aligned_weaken
                             [OF _ APIType_capBits_low[where newType = newType]])
                      apply (simp add: is_aligned_def)
                      apply (drule range_cover.unat_of_nat_n_shift
@@ -2208,8 +2208,8 @@ lemma TripleSuc:
   "Suc (Suc (Suc 0)) = 3"
   by simp
 
-lemma sum_case_distrib:
-  "sum_case a b x >>= f = sum_case (\<lambda>x. a x >>= f) (\<lambda>x. b x >>= f) x"
+lemma case_sum_distrib:
+  "case_sum a b x >>= f = case_sum (\<lambda>x. a x >>= f) (\<lambda>x. b x >>= f) x"
   by (case_tac x,simp+)
 
 lemma alignUp_spec:
@@ -2228,9 +2228,9 @@ lemma checkFreeIndex_ccorres:
   (\<acute>status :== CALL ensureNoChildren(cte_Ptr slot);;
   (Cond \<lbrace>\<acute>status \<noteq> scast EXCEPTION_NONE\<rbrace> (\<acute>freeIndex :== CALL cap_untyped_cap_get_capFreeIndex(cap))
   (\<acute>freeIndex :== 0)))"
-  apply (simp add: constOnFailure_def catch_def liftE_def bindE_bind_linearise bind_assoc sum_case_distrib)
+  apply (simp add: constOnFailure_def catch_def liftE_def bindE_bind_linearise bind_assoc case_sum_distrib)
   apply (rule ccorres_guard_imp2)
-   apply (rule ccorres_split_nothrow_sum_case)
+   apply (rule ccorres_split_nothrow_case_sum)
         apply (ctac add:ensureNoChildren_ccorres)
        apply (ceqv)
        apply (rule ccorres_from_vcg[where P' = UNIV])

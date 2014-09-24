@@ -641,10 +641,10 @@ lemma invoke_tcb_ThreadControl_cur_thread:
         \<and>* (target_tcb,tcb_cspace_slot) \<mapsto>c -
         \<and>* (target_tcb, tcb_ipcbuffer_slot) \<mapsto>c NullCap
         \<and>* target_tcb \<mapsto>f - \<and>* R> s)
-        \<and> cap_type (fst a) \<noteq> Some UntypedType" in hoare_post_imp)
+        \<and> cap_type (fst x2) \<noteq> Some UntypedType" in hoare_post_imp)
        apply (clarsimp simp:sep_conj_ac, sep_solve)
       apply wp
-     apply (rule_tac P = "cap_type (fst a) \<noteq> Some UntypedType" in hoare_gen_asmEx)
+     apply (rule_tac P = "cap_type (fst x2) \<noteq> Some UntypedType" in hoare_gen_asmEx)
      apply (rule_tac Q = "\<lambda>r s. P (cdl_current_thread s)
        \<and> (<(target_tcb, tcb_vspace_slot) \<mapsto>c NullCap
        \<and>* (target_tcb, tcb_cspace_slot) \<mapsto>c -
@@ -912,10 +912,10 @@ lemma invoke_tcb_ThreadControl_cdl_current_domain:
         \<and>* (target_tcb,tcb_cspace_slot) \<mapsto>c -
         \<and>* (target_tcb, tcb_ipcbuffer_slot) \<mapsto>c NullCap
         \<and>* target_tcb \<mapsto>f - \<and>* R> s)
-        \<and> cap_type (fst a) \<noteq> Some UntypedType" in hoare_post_imp)
+        \<and> cap_type (fst x2) \<noteq> Some UntypedType" in hoare_post_imp)
        apply (clarsimp simp:sep_conj_ac)
       apply wp
-     apply (rule_tac P = "cap_type (fst a) \<noteq> Some UntypedType" in hoare_gen_asmEx)
+     apply (rule_tac P = "cap_type (fst x2) \<noteq> Some UntypedType" in hoare_gen_asmEx)
      apply (rule_tac Q = "\<lambda>r s. P (cdl_current_domain s)
        \<and> (<(target_tcb, tcb_vspace_slot) \<mapsto>c NullCap
        \<and>* (target_tcb, tcb_cspace_slot) \<mapsto>c -

@@ -51,13 +51,13 @@ declare word_neq_0_conv [simp del]
 lemma det_wp_loadObject_default [wp]:
   "det_wp (\<lambda>s. \<exists>obj. projectKO_opt ko = Some (obj::'a) \<and> 
                       is_aligned p (objBits obj) \<and> q = p
-                      \<and> option_case True (\<lambda>x. 2 ^ (objBits obj) \<le> x - p) n)
+                      \<and> case_option True (\<lambda>x. 2 ^ (objBits obj) \<le> x - p) n)
            (loadObject_default p q n ko :: ('a::pre_storable) kernel)"
   apply (simp add: loadObject_default_def split_def projectKO_def
                    alignCheck_def alignError_def magnitudeCheck_def
                    unless_def)
   apply (rule det_wp_pre)
-   apply (wp option_case_wp)
+   apply (wp case_option_wp)
   apply (clarsimp simp: is_aligned_mask[symmetric])
   apply simp
   done
@@ -136,7 +136,7 @@ lemma det_wp_asUser [wp]:
   done
   
 lemma det_wp_getMRs:
-  "det_wp (tcb_at' thread and option_case \<top> valid_ipc_buffer_ptr' buffer) (getMRs thread buffer mi)"
+  "det_wp (tcb_at' thread and case_option \<top> valid_ipc_buffer_ptr' buffer) (getMRs thread buffer mi)"
   apply (clarsimp simp: getMRs_def)
   apply (rule det_wp_pre)
    apply (wp det_mapM det_getRegister order_refl det_wp_mapM)

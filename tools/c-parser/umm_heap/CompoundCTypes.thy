@@ -631,8 +631,8 @@ lemma align_of_dvd_size_of_final_pad [simp]:
       2^align_td (final_pad ti) dvd size_td (final_pad ti)"
 apply(clarsimp simp: final_pad_def Let_def)
 apply auto
- apply(simp add: size_td_ti_pad_combine)
- apply(subst add_ac)
+ apply(simp add: size_td_ti_pad_combine )
+ apply(subst ac_simps)
  apply(rule dvd_padup_add)
  apply simp
 apply(simp add: padup_dvd)
@@ -1069,7 +1069,7 @@ done
 lemma align_field_extend_ti:
   "\<lbrakk> align_field s; align_field t; 2^(align_td t) dvd size_td s \<rbrakk> \<Longrightarrow>
       align_field (extend_ti s t fn)"
-apply(case_tac s, clarsimp)
+apply(case_tac s, clarsimp, thin_tac "s = ?X")
 apply(case_tac typ_struct, clarsimp)
  apply(clarsimp simp: align_field_def split: option.splits)
 apply(clarsimp simp: align_field_def)
@@ -1078,7 +1078,8 @@ apply(clarsimp split: split_if_asm option.splits)
  apply(case_tac f, clarsimp)
  apply clarsimp
  apply(frule field_lookup_offset2)
- apply(drule_tac x=list in spec, drule_tac x=s in spec)
+ apply (rename_tac lista s n listb)
+ apply(drule_tac x=listb in spec, drule_tac x=s in spec)
  apply(drule_tac x="n - size_td_list lista" in spec)
  apply clarsimp
  apply(drule dvd_diffD)
@@ -1194,7 +1195,7 @@ apply(rule, clarsimp)
  apply(subst size_td_ti_pad_combine)
   apply assumption
  apply(clarsimp simp: align_of_def)
- apply(subst add_ac)
+ apply(subst ac_simps)
  apply(rule dvd_padup_add)
  apply simp
 apply clarsimp

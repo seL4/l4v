@@ -475,10 +475,10 @@ where
 
 definition strip:: "'f set \<Rightarrow> 
                    ('p \<Rightarrow> ('s,'p,'f) com option) \<Rightarrow> ('p \<Rightarrow> ('s,'p,'f) com option)"
-  where "strip F \<Gamma> = (\<lambda>p. Option.map (strip_guards F) (\<Gamma> p))"
+  where "strip F \<Gamma> = (\<lambda>p. map_option (strip_guards F) (\<Gamma> p))"
 
 
-lemma strip_simp [simp]: "(strip F \<Gamma>) p = Option.map (strip_guards F) (\<Gamma> p)"
+lemma strip_simp [simp]: "(strip F \<Gamma>) p = map_option (strip_guards F) (\<Gamma> p)"
   by (simp add: strip_def)
 
 lemma dom_strip: "dom (strip F \<Gamma>) = dom \<Gamma>"
@@ -996,15 +996,11 @@ lemma inter_guards_strip_eq:
     (strip_guards UNIV c = strip_guards UNIV c2)"
 apply (induct c1 c2 rule: inter_guards.induct) 
 prefer 8 
-apply (simp split: split_if_asm  add: not_None_eq)
+apply (simp split: split_if_asm)
 apply hypsubst
 apply simp
-apply (rule conjI)
 apply  (rule ext)
 apply  (erule_tac x=s in allE, erule exE)
-apply  simp
-apply (rule ext)
-apply (erule_tac x=s in allE, erule exE)
 apply fastforce
 apply (fastforce split: option.splits split_if_asm)+
 done

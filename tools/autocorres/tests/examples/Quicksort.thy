@@ -44,7 +44,7 @@ lemma ptr_add_assoc [simp]:
 (* FIXME: move *)
 lemma ptr_add_commute [simp]:
   "p +\<^sub>p i +\<^sub>p j = p +\<^sub>p j +\<^sub>p i"
-  by (metis ptr_add_assoc add_commute)
+  by (metis ptr_add_assoc add.commute)
 
 
 (*
@@ -251,7 +251,7 @@ lemma is_array_concat:
   apply (frule unat_linear_over_array_loc)
   apply (subgoal_tac "array_loc_valid a n")
    apply (simp add: is_array_def array_loc_valid_def
-                    array_concat_elems_valid add_assoc conj_commute)
+                    array_concat_elems_valid add.assoc conj_commute)
   apply (simp add: array_loc_valid_def array_not_at_mem_end_def)
   done
 

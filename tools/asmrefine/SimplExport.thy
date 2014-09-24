@@ -101,15 +101,17 @@ fun get_field ctxt s = let
     handle ERROR _ => NONE
        | Bind => NONE
 
+val read_const = Proof_Context.read_const {proper = true, strict = true}
+
 fun process_struct ctxt csenv (nm, flds) = let
     val offs = map (ProgramAnalysis.offset csenv (map snd flds))
         (0 upto (length flds - 1))
-    val cons = Proof_Context.read_const_proper ctxt true (nm ^ "." ^ nm)
+    val cons = read_const ctxt (nm ^ "." ^ nm)
     val typ = dest_Const cons |> snd |> strip_type |> snd
     val sz = ProgramAnalysis.sizeof csenv (Absyn.StructTy nm)
     val algn = ProgramAnalysis.alignof csenv (Absyn.StructTy nm)
     val accs = map (fst #> prefix (nm ^ ".")
-        #> Proof_Context.read_const_proper ctxt true) flds
+        #> read_const ctxt) flds
   in (nm, (cons, typ, sz, algn, map fst flds ~~ (accs ~~ offs))) end
 
 fun structs ctxt csenv = ProgramAnalysis.get_senv csenv
@@ -131,7 +133,7 @@ fun enums ctxt csenv = let
   in
     #enumenv ecenv |> Symtab.dest
     |> map (fn (s, (n, _)) =>
-        (Proof_Context.read_const_proper ctxt true s
+        (read_const ctxt s
             |> dest_Const |> fst, n))
     |> Symtab.make |> Symtab.lookup
   end
@@ -679,7 +681,7 @@ and convert_ph3 ctxt params (Const (@{const_name Collect}, _) $ S $ x)
         handle TERM _ => raise TERM ("convert_ph3", [t])
     val _ = (fastype_of t <> @{typ int}) orelse raise TERM ("convert_ph3: int", [t])
   in "Num " ^ signed_string_of_int n ^ " " ^ convert_type false ctxt (fastype_of t) end
-  | convert_ph3 ctxt _ (Const (@{const_name TYPE}, Type (_, [T])))
+  | convert_ph3 ctxt _ (Const (@{const_name Pure.type}, Type (_, [T])))
     = "Type " ^ convert_type true ctxt T
   | convert_ph3 ctxt _ (Const (@{const_name pseudo_acc}, _) $ Free (s, T))
     = "Var " ^ s ^ " " ^ convert_type false ctxt T
@@ -887,7 +889,7 @@ fun emit_body ctxt params (Const (@{const_name Seq}, _) $ a $ b) n c e = let
     val ret_vals = Symtab.lookup proc_info (Long_Name.base_name p)
         |> the |> #params
         |> filter (fn (v, _) => v = HoarePackage.Out)
-        |> maps (snd #> Proof_Context.read_const_proper ctxt true
+        |> maps (snd #> read_const ctxt
          #> synthetic_updates ctxt params "rv#space#")
         |> map fst
 
@@ -929,7 +931,7 @@ fun emit_func_body ctxt eparams name = let
     val proc_info = Hoare.get_data ctxt |> #proc_info
     val params = Symtab.lookup proc_info (name ^ "_'proc")
         |> the |> #params
-        |> map (apsnd (Proof_Context.read_const_proper ctxt true
+        |> map (apsnd (read_const ctxt
                 #> synthetic_updates ctxt eparams ""
                 #> map fst))
 
@@ -951,7 +953,7 @@ fun emit_func_body ctxt eparams name = let
             |> concl_of |> Logic.dest_equals |> snd
         handle ERROR _ => @{term "Spec S"}
 
-    val full_nm = Proof_Context.read_const_proper ctxt true (name ^ "_'proc")
+    val full_nm = read_const ctxt (name ^ "_'proc")
         |> dest_Const |> fst |> unsuffix "_'proc"
   in emit ("Function " ^ full_nm ^ " " ^ space_pad_list inputs
                 ^ " " ^ space_pad_list outputs);
@@ -968,7 +970,7 @@ fun emit_func_body ctxt eparams name = let
 fun emit_struct ctxt csenv (nm, flds) = let
     val offs = map (ProgramAnalysis.offset csenv (map snd flds))
         (0 upto (length flds - 1))
-    val full_nm = Proof_Context.read_const_proper ctxt true (nm ^ "." ^ nm)
+    val full_nm = read_const ctxt (nm ^ "." ^ nm)
         |> dest_Const |> snd |> strip_type |> snd |> dest_Type |> fst
     val thy = Proof_Context.theory_of ctxt
     val sz = ProgramAnalysis.sizeof csenv (Absyn.StructTy nm)
@@ -986,8 +988,6 @@ fun emit_C_everything ctxt csenv = let
   in app (emit_struct ctxt csenv) structs;
      app (emit_func_body ctxt params) fs end
 *}
-
-declare [[show_types = true, show_consts = true]]
 
 ML {*
 fun openOut_relative thy = ParseGraph.filename_relative thy #> TextIO.openOut;

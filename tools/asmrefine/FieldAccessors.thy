@@ -192,7 +192,7 @@ lemma field_lookup_to_bytes_split:
    apply (rule trans, rule field_lookup_to_bytes, simp+)
    apply (drule field_lookup_offset_size[OF meta_eq_to_obj_eq])
    apply (simp add: drop_heap_list_le take_heap_list_le size_of_def)
-  apply (simp add: add_commute)
+  apply (simp add: add.commute)
   done
 
 lemma field_lookup_to_bytes_split_step:
@@ -262,11 +262,11 @@ fun add_field_h_val_rewrites lthy =
   Local_Theory.note ((@{binding field_h_val_rewrites}, []),
       get_field_h_val_rewrites lthy) lthy |> snd
 *}
-
+ML Global_Theory.facts_of
 ML {*
 fun get_field_to_bytes_rewrites lthy = let
     val fl_thms = Global_Theory.facts_of (Proof_Context.theory_of lthy)
-        |> Facts.dest_static []
+        |> Facts.dest_static false []
         |> filter (fn (s, _) => String.isSuffix "_fl_Some" s)
         |> maps snd
         |> map (Thm.transfer (Proof_Context.theory_of lthy))
@@ -277,7 +277,7 @@ fun get_field_to_bytes_rewrites lthy = let
     fun proc thm = case (fl_thms RL [thm RS step]) of
             (thm :: _) => proc (simp_tac lthy 1 thm |> Seq.hd)
         | [] => thm
-    fun test concl = (Term.exists_Const (fn (s, T) => s = @{const_name "drop"}) concl
+    fun test concl = (Term.exists_Const (fn (s, _) => s = @{const_name "drop"}) concl
         andalso (warning ("padding: " ^ (HOLogic.dest_Trueprop concl
             |> HOLogic.dest_eq |> fst |> strip_comb |> snd |> hd
             |> fastype_of |> dest_Type |> fst)); true))

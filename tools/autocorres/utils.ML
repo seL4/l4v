@@ -33,12 +33,12 @@ fun lhs_of (Const _ $ l $ _) = l
   | lhs_of t = raise (TERM ("lhs_of", [t]))
 
 fun rhs_of_eq (Const (@{const_name "Trueprop"}, _) $ eq) = rhs_of_eq eq
-  | rhs_of_eq (Const (@{const_name "=="}, _) $ _ $ r) = r
+  | rhs_of_eq (Const (@{const_name "Pure.eq"}, _) $ _ $ r) = r
   | rhs_of_eq (Const (@{const_name "HOL.eq"}, _) $ _ $ r) = r
   | rhs_of_eq t = raise (TERM ("rhs_of_eq", [t]))
 
 fun lhs_of_eq (Const (@{const_name "Trueprop"}, _) $ eq) = lhs_of_eq eq
-  | lhs_of_eq (Const (@{const_name "=="}, _) $ l $ _) = l
+  | lhs_of_eq (Const (@{const_name "Pure.eq"}, _) $ l $ _) = l
   | lhs_of_eq (Const (@{const_name "HOL.eq"}, _) $ l $ _) = l
   | lhs_of_eq t = raise (TERM ("lhs_of_eq", [t]))
 
@@ -267,7 +267,7 @@ end
 (* Attempt to guess if the given theorem is a "cong" rule. *)
 fun is_cong thm =
   case (Thm.concl_of thm) of
-       (Const ("HOL.Trueprop", _) $ (Const ("HOL.eq", _) $ lhs $ rhs)) =>
+       (Const (@{const_name "HOL.Trueprop"}, _) $ (Const (@{const_name "HOL.eq"}, _) $ lhs $ rhs)) =>
          (Term.head_of lhs = Term.head_of rhs)
      | _ => false
 
@@ -605,7 +605,7 @@ fun prove_rule name lemma tac lthy =
 (* Simple invocation of metis. *)
 val metis_tac = Metis_Tactic.metis_tac
         ATP_Proof_Reconstruct.partial_type_encs
-        ATP_Proof_Reconstruct.metis_default_lam_trans
+        ATP_Proof_Reconstruct.default_metis_lam_trans
 fun metis_insert_tac ctxt rules =
   (Method.insert_tac rules) THEN' (metis_tac ctxt [])
 
@@ -752,11 +752,11 @@ end
  * "f" the term with the abstracted variables converted into concrete
  * free variables.
  *
- * This is like "concrete_abs", but supports "prod_case".
+ * This is like "concrete_abs", but supports "case_prod.
  *)
 fun concrete_split' ctxt t =
 let
-  fun do_split (Const (@{const_name "prod_case"}, _) $ t) =
+  fun do_split (Const (@{const_name "case_prod"}, _) $ t) =
     let
       (* Abstract the first variable in the split... *)
       val (new_term, free, name) = concrete_abs' ctxt t
@@ -845,14 +845,13 @@ fun set_hidden_ctxt ctxt =
  *)
 fun all_facts_of ctxt =
   let
-    fun visible_facts facts =
-      Facts.dest_static [] facts
-      |> filter_out (Facts.is_concealed facts o #1);
+    val local_facts = Proof_Context.facts_of ctxt;
+    val global_facts = Global_Theory.facts_of (Proof_Context.theory_of ctxt);
   in
     maps Facts.selections
-     (visible_facts (Global_Theory.facts_of (Proof_Context.theory_of ctxt)) @
-      visible_facts (Proof_Context.facts_of ctxt))
-  end
+     (Facts.dest_static false [global_facts] local_facts @
+      Facts.dest_static false [] global_facts)
+  end;
 
 (* Guess the name of a thm. *)
 fun guess_thm_name ctxt thm =
@@ -958,7 +957,7 @@ fun subst_conv ctxt thm =
  * logical gunf. *)
 fun remove_meta_conv conv ctxt ct =
   (case Thm.term_of ct of
-    Const ("all", _) $ Abs _ =>
+    Const (@{const_name "Pure.all"}, _) $ Abs _ =>
       Conv.arg_conv (Conv.abs_conv (fn (_, ctxt) =>
           remove_meta_conv conv ctxt) ctxt) ct
   | Const (@{const_name "Trueprop"}, _) $ _ =>
@@ -977,18 +976,10 @@ fun remove_meta_conv conv ctxt ct =
  *
  * will define the constant "three" outside of the current locale.
  *)
-fun exec_background_result f lthy =
-let
-  val name = Named_Target.the_name lthy
-  val (result, lthy) =
-    Local_Theory.exit_global lthy
-    |> Named_Target.theory_init
-    |> f
-  val lthy = Local_Theory.exit_global lthy
-    |> Named_Target.context_cmd (name, Position.none)
-in
-  (result, lthy)
-end
+fun exec_background_result f =
+  let val f' = apsnd Local_Theory.exit_global o f o Named_Target.theory_init
+  in Local_Theory.background_theory_result f' end
+
 fun exec_background f lthy =
   exec_background_result (fn lthy => ((), f lthy)) lthy
   |> snd

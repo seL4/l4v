@@ -59,7 +59,7 @@ lemma cteMDBNode_C_update_lift [simp]:
 
 lemma ccap_relationE:
   "\<lbrakk>ccap_relation c v; \<And>vl. \<lbrakk> cap_lift v = Some vl; c = cap_to_H vl; c_valid_cap v\<rbrakk> \<Longrightarrow> P \<rbrakk> \<Longrightarrow> P"
-  unfolding ccap_relation_def option_map_def 
+  unfolding ccap_relation_def map_option_case 
   apply clarsimp
   apply (drule sym)
   apply (clarsimp split: option.splits)
@@ -398,6 +398,12 @@ declare insert_dom [simp]
 lemma in_alignCheck':
   "(z \<in> fst (alignCheck x n s)) = (snd z = s \<and> is_aligned x n)"
   by (cases z, simp add: in_alignCheck)
+
+lemma fst_alignCheck_empty [simp]:
+   "(fst (alignCheck x n s) = {}) = (\<not> is_aligned x n)"
+  apply (subst all_not_in_conv [symmetric])
+  apply (clarsimp simp: in_alignCheck')
+  done
 
 lemma fst_setCTE0:
   assumes ct: "cte_at' dest s"
@@ -1049,7 +1055,7 @@ proof -
 qed
 
 lemma c_valid_cte_eq:
- "c_valid_cte c = option_case True cl_valid_cte (cte_lift c)" 
+ "c_valid_cte c = case_option True cl_valid_cte (cte_lift c)" 
  apply (clarsimp simp: c_valid_cte_def cl_valid_cte_def c_valid_cap_def  split: option.splits)
  apply (unfold cte_lift_def)
  apply simp
@@ -1830,7 +1836,7 @@ lemma user_word_at_cross_over:
             word32_shift_by_2 shiftr_shiftl1 is_aligned_neg_mask_eq is_aligned_andI1)
   apply (drule_tac x="ucast (p >> 2)" in spec)
   apply (simp add: byte_to_word_heap_def Let_def ucast_ucast_mask)
-  apply (fold shiftl_t2n[where n=2, simplified, simplified mult_ac])
+  apply (fold shiftl_t2n[where n=2, simplified, simplified mult.commute mult.left_commute])
   apply (simp add: aligned_shiftr_mask_shiftl pageBits_def)
   apply (rule trans[rotated], rule_tac hp="hrs_mem (t_hrs_' (globals s'))"
                                    and x="Ptr &(Ptr (p && ~~ mask 12) \<rightarrow> [''words_C''])"
@@ -1845,10 +1851,8 @@ lemma user_word_at_cross_over:
   apply (rule_tac f="h_val ?hp" in arg_cong)
   apply simp
   apply (simp add: field_lvalue_def)
-  apply (subst field_lookup_offset_eq)
-   apply (fastforce intro: typ_heap_simps)
   apply (simp add: ucast_nat_def ucast_ucast_mask)
-  apply (fold shiftl_t2n[where n=2, simplified, simplified mult_ac])
+  apply (fold shiftl_t2n[where n=2, simplified, simplified mult.commute mult.left_commute])
   apply (simp add: aligned_shiftr_mask_shiftl)
   done
 
@@ -1868,15 +1872,15 @@ lemma user_memory_cross_over:
   apply (simp add: word_rsplit_rcat_size word_size)
   apply (drule_tac f="\<lambda>xs. xs ! unat (ptr && mask 2)" in arg_cong)
   apply (simp add: heap_list_nth unat_mask_2_less_4
-                   word_plus_and_or_coroll2 add_commute
+                   word_plus_and_or_coroll2 add.commute
                    hrs_mem_def)
   apply (cut_tac p=ptr in unat_mask_2_less_4)
   apply (subgoal_tac "(ptr && ~~ mask 2) + (ptr && mask 2) = ptr")
    apply (subgoal_tac "!n x. n < 4 \<longrightarrow> (unat (x\<Colon>word32) = n) = (x = of_nat n)")
-    apply (auto simp add: eval_nat_numeral unat_eq_0 add_commute
+    apply (auto simp add: eval_nat_numeral unat_eq_0 add.commute
                 elim!: less_SucE)[1]
     apply (clarsimp simp add: unat32_eq_of_nat word_bits_def)
-  apply (simp add: add_commute word_plus_and_or_coroll2)
+  apply (simp add: add.commute word_plus_and_or_coroll2)
   done
 
 lemma cap_get_tag_isCap_ArchObject0:

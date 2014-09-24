@@ -633,7 +633,7 @@ lemma preemption_point_def2:
            if rv then doE
              liftE reset_work_units;
              liftE (do_machine_op getActiveIRQ) >>=E
-             option_case (returnOk ()) (throwError \<circ> Interrupted)
+             case_option (returnOk ()) (throwError \<circ> Interrupted)
            odE else returnOk()
        odE"
   apply (rule ext)
@@ -954,7 +954,7 @@ lemma equiv_valid_2_bindE:
   shows "equiv_valid_2 D A A (E \<oplus> R) (P and S) (P' and S') (f >>=E g) (f' >>=E g')"
   apply(unfold bindE_def)
   apply(rule equiv_valid_2_guard_imp)
-    apply(rule_tac R'="E \<oplus> R'" and Q="sum_case \<top>\<top> Q" and Q'="sum_case \<top>\<top> Q'" and S=S and S'=S' in equiv_valid_2_bind)
+    apply(rule_tac R'="E \<oplus> R'" and Q="case_sum \<top>\<top> Q" and Q'="case_sum \<top>\<top> Q'" and S=S and S'=S' in equiv_valid_2_bind)
        apply(clarsimp simp: lift_def split: sum.splits)
        apply(intro impI conjI allI)
           apply(simp add: throwError_def)
@@ -1032,7 +1032,7 @@ lemma spec_equiv_valid_2_inv_bindE:
   shows "spec_equiv_valid_2_inv s I A (E \<oplus> R) (P and S) (P' and S') (f >>=E g) (f' >>=E g')"
   apply(unfold bindE_def)
   apply(rule spec_equiv_valid_2_inv_guard_imp)
-    apply(rule_tac R'="E \<oplus> R'" and Q="sum_case \<top>\<top> Q" and Q'="sum_case \<top>\<top> Q'" and S=S and S'=S' in bind_spec_ev2)
+    apply(rule_tac R'="E \<oplus> R'" and Q="case_sum \<top>\<top> Q" and Q'="case_sum \<top>\<top> Q'" and S=S and S'=S' in bind_spec_ev2)
        apply(clarsimp simp: lift_def split: sum.splits)
        apply(intro impI conjI allI)
           apply(simp add: throwError_def)

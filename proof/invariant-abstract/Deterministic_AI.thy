@@ -758,7 +758,7 @@ shows
 "valid_list_2 t m \<Longrightarrow> next_sib src t m \<noteq> Some src"
   apply (rule notI)
   apply (simp add: next_sib_def split: option.splits)
-  apply (subgoal_tac "distinct (t a)")
+  apply (subgoal_tac "distinct (t (the (m src)))")
    apply (frule distinct_after_in_list_not_self[where src=src])
    apply simp
   apply (simp add: valid_list_2_def)
@@ -4416,13 +4416,11 @@ lemma next_sib_set_not_self:
   shows "valid_list_2 t m \<Longrightarrow> x \<notin> next_sib_set x t m"
   apply(simp add: next_sib_set_eq_after_in_list_set valid_list_distinct after_in_list_list_set[symmetric] split: option.splits)
   apply(intro allI impI)
-  apply(frule_tac p=a in list_eq_after_in_list)
+  apply(frule_tac p="the (m x)" in list_eq_after_in_list)
    apply(simp)
-  apply(simp add: valid_list_2_def)
-  apply(elim conjE)
-  apply(erule_tac x=a in allE)+
-  apply(erule exE)
-  apply(drule_tac x="t a" and f=distinct in arg_cong)
+  apply(clarsimp simp add: valid_list_2_def)
+  apply(erule_tac x="the (m x)" in allE)+
+  apply(drule_tac x="t ?x" and f=distinct in arg_cong)
   apply(simp)
 done
 

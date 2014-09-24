@@ -831,8 +831,8 @@ lemma take_min_len:
   "take (min (length xs) n) xs = take n xs"
   apply (cases "length xs \<le> n")
    apply simp
-  apply (subst min_max.inf_commute)
-  apply (subst min_max.inf_absorb1)
+  apply (subst min.commute)
+  apply (subst min.absorb1)
    apply simp
   apply simp
   done

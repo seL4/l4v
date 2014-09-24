@@ -761,7 +761,6 @@ lemma seL4_ASIDPool_Assign_wp:
        simp:ep_related_cap_def)
     apply (clarsimp simp:user_pointer_at_def Let_def
       word_bits_def sep_conj_assoc)
-    apply (simp add:misc sz word_bits_def)
     apply (sep_solve)
     apply (sep_solve)
     apply (simp)

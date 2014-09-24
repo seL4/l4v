@@ -119,8 +119,7 @@ lemma capdl_objects_by_parts:
   apply (subst (6) sep_map_set_conj_restrict [where t = "(\<lambda>obj. tcb_at obj spec)"], simp)
   apply (subst (7) sep_map_set_conj_restrict [where t = "(\<lambda>obj. table_at obj spec)"], simp)
   apply (subst (8) sep_map_set_conj_restrict [where t = "(\<lambda>obj. capless_at obj spec)"], simp)
-  apply (clarsimp simp: object_types_distinct sep.mult_ac
-                        real_object_not_irq_node real_objects_some_type
+  apply (clarsimp simp: object_types_distinct real_object_not_irq_node real_objects_some_type
                   cong: rev_conj_cong)
   done
 
@@ -163,7 +162,7 @@ lemma objects_empty_objects_initialised_capless:
   apply (clarsimp simp: object_empty_object_initialised_capless)
   done
 
-lemma valid_prod_case':
+lemma valid_case_prod':
   "(\<And>x y. \<lbrace>P x y\<rbrace> f x y \<lbrace>Q\<rbrace>) \<Longrightarrow> \<lbrace>P (fst v) (snd v)\<rbrace> case v of (x, y) \<Rightarrow> f x y \<lbrace>Q\<rbrace>"
   by (clarsimp split: prod.splits)
 
@@ -234,18 +233,18 @@ lemma small_one:
   apply (frule well_formed_objects_card)
   apply (insert distinct_card [symmetric, where xs ="[obj\<leftarrow>obj_ids . cnode_or_tcb_at obj spec]"], simp)
   apply (frule distinct_card [symmetric])
-  apply (clarsimp simp: init_system_def, wp valid_prod_case')
-           apply (rule hoare_ex_wp, rename_tac t, rule_tac t=t in start_threads_sep [sep_wandise, standard], simp)
+  apply (clarsimp simp: init_system_def, wp valid_case_prod')
+           apply (rule hoare_ex_wp, rename_tac t, rule_tac t=t in start_threads_sep [sep_wandise], simp)
           apply (rule hoare_ex_wp, rename_tac t, rule_tac t=t and
-                                                 free_cptrs="[fstart .e. fend - 1]" in init_cspace_sep [sep_wandise, standard])
-         apply (rule hoare_ex_wp, rename_tac t, rule_tac t=t in init_tcbs_sep [sep_wandise, standard])
-        apply (rule hoare_ex_wp, rename_tac t, rule_tac t=t in init_vspace_sep [sep_wandise, standard])
-       apply (rule hoare_ex_wp, rename_tac t, rule_tac t=t in init_pd_asids_sep [sep_wandise, standard])
-      apply (rule hoare_ex_wp, rename_tac t, rule_tac t=t in init_irqs_sep [sep_wandise, standard])
+                                                 free_cptrs="[fstart .e. fend - 1]" in init_cspace_sep [sep_wandise])
+         apply (rule hoare_ex_wp, rename_tac t, rule_tac t=t in init_tcbs_sep [sep_wandise])
+        apply (rule hoare_ex_wp, rename_tac t, rule_tac t=t in init_vspace_sep [sep_wandise])
+       apply (rule hoare_ex_wp, rename_tac t, rule_tac t=t in init_pd_asids_sep [sep_wandise])
+      apply (rule hoare_ex_wp, rename_tac t, rule_tac t=t in init_irqs_sep [sep_wandise])
      apply (rule hoare_ex_wp, rename_tac t, rule_tac t=t and
                                             untyped_cptrs = "[ustart .e. uend - 1]" and
-                                            free_cptrs_orig = "[fstart .e. fend - 1]" in duplicate_caps_sep [sep_wandise, standard])
-     apply (rule create_irq_caps_sep [sep_wandise, standard,
+                                            free_cptrs_orig = "[fstart .e. fend - 1]" in duplicate_caps_sep [sep_wandise])
+     apply (rule create_irq_caps_sep [sep_wandise,
             where free_cptrs_orig = "[fstart .e. fend - 1]"
               and untyped_cptrs = "[ustart .e. uend - 1]"
               and orig_caps = "map_of (zip [obj\<leftarrow>obj_ids. real_object_at obj spec] [fstart .e. fend - 1])"

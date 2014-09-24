@@ -23,7 +23,7 @@ val the' = Utils.the'
 (* Print the current goal state then fail hard. *)
 exception ProofFailed of string
 
-fun fail_tac s = (print_tac s THEN (fn _ => Seq.single (raise (ProofFailed s))))
+fun fail_tac ctxt s = (print_tac ctxt s THEN (fn _ => Seq.single (raise (ProofFailed s))))
 
 type heap_info = HeapLiftBase.heap_info
 
@@ -120,7 +120,7 @@ let
 
   (* Find all functions that are directly unliftable. *)
   val raw_unliftable_functions =
-    AutoCorresUtil.map_all fn_info (fn fn_name =>
+    AutoCorresUtil.map_all lthy fn_info (fn fn_name =>
         (fn_name,
             FunctionInfo.get_function_def fn_info fn_name
             |> #definition
@@ -364,7 +364,7 @@ fun new_heap_valid_thm valid_term (_, _, setter, NONE) lthy = NONE
      lhs = rhs s   ==>   (%s. lhs) = rhs
    This allows us to rewrite a heap update even if the state is eta contracted away. *)
 fun eta_rhs lthy thm = let
-  val Const ("==", typ) $ lhs $ (rhs $ Var (("s", s_n), s_typ)) = term_of_thm thm
+  val Const (@{const_name "Pure.eq"}, typ) $ lhs $ (rhs $ Var (("s", s_n), s_typ)) = term_of_thm thm
   val abs_term = @{mk_term "?a == ?b" (a, b)} (lambda (Var (("s", s_n), s_typ)) lhs, rhs)
   val thm' = Goal.prove_future lthy [] [] abs_term
                (fn params => simp_tac (put_simpset HOL_basic_ss (#context params) addsimps thm :: @{thms atomize_eq ext}) 1)
@@ -636,10 +636,10 @@ let
     (* If debugging enabled, print goal states when we backtrack. *)
     val error_printed = ref 0
     fun print_n_tac printed_ref t =
-      (if false orelse (!printed_ref >= get_print_depth ()) then
+      (if false orelse (!printed_ref >= ML_Options.get_print_depth ()) then
         all_tac
       else
-        (printed_ref := (!printed_ref) + 1; print_tac "Error solving subgoal")) t
+        (printed_ref := (!printed_ref) + 1; print_tac ctxt "Error solving subgoal")) t
 
     (*
      * Recursively solve subgoals.
@@ -687,7 +687,7 @@ let
     (* If we created extra heap wrappers, apply them now.
      * Our simp rules don't seem to be enough for L2Opt,
      * so we cannot change the program before that. *)
-    val thm = Raw_Simplifier.rewrite_rule syntax_lift_rules thm
+    val thm = Raw_Simplifier.rewrite_rule ctxt syntax_lift_rules thm
 
     (* Gather post-simplification statistics. *)
     val _ = Statistics.gather ctxt "HLsimp" fn_name

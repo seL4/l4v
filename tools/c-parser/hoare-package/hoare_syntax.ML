@@ -760,7 +760,7 @@ fun guard ctxt Ts (add as (Const (@{const_name Groups.plus},_) $ l $ r)) =
       if Hoare.is_state_var hp then guard ctxt Ts p & SOME (not_Null p)(*& SOME (in_alloc p)*)
       else guard ctxt Ts p
 
-(*  | guard (Const ("list_update",_)$l$i$e) =
+(*  | guard (Const (@{const_name "list_update"},_)$l$i$e) =
       if is_arr l then guard i & SOME (in_length i l) & guard e else NONE*) (* oder default?*)
 (*  | guard (Const (upd,_)$e$s) = for procedure parameters,like default but left to right
       if is_some (try (unsuffix updateN) upd) then guard s & guard e else guard e & guard s *)
@@ -989,7 +989,7 @@ fun dest_procname ctxt prfx false (Const (p, _)) =
   | dest_procname ctxt prfx false (t as Const (@{syntax_const "_antiquoteOld"}, _) $ _ $ Free (p,_)) =
       (prfx ^ suffix Hoare.proc_deco p, t)
   (* FIXME StateFun.lookup !? *)
-  | dest_procname ctxt prfx false (t as Const ("StateFun.lookup", _) $ _ $ Free (p, _) $ _) =
+  | dest_procname ctxt prfx false (t as Const (@{const_name "StateFun.lookup"}, _) $ _ $ Free (p, _) $ _) =
       (prfx ^ suffix Hoare.proc_deco (Hoare.remdeco' p), t) (* antiquoteOld *)
 
   | dest_procname ctxt prfx false t = (prfx, t)
@@ -1000,7 +1000,7 @@ fun dest_procname ctxt prfx false (Const (p, _)) =
           (t' as Abs (_, _, Free (p, _) $ Bound 0)) =>
             (prfx ^ Hoare.resuffix Hoare.deco Hoare.proc_deco p, t')
         (* FIXME StateFun.lookup !? *)
-        | (t' as Abs (_, _, Const ("StateFun.lookup", _) $ _ $ Free (p, _) $ (_ $ Bound 0))) =>
+        | (t' as Abs (_, _, Const (@{const_name "StateFun.lookup"}, _) $ _ $ Free (p, _) $ (_ $ Bound 0))) =>
             (prfx ^ suffix Hoare.proc_deco (Hoare.remdeco' p), t')
         | t' => (prfx, t'))
       end
@@ -1247,7 +1247,7 @@ fun split_Let' ((l as Const (@{const_syntax Let'}, _)) $ x $ t) =
         then (I, t') (* Get rid of last abstraction *)
         else (fn t => Abs (x, T, recomb t), t')
      end
-  | split_Let' ((s as Const (@{const_syntax prod_case},_)) $ t) =
+  | split_Let' ((s as Const (@{const_syntax case_prod},_)) $ t) =
      let val (recomb, t') = split_Let' t
      in (fn t => s $ recomb t, t') end
   | split_Let' t = (I, t)

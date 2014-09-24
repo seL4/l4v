@@ -113,16 +113,16 @@ text {*
   The command sends a @{const Poll} message to the buffer component, and
   expects a message @{term a} back that has the form @{term "Pending b"}
   with a boolean payload @{term b}. This payload is embedded in the local
-  state of the component using the user-provided function @{text embed}.
+  state of the component using the user-provided function @{text embed_data}.
 *}
 definition
   EventPoll :: "'channel \<Rightarrow> 
     ('component_state local_state \<Rightarrow> bool \<Rightarrow> 'component_state local_state) \<Rightarrow> 
     ('channel, 'component_state) comp"
 where
-  "EventPoll c embed \<equiv>
+  "EventPoll c embed_data \<equiv>
     Request (\<lambda>_. {\<lparr>q_channel = c, q_data = Poll\<rparr>})
-            (\<lambda>a s. case a_data a of Pending b \<Rightarrow> {embed s b} | _ \<Rightarrow> {})"
+            (\<lambda>a s. case a_data a of Pending b \<Rightarrow> {embed_data s b} | _ \<Rightarrow> {})"
 
 subsubsection {* \label{ssec:eventwait}Event Wait *}
 text {*
@@ -137,9 +137,9 @@ definition
     ('component_state local_state \<Rightarrow> bool \<Rightarrow> 'component_state local_state) \<Rightarrow> 
     ('channel, 'component_state) comp"
 where
-  "EventWait c embed \<equiv>
+  "EventWait c embed_data \<equiv>
     Request (\<lambda>_. {\<lparr>q_channel = c, q_data = Poll\<rparr>})
-            (\<lambda>a s. case a_data a of Pending b \<Rightarrow> if b then {embed s b} else {}
+            (\<lambda>a s. case a_data a of Pending b \<Rightarrow> if b then {embed_data s b} else {}
                                   | _ \<Rightarrow> {})"
 
 subsubsection {* \label{ssec:memoryread}Memory Read *}
@@ -156,9 +156,9 @@ definition
     ('component_state local_state \<Rightarrow> variable \<Rightarrow> 'component_state local_state) \<Rightarrow>
     ('channel, 'component_state) comp"
 where
-  "MemoryRead c addr embed \<equiv>
+  "MemoryRead c addr embed_data \<equiv>
     Request (\<lambda>s. {\<lparr>q_channel = c, q_data = Read (addr s)\<rparr>}) 
-            (\<lambda>a s. case a_data a of Value v \<Rightarrow> {embed s v} | _ \<Rightarrow> {})"
+            (\<lambda>a s. case a_data a of Value v \<Rightarrow> {embed_data s v} | _ \<Rightarrow> {})"
 
 subsubsection {* \label{ssec:memorywrite}Memory Write *}
 text {*

@@ -48,7 +48,7 @@ sig
         (* result *)
         -> (Proof.context * FunctionInfo.fn_info)
 
-  val map_all : FunctionInfo.fn_info -> (string -> 'a) -> 'a list
+  val map_all : Proof.context -> FunctionInfo.fn_info -> (string -> 'a) -> 'a list
   val concurrent : bool Unsynchronized.ref
   val has_simpl_body_def : local_theory -> string -> bool
   val max_run_time : Time.time option Unsynchronized.ref
@@ -89,8 +89,8 @@ val concurrent = Unsynchronized.ref true;
 datatype 'a maybe_fork = Future of 'a future | Boring of 'a
 
 (* Fork a group of tasks. *)
-fun maybe_fork vals =
-  if ((!concurrent) andalso not (!Toplevel.debug)) then
+fun maybe_fork ctxt vals =
+  if ((!concurrent) andalso not (Config.get ctxt ML_Options.exception_trace)) then
     map Future (Future.forks {
         name = "", group = NONE, deps = [], pri = ~1, interrupts = true}
       vals)
@@ -104,8 +104,8 @@ fun maybe_join v =
   | Future x => Future.join x
 
 (* Functional map. *)
-fun par_map f a =
-  if ((!concurrent) andalso not (!Toplevel.debug)) then
+fun par_map ctxt f a =
+  if ((!concurrent) andalso not (Config.get ctxt ML_Options.exception_trace)) then
     Par_List.map f a
   else
     map f a
@@ -158,7 +158,7 @@ fun translate lthy fn_info convert define prove_mono fn_def_translate v =
     val converted_body_thms =
         map (fn name => fn _ =>
                 time_limit (fn _ => convert lthy name) [name]) all_functions
-        |> maybe_fork
+        |> maybe_fork lthy
     val converted_bodies = Symtab.make (all_functions ~~ converted_body_thms)
 
     (* In sorted order, define constants and proofs for the functions. *)
@@ -189,7 +189,7 @@ fun translate lthy fn_info convert define prove_mono fn_def_translate v =
                       |> (fn fn_defs => prove_mono (map #const fn_defs ~~
                                                     map #definition fn_defs) lthy)
                       |> (fn thms => funcs ~~ thms)) funcs))
-        |> maybe_fork |> map maybe_join
+        |> maybe_fork lthy |> map maybe_join
         |> List.concat |> Symtab.make
 
     val new_fn_defs =
@@ -210,8 +210,8 @@ fun translate lthy fn_info convert define prove_mono fn_def_translate v =
  *
  * We return a list of all results.
  *)
-fun map_all fn_info convert =
-  par_map convert (FunctionInfo.get_functions fn_info |> Symtab.keys)
+fun map_all ctxt fn_info convert =
+  par_map ctxt convert (FunctionInfo.get_functions fn_info |> Symtab.keys)
 
 (*
  * Get functions called by a particular function.
@@ -539,10 +539,10 @@ fun define_funcs
      * functions unsolved. *)
     val pred_thms = map (
         fn (pred, thm, body_def) =>
-          Thm.trivial (cterm_of (Proof_Context.theory_of ctxt) pred)
+          Thm.trivial (cterm_of (Proof_Context.theory_of ctxt') pred)
           |> Utils.apply_tac "unfold body" (Hypsubst.stac body_def 1)
           |> Utils.apply_tac "apply rule" (rtac thm 1)
-          |> Goal.norm_result
+          |> Goal.norm_result ctxt
           |> singleton (Variable.export ctxt' ctxt)
         )
         (Utils.zip3 preds fn_thms fn_def_thms)
@@ -552,7 +552,7 @@ fun define_funcs
     val helper_thms =
         (map (Symtab.lookup callee_thms #> the) combined_normal_calls) @ pred_thms
         |> map (Drule.forall_intr_vars)
-        |> map (Conv.fconv_rule Object_Logic.atomize)
+        |> map (Conv.fconv_rule (Object_Logic.atomize ctxt))
 
     (* Generate a proof term of equivalence using the folded definitions. *)
     val new_thm =
@@ -588,7 +588,7 @@ fun define_funcs
     val new_thms =
         map (prove_partial_l1_corres new_thm) preds
         |> (Variable.export ctxt' ctxt)
-        |> map (Goal.norm_result)
+        |> map (Goal.norm_result ctxt)
 
     (* Record the theorems in our theory data. *)
     val ctxt = fold (fn (fn_name, thm) =>

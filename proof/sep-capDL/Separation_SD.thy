@@ -131,7 +131,7 @@ definition
 where
   "sep_state_to_entity_map component_map \<equiv> \<lambda>s (obj_id,comp_id).
   if comp_id \<in> component_map obj_id
-  then Option.map (object_project comp_id) (s obj_id)
+  then map_option (object_project comp_id) (s obj_id)
   else None"
 
 definition

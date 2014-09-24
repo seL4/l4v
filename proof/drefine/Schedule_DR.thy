@@ -296,7 +296,7 @@ lemma schedule_resume_cur_thread_dcorres:
                         st_tcb_at_def obj_at_def ct_in_cur_domain_def in_cur_domain_def)
   apply (frule(1) valid_etcbs_tcb_etcb)
   apply (auto simp: transform_def transform_current_thread_def all_active_tcbs_def transform_objects_def active_tcbs_in_domain_def etcb_at_def
-                        map_add_def restrict_map_def Option.map_def transform_object_def transform_tcb_def valid_idle_def st_tcb_def2 get_tcb_def
+                        map_add_def restrict_map_def option_map_def transform_object_def transform_tcb_def valid_idle_def st_tcb_def2 get_tcb_def
                         transform_cnode_contents_def infer_tcb_pending_op_def transform_cap_def domIff st_tcb_at_kh_def obj_at_def only_idle_def
                   split: option.splits split_if Structures_A.kernel_object.splits Structures_A.thread_state.splits)[1]
    (* cur = idle_thread s' *)
@@ -315,7 +315,7 @@ lemma schedule_switch_thread_helper:
                         valid_state_def st_tcb_at_def obj_at_def switch_in_cur_domain_def in_cur_domain_def only_idle_def)
   apply (frule(1) valid_etcbs_tcb_etcb)
   apply (auto simp: transform_def transform_current_thread_def all_active_tcbs_def transform_objects_def active_tcbs_in_domain_def etcb_at_def
-                        map_add_def restrict_map_def Option.map_def transform_object_def transform_tcb_def valid_idle_def st_tcb_def2 get_tcb_def
+                        map_add_def restrict_map_def option_map_def transform_object_def transform_tcb_def valid_idle_def st_tcb_def2 get_tcb_def
                         transform_cnode_contents_def infer_tcb_pending_op_def transform_cap_def domIff st_tcb_at_kh_def obj_at_def only_idle_def
                   split: option.splits split_if Structures_A.kernel_object.splits Structures_A.thread_state.splits)
   done
@@ -350,7 +350,7 @@ lemma schedule_switch_thread_dcorres:
   apply (auto simp: select_def gets_def get_def bind_def return_def active_tcbs_in_domain_def 
                         invs_def valid_state_def valid_objs_def change_current_domain_def
                     Schedule_D.switch_to_thread_def modify_def put_def
-                    Option.map_def restrict_map_def map_add_def get_tcb_def
+                    option_map_def restrict_map_def map_add_def get_tcb_def
                     transform_def transform_current_thread_def cur_tcb_def tcb_at_def)[1]
   apply simp
   apply fastforce
@@ -383,7 +383,7 @@ lemma schedule_choose_new_thread_helper:
   apply (erule_tac x="hd (ready_queues s (cur_domain s) prio)" in ballE)
   apply (auto simp: transform_def transform_current_thread_def all_active_tcbs_def transform_objects_def active_tcbs_in_domain_def etcb_at_def
                        is_etcb_at_def
-                        map_add_def restrict_map_def Option.map_def transform_object_def transform_tcb_def valid_idle_def st_tcb_def2 get_tcb_def
+                        map_add_def restrict_map_def option_map_def transform_object_def transform_tcb_def valid_idle_def st_tcb_def2 get_tcb_def
                         transform_cnode_contents_def infer_tcb_pending_op_def transform_cap_def domIff st_tcb_at_kh_def obj_at_def only_idle_def
                   split: option.splits split_if Structures_A.kernel_object.splits Structures_A.thread_state.splits )
   done
@@ -473,7 +473,7 @@ lemma schedule_choose_new_thread_dcorres_fragment:
   apply (auto simp: select_def gets_def get_def bind_def return_def active_tcbs_in_domain_def
                         invs_def valid_state_def valid_objs_def change_current_domain_def
                     Schedule_D.switch_to_thread_def modify_def put_def
-                    Option.map_def restrict_map_def map_add_def get_tcb_def
+                    option_map_def restrict_map_def map_add_def get_tcb_def
                     transform_def transform_current_thread_def cur_tcb_def tcb_at_def)[1]
   apply (clarsimp simp: invs_def valid_state_def valid_sched_def max_non_empty_queue_def)
   apply (frule_tac p="Max {prio. ready_queues s' (cur_domain s') prio \<noteq> []}" in idle_thread_not_in_queue,simp,simp)
@@ -512,7 +512,7 @@ lemma schedule_choose_new_thread_dcorres_fragment:
   apply (auto simp: select_def gets_def get_def bind_def return_def active_tcbs_in_domain_def
                         invs_def valid_state_def valid_objs_def change_current_domain_def
                     Schedule_D.switch_to_thread_def modify_def put_def
-                    Option.map_def restrict_map_def map_add_def get_tcb_def
+                    option_map_def restrict_map_def map_add_def get_tcb_def
                     transform_def transform_current_thread_def cur_tcb_def tcb_at_def)[1]
   apply (clarsimp simp: invs_def valid_state_def valid_sched_def max_non_empty_queue_def)
   apply (frule_tac p="Max {prio. ready_queues s' (cur_domain s') prio \<noteq> []}" in idle_thread_not_in_queue,simp,simp)

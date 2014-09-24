@@ -1,7 +1,4 @@
-Built from git repo at ../../../seL4/haskell by jbeeren
+Built from git repo at ../../../seL4/haskell by davidg
 
 Generated from changeset:
-ddcc33c ioapic: fix haskell for new 14 bit FSR
-
-
-Warning - uncomitted changes used:
+(manually merged)

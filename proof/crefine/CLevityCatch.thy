@@ -240,7 +240,8 @@ lemma exec_Basic_Guard_UNIV:
   apply (rule iffI)
    apply (elim exec_elim_cases, simp_all, clarsimp)[1]
    apply (simp add: o_def, rule exec.Basic)
-  apply (elim exec_elim_cases, simp_all, clarsimp)[1]
+  apply (elim exec_elim_cases)
+  apply simp_all
   apply (rule exec_Seq' exec.Basic exec.Guard | simp)+
   done
 

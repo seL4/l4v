@@ -12,13 +12,6 @@ theory variable_munge
 imports "../CTranslation"
 begin
 
-lemma word32_sint_1[simp]:
- "sint (1::32 word) = 1"
- apply(subst word_1_no)
- apply(subst sint_numeral)
- apply(simp)
-done
-
 install_C_file "variable_munge.c"
 
 context variable_munge_global_addresses

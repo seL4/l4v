@@ -242,7 +242,7 @@ next
 
   case (3 ptr bits n slot s)
   show ?case    
-    apply (simp add: rec_del_call.cases simp_thms spec_validE_def)
+    apply (simp add: rec_del_call.simps simp_thms spec_validE_def)
     apply (rule hoare_pre, wp cap_swap_for_delete_P cap_swap_for_delete_Q)
     apply (clarsimp simp: invs_valid_ko_at_arm)
     done
@@ -346,17 +346,17 @@ shows "
         | (wp 
              
              check_cap_inv2[where Q="\<lambda>_. pas_refined aag"]
-             out_invs_trivial option_case_wpE cap_delete_deletes
+             out_invs_trivial case_option_wpE cap_delete_deletes
              cap_delete_valid_cap cap_insert_valid_cap out_cte_at
              cap_insert_cte_at cap_delete_cte_at out_valid_cap out_tcb_valid
              hoare_vcg_const_imp_lift_R hoare_vcg_all_lift_R
              thread_set_tcb_ipc_buffer_cap_cleared_invs
              thread_set_invs_trivial[OF ball_tcb_cap_casesI]
              hoare_vcg_all_lift thread_set_valid_cap out_emptyable
-             check_cap_inv [where P="valid_cap c", standard]
-             check_cap_inv [where P="tcb_cap_valid c p", standard]
-             check_cap_inv[where P="cte_at p0", standard]
-             check_cap_inv[where P="tcb_at p0", standard]
+             check_cap_inv [where P="valid_cap c" for c]
+             check_cap_inv [where P="tcb_cap_valid c p" for c p]
+             check_cap_inv[where P="cte_at p0" for p0]
+             check_cap_inv[where P="tcb_at p0" for p0]
              thread_set_cte_at
              thread_set_cte_wp_at_trivial[where Q="\<lambda>x. x", OF ball_tcb_cap_casesI]
              thread_set_no_cap_to_trivial[OF ball_tcb_cap_casesI]

@@ -73,6 +73,7 @@ definition
 where
   "cchaos upd \<equiv> Spec { (s0,s) . \<exists>v. s = upd v s0 }"
 
+ML_file "isa_termstypes.ML"
 ML_file "StrictC.grm.sig"
 ML_file "StrictC.grm.sml"
 ML_file "StrictC.lex.sml"

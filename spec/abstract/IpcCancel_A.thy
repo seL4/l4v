@@ -157,7 +157,7 @@ definition
 
 definition
   cap_irqs :: "cap \<Rightarrow> irq set" where
- "cap_irqs cap \<equiv> Option.set (cap_irq_opt cap)"
+ "cap_irqs cap \<equiv> set_option (cap_irq_opt cap)"
 
 text {* Detect whether a capability is the final capability to a given object
 remaining in the system. Finalisation actions need to be taken when the final

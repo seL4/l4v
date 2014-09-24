@@ -19,7 +19,7 @@ begin
 
 type_synonym ('s,'a) lookup = "'s \<Rightarrow> 'a option"
 
-text {* Similar to Option.map but the second function returns option as well *}
+text {* Similar to map_option but the second function returns option as well *}
 definition
   opt_map :: "('s,'a) lookup \<Rightarrow> ('a \<Rightarrow> 'b option) \<Rightarrow> ('s,'b) lookup" (infixl "|>" 54)
 where

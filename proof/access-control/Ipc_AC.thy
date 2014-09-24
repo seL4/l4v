@@ -59,7 +59,6 @@ lemma receive_async_ipc_pas_refined:
   apply (simp add: receive_async_ipc_def)
   apply (cases cap, simp_all)
   apply (rule hoare_seq_ext [OF _ get_aep_sp])
-  apply clarsimp
   apply (rule hoare_pre)
   apply (wp set_async_ep_pas_refined set_thread_state_pas_refined
        | wpc)+
@@ -237,7 +236,6 @@ lemma receive_async_ipc_integrity_autarch:
   apply (simp add: receive_async_ipc_def)
   apply (cases cap, simp_all)
   apply (rule hoare_seq_ext [OF _ get_aep_sp])
-  apply clarsimp
   apply (rule hoare_pre)
   apply (wp set_async_ep_respects[where auth=Receive] set_thread_state_integrity_autarch
          do_async_transfer_integrity_autarch
@@ -280,7 +278,7 @@ lemma send_upd_ctxintegrity:
 lemma set_mrs_respects_in_async_ipc':
   "\<lbrace>integrity aag X st and st_tcb_at (op = Structures_A.Running) thread and
     K ((\<not> is_subject aag thread \<longrightarrow> st_tcb_at (receive_blocked_on ep) thread st
-        \<and> option_case True (\<lambda>buf'. auth_ipc_buffers st thread = ptr_range buf' msg_align_bits) buf) 
+        \<and> case_option True (\<lambda>buf'. auth_ipc_buffers st thread = ptr_range buf' msg_align_bits) buf) 
         \<and> aag_has_auth_to aag AsyncSend ep \<and> ipc_buffer_has_auth aag thread buf) \<rbrace>
      set_mrs thread buf msgs
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>" 
@@ -817,12 +815,12 @@ lemma send_ipc_pas_refined:
   apply (wp set_thread_state_pas_refined
        | wpc
        | simp add: hoare_if_r_and)+
-  apply (rule_tac Q="\<lambda>rv. pas_refined aag and K (can_grant \<longrightarrow> is_subject aag a)" in hoare_strengthen_post[rotated])
+  apply (rule_tac Q="\<lambda>rv. pas_refined aag and K (can_grant \<longrightarrow> is_subject aag (hd list))" in hoare_strengthen_post[rotated])
    apply (clarsimp simp: cli_no_irqs pas_refined_refl aag_cap_auth_def clas_no_asid)
   apply (wp set_thread_state_pas_refined do_ipc_transfer_pas_refined static_imp_wp
        | wpc
        | simp add: hoare_if_r_and)+
-  apply (rule_tac Q="\<lambda>rv. valid_objs and  pas_refined aag and K (can_grant \<longrightarrow> is_subject aag a)" in hoare_strengthen_post[rotated])
+  apply (rule_tac Q="\<lambda>rv. valid_objs and  pas_refined aag and K (can_grant \<longrightarrow> is_subject aag (hd list))" in hoare_strengthen_post[rotated])
    apply (clarsimp simp: cli_no_irqs pas_refined_refl aag_cap_auth_def clas_no_asid)
   apply (wp set_thread_state_pas_refined do_ipc_transfer_pas_refined static_imp_wp
        | wpc
@@ -1290,7 +1288,7 @@ lemma mul_add_word_size_lt_msg_align_bits_ofnat:
 
 lemmas ptr_range_off_off_mems = 
     ptr_range_add_memI [OF _ mul_word_size_lt_msg_align_bits_ofnat]
-    ptr_range_add_memI [OF _ mul_add_word_size_lt_msg_align_bits_ofnat, simplified add_assoc [symmetric]]
+    ptr_range_add_memI [OF _ mul_add_word_size_lt_msg_align_bits_ofnat, simplified add.assoc [symmetric]]
 
 lemma store_word_offs_respects_in_ipc:
   "\<lbrace>integrity_tcb_in_ipc aag X receiver epptr TRContext st and
@@ -1351,7 +1349,7 @@ lemma set_original_respects_in_ipc_autarch:
   apply (wp set_original_wp)
   apply (clarsimp simp: integrity_tcb_in_ipc_def)
   apply (simp add: integrity_def
-                   tcb_states_of_state_def get_tcb_def Option.map_def
+                   tcb_states_of_state_def get_tcb_def map_option_def
                  split del: split_if cong: if_cong)
   apply simp
   apply (clarsimp simp: integrity_cdt_def)
@@ -1451,8 +1449,8 @@ lemma transfer_caps_respects_in_ipc:
          and (\<lambda>s. (\<forall>x \<in> set caps. s \<turnstile> fst x) \<and> (\<forall>x \<in> set caps. cte_wp_at (\<lambda>cp. fst x \<noteq> cap.NullCap \<longrightarrow> cp = fst x) (snd x) s \<and> real_cte_at (snd x) s))
          and K ((\<not> null caps \<longrightarrow> is_subject aag receiver)
               \<and> (\<forall>cap \<in> set caps. is_subject aag (fst (snd cap)))
-              \<and> (\<not> is_subject aag receiver \<longrightarrow> option_case True (\<lambda>buf'. auth_ipc_buffers st receiver = ptr_range buf' msg_align_bits) recv_buf)
-              \<and> (option_case True (\<lambda>buf'. is_aligned buf' msg_align_bits) recv_buf)
+              \<and> (\<not> is_subject aag receiver \<longrightarrow> case_option True (\<lambda>buf'. auth_ipc_buffers st receiver = ptr_range buf' msg_align_bits) recv_buf)
+              \<and> (case_option True (\<lambda>buf'. is_aligned buf' msg_align_bits) recv_buf)
               \<and> length caps < 6)\<rbrace>
      transfer_caps mi caps endpoint receiver recv_buf diminish
    \<lbrace>\<lambda>rv. integrity_tcb_in_ipc aag X receiver epptr TRContext st\<rbrace>"
@@ -1473,8 +1471,8 @@ lemma transfer_caps_respects_in_ipc:
 lemma copy_mrs_respects_in_ipc:
   "\<lbrace>integrity_tcb_in_ipc aag X receiver epptr TRContext st
         and st_tcb_at (receive_blocked_on epptr) receiver
-        and K ((\<not> is_subject aag receiver \<longrightarrow> option_case True (\<lambda>buf'. auth_ipc_buffers st receiver = ptr_range buf' msg_align_bits) rbuf)
-              \<and> (option_case True (\<lambda>buf'. is_aligned buf' msg_align_bits) rbuf) \<and> unat n < 2 ^ (msg_align_bits - 2))\<rbrace>
+        and K ((\<not> is_subject aag receiver \<longrightarrow> case_option True (\<lambda>buf'. auth_ipc_buffers st receiver = ptr_range buf' msg_align_bits) rbuf)
+              \<and> (case_option True (\<lambda>buf'. is_aligned buf' msg_align_bits) rbuf) \<and> unat n < 2 ^ (msg_align_bits - 2))\<rbrace>
      copy_mrs sender sbuf receiver rbuf n
    \<lbrace>\<lambda>rv. integrity_tcb_in_ipc aag X receiver epptr TRContext st\<rbrace>"
   apply (rule hoare_gen_asm)
@@ -1700,7 +1698,7 @@ lemma send_ipc_integrity_autarch:
    apply (rule hoare_pre)
     apply (wp setup_caller_cap_integrity_autarch set_thread_state_integrity_autarch thread_get_wp'
                   | wpc)+
-          apply (rule_tac Q="\<lambda>rv s. integrity aag X st s\<and> (can_grant \<longrightarrow> is_subject aag a)" in hoare_strengthen_post[rotated])
+          apply (rule_tac Q="\<lambda>rv s. integrity aag X st s\<and> (can_grant \<longrightarrow> is_subject aag (hd list))" in hoare_strengthen_post[rotated])
           apply simp+
           apply (wp set_thread_state_integrity_autarch thread_get_wp' do_ipc_transfer_integrity_autarch
                     hoare_vcg_all_lift hoare_drop_imps set_endpoinintegrity
@@ -1723,7 +1721,7 @@ lemma send_ipc_integrity_autarch:
    apply (wp set_endpoinintegrity set_thread_state_integrity_autarch setup_caller_cap_integrity_autarch
              hoare_vcg_ex_lift sts_typ_ats thread_get_wp'
         | wpc)+
-         apply (rule_tac Q="\<lambda>rv sa. integrity aag X s sa \<and> (can_grant \<longrightarrow> is_subject aag a)" in hoare_strengthen_post[rotated])
+         apply (rule_tac Q="\<lambda>rv sa. integrity aag X s sa \<and> (can_grant \<longrightarrow> is_subject aag (hd list))" in hoare_strengthen_post[rotated])
           apply simp+
          apply (wp thread_get_inv put_wp get_object_wp get_endpoint_wp thread_get_wp'
                    set_thread_state_running_respects_in_ipc[where epptr=epptr]

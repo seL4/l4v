@@ -2727,7 +2727,8 @@ lemma send_ipc_silc_inv:
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   unfolding send_ipc_def
   apply (wp setup_caller_cap_silc_inv | wpc | simp)+
-        apply(rule_tac Q="\<lambda> r s. (can_grant \<longrightarrow> is_subject aag thread \<and> is_subject aag aa) \<and> silc_inv aag st s" in hoare_strengthen_post)
+        apply(rule_tac Q="\<lambda> r s. (can_grant \<longrightarrow> is_subject aag thread \<and> is_subject aag (hd list)) \<and> silc_inv aag st s" in hoare_strengthen_post)
+         apply simp
          apply(wp do_ipc_transfer_silc_inv | wpc | simp)+
     apply(wp_once hoare_drop_imps)
     apply (wp get_endpoint_wp)

@@ -238,7 +238,7 @@ let
 
   (* Enter into the correct context. *)
   val {base = locale_name,...} = OS.Path.splitBaseExt (OS.Path.file filename)
-  val lthy = Named_Target.context_cmd (locale_name, Position.none) thy
+  val lthy = Named_Target.begin (locale_name, Position.none) thy
 
   (* Fetch basic program information. *)
   val prog_info = ProgramInfo.get_prog_info lthy filename
@@ -318,7 +318,7 @@ let
    * to sort constraints on constants. This doesn't violate the Isabelle
    * kernel's soundness, but does wreck havoc on us.
    *)
-  val sanity_errors = AutoCorresUtil.map_all fn_info (fn fn_name =>
+  val sanity_errors = AutoCorresUtil.map_all lthy fn_info (fn fn_name =>
     let
       val def =
         FunctionInfo.get_function_def fn_info fn_name

@@ -284,7 +284,7 @@ where
 
 class c_type
 
-classrel c_type < type
+instance c_type \<subseteq> type ..
 
 consts
   typ_info_t :: "'a::c_type itself \<Rightarrow> 'a typ_info"
@@ -335,14 +335,14 @@ where
 definition map_td_flr :: "(nat \<Rightarrow> nat \<Rightarrow> 'a \<Rightarrow> 'b) \<Rightarrow>
   ('a typ_desc \<times> nat) option \<Rightarrow> 'b flr"
 where
-  "map_td_flr f \<equiv> option_case None (\<lambda>(s,n). Some (map_td f s,n))"
+  "map_td_flr f \<equiv> case_option None (\<lambda>(s,n). Some (map_td f s,n))"
 
 
 definition
   import_flr :: "(nat \<Rightarrow> nat \<Rightarrow> 'b \<Rightarrow> 'a) \<Rightarrow> 'a flr \<Rightarrow> ('b typ_desc \<times> nat) option \<Rightarrow> bool"
 where
-  "import_flr f s k \<equiv> option_case (k=None)
-      (\<lambda>(s,m). option_case False (\<lambda>(t,n). n=m \<and> map_td f t=s) k )
+  "import_flr f s k \<equiv> case_option (k=None)
+      (\<lambda>(s,m). case_option False (\<lambda>(t,n). n=m \<and> map_td f t=s) k )
       s"
 
 definition
@@ -358,7 +358,7 @@ where
 definition
   field_ti :: "'a::c_type itself \<Rightarrow> qualified_field_name \<rightharpoonup> 'a typ_info"
 where
-  "field_ti t n \<equiv> option_case None (Some \<circ> fst)
+  "field_ti t n \<equiv> case_option None (Some \<circ> fst)
       (field_lookup (typ_info_t TYPE('a)) n 0)"
 
 

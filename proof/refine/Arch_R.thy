@@ -169,7 +169,7 @@ lemma pac_corres:
                 apply clarsimp
                 apply (erule_tac P = "x = asid_high_bits_of word2" in notE)
                 apply (rule word_eqI)
-                apply (drule_tac x="ucast x" in bang_eq [THEN iffD1,standard])
+                apply (drule_tac x1="ucast x" in bang_eq [THEN iffD1])
                 apply (erule_tac x=n in allE)
                 apply (simp add: word_size nth_ucast)
              apply wp
@@ -493,10 +493,10 @@ crunch inv [wp]: "ArchRetypeDecls_H.decodeInvocation" "P"
    ignore: forME_x getObject)
 
 (* FIXME: Move *)
-lemma option_case_corres:
+lemma case_option_corres:
   assumes nonec: "corres r Pn Qn (nc >>= f) (nc' >>= g)"
   and     somec: "\<And>v'. corres r (Ps v') (Qs v') (sc v' >>= f) (sc' v' >>= g)"
-  shows "corres r (option_case Pn Ps v) (option_case Qn Qs v) (option_case nc sc v >>= f) (option_case nc' sc' v >>= g)"
+  shows "corres r (case_option Pn Ps v) (case_option Qn Qs v) (case_option nc sc v >>= f) (case_option nc' sc' v >>= g)"
   apply (cases v)
    apply simp  
    apply (rule nonec)
@@ -504,10 +504,10 @@ lemma option_case_corres:
   apply (rule somec)
   done
 
-lemma option_case_corresE:
+lemma case_option_corresE:
   assumes nonec: "corres r Pn Qn (nc >>=E f) (nc' >>=E g)"
   and     somec: "\<And>v'. corres r (Ps v') (Qs v') (sc v' >>=E f) (sc' v' >>=E g)"
-  shows "corres r (option_case Pn Ps v) (option_case Qn Qs v) (option_case nc sc v >>=E f) (option_case nc' sc' v >>=E g)"
+  shows "corres r (case_option Pn Ps v) (case_option Qn Qs v) (case_option nc sc v >>=E f) (case_option nc' sc' v >>=E g)"
   apply (cases v)
    apply simp  
    apply (rule nonec)
@@ -712,7 +712,7 @@ shows
       apply (cases "excaps'", simp)
       apply clarsimp
       apply (case_tac a, simp_all)[1]
-      apply (case_tac arch_cap, simp_all)[1]
+      apply (case_tac arch_capa, simp_all)[1]
       apply (case_tac option, simp_all)[1]
       apply (rule corres_guard_imp)
         apply (rule corres_splitEE)
@@ -736,7 +736,6 @@ shows
               apply (rule corres_splitEE)
                  prefer 2
                  apply (rule corres_whenE)
-                   apply (simp)
                    apply (subst conj_assoc [symmetric])
                    apply (subst assocs_empty_dom_comp [symmetric])
                    apply (rule dom_ucast_eq)
@@ -762,7 +761,7 @@ shows
       apply (simp split: invocation_label.split)
      apply (subgoal_tac "length excaps' = length excaps")
       prefer 2
-      apply (simp add: list_all2_def)
+      apply (simp add: list_all2_iff)
      apply (cases args, simp)
      apply (rename_tac a0 as)
      apply (case_tac as, simp)
@@ -874,9 +873,9 @@ shows
           apply assumption
          apply (rule whenE_throwError_corres, simp, simp)
          apply (rule_tac R="\<lambda>_ s. valid_arch_objs s \<and> pspace_aligned s
-                                  \<and> ab + 2 ^ pageBitsForSize vmpage_size - 1 < kernel_base \<and>
+                                  \<and> hd args + 2 ^ pageBitsForSize vmpage_size - 1 < kernel_base \<and>
                                   valid_arch_state s \<and> equal_kernel_mappings s \<and> valid_global_objs s \<and>
-                                  s \<turnstile> (fst (hd excaps)) \<and> (\<exists>\<rhd> (lookup_pd_slot worda ab && ~~ mask pd_bits)) s \<and>
+                                  s \<turnstile> (fst (hd excaps)) \<and> (\<exists>\<rhd> (lookup_pd_slot (obj_ref_of (fst (hd excaps))) (hd args) && ~~ mask pd_bits)) s \<and>
                                   (\<exists>\<rhd> rv') s \<and> page_directory_at rv' s" 
                      and R'="\<lambda>_ s. s \<turnstile>' (fst (hd excaps')) \<and> valid_objs' s \<and>
                                     pspace_aligned' s \<and> pspace_distinct' s \<and>
@@ -905,7 +904,7 @@ shows
                    apply (clarsimp simp: archinv_relation_def page_invocation_map_def)
                   apply (wp hoare_whenE_wp check_vp_wpR)
             apply (clarsimp simp: valid_cap_def  dest!: vmsz_aligned_less_kernel_base_eq)
-            apply (frule_tac vptr=ab in page_directory_pde_at_lookupI, assumption)
+            apply (frule_tac vptr="hd args" in page_directory_pde_at_lookupI, assumption)
             apply (clarsimp simp: vmsz_aligned_def pageBitsForSize_def page_directory_at_aligned_pd_bits 
               split: vmpage_size.splits)
            apply (clarsimp simp: valid_cap'_def)
@@ -929,14 +928,14 @@ shows
        apply (rule corres_splitEE [where r' = "op ="])
           prefer 2
           apply (clarsimp simp: list_all2_Cons2)
-          apply (case_tac af, simp_all)[1]
+          apply (case_tac "fst (hd excaps)", simp_all)[1]
           apply clarsimp
-          apply (case_tac arch_cap, simp_all)[1]
+          apply (case_tac arch_capa, simp_all)[1]
           apply (case_tac optiona, simp_all)[1]
           apply (rule corres_returnOkTT)
           apply simp
          apply (simp add: Let_def split: list.split)
-         apply (rule option_case_corresE)
+         apply (rule case_option_corresE)
           apply (rule corres_trivial)
           apply simp
          apply simp
@@ -1086,7 +1085,7 @@ shows
       apply clarsimp
      apply (rule whenE_throwError_corres, simp)
       apply (clarsimp simp: kernel_base_def kernelBase_def)
-     apply (rule option_case_corresE)
+     apply (rule case_option_corresE)
       apply (rule corres_trivial)
       apply clarsimp
      apply clarsimp
@@ -1497,7 +1496,7 @@ lemma is_aligned_ptrFromPAddr_aligned:
   "m \<le> 28 \<Longrightarrow> is_aligned (Platform.ptrFromPAddr p) m = is_aligned p m"
   apply (simp add:Platform.ptrFromPAddr_def is_aligned_mask
     physMappingOffset_def kernelBase_addr_def physBase_def)
-  apply (subst add_commute)
+  apply (subst add.commute)
   apply (subst mask_add_aligned)
    apply (erule is_aligned_weaken[rotated])
    apply (simp add:is_aligned_def)
@@ -1543,7 +1542,7 @@ lemma createMappingEntires_valid_slots_duplicated'[wp]:
      apply (frule is_aligned_no_wrap'[where off = "0x3c"])
       apply simp
      apply (drule upto_enum_step_shift[where n = 6 and m = 2,simplified])
-     apply (clarsimp simp:mask_def add_commute upto_enum_step_def)
+     apply (clarsimp simp:mask_def add.commute upto_enum_step_def)
      apply (drule(1) le_less_trans)
      apply simp
     apply wp
@@ -1560,7 +1559,7 @@ lemma createMappingEntires_valid_slots_duplicated'[wp]:
    apply (frule is_aligned_no_wrap'[where off = "0x3c" and sz = 6])
     apply simp
    apply (drule upto_enum_step_shift[where n = 6 and m = 2,simplified])
-   apply (clarsimp simp:mask_def add_commute upto_enum_step_def)
+   apply (clarsimp simp:mask_def add.commute upto_enum_step_def)
    apply (drule(1) le_less_trans)
    apply simp
    done
@@ -1745,14 +1744,14 @@ lemma arch_decodeInvocation_wf[wp]:
       simp add: valid_arch_inv'_def valid_pti'_def unlessE_whenE|
       rule_tac x="fst p" in hoare_imp_eq_substR
       )+)
-              apply (rule_tac Q'="\<lambda>b c. ko_at' Hardware_H.pde.InvalidPDE (b + (a >> 20 << 2)) c \<longrightarrow>
+              apply (rule_tac Q'="\<lambda>b c. ko_at' Hardware_H.pde.InvalidPDE (b + (hd args >> 20 << 2)) c \<longrightarrow>
                  cte_wp_at'
                   (is_arch_update'
-                    (capability.ArchObjectCap (arch_capability.PageTableCap word (Some (snd p, a >> 20 << 20)))))
+                    (capability.ArchObjectCap (arch_capability.PageTableCap word (Some (snd p, hd args >> 20 << 20)))))
                   slot c \<and>
-                 c \<turnstile>' capability.ArchObjectCap (arch_capability.PageTableCap word (Some (snd p, a >> 20 << 20))) \<and>
+                 c \<turnstile>' capability.ArchObjectCap (arch_capability.PageTableCap word (Some (snd p, hd args >> 20 << 20))) \<and>
                  is_aligned (addrFromPPtr word) ptBits \<and>
-                 valid_pde_mapping_offset' (b + (a >> 20 << 2) && mask pdBits)
+                 valid_pde_mapping_offset' (b + (hd args >> 20 << 2) && mask pdBits)
                 " in hoare_post_imp_R)
               apply ((wp whenE_throwError_wp isFinalCapability_inv getPDE_wp
                 | wpc |
@@ -1831,7 +1830,7 @@ lemma setObject_pde_nosch [wp]:
 
 crunch nosch[wp]: setMRs "\<lambda>s. P (ksSchedulerAction s)"
     (ignore: getRestartPC setRegister transferCapsToSlots
-   wp: hoare_drop_imps hoare_vcg_split_option_case
+   wp: hoare_drop_imps hoare_vcg_split_case_option
         mapM_wp'
    simp: split_def zipWithM_x_mapM)
 

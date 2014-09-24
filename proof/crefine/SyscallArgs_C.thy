@@ -195,10 +195,10 @@ lemma preemptionPoint_ccorres:
 definition
   "invocationCatch thread isBlocking isCall inject
    \<equiv>
-   sum.sum_case (throwError \<circ> Inl)
+   sum.case_sum (throwError \<circ> Inl)
     (\<lambda>oper. doE y \<leftarrow> liftE (setThreadState Structures_H.thread_state.Restart thread);
              reply \<leftarrow> RetypeDecls_H.performInvocation isBlocking isCall (inject oper)
-                           >>= sum.sum_case (throwError \<circ> Inr) returnOk;
+                           >>= sum.case_sum (throwError \<circ> Inr) returnOk;
              liftE (if reply = [] then replyOnRestart thread [] isCall \<sqinter> return ()
                         else replyOnRestart thread reply isCall)
        odE)"
@@ -290,7 +290,7 @@ lemma ccorres_alternative2:
   done
 
 lemma o_xo_injector:
-  "((f o f') \<currency> r) = ((f \<currency> r) o sum_case (Inl o f') Inr)"
+  "((f o f') \<currency> r) = ((f \<currency> r) o case_sum (Inl o f') Inr)"
   by (intro ext, simp split: sum.split)
 
 lemma ccorres_invocationCatch_Inr:
@@ -625,7 +625,7 @@ lemma no_fail_loadWordUser:
   done
 
 lemma no_fail_getMRs:
-  "no_fail (tcb_at' thread and option_case \<top> valid_ipc_buffer_ptr' buffer)
+  "no_fail (tcb_at' thread and case_option \<top> valid_ipc_buffer_ptr' buffer)
            (getMRs thread buffer info)"
   apply (rule det_wp_no_fail)
   apply (rule det_wp_getMRs)
@@ -735,7 +735,7 @@ lemma threadGet_tcbIpcBuffer_ccorres [corres]:
   done 
 
 (* FIXME: move *)
-lemma ccorres_bool_cases:
+lemma ccorres_case_bools:
   assumes P: "ccorres r xf P P' hs (a True) (c True)"
   assumes Q: "ccorres r xf Q Q' hs (a False) (c False)"
   shows "ccorres r xf (\<lambda>s. (b \<longrightarrow> P s) \<and> (\<not>b \<longrightarrow> Q s))
@@ -776,7 +776,7 @@ lemma ccap_relation_frame_tags:
   done
 
 (* FIXME: move *)
-lemma ccorres_bool_cases':
+lemma ccorres_case_bools':
   assumes P: "b \<Longrightarrow> ccorres r xf P P' hs (a True) (c True)"
   assumes Q: "\<not> b \<Longrightarrow> ccorres r xf Q Q' hs (a False) (c False)"
   shows "ccorres r xf (\<lambda>s. (b \<longrightarrow> P s) \<and> (\<not>b \<longrightarrow> Q s))
@@ -804,10 +804,10 @@ lemma lookupIPCBuffer_ccorres:
      apply (rule ccorres_move_c_guard_cte)
      apply (ctac (no_vcg))
        apply csymbr
-       apply (rule_tac b="isArchObjectCap rva \<and> isPageCap (capCap rva)" in ccorres_bool_cases')
+       apply (rule_tac b="isArchObjectCap rva \<and> isPageCap (capCap rva)" in ccorres_case_bools')
         apply simp
         apply (rule ccorres_symb_exec_r)
-          apply (rule_tac b="capVPSize (capCap rva) \<noteq> ARMSmallPage" in ccorres_bool_cases')
+          apply (rule_tac b="capVPSize (capCap rva) \<noteq> ARMSmallPage" in ccorres_case_bools')
            apply (rule ccorres_cond_true_seq)
            apply (rule ccorres_rhs_assoc)+
            apply csymbr
@@ -1013,7 +1013,7 @@ lemma getMRs_user_word:
    apply simp
    apply (drule (1) order_less_le_trans)
    apply (simp add: word_less_nat_alt word_le_nat_alt)
-  apply (simp add: word_le_nat_alt add_ac mult_ac)
+  apply (simp add: word_le_nat_alt add.commute add.left_commute mult.commute mult.left_commute)
   done
 
 declare split_if [split]
@@ -1024,7 +1024,7 @@ definition
 definition
   "sysargs_rel args buffer \<equiv> 
           cur_tcb'
-          and option_case \<top> valid_ipc_buffer_ptr' buffer
+          and case_option \<top> valid_ipc_buffer_ptr' buffer
           and getMRs_rel args buffer
           and (\<lambda>_. length args > unat (scast n_msgRegisters :: word32) \<longrightarrow> buffer \<noteq> None)"
 
@@ -1037,7 +1037,7 @@ lemma sysargs_rel_to_n:
 
 lemma getMRs_rel:
   "\<lbrace>\<lambda>s. msgLength mi \<le> msgMaxLength \<and> thread = ksCurThread s \<and> 
-        option_case \<top> valid_ipc_buffer_ptr' buffer s \<and>
+        case_option \<top> valid_ipc_buffer_ptr' buffer s \<and>
         cur_tcb' s\<rbrace> 
   getMRs thread buffer mi \<lbrace>\<lambda>args. getMRs_rel args buffer\<rbrace>"
   apply (simp add: getMRs_rel_def)
@@ -1063,7 +1063,7 @@ lemma getMRs_len[simplified]:
   done
 
 lemma getMRs_sysargs_rel:  
-  "\<lbrace>(\<lambda>s. thread = ksCurThread s) and cur_tcb' and option_case \<top> valid_ipc_buffer_ptr' buffer and K (msgLength mi \<le> msgMaxLength)\<rbrace> 
+  "\<lbrace>(\<lambda>s. thread = ksCurThread s) and cur_tcb' and case_option \<top> valid_ipc_buffer_ptr' buffer and K (msgLength mi \<le> msgMaxLength)\<rbrace> 
   getMRs thread buffer mi \<lbrace>\<lambda>args. sysargs_rel args buffer\<rbrace>"
   apply (simp add: sysargs_rel_def)
   apply (wp getMRs_rel getMRs_len|simp)+
@@ -1121,16 +1121,16 @@ lemma ucast_add:
      "ucast (a + (b :: 'a :: len word)) = ucast a + (ucast b :: ('a signed word))"
   apply (case_tac "len_of TYPE('a) = 1")
    apply (clarsimp simp: ucast_def)
-   apply (metis (hide_lams, mono_tags) One_nat_def len_signed plus_word.abs_eq uint_word_arith_bintrs(2) word_ubin.Abs_norm)
+   apply (metis (hide_lams, mono_tags) One_nat_def len_signed plus_word.abs_eq uint_word_arith_bintrs(1) word_ubin.Abs_norm)
   apply (clarsimp simp: ucast_def)
-  apply (metis le_refl len_signed plus_word.abs_eq uint_word_arith_bintrs(2) wi_bintr)
+  apply (metis le_refl len_signed plus_word.abs_eq uint_word_arith_bintrs(1) wi_bintr)
   done
 
 (* FIXME: move *)
 lemma ucast_minus:
      "ucast (a - (b :: 'a :: len word)) = ucast a - (ucast b :: ('a signed word))"
   apply (insert ucast_add [where a=a and b="-b"])
-  apply (metis (hide_lams, no_types) is_num_normalize(10) is_num_normalize(8) is_num_normalize(9) minus_minus ucast_add)
+  apply (metis (no_types, hide_lams) add_diff_eq diff_add_cancel ucast_add is_num_normalize)
   done
 
 (* FIXME : move *)
@@ -1194,11 +1194,11 @@ lemma getSyscallArg_ccorres_foo:
        apply (clarsimp simp: CTypesDefs.ptr_add_def)
        apply (frule (1) user_word_at_cross_over)
         apply simp
-       apply (clarsimp simp: mult_ac ucast_nat_def')
+       apply (clarsimp simp: mult.commute mult.left_commute ucast_nat_def')
       apply (clarsimp simp: CTypesDefs.ptr_add_def)
       apply (frule (1) user_word_at_cross_over)
        apply simp
-      apply (clarsimp simp: mult_ac ucast_nat_def)
+      apply (clarsimp simp: mult.commute mult.left_commute ucast_nat_def)
      apply wp[1]
     apply (rule_tac P="\<exists>b. buffer = Some b" in hoare_gen_asm)
     apply (clarsimp simp: option_to_ptr_def option_to_0_def)

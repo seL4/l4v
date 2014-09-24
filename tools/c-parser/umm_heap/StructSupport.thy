@@ -20,7 +20,7 @@ apply(induct_tac ts)
 apply(clarsimp split: option.splits)
 apply auto
  apply(case_tac a, clarsimp split: split_if_asm)
-  apply(simp add: add_ac)+
+  apply(simp add: ac_simps)+
 apply(case_tac a, clarsimp split: split_if_asm)
 done
 
@@ -40,7 +40,7 @@ apply(case_tac typ_struct, simp)
 apply auto
  apply(subst field_lookup_list_Some2)
   apply(simp add: fnl_set)
- apply(simp add: add_ac)
+ apply(simp add: ac_simps)
 apply(subst field_lookup_list_append)
 apply(clarsimp split: option.splits)
 done
@@ -122,26 +122,14 @@ apply(induct ti and st and ts and x)
      apply auto
   apply(clarsimp simp: adjust_ti_def)
  apply(clarsimp split: option.splits)
-  apply(rule, clarsimp)
-   apply(case_tac dt_pair, clarsimp)
-  apply clarsimp
-  apply(case_tac dt_pair, clarsimp split: split_if_asm)
-  apply(drule_tac x=fn in spec)
-  apply clarsimp
-  apply(fold adjust_ti_def)
-  apply(drule field_lookup_adjust_ti)
-  apply clarsimp
  apply(rule, clarsimp)
-  apply(drule_tac x=fn in spec)
-  apply(drule_tac x="m" in spec)
-  apply(drule_tac x=s in spec)
-  apply(drule_tac x=n in spec)
-  apply clarsimp
+  apply(case_tac dt_pair, clarsimp)
  apply clarsimp
+ apply(case_tac dt_pair, clarsimp split: split_if_asm)
  apply(drule_tac x=fn in spec)
- apply(drule_tac x="m" in spec)
- apply(drule_tac x=s in spec)
- apply(drule_tac x=n in spec)
+ apply clarsimp
+ apply(fold adjust_ti_def)
+ apply(drule field_lookup_adjust_ti)
  apply clarsimp
 apply clarsimp
 done
@@ -154,7 +142,7 @@ done
 
 lemma fl_update:
   "field_lookup (adjust_ti ti f g) fs m =
-      (option_case None (\<lambda>(t,n). Some (adjust_ti t f g,n)) (field_lookup ti fs m))"
+      (case_option None (\<lambda>(t,n). Some (adjust_ti t f g,n)) (field_lookup ti fs m))"
 apply(auto split: option.splits)
  apply(rule ccontr, clarsimp)
  apply(drule field_lookup_adjust_ti, clarsimp)
@@ -265,13 +253,13 @@ lemma size_empty_typ_info [simp]:
   by (simp add: empty_typ_info_def)
 
 lemma list_size_append [simp]:
-  "list_size (dt_pair_size size (list_size char_size)) (xs @ ys) =
-  list_size (dt_pair_size size (list_size char_size)) xs +
-  list_size (dt_pair_size size (list_size char_size)) ys"
+  "size_list (size_dt_pair size (size_list size_char)) (xs @ ys) =
+  size_list (size_dt_pair size (size_list size_char)) xs +
+  size_list (size_dt_pair size (size_list size_char)) ys"
   by (induct xs) auto
 
 lemma list_size_char:
-  "list_size char_size xs = length xs"
+  "size_list size_char xs = length xs"
   by (induct xs) auto
 
 lemma size_ti_extend_ti [simp]:
@@ -405,7 +393,8 @@ apply(rule_tac s\<^sub>0="(s\<^sub>1 ++ s\<^sub>0) |` {(x,y) | x y. x \<in> {&(p
       apply(frule sep_map_dom_exc)
       apply(rotate_tac -1)
       apply(drule sym)
-      apply(clarsimp simp: restrict_map_disj_dom_empty map_add_ac sep_conj_ac)
+      apply(thin_tac "s = ?x")
+      apply(clarsimp simp: restrict_map_disj_dom_empty map_ac_simps sep_conj_ac)
      apply(clarsimp simp: inv_footprint_def sep_conj_ac)
      apply(rule inter_sub)
       apply(clarsimp simp: sep_conj_ac)
@@ -439,7 +428,7 @@ apply(rule_tac s\<^sub>0="(s\<^sub>1 ++ s\<^sub>0) |` {(x,y) | x y. x \<in> {&(p
   apply simp
  apply(clarsimp simp: map_disj_def)
  apply blast
-apply(subst map_add_com[of "m|`S", standard])
+apply(subst map_add_com[of "m|`S" for m S])
  apply(clarsimp simp: map_disj_def)
  apply blast
 apply(subst map_add_restrict_comp_right_dom)

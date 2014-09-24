@@ -239,7 +239,7 @@ interpretation cap_move_ext: is_extended "cap_move_ext a b c d"
   done
 
 lemmas rec_del_simps_ext =
-    rec_del.simps [THEN ext[where f="rec_del args", standard]]
+    rec_del.simps [THEN ext[where f="rec_del args" for args]]
 
 lemma rec_del_s_bcorres: 
 notes rec_del.simps[simp del]
@@ -260,7 +260,7 @@ shows
    
   show ?case
     apply (simp add: rec_del.simps)
-    apply (wp "2" | wpc | simp split: prod.splits | intro impI conjI allI | (rule ssubst[rotated, where s="fst x",standard], rule "2",simp+) | wp_once drop_sbcorres_underlying)+
+    apply (wp "2" | wpc | simp split: prod.splits | intro impI conjI allI | (rule ssubst[rotated, where s="fst x" for x], rule "2",simp+) | wp_once drop_sbcorres_underlying)+
     done
   next
   case (3 slot exposed s)

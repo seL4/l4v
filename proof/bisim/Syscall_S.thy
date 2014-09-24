@@ -37,13 +37,13 @@ lemma syscall_bisim:
            (syscall m_flt  h_flt m_err h_err m_fin) 
            (syscall m_flt' h_flt' m_err' h_err' m_fin')"
   apply (simp add: syscall_def liftE_bindE)
-  apply (rule bisim_split_bind_sum_case)
+  apply (rule bisim_split_bind_case_sum)
       apply (rule bs)
      apply simp
      apply (rule bs)
      apply simp
     apply (simp add: liftE_bindE)
-    apply (rule bisim_split_bind_sum_case)
+    apply (rule bisim_split_bind_case_sum)
         apply (erule bs)
        apply simp
        apply (erule bs)
@@ -439,7 +439,7 @@ lemma bisim_split_catch:
   and     v2: "\<lbrace>P'\<rbrace> m' \<lbrace>\<lambda>_ _. True\<rbrace>, \<lbrace>Pf'\<rbrace>"
   shows "bisim r (Pn and P) (Pn' and P') (m <catch> c) (m' <catch> c')"
   unfolding catch_def
-  apply (rule bisim_split [where Q = "\<lambda>r s. sum_case (\<lambda>l. Pf l s) (\<lambda>_. True) r" and Q' = "\<lambda>r s. sum_case (\<lambda>l. Pf' l s) (\<lambda>_. True) r", OF bm, folded validE_def])
+  apply (rule bisim_split [where Q = "\<lambda>r s. case_sum (\<lambda>l. Pf l s) (\<lambda>_. True) r" and Q' = "\<lambda>r s. case_sum (\<lambda>l. Pf' l s) (\<lambda>_. True) r", OF bm, folded validE_def])
     apply (case_tac ra)
      apply clarsimp
      apply (erule bc)
@@ -463,7 +463,7 @@ lemma bisim_split_catch_req:
   and     v1: "\<lbrace>P\<rbrace> m \<lbrace>\<lambda>_ _. True\<rbrace>, \<lbrace>\<lambda>r. Pf r and Pf' r\<rbrace>"
   shows "bisim op = (Pn and P) Pn' (m <catch> c) (m' <catch> c')"
   unfolding catch_def
-  apply (rule bisim_split_req [where Q = "\<lambda>r s. sum_case (\<lambda>l. Pf l s) (\<lambda>_. True) r" and Q' = "\<lambda>r s. sum_case (\<lambda>l. Pf' l s) (\<lambda>_. True) r"])
+  apply (rule bisim_split_req [where Q = "\<lambda>r s. case_sum (\<lambda>l. Pf l s) (\<lambda>_. True) r" and Q' = "\<lambda>r s. case_sum (\<lambda>l. Pf' l s) (\<lambda>_. True) r"])
   apply (rule bm [simplified rel_sum_comb_eq])
   apply (case_tac r)
      apply clarsimp
