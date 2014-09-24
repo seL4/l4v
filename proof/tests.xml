@@ -35,8 +35,8 @@
 
     <!-- DSpec / DRefine -->
     <sequence depends="DSpec">
-        <test name="DRefine">make DRefine</test>
         <test name="DBaseRefine">make DBaseRefine</test>
+        <test name="DRefine">make DRefine</test>
     </sequence>
 
     <!-- Access Control -->

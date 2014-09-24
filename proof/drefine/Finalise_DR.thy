@@ -2275,7 +2275,7 @@ lemma dcorres_unmap_page_table:
     apply (rule corres_split[OF _ dcorres_page_table_mapped])
       apply (rule dcorres_option[where P = \<top>])
        apply simp
-      apply (simp add:Option.map_def dc_def[symmetric])
+      apply (simp add: dc_def[symmetric])
       apply (rule corres_dummy_return_l)
        apply (rule corres_split[where r'=dc])
           apply clarify
