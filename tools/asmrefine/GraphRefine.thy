@@ -133,19 +133,42 @@ lemma nat_trace_rel_split:
     apply (drule_tac x="na - Suc n" in spec | clarsimp)+
   done
 
+lemma nat_trace_rel_to_relpow:
+  "trace \<in> nat_trace_rel cont R
+    \<Longrightarrow> trace i = Some x
+    \<Longrightarrow> trace (i + j) = Some y
+    \<Longrightarrow> (x, y) \<in> R ^^ j"
+  apply (induct j arbitrary: y)
+   apply simp
+  apply atomize
+  apply (clarsimp simp: nat_trace_rel_def)
+  apply (drule_tac x="i + j" in spec, clarsimp)
+  apply auto
+  done
+
 lemma exec_graph_trace_must_take_steps:
   "trace \<in> exec_trace \<Gamma> fn
     \<Longrightarrow> trace i = Some [(nn, st, fn)]
     \<Longrightarrow> (exec_graph_step \<Gamma> ^^ j) `` {[(nn, st, fn)]} \<subseteq> {[(nn', st', fn)]}
-    \<Longrightarrow> j < 2 \<and> (j = 0 \<or> nn \<notin> {Ret, Err})
+    \<Longrightarrow> \<forall>k < j. \<forall>st'. ([(nn, st, fn)], st') \<in> exec_graph_step \<Gamma> ^^ k
+        \<longrightarrow> continuing st'
     \<Longrightarrow> trace (i + j) = Some [(nn', st', fn)]"
-  apply (cases j)
-   apply simp
-  apply (case_tac nat, simp_all)
-  apply (frule_tac i=i in exec_trace_step_cases)
-  apply clarsimp
-  apply (drule subsetD, erule ImageI, simp)
-  apply simp
+  apply (case_tac "trace (i + j)")
+   apply (clarsimp simp add: exec_trace_def)
+   apply (drule(1) trace_None_dom_eq)
+   apply clarsimp
+   apply (drule sym[where s="dom trace"])
+   apply (frule_tac x=i in eqset_imp_iff)
+   apply (frule_tac x="n' - 1" in eqset_imp_iff)
+   apply (frule_tac x="n'" in eqset_imp_iff)
+   apply (simp(no_asm_use), clarsimp simp: domIff)
+   apply (frule_tac i="n' - 1" in trace_end_eq_Some, simp+)
+   apply (drule(1) trace_end_SomeD, clarsimp)
+   apply (drule_tac x="n' - 1 - i" in spec, simp)
+   apply (drule_tac i=i and j="n' - 1 - i" in nat_trace_rel_to_relpow, simp+)
+  apply (clarsimp simp add: exec_trace_def)
+  apply (drule_tac i=i and j=j in nat_trace_rel_to_relpow, simp+)
+  apply auto
   done
 
 lemma c_trace_may_extend:
@@ -200,8 +223,9 @@ lemma simpl_to_graph_step_general:
   "(\<And>sst gst. sst \<in> P \<Longrightarrow> sst \<in> I \<Longrightarrow> inp_eqs gst sst
         \<Longrightarrow> \<exists>sst' gst'. ((step SGamma) ^^ j) (com, Normal sst) (com', Normal sst')
             \<and> (exec_graph_step GGamma ^^ i) `` {[(nn, gst, gf)]} \<subseteq> {[(nn', gst', gf)]}
+            \<and> (\<forall>k < i. \<forall>st'. ([(nn, gst, gf)], st') \<in> exec_graph_step GGamma ^^ k
+                \<longrightarrow> continuing st')
             \<and> sst' \<in> P' \<and> sst' \<in> I \<and> inp_eqs' gst' sst')
-    \<Longrightarrow> (i < 2 \<and> (i = 0 \<or> nn \<notin> {Ret, Err}))
     \<Longrightarrow> simpl_to_graph SGamma GGamma gf nn' com' (n + min i j) traces P' I inp_eqs' out_eqs
     \<Longrightarrow> simpl_to_graph SGamma GGamma gf nn com n traces P I inp_eqs out_eqs"
   apply (clarsimp intro!: simpl_to_graphI)
@@ -677,34 +701,36 @@ lemma simpl_to_graph_Catch:
     = simpl_to_graph SGamma GGamma f nn (add_cont c (Inr d # con)) n tS P I eqs out_eqs"
   by (simp add: add_cont_Cons)
 
-lemma no_next_step: "\<forall>gst'.
+lemma no_next_step: "eq_impl nn' eqs (\<lambda>gst' sst'.
         ((exec_graph_step GGamma) ^^ 0) `` {[(nn, gst', fn)]} \<subseteq> {[(nn, gst', fn)]}
-        \<and> 0 < (2 :: nat) \<and> (0 = (0 :: nat) \<or> nn \<notin> {Ret, Err})"
-  by simp
+        \<and> (\<forall>k < (0 :: nat). \<forall>st'. ([(nn, gst', fn)], st') \<in> exec_graph_step GGamma ^^ k
+        \<longrightarrow> continuing st')) P"
+  by (simp add: eq_impl_def)
 
 lemma basic_next_step: "GGamma fn = Some gf \<Longrightarrow> function_graph gf m = Some (Basic nn' upds)
-    \<Longrightarrow> \<forall>gst'.
+    \<Longrightarrow> eq_impl nn'' eqs (\<lambda>gst' sst'.
         ((exec_graph_step GGamma) ^^ 1) `` {[(NextNode m, gst', fn)]} \<subseteq> {[(nn', upd_vars upds gst', fn)]}
-        \<and> (1 :: nat) < 2 \<and> ((1 :: nat) = 0 \<or> NextNode m \<notin> {Ret, Err})"
-  apply (clarsimp simp del: imp_disjL)
+        \<and> (\<forall>k < 1. \<forall>st'. ([(NextNode m, gst', fn)], st') \<in> exec_graph_step GGamma ^^ k
+        \<longrightarrow> continuing st')) P"
+  apply (clarsimp simp: eq_impl_def simp del: imp_disjL)
   apply (clarsimp simp: exec_graph_step_def K_def split: graph_function.split_asm)
   done
 
 lemma simpl_to_graph_Basic_next_step:
-  assumes next_step: "\<forall>gst'.
+  assumes next_step: "eq_impl nn eqs (\<lambda>gst' sst'.
         ((exec_graph_step GGamma) ^^ steps) `` {[(nn, gst', fn)]} \<subseteq> {[(nn', f gst', fn)]}
-        \<and> steps < 2 \<and> (steps = 0 \<or> nn \<notin> {Ret, Err})"
+        \<and> (\<forall>k < steps. \<forall>st'. ([(nn, gst', fn)], st') \<in> exec_graph_step GGamma ^^ k
+        \<longrightarrow> continuing st')) (P \<inter> I)"
   shows
   "\<lbrakk> eq_impl nn eqs (\<lambda>gst sst. eqs2 (f gst) (f' sst) \<and> f' sst \<in> I \<and> f' sst \<in> Q) (P \<inter> I);
         simpl_to_graph SGamma GGamma fn nn' (add_cont com.Skip con) (n + min steps 1) tS Q I eqs2 out_eqs \<rbrakk>
     \<Longrightarrow> simpl_to_graph SGamma GGamma fn nn (add_cont (com.Basic f') con) n tS P I eqs out_eqs"
   apply (rule simpl_to_graph_step_general[where j=1 and i=steps, rotated -1])
-    apply simp
-   apply (simp add: eq_OO)
-   apply (rule exI, rule conjI, blast intro: add_cont_step step.intros)
-   apply (rule exI, rule conjI, rule next_step[rule_format, THEN conjunct1])
-   apply (drule(1) eq_implD, simp+)
-  apply (simp add: next_step[simplified])
+   apply simp
+  apply (frule eq_implD[OF next_step], simp)
+  apply (simp add: eq_OO)
+  apply (rule exI, rule conjI, blast intro: add_cont_step step.intros)
+  apply (auto dest: eq_implD)
   done
 
 lemmas simpl_to_graph_Basic_triv'
@@ -1049,17 +1075,19 @@ lemma nontermination_to_c_trace:
 lemma simpl_to_graph_call_next_step:
   assumes graph: "nn = NextNode m" "GGamma p = Some gfc"
       "function_graph gfc m = Some (node.Call nn' p' args rets)"
-  assumes next_step: "\<forall>gst'.
+  assumes next_step: "eq_impl nn eqs_inner (\<lambda>gst' sst'.
         ((exec_graph_step GGamma) ^^ steps) `` {[(nn', gst', p)]} \<subseteq> {[(nn'', f gst', p)]}
-        \<and> steps < 2 \<and> (steps = 0 \<or> nn' \<notin> {Ret, Err})"
+        \<and> (\<forall>k < steps. \<forall>st'. ([(nn', gst', p)], st') \<in> exec_graph_step GGamma ^^ k
+        \<longrightarrow> continuing st')) I"
   and rel: "graph_fun_refines SGamma GGamma I inputs proc outputs p'"
   and modifies: "(\<forall>\<sigma>. SGamma \<turnstile>\<^bsub>/UNIV\<^esub> {\<sigma>} com.Call proc (Q \<sigma>)) \<or> (Q = (\<lambda>_. UNIV))"
   and init: "eq_impl nn eqs (\<lambda>gst sst. initf sst \<in> I
             \<and> map (\<lambda>i. i gst) args = map (\<lambda>i. i (initf sst)) inputs) (I \<inter> P)"
-  and ret: "eq_impl nn eqs (\<lambda>gst sst. \<forall>sst' vs. map (\<lambda>i. i sst') outputs = vs
+  and ret: "eq_impl nn eqs (\<lambda>gst sst. (\<forall>sst' vs. map (\<lambda>i. i sst') outputs = vs
                   \<and> sst' \<in> I \<and> sst' \<in> Q (initf sst)
         \<longrightarrow> eqs2 (f (save_vals rets vs gst))
-                (f' sst sst' (ret sst sst')) \<and> f' sst sst' (ret sst sst') \<in> I) I"
+                (f' sst sst' (ret sst sst')) \<and> f' sst sst' (ret sst sst') \<in> I
+            \<and> eqs_inner (save_vals rets vs gst) (f' sst sst' (ret sst sst')))) I"
   and cont: "simpl_to_graph SGamma GGamma p nn'' (add_cont com.Skip con) n tS UNIV I eqs2 out_eqs"
   shows "simpl_to_graph SGamma GGamma p nn
         (add_cont (call initf proc ret (\<lambda>x y. com.Basic (f' x y))) con)
@@ -1068,14 +1096,13 @@ lemma simpl_to_graph_call_next_step:
   apply (clarsimp simp: call_def block_def graph)
   apply (rule_tac i=0 and j=3 and P'="{initf sst}"
         and inp_eqs'="\<lambda>gst _. eqs gst sst \<and> sst \<in> I" in simpl_to_graph_step_general)
-    apply (simp add: init[THEN eq_implD] numeral_3_eq_3 eq_OO)
-    apply (rule conjI[OF _ refl])
-    apply (intro relcomppI)
-      apply (rule add_cont_step, rule step.DynCom)
-     apply (simp add: add_cont_Cons[symmetric])
-     apply (rule add_cont_step, rule step.Basic)
-    apply (simp add: add_cont_Cons(1), rule add_cont_step, rule step.SeqSkip)
-   apply simp
+   apply (simp add: init[THEN eq_implD] numeral_3_eq_3 eq_OO)
+   apply (rule conjI[OF _ refl])
+   apply (intro relcomppI)
+     apply (rule add_cont_step, rule step.DynCom)
+    apply (simp add: add_cont_Cons[symmetric])
+    apply (rule add_cont_step, rule step.Basic)
+   apply (simp add: add_cont_Cons(1), rule add_cont_step, rule step.SeqSkip)
   apply simp
   apply (clarsimp intro!: simpl_to_graphI)
   apply (frule init[THEN eq_implD], simp+)
@@ -1110,30 +1137,49 @@ lemma simpl_to_graph_call_next_step:
     apply (rule exec_impl_steps_Normal)
     apply (rule exec.CatchMiss exec.Seq exec.Skip exec.DynCom exec.Basic | simp)+
   apply clarsimp
-  apply (frule(1) exec_graph_trace_must_take_steps[OF
-      _ _ next_step[rule_format, THEN conjunct1]])
-   apply (simp only: next_step)
-  apply (cut_tac tr=tr and tr'=trace'
-      and sst="f' ?a ?b ?c" in simpl_to_graphD[OF cont])
-   apply (rule conjI, assumption)
-   apply simp
-   apply (drule ret[THEN eq_implD], simp)
-   apply (simp only: conj_assoc[symmetric], rule conjI[rotated], assumption)
-   apply (simp add: return_vars_def conj_ac)
+  apply (frule ret[THEN eq_implD], simp, clarsimp)
+  apply (drule_tac x=ssta in spec, drule mp, rule conjI, assumption)
    apply (rule disjE[OF modifies])
     apply (drule spec, drule cvalidD[OF hoare_sound], simp+)
      apply clarsimp
     apply auto[1]
-   apply clarsimp
-   apply metis
+   apply simp
+  apply clarsimp
+  apply (frule next_step[THEN eq_implD], simp)
+  apply (clarsimp simp: return_vars_def)
+  apply (frule(3) exec_graph_trace_must_take_steps)
+  apply (cut_tac tr=tr and tr'=trace' and n''="n'' + ja"
+      and sst="f' ?a ?b ?c" in simpl_to_graphD[OF cont])
+   apply auto[1]
   apply (metis restrict_map_eq_mono[OF le_add1])
   done
 
 lemmas simpl_to_graph_call_triv
-    = simpl_to_graph_call_next_step[where f'="\<lambda>x y s. s", OF _ _ _ no_next_step]
+    = simpl_to_graph_call_next_step[where f'="\<lambda>x y s. s",
+        where eqs_inner="\<lambda>_ _. True", OF _ _ _ no_next_step]
 
 lemmas simpl_to_graph_call
-    = simpl_to_graph_call_next_step[OF _ _ _ basic_next_step]
+    = simpl_to_graph_call_next_step[OF _ _ _ basic_next_step,
+        where eqs_inner="\<lambda>_ _. True"]
+
+lemma known_guard_then_basic_next_step:
+  "GGamma fn = Some gf \<Longrightarrow> function_graph gf m = Some (node.Cond (NextNode m') Err C)
+    \<Longrightarrow> GGamma fn = Some gf \<Longrightarrow> function_graph gf m' = Some (node.Basic nn'' upds)
+    \<Longrightarrow> eq_impl nn (\<lambda>gst' sst'. C gst') (\<lambda>gst' sst'.
+        ((exec_graph_step GGamma) ^^ 2) `` {[(NextNode m, gst', fn)]} \<subseteq> {[(nn'', upd_vars upds gst', fn)]}
+        \<and> (\<forall>k < 2. \<forall>st'. ([(NextNode m, gst', fn)], st') \<in> exec_graph_step GGamma ^^ k
+        \<longrightarrow> continuing st')) I"
+  apply (clarsimp simp: eq_impl_def)
+  apply (drule_tac n=m and gst=gst and GGamma=GGamma
+    in exec_graph_step_image_node[rotated], simp)
+  apply (drule_tac n=m' and gst=gst and GGamma=GGamma
+    in exec_graph_step_image_node[rotated], simp)
+  apply (simp add: numeral_2_eq_2 relcomp_Image less_Suc_eq K_def)
+  apply (simp add: set_eq_iff)
+  done
+
+lemmas simpl_to_graph_call_known_guard
+    = simpl_to_graph_call_next_step[OF _ _ _ known_guard_then_basic_next_step]
 
 lemma simpl_to_graph_lvar_nondet_init:
   assumes stg: "simpl_to_graph SGamma GGamma fname nn (add_cont com.Skip con) n traces UNIV I eqs2 out_eqs"
@@ -1215,8 +1261,8 @@ lemma simpl_to_graph_known_extra_check:
       function_graph gf m = Some (node.Cond l Err Check);
       \<And>s. Check s \<longrightarrow> True;
       eq_impl nn eqs (\<lambda>gst sst. Check gst) (P \<inter> I);
-      eq_impl nn eqs eqs2 (P \<inter> I);
-      simpl_to_graph SGamma GGamma fname l com n traces P I eqs2 out_eqs \<rbrakk>
+      simpl_to_graph SGamma GGamma fname l com n traces P I eqs2 out_eqs;
+      eq_impl nn eqs eqs2 (P \<inter> I) \<rbrakk>
     \<Longrightarrow> simpl_to_graph SGamma GGamma fname nn com n traces P I eqs out_eqs"
   apply (rule_tac i=1 and j=0 in simpl_to_graph_step_general[rotated -1])
     apply simp
@@ -1857,6 +1903,12 @@ fun apply_simpl_to_graph_tac funs hints ctxt =
             THEN' apply_graph_refines_ex_tac funs ctxt
             THEN' apply_modifies_thm ctxt,
         rtac @{thm simpl_to_graph_call[OF refl]}
+            THEN' inst_graph_tac ctxt
+            THEN' inst_graph_tac ctxt
+            THEN' apply_graph_refines_ex_tac funs ctxt
+            THEN' apply_modifies_thm ctxt,
+        rtac @{thm simpl_to_graph_call_known_guard[OF refl]}
+            THEN' inst_graph_tac ctxt
             THEN' inst_graph_tac ctxt
             THEN' inst_graph_tac ctxt
             THEN' apply_graph_refines_ex_tac funs ctxt

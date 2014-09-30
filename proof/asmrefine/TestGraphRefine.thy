@@ -38,12 +38,7 @@ consts
 
 local_setup {* add_field_h_val_rewrites #> add_field_to_bytes_rewrites *}
 
-locale graph_refine_locale = kernel_all_substitute
-    + assumes globals_list_distinct:
-        "globals_list_distinct domain symbol_table globals_list"
-      assumes halt_halts: "\<exists>ft. (\<forall>s xs. (\<Gamma> \<turnstile> \<langle>com.Call halt_'proc, Normal s\<rangle> \<Rightarrow> xs)
-            = (xs = Fault ft))"
-begin
+context graph_refine_locale begin
 
 ML {* SimplToGraphProof.globals_swap
  := (fn t => @{term "globals_swap t_hrs_' t_hrs_'_update symbol_table globals_list"} $ t)
@@ -59,9 +54,9 @@ where
         \<and> htd_safe domain (hrs_htd (t_hrs_' (globals s)))}"
 
 ML {* ProveSimplToGraphGoals.test_all_graph_refine_proofs_after
-    funs (csenv ()) @{context} (SOME "Kernel_C.ackInterrupt")  *}
+    funs (csenv ()) @{context} (SOME "Kernel_C.lookupPTSlot")  *}
 
-ML {* val nm = "Kernel_C.ackInterrupt" *}
+ML {* val nm = "Kernel_C.lookupPTSlot" *}
 
 local_setup {* define_graph_fun_short funs nm *}
 
@@ -73,7 +68,6 @@ ML {*
 val init_thm = SimplToGraphProof.simpl_to_graph_upto_subgoals funs hints nm
     @{context}
 *}
-
 
 ML {*
 ProveSimplToGraphGoals.simpl_to_graph_thm funs (csenv ()) @{context} nm;
@@ -96,7 +90,6 @@ schematic_lemma "PROP ?P"
     in case res of NONE => Seq.single t | SOME r => Seq.single r
     end) *})
 
-
   apply (tactic {* ALLGOALS (nth (tacs @{context}) 0) *})
   apply (tactic {* ALLGOALS (nth (tacs @{context}) 1) *})
 
@@ -109,6 +102,24 @@ schematic_lemma "PROP ?P"
   apply (tactic {* ALLGOALS (nth (tacs @{context}) 5) *})
 
   apply (tactic {* ALLGOALS (nth (tacs @{context}) 6) *})
+
+
+
+  apply (simp add: pglobal_valid_def)
+  apply (erule_tac g="kernel_all_global_addresses.ksReadyQueues_global_data" in ptr_inverse_safe_htd_safe_globals_list_distinct, rule globals_list_distinct)
+  apply (rule kernel_all_global_addresses.global_data_mems)
+  apply (simp add: global_data_defs global_data_region_def global_data_def
+                   )
+  apply (rule order_trans, rule s_footprint_intvl)
+  apply simp
+thm globals_list_valid_def
+find_theorems s_footprint
+thm s_footprint_intvl
+find_theorems global_data_region
+thm global_data_defs
+term 
+
+find_theorems ptr_inverse_safe
 
 find_theorems "_ - _ = _ + (- _)"
 thm word_minus_def

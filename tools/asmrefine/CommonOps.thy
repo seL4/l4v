@@ -13,6 +13,7 @@ theory CommonOps
 imports 
 	"../../lib/WordLemmaBucket"
 	"../../lib/CTranslationNICTA"
+	"GlobalsSwap"
 begin
 
 text {* Additional constants needed to make conversion to graph lang easy *}
@@ -77,12 +78,6 @@ where
   in (x + y + cinw,
       unat (x + y + cinw) \<noteq> unat x + unat y + unat cinw,
       (msb x \<noteq> msb y) \<and> (msb x \<noteq> msb (x + y + cinw)))"
-
-definition
-  ptr_inverse_safe :: "('a :: mem_type) ptr \<Rightarrow> heap_typ_desc \<Rightarrow> bool"
-where
-  "ptr_inverse_safe p htd = (c_guard p
-        \<and> (fst ` s_footprint p \<inter> fst ` dom_s htd = {}))"
 
 definition
   all_htd_updates :: "('a :: c_type) itself \<Rightarrow> word32 \<Rightarrow> word32 \<Rightarrow> word32

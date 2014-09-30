@@ -827,6 +827,24 @@ fun synthetic_updates ctxt params pref (Const (c, T)) = let
 
 fun is_no_read_globals ctxt params = is_no_read ctxt params true
 
+fun get_global_valid_assertion ctxt (params : export_params) t = let
+    val tnames = Term.add_const_names t []
+    val globs = map_filter (#rw_global_accs params) tnames
+        @ map_filter (#rw_global_upds params) tnames
+    fun assert nm = let
+        val T = Symtab.lookup (#rw_globals_tab params) nm
+            |> the |> fst |> fastype_of |> range_type
+        val p = TermsTypes.mk_global_addr_ptr (nm, T)
+      in convert_op ctxt params "PGlobalValid" "Bool"
+          [mk_pseudo_acc "HTD" @{typ heap_typ_desc}, ptr_to_typ p, p]
+      end
+    val globs = sort_distinct fast_string_ord globs
+      |> map assert
+    fun conj (x, y) = "Op And Bool 2 " ^ x ^ " " ^ y
+  in case globs of [] => NONE
+    | _ => SOME (foldr1 conj globs)
+  end
+
 fun emit_body ctxt params (Const (@{const_name Seq}, _) $ a $ b) n c e = let
     val (n, nm) = emit_body ctxt params b n c e
         handle TERM (s, ts) => raise TERM (s, b :: ts)
@@ -879,9 +897,13 @@ fun emit_body ctxt params (Const (@{const_name Seq}, _) $ a $ b) n c e = let
     val upds = convert_param_upds ctxt params (betapply (f, s_st ctxt))
       |> filter_out (fn (s, v) => v = "Var " ^ s)
       |> map (fn (s, v) => s ^ " " ^ v)
+
   in
     emit (string_of_int n ^ " Basic " ^ c ^ " " ^ space_pad_list upds);
-    (n + 1, string_of_int n)
+    case get_global_valid_assertion ctxt params f of NONE =>
+        (n + 1, string_of_int n)
+      | SOME ass => (emit (string_of_int (n + 1) ^ " Cond " ^ string_of_int n ^ " Err " ^ ass);
+        (n + 2, string_of_int (n + 1)))
   end
   | emit_body ctxt params (Const (@{const_name call}, _) $ f $ Const (p, _)
         $ _ $ r2) n c e = let

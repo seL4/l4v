@@ -38,12 +38,7 @@ consts
 
 local_setup {* add_field_h_val_rewrites #> add_field_to_bytes_rewrites *}
 
-locale graph_refine_locale = kernel_all_substitute
-    + assumes globals_list_distinct:
-        "globals_list_distinct domain symbol_table globals_list"
-      assumes halt_halts: "\<exists>ft. (\<forall>s xs. (\<Gamma> \<turnstile> \<langle>com.Call halt_'proc, Normal s\<rangle> \<Rightarrow> xs)
-            = (xs = Fault ft))"
-begin
+context graph_refine_locale begin
 
 ML {* SimplToGraphProof.globals_swap
  := (fn t => @{term "globals_swap t_hrs_' t_hrs_'_update symbol_table globals_list"} $ t)

@@ -283,7 +283,7 @@ fun enum_simps csenv ctxt = let
        |> map (Proof_Context.get_thm ctxt o suffix "_def" o fst)
   end
 
-fun safe_goal_tac_no_iff ctxt =
+fun safe_goal_tac ctxt =
   REPEAT_ALL_NEW (DETERM o CHANGED o safe_steps_tac ctxt)
 
 fun res_from_ctxt tac_name thm_name ctxt thm = let
@@ -335,7 +335,8 @@ fun get_field_h_val_rewrites ctxt =
 fun get_globals_rewrites ctxt = let
     val gsr = Proof_Context.get_thms ctxt "globals_swap_rewrites"
     val cgr = Proof_Context.get_thms ctxt "const_globals_rewrites_with_swap"
-  in (gsr, cgr) end
+    val pinv = Proof_Context.get_thms ctxt "pointer_inverse_safe_global_rules"
+  in (gsr, cgr, pinv) end
         handle ERROR _ => raise THM
             ("run add_globals_swap_rewrites on ctxt", 1, [])
 
@@ -471,6 +472,9 @@ fun decompose_mem_goals trace ctxt = SUBGOAL (fn (t, i) =>
         in (etac thm THEN' atac THEN' prove_ptr_safe "const_globals" ctxt)
             ORELSE' except_tac ctxt "decompose_mem_goals: const globals"
         end i
+    | @{term Trueprop} $ (Const (@{const_name pglobal_valid}, _) $ _ $ _ $ _)
+        => asm_simp_tac (ctxt addsimps @{thms pglobal_valid_def}
+            addsimps #3 (get_globals_rewrites ctxt)) i
     | @{term Trueprop} $ (@{term "op = :: heap_mem \<Rightarrow> _"} $ x $ y) => let
         val query = (heap_upd_kind x, heap_upd_kind y)
         val _ = if trace then writeln ("decompose_mem_goals: " ^ @{make_string} query)
@@ -554,9 +558,10 @@ fun graph_refine_proof_tacs csenv ctxt = let
             )),
         (["step 3: split into goals with safe steps",
             "also derive ptr_safe assumptions from h_t_valid"],
-        (TRY o safe_goal_tac_no_iff ctxt)
-            THEN_ALL_NEW (TRY o DETERM o REPEAT_ALL_NEW (dtac @{thm h_t_valid_orig_and_ptr_safe}))
-            THEN_ALL_NEW (TRY o safe_goal_tac_no_iff ctxt)),
+        (TRY o safe_goal_tac ctxt)
+            THEN_ALL_NEW (TRY o DETERM
+                o REPEAT_ALL_NEW (dtac @{thm h_t_valid_orig_and_ptr_safe}))
+            THEN_ALL_NEW (TRY o safe_goal_tac ctxt)),
         (["step 4: split up memory write problems."],
         decompose_mem_goals false ctxt),
         (["step 5: normalise memory reads"],
