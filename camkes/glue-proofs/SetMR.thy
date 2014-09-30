@@ -17,6 +17,15 @@ context mr begin
 
 abbreviation "seL4_MsgMaxLength \<equiv> 120"
 
+lemma le_step_down:"\<lbrakk>(i::int) < n; i = n - 1 \<Longrightarrow> P; i < n - 1 \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
+  apply arith
+  done
+
+(* Avoid having to hold Isabelle's hand with "unat (of_int x)". *)
+lemma unat_nat[simp]:"\<lbrakk>(i::int) \<ge> 0; i < seL4_MsgMaxLength\<rbrakk> \<Longrightarrow> unat ((of_int i)::sword32) = nat i"
+  apply (erule le_step_down, simp, simp)+
+  done
+
 (* A manually abstracted version of seL4_SetMR. A future version of AutoCorres should translate
  * seL4_SetMR to this automatically.
  *)
@@ -30,7 +39,7 @@ where
      guard (\<lambda>s. 0 \<le> i);
      modify (\<lambda>s. s \<lparr>heap_seL4_IPCBuffer__C := (heap_seL4_IPCBuffer__C s)(ret' :=
         msg_C_update  (
-            \<lambda>a. Arrays.update a (unat ((of_int i)::sword32)) val) (heap_seL4_IPCBuffer__C s ret')
+            \<lambda>a. Arrays.update a (nat i) val) (heap_seL4_IPCBuffer__C s ret')
           )  \<rparr>)
   od"
 
@@ -86,7 +95,7 @@ lemma seL4_GetMR_wp[wp_unsafe]:
             i < seL4_MsgMaxLength \<and>
             globals_frame_intact s \<and>
             ipc_buffer_valid s \<and>
-            P (getMR s (unat ((of_int i)::sword32))) s\<rbrace>
+            P (getMR s (nat i)) s\<rbrace>
      seL4_GetMR' i
    \<lbrace>P\<rbrace>!"
   apply (simp add:seL4_GetMR'_def)
@@ -109,16 +118,12 @@ lemma seL4_SetMR_wp[wp_unsafe]:
         ipc_buffer_valid s \<and>
         i \<ge> 0 \<and>
         i < seL4_MsgMaxLength \<and>
-        (\<forall>x. P x (setMR s (unat ((of_int i)::sword32)) v))\<rbrace>
+        (\<forall>x. P x (setMR s (nat i) v))\<rbrace>
      exec_concrete lift_global_heap (seL4_SetMR' i v)
    \<lbrace>P\<rbrace>!"
   apply (simp add:seL4_SetMR_lifted'_def)
   apply (wp seL4_GetIPCBuffer_wp)
   apply (simp add:setMR_def globals_frame_intact_def ipc_buffer_valid_def)
-  done
-
-lemma le_step_down:"\<lbrakk>(i::int) < n; i = n - 1 \<Longrightarrow> P; i < n - 1 \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
-  apply arith
   done
 
 (* When you write to a message register and then read back from the same register, you get the value
@@ -127,7 +132,7 @@ lemma le_step_down:"\<lbrakk>(i::int) < n; i = n - 1 \<Longrightarrow> P; i < n 
 lemma "\<forall>(i::int) x. \<lbrace>\<lambda>s. i \<ge> 0 \<and> i < seL4_MsgMaxLength \<and>
                          globals_frame_intact s \<and>
                          ipc_buffer_valid s \<and>
-                         P (setMR s (unat ((of_int i)::sword32)) x)\<rbrace>
+                         P (setMR s (nat i) x)\<rbrace>
          do exec_concrete lift_global_heap (seL4_SetMR' i x);
             seL4_GetMR' i
          od
