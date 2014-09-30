@@ -90,6 +90,24 @@ lemma getMR_setMR:
   apply (simp add:getMR_def setMR_def fun_upd_def)
   done
 
+lemma msg_update_id:"msg_C_update (\<lambda>r. Arrays.update r i (index (msg_C y) i)) y = y"
+  apply (cut_tac f="(\<lambda>r. Arrays.update r i (index (msg_C y) i))" and
+                 f'=id and r=y and r'=y in seL4_IPCBuffer__C_fold_congs(2))
+     apply simp+
+  apply (simp add:id_def) 
+  apply (metis seL4_IPCBuffer__C_accupd_diff(22) seL4_IPCBuffer__C_accupd_diff(24)
+               seL4_IPCBuffer__C_accupd_diff(26) seL4_IPCBuffer__C_accupd_diff(28)
+               seL4_IPCBuffer__C_accupd_diff(30) seL4_IPCBuffer__C_accupd_diff(41)
+               seL4_IPCBuffer__C_accupd_same(2) seL4_IPCBuffer__C_idupdates(1))
+  done
+
+lemma setMR_getMR:
+  "setMR s i (getMR s i) = s"
+  apply (simp add:setMR_def getMR_def)
+  apply (subst msg_update_id)
+  apply simp
+  done
+
 lemma if_fold:"(if P then Q else if P then R else S) = (if P then Q else S)"
   by presburger
 
@@ -173,6 +191,20 @@ lemma "\<forall>(i::int) x y. \<lbrace>\<lambda>s. i \<ge> 0 \<and> i < seL4_Msg
   apply (wp seL4_SetMR_wp)
   apply clarsimp
   apply (simp add:setMR_def globals_frame_intact_def ipc_buffer_valid_def)
+  done
+
+(* seL4_SetMR with the value that is already in that message register does nothing. *)
+lemma "\<forall>(i::int) x s'. \<lbrace>\<lambda>s. i \<ge> 0 \<and> i < seL4_MsgMaxLength \<and>
+                            globals_frame_intact s \<and>
+                            ipc_buffer_valid s \<and>
+                            x = getMR s (nat i) \<and>
+                            s = s'\<rbrace>
+          exec_concrete lift_global_heap (seL4_SetMR' i x)
+        \<lbrace>\<lambda>_ s. s = s'\<rbrace>!"
+  apply (rule allI)+
+  apply (wp seL4_SetMR_wp)
+  apply clarsimp
+  apply (simp add:setMR_getMR)
   done
 
 end
