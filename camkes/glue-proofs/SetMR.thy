@@ -90,6 +90,16 @@ lemma getMR_setMR:
   apply (simp add:getMR_def setMR_def fun_upd_def)
   done
 
+lemma if_fold:"(if P then Q else if P then R else S) = (if P then Q else S)"
+  by presburger
+
+lemma setMR_setMR[simp]:"setMR (setMR s i x) i y = setMR s i y"
+  apply (simp add:setMR_def fun_upd_def)
+  apply (subst if_fold)
+  apply (subst comp_def, subst update_update)
+  apply simp
+  done
+
 lemma seL4_GetMR_wp[wp_unsafe]:
   "\<lbrace>\<lambda>s. (i::int) \<ge> 0 \<and>
             i < seL4_MsgMaxLength \<and>
@@ -146,6 +156,23 @@ lemma "\<forall>(i::int) x. \<lbrace>\<lambda>s. i \<ge> 0 \<and> i < seL4_MsgMa
   apply (subst getMR_setMR)
    apply (erule le_step_down, simp, simp)+
   apply (simp add:setMR_def getMR_def globals_frame_intact_def ipc_buffer_valid_def)
+  done
+
+(* seL4_SetMR run twice on the same register is the same as just running the second invocation. *)
+lemma "\<forall>(i::int) x y. \<lbrace>\<lambda>s. i \<ge> 0 \<and> i < seL4_MsgMaxLength \<and>
+                           globals_frame_intact s \<and>
+                           ipc_buffer_valid s \<and>
+                           P (setMR s (nat i) y)\<rbrace>
+         do exec_concrete lift_global_heap (seL4_SetMR' i x);
+            exec_concrete lift_global_heap (seL4_SetMR' i y)
+         od
+             \<lbrace>\<lambda>_ s. globals_frame_intact s \<and>
+                    ipc_buffer_valid s \<and>
+                    P s\<rbrace>!"
+  apply (rule allI)+
+  apply (wp seL4_SetMR_wp)
+  apply clarsimp
+  apply (simp add:setMR_def globals_frame_intact_def ipc_buffer_valid_def)
   done
 
 end
