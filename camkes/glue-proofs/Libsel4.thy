@@ -1,4 +1,4 @@
-theory SetMR imports
+theory Libsel4 imports
   "../../tools/c-parser/CTranslation"
   "../../tools/autocorres/AutoCorres"
   "../../tools/autocorres/NonDetMonadEx"
@@ -9,11 +9,11 @@ begin
  *)
 
 (* Load the fragment of libsel4 we need for reasoning about seL4_GetMR and seL4_SetMR. *)
-install_C_file "mr.c"
+install_C_file "libsel4.c"
 
-autocorres [ts_rules=nondet, no_heap_abs=seL4_SetMR] "mr.c"
+autocorres [ts_rules=nondet, no_heap_abs=seL4_SetMR] "libsel4.c"
 
-context mr begin
+context libsel4 begin
 
 abbreviation "seL4_MsgMaxLength \<equiv> 120"
 
@@ -133,7 +133,7 @@ lemma seL4_GetMR_wp[wp_unsafe]:
 
 end
 
-locale SetMR = mr +
+locale SetMR = libsel4 +
   (* This assumption should go away in future when the abstraction is performed automatically. *)
   assumes seL4_SetMR_axiom:"exec_concrete lift_global_heap (seL4_SetMR' i val) =
                                 seL4_SetMR_lifted' i val"
