@@ -226,6 +226,22 @@ lemma "\<lbrakk> i \<noteq> j \<rbrakk> \<Longrightarrow> do exec_concrete lift_
   apply (auto simp: fun_upd_def o_def split: split_if split_if_asm)[1]
   done
 
+definition
+  messageInfo_new :: "word32 \<Rightarrow> word32 \<Rightarrow> word32 \<Rightarrow> word32 \<Rightarrow> word32"
+where
+  "messageInfo_new label capsUnwrapped extraCaps len \<equiv>
+    (label && 0xFFFFF << 12) || (capsUnwrapped && 7 << 9) || (extraCaps && 3 << 7) || (len && 0x7F)"
+
+lemma seL4_MessageInfo_new_wp[THEN validNF_make_schematic_post, simplified]:"\<forall>s'. \<lbrace>\<lambda>s. s = s'\<rbrace>
+              seL4_MessageInfo_new' l c e len
+            \<lbrace>\<lambda>r s. index (words_C r) 0 = messageInfo_new l c e len \<and> s = s'\<rbrace>!"
+  apply (rule allI)
+  apply (simp add:seL4_MessageInfo_new'_def)
+  apply wp
+  apply (clarsimp simp:messageInfo_new_def word_bw_comms word_bw_lcs)
+  apply (metis (no_types, hide_lams) word_bw_assocs(2))
+  done
+
 end
 
 end
