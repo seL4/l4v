@@ -207,6 +207,25 @@ lemma "\<forall>(i::int) x s'. \<lbrace>\<lambda>s. i \<ge> 0 \<and> i < seL4_Ms
   apply (simp add:setMR_getMR)
   done
 
+(* SetMRs on distinct registers can be reordered. You probably never want to use this lemma, but
+ * it's nice to know it's true.
+ *)
+lemma "\<lbrakk> i \<noteq> j \<rbrakk> \<Longrightarrow> do exec_concrete lift_global_heap (seL4_SetMR' i x);
+                    exec_concrete lift_global_heap (seL4_SetMR' j y)
+                 od
+               = do exec_concrete lift_global_heap (seL4_SetMR' j y);
+                    exec_concrete lift_global_heap (seL4_SetMR' i x)
+                 od"
+  apply (subst seL4_SetMR_axiom)+
+  apply (case_tac "i < 0 \<or> j < 0")
+   apply (simp add:seL4_SetMR_lifted'_def seL4_GetIPCBuffer'_def bind_assoc seL4_GlobalsFrame_def)
+   apply (monad_eq)
+   apply (auto simp: fun_upd_def o_def split: split_if split_if_asm)[1]
+  apply (simp add:seL4_SetMR_lifted'_def seL4_GetIPCBuffer'_def bind_assoc seL4_GlobalsFrame_def)
+  apply (monad_eq)
+  apply (auto simp: fun_upd_def o_def split: split_if split_if_asm)[1]
+  done
+
 end
 
 end
