@@ -20,14 +20,7 @@ lemma construct_singleton:
   "\<lbrakk> S \<noteq> {}; \<forall>s\<in>S. \<forall>s'. s \<noteq> s' \<longrightarrow> s' \<notin> S \<rbrakk> \<Longrightarrow> \<exists>x. S = {x}"
   by blast
 
-lemma insort_com:
-  "insort x (insort y xs) = insort y (insort x xs)"
-  apply (induct xs)
-   apply clarsimp
-   apply (simp add: linorder_not_le)
-  apply clarsimp
-  apply fastforce
-  done
+lemmas insort_com = insort_left_comm
 
 lemma bleeding_obvious:
   "(P \<Longrightarrow> True) \<equiv> (Trueprop True)"
@@ -55,6 +48,12 @@ lemma cases_simp2 [simp]:
   "((\<not> P \<longrightarrow> Q) \<and> (P \<longrightarrow> Q)) = Q"
   by blast
 
+(* FIXME : Should probably be in the simpset, but would cause too much
+ * legacy breakage. *)
+lemma a_imp_b_imp_b:
+  "((a \<longrightarrow> b) \<longrightarrow> b) = (a \<or> b)"
+  by blast
+
 (* List stuff *)
 
 lemma length_neq:
@@ -76,6 +75,17 @@ qed
 lemma eq_concat_lenD:
   "xs = ys @ zs \<Longrightarrow> length xs = length ys + length zs"
   by simp
+
+lemma map_upt_reindex': "map f [a ..< b] = map (\<lambda>n. f (n + a - x)) [x ..< x + b - a]"
+  apply (rule nth_equalityI)
+   apply simp
+  apply (clarsimp simp: add.commute)
+  done
+
+lemma map_upt_reindex: "map f [a ..< b] = map (\<lambda>n. f (n + a)) [0 ..< b - a]"
+  apply (subst map_upt_reindex' [where x=0])
+  apply clarsimp
+  done
 
 (* These aren't used, but are generally useful *)
 
@@ -875,5 +885,68 @@ lemma bij_betw_empty_dom_exists:
 lemma bij_betw_map_empty_dom_exists:
   "r = {} \<Longrightarrow> \<exists>t. bij_betw_map t {} r"
   by (clarsimp simp: bij_betw_map_def bij_betw_empty_dom_exists)
+
+(*
+ * Function and Relation Powers.
+ *)
+
+lemma funpow_add [simp]:
+  fixes f :: "'a \<Rightarrow> 'a"
+  shows "(f ^^ a) ((f ^^ b) s) = (f ^^ (a + b)) s"
+  by (metis comp_apply funpow_add)
+
+lemma funpow_unfold:
+  fixes f :: "'a \<Rightarrow> 'a"
+  assumes "n > 0"
+  shows "f ^^ n = (f ^^ (n - 1)) \<circ> f"
+  by (metis Suc_diff_1 assms funpow_Suc_right)
+
+lemma relpow_unfold: "n > 0 \<Longrightarrow> S ^^ n = (S ^^ (n - 1)) O S"
+  by (cases n, auto)
+
+
+(*
+ * Equivalence relations.
+ *)
+
+(* Convert a projection into an equivalence relation. *)
+definition
+  equiv_of :: "('s \<Rightarrow> 't) \<Rightarrow> ('s \<times> 's) set"
+where
+  "equiv_of proj \<equiv> {(a, b). proj a = proj b}"
+
+lemma equiv_of_is_equiv_relation [simp]:
+   "equiv UNIV (equiv_of proj)"
+  by (auto simp: equiv_of_def intro!: equivI refl_onI symI transI)
+
+lemma in_equiv_of [simp]:
+  "((a, b) \<in> equiv_of f) \<longleftrightarrow> (f a = f b)"
+  by (clarsimp simp: equiv_of_def)
+
+(* For every equivalence relation R, there exists a projection function
+ * "f" such that "f x = f y \<longleftrightarrow> (x, y) \<in> R". That is, you can reason
+ * about projections instead of equivalence relations if you so wish. *)
+lemma equiv_relation_to_projection:
+  fixes R :: "('a \<times> 'a) set"
+  assumes equiv: "equiv UNIV R"
+  shows "\<exists>f :: 'a \<Rightarrow> 'a set. \<forall>x y. f x = f y \<longleftrightarrow> (x, y) \<in> R"
+  apply (rule exI [of _ "\<lambda>x. {y. (x, y) \<in> R}"])
+  apply clarsimp
+  apply (case_tac "(x, y) \<in> R")
+   apply clarsimp
+   apply (rule set_eqI)
+   apply clarsimp
+   apply (metis equivE sym_def trans_def equiv)
+  apply (clarsimp)
+  apply (metis UNIV_I equiv equivE mem_Collect_eq refl_on_def)
+  done
+
+
+(*
+ * Misc
+ *)
+
+lemma range_constant [simp]: "range (\<lambda>_. k) = {k}"
+  by (clarsimp simp: image_def)
 
 end

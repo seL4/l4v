@@ -777,7 +777,7 @@ lemma globals_list_distinct_filter_member:
   apply (erule distinct_prop_weaken, simp)
   done
 
-lemma s_footprint_intvl:
+lemma s_footprint_intvl_subset:
   "s_footprint (p :: 'a ptr) \<subseteq> {ptr_val p ..+ size_of TYPE ('a :: c_type)} \<times> UNIV"
   by (auto simp: s_footprint_def s_footprint_untyped_def
                  intvl_def size_of_def)
@@ -793,7 +793,7 @@ lemma h_val_globals_swap_in_const_global:
   apply (erule disjoint_h_val_globals_swap_filter,
     erule(1) globals_list_distinct_filter_member)
    apply simp
-  apply (rule order_trans, rule s_footprint_intvl)
+  apply (rule order_trans, rule s_footprint_intvl_subset)
   apply (simp add: global_data_region_def const_global_data_def
                    Times_subset_cancel2)
   apply (erule intvl_sub_offset)
@@ -814,7 +814,7 @@ lemma const_globals_in_memory_to_h_val_with_swap:
     erule(1) globals_list_distinct_filter_member)
     apply simp
    apply (simp add: global_data_region_def const_global_data_def)
-   apply (rule order_trans, rule s_footprint_intvl)
+   apply (rule order_trans, rule s_footprint_intvl_subset)
    apply simp
   apply (erule(1) const_globals_in_memory_h_val[symmetric])
   done
@@ -840,7 +840,7 @@ lemma global_data_implies_ptr_inverse_safe:
                             htd_safe_def globals_list_distinct_def)
   apply (drule(1) bspec)+
   apply (simp add: global_data_region_def global_data_ok_def global_data_def)
-  apply (auto dest!: s_footprint_intvl[THEN subsetD])
+  apply (auto dest!: s_footprint_intvl_subset[THEN subsetD])
   done
 
 ML {*

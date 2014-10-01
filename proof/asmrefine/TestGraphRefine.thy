@@ -103,28 +103,6 @@ schematic_lemma "PROP ?P"
 
   apply (tactic {* ALLGOALS (nth (tacs @{context}) 6) *})
 
-
-
-  apply (simp add: pglobal_valid_def)
-  apply (erule_tac g="kernel_all_global_addresses.ksReadyQueues_global_data" in ptr_inverse_safe_htd_safe_globals_list_distinct, rule globals_list_distinct)
-  apply (rule kernel_all_global_addresses.global_data_mems)
-  apply (simp add: global_data_defs global_data_region_def global_data_def
-                   )
-  apply (rule order_trans, rule s_footprint_intvl)
-  apply simp
-thm globals_list_valid_def
-find_theorems s_footprint
-thm s_footprint_intvl
-find_theorems global_data_region
-thm global_data_defs
-term 
-
-find_theorems ptr_inverse_safe
-
-find_theorems "_ - _ = _ + (- _)"
-thm word_minus_def
-  apply (simp_all add: diff_conv_add_uminus add.commute)
-
   apply (tactic {* ALLGOALS (nth (tacs @{context}) 7) *})
   apply (tactic {* ALLGOALS (nth (tacs @{context}) 8) *})
   
