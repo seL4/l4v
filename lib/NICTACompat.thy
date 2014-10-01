@@ -13,7 +13,10 @@
 *)
 
 theory NICTACompat
-imports "~~/src/HOL/Word/WordBitwise" SignedWords
+imports
+  "~~/src/HOL/Word/WordBitwise"
+  SignedWords
+  NICTATools
 begin
 
 (* all theories should import from NICTACompat rather than any ancestors *)
