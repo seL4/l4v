@@ -1026,7 +1026,6 @@ lemma Sys2_wellformed: "pas_wellformed Sys2PAS"
   apply (intro conjI)
   apply (simp_all add: Sys2AuthGraph_def complete_AuthGraph_def
                        Sys2AuthGraph_aux_def)
-  apply blast
   done
  
 lemma Sys2AgentMap_simps:
