@@ -177,7 +177,7 @@ lemma "\<forall>(i::int) x. \<lbrace>\<lambda>s. i \<ge> 0 \<and> i < seL4_MsgMa
   done
 
 (* seL4_SetMR run twice on the same register is the same as just running the second invocation. *)
-lemma "\<forall>(i::int) x y. \<lbrace>\<lambda>s. i \<ge> 0 \<and> i < seL4_MsgMaxLength \<and>
+lemma SetMR_SetMR:"\<forall>(i::int) x y. \<lbrace>\<lambda>s. i \<ge> 0 \<and> i < seL4_MsgMaxLength \<and>
                            globals_frame_intact s \<and>
                            ipc_buffer_valid s \<and>
                            P (setMR s (nat i) y)\<rbrace>
@@ -210,7 +210,7 @@ lemma "\<forall>(i::int) x s'. \<lbrace>\<lambda>s. i \<ge> 0 \<and> i < seL4_Ms
 (* SetMRs on distinct registers can be reordered. You probably never want to use this lemma, but
  * it's nice to know it's true.
  *)
-lemma "\<lbrakk> i \<noteq> j \<rbrakk> \<Longrightarrow> do exec_concrete lift_global_heap (seL4_SetMR' i x);
+lemma SetMR_reorder:"\<lbrakk>i \<noteq> j\<rbrakk> \<Longrightarrow> do exec_concrete lift_global_heap (seL4_SetMR' i x);
                     exec_concrete lift_global_heap (seL4_SetMR' j y)
                  od
                = do exec_concrete lift_global_heap (seL4_SetMR' j y);
@@ -224,6 +224,19 @@ lemma "\<lbrakk> i \<noteq> j \<rbrakk> \<Longrightarrow> do exec_concrete lift_
   apply (simp add:seL4_SetMR_lifted'_def seL4_GetIPCBuffer'_def bind_assoc seL4_GlobalsFrame_def)
   apply (monad_eq)
   apply (auto simp: fun_upd_def o_def split: split_if split_if_asm)[1]
+  done
+
+lemma SetMR_reorder2:
+      "do exec_concrete lift_global_heap (seL4_SetMR' i x);
+          exec_concrete lift_global_heap (seL4_SetMR' j x)
+       od
+          = do exec_concrete lift_global_heap (seL4_SetMR' j x);
+               exec_concrete lift_global_heap (seL4_SetMR' i x)
+            od"
+  apply (case_tac "i = j")
+   apply clarsimp
+  apply (rule SetMR_reorder)
+  apply assumption
   done
 
 definition
