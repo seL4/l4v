@@ -255,6 +255,49 @@ lemma seL4_MessageInfo_new_wp[THEN validNF_make_schematic_post, simplified]:"\<f
   apply (metis (no_types, hide_lams) word_bw_assocs(2))
   done
 
+definition
+  MessageInfo_get_length :: "seL4_MessageInfo_C \<Rightarrow> word32"
+where
+  "MessageInfo_get_length info = (index (words_C info) 0) && 0x7f"
+
+lemma seL4_MessageInfo_get_length_wp[THEN validNF_make_schematic_post, simplified]:
+  "\<forall>s'. \<lbrace>\<lambda>s. s = s'\<rbrace>
+     seL4_MessageInfo_get_length' info
+        \<lbrace>\<lambda>r s. r = MessageInfo_get_length info \<and> s = s'\<rbrace>!"
+  apply (rule allI)
+  apply (simp add:seL4_MessageInfo_get_length'_def MessageInfo_get_length_def)
+  apply wp
+  apply simp
+  done
+
+(* FIXME: MOVE *)
+lemma le_mask_imp_and_mask:"(x::word32) \<le> mask n \<Longrightarrow> x && mask n = x"
+  by (metis and_mask_eq_iff_le_mask)
+
+(* FIXME: MOVE *)
+lemma or_not_mask_nop:"((x::word32) || ~~ mask n) && mask n = x && mask n"
+  by (metis word_and_not word_ao_dist2 word_bw_comms(1) word_log_esimps(3))
+
+(* TODO: It would actually be nice to say the rest of the info word doesn't change, but I haven't
+ * written defs for that yet.
+ *)
+lemma seL4_MessageInfo_set_length_wp[THEN validNF_make_schematic_post, simplified]:
+  "\<forall>s'. \<lbrace>\<lambda>s. s = s' \<and> len \<le> 0x7f\<rbrace>
+     seL4_MessageInfo_set_length' info len
+        \<lbrace>\<lambda>r s. MessageInfo_get_length r = len \<and> s = s'\<rbrace>!"
+  apply (rule allI)
+  apply (simp add:seL4_MessageInfo_set_length'_def MessageInfo_get_length_def)
+  apply wp
+  apply clarsimp
+  apply (cut_tac x=len and n=7 in le_mask_imp_and_mask)
+   apply (simp add:mask_def)+
+  apply (subst word_oa_dist)
+  apply (subst word_bw_assocs(1))
+  apply (cut_tac x=len and n=7 in or_not_mask_nop)
+  apply (subst (asm) word_bw_comms(2))
+  apply (clarsimp simp:mask_def)
+  done
+
 end
 
 end

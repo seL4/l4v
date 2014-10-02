@@ -29,6 +29,14 @@ static inline seL4_MessageInfo_t __attribute__((__const__)) seL4_MessageInfo_new
     seL4_MessageInfo.words[0] |= (length & 127) << 0;
     return seL4_MessageInfo;
 }
+static inline uint32_t __attribute__((__const__)) seL4_MessageInfo_get_length(seL4_MessageInfo_t seL4_MessageInfo) {
+    return (seL4_MessageInfo.words[0] & 0x7f) >> 0;
+}
+static inline seL4_MessageInfo_t __attribute__((__const__)) seL4_MessageInfo_set_length(seL4_MessageInfo_t seL4_MessageInfo, uint32_t v) {
+    seL4_MessageInfo.words[0] &= ~0x7f;
+    seL4_MessageInfo.words[0] |= (v << 0) & 0x7f;
+    return seL4_MessageInfo;
+}
 enum  {
     seL4_GlobalsFrame = 4294950912U
 };
