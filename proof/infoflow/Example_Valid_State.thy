@@ -9,8 +9,9 @@
  *)
 
 theory Example_Valid_State
-imports    "Noninterference"
-
+imports
+  "Noninterference"
+  "../../lib/Distinct_Cmd"
 begin
 
 section {* Example *}
@@ -214,12 +215,12 @@ definition "irq_cnode_ptr = kernel_base + 0x1C000"
 
 definition "timer_irq \<equiv> 10" (* not sure exactly how this fits in *)
 
-definition "Low_prio \<equiv> 5"
-definition "High_prio \<equiv> 5"
-definition "Low_time_slice \<equiv> 0"
-definition "High_time_slice \<equiv> 5"
-definition "Low_domain \<equiv> 0"
-definition "High_domain \<equiv> 1"
+definition "Low_prio \<equiv> 5 :: word8"
+definition "High_prio \<equiv> 5 :: word8"
+definition "Low_time_slice \<equiv> 0 :: nat"
+definition "High_time_slice \<equiv> 5 :: nat"
+definition "Low_domain \<equiv> 0 :: word8"
+definition "High_domain \<equiv> 1 :: word8"
 
 lemmas s0_ptr_defs =
   Low_cnode_ptr_def High_cnode_ptr_def Silc_cnode_ptr_def aep_ptr_def irq_cnode_ptr_def
@@ -227,6 +228,17 @@ lemmas s0_ptr_defs =
   High_tcb_ptr_def idle_tcb_ptr_def timer_irq_def Low_prio_def High_prio_def Low_time_slice_def
   Low_domain_def High_domain_def init_irq_node_ptr_def init_globals_frame_def init_global_pd_def
   kernel_base_def shared_page_ptr_def
+
+(* Distinctness proof of kernel pointers. *)
+
+distinct ptrs_distinct [simp]:
+  Low_tcb_ptr High_tcb_ptr idle_tcb_ptr
+  Low_pt_ptr High_pt_ptr
+  shared_page_ptr aep_ptr
+  Low_pd_ptr High_pd_ptr
+  Low_cnode_ptr High_cnode_ptr Silc_cnode_ptr irq_cnode_ptr
+  init_globals_frame init_global_pd
+  by (auto simp: s0_ptr_defs)
 
 
 text {* We need to define the asids of each pd and pt to ensure that
@@ -716,11 +728,11 @@ lemma kh0_SomeD:
         x = Low_cnode_ptr \<and> y = Low_cnode \<or>
         x \<in> irq_node_offs_range \<and> y = CNode 0 (empty_cnode 0)"
   apply (frule kh0_SomeD')
-  apply (erule disjE, simp add: kh0_def s0_ptr_defs
-        | force simp: kh0_def s0_ptr_defs split: split_if_asm)+
+  apply (erule disjE, simp add: kh0_def
+        | force simp: kh0_def split: split_if_asm)+
   done
 
-lemmas kh0_obj_def = 
+lemmas kh0_obj_def =
   Low_cnode_def High_cnode_def Silc_cnode_def aep_def irq_cnode_def Low_pd_def
   High_pd_def Low_pt_def High_pt_def Low_tcb_def High_tcb_def idle_tcb_def
 
@@ -815,9 +827,9 @@ lemma Sys1AgentMap_simps:
       "\<And>p. \<lbrakk>ptrFromPAddr shared_page_ptr \<le> p; p < ptrFromPAddr shared_page_ptr + 0x1000\<rbrakk>
           \<Longrightarrow> Sys1AgentMap p = partition_label Low"
   unfolding Sys1AgentMap_def
-  apply (simp_all add: s0_ptr_defs)
-  apply (simp add: ptrFromPAddr_def physMappingOffset_def kernelBase_addr_def physBase_def)
-  apply force
+  apply simp_all
+  apply (auto simp: ptrFromPAddr_def physMappingOffset_def
+          kernelBase_addr_def physBase_def s0_ptr_defs)
   done
 
 definition
@@ -904,11 +916,11 @@ lemma s0_caps_of_state :
   apply (simp add: caps_of_state_cte_wp_at cte_wp_at_cases s0_internal_def kh0_def kh0_obj_def)
   apply (case_tac p, clarsimp)
   apply (clarsimp split: if_splits)
-       apply (clarsimp simp: s0_ptr_defs cte_wp_at_cases tcb_cap_cases_def 
+       apply (clarsimp simp: cte_wp_at_cases tcb_cap_cases_def
                        split: split_if_asm)+
-    apply (clarsimp simp: Silc_caps_def s0_ptr_defs split: if_splits)
-   apply (clarsimp simp: High_caps_def s0_ptr_defs split: if_splits)
-  apply (clarsimp simp: Low_caps_def cte_wp_at_cases s0_ptr_defs split: if_splits)
+    apply (clarsimp simp: Silc_caps_def split: if_splits)
+   apply (clarsimp simp: High_caps_def split: if_splits)
+  apply (clarsimp simp: Low_caps_def cte_wp_at_cases split: if_splits)
   done
 
 lemma tcb_states_of_state_s0:
@@ -916,7 +928,7 @@ lemma tcb_states_of_state_s0:
   unfolding s0_internal_def tcb_states_of_state_def
   apply (rule ext)
   apply (simp add: get_tcb_def)
-  apply (simp add: kh0_def kh0_obj_def s0_ptr_defs)
+  apply (simp add: kh0_def kh0_obj_def)
   done
 
 lemma Sys1_wellformed:
@@ -941,7 +953,7 @@ lemma domains_of_state_s0[simp]:
    apply (erule domains_of_state_aux.cases)
    apply (clarsimp simp: s0_internal_def exst0_def ekh0_obj_def split: split_if_asm)
   apply clarsimp
-  apply (force simp: s0_internal_def exst0_def ekh0_obj_def s0_ptr_defs intro: domains_of_state_aux.domtcbs)+
+  apply (force simp: s0_internal_def exst0_def ekh0_obj_def intro: domains_of_state_aux.domtcbs)+
   done
 
 lemma Sys1_pas_refined:
@@ -958,7 +970,7 @@ lemma Sys1_pas_refined:
      apply (clarsimp simp: tcb_domain_map_wellformed_aux_def
                            Sys1PAS_def Sys1AgentMap_def
                            default_domain_def minBound_word
-                           s0_ptr_defs cte_level_bits_def)
+                           High_domain_def Low_domain_def cte_level_bits_def)
     apply (clarsimp simp: auth_graph_map_def 
                           Sys1PAS_def
                           state_objs_to_policy_def
@@ -986,7 +998,7 @@ lemma Sys1_pas_refined:
       apply simp
      apply (drule_tac x=ac in plus_one_helper2)
       apply (simp add: ptrFromPAddr_def physMappingOffset_def kernelBase_addr_def physBase_def
-                       s0_ptr_defs)
+                       shared_page_ptr_def kernel_base_def)
      apply (simp add: add.commute)
     apply (erule notE)
     apply (rule Sys1AgentMap_simps(13)[symmetric])
@@ -1045,7 +1057,7 @@ lemma silc_inv_s0:
   apply (clarsimp simp: silc_inv_def)
   apply (rule conjI, simp add: Sys1PAS_def)
   apply (rule conjI)
-   apply (clarsimp simp: Sys1PAS_def Sys1AgentMap_def s0_ptr_defs
+   apply (clarsimp simp: Sys1PAS_def Sys1AgentMap_def
                          s0_internal_def kh0_def obj_at_def kh0_obj_def
                          is_cap_table_def Silc_caps_well_formed split: split_if_asm)
   apply (rule conjI)
@@ -1065,7 +1077,11 @@ lemma silc_inv_s0:
                                    cap_points_to_label_def split: split_if_asm)+)[8]
     apply (clarsimp simp: intra_label_cap_def cap_points_to_label_def)
     apply (drule cte_wp_at_caps_of_state s0_caps_of_state)+
-    apply ((erule disjE | clarsimp simp: Sys1PAS_def Sys1AgentMap_simps[simplified s0_ptr_defs, simplified] the_nat_to_bl_10_def the_nat_to_bl_def nat_to_bl_def ctes_wp_at_def cte_wp_at_cases s0_internal_def kh0_def kh0_obj_def Silc_caps_well_formed obj_refs_def s0_ptr_defs | simp add: Silc_caps_def s0_ptr_defs)+)[1] (* slow *)
+    apply ((erule disjE |
+          clarsimp simp: Sys1PAS_def Sys1AgentMap_simps the_nat_to_bl_10_def
+              the_nat_to_bl_def nat_to_bl_def ctes_wp_at_def cte_wp_at_cases
+              s0_internal_def kh0_def kh0_obj_def Silc_caps_well_formed obj_refs_def
+         | simp add: Silc_caps_def)+)[1]
    apply (simp add: Sys1PAS_def Sys1AgentMap_simps)
   apply (clarsimp simp: all_children_def s0_internal_def silc_dom_equiv_def equiv_for_refl)
   done
@@ -1078,8 +1094,8 @@ defs irq_oracle_def: "irq_oracle \<equiv> \<lambda>pos. if pos mod 10 = 0 then 1
 lemma only_timer_irq_s0:
   "only_timer_irq timer_irq s0_internal"
   apply (clarsimp simp: only_timer_irq_def s0_internal_def irq_is_recurring_def is_irq_at_def
-                        irq_at_def Let_def irq_oracle_def machine_state0_def s0_ptr_defs)
-  apply arith
+                        irq_at_def Let_def irq_oracle_def machine_state0_def timer_irq_def)
+  apply presburger
   done
 
 lemma domain_sep_inv_s0:
@@ -1136,12 +1152,11 @@ lemma valid_caps_s0[simp]:
   "s0_internal \<turnstile> AsyncEndpointCap aep_ptr 0 {AllowRead}"
   "s0_internal \<turnstile> ReplyCap Low_tcb_ptr True"
   "s0_internal \<turnstile> ReplyCap High_tcb_ptr True"
-  apply (simp_all add: valid_cap_def s0_internal_def s0_ptr_defs cap_aligned_def is_aligned_def
+  by (simp_all add: valid_cap_def s0_internal_def s0_ptr_defs cap_aligned_def is_aligned_def
                        word_bits_def cte_level_bits_def the_nat_to_bl_10_def the_nat_to_bl_def
                        nat_to_bl_def Low_asid_def High_asid_def asid_low_bits_def asid_bits_def
                        obj_at_def kh0_def kh0_obj_def is_tcb_def is_cap_table_def a_type_def
                        is_aep_def)
-  done
 
 lemma valid_obj_s0[simp]:
   "valid_obj Low_cnode_ptr  Low_cnode s0_internal"
@@ -1163,7 +1178,7 @@ lemma valid_obj_s0[simp]:
                apply (simp_all add: valid_obj_def kh0_obj_def)
               apply (simp add: valid_cs_def Low_caps_ran High_caps_ran Silc_caps_ran
                                valid_cs_size_def word_bits_def cte_level_bits_def)+
-           apply (simp add: valid_aep_def obj_at_def s0_internal_def kh0_def s0_ptr_defs
+           apply (simp add: valid_aep_def obj_at_def s0_internal_def kh0_def
                             High_tcb_def is_tcb_def)
           apply (simp add: valid_cs_def valid_cs_size_def word_bits_def cte_level_bits_def)
           apply (simp add: well_formed_cnode_n_def)
@@ -1171,7 +1186,7 @@ lemma valid_obj_s0[simp]:
                                valid_vm_rights_def vm_kernel_only_def)+
      apply (clarsimp simp: valid_tcb_def tcb_cap_cases_def is_master_reply_cap_def
                            valid_ipc_buffer_cap_def valid_tcb_state_def
-           | simp add: obj_at_def s0_internal_def kh0_def kh0_obj_def is_aep_def s0_ptr_defs)+
+           | simp add: obj_at_def s0_internal_def kh0_def kh0_obj_def is_aep_def)+
   apply (simp add: valid_vm_rights_def vm_kernel_only_def)
   done
 
@@ -1189,11 +1204,12 @@ lemma pspace_aligned_s0:
   "pspace_aligned s0_internal"
   apply (clarsimp simp: pspace_aligned_def s0_internal_def)
   apply (drule kh0_SomeD)
-  apply (erule disjE, clarsimp simp: is_aligned_def s0_ptr_defs cte_level_bits_def
-                                    kh0_def kh0_obj_def)+
-  apply clarsimp
+  apply (erule disjE
+         | (subst is_aligned_def,
+           fastforce simp: s0_ptr_defs cte_level_bits_def kh0_def kh0_obj_def))+
+  apply (clarsimp simp: cte_level_bits_def)
   apply (drule irq_node_offs_range_correct)
-  apply clarsimp
+  apply (clarsimp simp: s0_ptr_defs cte_level_bits_def)
   apply (rule is_aligned_add[OF _ is_aligned_shift])
   apply (simp add: is_aligned_def s0_ptr_defs cte_level_bits_def)
   done
@@ -1306,7 +1322,7 @@ lemma pspace_distinct_s0:
           drule(1) notE[rotated, OF less_trans, OF _ _ leD, rotated 2] |
           drule(1) notE[rotated, OF le_less_trans, OF _ _ leD, rotated 2], simp, assumption)+)[1]
   done
-    
+
 lemma valid_pspace_s0[simp]:
   "valid_pspace s0_internal"
   apply (simp add: valid_pspace_def pspace_distinct_s0 pspace_aligned_s0 valid_objs_s0)
@@ -1366,9 +1382,8 @@ lemma valid_mdb_s0[simp]:
 
 lemma valid_ioc_s0[simp]:
   "valid_ioc s0_internal"
-  apply (clarsimp simp: s0_ptr_defs cte_wp_at_cases tcb_cap_cases_def valid_ioc_def
+  by (clarsimp simp: cte_wp_at_cases tcb_cap_cases_def valid_ioc_def
                         s0_internal_def kh0_def kh0_obj_def split: split_if_asm)+
-  done
 
 lemma valid_idle_s0[simp]:
   "valid_idle s0_internal"
@@ -1390,28 +1405,28 @@ lemma if_unsafe_then_cap_s0[simp]:
   apply (drule s0_caps_of_state)
   apply (case_tac "a=Low_cnode_ptr")
    apply (rule_tac x=Low_tcb_ptr in exI, rule_tac x="tcb_cnode_index 0" in exI)
-   apply ((clarsimp simp: cte_wp_at_cases s0_internal_def kh0_def kh0_obj_def s0_ptr_defs
+   apply ((clarsimp simp: cte_wp_at_cases s0_internal_def kh0_def kh0_obj_def
                           tcb_cap_cases_def the_nat_to_bl_10_def the_nat_to_bl_def nat_to_bl_def
                           Low_caps_def | erule disjE)+)[1]
   apply (case_tac "a=High_cnode_ptr")
    apply (rule_tac x=High_tcb_ptr in exI, rule_tac x="tcb_cnode_index 0" in exI)
-   apply ((clarsimp simp: cte_wp_at_cases s0_internal_def kh0_def kh0_obj_def s0_ptr_defs
+   apply ((clarsimp simp: cte_wp_at_cases s0_internal_def kh0_def kh0_obj_def
                           tcb_cap_cases_def the_nat_to_bl_10_def the_nat_to_bl_def nat_to_bl_def
                           High_caps_def | erule disjE)+)[1]
   apply (case_tac "a=Low_tcb_ptr")
    apply (rule_tac x=Low_cnode_ptr in exI, rule_tac x="the_nat_to_bl_10 1" in exI)
-   apply ((clarsimp simp: cte_wp_at_cases s0_internal_def kh0_def kh0_obj_def s0_ptr_defs
+   apply ((clarsimp simp: cte_wp_at_cases s0_internal_def kh0_def kh0_obj_def
                           tcb_cap_cases_def the_nat_to_bl_10_def the_nat_to_bl_def nat_to_bl_def
                           Low_caps_def well_formed_cnode_n_def dom_empty_cnode
          | erule disjE | force)+)[1]
   apply (case_tac "a=High_tcb_ptr")
    apply (rule_tac x=High_cnode_ptr in exI, rule_tac x="the_nat_to_bl_10 1" in exI)
-   apply ((clarsimp simp: cte_wp_at_cases s0_internal_def kh0_def kh0_obj_def s0_ptr_defs
+   apply ((clarsimp simp: cte_wp_at_cases s0_internal_def kh0_def kh0_obj_def
                           tcb_cap_cases_def the_nat_to_bl_10_def the_nat_to_bl_def nat_to_bl_def
                           High_caps_def well_formed_cnode_n_def dom_empty_cnode
          | erule disjE | force)+)[1]
   apply (rule_tac x=Silc_cnode_ptr in exI, rule_tac x="the_nat_to_bl_10 2" in exI)
-  apply ((clarsimp simp: cte_wp_at_cases s0_internal_def kh0_def kh0_obj_def s0_ptr_defs
+  apply ((clarsimp simp: cte_wp_at_cases s0_internal_def kh0_def kh0_obj_def
                          tcb_cap_cases_def the_nat_to_bl_10_def the_nat_to_bl_def nat_to_bl_def
                          Silc_caps_def well_formed_cnode_n_def dom_empty_cnode
         | erule disjE | force)+)[1]
@@ -1449,9 +1464,9 @@ lemma valid_arch_state_s0[simp]:
   "valid_arch_state s0_internal"
   apply (clarsimp simp: valid_arch_state_def s0_internal_def arch_state0_def)
   apply (intro conjI)
-      apply (clarsimp simp: obj_at_def kh0_def s0_ptr_defs a_type_def)
+      apply (clarsimp simp: obj_at_def kh0_def a_type_def)
      apply (simp add: valid_asid_table_def)
-    apply (clarsimp simp: obj_at_def kh0_def s0_ptr_defs a_type_def)
+    apply (clarsimp simp: obj_at_def kh0_def a_type_def)
    apply (simp add: valid_global_pts_def)
   apply (simp add: is_inv_def)
   done
@@ -1500,7 +1515,11 @@ lemma valid_arch_objs_s0[simp]:
   "valid_arch_objs s0_internal"
   apply (clarsimp simp: valid_arch_objs_def obj_at_def s0_internal_def)
   apply (drule kh0_SomeD)
-  apply (erule disjE | clarsimp simp: s0_ptr_defs pageBits_def addrFromPPtr_def physMappingOffset_def kernelBase_addr_def physBase_def is_aligned_def obj_at_def kh0_def kh0_obj_def a_type_def s0_ptr_defs kernel_mapping_slots_def High_pt'_def Low_pt'_def High_pd'_def Low_pd'_def ptrFromPAddr_def | erule vs_lookupE, force simp: vs_lookup_def arch_state0_def vs_asid_refs_def)+
+  apply (erule disjE | clarsimp simp:  pageBits_def addrFromPPtr_def
+      physMappingOffset_def kernelBase_addr_def physBase_def is_aligned_def
+      obj_at_def kh0_def kh0_obj_def a_type_def kernel_mapping_slots_def
+      High_pt'_def Low_pt'_def High_pd'_def Low_pd'_def ptrFromPAddr_def
+     | erule vs_lookupE, force simp: vs_lookup_def arch_state0_def vs_asid_refs_def)+
   done
 
 lemma valid_arch_caps_s0[simp]:
@@ -1515,9 +1534,9 @@ lemma valid_arch_caps_s0[simp]:
    apply (clarsimp simp: unique_table_caps_def is_pd_cap_def is_pt_cap_def)
    apply (drule s0_caps_of_state)+
    apply (erule disjE | simp)+
-  apply (clarsimp simp: unique_table_refs_def table_cap_ref_def s0_ptr_defs)
+  apply (clarsimp simp: unique_table_refs_def table_cap_ref_def)
   apply (drule s0_caps_of_state)+
-  apply (simp add: s0_ptr_defs | erule disjE)+
+  apply auto
   done
 
 lemma valid_global_objs_s0[simp]:
@@ -1723,6 +1742,4 @@ lemma Sys1_valid_initial_state_noenabled:
 text {* the extra assumptions in valid_initial_state of being enabled,
         and a serial system, follow from ADT_IF_Refine *}
 
-
-
-end (* a comment *)
+end
