@@ -281,18 +281,95 @@ lemma nat_to_bl_id [simp]: "nat_to_bl (size (x :: (('a::len) word))) (unat x) = 
 definition
   the_nat_to_bl :: "nat \<Rightarrow> nat \<Rightarrow> bool list" 
 where
-  "the_nat_to_bl sz n \<equiv> the (nat_to_bl sz n)"
+  "the_nat_to_bl sz n \<equiv>
+      the (nat_to_bl sz (n mod 2^sz))"
 
-definition
+abbreviation (input)
   the_nat_to_bl_10  :: "nat \<Rightarrow> bool list"
 where
   "the_nat_to_bl_10 n \<equiv> the_nat_to_bl 10 n"
 
-lemma tcb_cnode_index_nat_to_bl:
-  "n<10 \<Longrightarrow> the_nat_to_bl_10 n \<noteq> tcb_cnode_index n"
-  by (clarsimp simp: the_nat_to_bl_10_def the_nat_to_bl_def
-                     tcb_cnode_index_def
-                     nat_to_bl_def to_bl_def bin_to_bl_aux_def)
+lemma len_the_nat_to_bl [simp]:
+    "length (the_nat_to_bl x y) = x"
+  apply (clarsimp simp: the_nat_to_bl_def nat_to_bl_def)
+  apply safe
+   apply (metis le_def mod_less_divisor nat_zero_less_power_iff zero_less_numeral)
+  apply (clarsimp simp: len_bin_to_bl_aux not_le)
+  done
+
+lemma tcb_cnode_index_nat_to_bl [simp]:
+  "the_nat_to_bl_10 n \<noteq> tcb_cnode_index n"
+  by (clarsimp simp: tcb_cnode_index_def intro!: length_neq)
+
+lemma mod_less_self [simp]:
+    "a \<le> b mod a \<longleftrightarrow> ((a :: nat) = 0)"
+  by (metis mod_less_divisor nat_neq_iff not_less not_less0)
+
+lemma split_div_mod:
+    "a = (b::nat) \<longleftrightarrow> (a div k = b div k \<and> a mod k = b mod k)"
+  by (metis mod_div_equality2)
+
+lemma nat_to_bl_eq:
+  assumes "a < 2 ^ n \<or> b < 2 ^ n"
+  shows "nat_to_bl n a = nat_to_bl n b \<longleftrightarrow> a = b"
+  using assms
+  apply -
+  apply (erule disjE_R)
+   apply (clarsimp simp: nat_to_bl_def)
+  apply (case_tac "a \<ge> 2 ^ n")
+   apply (clarsimp simp: nat_to_bl_def)
+  apply (clarsimp simp: not_le)
+  apply (induct n arbitrary: a b)
+   apply (clarsimp simp: nat_to_bl_def)
+  apply atomize
+  apply (clarsimp simp: nat_to_bl_def)
+  apply (erule_tac x="a div 2" in allE)
+  apply (erule_tac x="b div 2" in allE)
+  apply (erule impE)
+   apply (metis power_commutes td_gal_lt zero_less_numeral)
+  apply (clarsimp simp: bin_rest_def bin_last_def zdiv_int)
+  apply (rule iffI [rotated], clarsimp)
+  apply (subst (asm) (1 2 3 4) bin_to_bl_aux_alt)
+  apply (clarsimp simp: zmod_eq_dvd_iff)
+  apply (subst split_div_mod [where k=2])
+  apply clarsimp
+  apply (metis int_numeral mod_2_not_eq_zero_eq_one_nat of_nat_1 of_nat_eq_iff zmod_int)
+  done
+
+lemma nat_to_bl_mod_n_eq [simp]:
+    "nat_to_bl n a = nat_to_bl n b \<longleftrightarrow> ((a = b \<and> a < 2 ^ n) \<or> (a \<ge> 2 ^ n \<and> b \<ge> 2 ^ n))"
+  apply (rule iffI)
+  apply (clarsimp simp: not_le)
+  apply (subst (asm) nat_to_bl_eq, simp)
+  apply clarsimp
+  apply (erule disjE)
+   apply clarsimp
+  apply (clarsimp simp: nat_to_bl_def)
+  done
+
+lemma the_the_eq:
+    "\<lbrakk> x \<noteq> None; y \<noteq> None \<rbrakk> \<Longrightarrow> (the x = the y) = (x = y)"
+  by auto
+
+lemma the_nat_to_bl_eq [simp]:
+    "(the_nat_to_bl n a = the_nat_to_bl m b) \<longleftrightarrow> (n = m \<and> (a mod 2 ^ n = b mod 2 ^ n))"
+  apply (case_tac "n = m")
+   apply (clarsimp simp: the_nat_to_bl_def)
+   apply (subst the_the_eq)
+     apply (clarsimp simp: nat_to_bl_def)
+    apply (clarsimp simp: nat_to_bl_def)
+   apply simp
+  apply simp
+  apply (metis len_the_nat_to_bl)
+  done
+
+lemma empty_cnode_eq_Some [simp]:
+    "(empty_cnode n x = Some y) = (length x = n \<and> y = NullCap)"
+  by (clarsimp simp: empty_cnode_def, metis)
+
+lemma empty_cnode_eq_None [simp]:
+    "(empty_cnode n x = None) = (length x \<noteq> n)"
+  by (clarsimp simp: empty_cnode_def)
 
 text {* Low's CSpace *}
 
@@ -311,11 +388,24 @@ where
         (the_nat_to_bl_10 318) 
             \<mapsto> Structures_A.AsyncEndpointCap aep_ptr 0 {AllowSend} )"
 
-
 definition
   Low_cnode :: Structures_A.kernel_object 
 where
   "Low_cnode \<equiv> Structures_A.CNode 10 Low_caps"
+
+lemma ran_empty_cnode [simp]:
+    "ran (empty_cnode C) = {NullCap}"
+  by (auto simp: empty_cnode_def ran_def Ex_list_of_length intro: set_eqI)
+
+lemma empty_cnode_app [simp]:
+    "length x = n \<Longrightarrow> empty_cnode n x = Some NullCap"
+  by (auto simp: empty_cnode_def)
+
+lemma in_ran_If [simp]:
+      "(x \<in> ran (\<lambda>n. if P n then A n else B n))
+            \<longleftrightarrow>  (\<exists>n. P n \<and> A n = Some x) \<or> (\<exists>n. \<not> P n \<and> B n = Some x)"
+ by (auto simp: ran_def)
+
 
 lemma Low_caps_ran:
   "ran Low_caps = {Structures_A.ThreadCap Low_tcb_ptr,
@@ -325,21 +415,11 @@ lemma Low_caps_ran:
                    Structures_A.AsyncEndpointCap aep_ptr 0 {AllowSend},
                    Structures_A.NullCap}"
   apply (rule equalityI)
-   apply (clarsimp simp: Low_caps_def)
-   apply (clarsimp simp: ran_def empty_cnode_def split: split_if_asm)
-  apply (clarsimp simp: ran_def)
-  apply (intro conjI)
-      apply ((force simp: Low_caps_def empty_cnode_def the_nat_to_bl_10_def
-                          the_nat_to_bl_def nat_to_bl_def)+)[2]
-    apply (rule_tac x="the_nat_to_bl_10 3" in exI)
-    apply (clarsimp simp: Low_caps_def empty_cnode_def the_nat_to_bl_10_def
-                          the_nat_to_bl_def nat_to_bl_def)
-   apply (rule_tac x="the_nat_to_bl_10 318" in exI)
-   apply (clarsimp simp: Low_caps_def empty_cnode_def the_nat_to_bl_10_def
-                          the_nat_to_bl_def nat_to_bl_def)
-  apply (rule_tac x="the_nat_to_bl_10 0" in exI)
-  apply (clarsimp simp: ran_def Low_caps_def empty_cnode_def the_nat_to_bl_10_def
-                        the_nat_to_bl_def nat_to_bl_def)
+   apply (clarsimp simp: Low_caps_def fun_upd_def empty_cnode_def split: split_if_asm)
+  apply (clarsimp simp: Low_caps_def fun_upd_def empty_cnode_def split: split_if_asm
+                  cong: conj_cong)
+  apply (rule exI [where x="the_nat_to_bl_10 0"])
+  apply simp
   done
 
 text {* High's Cspace *}
@@ -372,21 +452,11 @@ lemma High_caps_ran:
                     Structures_A.AsyncEndpointCap aep_ptr 0 {AllowRecv},
                     Structures_A.NullCap}"
   apply (rule equalityI)
-   apply (clarsimp simp: High_caps_def)
-   apply (clarsimp simp: ran_def empty_cnode_def split: split_if_asm)
-  apply (clarsimp simp: ran_def)
-  apply (intro conjI)
-      apply ((force simp: High_caps_def empty_cnode_def the_nat_to_bl_10_def
-                          the_nat_to_bl_def nat_to_bl_def)+)[2]
-    apply (rule_tac x="the_nat_to_bl_10 3" in exI)
-    apply (clarsimp simp: High_caps_def empty_cnode_def the_nat_to_bl_10_def
-                          the_nat_to_bl_def nat_to_bl_def)
-   apply (rule_tac x="the_nat_to_bl_10 318" in exI)
-   apply (clarsimp simp: High_caps_def empty_cnode_def the_nat_to_bl_10_def
-                          the_nat_to_bl_def nat_to_bl_def)
-  apply (rule_tac x="the_nat_to_bl_10 0" in exI)
-  apply (clarsimp simp: ran_def High_caps_def empty_cnode_def the_nat_to_bl_10_def
-                        the_nat_to_bl_def nat_to_bl_def)
+   apply (clarsimp simp: High_caps_def ran_def empty_cnode_def split: split_if_asm)
+  apply (clarsimp simp: High_caps_def ran_def empty_cnode_def split: split_if_asm
+                  cong: conj_cong)
+  apply (rule exI [where x="the_nat_to_bl_10 0"])
+  apply simp
   done
 
 text {* We need a copy of boundary crossing caps owned by SilcLabel.
@@ -414,13 +484,9 @@ lemma Silc_caps_ran:
                     Structures_A.NullCap}"
   apply (rule equalityI)
    apply (clarsimp simp: Silc_caps_def ran_def empty_cnode_def)
-  apply (clarsimp simp: ran_def Silc_caps_def empty_cnode_def)
-  apply (intro conjI)
-    apply (simp add: the_nat_to_bl_10_def the_nat_to_bl_def nat_to_bl_def)
-   apply (rule_tac x="the_nat_to_bl_10 318" in exI)
-   apply (simp add: the_nat_to_bl_10_def the_nat_to_bl_def nat_to_bl_def)
+  apply (clarsimp simp: ran_def Silc_caps_def empty_cnode_def cong: conj_cong)
   apply (rule_tac x="the_nat_to_bl_10 0" in exI)
-  apply (simp add: the_nat_to_bl_10_def the_nat_to_bl_def nat_to_bl_def)
+  apply simp
   done
 
 text {* async endpoint between Low and High *}
@@ -851,40 +917,13 @@ definition Sys1PAS :: "(auth_graph_label subject_label) PAS" where
 subsubsection {* Proof of pas_refined for Sys1 *}
 
 lemma High_caps_well_formed: "well_formed_cnode_n 10 High_caps"
- apply (clarsimp simp: High_caps_def well_formed_cnode_n_def) 
- apply (clarsimp simp: the_nat_to_bl_10_def the_nat_to_bl_def nat_to_bl_def)
- apply (clarsimp simp: empty_cnode_def dom_def)
- apply (rule set_eqI, clarsimp)
- apply (rule iffI)
-  apply (elim disjE, insert len_bin_to_bl, simp_all)[1] 
- apply clarsimp
-done
+  by (auto simp: High_caps_def well_formed_cnode_n_def  split: split_if_asm)
 
 lemma Low_caps_well_formed: "well_formed_cnode_n 10 Low_caps"
- apply (clarsimp simp: Low_caps_def well_formed_cnode_n_def) 
- apply (clarsimp simp: the_nat_to_bl_10_def the_nat_to_bl_def nat_to_bl_def)
- apply (clarsimp simp: empty_cnode_def dom_def)
- apply (rule set_eqI, clarsimp)
- apply (rule iffI)
-  apply (elim disjE, insert len_bin_to_bl, simp_all)[1] 
- apply clarsimp
-done
+  by (auto simp: Low_caps_def well_formed_cnode_n_def  split: split_if_asm)
 
 lemma Silc_caps_well_formed: "well_formed_cnode_n 10 Silc_caps"
- apply (clarsimp simp: Silc_caps_def well_formed_cnode_n_def) 
- apply (clarsimp simp: the_nat_to_bl_10_def the_nat_to_bl_def nat_to_bl_def)
- apply (clarsimp simp: empty_cnode_def dom_def)
- apply (rule set_eqI, clarsimp)
- apply (rule iffI)
-  apply (elim disjE, insert len_bin_to_bl, simp_all)[1] 
- apply clarsimp
-done
-
-(* clagged from KernelInit_R *)
-lemma empty_cnode_apply[simp]:
-  "(empty_cnode n xs = Some cap) = (length xs = n \<and> cap = Structures_A.NullCap)"
-  by (auto simp add: empty_cnode_def)
-
+  by (auto simp: Silc_caps_def well_formed_cnode_n_def  split: split_if_asm)
 
 lemma s0_caps_of_state : 
   "caps_of_state s0_internal p = Some cap \<Longrightarrow>
@@ -912,7 +951,7 @@ lemma s0_caps_of_state :
          ((High_tcb_ptr::obj_ref, (tcb_cnode_index 4)), Structures_A.NullCap)} "
   apply (insert High_caps_well_formed)
   apply (insert Low_caps_well_formed)
-  apply (insert Silc_caps_well_formed) 
+  apply (insert Silc_caps_well_formed)
   apply (simp add: caps_of_state_cte_wp_at cte_wp_at_cases s0_internal_def kh0_def kh0_obj_def)
   apply (case_tac p, clarsimp)
   apply (clarsimp split: if_splits)
@@ -1078,7 +1117,7 @@ lemma silc_inv_s0:
     apply (clarsimp simp: intra_label_cap_def cap_points_to_label_def)
     apply (drule cte_wp_at_caps_of_state s0_caps_of_state)+
     apply ((erule disjE |
-          clarsimp simp: Sys1PAS_def Sys1AgentMap_simps the_nat_to_bl_10_def
+          clarsimp simp: Sys1PAS_def Sys1AgentMap_simps
               the_nat_to_bl_def nat_to_bl_def ctes_wp_at_def cte_wp_at_cases
               s0_internal_def kh0_def kh0_obj_def Silc_caps_well_formed obj_refs_def
          | simp add: Silc_caps_def)+)[1]
@@ -1134,7 +1173,7 @@ lemma well_formed_cnode_n_s0_caps[simp]:
   "well_formed_cnode_n 10 Silc_caps"
   "\<not> well_formed_cnode_n 10 [[] \<mapsto> NullCap]"
   apply ((force simp: High_caps_def Low_caps_def Silc_caps_def well_formed_cnode_n_def
-                  the_nat_to_bl_10_def the_nat_to_bl_def nat_to_bl_def dom_empty_cnode)+)[3]
+                  the_nat_to_bl_def nat_to_bl_def dom_empty_cnode)+)[3]
   apply (clarsimp simp: well_formed_cnode_n_def)
   apply (drule eqset_imp_iff[where x="[]"])
   apply simp
@@ -1153,7 +1192,7 @@ lemma valid_caps_s0[simp]:
   "s0_internal \<turnstile> ReplyCap Low_tcb_ptr True"
   "s0_internal \<turnstile> ReplyCap High_tcb_ptr True"
   by (simp_all add: valid_cap_def s0_internal_def s0_ptr_defs cap_aligned_def is_aligned_def
-                       word_bits_def cte_level_bits_def the_nat_to_bl_10_def the_nat_to_bl_def
+                       word_bits_def cte_level_bits_def the_nat_to_bl_def
                        nat_to_bl_def Low_asid_def High_asid_def asid_low_bits_def asid_bits_def
                        obj_at_def kh0_def kh0_obj_def is_tcb_def is_cap_table_def a_type_def
                        is_aep_def)
@@ -1333,15 +1372,15 @@ lemma valid_pspace_s0[simp]:
      apply (clarsimp simp: ex_nonz_cap_to_def)
      apply (rule_tac x="High_cnode_ptr" in exI)
      apply (rule_tac x="the_nat_to_bl_10 1" in exI)
-     apply (force simp: cte_wp_at_cases s0_internal_def kh0_def kh0_obj_def s0_ptr_defs tcb_cap_cases_def High_caps_def the_nat_to_bl_10_def the_nat_to_bl_def nat_to_bl_def well_formed_cnode_n_def dom_empty_cnode)
+     apply (force simp: cte_wp_at_cases s0_internal_def kh0_def kh0_obj_def s0_ptr_defs tcb_cap_cases_def High_caps_def the_nat_to_bl_def nat_to_bl_def well_formed_cnode_n_def dom_empty_cnode)
     apply (clarsimp simp: ex_nonz_cap_to_def)
     apply (rule_tac x="Low_cnode_ptr" in exI)
     apply (rule_tac x="the_nat_to_bl_10 1" in exI)
-    apply (force simp: cte_wp_at_cases s0_internal_def kh0_def kh0_obj_def s0_ptr_defs tcb_cap_cases_def Low_caps_def the_nat_to_bl_10_def the_nat_to_bl_def nat_to_bl_def well_formed_cnode_n_def dom_empty_cnode)
+    apply (force simp: cte_wp_at_cases s0_internal_def kh0_def kh0_obj_def s0_ptr_defs tcb_cap_cases_def Low_caps_def the_nat_to_bl_def nat_to_bl_def well_formed_cnode_n_def dom_empty_cnode)
    apply (clarsimp simp: ex_nonz_cap_to_def)
    apply (rule_tac x="High_cnode_ptr" in exI)
    apply (rule_tac x="the_nat_to_bl_10 318" in exI)
-   apply (force simp: cte_wp_at_cases s0_internal_def kh0_def kh0_obj_def s0_ptr_defs tcb_cap_cases_def High_caps_def the_nat_to_bl_10_def the_nat_to_bl_def nat_to_bl_def well_formed_cnode_n_def dom_empty_cnode)
+   apply (force simp: cte_wp_at_cases s0_internal_def kh0_def kh0_obj_def s0_ptr_defs tcb_cap_cases_def High_caps_def the_nat_to_bl_def nat_to_bl_def well_formed_cnode_n_def dom_empty_cnode)
   apply (rule conjI)
    apply (simp add: Invariants_AI.cte_wp_at_caps_of_state zombies_final_def)
    apply (force dest: s0_caps_of_state simp: is_zombie_def)
@@ -1406,28 +1445,28 @@ lemma if_unsafe_then_cap_s0[simp]:
   apply (case_tac "a=Low_cnode_ptr")
    apply (rule_tac x=Low_tcb_ptr in exI, rule_tac x="tcb_cnode_index 0" in exI)
    apply ((clarsimp simp: cte_wp_at_cases s0_internal_def kh0_def kh0_obj_def
-                          tcb_cap_cases_def the_nat_to_bl_10_def the_nat_to_bl_def nat_to_bl_def
+                          tcb_cap_cases_def the_nat_to_bl_def nat_to_bl_def
                           Low_caps_def | erule disjE)+)[1]
   apply (case_tac "a=High_cnode_ptr")
    apply (rule_tac x=High_tcb_ptr in exI, rule_tac x="tcb_cnode_index 0" in exI)
    apply ((clarsimp simp: cte_wp_at_cases s0_internal_def kh0_def kh0_obj_def
-                          tcb_cap_cases_def the_nat_to_bl_10_def the_nat_to_bl_def nat_to_bl_def
+                          tcb_cap_cases_def the_nat_to_bl_def nat_to_bl_def
                           High_caps_def | erule disjE)+)[1]
   apply (case_tac "a=Low_tcb_ptr")
    apply (rule_tac x=Low_cnode_ptr in exI, rule_tac x="the_nat_to_bl_10 1" in exI)
    apply ((clarsimp simp: cte_wp_at_cases s0_internal_def kh0_def kh0_obj_def
-                          tcb_cap_cases_def the_nat_to_bl_10_def the_nat_to_bl_def nat_to_bl_def
+                          tcb_cap_cases_def the_nat_to_bl_def nat_to_bl_def
                           Low_caps_def well_formed_cnode_n_def dom_empty_cnode
          | erule disjE | force)+)[1]
   apply (case_tac "a=High_tcb_ptr")
    apply (rule_tac x=High_cnode_ptr in exI, rule_tac x="the_nat_to_bl_10 1" in exI)
    apply ((clarsimp simp: cte_wp_at_cases s0_internal_def kh0_def kh0_obj_def
-                          tcb_cap_cases_def the_nat_to_bl_10_def the_nat_to_bl_def nat_to_bl_def
+                          tcb_cap_cases_def the_nat_to_bl_def nat_to_bl_def
                           High_caps_def well_formed_cnode_n_def dom_empty_cnode
          | erule disjE | force)+)[1]
   apply (rule_tac x=Silc_cnode_ptr in exI, rule_tac x="the_nat_to_bl_10 2" in exI)
   apply ((clarsimp simp: cte_wp_at_cases s0_internal_def kh0_def kh0_obj_def
-                         tcb_cap_cases_def the_nat_to_bl_10_def the_nat_to_bl_def nat_to_bl_def
+                         tcb_cap_cases_def the_nat_to_bl_def nat_to_bl_def
                          Silc_caps_def well_formed_cnode_n_def dom_empty_cnode
         | erule disjE | force)+)[1]
   done
@@ -1684,9 +1723,12 @@ lemma valid_sched_s0[simp]:
 
 lemma executable_arch_objs_s0[simp]:
   "executable_arch_objs s0_internal"
-  apply (clarsimp simp: executable_arch_objs_def executable_arch_obj_def executable_pte_def executable_pde_def s0_internal_def obj_at_def kh0_def kh0_obj_def s0_ptr_defs High_pt'_def Low_pt'_def High_pd'_def Low_pd'_def split: arch_kernel_obj.splits pte.splits pde.splits split_if_asm)
-  done
-    
+  by (clarsimp simp: executable_arch_objs_def executable_arch_obj_def
+      executable_pte_def executable_pde_def s0_internal_def
+      obj_at_def kh0_def kh0_obj_def s0_ptr_defs High_pt'_def Low_pt'_def
+      High_pd'_def Low_pd'_def
+      split: arch_kernel_obj.splits pte.splits pde.splits split_if_asm)
+
 lemma einvs_s0:
   "einvs s0_internal"
   apply (simp add: valid_state_def invs_def)
