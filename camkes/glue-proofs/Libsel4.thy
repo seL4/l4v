@@ -342,26 +342,17 @@ lemma mask_twice2:"n \<le> m \<Longrightarrow> ((x::word32) && mask m) && mask n
 
 (* FIXME: MOVE *)
 lemma not_mask_twice:"n \<le> m \<Longrightarrow> ((x::word32) && ~~ mask n) && ~~ mask m = x && ~~ mask m"
-  proof -
-    assume a1: "n \<le> m"
-    have f2: "\<And>x\<^sub>1 x' x\<^sub>3. is_aligned ((x\<^sub>1\<Colon>32 word) && ~~ ((1 << x') - 1)) x\<^sub>3 \<or> \<not> x\<^sub>3 \<le> x'" by (metis is_aligned_neg_mask mask_def)
-    have f3: "\<And>x\<^sub>1 x'. (x\<^sub>1\<Colon>32 word) && ~~ ((1 << x') - 1) = ~~ ~~ x\<^sub>1 \<or> \<not> is_aligned x\<^sub>1 x'" by (metis is_aligned_neg_mask_eq mask_def word_bool_alg.double_compl)
-    have "\<And>x\<^sub>1 x'. ~~ ~~ (x\<^sub>1 x'\<Colon>32 word) = x\<^sub>1 x'" using word_bool_alg.double_compl by blast
-    hence "\<And>x\<^sub>1 x' x\<^sub>3. (x\<^sub>1\<Colon>32 word) && ~~ ((1 << x') - 1 || (1 << x\<^sub>3) - 1) = x\<^sub>1 && ~~ ((1 << x') - 1) \<or> \<not> x\<^sub>3 \<le> x'" using f2 f3 by (metis word_bool_alg.de_Morgan_disj word_bw_assocs(1)) (* > 2 s, timed out *)
-    hence "x && ~~ ((1 << m) - 1 || (1 << n) - 1) = x && ~~ ((1 << m) - 1)" using a1 by blast
-    thus "(x && ~~ mask n) && ~~ mask m = x && ~~ mask m" by (simp add: mask_def word_bw_comms(1) word_bw_lcs(1))
-  qed
+  apply (subst word_bw_assocs(1))
+  apply (simp add:mask_def)
+  by (metis (erased, hide_lams) is_aligned_neg_mask is_aligned_neg_mask_eq mask_def shiftl_1 word_bitwise_m1_simps(2) word_bw_comms(1))
 
-(* TODO: It would actually be nice to say the rest of the info word doesn't change, but I haven't
- * written defs for that yet.
- *)
 lemma seL4_MessageInfo_set_length_wp[THEN validNF_make_schematic_post, simplified]:
   "\<forall>s'. \<lbrace>\<lambda>s. s = s' \<and> len \<le> 0x7f\<rbrace>
      seL4_MessageInfo_set_length' info len
         \<lbrace>\<lambda>r s. MessageInfo_get_length r = len \<and>
                MessageInfo_get_label info = MessageInfo_get_label r \<and>
-               (* MessageInfo_get_capsUnwrapped info = MessageInfo_get_capsUnwrapped r \<and>
-               MessageInfo_get_extraCaps info = MessageInfo_get_extraCaps r \<and> *)
+               MessageInfo_get_capsUnwrapped info = MessageInfo_get_capsUnwrapped r \<and>
+               MessageInfo_get_extraCaps info = MessageInfo_get_extraCaps r \<and>
                s = s'\<rbrace>!"
   apply (rule allI)
   apply (simp add:seL4_MessageInfo_set_length'_def MessageInfo_get_length_def)
@@ -382,6 +373,19 @@ lemma seL4_MessageInfo_set_length_wp[THEN validNF_make_schematic_post, simplifie
   apply (simp add:mask_def)
   apply (cut_tac x="index (words_C info) 0" and n=7 and m=12 in not_mask_twice)
    apply (simp add:mask_def)+
+  apply (rule conjI)
+   apply (simp add:MessageInfo_get_capsUnwrapped_def)
+   apply (subst word_ao_dist)
+   apply (cut_tac x=len and y="0x7f" and z="0xe00" in word_bw_assocs(1))
+   apply simp
+   apply (subst word_bw_assocs(1))
+   apply simp
+  apply (simp add:MessageInfo_get_extraCaps_def)
+  apply (subst word_ao_dist)
+  apply (cut_tac x=len and y="0x7f" and z="0x180" in word_bw_assocs(1))
+  apply simp
+  apply (subst word_bw_assocs(1))
+  apply simp
   done
 
 end
