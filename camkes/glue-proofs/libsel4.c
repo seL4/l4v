@@ -29,6 +29,18 @@ static inline seL4_MessageInfo_t __attribute__((__const__)) seL4_MessageInfo_new
     seL4_MessageInfo.words[0] |= (length & 127) << 0;
     return seL4_MessageInfo;
 }
+static inline uint32_t __attribute__((__const__))
+seL4_MessageInfo_get_label(seL4_MessageInfo_t seL4_MessageInfo) {
+    return (seL4_MessageInfo.words[0] & 0xfffff000) >> 12;
+}
+static inline uint32_t __attribute__((__const__))
+seL4_MessageInfo_get_capsUnwrapped(seL4_MessageInfo_t seL4_MessageInfo) {
+    return (seL4_MessageInfo.words[0] & 0xe00) >> 9;
+}
+static inline uint32_t __attribute__((__const__))
+seL4_MessageInfo_get_extraCaps(seL4_MessageInfo_t seL4_MessageInfo) {
+    return (seL4_MessageInfo.words[0] & 0x180) >> 7;
+}
 static inline uint32_t __attribute__((__const__)) seL4_MessageInfo_get_length(seL4_MessageInfo_t seL4_MessageInfo) {
     return (seL4_MessageInfo.words[0] & 0x7f) >> 0;
 }

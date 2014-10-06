@@ -270,6 +270,51 @@ lemma seL4_MessageInfo_get_length_wp[THEN validNF_make_schematic_post, simplifie
   apply simp
   done
 
+definition
+  MessageInfo_get_label :: "seL4_MessageInfo_C \<Rightarrow> word32"
+where
+  "MessageInfo_get_label info = (index (words_C info) 0) && 0xFFFFF000 >> 12"
+
+lemma seL4_MessageInfo_get_label_wp[THEN validNF_make_schematic_post, simplified]:
+  "\<forall>s'. \<lbrace>\<lambda>s. s = s'\<rbrace>
+     seL4_MessageInfo_get_label' info
+        \<lbrace>\<lambda>r s. r = MessageInfo_get_label info \<and> s = s'\<rbrace>!"
+  apply (rule allI)
+  apply (simp add:seL4_MessageInfo_get_label'_def MessageInfo_get_label_def)
+  apply wp
+  apply simp
+  done
+
+definition
+  MessageInfo_get_capsUnwrapped :: "seL4_MessageInfo_C \<Rightarrow> word32"
+where
+  "MessageInfo_get_capsUnwrapped info = (index (words_C info) 0) && 0xE00 >> 9"
+
+lemma seL4_MessageInfo_get_capsUnwrapped_wp[THEN validNF_make_schematic_post, simplified]:
+  "\<forall>s'. \<lbrace>\<lambda>s. s = s'\<rbrace>
+     seL4_MessageInfo_get_capsUnwrapped' info
+        \<lbrace>\<lambda>r s. r = MessageInfo_get_capsUnwrapped info \<and> s = s'\<rbrace>!"
+  apply (rule allI)
+  apply (simp add:seL4_MessageInfo_get_capsUnwrapped'_def MessageInfo_get_capsUnwrapped_def)
+  apply wp
+  apply simp
+  done
+  
+definition
+  MessageInfo_get_extraCaps :: "seL4_MessageInfo_C \<Rightarrow> word32"
+where
+  "MessageInfo_get_extraCaps info = (index (words_C info) 0) && 0x180 >> 7"
+
+lemma seL4_MessageInfo_get_extraCaps_wp[THEN validNF_make_schematic_post, simplified]:
+  "\<forall>s'. \<lbrace>\<lambda>s. s = s'\<rbrace>
+     seL4_MessageInfo_get_extraCaps' info
+        \<lbrace>\<lambda>r s. r = MessageInfo_get_extraCaps info \<and> s = s'\<rbrace>!"
+  apply (rule allI)
+  apply (simp add:seL4_MessageInfo_get_extraCaps'_def MessageInfo_get_extraCaps_def)
+  apply wp
+  apply simp
+  done
+
 (* FIXME: MOVE *)
 lemma le_mask_imp_and_mask:"(x::word32) \<le> mask n \<Longrightarrow> x && mask n = x"
   by (metis and_mask_eq_iff_le_mask)
@@ -278,24 +323,65 @@ lemma le_mask_imp_and_mask:"(x::word32) \<le> mask n \<Longrightarrow> x && mask
 lemma or_not_mask_nop:"((x::word32) || ~~ mask n) && mask n = x && mask n"
   by (metis word_and_not word_ao_dist2 word_bw_comms(1) word_log_esimps(3))
 
+(* FIXME: MOVE *)
+lemma mask_exceed:"n \<ge> 32 \<Longrightarrow> (x::word32) && ~~ mask n = 0"
+  apply (metis (erased, hide_lams) is_aligned_neg_mask is_aligned_neg_mask_eq mask_32_max_word
+                                   word_bool_alg.compl_one word_bool_alg.conj_zero_right)
+  done
+
+(* FIXME: MOVE *)
+lemma mask_subsume:"\<lbrakk>n \<le> m\<rbrakk> \<Longrightarrow> ((x::word32) || y && mask n) && ~~ mask m = x && ~~ mask m"
+  apply (subst word_ao_dist)
+  apply (subgoal_tac "(y && mask n) && ~~ mask m = 0")
+   apply simp
+  by (metis (no_types, hide_lams) is_aligned_mask is_aligned_weaken word_and_not word_bool_alg.conj_zero_right word_bw_comms(1) word_bw_lcs(1))
+
+(* FIXME: MOVE *)
+lemma mask_twice2:"n \<le> m \<Longrightarrow> ((x::word32) && mask m) && mask n = x && mask n"
+  by (metis mask_twice min_def)
+
+(* FIXME: MOVE *)
+lemma not_mask_twice:"n \<le> m \<Longrightarrow> ((x::word32) && ~~ mask n) && ~~ mask m = x && ~~ mask m"
+  proof -
+    assume a1: "n \<le> m"
+    have f2: "\<And>x\<^sub>1 x' x\<^sub>3. is_aligned ((x\<^sub>1\<Colon>32 word) && ~~ ((1 << x') - 1)) x\<^sub>3 \<or> \<not> x\<^sub>3 \<le> x'" by (metis is_aligned_neg_mask mask_def)
+    have f3: "\<And>x\<^sub>1 x'. (x\<^sub>1\<Colon>32 word) && ~~ ((1 << x') - 1) = ~~ ~~ x\<^sub>1 \<or> \<not> is_aligned x\<^sub>1 x'" by (metis is_aligned_neg_mask_eq mask_def word_bool_alg.double_compl)
+    have "\<And>x\<^sub>1 x'. ~~ ~~ (x\<^sub>1 x'\<Colon>32 word) = x\<^sub>1 x'" using word_bool_alg.double_compl by blast
+    hence "\<And>x\<^sub>1 x' x\<^sub>3. (x\<^sub>1\<Colon>32 word) && ~~ ((1 << x') - 1 || (1 << x\<^sub>3) - 1) = x\<^sub>1 && ~~ ((1 << x') - 1) \<or> \<not> x\<^sub>3 \<le> x'" using f2 f3 by (metis word_bool_alg.de_Morgan_disj word_bw_assocs(1)) (* > 2 s, timed out *)
+    hence "x && ~~ ((1 << m) - 1 || (1 << n) - 1) = x && ~~ ((1 << m) - 1)" using a1 by blast
+    thus "(x && ~~ mask n) && ~~ mask m = x && ~~ mask m" by (simp add: mask_def word_bw_comms(1) word_bw_lcs(1))
+  qed
+
 (* TODO: It would actually be nice to say the rest of the info word doesn't change, but I haven't
  * written defs for that yet.
  *)
 lemma seL4_MessageInfo_set_length_wp[THEN validNF_make_schematic_post, simplified]:
   "\<forall>s'. \<lbrace>\<lambda>s. s = s' \<and> len \<le> 0x7f\<rbrace>
      seL4_MessageInfo_set_length' info len
-        \<lbrace>\<lambda>r s. MessageInfo_get_length r = len \<and> s = s'\<rbrace>!"
+        \<lbrace>\<lambda>r s. MessageInfo_get_length r = len \<and>
+               MessageInfo_get_label info = MessageInfo_get_label r \<and>
+               (* MessageInfo_get_capsUnwrapped info = MessageInfo_get_capsUnwrapped r \<and>
+               MessageInfo_get_extraCaps info = MessageInfo_get_extraCaps r \<and> *)
+               s = s'\<rbrace>!"
   apply (rule allI)
   apply (simp add:seL4_MessageInfo_set_length'_def MessageInfo_get_length_def)
   apply wp
   apply clarsimp
-  apply (cut_tac x=len and n=7 in le_mask_imp_and_mask)
+  apply (rule conjI)
+   apply (cut_tac x=len and n=7 in le_mask_imp_and_mask)
+    apply (simp add:mask_def)+
+   apply (subst word_oa_dist)
+   apply (subst word_bw_assocs(1))
+   apply (cut_tac x=len and n=7 in or_not_mask_nop)
+   apply (subst (asm) word_bw_comms(2))
+   apply (clarsimp simp:mask_def)
+  apply (simp add:MessageInfo_get_label_def)
+  apply (cut_tac x="index (words_C info) 0 && ~~ mask 7" and n=7 and
+                 m=12 and y=len in mask_subsume)
+   apply simp+
+  apply (simp add:mask_def)
+  apply (cut_tac x="index (words_C info) 0" and n=7 and m=12 in not_mask_twice)
    apply (simp add:mask_def)+
-  apply (subst word_oa_dist)
-  apply (subst word_bw_assocs(1))
-  apply (cut_tac x=len and n=7 in or_not_mask_nop)
-  apply (subst (asm) word_bw_comms(2))
-  apply (clarsimp simp:mask_def)
   done
 
 end
