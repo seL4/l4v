@@ -1645,7 +1645,7 @@ lemma reads_respects_scheduler_invisible_domain_switch: "reads_respects_schedule
     apply (rule equiv_valid_2_bind_pre[where R'=dc])
          apply (rule equiv_valid_2_bind_pre[where R'="op ="])
               apply simp
-              apply (rule_tac P="rv'b = choose_new_thread" in  CNode_IF.gen_asm_ev2_l)
+              apply (rule_tac P="rv'b = choose_new_thread" in  EquivValid.gen_asm_ev2_l)
               apply simp
               apply (rule equiv_valid_2_bind_pre)
                    apply (rule equiv_valid_2)

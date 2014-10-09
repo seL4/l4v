@@ -578,16 +578,6 @@ lemma create_word_objects_reads_respects_g:
   apply auto
   done
 
-(* FIXME: move to EquivValid, write similar rules for the others *)
-lemma mapM_x_ev'':
-  assumes reads_res: "\<And> x. x \<in> set lst \<Longrightarrow> equiv_valid_inv D A (P x) (m x)"
-  assumes inv: "\<And> x. x \<in> set lst \<Longrightarrow> invariant (m x) (\<lambda> s. \<forall>x\<in>set lst. P x s)"
-  shows "equiv_valid_inv D A (\<lambda> s. \<forall>x\<in>set lst. P x s) (mapM_x m lst)"
-  apply(rule mapM_x_ev)
-  apply(rule equiv_valid_guard_imp[OF reads_res], simp+)
-  apply(wp inv, simp)
-  done
-
 crunch arm_global_pd: copy_global_mappings "\<lambda> s. P (arm_global_pd (arch_state s))"
   (wp: crunch_wps simp: crunch_simps)
 
@@ -658,17 +648,6 @@ lemma create_cap_reads_respects_g:
     apply(rule create_cap_reads_respects)
    apply(rule doesnt_touch_globalsI[OF create_cap_globals_equiv])
   by simp
-
-
-
-
-(* FIXME: move to EquivValid *)
-lemma if_evrv:
-  assumes "b \<Longrightarrow> equiv_valid_rv_inv I A R P f"
-  assumes "\<not> b \<Longrightarrow> equiv_valid_rv_inv I A R Q g"
-  shows "equiv_valid_rv_inv I A R (\<lambda>s. (b \<longrightarrow> P s) \<and> (\<not>b \<longrightarrow> Q s)) (if b then f else g)"
-  apply (clarsimp split: split_if)
-  using assms by blast
 
 lemma default_object_not_asid_pool:
   "\<lbrakk>type \<noteq> ArchObject ASIDPoolObj; type \<noteq> Untyped\<rbrakk> \<Longrightarrow>

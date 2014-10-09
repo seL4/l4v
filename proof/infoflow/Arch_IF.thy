@@ -421,12 +421,6 @@ lemmas states_equiv_for_arm_asid_map_update =
   states_equiv_for_arm_asid_map_update1
   states_equiv_for_arm_asid_map_update2
 
-(* FIXME: move *)
-lemma equiv_valid_rv_trivial:
-  assumes inv: "\<And> P. \<lbrace> P \<rbrace> f \<lbrace> \<lambda>_. P \<rbrace>"
-  shows "equiv_valid_rv_inv I A \<top>\<top> \<top> f"
-  by(auto simp: equiv_valid_2_def dest: state_unchanged[OF inv])
-
 (*
 (* this works while we don't have either arm_asid_map or arm_hwasid_table in the
    state relation because it doesn't read from either *)
@@ -480,13 +474,6 @@ lemma invalidate_asid_reads_respects:
    apply(clarsimp simp: reads_equiv_def affects_equiv_def states_equiv_for_arm_asid_map_update)
   by wp
 *)
-
-(* FIXME: move *)
-lemma equiv_valid_2_trivial:
-  assumes inv: "\<And> P. \<lbrace> P \<rbrace> f \<lbrace> \<lambda>_. P \<rbrace>"
-  assumes inv': "\<And> P. \<lbrace> P \<rbrace> f' \<lbrace> \<lambda>_. P \<rbrace>"
-  shows "equiv_valid_2 I A A \<top>\<top> \<top> \<top> f f'"
-  by(auto simp: equiv_valid_2_def dest: state_unchanged[OF inv] state_unchanged[OF inv'])
 
 (*
 lemma invalidate_hw_asid_entry_ev2:
@@ -799,16 +786,6 @@ lemma set_vm_root_for_flush_reads_respects:
   apply (clarsimp simp: reads_equiv_def)
   done
 
-(* FIXME: move to EquivValid, write similar rules for the others *)
-lemma mapM_ev'':
-  assumes reads_res: "\<And> x. x \<in> set lst \<Longrightarrow> equiv_valid_inv D A (P x) (m x)"
-  assumes inv: "\<And> x. x \<in> set lst \<Longrightarrow> invariant (m x) (\<lambda> s. \<forall>x\<in>set lst. P x s)"
-  shows "equiv_valid_inv D A (\<lambda> s. \<forall>x\<in>set lst. P x s) (mapM m lst)"
-  apply(rule mapM_ev)
-  apply(rule equiv_valid_guard_imp[OF reads_res], simp+)
-  apply(wp inv, simp)
-  done
-
 crunch states_equiv_for: flush_table "states_equiv_for P Q R S X st"
   (wp: crunch_wps do_machine_op_mol_states_equiv_for ignore: do_machine_op simp: invalidateTLB_ASID_def crunch_simps)
 
@@ -841,22 +818,6 @@ lemma page_table_mapped_reads_respects:
   apply(wp get_pde_rev | wpc | simp)+
      apply(wp find_pd_for_asid_reads_respects | simp)+
   done
-
-lemma catch_ev[wp]:
-  assumes ok:
-    "equiv_valid I A A P f"
-  assumes err:
-    "\<And> e. equiv_valid I A A (E e) (handler e)" 
-  assumes hoare:
-    "\<lbrace> P \<rbrace> f -, \<lbrace> E \<rbrace>"
-  shows
-  "equiv_valid I A A P (f <catch> handler)"
-  apply(simp add: catch_def)
-  apply (wp err ok | wpc | simp)+
-   apply(insert hoare[simplified validE_E_def validE_def])[1]
-   apply(simp split: sum.splits)
-  by simp
-
 
 
 lemma unmap_page_table_reads_respects:

@@ -10,7 +10,7 @@
 
 theory WhileLoop_IF
 imports
-  EquivValid
+  "../../lib/EquivValid"
   "../../lib/NonDetMonadLemmaBucket"
 begin
 
@@ -277,8 +277,6 @@ lemma Prog3_ev:
             apply(rule bind_ev_general[where B="x_equiv And i_equiv And (\<lambda> s t. even (i s) \<longrightarrow> v s = v t) And res_equiv" and Q="\<top>\<top>"])
               apply(clarsimp simp: equiv_valid_def2 equiv_valid_2_def in_monad equivs)
              apply(rule if_ev)
-         oops         
+         oops
 
-
-
-end (* a comment *)
+end

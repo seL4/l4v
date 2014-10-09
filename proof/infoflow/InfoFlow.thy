@@ -9,7 +9,9 @@
  *)
 
 theory InfoFlow
-imports EquivValid
+imports
+  "../access-control/Syscall_AC"
+  "../../lib/EquivValid"
 begin
 
 (* We take the authority graph from the access proofs. We identify each

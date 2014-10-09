@@ -744,25 +744,6 @@ lemma reads_equiv_cdt_has_children:
   apply(fastforce dest: aag_can_read_self)
   done
 
-
-(* FIXME: move to EquivValid *)
-lemma equiv_valid_rv_liftE_bindE:
-  assumes ev1:
-  "equiv_valid_rv_inv I A W P f"
-  assumes ev2:
-  "\<And> rv rv'. W rv rv' \<Longrightarrow> equiv_valid_2 I A A R (Q rv) (Q rv') (g rv) (g rv')"
-  assumes hoare:
-  "\<lbrace> P \<rbrace> f \<lbrace> Q \<rbrace>"
-  shows "equiv_valid_rv_inv I A R P ((liftE f) >>=E g)"
-  apply(unfold bindE_def)
-  apply(rule_tac Q="\<lambda> rv. K (\<forall> v. rv \<noteq> Inl v) and (\<lambda> s. \<forall> v. rv = Inr v \<longrightarrow> Q v s)" in equiv_valid_rv_bind)
-    apply(rule_tac E="dc" in equiv_valid_2_liftE)
-    apply(rule ev1)
-   apply(clarsimp simp: lift_def split: sum.split)
-   apply(insert ev2, fastforce simp: equiv_valid_2_def)[1]
-  apply(insert hoare, clarsimp simp: valid_def liftE_def bind_def return_def split_def)
-  done
-
 lemma ensure_no_children_rev:
   "reads_equiv_valid_inv A aag (pas_refined aag and K (is_subject aag (fst slot))) 
   (ensure_no_children slot)"
