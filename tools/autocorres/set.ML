@@ -60,7 +60,7 @@ fun inter (S a) (S b) = Ord_List.inter Key.ord a b |> S
 fun subtract (S a) (S b) = Ord_List.subtract Key.ord a b |> S
 fun union (S a) (S b) = Ord_List.union Key.ord a b |> S
 fun insert a (S b) = Ord_List.insert Key.ord a b |> S
-fun union_sets l = foldl (fn (a, b) => union a b) empty l
+fun union_sets l = fold union l empty
 fun contains (S l) a = Ord_List.member Key.ord l a
 fun subset (S a, S b) = Ord_List.subset Key.ord (a, b)
 fun card (S a) = length a

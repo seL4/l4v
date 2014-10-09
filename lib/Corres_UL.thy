@@ -1117,4 +1117,28 @@ lemma corres_symb_exec_catch_r:
   apply (simp add: isLeft_def split: sum.split_asm)
   done
 
+(*
+ * Setup "Save_Attribs" mechanisms for printing the WP set.
+ *
+ * This is not the ideal place, but it is the earliest place that
+ * both "Save_Attribs" and "WP" are loaded.
+ *)
+setup {*
+let
+  val wp_attribs = [
+    ("wp", fn ctxt => get_attrib_set ctxt [] (
+       (WeakestPre.debug_get ctxt |> #rules |> #1 |> Net.content |> map snd)
+           @ (WeakestPre.debug_get ctxt |> #rules |> #3 |> map snd))),
+    ("wp_trip", fn ctxt => get_attrib_set ctxt [] (
+       (WeakestPre.debug_get ctxt |> #trips |> fst))),
+    ("wp_comb", fn ctxt => get_attrib_set ctxt [] (
+       (WeakestPre.debug_get ctxt |> #combs))),
+    ("wp_split", fn ctxt => get_attrib_set ctxt [] (
+       (WeakestPre.debug_get ctxt |> #splits)))
+  ]
+in
+  Attrib_Fetchers.map (fold Symtab.update wp_attribs)
+end
+*}
+
 end
