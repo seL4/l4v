@@ -434,10 +434,10 @@ lemma dmo_getExMonitor_C_wp[wp]:
 
 lemma do_user_op_if_C_corres:
    "corres_underlying rf_sr True op = 
-   (invs' and ex_abs einvs and (\<lambda>_. uop_sane f)) \<top>
+   (invs' and ex_abs einvs and (\<lambda>_. uop_nonempty f)) \<top>
    (doUserOp_if f tc) (doUserOp_C_if f tc)"
   apply (rule corres_gen_asm)
-  apply (simp add: doUserOp_if_def doUserOp_C_if_def uop_sane_def del: split_paired_All)
+  apply (simp add: doUserOp_if_def doUserOp_C_if_def uop_nonempty_def del: split_paired_All)
   apply (thin_tac "?P")
   apply (rule corres_guard_imp)
     apply (rule_tac r'="op=" and P'=\<top> and P="invs' and ex_abs (einvs)" in corres_split)
@@ -730,13 +730,13 @@ lemma full_invs_all_invs[simp]: "((tc,s),KernelEntry e) \<in> full_invs_if' \<Lo
   apply (fastforce simp: ct_running_related schedaction_related)
   done
 
-lemma c_to_haskell: "uop_sane uop \<Longrightarrow> global_automata_refine checkActiveIRQ_H_if (doUserOp_H_if uop) kernelCall_H_if
+lemma c_to_haskell: "uop_nonempty uop \<Longrightarrow> global_automata_refine checkActiveIRQ_H_if (doUserOp_H_if uop) kernelCall_H_if
      handlePreemption_H_if schedule'_H_if kernelExit_H_if full_invs_if' (ADT_H_if uop) UNIV
      check_active_irq_C_if (do_user_op_C_if uop) (kernel_call_C_if fp) handle_preemption_C_if schedule_C_if
      kernel_exit_C_if UNIV (ADT_C_if fp uop) (lift_snd_rel rf_sr) False"
   apply (simp add: global_automata_refine_def)
   apply (intro conjI)
-    apply (erule haskell_invs)
+    apply (rule haskell_invs)
    apply (unfold_locales)
                         apply (simp add: ADT_C_if_def)
                         apply blast
@@ -783,17 +783,25 @@ lemma c_to_haskell: "uop_sane uop \<Longrightarrow> global_automata_refine check
   apply (clarsimp simp: full_invs_if'_def)
   done
 
-theorem infoflow_refinement_H: "uop_sane uop \<Longrightarrow> ADT_C_if fp uop \<sqsubseteq> ADT_H_if uop"
-  apply (erule global_automata_refine.refinement[OF c_to_haskell])
+(*fw_sim lemmas as theorems and refinement as corollaries with sim_imp_refines?*)
+lemma infoflow_fw_sim_H: "uop_nonempty uop \<Longrightarrow> ADT_C_if fp uop \<sqsubseteq>\<^sub>F ADT_H_if uop"
+  apply (erule global_automata_refine.fw_simulates[OF c_to_haskell])
   done
 
-theorem infoflow_refinement_A: "uop_sane uop \<Longrightarrow> ADT_C_if fp uop \<sqsubseteq> ADT_A_if uop"
-  apply (rule refinement_trans)
-  apply (rule infoflow_refinement_H)
-  apply simp+
-  apply (erule global_automata_refine.refinement[OF haskell_to_abs])
+lemma infoflow_fw_sim_A: "uop_nonempty uop \<Longrightarrow> ADT_C_if fp uop \<sqsubseteq>\<^sub>F ADT_A_if uop"
+  apply (rule fw_simulates_trans)
+  apply (rule infoflow_fw_sim_H)
+   apply simp+
+  apply (erule global_automata_refine.fw_simulates[OF haskell_to_abs])
   done
-  
+
+theorem infoflow_refinement_H: "uop_nonempty uop \<Longrightarrow> ADT_C_if fp uop \<sqsubseteq> ADT_H_if uop"
+  apply (erule sim_imp_refines[OF infoflow_fw_sim_H])
+  done
+
+theorem infoflow_refinement_A: "uop_nonempty uop \<Longrightarrow> ADT_C_if fp uop \<sqsubseteq> ADT_A_if uop"
+  apply (erule sim_imp_refines[OF infoflow_fw_sim_A])
+  done
 
 end
 

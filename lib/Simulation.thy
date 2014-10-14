@@ -275,6 +275,9 @@ lemma L_invariantI:
   by (simp add: fw_simulates_def, rule_tac x="r \<inter> I\<^sub>a \<times> I\<^sub>c" in exI,
       simp add: LI_fw_sim)
 
+lemma refinement_refl[simp]:
+  "A \<sqsubseteq> A"
+  by (simp add: refines_def)
 
 lemma refinement_trans [trans]:
   "\<lbrakk>C \<sqsubseteq> B; B \<sqsubseteq> A\<rbrakk> \<Longrightarrow> C \<sqsubseteq> A"
@@ -300,5 +303,44 @@ lemma fw_inv_transport:
   apply blast
   done
 
+lemma fw_sim_refl:
+  "fw_sim Id A A"
+  apply (simp add: fw_sim_def rel_semi_def)
+  done
+
+lemma fw_simulates_refl[simp]:
+  "A \<sqsubseteq>\<^sub>F A"
+  apply (simp add: fw_simulates_def fw_sim_refl exI[where x="Id"])
+  done
+
+lemma fw_sim_trans:
+  "\<lbrakk>fw_sim Q C B; fw_sim R B A\<rbrakk> \<Longrightarrow> fw_sim (R O Q) C A"
+  apply (clarsimp simp: fw_sim_def)
+  apply (intro conjI)
+    apply clarsimp
+    apply (rename_tac s x)
+    apply (erule_tac x="s" in allE)
+    apply (drule set_mp)
+     apply assumption
+    apply clarsimp
+    apply (erule_tac x="s" in allE)
+    apply (drule set_mp)
+     apply assumption
+    apply blast
+   apply (clarsimp simp: rel_semi_def)
+   apply (rename_tac j z' x y z)
+   apply (erule_tac x="j" in allE)+
+   apply (drule_tac x="(y, z')" in set_mp)
+    apply blast
+   apply clarsimp
+   apply (rename_tac j x z x' y' z')
+   apply (drule_tac x="(x, y')" in set_mp)
+    apply auto
+  done
+
+lemma fw_simulates_trans:
+  "\<lbrakk>C \<sqsubseteq>\<^sub>F B; B \<sqsubseteq>\<^sub>F A\<rbrakk> \<Longrightarrow> C \<sqsubseteq>\<^sub>F A"
+  apply (auto simp: fw_simulates_def dest: fw_sim_trans)
+  done
 
 end

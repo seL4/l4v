@@ -3739,4 +3739,20 @@ lemma refines_refines':
   apply(auto simp: refines_def refines'_def)
   done
 
+text {* Two validity requires on the user operation (uop) of the infoflow adt.
+        These definitions are mostly only needed in ADT_A_if_Refine. *}
+
+text {* uop_nonempty is required to prove corres between do_user_op_if and doUserOp_if *}
+definition
+  uop_nonempty :: "user_transition_if \<Rightarrow> bool"
+where
+  "uop_nonempty uop \<equiv> \<forall>t pl pr pxn tc um es. uop t pl pr pxn (tc, um, es) \<noteq> {}"
+
+text {* uop_sane is required to prove that the infoflow adt describes an enabled system *}
+definition
+  uop_sane :: "user_transition_if \<Rightarrow> bool"
+where
+  "uop_sane f \<equiv> \<forall>t pl pr pxn tcu. (f t pl pr pxn tcu) \<noteq> {} \<and> 
+                (\<forall>tc um es. (Some Interrupt, tc, um, es) \<notin> (f t pl pr pxn tcu))"
+
 end (* a comment *)
