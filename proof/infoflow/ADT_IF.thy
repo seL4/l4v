@@ -3739,7 +3739,7 @@ lemma refines_refines':
   apply(auto simp: refines_def refines'_def)
   done
 
-text {* Two validity requires on the user operation (uop) of the infoflow adt.
+text {* Two validity requirements on the user operation (uop) of the infoflow adt.
         These definitions are mostly only needed in ADT_A_if_Refine. *}
 
 text {* uop_nonempty is required to prove corres between do_user_op_if and doUserOp_if *}
