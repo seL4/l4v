@@ -91,7 +91,7 @@ lemmas ac_statistics_rewrites =
     (* Convert L2 to standard exception monads. *)
     L2_defs'
 
-ML_file "set.ML"
+ML_file "../../lib/set.ML"
 ML_file "autocorres_data.ML"
 ML_file "trace_antiquote.ML"
 ML_file "mkterm_antiquote.ML"

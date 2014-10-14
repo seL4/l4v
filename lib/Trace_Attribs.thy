@@ -44,7 +44,7 @@ keywords
 begin
 
 ML_file "more_xml.ML"
-ML_file "../tools/autocorres/set.ML"
+ML_file "set.ML"
 ML_file "trace_attribs.ML"
 
 (* Setup attributes for simpset / claset. *)

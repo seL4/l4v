@@ -24,7 +24,7 @@ sig
   val make : key list -> key set
   val dest : key set -> key list
   val inter : key set -> key set -> key set
-  val subtract : key set -> key set -> key set
+  val subtract : key set -> key set -> key set (* NOTE: subtracts first from second *)
   val union : key set -> key set -> key set
   val union_sets : key set list -> key set
   val insert : key -> key set -> key set
