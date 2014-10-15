@@ -165,13 +165,17 @@ with TempDir(cleanup=(not args.no_cleanup)) as base_dir:
             os.path.join(release_files_dir, "CONTRIBUTORS"),
             os.path.join(target_dir, "autocorres", "CONTRIBUTORS"))
 
+    # License files.
+    shutil.copyfile(
+            os.path.join(args.repository, "LICENSE_BSD2.txt"),
+            os.path.join(target_dir, "LICENSE_BSD2.txt"))
+
     # For the examples, generate ".thy" files where appropriate, and also
     # generate an "All.thy" which contains all the examples.
     def gen_thy_file(c_file):
         thy_file = os.path.splitext(c_file)[0] + ".thy"
         base_name = os.path.splitext(os.path.basename(c_file))[0]
         with open(thy_file, "w") as f:
-            f.write("(* @LICENSE(NICTA) *)\n\n")
             f.write('theory %s\n' % base_name)
             f.write('imports "../../AutoCorres"\n')
             f.write('begin\n\n')
@@ -231,7 +235,7 @@ with TempDir(cleanup=(not args.no_cleanup)) as base_dir:
 
     # Check for bad strings.
     print "Searching for bad strings..."
-    for s in ["davidg", "dgreenaway", "autorefine"]:
+    for s in ["davidg", "dgreenaway", "autorefine", "@LICENSE"]:
         ret = subprocess.call(["grep", "-i", "-r", s, base_dir])
         if not ret:
             raise Exception("Found a bad string")
