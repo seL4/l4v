@@ -46,8 +46,6 @@ sig
                                  typ list -> string -> theory
    (* string is the name of the locale where the theorems about Gamma live *)
 
-  val time_limit : int ref
-
   val sorry_modifies_proofs : bool ref
 
   val calculate_modifies_proofs : bool Config.T
@@ -58,8 +56,6 @@ struct
 
 open TermsTypes
 type csenv = ProgramAnalysis.csenv
-
-val time_limit = ref 0
 
 val sorry_modifies_proofs = ref false
 
@@ -187,17 +183,8 @@ fun munge_tactic ctxt goal goalid tac = let
          Skip_Proof.cheat_tac 1 st
       else
          tac context st
-  val limiter = if !time_limit > 0 then
-                  TimeLimit.timeLimit (Time.fromSeconds (!time_limit))
-                else I
 in
-  SOME (limiter (Goal.prove ctxt [] [] (TermsTypes.mk_prop goal)) tacticfn)
-  handle ERROR s =>
-         (writeln ("Modifies proof for "^goalid^" failed with error "^s);
-          NONE)
-       | TimeLimit.TimeOut =>
-         (writeln ("Modifies proof for "^goalid^" took too long");
-          NONE)
+  Goal.prove_future ctxt [] [] (TermsTypes.mk_prop goal) tacticfn
 end
 
 fun prove_all_modifies_goals_local csenv includeP tyargs lthy = let
@@ -248,18 +235,16 @@ fun prove_all_modifies_goals_local csenv includeP tyargs lthy = let
                 ALLGOALS (asm_full_simp_tac ctxt)
               end
             in
-              case munge_tactic lthy goal fname tac of
-                NONE => (Binaryset.add (failedsofar, fname), lthy)
-                        before modifies_msg "proof failed"
-              | SOME th => let
-                  val (_, lthy) =
+              let
+                val th = munge_tactic lthy goal fname tac
+                val (_, lthy) =
                       Local_Theory.note
                           ((Binding.name (fname ^ "_modifies"), []), [th])
                           lthy
-                in
-                  (failedsofar, lthy) before
-                  modifies_msg "successful"
-                end
+              in
+                (failedsofar, lthy) before
+                modifies_msg "successful"
+              end
             end
           else let
               val example = valOf (Binaryset.find (fn _ => true) i)
@@ -303,25 +288,21 @@ fun prove_all_modifies_goals_local csenv includeP tyargs lthy = let
         HoarePackage.hoare_rule_tac ctxt [rec_thm] 1 THEN
         ALLGOALS (HoarePackage.vcg_tac "_modifies" "false" [] ctxt)
   in
-    case munge_tactic lthy nway_goal ("Clique including "^hd fnlist) tac of
-      SOME nway_thm => let
-        val nway_thms = HOLogic.conj_elims nway_thm
-        val _ = length nway_thms = length fnlist orelse
-                raise Fail "CONJUNCTS nway_thm and fnlist don't match up!"
-        fun note_it (nm, th, lthy) =
-            (writeln ("Modifies proof for "^nm^" successful");
-             #2 (Local_Theory.note ((Binding.name (nm ^ "_modifies"), []),
-                                    [th])
-                                   lthy))
-        val noted = ListPair.foldl note_it lthy (fnlist, nway_thms)
-      in
-        (failedsofar, noted)
-      end
-    | NONE => let
-      in
-        writeln ("Modifies proof for "^hd fnlist^" and its SCC failed");
-        (Binaryset.addList(failedsofar, fnlist), lthy)
-      end
+    let
+      val nway_thm =
+          munge_tactic lthy nway_goal ("Clique including "^hd fnlist) tac
+      val nway_thms = HOLogic.conj_elims nway_thm
+      val _ = length nway_thms = length fnlist orelse
+              raise Fail "CONJUNCTS nway_thm and fnlist don't match up!"
+      fun note_it (nm, th, lthy) =
+          (writeln ("Modifies proof for "^nm^" successful");
+           #2 (Local_Theory.note ((Binding.name (nm ^ "_modifies"), []),
+                                  [th])
+                                 lthy))
+      val noted = ListPair.foldl note_it lthy (fnlist, nway_thms)
+    in
+      (failedsofar, noted)
+    end
   end handle NoMods newset => (newset, lthy)
 
 
