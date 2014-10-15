@@ -36,7 +36,7 @@ TOPLEVEL_DIR=$( git -C ${CPARSER_DIR} rev-parse --show-toplevel)
 pushd ${TOPLEVEL_DIR}
 
 # Ensure that our working directory is clean.
-if ! git status --porcelain | grep -q -v '^\?\?' ; then
+if git status --porcelain | grep -q -v '^??' ; then
     if [[ -v ALLOW_DIRTY ]]; then
         warn "WARNING: Dirty working tree."
     else
