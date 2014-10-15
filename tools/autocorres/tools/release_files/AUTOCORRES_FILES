@@ -1,0 +1,125 @@
+This file describes the contents of this directory, briefly explanining
+the functionality of each file.
+
+AutoCorres.thy:
+    The top-level theory for the auto-corres project. This file should
+    be imported by users of the project, and itself includes all
+    necessary theorems and ML code.
+
+autocorres.ML:
+    Implements the top-level auto-corres command run by users.
+
+AutoCorresAttributes.thy:
+attributes.ML:
+    Installs new theory attributes (such as "[polish]") that are
+    internally used by various stages in auto-corres to determine how
+    intermediate specifications should be rewritten.
+
+autocorres_data.ML:
+    Sets up storage in Isabelle theory objects used to hold intermediate
+    theorems and definitions.
+
+CCorresE.thy:
+L1Defs.thy:
+SimplConv.thy:
+simpl_conv.ML:
+    Proof frameworks and functionality required to convert SIMPL
+    specifications into monadic specifications. "CCorresE.thy"
+    implements the underlying refinement framework, "L1Defs.thy"
+    specialises it for our particular needs, while the other files use
+    these framework to perform the conversion.
+
+L1Peephole.thy:
+    Contains theorems used to simplify specifications after they are
+    first converted into monadic form. New peep-hole optimisations may
+    be added here.
+
+ExceptionRewrite.thy:
+exception_rewrite.ML:
+    Proof frameworks and code to rewrite monadic specifications to
+    avoid using exceptions where possible.
+
+WordAbstract.thy:
+word_abstract.ML:
+    Word abstraction framework and theorems.
+
+CorresXF.thy:
+L1Valid.thy:
+L2Defs.thy:
+LocalVarExtract.thy:
+local_var_extract.ML:
+prog.ML:
+    Proof frameworks and functionality required to convert monadic
+    specifications where local variables are stored in the state
+    record into monadic specifications where bound variables are
+    used for local variables.
+
+    "CorresXF.thy" implements the underlying proof framework for
+    lifting local variables. "L2Defs.thy" instantiates this framework
+    for our particular needs. "L1Valid.thy" contains theories need
+    to prove that local variables remain unchanged in certain fragments
+    of code. The remaining files actually carry out the conversion.
+
+l2_opt.ML:
+L2Opt.thy:
+L2Peephole.thy:
+AutoCorresSimpset.thy:
+    An implementation of "flow-sensitive" optimisations, which implement
+    optimisations that can be aware of how local variables are used and
+    their concrete values.
+
+TypeStrengthen.thy:
+type_strengthen.ML:
+monad_convert.ML:
+monad_types.ML:
+    Theorems and functionality used to strengthen the type of
+    specifications to a stronger type.
+
+Polish.thy:
+pretty_bound_var_names.ML:
+    Rules used in the final "polishing" stage of abstraction, designed
+    to introduce syntactic sugar and remove rough edges required only
+    for proof automation.
+
+SimplBucket.thy:
+NonDetMonadEx.thy:
+MonadMono.thy:
+    Additional auxiliary lemmas and definitions that apply to HOL, SIMPL
+    and the non-deterministic state monad respectively.
+
+autocorres_util.ML:
+utils.ML:
+program_info.ML:
+function_info.ML:
+mkterm_antiquote.ML:
+trace_antiquote.ML:
+    Utility libraries used by the auto-corres tools. The former includes
+    methods for iterating over source code projects, while the latter
+    contains general-purpose functionality for interacting with the
+    Isabelle theorem prover.
+
+HeapLift.thy:
+TypHeapSimple.thy:
+ExecConcrete.thy:
+heap_lift_base.ML:
+heap_lift.ML:
+record_utils.ML:
+    Heap abstraction code.
+
+statistics.ML:
+    A tool for logging intermediate terms generated during conversion,
+    used for debugging and understanding effectiveness of various
+    optimisation stages.
+
+AbstractArrays.thy:
+DataStructures.thy:
+    Helper theorems for reasoning about arrays and linked lists.
+
+tests/examples/*.thy:
+tests/examples/*.c:
+tests/examples/*.h:
+tests/parse-tests/*.c:
+tests/parse-tests/*.h:
+tests/README:
+    Some simple examples of the tool in use.
+

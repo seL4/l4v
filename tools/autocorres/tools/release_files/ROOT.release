@@ -1,0 +1,10 @@
+(* @LICENSE(NICTA) *)
+
+session AutoCorres = CParser +
+  theories [quick_and_dirty]
+    "AutoCorres"
+
+session AutoCorresTest = AutoCorres +
+  theories
+    "tests/AutoCorresTest"
+

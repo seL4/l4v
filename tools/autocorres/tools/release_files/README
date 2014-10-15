@@ -1,0 +1,97 @@
+
+This is a preview release of the NICTA AutoCorres translation tool.
+
+The tool, used in conjunction with Michael Norrish's C parser, allows
+users to reason about C code using a high-level monadic representation
+of the code.
+
+The tool is described in the paper:
+
+    "Bridging the gap: Automatic verified abstraction of C"
+
+    David Greenaway, June Andronick, Gerwin Klein
+    Proceedings of the Third International
+            Conference on Interactive Theorem Proving (ITP), August 2012
+
+
+INSTALLATION:
+-------------
+
+    Typing:
+
+        isabelle build -d . AutoCorres
+
+    in the root of this release should build everything, including the
+    C parser and AutoCorres itself.
+
+    Once built, the examples in "autocorres/examples" can be run by
+    using the built "AutoCorres" Isabelle heap.
+
+
+RELEASE NOTES:
+--------------
+
+    This is a preview release of the tool, so there are a many rough
+    edges. Users are encouraged to get in touch with the authors if/when
+    they hit upon problems.
+
+
+PACKAGE CONTENTS:
+-----------------
+
+    This package contains:
+
+    * A preview release of the AutoCorres tool, translating the output
+      of the C parser into higher-level logic.
+
+    * A beta release of Michael Norrish's C parser, used to translate
+      C code into Isabelle:
+
+        http://www.ertos.nicta.com.au/software/c-parser/
+
+    * Norbert Schirmer's Simpl language and associated VCG tool. The
+      C parser translates into C into Schirmer's Simpl language:
+
+        http://afp.sourceforge.net/entries/Simpl.shtml
+
+    * Code from SML/NJ, including an implementation of binary sets
+      (Binaryset.ML) and the mllex and mlyacc tools
+      (tools/{mllex,mlyacc}). These are used by the C parser.
+
+    * Code from the mlton compiler, in particular regions during lexing
+      and parsing (Region.ML, SourceFile.ML and SourcePos.ML). These are
+      used by the C parser.
+
+    * NICTA compatibility word libraries and associated lemmas, for
+      assisting with reasoning about words (such as 32-bit words).
+
+    * Libraries from NICTA for defining and reasoning about monads,
+      including definitions for nondeterministic state monads and option
+      monads, along with a large proof library relating to these
+      definitions.
+
+    * The NICTA "wp" weakest precondition tool, which can be used to
+      assists in proving Hoare triples on monadic programs.
+
+
+REQUIREMENTS:
+-------------
+
+    * Isabelle2013-2 Interactive Theorem Prover
+
+        http://isabelle.in.tum.de/
+
+
+USAGE:
+------
+
+    Autocorres may be invoked after the C parser has completed, as follows:
+
+        install_C_file "filename.c"
+        autocorres "filename.c"
+
+    All definitions created by both the C parser and autocorres are placed into
+    a locale named "filename". (i.e., the input filename with the extension
+    stripped off.)
+
+

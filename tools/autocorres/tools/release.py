@@ -17,12 +17,15 @@ import shutil
 import tempfile
 import glob
 import time
+import fnmatch
 
 # Create a temporary directory
-class TempDir(object):
-    def __enter__(self, cleanup=True):
-        self.filename = tempfile.mkdtemp()
+class TempDir():
+    def __init__(self, cleanup=True):
         self.cleanup = cleanup
+
+    def __enter__(self):
+        self.filename = tempfile.mkdtemp()
         return self.filename
 
     def __exit__(self, type, value, traceback):
@@ -38,6 +41,15 @@ def mkdir_p(path):
             pass
         else:
             raise
+
+def rglob(base_path, pattern):
+    """Recursively find files matching glob pattern 'pattern', from base
+    directory 'base_path'."""
+    results = []
+    for root, dirnames, filenames in os.walk(base_path):
+        for filename in fnmatch.filter(filenames, pattern):
+            results.append(os.path.join(root, filename))
+    return results
 
 def read_manifest(filename, base):
     """Read the files described in a MANIFEST file, which has the form:
@@ -100,6 +112,8 @@ parser.add_argument('--dry-run', action='store_true',
         help='Do not output any files.', default=False)
 parser.add_argument('-t', '--test', metavar='ISABELLE_TARBALL',
         type=str, help='Test the archive.', default="")
+parser.add_argument('--no-cleanup', action='store_true',
+        help='Don''t delete temporary directories.', default=False)
 args = parser.parse_args()
 
 # Setup output filename if the user used the default.
@@ -112,14 +126,14 @@ if not args.dry_run:
     args.output = os.path.abspath(args.output)
 else:
     args.output = None
-release_files_dir = os.path.join(args.repository, "autocorres", "tools", "release_files")
+release_files_dir = os.path.join(args.repository, "tools", "autocorres", "tools", "release_files")
 
 # Ensure C-parser exists, and looks like a tarball.
 if not os.path.exists(args.cparser_tar) or not args.cparser_tar.endswith(".tar.gz"):
     parser.error("Expected a path to the C parser release tarball.")
 
 # Create temp dir.
-with TempDir() as base_dir:
+with TempDir(cleanup=(not args.no_cleanup)) as base_dir:
     # Generate base directory.
     target_dir_name = "autocorres-%s" % args.version
     target_dir = os.path.join(base_dir, target_dir_name)
@@ -129,7 +143,7 @@ with TempDir() as base_dir:
     print "Copying files..."
     copy_manifest(target_dir,
             os.path.join(release_files_dir, "AUTOCORRES_FILES"),
-            os.path.join(args.repository, "autocorres"), "autocorres")
+            os.path.join(args.repository, "tools", "autocorres"), "autocorres")
 
     # Copy lib files.
     copy_manifest(target_dir,
@@ -168,26 +182,36 @@ with TempDir() as base_dir:
         gen_thy_file(f)
     subprocess.check_call([
         "python",
-        os.path.join(args.repository, "misc", "gen_isabelle_root.py"),
+        os.path.join(args.repository, "misc", "scripts", "gen_isabelle_root.py"),
         "-T", "-o", os.path.join(target_dir, "autocorres", "tests", "AutoCorresTest.thy"),
         "-i", os.path.join(target_dir, "autocorres", "tests", "parse-tests"),
         "-i", os.path.join(target_dir, "autocorres", "tests", "proof-tests"),
         "-i", os.path.join(target_dir, "autocorres", "tests", "examples"),
         ])
 
-    # Check licenses
-    print "Checking licenses..."
-    subprocess.check_call([
-        os.path.join(args.repository, "misc", "license-tool", "check_license.py"),
-        "--exclude", os.path.join(release_files_dir, "licenses-ignore"),
-        os.path.join(target_dir)])
+    # Update include paths: change "../../lib" to "../lib".
+    def inplace_replace_string(filename, old_string, new_string):
+        with open(filename) as f:
+            data = f.read()
+        new_data = data.replace(old_string, new_string)
+        with open(filename, "w") as f:
+            f.write(new_data)
+    for f in rglob(os.path.join(target_dir, "autocorres"), "*.thy"):
+        inplace_replace_string(f, "../../lib", "../lib")
 
-    # Expand licenses.
-    print "Expanding licenses..."
-    subprocess.check_call([
-        os.path.join(args.repository, "misc", "license-tool", "expand_license.py"),
-        os.path.join(release_files_dir, "licenses"),
-        os.path.join(target_dir)])
+    ## Check licenses
+    #print "Checking licenses..."
+    #subprocess.check_call([
+    #    os.path.join(args.repository, "misc", "license-tool", "check_license.py"),
+    #    "--exclude", os.path.join(release_files_dir, "licenses-ignore"),
+    #    os.path.join(target_dir)])
+
+    ## Expand licenses.
+    #print "Expanding licenses..."
+    #subprocess.check_call([
+    #    os.path.join(args.repository, "misc", "license-tool", "expand_license.py"),
+    #    os.path.join(release_files_dir, "licenses"),
+    #    os.path.join(target_dir)])
 
     # Extract the C parser
     print "Extracting C parser..."

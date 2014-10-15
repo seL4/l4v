@@ -1,0 +1,16 @@
+
+AutoCorres 0.1
+--------------
+
+	* Support for Isabelle2012.
+
+	* Fix build errors in previous release.
+
+	* Internal refactoring of code to simplify handling of recursive function
+	  call proofs.
+
+AutoCorres 0.0
+--------------
+
+	* Initial release for Isabelle2011-1.
+
