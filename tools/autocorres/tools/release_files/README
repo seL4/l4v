@@ -5,13 +5,17 @@ The tool, used in conjunction with Michael Norrish's C parser, allows
 users to reason about C code using a high-level monadic representation
 of the code.
 
-The tool is described in the paper:
+The tool is described in the papers:
 
     "Bridging the gap: Automatic verified abstraction of C"
-
     David Greenaway, June Andronick, Gerwin Klein
     Proceedings of the Third International
             Conference on Interactive Theorem Proving (ITP), August 2012
+
+    "Don’t Sweat the Small Stuff --- Formal Veriﬁcation of C Code Without the Pain"
+    David Greenaway, Japheth Lim, June Andronick, Gerwin Klein
+    Proceedings of the 35th ACM SIGPLAN Conference on
+            Programming Language Design and Implementation. ACM, 2014.
 
 
 INSTALLATION:
@@ -31,9 +35,9 @@ INSTALLATION:
 RELEASE NOTES:
 --------------
 
-    This is a preview release of the tool, so there are a many rough
+    This is a preview release of the tool, so there are many rough
     edges. Users are encouraged to get in touch with the authors if/when
-    they hit upon problems.
+    they hit problems.
 
 
 PACKAGE CONTENTS:
@@ -77,7 +81,7 @@ PACKAGE CONTENTS:
 REQUIREMENTS:
 -------------
 
-    * Isabelle2013-2 Interactive Theorem Prover
+    * Isabelle2014 Interactive Theorem Prover
 
         http://isabelle.in.tum.de/
 
