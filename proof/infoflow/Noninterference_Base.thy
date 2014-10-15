@@ -91,25 +91,30 @@ lemma Run_app:
   apply(fastforce intro: Run_trans)
   done
 
-
+(* An ADT with an initial state. *)
 locale system =
   fixes A :: "('a,'s,'e) data_type"  
   and s0 :: "'s"  (* an initial state *)
 
 context system begin
 
+(* State 's' is reachable from the initial state 's0'. *)
 definition reachable where
   "reachable s \<equiv> \<exists> js. s \<in> execution A s0 js"
 
 definition Step where
   "Step a \<equiv> {(s,s') . s' \<in> execution A s [a]}"
 
+(* The system is "observationally deterministic": that is, the
+ * observable part of the system is always deterministic. *)
 definition obs_det where
   "obs_det \<equiv> \<forall> s js. (\<exists> s'. execution A s js = {s'})"
 
 lemma obs_detD:
   "obs_det \<Longrightarrow> \<exists> s'. execution A s js = {s'}" by (simp add: obs_det_def)
 
+(* The abstraction/concretisation functions "Init"/"Fin"
+ * don't abstract away information. *)
 definition no_abs where
   "no_abs \<equiv> \<forall> x s as . reachable s \<longrightarrow> x \<in> steps (Simulation.Step A) (Init A s) as \<longrightarrow>  Init A (Fin A x) = {x}"
    
@@ -118,6 +123,12 @@ lemma no_absD:
 
 end
 
+(*
+ * A system that is always enabled.
+ *
+ * In particular, the system will never be in deadlock, and there
+ * is always an enabled transition from every reachable state.
+ *)
 locale enabled_system = system +
   assumes enabled: "(\<exists> js. s \<in> execution A s0 js) \<Longrightarrow> \<exists> s'. s' \<in> execution A s js"
 
@@ -455,6 +466,8 @@ locale noninterference_system = enabled_system A s0 + noninterference_policy dom
 
 context noninterference_system begin
 
+(* The set of domains (which carry out actions in the list "as") which
+ * may influence "u", assuming we start in state "s". *)
 primrec  
  sources :: "'e list \<Rightarrow> 's \<Rightarrow> 'd \<Rightarrow> 'd set" where
  sources_Nil: "sources [] s u = {u}"|
