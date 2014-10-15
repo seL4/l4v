@@ -1,0 +1,186 @@
+#!/bin/bash
+#
+# Generate a standalone tarball of the C parser.
+#
+
+set -e
+
+case $(uname) in
+  Darwin* ) TAR=gnutar ; SEDIOPT="-i ''" ;;
+  * ) TAR=tar ; SEDIOPT=-i ;;
+esac
+
+
+
+warn ()
+{
+  echo "$1" >&2
+}
+
+die ()
+{
+  echo "$1" >&2
+  echo "Fatal error"
+  exit 1
+}
+
+if [ $# -ne 1 ]
+then
+    echo "Usage:" >&2
+    die "  $0 tag" >&2
+fi
+
+# Get the directory that this script is running in.
+CPARSER_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
+TOPLEVEL_DIR=$( git -C ${CPARSER_DIR} rev-parse --show-toplevel)
+pushd ${TOPLEVEL_DIR}
+
+# Ensure that our working directory is clean.
+if ! git status --porcelain | grep -q -v '^\?\?' ; then
+    if [[ -v ALLOW_DIRTY ]]; then
+        warn "WARNING: Dirty working tree."
+    else
+        warn "ERROR: Dirty working tree. Set the environment vairable ALLOW_DIRTY to ignore."
+        exit 1
+    fi
+fi
+
+# Create working directories.
+tmpdir=$(mktemp -d)
+outputdir=$tmpdir/c-parser
+echo "Outputs being placed in \"${outputdir}\"."
+
+# Parse command line arguments.
+tag=$1
+stem=c-parser-$tag
+shift
+
+[ -a "$stem" ] && die "Directory $stem already exists."
+
+safemakedir ()
+{
+    if [ ! -d "$1" ]
+    then
+        warn "Creating $1"
+        mkdir -p "$1"
+    else
+        warn "WARNING: release will be merged with existing $1 directory"
+    fi
+}
+safemakedir "$outputdir/src/lib"
+safemakedir "$outputdir/src/c-parser"
+safemakedir "$outputdir/doc"
+
+
+echo "Tarring standard sources"
+git -C ${TOPLEVEL_DIR} ls-files | grep ^tools/c-parser |
+    grep -v tools/c-parser/testfiles/caduceus |
+    grep -v tools/c-parser/debugClass |
+    grep -v tools/c-parser/notes |
+    grep -v tools/c-parser/map_sep |
+    grep -v tools/c-parser/kmalloc |
+    grep -v tools/c-parser/mkrelease |
+   tar -v -T - -c -f - -l |
+  (cd $outputdir/src ; tar xf -)
+
+
+echo "Copying misc files"
+cp -v lib/DistinctProp.thy lib/WordEnum.thy lib/Lib.thy lib/Enumeration.thy lib/WordLib.thy lib/NICTACompat.thy lib/StringOrd.thy lib/SignedWords.thy \
+   $outputdir/src/lib
+
+echo "Rearranging directories"
+/bin/mv -v $outputdir/src/tools/c-parser/README $outputdir
+/bin/mv -v $outputdir/src/tools/c-parser $outputdir/src/
+rmdir $outputdir/src/tools
+
+echo "Removing files"
+/bin/rm -v $outputdir/src/c-parser/testfiles/many_local_vars.{c,thy}
+
+echo "Executing gen_isabelle_root to generate testfiles/ROOT."
+python misc/scripts/gen_isabelle_root.py -i $outputdir/src/c-parser/testfiles -o $outputdir/src/c-parser/testfiles/ROOT -s CParserTest -b CParser ||
+    die "gen_isabelle_root failed."
+
+echo "Hacking IsaMakefile to remove ROOT generation."
+sed $SEDIOPT '/^testfiles\/ROOT/,/CParserTest/d' $outputdir/src/c-parser/IsaMakefile ||
+   die "sed on c-parser/IsaMakefile failed"
+
+
+# We are moving the c-parser directory from the "tools/c-parser" directory to
+# the "c-parser" directory. Here we carry out a hack to fixup import paths of
+# the form "../../lib/A" by converting them into "../lib/A".
+echo "Fixing import paths."
+pushd $outputdir/src/c-parser
+sed -i -E -e 's&\.\./lib/&lib/&g' `find -name '*.thy'`
+popd
+
+echo "Generating standalone-parser/table.ML"
+pushd $TOPLEVEL_DIR/tools/c-parser > /dev/null
+$TOPLEVEL_DIR/isabelle/bin/isabelle env make -f IsaMakefile $(pwd)/standalone-parser/table.ML \
+    || die "Couldn't generate table.ML for standalone parser"
+cp standalone-parser/table.ML $outputdir/src/c-parser/standalone-parser
+echo "Cleaning up standalone-parser's Makefile"
+sed '
+  1i\
+  SML_COMPILER ?= mlton
+  /^include/d
+  /General.table.ML/,/pretty-printing/d
+  /ISABELLE_HOME/d
+  /CLEAN_TARGETS/s|\$(STP_PFX)/table.ML||
+' < standalone-parser/Makefile > $outputdir/src/c-parser/standalone-parser/Makefile
+popd > /dev/null
+
+#dolicensing ()
+#{
+#    pushd "$1" > /dev/null 2>&1 ||
+#        die "Tried to dolicensing in non-existent directory $1"
+#
+#    echo "Checking for unlicensed files in $1"
+#    $TOPLEVEL_DIR/misc/license-tool/check_license.py --exclude $TOPLEVEL_DIR/c-parser/.licenseignore . ||
+#        { /bin/rm -r $outputdir ; die "Unlicensed files detected"; }
+#
+#    echo "Adding licence information in $(basename $1)."
+#
+#    $TOPLEVEL_DIR/misc/license-tool/expand_license.py $TOPLEVEL_DIR/c-parser/release-licensing . ||
+#        die "Licence expansion failed."
+#
+#    popd > /dev/null
+#}
+#
+#dolicensing $outputdir/src/c-parser
+#dolicensing $outputdir/src/lib
+
+
+echo "Making PDF of ctranslation file."
+cd $outputdir/src/c-parser/doc
+make ctranslation.pdf > /dev/null
+/bin/rm ctranslation.{log,aux,blg,bbl,toc}
+mv ctranslation.pdf $outputdir/doc
+
+popd > /dev/null
+
+lookforlicense=$(find $outputdir \! -name '*.lex.sml' \! -name '*.grm.sml' \! -type d -exec grep -q @LICENSE \{\} \; -print)
+if [ -n "$lookforlicense" ]
+then
+    die "### @LICENSE detected in file(s) $lookforlicense"
+else
+    echo "No @LICENSEs remain unexpanded - good."
+fi
+
+lookformichaeln=$(find $outputdir \! -name RELEASES \! -type d -exec grep -q /michaeln \{\} \; -print)
+if [ -n "$lookformichaeln" ]
+then
+    die "### /michaeln detected in file(s) $lookformichaeln"
+else
+    echo "No occurrences of \"/michaeln\" - good."
+fi
+
+echo -n "Compressing into $stem.tar.gz: "
+mv $tmpdir/c-parser $tmpdir/$stem
+
+pushd $tmpdir
+$TAR --owner=nobody --group=nogroup -cvzf ${stem}.tar.gz $stem | while read ; do echo -n "." ; done
+popd
+/bin/mv -f -v $tmpdir/${stem}.tar.gz .
+
+echo
+echo Done.
