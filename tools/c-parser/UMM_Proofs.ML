@@ -223,7 +223,6 @@ fun umm_mem_type recname recty typtag_thm tag_def_thm thy = let
   val ctxt0 = thy2ctxt thy
   val mem_type_instance_t =
       Logic.mk_of_class(recty, "CTypesDefs.mem_type")
-  val mem_type_instance_ct = cterm_of thy mem_type_instance_t
 
   (* typ_tag TYPE('a struct_scheme) = struct_tag_def *)
   val t_def_thms = [typtag_thm, tag_def_thm, @{thm "align_of_def"},
@@ -299,7 +298,7 @@ fun umm_mem_type recname recty typtag_thm tag_def_thm thy = let
   val _ = writeln "About to mem_type..."
 
   val is_mem_type_thm =
-      Goal.prove_internal ctxt0 [] mem_type_instance_ct
+      Goal.prove_future ctxt0 [] [] mem_type_instance_t
        (fn _ => DETERM ((
                 Class.intro_classes_tac [] THEN
                 dprint_tac "t_def" THEN
@@ -333,6 +332,7 @@ fun umm_packed_type recname recty typtag_thm tag_def_thm fgthms thy = let
   val ctxt0 = thy2ctxt thy
   val pt_ss = (ctxt0 addsimps ([typtag_thm, tag_def_thm] @ packed_type_simps @ fgthms))
 
+  (* Try to solve. If we fail, we catch the exception and ignore. *)
   val is_packed_type_thm =
       Goal.prove_internal ctxt0 [] packed_type_instance_ct
        (fn _ => DETERM ((
@@ -490,8 +490,8 @@ fun umm_struct_calculation ((recname, flds), st, thy) = let
   val _ = phase "FG"
   val _ = writeln "About to fg..."
   val fgthms = let
-    fun fg_thm f = Goal.prove_internal (thy2ctxt thy) []
-      (cterm_of thy (mk_prop (mk_fg_cons_tm recty (#2 f) (#1 f) thy)))
+    fun fg_thm f = Goal.prove_future (thy2ctxt thy) [] []
+      (mk_prop (mk_fg_cons_tm recty (#2 f) (#1 f) thy))
       (fn _ => asm_full_simp_tac
           ((thy2ctxt thy) addsimps [@{thm "fg_cons_def"}, @{thm comp_def}]) 1)
   in
@@ -583,7 +583,7 @@ in
 
       val instance_t = Logic.mk_of_class(ty, szclass)
       val instance_thm =
-          Goal.prove_internal (thy2ctxt thy) [] (cterm_of thy instance_t) (tac thy)
+          Goal.prove_future (thy2ctxt thy) [] [] instance_t (tac thy)
       val thy = Axclass.add_arity instance_thm thy
       val st = add_szclass_done (tyname, szclass) st
     in
