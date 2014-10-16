@@ -16,6 +16,8 @@ definition
   "typ_clear_region ptr bits d \<equiv> 
   \<lambda>x. (fst (d x), if x \<in> {ptr..+2 ^ bits} then empty else (snd (d x)))"
 
+declare [[calculate_modifies_proofs = false]]
+
 install_C_file "ptr_auxupd.c"
 
 (* FIXME: modifies proof fails, doesn't recognise AUXUPD *)
