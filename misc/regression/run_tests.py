@@ -18,13 +18,27 @@
 from __future__ import print_function
 
 import argparse
+import atexit
+import datetime
 import fnmatch
 import os
+import signal
 import subprocess
 import sys
 import testspec
+import time
 import traceback
-import datetime
+
+# Try importing psutil.
+PS_UTIL_AVAILABLE = False
+try:
+    import psutil
+    from psutil import NoSuchProcess
+    PS_UTIL_AVAILABLE = True
+    if not hasattr(psutil.Process, "children") and hasattr(psutil.Process, "get_children"):
+        psutil.Process.children = psutil.Process.get_children
+except ImportError:
+    pass
 
 ANSI_RESET = "\033[0m"
 ANSI_RED = "\033[31;1m"
@@ -48,6 +62,45 @@ def which(file):
     return None
 
 #
+# Kill a process and all of its children.
+#
+# We attempt to handle races where a PID goes away while we
+# are looking at it, but not where a PID has been reused.
+#
+def kill_family(parent_pid):
+    if not PS_UTIL_AVAILABLE:
+        return
+
+    # Find process.
+    try:
+        process = psutil.Process(parent_pid)
+    except NoSuchProcess:
+        # Race. Nothing more to do.
+        return
+
+    # SIGSTOP everyone first.
+    try:
+        process.suspend()
+    except NoSuchProcess:
+        # Race. Nothing more to do.
+        return
+    process_list = [process]
+    for child in process.children(recursive=True):
+        try:
+            child.suspend()
+        except NoSuchProcess:
+            # Race.
+            pass
+        else:
+            process_list.append(child)
+
+
+    # Now SIGKILL everyone.
+    process_list.reverse()
+    for p in process_list:
+        p.send_signal(signal.SIGKILL)
+
+#
 # Run a single test.
 #
 # Return a tuple of (success, log, time_taken).
@@ -58,10 +111,6 @@ def which(file):
 def run_test(test, verbose=False):
     # Construct the base command.
     command = ["bash", "-c", test.command]
-
-    # If we have a "timeout" program, use that to enforce the timeout.
-    if which("timeout") != None:
-        command = [which("timeout"), "-k", "5", str(test.timeout)] + command
 
     # If we have a "pidspace" program, use that to ensure that programs
     # that double-fork can't continue running after the parent command
@@ -95,6 +144,13 @@ def run_test(test, verbose=False):
         if verbose:
             print(output)
         return (False, output, datetime.datetime.now() - start_time)
+
+    # If our program exits for some reason, attempt to kill the process.
+    atexit.register(lambda: kill_family(process.pid))
+
+    # Setup an alarm at the timeout.
+    signal.signal(signal.SIGALRM, lambda signum, _: kill_family(process.pid))
+    signal.alarm(test.timeout)
 
     # Wait for the command to finish.
     (output, _) = process.communicate()
@@ -180,6 +236,17 @@ def main():
         if len(bad_names) > 0:
             parser.error("Unknown test names: %s" % (", ".join(sorted(bad_names))))
         tests_to_run = [t for t in tests if t.name in desired_names]
+
+    # If running at least one test, and psutil is not available, print a warning.
+    if len(tests_to_run) > 0 and not PS_UTIL_AVAILABLE:
+        print("\n"
+              "Warning: 'psutil' module not available. Processes may not be correctly\n"
+              "stopped. Run\n"
+              "\n"
+              "    pip install --user psutil\n"
+              "\n"
+              "to install.\n"
+              "\n")
 
     # Run the tests.
     print("Running %d test(s)...\n" % len(tests_to_run))
