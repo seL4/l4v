@@ -47,7 +47,7 @@ cparser_test: testfiles/ROOT .FORCE
 	$(ISABELLE_TOOL) build -d ../.. -d testfiles -b -v CParserTest
 testfiles/ROOT: testfiles testfiles/*.c testfiles/*.thy ../../misc/scripts/gen_isabelle_root.py
 	python ../../misc/scripts/gen_isabelle_root.py -i testfiles -o testfiles/ROOT -s CParserTest -b CParser
-all_tests.thy: testfiles testfiles/*.c ../misc/gen_isabelle_root.py
+all_tests.thy: testfiles testfiles/*.c ../../misc/scripts/gen_isabelle_root.py
 	python ../../misc/scripts/gen_isabelle_root.py -T -o $@ -b CParser -i testfiles
 
 GRAMMAR_PRODUCTS = l4c.lex.sml l4c.grm.sml l4c.grm.sig
