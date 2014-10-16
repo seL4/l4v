@@ -50,6 +50,7 @@ sig
 
   val sorry_modifies_proofs : bool ref
 
+  val calculate_modifies_proofs : bool Config.T
 end
 
 structure Modifies_Proofs : MODIFIES_PROOFS =
@@ -61,6 +62,11 @@ type csenv = ProgramAnalysis.csenv
 val time_limit = ref 0
 
 val sorry_modifies_proofs = ref false
+
+(* Config item to determine if "modifies" thms should be generated. *)
+val (calculate_modifies_proofs, calculate_modifies_proofs_setup) =
+    Attrib.config_bool (Binding.name "calculate_modifies_proofs") (K true)
+val _ = Context.>> (Context.map_theory calculate_modifies_proofs_setup)
 
 fun gen_modify_goalstring csenv fname modstrings = let
   fun foldthis (vname, vset) =
@@ -345,13 +351,17 @@ in
   lthy
 end
 
-fun prove_all_modifies_goals thy csenv includeP tyargs globloc = let
-  val lthy = Named_Target.init globloc thy
-in
-  lthy
-    |> prove_all_modifies_goals_local csenv includeP tyargs
-    |> Local_Theory.restore
-    |> Local_Theory.exit_global
-end
+fun prove_all_modifies_goals thy csenv includeP tyargs globloc =
+  if Config.get_global thy calculate_modifies_proofs then
+    let
+      val lthy = Named_Target.init globloc thy
+    in
+      lthy
+        |> prove_all_modifies_goals_local csenv includeP tyargs
+        |> Local_Theory.restore
+        |> Local_Theory.exit_global
+    end
+  else
+    thy
 
 end (* struct *)
