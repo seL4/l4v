@@ -428,7 +428,7 @@ definition
   valid_struct_field
     :: "('s \<Rightarrow> 't)
            \<Rightarrow> string list
-           \<Rightarrow> (('p::c_type) \<Rightarrow> ('f::c_type))
+           \<Rightarrow> (('p::packed_type) \<Rightarrow> ('f::packed_type))
            \<Rightarrow> (('f \<Rightarrow> 'f) \<Rightarrow> ('p \<Rightarrow> 'p))
            \<Rightarrow> ('s \<Rightarrow> heap_raw_state)
            \<Rightarrow> ((heap_raw_state \<Rightarrow> heap_raw_state) \<Rightarrow> 's \<Rightarrow> 's)
@@ -443,7 +443,7 @@ definition
 
 lemma valid_struct_fieldI [intro]:
   fixes st :: "'s \<Rightarrow> 't"
-  fixes field_getter :: "('a::c_type) \<Rightarrow> ('f::c_type)"
+  fixes field_getter :: "('a::packed_type) \<Rightarrow> ('f::packed_type)"
   shows "\<lbrakk>
      \<And>s f. f (field_getter s) = (field_getter s) \<Longrightarrow> field_setter f s = s;
      \<And>s f f'. f (field_getter s) = f' (field_getter s) \<Longrightarrow> field_setter f s = field_setter f' s;
@@ -602,7 +602,7 @@ lemma struct_rewrite_guard_split [heap_abs]:
   done
 
 lemma struct_rewrite_guard_c_guard_field [heap_abs]:
-  "\<lbrakk> valid_struct_field st field_name (field_getter :: ('a :: c_type) \<Rightarrow> ('f :: c_type)) field_setter t_hrs t_hrs_update;
+  "\<lbrakk> valid_struct_field st field_name (field_getter :: ('a :: packed_type) \<Rightarrow> ('f :: packed_type)) field_setter t_hrs t_hrs_update;
      struct_rewrite_expr P p' p;
      struct_rewrite_guard Q (\<lambda>s. c_guard (p' s)) \<rbrakk> \<Longrightarrow>
    struct_rewrite_guard (\<lambda>s. P s \<and> Q s)
@@ -633,7 +633,7 @@ lemma c_guard_array:
   done
 
 lemma struct_rewrite_guard_c_guard_Array_field [heap_abs]:
-  "\<lbrakk> valid_struct_field st field_name (field_getter :: ('a :: c_type) \<Rightarrow> ('f::oneMB_size ['n::fourthousand_count])) field_setter t_hrs t_hrs_update;
+  "\<lbrakk> valid_struct_field st field_name (field_getter :: ('a :: packed_type) \<Rightarrow> ('f::oneMB_packed ['n::fourthousand_count])) field_setter t_hrs t_hrs_update;
      struct_rewrite_expr P p' p;
      struct_rewrite_guard Q (\<lambda>s. c_guard (p' s)) \<rbrakk> \<Longrightarrow>
    struct_rewrite_guard (\<lambda>s. P s \<and> Q s \<and> 0 \<le> k \<and> nat k < CARD('n))
@@ -682,7 +682,7 @@ lemma struct_rewrite_expr_basecase_h_val [heap_abs]:
   by (simp add: struct_rewrite_expr_def)
 
 lemma struct_rewrite_expr_field [heap_abs]:
-  "\<lbrakk> valid_struct_field st field_name (field_getter :: ('a :: mem_type) \<Rightarrow> ('f :: mem_type)) field_setter t_hrs t_hrs_update;
+  "\<lbrakk> valid_struct_field st field_name (field_getter :: ('a :: packed_type) \<Rightarrow> ('f :: packed_type)) field_setter t_hrs t_hrs_update;
      struct_rewrite_expr P p' p;
      struct_rewrite_expr Q a (\<lambda>s. h_val (hrs_mem (t_hrs s)) (p' s)) \<rbrakk>
    \<Longrightarrow> struct_rewrite_expr (\<lambda>s. P s \<and> Q s) (\<lambda>s. field_getter (a s))
@@ -698,7 +698,7 @@ lemma struct_rewrite_expr_field [heap_abs]:
 
 lemma struct_rewrite_expr_Array_field [heap_abs]:
   "\<lbrakk> valid_struct_field st field_name
-                        (field_getter :: ('a :: mem_type) \<Rightarrow> 'f::oneMB_size ['n::fourthousand_count])
+                        (field_getter :: ('a :: packed_type) \<Rightarrow> 'f::oneMB_packed ['n::fourthousand_count])
                         field_setter t_hrs t_hrs_update;
      struct_rewrite_expr P p' p;
      struct_rewrite_expr Q a (\<lambda>s. h_val (hrs_mem (t_hrs s)) (p' s)) \<rbrakk>
@@ -747,7 +747,7 @@ lemma heap_update_field_unpacked:
      export_uinfo t = export_uinfo (typ_info_t TYPE('b::mem_type)) \<rbrakk> \<Longrightarrow>
    heap_update (Ptr &(p\<rightarrow>f) :: 'b ptr) v hp =
    heap_update p (update_ti t (to_bytes_p v) (h_val hp p)) hp"
-  sorry
+  oops
 
 (* \<approx> heap_update_Array_element *)
 lemma heap_update_Array_element_unpacked:
@@ -755,7 +755,7 @@ lemma heap_update_Array_element_unpacked:
    heap_update (ptr_coerce p' +\<^sub>p int n) w hp =
    heap_update (p'::('a::oneMB_size['b::fourthousand_count]) ptr)
                (Arrays.update (h_val hp p') n w) hp"
-  sorry
+  oops
 
 (* helper *)
 lemma read_write_valid_hrs_mem:
@@ -814,7 +814,7 @@ lemma heap_lift_wrap_h_val_skip_array [heap_abs]:
 
 (* These are valid rules, but produce redundant output. *)
 lemma struct_rewrite_modifies_field__unused:
-  "\<lbrakk> valid_struct_field (st :: 's \<Rightarrow> 't) field_name (field_getter :: ('a::mem_type) \<Rightarrow> ('f::mem_type)) field_setter t_hrs t_hrs_update;
+  "\<lbrakk> valid_struct_field (st :: 's \<Rightarrow> 't) field_name (field_getter :: ('a::packed_type) \<Rightarrow> ('f::packed_type)) field_setter t_hrs t_hrs_update;
      struct_rewrite_expr P p' p;
      struct_rewrite_expr Q f' f;
      struct_rewrite_modifies R
@@ -839,7 +839,7 @@ lemma struct_rewrite_modifies_field__unused:
   apply (rule read_write_valid_def3[where r = t_hrs and w = t_hrs_update])
    apply assumption
   apply (rule read_write_valid_def3[OF read_write_valid_hrs_mem])
-  apply (subst heap_update_field_unpacked)
+  apply (subst heap_update_field)
      apply assumption+
    apply (simp add: export_tag_adjust_ti(1)[rule_format] read_write_valid_fg_cons)
   apply (subst update_ti_update_ti_t)
@@ -850,7 +850,7 @@ lemma struct_rewrite_modifies_field__unused:
   done
 
 lemma struct_rewrite_modifies_Array_field__unused:
-  "\<lbrakk> valid_struct_field (st :: 's \<Rightarrow> 't) field_name (field_getter :: ('a::mem_type) \<Rightarrow> (('f::oneMB_size)['n::fourthousand_count])) field_setter t_hrs t_hrs_update;
+  "\<lbrakk> valid_struct_field (st :: 's \<Rightarrow> 't) field_name (field_getter :: ('a::packed_type) \<Rightarrow> (('f::oneMB_packed)['n::fourthousand_count])) field_setter t_hrs t_hrs_update;
      struct_rewrite_expr P p' p;
      struct_rewrite_expr Q f' f;
      struct_rewrite_modifies R
@@ -879,9 +879,9 @@ lemma struct_rewrite_modifies_Array_field__unused:
    apply assumption
   apply (rule read_write_valid_def3[OF read_write_valid_hrs_mem])
   apply (case_tac k, clarsimp)
-  apply (subst heap_update_Array_element_unpacked)
+  apply (subst heap_update_Array_element[symmetric])
     apply assumption
-   apply (subst heap_update_field_unpacked)
+   apply (subst heap_update_field)
       apply assumption+
     apply (simp add: export_tag_adjust_ti(1)[rule_format] read_write_valid_fg_cons)
    apply (subst h_val_field_from_bytes')
@@ -911,7 +911,7 @@ lemma struct_rewrite_modifies_Array_field__unused:
  * Are we lucky, or presumptuous?
  *)
 lemma struct_rewrite_modifies_field [heap_abs]:
-  "\<lbrakk> valid_struct_field (st :: 's \<Rightarrow> 't) field_name (field_getter :: ('a::mem_type) \<Rightarrow> ('f::mem_type)) field_setter t_hrs t_hrs_update;
+  "\<lbrakk> valid_struct_field (st :: 's \<Rightarrow> 't) field_name (field_getter :: ('a::packed_type) \<Rightarrow> ('f::packed_type)) field_setter t_hrs t_hrs_update;
      struct_rewrite_expr P p' p;
      struct_rewrite_expr Q f' f;
      \<And>s. heap_lift__wrap_h_val (h_val_p' s) (h_val (hrs_mem (t_hrs s)) (p' s));
@@ -937,7 +937,7 @@ lemma struct_rewrite_modifies_field [heap_abs]:
   apply (rule read_write_valid_def3[where r = t_hrs and w = t_hrs_update])
    apply assumption
   apply (rule read_write_valid_def3[OF read_write_valid_hrs_mem])
-  apply (subst heap_update_field_unpacked)
+  apply (subst heap_update_field)
      apply assumption+
    apply (simp add: export_tag_adjust_ti(1)[rule_format] read_write_valid_fg_cons)
    apply (subst h_val_field_from_bytes')
@@ -953,7 +953,7 @@ lemma struct_rewrite_modifies_field [heap_abs]:
 
 (* FIXME: this is nearly a duplicate. Would a standalone array rule work instead? *)
 lemma struct_rewrite_modifies_Array_field [heap_abs]:
-  "\<lbrakk> valid_struct_field (st :: 's \<Rightarrow> 't) field_name (field_getter :: ('a::mem_type) \<Rightarrow> (('f::oneMB_size)['n::fourthousand_count])) field_setter t_hrs t_hrs_update;
+  "\<lbrakk> valid_struct_field (st :: 's \<Rightarrow> 't) field_name (field_getter :: ('a::packed_type) \<Rightarrow> (('f::oneMB_packed)['n::fourthousand_count])) field_setter t_hrs t_hrs_update;
      struct_rewrite_expr P p' p;
      struct_rewrite_expr Q f' f;
      \<And>s. heap_lift__wrap_h_val (h_val_p' s) (h_val (hrs_mem (t_hrs s)) (p' s));
@@ -984,9 +984,9 @@ lemma struct_rewrite_modifies_Array_field [heap_abs]:
    apply assumption
   apply (rule read_write_valid_def3[OF read_write_valid_hrs_mem])
   apply (case_tac k, clarsimp)
-   apply (subst heap_update_Array_element_unpacked)
+   apply (subst heap_update_Array_element[symmetric])
     apply assumption
-   apply (subst heap_update_field_unpacked)
+   apply (subst heap_update_field)
       apply assumption+
     apply (simp add: export_tag_adjust_ti(1)[rule_format] read_write_valid_fg_cons)
    apply (subst h_val_field_from_bytes')
