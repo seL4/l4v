@@ -37,12 +37,12 @@ let
   |> fold (Thm.elim_implies o Thm.assume)  (asms @ Bs)
   |> Goal.conclude
   |> Drule.implies_intr_list asms
-  |> Goal.protect
+  |> Goal.protect 0
   |> Drule.implies_intr_list Bs
   |> Drule.implies_intr_list [Drule.protect concl]
   |> singleton (Variable.export ctxt' ctxt)  
   
-  val composed = new_thm OF [Goal.protect thm]
+  val composed = new_thm OF [Goal.protect 0 thm]
   
  in
    composed end
@@ -80,14 +80,14 @@ fun focus use_asms state =
       let
         val res = (retrofit ctxt th)
       in
-        Goal.protect (Conjunction.intr (Drule.mk_term (Thm.cprop_of res)) res) end;
+        Goal.protect 0 (Conjunction.intr (Drule.mk_term (Thm.cprop_of res)) res) end;
 
     val goal = Var (("guess", 0), propT);
       
     val before_qed = SOME (Method.Basic (fn ctxt => (SIMPLE_METHOD (PRIMITIVE (do_retrofit ctxt)))))
         
     fun after_qed [[_, res]] _ =  state
-    |> Proof.refine (Method.primitive_text (K res)) |> Seq.hd
+    |> Proof.refine (Method.primitive_text (K (K res))) |> Seq.hd
     
     val concl = 
       let 
@@ -100,13 +100,13 @@ fun focus use_asms state =
       "subgoal" before_qed after_qed [(Thm.empty_binding, [Logic.mk_term goal, goal])]
     |> Proof.put_thms false (Auto_Bind.assmsN,SOME (Assumption.all_prems_of (#context focus)))
     |> Proof.bind_terms [(("concl",0),SOME concl)]
-    |> Proof.refine (Method.primitive_text (K focused_goal')) |> Seq.hd
+    |> Proof.refine (Method.primitive_text (K (K focused_goal'))) |> Seq.hd
   end;
   
 val _ =
   Outer_Syntax.command @{command_spec "focus"} "focus subgoal"
     ((Scan.optional (Args.parens (Args.$$$ "no_asm") >> K false) true) >> 
-      (fn mode => Toplevel.print o Toplevel.proofs (Seq.make_results o Seq.single o focus mode)));     
+      (fn mode => Toplevel.proofs (Seq.make_results o Seq.single o focus mode)));
   
   *}  
   
@@ -124,3 +124,5 @@ schematic_lemma test: "\<And>x. Q x \<and> ?P x\<Longrightarrow> ?P x \<and> Q x
     apply (rule assms)
   done
 done
+
+end
