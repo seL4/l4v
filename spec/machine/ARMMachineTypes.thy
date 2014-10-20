@@ -112,29 +112,6 @@ end
 
 (*>*)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 (*>*)
 definition
 "capRegister \<equiv> R0"
@@ -337,9 +314,5 @@ instance by (intro_classes, simp add: enum_alt_vmpage_size)
 end
 
 (*>*)
-
-
-
-
 
 end
