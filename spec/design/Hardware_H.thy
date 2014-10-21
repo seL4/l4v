@@ -358,6 +358,7 @@ end
 
 (*>*)
 
+
 definition
 wordFromPDE :: "pde \<Rightarrow> machine_word"
 where

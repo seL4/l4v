@@ -271,8 +271,6 @@ where
   | ARMSuperSection \<Rightarrow>    24
   )"
 
-
-
 (* vmpage_size instance proofs *)
 (*<*)
 instantiation vmpage_size :: enum begin
@@ -314,5 +312,6 @@ instance by (intro_classes, simp add: enum_alt_vmpage_size)
 end
 
 (*>*)
+
 
 end

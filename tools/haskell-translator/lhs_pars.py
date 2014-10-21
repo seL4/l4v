@@ -311,14 +311,18 @@ def def_lines (d, call):
 		return L
 			
 	if call.instanceproofs:
-		L = []
 		if not call.bodies_only:
-			L.extend (flatten_tree (d.get('instance_proofs', [])))
-		if not (call.decls_only or call.bodies_only):
-			L.append ('')
+			instance_proofs = flatten_tree (d.get('instance_proofs', []))
+		else:
+			instance_proofs = []
+
 		if not call.decls_only:
-			L.extend (flatten_tree (d.get('instance_extras', [])))
-		return L
+			instance_extras = flatten_tree (d.get('instance_extras', []))
+		else:
+			instance_extras = []
+
+		newline_needed = len(instance_proofs) > 0 and len(instance_extras) > 0
+		return instance_proofs + ([''] if newline_needed else []) + instance_extras
 	
 	if call.body:
 		return get_lambda_body_lines (d)
