@@ -1,10 +1,3 @@
-ISABELLE 2014 update branch
-===========================
-
-Under development. Here be dragons.
-
-
-
 [The L4.verified Proofs][1]
 ===========================
 
