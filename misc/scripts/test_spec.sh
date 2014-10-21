@@ -63,7 +63,7 @@ function send_filenames () {
 
 # Assert files $1 and $2 are the same.
 function test_files () {
-	if diff -u $1 $2
+	if diff -B -u $1 $2
 	then
 		true
 	else
