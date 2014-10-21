@@ -30,6 +30,9 @@ endif
 ifndef ISABELLE_PROCESS
   export ISABELLE_PROCESS=${ISABELLE_HOME}/bin/isabelle-process
 endif
+ifndef ISABELLE_OUTPUT
+  export ISABELLE_OUTPUT=$(shell ${ISABELLE_TOOL} getenv -b ISABELLE_OUTPUT)
+endif
 
 # Setup rules for the heaps.
 $(HEAPS): .FORCE
@@ -44,17 +47,13 @@ clean: clean-images
 .PHONY: clean
 
 clean-images:
-	@echo "Not implemented yet."
-	exit 1
-	#rm -f $(HEAPS:%=$(ISABELLE_OUTPUT)/%)
-	#rm -f $(HEAPS:%=$(ISABELLE_OUTPUT)/log/%.gz)
-	#rm -f $(HEAPS:%=$(ISABELLE_OUTPUT)/log/%)
+	rm -f $(HEAPS:%=$(ISABELLE_OUTPUT)/%)
+	rm -f $(HEAPS:%=$(ISABELLE_OUTPUT)/log/%.gz)
+	rm -f $(HEAPS:%=$(ISABELLE_OUTPUT)/log/%)
 .PHONY: clean-images
 
 realclean: clean
-	@echo "Not implemented yet."
-	exit 1
-	#rm -rf $(ISABELLE_OUTPUT)
+	rm -rf $(ISABELLE_OUTPUT)
 .PHONY: realclean
 
 #
