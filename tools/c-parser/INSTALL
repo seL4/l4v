@@ -11,7 +11,7 @@
 #
 # Installation Instructions for the C-Parser
 
-This code requires Isabelle2013-2.
+This code requires Isabelle2014.
 
 To build the main heap CParser, use the following command in this directory (src/c-parser).
 
