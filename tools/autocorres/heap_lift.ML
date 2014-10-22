@@ -520,24 +520,52 @@ let
           #setter field_info,
           #t_hrs_getter prog_info,
           #t_hrs_setter prog_info)
+    |> (fn prop =>
+         (* HACK: valid_struct_field currently works only for packed types,
+          * so typecheck the prop first *)
+         let val _ = Syntax.check_term lthy prop in
+         [Goal.prove_future lthy [] [] prop
+            (fn params =>
+               (rtac @{thm valid_struct_fieldI} 1) THEN
+               (* Need some extra thms from the records package for our struct type. *)
+               (EqSubst.eqsubst_tac lthy [0]
+                  [hd (Proof_Context.get_thms lthy (struct_name ^ "_idupdates")) RS @{thm sym}] 1
+                  THEN asm_full_simp_tac lthy 1) THEN
+               (FIRST (Proof_Context.get_thms lthy (struct_name ^ "_fold_congs")
+                       |> map (fn t => rtac (t OF @{thms refl refl}) 1))
+                  THEN asm_full_simp_tac lthy 1) THEN
+               (REPEAT (subgoal_solver_tac (#context params))))]
+         end handle _ => [])
+
+  (* Generate "valid_struct_field_legacy" for each field of each struct. *)
+  fun mk_valid_struct_field_legacy_thm typ (field_info : HeapLiftBase.field_info) =
+    @{mk_term "Trueprop (valid_struct_field_legacy ?st [?fname] ?fgetter (%v. ?fsetter (%_. v)) ?getter ?setter ?valid_getter ?valid_setter ?t_hrs ?t_hrs_update)"
+        (st, fname, fgetter, fsetter, getter, setter, valid_getter, valid_setter, t_hrs, t_hrs_update) }
+      (#lift_fn_full heap_info,
+          Utils.encode_isa_string (#name field_info),
+          #getter field_info,
+          #setter field_info,
+          get_heap_getter heap_info typ,
+          get_heap_setter heap_info typ,
+          get_heap_valid_getter heap_info typ,
+          get_heap_valid_setter heap_info typ,
+          #t_hrs_getter prog_info,
+          #t_hrs_setter prog_info)
     |> (fn prop => Goal.prove_future lthy [] [] prop
-         (fn params =>
-             (rtac @{thm valid_struct_fieldI} 1) THEN
-             (* Need some extra thms from the records package for our struct type. *)
-             (EqSubst.eqsubst_tac lthy [0]
-                [hd (Proof_Context.get_thms lthy (struct_name ^ "_idupdates")) RS @{thm sym}] 1
-                THEN asm_full_simp_tac lthy 1) THEN
-             (FIRST (Proof_Context.get_thms lthy (struct_name ^ "_fold_congs")
-                     |> map (fn t => rtac (t OF @{thms refl refl}) 1))
-                THEN asm_full_simp_tac lthy 1) THEN
-             (REPEAT (subgoal_solver_tac (#context params)))))
+           (fn params =>
+               (rtac @{thm valid_struct_field_legacyI} 1) THEN (
+                   REPEAT (subgoal_solver_tac (#context params)))))
 
   (* Make thms for all fields of structs in our heap. *)
   fun valid_struct_abs_thms T =
     case (Typtab.lookup (#struct_types heap_info) T) of
       NONE => []
     | SOME struct_info =>
-        map (mk_valid_struct_field_thm (#name struct_info) T) (#field_info struct_info)
+        map (fn field =>
+                  mk_valid_struct_field_thm (#name struct_info) T field
+                  @ [mk_valid_struct_field_legacy_thm T field])
+            (#field_info struct_info)
+        |> List.concat
   val valid_field_thms =
     map valid_struct_abs_thms heap_types |> List.concat
 
@@ -569,6 +597,7 @@ let
         valid_global_field_thms]
     |> filter (prop_of #> exists_subterm (fn x => case x of Const (@{const_name "valid_globals_field"}, _) => true | _ => false) #> not)
     |> filter (prop_of #> exists_subterm (fn x => case x of Const (@{const_name "valid_struct_field"}, _) => true | _ => false) #> not)
+    |> filter (prop_of #> exists_subterm (fn x => case x of Const (@{const_name "valid_struct_field_legacy"}, _) => true | _ => false) #> not)
     |> filter (prop_of #> exists_subterm (fn x => case x of Const (@{const_name "valid_typ_heap"}, _) => true | _ => false) #> not)
        ) [base_rules, base_nolift_rules]
 

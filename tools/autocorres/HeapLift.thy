@@ -424,6 +424,11 @@ lemma read_write_valid_fg_cons:
  * Assert the given field ("field_getter", "field_setter") of the given structure
  * can be abstracted into the heap, and then accessed as a HOL object.
  *)
+
+(*
+ * This can deal with nested structures, but they must be packed_types.
+ * FIXME: generalise this framework to mem_types
+ *)
 definition
   valid_struct_field
     :: "('s \<Rightarrow> 't)
@@ -462,6 +467,50 @@ lemma valid_struct_fieldI [intro]:
   apply (safe | assumption | rule ext)+
   done
 
+(*
+ * This cannot deal with struct nesting, but works for general mem_types.
+ *)
+definition
+  valid_struct_field_legacy
+    :: "('s \<Rightarrow> 't)
+           \<Rightarrow> string list
+           \<Rightarrow> ('p \<Rightarrow> ('f::c_type))
+           \<Rightarrow> ('f \<Rightarrow> 'p \<Rightarrow> 'p)
+           \<Rightarrow> ('t \<Rightarrow> (('p::c_type) ptr \<Rightarrow> 'p))
+           \<Rightarrow> ((('p ptr \<Rightarrow> 'p) \<Rightarrow> ('p ptr \<Rightarrow> 'p)) \<Rightarrow> 't \<Rightarrow> 't)
+           \<Rightarrow> ('t \<Rightarrow> (('p::c_type) ptr \<Rightarrow> bool))
+           \<Rightarrow> ((('p ptr \<Rightarrow> bool) \<Rightarrow> ('p ptr \<Rightarrow> bool)) \<Rightarrow> 't \<Rightarrow> 't)
+           \<Rightarrow> ('s \<Rightarrow> heap_raw_state)
+           \<Rightarrow> ((heap_raw_state \<Rightarrow> heap_raw_state) \<Rightarrow> 's \<Rightarrow> 's)
+           \<Rightarrow> bool"
+where
+  "valid_struct_field_legacy st field_name field_getter field_setter
+            getter setter vgetter vsetter t_hrs t_hrs_update \<equiv>
+      (\<forall>s p. vgetter (st s) p \<longrightarrow>
+          h_val (hrs_mem (t_hrs s)) (Ptr &(p\<rightarrow>field_name))
+              = field_getter (getter (st s) p))
+      \<and> (\<forall>s p val. vgetter (st s) p \<longrightarrow>
+                 st (t_hrs_update (hrs_mem_update (heap_update (Ptr &(p\<rightarrow>field_name)) val)) s) =
+                           setter (\<lambda>old. old(p := (field_setter val (old p)))) (st s))
+      \<and> (\<forall>s p. vgetter (st s) p \<longrightarrow> c_guard p)
+      \<and> (\<forall>p. c_guard (p :: 'p ptr) \<longrightarrow> c_guard (Ptr &(p\<rightarrow>field_name) :: 'f ptr))"
+
+lemma valid_struct_field_legacyI [intro]:
+  fixes st :: "'s \<Rightarrow> 't"
+  fixes field_getter :: "('a::c_type) \<Rightarrow> ('f::c_type)"
+  shows "\<lbrakk> \<And>s p. vgetter (st s) p \<Longrightarrow>
+        h_val (hrs_mem (t_hrs s)) (Ptr &(p\<rightarrow>field_name))  = field_getter (getter (st s) p);
+     \<And>s p val. vgetter (st s) p \<Longrightarrow>
+        st (t_hrs_update (hrs_mem_update (heap_update (Ptr &(p\<rightarrow>field_name)) val)) s) =
+             setter (\<lambda>old. old(p := (field_setter val (old p)))) (st s);
+     \<And>s p. vgetter (st s) p \<Longrightarrow> c_guard p;
+     \<And>(p::'a ptr). c_guard p \<Longrightarrow> c_guard (Ptr &(p\<rightarrow>field_name) :: 'f ptr) \<rbrakk> \<Longrightarrow>
+    valid_struct_field_legacy st field_name field_getter field_setter getter setter vgetter vsetter t_hrs t_hrs_update"
+  apply (fastforce simp: valid_struct_field_legacy_def)
+  done
+
+
+
 lemma valid_typ_heap_get_hvalD:
   "\<lbrakk> valid_typ_heap st getter setter vgetter vsetter
         t_hrs t_hrs_update; vgetter (st s) p \<rbrakk> \<Longrightarrow>
@@ -476,6 +525,7 @@ lemma valid_typ_heap_t_hrs_updateD:
                            setter (\<lambda>x. x(p := v')) (st s)"
   apply (clarsimp simp: valid_typ_heap_def)
   done
+
 
 lemma heap_abs_expr_guard [heap_abs]:
   "\<lbrakk> valid_typ_heap st getter setter vgetter vsetter t_hrs t_hrs_update;
@@ -534,37 +584,37 @@ lemma heap_abs_modifies_heap_update [heap_abs]:
   apply (metis valid_typ_heap_t_hrs_updateD)
   done
 
-(*
-lemma abs_expr_field_getter [heap_abs]:
-  "\<lbrakk> valid_struct_field st field_name field_getter field_setter
+
+(* Legacy rules for non-packed types. *)
+lemma abs_expr_field_getter_legacy [heap_abs]:
+  "\<lbrakk> valid_struct_field_legacy st field_name field_getter field_setter
                      getter setter vgetter vsetter t_hrs t_hrs_setter;
       abs_expr st P a c \<rbrakk> \<Longrightarrow>
-   abs_expr st (P and (\<lambda>s. vgetter s (a s))) (\<lambda>s. field_getter (getter s (a s)))
-              (\<lambda>s. h_val (hrs_mem (t_hrs s)) (Ptr &((c s)\<rightarrow>field_name)))"
-  apply (clarsimp simp: abs_expr_def valid_struct_field_def valid_typ_heap_def)
+   abs_expr st (\<lambda>s. P s \<and> vgetter s (a s))
+               (\<lambda>s. field_getter (getter s (a s)))
+               (\<lambda>s. h_val (hrs_mem (t_hrs s)) (Ptr &((c s)\<rightarrow>field_name)))"
+  apply (clarsimp simp: abs_expr_def valid_struct_field_legacy_def valid_typ_heap_def)
   done
 
-lemma abs_expr_field_setter [heap_abs]:
-  "\<lbrakk> valid_struct_field st field_name
+lemma abs_expr_field_setter_legacy [heap_abs]:
+  "\<lbrakk> valid_struct_field_legacy st field_name
           field_getter field_setter getter setter vgetter vsetter t_hrs t_hrs_update;
      abs_expr st P p p'; abs_expr st Q val val' \<rbrakk> \<Longrightarrow>
-  abs_modifies st (P and Q and (\<lambda>s. vgetter s (p s)))
+  abs_modifies st (\<lambda>s. P s \<and> Q s \<and> vgetter s (p s))
       (\<lambda>s. setter (\<lambda>old. old((p s) := field_setter (val s) (old (p s)))) s)
       (\<lambda>s. t_hrs_update (hrs_mem_update (heap_update (Ptr &((p' s)\<rightarrow>field_name)) (val' s))) s)"
-  apply (clarsimp simp: abs_expr_def valid_struct_field_def valid_typ_heap_def abs_modifies_def)
+  apply (clarsimp simp: abs_expr_def valid_struct_field_legacy_def valid_typ_heap_def abs_modifies_def)
   done
 
-lemma abs_expr_field_guard [heap_abs]:
-  "\<lbrakk> valid_struct_field st field_name
-          (field_getter :: 'p \<Rightarrow> 'f) field_setter getter setter vgetter vsetter t_hrs t_hrs_update;
-     abs_expr st P p p' \<rbrakk> \<Longrightarrow>
-  abs_expr st (P and (\<lambda>s. vgetter s (p s :: 'p :: {c_type} ptr )))
-      (\<lambda>s. True)
-      (\<lambda>s. c_guard (Ptr &((p' s)\<rightarrow>field_name) :: 'f::{c_type} ptr))"
-  apply (clarsimp simp: abs_expr_def)
-  apply (clarsimp simp: abs_expr_def valid_struct_field_def valid_typ_heap_def)
+lemma abs_expr_field_guard_legacy [heap_abs]:
+ "\<lbrakk> valid_struct_field_legacy st field_name
+      (field_getter :: 'p \<Rightarrow> 'f) field_setter getter setter vgetter vsetter t_hrs t_hrs_update;
+    abs_expr st P p p' \<rbrakk> \<Longrightarrow>
+  abs_guard st (P and (\<lambda>s. vgetter s (p s :: 'p :: {c_type} ptr )))
+               (\<lambda>s. c_guard (Ptr &((p' s)\<rightarrow>field_name) :: 'f::{c_type} ptr))"
+  apply (clarsimp simp: abs_guard_def abs_expr_def valid_struct_field_legacy_def valid_typ_heap_def)
   done
-*)
+
 
 
 (*
