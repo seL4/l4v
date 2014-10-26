@@ -60,20 +60,45 @@ definition setExMonitor :: "exclusive_monitors \<Rightarrow> unit machine_monad"
 
 definition do_user_op_if where
   "do_user_op_if uop tc =
-   do pr \<leftarrow> gets ptable_rights_s;
+   do
+      (* Get the page rights of each address (ReadOnly, ReadWrite, None, etc). *)
+      pr \<leftarrow> gets ptable_rights_s;
+
+      (* Fetch the 'execute never' bits of the current thread's page directory. *)
       pxn \<leftarrow> gets ptable_xn_s;
+
+      (* Get the mapping from virtual to physical addresses. *)
       pl \<leftarrow> gets (\<lambda>s. restrict_map (ptable_lift_s s) {x. pr x \<noteq> {}});
+
+      (* Get the current thread. *)
       t \<leftarrow> gets cur_thread;
+
+      (* Generate user memory by throwing away anything from global
+       * memory that the user doesn't have access to. (The user must
+       * have both (1) a mapping to the page; (2) that mapping has the
+       * AllowRead right. *)
       um \<leftarrow> gets (\<lambda>s. restrict_map (user_mem s \<circ> ptrFromPAddr)
                              {y. EX x. pl x = Some y \<and> AllowRead \<in> pr x});
+
+      (* Fetch exclusive monitor state, used for ARM atomic instructions. *)
       es \<leftarrow> do_machine_op getExMonitor;
+
+      (* Non-deterministically execute one of the user's operations. *)
       u \<leftarrow> return (uop t pl pr pxn (tc, um, es));
       assert (u \<noteq> {});
       (e,(tc',um',es')) \<leftarrow> select u;
+
+      (* Update the changes the user made to memory into our model.
+       * We ignore changes that took place where they didn't have
+       * write permissions. (uop shouldn't be doing that --- if it is,
+       * uop isn't correctly modelling real hardware.) *)
       do_machine_op (user_memory_update
         (restrict_map um' {y. EX x. pl x = Some y \<and> AllowWrite : pr x} \<circ>
          addrFromPPtr));
+
+      (* Update exclusive monitor state used by the thread. *)
       do_machine_op (setExMonitor es');
+
       return (e,tc')
    od"
 
