@@ -166,7 +166,7 @@ seL4_CapData_Badge_new(uint32_t Badge) {
     seL4_CapData_t seL4_CapData;
     seL4_CapData.words[0] = 0;
     (void)0;
-    seL4_CapData.words[0] |= (seL4_CapData_Badge & 0x1) << 31;
+    seL4_CapData.words[0] |= ((uint32_t)seL4_CapData_Badge & 0x1) << 31;
     (void)0;
     seL4_CapData.words[0] |= (Badge & 0xfffffff) << 0;
     return seL4_CapData;
@@ -175,7 +175,7 @@ static inline void
 seL4_CapData_Badge_ptr_new(seL4_CapData_t *seL4_CapData_ptr, uint32_t Badge) {
     seL4_CapData_ptr->words[0] = 0;
     (void)0;
-    seL4_CapData_ptr->words[0] |= (seL4_CapData_Badge & 0x1) << 31;
+    seL4_CapData_ptr->words[0] |= ((uint32_t)seL4_CapData_Badge & 0x1) << 31;
     (void)0;
     seL4_CapData_ptr->words[0] |= (Badge & 0xfffffff) << 0;
 }
@@ -210,7 +210,7 @@ seL4_CapData_Guard_new(uint32_t GuardBits, uint32_t GuardSize) {
     seL4_CapData_t seL4_CapData;
     seL4_CapData.words[0] = 0;
     (void)0;
-    seL4_CapData.words[0] |= (seL4_CapData_Guard & 0x1) << 31;
+    seL4_CapData.words[0] |= ((uint32_t)seL4_CapData_Guard & 0x1) << 31;
     (void)0;
     seL4_CapData.words[0] |= (GuardBits & 0x3ffff) << 8;
     (void)0;
@@ -221,7 +221,7 @@ static inline void
 seL4_CapData_Guard_ptr_new(seL4_CapData_t *seL4_CapData_ptr, uint32_t GuardBits, uint32_t GuardSize) {
     seL4_CapData_ptr->words[0] = 0;
     (void)0;
-    seL4_CapData_ptr->words[0] |= (seL4_CapData_Guard & 0x1) << 31;
+    seL4_CapData_ptr->words[0] |= ((uint32_t)seL4_CapData_Guard & 0x1) << 31;
     (void)0;
     seL4_CapData_ptr->words[0] |= (GuardBits & 0x3ffff) << 8;
     (void)0;
