@@ -615,4 +615,35 @@ lemma Union_list_update:
   apply fastforce
   done
 
+lemma if_fold:"(if P then Q else if P then R else S) = (if P then Q else S)"
+  by presburger
+
+lemma fold_or_false:"\<not>(fold (op \<and>) xs False)"
+  apply clarsimp
+  apply (induct xs)
+   apply simp
+  apply simp
+  done
+
+lemma fold_or_true:"fold (op \<and>) xs True \<Longrightarrow> \<forall>i < length xs. xs ! i"
+  apply clarsimp
+  apply (induct xs)
+   apply simp
+  apply (case_tac "i = 0")
+   apply simp
+   apply (case_tac a)
+    apply simp
+   apply (simp add:fold_or_false)
+  apply simp
+  apply (case_tac a)
+   apply simp
+  apply (simp add:fold_or_false)
+  done
+
+lemma fst_enumerate:"i < length xs \<Longrightarrow> fst (enumerate 0 xs ! i) = i"
+  by (metis fst_conv nth_enumerate_eq plus_nat.add_0)
+
+lemma snd_enumerate:"i < length xs \<Longrightarrow> snd (enumerate 0 xs ! i) = xs ! i"
+  by (metis nth_enumerate_eq snd_conv)
+
 end
