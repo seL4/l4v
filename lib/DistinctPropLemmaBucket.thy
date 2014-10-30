@@ -618,14 +618,14 @@ lemma Union_list_update:
 lemma if_fold:"(if P then Q else if P then R else S) = (if P then Q else S)"
   by presburger
 
-lemma fold_or_false:"\<not>(fold (op \<and>) xs False)"
+lemma fold_and_false[simp]:"\<not>(fold (op \<and>) xs False)"
   apply clarsimp
   apply (induct xs)
    apply simp
   apply simp
   done
 
-lemma fold_or_true:"fold (op \<and>) xs True \<Longrightarrow> \<forall>i < length xs. xs ! i"
+lemma fold_and_true:"fold (op \<and>) xs True \<Longrightarrow> \<forall>i < length xs. xs ! i"
   apply clarsimp
   apply (induct xs)
    apply simp
@@ -633,11 +633,20 @@ lemma fold_or_true:"fold (op \<and>) xs True \<Longrightarrow> \<forall>i < leng
    apply simp
    apply (case_tac a)
     apply simp
-   apply (simp add:fold_or_false)
+   apply (simp add:fold_and_false)
   apply simp
   apply (case_tac a)
    apply simp
-  apply (simp add:fold_or_false)
+  apply (simp add:fold_and_false)
+  done
+
+lemma fold_or_true[simp]:"fold (op \<or>) xs True"
+  by (induct xs, simp+)
+
+lemma fold_or_false:"\<not>(fold (op \<or>) xs False) \<Longrightarrow> \<forall>i < length xs. \<not>(xs ! i)"
+  apply (induct xs, simp+)
+  apply (case_tac a, simp+)
+  apply (rule allI, case_tac "i = 0", simp+)
   done
 
 lemma fst_enumerate:"i < length xs \<Longrightarrow> fst (enumerate 0 xs ! i) = i"
