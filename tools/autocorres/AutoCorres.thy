@@ -92,10 +92,11 @@ lemmas ac_statistics_rewrites =
     L2_defs'
 
 ML_file "../../lib/set.ML"
-ML_file "autocorres_data.ML"
 ML_file "trace_antiquote.ML"
 ML_file "mkterm_antiquote.ML"
 ML_file "utils.ML"
+ML_file "autocorres_trace.ML"
+ML_file "autocorres_data.ML"
 ML_file "statistics.ML"
 ML_file "program_info.ML"
 ML_file "function_info.ML"

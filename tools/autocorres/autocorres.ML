@@ -71,6 +71,10 @@ type autocorres_options = {
   scope: string list option ref,
   scope_depth: int option ref,
 
+  (* Store detailed traces for conversions of the selected functions. *)
+  trace_heap_lift : string list option ref,
+  trace_word_abs : string list option ref,
+
   print_stats : bool option ref,
 
   keep_going : bool option ref
@@ -168,6 +172,14 @@ val heap_abs_syntax_parser =
   Parse.reserved "heap_abs_syntax" >>
   (fn _ => none_to_some (#heap_abs_syntax) true "autocorres: heap_abs_syntax option specified multiple times")
 
+val trace_heap_lift_parser =
+  named_opt "trace_heap_lift" "function names" >>
+  (fn funcs => none_to_some (#trace_heap_lift) funcs "autocorres: trace_heap_lift option specified multiple times")
+
+val trace_word_abs_parser =
+  named_opt "trace_word_abs" "function names" >>
+  (fn funcs => none_to_some (#trace_word_abs) funcs "autocorres: trace_word_abs option specified multiple times")
+
 val print_stats_parser =
   Parse.reserved "statistics" >>
   (fn _ => none_to_some (#print_stats) true "autocorres: statistics option specified multiple times")
@@ -193,6 +205,8 @@ fun default_opts _ = {
     heap_abs_syntax = ref NONE,
     scope = ref NONE,
     scope_depth = ref NONE,
+    trace_heap_lift = ref NONE,
+    trace_word_abs = ref NONE,
     print_stats = ref NONE,
     keep_going = ref NONE
   }
@@ -211,6 +225,8 @@ let
      heap_abs_syntax_parser ||
      scope_parser ||
      scope_depth_parser ||
+     trace_heap_lift_parser ||
+     trace_word_abs_parser ||
      print_stats_parser ||
      keep_going_parser)
     |> !! (fn xs => K ("autocorres: unknown option " ^ quote (Parse.text (fst xs) |> #1)))
@@ -263,6 +279,8 @@ let
         @ these (!(#no_signed_word_abs opt))
         @ these (!(#scope opt))
         @ Symtab.keys (!(#ts_force opt))
+        @ these (!(#trace_heap_lift opt))
+        @ these (!(#trace_word_abs opt))
   val invalid_functions =
         Symset.subtract all_functions (Symset.make funcs_in_options)
   val _ =
@@ -343,11 +361,11 @@ let
     |> (fn (lthy, fn_info) =>
         LocalVarExtract.translate_l2 filename fn_info lthy)
     |> (fn (lthy, fn_info) =>
-        HeapLift.system_heap_lift filename fn_info (these (!(#no_heap_abs opt))) (these (!(#force_heap_abs opt))) heap_abs_syntax keep_going lthy)
+        HeapLift.system_heap_lift filename fn_info (these (!(#no_heap_abs opt))) (these (!(#force_heap_abs opt))) heap_abs_syntax keep_going (these (!(#trace_heap_lift opt))) lthy)
     |> (fn (lthy, fn_info) =>
         if skip_word_abs then (lthy, fn_info) else
         WordAbstract.word_abstract filename fn_info (these (!(#unsigned_word_abs opt)))
-                                   (these (!(#no_signed_word_abs opt))) lthy)
+                                   (these (!(#no_signed_word_abs opt))) (these (!(#trace_word_abs opt))) lthy)
     |> (fn (lthy, fn_info) =>
         TypeStrengthen.type_strengthen ts_rules ts_force filename fn_info keep_going lthy)
     |> (fn (lthy, fn_info) =>

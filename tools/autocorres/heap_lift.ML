@@ -370,8 +370,6 @@ fun eta_rhs lthy thm = let
                (fn params => simp_tac (put_simpset HOL_basic_ss (#context params) addsimps thm :: @{thms atomize_eq ext}) 1)
 in thm' end
 
-
-
 (* Convert a program to use a lifted heap. *)
 fun system_heap_lift
     (filename : string)
@@ -380,6 +378,7 @@ fun system_heap_lift
     (force_heap_abs : string list)
     (heap_abs_syntax : bool)
     (keep_going : bool)
+    (trace_funcs : string list)
     lthy =
 let
   val prog_info = ProgramInfo.get_prog_info lthy filename
@@ -685,8 +684,20 @@ let
       DETERM ((SOLVES (
           ((K (CHANGED ((rtac_all rules 1) APPEND (fo_tac)))) THEN_ALL_NEW solve_tac) 1))
             ORELSE (print_n_tac error_printed THEN no_tac))
-    val thm = Utils.apply_tac "Solve goal" (solve_tac 1) goal
-      |> Goal.finish ctxt
+
+    val tactics = map (fn rule => (rule, rtac rule 1)) rules
+                  @ [(@{thm fun_app_def}, fo_tac)]
+    val replay_failure_start = 1
+    val replay_failures = Unsynchronized.ref replay_failure_start
+    val (thm, trace) =
+         case AutoCorresTrace.trace_solve_tac ctxt true false (K tactics) goal NONE replay_failures of
+            NONE => (* intentionally generate a TRACE_SOLVE_TAC_FAIL *)
+                    (AutoCorresTrace.trace_solve_tac ctxt false false (K tactics) goal NONE (Unsynchronized.ref 0);
+                     (* never reached *) error "heap_lift fail tac: impossible")
+          | SOME (thm, [trace]) => (Goal.finish ctxt thm, trace)
+    val _ = if !replay_failures < replay_failure_start then
+              @{trace} (fn_name ^ " HL: reverted to slow replay " ^
+                        Int.toString(replay_failure_start - !replay_failures) ^ " time(s)") else ()
 
     (* DEBUG: make sure that all uses of field_lvalue and c_guard are rewritten.
      *        Also make sure that we cleaned up internal constants. *)
@@ -722,7 +733,7 @@ let
     val _ = Statistics.gather ctxt "HLsimp" fn_name
         (Thm.prop_of thm |> HOLogic.dest_Trueprop |> (fn t => Utils.term_nth_arg t 1))
   in
-    (get_body_of_thm thm, Drule.gen_all thm)
+    (get_body_of_thm thm, Drule.gen_all thm, if member (op =) trace_funcs fn_name then SOME trace else NONE)
   end
 
   (* Save the heap info to the theory data. *)

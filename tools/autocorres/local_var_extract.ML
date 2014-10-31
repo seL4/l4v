@@ -1470,7 +1470,7 @@ let
     val thm = get_l2corres_thm ctxt prog_info fn_info
         fn_name callee_terms fn_args
 	(betapply (#const l1_def, measure_var)) l1_body_def
-  in (get_body_of_thm thm, thm) end
+  in (get_body_of_thm thm, thm, NONE) end
 
   (* Generate a constant name for our L2 bodies. *)
   fun gen_l2_name x = "l2_" ^ x

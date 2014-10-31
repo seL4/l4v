@@ -411,7 +411,7 @@ let
   let
     val thm = get_l1corres_thm prog_info fn_info ctxt fn_name
         callee_terms measure_var
-  in (get_body_of_l1corres_thm thm, thm) end
+  in (get_body_of_l1corres_thm thm, thm, NONE) end
 
   (* Get a constant name for our function definitions. *)
   fun get_const_name x = "l1_" ^ x

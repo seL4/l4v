@@ -34,10 +34,10 @@ sig
         -> (string -> (string * typ) list)
         (* generate fn name *)
         -> (string -> string)
-        (* convert : ctxt -> fn_name -> callee_terms -> measure -> args -> (fn, corres_thm)
+        (* convert : ctxt -> fn_name -> callee_terms -> measure -> args -> (fn, corres_thm, trace option)
            [ callee_terms : (recursive, callee, corres_thm) table ] *)
         -> (Proof.context -> string -> ((bool * term * thm) Symtab.table)
-            -> term -> term list -> (term * thm))
+            -> term -> term list -> (term * thm * thm AutoCorresTrace.RuleTrace option))
         (* prove_mono : (fn_term, fn_def) list -> ctxt -> mono_thms *)
         -> ((term * thm) list -> Proof.context -> thm list)
         (* update function info *)
@@ -329,7 +329,7 @@ fun gen_corres_for_function
     (get_fn_args : string -> (string * typ) list)
     (get_const_name : string -> string)
     (convert : Proof.context -> string -> ((bool * term * thm) Symtab.table) ->
-               term -> term list -> (term * thm))
+               term -> term list -> (term * thm * thm AutoCorresTrace.RuleTrace option))
     (ctxt : Proof.context)
     (fn_name : string) =
 let
@@ -367,7 +367,7 @@ let
    * term and a tactic for proving correspondence.
    *)
   val callee_tab = Symtab.make callee_info_and_proofs
-  val (body, thm) = convert ctxt''' fn_name callee_tab measure_var fn_arg_terms
+  val (body, thm, trace) = convert ctxt''' fn_name callee_tab measure_var fn_arg_terms
 
   (*
    * The returned body will have free variables as placeholders for the function's
@@ -394,7 +394,7 @@ let
   val _ = @{trace} ("Converted (" ^ phase ^ ") " ^ fn_name ^ " in " ^
                     Time.toString (Timer.checkRealTimer start_time) ^ " s")
 in
-  (exported_thm, body)
+  (exported_thm, body, trace)
 end
 
 (*
@@ -425,12 +425,13 @@ fun define_funcs
     (ctxt : Proof.context)
     (callee_thms : thm Symtab.table)
     _
-    (functions : (string * (thm * term)) list)
+    (functions : (string * (thm * term * thm AutoCorresTrace.RuleTrace option)) list)
     =
   let
     val fn_names = map fst functions
-    val fn_thms = map (snd #> fst) functions
-    val fn_bodies = map (snd #> snd) functions
+    val fn_thms = map (snd #> #1) functions
+    val fn_bodies = map (snd #> #2) functions
+    val fn_traces = map (fn (fn_name, (_, _, trace)) => case trace of NONE => [] | SOME tr => [(fn_name, tr)]) functions |> List.concat
 
     val _ = writeln ("Defining (" ^ phase ^ ") " ^ (Utils.commas fn_names))
 
@@ -600,6 +601,9 @@ fun define_funcs
     val ctxt = fold (fn (fn_name, thm) =>
         Utils.define_lemma (fn_name ^ "_" ^ phase ^ "corres") thm #> snd)
         (fn_names ~~ new_thms) ctxt
+
+    (* Add the traces to the context. *)
+    val ctxt = Local_Theory.background_theory (fold (fn (fn_name, trace) => AutoCorresData.add_trace filename phase fn_name trace) fn_traces) ctxt
   in
     (new_thms, (), ctxt)
   end
@@ -617,7 +621,7 @@ fun do_translation_phase
     (get_fn_args : string -> (string * typ) list)
     (get_const_name : string -> string)
     (convert : Proof.context -> string -> ((bool * term * thm) Symtab.table) ->
-               term -> term list -> (term * thm))
+               term -> term list -> (term * thm * thm AutoCorresTrace.RuleTrace option))
     (prove_mono : (term * thm) list -> Proof.context -> thm list)
     (update_fn_info : Proof.context -> FunctionInfo.function_def -> FunctionInfo.function_def)
     (rec_base_case : thm)

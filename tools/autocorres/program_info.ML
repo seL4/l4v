@@ -10,7 +10,7 @@
 
 (*
  * Functions for extracting information from the C parser in a format more
- * convienient for us to work with.
+ * convenient for us to work with.
  *)
 structure ProgramInfo =
 struct
