@@ -9,8 +9,16 @@
  *)
 
 (*
- * Well formed constraints of what capDL specications the system-initialiser can initialise.
+ * Well formed constraints of what capDL specifications the system-initialiser can initialise.
+ *
+ * There are two types of constraints:
+ *   - fundamental ones (such as that specs must be finite),
+ *     and other seL4 limitations (such as that page tables can't be shared).
+ *   - limitations of the initialiser.
+ *
+ * The latter are commented with LIMITATION.
  *)
+
 theory WellFormed_SI
 imports
   "../proof/capDL-api/Kernel_DP"
@@ -109,13 +117,14 @@ where
     | PageTableCap  _ _ ad    \<Rightarrow> ad = None
     | PageDirectoryCap _ _ ad \<Rightarrow> ad = None
     | IrqHandlerCap _         \<Rightarrow> True
-(* The following should probably eventually be true. *)
+(* LIMITATION: The following should probably eventually be true. *)
     | IrqControlCap           \<Rightarrow> False
     | UntypedCap _ _          \<Rightarrow> False
     | AsidControlCap          \<Rightarrow> False
     | AsidPoolCap _ _         \<Rightarrow> False
     | _                       \<Rightarrow> False)"
 
+(* LIMITATION: The specification cannot contain ASID numbers. *)
 definition vm_cap_has_asid :: "cdl_cap \<Rightarrow> bool"
 where
   "vm_cap_has_asid cap \<equiv>
@@ -318,6 +327,7 @@ where
       (is_fake_pt_cap cap \<or>
          (\<exists>sz. cap_type cap = Some (FrameType sz) \<and> (sz = 20 \<or> sz = 24) \<and> is_fake_vm_cap cap) )))"
 
+(* LIMITATION: The caps in a IRQ Node must have full permissions and be unbadged. *)
 definition well_formed_irq_node :: "cdl_state \<Rightarrow> cdl_object_id \<Rightarrow> cdl_object \<Rightarrow> bool"
 where
   "well_formed_irq_node spec obj_id obj \<equiv> \<forall>slot cap.
