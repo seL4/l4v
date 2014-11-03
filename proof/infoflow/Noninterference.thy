@@ -1383,13 +1383,6 @@ lemma handle_ev[wp]:
    apply(simp split: sum.splits)
   by simp
 
-
-lemma guarded_pas_domain_machine_state_update[simp]: "guarded_pas_domain aag
-               (s\<lparr>machine_state := x\<rparr>) =
-       guarded_pas_domain aag s"
-  apply (simp add: guarded_pas_domain_def)
-  done
-
 (*
 lemma Step[simp]:
   "ni.Step = system.Step (big_step_ADT_A_if utf)"
@@ -1519,15 +1512,6 @@ lemma user_small_Step_partitionIntegrity:
   apply assumption
   done
 
-lemma Step_ADT_A_if:
-  "data_type.Step (ADT_A_if utf) = (\<lambda>u. global_automaton_if check_active_irq_A_if
-          (do_user_op_A_if utf) kernel_call_A_if
-          kernel_handle_preemption_if kernel_schedule_if
-          kernel_exit_A_if \<inter>
-         {(s, y). step_restrict y})"
-  apply(simp add: ADT_A_if_def)
-  done
-
 lemma silc_inv_refl:
   "silc_inv aag st s \<Longrightarrow> silc_inv aag s s"
   apply(clarsimp simp: silc_inv_def silc_dom_equiv_def equiv_for_refl)
@@ -1582,7 +1566,7 @@ lemma small_Step_partitionIntegrity:
     partitionIntegrity (current_aag (internal_state_if s)) (internal_state_if s)
            (internal_state_if t)"
   apply(case_tac "sys_mode_of s")
-  apply(simp_all add: part_def split: if_splits add: Step_ADT_A_if global_automaton_if_def | safe )+
+  apply(simp_all add: part_def split: if_splits add: Step_ADT_A_if_def_global_automaton_if global_automaton_if_def | safe )+
            apply(fastforce dest: ADT_A_if_reachable_invs_if simp: invs_if_def intro: user_small_Step_partitionIntegrity check_active_irq_A_if_partitionIntegrity)+
      apply(fastforce dest: ADT_A_if_reachable_invs_if simp: invs_if_def not_schedule_modes_KernelEntry intro: kernel_call_A_if_partitionIntegrity)+
    defer
@@ -2879,8 +2863,7 @@ lemma small_Step_confidentiality_part_not_PSched:
   apply(frule_tac s=t' in ADT_A_if_reachable_invs_if)
   apply(case_tac "sys_mode_of s")
        (* InUserMode *)
-       apply((simp add: Step_ADT_A_if  
-                      global_automaton_if_def 
+       apply((simp add: Step_ADT_A_if_def_global_automaton_if global_automaton_if_def 
                  split: if_splits 
               | intro impI allI 
               | elim exE conjE disjE 
@@ -2896,8 +2879,7 @@ lemma small_Step_confidentiality_part_not_PSched:
         apply(drule_tac s=s and t=t and u=u and s'="(ad,bd)" in check_active_irq_A_if_retval_eq, simp+)
        apply(drule check_active_irq_A_if_confidentiality'[where s=s and t=t and s'=s' and t'=t' and u=u], simp+)
       (* InIdleMode *)
-      apply((simp add: Step_ADT_A_if  
-                       global_automaton_if_def 
+      apply((simp add: Step_ADT_A_if_def_global_automaton_if global_automaton_if_def 
                   split: if_splits 
              | intro impI allI 
              | elim exE conjE disjE 
@@ -2911,8 +2893,7 @@ lemma small_Step_confidentiality_part_not_PSched:
       prefer 2
       apply(case_tac t, simp)
       apply(case_tac event, (fastforce simp: part_def split: if_splits)+)[1]
-     apply((simp add: Step_ADT_A_if  
-                      global_automaton_if_def 
+     apply((simp add: Step_ADT_A_if_def_global_automaton_if global_automaton_if_def 
                  split: if_splits 
             | intro impI allI 
             | elim exE conjE disjE 
@@ -2924,16 +2905,14 @@ lemma small_Step_confidentiality_part_not_PSched:
     (* KernelPreempted *)
     apply(simp add: part_def)
     (* KernelSchedule bool -- where \<not> bool *)
-   apply((simp add: Step_ADT_A_if  
-                    global_automaton_if_def 
+   apply((simp add: Step_ADT_A_if_def_global_automaton_if global_automaton_if_def 
                split: if_splits 
          | intro impI allI 
          | elim exE conjE disjE 
          | simp_all add: not_schedule_modes_KernelEntry)+)[1]
    apply(drule kernel_schedule_if_confidentiality'[where s=s and t=t and s'=s' and t'=t' and u=u],simp+)
   (* KernelExit *)
-  apply((simp add: Step_ADT_A_if  
-                   global_automaton_if_def 
+  apply((simp add: Step_ADT_A_if_def_global_automaton_if global_automaton_if_def 
               split: if_splits 
         | intro impI allI 
         | elim exE conjE disjE 

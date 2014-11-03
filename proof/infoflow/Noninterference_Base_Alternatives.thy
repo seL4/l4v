@@ -471,18 +471,6 @@ lemma xNonleakage_gen:
   apply(erule Nonleakage_gen)
   done
 
-lemma xources_Step:
-  "\<lbrakk>reachable s; (dom a s, u) \<notin> policy\<rbrakk> \<Longrightarrow>
-  xources [a] s u = {u}"
-  apply(auto simp: xources_Cons xources_Nil enabled_Step dest: enabled_Step)
-  done
-
-lemma xources_Step_2:
-  "\<lbrakk>reachable s; (dom a s, u) \<in> policy\<rbrakk> \<Longrightarrow>
-  xources [a] s u = {dom a s,u}"
-  apply(auto simp: xources.xources_Cons xources.xources_Nil enabled_Step dest: enabled_Step)
-  done
-
 lemma xNonleakage_gen_confidentiality_u:
   "xNonleakage_gen \<Longrightarrow> confidentiality_u"
   apply(clarsimp simp: xNonleakage_gen_def confidentiality_u_def)
