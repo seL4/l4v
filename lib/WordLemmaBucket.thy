@@ -6044,4 +6044,73 @@ lemma and_mask_plus:
   apply (simp add:word_bw_comms word_bw_lcs)
   done
 
+lemma le_step_down_word:"\<lbrakk>(i::('a::len) word) \<le> n; i = n \<longrightarrow> P; i \<le> n - 1 \<longrightarrow> P\<rbrakk> \<Longrightarrow> P"
+  apply unat_arith
+  done
+
+lemma NOT_mask_AND_mask[simp]: "(w && mask n) && ~~ mask n = 0"
+  apply (clarsimp simp:mask_def)
+  by (metis word_bool_alg.conj_cancel_right word_bool_alg.conj_zero_right word_bw_comms(1) word_bw_lcs(1))
+
+lemma and_and_not[simp]:"(a && b) && ~~ b = 0"
+  apply (subst word_bw_assocs(1))
+  apply clarsimp
+  done
+
+lemma mask_shift_and_negate[simp]:"(w && mask n << m) && ~~ (mask n << m) = 0"
+  apply (clarsimp simp:mask_def)
+  by (metis (erased, hide_lams) mask_eq_x_eq_0 shiftl_over_and_dist word_bool_alg.conj_absorb word_bw_assocs(1))
+
+lemma shiftr_1[simplified]:"(x::word32) >> 1 = 0 \<Longrightarrow> x < 2"
+  apply word_bitwise apply clarsimp
+  done
+
+lemma le_step_down_nat:"\<lbrakk>(i::nat) \<le> n; i = n \<longrightarrow> P; i \<le> n - 1 \<longrightarrow> P\<rbrakk> \<Longrightarrow> P"
+  apply arith
+  done
+
+lemma mask_step_down:"(b::32word) && 0x1 = (1::32word) \<Longrightarrow> (\<exists>x. x < 32 \<and> mask x = b >> 1) \<Longrightarrow> (\<exists>x. mask x = b)"
+  apply clarsimp
+  apply (rule_tac x="x + 1" in exI)
+  apply (subgoal_tac "x \<le> 31")
+   apply (erule le_step_down_nat, clarsimp simp:mask_def, word_bitwise, clarsimp+)+
+   apply (clarsimp simp:mask_def, word_bitwise, clarsimp)
+  apply clarsimp
+  done
+
+lemma mask_1[simp]: "(\<exists>x. mask x = 1)"
+  apply (rule_tac x=1 in exI)
+  apply (simp add:mask_def)
+  done
+
+lemma not_switch:"~~ a = x \<Longrightarrow> a = ~~ x"
+  by auto
+
+(* The seL4 bitfield generator produces functions containing mask and shift operations, such that
+ * invoking two of them consecutively can produce something like the following. Note that it is
+ * unlikely you'll be able to use this lemma directly, hence the second one below.
+ *)
+lemma bitfield_op_twice':"(x && ~~ (mask n << m) || ((y && mask n) << m)) && ~~ (mask n << m) = x && ~~ (mask n << m)"
+  apply (induct n arbitrary: m)
+   apply simp 
+  apply (subst word_ao_dist)
+  apply (simp add:AND_twice)
+  done
+
+(* Helper to get bitfield_op_twice' to apply to code produced by the bitfield generator as it
+ * appears in the wild. You'll probably need e.g.
+ *  apply (clarsimp simp:bitfield_op_twice[unfolded mask_def, where n=5 and m=3, simplified])
+ *)
+lemma bitfield_op_twice:
+  "((x::word32) && ~~ (mask n << m) || ((y && mask n) << m)) && ~~ (mask n << m) = x && ~~ (mask n << m)"
+  by (rule bitfield_op_twice')
+
+lemma bitfield_op_twice'': "\<lbrakk>~~ a = b << c; \<exists>x. b = mask x\<rbrakk> \<Longrightarrow> (x && a || (y && b << c)) && a = x && a"
+  apply clarsimp
+  apply (cut_tac n=xa and m=c and x=x and y=y in bitfield_op_twice')
+  apply (clarsimp simp:mask_def)
+  apply (drule not_switch)
+  apply clarsimp
+  done
+
 end
