@@ -10,7 +10,7 @@
 
 (* Miscellaneous Isabelle tools. *)
 theory NICTATools
-imports Apply_Trace_Cmd Trace_Attribs
+imports Apply_Trace_Cmd
 begin
 
 section "Detect unused meta-forall"
