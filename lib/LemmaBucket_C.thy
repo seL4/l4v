@@ -1075,4 +1075,8 @@ proof -
     done
 qed
 
+(* arg_cong specified for FCP because it does not apply as is. *)
+lemma FCP_arg_cong:"f = g \<Longrightarrow> FCP f = FCP g"
+  by simp
+
 end
