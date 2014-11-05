@@ -136,7 +136,7 @@ def run_test(test, verbose=False):
     start_time = datetime.datetime.now()
 
     # Start the command.
-    usage = None
+    peak_mem_usage = None
     try:
         process = subprocess.Popen(command,
                 stdout=output, stderr=subprocess.STDOUT, stdin=subprocess.PIPE,
@@ -145,7 +145,7 @@ def run_test(test, verbose=False):
         output = "Exception while running test:\n\n%s" % (traceback.format_exc())
         if verbose:
             print(output)
-        return (False, "ERROR", output, datetime.datetime.now() - start_time, usage)
+        return (False, "ERROR", output, datetime.datetime.now() - start_time, peak_mem_usage)
 
     # If our program exits for some reason, attempt to kill the process.
     atexit.register(lambda: kill_family(process.pid))
@@ -161,7 +161,7 @@ def run_test(test, verbose=False):
     # Wait for the command to finish.
     with memusage.process_poller(process.pid) as m:
         (output, _) = process.communicate()
-        usage = m.peak_mem_usage()
+        peak_mem_usage = m.peak_mem_usage()
 
     # Cancel the alarm. Small race here (if the alarm fires just after the
     # process finished), but the returncode of our process should still be 0,
@@ -176,7 +176,7 @@ def run_test(test, verbose=False):
         status = "TIMEOUT"
     else:
         status = "FAILED"
-    return (process.returncode == 0, status, output, datetime.datetime.now() - start_time, usage)
+    return (process.returncode == 0, status, output, datetime.datetime.now() - start_time, peak_mem_usage)
 
 # Print a status line.
 def print_test_line_start(test_name):
