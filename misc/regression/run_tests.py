@@ -186,7 +186,7 @@ def print_test_line_start(test_name):
 def print_test_line_end(test_name, color, status, time_taken, mem):
     if mem:
         # Report meory usage in gigabytes.
-        mem = '%.2fGB' % round(float(mem) / 1024 / 1024 / 1024, 2)
+        mem = '%5.2fGB' % round(float(mem) / 1024 / 1024 / 1024, 2)
     if time_taken:
         # Strip milliseconds for better printing.
         time_taken = datetime.timedelta(seconds=int(time_taken.total_seconds()))
