@@ -21,6 +21,7 @@ import argparse
 import atexit
 import datetime
 import fnmatch
+import memusage
 import os
 import signal
 import subprocess
@@ -103,7 +104,7 @@ def kill_family(parent_pid):
 #
 # Run a single test.
 #
-# Return a tuple of (success, log, time_taken).
+# Return a tuple of (success, log, time_taken, memory_usage).
 #
 # Log only contains the output if verbose is *false*; otherwise, the
 # log is output to stdout where we can't easily get  to it.
@@ -135,6 +136,7 @@ def run_test(test, verbose=False):
     start_time = datetime.datetime.now()
 
     # Start the command.
+    usage = None
     try:
         process = subprocess.Popen(command,
                 stdout=output, stderr=subprocess.STDOUT, stdin=subprocess.PIPE,
@@ -143,7 +145,7 @@ def run_test(test, verbose=False):
         output = "Exception while running test:\n\n%s" % (traceback.format_exc())
         if verbose:
             print(output)
-        return (False, "ERROR", output, datetime.datetime.now() - start_time)
+        return (False, "ERROR", output, datetime.datetime.now() - start_time, usage)
 
     # If our program exits for some reason, attempt to kill the process.
     atexit.register(lambda: kill_family(process.pid))
@@ -157,7 +159,9 @@ def run_test(test, verbose=False):
     signal.alarm(test.timeout)
 
     # Wait for the command to finish.
-    (output, _) = process.communicate()
+    with memusage.process_poller(process.pid) as m:
+        (output, _) = process.communicate()
+        usage = m.peak_mem_usage()
 
     # Cancel the alarm. Small race here (if the alarm fires just after the
     # process finished), but the returncode of our process should still be 0,
@@ -172,27 +176,31 @@ def run_test(test, verbose=False):
         status = "TIMEOUT"
     else:
         status = "FAILED"
-    return (process.returncode == 0, status, output, datetime.datetime.now() - start_time)
+    return (process.returncode == 0, status, output, datetime.datetime.now() - start_time, usage)
 
 # Print a status line.
 def print_test_line_start(test_name):
     print("  running %-25s " % (test_name + " ..."), end="")
     sys.stdout.flush()
 
-def print_test_line_end(test_name, color, status, time_taken):
+def print_test_line_end(test_name, color, status, time_taken, mem):
+    if mem:
+        # Report meory usage in gigabytes.
+        mem = '%.2fGB' % round(float(mem) / 1024 / 1024 / 1024, 2)
     if time_taken:
         # Strip milliseconds for better printing.
         time_taken = datetime.timedelta(seconds=int(time_taken.total_seconds()))
+        time_taken = '%8s' % time_taken
+    extras = ', '.join(filter(None, [time_taken, mem]))
 
-        # Print status line.
-        print(output_color(color, "%-10s" % status) + (" %8s" % ("(" + str(time_taken) + ")")))
-    else:
-        print(output_color(color, "%-10s" % status))
+    # Print status line.
+    print(output_color(color, "%-10s" % status) + ('(%s)' % extras if extras else ''))
+
     sys.stdout.flush()
 
-def print_test_line(test_name, color, status, time_taken):
+def print_test_line(test_name, color, status, time_taken, mem):
     print_test_line_start(test_name)
-    print_test_line_end(test_name, color, status, time_taken)
+    print_test_line_end(test_name, color, status, time_taken, mem)
 
 #
 # Recursive glob
@@ -270,21 +278,21 @@ def main():
     failed_test_log = []
     for t in tests_to_run:
         if len(t.depends & failed_tests) > 0:
-            print_test_line(t.name, ANSI_YELLOW, "skipped", None)
+            print_test_line(t.name, ANSI_YELLOW, "skipped", None, None)
             failed_tests.add(t.name)
             continue
 
         # Run the test.
         print_test_line_start(t.name)
-        (passed, status, log, time_taken) = run_test(t, verbose=args.verbose)
+        (passed, status, log, time_taken, mem) = run_test(t, verbose=args.verbose)
 
         # Print result.
         if not passed:
             failed_tests.add(t.name)
             failed_test_log.append((t.name, log, time_taken))
-            print_test_line_end(t.name, ANSI_RED, "%s *" % status, time_taken)
+            print_test_line_end(t.name, ANSI_RED, "%s *" % status, time_taken, mem)
         else:
-            print_test_line_end(t.name, ANSI_GREEN, status, time_taken)
+            print_test_line_end(t.name, ANSI_GREEN, status, time_taken, mem)
 
     # Print failure summaries unless requested not to.
     if not args.brief and len(failed_test_log) > 0:
