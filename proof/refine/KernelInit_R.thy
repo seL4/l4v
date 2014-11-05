@@ -20,22 +20,22 @@ begin
 (* Axiomatisation of the rest of the initialisation code *)
 axiomatization where
   init_refinement:
-  "Init_H a b c d e f \<subseteq> lift_state_relation state_relation `` Init_A"
+  "Init_H \<subseteq> lift_state_relation state_relation `` Init_A"
 
 axiomatization where
   ckernel_init_valid_duplicates':
-  "\<forall>((tc,s),x) \<in> (Init_H a b c d e f). vs_valid_duplicates' (ksPSpace s)"
+  "\<forall>((tc,s),x) \<in> Init_H. vs_valid_duplicates' (ksPSpace s)"
 
 axiomatization where
   ckernel_init_invs:
-  "\<forall>((tc,s),x) \<in> (Init_H a b c d e f). invs' s"
+  "\<forall>((tc,s),x) \<in> Init_H. invs' s"
 
 axiomatization where
   ckernel_init_sch_norm:
-  "((tc,s),x) \<in> Init_H a b c d e f \<Longrightarrow> ksSchedulerAction s = ResumeCurrentThread"
+  "((tc,s),x) \<in> Init_H \<Longrightarrow> ksSchedulerAction s = ResumeCurrentThread"
 
 axiomatization where
   ckernel_init_ctr:
-  "((tc,s),x) \<in> Init_H a b c d e f \<Longrightarrow> ct_running' s"
+  "((tc,s),x) \<in> Init_H \<Longrightarrow> ct_running' s"
 
 end

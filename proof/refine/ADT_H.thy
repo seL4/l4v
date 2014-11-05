@@ -24,19 +24,27 @@ text {*
   to base the refinement's observable state on the abstract state.
 *}
 
+consts
+  initEntry :: word32
+  initFrames :: "word32 list"
+  initOffset :: word32
+  initKernelFrames :: "word32 list"
+  initBootFrames :: "word32 list"
+  initDataStart :: word32
+
 text {*
   The construction of the abstract data type
   for the executable specification largely follows
   the one for the abstract specification.
 *}
 definition
-  Init_H :: "word32 \<Rightarrow> word32 list \<Rightarrow> word32 \<Rightarrow> word32 list \<Rightarrow> asid list \<Rightarrow> word32 \<Rightarrow> kernel_state global_state set"
+  Init_H :: "kernel_state global_state set"
   where
-  "Init_H entry initFrames initOffset kernelFrames bootFrames data_start \<equiv>
+  "Init_H \<equiv>
    ({empty_context} \<times> snd `
-      fst (initKernel (VPtr entry) (map PPtr initFrames) (PPtr initOffset)
-                      (map PPtr kernelFrames) bootFrames
-                      (newKernelState data_start))) \<times>
+      fst (initKernel (VPtr initEntry) (map PPtr initFrames) (PPtr initOffset)
+                      (map PPtr initKernelFrames) initBootFrames
+                      (newKernelState initDataStart))) \<times>
     {UserMode} \<times> {None}"
 
 definition 
@@ -1929,14 +1937,12 @@ definition
                    m = (if ct_running' (snd s') then UserMode else IdleMode)}"
 
 definition
-  ADT_H :: "word32 \<Rightarrow> word32 list \<Rightarrow> word32 \<Rightarrow> word32 list \<Rightarrow> asid list \<Rightarrow> asid \<Rightarrow> 
-            user_transition \<Rightarrow>
+  ADT_H :: "user_transition \<Rightarrow>
             (kernel_state global_state, det_ext observable, unit) data_type"
 
   where
-  "ADT_H entry initFrames initOffset kernelFrames bootFrames data_start uop \<equiv>
-   \<lparr>Init = \<lambda>s. Init_H entry initFrames initOffset kernelFrames bootFrames
-                      data_start,
+  "ADT_H uop \<equiv>
+   \<lparr>Init = \<lambda>s. Init_H,
     Fin = \<lambda>((tc,s),m,e). ((tc, absKState s),m,e),
     Step = (\<lambda>u. global_automaton check_active_irq_H (do_user_op_H uop) kernel_call_H)\<rparr>"
 

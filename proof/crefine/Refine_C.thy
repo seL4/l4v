@@ -684,7 +684,7 @@ lemma ct_running'_C:
   done
 
 lemma full_invs_both:
-  "ADT_H a b c d e f uop \<Turnstile> 
+  "ADT_H uop \<Turnstile> 
   {s'. \<exists>s. (s,s') \<in> lift_state_relation state_relation \<and> 
      s \<in> full_invs \<and> s' \<in> full_invs'}"
   apply (rule fw_inv_transport)
@@ -862,7 +862,7 @@ lemma check_active_irq_corres_C:
 lemma refinement2_both:
   "\<lparr> Init = Init_C, Fin = Fin_C,
      Step = (\<lambda>u. global_automaton check_active_irq_C (do_user_op_C uop) (kernel_call_C fp)) \<rparr>
-   \<sqsubseteq> ADT_H a b c d e f uop"
+   \<sqsubseteq> ADT_H uop"
   apply (rule sim_imp_refines)
   apply (rule L_invariantI [where I\<^sub>c=UNIV and r="lift_state_relation rf_sr"])
     apply (rule full_invs_both)
@@ -917,12 +917,12 @@ lemma refinement2_both:
   done
 
 theorem refinement2:
-  "ADT_C uop \<sqsubseteq> ADT_H a b c d e f uop"
+  "ADT_C uop \<sqsubseteq> ADT_H uop"
   unfolding ADT_C_def
   by (rule refinement2_both)
 
 theorem fp_refinement:
-  "ADT_FP_C uop \<sqsubseteq> ADT_H a b c d e f uop"
+  "ADT_FP_C uop \<sqsubseteq> ADT_H uop"
   unfolding ADT_FP_C_def
   by (rule refinement2_both)
 
@@ -1030,7 +1030,7 @@ lemma kernel_all_subset_kernel:
 
 theorem true_refinement:
   "kernel_global.ADT_C symbol_table armKSKernelVSpace_C uop
-   \<sqsubseteq> ADT_H a b c d e f uop"
+   \<sqsubseteq> ADT_H uop"
   apply (rule refinement_trans[OF _ refinement2])
   apply (simp add: kernel_global.ADT_C_def ADT_C_def)
   apply (rule sim_imp_refines)
@@ -1042,7 +1042,7 @@ theorem true_refinement:
 
 theorem true_fp_refinement:
   "kernel_global.ADT_FP_C symbol_table armKSKernelVSpace_C uop
-   \<sqsubseteq> ADT_H a b c d e f uop"
+   \<sqsubseteq> ADT_H uop"
   apply (rule refinement_trans[OF _ fp_refinement])
   apply (simp add: kernel_global.ADT_FP_C_def ADT_FP_C_def)
   apply (rule sim_imp_refines)

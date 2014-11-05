@@ -44,8 +44,8 @@ where
 lemma refinement2_both_nondet:
   "\<lparr> Init = Init_C', Fin = Fin_CN,
      Step = global_automaton do_user_op_C (kernel_call_C fp) \<rparr>
-   \<sqsubseteq> ADT_H' a b c d e f"
-  apply (cut_tac a=a and b=b and c=c and d=d and e=e and f=f in refinement2_both)
+   \<sqsubseteq> ADT_H'"
+  apply (cut_tac refinement2_both)
   apply (clarsimp simp add: refines_def execution_def ADT_H'_def ADT_H_def)
   apply (clarsimp simp add: Fin_CN_def cstate_to_AN_def Fin_C_def cstate_to_A_def Init_C_def)
   apply (rename_tac js aa ba aaa baa ad bd ae be)
@@ -59,12 +59,12 @@ lemma refinement2_both_nondet:
   done
 
 theorem refinement2_nondet:
-  "ADT_C' \<sqsubseteq> ADT_H' a b c d e f"
+  "ADT_C' \<sqsubseteq> ADT_H'"
   unfolding ADT_C'_def
   by (rule refinement2_both_nondet)
 
 theorem fp_refinement_nondet:
-  "ADT_FP_C' \<sqsubseteq> ADT_H' a b c d e f"
+  "ADT_FP_C' \<sqsubseteq> ADT_H'"
   unfolding ADT_FP_C'_def
   by (rule refinement2_both_nondet)
 

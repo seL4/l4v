@@ -637,7 +637,7 @@ lemma sched_act_rct_related:
   by (case_tac "scheduler_action a", simp_all add: state_relation_def)
 
 lemma ckernel_invariant:
-  "ADT_H a b c d e f uop \<Turnstile> full_invs'"
+  "ADT_H uop \<Turnstile> full_invs'"
   unfolding full_invs'_def
   apply (rule invariantI)
    apply (clarsimp simp add: ADT_H_def)
@@ -650,7 +650,7 @@ lemma ckernel_invariant:
     apply (frule akernel_init_invs[THEN bspec])
     apply (rule_tac x = s in exI)
     apply (clarsimp simp: Init_A_def)
-   apply (insert ckernel_init_invs[of a b c d e f])[1]
+   apply (insert ckernel_init_invs)[1]
    apply clarsimp
    apply (frule ckernel_init_sch_norm)
    apply (frule ckernel_init_ctr)
@@ -726,7 +726,7 @@ text {* The top-level theorem *}
 
 lemma fw_sim_A_H:
   "LI (ADT_A uop)
-      (ADT_H a b c d e f uop) 
+      (ADT_H uop) 
       (lift_state_relation state_relation) 
       (full_invs \<times> full_invs')"
   apply (unfold LI_def full_invs_def full_invs'_def)
@@ -798,7 +798,7 @@ lemma fw_sim_A_H:
   done
 
 theorem refinement: 
-  "ADT_H a b c d e f uop \<sqsubseteq> ADT_A uop"
+  "ADT_H uop \<sqsubseteq> ADT_A uop"
   apply (rule sim_imp_refines)
   apply (rule L_invariantI)
     apply (rule akernel_invariant)
