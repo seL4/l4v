@@ -1123,6 +1123,7 @@ lemma corres_symb_exec_catch_r:
  * This is not the ideal place, but it is the earliest place that
  * both "Save_Attribs" and "WP" are loaded.
  *)
+(*
 setup {*
 let
   val wp_attribs = [
@@ -1140,5 +1141,6 @@ in
   Attrib_Fetchers.map (fold Symtab.update wp_attribs)
 end
 *}
+*)
 
 end
