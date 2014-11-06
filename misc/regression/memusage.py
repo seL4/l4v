@@ -54,16 +54,28 @@ class Poller(threading.Thread):
         self.pid = pid
         self.high = 0
         self.finished = False
+        self.started = threading.Semaphore(0)
 
     def run(self):
-        self.high = 0
-        # Poll the process once a second and track a high water mark of its
+        # Fetch a sample, and notify others that we have started.
+        self.high = get_total_usage(self.pid)
+        self.started.release()
+
+        #
+        # Poll the process periodically to track a high water mark of its
         # memory usage.
+        #
+        # We poll quickly at the beginning and use exponential backout until we
+        # hit 1 second to try and get better stats on short-lived processes.
+        #
+        polling_interval = 0.01
         while not self.finished:
+            time.sleep(polling_interval)
             usage = get_total_usage(self.pid)
             if usage > self.high:
                 self.high = usage
-            time.sleep(1)
+            if polling_interval < 1.0:
+                polling_interval = min(polling_interval * 1.5, 1.0)
 
     def peak_mem_usage(self):
         return self.high
@@ -77,8 +89,13 @@ class Poller(threading.Thread):
 def process_poller(pid):
     '''Initiate polling of a subprocess. This is intended to be used in a
     `with` block.'''
+    # Create a new thread and start it up.
     p = Poller(pid)
     p.start()
+
+    # Wait for the thread to record at least one sample before continuing.
+    p.started.acquire()
+
     return p
 
 def main():
