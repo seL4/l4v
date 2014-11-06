@@ -1,5 +1,6 @@
 *.pyc
 *.o
+*~
 .*.attrib_trace
 
 spec/cspec/c/api/
