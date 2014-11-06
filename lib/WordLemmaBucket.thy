@@ -6113,4 +6113,20 @@ lemma bitfield_op_twice'': "\<lbrakk>~~ a = b << c; \<exists>x. b = mask x\<rbra
   apply clarsimp
   done
 
+lemma bit_twiddle_min:" (y::sword32) xor (((x::sword32) xor y) && (if x < y then -1 else 0)) = min x y"
+  by (metis (mono_tags) min_def word_bitwise_m1_simps(2) word_bool_alg.xor_left_commute word_bool_alg.xor_self word_bool_alg.xor_zero_right word_bw_comms(1) word_le_less_eq word_log_esimps(7))
+
+lemma bit_twiddle_max:"(x::sword32) xor (((x::sword32) xor y) && (if x < y then -1 else 0)) = max x y"
+  by (metis (mono_tags) max_def word_bitwise_m1_simps(2) word_bool_alg.xor_left_self word_bool_alg.xor_zero_right word_bw_comms(1) word_le_less_eq word_log_esimps(7))
+   
+lemma has_zero_byte:
+  "~~ (((((v::word32) && 0x7f7f7f7f) + 0x7f7f7f7f) || v) || 0x7f7f7f7f) \<noteq> 0
+    \<Longrightarrow> v && 0xff000000 = 0 \<or> v && 0xff0000 = 0 \<or> v && 0xff00 = 0 \<or> v && 0xff = 0"
+  apply clarsimp
+  apply word_bitwise
+  by metis
+
+lemma swap_with_xor:"\<lbrakk>(x::word32) = a xor b; y = b xor x; z = x xor y\<rbrakk> \<Longrightarrow> z = b \<and> y = a"
+  by (metis word_bool_alg.xor_assoc word_bool_alg.xor_commute word_bool_alg.xor_self word_bool_alg.xor_zero_right)
+
 end
