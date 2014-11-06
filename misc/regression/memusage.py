@@ -21,7 +21,12 @@ def get_usage(proc):
     children. We use the proportional set size, which accounts for shared pages
     to give us a more accurate total usage.'''
     assert isinstance(proc, psutil.Process)
-    return sum([m.pss for m in proc.get_memory_maps(grouped=True)])
+    try:
+        return sum([m.pss for m in proc.get_memory_maps(grouped=True)])
+    except psutil.AccessDenied:
+        # If we don't have permission to read a particular process,
+        # just return 0.
+        return 0
 
 def get_total_usage(pid):
     '''Retrieve the memory usage of a process by PID including its children. We
