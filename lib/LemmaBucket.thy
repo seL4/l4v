@@ -134,4 +134,15 @@ lemma isRight_rel_sum_comb2:
        \<Longrightarrow> isRight v \<and> r (theRight v) (theRight v')"
   by (clarsimp simp: isRight_def)
 
+lemma enumerate_append:"enumerate i (xs @ ys) = enumerate i xs @ enumerate (i + length xs) ys"
+  apply (induct xs arbitrary:ys i)
+   apply clarsimp+
+  done
+
+lemma enumerate_bound:"(a, b) \<in> set (enumerate n xs) \<Longrightarrow> a < n + length xs"
+  by (metis add.commute in_set_enumerate_eq prod.sel(1))
+
+lemma enumerate_exceed:"(n + length xs, b) \<notin> set (enumerate n xs)"
+  by (metis enumerate_bound less_not_refl)
+
 end

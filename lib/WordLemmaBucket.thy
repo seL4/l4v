@@ -6129,4 +6129,14 @@ lemma has_zero_byte:
 lemma swap_with_xor:"\<lbrakk>(x::word32) = a xor b; y = b xor x; z = x xor y\<rbrakk> \<Longrightarrow> z = b \<and> y = a"
   by (metis word_bool_alg.xor_assoc word_bool_alg.xor_commute word_bool_alg.xor_self word_bool_alg.xor_zero_right)
 
+lemma scast_nop_1:"((scast ((of_int x)::('a::len) word))::'a sword) = of_int x"
+  apply (clarsimp simp:scast_def word_of_int)
+  by (metis len_signed sint_sbintrunc' word_sint.Rep_inverse)
+
+lemma scast_nop_2:"((scast ((of_int x)::('a::len) sword))::'a word) = of_int x"
+  apply (clarsimp simp:scast_def word_of_int)
+  by (metis len_signed sint_sbintrunc' word_sint.Rep_inverse)
+
+lemmas scast_nop[simp] = scast_nop_1 scast_nop_2 scast_id
+
 end
