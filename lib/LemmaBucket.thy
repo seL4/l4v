@@ -145,4 +145,7 @@ lemma enumerate_bound:"(a, b) \<in> set (enumerate n xs) \<Longrightarrow> a < n
 lemma enumerate_exceed:"(n + length xs, b) \<notin> set (enumerate n xs)"
   by (metis enumerate_bound less_not_refl)
 
+lemma all_pair_unwrap:"(\<forall>a. P (fst a) (snd a)) = (\<forall>a b. P a b)"
+  by force
+
 end
