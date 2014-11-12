@@ -553,7 +553,6 @@ lemma list_swap_both: "x \<in> set list \<Longrightarrow> y \<in> set list \<Lon
 
 lemma list_swap_self[simp]: "list_swap list x x = list"
   apply (simp add: list_swap_def)
-  apply (induct list,simp+)
   done
  
 lemma map_ignore: "x \<notin> set list \<Longrightarrow> (map (\<lambda>xa. if xa = x then y else xa)

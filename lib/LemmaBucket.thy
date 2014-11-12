@@ -148,4 +148,7 @@ lemma enumerate_exceed:"(n + length xs, b) \<notin> set (enumerate n xs)"
 lemma all_pair_unwrap:"(\<forall>a. P (fst a) (snd a)) = (\<forall>a b. P a b)"
   by force
 
+lemma if_fold[simp]:"(if P then Q else if P then R else S) = (if P then Q else S)"
+  by presburger
+
 end

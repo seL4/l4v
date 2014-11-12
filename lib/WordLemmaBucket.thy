@@ -6069,6 +6069,9 @@ lemma le_step_down_nat:"\<lbrakk>(i::nat) \<le> n; i = n \<longrightarrow> P; i 
   apply arith
   done
 
+lemma le_step_down_int:"\<lbrakk>(i::int) \<le> n; i = n \<longrightarrow> P; i \<le> n - 1 \<longrightarrow> P\<rbrakk> \<Longrightarrow> P"
+  by arith
+
 lemma mask_step_down:"(b::32word) && 0x1 = (1::32word) \<Longrightarrow> (\<exists>x. x < 32 \<and> mask x = b >> 1) \<Longrightarrow> (\<exists>x. mask x = b)"
   apply clarsimp
   apply (rule_tac x="x + 1" in exI)
@@ -6138,5 +6141,25 @@ lemma scast_nop_2:"((scast ((of_int x)::('a::len) sword))::'a word) = of_int x"
   by (metis len_signed sint_sbintrunc' word_sint.Rep_inverse)
 
 lemmas scast_nop[simp] = scast_nop_1 scast_nop_2 scast_id
+
+lemma le_mask_imp_and_mask:"(x::word32) \<le> mask n \<Longrightarrow> x && mask n = x"
+  by (metis and_mask_eq_iff_le_mask)
+
+lemma or_not_mask_nop:"((x::word32) || ~~ mask n) && mask n = x && mask n"
+  by (metis word_and_not word_ao_dist2 word_bw_comms(1) word_log_esimps(3))
+
+lemma mask_exceed:"n \<ge> 32 \<Longrightarrow> (x::word32) && ~~ mask n = 0"
+  apply (metis (erased, hide_lams) is_aligned_neg_mask is_aligned_neg_mask_eq mask_32_max_word
+                                   word_bool_alg.compl_one word_bool_alg.conj_zero_right)
+  done
+
+lemma mask_subsume:"\<lbrakk>n \<le> m\<rbrakk> \<Longrightarrow> ((x::word32) || y && mask n) && ~~ mask m = x && ~~ mask m"
+  apply (subst word_ao_dist)
+  apply (subgoal_tac "(y && mask n) && ~~ mask m = 0")
+   apply simp
+  by (metis (no_types, hide_lams) is_aligned_mask is_aligned_weaken word_and_not word_bool_alg.conj_zero_right word_bw_comms(1) word_bw_lcs(1))
+
+lemma mask_twice2:"n \<le> m \<Longrightarrow> ((x::word32) && mask m) && mask n = x && mask n"
+  by (metis mask_twice min_def)
 
 end
