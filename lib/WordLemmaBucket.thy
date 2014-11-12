@@ -6162,4 +6162,17 @@ lemma mask_subsume:"\<lbrakk>n \<le> m\<rbrakk> \<Longrightarrow> ((x::word32) |
 lemma mask_twice2:"n \<le> m \<Longrightarrow> ((x::word32) && mask m) && mask n = x && mask n"
   by (metis mask_twice min_def)
 
+(* Helper for dealing with casts of IPC buffer message register offsets.
+ * XXX: There is almost certainly a more pleasant way to do this proof.
+ *)
+lemma unat_nat:"\<lbrakk>i \<ge> 0; i \<le>2 ^ 31\<rbrakk> \<Longrightarrow> (unat ((of_int i)::sword32)) = nat i"
+  unfolding unat_def apply (subst eq_nat_nat_iff, clarsimp+)
+  apply (subst Int.ring_1_class.of_nat_nat[symmetric], clarsimp+,
+         subst Word.word_of_int_nat[symmetric], clarsimp+)
+  apply (rule Word.word_uint.Abs_inverse)
+  apply clarsimp
+  apply (subst Word.uints_unats)
+  apply (induct i, (simp add:unats_def)+)
+  done
+
 end
