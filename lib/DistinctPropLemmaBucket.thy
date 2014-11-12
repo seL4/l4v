@@ -649,10 +649,22 @@ lemma fold_or_false:"\<not>(fold (op \<or>) xs False) \<Longrightarrow> \<forall
   apply (rule allI, case_tac "i = 0", simp+)
   done
 
-lemma fst_enumerate:"i < length xs \<Longrightarrow> fst (enumerate 0 xs ! i) = i"
-  by (metis fst_conv nth_enumerate_eq plus_nat.add_0)
+lemma fst_enumerate:"i < length xs \<Longrightarrow> fst (enumerate n xs ! i) = i + n"
+  by (metis add.commute fst_conv nth_enumerate_eq)
 
-lemma snd_enumerate:"i < length xs \<Longrightarrow> snd (enumerate 0 xs ! i) = xs ! i"
+lemma snd_enumerate:"i < length xs \<Longrightarrow> snd (enumerate n xs ! i) = xs ! i"
   by (metis nth_enumerate_eq snd_conv)
+
+lemma pair_unpack:"((a, b) = x) = (a = fst x \<and> b = snd x)"
+  by fastforce
+
+lemma enumerate_member:"i < length xs \<Longrightarrow> (n + i, xs ! i) \<in> set (enumerate n xs)"
+  apply (subgoal_tac "(n + i, xs ! i) = enumerate n xs ! i")
+   apply clarsimp
+  apply (subst pair_unpack)
+  apply (rule conjI)
+   apply (simp add:fst_enumerate)
+  apply (simp add:snd_enumerate)
+  done
 
 end
