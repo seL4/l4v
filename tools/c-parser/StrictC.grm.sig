@@ -17,6 +17,7 @@ val GHOSTUPD:  'a * 'a -> (svalue,'a) token
 val AUXUPD:  'a * 'a -> (svalue,'a) token
 val RELSPEC:  'a * 'a -> (svalue,'a) token
 val FNSPEC:  'a * 'a -> (svalue,'a) token
+val NORETURN:  'a * 'a -> (svalue,'a) token
 val STATIC:  'a * 'a -> (svalue,'a) token
 val INLINE:  'a * 'a -> (svalue,'a) token
 val INVARIANT:  'a * 'a -> (svalue,'a) token
