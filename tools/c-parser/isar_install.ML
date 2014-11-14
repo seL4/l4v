@@ -194,6 +194,13 @@ in
 end
 
 fun install_C_file0 (((((memsafe),ctyps),cdefs),s),statetylist_opt) thy = let
+  val {base = localename,...} = OS.Path.splitBaseExt (OS.Path.file s)
+  val _ = not (Long_Name.is_qualified localename) orelse
+            raise Fail ("Base of filename looks like qualified Isabelle ID: "^
+                        localename)
+  val _ = localename <> "" orelse 
+          raise Fail ("Filename (>'" ^ s ^ 
+                      "'<) gives \"\" as locale name, which is illegal") 
   val statetylist = case statetylist_opt of NONE => [] | SOME l => List.rev l
   val mstate_ty =
       case get_first (fn (MachineState s) => SOME s | _ => NONE) statetylist of
@@ -244,7 +251,6 @@ fun install_C_file0 (((((memsafe),ctyps),cdefs),s),statetylist_opt) thy = let
   val ast = SyntaxTransforms.remove_embedded_fncalls cse ast
 in
   if install_defs then let
-      val {base = localename,...} = OS.Path.splitBaseExt (OS.Path.file s)
       val (thy, vdecls, globs) =
           mk_thy_decls
             state {owners=owners,gstate_ty=gstate_ty,mstate_ty=mstate_ty} thy
