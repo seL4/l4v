@@ -210,7 +210,7 @@ fun simpl_conv'
   end
 
 (* Perform post-processing on a theorem. *)
-fun cleanup_thm ctxt prog_info fn_name thm =
+fun cleanup_thm ctxt do_opt prog_info fn_name thm =
 let
   (* Measure the term. *)
   fun gather_stats phase thm =
@@ -269,7 +269,7 @@ let
   val _ = gather_stats "L1peep" thm
 
   (* Rewrite exceptions. *)
-  val thm = Conv.fconv_rule (l1conv (ExceptionRewrite.except_rewrite_conv ctxt)) thm
+  val thm = Conv.fconv_rule (l1conv (ExceptionRewrite.except_rewrite_conv ctxt do_opt)) thm
   val _ = gather_stats "L1except" thm
 in
   thm
@@ -308,7 +308,7 @@ in
   (unfolded_simpl_term, unfolded_simpl_thm, impl_thm)
 end
 
-fun get_l1corres_thm prog_info fn_info ctxt fn_name
+fun get_l1corres_thm prog_info fn_info ctxt do_opt fn_name
     callee_terms measure_var = let
   val thy = Proof_Context.theory_of ctxt
   val (simpl_term, simpl_thm, impl_thm) = get_simpl_body ctxt fn_info fn_name
@@ -350,7 +350,7 @@ in
           | SOME thm => ((rtac @{thm L1corres_Call} 1) THEN (rtac thm 1) THEN tactic))
   |> Goal.finish ctxt
   (* Apply simplifications to the L1 term. *)
-  |> cleanup_thm ctxt prog_info fn_name
+  |> cleanup_thm ctxt do_opt prog_info fn_name
 end
 
 fun get_body_of_l1corres_thm thm =
@@ -402,14 +402,14 @@ end
  * correspondence between our generated specs and the original SIMPL
  * code).
  *)
-fun translate_simpl filename fn_info lthy =
+fun translate_simpl filename fn_info do_opt lthy =
 let
   val prog_info = ProgramInfo.get_prog_info lthy filename
 
   (* Abstract the function to a new body with a proof of correspondence. *)
   fun convert ctxt fn_name callee_terms measure_var fn_args =
   let
-    val thm = get_l1corres_thm prog_info fn_info ctxt fn_name
+    val thm = get_l1corres_thm prog_info fn_info ctxt do_opt fn_name
         callee_terms measure_var
   in (get_body_of_l1corres_thm thm, thm, NONE) end
 

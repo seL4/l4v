@@ -26,6 +26,10 @@ struct
  *                ts_force RULE_NAME = FUNC_NAMES,
  *                ts_force ... = ...,
  *                heap_abs_syntax,
+ *
+ *                trace_heap_lift = FUNC_NAMES,
+ *                trace_word_abs = FUNC_NAMES,
+ *                no_opt,
  *                statistics,
  *                keep_going
  *              ]
@@ -74,6 +78,9 @@ type autocorres_options = {
   (* Store detailed traces for conversions of the selected functions. *)
   trace_heap_lift : string list option ref,
   trace_word_abs : string list option ref,
+
+  (* Disable L1Peephole, L2Peephole and L2Opt rules. *)
+  no_opt : bool option ref,
 
   print_stats : bool option ref,
 
@@ -180,6 +187,10 @@ val trace_word_abs_parser =
   named_opt "trace_word_abs" "function names" >>
   (fn funcs => none_to_some (#trace_word_abs) funcs "autocorres: trace_word_abs option specified multiple times")
 
+val no_opt_parser =
+  Parse.reserved "no_opt" >>
+  (fn _ => none_to_some (#no_opt) true "autocorres: no_opt option specified multiple times")
+
 val print_stats_parser =
   Parse.reserved "statistics" >>
   (fn _ => none_to_some (#print_stats) true "autocorres: statistics option specified multiple times")
@@ -205,6 +216,7 @@ fun default_opts _ = {
     heap_abs_syntax = ref NONE,
     scope = ref NONE,
     scope_depth = ref NONE,
+    no_opt = ref NONE,
     trace_heap_lift = ref NONE,
     trace_word_abs = ref NONE,
     print_stats = ref NONE,
@@ -225,6 +237,7 @@ let
      heap_abs_syntax_parser ||
      scope_parser ||
      scope_depth_parser ||
+     no_opt_parser ||
      trace_heap_lift_parser ||
      trace_word_abs_parser ||
      print_stats_parser ||
@@ -355,19 +368,22 @@ let
     else
       ()
 
+  val do_opt = !(#no_opt opt) <> SOME true
+
   (* Do the translation. *)
   val lthy =
-    SimplConv.translate_simpl filename fn_info lthy
+    SimplConv.translate_simpl filename fn_info do_opt lthy
     |> (fn (lthy, fn_info) =>
-        LocalVarExtract.translate_l2 filename fn_info lthy)
+        LocalVarExtract.translate_l2 filename fn_info do_opt lthy)
     |> (fn (lthy, fn_info) =>
-        HeapLift.system_heap_lift filename fn_info (these (!(#no_heap_abs opt))) (these (!(#force_heap_abs opt))) heap_abs_syntax keep_going (these (!(#trace_heap_lift opt))) lthy)
+        HeapLift.system_heap_lift filename fn_info (these (!(#no_heap_abs opt))) (these (!(#force_heap_abs opt))) heap_abs_syntax keep_going (these (!(#trace_heap_lift opt))) do_opt lthy)
     |> (fn (lthy, fn_info) =>
         if skip_word_abs then (lthy, fn_info) else
         WordAbstract.word_abstract filename fn_info (these (!(#unsigned_word_abs opt)))
-                                   (these (!(#no_signed_word_abs opt))) (these (!(#trace_word_abs opt))) lthy)
+                                   (these (!(#no_signed_word_abs opt))) (these (!(#trace_word_abs opt)))
+                                   do_opt lthy)
     |> (fn (lthy, fn_info) =>
-        TypeStrengthen.type_strengthen ts_rules ts_force filename fn_info keep_going lthy)
+        TypeStrengthen.type_strengthen ts_rules ts_force filename fn_info keep_going do_opt lthy)
     |> (fn (lthy, fn_info) =>
         lthy)
 in

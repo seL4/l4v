@@ -35,7 +35,7 @@ fun map_opt_simpset use_ugly_rules =
  *
  *   simp_expr P A ?X
  *
- * This is done by simplifing "A" while assuming "P", and unifying the result
+ * This is done by simplifying "A" while assuming "P", and unifying the result
  * (usually instantiating "X") in the process.
  *)
 val simp_expr_thm =
@@ -227,8 +227,13 @@ fun fix_L2_while_loop_splits_conv ctxt =
 (*
  * Carry out flow-sensitive optimisations on the given 'thm'.
  *
- * 'n' is the argument number to cleanup, counting from 1. So for example, if
+ * "n" is the argument number to cleanup, counting from 1. So for example, if
  * our input theorem was "corres P A B", an "n" of 2 would simplify "A".
+ * If n < 0, then the cleanup is applied to the -n-th argument from the end.
+ *
+ * If "fast_mode" is 0, perform flow-sensitive optimisations (which tend to be
+ * time-consuming). If 1, only apply L2Peephole and L2Opt simplification rules.
+ * If 2, do not use AutoCorres' simplification rules at all.
  *
  * If "fast_mode" is true, we don't do flow-sensitive optimisations (which tend
  * to be time-consuming).
@@ -241,7 +246,7 @@ let
   (* Setup basic simplifier. *)
   fun basic_ss ctxt =
       put_simpset AUTOCORRES_SIMPSET ctxt
-      |> (fn ctxt => ctxt addsimps (L2PeepholeThms.get ctxt))
+      |> (fn ctxt => if fast_mode < 2 then ctxt addsimps (L2PeepholeThms.get ctxt) else ctxt)
       |> (fn ctxt => ctxt addsimprocs [l2_gets_bind_simproc, l2_guard_simproc (simpset_of ctxt)])
       |> map_opt_simpset false
   fun simp_conv ctxt =
@@ -259,7 +264,7 @@ let
 
   (* Apply flow-sensitive optimisations, and then re-apply simple simplifications. *)
   val new_thm =
-    if not fast_mode then
+    if fast_mode = 0 then
       Conv.fconv_rule (
         l2conv (fn ctxt =>
           monad_equiv ctxt

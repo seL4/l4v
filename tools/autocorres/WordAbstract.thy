@@ -600,6 +600,12 @@ lemma corresTA_precond_to_asm:
   "\<lbrakk> \<And>s. P s \<Longrightarrow> corresTA \<top> rx ex A A' \<rbrakk> \<Longrightarrow> corresTA P rx ex A A'"
   by (clarsimp simp: corresXF_def)
 
+lemma L2_guard_true: "L2_seq (L2_guard \<top>) A = A ()"
+  by (monad_eq simp: L2_defs)
+lemma corresTA_simp_trivial_guard:
+  "corresTA P rx ex (L2_seq (L2_guard \<top>) A) C \<equiv> corresTA P rx ex (A ()) C"
+  by (simp add: L2_guard_true)
+
 definition "L2_assume P \<equiv> condition P (returnOk ()) (selectE {})"
 
 lemma L2_assume_alt_def:

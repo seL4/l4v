@@ -18,7 +18,8 @@ structure AutoCorresTrace = struct
  * This unifier is less general, but should work for AutoCorres's purposes.
  * It unifies terms t and t', where t' is assumed to be fully concrete (the subgoal proof).
  * Schematic variables in t, including functions, are instantiated by substituting them with
- * the corresponding subterm in t'.
+ * the corresponding subterm in t'. We assume that schematic variables do not have schematic
+ * arguments. (FIXME: add this test)
  * We also do some instantiations of schematic type variables in t, because it's currently needed
  * by WordAbstract. We assume that the type vars are never applied to arguments.
  *)

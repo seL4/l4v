@@ -307,11 +307,11 @@ in
 end
 
 (* Exception rewrite conversion. *)
-fun except_rewrite_conv ctxt =
+fun except_rewrite_conv ctxt do_opt =
   Simplifier.asm_full_rewrite (
     put_simpset HOL_basic_ss (Utils.set_hidden_ctxt ctxt)
         addsimps (L1ExceptionThms.get ctxt)
-        addsimps (L1PeepholeThms.get ctxt)
+        addsimps (if do_opt then L1PeepholeThms.get ctxt else [])
         addsimprocs simprocs)
 
 end

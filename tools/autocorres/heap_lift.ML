@@ -379,6 +379,7 @@ fun system_heap_lift
     (heap_abs_syntax : bool)
     (keep_going : bool)
     (trace_funcs : string list)
+    (do_opt : bool)
     lthy =
 let
   val prog_info = ProgramInfo.get_prog_info lthy filename
@@ -722,7 +723,7 @@ let
 
     (* Apply peephole optimisations to the theorem. *)
     val _ = writeln ("Simplifying (HL) " ^ fn_name)
-    val thm = L2Opt.cleanup_thm ctxt thm false 2
+    val thm = L2Opt.cleanup_thm ctxt thm (if do_opt then 0 else 2) 2
 
     (* If we created extra heap wrappers, apply them now.
      * Our simp rules don't seem to be enough for L2Opt,

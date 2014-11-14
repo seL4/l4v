@@ -153,7 +153,7 @@ in
 end
 
 (* Convert a program by abstracting words. *)
-fun word_abstract filename fn_info unsigned_abs no_signed_abs trace_funcs lthy =
+fun word_abstract filename fn_info unsigned_abs no_signed_abs trace_funcs do_opt lthy =
 let
   (* Generate a constant name for our definitions. *)
   fun gen_wa_name x = "wa_" ^ x
@@ -311,7 +311,10 @@ let
     val (thm, trace) =
         case AutoCorresTrace.trace_solve_tac ctxt true false
                  (K step_tacs) goal (SOME WORD_ABS_MAX_DEPTH) replay_failures of
-           SOME (thm, [trace]) => (Goal.finish ctxt thm, trace)
+           NONE => (* intentionally generate a TRACE_SOLVE_TAC_FAIL *)
+                   (AutoCorresTrace.trace_solve_tac ctxt false false (K step_tacs) goal NONE (Unsynchronized.ref 0);
+                    (* never reached *) error "word_abstract fail tac: impossible")
+         | SOME (thm, [trace]) => (Goal.finish ctxt thm, trace)
     val _ = if !replay_failures < replay_failure_start then
               @{trace} (fn_name ^ " WA: reverted to slow replay " ^
                         Int.toString(replay_failure_start - !replay_failures) ^ " time(s)") else ()
@@ -356,7 +359,12 @@ let
 
     (* Apply peephole optimisations to the theorem. *)
     val _ = writeln ("Simpifying (WA) " ^ fn_name)
-    val thm = L2Opt.cleanup_thm ctxt thm false 4
+    val thm = L2Opt.cleanup_thm ctxt thm (if do_opt then 0 else 2) 4
+
+    (* We end up with an unwanted L2_guard outside the L2_recguard.
+     * L2Opt should simplify the condition to (%_. True) even if (not do_opt),
+     * so we match the guard and get rid of it here. *)
+    val thm = Simplifier.rewrite_rule ctxt @{thms corresTA_simp_trivial_guard} thm
 
     (* Gather post-optimisation statistics. *)
     val _ = Statistics.gather ctxt "WAsimp" fn_name

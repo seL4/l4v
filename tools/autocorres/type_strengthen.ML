@@ -228,7 +228,7 @@ end
 
 (* Like perform_lift, but also applies the polishing rules, hopefully yielding
  * an even nicer definition. *)
-fun perform_lift_and_polish ctxt prog_info fn_info rule_set
+fun perform_lift_and_polish ctxt prog_info fn_info rule_set do_opt
     fn_thm fn_name =
   case (perform_lift ctxt prog_info fn_info rule_set
         fn_thm fn_name)
@@ -240,7 +240,7 @@ fun perform_lift_and_polish ctxt prog_info fn_info rule_set
     (Thm.concl_of thm |> Utils.rhs_of)
 
   (* Apply any polishing rules. *)
-  val polish_thm = Monad_Convert.polish ctxt rule_set thm
+  val polish_thm = Monad_Convert.polish ctxt rule_set do_opt thm
 
   (* Measure the term. *)
   val _ = Statistics.gather ctxt "polish" fn_name
@@ -262,7 +262,7 @@ in (polish_thm, dict) end
  * If the lift does not succeed, the function returns NONE.
  *)
 fun lift_function_rewrite rule_set filename prog_info fn_info
-    all_callee_proofs functions keep_going lthy =
+    all_callee_proofs functions keep_going do_opt lthy =
 let
   val fn_names = map fst functions
   val fn_defs = map snd functions
@@ -303,7 +303,7 @@ let
   val lifted_functions =
     map (fn (fn_name, fn_thm) =>
         perform_lift_and_polish lthy prog_info fn_info
-            rule_set' fn_thm fn_name)
+            rule_set' do_opt fn_thm fn_name)
         (fn_names ~~ fn_defs)
 
   val lifted_functions = map (fn x =>
@@ -537,14 +537,14 @@ end
 
 (* Lift the given function set, trying each rule until one succeeds. *)
 fun lift_function rules force_lift filename prog_info fn_info
-    all_callee_proofs functions keep_going lthy =
+    all_callee_proofs functions keep_going do_opt lthy =
 let
   val rules' = compute_lift_rules rules force_lift (map fst functions)
 
   (* Find the first lift that works. *)
   fun first (rule::xs) =
       (lift_function_rewrite rule filename prog_info fn_info
-           all_callee_proofs functions keep_going lthy
+           all_callee_proofs functions keep_going do_opt lthy
        handle LiftingFailed _ => first xs)
     | first [] = raise AllLiftingFailed functions
 in
@@ -572,7 +572,7 @@ end
 (* Run through every function, attempting to strengthen its type. *)
 fun type_strengthen (rules : Monad_Types.monad_type list)
                     (force_lift : Monad_Types.monad_type Symtab.table)
-                    filename fn_info (keep_going : bool) lthy =
+                    filename fn_info (keep_going : bool) (do_opt : bool) lthy =
 let
   (* Get all function definitions. *)
   val prog_info = ProgramInfo.get_prog_info lthy filename
@@ -601,7 +601,7 @@ let
     val start_time = Timer.startRealTimer ()
     val (lthy, new_rewrites, monad_name) =
         lift_function rules force_lift filename prog_info fn_info
-                      all_callee_proofs functions keep_going lthy
+                      all_callee_proofs functions keep_going do_opt lthy
     val _ = writeln ("  --> " ^ monad_name)
     val _ = @{trace} ("Converted (TS) " ^ Utils.commas (map fst functions) ^ " in " ^
                       Time.toString (Timer.checkRealTimer start_time) ^ " s")
