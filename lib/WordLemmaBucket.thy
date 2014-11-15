@@ -4200,16 +4200,14 @@ lemmas map_prod_split_imageI
                     and a="(a, b)" and b="(c, d)" for a b c d f g, simplified]
 
 lemma word_div_mult:
-  fixes c :: word32
+  fixes c :: "('a::len) word"
   shows "\<lbrakk>0 < c; a < b * c \<rbrakk> \<Longrightarrow> a div c < b"
   apply (simp add: word_less_nat_alt unat_div)
   apply (subst td_gal_lt [symmetric])
    apply assumption
   apply (erule order_less_le_trans)
   apply (subst unat_word_ariths)
-  apply (unfold word_bits_len_of)
-  apply (rule mod_le_dividend)
-  done
+  by (metis Divides.mod_less_eq_dividend)
 
 lemma word_less_power_trans_ofnat:
   "\<lbrakk>n < 2 ^ (m - k); k \<le> m; m < len_of TYPE('a)\<rbrakk>
