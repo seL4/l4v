@@ -6339,24 +6339,24 @@ lemma lsb_this_or_next:"\<not>(((x::('a::len) word) + 1) !! 0) \<Longrightarrow>
 (* Bit population count. Equivalent of __builtin_popcount.
  * FIXME: MOVE
  *)
-function
+definition
   pop_count :: "('a::len) word \<Rightarrow> nat"
 where
-  "pop_count x = (if x = 0 then 0 else ((if x !! 0 then 1 else 0) + pop_count (x >> 1)))"
-  by clarsimp+
-
-termination pop_count
-  apply (relation "measure unat")
-   apply simp+
-  apply (subst word_less_nat_alt[symmetric])
-  apply (rule shiftr1_lt[unfolded One_nat_def])
-  apply simp
-  done
+  "pop_count w \<equiv> length (filter id (to_bl w))"
 
 lemma pop_count_0[simp]:"pop_count 0 = 0"
-  by clarsimp
+  by (clarsimp simp:pop_count_def)
 
 lemma pop_count_1[simp]:"pop_count 1 = 1"
-  by clarsimp
+  by (clarsimp simp:pop_count_def to_bl_1)
+
+lemma pop_count_0_imp_0:"(pop_count w = 0) = (w = 0)"
+  apply (rule iffI)
+   apply (clarsimp simp:pop_count_def)
+   apply (subst (asm) filter_empty_conv)
+   apply (clarsimp simp:eq_zero_set_bl)
+   apply fast
+  apply simp
+  done
 
 end
