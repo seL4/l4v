@@ -6173,4 +6173,82 @@ lemma unat_nat:"\<lbrakk>i \<ge> 0; i \<le>2 ^ 31\<rbrakk> \<Longrightarrow> (un
   apply (induct i, (simp add:unats_def)+)
   done
 
+(* FIXME: MOVE *)
+lemma pow_2_gt:"n \<ge> 2 \<Longrightarrow> (2::int) < 2 ^ n"
+  apply (induct n)
+   apply simp+
+  done
+
+lemma uint_2_id:"len_of TYPE('a) \<ge> 2 \<Longrightarrow> uint (2::('a::len) word) = 2"
+  apply clarsimp
+  apply (subgoal_tac "2 \<in> uints (len_of TYPE('a))")
+   apply (subst (asm) Word.word_ubin.set_iff_norm)
+   apply simp
+  apply (subst word_uint.set_iff_norm)
+  apply clarsimp
+  apply (rule int_mod_eq')
+   apply simp
+  apply (rule pow_2_gt)
+  apply simp
+  done
+
+(* FIXME: MOVE *)
+lemma bintrunc_id:"\<lbrakk>of_nat n \<ge> m; m > 0\<rbrakk> \<Longrightarrow> bintrunc n m = m"
+  apply (subst bintrunc_mod2p)
+  apply (rule int_mod_eq')
+   apply simp+
+  apply (induct n arbitrary:m)
+   apply simp+
+  by force
+
+lemma shiftr1_unfold:"shiftr1 x = x >> 1"
+  by (metis One_nat_def comp_apply funpow.simps(1) funpow.simps(2) id_apply shiftr_def)
+
+lemma shiftr1_is_div_2:"(x::('a::len) word) >> 1 = x div 2"
+  apply (case_tac "len_of TYPE('a) = 1")
+   apply simp
+   apply (subgoal_tac "x = 0 \<or> x = 1")
+    apply (erule disjE)
+     apply (clarsimp simp:word_div_def)+
+   apply (metis One_nat_def less_irrefl_nat sint_1_cases)
+  apply clarsimp
+  apply (subst word_div_def)
+  apply clarsimp
+  apply (subst bintrunc_id)
+    apply (subgoal_tac "2 \<le> len_of TYPE('a)")
+     apply simp
+    apply (metis (no_types) le_0_eq le_SucE lens_not_0(2) not_less_eq_eq numeral_2_eq_2)
+   apply simp
+  apply (subst bin_rest_def[symmetric])
+  apply (subst shiftr1_def[symmetric])
+  apply (clarsimp simp:shiftr1_unfold)
+  done
+
+lemma div_of_0_id[simp]:"(0::('a::len) word) div n = 0"
+  by (simp add: word_div_def)
+
+lemma degenerate_word:"len_of TYPE('a) = 1 \<Longrightarrow> (x::('a::len) word) = 0 \<or> x = 1"
+  by (metis One_nat_def less_irrefl_nat sint_1_cases)
+
+lemma div_by_0_word:"(x::('a::len) word) div 0 = 0"
+  by (metis div_0 div_by_0 unat_0 word_arith_nat_defs(6) word_div_1)
+
+lemma div_less_dividend_word:"\<lbrakk>x \<noteq> 0; n \<noteq> 1\<rbrakk> \<Longrightarrow> (x::('a::len) word) div n < x"
+  apply (case_tac "n = 0")
+   apply clarsimp
+   apply (subst div_by_0_word)
+   apply (simp add:word_neq_0_conv)
+  apply (subst word_arith_nat_div)
+  apply (rule word_of_nat_less)
+  apply (rule div_less_dividend)
+   apply (metis (poly_guards_query) One_nat_def less_one nat_neq_iff unat_eq_1(2) unat_eq_zero)
+  apply (simp add:unat_gt_0)
+  done
+
+lemma shiftr1_lt:"x \<noteq> 0 \<Longrightarrow> (x::('a::len) word) >> 1 < x"
+  apply (subst shiftr1_is_div_2)
+  apply (rule div_less_dividend_word)
+   apply simp+
+  done
+
 end
