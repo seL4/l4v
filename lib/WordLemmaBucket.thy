@@ -6251,4 +6251,27 @@ lemma shiftr1_lt:"x \<noteq> 0 \<Longrightarrow> (x::('a::len) word) >> 1 < x"
    apply simp+
   done
 
+(* Bit population count. Equivalent of __builtin_popcount.
+ * FIXME: MOVE
+ *)
+function
+  pop_count :: "('a::len) word \<Rightarrow> nat"
+where
+  "pop_count x = (if x = 0 then 0 else ((if x !! 0 then 1 else 0) + pop_count (x >> 1)))"
+  by clarsimp+
+
+termination pop_count
+  apply (relation "measure unat")
+   apply simp+
+  apply (subst word_less_nat_alt[symmetric])
+  apply (rule shiftr1_lt[unfolded One_nat_def])
+  apply simp
+  done
+
+lemma pop_count_0[simp]:"pop_count 0 = 0"
+  by clarsimp
+
+lemma pop_count_1[simp]:"pop_count 1 = 1"
+  by clarsimp
+
 end
