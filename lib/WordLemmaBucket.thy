@@ -6251,6 +6251,91 @@ lemma shiftr1_lt:"x \<noteq> 0 \<Longrightarrow> (x::('a::len) word) >> 1 < x"
    apply simp+
   done
 
+lemma shiftr1_0_or_1:"(x::('a::len) word) >> 1 = 0 \<Longrightarrow> x = 0 \<or> x = 1"
+  apply (subst (asm) shiftr1_is_div_2)
+  by (smt2 Divides.div_less div_2_gt_zero div_by_1 le_unat_uoi nat_neq_iff not_less not_less_eq_eq of_nat_numeral unat_0 unat_div unat_eq_1(2) word_arith_nat_defs(6) word_div_1)
+
+lemma word_overflow:"(x::('a::len) word) + 1 > x \<or> x + 1 = 0"
+  apply clarsimp
+  by (metis diff_0 eq_diff_eq less_x_plus_1 max_word_max plus_1_less)
+
+lemma word_overflow_unat:"unat ((x::('a::len) word) + 1) = unat x + 1 \<or> x + 1 = 0"
+  by (metis Suc_eq_plus1 add.commute unatSuc)
+
+lemma even_word_imp_odd_next:"even (unat (x::('a::len) word)) \<Longrightarrow> x + 1 = 0 \<or> odd (unat (x + 1))"
+  apply (cut_tac x=x in word_overflow_unat)
+  apply clarsimp
+  done
+
+lemma odd_word_imp_even_next:"odd (unat (x::('a::len) word)) \<Longrightarrow> x + 1 = 0 \<or> even (unat (x + 1))"
+  apply (cut_tac x=x in word_overflow_unat)
+  apply clarsimp
+  done
+
+lemma overflow_imp_lsb:"(x::('a::len) word) + 1 = 0 \<Longrightarrow> x !! 0"
+  by (metis add.commute add_left_cancel max_word_max not_less word_and_1 word_bool_alg.conj_one_right word_bw_comms(1) word_overflow zero_neq_one)
+
+lemma word_lsb_nat:"lsb w = (unat w mod 2 = 1)"
+  unfolding word_lsb_def bin_last_def
+  by (metis (no_types, hide_lams) nat_mod_distrib nat_numeral not_mod_2_eq_1_eq_0 numeral_One uint_eq_0 uint_nonnegative unat_0 unat_def zero_le_numeral)
+
+lemma odd_iff_lsb:"odd (unat (x::('a::len) word)) = x !! 0"
+  apply (simp add:even_def)
+  apply (subst word_lsb_nat[unfolded One_nat_def, symmetric])
+  apply (rule word_lsb_alt)
+  done
+
+lemma of_nat_neq_iff_word:
+      "x mod 2 ^ len_of TYPE('a) \<noteq> y mod 2 ^ len_of TYPE('a) \<Longrightarrow>
+         (((of_nat x)::('a::len) word) \<noteq> of_nat y) = (x \<noteq> y)"
+  apply (rule iffI)
+   apply (case_tac "x = y")
+   apply (subst (asm) of_nat_eq_iff[symmetric])
+   apply simp+
+  apply (case_tac "((of_nat x)::('a::len) word) = of_nat y")
+   apply (subst (asm) word_unat.norm_eq_iff[symmetric])
+   apply simp+
+  done
+
+lemma shiftr1_irrelevant_lsb:"(x::('a::len) word) !! 0 \<or> x >> 1 = (x + 1) >> 1"
+  apply (case_tac "len_of TYPE('a) = 1")
+   apply clarsimp
+   apply (drule_tac x=x in degenerate_word[unfolded One_nat_def])
+   apply (erule disjE)
+    apply clarsimp+
+  apply (subst (asm) shiftr1_is_div_2[unfolded One_nat_def])+
+  apply (subst (asm) word_arith_nat_div)+
+  apply clarsimp
+  apply (subst (asm) bintrunc_id)
+    apply (subgoal_tac "len_of TYPE('a) > 0")
+     apply linarith
+    apply clarsimp+
+  apply (subst (asm) bintrunc_id)
+    apply (subgoal_tac "len_of TYPE('a) > 0")
+     apply linarith
+    apply clarsimp+
+  apply (case_tac "x + 1 = 0")
+   apply (clarsimp simp:overflow_imp_lsb)
+  apply (cut_tac x=x in word_overflow_unat)
+  apply clarsimp
+  apply (case_tac "even (unat x)")
+   apply (subgoal_tac "unat x div 2 = Suc (unat x) div 2")
+    apply clarsimp
+   apply (subst numeral_2_eq_2)+
+   apply (rule even_nat_plus_one_div_two[symmetric])
+   apply simp
+  apply (simp add:odd_iff_lsb)
+  done
+
+lemma shiftr1_0_imp_only_lsb:"((x::('a::len) word) + 1) >> 1 = 0 \<Longrightarrow> x = 0 \<or> x + 1 = 0"
+  by (metis One_nat_def shiftr1_0_or_1 word_less_1 word_overflow)
+
+lemma shiftr1_irrelevant_lsb':"\<not>((x::('a::len) word) !! 0) \<Longrightarrow> x >> 1 = (x + 1) >> 1"
+  by (metis shiftr1_irrelevant_lsb)
+
+lemma lsb_this_or_next:"\<not>(((x::('a::len) word) + 1) !! 0) \<Longrightarrow> x !! 0"
+  by (metis (poly_guards_query) even_word_imp_odd_next odd_iff_lsb overflow_imp_lsb)
+
 (* Bit population count. Equivalent of __builtin_popcount.
  * FIXME: MOVE
  *)
