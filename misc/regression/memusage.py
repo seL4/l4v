@@ -33,16 +33,22 @@ def get_total_usage(pid):
     ignore NoSuchProcess errors to mask subprocesses exiting while the cohort
     continues.'''
     total = 0
+
+    # Fetch parent's usage.
     try:
         p = psutil.Process(pid)
         total += get_usage(p)
+        children = p.get_children(recursive=True) #pylint: disable=E1123
     except psutil.NoSuchProcess:
         return 0
-    for proc in p.get_children(recursive=True): #pylint: disable=E1123
+
+    # Fetch usage of children.
+    for proc in children:
         try:
             total += get_usage(proc)
         except psutil.NoSuchProcess:
             pass
+
     return total
 
 class Poller(threading.Thread):

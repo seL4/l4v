@@ -206,7 +206,7 @@ fun mk_field_lvalue (p,f,ty) =
 fun mk_field_lvalue_ptr _ (p,f,ty,res_ty) =
       mk_ptr (mk_field_lvalue (p,f,ty), res_ty)
 
-val NULLptr = mk_ptr(Const(@{const_name "Groups.zero_class.zero"}, addr_ty), mk_ptr_ty unit)
+val NULLptr = mk_ptr(Const(@{const_name "Groups.zero_class.zero"}, addr_ty), unit)
 
 fun mk_ptr_coerce(oldtm, newty) = let
   val oldty = type_of oldtm

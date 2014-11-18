@@ -810,7 +810,7 @@ end
     | NUMERIC_CONSTANT of Absyn.numliteral_info
     | STRUCT | UNION | TYPEDEF | EXTERN | CONST | VOLATILE | RESTRICT
     | INVARIANT
-    | INLINE | STATIC
+    | INLINE | STATIC | NORETURN
     | FNSPEC
     | RELSPEC
     | AUXUPD
@@ -858,6 +858,9 @@ storage_class_specifier : TYPEDEF (wrap(TypeDef, TYPEDEFleft, TYPEDEFright))
 
 function_specifiers
 : INLINE        (wrap([], INLINEleft, INLINEright)) (* totally ignored by us *)
+| NORETURN      (wrap([wrap(gcc_attribs [GCC_AttribID "noreturn"],
+                            NORETURNleft, NORETURNright)],
+                      NORETURNleft, NORETURNright))
 | special_function_specs SPEC_BLOCKEND
                 (special_function_specs)
 | attribute_specifier

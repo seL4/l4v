@@ -353,6 +353,8 @@ attr_start = "__attribute__"{ws}*"((";
      (tok(Tokens.VOID,source,yypos,yypos+size yytext-1));
 <INITIAL,TDEF,TS,TSS,TSI>"inline"    =>
      (tok(Tokens.INLINE,source,yypos,yypos+size yytext-1));
+<INITIAL,TDEF,TS,TSS,TSI>"_Noreturn"    =>
+     (tok(Tokens.NORETURN,source,yypos,yypos+size yytext-1));
 <INITIAL,TDEF,TS,TSS,TSI>"static"    =>
      (tok(Tokens.STATIC,source,yypos,yypos+size yytext-1));
 

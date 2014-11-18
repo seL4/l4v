@@ -6359,4 +6359,27 @@ lemma pop_count_0_imp_0:"(pop_count w = 0) = (w = 0)"
   apply simp
   done
 
+(* Perhaps this one should be a simp lemma, but it seems a little dangerous. *)
+lemma cast_chunk_assemble_id:
+  "\<lbrakk>n = len_of TYPE('a::len); m = len_of TYPE('b::len); n * 2 = m\<rbrakk> \<Longrightarrow>
+  (((ucast ((ucast (x::'b word))::'a word))::'b word) || (((ucast ((ucast (x >> n))::'a word))::'b word) << n)) = x"
+  apply (subgoal_tac "((ucast ((ucast (x >> n))::'a word))::'b word) = x >> n")
+   apply clarsimp
+   apply (subst and_not_mask[symmetric])
+   apply (subst ucast_ucast_mask)
+   apply (subst word_ao_dist2[symmetric])
+   apply clarsimp
+  apply (rule ucast_ucast_len)
+  apply (rule shiftr_less_t2n')
+   apply (subst and_mask_eq_iff_le_mask)
+   apply (clarsimp simp:mask_def)
+   apply (metis max_word_eq max_word_max mult_2_right)
+  apply (metis add_diff_cancel_left' diff_less len_gt_0 mult_2_right)
+  done
+
+(* Helper for packing then unpacking a 64-bit variable. *)
+lemma cast_chunk_assemble_id_64[simp]:
+  "(((ucast ((ucast (x::64 word))::32 word))::64 word) || (((ucast ((ucast (x >> 32))::32 word))::64 word) << 32)) = x"
+  by (simp add:cast_chunk_assemble_id)
+
 end
