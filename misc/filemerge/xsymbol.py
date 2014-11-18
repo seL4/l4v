@@ -379,8 +379,8 @@ if len(sys.argv) > 1:
 else:
     f = sys.stdin
 
-for line in f:
-    # replace the words in the dictionary
-    for key in word_dic:
-        line = line.replace(key, word_dic[key])
-    print line,
+data = f.read()
+# replace the words in the dictionary
+for key, value in word_dic.items():
+    data = data.replace(key, value)
+print data,
