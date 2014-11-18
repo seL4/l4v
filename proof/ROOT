@@ -110,6 +110,7 @@ session InfoFlow in "infoflow" = Access +
 session InfoFlowC = CRefine +
   theories
     "infoflow/Noninterference_Refinement"
+    "infoflow/Example_Valid_StateH"
     
 session InfoFlowCCount = InfoFlowC +
   theories
