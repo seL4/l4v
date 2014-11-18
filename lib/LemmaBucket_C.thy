@@ -728,10 +728,9 @@ lemma heap_access_Array_element':
    apply (rule refl)
   apply (simp add: split_upt_on_n[OF less])
   apply (rule trans, rule foldr_does_nothing_to_xf[where xf="\<lambda>s. index s n"])
-   apply (simp add: index_update2)
-  apply (simp add: index_update)
+   apply simp+
   apply (subst foldr_does_nothing_to_xf[where xf="\<lambda>s. index s n"])
-   apply (simp add: index_update2)
+   apply simp
   apply (simp add: drop_heap_list_le take_heap_list_le)
   apply (subst take_heap_list_le)
    apply (simp add: le_diff_conv2)
@@ -754,7 +753,7 @@ lemma heap_update_id:
   apply clarsimp
   apply (simp add: from_bytes_def to_bytes_def update_ti_t_def
                    size_of_def field_access_update_same
-                   td_fafu_idem wf_fd)
+                   td_fafu_idem)
   done
 
 lemma fold_cong':
@@ -1078,5 +1077,18 @@ qed
 (* arg_cong specified for FCP because it does not apply as is. *)
 lemma FCP_arg_cong:"f = g \<Longrightarrow> FCP f = FCP g"
   by simp
+
+lemma h_val_id:
+    "h_val (hrs_mem (hrs_mem_update (heap_update x y) s)) x = (y::'a::mem_type)"
+  apply (subst hrs_mem_update)
+  apply (rule h_val_heap_update)
+  done
+
+lemma heap_update_id2:
+    "hrs_mem_update (heap_update p ((h_val (hrs_mem s) p)::'a::packed_type)) s = s"
+  apply (clarsimp simp:hrs_mem_update_def case_prod_beta)
+  apply (subst heap_update_id)
+   apply (simp add:hrs_mem_def)+
+  done
 
 end
