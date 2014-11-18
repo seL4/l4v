@@ -6382,4 +6382,35 @@ lemma cast_chunk_assemble_id_64[simp]:
   "(((ucast ((ucast (x::64 word))::32 word))::64 word) || (((ucast ((ucast (x >> 32))::32 word))::64 word) << 32)) = x"
   by (simp add:cast_chunk_assemble_id)
 
+lemma word_0_div_x [simp]:
+    "(0::'a::len word) div x = 0"
+  by unat_arith
+
+lemma word_of_size_1:
+    "size (a::'a::len word) = 1 \<Longrightarrow> a = 0 \<or> a = 1"
+  apply (clarsimp)
+  apply (rule word_eqI)
+   apply simp
+  apply (metis One_nat_def less_one nth_0 of_bool_eq(1)
+      of_bool_eq(2) of_bool_eq_iff word_eqI word_size)
+  done
+
+lemma shift_right_to_div:
+    "(a >> 1) = (a :: 'a::len word) div 2"
+  using word_size_gt_0 [of a]
+  apply (case_tac "size a = 1")
+   apply (frule word_of_size_1)
+   apply (clarsimp simp: word_size)
+   apply (case_tac "a = 0")
+    apply simp
+   apply (unat_arith, fastforce)
+  apply (subst shiftr_div_2n_w)
+   apply linarith
+  apply simp
+  done
+
+lemma shift_left_to_mult: "(a << 1) = (a :: 'a::len word) * 2"
+  by (metis One_nat_def mult_2 mult_2_right one_add_one
+        power_0 power_Suc shiftl_t2n)
+
 end
