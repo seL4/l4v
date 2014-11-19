@@ -100,25 +100,35 @@ parser = argparse.ArgumentParser(
         description='Generate autocorres release tarball.')
 parser.add_argument('version', metavar='VERSION',
         type=str, help='Version number of the release, such as "0.95-beta1".')
-parser.add_argument('repository', metavar='REPO',
-        type=str, help='Path to the L4.verified repository base.')
 parser.add_argument('cparser_tar', metavar='CPARSER_RELEASE',
         type=str, help='Tarball to the C parser release.')
+parser.add_argument('isabelle_tar', metavar='ISABELLE_TARBALL',
+        type=str, help='Tarball to the official Isabelle release')
 parser.add_argument('-b', '--browse', action='store_true',
         help='Open shell to browse output prior to tar\'ing.')
 parser.add_argument('-o', '--output', metavar='FILENAME',
         default=None, help='Output filename. Defaults to "autocorres-<VERSION>.tar.gz".')
 parser.add_argument('--dry-run', action='store_true',
         help='Do not output any files.', default=False)
-parser.add_argument('-t', '--test', metavar='ISABELLE_TARBALL',
-        type=str, help='Test the archive.', default="")
+parser.add_argument('-t', '--test', action='store_true', default=False,
+        help='Test the archive.')
 parser.add_argument('--no-cleanup', action='store_true',
         help='Don''t delete temporary directories.', default=False)
+parser.add_argument('-r', '--repository', metavar='REPO',
+        type=str, help='Path to the L4.verified repository base.', default=None)
 args = parser.parse_args()
 
 # Setup output filename if the user used the default.
 if args.output == None:
     args.output = "autocorres-%s.tar.gz" % args.version
+
+# If no repository was specified, assume it is in the cwd.
+if args.repository == None:
+    try:
+        args.repository = subprocess.check_output([
+            "git", "rev-parse", "--show-toplevel"]).strip()
+    except subprocess.CalledProcessError:
+        parser.error("Could not determine repository location.")
 
 # Get absolute paths to files.
 args.repository = os.path.abspath(args.repository)
@@ -131,6 +141,12 @@ release_files_dir = os.path.join(args.repository, "tools", "autocorres", "tools"
 # Ensure C-parser exists, and looks like a tarball.
 if not os.path.exists(args.cparser_tar) or not args.cparser_tar.endswith(".tar.gz"):
     parser.error("Expected a path to the C parser release tarball.")
+args.cparser_tar = os.path.abspath(args.cparser_tar)
+
+# Ensure Isabelle exists, and looks like a tarball.
+if not os.path.exists(args.isabelle_tar) or not args.isabelle_tar.endswith(".tar.gz"):
+    parser.error("Expected a path to the official Isabelle release.")
+args.isabelle_tar = os.path.abspath(args.isabelle_tar)
 
 # Create temp dir.
 with TempDir(cleanup=(not args.no_cleanup)) as base_dir:
@@ -247,6 +263,39 @@ with TempDir(cleanup=(not args.no_cleanup)) as base_dir:
         for i in dirs + files:
             os.utime(os.path.join(root, i), (target_time, target_time))
 
+    # Extract the Isabelle release
+    print "Extracting Isabelle..."
+    isabelle_dir = os.path.join(base_dir, "isabelle")
+    mkdir_p(isabelle_dir)
+    subprocess.check_call(["tar", "-xz", "-C", isabelle_dir, "--strip-components=1", "-f", args.isabelle_tar])
+    isabelle_bin = os.path.join(isabelle_dir, "bin", "isabelle")
+    assert os.path.exists(isabelle_bin)
+
+    # Build the documentation.
+    def build_docs(tree, isabelle_bin):
+        with TempDir() as doc_build_dir:
+            # Make a copy of the directory, so we don't pollute it.
+            shutil.copytree(tree, os.path.join(doc_build_dir, "doc"), symlinks=True)
+
+            # Build the docs.
+            try:
+                subprocess.check_call([
+                        isabelle_bin, "build", "-c", "-d", ".",
+                                "-d", "./autocorres/doc/quickstart",
+                                "AutoCorresQuickstart"],
+                        cwd=os.path.join(doc_build_dir, "doc"))
+            except subprocess.CalledProcessError:
+                print "Building documentation failed."
+                if args.browse:
+                    subprocess.call("zsh", cwd=target_dir)
+
+            # Copy the generated PDF into our output.
+            shutil.copyfile(
+                    os.path.join(doc_build_dir, "doc", "autocorres", "doc", "quickstart", "output", "document.pdf"),
+                    os.path.join(tree, "quickstart.pdf"))
+    print "Building documentation..."
+    build_docs(target_dir, isabelle_bin)
+
     # Compress everything up.
     if args.output != None:
         print "Creating tarball..."
@@ -254,22 +303,9 @@ with TempDir(cleanup=(not args.no_cleanup)) as base_dir:
             "--owner", "root", "--group", "root",
             "-C", base_dir, "-f", args.output, target_dir_name])
 
-    # Open a shell in the directory if requested.
-    if args.browse:
-        print "Opening shell..."
-        subprocess.call("zsh", cwd=target_dir)
-
     # Run a test if requested.
-    if args.test != "":
+    if args.test:
         print "Testing release..."
-
-        # Extract the Isabelle release
-        print "Extracting Isabelle..."
-        isabelle_dir = os.path.join(base_dir, "isabelle")
-        mkdir_p(isabelle_dir)
-        subprocess.check_call(["tar", "-xz", "-C", isabelle_dir, "--strip-components=1", "-f", args.test])
-        isabelle_bin = os.path.join(isabelle_dir, "bin", "isabelle")
-
         try:
             subprocess.check_call([isabelle_bin, "version"], cwd=target_dir)
             subprocess.check_call([isabelle_bin, "build", "-d", ".", "AutoCorres", "AutoCorresTest"], cwd=target_dir)
@@ -277,4 +313,9 @@ with TempDir(cleanup=(not args.no_cleanup)) as base_dir:
             print "Test failed"
             if args.browse:
                 subprocess.call("zsh", cwd=target_dir)
+
+    # Open a shell in the directory if requested.
+    if args.browse:
+        print "Opening shell..."
+        subprocess.call("zsh", cwd=target_dir)
 
