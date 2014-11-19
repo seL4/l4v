@@ -20,13 +20,13 @@ section {* Introduction *}
 text {*
 
   AutoCorres is a tool that attempts to simplify the formal verification of C
-  programs in the Isabelle/HOL~\cite{isabelle} theorem prover. It allows C code
+  programs in the Isabelle/HOL theorem prover. It allows C code
   to be automatically abstracted to produce a higher-level functional
   specification.
 
-  AutoCorres relies on the C-Parser~\cite{c-parser} developed by Michael Norrish
+  AutoCorres relies on the C-Parser~\cite{CParser_download} developed by Michael Norrish
   at NICTA. This tool takes raw C code as input and produces a translation in
-  SIMPL~\cite{simpl}, an imperative language written by Norbert Schirmer on top
+  SIMPL~\cite{Simpl-AFP}, an imperative language written by Norbert Schirmer on top
   of Isabelle. AutoCorres takes this SIMPL code to produce a "monadic"
   specification, which is intended to be simpler to reason about in Isabelle.
   The composition of these two tools (AutoCorres applied after the C-Parser) can
@@ -34,7 +34,7 @@ text {*
 
   This guide is written for users of Isabelle/HOL, with some knowledge of C, to
   get started proving properties of C programs. Using AutoCorres in conjunction
-  with the verification condition generator (VCG) \texttt{wp}~\cite{wp}, one
+  with the verification condition generator (VCG) \texttt{wp}, one
   should be able to do this without an understanding of SIMPL nor of the monadic
   representation produced by AutoCorres. We will see how this is possible in the
   next chapter.
@@ -190,7 +190,7 @@ text {*
   fault, will always terminate, and will have a corresponding end state
   to the generated abstract program.
 
-  For more technical details, see~\cite{DGreenaway2011}.
+  For more technical details, see~\cite{Greenaway_AK_12} and~\cite{Greenaway_LAK_14}.
 
 *}
 
@@ -267,6 +267,7 @@ text {*
   In the next section, we will see how to use AutoCorres to simplify
   larger, more realistic C programs.
 *}
+
 
 (*<*)
 end

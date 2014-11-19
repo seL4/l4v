@@ -15,5 +15,10 @@ session "AutoCorresQuickstart" = "AutoCorres" +
     Chapter2_HoareHeap
     Chapter3_HoareHeap
   files
-    "document/root.tex"
-    "document/comment.sty"
+    "mult_by_add.c"
+    "minmax.c"
+  document_files
+    "root.tex"
+    "root.bib"
+    "comment.sty"
+    "isabellecustom.sty"

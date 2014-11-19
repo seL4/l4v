@@ -10,8 +10,14 @@
 
 \documentclass[11pt,a4paper]{article}
 
-\usepackage{isabelle,isabellesym}
-\usepackage{color}
+\usepackage{isabellecustom,isabellesym}
+\usepackage{changepage}
+\usepackage{xcolor}
+\usepackage{mdframed}
+\usepackage{microtype}
+\usepackage[numbers]{natbib}
+
+\definecolor{spot}{rgb}{0,0.2,0.6}
 
 \usepackage{listings}
 \definecolor{grey}{rgb}{0.9,0.9,0.9}
@@ -49,9 +55,9 @@
 % generated text of all theories
 \input{session}
 
-% optional bibliography
-%\bibliographystyle{abbrv}
-%\bibliography{root}
+% bibliography
+\bibliographystyle{plainurl}
+\bibliography{root}
 
 \end{document}
 

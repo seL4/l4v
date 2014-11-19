@@ -66,8 +66,8 @@ text {*
 
   In this case AutoCorres has abstracted \texttt{mult\_by\_add} into a
   \emph{monadic} form. Monads are a pattern frequently used in
-  functional programming to represent imperative-style control-flow; and
-  in depth introduction to monads can be found elsewhere~\cite{BLAH}.
+  functional programming to represent imperative-style control-flow; an
+  in-depth introduction to monads can be found elsewhere.
 
   The monads used by AutoCorres in this example is a
   \emph{non-deterministic state monad}; program state is implicitly
@@ -83,7 +83,7 @@ text {*
   non-terminating) loops using monads.
 
   If we want to describe the behaviour of this program, we can use
-  Hoare logic~\cite{PROBABLYUNNCESSARY} as follows:
+  Hoare logic as follows:
 
     @{term [display] "\<lbrace> P \<rbrace> mult_by_add' a b \<lbrace> Q \<rbrace>"}
 
@@ -150,7 +150,7 @@ text {*
   The proof is straight-forward, but uses a few different techniques:
   The first is that we annotate the loop with a loop invariant and a
   measure, using the rule @{thm whileLoop_add_inv}. We then run the
-  \texttt{wp} tool~\cite{WPSOMEWHERE} which applys a large set of
+  \texttt{wp} tool which applys a large set of
   \emph{weakest precondition} rules on the program\footnote{This set of
   rules includes a rule which can handle annotated @{term whileLoop}
   terms, but will not attempt to process @{term whileLoop} terms without

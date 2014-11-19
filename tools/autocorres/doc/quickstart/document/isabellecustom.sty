@@ -1,0 +1,252 @@
+%%
+%% macros for Isabelle generated LaTeX output
+%%
+
+%%% Simple document preparation (based on theory token language and symbols)
+
+% isabelle environments
+
+\newcommand{\isabellecontext}{UNKNOWN}
+
+\newcommand{\isastyle}{\UNDEF}
+\newcommand{\isastyleminor}{\UNDEF}
+\newcommand{\isastylescript}{\UNDEF}
+\newcommand{\isastyletext}{\normalsize\rm}
+\newcommand{\isastyletxt}{\rm}
+\newcommand{\isastylecmt}{\rm}
+
+\newcommand{\isaspacing}{%
+  \sfcode 42 1000 % .
+  \sfcode 63 1000 % ?
+  \sfcode 33 1000 % !
+  \sfcode 58 1000 % :
+  \sfcode 59 1000 % ;
+  \sfcode 44 1000 % ,
+}
+
+%symbol markup -- \emph achieves decent spacing via italic corrections
+\newcommand{\isamath}[1]{\emph{$#1$}}
+\newcommand{\isatext}[1]{\emph{#1}}
+\DeclareRobustCommand{\isascriptstyle}{\def\isamath##1{##1}\def\isatext##1{\mbox{\isaspacing\isastylescript##1}}}
+\newcommand{\isactrlsub}[1]{\emph{\isascriptstyle${}\sb{#1}$}}
+\newcommand{\isactrlsup}[1]{\emph{\isascriptstyle${}\sp{#1}$}}
+\DeclareRobustCommand{\isactrlbsub}{\emph\bgroup\math{}\sb\bgroup\mbox\bgroup\isaspacing\isastylescript}
+\DeclareRobustCommand{\isactrlesub}{\egroup\egroup\endmath\egroup}
+\DeclareRobustCommand{\isactrlbsup}{\emph\bgroup\math{}\sp\bgroup\mbox\bgroup\isaspacing\isastylescript}
+\DeclareRobustCommand{\isactrlesup}{\egroup\egroup\endmath\egroup}
+\newcommand{\isactrlbold}[1]{{\bfseries\upshape\boldmath#1}}
+
+\newenvironment{isaantiq}{{\isacharat\isacharbraceleft}}{{\isacharbraceright}}
+
+\newdimen\isa@parindent\newdimen\isa@parskip
+
+\newenvironment{isabellebody}{%
+    \isamarkuptrue\par%
+    \isa@parindent\parindent\parindent2em%
+    \isa@parskip\parskip\parskip0pt%
+    \isaspacing\isastyle%
+}{%
+    \par%
+}
+
+\newenvironment{isabelle}{%
+    \medskip%
+    \begin{adjustwidth}{1em}{0pt}%
+    \begin{mdframed}[%
+        leftline=true,rightline=false,topline=false,bottomline=false,%
+        linecolor=spot!20,linewidth=2pt,backgroundcolor=spot!3]%
+    \begin{trivlist}%
+    \begin{isabellebody}%
+    \item\relax%
+}{%
+    \end{isabellebody}%
+    \end{trivlist}%
+    \end{mdframed}%
+    \end{adjustwidth}%
+    \medskip%
+}
+
+\newcommand{\isa}[1]{\emph{\isaspacing\isastyleminor #1}}
+
+\newcommand{\isaindent}[1]{\hphantom{#1}}
+\newcommand{\isanewline}{\mbox{}\par\mbox{}}
+\newcommand{\isasep}{}
+\newcommand{\isadigit}[1]{#1}
+
+\newcommand{\isachardefaults}{%
+\chardef\isacharbang=`\!%
+\chardef\isachardoublequote=`\"%
+\chardef\isachardoublequoteopen=`\"%
+\chardef\isachardoublequoteclose=`\"%
+\chardef\isacharhash=`\#%
+\chardef\isachardollar=`\$%
+\chardef\isacharpercent=`\%%
+\chardef\isacharampersand=`\&%
+\chardef\isacharprime=`\'%
+\chardef\isacharparenleft=`\(%
+\chardef\isacharparenright=`\)%
+\chardef\isacharasterisk=`\*%
+\chardef\isacharplus=`\+%
+\chardef\isacharcomma=`\,%
+\chardef\isacharminus=`\-%
+\chardef\isachardot=`\.%
+\chardef\isacharslash=`\/%
+\chardef\isacharcolon=`\:%
+\chardef\isacharsemicolon=`\;%
+\chardef\isacharless=`\<%
+\chardef\isacharequal=`\=%
+\chardef\isachargreater=`\>%
+\chardef\isacharquery=`\?%
+\chardef\isacharat=`\@%
+\chardef\isacharbrackleft=`\[%
+\chardef\isacharbackslash=`\\%
+\chardef\isacharbrackright=`\]%
+\chardef\isacharcircum=`\^%
+\chardef\isacharunderscore=`\_%
+\def\isacharunderscorekeyword{\_}%
+\chardef\isacharbackquote=`\`%
+\chardef\isacharbackquoteopen=`\`%
+\chardef\isacharbackquoteclose=`\`%
+\chardef\isacharbraceleft=`\{%
+\chardef\isacharbar=`\|%
+\chardef\isacharbraceright=`\}%
+\chardef\isachartilde=`\~%
+\def\isacharverbatimopen{\isacharbraceleft\isacharasterisk}%
+\def\isacharverbatimclose{\isacharasterisk\isacharbraceright}%
+\def\isacartoucheopen{\isatext{\raise.3ex\hbox{$\scriptscriptstyle\langle$}}}%
+\def\isacartoucheclose{\isatext{\raise.3ex\hbox{$\scriptscriptstyle\rangle$}}}%
+}
+
+
+% keyword and section markup
+
+\newcommand{\isakeyword}[1]
+{\emph{\bf\def\isachardot{.}\def\isacharunderscore{\isacharunderscorekeyword}%
+\def\isacharbraceleft{\{}\def\isacharbraceright{\}}#1}}
+\newcommand{\isacommand}[1]{\isakeyword{#1}}
+
+\newcommand{\isamarkupheader}[1]{\section{#1}}
+\newcommand{\isamarkupchapter}[1]{\chapter{#1}}
+\newcommand{\isamarkupsection}[1]{\section{#1}}
+\newcommand{\isamarkupsubsection}[1]{\subsection{#1}}
+\newcommand{\isamarkupsubsubsection}[1]{\subsubsection{#1}}
+\newcommand{\isamarkupsect}[1]{\section{#1}}
+\newcommand{\isamarkupsubsect}[1]{\subsection{#1}}
+\newcommand{\isamarkupsubsubsect}[1]{\subsubsection{#1}}
+
+\newif\ifisamarkup
+\newcommand{\isabeginpar}{\par\ifisamarkup\relax\else\medskip\fi}
+\newcommand{\isaendpar}{\par\medskip}
+\newenvironment{isapar}{\parindent\isa@parindent\parskip\isa@parskip\isabeginpar}{\isaendpar}
+\newenvironment{isamarkuptext}{\par\isastyletext\begin{isapar}}{\end{isapar}}
+\newenvironment{isamarkuptxt}{\par\isastyletxt\begin{isapar}}{\end{isapar}}
+\newcommand{\isamarkupcmt}[1]{{\isastylecmt--- #1}}
+
+
+% styles
+
+\def\isabellestyle#1{\csname isabellestyle#1\endcsname}
+
+\newcommand{\isabellestyledefault}{%
+\def\isastyle{\small\tt\slshape}%
+\def\isastyleminor{\small\tt\slshape}%
+\def\isastylescript{\footnotesize\tt\slshape}%
+\isachardefaults%
+}
+\isabellestyledefault
+
+\newcommand{\isabellestylett}{%
+\def\isastyle{\small\tt}%
+\def\isastyleminor{\small\tt}%
+\def\isastylescript{\footnotesize\tt}%
+\isachardefaults%
+}
+
+\newcommand{\isabellestyleit}{%
+\def\isastyle{\small\it}%
+\def\isastyleminor{\it}%
+\def\isastylescript{\footnotesize\it}%
+\isachardefaults%
+\def\isacharunderscorekeyword{\mbox{-}}%
+\def\isacharbang{\isamath{!}}%
+\def\isachardoublequote{}%
+\def\isachardoublequoteopen{}%
+\def\isachardoublequoteclose{}%
+\def\isacharhash{\isamath{\#}}%
+\def\isachardollar{\isamath{\$}}%
+\def\isacharpercent{\isamath{\%}}%
+\def\isacharampersand{\isamath{\&}}%
+\def\isacharprime{\isamath{\mskip2mu{'}\mskip-2mu}}%
+\def\isacharparenleft{\isamath{(}}%
+\def\isacharparenright{\isamath{)}}%
+\def\isacharasterisk{\isamath{*}}%
+\def\isacharplus{\isamath{+}}%
+\def\isacharcomma{\isamath{\mathord,}}%
+\def\isacharminus{\isamath{-}}%
+\def\isachardot{\isamath{\mathord.}}%
+\def\isacharslash{\isamath{/}}%
+\def\isacharcolon{\isamath{\mathord:}}%
+\def\isacharsemicolon{\isamath{\mathord;}}%
+\def\isacharless{\isamath{<}}%
+\def\isacharequal{\isamath{=}}%
+\def\isachargreater{\isamath{>}}%
+\def\isacharat{\isamath{@}}%
+\def\isacharbrackleft{\isamath{[}}%
+\def\isacharbackslash{\isamath{\backslash}}%
+\def\isacharbrackright{\isamath{]}}%
+\def\isacharunderscore{\mbox{-}}%
+\def\isacharbraceleft{\isamath{\{}}%
+\def\isacharbar{\isamath{\mid}}%
+\def\isacharbraceright{\isamath{\}}}%
+\def\isachartilde{\isamath{{}\sp{\sim}}}%
+\def\isacharbackquoteopen{\isatext{\raise.3ex\hbox{$\scriptscriptstyle\langle$}}}%
+\def\isacharbackquoteclose{\isatext{\raise.3ex\hbox{$\scriptscriptstyle\rangle$}}}%
+\def\isacharverbatimopen{\isamath{\langle\!\langle}}%
+\def\isacharverbatimclose{\isamath{\rangle\!\rangle}}%
+}
+
+\newcommand{\isabellestyleliteral}{%
+\isabellestyleit%
+\def\isacharunderscore{\_}%
+\def\isacharunderscorekeyword{\_}%
+\chardef\isacharbackquoteopen=`\`%
+\chardef\isacharbackquoteclose=`\`%
+}
+
+\newcommand{\isabellestyleliteralunderscore}{%
+\isabellestyleliteral%
+\def\isacharunderscore{\textunderscore}%
+\def\isacharunderscorekeyword{\textunderscore}%
+}
+
+\newcommand{\isabellestylesl}{%
+\isabellestyleit%
+\def\isastyle{\small\sl}%
+\def\isastyleminor{\sl}%
+\def\isastylescript{\footnotesize\sl}%
+}
+
+
+% tagged regions
+
+%plain TeX version of comment package -- much faster!
+\let\isafmtname\fmtname\def\fmtname{plain}
+\usepackage{comment}
+\let\fmtname\isafmtname
+
+\newcommand{\isafold}[1]{\emph{$\langle\mathord{\mathit{#1}}\rangle$}}
+
+\newcommand{\isakeeptag}[1]%
+{\includecomment{isadelim#1}\includecomment{isatag#1}\csarg\def{isafold#1}{}}
+\newcommand{\isadroptag}[1]%
+{\excludecomment{isadelim#1}\excludecomment{isatag#1}\csarg\def{isafold#1}{}}
+\newcommand{\isafoldtag}[1]%
+{\includecomment{isadelim#1}\excludecomment{isatag#1}\csarg\def{isafold#1}{\isafold{#1}}}
+
+\isakeeptag{theory}
+\isakeeptag{proof}
+\isakeeptag{ML}
+\isakeeptag{visible}
+\isadroptag{invisible}
+
+\IfFileExists{isabelletags.sty}{\usepackage{isabelletags}}{}
