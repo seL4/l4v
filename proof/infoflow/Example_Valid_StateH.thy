@@ -855,24 +855,6 @@ lemma kh0H_dom_distinct:
   "aep_ptr \<notin> tcb_offs_range idle_tcb_ptr"
   by (clarsimp simp: cnode_offs_range_def pd_offs_range_def pt_offs_range_def tcb_offs_range_def kh0H_obj_def s0_ptr_defs)+
 
-lemma s0_ptrs_distinct:
-  "init_globals_frame \<noteq> idle_tcb_ptr"
-  "init_globals_frame \<noteq> High_tcb_ptr"
-  "init_globals_frame \<noteq> Low_tcb_ptr"
-  "init_globals_frame \<noteq> irq_cnode_ptr"
-  "init_globals_frame \<noteq> aep_ptr"
-  "idle_tcb_ptr \<noteq> High_tcb_ptr"
-  "idle_tcb_ptr \<noteq> Low_tcb_ptr"
-  "idle_tcb_ptr \<noteq> irq_cnode_ptr"
-  "idle_tcb_ptr \<noteq> aep_ptr"
-  "High_tcb_ptr \<noteq> Low_tcb_ptr"
-  "High_tcb_ptr \<noteq> irq_cnode_ptr"
-  "High_tcb_ptr \<noteq> aep_ptr"
-  "Low_tcb_ptr \<noteq> irq_cnode_ptr"
-  "Low_tcb_ptr \<noteq> aep_ptr"
-  "irq_cnode_ptr \<noteq> aep_ptr"
-  by (clarsimp simp: s0_ptr_defs)+
-
 lemma kh0H_dom_sets_distinct:
   "irq_node_offs_range \<inter> cnode_offs_range Silc_cnode_ptr = {}"
   "irq_node_offs_range \<inter> cnode_offs_range High_cnode_ptr = {}"
@@ -1029,7 +1011,7 @@ lemma kh0H_simps[simp]:
   "kh0H (High_pt_ptr + (ucast (z:: 8 word) << 2)) = High_ptH High_pt_ptr (High_pt_ptr + (ucast (z:: 8 word) << 2))"
       apply (clarsimp simp: kh0H_def option_update_range_def)
       apply fastforce
-     apply (clarsimp simp: kh0H_def option_update_range_def kh0H_dom_distinct not_in_range_None s0_ptrs_distinct)+
+     apply (clarsimp simp: kh0H_def option_update_range_def kh0H_dom_distinct not_in_range_None)+
      apply ((clarsimp simp: kh0H_def option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_None offs_in_range | simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD1] not_in_range_None | simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD2] not_in_range_None)+,
             rule conjI,
              clarsimp,
@@ -1365,14 +1347,14 @@ lemma map_to_ctes_kh0H:
            drule kh0H_dom_tcb,
            fastforce simp: s0_ptr_defs mask_def objBitsKO_def,
           rule impI,
-          fastforce simp: option_update_range_def s0_ptrs_distinct kh0H_dom_distinct not_in_range_cte_None)
+          fastforce simp: option_update_range_def kh0H_dom_distinct not_in_range_cte_None)
    apply ((clarsimp simp: map_to_ctes_def Let_def split del: split_if,
           subst split_if_eq1,
           rule conjI,
            rule impI,
            (subst is_aligned_neg_mask_eq,
             simp add: is_aligned_def s0_ptr_defs objBitsKO_def)+,
-           ((clarsimp simp: option_update_range_def s0_ptrs_distinct kh0H_dom_distinct not_in_range_cte_None | clarsimp simp: idle_tcb_cte_def High_tcb_cte_def Low_tcb_cte_def)+)[1],
+           ((clarsimp simp: option_update_range_def kh0H_dom_distinct not_in_range_cte_None | clarsimp simp: idle_tcb_cte_def High_tcb_cte_def Low_tcb_cte_def)+)[1],
           rule impI,
           (subst(asm) is_aligned_neg_mask_eq,
            simp add: is_aligned_def s0_ptr_defs objBitsKO_def)+,
@@ -1389,7 +1371,7 @@ lemma map_to_ctes_kh0H:
            drule kh0H_dom_tcb,
            fastforce simp: s0_ptr_defs mask_def objBitsKO_def,
           rule impI,
-          fastforce simp: option_update_range_def s0_ptrs_distinct kh0H_dom_distinct not_in_range_cte_None s0_ptrs_distinct s0_ptrs_distinct[symmetric])
+          fastforce simp: option_update_range_def kh0H_dom_distinct not_in_range_cte_None)
    apply (clarsimp simp: map_to_ctes_def Let_def kh0H_obj_def split del: split_if,
           subst split_if_eq1,
           rule conjI,
@@ -1447,7 +1429,7 @@ lemma map_to_ctes_kh0H:
           rule conjI,
            rule impI,
            clarsimp simp: option_update_range_def kh0H_dom_distinct not_in_range_cte_None,
-           (clarsimp simp: option_update_range_def s0_ptrs_distinct kh0H_dom_distinct[THEN set_mem_neq] kh0H_dom_sets_distinct[THEN orthD1] not_in_range_cte_None | simp add: kh0H_dom_sets_distinct[THEN orthD2] not_in_range_cte_None)+,
+           (clarsimp simp: option_update_range_def kh0H_dom_distinct[THEN set_mem_neq] kh0H_dom_sets_distinct[THEN orthD1] not_in_range_cte_None | simp add: kh0H_dom_sets_distinct[THEN orthD2] not_in_range_cte_None)+,
            rule conjI,
             clarsimp,
            drule offs_range_correct,
@@ -1579,7 +1561,7 @@ lemma map_to_ctes_kh0H_simps[simp]:
   "map_to_ctes kh0H (idle_tcb_ptr + 0x40) = idle_tcb_cte (idle_tcb_ptr + 0x40)"
      apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def)
      apply fastforce
-    apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct not_in_range_cte_None s0_ptrs_distinct)
+    apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct not_in_range_cte_None)
    apply ((clarsimp simp: map_to_ctes_kh0H option_update_range_def cnode_offs_in_range s0_ptrs_aligned kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None,
          ((clarsimp simp: offs_in_range kh0H_dom_sets_distinct[THEN orthD1] not_in_range_cte_None
         | clarsimp simp: offs_in_range kh0H_dom_sets_distinct[THEN orthD2] not_in_range_cte_None)+)[1],
@@ -1592,9 +1574,9 @@ lemma map_to_ctes_kh0H_simps[simp]:
                 rule kh0H_dom_sets_distinct
                 )+,
           clarsimp split: option.splits)+)[3]
-  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct not_in_range_cte_None s0_ptrs_distinct split: option.splits)
+  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct not_in_range_cte_None split: option.splits)
   apply (cut_tac ptr="Low_tcb_ptr" and x="0x10" in tcb_offs_in_rangeI, simp add: s0_ptr_defs, simp add: s0_ptr_defs)
-  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None s0_ptrs_distinct split: option.splits)
+  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None split: option.splits)
   apply ((simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD1] not_in_range_cte_None
         | simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD2] not_in_range_cte_None)+)[1]
   apply (intro conjI impI allI)
@@ -1613,7 +1595,7 @@ lemma map_to_ctes_kh0H_simps[simp]:
          erule notE,
          rule kh0H_dom_sets_distinct)
   apply (cut_tac ptr="Low_tcb_ptr" and x="0x20" in tcb_offs_in_rangeI, simp add: s0_ptr_defs, simp add: s0_ptr_defs)
-  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None s0_ptrs_distinct split: option.splits)
+  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None split: option.splits)
   apply ((simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD1] not_in_range_cte_None
         | simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD2] not_in_range_cte_None)+)[1]
   apply (intro conjI impI allI)
@@ -1632,7 +1614,7 @@ lemma map_to_ctes_kh0H_simps[simp]:
          erule notE,
          rule kh0H_dom_sets_distinct)
   apply (cut_tac ptr="Low_tcb_ptr" and x="0x30" in tcb_offs_in_rangeI, simp add: s0_ptr_defs, simp add: s0_ptr_defs)
-  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None s0_ptrs_distinct split: option.splits)
+  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None split: option.splits)
   apply ((simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD1] not_in_range_cte_None
         | simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD2] not_in_range_cte_None)+)[1]
   apply (intro conjI impI allI)
@@ -1651,7 +1633,7 @@ lemma map_to_ctes_kh0H_simps[simp]:
          erule notE,
          rule kh0H_dom_sets_distinct)
   apply (cut_tac ptr="Low_tcb_ptr" and x="0x40" in tcb_offs_in_rangeI, simp add: s0_ptr_defs, simp add: s0_ptr_defs)
-  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None s0_ptrs_distinct split: option.splits)
+  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None split: option.splits)
   apply ((simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD1] not_in_range_cte_None
         | simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD2] not_in_range_cte_None)+)[1]
   apply (intro conjI impI allI)
@@ -1669,9 +1651,9 @@ lemma map_to_ctes_kh0H_simps[simp]:
           assumption,
          erule notE,
          rule kh0H_dom_sets_distinct)
-  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct not_in_range_cte_None s0_ptrs_distinct split: option.splits)
+  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct not_in_range_cte_None  split: option.splits)
   apply (cut_tac ptr="High_tcb_ptr" and x="0x10" in tcb_offs_in_rangeI, simp add: s0_ptr_defs, simp add: s0_ptr_defs)
-  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None s0_ptrs_distinct split: option.splits)
+  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None  split: option.splits)
   apply ((simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD1] not_in_range_cte_None
         | simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD2] not_in_range_cte_None)+)[1]
   apply (intro conjI impI allI)
@@ -1690,7 +1672,7 @@ lemma map_to_ctes_kh0H_simps[simp]:
          erule notE,
          rule kh0H_dom_sets_distinct)
   apply (cut_tac ptr="High_tcb_ptr" and x="0x20" in tcb_offs_in_rangeI, simp add: s0_ptr_defs, simp add: s0_ptr_defs)
-  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None s0_ptrs_distinct split: option.splits)
+  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None  split: option.splits)
   apply ((simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD1] not_in_range_cte_None
         | simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD2] not_in_range_cte_None)+)[1]
   apply (intro conjI impI allI)
@@ -1709,7 +1691,7 @@ lemma map_to_ctes_kh0H_simps[simp]:
          erule notE,
          rule kh0H_dom_sets_distinct)
   apply (cut_tac ptr="High_tcb_ptr" and x="0x30" in tcb_offs_in_rangeI, simp add: s0_ptr_defs, simp add: s0_ptr_defs)
-  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None s0_ptrs_distinct split: option.splits)
+  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None  split: option.splits)
   apply ((simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD1] not_in_range_cte_None
         | simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD2] not_in_range_cte_None)+)[1]
   apply (intro conjI impI allI)
@@ -1728,7 +1710,7 @@ lemma map_to_ctes_kh0H_simps[simp]:
          erule notE,
          rule kh0H_dom_sets_distinct)
   apply (cut_tac ptr="High_tcb_ptr" and x="0x40" in tcb_offs_in_rangeI, simp add: s0_ptr_defs, simp add: s0_ptr_defs)
-  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None s0_ptrs_distinct split: option.splits)
+  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None  split: option.splits)
   apply ((simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD1] not_in_range_cte_None
         | simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD2] not_in_range_cte_None)+)[1]
   apply (intro conjI impI allI)
@@ -1746,9 +1728,9 @@ lemma map_to_ctes_kh0H_simps[simp]:
           assumption,
          erule notE,
          rule kh0H_dom_sets_distinct)
-  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct not_in_range_cte_None s0_ptrs_distinct split: option.splits)
+  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct not_in_range_cte_None  split: option.splits)
   apply (cut_tac ptr="idle_tcb_ptr" and x="0x10" in tcb_offs_in_rangeI, simp add: s0_ptr_defs, simp add: s0_ptr_defs)
-  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None s0_ptrs_distinct split: option.splits)
+  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None  split: option.splits)
   apply ((simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD1] not_in_range_cte_None
         | simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD2] not_in_range_cte_None)+)[1]
   apply (intro conjI impI allI)
@@ -1767,7 +1749,7 @@ lemma map_to_ctes_kh0H_simps[simp]:
          erule notE,
          rule kh0H_dom_sets_distinct)
   apply (cut_tac ptr="idle_tcb_ptr" and x="0x20" in tcb_offs_in_rangeI, simp add: s0_ptr_defs, simp add: s0_ptr_defs)
-  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None s0_ptrs_distinct split: option.splits)
+  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None  split: option.splits)
   apply ((simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD1] not_in_range_cte_None
         | simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD2] not_in_range_cte_None)+)[1]
   apply (intro conjI impI allI)
@@ -1786,7 +1768,7 @@ lemma map_to_ctes_kh0H_simps[simp]:
          erule notE,
          rule kh0H_dom_sets_distinct)
   apply (cut_tac ptr="idle_tcb_ptr" and x="0x30" in tcb_offs_in_rangeI, simp add: s0_ptr_defs, simp add: s0_ptr_defs)
-  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None s0_ptrs_distinct split: option.splits)
+  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None  split: option.splits)
   apply ((simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD1] not_in_range_cte_None
         | simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD2] not_in_range_cte_None)+)[1]
   apply (intro conjI impI allI)
@@ -1805,7 +1787,7 @@ lemma map_to_ctes_kh0H_simps[simp]:
          erule notE,
          rule kh0H_dom_sets_distinct)
   apply (cut_tac ptr="idle_tcb_ptr" and x="0x40" in tcb_offs_in_rangeI, simp add: s0_ptr_defs, simp add: s0_ptr_defs)
-  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None s0_ptrs_distinct split: option.splits)
+  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None  split: option.splits)
   apply ((simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD1] not_in_range_cte_None
         | simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD2] not_in_range_cte_None)+)[1]
   apply (intro conjI impI allI)
