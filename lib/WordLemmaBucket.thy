@@ -6414,4 +6414,28 @@ lemma cast_chunk_assemble_id_64[simp]:
   "(((ucast ((ucast (x::64 word))::32 word))::64 word) || (((ucast ((ucast (x >> 32))::32 word))::64 word) << 32)) = x"
   by (simp add:cast_chunk_assemble_id)
 
+lemma cast_chunk_scast_assemble_id:
+  "\<lbrakk>n = len_of TYPE('a::len); m = len_of TYPE('b::len); n * 2 = m\<rbrakk> \<Longrightarrow>
+  (((ucast ((scast (x::'b word))::'a word))::'b word) || (((ucast ((scast (x >> n))::'a word))::'b word) << n)) = x"
+  apply (subgoal_tac "((scast x)::'a word) = ((ucast x)::'a word)")
+   apply (subgoal_tac "((scast (x >> n))::'a word) = ((ucast (x >> n))::'a word)")
+    apply (simp add:cast_chunk_assemble_id)
+   apply (subst down_cast_same[symmetric], subst is_down, arith, simp)+
+  done
+
+(* Another variant of packing and unpacking a 64-bit variable. *)
+lemma cast_chunk_assemble_id_64'[simp]:
+  "(((ucast ((scast (x::64 word))::32 word))::64 word) || (((ucast ((scast (x >> 32))::32 word))::64 word) << 32)) = x"
+  by (simp add:cast_chunk_scast_assemble_id)
+
+(* Specialiasations of down_cast_same for adding to local simpsets. *)
+lemma cast_down_u64: "(scast::64 word \<Rightarrow> 32 word) = (ucast::64 word \<Rightarrow> 32 word)"
+  apply (subst down_cast_same[symmetric])
+   apply (simp add:is_down)+
+  done
+lemma cast_down_s64: "(scast::64 sword \<Rightarrow> 32 word) = (ucast::64 sword \<Rightarrow> 32 word)"
+  apply (subst down_cast_same[symmetric])
+   apply (simp add:is_down)+
+  done
+
 end
