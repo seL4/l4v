@@ -4332,6 +4332,13 @@ lemma x_less_2_0_1:
   "x < 2 \<Longrightarrow> x = 0 \<or> x = 1"
   by unat_arith
 
+lemma x_less_2_0_1':
+  fixes x :: "('a::len) word"
+  shows "\<lbrakk>len_of TYPE('a) \<noteq> 1; x < 2\<rbrakk> \<Longrightarrow> x = 0 \<or> x = 1"
+  apply (induct x)
+   apply clarsimp+
+  by (metis Suc_eq_plus1 add_lessD1 less_irrefl one_add_one unatSuc word_less_nat_alt)
+
 lemma Collect_int_vars:
   "{s. P rv s} \<inter> {s. rv = xf s} = {s. P (xf s) s} \<inter> {s. rv = xf s}"
   by auto
@@ -6251,9 +6258,30 @@ lemma shiftr1_lt:"x \<noteq> 0 \<Longrightarrow> (x::('a::len) word) >> 1 < x"
    apply simp+
   done
 
+lemma word_less_div:
+  fixes x :: "('a::len) word"
+    and y :: "('a::len) word"
+  shows "x div y = 0 \<Longrightarrow> y = 0 \<or> x < y"
+  apply (case_tac "y = 0", clarsimp+)
+  by (metis One_nat_def Suc_le_mono le0 le_div_geq not_less unat_0 unat_div unat_gt_0 word_less_nat_alt zero_less_one)
+
+lemma not_degenerate_imp_2_neq_0:"len_of TYPE('a) > 1 \<Longrightarrow> (2::('a::len) word) \<noteq> 0"
+  by (metis numerals(1) power_not_zero power_zero_numeral)
+
 lemma shiftr1_0_or_1:"(x::('a::len) word) >> 1 = 0 \<Longrightarrow> x = 0 \<or> x = 1"
   apply (subst (asm) shiftr1_is_div_2)
-  by (smt2 Divides.div_less div_2_gt_zero div_by_1 le_unat_uoi nat_neq_iff not_less not_less_eq_eq of_nat_numeral unat_0 unat_div unat_eq_1(2) word_arith_nat_defs(6) word_div_1)
+  apply (drule word_less_div)
+  apply (case_tac "len_of TYPE('a) = 1")
+   apply (simp add:degenerate_word)
+  apply (erule disjE)
+   apply (subgoal_tac "(2::'a word) \<noteq> 0")
+    apply simp
+   apply (rule not_degenerate_imp_2_neq_0)
+   apply (subgoal_tac "len_of TYPE('a) \<noteq> 0")
+    apply arith
+   apply simp
+  apply (rule x_less_2_0_1', simp+)
+  done
 
 lemma word_overflow:"(x::('a::len) word) + 1 > x \<or> x + 1 = 0"
   apply clarsimp
