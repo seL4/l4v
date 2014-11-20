@@ -16,7 +16,7 @@ test -z $L4CAP && export L4CAP=../../../seL4/haskell
 if [[ ! -d $L4CAP/src/SEL4 ]]
 then
 	echo Set the L4CAP environment variable to the location
-	echo of the haskell mercurial source.
+	echo of the haskell kernel source.
 	exit
 fi
 
@@ -30,7 +30,7 @@ MACH="../../spec/machine"
 if [[ ! -d $SKEL ]]
 then
 	echo Error: $SKEL is not a directory.
-	echo '(this script needs to be run in the scripts directory)'
+	echo '(this script needs to be run in the tools/haskell-translator directory)'
 	exit
 fi
 
@@ -43,7 +43,7 @@ if [ "$(cd $L4CAP && git status --short)" != "" ]
 then
   echo >> $SPEC/version
   echo Warning - uncomitted changes used: >> $SPEC/version
-  $(cd $L4CAP && git status --short) >> $SPEC/version
+  (cd $L4CAP && git status --short) >> $SPEC/version
 fi
 
 NAMES=`ls $SKEL`
