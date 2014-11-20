@@ -860,6 +860,9 @@ def instance_transform (d):
 	assert bits[0] == 'instance'
 	classname = bits[1]
 	typename = type_conv(bits[2])
+	if classname == 'Show':
+		print "Warning: discarding class instance '%s :: Show'" % typename
+		return None;
 	if typename == '()':
 		print "Warning: discarding class instance 'unit :: %s'"\
 			% classname
