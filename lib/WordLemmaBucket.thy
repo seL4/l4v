@@ -6438,4 +6438,11 @@ lemma cast_down_s64: "(scast::64 sword \<Rightarrow> 32 word) = (ucast::64 sword
    apply (simp add:is_down)+
   done
 
+lemma mask_or_not_mask:"x && mask n || x && ~~ mask n = x"
+  apply (subst word_oa_dist)
+  apply simp
+  apply (subst word_oa_dist2)
+  apply simp
+  done
+
 end
