@@ -1091,4 +1091,29 @@ lemma heap_update_id2:
    apply (simp add:hrs_mem_def)+
   done
 
+lemma intvlI_unat:"unat b < unat c \<Longrightarrow> a + b \<in> {a ..+ unat c}"
+  by (metis intvlI word_unat.Rep_inverse)
+
+lemma neq_imp_bytes_disjoint:
+  "\<lbrakk> c_guard (x::'a::c_type ptr); c_guard y; unat j < align_of TYPE('a);
+        unat i < align_of TYPE('a); x \<noteq> y; 2 ^ n = align_of TYPE('a); n < 32\<rbrakk> \<Longrightarrow>
+    ptr_val x + j \<noteq> ptr_val y + i"
+  apply (rule ccontr)
+  apply (subgoal_tac "is_aligned (ptr_val x) n")
+   apply (subgoal_tac "is_aligned (ptr_val y) n")
+    apply (subgoal_tac "(ptr_val x + j && ~~ mask n) = (ptr_val y + i && ~~ mask n)")
+     apply (subst (asm) neg_mask_add_aligned, simp, simp add: word_less_nat_alt)
+     apply (subst (asm) neg_mask_add_aligned, simp, simp add: word_less_nat_alt)
+     apply (clarsimp simp: is_aligned_neg_mask_eq)
+    apply simp
+   apply (clarsimp simp: c_guard_def ptr_aligned_def is_aligned_def)
+  apply (clarsimp simp: c_guard_def ptr_aligned_def is_aligned_def)
+  done
+
+lemma heap_update_list_base':"heap_update_list p [] = id"
+  by (rule ext, simp)
+
+lemma hrs_mem_update_id3:"hrs_mem_update id = id"
+  by (metis (erased, lifting) DEADID.map_id cond_split_eta hrs_mem_update_def)
+
 end

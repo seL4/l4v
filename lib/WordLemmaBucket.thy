@@ -6445,4 +6445,31 @@ lemma mask_or_not_mask:"x && mask n || x && ~~ mask n = x"
   apply simp
   done
 
+lemma is_aligned_add_not_aligned:
+    "\<lbrakk>is_aligned (p::word32) n; \<not> is_aligned (q::word32) n\<rbrakk> \<Longrightarrow>
+          \<not> is_aligned (p + q) n"
+  by (metis is_aligned_addD1)
+
+lemma dvd_not_suc:"\<lbrakk> 2 ^ n dvd (p::nat); n > 0; i > 0; i < 2 ^ n; p + i > p; n < 32\<rbrakk> \<Longrightarrow>
+          \<not> (2 ^ n dvd (p + i))"
+  by (metis dvd_def dvd_reduce_multiple nat_dvd_not_less)
+
+lemma word32_gr0_conv_Suc:"(m::word32) > 0 \<Longrightarrow> \<exists>n. m = n + 1"
+  by (metis comm_semiring_1_class.normalizing_semiring_rules(24) zadd_diff_inverse)
+
+lemma offset_not_aligned:
+  "\<lbrakk> is_aligned (p::word32) n; i > 0; i < 2 ^ n; n < 32\<rbrakk>
+     \<Longrightarrow> \<not> is_aligned (p + of_nat i) n"
+  apply (erule is_aligned_add_not_aligned)
+  unfolding is_aligned_def apply clarsimp
+  apply (subst (asm) unat_of_nat_len)
+   apply (metis len32 unat_less_word_bits unat_power_lower32 word_bits_conv)
+  apply (metis nat_dvd_not_less)
+  done
+
+lemma neg_mask_add_aligned:
+  "\<lbrakk> is_aligned p n; q < 2 ^ n \<rbrakk>
+     \<Longrightarrow> (p + q) && ~~ mask n = p && ~~ mask n"
+  by (metis is_aligned_add_helper is_aligned_neg_mask_eq)
+
 end

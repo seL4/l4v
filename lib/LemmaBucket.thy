@@ -151,4 +151,7 @@ lemma all_pair_unwrap:"(\<forall>a. P (fst a) (snd a)) = (\<forall>a b. P a b)"
 lemma if_fold[simp]:"(if P then Q else if P then R else S) = (if P then Q else S)"
   by presburger
 
+lemma disjoint_subset_both:"\<lbrakk>A' \<subseteq> A; B' \<subseteq> B; A \<inter> B = {}\<rbrakk> \<Longrightarrow> A' \<inter> B' = {}"
+  by blast
+
 end
