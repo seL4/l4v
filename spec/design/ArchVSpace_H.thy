@@ -98,6 +98,7 @@ defs mapKernelRegion_def:
                   pdeDomain= 0,
                   pdeCacheable= True,
                   pdeGlobal= True,
+                  pdeExecuteNever= False,
                   pdeRights= VMKernelOnly \<rparr>);
           offset \<leftarrow> return ( fromVPtr virt `~shiftR~` pageBitsForSize ARMSection);
           slot \<leftarrow> return ( globalPD + PPtr (offset `~shiftL~` pdeBits));
@@ -110,6 +111,7 @@ defs mapKernelRegion_def:
                   pdeParity= True,
                   pdeCacheable= True,
                   pdeGlobal= True,
+                  pdeExecuteNever= False,
                   pdeRights= VMKernelOnly \<rparr>);
           offset \<leftarrow> return ( fromVPtr virt `~shiftR~` pageBitsForSize ARMSection);
           slots \<leftarrow> return ( map (\<lambda> n. globalPD + PPtr (n `~shiftL~` pdeBits))
@@ -150,6 +152,7 @@ defs mapKernelFrame_def:
                 pteFrame= paddr,
                 pteCacheable= armPageCacheable attributes,
                 pteGlobal= True,
+                pteExecuteNever= False,
                 pteRights= rights \<rparr>);
             storePTE ptSlot pte'
           od)
@@ -174,7 +177,7 @@ defs mapKernelDevice_def:
 "mapKernelDevice x0\<equiv> (case x0 of
     (addr, ptr) \<Rightarrow>    (do
     vptr \<leftarrow> return ( VPtr $ fromPPtr ptr);
-    mapKernelFrame addr vptr VMKernelOnly $ VMAttributes False False
+    mapKernelFrame addr vptr VMKernelOnly $ VMAttributes False False False
     od)
   )"
 
@@ -194,7 +197,7 @@ defs mapGlobalsFrame_def:
 "mapGlobalsFrame\<equiv> (do
     globalsFrame \<leftarrow> gets $ armKSGlobalsFrame \<circ> ksArchState;
     mapKernelFrame (addrFromPPtr globalsFrame) globalsBase VMReadOnly $
-        VMAttributes True True
+        VMAttributes True True False
 od)"
 
 defs createInitialRoot_def:
@@ -310,6 +313,7 @@ defs mapUserFrame_def:
                     pteFrame= paddr,
                     pteCacheable= True,
                     pteGlobal= False,
+                    pteExecuteNever= False,
                     pteRights= VMReadWrite \<rparr>);
                 storePTE ptSlot pte'
               od)
@@ -338,6 +342,7 @@ defs createMappingEntries_def:
         pteFrame= base,
         pteCacheable= armPageCacheable attrib,
         pteGlobal= False,
+        pteExecuteNever= armExecuteNever attrib,
         pteRights= vmRights \<rparr>, [p])
     odE)
   | ARMLargePage \<Rightarrow>    (doE
@@ -346,6 +351,7 @@ defs createMappingEntries_def:
         pteFrame= base,
         pteCacheable= armPageCacheable attrib,
         pteGlobal= False,
+        pteExecuteNever= armExecuteNever attrib,
         pteRights= vmRights \<rparr>, [p, p + 4  .e.  p + 60])
   odE)
   | ARMSection \<Rightarrow>    (doE
@@ -356,6 +362,7 @@ defs createMappingEntries_def:
         pdeDomain= 0,
         pdeCacheable= armPageCacheable attrib,
         pdeGlobal= False,
+        pdeExecuteNever= armExecuteNever attrib,
         pdeRights= vmRights \<rparr>, [p])
   odE)
   | ARMSuperSection \<Rightarrow>    (doE
@@ -365,6 +372,7 @@ defs createMappingEntries_def:
         pdeParity= armParityEnabled attrib,
         pdeCacheable= armPageCacheable attrib,
         pdeGlobal= False,
+        pdeExecuteNever= armExecuteNever attrib,
         pdeRights= vmRights \<rparr>, [p, p + 4  .e.  p + 60])
   odE)
   )"
@@ -372,42 +380,42 @@ defs createMappingEntries_def:
 defs ensureSafeMapping_def:
 "ensureSafeMapping x0\<equiv> (case x0 of
     (Inl (InvalidPTE, _)) \<Rightarrow>    returnOk ()
-  | (Inl (SmallPagePTE _ _ _ _, ptSlots)) \<Rightarrow>   
+  | (Inl (SmallPagePTE _ _ _ _ _, ptSlots)) \<Rightarrow>   
     forME_x ptSlots (\<lambda> slot. (doE
         pte \<leftarrow> withoutFailure $ getObject slot;
         (case pte of
               InvalidPTE \<Rightarrow>   returnOk ()
-            | SmallPagePTE _ _ _ _ \<Rightarrow>   returnOk ()
+            | SmallPagePTE _ _ _ _ _ \<Rightarrow>   returnOk ()
             | _ \<Rightarrow>   throw DeleteFirst
             )
     odE))
-  | (Inl (LargePagePTE _ _ _ _, ptSlots)) \<Rightarrow>   
+  | (Inl (LargePagePTE _ _ _ _ _, ptSlots)) \<Rightarrow>   
     forME_x ptSlots (\<lambda> slot. (doE
         pte \<leftarrow> withoutFailure $ getObject slot;
         (case pte of
               InvalidPTE \<Rightarrow>   returnOk ()
-            | LargePagePTE _ _ _ _ \<Rightarrow>   returnOk ()
+            | LargePagePTE _ _ _ _ _ \<Rightarrow>   returnOk ()
             | _ \<Rightarrow>   throw DeleteFirst
             )
     odE))
   | (Inr (InvalidPDE, _)) \<Rightarrow>    returnOk ()
   | (Inr (PageTablePDE _ _ _, _)) \<Rightarrow>   
     haskell_fail []
-  | (Inr (SectionPDE _ _ _ _ _ _, pdSlots)) \<Rightarrow>   
+  | (Inr (SectionPDE _ _ _ _ _ _ _, pdSlots)) \<Rightarrow>   
     forME_x pdSlots (\<lambda> slot. (doE
         pde \<leftarrow> withoutFailure $ getObject slot;
         (case pde of
               InvalidPDE \<Rightarrow>   returnOk ()
-            | SectionPDE _ _ _ _ _ _ \<Rightarrow>   returnOk ()
+            | SectionPDE _ _ _ _ _ _ _ \<Rightarrow>   returnOk ()
             | _ \<Rightarrow>   throw DeleteFirst
             )
     odE))
-  | (Inr (SuperSectionPDE _ _ _ _ _, pdSlots)) \<Rightarrow>   
+  | (Inr (SuperSectionPDE _ _ _ _ _ _, pdSlots)) \<Rightarrow>   
     forME_x pdSlots (\<lambda> slot. (doE
         pde \<leftarrow> withoutFailure $ getObject slot;
         (case pde of
               InvalidPDE \<Rightarrow>   returnOk ()
-            | SuperSectionPDE _ _ _ _ _ \<Rightarrow>   returnOk ()
+            | SuperSectionPDE _ _ _ _ _ _ \<Rightarrow>   returnOk ()
             | _ \<Rightarrow>   throw DeleteFirst
             )
     odE))
@@ -639,9 +647,9 @@ defs checkMappingPPtr_def:
     (Inl pt) \<Rightarrow>    (doE
     pte \<leftarrow> withoutFailure $ getObject pt;
     (case (pte, magnitude) of
-          (SmallPagePTE base _ _ _, ARMSmallPage) \<Rightarrow>  
+          (SmallPagePTE base _ _ _ _, ARMSmallPage) \<Rightarrow>  
             unlessE (base = addrFromPPtr pptr) $ throw InvalidRoot
-        | (LargePagePTE base _ _ _, ARMLargePage) \<Rightarrow>  
+        | (LargePagePTE base _ _ _ _, ARMLargePage) \<Rightarrow>  
             unlessE (base = addrFromPPtr pptr) $ throw InvalidRoot
         | _ \<Rightarrow>   throw InvalidRoot
         )
@@ -649,9 +657,9 @@ defs checkMappingPPtr_def:
   | (Inr pd) \<Rightarrow>    (doE
     pde \<leftarrow> withoutFailure $ getObject pd;
     (case (pde, magnitude) of
-          (SectionPDE base _ _ _ _ _, ARMSection) \<Rightarrow>  
+          (SectionPDE base _ _ _ _ _ _, ARMSection) \<Rightarrow>  
             unlessE (base = addrFromPPtr pptr) $ throw InvalidRoot
-        | (SuperSectionPDE base _ _ _ _, ARMSuperSection) \<Rightarrow>  
+        | (SuperSectionPDE base _ _ _ _ _, ARMSuperSection) \<Rightarrow>  
             unlessE (base = addrFromPPtr pptr) $ throw InvalidRoot
         | _ \<Rightarrow>   throw InvalidRoot
         )
@@ -755,7 +763,8 @@ defs maskVMRights_def:
 defs attribsFromWord_def:
 "attribsFromWord w \<equiv> VMAttributes_ \<lparr>
     armPageCacheable= w !! 0,
-    armParityEnabled= w !! 1 \<rparr>"
+    armParityEnabled= w !! 1,
+    armExecuteNever= w !! 2 \<rparr>"
 
 defs storeHWASID_def:
 "storeHWASID asid hw_asid \<equiv> (do
@@ -949,15 +958,15 @@ defs resolveVAddr_def:
     pdSlot \<leftarrow> return ( lookupPDSlot pd vaddr);
     pde \<leftarrow> getObject pdSlot;
     (case pde of
-          SectionPDE frame v16 v17 v18 v19 v20 \<Rightarrow>   return $ Just (ARMSection, frame)
-        | SuperSectionPDE frame v21 v22 v23 v24 \<Rightarrow>   return $ Just (ARMSuperSection, frame)
-        | PageTablePDE table v25 v26 \<Rightarrow>   (do
+          SectionPDE frame v18 v19 v20 v21 v22 v23 \<Rightarrow>   return $ Just (ARMSection, frame)
+        | SuperSectionPDE frame v24 v25 v26 v27 v28 \<Rightarrow>   return $ Just (ARMSuperSection, frame)
+        | PageTablePDE table v29 v30 \<Rightarrow>   (do
             pt \<leftarrow> return ( ptrFromPAddr table);
             pteSlot \<leftarrow> return ( lookupPTSlot_nofail pt vaddr);
             pte \<leftarrow> getObject pteSlot;
             (case pte of
-                  LargePagePTE frame v10 v11 v12 \<Rightarrow>   return $ Just (ARMLargePage, frame)
-                | SmallPagePTE frame v13 v14 v15 \<Rightarrow>   return $ Just (ARMSmallPage, frame)
+                  LargePagePTE frame v10 v11 v12 v13 \<Rightarrow>   return $ Just (ARMLargePage, frame)
+                | SmallPagePTE frame v14 v15 v16 v17 \<Rightarrow>   return $ Just (ARMSmallPage, frame)
                 | _ \<Rightarrow>   return Nothing
                 )
         od)
@@ -1118,8 +1127,8 @@ defs decodeARMMMUInvocation_def:
             whenE (null free) $ throw DeleteFirst;
             base \<leftarrow> returnOk ( (fst $ head free) `~shiftL~` asidLowBits);
             pool \<leftarrow> returnOk ( makeObject ::asidpool);
-            frame \<leftarrow> (let v27 = untyped in
-                if isUntypedCap v27 \<and> capBlockSize v27 = objBits pool
+            frame \<leftarrow> (let v31 = untyped in
+                if isUntypedCap v31 \<and> capBlockSize v31 = objBits pool
                 then  (doE
                     ensureNoChildren parentSlot;
                     returnOk $ capPtr untyped

@@ -1,5 +1,3 @@
 Built from git repo at ../../../seL4/haskell by kleing
 
-Generated from changeset:
-212ab3f updated INSTALL file; renamed
-
+eff5683 add support for XN attribute in Haskell
