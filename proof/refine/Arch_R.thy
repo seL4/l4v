@@ -1423,13 +1423,13 @@ lemma findPDForASID_page_directory_at':
 
 definition "slots_duplicated_ensured \<equiv> \<lambda>m s. case m of 
   Inl (pte, xs) \<Rightarrow> (case pte of 
-    pte.LargePagePTE _ _ _ _  \<Rightarrow> \<exists>p. xs = [p, p+4 .e. p + mask 6] \<and> is_aligned p 6
+    pte.LargePagePTE _ _ _ _ _ \<Rightarrow> \<exists>p. xs = [p, p+4 .e. p + mask 6] \<and> is_aligned p 6
         \<and> page_table_at' (p && ~~ mask ptBits) s
     | pte.InvalidPTE  \<Rightarrow> False
     | _ \<Rightarrow> \<exists>p. xs = [p]
       \<and> page_table_at' (p && ~~ mask ptBits) s)
   | Inr (pde, xs) \<Rightarrow> (case pde of 
-    pde.SuperSectionPDE _ _ _ _ _ \<Rightarrow> \<exists>p. xs = [p, p+4 .e. p + mask 6] \<and> is_aligned p 6
+    pde.SuperSectionPDE _ _ _ _ _ _ \<Rightarrow> \<exists>p. xs = [p, p+4 .e. p + mask 6] \<and> is_aligned p 6
         \<and> page_directory_at' (p && ~~ mask pdBits) s \<and> is_aligned p 6
     | pde.InvalidPDE  \<Rightarrow> False
     | _ \<Rightarrow> \<exists>p. xs = [p]

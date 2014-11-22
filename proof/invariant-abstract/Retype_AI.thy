@@ -1389,8 +1389,7 @@ abbreviation(input)
        and valid_arch_caps and valid_global_objs and valid_kernel_mappings 
        and valid_asid_map and valid_global_pd_mappings
        and pspace_in_kernel_window and cap_refs_in_kernel_window
-       and cur_tcb and valid_ioc and valid_machine_state
-       and executable_arch_objs"
+       and cur_tcb and valid_ioc and valid_machine_state"
 
 
 lemma all_invs_but_equal_kernel_mappings_restricted_eq:
@@ -1696,8 +1695,6 @@ lemma store_pde_vms[wp]:
 
 crunch valid_irq_states[wp]: store_pde "valid_irq_states"
 
-crunch executable_arch_objs[wp]: get_pde executable_arch_objs
-
 lemma copy_global_invs_mappings_restricted:
   "\<lbrace>(\<lambda>s. all_invs_but_equal_kernel_mappings_restricted (insert pd S) s)
           and (\<lambda>s. insert pd S \<inter> global_refs s = {})
@@ -1735,11 +1732,6 @@ lemma copy_global_invs_mappings_restricted:
     apply (simp add: valid_objs_def dom_def obj_at_def valid_obj_def)
     apply (drule spec, erule impE, fastforce, clarsimp)
    apply (clarsimp simp: obj_at_def empty_table_def kernel_vsrefs_def)
-   apply (rule conjI)
-    apply (clarsimp simp: obj_at_def empty_table_def kernel_vsrefs_def)
-   apply (drule executable_arch_objsD[rotated])
-    apply (fastforce simp: obj_at_def)
-   apply simp
   apply clarsimp
   apply (erule minus_one_helper5[rotated])
   apply (simp add: pd_bits_def pageBits_def)
@@ -3187,38 +3179,6 @@ lemma vms:
   apply (rule_tac x=sz in exI, clarsimp simp: obj_at_def orthr)
   done
 
-lemma executable_arch_obj_default:
-  assumes tyunt: "ty \<noteq> Structures_A.apiobject_type.Untyped"
-  shows "ArchObj ao = default_object ty us \<Longrightarrow> executable_arch_obj ao"
-  apply (cases ty, simp_all add: default_object_def tyunt)
-  apply (simp add: default_arch_object_def split: aobject_type.splits)
-  done
-
-lemma executable_arch_objs':
-  assumes ea: "executable_arch_objs s" 
-  shows "executable_arch_objs s'"
-proof
-  fix p ao
-  assume "ko_at (ArchObj ao) p s'"
-  hence "ko_at (ArchObj ao) p s \<or> ArchObj ao = default_object ty us"
-    by (simp add: ps_def obj_at_def s'_def split: split_if_asm)
-  moreover
-  { assume "ArchObj ao = default_object ty us" with tyunt
-    have "executable_arch_obj ao" by (rule executable_arch_obj_default)
-  }
-  moreover
-  { assume "ko_at (ArchObj ao) p s"
-    with ea
-    have "executable_arch_obj ao"
-      by (auto simp: vs_lookup' elim: executable_arch_objsD)
-    hence "executable_arch_obj ao"
-      apply (cases ao, simp_all add: obj_at_pres)
-      done
-  }
-  ultimately
-  show "executable_arch_obj ao" by blast
-qed
-
 lemma post_retype_invs:
   "\<lbrakk> invs s; region_in_kernel_window {ptr .. (ptr && ~~ mask sz) + 2 ^ sz - 1} s \<rbrakk>
         \<Longrightarrow> post_retype_invs ty (retype_addrs ptr ty n us) s'"
@@ -3235,8 +3195,7 @@ lemma post_retype_invs:
                      valid_kernel_mappings valid_asid_map
                      valid_global_pd_mappings valid_ioc vms
                      pspace_in_kernel_window
-                     cap_refs_in_kernel_window valid_irq_states
-                     executable_arch_objs')
+                     cap_refs_in_kernel_window valid_irq_states)
 
 end
 

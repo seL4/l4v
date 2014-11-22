@@ -871,13 +871,6 @@ proof (simp add: invs_def valid_state_def valid_pspace_def
     apply (auto intro: valid_arch_obj)
     done
 
-  have "executable_arch_objs s"
-    using invs by fastforce 
-  thus "executable_arch_objs (detype (untyped_range cap) s)"
-    unfolding executable_arch_objs_def
-    apply (auto)
-    done
-
   have unique_table_caps:
     "\<And>cps P. unique_table_caps cps
              \<Longrightarrow> unique_table_caps (\<lambda>x. if P x then None else cps x)"

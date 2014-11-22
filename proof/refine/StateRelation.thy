@@ -198,10 +198,10 @@ where
       = (x = Hardware_H.PageTablePDE ptr (ParityEnabled \<in> atts) domain)"
 | "pde_relation' (ARM_Structs_A.SectionPDE ptr atts domain rghts) x
       = (x = Hardware_H.SectionPDE ptr (ParityEnabled \<in> atts) domain
-                                (PageCacheable \<in> atts) (Global \<in> atts) (vmrights_map rghts))"
+               (PageCacheable \<in> atts) (Global \<in> atts) (XNever \<in> atts) (vmrights_map rghts))"
 | "pde_relation' (ARM_Structs_A.SuperSectionPDE ptr atts rghts) x
       = (x = Hardware_H.SuperSectionPDE ptr (ParityEnabled \<in> atts)
-                                (PageCacheable \<in> atts) (Global \<in> atts) (vmrights_map rghts))"
+               (PageCacheable \<in> atts) (Global \<in> atts) (XNever \<in> atts) (vmrights_map rghts))"
 
 
 primrec
@@ -209,16 +209,18 @@ primrec
 where
   "pte_relation'  ARM_Structs_A.InvalidPTE x = (x = Hardware_H.InvalidPTE)"
 | "pte_relation' (ARM_Structs_A.LargePagePTE ptr atts rghts) x
-      = (x = Hardware_H.LargePagePTE ptr (PageCacheable \<in> atts) (Global \<in> atts) (vmrights_map rghts))"
+      = (x = Hardware_H.LargePagePTE ptr (PageCacheable \<in> atts) (Global \<in> atts) 
+                                         (XNever \<in> atts) (vmrights_map rghts))"
 | "pte_relation' (ARM_Structs_A.SmallPagePTE ptr atts rghts) x
-      = (x = Hardware_H.SmallPagePTE ptr (PageCacheable \<in> atts) (Global \<in> atts) (vmrights_map rghts))"
+      = (x = Hardware_H.SmallPagePTE ptr (PageCacheable \<in> atts) (Global \<in> atts) 
+                                         (XNever \<in> atts) (vmrights_map rghts))"
 
 
 definition
   pde_align' :: "Hardware_H.pde \<Rightarrow> nat"
 where
  "pde_align' pde \<equiv>
-  case pde of Hardware_H.pde.SuperSectionPDE _ _ _ _ _ \<Rightarrow> 4 | _ \<Rightarrow> 0"
+  case pde of Hardware_H.pde.SuperSectionPDE _ _ _ _ _ _ \<Rightarrow> 4 | _ \<Rightarrow> 0"
 
 lemmas pde_align_simps[simp] =
   pde_align'_def[split_simps ARM_Structs_A.pde.split]
@@ -226,7 +228,7 @@ lemmas pde_align_simps[simp] =
 definition
   pte_align' :: "Hardware_H.pte \<Rightarrow> nat"
 where
- "pte_align' pte \<equiv> case pte of Hardware_H.pte.LargePagePTE _ _ _ _ \<Rightarrow> 4 | _ \<Rightarrow> 0"
+ "pte_align' pte \<equiv> case pte of Hardware_H.pte.LargePagePTE _ _ _ _ _ \<Rightarrow> 4 | _ \<Rightarrow> 0"
 
 lemmas pte_align_simps[simp] =
   pte_align'_def[split_simps ARM_Structs_A.pte.split]

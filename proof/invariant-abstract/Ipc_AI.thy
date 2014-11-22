@@ -1058,22 +1058,11 @@ lemma transfer_caps_loop_irq_handlers[wp]:
 crunch valid_arch_objs [wp]: set_extra_badge valid_arch_objs
 
 
-crunch executable_arch_objs [wp]: set_extra_badge executable_arch_objs
-
-
 lemma transfer_caps_loop_arch_objs[wp]:
   "\<lbrace>valid_arch_objs\<rbrace>
    transfer_caps_loop ep diminish buffer n caps slots mi
    \<lbrace>\<lambda>rv. valid_arch_objs\<rbrace>"
   by (rule transfer_caps_loop_pres) wp
-
-
-lemma transfer_caps_loop_executable_arch_objs[wp]:
-  "\<lbrace>executable_arch_objs\<rbrace>
-   transfer_caps_loop ep diminish buffer n caps slots mi
-   \<lbrace>\<lambda>rv. executable_arch_objs\<rbrace>"
-  by (rule transfer_caps_loop_pres) wp
-
 
 crunch valid_arch_caps [wp]: set_extra_badge valid_arch_caps
 
@@ -1907,10 +1896,6 @@ declare as_user_arch_obj [wp]
 
 
 crunch arch_objs[wp]: do_ipc_transfer "valid_arch_objs"
-  (wp: crunch_wps simp: zipWithM_x_mapM crunch_simps)
-
-
-crunch executable_arch_objs[wp]: do_ipc_transfer "executable_arch_objs"
   (wp: crunch_wps simp: zipWithM_x_mapM crunch_simps)
 
 
@@ -2755,8 +2740,6 @@ crunch irq_handlers[wp]: set_endpoint "valid_irq_handlers"
   (wp: crunch_wps)
 
 crunch arch_objs [wp]: setup_caller_cap "valid_arch_objs"
-
-crunch executable_arch_objs [wp]: setup_caller_cap "executable_arch_objs"
 
 crunch v_ker_map[wp]: setup_caller_cap "valid_kernel_mappings"
 

@@ -878,18 +878,6 @@ lemma set_pt_corres:
   apply (simp add: caps_of_state_after_update obj_at_def swp_cte_at_caps_of)
   done
 
-lemma word_from_vm_rights [simp]:
-  "fromEnum (vmrights_map R) = unat (word_from_vm_rights R)"
-  by (simp add: vmrights_map_def fromEnum_def enum_vmrights word_from_vm_rights_def 
-                vm_read_only_def vm_kernel_only_def vm_read_write_def)  
-
-lemma word_from_pde_corres:
-  "pde_relation' pde pde' \<Longrightarrow> wordFromPDE pde'= word_from_pde pde"
-  apply (simp add: word_from_pde_def wordFromPDE_def)
-  apply (cases pde)
-     apply (auto simp: ucast_id shiftL_nat shiftl_t2n)
-  done
-
 lemma store_pde_corres:
   "pde_relation_aligned (p >> 2) pde pde' \<Longrightarrow> 
   corres dc (pde_at p and pspace_aligned and valid_etcbs) (pde_at' p) (store_pde p pde) (storePDE p pde')"
@@ -916,13 +904,6 @@ lemma store_pde_corres':
   apply (rule stronger_corres_guard_imp,
          erule store_pde_corres)
    apply auto
-  done
-
-lemma word_from_pte_corres:
-  "pte_relation' pte pte' \<Longrightarrow> wordFromPTE pte'= word_from_pte pte"
-  apply (simp add: word_from_pte_def wordFromPTE_def) 
-  apply (cases pte)
-     apply (auto simp: ucast_id word_from_vm_rights shiftL_nat shiftl_t2n field_simps)
   done
 
 lemma store_pte_corres:
@@ -1243,7 +1224,7 @@ lemma arch_derive_corres:
   done
 
 definition
-  "vmattributes_map \<equiv> \<lambda>R. VMAttributes (PageCacheable \<in> R) (ParityEnabled \<in> R)"
+  "vmattributes_map \<equiv> \<lambda>R. VMAttributes (PageCacheable \<in> R) (ParityEnabled \<in> R) (XNever \<in> R)"
 
 definition 
   mapping_map :: "ARM_Structs_A.pte \<times> word32 list + ARM_Structs_A.pde \<times> word32 list \<Rightarrow> 
@@ -1300,16 +1281,15 @@ definition
 
 lemma valid_slots_typ_at':
   assumes x: "\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at' T p\<rbrace>"
-  assumes y: "\<And>arch p. \<lbrace>ko_wp_at' (op = (KOArch arch)) p\<rbrace> f \<lbrace>\<lambda>rv. ko_wp_at' (op = (KOArch arch)) p\<rbrace>"
   shows "\<lbrace>valid_slots' m\<rbrace> f \<lbrace>\<lambda>rv. valid_slots' m\<rbrace>"
   unfolding valid_slots'_def
   apply (cases m)
    apply (case_tac a)
    apply simp
-   apply (wp x y hoare_vcg_const_Ball_lift valid_pte_lift')
+   apply (wp x valid_pte_lift')
   apply (case_tac b)
   apply simp
-  apply (wp x y hoare_vcg_const_Ball_lift valid_pde_lift')
+  apply (wp x valid_pde_lift')
   done
 
 lemma createMappingEntries_valid_slots' [wp]:

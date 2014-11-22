@@ -364,10 +364,8 @@ lemma invs_A:
           apply (rule less_imp_le)
           apply (rule less_le_trans[OF shiftl_less_t2n'[OF ucast_less]],simp+)[1]
      apply (rule in_kernel_base|simp)+
-  apply (rule conjI)
-   apply (simp add: cap_refs_in_kernel_window_def caps_of_state_init_A_st_Null
-                   valid_refs_def[unfolded cte_wp_at_caps_of_state])
-  apply (simp add: executable_arch_objs_def obj_at_def state_defs)
+  apply (simp add: cap_refs_in_kernel_window_def caps_of_state_init_A_st_Null
+                  valid_refs_def[unfolded cte_wp_at_caps_of_state])
   apply word_bitwise
   done
 

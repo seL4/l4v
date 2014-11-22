@@ -1424,10 +1424,6 @@ lemma diminished_pd_self:
   apply (clarsimp simp: acap_rights_update_def split: cap.splits arch_cap.splits)
   done
 
-lemma XNever_attribs_from_word[simp]:
-  "XNever \<notin> attribs_from_word w"
-  by (simp add: attribs_from_word_def)
-
 lemma cte_wp_at_page_cap_weaken:
   "cte_wp_at (diminished (ArchObjectCap (PageCap word seta vmpage_size None))) slot s \<Longrightarrow>
    cte_wp_at (\<lambda>a. \<exists>p R sz m. a = ArchObjectCap (PageCap p R sz m)) slot s"

@@ -1464,67 +1464,6 @@ lemma set_cap_vs_lookup_pages [wp]:
   done
 
 
-lemma set_object_executable_arch_objs:
-  "\<lbrace>executable_arch_objs and typ_at (a_type ko) p and
-    (\<lambda>s. case ko of ArchObj ao \<Rightarrow> executable_arch_obj ao
-            | _ \<Rightarrow> True)\<rbrace>
-  set_object p ko 
-  \<lbrace>\<lambda>_. executable_arch_objs\<rbrace>"
-  apply (simp add: executable_arch_objs_def)
-  apply (subst imp_conv_disj)+
-  apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift set_object_neg_lookup set_object_neg_ko)
-  apply (clarsimp simp: pred_neg_def obj_at_def)
-  apply fastforce
-  done
-
-
-lemma set_ep_executable_arch_objs [wp]:
-  "\<lbrace>executable_arch_objs\<rbrace> set_endpoint p ep \<lbrace>\<lambda>_. executable_arch_objs\<rbrace>"
-  unfolding set_endpoint_def
-  apply (wp set_object_executable_arch_objs get_object_wp)
-  apply (clarsimp simp: vs_refs_def obj_at_def a_type_def 
-                  split: Structures_A.kernel_object.splits)
-  done
-
-
-lemma set_aep_executable_arch_objs [wp]:
-  "\<lbrace>executable_arch_objs\<rbrace> set_async_ep p aep \<lbrace>\<lambda>_. executable_arch_objs\<rbrace>"
-  unfolding set_async_ep_def
-  apply (wp set_object_executable_arch_objs get_object_wp)
-  apply (clarsimp simp: vs_refs_def obj_at_def a_type_def 
-                  split: Structures_A.kernel_object.splits)
-  done
-  
-
-lemma sts_executable_arch_objs [wp]:
-  "\<lbrace>executable_arch_objs\<rbrace> set_thread_state p st \<lbrace>\<lambda>_. executable_arch_objs\<rbrace>"
-  unfolding set_thread_state_def
-  apply (wp, simp, wp set_object_executable_arch_objs)
-  apply (fastforce simp: vs_refs_def obj_at_def a_type_def get_tcb_def
-                  split: Structures_A.kernel_object.splits option.splits)
-  done
-
-
-lemma thread_set_executable_arch_objs [wp]:
-  "\<lbrace>executable_arch_objs\<rbrace> thread_set f p \<lbrace>\<lambda>_. executable_arch_objs\<rbrace>"
-  unfolding thread_set_def
-  apply (wp set_object_executable_arch_objs)
-  apply (fastforce simp: vs_refs_def obj_at_def a_type_def get_tcb_def
-                  split: Structures_A.kernel_object.splits option.splits)
-  done
-
-
-lemma set_cap_executable_arch_objs [wp]:
-  "\<lbrace>executable_arch_objs\<rbrace> set_cap cap p \<lbrace>\<lambda>_. executable_arch_objs\<rbrace>"
-  unfolding set_cap_def split_def
-  apply (rule hoare_pre)
-   apply (wp set_object_executable_arch_objs get_object_wp
-            | wpc)+
-  apply (clarsimp simp: vs_refs_def obj_at_def simp del: fun_upd_apply)
-  apply (simp add: a_type_def wf_cs_upd)
-  done
-
-
 lemma valid_irq_handlers_lift:
   assumes x: "\<And>P. \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> f \<lbrace>\<lambda>rv s. P (caps_of_state s)\<rbrace>"
   assumes y: "\<And>P. \<lbrace>\<lambda>s. P (interrupt_states s)\<rbrace> f \<lbrace>\<lambda>rv s. P (interrupt_states s)\<rbrace>"
@@ -2132,14 +2071,6 @@ lemma do_machine_op_arch_objs [wp]:
   done
 
 
-lemma do_machine_op_executable_arch_objs [wp]:
-  "\<lbrace>executable_arch_objs\<rbrace> do_machine_op f \<lbrace>\<lambda>_. executable_arch_objs\<rbrace>"
-  apply (simp add: do_machine_op_def split_def)
-  apply wp
-  apply simp
-  done
-
-
 lemma empty_table_lift:
   assumes S: "\<And>P. \<lbrace>\<lambda>s. P (S s)\<rbrace> f \<lbrace>\<lambda>_ s. P (S s)\<rbrace>"
   assumes o: "\<And>P. \<lbrace>obj_at P p and Q\<rbrace> f \<lbrace>\<lambda>_. obj_at P p\<rbrace>"
@@ -2171,14 +2102,6 @@ lemma as_user_arch_obj:
   apply (clarsimp cong: if_cong)
   apply (drule get_tcb_SomeD)
   apply (clarsimp simp: obj_at_def vs_refs_def)
-  done
-
-
-lemma as_user_executable_arch_obj:
-  "\<lbrace>executable_arch_objs\<rbrace> as_user f t \<lbrace>\<lambda>_. executable_arch_objs\<rbrace>"
-  apply (simp add: as_user_def)
-  apply (wp set_object_executable_arch_objs hoare_drop_imps|simp add: split_def)+
-  apply (clarsimp cong: if_cong)
   done
 
 

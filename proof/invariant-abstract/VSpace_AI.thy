@@ -199,10 +199,6 @@ lemma find_free_hw_asid_arch_objs [wp]:
   apply (simp add: valid_arch_objs_arch_update)
   done
 
-
-crunch executable_arch_objs [wp]: find_free_hw_asid executable_arch_objs
-
-
 lemma find_free_hw_asid_pd_at_asid [wp]:
   "\<lbrace>pd_at_asid pd asid\<rbrace> find_free_hw_asid \<lbrace>\<lambda>_. pd_at_asid pd asid\<rbrace>"
   apply (simp add: find_free_hw_asid_def invalidate_hw_asid_entry_def invalidate_asid_def
@@ -464,9 +460,6 @@ lemma flush_space_arch_objs[wp]:
   done
 
 
-crunch executable_arch_objs [wp]: flush_space executable_arch_objs
-
-
 crunch typ_at [wp]: invalidate_asid_entry "\<lambda>s. P (typ_at T p s)"
 
 
@@ -521,10 +514,6 @@ lemma invalidate_asid_entry_invalidates:
 
 
 crunch arch_objs [wp]: invalidate_asid_entry valid_arch_objs
-  (simp: valid_arch_objs_arch_update)
-
-
-crunch executable_arch_objs [wp]: invalidate_asid_entry executable_arch_objs
   (simp: valid_arch_objs_arch_update)
 
 
@@ -1077,9 +1066,6 @@ crunch arch_objs [wp]: set_vm_root_for_flush valid_arch_objs
   (simp: valid_arch_objs_arch_update)
 
 
-crunch executable_arch_objs [wp]: set_vm_root_for_flush executable_arch_objs
-
-
 crunch typ_at [wp]: flush_table "\<lambda>s. P (typ_at T p s)"
   (simp: assertE_def whenE_def when_def wp: crunch_wps)
 
@@ -1407,9 +1393,6 @@ lemma lookup_pd_slot_pd:
 crunch arch_objs [wp]: flush_page valid_arch_objs
   (simp: crunch_simps valid_arch_objs_arch_update)
 
-crunch executable_arch_objs [wp]: flush_page executable_arch_objs
-  (simp: crunch_simps)
-
 crunch equal_mappings [wp]: flush_page equal_kernel_mappings
   (simp: crunch_simps)
 
@@ -1584,8 +1567,7 @@ where
 definition
   "valid_pti pti \<equiv> case pti of 
      ArchInvocation_A.PageTableMap cap ptr pde p \<Rightarrow>
-     pde_at p and (%s. wellformed_pde pde) and
-                  (%s. executable_pde pde) and
+     pde_at p and (\<lambda>s. wellformed_pde pde) and
      valid_pde pde and valid_cap cap and
      cte_wp_at (\<lambda>c. is_arch_update cap c \<and> cap_asid c = None) ptr and
      empty_pde_at p and
@@ -2281,8 +2263,7 @@ lemma vs_refs_pdI2:
   by (auto simp: vs_refs_def pde_ref_def graph_of_def)
 
 lemma set_pd_invs_map:
-  "\<lbrace>invs and (%s. \<forall>i. wellformed_pde (pd i)) and
-             (%s. \<forall>i. executable_pde (pd i)) and
+  "\<lbrace>invs and (\<lambda>s. \<forall>i. wellformed_pde (pd i)) and
      obj_at (\<lambda>ko. vs_refs (ArchObj (PageDirectory pd)) = vs_refs ko \<union> S) p and
      obj_at (\<lambda>ko. vs_refs_pages (ArchObj (PageDirectory pd)) = vs_refs_pages ko - T' \<union> S') p and
      obj_at (\<lambda>ko. \<exists>pd'. ko = ArchObj (PageDirectory pd')
@@ -2614,8 +2595,7 @@ lemma valid_cap_to_pd_cap:
               split: cap.splits option.splits arch_cap.splits)
 
 lemma store_pde_map_invs:
-  "\<lbrace>(%s. wellformed_pde pde) and invs and empty_pde_at p and valid_pde pde
-     and (%s. executable_pde pde)
+  "\<lbrace>(\<lambda>s. wellformed_pde pde) and invs and empty_pde_at p and valid_pde pde
      and (\<lambda>s. \<forall>p. pde_ref pde = Some p \<longrightarrow> (\<exists>ao. ko_at (ArchObj ao) p s \<and> valid_arch_obj ao s))
      and K (VSRef (p && mask pd_bits >> 2) (Some APageDirectory)
                \<notin> kernel_vsrefs)
@@ -2638,10 +2618,6 @@ lemma store_pde_map_invs:
   apply (rule conjI)
    apply (drule invs_valid_objs)
    apply (fastforce simp: valid_objs_def dom_def obj_at_def valid_obj_def)
-  apply (rule conjI)
-   apply clarsimp
-   apply (frule executable_arch_objsD, fastforce)
-   apply simp
   apply (rule conjI)
    apply (clarsimp simp: empty_pde_at_def)
    apply (clarsimp simp: obj_at_def)
@@ -2797,7 +2773,6 @@ lemma mapM_swp_store_pte_invs[wp]:
   "\<lbrace>invs and (\<lambda>s. (\<exists>p\<in>set slots. (\<exists>\<rhd> (p && ~~ mask pt_bits)) s) \<longrightarrow>
                   valid_pte pte s) and
     (\<lambda>s. wellformed_pte pte) and
-    (\<lambda>s. executable_pte pte) and
     (\<lambda>s. \<exists>slot. cte_wp_at
            (\<lambda>c. image (\<lambda>x. x && ~~ mask pt_bits) (set slots) \<subseteq> obj_refs c \<and>
                 is_pt_cap c \<and> (pte = ARM_Structs_A.InvalidPTE \<or>
@@ -2854,7 +2829,6 @@ lemma vs_refs_pdI3:
 
 lemma set_pd_invs_unmap':
   "\<lbrace>invs and (\<lambda>s. \<forall>i. wellformed_pde (pd i)) and
-             (\<lambda>s. \<forall>i. executable_pde (pd i)) and
     (\<lambda>s. (\<exists>\<rhd>p) s \<longrightarrow> valid_arch_obj (PageDirectory pd) s) and
     obj_at (\<lambda>ko. vs_refs (ArchObj (PageDirectory pd)) = vs_refs ko - T) p and
     obj_at (\<lambda>ko. vs_refs_pages (ArchObj (PageDirectory pd)) = vs_refs_pages ko - T' \<union> S') p and
@@ -2940,7 +2914,6 @@ lemma store_pde_invs_unmap':
     and valid_pde pde
     and (\<lambda>s. p && ~~ mask pd_bits \<notin> global_refs s)
     and K (wellformed_pde pde \<and> pde_ref pde = None)
-    and K (executable_pde pde)
     and K (ucast (p && mask pd_bits >> 2) \<notin> kernel_mapping_slots
            \<and> (\<exists>xs. slots = p # xs) )
     and (\<lambda>s. \<exists>pd. ko_at (ArchObj (PageDirectory pd)) (p && ~~ mask pd_bits) s)\<rbrace>
@@ -2962,12 +2935,6 @@ lemma store_pde_invs_unmap':
    apply (erule_tac P="\<lambda>x. (\<exists>y. ?a y x) \<longrightarrow> ?b x" in allE[where x="(p && ~~ mask pd_bits)"])
    apply (erule impE)
     apply (clarsimp simp: obj_at_def vs_refs_def)+
-
-  apply (rule conjI)
-   apply (clarsimp simp add: invs_def valid_state_def executable_arch_objs_def)
-   apply (erule allE[where x="(p && ~~ mask pd_bits)"])
-   apply (erule_tac x="PageDirectory pd" in allE)
-   apply (clarsimp simp: obj_at_def)
 
   apply (rule conjI)
    apply (clarsimp simp add: invs_def valid_state_def valid_arch_objs_def)
@@ -3097,7 +3064,6 @@ lemma mapM_x_swp_store_pte_invs [wp]:
   "\<lbrace>invs and (\<lambda>s. (\<exists>p\<in>set slots. (\<exists>\<rhd> (p && ~~ mask pt_bits)) s) \<longrightarrow>
                   valid_pte pte s) and
     (\<lambda>s. wellformed_pte pte) and
-    (\<lambda>s. executable_pte pte) and
     (\<lambda>s. \<exists>slot. cte_wp_at
            (\<lambda>c. image (\<lambda>x. x && ~~ mask pt_bits) (set slots) \<subseteq> obj_refs c \<and>
                 is_pt_cap c \<and> (pte = ARM_Structs_A.InvalidPTE \<or>

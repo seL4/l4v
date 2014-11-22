@@ -72,14 +72,16 @@ definition
   "absPageTable h a \<equiv> %offs.
    case (h (a + (ucast offs << 2))) of
      Some (KOArch (KOPTE (Hardware_H.InvalidPTE))) \<Rightarrow> ARM_Structs_A.InvalidPTE
-   | Some (KOArch (KOPTE (Hardware_H.LargePagePTE p c g rights))) \<Rightarrow>
+   | Some (KOArch (KOPTE (Hardware_H.LargePagePTE p c g xn rights))) \<Rightarrow>
        if is_aligned offs 4 then
          ARM_Structs_A.LargePagePTE p
-           {x. c & x=PageCacheable | g & x=Global} (vm_rights_of rights)
+           {x. c & x=PageCacheable | g & x=Global | xn & x=XNever}
+           (vm_rights_of rights)
        else ARM_Structs_A.InvalidPTE
-   | Some (KOArch (KOPTE (Hardware_H.SmallPagePTE p c g rights))) \<Rightarrow>
+   | Some (KOArch (KOPTE (Hardware_H.SmallPagePTE p c g xn rights))) \<Rightarrow>
        ARM_Structs_A.SmallPagePTE p {x. c & x=PageCacheable |
-                                        g & x=Global} (vm_rights_of rights)"
+                                        g & x=Global |
+                                        xn & x=XNever} (vm_rights_of rights)"
 
 definition
   absPageDirectory :: "(word32 \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> obj_ref \<Rightarrow>
@@ -90,14 +92,16 @@ definition
      Some (KOArch (KOPDE (Hardware_H.InvalidPDE))) \<Rightarrow> ARM_Structs_A.InvalidPDE
    | Some (KOArch (KOPDE (Hardware_H.PageTablePDE p e mw))) \<Rightarrow>
        ARM_Structs_A.PageTablePDE p {x. e & x=ParityEnabled} mw
-   | Some (KOArch (KOPDE (Hardware_H.SectionPDE p e mw c g rights))) \<Rightarrow>
+   | Some (KOArch (KOPDE (Hardware_H.SectionPDE p e mw c g xn rights))) \<Rightarrow>
        ARM_Structs_A.SectionPDE p {x. e & x=ParityEnabled |
                                       c & x=PageCacheable |
-                                      g & x=Global} mw (vm_rights_of rights)
-   | Some (KOArch (KOPDE (Hardware_H.SuperSectionPDE p e c g rights))) \<Rightarrow>
+                                      g & x=Global |
+                                      xn & x=XNever} mw (vm_rights_of rights)
+   | Some (KOArch (KOPDE (Hardware_H.SuperSectionPDE p e c g xn rights))) \<Rightarrow>
        if is_aligned offs 4 then
          ARM_Structs_A.SuperSectionPDE p
-           {x. e & x=ParityEnabled | c & x=PageCacheable | g & x=Global}
+           {x. e & x=ParityEnabled | c & x=PageCacheable 
+             | g & x=Global | xn & x=XNever}
            (vm_rights_of rights)
        else ARM_Structs_A.InvalidPDE"
 
@@ -125,10 +129,10 @@ lemma
                            Some (KOArch (KOPTE pte')))"
   and pte_rights:
     "\<forall>x. case ksPSpace \<sigma> x of
-           Some (KOArch (KOPTE (Hardware_H.LargePagePTE _ _ _ r))) \<Rightarrow>
+           Some (KOArch (KOPTE (Hardware_H.LargePagePTE _ _ _ _ r))) \<Rightarrow>
              r \<noteq> VMNoAccess"
     "\<forall>x. case ksPSpace \<sigma> x of
-           Some (KOArch (KOPTE (Hardware_H.SmallPagePTE _ _ _ r))) \<Rightarrow>
+           Some (KOArch (KOPTE (Hardware_H.SmallPagePTE _ _ _ _ r))) \<Rightarrow>
              r \<noteq> VMNoAccess"
 
   assumes pdes:
@@ -138,10 +142,10 @@ lemma
                              Some (KOArch (KOPDE pde')))"
   and pde_rights:
     "\<forall>x. case ksPSpace \<sigma> x of
-           Some (KOArch (KOPDE (Hardware_H.SectionPDE _ _ _ _ _ r))) \<Rightarrow>
+           Some (KOArch (KOPDE (Hardware_H.SectionPDE _ _ _ _ _ _ r))) \<Rightarrow>
              r \<noteq> VMNoAccess"
     "\<forall>x. case ksPSpace \<sigma> x of
-           Some (KOArch (KOPDE (Hardware_H.SuperSectionPDE _ _ _ _ r))) \<Rightarrow>
+           Some (KOArch (KOPDE (Hardware_H.SuperSectionPDE _ _ _ _ _ r))) \<Rightarrow>
              r \<noteq> VMNoAccess"
 
   assumes fst_pte:
@@ -558,7 +562,6 @@ lemma absHeap_correct:
 assumes pspace_aligned:  "pspace_aligned s"
 assumes pspace_distinct: "pspace_distinct s"
 assumes valid_objs:      "valid_objs s"
-assumes executable_arch_objs: "executable_arch_objs s"
 assumes pspace_relation: "pspace_relation (kheap s) (ksPSpace s')"
 assumes ghost_relation:
   "ghost_relation (kheap s) (gsUserPages s') (gsCNodes s')"
@@ -805,20 +808,10 @@ proof -
        apply (case_tac pte, simp_all add: pte_relation_aligned_def)[1]
         apply (clarsimp split: ARM_Structs_A.pte.splits)
         apply (rule set_eqI, clarsimp)
-        apply (case_tac x, simp_all)
-        using executable_arch_objs[simplified executable_arch_objs_def]
-        apply (erule_tac x=y in allE)
-        apply (clarsimp simp: obj_at_def executable_pte_def)
-        apply (erule_tac x=offs in allE)
-        apply clarsimp
+        apply (case_tac x, simp_all)[1]
        apply (clarsimp split: ARM_Structs_A.pte.splits)
        apply (rule set_eqI, clarsimp)
-       apply (case_tac x, simp_all)
-       using executable_arch_objs[simplified executable_arch_objs_def]
-       apply (erule_tac x=y in allE)
-       apply (clarsimp simp: obj_at_def executable_pte_def)
-       apply (erule_tac x=offs in allE)
-       apply clarsimp
+       apply (case_tac x, simp_all)[1]
       apply (clarsimp simp add: pde_relation_def)
      apply clarsimp+
 
@@ -862,20 +855,10 @@ proof -
        apply (fastforce simp add: subset_eq)
       apply (clarsimp split: ARM_Structs_A.pde.splits)
       apply (rule set_eqI, clarsimp)
-      apply (case_tac x, simp_all)
-      using executable_arch_objs[simplified executable_arch_objs_def]
-      apply (erule_tac x=y in allE)
-      apply (clarsimp simp: obj_at_def executable_pde_def)
-      apply (erule_tac x=offs in allE)
-      apply clarsimp
+      apply (case_tac x, simp_all)[1]
      apply (clarsimp split: ARM_Structs_A.pde.splits)
      apply (rule set_eqI, clarsimp)
-     apply (case_tac x, simp_all)
-     using executable_arch_objs[simplified executable_arch_objs_def]
-     apply (erule_tac x=y in allE)
-     apply (clarsimp simp: obj_at_def executable_pde_def)
-     apply (erule_tac x=offs in allE)
-     apply clarsimp
+     apply (case_tac x, simp_all)[1]
     apply (clarsimp simp add: pde_relation_def)
     done
 qed

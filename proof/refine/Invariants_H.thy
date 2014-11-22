@@ -393,16 +393,16 @@ primrec
   valid_pte' :: "Hardware_H.pte \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
   "valid_pte' (InvalidPTE) = \<top>"
-| "valid_pte' (LargePagePTE ptr x y z) = (valid_mapping' ptr ARMLargePage)"
-| "valid_pte' (SmallPagePTE ptr x y z) = (valid_mapping' ptr ARMSmallPage)"
+| "valid_pte' (LargePagePTE ptr _ _ _ _) = (valid_mapping' ptr ARMLargePage)"
+| "valid_pte' (SmallPagePTE ptr _ _ _ _) = (valid_mapping' ptr ARMSmallPage)"
 
 primrec
   valid_pde' :: "Hardware_H.pde \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
  "valid_pde' (InvalidPDE) = \<top>"
-| "valid_pde' (SectionPDE ptr x y z z' w) = (valid_mapping' ptr ARMSection)"
-| "valid_pde' (SuperSectionPDE ptr x y z w) = (valid_mapping' ptr ARMSuperSection)"
-| "valid_pde' (PageTablePDE ptr x z) = (\<lambda>_. is_aligned ptr ptBits)"
+| "valid_pde' (SectionPDE ptr _ _ _ _ _ _) = (valid_mapping' ptr ARMSection)"
+| "valid_pde' (SuperSectionPDE ptr _ _ _ _ _) = (valid_mapping' ptr ARMSuperSection)"
+| "valid_pde' (PageTablePDE ptr _ _) = (\<lambda>_. is_aligned ptr ptBits)"
 
 primrec
   valid_asid_pool' :: "asidpool \<Rightarrow> kernel_state \<Rightarrow> bool"
@@ -696,8 +696,8 @@ definition
 definition
   vs_ptr_align :: "Structures_H.kernel_object \<Rightarrow> nat" where
  "vs_ptr_align obj \<equiv>
-  case obj of KOArch (KOPTE (Hardware_H.pte.LargePagePTE _ _ _ _)) \<Rightarrow> 6
-            | KOArch (KOPDE (Hardware_H.pde.SuperSectionPDE _ _ _ _ _)) \<Rightarrow> 6
+  case obj of KOArch (KOPTE (Hardware_H.pte.LargePagePTE _ _ _ _ _)) \<Rightarrow> 6
+            | KOArch (KOPDE (Hardware_H.pde.SuperSectionPDE _ _ _ _ _ _)) \<Rightarrow> 6
             | _ \<Rightarrow> 0"
 
 definition "vs_valid_duplicates' \<equiv> \<lambda>h.
@@ -1410,9 +1410,9 @@ lemma objBits_cte_conv:
 
 lemma valid_pde_mapping'_simps[simp]:
  "valid_pde_mapping' offset (InvalidPDE) = True"
- "valid_pde_mapping' offset (SectionPDE ptr x y z z' w)
+ "valid_pde_mapping' offset (SectionPDE ptr a b c d e w)
      = valid_pde_mapping_offset' offset"
- "valid_pde_mapping' offset (SuperSectionPDE ptr x y' z w)
+ "valid_pde_mapping' offset (SuperSectionPDE ptr a' b' c' d' w)
      = valid_pde_mapping_offset' offset"
  "valid_pde_mapping' offset (PageTablePDE ptr x z'')
      = valid_pde_mapping_offset' offset"

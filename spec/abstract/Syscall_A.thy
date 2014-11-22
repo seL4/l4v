@@ -68,12 +68,12 @@ result in a fault;
 \item the fault handler @{text h_fault} to execute if the first
 operation resulted in a fault;
 \item the second operation @{text m_error} to execute (if no fault
-occured in the first operation); this second operation may result in
+occurred in the first operation); this second operation may result in
 an error;
 \item the error handler @{text h_error} to execute if the second
 operation resulted in an error;
 \item the third and last operation @{text h_error} to execute (if
-no error occured in the second operation); this operation may be
+no error occurred in the second operation); this operation may be
 interrupted.
 \end{itemize}
 *}

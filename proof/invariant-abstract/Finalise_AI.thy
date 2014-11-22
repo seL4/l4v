@@ -1605,11 +1605,6 @@ lemma invalidate_tlb_by_asid_pspace_aligned:
 crunch valid_arch_objs[wp]: invalidate_tlb_by_asid, page_table_mapped
   "valid_arch_objs"
 
-
-crunch executable_arch_objs[wp]: invalidate_tlb_by_asid, page_table_mapped
-  "executable_arch_objs"
-
-
 crunch cte_wp_at[wp]: invalidate_tlb_by_asid, page_table_mapped
   "\<lambda>s. P (cte_wp_at P' p s)"
 
@@ -1664,16 +1659,6 @@ lemma mapM_x_store_pte_valid_arch_objs:
     (\<forall>x \<in> set pteptrs. x && ~~ mask pt_bits \<in> obj_refs cap)) \<rbrace>
     mapM_x (\<lambda>p. store_pte p ARM_Structs_A.InvalidPTE) pteptrs
    \<lbrace>\<lambda>rv. valid_arch_objs\<rbrace>"
-  apply (rule hoare_strengthen_post)
-   apply (wp  mapM_x_wp')
-    apply (fastforce simp: is_pt_cap_def)+
-  done
-
-
-lemma mapM_x_store_pte_executable_arch_objs [wp]:
-  "\<lbrace>executable_arch_objs\<rbrace> 
-    mapM_x (\<lambda>p. store_pte p ARM_Structs_A.InvalidPTE) pteptrs 
-   \<lbrace>\<lambda>rv. executable_arch_objs\<rbrace>"
   apply (rule hoare_strengthen_post)
    apply (wp  mapM_x_wp')
     apply (fastforce simp: is_pt_cap_def)+
@@ -2295,12 +2280,6 @@ lemma store_pde_arch_objs_invalid:
   apply (simp add: pde_ref_def)
   done
 
-lemma store_pde_executable_arch_objs_invalid [wp]:
-  "\<lbrace>executable_arch_objs\<rbrace> store_pde p ARM_Structs_A.pde.InvalidPDE \<lbrace>\<lambda>_. executable_arch_objs\<rbrace>"
-  apply (wp)
-  apply (simp)
-  done
-
 lemma mapM_x_store_pde_InvalidPDE_empty2:
   "\<lbrace>invs and (\<lambda>s. word \<notin> global_refs s) and K (is_aligned word pd_bits) and K (slots = (map (\<lambda>a. (a << 2) + word) [0.e.(kernel_base >> 20) - 1])) \<rbrace>
   mapM_x (\<lambda>x. store_pde x ARM_Structs_A.pde.InvalidPDE) slots
@@ -2741,17 +2720,6 @@ lemma set_asid_pool_empty_table_objs:
    apply (drule vs_lookup_empty_table)
    apply fastforce
   apply simp
-  done
-
-
-lemma set_asid_pool_executable_arch_objs [wp]:
-  "\<lbrace>executable_arch_objs and asid_pool_at p\<rbrace> 
-  set_asid_pool p empty 
-   \<lbrace>\<lambda>rv. executable_arch_objs\<rbrace>"
-  apply (simp add: set_asid_pool_def)
-  apply (wp get_object_wp set_object_executable_arch_objs)
-  apply (clarsimp simp: obj_at_def)
-  apply (clarsimp simp: a_type_def split: Structures_A.kernel_object.splits arch_kernel_obj.splits)
   done
 
 lemma set_asid_pool_empty_table_lookup:

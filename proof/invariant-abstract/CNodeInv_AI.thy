@@ -2015,13 +2015,6 @@ crunch arch_objs [wp]: cap_move "valid_arch_objs"
 
 crunch arch_objs [wp]: empty_slot "valid_arch_objs"
 
-crunch executable_arch_objs [wp]: cap_swap "executable_arch_objs"
-
-crunch executable_arch_objs [wp]: cap_move "executable_arch_objs"
-
-crunch executable_arch_objs [wp]: empty_slot "executable_arch_objs"
-
-
 crunch valid_global_objs [wp]: cap_swap "valid_global_objs"
 
 

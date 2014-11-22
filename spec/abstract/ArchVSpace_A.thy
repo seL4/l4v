@@ -709,8 +709,9 @@ mapping is to have. *}
 definition
 attribs_from_word :: "word32 \<Rightarrow> vm_attributes" where
 "attribs_from_word w \<equiv>
-  let V = (if w !!0 then {PageCacheable} else {})
-  in if w!!1 then insert ParityEnabled V else V"
+  let V = (if w !!0 then {PageCacheable} else {});
+      V' = (if w!!1 then insert ParityEnabled V else V)
+  in if w!!2 then insert XNever V' else V'"
 
 text {* Update the mapping data saved in a page or page table capability. *}
 definition

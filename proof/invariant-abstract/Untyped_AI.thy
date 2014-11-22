@@ -3138,10 +3138,6 @@ crunch valid_arch_objs[wp]: create_cap "valid_arch_objs"
   (simp: crunch_simps)
 
 
-crunch executable_arch_objs[wp]: create_cap "executable_arch_objs"
-  (simp: crunch_simps)
-
-
 definition
   nonempty_table :: "word32 set \<Rightarrow> Structures_A.kernel_object \<Rightarrow> bool"
 where

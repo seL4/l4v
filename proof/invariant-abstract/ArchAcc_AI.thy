@@ -386,14 +386,12 @@ definition
     Inl (pte, xs) \<Rightarrow>
       \<lambda>s. xs \<noteq> [] \<and>
           (\<forall>p \<in> set xs. (\<exists>\<rhd> (p && ~~ mask pt_bits) and pte_at p) s) \<and>
-          wellformed_pte pte \<and> valid_pte pte s \<and>
-          executable_pte pte
+          wellformed_pte pte \<and> valid_pte pte s
   | Inr (pde, xs) \<Rightarrow>
       \<lambda>s. xs \<noteq> [] \<and>
           (\<forall>p \<in> set xs. (\<exists>\<rhd> (p && ~~ mask pd_bits) and pde_at p) s \<and>
              ucast (p && mask pd_bits >> 2) \<notin> kernel_mapping_slots) \<and>
-          wellformed_pde pde \<and> valid_pde pde s \<and>
-          executable_pde pde"
+          wellformed_pde pde \<and> valid_pde pde s"
 
 crunch inv[wp]: get_master_pte P
 crunch inv[wp]: get_master_pde P
@@ -1141,19 +1139,7 @@ lemma set_pd_arch_objs_unmap:
   done
 
 
-lemma set_pd_executable_arch_objs [wp]:
-  "\<lbrace>executable_arch_objs and K (executable_arch_obj (PageDirectory pd'))\<rbrace>
-  set_pd p pd' \<lbrace>\<lambda>_. executable_arch_objs\<rbrace>"
-  apply (simp add: set_pd_def)
-  apply (wp set_object_executable_arch_objs get_object_wp)
-  apply (fastforce simp: obj_at_def a_type_def 
-                  split: Structures_A.kernel_object.splits arch_kernel_obj.splits)
-  done
-
-
 declare graph_of_None_update[simp]
-
-
 declare graph_of_Some_update[simp]
 
 
@@ -1339,17 +1325,6 @@ lemma set_pt_arch_objs [wp]:
    apply (clarsimp simp: a_type_def split: Structures_A.kernel_object.splits arch_kernel_obj.splits)
   apply (clarsimp split: Structures_A.kernel_object.splits arch_kernel_obj.splits)
   apply (simp add: vs_refs_def)
-  done
-
-
-lemma set_pt_executable_arch_objs [wp]:
-  "\<lbrace>executable_arch_objs and K (executable_arch_obj (ARM_Structs_A.PageTable pt))\<rbrace>
-  set_pt p pt
-  \<lbrace>\<lambda>_. executable_arch_objs\<rbrace>"
-  apply (simp add: set_pt_def)
-  apply (wp set_object_executable_arch_objs get_object_wp)
-  apply (clarsimp simp: obj_at_def)
-  apply (clarsimp simp: a_type_def split: Structures_A.kernel_object.splits arch_kernel_obj.splits)
   done
 
 
@@ -1719,8 +1694,7 @@ crunch valid_irq_states[wp]: set_pd "valid_irq_states"
   (wp: crunch_wps)
 
 lemma set_pt_invs:
-  "\<lbrace>invs and (%s. \<forall>i. wellformed_pte (pt i)) and
-             (%s. \<forall>i. executable_pte (pt i)) and
+  "\<lbrace>invs and (\<lambda>s. \<forall>i. wellformed_pte (pt i)) and
     (\<lambda>s. (\<exists>\<rhd>p) s \<longrightarrow> valid_arch_obj (ARM_Structs_A.PageTable pt) s) and
     (\<lambda>s. \<exists>slot asid. caps_of_state s slot =
          Some (cap.ArchObjectCap (arch_cap.PageTableCap p asid)) \<and>
@@ -1795,7 +1769,6 @@ lemmas invs_ran_asid_table = invs_valid_asid_table[THEN valid_asid_table_ran]
 lemma store_pte_invs [wp]:
   "\<lbrace>invs and (\<lambda>s. (\<exists>\<rhd>(p && ~~ mask pt_bits)) s \<longrightarrow> valid_pte pte s) and
     (\<lambda>s. wellformed_pte pte) and
-    (\<lambda>s. executable_pte pte) and
     (\<lambda>s. \<exists>slot asid. caps_of_state s slot =
          Some (cap.ArchObjectCap
                  (arch_cap.PageTableCap (p && ~~ mask pt_bits) asid)) \<and>
@@ -1812,11 +1785,8 @@ lemma store_pte_invs [wp]:
   apply (wp dmo_invs set_pt_invs)
   apply clarsimp
   apply (intro conjI)
-      apply (drule invs_valid_objs)
-      apply (fastforce simp: valid_objs_def dom_def obj_at_def valid_obj_def)
-     apply clarsimp
-     apply (drule executable_arch_objsD, fastforce)
-     apply simp
+     apply (drule invs_valid_objs)
+     apply (fastforce simp: valid_objs_def dom_def obj_at_def valid_obj_def)
     apply clarsimp
     apply (drule (1) valid_arch_objsD, fastforce)
     apply simp
@@ -2016,16 +1986,6 @@ lemma set_asid_pool_arch_objs_unmap:
   apply (drule valid_arch_objsD, simp add: obj_at_def, assumption)
   apply simp
   apply (auto simp: obj_at_def dest!: ran_restrictD)
-  done
-
-
-lemma set_asid_pool_executable_arch_objs [wp]:
-  "\<lbrace>executable_arch_objs and ko_at (ArchObj (ARM_Structs_A.ASIDPool ap')) p\<rbrace>
-  set_asid_pool p ap \<lbrace>\<lambda>_. executable_arch_objs\<rbrace>"
-  apply (simp add: set_asid_pool_def)
-  apply (wp get_object_wp set_object_executable_arch_objs)
-  apply (clarsimp simp: obj_at_def)
-  apply (clarsimp simp: a_type_def split: Structures_A.kernel_object.splits arch_kernel_obj.splits)
   done
 
 
@@ -2267,7 +2227,6 @@ lemma set_asid_pool_invs_restrict:
             set_asid_pool_arch_objs_unmap  valid_irq_handlers_lift
             set_asid_pool_vs_lookup_unmap set_asid_pool_restrict_asid_map)
   apply simp
-  apply fastforce
   done
 
 
@@ -2782,8 +2741,7 @@ lemma create_mapping_entries_valid_slots [wp]:
    and pspace_aligned and valid_global_objs
    and \<exists>\<rhd> pd and page_directory_at pd and typ_at (AArch (AIntData sz)) (Platform.ptrFromPAddr base) and
     K (is_aligned base pageBits \<and> vmsz_aligned vptr sz \<and> vptr < kernel_base \<and>
-       vm_rights \<in> valid_vm_rights) and
-    K (XNever \<notin> attrib)\<rbrace>
+       vm_rights \<in> valid_vm_rights)\<rbrace>
   create_mapping_entries base vptr sz vm_rights attrib pd
   \<lbrace>\<lambda>m. valid_slots m\<rbrace>, -"
   apply (cases sz)
@@ -2970,16 +2928,6 @@ lemma store_pde_arch_objs_unmap:
   apply (simp add: graph_of_def split: split_if_asm)
   done
 
-lemma store_pde_executable_arch_objs [wp]:
-  "\<lbrace>executable_arch_objs 
-    and K (executable_pde pde)\<rbrace> 
-  store_pde p pde \<lbrace>\<lambda>_. executable_arch_objs\<rbrace>"
-  apply (simp add: store_pde_def)
-  apply wp
-  apply clarsimp
-  apply (drule (1) executable_arch_objsD, fastforce)
-  done
-
 
 (* FIXME: remove magic numbers in other lemmas, use in pde_at_aligned_vptr et al *)
 lemma lookup_pd_slot_add_eq:
@@ -3124,20 +3072,7 @@ lemma store_pte_valid_arch_objs[wp]:
   apply auto
 done
 
-lemma store_pte_executable_arch_objs[wp]: 
-  "\<lbrace>executable_arch_objs and K (executable_pte pte)\<rbrace>
-    store_pte p pte
-  \<lbrace>\<lambda>_. (executable_arch_objs)\<rbrace>"
-  unfolding store_pte_def
-  apply wp
-  apply clarsimp
-  apply (unfold executable_arch_objs_def)
-  apply (erule_tac x="p && ~~ mask pt_bits" in allE)
-  apply auto
-done
-
 crunch valid_arch [wp]: store_pte valid_arch_state
-
 
 lemma set_pd_vs_lookup_unmap:
   "\<lbrace>valid_vs_lookup and
@@ -3446,8 +3381,7 @@ lemma vs_refs_pages_subset2:
 
 
 lemma set_pd_invs_unmap:
-  "\<lbrace>invs and (%s. \<forall>i. wellformed_pde (pd i)) and
-             (%s. \<forall>i. executable_pde (pd i)) and
+  "\<lbrace>invs and (\<lambda>s. \<forall>i. wellformed_pde (pd i)) and
     (\<lambda>s. (\<exists>\<rhd>p) s \<longrightarrow> valid_arch_obj (PageDirectory pd) s) and
     obj_at (\<lambda>ko. vs_refs_pages (ArchObj (PageDirectory pd)) \<subseteq> vs_refs_pages ko) p and
     obj_at (\<lambda>ko. vs_refs (ArchObj (PageDirectory pd)) \<subseteq> vs_refs ko) p and
@@ -3474,22 +3408,17 @@ lemma set_pd_invs_unmap:
 
 
 lemma store_pde_invs_unmap:
-  "\<lbrace>invs and valid_pde pde and (%s. wellformed_pde pde)
-                           and (%s. executable_pde pde)
+  "\<lbrace>invs and valid_pde pde and (\<lambda>s. wellformed_pde pde)
             and K (ucast (p && mask pd_bits >> 2) \<notin> kernel_mapping_slots)
             and (\<lambda>s. p && ~~ mask pd_bits \<notin> global_refs s)
             and K (pde = ARM_Structs_A.InvalidPDE)\<rbrace>
   store_pde p pde \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: store_pde_def del: split_paired_Ex)
-  apply (wp dmo_invs set_pd_invs_unmap)
+  apply (wp set_pd_invs_unmap)
   apply (clarsimp simp del: split_paired_Ex del: exE)
   apply (rule conjI)
    apply (drule invs_valid_objs)
    apply (fastforce simp: valid_objs_def dom_def obj_at_def valid_obj_def)
-  apply (rule conjI)
-   apply clarsimp
-   apply (drule executable_arch_objsD, fastforce)
-   apply simp
   apply (rule conjI)
    apply clarsimp
    apply (drule (1) valid_arch_objsD, fastforce)
@@ -3505,11 +3434,6 @@ lemma store_pde_invs_unmap:
 
 lemma store_word_offs_arch_objs :
   "\<lbrace>valid_arch_objs\<rbrace> store_word_offs a b c \<lbrace>\<lambda>_. valid_arch_objs\<rbrace>"
-  by (wp|simp add: store_word_offs_def)+
-
-
-lemma store_word_offs_executable_arch_objs [wp]:
-  "\<lbrace>executable_arch_objs\<rbrace> store_word_offs a b c \<lbrace>\<lambda>_. executable_arch_objs\<rbrace>"
   by (wp|simp add: store_word_offs_def)+
 
 
@@ -3536,15 +3460,6 @@ lemma set_mrs_arch_objs:
   apply (clarsimp cong: if_cong)
   apply (drule get_tcb_SomeD)
   apply (clarsimp simp: obj_at_def vs_refs_def)
-  done
-
-
-lemma set_mrs_executable_arch_objs [wp]:
-  "\<lbrace>executable_arch_objs\<rbrace> set_mrs a b c \<lbrace>\<lambda>_. executable_arch_objs\<rbrace>"
-  apply (simp add: set_mrs_def)
-  apply (wp mapM_wp' set_object_executable_arch_objs hoare_drop_imps
-             |wpc|simp add: zipWithM_x_mapM split_def split del: split_if)+
-  apply (clarsimp cong: if_cong)
   done
 
 
