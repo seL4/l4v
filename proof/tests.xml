@@ -70,6 +70,6 @@
     <!-- Separation Logic on capDL. -->
     <sequence depends="DSpec">
         <test name="SepDSpec">make SepDSpec</test>
-        <test name="SepDSpecProofs">make SepDSpecProofs</test>
+        <test name="DSpecProofs">make DSpecProofs</test>
     </sequence>
 </testsuite>

@@ -29,7 +29,7 @@ HEAPS += AInvs BaseRefine Refine
 HEAPS += CKernel CSpec CBaseRefine CRefine
 
 # capDL heaps.
-HEAPS += DBaseRefine DRefine DPolicy DSpecProofs
+HEAPS += DBaseRefine DRefine DPolicy SepDSpec DSpecProofs
 
 # Security Proofs
 HEAPS += Access InfoFlow InfoFlowC
