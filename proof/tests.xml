@@ -46,6 +46,11 @@
         <test name="InfoFlowC" depends="CBaseRefine">make InfoFlowC</test>
     </sequence>
 
+    <!-- Access Control and capDL -->
+    <sequence depends="DRefine Access">
+        <test name="DPolicy">make DPolicy</test>
+    </sequence>
+
     <!-- Bisim -->
     <sequence depends="ASepSpec AInvs">
         <test name="Bisim">make Bisim</test>
