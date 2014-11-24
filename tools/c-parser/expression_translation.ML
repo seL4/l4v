@@ -730,7 +730,7 @@ in
       Signed _ => mk_zero (ctype_to_typ(thy, cty))
     | Unsigned _ => mk_zero (ctype_to_typ(thy, cty))
     | PlainChar => mk_zero IntInfo.char
-    | Ptr _ => mk_zero (ctype_to_typ(thy, cty))
+    | Ptr cty0 => mk_ptr (mk_zero addr_ty, ctype_to_typ(thy,cty0))
     | StructTy s => let
         val flds = case assoc(senv, s) of
                      NONE => raise Fail ("zero_term: no s. info for "^s)
