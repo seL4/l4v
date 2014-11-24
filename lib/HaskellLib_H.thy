@@ -262,6 +262,19 @@ instance ..
 
 end
 
+class finiteBit = bit +
+  fixes finiteBitSize :: "'a \<Rightarrow> nat"
+
+instantiation word :: (len0) finiteBit
+begin
+
+definition
+  finiteBitSize_word[simp]: "(finiteBitSize :: 'a::len0 word \<Rightarrow> nat) \<equiv> size"
+
+instance ..
+
+end
+
 definition
   bit_def[simp]:
  "bit x \<equiv> shiftL 1 x"

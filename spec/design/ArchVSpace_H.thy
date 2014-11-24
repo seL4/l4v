@@ -242,7 +242,7 @@ defs populateInitialRoot_def:
     haskell_assert (capCNodeGuard cRoot = 0) $
         [];
     haskell_assert (capCNodeBits cRoot + capCNodeGuardSize cRoot + pageBits =
-            bitSize (undefined::machine_word)) $
+            finiteBitSize (undefined::machine_word)) $
         [];
     forM_x [0  .e.  1 `~shiftL~` capCNodeBits cRoot - 1] (\<lambda> index. (do
         cSlot \<leftarrow> doKernelOp $ locateSlot (capCNodePtr cRoot) index;

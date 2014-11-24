@@ -75,7 +75,7 @@ defs makeRootCNode_def:
     rootCNCap \<leftarrow> doKernelOp $
         createObject (fromAPIType CapTableObject) frame levelBits;
     rootCNCap' \<leftarrow> return ( rootCNCap \<lparr>
-            capCNodeGuardSize := bitSize frame - pageBits - levelBits \<rparr>);
+            capCNodeGuardSize := finiteBitSize frame - pageBits - levelBits \<rparr>);
     rootSlots \<leftarrow> mapM (\<lambda> n. doKernelOp $ (do
         slot \<leftarrow> locateSlot (capCNodePtr rootCNCap') n;
         cptr \<leftarrow> return ( CPtr $ n `~shiftL~` pageBits);
@@ -226,7 +226,7 @@ defs addRegionWithMerge_def:
 defs initKernel_def:
 "initKernel entry initFrames initOffset kernelFrames bootFrames\<equiv> (do
         pageSize \<leftarrow> return ( bit pageBits);
-        wordSize \<leftarrow> return ( bitSize entry);
+        wordSize \<leftarrow> return ( finiteBitSize entry);
         allMemory \<leftarrow> doMachineOp getMemoryRegions;
         allFrames \<leftarrow> return ( concat $
               map (\<lambda> (s, e). [s, s+pageSize  .e.  s+(e-s) - 1])
@@ -302,7 +302,7 @@ defs initKernel_def:
             return (fst buffer, infoPtrs, tcbCap)
           od);
         bootInfoWords \<leftarrow> return ( wordsFromBootInfo bootInfo);
-        intSize \<leftarrow> return ( bitSize (undefined::machine_word) div 8);
+        intSize \<leftarrow> return ( finiteBitSize (undefined::machine_word) div 8);
         haskell_assert (length bootInfoWords * intSize < 1 `~shiftL~` pageBits) $
             [] @ show bootInfo;
         mapM_x
@@ -390,7 +390,7 @@ defs storeLargeBlock_def:
 defs makeBlockList_def:
 "makeBlockList s e \<equiv>
     let
-        n = bitSize s;
+        n = finiteBitSize s;
         magnitudes = [0  .e.  n - 1];
         makeLowBlock = (\<lambda>  ((start, end), xs, ys) b.
             if start !! b \<and> start \<le> end

@@ -1,5 +1,5 @@
-Built from git repo at ../../../seL4/haskell by davidg
+Built from git repo at ../../../seL4/haskell by kleing
 
 Generated from changeset:
-97d6bc9 Clean up data-flow in resolveVAddr.
+212ab3f updated INSTALL file; renamed
 
