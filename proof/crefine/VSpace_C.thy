@@ -35,6 +35,7 @@ lemma empty_fail_findPDForASIDAssert[iff]:
   apply (intro empty_fail_bind, simp_all split: sum.split)
   done
 
+(* FIXME: move *)
 lemma mask_AND_less_0:
   "\<lbrakk>x && mask n = 0; m \<le> n\<rbrakk> \<Longrightarrow> x && mask m = 0"
   apply (case_tac "len_of TYPE('a) \<le> n")
@@ -937,6 +938,7 @@ lemma ccorres_pre_getObject_asidpool:
   apply simp
   done 
 
+(* FIXME: move *)
 lemma ccorres_from_vcg_throws_nofail:
   "\<forall>\<sigma>. \<Gamma>\<turnstile> {s. P \<sigma> \<and> s \<in> P' \<and> (\<sigma>, s) \<in> srel} c {},
   {s. \<not>snd (a \<sigma>) \<longrightarrow> (\<exists>(rv, \<sigma>')\<in>fst (a \<sigma>). (\<sigma>', s) \<in> srel \<and> arrel rv (axf s))} \<Longrightarrow>
@@ -2091,53 +2093,6 @@ lemma ccorres_pre_getObject_pte:
   apply simp
   done
 
-(*
-lemma checkMappingPPtr_ccorres:
-  "ccorres (K dc \<currency> dc) (liftxf errstate (from_bool \<circ> Not \<circ> to_bool) (K ()) ret__int_')
-         no_0_obj'
-        (UNIV \<inter> {s. pteptr_' s = (case tabPtr of Inl ptr' \<Rightarrow> Ptr ptr' | _ \<Rightarrow> NULL)}
-              \<inter> {s. pdeptr_' s = (case tabPtr of Inr ptr' \<Rightarrow> Ptr ptr' | _ \<Rightarrow> NULL)}
-              \<inter> {s. pptr_' s = Ptr ptr}) []
-      (checkMappingPPtr ptr tabPtr) (Call checkMappingPPtr_'proc)"
-  apply (cinit lift: pteptr_' pdeptr_' pptr_')
-   apply csymbr
-   apply wpc
-    apply (simp add: liftE_bindE del: Collect_const)
-    apply (rule ccorres_pre_getObject_pte)
-    apply (rule_tac P="tabPtr \<noteq> Inl 0" in ccorres_gen_asm)
-    apply simp
-    apply (rule_tac P="\<top>"
-               and P'="{s. \<exists>rv'. cslift s (Ptr (theLeft tabPtr)) = Some rv'
-                            \<and> cpte_relation rv rv'}"
-                in ccorres_from_vcg_split_throws)
-     apply vcg
-    apply (rule conseqPre, vcg)
-    apply (clarsimp simp: typ_heap_simps')
-    apply (auto simp: cpte_relation_def Let_def pte_lift_def pte_tag_defs
-                      throwError_def return_def from_bool_def exception_defs
-                      unlessE_def returnOk_def pte_pte_large_lift_def
-                      pte_pte_small_lift_def
-               split: Hardware_H.pte.split_asm split_if_asm split_if)[1]
-   apply (simp add: liftE_bindE Collect_False del: Collect_const)
-   apply (rule ccorres_pre_getObject_pde)
-   apply (rule_tac P="tabPtr \<noteq> Inr 0" in ccorres_gen_asm)
-   apply simp
-   apply (rule_tac P="\<top>"
-              and P'="{s. \<exists>rv'. cslift s (Ptr (theRight tabPtr)) = Some rv'
-                           \<and> cpde_relation rv rv'}"
-               in ccorres_from_vcg_split_throws)
-    apply vcg
-   apply (rule conseqPre, vcg)
-   apply (clarsimp simp: typ_heap_simps')
-   apply (simp add: cpde_relation_def Let_def pde_lift_def pde_tag_defs
-                     throwError_def return_def from_bool_def exception_defs
-                     unlessE_def returnOk_def pde_pde_section_lift_def
-              split: Hardware_H.pde.split_asm split_if_asm split_if)[1]
-  apply (clarsimp simp: Collect_const_mem typ_heap_simps')
-  apply auto
-  done
-*)
-
 lemmas unfold_checkMapping_return
     = from_bool_0[where 'a=32, folded exception_defs]
       to_bool_def
@@ -2239,7 +2194,26 @@ lemma is_aligned_cache_preconds:
   apply (drule_tac x=6 and y=5 in is_aligned_weaken, simp)+
   apply (simp add: is_aligned_mask)
   done
-    
+
+lemma pte_pte_invalid_new_spec:
+  "\<forall>s. \<Gamma> \<turnstile> {s}
+       \<acute>ret__struct_pte_C :== PROC pte_pte_invalid_new()
+       \<lbrace> pte_lift \<acute>ret__struct_pte_C = Some (Pte_pte_large
+          \<lparr> pte_pte_large_CL.address_CL = 0,
+             XN_CL = 0,
+             TEX_CL = 0,
+              nG_CL = 0,
+              S_CL = 0,
+              APX_CL = 0,
+              AP_CL = 0,
+              C_CL = 0,
+              B_CL = 0,
+              reserved_CL = 0
+          \<rparr>)\<rbrace>"
+  apply vcg
+  apply (clarsimp simp: pte_lift_def pte_get_tag_def pte_pte_large_def fupdate_def)
+  done
+
 lemma unmapPage_ccorres:
   "ccorres dc xfdc (invs' and (\<lambda>_. asid \<le> mask asid_bits \<and> vmsz_aligned' vptr sz
                                            \<and> vptr < kernelBase))
@@ -2271,7 +2245,7 @@ lemma unmapPage_ccorres:
                   apply (clarsimp simp: typ_heap_simps')
                   apply (simp add: cpte_relation_def Let_def pte_lift_def
                                 isSmallPagePTE_def pte_tag_defs
-                                pte_pte_small_lift_def
+                                pte_pte_small_lift_def pte_pte_invalid_def
                          split: split_if_asm pte.split_asm)
                  apply (rule ceqv_refl)
                 apply (simp add: unfold_checkMapping_return liftE_liftM
@@ -2281,8 +2255,7 @@ lemma unmapPage_ccorres:
                 apply csymbr
                 apply (rule ccorres_split_nothrow_novcg_dc)
                    apply (rule storePTE_Basic_ccorres)
-                   apply (simp add: cpte_relation_def Let_def
-                                 pte_lift_pte_invalid)
+                   apply (simp add: cpte_relation_def Let_def)
                   apply csymbr
                   apply simp
                   apply (ctac add: cleanByVA_PoU_ccorres[unfolded dc_def])
@@ -2313,7 +2286,7 @@ lemma unmapPage_ccorres:
                   apply (clarsimp simp: typ_heap_simps')
                   apply (simp add: cpte_relation_def Let_def pte_lift_def
                                isLargePagePTE_def pte_tag_defs
-                               pte_pte_large_lift_def
+                               pte_pte_large_lift_def pte_pte_invalid_def
                         split: split_if_asm pte.split_asm)
                  apply (rule ceqv_refl)
                 apply (simp add: liftE_liftM dc_def[symmetric]
@@ -2321,7 +2294,6 @@ lemma unmapPage_ccorres:
                              Collect_False unfold_checkMapping_return word_sle_def
                         del: Collect_const)
                 apply (ccorres_remove_UNIV_guard)
-
                 apply (rule ccorres_rhs_assoc2)
                 apply (rule ccorres_split_nothrow_novcg)
                     apply (rule_tac F="\<top>\<top>" in ccorres_mapM_x_while)
@@ -2329,8 +2301,7 @@ lemma unmapPage_ccorres:
                         apply (rule ccorres_guard_imp2)
                          apply csymbr
                          apply (rule storePTE_Basic_ccorres)
-                         apply (simp add: cpte_relation_def Let_def
-                                      pte_lift_pte_invalid)
+                         apply (simp add: cpte_relation_def Let_def)
                         apply clarsimp
                         apply (simp add: upto_enum_step_def
                                      upto_enum_word
@@ -2861,7 +2832,8 @@ lemma makeUserPDE_spec:
   "\<forall>s. \<Gamma> \<turnstile> 
   \<lbrace>s. (\<acute>page_size = scast Kernel_C.ARMSection \<or> \<acute>page_size = scast Kernel_C.ARMSuperSection) \<and>
       \<acute>vm_rights < 4 \<and> vmsz_aligned' (\<acute>paddr) (gen_framesize_to_H \<acute>page_size)  \<and>
-      \<acute>parity && 1 = \<acute>parity \<and> \<acute>domain && 0xF = \<acute>domain \<and> \<acute>cacheable && 1 = \<acute>cacheable\<rbrace> 
+      \<acute>parity && 1 = \<acute>parity \<and> \<acute>domain && 0xF = \<acute>domain \<and> \<acute>cacheable && 1 = \<acute>cacheable \<and>
+      \<acute>nonexecutable && 1 = \<acute>nonexecutable\<rbrace> 
   Call makeUserPDE_'proc 
   \<lbrace> pde_lift \<acute>ret__struct_pde_C = Some (Pde_pde_section \<lparr>
        pde_pde_section_CL.address_CL = \<^bsup>s\<^esup>paddr,
@@ -2873,7 +2845,7 @@ lemma makeUserPDE_spec:
        AP_CL = ap_from_vm_rights (vmrights_to_H \<^bsup>s\<^esup>vm_rights), 
        P_CL = \<^bsup>s\<^esup>parity,
        Domain_CL = \<^bsup>s\<^esup>domain,
-       XN_CL = 0,
+       XN_CL = \<^bsup>s\<^esup>nonexecutable,
        C_CL = 0,
        B_CL = iwb_from_cacheable  \<^bsup>s\<^esup>cacheable
     \<rparr>) \<rbrace>"
@@ -2922,7 +2894,7 @@ lemma makeUserPTE_spec:
   "\<forall>s. \<Gamma> \<turnstile> 
   \<lbrace>s. (\<acute>page_size = scast Kernel_C.ARMSmallPage \<or> \<acute>page_size = scast Kernel_C.ARMLargePage) \<and>
       \<acute>vm_rights < 4 \<and> vmsz_aligned' \<acute>paddr (gen_framesize_to_H \<acute>page_size)  \<and>
-      \<acute>cacheable && 1 = \<acute>cacheable\<rbrace> 
+      \<acute>cacheable && 1 = \<acute>cacheable \<and> \<acute>nonexecutable && 1 = \<acute>nonexecutable\<rbrace> 
   Call makeUserPTE_'proc 
   \<lbrace> pte_lift \<acute>ret__struct_pte_C = Some (if \<^bsup>s\<^esup>page_size = scast Kernel_C.ARMSmallPage 
     then Pte_pte_small
@@ -2933,18 +2905,20 @@ lemma makeUserPTE_spec:
        TEX_CL = tex_bits_from_cacheable \<^bsup>s\<^esup>cacheable,
        AP_CL = ap_from_vm_rights (vmrights_to_H \<^bsup>s\<^esup>vm_rights),
        C_CL = 0,
-       B_CL = iwb_from_cacheable  \<^bsup>s\<^esup>cacheable
+       B_CL = iwb_from_cacheable  \<^bsup>s\<^esup>cacheable,
+       XN_CL = \<^bsup>s\<^esup>nonexecutable
      \<rparr>
     else Pte_pte_large
      \<lparr> pte_pte_large_CL.address_CL =  \<^bsup>s\<^esup>paddr,
-       XN_CL = 0, 
+       XN_CL = \<^bsup>s\<^esup>nonexecutable,
        TEX_CL = tex_bits_from_cacheable \<^bsup>s\<^esup>cacheable,
        nG_CL = 1,
        S_CL = shared_bit_from_cacheable \<^bsup>s\<^esup>cacheable,
        APX_CL = 0,
        AP_CL = ap_from_vm_rights (vmrights_to_H \<^bsup>s\<^esup>vm_rights),
        C_CL = 0,
-       B_CL =  iwb_from_cacheable  \<^bsup>s\<^esup>cacheable
+       B_CL =  iwb_from_cacheable  \<^bsup>s\<^esup>cacheable,
+       reserved_CL = 1
      \<rparr>)\<rbrace>"
   apply vcg
   apply (clarsimp simp:vmsz_aligned'_def)
@@ -2968,11 +2942,14 @@ lemma makeUserPTE_spec:
    iwb_from_cacheable_def dest!:mask_eq1_nochoice is_aligned_neg_mask_eq)+)[2]
   done
 
+term vm_attributes_lift
+
 lemma vmAttributesFromWord_spec:
   "\<forall>s. \<Gamma> \<turnstile> \<lbrace>s. True\<rbrace> Call vmAttributesFromWord_'proc 
   \<lbrace> vm_attributes_lift \<acute>ret__struct_vm_attributes_C = 
-      \<lparr> armParityEnabled_CL = (\<^bsup>s\<^esup>w >> 1) && 1,
-        armPageCacheable_CL = \<^bsup>s\<^esup>w && 1 \<rparr> \<rbrace>"
+      \<lparr>  armExecuteNever_CL =  (\<^bsup>s\<^esup>w >> 2) && 1,
+        armParityEnabled_CL = (\<^bsup>s\<^esup>w >> 1) && 1,
+        armPageCacheable_CL = \<^bsup>s\<^esup>w && 1 \<rparr>  \<rbrace>"
   by (vcg, simp add: vm_attributes_lift_def word_sless_def word_sle_def)
 
 lemma cap_to_H_PDCap_tag:
@@ -3208,29 +3185,6 @@ lemma pte_case_isInvalidPTE:
   by (cases pte, simp_all add: isInvalidPTE_def)
 
 
-lemma cpte_relation_invalid:
-  "cpte_relation pte pte' \<Longrightarrow>
-      (pte_get_tag pte' = scast pte_pte_invalid) = isInvalidPTE pte"
-  apply (simp add: cpte_relation_def Let_def isInvalidPTE_def)
-  apply (case_tac pte) 
-    apply (simp add: Let_def isInvalidPTE_def)
-    apply (case_tac "pte_get_tag pte'=scast pte_pte_invalid", simp add: pte_lift_def)
-    apply (case_tac "pte_get_tag pte'=scast pte_pte_large", simp add: pte_lift_def)
-    apply (case_tac "pte_get_tag pte'=scast pte_pte_small", simp add: pte_lift_def)
-    apply (simp add: pte_lift_def)
-   apply (simp add: cpte_relation_def Let_def isInvalidPTE_def)
-   apply (case_tac "pte_get_tag pte'=scast pte_pte_invalid", simp add: pte_lift_def)
-   apply (case_tac "pte_get_tag pte'=scast pte_pte_large", simp add: pte_lift_def)
-   apply (case_tac "pte_get_tag pte'=scast pte_pte_small", simp add: pte_lift_def)
-   apply (simp add: pte_lift_def)
-  apply (simp add: cpte_relation_def Let_def isInvalidPTE_def)
-  apply (case_tac "pte_get_tag pte'=scast pte_pte_invalid", simp add: pte_lift_def)
-  apply (case_tac "pte_get_tag pte'=scast pte_pte_large", simp add: pte_lift_def)
-  apply (case_tac "pte_get_tag pte'=scast pte_pte_small", simp add: pte_lift_def)
-  apply (simp add: pte_lift_def)
-done
-
-
 lemma flushTable_ccorres:
   "ccorres dc xfdc (invs' and cur_tcb' and (\<lambda>_. asid \<le> mask asid_bits))
       (UNIV \<inter> {s. pd_' s = pde_Ptr pd} \<inter> {s. asid_' s = asid}
@@ -3250,8 +3204,6 @@ lemma flushTable_ccorres:
        apply (clarsimp simp: pde_stored_asid_def to_bool_def split: split_if)
       apply (rule ccorres_Guard_Seq ccorres_rhs_assoc)+
 
-      (* why csymbr does not work here? ... *)
-      (* Now we can csymbr *)
       apply csymbr
         apply (simp add: word_sle_def mapM_discarded whileAnno_def Collect_False
                     del: Collect_const)

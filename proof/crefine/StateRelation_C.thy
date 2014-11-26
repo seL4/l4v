@@ -44,66 +44,6 @@ definition
           (addr_fun ` (dom as) = dom cs) \<and>
           (\<forall>x \<in> dom as. rel (the (as x)) (the (cs (addr_fun x))))"
 
-(*
- C globals.  Those marked with a ! are in the heap
-  
-  - handled in the error return  
-  current_syscall_error :: syscall_error_C
-  current_lookup_fault :: lookup_fault_C
-  current_fault :: fault_C
-  
-  - handled in the state relation
-  ksSchedulerAction :: tcb_C ptr
-  intStateIRQNode :: cte_C ptr
-  ksCurThread :: tcb_C ptr
-  ksIdleThread :: tcb_C ptr
-  ksReadyQueues :: tcb_queue_C[256] 
-  ksWorkUnitsCompleted :: word32
-  intStateIRQTable :: word32[64]
- 
-  - kernel init (not looked at yet)
-  initFreeL2Slots :: slot_list_C ptr
-  initFreeL1Slots :: word32[8]
-  initFreeMemory :: free_list_C ptr
-  initBootMemory :: free_list_C ptr
-  initRegions :: boot_region_C[255]
-  initHeapPtr :: unit ptr
-  initL1Node :: cte_C ptr
-  initHeap :: word8[ty8192] 
-  armKSGlobalPTsOffset :: word32 ??
-  kernel_device_array :: kernel_device_C[3]
-  memory_regions :: region_list_C
-  kernel_devices :: kernel_devices_C
-  device_regions :: device_list_C
-  n_initRegions :: word32
-  main_memory :: region_C
-  devices :: device_C[42]
-  epit1 :: epit_map_C ptr
-  avic :: avic_map_C ptr
-  
-  - Unhandled
-  -- Generic
-  + Danger Will Robinson!  This looks nasty.
-  current_message :: inline_message_C
-  
-  -- Arch
-  armKSGlobalsFrame :: word32[1024]
-  armKSGlobalPD :: pde_C[4096]
-  armKSGlobalPTs :: pte_C[1024]
-  
-  -- Unknown
-  
-  + Seems to be a typo
-  platform_interrupt_t :: word32 
-
-  + These seem to be read-only
-  exceptionMessage :: word32[3]
-  syscallMessage :: word32[12]
-  frameRegisters :: word32[11]
-  msgRegisters :: word32[6]
-  gpRegisters :: word32[6] 
-*)  
-
 
 definition
   asid_map_pd_to_hwasids :: "(asid \<rightharpoonup> hw_asid \<times> obj_ref) \<Rightarrow> (obj_ref \<Rightarrow> hw_asid set)"
@@ -438,7 +378,7 @@ where
      \<lparr> pde_pde_coarse_CL.address_CL = frame, 
        P_CL = of_bool parity, 
        Domain_CL = domain \<rparr>)
-  | SectionPDE frame parity domain cacheable global rights \<Rightarrow> 
+  | SectionPDE frame parity domain cacheable global xn rights \<Rightarrow> 
     cpde' = Some (Pde_pde_section
      \<lparr> pde_pde_section_CL.address_CL = frame, 
        size_CL = 0, 
@@ -449,11 +389,11 @@ where
        AP_CL = ap_from_vm_rights rights, 
        P_CL = of_bool parity,
        Domain_CL = domain,
-       XN_CL = 0,
+       XN_CL = of_bool xn,
        C_CL = 0,
        B_CL = b_from_cacheable cacheable
   \<rparr>)
-  | SuperSectionPDE frame parity cacheable global rights \<Rightarrow> 
+  | SuperSectionPDE frame parity cacheable global xn rights \<Rightarrow> 
     cpde' = Some (Pde_pde_section
      \<lparr> pde_pde_section_CL.address_CL = frame, 
        size_CL = 1, 
@@ -464,7 +404,7 @@ where
        AP_CL = ap_from_vm_rights rights, 
        P_CL = of_bool parity,
        Domain_CL = 0,
-       XN_CL = 0,
+       XN_CL = of_bool xn,
        C_CL = 0,
        B_CL = b_from_cacheable cacheable
   \<rparr>))"
@@ -476,20 +416,32 @@ where
   (let cpte' = pte_lift cpte in
   case pte of
     InvalidPTE \<Rightarrow> 
-    cpte' = Some (Pte_pte_invalid)
-  | LargePagePTE frame cacheable global rights \<Rightarrow> 
+    cpte' = Some (Pte_pte_large
+     \<lparr> pte_pte_large_CL.address_CL = 0,
+       XN_CL = 0, 
+       TEX_CL = 0,
+       nG_CL = 0,
+       S_CL = 0,
+       APX_CL = 0,
+       AP_CL = 0,
+       C_CL = 0,
+       B_CL = 0,
+       reserved_CL = 0
+     \<rparr>)
+  | LargePagePTE frame cacheable global xn rights \<Rightarrow> 
     cpte' = Some (Pte_pte_large
      \<lparr> pte_pte_large_CL.address_CL = frame,
-       XN_CL = 0, 
+       XN_CL = of_bool xn, 
        TEX_CL = tex_from_cacheable cacheable,
        nG_CL = of_bool (~global),
        S_CL = s_from_cacheable cacheable,
        APX_CL = 0,
        AP_CL = ap_from_vm_rights rights,
        C_CL = 0,
-       B_CL = b_from_cacheable cacheable
+       B_CL = b_from_cacheable cacheable,
+       reserved_CL = 1
      \<rparr>)
-  | SmallPagePTE frame cacheable global rights \<Rightarrow> 
+  | SmallPagePTE frame cacheable global xn rights \<Rightarrow> 
     cpte' = Some (Pte_pte_small
      \<lparr> address_CL = frame,
        nG_CL = of_bool (~global),
@@ -498,9 +450,25 @@ where
        TEX_CL = tex_from_cacheable cacheable,
        AP_CL = ap_from_vm_rights rights,
        C_CL = 0,
-       B_CL = b_from_cacheable cacheable
+       B_CL = b_from_cacheable cacheable,
+       XN_CL = of_bool xn
      \<rparr>))"
 
+(* Invalid PTEs map to large PTEs with reserved bit 0 *)
+lemma pte_0:
+  "index (pte_C.words_C cpte) 0 = 0 \<Longrightarrow> pte_lift cpte = Some (Pte_pte_large
+     \<lparr> pte_pte_large_CL.address_CL = 0,
+       XN_CL = 0, 
+       TEX_CL = 0,
+       nG_CL = 0,
+       S_CL = 0,
+       APX_CL = 0,
+       AP_CL = 0,
+       C_CL = 0,
+       B_CL = 0,
+       reserved_CL = 0
+     \<rparr>)"
+  by (simp add: pte_lift_def pte_get_tag_def pte_pte_large_def)
 
 definition
   casid_pool_relation :: "asidpool \<Rightarrow> asid_pool_C \<Rightarrow> bool"

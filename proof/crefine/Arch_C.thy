@@ -900,7 +900,8 @@ definition
 definition
  "vm_attribs_relation attr attr' \<equiv>
        armParityEnabled_CL (vm_attributes_lift attr') = from_bool (armParityEnabled attr)
-     \<and> armPageCacheable_CL (vm_attributes_lift attr') = from_bool (armPageCacheable attr)"
+     \<and> armPageCacheable_CL (vm_attributes_lift attr') = from_bool (armPageCacheable attr)
+     \<and> armExecuteNever_CL (vm_attributes_lift attr') = from_bool (armExecuteNever attr)"
 
 lemma framesize_from_H_eqs:
   "(framesize_from_H vsz = scast Kernel_C.ARMSmallPage) = (vsz = ARMSmallPage)"
@@ -922,8 +923,8 @@ lemma cpde_relation_pde_case:
   "cpde_relation pde cpde
      \<Longrightarrow> (case pde of InvalidPDE \<Rightarrow> P
              | PageTablePDE _ _ _ \<Rightarrow> Q
-             | SectionPDE _ _ _ _ _ _ \<Rightarrow> R
-             | SuperSectionPDE _ _ _ _ _ \<Rightarrow> S)
+             | SectionPDE _ _ _ _ _ _ _ \<Rightarrow> R
+             | SuperSectionPDE _ _ _ _ _ _ \<Rightarrow> S)
          = (if pde_get_tag cpde = scast pde_pde_invalid then P
             else if (pde_get_tag cpde = scast pde_pde_coarse)
                      \<or> (pde_get_tag cpde \<noteq> scast pde_pde_section) then Q
@@ -943,14 +944,14 @@ lemma pde_pde_section_size_0_1:
   apply simp
   done
 
-lemma pde_bits_from_cacheable_simps: 
-  "shared_bit_from_cacheable (case b of True \<Rightarrow> of_nat 1::word32 | False \<Rightarrow> of_nat 0) = (s_from_cacheable b :: word32)"
-  "tex_bits_from_cacheable (case b of True \<Rightarrow> of_nat 1::word32 | False \<Rightarrow> of_nat 0) = (tex_from_cacheable b :: word32)"
-  "iwb_from_cacheable (case b of True \<Rightarrow> of_nat 1 | False \<Rightarrow> of_nat 0) = b_from_cacheable b"
-  apply (simp_all add:shared_bit_from_cacheable_def s_from_cacheable_def 
-    tex_bits_from_cacheable_def tex_from_cacheable_def iwb_from_cacheable_def b_from_cacheable_def)
-  apply (case_tac b,simp+)+
-  done
+lemma pde_bits_from_cacheable_simps [simp]:
+  "shared_bit_from_cacheable (from_bool b) = s_from_cacheable b"
+  "tex_bits_from_cacheable (from_bool b) = tex_from_cacheable b"
+  "iwb_from_cacheable (from_bool b) =  b_from_cacheable b"
+  by (simp_all add: shared_bit_from_cacheable_def s_from_cacheable_def 
+                    tex_bits_from_cacheable_def tex_from_cacheable_def
+                    iwb_from_cacheable_def b_from_cacheable_def 
+               split: bool.splits)
 
 lemma createSafeMappingEntries_PDE_ccorres:
   "ccorres (syscall_error_rel \<currency> (\<lambda>rv rv'. isRight rv \<and> cpde_relation (fst (theRight rv)) (fst rv')
@@ -996,20 +997,20 @@ lemma createSafeMappingEntries_PDE_ccorres:
     apply (clarsimp simp: if_1_0_0)
     apply (clarsimp simp: typ_heap_simps vm_attribs_relation_def
                           from_bool_mask_simp[unfolded mask_def, simplified])
-    apply (intro conjI)
+    apply (rule conjI)
      apply (simp add: gen_framesize_to_H_def vm_page_size_defs)
     apply (clarsimp simp: pde_get_tag_alt cpde_relation_pde_case
                           pde_tag_defs fst_throwError_returnOk
                           pde_range_relation_def ptr_range_to_list_def
                           exception_defs isRight_def from_bool_def[where b=True]
                           syscall_error_rel_def syscall_error_to_H_cases)
-    apply (simp add: cpde_relation_def from_bool_def pde_bits_from_cacheable_simps
-                     of_bool_from_bool)
+    apply (clarsimp simp: cpde_relation_def true_def false_def)
    apply (rule ccorres_Cond_rhs)
     apply (simp del: Collect_const)
     apply (rule ccorres_rhs_assoc)+
     apply (rule ccorres_symb_exec_r)
       apply (rule ccorres_Guard_Seq)+
+      apply csymbr
       apply csymbr
       apply csymbr
       apply csymbr
@@ -1091,14 +1092,12 @@ lemma createSafeMappingEntries_PDE_ccorres:
   apply (clarsimp simp:ARMSuperSectionBits_def
     ARMSectionBits_def word_0_sle_from_less)
   apply (rule conjI)
-   apply (clarsimp simp: cpde_relation_def vm_page_size_defs
-     of_bool_from_bool from_bool_def Let_def
-     pde_bits_from_cacheable_simps)
+   apply (simp add: cpde_relation_def true_def false_def)   
   apply (simp add: split: split_if)
   done
 
 lemma pte_case_isLargePagePTE:
-  "(case pte of LargePagePTE _ _ _ _ \<Rightarrow> P | _ \<Rightarrow> Q)
+  "(case pte of LargePagePTE _ _ _ _ _ \<Rightarrow> P | _ \<Rightarrow> Q)
        = (if isLargePagePTE pte then P else Q)"
   by (simp add: isLargePagePTE_def split: Hardware_H.pte.split)
 
@@ -1143,6 +1142,12 @@ lemma lookupPTSlot_le_0x3C:
   apply (simp add: word_bits_def)
   done
 
+lemma pte_get_tag_exhaust:
+  "pte_get_tag pte = 0 \<or> pte_get_tag pte = 1"
+  apply (simp add: pte_get_tag_def)
+  apply word_bitwise
+  done
+
 lemma createSafeMappingEntries_PTE_ccorres:
   "ccorres (syscall_error_rel \<currency> (\<lambda>rv rv'. isLeft rv \<and> cpte_relation (fst (theLeft rv)) (fst rv')
                                          \<and> pte_range_relation (snd (theLeft rv)) (snd rv')))
@@ -1172,6 +1177,7 @@ lemma createSafeMappingEntries_PTE_ccorres:
     apply csymbr
     apply csymbr
     apply csymbr
+    apply csymbr
     apply (rule ccorres_symb_exec_r)
       apply (simp only: lookupError_injection)
       apply (ctac add: ccorres_injection_handler_csum1
@@ -1189,7 +1195,8 @@ lemma createSafeMappingEntries_PTE_ccorres:
              apply (drule obj_at_ko_at', clarsimp)
              apply (erule cmap_relationE1[OF rf_sr_cpte_relation], erule ko_at_projectKO_opt)
              apply (clarsimp simp: typ_heap_simps cpte_relation_def Let_def)
-             apply (simp add: isLargePagePTE_def pte_lift_def Let_def pte_tag_defs
+             apply (simp add: isLargePagePTE_def pte_pte_large_lift_def pte_lift_def Let_def
+                              pte_tag_defs pte_pte_invalid_def
                        split: Hardware_H.pte.split_asm split_if_asm)
             apply ceqv
            apply (simp add: pte_case_isLargePagePTE if_to_top_of_bindE del: Collect_const)
@@ -1233,6 +1240,7 @@ lemma createSafeMappingEntries_PTE_ccorres:
     apply csymbr
     apply csymbr
     apply csymbr
+    apply csymbr
 
     apply (rule ccorres_symb_exec_r)
       apply (ctac add: ccorres_injection_handler_csum1
@@ -1263,7 +1271,7 @@ lemma createSafeMappingEntries_PTE_ccorres:
                       apply (drule obj_at_ko_at', clarsimp)
                       apply (erule cmap_relationE1[OF rf_sr_cpte_relation],
                              erule ko_at_projectKO_opt)
-                      apply (auto simp: typ_heap_simps cpte_relation_def
+                      apply (auto simp: typ_heap_simps cpte_relation_def pte_pte_invalid_def
                                         Let_def pte_lift_def pte_tag_defs
                                  intro: typ_heap_simps split: split_if_asm)[1]
                      apply (wp getObject_inv loadObject_default_inv | simp)+
@@ -1272,7 +1280,9 @@ lemma createSafeMappingEntries_PTE_ccorres:
                  apply (simp add: upto_enum_step_def upto_enum_word
                            split: split_if)
                 apply (rule conseqPre, vcg)
-                apply clarsimp
+                apply (clarsimp simp: pte_tag_defs)
+                using pte_get_tag_exhaust
+                apply blast
                apply wp
               apply (simp add: upto_enum_step_def upto_enum_word
                                word_bits_def
@@ -1290,7 +1300,9 @@ lemma createSafeMappingEntries_PTE_ccorres:
                        in HoarePartial.reannotateWhileNoGuard)
           apply (rule HoarePartial.While[OF order_refl])
            apply (rule conseqPre, vcg)
-           apply clarsimp
+           apply (clarsimp simp: pte_tag_defs)
+           using pte_get_tag_exhaust
+           apply blast
           apply clarsimp
          apply vcg
         apply simp
@@ -1318,8 +1330,8 @@ lemma createSafeMappingEntries_PTE_ccorres:
                         from_bool_mask_simp[unfolded mask_def, simplified])
   apply (clarsimp simp: typ_heap_simps pte_range_relation_def
                         ptr_range_to_list_def upto_enum_word)
-  apply (simp add: cpte_relation_def Let_def pde_bits_from_cacheable_simps
-                   of_bool_from_bool from_bool_def)
+  apply (simp add: cpte_relation_def true_def false_def pte_tag_defs)
+  using pte_get_tag_exhaust
   apply auto[1]
   done
 
@@ -1360,8 +1372,6 @@ lemma word_add_format:
   "(-1::32 word) + b + c = b + (c - 1)"
   by simp
 
-thm pteCheckIfMapped_body_def
-
 lemma pteCheckIfMapped_ccorres:
   "ccorres (\<lambda>rv rv'. rv = to_bool rv') ret__unsigned_long_' \<top> 
     (UNIV \<inter> {s. pte___ptr_to_struct_pte_C_' s = Ptr slot}) [] 
@@ -1375,8 +1385,10 @@ lemma pteCheckIfMapped_ccorres:
   apply clarsimp
   apply (rule conseqPre, vcg)
   apply (clarsimp simp: typ_heap_simps' return_def)
-  apply (case_tac rv, simp_all add: to_bool_def cpte_relation_invalid isInvalidPTE_def 
-                             split: split_if)
+  apply (case_tac rv, simp_all add: to_bool_def isInvalidPTE_def pte_tag_defs pte_pte_invalid_def
+                                    cpte_relation_def pte_pte_large_lift_def pte_get_tag_def
+                                    pte_lift_def Let_def
+                             split: split_if_asm)
   done
 
 lemma cpde_relation_invalid: 
@@ -2198,8 +2210,8 @@ lemma is_aligned_no_overflow3:
 
 lemma pte_get_tag_alt:
   "pte_lift v = Some pteC
-    \<Longrightarrow> pte_get_tag v = (case pteC of Pte_pte_invalid \<Rightarrow> scast pte_pte_invalid
-          | Pte_pte_small _ \<Rightarrow> scast pte_pte_small
+    \<Longrightarrow> pte_get_tag v = (case pteC of 
+            Pte_pte_small _ \<Rightarrow> scast pte_pte_small
           | Pte_pte_large _ \<Rightarrow> scast pte_pte_large)"
   by (auto simp add: pte_lift_def Let_def split: split_if_asm)
 
@@ -2255,22 +2267,22 @@ lemma resolveVAddr_ccorres:
          apply (vcg, clarsimp)
         apply ceqv
        apply (rule ccorres_pre_getObject_pte)
-       apply csymbr+
        apply (rule ccorres_abstract_cleanup)
        apply (rule_tac P'="{s. \<exists>v. cslift s (pte_Ptr (lookup_pt_slot_no_fail (ptrFromPAddr word1)
                                                                               vaddr)) = Some v
-                                    \<and> cpte_relation rva v
-                                    \<and> ret__unsigned_long = pte_get_tag v}"
+                                    \<and> cpte_relation rva v}"
                   in ccorres_from_vcg_might_throw[where P=\<top>])
        apply (rule allI, rule conseqPre, vcg)
-       apply clarsimp
+       using pte_get_tag_exhaust
        apply (fastforce simp: pte_get_tag_alt pte_tag_defs cpte_relation_def
                               fst_return typ_heap_simps framesize_from_H_simps
                               pte_pte_large_lift_def pte_pte_small_lift_def
+                              pte_pte_invalid_def
                        intro: resolve_ret_rel_Some
                        split: pte.splits)
       apply (rule guard_is_UNIVI)
       apply (clarsimp simp: typ_heap_simps)
+      apply fastforce
      apply fastforce
     apply (drule_tac A="{s. isPageTablePDE rv \<longrightarrow> s \<Turnstile>\<^sub>c pde_Ptr (lookup_pd_slot pd vaddr)
         \<and> pde_get_tag (the (cslift s (pde_Ptr (lookup_pd_slot pd vaddr)))) = scast pde_pde_coarse

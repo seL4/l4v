@@ -23,7 +23,6 @@ crunch ksQ[wp]: handleVMFault "\<lambda>s. P (ksReadyQueues s)"
 context kernel_m
 begin
 
-(* Levity: added (20090419 09:44:42) *)
 declare liftE_handle [simp]
 
 lemma schedule_sch_act_wf:
