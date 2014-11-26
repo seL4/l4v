@@ -116,12 +116,15 @@ definition
   "ptable_lift_s' s \<equiv> ptable_lift (ksCurThread s) (absKState s)"
 
 definition
-  "ptable_xn_s' s \<equiv> ptable_xn (ksCurThread s) (absKState s)"
+  "ptable_attrs_s' s \<equiv> ptable_attrs (ksCurThread s) (absKState s)"
+
+definition
+  "ptable_xn_s' s \<equiv>  \<lambda>addr. XNever \<in> ptable_attrs_s' s addr"
 
 definition doUserOp_if :: "user_transition_if \<Rightarrow> user_context \<Rightarrow> (kernel_state, (event option \<times> user_context)) nondet_monad" where
   "doUserOp_if uop tc \<equiv>
   do pr \<leftarrow> gets ptable_rights_s';
-     pxn \<leftarrow> gets ptable_xn_s';
+     pxn \<leftarrow> gets (\<lambda>s x. pr x \<noteq> {} \<and> ptable_xn_s' s x);
      pl \<leftarrow> gets (\<lambda>s. ptable_lift_s' s |` {x. pr x \<noteq> {}});
      t \<leftarrow> getCurThread;
      um \<leftarrow>
@@ -199,7 +202,7 @@ lemma do_user_op_if_corres:
        apply (clarsimp elim!: state_relationE)
       apply (rule_tac r'="op=" and P=einvs and P'=invs' in corres_split)
          prefer 2
-         apply (clarsimp simp: ptable_xn_s_def ptable_xn_s'_def)
+         apply (clarsimp simp: ptable_attrs_s'_def ptable_attrs_s_def ptable_xn_s'_def ptable_xn_s_def)
          apply (subst absKState_correct, fastforce, assumption+)
          apply (clarsimp elim!: state_relationE)
         apply (rule_tac r'="op=" and P=einvs and P'=invs' in corres_split)
@@ -374,7 +377,7 @@ lemma do_user_op_if_corres':
       apply (rule_tac r'="op=" and P=einvs and P'=invs' in corres_split)
          prefer 2
          apply (clarsimp simp: absArchState_correct curthread_relation ptable_xn_s'_def
-                               ptable_xn_s_def)
+                               ptable_xn_s_def ptable_attrs_s_def ptable_attrs_s'_def)
          apply (subst absKState_correct, fastforce, assumption+)
          apply simp
          apply (clarsimp elim!: state_relationE)

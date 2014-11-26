@@ -98,11 +98,8 @@ lemma valid_global_pd_mappingsE:
 
 (* NOTE: we could probably add "is_aligned b (pageBitsForSize sz)"
          if we assumed "valid_global_objs s", additionally. *)
-(* NOTE: we might be able to show "p && ~~ mask a = Platform.ptrFromPAddr b"
-         with the help of valid_pde_kernel_mappings and WordLib.and_not_mask
-         (though that is not trivial) *)
 lemma some_get_page_info_kmapsD:
-  "\<lbrakk>get_page_info (\<lambda>obj. get_arch_obj (kheap s obj)) pd_ref p = Some (b, a, r);
+  "\<lbrakk>get_page_info (\<lambda>obj. get_arch_obj (kheap s obj)) pd_ref p = Some (b, a, attr, r);
     p \<in> kernel_mappings; valid_global_pd_mappings s; equal_kernel_mappings s\<rbrakk>
    \<Longrightarrow> (\<exists>sz. pageBitsForSize sz = a) \<and> r = {}"
    apply (clarsimp simp: get_page_info_def get_pd_entry_def get_arch_obj_def
@@ -141,7 +138,7 @@ lemma some_get_page_info_kmapsD:
 lemma get_page_info_gpd_kmaps:
   "\<lbrakk>valid_global_objs s; valid_arch_state s;
     get_page_info (\<lambda>obj. get_arch_obj (kheap s obj))
-                  (arm_global_pd (arch_state s)) p = Some (b, a, r)\<rbrakk>
+                  (arm_global_pd (arch_state s)) p = Some (b, a, attr, r)\<rbrakk>
    \<Longrightarrow> p \<in> kernel_mappings"
    apply (clarsimp simp: valid_global_objs_def valid_arch_state_def)
    apply (thin_tac "Ball ?x ?y")
@@ -171,7 +168,7 @@ lemma is_aligned_ptrFromPAddrD:
   done
 
 lemma some_get_page_info_umapsD:
-  "\<lbrakk>get_page_info (\<lambda>obj. get_arch_obj (kheap s obj)) pd_ref p = Some (b, a, r);
+  "\<lbrakk>get_page_info (\<lambda>obj. get_arch_obj (kheap s obj)) pd_ref p = Some (b, a, attr, r);
     (\<exists>\<rhd> pd_ref) s; p \<notin> kernel_mappings; valid_arch_objs s; pspace_aligned s;
     valid_asid_table (arm_asid_table (arch_state s)) s; valid_objs s\<rbrakk>
    \<Longrightarrow> (\<exists>sz. pageBitsForSize sz = a \<and> is_aligned b a \<and>

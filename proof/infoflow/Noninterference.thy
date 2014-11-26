@@ -20,9 +20,6 @@ begin
 datatype 'a partition = Partition 'a | PSched
 
 
-
-
-
 fun scheduler_modes where
   "scheduler_modes KernelPreempted = True" |
   "scheduler_modes (KernelEntry Interrupt) = True" |

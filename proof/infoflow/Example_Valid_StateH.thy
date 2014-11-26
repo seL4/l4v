@@ -129,7 +129,7 @@ definition
   Low_pt'H :: "word8 \<Rightarrow> Hardware_H.pte " 
 where
   "Low_pt'H \<equiv> (\<lambda>_. Hardware_H.InvalidPTE)
-            (0 := Hardware_H.SmallPagePTE shared_page_ptr (PageCacheable \<in> {}) (Global \<in> {}) (vmrights_map vm_read_write))"
+            (0 := Hardware_H.SmallPagePTE shared_page_ptr (PageCacheable \<in> {}) (Global \<in> {}) (XNever \<in> {}) (vmrights_map vm_read_write))"
 
 definition 
   Low_ptH :: "word32 \<Rightarrow> word32 \<Rightarrow> Structures_H.kernel_object option"
@@ -141,7 +141,9 @@ where
 
 definition
   [simp]:
-  "global_pdH \<equiv> (\<lambda>_. Hardware_H.InvalidPDE)( ucast (kernel_base >> 20) := Hardware_H.SectionPDE (addrFromPPtr kernel_base) (ParityEnabled \<in> {}) 0 (PageCacheable \<in> {}) (Global \<in> {}) (vmrights_map {}))"
+  "global_pdH \<equiv> (\<lambda>_. Hardware_H.InvalidPDE)( ucast (kernel_base >> 20) := 
+       Hardware_H.SectionPDE (addrFromPPtr kernel_base) (ParityEnabled \<in> {}) 0 
+                             (PageCacheable \<in> {}) (Global \<in> {}) (XNever \<in> {}) (vmrights_map {}))"
 
 
 definition
@@ -152,7 +154,7 @@ where
      (0 := Hardware_H.PageTablePDE 
               (Platform.addrFromPPtr Low_pt_ptr) 
               (ParityEnabled \<in> {})
-              undefined )"
+              undefined)"
 
 (* used addrFromPPtr because proof gives me ptrFromAddr.. TODO: check
 if it's right *)
@@ -174,7 +176,8 @@ definition
 where
   "High_pt'H \<equiv> 
     (\<lambda>_. Hardware_H.InvalidPTE)
-     (0 := Hardware_H.SmallPagePTE shared_page_ptr (PageCacheable \<in> {}) (Global \<in> {}) (vmrights_map vm_read_only))"
+     (0 := Hardware_H.SmallPagePTE shared_page_ptr (PageCacheable \<in> {}) (Global \<in> {}) (XNever \<in> {})
+                      (vmrights_map vm_read_only))"
 
 
 definition

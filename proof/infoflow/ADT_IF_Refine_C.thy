@@ -314,17 +314,22 @@ lemma kernelEntry_corres_C:
 
 end
 
+context state_rel
+begin
 
-definition (in state_rel)
+definition
   "ptable_rights_s'' s \<equiv> ptable_rights (cur_thread (cstate_to_A s)) (cstate_to_A s)"
 
-definition (in state_rel)
+definition
   "ptable_lift_s'' s \<equiv> ptable_lift (cur_thread (cstate_to_A s)) (cstate_to_A s)"
 
-definition (in state_rel)
-  "ptable_xn_s'' s \<equiv> ptable_xn (cur_thread (cstate_to_A s)) (cstate_to_A s)"
+definition
+  "ptable_attrs_s'' s \<equiv> ptable_attrs (cur_thread (cstate_to_A s)) (cstate_to_A s)"
 
-definition (in state_rel)
+definition
+  "ptable_xn_s'' s \<equiv> \<lambda>addr. XNever \<in> ptable_attrs_s'' s addr"
+
+definition
   doMachineOp_C :: "(machine_state, 'a) nondet_monad \<Rightarrow> (cstate, 'a) nondet_monad"
 where
  "doMachineOp_C mop \<equiv>
@@ -335,13 +340,13 @@ where
     return r
   od"
 
-definition (in state_rel) doUserOp_C_if
+definition doUserOp_C_if
   :: "user_transition_if \<Rightarrow> user_context \<Rightarrow> (cstate, (event option \<times> user_context)) nondet_monad"
    where
   "doUserOp_C_if uop tc \<equiv>
    do 
       pr \<leftarrow> gets ptable_rights_s'';
-      pxn \<leftarrow> gets ptable_xn_s'';
+      pxn \<leftarrow> gets (\<lambda>s x. pr x \<noteq> {} \<and> ptable_xn_s'' s x);
       pl \<leftarrow> gets (\<lambda>s. restrict_map (ptable_lift_s'' s) {x. pr x \<noteq> {}});
       t \<leftarrow> gets (\<lambda>s. cur_thread (cstate_to_A s));
       um \<leftarrow> gets (\<lambda>s. restrict_map (user_mem_C (globals s) \<circ> ptrFromPAddr)
@@ -358,11 +363,12 @@ definition (in state_rel) doUserOp_C_if
    od"
 
 
-definition (in state_rel)
+definition
   do_user_op_C_if
   where
   "do_user_op_C_if uop \<equiv> {(s,e,(tc,s'))| s e tc s'. ((e,tc),s') \<in> fst (split (doUserOp_C_if uop) s)}"
 
+end
 
 context kernel_m begin
 
@@ -451,7 +457,8 @@ lemma do_user_op_if_C_corres:
                              invs_def valid_state_def valid_pspace_def state_relation_def)
       apply (rule_tac r'="op=" and P'=\<top> and P="invs' and ex_abs (einvs)" in corres_split)
          prefer 2
-         apply (clarsimp simp: ptable_xn_s'_def ptable_xn_s''_def cstate_to_A_def rf_sr_def)
+         apply (clarsimp simp: ptable_xn_s'_def ptable_xn_s''_def ptable_attrs_s_def
+                               ptable_attrs_s'_def ptable_attrs_s''_def cstate_to_A_def rf_sr_def)
          apply (subst cstate_to_H_correct, simp add: invs'_def,force+)+
          apply (simp only: ex_abs_def)
          apply (elim exE conjE)

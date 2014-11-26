@@ -1721,14 +1721,6 @@ lemma valid_sched_s0[simp]:
   apply (clarsimp simp: valid_idle_etcb_def etcb_at'_def ekh0_obj_def s0_ptr_defs idle_thread_ptr_def)
   done
 
-lemma executable_arch_objs_s0[simp]:
-  "executable_arch_objs s0_internal"
-  by (clarsimp simp: executable_arch_objs_def executable_arch_obj_def
-      executable_pte_def executable_pde_def s0_internal_def
-      obj_at_def kh0_def kh0_obj_def s0_ptr_defs High_pt'_def Low_pt'_def
-      High_pd'_def Low_pd'_def
-      split: arch_kernel_obj.splits pte.splits pde.splits split_if_asm)
-
 lemma einvs_s0:
   "einvs s0_internal"
   apply (simp add: valid_state_def invs_def)

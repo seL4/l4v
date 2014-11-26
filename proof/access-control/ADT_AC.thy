@@ -60,12 +60,12 @@ lemma pd_of_thread_page_directory_at:
 lemma ptr_offset_in_ptr_range:
   "\<lbrakk> invs s; get_page_info (\<lambda>obj. get_arch_obj (kheap s obj))
            (get_pd_of_thread (kheap s) (arch_state s) tcb) x =
-          Some (a, aa, b); x \<notin> kernel_mappings;
+          Some (base, sz, attr, r); x \<notin> kernel_mappings;
      get_pd_of_thread (kheap s) (arch_state s) tcb \<noteq> arm_global_pd (arch_state s) \<rbrakk>
-   \<Longrightarrow> ptrFromPAddr a + (x && mask aa) \<in> ptr_range (ptrFromPAddr a) aa"
+   \<Longrightarrow> ptrFromPAddr base + (x && mask sz) \<in> ptr_range (ptrFromPAddr base) sz"
   apply (simp add: ptr_range_def mask_def)
   apply (rule conjI)
-   apply (rule_tac b="2 ^ aa - 1" in word_plus_mono_right2)
+   apply (rule_tac b="2 ^ sz - 1" in word_plus_mono_right2)
     apply (frule some_get_page_info_umapsD)
           apply (clarsimp simp: get_pd_of_thread_reachable invs_arch_objs
                                 invs_psp_aligned invs_valid_asid_table invs_valid_objs)+
@@ -160,14 +160,14 @@ lemma pt_in_pd_page_table_at:
   done
 
 lemma get_page_info_state_objs_to_policy:
-  "\<lbrakk> invs s; auth \<in> vspace_cap_rights_to_auth b;
+  "\<lbrakk> invs s; auth \<in> vspace_cap_rights_to_auth r;
      get_page_info (\<lambda>obj. get_arch_obj (kheap s obj))
-           (get_pd_of_thread (kheap s) (arch_state s) tcb) x = Some (a, aa, b);
+           (get_pd_of_thread (kheap s) (arch_state s) tcb) x = Some (base, sz, attr, r);
      get_pd_of_thread (kheap s) (arch_state s) tcb \<noteq> arm_global_pd (arch_state s);
      get_pd_entry (\<lambda>obj. get_arch_obj (kheap s obj))
          (get_pd_of_thread (kheap s) (arch_state s) tcb) x =
         Some (PageTablePDE word1 set1 word2); x \<notin> kernel_mappings \<rbrakk>
-  \<Longrightarrow> (ptrFromPAddr word1, auth, ptrFromPAddr (a + (x && mask aa))) \<in> state_objs_to_policy s"
+  \<Longrightarrow> (ptrFromPAddr word1, auth, ptrFromPAddr (base + (x && mask sz))) \<in> state_objs_to_policy s"
   apply (simp add: state_objs_to_policy_def)
   apply (rule sbta_vref)
   apply (clarsimp simp: state_vrefs_def split: option.splits)
@@ -176,10 +176,10 @@ lemma get_page_info_state_objs_to_policy:
   apply (clarsimp simp: typ_at_eq_kheap_obj)
 
   apply (clarsimp simp: vs_refs_no_global_pts_def)
-  apply (rule_tac x="(ucast ((x >> 12) && mask 8),  ptrFromPAddr a, aa,
-                      vspace_cap_rights_to_auth b)" in bexI)
+  apply (rule_tac x="(ucast ((x >> 12) && mask 8),  ptrFromPAddr base, sz,
+                      vspace_cap_rights_to_auth r)" in bexI)
    apply clarsimp
-   apply (rule_tac x="(ptrFromPAddr a + (x && mask aa), auth)" in image_eqI)
+   apply (rule_tac x="(ptrFromPAddr base + (x && mask sz), auth)" in image_eqI)
     apply (simp add: ptrFromPAddr_def physMappingOffset_def kernelBase_addr_def physBase_def)
    apply (simp add: ptr_offset_in_ptr_range)
 

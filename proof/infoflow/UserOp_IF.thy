@@ -26,31 +26,20 @@ definition ptable_lift_s where
 definition ptable_rights_s where
   "ptable_rights_s s \<equiv>  ptable_rights (cur_thread s) s"
 
-definition get_pt_xn :: "(obj_ref \<rightharpoonup> arch_kernel_obj) \<Rightarrow> obj_ref \<Rightarrow> word32 \<rightharpoonup> bool" where
-  "get_pt_xn ahp pt_ref vptr \<equiv>
-   case get_pt_entry ahp pt_ref vptr of
-     Some (ARM_Structs_A.SmallPagePTE base atts _) \<Rightarrow> Some (XNever \<in> atts)
-   | Some (ARM_Structs_A.LargePagePTE base atts _) \<Rightarrow> Some (XNever \<in> atts)
-   | _ \<Rightarrow> None"
-
-definition  get_page_xn :: "(obj_ref \<rightharpoonup> arch_kernel_obj) \<Rightarrow> obj_ref \<Rightarrow> word32 \<rightharpoonup> bool" where
-  "get_page_xn ahp pd_ref vptr \<equiv>
-   case get_pd_entry ahp pd_ref vptr of
-     Some (ARM_Structs_A.PageTablePDE p _ _) \<Rightarrow>
-       get_pt_xn ahp (Platform.ptrFromPAddr p) vptr
-   | Some (ARM_Structs_A.SectionPDE base atts _ _) \<Rightarrow> Some (XNever \<in> atts)
-   | Some (ARM_Structs_A.SuperSectionPDE base atts _) \<Rightarrow> Some (XNever \<in> atts)
-   | _ \<Rightarrow> None"
-
+(* FIXME: move to ADT_AI.thy *)
 definition
-  ptable_xn :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> word32 \<Rightarrow> bool" where
- "ptable_xn tcb s \<equiv> \<lambda>addr.
-  case_option False (\<lambda>x. x)
-     (get_page_xn (\<lambda>obj. get_arch_obj (kheap s obj))
+  ptable_attrs :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> word32 \<Rightarrow> vm_attributes" where
+ "ptable_attrs tcb s \<equiv> \<lambda>addr.
+  case_option {} (fst o snd o snd)
+     (get_page_info (\<lambda>obj. get_arch_obj (kheap s obj))
         (get_pd_of_thread (kheap s) (arch_state s) tcb) addr)"
 
+definition
+  ptable_attrs_s :: "'z state \<Rightarrow> word32 \<Rightarrow> vm_attributes" where
+ "ptable_attrs_s s \<equiv> ptable_attrs (cur_thread s) s"
+
 definition ptable_xn_s where
-  "ptable_xn_s s \<equiv>  ptable_xn (cur_thread s) s"
+  "ptable_xn_s s \<equiv>  \<lambda>addr. XNever \<in> ptable_attrs_s s addr"
 
 definition getExMonitor :: "exclusive_monitors machine_monad" where
   "getExMonitor \<equiv> gets exclusive_state"
@@ -64,8 +53,8 @@ definition do_user_op_if where
       (* Get the page rights of each address (ReadOnly, ReadWrite, None, etc). *)
       pr \<leftarrow> gets ptable_rights_s;
 
-      (* Fetch the 'execute never' bits of the current thread's page directory. *)
-      pxn \<leftarrow> gets ptable_xn_s;
+      (* Fetch the 'execute never' bits of the current thread's page mappings. *)
+      pxn \<leftarrow> gets (\<lambda>s x. pr x \<noteq> {} \<and> ptable_xn_s s x);
 
       (* Get the mapping from virtual to physical addresses. *)
       pl \<leftarrow> gets (\<lambda>s. restrict_map (ptable_lift_s s) {x. pr x \<noteq> {}});
@@ -229,49 +218,96 @@ lemma requiv_ptable_rights_eq:
   apply (rule ext)
   apply (case_tac "x \<in> kernel_mappings")
    apply (clarsimp simp: ptable_rights_def split: option.splits)
-   apply (intro conjI)
+   apply (rule conjI)
     apply clarsimp
     apply (frule some_get_page_info_kmapsD)
-       apply (fastforce simp: invs_valid_global_pd_mappings invs_equal_kernel_mappings
-                              vspace_cap_rights_to_auth_def)+
+       apply ((fastforce simp: invs_valid_global_pd_mappings invs_equal_kernel_mappings
+                              vspace_cap_rights_to_auth_def)+)[4]
    apply clarsimp
    apply (frule some_get_page_info_kmapsD)
-      apply (fastforce simp: invs_valid_global_pd_mappings invs_equal_kernel_mappings
-                             vspace_cap_rights_to_auth_def)+
+      apply ((fastforce simp: invs_valid_global_pd_mappings invs_equal_kernel_mappings
+                             vspace_cap_rights_to_auth_def)+)[4]
    apply clarsimp
    apply (frule_tac r=ba in some_get_page_info_kmapsD)
-      apply (fastforce simp: invs_valid_global_pd_mappings invs_equal_kernel_mappings
-                             vspace_cap_rights_to_auth_def)+
+      apply ((fastforce simp: invs_valid_global_pd_mappings invs_equal_kernel_mappings
+                             vspace_cap_rights_to_auth_def)+)[4]
 
   apply (case_tac "get_pd_of_thread (kheap s) (arch_state s) (cur_thread s)
                  = arm_global_pd (arch_state s)")
    apply (frule requiv_pd_of_thread_global_pd)
-       apply fastforce+
+       apply (fastforce+)[4]
    apply (clarsimp simp: ptable_rights_def split: option.splits)
-   apply (intro conjI)
+   apply (rule conjI)
     apply clarsimp
     apply (frule get_page_info_gpd_kmaps[rotated, rotated])
-      apply (fastforce simp: invs_valid_global_objs invs_arch_state)+
+      apply ((fastforce simp: invs_valid_global_objs invs_arch_state)+)[3]
    apply clarsimp
-   apply (intro conjI)
+   apply (rule conjI)
     apply clarsimp
     apply (frule get_page_info_gpd_kmaps[rotated, rotated])
-      apply (fastforce simp: invs_valid_global_objs invs_arch_state)+
+      apply ((fastforce simp: invs_valid_global_objs invs_arch_state)+)[3]
    apply clarsimp
    apply (frule get_page_info_gpd_kmaps[rotated, rotated])
-     apply (fastforce simp: invs_valid_global_objs invs_arch_state)+
+     apply ((fastforce simp: invs_valid_global_objs invs_arch_state)+)[3]
 
   apply (case_tac "get_pd_of_thread (kheap s') (arch_state s') (cur_thread s')
                  = arm_global_pd (arch_state s')")
   apply (drule reads_equiv_sym)
   apply (frule requiv_pd_of_thread_global_pd)
-       apply (fastforce simp: reads_equiv_def)+
+       apply ((fastforce simp: reads_equiv_def)+)[5]
 
   apply (simp add: ptable_rights_def)
   apply (frule requiv_get_pd_of_thread_eq)
-        apply fastforce+
+        apply (fastforce+)[6]
   apply (frule pd_of_thread_same_agent, simp+)
   apply (subst requiv_get_page_info_eq, simp+)
+  done
+
+
+lemma requiv_ptable_attrs_eq:
+  "\<lbrakk> reads_equiv aag s s'; pas_refined aag s; pas_refined aag s';
+     is_subject aag (cur_thread s); invs s; invs s'; ptable_rights_s s x \<noteq> {} \<rbrakk>
+   \<Longrightarrow> ptable_attrs_s s x = ptable_attrs_s s' x"
+  apply (simp add: ptable_attrs_s_def ptable_rights_s_def)
+  apply (case_tac "x \<in> kernel_mappings")
+   apply (clarsimp simp: ptable_attrs_def split: option.splits)
+   apply (rule conjI)
+    apply clarsimp
+    apply (frule some_get_page_info_kmapsD)
+       apply ((fastforce simp: invs_valid_global_pd_mappings invs_equal_kernel_mappings
+                              vspace_cap_rights_to_auth_def ptable_rights_def)+)[4]
+   apply clarsimp
+   apply (frule some_get_page_info_kmapsD)
+      apply ((fastforce simp: invs_valid_global_pd_mappings invs_equal_kernel_mappings
+                             vspace_cap_rights_to_auth_def ptable_rights_def)+)[4]
+
+  apply (case_tac "get_pd_of_thread (kheap s) (arch_state s) (cur_thread s)
+                 = arm_global_pd (arch_state s)")
+   apply (frule requiv_pd_of_thread_global_pd)
+       apply (fastforce+)[4]
+   apply (clarsimp simp: ptable_attrs_def split: option.splits)
+   apply (rule conjI)
+    apply clarsimp
+    apply (frule get_page_info_gpd_kmaps[rotated, rotated])
+      apply ((fastforce simp: invs_valid_global_objs invs_arch_state)+)[3]
+   apply clarsimp
+   apply (rule conjI)
+    apply (frule get_page_info_gpd_kmaps[rotated, rotated])
+      apply ((fastforce simp: invs_valid_global_objs invs_arch_state)+)[3]
+   apply clarsimp
+   apply (frule get_page_info_gpd_kmaps[rotated, rotated])
+     apply ((fastforce simp: invs_valid_global_objs invs_arch_state)+)[3]
+
+  apply (case_tac "get_pd_of_thread (kheap s') (arch_state s') (cur_thread s')
+                 = arm_global_pd (arch_state s')")
+  apply (drule reads_equiv_sym)
+  apply (frule requiv_pd_of_thread_global_pd)
+       apply ((fastforce simp: reads_equiv_def)+)[5]
+
+  apply (simp add: ptable_attrs_def)
+  apply (frule requiv_get_pd_of_thread_eq, simp+)[1]
+  apply (frule pd_of_thread_same_agent, simp+)[1]
+  apply (subst requiv_get_page_info_eq, simp+)[1]
   done
 
 lemma requiv_ptable_lift_eq:
@@ -281,166 +317,50 @@ lemma requiv_ptable_lift_eq:
   apply (simp add: ptable_lift_s_def ptable_rights_s_def)
   apply (case_tac "x \<in> kernel_mappings")
    apply (clarsimp simp: ptable_lift_def split: option.splits)
-   apply (intro conjI)
+   apply (rule conjI)
     apply clarsimp
     apply (frule some_get_page_info_kmapsD)
-       apply (fastforce simp: invs_valid_global_pd_mappings invs_equal_kernel_mappings
-                              vspace_cap_rights_to_auth_def ptable_rights_def)+
+       apply ((fastforce simp: invs_valid_global_pd_mappings invs_equal_kernel_mappings
+                              vspace_cap_rights_to_auth_def ptable_rights_def)+)[4]
    apply clarsimp
    apply (frule some_get_page_info_kmapsD)
-      apply (fastforce simp: invs_valid_global_pd_mappings invs_equal_kernel_mappings
-                             vspace_cap_rights_to_auth_def ptable_rights_def)+
+      apply ((fastforce simp: invs_valid_global_pd_mappings invs_equal_kernel_mappings
+                             vspace_cap_rights_to_auth_def ptable_rights_def)+)[4]
 
   apply (case_tac "get_pd_of_thread (kheap s) (arch_state s) (cur_thread s)
                  = arm_global_pd (arch_state s)")
    apply (frule requiv_pd_of_thread_global_pd)
-       apply fastforce+
+       apply (fastforce+)[4]
    apply (clarsimp simp: ptable_lift_def split: option.splits)
-   apply (intro conjI)
+   apply (rule conjI)
     apply clarsimp
     apply (frule get_page_info_gpd_kmaps[rotated, rotated])
-      apply (fastforce simp: invs_valid_global_objs invs_arch_state)+
+      apply ((fastforce simp: invs_valid_global_objs invs_arch_state)+)[3]
    apply clarsimp
-   apply (intro conjI)
+   apply (rule conjI)
     apply (frule get_page_info_gpd_kmaps[rotated, rotated])
-      apply (fastforce simp: invs_valid_global_objs invs_arch_state)+
+      apply ((fastforce simp: invs_valid_global_objs invs_arch_state)+)[3]
    apply clarsimp
    apply (frule get_page_info_gpd_kmaps[rotated, rotated])
-     apply (fastforce simp: invs_valid_global_objs invs_arch_state)+
+     apply ((fastforce simp: invs_valid_global_objs invs_arch_state)+)[3]
 
   apply (case_tac "get_pd_of_thread (kheap s') (arch_state s') (cur_thread s')
                  = arm_global_pd (arch_state s')")
   apply (drule reads_equiv_sym)
   apply (frule requiv_pd_of_thread_global_pd)
-       apply (fastforce simp: reads_equiv_def)+
+       apply ((fastforce simp: reads_equiv_def)+)[5]
 
   apply (simp add: ptable_lift_def)
-  apply (frule requiv_get_pd_of_thread_eq, simp+)
-  apply (frule pd_of_thread_same_agent, simp+)
-  apply (subst requiv_get_page_info_eq, simp+)
-  done
-
-lemma requiv_get_pt_xn_eq:
-  "\<lbrakk> reads_equiv aag s s'; pas_refined aag s; is_subject aag pt \<rbrakk>
-   \<Longrightarrow> get_pt_xn (\<lambda>obj. get_arch_obj (kheap s obj)) pt x
-       = get_pt_xn (\<lambda>obj. get_arch_obj (kheap s' obj)) pt x"
-  apply (simp add: get_pt_xn_def)
-  apply (subst requiv_get_pt_entry_eq, simp+)
-  done
-
-lemma requiv_get_page_xn_eq:
-  "\<lbrakk> reads_equiv aag s s'; pas_refined aag s; is_subject aag pd;
-     x \<notin> kernel_mappings \<rbrakk>
-   \<Longrightarrow> get_page_xn (\<lambda>obj. get_arch_obj (kheap s obj)) pd x
-       = get_page_xn (\<lambda>obj. get_arch_obj (kheap s' obj)) pd x"
-  apply (simp add: get_page_xn_def)
-  apply (subst requiv_get_pd_entry_eq[symmetric], simp+)
-  apply (clarsimp split: option.splits pde.splits)
-  apply (frule pt_in_pd_same_agent, fastforce+)
-  apply (rule requiv_get_pt_xn_eq, simp+)
-  done
-
-lemma some_get_page_xn_kmapsD:
-  "\<lbrakk>get_page_xn (\<lambda>obj. get_arch_obj (kheap s obj)) pd_ref p = Some xn;
-    p \<in> kernel_mappings; valid_global_pd_mappings s; equal_kernel_mappings s\<rbrakk>
-   \<Longrightarrow> \<not> xn"
-  apply (clarsimp simp: get_page_xn_def get_pd_entry_def get_arch_obj_def
-                        kernel_mappings_slots_eq
-                 split: option.splits Structures_A.kernel_object.splits
-                        arch_kernel_obj.splits)
-  apply (erule valid_global_pd_mappingsE)
-  apply (clarsimp simp: equal_kernel_mappings_def obj_at_def)
-  apply (drule_tac x=pd_ref in spec,
-         drule_tac x="arm_global_pd (arch_state s)" in spec, simp)
-  apply (drule bspec, assumption)
-  apply (clarsimp simp: valid_pd_kernel_mappings_def pde_mapping_bits_def)
-  apply (drule_tac x="ucast (p >> 20)" in spec)
-  apply (clarsimp simp: get_page_xn_def get_pd_entry_def get_arch_obj_def
-                        get_pt_xn_def get_pt_entry_def
-                        kernel_mappings_slots_eq
-                 split: option.splits Structures_A.kernel_object.splits
-                        arch_kernel_obj.splits
-                        ARM_Structs_A.pde.splits ARM_Structs_A.pte.splits)
-     apply (simp add: valid_pde_kernel_mappings_def obj_at_def
-                      valid_pt_kernel_mappings_def)
-     apply (drule_tac x="ucast ((p >> 12) && mask 8)" in spec)
-     apply (clarsimp simp: valid_pte_kernel_mappings_def)
-    apply (simp add: valid_pde_kernel_mappings_def obj_at_def
-                     valid_pt_kernel_mappings_def)
-    apply (drule_tac x="ucast ((p >> 12) && mask 8)" in spec)
-    apply (clarsimp simp: valid_pte_kernel_mappings_def)
-   apply (simp add: valid_pde_kernel_mappings_def)
-  apply (simp add: valid_pde_kernel_mappings_def)
-  done
-
-lemma get_pt_xn_some_get_pt_info:
-  "get_pt_xn ahp pd_ref vptr = Some xn \<Longrightarrow>
-    \<exists>base sz rights. get_pt_info ahp pd_ref vptr = Some (base, sz, rights)"
-  by (simp add: get_pt_xn_def get_pt_info_def split: option.splits pte.splits)
-
-lemma get_page_xn_some_get_page_info:
-  "get_page_xn ahp pd_ref vptr = Some xn \<Longrightarrow>
-    \<exists>base sz rights. get_page_info ahp pd_ref vptr = Some (base, sz, rights)"
-  apply (simp add: get_page_xn_def get_page_info_def split: option.splits pde.splits)
-  apply (drule get_pt_xn_some_get_pt_info)
-  apply simp
+  apply (frule requiv_get_pd_of_thread_eq, simp+)[1]
+  apply (frule pd_of_thread_same_agent, simp+)[1]
+  apply (subst requiv_get_page_info_eq, simp+)[1]
   done
 
 lemma requiv_ptable_xn_eq:
   "\<lbrakk> reads_equiv aag s s'; pas_refined aag s; pas_refined aag s';
-     is_subject aag (cur_thread s); invs s; invs s' \<rbrakk>
-   \<Longrightarrow> ptable_xn_s s = ptable_xn_s s'"
-  apply (simp add: ptable_xn_s_def)
-  apply (rule ext)
-  apply (case_tac "x \<in> kernel_mappings")
-   apply (clarsimp simp: ptable_xn_def split: option.splits)
-   apply (intro conjI)
-    apply clarsimp
-    apply (frule some_get_page_xn_kmapsD)
-       apply (fastforce simp: invs_valid_global_pd_mappings invs_equal_kernel_mappings)+
-   apply clarsimp
-   apply (frule some_get_page_xn_kmapsD)
-      apply (fastforce simp: invs_valid_global_pd_mappings invs_equal_kernel_mappings)+
-   apply clarsimp
-   apply (frule_tac xn=True in some_get_page_xn_kmapsD)
-      apply (fastforce simp: invs_valid_global_pd_mappings invs_equal_kernel_mappings)+
-
-  apply (case_tac "get_pd_of_thread (kheap s) (arch_state s) (cur_thread s)
-                 = arm_global_pd (arch_state s)")
-   apply (frule requiv_pd_of_thread_global_pd)
-       apply fastforce+
-   apply (clarsimp simp: ptable_xn_def split: option.splits)
-   apply (intro conjI)
-    apply clarsimp
-    apply (drule get_page_xn_some_get_page_info)
-    apply clarsimp
-    apply (frule get_page_info_gpd_kmaps[rotated, rotated])
-      apply (fastforce simp: invs_valid_global_objs invs_arch_state)+
-   apply clarsimp
-   apply (intro conjI)
-    apply clarsimp
-    apply (drule get_page_xn_some_get_page_info)
-    apply clarsimp
-    apply (frule get_page_info_gpd_kmaps[rotated, rotated])
-      apply (fastforce simp: invs_valid_global_objs invs_arch_state)+
-   apply clarsimp
-   apply (drule get_page_xn_some_get_page_info)
-   apply clarsimp
-   apply (frule get_page_info_gpd_kmaps[rotated, rotated])
-     apply (fastforce simp: invs_valid_global_objs invs_arch_state)+
-
-  apply (case_tac "get_pd_of_thread (kheap s') (arch_state s') (cur_thread s')
-                 = arm_global_pd (arch_state s')")
-  apply (drule reads_equiv_sym)
-  apply (frule requiv_pd_of_thread_global_pd)
-       apply (fastforce simp: reads_equiv_def)+
-
-  apply (simp add: ptable_xn_def)
-  apply (frule requiv_get_pd_of_thread_eq)
-        apply fastforce+
-  apply (frule pd_of_thread_same_agent, simp+)
-  apply (subst requiv_get_page_xn_eq, simp+)
-  done
+     is_subject aag (cur_thread s); invs s; invs s'; ptable_rights_s s x \<noteq> {} \<rbrakk>
+   \<Longrightarrow> ptable_xn_s s x = ptable_xn_s s' x"
+  by (simp add: ptable_xn_s_def requiv_ptable_attrs_eq)
 
 lemma requiv_user_mem_eq:
   "\<lbrakk> reads_equiv aag s s'; globals_equiv s s'; invs s;
@@ -502,7 +422,7 @@ definition context_matches_state where
   "context_matches_state pl pr pxn um es s \<equiv>
       pl = ptable_lift_s s |` {x. pr x \<noteq> {}} \<and>
       pr = ptable_rights_s s \<and>
-      pxn = ptable_xn_s s \<and>
+      pxn = (\<lambda>x. pr x \<noteq> {} \<and> ptable_xn_s s x) \<and>
       um = (user_mem s \<circ> ptrFromPAddr) |` {y. \<exists>x. pl x = Some y \<and> AllowRead \<in> pr x} \<and>
       es = exclusive_state (machine_state s)"
 
@@ -569,16 +489,20 @@ lemma do_user_op_reads_respects_g:
                   apply clarsimp
                   apply (wp add: select_wp select_ev dmo_getExMonitor_reads_respects_g del: gets_ev
                         | rule_tac P="pas_refined aag and invs" in gets_ev''' | simp)+
-  apply (simp add: reads_equiv_g_def, intro context_conjI allI impI, safe)
-        apply (simp add: requiv_ptable_rights_eq)
+  apply (simp add: reads_equiv_g_def)
+  apply (intro context_conjI allI impI, safe)
+        apply (clarsimp simp: requiv_ptable_rights_eq)
+       apply (rule ext)
+       apply (case_tac "ptable_rights_s s x = {}", simp)
        apply (simp add: requiv_ptable_xn_eq)
       apply (subst expand_restrict_map_eq)
       apply (clarsimp simp: requiv_ptable_lift_eq)
-     apply (simp add: requiv_cur_thread_eq)
+     apply (clarsimp simp: requiv_cur_thread_eq)
     apply (subst expand_restrict_map_eq)
     apply (clarsimp simp: restrict_map_def requiv_user_mem_eq
                           requiv_user_mem_eq[symmetric, OF reads_equiv_sym globals_equiv_sym])
    apply (simp add: context_matches_state_def comp_def)
+  apply (clarsimp)
   apply (erule_tac x=st in allE)+
   apply (simp add: context_matches_state_def reads_equiv_sym globals_equiv_sym affects_equiv_sym comp_def)
   apply (simp add: globals_equiv_def)

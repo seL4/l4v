@@ -1827,12 +1827,12 @@ lemma not_in_global_refs_vs_lookup:
    small page, since the invariants tell us that the 
    arm_globals_frame is only a small page *)
 lemma get_page_info_arm_globals_frame:
-  "\<lbrakk>get_page_info (\<lambda>obj. get_arch_obj (kheap s obj)) (get_pd_of_thread (kheap s) (arch_state s) t) p = Some (b, a, r);
+  "\<lbrakk>get_page_info (\<lambda>obj. get_arch_obj (kheap s obj)) (get_pd_of_thread (kheap s) (arch_state s) t) p = Some (base, sz, attr, r);
     get_pd_of_thread (kheap s) (arch_state s) t \<noteq> arm_global_pd (arch_state s);
     valid_arch_state s; valid_arch_objs s; valid_global_pd_mappings s; 
     equal_kernel_mappings s; valid_vs_lookup s; valid_global_objs s;
     valid_global_refs s;
-    b = addrFromPPtr (arm_globals_frame (arch_state s))\<rbrakk> \<Longrightarrow> r = {}"
+    base = addrFromPPtr (arm_globals_frame (arch_state s))\<rbrakk> \<Longrightarrow> r = {}"
   apply(case_tac "p \<in> kernel_mappings")
    apply(blast dest: some_get_page_info_kmapsD)
   apply(clarsimp simp: get_pd_of_thread_def split: option.splits kernel_object.splits cap.splits arch_cap.splits if_splits)
@@ -1898,36 +1898,37 @@ lemma ptrFromPAddr_add_helper:
   done
 
 lemma get_page_info_is_arm_globals_frame:
-  notes blah[simp del] = atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-          Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
+  notes [simp del] = atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
+                     Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
   shows
-  "\<lbrakk>x \<in> range_of_arm_globals_frame sa; invs sa;
-        get_page_info (\<lambda>obj. get_arch_obj (kheap sa obj))
-         (get_pd_of_thread (kheap sa) (arch_state sa) t) xa =
-        Some (a, aa, b);
-        a + (xa && mask aa) = addrFromPPtr x;
-        get_pd_of_thread (kheap sa) (arch_state sa) t \<noteq> arm_global_pd (arch_state sa);
-        xa \<notin> kernel_mappings\<rbrakk> \<Longrightarrow>
-       ptrFromPAddr a = (arm_globals_frame (arch_state sa))"
+  "\<lbrakk>x \<in> range_of_arm_globals_frame s; invs s;
+        get_page_info (\<lambda>obj. get_arch_obj (kheap s obj))
+         (get_pd_of_thread (kheap s) (arch_state s) t) x' =
+        Some (base, psz, attr, r);
+        base + (x' && mask psz) = addrFromPPtr x;
+        get_pd_of_thread (kheap s) (arch_state s) t \<noteq> arm_global_pd (arch_state s);
+        x' \<notin> kernel_mappings\<rbrakk> \<Longrightarrow>
+       ptrFromPAddr base = (arm_globals_frame (arch_state s))"
   apply(frule some_get_page_info_umapsD)
         (* following two lines clagged from ADT_AC.ptr_offset_in_ptr_range *)
         apply (clarsimp simp: get_pd_of_thread_reachable invs_arch_objs
                               invs_psp_aligned invs_valid_asid_table invs_valid_objs)+
-  apply(subgoal_tac "typ_at (AArch (AIntData ARMSmallPage)) (arm_globals_frame (arch_state sa)) sa")
+  apply(rename_tac sz)
+  apply(subgoal_tac "typ_at (AArch (AIntData ARMSmallPage)) (arm_globals_frame (arch_state s)) s")
    apply(clarsimp simp: obj_at_def)  
    prefer 2
    apply(fastforce dest: invs_arch_state simp: valid_arch_state_def)
   apply(frule invs_distinct)
   apply(clarsimp simp: pspace_distinct_def)
-  apply(drule_tac x="ptrFromPAddr a" in spec, drule_tac x="arm_globals_frame (arch_state sa)" in spec)
+  apply(drule_tac x="ptrFromPAddr base" in spec, drule_tac x="arm_globals_frame (arch_state s)" in spec)
   apply simp
-  apply(case_tac "ptrFromPAddr a = arm_globals_frame (arch_state sa)")
+  apply(case_tac "ptrFromPAddr base = arm_globals_frame (arch_state s)")
    apply assumption
   apply(frule ptr_offset_in_ptr_range)
      apply (simp+)
   apply(simp add: ptr_range_def)
-  apply(subgoal_tac "ptrFromPAddr a + (xa && mask (pageBitsForSize sz)) \<in> {arm_globals_frame
-            (arch_state sa)..arm_globals_frame (arch_state sa) + 0xFFF}")
+  apply(subgoal_tac "ptrFromPAddr base + (x' && mask (pageBitsForSize sz)) \<in> {arm_globals_frame
+            (arch_state s)..arm_globals_frame (arch_state s) + 0xFFF}")
    apply(simp only: p_assoc_help)
    apply blast
   apply(drule_tac y="addrFromPPtr x" and f=ptrFromPAddr in arg_cong)
@@ -1957,8 +1958,10 @@ lemma empty_rights_in_arm_globals_frame:
     apply(erule invs_equal_kernel_mappings)
    apply blast
   apply(rule get_page_info_arm_globals_frame)
-           apply (simp add: invs_arch_state invs_arch_objs invs_valid_global_pd_mappings invs_equal_kernel_mappings invs_valid_vs_lookup invs_valid_global_objs invs_valid_global_refs)+
-  apply(drule get_page_info_is_arm_globals_frame, simp+)
+           apply (simp add: invs_arch_state invs_arch_objs invs_valid_global_pd_mappings 
+                            invs_equal_kernel_mappings invs_valid_vs_lookup invs_valid_global_objs
+                            invs_valid_global_refs)+
+  apply(drule get_page_info_is_arm_globals_frame, simp+)[1]
   apply(fastforce dest: arg_cong[where f=addrFromPPtr])
   done
 
@@ -3755,4 +3758,4 @@ where
   "uop_sane f \<equiv> \<forall>t pl pr pxn tcu. (f t pl pr pxn tcu) \<noteq> {} \<and> 
                 (\<forall>tc um es. (Some Interrupt, tc, um, es) \<notin> (f t pl pr pxn tcu))"
 
-end (* a comment *)
+end

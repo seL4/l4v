@@ -1000,7 +1000,7 @@ lemma valid_list_post:
     \<Longrightarrow> valid_list_2 (t'(p := list_insert_after (t' p) src dest)) n"
   apply (insert valid_list dest neq)
   apply (simp add: valid_list_2_def t'_def n_def)
-  apply (fastforce simp: distinct_list_insert_after list_remove_distinct list_remove_removed set_list_insert_after list_remove_removed)
+  apply (fastforce simp: distinct_list_insert_after list_remove_distinct set_list_insert_after list_remove_removed)
   done
 
 end
@@ -1118,7 +1118,7 @@ lemma next_not_child:
     apply(drule(1) next_not_child_NoneD)
     apply(rule next_not_child_NoneI)
       apply(simp add: next_sib' descendants_child no_mloop_descendants desc)
-      apply(simp add: dest_no_parent descendants_of_def)
+      apply(simp add: descendants_of_def)
      apply(simp add: next_sib')
     apply(simp add: finite_depth_insert_child)
    apply(simp add: next_slot_def split: split_if_asm)
@@ -1134,13 +1134,13 @@ lemma next_not_child:
      apply(intro allI impI conjI)
       apply(drule_tac a=src and b=q' and c=src in descendants_trans, simp)
       apply(simp)
-     apply(simp add: descendants_of_def dest_no_parent)
+     apply(simp add: descendants_of_def)
     apply(elim exE conjE)
     apply(rule_tac x=q in exI)
     apply(simp)
     apply(intro conjI impI notI allI)
       apply(simp add: desc)
-     apply(simp add: dest_no_parent descendants_of_def)
+     apply(simp add: descendants_of_def)
     apply(simp)
    apply(simp add: finite_depth_insert_child)
   apply(case_tac "next_not_child p t m")
@@ -1294,7 +1294,7 @@ lemma next_not_child_no_parent:
        else next_not_child p t m)"
   apply(simp)
   apply(intro conjI impI)
-       apply(simp add: descendants_of_def dest_no_parent)
+       apply(simp add: descendants_of_def)
       apply(simp add: no_mloop_def descendants_of_def)
      apply(subgoal_tac "next_not_child src t m = None")
       prefer 2
@@ -1312,7 +1312,7 @@ lemma next_not_child_no_parent:
      apply(simp)
      apply(drule(1) next_not_child_NoneD, rule next_not_child_NoneI)
        apply(simp add: descendants next_sib_no_parent)
-       apply(simp add: descendants_of_def dest_no_parent)
+       apply(simp add: descendants_of_def )
       apply(simp add: next_sib_no_parent)
      apply(simp add: finite_depth)
     apply(simp)
@@ -1326,7 +1326,7 @@ lemma next_not_child_no_parent:
      apply(simp)
      apply(intro allI conjI impI notI)
       apply(simp add: desc)
-     apply(simp add: descendants_of_def dest_no_parent)
+     apply(simp add: descendants_of_def)
     apply(simp add: finite_depth)
    apply(rule next_not_child_NoneI)
      apply(intro allI impI)
@@ -1360,7 +1360,7 @@ lemma next_not_child:
        else next_not_child p t m)"
   apply(simp)
   apply(intro conjI impI)
-       apply(simp add: descendants_of_def dest_no_parent)
+       apply(simp add: descendants_of_def)
       apply(simp add: no_mloop_def descendants_of_def)
      apply(erule conjE)
      apply(rule next_not_childI)
@@ -1379,7 +1379,7 @@ lemma next_not_child:
      apply(simp)
      apply(drule(1) next_not_child_NoneD, rule next_not_child_NoneI)
        apply(simp add: descendants next_sib)
-       apply(simp add: descendants_of_def dest_no_parent no_mloop_def)
+       apply(simp add: descendants_of_def no_mloop_def)
       apply(simp add: next_sib)
      apply(simp add: finite_depth)
     apply(simp)
@@ -1388,13 +1388,13 @@ lemma next_not_child:
       apply(simp add: next_sib descendants)
      apply(rule disjI2)
      apply(simp add: next_sib descendants no_mloop_descendants)
-     apply(simp add: descendants_of_def dest_no_parent)
+     apply(simp add: descendants_of_def)
      apply(elim exE conjE)
      apply(rule_tac x=q in exI)
      apply(simp)
      apply(intro conjI impI notI)
       apply(simp add: desc)
-     apply(simp add: descendants_of_def dest_no_parent)
+     apply(simp add: descendants_of_def)
     apply(simp add: finite_depth)
    apply(rule next_not_childI)
     apply(rule disjI1)
@@ -1442,7 +1442,7 @@ lemma next_slot_no_parent:
   apply(subgoal_tac "next_not_child dest t m = None")
    prefer 2
    apply((rule next_not_child_NoneI | intro allI impI
-    | simp add: descendants_of_def dest_no_parent next_sib_def finite_depth dest)+)[1]
+    | simp add: descendants_of_def next_sib_def finite_depth dest)+)[1]
   apply(subgoal_tac "next_not_child src t m = None")
    prefer 2
    apply((rule next_not_child_NoneI | intro allI impI |
@@ -1632,7 +1632,7 @@ lemma cte_at_next_slot:
   apply(subgoal_tac "next_not_child_dom (p, cdt_list s, cdt s)")
    prefer 2
    apply(simp add: next_not_child_termination valid_mdb_def valid_list_2_def)
-  apply(simp add: next_not_child.psimps split: split_if_asm)
+  apply(simp split: split_if_asm)
    apply(case_tac "cdt s p")
     apply(simp)
    apply(rule descendants_of_cte_at)
@@ -2403,7 +2403,7 @@ lemma (in mdb_empty_abs') valid_list_post:
   apply(rule distinct_list_replace_list)
      apply(simp)+
    apply(rule ccontr)
-   apply(fastforce dest: int_not_emptyD simp: no_mdb_loop)
+   apply(fastforce dest: int_not_emptyD)
   apply(simp)
   done
 
@@ -2547,7 +2547,7 @@ lemma (in mdb_empty_abs') next_sib:
     apply(drule after_in_list_in_list)
     apply(simp add: valid_list_2_def)
    apply(simp)
-   apply(intro conjI impI notI, simp add: no_mdb_loop)
+   apply(intro conjI impI notI, simp)
    apply(subst list_replace_after_fst_list)
      apply(frule after_in_list_in_list)
      apply(simp add: valid_list_2_def)
