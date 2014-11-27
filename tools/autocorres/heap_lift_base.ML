@@ -111,7 +111,7 @@ in
 end
 
 (* Determine what heap types the given program accesses. *)
-fun get_program_heap_types prog_info fn_info lthy =
+fun get_program_heap_types prog_info fn_info gen_word_heaps lthy =
 let
   (* Map the type "T" into a (possibly different) type that should appear in
    * our new heap. *)
@@ -149,8 +149,12 @@ let
 
       (* Remove the "void" heap if it exists. *)
       |> Typset.subtract (Typset.make [@{typ "unit"}])
+
+  (* Generate all word heaps if desired. *)
+  val word_typs = if not gen_word_heaps then Typset.empty else
+                      Typset.make [@{typ word8}, @{typ word16}, @{typ word32}, @{typ word64}]
 in
-  Typset.union_sets (AutoCorresUtil.map_all lthy fn_info process)
+  Typset.union_sets (word_typs :: AutoCorresUtil.map_all lthy fn_info process)
 end
 
 (* Get fields from the globals type that should be copied from the
@@ -404,12 +408,12 @@ in
   } : heap_info
 end
 
-fun setup prog_info fn_info lthy =
+fun setup prog_info fn_info gen_word_heaps lthy =
 let
   val old_globalsT = #globals_type prog_info
 
   (* Generate a new globals structure. *)
-  val heapTs = get_program_heap_types prog_info fn_info lthy
+  val heapTs = get_program_heap_types prog_info fn_info gen_word_heaps lthy
   val ((lifted_globalsT, heap_getters_setters, global_fields), lthy)
       = Local_Theory.raw_theory_result (
           gen_new_heap old_globalsT (Typset.dest heapTs)) lthy

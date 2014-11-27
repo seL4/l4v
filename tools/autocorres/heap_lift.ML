@@ -380,13 +380,14 @@ fun system_heap_lift
     (keep_going : bool)
     (trace_funcs : string list)
     (do_opt : bool)
+    (gen_word_heaps : bool)
     lthy =
 let
   val prog_info = ProgramInfo.get_prog_info lthy filename
 
   (* Create base definitions for the new program, including a new
    * "globals" record with a lifted heap. *)
-  val (heap_info, lthy) = HeapLiftBase.setup prog_info fn_info lthy
+  val (heap_info, lthy) = HeapLiftBase.setup prog_info fn_info gen_word_heaps lthy
 
   (* Do some extra lifting and create syntax (see field_syntax comment). *)
   val (syntax_lift_rules, lthy) =

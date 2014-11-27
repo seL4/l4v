@@ -30,6 +30,7 @@ struct
  *                trace_heap_lift = FUNC_NAMES,
  *                trace_word_abs = FUNC_NAMES,
  *                no_opt,
+ *                gen_word_heaps,
  *                statistics,
  *                keep_going
  *              ]
@@ -81,6 +82,9 @@ type autocorres_options = {
 
   (* Disable L1Peephole, L2Peephole and L2Opt rules. *)
   no_opt : bool option ref,
+
+  (* Define word{8,16,32,64} heaps even if the program does not use them. *)
+  gen_word_heaps : bool option ref,
 
   print_stats : bool option ref,
 
@@ -191,6 +195,10 @@ val no_opt_parser =
   Parse.reserved "no_opt" >>
   (fn _ => none_to_some (#no_opt) true "autocorres: no_opt option specified multiple times")
 
+val gen_word_heaps_parser =
+  Parse.reserved "gen_word_heaps" >>
+  (fn _ => none_to_some (#gen_word_heaps) true "autocorres: gen_word_heaps option specified multiple times")
+
 val print_stats_parser =
   Parse.reserved "statistics" >>
   (fn _ => none_to_some (#print_stats) true "autocorres: statistics option specified multiple times")
@@ -217,6 +225,7 @@ fun default_opts _ = {
     scope = ref NONE,
     scope_depth = ref NONE,
     no_opt = ref NONE,
+    gen_word_heaps = ref NONE,
     trace_heap_lift = ref NONE,
     trace_word_abs = ref NONE,
     print_stats = ref NONE,
@@ -238,6 +247,7 @@ let
      scope_parser ||
      scope_depth_parser ||
      no_opt_parser ||
+     gen_word_heaps_parser ||
      trace_heap_lift_parser ||
      trace_word_abs_parser ||
      print_stats_parser ||
@@ -369,6 +379,7 @@ let
       ()
 
   val do_opt = !(#no_opt opt) <> SOME true
+  val gen_word_heaps = !(#gen_word_heaps opt) = SOME true
 
   (* Do the translation. *)
   val lthy =
@@ -376,7 +387,7 @@ let
     |> (fn (lthy, fn_info) =>
         LocalVarExtract.translate_l2 filename fn_info do_opt lthy)
     |> (fn (lthy, fn_info) =>
-        HeapLift.system_heap_lift filename fn_info (these (!(#no_heap_abs opt))) (these (!(#force_heap_abs opt))) heap_abs_syntax keep_going (these (!(#trace_heap_lift opt))) do_opt lthy)
+        HeapLift.system_heap_lift filename fn_info (these (!(#no_heap_abs opt))) (these (!(#force_heap_abs opt))) heap_abs_syntax keep_going (these (!(#trace_heap_lift opt))) do_opt gen_word_heaps lthy)
     |> (fn (lthy, fn_info) =>
         if skip_word_abs then (lthy, fn_info) else
         WordAbstract.word_abstract filename fn_info (these (!(#unsigned_word_abs opt)))
