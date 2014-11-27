@@ -74,12 +74,19 @@ The options are:
   * `ts_force RULE_NAME = FUNC_NAMES`: Force the given
     functions to be type-strengthened to the given type,
     even if a "better" type could otherwise be used.
+    See `tests/examples/type_strengthen_tricks.thy`.
 
   * `no_heap_abs = FUNC_NAMES`: Disable _heap abstraction_
     on the given list of functions.
 
+  * `force_heap_abs = FUNC_NAMES`: Attempt _heap abstraction_
+    on the given list of functions, even if AutoCorres' heuristics
+    believes that they cannot be lifted.
+
   * `heap_abs_syntax`: Enable experimental heap abstraction
     syntactic sugar.
+
+Less common options (mainly for debugging):
 
   * `keep_going`: Attempt to ignore certain non-critical
     errors.
@@ -87,21 +94,42 @@ The options are:
   * `scope`: Only parse the given functions and their
     callees, up to depth `scope_depth`.
 
+  * `trace_heap_lift = FUNC_NAMES`: Trace the _heap abstraction_
+    process for each of the given functions. The traces
+    are stored in the Isabelle theory and can be quite large.
+    See `tests/examples/TraceDemo.thy`.
+
+  * `trace_word_abs = FUNC_NAMES`: As above, but traces
+    _word abstraction_.
+
+  * `no_opt`: Disable some optimisation passes that simplify
+    the AutoCorres output.
+
+  * `gen_word_heaps`: Force _heap abstraction_ to create
+    abstract heaps for standard `word` types
+    (`word8`, `word16`, `word32`, `word64`) even if they
+    are not needed.
+
 An example of invoking AutoCorres with _all_ of the options
 is as follows:
 
     autocorres [
-        force_heap_abs = c d,
         unsigned_word_abs = f g h,
         no_signed_word_abs = i j k,
         skip_word_abs,  (* mutually exclusive with previous rules *)
         ts_rules = pure nondet,
         ts_force nondet = l m n,
         no_heap_abs = a b,
+        force_heap_abs = c d,
         heap_abs_syntax,
+        keep_going,
         scope = o p q,
         scope_depth = 5,
-        keep_going ] "filename.c"
+        trace_heap_lift = c d,
+        trace_word_abs = f h i,
+        no_opt,
+        gen_word_heaps
+        ] "filename.c"
 
 Examples
 --------
