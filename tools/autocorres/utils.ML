@@ -66,10 +66,25 @@ fun ac_warning str = warning ("autocorres: " ^ str)
 
 (* List functions that should really be included in PolyML. *)
 
-fun zip [] [] = []
-    | zip (x::xs) (y::ys) = ((x,y)::(zip xs ys))
+fun zipWith _ [] _ = []
+  | zipWith _ _ [] = []
+  | zipWith f (x::xs) (y::ys) = f x y :: zipWith f xs ys
+fun zip xs ys = zipWith (fn x => fn y => (x, y)) xs ys
 fun zip3 [] [] [] = []
     | zip3 (x::xs) (y::ys) (z::zs) = ((x,y,z)::(zip3 xs ys zs))
+
+fun findIndex p =
+  let fun find _ [] = NONE
+        | find n (x::xs) = if p x then SOME (x, n) else find (n+1) xs
+  in find 0 end
+
+fun enumerate xs = let
+  fun enum _ [] = []
+    | enum n (x::xs) = (n, x) :: enum (n+1) xs
+  in enum 0 xs end
+
+fun nubBy _ [] = []
+  | nubBy f (x::xs) = x :: filter (fn y => f x <> f y) (nubBy f xs)
 
 (* Define a constant "name" of type "term" into the local theory "lthy". *)
 fun define_const name term lthy =

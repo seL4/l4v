@@ -18,10 +18,14 @@ sig
   val get_def: theory -> string -> string -> string -> thm option
   val add_def: string -> string -> string -> thm -> theory -> theory
 
-  val add_trace: string -> string -> string -> thm AutoCorresTrace.RuleTrace -> theory -> theory
-  val get_trace: theory -> string -> string -> string -> thm AutoCorresTrace.RuleTrace option
+  datatype Trace =
+      RuleTrace of thm AutoCorresTrace.RuleTrace
+    | SimpTrace of AutoCorresTrace.SimpTrace
 
-  val debug : theory -> ((string * string * string) * thm) list * ((string * string * string) * thm AutoCorresTrace.RuleTrace) list
+  val add_trace: string -> string -> string -> Trace -> theory -> theory
+  val get_trace: theory -> string -> string -> string -> Trace option
+
+  val debug : theory -> ((string * string * string) * thm) list * ((string * string * string) * Trace) list
 end
 
 structure AutoCorresData : AUTOCORRES_DATA =
@@ -37,10 +41,22 @@ structure Symtab3 = Table(
   val ord = triple_ord fast_string_ord fast_string_ord fast_string_ord
 );
 
+
+(*
+ * Container type for various trace data.
+ * TODO: consolidate these in a better way.
+ *)
+
+datatype Trace =
+    RuleTrace of thm AutoCorresTrace.RuleTrace (* HeapLift and WordAbstract main stages *)
+  | SimpTrace of AutoCorresTrace.SimpTrace (* simp lemma bucket for L2Opt and TypeStrengthen *)
+
+
+
 (* AutoCorres Context Data. *)
 type ac_record = {
   proofs : thm Symtab3.table,
-  traces : thm AutoCorresTrace.RuleTrace Symtab3.table
+  traces : Trace Symtab3.table
 };
 datatype ac_data = ACData of ac_record;
 

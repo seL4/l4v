@@ -23,28 +23,12 @@ structure AutoCorresTrace = struct
  * We also do some instantiations of schematic type variables in t, because it's currently needed
  * by WordAbstract. We assume that the type vars are never applied to arguments.
  *)
-fun findIndex p =
-  let fun find _ [] = NONE
-        | find n (x::xs) = if p x then SOME (x, n) else find (n+1) xs
-  in find 0 end
-
-fun enumerate xs = let
-  fun enum _ [] = []
-    | enum n (x::xs) = (n, x) :: enum (n+1) xs
-  in enum 0 xs end
-
-fun zipWith _ [] _ = []
-  | zipWith _ _ [] = []
-  | zipWith f (x::xs) (y::ys) = f x y :: zipWith f xs ys
-
-fun nubBy _ [] = []
-  | nubBy f (x::xs) = x :: filter (fn y => f x <> f y) (nubBy f xs)
 
 (* generalised Term.lambda *)
 fun my_lambda args =
   let val n = length args
       fun lambda' depth args t =
-        (case findIndex (fn (a, _) => a = t) args of
+        (case Utils.findIndex (fn (a, _) => a = t) args of
             NONE =>
               (case t of
                   f $ x => lambda' depth args f $ lambda' depth args x
@@ -64,7 +48,7 @@ fun subterm_type absvars t = let
   in fastype_of (subst absvars t) end
 fun my_typ_insts (Type (_, args)) (Type (_, args')) =
     if length args <> length args' then NONE else
-    let val instss = zipWith my_typ_insts args args'
+    let val instss = Utils.zipWith my_typ_insts args args'
     in if exists (not o isSome) instss then NONE else
          SOME (List.mapPartial I instss |> List.concat) end
   | my_typ_insts (TFree _) (TFree _) = SOME []
@@ -96,7 +80,8 @@ fun annotate_boundvar _ absvars (Bound n) =
 fun my_match' _ (Var v) t' = SOME [(Var v, [], t')]
   | my_match' absvars (t as f $ x) t' =
       (case strip_comb t of
-          (Var v, args) => SOME [(Var v, map (fn (i, arg) => annotate_boundvar i absvars arg) (enumerate args), t')]
+          (Var v, args) => SOME [(Var v, map (fn (i, arg) => annotate_boundvar i absvars arg)
+                                             (Utils.enumerate args), t')]
         | _ => (case t' of
                    f' $ x' => (case (my_match' absvars f f', my_match' absvars x x') of
                                   (SOME uf, SOME ux) => SOME (uf @ ux)
@@ -118,12 +103,13 @@ fun my_unify_fact_tac ctxt subproof n state =
   case my_typ_match stateterm proofterm of
      NONE => Seq.empty
    | SOME typinsts =>
-     (case Thm.instantiate (map (fn (v, t) => (ctyp_of' v, ctyp_of' t)) (nubBy fst typinsts), []) state of state' =>
+     (case Thm.instantiate (map (fn (v, t) => (ctyp_of' v, ctyp_of' t)) (Utils.nubBy fst typinsts), []) state of
+       state' =>
         let val stateterm' = nth (prems_of state') (n-1) in
         case my_match stateterm' proofterm of
            NONE => Seq.empty
          | SOME substs =>
-             let val substs' = nubBy #1 substs
+             let val substs' = Utils.nubBy #1 substs
                                |> map (fn (var, args, t') => (var, my_lambda args t'))
                                |> map (fn (v, t) => (cterm_of' v, cterm_of' t))
              in
@@ -225,6 +211,20 @@ fun trace_solve_tac (ctxt : Proof.context)
         in try (get_tacs goal) end
   end
 
+
+
+datatype SimpTrace = SimpTrace of { equation : thm, thms : (string * cterm) list }
+
+fun fconv_rule_traced ctxt conv thm =
+  let val eq_thm = conv (cprop_of thm)
+      val thms = Apply_Trace.used_facts eq_thm
+  in (if Thm.is_reflexive eq_thm then thm else Thm.equal_elim eq_thm thm, (* Pure/conv.ML *)
+      SimpTrace { equation = eq_thm, thms = map (apsnd (cterm_of (Proof_Context.theory_of ctxt))) thms })
+  end
+
+fun fconv_rule_maybe_traced ctxt conv thm do_trace =
+  if do_trace then fconv_rule_traced ctxt conv thm |> apsnd SOME
+              else (Conv.fconv_rule conv thm, NONE)
 
 
 (* Utilities *)

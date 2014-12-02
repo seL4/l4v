@@ -234,11 +234,8 @@ fun fix_L2_while_loop_splits_conv ctxt =
  * If "fast_mode" is 0, perform flow-sensitive optimisations (which tend to be
  * time-consuming). If 1, only apply L2Peephole and L2Opt simplification rules.
  * If 2, do not use AutoCorres' simplification rules at all.
- *
- * If "fast_mode" is true, we don't do flow-sensitive optimisations (which tend
- * to be time-consuming).
  *)
-fun cleanup_thm ctxt thm fast_mode n =
+fun cleanup_thm ctxt thm fast_mode n do_trace =
 let
   (* Don't print out warning messages. *)
   val ctxt = Context_Position.set_visible false ctxt
@@ -258,25 +255,31 @@ let
     Utils.remove_meta_conv (fn ctxt => Utils.nth_arg_conv n (conv ctxt)) ctxt
 
   (* Apply peephole optimisations to the theorem. *)
-  val new_thm =
-      Conv.fconv_rule (l2conv simp_conv) thm
-      |> Drule.eta_contraction_rule
+  val (new_thm, peephole_trace) =
+      AutoCorresTrace.fconv_rule_maybe_traced ctxt (l2conv simp_conv) thm do_trace
+      |> apfst Drule.eta_contraction_rule
 
   (* Apply flow-sensitive optimisations, and then re-apply simple simplifications. *)
-  val new_thm =
+  (* TODO: trace monad_equiv using trace_solve_tac rather than fconv_rule_traced *)
+  val (new_thm, flow_trace) =
     if fast_mode = 0 then
-      Conv.fconv_rule (
+      AutoCorresTrace.fconv_rule_maybe_traced ctxt (
         l2conv (fn ctxt =>
           monad_equiv ctxt
           then_conv (simp_conv (put_simpset AUTOCORRES_SIMPSET ctxt))
-        )) new_thm
+        )) new_thm do_trace
     else
-      new_thm
+      (new_thm, NONE)
 
   (* Beta/Eta normalise. *)
   val new_thm = Conv.fconv_rule (l2conv (K Drule.beta_eta_conversion)) new_thm
 in
-  new_thm
+  (new_thm, List.mapPartial I [peephole_trace, flow_trace])
 end
+
+(* Also tag the traces in a suitable format to be stored in AutoCorresData. *)
+fun cleanup_thm_tagged ctxt thm fast_mode n do_trace phase =
+  cleanup_thm ctxt thm fast_mode n do_trace
+  |> apsnd (map AutoCorresData.SimpTrace #> Utils.zip [phase ^ " peephole opt", phase ^ " flow opt"])
 
 end

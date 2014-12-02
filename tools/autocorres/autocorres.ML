@@ -29,6 +29,7 @@ struct
  *
  *                trace_heap_lift = FUNC_NAMES,
  *                trace_word_abs = FUNC_NAMES,
+ *                trace_opt,
  *                no_opt,
  *                gen_word_heaps,
  *                statistics,
@@ -82,6 +83,9 @@ type autocorres_options = {
 
   (* Disable L1Peephole, L2Peephole and L2Opt rules. *)
   no_opt : bool option ref,
+
+  (* Trace simplification rules. Note that some simplification is performed even with no_opt set. *)
+  trace_opt : bool option ref,
 
   (* Define word{8,16,32,64} heaps even if the program does not use them. *)
   gen_word_heaps : bool option ref,
@@ -195,6 +199,10 @@ val no_opt_parser =
   Parse.reserved "no_opt" >>
   (fn _ => none_to_some (#no_opt) true "autocorres: no_opt option specified multiple times")
 
+val trace_opt_parser =
+  Parse.reserved "trace_opt" >>
+  (fn _ => none_to_some (#trace_opt) true "autocorres: trace_opt option specified multiple times")
+
 val gen_word_heaps_parser =
   Parse.reserved "gen_word_heaps" >>
   (fn _ => none_to_some (#gen_word_heaps) true "autocorres: gen_word_heaps option specified multiple times")
@@ -224,10 +232,11 @@ fun default_opts _ = {
     heap_abs_syntax = ref NONE,
     scope = ref NONE,
     scope_depth = ref NONE,
-    no_opt = ref NONE,
-    gen_word_heaps = ref NONE,
     trace_heap_lift = ref NONE,
     trace_word_abs = ref NONE,
+    no_opt = ref NONE,
+    trace_opt = ref NONE,
+    gen_word_heaps = ref NONE,
     print_stats = ref NONE,
     keep_going = ref NONE
   }
@@ -246,10 +255,11 @@ let
      heap_abs_syntax_parser ||
      scope_parser ||
      scope_depth_parser ||
-     no_opt_parser ||
-     gen_word_heaps_parser ||
      trace_heap_lift_parser ||
      trace_word_abs_parser ||
+     no_opt_parser ||
+     trace_opt_parser ||
+     gen_word_heaps_parser ||
      print_stats_parser ||
      keep_going_parser)
     |> !! (fn xs => K ("autocorres: unknown option " ^ quote (Parse.text (fst xs) |> #1)))
@@ -379,20 +389,21 @@ let
       ()
 
   val do_opt = !(#no_opt opt) <> SOME true
+  val trace_opt = !(#trace_opt opt) = SOME true
   val gen_word_heaps = !(#gen_word_heaps opt) = SOME true
 
   (* Do the translation. *)
   val lthy =
     SimplConv.translate_simpl filename fn_info do_opt lthy
     |> (fn (lthy, fn_info) =>
-        LocalVarExtract.translate_l2 filename fn_info do_opt lthy)
+        LocalVarExtract.translate_l2 filename fn_info do_opt trace_opt lthy)
     |> (fn (lthy, fn_info) =>
-        HeapLift.system_heap_lift filename fn_info (these (!(#no_heap_abs opt))) (these (!(#force_heap_abs opt))) heap_abs_syntax keep_going (these (!(#trace_heap_lift opt))) do_opt gen_word_heaps lthy)
+        HeapLift.system_heap_lift filename fn_info (these (!(#no_heap_abs opt))) (these (!(#force_heap_abs opt))) heap_abs_syntax keep_going (these (!(#trace_heap_lift opt))) do_opt trace_opt gen_word_heaps lthy)
     |> (fn (lthy, fn_info) =>
         if skip_word_abs then (lthy, fn_info) else
         WordAbstract.word_abstract filename fn_info (these (!(#unsigned_word_abs opt)))
                                    (these (!(#no_signed_word_abs opt))) (these (!(#trace_word_abs opt)))
-                                   do_opt lthy)
+                                   do_opt trace_opt lthy)
     |> (fn (lthy, fn_info) =>
         TypeStrengthen.type_strengthen ts_rules ts_force filename fn_info keep_going do_opt lthy)
     |> (fn (lthy, fn_info) =>

@@ -1242,7 +1242,7 @@ fun get_body_of_thm thm =
   |> HOLogic.dest_Trueprop
   |> dest_L2corres_term_abs
 
-fun get_l2corres_thm ctxt prog_info fn_info do_opt fn_name
+fun get_l2corres_thm ctxt prog_info fn_info do_opt trace_opt fn_name
     callee_terms fn_args l1_term init_unfold = let
 
   (* Get information about the return variable. *)
@@ -1374,13 +1374,14 @@ fun get_l2corres_thm ctxt prog_info fn_info do_opt fn_name
 
   (* HACK: we need to avoid these simps until heap_lift *)
   val cleanup_del = @{thms ptr_coerce.simps ptr_add_0_id}
-  val new_thm = L2Opt.cleanup_thm (ctxt delsimps cleanup_del) new_thm (if do_opt then 0 else 2) 5
+  val (new_thm, traces) = L2Opt.cleanup_thm_tagged (ctxt delsimps cleanup_del) new_thm
+                                                   (if do_opt then 0 else 2) 5 trace_opt "L2"
 
   (* Gather post-simplification statistics. *)
   val _ = Statistics.gather ctxt "L2simp" fn_name
       (Thm.prop_of new_thm |> HOLogic.dest_Trueprop |> (fn t => Utils.term_nth_arg t 4))
 in
-  new_thm
+  (new_thm, traces)
 end
 
 (*
@@ -1458,7 +1459,7 @@ end
 (*
  * Translate all functions from L1 to L2 format.
  *)
-fun translate_l2 filename fn_info do_opt lthy =
+fun translate_l2 filename fn_info do_opt trace_opt lthy =
 let
   val prog_info = ProgramInfo.get_prog_info lthy filename
 
@@ -1469,10 +1470,10 @@ let
     val l1_body_def = #definition l1_def WHERE [
             ("rec_measure'", cterm_of (Proof_Context.theory_of ctxt) measure_var)]
   
-    val thm = get_l2corres_thm ctxt prog_info fn_info do_opt
+    val (thm, traces) = get_l2corres_thm ctxt prog_info fn_info do_opt trace_opt
         fn_name callee_terms fn_args
         (betapply (#const l1_def, measure_var)) l1_body_def
-  in (get_body_of_thm thm, thm, NONE) end
+  in (get_body_of_thm thm, thm, traces) end
 
   (* Generate a constant name for our L2 bodies. *)
   fun gen_l2_name x = "l2_" ^ x

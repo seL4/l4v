@@ -380,6 +380,7 @@ fun system_heap_lift
     (keep_going : bool)
     (trace_funcs : string list)
     (do_opt : bool)
+    (trace_opt : bool)
     (gen_word_heaps : bool)
     lthy =
 let
@@ -724,7 +725,7 @@ let
 
     (* Apply peephole optimisations to the theorem. *)
     val _ = writeln ("Simplifying (HL) " ^ fn_name)
-    val thm = L2Opt.cleanup_thm ctxt thm (if do_opt then 0 else 2) 2
+    val (thm, opt_traces) = L2Opt.cleanup_thm_tagged ctxt thm (if do_opt then 0 else 2) 2 trace_opt "HL"
 
     (* If we created extra heap wrappers, apply them now.
      * Our simp rules don't seem to be enough for L2Opt,
@@ -735,7 +736,8 @@ let
     val _ = Statistics.gather ctxt "HLsimp" fn_name
         (Thm.prop_of thm |> HOLogic.dest_Trueprop |> (fn t => Utils.term_nth_arg t 1))
   in
-    (get_body_of_thm thm, Drule.gen_all thm, if member (op =) trace_funcs fn_name then SOME trace else NONE)
+    (get_body_of_thm thm, Drule.gen_all thm,
+     (if member (op =) trace_funcs fn_name then [("HL", AutoCorresData.RuleTrace trace)] else []) @ opt_traces)
   end
 
   (* Save the heap info to the theory data. *)

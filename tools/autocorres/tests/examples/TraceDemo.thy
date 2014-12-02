@@ -20,7 +20,7 @@ autocorres [ trace_heap_lift = incr, trace_word_abs = incr ] "trace_demo.c"
 (* Heap lifting trace. *)
 ML {*
 AutoCorresData.get_trace @{theory} "trace_demo.c" "HL" "incr"
-|> the
+|> the |> (fn AutoCorresData.RuleTrace x => x)
 |> AutoCorresTrace.print_ac_trace
 |> writeln
 *}
@@ -28,7 +28,7 @@ AutoCorresData.get_trace @{theory} "trace_demo.c" "HL" "incr"
 (* Word abstraction trace. *)
 ML {*
 AutoCorresData.get_trace @{theory} "trace_demo.c" "WA" "incr"
-|> the
+|> the |> (fn AutoCorresData.RuleTrace x => x)
 |> AutoCorresTrace.print_ac_trace
 |> writeln
 *}
@@ -36,7 +36,7 @@ AutoCorresData.get_trace @{theory} "trace_demo.c" "WA" "incr"
 (* To navigate a trace in jEdit, write it to a file: *)
 ML {*
 AutoCorresData.get_trace @{theory} "trace_demo.c" "HL" "incr"
-|> the
+|> the |> (fn AutoCorresData.RuleTrace x => x)
 |> AutoCorresTrace.print_ac_trace
 |> AutoCorresTrace.writeFile
        (Path.append (Resources.master_directory @{theory}) (Path.make ["trace_demo_incr.trace"]) |> Path.implode)

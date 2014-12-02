@@ -153,7 +153,7 @@ in
 end
 
 (* Convert a program by abstracting words. *)
-fun word_abstract filename fn_info unsigned_abs no_signed_abs trace_funcs do_opt lthy =
+fun word_abstract filename fn_info unsigned_abs no_signed_abs trace_funcs do_opt trace_opt lthy =
 let
   (* Generate a constant name for our definitions. *)
   fun gen_wa_name x = "wa_" ^ x
@@ -359,7 +359,7 @@ let
 
     (* Apply peephole optimisations to the theorem. *)
     val _ = writeln ("Simpifying (WA) " ^ fn_name)
-    val thm = L2Opt.cleanup_thm ctxt thm (if do_opt then 0 else 2) 4
+    val (thm, opt_traces) = L2Opt.cleanup_thm_tagged ctxt thm (if do_opt then 0 else 2) 4 trace_opt "WA"
 
     (* We end up with an unwanted L2_guard outside the L2_recguard.
      * L2Opt should simplify the condition to (%_. True) even if (not do_opt),
@@ -380,7 +380,8 @@ let
         |> HOLogic.dest_Trueprop
         |> dest_corresWA_term_abs
   in
-    (get_body_of_thm thm, Drule.gen_all thm, if member (op =) trace_funcs fn_name then SOME trace else NONE)
+    (get_body_of_thm thm, Drule.gen_all thm,
+     (if member (op =) trace_funcs fn_name then [("WA", AutoCorresData.RuleTrace trace)] else []) @ opt_traces)
   end
 
   (* Update function information. *)
