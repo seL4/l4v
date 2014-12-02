@@ -102,6 +102,9 @@ Less common options (mainly for debugging):
   * `trace_word_abs = FUNC_NAMES`: As above, but traces
     _word abstraction_.
 
+  * `trace_opt`: As above, but traces internal simplification
+    phases (for all functions).
+
   * `no_opt`: Disable some optimisation passes that simplify
     the AutoCorres output.
 
