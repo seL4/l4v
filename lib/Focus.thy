@@ -10,9 +10,8 @@
 
 theory Focus
 imports Main
-keywords "focus" :: prf_script
+keywords "subgoal" :: prf_goal
 begin
-
 
 ML {* 
 
@@ -104,19 +103,19 @@ fun focus use_asms state =
   end;
   
 val _ =
-  Outer_Syntax.command @{command_spec "focus"} "focus subgoal"
+  Outer_Syntax.command @{command_spec "subgoal"} "focus subgoal"
     ((Scan.optional (Args.parens (Args.$$$ "no_asm") >> K false) true) >> 
       (fn mode => Toplevel.proofs (Seq.make_results o Seq.single o focus mode)));
   
   *}  
   
 schematic_lemma test: "\<And>x. Q x \<and> ?P x\<Longrightarrow> ?P x \<and> Q x"
-  focus
+  subgoal
     thm assms
     apply (rule conjE)
   done
   apply assumption
-  focus (no_asm)
+  subgoal (no_asm)
     thm assms
     term ?concl
     apply (rule conjI)
