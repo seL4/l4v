@@ -77,8 +77,8 @@ fun mk_L1corres_call_prop ctxt prog_info fn_info target_fn_name term =
 (*
  * Convert a SIMPL fragment into a monadic term.
  *
- * We return the monadic version of the input fragment and
- * a proof of correspondence.
+ * We return the monadic version of the input fragment and a tactic
+ * to prove correspondence.
  *)
 fun simpl_conv'
     (prog_info : ProgramInfo.prog_info)
