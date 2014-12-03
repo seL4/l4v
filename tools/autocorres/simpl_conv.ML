@@ -423,9 +423,6 @@ let
         (the (AutoCorresData.get_def (Proof_Context.theory_of lthy)
             filename "L1def" (#name fn_def))))
 
-  (* We only translate functions with a SIMPL body. *)
-  fun is_valid_fun name = AutoCorresUtil.has_simpl_body_def lthy name
-
   (* Fetch the expected type of the translated function. *)
   val l1_fn_type = @{typ nat} --> mk_l1monadT (#state_type prog_info)
 
