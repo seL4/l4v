@@ -32,6 +32,7 @@ sig
   val subset : (key set * key set) -> bool
   val card: key set -> int
   val map: (key -> key) -> key set -> key set
+  val filter: (key -> bool) -> key set -> key set
 end;
 
 functor Set(Key: KEY): SET =
@@ -65,6 +66,7 @@ fun contains (S l) a = Ord_List.member Key.ord l a
 fun subset (S a, S b) = Ord_List.subset Key.ord (a, b)
 fun card (S a) = length a
 fun map f (S a) = make (List.map f a)
+fun filter f (S a) = S (List.filter f a)
 
 end;
 
