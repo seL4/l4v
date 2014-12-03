@@ -84,6 +84,29 @@ lemma ccorres_chain:
   apply clarsimp
   done
 
+(*
+ * Functions that don't have a body in the C file (i.e., they are
+ * prototyped and called, but are never defined) will be abstracted
+ * into a "fail" command by AutoCorres.
+ *
+ * More accurately, they will be abstracted into:
+ *
+ *     guard (\<lambda>s. INVALID_FUNCTION)
+ *
+ * where "INVALID_FUNCTION" is "False").
+ *
+ * We convert this above form into this alternative definition, so
+ * users have a better idea what is going on.
+ *)
+definition "FUNCTION_BODY_NOT_IN_INPUT_C_FILE \<equiv> fail"
+
+lemma [polish]:
+  "guard (\<lambda>s. UNDEFINED_FUNCTION) \<equiv> FUNCTION_BODY_NOT_IN_INPUT_C_FILE"
+  "(FUNCTION_BODY_NOT_IN_INPUT_C_FILE >>= m) = FUNCTION_BODY_NOT_IN_INPUT_C_FILE"
+  "unknown >>= (\<lambda>x. FUNCTION_BODY_NOT_IN_INPUT_C_FILE) = FUNCTION_BODY_NOT_IN_INPUT_C_FILE"
+  "unknown >>= (K_bind FUNCTION_BODY_NOT_IN_INPUT_C_FILE) = FUNCTION_BODY_NOT_IN_INPUT_C_FILE"
+  by (monad_eq simp: UNDEFINED_FUNCTION_def FUNCTION_BODY_NOT_IN_INPUT_C_FILE_def)+
+
 (* Rewrites that will be applied before collecting statistics. *)
 lemmas ac_statistics_rewrites =
     (* Setup "L1_seq" to have a sane lines-of-spec measurement. *)

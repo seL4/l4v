@@ -392,6 +392,22 @@ let
   val trace_opt = !(#trace_opt opt) = SOME true
   val gen_word_heaps = !(#gen_word_heaps opt) = SOME true
 
+  (* Any function that was declared in the C file (but never defined) should
+   * stay in the nondet-monad unless explicitly instructed by the user to be
+   * something else. *)
+  val ts_force = let
+    val invented_functions =
+      all_functions
+      (* Select functions with an invented body. *)
+      |> Symset.filter (fn n => FunctionInfo.get_function_def fn_info n |> #invented_body)
+      (* Ignore functions which already have a "ts_force" rule applied to them. *)
+      |> Symset.subtract (Symset.make (Symtab.keys ts_force))
+      |> Symset.dest
+  in
+    (* Use the most general monadic type allowed by the user. *)
+    fold (fn n => Symtab.update_new (n, List.last ts_rules)) invented_functions ts_force
+  end
+
   (* Do the translation. *)
   val lthy =
     SimplConv.translate_simpl filename fn_info do_opt lthy

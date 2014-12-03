@@ -355,15 +355,16 @@ declare recguard_dec_def [termination_simp]
  * SIMPL to translate. We instead use the following definition.
  *)
 
+definition "UNDEFINED_FUNCTION \<equiv> False"
+
 definition
   undefined_function_body :: "('a, int, strictc_errortype) com"
 where
-  "undefined_function_body \<equiv> Guard UndefinedFunction {} SKIP"
+  "undefined_function_body \<equiv> Guard UndefinedFunction {x. UNDEFINED_FUNCTION} SKIP"
 
 lemma L1corres_undefined_call:
-    "L1corres \<Gamma> ((L1_seq (L1_guard (L1_set_to_pred {})) L1_skip)) (Call X')"
-  by (clarsimp simp: L1corres_def L1_defs)
-
+    "L1corres \<Gamma> ((L1_seq (L1_guard (L1_set_to_pred {x. UNDEFINED_FUNCTION})) L1_skip)) (Call X')"
+  by (clarsimp simp: L1corres_def L1_defs UNDEFINED_FUNCTION_def)
 
 (* L1 monad_mono rules *)
 lemma monad_mono_step_recguard_dec_Suc:
