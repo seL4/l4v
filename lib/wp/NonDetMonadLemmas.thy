@@ -330,4 +330,10 @@ lemma validE_NF_make_schematic_post:
         \<and> (\<forall>rv s'. E s0 rv s' \<longrightarrow> E' rv s') \<rbrace> f \<lbrace> Q' \<rbrace>, \<lbrace> E' \<rbrace>!"
   by (auto simp add: validE_NF_def validE_def valid_def no_fail_def split: prod.splits sum.splits)
 
+lemma validNF_conjD1: "\<lbrace> P \<rbrace> f \<lbrace> \<lambda>rv s. Q rv s \<and> Q' rv s \<rbrace>! \<Longrightarrow> \<lbrace> P \<rbrace> f \<lbrace> Q \<rbrace>!"
+  by (fastforce simp: validNF_def valid_def no_fail_def)
+
+lemma validNF_conjD2: "\<lbrace> P \<rbrace> f \<lbrace> \<lambda>rv s. Q rv s \<and> Q' rv s \<rbrace>! \<Longrightarrow> \<lbrace> P \<rbrace> f \<lbrace> Q' \<rbrace>!"
+  by (fastforce simp: validNF_def valid_def no_fail_def)
+
 end
