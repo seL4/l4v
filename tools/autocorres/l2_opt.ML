@@ -162,10 +162,15 @@ end
  * the ability to cause exponential growth in the spec size in some cases;
  * thus, we can only selectively apply it in cases where this doesn't happen.
  *
- * In particular, we propagate a "gets" into its usage if it is used only once.
+ * In particular, we propagate a "gets" into its usage if it is used at most once.
+ *
+ * Or, if the user asks for "no_opt", we only erase the "gets" if it is never used.
+ * (Even with "no optimisation", we still want to get rid of control flow variables
+ * emitted by c-parser. Hopefully the user won't mind if their own unused variables
+ * also disappear.)
  *)
 val l2_gets_bind_thm = mk_meta_eq @{thm L2_gets_bind}
-fun l2_gets_bind_simproc' ctxt term =
+fun l2_gets_bind_simproc' only_trivial ctxt term =
 let
   fun is_simple (_ $ Abs (_, _, Bound _)) = true
     | is_simple (_ $ Abs (_, _, Free _)) = true
@@ -181,16 +186,17 @@ in
           | count_var_usage _ = 0
         val count = count_var_usage (subst_bounds ([Free ("_dummy", dummyT)], rhs))
       in
-        if count <= 1 orelse is_simple lhs then
+        if (if only_trivial then count = 0 else count <= 1) orelse is_simple lhs then
           SOME l2_gets_bind_thm
         else
           NONE
       end
     | _ => NONE
 end
-val l2_gets_bind_simproc =
+fun l2_gets_bind_simproc only_trivial =
   Raw_Simplifier.mk_simproc "L2_gets_bind_simproc"
-      [@{cpat "L2_seq (L2_gets (%_. ?A) ?n) ?B"}] l2_gets_bind_simproc'
+      [@{cpat "L2_seq (L2_gets (%_. ?A) ?n) ?B"}]
+      (l2_gets_bind_simproc' only_trivial)
 
 (* Simproc to clean up guards. *)
 fun l2_guard_simproc' ss ctxt term =
@@ -244,7 +250,8 @@ let
   fun basic_ss ctxt =
       put_simpset AUTOCORRES_SIMPSET ctxt
       |> (fn ctxt => if fast_mode < 2 then ctxt addsimps (L2PeepholeThms.get ctxt) else ctxt)
-      |> (fn ctxt => ctxt addsimprocs [l2_gets_bind_simproc, l2_guard_simproc (simpset_of ctxt)])
+      |> (fn ctxt => ctxt addsimprocs [l2_gets_bind_simproc (fast_mode = 2)])
+      |> (fn ctxt => ctxt addsimprocs [l2_guard_simproc (simpset_of ctxt)])
       |> map_opt_simpset false
   fun simp_conv ctxt =
     Drule.beta_eta_conversion
