@@ -129,13 +129,10 @@ fun polish ctxt (mt : Monad_Types.monad_type) do_opt thm =
 let
   (* Apply any polishing rules. *)
   val ctxt = Utils.set_hidden_ctxt ctxt
-  val solver = Raw_Simplifier.mk_solver "simp solver"
-      (K (asm_full_simp_tac ctxt))
-  val simps = PolishSimps.get ctxt
+  val simps = if do_opt then PolishSimps.get ctxt else []
 
   (* Simplify using polish rules. *)
-  val simp_conv =
-      Simplifier.rewrite ((if (*do_opt*) true then put_simpset (#polish_rules mt) ctxt else ctxt) addsimps simps)
+  val simp_conv = Simplifier.rewrite (put_simpset (#polish_rules mt) ctxt addsimps simps)
 
   (* eta-contract "case_prod clauses, so that they render as:
    * "%(a, b). P a b" instead of "case x of (a, b) => P a b". *)

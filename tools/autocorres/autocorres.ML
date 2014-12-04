@@ -410,7 +410,7 @@ let
 
   (* Do the translation. *)
   val lthy =
-    SimplConv.translate_simpl filename fn_info do_opt lthy
+    SimplConv.translate_simpl filename fn_info do_opt trace_opt lthy
     |> (fn (lthy, fn_info) =>
         LocalVarExtract.translate_l2 filename fn_info do_opt trace_opt lthy)
     |> (fn (lthy, fn_info) =>

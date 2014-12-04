@@ -1275,7 +1275,7 @@ fun get_l2corres_thm ctxt prog_info fn_info do_opt trace_opt fn_name
   val l2_unfolds = map (fn x => (mk_meta_eq x) handle (THM _) => x) (L2UnfoldThms.get ctxt)
   val init_rule = cterm_of thy l1_term
     |> (Conv.rewr_conv (safe_mk_meta_eq init_unfold)
-        then_conv Raw_Simplifier.rewrite ctxt false l2_unfolds)
+        then_conv Raw_Simplifier.rewrite (put_simpset HOL_basic_ss ctxt) false l2_unfolds)
 
   (* Extract the term we will be working with. *)
   val source_term = Thm.concl_of init_rule |> Logic.dest_equals |> snd
