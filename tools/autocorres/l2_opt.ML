@@ -170,7 +170,7 @@ end
  * also disappear.)
  *)
 val l2_gets_bind_thm = mk_meta_eq @{thm L2_gets_bind}
-fun l2_gets_bind_simproc' only_trivial ctxt term =
+fun l2_gets_bind_simproc' ctxt term =
 let
   fun is_simple (_ $ Abs (_, _, Bound _)) = true
     | is_simple (_ $ Abs (_, _, Free _)) = true
@@ -186,17 +186,17 @@ in
           | count_var_usage _ = 0
         val count = count_var_usage (subst_bounds ([Free ("_dummy", dummyT)], rhs))
       in
-        if (if only_trivial then count = 0 else count <= 1) orelse is_simple lhs then
+        if count <= 1 orelse is_simple lhs then
           SOME l2_gets_bind_thm
         else
           NONE
       end
     | _ => NONE
 end
-fun l2_gets_bind_simproc only_trivial =
+val l2_gets_bind_simproc =
   Raw_Simplifier.mk_simproc "L2_gets_bind_simproc"
       [@{cpat "L2_seq (L2_gets (%_. ?A) ?n) ?B"}]
-      (l2_gets_bind_simproc' only_trivial)
+      l2_gets_bind_simproc'
 
 (* Simproc to clean up guards. *)
 fun l2_guard_simproc' ss ctxt term =
@@ -250,7 +250,7 @@ let
   fun basic_ss ctxt =
       put_simpset AUTOCORRES_SIMPSET ctxt
       |> (fn ctxt => if fast_mode < 2 then ctxt addsimps (L2PeepholeThms.get ctxt) else ctxt)
-      |> (fn ctxt => ctxt addsimprocs [l2_gets_bind_simproc (fast_mode = 2)])
+      |> (fn ctxt => if fast_mode < 2 then ctxt addsimprocs [l2_gets_bind_simproc] else ctxt)
       |> (fn ctxt => ctxt addsimprocs [l2_guard_simproc (simpset_of ctxt)])
       |> map_opt_simpset false
   fun simp_conv ctxt =
