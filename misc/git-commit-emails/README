@@ -1,0 +1,15 @@
+
+This script takes a git repository, fetches any remote patches on the
+repository, and then shoots out an email describing any new commits.
+
+This should either be setup in cron to poll a remote repository, or---better
+still---be executed by another script when a push event occurs.
+
+One possible way or running it is as follows:
+
+    ./commit-email.py \
+        --repo project_name \
+        --to mailing.list@example.com \
+        --from mailing.list@example.com \
+        ./path/to/repo
+
