@@ -55,6 +55,7 @@ Apply_Trace_Cmd.thy:
 Trace_Attribs.thy:
 trace_attribs.ML:
 more_xml.ML:
+Solves_Tac.thy:
     Compatibility libraries for NICTA developments.
 
 set.ML:
