@@ -130,11 +130,8 @@ def send_email(from_addr, dest_addrs, headers, body, dry_run=False):
             mailer.sendmail(from_addr, addr, message_bytes)
         mailer.quit()
     finally:
-        # Safety: wait a short amount of time to avoid overloading the server,
-        # and to ensure that a worst-case-scenario bug will only send a limited
-        # number of emails per hour. (3600 / 100 = 100 emails/hour, in the
-        # worst case).
-        time.sleep(3600.0 / 100.0)
+        # Safety: wait a short amount of time to avoid overloading the server.
+        time.sleep(1.0)
 
 
 def email_commit(from_addr, dest_addrs, repo, remote, commit, repo_name, dry_run=False):
