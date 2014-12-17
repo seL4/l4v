@@ -6472,4 +6472,10 @@ lemma neg_mask_add_aligned:
      \<Longrightarrow> (p + q) && ~~ mask n = p && ~~ mask n"
   by (metis is_aligned_add_helper is_aligned_neg_mask_eq)
 
+lemma word_sless_sint_le:"x <s y \<Longrightarrow> sint x \<le> sint y - 1"
+  by (metis word_sless_alt zle_diff1_eq)
+
+lemma word_ge_min:"sint (x::32 word) \<ge> -2147483648"
+  by (metis sint_ge word32_bounds(1) word_size)
+
 end
