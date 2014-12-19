@@ -40,8 +40,6 @@ next
     by (rule ssubst) (simp add: nl replicate_app_Cons_same [where xs = "[]", simplified])
 qed
 
-text {* _bl *}
-
 lemma andList_Cons:
   assumes al: "andList $ map P (y # ys)"
   shows   "P y"
