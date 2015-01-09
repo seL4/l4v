@@ -801,7 +801,7 @@ lemma messageInfoFromWord_spec:
                  msgExtraCaps_CL = (w_' s >> 7) && 3, msgLength_CL = let v = w_' s && 0x7F in if v > msgMaxLength then msgMaxLength else v\<rparr>}"
   apply vcg
   apply (simp add: message_info_lift_def Let_def msgMaxLength_def mask_def word_sle_def
-                   word_sless_def
+                   word_sless_def seL4_MsgMaxLength_def
          split: split_if)
   done
 
@@ -2020,6 +2020,7 @@ lemma loadCapTransfer_ccorres [corres]:
   apply clarsimp
   apply (simp add: seL4_MsgLengthBits_def 
                    seL4_MsgExtraCapBits_def
+                   seL4_MsgMaxLength_def
                    word_size word_sle_def
                    msgMaxLength_def msgMaxExtraCaps_def
                    msgLengthBits_def msgExtraCapBits_def)
@@ -2043,9 +2044,9 @@ lemma getExtraCPtr_ccorres [corres]:
                  = Some rv}"
      in ccorres_from_vcg_throws)
    apply (rule allI, rule conseqPre, vcg)
-   apply (clarsimp simp: return_def msgMaxLength_def typ_heap_simps')
+   apply (clarsimp simp: return_def seL4_MsgMaxLength_def msgMaxLength_def typ_heap_simps')
   apply (clarsimp simp: bufferCPtrOffset_def word_size msgMaxLength_def
-                        seL4_MsgLengthBits_def Types_H.msgLengthBits_def
+                        seL4_MsgLengthBits_def  Types_H.msgLengthBits_def
                         field_simps)
   apply (clarsimp simp: valid_ipc_buffer_ptr'_def)
   apply (erule aligned_add_aligned, simp_all add: word_bits_def)
@@ -2159,7 +2160,8 @@ lemma setExtraBadge_ccorres:
    apply (unfold K_bind_def)
    apply (ctac add: storeWord_ccorres)
   apply (clarsimp simp: bufferCPtrOffset_def word_size msgMaxLength_def
-                        seL4_MsgLengthBits_def Types_H.msgLengthBits_def field_simps)
+                        seL4_MsgLengthBits_def seL4_MsgMaxLength_def Types_H.msgLengthBits_def
+                        field_simps)
   apply (subgoal_tac " is_aligned (buffer + (of_nat n * 4 + 0x1E8)) 2")
    apply clarsimp
    prefer 2
@@ -3183,6 +3185,7 @@ proof -
                   apply (drule(1) user_word_at_cross_over [OF _ _ refl])
                   apply (simp add: field_simps msgMaxLength_def
                                    seL4_MsgLengthBits_def
+                                   seL4_MsgMaxLength_def
                                    msgLengthBits_def)
                  apply simp
                 apply (rule conseqPre)
