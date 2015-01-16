@@ -14,6 +14,9 @@ imports
   "../../AutoCorres"
 begin
 
+(* Helper for noticing when you accidentally haven't constrained an of_nat *)
+abbreviation "of_nat32 \<equiv> of_nat::(nat \<Rightarrow> word32)"
+
 lemma byte_ptr_guarded:
     "ptr_val (x::8 word ptr) \<noteq> 0 \<Longrightarrow> c_guard x"
   unfolding c_guard_def c_null_guard_def ptr_aligned_def
@@ -298,6 +301,11 @@ definition
 where
   "no_overlap p q sz \<equiv> {ptr_val p ..+ sz} \<inter> {ptr_val q ..+ sz} = {}"
 
+lemma no_overlap_sym: "no_overlap x y = no_overlap y x"
+  apply (rule ext)
+  apply (clarsimp simp:no_overlap_def)
+  by blast
+
 (* FIXME: MOVE *)
 lemma h_val_not_id:
   fixes x :: "'a::mem_type ptr"
@@ -309,6 +317,125 @@ lemma h_val_not_id:
    apply blast
   apply clarsimp
   done
+
+definition
+  update_bytes :: "'a globals_scheme \<Rightarrow> 'b::mem_type ptr \<Rightarrow> word8 list \<Rightarrow> 'a globals_scheme"
+where
+  "update_bytes s p bs \<equiv> s\<lparr>t_hrs_' := hrs_mem_update (heap_update_list (ptr_val p) bs) (t_hrs_' s)\<rparr>"
+
+lemma the_horse_says_neigh: "(s\<lparr>t_hrs_' := x\<rparr> = s\<lparr>t_hrs_' := y\<rparr>) = (x = y)"
+ by (metis (erased, lifting) globals.cases_scheme globals.select_convs(1) globals.update_convs(1))
+
+lemma upto_singleton[simp]:"[x..x] = [x]"
+  by (simp add: upto_rec1)
+
+lemma update_bytes_ignore_ptr_coerce[simp]: "update_bytes s (ptr_coerce p) = update_bytes s p"
+  by (clarsimp simp:update_bytes_def intro!:ext)
+
+lemma hrs_mem_update_commute:
+  "f \<circ> g = g \<circ> f \<Longrightarrow> hrs_mem_update f (hrs_mem_update g s) = hrs_mem_update g (hrs_mem_update f s)"
+  by (metis (no_types, lifting) comp_eq_elim hrs_htd_def hrs_htd_mem_update hrs_mem_def hrs_mem_f prod.collapse)
+
+lemma hrs_mem_update_collapse:
+  "hrs_mem_update f (hrs_mem_update g s) = hrs_mem_update (f \<circ> g) s"
+  by (metis comp_eq_dest_lhs hrs_htd_def hrs_htd_mem_update hrs_mem_def hrs_mem_f prod.collapse)
+
+lemma update_bytes_reorder:
+  "{ptr_val p..+length cs} \<inter> {ptr_val q..+length bs} = {} \<Longrightarrow>
+      update_bytes (update_bytes s q bs) p cs = update_bytes (update_bytes s p cs) q bs"
+  apply (clarsimp simp:update_bytes_def)
+  apply (subst the_horse_says_neigh)
+  apply (subst hrs_mem_update_commute)
+   apply (clarsimp intro!:ext)
+   apply (subst heap_update_list_commute)
+    apply clarsimp+
+  done
+
+lemma lt_step_down: "\<lbrakk>(x::nat) < y; x = y - 1 \<longrightarrow> P; x < y - 1 \<longrightarrow> P\<rbrakk> \<Longrightarrow> P"
+  by force
+
+(* XXX: This proof makes me sad. *)
+lemma under_uint_imp_no_overflow: "x < UINT_MAX \<Longrightarrow> ((of_nat x)::word32) + 1 \<noteq> 0"
+  apply (induct x)
+   apply (clarsimp simp:UINT_MAX_def)+
+  apply unat_arith
+  apply (clarsimp simp:UINT_MAX_def)
+  apply (cut_tac y=x and z="(of_nat (UINT_MAX - 1))::word32" in le_unat_uoi)
+   apply (clarsimp simp:UINT_MAX_def)+
+  done
+
+lemma heap_update_list_append3:
+  "1 + length ys < 2 ^ word_bits \<Longrightarrow>
+    heap_update_list s (y # ys) hp = heap_update_list s [y] (heap_update_list (s + 1) ys hp)"
+  apply clarsimp
+  apply (subst heap_update_list_append2[where xs="[y]", simplified])
+   apply clarsimp+
+  done
+
+lemma hrs_mem_update_cong': "f = g \<Longrightarrow> hrs_mem_update f s = hrs_mem_update g s"
+  by presburger
+
+lemma update_bytes_append: "length bs \<le> UINT_MAX \<Longrightarrow>
+  update_bytes s p (b # bs) = update_bytes (update_bytes s p [b]) (byte_cast p +\<^sub>p 1) bs"
+  apply (clarsimp simp:update_bytes_def)
+  apply (subst the_horse_says_neigh)
+  apply (subst hrs_mem_update_commute)
+   apply (rule ext)+
+   apply simp
+   apply (case_tac "xa = ptr_val p")
+    apply (clarsimp simp:fun_upd_def)
+    apply (subst heap_update_nmem_same)
+     apply (clarsimp simp:intvl_def ptr_add_def)
+     apply (subgoal_tac "k < UINT_MAX")
+      prefer 2
+      apply unat_arith
+     apply (drule under_uint_imp_no_overflow)
+     apply unat_arith
+    apply clarsimp
+   apply (subst heap_update_list_update)
+    apply simp
+   apply (clarsimp simp:fun_upd_def)
+  apply (subst hrs_mem_update_collapse)
+  apply (rule hrs_mem_update_cong')
+  apply (clarsimp simp:ptr_add_def) 
+  apply (rule ext)
+  apply (cut_tac xs="[b]" and ys=bs and s="ptr_val p" and hp=x in heap_update_list_append)
+  apply (clarsimp simp:fun_upd_def intro!:ext)
+  apply (rule conjI)
+   apply clarsimp
+   apply (subst heap_update_nmem_same)
+    apply (clarsimp simp:ptr_add_def intvl_def)
+    apply (subgoal_tac "k < UINT_MAX")
+     prefer 2
+     apply unat_arith
+    apply (drule under_uint_imp_no_overflow)
+    apply unat_arith
+   apply clarsimp
+  apply clarsimp
+  apply (case_tac "xa \<in> {ptr_val p + 1..+length bs}")
+  apply (subst heap_update_mem_same_point)
+    apply simp
+   apply (subgoal_tac "addr_card = UINT_MAX + 1")
+    apply clarsimp
+   apply (clarsimp simp:addr_card UINT_MAX_def)
+  apply (subst heap_update_mem_same_point)
+    apply simp
+   apply (subgoal_tac "addr_card = UINT_MAX + 1")
+    apply clarsimp
+   apply (clarsimp simp:addr_card UINT_MAX_def)
+  apply clarsimp
+  apply (subst heap_update_nmem_same)
+   apply clarsimp
+  apply (subst heap_update_nmem_same)
+   apply clarsimp+
+  done
+
+(* TODO
+lemma h_val_id_update_bytes:
+  fixes q :: "'a::mem_type ptr"
+  shows "{ptr_val q..+size_of TYPE('a)} \<inter> {ptr_val p..+length bs} = {}
+          \<Longrightarrow> deref (update_bytes s p bs) q = deref s q"
+*)
 
 text {*
   Memcpy does what it says on the box.
