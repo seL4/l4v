@@ -430,12 +430,41 @@ lemma update_bytes_append: "length bs \<le> UINT_MAX \<Longrightarrow>
    apply clarsimp+
   done
 
-(* TODO
+lemma h_val_not_id_general:
+  fixes y :: "'a::mem_type ptr"
+  shows "\<forall>i \<in> {0..+size_of TYPE('a)}. \<forall>g. f g (ptr_val y + i) = g (ptr_val y + i)
+     \<Longrightarrow> h_val (hrs_mem (hrs_mem_update f s)) y = h_val (hrs_mem s) y"
+  apply (subst hrs_mem_update)
+  apply (clarsimp simp:h_val_def)
+  apply (subgoal_tac "heap_list (f (hrs_mem s)) (size_of TYPE('a)) (ptr_val y) =
+                      heap_list (hrs_mem s) (size_of TYPE('a)) (ptr_val y)")
+   apply clarsimp
+  apply (cut_tac h="f (hrs_mem s)" and p="ptr_val y" and n="size_of TYPE('a)"
+                 and h'="hrs_mem s" in heap_list_h_eq2)
+   apply (erule_tac x="x - ptr_val y" in  ballE)
+    apply clarsimp
+   apply (clarsimp simp:intvl_def)+
+  done
+
+lemma h_val_not_id_list:
+  fixes y :: "'a::mem_type ptr"
+  shows "{x..+length vs} \<inter> {ptr_val y..+size_of TYPE('a)} = {}
+     \<Longrightarrow> h_val (hrs_mem (hrs_mem_update (heap_update_list x vs) s)) y = h_val (hrs_mem s) y"
+  apply (subst h_val_not_id_general)
+   apply clarsimp
+   apply (metis (erased, hide_lams) disjoint_iff_not_equal heap_update_nmem_same intvlD intvlI
+          monoid_add_class.add.left_neutral)
+  apply clarsimp
+  done
+
 lemma h_val_id_update_bytes:
   fixes q :: "'a::mem_type ptr"
   shows "{ptr_val q..+size_of TYPE('a)} \<inter> {ptr_val p..+length bs} = {}
           \<Longrightarrow> deref (update_bytes s p bs) q = deref s q"
-*)
+  apply (clarsimp simp:update_bytes_def)
+  apply (subst h_val_not_id_list)
+   apply blast
+  by simp
 
 text {*
   Memcpy does what it says on the box.
