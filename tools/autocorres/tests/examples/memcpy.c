@@ -16,3 +16,7 @@ void *memcpy(void *dest, void *src, unsigned int size) {
     }
     return dest;
 }
+
+int *memcpy_int(int *dest, int *src) {
+    return memcpy(dest, src, sizeof(*dest));
+}
