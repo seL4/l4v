@@ -868,6 +868,49 @@ lemma memcpy_int_wp''[unfolded memcpy_int_spec_def]: "memcpy_int_spec dst src"
   apply (clarsimp simp:h_val_def ptr_add_def)
   done
 
+lemma bytes_of_imp_at[simp]: "bytes_of s x bs \<Longrightarrow> bytes_at s x bs"
+  by (clarsimp simp:bytes_of_def bytes_at_def)
+
+lemma bytes_at_imp_of:
+  fixes x :: "'a::mem_type ptr"
+  shows "\<lbrakk>bytes_at s x bs; length bs = size_of TYPE('a)\<rbrakk> \<Longrightarrow> bytes_of s x bs"
+  by (clarsimp simp:bytes_of_def bytes_at_def)
+
+text {*
+  Memcpying from a source to a destination via an intermediary does what it should. This is close to
+  the desirable property we want for CAmkES systems; i.e. that copying into your IPC buffer on one
+  side and then out on the other gives you back what you put in. Note that the type of the
+  intermediate pointer is irrelevant and we don't need to assume that the source and final
+  destination do not overlap.
+*}
+lemma memcpy_seq:
+  fixes x :: "'a::mem_type ptr"
+    and y :: "'b::mem_type ptr"
+    and z :: "'a::mem_type ptr"
+  shows "\<forall>s0 bs.
+   \<lbrace>\<lambda>s. s = s0 \<and> sz = of_nat (size_of TYPE('a)) \<and>
+        c_guard x \<and> c_guard y \<and> c_guard z \<and>
+        no_wrap x (unat sz) \<and> no_wrap y (unat sz) \<and> no_wrap z (unat sz) \<and>
+        no_overlap x y (unat sz) \<and> no_overlap y z (unat sz) \<and>
+        bytes_of s x bs\<rbrace>
+    do memcpy' (ptr_coerce y) (ptr_coerce x) sz;
+       memcpy' (ptr_coerce z) (ptr_coerce y) sz
+    od
+   \<lbrace>\<lambda>r s. r = ptr_coerce z \<and> bytes_of s z bs\<rbrace>!"
+  apply (rule allI)+
+  apply (wp memcpy_wp)
+  apply clarsimp
+  apply (rule_tac x=bs in exI)
+  apply clarsimp
+  apply (rule conjI, clarsimp simp:bytes_of_def)
+  apply clarsimp
+  apply (rule_tac x=bs in exI)
+  apply (rule conjI, clarsimp simp:bytes_of_def)
+  apply clarsimp
+  apply (rule bytes_at_imp_of)
+   apply (clarsimp simp:bytes_of_def)+
+  done
+
 end
 
 end
