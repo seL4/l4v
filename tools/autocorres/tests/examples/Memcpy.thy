@@ -794,6 +794,25 @@ lemma memcpy_int_wp':
   apply (clarsimp simp:h_val_def ptr_add_def)
   done
 
+text {* memcpying a typed variable is equivalent to assignment. *}
+lemma memcpy_type_wp:
+  fixes dst :: "'a::mem_type ptr"
+    and src :: "'a::mem_type ptr"
+  shows "\<forall>s0 bs.
+   \<lbrace>\<lambda>s. s = s0 \<and> c_guard dst \<and> c_guard src \<and> sz = of_nat (size_of TYPE('a)) \<and>
+        no_overlap dst src (unat sz) \<and> no_wrap dst (unat sz) \<and> no_wrap src (unat sz) \<and>
+        bytes_of s src bs\<rbrace>
+     memcpy' (ptr_coerce dst) (ptr_coerce src) sz
+   \<lbrace>\<lambda>r s. r = ptr_coerce dst \<and> bytes_of s dst bs \<and> s = update_bytes s0 dst bs\<rbrace>!"
+  apply (rule allI)+
+  apply (wp memcpy_wp)
+  apply clarsimp
+  apply (rule_tac x=bs in exI)
+  apply clarsimp
+  apply (subst no_overlap_sym)
+  apply (clarsimp simp:bytes_of_def)
+  done
+
 end
 
 end
