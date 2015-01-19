@@ -430,6 +430,15 @@ lemma update_bytes_append: "length bs \<le> UINT_MAX \<Longrightarrow>
    apply clarsimp+
   done
 
+lemma update_bytes_postpend: "length bs = x + 1 \<Longrightarrow>
+  update_bytes s p bs = update_bytes (update_bytes s p (take x bs)) (byte_cast p +\<^sub>p (of_nat x)) [bs ! x]"
+  apply (clarsimp simp:update_bytes_def)
+  apply (subst the_horse_says_neigh)
+  apply (clarsimp simp:ptr_add_def)
+  apply (subst heap_update_list_concat_fold_hrs_mem)
+   apply clarsimp+
+  by (metis append_eq_conv_conj append_self_conv hd_drop_conv_nth2 lessI take_hd_drop)
+  
 lemma h_val_not_id_general:
   fixes y :: "'a::mem_type ptr"
   shows "\<forall>i \<in> {0..+size_of TYPE('a)}. \<forall>g. f g (ptr_val y + i) = g (ptr_val y + i)
@@ -466,19 +475,44 @@ lemma h_val_id_update_bytes:
    apply blast
   by simp
 
+lemma bytes_at_len: "bytes_at s p bs \<Longrightarrow> length bs \<le> UINT_MAX"
+  by (clarsimp simp:bytes_at_def, fastforce)
+
+(* Another sad proof. *)
+lemma le_uint_max_imp_id: "x \<le> UINT_MAX \<Longrightarrow> unat ((of_nat x)::word32) = x"
+  apply (induct x)
+   apply (clarsimp simp:UINT_MAX_def)+
+  apply unat_arith
+  apply clarsimp
+  done
+
+lemma update_bytes_id: "update_bytes s p [] = s"
+  apply (clarsimp simp:update_bytes_def)
+  apply (subst heap_update_list_base')
+  by (metis (erased, lifting) DEADID.map_id globals.surjective globals.update_convs(1) hrs_htd_def
+                              hrs_htd_mem_update hrs_mem_def hrs_mem_f prod.collapse)
+
+lemma a_horse_by_any_other_name: "t_hrs_'_update f s = s\<lparr>t_hrs_' := f (t_hrs_' s)\<rparr>"
+  by auto
+
+lemma heap_update_list_singleton: "heap_update_list p [x] = heap_update (Ptr p) x"
+  apply (rule ext)
+  by (metis heap_update_def ptr_val.simps to_bytes_word8)
+
+lemma update_bytes_eq: "\<lbrakk>s = s'; p = p'; bs = bs'\<rbrakk> \<Longrightarrow> update_bytes s p bs = update_bytes s' p' bs'"
+  by clarsimp
+
 text {*
   Memcpy does what it says on the box.
-  TODO: To be usable in a composed proof, this really needs to state the exact side-effects of
-        memcpy.
 *}
-lemma
+lemma memcpy_wp':
   fixes src :: "'a::mem_type ptr"
     and dst :: "'b::mem_type ptr"
   shows "\<forall>s0 bs.
   \<lbrace>\<lambda>s. s = s0 \<and> c_guard src \<and> c_guard dst \<and> sz = of_nat (length bs) \<and> bytes_at s src bs \<and>
        no_wrap src (unat sz) \<and> no_wrap dst (unat sz) \<and> no_overlap src dst (unat sz)\<rbrace>
     memcpy' (ptr_coerce dst) (ptr_coerce src) sz
-  \<lbrace>\<lambda>r s. r = ptr_coerce dst \<and> bytes_at s dst bs\<rbrace>!"
+  \<lbrace>\<lambda>r s. r = ptr_coerce dst \<and> bytes_at s dst bs \<and> s = update_bytes s0 dst bs\<rbrace>!"
   apply (rule allI)+
   apply (rule validNF_assume_pre)
   unfolding memcpy'_def
@@ -486,7 +520,8 @@ lemma
   apply (subst whileLoop_add_inv[where
     I="\<lambda>i s. unat i \<le> unat sz \<and>
              bytes_at s dst (take (unat i) bs) \<and>
-             bytes_at s src bs" and
+             bytes_at s src bs \<and>
+             s = update_bytes s0 dst (take (unat i) bs)" and
     M="\<lambda>(i, s). unat sz - unat i"])
   apply wp
     apply clarsimp
@@ -510,7 +545,20 @@ lemma
        apply simp
       apply simp
       apply (subst h_val_id)
-      apply (erule_tac x="unat i" and P="\<lambda>x. deref s (byte_cast src +\<^sub>p int x) = bs ! x" in ballE)
+      apply (subst h_val_id_update_bytes)
+       apply (clarsimp simp:no_overlap_def ptr_add_def)
+       apply (subgoal_tac "{ptr_val src + i..+Suc 0} \<subseteq> {ptr_val src..+unat (of_nat32 (length bs))}")
+        prefer 2
+        apply (clarsimp simp:intvl_def)
+        apply (rule_tac x="unat i" in exI)
+        apply unat_arith
+       apply (subgoal_tac "{ptr_val dst..+unat i} \<subseteq> {ptr_val dst..+unat (of_nat32 (length bs))}")
+        prefer 2
+        apply (clarsimp simp:intvl_def)
+        apply (rule_tac x=ka in exI)
+        apply unat_arith
+       apply blast
+      apply (erule_tac x="unat i" and P="\<lambda>x. deref s0 (byte_cast src +\<^sub>p int x) = bs ! x" in ballE)
        apply clarsimp
        apply (subst nth_take)
         apply unat_arith
@@ -567,6 +615,67 @@ lemma
       apply blast
      apply clarsimp
     apply (rule conjI)
+     apply (subst h_val_id_update_bytes)
+      apply (clarsimp simp:no_overlap_def ptr_add_def)
+      apply (subgoal_tac "{ptr_val src + i..+Suc 0} \<subseteq> {ptr_val src..+unat (of_nat32 (length bs))}")
+       prefer 2
+       apply (clarsimp simp:intvl_def)
+       apply (rule_tac x="unat i" in exI)
+       apply unat_arith
+      apply (subgoal_tac "{ptr_val dst..+min (length bs) (unat i)} \<subseteq> {ptr_val dst..+unat (of_nat32 (length bs))}")
+       prefer 2
+       apply (clarsimp simp:intvl_def)
+       apply (rule_tac x=ka in exI)
+       apply unat_arith
+      apply blast
+     apply (subgoal_tac "deref s0 (byte_cast src +\<^sub>p uint i) = bs ! (unat i)")
+      apply clarsimp
+      apply (subgoal_tac "update_bytes s0 dst (take (unat (i + 1)) bs) =
+                          update_bytes (update_bytes s0 dst (take (unat i) bs)) (byte_cast dst +\<^sub>p uint i) [bs ! unat i]")
+       apply clarsimp
+       apply (subgoal_tac
+               "\<forall>s'. t_hrs_'_update (hrs_mem_update (heap_update (byte_cast dst +\<^sub>p uint i) (bs ! unat i))) s' =
+                     update_bytes s' (byte_cast dst +\<^sub>p uint i) [bs ! unat i]")
+        apply fast
+       apply (clarsimp simp:update_bytes_def)
+       apply (subst a_horse_by_any_other_name)
+       apply (subst the_horse_says_neigh)
+       apply (clarsimp simp:ptr_add_def)
+       apply (subst heap_update_list_singleton)
+       apply simp
+      apply (cut_tac s=s0 and p=dst and bs="take (unat (i + 1)) bs" and x="unat i"
+                     in update_bytes_postpend)
+       apply (subgoal_tac "unat (i + 1) \<le> length bs")
+        apply clarsimp
+        apply unat_arith
+       apply (subgoal_tac "unat i < length bs")
+        apply unat_arith
+       apply (rule unat_less_helper)
+       apply simp
+      apply clarsimp
+      apply (rule update_bytes_eq)
+        apply (subgoal_tac "min (unat i) (unat (i + 1)) = unat i")
+         apply clarsimp
+        apply clarsimp
+        apply unat_arith
+       apply (clarsimp simp:ptr_add_def)
+      apply clarsimp
+      apply (rule nth_take)
+      apply unat_arith
+     apply (clarsimp simp:bytes_at_def)
+     apply (erule disjE)
+      apply clarsimp
+     apply clarsimp
+     apply (erule_tac x="unat i" in ballE)
+      apply (subst (asm) uint_nat[symmetric])
+      apply simp
+     apply clarsimp
+     apply (subgoal_tac "unat i < length bs")
+      prefer 2
+      apply (rule unat_less_helper)
+      apply simp
+     apply unat_arith
+    apply (rule conjI)
      apply unat_arith
     apply (rule conjI)
      apply (rule byte_ptr_guarded)
@@ -580,21 +689,32 @@ lemma
                     in allE)
     apply clarsimp
    apply clarsimp
+   apply (rule conjI)
+    apply (subgoal_tac "unat i = length bs")
+     apply clarsimp
+    apply (case_tac "length bs = 0")
+     apply clarsimp
+    apply (subgoal_tac "length bs \<le> UINT_MAX")
+     prefer 2
+     apply (clarsimp simp:bytes_at_def)
+    (* XXX: We keep introducing this subgoal; we should do it once and for all up top. *)
+    apply (subgoal_tac "unat ((of_nat (length bs))::word32) = length bs")
+     prefer 2
+     apply (cut_tac y="length bs" and z="(of_nat UINT_MAX)::word32" in le_unat_uoi)
+      apply (clarsimp simp:UINT_MAX_def)
+     apply clarsimp+
+    apply unat_arith
+   (* insert a bunch a tedium... *)
    apply (subgoal_tac "unat i = length bs")
-    apply clarsimp
-   apply (case_tac "length bs = 0")
-    apply clarsimp
-   apply (subgoal_tac "length bs \<le> UINT_MAX")
     prefer 2
-    apply (clarsimp simp:bytes_at_def)
-   (* XXX: We keep introducing this subgoal; we should do it once and for all up top. *)
-   apply (subgoal_tac "unat ((of_nat (length bs))::word32) = length bs")
-    prefer 2
-    apply (cut_tac y="length bs" and z="(of_nat UINT_MAX)::word32" in le_unat_uoi)
-     apply (clarsimp simp:UINT_MAX_def)
-    apply clarsimp+
-   apply unat_arith
-  apply clarsimp
+    apply (drule bytes_at_len)
+    apply (subgoal_tac "unat (of_nat32 (length bs)) = length bs")
+     prefer 2
+     apply (rule le_uint_max_imp_id)
+     apply simp
+    apply unat_arith
+   apply clarsimp
+  apply (simp add:update_bytes_id)
   done
 
 end
