@@ -743,13 +743,20 @@ text {*
   heap-abstracted callers. This will need AutoCorres support to connect is_valid_* with
   c_guard/no_overlap/no_wrap.
 *}
-lemma memcpy_int_wp':
-  "\<forall>x. \<lbrace>\<lambda>s. deref s src = x \<and>
-            {ptr_val src..+4} \<inter> {ptr_val dst..+4} = {} \<and>
-            c_guard src \<and> c_guard dst \<and>
-            no_wrap src 4 \<and> no_wrap dst 4\<rbrace>
-         memcpy_int' dst src
-       \<lbrace>\<lambda>_ s. deref s dst = x\<rbrace>!"
+
+definition
+  memcpy_int_spec :: "sword32 ptr \<Rightarrow> sword32 ptr \<Rightarrow> bool"
+where
+  "memcpy_int_spec dst src \<equiv>
+    \<forall>x. \<lbrace>\<lambda>s. deref s src = x \<and>
+             {ptr_val src..+4} \<inter> {ptr_val dst..+4} = {} \<and>
+             c_guard src \<and> c_guard dst \<and>
+             no_wrap src 4 \<and> no_wrap dst 4\<rbrace>
+          memcpy_int' dst src
+        \<lbrace>\<lambda>_ s. deref s dst = x\<rbrace>!"
+
+lemma memcpy_int_wp'[unfolded memcpy_int_spec_def]: "memcpy_int_spec dst src"
+  unfolding memcpy_int_spec_def
   apply (rule allI)
   unfolding memcpy_int'_def
   apply (wp memcpy_wp)
@@ -795,7 +802,7 @@ lemma memcpy_int_wp':
   done
 
 text {* memcpying a typed variable is equivalent to assignment. *}
-lemma memcpy_type_wp:
+lemma memcpy_type_wp':
   fixes dst :: "'a::mem_type ptr"
     and src :: "'a::mem_type ptr"
   shows "\<forall>s0 bs.
@@ -811,6 +818,54 @@ lemma memcpy_type_wp:
   apply clarsimp
   apply (subst no_overlap_sym)
   apply (clarsimp simp:bytes_of_def)
+  done
+
+lemmas memcpy_type_wp = memcpy_type_wp'[THEN validNF_make_schematic_post', simplified]
+
+text {* Confirm that we can also prove memcpy_int using the previous generic lemma. *}
+lemma memcpy_int_wp''[unfolded memcpy_int_spec_def]: "memcpy_int_spec dst src"
+  unfolding memcpy_int_spec_def memcpy_int'_def
+  apply (rule allI)
+  apply (wp memcpy_type_wp)
+  (* Remainder mostly clagged from the original proof above. *)
+  apply clarsimp
+  apply (rule conjI, clarsimp simp:no_overlap_def, blast)
+  apply (rule_tac x="[deref s (byte_cast src),
+                      deref s (byte_cast src +\<^sub>p 1),
+                      deref s (byte_cast src +\<^sub>p 2),
+                      deref s (byte_cast src +\<^sub>p 3)]" in exI)
+  apply (rule conjI)
+   apply (clarsimp simp:bytes_of_def bytes_at_def UINT_MAX_def)
+   apply (case_tac "i = 0", clarsimp)
+   apply (case_tac "i = 1", clarsimp)
+   apply (case_tac "i = 2", clarsimp)
+   apply (case_tac "i = 3", clarsimp)
+   apply clarsimp
+  apply clarsimp
+  apply (subst h_val_not_id_update_bytes, clarsimp+)
+  apply (clarsimp simp:h_val_def)
+  apply (subgoal_tac "heap_list (hrs_mem (t_hrs_' s)) 4 (ptr_val src) = 
+                      deref s (byte_cast src) # (heap_list (hrs_mem (t_hrs_' s)) 3 (ptr_val src + 1))")
+   prefer 2
+   apply (clarsimp simp:h_val_def)
+   apply (subst heap_list_rec[symmetric])
+   apply simp
+  apply (subgoal_tac "heap_list (hrs_mem (t_hrs_' s)) 3 (ptr_val src + 1) = 
+                      deref s (byte_cast src +\<^sub>p 1) # (heap_list (hrs_mem (t_hrs_' s)) 2 (ptr_val src + 2))")
+   prefer 2
+   apply (clarsimp simp:h_val_def ptr_add_def)
+   apply (cut_tac h="hrs_mem (t_hrs_' s)" and p="ptr_val src + 1" and n=2 in heap_list_rec)
+   apply clarsimp
+   apply (metis add.commute)
+  apply clarsimp
+  apply (subgoal_tac "heap_list (hrs_mem (t_hrs_' s)) 2 (ptr_val src + 2) = 
+                      deref s (byte_cast src +\<^sub>p 2) # (heap_list (hrs_mem (t_hrs_' s)) 1 (ptr_val src + 3))")
+   prefer 2
+   apply (cut_tac h="hrs_mem (t_hrs_' s)" and p="ptr_val src + 2" and n=3 in heap_list_rec)
+   apply (clarsimp simp:h_val_def ptr_add_def)
+   apply (metis (no_types, hide_lams) Suc_eq_plus1 heap_list_base heap_list_rec is_num_normalize(1)
+                monoid_add_class.add.left_neutral one_add_one one_plus_numeral semiring_norm(3))
+  apply (clarsimp simp:h_val_def ptr_add_def)
   done
 
 end
