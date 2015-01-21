@@ -14,9 +14,22 @@
 Monitors the peak memory usage of a process and its children. Usage is similar
 to the UNIX `time` utility.
 '''
-import psutil, subprocess, sys, threading, time
 
-def get_usage(proc):
+import subprocess, sys, threading, time
+
+PSUTIL_NOT_AVAILABLE=False
+try:
+    import psutil
+except ImportError:
+  PSUTIL_NOT_AVAILABLE=True
+
+if PSUTIL_NOT_AVAILABLE:
+    def get_usage(proc):
+        return 0
+    def get_total_usage(proc):
+        return 0
+else:
+  def get_usage(proc):
     '''Retrieve the memory usage of a particular psutil process without its
     children. We use the proportional set size, which accounts for shared pages
     to give us a more accurate total usage.'''
@@ -28,7 +41,7 @@ def get_usage(proc):
         # just return 0.
         return 0
 
-def get_total_usage(pid):
+  def get_total_usage(pid):
     '''Retrieve the memory usage of a process by PID including its children. We
     ignore NoSuchProcess errors to mask subprocesses exiting while the cohort
     continues.'''
@@ -109,6 +122,14 @@ def main():
         print >>sys.stderr, 'Usage: %s command args...\n Measure peak memory ' \
             'usage of a command' % sys.argv[0]
         return -1
+
+    if PSUTIL_NOT_AVAILABLE:
+        print("Error: 'psutil' module not available. Run\n"
+              "\n"
+              "    pip install --user psutil\n"
+              "\n"
+              "to install.")
+        sys.exit(1)
 
     # Run the command requested.
     try:
