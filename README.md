@@ -117,6 +117,7 @@ will let you get away without installing a cross compiler.
 full build environment for seL4:
 
   * seL4 [development tool chain][8] on Debian and Ubuntu
+  * `make` version 3.81 or higher
 
 *On MacOS*: here it is harder to get a full cross-compiler setup going. For
 normal proof development, a full setup is not necessary, though. You mostly
