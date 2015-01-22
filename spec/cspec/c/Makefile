@@ -19,6 +19,14 @@ PARSERPATH=../../../tools/c-parser/standalone-parser
 PATH:=${PARSERPATH}:${PATH}
 export PATH
 TOOLPREFIX ?= arm-none-eabi-
+ifeq ($(shell which ${TOOLPREFIX}cpp),)
+  ifeq ($(shell which cpp),)
+    $(error C Preprocessor '${TOOLPREFIX}cpp' not found)
+  else
+    $(warning C Preprocessor '${TOOLPREFIX}cpp' not found; defaulting to native cpp)
+    TOOLPREFIX :=
+  endif
+endif
 # modifies are produced by the parser
 SKIP_MODIFIES=1
 FASTPATH=yes
@@ -28,10 +36,6 @@ CONFIG_DOMAIN_SCHEDULE=config.c
 .PHONY: newdefault
 
 newdefault: kernel_all.c_pp theories
-
-# Ensure C preprocessor exists.
-$(if $(shell which $(TOOLPREFIX)cpp),,\
-	$(error "C Preprocessor '$(TOOLPREFIX)cpp' not found. Try exporting TOOLPREFIX='' ."))
 
 # Create "umm_types" if necessary.
 ${UMM_TYPES}: kernel_all.c_pp
