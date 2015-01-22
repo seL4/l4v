@@ -21,7 +21,9 @@ install_C_file memsafe "jiraver313.c"
 ML {*
 local
 open Absyn
-val (decls, _) = StrictCParser.parse 15 [] (IsarInstall.mk_thy_relative @{theory} "jiraver313.c");
+val (decls, _) =
+  StrictCParser.parse (SOME "/usr/bin/cpp") 15 []
+    (IsarInstall.mk_thy_relative @{theory} "jiraver313.c");
 in
 val Decl d = hd decls
 val VarDecl vd = RegionExtras.node d
