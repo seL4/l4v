@@ -110,8 +110,7 @@ For running the standalone version of the C Parser you will additionally need
  * [MLton][7] ML compiler (package `mlton-compiler` on Ubuntu)
 
 For running the C proofs, you need a working C preprocessor setup for the seL4
-repository. If you are not after a full production build, `export TOOLPREFIX=""`
-will let you get away without installing a cross compiler.
+repository.
 
 *On Linux*: the best way to make sure you have everything is to install the
 full build environment for seL4:
@@ -132,9 +131,7 @@ need a gcc-compatible C pre-processor and python. Try the following steps:
     `easy_install` is part of Python's [`setuptools`][9].
   * install the [`misc/scripts/cpp`](misc/scripts/cpp) wrapper for clang, 
     by putting it in `~/bin`, or somewhere else in your `PATH`.
-  * set `export TOOLPREFIX=""` to tell the seL4 build not to use a cross
-    compiler.
-
+    
 
 [7]: http://mlton.org                               "MLton ML compiler"
 [8]: http://sel4.systems/Download/DebianToolChain   "seL4 tool chain setup"
