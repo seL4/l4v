@@ -101,7 +101,8 @@ The dependencies for installing Isabelle are
 
  * Perl 5.x with `libwww-perl`
  * Python 2.x
- * LaTeX (e.g. `texlive` with `texlive-bibtex-extra` + `texlive-latex-extra`)
+ * LaTeX (e.g. `texlive` with `texlive-bibtex-extra` + `texlive-latex-extra` +
+   `texlive-fonts-recommended`)
  * 32-bit C/C++ standard libraries on 64-bit platforms (optional)
 
 For running the standalone version of the C Parser you will additionally need
@@ -109,7 +110,8 @@ For running the standalone version of the C Parser you will additionally need
  * [MLton][7] ML compiler (package `mlton-compiler` on Ubuntu)
 
 For running the C proofs, you need a working C preprocessor setup for the seL4
-repository. 
+repository. If you are not after a full production build, `export TOOLPREFIX=""`
+will let you get away without installing a cross compiler.
 
 *On Linux*: the best way to make sure you have everything is to install the
 full build environment for seL4:
