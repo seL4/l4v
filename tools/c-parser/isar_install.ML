@@ -52,9 +52,21 @@ fun mk_thy_relative thy s =
     if OS.Path.isRelative s then OS.Path.concat(Path.implode (get_Cdir thy), s)
     else s
 
+val cpp_path = let
+  val (cpp_path_config, cpp_path_setup) =
+      Attrib.config_string (Binding.name "cpp_path") (K "/usr/bin/cpp")
+in
+  Context.>>(Context.map_theory cpp_path_setup);
+  cpp_path_config
+end
+
 fun get_Csyntax thy s = let
+  val cpp_option =
+      case Config.get_global thy cpp_path of
+          "" => NONE
+        | s => SOME s
   val (ast0, _) =
-      StrictCParser.parse 15 (C_Includes.get thy) (mk_thy_relative thy s)
+      StrictCParser.parse cpp_option 15 (C_Includes.get thy) (mk_thy_relative thy s)
       handle IO.Io {name, ...} => error ("I/O error on "^name)
 in
   SyntaxTransforms.remove_typedefs ast0
@@ -198,9 +210,9 @@ fun install_C_file0 (((((memsafe),ctyps),cdefs),s),statetylist_opt) thy = let
   val _ = not (Long_Name.is_qualified localename) orelse
             raise Fail ("Base of filename looks like qualified Isabelle ID: "^
                         localename)
-  val _ = localename <> "" orelse 
-          raise Fail ("Filename (>'" ^ s ^ 
-                      "'<) gives \"\" as locale name, which is illegal") 
+  val _ = localename <> "" orelse
+          raise Fail ("Filename (>'" ^ s ^
+                      "'<) gives \"\" as locale name, which is illegal")
   val statetylist = case statetylist_opt of NONE => [] | SOME l => List.rev l
   val mstate_ty =
       case get_first (fn (MachineState s) => SOME s | _ => NONE) statetylist of

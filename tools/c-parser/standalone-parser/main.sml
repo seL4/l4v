@@ -20,7 +20,7 @@ fun warn s = (TextIO.output(TextIO.stdErr, s^"\n");
 val execname = CommandLine.name
 
 fun usage() = die ("Usage: \n  "^execname()^
-                   " [-v<verboseness>] [-l<int>] [-I<include-dir>]* filename\n\
+                   " [--cpp=path|--nocpp] [-v<verboseness>] [-l<int>] [-I<include-dir>]* filename\n\
                    \Use -l to adjust error lookahead.  (The higher the number, the more the parser\n\
                    \will try to make sense of stuff with parse errors.)\n\
                    \\n\
@@ -408,6 +408,8 @@ val verbosity = Feedback.verbosity_level
 fun add_analysis f = analyses := f :: !analyses
 fun add_cse_analysis f = analyses := (fn cse => fn ast => f cse) :: !analyses
 
+val cpp = ref (SOME "/usr/bin/cpp")
+
 fun handler sopt =
     case sopt of
       ("h", _) => usage()
@@ -428,6 +430,7 @@ fun handler sopt =
     | ("addressed_vars", NONE) => add_cse_analysis print_addressed_vars
     | ("bogus_const", NONE) => add_cse_analysis print_bogus_consts
     | ("bogus_pure", NONE) => add_cse_analysis print_bogus_pures
+    | ("cpp", SOME v) => if v = "" then cpp := NONE else cpp := SOME v
     | ("embedded_fncalls", NONE) => add_cse_analysis print_embedded_fncalls
     | ("fnslocs", NONE) => add_analysis print_fnslocs
     | ("fnspecs", NONE) => add_cse_analysis print_fnspecs
@@ -435,6 +438,7 @@ fun handler sopt =
     | ("modifies", NONE) => add_cse_analysis print_modifies
     | ("nolinedirectives", NONE) =>
          (SourceFile.observe_line_directives := false)
+    | ("nocpp", NONE) => (cpp := NONE)
     | ("protoes", NONE) => add_cse_analysis print_protoes
     | ("reads", NONE) => add_cse_analysis print_reads
     | ("toposort", NONE) => add_cse_analysis produce_toposort
@@ -448,7 +452,7 @@ fun doit args =
     case cmdline_options handler args of
       [] => usage()
     | [fname] => let
-        val (ast,n) = StrictCParser.parse (!error_lookahead) (List.rev (!includes)) fname
+        val (ast,n) = StrictCParser.parse (!cpp) (!error_lookahead) (List.rev (!includes)) fname
         val ((ast', inits), cse) = ProgramAnalysis.process_decls
                                        {anon_vars = false, owners = [],
                                         allow_underscore_idents = false}
