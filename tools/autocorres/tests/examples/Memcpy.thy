@@ -971,6 +971,131 @@ lemma memcpy_int_wp'''[unfolded memcpy_int_spec_def]: "memcpy_int_spec dst src"
   apply clarsimp
   done
 
+lemma bytes_at_heap_list:
+  fixes x :: "'a::mem_type ptr"
+  shows "\<lbrakk>n \<le> UINT_MAX; no_wrap x n\<rbrakk>
+          \<Longrightarrow> bytes_at s x (heap_list (hrs_mem (t_hrs_' s)) n (ptr_val x))"
+  apply (clarsimp simp:bytes_at_def ptr_add_def h_val_def)
+  apply (subst heap_list_nth)
+   apply unat_arith
+  apply clarsimp
+  done
+
+text {*
+  A collection of useful type-generic implications for moving from the abstract heap to the concrete
+  heap.
+*}
+definition
+  is_valid_imp_c_guard :: "(lifted_globals \<Rightarrow> 'b::mem_type ptr \<Rightarrow> bool) \<Rightarrow> bool"
+where
+  "is_valid_imp_c_guard is_valid \<equiv> \<forall>s p. is_valid (lift_global_heap s) p \<longrightarrow> c_guard p"
+definition
+  is_valid_imp_no_null :: "(lifted_globals \<Rightarrow> 'b::mem_type ptr \<Rightarrow> bool) \<Rightarrow> bool"
+where
+  "is_valid_imp_no_null is_valid \<equiv>
+     \<forall>s p. is_valid (lift_global_heap s) p \<longrightarrow> 0 \<notin> {ptr_val p..of_nat (size_of TYPE('b))}"
+definition
+  is_valid_imp_no_wrap :: "(lifted_globals \<Rightarrow> 'b::mem_type ptr \<Rightarrow> bool) \<Rightarrow> bool"
+where
+  "is_valid_imp_no_wrap is_valid \<equiv>
+     \<forall>s p. is_valid (lift_global_heap s) p \<longrightarrow> no_wrap p (size_of TYPE('b))"
+definition
+  is_valid_imp_no_overlap :: "(lifted_globals \<Rightarrow> 'b::mem_type ptr \<Rightarrow> bool) \<Rightarrow> bool"
+where
+  "is_valid_imp_no_overlap is_valid \<equiv>
+     \<forall>s p q. is_valid (lift_global_heap s) p \<and> is_valid (lift_global_heap s) q \<and> p \<noteq> q
+               \<longrightarrow> no_overlap p q (size_of TYPE('b))"
+definition
+  is_valid_imp_heap_ptr_valid :: "(lifted_globals \<Rightarrow> 'b::mem_type ptr \<Rightarrow> bool) \<Rightarrow> bool"
+where
+  "is_valid_imp_heap_ptr_valid is_valid \<equiv>
+     \<forall>s p. is_valid (lift_global_heap s) p \<longrightarrow> heap_ptr_valid (hrs_htd (t_hrs_' s)) p"
+
+text {* We can easily discharge these for a given type. *}
+lemma is_valid_w32_imp_c_guard[unfolded is_valid_imp_c_guard_def, simplified]:
+    "is_valid_imp_c_guard is_valid_w32"
+  unfolding is_valid_imp_c_guard_def
+  apply clarsimp
+  apply (subst (asm) lifted_globals_ext_simps(5))
+  apply clarsimp
+  apply (rule simple_lift_c_guard, force)
+  done
+
+lemma is_valid_w32_imp_no_null[unfolded is_valid_imp_no_null_def, simplified]:
+    "is_valid_imp_no_null is_valid_w32"
+  unfolding is_valid_imp_no_null_def
+  apply clarsimp
+  apply (subst (asm) lifted_globals_ext_simps(5))
+  apply clarsimp
+  apply (drule simple_lift_c_guard)
+  apply (clarsimp simp:c_guard_def c_null_guard_def intvl_def)
+  by force
+
+lemma is_valid_w32_imp_no_wrap[unfolded is_valid_imp_no_wrap_def, simplified]:
+    "is_valid_imp_no_wrap is_valid_w32"
+  unfolding is_valid_imp_no_wrap_def no_wrap_def
+  apply clarsimp
+  apply (subst (asm) lifted_globals_ext_simps(5))
+  apply clarsimp
+  apply (drule simple_lift_c_guard)
+  apply (clarsimp simp:c_guard_def c_null_guard_def intvl_def)
+  done
+
+lemma is_valid_w32_imp_no_overlap[unfolded is_valid_imp_no_overlap_def, simplified]:
+    "is_valid_imp_no_overlap is_valid_w32"
+  unfolding is_valid_imp_no_overlap_def no_wrap_def
+  apply clarsimp
+  apply (subst (asm) lifted_globals_ext_simps(5))+
+  apply clarsimp
+  apply (drule simple_lift_heap_ptr_valid)+
+  apply (clarsimp simp:no_overlap_def)
+  apply (cut_tac p=p and q=q and d="hrs_htd (t_hrs_' s)" in heap_ptr_valid_neq_disjoint)
+     apply clarsimp+
+  done
+
+lemma is_valid_w32_imp_heap_ptr_valid[unfolded is_valid_imp_heap_ptr_valid_def, simplified]:
+    "is_valid_imp_heap_ptr_valid is_valid_w32"
+  unfolding is_valid_imp_heap_ptr_valid_def
+  apply clarsimp
+  apply (subst (asm) lifted_globals_ext_simps(5))
+  apply clarsimp
+  by (rule simple_lift_heap_ptr_valid, force)
+
+text {*
+  With that support in place, we can now prove a heap-abstracted call to memcpy of a type in a
+  reasonably generic way. Note that we leverage the relationship between
+  is_valid_*/lift_global_heap/simple_lift to transfer assumptions across the boundary between the
+  abstract and concrete heaps.
+*}
+lemma
+  fixes dst :: "32word ptr"
+    and src :: "32word ptr"
+  shows "\<forall>s0 x.
+   \<lbrace>\<lambda>s. s = s0 \<and> is_valid_w32 s dst \<and> is_valid_w32 s src \<and> sz = of_nat (size_of TYPE(32word)) \<and>
+        heap_w32 s src = x \<and> dst \<noteq> src\<rbrace>
+     exec_concrete lift_global_heap (memcpy' (ptr_coerce dst) (ptr_coerce src) sz)
+   \<lbrace>\<lambda>r s. r = ptr_coerce dst \<and> heap_w32 s dst = x\<rbrace>!"
+  apply (rule allI)+
+  apply (wp memcpy_wp)
+  apply (clarsimp simp:is_valid_w32_imp_c_guard
+                       is_valid_w32_imp_no_wrap
+                       is_valid_w32_imp_no_overlap)
+  apply (rule_tac x="map (\<lambda>i. deref s (byte_cast src +\<^sub>p of_nat i)) [0..<size_of TYPE(32word)]" in exI)
+  apply clarsimp
+  apply (rule conjI)
+   apply (clarsimp simp:bytes_at_def UINT_MAX_def)
+  apply clarsimp
+  apply (subst lifted_globals_ext_simps(3))+
+  apply (clarsimp simp:simple_lift_def is_valid_w32_imp_heap_ptr_valid)
+  apply (rule conjI)
+   apply clarsimp
+   apply (subst update_deref)
+    apply clarsimp+
+   apply (cut_tac s=s and x=src in val_eq_bytes)
+   apply clarsimp
+  apply (clarsimp simp:update_bytes_def is_valid_w32_imp_heap_ptr_valid)
+  done
+
 end
 
 end
