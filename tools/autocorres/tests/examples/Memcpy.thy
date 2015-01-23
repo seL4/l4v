@@ -911,6 +911,31 @@ lemma memcpy_seq:
    apply (clarsimp simp:bytes_of_def)+
   done
 
+lemma update_ti_eq:
+  fixes x :: "'a::mem_type"
+    and y :: 'a
+  shows "\<lbrakk>length bs = size_of TYPE('a); bs = bs'\<rbrakk>
+          \<Longrightarrow> update_ti_t (typ_info_t TYPE('a)) bs x = update_ti_t (typ_info_t TYPE('a)) bs' y"
+  by (clarsimp simp:upd)
+
+lemma from_bytes_cong: "x = y \<Longrightarrow> from_bytes x = from_bytes y"
+  by simp
+
+text {*
+  If you dereference a pointer, the value you get is the same as the underlying bytes backing that
+  memory.
+*}
+lemma val_eq_bytes:
+  fixes x :: "'a::mem_type ptr"
+  shows "deref s x = from_bytes (map (\<lambda>off. deref s (byte_cast x +\<^sub>p of_nat off)) [0..<size_of TYPE('a)])"
+  apply (clarsimp simp:h_val_def ptr_add_def)
+  apply (rule from_bytes_cong)
+  apply (rule nth_equalityI)
+   apply clarsimp+
+  apply (subst heap_list_nth)
+   apply clarsimp+
+  done
+
 end
 
 end
