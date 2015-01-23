@@ -936,6 +936,41 @@ lemma val_eq_bytes:
    apply clarsimp+
   done
 
+lemma extract_list_elem: "i < n \<Longrightarrow> f i = (map f [0..<n]) ! i"
+  apply (induct i)
+   apply clarsimp+
+  done
+
+lemma update_deref:
+  fixes x :: "'a::mem_type ptr"
+  shows "size_of TYPE('a) = length bs \<Longrightarrow> deref (update_bytes s x bs) x = from_bytes bs"
+  apply (clarsimp simp:update_bytes_def)
+  apply (subst hrs_mem_update)
+  apply (clarsimp simp:h_val_def)
+  apply (subst heap_list_update)
+   apply (metis less_imp_le max_size)
+  apply clarsimp
+  done
+
+text {*
+  The memcpy_int proof can now be completed more elegantly. Note that the body of this proof is more
+  generic than the previous attempts and doesn't involve manually reasoning about each byte.
+*}
+lemma memcpy_int_wp'''[unfolded memcpy_int_spec_def]: "memcpy_int_spec dst src"
+  unfolding memcpy_int_spec_def memcpy_int'_def
+  apply (rule allI)
+  apply (wp memcpy_type_wp)
+  apply clarsimp
+  apply (rule conjI, clarsimp simp:no_overlap_def, blast)
+  apply (rule_tac x="map (\<lambda>i. deref s (byte_cast src +\<^sub>p of_nat i)) [0..<size_of TYPE(32sword)]" in exI)
+  apply (rule conjI)
+   apply (clarsimp simp:bytes_of_def bytes_at_def UINT_MAX_def)+
+  apply (subst update_deref)
+   apply clarsimp
+  apply (cut_tac s=s and x=src in val_eq_bytes)
+  apply clarsimp
+  done
+
 end
 
 end
