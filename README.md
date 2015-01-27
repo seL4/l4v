@@ -30,6 +30,12 @@ section [Dependencies](#dependencies) below.
 
   [5]: http://source.android.com/source/downloading.html#installing-repo     "google repo installation"
 
+Contributing
+------------
+
+Contributions to this repository are welcome.
+Please read [`CONTRIBUTING.md`](CONTRIBUTING.md) for details.
+
 Overview
 --------
 
