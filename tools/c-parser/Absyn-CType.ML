@@ -361,6 +361,7 @@ in
     Signed i => int_sizeof i
   | Unsigned i => int_sizeof i
   | PlainChar => 1
+  | Bool => ti (boolWidth div CHAR_BIT)
   | StructTy s => structsizes s
   | EnumTy s => int_sizeof Int
   | Ptr _ => ti (ptrWidth div CHAR_BIT)
