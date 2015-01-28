@@ -160,11 +160,9 @@ type struct_id_decl = string wrap * struct_fields
 
 local val scount = ref 0
 in
-fun gen_struct_id () = (scount := !scount + 1;
-                        "ISA_anon_struct___"^Int.toString (!scount))
-fun gen_enum_name () = (scount := !scount + 1;
-                        wrap("ISA_anon_enum___" ^ Int.toString (!scount),
-                             SourcePos.bogus, SourcePos.bogus))
+fun gen_struct_id () =
+      (scount := !scount + 1;
+       NameGeneration.internalAnonStructPfx^Int.toString (!scount))
 end
 
 datatype storage_class_specifier = TypeDef | Extern | Static | Auto | Register

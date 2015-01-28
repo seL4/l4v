@@ -13,6 +13,7 @@ sig
   type program = Absyn.ext_decl list
   val remove_typedefs : program -> program
   val remove_embedded_fncalls : ProgramAnalysis.csenv -> program -> program
+  val remove_anonstructs : program -> program
 end;
 
 
@@ -466,6 +467,62 @@ fun extdecl_remove_embfncalls cse e =
 
 fun remove_embedded_fncalls cse = map (extdecl_remove_embfncalls cse)
 
+fun tysubst th ty =
+    case ty of
+        StructTy s => (case Symtab.lookup th s of
+                           NONE => ty
+                         | SOME s' => StructTy s')
+      | Ptr ty => Ptr (tysubst th ty)
+      | Array (ty, sz) => Array (tysubst th ty, sz)
+      | Function (retty, args) => Function (tysubst th retty,
+                                            map (tysubst th) args)
+      | _ => ty
 
+fun ws th strw =
+  let
+    fun strf s = case Symtab.lookup th s of NONE => s | SOME s' => s'
+  in
+    apnode strf strw
+  end
+
+fun dsubst th d =
+    case d of
+        StructDecl (nmw, flds) => StructDecl (ws th nmw, map (apfst (tysubst th)) flds)
+      | VarDecl(ty, nm, b, iopt, attrs) =>
+          VarDecl(tysubst th ty, nm, b, iopt, attrs)
+      | _ => d
+
+fun edsubst th ed =
+    case ed of
+        FnDefn _ => ed
+      | Decl d => Decl (apnode (dsubst th) d)
+
+fun calctheta (edec, acc as (i, th)) =
+    case edec of
+        FnDefn _ => acc
+      | Decl dw =>
+        (case node dw of
+             StructDecl (nmw, _) =>
+             let
+               val oldnm = node nmw
+               open NameGeneration
+             in
+               if String.isPrefix internalAnonStructPfx oldnm then
+                 let
+                   val newnm = mkAnonStructName i
+                 in
+                   (i + 1, Symtab.update (oldnm, newnm) th)
+                 end
+               else
+                 acc
+             end
+           | _ => acc)
+
+fun remove_anonstructs edecs =
+  let
+    val (_, theta) = List.foldl calctheta (1, Symtab.empty) edecs
+  in
+    map (edsubst theta) edecs
+  end
 
 end (* struct *)
