@@ -24,7 +24,8 @@ fun usage() = die ("Usage: \n  "^execname()^
                    \Use -l to adjust error lookahead.  (The higher the number, the more the parser\n\
                    \will try to make sense of stuff with parse errors.)\n\
                    \\n\
-                   \Also, add any of the following for additional analyses:\n\
+                   \For no analyses at all (not even typechecking), add --rawsyntaxonly\n\
+                   \Alternatively, add any of the following for additional analyses:\n\
                    \  --addressed_vars\n\
                    \  --bogus_const\n\
                    \  --bogus_pure\n\
@@ -409,6 +410,7 @@ fun add_analysis f = analyses := f :: !analyses
 fun add_cse_analysis f = analyses := (fn cse => fn ast => f cse) :: !analyses
 
 val cpp = ref (SOME "/usr/bin/cpp")
+val parse_only = ref false
 
 fun handler sopt =
     case sopt of
@@ -446,28 +448,35 @@ fun handler sopt =
     | ("unannotated_protoes", NONE) => add_cse_analysis print_unannotated_protoes
     | ("uncalledfns", NONE) => add_cse_analysis print_uncalledfns
     | ("unmodifiedglobs", NONE) => add_cse_analysis print_unmodified_globals
+    | ("rawsyntaxonly", NONE) => (parse_only := true)
     | _ => usage()
 
 fun doit args =
     case cmdline_options handler args of
       [] => usage()
-    | [fname] => let
+    | [fname] =>
+      let
         val (ast,n) = StrictCParser.parse (!cpp) (!error_lookahead) (List.rev (!includes)) fname
-        val ((ast', inits), cse) = ProgramAnalysis.process_decls
-                                       {anon_vars = false, owners = [],
-                                        allow_underscore_idents = false}
-                                       (SyntaxTransforms.remove_typedefs ast)
-        val _ = filename := fname
-        fun do_analyses alist =
-            case alist of
-              [] => exit (if !Feedback.numErrors = 0 then success else failure)
-            | f::fs => let
-                val () = f cse ast'
-              in
-                do_analyses fs
-              end
       in
-        do_analyses (List.rev (!analyses))
+        if !parse_only then ()
+        else
+          let
+            val ((ast', inits), cse) = ProgramAnalysis.process_decls
+                                           {anon_vars = false, owners = [],
+                                            allow_underscore_idents = false}
+                                           (SyntaxTransforms.remove_typedefs ast)
+            val _ = filename := fname
+            fun do_analyses alist =
+                case alist of
+                  [] => exit (if !Feedback.numErrors = 0 then success else failure)
+                | f::fs => let
+                    val () = f cse ast'
+                  in
+                    do_analyses fs
+                  end
+          in
+            do_analyses (List.rev (!analyses))
+          end
       end
     | _ => usage()
 
