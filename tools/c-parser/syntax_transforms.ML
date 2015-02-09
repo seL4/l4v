@@ -490,6 +490,7 @@ fun dsubst th d =
         StructDecl (nmw, flds) => StructDecl (ws th nmw, map (apfst (tysubst th)) flds)
       | VarDecl(ty, nm, b, iopt, attrs) =>
           VarDecl(tysubst th ty, nm, b, iopt, attrs)
+      | TypeDecl tnms => TypeDecl (map (apfst (tysubst th)) tnms)
       | _ => d
 
 fun edsubst th ed =

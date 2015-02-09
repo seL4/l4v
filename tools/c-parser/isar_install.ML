@@ -69,7 +69,7 @@ fun get_Csyntax thy s = let
       StrictCParser.parse cpp_option 15 (C_Includes.get thy) (mk_thy_relative thy s)
       handle IO.Io {name, ...} => error ("I/O error on "^name)
 in
-  ast0 |> SyntaxTransforms.remove_typedefs |> SyntaxTransforms.remove_anonstructs
+  ast0 |> SyntaxTransforms.remove_anonstructs |> SyntaxTransforms.remove_typedefs
 end
 
 fun define_naming_scheme [] _ = I
