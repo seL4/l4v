@@ -1096,6 +1096,91 @@ lemma
   apply (clarsimp simp:update_bytes_def is_valid_w32_imp_heap_ptr_valid)
   done
 
+text {*
+  Let's do the same instantiation for a structure. Note that the proof text for the following lemmas
+  is identical to the word 32 instantiation above. These could be straightforwardly abstracted into
+  a locale which could be automatically interpreted with the use of generated proofs.
+*}
+lemma is_valid_my_structure_imp_c_guard[unfolded is_valid_imp_c_guard_def, simplified]:
+    "is_valid_imp_c_guard is_valid_my_structure_C"
+  unfolding is_valid_imp_c_guard_def
+  apply clarsimp
+  apply (subst (asm) lifted_globals_ext_simps)
+  apply clarsimp
+  apply (rule simple_lift_c_guard, force)
+  done
+
+lemma is_valid_my_structure_imp_no_null[unfolded is_valid_imp_no_null_def, simplified]:
+    "is_valid_imp_no_null is_valid_my_structure_C"
+  unfolding is_valid_imp_no_null_def
+  apply clarsimp
+  apply (subst (asm) lifted_globals_ext_simps)
+  apply clarsimp
+  apply (drule simple_lift_c_guard)
+  apply (clarsimp simp:c_guard_def c_null_guard_def intvl_def)
+  by force
+
+lemma is_valid_my_structure_imp_no_wrap[unfolded is_valid_imp_no_wrap_def, simplified]:
+    "is_valid_imp_no_wrap is_valid_my_structure_C"
+  unfolding is_valid_imp_no_wrap_def no_wrap_def
+  apply clarsimp
+  apply (subst (asm) lifted_globals_ext_simps)
+  apply clarsimp
+  apply (drule simple_lift_c_guard)
+  apply (clarsimp simp:c_guard_def c_null_guard_def intvl_def)
+  done
+
+lemma is_valid_my_structure_imp_no_overlap[unfolded is_valid_imp_no_overlap_def, simplified]:
+    "is_valid_imp_no_overlap is_valid_my_structure_C"
+  unfolding is_valid_imp_no_overlap_def no_wrap_def
+  apply clarsimp
+  apply (subst (asm) lifted_globals_ext_simps)+
+  apply clarsimp
+  apply (drule simple_lift_heap_ptr_valid)+
+  apply (clarsimp simp:no_overlap_def)
+  apply (cut_tac p=p and q=q and d="hrs_htd (t_hrs_' s)" in heap_ptr_valid_neq_disjoint)
+     apply clarsimp+
+  done
+
+lemma is_valid_my_structure_imp_heap_ptr_valid[unfolded is_valid_imp_heap_ptr_valid_def, simplified]:
+    "is_valid_imp_heap_ptr_valid is_valid_my_structure_C"
+  unfolding is_valid_imp_heap_ptr_valid_def
+  apply clarsimp
+  apply (subst (asm) lifted_globals_ext_simps)
+  apply clarsimp
+  by (rule simple_lift_heap_ptr_valid, force)
+
+text {*
+  Again, we can now trivially transfer Hoare triple properties.
+*}
+lemma
+  fixes dst :: "my_structure_C ptr"
+    and src :: "my_structure_C ptr"
+  shows "\<forall>s0 x.
+   \<lbrace>\<lambda>s. s = s0 \<and> is_valid_my_structure_C s dst \<and> is_valid_my_structure_C s src \<and>
+        heap_my_structure_C s src = x \<and> dst \<noteq> src\<rbrace>
+     memcpy_struct' dst src
+   \<lbrace>\<lambda>r s. r = dst \<and> heap_my_structure_C s dst = x\<rbrace>!"
+  apply (rule allI)+
+  unfolding memcpy_struct'_def
+  apply (wp memcpy_wp)
+  apply (clarsimp simp:is_valid_my_structure_imp_c_guard)
+  apply (rule_tac x="map (\<lambda>i. deref s (byte_cast src +\<^sub>p of_nat i)) [0..<size_of TYPE(my_structure_C)]" in exI)
+  apply (clarsimp simp:is_valid_my_structure_imp_no_wrap is_valid_my_structure_imp_no_overlap)
+  apply (rule conjI)
+   apply (clarsimp simp:bytes_at_def UINT_MAX_def)
+  apply clarsimp
+  apply (subst lifted_globals_ext_simps)+
+  apply (clarsimp simp:simple_lift_def is_valid_my_structure_imp_heap_ptr_valid)
+  apply (rule conjI)
+   apply clarsimp
+   apply (subst update_deref)
+    apply clarsimp
+   apply (cut_tac s=s and x=src in val_eq_bytes)
+   apply clarsimp
+  apply (clarsimp simp:update_bytes_def is_valid_my_structure_imp_heap_ptr_valid)
+  done
+
 end
 
 end

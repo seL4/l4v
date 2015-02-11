@@ -20,3 +20,14 @@ void *memcpy(void *dest, void *src, unsigned int size) {
 int *memcpy_int(int *dest, int *src) {
     return memcpy(dest, src, sizeof(*dest));
 }
+
+struct my_structure {
+    char a;
+    int i;
+    long j;
+};
+
+struct my_structure *memcpy_struct(struct my_structure *dest,
+        struct my_structure *src) {
+    return memcpy(dest, src, sizeof(*dest));
+}
