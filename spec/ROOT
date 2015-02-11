@@ -85,8 +85,6 @@ session CKernel = CParser +
     "cspec/Kernel_C"
   theories
     "cspec/Kernel_C"
-  theories [condition = "COUNT_PROOFS"]
-    "../lib/proof_counting/ProofCount"
   files
     "cspec/c/kernel_all.c_pp"
 
@@ -132,8 +130,6 @@ session ASepSpec = ASpec +
 session Word = "HOL-Word" +
   theories [condition = "USE_RICH_METHODS"]
     "../lib/eisbach/Focus"
-  theories [condition = "COUNT_PROOFS"]
-    "../lib/proof_counting/ProofCount"
   theories
     "../lib/NICTACompat"
 

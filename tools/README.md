@@ -19,5 +19,8 @@ more of the seL4 [proofs](../proof/). Each has its own directory:
    Haskell into Isabelle/HOL, used to generate the seL4
    [design specification](../spec/design/).
 
+ * [proofcount](proofcount/) - Tool for collecting metrics from
+   finished proofs.
+
   [1]: http://www.nicta.com.au/pub?id=7629  "Don't Sweat the Small Stuff: Formal Verification of C Code Without the Pain"
 

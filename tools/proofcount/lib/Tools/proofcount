@@ -1,0 +1,278 @@
+#!/usr/bin/env bash
+#
+# Author: Daniel Matichuk
+#
+# DESCRIPTION: extract metrics from finished proofs
+#
+#
+# Copyright 2014, NICTA
+#
+# This software may be distributed and modified according to the terms of
+# the BSD 2-Clause license. Note that NO WARRANTY is provided.
+# See "LICENSE_BSD2.txt" for details.
+#
+# @TAG(NICTA_BSD)
+#
+
+PRG="$(basename "$0")"
+
+function realpath() { 
+	  echo "$(cd `dirname "$1"` &&  pwd)/`basename "$1"`"
+	}
+
+
+function usage() {
+  echo
+  echo "Usage: isabelle $PRG -O DIR -d DIR [-c] [-v] [-P] -x XML [ -L LOGIC -T THEORY ] [ -N NAME [ -s THEORY | -b THEORY | -t THEORY | -f FACT]* ]*"
+  echo
+  echo "  Options are:"
+  echo "    -L LOGIC     parent logic to use"
+  echo "    -T THEORY    parent theory to use"
+  echo "    -x XML       raw proof and specification size cache. -L and -T need to be passed if this file does not exist or if -c is passed."
+  echo "    -O DIR       output directory for metrics (default $PROOFCOUNT_OUTPUT_PATH)"
+  echo "    -d DIR       starting directory for building proof"
+  echo "    -c           use clean xml file for raw proof and specification count"
+  echo "    -s THEORY    bottom-level theory whose dependants are to be considered for specifications"
+  echo "    -b THEORY    theory that all counted theories must depend on for proofs (bottom)"
+  echo "    -t THEORY    theory that no counted theory may depend on for proofs (top)"
+  echo "    -f FACT      toplevel fact whose dependants will be counted in metrics"
+  echo "    -N NAME      name of a given metric collection"
+  echo "    -v           write intermediate theory files to stdout"
+  echo "    -P           patch isabelle to support metric collection (if necessary)"
+  echo
+  echo
+  exit 1
+}
+
+to_ML_list(){
+ if [ -z "$1" ]; then
+   echo "[]"
+ else
+   echo "[\"`echo "$1" | sed 's/ *$//' |  sed s/\ /\\",\\"/g`\"]"
+ fi
+}
+
+## process command line
+
+# options
+
+declare -a PROOFCOUNT_SPECS=
+declare -a PROOFCOUNT_PROOF_BOTTOM
+declare -a PROOFCOUNT_PROOF_TOP
+declare -a PROOFCOUNT_TOPLEVEL_FACTS
+
+declare -a PROOFCOUNT_METRICS=()
+
+PROOFCOUNT_OUTPUT_PATH="./"
+PROOFCOUNT_BUILD_DIR="."
+
+
+while getopts "L:T:O:s:r:t:N:b:f:x:d:cvP" OPT
+do
+  case "$OPT" in
+    L)
+      PROOFCOUNT_LOGIC="$OPTARG"
+      ;;
+    T)
+      PROOFCOUNT_IMPORT_THEORY="$OPTARG"
+      ;;
+    O)      
+      PROOFCOUNT_OUTPUT_PATH="$OPTARG"
+      ;;
+    N)
+      PROOFCOUNT_CURRENT_METRIC="${#PROOFCOUNT_METRICS[@]}"
+      PROOFCOUNT_METRICS["$PROOFCOUNT_CURRENT_METRIC"]="$OPTARG"
+      ;;
+    s)
+     [ -z "$PROOFCOUNT_CURRENT_METRIC" ] && usage
+     PROOFCOUNT_SPECS["$PROOFCOUNT_CURRENT_METRIC"]+="$OPTARG "
+      ;;
+    b)
+     [ -z "$PROOFCOUNT_CURRENT_METRIC" ] && usage
+     PROOFCOUNT_PROOF_BOTTOM["$PROOFCOUNT_CURRENT_METRIC"]+="$OPTARG "
+      ;;
+    t)
+     [ -z "$PROOFCOUNT_CURRENT_METRIC" ] && usage
+     PROOFCOUNT_PROOF_TOP["$PROOFCOUNT_CURRENT_METRIC"]+="$OPTARG "
+      ;;
+    f)
+    [ -z "$PROOFCOUNT_CURRENT_METRIC" ] && usage
+     PROOFCOUNT_TOPLEVEL_FACTS["$PROOFCOUNT_CURRENT_METRIC"]+="$OPTARG "
+      ;;
+    x)
+      PROOFCOUNT_XML="`realpath "$OPTARG"`"
+      ;;
+    c)
+      PROOFCOUNT_CLEAN="true"
+      ;;
+    d)
+      PROOFCOUNT_BUILD_DIR="$OPTARG"
+      ;;
+    v)
+      PROOFCOUNT_VERBOSE="true"
+      ;;
+    P)
+      PROOFCOUNT_PATCH="true"
+      ;;
+    \?)
+      usage
+      ;;
+  esac
+done
+
+shift $(($OPTIND - 1))
+
+if [ "$PROOFCOUNT_PATCH" ] ; then
+
+  PROOFCOUNT_PATCH="${ISABELLE_TMP_PREFIX}-proofcount-patch$$"
+
+  mkdir -p "$PROOFCOUNT_PATCH"
+
+  cp "$ISABELLE_PROOFCOUNT_HOME/ProofCountTest.thy" "$PROOFCOUNT_PATCH/"
+
+  echo "session ProofCountTest = HOL +
+        theories
+          ProofCountTest" > "$PROOFCOUNT_PATCH/ROOT"
+
+
+  (cd "$PROOFCOUNT_PATCH" ; "$ISABELLE_TOOL" build -d . ProofCountTest)
+
+  if [ $? -ne 0 ] ; then
+    echo "ProofCountTest failed ... patching this Isabelle install to support metric collection"
+  
+    (cd "$ISABELLE_HOME" ; patch -p1 < "$ISABELLE_PROOFCOUNT_HOME/isabelle_patch.diff")
+
+    (cd "$PROOFCOUNT_PATCH" ; "$ISABELLE_TOOL" build -d . ProofCountTest)
+
+    if [ $? -ne 0 ] ; then
+      echo "ProofCountTest failed after patching. Giving up..."
+      exit 1
+    fi
+
+  fi
+  rm -r "$PROOFCOUNT_PATCH"
+fi
+
+[ -z "$PROOFCOUNT_XML" ] && usage
+
+if [ ! -f "$PROOFCOUNT_XML" ]; then
+
+[ -z "$PROOFCOUNT_LOGIC" ] && usage
+[ -z "$PROOFCOUNT_IMPORT_THEORY" ] && usage
+
+fi
+
+
+
+## main
+
+echo "Starting ProofCount..."
+
+
+# setup
+
+
+PROOFCOUNT_BUILD_ROOTS="${ISABELLE_TMP_PREFIX}-proofcount-build$$"
+
+mkdir -p "$PROOFCOUNT_BUILD_ROOTS"
+
+echo "theory ProofCount_Exec
+imports \"$ISABELLE_PROOFCOUNT_HOME/ProofGraph\" \"$PROOFCOUNT_IMPORT_THEORY\"
+begin
+
+ML {*
+  val file_name = \"$PROOFCOUNT_XML\"
+  val (full_spec,proof_spec,thy_deps) = Proof_Graph.get_full_spec @{theory}
+  val _ = Proof_Graph.write_graph_spec_of (full_spec,proof_spec,thy_deps) \"\" file_name
+*}
+
+end" > "$PROOFCOUNT_BUILD_ROOTS/ProofCount_Exec.thy"
+
+[ "$PROOFCOUNT_VERBOSE" ] && cat "$PROOFCOUNT_BUILD_ROOTS/ProofCount_Exec.thy"
+
+PROOFCOUNT_METRIC_ROOTS="${ISABELLE_TMP_PREFIX}-proofcount-metric$$"
+
+mkdir -p "$PROOFCOUNT_METRIC_ROOTS"
+
+PROOFCOUNT_METRIC_HEAD="theory ProofCount_Metrics
+imports \"$ISABELLE_PROOFCOUNT_HOME/Proof_Metrics\"
+begin
+
+ML {*
+  val (full_spec,proof_spec,thy_deps) = Proof_Graph.read_graph_spec_from \"$PROOFCOUNT_XML\"
+  
+  val default_config : Proof_Metrics.metric_configs = 
+  { min_proof_size = 0,
+    filter_kinds = [Proof_Count.Lemma \"lemma\", Proof_Count.Lemma \"schematic_lemma\",
+                   Proof_Count.Lemma \"corollary\", Proof_Count.Lemma \"schematic_corollary\",
+                   Proof_Count.Lemma \"theorem\", Proof_Count.Lemma \"schematic_theorem\"],
+    filter_locale_consts = true,
+    full_spec = full_spec,
+    proof_spec = proof_spec,
+    thy_deps = thy_deps,
+    base_path = \"`realpath "$PROOFCOUNT_OUTPUT_PATH"`\"}
+  *}"
+
+PROOFCOUNT_METRICS_THY=""
+
+for key in ${!PROOFCOUNT_METRICS[@]}; do
+    PROOFCOUNT_METRICS_THY+="
+ML {*
+  val _ =
+    Proof_Metrics.compute_and_write_metrics
+    ({ spec_theories = $(to_ML_list "${PROOFCOUNT_SPECS[$key]}"),
+       proof_bottom = $(to_ML_list "${PROOFCOUNT_PROOF_BOTTOM[$key]}"),
+       proof_top = $(to_ML_list "${PROOFCOUNT_PROOF_TOP[$key]}"),
+       toplevel_facts = $(to_ML_list "${PROOFCOUNT_TOPLEVEL_FACTS[$key]}"),
+       name = \""${PROOFCOUNT_METRICS[$key]}"\"
+     },
+       default_config)
+    *}"
+done
+
+echo "$PROOFCOUNT_METRIC_HEAD 
+$PROOFCOUNT_METRICS_THY 
+end" > "$PROOFCOUNT_METRIC_ROOTS/ProofCount_Metrics.thy"
+
+[ "$PROOFCOUNT_VERBOSE" ] && cat "$PROOFCOUNT_METRIC_ROOTS/ProofCount_Metrics.thy" 
+
+# execution
+
+echo "session ProofCount_Exec = \"$PROOFCOUNT_LOGIC\" +
+  theories
+    ProofCount_Exec" > "$PROOFCOUNT_BUILD_ROOTS/ROOT"
+
+echo "`realpath "$PROOFCOUNT_BUILD_DIR"`" > "$PROOFCOUNT_BUILD_ROOTS/ROOTS"
+
+if [ -f "$PROOFCOUNT_XML" ] && [ ! "$PROOFCOUNT_CLEAN" ] ; then
+  echo "Using existing xml file: $PROOFCOUNT_XML"
+else
+  [ -z "$PROOFCOUNT_LOGIC" ] && usage
+  [ -z "$PROOFCOUNT_IMPORT_THEORY" ] && usage
+  echo "Making new metric file at $PROOFCOUNT_XML. Running Isabelle..."
+  "$ISABELLE_TOOL" build -d "$PROOFCOUNT_BUILD_ROOTS" ProofCount_Exec
+fi
+
+if [ $? -ne 0 ] || [ ! -f "$PROOFCOUNT_XML" ] ; then
+  echo "isabelle processing proofcount failed"
+  exit 1
+fi
+
+
+if [ -z "$PROOFCOUNT_METRICS_THY" ]; then
+  echo "No metrics to be calulated. Finished."
+  exit 0
+fi
+
+echo "Running metric calculations..."
+
+
+echo "session ProofCount_Metrics = HOL +
+  theories
+    ProofCount_Metrics" > "$PROOFCOUNT_METRIC_ROOTS/ROOT"
+
+"$ISABELLE_TOOL" build -d "$PROOFCOUNT_METRIC_ROOTS" ProofCount_Metrics
+
+
+rm -r "$PROOFCOUNT_METRIC_ROOTS"
+rm -r "$PROOFCOUNT_BUILD_ROOTS"

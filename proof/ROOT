@@ -112,12 +112,6 @@ session InfoFlowC = CRefine +
     "infoflow/Noninterference_Refinement"
     "infoflow/Example_Valid_StateH"
     
-session InfoFlowCCount = InfoFlowC +
-  theories
-    "../lib/proof_counting/ProofGraph_Serialize_InfoflowC"
-
-
-
 (*
  * Separation Kernel
  *)
