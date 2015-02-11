@@ -1016,7 +1016,7 @@ lemma is_valid_w32_imp_c_guard[unfolded is_valid_imp_c_guard_def, simplified]:
     "is_valid_imp_c_guard is_valid_w32"
   unfolding is_valid_imp_c_guard_def
   apply clarsimp
-  apply (subst (asm) lifted_globals_ext_simps(5))
+  apply (subst (asm) lifted_globals_ext_simps)
   apply clarsimp
   apply (rule simple_lift_c_guard, force)
   done
@@ -1025,7 +1025,7 @@ lemma is_valid_w32_imp_no_null[unfolded is_valid_imp_no_null_def, simplified]:
     "is_valid_imp_no_null is_valid_w32"
   unfolding is_valid_imp_no_null_def
   apply clarsimp
-  apply (subst (asm) lifted_globals_ext_simps(5))
+  apply (subst (asm) lifted_globals_ext_simps)
   apply clarsimp
   apply (drule simple_lift_c_guard)
   apply (clarsimp simp:c_guard_def c_null_guard_def intvl_def)
@@ -1035,7 +1035,7 @@ lemma is_valid_w32_imp_no_wrap[unfolded is_valid_imp_no_wrap_def, simplified]:
     "is_valid_imp_no_wrap is_valid_w32"
   unfolding is_valid_imp_no_wrap_def no_wrap_def
   apply clarsimp
-  apply (subst (asm) lifted_globals_ext_simps(5))
+  apply (subst (asm) lifted_globals_ext_simps)
   apply clarsimp
   apply (drule simple_lift_c_guard)
   apply (clarsimp simp:c_guard_def c_null_guard_def intvl_def)
@@ -1045,7 +1045,7 @@ lemma is_valid_w32_imp_no_overlap[unfolded is_valid_imp_no_overlap_def, simplifi
     "is_valid_imp_no_overlap is_valid_w32"
   unfolding is_valid_imp_no_overlap_def no_wrap_def
   apply clarsimp
-  apply (subst (asm) lifted_globals_ext_simps(5))+
+  apply (subst (asm) lifted_globals_ext_simps)+
   apply clarsimp
   apply (drule simple_lift_heap_ptr_valid)+
   apply (clarsimp simp:no_overlap_def)
@@ -1057,7 +1057,7 @@ lemma is_valid_w32_imp_heap_ptr_valid[unfolded is_valid_imp_heap_ptr_valid_def, 
     "is_valid_imp_heap_ptr_valid is_valid_w32"
   unfolding is_valid_imp_heap_ptr_valid_def
   apply clarsimp
-  apply (subst (asm) lifted_globals_ext_simps(5))
+  apply (subst (asm) lifted_globals_ext_simps)
   apply clarsimp
   by (rule simple_lift_heap_ptr_valid, force)
 
