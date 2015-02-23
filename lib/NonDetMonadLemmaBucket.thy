@@ -2907,4 +2907,8 @@ lemma validE_K_bind [wp_comb]:
 lemma liftE_K_bind: "liftE ((K_bind (\<lambda>s. A s)) x) = K_bind (liftE (\<lambda>s. A s)) x"
   by clarsimp
 
+lemma hoare_assume_preNF:
+  "(\<And>s. P s \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>!) \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>!"
+  by (metis validNF_alt_def)
+
 end
