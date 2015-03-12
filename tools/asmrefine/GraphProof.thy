@@ -1293,6 +1293,7 @@ proof -
   { fix addr' from rs(2) have "addr \<noteq> addr'
         \<Longrightarrow> restrs_list rs addr' = restrs_list ((addr, rev xs) # rs') addr'"
     apply clarsimp
+    apply hypsubst_thin
     apply (induct rs, simp_all add: restrs_list_Cons)
     apply (clarsimp simp: restrs_list_Cons)
     done
@@ -1728,7 +1729,7 @@ lemma visit_Call:
   apply (clarsimp simp: function_call_trace_eq visit_eqs Let_def
               simp del: imp_disjL split del: split_if)
   apply (rule conjI)
-   apply (clarsimp simp: function_call_trace_embed_def simp del: option_map_eq_Some)
+   apply (clarsimp simp: function_call_trace_embed_def simp del: map_option_eq_Some)
    apply (rule conjI, blast intro: trace_end_trace_drop_n_None)
    apply (rule conjI, metis trace_end_trace_drop_n_Err)
    apply (clarsimp simp: trace_drop_n_def)
