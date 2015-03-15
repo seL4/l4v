@@ -267,6 +267,19 @@ lemma exec_trace_drop_n_rest:
   apply auto
   done
 
+lemma trace_drop_n_init:
+  "tr \<in> exec_trace Gamma fn \<Longrightarrow> Gamma fn = Some f
+    \<Longrightarrow> function_graph f n = Some (Call nn fname inputs outputs)
+    \<Longrightarrow> Gamma fname = Some f'
+    \<Longrightarrow> tr i = Some [(NextNode n, st, fn')]
+    \<Longrightarrow> trace_drop_n (Suc i) 1 tr 0 = Some [(NextNode (entry_point f'),
+            init_vars (function_inputs f') inputs st, fname)]"
+  apply (frule(1) exec_trace_invariant)
+  apply (clarsimp simp: exec_graph_invariant_Cons)
+  apply (frule_tac i=i in exec_trace_step_cases, clarsimp)
+  apply (clarsimp simp: all_exec_graph_step_cases trace_drop_n_def)
+  done
+
 lemma exec_trace_init:
   "tr \<in> exec_trace Gamma fn
    \<Longrightarrow> \<exists>st gf. Gamma fn = Some gf \<and> tr 0 = Some [(NextNode (entry_point gf), st, fn)]"
@@ -295,5 +308,24 @@ lemma trace_end_trace_drop_n_None:
   apply auto[1]
   done
 
+lemma trace_end_trace_drop_n_Some:
+  "trace_end (trace_drop_n (Suc i) (Suc 0) tr) = Some [(Ret, st', dontcare)]
+    \<Longrightarrow> tr \<in> exec_trace Gamma fn \<Longrightarrow> Gamma fn = Some f
+    \<Longrightarrow> function_graph f n = Some (Call nn fname inputs outputs)
+    \<Longrightarrow> Gamma fname = Some f'
+    \<Longrightarrow> tr i = Some [(NextNode n, st, fn')]
+    \<Longrightarrow> \<exists>j. tr (Suc i + j) = Some [(nn, return_vars (function_outputs f') outputs st' st, fn)]
+"
+  apply (frule(4) exec_trace_drop_n)
+  apply (drule trace_end_SomeD, fastforce simp add: exec_trace_def)
+  apply clarsimp
+  apply (frule(4) exec_trace_drop_n_rest, simp, drule spec, drule(1) mp)
+  apply simp
+  apply (frule(1) exec_trace_invariant[where stack="[a, b]" for a b])
+  apply (clarsimp simp: exec_graph_invariant_Cons get_state_function_call_def)
+  apply (frule_tac i="Suc i + na" in exec_trace_step_cases, clarsimp)
+  apply (clarsimp simp: all_exec_graph_step_cases)
+  apply (metis add_Suc_right)
+  done
 
 end

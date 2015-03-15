@@ -23,8 +23,9 @@ are thus represented by naturals. *}
 datatype variable =
     VarNone
   | VarWord8 word8
+  | VarWord16 word16
   | VarWord32 word32
-  | VarWord32List "word32 list"
+  | VarWord64 word64
   | VarMem "word32 \<Rightarrow> word8"
   | VarDom "word32 set"
   | VarHTD "heap_typ_desc"
@@ -46,12 +47,16 @@ definition
     VarWord8 w \<Rightarrow> w | _ \<Rightarrow> 0)"
 
 definition
+  "var_word16 nm st = (case var_acc nm st of
+    VarWord16 w \<Rightarrow> w | _ \<Rightarrow> 0)"
+
+definition
   "var_word32 nm st = (case var_acc nm st of
     VarWord32 w \<Rightarrow> w | _ \<Rightarrow> 0)"
 
 definition
-  "var_word32list nm st = (case var_acc nm st of
-    VarWord32List w \<Rightarrow> w | _ \<Rightarrow> [])"
+  "var_word64 nm st = (case var_acc nm st of
+    VarWord64 w \<Rightarrow> w | _ \<Rightarrow> 0)"
 
 definition
   "var_mem nm st = (case var_acc nm st of
@@ -574,8 +579,10 @@ val opers = Symtab.make [
   ]
 
 fun mk_acc nm typ st = (case typ of
-        @{typ word32} => @{term var_word32}
-      | @{typ word8} => @{term var_word8}
+        @{typ word8} => @{term var_word8}
+      | @{typ word16} => @{term var_word16}
+      | @{typ word32} => @{term var_word32}
+      | @{typ word64} => @{term var_word64}
       | @{typ "word32 \<Rightarrow> word8"} => @{term var_mem}
       | @{typ "word32 set"} => @{term var_dom}
       | @{typ "heap_typ_desc"} => @{term var_htd}
@@ -615,25 +622,26 @@ val parse_lvals = parse_n parse_lval
 
 val parse_vars = parse_n parse_var
 
-fun mk_var_typ t = (case fastype_of t of
-        @{typ word32} => @{term VarWord32}
-      | @{typ word8} => @{term VarWord8}
-      | @{typ "32 signed word"} => @{term VarWord32}
-      | @{typ "8 signed word"} => @{term VarWord8}
+fun mk_var_typ T = (case T of
+        @{typ word8} => @{term VarWord8}
+      | @{typ word16} => @{term VarWord16}
+      | @{typ word32} => @{term VarWord32}
+      | @{typ word64} => @{term VarWord64}
+      | Type (@{type_name word}, [Type (@{type_name signed}, [T2])])
+        => let val uT = Type (@{type_name word}, [T2])
+        in Abs ("t", T, mk_var_typ uT $ (Const (@{const_name ucast}, T --> uT) $ Bound 0)) end
       | @{typ "word32 \<Rightarrow> word8"} => @{term VarMem}
       | @{typ "word32 set"} => @{term VarDom}
       | @{typ "heap_typ_desc"} => @{term VarHTD}
       | @{typ "unit \<times> nat"} => @{term VarMS}
       | @{typ bool} => @{term VarBool}
-      | T => raise TYPE ("mk_var_typ: unexpected var typ", [T], [t]))
-    $ (case fastype_of t of
-        @{typ "32 signed word"} => @{term "ucast :: 32 signed word => word32"} $ t
-      | @{typ "8 signed word"} => @{term "ucast :: 8 signed word => word8"} $ t
-      | _ => t)
+      | _ => raise TYPE ("mk_var_typ: unexpected var typ", [T], []))
+
+fun mk_var_term t = betapply (mk_var_typ (fastype_of t), t)
 
 fun parse_val_acc ss = let
     val (t, ss) = parse_val ss
-  in (Term.lambda_name ("s", s) (mk_var_typ t), ss) end
+  in (Term.lambda_name ("s", s) (mk_var_term t), ss) end
 
 fun parse_cond ss = let
     val (t, ss) = parse_val ss
@@ -730,7 +738,8 @@ fun get_funs thy file = let
     fun get () = case TextIO.inputLine f
       of NONE => []
       | SOME s => unsuffix "\n" s :: get ()
-  in fun_groups [] (map (Library.space_explode " ") (get ())) end
+  in fun_groups [] (map (Library.space_explode " "
+    #> filter (fn s => s <> "")) (get ())) end
 
 type funs = (string list * string list * (int * (int * term) list * term) option) Symtab.table
 
