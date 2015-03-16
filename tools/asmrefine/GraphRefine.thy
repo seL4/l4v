@@ -1684,7 +1684,7 @@ fun mk_simpl_acc ctxt sT nm = let
         val acc = mk_sst_acc nm
         val T = fastype_of acc |> dest_Type |> fst
       in if T = @{type_name ptr} then mk_ptr_val_app acc else acc end
-  in Term.lambda sst (ParseGraph.mk_var_typ (mk_sst_acc2 nm)) end
+  in Term.lambda sst (ParseGraph.mk_var_term (mk_sst_acc2 nm)) end
 
 fun foldr1_default _ v [] = v
   | foldr1_default f _ xs = foldr1 f xs
