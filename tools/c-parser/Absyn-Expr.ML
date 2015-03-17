@@ -157,7 +157,7 @@ fun eval_litconst lc = let
 in
   case node lc of
     NUMCONST nc => (#value nc, numconst_type nc)
-  | STRING_LIT s => (Feedback.errorStr'(left lc, right lc,
+  | STRING_LIT _ => (Feedback.errorStr'(left lc, right lc,
                                         "Don't evaluate string literals!");
                      (fi 1, Signed Int))
 end
@@ -396,7 +396,6 @@ in
 end
 
 val fi = IntInf.fromInt
-val ti = IntInf.toInt
 
 fun eval_unop (l, r, uop, (n, ty)) = let
   open IntInf
@@ -416,7 +415,6 @@ fun eclookup (CE {enumenv,...}) s = Symtab.lookup enumenv s
 
 fun consteval0 (ecenv as CE {enumenv, typing, structsize}) e = let
   val fi = IntInf.fromInt
-  val one = (fi 1, Signed Int)
   val zero = (fi 0, Signed Int)
   fun Fail s = (Feedback.errorStr'(eleft e, eright e, s); zero)
   val consteval = consteval0 ecenv
@@ -445,7 +443,7 @@ in
                   ImplementationTypes.size_t)
   | MKBOOL e => bool (#1 (consteval e) <> fi 0)
   | TypeCast(destty, e0) => let
-      val (v,ty) = consteval e0
+      val (v,_) = consteval e0
     in
       safeop (eleft e, eright e) (node destty) (fn x => x) v
     end
@@ -496,7 +494,7 @@ fun eneeds_sc_protection e =
     | Constant _ => false
     | Var _ => false
     | StructDot (e,_) => eneeds_sc_protection e
-    | ArrayDeref(e1, e2) => true (* could try to figure out if the array is
+    | ArrayDeref _ => true (* could try to figure out if the array is
                                     a pointer, but even if it isn't, there
                                     should be bounds checking going on *)
     | Deref _ => true

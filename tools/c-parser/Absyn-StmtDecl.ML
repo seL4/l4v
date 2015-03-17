@@ -224,10 +224,6 @@ fun stmt_type s =
     | LocalInit _ => "LocalInit"
     | _ => "[whoa!  Unknown stmt type]"
 
-
-
-val bogus_emptystmt = swrap(EmptyStmt, bogus, bogus)
-
 fun stmt_fail (Stmt w, msg) =
     Fail (Region.toString (Region.Wrap.region w) ^ ": " ^ msg)
 
