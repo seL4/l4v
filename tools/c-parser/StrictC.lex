@@ -193,7 +193,9 @@ attr_start = "__attribute__"{ws}*"((";
                              getPos(source, yypos + 6));
                        continue());
 <INITIAL>"register"=> (tok(Tokens.YREGISTER,source,yypos,yypos+size yytext-1));
-
+<INITIAL>"_Thread_local" =>
+                     (tok(Tokens.THREAD_LOCAL,source,yypos,yypos+size yytext-1));
+<INITIAL>"auto" =>   (tok(Tokens.AUTO,source,yypos,yypos+size yytext-1));
 
 <TDEF>"/*" =>        (YYBEGIN TRADCOMMENT; in_comment := true;
                       return := STDEF;

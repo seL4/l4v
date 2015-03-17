@@ -122,7 +122,6 @@ datatype var_info =
                 fname : string option,
                 proto_param : bool,
                 munged_name : string,
-                is_genuine : bool,
                 declared_at : Region.t,
                 attrs : gcc_attribute list}
 fun viToString (VI {name, fname,...}) =
@@ -137,7 +136,6 @@ fun get_vi_fname (VI {fname,...}) = fname
 fun get_vi_type (VI {vtype,...}) = vtype
 fun get_vi_senv (VI {struct_env,...}) = struct_env
 fun declpos (VI {declared_at,...}) = declared_at
-fun is_genuine (VI {is_genuine, ...}) = is_genuine
 
 fun vi_compare(VI vi1, VI vi2) = let
   val ocmp = option_compare and pcmp = pair_compare and scmp = String.compare
@@ -395,24 +393,24 @@ local
     cse_makeUpdate (from, from', to)
   end z
 
-  fun vi_makeUpdate z = makeUpdate10 z
+  fun vi_makeUpdate z = makeUpdate9 z
   fun update_VI z = let
     fun from name return_var vtype struct_env fname proto_param
-            munged_name is_genuine declared_at attrs =
+            munged_name declared_at attrs =
         {name = name, return_var = return_var, vtype = vtype,
          struct_env = struct_env, fname = fname, declared_at = declared_at,
          proto_param = proto_param, munged_name = munged_name,
-         is_genuine = is_genuine, attrs = attrs}
-    fun from' attrs declared_at is_genuine munged_name proto_param fname struct_env
+         attrs = attrs}
+    fun from' attrs declared_at munged_name proto_param fname struct_env
               vtype return_var name =
         {name = name, return_var = return_var, vtype = vtype,
          struct_env = struct_env, fname = fname, declared_at = declared_at,
          proto_param = proto_param, munged_name = munged_name,
-         is_genuine = is_genuine, attrs = attrs}
+         attrs = attrs}
     fun to f {name, return_var, vtype, struct_env, fname, proto_param,
-              munged_name, is_genuine, declared_at, attrs} =
+              munged_name, declared_at, attrs} =
         f name return_var vtype struct_env fname proto_param
-          munged_name is_genuine declared_at attrs
+          munged_name declared_at attrs
   in
     vi_makeUpdate (from, from', to)
   end z
@@ -460,8 +458,6 @@ fun cse_fupdglobinits f (CSE cse) =
 
 fun upd_mname mname (VI vi) =
     VI (update_VI vi (U #munged_name mname) $$)
-fun vi_upd_genuine b (VI vi) =
-    VI (update_VI vi (U #is_genuine b) $$)
 fun vi_upd_type ty (VI vi) =
     VI (update_VI vi (U #vtype ty) $$)
 
@@ -874,10 +870,8 @@ fun munge_insert (v as VI vrec) cse = let
   fun merge_vis v1 v2 = let
     val ty1 = get_vi_type v1
     val ty2 = get_vi_type v2
-    val g1 = is_genuine v1
-    val g2 = is_genuine v2
   in
-    vi_upd_type (max_type ty1 ty2) (vi_upd_genuine (g1 orelse g2) v1)
+    vi_upd_type (max_type ty1 ty2) v1
   end
 
   fun vars_add v1 vlist =
@@ -1195,7 +1189,7 @@ fun process_expr lvstate fname (env as CSE {senv, ...}) e = let
           val retvar = VI {name = nm, munged_name = nm, vtype = rettype,
                            struct_env = senv, proto_param = false,
                            fname = SOME "", return_var = true, attrs = [],
-                           is_genuine = true, declared_at = Region.bogus}
+                           declared_at = Region.bogus}
         in
           foldthis (rettype, count - 1) (#2 (insert_var(retvar, acc)))
         end
@@ -1277,7 +1271,7 @@ fun process_decl fname (d:declaration wrap) (e as CSE {senv,...}) = let
   val ecenv = cse2ecenv e
 in
   case node d of
-    VarDecl (ty,s,is_genuine,iopt,attrs) => let
+    VarDecl (ty,s,storage_specs,iopt,attrs) => let
       val s = if node s = phantom_state_name then
                 (Feedback.errorStr'
                      (left s, right s,
@@ -1305,7 +1299,7 @@ in
                 NONE => let
                 in
                   case fname of
-                    SOME fnm => if is_genuine then
+                    SOME fnm => if not (is_extern storage_specs) then
                                   raise Fail ("Array "^str^" in function "^fnm^
                                               " must be given a size or an \
                                               \initialiser")
@@ -1330,7 +1324,7 @@ in
 
       val vi = VI {name = str, vtype = vty, attrs = attrs,
                    munged_name = str, struct_env = senv, proto_param = false,
-                   fname = fname, return_var = false, is_genuine = is_genuine,
+                   fname = fname, return_var = false,
                    declared_at = Region.make{left = left s, right = right s}}
       val (vi, e) = insert_var (vi, e)
       val bogus = SourcePos.bogus
@@ -1401,7 +1395,7 @@ in
             in
               (w (Assign(var_e, exp)), SOME exp, e)
             end
-      val d' = wrap(VarDecl(ty,s,is_genuine,NONE,attrs), left d, right d)
+      val d' = wrap(VarDecl(ty,s,storage_specs,NONE,attrs), left d, right d)
       val e =
           case proc_expr_opt of
               NONE => e
@@ -1431,7 +1425,7 @@ in
           else let
               val retvar = VI {name = ret_vname, munged_name = ret_vname,
                                vtype = rettype, proto_param = false,
-                               struct_env = senv, is_genuine = true,
+                               struct_env = senv,
                                fname = SOME fname, return_var = true,
                                attrs = [], declared_at = Region.bogus}
             in
@@ -1443,7 +1437,7 @@ in
                    | SOME s => s
         val var =
             VI {name = name, vtype = param_norm (constify_abtype ecenv ty),
-                munged_name = name, is_genuine = true, attrs = [],
+                munged_name = name, attrs = [],
                 struct_env = senv, proto_param = true,
                 fname = SOME fname, return_var = false,
                 declared_at = Region.bogus}
@@ -1454,7 +1448,7 @@ in
       val paramtypes = map (param_norm o constify_abtype ecenv o #1) params
       val ftype = Function(rettype, paramtypes)
       val fvi = VI {name = fname, vtype = ftype, munged_name = fname,
-                    proto_param = false, struct_env = senv, is_genuine = true,
+                    proto_param = false, struct_env = senv,
                     fname = NONE, return_var = false, attrs = [],
                     declared_at = Region.Wrap.region d}
       val (_, e) = insert_var (fvi, e)
@@ -1729,13 +1723,13 @@ fun process_one_extdecl (env0 : csenv) edec =
         val rv_nm = return_var_name rettype
         val retvar = VI {name = rv_nm, munged_name = rv_nm, attrs = [],
                          vtype = rettype, proto_param = false,
-                         struct_env = senv, is_genuine = true,
+                         struct_env = senv,
                          fname = SOME (node s), return_var = true,
                          declared_at = Region.bogus}
         val paramtypes = map (param_norm o constify_abtype ecenv o #1) params
         val ftype = Function(rettype, paramtypes)
         val fvi = VI {name = node s, vtype = ftype, munged_name = node s,
-                      proto_param = false, struct_env = senv, is_genuine = true,
+                      proto_param = false, struct_env = senv,
                       fname = NONE, return_var = false, attrs = [],
                       declared_at = Region.Wrap.region s}
         val (_, env) = insert_var(fvi,env)
@@ -1744,7 +1738,6 @@ fun process_one_extdecl (env0 : csenv) edec =
                vtype = param_norm (constify_abtype ecenv ty),
                struct_env = senv, proto_param = false,
                fname = fname, return_var = false,
-               is_genuine = true,
                declared_at =
                  Region.make{left = left pname, right = right pname}}
         val env = new_scope env (* new scope for parameters and body *)
