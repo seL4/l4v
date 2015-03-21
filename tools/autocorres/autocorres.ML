@@ -360,7 +360,11 @@ let
         in
           FunctionInfo.map_fn_info (fn def =>
             if Symset.contains valid_functions (#name def) then SOME def else NONE) fn_info
+          |> (fn fi => (let val fns = FunctionInfo.get_functions fi |> Symtab.dest |> map fst
+                            val _ = @{trace} ("autocorres scope: selected " ^ Int.toString (length fns) ^ " functions")
+                        in map (fn f => @{trace} f) fns end; fi))
         end
+  val all_functions = Symset.make (Symtab.keys (FunctionInfo.get_functions fn_info))
 
   (*
    * Sanity check the C parser's output.
@@ -424,9 +428,11 @@ let
         TypeStrengthen.type_strengthen ts_rules ts_force filename fn_info keep_going do_opt lthy)
     |> (fn (lthy, fn_info) =>
         lthy)
+
+  val _ = @{trace} "AutoCorres: exiting"
 in
   (* Exit context. *)
-  Local_Theory.exit_global lthy
+  Named_Target.exit lthy
 end
 
 end
