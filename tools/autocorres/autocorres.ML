@@ -361,7 +361,7 @@ let
           FunctionInfo.map_fn_info (fn def =>
             if Symset.contains valid_functions (#name def) then SOME def else NONE) fn_info
           |> (fn fi => (let val fns = FunctionInfo.get_functions fi |> Symtab.dest |> map fst
-                            val _ = @{trace} ("autocorres scope: selected " ^ Int.toString (length fns) ^ " functions")
+                            val _ = @{trace} ("autocorres scope: selected " ^ Int.toString (length fns) ^ " functions:")
                         in map (fn f => @{trace} f) fns end; fi))
         end
   val all_functions = Symset.make (Symtab.keys (FunctionInfo.get_functions fn_info))
@@ -413,7 +413,7 @@ let
   end
 
   (* Do the translation. *)
-  val lthy =
+  val (lthy, fn_info) =
     SimplConv.translate_simpl filename fn_info do_opt trace_opt lthy
     |> (fn (lthy, fn_info) =>
         LocalVarExtract.translate_l2 filename fn_info do_opt trace_opt lthy)
@@ -427,9 +427,13 @@ let
     |> (fn (lthy, fn_info) =>
         TypeStrengthen.type_strengthen ts_rules ts_force filename fn_info keep_going do_opt lthy)
     |> (fn (lthy, fn_info) =>
-        lthy)
+        (lthy, fn_info))
 
-  val _ = @{trace} "AutoCorres: exiting"
+  (* Save fn_info for future reference. *)
+  val _ = @{trace} "Saving function info to AutoCorresFunctionInfo."
+  val lthy = Local_Theory.background_theory (
+	  AutoCorresFunctionInfo.map (fn tbl =>
+	    Symtab.update (filename, fn_info) tbl)) lthy
 in
   (* Exit context. *)
   Named_Target.exit lthy

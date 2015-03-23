@@ -20,7 +20,7 @@ sig
         -> (local_theory -> 'b Symtab.table -> 'c -> (string * 'a) list -> ('b list * 'c * local_theory))
         -> ((term * thm) list -> local_theory -> thm list)
         -> (local_theory -> 'c -> FunctionInfo.function_def -> FunctionInfo.function_def)
-        -> 'c -> (local_theory * FunctionInfo.function_def Symtab.table * 'c)
+        -> 'c -> (local_theory * FunctionInfo.fn_info * 'c)
 
   val do_translation_phase :
         string -> string (* phase name, source file name *)
@@ -198,7 +198,7 @@ fun translate lthy fn_info convert define prove_mono fn_def_translate v =
                 NONE => fn_def
               | SOME thm => FunctionInfo.fn_def_update_mono_thm thm fn_def) new_fn_defs
   in
-    (lthy, new_fn_defs, v)
+    (lthy, FunctionInfo.map_fn_info (fn x => Symtab.lookup new_fn_defs (#name x)) fn_info, v)
   end
 
 (*
@@ -642,7 +642,7 @@ let
 
   (* Map function information. *)
 in
-  (ctxt', FunctionInfo.map_fn_info (fn x => Symtab.lookup new_fn_info (#name x)) fn_info)
+  (ctxt', new_fn_info)
 end
 
 end

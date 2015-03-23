@@ -317,3 +317,12 @@ fun fn_def_update_invented_body new_val old
   = { name = #name old, args = #args old, return_type = #return_type old, const = #const old, raw_const = #raw_const old,  definition = #definition old, mono_thm = #mono_thm old, invented_body = new_val}
 
 end
+
+(* Save function information into the theory. *)
+structure AutoCorresFunctionInfo = Theory_Data(
+  type T = FunctionInfo.fn_info Symtab.table;
+  val empty = Symtab.empty;
+  val extend = I;
+  fun merge (l, r) =
+    Symtab.merge (fn _ => true) (l, r);
+)
