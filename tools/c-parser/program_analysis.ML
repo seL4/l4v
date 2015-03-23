@@ -1288,6 +1288,17 @@ in
         if get_allow_underscores e orelse check_uscore_ok str then str
         else (Feedback.errorStr'(left s, right s, err); str)
       end
+      val is_extern = is_extern storage_specs
+      val is_static = is_static storage_specs
+      val _ = if is_static andalso is_extern then
+                Feedback.errorStr'(left s, right s,
+                                   "Var can't be declared static *and* extern")
+              else ()
+      val _ = if is_extern andalso isSome fname andalso isSome iopt then
+                Feedback.errorStr'(left s, right s,
+                                   "Can't initialise block-local extern")
+              else ()
+      val fname = if is_extern then NONE else fname
 
       val ty = fparam_norm ty
       val ty =
@@ -1299,7 +1310,7 @@ in
                 NONE => let
                 in
                   case fname of
-                    SOME fnm => if not (is_extern storage_specs) then
+                    SOME fnm => if not is_extern then
                                   raise Fail ("Array "^str^" in function "^fnm^
                                               " must be given a size or an \
                                               \initialiser")
@@ -1331,13 +1342,13 @@ in
       val mvinfo = MungedVar {munge = get_mname vi,
                               owned_by = StmtDecl.get_owned_by attrs}
       val var_e = ewrap(Var (str, ref (SOME (vty, mvinfo))), left s, right s)
-      val (init, proc_expr_opt, e) =
+      val (inits, proc_expr_opt, e) =
           case iopt of
             NONE => let
             in
               case fname of
-                NONE => (sbogwrap EmptyStmt, NONE, e)
-              | SOME _ => (swrap(LocalInit var_e, left s, right s),
+                NONE => ([], NONE, e)
+              | SOME _ => ([BI_Stmt (swrap(LocalInit var_e, left s, right s))],
                            NONE,
                            e)
             end
@@ -1367,7 +1378,7 @@ in
                                                 \function call")
                           | SOME _ => ()
                 in
-                  (w (AssignFnCall(SOME var_e, e_fn, args)),
+                  ([BI_Stmt (w (AssignFnCall(SOME var_e, e_fn, args)))],
                    case args of
                      [] => NONE
                    | h :: t => let
@@ -1382,7 +1393,7 @@ in
                             NONE => cse_fupdglobinits (Symtab.update (str, exp)) e
                           | _ => e
                 in
-                  (w (Assign(var_e, exp)), SOME exp, e)
+                  ([BI_Stmt (w (Assign(var_e, exp)))], SOME exp, e)
                 end
             end
           | SOME (InitList ilist) => let
@@ -1393,7 +1404,7 @@ in
                     NONE => cse_fupdglobinits (Symtab.update (str, exp)) e
                   | _ => e
             in
-              (w (Assign(var_e, exp)), SOME exp, e)
+              ([BI_Stmt (w (Assign(var_e, exp)))], SOME exp, e)
             end
       val d' = wrap(VarDecl(ty,s,storage_specs,NONE,attrs), left d, right d)
       val e =
@@ -1402,7 +1413,7 @@ in
             | SOME exp => #1 (process_expr RV fname e exp)
                           (* ignore global reads done by initialiser *)
     in
-      ([BI_Decl d', BI_Stmt init], e)
+      (BI_Decl d' :: inits, e)
     end
   | StructDecl s => ([BI_Decl d], newstr_decl s e)
   | TypeDecl _ => raise Fail "collect_vars: TypeDecl unexpected, \

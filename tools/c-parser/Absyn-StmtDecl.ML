@@ -124,6 +124,7 @@ sig
   val stmt_fail : statement * string -> exn
 
   val is_extern : storage_class list -> bool
+  val is_static : storage_class list -> bool
 
 end
 
