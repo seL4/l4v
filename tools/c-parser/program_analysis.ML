@@ -1269,6 +1269,7 @@ fun fold_pipe (f : 'env -> 'a -> 'b * 'env) (env0 : 'env) (items : 'a list) =
    level *)
 fun process_decl fname (d:declaration wrap) (e as CSE {senv,...}) = let
   val ecenv = cse2ecenv e
+  fun puredecl d = {decl = d, localinits = [], globalinits = []}
 in
   case node d of
     VarDecl (ty,s,storage_specs,iopt,attrs) => let
@@ -1333,8 +1334,14 @@ in
       val e = process_type (left d, right d) (ty, e)
       val vty = constify_abtype ecenv ty
 
+      val (fname, munged_name) =
+          if is_static andalso isSome fname then
+            (NONE, mk_localstatic {fname = valOf fname, vname = str})
+          else (fname, str)
+
       val vi = VI {name = str, vtype = vty, attrs = attrs,
-                   munged_name = str, struct_env = senv, proto_param = false,
+                   munged_name = munged_name, struct_env = senv,
+                   proto_param = false,
                    fname = fname, return_var = false,
                    declared_at = Region.make{left = left s, right = right s}}
       val (vi, e) = insert_var (vi, e)
@@ -1348,7 +1355,7 @@ in
             in
               case fname of
                 NONE => ([], NONE, e)
-              | SOME _ => ([BI_Stmt (swrap(LocalInit var_e, left s, right s))],
+              | SOME _ => ([swrap(LocalInit var_e, left s, right s)],
                            NONE,
                            e)
             end
@@ -1378,7 +1385,7 @@ in
                                                 \function call")
                           | SOME _ => ()
                 in
-                  ([BI_Stmt (w (AssignFnCall(SOME var_e, e_fn, args)))],
+                  ([w (AssignFnCall(SOME var_e, e_fn, args))],
                    case args of
                      [] => NONE
                    | h :: t => let
@@ -1393,7 +1400,7 @@ in
                             NONE => cse_fupdglobinits (Symtab.update (str, exp)) e
                           | _ => e
                 in
-                  ([BI_Stmt (w (Assign(var_e, exp)))], SOME exp, e)
+                  ([w (Assign(var_e, exp))], SOME exp, e)
                 end
             end
           | SOME (InitList ilist) => let
@@ -1404,7 +1411,7 @@ in
                     NONE => cse_fupdglobinits (Symtab.update (str, exp)) e
                   | _ => e
             in
-              ([BI_Stmt (w (Assign(var_e, exp)))], SOME exp, e)
+              ([w (Assign(var_e, exp))], SOME exp, e)
             end
       val d' = wrap(VarDecl(ty,s,storage_specs,NONE,attrs), left d, right d)
       val e =
@@ -1412,10 +1419,14 @@ in
               NONE => e
             | SOME exp => #1 (process_expr RV fname e exp)
                           (* ignore global reads done by initialiser *)
+      val (globalinits, localinits) =
+          case fname of
+              NONE => (inits, [])
+            | SOME _ => ([], inits)
     in
-      (BI_Decl d' :: inits, e)
+      ({decl = d', localinits = localinits, globalinits = globalinits}, e)
     end
-  | StructDecl s => ([BI_Decl d], newstr_decl s e)
+  | StructDecl s => (puredecl d, newstr_decl s e)
   | TypeDecl _ => raise Fail "collect_vars: TypeDecl unexpected, \
                              \translate these out!"
   | ExtFnDecl {rettype = rettype0,name = fname0,params,specs,...} => let
@@ -1509,9 +1520,9 @@ in
       end
       val e = update_hpfninfo (Decl d) e
     in
-      ([BI_Decl d], pop_scope (set_proto_params fname (List.rev pm_vis0) e))
+      (puredecl d, pop_scope (set_proto_params fname (List.rev pm_vis0) e))
     end
-  | EnumDecl eninfo => ([BI_Decl d], process_enumdecl eninfo e)
+  | EnumDecl eninfo => (puredecl d, process_enumdecl eninfo e)
 end
 
 
@@ -1519,7 +1530,13 @@ fun process_blockitem fname e bi = let
 in
   case bi of
     BI_Stmt s => apfst (map BI_Stmt) (process_stmt fname e s)
-  | BI_Decl d => process_decl (SOME fname) d e
+  | BI_Decl d =>
+    let
+      val ({decl,localinits,globalinits}, e') = process_decl (SOME fname) d e
+    in
+      (* throw away globalinits for the moment *)
+      (BI_Decl decl :: map BI_Stmt localinits, e')
+    end
 end
 and process_stmt fname e (stmt : statement) = let
   fun pex e exp = process_expr RV (SOME fname) e exp
@@ -1706,10 +1723,9 @@ fun split_decls (ds, is) bis =
 fun process_one_extdecl (env0 : csenv) edec =
     case edec of
       Decl d => let
-        val (bis, e) = process_decl NONE d env0
-        val (ds, is) = split_decls ([],[]) bis
+        val ({decl, localinits, globalinits}, e) = process_decl NONE d env0
       in
-        ((ds, is), e)
+        (([Decl decl], globalinits), e)
       end
     | FnDefn((rettype0, s), params, specs, body) => let
         val _ =

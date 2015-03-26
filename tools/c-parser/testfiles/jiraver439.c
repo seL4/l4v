@@ -1,6 +1,14 @@
-int f(void)
+unsigned z;
+
+unsigned f(void)
 {
-  static int x = 0;
+  static unsigned x = 0;
   x++;
   return x;
+}
+
+unsigned g(void)
+{
+  z++;
+  return z;
 }

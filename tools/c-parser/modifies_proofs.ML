@@ -82,7 +82,7 @@ fun mvar_to_string mv = let
 in
   case mv of
     TheHeap => NameGeneration.global_heap
-  | M vi => srcname vi
+  | M vi => get_mname vi
   | PhantomState => NameGeneration.phantom_state_name
   | GhostState => NameGeneration.ghost_state_name
 end

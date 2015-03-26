@@ -624,8 +624,8 @@ fun mk_thy_decls state {owners,mstate_ty=pmstate_ty,gstate_ty} thy = let
           [(bnm global_heap_var, MemoryModelExtras.extended_heap_ty, NoSyn),
            (bnm (global_var phantom_state_name), pmstate_ty, NoSyn),
            (bnm (global_var ghost_state_name), gstate_ty, NoSyn)] @
-          map (fn ({src_name,...}, ty, _, _) =>
-                  (bnm (global_var src_name), ty, NoSyn)) nsglobs @
+          map (fn ({isa_name,...}, ty, _, _) =>
+                  (bnm (global_var isa_name), ty, NoSyn)) nsglobs @
           (if null owners then []
            else [(bnm (global_var owned_by_fn_name), nat, NoSyn)])
       val thy =

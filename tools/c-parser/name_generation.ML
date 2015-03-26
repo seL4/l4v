@@ -60,6 +60,8 @@ sig
   val phantom_state_name : string
   val ghost_state_name : string
   val owned_by_fn_name : string
+
+  val mk_localstatic : {fname : string, vname : string } -> string
 end;
 
 (*
@@ -247,6 +249,9 @@ fun rmUScoreSafety s =
     if String.isPrefix ussafe_pfx s then
       String.extract(s, String.size ussafe_pfx, NONE)
     else s
+
+fun mk_localstatic {fname, vname} = "static'" ^ fname ^ "'" ^ vname
+
 
 
 end;
