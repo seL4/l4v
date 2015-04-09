@@ -8,7 +8,7 @@
  * @TAG(NICTA_BSD)
  *)
 
-structure ImplementationNumbers :> IMPLEMENTATION_NUMBERS =
+structure ImplementationNumbers : IMPLEMENTATION_NUMBERS =
 struct
 
 open IntInf
