@@ -88,7 +88,7 @@ let
     if return_ctype = Absyn.Void then
       empty_set
     else
-      make_set [(NameGeneration.return_var_name return_ctype,
+      make_set [(NameGeneration.return_var_name return_ctype |> MString.dest,
           #return_type fn_def)]
 in
   (inputs, outputs)

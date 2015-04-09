@@ -226,7 +226,7 @@ let
     val ret_var_name =
         Symtab.lookup (ProgramAnalysis.get_fninfo (#csenv prog_info)) fn_name
         |> the
-        |> (fn (ctype, _, _) => NameGeneration.return_var_name ctype)
+        |> (fn (ctype, _, _) => NameGeneration.return_var_name ctype |> MString.dest)
     val ret_var_setter = Symtab.lookup (#var_setters prog_info) ret_var_name
     val ret_var_getter = Symtab.lookup (#var_getters prog_info) ret_var_name
     fun try_unify (x::xs) =

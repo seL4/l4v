@@ -204,7 +204,7 @@ let
 
     (* Convert arguments into a list of (name, HOL type) pairs. *)
     val arg_list = map (fn v => (
-        ProgramAnalysis.get_mname v,
+        ProgramAnalysis.get_mname v |> MString.dest,
         CalculateState.ctype_to_typ (thy, ProgramAnalysis.get_vi_type v)
         )) carg_list
 

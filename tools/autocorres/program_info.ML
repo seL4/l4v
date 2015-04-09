@@ -68,7 +68,7 @@ let
   val hol_type = CalculateState.ctype_to_typ
       (thy, ProgramAnalysis.get_vi_type csenv_var)
   val (getter, setter) = get_record_getter_setter
-      ctxt state_typ (HoarePackage.varname munged_name)
+      ctxt state_typ (HoarePackage.varname (MString.dest munged_name))
 in
   (munged_name, pretty_name, hol_type, getter, setter)
 end
