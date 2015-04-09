@@ -687,7 +687,7 @@ fun dest_conjs t = (t RS @{thm conjunct1})
         :: dest_conjs (t RS @{thm conjunct2})
     handle THM _ => [t]
 
-fun define_globals_list mungedb globloc globty thy = let
+fun define_globals_list (mungedb:CalculateState.mungedb) globloc globty thy = let
     open CalculateState NameGeneration
 
     val sT = @{typ string}
@@ -698,29 +698,30 @@ fun define_globals_list mungedb globloc globty thy = let
     fun glob (_, _, _, Local _) = error "define_globals_list: Local"
       | glob (nm, typ, _, UntouchedGlobal) = let
             val cname = NameGeneration.untouched_global_name nm
-            val init = Syntax.read_term ctxt cname
+            val init = Syntax.read_term ctxt (MString.dest cname)
         in Const (@{const_name "const_global_data"}, sT --> typ --> gdT)
-            $ HOLogic.mk_string nm $ init end
+            $ HOLogic.mk_string (MString.dest nm) $ init end
       | glob (nm, typ, _, NSGlobal) = let
             (* FIXME: _' hackery (or more generally, hackery) *)
-            val acc = (Sign.intern_const thy (global_rcd_name ^ "." ^ nm ^ "_'"
-),
-                globty --> typ)
+            val acc = (Sign.intern_const thy (global_rcd_name ^ "." ^ 
+                                              MString.dest nm ^ "_'"),
+                       globty --> typ)
             val upd = (Sign.intern_const thy
-                    (global_rcd_name ^ "." ^ nm ^ "_'" ^ Record.updateN),
+                          (global_rcd_name ^ "." ^ MString.dest nm ^ "_'" ^ 
+                           Record.updateN),
                 (typ --> typ) --> globty --> globty)
         in Const (@{const_name "global_data"}, sT
                 --> snd acc --> snd upd --> gdT)
-            $ HOLogic.mk_string nm $ Const acc $ Const upd end
+            $ HOLogic.mk_string (MString.dest nm) $ Const acc $ Const upd end
       | glob (nm, typ, _, AddressedGlobal) =
         Const (@{const_name "addressed_global_data"},
                 sT --> Term.itselfT typ --> gdT)
-            $ HOLogic.mk_string nm $ Logic.mk_type typ
+            $ HOLogic.mk_string (MString.dest nm) $ Logic.mk_type typ
 
     val naming = Binding.name o NameGeneration.global_data_name
     val globs = CNameTab.dest mungedb |> map snd
         |> filter (fn v => case #4 v of Local _ => false | _ => true)
-        |> map (fn g => (naming (#1 g), glob g))
+        |> map (fn g => (g |> #1 |> MString.dest |> naming, glob g))
 
     val (xs, ctxt) = fold_map (fn (nm, tm) => Local_Theory.define
         ((nm, NoSyn), ((Thm.def_binding nm, []), tm))) globs ctxt
