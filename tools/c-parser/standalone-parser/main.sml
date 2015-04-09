@@ -60,11 +60,10 @@ fun print_addressed_vars cse = let
   val _ = writeln (String.concat
                        (separate "\n   " (pfx1 :: map srcname globs)))
   val addressed = get_addressed cse
-  val addr_vars = Symtab.keys addressed
+  val addr_vars = map MString.dest (MSymTab.keys addressed)
   val pfx2 = "There are "^Int.toString (length addr_vars)^
              " addressed variables: "
-  val _ = writeln (String.concat
-                       (separate "\n   " (pfx2 :: addr_vars)))
+  val _ = writeln (String.concatWith "\n  " (pfx2 :: addr_vars))
 in
   ()
 end
@@ -148,7 +147,10 @@ fun print_unmodified_globals cse = let
 in
   writeln "Unmodifed, unaddressed globals:";
   writeln ("   " ^
-           commas (Symtab.keys (ProgramAnalysis.calc_untouched_globals cse)))
+           (cse |> ProgramAnalysis.calc_untouched_globals
+                |> MSymTab.keys
+                |> map MString.dest
+                |> commas))
 end
 
 val filename = ref ""

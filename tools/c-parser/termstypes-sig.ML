@@ -63,7 +63,7 @@ sig
   (* More terms/types - for expression_translation.ML *)
   val NULLptr : term
   val mk_ptr : term * typ -> term
-  val mk_fnptr : theory -> string -> term
+  val mk_fnptr : theory -> MString.t -> term
   val mk_cguard_ptr : term -> term
   val mk_global_addr_ptr : string * typ -> term
 

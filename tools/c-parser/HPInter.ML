@@ -100,7 +100,7 @@ fun mk_fninfo thy csenv includeP decllist : fninfo list = let
       List.concat (map (parse_spec fname) fspecs)
   fun mk_ret rettype =
       if rettype = Void then []
-      else [(return_var_name rettype,
+      else [(MString.dest (return_var_name rettype),
              CalculateState.ctype_to_typ (thy, rettype),
              rettype)]
   fun to_param vi = let
@@ -108,7 +108,7 @@ fun mk_fninfo thy csenv includeP decllist : fninfo list = let
     val cty = get_vi_type vi
     val typ = ctype_to_typ (thy,cty)
   in
-    (get_mname vi, typ, SOME cty)
+    (MString.dest (get_mname vi), typ, SOME cty)
   end
   fun foldthis (_, d) acc =
       case d of

@@ -52,7 +52,7 @@ sig
 
   val expr_term : Proof.context -> ProgramAnalysis.csenv ->
                   varinfo TermsTypes.termbuilder ->
-                  (string -> varinfo option) -> Absyn.expr -> expr_info
+                  (MString.t -> varinfo option) -> Absyn.expr -> expr_info
 
 end
 
@@ -932,12 +932,18 @@ in
   | Var (s, ref extra) => let
       val _ = Feedback.informStr'(5, eleft e, eright e,
                                   "Looking up variable information for " ^ s)
+      fun p (x as (ec, is_fn, s)) =
+        (Feedback.informStr(5,
+                            "Information is: ec = " ^ Bool.toString ec ^
+                            ", is_fn = "^Bool.toString is_fn^
+                            ", munge_name = "^MString.destPP s);
+         x)
       val (ec, is_fn, s) =
           case extra of
-              NONE => (false, false, s)
-            | SOME (_, MungedVar {munge = s',...}) => (false, false, s')
-            | SOME (_, EnumC) => (true, false, s)
-            | SOME (_, FunctionName) => (false, true, s)
+              NONE => p (false, false, MString.mk s)
+            | SOME (_, MungedVar {munge = s',...}) => p (false, false, s')
+            | SOME (_, EnumC) => p (true, false, MString.mk s)
+            | SOME (_, FunctionName) => p (false, true, MString.mk s)
       fun mk_ec s = let
         val constname = Sign.intern_const thy s
         fun rval _ = Const(constname, IntInfo.int)
@@ -945,7 +951,7 @@ in
         mk_rval(rval, Signed Int)
       end
     in
-      if ec then mk_ec s
+      if ec then mk_ec (MString.dest s)
       else if is_fn then
         mk_rval((fn _ => mk_fnptr thy s), Ptr (#1 (valOf extra)))
       else
@@ -963,7 +969,7 @@ in
             case vsort of
               AddressedGlobal => let
                 val _ = Feedback.informStr'(5, eleft e, eright e,
-                                            "Variable " ^ s ^
+                                            "Variable " ^ MString.dest s ^
                                             " is an addressed global")
                 open NameGeneration CalculateState
 
@@ -979,10 +985,12 @@ in
             | UntouchedGlobal => let
                 open NameGeneration
                 val _ = Feedback.informStr'(5, eleft e, eright e,
-                                            "Variable " ^ s ^
+                                            "Variable " ^ MString.dest s ^
                                             " is an untouched global")
-                val constname = Consts.intern (Proof_Context.consts_of ctxt)
-                                              (untouched_global_name s)
+                val constname =
+                    s |> untouched_global_name
+                      |> MString.dest
+                      |> Consts.intern (Proof_Context.consts_of ctxt)
                 val const =
                     Syntax.check_term ctxt (Const(constname,dummyT))
                 fun rval _ = const
@@ -992,7 +1000,7 @@ in
             | _ => let
                 (* locals and NSGlobals are treated the same *)
                 val _ = Feedback.informStr'(5, eleft e, eright e,
-                                            "Variable " ^ s ^
+                                            "Variable " ^ MString.dest s ^
                                             " is a local/NSglobal")
                 val ownership_guard =
                     case vsort of
@@ -1035,11 +1043,11 @@ in
         | NONE => let
             val _ = warnStr'(eleft e, eright e,
                              "Confused that this code is executing at variable "
-                             ^ s)
+                             ^ MString.dest s)
           in
-            case eclookup ecenv s of
-              NONE => error (": bad variable reference "^s)
-            | SOME _ => mk_ec s
+            case eclookup ecenv (MString.dest s) of
+              NONE => error (": bad variable reference "^MString.dest s)
+            | SOME _ => mk_ec (MString.dest s)
           end
     end
   | CondExp(g,te,ee) => let

@@ -16,6 +16,7 @@ sig
   type 'a ctype = 'a Absyn.ctype
   type ecenv = Absyn.ecenv
   type 'a rcd_env = 'a ProgramAnalysis.rcd_env
+  type nm_info = ProgramAnalysis.nm_info
 
   val define_enum_consts : ecenv -> theory -> theory
 
@@ -24,10 +25,6 @@ sig
   val populate_globals : bool Config.T
   val record_globinits : bool Config.T
   val current_C_filename : string Config.T
-
-  (* the "isa_name" is the munged name, but in the form without trailing
-     _' suffixes *)
-  type nm_info = {src_name : string, isa_name : string}
 
   val ctype_to_typ : theory * int ctype -> typ
   datatype var_sort = Local of string
@@ -51,7 +48,7 @@ sig
 
   val gen_umm_types_file : csenv -> string -> unit
 
-  type mungedb = (string * typ * int ctype option * var_sort) CNameTab.table
+  type mungedb = (MString.t * typ * int ctype option * var_sort) CNameTab.table
   val mk_mungedb : (nm_info * typ * int ctype option * var_sort) list ->
                    mungedb
 
@@ -147,9 +144,6 @@ datatype isa_type = refty of (isa_type option * int ctype)
                   | existing of typ * int ctype
 type isa_senv = isa_type rcd_env
 
-type nm_info = {src_name : string, isa_name : string}
-
-
 datatype var_sort =
          Local of string | NSGlobal | AddressedGlobal | UntouchedGlobal
 type isa_var = (nm_info * isa_type * var_sort)
@@ -204,21 +198,21 @@ fun translate_vi csenv = let
       Function _ => NONE
     | ty => let
         val isaty = translate_type ty
+        val k = get_mname vi
         val var_sort =
             case get_vi_fname vi of
               SOME s => Local s
             | NONE => let
               in
-                if Symtab.defined (get_addressed csenv) (srcname vi) then
+                if MSymTab.defined (get_addressed csenv) k then
                   AddressedGlobal
-                else if Symtab.defined untoucheds (srcname vi) then
+                else if MSymTab.defined untoucheds k then
                   UntouchedGlobal
                 else
                   NSGlobal
               end
       in
-        SOME ({src_name = srcname vi, isa_name = get_mname vi}, isaty,
-              var_sort)
+        SOME (vi_nm_info vi, isaty, var_sort)
       end
   end
 in
@@ -571,11 +565,13 @@ in
   (thy, List.rev rcdinfo0)
 end
 
+fun simple s = {isa_name = MString.mk s, src_name = s}
+
 fun pretty_globals thy vars =
     Pretty.big_list
         "Defining global variables: record 'a globals ="
         (map (fn (nm,ity,_,_) =>
-                 Pretty.str (#isa_name nm ^ " :: " ^
+                 Pretty.str (MString.dest (#isa_name nm) ^ " :: " ^
                              Syntax.string_of_typ (thy2ctxt thy) ity))
              vars)
     |>
@@ -625,7 +621,8 @@ fun mk_thy_decls state {owners,mstate_ty=pmstate_ty,gstate_ty} thy = let
            (bnm (global_var phantom_state_name), pmstate_ty, NoSyn),
            (bnm (global_var ghost_state_name), gstate_ty, NoSyn)] @
           map (fn ({isa_name,...}, ty, _, _) =>
-                  (bnm (global_var isa_name), ty, NoSyn)) nsglobs @
+                  (bnm (global_var (MString.dest isa_name)), ty, NoSyn))
+              nsglobs @
           (if null owners then []
            else [(bnm (global_var owned_by_fn_name), nat, NoSyn)])
       val thy =
@@ -636,8 +633,9 @@ fun mk_thy_decls state {owners,mstate_ty=pmstate_ty,gstate_ty} thy = let
     in
       (thy'', locale_params owners)
     end
-    val lvars = ({isa_name = global_exn_var_name, src_name = global_exn_var_name},
-        c_exntype_ty, NONE, Local "cparser'internal") :: lvars
+    val lvars = (simple global_exn_var_name,
+                 c_exntype_ty, NONE,
+                 Local "cparser'internal") :: lvars
     fun mk_locals_rcd thy =
         let
             (* the state information accumulated so far allows for local
@@ -648,7 +646,7 @@ fun mk_thy_decls state {owners,mstate_ty=pmstate_ty,gstate_ty} thy = let
                 case vs of
                   [] => []
                 | ({isa_name = nm,...}, ty, _, _) :: rest => let
-                    val nm' = HoarePackage.varname nm
+                    val nm' = HoarePackage.varname (MString.dest nm)
                   in
                     if member (op =) seen nm' then map_elim_name seen rest
                     else (bnm nm',ty,NoSyn) :: map_elim_name (nm'::seen) rest
@@ -673,7 +671,7 @@ in
   declare_vars thy
 end
 
-type mungedb = (string * typ * int ctype option * var_sort) CNameTab.table
+type mungedb = (MString.t * typ * int ctype option * var_sort) CNameTab.table
 
 fun mk_mungedb l = let
   open CNameTab

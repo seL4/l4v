@@ -25,6 +25,7 @@ ML_file "Region.ML"
 ML_file "Binaryset.ML"
 ML_file "Feedback.ML"
 ML_file "basics.ML"
+ML_file "MString.ML"
 
 ML_file "TargetNumbers-sig.ML"
 ML_file "Target-ARM32.ML"  (* <-- change this for other machine models *)

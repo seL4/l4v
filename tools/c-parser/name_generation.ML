@@ -12,10 +12,10 @@ signature NAME_GENERATION =
 sig
 
   val initialisation_function : string
-  val return_var_name : int Absyn.ctype -> string
-  val embret_var_name : string * int -> string
-  val dest_embret : string -> (string * int) option
-  val C_global_var : string -> string
+  val return_var_name : int Absyn.ctype -> MString.t
+  val embret_var_name : string * int -> MString.t
+  val dest_embret : MString.t -> (string * int) option
+  val C_global_var : MString.t -> MString.t
   val global_var : string -> string
   val global_addr : string -> string
   val fake_param : string -> int -> string
@@ -28,8 +28,8 @@ sig
 
   val enum_const_name : string -> string
   val enum_const_summary_lemma_sfx : string
-  val untouched_global_name : string -> string
-  val global_initializer_name : string -> string
+  val untouched_global_name : MString.t -> MString.t
+  val global_initializer_name : MString.t -> MString.t
   val global_data_name : string -> string
 
   val global_rcd_name : string
@@ -61,7 +61,7 @@ sig
   val ghost_state_name : string
   val owned_by_fn_name : string
 
-  val mk_localstatic : {fname : string, vname : string } -> string
+  val mk_localstatic : {fname : string, vname : string } -> MString.t
 end;
 
 (*
@@ -157,10 +157,13 @@ val initialisation_function = "___special___init"
 
 fun embret_var_name (f,i) =
     if i < 1 then raise Fail "embret_var_name: i < 1"
-    else if i = 1 then "ret__" ^ f
-    else f ^ "_eret_" ^ Int.toString i
+    else if i = 1 then MString.mk ("ret__" ^ f)
+    else MString.mk (f ^ "_eret_" ^ Int.toString i)
 
-fun dest_embret s =
+fun dest_embret s0 =
+  let
+    val s = MString.dest s0
+  in
     if String.isPrefix "ret__" s then
       SOME (String.extract(s,5,NONE), 1)
     else let
@@ -173,6 +176,7 @@ fun dest_embret s =
         else
           NONE
       end
+  end
 
 fun return_var_name ty = embret_var_name (Absyn.tyname ty, 1)
 
@@ -188,9 +192,11 @@ val enum_const_summary_lemma_sfx = "_defs"
 fun fix_underscore s = if String.isPrefix "_" s
   then "underscore" ^ s else s
 
-fun untouched_global_name s = fix_underscore s
+fun untouched_global_name s =
+  s |> MString.dest |> fix_underscore |> MString.mk
 
-fun global_initializer_name s = fix_underscore s ^ "_global_initializer"
+fun global_initializer_name s =
+  fix_underscore (MString.dest s) ^ "_global_initializer" |> MString.mk
 fun global_data_name s = fix_underscore s ^ "_global_data"
 
 val global_rcd_name = "globals"
@@ -250,7 +256,8 @@ fun rmUScoreSafety s =
       String.extract(s, String.size ussafe_pfx, NONE)
     else s
 
-fun mk_localstatic {fname, vname} = "static'" ^ fname ^ "'" ^ vname
+fun mk_localstatic {fname, vname} =
+  MString.mk ("static'" ^ fname ^ "'" ^ vname)
 
 
 

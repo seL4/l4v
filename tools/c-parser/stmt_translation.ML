@@ -137,7 +137,7 @@ fun stmt_term (ctxt : Proof.context)
               (cse : ProgramAnalysis.csenv)
               (fname : string)
               (termbuilders : varinfo termbuilder)
-              (varinfo : string -> varinfo option)
+              (varinfo : MString.t -> varinfo option)
               (fninfo : HPInter.fninfo list)
               (statetype : Term.typ)
               (globty : Term.typ)
@@ -234,7 +234,7 @@ in
             Var(nm, ref extra) => let
             in
               case extra of
-                SOME (_, MungedVar mvi) => #munge mvi
+                SOME (_, MungedVar mvi) => MString.dest (#munge mvi)
               | _ => error "Confused by lack of variable info"
             end
           | _ => error "Bad variable being initialised"
@@ -372,7 +372,7 @@ in
       val (retvar_name, _, cretty) =
           hd (#outparams this_fn_info)
           handle Empty => error ("No return parameter for function "^fname)
-      val mvi = MungedVar {munge = retvar_name, owned_by = NONE}
+      val mvi = MungedVar {munge = MString.mk retvar_name, owned_by = NONE}
       val retvar =
           ewrap (Var (retvar_name, ref (SOME (cretty, mvi))),
                  eleft s,
@@ -429,11 +429,12 @@ in
               val (pbody, pguard) = MemoryModelExtras.mk_lookup_proc_pair
                       symbol_table naming
                       (mk_ptr_val (rval_of call_ei svar))
-              val retinfo = case rty of
-                              Void => NONE
-                            | _ => SOME (NameGeneration.return_var_name rty,
-                                         CalculateState.ctype_to_typ(sg,rty),
-                                         rty)
+              val retinfo =
+                  case rty of
+                      Void => NONE
+                    | _ => SOME (NameGeneration.return_var_name rty |> MString.dest,
+                                 CalculateState.ctype_to_typ(sg,rty),
+                                 rty)
               fun guard s = let
                 val fptr_val = rval_of call_ei s
               in
@@ -643,14 +644,14 @@ in
   Const(fullname, ty) $ Kupd $ rcdterm
 end
 
-fun state_vlookup (fname_opt : string option) s state = let
+fun state_vlookup (fname_opt : string option) (s:MString.t) (state:CalculateState.mungedb) = let
 in
   case CNameTab.lookup state {varname = s, fnname = fname_opt} of
     NONE => NONE
   | SOME (realnm, ty, cty, vsort) => let
       val realnm' = case fname_opt of
-                      NONE => NameGeneration.global_var realnm
-                    | SOME f => HoarePackage.varname realnm
+                      NONE => NameGeneration.global_var (MString.dest realnm)
+                    | SOME f => HoarePackage.varname (MString.dest realnm)
     in
       SOME(realnm',ty,cty,vsort)
     end
@@ -696,7 +697,9 @@ fun strip_invs com statetype =
 fun lookup_addr_vars state = let
   fun foldthis ({varname,fnname}, (realnm,ty,cty,vsort)) acc =
       case fnname of
-        NONE => Symtab.update(NameGeneration.global_addr varname, mk_ptr_ty ty) acc
+        NONE => Symtab.update
+                    (NameGeneration.global_addr (MString.dest varname), mk_ptr_ty ty)
+                    acc
       | SOME _ => acc
 in
   CNameTab.fold foldthis state Symtab.empty

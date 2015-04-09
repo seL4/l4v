@@ -66,7 +66,7 @@ val _ = Context.>> (Context.map_theory calculate_modifies_proofs_setup)
 
 fun gen_modify_goalstring csenv fname modstrings = let
   fun foldthis (vname, vset) =
-      case Symtab.lookup (ProgramAnalysis.get_addressed csenv) vname of
+      case MSymTab.lookup (ProgramAnalysis.get_addressed csenv) (MString.mk vname) of
         NONE => Binaryset.add(vset, vname)
       | SOME _ => Binaryset.add(vset, NameGeneration.global_heap)
   val vset = List.foldl foldthis (Binaryset.empty String.compare) modstrings
@@ -82,7 +82,7 @@ fun mvar_to_string mv = let
 in
   case mv of
     TheHeap => NameGeneration.global_heap
-  | M vi => get_mname vi
+  | M vi => MString.dest (get_mname vi)
   | PhantomState => NameGeneration.phantom_state_name
   | GhostState => NameGeneration.ghost_state_name
 end

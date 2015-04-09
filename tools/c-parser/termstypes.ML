@@ -174,7 +174,8 @@ fun mk_ptr (w,ty) =
 fun mk_global_addr_ptr (gname, ty) =
     mk_ptr (symbol_table $ HOLogic.mk_string gname, ty)
 
-fun mk_fnptr _ (* thy *) s = mk_ptr (symbol_table $ HOLogic.mk_string s, unit)
+fun mk_fnptr _ (* thy *) s =
+  mk_ptr (symbol_table $ HOLogic.mk_string (MString.dest s), unit)
 
 
 

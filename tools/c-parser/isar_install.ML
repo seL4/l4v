@@ -115,7 +115,7 @@ fun print_addressed_vars cse = let
   val _ = informStr (0, "There are "^Int.toString (length globs)^" globals: "^
                         commas_quote (map srcname globs))
   val addressed = get_addressed cse
-  val addr_vars = Symtab.keys addressed
+  val addr_vars = map MString.dest (MSymTab.keys addressed)
   val _ = informStr (0, "There are "^Int.toString (length addr_vars)^
                         " addressed variables: "^ commas_quote addr_vars)
 in
@@ -127,8 +127,8 @@ fun define_global_initializers globloc msgpfx name_munger mungedb cse globs thy 
   val lthy = Named_Target.init globloc thy
   val globinits = let
     val inittab = get_globinits cse
-    fun foldthis (gnm, gty) defs = let
-      val rhs_opt = Symtab.lookup inittab gnm
+    fun foldthis (gnm : MString.t, gty) defs = let
+      val rhs_opt = MSymTab.lookup inittab gnm
       val rhs_t =
           case  rhs_opt of
             NONE => ExpressionTranslation.zero_term thy (get_senv cse) gty
@@ -154,15 +154,15 @@ fun define_global_initializers globloc msgpfx name_munger mungedb cse globs thy 
       (gnm, gty, rhs_t) :: defs
     end
   in
-    Symtab.fold foldthis globs []
+    MSymTab.fold foldthis globs []
   end
   fun define1 ((nm, ty, value), lthy) = let
     open Feedback
     val _ = informStr(2,
-                      msgpfx ^ nm ^ " (of C type "^
+                      msgpfx ^ MString.dest nm ^ " (of C type "^
                       Absyn.tyname ty ^") to have value "^
                       Syntax.string_of_term lthy value)
-    val b = Binding.name (name_munger nm)
+    val b = Binding.name (MString.dest (name_munger nm))
     val (_, lthy) =
         Local_Theory.define
             ((b, NoSyn), ((Thm.def_binding b, []), value))
@@ -290,8 +290,8 @@ in
       val thy =
           if Config.get_global thy CalculateState.record_globinits then let
               val globs0 = get_globals cse
-              val globs_types = map (fn vi => (srcname vi, get_vi_type vi)) globs0
-              val glob_table = Symtab.make globs_types
+              val globs_types = map (fn vi => (get_mname vi, get_vi_type vi)) globs0
+              val glob_table = MSymTab.make globs_types
             in
               define_global_initializers
                   globloc "Defining initializers for all globals "

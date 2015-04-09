@@ -47,21 +47,9 @@ fun option_compare _ (NONE, SOME _) = LESS
 fun measure_cmp f (x,y) = Int.compare(f x, f y)
 fun inv_img_cmp f c (x,y) = c (f x, f y)
 
-structure CNameTab = Table
-  (struct type key = {varname : string,
-                      fnname : string option}
-          fun ord ({varname = vn1, fnname = fn1},
-                   {varname = vn2, fnname = fn2}) =
-              pair_compare (option_compare String.compare,
-                            String.compare)
-                           ((fn1, vn1), (fn2, vn2))
-   end)
 end;
-open StrictCBasics
 
-datatype more_info = MungedVar of { munge : string, owned_by : string option}
-                   | EnumC
-                   | FunctionName
+open StrictCBasics
 
 signature FLIP_TABLE =
 sig
