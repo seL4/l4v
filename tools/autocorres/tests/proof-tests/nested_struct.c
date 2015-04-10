@@ -47,9 +47,9 @@ struct s4 {
     struct s3 x[2];
 };
 void g(struct s4 *s) {
-    s->x[0].x.x[0].x = s->x[0].x.x[0].y;
-    s->x[0].x.x[0] = s->x[0].x.x[1];
-    s->x[0].x = s->x[0].y;
-    s->x[0] = s->x[1];
+    s->x[0].x.x[0].y = s->x[0].x.x[0].x;
+    s->x[0].x.x[1] = s->x[0].x.x[0];
+    s->x[0].y = s->x[0].x;
+    s->x[1] = s->x[0];
     *s = *s;
 }
