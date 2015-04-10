@@ -15,6 +15,8 @@ sig
   val GhostState : string -> additional_options
   val get_Csyntax : theory -> string -> Absyn.ext_decl list
   val gen_umm_types_file : string -> string -> theory -> theory
+  val do_cpp : {error_detail : int, cpp_path : string option} ->
+               {includes : string list, filename : string} -> string
   val install_C_file : (((bool option * bool option) * bool option) * string) *
                        additional_options list option ->
                        theory -> theory
@@ -60,13 +62,51 @@ in
   cpp_path_config
 end
 
+val report_cpp_errors = let
+  val (report_cpp_errors_config, report_cpp_errors_setup) =
+      Attrib.config_int (Binding.name "report_cpp_errors") (K 10)
+in
+  Context.>>(Context.map_theory report_cpp_errors_setup);
+  report_cpp_errors_config
+end
+
+fun do_cpp {error_detail, cpp_path} {includes, filename} =
+  case cpp_path of
+      NONE => filename
+    | SOME p =>
+      let
+        open OS.FileSys OS.Process
+        val tmpname = tmpName()
+        val err_tmpname = tmpName()
+        val includes_string = String.concat (map (fn s => "-I\""^s^"\" ") includes)
+        fun plural 1 = "" | plural _ = "s"
+        val cmdline =
+            p ^ " " ^ includes_string ^ " -CC \"" ^ filename ^ "\" > " ^ tmpname ^ " 2> " ^ err_tmpname
+      in
+        if isSuccess (system cmdline) then (OS.FileSys.remove err_tmpname; tmpname)
+        else let val _ = OS.FileSys.remove tmpname
+                 val (msg, rest) = File.read_lines (Path.explode err_tmpname) |> chop error_detail
+                 val _ = OS.FileSys.remove err_tmpname
+                 val _ = warning ("cpp failed on " ^ filename ^ "\nCommand: " ^ cmdline ^
+                                  "\n\nOutput:\n" ^
+                                  cat_lines (msg @ (if null rest then [] else
+                                                    ["(... " ^ string_of_int (length rest) ^
+                                                     " more line" ^ plural (length rest) ^ ")"])))
+             in raise Feedback.WantToExit ("cpp failed on " ^ filename) end
+      end
+
 fun get_Csyntax thy s = let
   val cpp_option =
       case Config.get_global thy cpp_path of
           "" => NONE
         | s => SOME s
+  val cpp_error_count = Config.get_global thy report_cpp_errors
   val (ast0, _) =
-      StrictCParser.parse cpp_option 15 (C_Includes.get thy) (mk_thy_relative thy s)
+      StrictCParser.parse
+          (do_cpp {error_detail = cpp_error_count, cpp_path = cpp_option})
+          15
+          (C_Includes.get thy)
+          (mk_thy_relative thy s)
       handle IO.Io {name, ...} => error ("I/O error on "^name)
 in
   ast0 |> SyntaxTransforms.remove_anonstructs |> SyntaxTransforms.remove_typedefs

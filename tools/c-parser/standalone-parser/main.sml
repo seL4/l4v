@@ -453,12 +453,25 @@ fun handler sopt =
     | ("rawsyntaxonly", NONE) => (parse_only := true)
     | _ => usage()
 
+fun docpp (SOME p) {includes, filename} =
+  let
+    val includes_string = String.concat (map (fn s => "-I\""^s^"\" ") includes)
+    open OS.FileSys OS.Process
+    val tmpname = tmpName()
+    val cmdline =
+        p ^ " " ^ includes_string ^ " -CC \"" ^ filename ^ "\" > " ^ tmpname
+  in
+    if isSuccess (system cmdline) then tmpname
+    else raise Feedback.WantToExit ("cpp failed on "^filename)
+  end
+  | docpp NONE {filename, ...} = filename
+
 fun doit args =
     case cmdline_options handler args of
       [] => usage()
     | [fname] =>
       let
-        val (ast,n) = StrictCParser.parse (!cpp) (!error_lookahead) (List.rev (!includes)) fname
+        val (ast,n) = StrictCParser.parse (docpp (!cpp)) (!error_lookahead) (List.rev (!includes)) fname
       in
         if !parse_only then ()
         else
