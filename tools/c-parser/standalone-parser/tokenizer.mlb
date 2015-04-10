@@ -15,6 +15,7 @@ ann
 in
   table.ML
 end
+../MString.ML
 ../RegionExtras.ML
 ../Absyn-CType.ML
 ../Absyn-Expr.ML
