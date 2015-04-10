@@ -75,9 +75,6 @@ where
       without_preemption $ send_async_ipc ep badge message;
       returnOk []
     odE"
-| "perform_invocation block call (InvokeArchObject i) =
-    arch_perform_invocation i"
-
 | "perform_invocation _ _ _ = fail"
 
 definition

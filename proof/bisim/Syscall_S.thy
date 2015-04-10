@@ -536,6 +536,17 @@ lemma separate_state_pres:
   apply (wp hoare_vcg_all_lift rl) 
   done
 
+lemma separate_state_pres':
+  assumes rl: "(\<And>P t p. \<lbrace>\<lambda>s. P (typ_at t p s)\<rbrace> f \<lbrace>\<lambda>_ s. P (typ_at t p s)\<rbrace>)" 
+  "(\<And>P. \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> f \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>)"
+  shows  "\<lbrace>separate_state\<rbrace> f \<lbrace>\<lambda>_. separate_state\<rbrace>"
+  apply (rule separate_state_pres)
+  apply (rule hoare_pre)
+  apply (wps rl)
+  apply wp
+  apply simp
+  done
+
 lemma separate_state_more_update[simp]:
   "separate_state (trans_state f s) =
    separate_state s"
@@ -713,6 +724,91 @@ lemma call_kernel_bisim:
       apply (rule bisim_refl')
   apply wp
   apply simp
+  done
+
+
+lemma as_user_separate_state [wp]: 
+  "\<lbrace>separate_state\<rbrace> as_user t f \<lbrace>\<lambda>_. separate_state\<rbrace>"
+  by (wp separate_state_pres')
+
+lemma activate_thread_separate_state [wp]:
+  "\<lbrace>separate_state\<rbrace> activate_thread \<lbrace>\<lambda>_. separate_state\<rbrace>"
+  unfolding activate_thread_def
+  by (wp separate_state_pres' | wpc | simp add: arch_activate_idle_thread_def |  strengthen imp_consequent)+
+
+lemma schedule_separate_state [wp]:
+  "\<lbrace>separate_state\<rbrace> schedule :: (unit,unit) s_monad \<lbrace>\<lambda>_. separate_state\<rbrace>"
+  apply (simp add: schedule_def switch_to_thread_def arch_switch_to_thread_def switch_to_idle_thread_def arch_switch_to_idle_thread_def allActiveTCBs_def)
+  apply (wp select_inv separate_state_pres' alternative_valid | wpc | simp add: arch_activate_idle_thread_def |  strengthen imp_consequent)+
+  done
+
+lemma set_message_info_sep_pres [wp]:
+      "\<lbrace>\<lambda>s. P (typ_at t p s) (caps_of_state s)\<rbrace>
+      set_message_info a b
+      \<lbrace>\<lambda>_ s. P (typ_at t p s) (caps_of_state s)\<rbrace>"
+  apply (rule hoare_pre)
+  apply (wp | wpc | wps | simp )+
+  done
+
+lemma set_mrs_separate_state [wp]:
+  "\<lbrace>separate_state\<rbrace> set_mrs a b c \<lbrace>\<lambda>_. separate_state\<rbrace>"
+  apply (rule separate_state_pres)
+  apply (rule hoare_pre)
+  apply (wp | wpc | wps | simp )+
+  done
+
+lemma send_async_ipc_separate_state [wp]:
+  "\<lbrace>separate_state\<rbrace> send_async_ipc a b c \<lbrace>\<lambda>_. separate_state\<rbrace>"
+  apply (simp add: send_async_ipc_def)
+  apply (rule separate_state_pres)
+  apply (rule hoare_pre)
+  apply (wp  | wpc | wps | simp add: update_waiting_aep_def do_async_transfer_def | strengthen imp_consequent)+
+  done
+
+lemma dmo_separate_state [wp]:
+  "\<lbrace>separate_state\<rbrace> do_machine_op f \<lbrace>\<lambda>_. separate_state\<rbrace>"
+  by (rule separate_state_pres, rule hoare_pre, wps, wp, simp)
+
+lemma handle_interrupt_separate_state [wp]:
+  "\<lbrace>separate_state\<rbrace> handle_interrupt irq \<lbrace>\<lambda>_. separate_state\<rbrace>"
+  unfolding handle_interrupt_def
+  apply (rule hoare_pre)
+  apply (wp | wpc | wps | simp | strengthen imp_consequent)+
+  done
+
+lemma decode_invocation_separate_state [wp]:
+  "\<lbrace> separate_state \<rbrace>
+  Decode_SA.decode_invocation param_a param_b param_c param_d param_e param_f
+  \<lbrace> \<lambda>_. separate_state \<rbrace>"
+  unfolding decode_invocation_def
+  apply (rule hoare_pre, wpc, wp)
+  apply simp
+  done
+
+lemma separate_state_machine_state:
+  "separate_state (s\<lparr>machine_state := ms\<rparr>) = separate_state s"
+  unfolding separate_state_def by simp
+
+;
+crunch separate_state [wp]: set_thread_state "separate_state"
+   (wp: separate_state_pres' crunch_wps simp: crunch_simps)
+
+;
+crunch separate_state [wp]: set_async_ep "separate_state"
+   (wp: separate_state_pres' crunch_wps simp: crunch_simps)
+
+;
+crunch separate_state [wp]: "Syscall_SA.handle_event" "separate_state"
+   (wp: crunch_wps without_preemption_wp syscall_valid simp: crunch_simps separate_state_machine_state ignore: set_thread_state do_machine_op)
+
+  
+lemma call_kernel_separate_state:
+  "\<lbrace>separate_state and cur_tcb and valid_objs\<rbrace> Syscall_A.call_kernel ev :: (unit,unit) s_monad \<lbrace>\<lambda>_. separate_state\<rbrace>"
+  apply (rule hoare_pre)
+  apply (rule bisim_valid)
+   apply (rule call_kernel_bisim)
+  apply (simp add: call_kernel_def)
+  apply (wp | wpc | wps | simp | strengthen imp_consequent)+
   done
 
 end
