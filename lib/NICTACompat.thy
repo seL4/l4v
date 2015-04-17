@@ -99,7 +99,7 @@ ML {*
   fun is_refl (Const (@{const_name Pure.eq}, _) $ x $ y) = (x = y)
     | is_refl _ = false;
 
-  fun typ_size_of t = Word_Lib.dest_wordT (type_of (term_of t));
+  fun typ_size_of t = Word_Lib.dest_wordT (type_of (Thm.term_of t));
 
   fun num_len (Const (@{const_name Num.Bit0}, _) $ n) = num_len n + 1
     | num_len (Const (@{const_name Num.Bit1}, _) $ n) = num_len n + 1
@@ -109,7 +109,7 @@ ML {*
     | num_len t = raise TERM ("num_len", [t])
 
   fun unsigned_norm is_neg _ ctxt ct =
-  (if is_neg orelse num_len (term_of ct) > typ_size_of ct then let
+  (if is_neg orelse num_len (Thm.term_of ct) > typ_size_of ct then let
       val btr = if is_neg
                 then @{thm neg_num_bintr} else @{thm num_abs_bintr}
       val th = [Thm.reflexive ct, mk_eq btr] MRS transitive_thm
@@ -117,7 +117,7 @@ ML {*
       (* will work in context of theory Word as well *)
       val ss = simpset_of (@{context} addsimps @{thms bintrunc_numeral})
       val cnv = simplify (put_simpset ss ctxt) th
-    in if is_refl (prop_of cnv) then NONE else SOME cnv end
+    in if is_refl (Thm.prop_of cnv) then NONE else SOME cnv end
     else NONE)
   handle TERM ("num_len", _) => NONE
        | TYPE ("dest_binT", _, _) => NONE
@@ -144,15 +144,15 @@ lemma "f 7 = f (3 :: 2 word)"
   apply simp
   done
 
-lemma "f -2 = f (22 :: 3 word)"
+lemma "f (-2) = f (22 :: 3 word)"
   apply simp
   done
 
-lemma "f -1 = f (13 :: 'a::len word)"
+lemma "f (-1) = f (13 :: 'a::len word)"
   (* apply simp *)
   oops
 
-lemma "f -2 = f (8589934590 :: word32)"
+lemma "f (-2) = f (8589934590 :: word32)"
   using [[simp_trace]]
   apply simp
   done
@@ -161,15 +161,15 @@ lemma "(-1 :: 2 word) = 3"
   apply simp
   done
 
-lemma "f -1 = f (15 :: 4 word)"
+lemma "f (-1) = f (15 :: 4 word)"
   apply (simp add: minus_one_norm)
   done
 
-lemma "f -1 = f (7 :: 3 word)"
+lemma "f (-1) = f (7 :: 3 word)"
   apply (simp add: minus_one_norm)
   done
 
-lemma "f -1 = f (0xFFFF :: 16 word)"
+lemma "f (-1) = f (0xFFFF :: 16 word)"
   by (simp add: minus_one_norm)
 
 lemma bin_nth_minus_Bit0[simp]:

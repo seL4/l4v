@@ -234,7 +234,6 @@ where
 
 | wfd5: "wf_desc_pair (DTPair x n) = wf_desc x"
 
-
 primrec
   wf_size_desc :: "'a typ_desc \<Rightarrow> bool" and
   wf_size_desc_struct :: "'a typ_struct \<Rightarrow> bool" and
@@ -254,10 +253,14 @@ where
 | wfsd5: "wf_size_desc_pair (DTPair x n) = wf_size_desc x"
 
 
-primrec
+definition
   typ_struct :: "'a typ_desc \<Rightarrow> 'a typ_struct"
 where
+  "typ_struct t = (case t of TypDesc st sz \<Rightarrow> st)"
+
+lemma typ_struct [simp]:
   "typ_struct (TypDesc st sz) = st"
+  by (simp add: typ_struct_def)
 
 primrec
   typ_name :: "'a typ_desc \<Rightarrow> typ_name"

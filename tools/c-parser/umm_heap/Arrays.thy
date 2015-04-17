@@ -163,7 +163,7 @@ apply (drule_tac spec[where ?x = "Rep_array x"])
 apply (simp add: Rep_array_inverse)
 done
 
-rep_datatype "Abs_array"
+old_rep_datatype "Abs_array"
   by (auto simp: array_inject intro: array_induct)
 
 (* should add nice syntax for index *)

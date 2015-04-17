@@ -31,7 +31,7 @@ chapter "Specifications"
  *)
 
 session ASpec in "abstract" = Word +
-  options [document=pdf, document_graph, timeout=600]
+  options [document=pdf, timeout=600]
   theories [document = false]
     "../../lib/NICTACompat"
     "../../lib/Lib"
