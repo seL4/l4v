@@ -11,7 +11,7 @@
 theory CProof
 imports
   "umm_heap/SepFrame"
-  "hoare-package/Vcg"
+  "Simpl/Vcg"
   "umm_heap/StructSupport"
 begin
 
