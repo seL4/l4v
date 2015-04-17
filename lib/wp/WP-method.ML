@@ -53,7 +53,7 @@ type wp_rules = {trips: thm list * (theory -> term -> term),
 
 fun accum_last_occurence' [] _ = ([], Termtab.empty)
   | accum_last_occurence' ((t, v) :: ts) tt1 = let
-      val tm = prop_of t;
+      val tm = Thm.prop_of t;
       val tt2 = Termtab.insert_list (K false) (tm, v) tt1;
       val (ts', tt3) = accum_last_occurence' ts tt2;
   in case Termtab.lookup tt3 tm of
@@ -87,9 +87,9 @@ fun add_rule_inner trip_conv t (trips, n, others) = (
 
 fun del_rule_inner trip_conv t (trips, n, others) =
     case get_key trip_conv t of
-      SOME k => (Net.delete_term_safe (Thm.eq_thm_prop o pairself snd)
+      SOME k => (Net.delete_term_safe (Thm.eq_thm_prop o apply2 snd)
                  (k, (n, t)) trips, n, others)
-    | _ => (trips, n, remove (Thm.eq_thm_prop o pairself snd) (n, t) others)
+    | _ => (trips, n, remove (Thm.eq_thm_prop o apply2 snd) (n, t) others)
 
 val no_rules = (Net.empty, 0, []);
 

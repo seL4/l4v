@@ -4367,21 +4367,11 @@ lemma dom_eqI:
 lemma dvd_reduce_multiple:
   fixes k :: nat
   shows "(k dvd k * m + n) = (k dvd n)"
-  apply (induct m)
-   apply simp
-  apply simp
-  apply (subst add.assoc, subst add.commute)
-  apply (subst dvd_reduce)
-  apply assumption
-  done
+  by (induct m) (auto simp: add_ac)
 
 lemma image_iff:
   "inj f \<Longrightarrow> f x \<in> f ` S = (x \<in> S)"
-  apply rule
-   apply (erule imageE)
-   apply (simp add: inj_eq)
-  apply (erule imageI)
-  done
+  by (rule inj_image_mem_iff)
 
 lemma of_nat_power:
   shows "\<lbrakk> p < 2 ^ x; x < len_of TYPE ('a :: len) \<rbrakk> \<Longrightarrow> of_nat p < (2 :: 'a :: len word) ^ x"
@@ -5054,7 +5044,8 @@ lemma sint_int_max_plus_1:
   "sint (2 ^ (len_of TYPE('a) - Suc 0) :: ('a::len) word) = - (2 ^ (len_of TYPE('a) - Suc 0))"
   apply (subst word_of_int_2p [symmetric])
   apply (subst int_word_sint)
-  apply (clarsimp simp: comm_semiring_1_class.normalizing_semiring_rules(27))
+  apply clarsimp
+  apply (metis Suc_pred int_word_uint len_gt_0 power_Suc uint_eq_0 word_of_int_2p word_pow_0)
   done
 
 lemma word32_bounds:
@@ -5379,7 +5370,7 @@ lemma smod_int_range:
    apply (insert pos_mod_conj [where a="-a" and b=b])[1]
    apply (clarsimp simp: smod_int_alt_def sign_simps sgn_if
               abs_if not_less add1_zle_eq [simplified add.commute])
-   apply (metis add_le_cancel_left comm_monoid_add_class.add.right_neutral
+   apply (metis add_le_cancel_left monoid_add_class.add.right_neutral
              int_one_le_iff_zero_less less_le_trans mod_minus_right neg_less_0_iff_less
              neg_mod_conj not_less pos_mod_conj)
   apply (insert neg_mod_conj [where a=a and b="b"])[1]
@@ -6312,7 +6303,7 @@ lemma word_lsb_nat:"lsb w = (unat w mod 2 = 1)"
   by (metis (no_types, hide_lams) nat_mod_distrib nat_numeral not_mod_2_eq_1_eq_0 numeral_One uint_eq_0 uint_nonnegative unat_0 unat_def zero_le_numeral)
 
 lemma odd_iff_lsb:"odd (unat (x::('a::len) word)) = x !! 0"
-  apply (simp add:even_def)
+  apply (simp add:even_iff_mod_2_eq_zero)
   apply (subst word_lsb_nat[unfolded One_nat_def, symmetric])
   apply (rule word_lsb_alt)
   done
@@ -6352,9 +6343,8 @@ lemma shiftr1_irrelevant_lsb:"(x::('a::len) word) !! 0 \<or> x >> 1 = (x + 1) >>
   apply clarsimp
   apply (case_tac "even (unat x)")
    apply (subgoal_tac "unat x div 2 = Suc (unat x) div 2")
-    apply clarsimp
+    apply metis
    apply (subst numeral_2_eq_2)+
-   apply (rule even_nat_plus_one_div_two[symmetric])
    apply simp
   apply (simp add:odd_iff_lsb)
   done
@@ -6455,7 +6445,7 @@ lemma dvd_not_suc:"\<lbrakk> 2 ^ n dvd (p::nat); n > 0; i > 0; i < 2 ^ n; p + i 
   by (metis dvd_def dvd_reduce_multiple nat_dvd_not_less)
 
 lemma word32_gr0_conv_Suc:"(m::word32) > 0 \<Longrightarrow> \<exists>n. m = n + 1"
-  by (metis comm_semiring_1_class.normalizing_semiring_rules(24) zadd_diff_inverse)
+  by (metis add.commute add_minus_cancel)
 
 lemma offset_not_aligned:
   "\<lbrakk> is_aligned (p::word32) n; i > 0; i < 2 ^ n; n < 32\<rbrakk>
