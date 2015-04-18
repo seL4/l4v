@@ -192,6 +192,7 @@ proof (induct args rule: resolve_address_bits'.induct)
     apply (cases cap)
               defer 6 (* cnode *)
           apply (auto simp: in_monad)[11]
+    apply (rename_tac obj_ref nat list)
     apply (simp only: cap.simps)
     apply (case_tac "nat + length list = 0")
      apply (simp add: fail_def)
@@ -1323,6 +1324,7 @@ lemma master_cap_class:
   \<Longrightarrow> cap_class a = cap_class b"
   apply (case_tac a)
    apply (clarsimp simp: cap_master_cap_simps dest!:cap_master_cap_eqDs)+
+  apply (rename_tac arch_cap)
   apply (case_tac arch_cap)
    apply (clarsimp simp: cap_master_cap_simps dest!:cap_master_cap_eqDs)+
   done
@@ -1763,11 +1765,11 @@ lemma set_cap_mdb_cte_at:
      apply (erule use_valid[OF _ set_cap_caps_of_state])
      apply simp
      apply (rule impI)
-     apply (erule_tac P = "?x\<in> ran ?G" in mp)
+     apply (erule_tac P = "x\<in> ran G" for x G in mp)
      apply (rule ranI,simp)
    apply (erule use_valid[OF _ set_cap_caps_of_state])
    apply (drule spec)+
-   apply (drule_tac P = "cdt ?x ?y = ?z" in mp)
+   apply (drule_tac P = "cdt x y = z" for x y z in mp)
    apply simp+
   apply clarsimp
   done
@@ -2214,7 +2216,7 @@ lemma set_free_index_valid_mdb:
    apply simp
    apply (intro conjI)
       apply (elim conjE)
-      apply (thin_tac "?P\<longrightarrow>?Q")+
+      apply (thin_tac "P\<longrightarrow>Q" for P Q)+
       apply (simp add:untyped_range_simp)+
      apply (intro impI)
      apply (elim conjE | simp)+
@@ -3655,7 +3657,8 @@ lemma set_free_index_invs:
    apply (clarsimp simp:no_cap_to_obj_with_diff_ref_def cte_wp_at_caps_of_state vs_cap_ref_def)
    apply (case_tac capa)
     apply (simp_all add:table_cap_ref_def)
-   apply (case_tac arch_cap)
+    apply (rename_tac arch_cap)
+    apply (case_tac arch_cap)
     apply simp_all
   apply (clarsimp simp:cap_refs_in_kernel_window_def
               valid_refs_def simp del:split_paired_All)
@@ -4002,7 +4005,7 @@ lemma unique_table_refs_upd_eqD:
   apply simp
   apply (intro allI impI)
   apply (case_tac "p=p'")
-   apply (thin_tac " \<forall>p. ?P p")
+   apply (thin_tac " \<forall>p. P p" for P)
    apply simp
   apply (case_tac "a=p")
    apply (erule_tac x=p in allE)
@@ -4095,8 +4098,8 @@ lemma set_untyped_cap_as_full_is_final_cap'_neg:
   apply (rule hoare_pre)
   apply (simp add:is_final_cap'_def2)
      apply (wp hoare_vcg_all_lift hoare_vcg_ex_lift)
-       apply (rule_tac Q = "cte_wp_at ?Q ?slot" 
-         and Q'="cte_wp_at (op = src_cap) src" in P_bool_lift' )
+       apply (rule_tac Q = "cte_wp_at Q slot" 
+         and Q'="cte_wp_at (op = src_cap) src" for Q slot in P_bool_lift' )
        apply (wp set_untyped_cap_as_full_cte_wp_at)
        apply clarsimp
      apply (wp set_untyped_cap_as_full_cte_wp_at_neg)
@@ -4114,8 +4117,8 @@ lemma set_untyped_cap_as_full_not_final_not_pg_cap:
             \<and> cte_wp_at (\<lambda>cap. obj_irq_refs cap = obj_irq_refs cap' \<and> \<not> is_pg_cap cap) (a, b) s)\<rbrace>"
   apply (rule hoare_pre)
   apply (wp hoare_vcg_ex_lift)
-   apply (rule_tac Q = "cte_wp_at ?Q ?slot" 
-               and Q'="cte_wp_at (op = src_cap) src" in P_bool_lift' )
+   apply (rule_tac Q = "cte_wp_at Q slot"
+               and Q'="cte_wp_at (op = src_cap) src" for Q slot in P_bool_lift' )
     apply (wp set_untyped_cap_as_full_cte_wp_at)
     apply (auto simp: cte_wp_at_caps_of_state is_cap_simps masked_as_full_def cap_bits_untyped_def)[1]
    apply (wp set_untyped_cap_as_full_cte_wp_at_neg)
@@ -4603,6 +4606,7 @@ lemma mask_cap_valid[simp]:
                              cap_aligned_def
                              acap_rights_update_def)
   using valid_validate_vm_rights[simplified valid_vm_rights_def]
+  apply (rename_tac arch_cap)
   by (case_tac arch_cap, simp_all)
 
 
@@ -4741,6 +4745,7 @@ lemma valid_cap_update_rights[simp]:
          simp_all add: cap_rights_update_def valid_cap_def cap_aligned_def
                        acap_rights_update_def)
   using valid_validate_vm_rights[simplified valid_vm_rights_def]
+  apply (rename_tac arch_cap)
   apply (case_tac arch_cap, simp_all)
   done
 
@@ -4752,6 +4757,7 @@ lemma update_cap_data_validI:
      apply (simp add: valid_cap_def cap_aligned_def)
     apply (simp add: valid_cap_def cap_aligned_def)
    apply (simp add: the_cnode_cap_def valid_cap_def cap_aligned_def)
+  apply (rename_tac arch_cap)
   apply (case_tac arch_cap)
       apply (simp_all add: is_cap_defs arch_update_cap_data_def)
   done
@@ -4956,7 +4962,7 @@ lemma no_reply_caps_for_thread:
   apply (subgoal_tac "st_tcb_at halted t s")
    apply (fastforce simp: invs_def valid_state_def valid_reply_caps_def
                          has_reply_cap_def cte_wp_at_caps_of_state st_tcb_def2)
-  apply (thin_tac "cte_wp_at ?P (a, b) s")
+  apply (thin_tac "cte_wp_at P (a, b) s" for P)
   apply (fastforce simp: st_tcb_at_def obj_at_def is_tcb valid_obj_def
                         valid_tcb_def cte_wp_at_cases tcb_cap_cases_def
                   dest: invs_valid_objs
@@ -5376,6 +5382,7 @@ lemma same_region_as_cap_class:
    apply (fastforce simp: cap_range_def arch_is_physical_def is_cap_simps
      is_physical_def split:cap.splits arch_cap.splits)+
  apply (clarsimp split: arch_cap.splits cap.splits)
+ apply (rename_tac arch_cap arch_capa)
  apply (case_tac arch_cap)
   apply (case_tac arch_capa,clarsimp+)+
  done

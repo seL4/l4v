@@ -216,6 +216,7 @@ lemma VSRef_AASIDPool_in_vs_refs:
             apool (ucast (asid && mask asid_low_bits)) = Some r)"
   apply (simp add: vs_refs_def)
   apply (case_tac ko, simp_all)
+  apply (rename_tac arch_kernel_obj)
   apply (case_tac arch_kernel_obj, simp_all add: image_def graph_of_def)
   apply clarsimp
   apply (rule iffI)

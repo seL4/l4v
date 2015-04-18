@@ -235,7 +235,7 @@ lemma fast_finalise_def2:
      assert (result = (NullCap, None))
    od"
   apply (cases cap, simp_all add: liftM_def assert_def can_fast_finalise_def)
-  apply (case_tac option,simp+)+
+  apply (rename_tac option, case_tac option, simp+)+ (* FIXME *)
   done
 
 (*

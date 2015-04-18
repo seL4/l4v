@@ -104,7 +104,7 @@ fun add_implicit_vars ctxt schematics prop  =
     val thy = Thm.theory_of_cterm prop;
     val cert = Thm.cterm_of thy;
     
-    val eqs = map (cert o Logic.mk_equals o pairself Thm.term_of o swap) schematics;
+    val eqs = map (cert o Logic.mk_equals o apply2 Thm.term_of o swap) schematics;
    
     val goal = prop
     |> Thm.instantiate_cterm ([],schematics)
@@ -193,9 +193,9 @@ fun lift_import idx params concl_vars th ctxt =
         
     val ((inst1,inst2), eqps) = (map2 var_inst vars ys'')
     |> split_list
-    ||> map (pairself cert)
+    ||> map (apply2 cert)
     |>> split_list
-    |>> pairself (map (pairself cert))
+    |>> apply2 (map (apply2 cert))
     
     
     val eqs = map (fn (t,t') => (Thm.mk_binop ( cert (Const("==",(typ_of o ctyp_of_term) t --> (typ_of o ctyp_of_term) t' --> propT))) t t')) eqps
@@ -269,7 +269,7 @@ fun clear_spurious_tpairs params thm =
     val cert = Thm.cterm_of (Thm.theory_of_thm thm)
     fun abs t = fold_rev lambda (map term_of params) t
     
-    val eq_pairs = map (cert o Logic.mk_equals o pairself abs) tpairs
+    val eq_pairs = map (cert o Logic.mk_equals o apply2 abs) tpairs
 
     val thm' = thm
     |> Drule.implies_intr_list eq_pairs

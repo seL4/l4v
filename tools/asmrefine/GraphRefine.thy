@@ -2056,7 +2056,7 @@ fun get_var_deps nodes ep outputs = let
         val node = Inttab.lookup nodes point |> the
         val conts = map dest_next_node (get_conts node)
         val (lvs, rvs) = get_lvals_rvals node
-          |> pairself (Ord_List.make string_ord)
+          |> apply2 (Ord_List.make string_ord)
         val cont_vars = maps (Inttab.lookup_list tab) conts
           |> Ord_List.make string_ord
         val vars = Ord_List.merge string_ord (rvs,

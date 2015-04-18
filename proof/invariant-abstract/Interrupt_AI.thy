@@ -280,6 +280,7 @@ lemma invoke_irq_handler_invs':
     apply (wp maskInterrupt_invs)
      apply simp
     apply simp
+   apply (rename_tac irq cap prod)
    apply (rule hoare_pre)
     apply (wp valid_cap_typ [OF cap_delete_one_typ_at])
      apply (strengthen real_cte_tcb_valid)

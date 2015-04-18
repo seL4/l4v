@@ -103,7 +103,7 @@ fun focus use_asms state =
   end;
   
 val _ =
-  Outer_Syntax.command @{command_spec "subgoal"} "focus subgoal"
+  Outer_Syntax.command @{command_keyword "subgoal"} "focus subgoal"
     ((Scan.optional (Args.parens (Args.$$$ "no_asm") >> K false) true) >> 
       (fn mode => Toplevel.proofs (Seq.make_results o Seq.single o focus mode)));
   

@@ -522,7 +522,7 @@ lemma range_cover_stuff:
       prefer 2
        apply (erule le_trans[rotated])
        apply clarsimp
-      apply (thin_tac "n \<le> ?M")
+      apply (thin_tac "n \<le> M" for M)
       apply (simp add:shiftr_div_2n')
       apply (simp add:td_gal[symmetric])
       apply (subst (asm) unat_sub)
@@ -1193,7 +1193,7 @@ lemma untyped_inc':
     apply clarsimp
     apply (drule(1) untyped_range_non_empty[OF _ cs_cap_aligned])
     apply (drule(1) untyped_range_non_empty)
-    apply (thin_tac "?P \<longrightarrow> ?Q")+
+    apply (thin_tac "P \<longrightarrow> Q" for P Q)+
      apply blast
    apply (erule_tac x = src in allE)
    apply (erule_tac x = p in allE)
@@ -1201,7 +1201,7 @@ lemma untyped_inc':
    apply (elim conjE)
    apply (erule subset_splitE)
       apply simp
-      apply (thin_tac "?P \<longrightarrow> ?Q")+
+      apply (thin_tac "P \<longrightarrow> Q" for P Q)+
       apply blast
      apply (intro conjI)
        apply (intro impI)
@@ -1211,8 +1211,8 @@ lemma untyped_inc':
       apply clarsimp
      apply simp
      apply (elim conjE)
-     apply (thin_tac "?P \<longrightarrow> ?Q")+
-     apply (thin_tac "?P \<inter> ?Q = {}")+
+     apply (thin_tac "P \<longrightarrow> Q" for P Q)+
+     apply (thin_tac "P \<inter> Q = {}" for P Q)+
      apply (intro impI)
      apply (drule d_rangeD[OF d])
      apply simp
@@ -1252,7 +1252,7 @@ lemma untyped_inc':
      apply (drule(1) disjoint_subset[OF psubset_imp_subset,rotated])
      apply simp
     apply blast
-   apply (thin_tac "?P \<longrightarrow> ?Q")+
+   apply (thin_tac "P \<longrightarrow> Q" for P Q)+
    apply (drule disjoint_subset2)
     apply (simp (no_asm) add:Int_ac)
    apply (drule(1) untyped_range_non_empty[OF _ cs_cap_aligned])+
@@ -1531,6 +1531,7 @@ lemma retype_ret_valid_caps:
         dom_def arch_default_cap_def ptr_add_def | rule conjI | intro conjI obj_at_foldr_intro imageI
       | rule is_aligned_add_multI[OF _ le_refl],
         (simp add:range_cover_def word_bits_def obj_bits_api_def slot_bits_def)+)+)[4]
+    apply (rename_tac aobject_type)
     apply (case_tac aobject_type)
       apply (clarsimp simp:valid_cap_def default_object_def cap_aligned_def 
         cte_level_bits_def slot_bits_def is_obj_defs well_formed_cnode_n_def empty_cnode_def
@@ -1676,6 +1677,7 @@ lemma untyped_range_default_empty:
 lemma obj_refs_default_cap:
   "obj_refs (default_cap tp oref sz) \<subseteq> {oref}"
   apply (cases tp, simp_all)
+  apply (rename_tac aobject_type)
   apply (case_tac aobject_type, simp_all add: arch_default_cap_def)
   done
 
@@ -1683,6 +1685,7 @@ lemma obj_refs_default_cap:
 lemma obj_refs_default_nut:
   "tp \<noteq> Untyped \<Longrightarrow> obj_refs (default_cap tp oref sz) = {oref}"
   apply (cases tp, simp_all)
+  apply (rename_tac aobject_type)
   apply (case_tac aobject_type, simp_all add: arch_default_cap_def)
   done
 
@@ -1744,6 +1747,7 @@ lemma retype_region_ranges':
     apply (rule is_aligned_mult_triv2)
      apply (simp add:range_cover_def)
    apply (drule sym)
+  apply (rename_tac aobject_type)
   apply (case_tac aobject_type)
    apply (simp_all add: aobj_ref_def arch_default_cap_def p_assoc_help)
    apply ((rule is_aligned_no_wrap'[OF is_aligned_add_multI[OF _ le_refl refl]],
@@ -1769,7 +1773,7 @@ lemma retype_region_ranges:
     apply (fastforce simp:cte_wp_at_caps_of_state)
    apply (drule(1) bspec)
    apply (drule(1) subsetD)
-   apply (rule_tac A = "{?x..?y}" in subsetD[rotated])
+   apply (rule_tac A = "{x..y}" for x y in subsetD[rotated])
    apply assumption
    apply simp
    apply (erule subset_trans[OF range_cover_subset'])
@@ -1806,6 +1810,7 @@ lemma retype_region_distinct_sets:
   apply (subgoal_tac  "of_nat y * (2::word32) ^ obj_bits_api tp us \<noteq> of_nat x * 2 ^ obj_bits_api tp us")
    apply (case_tac tp) defer
         apply (simp add:cap_range_def ptr_add_def)+
+    apply (rename_tac aobject_type)
     apply (case_tac aobject_type)
           apply (simp add:ptr_add_def aobj_ref_def arch_default_cap_def)+
    apply (clarsimp simp: ptr_add_def word_unat_power[symmetric]
@@ -1957,6 +1962,7 @@ lemma retype_region_descendants_range_ret:
      apply (rule is_aligned_add_multI)
         apply (fastforce simp:range_cover_def)+
   apply (case_tac ty,simp_all add:cap_range_def ptr_add_def obj_bits_api_def)
+  apply (rename_tac aobject_type)
   apply (case_tac aobject_type,
     simp_all add:cap_range_def aobj_ref_def arch_default_cap_def default_arch_object_def)
   done
@@ -2029,7 +2035,7 @@ lemma set_cap_valid_mdb_simple:
     apply (intro conjI impI)
      apply (simp)
      apply (elim conjE)
-     apply (thin_tac "?Q \<longrightarrow>?P")+
+     apply (thin_tac "Q \<longrightarrow> P" for P Q)+
      apply (frule(2) descendants_range_inD[rotated])
      apply (drule caps_of_state_valid_cap[OF _ obj])
      apply (drule sym)
@@ -2046,11 +2052,11 @@ lemma set_cap_valid_mdb_simple:
    apply simp
    apply (intro conjI)
       apply (elim conjE)
-      apply (thin_tac "?P\<longrightarrow>?Q")+
+      apply (thin_tac "P\<longrightarrow>Q" for P Q)+
       apply (simp add:untyped_range_simp)+
      apply (intro impI)
      apply (elim conjE | simp)+
-     apply (thin_tac "?P\<longrightarrow>?Q")+
+     apply (thin_tac "P\<longrightarrow>Q" for P Q)+
      apply (frule(2) descendants_range_inD[rotated])
      apply (drule caps_of_state_valid_cap[OF _ obj])
      apply (drule sym)
@@ -2058,11 +2064,11 @@ lemma set_cap_valid_mdb_simple:
      apply ((clarsimp simp:valid_cap_def cap_aligned_def untyped_range.simps)+)[3]
     apply (intro impI)
     apply (elim conjE subset_splitE | simp)+
-        apply (thin_tac "?P\<longrightarrow>?Q")+
+        apply (thin_tac "P\<longrightarrow>Q" for P Q)+
         apply (clarsimp simp:untyped_range.simps)
       apply simp
       apply (elim conjE)
-      apply (thin_tac "?P\<longrightarrow>?Q")+
+      apply (thin_tac "P\<longrightarrow>Q" for P Q)+
       apply (clarsimp simp:untyped_range.simps)
      apply simp
      apply (erule disjE)
@@ -2180,6 +2186,7 @@ lemma set_untyped_cap_invs_simple:
   apply (clarsimp simp:no_cap_to_obj_with_diff_ref_def cte_wp_at_caps_of_state vs_cap_ref_def)
   apply (case_tac cap)
    apply (simp_all add:vs_cap_ref_def table_cap_ref_def)
+  apply (rename_tac arch_cap)
   apply (case_tac arch_cap)
    apply simp_all
   apply (clarsimp simp:cap_refs_in_kernel_window_def
@@ -2207,11 +2214,11 @@ lemma set_untyped_cap_caps_overlap_reserved:
   apply clarify
   apply (erule subset_splitE)
      apply (simp del:usable_untyped_range.simps)
-     apply (thin_tac "?P \<longrightarrow> ?Q")+
+     apply (thin_tac "P \<longrightarrow> Q" for P Q)+
      apply (elim conjE)
      apply blast
     apply (simp del:usable_untyped_range.simps)
-    apply (thin_tac "?P\<longrightarrow>?Q")+
+    apply (thin_tac "P\<longrightarrow>Q" for P Q)+
     apply (elim conjE)
     apply (drule(2) descendants_range_inD)
     apply simp
@@ -2227,7 +2234,7 @@ lemma set_untyped_cap_caps_overlap_reserved:
         apply (rule valid_cap_aligned)
        apply (erule(1) caps_of_state_valid)
       apply simp+
-  apply (thin_tac "?P\<longrightarrow>?Q")+
+  apply (thin_tac "P\<longrightarrow>Q" for P Q)+
   apply (rule disjoint_subset[OF usable_range_subseteq])
      apply (rule valid_cap_aligned)
     apply (erule(1) caps_of_state_valid)
@@ -2414,13 +2421,13 @@ lemma descendants_range_caps_no_overlapI:
        apply (clarsimp simp: word_and_le2)
      apply simp
      apply (elim conjE)
-     apply (thin_tac "?P\<longrightarrow>?Q")+
+     apply (thin_tac "P\<longrightarrow>Q" for P Q)+
      apply (drule(2) descendants_range_inD)
      apply simp
     apply simp
    apply (erule subset_trans[OF _  equalityD1,rotated])
    apply (clarsimp simp:word_and_le2)
-  apply (thin_tac "?P\<longrightarrow>?Q")+
+  apply (thin_tac "P\<longrightarrow>Q" for P Q)+
   apply (drule disjoint_subset[rotated,
        where A' = "{ptr..(ptr && ~~ mask sz) + 2 ^ sz - 1}"])
   apply (clarsimp simp:word_and_le2 Int_ac)+
@@ -2463,7 +2470,7 @@ lemma cte_wp_at_caps_no_overlapI:
       apply (erule subset_trans[OF _ psubset_imp_subset,rotated])
        apply (clarsimp simp: word_and_le2)
      apply simp
-     apply (thin_tac "?P\<longrightarrow>?Q")+
+     apply (thin_tac "P\<longrightarrow>Q" for P Q)+
      apply (elim conjE)
      apply (drule disjoint_subset2[rotated,
        where B' = "{ptr..(ptr && ~~ mask sz) + 2 ^ sz - 1}"])
@@ -2475,7 +2482,7 @@ lemma cte_wp_at_caps_no_overlapI:
     apply simp
    apply (erule subset_trans[OF _  equalityD1,rotated])
    apply (clarsimp simp:word_and_le2)
-  apply (thin_tac "?P\<longrightarrow>?Q")+
+  apply (thin_tac "P\<longrightarrow>Q" for P Q)+
   apply (drule disjoint_subset[rotated,
        where A' = "{ptr..(ptr && ~~ mask sz) + 2 ^ sz - 1}"])
   apply (clarsimp simp:word_and_le2 Int_ac)+
@@ -2883,6 +2890,7 @@ lemma invoke_untyped_st_tcb_at:
    \<lbrace>\<lambda>rv. st_tcb_at P t\<rbrace>"
   apply (cases ui, simp add: mapM_x_def[symmetric]
                   split del: split_if)
+  apply (rename_tac cslot_ptr word1 word2 apiobject_type nat list)
   apply (rule hoare_name_pre_state)
   apply (clarsimp)
   apply (wp mapM_x_wp[OF _ subset_refl] get_cap_wp
@@ -3428,7 +3436,7 @@ lemma create_caps_invs:
   apply (clarsimp simp add: mapM_x_def sequence_x_def) 
   apply (rule hoare_seq_ext)
    apply assumption
-  apply (thin_tac "valid ?a ?b ?c")
+  apply (thin_tac "valid a b c" for a b c)
   apply (rule hoare_pre)
   apply (rule hoare_strengthen_post)
   apply (rule_tac list=list in create_caps_invs_inv[OF create_cap_Q],clarsimp+)
@@ -3781,6 +3789,7 @@ lemma nonempty_default[simp]:
   "tp \<noteq> Untyped \<Longrightarrow> \<not> nonempty_table S (default_object tp us)"
   apply (case_tac tp, simp_all add: default_object_def nonempty_table_def
                                     a_type_def)
+  apply (rename_tac aobject_type)
   apply (case_tac aobject_type, simp_all add: default_arch_object_def)
    apply (simp_all add: empty_table_def pde_ref_def valid_pde_mappings_def)
   done

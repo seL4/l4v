@@ -12,7 +12,7 @@
    Type class for enumerations.
 *)
 
-header "Enumerations"
+chapter "Enumerations"
 
 theory Enumeration
 imports "~~/src/HOL/Main"

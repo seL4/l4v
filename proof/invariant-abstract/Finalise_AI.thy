@@ -317,7 +317,7 @@ lemma replaceable_more_update[simp]:
 
 (* FIXME: move *)
 lemma obj_ref_ofI: "obj_refs cap = {x} \<Longrightarrow> obj_ref_of cap = x"
-  by (case_tac cap, simp_all) (case_tac arch_cap, simp_all)
+  by (case_tac cap, simp_all) (rename_tac arch_cap, case_tac arch_cap, simp_all)
 lemmas obj_ref_ofI' = obj_ref_ofI[OF obj_ref_elemD]
 
 
@@ -368,7 +368,7 @@ lemma empty_slot_invs:
    apply (clarsimp simp: irq_revocable_def)
   apply (rule conjI)
    apply (clarsimp simp: reply_master_revocable_def)
-  apply (thin_tac "\<forall>irq. irqopt = Some irq \<longrightarrow> ?P irq")
+  apply (thin_tac "\<forall>irq. irqopt = Some irq \<longrightarrow> P irq" for P)
   apply (rule conjI)
    apply (clarsimp simp: valid_machine_state_def)
   apply (rule conjI)
@@ -1621,14 +1621,15 @@ lemma flush_table_empty:
     | wpc
     | simp
     | wps)+
+  apply (rename_tac pd x y)
   apply (rule_tac Q="\<lambda>pd' s.
-              (if worda \<noteq> pd'
+              (if pd \<noteq> pd'
                then (\<lambda>s. obj_at
                          (empty_table (set (arm_global_pts (arch_state s)))) word
                          s)
                else (\<lambda>_. True))
                s \<and>
-              (if worda \<noteq> pd' then \<lambda>s. True
+              (if pd \<noteq> pd' then \<lambda>s. True
                else (\<lambda>s. obj_at
                          (empty_table (set (arm_global_pts (arch_state s)))) word
                          s))
@@ -1911,8 +1912,9 @@ lemma page_directory_at_def2:
   apply (simp add: a_type_def obj_at_def)
   apply (rule iffI)
    apply (erule exE)
-   apply (case_tac ko) apply (simp_all add: split_if_eq1)
-   apply (case_tac arch_kernel_obj) apply simp_all
+   apply (case_tac ko, simp_all add: split_if_eq1)
+   apply (rename_tac arch_kernel_obj)
+   apply (case_tac arch_kernel_obj, simp_all)
   apply (erule exE)
   apply (rule_tac x="ArchObj (PageDirectory pd)" in exI)
   apply simp
@@ -1965,10 +1967,12 @@ lemma obj_at_empty_tableI:
    apply (case_tac ko)
        apply ((erule_tac x="ucast (kernel_base >> 20) - 1" in allE,
          simp add: kernel_base_def kernel_mapping_slots_def)+)[4]
+   apply (rename_tac arch_kernel_obj)
    apply (case_tac arch_kernel_obj) defer 3
       apply ((erule_tac x="ucast (kernel_base >> 20) - 1" in allE,
          simp add: kernel_base_def kernel_mapping_slots_def)+)[4]
    (* Interesting case *)
+  apply (rename_tac "fun")
   apply clarsimp
   apply (erule_tac x=x in allE)
   apply (case_tac "x \<notin> kernel_mapping_slots")
@@ -2399,6 +2403,7 @@ lemma arch_cap_recycle_replaceable:
     apply (clarsimp simp: vs_cap_ref_def valid_cap_simps invs_psp_aligned
                           invs_arch_objs invs_valid_objs invs_valid_asid_table
                    split: option.splits vmpage_size.splits)
+   apply (rename_tac word option)
    apply (case_tac slot)
    apply (clarsimp simp: valid_cap_simps)
    apply (case_tac "\<not> is_final_cap' (cap.ArchObjectCap (arch_cap.PageTableCap word option)) s")
@@ -2416,6 +2421,7 @@ lemma arch_cap_recycle_replaceable:
    apply (rule_tac x = "a" in exI, rule_tac x = "b" in exI)
    apply (fastforce intro!: word_aligned_pt_slots
                     elim!: caps_of_state_aligned_page_table)
+  apply (rename_tac word option)
   apply (case_tac "\<not> is_final_cap' (cap.ArchObjectCap (arch_cap.PageDirectoryCap word option)) s")
    apply clarsimp
   apply (frule caps_of_state_valid)
@@ -2504,6 +2510,7 @@ lemma cap_recycle_replaceable:
    apply (frule(1) zombies_finalD [OF caps_of_state_cteD], clarsimp simp: is_cap_simps)
    apply (clarsimp simp: cte_wp_at_caps_of_state)
    apply (frule caps_of_state_valid_cap, clarsimp+)
+   apply (rename_tac option nat)
    apply (case_tac option, simp_all)[1]
    -- "None case"
     apply clarsimp
@@ -3042,6 +3049,7 @@ lemma recycle_cap_invs:
   apply (cases cap, simp_all add: recycle_cap_def)
            apply ((wp | simp)+)[9]
    -- "Zombie"
+   apply (rename_tac option nat)
    apply (case_tac option, simp_all)
     apply (rule hoare_seq_ext[rotated], rule assert_sp gts_sp)+
     apply (rule hoare_seq_ext)
@@ -3152,6 +3160,7 @@ lemma valid_idle_has_null_cap:
   apply (case_tac capa, simp_all add: cap_range_def global_refs_def)[1]
   apply (clarsimp simp: valid_irq_node_def valid_idle_def st_tcb_at_def
                         obj_at_def is_cap_table_def)
+  apply (rename_tac word tcb)
   apply (drule_tac x=word in spec, simp)
   done
 
@@ -3197,7 +3206,7 @@ lemma arch_recycle_cap_valid[wp]:
     apply (erule disjE)
      apply ((clarsimp simp: arch_reset_mem_mapping.simps
                             valid_cap_def cap_aligned_def
-       | case_tac arch_cap)+)[2]
+       | rename_tac arch_cap, case_tac arch_cap)+)[2]
    apply (simp add: arch_recycle_cap_def)
    apply (intro conjI impI)
     apply (wp unmap_page_table_valid_cap invalidate_tlb_by_asid_valid_cap

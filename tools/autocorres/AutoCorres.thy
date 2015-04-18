@@ -140,7 +140,7 @@ ML_file "autocorres.ML"
 
 (* Setup "autocorres" keyword. *)
 ML {*
-  Outer_Syntax.command @{command_spec "autocorres"}
+  Outer_Syntax.command @{command_keyword "autocorres"}
     "Abstract the output of the C parser into a monadic representation."
     (AutoCorres.autocorres_parser >>
       (Toplevel.theory o (fn (opt, filename) => AutoCorres.do_autocorres opt filename)))

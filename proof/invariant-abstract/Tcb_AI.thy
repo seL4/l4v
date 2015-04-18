@@ -484,7 +484,7 @@ lemma same_object_obj_refs:
   apply (cases cap, simp_all add: same_object_as_def)
        apply (clarsimp simp: is_cap_simps bits_of_def
                       split: cap.split_asm arch_cap.split_asm)+
-     apply (case_tac arch_capa, simp_all)+
+     apply (rename_tac arch_cap, case_tac arch_cap, simp_all)+
   done
 
 
@@ -855,7 +855,7 @@ lemma thread_set_tcb_ipc_buffer_cap_cleared_invs:
               | rule conjI | erule disjE)+
   apply (clarsimp simp: valid_tcb_def dest!: get_tcb_SomeD)
   apply (rule conjI, simp add: ran_tcb_cap_cases)
-  apply (cut_tac P="op = ?v" and t="(t, tcb_cnode_index 4)"
+  apply (cut_tac P="op = v" and t="(t, tcb_cnode_index 4)" for v
             in  cte_wp_at_tcbI)
      apply simp
     apply fastforce
@@ -1387,6 +1387,7 @@ lemma update_cap_valid:
      apply (simp add: badge_update_def cap_rights_update_def)
     apply (simp add: badge_update_def)
    apply simp
+  apply (rename_tac arch_cap)
   using valid_validate_vm_rights[simplified valid_vm_rights_def]
   apply (case_tac arch_cap, simp_all add: acap_rights_update_def
                                      split: option.splits prod.splits)

@@ -1624,7 +1624,8 @@ lemma valid_cap_def2:
           apply (simp_all add: valid_cap_simps wellformed_cap_simps
                                valid_cap_ref_simps
                         split: option.splits)
-    apply fastforce+
+    apply (fastforce+)[4]
+  apply (rename_tac arch_cap)
   apply (case_tac arch_cap)
     apply (auto simp add: valid_cap_simps wellformed_acap_simps
                           valid_cap_ref_simps vmsz_aligned_ARMSection
@@ -1831,6 +1832,7 @@ lemma asid_pool_at_ko:
   "asid_pool_at p s \<Longrightarrow> \<exists>pool. ko_at (ArchObj (ARM_Structs_A.ASIDPool pool)) p s"
   apply (clarsimp simp: obj_at_def a_type_def)
   apply (case_tac ko, simp_all split: split_if_asm)
+  apply (rename_tac arch_kernel_obj)
   apply (case_tac arch_kernel_obj, auto)
   done
 
@@ -2003,8 +2005,10 @@ lemma ex_nonz_cap_toE:
 lemma refs_of_live:
   "refs_of ko \<noteq> {} \<Longrightarrow> live ko"
   apply (cases ko, simp_all)
+    apply (rename_tac tcb_ext)
     apply (case_tac "tcb_state tcb_ext", simp_all)
    apply clarsimp
+  apply (rename_tac async_ep)
   apply (case_tac async_ep, simp_all)
   done
 
@@ -2074,6 +2078,7 @@ lemma physical_valid_cap_not_empty_range:
   "\<lbrakk>valid_cap cap s; cap_class cap = PhysicalClass\<rbrakk> \<Longrightarrow> cap_range cap \<noteq> {}"
   apply (case_tac cap)
    apply (simp_all add:cap_range_def valid_cap_simps cap_aligned_def is_aligned_no_overflow)
+  apply (rename_tac arch_cap)
   apply (case_tac arch_cap,simp_all)
   done
 
@@ -2164,6 +2169,7 @@ lemma in_user_frame_def:
    apply (simp add: a_type_simps)
   apply clarsimp
   apply (case_tac ko, simp_all add: a_type_simps split: split_if_asm)
+  apply (rename_tac arch_kernel_obj)
   apply (case_tac arch_kernel_obj, simp_all add: a_type_simps)
   done
 
@@ -2266,8 +2272,10 @@ lemma valid_arch_obj_pspaceI:
   apply (cases obj, simp_all)
     apply (simp add: obj_at_def)
    apply (erule allEI)
+   apply (rename_tac "fun" x)
    apply (case_tac "fun x", simp_all add: obj_at_def)
   apply (erule ballEI)
+  apply (rename_tac "fun" x)
   apply (case_tac "fun x", simp_all add: obj_at_def)
   done
 
@@ -2503,6 +2511,7 @@ lemmas  pageBitsForSize_simps[simp] =
 lemma arch_kobj_size_bounded:
   "arch_kobj_size obj < word_bits"
   apply (cases obj, simp_all add: word_bits_conv pageBits_def)
+  apply (rename_tac vmpage_size)
   apply (case_tac vmpage_size, simp_all)
   done
 
@@ -2770,6 +2779,7 @@ lemma obj_bits_T:
   apply (cases v, simp_all add: obj_bits_type_def a_type_def)
    apply (clarsimp simp: obj_bits.simps well_formed_cnode_n_def
                          length_set_helper length_helper cte_level_bits_def)
+  apply (rename_tac arch_kernel_obj)
   apply (case_tac arch_kernel_obj, simp_all add: obj_bits.simps)
   done
 
@@ -2823,11 +2833,13 @@ lemma valid_cap_typ:
       apply (rule hoare_vcg_conj_lift [OF valid_untyped_typ[OF P]])
       apply (simp add: valid_def)
      apply (rule hoare_vcg_conj_lift [OF P hoare_vcg_prop])+
+   apply (rename_tac option nat)
    apply (case_tac option, simp_all add: tcb_at_typ cap_table_at_typ)[1]
     apply (rule hoare_vcg_conj_lift [OF P])
     apply (rule hoare_vcg_prop)
    apply (rule hoare_vcg_conj_lift [OF P])
    apply (rule hoare_vcg_prop)
+  apply (rename_tac arch_cap)
   apply (case_tac arch_cap,
          simp_all add: P P[where P=id, simplified]
                        hoare_vcg_prop)
@@ -2886,8 +2898,10 @@ lemma valid_arch_obj_typ:
   apply (cases ob, simp_all)
     apply (rule hoare_vcg_const_Ball_lift [OF P])
    apply (rule hoare_vcg_all_lift)
+   apply (rename_tac "fun" x)
    apply (case_tac "fun x", simp_all add: hoare_vcg_prop P)
   apply (rule hoare_vcg_ball_lift)
+  apply (rename_tac "fun" x)
   apply (case_tac "fun x", simp_all add: hoare_vcg_prop P)
   apply (rule P)
   done
@@ -3022,46 +3036,55 @@ lemma a_type_ACapTableE:
     (!!cs. \<lbrakk>ko = CNode n cs; well_formed_cnode_n n cs\<rbrakk> \<Longrightarrow> R)\<rbrakk>
    \<Longrightarrow> R"
   by (case_tac ko, simp_all add: a_type_simps split: split_if_asm,
+      rename_tac arch_kernel_obj,
       case_tac arch_kernel_obj, simp_all add: a_type_simps)
 lemma a_type_AGarbageE:
   "\<lbrakk>a_type ko = AGarbage;
     (!!n cs. \<lbrakk>ko = CNode n cs; \<not> well_formed_cnode_n n cs\<rbrakk> \<Longrightarrow> R)\<rbrakk>
    \<Longrightarrow> R"
   apply (case_tac ko, simp_all add: a_type_simps split: split_if_asm)
+  apply (rename_tac arch_kernel_obj)
   apply (case_tac arch_kernel_obj, simp_all add: a_type_simps)
   done
 lemma a_type_ATCBE:
   "\<lbrakk>a_type ko = ATCB; (!!tcb. ko = TCB tcb \<Longrightarrow> R)\<rbrakk> \<Longrightarrow> R"
   by (case_tac ko, simp_all add: a_type_simps split: split_if_asm,
+      rename_tac arch_kernel_obj,
       case_tac arch_kernel_obj, simp_all add: a_type_simps)
 lemma a_type_AEndpointE:
   "\<lbrakk>a_type ko = AEndpoint; (!!ep. ko = Endpoint ep \<Longrightarrow> R)\<rbrakk> \<Longrightarrow> R"
   by (case_tac ko, simp_all add: a_type_simps split: split_if_asm,
+      rename_tac arch_kernel_obj,
       case_tac arch_kernel_obj, simp_all add: a_type_simps)
 lemma a_type_AAEPE:
   "\<lbrakk>a_type ko = AAEP; (!!aep. ko = AsyncEndpoint aep \<Longrightarrow> R)\<rbrakk> \<Longrightarrow> R"
   by (case_tac ko, simp_all add: a_type_simps split: split_if_asm,
+      rename_tac arch_kernel_obj,
       case_tac arch_kernel_obj, simp_all add: a_type_simps)
 lemma a_type_AASIDPoolE:
   "\<lbrakk>a_type ko = AArch AASIDPool;
     (!!ap. ko = ArchObj (arch_kernel_obj.ASIDPool ap) \<Longrightarrow> R)\<rbrakk>
    \<Longrightarrow> R"
   by (case_tac ko, simp_all add: a_type_simps split: split_if_asm,
+      rename_tac arch_kernel_obj,
       case_tac arch_kernel_obj, simp_all add: a_type_simps)
 lemma a_type_APageDirectoryE:
   "\<lbrakk>a_type ko = AArch APageDirectory;
     (!!pd. ko = ArchObj (PageDirectory pd) \<Longrightarrow> R)\<rbrakk>
    \<Longrightarrow> R"
   by (case_tac ko, simp_all add: a_type_simps split: split_if_asm,
+      rename_tac arch_kernel_obj,
       case_tac arch_kernel_obj, simp_all add: a_type_simps)
 lemma a_type_APageTableE:
   "\<lbrakk>a_type ko = AArch APageTable; (!!pt. ko = ArchObj (PageTable pt) \<Longrightarrow> R)\<rbrakk>
    \<Longrightarrow> R"
   by (case_tac ko, simp_all add: a_type_simps split: split_if_asm,
+      rename_tac arch_kernel_obj,
       case_tac arch_kernel_obj, simp_all add: a_type_simps)
 lemma a_type_AIntDataE:
   "\<lbrakk>a_type ko = AArch (AIntData sz); ko = ArchObj (DataPage sz) \<Longrightarrow> R\<rbrakk> \<Longrightarrow> R"
   by (case_tac ko, simp_all add: a_type_simps split: split_if_asm,
+      rename_tac arch_kernel_obj,
       case_tac arch_kernel_obj, simp_all add: a_type_simps)
 
 lemmas a_type_elims[elim!] =
@@ -3904,7 +3927,7 @@ lemma vs_lookup_pages_vs_lookupI: "(ref \<rhd> p) s \<Longrightarrow> (ref \<unr
     apply (erule rtrancl.induct, simp_all)
     apply (rename_tac a b c)
     apply (subgoal_tac "(b \<unrhd>1 c) s", erule (1) rtrancl_into_rtrancl)
-    apply (thin_tac "?x : rtrancl ?r")+
+    apply (thin_tac "x : rtrancl r" for x r)+
     apply (simp add: vs_lookup1_def vs_lookup_pages1_def split_def)
     apply (erule exEI)
     apply clarsimp
@@ -4038,21 +4061,21 @@ lemma valid_arch_objs_alt:
   apply (intro iffI conjI)
        apply fastforce
       apply (clarsimp simp: obj_at_def)
-      apply (thin_tac "Ball ?S ?P")
+      apply (thin_tac "Ball S P" for S P)
       apply (frule vs_lookup_atI)
       apply (drule valid_arch_objsD)
         apply (simp add: obj_at_def)
        apply assumption
       apply (clarsimp simp: obj_at_def ranI)
      apply (clarsimp simp: obj_at_def)
-     apply (thin_tac "Ball ?S ?P")
+     apply (thin_tac "Ball S P" for S P)
      apply (frule (2) vs_lookup_apI)
      apply (drule valid_arch_objsD)
        apply (simp add: obj_at_def)
       apply assumption
      apply fastforce
     apply (clarsimp simp: obj_at_def)
-    apply (thin_tac "Ball ?S ?P")
+    apply (thin_tac "Ball S P" for S P)
     apply (frule (5) vs_lookup_pdI)
     apply (drule valid_arch_objsD)
       apply (simp add: obj_at_def)

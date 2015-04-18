@@ -57,7 +57,7 @@ in
   
 
 val _ =
-  Outer_Syntax.command @{command_spec "by"} "terminal backward proof"
+  Outer_Syntax.command @{command_keyword "by"} "terminal backward proof"
     ((fn toks => 
     let
       val (beg,fin) = (Token.pos_of (hd toks),Token.pos_of (List.last toks))
@@ -83,7 +83,7 @@ fun theorems kind =
     >> (fn (facts, fixes) => #2 oo Specification.theorems_cmd kind facts fixes);
 
 val _ =
-  Outer_Syntax.local_theory' @{command_spec "lemmas"} "define lemmas" (wrap_lthy' "lemmas" (theorems Thm.lemmaK));
+  Outer_Syntax.local_theory' @{command_keyword "lemmas"} "define lemmas" (wrap_lthy' "lemmas" (theorems Thm.lemmaK));
 
 fun get_size_report () = Synchronized.value transactions
 

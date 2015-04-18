@@ -474,7 +474,7 @@ local
 in
 fun new_include s thy = C_Includes.map (fn sl => mk_thy_relative thy s::sl) thy
 
-val _ = Outer_Syntax.command @{command_spec "new_C_include_dir"}
+val _ = Outer_Syntax.command @{command_keyword "new_C_include_dir"}
                             "add a directory to the include path"
                             (P.text >> (Toplevel.theory o new_include))
 
@@ -494,13 +494,13 @@ end
 
 val _ =
     Outer_Syntax.command
-      @{command_spec "install_C_file"}
+      @{command_keyword "install_C_file"}
       "import a C file"
       file_inclusion
 
 val _ =
     Outer_Syntax.command
-      @{command_spec "install_C_types"}
+      @{command_keyword "install_C_types"}
       "install types from a C file"
       (P.text >> (Toplevel.theory o install_C_types))
 

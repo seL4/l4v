@@ -32,7 +32,7 @@ ML {* fun normalize_env (tyenv,tenv) =
 (*FIXME: Belongs in Args*)
 ML {* fun toks_of src = let val ((_,toks),_) = Args.dest_src src in toks end;*}
 
-ML {* fun map_toks f src = let val ((name,toks),pos) = Args.dest_src src in Args.src ((name,f toks),pos) end;*}
+ML {* fun map_toks f src = let val ((name,toks),pos) = Args.dest_src src in Token.src ((name,f toks),pos) end;*}
 
 section {* Rich methods *}
 
@@ -45,17 +45,17 @@ sig
   
   datatype rich_method =
     Basic of basic_rich_method |
-    Source of Args.src |
+    Source of Token.src |
     Infix of string * (rich_method * rich_method) |
     Postfix of (string * string list) * rich_method |
-    Match_Bind of Args.src * (Args.src * rich_method) list |
+    Match_Bind of Token.src * (Token.src * rich_method) list |
     Focus of term * rich_method
     
   type rich_method_args = string list * term list * ((bool * string) list) * (string list)  
     
-  val fold_map_src: bool -> (Args.src -> 'a -> Args.src * 'a) -> rich_method -> 'a -> rich_method * 'a
-  val map_src: bool -> (Args.src -> Args.src) -> rich_method -> rich_method
-  val fold_src: bool -> (Args.src -> 'a -> 'a) -> rich_method -> 'a -> 'a
+  val fold_map_src: bool -> (Token.src -> 'a -> Token.src * 'a) -> rich_method -> 'a -> rich_method * 'a
+  val map_src: bool -> (Token.src -> Token.src) -> rich_method -> rich_method
+  val fold_src: bool -> (Token.src -> 'a -> 'a) -> rich_method -> 'a -> 'a
   val the_method : Proof.context -> string -> rich_method_args * rich_method
   val check: Proof.context -> xstring * Position.T -> string * (rich_method_args * rich_method)
 
@@ -100,15 +100,15 @@ type rich_method_args = string list * term list * ((bool * string) list) * (stri
          
 datatype rich_method =
     Basic of basic_rich_method |
-    Source of Args.src |
+    Source of Token.src |
     Infix of string * (rich_method * rich_method) |
     Postfix of (string * string list) * rich_method |
-    Match_Bind of Args.src * (Args.src * rich_method) list |
+    Match_Bind of Token.src * (Token.src * rich_method) list |
     Focus of term * rich_method
 
 fun src_term_lift f t a =
   let
-    val src = Args.src (("",[Token.mk_term t]),Position.none)
+    val src = Token.src (("",[Token.mk_term t]),Position.none)
     val (src',a') = f src a
     val ((_,[tok]),_) = Args.dest_src src'
     val SOME (Token.Term t') = Token.get_value tok
@@ -168,7 +168,7 @@ local
     let
       val ((name, toks), pos) = Args.dest_src src;
       val (toks', t') = fold_map replace_value toks t;
-      val src' = Args.src ((name, toks'), pos);
+      val src' = Token.src ((name, toks'), pos);
     in (src', t') end;
 
 in
@@ -524,13 +524,13 @@ local
       
 
     fun meth5 x = ((@{keyword "match"} |-- Parse.!!! 
-                    ((Parse.position (Args.parse1 (curry (op <>) "in")) >> (fn (toks,pos) => (Args.src (("",toks),pos)))))
+                    ((Parse.position (Args.parse1 (curry (op <>) "in")) >> (fn (toks,pos) => (Token.src (("",toks),pos)))))
                      -- (@{keyword "in"} |--  
                   Parse.enum1 "\<bar>" (Parse.position (Args.parse1 (fn t => t <> "\<Rightarrow>" andalso t <> "\<bar>" andalso is_symid_meth t)) -- 
                             (@{keyword "\<Rightarrow>"} |-- meth4 )))) 
-                     >> (fn (src,m1) => Match_Bind (src,map (apfst (fn (toks,pos) => (Args.src (("",toks),pos)))) m1))) x
+                     >> (fn (src,m1) => Match_Bind (src,map (apfst (fn (toks,pos) => (Token.src (("",toks),pos)))) m1))) x
     and meth4 x =
-     (Parse.position (Parse.xname >> rpair []) >> (Source o Args.src) ||
+     (Parse.position (Parse.xname >> rpair []) >> (Source o Token.src) ||
       Parse.$$$ "(" |-- Parse.!!! (meth0 --| Parse.$$$ ")")) x
     and meth3 x =
      (meth4 -- Parse.keyword_with (member (op =) postfix_syn) >> (fn (m,x) => Postfix ((x,[]),m)) ||
@@ -538,7 +538,7 @@ local
       meth5 ||
       meth4) x
     and meth2 x =
-     (Parse.position (Parse.xname --(parse1 (is_symid_meth))) >>  (Source o Args.src) ||
+     (Parse.position (Parse.xname --(parse1 (is_symid_meth))) >>  (Source o Token.src) ||
       meth3) x
     and meth_infix ts x =
      case ts of (t :: ts) =>
@@ -1077,7 +1077,7 @@ fun parse_method ctxt (txt, pos) =
  
 (* define rich method *)
 
-val default_rich_method = Source (Args.src (("-",[]),Position.none))
+val default_rich_method = Source (Token.src (("-",[]),Position.none))
 
 local
     
@@ -1135,7 +1135,7 @@ end;
 val parse_fact = (Args.bracks Parse.name >> pair true) || (Parse.name >> pair false)
                       
 val _ =
-  Outer_Syntax.local_theory @{command_spec "method_definition"} "define proof method"
+  Outer_Syntax.local_theory @{command_keyword "method_definition"} "define proof method"
     (Parse.binding -- 
       Scan.optional (@{keyword "srcs"} |-- Parse.!!! (Scan.repeat1 Parse.name)) [] --
       Parse.for_fixes --     
@@ -1145,7 +1145,7 @@ val _ =
       >> (fn (((((b,srcs), xs), facts), meths), (rm,_)) => define_rich_method_cmd b xs srcs facts meths rm));
       
 val _ =
-  Outer_Syntax.command @{command_spec "method_setup"} "define proof method in ML"
+  Outer_Syntax.command @{command_keyword "method_setup"} "define proof method in ML"
     (Parse.position Parse.name --
         Parse.!!! (@{keyword "="} |-- Parse.ML_source -- Scan.optional Parse.text "")
       >> (fn (name, (txt, cmt)) => Toplevel.theory (Method.method_setup name txt cmt)));
@@ -1217,7 +1217,7 @@ val define_basic_method_cmd = gen_define_basic_method Proof_Context.read_vars
 
 (*FIXME: Some duplication here*)
 val _ =
-  Outer_Syntax.local_theory @{command_spec "ML_method_definition"} "define proof method"
+  Outer_Syntax.local_theory @{command_keyword "ML_method_definition"} "define proof method"
     (Parse.binding --
       Scan.option (Args.parens ((@{keyword "infix"} || @{keyword "postfix_meth"}) -- 
                                           Parse.!!! (Parse.keyword -- Parse.int) >> 
@@ -1308,13 +1308,13 @@ ML_method_definition THEN_ALL_NEW (infix \<mapsto> 20) methods meth1 meth2 =
 
 ML {*
 val _ =
-  Outer_Syntax.command @{command_spec "apply"} "apply rich proof method"
+  Outer_Syntax.command @{command_keyword "apply"} "apply rich proof method"
     (Rich_Method.parse_rich_method  
       >> (fn (rm,pos) => Toplevel.print o Toplevel.proofs (Rich_Method.apply_rich_method rm pos)));
       
 
 val _ =
-  Outer_Syntax.command @{command_spec "by"} "terminal backward proof"
+  Outer_Syntax.command @{command_keyword "by"} "terminal backward proof"
     (Rich_Method.parse_rich_method -- Scan.option Rich_Method.parse_rich_method >> 
       (fn (rm,orm) => Isar_Cmd.terminal_proof ((apfst Rich_Method.rich_method_as_text) rm, Option.map (apfst Rich_Method.rich_method_as_text) orm)));
 *}

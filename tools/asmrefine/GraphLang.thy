@@ -755,7 +755,7 @@ fun define_graph s nodes = let
         else if i = j then eq_bdy i (SOME n) :: match_ts (i + 1) ns
         else error "match_ts: idx too small"
       | match_ts i [] = []
-    val nodes = sort (int_ord o pairself fst) nodes
+    val nodes = sort (int_ord o apply2 fst) nodes
   in StaticFun.define_tree_and_save_thms (Binding.name s) 
     (map (fst #> Int.toString #> prefix (s ^ "_")) nodes)
     (map (apfst (HOLogic.mk_number @{typ nat})) nodes)

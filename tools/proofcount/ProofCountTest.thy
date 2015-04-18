@@ -15,7 +15,7 @@ begin
 
 ML {* 
 val _ =
-  Outer_Syntax.command @{command_spec "done"} "done proof"
+  Outer_Syntax.command @{command_keyword "done"} "done proof"
     (Scan.succeed Isar_Cmd.done_proof);
 *} 
 

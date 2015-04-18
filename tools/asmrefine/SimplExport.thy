@@ -527,7 +527,7 @@ fun convert_fetch_ph2 ctxt params [] (t as (Const (@{const_name CTypesDefs.ptr_a
   | convert_fetch_ph2 ctxt params [] (Const (@{const_name heap_update}, _) $ p $ v $ m)
     = let
       val xs = narrow_mem_upd ctxt params p v
-        |> map (pairself (convert_fetch_ph2 ctxt params []))
+        |> map (apply2 (convert_fetch_ph2 ctxt params []))
         |> filter_out (uncurry (triv_mem_upd ctxt))
       val m = convert_fetch_ph2 ctxt params [] m
     in fold (uncurry mk_memupd1) xs m end

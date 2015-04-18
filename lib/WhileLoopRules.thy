@@ -714,7 +714,7 @@ lemma validNF_whileLoopE:
     apply clarsimp
    apply clarsimp
   apply (clarsimp split: sum.splits)
-  apply (metis post_cond)
+  apply (blast intro: post_cond)
   done
 
 lemma validNF_whileLoopE_inv [wp]:

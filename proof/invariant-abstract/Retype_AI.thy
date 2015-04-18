@@ -477,7 +477,7 @@ proof -
     using aligned sz
     by (simp add:mask_twice is_aligned_mask mask_out_sub_mask min_def)
   show ?thesis using aligned sz
-  apply (drule_tac i = "?a +?b" in Nat.mult_le_mono[where k = "2^sbit",OF _ le_refl])
+  apply (drule_tac i = "a +b" for a b in Nat.mult_le_mono[where k = "2^sbit",OF _ le_refl])
   apply (subst (asm) add_mult_distrib)
   apply (clarsimp simp: power_add[symmetric])
   apply (subst (asm) unat_shiftl_absorb[where p = "sz - sbit"])
@@ -1503,7 +1503,7 @@ lemma store_pde_map_global_valid_arch_caps:
     apply (simp add: empty_table_def)
    apply clarsimp
    apply (rule conjI, clarsimp)
-   apply (thin_tac "All ?P")
+   apply (thin_tac "All P" for P)
    apply clarsimp
    apply (frule_tac ref'="VSRef (ucast c) (Some APageDirectory) # r" and
                     p'=q in vs_lookup_pages_step)
@@ -1512,7 +1512,7 @@ lemma store_pde_map_global_valid_arch_caps:
    apply (clarsimp simp: valid_arch_caps_def valid_vs_lookup_def)
   apply clarsimp
   apply (rule conjI, clarsimp)
-  apply (thin_tac "All ?P")
+  apply (thin_tac "All P" for P)
   apply clarsimp
   apply (drule_tac ref'="VSRef (ucast c) (Some APageDirectory) # r" and
                    p'=q in vs_lookup_pages_step)
@@ -1768,7 +1768,7 @@ lemma mapM_copy_global_invs_mappings_restricted:
   apply (fold all_invs_but_equal_kernel_mappings_restricted_eq)
   apply (induct pds, simp_all only: mapM_x_Nil mapM_x_Cons K_bind_def)
    apply (wp, simp)
-  apply (rule hoare_seq_ext, assumption, thin_tac "?P")
+  apply (rule hoare_seq_ext, assumption, thin_tac "P" for P)
   apply (rule hoare_conjI)
    apply (rule hoare_pre, rule copy_global_invs_mappings_restricted)
    apply clarsimp
@@ -2321,6 +2321,7 @@ lemma valid_obj_default_object:
    apply safe
     apply (simp split: split_if_asm)
    apply (clarsimp split: split_if_asm)
+  apply (rename_tac aobject_type)
   apply (case_tac aobject_type, simp_all add: default_arch_object_def)
   done
 
@@ -2440,8 +2441,9 @@ lemma valid_untyped_helper:
      apply (fastforce elim!: obj_at_pres)
     apply (fastforce elim!: obj_at_pres)
    apply (fastforce elim!: obj_at_pres)
+  apply (rename_tac word nat1 nat2)
   apply (clarsimp simp:valid_untyped_def is_cap_simps obj_at_def split:split_if_asm)
-    apply (thin_tac "\<forall>x. ?Q x")
+    apply (thin_tac "\<forall>x. Q x" for Q)
      apply (frule retype_addrs_obj_range_subset_strong[OF _ cover' tyunt])
      apply (frule usable_range_subseteq)
        apply (simp add:is_cap_simps)
@@ -2460,7 +2462,7 @@ lemma valid_untyped_helper:
     apply simp
     apply (drule(1) disjoint_subset2[rotated])
     apply (simp add:Int_ac)
-   apply (thin_tac "\<forall>x. ?Q x")
+   apply (thin_tac "\<forall>x. Q x" for Q)
    apply (frule retype_addrs_obj_range_subset[OF _ cover' tyunt])
    apply (clarsimp simp:cap_aligned_def)
     apply (frule aligned_ranges_subset_or_disjoint)

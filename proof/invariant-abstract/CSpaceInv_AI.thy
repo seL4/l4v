@@ -63,6 +63,7 @@ proof (induct slot rule: resolve_address_bits'.induct)
             apply (auto simp: in_monad)[5]
        defer
        apply (auto simp: in_monad)[6]
+  apply (rename_tac obj_ref nat list)
   apply (simp only: cap.simps)
   apply (case_tac "nat + length list = 0")
    apply (simp add: fail_def)
@@ -240,9 +241,11 @@ lemma valid_arch_obj_tcb_update':
   apply (cases obj)
      apply (fastforce elim: typ_at_same_type [rotated -1])
     apply clarsimp
+    apply (rename_tac "fun" x)
     apply (erule_tac x=x in allE)
     apply (case_tac "fun x", (clarsimp simp: obj_at_def)+)[1]
    apply clarsimp
+   apply (rename_tac "fun" x)
    apply (erule_tac x=x in ballE)
    apply (case_tac "fun x", (clarsimp simp: obj_at_def)+)[1]
    apply (fastforce elim: typ_at_same_type [rotated -1])
@@ -1269,6 +1272,7 @@ lemma range_not_empty_is_physical:
   "valid_cap cap s \<Longrightarrow> (cap_class cap = PhysicalClass) = (cap_range cap \<noteq> {})"
   apply (case_tac cap)
    apply (simp_all add:cap_range_def valid_cap_simps cap_aligned_def is_aligned_no_overflow)
+  apply (rename_tac arch_cap)
   apply (case_tac arch_cap)
    apply (simp_all add:cap_range_def aobj_ref_def)
   done
@@ -1622,6 +1626,7 @@ lemma set_cap_valid_vs_lookup:
     apply (drule(3) unique_table_refsD)
     apply (clarsimp simp: reachable_pg_cap_def is_pg_cap_def)
     apply (case_tac cap, simp_all add: vs_cap_ref_simps)[1]
+    apply (rename_tac arch_cap)
     apply (case_tac arch_cap,
            simp_all add: vs_cap_ref_simps table_cap_ref_simps)[1]
        apply (clarsimp dest!: table_cap_ref_vs_cap_ref_Some)
@@ -1665,7 +1670,7 @@ lemma set_cap_unique_table_caps:
   apply (erule impCE)
    prefer 2
    apply (simp del: imp_disjL)
-   apply (thin_tac "\<forall>a b. ?P a b")
+   apply (thin_tac "\<forall>a b. P a b" for P)
    apply (auto simp: cte_wp_at_caps_of_state)[1]
   apply (clarsimp simp del: imp_disjL del: allI)
   apply (case_tac "cap_asid cap \<noteq> None")
@@ -2152,9 +2157,9 @@ lemma replace_cap_invs:
    apply (erule disjE)
     apply (simp add: fun_upd_def[symmetric] fun_upd_idem)
    apply (clarsimp simp add: reply_mdb_def)
-   apply (thin_tac "\<forall>a b. (a, b) \<in> cte_refs ?cp ?nd \<and> ?Q a b\<longrightarrow> ?R a b")
-   apply (thin_tac "is_pt_cap ?cap \<longrightarrow> ?P")+ 
-   apply (thin_tac "is_pd_cap ?cap \<longrightarrow> ?P")+
+   apply (thin_tac "\<forall>a b. (a, b) \<in> cte_refs cp nd \<and> Q a b\<longrightarrow> R a b" for cp nd Q R)
+   apply (thin_tac "is_pt_cap cap \<longrightarrow> P" for cap P)+ 
+   apply (thin_tac "is_pd_cap cap \<longrightarrow> P" for cap P)+
    apply (rule conjI)
     apply (unfold reply_caps_mdb_def)[1]
     apply (erule allEI, erule allEI)

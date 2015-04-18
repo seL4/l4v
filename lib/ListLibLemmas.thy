@@ -251,7 +251,7 @@ lemma after_can_split_distinct: "distinct list \<Longrightarrow> after_in_list l
     apply assumption
    apply simp
   apply (elim ex1E)
-  apply (thin_tac "\<forall>x. ?P x")
+  apply (thin_tac "\<forall>x. P x" for P)
   apply (frule_tac yb="y#ysa" in distinct_inj_middle,assumption+)
   apply simp
   done
@@ -751,7 +751,7 @@ lemma range_nat_relation_induct:
 "\<lbrakk> m = Suc (n + k) ; m < cap ; \<forall>n. Suc n < cap \<longrightarrow> P n (Suc n );  
    \<forall>i j k. i < cap \<and> j < cap \<and> k < cap \<longrightarrow> P i j \<longrightarrow> P j k \<longrightarrow> P i k \<rbrakk> \<Longrightarrow>  P n m"
   apply (clarify)
-  apply (thin_tac "m = ?t")
+  apply (thin_tac "m = t" for t)
   apply (induct k)
    apply (drule_tac x = "n" in spec)
    apply (erule impE, simp, simp)

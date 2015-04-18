@@ -202,7 +202,7 @@ fun wp_cases_method processors = Scan.succeed (fn ctxt =>
 local structure P = Parse and K = Keyword in
 
 fun add_wpc tm thm lthy = let
-  val ctxt = Local_Theory.exit lthy
+  val ctxt = Local_Theory.target_of lthy
   val tm' = (Syntax.read_term ctxt tm) |> Thm.cterm_of ctxt o Logic.varify_global
   val thm' = Proof_Context.get_thm ctxt thm
 in

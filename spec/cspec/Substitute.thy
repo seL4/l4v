@@ -45,8 +45,8 @@ val debug_trace = ref (Bound 0);
 
 (*
 fun add_conv tm tm' convs = let
-    val argTs = pairself (fst o strip_type o fastype_of) (tm, tm');
-    val argLs = pairself length argTs
+    val argTs = apply2 (fst o strip_type o fastype_of) (tm, tm');
+    val argLs = apply2 length argTs
     val tm'' = if fst argLs > snd argLs
       then list_abs (map (pair "_") (take (fst argLs - snd argLs) (fst argTs)),
           tm') else tm';

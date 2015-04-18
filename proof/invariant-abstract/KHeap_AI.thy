@@ -129,9 +129,11 @@ lemma valid_arch_obj_same_type:
      apply (erule (2) typ_at_same_type)
     apply clarsimp
     apply (erule_tac x=x in allE)
+    apply (rename_tac "fun" x)
     apply (case_tac "fun x", (clarsimp simp: obj_at_def a_type_def)+)[1]
    apply clarsimp
    apply (erule_tac x=x in ballE)
+    apply (rename_tac "fun" x)
     apply (case_tac "fun x", (clarsimp simp:obj_at_def a_type_def)+)[1]
    apply simp
   apply clarsimp
@@ -2133,6 +2135,7 @@ lemma store_pde_st_tcb_at:
                    get_pd_def bind_assoc)
   apply (rule hoare_seq_ext [OF _ get_object_sp])
   apply (case_tac x, simp_all)
+  apply (rename_tac arch_kernel_obj)
   apply (case_tac arch_kernel_obj, simp_all)
   apply (rule hoare_seq_ext [OF _ get_object_sp])
   apply wp
