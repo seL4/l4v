@@ -20,13 +20,6 @@ imports
   Interrupt_AI
 begin
 
-(*
-lemmas schedule_ct_activateable'[wp] = use_bcorres[where Q="\<lambda>_. ct_in_state activatable" and P="invs",simplified o_def,simplified, OF schedule_bcorres schedule_ct_activateable]
-*)
-
-(*
-lemmas schedule_invs'[wp] = use_bcorres[where Q="\<lambda>_. invs" and P="invs",simplified o_def,simplified, OF schedule_bcorres schedule_invs]
-*)
 
 lemma schedule_invs[wp]: "\<lbrace>invs\<rbrace> (Schedule_A.schedule :: (unit,det_ext) s_monad) \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: Schedule_A.schedule_def)
@@ -211,7 +204,7 @@ lemma handle_fault_reply_cte_wp_at:
       apply (drule_tac P=P and p=p in cte_wp_at_after_update)
       apply (drule sym)
       apply (clarsimp)
-      apply (rule_tac x="s \<lparr> kheap := ?p \<rparr>" in arg_cong)
+      apply (rule_tac x="s \<lparr> kheap := p \<rparr>" for p in arg_cong)
       apply (clarsimp)
       done
     show ?thesis
@@ -414,16 +407,20 @@ lemma sts_valid_inv[wp]:
   apply (case_tac i, simp_all add: aep_at_typ ep_at_typ 
                                    sts_valid_untyped_inv sts_valid_arch_inv)
          apply (wp | simp)+
+      apply (rename_tac tcb_invocation)
       apply (case_tac tcb_invocation, 
              (wp set_thread_state_valid_cap|
               simp add: tcb_at_typ split: option.split|
               safe)+)
+    apply (rename_tac cnode_invocation)
     apply (case_tac cnode_invocation, simp_all)[1]
     apply (case_tac cnode_invocation,
            (wp set_thread_state_valid_cap sts_nasty_bit hoare_vcg_const_imp_lift            
               | simp)+)
+   apply (rename_tac irq_control_invocation)
    apply (case_tac irq_control_invocation,
            (wp | simp)+)
+  apply (rename_tac irq_handler_invocation)
   apply (case_tac irq_handler_invocation, simp_all)
   apply (wp ex_cte_cap_to_pres hoare_vcg_ex_lift set_thread_state_valid_cap)
   done
@@ -524,30 +521,30 @@ lemma decode_inv_wf[wp]:
              cap_rights_update_def ex_cte_cap_wp_to_weakenE[OF _ TrueI]
              cte_wp_at_caps_of_state
            split: cap.splits)
-       apply (thin_tac " \<forall>x\<in>set excaps. ?P x & ?Q x")+
+       apply (thin_tac " \<forall>x\<in>set excaps. P x \<and> Q x" for P Q)+
        apply (drule (1) bspec)+
        apply (subst split_paired_Ex[symmetric], rule exI, simp)
-      apply (thin_tac " \<forall>x\<in>set excaps. ?P x & ?Q x")+
+      apply (thin_tac " \<forall>x\<in>set excaps. P x \<and> Q x" for P Q)+
       apply (rule conjI)
        apply (subst split_paired_Ex[symmetric], rule_tac x=slot in exI, simp)
       apply clarsimp
       apply (drule (1) bspec)+
       apply (subst split_paired_Ex[symmetric], rule exI, simp)
-     apply (thin_tac " \<forall>x\<in>set excaps. ?P x & ?Q x")+
+     apply (thin_tac " \<forall>x\<in>set excaps. P x \<and> Q x" for P Q)+
      apply (drule (1) bspec)+
      apply (clarsimp simp add: ex_cte_cap_wp_to_weakenE[OF _ TrueI])
      apply (rule diminished_no_cap_to_obj_with_diff_ref)
       apply (fastforce simp add: cte_wp_at_caps_of_state)
      apply (simp add: invs_valid_arch_caps)
     apply (simp add: invs_valid_objs invs_valid_global_refs)
-   apply (thin_tac " \<forall>x\<in>set excaps. ?P x & ?Q x")+
+   apply (thin_tac " \<forall>x\<in>set excaps. P x \<and> Q x" for P Q)+
    apply (rule conjI)
     apply clarsimp
     apply (drule (1) bspec)+
     apply (subst split_paired_Ex[symmetric], rule exI, simp)
    apply (clarsimp simp add: diminished_def mask_cap_def cap_rights_update_def
                    split: cap.splits)
-  apply (thin_tac " \<forall>x\<in>set excaps. ?P x & ?Q x")+
+  apply (thin_tac " \<forall>x\<in>set excaps. P x \<and> Q x" for P Q)+
   apply (subst split_paired_Ex[symmetric], rule exI, simp)
   done
 
@@ -1256,6 +1253,7 @@ lemma he_invs[wp]:
   handle_event e 
   \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (case_tac e, simp_all)
+      apply (rename_tac syscall)
       apply (case_tac syscall, simp_all)
       apply ((rule hoare_pre, wp hvmf_active hr_invs hy_inv) | 
                  wpc | wp hoare_drop_imps hoare_vcg_all_lift |

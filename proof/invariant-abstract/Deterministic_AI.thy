@@ -1966,7 +1966,7 @@ lemma next_not_child_no_parent:
    apply (drule_tac x="a" in meta_spec)
    apply (simp add: m'_def m''_def next_sib_def nnext nnext'' cong: if_weak_cong split: split_if_asm)
   apply (simp split del: split_if)
-  apply (thin_tac "\<And>a. \<lbrakk>False; ?Q a\<rbrakk> \<Longrightarrow> ?P a")
+  apply (thin_tac "\<And>a. \<lbrakk>False; Q a\<rbrakk> \<Longrightarrow> P a" for Q P)
   apply (simp add: m'_def m''_def next_sib_def nnext nnext'' cong: if_weak_cong split: split_if_asm | intro impI conjI)+
     apply (simp add: valid_list_2_def | drule after_in_list_in_list | clarsimp)+
     done
@@ -3456,11 +3456,11 @@ lemma after_in_listD': "after_in_list (t p) x = Some y \<Longrightarrow> (\<exis
   apply (elim exE conjE)
   apply (rule conjI)
   apply (subgoal_tac "x \<in> set (t p) \<and> y \<in> set (t p)")
-  apply (thin_tac "t p = ?Q")
+  apply (thin_tac "t p = Q" for Q)
   apply (simp add: valid_list[simplified valid_list_2_def])+
   apply (subgoal_tac "distinct (t p)")
   apply simp
-  apply (thin_tac "t p = ?Q")
+  apply (thin_tac "t p = Q" for Q)
   apply (simp add: valid_list[simplified valid_list_2_def])+
   done
 
@@ -4132,6 +4132,7 @@ lemma handle_event_valid_list[wp]:
         handle_event e
    \<lbrace>\<lambda>_.valid_list\<rbrace>"
   apply (case_tac e, simp_all)
+      apply (rename_tac syscall)
       apply (case_tac syscall, simp_all)
           apply ((rule hoare_pre, wp) |
                  wpc | wp hoare_drop_imps hoare_vcg_all_lift | simp)+
@@ -4420,7 +4421,7 @@ lemma next_sib_set_not_self:
    apply(simp)
   apply(clarsimp simp add: valid_list_2_def)
   apply(erule_tac x="the (m x)" in allE)+
-  apply(drule_tac x="t ?x" and f=distinct in arg_cong)
+  apply(drule_tac x="t x" and f=distinct for x in arg_cong)
   apply(simp)
 done
 

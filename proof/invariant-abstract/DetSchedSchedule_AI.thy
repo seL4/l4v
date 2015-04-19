@@ -2223,6 +2223,7 @@ lemma receive_ipc_valid_sched:
                       set_thread_state_runnable_valid_sched_action
                       set_thread_state_valid_blocked_except | simp | wpc)+)[2]
          apply simp
+         apply (rename_tac list sender_state data)
          apply (rule_tac Q="\<lambda>_. valid_sched and scheduler_act_not (hd list) and not_queued (hd list) and not_cur_thread (hd list) and (\<lambda>s. hd list \<noteq> idle_thread s)" in hoare_strengthen_post)
           apply wp
          apply (simp add: valid_sched_def)
@@ -2316,6 +2317,7 @@ lemma aep_cancel_all_not_queued:
    aep_cancel_all epptr \<lbrace>\<lambda>rv. not_queued t\<rbrace>"
   apply (simp add: aep_cancel_all_def)
   apply (wp reschedule_required_not_queued | wpc | simp)+
+     apply (rename_tac list)
      apply (rule hoare_gen_asm)
      apply (rule_tac S="set list - {t}" in mapM_x_wp)
       apply (wp tcb_sched_action_enqueue_not_queued | clarsimp)+
@@ -2684,6 +2686,7 @@ lemma handle_event_valid_sched:
       and (\<lambda>s. scheduler_action s = resume_cur_thread)\<rbrace>
    handle_event e \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
   apply (cases e, simp_all)
+      apply (rename_tac syscall)
       apply (case_tac syscall, simp_all add: handle_send_def handle_call_def)
             apply ((rule hoare_pre, wp handle_invocation_valid_sched handle_wait_valid_sched handle_reply_valid_sched | fastforce simp: invs_valid_objs invs_sym_refs valid_sched_ct_not_queued)+)[5]
        apply (wp handle_fault_valid_sched hvmf_active hoare_drop_imps
