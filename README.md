@@ -100,6 +100,17 @@ The repository is organised as follows.
 Dependencies
 ------------
 
+### Hardware
+
+Almost all proofs in this repository should work within 4GB of RAM. Proofs
+involving the C refinement, will usually need the 64bit mode of polyml and
+about 12GB of RAM.
+
+The proofs distribute reasonably well over multiple cores, up to about 8
+cores.
+
+### Software
+
 The proofs in this repository use `Isabelle2014`. A copy of Isabelle
 is included in the repository setup.
 
@@ -123,6 +134,13 @@ full build environment for seL4:
 
   * seL4 [development tool chain][8] on Debian and Ubuntu
   * `make` version 3.81 or higher
+
+You can get away with avoiding a full cross compiler setup form the above,
+but you will need at least these:
+
+    sudo apt-get install python-pip python-dev libxml2-utils
+    sudo pip install tempita
+    sudo pip install psutil
 
 *On MacOS*: here it is harder to get a full cross-compiler setup going. For
 normal proof development, a full setup is not necessary, though. You mostly
