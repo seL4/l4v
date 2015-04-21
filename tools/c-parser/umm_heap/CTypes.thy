@@ -16,6 +16,7 @@ imports
   "~~/src/HOL/Library/Prefix_Order"
 begin
 
+
 lemma fu_commutes:
   "fu_commutes f g \<Longrightarrow> f bs (g bs' v) = g bs' (f bs v)"
   by (simp add: fu_commutes_def)
@@ -62,8 +63,7 @@ lemma update_ti_list_t_cons [simp]:
           update_ti_pair_t x (take (size_td_pair x) bs)
               (update_ti_list_t xs (drop (size_td_pair x) bs) v) else
           v)"
-  by (force simp: update_ti_list_t_def update_ti_pair_t_def min_def
-            intro!: ext)
+  by (force simp: update_ti_list_t_def update_ti_pair_t_def min_def)
 
 lemma update_ti_append_s [simp]:
   "\<And>bs. update_ti_list_t (xs@ys) bs v = (
@@ -86,7 +86,7 @@ text {* --------------------------------------------------------------- *}
 lemma field_desc_empty [simp]:
   "field_desc (TypDesc (TypAggregate []) nm) = \<lparr> field_access = \<lambda>x bs. [],
       field_update = \<lambda>x. id \<rparr>"
-  by (force simp: field_desc_def update_ti_t_def intro: ext)
+  by (force simp: update_ti_t_def)
 
 
 lemma export_uinfo_typdesc_simp [simp]:
@@ -95,24 +95,24 @@ lemma export_uinfo_typdesc_simp [simp]:
 
 lemma map_td_list_append [simp]:
   "map_td_list f (xs@ys) = map_td_list f xs @ map_td_list f ys"
-  by (induct_tac xs, auto)
+  by (induct_tac xs) auto
 
 
 lemma dt_snd_map_td_list:
   "dt_snd ` set (map_td_list f ts) = dt_snd ` set ts"
-  by (induct_tac ts, simp, case_tac a, auto)
-
+proof (induct ts)
+  case (Cons x xs) thus ?case by (cases x) auto
+qed simp
 
 lemma wf_desc_map:
-  shows "wf_desc (map_td f t) = wf_desc t \<and>
-       wf_desc_struct (map_td_struct f st) = wf_desc_struct st \<and>
-       wf_desc_pair (map_td_pair f x) = wf_desc_pair x \<and>
-       wf_desc_list (map_td_list f ts) = wf_desc_list ts"
-proof (induct rule: wf_desc_wf_desc_struct_wf_desc_list_wf_desc_pair.induct)
-  case (6 x xs) thus ?case
+  shows "wf_desc (map_td f t) = wf_desc t" and
+      "wf_desc_struct (map_td_struct f st) = wf_desc_struct st" and
+      "wf_desc_list (map_td_list f ts) = wf_desc_list ts" and
+      "wf_desc_pair (map_td_pair f x) = wf_desc_pair x"
+proof (induct t and st and ts and x)
+  case (Cons_typ_desc x xs) thus ?case
     by (cases x, auto simp: dt_snd_map_td_list)
 qed auto
-
 
 lemma wf_desc_list_append [simp]:
   "wf_desc_list (xs@ys) = (wf_desc_list xs \<and> wf_desc_list ys \<and>
@@ -130,13 +130,12 @@ lemma norm_tu_list_append [simp]:
   by (induct xs, auto simp: min_def ac_simps drop_take)
 
 lemma wf_size_desc_gt:
-  shows "(wf_size_desc (t::'a typ_desc) \<longrightarrow> 0 < size_td t) \<and>
-      (wf_size_desc_struct st \<longrightarrow> 0 < size_td_struct (st::'a typ_struct)) \<and>
-      (wf_size_desc_pair x \<longrightarrow> 0 < size_td_pair (x::'a typ_pair)) \<and>
-      (ts \<noteq> [] \<longrightarrow> wf_size_desc_list ts \<longrightarrow>
-          0 < size_td_list (ts::'a typ_pair list)) "
-  by (induct rule: wf_desc_wf_desc_struct_wf_desc_list_wf_desc_pair.induct) auto
-
+  shows "wf_size_desc (t::'a typ_desc) \<Longrightarrow> 0 < size_td t" and
+      "wf_size_desc_struct st \<Longrightarrow> 0 < size_td_struct (st::'a typ_struct)" and
+      "\<lbrakk> ts \<noteq> []; wf_size_desc_list ts \<rbrakk> \<Longrightarrow>
+          0 < size_td_list (ts::'a typ_pair list)" and
+      "wf_size_desc_pair x \<Longrightarrow> 0 < size_td_pair (x::'a typ_pair)"
+  by (induct t and st and ts and x rule: typ_desc_typ_struct_inducts, auto)
 
 lemma field_lookup_empty [simp]:
   "field_lookup t [] n = Some (t,n)"
@@ -170,27 +169,27 @@ qed
 
 lemma field_lookup_list_None:
   "\<And>f fs m. f \<notin> dt_snd ` set ts \<Longrightarrow> field_lookup_list ts (f#fs) m = None"
-  by (induct ts, clarsimp)
-     (case_tac a, auto)
+proof (induct ts)
+  case (Cons x _) thus ?case by (cases x) auto
+qed simp
 
-lemma field_lookup_list_Some [rule_format]:
-  "\<And>f fs m. f \<in> dt_snd ` set ts \<Longrightarrow> field_lookup_list ts [f] m \<noteq> None"
-  by (induct ts, clarsimp)
-     (case_tac a, auto)
+lemma field_lookup_list_Some:
+  "f \<in> dt_snd ` set ts \<Longrightarrow> field_lookup_list ts [f] m \<noteq> None"
+proof (induct ts arbitrary: f m)
+  case (Cons x _) thus ?case by (cases x) auto
+qed simp
 
 lemma field_lookup_offset_le:
   shows "\<And>s m n f. field_lookup t f m = Some ((s::'a typ_desc),n) \<Longrightarrow>
             m \<le> n" and
       "\<And>s m n f. field_lookup_struct st f m = Some ((s::'a typ_desc),n) \<Longrightarrow>
           m \<le> n" and
-      "\<And>s m n f. field_lookup_pair x f m = Some ((s::'a typ_desc),n) \<Longrightarrow>
-          m \<le> n" and
       "\<And>s m n f. field_lookup_list ts f m = Some ((s::'a typ_desc),n) \<Longrightarrow>
+          m \<le> n" and
+      "\<And>s m n f. field_lookup_pair x f m = Some ((s::'a typ_desc),n) \<Longrightarrow>
           m \<le> n"
-proof (induct t and st and x and ts
-       rule: field_lookup.induct field_lookup_struct.induct
-             field_lookup_pair.induct field_lookup_list.induct)
-  case (Cons_typ_desc_char_list_dt_pair x xs) thus ?case by (fastforce split: option.splits)
+proof (induct t and st and ts and x)
+  case (Cons_typ_desc x xs) thus ?case by (fastforce split: option.splits)
 qed (auto split: split_if_asm)
 
 lemma field_lookup_offset':
@@ -199,18 +198,14 @@ lemma field_lookup_offset':
       "\<And>f m m' n t'. (field_lookup_struct st f m =
               Some ((t'::'a typ_desc),m + n)) =
           (field_lookup_struct st f m' = Some (t',m' + n))" and
-      "\<And>f m m' n t'. (field_lookup_pair x f m =
-              Some ((t'::'a typ_desc),m + n)) =
-          (field_lookup_pair x f m' = Some (t',m' + n))" and
       "\<And>f m m' n t'. (field_lookup_list ts f m =
               Some ((t'::'a typ_desc),m + n)) =
-          (field_lookup_list ts f m' = Some (t',m' + n))"
-proof (induct t and st and x and ts
-       rule: field_lookup.induct field_lookup_struct.induct
-             field_lookup_pair.induct field_lookup_list.induct)
-  case (Cons_typ_desc_char_list_dt_pair x xs)
-  note Cons_typ_desc = this
-  thus ?case apply -
+          (field_lookup_list ts f m' = Some (t',m' + n))" and
+      "\<And>f m m' n t'. (field_lookup_pair x f m =
+              Some ((t'::'a typ_desc),m + n)) =
+          (field_lookup_pair x f m' = Some (t',m' + n))"
+proof (induct t and st and ts and x)
+  case (Cons_typ_desc x xs) thus ?case apply -
   proof
     assume ls: "field_lookup_list (x # xs) f m = Some (t', m + n)"
     show "field_lookup_list (x # xs) f m' = Some (t', m' + n)" (is "?X")
@@ -314,8 +309,7 @@ lemma map_td_size [simp]:
       "size_td_struct (map_td_struct f st) = size_td_struct st" and
       "size_td_list (map_td_list f ts) = size_td_list ts" and
       "size_td_pair (map_td_pair f x) = size_td_pair x"
-  by (induct t and st and ts and x 
-      rule: size_td.induct size_td_struct.induct size_td_list.induct size_td_pair.induct, auto)
+  by (induct t and st and ts and x, auto)
 
 lemma export_uinfo_size [simp]:
   "size_td (export_uinfo t) = size_td (t::'a typ_info)"
@@ -330,10 +324,8 @@ lemma wf_size_desc_map:
       "wf_size_desc_struct (map_td_struct f st) = wf_size_desc_struct st" and
       "wf_size_desc_list (map_td_list f ts) = wf_size_desc_list ts" and
       "wf_size_desc_pair (map_td_pair f x) = wf_size_desc_pair x"
-  by (induct t and st and ts and x
-      rule: wf_size_desc.induct wf_size_desc_struct.induct
-            wf_size_desc_list.induct wf_size_desc_pair.induct, auto)
-     (case_tac x, simp+)
+  by (induct t and st and ts and x, auto)
+     (case_tac list, simp+)
 
 lemma map_td_flr_Some [simp]:
   "map_td_flr f (Some (t,n)) = Some (map_td f t,n)"
@@ -353,10 +345,8 @@ lemma field_lookup_map:
           field_lookup_list (map_td_list fupd ts) f m = map_td_flr fupd s" and
       "\<And>f m s. field_lookup_pair x f m = s \<Longrightarrow>
           field_lookup_pair (map_td_pair fupd x) f m = map_td_flr fupd s"
-proof (induct t and st and ts and x
-       rule: field_lookup.induct field_lookup_struct.induct
-             field_lookup_list.induct field_lookup_pair.induct)
-  case (Cons_typ_desc_char_list_dt_pair x xs) thus ?case
+proof (induct t and st and ts and x)
+  case (Cons_typ_desc x xs) thus ?case
     by (clarsimp, cases x, auto simp: map_td_flr_def split: option.splits)
 qed auto
 
@@ -798,16 +788,18 @@ apply(induct t and st and ts and x)
      apply((erule allE)+, erule (1) impE)
      apply clarsimp
      apply(case_tac f, clarsimp+)
-     apply(rule_tac x="a#listb" in exI)
+     apply(rename_tac x xs)
+     apply(rule_tac x="x#xs" in exI)
      apply clarsimp
     apply clarsimp+
  apply(rule, clarsimp)
   apply((erule allE)+, erule (1) impE)
   apply(clarsimp, case_tac f, clarsimp+)
-  apply(rule_tac x="a#lista" in exI)
+  apply(rename_tac x xs)
+  apply(rule_tac x="x#xs" in exI)
   apply(clarsimp)
  apply clarsimp
- apply(thin_tac "\<forall>s. ?P s")
+ apply(thin_tac "\<forall>s. P s" for P)
  apply(drule_tac x=s in spec)
  apply(drule_tac x="m + size_td (dt_fst dt_pair)" in spec)
  apply(drule_tac x="n - size_td (dt_fst dt_pair)" in spec)
@@ -853,7 +845,7 @@ apply(induct t and st and ts and x)
      apply fast
     apply clarsimp+
  apply(clarsimp split: option.splits)
-  apply(thin_tac "All ?P")
+  apply(thin_tac "All P" for P)
   apply(drule_tac x=s in spec)
   apply(drule_tac x="m + size_td (dt_fst dt_pair)" in spec)
   apply(drule_tac x="n - size_td (dt_fst dt_pair)" in spec)
@@ -893,7 +885,7 @@ apply rule
  apply(drule_tac x=0 in spec)
  apply(drule_tac x=b in spec)
  apply clarsimp
-apply(thin_tac "All ?P")
+apply(thin_tac "All P" for P)
 apply(drule_tac x=a in spec)
 apply(drule_tac x=0 in spec)
 apply(drule_tac x=b in spec)
@@ -917,7 +909,7 @@ lemma td_set_struct_field_lookup_structD:
 apply(insert td_set_field_lookup_rev' [of undefined st undefined undefined])
 apply clarsimp
 apply(case_tac k, clarsimp)
-apply(thin_tac "All ?P")
+apply(thin_tac "All P" for P)
 apply(drule_tac x=a in spec)
 apply(drule_tac x=m in spec)
 apply(drule_tac x="b - m" in spec)
@@ -940,8 +932,8 @@ lemma td_set_list_field_lookup_listD:
 apply(insert td_set_field_lookup_rev' [of undefined undefined xs undefined])
 apply clarsimp
 apply(case_tac k, clarsimp)
-apply(thin_tac "All ?P")
-apply(thin_tac "All ?P")
+apply(thin_tac "All P" for P)
+apply(thin_tac "All P" for P)
 apply(drule_tac x=a in spec)
 apply(drule_tac x=m in spec)
 apply(drule_tac x="b - m" in spec)
@@ -954,9 +946,9 @@ lemma td_set_pair_field_lookup_pairD:
 apply(insert td_set_field_lookup_rev' [of undefined undefined undefined x])
 apply clarsimp
 apply(case_tac k, clarsimp)
-apply(thin_tac "All ?P")
-apply(thin_tac "All ?P")
-apply(thin_tac "All ?P")
+apply(thin_tac "All P" for P)
+apply(thin_tac "All P" for P)
+apply(thin_tac "All P" for P)
 apply(drule_tac x=a in spec)
 apply(drule_tac x=m in spec)
 apply(drule_tac x="b - m" in spec)
@@ -987,7 +979,7 @@ apply(induct t and st and ts and x)
    apply(frule td_set_pair_field_lookup_pairD)
    apply(drule field_lookup_offset_le)
    apply(drule td_set_pair_offset_size_m)
-   apply(thin_tac "\<forall>f g. ?P f g")+
+   apply(thin_tac "\<forall>f g. P f g" for P)+
    apply(case_tac dt_pair, simp )
    apply(subgoal_tac "0 < size_td a")
     apply simp
@@ -996,7 +988,7 @@ apply(induct t and st and ts and x)
   apply(frule td_set_pair_field_lookup_pairD)
   apply(drule field_lookup_offset_le)
   apply(drule td_set_pair_offset_size_m)
-  apply(thin_tac "\<forall>f g. ?P f g")+
+  apply(thin_tac "\<forall>f g. P f g" for P)+
   apply(case_tac dt_pair, simp )
   apply(subgoal_tac "0 < size_td a")
    apply simp
@@ -1178,7 +1170,8 @@ lemma tf4:  "tf_set_list (x#xs) = tf_set_pair x \<union> {t. t \<in> tf_set_list
 apply(clarsimp simp: tf_set_list_def tf_set_pair_def)
 apply(case_tac x)
 apply clarsimp
-apply(rule, clarsimp)
+apply(rename_tac a b)
+apply(rule equalityI, clarsimp)
  apply(case_tac ba, auto)
        apply(drule field_lookup_list_offset2, fast)
       apply(clarsimp split: option.splits)

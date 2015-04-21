@@ -117,7 +117,8 @@ abbreviation
 
 section "dt_pair: a reimplementation of 2 item tuples"
 
-datatype ('a,'b) dt_pair = DTPair 'a 'b
+datatype (plugins del: size)
+    ('a,'b) dt_pair = DTPair 'a 'b
 
 primrec
   dt_fst :: "('a,'b) dt_pair \<Rightarrow> 'a"
