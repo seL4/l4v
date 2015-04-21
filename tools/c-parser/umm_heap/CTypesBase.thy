@@ -220,10 +220,6 @@ lemma intvl_start_inter:
   "\<lbrakk> 0 < m; 0 < n \<rbrakk> \<Longrightarrow> {p..+m} \<inter> {p..+n} \<noteq> {}"
   by (force simp: disjoint_iff_not_equal dest: intvl_self)
 
-lemma intvl_overflow_witness:
-  "2^len_of TYPE('a) \<le> n \<Longrightarrow> (x::'a::len word) = p + of_nat (unat (x - p)) \<and> unat (x - p) < n"
-  by simp unat_arith 
-
 lemma intvl_overflow:
   assumes "2^len_of TYPE('a) \<le> n"
   shows "{(p::'a::len word)..+n} = UNIV"
