@@ -47,7 +47,6 @@ where
       F \<subseteq> fields TYPE('a) \<and>
       dom s = s_footprint p - fs_footprint p F \<and> wf_heap_val s"
 
-(*XXX: 0,1000 or 1000,1000?*)
 notation (input)
   mfs_sep_map ("_ \<mapsto>\<^sub>_\<^sup>_ _" [56,0,1000,51] 56)
 
@@ -237,23 +236,23 @@ apply(case_tac "x \<in> s_footprint p")
 apply(case_tac x, clarsimp)
 apply(drule_tac x=aa in fun_cong)
 apply(auto simp: s_footprint_restrict lift_state_def
- split: s_heap_index.splits split_if_asm option.splits)
+           split: s_heap_index.splits split_if_asm option.splits) (* FIXME! *)
       apply(clarsimp simp: restrict_s_def)
      apply(clarsimp simp: restrict_s_def)
     apply(clarsimp simp: restrict_s_def)
-    apply(drule_tac x="nat" in fun_cong)
+    apply(drule_tac x="x2" in fun_cong)
     apply clarsimp
    apply(clarsimp simp: restrict_s_def)
-   apply(drule_tac x="nat" in fun_cong)
+   apply(drule_tac x="x2" in fun_cong)
    apply clarsimp
   apply(clarsimp simp: restrict_s_def)
-  apply(drule_tac x="nat" in fun_cong)
+  apply(drule_tac x="x2" in fun_cong)
   apply clarsimp
  apply(clarsimp simp: restrict_s_def)
- apply(drule_tac x="nat" in fun_cong)
+ apply(drule_tac x="x2" in fun_cong)
  apply clarsimp
 apply(clarsimp simp: restrict_s_def)
-apply(drule_tac x="nat" in fun_cong)
+apply(drule_tac x="x2" in fun_cong)
 apply clarsimp
 done
 
@@ -353,7 +352,7 @@ apply(erule impE)
  apply simp
 apply simp
 apply(subgoal_tac "unat (q - p) = unat (1::32 word) + unat (q - (p + 1))")
- apply(simp add: unat_1)
+ apply(simp)
 apply(subgoal_tac "q - (p + 1) = (q-p) - 1")
  apply(simp only:)
 apply(subst unat_minus_one)
@@ -397,7 +396,7 @@ apply(induct_tac n)
  apply simp
 apply clarsimp
 apply rule
- apply(thin_tac "All ?P")
+ apply(thin_tac "All P" for P)
  apply(drule_tac x=p in spec)
  apply(erule impE)
   apply(rule intvl_self)
@@ -697,7 +696,7 @@ oops
 
 lemma sep_map_mfs_sep_map_empty:
   "(p \<mapsto>\<^sub>g (v::'a::mem_type)) = (p \<mapsto>\<^sub>g\<^sup>({}) v)"
-  by (auto simp: sep_map_def mfs_sep_map_def map_add_dom_eq intro!: ext)
+  by (auto simp: sep_map_def mfs_sep_map_def map_add_dom_eq)
 
 lemma fd_cons_double_update:
   "\<lbrakk> fd_cons t; length bs = length  bs' \<rbrakk> \<Longrightarrow>
@@ -814,7 +813,7 @@ lemma field_access_take_drop:
         access_ti\<^sub>0 s v"
 apply(induct t and st and ts and x)
      apply(auto simp: access_ti\<^sub>0_def)
- apply(thin_tac "All ?P")+
+ apply(thin_tac "All P" for P)+
  apply(subst (asm) take_all)
   apply(drule wf_fd_cons_structD)
   apply(clarsimp simp: fd_cons_struct_def fd_cons_desc_def fd_cons_length_def)
@@ -1425,6 +1424,7 @@ apply(clarsimp split: option.splits)
  apply(erule impE)
   apply simp
  apply(case_tac dt_pair, simp+)
+ apply(rename_tac a b)
  apply(drule_tac x=bs in spec)
  apply(drule_tac x="drop (size_td a) bs'" in spec)
  apply clarsimp
@@ -1588,7 +1588,7 @@ lemma from_bytes_heap_list_s_update:
         update_ti_t s (to_bytes_p w) (from_bytes (heap_list_s (singleton_t p v ++ x) (size_of TYPE('a)) (ptr_val p)))"
 apply(subst map_add_restrict_UNIV [where X="s_footprint_untyped (&(p\<rightarrow>f)) (export_uinfo s)" and h="singleton_t p v"])
   apply(clarsimp simp: fs_footprint_def field_footprint_def field_lvalue_def)
-  apply(thin_tac "dom x = ?X")
+  apply(thin_tac "dom x = X" for X)
   apply(clarsimp simp: field_typ_def field_typ_untyped_def)
   apply force
  apply simp
@@ -1924,7 +1924,7 @@ lemma sep_cut_0 [simp]:
 
 lemma heap_merge_restrict_dom_un:
   "dom s = P \<union> Q \<Longrightarrow> (s|`P) ++ (s|`Q) = s"
-  by (force simp: map_add_def restrict_map_def intro: ext split: option.splits)
+  by (force simp: map_add_def restrict_map_def split: option.splits)
 
 lemma sep_cut_split:
   assumes sc: "sep_cut p y s" and le: "x \<le> y"

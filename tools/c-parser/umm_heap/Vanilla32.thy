@@ -49,7 +49,7 @@ begin
 
   instance
     apply intro_classes
-    apply (auto simp: size_of_def typ_info_unit align_of_def align_field_def addr_card
+    apply (auto simp: size_of_def align_of_def align_field_def addr_card
                       wf_lf_def fd_cons_desc_def
                       fd_cons_double_update_def fd_cons_update_access_def
                       fd_cons_access_update_def fd_cons_length_def)
@@ -366,7 +366,7 @@ begin
 instance
   apply (intro_classes)
     apply (auto simp:  to_bytes_def from_bytes_def
-                 length_word_rsplit_exp_size' word_size align_of_ptr
+                 length_word_rsplit_exp_size' word_size
                  word_rcat_rsplit size_of_def  addr_card
                  typ_info_ptr fd_cons_double_update_def
                  fd_cons_update_access_def fd_cons_access_update_def
@@ -423,7 +423,7 @@ lemma ptr_aligned_coerceI:
 lemma lift_ptr_ptr [simp]:
   "\<And>p::'a::mem_type ptr ptr.
   lift h (ptr_coerce p) = ptr_val (lift h p)"
-  by (simp add: lift_def h_val_def from_bytes_def from_bytes_def
+  by (simp add: lift_def h_val_def from_bytes_def
                 typ_info_word word_tag_def typ_info_ptr)
 
 lemmas Vanilla32_tags [simp] =

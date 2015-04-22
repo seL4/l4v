@@ -30,7 +30,8 @@ lemma aggregate_empty_typ_info [simp]:
 
 lemma aggregate_extend_ti [simp]:
   "aggregate (extend_ti tag t f)"
-apply(case_tac tag, simp)
+apply(case_tac tag)
+apply(rename_tac typ_struct xs)
 apply(case_tac typ_struct, auto)
 done
 
@@ -137,7 +138,8 @@ lemma field_names_list_empty_typ_info [simp]:
 lemma field_names_list_extend_ti [simp]:
   "set (field_names_list (extend_ti tag t fn)) = set (field_names_list tag) \<union> {fn}"
 apply(clarsimp simp: field_names_list_def)
-apply(case_tac tag, simp)
+apply(case_tac tag)
+apply(rename_tac typ_struct xs)
 apply(case_tac typ_struct, simp+)
 done
 
@@ -170,21 +172,24 @@ lemma wf_desc_extend_ti:
   "\<lbrakk> wf_desc tag; wf_desc t; f \<notin> set (field_names_list tag) \<rbrakk> \<Longrightarrow>
       wf_desc (extend_ti tag t f)"
 apply(clarsimp simp: field_names_list_def)
-apply(case_tac tag, clarsimp)
+apply(case_tac tag)
+apply(rename_tac typ_struct xs)
 apply(case_tac typ_struct, clarsimp+)
 done
 
-lemma foldl_append_length [rule_format]:
-  "\<forall>s. length (foldl op @ s xs) \<ge> length s"
-apply(induct_tac xs, auto)
-apply(drule_tac x="s@a" in spec)
+lemma foldl_append_length:
+  "length (foldl op @ s xs) \<ge> length s"
+apply(induct xs arbitrary: s, clarsimp)
+apply(rename_tac a list s)
+apply(drule_tac x="s@a" in meta_spec)
 apply clarsimp
 done
 
-lemma foldl_append_nmem [rule_format]:
-  "\<forall>s. s \<noteq> [] \<longrightarrow> foldl op @ s xs \<notin> set xs"
-apply(induct_tac xs, auto)
-apply(drule_tac x="s@a" in spec)
+lemma foldl_append_nmem:
+  "s \<noteq> [] \<Longrightarrow> foldl op @ s xs \<notin> set xs"
+apply(induct xs arbitrary: s, clarsimp)
+apply(rename_tac a list s)
+apply(drule_tac x="s@a" in meta_spec)
 apply clarsimp
 apply(subgoal_tac "length (foldl op @ (s@a) list) \<ge> length (s@a)")
  apply simp
@@ -196,7 +201,7 @@ lemma wf_desc_ti_pad_combine:
       wf_desc (ti_pad_combine n tag)"
 apply(clarsimp simp: ti_pad_combine_def Let_def)
 apply(erule wf_desc_extend_ti)
-  apply simp
+ apply simp
 apply(rule foldl_append_nmem, simp)
 done
 
@@ -209,29 +214,24 @@ lemma wf_desc_ti_typ_combine:
     wf_desc (ti_typ_combine (t_b::'a::wf_type itself) f_ab f_upd_ab fn tag)"
 apply(clarsimp simp: ti_typ_combine_def Let_def)
 apply(erule wf_desc_extend_ti)
-  apply simp+
+ apply simp+
 done
 
 lemma wf_desc_ti_typ_pad_combine:
   "\<lbrakk> wf_desc tag;  fn \<notin> set (field_names_list tag);
     hd fn \<noteq> CHR ''!'' \<rbrakk> \<Longrightarrow>
     wf_desc (ti_typ_pad_combine (t_b::'a::wf_type itself) f_ab f_upd_ab fn tag)"
-apply(auto simp: ti_typ_pad_combine_def Let_def)
- apply(rule wf_desc_ti_typ_combine)
-  apply auto
- apply(erule wf_desc_ti_pad_combine)
-apply(erule (1) wf_desc_ti_typ_combine)
-done
+  unfolding ti_typ_pad_combine_def Let_def
+  by (auto intro!: wf_desc_ti_typ_combine wf_desc_ti_pad_combine)
 
 lemma wf_desc_final_pad:
   "wf_desc tag \<Longrightarrow> wf_desc (final_pad tag)"
-apply(clarsimp simp: final_pad_def Let_def)
-apply(erule wf_desc_ti_pad_combine)
-done
+  by (auto simp: final_pad_def Let_def elim: wf_desc_ti_pad_combine)
 
 lemma wf_size_desc_extend_ti:
   "\<lbrakk> wf_size_desc tag; wf_size_desc t \<rbrakk> \<Longrightarrow> wf_size_desc (extend_ti tag t fn)"
 apply(case_tac tag, auto)
+apply(rename_tac typ_struct list)
 apply(case_tac typ_struct, auto)
 done
 
@@ -241,13 +241,6 @@ apply(clarsimp simp: ti_pad_combine_def Let_def)
 apply(erule wf_size_desc_extend_ti)
 apply simp
 done
-
-lemma wf_size_desc_map:
-  "wf_size_desc (map_td f t) = wf_size_desc (t::'a typ_info)"
-  "wf_size_desc_struct (map_td_struct f st) = wf_size_desc_struct (st::'a field_desc typ_struct)"
-  "wf_size_desc_list (map_td_list f ts) = wf_size_desc_list (ts::('a typ_info,field_name) dt_pair list)"
-  "wf_size_desc_pair (map_td_pair f x) = wf_size_desc_pair (x::('a typ_info,field_name) dt_pair)"
-  by (induct t and st and ts and x) auto
 
 lemma wf_size_desc_adjust_ti:
   "wf_size_desc (adjust_ti t f g) = wf_size_desc (t::'a typ_info)"
@@ -382,7 +375,7 @@ lemma update_ti_adjust_ti:
   "fg_cons f g \<Longrightarrow> update_ti_t (adjust_ti t f g) bs v =
       g (update_ti_t t bs (f v)) v"
 apply(insert field_desc_adjust_ti(1) [of f g t])
-apply(clarsimp simp: field_desc_def update_desc_def)
+apply(clarsimp simp: update_desc_def)
 done
 
 declare field_desc_def [simp del]
@@ -410,15 +403,9 @@ done
 lemma align_of_extend_ti [simp]:
   "aggregate ti \<Longrightarrow> align_td (extend_ti ti t fn) = max (align_td ti) (align_td t)"
 apply(case_tac ti, clarsimp)
+apply(rename_tac typ_struct xs)
 apply(case_tac typ_struct, clarsimp+)
 done
-
-lemma align_of_map [simp]:
-  "align_td (map_td f t) = align_td (t::'a typ_info)"
-  "align_td_struct (map_td_struct f st) = align_td_struct (st::'a field_desc typ_struct)"
-  "align_td_list (map_td_list f ts) = align_td_list (ts::('a typ_info,field_name) dt_pair list)"
-  "align_td_pair (map_td_pair f x) = align_td_pair (x::('a typ_info,field_name) dt_pair)"
-  by(induct t and st and ts and x) auto
 
 lemma align_of_adjust_ti [simp]:
   "align_td (adjust_ti t f g) = align_td (t::'a typ_info)"
@@ -459,6 +446,7 @@ lemma fc_extend_ti:
   "\<lbrakk> fu_commutes (update_ti_t s) h; fu_commutes (update_ti_t t) h \<rbrakk>
       \<Longrightarrow> fu_commutes (update_ti_t (extend_ti s t fn)) h"
 apply(case_tac s, auto)
+apply(rename_tac typ_struct xs)
 apply(case_tac typ_struct, auto)
 apply(auto simp: fu_commutes_def)
 done
@@ -517,6 +505,7 @@ lemma fu_eq_mask_ti_pad_combine:
   "\<lbrakk> fu_eq_mask ti f; aggregate ti \<rbrakk> \<Longrightarrow> fu_eq_mask (ti_pad_combine n ti) f"
 apply(clarsimp simp: ti_pad_combine_def Let_def)
 apply(case_tac ti,  auto)
+apply(rename_tac typ_struct xs)
 apply(case_tac typ_struct, auto)
 apply(clarsimp simp: fu_eq_mask_def update_ti_list_t_def)
 done
@@ -544,7 +533,9 @@ lemma fu_eq_mask_ti_typ_combine:
 apply(frule fg_cons_upd_local)
 apply(auto simp: ti_typ_combine_def Let_def)
 apply(case_tac ti, auto)
+apply(rename_tac typ_struct xs)
 apply(case_tac typ_struct, auto)
+apply(rename_tac xs')
 apply(auto simp: fu_eq_mask_def)
 apply(simp add: update_ti_adjust_ti)
 apply(auto simp:  update_ti_list_t_def size_of_def)
@@ -552,20 +543,20 @@ apply(subst upd [where w="f undefined"])
  apply(simp add: size_of_def)
 apply(subst upd [where w="f undefined" and v="f (h v')"])
  apply(simp add: size_of_def)
-apply(subgoal_tac "fu_commutes (\<lambda>v. update_ti_list_t lista v) g")
+apply(subgoal_tac "fu_commutes (\<lambda>v. update_ti_list_t xs' v) g")
  apply(clarsimp simp: fu_commutes_def)
  apply(frule_tac x="h v" in spec)
  apply(rotate_tac -1)
- apply(drule_tac x="take (size_td_list lista) bs" in spec)
+ apply(drule_tac x="take (size_td_list xs') bs" in spec)
  apply(drule_tac x="update_ti_t (typ_info_t TYPE('a))
-                   (drop (size_td_list lista) bs) (f undefined)" in spec)
+                   (drop (size_td_list xs') bs) (f undefined)" in spec)
  apply(frule_tac x="h v'" in spec)
  apply(rotate_tac -1)
- apply(drule_tac x="take (size_td_list lista) bs" in spec)
+ apply(drule_tac x="take (size_td_list xs') bs" in spec)
  apply(drule_tac x="update_ti_t (typ_info_t TYPE('a))
-                   (drop (size_td_list lista) bs) (f undefined)" in spec)
+                   (drop (size_td_list xs') bs) (f undefined)" in spec)
  apply(clarsimp simp: update_ti_list_t_def)
- apply(drule_tac x="take (size_td_list lista) bs" in spec)
+ apply(drule_tac x="take (size_td_list xs') bs" in spec)
  apply simp
  apply(rotate_tac -1)
  apply(drule_tac x="v" in spec)
@@ -573,18 +564,18 @@ apply(subgoal_tac "fu_commutes (\<lambda>v. update_ti_list_t lista v) g")
  apply(drule_tac x="v'" in spec)
 
  apply(frule_tac x="h v" in spec)
- apply(drule_tac x="(take (size_td_list lista) bs)" in spec)
+ apply(drule_tac x="(take (size_td_list xs') bs)" in spec)
  apply(drule_tac x="f undefined" in spec)
  apply(frule_tac x="h v'" in spec)
- apply(drule_tac x="(take (size_td_list lista) bs)" in spec)
+ apply(drule_tac x="(take (size_td_list xs') bs)" in spec)
  apply(drule_tac x="f undefined" in spec)
- apply(thin_tac "\<forall>v bs bs'. ?X v bs bs'")
+ apply(thin_tac "\<forall>v bs bs'. X v bs bs'" for X)
  apply simp
  apply(unfold upd_local_def)
  apply fast
 apply(unfold fu_commutes_def)
-apply(thin_tac "\<forall>bs. ?X bs")
-apply(thin_tac "\<forall>x y z a. ?X x y z a")
+apply(thin_tac "\<forall>bs. X bs" for X)
+apply(thin_tac "\<forall>x y z a. X x y z a" for X)
 apply(clarsimp simp: update_ti_list_t_def)
 done
 
@@ -616,6 +607,7 @@ done
 lemma size_td_extend_ti:
   "aggregate s \<Longrightarrow> size_td (extend_ti s t fn) = size_td s + size_td t"
 apply(case_tac s, auto)
+apply(rename_tac typ_struct xs)
 apply(case_tac typ_struct, auto)
 done
 
@@ -638,23 +630,15 @@ apply auto
 apply(simp add: padup_dvd)
 done
 
-lemma size_td_lt_extend_ti:
-  "aggregate s \<Longrightarrow> size_td (extend_ti s t fn) = size_td s + size_td t"
-apply(case_tac s, auto)
-apply(case_tac typ_struct, auto)
-done
-
 lemma size_td_lt_ti_pad_combine:
   "aggregate t \<Longrightarrow> size_td (ti_pad_combine n t) = size_td t + n"
-apply(clarsimp simp: ti_pad_combine_def Let_def)
-apply(simp add: size_td_lt_extend_ti)
-done
+  by (metis add.commute size_td_ti_pad_combine)
 
 lemma size_td_lt_ti_typ_combine:
   "aggregate ti \<Longrightarrow> size_td (ti_typ_combine (t::'b::c_type itself) f g fn ti) =
       size_td ti + size_td (typ_info_t TYPE('b))"
 apply(clarsimp simp: ti_typ_combine_def Let_def)
-apply(simp add: size_td_lt_extend_ti)
+apply(simp add: size_td_extend_ti)
 done
 
 lemma size_td_lt_ti_typ_pad_combine:
@@ -689,7 +673,9 @@ lemma lf_fn_disj_fn [rule_format]:
   "\<forall>fn t tn. fn \<notin> set (field_names_list (TypDesc (TypAggregate xs) tn))
        \<longrightarrow> lf_fn ` lf_set_list xs [] \<inter> lf_fn ` lf_set t [fn] = {}"
 apply(induct_tac xs)
- apply clarsimp+
+ apply clarsimp
+apply(rename_tac a list)
+apply clarsimp
 apply(drule_tac x=fn in spec)
 apply(erule impE)
  apply(clarsimp simp: field_names_list_def split: split_if_asm)
@@ -712,6 +698,7 @@ lemma wf_lf_extend_ti:
       ti_ind (lf_set ti []) (lf_set t []) \<rbrakk> \<Longrightarrow>
       wf_lf (lf_set (extend_ti ti t fn) [])"
 apply(case_tac ti, clarsimp)
+apply(rename_tac typ_struct xs)
 apply(case_tac typ_struct, clarsimp+)
  apply(subst wf_lf_fn)
   apply simp+
@@ -776,6 +763,7 @@ lemma ti_ind_extend_ti:
       ti_ind (lf_set ti []) (lf_set (adjust_ti k f g) []) \<rbrakk>
       \<Longrightarrow> ti_ind (lf_set (extend_ti ti t fn) []) (lf_set (adjust_ti k f g) [])"
 apply(case_tac ti, clarsimp)
+apply(rename_tac typ_struct xs)
 apply(case_tac typ_struct, clarsimp)
  apply(subst ti_ind_fn)
  apply simp
@@ -857,6 +845,7 @@ lemma g_ind_extend_ti:
   "\<lbrakk> g_ind (lf_set s []) g; g_ind (lf_set t []) g \<rbrakk> \<Longrightarrow>
       g_ind (lf_set (extend_ti s t fn) []) g"
 apply(case_tac s, auto)
+apply(rename_tac typ_struct xs)
 apply(case_tac typ_struct, auto)
 apply(auto simp: g_ind_def image_Un fu_s_comm_k_def)
  apply(subgoal_tac "lf_fd xb \<in> lf_fd ` lf_set t [fn]")
@@ -908,6 +897,7 @@ lemma f_ind_extend_ti:
   "\<lbrakk> f_ind f (lf_fd ` lf_set s []); f_ind f (lf_fd ` lf_set t []) \<rbrakk> \<Longrightarrow>
       f_ind f (lf_fd ` lf_set (extend_ti s t fn) [])"
 apply(case_tac s, auto)
+apply(rename_tac typ_struct xs)
 apply(case_tac typ_struct, auto)
 apply(auto simp: f_ind_def)
  apply(subgoal_tac "lf_fd xa \<in> lf_fd ` lf_set t [fn]")
@@ -959,6 +949,7 @@ lemma fa_ind_extend_ti:
   "\<lbrakk> fa_ind (lf_fd ` lf_set s []) g; fa_ind (lf_fd ` lf_set t []) g \<rbrakk> \<Longrightarrow>
       fa_ind (lf_fd ` lf_set (extend_ti s t fn) []) g"
 apply(case_tac s, auto)
+apply(rename_tac typ_struct xs)
 apply(case_tac typ_struct, auto)
 apply(auto simp: fa_ind_def  )
  apply(subgoal_tac "lf_fd xa \<in> lf_fd ` lf_set t [fn]")
@@ -1054,7 +1045,7 @@ lemma align_td_field_lookup:
 apply(induct t and st and ts and x)
      apply auto
 apply(clarsimp split: option.splits)
- apply(thin_tac "All ?P")
+ apply(thin_tac "All P" for P)
  apply(drule_tac x=f in spec)
  apply(drule_tac x="m+size_td (dt_fst dt_pair)" in spec)
  apply(drule_tac x=s in spec)
@@ -1069,7 +1060,8 @@ done
 lemma align_field_extend_ti:
   "\<lbrakk> align_field s; align_field t; 2^(align_td t) dvd size_td s \<rbrakk> \<Longrightarrow>
       align_field (extend_ti s t fn)"
-apply(case_tac s, clarsimp, thin_tac "s = ?X")
+apply(case_tac s, clarsimp, thin_tac "s = X" for X)
+apply(rename_tac typ_struct xs)
 apply(case_tac typ_struct, clarsimp)
  apply(clarsimp simp: align_field_def split: option.splits)
 apply(clarsimp simp: align_field_def)
@@ -1208,6 +1200,7 @@ lemma npf_extend_ti [simp]:
   "non_padding_fields (extend_ti s t fn) = non_padding_fields s @
       (if hd fn = CHR ''!'' then [] else [fn])"
 apply(case_tac s, clarsimp)
+apply(rename_tac typ_struct xs)
 apply(case_tac typ_struct, auto)
 done
 

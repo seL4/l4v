@@ -17,6 +17,7 @@ lemma field_lookup_list_Some2 [rule_format]:
       field_lookup t fs (m + size_td_list ts)"
 apply(induct_tac ts)
  apply(clarsimp split: option.splits)
+apply(rename_tac a list)
 apply(clarsimp split: option.splits)
 apply auto
  apply(case_tac a, clarsimp split: split_if_asm)
@@ -36,6 +37,7 @@ lemma fnl_extend_ti:
     field_lookup (extend_ti tag t fn) (f # fs) m =
       (if f=fn then field_lookup t fs (size_td tag+m) else field_lookup tag (f # fs) m)"
 apply(case_tac tag, simp)
+apply(rename_tac typ_struct xs)
 apply(case_tac typ_struct, simp)
 apply auto
  apply(subst field_lookup_list_Some2)
@@ -206,6 +208,7 @@ lemma field_names_list:
 lemma field_names_extend_ti:
   "typ_name t \<noteq> typ_name ti \<Longrightarrow> field_names (extend_ti ti xi fn) t = field_names ti t @ (map (\<lambda>fs. fn#fs) (field_names xi t))"
 apply(cases ti, clarsimp)
+apply(rename_tac typ_struct xs)
 apply(case_tac typ_struct, auto)
 apply(simp add: field_names_list)
 done
@@ -252,19 +255,14 @@ lemma size_empty_typ_info [simp]:
   "size (empty_typ_info tn) = 2"
   by (simp add: empty_typ_info_def)
 
-lemma list_size_append [simp]:
-  "size_list (size_dt_pair size (size_list size_char)) (xs @ ys) =
-  size_list (size_dt_pair size (size_list size_char)) xs +
-  size_list (size_dt_pair size (size_list size_char)) ys"
-  by (induct xs) auto
-
 lemma list_size_char:
   "size_list size_char xs = length xs"
   by (induct xs) auto
 
 lemma size_ti_extend_ti [simp]:
   "aggregate ti \<Longrightarrow> size (extend_ti ti t fn) = size ti + size t + 2 + size fn"
-apply(cases ti, auto)
+apply(cases ti, clarsimp)
+apply(rename_tac typ_struct xs)
 apply(case_tac typ_struct, auto simp: list_size_char)
 done
 
@@ -393,7 +391,7 @@ apply(rule_tac s\<^sub>0="(s\<^sub>1 ++ s\<^sub>0) |` {(x,y) | x y. x \<in> {&(p
       apply(frule sep_map_dom_exc)
       apply(rotate_tac -1)
       apply(drule sym)
-      apply(thin_tac "s = ?x")
+      apply(thin_tac "s = x" for x)
       apply(clarsimp simp: restrict_map_disj_dom_empty map_ac_simps sep_conj_ac)
      apply(clarsimp simp: inv_footprint_def sep_conj_ac)
      apply(rule inter_sub)
@@ -569,16 +567,16 @@ lemma td_names_empty_typ_info [simp]:
 
 lemma td_names_ptr [simp]:
   "td_names (typ_info_t TYPE(('a :: c_type) ptr)) = {typ_name_itself TYPE('a) @ ''+ptr''}"
-  by (simp add: typ_info_ptr pad_typ_name_def)
+  by (simp add: pad_typ_name_def)
 
 lemma td_names_word8 [simp]:
   fixes x :: "byte itself"
   shows "td_names (typ_info_t x) = {''word00010''}"
- by (simp add:typ_info_word pad_typ_name_def nat_to_bin_string.simps)
+ by (simp add: pad_typ_name_def nat_to_bin_string.simps)
 
 lemma td_names_word32 [simp]:
   "td_names (typ_info_t TYPE(32 word)) = {''word0000010''}"
-  by (simp add: typ_info_word pad_typ_name_def nat_to_bin_string.simps)
+  by (simp add: pad_typ_name_def nat_to_bin_string.simps)
 
 lemma td_names_export_uinfo [simp]:
   "td_names (export_uinfo td) = td_names td"
@@ -689,7 +687,6 @@ lemma typ_name_array_tag_n:
 lemma typ_name_array [simp]:
   "typ_name (typ_info_t TYPE('a::c_type['b :: finite])) =
     typ_name (typ_info_t TYPE('a)) @ ''_array_'' @ nat_to_bin_string (card (UNIV :: 'b set))"
-  apply (simp add: typ_info_array array_tag_def typ_name_array_tag_n)
-  done
-
+  by (simp add: typ_info_array array_tag_def typ_name_array_tag_n)
+ 
 end
