@@ -13,7 +13,7 @@ sig
 
   (* Types *)
   val typ_ord : typ * typ -> order
-  val expand_tyabbrevs : theory -> typ -> typ
+  val expand_tyabbrevs : Proof.context -> typ -> typ
 
   val alpha : typ
   val beta : typ
@@ -200,10 +200,6 @@ fun dest_list_type ty =
     case ty of
       Type("List.list", args) => hd args
     | _ => raise TYPE( "dest_list_type: not a list type", [ty], [])
-fun dest_array_type ty =
-    case ty of
-      Type("Arrays.array", args) => (hd args, hd (tl args))
-    | _ => raise TYPE("dest_array_type: not an array type", [ty], [])
 
 val alpha = TFree("'a", ["HOL.type"])
 val beta = TFree("'b", ["HOL.type"])
@@ -239,7 +235,7 @@ fun dest_numeral_type ty =
     | @{typ "Numeral_Type.num1"} => 1
     | ty => raise TYPE ("Not a numeral type", [ty], [])
 
-fun expand_tyabbrevs sg ty = #T (rep_ctyp (ctyp_of sg ty))
+fun expand_tyabbrevs sg ty = Thm.typ_of (Thm.ctyp_of sg ty)
 
 (* ----------------------------------------------------------------------
     Terms
@@ -564,7 +560,7 @@ end
 
 fun hd_has_name s t = let
   val (f, args) = cstrip_comb t
-  val t = #t (rep_cterm f)
+  val t = Thm.term_of f
 in
   case t of
     Const(s', _) => s = s'

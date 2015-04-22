@@ -456,10 +456,10 @@ fun mk_thy_types cse install thy = let
              there are no axioms attached to c_type *)
           val c_type_instance_t =
               Logic.mk_of_class(recty, "CTypesDefs.c_type")
-          val c_type_instance_ct = cterm_of thy c_type_instance_t
+          val c_type_instance_ct = Thm.cterm_of (thy2ctxt thy) c_type_instance_t
           val is_c_type_thm =
               Goal.prove_internal (thy2ctxt thy) [] c_type_instance_ct
-                                  (fn _ => Class.intro_classes_tac [])
+                                  (fn _ => Class.intro_classes_tac (thy2ctxt thy) [])
           val thy = Axclass.add_arity is_c_type_thm thy
 
           val _ =

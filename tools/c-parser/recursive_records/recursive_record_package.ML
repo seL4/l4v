@@ -145,7 +145,7 @@ fun add_term_vars (t, vars: term list) = case t of
 
 fun term_vars t = add_term_vars(t,[]);
 in
-val [updvar] = term_vars (nth (prems_of updcong_foldE) 1)
+val [updvar] = term_vars (nth (Thm.prems_of updcong_foldE) 1)
 end
 
 fun prove_record_rewrites ({record_name, fields}, thy) = let
@@ -162,7 +162,7 @@ fun prove_record_rewrites ({record_name, fields}, thy) = let
   fun prove g =
       Goal.prove_global_future thy [] [] (mk_prop g)
                         (fn {prems=_,context} =>
-                            case_tac context "r" 1 THEN
+                            case_tac context "r" [] NONE 1 THEN
                             asm_full_simp_tac context 1)
   fun mk_upd_t {fldname,fldty} =
       Const(Sign.intern_const thy (suffix updateN fldname),
@@ -258,8 +258,8 @@ fun prove_record_rewrites ({record_name, fields}, thy) = let
     Goal.prove_global_future
       thy [] []
       (mk_prop (mk_eqt(List.foldl mk_arg r_var' fields, r_var)))
-      (fn {context,...} => case_tac context "r" 1 THEN
-                         case_tac context "r'" 1 THEN
+      (fn {context,...} => case_tac context "r" [] NONE 1 THEN
+                         case_tac context "r'" [] NONE 1 THEN
                          asm_full_simp_tac context 1)
   end
   val _ = writeln "  proved idupd_value2"
@@ -269,8 +269,8 @@ fun prove_record_rewrites ({record_name, fields}, thy) = let
      case. *)
   fun prove_fold_cong (idupdate, updupd_same) = let
     val upd = (head_of o fst o HOLogic.dest_eq
-                 o HOLogic.dest_Trueprop o concl_of) idupdate;
-    val ct  = cterm_of thy;
+                 o HOLogic.dest_Trueprop o Thm.concl_of) idupdate;
+    val ct  = Thm.cterm_of (Proof_Context.init_global thy);
     val cgE = cterm_instantiate [(ct updvar, ct upd)] updcong_foldE;
   in [idupdate, updupd_same] MRS cgE end;
 
