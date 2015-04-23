@@ -41,15 +41,15 @@ text {*
 \begin{verbatim}
   procedure Simple {
     string echo_string(in string s);
-    int echo_int(int int i);
+    int echo_int(in int i);
     void echo_parameter(in int pin, out int pout);
   };
 \end{verbatim}
 
   The representation of this in Isabelle is quite similar:\footnote{The
-  procedure parameter types @{text int} and @{text uint}
-  are synonyms for
-  @{term integer} and @{term "unsigned integer"}, respectively, and are
+  procedure parameter type @{text int}
+  is a synonym for
+  @{term integer} and is
   therefore not modelled in Isabelle.}
 *}
 definition
