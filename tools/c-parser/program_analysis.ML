@@ -261,7 +261,7 @@ datatype csenv (* CalculateState environment *) =
                  scope : var_info Symtab.table list,
                  array_mentions : (int ctype * int) Binaryset.set,
                  enumenv : string wrap list *
-                           (int * string option) Symtab.table,
+                           (IntInf.int * string option) Symtab.table,
                  globinits : Absyn.expr MSymTab.table,
                  heaptypes : int ctype Binaryset.set,
                  call_info : fncall_type Binaryset.set Symtab.table,
@@ -769,7 +769,7 @@ fun process_enumdecl (enameopt_w,econsts) env = let
       | NONE => let
           val e_val = case eopt of
                         NONE => i
-                      | SOME e => IntInf.toInt (consteval (cse2ecenv env) e)
+                      | SOME e => consteval (cse2ecenv env) e
           val tab' = Symtab.update(node ecn_w, (e_val, node enameopt_w)) alist
         in
           (e_val + 1, ecn_w::set, tab')

@@ -59,7 +59,7 @@ and designator =
 
 
 datatype ecenv =
-         CE of {enumenv : (int * string option) Symtab.table,
+         CE of {enumenv : (IntInf.int * string option) Symtab.table,
                           (* lookup is from econst name to value and the
                              name of the type it belongs to, if any
                              (they can be anonymous) *)
@@ -111,7 +111,7 @@ sig
 
 
   datatype ecenv = datatype ExprDatatype.ecenv (* "enumerated constant environment" *)
-  val eclookup : ecenv -> string -> (int * string option) option
+  val eclookup : ecenv -> string -> (IntInf.int * string option) option
   val constify_abtype : ecenv -> expr CType.ctype -> int CType.ctype
   val consteval : ecenv -> expr -> IntInf.int
 
@@ -428,7 +428,7 @@ in
     in
       case Symtab.lookup enumenv s of
         NONE => Fail ("Variable "^s^ " can't appear in a constant expression")
-      | SOME (v, _) => (fi v, Signed Int)
+      | SOME (v, _) => (v, Signed Int)
     end
   | StructDot _ =>
     Fail "Can't evaluate fieldref in constant expression"
