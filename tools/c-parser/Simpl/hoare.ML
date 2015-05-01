@@ -69,7 +69,7 @@ sig
   
   val add_foldcongsimps: thm list -> theory -> theory
   val get_foldcong_ss : theory -> simpset
-  val add_foldcongs :  thm list -> theory -> theory
+  val add_foldcongs : thm list -> theory -> theory
   val modeqN : string
   val modexN : string
   val implementationN : string
@@ -1894,17 +1894,21 @@ structure FoldCongData = Theory_Data
   val copy = I;
   val extend = I;
   val merge = merge_ss;
-);
+)
 
-val get_foldcong_ss = FoldCongData.get;
-fun add_foldcongs congs = FoldCongData.map (fn ss =>
-        put_simpset ss @{context}
+val get_foldcong_ss = FoldCongData.get
+
+fun add_foldcongs congs thy = FoldCongData.map (fn ss =>
+        Proof_Context.init_global thy
+        |> put_simpset ss
         |> fold Simplifier.add_cong congs
-        |> simpset_of);
-fun add_foldcongsimps simps = FoldCongData.map (fn ss =>
-        put_simpset ss @{context}
+        |> simpset_of) thy
+                
+fun add_foldcongsimps simps thy = FoldCongData.map (fn ss =>
+        Proof_Context.init_global thy
+        |> put_simpset ss
         |> (fn ctxt => ctxt addsimps simps)
-        |> simpset_of);
+        |> simpset_of) thy
 
 (* propagates state into "Collect" sets and simplifies selections updates like:
  *  s:{s. P s} = P s
