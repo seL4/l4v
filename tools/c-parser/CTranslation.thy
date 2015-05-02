@@ -87,7 +87,6 @@ ML_file "recursive_records/recursive_record_pp.ML"
 ML_file "recursive_records/recursive_record_package.ML"
 ML_file "expression_typing.ML"
 ML_file "UMM_Proofs.ML"
-declare [[ML_print_depth = 100 ]]
 ML_file "program_analysis.ML"
 ML_file "heapstatetype.ML"
 ML_file "MemoryModelExtras-sig.ML"

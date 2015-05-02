@@ -174,7 +174,7 @@ end
 fun is_litzero ei =
     ctype_of ei = Signed Int andalso
     (rval_of ei True = IntInfo.numeral2w (Signed Int) 0
-     handle _ => false)
+     handle Fail _ => false)
 
 (* Given a term-generating function "term_gen_fn" a list of subexpressions
  * "eis", a destination type "result_type" and boolean indicating whether the
@@ -364,13 +364,13 @@ in
                                  " taking address of value without one"))
     end
   | BitNegate => let val ei' = strip_kb (intprom_ei thy ei)
-                     val _ = writeln("After prom, argument to bitNOT has type "^
+                     val _ = tracing("After prom, argument to bitNOT has type "^
                                      tyname (ctype_of ei'))
                      val result =
                          lmk_comb(@{const_name "bitNOT"},
                                   [ei'], First, ctype_of ei', false)
                  in
-                   writeln("bitNOT result has type "^tyname (ctype_of result));
+                   tracing("bitNOT result has type "^tyname (ctype_of result));
                    result
                  end
 end handle TYPE (s,tys,tms) => raise TYPE ("unop_term: "^s, tys, tms)
@@ -542,7 +542,7 @@ in
                             ei2, ei1)
 
   | Equals => let
-      val _ = writeln ("EQ_OP("^tyname (ctype_of ei1)^", "
+      val _ = tracing ("EQ_OP("^tyname (ctype_of ei1)^", "
                        ^tyname (ctype_of ei2)^")")
     in
       mk_relbinop thy (@{const_name "HOL.eq"}, @{const_name "HOL.eq"}, ei1, ei2)
@@ -759,7 +759,6 @@ end
 
 fun mk_complit_upd thy cty rootty ((pth,value), ei) = let
   open complit
-  val ctxt = Proof_Context.init_global thy
   fun mk_upds ty upds base =
       case upds of
         [] => K_rec ty $ base
@@ -773,7 +772,7 @@ fun mk_complit_upd thy cty rootty ((pth,value), ei) = let
         end
       | fld s :: rest => let
           val _ = Feedback.informStr(7, "mk_complit_upd: Field "^s^" in type "^
-                                         Syntax.string_of_typ ctxt ty)
+                                         Syntax.string_of_typ (thy2ctxt thy) ty)
           val recd_ty = case ty of
                           Type(fullname, _) => fullname
                         | _ => raise Fail "mk_complit_upd: bad struct tyname"
@@ -1203,7 +1202,7 @@ in
                             (map (fn (vp,_) => vpl_toString vp ^ ", ") updates))
       val zero_tm = zero_term thy senv cty
       val _ = informStr(7, "Compound literal base zero is: "^
-                           Syntax.string_of_term (Proof_Context.init_global thy)
+                           Syntax.string_of_term (thy2ctxt thy)
                                                  zero_tm)
       val ei0 = mk_rval((fn _ => zero_tm), cty)
       val typ = CalculateState.ctype_to_typ (thy, cty)

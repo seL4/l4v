@@ -219,14 +219,14 @@ in
   doit
 end
 
-fun tycon_munge thy s = Sign.intern_type thy s
-
 fun isa_type_to_typ thy (ity : isa_type) = let
-  fun m s = let val s' = tycon_munge thy s
+  fun m s = Sign.full_name thy (Binding.name s)
+  (* FIXME: why was the below necessary?
+            let val s' = Sign.intern_type thy s
             in
               if s' = s then Sign.full_name thy (Binding.name s)
               else s'
-            end
+            end *)
   fun mk_numeral_type' sz =
       if sz = 8192 then @{typ "ty8192"}
       else mk_numeral_type sz
@@ -234,7 +234,7 @@ in
   case ity of
     refty (NONE, _) => mk_ptr_ty unit
   | refty (SOME ity0, _) => mk_ptr_ty (isa_type_to_typ thy ity0)
-  | recd (s, _) => Type(m s, [])
+  | recd (s, _) => Type (m s, [])
   | array (ity, sz, _) =>
     Type("Arrays.array", [isa_type_to_typ thy ity, mk_numeral_type' sz])
   | existing (ty, _) => ty
@@ -427,7 +427,7 @@ fun mk_thy_types cse install thy = let
   open MemoryModelExtras
   open UserTypeDeclChecking
   val umm_prfstate = initial_state
-  fun new_rcdinfo (recname,flds) = let
+  fun new_rcdinfo (recname,flds) thy = let
     fun fldtys (fldname, cty) = (fldname, ctype_to_typ (thy,cty), cty)
   in
     (recname, map fldtys flds)
@@ -444,13 +444,12 @@ fun mk_thy_types cse install thy = let
                                       listvars #1 flds))
                     recflds
 
-        fun mk_rp_fld (fldname,cty) = {fldname = fldname,
-                                       fldty = ctype_to_typ (thy,cty)}
-        fun mk_rp_recd (recname, flds) =
-            {record_name = recname, fields = map mk_rp_fld flds}
+        fun mk_rp_fld thy (fldname,cty) = {fldname = fldname,
+                                           fldty = ctype_to_typ (thy,cty)}
+        fun mk_rp_recd thy (recname, flds) =
+            {record_name = recname, fields = map (mk_rp_fld thy) flds}
         fun mk_ctype_instance (recname, _) thy = let
-          val fullrecname = Sign.intern_type thy recname
-          val recty = Type(fullrecname, [])
+          val recty = Syntax.read_typ_global thy recname
 
           (* establish the new type as a c_type, which requires no proof, as
              there are no axioms attached to c_type *)
@@ -470,12 +469,13 @@ fun mk_thy_types cse install thy = let
           thy
         end
       in
-        thy |> RecursiveRecordPackage.define_record_type (map mk_rp_recd recflds)
+        thy |> RecursiveRecordPackage.define_record_type (map (mk_rp_recd thy) recflds)
             |> Basics.fold mk_ctype_instance recflds
       end
     else
       thy
   end
+
   val thy = List.foldl rcddecls_phase0 thy sorted_structs
 
   (* Yuck, sorry *)
@@ -529,7 +529,7 @@ fun mk_thy_types cse install thy = let
   end
 
   fun rcddecl_phase1 (p as (recname, _ (* flds *)), (thy, st, rcdacc)) = let
-    val rcdinfo = new_rcdinfo p
+    val rcdinfo = new_rcdinfo p thy
     val (st, thy1) =
         if install then
           (informStr (2, "Proving UMM properties for struct "^recname);
@@ -574,8 +574,7 @@ fun pretty_globals thy vars =
                  Pretty.str (MString.dest (#isa_name nm) ^ " :: " ^
                              Syntax.string_of_typ (thy2ctxt thy) ity))
              vars)
-    |>
-    Pretty.writeln;
+    |> Pretty.string_of |> tracing;
 
 fun categorise_globals (alladdressed, popglobs) l = let
   fun recurse (acc as (ut, ns, ad)) l =

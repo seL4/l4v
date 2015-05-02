@@ -22,7 +22,7 @@ thm g_body_def   (* 2 C_Guards, one per deref; see JIRA VER-152 *)
 ML {*
 
 val th = @{thm g_body_def}
-val t = concl_of th
+val t = Thm.concl_of th
 fun incifGuard (@{const "C_Guard"}) i = i + 1
   | incifGuard _ i = i
 

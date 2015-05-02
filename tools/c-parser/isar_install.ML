@@ -34,7 +34,7 @@ val bogus = SourcePos.bogus
 
 val _ = Feedback.errorf := (ignore o error)
 val _ = Feedback.warnf := warning
-val _ = Feedback.informf := (Output.writeln o Feedback.timestamp)
+val _ = Feedback.informf := (Output.tracing o Feedback.timestamp)
 
 structure C_Includes = Theory_Data
 (struct
@@ -310,13 +310,10 @@ in
       val (globloc, ctxt) =
           Expression.add_locale loc_b loc_b ([], []) globs thy
       val thy = Local_Theory.exit_global ctxt
-      val _ = writeln ("Created locale for globals (" ^ Binding.print loc_b ^
+      val _ = Output.state ("Created locale for globals (" ^ Binding.print loc_b ^
                        ")- with " ^ Int.toString (length globs) ^
                        " globals elements")
-      val _ = app (fn e => writeln ("-- " ^
-                                    HPInter.asm_to_string
-                                        (Syntax.string_of_term ctxt)
-                                        e))
+      val _ = app (fn e => Output.state ("-- " ^ HPInter.asm_to_string (Syntax.string_of_term ctxt) e))
                   globs
       val mungedb = mk_mungedb vdecls
       val thy = CalculateState.store_mungedb (s, mungedb) thy
@@ -341,18 +338,16 @@ in
                   glob_table
                   thy
             end
-          else (warnStr'(bogus, bogus,
-                         "Ignoring initialisations of modified globals");
+          else (warning "Ignoring initialisations of modified globals (if any)";
                 thy)
-      val _ = writeln "Declared state."
       open TermsTypes
       val (globty, styargs) = let
         val globty0 = Type(Sign.intern_type thy
                                             NameGeneration.global_rcd_name, [])
-        val globty = expand_tyabbrevs thy globty0
+        val globty = expand_tyabbrevs (thy2ctxt thy) globty0
         val statetype0 =
             Type(Sign.intern_type thy NameGeneration.local_rcd_name, [globty])
-        val statetype = expand_tyabbrevs thy statetype0
+        val statetype = expand_tyabbrevs (thy2ctxt thy) statetype0
             (* only happens if no local variables, = no functions declared,
                = pretty bogus
                (decl_only and bigstruct test cases are like this though) *)
@@ -369,8 +364,8 @@ in
                           " (derived from "^
                           String.concatWith ", " (valOf roots_opt) ^ ")"
       val _ =
-          writeln ("Beginning function translation for " ^
-                   toTranslate_s)
+          tracing ("Beginning function translation for " ^
+                    toTranslate_s)
       val toTranslateP =
           case toTranslate of
               NONE => (fn _ => true)
@@ -404,7 +399,7 @@ in
   else
     thy
 end handle e as TYPE (s,tys,tms) =>
-         (writeln (s ^ "\n" ^
+         (tracing (s ^ "\n" ^
                    Int.toString (length tms) ^ " term(s): " ^
                    String.concatWith
                        ", "
@@ -423,7 +418,7 @@ fun install_C_file args thy =
 fun interactive_install s thy =
   install_C_file ((((NONE, NONE), NONE), s), NONE) thy
   handle TYPE (s,tys,tms) =>
-         (writeln (s ^ "\n" ^
+         (tracing (s ^ "\n" ^
                    Int.toString (length tms) ^ " term(s): " ^
                    String.concatWith
                        ", "

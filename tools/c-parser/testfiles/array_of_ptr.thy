@@ -13,6 +13,7 @@ imports "../CTranslation"
 begin
 
 install_C_file "array_of_ptr.c"
+
 print_locale array_of_ptr_global_addresses
 
 end

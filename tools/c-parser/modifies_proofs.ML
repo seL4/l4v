@@ -177,10 +177,10 @@ in
                      arg5_t $ arg6_t)
 end
 
-fun munge_tactic ctxt goal goalid tac = let
+fun munge_tactic ctxt goal tac = let
   fun tacticfn {prems = _,context} st =
       if !sorry_modifies_proofs then
-         Skip_Proof.cheat_tac 1 st
+         Skip_Proof.cheat_tac ctxt 1 st
       else
          tac context st
 in
@@ -189,9 +189,9 @@ end
 
 fun prove_all_modifies_goals_local csenv includeP tyargs lthy = let
   open ProgramAnalysis
-  val _ = writeln "Proving automatically calculated modifies proofs"
+  val _ = tracing "Proving automatically calculated modifies proofs"
   val globs_all_addressed = Config.get lthy CalculateState.globals_all_addressed
-  val _ = writeln ("Globals_all_addressed mode = " ^ Bool.toString globs_all_addressed)
+  val _ = tracing ("Globals_all_addressed mode = " ^ Bool.toString globs_all_addressed)
   (* first enter the locale where \<Gamma> exists, and where all the
      mappings from function name to function body exist *)
   val lconsts = Proof_Context.consts_of lthy
@@ -205,7 +205,7 @@ fun prove_all_modifies_goals_local csenv includeP tyargs lthy = let
       fun modifies_msg msg = let
           val {usr, sys} = Timer.checkCPUTimer timer
         in
-          writeln ("modifies:" ^ fname ^ ":" ^
+          tracing ("modifies:" ^ fname ^ ":" ^
                    Int.toString (Time.toSeconds usr + Time.toSeconds sys) ^
                    "s:" ^ msg)
         end;
@@ -231,12 +231,12 @@ fun prove_all_modifies_goals_local csenv includeP tyargs lthy = let
                 val geq = Proof_Context.get_thm ctxt "globals.equality"
               in
                 HoarePackage.vcg_tac "_modifies" "false" [] ctxt 1 THEN
-                ALLGOALS (REPEAT_ALL_NEW (resolve_tac [exI, geq])) THEN
+                ALLGOALS (REPEAT_ALL_NEW (resolve_tac ctxt [exI, geq])) THEN
                 ALLGOALS (asm_full_simp_tac ctxt)
               end
             in
               let
-                val th = munge_tactic lthy goal fname tac
+                val th = munge_tactic lthy goal tac
                 val (_, lthy) =
                       Local_Theory.note
                           ((Binding.name (fname ^ "_modifies"), []), [th])
@@ -261,7 +261,7 @@ fun prove_all_modifies_goals_local csenv includeP tyargs lthy = let
     val n = length fnlist (* >= 1 *)
     val rec_thm = HoarePackage.gen_proc_rec lthy HoarePackage.Partial n
     val mods = valOf (get_modifies csenv (hd fnlist))
-        handle Option => (writeln ("No modifies info for "^hd fnlist);
+        handle Option => (tracing ("No modifies info for "^hd fnlist);
                           raise NoMods (Binaryset.addList(failedsofar, fnlist)))
     val mvlist = Binaryset.listItems mods
     fun gen_modgoal (fname : string) : term = let
@@ -276,7 +276,7 @@ fun prove_all_modifies_goals_local csenv includeP tyargs lthy = let
                         gamma_t fname mvlist
       else let
           val example = valOf (Binaryset.find (fn _ => true) i)
-          val _ = writeln ("Not attempting modifies proof for "^fname^
+          val _ = tracing ("Not attempting modifies proof for "^fname^
                            " (or its recursive component) as it calls a\
                            \ function ("^example^") that has failed")
         in
@@ -289,13 +289,12 @@ fun prove_all_modifies_goals_local csenv includeP tyargs lthy = let
         ALLGOALS (HoarePackage.vcg_tac "_modifies" "false" [] ctxt)
   in
     let
-      val nway_thm =
-          munge_tactic lthy nway_goal ("Clique including "^hd fnlist) tac
-      val nway_thms = HOLogic.conj_elims nway_thm
+      val nway_thm = munge_tactic lthy nway_goal tac
+      val nway_thms = HOLogic.conj_elims lthy nway_thm
       val _ = length nway_thms = length fnlist orelse
               raise Fail "CONJUNCTS nway_thm and fnlist don't match up!"
       fun note_it (nm, th, lthy) =
-          (writeln ("Modifies proof for "^nm^" successful");
+          (tracing ("Modifies proof for "^nm^" successful");
            #2 (Local_Theory.note ((Binding.name (nm ^ "_modifies"), []),
                                   [th])
                                  lthy))

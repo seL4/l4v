@@ -60,7 +60,7 @@ fun define_accessor arg (({fldname, fldty}, result), thy) = let
          [(bnm fldname, NONE, NoSyn)]
          [((bnm (fldname ^ "_def"), []), defn)] thy
 in
-  add_recursive_record_thms [] [] thy
+  thy
 end
 
 fun define_updator arg (i, {fldname, fldty}) thy = let
@@ -80,7 +80,7 @@ fun define_updator arg (i, {fldname, fldty}) thy = let
          [(bnm upd_name, NONE, NoSyn)]
          [((bnm (upd_name ^ "_def"), []), defn)] thy
 in
-  add_recursive_record_thms [] [] thy
+  thy
 end
 
 fun define_functions (r as {record_name, fields}) thy = let

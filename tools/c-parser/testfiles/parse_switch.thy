@@ -25,7 +25,7 @@ thm k_body_def
 
 ML {*
   val kthm = @{thm k_body_def}
-  val k_t = concl_of kthm
+  val k_t = Thm.concl_of kthm
   val cs = Term.add_consts k_t []
 *}
 

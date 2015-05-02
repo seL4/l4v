@@ -244,7 +244,7 @@ term "\<turnstile>\<^sub>s p"
 lemma sep_map_NULL [simp]:
   "NULL \<mapsto> (v::'a::mem_type) = sep_false"
   by (force simp: sep_map_def sep_map_inv_def c_guard_def
-            dest: lift_typ_heap_g sep_conjD  c_null_guard  intro!: ext)
+            dest: lift_typ_heap_g sep_conjD c_null_guard)
 
 lemma sep_map'_NULL_simp [simp]:
   "NULL \<hookrightarrow> (v::'a::mem_type) = sep_false"
@@ -267,15 +267,7 @@ done
 
 lemma tagd_sep_false [simp]:
   "\<turnstile>\<^sub>s (NULL::'a::mem_type ptr) = sep_false"
-  apply (simp add: tagd_inv_def tagd_def)
-  apply (rule ext)
-  apply simp
-  apply (rule notI)
-  apply (drule sep_conjD)
-  apply clarsimp
-  apply (drule s_valid_g)
-  apply (simp add: c_guard_NULL_simp)
-  done
+  by (auto simp: tagd_inv_def tagd_def dest!: sep_conjD s_valid_g)
 
 (* Print translations for pointer dereferencing in program statements and
    expressions.

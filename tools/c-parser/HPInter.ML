@@ -72,7 +72,7 @@ fun mk_fninfo thy csenv includeP decllist : fninfo list = let
   fun parse_spec fname fspec =
       case fspec of
         fnspec spec => let
-          val toklist = Outer_Syntax.scan Position.none (node spec)
+          val toklist = Token.explode (Thy_Header.get_keywords thy) Position.none (node spec)
                         (* it might be nice to remember where the spec came
                            from so we could put in a reasonable pos'n above *)
           val filtered = List.filter Token.is_proper toklist
@@ -140,7 +140,7 @@ fun mk_fninfo thy csenv includeP decllist : fninfo list = let
                          raise Fail ("mk_fninfo: No function information for "^
                                      fname)
               val rettype = valOf (get_rettype fname csenv)
-	      val _ = writeln ("Added external decl for " ^ fname ^
+	      val _ = tracing ("Added external decl for " ^ fname ^
 			       " with " ^ Int.toString (length params) ^
                                " args.")
               val spec = parse_specs fname specs
@@ -302,7 +302,6 @@ let
   val localename_b = Binding.name localename
   val thy = thy |> Context.theory_map (HoarePackage.set_default_state_kind
                                        HoarePackage.Record)
-  val writeln = fn s => writeln("HPInter.mfd: " ^ s)
   val name_pars =
       map (fn {fname,inparams,outparams,recursivep,...} =>
                 (fname, recursivep, map #1 inparams, map #1 outparams))
@@ -311,14 +310,14 @@ let
   val thy = List.foldr (uncurry add_syntax) thy name_pars
   val lthy = Named_Target.init globloc thy
   val name_body = compile_fninfos cse styargs compfn lthy fninfo
-  val _ = writeln "Translated all functions"
+  val _ = tracing "Translated all functions"
   val globs = extract_fixes globals_elems
 
   val body_elems = map (create_bodyloc_elems globs thy) name_body
 
   fun add_body_defs ((elems, _ (* name-body *)), lthy) = let
     fun foldthis (e, lthy) = let
-      val _ = writeln ("Adding body_def for " ^ Binding.name_of (#1 (#1 e)))
+      val _ = tracing ("Adding body_def for " ^ Binding.name_of (#1 (#1 e)))
     in
       Local_Theory.restore (#2 (Local_Theory.define e lthy))
     end
@@ -366,7 +365,7 @@ let
            is dropped and not used again *)
         val lthy = Named_Target.init globloc thy
         val t = Syntax.read_term lthy tstr
-        val _ = writeln ("Adding spec locale "^speclocalename^
+        val _ = tracing ("Adding spec locale "^speclocalename^
                          (if speclocalename = "" then "" else " ")^
                          "for function "^name ^ " (" ^ tstr ^ ")")
         val e' = Element.Assumes [((speclocalename_b,[]),

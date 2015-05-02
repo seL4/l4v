@@ -72,10 +72,10 @@ fun hst_prove_globals fullrecname thy = let
   val hst_instance_ct = Thm.cterm_of (thy2ctxt thy') hst_instance_t
   val hst_thms = @{thms "hrs_simps"} @ [@{thm "split_def"}]
   val is_hst_thm =
-      Goal.prove_internal (thy2ctxt thy)
+      Goal.prove_internal (thy2ctxt thy')
           [] hst_instance_ct
           (fn _ =>
-              Class.intro_classes_tac (thy2ctxt thy) [] THEN
+              Class.intro_classes_tac (thy2ctxt thy') [] THEN
               ALLGOALS (asm_full_simp_tac
                             (thy2ctxt thy' addsimps hst_thms)))
 in

@@ -713,9 +713,8 @@ fun fndefn_term (state : CalculateState.mungedb) cse fninfo rcdinfo ms globty st
       decl
   val fname = node fname
   val bilist = node locbodyw
-  val _ = writeln ("Translating function "^fname)
+  val _ = tracing ("Translating function "^fname)
   val body = bilist2stmts bilist
-  fun bad_varmsg f s = "Bad variable reference to "^ s ^ " in function " ^ f
   fun varinfo s = state_varlookup fname s state
 
   val termbuilders : varinfo termbuilder =
@@ -729,9 +728,6 @@ fun fndefn_term (state : CalculateState.mungedb) cse fninfo rcdinfo ms globty st
   in
     (cse2ecenv cse, get_senv cse)
   end
-  fun typing_fninfo s =
-      raise Fail "Looking up type information for a function while doing an\
-                 \ expression translation."
   val stmt_trans = stmt_term ctxt cse fname termbuilders
                              varinfo fninfo
                              statetype globty styargs ms
