@@ -3701,14 +3701,12 @@ fun get_state_space i st =
 
 fun mk_hoare_tac hoare_tac finish_tac annotate_inv exnames
                  strip_guards spec_sfx ctxt i st =
-    (case get_state_space i st of
+    case get_state_space i st of
        SOME (Tids,mode,kind)
        => SELECT_GOAL
             (hoare_tac annotate_inv exnames strip_guards mode kind (is_state_space_var Tids)
                    spec_sfx ctxt (finish_tac kind (is_state_space_var Tids))) i st
-     | NONE =>
-        (warning "could not find proper state space type (record) in goal";
-         no_tac st))
+     | NONE => no_tac st
 
 fun vcg_tac spec_sfx strip_guards exnames ctxt i st =
   mk_hoare_tac HoareTac (vcg_polish_tac (spec_sfx="_modifies") ctxt)
