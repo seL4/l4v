@@ -472,6 +472,7 @@ lemma invoke_untyped_integrity:
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (cases ui)
+  apply (rename_tac cslot_ptr word1 word2 apiobject_type nat list)
   apply (simp add: mapM_x_def[symmetric] authorised_untyped_inv_def)
   apply (wp mapM_x_wp[OF _ subset_refl] create_cap_integrity
             init_arch_objects_integrity retype_region_integrity
@@ -516,6 +517,7 @@ lemma clas_default_cap:
   "tp \<noteq> ArchObject ASIDPoolObj \<Longrightarrow> cap_links_asid_slot aag p (default_cap tp p' sz)"
   unfolding cap_links_asid_slot_def
   apply (cases tp, simp_all)
+  apply (rename_tac aobject_type) 
   apply (case_tac aobject_type, simp_all add: arch_default_cap_def)
   done
 
@@ -651,8 +653,9 @@ lemma init_arch_objects_pas_refined:
    \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
   apply(rule hoare_gen_asm)
   apply(cases tp)
-  apply(simp_all add: init_arch_objects_def)
-  apply(wp | simp)+
+       apply(simp_all add: init_arch_objects_def)
+       apply(wp | simp)+
+  apply(rename_tac aobject_type)
   apply(case_tac aobject_type, simp_all)
         apply((simp | wp create_word_objects_pas_refined)+)[5]
    apply(wp)
@@ -1256,6 +1259,7 @@ lemma invoke_untyped_pas_refined:
    \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
   apply(rule hoare_gen_asm)
   apply(cases ui)
+  apply (rename_tac cslot_ptr word1 word2 apiobject_type nat list)
   apply(simp add: mapM_x_def[symmetric] authorised_untyped_inv_def)
   apply(rule hoare_weaken_pre)
    apply(wp mapM_x_and_const_wp [OF create_cap_pas_refined]
@@ -1514,6 +1518,7 @@ lemma authorised_untyped_invI:
         authorised_untyped_inv' aag ui\<rbrakk> \<Longrightarrow>
    authorised_untyped_inv aag ui"
   apply(case_tac ui)
+  apply (rename_tac cslot_ptr word1 word2 apiobject_type nat list)
   apply(clarsimp simp: authorised_untyped_inv_state_def cte_wp_at_sym authorised_untyped_inv_def authorised_untyped_inv'_def)
   apply(drule_tac x="UntypedCap  (word2 && ~~ mask sz) sz idx" in spec, clarsimp simp: ptr_range_def bits_of_UntypedCap)
   apply(erule bspec)

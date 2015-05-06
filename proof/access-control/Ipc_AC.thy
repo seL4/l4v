@@ -511,7 +511,7 @@ next
          out of the postcondition the conjunct that the return value is derived,
          and solve this using derived_cap_is_derived, and then solve the rest
          using derive_cap_is_derived_foo *)
-    apply (rule_tac Q'="\<lambda>r s. ?S r s \<and> ?QQ r s" in hoare_post_imp_R)
+    apply (rule_tac Q'="\<lambda>r s. S r s \<and> Q r s" for S Q in hoare_post_imp_R)
      apply (rule hoare_vcg_conj_lift_R)
       apply (rule derive_cap_is_derived)
      prefer 2
@@ -812,20 +812,23 @@ lemma send_ipc_pas_refined:
   apply (simp add: send_ipc_def)
   apply (rule hoare_seq_ext[OF _ get_endpoint_sp])
   apply (rule hoare_pre)
-  apply (wp set_thread_state_pas_refined
-       | wpc
-       | simp add: hoare_if_r_and)+
-  apply (rule_tac Q="\<lambda>rv. pas_refined aag and K (can_grant \<longrightarrow> is_subject aag (hd list))" in hoare_strengthen_post[rotated])
-   apply (clarsimp simp: cli_no_irqs pas_refined_refl aag_cap_auth_def clas_no_asid)
-  apply (wp set_thread_state_pas_refined do_ipc_transfer_pas_refined static_imp_wp
-       | wpc
-       | simp add: hoare_if_r_and)+
-  apply (rule_tac Q="\<lambda>rv. valid_objs and  pas_refined aag and K (can_grant \<longrightarrow> is_subject aag (hd list))" in hoare_strengthen_post[rotated])
-   apply (clarsimp simp: cli_no_irqs pas_refined_refl aag_cap_auth_def clas_no_asid)
-  apply (wp set_thread_state_pas_refined do_ipc_transfer_pas_refined static_imp_wp
-       | wpc
-       | simp add: hoare_if_r_and
-       | rule hoare_drop_imps)+
+   apply (wp set_thread_state_pas_refined
+        | wpc
+        | simp add: hoare_if_r_and)+
+         apply (rename_tac list x xs recv_state diminish)
+         apply (rule_tac Q="\<lambda>rv. pas_refined aag and K (can_grant \<longrightarrow> is_subject aag (hd list))"
+                         in hoare_strengthen_post[rotated])
+          apply (clarsimp simp: cli_no_irqs pas_refined_refl aag_cap_auth_def clas_no_asid)
+         apply (wp set_thread_state_pas_refined do_ipc_transfer_pas_refined static_imp_wp
+                 | wpc
+                 | simp add: hoare_if_r_and)+
+     apply (rename_tac list x xs)
+     apply (rule_tac Q="\<lambda>rv. valid_objs and  pas_refined aag and K (can_grant \<longrightarrow> is_subject aag (hd list))" in hoare_strengthen_post[rotated])
+      apply (clarsimp simp: cli_no_irqs pas_refined_refl aag_cap_auth_def clas_no_asid)
+     apply (wp set_thread_state_pas_refined do_ipc_transfer_pas_refined static_imp_wp
+             | wpc
+             | simp add: hoare_if_r_and
+             | rule hoare_drop_imps)+ 
   apply clarsimp
   apply (rule obj_at_valid_objsE, assumption+)
   apply (clarsimp cong: conj_cong imp_cong simp: tcb_at_st_tcb_at conj_ac)
@@ -861,6 +864,7 @@ lemma receive_ipc_pas_refined:
   apply (rule hoare_pre)
    apply (wp static_imp_wp set_thread_state_pas_refined get_endpoint_wp
         | wpc | simp split del: split_if)+
+         apply (rename_tac list sender_state data)
          apply (simp add:aag_cap_auth_def clas_no_asid cli_no_irqs)
          apply (rule_tac Q="\<lambda>rv s. pas_refined aag s \<and> (sender_can_grant data \<longrightarrow> is_subject aag (hd list))"
                     in hoare_strengthen_post[rotated])
@@ -873,6 +877,7 @@ lemma receive_ipc_pas_refined:
                    hoare_vcg_imp_lift [OF set_endpoint_get_tcb, unfolded disj_not1] hoare_vcg_all_lift
               | wpc
               | simp add: thread_get_def  get_thread_state_def)+
+  apply (rename_tac word1 word2 set s)
   apply (clarsimp simp: tcb_at_def [symmetric] conj_ac tcb_at_st_tcb_at)
   apply (rule conjI)
    apply (rule impI)
@@ -1087,6 +1092,7 @@ lemma receive_ipc_integrity_autarch:
   apply (rule hoare_gen_asm)
   apply (simp add: receive_ipc_def thread_get_def get_thread_state_def split: cap.splits cong: Structures_A.endpoint.case_cong)
   apply clarsimp
+  apply (rename_tac word1 word2 set)
   apply (rule hoare_pre)
    apply (wp set_endpoinintegrity set_thread_state_running_respects
              setup_caller_cap_integrity_autarch
@@ -1094,6 +1100,7 @@ lemma receive_ipc_integrity_autarch:
              set_thread_state_integrity_autarch[where param_a=receiver]
              sts_receive_Inactive_respects
        | wpc | simp)+
+         apply (rename_tac list tcb data)
          apply (rule_tac Q="\<lambda>rv s. integrity aag X st s
                             \<and> is_subject aag receiver
                             \<and> (sender_can_grant data \<longrightarrow> is_subject aag (hd list))
@@ -1692,6 +1699,7 @@ lemma send_ipc_integrity_autarch:
                | wpc | simp)+
    apply (fastforce simp: obj_at_def is_ep) -- "ep_at and has_auth"
   -- "WaitingEP"
+  apply (rename_tac list)
   apply simp
   apply (case_tac "is_subject aag (hd list)") (* autarch or not on rec. side *)
    apply clarsimp
@@ -1867,6 +1875,8 @@ lemma send_fault_ipc_integrity_autarch:
             thread_set_tcb_fault_update_valid_mdb
        | wpc
        | simp add: is_obj_defs)+
+  (* 13 subgoals *)
+  apply (rename_tac word1 word2 set)
   apply (rule_tac Q="\<lambda>rv s. obj_at (\<lambda>ep. is_ep ep \<and> (\<forall>r\<in>refs_of ep. snd r = EPRecv \<longrightarrow> is_subject aag (fst r))) word1 s
                            \<and> is_subject aag (cur_thread s)
                            \<and> aag_has_auth_to aag SyncSend word1"

@@ -151,6 +151,7 @@ lemma pt_in_pd_page_table_at:
     \<Longrightarrow> page_table_at (ptrFromPAddr word1) s"
   apply (clarsimp simp: get_pd_entry_def get_arch_obj_def
                   split: option.splits kernel_object.splits arch_kernel_obj.splits)
+  apply (rename_tac "fun")
   apply (subgoal_tac "valid_arch_obj (PageDirectory fun) s")
    apply (simp add: kernel_mappings_slots_eq)
    apply (drule bspec)

@@ -214,34 +214,37 @@ lemma set_thread_state_authorised[wp]:
      set_thread_state thread Structures_A.thread_state.Restart
    \<lbrace>\<lambda>rv. authorised_invocation aag i\<rbrace>"
   apply (cases i)
-  apply (simp_all add: authorised_invocation_def)
-  apply (wp sts_valid_untyped_inv ct_in_state_set
-            hoare_vcg_ex_lift sts_obj_at_impossible
-            set_thread_state_authorised_untyped_inv_state
-       | simp)+
-  apply (case_tac tcb_invocation, simp_all)
-  apply (wp hoare_case_option_wp sts_typ_ats set_thread_state_cte_wp_at
-            hoare_vcg_conj_lift static_imp_wp
-       | simp)+
-  apply ((clarsimp split: option.splits)+)[3]
-  apply (wp
-       | simp)+
-  apply (case_tac cnode_invocation,
-         simp_all add: cnode_inv_auth_derivations_def authorised_cnode_inv_def)
-  apply (wp set_thread_state_cte_wp_at
-       | simp)+
-  apply (case_tac arch_invocation, simp_all add: valid_arch_inv_def)
-  apply (case_tac page_table_invocation, simp_all add: valid_pti_def)
-  apply (wp sts_typ_ats sts_obj_at_impossible ct_in_state_set
-            hoare_vcg_ex_lift hoare_vcg_conj_lift
-       | simp add: valid_pdi_def)+
-  apply (case_tac asid_control_invocation, simp_all add: valid_aci_def)
-  apply (wp ct_in_state_set
-       | simp)+
-  apply (case_tac asid_pool_invocation, simp_all add: valid_apinv_def)
+           apply (simp_all add: authorised_invocation_def)
+          apply (wp sts_valid_untyped_inv ct_in_state_set
+                    hoare_vcg_ex_lift sts_obj_at_impossible
+                    set_thread_state_authorised_untyped_inv_state
+                  | simp)+
+      apply (rename_tac tcb_invocation)
+      apply (case_tac tcb_invocation, simp_all)[1]
+           apply (wp hoare_case_option_wp sts_typ_ats set_thread_state_cte_wp_at
+                     hoare_vcg_conj_lift static_imp_wp
+                   | simp)+
+          apply ((clarsimp split: option.splits)+)[3]
+       apply (wp | simp)+
+     apply (rename_tac cnode_invocation)
+     apply (case_tac cnode_invocation,
+            simp_all add: cnode_inv_auth_derivations_def authorised_cnode_inv_def)[1]
+           apply (wp set_thread_state_cte_wp_at | simp)+
+  apply (rename_tac arch_invocation)
+  apply (case_tac arch_invocation, simp_all add: valid_arch_inv_def)[1]
+      apply (rename_tac page_table_invocation)
+      apply (case_tac page_table_invocation, simp_all add: valid_pti_def)[1]
+       apply (wp sts_typ_ats sts_obj_at_impossible ct_in_state_set
+                 hoare_vcg_ex_lift hoare_vcg_conj_lift
+               | simp add: valid_pdi_def)+
+     apply (rename_tac asid_control_invocation)
+     apply (case_tac asid_control_invocation, simp_all add: valid_aci_def)
+     apply (wp ct_in_state_set | simp)+
+  apply (rename_tac asid_pool_invocation)
+  apply (case_tac asid_pool_invocation; simp add: valid_apinv_def)
   apply (wp sts_obj_at_impossible ct_in_state_set
             hoare_vcg_ex_lift
-       | simp)+
+          | simp)+
   done
 
 lemma sts_first_restart:
@@ -594,21 +597,22 @@ lemma handle_event_pas_refined:
           and (\<lambda>s. ev \<noteq> Interrupt \<longrightarrow> is_subject aag (cur_thread s)) and (\<lambda>s. ev \<noteq> Interrupt \<longrightarrow> ct_active s) \<rbrace>
     handle_event ev
    \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
-  apply (case_tac ev, simp_all)
-  apply (case_tac syscall, simp_all add: handle_send_def handle_call_def)
-  apply ((wp handle_invocation_pas_refined handle_wait_pas_refined
-            handle_fault_pas_refined 
-       | simp | clarsimp)+)
-  apply (fastforce simp: valid_fault_def)
-  apply (wp handle_fault_pas_refined
-       | simp)+
-  apply (fastforce simp: valid_fault_def)
-  apply (wp handle_interrupt_pas_refined handle_fault_pas_refined
-            hoare_vcg_conj_lift hoare_vcg_all_lift
-       | wpc
-       | rule hoare_drop_imps
-       | strengthen invs_vobjs_strgs
-       | simp)+
+  apply (case_tac ev; simp)
+      apply (rename_tac syscall)
+      apply (case_tac syscall; simp add: handle_send_def handle_call_def)
+            apply ((wp handle_invocation_pas_refined handle_wait_pas_refined
+                       handle_fault_pas_refined 
+                     | simp | clarsimp)+)
+     apply (fastforce simp: valid_fault_def)
+    apply (wp handle_fault_pas_refined
+            | simp)+
+    apply (fastforce simp: valid_fault_def)
+   apply (wp handle_interrupt_pas_refined handle_fault_pas_refined
+             hoare_vcg_conj_lift hoare_vcg_all_lift
+           | wpc
+           | rule hoare_drop_imps
+           | strengthen invs_vobjs_strgs
+           | simp)+
   apply auto
   done
 
@@ -634,11 +638,6 @@ lemma handle_yield_integrity[wp]:
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   by (simp add: handle_yield_def | wp)+
 
-(*lemma "integrity aag X st (st\<lparr>machine_state := sa\<lparr>irq_state := Suc (irq_state sa)\<rparr>\<rparr>)"
-  apply (clarsimp simp add: integrity_def)
-  apply (rule trm_orefl)
-  oops *)
-
 lemma ct_in_state_machine_state_update[simp]: "ct_in_state s (st\<lparr>machine_state := x\<rparr>) = ct_in_state s st"
   apply (simp add: ct_in_state_def)
   done
@@ -652,7 +651,8 @@ lemma handle_event_integrity:
     handle_event ev
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply (case_tac "ev \<noteq> Interrupt")
-  apply (case_tac ev, simp_all)
+  apply (case_tac ev; simp)
+      apply (rename_tac syscall)
       apply (case_tac syscall, simp_all add: handle_send_def handle_call_def)
       apply (wp handle_wait_integrity handle_invocation_respects
                 handle_reply_respects handle_fault_integrity_autarch
@@ -719,7 +719,7 @@ lemma activate_thread_integrity:
   apply (simp add: activate_thread_def arch_activate_idle_thread_def)
   apply (rule hoare_pre)
   apply (wp gts_wp set_thread_state_integrity_autarch as_user_integrity_autarch | wpc |  simp add: arch_activate_idle_thread_def)+
-  apply(clarsimp simp: valid_idle_def st_tcb_at_def obj_at_def)
+  apply (clarsimp simp: valid_idle_def st_tcb_at_def obj_at_def)
   done
 
 lemma activate_thread_pas_refined:
@@ -839,7 +839,7 @@ lemma choose_thread_respects:
     apply force
    apply (simp add: etcb_at_def)
   apply (simp add: max_non_empty_queue_def)
-  apply (erule_tac P="hd ?A \<in> ?B" in notE)
+  apply (erule_tac P="hd A \<in> B" for A B in notE)
   apply (rule Max_prop)
    apply force+
    done

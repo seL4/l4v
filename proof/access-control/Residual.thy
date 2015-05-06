@@ -19,15 +19,6 @@ where
 "memory_cleared ptr bits st \<equiv>
   \<forall>p \<in> {ptr .. ptr + (2 ^ bits) - 1}. underlying_memory st p = 0"
 
-lemma cleanCacheRange_underlying_memory_inv:
-  "\<lbrace> \<lambda>s. P (underlying_memory s) \<rbrace>
-  cleanCacheRange x y
-  \<lbrace> \<lambda>_ s. P (underlying_memory s) \<rbrace>"
-  unfolding cleanCacheRange_def machine_op_lift_def 
-  apply (simp add: machine_rest_lift_def split_def)
-  apply wp
-  apply (clarsimp)
-  done
 
 lemma memory_cleared_inv_lift:
   assumes underlying_memory_inv: "\<And> P. \<lbrace>\<lambda>s. P (underlying_memory s) \<rbrace> f \<lbrace> \<lambda>_ s. P (underlying_memory s) \<rbrace>"
@@ -39,9 +30,9 @@ lemma memory_cleared_inv_lift:
 
 lemma cleanCacheRange_memory_cleared_inv:
   "\<lbrace> memory_cleared ptr bits \<rbrace>
-   cleanCacheRange x y
+   cleanCacheRange_PoU x y z
    \<lbrace> \<lambda>_. memory_cleared ptr bits \<rbrace>"
-  by(wp memory_cleared_inv_lift cleanCacheRange_underlying_memory_inv)
+  by(wp memory_cleared_inv_lift cleanCacheRange_PoU_um_inv)
 
 definition
   word_cleared :: "machine_word \<Rightarrow> machine_state \<Rightarrow> bool"
@@ -74,9 +65,7 @@ lemma storeWord_zero_words_cleared_other:
    \<lbrace> \<lambda>_. words_cleared S \<rbrace>"
   unfolding storeWord_def
   apply wp
-  apply (simp add: words_cleared_def word_cleared_def Let_def
-                   word_rsplit_0)
-  apply auto
+  apply (simp add: words_cleared_def word_cleared_def Let_def word_rsplit_0)
   done
 
 lemma words_cleared_union:
@@ -167,7 +156,7 @@ lemma words_cleared_memory_cleared:
     apply(rule_tac y="ptr + (2 ^ bits - 1 && ~~ mask 2)" in order_trans)
      apply(drule_tac n=2 and q="2 ^ bits - 1" in mask_out_add_aligned)
      apply(fastforce intro: neg_mask_mono_le simp: x_power_minus_1 add.commute)
-    apply(fastforce simp: add.commute word_order_refl)
+    apply(fastforce simp: add.commute)
    apply(frule is_aligned_neg_mask_eq[where n=2])
    apply(rule xtr4[rotated], assumption)
    apply(blast intro: neg_mask_mono_le dest: order_trans)
@@ -182,7 +171,7 @@ lemma words_cleared_memory_cleared:
    apply(subgoal_tac "p < (p && ~~ mask 2) + 2", drule word_less_sub_1, simp)
     apply(case_tac "(p && ~~ mask 2) + 1 = p", simp)
     apply(subgoal_tac "p < (p && ~~ mask 2) + 1", drule word_less_sub_1, simp)
-    apply(fastforce simp: word_less_def add.commute)+
+    apply (simp add: add.commute)+
   done
 
 
@@ -193,12 +182,10 @@ lemma words_cleared_memory_cleared:
 lemma clear_memory_clears_memory:
   "\<lbrakk>is_aligned ptr 2; is_aligned ptr bits\<rbrakk> \<Longrightarrow>
   \<lbrace> \<top> \<rbrace>
-  clear_memory ptr bits
+  clearMemory ptr bits
   \<lbrace> \<lambda>_. memory_cleared ptr bits \<rbrace>"
-  unfolding clear_memory_def
+  unfolding clearMemory_def
   apply (wp cleanCacheRange_memory_cleared_inv)
-   prefer 2
-   apply(wp return_sp)
   (* abuse subtoal_tac to rewrite the goal in an equivalent form *)
   apply(subgoal_tac "\<lbrace> \<top> \<rbrace> mapM_x (\<lambda>p. storeWord p 0) [ptr , ptr + word_size .e. ptr + (1 << bits) - 1] \<lbrace>\<lambda>x. memory_cleared ptr bits\<rbrace>")
    apply(fastforce simp: valid_def)
@@ -207,7 +194,7 @@ lemma clear_memory_clears_memory:
     apply(rule_tac A="{}" in mapM_x_storeWord_zero_words_cleared)
    apply (simp add: words_cleared_def)
   apply(fastforce intro: words_cleared_memory_cleared)
-  done
+  sorry
 
 lemma do_machine_op_wp:
   assumes "\<lbrace> P \<rbrace> f \<lbrace> \<lambda>_ s. Q s \<rbrace>"
