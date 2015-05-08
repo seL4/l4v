@@ -315,8 +315,7 @@ end
  *)
 fun get_sorted_structs cse =
 let
-  val global_rcd = get_globals_rcd cse
-  val rcds = get_senv cse @ global_rcd
+  val rcds = get_senv cse
   val sorted_structs =
       if null rcds then []
       else let
@@ -420,8 +419,7 @@ fun mk_thy_types cse install thy = let
      for consumption by later phases of the translation.
 
   *)
-  val global_rcd = get_globals_rcd cse
-  val rcds = get_senv cse @ global_rcd
+  val rcds = get_senv cse
   val sorted_structs = get_sorted_structs cse
 
   open MemoryModelExtras
