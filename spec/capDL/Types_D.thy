@@ -316,7 +316,8 @@ lemmas tcb_slot_defs =
 
 (* Capability getters / setters *)
 
-primrec cap_objects :: "cdl_cap \<Rightarrow> cdl_object_id set"
+primrec (nonexhaustive)
+  cap_objects :: "cdl_cap \<Rightarrow> cdl_object_id set"
 where
     "cap_objects (IOPageTableCap x) = {x}"
   | "cap_objects (IOSpaceCap x) = {x}"
@@ -379,7 +380,7 @@ lemma cap_object_simps:
   "cap_object (PendingAsyncRecvCap x) = x"
   by (simp_all add:cap_object_def Nitpick.The_psimp cap_has_object_def)
 
-primrec cap_badge :: "cdl_cap \<Rightarrow> cdl_badge"
+primrec (nonexhaustive) cap_badge :: "cdl_cap \<Rightarrow> cdl_badge"
 where
     "cap_badge (AsyncEndpointCap _ x _) = x"
   | "cap_badge (EndpointCap _ x _) = x"
@@ -418,7 +419,7 @@ where
     | PageTableCap pt1 _ pt2 \<Rightarrow> PageTableCap pt1 r pt2
     | _ \<Rightarrow> c"
 
-primrec cap_guard :: "cdl_cap \<Rightarrow> cdl_cap_guard"
+primrec (nonexhaustive) cap_guard :: "cdl_cap \<Rightarrow> cdl_cap_guard"
 where
   "cap_guard (CNodeCap _ x _ _) = x"
 
@@ -429,7 +430,7 @@ where
       CNodeCap f1 _ f3 f4 \<Rightarrow> CNodeCap f1 x f3 f4
     | _ \<Rightarrow> c"
 
-primrec cap_guard_size :: "cdl_cap \<Rightarrow> cdl_cap_guard_size"
+primrec (nonexhaustive) cap_guard_size :: "cdl_cap \<Rightarrow> cdl_cap_guard_size"
 where
   "cap_guard_size (CNodeCap _ _ x _ ) = x"
 
