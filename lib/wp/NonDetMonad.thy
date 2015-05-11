@@ -356,7 +356,7 @@ subsection "Monad Laws for the Exception Monad"
 text {* More direct definition of @{const liftE}: *}
 lemma liftE_def2:
   "liftE f = (\<lambda>s. ((\<lambda>(v,s'). (Inr v, s')) ` fst (f s), snd (f s)))"
-  by (auto intro: ext simp: liftE_def return_def split_def bind_def)
+  by (auto simp: liftE_def return_def split_def bind_def)
 
 text {* Left @{const returnOk} absorbtion over @{term bindE}: *}
 lemma returnOk_bindE [simp]: "(returnOk x >>=E f) = f x"

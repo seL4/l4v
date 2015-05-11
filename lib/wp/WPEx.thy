@@ -20,14 +20,10 @@ ML {*
 
 structure strengthen_congs = Generic_Data
 (struct
-    val name = "HOL/strengthen/congs"
     type T = thm list
     val empty = [@{thm "strengthen_congs_base"}]
     val extend = I
     val merge = Thm.merge_thms;
-    fun print context rules =
-        Pretty.writeln (Pretty.big_list "strengthening congruence rules:"
-        (map (Display.pretty_thm (Context.proof_of context)) rules));
 end);
 
 structure Strengthen = struct

@@ -90,7 +90,6 @@ structure WPCPredicateAndFinals = Theory_Data
 (struct
     type T = (cterm * thm) list
     val empty = []
-    val copy = I
     val extend = I
     fun merge (xs, ys) =
         (* Order of predicates is important, so we can't reorder *)
@@ -157,13 +156,13 @@ end;
 
 fun resolve_single_tac ctxt rules n thm =
   case Seq.chop 2 (resolve_tac ctxt rules n thm)
-  of ([], seq) => raise WPCFailed
+  of ([], _) => raise WPCFailed
                         ("resolve_single_tac: no rules could apply",
                          [], thm :: rules)
-   | (x :: y :: zs, seq) => raise WPCFailed
+   | (_ :: _ :: _, _) => raise WPCFailed
                         ("resolve_single_tac: multiple rules applied",
                          [], thm :: rules)
-   | ([x], seq) => Seq.single x;
+   | ([x], _) => Seq.single x;
 
 fun split_term processors ctxt target pred fin t =
 let
@@ -209,7 +208,7 @@ in
   Local_Theory.background_theory (WPCPredicateAndFinals.map (fn xs => (tm', thm') :: xs)) lthy
 end; 
   
-val wpcP =  
+val _ =  
     Outer_Syntax.command 
         @{command_keyword "wpc_setup"}
         "Add wpc stuff"
