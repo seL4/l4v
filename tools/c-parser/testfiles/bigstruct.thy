@@ -12,9 +12,6 @@ theory bigstruct
 imports "../CTranslation"
 begin
 
-(* to prove a case rule with up to 25 fields *)
-declare [[blast_depth_limit = 25]]
-
 install_C_file "bigstruct.c"
 
 end
