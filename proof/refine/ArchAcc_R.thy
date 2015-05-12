@@ -34,7 +34,8 @@ lemma get_asid_pool_corres:
   apply (rule corres_no_failI)
    apply (rule no_fail_pre, wp)
    apply (clarsimp simp: typ_at'_def ko_wp_at'_def)
-   apply (case_tac ko, simp_all)[1]
+   apply (case_tac ko; simp)
+   apply (rename_tac arch_kernel_object)
    apply (case_tac arch_kernel_object, simp_all)[1]
    apply (clarsimp simp: lookupAround2_known1
                          projectKOs)
@@ -167,8 +168,9 @@ lemma set_asid_pool_corres:
          apply assumption
         apply (simp add: typ_at'_def obj_at'_def ko_wp_at'_def projectKOs)
         apply clarsimp
-        apply (case_tac ko, simp_all)[1]
-        apply (case_tac arch_kernel_object, simp_all)[1]
+        apply (case_tac ko; simp)
+        apply (rename_tac arch_kernel_object)
+        apply (case_tac arch_kernel_object; simp)
        prefer 5
        apply (rule get_object_sp)
       apply (clarsimp simp: obj_at_def exs_valid_def assert_def a_type_def return_def fail_def)
@@ -208,8 +210,9 @@ lemma get_pde_corres:
   apply (rule corres_no_failI)
    apply (rule no_fail_pre, wp)
    apply (clarsimp simp: ko_wp_at'_def typ_at'_def lookupAround2_known1) 
-   apply (case_tac ko, simp_all)[1]
-   apply (case_tac arch_kernel_object, simp_all add: projectKOs)[1]
+   apply (case_tac ko; simp)
+   apply (rename_tac arch_kernel_object)
+   apply (case_tac arch_kernel_object; simp add: projectKOs)
    apply (clarsimp simp: objBits_def cong: option.case_cong)
    apply (erule (1) ps_clear_lookupAround2)
      apply simp
@@ -316,6 +319,7 @@ lemma get_master_pde_corres:
      apply (rule no_fail_pre, wp)
      apply (clarsimp simp: ko_wp_at'_def typ_at'_def lookupAround2_known1) 
      apply (case_tac ko, simp_all)[1]
+     apply (rename_tac arch_kernel_object)
      apply (case_tac arch_kernel_object, simp_all add: projectKOs)[1]
      apply (clarsimp simp: objBits_def cong: option.case_cong)
      apply (erule (1) ps_clear_lookupAround2)
@@ -420,8 +424,9 @@ lemma get_master_pde_corres:
       apply simp
      apply simp
     apply (clarsimp simp:typ_at'_def ko_wp_at'_def)
-    apply (case_tac ko,simp_all)
-    apply (case_tac arch_kernel_object, simp_all add: projectKOs)[1]
+    apply (case_tac ko; simp)
+    apply (rename_tac arch_kernel_object)
+    apply (case_tac arch_kernel_object; simp add: projectKOs)
     apply clarsimp
     apply (frule_tac x = "(ucast ((p && ~~ mask 6 )&& mask pd_bits >> 2))" in pde_relation_alignedD)
       apply assumption
@@ -429,6 +434,7 @@ lemma get_master_pde_corres:
      apply (subst mask_pd_bits_inner_beauty)
       apply (simp add:is_aligned_neg_mask)
      apply assumption
+    apply (rename_tac pde)
     apply (case_tac pde)
      apply (simp add: pde_relation_aligned_def
                       is_aligned_mask[where 'a=32, symmetric])+
@@ -478,6 +484,7 @@ lemma get_pte_corres:
    apply (rule no_fail_pre, wp)
    apply (clarsimp simp: ko_wp_at'_def typ_at'_def lookupAround2_known1) 
    apply (case_tac ko, simp_all)[1]
+   apply (rename_tac arch_kernel_object)
    apply (case_tac arch_kernel_object, simp_all add: projectKOs)[1]
    apply (clarsimp simp: objBits_def cong: option.case_cong)
    apply (erule (1) ps_clear_lookupAround2)
@@ -584,6 +591,7 @@ lemma get_master_pte_corres:
      apply (rule no_fail_pre, wp)
      apply (clarsimp simp: ko_wp_at'_def typ_at'_def lookupAround2_known1) 
      apply (case_tac ko, simp_all)[1]
+     apply (rename_tac arch_kernel_object)
      apply (case_tac arch_kernel_object, simp_all add: projectKOs)[1]
      apply (clarsimp simp: objBits_def cong: option.case_cong)
      apply (erule (1) ps_clear_lookupAround2)
@@ -636,7 +644,8 @@ lemma get_master_pte_corres:
        apply simp
       apply simp
      apply (clarsimp simp:typ_at'_def ko_wp_at'_def)
-     apply (case_tac ko,simp_all)
+     apply (case_tac ko; simp)
+     apply (rename_tac arch_kernel_object)
      apply (case_tac arch_kernel_object, simp_all add: projectKOs)[1]
      apply clarsimp
      apply (frule_tac x = "(ucast ((p && ~~ mask 6 )&& mask pt_bits >> 2))" in pte_relation_alignedD)
@@ -645,6 +654,7 @@ lemma get_master_pte_corres:
       apply (subst mask_pt_bits_inner_beauty)
        apply (simp add:is_aligned_neg_mask)
       apply assumption
+     apply (rename_tac pte)
      apply (case_tac pte)
        apply (simp_all add:pte_relation_aligned_def
          is_aligned_mask[symmetric])+
@@ -739,6 +749,7 @@ lemma set_pd_corres:
     apply simp
    apply (clarsimp simp: obj_at'_def ko_wp_at'_def typ_at'_def lookupAround2_known1 projectKOs) 
    apply (case_tac ko, simp_all)[1]
+   apply (rename_tac arch_kernel_object)
    apply (case_tac arch_kernel_object, simp_all add: projectKOs)[1]
    apply (simp add: objBits_simps archObjSize_def word_bits_def)
   apply (clarsimp simp: setObject_def in_monad split_def updateObject_default_def projectKOs)
@@ -816,6 +827,7 @@ lemma set_pt_corres:
     apply simp
    apply (clarsimp simp: obj_at'_def ko_wp_at'_def typ_at'_def lookupAround2_known1 projectKOs) 
    apply (case_tac ko, simp_all)[1]
+   apply (rename_tac arch_kernel_object)
    apply (case_tac arch_kernel_object, simp_all add: projectKOs)[1]
    apply (simp add: objBits_simps archObjSize_def word_bits_def)
   apply (clarsimp simp: setObject_def in_monad split_def updateObject_default_def projectKOs)
@@ -991,7 +1003,7 @@ lemma page_table_at_state_relation:
     apply (rule_tac x = "ucast y" in exI)
     apply (simp add:ucast_ucast_len)
    apply fastforce
-  apply (thin_tac "dom ?a = ?b")
+  apply (thin_tac "dom a = b" for a b)
   apply (frule(1) pspace_alignedD)
   apply (clarsimp simp:ucast_ucast_len
     split:if_splits)
@@ -1029,7 +1041,7 @@ lemma page_directory_at_state_relation:
     apply (rule_tac x = "ucast y" in exI)
     apply (simp add:ucast_ucast_len)
    apply fastforce
-  apply (thin_tac "dom ?a = ?b")
+  apply (thin_tac "dom a = b" for a b)
   apply (frule(1) pspace_alignedD)
   apply (clarsimp simp:ucast_ucast_len
     split:if_splits)

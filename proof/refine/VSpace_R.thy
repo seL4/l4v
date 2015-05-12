@@ -710,7 +710,9 @@ proof -
                      in corres_split [OF _ getSlotCap_corres])
            apply (insert Q)
            apply (case_tac rv, simp_all add: isCap_simps Q[simplified])[1]
+           apply (rename_tac arch_cap)
            apply (case_tac arch_cap, simp_all add: isCap_simps Q[simplified])[1]
+           apply (rename_tac word option) 
            apply (case_tac option, simp_all add: Q[simplified])[1]
            apply (clarsimp simp: cap_asid_def)
            apply (rule corres_guard_imp)
@@ -945,7 +947,7 @@ lemma delete_asid_pool_corres:
   apply (simp add: delete_asid_pool_def deleteASIDPool_def) 
   apply (rule corres_assume_pre, simp add: is_aligned_mask
                                      cong: corres_weak_cong) 
-  apply (thin_tac ?P)+
+  apply (thin_tac P for P)+
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ corres_gets_asid])
       apply (rule corres_when)
@@ -957,7 +959,7 @@ lemma delete_asid_pool_corres:
            apply (rule corres_mapM [where r=dc and r'=dc], simp, simp)
                prefer 5
                apply (rule order_refl)
-              apply (drule_tac t="inv ?f ?x \<circ> ?g" in sym)
+              apply (drule_tac t="inv f x \<circ> g" for f x g in sym)
               apply (rule_tac P="invs and
                                  ko_at (ArchObj (arch_kernel_obj.ASIDPool pool)) ptr and
                                  [VSRef (ucast (asid_high_bits_of base)) None] \<rhd> ptr and
@@ -1012,7 +1014,7 @@ lemma delete_asid_pool_corres:
                  apply (rule sym)
                  apply (simp add: is_aligned_add_helper[THEN conjunct1]
                                   mask_eq_iff_w2p asid_low_bits_def word_size)
-                apply (rule_tac f="\<lambda>a. a && mask ?n" in arg_cong)
+                apply (rule_tac f="\<lambda>a. a && mask n" for n in arg_cong)
                 apply (rule shiftr_eq_mask_eq)
                 apply (simp add: is_aligned_add_helper is_aligned_neg_mask_eq)
                apply clarsimp
@@ -1045,7 +1047,7 @@ lemma delete_asid_pool_corres:
                     in hoare_post_add)
          apply (drule sym, simp only: )
          apply (drule sym, simp only: )
-         apply (thin_tac "?P")+
+         apply (thin_tac "P" for P)+
          apply (simp only: pred_conj_def cong: conj_cong)
          apply simp
          apply (fold cur_tcb_def)
@@ -1068,7 +1070,7 @@ lemma delete_asid_pool_corres:
       apply (simp add: o_def pred_conj_def)
       apply wp
      apply (wp getASID_wp)
-   apply (clarsimp simp: conj_ac)
+   apply (clarsimp simp: conj_comms)
    apply (auto simp: vs_lookup_def intro: vs_asid_refsI)[1]
   apply clarsimp
   done
@@ -1127,8 +1129,10 @@ proof -
                           capPDMappedASID (capCap rv') \<noteq> None \<and> 
                           capPDBasePtr (capCap rv') = pd")
           apply (case_tac rv, simp_all add: isCap_simps)[1]
+          apply (rename_tac arch_cap)
           apply (case_tac arch_cap, auto)[1]
          apply (case_tac rv, simp_all add: isCap_simps X[simplified])[1]
+         apply (rename_tac arch_cap)
          apply (case_tac arch_cap, auto simp: X[simplified] split: option.splits)[1]
         apply (simp add: cte_map_def objBits_simps tcb_cnode_index_def tcbVTableSlot_def to_bl_1)
        apply wp
@@ -1307,7 +1311,7 @@ lemma flush_table_corres:
   apply (simp add: flush_table_def flushTable_def)
   apply (rule corres_assume_pre)
   apply (simp add: ptBits_def pt_bits_def pageBits_def is_aligned_mask cong: corres_weak_cong)
-  apply (thin_tac "?P")+
+  apply (thin_tac "P" for P)+
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ set_vm_root_for_flush_corres])
       apply (rule corres_split [OF _ load_hw_asid_corres2[where pd=pd]])
@@ -1342,7 +1346,7 @@ lemma flush_page_corres:
   apply (clarsimp simp: flush_page_def flushPage_def) 
   apply (rule corres_assume_pre)
   apply (simp add: is_aligned_mask cong: corres_weak_cong)
-  apply (thin_tac ?P)+
+  apply (thin_tac P for P)+
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ set_vm_root_for_flush_corres])
       apply (rule corres_split [OF _ load_hw_asid_corres2[where pd=pd]])
@@ -2148,6 +2152,7 @@ proof -
   show ?thesis
   using assms
   apply (cases pi)
+       apply (rename_tac word cap prod sum)
        apply (clarsimp simp: perform_page_invocation_def performPageInvocation_def
                              page_invocation_map_def)
        apply (rule corres_guard_imp)
@@ -2172,8 +2177,7 @@ proof -
                         apply (rule no_fail_cleanCacheRange_PoU)
                        apply (wp hoare_vcg_ex_lift)
                      apply (clarsimp simp:pte_relation_aligned_def)
-                     apply (clarsimp dest!:valid_slots_duplicated_pteD') (*
-apply (wp mapM_UNIV_wp | simp add: swp_def del: fun_upd_apply)+ *)
+                     apply (clarsimp dest!:valid_slots_duplicated_pteD')
                     apply (rule_tac Q="\<lambda>_. K (word \<le> mask asid_bits \<and> word \<noteq> 0) and invs and (\<lambda>s. \<exists>pd. pd_at_asid word pd s)" in hoare_strengthen_post)
                      prefer 2
                      apply auto[1]
@@ -2191,10 +2195,10 @@ apply (wp mapM_UNIV_wp | simp add: swp_def del: fun_upd_apply)+ *)
              apply (rule conjI)
               apply clarsimp
               apply (drule same_refs_lD)
-apply (rule_tac x=a in exI, rule_tac x=b in exI)
-apply clarify
-apply (drule_tac x=refa in spec)
-apply clarsimp
+              apply (rule_tac x=a in exI, rule_tac x=b in exI)
+              apply clarify
+              apply (drule_tac x=refa in spec)
+              apply clarsimp
              apply (rule conjI[rotated], fastforce)
              apply auto[1]
             apply clarsimp
@@ -2262,6 +2266,7 @@ apply clarsimp
         apply (simp add: cap_master_cap_def split: cap.splits arch_cap.splits)
        apply (auto simp: cte_wp_at_ctes_of valid_page_inv'_def)[1]
        -- "PageRemap"
+      apply (rename_tac word sum)
       apply (clarsimp simp: perform_page_invocation_def performPageInvocation_def
                             page_invocation_map_def)
       apply (case_tac sum)
@@ -2361,7 +2366,8 @@ apply clarsimp
                                ARM_Structs_A.arch_kernel_obj.splits option.splits
                                arch_cap.splits)+)[2]
        apply (clarsimp simp: pde_at_def obj_at_def a_type_def)
-       apply (case_tac ko, (simp_all split: split_if_asm))
+       apply (case_tac ko, simp_all split: split_if_asm)[1]
+       apply (rename_tac arch_kernel_obj)
        apply (case_tac arch_kernel_obj, simp_all)
        apply (rule conjI)
         apply clarsimp
@@ -2543,6 +2549,7 @@ lemma perform_page_table_corres:
    apply (clarsimp simp: cte_wp_at_ctes_of valid_pti'_def)
    apply auto[1]
    apply (clarsimp simp:valid_pde_mapping'_def split:Hardware_H.pde.split)
+  apply (rename_tac cap a b)
   apply (clarsimp simp: page_table_invocation_map_def)
   apply (rule_tac F="is_pt_cap cap" in corres_req)
    apply (clarsimp simp: valid_pti_def)
@@ -2607,6 +2614,7 @@ lemma pap_corres:
           (performASIDPoolInvocation ap')"
   apply (clarsimp simp: perform_asid_pool_invocation_def performASIDPoolInvocation_def)
   apply (cases ap, simp add: asid_pool_invocation_map_def)
+  apply (rename_tac word1 word2 prod)
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ getSlotCap_corres])
       apply (rule_tac F="\<exists>p asid. rv = Structures_A.ArchObjectCap (ARM_Structs_A.PageDirectoryCap p asid)" in corres_gen_asm)
@@ -3595,7 +3603,7 @@ lemma perform_pt_invs [wp]:
        apply (rule hoare_pre_imp[of _ \<top>], assumption)
        apply (clarsimp simp: valid_def
                              disj_commute[of "pointerInUserData p s" for p s])
-       apply (thin_tac "?x : fst (setVMRootForFlush ?a ?b s)")
+       apply (thin_tac "x : fst (setVMRootForFlush a b s)" for x a b)
        apply (erule use_valid)
         apply (clarsimp simp: doFlush_def split: flush_type.splits)
         apply (clarsimp split: sum.split | intro conjI impI
@@ -3617,6 +3625,7 @@ lemma perform_pt_invs [wp]:
                          capAligned_def is_arch_update'_def isCap_simps)
   apply clarsimp
   apply (wp arch_update_updateCap_invs unmapPage_cte_wp_at' getSlotCap_wp|wpc)+
+  apply (rename_tac acap word a b)
   apply (rule_tac Q="\<lambda>_. invs' and cte_wp_at' (\<lambda>cte. \<exists>r R sz m. cteCap cte =
                                        ArchObjectCap (PageCap r R sz m)) word" 
                in hoare_strengthen_post)

@@ -16,8 +16,6 @@ theory Machine_R
 imports Bits_R
 begin
 
-declare empty_fail_assert[simp]
-
 definition "irq_state_independent_H (P :: kernel_state \<Rightarrow> bool)\<equiv>
               \<forall>(f :: nat \<Rightarrow> nat) (s :: kernel_state). P s \<longrightarrow> P (s\<lparr>ksMachineState := ksMachineState s
                                 \<lparr>irq_state := f (irq_state (ksMachineState s))\<rparr>\<rparr>)"
@@ -55,7 +53,7 @@ lemma getActiveIRQ_masked:
   "\<lbrace>\<lambda>s. valid_irq_masks' table (irq_masks s)\<rbrace> getActiveIRQ
   \<lbrace>\<lambda>rv s. \<forall>irq. rv = Some irq \<longrightarrow> table irq \<noteq> IRQInactive\<rbrace>"
   apply (simp add: getActiveIRQ_def)
-  apply (wp alternative_wp select_wp)
+  apply wp
   apply (clarsimp simp: valid_irq_masks'_def)
   done
 

@@ -1101,6 +1101,7 @@ lemma threadSet_sch_actT_P:
      apply (clarsimp simp: o_def)
     apply clarsimp
    apply (fastforce simp: obj_at'_def projectKOs)
+  apply (rename_tac word)
   apply (subgoal_tac "t \<noteq> word")
    apply (frule_tac t'1=word
                 and P1="runnable' \<circ> tcbState"
@@ -1240,7 +1241,9 @@ proof -
     apply (drule valid_queues_subset, simp+)
     apply (clarsimp simp: cur_tcb'_def valid_irq_node'_def valid_queues'_def)
     apply (cases P)
-    apply (fastforce simp: domains ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def dest!: z z')+
+     apply (fastforce simp: domains ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def dest!: z z')
+    apply (fastforce simp: domains ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def dest!: z z')
+    (* takes long *)
     done
 qed
 
@@ -1846,8 +1849,8 @@ lemma rescheduleRequired_corres:
   apply (simp add: rescheduleRequired_def reschedule_required_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split[OF _ get_sa_corres])
-      apply (rule_tac P="case action of switch_thread t \<Rightarrow> ?P t | _ \<Rightarrow> \<top>"
-              and P'="case actiona of SwitchToThread t \<Rightarrow> ?P' t | _ \<Rightarrow> \<top>" in corres_split[where r'=dc])
+      apply (rule_tac P="case action of switch_thread t \<Rightarrow> P t | _ \<Rightarrow> \<top>"
+              and P'="case actiona of SwitchToThread t \<Rightarrow> P' t | _ \<Rightarrow> \<top>" for P P' in corres_split[where r'=dc])
          apply (rule set_sa_corres)
          apply simp
         apply (case_tac action)
@@ -2153,6 +2156,7 @@ lemma threadSet_runnable_sch_act:
                  in use_valid [OF _ threadSet_obj_at'_really_strongest])
     apply (clarsimp elim!: obj_at'_weakenE)
    apply simp
+  apply (rename_tac word)
   apply (rule conjI)
   apply (frule_tac t'1=word
                and P1="runnable' \<circ> tcbState"
@@ -2208,6 +2212,7 @@ lemma threadSet_sch_act_switch:
                  in use_valid [OF _ threadSet_obj_at'_really_strongest])
     apply (clarsimp simp: ct_in_state'_def st_tcb_at'_def o_def)
    apply (clarsimp simp: ct_in_state'_def st_tcb_at'_def)
+  apply (rename_tac word)
   apply (rule conjI)
   apply (clarsimp simp: st_tcb_at'_def)
   apply (frule_tac t'1="word"
@@ -3188,6 +3193,7 @@ lemma pspace_dom_dom:
      apply (rule_tac x = n in exI)
      apply (clarsimp simp: of_bl_def word_of_int_hom_syms)
     apply (rule range_eqI [where x = 0], simp)+
+  apply (rename_tac vmpage_size)
   apply (rule exI [where x = 0])
   apply (case_tac vmpage_size, simp_all add: pageBits_def)
   done
@@ -3225,6 +3231,7 @@ lemma lipcb_corres':
           apply (simp add: Let_def split: cap.split arch_cap.split
                          split del: split_if cong: if_cong)
           apply (safe, simp_all add: isCap_simps)[1]
+          apply (rename_tac word rights vmpage_size option)
           apply (subgoal_tac "word + (buffer_ptr &&
                                       mask (pageBitsForSize vmpage_size)) \<noteq> 0")
            apply (simp add: cap_aligned_def
@@ -3991,10 +3998,11 @@ lemma set_eobject_corres':
    apply (clarsimp simp: is_other_obj_relation_type)
    apply (drule(1) bspec)
    apply (clarsimp simp: non_exst_same_def)
-   apply (case_tac bb, simp_all)[1]
+   apply (case_tac bb; simp)
      apply (clarsimp simp: obj_at'_def other_obj_relation_def cte_relation_def tcb_relation_def projectKOs split: split_if_asm)+
    apply (clarsimp simp: aobj_relation_cuts_def split: ARM_Structs_A.arch_kernel_obj.splits)
-   apply (case_tac arch_kernel_obj, simp_all)
+   apply (rename_tac arch_kernel_obj obj d p ts)
+   apply (case_tac arch_kernel_obj; simp)
      apply (clarsimp simp: pte_relation_def pde_relation_def is_tcb_def)+
   apply (simp only: ekheap_relation_def dom_fun_upd2 simp_thms)
   apply (frule bspec, erule domI)

@@ -1178,7 +1178,7 @@ lemma setObject_ko_wp_at:
                  elim!: rsubst[where P=P]
              split del: split_if)
   apply (rule iffI)
-   apply (clarsimp simp: n n ps_clear_upd' objBits_def[symmetric]
+   apply (clarsimp simp: n ps_clear_upd' objBits_def[symmetric]
                   split: split_if_asm)
   apply (clarsimp simp: n project_inject objBits_def[symmetric]
                         ps_clear_upd
@@ -1188,18 +1188,22 @@ lemma setObject_ko_wp_at:
 lemma typ_at'_valid_obj'_lift:
   assumes P: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
   shows      "\<lbrace>\<lambda>s. valid_obj' obj s\<rbrace> f \<lbrace>\<lambda>rv s. valid_obj' obj s\<rbrace>"
-  apply (cases obj, simp_all add: valid_obj'_def)
-         apply (case_tac endpoint, simp_all add: valid_ep'_def)
+  apply (cases obj; simp add: valid_obj'_def)
+       apply (rename_tac endpoint)
+       apply (case_tac endpoint; simp add: valid_ep'_def)
+         apply (wp hoare_vcg_const_Ball_lift typ_at_lifts [OF P])
+      apply (rename_tac async_endpoint)
+      apply (case_tac async_endpoint; simp add: valid_aep'_def)
+        apply (wp hoare_vcg_const_Ball_lift typ_at_lifts [OF P])
+   apply (rename_tac tcb)
+   apply (case_tac "tcbState tcb";
+          simp add: valid_tcb'_def valid_tcb_state'_def split_def)
            apply (wp hoare_vcg_const_Ball_lift typ_at_lifts [OF P])
-        apply (case_tac async_endpoint, simp_all add: valid_aep'_def)
-          apply (wp hoare_vcg_const_Ball_lift typ_at_lifts [OF P])
-     apply (case_tac "tcbState tcb",
-            simp_all add: valid_tcb'_def valid_tcb_state'_def split_def)
-             apply (wp hoare_vcg_const_Ball_lift typ_at_lifts [OF P])
-     apply (simp add: valid_cte'_def)
-     apply (wp typ_at_lifts[OF P])
-    apply (case_tac arch_kernel_object, simp_all)[1]
-      apply (wp typ_at_lifts[OF P])
+   apply (simp add: valid_cte'_def)
+   apply (wp typ_at_lifts[OF P])
+  apply (rename_tac arch_kernel_object)
+  apply (case_tac arch_kernel_object; simp)
+    apply (wp typ_at_lifts[OF P])
   done
 
 lemmas setObject_valid_obj = typ_at'_valid_obj'_lift [OF setObject_typ_at']

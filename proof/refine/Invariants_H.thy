@@ -15,8 +15,6 @@ imports
   "../invariant-abstract/AInvs"
 begin
 
-declare word_neq_0_conv[simp del]
-
 -- ---------------------------------------------------------------------------
 section "Invariants on Executable Spec"
 
@@ -260,7 +258,7 @@ definition
 definition
  "obj_range' (p::word32) ko \<equiv> {p .. p + 2 ^ objBitsKO ko - 1}"
 
-primrec
+primrec (nonexhaustive)
   usableUntypedRange :: "capability \<Rightarrow> word32 set"
 where
  "usableUntypedRange (UntypedCap p n f) =
@@ -1029,11 +1027,11 @@ abbreviation(input)
 
 lemma all_invs_but_sym_refs_not_ct_inQ_check':
   "(all_invs_but_sym_refs_ct_not_inQ' and sym_refs \<circ> state_refs_of' and ct_not_inQ) = invs'"
-  by (simp add: pred_conj_def conj_ac invs'_def valid_state'_def)
+  by (simp add: pred_conj_def conj_commute conj_left_commute invs'_def valid_state'_def)
 
 lemma all_invs_but_not_ct_inQ_check':
   "(all_invs_but_ct_not_inQ' and ct_not_inQ) = invs'"
-  by (simp add: pred_conj_def conj_ac invs'_def valid_state'_def)
+  by (simp add: pred_conj_def conj_commute conj_left_commute invs'_def valid_state'_def)
 
 definition
   "all_invs_but_ct_idle_or_in_cur_domain'
@@ -1050,7 +1048,8 @@ definition
 
 lemma all_invs_but_ct_idle_or_in_cur_domain_check':
   "(all_invs_but_ct_idle_or_in_cur_domain' and ct_idle_or_in_cur_domain') = invs'"
-  by (simp add: all_invs_but_ct_idle_or_in_cur_domain'_def pred_conj_def conj_ac invs'_def valid_state'_def)
+  by (simp add: all_invs_but_ct_idle_or_in_cur_domain'_def pred_conj_def
+                conj_left_commute conj_commute invs'_def valid_state'_def)
 
 abbreviation (input)
   "invs_no_cicd' \<equiv> all_invs_but_ct_idle_or_in_cur_domain'"
@@ -1273,7 +1272,7 @@ lemma state_refs_of'_eqD:
 
 lemma obj_at_state_refs_ofD':
   "obj_at' P p s \<Longrightarrow> \<exists>obj. P obj \<and> state_refs_of' s p = refs_of' (injectKO obj)"
-  apply (clarsimp simp: obj_at'_real_def project_inject ko_wp_at'_def conj_ac)
+  apply (clarsimp simp: obj_at'_real_def project_inject ko_wp_at'_def conj_commute)
   apply (rule exI, erule conjI)
   apply (clarsimp simp: state_refs_of'_def)
   done
@@ -1318,10 +1317,11 @@ lemma ex_nonz_cap_toE':
 
 lemma refs_of_live':
   "refs_of' ko \<noteq> {} \<Longrightarrow> live' ko"
-  apply (cases ko, simp_all)
-    apply clarsimp
-   apply (case_tac async_endpoint, simp_all)
-  apply (case_tac "tcbState tcb", simp_all)
+  apply (cases ko; clarsimp)
+   apply (rename_tac async_endpoint)
+   apply (case_tac async_endpoint; simp)
+  apply (rename_tac tcb)
+  apply (case_tac "tcbState tcb"; simp)
   done
 
 lemma if_live_then_nonz_capE':
@@ -1367,7 +1367,7 @@ lemma valid_objsI' [intro]:
 
 lemma valid_objsE' [elim]:
   "\<lbrakk> valid_objs' s; ksPSpace s x = Some obj; valid_obj' obj s \<Longrightarrow> R \<rbrakk> \<Longrightarrow> R"
-  unfolding valid_objs'_def by (auto intro: ranI)
+  unfolding valid_objs'_def by auto
 
 lemma pspace_distinctD':
   "\<lbrakk> ksPSpace s x = Some v; pspace_distinct' s \<rbrakk> \<Longrightarrow> ps_clear x (objBitsKO v) s"
@@ -1510,11 +1510,14 @@ lemma valid_cap'_pspaceI:
 
 lemma valid_arch_obj'_pspaceI:
   "valid_arch_obj' obj s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> valid_arch_obj' obj s'"
-  apply (cases obj, simp_all)
+  apply (cases obj; simp)
+    apply (rename_tac asidpool)
     apply (case_tac asidpool,
            auto simp: page_directory_at'_def intro: typ_at'_pspaceI[rotated])[1]
-   apply (case_tac pte, simp_all add: valid_mapping'_def)
-  apply (case_tac pde,
+   apply (rename_tac pte)
+   apply (case_tac pte; simp add: valid_mapping'_def)
+  apply (rename_tac pde)
+  apply (case_tac pde;
          auto simp: page_table_at'_def valid_mapping'_def
              intro: typ_at'_pspaceI[rotated])
   done
@@ -1543,7 +1546,7 @@ lemma valid_mdb'_pspaceI:
 
 lemma state_refs_of'_pspaceI:
   "P (state_refs_of' s) \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> P (state_refs_of' s')"
-  unfolding state_refs_of'_def ps_clear_def by (simp cong: option.case_cong)
+  unfolding state_refs_of'_def ps_clear_def by simp
 
 lemma if_live_then_nonz_cap'_pspaceI:
   "if_live_then_nonz_cap' s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> if_live_then_nonz_cap' s'"
@@ -1736,7 +1739,7 @@ lemma ps_clearI:
    apply (simp add: ps_clear_def2)
    apply (rule ccontr, erule nonemptyE, clarsimp)
    apply (drule minus_one_helper[where x="z + 1" for z])
-    apply (clarsimp simp del: word_neq_0_conv)
+    apply clarsimp
    apply simp
   apply (erule is_aligned_get_word_bits)
    apply (erule(1) is_aligned_no_wrap')
@@ -1842,7 +1845,7 @@ lemma in_magnitude_check3:
 lemma in_alignCheck[simp]:
   "((v, s') \<in> fst (alignCheck x n s)) = (s' = s \<and> is_aligned x n)"
   by (simp add: alignCheck_def in_monad is_aligned_mask[symmetric]
-                alignError_def conj_ac
+                alignError_def conj_comms
           cong: conj_cong)
 
 lemma tcb_space_clear:
@@ -1901,7 +1904,7 @@ lemma cte_wp_at_cases':
                          cte_level_bits_def Ball_def
                          unless_def when_def bind_def
                   split: kernel_object.splits split_if_asm option.splits
-                    del: disjCI simp del: word_neq_0_conv)
+                    del: disjCI)
         apply (subst(asm) in_magnitude_check3, simp+,
                simp split: split_if_asm, (rule disjI2)?, intro exI, rule conjI,
                erule rsubst[where P="\<lambda>x. ksPSpace s x = v" for s v],
@@ -1922,8 +1925,7 @@ lemma cte_wp_at_cases':
    apply (simp add: loadObject_cte unless_def alignCheck_def
                     is_aligned_mask[symmetric] objBits_simps
                     cte_level_bits_def magnitudeCheck_def
-                    return_def fail_def
-               del: word_neq_0_conv)
+                    return_def fail_def)
    apply (clarsimp simp: bind_def return_def when_def fail_def
                   split: option.splits)
    apply simp
@@ -1934,7 +1936,7 @@ lemma cte_wp_at_cases':
                     cte_level_bits_def magnitudeCheck_def
                     return_def fail_def tcbCTableSlot_def tcbVTableSlot_def
                     tcbIPCBufferSlot_def tcbReplySlot_def tcbCallerSlot_def
-               del: word_neq_0_conv split: option.split_asm)
+                split: option.split_asm)
      apply (clarsimp simp: bind_def tcb_cte_cases_def split: split_if_asm)
     apply (clarsimp simp: bind_def tcb_cte_cases_def iffD2[OF linorder_not_less]
                           when_False return_def
@@ -2080,12 +2082,8 @@ proof -
   have Q: "\<And>P f. (\<exists>x. (\<exists>y. x = f y) \<and> P x) = (\<exists>y. P (f y))"
     by fastforce
   show ?thesis
-    apply (clarsimp simp:   cte_wp_at_cases' obj_at'_real_def typ_at'_def
-                            ko_wp_at'_def objBits_simps P Q conj_ac
-                            cte_level_bits_def
-                    intro!: ext)
-    apply fastforce
-    done
+    by (fastforce simp: cte_wp_at_cases' obj_at'_real_def typ_at'_def
+                        ko_wp_at'_def objBits_simps P Q conj_comms cte_level_bits_def)
 qed
 
 lemma typ_at_lift_tcb':
@@ -2137,9 +2135,9 @@ lemma koType_obj_range':
 lemma typ_at_lift_valid_untyped':
   assumes P: "\<And>T p. \<lbrace>\<lambda>s. \<not>typ_at' T p s\<rbrace> f \<lbrace>\<lambda>rv s. \<not>typ_at' T p s\<rbrace>"
   shows "\<lbrace>\<lambda>s. valid_untyped' p n idx s\<rbrace> f \<lbrace>\<lambda>rv s. valid_untyped' p n idx s\<rbrace>"
-  apply (clarsimp simp: valid_untyped'_def split del:if_splits)
+  apply (clarsimp simp: valid_untyped'_def split del:split_if)
   apply (rule hoare_vcg_all_lift)
-  apply (clarsimp simp: valid_def split del:if_splits)
+  apply (clarsimp simp: valid_def split del:split_if)
   apply (frule ko_wp_typ_at')
   apply clarsimp
   apply (cut_tac T=T and p=ptr' in P)
@@ -2165,13 +2163,15 @@ lemma typ_at_lift_valid_cap':
   shows      "\<lbrace>\<lambda>s. valid_cap' cap s\<rbrace> f \<lbrace>\<lambda>rv s. valid_cap' cap s\<rbrace>"
   apply (simp add: valid_cap'_def)
   apply wp
-  apply (case_tac cap,
-         simp_all add: valid_cap'_def P [where P=id, simplified] typ_at_lift_tcb'
-                       hoare_vcg_prop typ_at_lift_ep'
-                       typ_at_lift_aep' typ_at_lift_cte_at'
-                       hoare_vcg_conj_lift [OF typ_at_lift_cte_at'])
-     apply (case_tac zombie_type, simp_all)
+  apply (case_tac cap;
+         simp add: valid_cap'_def P [where P=id, simplified] typ_at_lift_tcb'
+                   hoare_vcg_prop typ_at_lift_ep'
+                   typ_at_lift_aep' typ_at_lift_cte_at'
+                   hoare_vcg_conj_lift [OF typ_at_lift_cte_at'])
+     apply (rename_tac zombie_type nat)
+     apply (case_tac zombie_type; simp)
       apply (wp typ_at_lift_tcb' P hoare_vcg_all_lift typ_at_lift_cte')
+    apply (rename_tac arch_capability)
     apply (case_tac arch_capability,
            simp_all add: P [where P=id, simplified] page_table_at'_def
                          hoare_vcg_prop page_directory_at'_def All_less_Ball)
@@ -2329,7 +2329,7 @@ lemma loop_split:
 proof induct
   case base
   thus ?case
-    by (auto dest: next_single_value elim: tranclE2 elim: r_into_trancl)
+    by (auto dest: next_single_value elim: tranclE2)
 next
   case (step y z)
   hence "m \<turnstile> y \<leadsto>\<^sup>+ c" by simp
@@ -2516,7 +2516,7 @@ lemma valid_arch_state_update' [iff]:
 
 lemma valid_idle_update' [iff]:
   "valid_idle' (f s) = valid_idle' s"
-  by (auto intro: valid_idle'_pspace_itI simp: pspace idle)
+  by (auto simp: pspace idle)
 
 lemma ifunsafe_update [iff]:
   "if_unsafe_then_cap' (f s) = if_unsafe_then_cap' s"
@@ -2737,12 +2737,6 @@ lemma valid_queues_arch [simp]:
   "valid_queues (ksArchState_update f s) = valid_queues s"
   by (simp add: valid_queues_def)
 
-lemma state_refs_of_arch' [simp]:
-  "state_refs_of' (ksArchState_update f s) = state_refs_of' s"
-  apply (rule ext)
-  apply (simp add: state_refs_of'_def ps_clear_def split: option.splits)
-  done
-
 lemma if_unsafe_then_cap_arch' [simp]:
   "if_unsafe_then_cap' (ksArchState_update f s) = if_unsafe_then_cap' s"
   by (simp add: if_unsafe_then_cap'_def ex_cte_cap_to'_def)
@@ -2770,12 +2764,6 @@ lemma valid_queues_arch' [simp]:
 lemma valid_queues_machine_state' [simp]:
   "valid_queues' (ksMachineState_update f s) = valid_queues' s"
   by (simp add: valid_queues'_def)
-
-lemma state_refs_of'_state [simp]:
-  "state_refs_of' (ksMachineState_update f s) = state_refs_of' s"
-  apply (rule ext)
-  apply (simp add: state_refs_of'_def ps_clear_def split: option.splits)
-  done
 
 lemma valid_irq_node'_machine_state [simp]:
   "valid_irq_node' x (ksMachineState_update f s) = valid_irq_node' x s"
@@ -2856,8 +2844,9 @@ lemma objBitsT_simps:
 
 lemma objBitsT_koTypeOf :
   "(objBitsT (koTypeOf ko)) = objBitsKO ko"
-  apply (cases ko, simp_all add: objBits_simps objBitsT_simps)
-  apply (case_tac arch_kernel_object, simp_all add: archObjSize_def objBitsT_simps)
+  apply (cases ko; simp add: objBits_simps objBitsT_simps)
+  apply (rename_tac arch_kernel_object)
+  apply (case_tac arch_kernel_object; simp add: archObjSize_def objBitsT_simps)
   done
 
 lemma sane_update [intro!]:
@@ -2900,9 +2889,7 @@ lemma valid_queues_running:
 
 lemma valid_refs'_cteCaps:
   "valid_refs' S (ctes_of s) = (\<forall>c \<in> ran (cteCaps_of s). S \<inter> capRange c = {})"
-  apply (simp add: valid_refs'_def cteCaps_of_def)
-  apply (fastforce elim!: ranE intro!: ranI)
-  done
+  by (fastforce simp: valid_refs'_def cteCaps_of_def elim!: ranE)
 
 lemma invs_valid_stateI' [elim!]:
   "invs' s \<Longrightarrow> valid_state' s"

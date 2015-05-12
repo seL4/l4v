@@ -22,17 +22,7 @@ declare  less_1_simp[simp]
 
 declare  is_aligned_no_overflow[simp]
 
-lemma dmo_valid_cap'[wp]:
-  "\<lbrace>valid_cap' cap\<rbrace> doMachineOp mop \<lbrace>\<lambda>rv. valid_cap' cap\<rbrace>"
-  by (simp add: doMachineOp_def split_def | wp select_wp)+
-
-lemma dmo_norq[wp]:
-  "\<lbrace>\<lambda>s. P (ksReadyQueues s)\<rbrace> doMachineOp mop \<lbrace>\<lambda>rv s. P (ksReadyQueues s)\<rbrace>"
-  by (simp add: doMachineOp_def split_def | wp select_wp)+
-
 declare unless_True[simp]
-
-declare unless_False[simp]
 
 declare maybe_fail_bind_fail[simp]
 

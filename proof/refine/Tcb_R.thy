@@ -959,26 +959,6 @@ proof -
   done
 qed
 
-lemma setObject_tcb_cte_at[wp]:
-  "\<lbrace>cte_at' p\<rbrace> setObject p' (val :: tcb) \<lbrace>\<lambda>rv. cte_at' p\<rbrace>"
-  by (rule typ_at_lifts, wp)
-
-lemma threadSet_cte_at' [wp]:
-  "\<lbrace>cte_at' p\<rbrace> threadSet f t \<lbrace>\<lambda>rv. cte_at' p\<rbrace>"
-  by (simp add: threadSet_def, wp)
-
-lemma threadSet_real_cte_at [wp]:
-  "\<lbrace>real_cte_at' p\<rbrace> threadSet f t \<lbrace>\<lambda>rv. real_cte_at' p\<rbrace>"
-  by (rule typ_at_lifts, wp)
-
-lemma threadSet_valid_cap [wp]:
-  "\<lbrace>\<lambda>s. valid_cap' c s\<rbrace> threadSet f t \<lbrace>\<lambda>_ s. valid_cap' c s\<rbrace>"
-  by (rule typ_at_lifts, wp)
-
-lemma ksReadyQueues_typ_at'[simp]:
-  "typ_at' T p (ksReadyQueues_update f s) = typ_at' T p s"
-  by (simp add: typ_at'_def ko_wp_at'_def ps_clear_def)
-
 crunch typ_at'[wp]: setPriority "\<lambda>s. P (typ_at' T p s)"
   (ignore: getObject simp: crunch_simps)
 
@@ -1024,18 +1004,20 @@ lemma sameObject_corres2:
   "\<lbrakk> cap_relation c c'; cap_relation d d' \<rbrakk>
      \<Longrightarrow> same_object_as c d = sameObjectAs c' d'"
   apply (frule(1) sameRegion_corres2[symmetric, where c=c and d=d])
-  apply (case_tac c, simp_all add: sameObjectAs_def same_object_as_def
-                                   isCap_simps is_cap_simps bits_of_def)
-   apply (case_tac d, simp_all)[1]
-   apply (case_tac d', simp_all)[1]
+  apply (case_tac c; simp add: sameObjectAs_def same_object_as_def
+                               isCap_simps is_cap_simps bits_of_def)
+   apply (case_tac d; simp)
+   apply (case_tac d'; simp)
+  apply (rename_tac arch_cap)
   apply clarsimp
-  apply (case_tac d, (simp_all split: arch_cap.split)[11]) (* This 11 is somewhat of a magic number *)
+  apply (case_tac d, (simp_all split: arch_cap.split)[11])
+  apply (rename_tac arch_capa)
   apply (clarsimp simp add: ArchRetype_H.sameObjectAs_def Let_def)
   apply (intro conjI impI)
-   apply (case_tac arch_cap, simp_all add: isCap_simps)[1]
-   apply (case_tac arch_capa, simp_all)[1]
-  apply (case_tac arch_cap, simp_all add: sameRegionAs_def isCap_simps)
-  apply (case_tac arch_capa, simp_all)
+   apply (case_tac arch_cap; simp add: isCap_simps)
+   apply (case_tac arch_capa; simp)
+  apply (case_tac arch_cap; simp add: sameRegionAs_def isCap_simps)
+  apply (case_tac arch_capa; simp)
   done
 
 lemma check_cap_at_corres:
@@ -1474,6 +1456,7 @@ proof -
                checkCap_inv [where P=sch_act_simple]
                out_no_cap_to_trivial [OF ball_tcb_cap_casesI]
                checked_insert_no_cap_to
+  note if_cong [cong] option.case_cong [cong]
   show ?thesis
     apply (simp add: invokeTCB_def liftE_bindE)
     apply (rule corres_guard_imp)
@@ -1508,7 +1491,7 @@ proof -
                           tcb_at_cte_at' cte_at_tcb_at_16' isCap_simps
                           domIff valid_tcb'_def tcb_cte_cases_def
                    split: option.split_asm
-                   dest!: isValidVTableRootD)
+                   dest!: isValidVTableRootD) (* long *)
   done
 qed
 
@@ -1657,6 +1640,7 @@ lemma tcbinv_corres:
        apply (rule corres_guard_imp [OF writereg_corres], simp+)[1]
       apply (rule corres_guard_imp [OF readreg_corres], simp+)[1]
      apply (rule corres_guard_imp [OF copyreg_corres], simp+)[1]
+    apply (rename_tac word p1 opt1 opt2 opt3 opt4 opt5)
     apply (clarsimp simp del: invoke_tcb.simps)
     apply (rule_tac F="is_aligned word 5" in corres_req)
      apply (clarsimp simp add: is_aligned_weaken [OF tcb_aligned])
@@ -1665,11 +1649,9 @@ lemma tcbinv_corres:
                     split: option.split option.split_asm)
     apply clarsimp
     apply (auto split: option.split_asm simp: newroot_rel_def)[1]
-   apply (simp add: invokeTCB_def liftM_def[symmetric]
-                    o_def dc_def[symmetric])
+   apply (simp add: invokeTCB_def liftM_def[symmetric] o_def dc_def[symmetric])
    apply (rule corres_guard_imp [OF suspend_corres], simp+)
-  apply (simp add: invokeTCB_def liftM_def[symmetric]
-                   o_def dc_def[symmetric])
+  apply (simp add: invokeTCB_def liftM_def[symmetric] o_def dc_def[symmetric])
   apply (rule corres_guard_imp [OF restart_corres], simp+)
   done
 
@@ -1724,6 +1706,8 @@ lemma decode_readreg_corres:
   done
 
 lemma decode_writereg_corres:
+  notes if_cong [cong]
+  shows
   "\<lbrakk> length args < 2 ^ word_bits \<rbrakk> \<Longrightarrow>
    corres (ser \<oplus> tcbinv_relation) (invs and tcb_at t) (invs' and tcb_at' t)
      (decode_write_registers args (cap.ThreadCap t))
@@ -1930,6 +1914,8 @@ lemma checkValidIPCBuffer_ArchObject_wp:
   done
 
 lemma decode_set_ipc_corres:
+  notes if_cong [cong]
+  shows
   "\<lbrakk> cap_relation cap cap'; is_thread_cap cap;
      list_all2 (\<lambda>(c, sl) (c', sl'). cap_relation c c' \<and> sl' = cte_map sl) extras extras' \<rbrakk> \<Longrightarrow>
    corres (ser \<oplus> tcbinv_relation) (\<lambda>s. \<forall>x \<in> set extras. cte_at (snd x) s)
@@ -2026,6 +2012,8 @@ lemma cap_CNode_case_throw:
   by (cases cap, simp_all add: isCap_simps unlessE_def)
 
 lemma decode_set_space_corres:
+  notes if_cong [cong]
+  shows
  "\<lbrakk> cap_relation cap cap'; list_all2 (\<lambda>(c, sl) (c', sl'). cap_relation c c' \<and> sl' = cte_map sl) extras extras';
       is_thread_cap cap \<rbrakk> \<Longrightarrow>
   corres (ser \<oplus> tcbinv_relation)
@@ -2061,6 +2049,7 @@ lemma decode_set_space_corres:
                              apply (case_tac vroot_cap', simp_all add:
                                               is_valid_vtable_root_def isValidVTableRoot_def
                                               ArchVSpace_H.isValidVTableRoot_def)[1]
+                             apply (rename_tac arch_cap)
                              apply (clarsimp, case_tac arch_cap, simp_all)[1]
                              apply (simp split: option.split)
                             apply (rule corres_trivial, simp)
@@ -2161,6 +2150,8 @@ lemma decodeSetSpace_tc_slot[wp]:
   done
 
 lemma decode_tcb_conf_corres:
+  notes if_cong [cong] option.case_cong [cong]
+  shows
  "\<lbrakk> cap_relation cap cap'; list_all2 (\<lambda>(c, sl) (c', sl'). cap_relation c c' \<and> sl' = cte_map sl) extras extras';
      is_thread_cap cap \<rbrakk> \<Longrightarrow>
   corres (ser \<oplus> tcbinv_relation) (einvs and valid_cap cap and (\<lambda>s. \<forall>x \<in> set extras. cte_at (snd x) s))

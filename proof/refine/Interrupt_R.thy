@@ -217,9 +217,6 @@ lemma valid_globals_ex_cte_cap_irq:
   apply (simp add: global_refs'_def cte_level_bits_def)
   done
 
-lemma vmdb_invs'_strg:
-  "invs' s \<longrightarrow> valid_mdb' s"
-  by clarsimp
 
 declare setInterruptMode_def[simp] MachineOps.setInterruptMode_def[simp]
 
@@ -233,6 +230,7 @@ lemma invoke_irq_handler_corres:
     apply (rule corres_guard_imp, rule corres_machine_op)
       apply (rule corres_Id, simp_all)
     apply (rule no_fail_maskInterrupt)
+   apply (rename_tac word cap prod)
    apply clarsimp
    apply (rule corres_guard_imp)
      apply (rule corres_split [OF _ get_irq_slot_corres])
@@ -245,9 +243,9 @@ lemma invoke_irq_handler_corres:
                       in hoare_post_imp)
          apply fastforce
         apply (wp cap_delete_one_still_derived)
-       apply (strengthen vmdb_invs'_strg)
+       apply (strengthen invs_mdb_strengthen')
        apply wp
-      apply (simp add: conj_ac eq_commute)
+      apply (simp add: conj_comms eq_commute)
       apply (wp get_irq_slot_different hoare_drop_imps)
     apply (clarsimp simp: valid_state_def invs_def)
     apply (erule cte_wp_at_weakenE, simp add: is_derived_use_interrupt)
@@ -307,6 +305,7 @@ lemma invoke_irq_handler_invs'[wp]:
    apply (wp cteInsert_invs)
    apply (strengthen aep_badge_derived_enough_strg isnt_irq_handler_strg)
    apply (wp cteDeleteOne_other_cap[unfolded o_def])[1]
+  apply (rename_tac word1 cap word2)
   apply (simp add: getInterruptState_def getIRQSlot_def locateSlot_conv)
   apply wp
   apply (clarsimp simp: ucast_nat_def)

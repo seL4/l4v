@@ -12,8 +12,6 @@ theory Orphanage
 imports Refine
 begin
 
-declare if_cong[cong]
-
 definition
    is_active_thread_state :: "thread_state \<Rightarrow> bool"
 where
@@ -372,6 +370,7 @@ lemma rescheduleRequired_no_orphans [wp]:
   unfolding rescheduleRequired_def
   apply (wp tcbSchedEnqueue_no_orphans hoare_vcg_all_lift ssa_no_orphans | wpc | clarsimp)+
    apply (wps tcbSchedEnqueue_nosch, wp static_imp_wp)
+   apply (rename_tac word t p)
    apply (rule_tac P="word = t" in hoare_gen_asm)
    apply (wp hoare_disjI1 | clarsimp)+
   done
@@ -383,6 +382,7 @@ lemma rescheduleRequired_almost_no_orphans [wp]:
   unfolding rescheduleRequired_def
   apply (wp tcbSchedEnqueue_almost_no_orphans_lift hoare_vcg_all_lift | wpc | clarsimp)+
    apply (wps tcbSchedEnqueue_nosch, wp static_imp_wp)
+   apply (rename_tac word t p)
    apply (rule_tac P="word = t" in hoare_gen_asm)
    apply (wp hoare_disjI1 | clarsimp)+
   done
@@ -495,8 +495,8 @@ lemma tcbSchedDequeue_almost_no_orphans [wp]:
    tcbSchedDequeue thread
    \<lbrace> \<lambda>rv s. almost_no_orphans thread s \<rbrace>"
   unfolding tcbSchedDequeue_def
-  apply (wp threadSet_almost_no_orphans | simp)+
-  apply (simp add:no_orphans_strg_almost)
+  apply (wp threadSet_almost_no_orphans | simp cong: if_cong)+
+  apply (simp add:no_orphans_strg_almost cong: if_cong)
   done
 
 lemma tcbSchedDequeue_no_orphans [wp]:
@@ -796,7 +796,8 @@ lemma schedule_no_orphans [wp]:
              | strengthen all_invs_but_ct_idle_or_in_cur_domain'_strg
              | wps tcbSchedEnqueue_ct')+)[2]
      apply wp[1]
-     -- "action = SwitchToThread word"
+    -- "action = SwitchToThread word"
+    apply (rename_tac word)
     apply (wp ssa_no_orphans hoare_vcg_all_lift
               ThreadDecls_H_switchToThread_no_orphans)
       apply (rule_tac Q="\<lambda>_ s. (t=word \<longrightarrow> ksCurThread s = word) \<and>
@@ -1148,6 +1149,7 @@ lemma createNewCaps_no_orphans:
   apply (clarsimp simp: createNewCaps_def toAPIType_def ArchTypes_H.toAPIType_def
     split del: split_if cong: option.case_cong)
   apply (cases tp, simp_all split del: split_if)
+        apply (rename_tac apiobject_type)
         apply (case_tac apiobject_type, simp_all)
             apply (wp mapM_x_wp' threadSet_no_orphans
                    | clarsimp simp: is_active_thread_state_def makeObject_tcb
@@ -1164,6 +1166,7 @@ lemma createObject_no_orphans:
    \<lbrace>\<lambda>xa. no_orphans\<rbrace>"
   apply (case_tac tp)
         apply (simp_all add:createObject_def ArchRetype_H.createObject_def)
+        apply (rename_tac apiobject_type)
         apply (case_tac apiobject_type)
             apply (simp_all add:ArchRetype_H.createObject_def createPageObject_def placeNewObject_def2
               toAPIType_def ArchTypes_H.toAPIType_def placeNewObject_def2)+
@@ -1263,8 +1266,6 @@ lemma deleteObjects_no_orphans [wp]:
   apply (clarsimp simp: st_tcb_at'_def obj_at_delete'[unfolded field_simps]
                   cong: if_cong)
   done
-
-declare word_neq_0_conv[simp del]
 
 lemma invokeUntyped_no_orphans' [wp]:
   "ui = Retype cref ptr_base ptr tp us slots \<Longrightarrow>
@@ -1405,6 +1406,10 @@ lemma setInterruptState_no_orphans [wp]:
 
 crunch no_orphans [wp]: emptySlot "no_orphans"
 
+lemma mapM_x_match:
+  "\<lbrace>I and V xs\<rbrace> mapM_x m xs \<lbrace>\<lambda>rv. Q\<rbrace> \<Longrightarrow> \<lbrace>I and V xs\<rbrace> mapM_x m xs \<lbrace>\<lambda>rv. Q\<rbrace>"
+  by assumption
+
 lemma epCancelAll_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> valid_queues' s \<and> valid_objs' s \<rbrace>
     epCancelAll epptr
@@ -1413,10 +1418,12 @@ lemma epCancelAll_no_orphans [wp]:
   apply (wp sts_valid_objs' set_ep_valid_objs' sts_st_tcb'
             hoare_vcg_const_Ball_lift tcbSchedEnqueue_almost_no_orphans
              | wpc
-             | clarsimp simp: valid_tcb_state'_def
-             | rule_tac V="\<lambda>_. valid_queues' and valid_objs'"
+             | rule mapM_x_match,
+               rename_tac list,
+               rule_tac V="\<lambda>_. valid_queues' and valid_objs'"
                     and I="no_orphans and (\<lambda>s. \<forall>t\<in>set list. tcb_at' t s)"
-                     in mapM_x_inv_wp2)+
+                     in mapM_x_inv_wp2
+             | clarsimp simp: valid_tcb_state'_def)+
   apply (rule_tac Q="\<lambda>rv. no_orphans and valid_objs' and valid_queues' and ko_at' rv epptr"
                  in hoare_post_imp)
    apply (fastforce simp: valid_obj'_def valid_ep'_def obj_at'_def projectKOs)
@@ -1431,10 +1438,15 @@ lemma aepCancelAll_no_orphans [wp]:
   apply (wp sts_valid_objs' set_aep_valid_objs' sts_st_tcb'
             hoare_vcg_const_Ball_lift tcbSchedEnqueue_almost_no_orphans
              | wpc
-             | clarsimp simp: valid_tcb_state'_def
-             | rule_tac V="\<lambda>_. valid_queues' and valid_objs'"
-                    and I="no_orphans and (\<lambda>s. \<forall>t\<in>set list. tcb_at' t s)"
-                     in mapM_x_inv_wp2)+
+             | clarsimp simp: valid_tcb_state'_def)+
+    apply (rename_tac list)
+    apply (rule_tac V="\<lambda>_. valid_queues' and valid_objs'"
+                and I="no_orphans and (\<lambda>s. \<forall>t\<in>set list. tcb_at' t s)"
+                in mapM_x_inv_wp2)
+    apply simp
+   apply (wp sts_valid_objs' set_aep_valid_objs' sts_st_tcb'
+            hoare_vcg_const_Ball_lift tcbSchedEnqueue_almost_no_orphans|
+          clarsimp simp: valid_tcb_state'_def)+
   apply (rule_tac Q="\<lambda>rv. no_orphans and valid_objs' and valid_queues' and ko_at' rv aep"
                  in hoare_post_imp)
    apply (fastforce simp: valid_obj'_def valid_aep'_def obj_at'_def projectKOs)
@@ -2245,7 +2257,7 @@ lemma setDomain_no_orphans [wp]:
      setDomain tptr newdom
    \<lbrace>\<lambda>_. no_orphans\<rbrace>"
   apply (simp add: setDomain_def when_def)
-  apply (wp_trace tcbSchedEnqueue_almost_no_orphans hoare_vcg_imp_lift threadSet_almost_no_orphans
+  apply (wp tcbSchedEnqueue_almost_no_orphans hoare_vcg_imp_lift threadSet_almost_no_orphans
             threadSet_valid_queues'_no_state threadSet_st_tcb_at2 hoare_vcg_disj_lift
             threadSet_no_orphans
        | clarsimp simp: st_tcb_at_neg2 not_obj_at')+
