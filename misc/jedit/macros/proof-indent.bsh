@@ -10,8 +10,16 @@
 
 /*
  * Indent Isabelle apply-style proofs.
- *
  * 2013 David Greenaway.
+ *
+ * Install by dropping this file (`proof-indent.bsh`) into the directory
+ * ` ~/.isabelle/jedit/macros/`. After restarting jEdit or rescanning
+ * macros in jEdit, the macro `proof-indent` shoud appear in the `Macros`
+ * menu.
+ *
+ * You can additionally add a key binding, for instance Command-Shift-I
+ * (for Indent), to the new macro `proof-indent` by going to
+ * `Plugins -> Plugin Options -> Global Options -> jEdit/Shortcuts`
  */
 
 import isabelle.*;
