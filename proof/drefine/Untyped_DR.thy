@@ -71,8 +71,7 @@ next
     apply (case_tac "is_aligned a 2")
      apply (simp add: loadWord_def is_aligned_mask exec_gets)
      apply (simp add: return_def)
-    apply (simp add: loadWord_def exec_gets fail_def is_aligned_mask
-                del: word_neq_0_conv)
+    apply (simp add: loadWord_def exec_gets fail_def is_aligned_mask)
     done
 
   have loadWord_atMostOneResult:
@@ -80,8 +79,7 @@ next
     apply (case_tac "is_aligned a 2")
      apply (simp add: loadWord_def is_aligned_mask exec_gets)
      apply (simp add: return_def)
-    apply (simp add: loadWord_def exec_gets fail_def is_aligned_mask
-                del: word_neq_0_conv)
+    apply (simp add: loadWord_def exec_gets fail_def is_aligned_mask)
     done
 
   have mapM_loadWord_atMostOneResult[rule_format]:
@@ -288,7 +286,7 @@ lemma freeMemory_dcorres:
                         \<lambda>_ _. is_arch_cap or op = cap.NullCap)" in bspec)
    apply (simp add: ran_tcb_cap_cases)
   apply clarsimp
-  apply (thin_tac "case_option ?x ?y ?z")
+  apply (thin_tac "case_option x y z" for x y z)
   apply (simp add: valid_ipc_buffer_cap_def)
   apply (drule valid_page_cap_imp_valid_buf)
   apply (frule_tac transform_full_intent_machine_state_eq, simp_all)
@@ -299,7 +297,7 @@ lemma freeMemory_dcorres:
                         mask_2pm1[symmetric])
   apply (erule_tac x="(p && ~~ mask (pageBitsForSize sz))" in allE)
   apply clarsimp
-  apply (thin_tac "length ?xs = ?y")
+  apply (thin_tac "length xs = y" for xs y)
   apply (clarsimp simp:is_aligned_neg_mask_eq)
   apply (erule impE)
    apply (simp add:mask_def[unfolded shiftl_t2n,simplified,symmetric] p_assoc_help)
@@ -309,7 +307,7 @@ lemma freeMemory_dcorres:
     apply simp
    apply (cut_tac ptr = p and n = "pageBitsForSize sz" in word_neg_and_le)
    apply (simp add:mask_def[unfolded shiftl_t2n,simplified,symmetric] p_assoc_help)
-  apply (thin_tac "?x\<noteq>?y")
+  apply (thin_tac "x\<noteq>y" for x y)
   apply (erule notE)
   apply (rule is_aligned_no_wrap'[OF is_aligned_neg_mask])
    apply (rule le_refl)
@@ -403,7 +401,7 @@ definition
 
 lemma transform_empty_cnode:
   "transform_cnode_contents o_bits (empty_cnode o_bits) = empty_cap_map o_bits"
-  apply (simp add: transform_cnode_contents_def wf_empty dom_empty_cnode)
+  apply (simp add: transform_cnode_contents_def dom_empty_cnode)
   apply (rule ext, simp add: option_map_join_def empty_cap_map_def
                              nat_to_bl_def len_bin_to_bl_aux)
   done
@@ -420,7 +418,7 @@ lemma transform_default_tcb:
                    get_ipc_buffer_words_def)
   apply (simp add: transform_intent_def invocation_type_def fromEnum_def
                    enum_invocation_label toEnum_def)
-  apply (simp add: fun_eq_iff tcb_slot_defs tcb_pending_op_slot_def)
+  apply (simp add: fun_eq_iff tcb_slot_defs)
   apply (simp add: infer_tcb_pending_op_def guess_error_def default_etcb_def default_domain_def)
   done
 
@@ -448,20 +446,20 @@ lemma obj_bits_bound32:
   type = Invariants_AI.CapTableObject \<longrightarrow> us < 28\<rbrakk>
   \<Longrightarrow>obj_bits_api type us < WordSetup.word_bits"
   apply (case_tac type)
-   apply (simp_all add:obj_bits_api_def word_bits_def slot_bits_def)
+       apply (simp_all add:obj_bits_api_def word_bits_def slot_bits_def)
+  apply (rename_tac aobject_type)
   apply (case_tac aobject_type)
-   apply (simp_all add:arch_kobj_size_def
-     default_arch_object_def pageBits_def)
+        apply (simp_all add:arch_kobj_size_def default_arch_object_def pageBits_def)
   done
 
 lemma obj_bits_bound4:
   "\<lbrakk>type = Invariants_AI.Untyped \<longrightarrow> 4 \<le> us\<rbrakk> \<Longrightarrow>
     4 \<le> obj_bits_api type us"
   apply (case_tac type)
-   apply (simp_all add:obj_bits_api_def word_bits_def slot_bits_def)
+       apply (simp_all add:obj_bits_api_def word_bits_def slot_bits_def)
+  apply (rename_tac aobject_type)
   apply (case_tac aobject_type)
-   apply (simp_all add:arch_kobj_size_def
-     default_arch_object_def pageBits_def)
+        apply (simp_all add:arch_kobj_size_def default_arch_object_def pageBits_def)
   done
 
 lemma distinct_retype_addrs:
@@ -483,7 +481,7 @@ lemma distinct_retype_addrs:
     apply (erule Retype_AI.range_cover.range_cover_le_n_less(2))
     apply simp
    apply (rule shiftl_shiftr_id)
-     apply (simp add:range_cover_def)
+    apply (simp add:range_cover_def)
    apply (rule word_of_nat_less)
    apply (subst unat_power_lower)
     apply (rule diff_less)
@@ -540,7 +538,7 @@ lemma retype_transform_obj_ref_pick_id:
   "type \<noteq> Structures_A.Untyped
    \<Longrightarrow> map (\<lambda>x. {pick x}) (map (retype_transform_obj_ref type us) xs)
    = map (retype_transform_obj_ref type us) xs"
-  by (simp add:retype_transform_obj_ref_def map_map)
+  by (simp add:retype_transform_obj_ref_def)
 
 lemma translate_object_type_not_untyped:
   "type \<noteq> Invariants_AI.Untyped
@@ -593,49 +591,44 @@ lemma retype_region_dcorres:
   us (translate_object_type type) (map (retype_transform_obj_ref type us) (retype_addrs ptr type n us)))
   (Retype_A.retype_region ptr n us type)"
   apply (simp add: retype_region_def Untyped_D.retype_region_def
-                split del: split_if)
+              split del: split_if)
   apply (clarsimp simp:when_def generate_object_ids_def bind_assoc
-     split del:if_splits)
-  apply (simp add:retype_addrs_fold split del:if_splits)
+                  split del:split_if)
+  apply (simp add:retype_addrs_fold split del:split_if)
   apply (case_tac "type = Invariants_AI.Untyped")
    apply (rule corres_guard_imp)
      apply (simp add:translate_object_type_def)
     apply (intro conjI impI ballI | simp)+
-  apply (simp add:gets_fold_into_modify retype_addrs_fold retype_region_ext_def modify_modify
-                  create_objects_def)
-  apply (rule dcorres_expand_pfx)
-  apply clarsimp
-  apply (rule corres_guard_imp)
-    apply (rule corres_split)
-       apply (rule corres_trivial)
-       apply simp
-      apply (rule_tac r = dc and Q = \<top> and Q' = "op = s'" in corres_guard_imp)
-        apply (clarsimp simp: transform_def bind_def simpler_modify_def corres_underlying_def
+   apply (simp add:gets_fold_into_modify retype_addrs_fold retype_region_ext_def modify_modify
+                   create_objects_def)
+   apply (rule dcorres_expand_pfx)
+   apply clarsimp
+   apply (rule corres_guard_imp)
+     apply (rule corres_split)
+        apply (rule corres_trivial)
+        apply simp
+       apply (rule_tac r = dc and Q = \<top> and Q' = "op = s'" in corres_guard_imp)
+         apply (clarsimp simp: transform_def bind_def simpler_modify_def corres_underlying_def
           transform_current_thread_def transform_cdt_def transform_asid_table_def)
-        apply (rule ext)
-        apply (clarsimp simp:foldr_upd_app_if foldr_fun_upd_value restrict_map_def map_add_def
+         apply (rule ext)
+         apply (clarsimp simp:foldr_upd_app_if foldr_fun_upd_value restrict_map_def map_add_def
                              transform_objects_def retype_transform_obj_ref_def image_def)
-        apply (subgoal_tac "idle_thread s' \<notin> set (retype_addrs ptr type n us)")
-        apply (subgoal_tac "type = Structures_A.CapTableObject \<longrightarrow> us \<noteq> 0")
-         apply (clarsimp simp:transform_default_object translate_object_type_not_untyped)
-         defer
-        apply clarsimp
-        apply (frule invs_valid_idle,clarsimp simp:valid_idle_def st_tcb_at_def obj_at_def)
-
-        apply (erule(3) pspace_no_overlapC)
-        apply clarsimp
-       apply simp
-      apply assumption
-     apply wp
-    apply fastforce
-   apply simp
-  apply (case_tac type,
-    simp_all add:translate_object_type_def)
+         apply (subgoal_tac "idle_thread s' \<notin> set (retype_addrs ptr type n us)")
+          apply (subgoal_tac "type = Structures_A.CapTableObject \<longrightarrow> us \<noteq> 0")
+           apply (clarsimp simp:transform_default_object translate_object_type_not_untyped)
+          defer
+          apply clarsimp
+          apply (frule invs_valid_idle,clarsimp simp:valid_idle_def st_tcb_at_def obj_at_def)
+          apply (erule(3) pspace_no_overlapC)
+          apply clarsimp
+         apply simp
+        apply assumption
+       apply wp
+     apply fastforce
+    apply simp
+   apply (case_tac type, simp_all add:translate_object_type_def)
+  apply (rename_tac aobject_type)
   apply (case_tac aobject_type,simp_all)
-
-
-
-
   done
 
 lemma page_objects_default_object:
@@ -679,7 +672,7 @@ lemma clearMemory_unused_corres_noop:
         apply (subgoal_tac "y && ~~ mask (obj_bits_api ty us) = p")
          apply (clarsimp simp: ipc_frame_wp_at_def obj_at_def ran_null_filter
                         split: cap.split_asm arch_cap.split_asm)
-         apply (cut_tac t="(?t, tcb_cnode_index 4)" and P="op = ?cap"
+         apply (cut_tac t="(t, tcb_cnode_index 4)" and P="op = cap" for t cap
                     in cte_wp_at_tcbI, simp, fastforce, simp)
          apply (clarsimp simp: cte_wp_at_caps_of_state)
          apply (drule(1) bspec)
@@ -699,12 +692,6 @@ lemma clearMemory_unused_corres_noop:
      apply (drule subsetD[OF upto_enum_step_subset])
      apply simp
     apply (wp | simp)+
-  done
-
-lemma word_neq0:
- "(a \<noteq> (0::word32)) = ((0::word32) < a)"
-  apply (rule ccontr)
-  apply (simp add:not_less)
   done
 
 lemma dcorres_create_word_objects:
@@ -730,7 +717,7 @@ lemma dcorres_create_word_objects:
     apply (rule corres_split[OF corres_trivial])
        apply simp
       apply (rule corres_mapM_to_mapM_x)
-      apply (rule_tac P=\<top> and P'="?P" and S = "{(x,y). y \<in> set ?M}"
+      apply (rule_tac P=\<top> and P'="P" and S = "{(x,y). y \<in> set M}" for P M
                in corres_mapM_x[where f="\<lambda>_. return ()", OF _ _ _ refl,
                                  simplified mapM_x_return])
          apply clarsimp
@@ -740,8 +727,7 @@ lemma dcorres_create_word_objects:
          apply simp
         apply wp
        apply (wp hoare_vcg_ball_lift | simp)+
-      apply (clarsimp simp:zip_same retype_addrs_def ptr_add_def
-       image_def shiftl_t2n)
+      apply (clarsimp simp:zip_same retype_addrs_def ptr_add_def image_def shiftl_t2n)
       apply (rule_tac x = "unat x" in bexI)
        apply simp
       apply clarsimp
@@ -1304,7 +1290,7 @@ lemma free_range_of_untyped_pick_retype_addrs:
   apply (subst group_add_class.add_diff_eq[symmetric])
   apply (frule range_cover_not_zero_shift[rotated,OF _ le_refl])
    apply simp
-  apply (thin_tac "\<not> ?P")
+  apply (thin_tac "\<not>P" for P)
   apply (subst add.assoc[symmetric])
   apply (subst AND_NOT_mask_plus_AND_mask_eq[symmetric,where n = sz])
   apply (subst add.commute[where a = "(ptr && mask sz)"])
@@ -1740,7 +1726,7 @@ lemma descendants_of_empty_lift :
    apply clarsimp
    apply (frule transform_cdt_dom_standard)
    apply (clarsimp simp:descendants_of_def)
-   apply (thin_tac "(a,b) = ?P")
+   apply (thin_tac "(a,b) = P" for P)
    apply (drule(1) transform_cdt_some_rev)
     apply (clarsimp simp:valid_mdb_def)
    apply clarsimp
@@ -1815,6 +1801,7 @@ lemma decode_untyped_corres:
                         unlessE_whenE
              split del: split_if
                  split: invocation_label.split_asm)
+  apply (rename_tac a list w1 w2 w3 w4 w5 apiobject_type)
   apply (cases excaps')
    apply (simp add: get_index_def transform_cap_list_def
                     alternative_refl)
@@ -1840,7 +1827,7 @@ lemma decode_untyped_corres:
        apply auto[1]
       apply (rename_tac cnode_cap cnode_cap')
       apply (simp add: bindE_assoc split del: split_if)
-      apply (simp add: if_to_top_of_bindE is_cnode_cap_eq[symmetric]
+      apply (simp add: if_to_top_of_bindE is_cnode_cap_transform_cap[symmetric]
                   split del: split_if)
       apply (rule corres_if_rhs[rotated])
        apply (rule corres_trivial, simp add: alternative_refl)
@@ -1866,7 +1853,7 @@ lemma decode_untyped_corres:
                apply (erule is_aligned_weaken)
                apply (simp add:range_cover_def)
               apply (simp add:has_children_def KHeap_D.is_cdt_parent_def
-                descendants_of_empty_lift word_neq0)
+                descendants_of_empty_lift word_neq_0_conv)
               apply (subst alignUp_gt_0[where x = "2 ^ sz"])
                   apply (rule is_aligned_weaken[where x = sz])
                    apply (simp add:is_aligned_def)
@@ -1900,10 +1887,10 @@ lemma decode_untyped_corres:
       apply (rule corres_guard_imp)
         apply (rule_tac F="cap_aligned cnode_cap' \<and> is_cnode_cap cnode_cap'" in corres_gen_asm2)
         apply (subgoal_tac "map (Pair (cap_object (transform_cap cnode_cap')))
-             [unat word4 ..< unat word4 + unat word5]
+             [unat w4 ..< unat w4 + unat w5]
              = map (\<lambda>x. transform_cslot_ptr (obj_ref_of (cnode_cap'),
              (nat_to_cref (bits_of cnode_cap') x)))
-             [unat word4 ..< unat word4 + unat word5]")
+             [unat w4 ..< unat w4 + unat w5]")
          apply (simp del: map_eq_conv)
          apply (simp add: mapME_x_map_simp)
          apply (rule mapME_x_corres_inv)
@@ -1919,7 +1906,7 @@ lemma decode_untyped_corres:
      apply (rule hoare_pre)
       apply (wp hoare_drop_imp | simp)+
      apply fastforce
-    apply (clarsimp simp:is_cnode_cap_eq conj_ac split del:if_splits)
+    apply (clarsimp simp: conj_comms is_cnode_cap_transform_cap split del: split_if)
     apply (rule validE_R_validE)
     apply (rule_tac Q' = "\<lambda>a s. invs s \<and> valid_etcbs s \<and> valid_cap a s \<and> cte_wp_at (op = (cap.UntypedCap ptr sz idx)) slot' s
       \<and> (Structures_A.is_cnode_cap a \<longrightarrow> not_idle_thread (obj_ref_of a) s)"
@@ -1930,7 +1917,7 @@ lemma decode_untyped_corres:
       in hoare_post_imp_R)
        apply wp
       apply (clarsimp simp: cte_wp_at_caps_of_state)
-      apply (frule_tac p = "(?x,?y)" in caps_of_state_valid[rotated])
+      apply (frule_tac p = "(x,y)" for x y in caps_of_state_valid[rotated])
        apply simp
       apply (clarsimp simp:valid_cap_def obj_at_def valid_idle_def st_tcb_at_def
         is_cap_simps not_idle_thread_def is_cap_table_def dest!:invs_valid_idle)
@@ -1941,8 +1928,8 @@ lemma decode_untyped_corres:
     apply (rule ccontr)
     apply (clarsimp simp:valid_cap_simps cap_aligned_def)
     apply (frule cte_wp_at_caps_descendants_range_inI[where ptr = ptr and cref = slot' and sz = sz])
-      apply (clarsimp simp:cte_wp_at_caps_of_state is_aligned_neg_mask_eq)
-      apply simp+
+       apply (clarsimp simp:cte_wp_at_caps_of_state is_aligned_neg_mask_eq)
+       apply simp+
     apply (simp add:is_aligned_neg_mask_eq)
     apply (drule descendants_range_imply_no_descendants[rotated 3])
          apply clarsimp+
@@ -1951,7 +1938,7 @@ lemma decode_untyped_corres:
      apply simp
     apply simp
    apply (rule hoare_pre,wp,simp)
-   apply (wp hoare_drop_imp mapME_x_inv_wp2 | simp add:whenE_def split del:split_if)+
+  apply (wp hoare_drop_imp mapME_x_inv_wp2 | simp add:whenE_def split del:split_if)+
   apply (rule hoare_pre,wp,simp)
   done
 
@@ -1960,11 +1947,11 @@ lemma decode_untyped_label_not_match:
     \<Longrightarrow> \<lbrace>op = s\<rbrace> Decode_A.decode_untyped_invocation label args ref (cap.UntypedCap a b idx) e
              \<lbrace>\<lambda>r. \<bottom>\<rbrace>, \<lbrace>\<lambda>e. op = s\<rbrace>"
   apply (case_tac "invocation_type label = UntypedRetype")
-    apply (clarsimp simp:Decode_A.decode_untyped_invocation_def transform_intent_def)+
-      apply (clarsimp simp:transform_intent_untyped_retype_def split:option.splits list.splits)
-    apply (simp add:Decode_A.decode_untyped_invocation_def unlessE_def)
-    apply wp
-done
+   apply (clarsimp simp:Decode_A.decode_untyped_invocation_def transform_intent_def)+
+   apply (clarsimp simp:transform_intent_untyped_retype_def split:option.splits list.splits)
+  apply (simp add:Decode_A.decode_untyped_invocation_def unlessE_def)
+  apply wp
+  done
 
 
 end

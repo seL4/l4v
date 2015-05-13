@@ -12,8 +12,6 @@ theory Ipc_DR
 imports CNode_DR
 begin
 
-declare option.weak_case_cong[cong]
-
 abbreviation
 "thread_is_running y s \<equiv> st_tcb_at (op=Structures_A.thread_state.Running) y s"
 
@@ -28,7 +26,7 @@ lemma set_thread_state_cur_thread_idle_thread:
   "\<lbrace>\<lambda>s. P (cur_thread s) (idle_thread s) \<rbrace> set_thread_state thread x \<lbrace>\<lambda>rv s. P (cur_thread s)  (idle_thread s)\<rbrace>"
   apply (simp add:set_thread_state_def)
   apply (wp set_object_cur_thread_idle_thread dxo_wp_weak | simp)+
-done
+  done
 
 lemma thread_set_cur_thread_idle_thread:
   " \<lbrace>\<lambda>s. P (cur_thread s) (idle_thread s)\<rbrace> thread_set (tcb_fault_update Map.empty) word  \<lbrace>\<lambda>xg s. P (cur_thread s) (idle_thread s)\<rbrace>"
@@ -518,7 +516,7 @@ lemma dcorres_do_async_transfer:
       apply (wp | clarsimp simp:not_idle_thread_def)+
     apply (simp add:gets_the_def gets_def bind_assoc get_def split_def get_ipc_buffer_def tcb_at_def
       exs_valid_def fail_def return_def bind_def assert_opt_def split:cdl_cap.splits)
-    apply (rule_tac x = "(?a,?b)" in bexI)
+    apply (rule_tac x = "(a,b)" for a b in bexI)
     apply (rule conjI|fastforce simp:fail_def return_def split:option.splits)+
     apply (clarsimp split:option.splits simp:fail_def | rule conjI)+
       apply (subst opt_cap_tcb)
@@ -712,52 +710,53 @@ lemma recv_async_ipc_corres:
              (recv_async_ipc thread cap)
              (receive_async_ipc thread cap')"
   apply (clarsimp simp:receive_async_ipc_def invs_def recv_async_ipc_def corres_free_fail split:cap.splits)
+  apply (rename_tac word1 word2 rights)
   apply (rule dcorres_expand_pfx)
   apply (rule_tac Q' = "\<lambda>r. op = s' and ko_at (kernel_object.AsyncEndpoint r) word1 and valid_aep r" in corres_symb_exec_r)
-    apply (rule dcorres_expand_pfx)
-    apply (clarsimp simp:obj_at_def is_aep_def)
-    apply (simp add:gets_def bind_assoc option_select_def)
-    apply (rule dcorres_absorb_get_l)
-    apply (frule get_async_ep_pick,simp)
-    apply (case_tac rv)
-      apply (clarsimp simp:aep_waiting_set_lift valid_state_def cap_object_simps
-        valid_aep_abstract_def none_is_waiting_aep_def)
-      apply (rule corres_guard_imp)
-        apply (rule corres_alternate1)
-        apply (rule corres_dummy_return_l)
-        apply (rule corres_split[OF _ set_thread_state_block_on_async_recv_corres])
-      apply  (rule corres_dummy_set_async_ep,simp)
-      apply (wp|simp)+
-      apply (clarsimp simp:st_tcb_at_def tcb_at_def obj_at_def get_tcb_rev)
-(* WaitingAEP *)
+     apply (rule dcorres_expand_pfx)
+     apply (clarsimp simp:obj_at_def is_aep_def)
+     apply (simp add:gets_def bind_assoc option_select_def)
+     apply (rule dcorres_absorb_get_l)
+     apply (frule get_async_ep_pick,simp)
+     apply (case_tac rv)
+       apply (clarsimp simp:aep_waiting_set_lift valid_state_def cap_object_simps valid_aep_abstract_def
+                            none_is_waiting_aep_def)
+       apply (rule corres_guard_imp)
+         apply (rule corres_alternate1)
+         apply (rule corres_dummy_return_l)
+         apply (rule corres_split[OF _ set_thread_state_block_on_async_recv_corres])
+           apply  (rule corres_dummy_set_async_ep,simp)
+         apply (wp|simp)+
+       apply (clarsimp simp:st_tcb_at_def tcb_at_def obj_at_def get_tcb_rev)
+      (* WaitingAEP *)
       apply (clarsimp simp:aep_waiting_set_lift valid_state_def
-        valid_aep_abstract_def none_is_waiting_aep_def cap_object_simps)
+                           valid_aep_abstract_def none_is_waiting_aep_def cap_object_simps)
       apply (rule conjI)
-        apply (clarsimp simp:neq_Nil_conv)
+       apply (clarsimp simp:neq_Nil_conv)
       apply clarsimp
       apply (rule corres_guard_imp)
         apply (rule corres_dummy_return_l)
         apply (rule corres_split[OF _ set_thread_state_block_on_async_recv_corres])
-      apply  (rule corres_dummy_set_async_ep,simp+)
+          apply  (rule corres_dummy_set_async_ep,simp+)
       apply (fastforce simp:st_tcb_at_def obj_at_def get_tcb_rev)
 
-(* Active AEP list *)
-      apply (clarsimp simp:aep_waiting_set_lift valid_state_def
-        valid_aep_abstract_def none_is_waiting_aep_def cap_object_simps)
-      apply (rule corres_alternate2)
-      apply (rule corres_guard_imp )
-      apply (rule corres_dummy_return_l)
-        apply (rule corres_split[OF corres_dummy_set_async_ep dcorres_do_async_transfer])
-      apply (wp|clarsimp)+
-      apply (clarsimp simp:valid_pspace_def st_tcb_at_tcb_at)
-      apply wp
-      apply (rule_tac Q="\<lambda>r. ko_at (kernel_object.AsyncEndpoint r) word1 and valid_state" in hoare_strengthen_post)
-        apply (wp get_aep_ko | clarsimp)+
-      apply (rule valid_objs_valid_aep_simp)
-        apply (clarsimp simp:valid_objs_valid_aep_simp valid_state_def valid_pspace_def)
-        apply (simp add:obj_at_def)
+     (* Active AEP list *)
+     apply (clarsimp simp:aep_waiting_set_lift valid_state_def
+                          valid_aep_abstract_def none_is_waiting_aep_def cap_object_simps)
+     apply (rule corres_alternate2)
+     apply (rule corres_guard_imp )
+       apply (rule corres_dummy_return_l)
+       apply (rule corres_split[OF corres_dummy_set_async_ep dcorres_do_async_transfer])
+        apply (wp|clarsimp)+
+     apply (clarsimp simp:valid_pspace_def st_tcb_at_tcb_at)
+    apply wp
+     apply (rule_tac Q="\<lambda>r. ko_at (kernel_object.AsyncEndpoint r) word1 and valid_state" in hoare_strengthen_post)
+      apply (wp get_aep_ko | clarsimp)+
+     apply (rule valid_objs_valid_aep_simp)
+      apply (clarsimp simp:valid_objs_valid_aep_simp valid_state_def valid_pspace_def)
+     apply (simp add:obj_at_def)
     apply (clarsimp|wp)+
-done
+  done
 
 lemma send_async_ipc_corres:
   "ep_id = epptr \<Longrightarrow> dcorres dc \<top> (invs and valid_etcbs)
@@ -771,34 +770,35 @@ lemma send_async_ipc_corres:
   apply (rule dcorres_absorb_get_l)
   apply clarsimp
   apply (frule valid_objs_valid_aep_simp[rotated])
-    apply (simp add:valid_state_def valid_pspace_def)
+   apply (simp add:valid_state_def valid_pspace_def)
+  apply (rename_tac async_ep s)
   apply (case_tac async_ep)
-      apply (simp add:gets_def bind_assoc option_select_def)
-      apply (frule get_async_ep_pick,simp)
-      apply (clarsimp simp:aep_waiting_set_lift valid_state_def valid_aep_abstract_def none_is_waiting_aep_def)
-      apply (rule corres_guard_imp,rule corres_dummy_set_async_ep,simp+)
-(* Waiting AEP list *)
-      apply (simp add:gets_def bind_assoc option_select_def)
-      apply (frule get_async_ep_pick,simp)
-      apply (clarsimp simp:aep_waiting_set_lift valid_state_def valid_aep_abstract_def)
-      apply (rule conjI)
-        apply (clarsimp simp: dest!:not_empty_list_not_empty_set)
-      apply (clarsimp simp:neq_Nil_conv)
-      apply (rule corres_guard_imp)
-        apply (rule select_pick_corres)
-          apply (rule corres_update_waiting_aep_do_async_transfer)
-          apply (drule_tac s = "insert y (set ys)" in sym)
-          apply (clarsimp simp:image_def)
-          apply (drule_tac s = "insert y (set ys)" in sym)
-        apply (drule_tac x = y in eqset_imp_iff)
-        apply (clarsimp simp:valid_pspace_def aep_waiting_set_def)
-      apply (clarsimp simp: st_tcb_at_def obj_at_def valid_aep_def split:list.splits)
-(* ActiveAEP *)
-    apply (clarsimp simp:gets_def bind_assoc option_select_def)
+    apply (simp add:gets_def bind_assoc option_select_def)
     apply (frule get_async_ep_pick,simp)
     apply (clarsimp simp:aep_waiting_set_lift valid_state_def valid_aep_abstract_def none_is_waiting_aep_def)
     apply (rule corres_guard_imp,rule corres_dummy_set_async_ep,simp+)
-done
+   (* Waiting AEP list *)
+   apply (simp add:gets_def bind_assoc option_select_def)
+   apply (frule get_async_ep_pick,simp)
+   apply (clarsimp simp:aep_waiting_set_lift valid_state_def valid_aep_abstract_def)
+   apply (rule conjI)
+    apply (clarsimp simp: dest!:not_empty_list_not_empty_set)
+   apply (clarsimp simp:neq_Nil_conv)
+   apply (rule corres_guard_imp)
+     apply (rule select_pick_corres)
+     apply (rule corres_update_waiting_aep_do_async_transfer)
+    apply (drule_tac s = "insert y (set ys)" in sym)
+    apply (clarsimp simp:image_def)
+   apply (drule_tac s = "insert y (set ys)" in sym)
+   apply (drule_tac x = y in eqset_imp_iff)
+   apply (clarsimp simp:valid_pspace_def aep_waiting_set_def)
+   apply (clarsimp simp: st_tcb_at_def obj_at_def valid_aep_def split:list.splits)
+  (* ActiveAEP *)
+  apply (clarsimp simp:gets_def bind_assoc option_select_def)
+  apply (frule get_async_ep_pick,simp)
+  apply (clarsimp simp:aep_waiting_set_lift valid_state_def valid_aep_abstract_def none_is_waiting_aep_def)
+  apply (rule corres_guard_imp,rule corres_dummy_set_async_ep,simp+)
+  done
 
 lemma set_thread_state_block_on_send_corres:
     "dcorres dc \<top>
@@ -840,15 +840,15 @@ lemma corres_setup_caller_cap:
   apply (clarsimp simp:not_idle_thread_def tcb_at_def obj_at_def st_tcb_at_def)
   apply (rule conjI|clarsimp simp:is_tcb_def)+
   apply (drule valid_tcb_objs)
-    apply (erule get_tcb_rev)
-    apply (simp add:valid_tcb_state_def)
-done
+   apply (erule get_tcb_rev)
+  apply (simp add:valid_tcb_state_def)
+  done
 
 lemma seq_alt_when:"(do a \<leftarrow> when c (f \<sqinter> g); h a od) = ((do a\<leftarrow>when c f ; h a od)\<sqinter> (do a\<leftarrow>when c g; h a od))"
-apply (clarsimp simp:when_def)
-apply (subst alternative_bind_distrib)+
-apply (clarsimp simp:alternative_def)
-done
+  apply (clarsimp simp:when_def)
+  apply (subst alternative_bind_distrib)+
+  apply (clarsimp simp:alternative_def)
+  done
 
 lemma evalMonad_mapM:
   assumes as:"evalMonad (mapM f ls) s = Some v"
@@ -942,46 +942,48 @@ lemma dcorres_set_extra_badge:
            (set_extra_badge rcv_buffer w n)"
   apply (clarsimp simp:set_extra_badge_def corrupt_ipc_buffer_def)
   apply (rule dcorres_expand_pfx)
-    apply clarsimp
-    apply (frule lookup_ipc_buffer_SomeB_evalMonad)
-    apply clarsimp
-    apply (rule corres_guard_imp)
+  apply clarsimp
+  apply (frule lookup_ipc_buffer_SomeB_evalMonad)
+  apply clarsimp
+  apply (rule corres_guard_imp)
     apply (rule corres_symb_exec_l)
-      apply (rule_tac F = "rv = Some b" in corres_gen_asm)
-      apply (clarsimp)
-      apply (rule dcorres_store_word_offs_spec)
-      apply (drule_tac x = "buffer_cptr_index + n" and sz = sz in within_page_ipc_buf)
-        apply (simp add:of_nat_add)+
-        apply (simp add:obj_at_def cte_wp_at_cases)
-        apply (drule_tac t = "tcb_ipcframe obj" in sym)
-        apply (fastforce simp:ipc_frame_wp_at_def obj_at_def)
-        apply (simp add:obj_at_def cte_wp_at_cases)
-        apply (drule_tac t = "tcb_ipcframe obj" in sym)
-        apply (fastforce simp:ipc_frame_wp_at_def obj_at_def)
-        apply (simp add:ipc_buffer_wp_at_def obj_at_def)
+       apply (rule_tac F = "rv = Some b" in corres_gen_asm)
+       apply (clarsimp)
+       apply (rule dcorres_store_word_offs_spec)
+       apply (drule_tac x = "buffer_cptr_index + n" and sz = sz in within_page_ipc_buf)
+             apply (simp)+
+           apply (simp add:obj_at_def cte_wp_at_cases)
+           apply (drule_tac t = "tcb_ipcframe obj" in sym)
+           apply (fastforce simp:ipc_frame_wp_at_def obj_at_def)
+          apply (simp add:obj_at_def cte_wp_at_cases)
+          apply (drule_tac t = "tcb_ipcframe obj" in sym)
+          apply (fastforce simp:ipc_frame_wp_at_def obj_at_def)
+         apply (simp add:ipc_buffer_wp_at_def obj_at_def)
         apply (clarsimp simp:msg_max_length_def max_ipc_words_def buffer_cptr_index_def
-          capTransferDataSize_def msgMaxLength_def msgMaxExtraCaps_def msgExtraCapBits_def msg_align_bits)
-        apply (simp add:of_nat_mult)
+                             capTransferDataSize_def msgMaxLength_def msgMaxExtraCaps_def
+                             msgExtraCapBits_def msg_align_bits)
+       apply (simp)
       apply (clarsimp simp:get_ipc_buffer_def gets_the_def exs_valid_def gets_def
-        get_def bind_def return_def assert_opt_def fail_def split:option.splits | rule conjI)+
-      apply (subgoal_tac "s = transform s'")
-      prefer 2
-      apply simp+
-      apply (rule exI)
-      apply (clarsimp simp: obj_at_def, frule(1) valid_etcbs_tcb_etcb)
-      apply (subst opt_cap_tcb)
-        apply (rule get_tcb_rev, simp)
-        apply (clarsimp simp: get_etcb_def)
+                           get_def bind_def return_def assert_opt_def fail_def
+                      split:option.splits | rule conjI)+
+       apply (subgoal_tac "s = transform s'")
+        prefer 2
+        apply simp+
+       apply (rule exI)
+       apply (clarsimp simp: obj_at_def, frule(1) valid_etcbs_tcb_etcb)
+       apply (subst opt_cap_tcb)
+          apply (rule get_tcb_rev, simp)
+         apply (clarsimp simp: get_etcb_def)
         apply (simp add:obj_at_def not_idle_thread_def)+
-    apply (simp split:cdl_cap.splits)
-    apply (wp cdl_get_ipc_buffer_Some)
-    apply (drule lookup_ipc_buffer_SomeB_evalMonad)
-    apply (fastforce simp:cte_wp_at_def)
-  apply (clarsimp simp:tcb_at_def get_tcb_SomeD obj_at_def not_idle_thread_def)+
+      apply (simp split:cdl_cap.splits)
+     apply (wp cdl_get_ipc_buffer_Some)
+           apply (drule lookup_ipc_buffer_SomeB_evalMonad)
+           apply (fastforce simp:cte_wp_at_def)
+          apply (clarsimp simp:tcb_at_def get_tcb_SomeD obj_at_def not_idle_thread_def)+
   apply (clarsimp simp:cte_wp_at_cases obj_at_def)
   apply (drule_tac t = "tcb_ipcframe obj" in sym)
   apply (fastforce simp:ipc_frame_wp_at_def obj_at_def)
-done
+  done
 
 definition
   "dest_of xs \<equiv> case xs of [] \<Rightarrow> None | [r] \<Rightarrow> Some (transform_cslot_ptr r)"
@@ -1007,49 +1009,50 @@ lemma evalMonad_thread_get_eq:
   "evalMonad (thread_get f x) b = (case (get_tcb x b) of None \<Rightarrow> None | Some t \<Rightarrow> Some (f t))"
   apply (simp add:thread_get_def)
   apply (subst evalMonad_compose)
-    apply (simp add:empty_when_fail_simps weak_det_spec_simps)+
-    apply wp
-    apply clarsimp
+     apply (simp add:empty_when_fail_simps weak_det_spec_simps)+
+   apply wp
+   apply clarsimp
   apply (clarsimp simp:gets_the_def gets_def get_def bind_def return_def assert_opt_def)
   apply (case_tac "get_tcb x b")
-    apply (clarsimp simp:return_def fail_def evalMonad_def split:option.splits)+
-done
+   apply (clarsimp simp:return_def fail_def evalMonad_def split:option.splits)+
+  done
 
 lemma evalMonad_lookup_ipc_buffer_wp:
 assumes cte_wp:"\<And>P slot. (\<And>c. P c \<Longrightarrow> \<not> is_untyped_cap c)
   \<Longrightarrow> \<lbrace>cte_wp_at (P and op\<noteq> cap.NullCap) slot\<rbrace> f \<lbrace>\<lambda>r. cte_wp_at P slot\<rbrace>"
-assumes tcb_wp:"\<And>P buf t. \<lbrace>ipc_buffer_wp_at buf t\<rbrace> f \<lbrace>\<lambda>r. ipc_buffer_wp_at buf t \<rbrace>"
+assumes tcb_wp:"\<And>buf t. \<lbrace>ipc_buffer_wp_at buf t\<rbrace> f \<lbrace>\<lambda>r. ipc_buffer_wp_at buf t \<rbrace>"
 shows "\<lbrace>\<lambda>s. evalMonad (lookup_ipc_buffer in_receive x) s = Some (Some buf)\<rbrace> f \<lbrace>\<lambda>rv s. evalMonad (lookup_ipc_buffer in_receive x) s = Some (Some buf)\<rbrace>"
   apply (simp add:valid_def lookup_ipc_buffer_def)
-    apply (subst evalMonad_compose)
-      apply (simp add:empty_when_fail_thread_get weak_det_spec_thread_get)+
-      apply wp
-    apply (clarsimp split:option.split_asm simp:evalMonad_thread_get_eq)
-    apply (frule use_valid[OF _ tcb_wp])
-     apply (clarsimp dest!:get_tcb_SomeD simp:ipc_buffer_wp_at_def obj_at_def)
-     apply (fastforce)
-    apply (clarsimp simp:ipc_buffer_wp_at_def obj_at_def dest!:get_tcb_rev)
-    apply (subst evalMonad_compose)
-      apply (simp add:empty_when_fail_thread_get weak_det_spec_thread_get)+
-      apply wp
-    apply (subst (asm) evalMonad_compose)
-      apply (simp add:empty_when_fail_get_cap weak_det_spec_get_cap)+
-      apply wp
-    apply (clarsimp simp:evalMonad_get_cap split:option.split_asm cap.split_asm)
-    apply (drule caps_of_state_cteD)
-    apply (frule_tac P1 = "op = (cap.ArchObjectCap arch_cap)" in use_valid[OF _ cte_wp])
-       apply (clarsimp simp:is_cap_simps)
-      apply (erule cte_wp_at_weakenE)
-      apply clarsimp
-    apply (clarsimp simp:cte_wp_at_caps_of_state evalMonad_thread_get_eq)
-    apply (subst evalMonad_compose)
-      apply (simp add:empty_when_fail_get_cap weak_det_spec_get_cap)+
-      apply wp
-    apply (simp add:evalMonad_get_cap)
-    apply (case_tac arch_cap)
+  apply (subst evalMonad_compose)
+     apply (simp add:empty_when_fail_thread_get weak_det_spec_thread_get)+
+   apply wp
+  apply (clarsimp split:option.split_asm simp:evalMonad_thread_get_eq)
+  apply (frule use_valid[OF _ tcb_wp])
+   apply (clarsimp dest!:get_tcb_SomeD simp:ipc_buffer_wp_at_def obj_at_def)
+   apply (fastforce)
+  apply (clarsimp simp:ipc_buffer_wp_at_def obj_at_def dest!:get_tcb_rev)
+  apply (subst evalMonad_compose)
+     apply (simp add:empty_when_fail_thread_get weak_det_spec_thread_get)+
+   apply wp
+  apply (subst (asm) evalMonad_compose)
+     apply (simp add:empty_when_fail_get_cap weak_det_spec_get_cap)+
+   apply wp
+  apply (clarsimp simp:evalMonad_get_cap split:option.split_asm cap.split_asm)
+  apply (drule caps_of_state_cteD)
+  apply (rename_tac arch_cap)
+  apply (frule_tac P1 = "op = (cap.ArchObjectCap arch_cap)" in use_valid[OF _ cte_wp])
+    apply (clarsimp simp:is_cap_simps)
+   apply (erule cte_wp_at_weakenE)
+   apply clarsimp
+  apply (clarsimp simp:cte_wp_at_caps_of_state evalMonad_thread_get_eq)
+  apply (subst evalMonad_compose)
+     apply (simp add:empty_when_fail_get_cap weak_det_spec_get_cap)+
+   apply wp
+  apply (simp add:evalMonad_get_cap)
+  apply (case_tac arch_cap)
       apply simp_all
-    apply (clarsimp simp:evalMonad_def return_def split:if_splits)
-done
+  apply (clarsimp simp:evalMonad_def return_def split:if_splits)
+  done
 
 crunch ipc_buffer_wp_at[wp]: update_cdt "ipc_buffer_wp_at buf t"
   (wp: crunch_wps simp: crunch_simps Retype_A.detype_def set_cdt_def ipc_buffer_wp_at_def ignore:clearMemory)
@@ -1065,7 +1068,7 @@ lemma ipc_buffer_wp_set_cap[wp]:
   apply (simp add:get_object_def gets_def get_def bind_def return_def assert_def fail_def valid_def)
   apply (clarsimp split:Structures_A.kernel_object.splits simp:return_def set_object_def fail_def get_def put_def bind_def)
   apply (rule conjI|clarsimp simp:ipc_buffer_wp_at_def obj_at_def)+
-done
+  done
 
 lemma ipc_buffer_wp_at_cap_insert_ext[wp]:
   "\<lbrace>ipc_buffer_wp_at buf t \<rbrace> cap_insert_ext src_parent src_slot dest_slot src_p dest_p \<lbrace>\<lambda>r. ipc_buffer_wp_at buf t\<rbrace>"
@@ -1159,17 +1162,17 @@ next
        apply (rule dcorres_set_extra_badge,simp)
       apply wp[1]
      apply (simp add: store_word_offs_def set_extra_badge_def
-                      not_idle_thread_def ipc_frame_wp_at_def
-                      split_def)
+     not_idle_thread_def ipc_frame_wp_at_def
+     split_def)
      apply (wp evalMonad_lookup_ipc_buffer_wp)
-     apply (erule cte_wp_at_weakenE)
-     apply (simp add:ipc_buffer_wp_at_def)+
-     apply wp
-     apply (wp hoare_vcg_ex_lift valid_irq_node_typ hoare_vcg_ball_lift)[3]
-     apply simp
+         apply (erule cte_wp_at_weakenE)
+         apply (simp add:ipc_buffer_wp_at_def)+
+        apply wp
+       apply (wp hoare_vcg_ex_lift valid_irq_node_typ hoare_vcg_ball_lift)[3]
+    apply simp
    apply (fastforce simp: not_idle_thread_def ipc_frame_wp_at_def ipc_buffer_def)
   apply (subgoal_tac "\<not>(Types_D.is_ep_cap (transform_cap cap) \<and>
-                        (\<exists>z. ep' = Some z \<and> z = cap_object (transform_cap cap)))")
+                       (\<exists>z. ep' = Some z \<and> z = cap_object (transform_cap cap)))")
    prefer 2
    apply (clarsimp simp: is_cap_simps cap_type_simps split: cdl_cap.splits)
   apply (simp del: de_Morgan_conj split del: split_if)
@@ -1218,40 +1221,36 @@ next
            apply wp[1]
           apply (simp add: split_def not_idle_thread_def)
           apply (wp evalMonad_lookup_ipc_buffer_wp )
-          apply (rule hoare_pre)
-          apply (rule cap_insert_weak_cte_wp_at_not_null)
-           apply clarsimp+
-          apply (wp cap_insert_idle valid_irq_node_typ
-                    hoare_vcg_ball_lift cap_insert_cte_wp_at)
-          apply (rule validE_validE_R)
+            apply (rule hoare_pre)
+             apply (rule cap_insert_weak_cte_wp_at_not_null)
+             apply clarsimp+
+           apply (wp cap_insert_idle valid_irq_node_typ hoare_vcg_ball_lift cap_insert_cte_wp_at)
+        apply (rule validE_validE_R)
         apply (wp whenE_throwError_wp)[1]
        apply wp
-      apply (clarsimp)
-      apply (rule hoareE_TrueI)
-     apply (rule validE_R_validE)
-     apply (simp add:conj_ac ball_conj_distrib
-          split del:if_splits
-          del:split_paired_Ex split_paired_All split_paired_Ball split_paired_Bex
-          split_paired_all)
-     apply (rule_tac Q' ="\<lambda>cap' s. (cap'\<noteq> cap.NullCap \<longrightarrow>(
-          (cte_wp_at (is_derived (cdt s) (slot_ptr, slot_idx) cap') (slot_ptr, slot_idx) s)
-          \<and> pspace_aligned s \<and> pspace_distinct s \<and> valid_objs s \<and> valid_idle s
-          \<and> valid_mdb s \<and> ?QM s cap'))"
-          in hoare_post_imp_R)
-        prefer 2
-          apply (subgoal_tac "r\<noteq> cap.NullCap \<longrightarrow> cte_wp_at (op \<noteq> cap.NullCap) (slot_ptr, slot_idx) s")
-           apply (intro impI)
-           apply simp
-           apply (elim conjE)
-           apply (erule conjE)
-           apply simp
-          apply (clarsimp simp:cte_wp_at_caps_of_state)
-        apply (subst imp_conjR)
-         apply (rule hoare_vcg_conj_liftE_R)
-         apply (rule derive_cap_is_derived)
-        apply (rule derive_cap_is_derived_foo)
-      apply wp
-      apply (simp split del: split_if)
+        apply (clarsimp)
+       apply (rule hoareE_TrueI)
+      apply (rule validE_R_validE)
+      apply (simp add:conj_comms ball_conj_distrib split del:split_if)
+      apply (rule_tac Q' ="\<lambda>cap' s. (cap'\<noteq> cap.NullCap \<longrightarrow>(
+       (cte_wp_at (is_derived (cdt s) (slot_ptr, slot_idx) cap') (slot_ptr, slot_idx) s)
+       \<and> pspace_aligned s \<and> pspace_distinct s \<and> valid_objs s \<and> valid_idle s
+       \<and> valid_mdb s \<and> QM s cap'))" for QM
+       in hoare_post_imp_R)
+       prefer 2
+       apply (subgoal_tac "r\<noteq> cap.NullCap \<longrightarrow> cte_wp_at (op \<noteq> cap.NullCap) (slot_ptr, slot_idx) s")
+        apply (intro impI)
+        apply simp
+        apply (elim conjE)
+        apply (erule conjE)
+        apply simp
+       apply (clarsimp simp:cte_wp_at_caps_of_state)
+      apply (subst imp_conjR)
+      apply (rule hoare_vcg_conj_liftE_R)
+       apply (rule derive_cap_is_derived)
+      apply (rule derive_cap_is_derived_foo)
+     apply wp
+   apply (simp split del: split_if)
   apply (clarsimp split del: split_if cong: conj_cong)
   apply (rule conjI)
    apply (clarsimp simp: valid_mdb_def mdb_cte_at_def cte_wp_at_caps_of_state)
@@ -1266,14 +1265,11 @@ next
   apply (clarsimp split del: split_if)
   apply (clarsimp simp: cte_wp_at_caps_of_state not_idle_thread_def)
   apply (rule conjI)
-   apply (clarsimp simp: not_idle_thread_def valid_idle_def st_tcb_at_def
-                         obj_at_def is_cap_table_def)
+   apply (clarsimp simp: not_idle_thread_def valid_idle_def st_tcb_at_def obj_at_def is_cap_table_def)
   apply (rule conjI)
-   apply (clarsimp simp: not_idle_thread_def valid_idle_def st_tcb_at_def
-                         obj_at_def is_cap_table_def)
+   apply (clarsimp simp: not_idle_thread_def valid_idle_def st_tcb_at_def obj_at_def is_cap_table_def)
   apply (rule conjI)
-   apply (clarsimp simp: not_idle_thread_def valid_idle_def st_tcb_at_def
-                         obj_at_def is_cap_table_def)
+   apply (clarsimp simp: not_idle_thread_def valid_idle_def st_tcb_at_def obj_at_def is_cap_table_def)
   apply (rule conjI)
    apply (rule rev_mp[OF _ real_cte_tcb_valid])
    apply simp
@@ -1360,9 +1356,11 @@ lemma get_receive_slot_dcorres:
         apply (simp add:tcb_slot_pending_ipc_neq[symmetric])
         apply (case_tac "tcb_ipcframe obj")
           apply (simp_all add:dest_of_def)
+        apply (rename_tac arch_cap)
         apply (case_tac "arch_cap")
           apply (simp_all add:dest_of_def)
         apply (clarsimp simp:transform_cap_def)
+      apply (rename_tac word set vm opt)
       apply (drule_tac x = word in spec)
       apply (drule_tac x = "set" in spec)
       apply (clarsimp simp:cte_wp_at_cases dest!:get_tcb_SomeD)
@@ -1451,6 +1449,7 @@ lemma dcorres_dummy_corrupt_ipc_buffer:
       apply simp_all
       apply (rule corres_guard_imp[OF dummy_corrupt_tcb_intent_corres]
         ,(clarsimp simp:not_idle_thread_def tcb_at_def)+)+
+    apply (rename_tac arch_cap etcb)
     apply (case_tac "arch_cap")
       apply simp_all
       apply (rule corres_guard_imp[OF dummy_corrupt_tcb_intent_corres]
@@ -1609,7 +1608,7 @@ lemma dcorres_copy_mrs':
            apply (rule corres_split[OF _ set_registers_corres])
              apply (rule corres_symb_exec_r)+
           apply (rule corres_trivial[OF corres_free_return])
-        apply (wp|clarsimp simp:option.cases split:option.splits)+
+        apply (wp|clarsimp split:option.splits)+
       apply (clarsimp simp:get_ipc_buffer_def gets_the_def exs_valid_def gets_def
         get_def bind_def return_def assert_opt_def fail_def split:option.splits | rule conjI)+
       apply (frule(1) tcb_at_is_etcb_at, clarsimp simp: is_etcb_at_def, fold get_etcb_def)
@@ -1644,7 +1643,10 @@ lemma dcorres_copy_mrs':
 done
 
 
-lemma opt_cap_valid_etcbs: "\<lbrakk>tcb_at ptr s; valid_etcbs s; ptr \<noteq> idle_thread s; sl \<in> tcb_abstract_slots \<or> sl = tcb_pending_op_slot\<rbrakk> \<Longrightarrow> \<exists>cap. opt_cap (ptr, sl) (transform s) = Some cap"
+lemma opt_cap_valid_etcbs:
+  "\<lbrakk>tcb_at ptr s; valid_etcbs s; ptr \<noteq> idle_thread s; 
+    sl \<in> tcb_abstract_slots \<or> sl = tcb_pending_op_slot\<rbrakk> \<Longrightarrow> 
+  \<exists>cap. opt_cap (ptr, sl) (transform s) = Some cap"
   apply (clarsimp simp: tcb_at_def)
   apply (frule(1) valid_etcbs_get_tcb_get_etcb)
   apply (clarsimp simp: opt_cap_tcb)
@@ -1741,6 +1743,7 @@ shows "\<lbrace>\<lambda>s. evalMonad (lookup_ipc_buffer in_receive x) s = Some 
         apply (fastforce simp:evalMonad_def return_def)
       apply (clarsimp simp:evalMonad_get_cap split:option.split_asm cap.split_asm)
     apply (drule caps_of_state_cteD)
+    apply (rename_tac arch_cap)
     apply (frule_tac P1 = "op = (cap.ArchObjectCap arch_cap)" in use_valid[OF _ cte_wp])
       apply (erule cte_wp_at_weakenE)
       apply clarsimp
@@ -1757,19 +1760,20 @@ done
 lemma ipc_buffer_wp_at_copy_mrs[wp]:
   "\<lbrace>ipc_buffer_wp_at buf t \<rbrace> copy_mrs send rva recv rv (mi_length (data_to_message_info (tcb_context obj' msg_info_register)))
             \<lbrace>\<lambda>r. ipc_buffer_wp_at buf t\<rbrace>"
-  apply (simp add:copy_mrs_def)
-    apply (wp|wpc)+
+  unfolding copy_mrs_def
+  apply (wp|wpc)+
     apply (wp mapM_wp)
       apply (simp add:store_word_offs_def ipc_buffer_wp_at_def)
       apply wp
      prefer 2
      apply fastforce
     apply (clarsimp simp:ipc_buffer_wp_at_def)
-  apply (rule_tac Q="\<lambda>rv. ipc_buffer_wp_at buf t" in hoare_strengthen_post)
+   apply (rule_tac Q="\<lambda>rv. ipc_buffer_wp_at buf t" in hoare_strengthen_post)
     apply (wp mapM_wp)
-   apply fastforce
-  apply (clarsimp)
-done
+    apply fastforce
+   apply (clarsimp)
+  apply wp
+  done
 
 lemma copy_mrs_valid_irq_node:
   "\<lbrace>valid_irq_node\<rbrace> copy_mrs a b c d e
@@ -2207,6 +2211,7 @@ lemma recv_sync_ipc_corres:
         apply (simp add:valid_state_def)
         apply simp
       apply (clarsimp simp:option_select_def valid_ep_abstract_def)
+      apply (rename_tac list)
       apply (drule_tac s = "set list" in sym)
       apply (rule conjI, clarsimp dest!: not_empty_list_not_empty_set)
       apply (clarsimp simp:neq_Nil_conv)
@@ -2386,6 +2391,7 @@ lemma send_sync_ipc_corres:
   apply (clarsimp simp:valid_ep_abstract_def split del:if_splits)
   apply (subst option_select_not_empty)
    apply (clarsimp simp: dest!: not_empty_list_not_empty_set)
+  apply (rename_tac list)
   apply (drule_tac s = "set list" in sym)
   apply (clarsimp simp: bind_assoc neq_Nil_conv)
   apply (rule_tac P1="\<top>" and P'="op = s'a" and x1 = y
@@ -2451,11 +2457,6 @@ lemma send_sync_ipc_corres:
    apply clarsimp+
   apply fastforce
 done
-
-lemma dcorres_injection_handler_rhs:
-  "dcorres (dc \<oplus> r) P P' f g
-     \<Longrightarrow> dcorres (dc \<oplus> r) P P' f (injection_handler h g)"
-  by (rule KHeap_DR.dcorres_injection_handler_rhs)
 
 lemma not_idle_thread_resolve_address_bits:
   "\<lbrace>valid_global_refs and valid_objs and valid_idle and valid_irq_node and ko_at (TCB obj) thread\<rbrace>

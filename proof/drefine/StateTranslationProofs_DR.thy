@@ -78,7 +78,7 @@ done
 
 lemma msg_registers_lt_msg_max_length [simp]:
   "length msg_registers < msg_max_length"
-  by (simp add: msg_registers_def msgRegisters_unfold msg_max_length_def )
+  by (simp add: msgRegisters_unfold msg_max_length_def)
 
 lemma get_tcb_mrs_update_state :
   "get_tcb_mrs ms (tcb_state_update f tcb) = get_tcb_mrs ms tcb"
@@ -171,27 +171,27 @@ lemmas caps_of_state_upds = caps_of_state_update_tcb caps_of_state_update_same_c
 
 lemma transform_cdt_kheap_update [simp]:
   "transform_cdt (kheap_update f s) = transform_cdt s"
-  by (clarsimp simp: transform_cdt_def cong: if_cong)
+  by (clarsimp simp: transform_cdt_def)
 
 lemma transform_cdt_update_machine [simp]:
   "transform_cdt (update_machine ms s) = transform_cdt s "
-  by (clarsimp simp: transform_cdt_def cong: if_cong)
+  by (clarsimp simp: transform_cdt_def)
 
 lemma transform_cdt_update_original_cap [simp]:
   "transform_cdt (b\<lparr>is_original_cap := x\<rparr>) = transform_cdt b"
-  by (clarsimp simp: transform_cdt_def cong: if_cong)
+  by (clarsimp simp: transform_cdt_def)
 
 lemma transform_asid_table_kheap_update [simp]:
   "transform_asid_table (kheap_update f s) = transform_asid_table s"
-  by (clarsimp simp: transform_asid_table_def cong: if_cong)
+  by (clarsimp simp: transform_asid_table_def)
 
 lemma transform_asid_table_update_machine [simp]:
   "transform_asid_table (update_machine ms s) = transform_asid_table s "
-  by (clarsimp simp: transform_asid_table_def cong: if_cong)
+  by (clarsimp simp: transform_asid_table_def)
 
 lemma transform_asid_table_update_original_cap [simp]:
   "transform_asid_table (b\<lparr>is_original_cap := x\<rparr>) = transform_asid_table b"
-  by (clarsimp simp: transform_asid_table_def cong: if_cong)
+  by (clarsimp simp: transform_asid_table_def)
 
 lemma transform_objects_update_kheap_same_caps:
   "\<lbrakk> kh ptr = Some ko; caps_of_object ko' = caps_of_object ko; a_type ko' = a_type ko\<rbrakk> \<Longrightarrow>

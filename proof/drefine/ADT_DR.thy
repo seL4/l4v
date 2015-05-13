@@ -132,7 +132,7 @@ lemma dwp_thread_set_idle:
   apply (wp)
     apply (rule_tac Q = "\<lambda>s. transform s = cs \<and> thread = idle_thread s"
       in hoare_vcg_precond_imp)
-    apply (clarsimp simp:valid_def mem_def set_object_def
+    apply (clarsimp simp:valid_def set_object_def
       put_def get_def return_def bind_def)
     apply (clarsimp simp:transform_def transform_current_thread_def transform_objects_def)
   apply (assumption)
