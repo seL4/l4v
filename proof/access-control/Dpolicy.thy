@@ -310,7 +310,8 @@ lemma caps_of_state_transform_opt_cap_rev:
     apply (clarsimp simp:valid_obj_def valid_cs_def valid_cs_size_def)
     apply (clarsimp simp:transform_cnode_contents_def)
     apply (rule_tac x=z in exI, simp)
-    apply (rule_tac x="the (nat_to_bl nata b)" in exI)
+    apply (rename_tac n list cap')
+    apply (rule_tac x="the (nat_to_bl n b)" in exI)
     apply (clarsimp simp:option_map_join_def split:option.splits)
     apply (rule nat_to_bl_to_bin, simp+)
    apply (drule valid_etcbs_tcb_etcb [rotated], fastforce)
@@ -323,9 +324,9 @@ lemma caps_of_state_transform_opt_cap_rev:
               simp, simp add:tcb_cap_cases_def)+
    apply (rule exI, rule conjI, simp)
    apply (rule_tac x="tcb_cnode_index 0" in exI)
-   apply (subst bl_to_bin_tcb_cnode_index_le0)
-    apply simp+
-  apply (case_tac arch_kernel_obj, simp_all)
+   apply (subst bl_to_bin_tcb_cnode_index_le0; simp)
+  apply (rename_tac arch_kernel_obj)
+  apply (case_tac arch_kernel_obj; simp)
     apply (clarsimp simp:transform_asid_pool_contents_def unat_map_def split:split_if_asm)
     apply (clarsimp simp:is_real_cap_def is_null_cap_def transform_asid_pool_entry_def
                     split:option.splits)
@@ -370,9 +371,9 @@ lemma opt_cap_None_word_bits:
      apply simp
     apply (rule power_strict_increasing, simp+)
    apply (frule valid_etcbs_tcb_etcb[rotated], fastforce)
-   apply (clarsimp simp:transform_tcb_def tcb_slot_defs WordSetup.word_bits_def
-                        tcb_pending_op_slot_def)
-  apply (case_tac arch_kernel_obj, simp_all)
+   apply (clarsimp simp:transform_tcb_def tcb_slot_defs WordSetup.word_bits_def)
+  apply (rename_tac arch_kernel_obj)
+  apply (case_tac arch_kernel_obj; simp)
     apply (simp add:transform_asid_pool_contents_def transform_page_table_contents_def
                     transform_page_directory_contents_def unat_map_def WordSetup.word_bits_def)+
   done
@@ -382,25 +383,25 @@ lemma opt_cap_Some_rev:
   apply (rule transform_cslot_pre_onto)
   apply (subst not_le[symmetric])
   apply (rule notI)
-  apply (drule_tac ptr=ptr in opt_cap_None_word_bits)
-   apply simp+
+  apply (drule_tac ptr=ptr in opt_cap_None_word_bits; simp)
   done
 
 lemma obj_refs_transform:
   "\<not> (\<exists>x sz i. cap = cap.UntypedCap x sz i) \<Longrightarrow> obj_refs cap = cdl_obj_refs (transform_cap cap)"
-  apply (case_tac cap, clarsimp+)
-  apply (case_tac arch_cap, clarsimp+)
+  apply (case_tac cap; clarsimp)
+  apply (rename_tac arch_cap)
+  apply (case_tac arch_cap; clarsimp)
   done
 
 lemma untyped_range_transform:
   "(\<exists>x sz i. cap = cap.UntypedCap x sz i) \<Longrightarrow> untyped_range cap = cdl_obj_refs (transform_cap cap)"
-  apply (case_tac cap, clarsimp+)
-  done
+  by auto
 
 lemma cap_auth_conferred_transform:
   "cap_auth_conferred cap = cdl_cap_auth_conferred (transform_cap cap)"
-  apply (case_tac cap, (clarsimp simp:cap_auth_conferred_def cdl_cap_auth_conferred_def)+)
-  apply (case_tac arch_cap, (clarsimp simp:is_page_cap_def)+)
+  apply (case_tac cap; clarsimp simp:cap_auth_conferred_def cdl_cap_auth_conferred_def)
+  apply (rename_tac arch_cap)
+  apply (case_tac arch_cap; clarsimp simp:is_page_cap_def)
   done
 
 lemma thread_states_transform:
@@ -414,8 +415,7 @@ lemma thread_states_transform:
   apply clarsimp
   apply (rule_tac cap="infer_tcb_pending_op oref (tcb_state a)" in csta_caps[where ptr="(oref, 5)"
                           and auth=auth and oref=oref' and s="transform s", simplified])
-    apply (rule opt_cap_tcb[where sl=5, unfolded tcb_slot_defs tcb_pending_op_slot_def,
-                                                                 simplified])
+    apply (rule opt_cap_tcb[where sl=5, unfolded tcb_slot_defs, simplified])
       apply simp
      apply simp
     apply (rule notI, drule invs_valid_idle, simp add:valid_idle_def st_tcb_def2)
@@ -439,11 +439,14 @@ lemma thread_state_cap_transform_tcb:
                              split: split_if_asm)
     apply (clarsimp simp:transform_cnode_contents_def)
     apply (case_tac z, simp_all add:is_thread_state_cap_def split:split_if_asm)
-    apply (case_tac arch_cap, simp_all)
+    apply (rename_tac arch_cap)
+    apply (case_tac arch_cap; simp)
    apply (clarsimp simp:transform_cnode_contents_def)
    apply (case_tac z, simp_all add:is_thread_state_cap_def split:split_if_asm)
-   apply (case_tac arch_cap, simp_all)
-  apply (case_tac arch_kernel_obj, simp_all)
+   apply (rename_tac arch_cap)
+   apply (case_tac arch_cap; simp)
+  apply (rename_tac arch_kernel_obj)
+  apply (case_tac arch_kernel_obj; simp)
     apply (clarsimp simp:transform_asid_pool_contents_def unat_map_def transform_asid_pool_entry_def
                     split:split_if_asm option.splits)
    apply (clarsimp simp:transform_page_table_contents_def unat_map_def transform_pte_def
@@ -462,8 +465,9 @@ lemma thread_states_transform_rev:
   apply (frule valid_etcbs_get_tcb_get_etcb[rotated], fastforce)
   apply (frule_tac sl=b in opt_cap_tcb, assumption, simp)
   apply (clarsimp split:split_if_asm)
-   apply (case_tac "aa tcb", simp_all add:is_thread_state_cap_def split:split_if_asm)
-   apply (case_tac "arch_cap", simp_all split:split_if_asm)
+   apply (case_tac "aa tcb"; simp add:is_thread_state_cap_def split:split_if_asm)
+   apply (rename_tac arch_cap)
+   apply (case_tac "arch_cap"; simp split:split_if_asm)
   apply (case_tac "tcb_state tcb", auto simp:infer_tcb_pending_op_def cdl_cap_auth_conferred_def)
   done
 
@@ -471,7 +475,7 @@ lemma idle_thread_null_cap:
   "\<lbrakk> invs s; caps_of_state s ptr = Some cap; fst ptr = idle_thread s \<rbrakk> \<Longrightarrow> cap = cap.NullCap"
   apply (rule_tac s=s and v="snd ptr" in valid_idle_has_null_cap,
                                     (simp add:invs_def valid_state_def)+)
-  apply (drule_tac s="fst ?x" in sym, simp)
+  apply (drule_tac s="fst x" for x in sym, simp)
   done
 
 lemma idle_thread_no_authority:
@@ -506,15 +510,13 @@ lemma opt_cap_pt_Some':
 lemma pte_cdl_obj_refs:
   "\<lbrakk> pte_ref pte = Some (a, b, c); ptr \<in> ptr_range a b \<rbrakk> \<Longrightarrow>
      ptr \<in> cdl_obj_refs (transform_pte pte)"
-  apply (case_tac pte)
-    apply (simp_all add:pte_ref_def transform_pte_def)
+  apply (case_tac pte; simp add: pte_ref_def transform_pte_def)
   done
 
 lemma pte_cdl_cap_auth_conferred:
   "\<lbrakk> pte_ref pte = Some (a, b, c); auth \<in> c \<rbrakk> \<Longrightarrow>
      auth \<in> cdl_cap_auth_conferred (transform_pte pte)"
-  apply (case_tac pte)
-    apply (simp_all add:pte_ref_def transform_pte_def cdl_cap_auth_conferred_def)
+  apply (case_tac pte; simp add: pte_ref_def transform_pte_def cdl_cap_auth_conferred_def)
   done
 
 lemma opt_cap_pd_Some':
@@ -532,15 +534,13 @@ lemma opt_cap_pd_Some':
 lemma pde_cdl_obj_refs:
   "\<lbrakk> pde_ref2 pde = Some (a, b, c); ptr \<in> ptr_range a b \<rbrakk> \<Longrightarrow>
      ptr \<in> cdl_obj_refs (transform_pde pde)"
-  apply (case_tac pde)
-     apply (simp_all add:pde_ref2_def transform_pde_def ptr_range_def)
+  apply (case_tac pde; simp add: pde_ref2_def transform_pde_def ptr_range_def)
   done
 
 lemma pde_cdl_cap_auth_conferred:
   "\<lbrakk> pde_ref2 pde = Some (a, b, c); auth \<in> c \<rbrakk> \<Longrightarrow>
      auth \<in> cdl_cap_auth_conferred (transform_pde pde)"
-  apply (case_tac pde)
-     apply (simp_all add:pde_ref2_def transform_pde_def cdl_cap_auth_conferred_def)
+  apply (case_tac pde; simp add: pde_ref2_def transform_pde_def cdl_cap_auth_conferred_def)
   done
 
 lemma state_vrefs_transform:
@@ -548,7 +548,8 @@ lemma state_vrefs_transform:
      (ptr, auth, ptr') \<in> cdl_state_objs_to_policy (transform s)"
   apply (simp add:state_vrefs_def, case_tac "kheap s ptr", simp+)
   apply (case_tac a, simp_all add:vs_refs_no_global_pts_def)
-  apply (case_tac arch_kernel_obj, simp_all add:vs_refs_no_global_pts_def)
+  apply (rename_tac arch_kernel_obj)
+  apply (case_tac arch_kernel_obj; simp add: vs_refs_no_global_pts_def)
     apply (clarsimp simp:graph_of_def)
     apply (subst fst')
     apply (rule csta_caps)
@@ -620,9 +621,11 @@ lemma state_vrefs_transform_rev:
    apply (frule valid_etcbs_tcb_etcb [rotated], fastforce)
    apply (clarsimp simp:transform_tcb_def is_real_cap_transform is_real_cap_infer_tcb_pending_op
                    split:split_if_asm)
+  apply (rename_tac arch_kernel_obj)
   apply (case_tac arch_kernel_obj, simp_all add:vs_refs_no_global_pts_def graph_of_def)
     apply (clarsimp simp:transform_asid_pool_contents_def unat_map_def split:split_if_asm)
     apply (rule exI)
+    apply (rename_tac "fun")
     apply (case_tac "fun (of_nat b)")
      apply (clarsimp simp:transform_asid_pool_entry_def)
     apply (rule_tac x="(of_nat b, ptr')" in image_eqI)
@@ -677,8 +680,9 @@ lemma state_objs_transform:
           apply simp
          apply fastforce
         apply (simp add:idle_thread_no_authority)
-       apply (case_tac cap, simp+)
-       apply (case_tac arch_cap, simp+)
+       apply (case_tac cap; simp)
+       apply (rename_tac arch_cap)
+       apply (case_tac arch_cap; simp)
       apply (simp add:cap_auth_conferred_transform)
      apply (simp add:fst_transform_cslot_ptr)
      apply (rule_tac ptr="transform_cslot_ptr ptr" and auth=Control and oref=oref and
@@ -755,8 +759,9 @@ lemma state_vrefs_asidpool_control:
   apply (clarsimp simp:state_vrefs_def )
   apply (cases "kheap s poolptr")
    apply clarsimp
-  apply (simp add: vs_refs_no_global_pts_def, case_tac a, clarsimp+)
-  apply (case_tac arch_kernel_obj, clarsimp+)
+  apply (simp add: vs_refs_no_global_pts_def, case_tac a; clarsimp)
+  apply (rename_tac arch_kernel_obj)
+  apply (case_tac arch_kernel_obj; clarsimp)
   done
 
 lemma idle_thread_no_asid:
@@ -793,9 +798,10 @@ lemma transform_asid_low_bits_of:
 
 lemma cap_asid'_transform:
   "\<lbrakk> invs s; caps_of_state s ptr = Some cap \<rbrakk> \<Longrightarrow> cap_asid' cap = cdl_cap_asid' (transform_cap cap)"
-  apply (case_tac cap, simp_all)
+  apply (case_tac cap; simp)
   apply (drule caps_of_state_valid, simp)
-  apply (case_tac arch_cap, simp_all)
+  apply (rename_tac arch_cap)
+  apply (case_tac arch_cap; simp)
      apply (clarsimp simp:transform_asid_high_bits_of' valid_cap_def split:option.splits)+
   done
 
@@ -815,6 +821,7 @@ lemma state_asids_transform:
    apply (frule state_vrefs_asidpool_control, simp)
    apply (simp add:state_vrefs_def, case_tac "kheap s poolptr", simp_all)
    apply (case_tac aa, simp_all add:vs_refs_no_global_pts_def)
+   apply (rename_tac arch_kernel_obj)
    apply (case_tac arch_kernel_obj, simp_all add:graph_of_def, safe)
    apply (rule_tac pdcap="cdl_cap.PageDirectoryCap b Fake None" in csata_asid_lookup)
        apply (simp add:asid_table_entry_transform)
@@ -853,7 +860,8 @@ lemma opt_cap_Some_asid_real:
    apply (frule valid_etcbs_tcb_etcb[rotated], fastforce)
    apply (clarsimp simp:transform_tcb_def tcb_slot_defs is_real_cap_transform
                         is_real_cap_infer_tcb_pending_op split:split_if_asm)
-  apply (case_tac arch_kernel_obj, simp_all)
+  apply (rename_tac arch_kernel_obj)
+  apply (case_tac arch_kernel_obj; simp)
     apply (clarsimp simp:transform_asid_pool_contents_def unat_map_def split:split_if_asm)
     apply (clarsimp simp:transform_asid_pool_entry_def split:option.splits)
    apply (clarsimp simp:transform_page_table_contents_def unat_map_def split:split_if_asm)
@@ -888,7 +896,8 @@ lemma state_vrefs_asid_pool_transform_rev:
    apply fastforce
   apply (case_tac a, simp_all add:transform_object_def object_slots_def)
     apply (clarsimp simp:obj_at_def a_type_def split:split_if_asm)+
-  apply (case_tac arch_kernel_obj, simp_all add:vs_refs_no_global_pts_def graph_of_def)
+  apply (rename_tac arch_kernel_obj)
+  apply (case_tac arch_kernel_obj; simp add:vs_refs_no_global_pts_def graph_of_def)
   apply (simp add:transform_asid_pool_contents_def unat_map_def transform_asid_low_bits_of
               split:split_if_asm)
   apply (rule_tac x="(ucast asid, cap_object pdcap)" in image_eqI)
@@ -937,8 +946,9 @@ lemma idle_thread_no_irqs:
 
 lemma cap_irqs_controlled_transform:
   "cap_irqs_controlled cap = cdl_cap_irqs_controlled (transform_cap cap)"
-  apply (case_tac cap, simp_all)
-  apply (case_tac arch_cap, simp_all)
+  apply (case_tac cap; simp)
+  apply (rename_tac arch_cap)
+  apply (case_tac arch_cap; simp)
   done
 
 lemma state_irqs_transform:
@@ -1005,7 +1015,8 @@ proof -
      apply (case_tac z, simp_all add: nat_split_conv_to_if
                                split: split_if_asm)
       prefer 2
-      apply (case_tac arch_kernel_obj, simp_all)
+      apply (rename_tac arch_kernel_obj)
+      apply (case_tac arch_kernel_obj; simp)
      apply (drule valid_etcbs_tcb_etcb [rotated], fastforce)
      apply clarsimp
      apply (rule domains_of_state_aux.intros, assumption)
