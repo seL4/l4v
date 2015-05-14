@@ -677,7 +677,7 @@ lemma cap_rights_reset_cap_asid:
   "reset_cap_asid cap = reset_cap_asid cap'
  \<Longrightarrow> cap_rights cap = cap_rights cap'"
   apply (clarsimp simp: cap_rights_def reset_cap_asid_def)
-  apply (case_tac cap, (case_tac cap', simp_all)+)
+  apply (case_tac cap; (case_tac cap'; simp))
   done
 
 (* Lemmas about valid_src_cap *)

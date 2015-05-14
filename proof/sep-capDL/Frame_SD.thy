@@ -90,10 +90,7 @@ lemma disjoint_union_diff:
 lemma intent_reset_update_slots_single:
   "intent_reset (update_slots (object_slots obj(slot \<mapsto> cap)) obj)
   = update_slots (object_slots (intent_reset obj)(slot \<mapsto> cap)) (intent_reset obj)"
-  apply (clarsimp simp:intent_reset_def update_slots_def split:cdl_object.splits)
-  apply (case_tac cdl_tcb_ext)
-  apply (auto simp:object_slots_def)
-  done
+  by simp
 
 lemma object_clean_update_slots_single:
   "object_clean (update_slots (object_slots obj(slot \<mapsto> cap)) obj)
@@ -266,14 +263,15 @@ lemma sep_map_f_tcb_at:
   apply (clarsimp simp:sep_map_f_conj
     object_project_def is_tcb_def
     split:option.splits cdl_object.splits)
+  apply (rename_tac cdl_tcb z)
   apply (case_tac z,
          simp_all add: object_wipe_slots_def object_clean_def asid_reset_def
                        update_slots_def intent_reset_def)
   apply (simp add:object_at_def opt_object_def object_slots_def object_wipe_slots_def
                   update_slots_def)
-  apply (case_tac cdl_tcb_ext)
-  apply clarsimp
-  apply (case_tac cdl_tcb_exta)
+  apply (rename_tac cdl_tcb')
+  apply (case_tac cdl_tcb)
+  apply (case_tac cdl_tcb')
   apply clarsimp
   done
 
@@ -353,14 +351,15 @@ lemma set_cdl_tcb_field_wp:
    apply simp
   apply (clarsimp simp:object_at_def)
   apply (wp|wpc|simp)+
-        apply (rule_tac P =
-          "object_clean (object_wipe_slots (Tcb cdl_tcb_ext)) = object_clean (object_wipe_slots (Tcb tcb))"
-          in hoare_gen_asm)
-         apply (rule_tac obj_p = "Tcb tcb" in set_object_cdl_field_wp[OF slots_simp  ])
-            apply (simp add:object_type_simps object_wipe_slots_object_clean)+
-       apply (drule_tac tcb = cdl_tcb_ext in fields_cong)
-       apply simp
-     apply wp
+          apply (rename_tac cdl_tcb)
+          apply (rule_tac P =
+                 "object_clean (object_wipe_slots (Tcb cdl_tcb)) = object_clean (object_wipe_slots (Tcb tcb))"
+                 in hoare_gen_asm)
+          apply (rule_tac obj_p = "Tcb tcb" in set_object_cdl_field_wp[OF slots_simp  ])
+             apply (simp add:object_type_simps object_wipe_slots_object_clean)+
+          apply (drule_tac tcb = cdl_tcb in fields_cong)
+          apply simp
+         apply wp
   apply (clarsimp simp:opt_object_def object_at_def)
   done
 
