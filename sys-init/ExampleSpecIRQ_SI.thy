@@ -561,7 +561,7 @@ lemma well_formed_cap_example [simp]:
   apply (clarsimp simp: well_formed_cap_def example_spec_def
                      obj_defs new_cap_map_def new_irq_node_def new_cnode_def
                      object_slots_def empty_cap_map_def guard_bits_def
-                     tcb_slot_defs tcb_pending_op_slot_def vm_read_write_def
+                     tcb_slot_defs vm_read_write_def
               split: cdl_cap.splits split_if_asm)
   done
 
@@ -841,7 +841,6 @@ lemma well_formed_irq_table_example_spec:
    apply (clarsimp simp: example_irq_node_def)
    apply (insert ucast_8_32_inj)
    apply (clarsimp simp: inj_on_def)
-   find_theorems irq_nodes example_spec
   apply (clarsimp simp: irq_nodes_example_spec)
   apply (rule subset_antisym)
    apply (clarsimp simp: example_spec_def)
@@ -898,7 +897,7 @@ lemma well_formed_example:
   apply (auto simp: example_spec_def object_size_bits_def object_default_state_def2
                     pd_size_def word_bits_def empty_cnode_def is_cnode_def
                     object_slots_def empty_cap_map_def tcb_slot_defs
-                    default_tcb_def obj_defs tcb_pending_op_slot_def
+                    default_tcb_def obj_defs
                     small_frame_size_def small_section_size_def pt_size_def
                     new_cnode_def new_cap_map_def empty_irq_node_def
                     new_irq_node_def

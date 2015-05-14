@@ -180,7 +180,7 @@ lemma irqhandler_cap_at_example_spec [simp]:
   "\<not> irqhandler_cap_at cap_ref example_spec"
   by (clarsimp simp: example_spec_def cap_at_def object_id_defs split_beta'
                         opt_cap_def slots_of_def opt_object_def object_slots_def
-                        example_tcb_def tcb_slot_defs tcb_pending_op_slot_def empty_cap_map_def
+                        example_tcb_def tcb_slot_defs empty_cap_map_def
                  split: split_if_asm)
 
 lemma original_cap_at_example_spec [simp]:
@@ -193,7 +193,7 @@ lemma well_formed_cap_example [simp]:
   \<Longrightarrow> well_formed_cap cap"
   by (clarsimp simp: well_formed_cap_def example_spec_def example_tcb_def
                      object_slots_def empty_cap_map_def guard_bits_def
-                     tcb_slot_defs tcb_pending_op_slot_def vm_read_write_def
+                     tcb_slot_defs vm_read_write_def
               split: cdl_cap.splits split_if_asm)
 
 lemma range_example_irq_node:
@@ -245,7 +245,7 @@ lemma well_formed_orig_cap_example [simp]:
   by (clarsimp simp: well_formed_orig_cap_def example_spec_def
                      object_slots_def example_tcb_def empty_cap_map_def
                      cap_type_def default_cap_def cap_rights_def
-                     tcb_slot_defs tcb_pending_op_slot_def ep_related_cap_def
+                     tcb_slot_defs ep_related_cap_def
               split: split_if_asm)
 
 lemma well_formed_cap_to_real_object_example [simp]:
@@ -339,7 +339,7 @@ lemma well_formed_example:
     apply (rule well_formed_fake_pt_caps_unique_example)
    apply (rule well_formed_irqhandler_caps_example)
   apply (clarsimp split: option.splits, rename_tac obj)
-  apply (clarsimp simp: well_formed_caps_example well_formed_cap_to_object_example
+  apply (clarsimp simp: well_formed_cap_to_object_example
                         well_formed_orig_caps_unique_example)
   apply (rule conjI)
    apply (erule well_formed_tcb_example)
@@ -350,7 +350,7 @@ lemma well_formed_example:
   apply (fastforce simp: example_spec_def object_size_bits_def object_default_state_def2
                          pd_size_def word_bits_def empty_cnode_def is_cnode_def
                          object_slots_def empty_cap_map_def tcb_slot_defs
-                         default_tcb_def example_tcb_def tcb_pending_op_slot_def
+                         default_tcb_def example_tcb_def
                          small_frame_size_def object_at_def
                          irq_nodes_def range_example_irq_node
                   split: split_if_asm)

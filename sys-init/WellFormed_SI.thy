@@ -551,7 +551,7 @@ lemma well_formed_slot_object_size_bits:
   apply clarsimp
   apply (clarsimp simp: opt_cap_def opt_object_def)
   apply (subgoal_tac "slot \<in> dom (object_slots (object_default_state obj))")
-   apply (thin_tac "dom ?P = dom ?Q")
+   apply (thin_tac "dom P = dom Q" for P Q)
    apply (clarsimp simp: well_formed_caps_def)
    apply (erule_tac x=slot in allE)
    apply (clarsimp simp: object_default_state_def2 object_type_def has_slots_def
@@ -945,8 +945,9 @@ lemma well_formed_tcb_cspace_cap:
   apply (clarsimp simp: well_formed_tcb_def)
   apply (erule_tac x=tcb_cspace_slot in allE)+
   apply (clarsimp simp: is_tcb_def object_default_state_def2 split: cdl_object.splits)
+  apply (rename_tac cdl_tcb)
   apply (clarsimp simp: opt_cap_def slots_of_def opt_object_def split: option.splits)
-  apply (subgoal_tac "\<exists>cspace_cap. object_slots (Tcb cdl_tcb_ext) tcb_cspace_slot =
+  apply (subgoal_tac "\<exists>cspace_cap. object_slots (Tcb cdl_tcb) tcb_cspace_slot =
                                    Some cspace_cap")
    apply (clarsimp simp: dom_def well_formed_tcb_def real_object_at_def)
    apply (erule well_formed_cap_object [where obj_id=obj_id and slot=tcb_cspace_slot])
@@ -1334,12 +1335,12 @@ lemma well_formed_cap_object_cdl_irq_node:
   apply (rename_tac cap)
   apply (frule (1) well_formed_irq_aep_cap, simp add: opt_cap_def)
   apply (frule well_formed_cap_object, simp add: opt_cap_def)
-   apply (metis cap_has_object_simps)
+   apply (metis cap_has_object_simps(12))
   apply clarsimp
   apply (frule well_formed_types_match [where obj_id = "cdl_irq_node spec irq" and slot = 0])
     apply (simp add: opt_cap_def)
    apply simp
-   apply (metis cap_has_object_simps)
+   apply (metis cap_has_object_simps(12))
   apply (clarsimp simp: object_type_is_object cap_type_def split: cdl_cap.splits)
   done
 
@@ -1580,6 +1581,7 @@ lemma update_cap_rights_and_data:
                            vm_read_write_def vm_read_only_def
                    split:  cdl_frame_cap_type.splits)+)
   apply (case_tac spec_cap, simp_all add: cap_type_def)
+  apply (rename_tac word1 word2 nat1 nat2)
   apply (clarsimp simp: update_cap_data_det_def update_cap_rights_def
                         default_cap_def well_formed_cap_def update_cap_object_def
                         cap_rights_def cap_data_def cnode_cap_size_def)

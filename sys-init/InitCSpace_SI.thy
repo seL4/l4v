@@ -816,7 +816,7 @@ lemma seL4_CNode_Mutate_object_slot_initialised_sep_helper:
    apply (elim conjE)
    apply (intro conjI,
      simp_all add:has_type_default_not_non ep_related_cap_default_cap)
-      apply (thin_tac "\<guillemotleft>?P \<and>* ?Q \<guillemotright>s")
+      apply (thin_tac "\<guillemotleft>P \<and>* Q \<guillemotright>s" for P Q)
       apply sep_solve
     apply ((clarsimp simp: si_cnode_cap_def word_bits_def si_cspace_cap_def
                     dest!: guard_equal_si_cspace_cap |
@@ -878,7 +878,7 @@ lemma seL4_CNode_Move_object_slot_initialised_cap_has_object_sep_helper:
    apply (elim conjE)
    apply (intro conjI,
      simp_all add:has_type_default_not_non ep_related_cap_default_cap)
-      apply (thin_tac "\<guillemotleft>?P \<and>* ?Q \<guillemotright>s")
+      apply (thin_tac "\<guillemotleft>P \<and>* Q \<guillemotright>s" for P Q)
       apply sep_solve
      apply ((clarsimp simp: si_cnode_cap_def word_bits_def si_cspace_cap_def
                        dest!: guard_equal_si_cspace_cap |
@@ -933,7 +933,7 @@ lemma seL4_CNode_Move_object_slot_initialised_irqhandler_cap_sep_helper:
    apply (elim conjE)
    apply (intro conjI,
           simp_all add:has_type_default_not_non ep_related_cap_default_cap)
-      apply (thin_tac "\<guillemotleft>?P \<and>* ?Q \<guillemotright>s")
+      apply (thin_tac "\<guillemotleft>P \<and>* Q \<guillemotright>s" for P Q)
       apply (sep_solve add: sep_any_imp)
      apply ((clarsimp simp: si_cnode_cap_def word_bits_def si_cspace_cap_def
                      dest!: guard_equal_si_cspace_cap |
