@@ -369,9 +369,8 @@ done
 
 
 ML {*
-
    fun J f x = f x
-               handle _ => x
+               handle _ => x   (* FIXME *)
 
    fun sep_wp thms ctxt  =
    let val thms' = map (sep_wandise_helper ctxt |> J) thms;
@@ -395,7 +394,6 @@ ML {*
 method_setup sep_wp = {*
   sep_wp_parse
 *}
-
 
 
 end

@@ -1112,7 +1112,7 @@ proof (rule iffI)
     ultimately
     have "((Q and R) \<and>* P) s = ((Q \<and>* P) and (R \<and>* P)) s" using pp by blast
   }
-  thus "\<forall>Q R. ((Q and R) \<and>* P) = ((Q \<and>* P) and (R \<and>* P))" by (blast intro!: ext)
+  thus "\<forall>Q R. ((Q and R) \<and>* P) = ((Q \<and>* P) and (R \<and>* P))" by blast
 
 next
   assume a: "\<forall>Q R. ((Q and R) \<and>* P) = ((Q \<and>* P) and (R \<and>* P))"

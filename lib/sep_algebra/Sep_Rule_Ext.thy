@@ -29,9 +29,9 @@ ML {*
    fun make_sep_drule direct thms ctxt i =
      let val default = sep_drule_comb_tac direct
          fun make_sep_rule_inner i thm  =
-             let val goal = i + nprems_of thm - 1 in
+             let val goal = i + Thm.nprems_of thm - 1 in
                      case sep_curry ctxt thm of (SOME thm') =>
-                                             (sep_drule_tac (fn i => sep_drule_tactic [thm'] i THEN
+                                             (sep_drule_tac (fn i => sep_drule_tactic ctxt [thm'] i THEN
                                               ((sep_mp_solver ctxt) THEN' (TRY o sep_flatten ctxt)) goal ) ctxt) i|
                                          NONE => default [thm] ctxt i
                      end;

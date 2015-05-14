@@ -29,78 +29,78 @@ lemma sep_erule:
 
 ML {* 
 
- val sep_select     = (resolve_tac  [@{thm sep_eq}])
- val sep_asm_select = (dresolve_tac [@{thm sep_asm_eq}])
- val sep_asm_erule_select = (eresolve_tac [@{thm sep_asm_eq_erule}])
+fun sep_select ctxt     = (resolve_tac ctxt [@{thm sep_eq}])
+fun sep_asm_select ctxt = (dresolve_tac ctxt [@{thm sep_asm_eq}])
+fun sep_asm_erule_select ctxt = (eresolve_tac ctxt [@{thm sep_asm_eq_erule}])
 
 
- fun sep_rule_tactic thms  = 
-     let val sep_rule = (resolve_tac [@{thm sep_rule}]) in
-      sep_apply_tactic sep_rule thms
+fun sep_rule_tactic ctxt thms  = 
+     let val sep_rule = (resolve_tac ctxt [@{thm sep_rule}]) in
+      sep_apply_tactic ctxt sep_rule thms
  end;
 
- fun sep_drule_tactic thms  =
-     let val sep_drule = (dresolve_tac [rotate_prems ~1 @{thm sep_rule}]) in
-      sep_apply_tactic sep_drule thms  
+ fun sep_drule_tactic ctxt thms  =
+     let val sep_drule = (dresolve_tac ctxt [rotate_prems ~1 @{thm sep_rule}]) in
+      sep_apply_tactic ctxt sep_drule thms  
  end;
 
- fun sep_frule_tactic thms  =
-     let val sep_frule = (forward_tac [rotate_prems ~1 @{thm sep_rule}]) in
-      sep_apply_tactic sep_frule thms  
+ fun sep_frule_tactic ctxt thms  =
+     let val sep_frule = (forward_tac ctxt [rotate_prems ~1 @{thm sep_rule}]) in
+      sep_apply_tactic ctxt sep_frule thms  
  end;
 
- fun sep_erule_tactic thms = 
-     let val sep_erule = (eresolve_tac [@{thm sep_erule}]) in
-     sep_apply_tactic sep_erule thms
+ fun sep_erule_tactic ctxt thms = 
+     let val sep_erule = (eresolve_tac ctxt [@{thm sep_erule}]) in
+     sep_apply_tactic ctxt sep_erule thms
  end;
 
  fun sep_rule_tac tac ctxt =
-     rotator sep_select (tac) ctxt
+     rotator (sep_select ctxt) (tac) ctxt
  fun sep_drule_tac tac ctxt = 
-     rotator sep_asm_select tac ctxt
+     rotator (sep_asm_select ctxt) tac ctxt
  fun sep_erule_tac tac ctxt = 
-     rotator sep_asm_select tac ctxt
+     rotator (sep_asm_select ctxt) tac ctxt
  fun sep_erule_concl_tac tac ctxt = 
-     rotator sep_select tac ctxt
+     rotator (sep_select ctxt) tac ctxt
 
  fun sep_erule_full_tac tac ctxt =
     let val r = rotator' ctxt
     in 
-     tac |> r sep_asm_erule_select |> r sep_select 
+     tac |> r (sep_asm_erule_select ctxt) |> r (sep_select ctxt) 
    end;
   
   fun sep_erule_full_tac' tac ctxt =
     let val r = rotator' ctxt
     in 
-     tac |> r sep_select |> r sep_asm_erule_select
+     tac |> r (sep_select ctxt) |> r (sep_asm_erule_select ctxt)
    end;
 
 
- fun sep_rule_comb_tac true  thms ctxt  =   (sep_rule_tac  (resolve_tac thms) ctxt) |
-     sep_rule_comb_tac false thms ctxt  =   (sep_rule_tac (sep_rule_tactic thms) ctxt)
+ fun sep_rule_comb_tac true  thms ctxt  =   (sep_rule_tac  (resolve_tac ctxt thms) ctxt) |
+     sep_rule_comb_tac false thms ctxt  =   (sep_rule_tac (sep_rule_tactic ctxt thms) ctxt)
 
  fun sep_rule_method bool thms ctxt  = SIMPLE_METHOD'  (sep_rule_comb_tac bool thms ctxt)
 
- fun sep_drule_comb_tac true  thms ctxt = (sep_drule_tac (dresolve_tac thms) ctxt) |
-     sep_drule_comb_tac false thms ctxt = (sep_drule_tac (sep_drule_tactic thms) ctxt) 
+ fun sep_drule_comb_tac true  thms ctxt = (sep_drule_tac (dresolve_tac ctxt thms) ctxt) |
+     sep_drule_comb_tac false thms ctxt = (sep_drule_tac (sep_drule_tactic ctxt thms) ctxt) 
 
  fun sep_drule_method bool thms ctxt = SIMPLE_METHOD' (sep_drule_comb_tac bool thms ctxt) 
 
- fun sep_frule_method true  thms ctxt = SIMPLE_METHOD' (sep_drule_tac (forward_tac thms) ctxt) |
-     sep_frule_method false thms ctxt = SIMPLE_METHOD' (sep_drule_tac (sep_frule_tactic thms) ctxt)
+ fun sep_frule_method true  thms ctxt = SIMPLE_METHOD' (sep_drule_tac (forward_tac ctxt thms) ctxt) |
+     sep_frule_method false thms ctxt = SIMPLE_METHOD' (sep_drule_tac (sep_frule_tactic ctxt thms) ctxt)
 
- fun sep_erule_method true  thms ctxt = SIMPLE_METHOD' (sep_erule_tac (eresolve_tac thms) ctxt) |
-     sep_erule_method false thms ctxt = SIMPLE_METHOD' (sep_erule_tac (sep_erule_tactic thms) ctxt)
+ fun sep_erule_method true  thms ctxt = SIMPLE_METHOD' (sep_erule_tac (eresolve_tac ctxt thms) ctxt) |
+     sep_erule_method false thms ctxt = SIMPLE_METHOD' (sep_erule_tac (sep_erule_tactic ctxt thms) ctxt)
 
  fun sep_erule_concl_method true  thms ctxt =
-                                 SIMPLE_METHOD' (sep_erule_concl_tac (eresolve_tac thms) ctxt) |
+                                 SIMPLE_METHOD' (sep_erule_concl_tac (eresolve_tac ctxt thms) ctxt) |
      sep_erule_concl_method false thms ctxt =
-                                 SIMPLE_METHOD' (sep_erule_concl_tac (sep_erule_tactic thms) ctxt)
+                                 SIMPLE_METHOD' (sep_erule_concl_tac (sep_erule_tactic ctxt thms) ctxt)
 
 fun sep_erule_full_method true thms ctxt =
-                                     SIMPLE_METHOD' (sep_erule_full_tac (eresolve_tac thms) ctxt) |
+                                     SIMPLE_METHOD' (sep_erule_full_tac (eresolve_tac ctxt thms) ctxt) |
     sep_erule_full_method false thms ctxt =
-                                     SIMPLE_METHOD' (sep_erule_full_tac (sep_erule_tactic thms) ctxt)
+                                     SIMPLE_METHOD' (sep_erule_full_tac (sep_erule_tactic ctxt thms) ctxt)
 
 *}  
 

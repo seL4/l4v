@@ -40,14 +40,14 @@ ML {*
    fun sep_cancel_tactic ctxt concl  = 
        let val thms = rev (SepCancel_Rules.get ctxt)
            val tac  =  atac ORELSE'
-                       eresolve_tac [@{thm sep_mp}, @{thm sep_conj_empty}, @{thm sep_empty_conj}]
-                       ORELSE' sep_erule_tactic thms
-           val direct_tac = eresolve_tac thms
+                       eresolve_tac ctxt [@{thm sep_mp}, @{thm sep_conj_empty}, @{thm sep_empty_conj}]
+                       ORELSE' sep_erule_tactic ctxt thms
+           val direct_tac = eresolve_tac ctxt thms
            val safe_sep_wand_tac = rotator' ctxt (rtac @{thm sep_wand_lens_simple}) (etac @{thm sep_conj_sep_impl_safe'})
            fun sep_cancel_tactic_inner true   = sep_erule_full_tac' tac ctxt |
                sep_cancel_tactic_inner false  = sep_erule_full_tac tac ctxt               
    in sep_cancel_tactic_inner concl ORELSE'
-      eresolve_tac [@{thm sep_curry'}, @{thm sep_conj_sep_impl_safe}, @{thm sep_imp_empty}, @{thm sep_empty_imp'}] ORELSE'
+      eresolve_tac ctxt [@{thm sep_curry'}, @{thm sep_conj_sep_impl_safe}, @{thm sep_imp_empty}, @{thm sep_empty_imp'}] ORELSE'
       safe_sep_wand_tac ORELSE'
       direct_tac
    end;
@@ -61,7 +61,7 @@ ML {*
    fun sep_cancel_method (concl,_) ctxt = SIMPLE_METHOD' (sep_cancel_tactic' ctxt concl)
   
   val sep_cancel_syntax = Method.sections [
-    Args.add -- Args.colon >> K (I, SepCancel_Rules.add)];
+    Args.add -- Args.colon >> K (Method.modifier SepCancel_Rules.add @{here})];
   
   val sep_cancel_syntax' = (Scan.lift (Args.mode "concl") -- sep_cancel_syntax)
   

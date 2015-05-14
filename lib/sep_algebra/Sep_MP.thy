@@ -31,18 +31,18 @@ lemma sep_wand_frame_lens: "((P \<longrightarrow>* Q) \<and>* R) s \<Longrightar
 
 ML {*
   fun sep_wand_frame_drule ctxt = 
-     let val lens  = dresolve_tac [@{thm sep_wand_frame_lens}]
-         val lens' = dresolve_tac [@{thm sep_asm_eq}]
+     let val lens  = dresolve_tac ctxt [@{thm sep_wand_frame_lens}]
+         val lens' = dresolve_tac ctxt [@{thm sep_asm_eq}]
          val r = rotator' ctxt
          val sep_cancel_thms = rev (SepCancel_Rules.get ctxt)
-      in sep_apply_tactic (dresolve_tac [@{thm sep_mp_frame_gen}]) sep_cancel_thms |> r lens |> r lens'
+      in sep_apply_tactic ctxt (dresolve_tac ctxt [@{thm sep_mp_frame_gen}]) sep_cancel_thms |> r lens |> r lens'
    end; 
 
    fun sep_mp_solver ctxt  =
-    let val sep_mp = sep_apply_tactic (dtac @{thm sep_mp_gen}) ((rev o SepCancel_Rules.get) ctxt)
+    let val sep_mp = sep_apply_tactic ctxt (dtac @{thm sep_mp_gen}) ((rev o SepCancel_Rules.get) ctxt)
         val taclist = [sep_drule_comb_tac false [@{thm sep_empty_imp}] ctxt,
                        sep_drule_tac sep_mp ctxt,
-                       sep_drule_tac (sep_drule_tactic [@{thm sep_impl_simpl}]) ctxt,
+                       sep_drule_tac (sep_drule_tactic ctxt [@{thm sep_impl_simpl}]) ctxt,
                        sep_wand_frame_drule ctxt ]
         val check = DETERM o (sep_drule_tac (sep_select_tactic (dtac @{thm sep_wand_frame_lens}) [1] ctxt) ctxt)
          
@@ -53,4 +53,5 @@ ML {*
 *}
  
 method_setup sep_mp = {* Scan.succeed sep_mp_method *}
+
 end

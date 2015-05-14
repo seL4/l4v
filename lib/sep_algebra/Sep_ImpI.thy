@@ -27,18 +27,18 @@ done
 
 ML {* 
 
-val sep_wand_lens  = (resolve_tac [@{thm sep_wand_lens}])
-val sep_wand_lens' = (resolve_tac [@{thm sep_wand_lens'}])
+fun sep_wand_lens ctxt = resolve_tac ctxt[@{thm sep_wand_lens}]
+fun sep_wand_lens' ctxt = resolve_tac ctxt [@{thm sep_wand_lens'}]
 
 
 fun sep_wand_rule_tac tac ctxt =
   let val r = rotator' ctxt in 
-    tac |> r sep_wand_lens' |> r sep_wand_lens |> r sep_select
+    tac |> r (sep_wand_lens' ctxt) |> r (sep_wand_lens ctxt) |> r (sep_select ctxt)
 end;
 
 fun sep_wand_rule_tac' thms ctxt =
   let val r = rotator' ctxt in
-     eresolve_tac thms |> r sep_wand_lens |> r sep_select |> r sep_asm_select
+     eresolve_tac ctxt thms |> r (sep_wand_lens ctxt) |> r (sep_select ctxt) |> r (sep_asm_select ctxt)
   end;
 
 fun sep_wand_rule_method thms ctxt = SIMPLE_METHOD' (sep_wand_rule_tac thms ctxt)
@@ -97,7 +97,7 @@ ML {*
      fun flip f a b = f b a 
 
      fun sep_match_trivial_tac ctxt =
-        let  val sepcancel = (flip sep_apply_tactic) (SepCancel_Rules.get ctxt |> rev)
+        let  val sepcancel = (flip (sep_apply_tactic ctxt)) (SepCancel_Rules.get ctxt |> rev)
              fun f x = x |> rotate_prems ~1 |> etac |> sepcancel
              val sep_thms = map f [@{thm sep_wand_trivial}, @{thm sep_wand_match}]
         in sep_wand_rule_tac (rtac @{thm sep_rule} THEN' FIRST' sep_thms) ctxt
