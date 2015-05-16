@@ -218,23 +218,9 @@ lemma set_cdt_inv:
   done
 
 
-lemma cte_wp_at_cdt [simp]:
-  "cte_wp_at P p (cdt_update f s) = cte_wp_at P p s"
-  by (clarsimp simp add: cte_wp_at_cases)
-
-
-lemma obj_at_cdt [simp]:
-  "obj_at P p (cdt_update f s) = obj_at P p s"
-  by (clarsimp simp add: obj_at_def)
-
-
-lemma valid_cap_cdt [simp]:
-  "cdt_update f s \<turnstile> cap = s \<turnstile> cap"
-  apply (cases cap)
-  apply (simp_all add: valid_cap_def valid_untyped_def split_def
-                 cong: arch_cap.case_cong
-                split: option.split sum.split)
-  done
+lemmas cte_wp_at_cdt = cdt_update.cte_wp_at_update
+lemmas obj_at_cdt = cdt_update.obj_at_update
+lemmas valid_cap_cdt = cdt_update.valid_cap_update
 
 
 lemma set_object_at_obj3: 
@@ -493,9 +479,7 @@ lemma set_ep_refs_of[wp]:
   apply (simp add: set_endpoint_def set_object_def)
   apply (rule hoare_seq_ext [OF _ get_object_sp])
   apply wp
-  apply (clarsimp simp: state_refs_of_def
-                 elim!: rsubst[where P=P]
-                intro!: ext)
+  apply (fastforce simp: state_refs_of_def elim!: rsubst[where P=P])
   done
 
 
@@ -1096,9 +1080,7 @@ lemma ep_redux_simps:
         = (set xs \<times> {EPRecv})"
   "aep_q_refs_of (case xs of [] \<Rightarrow> Structures_A.IdleAEP | y # ys \<Rightarrow> Structures_A.WaitingAEP (y # ys))
         = (set xs \<times> {AEPAsync})"
-  by (fastforce split: list.splits
-                simp: valid_ep_def valid_aep_def
-              intro!: ext)+
+  by (fastforce split: list.splits simp: valid_ep_def valid_aep_def)+
 
 
 crunch it[wp]: set_async_ep "\<lambda>s. P (idle_thread s)"
@@ -1608,7 +1590,7 @@ lemma set_object_valid_kernel_mappings:
   apply wp
   apply (clarsimp simp: valid_kernel_mappings_def
                  elim!: ranE split: split_if_asm)
-  apply (fastforce intro: ranI)
+  apply fastforce
   done
 
 
@@ -2108,8 +2090,7 @@ lemma as_user_arch_obj:
 
 
 lemma tcb_cap_valid_caps_of_stateD:
-  "\<And>P. \<lbrakk> caps_of_state s p = Some cap; valid_objs s \<rbrakk> \<Longrightarrow>
-   tcb_cap_valid cap p s"
+  "\<lbrakk> caps_of_state s p = Some cap; valid_objs s \<rbrakk> \<Longrightarrow> tcb_cap_valid cap p s"
   apply (rule cte_wp_tcb_cap_valid)
    apply (simp add: cte_wp_at_caps_of_state)
   apply assumption
