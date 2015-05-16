@@ -417,9 +417,10 @@ lemma invoke_tcb_globals_equiv:
               | clarsimp simp add: invs_valid_ko_at_arm split del: split_if)+
        apply (simp_all del: tcb_inv_wf.simps split del: split_if)
        apply (wp | clarsimp simp: invs_valid_ko_at_arm no_cap_to_idle_thread | intro conjI impI)+
+       apply (rename_tac word1 word2 b1 b2 b3 b4 arm_copy_register_sets)
        apply (rule_tac Q="\<lambda>_. valid_ko_at_arm and globals_equiv st and (\<lambda>s. word1 \<noteq> idle_thread s) and (\<lambda>s. word2 \<noteq> idle_thread s)" in hoare_strengthen_post)
         apply (wp mapM_x_wp' as_user_globals_equiv | simp add: invs_valid_ko_at_arm | intro conjI impI | clarsimp simp: no_cap_to_idle_thread)+
-done
+  done
    
 
 section "reads respects"
@@ -688,9 +689,3 @@ lemma decode_tcb_invocation_authorised_extra:
   done
  
 end
-
-
-
-
-
-

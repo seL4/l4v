@@ -655,11 +655,11 @@ lemma default_object_not_asid_pool:
   apply(clarsimp simp: default_object_def split: apiobject_type.splits simp: default_arch_object_def split: aobject_type.splits)
   done
 
-lemma retype_region_ext_def2: "retype_region_ext a b = modify (\<lambda>exst. ekheap_update (\<lambda>ekh x. if x \<in> set a then default_ext b (cur_domain exst) else ekh x) exst)"
-  apply (simp add: retype_region_ext_def foldr_upd_app_if'
-                   gets_def get_def bind_def return_def
-                   modify_def get_def put_def bind_def
-                   fun_eq_iff)
+lemma retype_region_ext_def2:
+  "retype_region_ext a b =
+   modify (\<lambda>exst. ekheap_update (\<lambda>ekh x. if x \<in> set a then default_ext b (cur_domain exst) else ekh x) exst)"
+  apply (simp add: retype_region_ext_def foldr_upd_app_if' gets_def bind_def return_def
+                   modify_def get_def put_def fun_eq_iff)
   done
 
 lemma retype_region_reads_respects:
@@ -682,25 +682,6 @@ lemma retype_region_reads_respects:
           apply (wp | simp)+
      apply(rule return_ev2 | simp | rule impI, rule TrueI)+
   apply(intro impI, wp)
-  done
-
-lemma word_range_max:
-  "n < word_bits \<Longrightarrow> (p::word32) \<le> (p && ~~ mask n) + (2^n - 1)"
-  apply(rule ord_eq_le_trans)
-   apply(rule sym)
-   apply(rule_tac b="(2 ^ n)::word32" in word_mod_div_equality)
-  apply(simp add: neg_mask_is_div)
-  apply(rule word_plus_mono_right)
-   prefer 2
-   apply(rule_tac sz=n in is_aligned_no_wrap')
-    apply(rule is_alignedI)
-    apply(subst mult.commute, rule refl)
-   apply simp
-  apply(rule word_less_sub_1)
-  apply(rule word_mod_less_divisor)
-  apply(rule eq_mask_less)
-   apply(simp add: word_log_esimps)
-  apply(simp add: word_bits_def)
   done
 
 lemma subset_thing:
@@ -732,43 +713,42 @@ lemma retype_region_globals_equiv:
     K (0 < num_objects)\<rbrace>
   retype_region ptr num_objects o_bits type
   \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
-  apply(simp only: retype_region_def 
-                   foldr_upd_app_if fun_app_def K_bind_def)
+  apply(simp only: retype_region_def foldr_upd_app_if fun_app_def K_bind_def)
   apply (wp dxo_wp_weak |simp)+
-  apply (simp add: trans_state_update[symmetric] del: trans_state_update)
-  apply (wp | simp)+
+      apply (simp add: trans_state_update[symmetric] del: trans_state_update)
+     apply (wp | simp)+
   apply clarsimp
   apply (simp only: globals_equiv_def)
   apply (clarsimp split del: split_if)
   apply (subgoal_tac "pspace_no_overlap ptr sz sa")
-    apply (rule conjI)
-   apply(clarsimp simp: pspace_no_overlap_def)
-   apply(drule_tac x="arm_global_pd (arch_state sa)" in spec)
-   apply(clarsimp simp: invs_def valid_state_def valid_global_objs_def valid_ao_at_def obj_at_def ptr_add_def)
-   apply(frule_tac p=p in range_cover_subset)
-     apply(simp add: blah)
-    apply simp
-   apply(frule range_cover_subset')
-    apply simp
-   apply(clarsimp simp: p_assoc_help)
-   apply(drule disjoint_subset_neg1[OF _ subset_thing], rule is_aligned_no_wrap')
-       apply(clarsimp simp: valid_pspace_def pspace_aligned_def)
-       apply(drule_tac x="arm_global_pd (arch_state sa)" and A="dom (kheap sa)"  in bspec)
-        apply (simp add: domI)
-       apply simp
-      apply(rule word_power_less_1)
-      apply(case_tac ao, simp_all add: arch_kobj_size_def word_bits_def)
-     apply(simp add: pageBits_def)
-    apply(simp add: pageBitsForSize_def split: vmpage_size.splits)
-   apply(drule (1) subset_trans)
-   apply(erule_tac P="?a \<in> ?b" in notE)
-   apply(erule_tac A="{?c..?d}" in subsetD)
-   apply(simp add: blah)
-   apply(rule is_aligned_no_wrap')
-    apply(rule is_aligned_add[OF _ is_aligned_mult_triv2])
+   apply (rule conjI)
+    apply(clarsimp simp: pspace_no_overlap_def)
+    apply(drule_tac x="arm_global_pd (arch_state sa)" in spec)
+    apply(clarsimp simp: invs_def valid_state_def valid_global_objs_def valid_ao_at_def obj_at_def ptr_add_def)
+    apply(frule_tac p=p in range_cover_subset)
+      apply(simp add: blah)
+     apply simp
+    apply(frule range_cover_subset')
+     apply simp
+    apply(clarsimp simp: p_assoc_help)
+    apply(drule disjoint_subset_neg1[OF _ subset_thing], rule is_aligned_no_wrap')
+        apply(clarsimp simp: valid_pspace_def pspace_aligned_def)
+        apply(drule_tac x="arm_global_pd (arch_state sa)" and A="dom (kheap sa)"  in bspec)
+         apply (simp add: domI)
+        apply simp
+       apply(rule word_power_less_1)
+       apply(case_tac ao, simp_all add: arch_kobj_size_def word_bits_def)
+      apply(simp add: pageBits_def)
+     apply(simp add: pageBitsForSize_def split: vmpage_size.splits)
+    apply(drule (1) subset_trans)
+    apply(erule_tac P="a \<in> b" for a b in notE)
+    apply(erule_tac A="{ptr + c..d}" for c d in subsetD)
+    apply(simp add: blah)
+    apply(rule is_aligned_no_wrap')
+     apply(rule is_aligned_add[OF _ is_aligned_mult_triv2])
+     apply(simp add: range_cover_def)
+    apply(rule word_power_less_1)
     apply(simp add: range_cover_def)
-   apply(rule word_power_less_1)
-   apply(simp add: range_cover_def)
    apply (erule updates_not_idle)
    apply(clarsimp simp: pspace_no_overlap_def)
    apply(drule_tac x="idle_thread sa" in spec)
@@ -787,8 +767,8 @@ lemma retype_region_globals_equiv:
       apply uint_arith
      apply simp+
    apply(drule (1) subset_trans)
-   apply(erule_tac P="?a \<in> ?b" in notE)
-   apply(erule_tac A="{?c..?d}" in subsetD)
+   apply(erule_tac P="a \<in> b" for a b in notE)
+   apply(erule_tac A="{idle_thread_ptr..d}" for d in subsetD)
    apply(simp add: blah)
    apply (erule_tac t=idle_thread_ptr in subst)
    apply(rule is_aligned_no_wrap')
@@ -941,7 +921,7 @@ lemma pspace_distinct_def':
   "pspace_distinct \<equiv> \<lambda>s. \<forall>x y ko ko'.
              kheap s x = Some ko \<and> kheap s y = Some ko' \<and> x \<noteq> y \<longrightarrow>
              obj_range x ko \<inter> obj_range y ko' = {}"
-  by(auto simp: pspace_distinct_def obj_range_def add.assoc field_simps)
+  by(auto simp: pspace_distinct_def obj_range_def field_simps)
 
 lemma page_caps_do_not_overlap_arm_globals_frame:
   "\<lbrakk>cte_wp_at (op = (ArchObjectCap (PageCap word fun vmpage_size option))) slot s; valid_objs s;
@@ -987,7 +967,8 @@ lemma word_object_range_cover_globals_inv:
   apply(clarsimp simp: valid_def word_object_range_cover_globals_def split_def)
   apply safe
      apply(drule use_valid |
-           rule_tac P="\<lambda> y. {ptr..ptr + of_nat num_objects * 2 ^ ?sz - 1} \<inter> ptr_range y 12 = {}" in agpd | fastforce)+
+           rule_tac P="\<lambda> y. {ptr..ptr + of_nat num_objects * 2 ^ sz - 1} \<inter> ptr_range y 12 = {}"
+           for sz in agpd | fastforce)+
   done
     
       
@@ -997,10 +978,6 @@ lemma set_cap_reads_respects_g:
    apply(rule reads_respects_g[OF set_cap_reads_respects])
    apply(rule doesnt_touch_globalsI[OF set_cap_globals_equiv])
   by simp
-
-lemma invs_valid_global_objs_strengthen:
-  "invs s \<longrightarrow> valid_global_objs s"
-  by(auto simp: invs_def valid_state_def)
 
 (* FIXME: put this into Retype_AC instead *)   
 lemma set_free_index_invs':
@@ -1020,7 +997,7 @@ lemma set_free_index_invs':
   apply(case_tac "free_index_of cap \<le> idx'")
    apply simp
     apply(cut_tac cap=cap and cref=slot and idx="idx'" in set_free_index_invs)
-    apply(simp add: free_index_update_def conj_ac)
+    apply(simp add: free_index_update_def conj_comms)
    apply simp
    apply(wp set_untyped_cap_invs_simple | simp)+
    apply(fastforce simp: cte_wp_at_def)
@@ -1069,18 +1046,18 @@ lemma word_object_range_cover_globalsI:
   apply(frule range_cover_subset', simp+)
   apply(frule untyped_caps_do_not_overlap_arm_globals_frame, (simp add: invs_valid_objs invs_arch_state invs_valid_global_refs)+)
   apply(clarsimp split: apiobject_type.splits aobject_type.splits simp: default_arch_object_def)
-       apply(erule disjoint_subset)
-       apply(erule disjoint_subset[rotated])
-       apply(simp add: ptr_range_def blah word_and_le2)
-       apply(erule disjoint_subset)
-       apply(erule disjoint_subset[rotated])
-       apply(simp add: ptr_range_def blah word_and_le2)
-       apply(erule disjoint_subset)
-       apply(erule disjoint_subset[rotated])
-       apply(simp add: ptr_range_def blah word_and_le2)
-       apply(erule disjoint_subset)
-       apply(erule disjoint_subset[rotated])
-       apply(simp add: ptr_range_def blah word_and_le2)
+     apply(erule disjoint_subset)
+     apply(erule disjoint_subset[rotated])
+     apply(simp add: ptr_range_def blah word_and_le2)
+    apply(erule disjoint_subset)
+    apply(erule disjoint_subset[rotated])
+    apply(simp add: ptr_range_def blah word_and_le2)
+   apply(erule disjoint_subset)
+   apply(erule disjoint_subset[rotated])
+   apply(simp add: ptr_range_def blah word_and_le2)
+  apply(erule disjoint_subset)
+  apply(erule disjoint_subset[rotated])
+  apply(simp add: ptr_range_def blah word_and_le2)
   done
   
 
@@ -1090,6 +1067,7 @@ lemma invoke_untyped_reads_respects_g:
   shows
   "reads_respects_g aag l (invs and valid_untyped_inv ui and ct_active and authorised_untyped_inv_state aag ui and K (authorised_untyped_inv aag ui)) (invoke_untyped ui)"
   apply(case_tac ui)
+  apply(rename_tac cslot_ptr word1 word2 apiobject_type nat list)
   apply(simp add: mapM_x_def[symmetric])
   apply(wp mapM_x_ev'' create_cap_reads_respects_g hoare_vcg_ball_lift
            create_cap_valid_global_objs init_arch_objects_reads_respects_g
@@ -1098,15 +1076,15 @@ lemma invoke_untyped_reads_respects_g:
             apply(wp init_arch_objects_invs_from_restricted)
            apply(fastforce simp: invs_def)
           apply(wp retype_region_reads_respects_g[where slot="slot_of_untyped_inv ui"])
-         apply(rule_tac Q="\<lambda> rvc s. 
-                              word_object_range_cover_globals apiobject_type word2 (?sz37 x word1 word2 apiobject_type nat list rv rva rvb rvc) (length list) s \<and> 
+         apply(rule_tac Q="\<lambda>rvc s. 
+                              word_object_range_cover_globals apiobject_type word2 sz (length list) s \<and> 
                                 (\<forall>x\<in>set rvc. is_subject aag x) \<and>
                                 (\<forall>x\<in>set rvc. is_aligned x (obj_bits_api apiobject_type nat)) \<and> 
                                 ((0::word32) < of_nat (length list)) \<and>
                                 post_retype_invs apiobject_type rvc s \<and>
                                 global_refs s \<inter> set rvc = {} \<and> 
                                 (\<forall>x\<in>set list. is_subject aag (fst x))"
- in hoare_strengthen_post)
+                for sz in hoare_strengthen_post)
           apply(wp word_object_range_cover_globals_inv 
                    retype_region_ret_is_subject[simplified] 
                    retype_region_global_refs_disjoint 
@@ -1131,7 +1109,7 @@ lemma invoke_untyped_reads_respects_g:
                               (bits_of rv))
                          (bits_of rv)
                          idx)
-                   prod s \<and>
+                   cslot_ptr s \<and>
                   (idx
                    \<le> unat
                       (word2 &&
@@ -1197,9 +1175,9 @@ region_in_kernel_window
                delete_objects_caps_no_overlap
                region_in_kernel_window_preserved
                get_cap_reads_respects_g get_cap_wp
-           |strengthen invs_valid_global_objs_strengthen
+           |strengthen invs_valid_global_objs_strg
            |simp split del: split_if)+
-  apply(clarsimp simp: conj_ac cong: conj_cong split del: split_if simp: authorised_untyped_inv_def authorised_untyped_inv_state_def)
+  apply(clarsimp simp: conj_comms cong: conj_cong split del: split_if simp: authorised_untyped_inv_def authorised_untyped_inv_state_def)
   apply(drule (1) cte_wp_at_eqD2, clarsimp split del: split_if simp: cte_wp_at_sym)
   apply(frule cte_wp_at_valid_objs_valid_cap, simp add: invs_valid_objs)
   apply(clarsimp simp: valid_cap_def cap_aligned_def is_aligned_neg_mask_eq bits_of_UntypedCap split del: split_if cong: if_cong)
@@ -1274,7 +1252,7 @@ region_in_kernel_window
             apply(fastforce intro!: word_object_range_cover_globalsI)
            apply(drule_tac x="UntypedCap (word2 && ~~ mask sz) sz idx" in spec)
            apply(clarsimp simp: ptr_range_def p_assoc_help bits_of_UntypedCap)
-           apply(erule_tac A="{word2 && ~~ mask sz..?b}" in bspec)
+           apply(erule_tac A="{word2 && ~~ mask sz..b}" for b in bspec)
            apply(erule subsetD[rotated])
            apply(simp add: blah word_and_le2)
           apply(fastforce intro!: cte_wp_at_pspace_no_overlapI simp: cte_wp_at_sym)
@@ -1331,6 +1309,7 @@ lemma invoke_untyped_globals_equiv:
    \<lbrace> \<lambda>_. globals_equiv st \<rbrace>"
   apply(rule hoare_gen_asm)
   apply(case_tac ui)
+  apply(rename_tac cslot_ptr word1 word2 apiobject_type nat list)
   apply(simp add: mapM_x_def[symmetric])
   apply(wp)
       apply(rule_tac Q="\<lambda>_. globals_equiv st and valid_global_objs" in hoare_strengthen_post)
@@ -1340,12 +1319,12 @@ lemma invoke_untyped_globals_equiv:
     apply(fastforce simp: invs_def)
    apply(rule_tac Q="\<lambda> rva s. globals_equiv st s \<and> 
 word_object_range_cover_globals apiobject_type word2
-                (?sz29 x word1 word2 apiobject_type nat list y ya cap rva)
+                sz
                 (length list) s \<and> 
                    ((0::word32) < of_nat (length list)) \<and>
                               (\<forall>x\<in>set rva. is_aligned x (obj_bits_api apiobject_type nat)) \<and> 
                               (post_retype_invs apiobject_type rva s) \<and> 
-                              (global_refs s \<inter> set rva = {})" in hoare_strengthen_post)
+                              (global_refs s \<inter> set rva = {})" for sz in hoare_strengthen_post)
     apply(wp retype_region_ret_is_subject[simplified] retype_region_global_refs_disjoint retype_region_ret_pd_aligned retype_region_aligned_for_init retype_region_post_retype_invs retype_region_globals_equiv[where slot="slot_of_untyped_inv ui"] word_object_range_cover_globals_inv)[1]
    apply(auto simp: global_refs_def simp: obj_bits_api_def default_arch_object_def pd_bits_def pageBits_def post_retype_invs_def)[1]
    apply (fold ptr_range_def, simp)
@@ -1359,7 +1338,7 @@ word_object_range_cover_globals apiobject_type word2
                               (bits_of cap))
                          (bits_of cap)
                          idx)
-                   prod s \<and>
+                   cslot_ptr s \<and>
                   (idx
                    \<le> unat
                       (word2 &&
@@ -1413,8 +1392,8 @@ word_object_range_cover_globals apiobject_type word2
             word_object_range_cover_globals_inv delete_objects_caps_no_overlap
             region_in_kernel_window_preserved get_cap_wp
         | simp split del: split_if
-        | strengthen invs_valid_global_objs_strengthen)+
-  apply(clarsimp simp: conj_ac cong: conj_cong split del: split_if simp: authorised_untyped_inv_def authorised_untyped_inv_state_def)
+        | strengthen invs_valid_global_objs_strg)+
+  apply(clarsimp simp: conj_comms cong: conj_cong split del: split_if simp: authorised_untyped_inv_def authorised_untyped_inv_state_def)
   apply(drule (1) cte_wp_at_eqD2, clarsimp split del: split_if simp: cte_wp_at_sym)
   apply(frule cte_wp_at_valid_objs_valid_cap, simp add: invs_valid_objs)  
   apply(split split_if)

@@ -91,16 +91,9 @@ lemma Run_ConsD:
   apply(auto)
   done
 
-lemma Run_trans':
-  "\<forall> s t u bs. (s,t) \<in> Run Stepf as \<and> (t,u) \<in> Run Stepf bs \<longrightarrow> (s,u) \<in> Run Stepf (as @ bs)"
-  apply(induct_tac as)
-   apply auto
-  apply(rule relcompI,auto)
-  done
-
 lemma Run_trans:
-  "\<lbrakk>(s,t) \<in> Run Stepf as; (t,u) \<in> Run Stepf bs\<rbrakk> \<Longrightarrow> (s,u) \<in> Run Stepf (as @ bs)"
-  by(blast intro: Run_trans'[rule_format])
+  "\<lbrakk> (s,t) \<in> Run Stepf as; (t,u) \<in> Run Stepf bs \<rbrakk> \<Longrightarrow> (s,u) \<in> Run Stepf (as @ bs)"
+  by (induct as arbitrary: s t u bs) auto
 
 lemma Run_app:
   "Run Stepf (as @ bs) = (Run Stepf as) O (Run Stepf bs)"

@@ -521,18 +521,21 @@ lemma sts_authorised_for_globals_inv: "\<lbrace>authorised_for_globals_inv oper\
             authorised_for_globals_page_table_inv_def
             authorised_for_globals_page_inv_def
   apply (case_tac oper)
-          apply (wp | simp)+
+           apply (wp | simp)+
+  apply (rename_tac arch_invocation)
   apply (case_tac arch_invocation)
       apply simp
+      apply (rename_tac page_table_invocation)
       apply (case_tac page_table_invocation)
        apply simp+
        apply (wp set_thread_state_arm_global_pd)
      apply simp
      apply wp
     apply simp
+    apply (rename_tac page_invocation)
     apply (case_tac page_invocation)
-       apply (simp | wp hoare_ex_wp)+
-done
+        apply (simp | wp hoare_ex_wp)+
+  done
 
 
 
@@ -934,7 +937,8 @@ lemma handle_event_reads_respects_f_g:
   apply(rule_tac Q="ev \<noteq> Interrupt" in equiv_valid_hoist_guard)
    prefer 2
    apply fastforce
-  apply (case_tac ev, simp_all)
+  apply (case_tac ev; simp)
+    apply (rename_tac syscall)
     apply (case_tac syscall, simp_all add: handle_send_def handle_call_def)
           apply ((wp handle_invocation_reads_respects_g[simplified]
                   handle_wait_reads_respects_f_g[where st=st]
