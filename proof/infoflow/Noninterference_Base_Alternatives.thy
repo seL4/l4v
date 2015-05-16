@@ -33,16 +33,16 @@ lemma in_xources_ConsD:
   "x \<in> (xources (a # as) s u) \<Longrightarrow>
    (\<forall> s'. (s,s') \<in> Step a \<longrightarrow> x \<in> xources as s' u) \<or> 
    (x = dom a s \<and> (\<forall> s'. (s,s') \<in> Step a \<longrightarrow> (\<exists> v. dom a s \<leadsto> v \<and> v \<in> xources as s' u)))"
-  by(auto simp: xources_Cons)
+  by auto
 
 lemma in_xources_ConsI1:
   "\<lbrakk>\<forall> s'. (s,s') \<in> Step a \<longrightarrow> x \<in> xources as s' u\<rbrakk> \<Longrightarrow> x \<in> xources (a#as) s u"
-  by(auto simp: xources_Cons)
+  by auto
 
 lemma in_xources_ConsI2:
   "\<lbrakk>x = dom a s; \<forall> s'. (s,s') \<in> Step a \<longrightarrow> (\<exists> v. dom a s \<leadsto> v \<and> v \<in> xources as s' u)\<rbrakk> \<Longrightarrow> 
   x \<in> xources (a#as) s u"
-  by(auto simp: xources_Cons)
+  by auto
 
 
 declare xources_Nil [simp del]     
@@ -665,4 +665,4 @@ lemma Noninfluence_strong_uwr_equiv_Noninfluence_strong_uwr_pg:
 end
 
 
-end (* a comment *)
+end

@@ -1084,11 +1084,6 @@ lemma intra_label_cap_is_original_cap[simp]:
   apply(simp add: intra_label_cap_def)
   done
 
-lemma slots_holding_overlapping_caps_is_original_cap[simp]:
-  "slots_holding_overlapping_caps cap (s\<lparr>is_original_cap := X\<rparr>) = slots_holding_overlapping_caps cap s"
-  apply(simp add: slots_holding_overlapping_caps_def2 ctes_wp_at_def)
-  done
-
 lemma silc_inv_is_original_cap[simp]:
   "silc_inv aag st (s\<lparr>is_original_cap := X\<rparr>) = silc_inv aag st s"
   apply(simp add: silc_inv_def silc_dom_equiv_def equiv_for_def)

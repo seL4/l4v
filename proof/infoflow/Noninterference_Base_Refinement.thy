@@ -155,5 +155,3 @@ lemma Noninfluence_strong_uwr_quasi_refinement_closed:
   
 end
 end
-
-(* a comment *)
