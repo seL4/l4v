@@ -594,11 +594,8 @@ proof -
    apply (subst x)
    apply (subst zip_append)
     apply simp
-   apply (simp add: map_append)
    apply (simp add: map_zip_replicate_False_xor drop_minus)
-  apply clarsimp
-  apply (rule word_eqI)
-  apply (simp add: word_size nth_w2p)
+  apply (auto simp add: word_size nth_w2p intro!: word_eqI)
   done
 qed
 
@@ -787,8 +784,7 @@ proof cases
   assume "n < len_of TYPE('a)"
   with al
   show ?thesis
-    apply (simp add: is_aligned_def dvd_eq_mod_eq_0 word_arith_nat_mod
-                del: word_neq_0_conv)
+    apply (simp add: is_aligned_def dvd_eq_mod_eq_0 word_arith_nat_mod)
     apply (erule of_nat_neq_0)
     apply (rule order_less_trans)
      apply (rule mod_less_divisor)

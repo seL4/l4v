@@ -144,7 +144,7 @@ lemma andCapRights_ac:
   "andCapRights (andCapRights a b) c = andCapRights a (andCapRights b c)"
   "andCapRights a b = andCapRights b a"
   "andCapRights a (andCapRights b c) = andCapRights b (andCapRights a c)"
-  by (simp add: andCapRights_def conj_ac split: cap_rights.split)+
+  by (simp add: andCapRights_def conj_comms split: cap_rights.split)+
 
 lemma wordFromRights_rightsFromWord:
   "wordFromRights (rightsFromWord w) = w && mask 3"
@@ -643,7 +643,7 @@ lemma lookupSlotForThread_ccorres':
      apply wp
    apply vcg
   apply (rule conjI)
-   apply (clarsimp simp add: conj_ac word_size tcbSlots Kernel_C.tcbCTable_def)
+   apply (clarsimp simp add: conj_comms word_size tcbSlots Kernel_C.tcbCTable_def)
    apply (rule conjI)
     apply fastforce
    apply (erule tcb_at_cte_at')

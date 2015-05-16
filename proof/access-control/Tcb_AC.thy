@@ -223,7 +223,7 @@ lemma invoke_tcb_tc_respects_aag:
   apply (rule_tac P="case ep of Some v \<Rightarrow> length v = word_bits | _ \<Rightarrow> True"
                 in hoare_gen_asm)
   apply wp
-      apply ((((simp add: conj_ac(1, 2) del: hoare_post_taut hoare_True_E_R
+      apply ((((simp add: conj_comms(1, 2) del: hoare_post_taut hoare_True_E_R
         | rule wp_split_const_if wp_split_const_if_R
                    hoare_vcg_all_lift_R
                    hoare_vcg_E_elim hoare_vcg_const_imp_lift_R

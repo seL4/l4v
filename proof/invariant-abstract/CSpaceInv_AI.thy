@@ -887,7 +887,7 @@ lemma is_final_cap'_def3:
   apply (clarsimp simp: is_final_cap'_def2
                 intro!: ext arg_cong[where f=Ex])
   apply (subst iff_conv_conj_imp)
-  apply (clarsimp simp: all_conj_distrib conj_ac)
+  apply (clarsimp simp: all_conj_distrib conj_comms)
   apply (rule rev_conj_cong[OF _ refl])
   apply (rule arg_cong[where f=All] ext)+
   apply (clarsimp simp: cte_wp_at_caps_of_state)
@@ -966,7 +966,7 @@ lemma zombies_finalD2:
   "\<lbrakk> fst (get_cap p s) = {(cap, s)}; fst (get_cap p' s) = {(cap', s)};
      p \<noteq> p'; zombies_final s; obj_refs cap \<inter> obj_refs cap' \<noteq> {} \<rbrakk>
      \<Longrightarrow> \<not> is_zombie cap \<and> \<not> is_zombie cap'"
-  by (simp only: zombies_final_def2 cte_wp_at_def simp_thms conj_ac)
+  by (simp only: zombies_final_def2 cte_wp_at_def simp_thms conj_comms)
 
 lemma zombies_finalD3:
   "\<lbrakk> cte_wp_at P p s; cte_wp_at P' p' s; p \<noteq> p'; zombies_final s;
@@ -1898,7 +1898,7 @@ lemma set_cap_caps_of_state2:
 
 lemma obj_irq_refs_empty:
   "(obj_irq_refs cap = {}) = (cap_irqs cap = {} \<and> obj_refs cap = {})"
-  by (simp add: obj_irq_refs_def conj_ac)
+  by (simp add: obj_irq_refs_def conj_comms)
 
 
 lemma final_NullCap:

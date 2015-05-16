@@ -12,7 +12,7 @@
 The TCB and thread related specifications.
 *)
 
-header "Threads and TCBs"
+chapter "Threads and TCBs"
 
 theory Tcb_A
 imports Schedule_A

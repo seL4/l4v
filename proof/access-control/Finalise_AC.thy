@@ -462,7 +462,7 @@ next
            apply simp
           apply (rule "2.hyps", assumption+)
          apply simp
-        apply (simp add: conj_ac)
+        apply (simp add: conj_comms)
         apply (wp set_cap_integrity_autarch replace_cap_invs
                   final_cap_same_objrefs set_cap_cte_cap_wp_to
                   set_cap_cte_wp_at hoare_vcg_const_Ball_lift static_imp_wp
@@ -494,7 +494,7 @@ next
        apply simp
       apply (simp add: is_final_cap_def)
       apply (wp get_cap_auth_wp [where aag = aag])
-    apply (clarsimp simp: pas_refined_wellformed cte_wp_at_caps_of_state conj_ac)
+    apply (clarsimp simp: pas_refined_wellformed cte_wp_at_caps_of_state conj_comms)
     apply (frule (1) caps_of_state_valid)
     apply (frule if_unsafe_then_capD [OF caps_of_state_cteD], clarsimp+)
     apply auto
@@ -632,7 +632,7 @@ lemma arch_recycle_cap_respects:
              | wp_once hoare_drop_imps
              | elim conjE
              | (erule is_aligned_weaken, simp add: pd_bits_def pageBits_def))+
-  apply (clarsimp simp: conj_ac cases_simp_options valid_cap_def cap_aligned_def)
+  apply (clarsimp simp: conj_comms cases_simp_options valid_cap_def cap_aligned_def)
   apply (frule (1) cte_wp_valid_cap [OF _ invs_valid_objs])
   apply (simp add: cap_auth_conferred_def is_page_cap_def aag_cap_auth_def
                    pas_refined_all_auth_is_owns valid_cap_simps
@@ -1052,7 +1052,7 @@ lemma cap_recycle_respects[wp]:
      apply (wp rec_del_respects rec_del_invs rec_del_has_recycle_rights_insts preemption_point_inv' | simp)+
     apply (clarsimp simp: cte_wp_at_caps_of_state)
     apply (auto elim: caps_of_state_valid)[1]
-   apply (simp add: conj_ac)
+   apply (simp add: conj_comms)
    apply (wp cap_revoke_respects cap_revoke_pas_refined cap_revoke_invs
              cap_revoke_has_recycle_rights
                | strengthen real_cte_emptyable_strg | simp)+

@@ -12,7 +12,7 @@
 	Kernel state and kernel monads, imports everything that SEL4.Model needs.
 *)
 
-header "Architecture Specific Kernel State and Monads"
+chapter "Architecture Specific Kernel State and Monads"
 
 theory ArchStateData_H
 imports

@@ -6613,7 +6613,7 @@ proof (induct arbitrary: P p rule: finalise_spec_induct2)
      apply (wp getCTE_wp')
     apply (clarsimp simp: cte_wp_at_ctes_of disj_ac)
     apply (rule conjI, clarsimp simp: removeable'_def)
-    apply (clarsimp simp: conj_ac)
+    apply (clarsimp simp: conj_comms)
     apply (rule conjI, erule ctes_of_valid', clarsimp)
     apply (rule conjI, clarsimp)
     apply fastforce
@@ -7483,7 +7483,7 @@ next
               apply (wp replace_cap_invs final_cap_same_objrefs
                         set_cap_cte_wp_at set_cap_cte_cap_wp_to
                         hoare_vcg_const_Ball_lift static_imp_wp
-                         | simp add: conj_ac
+                         | simp add: conj_comms
                          | erule finalise_cap_not_reply_master [simplified])+
              apply (wp make_zombie_invs' updateCap_cap_to'
                         updateCap_cte_wp_at_cases
@@ -7492,7 +7492,7 @@ next
             apply clarsimp
             apply (drule_tac cap=a in cap_relation_removables,
                       clarsimp, assumption+)
-            apply (clarsimp simp: conj_ac)
+            apply (clarsimp simp: conj_comms)
            apply (wp | simp)+
            apply (rule hoare_strengthen_post)
             apply (rule_tac Q="\<lambda>fin s. einvs s \<and> simple_sched_action s
@@ -7531,9 +7531,9 @@ next
           apply (case_tac "cteCap rv'",
                  auto simp add: isCap_simps is_cap_simps final_matters'_def)[1]
          apply (wp isFinalCapability_inv isFinal2 static_imp_wp
-                 | simp add: is_final_cap_def conj_ac cte_wp_at_eq_simp)+
+                 | simp add: is_final_cap_def conj_comms cte_wp_at_eq_simp)+
        apply (rule isFinal[where x="cte_map slot"])
-      apply (wp get_cap_wp| simp add: conj_ac)+
+      apply (wp get_cap_wp| simp add: conj_comms)+
       apply (wp getCTE_wp')
      apply clarsimp
      apply (frule cte_wp_at_valid_objs_valid_cap[where P="op = cap" for cap])

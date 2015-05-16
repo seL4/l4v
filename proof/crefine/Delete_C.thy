@@ -561,7 +561,7 @@ lemma reduceZombie_ccorres1:
               apply (simp add: guard_is_UNIV_def)+
            apply (rule ccorres_fail)
           apply (simp add: guard_is_UNIV_def)
-         apply (simp add: conj_ac)
+         apply (simp add: conj_comms)
          apply (wp getCTE_wp)
         apply simp
         apply (rule ccorres_split_throws)
@@ -807,7 +807,7 @@ proof (induct rule: finaliseSlot'.induct[where ?a0.0=slot and ?a1.0=exposed and 
                 apply (wp cutMon_validE_drop reduceZombie_invs reduceZombie_sch_act_simple)
                 apply (wp reduceZombie_cap_to[simplified imp_conv_disj, simplified])
                apply (simp add: guard_is_UNIV_def)
-              apply (simp add: conj_ac)
+              apply (simp add: conj_comms)
               apply (wp make_zombie_invs' updateCap_cte_wp_at_cases
                         updateCap_cap_to' hoare_vcg_disj_lift static_imp_wp)
             apply (simp add: guard_is_UNIV_def)

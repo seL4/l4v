@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-header "Platform Definitions"
+chapter "Platform Definitions"
 
 theory Platform
 imports

@@ -12,7 +12,7 @@
 Top-level system call interface.
 *)
 
-header "System Calls"
+chapter "System Calls"
 
 theory Syscall_A
 imports

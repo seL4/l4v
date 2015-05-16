@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-header "Retyping Objects"
+chapter "Retyping Objects"
 
 theory ArchVSpaceDecls_H
 imports ArchRetypeDecls_H InvocationLabels_H

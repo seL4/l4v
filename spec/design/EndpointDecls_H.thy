@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-header "Function Declarations for Endpoints"
+chapter "Function Declarations for Endpoints"
 
 theory EndpointDecls_H
 imports FaultMonad_H

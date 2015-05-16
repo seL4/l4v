@@ -8,7 +8,7 @@
  * @TAG(NICTA_BSD)
  *)
 
-header "List Manipulation Functions"
+chapter "List Manipulation Functions"
 
 theory List_Lib
 imports "~~/src/HOL/Main"

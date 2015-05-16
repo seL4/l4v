@@ -1466,7 +1466,7 @@ lemma invoke_untyped_corres:
                    elim!:cte_wp_at_weakenE | intro conjI | drule (1) bspec | drule(1) mdb_cte_atD[rotated])+)[2]
                apply (wp retype_region_cte_at_other'[where sz= sz] retype_region_post_retype_invs[where sz = sz]
                  hoare_vcg_const_Ball_lift retype_region_aligned_for_init)
-             apply (clarsimp simp:conj_ac misc cover)
+             apply (clarsimp simp:conj_comms misc cover)
              apply (rule_tac Q="\<lambda>r s.
                 cte_wp_at (op = (cap.UntypedCap ptr sz (unat (of_nat (length slots) << obj_bits_api tp us)))) (cref, oref) s \<and>
                 invs s \<and> pspace_no_overlap ptr sz s \<and> caps_no_overlap ptr sz s \<and>
@@ -1503,7 +1503,7 @@ lemma invoke_untyped_corres:
            apply (rule set_eqI)
            apply (clarsimp simp: bits_of_def image_def)
           apply wp
-         apply (clarsimp simp:conj_ac)
+         apply (clarsimp simp:conj_comms)
          apply (rule_tac P = "cap = cap.UntypedCap ptr sz idx \<and> sz \<le> word_bits
            \<and> 2 \<le> sz" in hoare_gen_asm)
          apply (clarsimp simp:delete_objects_rewrite bits_of_def)
@@ -1512,7 +1512,7 @@ lemma invoke_untyped_corres:
      misc invoke_untyped_proofs.cref_inv[OF pf] invoke_untyped_proofs.detype_invs[OF pf]
      cover invoke_untyped_proofs.vc[OF pf] subset_stuff  invoke_untyped_proofs.usable_range_disjoint[OF pf]
      range_cover.sz[OF cover] range_cover.aligned[OF cover] detype_valid_etcbs
-   apply (clarsimp simp:detype_clear_um_independent conj_ac not_idle_thread_def
+   apply (clarsimp simp:detype_clear_um_independent conj_comms not_idle_thread_def
      misc invs_valid_idle invs_valid_objs word_bits_def)
    apply (clarsimp simp:cte_wp_at_caps_of_state range_cover.aligned
      untyped_range.simps bits_of_def field_simps)
@@ -1583,7 +1583,7 @@ lemma invoke_untyped_corres:
                    elim!:cte_wp_at_weakenE | intro conjI | drule (1) bspec | drule(1) mdb_cte_atD[rotated])+)[2]
          apply (wp retype_region_cte_at_other'[where sz= sz] retype_region_post_retype_invs[where sz = sz]
            hoare_vcg_const_Ball_lift retype_region_aligned_for_init)
-       apply (clarsimp simp:conj_ac misc cover)
+       apply (clarsimp simp:conj_comms misc cover)
        apply (rule_tac Q="\<lambda>r s.
          cte_wp_at (op = (cap.UntypedCap (ptr && ~~ mask sz)
          sz (unat ((ptr && mask sz) + (of_nat (length slots) << obj_bits_api tp us))))) (cref, oref) s \<and>
@@ -1875,7 +1875,7 @@ lemma decode_untyped_corres:
            apply (simp add:const_on_failure_def)
           apply clarsimp
           apply wp
-         apply (clarsimp simp:conj_ac)
+         apply (clarsimp simp:conj_comms)
          apply (wp mapME_x_inv_wp[OF hoare_pre(2)] | simp)+
         apply (wp hoare_whenE_wp)
        apply (simp add:validE_def split del:if_splits)

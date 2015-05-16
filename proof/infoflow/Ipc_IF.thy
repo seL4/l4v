@@ -260,7 +260,7 @@ lemma update_waiting_aep_reads_respects:
             set_async_ep_reads_respects set_thread_state_pas_refined
             set_aep_valid_objs hoare_vcg_disj_lift set_async_ep_pas_refined
         | simp add: split_def reads_lrefl)+
-  apply (clarsimp simp: conj_ac)
+  apply (clarsimp simp: conj_comms)
   apply(frule_tac P="receive_blocked_on aepptr" and t="hd queue" in aep_queued_st_tcb_at')
       apply(fastforce)
      apply assumption
@@ -382,7 +382,7 @@ lemma update_waiting_aep_equiv_but_for_labels:
    \<lbrace> \<lambda>_. equiv_but_for_labels aag L st \<rbrace>"
   unfolding update_waiting_aep_def
   apply (wp static_imp_wp do_async_transfer_equiv_but_for_labels set_thread_state_runnable_equiv_but_for_labels set_thread_state_pas_refined set_async_ep_equiv_but_for_labels set_aep_valid_objs_at set_async_ep_st_tcb_at set_async_ep_cte_wp_at set_async_ep_pas_refined hoare_vcg_disj_lift switch_if_required_to_equiv_but_for_labels | wpc | simp add: split_def)+
-  apply (clarsimp simp: conj_ac)
+  apply (clarsimp simp: conj_comms)
   apply(frule_tac P="receive_blocked_on aepptr" and t="hd list" in aep_queued_st_tcb_at')
       apply(fastforce)
      apply assumption
@@ -1727,7 +1727,7 @@ lemma do_reply_transfer_reads_respects_f:
                     cap_delete_one_silc_inv reads_respects_f[OF thread_get_reads_respects]
                     reads_respects_f[OF get_thread_state_rev]
                | simp add: invs_valid_objs invs_valid_global_refs invs_distinct invs_arch_state invs_valid_ko_at_arm | rule conjI | elim conjE | assumption)+)[8]
-  apply(clarsimp simp: conj_ac)
+  apply(clarsimp simp: conj_comms)
   apply(rule conjI, fastforce intro: reads_lrefl)+
   apply(rule allI)
   apply(rule conjI, fastforce intro: reads_lrefl)+

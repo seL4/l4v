@@ -199,7 +199,7 @@ next
           apply (rule spec_valid_conj_liftE1, rule rec_del_emptyable)
           apply (rule "2.hyps", assumption+)
          apply simp
-         apply (simp add: conj_ac)
+         apply (simp add: conj_comms)
          apply (wp set_cap_P set_cap_Q replace_cap_invs
                   final_cap_same_objrefs set_cap_cte_cap_wp_to
                   set_cap_cte_wp_at hoare_vcg_const_Ball_lift static_imp_wp
@@ -233,9 +233,9 @@ next
      apply (simp add: is_final_cap_def)
      apply wp
      apply (wp get_cap_wp)
-     apply (clarsimp simp: cte_wp_at_caps_of_state conj_ac)
+     apply (clarsimp simp: cte_wp_at_caps_of_state conj_comms)
      apply (frule (1) caps_of_state_valid)
-    apply (clarsimp simp:   conj_ac invs_def valid_state_def valid_pspace_def valid_arch_caps_def invs_R)
+    apply (clarsimp simp:   conj_comms invs_def valid_state_def valid_pspace_def valid_arch_caps_def invs_R)
     apply (frule if_unsafe_then_capD [OF caps_of_state_cteD],clarsimp+)
 done
 next
@@ -338,7 +338,7 @@ shows "
    apply (rule_tac P="case ep of Some v \<Rightarrow> length v = word_bits | _ \<Rightarrow> True"
                 in hoare_gen_asm)
    apply wp
-      apply ((simp add: conj_ac(1, 2) del: hoare_post_taut hoare_True_E_R
+      apply ((simp add: conj_comms(1, 2) del: hoare_post_taut hoare_True_E_R
         | rule wp_split_const_if wp_split_const_if_R
                    hoare_vcg_all_lift_R
                    hoare_vcg_E_elim hoare_vcg_const_imp_lift_R

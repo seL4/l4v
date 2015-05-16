@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-header "Fault Handlers"
+chapter "Fault Handlers"
 
 theory FaultHandler_H
 imports FaultHandlerDecls_H TCB_H

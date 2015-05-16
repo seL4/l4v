@@ -25,7 +25,7 @@ abbreviation
 abbreviation
   "enum_ex \<equiv> enum_class.enum_ex"
 
-primrec
+primrec (nonexhaustive)
   the_index :: "'a list \<Rightarrow> 'a \<Rightarrow> nat"
 where
   "the_index (x # xs) y = (if x = y then 0 else Suc (the_index xs y))"

@@ -701,7 +701,7 @@ lemma transfer_caps_loop_presM:
              split del: split_if)
   apply (clarsimp simp: remove_rights_def caps_of_state_valid
                         neq_Nil_conv cte_wp_at_caps_of_state
-                        imp_conjR[symmetric] conj_ac
+                        imp_conjR[symmetric] conj_comms
                  split del: if_splits)
   apply (intro conjI)
    apply clarsimp
@@ -2283,7 +2283,7 @@ lemma is_derived_ReplyCap [simp]:
   apply (subst fun_eq_iff)
   apply clarsimp
   apply (case_tac x, simp_all add: is_derived_def is_cap_simps
-                                   cap_master_cap_def conj_ac is_pt_cap_def
+                                   cap_master_cap_def conj_comms is_pt_cap_def
                                    vs_cap_ref_def)
   done
 
@@ -2376,7 +2376,7 @@ lemma update_waiting_invs[wp]:
   apply (wp |simp)+
     apply (simp add: invs_def valid_state_def valid_pspace_def)
     apply (wp valid_irq_node_typ sts_only_idle)
-   apply (simp add: valid_tcb_state_def conj_ac)
+   apply (simp add: valid_tcb_state_def conj_comms)
    apply (simp add: cte_wp_at_caps_of_state)
    apply (wp set_aep_valid_objs hoare_post_imp [OF disjI1]
              valid_irq_node_typ | assumption |
@@ -3110,7 +3110,7 @@ lemma si_invs':
             | strengthen reply_cap_doesnt_exist_strg
                          disjI2_strg[where Q="cte_wp_at (\<lambda>cp. is_master_reply_cap cp \<and> R cp) p s" for R p s]
             | (wp hoare_vcg_conj_lift static_imp_wp | wp dxo_wp_weak | simp)+)+
-  apply (clarsimp simp: ep_redux_simps conj_ac
+  apply (clarsimp simp: ep_redux_simps conj_comms
                   cong: list.case_cong if_cong)
   apply (frule(1) sym_refs_ko_atD)
   apply (clarsimp simp: st_tcb_at_refs_of_rev st_tcb_at_tcb_at)

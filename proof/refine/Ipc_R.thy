@@ -1866,11 +1866,11 @@ lemma corres_return_ignore:
 
 lemma invs_mdb_absorb' [simp]:
   "(invs' s \<and> valid_mdb' s) = invs' s"
-  by (simp add: invs'_def valid_state'_def valid_pspace'_def conj_ac)
+  by (simp add: invs'_def valid_state'_def valid_pspace'_def conj_comms)
 
 lemma invs_mdb_absorb'_ac [simp]:
   "(invs' s \<and> valid_mdb' s \<and> P s) = (invs' s \<and> P s)"
-  by (simp add: invs'_def valid_state'_def valid_pspace'_def conj_ac)
+  by (simp add: invs'_def valid_state'_def valid_pspace'_def conj_comms)
 
 lemma lookupIPCBuffer_valid_ipc_buffer [wp]:
   "\<lbrace>valid_objs'\<rbrace> VSpace_H.lookupIPCBuffer b s \<lbrace>case_option \<top> valid_ipc_buffer_ptr'\<rbrace>"
@@ -3164,7 +3164,7 @@ lemma sai_invs'[wp]:
                           add: doAsyncTransfer_def setMessageInfo_def)[1]
     apply (wp hoare_convert_imp [OF asUser_nosch]
               hoare_convert_imp [OF setMRs_nosch])
-     apply (clarsimp simp:conj_ac)
+     apply (clarsimp simp:conj_comms)
      apply (simp add: invs'_def valid_state'_def)
      apply (wp valid_irq_node_lift sts_valid_objs' setThreadState_ct_not_inQ
                sts_valid_queues [where st="Structures_H.thread_state.Running", simplified]
@@ -3632,7 +3632,7 @@ lemma is_derived_ReplyCap' [simp]:
 
 lemma unique_master_reply_cap':
   "\<And>c t. (isReplyCap c \<and> capReplyMaster c \<and> capTCBPtr c = t) = (c = capability.ReplyCap t True)"
-  by (fastforce simp: isCap_simps conj_ac)
+  by (fastforce simp: isCap_simps conj_comms)
 
 lemma getSlotCap_cte_wp_at:
   "\<lbrace>\<top>\<rbrace> getSlotCap sl \<lbrace>\<lambda>rv. cte_wp_at' (\<lambda>c. cteCap c = rv) sl\<rbrace>"
@@ -3904,7 +3904,7 @@ lemma ri_invs' [wp]:
   apply (drule(1) sym_refs_ko_atD')
   apply (drule simple_st_tcb_at_state_refs_ofD')
   apply (clarsimp simp: projectKOs valid_obj'_def valid_ep'_def
-                        st_tcb_at_refs_of_rev' conj_ac
+                        st_tcb_at_refs_of_rev' conj_comms
              split del: split_if
                   cong: if_cong)
   apply (frule_tac t=sender in valid_queues_not_runnable'_not_ksQ)
@@ -3913,7 +3913,7 @@ lemma ri_invs' [wp]:
    prefer 2
    apply (clarsimp simp: st_tcb_at'_def obj_at'_def)
   apply (drule st_tcb_at_state_refs_ofD')
-  apply (simp only: conj_ac(1, 2)[where Q="sym_refs R" for R])
+  apply (simp only: conj_comms(1, 2)[where Q="sym_refs R" for R])
   apply (subgoal_tac "distinct (ksIdleThread s # capEPPtr cap # t # sender # queue)")
    apply (rule conjI)
     apply (simp add: ep_redux_simps' cong: if_cong)
@@ -4131,7 +4131,7 @@ lemma si_invs'[wp]:
     apply (frule(1) sym_refs_ko_atD')
     apply (clarsimp simp: projectKOs valid_obj'_def valid_ep'_def
                           st_tcb_at_refs_of_rev' st_tcb_at_tcb_at'
-                          conj_ac fun_upd_def[symmetric]
+                          conj_comms fun_upd_def[symmetric]
                split del: split_if)
     apply (drule simple_st_tcb_at_state_refs_ofD' st_tcb_at_state_refs_ofD')+
     apply (subst fun_upd_idem[where x=t])

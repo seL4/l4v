@@ -1089,7 +1089,7 @@ lemma invoke_untyped_valid_pdpt[wp]:
       retype_region_invs_extras[where sz = sz]
       retype_region_ret_folded | simp)+
     apply (rule_tac P = "cap = cap.UntypedCap (ptr && ~~ mask sz) sz idx" in hoare_gen_asm)
-    apply (clarsimp simp:conj_ac bits_of_def region_in_kernel_window_def)
+    apply (clarsimp simp:conj_comms bits_of_def region_in_kernel_window_def)
     apply (wp set_cap_no_overlap hoare_vcg_ball_lift set_cap_free_index_invs_spec
               set_cap_cte_wp_at set_cap_descendants_range_in set_cap_caps_no_overlap
               set_untyped_cap_caps_overlap_reserved set_cap_cte_cap_wp_to get_cap_wp)
@@ -1110,7 +1110,7 @@ lemma invoke_untyped_valid_pdpt[wp]:
       retype_region_invs_extras[where sz = sz]
       retype_region_ret_folded | simp)+
     apply (rule_tac P = "cap = cap.UntypedCap (ptr && ~~ mask sz) sz idx" in hoare_gen_asm)
-    apply (clarsimp simp:conj_ac bits_of_def region_in_kernel_window_def)
+    apply (clarsimp simp:conj_comms bits_of_def region_in_kernel_window_def)
     apply (wp set_cap_no_overlap set_untyped_cap_invs_simple
               set_cap_cte_wp_at set_cap_caps_no_overlap
               set_untyped_cap_caps_overlap_reserved get_cap_wp)
@@ -1122,7 +1122,7 @@ lemma invoke_untyped_valid_pdpt[wp]:
       detype_locale detype_descendants_range_in detype_invs kernel_window_inv)
   apply (frule(1) valid_global_refsD2[OF _ invs_valid_global_refs])
   apply (clarsimp simp:cte_wp_at_caps_of_state invs_valid_objs
-      untyped_range.simps bits_of_def conj_ac)
+      untyped_range.simps bits_of_def conj_comms)
   apply (frule caps_of_state_valid_cap)
    apply (simp add:invs_valid_objs)
   apply (frule valid_cap_aligned)

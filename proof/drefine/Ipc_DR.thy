@@ -2431,7 +2431,7 @@ lemma send_sync_ipc_corres:
              apply (rule hoare_disjI1)
              apply (wp do_ipc_transfer_st_tcb | wpc | simp)+
           apply (simp add:return_def fail_def valid_def split:Structures_A.thread_state.splits)
-         apply (clarsimp simp:conj_ac not_idle_thread_def)+
+         apply (clarsimp simp:conj_comms not_idle_thread_def)+
         apply (rule hoare_drop_imp)
         apply wp
       apply clarsimp

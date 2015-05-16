@@ -891,7 +891,7 @@ lemma ep_cancel_badged_sends_invs[wp]:
      apply clarsimp
      apply blast
     apply (wp valid_irq_node_typ)
-   apply (clarsimp simp: valid_ep_def conj_ac)
+   apply (clarsimp simp: valid_ep_def conj_comms)
    apply (subst obj_at_weakenE[where P'=is_ep], assumption)
     apply (clarsimp simp: is_ep_def)
    apply (frule(1) sym_refs_ko_atD, clarsimp)

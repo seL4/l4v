@@ -371,7 +371,7 @@ qed
 lemma of_bl_take:
   "length xs < len_of TYPE('a) \<Longrightarrow> of_bl (take n xs) = ((of_bl xs) >> (length xs - n) :: ('a :: len) word)"
   apply (clarsimp simp: bang_eq and_bang test_bit_of_bl
-                        rev_take conj_ac nth_shiftr)
+                        rev_take conj_comms nth_shiftr)
   apply safe
         apply simp_all
    apply (clarsimp elim!: rsubst[where P="\<lambda>x. rev xs ! x"])+
@@ -2000,7 +2000,7 @@ lemma cap_insert_mdb_cte_at:
     set_cap_cte_wp_at get_cap_wp)
   apply (clarsimp simp:free_index_update_def split:cap.splits)
   apply (wp)
-  apply (clarsimp simp:if_True conj_ac split del:if_splits cong:split_weak_cong)
+  apply (clarsimp simp:if_True conj_comms split del:if_splits cong:split_weak_cong)
   apply (wps)
   apply (wp valid_case_option_post_wp get_cap_wp hoare_vcg_if_lift
     hoare_impI set_untyped_cap_as_full_cte_wp_at )

@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-header "Machine Operations"
+chapter "Machine Operations"
 
 theory MachineOps
 imports

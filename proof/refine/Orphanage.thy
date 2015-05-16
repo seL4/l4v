@@ -1318,7 +1318,7 @@ lemma invokeUntyped_no_orphans' [wp]:
    apply (rule conjI)
     apply (rule invokeUntyped_proofs.cte_wp_at'[OF ivk_pf])
    using ivk_pf
-   apply (clarsimp simp:conj_ac invs_valid_pspace'
+   apply (clarsimp simp:conj_comms invs_valid_pspace'
           invokeUntyped_proofs_def no_orph misc)
    apply (simp add:getFreeIndex_def add_minus_neg_mask field_simps shiftL_nat
                    invokeUntyped_proofs.ps_no_overlap'[OF ivk_pf]
@@ -1348,7 +1348,7 @@ lemma invokeUntyped_no_orphans' [wp]:
               updateFreeIndex_caps_overlap_reserved' | clarsimp)+
    apply (strengthen impI[OF invs_pspace_aligned'] impI[OF invs_valid_pspace']
           impI[OF invs_pspace_distinct'] impI[OF invs_arch_state] impI[OF invs_psp_aligned])
-   apply (clarsimp simp:conj_ac invokeUntyped_proofs.slots_invD[OF ivk_pf])
+   apply (clarsimp simp:conj_comms invokeUntyped_proofs.slots_invD[OF ivk_pf])
    apply (rule_tac P = "cap = capability.UntypedCap (ptr && ~~ mask sz) sz idx" 
        in hoare_gen_asm)
    apply (clarsimp simp:misc)
@@ -1362,7 +1362,7 @@ lemma invokeUntyped_no_orphans' [wp]:
      deleteObjects_st_tcb_at'[where p = cref]
      deleteObjects_cte_wp_at'[where idx = idx and ptr = ptr and bits = sz]
      deleteObjects_ct_active'[where idx = idx and cref = cref])
-   apply (clarsimp simp:conj_ac)
+   apply (clarsimp simp:conj_comms)
    apply (wp getSlotCap_wp)
    using invokeUntyped_proofs.usableRange_disjoint[OF ivk_pf]
      invokeUntyped_proofs.descendants_range[OF ivk_pf]
@@ -1856,7 +1856,7 @@ proof (induct arbitrary: P p rule: finalise_spec_induct2)
      apply (wp getCTE_wp')
     apply (clarsimp simp: cte_wp_at_ctes_of disj_ac)
     apply (rule conjI, clarsimp simp: removeable'_def)
-    apply (clarsimp simp: conj_ac)
+    apply (clarsimp simp: conj_comms)
     apply (rule conjI, erule ctes_of_valid', clarsimp)
     apply (rule conjI, clarsimp)
     apply (fastforce)
@@ -2211,13 +2211,13 @@ lemma performASIDControlInvocation_no_orphans [wp]:
       apply simp
      apply (wp static_imp_wp updateFreeIndex_pspace_no_overlap'[where sz= pageBits] getSlotCap_wp | simp)+
   apply (strengthen impI[OF invs_pspace_aligned'] impI[OF invs_pspace_distinct'] impI[OF invs_valid_pspace'])
-  apply (clarsimp simp:conj_ac)
+  apply (clarsimp simp:conj_comms)
      apply (wp deleteObjects_invs'[where idx = idx]
        hoare_ex_wp deleteObjects_cte_wp_at'[where idx = idx] hoare_vcg_const_imp_lift )
   using invs' misc cte exclude no_orphans cover
   apply (clarsimp simp: is_active_thread_state_def makeObject_tcb valid_aci'_def
                         cte_wp_at_ctes_of invs_pspace_aligned' invs_pspace_distinct'
-                        projectKO_opt_tcb isRunning_def isRestart_def conj_ac
+                        projectKO_opt_tcb isRunning_def isRestart_def conj_comms
                         invs_valid_pspace' vc objBits_simps archObjSize_def range_cover.aligned)
   apply (intro conjI)
     apply (rule vc)

@@ -429,7 +429,7 @@ shows
               apply (clarsimp simp: asid_high_bits_def)
              apply wp
             apply (strengthen impI[OF valid_pspace_mdb'] vp_strgs' impI[OF valid_pspace_valid_objs'])
-            apply (clarsimp simp: is_simple_cap'_def isCap_simps conj_ac placeNewObject_def2)
+            apply (clarsimp simp: is_simple_cap'_def isCap_simps conj_comms placeNewObject_def2)
             apply (wp createObjects_valid_pspace'[where ty="Inl (KOArch (KOASIDPool f))" and sz = pageBits]
                       createObjects_cte_wp_at'[where sz = pageBits] 
                    | simp add:makeObjectKO_def objBits_simps archObjSize_def range_cover_full)+
@@ -437,7 +437,7 @@ shows
             apply (wp createObject_typ_at')
            apply clarsimp
            apply vcg
-          apply (clarsimp simp:conj_ac objBits_simps archObjSize_def |
+          apply (clarsimp simp:conj_comms objBits_simps archObjSize_def |
                  strengthen impI[OF valid_pspace_mdb'] vp_strgs' impI[OF invs_valid_pspace']
                  impI[OF valid_pspace_valid_objs'] impI[OF invs_valid_global'])+
           apply (wp updateFreeIndex_invs_simple'[where cap = "UntypedCap frame pageBits idx",simplified]
@@ -480,7 +480,7 @@ shows
               deleteObjects_ct_active'[where cref = parent and idx = idx])
    apply clarsimp
    apply vcg
-  apply (clarsimp simp:conj_ac invs_valid_pspace')
+  apply (clarsimp simp:conj_comms invs_valid_pspace')
   apply (frule cte_wp_at_valid_objs_valid_cap', fastforce)
   apply (clarsimp simp:valid_cap'_def capAligned_def cte_wp_at_ctes_of 
     descendants_range'_def2 empty_descendants_range_in')

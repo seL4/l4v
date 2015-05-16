@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-header "Kernel Invocation Labels"
+chapter "Kernel Invocation Labels"
 
 theory InvocationLabels_H
 imports "../../lib/Enumeration"

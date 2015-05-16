@@ -252,7 +252,7 @@ lemma seL4_Page_Table_Map:
          apply (simp add:cap_has_object_def)
         apply clarsimp
         apply (sep_solve)
-       apply (simp add:lookup_extra_caps_def conj_ac mapME_singleton)
+       apply (simp add:lookup_extra_caps_def conj_comms mapME_singleton)
        apply (rule wp_no_exception_seq)
         apply wp[1]
        apply (rule lookup_cap_and_slot_rvu[where r = root_size
@@ -395,7 +395,7 @@ lemma seL4_Section_Map_wp:
          apply simp
         apply clarsimp
         apply sep_solve
-       apply (simp add:lookup_extra_caps_def conj_ac mapME_singleton)
+       apply (simp add:lookup_extra_caps_def conj_comms mapME_singleton)
        apply (rule wp_no_exception_seq)
         apply wp[1]
        apply (rule lookup_cap_and_slot_rvu[where r = root_size

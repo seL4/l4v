@@ -13,7 +13,7 @@ The main architecture independent data types and type definitions in
 the abstract model.
 *)
 
-header "Basic Data Structures"
+chapter "Basic Data Structures"
 
 theory Structures_A
 imports
@@ -97,13 +97,13 @@ definition
   the_arch_cap :: "cap \<Rightarrow> arch_cap" where
   "the_arch_cap cap \<equiv> case cap of ArchObjectCap a \<Rightarrow> a"
 
-primrec
+primrec (nonexhaustive)
   cap_ep_badge :: "cap \<Rightarrow> badge"
 where
   "cap_ep_badge (EndpointCap _ badge _) = badge"
 | "cap_ep_badge (AsyncEndpointCap _ badge _) = badge"
 
-primrec
+primrec (nonexhaustive)
   cap_ep_ptr :: "cap \<Rightarrow> badge"
 where
   "cap_ep_ptr (EndpointCap obj_ref _ _) = obj_ref"
@@ -163,7 +163,7 @@ where
   "is_aep_cap (AsyncEndpointCap _ _ _) = True"
 | "is_aep_cap _                        = False"
 
-primrec
+primrec (nonexhaustive)
   cap_rights :: "cap \<Rightarrow> cap_rights"
 where
   "cap_rights (EndpointCap _ _ cr) = cr"
@@ -408,7 +408,7 @@ where
 | "obj_bits (AsyncEndpoint aep) = 4"
 | "obj_bits (ArchObj ao) = arch_kobj_size ao"
 
-primrec
+primrec (nonexhaustive)
   obj_size :: "cap \<Rightarrow> word32"
 where
   "obj_size NullCap = 0"
@@ -511,7 +511,7 @@ lemma zombie_cte_bits_simps[simp]:
   by (simp add: zombie_cte_bits_def)+
 
 text {* The first capability slot of the relevant kernel object. *}
-primrec
+primrec (nonexhaustive)
   first_cslot_of :: "cap \<Rightarrow> cslot_ptr"
 where
   "first_cslot_of (ThreadCap oref) = (oref, tcb_cnode_index 0)"
@@ -540,7 +540,7 @@ text {*
   It also provides cases for UntypedCap and ReplyCap which are not
   true object references in the sense of the other caps.
 *}
-primrec
+primrec (nonexhaustive)
   obj_ref_of :: "cap \<Rightarrow> obj_ref"
 where
   "obj_ref_of (UntypedCap r s f) = r"
@@ -552,7 +552,7 @@ where
 | "obj_ref_of (Zombie ptr b n) = ptr"
 | "obj_ref_of (ArchObjectCap x) = the (aobj_ref x)"
 
-primrec
+primrec (nonexhaustive)
   cap_bits_untyped :: "cap \<Rightarrow> nat"
 where
   "cap_bits_untyped (UntypedCap r s f) = s"

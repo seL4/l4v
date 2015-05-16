@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-header "Kernel"
+chapter "Kernel"
 
 theory Kernel_H
 imports

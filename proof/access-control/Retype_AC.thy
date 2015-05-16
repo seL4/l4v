@@ -1168,7 +1168,7 @@ lemma set_free_index_invs':
   apply(case_tac "free_index_of cap \<le> idx'")
    apply simp
     apply(cut_tac cap=cap and cref=slot and idx="idx'" in set_free_index_invs)
-    apply(simp add: free_index_update_def conj_ac)
+    apply(simp add: free_index_update_def conj_comms)
    apply simp
    apply(wp set_untyped_cap_invs_simple | simp)+
    apply(fastforce simp: cte_wp_at_def)
@@ -1356,7 +1356,7 @@ lemma invoke_untyped_pas_refined:
                        descendants_range_caps_no_overlapI
                        cte_wp_at_pspace_no_overlapI dest: unat_less_helper)[15]
     apply(clarsimp split del: split_if)
-    apply(simp add: conj_ac cong: conj_cong split del: split_if)
+    apply(simp add: conj_comms cong: conj_cong split del: split_if)
     apply(wp delete_objects_invs delete_objects_pas_refined[where aag=aag]
              delete_objects_descendants_range_in
              region_in_kernel_window_preserved hoare_ex_wp get_cap_wp
@@ -1364,10 +1364,10 @@ lemma invoke_untyped_pas_refined:
              delete_objects_pspace_no_overlap'
           | simp split del: split_if)+
   apply (clarsimp split del: split_if
-                  simp: conj_ac cong: conj_cong)
+                  simp: conj_comms cong: conj_cong)
   apply (drule (1) cte_wp_at_eqD2)
   apply (clarsimp split del: split_if
-                  simp: conj_ac cong: conj_cong if_cong simp: bits_of_UntypedCap)
+                  simp: conj_comms cong: conj_cong if_cong simp: bits_of_UntypedCap)
   apply(split split_if)
   apply(subgoal_tac "sz < word_bits")
    apply(intro conjI impI)

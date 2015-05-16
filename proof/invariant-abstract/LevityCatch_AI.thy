@@ -124,7 +124,7 @@ lemma mask_lower_twice:
 (* FIXME: move *)
 lemma mask_lower_twice2:
   "(a && ~~ mask n) && ~~ mask m = a && ~~ mask (max n m)"
-  by (rule word_eqI, simp add: neg_mask_bang conj_ac)
+  by (rule word_eqI, simp add: neg_mask_bang conj_comms)
 
 lemma all_eq_trans: "\<lbrakk> \<forall>x. P x = Q x; \<forall>x. Q x = R x \<rbrakk> \<Longrightarrow> \<forall>x. P x = R x"
   by simp

@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-header "Function Declarations for TCBs"
+chapter "Function Declarations for TCBs"
 
 theory TCBDecls_H
 imports FaultMonad_H Invocations_H

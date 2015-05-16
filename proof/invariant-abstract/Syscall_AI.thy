@@ -872,7 +872,7 @@ lemma hinv_invs':
                        simp: st_tcb_at_tcb_at)[1]
          apply (rule gts_sp)
         apply wp
-       apply (simp add: ct_in_state_def conj_ac)
+       apply (simp add: ct_in_state_def conj_comms)
        apply wp
        apply (rule_tac Q="\<lambda>rv s. st_tcb_at active thread s \<and>
                                  cur_thread s = thread" in hoare_post_imp)

@@ -573,7 +573,7 @@ lemma invokeTCB_typ_at'[wp]:
          simp_all add: invokeTCB_def
                        getThreadBufferSlot_def locateSlot_conv
             split del: split_if)
-   apply (simp only: cases_simp if_cancel simp_thms conj_ac pred_conj_def
+   apply (simp only: cases_simp if_cancel simp_thms conj_comms pred_conj_def
                      Let_def split_def getThreadVSpaceRoot
           | (simp split del: split_if cong: if_cong)
           | (wp mapM_x_wp[where S=UNIV, simplified]
@@ -1665,7 +1665,7 @@ lemma hw_corres':
                 hoare_vcg_all_lift
                 deleteCallerCap_ct_not_ksQ)
    apply (simp add: invs_valid_objs tcb_at_invs invs_psp_aligned invs_cur)
-   apply (clarsimp simp add: ct_in_state_def conj_ac)
+   apply (clarsimp simp add: ct_in_state_def conj_comms)
   apply (clarsimp simp add: ct_in_state'_def)
   apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def
                         ct_in_state'_def sch_act_sane_not)

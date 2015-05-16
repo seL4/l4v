@@ -898,7 +898,7 @@ lemma decodeCNodeInvocation_ccorres:
                                     apply (wp sts_valid_pspace_hangers)
                                    apply (simp add: Collect_const_mem)
                                    apply (vcg exspec=setThreadState_modifies)
-                                  apply (simp add: conj_ac valid_tcb_state'_def)
+                                  apply (simp add: conj_comms valid_tcb_state'_def)
                                   apply (wp injection_wp_E[OF refl])
                                   apply (rule hoare_post_imp_R)
                                    apply (rule_tac Q'="\<lambda>rv. valid_pspace' and valid_queues
@@ -1786,7 +1786,7 @@ lemma invokeUntyped_Retype_ccorres_side_case:
     apply (clarsimp simp: hrs_htd_update rf_sr_def cstate_relation_def
                           Let_def kernel_data_refs_domain_eq_rotate)
    apply (clarsimp simp: cte_wp_at_ctes_of invs_valid_objs' invs_valid_pspace'
-                         conj_ac)
+                         conj_comms)
    apply (frule invokeUntyped_proofs.usableRange_disjoint)
    apply (frule invokeUntyped_proofs.descendants_range)
    apply (frule invokeUntyped_proofs.descendants_range(2))
@@ -1987,7 +1987,7 @@ lemma invokeUntyped_Retype_ccorres:
              apply vcg
             apply (rule conseqPre, vcg, clarsimp)
            apply (cut_tac cover us_misc proofs misc us_misc')
-           apply (clarsimp simp: getFreeIndex_def conj_ac)
+           apply (clarsimp simp: getFreeIndex_def conj_comms)
            apply (rule_tac Q = "\<lambda>r. invs' and sch_act_simple and ct_active' and
                     cte_wp_at' (\<lambda>c. cteCap c = UntypedCap ptr_base sz idx) cref and 
                     (\<lambda>s. \<forall>slot\<in>set destSlots. cte_wp_at' (\<lambda>c. cteCap c = NullCap) slot s) and

@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-header "The Fault Monad"
+chapter "The Fault Monad"
 
 theory FaultMonad_H
 imports KernelStateData_H Fault_H

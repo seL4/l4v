@@ -12,7 +12,7 @@
    Types visible in the API. 
 *)
 
-header "Types visible in the API"
+chapter "Types visible in the API"
 
 theory Types_H
 imports

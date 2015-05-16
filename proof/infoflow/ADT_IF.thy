@@ -2843,7 +2843,7 @@ lemma cap_recycle_irq_state_inv:
 
    apply(wp hoare_unless_wp  finalise_slot_irq_state_inv[where st=st and irq=irq] 
             cap_revoke_irq_state_inv[folded validE_R_def] 
-        | simp add: conj_ac |  wp_once irq_state_inv_triv)+
+        | simp add: conj_comms |  wp_once irq_state_inv_triv)+
   apply(rule validE_validE_R[OF hoare_post_impErr, OF cap_revoke_domain_sep_inv], simp+)
   apply(auto)
   done

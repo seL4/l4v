@@ -359,7 +359,7 @@ proof -
   show ?thesis
     apply (simp add: global_data_valid_def global_data_def)
     apply (simp add: all_to_xs order_less_imp_le[OF max_size]
-                     inj_eq[OF to_bytes_p_inj] conj_ac K_def)
+                     inj_eq[OF to_bytes_p_inj] conj_comms K_def)
     apply (safe, simp_all add: to_bytes_p_from_bytes)
     apply (drule_tac x="to_bytes_p (from_bytes xs :: 'a)" in spec, drule mp)
      apply simp

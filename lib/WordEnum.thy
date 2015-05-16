@@ -13,7 +13,7 @@
   Instance of words in the enumeration class.
 *)
 
-header "Enumeration instances for Words"
+chapter "Enumeration instances for Words"
 
 theory WordEnum
 imports Enumeration WordLib
@@ -47,7 +47,7 @@ end
 lemma fromEnum_unat[simp]: "fromEnum (x :: ('a :: len) word) = unat x"
   apply (subgoal_tac "x \<in> set enum")
    defer
-   apply (simp add: enum_surj)
+   apply simp
   apply (unfold fromEnum_def enum_word_def)
   apply (subgoal_tac "ALL n. n < 2 ^ len_of TYPE('a) --> (map of_nat [0..< 2 ^ len_of TYPE('a)] ! n) = x --> n = unat x")
    apply (subgoal_tac "(map of_nat [0..< 2 ^ len_of TYPE('a)]) ! (the_index (map of_nat [0..< 2 ^ len_of TYPE('a)]) x) = x")

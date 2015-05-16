@@ -1561,7 +1561,7 @@ next
           apply(clarsimp simp: cte_wp_at_def appropriate_cte_cap_def)
           apply(drule_tac x="cap" in fun_cong)
           apply(clarsimp simp: appropriate_cte_cap_def split: cap.splits)
-         apply(clarsimp cong: conj_cong simp: conj_ac)
+         apply(clarsimp cong: conj_cong simp: conj_comms)
         apply(wp drop_spec_ev[OF liftE_ev] is_final_cap_reads_respects | simp)+
 
 

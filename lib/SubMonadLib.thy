@@ -172,7 +172,7 @@ lemma submonad_bind:
   apply (subst bind_subst_lift [OF stateAssert_stateAssert])
   apply (clarsimp simp: pred_conj_def)
   apply (clarsimp simp: bind_assoc split_def select_f_walk
-                empty_fail_modify empty_fail_stateAssert empty_failD
+                empty_fail_stateAssert empty_failD
                 bind_subst_lift[OF modify_modify] submonad_args.args o_def
                 bind_subst_lift[OF bind_select_f_bind])
   done
@@ -348,7 +348,7 @@ lemma corres_submonad:
                          assert_def return_def bind_def)
   apply (rule corres_split' [where r'="\<lambda>x y. (x, y) \<in> ssr",
                              OF _ _ hoare_post_taut hoare_post_taut])
-   apply (clarsimp simp: corres_gets)
+   apply clarsimp
   apply (rule corres_split' [where r'="\<lambda>(x, x') (y, y'). rvr x y \<and> (x', y') \<in> ssr",
                              OF _ _ hoare_post_taut hoare_post_taut])
    defer
@@ -424,7 +424,7 @@ proof -
     apply (subst select_f_stateAssert, rule efim efim')+
     apply (subst gets_stateAssert bind_subst_lift [OF stateAssert_stateAssert])+
     apply (rule bind_cong)
-     apply (simp add: pred_conj_def conj_ac)
+     apply (simp add: pred_conj_def conj_comms)
     apply (simp add: bind_assoc select_f_walk[symmetric])
     apply (clarsimp dest!: fst_stateAssertD)
     apply (subst bind_assoc[symmetric],

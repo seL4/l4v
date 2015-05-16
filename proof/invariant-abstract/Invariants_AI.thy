@@ -4867,7 +4867,7 @@ lemma get_irq_slot_real_cte:
 lemma all_invs_but_sym_refs_check:
   "(all_invs_but_sym_refs and sym_refs \<circ> state_refs_of) = invs"
   by (simp add: invs_def valid_state_def valid_pspace_def
-                o_def pred_conj_def conj_ac)
+                o_def pred_conj_def conj_comms)
 
 lemma invs_unique_table_caps[elim!]:
   "invs s \<Longrightarrow> unique_table_caps (caps_of_state s)"

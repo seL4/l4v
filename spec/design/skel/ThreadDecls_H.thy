@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-header "Function Declarations for Threads"
+chapter "Function Declarations for Threads"
 
 theory ThreadDecls_H
 imports

@@ -12,7 +12,7 @@
 Functions to access kernel memory.
 *)
 
-header {* Accessing the Kernel Heap *}
+chapter {* Accessing the Kernel Heap *}
 
 theory KHeap_A
 imports Exceptions_A

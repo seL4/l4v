@@ -629,15 +629,9 @@ lemma fold_and_true:"fold (op \<and>) xs True \<Longrightarrow> \<forall>i < len
   apply clarsimp
   apply (induct xs)
    apply simp
-  apply (case_tac "i = 0")
-   apply simp
-   apply (case_tac a)
-    apply simp
-   apply (simp add:fold_and_false)
-  apply simp
-  apply (case_tac a)
-   apply simp
-  apply (simp add:fold_and_false)
+  apply (case_tac "i = 0"; simp)
+   apply (case_tac a; simp)
+  apply (case_tac a; simp)
   done
 
 lemma fold_or_true[simp]:"fold (op \<or>) xs True"

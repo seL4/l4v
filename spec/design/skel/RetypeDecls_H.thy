@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-header "Function Declarations for Retyping Objects"
+chapter "Function Declarations for Retyping Objects"
 
 theory RetypeDecls_H
 imports

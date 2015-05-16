@@ -12,7 +12,7 @@
 	Declarations from SEL4.Kernel.FaultHandler
 *)
 
-header "Function Declarations for Fault Handlers"
+chapter "Function Declarations for Fault Handlers"
 
 theory FaultHandlerDecls_H
 imports Structures_H FaultMonad_H

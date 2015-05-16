@@ -1395,7 +1395,7 @@ abbreviation(input)
 lemma all_invs_but_equal_kernel_mappings_restricted_eq:
   "all_invs_but_equal_kernel_mappings_restricted {}
         = invs"
-  by (rule ext, simp add: invs_def valid_state_def conj_ac restrict_map_def)
+  by (rule ext, simp add: invs_def valid_state_def conj_comms restrict_map_def)
 
 
 crunch iflive[wp]: copy_global_mappings "if_live_then_nonz_cap"

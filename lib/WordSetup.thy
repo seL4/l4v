@@ -8,7 +8,7 @@
  * @TAG(NICTA_BSD)
  *)
 
-header "Machine Word Setup"
+chapter "Machine Word Setup"
 
 theory WordSetup
 imports WordEnum DistinctProp

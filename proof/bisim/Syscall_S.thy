@@ -566,7 +566,7 @@ lemma cap_delete_one_sep [wp]:
         apply (wp)
        apply assumption
       apply (wp get_cap_inv hoare_drop_imps)
-    apply (simp add: conj_ac)
+    apply (simp add: conj_comms)
     apply (rule separate_state_pres)
     apply (rule hoare_pre)
      apply (wps )

@@ -1465,7 +1465,7 @@ lemma ccorres_symb_exec_r_abstract_UNIV:
           rule_tac r'="\<lambda>rv rv'. F rv'" and xf'=xf'
                 in ccorres_split_nothrow_novcg)
        apply (rule_tac P'=R' in ccorres_from_vcg[where P=R])
-       apply (clarsimp simp add: return_def Int_def conj_ac)
+       apply (clarsimp simp add: return_def Int_def conj_comms)
       apply assumption
      apply fastforce
     apply wp

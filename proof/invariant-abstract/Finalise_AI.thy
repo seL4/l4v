@@ -351,12 +351,12 @@ lemma empty_slot_invs:
                   set_cap_idle valid_irq_node_typ set_cap_typ_at
                   set_cap_irq_handlers set_cap_valid_arch_caps | simp add: trans_state_update[symmetric] del: trans_state_update fun_upd_apply split del: split_if )+
   apply (clarsimp simp: is_final_cap'_def2 simp del: fun_upd_apply)
-  apply (clarsimp simp: conj_ac invs_def valid_state_def valid_mdb_def2)
+  apply (clarsimp simp: conj_comms invs_def valid_state_def valid_mdb_def2)
   apply (subgoal_tac "mdb_empty_abs s")
    prefer 2
    apply (rule mdb_empty_abs.intro)
    apply (rule vmdb_abs.intro)
-   apply (simp add: valid_mdb_def swp_def cte_wp_at_caps_of_state conj_ac)
+   apply (simp add: valid_mdb_def swp_def cte_wp_at_caps_of_state conj_comms)
   apply (clarsimp simp: untyped_mdb_def mdb_empty_abs.descendants mdb_empty_abs.no_mloop_n
                         valid_pspace_def cap_range_def)
   apply (clarsimp simp: untyped_inc_def mdb_empty_abs.descendants mdb_empty_abs.no_mloop_n)
@@ -2408,7 +2408,7 @@ lemma arch_cap_recycle_replaceable:
    apply (clarsimp simp: valid_cap_simps)
    apply (case_tac "\<not> is_final_cap' (cap.ArchObjectCap (arch_cap.PageTableCap word option)) s")
     apply clarsimp
-   apply (clarsimp simp:conj_ac)
+   apply (clarsimp simp:conj_comms)
    apply (intro conjI)
       apply (fastforce intro!: word_aligned_pt_slots
                        elim!: caps_of_state_aligned_page_table)
@@ -2426,7 +2426,7 @@ lemma arch_cap_recycle_replaceable:
    apply clarsimp
   apply (frule caps_of_state_valid)
    apply fastforce
-  apply (clarsimp simp:cap_aligned_def valid_cap_simps conj_ac)
+  apply (clarsimp simp:cap_aligned_def valid_cap_simps conj_comms)
   -- "pd"
   apply (frule caps_of_state_aligned_page_directory)
    apply simp
@@ -2805,7 +2805,7 @@ lemma set_asid_pool_invs_table:
              valid_irq_handlers_lift set_asid_pool_empty_table_lookup
              set_asid_pool_empty_valid_asid_map
           | strengthen valid_arch_state_table_strg)+
-  apply (clarsimp simp: conj_ac)
+  apply (clarsimp simp: conj_comms)
   apply (rule context_conjI)
    apply clarsimp
    apply (frule valid_vs_lookupD[OF vs_lookup_pages_vs_lookupI], clarsimp)

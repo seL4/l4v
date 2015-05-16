@@ -239,7 +239,7 @@ lemma ranE:
 
 lemma ball_reorder: "(\<forall>x \<in> A. \<forall>y \<in> B. P x y) = (\<forall>y \<in> B. \<forall>x \<in> A.  P x y)" by auto
 
-lemma map_id [simp]: "map id = id"
+lemma map_id: "map id = id"
   by (rule List.map.id)
 
 lemma hd_map: "ls \<noteq> [] \<Longrightarrow> hd (map f ls) = f (hd ls)"
@@ -478,7 +478,7 @@ proof -
     next
       case (insert x F)
       thus ?case
-	by (cases "F = {}") (auto simp add: Min_insert dest: Min_in intro: minf)
+	by (cases "F = {}") (auto dest: Min_in intro: minf)
     qed
   qed
 
@@ -707,7 +707,8 @@ lemma map_conv_upd:
 lemma sum_all_ex [simp]:
     "(\<forall>a. x \<noteq> Inl a) = (\<exists>a. x = Inr a)"
     "(\<forall>a. x \<noteq> Inr a) = (\<exists>a. x = Inl a)"
-  apply (metis Inl_not_Inr Inr_not_Inl sum.exhaust)+
+   apply (metis Inr_not_Inl sum.exhaust)
+  apply (metis Inl_not_Inr sum.exhaust)
   done
 
 lemma split_distrib: "split (\<lambda>a b. T (f a b)) = (\<lambda>x. T (split (\<lambda>a b. f a b) x))"

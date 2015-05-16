@@ -12,7 +12,7 @@
 Monad instantiations, handling of faults, errors, and interrupts.
 *)
 
-header "Basic Kernel and Exception Monads"
+chapter "Basic Kernel and Exception Monads"
 
 theory Exceptions_A
 imports Deterministic_A

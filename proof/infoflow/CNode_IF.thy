@@ -1021,7 +1021,7 @@ where
 
 lemma reads_equiv_f_g_conj:
   "reads_equiv_f_g aag s s' \<equiv> reads_equiv_f aag s s' \<and> reads_equiv_g aag s s'"
-  apply(simp add: reads_equiv_f_g_def reads_equiv_f_def reads_equiv_g_def conj_ac)
+  apply(simp add: reads_equiv_f_g_def reads_equiv_f_def reads_equiv_g_def conj_comms)
   done
 
 lemma reads_respects_f_g:

@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-header "System Calls"
+chapter "System Calls"
 
 theory Syscall_H
 imports Kernel_H Event_H

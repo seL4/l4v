@@ -1384,9 +1384,9 @@ lemma handle_invocation_corres:
           apply (wp hoare_vcg_conj_lift hoare_strengthen_post[OF pinv_invs])
            apply (clarsimp simp:invs_def valid_state_def)
           apply wp
-         apply (simp add:conj_ac not_idle_thread_def split_def)
+         apply (simp add:conj_comms not_idle_thread_def split_def)
          apply (wp sts_Restart_invs set_thread_state_ct_active)
-        apply (simp add:conj_ac split_def msg_from_syscall_error_simp)
+        apply (simp add:conj_comms split_def msg_from_syscall_error_simp)
         apply (wp | simp add:split_def)+
        apply (rule_tac Q'="\<lambda>r s. s = s'a \<and> ex_nonz_cap_to (cur_thread s) s \<and>
                                valid_invocation r s \<and> invocation_duplicates_valid r s"
@@ -1498,7 +1498,7 @@ lemma handle_wait_corres:
             apply wp
           apply (simp add:injection_handler_def)
           apply (wp|wpc)+
-          apply (simp only: conj_ac)
+          apply (simp only: conj_comms)
           apply wp
           apply (rule hoare_vcg_E_elim)
            apply (simp add: lookup_cap_def lookup_slot_for_thread_def split_def)
@@ -1690,7 +1690,7 @@ lemma handle_event_corres:
   apply (rule corres_symb_exec_r)
      apply (rule corres_symb_exec_catch_r)
         apply (rule handle_fault_corres)
-       apply (simp only: conj_ac)
+       apply (simp only: conj_comms)
        apply (rule hoare_vcg_E_conj)
         apply (wp handle_vm_fault_wp)
      apply (simp add:no_fail_def)

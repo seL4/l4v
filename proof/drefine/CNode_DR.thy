@@ -1865,7 +1865,7 @@ lemma dcorres_recycle_pd_caps:
          apply (simp add: kernel_base_def word_bits_conv)+
         apply unat_arith
        apply ((wp mapM_x_wp' | simp add: )+)[3]
-    apply (simp add: swp_def conj_ac cong del: imp_cong)
+    apply (simp add: swp_def conj_comms cong del: imp_cong)
     apply ((wp mapM_x_swp_store_pde_invs_unmap [unfolded swp_def]
       mapM_x_wp' [OF store_pde_valid_cap]
       mapM_x_store_pde_valid_pdpt2
@@ -1905,7 +1905,7 @@ lemma dcorres_recycle_pd_caps:
     apply (drule valid_global_refsD2, fastforce)
     apply (clarsimp simp: cap_range_def)
    apply (rule pd_shifting_kernel_mapping_slots, simp_all add: pd_bits_def pageBits_def cap_aligned_def)[1]
-  apply (clarsimp simp: conj_ac cap_aligned_def
+  apply (clarsimp simp: conj_comms cap_aligned_def
     pd_bits_def pageBits_def obj_at_def)
   apply (drule valid_pdpt_objs_pdD[where ptr = w])
    apply (simp add:is_aligned_neg_mask_eq pd_bits_def pageBits_def)
@@ -2022,7 +2022,7 @@ lemma dcorres_recycle_pt_caps:
              invalidate_tlb_by_asid_dwp page_table_mapped_dwp dmo_dwp
              mapM_x_store_pte_valid_pdpt2 mapM_x_swp_store_pte_invs [unfolded swp_def]
              mapM_x_wp' [OF store_pte_valid_cap] mapM_x_wp' [OF store_pte_cte_wp_at]
-             | simp add: conj_ac pred_conj_def)+)[8]
+             | simp add: conj_comms pred_conj_def)+)[8]
        apply (simp add: cleanCacheRange_PoU_def[symmetric])
        apply ((wp dmo_dwp mapM_x_store_pte_valid_pdpt2
                   mapM_x_swp_store_pte_invs[unfolded swp_def]
@@ -2030,7 +2030,7 @@ lemma dcorres_recycle_pt_caps:
                   mapM_x_wp'[OF store_pte_valid_cap]
                   mapM_x_wp'[OF store_pte_cte_wp_at] | simp add: swp_def)+)[4]
    apply simp
-  apply (clarsimp simp: conj_ac)
+  apply (clarsimp simp: conj_comms)
   apply (frule (1) cte_wp_at_valid_objs_valid_cap [OF _ invs_valid_objs])
   apply (intro conjI)
     apply (fastforce simp: valid_cap_def cap_aligned_def pt_bits_def pageBits_def)
@@ -2410,7 +2410,7 @@ lemma recycle_cap_ref_corres:
         apply (wp rec_del_invs)
        apply (wp rec_del_preservation)
            apply (simp add:not_idle_thread_def,wp rec_del_valid_pdpt_objs)+
-    apply (clarsimp simp:conj_ac)
+    apply (clarsimp simp:conj_comms)
     apply (wp cap_revoke_invs cap_revoke_preservation)
     apply (rule validE_validE_R)
     apply (simp add:validE_def)

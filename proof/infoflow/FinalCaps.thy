@@ -1686,7 +1686,7 @@ lemma rec_del_silc_inv':
                |simp add: without_preemption_def split del: split_if)+
  
        (* where the action is *)
-       apply(simp cong: conj_cong add: conj_ac)
+       apply(simp cong: conj_cong add: conj_comms)
        apply(rule_tac Q="\<lambda> rvb s. pas_refined aag s \<and>
                                   silc_inv aag st s \<and>
                                   pasSubject aag \<noteq> SilcLabel \<and>
@@ -1701,7 +1701,7 @@ lemma rec_del_silc_inv':
         apply (fastforce)
        apply(wp finalise_cap_pas_refined finalise_cap_silc_inv finalise_cap_auth' finalise_cap_ret' finalise_cap_ret_is_subject' finalise_cap_ret_is_silc[where st=st])[1]
       apply(wp drop_spec_validE[OF liftE_wp] get_cap_auth_wp[where aag=aag] | simp add: without_preemption_def)+
-    apply (clarsimp simp: conj_ac cong: conj_cong simp: caps_of_state_cteD)
+    apply (clarsimp simp: conj_comms cong: conj_cong simp: caps_of_state_cteD)
     apply (rule conjI, clarsimp simp: silc_inv_def)
     apply(case_tac cap, simp_all add: is_zombie_def add: aag_cap_auth_CNode aag_cap_auth_Thread aag_cap_auth_Zombie)
     done
@@ -1795,7 +1795,7 @@ lemma cap_revoke_silc_inv':
          apply(rule drop_spec_validE[OF valid_validE[OF cap_delete_silc_inv]])
         apply (wp drop_spec_validE[OF assertE_wp] drop_spec_validE[OF without_preemption_wp] get_cap_wp select_wp drop_spec_validE[OF returnOk_wp])
   apply clarsimp
-  apply (clarsimp cong: conj_cong simp: conj_ac)
+  apply (clarsimp cong: conj_cong simp: conj_comms)
   apply (subst conj_commute)
   apply (rule conjI)
    apply(fastforce dest: descendants_of_owned split: if_splits)
@@ -1907,7 +1907,7 @@ lemma cap_recycle_silc_inv:
     apply(wp hoare_drop_imps hoare_vcg_all_lift finalise_slot_silc_inv)[1]
    apply(wp hoare_unless_wp set_cap_silc_inv recycle_cap_ret_is_silc[where st=st] get_cap_wp | simp)+
    apply(wp hoare_drop_imps hoare_vcg_all_lift finalise_slot_silc_inv)[1]
-  apply (clarsimp simp: conj_ac cong: conj_cong)
+  apply (clarsimp simp: conj_comms cong: conj_cong)
   apply(rule hoare_pre)
    apply(rule hoare_vcg_conj_liftE1)
     apply (wp | simp)+
@@ -2569,7 +2569,7 @@ lemma invoke_irq_handler_silc_inv:
   apply(case_tac blah)
     apply(wp cap_insert_silc_inv'' cap_delete_one_silc_inv cap_delete_one_cte_wp_at_other static_imp_wp
              hoare_vcg_ex_lift slots_holding_overlapping_caps_from_silc_inv[where aag=aag and st=st]
-         | simp add: authorised_irq_hdl_inv_def get_irq_slot_def conj_ac)+
+         | simp add: authorised_irq_hdl_inv_def get_irq_slot_def conj_comms)+
    apply (clarsimp simp: pas_refined_def irq_map_wellformed_aux_def)
    apply (drule cte_wp_at_eqD)
    apply (elim exE conjE, rename_tac cap')

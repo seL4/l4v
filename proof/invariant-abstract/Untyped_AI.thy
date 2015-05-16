@@ -2901,7 +2901,7 @@ lemma invoke_untyped_st_tcb_at:
    apply (rule_tac P = "cap = cap.UntypedCap word2 sz idx" in hoare_gen_asm(1))
    apply (clarsimp simp:bits_of_def delete_objects_rewrite)
    apply (wp get_cap_wp)
-  apply (clarsimp simp: conj_ac freeMemory_def invs_psp_aligned invs_valid_objs)
+  apply (clarsimp simp: conj_comms freeMemory_def invs_psp_aligned invs_valid_objs)
   apply (frule caps_of_state_valid)
    apply (simp add:cte_wp_at_caps_of_state)
   apply (intro conjI)
@@ -3379,7 +3379,7 @@ lemma create_caps_invs_inv:
        \<and> tp \<noteq> ArchObject ASIDPoolObj) \<rbrace>"
   apply (rule hoare_pre)
   apply (wp hoare_vcg_const_Ball_lift | clarsimp)+
-  apply (clarsimp simp: conj_ac invs_mdb distinct_sets_prop distinct_prop_map
+  apply (clarsimp simp: conj_comms invs_mdb distinct_sets_prop distinct_prop_map
                         ex_cte_cap_to_cnode_always_appropriate_strg)
   apply (simp add: cte_wp_at_caps_of_state[where p=p])
   apply (intro conjI)
@@ -4175,11 +4175,11 @@ lemma invoke_untyp_invs':
          apply ((wp hoare_vcg_const_imp_lift hoare_drop_imp
                     retype_region_invs_extras[where sz = sz]
                     retype_region_aligned_for_init[where sz = sz] | simp)+)[1]
-        apply (clarsimp simp:conj_ac,simp cong:conj_cong)
-        apply (simp add:ball_conj_distrib conj_ac)
+        apply (clarsimp simp:conj_comms,simp cong:conj_cong)
+        apply (simp add:ball_conj_distrib conj_comms)
         apply (strengthen imp_consequent impI[OF invs_mdb]
                          impI[OF invs_valid_pspace]
-               | clarsimp simp:conj_ac)+
+               | clarsimp simp:conj_comms)+
         apply (rule_tac P = "cap = cap.UntypedCap (ptr && ~~ mask sz) sz idx"
                      in hoare_gen_asm)
         apply (simp add:bits_of_def region_in_kernel_window_def)
@@ -4250,11 +4250,11 @@ lemma invoke_untyp_invs':
          apply ((wp hoare_vcg_const_imp_lift hoare_drop_imp
                     retype_region_invs_extras[where sz = sz]
                     retype_region_aligned_for_init[where sz = sz] | simp)+)[1]
-        apply (clarsimp simp:conj_ac,simp cong:conj_cong)
-        apply (simp add:ball_conj_distrib conj_ac)
+        apply (clarsimp simp:conj_comms,simp cong:conj_cong)
+        apply (simp add:ball_conj_distrib conj_comms)
         apply (strengthen imp_consequent impI[OF invs_mdb]
                           impI[OF invs_valid_pspace]
-               | clarsimp simp:conj_ac)+
+               | clarsimp simp:conj_comms)+
         apply (rule_tac P = "cap = cap.UntypedCap ptr sz idx" in hoare_gen_asm)
         apply (simp add:bits_of_def region_in_kernel_window_def)
         apply (wp set_cap_no_overlap hoare_vcg_ball_lift
@@ -4273,7 +4273,7 @@ lemma invoke_untyp_invs':
         detype_locale detype_descendants_range_in detype_invs kernel_window_inv)
       apply (frule(1) valid_global_refsD2[OF _ invs_valid_global_refs])
       apply (clarsimp simp:cte_wp_at_caps_of_state invs_valid_objs
-        untyped_range.simps bits_of_def conj_ac)
+        untyped_range.simps bits_of_def conj_comms)
       apply (frule caps_of_state_valid[rotated])
        apply simp
       apply (frule valid_cap_aligned)

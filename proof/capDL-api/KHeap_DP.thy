@@ -1021,7 +1021,7 @@ lemma decode_cnode_mint_rvu:
     apply (clarsimp simp:sep_conj_assoc)
     apply (sep_erule sep_cancel, assumption)
    apply (clarsimp dest!: mapu_dest_opt_cap
-     simp:conj_ac is_exclusive_cap_update_cap_data
+     simp:conj_comms is_exclusive_cap_update_cap_data
      safe_for_derive_not_non valid_src_cap_def)
    apply (intro conjI impI allI)
       apply (metis reset_cap_asid_cap_type)
@@ -1082,7 +1082,7 @@ lemma decode_cnode_mutate_rvu:
     apply (clarsimp simp:sep_conj_assoc)
     apply (sep_solve)
    apply (clarsimp dest!: mapu_dest_opt_cap
-     simp: conj_ac update_cap_data_non cong:non_cap_cong)
+     simp: conj_comms update_cap_data_non cong:non_cap_cong)
    apply (metis reset_cap_asid_cap_type reset_cap_asid_ep_related_cap valid_src_cap_asid_cong)
   apply sep_solve
   done

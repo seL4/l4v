@@ -2499,7 +2499,7 @@ lemma ref_is_unique:
 lemma mask_shift_mask_helper:
   "(p && mask pd_bits >> 2) && mask 12 = (p && mask pd_bits >> 2)"
   apply (rule word_eqI)
-  apply (simp add: word_size pd_bits_def pageBits_def nth_shiftr conj_ac)
+  apply (simp add: word_size pd_bits_def pageBits_def nth_shiftr conj_comms)
   done
 
 lemma ucast_ucast_mask_shift_helper:

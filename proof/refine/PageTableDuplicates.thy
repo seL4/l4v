@@ -1467,7 +1467,7 @@ proof -
         invokeUntyped_proofs.not_0_ptr[OF pf] invokeUntyped_proofs.vc'[OF pf]
   apply (clarsimp simp:cte_wp_at_ctes_of)
   apply (rule_tac x = "capability.UntypedCap (ptr && ~~ mask sz) sz idx" in exI)
-  apply (clarsimp simp: is_aligned_neg_mask_eq' conj_ac invs_valid_pspace'
+  apply (clarsimp simp: is_aligned_neg_mask_eq' conj_comms invs_valid_pspace'
              invs_pspace_aligned' invs_pspace_distinct'
              range_cover.sz[where 'a=32, folded word_bits_def]
              invokeUntyped_proofs.ps_no_overlap'[OF pf])
@@ -1689,7 +1689,7 @@ lemma unmapPage_valid_duplicates'[wp]:
     mapM_x_storePDE_update_helper[where sz = 6]
     lookupPTSlot_page_table_at'
     checkMappingPPtr_SmallPage | wpc  
-    | simp add:split_def conj_ac | wp_once checkMappingPPtr_inv)+
+    | simp add:split_def conj_comms | wp_once checkMappingPPtr_inv)+
           apply (rule_tac ptr = "p && ~~ mask ptBits" and word = p
             in mapM_x_storePTE_update_helper[where sz = 6])
          apply simp
@@ -1708,16 +1708,16 @@ lemma unmapPage_valid_duplicates'[wp]:
         apply (wp storePTE_no_duplicates' mapM_x_mapM_valid
           storePDE_no_duplicates' checkMappingPPtr_Section
           checkMappingPPtr_SmallPage | wpc  
-          | simp add:split_def conj_ac | wp_once checkMappingPPtr_inv)+
+          | simp add:split_def conj_comms | wp_once checkMappingPPtr_inv)+
         apply (rule_tac ptr = "p && ~~ mask pdBits" and word = p
           in mapM_x_storePDE_update_helper[where sz = 6])
        apply (wp mapM_x_mapM_valid)
        apply (rule_tac ptr = "p && ~~ mask pdBits" and word = p
          in mapM_x_storePDE_update_helper[where sz = 6])
       apply wp
-     apply (clarsimp simp:conj_ac)
+     apply (clarsimp simp:conj_comms)
   apply (wp checkMappingPPtr_inv static_imp_wp)
-  apply (clarsimp simp:conj_ac)
+  apply (clarsimp simp:conj_comms)
   apply (rule hoare_pre)
    apply (wp)
    apply (rule hoare_post_imp_R[where Q'= "\<lambda>r. pspace_aligned' and 
@@ -2044,7 +2044,7 @@ proof (induct arbitrary: P p rule: finalise_spec_induct2)
      apply (wp getCTE_wp')
     apply (clarsimp simp: cte_wp_at_ctes_of disj_ac)
     apply (rule conjI, clarsimp simp: removeable'_def)
-    apply (clarsimp simp: conj_ac invs_pspace_aligned' invs_valid_objs')
+    apply (clarsimp simp: conj_comms invs_pspace_aligned' invs_valid_objs')
     apply (rule conjI, erule ctes_of_valid', clarsimp)
     apply (rule conjI, clarsimp)
     apply (fastforce)
@@ -2280,7 +2280,7 @@ lemma invokeCNode_valid_duplicates'[wp]:
           \<and> pspace_aligned' s"])
        apply simp
       apply (wp getCTE_valid_cap)
-      apply (clarsimp simp:conj_ac)
+      apply (clarsimp simp:conj_comms)
       apply (rule hoare_post_impErr[OF valid_validE])
         apply (rule finaliseSlot_valid_duplicates')
        apply (simp add:invs_pspace_aligned' invs_valid_objs')

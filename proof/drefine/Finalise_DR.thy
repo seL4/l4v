@@ -1765,7 +1765,7 @@ lemma dcorres_unmap_large_section:
    apply (rule less_kernel_base_mapping_slots)
     apply (simp add:pd_bits_def pageBits_def)+
   apply (rule conjI,fastforce) -- valid_idle
-  apply (rule conj_ac[THEN iffD1])
+  apply (rule conj_comms[THEN iffD1])
   apply (rule context_conjI)
    apply (clarsimp simp:tl_map field_simps)
    apply (subst mask_lower_twice[symmetric,where n = 6])
@@ -1883,7 +1883,7 @@ lemma dcorres_unmap_large_page:
      apply simp
   apply (clarsimp simp:unat_def pt_page_relation_univ)
   apply (rule conjI,fastforce)
-  apply (rule conj_ac[THEN iffD1])
+  apply (rule conj_comms[THEN iffD1])
   apply (rule context_conjI)
     apply (clarsimp simp:tl_map drop_map)
     apply (simp add:field_simps)

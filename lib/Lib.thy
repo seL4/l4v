@@ -12,7 +12,7 @@
    Miscellaneous library definitions and lemmas.
 *)
 
-header "Library"
+chapter "Library"
 
 theory Lib
 imports "~~/src/HOL/Main"

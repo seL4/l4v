@@ -1235,7 +1235,7 @@ lemma cteInsert_ccorres:
    apply vcg
   apply (simp add: Collect_const_mem split del: split_if) -- "Takes a while"
   apply (rule conjI)
-   apply (clarsimp simp: conj_ac cte_wp_at_ctes_of ctes_of_not_0)
+   apply (clarsimp simp: conj_comms cte_wp_at_ctes_of ctes_of_not_0)
    apply (intro conjI)
       apply clarsimp
      apply simp

@@ -2282,7 +2282,7 @@ lemma final_cap_unchanged:
   done
 
 
-lemmas set_cap_cte_wp_at_cases = set_cap_cte_wp_at[unfolded if_bool_eq_conj pred_conj_def conj_ac]
+lemmas set_cap_cte_wp_at_cases = set_cap_cte_wp_at[unfolded if_bool_eq_conj pred_conj_def conj_comms]
 
 
 lemma cyclic_zombieD[dest!]:
@@ -4079,7 +4079,7 @@ lemma cap_move_invs[wp]:
      cap_move cap ptr ptr'
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   unfolding invs_def valid_state_def valid_pspace_def
-  apply (simp add: pred_conj_def conj_ac [where Q = "valid_mdb S" for S])
+  apply (simp add: pred_conj_def conj_comms [where Q = "valid_mdb S" for S])
   apply wp
    apply (rule hoare_vcg_mp)
     apply (rule hoare_pre, rule cap_move_zombies_final)

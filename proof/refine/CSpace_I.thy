@@ -834,7 +834,7 @@ lemma sameRegionAs_def2:
            split del: split_if cong: if_cong)
   apply (clarsimp simp: capRange_def Let_def)
   apply (simp add: range_subset_eq2 cong: conj_cong)
-  apply (simp add: interval_empty conj_ac)
+  apply (simp add: interval_empty conj_comms)
   done
 
 lemma sameObjectAs_def2:
@@ -888,7 +888,7 @@ lemma sameObjectAs_sameRegionAs:
 
 lemma sameObjectAs_sym:
   "sameObjectAs c d = sameObjectAs d c"
-  by (simp add: sameObjectAs_def2 eq_commute conj_ac)
+  by (simp add: sameObjectAs_def2 eq_commute conj_comms)
 
 lemma untypedRange_Master:
   "untypedRange (capMasterCap cap) = untypedRange cap"

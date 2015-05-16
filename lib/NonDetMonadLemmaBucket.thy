@@ -566,7 +566,7 @@ lemma cutMon_walk_bind:
   "(cutMon (op = s) (f >>= g))
      = (cutMon (op = s) f >>= (\<lambda>rv. cutMon (\<lambda>s'. (rv, s') \<in> fst (f s)) (g rv)))"
   apply (rule ext, simp add: cutMon_def bind_def fail_def)
-  apply (auto intro!: iffI simp: split_def)
+  apply (auto simp: split_def)
   done
 
 lemma cutMon_walk_bindE:
@@ -1149,13 +1149,9 @@ lemma id_injection:
   "id = injection_handler id"
 proof -
   have P: "case_sum throwError (\<lambda>v. return (Inr v)) = return"
-    by (clarsimp simp: throwError_def
-                split: sum.splits
-               intro!: ext)
+    by (auto simp: throwError_def split: sum.splits)
   show ?thesis
-    by (clarsimp simp: injection_handler_def handleE'_def
-                       P
-               intro!: ext)
+    by (auto simp: injection_handler_def handleE'_def P)
 qed
 
 
@@ -1853,8 +1849,8 @@ lemma oblivious_modify_swap:
   "\<lbrakk> oblivious f m \<rbrakk>   \<Longrightarrow>
    (modify f >>= (\<lambda>rv. m))
     = (m >>= (\<lambda>rv. modify f))"
-  apply (clarsimp simp: bind_def simpler_modify_def
-                intro!: ext)
+  apply (clarsimp simp: bind_def simpler_modify_def)
+  apply (rule ext)+
   apply (case_tac "m (f s)", clarsimp)
   apply (simp add: oblivious_def)
   apply (drule_tac x=s in spec)
@@ -2562,15 +2558,13 @@ lemma bind_liftE_distrib: "(liftE (A >>= (\<lambda>x. B x))) = (liftE A >>=E (\<
 
 lemma in_condition [monad_eq]:
   "((a, b) \<in> fst (condition C L R s)) = ((C s \<longrightarrow> (a, b) \<in> fst (L s)) \<and> (\<not> C s \<longrightarrow> (a, b) \<in> fst (R s)))"
-  apply (clarsimp simp: condition_def)
-  done
+  by (rule condition_split)
 
 lemma snd_condition [monad_eq]:
   "(snd (condition C L R s)) = ((C s \<longrightarrow> snd (L s)) \<and> (\<not> C s \<longrightarrow> snd (R s)))"
-  apply (clarsimp simp: condition_def)
-  done
+  by (rule condition_split)
 
-lemma condition_apply_cong [cong, fundef_cong]:
+lemma condition_apply_cong:
   "\<lbrakk> c s = c' s'; s = s'; \<And>s. c' s \<Longrightarrow> l s = l' s  ; \<And>s. \<not> c' s \<Longrightarrow> r s = r' s  \<rbrakk> \<Longrightarrow>  condition c l r s = condition c' l' r' s'"
   apply (clarsimp split: condition_splits)
   done

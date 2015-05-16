@@ -515,7 +515,7 @@ lemma timerTick_corres:
                threadSet_st_tcb_at_state threadSet_weak_sch_act_wf tcbSchedAppend_valid_objs'
                rescheduleRequired_weak_sch_act_wf tcbSchedAppend_valid_queues| simp)+
             apply (strengthen impI[OF sch_act_wf_weak])
-            apply (clarsimp simp:conj_ac)
+            apply (clarsimp simp:conj_comms)
             apply (wp tcbSchedAppend_valid_queues tcbSchedAppend_sch_act_wf)
            apply simp
            apply (wp threadSet_valid_queues threadSet_st_tcb_at_state threadSet_sch_act

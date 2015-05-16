@@ -2073,7 +2073,7 @@ lemma ccte_relation_eq_ccap_relation:
   apply (simp add: ccte_relation_def option_map_Some_eq2 cte_lift_def
                    ccap_relation_def)
   apply (simp add: cte_to_H_def split: option.split)
-  apply (cases cte, clarsimp simp: c_valid_cte_def conj_ac)
+  apply (cases cte, clarsimp simp: c_valid_cte_def conj_comms)
   done
 
 lemma cap_reply_cap_ptr_new_np_updateCap_ccorres:
@@ -2765,7 +2765,7 @@ lemma fastpath_call_ccorres:
    apply (clarsimp simp: invs_sym'
                          cte_wp_at_ctes_of tcbCallerSlot_def
                          tcbVTableSlot_def tcbReplySlot_def
-                         conj_ac tcb_cnode_index_defs field_simps
+                         conj_comms tcb_cnode_index_defs field_simps
                          obj_at_tcbs_of)
    apply (clarsimp simp: cte_level_bits_def isValidVTableRoot_def
                          ArchVSpace_H.isValidVTableRoot_def
@@ -3320,7 +3320,7 @@ lemma fastpath_reply_wait_ccorres:
                     apply (vcg exspec=endpoint_ptr_mset_epQueue_tail_state_modifies
                                exspec=endpoint_ptr_set_epQueue_head_np_modifies
                                exspec=endpoint_ptr_get_epQueue_tail_modifies)
-                   apply (simp add: valid_pspace'_def pred_conj_def conj_ac
+                   apply (simp add: valid_pspace'_def pred_conj_def conj_comms
                                     valid_mdb'_def)
                    apply (wp threadSet_cur threadSet_tcbState_valid_objs
                              threadSet_state_refs_of' threadSet_ctes_of
@@ -3793,7 +3793,7 @@ lemma getObject_get_assert:
   apply (simp add: lookupAround2_known1 assert_opt_def
                    obj_at'_def projectKO_def2
             split: option.split)
-  apply (clarsimp simp: fail_def fst_return conj_ac project_inject
+  apply (clarsimp simp: fail_def fst_return conj_comms project_inject
                         objBits_def)
   apply (simp only: assert2[symmetric],
          rule bind_apply_cong[OF refl])
@@ -4209,7 +4209,7 @@ lemma setThreadState_blocked_rewrite:
                | (simp only: getCurThread_def getSchedulerAction_def
                       , rule empty_fail_gets))+)+
      apply (rule monadic_rewrite_refl)
-    apply (simp add: conj_ac, wp)
+    apply (simp add: conj_comms, wp)
     apply (rule_tac Q="\<lambda>rv s. obj_at' (Not o runnable' o tcbState) t s"
                in hoare_post_imp)
      apply (clarsimp simp: obj_at'_def sch_act_simple_def st_tcb_at'_def)

@@ -461,7 +461,7 @@ lemma setPriority_ccorres:
      apply (wp threadSet_tcbDomain_triv)
      apply simp
     apply (simp add: guard_is_UNIV_def)
-   apply (simp add: inQ_def pred_conj_def conj_ac)
+   apply (simp add: inQ_def pred_conj_def conj_comms)
    apply (wp weak_sch_act_wf_lift_linear)
     apply (rule hoare_strengthen_post,
           rule tcbSchedDequeue_nonq[where t'=t])
@@ -695,7 +695,7 @@ lemma invokeTCB_ThreadControl_ccorres:
             apply (rule ccorres_split_throws)
              apply (rule ccorres_return_C_errorE, simp+)[1]
             apply vcg
-           apply (simp add: conj_ac cong: conj_cong)
+           apply (simp add: conj_comms cong: conj_cong)
            apply (wp hoare_vcg_const_imp_lift_R cteDelete_invs')
           apply simp
           apply (rule ccorres_return_CE)
@@ -722,7 +722,7 @@ lemma invokeTCB_ThreadControl_ccorres:
                        del: Collect_const)
            apply ((rule ccorres_split_nothrow_novcg_dc[rotated], assumption)
                    | rule ccorres_rhs_assoc2)+
-             apply (simp add: conj_ac pred_conj_def)
+             apply (simp add: conj_comms pred_conj_def)
              apply (simp add: o_def cong: conj_cong option.case_cong)
 
              apply (wp checked_insert_tcb_invs' hoare_case_option_wp
@@ -769,7 +769,7 @@ lemma invokeTCB_ThreadControl_ccorres:
           apply simp
           apply (rule ccorres_split_throws, rule ccorres_return_C_errorE, simp+)
           apply vcg
-         apply (simp add: conj_ac, simp cong: conj_cong add: invs_mdb' invs_pspace_aligned')
+         apply (simp add: conj_comms, simp cong: conj_cong add: invs_mdb' invs_pspace_aligned')
          apply (simp add: cte_is_derived_capMasterCap_strg o_def)
          apply (wp cteDelete_invs' hoare_case_option_wp cteDelete_deletes
                    cteDelete_sch_act_simple
@@ -792,7 +792,7 @@ lemma invokeTCB_ThreadControl_ccorres:
                       del: Collect_const)
           apply ((rule ccorres_split_nothrow_novcg_dc[rotated], assumption)
                   | rule ccorres_rhs_assoc2)+
-            apply (simp add: conj_ac pred_conj_def)
+            apply (simp add: conj_comms pred_conj_def)
             apply (simp add: o_def cong: conj_cong option.case_cong)
             apply (wp checked_insert_tcb_invs' hoare_case_option_wp
                       checkCap_inv [where P="tcb_at' p0" for p0]
@@ -841,7 +841,7 @@ lemma invokeTCB_ThreadControl_ccorres:
          apply simp
          apply (rule ccorres_split_throws, rule ccorres_return_C_errorE, simp+)
          apply vcg
-        apply (simp add: conj_ac, simp cong: conj_cong add: invs_mdb' invs_pspace_aligned')
+        apply (simp add: conj_comms, simp cong: conj_cong add: invs_mdb' invs_pspace_aligned')
         apply (simp add: cte_is_derived_capMasterCap_strg o_def)
         apply (wp cteDelete_invs' hoare_case_option_wp cteDelete_deletes
                   cteDelete_sch_act_simple 
@@ -854,7 +854,7 @@ lemma invokeTCB_ThreadControl_ccorres:
      apply (clarsimp simp: guard_is_UNIV_def tcbCTableSlot_def Kernel_C.tcbCTable_def
                            cte_level_bits_def size_of_def word_sle_def option_to_0_def
                            true_def from_bool_def cintr_def)
-    apply (simp add: conj_ac)
+    apply (simp add: conj_comms)
     apply (wp hoare_case_option_wp threadSet_invs_trivial
               threadSet_cap_to' static_imp_wp | simp)+
    apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem)

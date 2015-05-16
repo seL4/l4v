@@ -7016,7 +7016,7 @@ shows  "ccorres dc xfdc
                  ptr.. (ptr && ~~ mask sz) + 2 ^ sz  - 1} srcSlot (ctes_of s)"
               in hoare_pre(1))
              apply wp
-            apply (clarsimp simp:createObject_hs_preconds_def field_simps conj_ac 
+            apply (clarsimp simp:createObject_hs_preconds_def field_simps conj_comms 
                    invs_valid_pspace' invs_pspace_distinct' invs_pspace_aligned'
                    invs_ksCurDomain_maxDomain')
             apply (subst intvl_range_conv)
@@ -7066,7 +7066,7 @@ shows  "ccorres dc xfdc
         apply (rule conseqPre, vcg exspec=insertNewCap_modifies exspec=createObject_modifies)
         apply clarsimp
 
-       apply (clarsimp simp:conj_ac field_simps
+       apply (clarsimp simp:conj_comms field_simps
                        createObject_hs_preconds_def range_cover_sz')
        apply (subgoal_tac "is_aligned (ptr + (1 + of_nat n << APIType_capBits newType userSize))
          (APIType_capBits newType userSize)")
@@ -7080,7 +7080,7 @@ shows  "ccorres dc xfdc
                  insertNewCap_untypedRange hoare_vcg_all_lift insertNewCap_cte_at static_imp_wp)
          apply (wp insertNewCap_cte_wp_at_other)
         apply (wp hoare_vcg_all_lift static_imp_wp insertNewCap_cte_at)
-       apply (clarsimp simp:conj_ac | 
+       apply (clarsimp simp:conj_comms | 
          strengthen impI[OF invs_valid_pspace'] impI[OF invs_pspace_aligned']
          impI[OF invs_pspace_distinct'])+
        apply (frule range_cover.range_cover_n_less)
@@ -7100,7 +7100,7 @@ shows  "ccorres dc xfdc
         apply (erule range_cover_sz')
        apply (rule hoare_pre)
         apply (strengthen pspace_no_overlap'_strg[where sz = sz])
-        apply (clarsimp simp:range_cover.sz conj_ac)
+        apply (clarsimp simp:range_cover.sz conj_comms)
         apply (wp createObject_invs'
                   createObject_caps_overlap_reserved_ret' createObject_valid_cap'
                   createObject_descendants_range' createObject_idlethread_range
@@ -7113,7 +7113,7 @@ shows  "ccorres dc xfdc
          apply (wp createObject_cte_wp_at' createObject_ex_cte_cap_wp_to
                    createObject_no_inter[where sz = sz] hoare_vcg_all_lift static_imp_wp)
        apply (clarsimp simp:invs_pspace_aligned' invs_pspace_distinct' invs_valid_pspace'
-         field_simps range_cover.sz conj_ac range_cover.aligned range_cover_sz'
+         field_simps range_cover.sz conj_comms range_cover.aligned range_cover_sz'
          is_aligned_shiftl_self aligned_add_aligned[OF range_cover.aligned])
        apply (drule_tac x = n and  P = "\<lambda>x. x< length destSlots \<longrightarrow> ?Q x" in spec)+
        apply clarsimp
@@ -7203,7 +7203,7 @@ shows  "ccorres dc xfdc
    apply (frule range_cover.aligned)
    apply (frule range_cover_full[OF range_cover.aligned])
     apply (simp add:range_cover_def word_bits_def)
-   apply (clarsimp simp: invs_valid_pspace' conj_ac intvl_range_conv
+   apply (clarsimp simp: invs_valid_pspace' conj_comms intvl_range_conv
         createObject_hs_preconds_def range_cover.aligned range_cover_full)
    apply (simp add: intvl_range_conv[OF range_cover.aligned range_cover_sz'])
    apply (intro conjI)

@@ -12,7 +12,7 @@
    Nondeterministic state and error monads with failure in Isabelle.
 *)
 
-header "Nondeterministic State Monad with Failure"
+chapter "Nondeterministic State Monad with Failure"
 
 theory NonDetMonad
 imports "../Lib"
@@ -196,12 +196,9 @@ text {*
   the result is true or the right monad if the result is false.
 *}
 definition
-  condition :: "('s \<Rightarrow> bool)
-      \<Rightarrow> ('s, 'r) nondet_monad
-      \<Rightarrow> ('s, 'r) nondet_monad
-      \<Rightarrow> ('s, 'r) nondet_monad"
+  condition :: "('s \<Rightarrow> bool) \<Rightarrow> ('s, 'r) nondet_monad \<Rightarrow> ('s, 'r) nondet_monad \<Rightarrow> ('s, 'r) nondet_monad"
 where
-  "(condition P L R) \<equiv> \<lambda>s. if (P s) then (L s) else (R s)"
+  "condition P L R \<equiv> \<lambda>s. if (P s) then (L s) else (R s)"
 
 notation (output)
   condition  ("(condition (_)//  (_)//  (_))" [1000,1000,1000] 1000)
@@ -509,7 +506,7 @@ where
 
 text {*
   Map a monadic function with two parameters over two lists,
-  going through both lists simultanously, left to right, ignoring
+  going through both lists simultaneously, left to right, ignoring
   return values.
 *}
 definition
@@ -834,7 +831,7 @@ where
 
 text {*
   It is often desired to prove non-failure and a Hoare triple
-  simulataneously, as the reasoning is often similar. The following
+  simultaneously, as the reasoning is often similar. The following
   definitions allow such reasoning to take place.
 *}
 

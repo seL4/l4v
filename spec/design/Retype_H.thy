@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-header "Retyping Objects"
+chapter "Retyping Objects"
 
 theory Retype_H
 imports

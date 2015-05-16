@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-header "Function Declarations for CSpace"
+chapter "Function Declarations for CSpace"
 
 theory CSpaceDecls_H
 imports FaultMonad_H

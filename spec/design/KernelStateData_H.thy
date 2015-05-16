@@ -12,7 +12,7 @@
 	Kernel state and kernel monads, imports everything that SEL4.Model needs.
 *)
 
-header "Kernel State and Monads"
+chapter "Kernel State and Monads"
 
 theory KernelStateData_H
 imports

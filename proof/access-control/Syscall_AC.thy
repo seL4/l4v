@@ -324,7 +324,7 @@ lemma handle_invocation_pas_refined:
               hoare_vcg_conj_lift hoare_vcg_all_lift
          | wpc
          | rule hoare_drop_imps
-         | simp add: if_apply_def2 conj_ac split del: split_if
+         | simp add: if_apply_def2 conj_comms split del: split_if
                del: hoare_True_E_R)+),
         ((wp lookup_extra_caps_auth lookup_extra_caps_authorised
               decode_invocation_authorised
@@ -353,7 +353,7 @@ lemma handle_invocation_respects:
          | wpc | simp add: if_apply_def2
                       del: hoare_post_taut hoare_True_E_R
                        split del: split_if)+
-  apply (simp add: conj_ac pred_conj_def comp_def if_apply_def2 split del: split_if
+  apply (simp add: conj_comms pred_conj_def comp_def if_apply_def2 split del: split_if
          | wp perform_invocation_respects set_thread_state_pas_refined
             set_thread_state_authorised
             set_thread_state_runnable_valid_sched

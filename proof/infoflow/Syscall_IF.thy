@@ -705,7 +705,7 @@ lemma handle_invocation_reads_respects_g:
   apply (rule conjI)
    apply(fastforce intro: reads_lrefl)
   apply(rule conjI, fastforce)+
-  apply (simp add: conj_ac)
+  apply (simp add: conj_comms)
   apply (rule conjI)
    apply (clarsimp elim!: schact_is_rct_simple)
   apply (rule conjI)

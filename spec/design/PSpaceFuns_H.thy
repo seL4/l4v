@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-header "Physical Memory Functions"
+chapter "Physical Memory Functions"
 
 theory PSpaceFuns_H
 imports

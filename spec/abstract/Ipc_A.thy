@@ -12,7 +12,7 @@
 Specification of Inter-Process Communication.
 *)
 
-header "IPC"
+chapter "IPC"
 
 theory Ipc_A
 imports Tcb_A

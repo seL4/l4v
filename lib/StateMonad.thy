@@ -8,12 +8,11 @@
  * @TAG(NICTA_BSD)
  *)
 
-(* Author: Gerwin Klein
-
-   The state and error monads in Isabelle,
+(* 
+  The state and error monads in Isabelle,
 *)
 
-header "Monads"
+chapter "Monads"
 
 theory StateMonad
 imports Lib
@@ -449,77 +448,77 @@ definition
   "pred_lift_exact P Q \<equiv> \<lambda>x y. P x \<and> Q y"
 
 lemma pred_lift_taut[simp]: "\<guillemotleft>\<top>,\<top>\<guillemotright> = \<top>\<top>"
- apply(simp add:pred_lift_exact_def)
-done
+  apply(simp add:pred_lift_exact_def)
+  done
 
 lemma pred_lift_cont_l[simp]: "\<guillemotleft>\<bottom>,x\<guillemotright> = \<bottom>\<bottom>"
- apply(simp add:pred_lift_exact_def)
-done
+  apply(simp add:pred_lift_exact_def)
+  done
 
 lemma pred_lift_cont_r[simp]: "\<guillemotleft>x,\<bottom>\<guillemotright> = \<bottom>\<bottom>"
- apply(simp add:pred_lift_exact_def)
-done
+  apply(simp add:pred_lift_exact_def)
+  done
 
 lemma pred_liftI[intro!]: "\<lbrakk> P x; Q y \<rbrakk> \<Longrightarrow> \<guillemotleft>P,Q\<guillemotright> x y"
- apply(simp add:pred_lift_exact_def)
-done
+  apply(simp add:pred_lift_exact_def)
+  done
 
 lemma pred_exact_split:
-      "\<guillemotleft>P,Q\<guillemotright> = (\<guillemotleft>P,\<top>\<guillemotright> And \<guillemotleft>\<top>,Q\<guillemotright>)"
- apply(simp add:pred_lift_exact_def bipred_conj_def)
-done
+  "\<guillemotleft>P,Q\<guillemotright> = (\<guillemotleft>P,\<top>\<guillemotright> And \<guillemotleft>\<top>,Q\<guillemotright>)"
+  apply(simp add:pred_lift_exact_def bipred_conj_def)
+  done
 
 lemma pred_andE[elim!]: "\<lbrakk> (A and B) x; \<lbrakk> A x; B x \<rbrakk> \<Longrightarrow> R \<rbrakk> \<Longrightarrow> R"
- apply(simp add:pred_conj_def)
-done
+  apply(simp add:pred_conj_def)
+  done
 
 lemma pred_andI[intro!]: "\<lbrakk> A x; B x \<rbrakk> \<Longrightarrow> (A and B) x"
- apply(simp add:pred_conj_def)
-done
+  apply(simp add:pred_conj_def)
+  done
 
 lemma bipred_conj_app[simp]: "(P And Q) x = (P x and Q x)"
- apply(simp add:pred_conj_def bipred_conj_def)
-done
+  apply(simp add:pred_conj_def bipred_conj_def)
+  done
 
 lemma bipred_disj_app[simp]: "(P Or Q) x = (P x or Q x)"
- apply(simp add:pred_disj_def bipred_disj_def)
-done
+  apply(simp add:pred_disj_def bipred_disj_def)
+  done
 
 lemma pred_conj_app[simp]: "(P and Q) x = (P x \<and> Q x)"
- apply(simp add:pred_conj_def)
-done
+  apply(simp add:pred_conj_def)
+  done
 
 lemma pred_disj_app[simp]: "(P or Q) x = (P x \<or> Q x)"
- apply(simp add:pred_disj_def)
-done
+  apply(simp add:pred_disj_def)
+  done
 
 lemma pred_notnotD[simp]: "(not not P) = P"
- apply(simp add:pred_neg_def)
-done
+  apply(simp add:pred_neg_def)
+  done
 
 lemma bipred_notnotD[simp]: "(Not Not P) = P"
- apply(simp add:bipred_neg_def)
-done
+  apply(simp add:bipred_neg_def)
+  done
 
 lemma pred_lift_add[simp]: "\<guillemotleft>P,Q\<guillemotright> x = ((\<lambda>s. P x) and Q)"
- apply(simp add:pred_lift_exact_def pred_conj_def)
-done
+  apply(simp add:pred_lift_exact_def pred_conj_def)
+  done
 
 lemma pred_and_true[simp]: "(P and \<top>) = P"
- apply(simp add:pred_conj_def)
-done
+  apply(simp add:pred_conj_def)
+  done
 
 lemma pred_and_true_var[simp]: "(\<top> and P) = P"
- apply(simp add:pred_conj_def)
-done
+  apply(simp add:pred_conj_def)
+  done
 
 lemma pred_and_false[simp]: "(P and \<bottom>) = \<bottom>"
- apply(simp add:pred_conj_def)
-done
+  apply(simp add:pred_conj_def)
+  done
 
 lemma pred_and_false_var[simp]: "(\<bottom> and P) = \<bottom>"
- apply(simp add:pred_conj_def)
-done
+  apply(simp add:pred_conj_def)
+  done
 
 lemma seq':
   "\<lbrakk> \<lbrace>A\<rbrace> f \<lbrace>B\<rbrace>;
@@ -537,42 +536,36 @@ lemma seq:
   assumes g_valid: "\<And>x. P x \<Longrightarrow> \<lbrace>C\<rbrace> g x \<lbrace>D\<rbrace>"
   assumes bind:  "\<And>x s. B x s \<Longrightarrow> P x \<and> C s"
   shows "\<lbrace>A\<rbrace> do x \<leftarrow> f; g x od \<lbrace>D\<rbrace>"
-apply (insert f_valid g_valid bind)
-apply (blast intro: seq')
-done
-
-
+  apply (insert f_valid g_valid bind)
+  apply (blast intro: seq')
+  done
 
 lemma seq_invar_nobind:
   assumes f_valid: "\<lbrace>A\<rbrace> f \<lbrace>\<guillemotleft>\<top>,A\<guillemotright>\<rbrace>"
   assumes g_valid: "\<And>x. \<lbrace>A\<rbrace> g x \<lbrace>\<guillemotleft>\<top>,A\<guillemotright>\<rbrace>"
   shows "\<lbrace>A\<rbrace> do x \<leftarrow> f; g x od \<lbrace>\<guillemotleft>\<top>,A\<guillemotright>\<rbrace>"
- apply(rule_tac B="\<guillemotleft>\<top>,A\<guillemotright>" and
-                C="A" and P="\<top>" in seq)
- apply(insert f_valid g_valid)
- apply(simp_all add:pred_lift_exact_def)
-done
+  apply(rule_tac B="\<guillemotleft>\<top>,A\<guillemotright>" and C="A" and P="\<top>" in seq)
+    apply(insert f_valid g_valid)
+    apply(simp_all add:pred_lift_exact_def)
+  done
 
 lemma seq_invar_bind:
   assumes f_valid: "\<lbrace>A\<rbrace> f \<lbrace>\<guillemotleft>B,A\<guillemotright>\<rbrace>"
   assumes g_valid: "\<And>x. P x \<Longrightarrow> \<lbrace>A\<rbrace> g x \<lbrace>\<guillemotleft>\<top>,A\<guillemotright>\<rbrace>"
   assumes bind: "\<And>x. B x \<Longrightarrow> P x"
   shows "\<lbrace>A\<rbrace> do x \<leftarrow> f; g x od \<lbrace>\<guillemotleft>\<top>,A\<guillemotright>\<rbrace>"
- apply(rule_tac B="\<guillemotleft>B,A\<guillemotright>" and
-                C="A" and
-                P="P" in seq)
- apply(insert f_valid g_valid bind)
- apply(simp_all add: pred_lift_exact_def)
-done
+  apply(rule_tac B="\<guillemotleft>B,A\<guillemotright>" and C="A" and P="P" in seq)
+    apply(insert f_valid g_valid bind)
+    apply(simp_all add: pred_lift_exact_def)
+  done
 
 lemma seq_noimp:
   assumes f_valid: "\<lbrace>A\<rbrace> f \<lbrace>\<guillemotleft>C,B\<guillemotright>\<rbrace>"
   assumes g_valid: "\<And>x. C x \<Longrightarrow> \<lbrace>B\<rbrace> g x \<lbrace>D\<rbrace>"
   shows "\<lbrace>A\<rbrace> do x \<leftarrow> f; g x od \<lbrace>D\<rbrace>"
- apply(rule_tac B="\<guillemotleft>C,B\<guillemotright>" and
-                C="B" and P="C" in seq)
- apply(insert f_valid g_valid, simp_all add:pred_lift_exact_def)
-done
+  apply(rule_tac B="\<guillemotleft>C,B\<guillemotright>" and C="B" and P="C" in seq)
+    apply(insert f_valid g_valid, simp_all add:pred_lift_exact_def)
+  done
 
 lemma seq_ext':
   "\<lbrakk> \<lbrace>A\<rbrace> f \<lbrace>B\<rbrace>;
@@ -585,164 +578,160 @@ lemma seq_ext:
   assumes f_valid: "\<lbrace>A\<rbrace> f \<lbrace>B\<rbrace>"
   assumes g_valid: "\<And>x. \<lbrace>B x\<rbrace> g x \<lbrace>C\<rbrace>"
   shows "\<lbrace>A\<rbrace> do x \<leftarrow> f; g x od \<lbrace>C\<rbrace>"
- apply(insert f_valid g_valid)
- apply(blast intro: seq_ext')
-done
+  apply(insert f_valid g_valid)
+  apply(blast intro: seq_ext')
+  done
 
 lemma seqE':
   "\<lbrakk> \<lbrace>A\<rbrace> f \<lbrace>B\<rbrace>,\<lbrace>E\<rbrace>;
      \<forall>x. \<lbrace>B x\<rbrace> g x \<lbrace>C\<rbrace>,\<lbrace>E\<rbrace> \<rbrakk> \<Longrightarrow>
    \<lbrace>A\<rbrace> doE x \<leftarrow> f; g x odE \<lbrace>C\<rbrace>,\<lbrace>E\<rbrace>"
- apply(simp add:bindE_def lift_def bind_def Let_def split_def)
- apply(clarsimp simp:validE_def)
- apply(case_tac "fst (f s)", simp_all)
+  apply(simp add:bindE_def lift_def bind_def Let_def split_def)
+  apply(clarsimp simp:validE_def)
+  apply(case_tac "fst (f s)", simp_all)
+   apply(case_tac a, simp_all)
+    apply(fastforce simp:throwError_def return_def)
+   apply(clarsimp simp:throwError_def return_def)
   apply(case_tac a, simp_all)
-   apply(fastforce simp:throwError_def return_def)
-  apply(clarsimp simp:throwError_def return_def)
- apply(case_tac a, simp_all)
-  apply(fastforce)+
-done
+   apply(fastforce)+
+  done
 
 lemma seqE:
   assumes f_valid: "\<lbrace>A\<rbrace> f \<lbrace>B\<rbrace>,\<lbrace>E\<rbrace>"
   assumes g_valid: "\<And>x. \<lbrace>B x\<rbrace> g x \<lbrace>C\<rbrace>,\<lbrace>E\<rbrace>"
   shows "\<lbrace>A\<rbrace> doE x \<leftarrow> f; g x odE \<lbrace>C\<rbrace>,\<lbrace>E\<rbrace>"
- apply(insert f_valid g_valid)
- apply(blast intro: seqE')
-done
+  apply(insert f_valid g_valid)
+  apply(blast intro: seqE')
+  done
 
 lemma get_sp:
   "\<lbrace>P\<rbrace> get \<lbrace>\<lambda>a s. s = a \<and> P s\<rbrace>"
   apply(simp add:get_def valid_def)
-done
+  done
 
 lemma put_sp:
   "\<lbrace>\<top>\<rbrace> put a \<lbrace>\<lambda>_ s. s = a\<rbrace>"
   apply(simp add:put_def valid_def)
-done
+  done
 
 lemma return_sp:
   "\<lbrace>P\<rbrace> return a \<lbrace>\<lambda>b s. b = a \<and> P s\<rbrace>"
   apply(simp add:return_def valid_def)
-done
+  done
 
 lemma hoare_post_conj [intro!]:
   "\<lbrakk> \<lbrace> P \<rbrace> a \<lbrace> Q \<rbrace>; \<lbrace> P \<rbrace> a \<lbrace> R \<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace> P \<rbrace> a \<lbrace> Q And R \<rbrace>"
- apply(simp add:valid_def split_def bipred_conj_def)
-done
+  apply(simp add:valid_def split_def bipred_conj_def)
+  done
 
 lemma hoare_pre_disj [intro!]: 
   "\<lbrakk> \<lbrace> P \<rbrace> a \<lbrace> R \<rbrace>; \<lbrace> Q \<rbrace> a \<lbrace> R \<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace> P or Q \<rbrace> a \<lbrace> R \<rbrace>"
- apply(simp add:valid_def pred_disj_def)
-done
+  apply(simp add:valid_def pred_disj_def)
+  done
 
 lemma hoare_post_taut [iff]: "\<lbrace> P \<rbrace> a \<lbrace> \<top>\<top> \<rbrace>"
- apply(simp add:valid_def)
-done
+  apply(simp add:valid_def)
+  done
 
 lemma hoare_pre_cont [iff]: "\<lbrace> \<bottom> \<rbrace> a \<lbrace> P \<rbrace>"
- apply(simp add:valid_def)
-done
+  apply(simp add:valid_def)
+  done
 
 lemma hoare_return [intro!]: "\<And>x. P x \<Longrightarrow> \<lbrace> Q \<rbrace> return x \<lbrace> \<guillemotleft>P,Q\<guillemotright> \<rbrace>"
- apply(simp add:valid_def return_def pred_lift_exact_def)
-done
+  apply(simp add:valid_def return_def pred_lift_exact_def)
+  done
 
 lemma hoare_return_drop [iff]: "\<lbrace> Q \<rbrace> return x \<lbrace> \<guillemotleft>\<top>,Q\<guillemotright> \<rbrace>"
- apply(simp add:valid_def return_def pred_lift_exact_def)
-done
+  apply(simp add:valid_def return_def pred_lift_exact_def)
+  done
 
 lemma hoare_return_drop_var [iff]: "\<lbrace> Q \<rbrace> return x \<lbrace> \<lambda>r. Q \<rbrace>"
  apply(simp add:valid_def return_def pred_lift_exact_def)
 done
 
 lemma hoare_return_only [intro!]: "\<And>x. P x \<Longrightarrow> \<lbrace> Q \<rbrace> return x \<lbrace> \<guillemotleft>P,\<top>\<guillemotright> \<rbrace>"
- apply(simp add:valid_def return_def pred_lift_exact_def)
-done
+  apply(simp add:valid_def return_def pred_lift_exact_def)
+  done
 
 lemma hoare_get [iff]: "\<lbrace> P \<rbrace> get \<lbrace> \<guillemotleft>P,P\<guillemotright> \<rbrace>"
- apply(simp add:valid_def get_def pred_lift_exact_def)
-done
+  apply(simp add:valid_def get_def pred_lift_exact_def)
+  done
 
 lemma hoare_gets [intro!]: "\<lbrakk> \<And>s. P s \<Longrightarrow> Q (f s) s \<rbrakk> \<Longrightarrow> \<lbrace> P \<rbrace> gets f \<lbrace> Q \<rbrace>"
- apply(simp add:valid_def gets_def get_def bind_def return_def)
-done
+  apply(simp add:valid_def gets_def get_def bind_def return_def)
+  done
 
 lemma hoare_modify [iff]: "\<lbrace> P o f \<rbrace> modify f \<lbrace> \<guillemotleft>\<top>,P\<guillemotright> \<rbrace>"
- apply(simp add:valid_def modify_def pred_lift_exact_def put_def bind_def get_def)
-done
+  apply(simp add:valid_def modify_def pred_lift_exact_def put_def bind_def get_def)
+  done
 
 lemma hoare_modifyE [intro!]: "\<lbrakk> \<And>s. P s \<Longrightarrow> Q (f s) \<rbrakk> \<Longrightarrow> \<lbrace> P \<rbrace> modify f \<lbrace> \<guillemotleft>\<top>,Q\<guillemotright> \<rbrace>"
- apply(simp add:valid_def modify_def pred_lift_exact_def put_def bind_def get_def)
-done
+  apply(simp add:valid_def modify_def pred_lift_exact_def put_def bind_def get_def)
+  done
 
 lemma hoare_modifyE_var [intro!]: "\<lbrakk> \<And>s. P s \<Longrightarrow> Q (f s) \<rbrakk> \<Longrightarrow> \<lbrace> P \<rbrace> modify f \<lbrace> \<lambda>r s. Q s \<rbrace>"
- apply(simp add:valid_def modify_def pred_lift_exact_def put_def bind_def get_def)
-done
+  apply(simp add:valid_def modify_def pred_lift_exact_def put_def bind_def get_def)
+  done
 
 lemma hoare_put [intro!]: "P x \<Longrightarrow> \<lbrace> Q \<rbrace> put x \<lbrace> \<guillemotleft>\<top>,P\<guillemotright>\<rbrace>"
- apply(simp add:valid_def put_def pred_lift_exact_def)
-done
+  apply(simp add:valid_def put_def pred_lift_exact_def)
+  done
 
 lemma hoare_if [intro!]: 
   "\<lbrakk> P \<Longrightarrow> \<lbrace> Q \<rbrace> a \<lbrace> R \<rbrace>; \<not> P \<Longrightarrow> \<lbrace> Q \<rbrace> b \<lbrace> R \<rbrace> \<rbrakk> \<Longrightarrow>
    \<lbrace> Q \<rbrace> if P then a else b \<lbrace> R \<rbrace>"
- apply(simp add:valid_def)
-done
+  apply(simp add:valid_def)
+  done
 
 lemma hoare_when [intro!]:
   "\<lbrakk> \<lbrakk> P \<rbrakk> \<Longrightarrow> \<lbrace> Q \<rbrace> a \<lbrace> \<guillemotleft>\<top>,R\<guillemotright> \<rbrace>; \<And>s. \<lbrakk> \<not> P; Q s \<rbrakk> \<Longrightarrow> R s \<rbrakk> \<Longrightarrow>
    \<lbrace> Q \<rbrace> when P a \<lbrace> \<guillemotleft>\<top>,R\<guillemotright> \<rbrace>"
- apply(simp add:valid_def when_def split_def return_def pred_lift_exact_def)
-done
+  apply(simp add:valid_def when_def split_def return_def pred_lift_exact_def)
+  done
 
 lemma hoare_unless [intro!]: 
   "\<lbrakk> \<And>s. \<lbrakk> P; Q s \<rbrakk> \<Longrightarrow> R s; \<lbrakk> \<not> P \<rbrakk> \<Longrightarrow> \<lbrace> Q \<rbrace> a \<lbrace> \<guillemotleft>\<top>,R\<guillemotright> \<rbrace> \<rbrakk> \<Longrightarrow>
    \<lbrace> Q \<rbrace> unless P a \<lbrace> \<guillemotleft>\<top>,R\<guillemotright> \<rbrace>"
- apply(simp add:valid_def unless_def split_def when_def return_def pred_lift_exact_def)
-done
+  apply(simp add:valid_def unless_def split_def when_def return_def pred_lift_exact_def)
+  done
 
 lemma hoare_pre_subst: "\<lbrakk> A = B; \<lbrace>A\<rbrace> a \<lbrace>C\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>B\<rbrace> a \<lbrace>C\<rbrace>"
- apply(clarsimp simp:valid_def split_def)
-done
+  apply(clarsimp simp:valid_def split_def)
+  done
 
 lemma hoare_post_subst: "\<lbrakk> B = C; \<lbrace>A\<rbrace> a \<lbrace>B\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>A\<rbrace> a \<lbrace>C\<rbrace>"
- apply(clarsimp simp:valid_def split_def)
-done
+  apply(clarsimp simp:valid_def split_def)
+  done
 
 lemma hoare_pre_tautI: "\<lbrakk> \<lbrace>A and P\<rbrace> a \<lbrace>B\<rbrace>; \<lbrace>A and not P\<rbrace> a \<lbrace>B\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>A\<rbrace> a \<lbrace>B\<rbrace>"
- apply(clarsimp simp:valid_def split_def pred_conj_def pred_neg_def, blast)
-done
+  apply(clarsimp simp:valid_def split_def pred_conj_def pred_neg_def, blast)
+  done
 
 lemma hoare_return_var[intro!]: "\<lbrakk> \<And>x. P x \<Longrightarrow> Q x \<rbrakk> \<Longrightarrow> (\<And>x. P x \<Longrightarrow> \<lbrace>R\<rbrace> return x \<lbrace>\<guillemotleft>Q,R\<guillemotright>\<rbrace>)"
- apply(clarsimp simp:valid_def split_def return_def pred_lift_exact_def)
-done
+  by (rule hoare_return)
 
 lemma hoare_return_drop_imp[intro!]: "\<lbrakk> \<And>s. P s \<Longrightarrow> Q s \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> return x \<lbrace>\<guillemotleft>\<top>,Q\<guillemotright>\<rbrace>"
  apply(simp add:valid_def return_def)
-done
+ done
 
-lemma hoare_case_option_inference:
- "\<lbrakk> \<And>y. x = Some y \<Longrightarrow> P x; x = None \<Longrightarrow> P x \<rbrakk> \<Longrightarrow> P x"
- apply(case_tac "x", simp_all)
-done
+lemmas hoare_case_option_inference = option.exhaust
 
 lemma hoare_pre_imp: "\<lbrakk> \<lbrace>Q\<rbrace> a \<lbrace>R\<rbrace>; \<And>s. P s \<Longrightarrow> Q s \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> a \<lbrace>R\<rbrace>"
- apply(simp add:valid_def)
-done
+  apply(simp add:valid_def)
+  done
 
 lemma hoare_post_imp: "\<lbrakk> \<lbrace>P\<rbrace> a \<lbrace>Q\<rbrace>; \<And>r s. Q r s \<Longrightarrow> R r s \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> a \<lbrace>R\<rbrace>"
- apply(simp add:valid_def split_def)
-done
+  apply(simp add:valid_def split_def)
+  done
 
 lemma hoare_post_impE: "\<lbrakk> \<lbrace>P\<rbrace> a \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>;
                           \<And>r s. Q r s \<Longrightarrow> R r s;
                           \<And>e s. E e s \<Longrightarrow> F e s \<rbrakk> \<Longrightarrow>
                         \<lbrace>P\<rbrace> a \<lbrace>R\<rbrace>,\<lbrace>F\<rbrace>"
- apply(clarsimp simp:validE_def)
- apply(case_tac aa, simp_all)
-  apply(fastforce)+
-done
+  apply(clarsimp simp:validE_def)
+  apply(case_tac aa, simp_all)
+   apply(fastforce)+
+  done
 
 lemma "isSkip f \<Longrightarrow> \<lbrace> P \<rbrace> f \<lbrace> \<guillemotleft>\<top>,P\<guillemotright> \<rbrace>"
   apply (clarsimp simp: valid_def split_def isSkip_def)

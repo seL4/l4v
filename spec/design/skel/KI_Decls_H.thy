@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-header "Initialisation"
+chapter "Initialisation"
 
 theory KI_Decls_H
 imports

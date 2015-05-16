@@ -831,7 +831,7 @@ lemma send_ipc_pas_refined:
              | rule hoare_drop_imps)+ 
   apply clarsimp
   apply (rule obj_at_valid_objsE, assumption+)
-  apply (clarsimp cong: conj_cong imp_cong simp: tcb_at_st_tcb_at conj_ac)
+  apply (clarsimp cong: conj_cong imp_cong simp: tcb_at_st_tcb_at conj_comms)
   apply (auto dest: ep_queued_st_tcb_at [where P = \<top>] simp:  tcb_at_st_tcb_at valid_ep_def valid_obj_def obj_at_def split: list.split)
   done
 
@@ -878,7 +878,7 @@ lemma receive_ipc_pas_refined:
               | wpc
               | simp add: thread_get_def  get_thread_state_def)+
   apply (rename_tac word1 word2 set s)
-  apply (clarsimp simp: tcb_at_def [symmetric] conj_ac tcb_at_st_tcb_at)
+  apply (clarsimp simp: tcb_at_def [symmetric] conj_comms tcb_at_st_tcb_at)
   apply (rule conjI)
    apply (rule impI)
    -- "is_subject"
@@ -1741,7 +1741,7 @@ lemma send_ipc_integrity_autarch:
               | rule hoare_drop_imps
               | simp add: get_thread_state_def)+
 
-  apply (clarsimp simp: conj_ac)
+  apply (clarsimp simp: conj_comms)
   apply (subgoal_tac "st_tcb_at (receive_blocked_on epptr) x s")
    prefer 2
    apply (erule ep_queued_st_tcb_at'')

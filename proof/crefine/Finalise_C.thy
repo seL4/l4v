@@ -549,7 +549,7 @@ lemma use_tcb_queue_relation2:
            \<and> qhead = (hd (map tcb_ptr_to_ctcb_ptr xs @ [tcb_Ptr 0])))"
   apply (induct xs arbitrary: qhead qprev)
    apply simp
-  apply (simp add: conj_ac cong: conj_cong)
+  apply (simp add: conj_comms cong: conj_cong)
   done
 
 lemma tcb_queue_relation2_concat:

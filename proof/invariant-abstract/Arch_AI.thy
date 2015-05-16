@@ -827,7 +827,7 @@ lemma perform_asid_control_invocation_st_tcb_at:
   apply (rename_tac word1 a b aa ba word2)
   apply (wp hoare_vcg_const_imp_lift retype_region_st_tcb_at set_cap_no_overlap|simp)+
     apply (strengthen impI[OF invs_valid_objs] impI[OF invs_psp_aligned])
-    apply (clarsimp simp:conj_ac)
+    apply (clarsimp simp:conj_comms)
     apply (wp max_index_upd_invs_simple get_cap_wp)
    apply (rule hoare_name_pre_state)
    apply (subgoal_tac "is_aligned word1 page_bits")
@@ -1602,7 +1602,7 @@ lemma arch_decode_inv_wf[wp]:
          apply (simp add: mask_asid_low_bits_ucast_ucast)+
       apply (fastforce simp: diminished_pd_self)
      apply (simp add: vmsz_aligned_def split: vmpage_size.splits)
-     apply (simp add: conj_ac)
+     apply (simp add: conj_comms)
      apply (rule conjI, simp, rule conjI, simp add: mask_def)
      apply (rule conjI)
       apply (rule is_aligned_addrFromPPtr)
@@ -1678,7 +1678,7 @@ lemma arch_decode_inv_wf[wp]:
           apply (rule impI)
           apply (subst eq_commute[where b="snd p"])
           apply assumption
-         apply (simp add: conj_ac)
+         apply (simp add: conj_comms)
          apply ((wp_trace whenE_throwError_wp check_vp_wpR hoare_vcg_const_imp_lift_R
                     hoare_drop_impE_R create_mapping_entries_parent_for_refs
                | wpc

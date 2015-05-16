@@ -12,7 +12,7 @@
 Higher level functions for manipulating virtual address spaces
 *)
 
-header "ARM VSpace Functions"
+chapter "ARM VSpace Functions"
 
 theory ArchVSpace_A
 imports Retype_A

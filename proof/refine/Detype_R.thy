@@ -2461,7 +2461,7 @@ lemma placeNewObject_cte_wp_at'':
   apply (simp add:cte_wp_at_cases_mask' obj_at'_real_def)
   apply (wp hoare_vcg_disj_lift)
    apply (wp placeNewObject_ko_wp_at')
-  apply (clarsimp simp:conj_ac)
+  apply (clarsimp simp:conj_comms)
   apply (intro conjI impI allI impI)
     apply (drule(4) not_in_new_cap_addrs')
     apply (clarsimp simp:ko_wp_at'_def)
@@ -3615,7 +3615,7 @@ lemma new_cap_object_comm_helper:
        apply (rule commute_commute[OF createObject_updateMDB_commute])
       apply (wp getCTE_wp hoare_vcg_imp_lift hoare_vcg_disj_lift valid_arch_state'_updateMDB
         updateMDB_pspace_no_overlap' setCTE_pspace_no_overlap'
-        | clarsimp simp:conj_ac)+
+        | clarsimp simp:conj_comms)+
   apply (clarsimp simp:cte_wp_at_ctes_of)
   apply (frule_tac slot = slot in pspace_no_overlapD2')
    apply simp+

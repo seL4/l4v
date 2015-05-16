@@ -12,7 +12,7 @@
 Types of exceptions in the abstract model.
 *)
 
-header "Error and Fault Messages"
+chapter "Error and Fault Messages"
 
 theory ExceptionTypes_A
 imports MiscMachine_A

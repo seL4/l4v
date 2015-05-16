@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-header "Kernel Init Monad"
+chapter "Kernel Init Monad"
 
 theory KernelInitMonad_H
 imports KernelStateData_H

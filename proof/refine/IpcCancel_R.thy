@@ -773,7 +773,7 @@ proof -
               | simp add: valid_tcb_state'_def split del: split_if
               | wpc)+
     apply (rule hoare_strengthen_post [OF get_ep_sp'])
-    apply (clarsimp simp: st_tcb_at_tcb_at' fun_upd_def[symmetric] conj_ac
+    apply (clarsimp simp: st_tcb_at_tcb_at' fun_upd_def[symmetric] conj_comms
                split del: split_if cong: if_cong)
     apply (rule conjI, clarsimp simp: valid_idle'_def st_tcb_at'_def obj_at'_def projectKOs)
     apply (frule obj_at_valid_objs', clarsimp)

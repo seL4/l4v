@@ -12,51 +12,23 @@
 Arch specific object invocations
 *)
 
-header "ARM Object Invocations"
+chapter "ARM Object Invocations"
 
 theory ArchInvocation_A
 imports Structures_A
 begin
 
 text {* These datatypes encode the arguments to the various possible
-ARM-specific system calls. Accessors are defined for various fields
+ARM-specific system calls. Selectors are defined for various fields
 for convenience elsewhere. *}
 
 datatype flush_type = Clean | Invalidate | CleanInvalidate | Unify
 
 datatype page_directory_invocation =
-    PageDirectoryFlush flush_type vspace_ref vspace_ref word32 obj_ref asid
+    PageDirectoryFlush (pd_flush_type: flush_type) (pd_flush_start: vspace_ref)
+                       (pd_flush_end: vspace_ref) (pd_flush_pstart: word32)
+                       (pd_flush_pd: obj_ref) (pd_flush_asid: asid)
   | PageDirectoryNothing
-
-primrec
-  pd_flush_type :: "page_directory_invocation \<Rightarrow> flush_type"
-where
-  "pd_flush_type (PageDirectoryFlush typ start end pstart pd asid) = typ"
-
-primrec
-  pd_flush_start :: "page_directory_invocation \<Rightarrow> vspace_ref"
-where
-  "pd_flush_start (PageDirectoryFlush typ start end pstart pd asid) = start"
-
-primrec
-  pd_flush_end :: "page_directory_invocation \<Rightarrow> vspace_ref"
-where
-  "pd_flush_end (PageDirectoryFlush typ start end pstart pd asid) = end"
-
-primrec
-  pd_flush_pstart :: "page_directory_invocation \<Rightarrow> word32"
-where
-  "pd_flush_pstart (PageDirectoryFlush typ start end pstart pd asid) = pstart"
-
-primrec
-  pd_flush_pd :: "page_directory_invocation \<Rightarrow> obj_ref"
-where
-  "pd_flush_pd (PageDirectoryFlush typ start end pstart pd asid) = pd"
-
-primrec
-  pd_flush_asid :: "page_directory_invocation \<Rightarrow> asid"
-where
-  "pd_flush_asid (PageDirectoryFlush typ start end pstart pd asid) = asid"
 
 datatype page_table_invocation = 
     PageTableMap cap cslot_ptr pde obj_ref
@@ -70,98 +42,25 @@ datatype asid_pool_invocation =
 
 datatype page_invocation
      = PageMap 
-         asid
-         cap
-         cslot_ptr
-         "pte \<times> (obj_ref list) + pde \<times> (obj_ref list)"
+         (page_map_asid: asid)
+         (page_map_cap: cap)
+         (page_map_ct_slot: cslot_ptr)
+         (page_map_entries: "pte \<times> (obj_ref list) + pde \<times> (obj_ref list)")
      | PageRemap
-         asid 
-         "pte \<times> (obj_ref list) + pde \<times> (obj_ref list)"
+         (page_remap_asid: asid)
+         (page_remap_entries: "pte \<times> (obj_ref list) + pde \<times> (obj_ref list)")
      | PageUnmap 
-         arch_cap
-         cslot_ptr
+         (page_unmap_cap: arch_cap)
+         (page_unmap_cap_slot: cslot_ptr)
      | PageFlush
-         flush_type
-         vspace_ref
-         vspace_ref
-         word32
-         obj_ref
-         asid
+         (page_flush_type: flush_type)
+         (page_flush_start: vspace_ref)
+         (page_flush_end: vspace_ref)
+         (page_flush_pstart: word32)
+         (page_flush_pd: obj_ref)
+         (page_flush_asid: asid)
      | PageGetAddr
-         obj_ref
-
-primrec
-  page_map_cap :: "page_invocation \<Rightarrow> cap"
-where
-  "page_map_cap (PageMap a c p x) = c"
-
-primrec
-  page_map_asid :: "page_invocation \<Rightarrow> asid"
-where
-  "page_map_asid (PageMap a c p x) = a"
-primrec
-  page_map_ct_slot :: "page_invocation \<Rightarrow> cslot_ptr"
-where
-  "page_map_ct_slot (PageMap a c p x) = p"
-primrec
-  page_map_entries :: "page_invocation \<Rightarrow> pte \<times> (obj_ref list) + pde \<times> (obj_ref list)"
-where
-  "page_map_entries (PageMap a c p x) = x"
-
-primrec
-  page_remap_entries :: "page_invocation \<Rightarrow> pte \<times> (obj_ref list) + pde \<times> (obj_ref list)"
-where
-  "page_remap_entries (PageRemap a x) = x"
-
-primrec
-  page_remap_asid :: "page_invocation \<Rightarrow> asid"
-where
-  "page_remap_asid (PageRemap a x) = a"
-
-primrec
-  page_unmap_cap :: "page_invocation \<Rightarrow> arch_cap"
-where
-  "page_unmap_cap (PageUnmap c p) = c"
-
-primrec
-  page_unmap_cap_slot :: "page_invocation \<Rightarrow> cslot_ptr"
-where
-  "page_unmap_cap_slot (PageUnmap c p) = p"
-
-primrec
-  page_flush_pd :: "page_invocation \<Rightarrow> obj_ref"
-where
-  "page_flush_pd (PageFlush typ start end pstart pd asid) = pd"
-
-primrec
-  page_flush_asid :: "page_invocation \<Rightarrow> asid"
-where
-  "page_flush_asid (PageFlush typ start end pstart pd asid) = asid"
-
-primrec
-  page_flush_type :: "page_invocation \<Rightarrow> flush_type"
-where
-  "page_flush_type (PageFlush typ start end pstart pd asid) = typ"
-
-primrec
-  page_flush_start :: "page_invocation \<Rightarrow> vspace_ref"
-where
-  "page_flush_start (PageFlush typ start end pstart pd asid) = start"
-
-primrec
-  page_flush_end :: "page_invocation \<Rightarrow> vspace_ref"
-where
-  "page_flush_end (PageFlush typ start end pstart pd asid) = end"
-
-primrec
-  page_flush_pstart :: "page_invocation \<Rightarrow> word32"
-where
-  "page_flush_pstart (PageFlush typ start end pstart pd asid) = pstart"
-
-primrec
-  page_get_paddr :: "page_invocation \<Rightarrow> obj_ref"
-where
-  "page_get_paddr (PageGetAddr ptr) = ptr"
+         (page_get_paddr: obj_ref)
 
 datatype arch_invocation
      = InvokePageTable page_table_invocation
@@ -170,7 +69,7 @@ datatype arch_invocation
      | InvokeASIDControl asid_control_invocation
      | InvokeASIDPool asid_pool_invocation
 
-(* There are no additional interrupt control operations on ARM. *)
+-- "There are no additional interrupt control operations on ARM."
 typedecl arch_interrupt_control
 
 end

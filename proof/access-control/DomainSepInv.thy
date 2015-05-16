@@ -1065,7 +1065,7 @@ lemma receive_ipc_domain_sep_inv:
           apply(rule_tac Q="\<lambda> r s. domain_sep_inv irqs st s" in hoare_strengthen_post)
           apply(wp do_ipc_transfer_domain_sep_inv hoare_vcg_all_lift | wpc | simp)+
      apply(wp hoare_vcg_imp_lift [OF set_endpoint_get_tcb, unfolded disj_not1] hoare_vcg_all_lift get_endpoint_wp)
-  apply (clarsimp simp: conj_ac)
+  apply (clarsimp simp: conj_comms)
   apply (fastforce simp: valid_objs_def valid_obj_def obj_at_def
                          ep_redux_simps neq_Nil_conv valid_ep_def case_list_cons_cong)
   done
