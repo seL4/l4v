@@ -380,7 +380,7 @@ fun make_goal const_term const pre extra ctxt =
 
 fun crunch cfg pre extra stack const' thms =
   let 
-    val ctxt = #ctxt cfg;
+    val ctxt = #ctxt cfg |> Context_Position.set_visible false;
     val const = real_const_from_name const' (#nmspce cfg) ctxt;
     val empty_ref = Unsynchronized.ref [] : thm list Unsynchronized.ref (* FIXME: avoid refs *)
   in
@@ -439,7 +439,7 @@ fun crunch cfg pre extra stack const' thms =
                 in Instance.put_precond precond goal |> HOLogic.mk_Trueprop end;
               val goal_prop2 = if Instance.has_preconds then collect_preconds pre else goal_prop;
 
-              val ctxt''' = ctxt'' |> Variable.auto_fixes goal_prop2 |> Context_Position.set_visible false
+              val ctxt''' = ctxt'' |> Variable.auto_fixes goal_prop2
               val _ = writeln ("attempting: " ^ Syntax.string_of_term ctxt''' goal_prop2);
  
             in (Goal.prove ctxt''' [] [] goal_prop2

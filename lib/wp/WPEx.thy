@@ -408,14 +408,19 @@ ML {*
 val valid_strengthen_with_mresults = @{thm valid_strengthen_with_mresults};
 val wpex_name_for_idE = @{thm wpex_name_for_idE};
 
-fun wps_tac ctxt rules
-  = rtac valid_strengthen_with_mresults 1
-    THEN (safe_simp_tac (put_simpset postcond_ss ctxt) 1)
-    THEN Subgoal.FOCUS (fn focus => let
-        val ctxt = #context focus;
-        val (simps, _) = get_wp_simps_strgs ctxt rules (#prems focus);
-      in CHANGED (simp_tac (put_simpset wp_default_ss ctxt addsimps simps) 1) end) ctxt 1
-    THEN etac wpex_name_for_idE 1;
+fun wps_tac ctxt rules =
+let
+  (* avoid duplicate simp rule etc warnings: *)
+  val ctxt = Context_Position.set_visible false ctxt
+in
+  rtac valid_strengthen_with_mresults 1
+  THEN (safe_simp_tac (put_simpset postcond_ss ctxt) 1)
+  THEN Subgoal.FOCUS (fn focus => let
+      val ctxt = #context focus;
+      val (simps, _) = get_wp_simps_strgs ctxt rules (#prems focus);
+    in CHANGED (simp_tac (put_simpset wp_default_ss ctxt addsimps simps) 1) end) ctxt 1
+  THEN etac wpex_name_for_idE 1
+end
 
 val wps_method = Attrib.thms >> curry
   (fn (ts, ctxt) => Method.SIMPLE_METHOD (wps_tac ctxt ts));
