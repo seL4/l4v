@@ -12,8 +12,6 @@ theory DetWP
 imports "../../lib/clib/DetWPLib" Include_C
 begin
 
-declare option.weak_case_cong[cong]
-
 lemma det_wp_doMachineOp [wp]:
   "det_wp (\<lambda>_. P) f \<Longrightarrow> det_wp (\<lambda>_. P) (doMachineOp f)"
   apply (simp add: doMachineOp_def split_def)
@@ -33,10 +31,6 @@ lemma det_wp_loadWordUser [wp]:
    apply wp
   apply (clarsimp simp: is_aligned_mask)
   done
-
-lemma getRegister_inv:
-  "\<lbrace>P\<rbrace> getRegister r \<lbrace>\<lambda>_. P\<rbrace>"
-  by (simp add: getRegister_def)
 
 declare det_wp_liftM[wp]
 
@@ -74,7 +68,6 @@ lemma det_wp_getTCB [wp]:
     apply simp
    apply (erule is_aligned_no_overflow)
   apply (simp add: word_bits_def)
-  apply (clarsimp split: option.split_asm simp: objBits_simps)
   done
 
 lemma det_wp_setObject_other [wp]:

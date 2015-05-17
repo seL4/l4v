@@ -12,7 +12,7 @@ theory Ipc_C
 imports Finalise_C CSpace_All
 begin
 
-declare option.weak_case_cong[cong]
+declare option.case_cong_weak[cong]
 
 definition
   "replyFromKernel_success_empty thread \<equiv> do

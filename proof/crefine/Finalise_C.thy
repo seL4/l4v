@@ -275,6 +275,7 @@ next
      apply (clarsimp simp: cscheduler_action_relation_def
                            st_tcb_at'_def
                     split: scheduler_action.split_asm)
+     apply (rename_tac word)
      apply (frule_tac x=word in tcbSchedEnqueue_cslift_precond_discharge)
         apply simp
        apply clarsimp
@@ -315,6 +316,7 @@ lemma epCancelAll_ccorres:
      apply (rule_tac A="invs' and ko_at' rv epptr"
                   in ccorres_guard_imp2[where A'=UNIV])
       apply wpc
+        apply (rename_tac list)
         apply (simp add: endpoint_state_defs
                          Collect_False Collect_True
                          ccorres_cond_iffs
@@ -364,6 +366,7 @@ lemma epCancelAll_ccorres:
         apply vcg
        apply (simp add: ccorres_cond_iffs dc_def[symmetric])
        apply (rule ccorres_return_Skip)
+      apply (rename_tac list)
       apply (simp add: endpoint_state_defs
                        Collect_False Collect_True
                        ccorres_cond_iffs dc_def[symmetric]
@@ -453,6 +456,7 @@ lemma aepCancelAll_ccorres:
        apply (simp add: async_endpoint_state_defs ccorres_cond_iffs
                         dc_def[symmetric])
        apply (rule ccorres_return_Skip)
+      apply (rename_tac list)
       apply (simp add: async_endpoint_state_defs ccorres_cond_iffs
                        dc_def[symmetric] Collect_True
                   del: Collect_const)
@@ -561,8 +565,9 @@ lemma tcb_queue_relation2_concat:
               ys (last (before # xs)) after)"
   apply (induct xs arbitrary: before)
    apply simp
+  apply (rename_tac x xs before)
   apply (simp split del: split_if)
-  apply (case_tac "hp a")
+  apply (case_tac "hp x")
    apply simp
   apply simp
   done
@@ -734,7 +739,7 @@ lemma finaliseCap_True_standin_ccorres:
                         \<inter> {s. exposed_' s = from_bool True (* dave has name wrong *)}) []
    (finaliseCapTrue_standin cap final) (Call finaliseCap_'proc)"
   unfolding finaliseCapTrue_standin_simple_def
-  apply (case_tac "?P :: bool")
+  apply (case_tac "P :: bool" for P)
    apply (erule finaliseCap_True_cases_ccorres)
   apply (simp add: finaliseCap_def ccorres_fail')
   done
@@ -1508,7 +1513,7 @@ lemma cteDeleteOne_stronger_ccorres:
          apply (simp add: dc_def[symmetric])
          apply (ctac add: emptySlot_ccorres)
         apply (simp add: pred_conj_def finaliseCapTrue_standin_simple_def)
-        apply (strengthen vmdb_invs'_strg) 
+        apply (strengthen invs_mdb_strengthen') 
         apply (wp typ_at_lifts isFinalCapability_inv)
        apply (clarsimp simp: from_bool_def true_def irq_opt_relation_def
                              invs_pspace_aligned' cte_wp_at_ctes_of)
@@ -1624,7 +1629,7 @@ lemma finaliseCap_ccorres:
    (finaliseCap cap final flag) (Call finaliseCap_'proc)"
   apply (rule_tac F="capAligned cap" in Corres_UL_C.ccorres_req)
    apply (clarsimp simp: valid_capAligned)
-  apply (case_tac "?P :: bool")
+  apply (case_tac "P :: bool" for P)
    apply (rule ccorres_guard_imp2, erule finaliseCap_True_cases_ccorres)
    apply simp
   apply (subgoal_tac "\<exists>acap. (0 <=s (-1 :: word8)) \<or> acap = capCap cap")
@@ -1686,8 +1691,8 @@ lemma finaliseCap_ccorres:
     apply (simp add: mod_mask_drop[where n=5] mask_def[where n=5]
                      less_imp_neq [OF word_mod_less_divisor]
                      less_imp_neq Let_def)
-    apply (thin_tac "?a = ?b")+
-    apply (subgoal_tac "?P")
+    apply (thin_tac "a = b" for a b)+
+    apply (subgoal_tac "P" for P)
      apply (subst add.commute, subst unatSuc, assumption)+
      apply (rule conjI)
       apply (rule word_eqI)

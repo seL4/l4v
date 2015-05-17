@@ -171,7 +171,7 @@ lemma preemptionPoint_ccorres:
                  [where P=\<top> and P'=UNIV and r'=dc and xf'=xfdc])
          apply (rule ccorres_from_vcg)
 	 apply (rule allI, rule conseqPre, vcg)
-	 apply (thin_tac "?P")+
+	 apply (thin_tac "P" for P)+
 	 apply (clarsimp simp: setWorkUnits_def simpler_modify_def)
 	 apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
 	                       carch_state_relation_def 
@@ -306,7 +306,7 @@ lemma ccorres_invocationCatch_Inr:
   apply (simp add: invocationCatch_def liftE_bindE o_xo_injector)
   apply (subst ccorres_liftM_simp[symmetric])
   apply (simp add: liftM_def bind_assoc bindE_def)
-  apply (rule_tac f="\<lambda>f. ccorres ?rvr ?xs P P' hs f c" in arg_cong)
+  apply (rule_tac f="\<lambda>f. ccorres rvr xs P P' hs f c" for rvr xs in arg_cong)
   apply (rule ext)
   apply (rule bind_apply_cong [OF refl])+
   apply (simp add: throwError_bind returnOk_bind lift_def liftE_def
@@ -611,7 +611,8 @@ lemma ccorres_defer:
   apply (clarsimp simp: return_def)
   apply (rule conjI)
    apply clarsimp
-   apply (erule_tac x=n in allE)
+   apply (rename_tac s)
+   apply (erule_tac x=n in allE)   
    apply (erule_tac x="Normal s" in allE)
    apply (clarsimp simp: unif_rrel_def)
   apply fastforce
@@ -691,7 +692,7 @@ lemma getMRs_tcbContext:
   \<lbrace>\<lambda>rv s. obj_at' (\<lambda>tcb. tcbContext tcb (State_H.msgRegisters ! n) = rv ! n) (ksCurThread s) s\<rbrace>"
   apply (rule hoare_assume_pre)
   apply (elim conjE)
-  apply (thin_tac "thread = ?t")
+  apply (thin_tac "thread = t" for t)
   apply (clarsimp simp add: getMRs_def)
   apply (rule hoare_pre)
    apply (wp|wpc)+
@@ -899,7 +900,7 @@ lemma lookupIPCBuffer_ccorres:
      apply (rule conjI)
       apply (clarsimp simp: isCap_simps word_less_nat_alt)
       apply (frule ccap_relation_frame_tags)
-      apply (simp add: generic_frame_cap_size)
+      apply simp
       apply (simp add: cap_get_tag_PageCap_small_frame cap_get_tag_PageCap_frame)
       apply (auto simp: cap_tag_defs)[1]
      apply (auto simp: cap_get_tag_isCap isArchPageCap_def isCap_simps
@@ -979,7 +980,7 @@ lemma getMRs_user_word:
   \<lbrace>\<lambda>xs. user_word_at (xs ! unat i) (buffer + (i * 4 + 4))\<rbrace>"
   apply (rule hoare_assume_pre)
   apply (elim conjE)
-  apply (thin_tac "valid_ipc_buffer_ptr' ?x ?y")
+  apply (thin_tac "valid_ipc_buffer_ptr' x y" for x y)
   apply (simp add: getMRs_def)
   apply wp
    apply (rule_tac P="length hardwareMRValues = unat n_msgRegisters" in hoare_gen_asm)

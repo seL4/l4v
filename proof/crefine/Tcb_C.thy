@@ -732,7 +732,7 @@ lemma invokeTCB_ThreadControl_ccorres:
                        checkCap_inv [where P="sch_act_simple"]
                           | simp)+
             apply (simp add: guard_is_UNIV_def)
-           apply (thin_tac "ccorres ?a1 ?a2 ?a3 ?a4 ?a5 ?a6 ?a7")
+           apply (thin_tac "ccorres a1 a2 a3 a4 a5 a6 a7" for a1 a2 a3 a4 a5 a6 a7)
            apply (rule ccorres_rhs_assoc)+
            apply (rule checkCapAt_ccorres2)
               apply ceqv
@@ -804,7 +804,7 @@ lemma invokeTCB_ThreadControl_ccorres:
                                  word_sle_def if_1_0_0 Collect_const_mem
                                  option_to_0_def Kernel_C.tcbVTable_def tcbVTableSlot_def
                                  cte_level_bits_def size_of_def cintr_def)
-          apply (thin_tac "ccorres ?a1 ?a2 ?a3 ?a4 ?a5 ?a6 ?a7")
+          apply (thin_tac "ccorres a1 a2 a3 a4 a5 a6 a7" for a1 a2 a3 a4 a5 a6 a7)
           apply (rule ccorres_rhs_assoc)+
           apply (rule checkCapAt_ccorres2)
              apply ceqv
@@ -1349,8 +1349,6 @@ lemma asUser_sysargs_rel:
    apply (wp asUser_getMRs_rel hoare_valid_ipc_buffer_ptr_typ_at'|simp)+
 done
 
-(* FIXME: move! (did get lost, somewhere along the path. *)
-declare empty_fail_setRegister[simp]
 
 lemma invokeTCB_WriteRegisters_ccorres[where S=UNIV]:
   notes static_imp_wp [wp]
@@ -1377,7 +1375,7 @@ lemma invokeTCB_WriteRegisters_ccorres[where S=UNIV]:
    apply (simp add: liftE_def bind_assoc
                del: Collect_const)
    apply (rule ccorres_pre_getCurThread)
-   apply (rule_tac P="\<lambda>a. ccorres_underlying rf_sr \<Gamma> ?r' ?xf ?arrel ?axf ?P ?P' ?hs a ?c" in subst)
+   apply (rule_tac P="\<lambda>a. ccorres_underlying rf_sr \<Gamma> r' xf arrel axf P P' hs a c" for r' xf arrel axf P P' hs c in subst)
     apply (rule liftE_bindE)
 
    apply (ctac add: Arch_performTransfer_ccorres)
@@ -1615,8 +1613,7 @@ shows
                       del: Collect_const)
           apply (simp add: replyOnRestart_def liftE_def bind_assoc when_def
                            replyFromKernel_def if_to_top_of_bind setMRs_def
-                           zipWithM_x_mapM_x asUser_mapM_x empty_fail_setRegister
-                           split_def
+                           zipWithM_x_mapM_x asUser_mapM_x split_def
                       del: Collect_const cong: if_cong)
           apply (rule ccorres_symb_exec_l)
              apply (rule ccorres_symb_exec_l[OF _ _ _ empty_fail_getThreadState])
@@ -2117,7 +2114,7 @@ lemma decodeWriteRegisters_ccorres:
     apply (rule syscall_error_throwError_ccorres_n)
     apply (simp add: syscall_error_to_H_cases)
    apply (simp add: word_less_nat_alt del: Collect_const)
-   apply (rule_tac P="\<lambda>a. ccorres ?rvr ?xf ?P ?P' ?hs a ?c" in ssubst,
+   apply (rule_tac P="\<lambda>a. ccorres rvr xf P P' hs a c" for rvr xf P P' hs c in ssubst,
           rule bind_cong [OF _ refl], rule list_case_helper,
           clarsimp simp: tl_drop_1)+
    apply (rule ccorres_add_return)
@@ -2269,7 +2266,7 @@ lemma decodeCopyRegisters_ccorres:
          apply (simp add: cap_get_tag_isCap if_1_0_0 del: Collect_const)
          apply (rule ccorres_assert2)
          apply (rule ccorres_Cond_rhs_Seq)
-          apply (rule_tac P="?Q' (capTCBPtr rva) rva"
+          apply (rule_tac P="Q' (capTCBPtr rva) rva" for Q'
                      in ccorres_inst)
           apply (rule ccorres_rhs_assoc)+
           apply (csymbr, csymbr)
@@ -2660,8 +2657,8 @@ lemma decodeTCBConfigure_ccorres:
     prefer 2
     apply (clarsimp simp: idButNot_def interpret_excaps_test_null
                           excaps_map_def neq_Nil_conv)
-   apply (thin_tac "?P \<longrightarrow> index ?exc ?n \<noteq> NULL")+
-   apply (rule_tac P="\<lambda>a. ccorres ?rvr ?xf ?P ?P' ?hs a ?c" in ssubst,
+   apply (thin_tac "P \<longrightarrow> index exc n \<noteq> NULL" for P exc n)+
+   apply (rule_tac P="\<lambda>a. ccorres rvr xf P P' hs a c" for rvr xf P P' hs c in ssubst,
           rule bind_cong [OF _ refl], rule list_case_helper, clarsimp)+
    apply (simp add: hd_drop_conv_nth2 del: Collect_const)
    apply (rule ccorres_add_return,
@@ -2771,8 +2768,8 @@ lemma decodeTCBConfigure_ccorres:
                            apply (simp add: all_ex_eq_helper Collect_const_mem numeral_eqs)
                            apply (vcg exspec=deriveCap_modifies)
                           apply (rule ceqv_tuple2, ceqv, ceqv)
-                         apply (rule_tac P="?P (fst rv') (snd rv')"
-                                    and P'="?P' (fst rv') (snd rv')" in ccorres_inst)
+                         apply (rule_tac P="P (fst rv') (snd rv')"
+                                    and P'="P' (fst rv') (snd rv')" for P P' in ccorres_inst)
                          apply (clarsimp simp del: Collect_const)
                          apply csymbr
                          apply (rule ccorres_Guard_Seq)+
@@ -3093,7 +3090,7 @@ lemma decodeSetPriority_ccorres:
   apply (intro conjI impI allI)
       apply (clarsimp simp: unat_eq_0)
      apply (clarsimp simp: word32_FF_is_mask ucast_ucast_mask)
-    apply (thin_tac "tcb_at' ?p ?s")+
+    apply (thin_tac "tcb_at' p s" for p s)+
     apply (clarsimp simp: ct_in_state'_def st_tcb_at'_def)
     apply (drule obj_at_ko_at', clarsimp)
     apply (erule cmap_relationE1 [OF cmap_relation_tcb], erule ko_at_projectKO_opt)
@@ -3305,7 +3302,7 @@ lemma decodeSetSpace_ccorres:
    apply (rule ccorres_Guard_Seq)+
    apply csymbr
    apply (simp add: if_1_0_0 interpret_excaps_test_null del: Collect_const)
-   apply (rule_tac P="\<lambda>c. ccorres ?rvr ?xf ?P ?P' ?hs ?a (Cond c ?c1 ?c2 ;; ?c3)" in ssubst)
+   apply (rule_tac P="\<lambda>c. ccorres rvr xf P P' hs a (Cond c c1 c2 ;; c3)" for rvr xf P P' hs a c1 c2 c3 in ssubst)
     apply (rule Collect_cong)
     apply (rule interpret_excaps_test_null)
      apply (clarsimp simp: neq_Nil_conv)
@@ -3325,7 +3322,7 @@ lemma decodeSetSpace_ccorres:
                    simp del: Collect_const)
    apply (drule_tac a="Suc 0" in neq_le_trans [OF not_sym])
     apply (clarsimp simp: neq_Nil_conv)
-   apply (rule_tac P="\<lambda>a. ccorres ?rvr ?xf ?P ?P' ?hs a ?c" in ssubst,
+   apply (rule_tac P="\<lambda>a. ccorres rvr xf P P' hs a c" for rvr xf P P' hs c in ssubst,
           rule bind_cong [OF _ refl], rule list_case_helper,
           clarsimp)+
    apply (simp add: hd_drop_conv_nth2 del: Collect_const)

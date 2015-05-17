@@ -1248,6 +1248,7 @@ lemma ccorres_stateAssert_after:
   apply (clarsimp simp: split_def)
   apply (rule conjI)
    apply clarsimp
+   apply (rename_tac s)
    apply (erule_tac x=n in allE)
    apply (erule_tac x="Normal s" in allE)
    apply clarsimp
@@ -1701,9 +1702,9 @@ proof -
     apply (case_tac "ptr \<le> x + 2 ^ pageBits - 1",
            simp_all only: simp_thms not_le)
     apply clarsimp
-    apply (thin_tac "?psp = Some ?ko")+
-    apply (thin_tac "ps_clear ?x ?y ?z")
-    apply (thin_tac "cteCap ?x = ?y")+
+    apply (thin_tac "psp = Some ko" for psp ko)+
+    apply (thin_tac "ps_clear x y z" for x y z)
+    apply (thin_tac "cteCap x = y" for x y)+
     apply (frule is_aligned_no_overflow)
     apply (simp only: x_power_minus_1)
     apply (frule_tac x=x in word_plus_strict_mono_right[of _ "2^pageBits"])
@@ -1779,8 +1780,3 @@ lemma deleteObjects_ccorres[corres]:
 
 end  
 end  
-(*
- * Local Variables: ***
- * indent-tabs-mode: nil ***
- * End: ***
- *)

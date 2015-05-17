@@ -12,6 +12,7 @@ theory Arch_C
 imports Recycle_C
 begin
 
+(* FIXME: move *)
 lemma of_bool_from_bool: "of_bool = from_bool"
   by (rule ext, simp add: from_bool_def split: bool.split)
 
@@ -841,7 +842,7 @@ lemma decodeARMPageTableInvocation_ccorres:
                         shiftr_shiftl1 mask_def[where n=18])
   apply (simp add: cpde_relation_def Let_def pde_lift_pde_coarse
                    pde_pde_coarse_lift_def word_bw_assocs)
-  apply (thin_tac "?P")+
+  apply (thin_tac "P" for P)+
   apply (subst is_aligned_neg_mask [OF _ order_refl],
         rule is_aligned_addrFromPPtr_n,
         rule is_aligned_andI2,
@@ -1070,8 +1071,9 @@ lemma createSafeMappingEntries_PDE_ccorres:
        apply wp
       apply (simp add: ccHoarePost_def isRight_def xfdc_def)
       apply (rule HoarePartial.SeqSwap)
-       apply (rule_tac Q="\<lbrace>?Bonus \<acute>i \<longrightarrow> ?Prop \<acute>ret___struct_create_mappings_pde_return_C\<rbrace>"
-                   and I="\<lbrace>?Prop \<acute>ret___struct_create_mappings_pde_return_C\<rbrace>"
+       apply (rule_tac Q="\<lbrace>Bonus \<acute>i \<longrightarrow> Prop \<acute>ret___struct_create_mappings_pde_return_C\<rbrace>"
+                   and I="\<lbrace>Prop \<acute>ret___struct_create_mappings_pde_return_C\<rbrace>"
+                 for Bonus Prop
                  in HoarePartial.reannotateWhileNoGuard)
        apply (rule HoarePartial.While[OF order_refl])
         apply (rule conseqPre, vcg)
@@ -1295,8 +1297,9 @@ lemma createSafeMappingEntries_PTE_ccorres:
          apply (simp add: isLeft_def ccHoarePost_def xfdc_def
                           upto_enum_step_def)
          apply (rule HoarePartial.SeqSwap)
-          apply (rule_tac Q="\<lbrace>?Bonus \<acute>i \<longrightarrow> ?Prop \<acute>ret___struct_create_mappings_pte_return_C\<rbrace>"
-                      and I="\<lbrace>?Prop \<acute>ret___struct_create_mappings_pte_return_C\<rbrace>"
+          apply (rule_tac Q="\<lbrace>Bonus \<acute>i \<longrightarrow> Prop \<acute>ret___struct_create_mappings_pte_return_C\<rbrace>"
+                      and I="\<lbrace>Prop \<acute>ret___struct_create_mappings_pte_return_C\<rbrace>"
+                      for Bonus Prop
                        in HoarePartial.reannotateWhileNoGuard)
           apply (rule HoarePartial.While[OF order_refl])
            apply (rule conseqPre, vcg)
@@ -2258,6 +2261,7 @@ lemma resolveVAddr_ccorres:
         apply (clarsimp simp: isPageTablePDE_def split: pde.splits)
        prefer 2
        apply (clarsimp simp: isPageTablePDE_def split: pde.splits)
+      apply (rename_tac word1 bool word2)
       apply (rule ccorres_rhs_assoc)+
       apply csymbr
       apply (rule ccorres_abstract_cleanup)
@@ -2980,7 +2984,7 @@ lemma decodeARMFrameInvocation_ccorres:
    apply (clarsimp simp: mask_def[where n=4] typ_heap_simps')
    apply (clarsimp simp: isCap_simps)
    apply (frule slotcap_in_mem_valid, clarsimp+)
-   apply (erule_tac c="ArchObjectCap (PageDirectoryCap ?a ?b)" in ccap_relationE)
+   apply (erule_tac c="ArchObjectCap (PageDirectoryCap a b)" for a b in ccap_relationE)
    apply (clarsimp simp: cap_lift_page_directory_cap to_bool_def
                          cap_page_directory_cap_lift_def
                          cap_to_H_def[split_simps cap_CL.split]
@@ -3003,7 +3007,7 @@ lemma decodeARMFrameInvocation_ccorres:
                         attribsFromWord_def vm_attribs_relation_def isCap_simps
                         of_bool_nth[simplified of_bool_from_bool])
       apply (frule interpret_excaps_eq[rule_format, where n=0], simp)
-      apply (erule_tac c="ArchObjectCap (PageDirectoryCap ?a ?b)" in ccap_relationE)
+      apply (erule_tac c="ArchObjectCap (PageDirectoryCap a b)" for a b in ccap_relationE)
       apply (clarsimp simp: cap_lift_page_directory_cap to_bool_def 
                             cap_page_directory_cap_lift_def
                             cap_to_H_def[split_simps cap_CL.split] valid_cap'_def)
@@ -3096,7 +3100,7 @@ lemma flush_range_le:
      = end - (start && ~~ mask (pageBitsForSize a))")
     prefer 2
     apply (simp add:mask_out_sub_mask)
-   apply (rule_tac P =" \<lambda>x. x <?y" in ssubst)
+   apply (rule_tac P =" \<lambda>x. x < y" for y in ssubst)
     apply assumption
    apply (subst AND_NOT_mask_plus_AND_mask_eq
      [where w = "end",symmetric,where n = "pageBitsForSize a"])
@@ -3611,7 +3615,7 @@ lemma Arch_decodeInvocation_ccorres:
                                         word_sle_def word_sless_def
                                         if_1_0_0 word_less_nat_alt[symmetric]
                                         from_bool_0)
-                  apply (cut_tac P="\<lambda>y. y < i_' x + 1 = ?rhs y" in allI,
+                  apply (cut_tac P="\<lambda>y. y < i_' x + 1 = rhs y" for rhs in allI,
                          rule less_x_plus_1)
                    apply (clarsimp simp: max_word_def asid_high_bits_def)
                   apply (clarsimp simp: rf_sr_armKSASIDTable from_bool_def
@@ -3755,9 +3759,9 @@ lemma Arch_decodeInvocation_ccorres:
              apply wp
             apply (simp add: cap_get_tag_isCap)
             apply (rule HoarePartial.SeqSwap)
-             apply (rule_tac I="\<lbrace>?Prop \<acute>ksCurThread \<acute>root\<rbrace>"
-                         and Q="\<lbrace>?Bonus \<acute>i \<longrightarrow> ?Prop \<acute>ksCurThread \<acute>root\<rbrace>"
-                              in HoarePartial.reannotateWhileNoGuard)
+             apply (rule_tac I="\<lbrace>Prop \<acute>ksCurThread \<acute>root\<rbrace>"
+                         and Q="\<lbrace>Bonus \<acute>i \<longrightarrow> Prop \<acute>ksCurThread \<acute>root\<rbrace>"
+                         for Prop Bonus in HoarePartial.reannotateWhileNoGuard)
              apply (rule HoarePartial.While[OF order_refl])
               apply (rule conseqPre, vcg)
               apply clarify
@@ -3932,7 +3936,7 @@ lemma Arch_decodeInvocation_ccorres:
                  apply (drule plus_one_helper)
                  apply simp
                 apply (subgoal_tac "i_' xb < i_' xb + 1")
-                 apply (erule_tac P="?x < ?y" in disjE, simp_all)[1]
+                 apply (erule_tac P="x < y" for x y in disjE, simp_all)[1]
                 apply (rule plus_one_helper2 [OF order_refl])
                 apply (rule notI, drule max_word_wrap)
                 apply (clarsimp simp: max_word_def asid_low_bits_def)
@@ -4013,9 +4017,9 @@ lemma Arch_decodeInvocation_ccorres:
           apply (wp getASID_wp)
          apply (simp del: Collect_const)
          apply (rule HoarePartial.SeqSwap)
-          apply (rule_tac I="\<lbrace>\<forall>rv. ?Prop \<acute>ksCurThread \<acute>pdCapSlot rv\<rbrace>"
-                      and Q="\<lbrace>\<forall>rv. ?Bonus \<acute>i rv \<longrightarrow> ?Prop \<acute>ksCurThread \<acute>pdCapSlot rv\<rbrace>"
-                           in HoarePartial.reannotateWhileNoGuard)
+          apply (rule_tac I="\<lbrace>\<forall>rv. Prop \<acute>ksCurThread \<acute>pdCapSlot rv\<rbrace>"
+                      and Q="\<lbrace>\<forall>rv. Bonus \<acute>i rv \<longrightarrow> Prop \<acute>ksCurThread \<acute>pdCapSlot rv\<rbrace>"
+                      for Prop Bonus in HoarePartial.reannotateWhileNoGuard)
           apply vcg
            apply clarsimp
           apply clarsimp

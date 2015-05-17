@@ -507,7 +507,7 @@ lemma reduceZombie_ccorres1:
                apply (rule ccorres_Cond_rhs_Seq)
                 apply (rule_tac P="\<exists>s. s \<turnstile>' cap \<and> s \<turnstile>' cteCap rv"
                               in ccorres_gen_asm)
-                apply (subgoal_tac "?P", subst if_P, assumption)
+                apply (subgoal_tac "P" for P, subst if_P, assumption)
                  prefer 2
                  apply (clarsimp simp: word_unat.Abs_inject
                                        valid_cap_capZombieNumber_unats)
@@ -539,7 +539,7 @@ lemma reduceZombie_ccorres1:
                      apply (rule order_trans, rule diff_le_self)
                      apply (simp add: unat_of_nat)
                     apply clarsimp
-                    apply (erule_tac P="\<lambda>cap. ccap_relation cap ?cap'" in rsubst)
+                    apply (erule_tac P="\<lambda>cap. ccap_relation cap cap'" for cap' in rsubst)
                     apply (clarsimp simp: isCap_simps capAligned_def)
                     apply (drule valid_cap_capZombieNumber_unats | simp)+
                     apply (simp add: word_unat.Abs_inverse)
@@ -918,7 +918,7 @@ proof (induct rule: cteRevoke.induct[where ?a0.0=slot and ?a1.0=s])
           apply vcg
           apply (clarsimp simp: cte_wp_at_ctes_of)
           apply (frule_tac p="slot'" in ctes_of_valid', clarsimp)
-          apply (frule_tac p="mdbNext ?m" in ctes_of_valid', clarsimp)
+          apply (frule_tac p="mdbNext m" for m in ctes_of_valid', clarsimp)
           apply (drule(1) rf_sr_ctes_of_clift[rotated])+
           apply (clarsimp simp: ccte_relation_def)
           apply (auto intro: valid_capAligned)[1]

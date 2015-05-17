@@ -13,8 +13,6 @@ imports TcbAcc_C CSpace_C PSpace_C TcbQueue_C
 begin
 
 
-declare empty_fail_error_bits[simp]
-
 (* FIXME: move *)
 lemma empty_fail_findPDForASID[iff]:
   "empty_fail (findPDForASID asid)"
@@ -97,7 +95,6 @@ proof -
   done
 qed
 
-declare word_neq_0_conv [simp del]
 
 lemma rf_asidTable:
   "\<lbrakk> (\<sigma>, x) \<in> rf_sr; valid_arch_state' \<sigma>; idx \<le> mask asid_high_bits \<rbrakk>
@@ -878,10 +875,12 @@ lemma cap_case_isPageDirectoryCap:
                 | _ => g)
     = (if ( if (isArchObjectCap cap) then if (isPageDirectoryCap (capCap cap)) then capPDMappedASID (capCap cap) \<noteq> None else False else False)
                 then fn (capPDBasePtr (capCap cap)) (the ( capPDMappedASID (capCap cap))) else g)"
-  apply (cases cap, simp_all add: isArchObjectCap_def)
+  apply (cases cap; simp add: isArchObjectCap_def)
+  apply (rename_tac arch_capability)
   apply (case_tac arch_capability, simp_all add: isPageDirectoryCap_def)
-  apply (case_tac option, simp_all)
-done
+  apply (rename_tac option)
+  apply (case_tac option; simp)
+  done
 
 (* FIXME: MOVE to CSpaceAcc_C *)
 lemma ccorres_pre_gets_armKSASIDTable_ksArchState:
@@ -1018,7 +1017,7 @@ lemma findPDForASID_ccorres:
       apply (case_tac "asidTable (ucast (asid_high_bits_of asid))", clarsimp, clarsimp) 
 
      apply simp
-     apply (thin_tac "?a = (if ?b then ?c else ?d)")
+     apply (thin_tac "a = (if b then c else d)" for a b c d)
 
      apply (rule_tac Q="\<lambda>s. asidTable = (armKSASIDTable (ksArchState s))\<and> valid_arch_state' s \<and> no_0_obj' s \<and> (asid \<le> mask asid_bits) " 
                  and Q'="\<lambda>s'. option_to_ptr (asidTable (ucast (asid_high_bits_of asid))) = 
@@ -1063,6 +1062,7 @@ lemma findPDForASID_ccorres:
       apply (simp add: array_relation_def)
       apply (erule_tac x="(asid && 2 ^ asid_low_bits - 1)" in allE)
       apply (simp add: word_and_le1 mask_def option_to_ptr_def option_to_0_def)
+      apply (rename_tac "fun" array)
       apply (case_tac "fun (asid && 2 ^ asid_low_bits - 1)", clarsimp)
        apply (clarsimp simp: throwError_def  return_def )
        apply (clarsimp simp: EXCEPTION_NONE_def EXCEPTION_LOOKUP_FAULT_def)
@@ -2124,7 +2124,7 @@ lemma checkMappingPPtr_pte_ccorres:
       apply (rule stronger_ccorres_guard_imp)
         apply (rule ccorres_from_vcg_might_throw[where P=\<top>])
         apply (rule allI)
-        apply (rule conseqPost, rule conseqPre, rule_tac \<sigma>=\<sigma> and pte=rv in pre)
+        apply (rule conseqPost, rule conseqPre, rule_tac \<sigma>1=\<sigma> and pte1=rv in pre)
           apply clarsimp
           apply (erule CollectE, assumption)
          apply (auto simp: in_monad Bex_def isSmallPagePTE_def isLargePagePTE_def
@@ -2159,7 +2159,7 @@ lemma checkMappingPPtr_pde_ccorres:
       apply (rule stronger_ccorres_guard_imp)
         apply (rule ccorres_from_vcg_might_throw[where P=\<top>])
         apply (rule allI)
-        apply (rule conseqPost, rule conseqPre, rule_tac \<sigma>=\<sigma> and pde=rv in pre)
+        apply (rule conseqPost, rule conseqPre, rule_tac \<sigma>1=\<sigma> and pde1=rv in pre)
           apply clarsimp
           apply (erule CollectE, assumption)
          apply (auto simp: in_monad Bex_def isSectionPDE_def isSuperSectionPDE_def
@@ -2327,7 +2327,7 @@ lemma unmapPage_ccorres:
                    apply (simp add: objBits_simps archObjSize_def)
                   apply (simp add: typ_at_to_obj_at_arches[symmetric])
                   apply wp
-                 apply (subgoal_tac "?P")
+                 apply (subgoal_tac "P" for P)
                   apply (frule bspec, erule hd_in_set)
                   apply (frule bspec, erule last_in_set)
                   apply (simp add: upto_enum_step_def upto_enum_word
@@ -2448,7 +2448,7 @@ lemma unmapPage_ccorres:
                apply (simp add: typ_at_to_obj_at_arches[symmetric])
                apply wp
               apply simp
-              apply (subgoal_tac "?P")
+              apply (subgoal_tac "P" for P)
                apply (frule bspec, erule hd_in_set)
                apply (frule bspec, erule last_in_set)
                apply (simp add: upto_enum_step_def upto_enum_word
@@ -2523,7 +2523,8 @@ lemma generic_frame_mapped_address:
   done
     
 lemma updateCap_frame_mapped_addr_ccorres:
-  "ccorres dc xfdc 
+  notes option.case_cong_weak [cong]
+  shows "ccorres dc xfdc 
            (cte_wp_at' (\<lambda>c. ArchObjectCap cap = cteCap c) ctSlot and K (isPageCap cap))
            UNIV []
            (updateCap ctSlot (ArchObjectCap (capVPMappedAddress_update empty cap)))
@@ -2942,8 +2943,6 @@ lemma makeUserPTE_spec:
    iwb_from_cacheable_def dest!:mask_eq1_nochoice is_aligned_neg_mask_eq)+)[2]
   done
 
-term vm_attributes_lift
-
 lemma vmAttributesFromWord_spec:
   "\<forall>s. \<Gamma> \<turnstile> \<lbrace>s. True\<rbrace> Call vmAttributesFromWord_'proc 
   \<lbrace> vm_attributes_lift \<acute>ret__struct_vm_attributes_C = 
@@ -2979,7 +2978,7 @@ lemma cap_lift_PDCap_Base:
 (* FIXME: move *)
 lemma word_le_mask_eq:
   "\<lbrakk> x \<le> mask n; n < word_bits \<rbrakk> \<Longrightarrow> x && mask n = (x::word32)"
-  by (rule less_mask_eq) (simp add: mask_def)
+  by (rule le_mask_imp_and_mask)
 
 declare mask_Suc_0[simp]
 
@@ -2996,6 +2995,7 @@ lemma setCTE_asidpool':
    apply (clarsimp simp: lookupAround2_char1)
    apply (clarsimp split: split_if)
    apply (case_tac obj', auto)[1]
+   apply (rename_tac arch_kernel_object)
    apply (case_tac arch_kernel_object, auto)[1]
    apply (simp add: updateObject_cte) 
    apply (clarsimp simp: updateObject_cte typeError_def magnitudeCheck_def in_monad 
@@ -3025,8 +3025,10 @@ lemma asid_pool_at_ko:
   "asid_pool_at' p s \<Longrightarrow> \<exists>pool. ko_at' (ASIDPool pool) p s"
   apply (clarsimp simp: typ_at'_def obj_at'_def ko_wp_at'_def projectKOs)
   apply (case_tac ko, auto)
-  apply (case_tac arch_kernel_object, auto)
-  apply (case_tac asidpool, auto)
+  apply (rename_tac arch_kernel_object)
+  apply (case_tac arch_kernel_object, auto)[1]
+  apply (rename_tac asidpool)
+  apply (case_tac asidpool, auto)[1]
   done
 
 (* FIXME: move *)
@@ -3062,6 +3064,8 @@ lemma setObjectASID_Basic_ccorres:
   done
 
 lemma performASIDPoolInvocation_ccorres:
+  notes option.case_cong_weak [cong]
+  shows
   "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
        (invs' and cte_wp_at' (isPDCap o cteCap) ctSlot and asid_pool_at' poolPtr 
         and K (asid \<le> mask asid_bits))
@@ -3116,7 +3120,7 @@ lemma performASIDPoolInvocation_ccorres:
                 apply (simp add: cte_to_H_def c_valid_cte_def)
                 apply (simp add: cap_page_directory_cap_lift)
                 apply (simp (no_asm) add: cap_to_H_def)
-                apply (simp add: to_bool_def asid_bits_def word_le_mask_eq asid_bits_def word_bits_def)
+                apply (simp add: to_bool_def asid_bits_def le_mask_imp_and_mask word_bits_def)
                 apply (erule (1) cap_lift_PDCap_Base)
                apply simp
               apply (erule_tac t = s' in ssubst)

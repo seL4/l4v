@@ -38,7 +38,7 @@ lemma coerce_memset_to_heap_update_user_data:
       = heap_update (Ptr x :: user_data_C ptr)
              (user_data_C (FCP (\<lambda>_. 0)))"
   apply (intro ext, simp add: heap_update_def)
-  apply (rule_tac f="\<lambda>xs. heap_update_list x xs ?a ?b" in arg_cong)
+  apply (rule_tac f="\<lambda>xs. heap_update_list x xs a b" for a b in arg_cong)
   apply (simp add: to_bytes_def size_of_def typ_info_simps user_data_C_tag_def)
   apply (simp add: ti_typ_pad_combine_empty_ti ti_typ_pad_combine_td align_of_def padup_def
                    final_pad_def size_td_lt_ti_typ_pad_combine Let_def size_of_def)
@@ -307,7 +307,7 @@ lemma coerce_memset_to_heap_update_asidpool:
       = heap_update (Ptr x :: asid_pool_C ptr)
              (asid_pool_C (FCP (\<lambda>x. Ptr 0)))"
   apply (intro ext, simp add: heap_update_def)
-  apply (rule_tac f="\<lambda>xs. heap_update_list x xs ?a ?b" in arg_cong)
+  apply (rule_tac f="\<lambda>xs. heap_update_list x xs a b" for a b in arg_cong)
   apply (simp add: to_bytes_def size_of_def typ_info_simps asid_pool_C_tag_def)
   apply (simp add: ti_typ_pad_combine_empty_ti ti_typ_pad_combine_td align_of_def padup_def
                    final_pad_def size_td_lt_ti_typ_pad_combine Let_def size_of_def)
@@ -335,12 +335,12 @@ lemma coerce_memset_to_heap_update_pte:
       = heap_update (Ptr x :: pte_C ptr)
              (pte_C.pte_C (FCP (\<lambda>x. 0)))"
   apply (intro ext, simp add: heap_update_def)
-  apply (rule_tac f="\<lambda>xs. heap_update_list x xs ?a ?b" in arg_cong)
+  apply (rule_tac f="\<lambda>xs. heap_update_list x xs a b" for a b in arg_cong)
   apply (simp add: to_bytes_def size_of_def typ_info_simps pte_C_tag_def)
   apply (simp add: ti_typ_pad_combine_empty_ti ti_typ_pad_combine_td align_of_def padup_def
                    final_pad_def size_td_lt_ti_typ_pad_combine Let_def size_of_def)
   apply (simp add: typ_info_simps align_td_array' size_td_array)
-  apply (simp add: typ_info_array' typ_info_word word_rsplit_0 fcp_beta)
+  apply (simp add: typ_info_array' typ_info_word word_rsplit_0)
   apply (simp add: replicateHider_def)
   done
 
@@ -349,12 +349,12 @@ lemma coerce_memset_to_heap_update_pde:
       = heap_update (Ptr x :: pde_C ptr)
              (pde_C.pde_C (FCP (\<lambda>x. 0)))"
   apply (intro ext, simp add: heap_update_def)
-  apply (rule_tac f="\<lambda>xs. heap_update_list x xs ?a ?b" in arg_cong)
+  apply (rule_tac f="\<lambda>xs. heap_update_list x xs a b" for a b in arg_cong)
   apply (simp add: to_bytes_def size_of_def typ_info_simps pde_C_tag_def)
   apply (simp add: ti_typ_pad_combine_empty_ti ti_typ_pad_combine_td align_of_def padup_def
                    final_pad_def size_td_lt_ti_typ_pad_combine Let_def size_of_def)
   apply (simp add: typ_info_simps align_td_array' size_td_array)
-  apply (simp add: typ_info_array' typ_info_word word_rsplit_0 fcp_beta)
+  apply (simp add: typ_info_array' typ_info_word word_rsplit_0)
   apply (simp add: replicateHider_def)
   done
 
@@ -582,24 +582,6 @@ lemma ccorres_if_True_False_simps:
   "ccorres r xf P P' hs a (IF False THEN c ELSE c' FI ;; d) = ccorres r xf P P' hs a (c' ;; d)"
   by (simp_all add: ccorres_cond_iffs ccorres_seq_simps)
 
-(*
-lemma resetMemMapping_spec':
-  "\<forall>s. \<Gamma> \<turnstile> \<lbrace>s. ccap_relation acap (cap_' s)\<rbrace>
-           Call resetMemMapping_'proc
-           {s'. ccap_relation (case acap of ArchObjectCap acap' \<Rightarrow> ArchObjectCap (resetMemMapping acap') | _ \<Rightarrow> acap) 
-                               (ret__struct_cap_C_' s')}"
-  apply vcg
-  apply (subgoal_tac "\<forall>t cap. (t = cap_get_tag cap) = (cap_get_tag cap = t)")  
-  apply (erule ccap_relationE)
-  apply (intro impI allI conjI)
-   apply (auto simp: isCap_simps resetMemMapping_def cap_to_H_simps c_valid_cap_def cl_valid_cap_def cap_lifts ccap_relation_def
-     cap_to_H_simps asidInvalid_def)[4]
-  apply (clarsimp simp add: ccap_relation_def c_valid_cap_def cl_valid_cap_def cap_to_H_simps Let_def resetMemMapping_def cap_lift_def
-    split: capability.splits cap_CL.splits split_if_asm)
-  apply fastforce
-  done
-*)
-
 lemmas cap_tag_values =
   cap_untyped_cap_def
   cap_endpoint_cap_def
@@ -629,6 +611,7 @@ lemma resetMemMapping_spec:
    apply (auto simp: isCap_simps resetMemMapping_def cap_to_H_simps cap_lifts ccap_relation_def c_valid_cap_def cl_valid_cap_def
       asidInvalid_def)[7]
   apply (clarsimp split: capability.splits cap_CL.splits option.splits)
+  apply (rename_tac arch_capability)
   apply (case_tac arch_capability,
         auto simp: resetMemMapping_def cap_to_H_def
         cap_small_frame_cap_lift_def cap_frame_cap_lift_def
@@ -1002,6 +985,7 @@ lemma arch_recycleCap_ccorres:
                            asid_shiftr_low_bits_less[unfolded mask_def asid_bits_def]
                            word_and_le1
                     elim!: ccap_relationE cong: conj_cong)
+    apply (rename_tac vmpage_size opt)
     apply (simp add: capAligned_def)
     apply (case_tac "vmpage_size = ARMSmallPage")
      apply (frule(1) cap_get_tag_isCap_unfolded_H_cap)
@@ -1126,7 +1110,7 @@ lemma cpspace_relation_ep_update_ep2:
           (cslift t(ep_Ptr epptr \<mapsto> endpoint))
           ep_Ptr (cendpoint_relation (cslift t'))"
   apply (rule cmap_relationE1, assumption, erule ko_at_projectKO_opt)
-  apply (rule_tac P="\<lambda>a. cmap_relation a ?b ?c ?d" in rsubst,
+  apply (rule_tac P="\<lambda>a. cmap_relation a b c d" for b c d in rsubst,
                    erule cmap_relation_upd_relI, assumption+)
     apply simp+
   apply (rule ext, simp add: map_comp_def projectKO_opt_ep split: split_if)
@@ -1254,6 +1238,7 @@ lemma epCancelBadgedSends_ccorres:
       apply (rule ccorres_return_Skip)
      apply (simp add: dc_def[symmetric] ccorres_cond_iffs)
      apply (rule ccorres_return_Skip)
+    apply (rename_tac list)
     apply (simp add: Collect_True Collect_False endpoint_state_defs
                      ccorres_cond_iffs dc_def[symmetric]
                 del: Collect_const cong: call_ignore_cong)
@@ -1343,6 +1328,7 @@ lemma epCancelBadgedSends_ccorres:
             apply (fastforce simp: valid_ep'_def st_tcb_at' split: list.splits)
            apply (simp add: guard_is_UNIV_def)
           apply (rule allI)
+          apply (rename_tac a lista x)
           apply (rule iffD1 [OF ccorres_expand_while_iff_Seq])
           apply (rule ccorres_init_tmp_lift2, ceqv)
           apply (rule ccorres_guard_imp2)
@@ -1362,7 +1348,7 @@ lemma epCancelBadgedSends_ccorres:
                                               | v # vs \<Rightarrow> tcb_ptr_to_ctcb_ptr v) \<rparr>"
                       and xf'="next___ptr_to_struct_tcb_C_'"
                            in ccorres_subst_basic_helper)
-               apply (thin_tac "\<forall>x. ?P x")
+               apply (thin_tac "\<forall>x. P x" for P)
                apply (rule myvars.fold_congs, (rule refl)+)
                apply (clarsimp simp: tcb_queue_relation'_def use_tcb_queue_relation2
                                      tcb_queue_relation2_concat)
@@ -1387,12 +1373,12 @@ lemma epCancelBadgedSends_ccorres:
                               and P'="{s. ep_queue_relation' (cslift s) (x @ a # lista)
                                            (head_C (queue_' s)) (end_C (queue_' s))}"
                                in ccorres_from_vcg)
-                   apply (thin_tac "\<forall>x. ?P x")
+                   apply (thin_tac "\<forall>x. P x" for P)
                    apply (rule allI, rule conseqPre, vcg)
                    apply (clarsimp simp: ball_Un)
                    apply (rule exI, rule conjI)
                     apply (rule exI, erule conjI)
-                    apply (intro conjI[rotated], assumption, (fastforce intro: intro: st_tcb_at_tcb_at')+)[1]
+                    apply (intro conjI[rotated], assumption, fastforce +)[1]
                    apply (clarsimp simp: return_def rf_sr_def cstate_relation_def Let_def)
                    apply (rule conjI)
                     apply (clarsimp simp: cpspace_relation_def)
@@ -1443,7 +1429,7 @@ lemma epCancelBadgedSends_ccorres:
              apply (drule_tac x="x @ [a]" in spec, simp add: dc_def[symmetric])
             apply vcg
            apply (vcg spec=modifies)
-          apply (thin_tac "\<forall>x. ?P x")
+          apply (thin_tac "\<forall>x. P x" for P)
           apply (clarsimp simp: st_tcb_at_tcb_at' ball_Un)
           apply (rule conjI)
            apply (clarsimp split: split_if)
@@ -1459,6 +1445,7 @@ lemma epCancelBadgedSends_ccorres:
            apply (frule rf_sr_cscheduler_relation)
            apply (clarsimp simp: cscheduler_action_relation_def st_tcb_at'_def
                           split: scheduler_action.split_asm)
+           apply (rename_tac word)
            apply (frule_tac x=word in tcbSchedEnqueue_cslift_precond_discharge)
               apply simp
              apply clarsimp
@@ -1522,7 +1509,7 @@ lemma coerce_memset_to_heap_update:
                     (lookup_fault_C (FCP (\<lambda>x. 0)))
                       0 0 0 0 0 NULL NULL NULL NULL)"
   apply (intro ext, simp add: heap_update_def)
-  apply (rule_tac f="\<lambda>xs. heap_update_list x xs ?a ?b" in arg_cong)
+  apply (rule_tac f="\<lambda>xs. heap_update_list x xs a b" for a b in arg_cong)
   apply (simp add: to_bytes_def size_of_def typ_info_simps tcb_C_tag_def)
   apply (simp add: ti_typ_pad_combine_empty_ti ti_typ_pad_combine_td align_of_def padup_def
                    final_pad_def size_td_lt_ti_typ_pad_combine Let_def size_of_def)
@@ -1535,7 +1522,7 @@ lemma coerce_memset_to_heap_update:
                    final_pad_def size_td_lt_ti_typ_pad_combine Let_def size_of_def 
                    align_td_array' size_td_array)
   apply (simp add: typ_info_array')
-  apply (simp add: typ_info_word word_rsplit_0 fcp_beta upt_conv_Cons)
+  apply (simp add: typ_info_word word_rsplit_0 upt_conv_Cons)
   apply (simp add: typ_info_word typ_info_ptr word_rsplit_0
                    replicateHider_def)
   done
@@ -1644,7 +1631,7 @@ lemma recycleCap_ccorres':
                                 "StrictC'_thread_state_defs" ccontext_relation_def
                                 newContext_def2 rf_sr_ksCurDomain)
           apply (clarsimp simp add: timeSlice_def is_cap_fault_def)
-          apply (case_tac r, simp_all add: "StrictC'_register_defs" fcp_beta)[1]
+          apply (case_tac r, simp_all add: "StrictC'_register_defs")[1]
          apply csymbr
          apply (rule ccorres_return_C, simp+)[1]
         apply wp
