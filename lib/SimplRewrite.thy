@@ -70,7 +70,7 @@ proof (induct rule: exec.induct)
 
   case Basic show ?case
     apply simp
-    apply (rule_tac P="exec ?G ?c ?xs" in subst[rotated], rule exec.Basic)
+    apply (rule_tac P="exec G c xs" for G c xs in subst[rotated], rule exec.Basic)
     apply (simp add: inv_inv_eq bij inv_f_f bij_is_inj)
     done
 

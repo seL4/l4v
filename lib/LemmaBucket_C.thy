@@ -480,9 +480,8 @@ lemma index_fold_update:
      = (if n \<in> set xs then f n (index v n) else index v n)"
   apply (induct xs)
    apply simp
-  apply (case_tac "a = n")
-   apply simp
-  apply simp
+  apply (rename_tac x xs)
+  apply (case_tac "x = n"; simp)
   done
 
 lemma heap_update_list_id:
@@ -625,7 +624,7 @@ lemma access_in_array:
    apply simp
   apply (drule spec, drule(1) mp)
   apply (simp add: size_of_def ac_simps drop_take)
-  apply (subgoal_tac "length ?v = size_of TYPE('a)")
+  apply (subgoal_tac "length v = size_of TYPE('a)" for v)
    apply (subst subst, assumption)
    apply (subst(asm) subst, assumption)
    apply simp
@@ -698,14 +697,14 @@ lemma heap_update_Array:
    apply simp
   apply (rule foldl_cong[OF refl refl])
   apply (simp add: array_ptr_index_def CTypesDefs.ptr_add_def)
-  apply (rule_tac f="\<lambda>xs. heap_update_list ?p xs ?s" in arg_cong)
+  apply (rule_tac f="\<lambda>xs. heap_update_list p xs s" for p s in arg_cong)
   apply (simp add: to_bytes_def size_of_def
                    packed_type_access_ti)
   apply (simp add: typ_info_array')
   apply (subst fcp_eta[symmetric], subst access_ti_list_array)
      apply simp
     apply simp
-   apply (simp add: fcp_eta packed_type_access_ti size_of_def)
+   apply (simp add: packed_type_access_ti size_of_def)
    apply fastforce
   apply (rule take_drop_foldl_concat)
    apply (simp add: size_of_def)
@@ -933,8 +932,8 @@ lemma h_t_valid_Array_element':
                      CTypesDefs.ptr_add_def unat_word_ariths unat_of_nat)
     using align_size_of[where 'a='a] align[where 'a='a]
     apply (simp add: align_of_def size_of_def addr_card_def card_word)
-    apply (simp add: dvd_mod dvd_add dvd_mult)
-   apply (thin_tac "\<forall>x. ?P x")
+    apply (simp add: dvd_mod)
+   apply (thin_tac "\<forall>x. P x" for P)
    apply (clarsimp simp: intvl_def)
    apply (drule_tac x="offs * size_of TYPE('a) + k" in spec)
    apply (drule mp)
@@ -974,7 +973,7 @@ lemma ptr_safe_Array_element:
    apply (simp only: size_of_def)
    apply (rule mult_le_mono1)
    apply simp
-  apply (thin_tac "coerce \<or> ?P")
+  apply (thin_tac "coerce \<or> P" for P)
   apply (elim disjE exE conjE, simp_all add: typ_uinfo_t_def)
   apply (erule order_less_le_trans)
   apply (rule prefix_length_le)
@@ -1021,9 +1020,8 @@ lemma ptr_add_disjoint2:
   apply (erule swap)
   apply (rule intvl_inter_le[where k=0 and ka="unat (ptr_val x - ptr_val y)"])
     apply clarsimp
-   apply (metis (hide_lams, no_types) WordLemmaBucket.word_l_diffs(1)
-              comm_semiring_1_class.normalizing_semiring_rules(24) linorder_not_less
-              order_less_le_trans word_le_less_eq word_of_nat_le)
+   apply (metis (no_types, hide_lams) add.commute less_imp_le less_le_trans not_le unat_less_helper
+                word_diff_ls'(4))   
   apply simp
   done
 
@@ -1113,7 +1111,7 @@ lemma neq_imp_bytes_disjoint:
 lemma heap_update_list_base':"heap_update_list p [] = id"
   by (rule ext, simp)
 
-lemma hrs_mem_update_id3:"hrs_mem_update id = id"
-  by (metis (erased, lifting) DEADID.map_id cond_split_eta hrs_mem_update_def)
+lemma hrs_mem_update_id3: "hrs_mem_update id = id"
+  unfolding hrs_mem_update_def by simp
 
 end
