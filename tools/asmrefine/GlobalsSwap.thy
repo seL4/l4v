@@ -420,10 +420,11 @@ lemma globals_swap_absorb_update:
                     heap_list_update_eq order_less_imp_le
                del: SepCode.inv_p)
   apply (drule meta_mp, simp add: globals_list_valid_def globals_list_distinct_def)+
+  apply (rename_tac x xs)
   apply (subgoal_tac "\<forall>gs. 
-                globals_swap g_hrs g_hrs_upd symtab (GlobalData nm m ok g s # a # xs) gs
-                 = global_swap g_hrs g_hrs_upd symtab a (globals_swap g_hrs g_hrs_upd symtab (GlobalData nm m ok g s # xs) gs)")
-   apply (subgoal_tac "\<forall>gs. s v' (global_swap g_hrs g_hrs_upd symtab a gs) = global_swap g_hrs g_hrs_upd symtab a (s v' gs)")
+                globals_swap g_hrs g_hrs_upd symtab (GlobalData nm m ok g s # x # xs) gs
+                 = global_swap g_hrs g_hrs_upd symtab x (globals_swap g_hrs g_hrs_upd symtab (GlobalData nm m ok g s # xs) gs)")
+   apply (subgoal_tac "\<forall>gs. s v' (global_swap g_hrs g_hrs_upd symtab x gs) = global_swap g_hrs g_hrs_upd symtab x (s v' gs)")
     apply (simp add: global_acc_valid_def)
    apply (clarsimp simp: globals_list_valid_def global_data_swappable_def
                          global_data_def global_swap_def K_def
@@ -859,7 +860,7 @@ fun add_globals_swap_rewrites member_thms ctxt = let
         MRS @{thm global_data_implies_ptr_inverse_safe}
     val empty_ctxt = put_simpset HOL_basic_ss ctxt
     fun unfold_mem thm = let
-        val (x, _) = HOLogic.dest_mem (HOLogic.dest_Trueprop (concl_of thm))
+        val (x, _) = HOLogic.dest_mem (HOLogic.dest_Trueprop (Thm.concl_of thm))
         val (s, _) = dest_Const (head_of x)
       in if s = @{const_name global_data} orelse s = @{const_name const_global_data}
         orelse s = @{const_name addressed_global_data}
