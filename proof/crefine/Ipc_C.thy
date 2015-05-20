@@ -12,8 +12,6 @@ theory Ipc_C
 imports Finalise_C CSpace_All
 begin
 
-declare option.case_cong_weak[cong]
-
 definition
   "replyFromKernel_success_empty thread \<equiv> do
      VSpace_H.lookupIPCBuffer True thread;
@@ -88,9 +86,6 @@ lemmas msgMaxLength_unfold
 lemma registers_less_maxlength:
   "length msgRegisters < msgMaxLength"
   by (simp add: msgRegisters_unfold msgMaxLength_unfold)
-
-(* FIXME: move! (did get lost, somewhere along the path. *)
-declare empty_fail_setRegister[simp]
 
 lemma setMRs_to_setMR':
   "setMRs thread buffer xs
@@ -212,6 +207,7 @@ lemma thread_submonad_args:
                   split: kernel_object.splits option.splits)
   apply (clarsimp simp: obj_at'_def thread_replace_def Let_def projectKOs
                  split: kernel_object.splits option.splits)
+  apply (rename_tac tcb)
   apply (case_tac tcb, simp add: objBitsKO_def ps_clear_def)
   done
 
@@ -262,6 +258,7 @@ lemma asUser_threadGet_tcbFault_comm:
                      split: option.split)
       apply (clarsimp simp: fun_upd_idem fun_upd_twist
                      split: kernel_object.split)
+      apply (rename_tac tcb)
       apply (case_tac tcb, simp)
      apply (clarsimp simp: asUser_replace_def Let_def obj_at'_real_def
                            ko_wp_at'_def ps_clear_upd_None ps_clear_upd
@@ -523,6 +520,7 @@ lemmas syscallMessage_unfold
          unfolded toEnum_def enum_register, simplified]
 
 lemma handleFaultReply':
+  notes option.case_cong_weak [cong]
   assumes neq: "r \<noteq> s"
   shows "do 
     tag \<leftarrow> getMessageInfo s;
@@ -547,7 +545,7 @@ lemma handleFaultReply':
      apply (rule bind_apply_cong [OF refl], rename_tac sb s'')
      apply (case_tac sb)
       apply (case_tac "msgLength tag < scast n_msgRegisters")
-       apply (fastforce simp: bind_assoc asUser_bind_distrib asUser_return
+       apply (fastforce simp: bind_assoc asUser_bind_distrib
                              zip_Cons mapM_x_Cons mapM_x_Nil
                              asUser_comm [OF neq] asUser_getRegister_discarded
                              submonad_asUser.fn_stateAssert asUser_return
@@ -556,7 +554,7 @@ lemma handleFaultReply':
                              ARMMachineTypes.sanitiseRegister_def
                              n_msgRegisters_def
                        dest: word_less_cases)
-      apply (clarsimp simp: bind_assoc asUser_bind_distrib asUser_return
+      apply (clarsimp simp: bind_assoc asUser_bind_distrib
                             zip_Cons mapM_x_Cons mapM_x_Nil
                             asUser_comm [OF neq] asUser_getRegister_discarded
                             submonad_asUser.fn_stateAssert asUser_return
@@ -565,7 +563,7 @@ lemma handleFaultReply':
                             ARMMachineTypes.sanitiseRegister_def
                             n_msgRegisters_def)
      apply (case_tac "msgLength tag < scast n_msgRegisters")
-      apply (fastforce simp: asUser_bind_distrib asUser_return
+      apply (fastforce simp: asUser_bind_distrib
                             zip_Cons word_le_make_less mapM_x_Cons mapM_x_Nil
                             asUser_comm [OF neq] asUser_getRegister_discarded
                             submonad_asUser.fn_stateAssert asUser_return
@@ -573,11 +571,10 @@ lemma handleFaultReply':
                             bind_assoc State_H.sanitiseRegister_def
                             ARMMachineTypes.sanitiseRegister_def
                             bind_comm_mapM_comm [OF asUser_loadWordUser_comm]
-                            empty_fail_setRegister word_size
-                            stateAssert_mapM_loadWordUser_comm
+                            word_size stateAssert_mapM_loadWordUser_comm
                             n_msgRegisters_def
                       dest: word_less_cases)
-     apply (clarsimp simp: asUser_bind_distrib asUser_return
+     apply (clarsimp simp: asUser_bind_distrib
                             zip_Cons word_le_make_less mapM_x_Cons mapM_x_Nil
                             asUser_comm [OF neq] asUser_getRegister_discarded
                             submonad_asUser.fn_stateAssert asUser_return
@@ -585,8 +582,7 @@ lemma handleFaultReply':
                             bind_assoc State_H.sanitiseRegister_def
                             ARMMachineTypes.sanitiseRegister_def
                             bind_comm_mapM_comm [OF asUser_loadWordUser_comm]
-                            empty_fail_setRegister word_size
-                            stateAssert_mapM_loadWordUser_comm
+                            word_size stateAssert_mapM_loadWordUser_comm
                             word_less_nat_alt n_msgRegisters_def)
     apply (clarsimp simp: handleFaultReply_def asUser_getRegister_discarded
                           bind_subst_lift [OF stateAssert_stateAssert]
@@ -605,7 +601,7 @@ lemma handleFaultReply':
   apply (rule bind_apply_cong [OF refl], rename_tac sb s'')
   apply (case_tac sb)
    apply (case_tac "msgLength tag < scast n_msgRegisters")
-    apply (fastforce simp: bind_assoc asUser_bind_distrib asUser_return
+    apply (fastforce simp: bind_assoc asUser_bind_distrib
                           zip_Cons mapM_x_Cons mapM_x_Nil
                           asUser_comm [OF neq] asUser_getRegister_discarded
                           submonad_asUser.fn_stateAssert asUser_return
@@ -614,7 +610,7 @@ lemma handleFaultReply':
                           ARMMachineTypes.sanitiseRegister_def
                           n_msgRegisters_def
                     dest: word_less_cases)
-   apply (clarsimp simp: bind_assoc asUser_bind_distrib asUser_return
+   apply (clarsimp simp: bind_assoc asUser_bind_distrib
                          zip_Cons mapM_x_Cons mapM_x_Nil
                          asUser_comm [OF neq] asUser_getRegister_discarded
                          submonad_asUser.fn_stateAssert asUser_return
@@ -623,7 +619,7 @@ lemma handleFaultReply':
                          ARMMachineTypes.sanitiseRegister_def take_Cons
                   split: nat.split)
   apply (case_tac "msgLength tag < scast n_msgRegisters")
-   apply (fastforce simp: asUser_bind_distrib asUser_return zipWithM_x_mapM_x
+   apply (fastforce simp: asUser_bind_distrib zipWithM_x_mapM_x
                          zip_Cons word_le_make_less mapM_x_Cons mapM_x_Nil
                          asUser_comm [OF neq] asUser_getRegister_discarded
                          submonad_asUser.fn_stateAssert asUser_return
@@ -631,8 +627,7 @@ lemma handleFaultReply':
                          bind_assoc State_H.sanitiseRegister_def
                          ARMMachineTypes.sanitiseRegister_def
                          bind_comm_mapM_comm [OF asUser_loadWordUser_comm]
-                         empty_fail_setRegister word_size
-                         stateAssert_mapM_loadWordUser_comm
+                         word_size stateAssert_mapM_loadWordUser_comm
                          n_msgRegisters_def
                    dest: word_less_cases)
   apply (simp add: n_msgRegisters_def word_le_nat_alt
@@ -644,14 +639,13 @@ lemma handleFaultReply':
                                @ [scast n_syscallMessage + 1 .e. msgMaxLength]")
    apply (simp only: upto_enum_word[where y="scast n_syscallMessage :: word32"]
                      upto_enum_word[where y="scast n_syscallMessage + 1 :: word32"])
-   apply (clarsimp simp: bind_assoc asUser_bind_distrib asUser_return
+   apply (clarsimp simp: bind_assoc asUser_bind_distrib
                          mapM_x_Cons mapM_x_Nil
                          asUser_comm [OF neq] asUser_getRegister_discarded
-                         submonad_asUser.fn_stateAssert asUser_return
+                         submonad_asUser.fn_stateAssert
                          bind_subst_lift [OF submonad_asUser.stateAssert_fn] 
                          word_less_nat_alt State_H.sanitiseRegister_def
                          ARMMachineTypes.sanitiseRegister_def
-                         n_msgRegisters_def empty_fail_setRegister
                          split_def n_msgRegisters_def msgMaxLength_def
                          word_size msgLengthBits_def n_syscallMessage_def
               split del: split_if cong: if_weak_cong)
@@ -681,9 +675,7 @@ begin
 lemma ccorres_merge_return:
   "ccorres (\<lambda>a c. r (f a) c) xf P P' hs H C \<Longrightarrow> 
    ccorres r xf P P' hs (do x \<leftarrow> H; return (f x) od) C"  
-  apply (clarsimp simp: ccorres_underlying_def split_def bind_def return_def split: xstate.splits)
-  apply (fastforce simp: unif_rrel_def)
-  done
+  by (rule ccorres_return_into_rel)
 
 (* FIXME: move *)
 lemma ccorres_break:
@@ -1616,6 +1608,7 @@ proof -
           apply (wp asUser_inv mapM_wp' getRegister_inv hoare_drop_imps
                     asUser_get_registers asUser_const_rv)
          apply simp
+        apply (rename_tac list)
         apply (rule_tac P="zip [Suc (Suc 0) ..< msgMaxLength] list = [(2, hd list), (3, hd (tl list))]"
                    in ccorres_gen_asm)
         apply (simp add: bind_assoc fault_tag_defs ccorres_cond_iffs
@@ -1833,7 +1826,7 @@ proof -
             apply (simp add: guard_is_UNIV_def)
            apply (subgoal_tac "buffer = None")
             apply (simp add: mapM_discarded[symmetric])
-            apply (rule_tac P="\<lambda>a. ccorres ?r ?xf ?Pre ?Pre' ?hs (a >>= ?b) ?c" in subst)
+            apply (rule_tac P="\<lambda>a. ccorres r xf Pre Pre' hs (a >>= b) c" for r xf Pre Pre' hs b c in subst)
              apply (rule mapM_length_cong[OF refl])
              apply (clarsimp simp: setMR_def length_msgRegisters n_msgRegisters_def
                                    set_zip)
@@ -1938,6 +1931,7 @@ lemma ccorres_emptyOnFailure:
   apply (drule (1) bspec)
   apply (rule conjI, clarsimp)
    apply (erule_tac x=n in allE)
+   apply (rename_tac s)
    apply (erule_tac x="Normal s" in allE)
    apply clarsimp
    apply (rule bexI)
@@ -1962,6 +1956,7 @@ lemma unifyFailure_ccorres:
   apply (rule conjI)
    apply clarsimp
    apply (erule_tac x=n in allE)
+   apply (rename_tac s)
    apply (erule_tac x="Normal s" in allE)
    apply clarsimp
    apply (rule bexI)
@@ -2188,6 +2183,7 @@ lemma ccorres_constOnFailure:
   apply (drule (1) bspec)
   apply (rule conjI, clarsimp)
    apply (erule_tac x=na in allE)
+   apply (rename_tac s)
    apply (erule_tac x="Normal s" in allE)
    apply clarsimp
    apply (rule bexI)
@@ -2535,7 +2531,8 @@ next
      apply (clarsimp simp:isCap_simps)
     apply (case_tac cap)
      apply (simp_all add:isCap_simps)
-    apply (case_tac arch_capability)
+    apply (rename_tac acap)
+    apply (case_tac acap)
      apply (clarsimp simp:ArchRetype_H.maskCapRights_def)+
     done
 
@@ -2546,7 +2543,8 @@ next
       apply (wp,clarsimp)+
       defer
      apply (wp,clarsimp)+
-    apply (case_tac arch_capability)
+    apply (rename_tac acap)
+    apply (case_tac acap)
      apply (simp_all add:ArchRetype_H.deriveCap_def Let_def isCap_simps is_the_ep_def)
     apply (wp |clarsimp|rule conjI)+
     done
@@ -2555,7 +2553,8 @@ next
     "\<And>r cap. (maskCapRights r cap = NullCap) = (cap = NullCap)"
     apply (case_tac cap)
      apply (simp_all add:maskCapRights_def isCap_simps)
-    apply (case_tac arch_capability)
+    apply (rename_tac acap)
+    apply (case_tac acap)
      apply (simp add:ArchRetype_H.maskCapRights_def)+
     done
   note split_if[split del]
@@ -2651,7 +2650,7 @@ next
                     apply (rule ccorres_symb_exec_r)
                       apply (simp add: Collect_const[symmetric] del: Collect_const)
                       apply (rule ccorres_rhs_assoc2)
-                      apply (rule_tac P="ccorresG rf_sr \<Gamma> ?r ?xf ?Pre ?Pre' ?hs ?a" in rsubst)
+                      apply (rule_tac P="ccorresG rf_sr \<Gamma> r xf Pre Pre' hs a" for r xf Pre Pre' hs a in rsubst)
                        apply (rule Cons.hyps)
                         apply (clarsimp simp: excaps_map_def dest!: drop_n_foo)
                        apply clarsimp
@@ -2666,7 +2665,7 @@ next
                      apply (clarsimp)
                   apply (vcg exspec=cteInsert_modifies)
                  apply vcg
-                apply (simp split del: split_if)
+                apply (simp)
                 apply (rule ccorres_split_throws) 
                  apply (rule_tac P=\<top> and P'="?S" in ccorres_break)
                   apply clarsimp
@@ -2723,7 +2722,7 @@ next
                  apply csymbr
                  apply (rule ccorres_symb_exec_r)
                    apply (rule ccorres_rhs_assoc2)
-                   apply (rule_tac P="ccorresG rf_sr \<Gamma> ?r ?xf ?Pre ?Pre' ?hs ?a" in rsubst)
+                   apply (rule_tac P="ccorresG rf_sr \<Gamma> r xf Pre Pre' hs a" for r xf Pre Pre' hs a in rsubst)
                     apply (rule Cons.hyps)
                      apply (clarsimp simp: excaps_map_def dest!: drop_n_foo)
                     apply simp
@@ -2737,7 +2736,7 @@ next
                           hoare_vcg_const_Ball_lift cteInsert_cte_wp_at)
                apply (vcg exspec=cteInsert_modifies)
               apply vcg
-             apply (simp split del: split_if)
+             apply (simp)
              apply (rule ccorres_split_throws) 
               apply (rule_tac P=\<top> and P'="?S" in ccorres_break)
                apply clarsimp
@@ -3066,13 +3065,13 @@ next
     apply simp
     apply (cases ys')
      apply simp
-    apply (subst P[where m=0])
+    apply (subst P[where m1=0])
        apply simp+
     apply (rule conjI)
-     apply (cut_tac m=0 in Cons.prems(4), simp+)
+     apply (cut_tac m1=0 in Cons.prems(4), simp+)
     apply (rule Cons.hyps)
-       apply (rule_tac m="Suc m" in P, simp+)
-    apply (cut_tac m="Suc m" in Cons.prems(4), simp+)
+       apply (rule_tac m1="Suc m" in P, simp+)
+    apply (cut_tac m1="Suc m" in Cons.prems(4), simp+)
     done
 qed
 
@@ -3105,6 +3104,7 @@ proof -
                    simp del: Collect_const)
    apply (simp add: liftE_bindE del: Collect_const)
    apply wpc
+   apply (rename_tac word1 word2 word3 word4)
    apply (simp del: Collect_const)
    apply wpc
     apply (simp add: option_to_ptr_def option_to_0_def)
@@ -3678,7 +3678,7 @@ lemma handleFaultReply_ccorres [corres]:
                        apply vcg
                        apply (rule conjI, simp add: State_H.exceptionMessage_def
                                     ARMMachineTypes.exceptionMessage_def word_of_nat_less)
-                       apply (thin_tac "n < unat ?n'")
+                       apply (thin_tac "n < unat n'" for n')
                        apply (simp add: msgRegisters_ccorres n_msgRegisters_def length_msgRegisters
                                         unat_of_nat exceptionMessage_ccorres[symmetric]
                                         n_exceptionMessage_def length_exceptionMessage)
@@ -4944,6 +4944,7 @@ lemma sendIPC_ccorres [corres]:
       apply (rule ccorres_rhs_assoc2)
       apply (rule ccorres_rhs_assoc2)
       apply (rule ccorres_rhs_assoc2)
+      apply (rename_tac list)
       apply (rule ccorres_split_nothrow_novcg)
           apply (simp only: )
           apply (rule sendIPC_block_ccorres_helper)
@@ -4982,7 +4983,7 @@ lemma sendIPC_ccorres [corres]:
      apply clarsimp
      apply (rule conjI, assumption)
      apply (fastforce simp: valid_tcb_state'_def isBlockedOnSend_def
-                elim!: delta_sym_refs[OF invs_sym_refs']
+                elim!: delta_sym_refs[OF invs_sym']
                 split: split_if_asm
                 simp: obj_at'_def projectKOs projectKO_opt_tcb
                        ko_wp_at'_def objBits_simps)[1]
@@ -5304,6 +5305,8 @@ lemma receiveIPC_dequeue_ccorres_helper:
   done
 
 lemma receiveIPC_ccorres [corres]:
+  notes option.case_cong_weak [cong]
+  shows
   "ccorres dc xfdc (invs' and st_tcb_at' simple' thread and sch_act_not thread
                           and (\<lambda>s. \<forall>d p. thread \<notin> set (ksReadyQueues s (d, p)))
                           and valid_cap' cap and K (isEndpointCap cap))
@@ -5361,6 +5364,7 @@ lemma receiveIPC_ccorres [corres]:
          apply (rule ccorres_rhs_assoc2)
          apply (rule ccorres_rhs_assoc2)
          apply (rule ccorres_rhs_assoc2)
+         apply (rename_tac list)
          apply (rule ccorres_split_nothrow_novcg)
              apply (rule receiveIPC_block_ccorres_helper)
             apply ceqv
@@ -5546,11 +5550,12 @@ lemma receiveIPC_ccorres [corres]:
       apply (subgoal_tac "(capEPPtr cap) \<noteq> thread \<and> state_refs_of' s thread = {}")
        apply (clarsimp simp: valid_obj'_def valid_ep'_def refs_of'_def
                       split: endpoint.splits)
+         apply (rename_tac list)
          apply (subgoal_tac "state_refs_of' s (capEPPtr cap) = (set list) \<times> {EPRecv}
                              \<and> thread \<notin> (set list)")
           apply (fastforce simp: obj_at'_def is_aligned_neg_mask objBitsKO_def
                                 projectKOs invs'_def valid_state'_def st_tcb_at'_def
-                                valid_tcb_state'_def ko_wp_at'_def invs_valid_objs'
+                                ko_wp_at'_def invs_valid_objs'
                                 isBlockedOnReceive_def projectKO_opt_tcb
                                 from_bool_def to_bool_def valid_tcb_state'_def
                           elim: delta_sym_refs
@@ -5563,7 +5568,7 @@ lemma receiveIPC_ccorres [corres]:
         apply (subgoal_tac "state_refs_of' s (capEPPtr cap) = {}")
          apply (fastforce simp: obj_at'_def is_aligned_neg_mask objBitsKO_def
                                projectKOs invs'_def valid_state'_def st_tcb_at'_def
-                               valid_tcb_state'_def ko_wp_at'_def invs_valid_objs'
+                               ko_wp_at'_def invs_valid_objs'
                                isBlockedOnReceive_def projectKO_opt_tcb
                                from_bool_def to_bool_def valid_tcb_state'_def
                          elim: delta_sym_refs
@@ -5572,9 +5577,10 @@ lemma receiveIPC_ccorres [corres]:
        apply (frule(1) sym_refs_ko_atD' [OF _ invs_sym'])
        apply (frule invs_queues)
        apply clarsimp
+       apply (rename_tac list x xa)
        apply (rule_tac P="x\<in>set list" in case_split)
         apply (clarsimp simp:st_tcb_at_refs_of_rev')
-        apply (erule_tac x=x and P="\<lambda>x. st_tcb_at' ?P x s" in ballE)
+        apply (erule_tac x=x and P="\<lambda>x. st_tcb_at' P x s" for P in ballE)
          apply (drule_tac t=x in valid_queues_not_runnable'_not_ksQ)
           apply (clarsimp simp: st_tcb_at'_def obj_at'_def o_def)
          apply (subgoal_tac "sch_act_not x s")
@@ -5967,6 +5973,8 @@ proof -
 qed
 
 lemma receiveAsyncIPC_enqueue_ccorres_helper:
+  notes option.case_cong_weak [cong]
+  shows
   "ccorres dc xfdc (valid_pspace'
                 and (\<lambda>s. sym_refs ((state_refs_of' s)(aepptr := set queue \<times> {AEPAsync})))
                 and st_tcb_at'  (\<lambda>st. isBlockedOnAsyncEvent st \<and>
@@ -6198,6 +6206,7 @@ lemma receiveAsyncIPC_ccorres [corres]:
        apply (clarsimp simp: guard_is_UNIV_def)
       apply (clarsimp simp: guard_is_UNIV_def)
      -- "WaitingAEP case"
+     apply (rename_tac list)
      apply (rule ccorres_cond_true)
      apply (intro ccorres_rhs_assoc)
      apply csymbr
@@ -6240,6 +6249,7 @@ lemma receiveAsyncIPC_ccorres [corres]:
      apply (clarsimp simp: obj_at'_def state_refs_of'_def projectKOs)
     apply (clarsimp simp: invs'_def valid_state'_def st_tcb_at'
                    elim!: st_tcb'_weakenE)
+   apply (rename_tac list)
    apply (subgoal_tac "state_refs_of' s (capAEPPtr cap) = (set list) \<times> {AEPAsync} \<and>
                        thread \<notin> (set list)")
     apply (fastforce simp: obj_at'_def is_aligned_neg_mask objBitsKO_def

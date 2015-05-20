@@ -614,7 +614,6 @@ lemma ctes_of_valid_strengthen:
   done
 
 lemma decodeCNodeInvocation_ccorres:
-  notes tl_drop_1[simp]
   shows
   "interpret_excaps extraCaps' = excaps_map extraCaps \<Longrightarrow>
    ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
@@ -650,7 +649,7 @@ lemma decodeCNodeInvocation_ccorres:
                simp del: Collect_const
                    cong: call_ignore_cong globals.fold_congs
                          StateSpace.state.fold_congs bool.case_cong
-               cong del: invocation_label.weak_case_cong)
+               cong del: invocation_label.case_cong_weak)
    apply (rule ccorres_Cond_rhs_Seq)
     apply (simp add: unlessE_def throwError_bind invocationCatch_def)
     apply (rule syscall_error_throwError_ccorres_n)
@@ -1016,8 +1015,7 @@ lemma decodeCNodeInvocation_ccorres:
                      apply (rule validE_R_validE)
                      apply (rule_tac Q'="\<lambda>a b. cte_wp_at' (\<lambda>x. True) a b \<and> invs' b \<and> 
                        tcb_at' thread b  \<and> sch_act_wf (ksSchedulerAction b) b \<and> valid_tcb_state' Restart b
-                       \<and> ?Q2 b"
-                                               in  hoare_post_imp_R)
+                       \<and> Q2 b" for Q2 in  hoare_post_imp_R)
                        prefer 2
                        apply (clarsimp simp:cte_wp_at_ctes_of)
                        apply (drule ctes_of_valid')
@@ -2167,7 +2165,8 @@ lemma mapME_ensureEmptySlot':
   apply (induct slots arbitrary: P)
    apply simp
    apply wp 
-  apply (simp add: mapME_def sequenceE_def Let_def) 
+  apply (rename_tac a slots P)
+  apply (simp add: mapME_def sequenceE_def Let_def)
   apply (rule_tac Q="\<lambda>rv. P and (\<lambda>s. \<exists>cte. cteCap cte = capability.NullCap \<and> ctes_of s (f a) = Some cte)" in validE_R_sp) 
    apply (simp add: ensureEmptySlot_def unlessE_def) 
    apply (wp injection_wp_E[OF refl] getCTE_wp')
@@ -2716,26 +2715,6 @@ shows
                             apply (clarsimp simp:toEnum_object_type_to_H 
                               unat_of_nat_APIType_capBits word_size hd_conv_nth length_ineq_not_Nil
                               split:if_splits)
-(*
-                         apply assumption
-                        apply (rule_tac P = "APIType_capBits (object_type_to_H (args ! 0)) (unat (args ! Suc 0)) < 32" in ccorres_gen_asm)
-                        apply (subgoal_tac "\<not> (0x20::word32) \<le> of_nat (APIType_capBits (object_type_to_H (args ! 0)) (unat (args ! Suc 0)))")
-                         prefer 2
-                         apply (clarsimp simp:not_le)
-                         apply (erule of_nat_power[where x = 5,simplified])
-                         apply simp
-
-                        apply simp
-                        apply (rule ccorres_Guard_Seq)
-                        apply csymbr
-                        apply (rule ccorres_split_when_throwError_cond[where Q = \<top> and Q' = UNIV])
-                           apply (clarsimp simp: ccap_relation_untyped_CL_simps shiftL_nat
-                             valid_untyped_capBlockSize_misc
-                             of_nat_shiftR)
-                           apply (clarsimp simp:toEnum_object_type_to_H 
-                             unat_of_nat_APIType_capBits word_size hd_conv_nth length_ineq_not_Nil
-                             split:if_splits)
-*)
                           apply (rule syscall_error_throwError_ccorres_n)
                           apply (clarsimp simp: syscall_error_rel_def
                             ccap_relation_untyped_CL_simps shiftL_nat
@@ -2839,19 +2818,6 @@ shows
                    apply (clarsimp split:if_splits simp:not_less toEnum_object_type_to_H 
                              word_size hd_conv_nth length_ineq_not_Nil)
                    apply (case_tac "tcbState obja", (simp add: runnable'_def valid_tcb_state'_def)+)
-(*                    apply (intro conjI impI)
-                     apply (rule shiftR_gt0_le32)
-                      apply (erule less_le_trans[rotated])
-                      apply (simp add:word_le_nat_alt)
-                     apply (clarsimp simp:shiftL_nat isCap_simps valid_cap_simps',simp add:word_bits_def)
-
-                    apply (rule shiftR_gt0_le32)
-                     apply (erule less_le_trans[rotated])
-                     apply (simp add:word_le_nat_alt)
-                    apply (clarsimp simp:shiftL_nat isCap_simps valid_cap_simps')
-                    apply (rule le_less_trans[OF diff_le_self])
-                    apply (rule power_strict_increasing,simp add:word_bits_def,simp)
-*)
                   apply (wp mapME_wp'[unfolded mapME_def])
                   apply (rule hoare_pre)
                    apply (rule validE_R_validE)

@@ -21,8 +21,6 @@ crunch sch_act_wf [wp]: replyFromKernel "\<lambda>s. sch_act_wf (ksSchedulerActi
 
 context kernel_m begin
 
-declare split_if [split del]
-
 (* FIXME: should do this from the beginning *)
 declare true_def [simp] false_def [simp]
 

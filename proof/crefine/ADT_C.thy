@@ -96,7 +96,7 @@ lemma setContext_C_corres:
    apply assumption
   apply clarsimp
   apply (clarsimp simp: typ_heap_simps')
-  apply (thin_tac "(?a,?b) \<in> fst ?t")+
+  apply (thin_tac "(a,b) \<in> fst t" for a b t)+
   apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def cpspace_relation_def
                         carch_state_relation_def cmachine_state_relation_def
                         typ_heap_simps' update_tcb_map_tos)
@@ -290,6 +290,7 @@ lemma cint_rel_to_H:
    cint_state_to_H n t = (ksInterruptState s)"
   apply (simp add: irqs_masked'_def)
   apply (cases "ksInterruptState s")
+  apply (rename_tac "fun")
   apply (clarsimp simp: cinterrupt_relation_def cint_state_to_H_def
                         Platform.maxIRQ_def Kernel_C.maxIRQ_def)
   apply (rule ext)
@@ -358,8 +359,8 @@ lemma user_mem_C_relation:
                         Ptr ` dom (heap_to_page_data (ksPSpace s') (underlying_memory (ksMachineState s')))")
     apply simp
     apply clarsimp
-   apply (thin_tac "Ball ?A ?P")
-   apply (thin_tac "?t = dom (clift (t_hrs_' s))")
+   apply (thin_tac "Ball A P" for A P)
+   apply (thin_tac "t = dom (clift (t_hrs_' s))" for t)
    apply (rule imageI)
    apply (clarsimp simp: dom_def heap_to_page_data_def obj_at'_def projectKOs)
   apply (clarsimp simp: pointerInUserData_def)
@@ -582,7 +583,7 @@ lemma (in kernel_m)
      apply (simp add: valid_asid_map'_def)
     apply (frule is_inv_inj2, simp add: dom_option_map)
    apply simp
-  apply (thin_tac "array_map_conv ?f ?n ?c = ?a")
+  apply (thin_tac "array_map_conv f n c = a" for f n c a)
   apply (clarsimp simp: asid_map_pd_to_hwasids_def ran_def)
   apply (subst (asm) fun_eq_iff)
   apply fastforce
@@ -867,7 +868,7 @@ lemma cpspace_tcb_relation_unique:
    apply (rename_tac p x y)
    apply (cut_tac ctes)
    apply (drule_tac x=x in spec, drule_tac x=y in spec, erule impE, fastforce)
-   apply (thin_tac "map_to_tcbs ?x ?y = Some ?z")+
+   apply (thin_tac "map_to_tcbs x y = Some z" for x y z)+
    apply (case_tac x, case_tac y, case_tac "the (clift ch (tcb_Ptr (p+0x100)))")
    apply (clarsimp simp: ctcb_relation_def ran_tcb_cte_cases)
    apply (drule up_ucast_inj_eq[THEN iffD1,rotated], simp+)
@@ -959,6 +960,7 @@ lemma cpspace_asidpool_relation_unique:
    using invs
    apply (clarsimp simp: casid_pool_relation_def Let_def
                   split: asidpool.splits asid_pool_C.splits)
+   apply (rename_tac "fun" array)
    apply (drule bspec, fastforce)+
    apply (drule array_relation_to_map)+
    apply (rule ext, rename_tac y)
@@ -1038,7 +1040,7 @@ lemma map_to_cnes_eq:
    apply (drule_tac x="x-n" in spec)
    apply (clarsimp simp add: map_comp_def projectKO_opt_tcb
                    split: option.splits kernel_object.splits)
-   apply (frule_tac x="x-n" in SR_lemmas_C.pspace_distinctD'[OF _ distinct'])
+   apply (frule_tac x="x-n" in pspace_distinctD'[OF _ distinct'])
    apply (simp add: objBitsKO_def)
    apply (erule_tac y=x and s=s' and getF=a and setF=b
           in tcb_space_clear[rotated], assumption+, simp+)
@@ -1053,7 +1055,7 @@ lemma map_to_cnes_eq:
    apply (drule_tac x="x-n" in spec)
    apply (clarsimp simp add: map_comp_def projectKO_opt_tcb
                    split: option.splits kernel_object.splits)
-   apply (frule_tac x="x-n" in SR_lemmas_C.pspace_distinctD'[OF _ distinct])
+   apply (frule_tac x="x-n" in pspace_distinctD'[OF _ distinct])
    apply (simp add: objBitsKO_def)
    apply (erule_tac y=x and s=s and getF=a and setF=b
           in tcb_space_clear[rotated], assumption+, simp+)
@@ -1063,7 +1065,7 @@ lemma map_to_cnes_eq:
    apply (simp add: cte_wp_at'_obj_at')
    apply (elim disjE)
       apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def)
-     apply (thin_tac "Bex ?A ?P")
+     apply (thin_tac "Bex A P" for A P)
      apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def projectKO_opt_cte)
     apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def
                           projectKO_opt_cte projectKO_opt_tcb)
@@ -1072,7 +1074,7 @@ lemma map_to_cnes_eq:
            in tcb_space_clear[rotated], assumption+)
      apply (drule_tac x=x in spec, simp add: projectKO_opt_tcb)
     apply simp
-   apply (thin_tac "Bex ?A ?P")
+   apply (thin_tac "Bex A P" for A P)
    apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def
                          projectKO_opt_cte projectKO_opt_tcb)
    apply (case_tac ko, simp_all, clarsimp simp: objBitsKO_def)
@@ -1129,7 +1131,7 @@ proof -
    apply (frule (1) map_to_ko_atI[OF _ aligned' distinct'])
   apply (drule (1) map_to_cnes_eq[OF aligned aligned' distinct distinct'])
   apply (drule (1) cpspace_user_data_relation_unique)
-  apply (thin_tac "cmap_relation ?a ?c ?f ?r")+
+  apply (thin_tac "cmap_relation a c f r" for a c f r)+
   apply (cut_tac no_kdatas)
   apply (clarsimp simp add: ran_def fun_eq_iff)
   apply (drule_tac x=x in spec)+
@@ -1180,7 +1182,9 @@ lemma ksPSpace_eq_imp_valid_arch_obj'_eq:
   assumes ksPSpace: "ksPSpace s' = ksPSpace s"
   shows "valid_arch_obj' ao s' = valid_arch_obj' ao s"
   apply (case_tac ao, simp)
-  apply (case_tac pte, simp_all add: valid_mapping'_def)
+   apply (rename_tac pte)
+   apply (case_tac pte, simp_all add: valid_mapping'_def)
+  apply (rename_tac pde)
   apply (case_tac pde, simp_all add: valid_mapping'_def)
   done
 
