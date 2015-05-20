@@ -230,7 +230,7 @@ lemma LI_abs_to_c:
 lemma ADT_C_if_Init_Fin_serial:
   "Init_Fin_serial (ADT_C_if fp utf) s {s'. \<exists>hs. (hs, s') \<in> lift_fst_rel (lift_snd_rel rf_sr) \<and> hs \<in> full_invs_if'}"
   apply (unfold_locales)
-     apply (subgoal_tac "ADT_C_if fp utf \<Turnstile> ?P")
+     apply (subgoal_tac "ADT_C_if fp utf \<Turnstile> P" for P)
       prefer 2
       apply (rule fw_inv_transport)
         apply (rule global_automaton_invs.ADT_invs)
@@ -408,4 +408,4 @@ lemma xnonleakage_C:
 
 end
 
-end (* a comment *)
+end

@@ -444,7 +444,7 @@ lemma do_user_op_if_C_corres:
    (doUserOp_if f tc) (doUserOp_C_if f tc)"
   apply (rule corres_gen_asm)
   apply (simp add: doUserOp_if_def doUserOp_C_if_def uop_nonempty_def del: split_paired_All)
-  apply (thin_tac "?P")
+  apply (thin_tac "P" for P)
   apply (rule corres_guard_imp)
     apply (rule_tac r'="op=" and P'=\<top> and P="invs' and ex_abs (einvs)" in corres_split)
        prefer 2
@@ -504,7 +504,6 @@ lemma do_user_op_if_C_corres:
              apply (wp | simp)+
   
    apply (clarsimp simp add: invs'_def valid_state'_def valid_pspace'_def ex_abs_def)
-   apply (thin_tac "(?a,?b) : f ?c ?d ?e ?f ?g")
    apply (clarsimp simp: user_mem'_def ex_abs_def restrict_map_def invs_def
                          ptable_lift_s'_def
                   split: if_splits)
