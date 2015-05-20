@@ -467,7 +467,6 @@ lemma chooseThread_ccorres:
                   apply (rule allI, rule conseqPre, vcg)
                   apply (clarsimp simp: throwError_def return_def)
                  apply wp
-                apply (thin_tac "ccorres_underlying ?sr ?G ?r ?xf ?ar ?axf ?P ?P' ?hs ?a ?c")
                 apply (clarsimp simp: invs_valid_queues')
                 apply (clarsimp simp: all_invs_but_ct_idle_or_in_cur_domain'_def valid_queues_def)
                 apply (drule_tac x="curdom" in spec)
@@ -476,7 +475,7 @@ lemma chooseThread_ccorres:
                                       tcb_at_not_NULL[OF obj_at'_weakenE])
                apply wp
               apply (clarsimp simp: guard_is_UNIV_def)
-             apply (clarsimp simp: upto_enum_word rev_map nth_map nth_rev
+             apply (clarsimp simp: upto_enum_word rev_map nth_rev
                                    field_simps all_invs_but_ct_idle_or_in_cur_domain'_def
                          simp del: upt.simps)
              apply (clarsimp simp: minBound_word maxBound_word seL4_MaxPrio_def
@@ -600,7 +599,7 @@ lemma schedule_ccorres:
                       in ccorres_inst)
          apply (case_tac rva, simp_all del: dc_simp)
           apply (rule ccorres_guard_imp2)
-           apply (clarsimp simp: to_bool_def ccorres_seq_cond_univ)
+           apply (clarsimp simp: to_bool_def)
            apply (ctac add: tcbSchedEnqueue_ccorres)
              apply (rule_tac P'="\<lambda>rv. {s. ksDomainTime_' (globals s) = rv}"
                           in ccorres_pre_getDomainTime)
@@ -631,7 +630,7 @@ lemma schedule_ccorres:
           apply auto[1]
 (* else branch for rva *)
           apply (rule ccorres_guard_imp2)
-           apply (clarsimp simp: to_bool_def ccorres_seq_cond_univ)
+           apply (clarsimp simp: to_bool_def)
              apply (rule_tac P'="\<lambda>rv. {s. ksDomainTime_' (globals s) = rv}"
                           in ccorres_pre_getDomainTime)
              apply (case_tac "rv = 0")
@@ -661,7 +660,7 @@ lemma schedule_ccorres:
           apply (auto simp: Collect_const_mem cscheduler_action_relation_def st_tcb_at'_def
                       elim: obj_at'_weakenE
                       dest: obj_at_cslift_tcb)[1]
-
+     apply (rename_tac word)     
      apply (rule ccorres_guard_imp2)
       apply (rule ccorres_cond_false)
       apply (rule ccorres_cond_true)
