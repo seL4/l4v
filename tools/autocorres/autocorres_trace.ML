@@ -93,19 +93,19 @@ fun my_match' _ (Var v) t' = SOME [(Var v, [], t')]
 fun my_match t t' = my_match' [] (Envir.beta_norm t) t'
 
 fun my_unify_fact_tac ctxt subproof n state =
-  let val cterm_of' = cterm_of (Proof_Context.theory_of ctxt)
-      val ctyp_of' = ctyp_of (Proof_Context.theory_of ctxt)
+  let val cterm_of' = Thm.cterm_of ctxt
+      val ctyp_of' = Thm.ctyp_of ctxt
   in
-  if length (prems_of state) < n then no_tac state else
-  let val stateterm = nth (prems_of state) (n-1)
-      val proofterm = prop_of subproof
+  if length (Thm.prems_of state) < n then no_tac state else
+  let val stateterm = nth (Thm.prems_of state) (n-1)
+      val proofterm = Thm.prop_of subproof
   in
   case my_typ_match stateterm proofterm of
      NONE => Seq.empty
    | SOME typinsts =>
      (case Thm.instantiate (map (fn (v, t) => (ctyp_of' v, ctyp_of' t)) (Utils.nubBy fst typinsts), []) state of
        state' =>
-        let val stateterm' = nth (prems_of state') (n-1) in
+        let val stateterm' = nth (Thm.prems_of state') (n-1) in
         case my_match stateterm' proofterm of
            NONE => Seq.empty
          | SOME substs =>
@@ -114,7 +114,7 @@ fun my_unify_fact_tac ctxt subproof n state =
                                |> map (fn (v, t) => (cterm_of' v, cterm_of' t))
              in
              case Thm.instantiate ([], substs') state of state' =>
-               (case Proof_Context.fact_tac ctxt [Drule.gen_all subproof] 1 state' |> Seq.pull of
+               (case Proof_Context.fact_tac ctxt [Drule.gen_all (Variable.maxidx_of ctxt) subproof] 1 state' |> Seq.pull of
                    NONE => Seq.empty
                  | r => Seq.make (fn () => r))
              handle _ => Seq.empty
@@ -169,8 +169,8 @@ fun trace_solve_tac (ctxt : Proof.context)
                     (replay_failures : int Unsynchronized.ref)
                     : (thm * thm RuleTrace list) option =
   if depth = SOME 0 then raise TRACE_SOLVE_TAC_FAIL [(state, @{thm symmetric})] else
-  let val cterm_of' = cterm_of (Proof_Context.theory_of ctxt) in
-  case prems_of state of
+  let val cterm_of' = Thm.cterm_of ctxt in
+  case Thm.prems_of state of
      [] => SOME (state, [])
    | (goal::_) =>
         let val cgoal = cterm_of' goal
@@ -197,7 +197,7 @@ fun trace_solve_tac (ctxt : Proof.context)
                                                      val steps = (tag, tactic) :: List.concat (map trace_steps trace)
                                                  in case EVERY (map snd steps) state |> Seq.pull of
                                                        SOME (state', _) =>
-                                                         if length (prems_of state) = length (prems_of state') + 1
+                                                         if length (Thm.prems_of state) = length (Thm.prems_of state') + 1
                                                            then state' else raise exn
                                                      | NONE => raise exn end
                                              | SOME (s, _) => s)
@@ -216,10 +216,10 @@ fun trace_solve_tac (ctxt : Proof.context)
 datatype SimpTrace = SimpTrace of { equation : thm, thms : (string * cterm) list }
 
 fun fconv_rule_traced ctxt conv thm =
-  let val eq_thm = conv (cprop_of thm)
-      val thms = Apply_Trace.used_facts eq_thm
+  let val eq_thm = conv (Thm.cprop_of thm)
+      val thms = [] (* Apply_Trace.used_facts eq_thm *) (* 2015 FIXME *)
   in (if Thm.is_reflexive eq_thm then thm else Thm.equal_elim eq_thm thm, (* Pure/conv.ML *)
-      SimpTrace { equation = eq_thm, thms = map (apsnd (cterm_of (Proof_Context.theory_of ctxt))) thms })
+      SimpTrace { equation = eq_thm, thms = map (apsnd (Thm.cterm_of ctxt)) thms })
   end
 
 fun fconv_rule_maybe_traced ctxt conv thm do_trace =
@@ -245,7 +245,7 @@ fun intercalate _ [] = []
 
 fun print_ac_trace' indent (RuleTrace tr) =
   let val print_cterm = cterm_to_string true
-      val print_thm = cprop_of #> print_cterm
+      val print_thm = Thm.cprop_of #> print_cterm
       val indent' = indent ^ "  "
   in
     indent ^ "Subgoal: " ^ print_cterm (#input tr) ^ "\n" ^

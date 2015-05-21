@@ -124,7 +124,7 @@ let
         (fn_name,
             FunctionInfo.get_function_def fn_info fn_name
             |> #definition
-            |> prop_of
+            |> Thm.prop_of
             |> Utils.rhs_of
             |> can_lift_term))
     |> filter (not o snd)
@@ -160,7 +160,7 @@ fun dest_first_order ctxt ct =
  *)
 fun greedy_thm_instantiate base_thm subgoal_thm =
 let
-  val asms = prop_of base_thm |> Logic.strip_assums_hyp
+  val asms = Thm.prop_of base_thm |> Logic.strip_assums_hyp
 in
   fold (fn (i, asm) => fn (thm, change_made) =>
     if (Term.could_unify (asm, Thm.concl_of subgoal_thm)) then
@@ -428,8 +428,8 @@ let
 
   (* Extract the abstract term out of a L2Tcorres thm. *)
   fun dest_L2Tcorres_term_abs (_ $ _ $ t $ _ ) = t
-  fun get_body_of_thm thm =
-      concl_of (Drule.gen_all thm)
+  fun get_body_of_thm ctxt thm =
+      Thm.concl_of (Drule.gen_all (Variable.maxidx_of ctxt) thm)
       |> HOLogic.dest_Trueprop
       |> dest_L2Tcorres_term_abs
 
@@ -479,7 +479,7 @@ let
   in
     fun subgoal_solver_tac ctxt =
       (fast_force_tac (put_simpset ss ctxt) 1)
-        ORELSE (CHANGED (Method.try_intros_tac [@{thm conjI}, @{thm ext}] []
+        ORELSE (CHANGED (Method.try_intros_tac ctxt [@{thm conjI}, @{thm ext}] []
             THEN clarsimp_tac (put_simpset ss ctxt) 1))
   end
 
@@ -597,10 +597,10 @@ let
         valid_typ_heap_thms,
         valid_field_thms,
         valid_global_field_thms]
-    |> filter (prop_of #> exists_subterm (fn x => case x of Const (@{const_name "valid_globals_field"}, _) => true | _ => false) #> not)
-    |> filter (prop_of #> exists_subterm (fn x => case x of Const (@{const_name "valid_struct_field"}, _) => true | _ => false) #> not)
-    |> filter (prop_of #> exists_subterm (fn x => case x of Const (@{const_name "valid_struct_field_legacy"}, _) => true | _ => false) #> not)
-    |> filter (prop_of #> exists_subterm (fn x => case x of Const (@{const_name "valid_typ_heap"}, _) => true | _ => false) #> not)
+    |> filter (Thm.prop_of #> exists_subterm (fn x => case x of Const (@{const_name "valid_globals_field"}, _) => true | _ => false) #> not)
+    |> filter (Thm.prop_of #> exists_subterm (fn x => case x of Const (@{const_name "valid_struct_field"}, _) => true | _ => false) #> not)
+    |> filter (Thm.prop_of #> exists_subterm (fn x => case x of Const (@{const_name "valid_struct_field_legacy"}, _) => true | _ => false) #> not)
+    |> filter (Thm.prop_of #> exists_subterm (fn x => case x of Const (@{const_name "valid_typ_heap"}, _) => true | _ => false) #> not)
        ) [base_rules, base_nolift_rules]
 
   (*val _ = map (fn r => @{trace} r) rules*)
@@ -615,8 +615,8 @@ let
     val l2_body_def =
         #definition fn_def
         (* Instantiate the arguments. *)
-        |> Utils.inst_args (map (cterm_of thy) (measure_var :: fn_args))
-    val l2_body = Utils.rhs_of (prop_of l2_body_def)
+        |> Utils.inst_args (map (Thm.cterm_of ctxt) (measure_var :: fn_args))
+    val l2_body = Utils.rhs_of (Thm.prop_of l2_body_def)
 
     (* Get L2 body definition with function arguments. *)
     val l2_term = betapplys (#const fn_def, measure_var :: fn_args)
@@ -627,7 +627,7 @@ let
     (* Generate a schematic goal. *)
     val goal = @{mk_term "Trueprop (L2Tcorres ?st ?A ?C)" (st, C)}
         (st, l2_term)
-        |> cterm_of thy
+        |> Thm.cterm_of ctxt
         |> Goal.init
         |> Utils.apply_tac "unfold RHS" (EqSubst.eqsubst_tac ctxt [0] [l2_body_def] 1)
 
@@ -656,7 +656,7 @@ let
     fun print1_tac label t =
       (@{trace} (
          label ^ ": subgoal 1 of " ^ Int.toString (Logic.count_prems (term_of_thm t)),
-         Logic.get_goal (term_of_thm t) 1 |> cterm_of (Proof_Context.theory_of lthy));
+         Logic.get_goal (term_of_thm t) 1 |> Thm.cterm_of lthy);
        all_tac t)
 
     (* Convert the concrete side of the given L2T term to/from first-order form. *)
@@ -736,7 +736,7 @@ let
     val _ = Statistics.gather ctxt "HLsimp" fn_name
         (Thm.prop_of thm |> HOLogic.dest_Trueprop |> (fn t => Utils.term_nth_arg t 1))
   in
-    (get_body_of_thm thm, Drule.gen_all thm,
+    (get_body_of_thm ctxt thm, Drule.gen_all (Variable.maxidx_of ctxt) thm,
      (if member (op =) trace_funcs fn_name then [("HL", AutoCorresData.RuleTrace trace)] else []) @ opt_traces)
   end
 

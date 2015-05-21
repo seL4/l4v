@@ -1164,8 +1164,7 @@ lemma word_rsplit_signed:
 lemma heap_update_signed_word [simp]:
     "heap_update (ptr_coerce p :: 'a word ptr) (scast v) = heap_update (p :: ('a::len8) signed word ptr) v"
     "heap_update (ptr_coerce p' :: 'a signed word ptr) (ucast v') = heap_update (p' :: ('a::len8) word ptr) v'"
-  apply (auto intro!: ext simp: heap_update_def to_bytes_def
-                         typ_info_word word_rsplit_def cast_simps)
+  apply (auto simp: heap_update_def to_bytes_def typ_info_word word_rsplit_def cast_simps)
   done
 
 lemma valid_typ_heap_c_guard:
@@ -1332,7 +1331,7 @@ lemma ptr_coerce_eq:
 lemma signed_word_heap_opt [L2opt]:
   "(scast (((\<lambda>x. ucast (a (ptr_coerce x))) (p := v :: 'a::len signed word)) (b :: 'a signed word ptr)))
   = ((a(ptr_coerce p := (scast v :: 'a word))) ((ptr_coerce b) :: 'a word ptr))"
-  by (auto simp: fun_upd_def scast_id ptr_coerce_eq)
+  by (auto simp: fun_upd_def ptr_coerce_eq)
 
 lemma signed_word_heap_ptr_coerce_opt [L2opt]:
   "(ptr_coerce (((\<lambda>x. ptr_coerce (a (ptr_coerce x))) (p := v :: 'a ptr)) (b :: 'a ptr ptr)))
@@ -1533,14 +1532,14 @@ lemma array_update_split:
                in arg_cong)
 
   apply (subst fcp_eta[where g = arr, symmetric])
-  apply (clarsimp simp: to_bytes_def typ_info_array array_tag_def array_tag_n_eq)
+  apply (clarsimp simp: to_bytes_def typ_info_array array_tag_def array_tag_n_eq simp del: fcp_eta)
   apply (subst access_ti_list_array_unpacked)
      apply clarsimp
      apply (rule refl)
     apply (simp add: size_of_def)
    apply clarsimp
    apply (rule refl)
-  apply (clarsimp simp: fcp_eta foldl_conv_concat)
+  apply (clarsimp simp: foldl_conv_concat)
 
   (* we need this later *)
   apply (subgoal_tac
@@ -1576,6 +1575,7 @@ lemma fold_update_id:
   \<rbrakk> \<Longrightarrow> fold (\<lambda>i. setter (\<lambda>x. x(ind i := val i))) xs s = s"
   apply (induct xs)
    apply simp
+  apply (rename_tac a xs)
   apply clarsimp
   apply (subgoal_tac "setter (\<lambda>x. x(ind a := getter s (ind a))) s = s")
    apply simp
@@ -1627,7 +1627,7 @@ theorem abs_array_update [heap_abs]:
                          if i = n then val else getter (st s) (ptr_coerce (b' (st s)) +\<^sub>p int i)))"])
    apply (rule_tac f = setter in arg_cong)
    apply (case_tac "x = n")
-    apply (simp add: index_update)
+    apply simp
    apply (subst index_update2)
      apply simp
     apply simp
@@ -1674,21 +1674,21 @@ theorem abs_array_update [heap_abs]:
 
 lemma the_fun_upd_lemma1:
     "(\<lambda>x. the (f x))(p := v) = (\<lambda>x. the ((f (p := Some v)) x))"
-  by (auto intro!: ext simp: fun_upd_def)
+  by auto
 
 lemma the_fun_upd_lemma2:
    "\<exists>z. f p = Some z \<Longrightarrow>
        (\<lambda>x. \<exists>z. (f (p := Some v)) x = Some z) =  (\<lambda>x. \<exists>z. f x = Some z) "
-  by (auto intro!: ext simp: fun_upd_def)
+  by auto
 
 lemma the_fun_upd_lemma3:
     "((\<lambda>x. the (f x))(p := v)) x = the ((f (p := Some v)) x)"
-  by (auto intro!: ext simp: fun_upd_def)
+  by simp
 
 lemma the_fun_upd_lemma4:
    "\<exists>z. f p = Some z \<Longrightarrow>
        (\<exists>z. (f (p := Some v)) x = Some z) =  (\<exists>z. f x = Some z) "
-  by (auto intro!: ext simp: fun_upd_def)
+  by simp
 
 lemmas the_fun_upd_lemmas =
     the_fun_upd_lemma1

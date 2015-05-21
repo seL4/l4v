@@ -192,7 +192,7 @@ val throws_exception = Term_Ord.term_cache (fn x => throws_exception' (anon x))
  * If so, we perform the rewrite. Otherwise, we just leave the exceptions in place.
  *)
 fun l1_condition_simproc redex =
-  case term_of redex of
+  case Thm.term_of redex of
       (Const (@{const_name "L1_catch"}, _)
           $ (Const (@{const_name "L1_seq"}, _)
             $ (Const (@{const_name "L1_condition"}, _) $ _ $ cond_lhs $ cond_rhs)
@@ -247,7 +247,7 @@ fun l1_condition_simproc redex =
     | _ => NONE
 
 fun nothrow_simproc redex =
-  case term_of redex of
+  case Thm.term_of redex of
       (Const (@{const_name "no_throw"}, _)
           $ Abs (_, _, Const (@{const_name True}, _))
           $ body) =>
@@ -258,7 +258,7 @@ fun nothrow_simproc redex =
     | _ => NONE
 
 fun noreturn_simproc redex =
-  case term_of redex of
+  case Thm.term_of redex of
       (Const (@{const_name "no_return"}, _)
           $ Abs (_, _, Const (@{const_name True}, _))
           $ body) =>
@@ -269,7 +269,7 @@ fun noreturn_simproc redex =
     | _ => NONE
 
 fun alwaysfail_simproc redex =
-  case term_of redex of
+  case Thm.term_of redex of
       (Const (@{const_name "always_fail"}, _)
           $ Abs (_, _, Const (@{const_name True}, _))
           $ body) =>
@@ -279,10 +279,10 @@ fun alwaysfail_simproc redex =
     | _ => NONE
 
 fun emptyfail_simproc redex =
-  case term_of redex of
+  case Thm.term_of redex of
       (Const (@{const_name "empty_fail"}, _)
           $ body) =>
-        (SOME (empty_fail body)) handle Utils.InvalidInput _ => NONE
+        ((SOME (empty_fail body)) handle Utils.InvalidInput _ => NONE)
     | _ => NONE
 
 val simprocs =

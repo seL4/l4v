@@ -124,7 +124,7 @@ let
   let
     val body =
       #definition function
-      |> concl_of
+      |> Thm.concl_of
       |> Utils.rhs_of
   in
     Term.fold_aterms (fn t => fn a =>
@@ -221,7 +221,7 @@ let
     val (definition, invented) =
         (Proof_Context.get_thms ctxt (name ^ "_body_def"), false)
         handle ERROR _ =>
-          ([instantiate' [SOME (ctyp_of thy myvars_typ)] []
+          ([instantiate' [SOME (Thm.ctyp_of ctxt myvars_typ)] []
                              @{thm undefined_function_body_def}], true)
   in
     {

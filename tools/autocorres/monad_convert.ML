@@ -73,13 +73,23 @@ fun term_search_bf_first pred prune term = let
   val _ = term_search_bf (fn result => K (r := SOME result)) pred prune term
 in !r end
 
+(* From Pure/Tools/find_theorems.ML, because Florian made it private *)
+fun matches_subterm thy (pat, obj) =
+  let
+    fun msub bounds obj = Pattern.matches thy (pat, obj) orelse
+      (case obj of
+        Abs (_, T, t) => msub (bounds + 1) (snd (Term.dest_abs (Name.bound bounds, T, t)))
+      | t $ u => msub bounds t orelse msub bounds u
+      | _ => false)
+  in msub 0 obj end;
+
 fun grep_term ctxt pattern =
 let
   val thy = Proof_Context.theory_of ctxt
 in
   term_search_bf_first
       (fn term => Pattern.matches thy (pattern, term))
-      (fn term => not (Pattern.matches_subterm thy (pattern, term)))
+      (fn term => not (matches_subterm thy (pattern, term)))
 end
 
 (* Check whether the term is in L2_monad notation. *)
@@ -103,7 +113,7 @@ let
   val lthy = Utils.set_hidden_ctxt lthy
   val rules = if forward then #lift_rules mt else #unlift_rules mt
   val rules' = dest_ss rules |> #simps |> map #2
-  val cterm = cterm_of (Proof_Context.theory_of lthy) term
+  val cterm = Thm.cterm_of lthy term
   (* Just apply the simplifier and hope that it works. *)
   val thm = Simplifier.rewrite (
       put_simpset HOL_ss lthy addsimps rules' addsimps more_facts) cterm

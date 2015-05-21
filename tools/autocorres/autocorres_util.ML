@@ -287,7 +287,7 @@ let
             is_recursive_call measure_var
         |> fold Logic.all (rev ((if is_recursive_call then [] else [my_measure_var]) @ fn_arg_terms))
         |> Sign.no_vars ctxt'
-        |> cterm_of (Proof_Context.theory_of ctxt')
+        |> Thm.cterm_of ctxt'
     val ([thm], ctxt''') = Assumption.add_assumes [assumption] ctxt'
 
     (* Generate a morphism for escaping this context. *)
@@ -335,7 +335,6 @@ fun gen_corres_for_function
 let
   val _ = writeln ("Converting (" ^ phase ^") " ^ fn_name)
   val start_time = Timer.startRealTimer ()
-  val thy = Proof_Context.theory_of ctxt
 
   (* Get a list of functions we call. *)
   val (normal_calls, recursive_calls)
@@ -352,7 +351,7 @@ let
   (* Fix variables for function arguments. *)
   val fn_args = get_fn_args fn_name
   val (arg_names, ctxt'')
-      = Variable.variant_fixes (map (fn (a, b) => a ^ "'arg") fn_args) ctxt'
+      = Variable.variant_fixes (map (fn (a, _) => a ^ "'arg") fn_args) ctxt'
   val fn_arg_terms = map (fn (n, T) => Free (n, T)) (arg_names ~~ (map snd fn_args))
   val fn_args_morph = Variable.export_morphism ctxt'' ctxt'
 
@@ -501,10 +500,10 @@ fun define_funcs
         |> map (fn x => (get_const_name x, Utils.get_term ctxt (get_const_name x)))
         |> Symtab.make
     fun fill_proofs thm =
-      Utils.instantiate_thm_vars (Proof_Context.theory_of ctxt)
+      Utils.instantiate_thm_vars ctxt
         (fn ((name, _), _) =>
           Symtab.lookup callee_terms name
-          |> Option.map (cterm_of (Proof_Context.theory_of ctxt))) thm
+          |> Option.map (Thm.cterm_of ctxt)) thm
     val fn_thms = map fill_proofs fn_thms
 
     (* Fix free variable for the measure. *)
@@ -531,17 +530,17 @@ fun define_funcs
       end) fn_names
 
     (* We generate a goal which solves all the mutually recursive calls simultaneously. *)
-    val goal = map (Object_Logic.atomize_term (Proof_Context.theory_of ctxt')) preds
+    val goal = map (Object_Logic.atomize_term ctxt') preds
         |> Utils.mk_conj_list
         |> HOLogic.mk_Trueprop
-        |> cterm_of (Proof_Context.theory_of ctxt')
+        |> Thm.cterm_of ctxt'
 
     (* Prove each of the predicates above, leaving any assumptions about called
      * functions unsolved. *)
     val pred_thms = map (
         fn (pred, thm, body_def) =>
-          Thm.trivial (cterm_of (Proof_Context.theory_of ctxt') pred)
-          |> Utils.apply_tac "unfold body" (Hypsubst.stac body_def 1)
+          Thm.trivial (Thm.cterm_of ctxt' pred)
+          |> Utils.apply_tac "unfold body" (Hypsubst.stac ctxt' body_def 1)
           |> Utils.apply_tac "apply rule" (rtac thm 1)
           |> Goal.norm_result ctxt
           |> singleton (Variable.export ctxt' ctxt)
@@ -562,7 +561,7 @@ fun define_funcs
         if is_recursive then (
           Utils.apply_tac "start induction"
                 (rtac (@{thm recguard_induct} WHERE [
-                    ("n", cterm_of (Proof_Context.theory_of ctxt') measure_var)]) 1) thm
+                    ("n", Thm.cterm_of ctxt' measure_var)]) 1) thm
           |> Utils.apply_tac "unfold bodies"
               (EVERY (map (fn x => (EqSubst.eqsubst_tac ctxt' [1] [x] 1)) (rev fn_def_thms)))
           |> Utils.apply_tac "solve induction base cases"
@@ -580,7 +579,7 @@ fun define_funcs
      * Split it up into several proofs.
      *)
     fun prove_partial_l1_corres thm pred =
-      cterm_of (Proof_Context.theory_of ctxt') pred
+      Thm.cterm_of ctxt' pred
       |> Goal.init
       |> Utils.apply_tac "solving using metis" (Utils.metis_tac ctxt [thm] 1)
       |> Goal.finish ctxt'

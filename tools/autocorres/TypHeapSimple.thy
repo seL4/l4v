@@ -436,8 +436,6 @@ proof -
     apply (clarsimp simp: field_lvalue_def split: option.splits)
     apply (safe, simp_all)
        apply (frule_tac v=v and v'=v' in update_field_update)
-       apply clarsimp
-       apply (thin_tac "?P = update_ti_t ?x ?y ?z")
        apply (clarsimp simp: field_of_t_def field_of_def typ_uinfo_t_def)
        apply (frule_tac m=0 in field_names_SomeD2)
         apply simp

@@ -41,20 +41,20 @@ fun map_opt_simpset use_ugly_rules =
 val simp_expr_thm =
     @{lemma "(simp_expr P G G == simp_expr P G G') ==> simp_expr P G G'" by (clarsimp simp: simp_expr_def)}
 fun solve_simp_expr_tac ctxt =
-  Subgoal.FOCUS_PARAMS (fn {context = ctxt, schematics = (_, term_schem), ...} =>
+  Subgoal.FOCUS_PARAMS (fn {context = ctxt, ...} =>
   (fn thm =>
     case Drule.cprems_of thm of
       [] => (no_tac thm)
     | (goal::_) =>
-      (case term_of goal of
+      (case Thm.term_of goal of
         (_ $ (Const (@{const_name "simp_expr"}, _) $ P $ L $ _)) =>
         let
           val goal = @{mk_term "simp_expr ?P ?L ?L" (P, L)} (P, L)
-              |> cterm_of (Proof_Context.theory_of ctxt)
+              |> Thm.cterm_of ctxt
           val simplified = Simplifier.asm_full_rewrite (map_opt_simpset false ctxt) goal
 
           (* Ensure that all schematics have been resolved. *)
-          val schematic_remains = Term.exists_subterm Term.is_Var (prop_of simplified)
+          val schematic_remains = Term.exists_subterm Term.is_Var (Thm.prop_of simplified)
         in
           if schematic_remains then
             (rtac @{thm simp_expr_triv} 1) thm
@@ -72,7 +72,7 @@ fun solve_simp_expr_tac ctxt =
  * where both "A" and "B" are constants (i.e., not schematics).
  *)
 fun solve_simp_expr_const_tac ctxt thm =
-  if (Term.exists_subterm Term.is_Var (term_of (cprem_of thm 1))) then
+  if (Term.exists_subterm Term.is_Var (Thm.term_of (Thm.cprem_of thm 1))) then
     no_tac thm
   else
     SOLVES (
@@ -90,19 +90,17 @@ fun solve_simp_expr_const_tac ctxt thm =
  * too large.
  *)
 fun simp_monad_equiv_pre_tac ctxt =
-  Subgoal.FOCUS_PARAMS (fn {context = ctxt, schematics = (_, term_schem), ...} =>
+  Subgoal.FOCUS_PARAMS (fn {context = ctxt, ...} =>
   (fn thm =>
-    case term_of (cprem_of thm 1) of
+    case Thm.term_of (Thm.cprem_of thm 1) of
       Const (@{const_name Trueprop}, _) $
         (Const (@{const_name monad_equiv}, _) $ P $ _ $ _ $ _ $ _) =>
         let
-          val thy = Proof_Context.theory_of ctxt
-
           (* Perform basic simplification of the term. *)
-          val simp_thm = Simplifier.asm_full_rewrite (map_opt_simpset false ctxt) (cterm_of thy P)
+          val simp_thm = Simplifier.asm_full_rewrite (map_opt_simpset false ctxt) (Thm.cterm_of ctxt P)
         in
           (rtac (@{thm monad_equiv_weaken_pre''} OF [simp_thm]) 1
-            ORELSE (fn t => raise (CTERM ("failed to prove goal", [cprem_of t 1])))) thm
+            ORELSE (fn t => raise (CTERM ("failed to prove goal", [Thm.cprem_of t 1])))) thm
         end
     | _ =>
         all_tac thm
@@ -116,11 +114,10 @@ fun monad_equiv ctxt ct =
 let
   (* Mark context as being "invisible" to reduce warnings being printed. *)
   val ctxt = Context_Position.set_visible false ctxt
-  val thy = Proof_Context.theory_of ctxt
 
   (* Generate our top-level "monad_equiv" goal. *)
-  val goal = @{mk_term "?L == ?R" (L)} (term_of ct)
-    |> cterm_of thy
+  val goal = @{mk_term "?L == ?R" (L)} (Thm.term_of ct)
+    |> Thm.cterm_of ctxt
     |> Goal.init
     |> Utils.apply_tac "Creating object-level equality." (rtac @{thm eq_reflection} 1)
     |> Utils.apply_tac "Creating 'monad_equiv' goal." (rtac @{thm monad_equiv_eq} 1)
@@ -145,7 +142,7 @@ let
       ORELSE
       ((solve_simp_expr_tac ctxt 1)
       ORELSE
-      ((resolve_tac thms THEN_ALL_NEW solve_goal_tac) 1
+      ((resolve_tac ctxt thms THEN_ALL_NEW solve_goal_tac) 1
       ORELSE
       ((print_failure_tac))))))
 
@@ -175,14 +172,14 @@ let
   fun is_simple (_ $ Abs (_, _, Bound _)) = true
     | is_simple (_ $ Abs (_, _, Free _)) = true
     | is_simple (_ $ Abs (_, _, Const _)) = true
-    | is_simple x = false
+    | is_simple _ = false
 in
   case term of
-    (Const (@{const_name "L2_seq"}, _) $ lhs $ Abs (n, _, rhs)) =>
+    (Const (@{const_name "L2_seq"}, _) $ lhs $ Abs (_, _, rhs)) =>
       let
         fun count_var_usage (a $ b) = count_var_usage a + count_var_usage b
           | count_var_usage (Abs (_, _, x)) = count_var_usage x
-          | count_var_usage (Free ("_dummy", dummyT)) = 1
+          | count_var_usage (Free ("_dummy", _)) = 1
           | count_var_usage _ = 0
         val count = count_var_usage (subst_bounds ([Free ("_dummy", dummyT)], rhs))
       in
@@ -201,9 +198,8 @@ val l2_gets_bind_simproc =
 (* Simproc to clean up guards. *)
 fun l2_guard_simproc' ss ctxt term =
 let
-  val thy = Proof_Context.theory_of ctxt
   val simp_thm = Simplifier.asm_full_rewrite
-      (Simplifier.add_cong @{thm HOL.conj_cong} (put_simpset ss ctxt)) (cterm_of thy term)
+      (Simplifier.add_cong @{thm HOL.conj_cong} (put_simpset ss ctxt)) (Thm.cterm_of ctxt term)
   val [lhs, rhs] = Thm.prop_of (Drule.eta_contraction_rule simp_thm) |> Term.strip_comb |> snd
 in
   if Term_Ord.fast_term_ord (lhs, rhs) = EQUAL then

@@ -36,7 +36,7 @@ fun get_record_info thy T =
  * structure.
  *)
 fun get_record_constructor thy T =
-  get_record_info thy T |> #ext_def |> prop_of |> Utils.lhs_of |> head_of
+  get_record_info thy T |> #ext_def |> Thm.prop_of |> Utils.lhs_of |> head_of
   |> Term_Subst.instantiate ([((("'z", 0), @{sort "type"}), @{typ unit})], [])
 
 (*
@@ -54,15 +54,15 @@ fun get_record_constructor thy T =
  * This allows certain simplifications to occur on the definition
  * "foo" without having to expand it.
  *)
-fun generate_ext_simps name def_thm lthy =
+fun generate_ext_simps name def_thm ctxt =
 let
-  val thy = Proof_Context.theory_of lthy
+  val thy = Proof_Context.theory_of ctxt
 
   (* Determine record type. *)
-  val T = prop_of def_thm |> Utils.rhs_of |> head_of |> fastype_of |> body_type
+  val T = Thm.prop_of def_thm |> Utils.rhs_of |> head_of |> fastype_of |> body_type
 
   (* Fetch components that make up the new record. *)
-  val components = prop_of def_thm |> Utils.rhs_of |> strip_comb |> snd
+  val components = Thm.prop_of def_thm |> Utils.rhs_of |> strip_comb |> snd
 
   (* Fetch fields of the record type T. *)
   val fields = let
@@ -75,16 +75,16 @@ let
   fun gen_simp_proof ((field_name, field_type), defn) =
       HOLogic.mk_Trueprop (
         HOLogic.mk_eq (
-          Const (field_name, T --> field_type) $ (prop_of def_thm |> Utils.lhs_of), defn))
-      |> cterm_of thy
+          Const (field_name, T --> field_type) $ (Thm.prop_of def_thm |> Utils.lhs_of), defn))
+      |> Thm.cterm_of ctxt
       |> Goal.init
       |> Utils.apply_tac "solve simple record proof"
-          (simp_tac (lthy addsimps [def_thm]) 1)
-      |> Goal.finish lthy
+          (simp_tac (ctxt addsimps [def_thm]) 1)
+      |> Goal.finish ctxt
   val thms = map gen_simp_proof (fields ~~ components)
 
   (* Define the theorem. *)
-  val lthy = Utils.define_lemmas name thms lthy |> snd
+  val lthy = Utils.define_lemmas name thms ctxt |> snd
 
   (* Add new rules to the simpset. *)
   val lthy = Local_Theory.map_contexts

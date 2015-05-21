@@ -145,7 +145,7 @@ fun get_prog_info ctxt filename : prog_info =
     val csenv = CalculateState.get_csenv thy filename |> the;
 
     (* Get the type of the state record and the globals record. *)
-    fun expand_type_abbrevs t = #T (rep_ctyp (ctyp_of thy t))
+    fun expand_type_abbrevs t = Thm.typ_of (Thm.ctyp_of ctxt t)
     val globals_type = Type (Sign.intern_type thy "globals", []) |> expand_type_abbrevs
     val state_type = Type (Sign.intern_type thy "myvars", [globals_type]) |> expand_type_abbrevs
 
