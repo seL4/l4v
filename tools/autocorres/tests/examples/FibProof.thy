@@ -129,7 +129,7 @@ lemma fibo32_rec: "\<lbrakk> a < a + 2; b = a + 1; c = a + 2 \<rbrakk> \<Longrig
   apply simp
   apply safe
      apply unat_arith
-    apply (metis comm_semiring_1_class.normalizing_semiring_rules(24) less_is_non_zero_p1)
+    apply (metis not_le overflow_plus_one_self word_n1_ge word_not_simps(1))
    apply (metis word_not_simps(1))
   apply (simp add: field_simps)
   done

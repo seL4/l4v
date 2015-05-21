@@ -389,7 +389,7 @@ lemma the_equality': "\<And>P a. \<lbrakk>P a; \<And>x. \<lbrakk> P a; P x \<rbr
 (* Hypothetical "wp_all" tactic *)
 ML {*
 fun wp_all_tac ctxt = let fun f n thm =
-      if n > nprems_of thm then Seq.single thm else
+      if n > Thm.nprems_of thm then Seq.single thm else
         let val thms = WeakestPre.apply_rules_tac_n false
                          ctxt [] (Unsynchronized.ref []) n thm
                        |> Seq.list_of

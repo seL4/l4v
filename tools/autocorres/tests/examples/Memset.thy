@@ -93,7 +93,7 @@ proof -
           apply arith
          apply (metis diff_Suc_diff_eq2 diff_diff_left minus_nat.diff_0 replicate_Suc_append)
         apply (clarsimp simp: ptr_add_def)
-        apply (metis (hide_lams, no_types) add_less_cancel_right comm_monoid_add_class.add.left_neutral intvl_inter_le le0 le_add_diff_inverse of_nat_diff semiring_1_class.of_nat_0)
+        apply (metis (hide_lams, no_types) add_less_cancel_right add.left_neutral intvl_inter_le le0 le_add_diff_inverse of_nat_diff semiring_1_class.of_nat_0)
        apply clarsimp
       apply (clarsimp simp: hrs_mem_update_def)
       done
