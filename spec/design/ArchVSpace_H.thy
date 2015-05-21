@@ -666,10 +666,16 @@ defs checkMappingPPtr_def:
   odE)
   )"
 
+defs armv_contextSwitch_HWASID_def:
+"armv_contextSwitch_HWASID pd hwasid \<equiv> (do
+   setCurrentPD $ addrFromPPtr pd;
+   setHardwareASID hwasid
+od)"
+
 defs armv_contextSwitch_def:
 "armv_contextSwitch pd asid \<equiv> (do
-   doMachineOp $ setCurrentPD $ addrFromPPtr pd;
-   setCurrentASID asid
+   hwasid \<leftarrow> getHWASID asid;
+   doMachineOp $ armv_contextSwitch_HWASID pd hwasid
 od)"
 
 defs setVMRoot_def:
@@ -707,8 +713,7 @@ defs setVMRootForFlush_def:
         if isArchObjectCap v8 \<and> isPageDirectoryCap (capCap v8) \<and> capPDMappedASID (capCap v8) \<noteq> None \<and> capPDBasePtr (capCap v8) = pd
         then let cur_pd = pd in  return False
         else  (do
-            doMachineOp $ setCurrentPD $ addrFromPPtr pd;
-            setCurrentASID asid;
+            armv_contextSwitch pd asid;
             return True
         od)
         )
@@ -853,12 +858,6 @@ defs getHWASID_def:
             return new_hw_asid
         od)
         )
-od)"
-
-defs setCurrentASID_def:
-"setCurrentASID asid\<equiv> (do
-    hw_asid \<leftarrow> getHWASID asid;
-    doMachineOp $ setHardwareASID hw_asid
 od)"
 
 defs doFlush_def:

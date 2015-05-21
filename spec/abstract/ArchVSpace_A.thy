@@ -283,14 +283,20 @@ get_hw_asid :: "asid \<Rightarrow> (hardware_asid,'z::state_ext) s_monad" where
   od)
 od"
 
-text {* Set the current virtual ASID by setting the hardware ASID to one
-associated with it. *}
+
+abbreviation
+  "arm_context_switch_hwasid pd hwasid \<equiv> do
+              setCurrentPD $ addrFromPPtr pd;
+              setHardwareASID hwasid
+          od" 
+
 definition
-set_current_asid :: "asid \<Rightarrow> (unit,'z::state_ext) s_monad" where
-"set_current_asid asid \<equiv> do
-    hw_asid \<leftarrow> get_hw_asid asid;
-    do_machine_op $ setHardwareASID hw_asid
-od"
+  arm_context_switch :: "word32 \<Rightarrow> asid \<Rightarrow> (unit, 'z::state_ext) s_monad"
+where
+  "arm_context_switch pd asid \<equiv> do
+      hwasid \<leftarrow> get_hw_asid asid;
+      do_machine_op $ arm_context_switch_hwasid pd hwasid
+    od"
 
 text {* Switch into the address space of a given thread or the global address
 space if none is correctly configured. *}
@@ -303,10 +309,7 @@ definition
        ArchObjectCap (PageDirectoryCap pd (Some asid)) \<Rightarrow> doE
            pd' \<leftarrow> find_pd_for_asid asid;
            whenE (pd \<noteq> pd') $ throwError InvalidRoot;
-           liftE $ do
-               do_machine_op $ setCurrentPD $ addrFromPPtr pd;
-               set_current_asid asid
-           od
+           liftE $ arm_context_switch pd asid
        odE
      | _ \<Rightarrow> throwError InvalidRoot) <catch>
     (\<lambda>_. do
@@ -368,8 +371,7 @@ set_vm_root_for_flush :: "word32 \<Rightarrow> asid \<Rightarrow> (bool,'z::stat
                     ArchObjectCap (PageDirectoryCap cur_pd (Some _)) \<Rightarrow> return (cur_pd \<noteq> pd)
                   | _ \<Rightarrow> return True);
     (if not_is_pd then do
-        do_machine_op $ setCurrentPD $ addrFromPPtr pd;
-        set_current_asid asid;
+        arm_context_switch pd asid;
         return True
     od
     else return False)

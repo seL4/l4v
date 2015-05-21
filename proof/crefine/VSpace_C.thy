@@ -1431,15 +1431,30 @@ lemma getHWASID_ccorres:
   apply (auto simp: all_invs_but_ct_idle_or_in_cur_domain'_def)
   done
 
-lemma setCurrentASID_ccorres:
+lemma armv_contextSwitch_HWASID_ccorres:
+  "ccorres dc xfdc \<top> (UNIV \<inter> {s. cap_pd_' s = pde_Ptr pd} \<inter> {s. hw_asid_' s = hwasid}) []
+     (doMachineOp (armv_contextSwitch_HWASID pd hwasid)) (Call armv_contextSwitch_HWASID_'proc)"
+  apply (cinit' lift: cap_pd_' hw_asid_')
+   apply (simp add: armv_contextSwitch_HWASID_def doMachineOp_bind setCurrentPD_empty_fail 
+                    setHardwareASID_empty_fail )
+   apply csymbr
+   apply (ctac (no_vcg) add: setCurrentPD_ccorres)
+    apply (fold dc_def)
+    apply (ctac (no_vcg) add: setHardwareASID_ccorres)
+   apply wp
+  apply clarsimp
+  done
+ 
+
+lemma armv_contextSwitch_ccorres:
   "ccorres dc xfdc (all_invs_but_ct_idle_or_in_cur_domain' and (\<lambda>s. asid \<le> mask asid_bits))
-                   (UNIV \<inter> {s. asid_' s = asid}) []
-       (setCurrentASID asid) (Call setCurrentASID_'proc)"
-  apply (cinit lift: asid_')
+                   (UNIV \<inter> {s. cap_pd_' s =  pde_Ptr pd} \<inter> {s. asid_' s = asid} ) []
+       (armv_contextSwitch pd asid) (Call armv_contextSwitch_'proc)"
+  apply (cinit lift: cap_pd_' asid_')
    apply simp
    apply (ctac(no_vcg) add: getHWASID_ccorres)
     apply (fold dc_def)
-    apply (ctac add: setHardwareASID_ccorres)
+    apply (ctac (no_vcg)add: armv_contextSwitch_HWASID_ccorres)
    apply wp
   apply clarsimp
   done
@@ -1545,26 +1560,7 @@ lemma setVMRoot_ccorres:
           apply vcg
          apply wp
         apply (simp add: whenE_def returnOk_def)
-        apply (unfold armv_contextSwitch_def)
-        apply (rule ccorres_call)
-           apply (rule ccorres_Call)
-            apply (rule armv_contextSwitch_impl [unfolded armv_contextSwitch_body_def])
-           apply simp
-           apply (rule ccorres_rhs_assoc)
-           apply (rule ccorres_symb_exec_r)
-             apply (ctac(no_vcg) add: setCurrentPD_ccorres)
-              apply (ctac add: setCurrentASID_ccorres[unfolded dc_def])
-             apply (wp dmo_setCurrentPD_invs_no_cicd')
-            apply simp
-            apply vcg
-           apply simp
-           apply (rule conseqPre)
-            apply vcg
-           apply (rule subsetI)
-           apply simp
-          apply simp
-         apply simp
-        apply simp
+        apply (ctac add: armv_contextSwitch_ccorres[unfolded dc_def])
        apply (simp add: checkPDNotInASIDMap_def checkPDASIDMapMembership_def)
        apply (rule ccorres_stateAssert)
        apply (rule ccorres_rhs_assoc)+
@@ -1640,33 +1636,8 @@ lemma setVMRootForFlush_ccorres:
             rule ccorres_rhs_assoc2,
             rule ccorres_symb_exec_r)
        apply simp
-       apply (subst bind_assoc[symmetric])
-       apply (rule ccorres_split_nothrow_call_novcg)
-             apply (rule ccorres_Call)
-              apply (rule armv_contextSwitch_impl[unfolded armv_contextSwitch_body_def])
-             apply simp
-             apply (rule ccorres_rhs_assoc)
-             apply (rule ccorres_symb_exec_r)
-               apply simp
-               apply (ctac(no_vcg) add:setCurrentPD_ccorres)
-                apply (rule ccorres_call)
-                   apply (ctac(no_vcg) add: setCurrentASID_ccorres)
-                  apply simp
-                 unfolding xfdc_def apply simp
-                apply simp
-               apply (wp dmo_setCurrentPD_invs_no_cicd')
-              apply simp
-              apply vcg
-             apply simp
-             apply (rule conseqPre)
-              apply vcg
-             apply (rule subsetI)
-             apply simp
-            apply simp
-           apply simp
-          apply simp
-         apply ceqv
-        apply (ctac add:ccorres_return_C)
+       apply (ctac (no_vcg)add: armv_contextSwitch_ccorres)
+        apply (ctac add: ccorres_return_C)
        apply wp
       apply (simp add: true_def from_bool_def)
       apply vcg

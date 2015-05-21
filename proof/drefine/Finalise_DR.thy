@@ -577,7 +577,7 @@ done
 
 lemma set_current_pd_dwp[wp]:
   " \<lbrace>\<lambda>ms. underlying_memory ms = m\<rbrace> setCurrentPD (Platform.addrFromPPtr x) \<lbrace>\<lambda>rv ms. underlying_memory ms = m\<rbrace>"
-  by (clarsimp simp:setCurrentPD_def,wp)
+  by (clarsimp simp:setCurrentPD_def writeTTBR0_def isb_def dsb_def,wp)
 
 lemma set_hardware_asid_dwp[wp]:
   " \<lbrace>\<lambda>ms. underlying_memory ms = m\<rbrace> setHardwareASID hw_asid \<lbrace>\<lambda>rv ms. underlying_memory ms = m\<rbrace>"
@@ -688,7 +688,7 @@ lemma dcorres_set_vm_root:
       apply simp
     apply (rule hoare_pre)
     apply (wp hoare_whenE_wp do_machine_op_wp [OF allI] hoare_drop_imps find_pd_for_asid_inv
-      | wpc | simp add: set_current_asid_def get_hw_asid_def load_hw_asid_def if_apply_def2)+
+      | wpc | simp add: arm_context_switch_def get_hw_asid_def load_hw_asid_def if_apply_def2)+
    done
 
 lemma dcorres_delete_asid_pool:
@@ -780,7 +780,7 @@ lemma dcorres_flush_page:
   apply (simp add:load_hw_asid_def)
   apply wp
   apply (clarsimp simp:set_vm_root_for_flush_def)
-    apply (wp do_machine_op_wp|clarsimp simp:set_current_asid_def get_hw_asid_def)+
+    apply (wp do_machine_op_wp|clarsimp simp:arm_context_switch_def get_hw_asid_def)+
     apply (wpc)
     apply wp
     apply (rule hoare_conjI,rule hoare_drop_imp)
@@ -804,7 +804,7 @@ lemma dcorres_flush_table:
     apply (clarsimp simp:load_hw_asid_def)
     apply wp
    apply (clarsimp simp:set_vm_root_for_flush_def)
-   apply (wp do_machine_op_wp|clarsimp simp:set_current_asid_def get_hw_asid_def)+
+   apply (wp do_machine_op_wp|clarsimp simp:arm_context_switch_def get_hw_asid_def)+
          apply wpc
           apply wp
         apply (rule hoare_conjI,rule hoare_drop_imp)

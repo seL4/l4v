@@ -1409,7 +1409,7 @@ lemma delete_asid_pool_idle [wp]:
   apply (rule mapM_wp)
   apply wp
   apply (rule_tac Q = "\<lambda>r s. P (idle_thread s)" in hoare_strengthen_post)
-  apply (clarsimp simp:load_hw_asid_def find_free_hw_asid_def invalidate_asid_entry_def set_current_asid_def get_hw_asid_def | wp | wpc)+
+  apply (clarsimp simp:load_hw_asid_def find_free_hw_asid_def invalidate_asid_entry_def arm_context_switch_def get_hw_asid_def | wp | wpc)+
   apply fastforce
   apply wp
   apply clarsimp

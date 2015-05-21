@@ -142,7 +142,7 @@ crunch_ignore (empty_fail)
         invalidateByVA_I_impl invalidate_I_PoU_impl cleanInvalByVA_impl branchFlush_impl
         clean_D_PoU_impl cleanInvalidate_D_PoC_impl cleanInvalidateL2Range_impl
         invalidateL2Range_impl cleanL2Range_impl flushBTAC_impl writeContextID_impl
-        isb_impl dsb_impl dmb_impl setHardwareASID_impl setCurrentPD_impl do_extended_op
+        isb_impl dsb_impl dmb_impl setHardwareASID_impl writeTTBR0_impl do_extended_op
         cacheRangeOp)
 
 crunch (empty_fail) empty_fail[wp]: set_object, gets_the, get_register, get_cap

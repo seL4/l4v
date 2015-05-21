@@ -59,13 +59,17 @@ lemma integrity_arm_next_asid [iff]:
 
 declare dmo_mol_respects [wp]
 
-crunch respects[wp]: set_current_asid "integrity X aag st"
-  (simp: invalidateTLB_ASID_def setHardwareASID_def ignore: do_machine_op)
+crunch respects[wp]: arm_context_switch "integrity X aag st"
+  (simp: dmo_bind_valid dsb_def isb_def writeTTBR0_def invalidateTLB_ASID_def 
+         setHardwareASID_def setCurrentPD_def 
+ ignore: do_machine_op)
 
 crunch respects[wp]: find_pd_for_asid "integrity X aag st"
 
 crunch respects[wp]: set_vm_root "integrity X aag st"
-  (wp: crunch_wps simp: setCurrentPD_def crunch_simps ignore: do_machine_op)
+    (wp: crunch_wps 
+   simp: setCurrentPD_def isb_def dsb_def writeTTBR0_def dmo_bind_valid crunch_simps 
+ ignore: do_machine_op)
 
 crunch respects[wp]: set_vm_root_for_flush "integrity X aag st"
   (wp: crunch_wps simp: setCurrentPD_def crunch_simps ignore: do_machine_op)

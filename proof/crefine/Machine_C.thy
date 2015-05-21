@@ -31,10 +31,10 @@ assumes resetTimer_ccorres:
            (doMachineOp resetTimer)
            (Call resetTimer_'proc)"
 
-assumes setCurrentPD_ccorres:
+assumes writeTTBR0_ccorres:
   "ccorres dc xfdc \<top> (\<lbrace>\<acute>addr = pd\<rbrace>) []
-           (doMachineOp (setCurrentPD pd))
-           (Call setCurrentPD_'proc)"
+           (doMachineOp (writeTTBR0 pd))
+           (Call writeTTBR0_'proc)"
 
 assumes setHardwareASID_ccorres:
   "ccorres dc xfdc \<top> (\<lbrace>\<acute>hw_asid = hw_asid\<rbrace>) []
@@ -174,34 +174,7 @@ assumes cleanCacheRange_PoU_spec:
 (* The following are fastpath specific assumptions.
    We might want to move them somewhere else. *)
 
-(*
-  The setCurrentPD_fp function is a fastpath specific implementation of
-  setCurrentPD, making stronger assumptions on the assembly level.
-  It has the same outside interface as @{text setCurrentPD}.
-
-  The setHardwareASID_fp function is similar to regular setHardwareASID,
-  but does not perform a data synchronisation barrier, which is performed
-  explicitly via dsb_fp. The fastpath requires these functions taken
-  together to have the same effect, in fact with a slight ordering change.
-*)
-
-assumes setCurrentPD_setHardwareASID_dsb_fp_ccorres:
-  "\<exists>DSB setHWASID_no_DSB.
-  (\<forall>pd.
-    ccorres dc xfdc \<top> (\<lbrace>\<acute>pd_addr = pd\<rbrace>) []
-           (doMachineOp (setCurrentPD pd))
-           (Call setCurrentPD_fp_'proc))
-  \<and> (\<forall>hw_asid.
-    ccorres dc xfdc \<top> (\<lbrace>\<acute>asid___unsigned_char = ucast hw_asid\<rbrace>) []
-           (doMachineOp (setHWASID_no_DSB hw_asid))
-           (Call setHardwareASID_fp_'proc))
-  \<and> ccorres dc xfdc \<top> UNIV []
-           (doMachineOp DSB) (Call dsb_fp_'proc)
-  \<and> (\<forall>hw_asid pd.
-     (do (x :: unit) \<leftarrow> DSB; setCurrentPD pd; setHWASID_no_DSB hw_asid od)
-       = (do setCurrentPD pd; setHardwareASID hw_asid od))"
-
-(* likewise clearExMonitor_fp is an inline-friendly version of clearExMonitor *)
+(*  clearExMonitor_fp is an inline-friendly version of clearExMonitor *)
 assumes clearExMonitor_fp_ccorres:
   "ccorres dc xfdc (\<lambda>_. True) UNIV [] (doMachineOp MachineOps.clearExMonitor)
    (Call clearExMonitor_fp_'proc)"
@@ -691,6 +664,21 @@ lemma cleanCaches_PoU_ccorres:
       apply (ctac (no_vcg) add: invalidate_I_PoU_ccorres)
        apply (ctac (no_vcg) add: dsb_ccorres)
       apply wp
+  apply clarsimp
+  done
+
+
+lemma setCurrentPD_ccorres:
+  "ccorres dc xfdc \<top> (\<lbrace>\<acute>addr = pd\<rbrace>) []
+           (doMachineOp (setCurrentPD pd))
+           (Call setCurrentPD_'proc)"
+  apply cinit'
+   apply (simp add: setCurrentPD_def doMachineOp_bind empty_fail_dsb empty_fail_isb
+                    writeTTBR0_empty_fail)
+   apply (ctac (no_vcg) add: dsb_ccorres)
+    apply (ctac (no_vcg) add: writeTTBR0_ccorres)
+     apply (ctac (no_vcg) add: isb_ccorres)
+    apply wp
   apply clarsimp
   done
 

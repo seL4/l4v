@@ -1339,7 +1339,7 @@ done
 lemma set_vm_root_for_flush_dwp[wp]:
   "\<lbrace>\<lambda>ps. transform ps = cs\<rbrace> set_vm_root_for_flush word1 word2 \<lbrace>\<lambda>r s. transform s = cs\<rbrace>"
   apply (simp add:set_vm_root_for_flush_def)
-  apply (wp do_machine_op_wp|clarsimp simp:set_current_asid_def get_hw_asid_def)+
+  apply (wp do_machine_op_wp|clarsimp simp:arm_context_switch_def get_hw_asid_def)+
   apply (wpc)
     apply wp
     apply (rule hoare_conjI,rule hoare_drop_imp)

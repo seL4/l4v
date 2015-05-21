@@ -1697,7 +1697,7 @@ lemma lookupPTSlot_aligned:
 
 crunch valid_arch_state'[wp]:
  flushPage valid_arch_state'
-  (wp: crunch_wps simp: crunch_simps unless_def
+  (wp: crunch_wps  getHWASID_valid_arch' simp: crunch_simps unless_def
     ignore:getObject updateObject setObject)
 
 crunch valid_arch_state'[wp]:
@@ -1768,7 +1768,7 @@ crunch ko_wp_at'[wp]:
     ignore:getObject updateObject setObject)
 
 crunch ko_wp_at'[wp]:
- setCurrentASID "\<lambda>s. ko_wp_at' P p s"
+ armv_contextSwitch "\<lambda>s. ko_wp_at' P p s"
   (wp: crunch_wps simp: crunch_simps unless_def
     ignore:getObject updateObject setObject)
 

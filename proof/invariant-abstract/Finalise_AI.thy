@@ -1617,7 +1617,7 @@ lemma flush_table_empty:
     flush_table ac aa b word
    \<lbrace>\<lambda>rv s. obj_at (empty_table (set (arm_global_pts (arch_state s)))) word s\<rbrace>"
   apply (clarsimp simp: flush_table_def set_vm_root_def)
-  apply (wp do_machine_op_obj_at set_current_asid_empty hoare_whenE_wp
+  apply (wp do_machine_op_obj_at arm_context_switch_empty hoare_whenE_wp
     | wpc
     | simp
     | wps)+

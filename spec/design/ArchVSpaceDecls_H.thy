@@ -129,6 +129,9 @@ consts
 checkMappingPPtr :: "machine_word \<Rightarrow> vmpage_size \<Rightarrow> (machine_word) + (machine_word) \<Rightarrow> ( lookup_failure , unit ) kernel_f"
 
 consts
+armv_contextSwitch_HWASID :: "machine_word \<Rightarrow> hardware_asid \<Rightarrow> unit machine_monad"
+
+consts
 armv_contextSwitch :: "machine_word \<Rightarrow> asid \<Rightarrow> unit kernel"
 
 consts
@@ -175,9 +178,6 @@ findFreeHWASID :: "hardware_asid kernel"
 
 consts
 getHWASID :: "asid \<Rightarrow> hardware_asid kernel"
-
-consts
-setCurrentASID :: "asid \<Rightarrow> unit kernel"
 
 consts
 doFlush :: "flush_type \<Rightarrow> vptr \<Rightarrow> vptr \<Rightarrow> paddr \<Rightarrow> unit machine_monad"

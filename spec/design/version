@@ -1,3 +1,26 @@
-Built from git repo at ../../../seL4/haskell by kleing
+Built from git repo at /home/jbeeren/nfshome/work/fp/seL4/haskell by jbeeren
 
-eff5683 add support for XN attribute in Haskell
+Generated from changeset:
+a3c1a39 Minor change to haskell implementation of armv_contextSwitch
+
+
+Warning - uncomitted changes used:
+ M src/SEL4/Kernel/VSpace/ARM.lhs
+?? ../api/
+?? ../arch/
+?? ../kernel.elf
+?? ../kernel.elf.strip
+?? ../kernel.o
+?? ../kernel_all.c
+?? ../kernel_all.c_pp
+?? ../kernel_final.c
+?? ../kernel_final.s
+?? ../linker.lds_pp
+?? ../parsetab.py
+?? ../plat/
+?? ../sources_list_updated
+?? ../src/arch/arm/armv/armv6/machine_asm.o
+?? ../src/arch/arm/halt.o
+?? ../src/arch/arm/head.o
+?? ../src/arch/arm/idle.o
+?? ../src/arch/arm/traps.o

@@ -184,10 +184,11 @@ definition
 where "resetTimer \<equiv> machine_op_lift resetTimer_impl"
 
 consts
-  setCurrentPD_impl :: "paddr \<Rightarrow> unit machine_rest_monad"
+  writeTTBR0_impl :: "paddr \<Rightarrow> unit machine_rest_monad"
 definition
-  setCurrentPD :: "paddr \<Rightarrow> unit machine_monad"
-where "setCurrentPD pd \<equiv> machine_op_lift (setCurrentPD_impl pd)"
+  writeTTBR0 :: "paddr \<Rightarrow> unit machine_monad"
+where "writeTTBR0 pd \<equiv> machine_op_lift (writeTTBR0_impl pd)"
+
 
 consts
   setHardwareASID_impl :: "hardware_asid \<Rightarrow> unit machine_rest_monad"
@@ -218,7 +219,13 @@ definition
 where "dmb \<equiv> machine_op_lift dmb_impl"
 
 
-
+definition
+  setCurrentPD :: "paddr \<Rightarrow> unit machine_monad"
+where "setCurrentPD pd \<equiv> do
+             dsb;
+             writeTTBR0 pd;
+             isb
+          od"
 
 consts
   invalidateTLB_impl :: "unit machine_rest_monad"
