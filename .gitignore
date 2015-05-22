@@ -12,6 +12,8 @@ spec/cspec/c/plat/
 spec/cspec/c/sources_list_updated
 spec/umm_types.txt
 
+**/CFunDump.txt
+
 tools/autocorres/doc/quickstart/umm_types.txt
 tools/autocorres/sel4.txt
 tools/autocorres/tests/ROOT
