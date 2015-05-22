@@ -26,10 +26,10 @@
     </sequence>
 
     <!-- CRefine -->
-    <sequence timeout="14400">
+    <sequence timeout="14400" depends="CParser">
         <test name="CKernel">make CKernel</test>
         <test name="CSpec">make CSpec</test>
-        <test name="CBaseRefine">make CBaseRefine</test>
+        <test name="CBaseRefine" depends="Refine">make CBaseRefine</test>
         <test name="CRefine">make CRefine</test>
     </sequence>
 
