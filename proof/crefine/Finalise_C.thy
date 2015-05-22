@@ -587,8 +587,11 @@ context kernel_m begin
 
 lemma suspend_ccorres:
   assumes cteDeleteOne_ccorres:
-  "\<And>slot. ccorres dc xfdc
-   (invs' and sch_act_simple) (UNIV \<inter> {s. slot_' s = Ptr slot}) []
+  "\<And>w slot. ccorres dc xfdc
+   (invs' and sch_act_simple and cte_wp_at' (\<lambda>ct. w = -1 \<or> cteCap ct = NullCap
+        \<or> (\<forall>cap'. ccap_relation (cteCap ct) cap' \<longrightarrow> cap_get_tag cap' = w)) slot)
+   ({s. gs_get_assn cteDeleteOne_'proc (ghost'state_' (globals s)) = w}
+        \<inter> {s. slot_' s = Ptr slot}) []
    (cteDeleteOne slot) (Call cteDeleteOne_'proc)"
   shows
   "ccorres dc xfdc
@@ -1231,7 +1234,8 @@ lemma no_0_pd_at'[elim!]:
 lemma Arch_finaliseCap_ccorres:
   "\<And>final.
    ccorres ccap_relation ret__struct_cap_C_'
-   (invs' and valid_cap' (ArchObjectCap cap))
+   (invs' and valid_cap' (ArchObjectCap cap)
+       and (\<lambda>s. 2 ^ acapBits cap \<le> gsMaxObjectSize s))
    (UNIV \<inter> {s. ccap_relation (ArchObjectCap cap) (cap_' s)}
                         \<inter> {s. final_' s = from_bool final}) []
    (ArchRetypeDecls_H.finaliseCap cap final) (Call Arch_finaliseCap_'proc)"
@@ -1482,26 +1486,30 @@ lemma isFinalCapability_ccorres:
 
 lemma cteDeleteOne_stronger_ccorres:
   "ccorres dc xfdc
-   (invs' ) (UNIV \<inter> {s. slot_' s = Ptr slot}) []
-   (cteDeleteOne slot) (Call cteDeleteOne_'proc)"  
+   (invs' and cte_wp_at' (\<lambda>ct. w = -1 \<or> cteCap ct = NullCap
+        \<or> (\<forall>cap'. ccap_relation (cteCap ct) cap' \<longrightarrow> cap_get_tag cap' = w)) slot)
+   ({s. gs_get_assn cteDeleteOne_'proc (ghost'state_' (globals s)) = w}
+        \<inter> {s. slot_' s = Ptr slot}) []
+   (cteDeleteOne slot) (Call cteDeleteOne_'proc)"
   unfolding cteDeleteOne_def
   apply (rule ccorres_symb_exec_l'
                 [OF _ getCTE_inv getCTE_sp empty_fail_getCTE])
   apply (cinit' lift: slot_' cong: call_ignore_cong)
    apply (rule ccorres_move_c_guard_cte)
-   apply (rule ccorres_symb_exec_r)
-     apply (rule_tac xf'=ret__unsigned_long_' in ccorres_abstract)
-      apply ceqv
-     apply (rule ccorres_gen_asm2,
-            erule_tac t="rv' = scast cap_null_cap"
-                  and s="cteCap cte = NullCap"
-                   in ssubst)
-     apply (clarsimp simp only: when_def unless_def dc_def[symmetric])
-     apply (rule ccorres_cond2[where R=\<top>])
-       apply (clarsimp simp: Collect_const_mem)
-      apply (rule ccorres_rhs_assoc)+
-      apply csymbr
-      apply csymbr
+   apply csymbr
+   apply (rule ccorres_abstract_cleanup)
+   apply (rule ccorres_gen_asm2,
+          erule_tac t="cap_type = scast cap_null_cap"
+                and s="cteCap cte = NullCap"
+                 in ssubst)
+   apply (clarsimp simp only: when_def unless_def dc_def[symmetric])
+   apply (rule ccorres_cond2[where R=\<top>])
+     apply (clarsimp simp: Collect_const_mem)
+    apply (rule ccorres_rhs_assoc)+
+    apply csymbr
+    apply csymbr
+    apply (rule ccorres_Guard_Seq)
+    apply (rule ccorres_basic_srnoop)
       apply (ctac(no_vcg) add: isFinalCapability_ccorres[where slot=slot])
        apply (rule_tac A="invs'  and cte_wp_at' (op = cte) slot"
                      in ccorres_guard_imp2[where A'=UNIV])
@@ -1519,25 +1527,26 @@ lemma cteDeleteOne_stronger_ccorres:
                              invs_pspace_aligned' cte_wp_at_ctes_of)
        apply (erule(1) cmap_relationE1 [OF cmap_relation_cte])
        apply (clarsimp simp: typ_heap_simps ccte_relation_ccap_relation)
-      apply (wp isFinalCapability_inv)
-     apply (rule ccorres_return_Skip)
+      apply (wp isFinalCapability_inv)  
+     apply simp
     apply (simp del: Collect_const add: false_def)
-    apply vcg
-   apply (rule conseqPre, vcg)
-   apply clarsimp
+   apply (rule ccorres_return_Skip)
   apply (clarsimp simp: Collect_const_mem cte_wp_at_ctes_of)
   apply (erule(1) cmap_relationE1 [OF cmap_relation_cte])
   apply (clarsimp simp: typ_heap_simps cap_get_tag_isCap
                  dest!: ccte_relation_ccap_relation)
+  apply (auto simp: o_def)
   done
-
 
 lemma cteDeleteOne_ccorres:
   "ccorres dc xfdc
-   (invs' and sch_act_simple) (UNIV \<inter> {s. slot_' s = Ptr slot}) []
+   (invs' and sch_act_simple and cte_wp_at' (\<lambda>ct. w = -1 \<or> cteCap ct = NullCap
+        \<or> (\<forall>cap'. ccap_relation (cteCap ct) cap' \<longrightarrow> cap_get_tag cap' = w)) slot)
+   ({s. gs_get_assn cteDeleteOne_'proc (ghost'state_' (globals s)) = w}
+        \<inter> {s. slot_' s = Ptr slot}) []
    (cteDeleteOne slot) (Call cteDeleteOne_'proc)"
   apply (rule ccorres_guard_imp2)
-  apply (rule cteDeleteOne_stronger_ccorres)
+  apply (rule cteDeleteOne_stronger_ccorres[where w=w])
   apply clarsimp
 done
 
@@ -1572,12 +1581,20 @@ lemma deletingIRQHandler_ccorres:
           ucast_nat_def uint_up_ucast is_up)
        apply (erule getIRQSlot_ccorres_stuff)
       apply ceqv
-     apply (simp add: dc_def[symmetric])
-     apply (ctac add: cteDeleteOne_ccorres)
+     apply (rule ccorres_Guard_Seq)
+     apply (rule ccorres_symb_exec_r)
+       apply (ctac add: cteDeleteOne_ccorres[where w="scast cap_async_endpoint_cap"])
+      apply vcg
+     apply (rule conseqPre, vcg, clarsimp simp: rf_sr_def
+          gs_set_assn_Delete_cstate_relation[unfolded o_def])
+    apply (simp add: getIRQSlot_def locateSlot_def getInterruptState_def)
     apply wp
    apply vcg
-  apply simp
-  done
+  apply (clarsimp simp: cap_get_tag_isCap ghost_assertion_data_get_def
+                        ghost_assertion_data_set_def)
+  apply (simp add: cap_tag_defs)
+  sorry (* oops we never put this in the haskell invariants 
+  done *)
 
 lemma Zombie_new_spec:
   "\<forall>s. \<Gamma>\<turnstile> ({s} \<inter> {s. type_' s = 32 \<or> type_' s < 31}) Call Zombie_new_'proc
@@ -1623,7 +1640,8 @@ lemma finaliseCap_ccorres:
    ccorres (\<lambda>rv rv'. ccap_relation (fst rv) (finaliseCap_ret_C.remainder_C rv')
                    \<and> irq_opt_relation (snd rv) (finaliseCap_ret_C.irq_C rv'))
    ret__struct_finaliseCap_ret_C_'
-   (invs' and sch_act_simple and valid_cap' cap and (\<lambda>s. ksIdleThread s \<notin> capRange cap))
+   (invs' and sch_act_simple and valid_cap' cap and (\<lambda>s. ksIdleThread s \<notin> capRange cap)
+          and (\<lambda>s. 2 ^ capBits cap \<le> gsMaxObjectSize s))
    (UNIV \<inter> {s. ccap_relation cap (cap_' s)} \<inter> {s. final_' s = from_bool final}
                         \<inter> {s. exposed_' s = from_bool flag (* dave has name wrong *)}) []
    (finaliseCap cap final flag) (Call finaliseCap_'proc)"
@@ -1791,8 +1809,8 @@ lemma finaliseCap_ccorres:
   apply (clarsimp simp: cap_get_tag_isCap word_sle_def Collect_const_mem
                         false_def from_bool_def)
   apply (intro impI conjI)
+         apply (clarsimp split: bool.splits)
         apply (clarsimp split: bool.splits)
-        apply clarsimp
        apply (clarsimp simp: valid_cap'_def isCap_simps)
       apply (clarsimp simp: isCap_simps capRange_def
                             capAligned_def)

@@ -5254,8 +5254,7 @@ lemma word_sdiv_div_minus1 [simp]:
   apply (metis wi_hom_neg word_sint.Rep_inverse')
   done
 
-lemma word_sdiv_0 [simp]: "(x :: ('a::len) word) sdiv 0 = 0"
-  by (clarsimp simp: sdiv_word_def)
+lemmas word_sdiv_0 = word_sdiv_div0
 
 lemma sdiv_word_min:
     "- (2 ^ (size a - 1)) \<le> sint (a :: ('a::len) word) sdiv sint (b :: ('a::len) word)"
@@ -5323,6 +5322,12 @@ lemmas sdiv_word32_max = sdiv_word_max [where 'a=32, simplified word_size, simpl
     sdiv_word_max [where 'a="32 signed", simplified word_size, simplified]
 lemmas sdiv_word32_min = sdiv_word_min [where 'a=32, simplified word_size, simplified]
     sdiv_word_min [where 'a="32 signed", simplified word_size, simplified]
+
+lemmas word_sdiv_numerals_lhs = sdiv_word_def[where a="numeral x" for x]
+    sdiv_word_def[where a=0] sdiv_word_def[where a=1]
+
+lemmas word_sdiv_numerals = word_sdiv_numerals_lhs[where b="numeral y" for y]
+    word_sdiv_numerals_lhs[where b=0] word_sdiv_numerals_lhs[where b=1]
 
 (*
  * Signed modulo properties.
@@ -5407,6 +5412,12 @@ lemma smod_word_alt_def:
              minus_word.abs_eq [symmetric] times_word.abs_eq [symmetric])
   apply (clarsimp simp: smod_word_def smod_int_def)
   done
+
+lemmas word_smod_numerals_lhs = smod_word_def[where a="numeral x" for x]
+    smod_word_def[where a=0] smod_word_def[where a=1]
+
+lemmas word_smod_numerals = word_smod_numerals_lhs[where b="numeral y" for y]
+    word_smod_numerals_lhs[where b=0] word_smod_numerals_lhs[where b=1]
 
 lemma sint_of_int_eq:
   "\<lbrakk> - (2 ^ (len_of TYPE('a) - 1)) \<le> x; x < 2 ^ (len_of TYPE('a) - 1) \<rbrakk> \<Longrightarrow> sint (of_int x :: ('a::len) word) = x"

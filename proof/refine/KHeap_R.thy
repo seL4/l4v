@@ -1817,19 +1817,23 @@ lemma setEndpoint_idle'[wp]:
 crunch it[wp]: setEndpoint "\<lambda>s. P (ksIdleThread s)"
   (simp: updateObject_default_inv ignore: getObject)
 
-lemma setObject_ksMachine:
-  "\<lbrakk> \<And>p q n ko. \<lbrace>\<lambda>s. P (ksMachineState s)\<rbrace> updateObject val p q n ko \<lbrace>\<lambda>rv s. P (ksMachineState s)\<rbrace> \<rbrakk>
-     \<Longrightarrow> \<lbrace>\<lambda>s. P (ksMachineState s)\<rbrace> setObject ptr val \<lbrace>\<lambda>rv s. P (ksMachineState s)\<rbrace>"
+lemma setObject_ksPSpace_only:
+  "\<lbrakk> \<And>p q n ko. \<lbrace>P\<rbrace> updateObject val p q n ko \<lbrace>\<lambda>rv. P \<rbrace>;
+        \<And>f s. P (ksPSpace_update f s) = P s \<rbrakk>
+     \<Longrightarrow> \<lbrace>P\<rbrace> setObject ptr val \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (simp add: setObject_def split_def)
   apply (wp | simp | assumption)+
   done
 
+lemma setObject_ksMachine:
+  "\<lbrakk> \<And>p q n ko. \<lbrace>\<lambda>s. P (ksMachineState s)\<rbrace> updateObject val p q n ko \<lbrace>\<lambda>rv s. P (ksMachineState s)\<rbrace> \<rbrakk>
+     \<Longrightarrow> \<lbrace>\<lambda>s. P (ksMachineState s)\<rbrace> setObject ptr val \<lbrace>\<lambda>rv s. P (ksMachineState s)\<rbrace>"
+  by (simp add: setObject_ksPSpace_only)
+
 lemma setObject_ksInterrupt:
   "\<lbrakk> \<And>p q n ko. \<lbrace>\<lambda>s. P (ksInterruptState s)\<rbrace> updateObject val p q n ko \<lbrace>\<lambda>rv s. P (ksInterruptState s)\<rbrace> \<rbrakk>
      \<Longrightarrow> \<lbrace>\<lambda>s. P (ksInterruptState s)\<rbrace> setObject ptr val \<lbrace>\<lambda>rv s. P (ksInterruptState s)\<rbrace>"
-  apply (simp add: setObject_def split_def)
-  apply (wp | simp | assumption)+
-  done
+  by (simp add: setObject_ksPSpace_only)
 
 lemma valid_irq_handlers_lift':
   assumes x: "\<And>P. \<lbrace>\<lambda>s. P (cteCaps_of s)\<rbrace> f \<lbrace>\<lambda>rv s. P (cteCaps_of s)\<rbrace>"
@@ -1853,17 +1857,23 @@ lemma set_ep_irq_node' [wp]:
   "\<lbrace>\<lambda>s. P (irq_node' s)\<rbrace> setEndpoint ptr val \<lbrace>\<lambda>rv s. P (irq_node' s)\<rbrace>"
   by (simp add: setEndpoint_def | wp setObject_ksInterrupt updateObject_default_inv)+
 
+lemma set_ep_maxObj [wp]:
+  "\<lbrace>\<lambda>s. P (gsMaxObjectSize s)\<rbrace> setEndpoint ptr val \<lbrace>\<lambda>rv s. P (gsMaxObjectSize s)\<rbrace>"
+  by (simp add: setEndpoint_def | wp setObject_ksPSpace_only updateObject_default_inv)+
+
 lemma valid_global_refs_lift':
   assumes ctes: "\<And>P. \<lbrace>\<lambda>s. P (ctes_of s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ctes_of s)\<rbrace>"
   assumes arch: "\<And>P. \<lbrace>\<lambda>s. P (ksArchState s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ksArchState s)\<rbrace>"
   assumes idle: "\<And>P. \<lbrace>\<lambda>s. P (ksIdleThread s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ksIdleThread s)\<rbrace>"
   assumes irqn: "\<And>P. \<lbrace>\<lambda>s. P (irq_node' s)\<rbrace> f \<lbrace>\<lambda>_ s. P (irq_node' s)\<rbrace>"
+  assumes maxObj: "\<And>P. \<lbrace>\<lambda>s. P (gsMaxObjectSize s)\<rbrace> f \<lbrace>\<lambda>_ s. P (gsMaxObjectSize s)\<rbrace>"
   shows "\<lbrace>valid_global_refs'\<rbrace> f \<lbrace>\<lambda>_. valid_global_refs'\<rbrace>"
-  apply (simp add: valid_global_refs'_def valid_refs'_def global_refs'_def)
+  apply (simp add: valid_global_refs'_def valid_refs'_def global_refs'_def valid_cap_sizes'_def)
   apply (rule hoare_lift_Pf [where f="ksArchState"])
    apply (rule hoare_lift_Pf [where f="ksIdleThread"])
     apply (rule hoare_lift_Pf [where f="irq_node'"])
-     apply (wp ctes hoare_vcg_const_Ball_lift arch idle irqn)
+     apply (rule hoare_lift_Pf [where f="gsMaxObjectSize"])
+      apply (wp ctes hoare_vcg_const_Ball_lift arch idle irqn maxObj)
   done
 
 lemma valid_arch_state_lift':
@@ -1970,6 +1980,10 @@ lemma set_aep_ksInterrupt[wp]:
 lemma set_aep_ksMachine[wp]:
   "\<lbrace>\<lambda>s. P (ksMachineState s)\<rbrace> setAsyncEP ptr val \<lbrace>\<lambda>rv s. P (ksMachineState s)\<rbrace>"
   by (simp add: setAsyncEP_def | wp setObject_ksMachine updateObject_default_inv)+
+
+lemma set_aep_maxObj [wp]:
+  "\<lbrace>\<lambda>s. P (gsMaxObjectSize s)\<rbrace> setAsyncEP ptr val \<lbrace>\<lambda>rv s. P (gsMaxObjectSize s)\<rbrace>"
+  by (simp add: setAsyncEP_def | wp setObject_ksPSpace_only updateObject_default_inv)+
 
 lemma set_aep_global_refs' [wp]:
   "\<lbrace>valid_global_refs'\<rbrace> setAsyncEP ptr val \<lbrace>\<lambda>_. valid_global_refs'\<rbrace>"

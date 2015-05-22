@@ -1319,12 +1319,8 @@ proof (simp add: invs'_def valid_state'_def valid_pspace'_def
     by (simp add: class_links_def tree_to_ctes mdb_next_unfold)
 
   show "valid_global_refs' ?s" using refs
-    apply (simp add: valid_global_refs'_def tree_to_ctes
-                     global_refs'_def valid_refs'_def Ball_def)
-    apply (erule conjE)+
-    apply (erule allEI)
-    apply (clarsimp simp: ran_def)
-    done
+    by (simp add: valid_global_refs'_def tree_to_ctes valid_cap_sizes'_def
+                  global_refs'_def valid_refs'_def ball_ran_eq)
   
   show "valid_arch_state' ?s"
     using arch global_refs2

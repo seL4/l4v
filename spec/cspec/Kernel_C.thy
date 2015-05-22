@@ -12,17 +12,19 @@ theory Kernel_C
 imports
   "../machine/ARMMachineTypes"
   "../../lib/CTranslationNICTA"
+  "../../tools/asmrefine/CommonOps"
 begin
 
 declare [[populate_globals=true]]
 
-type_synonym cghost_state = "(machine_word \<rightharpoonup> vmpage_size) * (machine_word \<rightharpoonup> nat)"
+type_synonym cghost_state = "(machine_word \<rightharpoonup> vmpage_size) * (machine_word \<rightharpoonup> nat)
+    * ghost_assertions"
 
 definition
   gs_clear_region :: "word32 \<Rightarrow> nat \<Rightarrow> cghost_state \<Rightarrow> cghost_state" where
   "gs_clear_region ptr bits gs \<equiv>
    (%x. if x \<in> {ptr..+2 ^ bits} then None else fst gs x,
-    %x. if x \<in> {ptr..+2 ^ bits} then None else snd gs x)"
+    %x. if x \<in> {ptr..+2 ^ bits} then None else fst (snd gs) x, snd (snd gs))"
 
 definition
   gs_new_frames:: "vmpage_size \<Rightarrow> word32 \<Rightarrow> nat \<Rightarrow> cghost_state \<Rightarrow> cghost_state"
@@ -40,7 +42,17 @@ definition
    if bits < sz + 4 then gs
    else (fst gs, \<lambda>x. if \<exists>n\<le>mask (bits - sz - 4). x = ptr + n * 2 ^ (sz + 4)
                      then Some sz
-                     else snd gs x)"
+                     else fst (snd gs) x, snd (snd gs))"
+
+abbreviation
+  gs_get_assn :: "int \<Rightarrow> cghost_state \<Rightarrow> word32"
+  where
+  "gs_get_assn k \<equiv> ghost_assertion_data_get k (snd o snd)"
+
+abbreviation
+  gs_set_assn :: "int \<Rightarrow> word32 \<Rightarrow> cghost_state \<Rightarrow> cghost_state"
+  where
+  "gs_set_assn k v \<equiv> ghost_assertion_data_set k v (apsnd o apsnd)"
 
 declare [[record_codegen = false]]
 declare [[allow_underscore_idents = true]]

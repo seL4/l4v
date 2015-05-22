@@ -1963,6 +1963,21 @@ lemma rf_sr_armKSGlobalPD:
          = symbol_table ''armKSGlobalPD''"
   by (clarsimp simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def carch_globals_def)
 
+lemma ghost_assertion_size_logic':
+  "unat (sz :: word32) \<le> gsMaxObjectSize s
+    \<Longrightarrow> cstate_relation s gs
+    \<Longrightarrow> gs_get_assn cap_get_capSizeBits_'proc (ghost'state_' gs) = 0 \<or>
+            sz \<le> gs_get_assn cap_get_capSizeBits_'proc (ghost'state_' gs)"
+  by (clarsimp simp: rf_sr_def cstate_relation_def Let_def ghost_size_rel_def
+                     linorder_not_le word_less_nat_alt)
+
+lemma ghost_assertion_size_logic:
+  "unat (sz :: word32) \<le> gsMaxObjectSize s
+    \<Longrightarrow> (s, \<sigma>) \<in> rf_sr
+    \<Longrightarrow> gs_get_assn cap_get_capSizeBits_'proc (ghost'state_' (globals \<sigma>)) = 0 \<or>
+            sz \<le> gs_get_assn cap_get_capSizeBits_'proc (ghost'state_' (globals \<sigma>))"
+  by (clarsimp simp: rf_sr_def ghost_assertion_size_logic')
+
 end
 end
 

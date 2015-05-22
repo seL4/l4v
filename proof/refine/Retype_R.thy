@@ -4740,29 +4740,32 @@ crunch ksArch[wp]: createNewCaps "\<lambda>s. P (ksArchState s)"
 crunch it[wp]: createNewCaps "\<lambda>s. P (ksIdleThread s)"
   (simp: crunch_simps unless_def wp: crunch_wps updateObject_default_inv
        ignore: getObject setObject)
+crunch gsMaxObjectSize[wp]: createNewCaps "\<lambda>s. P (gsMaxObjectSize s)"
+  (simp: crunch_simps unless_def wp: crunch_wps updateObject_default_inv
+       ignore: getObject setObject)
 
 lemma createNewCaps_global_refs':
   "\<lbrace>\<lambda>s. range_cover ptr sz (APIType_capBits ty us) n \<and> n \<noteq> 0
        \<and> pspace_aligned' s \<and> pspace_distinct' s
-       \<and> pspace_no_overlap' ptr sz s \<and> valid_global_refs' s\<rbrace>
+       \<and> pspace_no_overlap' ptr sz s \<and> valid_global_refs' s
+       \<and> 0 < gsMaxObjectSize s\<rbrace>
      createNewCaps ty ptr n us
    \<lbrace>\<lambda>rv. valid_global_refs'\<rbrace>"
-  apply (simp add: valid_global_refs'_def valid_refs'_def)
-  apply (rule_tac Q="\<lambda>rv s. \<forall>ptr. \<not> cte_wp_at' (\<lambda>cte. kernel_data_refs \<inter> capRange (cteCap cte)
-                                                        \<noteq> {}) ptr s \<and> global_refs' s \<subseteq> kernel_data_refs"
+  apply (simp add: valid_global_refs'_def valid_cap_sizes'_def valid_refs'_def)
+  apply (rule_tac Q="\<lambda>rv s. \<forall>ptr. \<not> cte_wp_at' (\<lambda>cte. (kernel_data_refs \<inter> capRange (cteCap cte) \<noteq> {}
+        \<or> 2 ^ capBits (cteCap cte) > gsMaxObjectSize s)) ptr s \<and> global_refs' s \<subseteq> kernel_data_refs"
                  in hoare_post_imp)
-   apply (clarsimp simp: cte_wp_at_ctes_of elim!: ranE)
+   apply (auto simp: cte_wp_at_ctes_of linorder_not_less elim!: ranE)[1]
   apply (rule hoare_pre)
    apply (simp add: global_refs'_def)
    apply (rule hoare_use_eq [where f=ksArchState, OF createNewCaps_ksArch])
    apply (rule hoare_use_eq [where f=ksIdleThread, OF createNewCaps_it])
    apply (rule hoare_use_eq [where f=irq_node', OF createNewCaps_ksInterrupt])
-   apply (wp hoare_vcg_all_lift createNewCaps_cte_wp_at2)
+   apply (rule hoare_use_eq [where f=gsMaxObjectSize], wp)
+   apply (wp hoare_vcg_all_lift createNewCaps_cte_wp_at2[where sz=sz])
   apply (clarsimp simp: cte_wp_at_ctes_of global_refs'_def
                         makeObject_cte)
-  apply (intro conjI)
-  apply fastforce
-  apply auto
+  apply (auto simp: linorder_not_less ball_ran_eq)
   done
 
 crunch ksArchState[wp]: createNewCaps "\<lambda>s. P (ksArchState s)"
@@ -5264,10 +5267,12 @@ lemma createNewCaps_invs':
         \<and> caps_no_overlap'' ptr sz s \<and> ptr \<noteq> 0 
         \<and> {ptr .. (ptr && ~~ mask sz) + 2 ^ sz - 1} \<inter> kernel_data_refs = {}
         \<and> caps_overlap_reserved' {ptr..ptr + of_nat n * 2^(APIType_capBits ty us) - 1} s
-        \<and> (ty = APIObjectType ArchTypes_H.CapTableObject \<longrightarrow> us > 0))
+        \<and> (ty = APIObjectType ArchTypes_H.CapTableObject \<longrightarrow> us > 0)
+        \<and> gsMaxObjectSize s > 0)
        and K (range_cover ptr sz (APIType_capBits ty us) n \<and> n \<noteq> 0)\<rbrace>
      createNewCaps ty ptr n us
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  (is "\<lbrace>?P and K ?Q\<rbrace> ?f \<lbrace>\<lambda>rv. invs'\<rbrace>")
 proof (rule hoare_gen_asm, erule conjE)
   assume cover: "range_cover ptr sz (APIType_capBits ty us) n" and not_0: "n \<noteq> 0"
   have cnc_ct_not_inQ:
@@ -5285,11 +5290,7 @@ proof (rule hoare_gen_asm, erule conjE)
     using cover not_0
     apply (fastforce simp: valid_pspace'_def)
     done
-  show "\<lbrace>\<lambda>s. invs' s \<and> ct_active' s \<and> pspace_no_overlap' ptr sz s
-        \<and> caps_no_overlap'' ptr sz s \<and> ptr \<noteq> 0 
-        \<and> {ptr .. (ptr && ~~ mask sz) + 2 ^ sz - 1} \<inter> kernel_data_refs = {}
-        \<and> caps_overlap_reserved' {ptr..ptr + of_nat n * 2^(APIType_capBits ty us) - 1} s
-        \<and> (ty = APIObjectType ArchTypes_H.CapTableObject \<longrightarrow> us > 0)\<rbrace>
+  show "\<lbrace>?P\<rbrace>
      createNewCaps ty ptr n us
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def
@@ -5528,21 +5529,22 @@ lemma createObjects_no_cte_valid_global:
         valid_global_refs' s\<rbrace>
       createObjects ptr n val gbits
    \<lbrace>\<lambda>rv s. valid_global_refs' s\<rbrace>"
-  apply (simp add: valid_global_refs'_def valid_refs'_def)
-  apply (rule_tac Q="\<lambda>rv s. \<forall>ptr. \<not> cte_wp_at' (\<lambda>cte. kernel_data_refs \<inter> capRange (cteCap cte)
-                                                        \<noteq> {}) ptr s \<and> global_refs' s \<subseteq> kernel_data_refs"
+  apply (simp add: valid_global_refs'_def valid_cap_sizes'_def valid_refs'_def)
+  apply (rule_tac Q="\<lambda>rv s. \<forall>ptr. \<not> cte_wp_at' (\<lambda>cte. (kernel_data_refs \<inter> capRange (cteCap cte) \<noteq> {}
+        \<or> 2 ^ capBits (cteCap cte) > gsMaxObjectSize s)) ptr s \<and> global_refs' s \<subseteq> kernel_data_refs"
                  in hoare_post_imp)
-   apply (clarsimp simp: cte_wp_at_ctes_of elim!: ranE)
+   apply (auto simp: cte_wp_at_ctes_of linorder_not_less elim!: ranE)[1]
   apply (rule hoare_pre)
    apply (simp add: global_refs'_def)
    apply (rule hoare_use_eq [where f=ksArchState, OF createObjects_ksArch])
    apply (rule hoare_use_eq [where f=ksIdleThread, OF createObjects_it])
    apply (rule hoare_use_eq [where f=irq_node', OF createObjects_ksInterrupt])
+   apply (rule hoare_use_eq [where f=gsMaxObjectSize], wp)
    apply (simp add:createObjects_def)
    apply (wp hoare_vcg_all_lift createObjects_orig_cte_wp_at2')
   apply (simp add: no_cte no_tcb split_def cte_wp_at_ctes_of split: option.splits)
   apply (clarsimp simp: global_refs'_def)
-  apply auto
+  apply (auto simp: ball_ran_eq linorder_not_less[symmetric])
   done
 
 lemma createObjects'_typ_at:

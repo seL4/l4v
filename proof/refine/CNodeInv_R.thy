@@ -5215,11 +5215,10 @@ lemma weak_derived_cte_refs:
   apply simp
   done
 
-lemma weak_derived_capRange:
-  "weak_derived' c c' \<Longrightarrow> capRange c' = capRange c"
+lemma weak_derived_capRange_capBits:
+  "weak_derived' c c' \<Longrightarrow> capRange c' = capRange c \<and> capBits c' = capBits c"
   apply (clarsimp simp: weak_derived'_def)
-  apply (rule master_eqI, rule capRange_Master)
-  apply simp
+  apply (metis capRange_Master capBits_Master)
   done
 
 lemma cteSwap_refs[wp]:
@@ -5230,8 +5229,8 @@ lemma cteSwap_refs[wp]:
   apply (simp add: cteSwap_def)
   apply wp
   apply (clarsimp simp: cte_wp_at_ctes_of)
-  apply (drule(1) valid_global_refsD')+
-  apply (drule weak_derived_capRange)+
+  apply (drule(1) valid_global_refsD_with_objSize)+
+  apply (drule weak_derived_capRange_capBits)+
   apply (clarsimp simp: global_refs'_def Int_Un_distrib2)
   done
 
@@ -5288,7 +5287,7 @@ lemma cteSwap_invs'[wp]:
              valid_queues_lift cur_tcb_lift
              valid_irq_node_lift irqs_masked_lift tcb_in_cur_domain'_lift ct_idle_or_in_cur_domain'_lift2)
   apply (clarsimp simp: cte_wp_at_ctes_of weak_derived_zobj weak_derived_cte_refs
-                        weak_derived_capRange)
+                        weak_derived_capRange_capBits)
   done
 
 lemma capSwap_invs'[wp]:
@@ -5788,14 +5787,13 @@ lemma make_zombie_invs':
 
      apply (clarsimp simp: disj_ac cte_wp_at_ctes_of
                     dest!: ztc_phys capBits_capUntyped_capRange)
-     apply (drule(1) capBits_capUntyped_capRange, simp)
-     apply (clarsimp dest!: valid_global_refsD')
+     apply (frule(1) capBits_capUntyped_capRange, simp)
+     apply (clarsimp dest!: valid_global_refsD_with_objSize)
     apply safe[1]
      apply (clarsimp simp: cte_wp_at_ctes_of)
      apply (drule bspec[where x=sl], simp)
      apply (clarsimp simp: isCap_simps)
-
-    apply (fastforce elim: if_unsafe_then_capD' simp: isCap_simps)
+    apply (auto elim: if_unsafe_then_capD')[1]
    apply (clarsimp simp: cte_wp_at_ctes_of)
    apply (subgoal_tac "st_tcb_at' (op = Inactive) p' s
                                \<and> obj_at' (Not \<circ> tcbQueued) p' s")
@@ -9005,6 +9003,8 @@ crunch valid_arch_state'[wp]: cteMove "valid_arch_state'"
 
 crunch global_refs_noop[wp]: cteMove "\<lambda>s. P (global_refs' s)"
   (wp: crunch_wps)
+crunch gsMaxObjectSize[wp]: cteMove "\<lambda>s. P (gsMaxObjectSize s)"
+  (wp: crunch_wps)
 
 lemma cteMove_global_refs' [wp]:
   "\<lbrace>\<lambda>s. valid_global_refs' s
@@ -9012,16 +9012,22 @@ lemma cteMove_global_refs' [wp]:
       \<and> cte_wp_at' (\<lambda>c. cteCap c = NullCap) dest s\<rbrace>
      cteMove cap src dest
    \<lbrace>\<lambda>rv. valid_global_refs'\<rbrace>"
-  apply (simp add: valid_global_refs'_def valid_refs'_cteCaps)
+  apply (rule hoare_name_pre_state, clarsimp simp: valid_global_refs'_def)
+  apply (frule_tac p=src and cte="the (ctes_of s src)" in cte_at_valid_cap_sizes_0)
+   apply (clarsimp simp: cte_wp_at_ctes_of)
+  apply (simp add: valid_refs'_cteCaps valid_cap_sizes_cteCaps)
   apply (rule hoare_pre)
    apply (rule hoare_use_eq [where f=global_refs', OF cteMove_global_refs_noop])
+   apply (rule hoare_use_eq [where f=gsMaxObjectSize], wp)
    apply (simp add: cteMove_def)
    apply (wp getCTE_wp)
-  apply (clarsimp simp: cte_wp_at_ctes_of ran_def)
+  apply (clarsimp simp: cte_wp_at_ctes_of ran_def all_conj_distrib[symmetric]
+                        imp_conjR[symmetric])
   apply (subst(asm) imp_ex, subst(asm) all_comm)
   apply (drule_tac x="(id (dest := src, src := dest)) a" in spec)
   apply (clarsimp simp: modify_map_def cteCaps_of_def
-                 split: split_if_asm dest!: weak_derived_capRange)
+                 split: split_if_asm dest!: weak_derived_capRange_capBits)
+  apply auto?
   done
 
 lemma cteMove_invs' [wp]:
@@ -9042,7 +9048,6 @@ lemma cteMove_invs' [wp]:
                 sch_act_wf_lift ct_idle_or_in_cur_domain'_lift2 tcb_in_cur_domain'_lift)
   apply clarsimp
   done
-
 lemma cteMove_cte_wp_at:
   "\<lbrace>\<lambda>s. cte_at' ptr s \<and> (if p = ptr  then (Q capability.NullCap) else (if p' = ptr then Q cap else cte_wp_at' (Q \<circ> cteCap) ptr s))\<rbrace>
   cteMove cap p p'
@@ -9479,7 +9484,7 @@ lemma updateCap_noop_invs:
   apply (case_tac cte)
   apply (clarsimp simp: fun_upd_idem)
   apply (frule(1) ctes_of_valid')
-  apply (frule(1) valid_global_refsD')
+  apply (frule(1) valid_global_refsD_with_objSize)
   apply clarsimp
   apply (rule_tac P="op = cte" for cte in if_unsafe_then_capD')
     apply (simp add: cte_wp_at_ctes_of)

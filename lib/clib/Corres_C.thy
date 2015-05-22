@@ -288,7 +288,7 @@ abbreviation
 
 lemma ccorres_basic_srnoop:
   assumes asm: "ccorres_underlying rf_sr Gamm r xf arrel axf G G' hs a c"
-  and   gsr: "\<And>s s'. globals (g s') = globals s'" 
+  and   gsr: "\<And>s'. globals (g s') = globals s'" 
   and   gG: "\<And>s'. s' \<in> G' \<Longrightarrow> g s' \<in> G'" 
   shows "ccorres_underlying rf_sr Gamm r xf arrel axf G G' hs a (Basic g ;; c)"
   using asm unfolding rf_sr_def
@@ -296,6 +296,19 @@ lemma ccorres_basic_srnoop:
    apply (simp add: gsr)
   apply (erule gG)
   done
+
+lemma ccorres_basic_srnoop2:
+  assumes gsr: "\<And>s'. globals (g s') = globals s'" 
+  assumes asm: "ccorres_underlying rf_sr Gamm r xf arrel axf G G' hs a c"
+  shows "ccorres_underlying rf_sr Gamm r xf arrel axf G {s. g s \<in> G'} hs a (Basic g ;; c)"
+  apply (rule ccorres_guard_imp2)
+   apply (rule ccorres_symb_exec_r)
+     apply (rule asm)
+    apply vcg
+   apply (rule conseqPre, vcg, clarsimp simp: rf_sr_def gsr)
+  apply clarsimp
+  done
+
 
 (* The naming convention here is that xf', xfr, and xfru are the terms we instantiate *)
 lemma ccorres_call:

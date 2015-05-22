@@ -462,65 +462,81 @@ lemma cleanCacheRange_PoC_ccorres:
   done
 
 lemma cleanInvalidateCacheRange_RAM_ccorres:
-  "ccorres dc xfdc (\<lambda>_. w1 \<le> w2 \<and> w3 \<le> w3 + (w2 - w1) 
-                      \<and> w1 && mask 5 = w3 && mask 5)
+  "ccorres dc xfdc ((\<lambda>s. unat (w2 - w1) \<le> gsMaxObjectSize s)
+                      and (\<lambda>_. w1 \<le> w2 \<and> w3 \<le> w3 + (w2 - w1) 
+                      \<and> w1 && mask 5 = w3 && mask 5 \<and> unat (w2 - w2) \<le> gsMaxObjectSize s))
                    (\<lbrace>\<acute>start = w1\<rbrace> \<inter> \<lbrace>\<acute>end = w2\<rbrace> \<inter> \<lbrace>\<acute>pstart = w3\<rbrace>) []
            (doMachineOp (cleanInvalidateCacheRange_RAM w1 w2 w3))
            (Call cleanInvalidateCacheRange_RAM_'proc)"
-  apply (rule ccorres_gen_asm[where G=\<top>, simplified])
+  apply (rule ccorres_gen_asm)
   apply (cinit' lift: start_' end_' pstart_')
    apply (clarsimp simp: word_sle_def whileAnno_def)
    apply (ccorres_remove_UNIV_guard)
-   apply (simp add: cleanInvalidateCacheRange_RAM_def doMachineOp_bind
-                    empty_fail_dsb empty_fail_cleanCacheRange_PoC empty_fail_cleanInvalidateL2Range
-                    empty_fail_cacheRangeOp empty_fail_cleanInvalByVA)
-   apply (ctac (no_vcg) add: cleanCacheRange_PoC_ccorres)
-    apply (ctac (no_vcg) add: dsb_ccorres)
-     apply (ctac (no_vcg) add: cleanInvalidateL2Range_ccorres)
-      apply csymbr
-      apply (rule ccorres_split_nothrow_novcg)
-          apply (rule cacheRangeOp_ccorres)
-            apply (rule empty_fail_cleanInvalByVA)
-           apply clarsimp
-           apply (cinitlift index_')
-           apply (rule ccorres_guard_imp2)
-            apply csymbr
-            apply (ctac add: cleanInvalByVA_ccorres)
-           apply (clarsimp simp: lineStart_def cacheLineBits_def shiftr_shiftl1
-                                 mask_out_sub_mask)
-           apply (drule_tac s="w1 && mask 5" in sym, simp add: cache_range_lineIndex_helper)          
-          apply (vcg exspec=cleanInvalByVA_modifies)
-         apply (rule ceqv_refl)
-        apply (ctac (no_vcg) add: dsb_ccorres[simplified dc_def])
-       apply (wp | clarsimp simp: guard_is_UNIVI)+
+   apply (rule ccorres_Guard_Seq)
+   apply (rule ccorres_basic_srnoop)
+     apply (simp add: cleanInvalidateCacheRange_RAM_def doMachineOp_bind
+                      empty_fail_dsb empty_fail_cleanCacheRange_PoC empty_fail_cleanInvalidateL2Range
+                      empty_fail_cacheRangeOp empty_fail_cleanInvalByVA)
+     apply (ctac (no_vcg) add: cleanCacheRange_PoC_ccorres)
+      apply (ctac (no_vcg) add: dsb_ccorres)
+       apply (ctac (no_vcg) add: cleanInvalidateL2Range_ccorres)
+        apply csymbr
+        apply (rule ccorres_split_nothrow_novcg)
+            apply (rule cacheRangeOp_ccorres)
+              apply (rule empty_fail_cleanInvalByVA)
+             apply clarsimp
+             apply (cinitlift index_')
+             apply (rule ccorres_guard_imp2)
+              apply csymbr
+              apply (ctac add: cleanInvalByVA_ccorres)
+             apply (clarsimp simp: lineStart_def cacheLineBits_def shiftr_shiftl1
+                                   mask_out_sub_mask)
+             apply (drule_tac s="w1 && mask 5" in sym, simp add: cache_range_lineIndex_helper)          
+            apply (vcg exspec=cleanInvalByVA_modifies)
+           apply (rule ceqv_refl)
+          apply (ctac (no_vcg) add: dsb_ccorres[simplified dc_def])
+       apply (wp | clarsimp simp: guard_is_UNIVI o_def)+
+  apply (frule(1) ghost_assertion_size_logic)
+  apply (clarsimp simp: o_def)
   done
 
 lemma cleanCacheRange_RAM_ccorres:
-  "ccorres dc xfdc (\<lambda>_. w1 \<le> w2 \<and> w3 \<le> w3 + (w2 - w1)
-                      \<and> w1 && mask 5 = w3 && mask 5)
+  "ccorres dc xfdc (\<lambda>s. w1 \<le> w2 \<and> w3 \<le> w3 + (w2 - w1)
+                      \<and> w1 && mask 5 = w3 && mask 5
+                      \<and> unat (w2 - w1) \<le> gsMaxObjectSize s)
                    (\<lbrace>\<acute>start = w1\<rbrace> \<inter> \<lbrace>\<acute>end = w2\<rbrace> \<inter> \<lbrace>\<acute>pstart = w3\<rbrace>) []
            (doMachineOp (cleanCacheRange_RAM w1 w2 w3))
            (Call cleanCacheRange_RAM_'proc)"
   apply (cinit' lift: start_' end_' pstart_')
    apply (simp add: cleanCacheRange_RAM_def doMachineOp_bind
                     empty_fail_dsb empty_fail_cleanCacheRange_PoC empty_fail_cleanL2Range)
+   apply (rule ccorres_Guard_Seq)
+   apply (rule ccorres_basic_srnoop2, simp)
    apply (ctac (no_vcg) add: cleanCacheRange_PoC_ccorres)
     apply (ctac (no_vcg) add: dsb_ccorres)
+     apply (rule_tac P="\<lambda>s. unat (w2 - w1) \<le> gsMaxObjectSize s"
+        in ccorres_cross_over_guard)
+     apply (rule ccorres_Guard_Seq)
+     apply (rule ccorres_basic_srnoop2, simp)
      apply (ctac (no_vcg) add: cleanL2Range_ccorres[unfolded dc_def])
     apply wp
   apply clarsimp
+  apply (auto dest: ghost_assertion_size_logic simp: o_def)
   done
 
 lemma cleanCacheRange_PoU_ccorres:
-  "ccorres dc xfdc (\<lambda>_. w1 \<le> w2 \<and> w3 \<le> w3 + (w2 - w1)
-                      \<and> w1 && mask 5 = w3 && mask 5)
+  "ccorres dc xfdc ((\<lambda>s. unat (w2 - w1) \<le> gsMaxObjectSize s)
+                    and (\<lambda>_. w1 \<le> w2 \<and> w3 \<le> w3 + (w2 - w1)
+                      \<and> w1 && mask 5 = w3 && mask 5))
                    (\<lbrace>\<acute>start = w1\<rbrace> \<inter> \<lbrace>\<acute>end = w2\<rbrace> \<inter> \<lbrace>\<acute>pstart = w3\<rbrace>) []
            (doMachineOp (cleanCacheRange_PoU w1 w2 w3))
            (Call cleanCacheRange_PoU_'proc)"
-  apply (rule ccorres_gen_asm[where G=\<top>, simplified])
+  apply (rule ccorres_gen_asm)
   apply (cinit' lift: start_' end_' pstart_')
    apply (clarsimp simp: word_sle_def whileAnno_def)
    apply (ccorres_remove_UNIV_guard)
+   apply (rule ccorres_Guard_Seq)
+   apply (rule ccorres_basic_srnoop2, simp)
    apply (simp add: cleanCacheRange_PoU_def)
    apply csymbr
    apply (rule cacheRangeOp_ccorres[simplified dc_def])
@@ -535,6 +551,8 @@ lemma cleanCacheRange_PoU_ccorres:
     apply (drule_tac s="w1 && mask 5" in sym, simp add: cache_range_lineIndex_helper)
    apply (vcg exspec=cleanByVA_PoU_modifies)
   apply clarsimp
+  apply (frule(1) ghost_assertion_size_logic)
+  apply (clarsimp simp: o_def)
   done
 
 lemma dmo_if:
@@ -542,12 +560,13 @@ lemma dmo_if:
   by (simp split: split_if)
 
 lemma invalidateCacheRange_RAM_ccorres:
-  "ccorres dc xfdc (\<lambda>_. w1 \<le> w2 \<and> w3 \<le> w3 + (w2 - w1)
-                      \<and> w1 && mask 5 = w3 && mask 5)
+  "ccorres dc xfdc ((\<lambda>s. unat (w2 - w1) \<le> gsMaxObjectSize s)
+                    and (\<lambda>_. w1 \<le> w2 \<and> w3 \<le> w3 + (w2 - w1)
+                      \<and> w1 && mask 5 = w3 && mask 5))
                    (\<lbrace>\<acute>start = w1\<rbrace> \<inter> \<lbrace>\<acute>end = w2\<rbrace> \<inter> \<lbrace>\<acute>pstart = w3\<rbrace>) []
            (doMachineOp (invalidateCacheRange_RAM w1 w2 w3))
            (Call invalidateCacheRange_RAM_'proc)"
-  apply (rule ccorres_gen_asm[where G=\<top>, simplified])
+  apply (rule ccorres_gen_asm)
   apply (cinit' lift: start_' end_' pstart_')
    apply (clarsimp simp: word_sle_def whileAnno_def split del: split_if)
    apply (ccorres_remove_UNIV_guard)
@@ -569,7 +588,13 @@ lemma invalidateCacheRange_RAM_ccorres:
           apply (rule ccorres_call[OF cleanCacheRange_RAM_ccorres, where xf'=xfdc], (clarsimp)+)
          apply (rule ccorres_return_Skip[unfolded dc_def])
         apply ceqv
+       apply (rule_tac P="\<lambda>s. unat (w2 - w1) \<le> gsMaxObjectSize s"
+          in ccorres_cross_over_guard)
+       apply (rule ccorres_Guard_Seq)
+       apply (rule ccorres_basic_srnoop2, simp)
        apply (ctac add: invalidateL2Range_ccorres)
+         apply (rule ccorres_Guard_Seq)
+         apply (rule ccorres_basic_srnoop2, simp)
          apply (csymbr)
          apply (rule ccorres_split_nothrow_novcg)
              apply (rule cacheRangeOp_ccorres)
@@ -591,6 +616,7 @@ lemma invalidateCacheRange_RAM_ccorres:
        apply (vcg exspec=plat_invalidateL2Range_modifies)
       apply wp
      apply (simp add: guard_is_UNIV_def)
+     apply (auto dest: ghost_assertion_size_logic simp: o_def)[1]
     apply (wp | clarsimp split: split_if)+
    apply (clarsimp simp: lineStart_def cacheLineBits_def guard_is_UNIV_def)
   apply (clarsimp simp: lineStart_mask)

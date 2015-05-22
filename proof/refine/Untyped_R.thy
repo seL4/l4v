@@ -4091,7 +4091,9 @@ lemma updateFreeIndex_invs_simple':
          apply clarsimp
          apply (rule_tac x = cref' in exI)
          apply clarsimp
-        apply (drule(1) valid_global_refsD')
+        apply (drule(1) valid_global_refsD_with_objSize)
+        apply (clarsimp simp: isCap_simps)
+       apply (drule(1) valid_global_refsD_with_objSize)
   apply (clarsimp simp:isCap_simps cte_wp_at_ctes_of)+
   done
 
@@ -5508,22 +5510,24 @@ lemma insertNewCap_idle'[wp]:
 
 crunch global_refs': insertNewCap "\<lambda>s. P (global_refs' s)"
   (wp: crunch_wps simp: crunch_simps)
+crunch gsMaxObjectSize[wp]: insertNewCap "\<lambda>s. P (gsMaxObjectSize s)"
+  (wp: crunch_wps simp: crunch_simps)
 
 lemma insertNewCap_valid_global_refs':
   "\<lbrace>valid_global_refs' and
-        cte_wp_at' (\<lambda>cte. capRange cap \<subseteq> capRange (cteCap cte)) parent\<rbrace>
+        cte_wp_at' (\<lambda>cte. capRange cap \<subseteq> capRange (cteCap cte)
+            \<and> capBits cap \<le> capBits (cteCap cte)) parent\<rbrace>
      insertNewCap parent slot cap
    \<lbrace>\<lambda>rv. valid_global_refs'\<rbrace>"
-  apply (simp add: valid_global_refs'_def valid_refs'_cteCaps)
+  apply (simp add: valid_global_refs'_def valid_refs'_cteCaps valid_cap_sizes_cteCaps)
   apply (rule hoare_pre)
    apply (rule hoare_use_eq [where f=global_refs', OF insertNewCap_global_refs'])
-   apply wp
-  apply (clarsimp simp: cte_wp_at_ctes_of cteCaps_of_def)
-  apply (clarsimp elim!: ranE split: split_if_asm)
-   apply fastforce
-  apply fastforce
+   apply (rule hoare_use_eq [where f=gsMaxObjectSize])
+    apply wp
+  apply (clarsimp simp: cte_wp_at_ctes_of cteCaps_of_def ball_ran_eq)
+  apply (frule power_increasing[where a=2], simp)
+  apply (blast intro: order_trans)
   done
-
 
 lemma insertNewCap_valid_irq_handlers:
   "\<lbrace>valid_irq_handlers' and (\<lambda>s. \<forall>irq. cap = IRQHandlerCap irq \<longrightarrow> irq_issued' irq s)\<rbrace>
@@ -5598,6 +5602,12 @@ lemma insertNewCap_ct_active'[wp]:
 crunch ksDomScheduleIdx[wp]: insertNewCap "\<lambda>s. P (ksDomScheduleIdx s)"
   (wp: crunch_simps hoare_drop_imps)
 
+lemma capRange_subset_capBits:
+  "capAligned cap \<Longrightarrow> capAligned cap'
+    \<Longrightarrow> capRange cap \<subseteq> capRange cap'
+    \<Longrightarrow> capBits cap \<le> capBits cap'"
+  sorry
+
 lemma insertNewCap_invs':
   "\<lbrace>invs' and ct_active'
           and valid_cap' cap
@@ -5619,8 +5629,10 @@ lemma insertNewCap_invs':
              valid_arch_state_lift'
              valid_irq_node_lift insertNewCap_valid_irq_handlers)
   apply (clarsimp simp: cte_wp_at_ctes_of)
-  apply (rule conjI, clarsimp)
-  apply (auto simp: isCap_simps sameRegionAs_def3)
+  apply (frule ctes_of_valid[rotated, where p=parent, OF valid_pspace_valid_objs'])
+   apply (fastforce simp: cte_wp_at_ctes_of)
+  apply (auto simp: isCap_simps sameRegionAs_def3 intro!: capRange_subset_capBits
+              elim: valid_capAligned)
   done
 
 lemma insertNewCap_irq_issued'[wp]:
@@ -5795,6 +5807,9 @@ apply (wp createNewCaps_st_tcb_at'[where sz=sz])
 apply simp
 done
 
+crunch gsMaxObjectSize[wp]: deleteObjects "\<lambda>s. P (gsMaxObjectSize s)"
+  (simp: unless_def wp: crunch_wps)
+
 lemma invokeUntyped_invs'':
    "ui = Retype cref ptr_base ptr tp us slots \<Longrightarrow>
    \<lbrace>invs' and valid_untyped_inv' ui and ct_active'\<rbrace>
@@ -5929,6 +5944,10 @@ lemma invokeUntyped_invs'':
       apply (simp add: atLeastatMost_subset_iff word_and_le2)
       done
 
+    have gsMaxObjectSize_0: "0 < gsMaxObjectSize s"
+      using cte_wp_at' valid_global_refs'
+      by (clarsimp simp: valid_global_refs'_def cte_wp_at_ctes_of cte_at_valid_cap_sizes_0)
+
     note neg_mask_add_mask = word_plus_and_or_coroll2
     [symmetric,where w = "mask sz" and t = ptr,symmetric]
     note msimp[simp add] =  misc getObjectSize_def_eq neg_mask_add_mask
@@ -5981,7 +6000,8 @@ lemma invokeUntyped_invs'':
      apply (wp updateFreeIndex_caps_overlap_reserved'
                updateFreeIndex_descendants_range_in' getCTE_wp | simp)+
     using cte_wp_at'
-    apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps getFreeIndex_def shiftL_nat shiftl_t2n)
+    apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps getFreeIndex_def
+                          shiftL_nat shiftl_t2n gsMaxObjectSize_0)
      apply (intro conjI)
              apply (simp add: range_cover_unat[OF cover,unfolded size_eq]
                               range_cover.unat_of_nat_shift size_eq field_simps)+
@@ -6077,7 +6097,8 @@ lemma invokeUntyped_invs'':
   apply (wp getCTE_wp)
   using cte_wp_at' cref_inv misc us_align descendants_range
   apply (clarsimp simp: is_aligned_neg_mask_eq' invs_valid_pspace' invs_ksCurDomain_maxDomain'
-       cte_wp_at_ctes_of isCap_simps getFreeIndex_def shiftL_nat shiftl_t2n)
+       cte_wp_at_ctes_of isCap_simps getFreeIndex_def shiftL_nat shiftl_t2n
+       gsMaxObjectSize_0)
   apply (intro conjI)
                apply (rule range_cover.sz
                  [where 'a=32, folded word_bits_def, OF cover])

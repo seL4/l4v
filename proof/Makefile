@@ -35,7 +35,7 @@ HEAPS += DBaseRefine DRefine DPolicy SepDSpec DSpecProofs
 HEAPS += Access InfoFlow InfoFlowC
 
 # Binary Verification
-HEAPS += SimplExportAndRefine
+HEAPS += SimplExportAndRefine SimplExportOnly
 
 # Separation Kernel Bisimilarity
 HEAPS += Bisim

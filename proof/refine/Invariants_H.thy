@@ -820,9 +820,16 @@ where
    range (\<lambda>irq :: irq. irq_node' s + 16 * ucast irq)"
 
 definition
+  valid_cap_sizes' :: "nat \<Rightarrow> cte_heap \<Rightarrow> bool"
+where
+  "valid_cap_sizes' n hp = (\<forall>cte \<in> ran hp. 2 ^ capBits (cteCap cte) \<le> n)"
+
+definition
   valid_global_refs' :: "kernel_state \<Rightarrow> bool"
 where
-  "valid_global_refs' \<equiv> \<lambda>s. valid_refs' kernel_data_refs (ctes_of s) \<and> global_refs' s \<subseteq> kernel_data_refs"
+  "valid_global_refs' \<equiv> \<lambda>s. valid_refs' kernel_data_refs (ctes_of s)
+    \<and> global_refs' s \<subseteq> kernel_data_refs
+    \<and> valid_cap_sizes' (gsMaxObjectSize s) (ctes_of s)"
 
 definition
   pspace_domain_valid :: "kernel_state \<Rightarrow> bool"
@@ -2495,6 +2502,7 @@ locale Arch_Idle_update_eq =
   assumes idle: "ksIdleThread (f s) = ksIdleThread s"
   assumes int_nd:  "intStateIRQNode (ksInterruptState (f s))
                     = intStateIRQNode (ksInterruptState s)"
+  assumes maxObj: "gsMaxObjectSize (f s) = gsMaxObjectSize s"
 begin
 
 lemma global_refs_update' [iff]:
@@ -2508,7 +2516,7 @@ begin
 
 lemma valid_global_refs_update' [iff]:
   "valid_global_refs' (f s) = valid_global_refs' s"
-  by (simp add: valid_global_refs'_def pspace arch idle)
+  by (simp add: valid_global_refs'_def pspace arch idle maxObj)
 
 lemma valid_arch_state_update' [iff]:
   "valid_arch_state' (f s) = valid_arch_state' s"
@@ -2890,6 +2898,20 @@ lemma valid_queues_running:
 lemma valid_refs'_cteCaps:
   "valid_refs' S (ctes_of s) = (\<forall>c \<in> ran (cteCaps_of s). S \<inter> capRange c = {})"
   by (fastforce simp: valid_refs'_def cteCaps_of_def elim!: ranE)
+
+lemma valid_cap_sizes_cteCaps:
+  "valid_cap_sizes' n (ctes_of s) = (\<forall>c \<in> ran (cteCaps_of s). 2 ^ capBits c \<le> n)"
+  apply (simp add: valid_cap_sizes'_def cteCaps_of_def)
+  apply (fastforce elim!: ranE)
+  done
+
+lemma cte_at_valid_cap_sizes_0:
+  "valid_cap_sizes' n ctes \<Longrightarrow> ctes p = Some cte \<Longrightarrow> 0 < n"
+  apply (clarsimp simp: valid_cap_sizes'_def)
+  apply (drule bspec, erule ranI)
+  apply (rule Suc_le_lessD, erule order_trans[rotated])
+  apply simp
+  done
 
 lemma invs_valid_stateI' [elim!]:
   "invs' s \<Longrightarrow> valid_state' s"

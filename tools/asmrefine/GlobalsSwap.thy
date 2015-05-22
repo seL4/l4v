@@ -890,5 +890,4 @@ fun add_globals_swap_rewrites member_thms ctxt = let
   end
 *}
 
-
 end

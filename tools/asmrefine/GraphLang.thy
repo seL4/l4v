@@ -446,7 +446,7 @@ lemma nat_trace_Max_dom_None:
 lemma trace_end_NoneD:
   "trace_end tr = None \<Longrightarrow> tr \<in> nat_trace_rel cont r
     \<Longrightarrow> tr = (\<lambda>_. None) \<or> (\<exists>f. tr = Some o f)"
-  apply (rule disjCI2)
+  apply (subst disj_commute, rule disjCI)
   apply (clarsimp simp: fun_eq_iff)
   apply (simp add: trace_end_def split: split_if_asm)
    apply (metis nat_trace_Max_dom_None not_None_eq)

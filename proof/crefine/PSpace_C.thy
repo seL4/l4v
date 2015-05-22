@@ -126,7 +126,8 @@ lemma storePTE_Basic_ccorres':
   apply (simp add: cready_queues_relation_def
                    carch_state_relation_def
                    cmachine_state_relation_def
-                   Let_def typ_heap_simps)
+                   Let_def typ_heap_simps
+                   cteCaps_of_def update_pte_map_tos)
   done
 
 
@@ -180,7 +181,8 @@ lemma storePDE_Basic_ccorres':
                    carch_state_relation_def
                    cmachine_state_relation_def
                    Let_def typ_heap_simps
-                   pde_stored_asid_update_valid_offset)
+                   pde_stored_asid_update_valid_offset
+                   cteCaps_of_def update_pde_map_tos)
   done
 
 lemma storePDE_Basic_ccorres:

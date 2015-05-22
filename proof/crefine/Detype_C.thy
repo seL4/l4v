@@ -1733,9 +1733,12 @@ proof -
     (gsCNodes_update ?psu (gsUserPages_update ?psu s),
      globals_update (ghost'state_'_update (gs_clear_region ptr bits)) s')
     \<in> rf_sr"
-    by (simp add: rf_sr_def cstate_relation_def Let_def gs_clear_region_def
+    apply (case_tac "ghost'state_' (globals s')")
+    apply (simp add: rf_sr_def cstate_relation_def Let_def gs_clear_region_def
                   upto_intvl_eq[OF al] carch_state_relation_def
-                  cmachine_state_relation_def)
+                  cmachine_state_relation_def ghost_size_rel_def
+                  ghost_assertion_data_get_def)
+    done
 
   from gsu_in_sr[OF msu_in_sr]
   show "(?t, globals_update

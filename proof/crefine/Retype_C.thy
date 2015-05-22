@@ -198,7 +198,8 @@ lemma fst_s_footprint:
 lemma memzero_spec:
   "\<forall>s. \<Gamma> \<turnstile> \<lbrace>s. ptr_val \<acute>s \<noteq> 0 \<and> ptr_val \<acute>s \<le> ptr_val \<acute>s + (\<acute>n - 1)
          \<and> (is_aligned (ptr_val \<acute>s) 2) \<and> (is_aligned (\<acute>n) 2)
-         \<and> {ptr_val \<acute>s ..+ unat \<acute>n} \<times> {SIndexVal, SIndexTyp 0} \<subseteq> dom_s (hrs_htd \<acute>t_hrs)\<rbrace>
+         \<and> {ptr_val \<acute>s ..+ unat \<acute>n} \<times> {SIndexVal, SIndexTyp 0} \<subseteq> dom_s (hrs_htd \<acute>t_hrs)
+         \<and> gs_get_assn cap_get_capSizeBits_'proc \<acute>ghost'state \<in> insert 0 {\<acute>n ..}\<rbrace>
     Call memzero_'proc {t.
      t_hrs_' (globals t) = hrs_mem_update (heap_update_list (ptr_val (s_' s))
                                             (replicate (unat (n_' s)) (ucast (0)))) (t_hrs_' (globals s))}"
@@ -280,7 +281,8 @@ qed
 
 lemma memset_spec:
   "\<forall>s. \<Gamma> \<turnstile> \<lbrace>s. ptr_val \<acute>s \<noteq> 0 \<and> ptr_val \<acute>s \<le> ptr_val \<acute>s + (\<acute>n - 1)
-         \<and> {ptr_val \<acute>s ..+ unat \<acute>n} \<times> {SIndexVal, SIndexTyp 0} \<subseteq> dom_s (hrs_htd \<acute>t_hrs)\<rbrace>
+         \<and> {ptr_val \<acute>s ..+ unat \<acute>n} \<times> {SIndexVal, SIndexTyp 0} \<subseteq> dom_s (hrs_htd \<acute>t_hrs)
+         \<and> gs_get_assn cap_get_capSizeBits_'proc \<acute>ghost'state \<in> insert 0 {\<acute>n ..}\<rbrace>
     Call memset_'proc
    {t. t_hrs_' (globals t) = hrs_mem_update (heap_update_list (ptr_val (s_' s))
                                             (replicate (unat (n_' s)) (ucast (c_' s)))) (t_hrs_' (globals s))}"
@@ -4498,9 +4500,30 @@ lemma typ_region_bytes_actually_is_bytes:
     \<Longrightarrow> region_actually_is_bytes ptr (2 ^ bits) s"
   by (clarsimp simp: region_actually_is_bytes_def typ_region_bytes_def)
 
+(* FIXME: need a way to avoid overruling the parser on this, it's ugly *)
+lemma memzero_modifies:
+  "\<forall>\<sigma>. \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {\<sigma>} Call memzero_'proc {t. t may_only_modify_globals \<sigma> in [t_hrs]}"
+  apply (rule allI, rule conseqPre)
+  apply (hoare_rule HoarePartial.ProcNoRec1)
+   apply (tactic {* HoarePackage.vcg_tac "_modifies" "false" [] @{context} 1 *})
+  apply (clarsimp simp: mex_def meq_def simp del: split_paired_Ex)
+  apply (intro exI globals.equality, simp_all)
+  done
+
+lemma ghost_assertion_size_logic_no_unat:
+  "sz \<le> gsMaxObjectSize s
+    \<Longrightarrow> (s, \<sigma>) \<in> rf_sr
+    \<Longrightarrow> gs_get_assn cap_get_capSizeBits_'proc (ghost'state_' (globals \<sigma>)) = 0 \<or>
+            of_nat sz \<le> gs_get_assn cap_get_capSizeBits_'proc (ghost'state_' (globals \<sigma>))"
+  apply (rule ghost_assertion_size_logic'[rotated])
+   apply (simp add: rf_sr_def)
+  apply (simp add: unat_of_nat)
+  done
+
 lemma ccorres_placeNewObject_endpoint:
   "ccorresG rf_sr \<Gamma> dc xfdc
    (pspace_aligned' and pspace_distinct' and pspace_no_overlap' regionBase 4
+      and (\<lambda>s. 16 \<le> gsMaxObjectSize s)
       and K (regionBase \<noteq> 0 \<and> range_cover regionBase 4 4 1
       \<and> {regionBase..+16} \<inter> kernel_data_refs = {}))
    ({s. region_actually_is_bytes regionBase 0x10 s})
@@ -4514,12 +4537,14 @@ lemma ccorres_placeNewObject_endpoint:
   apply vcg
   apply (clarsimp simp: rf_sr_htd_safe)
   apply (intro conjI allI impI)
-       apply (rule is_aligned_no_wrap')
-        apply (erule range_cover.aligned)
-       apply simp
-      apply (clarsimp elim!: is_aligned_weaken dest!:range_cover.aligned)
-     apply (clarsimp simp: is_aligned_def)
-    apply (simp add: region_actually_is_bytes_dom_s)
+        apply (rule is_aligned_no_wrap')
+         apply (erule range_cover.aligned)
+        apply simp
+       apply (clarsimp elim!: is_aligned_weaken dest!:range_cover.aligned)
+      apply (clarsimp simp: is_aligned_def)
+     apply (simp add: region_actually_is_bytes_dom_s)
+    apply (frule(1) ghost_assertion_size_logic_no_unat)
+    apply (clarsimp simp: o_def)
    apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                          kernel_data_refs_domain_eq_rotate
                   elim!: ptr_retyp_htd_safe_neg)
@@ -4540,6 +4565,7 @@ lemma ccorres_placeNewObject_endpoint:
 lemma ccorres_placeNewObject_asyncendpoint:
   "ccorresG rf_sr \<Gamma> dc xfdc
    (pspace_aligned' and pspace_distinct' and pspace_no_overlap' regionBase 4
+      and (\<lambda>s. 16 \<le> gsMaxObjectSize s)
       and K (regionBase \<noteq> 0
       \<and> {regionBase..+16} \<inter> kernel_data_refs = {}
       \<and> range_cover regionBase 4 4 1))
@@ -4554,12 +4580,14 @@ lemma ccorres_placeNewObject_asyncendpoint:
   apply vcg
   apply (clarsimp simp: rf_sr_htd_safe)
   apply (intro conjI allI impI)
-       apply (rule is_aligned_no_wrap')
-        apply (erule range_cover.aligned)
-       apply simp
-      apply (clarsimp elim!: is_aligned_weaken dest!:range_cover.aligned)
-     apply (clarsimp simp: is_aligned_def)
-    apply (simp add: region_actually_is_bytes_dom_s)
+        apply (rule is_aligned_no_wrap')
+         apply (erule range_cover.aligned)
+        apply simp
+       apply (clarsimp elim!: is_aligned_weaken dest!:range_cover.aligned)
+      apply (clarsimp simp: is_aligned_def)
+     apply (simp add: region_actually_is_bytes_dom_s)
+    apply (frule(1) ghost_assertion_size_logic_no_unat)
+    apply (clarsimp simp: o_def)
    apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                          kernel_data_refs_domain_eq_rotate
                   elim!: ptr_retyp_htd_safe_neg)
@@ -4581,6 +4609,7 @@ lemma ccorres_placeNewObject_asyncendpoint:
 lemma ccorres_placeNewObject_captable:
   "ccorresG rf_sr \<Gamma> dc xfdc
    (pspace_aligned' and pspace_distinct' and pspace_no_overlap' regionBase (unat userSize + 4)
+      and (\<lambda>s. 2 ^ (unat userSize + 4) \<le> gsMaxObjectSize s)
       and K (regionBase \<noteq> 0 \<and> range_cover regionBase (unat userSize + 4) (unat userSize + 4) 1
       \<and> ({regionBase..+2 ^ (unat userSize + 4)} \<inter> kernel_data_refs = {})))
     ({s. region_actually_is_bytes regionBase (2 ^ (unat userSize + 4)) s})
@@ -4602,6 +4631,9 @@ lemma ccorres_placeNewObject_captable:
      apply (frule range_cover.unat_of_nat_shift[OF _ le_refl le_refl])
      apply simp
     apply (simp add: region_actually_is_bytes_dom_s)
+    apply clarsimp
+    apply (frule(1) ghost_assertion_size_logic_no_unat)
+    apply (clarsimp simp: o_def)
    apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                          kernel_data_refs_domain_eq_rotate
                   elim!: ptr_retyps_htd_safe_neg)
@@ -4640,6 +4672,7 @@ declare replicate_numeral [simp del]
 lemma ccorres_placeNewObject_tcb:
   "ccorresG rf_sr \<Gamma> dc xfdc
    (pspace_aligned' and pspace_distinct' and pspace_no_overlap' regionBase 9 and valid_queues and (\<lambda>s. sym_refs (state_refs_of' s))
+      and (\<lambda>s. 2 ^ 9 \<le> gsMaxObjectSize s)
       and K (regionBase \<noteq> 0 \<and> range_cover regionBase 9 9 1
       \<and>  {regionBase..+2^9} \<inter> kernel_data_refs = {}))
    ({s. region_actually_is_bytes regionBase 0x200 s})
@@ -4671,12 +4704,13 @@ lemma ccorres_placeNewObject_tcb:
     apply (rule tcb_ptr_orth_cte_ptrs')
    apply (simp add:word_0_sle_from_less)
    apply (intro conjI allI impI)
-             apply (rule is_aligned_no_wrap')
-              apply (erule range_cover.aligned)
-             apply simp
-            apply (clarsimp elim!: is_aligned_weaken dest!:range_cover.aligned)
-           apply (clarsimp simp: is_aligned_def)
-          apply (simp add: region_actually_is_bytes_dom_s)
+              apply (rule is_aligned_no_wrap')
+               apply (erule range_cover.aligned)
+              apply simp
+             apply (clarsimp elim!: is_aligned_weaken dest!:range_cover.aligned)
+            apply (clarsimp simp: is_aligned_def)
+           apply (simp add: region_actually_is_bytes_dom_s)
+          apply (frule(1) ghost_assertion_size_logic_no_unat, simp add: o_def)
          apply (simp only: rf_sr_domain_eq)
          apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                                kernel_data_refs_domain_eq_rotate)
@@ -4742,6 +4776,7 @@ lemma ccorres_placeNewObject_tcb:
 lemma placeNewObject_pte:
   "ccorresG rf_sr \<Gamma> dc xfdc
    ( valid_global_refs' and pspace_aligned' and pspace_distinct' and pspace_no_overlap' regionBase 10
+      and (\<lambda>s. 2 ^ 10 \<le> gsMaxObjectSize s)
       and K (regionBase \<noteq> 0 \<and> range_cover regionBase 10 10 1
       \<and> ({regionBase..+2 ^ 10} \<inter> kernel_data_refs = {})
       ))
@@ -4756,11 +4791,12 @@ lemma placeNewObject_pte:
   apply vcg
   apply (clarsimp simp: rf_sr_htd_safe)
   apply (intro conjI allI impI)
-       apply (rule is_aligned_no_wrap')
-       apply (erule range_cover.aligned)
-       apply (clarsimp elim!: is_aligned_weaken dest!:range_cover.aligned)+
-     apply (simp add:is_aligned_def)
-    apply (simp add: region_actually_is_bytes_dom_s)
+        apply (rule is_aligned_no_wrap')
+        apply (erule range_cover.aligned)
+        apply (clarsimp elim!: is_aligned_weaken dest!:range_cover.aligned)+
+      apply (simp add:is_aligned_def)
+     apply (simp add: region_actually_is_bytes_dom_s)
+    apply (frule(1) ghost_assertion_size_logic_no_unat, simp add: o_def)
    apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                          kernel_data_refs_domain_eq_rotate
                   elim!: ptr_retyps_htd_safe_neg)
@@ -4789,6 +4825,7 @@ lemma placeNewObject_pte:
 lemma placeNewObject_pde:
   "ccorresG rf_sr \<Gamma> dc xfdc
    (valid_global_refs' and pspace_aligned' and pspace_distinct' and pspace_no_overlap' regionBase 14
+      and (\<lambda>s. 2 ^ 14 \<le> gsMaxObjectSize s)
       and K (regionBase \<noteq> 0 \<and> range_cover regionBase 14 14 1
       \<and> ({regionBase..+2 ^ 14} 
           \<inter> kernel_data_refs = {})
@@ -4804,12 +4841,13 @@ lemma placeNewObject_pde:
   apply vcg
   apply (clarsimp simp: rf_sr_htd_safe)
   apply (intro conjI allI impI)
-       apply (rule is_aligned_no_wrap')
-        apply (erule range_cover.aligned)
-       apply simp
-      apply (clarsimp elim!: is_aligned_weaken dest!:range_cover.aligned)+
-     apply (simp add:is_aligned_def)
-    apply (simp add: region_actually_is_bytes_dom_s)
+        apply (rule is_aligned_no_wrap')
+         apply (erule range_cover.aligned)
+        apply simp
+       apply (clarsimp elim!: is_aligned_weaken dest!:range_cover.aligned)+
+      apply (simp add:is_aligned_def)
+     apply (simp add: region_actually_is_bytes_dom_s)
+    apply (frule(1) ghost_assertion_size_logic_no_unat, simp add: o_def)
    apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                          kernel_data_refs_domain_eq_rotate
                   elim!: ptr_retyps_htd_safe_neg)
@@ -4834,16 +4872,24 @@ lemma placeNewObject_pde:
   apply (simp add: region_actually_is_bytes)
  done
 
+end
+
 definition "placeNewObject_with_memset regionBase us \<equiv> 
   (do x \<leftarrow> placeNewObject regionBase UserData us;
       doMachineOp (mapM_x (\<lambda>p\<Colon>word32. storeWord p (0\<Colon>word32))
                [regionBase , regionBase + (4\<Colon>word32) .e. regionBase + (2\<Colon>word32) ^ (pageBits + us) - (1\<Colon>word32)])
    od)"
 
+crunch gsMaxObjectSize[wp]: placeNewObject_with_memset, createObject "\<lambda>s. P (gsMaxObjectSize s)"
+  (wp: crunch_wps simp: unless_def)
+
+context kernel_m begin
+
 lemma placeNewObject_user_data:
   "ccorresG rf_sr \<Gamma> dc xfdc
   (pspace_aligned' and pspace_distinct' and pspace_no_overlap' regionBase (pageBits+us) and valid_queues 
   and (\<lambda>s. sym_refs (state_refs_of' s))
+  and (\<lambda>s. 2^(pageBits +  us) \<le> gsMaxObjectSize s)
   and K (regionBase \<noteq> 0 \<and> range_cover regionBase (pageBits + us) (pageBits+us) (Suc 0)
   \<and>  {regionBase..+2^(pageBits +  us)} \<inter> kernel_data_refs = {}))
   ({s. region_actually_is_bytes regionBase (2^(pageBits+us)) s})
@@ -4857,12 +4903,13 @@ lemma placeNewObject_user_data:
   apply vcg
   apply (clarsimp simp: rf_sr_htd_safe)
   apply (intro conjI allI impI)
-       apply (erule is_aligned_no_overflow'[OF range_cover.aligned])
-      apply (clarsimp elim!: is_aligned_weaken simp :pageBits_def dest!:range_cover.aligned)
-     apply (rule is_aligned_power2)
-     apply (clarsimp simp :pageBits_def)
-    apply (erule region_actually_is_bytes_dom_s)
-    apply (simp add:unat_power_lower[OF range_cover_sz'])
+        apply (erule is_aligned_no_overflow'[OF range_cover.aligned])
+       apply (clarsimp elim!: is_aligned_weaken simp :pageBits_def dest!:range_cover.aligned)
+      apply (rule is_aligned_power2)
+      apply (clarsimp simp :pageBits_def)
+     apply (erule region_actually_is_bytes_dom_s)
+     apply (simp add:unat_power_lower[OF range_cover_sz'])
+    apply (frule(1) ghost_assertion_size_logic_no_unat, simp add: o_def)
    apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                          kernel_data_refs_domain_eq_rotate
                   elim!: ptr_retyps_htd_safe_neg)
@@ -4905,6 +4952,7 @@ definition
 where
   "createObject_hs_preconds regionBase newType userSize \<equiv>
      (invs' and (pspace_no_overlap' regionBase (getObjectSize newType userSize))
+           and (\<lambda>s. 2 ^ (getObjectSize newType userSize) \<le> gsMaxObjectSize s)
            and K(regionBase \<noteq> 0
                    \<and> ({regionBase..+2 ^ (getObjectSize newType userSize)} \<inter> kernel_data_refs = {})
                    \<and> range_cover regionBase (getObjectSize newType userSize) (getObjectSize newType userSize) (Suc 0)
@@ -5013,8 +5061,10 @@ lemma gsUserPages_update_ccorres:
   apply (rule ccorres_from_vcg)
   apply vcg_step
   apply (clarsimp simp: split_def simpler_modify_def gs_new_frames_def)
+  apply (case_tac "ghost'state_' (globals x)")
   apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def fun_upd_def
                         carch_state_relation_def cmachine_state_relation_def
+                        ghost_size_rel_def ghost_assertion_data_get_def
                   cong: if_cong)
   done
 
@@ -5069,27 +5119,30 @@ proof -
                 apply simp
                apply wp
               apply vcg
-             apply (rule hoare_strengthen_post, rule hoare_triv[of \<top> _ "\<lambda>_. \<top>"], simp add:hoare_TrueI)
+             apply (rule hoare_strengthen_post[where Q="\<lambda>_ s. 2 ^ pageBits \<le> gsMaxObjectSize s"], wp)
              apply (frule is_aligned_addrFromPPtr_n, simp)
              apply (clarsimp simp: is_aligned_no_overflow'[where n=12, simplified] pageBits_def
                                    field_simps is_aligned_mask[symmetric] mask_AND_less_0)
             apply vcg
+           apply simp
            apply wp
           apply vcg
          apply clarify
          apply (intro conjI)
           apply (clarsimp simp: invs_pspace_aligned' invs_pspace_distinct'
-                                APIType_capBits_def invs_queues)
+                                APIType_capBits_def invs_queues pageBits_def)
          apply (subst Int_iff)
          apply clarsimp
          apply (intro conjI)
-              apply (clarsimp elim!: is_aligned_weaken
-                              simp: is_aligned_no_wrap' APIType_capBits_def
-                              dest!: range_cover.aligned)+
-           apply (clarsimp simp: is_aligned_def)
-          apply (erule region_actually_is_bytes_dom_s)
-          apply (clarsimp simp: APIType_capBits_def rf_sr_def
-                                cstate_relation_def Let_def)
+               apply (clarsimp elim!: is_aligned_weaken
+                               simp: is_aligned_no_wrap' APIType_capBits_def
+                               dest!: range_cover.aligned)+
+            apply (clarsimp simp: is_aligned_def)
+           apply (erule region_actually_is_bytes_dom_s)
+           apply (clarsimp simp: APIType_capBits_def rf_sr_def
+                                 cstate_relation_def Let_def)
+          apply (frule(1) ghost_assertion_size_logic_no_unat)
+          apply (simp add: o_def APIType_capBits_def)
          apply (intro allI impI)
          apply (clarsimp simp: pageBits_def ccap_relation_def
                     APIType_capBits_def cap_to_H_simps cap_small_frame_cap_lift
@@ -5122,26 +5175,29 @@ proof -
                apply simp
               apply wp
              apply vcg
-            apply (rule hoare_strengthen_post, rule hoare_triv[of \<top> _ "\<lambda>_. \<top>"], simp add:hoare_TrueI)
+            apply (rule hoare_strengthen_post[where Q="\<lambda>_ s. 2 ^ (pageBits + 4) \<le> gsMaxObjectSize s"], wp)
             apply (frule is_aligned_addrFromPPtr_n, simp)
             apply (clarsimp simp: is_aligned_no_overflow'[where n=16, simplified] pageBits_def
                                   field_simps is_aligned_mask[symmetric] mask_AND_less_0)
            apply vcg
+          apply simp
           apply wp
          apply vcg
         apply clarify
         apply (intro conjI)
          apply (clarsimp simp: invs_pspace_aligned' invs_pspace_distinct'
-                               APIType_capBits_def invs_queues)
+                               APIType_capBits_def invs_queues pageBits_def)
         apply clarsimp
         apply (intro conjI)
-              apply (clarsimp elim!: is_aligned_weaken
-                               simp: is_aligned_no_wrap' APIType_capBits_def
-                              dest!: range_cover.aligned)+
-          apply (clarsimp simp: is_aligned_def)
-         apply (erule region_actually_is_bytes_dom_s)
-         apply (clarsimp simp: APIType_capBits_def rf_sr_def
+               apply (clarsimp elim!: is_aligned_weaken
+                                simp: is_aligned_no_wrap' APIType_capBits_def
+                               dest!: range_cover.aligned)+
+           apply (clarsimp simp: is_aligned_def)
+          apply (erule region_actually_is_bytes_dom_s)
+          apply (clarsimp simp: APIType_capBits_def rf_sr_def
                                cstate_relation_def Let_def)
+         apply (frule(1) ghost_assertion_size_logic_no_unat)
+         apply (simp add: o_def APIType_capBits_def)
         apply (intro allI impI)
         apply (clarsimp simp: pageBits_def ccap_relation_def
                    APIType_capBits_def framesize_to_H_def cap_to_H_simps
@@ -5177,26 +5233,29 @@ proof -
               apply simp
              apply wp
             apply vcg
-           apply (rule hoare_strengthen_post, rule hoare_triv[of \<top> _ "\<lambda>_. \<top>"], simp add:hoare_TrueI)
+           apply (rule hoare_strengthen_post[where Q="\<lambda>_ s. 2 ^ (pageBits + 8) \<le> gsMaxObjectSize s"], wp)
            apply (frule is_aligned_addrFromPPtr_n, simp)
            apply (clarsimp simp: is_aligned_no_overflow'[where n=20, simplified] pageBits_def
                                  field_simps is_aligned_mask[symmetric] mask_AND_less_0)
           apply vcg
+         apply simp
          apply wp
         apply vcg
        apply clarify
        apply (intro conjI)
         apply (clarsimp simp: invs_pspace_aligned' invs_pspace_distinct'
-                              APIType_capBits_def invs_queues)
+                              APIType_capBits_def invs_queues pageBits_def)
        apply clarsimp
        apply (intro conjI)
-             apply (clarsimp elim!: is_aligned_weaken
-                              simp: is_aligned_no_wrap' APIType_capBits_def
-                             dest!: range_cover.aligned)+
-         apply (clarsimp simp: is_aligned_def)
-        apply (erule region_actually_is_bytes_dom_s)
-        apply (clarsimp simp: APIType_capBits_def rf_sr_def
-                              cstate_relation_def Let_def)
+              apply (clarsimp elim!: is_aligned_weaken
+                               simp: is_aligned_no_wrap' APIType_capBits_def
+                              dest!: range_cover.aligned)+
+          apply (clarsimp simp: is_aligned_def)
+         apply (erule region_actually_is_bytes_dom_s)
+         apply (clarsimp simp: APIType_capBits_def rf_sr_def
+                               cstate_relation_def Let_def)
+        apply (frule(1) ghost_assertion_size_logic_no_unat)
+        apply (simp add: o_def APIType_capBits_def)
        apply (intro allI impI)
        apply (clarsimp simp: pageBits_def ccap_relation_def
                   APIType_capBits_def framesize_to_H_def cap_to_H_simps
@@ -5233,26 +5292,29 @@ proof -
              apply simp
             apply wp
            apply vcg
-          apply (rule hoare_strengthen_post, rule hoare_triv[of \<top> _ "\<lambda>_. \<top>"], simp add:hoare_TrueI)
+          apply (rule hoare_strengthen_post[where Q="\<lambda>_ s. 2 ^ (pageBits + 12) \<le> gsMaxObjectSize s"], wp)
           apply (frule is_aligned_addrFromPPtr_n, simp)
           apply (clarsimp simp: is_aligned_no_overflow'[where n=24, simplified] pageBits_def
                                 field_simps is_aligned_mask[symmetric] mask_AND_less_0)
          apply vcg
+        apply simp
         apply wp
        apply vcg
       apply clarify
       apply (intro conjI)
        apply (clarsimp simp: invs_pspace_aligned' invs_pspace_distinct'
-                             APIType_capBits_def invs_queues)
+                             APIType_capBits_def invs_queues pageBits_def)
       apply clarsimp
       apply (intro conjI)
-            apply (clarsimp elim!: is_aligned_weaken
-                             simp: is_aligned_no_wrap' APIType_capBits_def
-                            dest!: range_cover.aligned)+
-        apply (clarsimp simp: is_aligned_def)
-       apply (erule region_actually_is_bytes_dom_s)
-       apply (clarsimp simp: APIType_capBits_def rf_sr_def
-                             cstate_relation_def Let_def)
+             apply (clarsimp elim!: is_aligned_weaken
+                              simp: is_aligned_no_wrap' APIType_capBits_def
+                             dest!: range_cover.aligned)+
+         apply (clarsimp simp: is_aligned_def)
+        apply (erule region_actually_is_bytes_dom_s)
+        apply (clarsimp simp: APIType_capBits_def rf_sr_def
+                              cstate_relation_def Let_def)
+       apply (frule(1) ghost_assertion_size_logic_no_unat)
+       apply (simp add: o_def APIType_capBits_def)
       apply (intro allI impI)
       apply clarsimp
       apply (clarsimp simp: pageBits_def ccap_relation_def
@@ -5298,13 +5360,15 @@ proof -
                             field_simps is_aligned_mask[symmetric] mask_AND_less_0)
      apply clarsimp
      apply (intro conjI)
-           apply (clarsimp elim!: is_aligned_weaken
-                            simp: is_aligned_no_wrap' APIType_capBits_def
-                           dest!: range_cover.aligned)+
-       apply (clarsimp simp: is_aligned_def)
-      apply (erule region_actually_is_bytes_dom_s)
-      apply (clarsimp simp: APIType_capBits_def rf_sr_def cstate_relation_def
-                            Let_def)
+            apply (clarsimp elim!: is_aligned_weaken
+                             simp: is_aligned_no_wrap' APIType_capBits_def
+                            dest!: range_cover.aligned)+
+        apply (clarsimp simp: is_aligned_def)
+       apply (erule region_actually_is_bytes_dom_s)
+       apply (clarsimp simp: APIType_capBits_def rf_sr_def cstate_relation_def
+                             Let_def)
+      apply (frule(1) ghost_assertion_size_logic_no_unat)
+      apply (simp add: o_def APIType_capBits_def)
      apply (intro allI impI)
      apply (clarsimp simp: pageBits_def ccap_relation_def APIType_capBits_def
                 framesize_to_H_def cap_to_H_simps cap_page_table_cap_lift
@@ -5353,19 +5417,21 @@ proof -
     apply (frule range_cover.aligned)
     apply (frule is_aligned_addrFromPPtr_n, simp)
     apply (intro conjI)
-              apply fastforce
-             apply simp+
-           apply (clarsimp simp: invs'_def valid_state'_def pageBits_def
-                                 valid_arch_state'_def page_directory_at'_def pdBits_def)
-          apply (clarsimp simp: is_aligned_no_overflow'[where n=14, simplified]
-                                field_simps is_aligned_mask[symmetric] mask_AND_less_0)+
-      apply (clarsimp elim!: is_aligned_weaken
-                       simp: is_aligned_no_wrap' APIType_capBits_def
-                      dest!: range_cover.aligned)+
-     apply (clarsimp simp: is_aligned_def)
-    apply (erule region_actually_is_bytes_dom_s)
-    apply (clarsimp simp: APIType_capBits_def rf_sr_def cstate_relation_def
-                          Let_def)
+               apply fastforce
+              apply simp+
+            apply (clarsimp simp: invs'_def valid_state'_def pageBits_def
+                                  valid_arch_state'_def page_directory_at'_def pdBits_def)
+           apply (clarsimp simp: is_aligned_no_overflow'[where n=14, simplified]
+                                 field_simps is_aligned_mask[symmetric] mask_AND_less_0)+
+       apply (clarsimp elim!: is_aligned_weaken
+                        simp: is_aligned_no_wrap' APIType_capBits_def
+                       dest!: range_cover.aligned)+
+      apply (clarsimp simp: is_aligned_def)
+     apply (erule region_actually_is_bytes_dom_s)
+     apply (clarsimp simp: APIType_capBits_def rf_sr_def cstate_relation_def
+                           Let_def)
+    apply (frule(1) ghost_assertion_size_logic_no_unat)
+    apply (simp add: o_def APIType_capBits_def)
     done
 qed
 
@@ -5382,8 +5448,10 @@ lemma gsCNodes_update_ccorres:
   apply (rule ccorres_from_vcg)
   apply vcg_step
   apply (clarsimp simp: split_def simpler_modify_def gs_new_cnodes_def)
+  apply (case_tac "ghost'state_' (globals x)")
   apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def fun_upd_def
                         carch_state_relation_def cmachine_state_relation_def
+                        ghost_size_rel_def ghost_assertion_data_get_def
                  cong: if_cong)
   done
 
@@ -5577,6 +5645,8 @@ proof -
                           tcbBlockSizeBits_def new_cap_addrs_def projectKO_opt_tcb)
          apply (clarsimp simp: range_cover.aligned
                                region_actually_is_bytes_def APIType_capBits_def)
+         apply (frule(1) ghost_assertion_size_logic_no_unat)
+         apply (clarsimp simp: o_def)
          apply (intro conjI)
              apply (rule is_aligned_no_wrap',erule range_cover.aligned)
              apply (simp)
@@ -5704,6 +5774,8 @@ proof -
                (unat userSizea)" in
          ccorres_guard_imp2)
        apply (rule ccorres_Guard_Seq)+
+       apply (rule ccorres_basic_srnoop2, simp)
+       apply (rule ccorres_Guard_Seq)+
        apply (subst unat_add_simple)
         apply (simp add:word_bits_def)
        apply (simp add:field_simps hrs_htd_update)
@@ -5738,9 +5810,11 @@ proof -
       apply (frule invs_pspace_distinct')
       apply (frule invs_queues)
       apply (frule invs_sym')
+      apply (frule(1) ghost_assertion_size_logic_no_unat)
       apply (clarsimp simp: getObjectSize_def objBits_simps
                  ArchTypes_H.getObjectSize_def apiGetObjectSize_def
                  cteSizeBits_def word_bits_conv add.commute createObject_c_preconds_def
+                 region_actually_is_bytes_def
                 elim!: is_aligned_no_wrap' 
                dest: word_of_nat_le  intro!: range_coverI)[1]
       apply (unat_arith)
@@ -6386,7 +6460,8 @@ lemma createObject_invs':
           caps_overlap_reserved' {ptr..ptr + 2 ^ APIType_capBits ty us - 1} s \<and>
           (ty = APIObjectType apiobject_type.CapTableObject \<longrightarrow> 0 < us) \<and>
           is_aligned ptr (APIType_capBits ty us) \<and> APIType_capBits ty us < word_bits \<and>
-          {ptr..ptr + 2 ^ APIType_capBits ty us - 1} \<inter> kernel_data_refs = {}
+          {ptr..ptr + 2 ^ APIType_capBits ty us - 1} \<inter> kernel_data_refs = {} \<and>
+          0 < gsMaxObjectSize s
     \<rbrace> createObject ty ptr us \<lbrace>\<lambda>r s. invs' s \<rbrace>"
   apply (simp add:createObject_def3)
   apply (rule hoare_pre)
@@ -6921,6 +6996,23 @@ lemma region_is_bytes_update:
   apply (simp add: subsetD split: split_if_asm)
   done
 
+lemma range_cover_gsMaxObjectSize:
+  "cte_wp_at' (\<lambda>cte. cteCap cte = UntypedCap (ptr &&~~ mask sz) sz idx) srcSlot s
+    \<Longrightarrow> range_cover ptr sz (APIType_capBits newType userSize) (length destSlots)
+    \<Longrightarrow> valid_global_refs' s
+    \<Longrightarrow> unat num = length destSlots
+    \<Longrightarrow> unat (num << (APIType_capBits newType userSize) :: word32) \<le> gsMaxObjectSize s
+        \<and> 2 ^ APIType_capBits newType userSize \<le> gsMaxObjectSize s"
+  apply (clarsimp simp: valid_global_refs'_def
+                        valid_cap_sizes'_def cte_wp_at_ctes_of)
+  apply (drule bspec, erule ranI)
+  sorry (*
+  apply (erule order_trans[rotated])
+  apply (clarsimp simp: shiftl_t2n)
+  apply (subst unat_mult_simple)
+   apply (frule range_cover.string)
+ *)
+
 lemma createNewObjects_ccorres:
 notes blah[simp del] =  atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
       Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex 
@@ -6969,12 +7061,22 @@ shows  "ccorres dc xfdc
     apply (rule less_le_trans [OF getObjectSize_max_size], auto simp: word_bits_def)[1]
    apply simp
   apply (cinit lift: t_' parent_' slots_' regionBase_' userSize_')
-   apply csymbr
+   apply (rule ccorres_rhs_assoc2)+
+   apply (rule ccorres_rhs_assoc)
    apply (rule_tac Q' = "Q' 
      \<inter> {s. objectSize_' s = of_nat (APIType_capBits newType userSize)}
      \<inter> {s. nextFreeArea_' s = Ptr ptr } "
+     and R="(\<lambda>s. unat (num << (APIType_capBits newType userSize) :: word32)
+        \<le> gsMaxObjectSize s) and ?R''"
      for Q' in ccorres_symb_exec_r)
+     apply (rule ccorres_guard_imp[where A="X and Q"
+         and A'=Q' and Q=Q and Q'=Q' for X Q Q', rotated]
+         (* this moves the gsMaxObjectSize bit into the ccorres_symb_exec_r
+            vcg proof *))
+       apply clarsimp
+      apply clarsimp
      apply (cinitlift objectSize_' nextFreeArea_')
+     apply simp
      apply (clarsimp simp: whileAnno_def)
      apply (rule ccorres_rel_imp)
       apply (rule ccorres_zipWithM_x_while)
@@ -7017,6 +7119,7 @@ shows  "ccorres dc xfdc
               \<and> (\<forall>n < length destSlots. cte_at' (cnodeptr + (start * 0x10 + of_nat n * 0x10)) s
                     \<and> ex_cte_cap_wp_to' (\<lambda>_. True) (cnodeptr + (start * 0x10 + of_nat n * 0x10)) s)
               \<and> invs' s
+              \<and> 2 ^ APIType_capBits newType userSize \<le> gsMaxObjectSize s
               \<and> (\<forall>k < length destSlots - n.
                  cte_wp_at' (\<lambda>c. cteCap c = NullCap)
                  (cnodeptr + (of_nat k * 0x10 + start * 0x10 + of_nat n * 0x10)) s)
@@ -7033,6 +7136,7 @@ shows  "ccorres dc xfdc
               apply (simp_all add:range_cover_sz'[where 'a=32, folded word_bits_def]
                               word_bits_def range_cover_def)[2]
             apply (intro conjI )
+                  
                  apply (drule_tac p = n in range_cover_no_0)
                    apply (simp add:shiftl_t2n field_simps)+
                 apply (erule pspace_no_overlap'_le)
@@ -7126,7 +7230,9 @@ shows  "ccorres dc xfdc
        apply (drule_tac x = n and  P = "\<lambda>x. x< length destSlots \<longrightarrow> Q x" for Q in spec)+
        apply clarsimp
        apply (intro conjI)
-                       apply (simp add: word_bits_def range_cover_def)
+                        apply (simp add: word_bits_def range_cover_def)
+                       apply (clarsimp simp: cte_wp_at_ctes_of invs'_def valid_state'_def
+                                             valid_global_refs'_def cte_at_valid_cap_sizes_0)
                       apply (erule range_cover_le,simp)
                      apply (drule_tac p = "n" in range_cover_no_0)
                        apply (simp add:field_simps shiftl_t2n)+
@@ -7203,16 +7309,17 @@ shows  "ccorres dc xfdc
       apply (clarsimp simp:range_cover.range_cover_n_less[where 'a=32, folded word_bits_def])
      apply clarsimp
     apply vcg
-   apply clarsimp
-   apply (rule conseqPre)
-    apply vcg
-   apply clarsimp
+   apply (rule conseqPre, vcg, clarsimp)
+   apply (frule(1) ghost_assertion_size_logic)
+   apply (drule range_cover_sz')
+   apply (intro conjI impI, simp_all add: o_def word_of_nat_less)[1]
   apply (rule conjI)
    apply (frule range_cover.aligned)
    apply (frule range_cover_full[OF range_cover.aligned])
     apply (simp add:range_cover_def word_bits_def)
    apply (clarsimp simp: invs_valid_pspace' conj_comms intvl_range_conv
         createObject_hs_preconds_def range_cover.aligned range_cover_full)
+   apply (frule(1) range_cover_gsMaxObjectSize, fastforce, assumption)
    apply (simp add: intvl_range_conv[OF range_cover.aligned range_cover_sz'])
    apply (intro conjI)
          apply (simp add: word_bits_def range_cover_def)
@@ -7237,9 +7344,15 @@ shows  "ccorres dc xfdc
    apply clarsimp
    apply (drule(1) bspec[OF _ nth_mem])+
    apply (clarsimp simp:cte_wp_at_ctes_of)
+  apply clarsimp
+  apply (frule range_cover_sz')
+  apply (frule(1) range_cover_gsMaxObjectSize, fastforce, assumption)
+  apply clarsimp
+  apply (drule(1) ghost_assertion_size_logic)+
+  apply (simp add: o_def)
   apply (case_tac newType,simp_all add:object_type_from_H_def Kernel_C_defs
-             nAPIObjects_def APIType_capBits_def split:apiobject_type.splits)[1]
-          apply (simp add:unat_eq_def word_unat.Rep_inverse')
+             nAPIObjects_def APIType_capBits_def o_def split:apiobject_type.splits)[1]
+          apply (simp add:unat_eq_def word_unat.Rep_inverse' word_less_nat_alt)
          apply (clarsimp simp:objBits_simps,unat_arith)
         apply (clarsimp simp:objBits_simps unat_eq_def word_unat.Rep_inverse')+
      apply (clarsimp simp: ARMSmallPageBits_def ARMLargePageBits_def

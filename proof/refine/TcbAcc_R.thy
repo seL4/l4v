@@ -552,18 +552,18 @@ lemma setObject_tcb_valid_globals' [wp]:
     obj_at' (\<lambda>tcb. (\<forall>(getF, setF) \<in> ran tcb_cte_cases. getF tcb = getF v)) t\<rbrace>
   setObject t (v :: tcb) 
   \<lbrace>\<lambda>rv. valid_global_refs'\<rbrace>"
-  unfolding pred_conj_def valid_global_refs'_def valid_refs'_def
-  apply simp
+  unfolding pred_conj_def valid_global_refs'_def
   apply (rule hoare_lift_Pf2 [where f="global_refs'"])
-   apply (subst conj_assoc [symmetric], rule setObject_ctes_of)
-    apply (clarsimp simp: updateObject_default_def in_monad projectKOs
-                          in_magnitude_check objBits_simps Pair_fst_snd_eq
-                          obj_at'_def)
-    apply fastforce
-   apply (clarsimp simp: updateObject_default_def in_monad Pair_fst_snd_eq
-                         obj_at'_def objBits_simps in_magnitude_check
-                         projectKOs bind_def)
-  apply wp
+   apply (rule hoare_lift_Pf2 [where f="gsMaxObjectSize"])
+    apply (rule setObject_ctes_of)
+     apply (clarsimp simp: updateObject_default_def in_monad projectKOs
+                           in_magnitude_check objBits_simps Pair_fst_snd_eq
+                           obj_at'_def)
+     apply fastforce
+    apply (clarsimp simp: updateObject_default_def in_monad Pair_fst_snd_eq
+                          obj_at'_def objBits_simps in_magnitude_check
+                          projectKOs bind_def)
+   apply (wp | wp setObject_ksPSpace_only updateObject_default_inv | simp)+
   done
 
 lemma setObject_tcb_irq_handlers':
@@ -3516,10 +3516,13 @@ lemma sts_ctes_of [wp]:
 crunch ksInterruptState[wp]: setThreadState "\<lambda>s. P (ksInterruptState s)"
   (simp: unless_def crunch_simps)
 
+crunch gsMaxObjectSize[wp]: setThreadState "\<lambda>s. P (gsMaxObjectSize s)"
+  (simp: unless_def crunch_simps ignore: getObject setObject wp: setObject_ksPSpace_only updateObject_default_inv)
+
 lemmas setThreadState_irq_handlers[wp]
     = valid_irq_handlers_lift'' [OF sts_ctes_of setThreadState_ksInterruptState]
 
-lemma sts_global_reds' [wp]:
+lemma sts_global_refs' [wp]:
   "\<lbrace>valid_global_refs'\<rbrace> setThreadState st t \<lbrace>\<lambda>_. valid_global_refs'\<rbrace>"
   by (rule valid_global_refs_lift') wp 
 

@@ -10,7 +10,7 @@
 
 theory GraphLangLemmas
 
-imports GraphLang
+imports GraphLang CommonOpsLemmas
 
 begin
 

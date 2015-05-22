@@ -4079,23 +4079,19 @@ proof -
      apply (clarsimp simp: ccorres_cond_iffs split del: split_if)
      apply (fold dc_def)[1]
      apply (rule ccorres_rhs_assoc)+
-     apply (ctac(no_vcg) add: cteDeleteOne_stronger_ccorres)
-      apply (rule ccorres_split_nothrow_novcg)
-          apply (rule ccorres_call [where xf'=xfdc])
-             apply (rule cteDeleteOne_stronger_ccorres)
-	    apply (rule refl)
-           apply simp
-          apply simp
-         apply ceqv
-        apply (ctac (no_vcg) add: setThreadState_ccorres)
-         apply (rule ccorres_call)
-            apply (rule attemptSwitchTo_ccorres)
-           apply simp
-          apply simp
-         apply simp
-        apply (wp sts_running_valid_queues setThreadState_st_tcb | simp)+
-       apply (wp cteDeleteOne_sch_act_wf)
-      apply (simp add: guard_is_UNIV_def ThreadState_Running_def mask_def)
+     apply (ctac(no_vcg))
+      apply (rule ccorres_Guard_Seq)
+      apply (rule ccorres_symb_exec_r)
+        apply (ctac(no_vcg) add: cteDeleteOne_stronger_ccorres[where w="-1"])
+         apply (ctac(no_vcg) add: setThreadState_ccorres)
+          apply (ctac add: attemptSwitchTo_ccorres)
+         apply (wp sts_running_valid_queues setThreadState_st_tcb | simp)+
+        apply (wp cteDeleteOne_sch_act_wf)
+       apply vcg
+      apply (rule conseqPre, vcg)
+      apply (simp(no_asm_use) add: gs_set_assn_Delete_cstate_relation[unfolded o_def]
+                                   subset_iff rf_sr_def)
+     apply wp
      apply simp
      apply (strengthen invs_weak_sch_act_wf_strg
                        invs_valid_queues_strg)
@@ -4106,51 +4102,59 @@ proof -
     apply (rule ccorres_rhs_assoc)+
     apply (fold dc_def)[1]
     apply csymbr
-    apply (ctac (no_vcg) add: cteDeleteOne_stronger_ccorres)
-     apply (rule_tac A'=UNIV in stronger_ccorres_guard_imp)
-       apply (rule ccorres_split_nothrow_novcg [OF ccorres_call,
-                                                OF handleFaultReply_ccorres,
-                                                unfolded bind_assoc,
-                                                where xf'=restart_'])
-             apply simp_all[3]
-          apply ceqv
-         apply (rule ccorres_move_c_guard_tcb)
-         apply (rule ccorres_split_nothrow_novcg)
-             apply (rule fault_null_fault_ptr_new_ccorres)
+    apply (rule ccorres_Guard_Seq)
+    apply (rule ccorres_symb_exec_r)
+      apply (ctac (no_vcg) add: cteDeleteOne_stronger_ccorres[where w="-1"])
+       apply (rule_tac A'=UNIV in stronger_ccorres_guard_imp)
+         apply (rule ccorres_split_nothrow_novcg [OF ccorres_call,
+                                                  OF handleFaultReply_ccorres,
+                                                  unfolded bind_assoc,
+                                                  where xf'=restart_'])
+               apply simp_all[3]
             apply ceqv
-           apply (rule_tac R=\<top> in ccorres_cond2)
-             apply (clarsimp simp: to_bool_def)
-            apply (ctac (no_vcg))
-             apply (simp only: K_bind_def)
-             apply (ctac)
-            apply (wp sts_running_valid_queues setThreadState_st_tcb | simp)+
-           apply (fold dc_def)[1]
-           apply (ctac add: setThreadState_ccorres_valid_queues')
-          apply ((wp threadSet_valid_queues threadSet_sch_act threadSet_valid_queues' static_imp_wp
-                     threadSet_valid_objs' threadSet_weak_sch_act_wf
-                       | simp add: valid_tcb_state'_def)+)[1]
-         apply (clarsimp simp: guard_is_UNIV_def ThreadState_Restart_def
-                               ThreadState_Inactive_def mask_def to_bool_def)
-        apply (rule_tac Q="\<lambda>rv. valid_queues and tcb_at' receiver and valid_queues' and
-                              valid_objs' and sch_act_simple and 
-                              (\<lambda>s. sch_act_wf (ksSchedulerAction s) s)" in hoare_post_imp)
-         apply (fastforce simp: inQ_def weak_sch_act_wf_def)
-        apply (wp threadSet_valid_queues threadSet_sch_act handleFaultReply_sch_act_wf) 
-       apply (clarsimp simp: guard_is_UNIV_def)
-      apply assumption
-     apply clarsimp
-     apply (drule_tac p=receiver in obj_at_ko_at')
-     apply clarsimp
-     apply (erule(1) cmap_relation_ko_atE [OF cmap_relation_tcb])
-     apply (clarsimp simp: ctcb_relation_def typ_heap_simps)     
-    apply wp 
-    apply (strengthen vp_invs_strg' impI[OF invs_valid_queues'])
-    apply (wp cteDeleteOne_tcbFault cteDeleteOne_sch_act_wf)     
+           apply (rule ccorres_move_c_guard_tcb)
+           apply (rule ccorres_split_nothrow_novcg)
+               apply (rule fault_null_fault_ptr_new_ccorres)
+              apply ceqv
+             apply (rule_tac R=\<top> in ccorres_cond2)
+               apply (clarsimp simp: to_bool_def)
+              apply (ctac (no_vcg))
+               apply (simp only: K_bind_def)
+               apply (ctac)
+              apply (wp sts_running_valid_queues setThreadState_st_tcb | simp)+
+             apply (fold dc_def)[1]
+             apply (ctac add: setThreadState_ccorres_valid_queues')
+            apply ((wp threadSet_valid_queues threadSet_sch_act threadSet_valid_queues' static_imp_wp
+                       threadSet_valid_objs' threadSet_weak_sch_act_wf
+                         | simp add: valid_tcb_state'_def)+)[1]
+           apply (clarsimp simp: guard_is_UNIV_def ThreadState_Restart_def
+                                 ThreadState_Inactive_def mask_def to_bool_def)
+          apply (rule_tac Q="\<lambda>rv. valid_queues and tcb_at' receiver and valid_queues' and
+                                valid_objs' and sch_act_simple and 
+                                (\<lambda>s. sch_act_wf (ksSchedulerAction s) s)" in hoare_post_imp)
+           apply (fastforce simp: inQ_def weak_sch_act_wf_def)
+          apply (wp threadSet_valid_queues threadSet_sch_act handleFaultReply_sch_act_wf) 
+         apply (clarsimp simp: guard_is_UNIV_def)
+        apply assumption
+       apply clarsimp
+       apply (drule_tac p=receiver in obj_at_ko_at')
+       apply clarsimp
+       apply (erule(1) cmap_relation_ko_atE [OF cmap_relation_tcb])
+       apply (clarsimp simp: ctcb_relation_def typ_heap_simps)
+      apply wp 
+      apply (strengthen vp_invs_strg' impI[OF invs_valid_queues'])
+      apply (wp cteDeleteOne_tcbFault cteDeleteOne_sch_act_wf)
+     apply vcg
+    apply (rule conseqPre, vcg)
+    apply (simp(no_asm_use) add: gs_set_assn_Delete_cstate_relation[unfolded o_def]
+                                 subset_iff rf_sr_def)
    apply (clarsimp simp: guard_is_UNIV_def to_bool_def true_def     
                          option_to_ptr_def option_to_0_def false_def
-                         ThreadState_Running_def mask_def split: option.splits)
+                         ThreadState_Running_def mask_def
+                         ghost_assertion_data_get_def ghost_assertion_data_set_def
+                  split: option.splits)
   apply (clarsimp simp: st_tcb_at_tcb_at')
-  apply (clarsimp simp: st_tcb_at'_def obj_at'_def)
+  apply (clarsimp simp: st_tcb_at'_def obj_at'_def cte_wp_at_ctes_of)
   apply fastforce
   done
 qed

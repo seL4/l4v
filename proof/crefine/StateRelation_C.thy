@@ -580,6 +580,12 @@ where
      length adomSched = card (UNIV :: 'b set) \<and>
      (\<forall>n \<le> length adomSched. dom_schedule_entry_relation (adomSched ! n) (index cdomSched n))"
 
+definition
+  ghost_size_rel :: "cghost_state \<Rightarrow> nat \<Rightarrow> bool"
+where
+  "ghost_size_rel gs maxSize = ((gs_get_assn cap_get_capSizeBits_'proc gs = 0)
+    \<or> (maxSize \<le> unat (gs_get_assn cap_get_capSizeBits_'proc gs)))"
+
 definition (in state_rel)
   cstate_relation :: "KernelStateData_H.kernel_state \<Rightarrow> globals \<Rightarrow> bool"
 where
@@ -597,7 +603,8 @@ where
                                  (ksSchedulerAction_' cstate) \<and>
        carch_state_relation (ksArchState astate) cstate \<and>
        cmachine_state_relation (ksMachineState astate) cstate \<and>
-       ghost'state_' cstate = (gsUserPages astate, gsCNodes astate) \<and>
+       apsnd fst (ghost'state_' cstate) = (gsUserPages astate, gsCNodes astate) \<and>
+       ghost_size_rel (ghost'state_' cstate) (gsMaxObjectSize astate) \<and>
        ksWorkUnitsCompleted_' cstate = ksWorkUnitsCompleted astate \<and>
        h_t_valid (hrs_htd (t_hrs_' cstate)) c_guard
          (pd_Ptr (symbol_table ''armKSGlobalPD'')) \<and>

@@ -1130,7 +1130,7 @@ lemma rf_sr_tcb_update_no_queue:
   \<Longrightarrow> (s\<lparr>ksPSpace := ksPSpace s(thread \<mapsto> KOTCB tcb')\<rparr>, x\<lparr>globals := globals s'\<lparr>t_hrs_' := t_hrs_' (globals t)\<rparr>\<rparr>) \<in> rf_sr"
   unfolding rf_sr_def state_relation_def cstate_relation_def cpspace_relation_def
   apply (clarsimp simp: Let_def update_tcb_map_tos map_to_ctes_upd_tcb_no_ctes heap_to_page_data_def)
-  apply (frule (1) cmap_relation_ko_atD)  
+  apply (frule (1) cmap_relation_ko_atD) 
   apply (erule obj_atE')
   apply (clarsimp simp: projectKOs)
   apply (intro conjI)
@@ -1149,7 +1149,7 @@ lemma rf_sr_tcb_update_no_queue:
      apply (clarsimp intro!: ext)
     apply (clarsimp intro!: ext)
    apply (simp add: carch_state_relation_def)
-  apply (simp add: cmachine_state_relation_def) 
+  apply (simp add: cmachine_state_relation_def)
   done
 
 lemma rf_sr_tcb_update_no_queue_helper:

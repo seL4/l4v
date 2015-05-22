@@ -13,8 +13,6 @@ theory SEL4GlobalsSwap
 imports "../../tools/asmrefine/GlobalsSwap"
   "../../tools/asmrefine/FieldAccessors"
   "../../spec/cspec/Substitute"
-  (* FIXME CommonOps only needed because ptr_inverse_safe in wrong place *)
-  "../../tools/asmrefine/CommonOps"
 
 begin
 

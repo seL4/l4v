@@ -24,9 +24,8 @@ val csenv = let
 
 context kernel_all_substitute begin
 
-ML {* outfile := SOME (openOut_relative @{theory} "CFunDump.txt");
-  emit_C_everything @{context} (csenv ());
-  TextIO.closeOut (the (! outfile))
+ML {* 
+  emit_C_everything_relative @{context} (csenv ()) "CFunDump.txt";
 *}
 
 end

@@ -2982,17 +2982,24 @@ lemma setCTE_global_refs[wp]:
   apply (wp|wpc|simp add: unless_def)+
   done
 
+lemma setCTE_gsMaxObjectSize[wp]:
+  "\<lbrace>\<lambda>s. P (gsMaxObjectSize s)\<rbrace> setCTE p c \<lbrace>\<lambda>_ s. P (gsMaxObjectSize s)\<rbrace>"
+  apply (simp add: setCTE_def setObject_def split_def updateObject_cte)
+  apply (wp|wpc|simp add: unless_def)+
+  done
+
 lemma setCTE_valid_globals[wp]:
-  "\<lbrace>valid_global_refs' and (\<lambda>s. kernel_data_refs \<inter> capRange (cteCap c) = {})\<rbrace>
+  "\<lbrace>valid_global_refs' and (\<lambda>s. kernel_data_refs \<inter> capRange (cteCap c) = {})
+      and (\<lambda>s. 2 ^ capBits (cteCap c) \<le> gsMaxObjectSize s)\<rbrace>
   setCTE p c
   \<lbrace>\<lambda>_. valid_global_refs'\<rbrace>"
   apply (simp add: valid_global_refs'_def valid_refs'_def pred_conj_def)
   apply (rule hoare_lift_Pf2 [where f=global_refs'])
+   apply (rule hoare_lift_Pf2 [where f=gsMaxObjectSize])
+    apply wp
+    apply (clarsimp simp: ran_def valid_cap_sizes'_def)
+    apply metis
    apply wp
-   apply (clarsimp simp: ran_def)
-   apply (case_tac "a = p", clarsimp)
-   apply fastforce
-  apply wp
   done
 
 lemma updateMDB_global_refs [wp]:
@@ -3000,12 +3007,13 @@ lemma updateMDB_global_refs [wp]:
   apply (clarsimp simp add: updateMDB_def)
   apply (rule hoare_pre)
    apply (wp getCTE_wp)
-  apply (clarsimp simp: cte_wp_at_ctes_of valid_global_refs'_def valid_refs'_def)
+  apply (clarsimp simp: cte_wp_at_ctes_of valid_global_refs'_def valid_refs'_def valid_cap_sizes'_def)
   apply blast
   done
 
 lemma updateCap_global_refs [wp]:
- "\<lbrace>valid_global_refs' and (\<lambda>s. kernel_data_refs \<inter> capRange cap = {})\<rbrace>
+ "\<lbrace>valid_global_refs' and (\<lambda>s. kernel_data_refs \<inter> capRange cap = {})
+     and (\<lambda>s. 2 ^ capBits cap \<le> gsMaxObjectSize s)\<rbrace>
   updateCap p cap
   \<lbrace>\<lambda>rv. valid_global_refs'\<rbrace>"
   apply (clarsimp simp add: updateCap_def)
@@ -3099,6 +3107,7 @@ lemmas setCTE_cteCap_wp_irq[wp] =
 crunch global_refs'[wp]: setUntypedCapAsFull "\<lambda>s. P (global_refs' s) "
   (simp: crunch_simps)
 
+
 lemma setUntypedCapAsFull_valid_refs'[wp]:
   "\<lbrace>\<lambda>s. valid_refs' R (ctes_of s) \<and> cte_wp_at' (op = srcCTE) src s\<rbrace>
    setUntypedCapAsFull (cteCap srcCTE) cap src
@@ -3114,6 +3123,23 @@ lemma setUntypedCapAsFull_valid_refs'[wp]:
     isCap_simps split:if_splits)
 done
 
+crunch gsMaxObjectSize[wp]: setUntypedCapAsFull "\<lambda>s. P (gsMaxObjectSize s)"
+
+lemma setUntypedCapAsFull_sizes[wp]:
+  "\<lbrace>\<lambda>s. valid_cap_sizes' sz (ctes_of s) \<and> cte_wp_at' (op = srcCTE) src s\<rbrace>
+    setUntypedCapAsFull (cteCap srcCTE) cap src 
+  \<lbrace>\<lambda>rv s. valid_cap_sizes' sz (ctes_of s)\<rbrace>"
+  apply (clarsimp simp:valid_cap_sizes'_def setUntypedCapAsFull_def split del:if_splits)
+  apply (rule hoare_pre)
+  apply (wp updateCap_ctes_of_wp | wps)+
+  apply (clarsimp simp:ran_dom)
+  apply (drule_tac x = y in bspec)
+    apply (drule_tac a = y in domI)
+    apply (simp add:modify_map_dom)
+  apply (clarsimp simp:modify_map_def cte_wp_at_ctes_of
+    isCap_simps split:if_splits)
+  done
+
 lemma setUntypedCapAsFull_valid_global_refs'[wp]:
   "\<lbrace>\<lambda>s. valid_global_refs' s \<and> cte_wp_at' (op = srcCTE) src s\<rbrace>
    setUntypedCapAsFull (cteCap srcCTE) cap src
@@ -3124,6 +3150,16 @@ lemma setUntypedCapAsFull_valid_global_refs'[wp]:
   apply simp
 done
 
+lemma capMaster_eq_capBits_eq:
+  "capMasterCap cap = capMasterCap cap' \<Longrightarrow> capBits cap = capBits cap'"
+  by (metis capBits_Master)
+
+lemma valid_global_refsD_with_objSize:
+  "\<lbrakk> ctes_of s p = Some cte; valid_global_refs' s \<rbrakk> \<Longrightarrow>
+  kernel_data_refs \<inter> capRange (cteCap cte) = {} \<and> global_refs' s \<subseteq> kernel_data_refs
+    \<and> 2 ^ capBits (cteCap cte) \<le> gsMaxObjectSize s"
+  by (clarsimp simp: valid_global_refs'_def valid_refs'_def valid_cap_sizes'_def ran_def) blast
+
 lemma cteInsert_valid_globals [wp]:
  "\<lbrace>valid_global_refs' and (\<lambda>s. cte_wp_at' (is_derived' (ctes_of s) src cap \<circ> cteCap) src s)\<rbrace>
   cteInsert cap src dest
@@ -3132,8 +3168,9 @@ lemma cteInsert_valid_globals [wp]:
   apply (rule hoare_pre)
    apply (wp getCTE_wp)
   apply (clarsimp simp: cte_wp_at_ctes_of is_derived'_def badge_derived'_def)
+  apply (frule capMaster_eq_capBits_eq)
   apply (drule capMaster_capRange)
-  apply (drule (1) valid_global_refsD')
+  apply (drule (1) valid_global_refsD_with_objSize)
   apply simp
   done
 
@@ -4016,16 +4053,23 @@ lemma setupReplyMaster_iflive'[wp]:
   done
 
 lemma setupReplyMaster_global_refs[wp]:
-  "\<lbrace>\<lambda>s. valid_global_refs' s \<and> thread \<notin> global_refs' s\<rbrace>
+  "\<lbrace>\<lambda>s. valid_global_refs' s \<and> thread \<notin> global_refs' s \<and> tcb_at' thread s
+      \<and> ex_nonz_cap_to' thread s \<and> valid_objs' s\<rbrace>
     setupReplyMaster thread
    \<lbrace>\<lambda>rv. valid_global_refs'\<rbrace>"
   apply (simp add: setupReplyMaster_def locateSlot_def)
   apply (wp getCTE_wp')
-  apply (clarsimp simp: capRange_def)
+  apply (clarsimp simp: capRange_def cte_wp_at_ctes_of objBits_simps)
+  apply (clarsimp simp: ex_nonz_cap_to'_def cte_wp_at_ctes_of)
+  apply (rename_tac "prev_cte")
+  apply (case_tac prev_cte, simp)
+  apply (frule(1) ctes_of_valid_cap')
+  apply (drule(1) valid_global_refsD_with_objSize)+
+  apply (clarsimp simp: valid_cap'_def objBits_simps obj_at'_def projectKOs
+                 split: capability.split_asm)
   done
 
 crunch valid_arch'[wp]: setupReplyMaster "valid_arch_state'"
-
 lemma ex_nonz_tcb_cte_caps':
   "\<lbrakk>ex_nonz_cap_to' t s; tcb_at' t s; valid_objs' s; sl \<in> dom tcb_cte_cases\<rbrakk> \<Longrightarrow>
    ex_cte_cap_to' (t + sl) s"
@@ -4380,8 +4424,9 @@ lemma arch_update_setCTE_invs:
              setCTE_norq hoare_vcg_disj_lift| simp add: st_tcb_at'_def)+
   apply clarsimp
   apply (clarsimp simp: valid_global_refs'_def is_arch_update'_def cte_wp_at_ctes_of isCap_simps)
+  apply (frule capMaster_eq_capBits_eq)
   apply (drule capMaster_capRange)
-  apply (clarsimp simp: valid_refs'_def)
+  apply (clarsimp simp: valid_refs'_def valid_cap_sizes'_def)
   apply fastforce
   done
 
@@ -4393,7 +4438,8 @@ definition
    parent = IRQControlCap \<and>
    (\<forall>p n'. m p \<noteq> Some (CTE cap n'))
   \<or>
-   isUntypedCap parent \<and> descendants_of' p m = {} \<and> capRange cap \<noteq> {})"
+   isUntypedCap parent \<and> descendants_of' p m = {} \<and> capRange cap \<noteq> {}
+      \<and> capBits cap \<le> capBits parent)"
 
 definition
   "is_simple_cap' cap \<equiv>
@@ -4908,12 +4954,14 @@ lemma sameRegion_capRange_sub:
   apply (clarsimp simp: isCap_simps capRange_def)
   done
 
-lemma safe_parent_for_capRange:
-  "\<lbrakk> safe_parent_for' m p cap; m p = Some cte \<rbrakk> \<Longrightarrow> capRange cap \<subseteq> capRange (cteCap cte)"
+lemma safe_parent_for_capRange_capBits:
+  "\<lbrakk> safe_parent_for' m p cap; m p = Some cte \<rbrakk> \<Longrightarrow> capRange cap \<subseteq> capRange (cteCap cte)
+    \<and> capBits cap \<le> capBits (cteCap cte)"
   apply (clarsimp simp: safe_parent_for'_def)
   apply (erule disjE)
    apply (clarsimp simp: capRange_def)
-  apply (auto simp: sameRegionAs_def2 isCap_simps capRange_def capMasterCap_def capRange_Master
+  apply (auto simp: sameRegionAs_def2 isCap_simps capRange_def
+                    capMasterCap_def capRange_Master objBits_simps
          split:capability.splits arch_capability.splits)
   done
 
@@ -5248,7 +5296,7 @@ lemma utRange_c':
 lemma capRange_c':
   "capRange c' \<subseteq> capRange src_cap"
   using safe_parent src
-  by - (drule (1) safe_parent_for_capRange, simp)
+  by - (drule (1) safe_parent_for_capRange_capBits, simp)
 
 lemma not_ut_c' [simp]:
   "\<not>isUntypedCap c'"
@@ -5816,9 +5864,9 @@ lemma cteInsert_valid_globals_simple:
   apply (rule hoare_pre)
    apply (wp getCTE_wp)
   apply (clarsimp simp: cte_wp_at_ctes_of)
-  apply (drule (1) safe_parent_for_capRange)
-  apply (drule (1) valid_global_refsD')
-  apply blast
+  apply (drule (1) safe_parent_for_capRange_capBits)
+  apply (drule (1) valid_global_refsD_with_objSize)
+  apply (auto elim: order_trans[rotated])
   done
 
 lemma cteInsert_simple_invs:
@@ -6227,6 +6275,8 @@ lemma updateFreeIndex_invs':
          apply (rule_tac x = cref' in exI)
          apply clarsimp
         apply (drule(1) valid_global_refsD')
+        apply (clarsimp simp: isCap_simps)
+       apply (drule(1) valid_global_refsD_with_objSize)
   apply (clarsimp simp:isCap_simps cte_wp_at_ctes_of)+
   done
 

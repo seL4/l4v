@@ -1266,12 +1266,7 @@ lemma emptySlot_idle'[wp]:
 
 crunch ksArch[wp]: emptySlot "\<lambda>s. P (ksArchState s)"
 crunch ksIdle[wp]: emptySlot "\<lambda>s. P (ksIdleThread s)"
-
-lemma valid_refs'_cteCaps:
-  "valid_refs' S (ctes_of s) = (\<forall>c \<in> ran (cteCaps_of s). S \<inter> capRange c = {})"
-  apply (simp add: valid_refs'_def cteCaps_of_def)
-  apply (fastforce elim!: ranE)
-  done
+crunch gsMaxObjectSize[wp]: emptySlot "\<lambda>s. P (gsMaxObjectSize s)"
 
 lemma emptySlot_cteCaps_of:
   "\<lbrace>\<lambda>s. P (cteCaps_of s(p \<mapsto> NullCap))\<rbrace>
@@ -1287,17 +1282,18 @@ lemma emptySlot_cteCaps_of:
   done
 
 lemma emptySlot_valid_global_refs[wp]:
-  "\<lbrace>valid_global_refs'\<rbrace> emptySlot sl opt \<lbrace>\<lambda>rv. valid_global_refs'\<rbrace>"
+  "\<lbrace>valid_global_refs' and cte_at' sl\<rbrace> emptySlot sl opt \<lbrace>\<lambda>rv. valid_global_refs'\<rbrace>"
   apply (simp add: valid_global_refs'_def global_refs'_def)
   apply (rule hoare_pre)
    apply (rule hoare_use_eq_irq_node' [OF emptySlot_irq_node'])
    apply (rule hoare_use_eq [where f=ksArchState, OF emptySlot_ksArch])
    apply (rule hoare_use_eq [where f=ksIdleThread, OF emptySlot_ksIdle])
-   apply (simp add: valid_refs'_cteCaps)
+   apply (rule hoare_use_eq [where f=gsMaxObjectSize], wp)
+   apply (simp add: valid_refs'_cteCaps valid_cap_sizes_cteCaps)
    apply (rule emptySlot_cteCaps_of)
-  apply (clarsimp simp: valid_refs'_cteCaps elim!: ranE
-                 split: split_if_asm)
-  apply fastforce
+  apply (clarsimp simp: cte_wp_at_ctes_of)
+  apply (frule(1) cte_at_valid_cap_sizes_0)
+  apply (clarsimp simp: valid_refs'_cteCaps valid_cap_sizes_cteCaps ball_ran_eq)
   done
 
 lemmas doMachineOp_irq_handlers[wp]
@@ -1421,7 +1417,7 @@ lemma emptySlot_invs'[wp]:
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
   apply (rule hoare_pre)
    apply (wp valid_arch_state_lift' valid_irq_node_lift)
-  apply clarsimp
+  apply (clarsimp simp: cte_wp_at_ctes_of)
   done
 
 lemma opt_deleted_irq_corres:

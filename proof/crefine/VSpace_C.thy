@@ -1719,47 +1719,61 @@ definition
   | ArchRetypeDecls_H.flush_type.Unify \<Rightarrow> (label = Kernel_C.ARMPageUnify_Instruction \<or> label = Kernel_C.ARMPDUnify_Instruction)"
 
 lemma doFlush_ccorres:
-  "ccorres dc xfdc (\<lambda>_. vs \<le> ve \<and> ps \<le> ps + (ve - vs) \<and> vs && mask 5 = ps && mask 5)
+  "ccorres dc xfdc (\<lambda>s. vs \<le> ve \<and> ps \<le> ps + (ve - vs) \<and> vs && mask 5 = ps && mask 5
+        \<and> unat (ve - vs) \<le> gsMaxObjectSize s)
      (\<lbrace>flushtype_relation t \<acute>label___int\<rbrace> \<inter> \<lbrace>\<acute>start = vs\<rbrace> \<inter> \<lbrace>\<acute>end = ve\<rbrace> \<inter> \<lbrace>\<acute>pstart = ps\<rbrace>) []
      (doMachineOp (doFlush t vs ve ps)) (Call doFlush_'proc)" 
   apply (cinit' lift: label___int_' start_' end_' pstart_')
-  apply (unfold doMachineOp_bind doFlush_def)
-   apply (simp only: dmo_flushtype_case)
-   apply wpc
+   apply (unfold doMachineOp_bind doFlush_def)
+   apply (rule ccorres_Guard_Seq)
+   apply (rule ccorres_basic_srnoop)
+     apply (simp only: dmo_flushtype_case)
+     apply wpc
+        apply (rule ccorres_cond_true)
+        apply (ctac (no_vcg) add: cleanCacheRange_RAM_ccorres)
+       apply (rule ccorres_cond_false)
+       apply (rule ccorres_cond_true)
+       apply (ctac (no_vcg) add: invalidateCacheRange_RAM_ccorres)
+      apply (rule ccorres_cond_false)
+      apply (rule ccorres_cond_false)
       apply (rule ccorres_cond_true)
-      apply (ctac (no_vcg) add: cleanCacheRange_RAM_ccorres)
+      apply (ctac (no_vcg) add: cleanInvalidateCacheRange_RAM_ccorres)
+      apply (rule ccorres_cond_false)
+     apply (rule ccorres_cond_false)
      apply (rule ccorres_cond_false)
      apply (rule ccorres_cond_true)
-     apply (ctac (no_vcg) add: invalidateCacheRange_RAM_ccorres)
-    apply (rule ccorres_cond_false)
-    apply (rule ccorres_cond_false)
-    apply (rule ccorres_cond_true)
-    apply (ctac (no_vcg) add: cleanInvalidateCacheRange_RAM_ccorres)
-   apply (rule ccorres_cond_false)
-   apply (rule ccorres_cond_false)
-   apply (rule ccorres_cond_false)
-   apply (rule ccorres_cond_true)
-   apply (simp add: empty_fail_cleanCacheRange_PoU empty_fail_dsb empty_fail_invalidateCacheRange_I empty_fail_branchFlushRange empty_fail_isb doMachineOp_bind)
-   apply (rule ccorres_rhs_assoc)+
-   apply (fold dc_def)
-   apply (ctac (no_vcg) add: cleanCacheRange_PoU_ccorres)
-    apply (ctac (no_vcg) add: dsb_ccorres)
-     apply (ctac (no_vcg) add: invalidateCacheRange_I_ccorres)
-      apply (ctac (no_vcg) add: branchFlushRange_ccorres)
-       apply (ctac (no_vcg) add: isb_ccorres)
-      apply wp
-  apply (auto simp: flushtype_relation_def 
+     apply (simp add: empty_fail_cleanCacheRange_PoU empty_fail_dsb empty_fail_invalidateCacheRange_I empty_fail_branchFlushRange empty_fail_isb doMachineOp_bind)
+     apply (rule ccorres_rhs_assoc)+
+     apply (fold dc_def)
+     apply (ctac (no_vcg) add: cleanCacheRange_PoU_ccorres)
+      apply (ctac (no_vcg) add: dsb_ccorres)
+       apply (ctac (no_vcg) add: invalidateCacheRange_I_ccorres)
+        apply (ctac (no_vcg) add: branchFlushRange_ccorres)
+         apply (ctac (no_vcg) add: isb_ccorres)
+        apply wp
+    apply simp
+   apply (clarsimp simp: Collect_const_mem)
+  apply (auto simp: flushtype_relation_def o_def
                         Kernel_C.ARMPageClean_Data_def Kernel_C.ARMPDClean_Data_def
                         Kernel_C.ARMPageInvalidate_Data_def Kernel_C.ARMPDInvalidate_Data_def
                         Kernel_C.ARMPageCleanInvalidate_Data_def Kernel_C.ARMPDCleanInvalidate_Data_def
                         Kernel_C.ARMPageUnify_Instruction_def Kernel_C.ARMPDUnify_Instruction_def
+                  dest: ghost_assertion_size_logic[rotated]
                  split: ArchRetypeDecls_H.flush_type.splits)
   done
+
+end
+
+crunch gsMaxObjectSize[wp]: setVMRootForFlush "\<lambda>s. P (gsMaxObjectSize s)"
+  (wp: crunch_wps)
+
+context kernel_m begin
 
 lemma performPageFlush_ccorres:
   "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
        (invs' and K (asid \<le> mask asid_bits)
-              and (\<lambda>_. ps \<le> ps + (ve - vs) \<and> vs && mask 5 = ps && mask 5))
+              and (\<lambda>s. ps \<le> ps + (ve - vs) \<and> vs && mask 5 = ps && mask 5
+                  \<and> unat (ve - vs) \<le> gsMaxObjectSize s))
        (\<lbrace>\<acute>pd = Ptr pd\<rbrace> \<inter> \<lbrace>\<acute>asid = asid\<rbrace> \<inter> 
                \<lbrace>\<acute>start = vs\<rbrace> \<inter> \<lbrace>\<acute>end =  ve\<rbrace> \<inter> \<lbrace>\<acute>pstart = ps\<rbrace> \<inter> \<lbrace>flushtype_relation typ \<acute>label___int \<rbrace>)
        []
@@ -1950,7 +1964,8 @@ lemma performPageGetAddress_ccorres:
 lemma performPageDirectoryInvocationFlush_ccorres:
   "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
        (invs' and K (asid \<le> mask asid_bits)
-              and (\<lambda>_. ps \<le> ps + (ve - vs) \<and> vs && mask 5 = ps && mask 5))
+              and (\<lambda>s. ps \<le> ps + (ve - vs) \<and> vs && mask 5 = ps && mask 5
+                  \<and> unat (ve - vs) \<le> gsMaxObjectSize s))
        (\<lbrace>\<acute>pd = Ptr pd\<rbrace> \<inter> \<lbrace>\<acute>asid = asid\<rbrace> \<inter> 
                \<lbrace>\<acute>start = vs\<rbrace> \<inter> \<lbrace>\<acute>end =  ve\<rbrace> \<inter> \<lbrace>\<acute>pstart = ps\<rbrace> \<inter> \<lbrace>flushtype_relation typ \<acute>label___int \<rbrace>)
        []
@@ -2186,7 +2201,8 @@ lemma pte_pte_invalid_new_spec:
   done
 
 lemma unmapPage_ccorres:
-  "ccorres dc xfdc (invs' and (\<lambda>_. asid \<le> mask asid_bits \<and> vmsz_aligned' vptr sz
+  "ccorres dc xfdc (invs' and (\<lambda>s. 2 ^ pageBitsForSize sz \<le> gsMaxObjectSize s)
+                          and (\<lambda>_. asid \<le> mask asid_bits \<and> vmsz_aligned' vptr sz
                                            \<and> vptr < kernelBase))
       (UNIV \<inter> {s. gen_framesize_to_H (page_size_' s) = sz \<and> page_size_' s < 4}
             \<inter> {s. asid_' s = asid} \<inter> {s. vptr_' s = vptr} \<inter> {s. pptr_' s = Ptr pptr}) []
@@ -2291,6 +2307,10 @@ lemma unmapPage_ccorres:
                   apply (ctac add: cleanCacheRange_PoU_ccorres[unfolded dc_def])
                  apply (rule_tac P="is_aligned rva 6" in hoare_gen_asm)
                  apply (rule hoare_strengthen_post)
+                  apply (rule hoare_vcg_conj_lift)
+                   apply (rule_tac P="\<lambda>s. 2 ^ pageBitsForSize sz \<le> gsMaxObjectSize s"
+                      in mapM_x_wp')
+                   apply wp[1]
                   apply (rule mapM_x_accumulate_checks)
                    apply (simp add: storePTE_def)
                    apply (rule obj_at_setObject3)
@@ -2298,6 +2318,7 @@ lemma unmapPage_ccorres:
                    apply (simp add: objBits_simps archObjSize_def)
                   apply (simp add: typ_at_to_obj_at_arches[symmetric])
                   apply wp
+                 apply clarify
                  apply (subgoal_tac "P" for P)
                   apply (frule bspec, erule hd_in_set)
                   apply (frule bspec, erule last_in_set)
@@ -2411,6 +2432,10 @@ lemma unmapPage_ccorres:
                apply (ctac add: cleanCacheRange_PoU_ccorres[unfolded dc_def])
               apply (rule_tac P="is_aligned rv pdBits" in hoare_gen_asm)
               apply (rule hoare_strengthen_post)
+               apply (rule hoare_vcg_conj_lift)
+                apply (rule_tac P="\<lambda>s. 2 ^ pageBitsForSize sz \<le> gsMaxObjectSize s"
+                   in mapM_x_wp')
+                apply wp[1]
                apply (rule mapM_x_accumulate_checks)
                 apply (simp add: storePDE_def)
                 apply (rule obj_at_setObject3)
@@ -2418,7 +2443,7 @@ lemma unmapPage_ccorres:
                 apply (simp add: objBits_simps archObjSize_def)
                apply (simp add: typ_at_to_obj_at_arches[symmetric])
                apply wp
-              apply simp
+              apply clarsimp
               apply (subgoal_tac "P" for P)
                apply (frule bspec, erule hd_in_set)
                apply (frule bspec, erule last_in_set)
@@ -2751,7 +2776,8 @@ lemma performPageInvocationUnmap_ccorres:
     apply (drule diminished_PageCap)
     apply clarsimp
     apply (drule ccap_relation_mapped_asid_0)
-    apply (drule ctes_of_valid', clarsimp)
+    apply (frule ctes_of_valid', clarsimp)
+    apply (drule valid_global_refsD_with_objSize, clarsimp)
     apply (clarsimp simp: mask_def valid_cap'_def
                           vmsz_aligned_aligned_pageBits)
    apply assumption

@@ -37,6 +37,7 @@ record kernel_state =
   ksPSpace             :: pspace
   gsUserPages          :: "machine_word \<Rightarrow> vmpage_size option"
   gsCNodes             :: "machine_word \<Rightarrow> nat option"
+  gsMaxObjectSize      :: nat
   ksDomScheduleIdx     :: nat
   ksDomSchedule        :: "(domain \<times> machine_word) list"
   ksCurDomain          :: domain

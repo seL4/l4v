@@ -3112,6 +3112,12 @@ crunch ksDomScheduleIdx[wp]: storePDE "\<lambda>s. P (ksDomScheduleIdx s)"
 crunch ksDomScheduleIdx[wp]: storePTE "\<lambda>s. P (ksDomScheduleIdx s)"
 (ignore: getObject setObject) 
 
+crunch gsMaxObjectSize[wp]: storePTE "\<lambda>s. P (gsMaxObjectSize s)"
+(ignore: getObject setObject wp: setObject_ksPSpace_only updateObject_default_inv)
+
+crunch gsMaxObjectSize[wp]: storePDE "\<lambda>s. P (gsMaxObjectSize s)"
+(ignore: getObject setObject wp: setObject_ksPSpace_only updateObject_default_inv)
+
 lemma storePDE_invs[wp]:
   "\<lbrace>invs' and valid_pde' pde
           and (\<lambda>s. valid_pde_mapping' (p && mask pdBits) pde)\<rbrace>
@@ -3454,7 +3460,9 @@ lemma setASIDPool_invs [wp]:
   apply (rule hoare_pre)
    apply (wp sch_act_wf_lift valid_global_refs_lift' irqs_masked_lift
              valid_arch_state_lift' valid_irq_node_lift 
-             cur_tcb_lift valid_irq_handlers_lift'')+
+             cur_tcb_lift valid_irq_handlers_lift''
+             updateObject_default_inv
+           | rule setObject_ksPSpace_only | simp)+
   apply (clarsimp simp add: setObject_def)
   done
 

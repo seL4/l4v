@@ -157,6 +157,10 @@ session SimplExportAndRefine = CSpec +
     "asmrefine/SEL4SimplExport"
     "asmrefine/SEL4GraphRefine"
 
+session SimplExportOnly = CSpec +
+  theories
+    "asmrefine/SEL4SimplExport"
+
 (*
  * Libraries
  *)

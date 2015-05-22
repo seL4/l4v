@@ -2202,40 +2202,51 @@ lemma getThreadState_ccorres_foo:
   apply (clarsimp simp: ctcb_relation_def obj_at'_def)
   done
 
+lemma gs_set_assn_Delete_cstate_relation:
+  "cstate_relation s (ghost'state_'_update (gs_set_assn cteDeleteOne_'proc v) gs)
+    = cstate_relation s gs"
+  apply (cases "ghost'state_' gs")
+  apply (auto simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def
+                    cmachine_state_relation_def ghost_assertion_data_set_def
+                    ghost_size_rel_def ghost_assertion_data_get_def
+                    cteDeleteOne_'proc_def cap_get_capSizeBits_'proc_def)
+  done
+
 lemma ipcCancel_ccorres_reply_helper:
   assumes cteDeleteOne_ccorres:
-  "\<And>slot. ccorres dc xfdc
-   (invs' and sch_act_simple) (UNIV \<inter> {s. slot_' s = Ptr slot}) []
+  "\<And>w slot. ccorres dc xfdc
+   (invs' and sch_act_simple and cte_wp_at' (\<lambda>ct. w = -1 \<or> cteCap ct = NullCap
+        \<or> (\<forall>cap'. ccap_relation (cteCap ct) cap' \<longrightarrow> cap_get_tag cap' = w)) slot)
+   ({s. gs_get_assn cteDeleteOne_'proc (ghost'state_' (globals s)) = w}
+        \<inter> {s. slot_' s = Ptr slot}) []
    (cteDeleteOne slot) (Call cteDeleteOne_'proc)"
   shows
+
   "ccorres dc xfdc (invs' and st_tcb_at' (isBlockedOnReply or isBlockedOnFault) thread
-                          and sch_act_simple)
-     UNIV hs
-     (do y \<leftarrow> threadSet (tcbFault_update empty) thread;
+                          and sch_act_simple) UNIV hs
+     (do y \<leftarrow> threadSet (tcbFault_update Map.empty) thread;
          slot \<leftarrow> getThreadReplySlot thread;
-         callerCap \<leftarrow> liftM (\<lambda>a. mdbNext (cteMDBNode a)) (getCTE slot);
+         callerCap \<leftarrow> liftM (\<lambda>x. mdbNext (cteMDBNode x)) (getCTE slot);
          when (callerCap \<noteq> nullPointer)
           (do y \<leftarrow> stateAssert (capHasProperty callerCap isReplyCap) [];
               cteDeleteOne callerCap
            od)
       od)
-      (CALL fault_null_fault_ptr_new(Ptr
-      &(tcb_ptr_to_ctcb_ptr thread\<rightarrow>[''tcbFault_C'']));;
-       (Guard ShiftError UNIV (Guard ShiftError UNIV
-         (Guard SignedArithmetic UNIV (Guard SignedArithmetic UNIV
-           (\<acute>slot :==
-              cte_Ptr
-               ((ptr_val (tcb_ptr_to_ctcb_ptr thread) && 0xFFFFFE00) +
-                of_int (sint Kernel_C.tcbReply) * of_nat (size_of TYPE(cte_C)))))));;
-        (Guard C_Guard \<lbrace>hrs_htd \<acute>t_hrs \<Turnstile>\<^sub>t \<acute>slot\<rbrace>
-          (\<acute>ret__unsigned_long :== CALL mdb_node_get_mdbNext(h_val
-                              (hrs_mem \<acute>t_hrs)
-                              (mdb_Ptr &(\<acute>slot\<rightarrow>[''cteMDBNode_C'']))));;
-         (\<acute>callerCap___ptr_to_struct_cte_C :==
-            cte_Ptr \<acute>ret__unsigned_long;;
-          IF \<acute>callerCap___ptr_to_struct_cte_C \<noteq> cte_Ptr 0 THEN
-            CALL cteDeleteOne(\<acute>callerCap___ptr_to_struct_cte_C)
-          FI))))"
+     (CALL fault_null_fault_ptr_new(Ptr &(tcb_ptr_to_ctcb_ptr thread\<rightarrow>[''tcbFault_C'']));;
+      (\<acute>slot :==
+         cte_Ptr
+          ((ptr_val (tcb_ptr_to_ctcb_ptr thread) && 0xFFFFFE00) +
+           of_int (sint Kernel_C.tcbReply) * of_nat (size_of TYPE(cte_C)));;
+       (Guard C_Guard {s. s \<Turnstile>\<^sub>c slot_' s}
+         (\<acute>ret__unsigned_long :== CALL mdb_node_get_mdbNext(h_val (hrs_mem \<acute>t_hrs)
+                  (mdb_Ptr &(\<acute>slot\<rightarrow>[''cteMDBNode_C'']))));;
+        (\<acute>callerCap___ptr_to_struct_cte_C :== cte_Ptr \<acute>ret__unsigned_long;;
+         IF \<acute>callerCap___ptr_to_struct_cte_C \<noteq> NULL THEN
+           Basic (globals_update (ghost'state_'_update
+              (ghost_assertion_data_set cteDeleteOne_'proc (ucast cap_reply_cap)
+                (\<lambda>x. apsnd (apsnd x)))));;
+           CALL cteDeleteOne(\<acute>callerCap___ptr_to_struct_cte_C)
+         FI))))"
   apply (rule ccorres_guard_imp2)
    apply (rule ccorres_gen_asm, drule_tac thread=thread in ptr_val_tcb_ptr_mask2)
    apply (simp add: getThreadReplySlot_def del: Collect_const)
@@ -2248,7 +2259,6 @@ lemma ipcCancel_ccorres_reply_helper:
       apply (clarsimp simp: ctcb_relation_def fault_lift_null_fault
                             cfault_rel_def cthread_state_relation_def)
       apply (case_tac "tcbState tcb", simp_all add: is_cap_fault_def)[1]
-     apply (rule ccorres_Guard_Seq)+
      apply ctac
        apply (simp (no_asm) only: liftM_def bind_assoc return_bind del: Collect_const)
        apply (rule ccorres_pre_getCTE)
@@ -2266,14 +2276,20 @@ lemma ipcCancel_ccorres_reply_helper:
          apply (simp add: nullPointer_def when_def)
          apply (rule ccorres_symb_exec_l[OF _ _ _ empty_fail_stateAssert])
            apply (simp only: dc_def[symmetric])
-           apply (ctac add: cteDeleteOne_ccorres)
+           apply (rule ccorres_symb_exec_r)
+             apply (ctac add: cteDeleteOne_ccorres[where w="scast cap_reply_cap"])
+            apply vcg
+           apply (rule conseqPre, vcg, clarsimp simp: rf_sr_def
+              gs_set_assn_Delete_cstate_relation[unfolded o_def])
           apply (wp | simp)+
         apply (simp add: when_def nullPointer_def dc_def[symmetric])
         apply (rule ccorres_return_Skip)
-       apply (simp add: guard_is_UNIV_def)
+       apply (simp add: guard_is_UNIV_def ghost_assertion_data_get_def
+                        ghost_assertion_data_set_def cap_tag_defs)
       apply (simp add: locateSlot_conv, wp)
      apply vcg
-    apply (simp add: cte_wp_at_ctes_of)
+    apply (rule_tac Q="\<lambda>rv. invs' and sch_act_simple" in hoare_post_imp)
+     apply (clarsimp simp: cte_wp_at_ctes_of capHasProperty_def cap_get_tag_isCap ucast_id)
     apply (wp hoare_vcg_all_lift threadSet_invs_trivial
                | wp_once hoare_drop_imps | simp)+
    apply (clarsimp simp: guard_is_UNIV_def tcbReplySlot_def
@@ -2283,8 +2299,11 @@ lemma ipcCancel_ccorres_reply_helper:
 
 lemma ipcCancel_ccorres1:
   assumes cteDeleteOne_ccorres:
-  "\<And>slot. ccorres dc xfdc
-   (invs' and sch_act_simple) (UNIV \<inter> {s. slot_' s = Ptr slot}) []
+  "\<And>w slot. ccorres dc xfdc
+   (invs' and sch_act_simple and cte_wp_at' (\<lambda>ct. w = -1 \<or> cteCap ct = NullCap
+        \<or> (\<forall>cap'. ccap_relation (cteCap ct) cap' \<longrightarrow> cap_get_tag cap' = w)) slot)
+   ({s. gs_get_assn cteDeleteOne_'proc (ghost'state_' (globals s)) = w}
+        \<inter> {s. slot_' s = Ptr slot}) []
    (cteDeleteOne slot) (Call cteDeleteOne_'proc)"
   shows
   "ccorres dc xfdc (tcb_at' thread and invs' and sch_act_simple)
@@ -2336,7 +2355,8 @@ lemma ipcCancel_ccorres1:
            apply (unfold comp_def)[1]
            apply (rule ccorres_Guard ccorres_Guard_Seq)+
            apply (clarsimp simp del: dc_simp simp: of_int_sint)
-           apply (rule ipcCancel_ccorres_reply_helper [OF cteDeleteOne_ccorres])
+           apply ccorres_remove_UNIV_guard
+           apply (rule ipcCancel_ccorres_reply_helper [OF cteDeleteOne_ccorres, unfolded dc_def])
           -- "BlockedOnAsyncEvent"
           apply (simp add: word_sle_def "StrictC'_thread_state_defs" ccorres_cond_iffs dc_def [symmetric] cong: call_ignore_cong)
           apply (rule ccorres_symb_exec_r)
