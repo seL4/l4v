@@ -115,7 +115,7 @@ lemma field_access_take_drop_general:
         access_ti s v (take (size_td s) (drop (n - m) bs))"
 apply (induct t and st and ts and x)
      apply auto
- apply(thin_tac "All ?P")+
+ apply(thin_tac "All P" for P)+
  apply(subst (asm) take_all)
   apply(drule wf_fd_cons_structD)
   apply(clarsimp simp: fd_cons_struct_def fd_cons_desc_def fd_cons_length_def)

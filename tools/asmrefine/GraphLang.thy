@@ -460,8 +460,8 @@ lemma trace_end_SomeD:
   apply (rule exI, rule conjI, assumption)
   apply (case_tac "tr (Suc (Max (dom tr)))")
    apply (simp add: nat_trace_rel_def)
-   apply (metis option.sel option.simps)
-  apply (cut_tac x="Suc ?y" in Max_ge[OF finite_subset domI])
+   apply (metis option.sel option.simps(3))
+  apply (cut_tac x="Suc y" for y in Max_ge[OF finite_subset domI])
      apply (erule(1) trace_None_dom_subset[rotated])
     apply simp+
   done
@@ -754,7 +754,7 @@ fun define_graph s nodes = let
         if i < j then eq_bdy i NONE :: match_ts (i + 1) ((j, n) :: ns)
         else if i = j then eq_bdy i (SOME n) :: match_ts (i + 1) ns
         else error "match_ts: idx too small"
-      | match_ts i [] = []
+      | match_ts _ [] = []
     val nodes = sort (int_ord o apply2 fst) nodes
   in StaticFun.define_tree_and_save_thms (Binding.name s) 
     (map (fst #> Int.toString #> prefix (s ^ "_")) nodes)

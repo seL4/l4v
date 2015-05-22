@@ -151,7 +151,7 @@ fun cons_field_upds ctxt csenv = let
     |> maps (fn (_, [t]) => [t]
               | (tp, ts) => ts @ Proof_Context.get_thms ctxt
           (tp ^ "_accupd_diff"))
-  val rews = map (concl_of #> HOLogic.dest_Trueprop #> HOLogic.dest_eq) (simps @ accups)
+  val rews = map (Thm.concl_of #> HOLogic.dest_Trueprop #> HOLogic.dest_eq) (simps @ accups)
   in Pattern.rewrite_term (Proof_Context.theory_of ctxt) rews [] end
 
 type export_params = {cons_field_upds: term -> term,
@@ -169,7 +169,7 @@ type export_params = {cons_field_upds: term -> term,
 fun get_all_export_params ctxt csenv : export_params = let
     (* assuming DefineGlobalsList has already run *)
     val defs = Proof_Context.get_thms ctxt "global_data_defs"
-    val rhss = map (concl_of #> Logic.dest_equals #> snd) defs
+    val rhss = map (Thm.concl_of #> Logic.dest_equals #> snd) defs
     val const_globals = map_filter
       (fn (Const (@{const_name const_global_data}, _) $ nm $ v)
             => SOME (HOLogic.dest_string nm, v)
@@ -319,8 +319,8 @@ fun ptr_simp ctxt = ctxt addsimps @{thms CTypesDefs.ptr_add_def size_of_def size
 val trace_ptr_simp = false
 
 fun ptr_simp_term ctxt s pat t = let
-    val rew_thm = pat |> cterm_of (Proof_Context.theory_of ctxt) |> ptr_simp ctxt
-    val rew = rew_thm |> concl_of |> Logic.varify_global |> Logic.dest_equals
+    val rew_thm = pat |> Thm.cterm_of ctxt |> ptr_simp ctxt
+    val rew = rew_thm |> Thm.concl_of |> Logic.varify_global |> Logic.dest_equals
     val _ = (not (fst rew aconv snd rew))
         orelse raise TERM ("ptr_simp_term: " ^ s, [fst rew])
     val _ = if not trace_ptr_simp then () else
@@ -439,8 +439,8 @@ fun triv_mem_upd ctxt p v = case dest_mem_acc_addr v of
       NONE => false
     | SOME p' => p aconv p' orelse let
       val t = @{term "op - :: word32 \<Rightarrow> _"} $ get_ptr_val p $ get_ptr_val p'
-      val thm = ptr_simp ctxt (cterm_of (Proof_Context.theory_of ctxt) t)
-      val t' = Thm.rhs_of thm |> term_of
+      val thm = ptr_simp ctxt (Thm.cterm_of ctxt t)
+      val t' = Thm.rhs_of thm |> Thm.term_of
     in t' = @{term "0 :: word32"} 
         orelse (Display.pretty_thm ctxt thm |> Pretty.writeln; false)
     end
@@ -669,7 +669,7 @@ and convert_ph3 ctxt params (Const (@{const_name Collect}, _) $ S $ x)
   | convert_ph3 ctxt params (t as (Const (@{const_name word_of_int}, _) $ _))
     = let
         val thy = Proof_Context.theory_of ctxt
-        val t' = Pattern.rewrite_term thy (map (concl_of #> HOLogic.dest_Trueprop
+        val t' = Pattern.rewrite_term thy (map (Thm.concl_of #> HOLogic.dest_Trueprop
             #> HOLogic.dest_eq) @{thms word_uint.Rep_inverse word_sint.Rep_inverse}) [] t
       in if t' aconv t then convert_ph3 ctxt params (ptr_simp_term ctxt "word_of_int" t t)
         else convert_ph3 ctxt params t' end
@@ -706,8 +706,8 @@ fun htd_simp ctxt = ctxt addsimps @{thms fold_all_htd_updates
   |> Simplifier.add_cong @{thm if_cong} |> Simplifier.rewrite
 
 fun simp_htd ctxt t = let
-    val rew_thm = cterm_of (Proof_Context.theory_of ctxt) t |> htd_simp ctxt
-  in term_of (Thm.rhs_of rew_thm) end
+    val rew_thm = Thm.cterm_of ctxt t |> htd_simp ctxt
+  in Thm.term_of (Thm.rhs_of rew_thm) end
 
 fun convert_upd_ph3 ctxt params (s, v) =
   let
@@ -798,10 +798,10 @@ fun get_reads_calls ctxt params globals name = let
       | calls (Abs (_, _, t)) = calls t
       | calls _ = []
     val reads = (if globals then has_reads_globals params else has_reads)
-        (concl_of thm)
+        (Thm.concl_of thm)
     val call_to_name = dest_Const #> fst #> Long_Name.base_name
         #> unsuffix "_'proc"
-  in (reads, calls (concl_of thm) |> map call_to_name) end
+  in (reads, calls (Thm.concl_of thm) |> map call_to_name) end
 
 fun is_no_read ctxt params globals s = let
     fun inner stack s = if member (op =) stack s then true else let
@@ -811,7 +811,7 @@ fun is_no_read ctxt params globals s = let
 
 fun is_no_write ctxt s = let
     val thm = Proof_Context.get_thm ctxt (s ^ "_modifies")
-    val mex = exists_Const (fn (s, _) => s = @{const_name mex}) (concl_of thm)
+    val mex = exists_Const (fn (s, _) => s = @{const_name mex}) (Thm.concl_of thm)
   in not mex end
 
 fun synthetic_updates ctxt params pref (Const (c, T)) = let
@@ -885,7 +885,7 @@ fun emit_body ctxt params (Const (@{const_name Seq}, _) $ a $ b) n c e = let
               signed_mult_eq_checks32_to_64
               sdiv_word32_min[THEN eqTrueI] sdiv_word32_max_ineq
               signed_shift_guard_to_word_32}
-        |> map (concl_of #> HOLogic.dest_Trueprop #> HOLogic.dest_eq)) [] G
+        |> map (Thm.concl_of #> HOLogic.dest_Trueprop #> HOLogic.dest_eq)) [] G
     val s = convert_fetch ctxt params (reduce_set_mem ctxt (s_st ctxt) G)
   in
     emit (string_of_int n ^ " Cond " ^ nm ^ " Err " ^ s);
@@ -972,7 +972,7 @@ fun emit_func_body ctxt eparams name = let
             |> simplify (put_simpset HOL_basic_ss ctxt
                 addsimps @{thms switch.simps fst_conv snd_conv
                                 insert_iff empty_iff})
-            |> concl_of |> Logic.dest_equals |> snd
+            |> Thm.concl_of |> Logic.dest_equals |> snd
         handle ERROR _ => @{term "Spec S"}
 
     val full_nm = read_const ctxt (name ^ "_'proc")
