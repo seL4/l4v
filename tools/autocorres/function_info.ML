@@ -111,8 +111,6 @@ datatype fn_info = FunctionInfo of {
  *)
 fun mk_function_info fn_info_dict =
 let
-  val all_functions = Symtab.keys fn_info_dict
-
   (* Construct a dictionary from the constant name of a function to its name. *)
   val const_to_function =
     map (fn (a, b) => (#raw_const b, a)) (Symtab.dest fn_info_dict)
