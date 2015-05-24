@@ -219,29 +219,29 @@ in
   doit
 end
 
-fun isa_type_to_typ thy (ity : isa_type) = let
-  fun m s = Sign.full_name thy (Binding.name s)
-  (* FIXME: why was the below necessary?
-            let val s' = Sign.intern_type thy s
-            in
-              if s' = s then Sign.full_name thy (Binding.name s)
-              else s'
-            end *)
+fun isa_type_to_typ ctxt (ity : isa_type) = let
+  fun m s = let
+    val thy = Proof_Context.theory_of ctxt
+    val known = (Syntax.parse_typ ctxt s; true) handle ERROR _ => false
+    val f = if known then Sign.intern_type thy else Sign.full_name thy o Binding.name
+  in
+    f s
+  end
   fun mk_numeral_type' sz =
       if sz = 8192 then @{typ "ty8192"}
       else mk_numeral_type sz
 in
   case ity of
     refty (NONE, _) => mk_ptr_ty unit
-  | refty (SOME ity0, _) => mk_ptr_ty (isa_type_to_typ thy ity0)
+  | refty (SOME ity0, _) => mk_ptr_ty (isa_type_to_typ ctxt ity0)
   | recd (s, _) => Type (m s, [])
   | array (ity, sz, _) =>
-    Type("Arrays.array", [isa_type_to_typ thy ity, mk_numeral_type' sz])
+    Type("Arrays.array", [isa_type_to_typ ctxt ity, mk_numeral_type' sz])
   | existing (ty, _) => ty
 end
 
 fun ctype_to_typ (thy,c0ty) =
-    isa_type_to_typ thy (translate_inttype c0ty)
+    isa_type_to_typ (thy2ctxt thy) (translate_inttype c0ty)
 
 fun create_state cse = let
   val trans = translate_vi cse
@@ -261,7 +261,7 @@ in
   case dlist of
     [] => (List.rev lvars, List.rev gvars)
   | vdecl (s, ty, vsort) :: tail => let
-      val tuple = (s, isa_type_to_typ thy ty, SOME (isa_type_to_cty ty), vsort)
+      val tuple = (s, isa_type_to_typ (thy2ctxt thy) ty, SOME (isa_type_to_cty ty), vsort)
     in
       case vsort of
         Local _ => split_vars (tuple :: lvars, gvars) tail
