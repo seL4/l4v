@@ -152,8 +152,9 @@ fun get_prog_info ctxt filename : prog_info =
     (* Get the gamma variable, mapping function numbers to function bodies in
      * SIMPL. *)
     val gamma =
-      Const (Consts.intern (Proof_Context.consts_of ctxt) "\<Gamma>", dummyT)
-      |> Syntax.check_term ctxt
+      (Const (Consts.intern (Proof_Context.consts_of ctxt) "\<Gamma>", dummyT)
+       |> Syntax.check_term ctxt)
+      handle TERM _ => error "autocorres: could not find any functions -- \<Gamma> is not defined."
 
     (*
      * Return a Const term of the local-variable getters/setters for the given

@@ -45,37 +45,34 @@ text {*
   Although both symbols map to the same underlying type, these have different
   constraints (e.g. IDL symbols become direct substrings of code-level symbols
   and hence need to respect symbol naming restrictions for the target
-  language(s)) and will be extended to represent these in a future iteration of
-  this specification.
+  language(s)).
 *}
 
 subsection {* \label{subsec:methods}Methods *}
 text {*
-  Methods are the elements that make up a CAmkES trait (described below).
-  Each method within a CAmkES trait has a list of parameters defined by a
+  Methods are the elements that make up a CAmkES procedure (described below).
+  Each method within a CAmkES procedure has a list of parameters defined by a
   type, direction and symbol name. Each method also has an optional return
   value type. The valid types for method parameters and return values include
   a set of high level types designed to abstract the types available in a
-  general programming language. By using only these types in a trait
+  general programming language. By using only these types in a procedure
   description, the interface can be implemented in any valid target language.
 
   When fixed width types are required for an interface there are a set of types
-  available that are C-specific. Using these types in a trait description
-  precludes implementing or using the trait in a component not written in C.
+  available that are C-specific. Using these types in a procedure description
+  precludes implementing or using the procedure in a component not written in C.
   In general the high-level types should be used in preference to the C-specific
   types.
 
-  Array types are supported as method parameters and return types in CAmkES in
-  two flavours: arrays with a given size and arrays terminated by a
-  @{text NULL} (@{text 0})
-  value. Both types of arrays are parameterised with the underlying type of
+  In high-level languages, arrays may have attached size information, while in
+  C this information is passed as an extra parameter to their containing
+  method. Arrays are parameterised with the underlying type of
   their elements. Similar to primitive types, using a high-level type for the
   elementary type of an array allows it to be implemented or used in any
   component, while using a C-specific type prevents implementing or using it in
   a component not written in C. Arrays of arrays and multidimensional arrays are
   not supported.
 *}
-(* Based on camkes-templates/v4nicta_generic/* *)
 
 datatype number =
     -- "High level types"
@@ -102,12 +99,6 @@ datatype textual =
   | String
     -- "C-specific types"
   | char
-text {*
-  Note that a string in C is a @{text NULL}-terminated character array.
-  If a C-specific
-  string is required in a trait it is best to specify it manually (i.e. as
-  a @{text "TerminatedArray (Textual char)"}).
-*}
 
 datatype primitive =
     Numerical number
@@ -122,17 +113,16 @@ datatype param_type =
   | Array array
 
 text {*
-  Rather than having a single return value per trait method, each
+  Rather than having a single return value per procedure method, each
   method parameter can be an input parameter, an output parameter, or both.
 *}
-(* Better than representing in/out separately because \<not>in \<and> \<not>out is not valid. *)
 datatype param_direction =
-    InParameter
+    InParameter (* also covers 'refin' *)
   | OutParameter
   | InOutParameter
 
 text {*
-  Each trait comprises a collection of methods that each have an
+  Each procedure comprises a collection of methods that each have an
   optional return type,
   identifier and a list of parameters. Each parameter has a type and an
   identifier.
@@ -147,7 +137,7 @@ record method =
   m_name        :: idl_symbol
   m_parameters  :: "parameter list"
 text {*
-  The translation from trait methods in IDL to their representation in
+  The translation from procedure methods in IDL to their representation in
   Isabelle is straightforward. The CAmkES method
 
 \begin{verbatim}
@@ -175,10 +165,10 @@ text {*
   interfaces that consist of a list of function calls and interfaces
   that have other patterns of interaction.
 
-  There are three basic types of supported interfaces. The first, @{text trait},
+  There are three basic types of supported interfaces. The first, @{text procedure},
   is used for modelling traditional caller-callee semantics of interaction. The
-  second, @{text event} is used for asynchronous notifications such as interrupts.
-  Finally, @{text dataport} is used to model shared memory communication.
+  second, @{text event}, is used for asynchronous notifications such as interrupts.
+  Finally, @{text dataport}, is used to model shared memory communication.
 *}
 type_synonym procedure = "method list"
 type_synonym event     = nat -- "ID"
@@ -196,19 +186,13 @@ text {*
 
   Native connectors map directly to implementation mechanisms. These are the
   types of connectors that are found in almost all component platform models. The
-  event-style connectors, @{text AsynchronousEvent} and @{text RPCEvent} are
+  event-style connector, @{text AsynchronousEvent}, is
   used to model communication consisting of an identifier with no associated message
   data.
 *}
-(* Based on camkes-generator/include/std_connector.camkes. *)
 datatype native_connector_type =
     AsynchronousEvent -- "an asynchronous notification"
-  | RPCEvent -- "a synchronous notification"
   | RPC -- "a synchronous channel"
-  | DirectCall -- "a synchronous channel to a component in the same address space"
-(* FIXME: This is the first mention of address spaces. This should be introduced
- * somewhere earlier.
- *)
   | SharedData -- "a shared memory region"
 
 text {*
