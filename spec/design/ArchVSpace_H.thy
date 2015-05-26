@@ -23,7 +23,7 @@ defs kernelBase_def:
 "kernelBase \<equiv> VPtr 0xf0000000"
 
 defs globalsBase_def:
-"globalsBase \<equiv> VPtr 0xff000000"
+"globalsBase \<equiv> VPtr 0xffffc000"
 
 defs idleThreadStart_def:
 "idleThreadStart \<equiv> globalsBase + VPtr 0x100"
@@ -36,62 +36,22 @@ defs idleThreadCode_def:
     , 0xeafffffc
     ]"
 
-defs initKernelVM_def:
-"initKernelVM\<equiv> (do
-    createGlobalPD;
-    allMemory \<leftarrow> doMachineOp getMemoryRegions;
-    mapM_x mapKernelRegion allMemory;
-    kernelDevices \<leftarrow> doMachineOp getKernelDevices;
-    mapM_x mapKernelDevice kernelDevices;
-    createGlobalsFrame;
-    mapGlobalsFrame;
-    activateGlobalPD
-od)"
-
-defs initVSpace_def:
-"initVSpace cRootSlot vRootSlot\<equiv> (do
-    provideRegion $ BootRegion
-        (CPtr $ fromVPtr kernelBase) maxBound BRCapsOnly 0;
-    vRoot \<leftarrow> createInitialRoot vRootSlot;
-    cRoot \<leftarrow> doKernelOp $ getSlotCap cRootSlot;
-    populateInitialRoot vRoot cRoot;
-    doKernelOp $ doMachineOp cleanCaches_PoU
-od)"
-
-defs createGlobalPD_def:
-"createGlobalPD\<equiv> (do
-    globalPD \<leftarrow> gets $ armKSGlobalPD \<circ> ksArchState;
-    deleteObjects (PPtr $ fromPPtr globalPD) pdBits;
-    placeNewObject (PPtr $ fromPPtr globalPD) (makeObject ::pde)
-          (pdBits `~shiftR~` (objBits (makeObject ::pde)));
-    globalPTs \<leftarrow> gets $ armKSGlobalPTs \<circ> ksArchState;
-    deleteObjects (PPtr $ fromPPtr $ head globalPTs) pageBits;
-    placeNewObject (PPtr $ fromPPtr $ head globalPTs) (makeObject ::pte)
-          (pageBits `~shiftR~` (objBits (makeObject ::pte)));
-    return ()
-od)"
-
-defs activateGlobalPD_def:
-"activateGlobalPD\<equiv> (do
-    doMachineOp cleanCaches_PoU;
-    globalPD \<leftarrow> gets $ armKSGlobalPD \<circ> ksArchState;
-    doMachineOp $ (do
-        setCurrentPD $ addrFromPPtr globalPD;
-        invalidateTLB
-    od)
-od)"
-
-defs mapKernelRegion_def:
-"mapKernelRegion x0\<equiv> (case x0 of
-    (phys, physEnd) \<Rightarrow>    (do
-    magnitude \<leftarrow> return ( physEnd - phys);
+defs mapKernelWindow_def:
+"mapKernelWindow\<equiv> (do
+    vbase \<leftarrow> return ( kernelBase `~shiftR~` pageBitsForSize (ARMSection));
     pdeBits \<leftarrow> return ( objBits (undefined ::pde));
-    haskell_assert (magnitude \<ge> bit (pageBitsForSize ARMSection))
-        [];
+    pteBits \<leftarrow> return ( objBits (undefined ::pte));
+    ptSize \<leftarrow> return ( ptBits - pteBits);
+    pdSize \<leftarrow> return ( pdBits - pdeBits);
     globalPD \<leftarrow> gets $ armKSGlobalPD \<circ> ksArchState;
-    if (magnitude < bit (pageBitsForSize ARMSuperSection))
-      then forM_x [phys, phys + bit (pageBitsForSize ARMSection)  .e.  phys + magnitude - 1] (\<lambda> phys. (do
-          virt \<leftarrow> return ( VPtr $ fromPPtr $ ptrFromPAddr phys);
+    globalPTs \<leftarrow> gets $ armKSGlobalPTs \<circ> ksArchState;
+    deleteObjects (PPtr $ fromPPtr globalPD) pdBits;
+    placeNewObject (PPtr $ fromPPtr globalPD) (makeObject ::pde) pdSize;
+    forM_x [vbase, vbase+16  .e.  (bit pdSize) - 16 - 1] $ createSectionPDE;
+    forM_x [(bit pdSize) - 16, (bit pdSize) - 2] (\<lambda> v. (do
+          offset \<leftarrow> return ( fromVPtr v);
+          virt \<leftarrow> return ( v `~shiftL~` pageBitsForSize (ARMSection));
+          phys \<leftarrow> return ( addrFromPPtr $ PPtr $ fromVPtr virt);
           pde \<leftarrow> return ( SectionPDE_ \<lparr>
                   pdeFrame= phys,
                   pdeParity= True,
@@ -100,226 +60,334 @@ defs mapKernelRegion_def:
                   pdeGlobal= True,
                   pdeExecuteNever= False,
                   pdeRights= VMKernelOnly \<rparr>);
-          offset \<leftarrow> return ( fromVPtr virt `~shiftR~` pageBitsForSize ARMSection);
           slot \<leftarrow> return ( globalPD + PPtr (offset `~shiftL~` pdeBits));
           storePDE slot pde
-      od))
-      else forM_x [phys, phys + bit (pageBitsForSize ARMSuperSection)  .e.  phys + magnitude - 1] (\<lambda> phys. (do
-          virt \<leftarrow> return ( VPtr $ fromPPtr $ ptrFromPAddr phys);
-          pde \<leftarrow> return ( SuperSectionPDE_ \<lparr>
-                  pdeFrame= phys,
-                  pdeParity= True,
-                  pdeCacheable= True,
-                  pdeGlobal= True,
-                  pdeExecuteNever= False,
-                  pdeRights= VMKernelOnly \<rparr>);
-          offset \<leftarrow> return ( fromVPtr virt `~shiftR~` pageBitsForSize ARMSection);
-          slots \<leftarrow> return ( map (\<lambda> n. globalPD + PPtr (n `~shiftL~` pdeBits))
-                  [offset  .e.  offset + 15]);
-          mapM_x (flip storePDE pde) slots
-      od))
-    od)
-  )"
-
-defs mapKernelFrame_def:
-"mapKernelFrame paddr vptr rights attributes\<equiv> (do
-    haskell_assert (vptr \<ge> kernelBase) [];
-    pd \<leftarrow> gets $ armKSGlobalPD \<circ> ksArchState;
-    pdSlot \<leftarrow> return ( lookupPDSlot pd vptr);
-    pde \<leftarrow> getObject pdSlot;
-    pteBits \<leftarrow> return ( objBits (undefined ::pte));
-    ptIndex \<leftarrow> return ( fromVPtr $ vptr `~shiftR~` 12 && 0xff);
-    ptSlot \<leftarrow> (case pde of
-          PageTablePDE _ _ _ \<Rightarrow>   (do
-            pt \<leftarrow> return ( ptrFromPAddr $ pdeTable pde);
-            return $ pt + (PPtr $ ptIndex `~shiftL~` pteBits)
-          od)
-        | InvalidPDE  \<Rightarrow>   (do
-            ptFrame \<leftarrow> allocKernelPT;
-            pde \<leftarrow> return ( PageTablePDE_ \<lparr>
-                    pdeTable= addrFromPPtr ptFrame,
-                    pdeParity= True,
-                    pdeDomain= 0 \<rparr>);
-            storePDE pdSlot pde;
-            return $ PPtr $ fromPPtr ptFrame + (ptIndex `~shiftL~` pteBits)
-        od)
-        | _ \<Rightarrow>   haskell_fail []
-        );
-    pte \<leftarrow> getObject ptSlot;
-    (case pte of
-          InvalidPTE  \<Rightarrow>   (do
-            pte' \<leftarrow> return ( SmallPagePTE_ \<lparr>
-                pteFrame= paddr,
-                pteCacheable= armPageCacheable attributes,
-                pteGlobal= True,
-                pteExecuteNever= False,
-                pteRights= rights \<rparr>);
-            storePTE ptSlot pte'
-          od)
-        | _ \<Rightarrow>   haskell_fail []
-        )
+    od));
+    paddr \<leftarrow> return ( addrFromPPtr $ PPtr $ fromPPtr $ head globalPTs);
+    pde \<leftarrow> return ( PageTablePDE_ \<lparr>pdeTable= paddr ,pdeParity= True, pdeDomain= 0\<rparr>);
+    slot \<leftarrow> return ( globalPD + PPtr (((bit pdSize) - 1) `~shiftL~` pdeBits));
+    deleteObjects (PPtr $ fromPPtr $ head globalPTs) ptBits;
+    placeNewObject (PPtr $ fromPPtr $ head globalPTs) (makeObject ::pte) ptSize;
+    storePDE slot pde;
+    mapGlobalsFrame;
+    kernelDevices \<leftarrow> doMachineOp getKernelDevices;
+    mapM_x mapKernelDevice kernelDevices
 od)"
 
-defs allocKernelPT_def:
-"allocKernelPT\<equiv> (do
-    pts \<leftarrow> gets $ armKSGlobalPTs \<circ> ksArchState;
-    (case pts of
-          [] \<Rightarrow>   haskell_fail []
-        | (pt#pts') \<Rightarrow>   (do
-            modify (\<lambda> ks. ks \<lparr>
-                ksArchState := (ksArchState ks) \<lparr> armKSGlobalPTs := pts' \<rparr> \<rparr>);
-            return pt
-        od)
-        )
+defs createSectionPDE_def:
+"createSectionPDE v\<equiv> (do
+    vbase \<leftarrow> return ( kernelBase `~shiftR~` pageBitsForSize (ARMSection));
+    pdeBits \<leftarrow> return ( objBits (undefined ::pde));
+    pteBits \<leftarrow> return ( objBits (undefined ::pte));
+    globalPD \<leftarrow> gets $ armKSGlobalPD \<circ> ksArchState;
+    offset \<leftarrow> return ( fromVPtr v);
+    virt \<leftarrow> return ( (v - vbase) `~shiftL~` (pageBitsForSize (ARMSuperSection) - 4));
+    phys \<leftarrow> return ( addrFromPPtr $ PPtr $ fromVPtr virt);
+    pde \<leftarrow> return ( SuperSectionPDE_ \<lparr>
+            pdeFrame= phys,
+            pdeParity= True,
+            pdeCacheable= True,
+            pdeGlobal= True,
+            pdeExecuteNever= False,
+            pdeRights= VMKernelOnly \<rparr>);
+    slots \<leftarrow> return ( map (\<lambda> n. globalPD + PPtr (n `~shiftL~` pdeBits))
+            [offset  .e.  offset + 15]);
+    (flip $ mapM_x ) slots (\<lambda> slot.  storePDE slot pde)
 od)"
 
 defs mapKernelDevice_def:
 "mapKernelDevice x0\<equiv> (case x0 of
     (addr, ptr) \<Rightarrow>    (do
     vptr \<leftarrow> return ( VPtr $ fromPPtr ptr);
-    mapKernelFrame addr vptr VMKernelOnly $ VMAttributes False False False
+    mapKernelFrame addr vptr VMKernelOnly $ VMAttributes False False True
     od)
   )"
 
-defs createGlobalsFrame_def:
-"createGlobalsFrame\<equiv> (do
-    globals \<leftarrow> gets $ armKSGlobalsFrame \<circ> ksArchState;
-    deleteObjects (PPtr $ fromPPtr globals) pageBits;
-    reserveFrame (PPtr $ fromPPtr globals) True;
-    offset \<leftarrow> return ( fromVPtr $ idleThreadStart - globalsBase);
-    doMachineOp $ mapM_x
-        (split  storeWord
-        )
-        (zipE2 (globals + PPtr offset) ( globals + PPtr offset + 4) (idleThreadCode))
+defs activateGlobalPD_def:
+"activateGlobalPD\<equiv> (do
+    globalPD \<leftarrow> gets $ armKSGlobalPD \<circ> ksArchState;
+    doMachineOp $ (do
+        setCurrentPD $ addrFromPPtr globalPD;
+        invalidateTLB
+    od)
+od)"
+
+defs createITPDPTs_def:
+"createITPDPTs rootCNCap vptrStart biFrameVPtr\<equiv>  (do
+    pdSize \<leftarrow> return ( pdBits - objBits (makeObject ::pde));
+    ptSize \<leftarrow> return ( ptBits - objBits (makeObject ::pte));
+    pdPPtr \<leftarrow> allocRegion pdBits;
+    doKernelOp $ placeNewObject (ptrFromPAddr pdPPtr) (makeObject::pde) pdSize;
+    pdCap \<leftarrow> return $ ArchObjectCap $ PageDirectoryCap (ptrFromPAddr pdPPtr) (Just itASID);
+    slot  \<leftarrow> doKernelOp $ locateSlot (capCNodePtr rootCNCap) biCapITPD;
+    doKernelOp $ insertInitCap slot $ pdCap;
+    slotBefore \<leftarrow> noInitFailure $ gets $ initSlotPosCur;
+    btmVPtr \<leftarrow> return ( vptrStart `~shiftR~` (pdSize + pageBits) `~shiftL~` (pdSize + pageBits));
+    step \<leftarrow> return ( 1 `~shiftL~` (ptSize + pageBits));
+    topVPtr \<leftarrow> return ( biFrameVPtr + (bit biFrameSizeBits) - 1);
+    forM_x [btmVPtr,btmVPtr + step  .e.  topVPtr] (\<lambda> vptr. (do
+        ptPPtr \<leftarrow> allocRegion ptBits;
+        doKernelOp $ placeNewObject (ptrFromPAddr ptPPtr) (makeObject::pte) ptSize;
+        provideCap rootCNCap $ ArchObjectCap $ PageTableCap (ptrFromPAddr ptPPtr) (Just (itASID, vptr))
+    od));
+    slotAfter \<leftarrow> noInitFailure $ gets initSlotPosCur;
+    bootInfo \<leftarrow> noInitFailure $ gets initBootInfo;
+    bootInfo' \<leftarrow> return ( bootInfo \<lparr> bifUIPTCaps := [slotBefore  .e.  slotAfter - 1] \<rparr>);
+    noInitFailure $ modify (\<lambda> s. s \<lparr> initBootInfo := bootInfo' \<rparr>);
+    return pdCap
+od)"
+
+defs writeITPDPTs_def:
+"writeITPDPTs rootCNCap pdCap \<equiv>
+  (case pdCap of
+      ArchObjectCap cap \<Rightarrow>   (do
+      doKernelOp $ copyGlobalMappings $ capPDBasePtr cap;
+      ptSlots \<leftarrow> noInitFailure $ gets $ bifUIPTCaps \<circ> initBootInfo;
+      doKernelOp $ (
+          (flip mapM) ptSlots (\<lambda> pos. (do
+              slot \<leftarrow> locateSlot (capCNodePtr rootCNCap) pos;
+              cte \<leftarrow> getCTE slot;
+              mapITPTCap pdCap (cteCap cte)
+          od)
+           )
+      );
+      frameSlots \<leftarrow> noInitFailure $ gets $ bifUIFrameCaps \<circ> initBootInfo;
+      doKernelOp $ (do
+           (flip mapM) frameSlots (\<lambda> pos. (do
+              slot \<leftarrow> locateSlot (capCNodePtr rootCNCap) pos;
+              cte \<leftarrow> getCTE slot;
+              mapITFrameCap pdCap (cteCap cte)
+           od)
+                                              );
+           slot \<leftarrow> locateSlot (capCNodePtr rootCNCap) biCapITIPCBuf;
+           cte \<leftarrow> getCTE slot;
+           mapITFrameCap pdCap (cteCap cte);
+           slot \<leftarrow> locateSlot (capCNodePtr rootCNCap) biCapBIFrame;
+           cte \<leftarrow> getCTE slot;
+           mapITFrameCap pdCap (cteCap cte)
+      od)
+      od)
+    | _ \<Rightarrow>   haskell_fail $ (show pdCap) @ []
+    )"
+
+defs createITASIDPool_def:
+"createITASIDPool rootCNCap\<equiv> (do
+    apPPtr \<leftarrow> allocRegion $ objBits (undefined ::asidpool);
+    doKernelOp $ placeNewObject (ptrFromPAddr apPPtr) (makeObject::asidpool) 0;
+    slot \<leftarrow> doKernelOp $ locateSlot (capCNodePtr rootCNCap) biCapITASIDPool;
+    asidPoolCap \<leftarrow> return $ ArchObjectCap $ ASIDPoolCap (ptrFromPAddr apPPtr) 0;
+    doKernelOp $ insertInitCap slot asidPoolCap;
+    slot \<leftarrow> doKernelOp $ locateSlot (capCNodePtr rootCNCap) biCapASIDControl;
+    asidControlCap \<leftarrow> return $ ArchObjectCap $ ASIDControlCap;
+    doKernelOp $ insertInitCap slot asidControlCap;
+    return asidPoolCap
+od)"
+
+defs writeITASIDPool_def:
+"writeITASIDPool apCap pdCap\<equiv> (do
+    apPtr \<leftarrow> (case apCap of
+                     ArchObjectCap (ASIDPoolCap ptr _) \<Rightarrow>   return ptr
+                   | _ \<Rightarrow>   haskell_fail []
+                   );
+    pdPtr \<leftarrow> (case pdCap of
+                     ArchObjectCap (PageDirectoryCap ptr _) \<Rightarrow>   return ptr
+                   | _ \<Rightarrow>   haskell_fail []
+                   );
+ ap \<leftarrow> liftM (inv ASIDPool) $  getObject apPtr;
+    ap' \<leftarrow> return ( ap aLU [(itASID, Just pdPtr)]);
+    setObject apPtr (ASIDPool ap');
+    asidTable \<leftarrow> gets (armKSASIDTable \<circ> ksArchState);
+    asidTable' \<leftarrow> return ( asidTable aLU [(asidHighBitsOf itASID, Just apPtr)]);
+    modify (\<lambda> s. s \<lparr>
+         ksArchState := (ksArchState s) \<lparr> armKSASIDTable := asidTable' \<rparr>\<rparr>)
+od)"
+
+defs mapITPTCap_def:
+"mapITPTCap pdCap ptCap\<equiv> (do
+    pd \<leftarrow> (case pdCap of
+                ArchObjectCap (PageDirectoryCap ptr _) \<Rightarrow>   return ptr
+              | _ \<Rightarrow>   haskell_fail []
+              );
+    ptCap' \<leftarrow> (case ptCap of
+                    ArchObjectCap c \<Rightarrow>   return c
+                  | _ \<Rightarrow>   haskell_fail []
+                  );
+    (pt,vptr) \<leftarrow> (case ptCap' of
+                              PageTableCap pt' (Some (_, vptr')) \<Rightarrow>   return (pt', vptr')
+                            | _ \<Rightarrow>   haskell_fail $ [] @ (show ptCap)
+                            );
+    offset \<leftarrow> return ( fromVPtr $ vptr `~shiftR~` pageBitsForSize ARMSection);
+    targetSlot \<leftarrow> return ( pd + (PPtr $ offset `~shiftL~` 2));
+    pde \<leftarrow> return ( PageTablePDE_ \<lparr>
+            pdeTable= addrFromPPtr pt,
+            pdeParity= True,
+            pdeDomain= 0 \<rparr>);
+    storePDE targetSlot pde
+od)"
+
+defs mapITFrameCap_def:
+"mapITFrameCap pdCap frameCap\<equiv> (do
+    pd' \<leftarrow> (case pdCap of
+                 ArchObjectCap (PageDirectoryCap ptr _) \<Rightarrow>   return ptr
+               | _ \<Rightarrow>   haskell_fail $ [] @ (show pdCap)
+               );
+    frameCap' \<leftarrow> (case frameCap of
+                       ArchObjectCap c \<Rightarrow>   return c
+                     | _ \<Rightarrow>   haskell_fail $ [] @ (show frameCap)
+                     );
+    (frame,vptr) \<leftarrow> (case frameCap' of
+                                PageCap frame' _ _ (Some (_, vptr')) \<Rightarrow>   return (frame', vptr')
+                              | _ \<Rightarrow>   haskell_fail $ [] @ (show frameCap)
+                              );
+    offset \<leftarrow> return ( fromVPtr $ vptr `~shiftR~` pageBitsForSize ARMSection);
+    pd \<leftarrow> return ( pd' + (PPtr $ offset `~shiftL~` 2));
+    pde \<leftarrow> getObject pd;
+    pt \<leftarrow> (case pde of
+                       PageTablePDE ref _ _ \<Rightarrow>   return $ ptrFromPAddr ref
+                     | _ \<Rightarrow>   haskell_fail $ [] @ (show pd) @ [] @ (show pde)
+                     );
+    offset \<leftarrow> return ( fromVPtr $ ((vptr &&(mask $ pageBitsForSize ARMSection))
+                               `~shiftR~` pageBitsForSize ARMSmallPage));
+    targetSlot \<leftarrow> return ( pt + (PPtr $ offset `~shiftL~` 2));
+    pte \<leftarrow> return ( SmallPagePTE_ \<lparr>
+            pteFrame= addrFromPPtr frame,
+            pteCacheable= True,
+            pteGlobal= False,
+            pteExecuteNever= False,
+            pteRights= VMReadWrite \<rparr>);
+    storePTE targetSlot pte
+od)"
+
+defs createIPCBufferFrame_def:
+"createIPCBufferFrame rootCNCap vptr\<equiv> (do
+      pptr \<leftarrow> allocFrame;
+      doKernelOp $ doMachineOp $ clearMemory (ptrFromPAddr pptr) (1 `~shiftL~` pageBits);
+      cap \<leftarrow> createITFrameCap (ptrFromPAddr pptr) vptr (Just itASID) False;
+      slot \<leftarrow> doKernelOp $ locateSlot (capCNodePtr rootCNCap) biCapITIPCBuf;
+      doKernelOp $ insertInitCap slot cap;
+      bootInfo \<leftarrow> noInitFailure $ gets (initBootInfo);
+      bootInfo' \<leftarrow> return ( bootInfo \<lparr> bifIPCBufVPtr := vptr\<rparr>);
+      noInitFailure $ modify (\<lambda> s. s \<lparr>initBootInfo := bootInfo' \<rparr>);
+      return cap
+od)"
+
+defs createBIFrame_def:
+"createBIFrame rootCNCap vptr nodeId numNodes\<equiv> (do
+      pptr \<leftarrow> allocFrame;
+      bootInfo \<leftarrow> noInitFailure $ gets initBootInfo;
+      bootInfo' \<leftarrow> return ( bootInfo \<lparr> bifNodeID := nodeId,
+                                 bifNumNodes := numNodes \<rparr>);
+      noInitFailure $ modify (\<lambda> s. s \<lparr>
+          initBootInfo := bootInfo',
+          initBootInfoFrame := pptr,
+          initSlotPosCur := biCapDynStart
+          \<rparr>);
+      doKernelOp $ doMachineOp $ clearMemory (ptrFromPAddr pptr) (1 `~shiftL~` pageBits);
+      cap \<leftarrow> createITFrameCap (ptrFromPAddr pptr) vptr (Just itASID) False;
+      slot \<leftarrow> doKernelOp $ locateSlot (capCNodePtr rootCNCap) biCapBIFrame;
+      doKernelOp $ insertInitCap slot cap;
+      return cap
+od)"
+
+defs createITFrameCap_def:
+"createITFrameCap pptr vptr asid large\<equiv> (do
+    sz \<leftarrow> return ( if large then ARMLargePage else ARMSmallPage);
+    addr \<leftarrow> return ( (case asid of
+                      Some asid' \<Rightarrow>   Just (asid', vptr)
+                    | None \<Rightarrow>   Nothing
+                    ));
+    frame \<leftarrow> return ( PageCap_ \<lparr>
+             capVPBasePtr= pptr,
+             capVPRights= VMReadWrite,
+             capVPSize= sz,
+             capVPMappedAddress= addr \<rparr>);
+    return $ ArchObjectCap $ frame
+od)"
+
+defs createFramesOfRegion_def:
+"createFramesOfRegion rootCNCap region doMap pvOffset\<equiv> (do
+    curSlotPos \<leftarrow> noInitFailure $ gets initSlotPosCur;
+    (startPPtr, endPPtr) \<leftarrow> return $ fromRegion region;
+    forM_x [startPPtr,startPPtr + (bit pageBits)  .e.  endPPtr] (\<lambda> ptr. (do
+        paddr \<leftarrow> return ( fromPAddr $ addrFromPPtr ptr);
+        frameCap \<leftarrow> if doMap then
+                    createITFrameCap ptr ((VPtr paddr) + pvOffset ) (Just itASID) False
+                    else createITFrameCap ptr 0 Nothing False;
+        provideCap rootCNCap frameCap
+    od));
+    slotPosAfter \<leftarrow> noInitFailure $ gets initSlotPosCur;
+    bootInfo \<leftarrow> noInitFailure $ gets initBootInfo;
+    bootInfo' \<leftarrow> return ( bootInfo \<lparr> bifUIFrameCaps := [curSlotPos  .e.  slotPosAfter - 1] \<rparr>);
+    noInitFailure $ modify (\<lambda> s. s \<lparr> initBootInfo := bootInfo' \<rparr>)
 od)"
 
 defs mapGlobalsFrame_def:
 "mapGlobalsFrame\<equiv> (do
     globalsFrame \<leftarrow> gets $ armKSGlobalsFrame \<circ> ksArchState;
     mapKernelFrame (addrFromPPtr globalsFrame) globalsBase VMReadOnly $
-        VMAttributes True True False
+        VMAttributes True True True;
+    writeIdleCode
 od)"
 
-defs createInitialRoot_def:
-"createInitialRoot slot\<equiv> (do
-    asid \<leftarrow> return ( 1);
-    initPDFrame \<leftarrow> allocRegion pdBits;
-    initPD \<leftarrow> return ( ptrFromPAddr initPDFrame);
-    rootCap \<leftarrow> return ( ArchObjectCap $ PageDirectoryCap_ \<lparr>
-            capPDBasePtr= initPD,
-            capPDMappedASID= Just asid \<rparr>);
-    doKernelOp $ (do
-        placeNewObject (ptrFromPAddr initPDFrame) (makeObject ::pde)
-              (pdBits `~shiftR~` (objBits (makeObject ::pde)));
-        copyGlobalMappings initPD;
-        insertInitCap slot rootCap
-    od);
-    initASIDPoolFrame \<leftarrow> allocRegion $ objBits (undefined ::asidpool);
-    initASIDPoolPtr \<leftarrow> return ( ptrFromPAddr initASIDPoolFrame);
- emptyASIDPool \<leftarrow> liftM (inv ASIDPool) $  return ( (makeObject ::asidpool));
-    initASIDPool \<leftarrow> return ( ASIDPool $ emptyASIDPool aLU [(asid && mask asidLowBits, Just initPD)]);
-    doKernelOp $ (do
-        placeNewObject (ptrFromPAddr initASIDPoolFrame) initASIDPool 0;
-        asidTable \<leftarrow> gets (armKSASIDTable \<circ> ksArchState);
-        asidTable' \<leftarrow> return (
-                asidTable aLU [(asidHighBitsOf asid, Just initASIDPoolPtr)]);
-        modify (\<lambda> s. s \<lparr>
-            ksArchState := (ksArchState s) \<lparr> armKSASIDTable := asidTable' \<rparr>\<rparr>)
-    od);
-    provideCap $ ArchObjectCap $ ASIDControlCap;
-    provideCap $ ArchObjectCap $ ASIDPoolCap_ \<lparr>
-        capASIDPool= initASIDPoolPtr,
-        capASIDBase= 0 \<rparr>;
-    return rootCap
+defs writeIdleCode_def:
+"writeIdleCode\<equiv> (do
+    globalsFrame \<leftarrow> gets $ armKSGlobalsFrame \<circ> ksArchState;
+    offset \<leftarrow> return ( fromVPtr $ idleThreadStart - globalsBase);
+    doMachineOp $ mapM_x
+        (split  storeWord
+        )
+        (zipE2 (globalsFrame + PPtr offset) ( globalsFrame + PPtr offset + 4) (idleThreadCode))
 od)"
 
-defs populateInitialRoot_def:
-"populateInitialRoot vRoot cRoot\<equiv> (do
-    asid \<leftarrow> return ( fromJust $ capPDMappedASID $ capCap vRoot);
- pdCap \<leftarrow> liftM capCap $  return ( vRoot);
-    pd \<leftarrow> return ( capPDBasePtr pdCap);
-    (case cRoot of
-          CNodeCap _ _ _ _ \<Rightarrow>   return ()
-        | _ \<Rightarrow>   haskell_fail []
-        );
-    haskell_assert (capCNodeGuard cRoot = 0) $
-        [];
-    haskell_assert (capCNodeBits cRoot + capCNodeGuardSize cRoot + pageBits =
-            finiteBitSize (undefined::machine_word)) $
-        [];
-    forM_x [0  .e.  1 `~shiftL~` capCNodeBits cRoot - 1] (\<lambda> index. (do
-        cSlot \<leftarrow> doKernelOp $ locateSlot (capCNodePtr cRoot) index;
-        cte \<leftarrow> doKernelOp $ getObject cSlot;
-        (let v2 = cteCap cte in
-            if isArchObjectCap v2 \<and> isPageCap (capCap v2)
-            then
-            let pageCap = capCap v2
-            in  (do
-                haskell_assert (capVPSize pageCap = ARMSmallPage) $
-                    [];
-                vaddr \<leftarrow> return ( VPtr $ index `~shiftL~` pageBits);
-                pageCap' \<leftarrow> return ( pageCap \<lparr>
-                        capVPMappedAddress := Just (asid, vaddr) \<rparr>);
-                cte' \<leftarrow> return ( cte \<lparr> cteCap := ArchObjectCap pageCap' \<rparr>);
-                doKernelOp $ setObject cSlot cte';
-                mapUserFrame pd asid
-                    (addrFromPPtr $ capVPBasePtr pageCap) vaddr
-            od)
-            else  return ()
-            )
-    od))
+defs mapKernelFrame_def:
+"mapKernelFrame paddr vaddr vmrights attributes\<equiv> (do
+    idx \<leftarrow> return ( fromVPtr $ ( (vaddr && (mask $ pageBitsForSize ARMSection))
+                          `~shiftR~` pageBitsForSize ARMSmallPage));
+    globalPT \<leftarrow> getARMGlobalPT;
+    pte \<leftarrow> return ( SmallPagePTE_ \<lparr>
+                 pteFrame= paddr,
+                 pteCacheable= armPageCacheable attributes,
+                 pteGlobal= True,
+                 pteExecuteNever= False,
+                 pteRights= vmrights \<rparr>);
+    storePTE (PPtr ((fromPPtr globalPT) + (idx `~shiftL~` 2))) pte
 od)"
 
-defs allocUserPT_def:
-"allocUserPT asid vaddr\<equiv> (do
-    initPTFrame \<leftarrow> allocRegion ptBits;
-    doKernelOp $ placeNewObject (ptrFromPAddr initPTFrame)
-        (makeObject ::pte) (ptBits `~shiftR~` (objBits (makeObject ::pte)));
-    initPT \<leftarrow> return ( ptrFromPAddr initPTFrame);
-    provideCap $ ArchObjectCap $ PageTableCap_ \<lparr>
-        capPTBasePtr= initPT,
-        capPTMappedAddress= Just (asid, vaddr) \<rparr>;
-    return initPT
+defs getARMGlobalPT_def:
+"getARMGlobalPT\<equiv> (do
+    pt \<leftarrow> gets (head \<circ> armKSGlobalPTs \<circ> ksArchState);
+    return pt
 od)"
 
-defs mapUserFrame_def:
-"mapUserFrame pd asid paddr vptr\<equiv> (do
-    haskell_assert (vptr < kernelBase) [];
-    pdSlot \<leftarrow> return ( lookupPDSlot pd vptr);
-    pde \<leftarrow> doKernelOp $ getObject pdSlot;
-    pteBits \<leftarrow> return ( objBits (undefined ::pte));
-    ptIndex \<leftarrow> return ( fromVPtr $ vptr `~shiftR~` 12 && 0xff);
-    ptSlot \<leftarrow> (case pde of
-          PageTablePDE _ _ _ \<Rightarrow>   (do
-            pt \<leftarrow> return ( ptrFromPAddr $ pdeTable pde);
-            return $ pt + (PPtr $ ptIndex `~shiftL~` pteBits)
-          od)
-        | InvalidPDE  \<Rightarrow>   (do
-            ptFrame \<leftarrow> allocUserPT asid vptr;
-            pde \<leftarrow> return ( PageTablePDE_ \<lparr>
-                    pdeTable= addrFromPPtr ptFrame,
-                    pdeParity= True,
-                    pdeDomain= 0 \<rparr>);
-            doKernelOp $ storePDE pdSlot pde;
-            return $ PPtr $ fromPPtr ptFrame + (ptIndex `~shiftL~` pteBits)
-        od)
-        | _ \<Rightarrow>   haskell_fail []
-        );
-    doKernelOp $ (do
-        pte \<leftarrow> getObject ptSlot;
-        (case pte of
-              InvalidPTE  \<Rightarrow>   (do
-                pte' \<leftarrow> return ( SmallPagePTE_ \<lparr>
-                    pteFrame= paddr,
-                    pteCacheable= True,
-                    pteGlobal= False,
-                    pteExecuteNever= False,
-                    pteRights= VMReadWrite \<rparr>);
-                storePTE ptSlot pte'
+defs createDeviceFrames_def:
+"createDeviceFrames rootCNodeCap\<equiv> (do
+    deviceRegions \<leftarrow> doKernelOp $ doMachineOp getDeviceRegions;
+    (flip mapM_x) deviceRegions (\<lambda> (start,end). (do
+        frameSize \<leftarrow> return $ if (isAligned start (pageBitsForSize ARMSection))
+                         \<and> isAligned end (pageBitsForSize ARMSection)
+            then ARMSection else ARMSmallPage;
+        slotBefore \<leftarrow> noInitFailure $ gets initSlotPosCur;
+        (flip mapM_x) [start, (start + (bit (pageBitsForSize frameSize)))  .e.  (end - 1)]
+              (\<lambda> f. (do
+                  frameCap \<leftarrow> createITFrameCap (ptrFromPAddr f) 0 Nothing (frameSize = ARMSection);
+                  provideCap rootCNodeCap frameCap
               od)
-            | _ \<Rightarrow>   haskell_fail []
-            )
+                                                  );
+        slotAfter \<leftarrow> noInitFailure $ gets initSlotPosCur;
+        biDeviceRegion \<leftarrow> return ( BIDeviceRegion_ \<lparr>
+                                  bidrBasePAddr= start,
+                                  bidrFrameSizeBits= fromIntegral $ pageBitsForSize frameSize,
+                                  bidrFrameCaps= SlotRegion (slotBefore, slotAfter) \<rparr>);
+        devRegions \<leftarrow> noInitFailure $ gets (bifDeviceRegions \<circ> initBootInfo);
+        devRegions' \<leftarrow> return ( devRegions @ [biDeviceRegion]);
+        bootInfo \<leftarrow> noInitFailure $ gets (initBootInfo);
+        bootInfo' \<leftarrow> return ( bootInfo \<lparr> bifDeviceRegions := devRegions' \<rparr>);
+        noInitFailure $ modify (\<lambda> st. st \<lparr> initBootInfo := bootInfo' \<rparr>)
     od)
+        );
+    bInfo \<leftarrow> noInitFailure $ gets (initBootInfo);
+    bInfo' \<leftarrow> return ( bInfo \<lparr> bifNumDeviceRegions := (fromIntegral \<circ> length \<circ> bifDeviceRegions) bInfo \<rparr>);
+    noInitFailure $ modify (\<lambda> st. st \<lparr> initBootInfo := bInfo' \<rparr>)
 od)"
 
 defs copyGlobalMappings_def:
@@ -426,9 +494,9 @@ defs lookupIPCBuffer_def:
     bufferPtr \<leftarrow> threadGet tcbIPCBuffer thread;
     bufferFrameSlot \<leftarrow> getThreadBufferSlot thread;
     bufferCap \<leftarrow> getSlotCap bufferFrameSlot;
-    (let v4 = bufferCap in
-        if isArchObjectCap v4 \<and> isPageCap (capCap v4)
-        then let frame = capCap v4
+    (let v3 = bufferCap in
+        if isArchObjectCap v3 \<and> isPageCap (capCap v3)
+        then let frame = capCap v3
         in  (do
             rights \<leftarrow> return ( capVPRights frame);
             pBits \<leftarrow> return ( pageBitsForSize $ capVPSize frame);
@@ -699,9 +767,9 @@ defs setVMRoot_def:
                 | _ \<Rightarrow>   return ()
                 );
             globalPD \<leftarrow> gets (armKSGlobalPD \<circ> ksArchState);
-            doMachineOp $ setCurrentPD $ addrFromPPtr globalPD
+            doMachineOp $ setCurrentPD $ addrFromPPtr globalPD 
         od)
-                                                              )
+                                                               )
 od)"
 
 defs setVMRootForFlush_def:
@@ -709,8 +777,8 @@ defs setVMRootForFlush_def:
     tcb \<leftarrow> getCurThread;
     threadRootSlot \<leftarrow> getThreadVSpaceRoot tcb;
     threadRoot \<leftarrow> getSlotCap threadRootSlot;
-    (let v8 = threadRoot in
-        if isArchObjectCap v8 \<and> isPageDirectoryCap (capCap v8) \<and> capPDMappedASID (capCap v8) \<noteq> None \<and> capPDBasePtr (capCap v8) = pd
+    (let v7 = threadRoot in
+        if isArchObjectCap v7 \<and> isPageDirectoryCap (capCap v7) \<and> capPDMappedASID (capCap v7) \<noteq> None \<and> capPDBasePtr (capCap v7) = pd
         then let cur_pd = pd in  return False
         else  (do
             armv_contextSwitch pd asid;
@@ -732,28 +800,6 @@ defs checkValidIPCBuffer_def:
     returnOk ()
     odE)
   | _ \<Rightarrow>    throw IllegalOperation
-  )"
-
-defs createInitPage_def:
-"createInitPage addr\<equiv> (do
-    ptr \<leftarrow> return ( ptrFromPAddr addr);
-    reserveFrame ptr False;
-    return $ ArchObjectCap $ PageCap ptr VMReadWrite ARMSmallPage Nothing
-od)"
-
-defs createDeviceCap_def:
-"createDeviceCap x0\<equiv> (case x0 of
-    (addr, end) \<Rightarrow>    (do
-    wptr \<leftarrow> return ( ptrFromPAddr addr);
-    rawmagnitude \<leftarrow> return ( end - addr);
-    sz \<leftarrow> return ( find (\<lambda> sz. rawmagnitude = bit (pageBitsForSize sz))
-                  [minBound  .e.  maxBound]);
-    magnitude \<leftarrow> (case sz of
-          Some magnitude \<Rightarrow>   return magnitude
-        | None \<Rightarrow>   haskell_fail []
-        );
-    return $ ArchObjectCap $ PageCap wptr VMReadWrite magnitude Nothing
-    od)
   )"
 
 defs maskVMRights_def:
@@ -957,15 +1003,15 @@ defs resolveVAddr_def:
     pdSlot \<leftarrow> return ( lookupPDSlot pd vaddr);
     pde \<leftarrow> getObject pdSlot;
     (case pde of
-          SectionPDE frame v18 v19 v20 v21 v22 v23 \<Rightarrow>   return $ Just (ARMSection, frame)
-        | SuperSectionPDE frame v24 v25 v26 v27 v28 \<Rightarrow>   return $ Just (ARMSuperSection, frame)
-        | PageTablePDE table v29 v30 \<Rightarrow>   (do
+          SectionPDE frame v17 v18 v19 v20 v21 v22 \<Rightarrow>   return $ Just (ARMSection, frame)
+        | SuperSectionPDE frame v23 v24 v25 v26 v27 \<Rightarrow>   return $ Just (ARMSuperSection, frame)
+        | PageTablePDE table v28 v29 \<Rightarrow>   (do
             pt \<leftarrow> return ( ptrFromPAddr table);
             pteSlot \<leftarrow> return ( lookupPTSlot_nofail pt vaddr);
             pte \<leftarrow> getObject pteSlot;
             (case pte of
-                  LargePagePTE frame v10 v11 v12 v13 \<Rightarrow>   return $ Just (ARMLargePage, frame)
-                | SmallPagePTE frame v14 v15 v16 v17 \<Rightarrow>   return $ Just (ARMSmallPage, frame)
+                  LargePagePTE frame v9 v10 v11 v12 \<Rightarrow>   return $ Just (ARMLargePage, frame)
+                | SmallPagePTE frame v13 v14 v15 v16 \<Rightarrow>   return $ Just (ARMSmallPage, frame)
                 | _ \<Rightarrow>   return Nothing
                 )
         od)
@@ -1126,8 +1172,8 @@ defs decodeARMMMUInvocation_def:
             whenE (null free) $ throw DeleteFirst;
             base \<leftarrow> returnOk ( (fst $ head free) `~shiftL~` asidLowBits);
             pool \<leftarrow> returnOk ( makeObject ::asidpool);
-            frame \<leftarrow> (let v31 = untyped in
-                if isUntypedCap v31 \<and> capBlockSize v31 = objBits pool
+            frame \<leftarrow> (let v30 = untyped in
+                if isUntypedCap v30 \<and> capBlockSize v30 = objBits pool
                 then  (doE
                     ensureNoChildren parentSlot;
                     returnOk $ capPtr untyped

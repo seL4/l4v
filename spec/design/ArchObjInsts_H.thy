@@ -161,7 +161,7 @@ begin
 
 definition
   makeObject_asidpool: "(makeObject :: asidpool)  \<equiv> ASIDPool $
-        funArray (const Nothing)"
+        funPartialArray (const Nothing) (0,1023)"
 
 definition
   loadObject_asidpool[simp]:

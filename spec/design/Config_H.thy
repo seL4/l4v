@@ -25,7 +25,7 @@ where
 definition
 rootCNodeSize :: "nat"
 where
-"rootCNodeSize \<equiv> 8"
+"rootCNodeSize \<equiv> 12"
 
 definition
 timeSlice :: "nat"

@@ -261,6 +261,9 @@ where
     UnknownSyscallException v0 \<Rightarrow> True
   | _ \<Rightarrow> False"
 
+datatype init_failure =
+    InitFailure
+
 datatype syscall_error =
     IllegalOperation
   | InvalidArgument nat

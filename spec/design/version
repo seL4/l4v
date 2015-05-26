@@ -1,11 +1,10 @@
 Built from git repo at /home/jbeeren/nfshome/work/fp/seL4/haskell by jbeeren
 
 Generated from changeset:
-a3c1a39 Minor change to haskell implementation of armv_contextSwitch
+3105c61 Merge branch 'master' into context-switch
 
 
 Warning - uncomitted changes used:
- M src/SEL4/Kernel/VSpace/ARM.lhs
 ?? ../api/
 ?? ../arch/
 ?? ../kernel.elf
