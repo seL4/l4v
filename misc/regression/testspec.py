@@ -246,7 +246,7 @@ def process_tests(tests, strict=False):
             if not dependency_name in valid_names:
                 if strict:
                     raise TestSpecParseException(
-                            "Depedency '%s' invalid." % dependency_name)
+                            "Dependency '%s' invalid." % dependency_name)
                 test.depends.remove(dependency_name)
 
    # Toposort.
