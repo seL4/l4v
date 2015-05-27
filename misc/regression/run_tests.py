@@ -45,7 +45,7 @@ ANSI_RESET = "\033[0m"
 ANSI_RED = "\033[31;1m"
 ANSI_GREEN = "\033[32m"
 ANSI_YELLOW = "\033[33m"
-ANSI_WHITE = "\033[38m"
+ANSI_WHITE = "\033[37m"
 ANSI_BOLD = "\033[1m"
 
 def output_color(color, s):
