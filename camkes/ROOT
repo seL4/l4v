@@ -50,6 +50,11 @@ session CamkesCdlBase (Camkes) in "adl-spec" = DSpec +
     "root.tex"
     "comment.sty"
 
+(* CAmkES<->CapDL reasoning. *)
+session CamkesCdlRefine (Camkes) in "cdl-refine" = CamkesCdlBase +
+  theories
+    Generator_CAMKES_CDL
+
 session CamkesGlueSpec (Camkes) in "glue-spec" = HOL +
   options [document = pdf]
   theories
