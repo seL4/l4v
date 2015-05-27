@@ -18,8 +18,22 @@ imports
   Config_H
 begin
 
-defs noInitFailure_def:
-"noInitFailure \<equiv> lift"
+fun coverOf :: "region list => region" 
+where "coverOf x0 = (case x0 of
+    [] =>    Region (0,0)
+  | [x] =>    x
+  | (x#xs) =>  
+    let
+        (l,h) = fromRegion x;
+        (ll,hh) = fromRegion $ coverOf xs;
+        ln = if l \<le> ll then l else ll;
+        hn = if h \<le> hh then hh else h
+    in
+    Region (ln, hn)
+  )"
+
+definition syncBIFrame :: "unit kernel_init"
+where "syncBIFrame \<equiv> returnOk ()"
 
 defs minNum4kUntypedObj_def:
 "minNum4kUntypedObj \<equiv> 12"
@@ -28,32 +42,32 @@ defs maxNumFreememRegions_def:
 "maxNumFreememRegions \<equiv> 2"
 
 defs getAPRegion_def:
-"getAPRegion kernelFrameEnd\<equiv> (do
+"getAPRegion kernelFrameEnd\<equiv> (doE
    memRegions \<leftarrow> doKernelOp $ doMachineOp getMemoryRegions;
-   subRegions \<leftarrow> return $ (flip map) memRegions (\<lambda> x.
+   subRegions \<leftarrow> returnOk $ (flip map) memRegions (\<lambda> x.
         let (s,e) = x in
         if s < kernelFrameEnd then (kernelFrameEnd,e) else (s,e)
       );
-   return $ map ptrFromPAddrRegion subRegions
-od)"
+   returnOk $ map ptrFromPAddrRegion subRegions
+odE)"
 
 defs initFreemem_def:
-"initFreemem kernelFrameEnd uiRegion\<equiv> (do
+"initFreemem kernelFrameEnd uiRegion\<equiv> (doE
    memRegions \<leftarrow> getAPRegion kernelFrameEnd;
-   region \<leftarrow> return ( fromRegion uiRegion);
-   fst' \<leftarrow> return ( fst \<circ> fromRegion);
-   snd' \<leftarrow> return ( snd \<circ> fromRegion);
-   subUI \<leftarrow> return ( \<lambda> r.
+   region \<leftarrow> returnOk ( fromRegion uiRegion);
+   fst' \<leftarrow> returnOk ( fst \<circ> fromRegion);
+   snd' \<leftarrow> returnOk ( snd \<circ> fromRegion);
+   subUI \<leftarrow> returnOk ( \<lambda> r.
            if fst region \<ge> fst' r  \<and> snd region \<le> snd' r
            then [(fst' r, fst region), (snd region, snd' r)]
            else [(fst' r, snd' r)]);
-   freeRegions \<leftarrow> return ( concat $ map subUI memRegions);
-   freeRegions' \<leftarrow> return ( take maxNumFreememRegions $ freeRegions @
+   freeRegions \<leftarrow> returnOk ( concat $ map subUI memRegions);
+   freeRegions' \<leftarrow> returnOk ( take maxNumFreememRegions $ freeRegions @
                       (if (length freeRegions < maxNumFreememRegions)
                        then replicate (maxNumFreememRegions - length freeRegions) (PPtr 0, PPtr 0)
                        else []));
    noInitFailure $ modify (\<lambda> st. st \<lparr> initFreeMemory := map Region freeRegions' \<rparr>)
-od)"
+odE)"
 
 defs allocRegion_def:
 "allocRegion bits \<equiv>
@@ -69,29 +83,29 @@ defs allocRegion_def:
                 (r, q) = (align b, align t)
             in (r = b \<or> q = t) \<and> t - b \<ge> s)
     in
-                          (do
+                          (doE
     freeMem \<leftarrow> noInitFailure $ gets initFreeMemory;
     (case isAlignedUsable `~break~` freeMem of
-          (small, r#rest) \<Rightarrow>   (do
-            (b, t) \<leftarrow> return ( fromRegion r);
-            (result, region) \<leftarrow> return ( if align b = b then (b, Region (b + s, t)) else (t - s, Region (b, t - s)));
+          (small, r#rest) \<Rightarrow>   (doE
+            (b, t) \<leftarrow> returnOk ( fromRegion r);
+            (result, region) \<leftarrow> returnOk ( if align b = b then (b, Region (b + s, t)) else (t - s, Region (b, t - s)));
             noInitFailure $ modify (\<lambda> st. st \<lparr> initFreeMemory := small@ [region] @rest \<rparr>);
-            return $ addrFromPPtr result
-          od)
+            returnOk $ addrFromPPtr result
+          odE)
         | (_, []) \<Rightarrow>  
             (case isUsable `~break~` freeMem of
-                  (small, r'#rest) \<Rightarrow>   (do
-                    (b, t) \<leftarrow> return ( fromRegion r');
-                    result \<leftarrow> return ( align b);
-                    below \<leftarrow> return ( if result = b then [] else [Region (b, result)]);
-                    above \<leftarrow> return ( if result + s = t then [] else [Region (result + s, t)]);
+                  (small, r'#rest) \<Rightarrow>   (doE
+                    (b, t) \<leftarrow> returnOk ( fromRegion r');
+                    result \<leftarrow> returnOk ( align b);
+                    below \<leftarrow> returnOk ( if result = b then [] else [Region (b, result)]);
+                    above \<leftarrow> returnOk ( if result + s = t then [] else [Region (result + s, t)]);
                     noInitFailure $ modify (\<lambda> st. st \<lparr> initFreeMemory := small@below@above@rest \<rparr>);
-                    return $ addrFromPPtr result
-                  od)
+                    returnOk $ addrFromPPtr result
+                  odE)
                 | _ \<Rightarrow>   haskell_fail []
                 )
         )
-                          od)"
+                          odE)"
 
 defs initKernel_def:
 "initKernel entry initFrames initOffset kernelFrames bootFrames\<equiv> (do
@@ -110,13 +124,13 @@ defs initKernel_def:
         initKernelVM;
         initCPU;
         initPlatform;
-        runInit $ (do
+        runInit $ (doE
                 initFreemem kfEndPAddr uiRegion;
                 rootCNCap \<leftarrow> makeRootCNode;
                 initInterruptController rootCNCap biCapIRQControl;
-                ipcBufferVPtr \<leftarrow> return ( vptrEnd);
+                ipcBufferVPtr \<leftarrow> returnOk ( vptrEnd);
                 ipcBufferCap \<leftarrow> createIPCBufferFrame rootCNCap ipcBufferVPtr;
-                biFrameVPtr \<leftarrow> return ( vptrEnd + (1 `~shiftL~` pageBits));
+                biFrameVPtr \<leftarrow> returnOk ( vptrEnd + (1 `~shiftL~` pageBits));
                 createBIFrame rootCNCap biFrameVPtr 0 1;
                 createFramesOfRegion rootCNCap uiRegion True initOffset;
                 itPDCap \<leftarrow> createITPDPTs rootCNCap vptrStart biFrameVPtr;
@@ -129,21 +143,21 @@ defs initKernel_def:
                 createDeviceFrames rootCNCap;
                 finaliseBIFrame;
                 syncBIFrame
-        od)
+        odE)
 od)"
 
 defs finaliseBIFrame_def:
-"finaliseBIFrame\<equiv> (do
+"finaliseBIFrame\<equiv> (doE
   cur \<leftarrow> noInitFailure $ gets $ initSlotPosCur;
   max \<leftarrow> noInitFailure $ gets $ initSlotPosMax;
   noInitFailure $ modify (\<lambda> s. s \<lparr> initBootInfo := (initBootInfo s) \<lparr>bifNullCaps := [cur  .e.  max - 1]\<rparr>\<rparr>)
-od)"
+odE)"
 
 defs createInitialThread_def:
-"createInitialThread rootCNCap itPDCap ipcBufferCap entry ipcBufferVPtr biFrameVPtr\<equiv> (do
-      tcbBits \<leftarrow> return ( objBits (makeObject::tcb));
+"createInitialThread rootCNCap itPDCap ipcBufferCap entry ipcBufferVPtr biFrameVPtr\<equiv> (doE
+      tcbBits \<leftarrow> returnOk ( objBits (makeObject::tcb));
       tcb' \<leftarrow> allocRegion tcbBits;
-      tcbPPtr \<leftarrow> return ( ptrFromPAddr tcb');
+      tcbPPtr \<leftarrow> returnOk ( ptrFromPAddr tcb');
       doKernelOp $ (do
          placeNewObject tcbPPtr (makeObject::tcb) 0;
          srcSlot \<leftarrow> locateSlot (capCNodePtr rootCNCap) biCapITCNode;
@@ -161,13 +175,13 @@ defs createInitialThread_def:
          slot \<leftarrow> locateSlot (capCNodePtr rootCNCap) biCapITTCB;
          insertInitCap slot cap
       od);
-      return ()
-od)"
+      returnOk ()
+odE)"
 
 defs createIdleThread_def:
-"createIdleThread\<equiv> (do
+"createIdleThread\<equiv> (doE
       paddr \<leftarrow> allocRegion $ objBits (makeObject ::tcb);
-      tcbPPtr \<leftarrow> return ( ptrFromPAddr paddr);
+      tcbPPtr \<leftarrow> returnOk ( ptrFromPAddr paddr);
       doKernelOp $ (do
             placeNewObject tcbPPtr (makeObject::tcb) 0;
             modify (\<lambda> s. s \<lparr>ksIdleThread := tcbPPtr\<rparr>);
@@ -175,53 +189,53 @@ defs createIdleThread_def:
             setSchedulerAction ResumeCurrentThread
       od);
       configureIdleThread tcbPPtr
-od)"
+odE)"
 
 defs createUntypedObject_def:
-"createUntypedObject rootCNodeCap bootMemReuseReg\<equiv> (do
-    regStart \<leftarrow> return ( (fst \<circ> fromRegion));
-    regStartPAddr \<leftarrow> return ( (addrFromPPtr \<circ> regStart));
-    regEnd \<leftarrow> return ( (snd \<circ> fromRegion));
-    regEndPAddr \<leftarrow> return ( (addrFromPPtr \<circ> regEnd));
+"createUntypedObject rootCNodeCap bootMemReuseReg\<equiv> (doE
+    regStart \<leftarrow> returnOk ( (fst \<circ> fromRegion));
+    regStartPAddr \<leftarrow> returnOk ( (addrFromPPtr \<circ> regStart));
+    regEnd \<leftarrow> returnOk ( (snd \<circ> fromRegion));
+    regEndPAddr \<leftarrow> returnOk ( (addrFromPPtr \<circ> regEnd));
     slotBefore \<leftarrow> noInitFailure $ gets initSlotPosCur;
-    mapM_x (\<lambda> i. provideUntypedCap rootCNodeCap i (fromIntegral pageBits) slotBefore)
+    mapME_x (\<lambda> i. provideUntypedCap rootCNodeCap i (fromIntegral pageBits) slotBefore)
              [regStartPAddr bootMemReuseReg, (regStartPAddr bootMemReuseReg + bit pageBits)  .e.  (regEndPAddr bootMemReuseReg - 1)];
     currSlot \<leftarrow> noInitFailure $ gets initSlotPosCur;
-    mapM_x (\<lambda> _. (do
+    mapME_x (\<lambda> _. (doE
              paddr \<leftarrow> allocRegion pageBits;
              provideUntypedCap rootCNodeCap paddr (fromIntegral pageBits) slotBefore
-    od)
+    odE)
                                                                                     )
           [(currSlot - slotBefore)  .e.  (fromIntegral minNum4kUntypedObj - 1)];
     freemem \<leftarrow> noInitFailure $ gets initFreeMemory;
-    (flip mapM) (take maxNumFreememRegions freemem)
+    (flip mapME) (take maxNumFreememRegions freemem)
         (\<lambda> reg. (
-            (\<lambda> f. mapM (f reg) [4  .e.  (finiteBitSize (undefined::machine_word)) - 2])
-                (\<lambda> reg bits. (do
+            (\<lambda> f. mapME (f reg) [4  .e.  (finiteBitSize (undefined::machine_word)) - 2])
+                (\<lambda> reg bits. (doE
                     reg' \<leftarrow> (if Not (isAligned (regStartPAddr reg) (bits + 1))
                                 \<and> (regEndPAddr reg) - (regStartPAddr reg) \<ge> bit bits
-                        then (do
+                        then (doE
                             provideUntypedCap rootCNodeCap (regStartPAddr reg) (fromIntegral bits) slotBefore;
-                            return $ Region (regStart reg + bit bits, regEnd reg)
-                        od)
-                        else return reg);
+                            returnOk $ Region (regStart reg + bit bits, regEnd reg)
+                        odE)
+                        else returnOk reg);
                     if Not (isAligned (regEndPAddr reg') (bits + 1)) \<and> (regEndPAddr reg') - (regStartPAddr reg') \<ge> bit bits
-                        then (do
+                        then (doE
                             provideUntypedCap rootCNodeCap (regEndPAddr reg' - bit bits) (fromIntegral bits) slotBefore;
-                            return $ Region (regStart reg', regEnd reg' - bit bits)
-                        od)
-                        else return reg' 
-                od)
-                                         )
+                            returnOk $ Region (regStart reg', regEnd reg' - bit bits)
+                        odE)
+                        else returnOk reg' 
+                odE)
+                                           )
         )
         );
-    emptyReg \<leftarrow> return ( Region (PPtr 0, PPtr 0));
-    freemem' \<leftarrow> return ( replicate maxNumFreememRegions emptyReg);
+    emptyReg \<leftarrow> returnOk ( Region (PPtr 0, PPtr 0));
+    freemem' \<leftarrow> returnOk ( replicate maxNumFreememRegions emptyReg);
     slotAfter \<leftarrow> noInitFailure $ gets initSlotPosCur;
     noInitFailure $ modify (\<lambda> s. s \<lparr> initFreeMemory := freemem',
                       initBootInfo := (initBootInfo s) \<lparr>
                            bifUntypedObjCaps := [slotBefore  .e.  slotAfter - 1] \<rparr>\<rparr>)
-od)"
+odE)"
 
 defs mapTaskRegions_def:
 "mapTaskRegions taskMappings\<equiv> (
@@ -232,58 +246,44 @@ defs allocFrame_def:
 "allocFrame \<equiv> allocRegion pageBits"
 
 defs makeRootCNode_def:
-"makeRootCNode\<equiv> (do
-      slotBits \<leftarrow> return ( objBits (undefined::cte));
-      levelBits \<leftarrow> return ( rootCNodeSize);
-      frame \<leftarrow> liftM ptrFromPAddr $ allocRegion (levelBits + slotBits);
+"makeRootCNode\<equiv> (doE
+      slotBits \<leftarrow> returnOk ( objBits (undefined::cte));
+      levelBits \<leftarrow> returnOk ( rootCNodeSize);
+      frame \<leftarrow> liftME ptrFromPAddr $ allocRegion (levelBits + slotBits);
       rootCNCap \<leftarrow> doKernelOp $ createObject (fromAPIType CapTableObject) frame levelBits;
-      rootCNCap \<leftarrow> return $ rootCNCap \<lparr>capCNodeGuardSize := 32 - levelBits\<rparr>;
+      rootCNCap \<leftarrow> returnOk $ rootCNCap \<lparr>capCNodeGuardSize := 32 - levelBits\<rparr>;
       slot \<leftarrow> doKernelOp $ locateSlot (capCNodePtr rootCNCap) biCapITCNode;
       doKernelOp $ insertInitCap slot rootCNCap;
-      return rootCNCap
-od)"
+      returnOk rootCNCap
+odE)"
 
 defs provideCap_def:
-"provideCap rootCNodeCap cap\<equiv> (do
+"provideCap rootCNodeCap cap\<equiv> (doE
     currSlot \<leftarrow> noInitFailure $ gets initSlotPosCur;
     maxSlot \<leftarrow> noInitFailure $ gets initSlotPosMax;
-    when (currSlot \<ge> maxSlot) $ throwError InitFailure;
+    whenE (currSlot \<ge> maxSlot) $ throwError InitFailure;
     slot \<leftarrow> doKernelOp $ locateSlot (capCNodePtr rootCNodeCap) currSlot;
     doKernelOp $ insertInitCap slot cap;
     noInitFailure $ modify (\<lambda> st. st \<lparr> initSlotPosCur := currSlot + 1 \<rparr>)
-od)"
+odE)"
 
 defs provideUntypedCap_def:
-"provideUntypedCap rootCNodeCap pptr magnitudeBits slotPosBefore\<equiv> (do
+"provideUntypedCap rootCNodeCap pptr magnitudeBits slotPosBefore\<equiv> (doE
     currSlot \<leftarrow> noInitFailure $ gets initSlotPosCur;
-    i \<leftarrow> return ( currSlot - slotPosBefore);
+    i \<leftarrow> returnOk ( currSlot - slotPosBefore);
     untypedObjs \<leftarrow> noInitFailure $ gets (bifUntypedObjPAddrs \<circ> initBootInfo);
-    haskell_assert (length untypedObjs = fromIntegral i) [];
+    haskell_assertE (length untypedObjs = fromIntegral i) [];
     untypedObjs' \<leftarrow> noInitFailure $ gets (bifUntypedObjSizeBits \<circ> initBootInfo);
-    haskell_assert (length untypedObjs' = fromIntegral i) [];
+    haskell_assertE (length untypedObjs' = fromIntegral i) [];
     bootInfo \<leftarrow> noInitFailure $ gets initBootInfo;
-    bootInfo' \<leftarrow> return ( bootInfo \<lparr> bifUntypedObjPAddrs := untypedObjs @ [pptr],
+    bootInfo' \<leftarrow> returnOk ( bootInfo \<lparr> bifUntypedObjPAddrs := untypedObjs @ [pptr],
                                bifUntypedObjSizeBits := untypedObjs' @ [magnitudeBits] \<rparr>);
     noInitFailure $ modify (\<lambda> st. st \<lparr> initBootInfo := bootInfo' \<rparr>);
     provideCap rootCNodeCap $ UntypedCap_ \<lparr>
                                   capPtr= ptrFromPAddr pptr,
                                   capBlockSize= fromIntegral magnitudeBits,
                                   capFreeIndex= 0 \<rparr>
-od)"
-
-defs coverOf_def:
-"coverOf x0\<equiv> (case x0 of
-    [] \<Rightarrow>    Region (0,0)
-  | [x] \<Rightarrow>    x
-  | (x#xs) \<Rightarrow>  
-    let
-        (l,h) = fromRegion x;;
-        (ll,hh) = fromRegion $ coverOf xs;;
-        ln = if l \<le> ll then l else ll;;
-        hn = if h \<le> hh then hh else h
-    in
-    Region (ln, hn)
-  )"
+odE)"
 
 
 consts

@@ -78,7 +78,7 @@ def get_defs (filename):
 		return file_defs[filename]
 
 	cmdline = os.environ['L4CPP']	
-	f = os.popen ('cpp -traditional-cpp %s %s' % (cmdline, filename))
+	f = os.popen ('cpp -Wno-invalid-pp-token -traditional-cpp %s %s' % (cmdline, filename))
 	input = [line.rstrip() for line in f]
 	f.close()
 	defs = top_transform (input)
@@ -1764,9 +1764,9 @@ def split_on_unmatched_bracket (elts, n = None):
 	return (elts, [], n)
 
 def monad_type_acquire (sig, type=0):
-	# note kernel appears after kernel_f/kernel_monad
+	# note kernel appears after kernel_f/kernel_monad            
 	for (key, n) in [('kernel_f', 1), ('fault_monad', 1),
-			('syscall_monad', 2), ('kernel_monad', 0),
+			('syscall_monad', 2), ('kernel_monad', 0),('kernel_init',1),
 			('kernel_p', 1), ('kernel', 0)]:
 		if key in sig:
 			sigend = sig.split(key)[-1]
@@ -1779,6 +1779,12 @@ def monad_type_transform ((line, type)):
 	if 'withoutError' in line:
 		split = 'withoutError'
 		newtype = 1
+	elif 'doKernelOp' in line:
+		split = 'doKernelOp'
+		newtype = 0
+	elif 'runInit' in line:
+		split = 'runInit'
+		newtype = 1 
 	elif 'withoutFailure' in line:
 		split = 'withoutFailure'
 		newtype = 0

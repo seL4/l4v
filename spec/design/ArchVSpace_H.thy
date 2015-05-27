@@ -113,34 +113,34 @@ defs activateGlobalPD_def:
 od)"
 
 defs createITPDPTs_def:
-"createITPDPTs rootCNCap vptrStart biFrameVPtr\<equiv>  (do
-    pdSize \<leftarrow> return ( pdBits - objBits (makeObject ::pde));
-    ptSize \<leftarrow> return ( ptBits - objBits (makeObject ::pte));
+"createITPDPTs rootCNCap vptrStart biFrameVPtr\<equiv>  (doE
+    pdSize \<leftarrow> returnOk ( pdBits - objBits (makeObject ::pde));
+    ptSize \<leftarrow> returnOk ( ptBits - objBits (makeObject ::pte));
     pdPPtr \<leftarrow> allocRegion pdBits;
     doKernelOp $ placeNewObject (ptrFromPAddr pdPPtr) (makeObject::pde) pdSize;
-    pdCap \<leftarrow> return $ ArchObjectCap $ PageDirectoryCap (ptrFromPAddr pdPPtr) (Just itASID);
+    pdCap \<leftarrow> returnOk $ ArchObjectCap $ PageDirectoryCap (ptrFromPAddr pdPPtr) (Just itASID);
     slot  \<leftarrow> doKernelOp $ locateSlot (capCNodePtr rootCNCap) biCapITPD;
     doKernelOp $ insertInitCap slot $ pdCap;
     slotBefore \<leftarrow> noInitFailure $ gets $ initSlotPosCur;
-    btmVPtr \<leftarrow> return ( vptrStart `~shiftR~` (pdSize + pageBits) `~shiftL~` (pdSize + pageBits));
-    step \<leftarrow> return ( 1 `~shiftL~` (ptSize + pageBits));
-    topVPtr \<leftarrow> return ( biFrameVPtr + (bit biFrameSizeBits) - 1);
-    forM_x [btmVPtr,btmVPtr + step  .e.  topVPtr] (\<lambda> vptr. (do
+    btmVPtr \<leftarrow> returnOk ( vptrStart `~shiftR~` (pdSize + pageBits) `~shiftL~` (pdSize + pageBits));
+    step \<leftarrow> returnOk ( 1 `~shiftL~` (ptSize + pageBits));
+    topVPtr \<leftarrow> returnOk ( biFrameVPtr + (bit biFrameSizeBits) - 1);
+    forME_x [btmVPtr,btmVPtr + step  .e.  topVPtr] (\<lambda> vptr. (doE
         ptPPtr \<leftarrow> allocRegion ptBits;
         doKernelOp $ placeNewObject (ptrFromPAddr ptPPtr) (makeObject::pte) ptSize;
         provideCap rootCNCap $ ArchObjectCap $ PageTableCap (ptrFromPAddr ptPPtr) (Just (itASID, vptr))
-    od));
+    odE));
     slotAfter \<leftarrow> noInitFailure $ gets initSlotPosCur;
     bootInfo \<leftarrow> noInitFailure $ gets initBootInfo;
-    bootInfo' \<leftarrow> return ( bootInfo \<lparr> bifUIPTCaps := [slotBefore  .e.  slotAfter - 1] \<rparr>);
+    bootInfo' \<leftarrow> returnOk ( bootInfo \<lparr> bifUIPTCaps := [slotBefore  .e.  slotAfter - 1] \<rparr>);
     noInitFailure $ modify (\<lambda> s. s \<lparr> initBootInfo := bootInfo' \<rparr>);
-    return pdCap
-od)"
+    returnOk pdCap
+odE)"
 
 defs writeITPDPTs_def:
 "writeITPDPTs rootCNCap pdCap \<equiv>
   (case pdCap of
-      ArchObjectCap cap \<Rightarrow>   (do
+      ArchObjectCap cap \<Rightarrow>   (doE
       doKernelOp $ copyGlobalMappings $ capPDBasePtr cap;
       ptSlots \<leftarrow> noInitFailure $ gets $ bifUIPTCaps \<circ> initBootInfo;
       doKernelOp $ (
@@ -166,22 +166,22 @@ defs writeITPDPTs_def:
            cte \<leftarrow> getCTE slot;
            mapITFrameCap pdCap (cteCap cte)
       od)
-      od)
+      odE)
     | _ \<Rightarrow>   haskell_fail $ (show pdCap) @ []
     )"
 
 defs createITASIDPool_def:
-"createITASIDPool rootCNCap\<equiv> (do
+"createITASIDPool rootCNCap\<equiv> (doE
     apPPtr \<leftarrow> allocRegion $ objBits (undefined ::asidpool);
     doKernelOp $ placeNewObject (ptrFromPAddr apPPtr) (makeObject::asidpool) 0;
     slot \<leftarrow> doKernelOp $ locateSlot (capCNodePtr rootCNCap) biCapITASIDPool;
-    asidPoolCap \<leftarrow> return $ ArchObjectCap $ ASIDPoolCap (ptrFromPAddr apPPtr) 0;
+    asidPoolCap \<leftarrow> returnOk $ ArchObjectCap $ ASIDPoolCap (ptrFromPAddr apPPtr) 0;
     doKernelOp $ insertInitCap slot asidPoolCap;
     slot \<leftarrow> doKernelOp $ locateSlot (capCNodePtr rootCNCap) biCapASIDControl;
-    asidControlCap \<leftarrow> return $ ArchObjectCap $ ASIDControlCap;
+    asidControlCap \<leftarrow> returnOk $ ArchObjectCap $ ASIDControlCap;
     doKernelOp $ insertInitCap slot asidControlCap;
-    return asidPoolCap
-od)"
+    returnOk asidPoolCap
+odE)"
 
 defs writeITASIDPool_def:
 "writeITASIDPool apCap pdCap\<equiv> (do
@@ -259,23 +259,23 @@ defs mapITFrameCap_def:
 od)"
 
 defs createIPCBufferFrame_def:
-"createIPCBufferFrame rootCNCap vptr\<equiv> (do
+"createIPCBufferFrame rootCNCap vptr\<equiv> (doE
       pptr \<leftarrow> allocFrame;
       doKernelOp $ doMachineOp $ clearMemory (ptrFromPAddr pptr) (1 `~shiftL~` pageBits);
       cap \<leftarrow> createITFrameCap (ptrFromPAddr pptr) vptr (Just itASID) False;
       slot \<leftarrow> doKernelOp $ locateSlot (capCNodePtr rootCNCap) biCapITIPCBuf;
       doKernelOp $ insertInitCap slot cap;
       bootInfo \<leftarrow> noInitFailure $ gets (initBootInfo);
-      bootInfo' \<leftarrow> return ( bootInfo \<lparr> bifIPCBufVPtr := vptr\<rparr>);
+      bootInfo' \<leftarrow> returnOk ( bootInfo \<lparr> bifIPCBufVPtr := vptr\<rparr>);
       noInitFailure $ modify (\<lambda> s. s \<lparr>initBootInfo := bootInfo' \<rparr>);
-      return cap
-od)"
+      returnOk cap
+odE)"
 
 defs createBIFrame_def:
-"createBIFrame rootCNCap vptr nodeId numNodes\<equiv> (do
+"createBIFrame rootCNCap vptr nodeId numNodes\<equiv> (doE
       pptr \<leftarrow> allocFrame;
       bootInfo \<leftarrow> noInitFailure $ gets initBootInfo;
-      bootInfo' \<leftarrow> return ( bootInfo \<lparr> bifNodeID := nodeId,
+      bootInfo' \<leftarrow> returnOk ( bootInfo \<lparr> bifNodeID := nodeId,
                                  bifNumNodes := numNodes \<rparr>);
       noInitFailure $ modify (\<lambda> s. s \<lparr>
           initBootInfo := bootInfo',
@@ -286,40 +286,40 @@ defs createBIFrame_def:
       cap \<leftarrow> createITFrameCap (ptrFromPAddr pptr) vptr (Just itASID) False;
       slot \<leftarrow> doKernelOp $ locateSlot (capCNodePtr rootCNCap) biCapBIFrame;
       doKernelOp $ insertInitCap slot cap;
-      return cap
-od)"
+      returnOk cap
+odE)"
 
 defs createITFrameCap_def:
-"createITFrameCap pptr vptr asid large\<equiv> (do
-    sz \<leftarrow> return ( if large then ARMLargePage else ARMSmallPage);
-    addr \<leftarrow> return ( (case asid of
+"createITFrameCap pptr vptr asid large\<equiv> (doE
+    sz \<leftarrow> returnOk ( if large then ARMLargePage else ARMSmallPage);
+    addr \<leftarrow> returnOk ( (case asid of
                       Some asid' \<Rightarrow>   Just (asid', vptr)
                     | None \<Rightarrow>   Nothing
                     ));
-    frame \<leftarrow> return ( PageCap_ \<lparr>
+    frame \<leftarrow> returnOk ( PageCap_ \<lparr>
              capVPBasePtr= pptr,
              capVPRights= VMReadWrite,
              capVPSize= sz,
              capVPMappedAddress= addr \<rparr>);
-    return $ ArchObjectCap $ frame
-od)"
+    returnOk $ ArchObjectCap $ frame
+odE)"
 
 defs createFramesOfRegion_def:
-"createFramesOfRegion rootCNCap region doMap pvOffset\<equiv> (do
+"createFramesOfRegion rootCNCap region doMap pvOffset\<equiv> (doE
     curSlotPos \<leftarrow> noInitFailure $ gets initSlotPosCur;
-    (startPPtr, endPPtr) \<leftarrow> return $ fromRegion region;
-    forM_x [startPPtr,startPPtr + (bit pageBits)  .e.  endPPtr] (\<lambda> ptr. (do
-        paddr \<leftarrow> return ( fromPAddr $ addrFromPPtr ptr);
+    (startPPtr, endPPtr) \<leftarrow> returnOk $ fromRegion region;
+    forME_x [startPPtr,startPPtr + (bit pageBits)  .e.  endPPtr] (\<lambda> ptr. (doE
+        paddr \<leftarrow> returnOk ( fromPAddr $ addrFromPPtr ptr);
         frameCap \<leftarrow> if doMap then
                     createITFrameCap ptr ((VPtr paddr) + pvOffset ) (Just itASID) False
                     else createITFrameCap ptr 0 Nothing False;
         provideCap rootCNCap frameCap
-    od));
+    odE));
     slotPosAfter \<leftarrow> noInitFailure $ gets initSlotPosCur;
     bootInfo \<leftarrow> noInitFailure $ gets initBootInfo;
-    bootInfo' \<leftarrow> return ( bootInfo \<lparr> bifUIFrameCaps := [curSlotPos  .e.  slotPosAfter - 1] \<rparr>);
+    bootInfo' \<leftarrow> returnOk ( bootInfo \<lparr> bifUIFrameCaps := [curSlotPos  .e.  slotPosAfter - 1] \<rparr>);
     noInitFailure $ modify (\<lambda> s. s \<lparr> initBootInfo := bootInfo' \<rparr>)
-od)"
+odE)"
 
 defs mapGlobalsFrame_def:
 "mapGlobalsFrame\<equiv> (do
@@ -360,35 +360,35 @@ defs getARMGlobalPT_def:
 od)"
 
 defs createDeviceFrames_def:
-"createDeviceFrames rootCNodeCap\<equiv> (do
+"createDeviceFrames rootCNodeCap\<equiv> (doE
     deviceRegions \<leftarrow> doKernelOp $ doMachineOp getDeviceRegions;
-    (flip mapM_x) deviceRegions (\<lambda> (start,end). (do
-        frameSize \<leftarrow> return $ if (isAligned start (pageBitsForSize ARMSection))
+    (flip mapME_x) deviceRegions (\<lambda> (start,end). (doE
+        frameSize \<leftarrow> returnOk $ if (isAligned start (pageBitsForSize ARMSection))
                          \<and> isAligned end (pageBitsForSize ARMSection)
             then ARMSection else ARMSmallPage;
         slotBefore \<leftarrow> noInitFailure $ gets initSlotPosCur;
-        (flip mapM_x) [start, (start + (bit (pageBitsForSize frameSize)))  .e.  (end - 1)]
-              (\<lambda> f. (do
+        (flip mapME_x) [start, (start + (bit (pageBitsForSize frameSize)))  .e.  (end - 1)]
+              (\<lambda> f. (doE
                   frameCap \<leftarrow> createITFrameCap (ptrFromPAddr f) 0 Nothing (frameSize = ARMSection);
                   provideCap rootCNodeCap frameCap
-              od)
+              odE)
                                                   );
         slotAfter \<leftarrow> noInitFailure $ gets initSlotPosCur;
-        biDeviceRegion \<leftarrow> return ( BIDeviceRegion_ \<lparr>
+        biDeviceRegion \<leftarrow> returnOk ( BIDeviceRegion_ \<lparr>
                                   bidrBasePAddr= start,
                                   bidrFrameSizeBits= fromIntegral $ pageBitsForSize frameSize,
                                   bidrFrameCaps= SlotRegion (slotBefore, slotAfter) \<rparr>);
         devRegions \<leftarrow> noInitFailure $ gets (bifDeviceRegions \<circ> initBootInfo);
-        devRegions' \<leftarrow> return ( devRegions @ [biDeviceRegion]);
+        devRegions' \<leftarrow> returnOk ( devRegions @ [biDeviceRegion]);
         bootInfo \<leftarrow> noInitFailure $ gets (initBootInfo);
-        bootInfo' \<leftarrow> return ( bootInfo \<lparr> bifDeviceRegions := devRegions' \<rparr>);
+        bootInfo' \<leftarrow> returnOk ( bootInfo \<lparr> bifDeviceRegions := devRegions' \<rparr>);
         noInitFailure $ modify (\<lambda> st. st \<lparr> initBootInfo := bootInfo' \<rparr>)
-    od)
+    odE)
         );
     bInfo \<leftarrow> noInitFailure $ gets (initBootInfo);
-    bInfo' \<leftarrow> return ( bInfo \<lparr> bifNumDeviceRegions := (fromIntegral \<circ> length \<circ> bifDeviceRegions) bInfo \<rparr>);
+    bInfo' \<leftarrow> returnOk ( bInfo \<lparr> bifNumDeviceRegions := (fromIntegral \<circ> length \<circ> bifDeviceRegions) bInfo \<rparr>);
     noInitFailure $ modify (\<lambda> st. st \<lparr> initBootInfo := bInfo' \<rparr>)
-od)"
+odE)"
 
 defs copyGlobalMappings_def:
 "copyGlobalMappings newPD\<equiv> (do

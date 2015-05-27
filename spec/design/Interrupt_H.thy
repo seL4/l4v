@@ -133,7 +133,7 @@ defs deletedIRQHandler_def:
     setIRQState IRQInactive irq"
 
 defs initInterruptController_def:
-"initInterruptController rootCNCap biCapIRQC\<equiv> (do
+"initInterruptController rootCNCap biCapIRQC\<equiv> (doE
     frame \<leftarrow> allocFrame;
     doKernelOp $ (do
         haskell_assert (length [minBound .e. (maxBound::irq)]
@@ -149,8 +149,8 @@ defs initInterruptController_def:
         slot \<leftarrow> locateSlot (capCNodePtr rootCNCap) biCapIRQC;
         insertInitCap slot IRQControlCap
     od);
-    return IRQControlCap
-od)"
+    returnOk IRQControlCap
+odE)"
 
 defs handleInterrupt_def:
 "handleInterrupt irq\<equiv> (do

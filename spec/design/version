@@ -1,25 +1,5 @@
-Built from git repo at /home/jbeeren/nfshome/work/fp/seL4/haskell by jbeeren
+Built from git repo at /Users/kleing/verification/seL4/haskell by kleing
 
 Generated from changeset:
-3105c61 Merge branch 'master' into context-switch
+cf53dfa removed setCurrentASID
 
-
-Warning - uncomitted changes used:
-?? ../api/
-?? ../arch/
-?? ../kernel.elf
-?? ../kernel.elf.strip
-?? ../kernel.o
-?? ../kernel_all.c
-?? ../kernel_all.c_pp
-?? ../kernel_final.c
-?? ../kernel_final.s
-?? ../linker.lds_pp
-?? ../parsetab.py
-?? ../plat/
-?? ../sources_list_updated
-?? ../src/arch/arm/armv/armv6/machine_asm.o
-?? ../src/arch/arm/halt.o
-?? ../src/arch/arm/head.o
-?? ../src/arch/arm/idle.o
-?? ../src/arch/arm/traps.o
