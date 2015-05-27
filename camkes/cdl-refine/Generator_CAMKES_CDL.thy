@@ -447,6 +447,13 @@ lemma helper15:
    apply (case_tac "map_of ys x")
     by clarsimp+
 
+lemma helper13: "map_of (map (\<lambda>(n, y). (the_id_of n, y)) xs) x = Some z \<Longrightarrow> z \<in> snd ` set xs"
+  proof -
+    assume "map_of (map (\<lambda>(n, y). (the_id_of n, y)) xs) x = Some z"
+    hence "(x, z) \<in> (\<lambda>(uu, y). (the_id_of uu, y)) ` set xs" using map_of_SomeD by fastforce
+    thus "z \<in> snd ` set xs" using helper8 by fastforce
+  qed
+
 lemma generated_no_pds_pts_frames:
   "generate' spec = cdl \<Longrightarrow>
      \<not>(\<exists>x \<in> objs cdl. case x of PageDirectory _ \<Rightarrow> True
@@ -458,7 +465,32 @@ lemma generated_no_pds_pts_frames:
   apply (case_tac "map_of (map (\<lambda>(n, y). (the_id_of n, y)) (cnode_objs spec)) xa")
    apply clarsimp
    apply (case_tac "map_of (map (\<lambda>(n, y). (the_id_of n, y)) (tcb_objs spec)) xa")
-  oops (* TODO *)
+    apply clarsimp
+    apply (case_tac "map_of (map (\<lambda>(n, y). (the_id_of n, y)) (ep_objs spec)) xa")
+     apply clarsimp
+     apply (metis is_none_code(1))
+    apply clarsimp
+    apply (insert ep_objs_only_eps[where spec=spec], clarsimp)
+    apply (drule helper13)
+    apply clarsimp
+    apply (rename_tac a' b')
+    apply (erule_tac x="(a', b')" in ballE)
+     apply clarsimp
+     apply (case_tac b', simp_all)
+   apply (insert tcb_objs_only_tcbs[where spec=spec], clarsimp)
+   apply (drule helper13)
+   apply clarsimp
+   apply (rename_tac a' b')
+   apply (erule_tac x="(a', b')" and A="set (tcb_objs spec)" in ballE)
+    apply clarsimp
+    apply (case_tac b', simp_all)
+  apply (insert cnode_objs_only_cnodes[where spec=spec], clarsimp)
+  apply (drule helper13)
+  apply clarsimp
+  apply (rename_tac a' b')
+  apply (erule_tac x="(a', b')" and A="set (cnode_objs spec)" in ballE)
+   apply clarsimp
+   by (case_tac b', simp_all)
 
 lemma helper12: "valid_extra a b \<Longrightarrow> dom (cdl_objects a) \<inter> dom b = {}"
   by (clarsimp simp:valid_extra_def)
