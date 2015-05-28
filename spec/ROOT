@@ -46,17 +46,17 @@ session ASpec in "abstract" = Word +
     "Syscall_A"
     "Glossary_Doc"
   document_files
-	"VERSION"
+    "VERSION"
     "root.tex"
     "root.bib"
     "defs.bib"
-	"imgs/CDT.pdf"
-	"imgs/seL4-background_01.pdf"
-	"imgs/seL4-background_03.pdf"
-	"imgs/seL4-background_04.pdf"
-	"imgs/sel4objects_01.pdf"
-	"imgs/sel4objects_05.pdf"
-	"imgs/sel4_internals_01.pdf"
+    "imgs/CDT.pdf"
+    "imgs/seL4-background_01.pdf"
+    "imgs/seL4-background_03.pdf"
+    "imgs/seL4-background_04.pdf"
+    "imgs/sel4objects_01.pdf"
+    "imgs/sel4objects_05.pdf"
+    "imgs/sel4_internals_01.pdf"
 
 (*
  * Executable/Design Specification
