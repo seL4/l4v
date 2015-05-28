@@ -203,7 +203,7 @@ lemma ceqv_refl:
   unfolding ceqv_def by auto
 
 lemma ceqv_trans:
-  "\<lbrakk> ceqv \<Gamma> xf' rv' t t' c c'; ceqv \<Gamma> xf' rv' t t' c c'' \<rbrakk> \<Longrightarrow> ceqv \<Gamma> xf' rv' t t' c c''"
+  "\<lbrakk> ceqv \<Gamma> xf' rv' t t' c c'; ceqv \<Gamma> xf' rv' t t' c' c'' \<rbrakk> \<Longrightarrow> ceqv \<Gamma> xf' rv' t t' c c''"
   unfolding ceqv_def by auto
 
 (* A bit yuck, might be better to define the other way around *)

@@ -432,7 +432,7 @@ lemma syscall_helper:
   " \<lbrakk> \<And>x xa. \<lbrace>Qa x xa\<rbrace> perform_syscall_fn xa \<lbrace>Q\<rbrace>, \<lbrace>\<lambda>r s. True\<rbrace>; \<And>r. \<lbrace>Qi r\<rbrace> arg_decode_fn r \<lbrace>Qa r\<rbrace>, \<lbrace>\<lambda>r s. False\<rbrace>;
  \<lbrace>P\<rbrace> cap_decoder_fn \<lbrace>Qi\<rbrace>, \<lbrace>\<lambda>r s. False\<rbrace>\<rbrakk>
 \<Longrightarrow> \<lbrace>P\<rbrace> syscall cap_decoder_fn decode_error_handler arg_decode_fn arg_error_handler_fn perform_syscall_fn \<lbrace>Q\<rbrace>, \<lbrace>\<lambda>r s. True\<rbrace>"
-  apply (simp add:syscall_def del:split_paired_all)
+  apply (simp add:syscall_def)
   apply (rule hoare_vcg_handle_elseE)
     apply simp
    apply simp
@@ -563,7 +563,7 @@ lemma invoke_tcb_ThreadControl_cur_thread:
       |wpc
       |simp add:tcb_update_ipc_buffer_def
     tcb_update_thread_slot_def)+
-    apply (clarsimp simp:conj_ac)
+    apply (clarsimp simp:conj_comms)
     apply (rule hoare_post_impErr[OF valid_validE,rotated],assumption)
      apply (fastforce split:option.splits)
      apply (wp hoare_drop_imps hoare_whenE_wp alternative_wp
@@ -830,7 +830,7 @@ lemma invoke_tcb_ThreadControl_cdl_current_domain:
       |wpc
       |simp add:tcb_update_ipc_buffer_def
     tcb_update_thread_slot_def)+
-    apply (clarsimp simp:conj_ac)
+    apply (clarsimp simp:conj_comms)
     apply (rule hoare_post_impErr[OF valid_validE,rotated],assumption)
      apply (fastforce split:option.splits)
      apply (wp hoare_drop_imps hoare_whenE_wp alternative_wp
@@ -1048,9 +1048,10 @@ shows
   using unify
   apply (simp add: seL4_TCB_Configure_def sep_state_projection2_def)
   apply (simp only: is_tcb_def split:cdl_object.splits)
+  apply (rename_tac cdl_tcb sz)
   apply (rule hoare_pre)
    apply (wp do_kernel_op_pull_back)
-   apply (rule_tac tcb=cdl_tcb_ext in call_kernel_with_intent_allow_error_helper
+   apply (rule_tac tcb=cdl_tcb in call_kernel_with_intent_allow_error_helper
                 [where check = True and Perror = \<top>,simplified])
                 apply (fastforce)
                apply (rule hoare_strengthen_post[OF set_cap_wp])
@@ -1081,7 +1082,7 @@ shows
             apply (clarsimp cong:reset_cap_asid_cap_type)
            apply (clarsimp dest!:reset_cap_asid_cap_type)
           apply (rule hoare_post_impErr)
-            apply (rule_tac R = "(root_tcb_id, tcb_pending_op_slot) \<mapsto>c RestartCap \<and>* ?R'" in
+            apply (rule_tac R = "(root_tcb_id, tcb_pending_op_slot) \<mapsto>c RestartCap \<and>* R'" for R' in
             invoke_tcb_threadcontrol_wp'[where vrt_cap = vspace_cap and
             crt_cap = "cdl_update_cnode_cap_data cspace_cap cspace_root_data" and
             ipcbuff_cap = buffer_frame_cap and tcb = tcb])
@@ -1117,7 +1118,7 @@ shows
           (cap_object cnode_cap, buffer_frame_slot) \<mapsto>c buffer_frame_cap \<and>*
           (cap_object tcb_cap, tcb_ipcbuffer_slot) \<mapsto>c NullCap \<and>*
           (root_tcb_id, tcb_pending_op_slot) \<mapsto>c RestartCap \<and>*
-          root_tcb_id \<mapsto>f Tcb cdl_tcb_ext \<and>*
+          root_tcb_id \<mapsto>f Tcb cdl_tcb \<and>*
           cap_object cnode_cap \<mapsto>f CNode (empty_cnode root_size) \<and>*
           (root_tcb_id, tcb_cspace_slot) \<mapsto>c cnode_cap \<and>* (cap_object cnode_cap, cnode_cap_slot) \<mapsto>c cnode_cap' \<and>* R> s"
           in  hoare_strengthen_post)
@@ -1178,7 +1179,7 @@ shows
     hoare_vcg_imp_lift hoare_vcg_ex_lift hoare_vcg_all_lift
     update_thread_intent_update)
     defer
-    apply (clarsimp simp:disj_not1)
+    apply (clarsimp)
     apply (intro conjI allI impI disjI2)
               apply (clarsimp dest!:reset_cap_asid_cnode_cap simp:cnode_cap_reset_asid)+
               apply sep_cancel+
@@ -1225,8 +1226,7 @@ lemma restart_cdl_current_domain:
   apply clarsimp
   apply (drule opt_cap_sep_imp)
   apply auto[1]
-  apply (simp add:reset_cap_asid_def
-    split:cdl_cap.splits)
+  apply (simp add:reset_cap_asid_def split:cdl_cap.splits)
   done
 
 
@@ -1274,6 +1274,7 @@ lemma seL4_TCB_WriteRegisters_wp:
   apply (simp add:seL4_TCB_WriteRegisters_def
     sep_state_projection2_def
     is_tcb_def split:cdl_object.splits)
+  apply (rename_tac cdl_tcb)
   apply (rule hoare_pre)
   apply (wp do_kernel_op_pull_back)
   apply (rule hoare_post_imp[OF _ call_kernel_with_intent_allow_error_helper
@@ -1290,7 +1291,7 @@ lemma seL4_TCB_WriteRegisters_wp:
         apply (wp restart_cdl_current_thread[where cap = RestartCap]
           restart_cdl_current_domain[where cap = RestartCap])
          apply (wp set_cap_wp hoare_vcg_conj_lift)
-         apply (rule_tac R1="root_tcb_id \<mapsto>f Tcb cdl_tcb_ext  \<and>* ?Q" in
+         apply (rule_tac R1="root_tcb_id \<mapsto>f Tcb cdl_tcb  \<and>* Q" for Q in
           hoare_post_imp[OF _ set_cap_wp])
          apply sep_solve
          apply wp
@@ -1301,7 +1302,7 @@ lemma seL4_TCB_WriteRegisters_wp:
         apply wp
         apply (rule alternativeE_wp)
          apply wp[2]
-       apply (clarsimp simp:conj_ac lookup_extra_caps_def
+       apply (clarsimp simp:conj_comms lookup_extra_caps_def
          mapME_def sequenceE_def)
        apply (rule returnOk_wp)
       apply (rule lookup_cap_and_slot_rvu
@@ -1363,6 +1364,7 @@ lemma seL4_TCB_Resume_wp:
     \<and>* R \<guillemotright> \<rbrace>"
   apply (simp add:seL4_TCB_Resume_def sep_state_projection2_def
     is_tcb_def split:cdl_object.splits)
+  apply (rename_tac cdl_tcb)
   apply (rule hoare_pre)
   apply (wp do_kernel_op_pull_back)
   apply (rule hoare_post_imp[OF _ call_kernel_with_intent_allow_error_helper
@@ -1377,21 +1379,21 @@ lemma seL4_TCB_Resume_wp:
          apply (clarsimp simp:invoke_tcb_def)
          apply (wp restart_cdl_current_thread[where cap = NullCap]
            restart_cdl_current_domain[where cap = NullCap])
-         apply (rule_tac R1="root_tcb_id \<mapsto>f Tcb cdl_tcb_ext
-             \<and>* (root_tcb_id, tcb_pending_op_slot) \<mapsto>c RestartCap \<and>* ?Q" in
+         apply (rule_tac R1="root_tcb_id \<mapsto>f Tcb cdl_tcb
+             \<and>* (root_tcb_id, tcb_pending_op_slot) \<mapsto>c RestartCap \<and>* Q" for Q in
              hoare_post_imp[OF _ restart_null_wp])
          apply (rule conjI,sep_solve)
          apply (rule sep_any_imp_c'_conj)
          apply sep_cancel
          apply sep_cancel
          apply simp
-         apply (simp add:is_pending_cap_def conj_ac)
+         apply (simp add:is_pending_cap_def conj_comms)
          apply (wp set_cap_wp hoare_vcg_conj_lift)
           apply (rule_tac R1 ="(cap_object tcb_cap, tcb_pending_op_slot) \<mapsto>c NullCap \<and>* (\<lambda>_. True)"
            in hoare_post_imp[OF _ set_cap_wp])
           apply sep_cancel
           apply simp
-         apply (rule_tac R1="root_tcb_id \<mapsto>f Tcb cdl_tcb_ext  \<and>* ?Q" in
+         apply (rule_tac R1="root_tcb_id \<mapsto>f Tcb cdl_tcb  \<and>* Q" for Q in
           hoare_post_imp[OF _ set_cap_wp])
          apply (sep_select 4,sep_cancel)
          apply (sep_select 3,sep_cancel)
@@ -1428,11 +1430,10 @@ lemma seL4_TCB_Resume_wp:
         apply (simp add: ep_related_cap_def cap_type_def cap_object_def
                   split: cdl_cap.splits)
        apply ((rule conjI|sep_solve)+)[1]
-   apply (clarsimp simp: user_pointer_at_def
-     Let_unfold sep_conj_assoc is_tcb_def)
+   apply (clarsimp simp: user_pointer_at_def Let_unfold sep_conj_assoc is_tcb_def)
    apply sep_cancel+
   apply sep_solve
-done
+  done
 
 end
 

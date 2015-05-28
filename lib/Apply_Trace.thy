@@ -39,8 +39,8 @@ fun thm_to_cterm keep_hyps thm =
 let
   
   val thy = Thm.theory_of_thm thm
-  val crep = crep_thm thm
-  val ceqs = map (Thm.cterm_of thy o Logic.mk_equals o pairself term_of) (#tpairs crep)
+  val crep = Thm.crep_thm thm
+  val ceqs = map (Thm.global_cterm_of thy o Logic.mk_equals o apply2 Thm.term_of) (#tpairs crep)
   val hyps = #hyps crep
   val thm' = if keep_hyps then Drule.list_implies (hyps,#prop crep) else #prop crep
 
@@ -55,7 +55,7 @@ fun clear_deps thm =
 let
    
   val thm' = try clear_thm_deps' thm
-  |> Option.map (fold (fn _ => fn t => (@{thm Pure.reflexive} RS t)) (#tpairs (rep_thm thm)))
+  |> Option.map (fold (fn _ => fn t => (@{thm Pure.reflexive} RS t)) (#tpairs (Thm.rep_thm thm)))
 
 in case thm' of SOME thm' => thm' | NONE => error "Can't clear deps here" end
 
@@ -72,7 +72,7 @@ fun proof_body_descend' (_,("",_,body)) = fold (append o proof_body_descend') (t
 
 fun used_facts thm = fold (append o proof_body_descend') (thms_of (Thm.proof_body_of thm)) []
 
-fun raw_primitive_text f = Method.Basic (fn ctxt => (Method.RAW_METHOD (K (fn thm => Seq.single (f thm)))))
+fun raw_primitive_text f = Method.Basic (fn ctxt => (Method.METHOD (K (fn thm => Seq.single (f thm)))))
 
 
 fun fold_map_src f m =
@@ -119,7 +119,7 @@ let
   fun match_hyp hyp =
   let
     fun get (nm,thms) = 
-      case (get_index (fn t => if (prop_of t) aconv hyp then SOME hyp else NONE) thms)
+      case (get_index (fn t => if (Thm.prop_of t) aconv hyp then SOME hyp else NONE) thms)
       of SOME t => SOME (nm,t)
         | NONE => NONE
 

@@ -43,16 +43,6 @@ fun suspicious_term ctxt s t = if Term.add_var_names t [] = [] then ()
 
 val debug_trace = ref (Bound 0);
 
-(*
-fun add_conv tm tm' convs = let
-    val argTs = pairself (fst o strip_type o fastype_of) (tm, tm');
-    val argLs = pairself length argTs
-    val tm'' = if fst argLs > snd argLs
-      then list_abs (map (pair "_") (take (fst argLs - snd argLs) (fst argTs)),
-          tm') else tm';
-  in Termtab.insert (K true) (tm, tm'') convs end
-*)
-
 fun convert prefix src_ctxt proc (tm as Const (name, _)) (convs, ctxt) =
   (term_convert prefix convs tm; (convs, ctxt))
   handle Option =>
@@ -106,7 +96,7 @@ fun convert_impls ctxt = let
 
     val thm = Proof_Context.get_thm ctxt "\<Gamma>_def"
 
-    val proc_defs = (Term.add_const_names (concl_of thm) [])
+    val proc_defs = (Term.add_const_names (Thm.concl_of thm) [])
       |> filter (String.isSuffix Hoare.proc_deco)
       |> map (suffix "_def" #> Proof_Context.get_thm ctxt)
 
@@ -238,7 +228,7 @@ ML {*
 
 (* the unvarify sets ?symbol_table back to symbol_table. be careful *)
 val global_datas = @{thms global_data_defs}
-  |> map (concl_of #> Logic.unvarify_global
+  |> map (Thm.concl_of #> Logic.unvarify_global
         #> Logic.dest_equals #> snd #> Envir.beta_eta_contract)
 
 val const_globals = map_filter
@@ -282,7 +272,7 @@ val grab_name_str = head_of #> dest_Const #> fst #> Long_Name.base_name
 in
 
 fun const_global_asserts ctxt cond
-  (t as (Const (@{const_name index}, T) $ arr $ n)) = if member op= consts arr
+  (t as (Const (@{const_name index}, _) $ arr $ n)) = if member op= consts arr
     then [(index_eq_set_helper $ grab_name_str arr
         $ lambda s t $ lambda s n $ cond) |> Syntax.check_term ctxt]
     else []
@@ -294,21 +284,19 @@ fun const_global_asserts ctxt cond
     then [(eq_set_helper $ grab_name_str (f $ x) $ (f $ x) $ cond)
         |> Syntax.check_term ctxt]
     else const_global_asserts ctxt cond f @ const_global_asserts ctxt cond x
-  | const_global_asserts ctxt cond (a as Abs (_, @{typ "globals myvars"}, t))
+  | const_global_asserts ctxt cond (a as Abs (_, @{typ "globals myvars"}, _))
     = const_global_asserts ctxt cond (betapply (a, s))
-  | const_global_asserts ctxt cond (Abs (s, T, t))
+  | const_global_asserts ctxt cond (Abs (_, _, t))
     = const_global_asserts ctxt cond t
   | const_global_asserts _ _ _ = []
 
 fun guard_rewritable_globals const_cond ctxt =
   Pattern.rewrite_term @{theory} [hrs_htd_update_guard_rew2] []
   o Pattern.rewrite_term @{theory} [hrs_htd_update_guard_rew1] []
-  o com_rewrite (fn t => let
-    val cns = Term.add_const_names t [];
-  in (t, map (pair @{term C_Guard})
+  o com_rewrite (fn t => 
+     (t, map (pair @{term C_Guard})
         (case const_cond of SOME cond => const_global_asserts ctxt cond t
-                | NONE => []))
-  end)
+                | NONE => [])))
 
 val guard_htd_updates_with_domain = com_rewrite 
   (fn t => if fastype_of t = @{typ "globals myvars \<Rightarrow> globals myvars"}
@@ -327,7 +315,7 @@ end
 
 *}
 
-ML {* Modifies_Proofs.sorry_modifies_proofs := true *}
+ML {* Modifies_Proofs.sorry_modifies_proofs := true *} (* FIXME *)
 
 local_setup {*
 SubstituteSpecs.take_all_actions

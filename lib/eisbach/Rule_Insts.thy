@@ -167,7 +167,7 @@ fun read_insts ctxt mixed_insts prep_ts post_ts (tvars, vars) =
     val inst_tvars = map_filter (make_instT (instT2 o instT1)) tvars;
     val inst_vars = map_filter (make_inst inst2) vars2;
   in
-    (map (pairself certT) inst_tvars, map (pairself cert) inst_vars)
+    (map (apply2 certT) inst_tvars, map (apply2 cert) inst_vars)
   end;
 
 fun gen_read_instantiate_mixed ctxt mixed_insts prep_ts post_ts thm =
@@ -328,7 +328,7 @@ fun bires_inst_tac bires_flag ctxt insts thm =
         val cenv =
           map
             (fn (xi, t) =>
-              pairself (Thm.cterm_of thy) (Var (xi, fastype_of t), t))
+              apply2 (Thm.cterm_of thy) (Var (xi, fastype_of t), t))
             (distinct
               (fn ((x1, t1), (x2, t2)) => x1 = x2 andalso t1 aconv t2)
               (xis ~~ ts));
@@ -342,7 +342,7 @@ fun bires_inst_tac bires_flag ctxt insts thm =
         fun liftterm t =
           fold_rev absfree (param_names ~~ paramTs) (Logic.incr_indexes (paramTs, inc) t);
         fun liftpair (cv, ct) = (cterm_fun liftvar cv, cterm_fun liftterm ct);
-        val lifttvar = pairself (ctyp_of thy o Logic.incr_tvar inc);
+        val lifttvar = apply2 (ctyp_of thy o Logic.incr_tvar inc);
         val rule = Drule.instantiate_normalize
               (map lifttvar envT', map liftpair cenv)
               (Thm.lift_rule cgoal thm)

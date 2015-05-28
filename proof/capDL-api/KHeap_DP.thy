@@ -677,7 +677,7 @@ lemma cap_rights_reset_cap_asid:
   "reset_cap_asid cap = reset_cap_asid cap'
  \<Longrightarrow> cap_rights cap = cap_rights cap'"
   apply (clarsimp simp: cap_rights_def reset_cap_asid_def)
-  apply (case_tac cap, (case_tac cap', simp_all)+)
+  apply (case_tac cap; (case_tac cap'; simp))
   done
 
 (* Lemmas about valid_src_cap *)
@@ -1021,7 +1021,7 @@ lemma decode_cnode_mint_rvu:
     apply (clarsimp simp:sep_conj_assoc)
     apply (sep_erule sep_cancel, assumption)
    apply (clarsimp dest!: mapu_dest_opt_cap
-     simp:conj_ac is_exclusive_cap_update_cap_data
+     simp:conj_comms is_exclusive_cap_update_cap_data
      safe_for_derive_not_non valid_src_cap_def)
    apply (intro conjI impI allI)
       apply (metis reset_cap_asid_cap_type)
@@ -1082,7 +1082,7 @@ lemma decode_cnode_mutate_rvu:
     apply (clarsimp simp:sep_conj_assoc)
     apply (sep_solve)
    apply (clarsimp dest!: mapu_dest_opt_cap
-     simp: conj_ac update_cap_data_non cong:non_cap_cong)
+     simp: conj_comms update_cap_data_non cong:non_cap_cong)
    apply (metis reset_cap_asid_cap_type reset_cap_asid_ep_related_cap valid_src_cap_asid_cong)
   apply sep_solve
   done

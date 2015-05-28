@@ -109,8 +109,7 @@ lemma minimum_enum_upto:
   fixes x :: "'a::len word"
   assumes le: "x \<le> y"
   shows   "minimum [x .e. y] = x"
-  unfolding minimum_def using le
-  by (auto simp: upto_enum_set_conv intro!: MinI)
+  unfolding minimum_def using le by (auto intro!: MinI)
 
 lemma break_subsetsD:
   "break f xs = (ys, zs) \<Longrightarrow> set ys \<subseteq> set xs \<and> set zs \<subseteq> set xs"
@@ -155,9 +154,7 @@ lemma complement_mask:
 
 lemma haskell_assert_wp:
   "\<lbrace>\<lambda>s. Q \<longrightarrow> P s\<rbrace> haskell_assert Q xs \<lbrace>\<lambda>_. P\<rbrace>"
-  apply (simp add: haskell_assert_def)
-  apply wp
-  done
+  by simp wp
 
 lemma init_append_last:
   "xs \<noteq> [] \<Longrightarrow> init xs @ [last xs] = xs"
@@ -179,7 +176,7 @@ lemma empty_fail_stateAssert:
 
 lemma haskell_fail_wp:
   "\<lbrace>\<top>\<rbrace> haskell_fail x \<lbrace>P\<rbrace>"
-  by (simp add: haskell_fail_def)
+  by simp
 
 lemma no_fail_haskell_fail [simp, wp]:
   "no_fail \<bottom> (haskell_fail xs)"
@@ -254,7 +251,7 @@ proof -
   hence um: "unat (a mod 2 ^ n - 1) div 2 ^ n = 0" using sz
     apply -
     apply (rule div_less)
-    apply (simp add: unat_minus_one del: word_neq_0_conv)
+    apply (simp add: unat_minus_one)
     apply (rule order_less_trans)
      apply (rule diff_Suc_less)
      apply (erule contrapos_np)
@@ -279,10 +276,10 @@ proof -
     apply (subst uno_simps)
     apply (subst unat_1)
     apply (subst mod_add_right_eq [symmetric])
-    apply (simp add: unat_power_lower)
+    apply simp
     apply (subst power_mod_div)
     apply (subst div_mult_self1)
-    apply simp
+     apply simp
     apply (subst um)
     apply simp
     apply (subst mod_mod_power)
@@ -334,8 +331,7 @@ next
     apply (subst unat_word_ariths)
     apply simp
     apply (subst mult_mod_left)
-    apply (simp add: unat_div field_simps power_add[symmetric] mod_mod_power
-                     min.absorb2 unat_power_lower)
+    apply (simp add: unat_div field_simps power_add[symmetric] mod_mod_power min.absorb2)
     done
   ultimately have lt: "2 ^ n * (unat a div 2 ^ n + 1) < 2 ^ len_of TYPE('a)" by simp
       
@@ -344,9 +340,9 @@ next
     apply (simp add: field_simps)
     apply (rule word_add_less_mono1)
     apply (rule word_mod_less_divisor)
-    apply (simp add: word_less_nat_alt unat_power_lower)
+    apply (simp add: word_less_nat_alt)
     apply (subst unat_word_ariths)
-    apply (simp add: unat_div unat_power_lower)
+    apply (simp add: unat_div)
     done
   also have "\<dots> =  alignUp a n"
     by (rule alignUp_not_aligned_eq [symmetric]) fact+  
@@ -377,7 +373,7 @@ next
      apply (erule order_less_le_trans)
      apply simp
     apply (subst mult.commute)
-    apply (simp add: unat_power_lower)
+    apply simp
     apply (rule nat_less_power_trans)
      apply simp
     apply simp
@@ -438,10 +434,10 @@ next
 
     hence r: "unat a div 2 ^ n < k" using sz
       apply (simp add: unat_div word_less_nat_alt)
-      apply (subst (asm) unat_of_nat) 
+      apply (subst (asm) unat_of_nat)
       apply (subst (asm) mod_less)
-      apply (rule order_less_le_trans [OF kv])
-      apply (simp add: unat_power_lower)+
+       apply (rule order_less_le_trans [OF kv])
+       apply simp+
       done
     
     have "alignUp a n = (a div 2 ^ n + 1) * 2 ^ n"
@@ -465,13 +461,13 @@ next
       apply (clarsimp simp: field_simps)
       apply (rule ccontr)
       apply (drule (1) order_le_neq_trans)
-      apply (simp add: unat_power_lower)
+      apply (simp)
       done
     
     hence "2 ^ (len_of TYPE('a) - n) - 1 < k" using r
       by simp
     hence False using kv by simp
-  } thus ?thesis by (clarsimp simp del: word_neq_0_conv)
+  } thus ?thesis by (clarsimp)
 qed
 
 lemma alignUp_ar_helper:

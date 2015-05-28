@@ -8,6 +8,7 @@
  * @TAG(NICTA_BSD)
  *)
 
+(* FIXME: all this should work on Proof.context or local_thy, not theory *)
 signature UMM_PROOFS =
 sig
   type T
@@ -88,8 +89,6 @@ fun umm_finalise st thy = let
                 (("fl_ti_simps", #fl_ti_thms st), [Simplifier.simp_add])
                ]
 
-    val _ = writeln ("finalise: Adding thms " ^
-                     (foldl (fn (x, a) => a ^ " " ^ fst (fst x)) "" thms))
     fun mapthis ((nm,thms),attrs) = ((Binding.name nm, thms), attrs)
     val (_, thy) = Global_Theory.add_thmss (map mapthis thms) thy
 
@@ -204,7 +203,7 @@ fun phase st recname s =
     if !Feedback.verbosity_level > 2 then let
         val tm = (Time.now ()) - (#starttime st)
       in
-        Output.writeln ("PHASE " ^ s ^ " " ^ recname ^ " " ^
+        Output.tracing ("PHASE " ^ s ^ " " ^ recname ^ " " ^
                         LargeInt.toString (Time.toMilliseconds tm))
       end
     else ()
@@ -219,7 +218,7 @@ val size_td_simps_arr_fl =
     [@{thm "size_td_array"}, @{thm "align_td_array"}, @{thm "max_def"}]
 
 fun umm_mem_type recname recty typtag_thm tag_def_thm thy = let
-  val _ = writeln ("Proving UMM inversion for type "^recname^"... ")
+  val _ = tracing ("Proving UMM inversion for type "^recname^"... ")
   val ctxt0 = thy2ctxt thy
   val mem_type_instance_t =
       Logic.mk_of_class(recty, "CTypesDefs.mem_type")
@@ -259,14 +258,14 @@ fun umm_mem_type recname recty typtag_thm tag_def_thm thy = let
 
   (* fu_eq_mask *)
   val fu_eq_mask_step = auto_tac ctxt0 THEN
-      resolve_tac [@{thm "fu_eq_mask"}] 1 THEN
+      resolve_tac ctxt0 [@{thm "fu_eq_mask"}] 1 THEN
       dprint_tac "fu_eq_mask [v-2]" THEN
-      assume_tac 1 THEN
+      assume_tac ctxt0 1 THEN
       dprint_tac "fu_eq_mask [v-1]" THEN
       asm_full_simp_tac (ctxt0 addsimps (size_td_simps_arr)) 1 THEN
       dprint_tac "fu_eq_mask [v0]" THEN
-      resolve_tac [@{thm "fu_eq_mask_final_pad"}] 1 THEN
-      REPEAT (resolve_tac [@{thm "fu_eq_mask_ti_typ_pad_combine"}] 1) THEN
+      resolve_tac ctxt0 [@{thm "fu_eq_mask_final_pad"}] 1 THEN
+      REPEAT (resolve_tac ctxt0 [@{thm "fu_eq_mask_ti_typ_pad_combine"}] 1) THEN
       asm_full_simp_tac (ctxt0 addsimps [
           @{thm "fu_eq_mask_empty_typ_info"}, @{thm "there_is_only_one"}]) 1 THEN
       dprint_tac "fu_eq_mask [v1]" THEN
@@ -295,12 +294,10 @@ fun umm_mem_type recname recty typtag_thm tag_def_thm thy = let
             [@{thm "addr_card"}, @{thm "align_of_def"},
              @{thm "size_of_def"}, @{thm "align_of_final_pad"}])) 1
 
-  val _ = writeln "About to mem_type..."
-
   val is_mem_type_thm =
       Goal.prove_future ctxt0 [] [] mem_type_instance_t
        (fn _ => DETERM ((
-                Class.intro_classes_tac [] THEN
+                Class.intro_classes_tac ctxt0 [] THEN
                 dprint_tac "t_def" THEN
                 t_def_step THEN
                 dprint_tac "wf_desc" THEN
@@ -324,34 +321,35 @@ end;
 val packed_type_simps = @{thms "packed_type_intro_simps"}
 
 fun umm_packed_type recname recty typtag_thm tag_def_thm fgthms thy = let
-  val _ = writeln ("Proving UMM packed type for type "^recname^"... ")
+  val _ = tracing ("Proving UMM packed type for type "^recname^"... ")
+  val ctxt0 = thy2ctxt thy
   val packed_type_instance_t =
       Logic.mk_of_class (recty, "PackedTypes.packed_type")
-  val packed_type_instance_ct = cterm_of thy packed_type_instance_t
+  val packed_type_instance_ct = Thm.cterm_of ctxt0 packed_type_instance_t
 
-  val ctxt0 = thy2ctxt thy
   val pt_ss = (ctxt0 addsimps ([typtag_thm, tag_def_thm] @ packed_type_simps @ fgthms))
 
   (* Try to solve. If we fail, we catch the exception and ignore. *)
   val is_packed_type_thm =
       Goal.prove_internal ctxt0 [] packed_type_instance_ct
        (fn _ => DETERM ((
-                ((fn _ => Class.intro_classes_tac []) THEN_ALL_NEW (asm_simp_tac pt_ss)) 1)))
+                ((fn _ => Class.intro_classes_tac ctxt0 []) THEN_ALL_NEW (asm_simp_tac pt_ss)) 1)))
 in
     Axclass.add_arity is_packed_type_thm thy
-end handle THM _ => (writeln ("Failed to prove UMM packed type for type "^recname); thy)
+end handle THM _ => (tracing ("Failed to prove UMM packed type for type "^recname); thy)
 
 exception AlreadyDone
 fun calculate_record_size recname (st, thy) ths ty =
   if Binaryset.member(#structsize_done st, recname) then (st, thy)
   else let
+      val ctxt = thy2ctxt thy
       val tysize_th =
           Simplifier.rewrite
               ((thy2ctxt thy) addsimps
                           ((@{thm "size_of_def"} :: @{thm "typ_info_array"} ::
                             @{thm "array_tag_def"} :: @{thm "TWO"} ::
                             @{thms "size_td_simps"} @ ths)))
-              (cterm_of thy (mk_sizeof (mk_TYPE ty)))
+              (Thm.cterm_of ctxt (mk_sizeof (mk_TYPE ty)))
       val _ = let
         val ctxt = thy2ctxt thy
         val size_t = Thm.term_of (Thm.rhs_of tysize_th)
@@ -359,7 +357,7 @@ fun calculate_record_size recname (st, thy) ths ty =
         (* check that it simplifies to a number *)
         numb_to_int size_t
         handle e as TERM _ =>
-               (writeln ("Can't get good computation of size of type " ^
+               (tracing ("Can't get good computation of size of type " ^
                          recname ^ " (got this RHS: "^
                          Syntax.string_of_term ctxt size_t ^ ")");
                 raise e)
@@ -374,7 +372,7 @@ fun calculate_record_size recname (st, thy) ths ty =
 
 fun umm_struct_calculation ((recname, flds), st, thy) = let
   val _ = not (Binaryset.member (#records_done st, recname)) orelse
-          (writeln ("UMM Proof for "^recname^" already done");
+          (tracing ("UMM Proof for "^recname^" already done");
            raise AlreadyDone)
 
   (* useful stuff for what is to come *)
@@ -433,23 +431,23 @@ fun umm_struct_calculation ((recname, flds), st, thy) = let
   val thy = umm_mem_type recname recty typtag_thm tag_def_thm thy
 
   val _ = phase "SIZE"
-  val _ = writeln "About to size/align..."
+  val _ = tracing "About to size/align..."
 
   val size_td_thm =
       Simplifier.asm_full_rewrite
 	  ((thy2ctxt thy) addsimps (size_td_simps_arr @ [tag_def_thm, typtag_thm]))
-	  (cterm_of thy (mk_sizetd typ_info_TYPE))
+	  (Thm.cterm_of (thy2ctxt thy) (mk_sizetd typ_info_TYPE))
   val (st,thy) = calculate_record_size recname (st,thy) [size_td_thm] recty
 
 
   val _ = phase "ALIGN"
-  val _ = writeln "About to size/align 1..."
+  val _ = tracing "About to size/align 1..."
 
   val align_td_thm =
       Simplifier.asm_full_rewrite
           ((thy2ctxt thy) addsimps (size_td_simps_arr
                                     @ [tag_def_thm, typtag_thm, @{thm "align_of_def"}]))
-          (cterm_of thy (mk_aligntd typ_info_TYPE))
+          (Thm.cterm_of (thy2ctxt thy) (mk_aligntd typ_info_TYPE))
 
   val (recthms,thy) =
       Global_Theory.add_thms [((Binding.name(recname^"_size_of"),size_td_thm),[]),
@@ -461,25 +459,25 @@ fun umm_struct_calculation ((recname, flds), st, thy) = let
                              thy |> apfst hd
 
   val _ = phase "TYPNAME"
-  val _ = writeln "About to type typ_name ..."
+  val _ = tracing "About to type typ_name ..."
   val typ_name_thm =
       Simplifier.asm_full_rewrite
           ((thy2ctxt thy) addsimps [tag_def_thm, typtag_thm])
-          (cterm_of thy (mk_typ_name_of recty))
+          (Thm.cterm_of (thy2ctxt thy) (mk_typ_name_of recty))
   val (typ_name_thm, thy) =
       Global_Theory.add_thms [((Binding.name(recname ^ "_typ_name"), typ_name_thm),
                                [Simplifier.simp_add])]
                              thy
 
   val _ = phase "FL"
-  val _ = writeln "About to type/field fl..."
+  val _ = tracing "About to type/field fl..."
 
   val flthms = let
     val fl_simps = size_td_simps_arr_fl @ @{thms "fl_simps"} @
       [tag_def_thm, typtag_thm]
     fun fl_thm f = ((Binding.name(recname^"_"^(#1 f) ^"_fl"), Drule.export_without_context (
       Simplifier.asm_full_rewrite ((thy2ctxt thy) addsimps fl_simps)
-      (cterm_of thy (mk_field_lookup (recty,#1 f))))),[])
+      (Thm.cterm_of (thy2ctxt thy) (mk_field_lookup (recty,#1 f))))),[])
   in
     map fl_thm flds
   end;
@@ -488,7 +486,7 @@ fun umm_struct_calculation ((recname, flds), st, thy) = let
   val thy = add_data_thms [("fl_simps", flthms)] thy
 
   val _ = phase "FG"
-  val _ = writeln "About to fg..."
+  val _ = tracing "About to fg..."
   val fgthms = let
     fun fg_thm f = Goal.prove_future (thy2ctxt thy) [] []
       (mk_prop (mk_fg_cons_tm recty (#2 f) (#1 f) thy))
@@ -502,13 +500,13 @@ fun umm_struct_calculation ((recname, flds), st, thy) = let
   val thy = umm_packed_type recname recty typtag_thm tag_def_thm fgthms thy
 
   val _ = phase "FLSOME"
-  val _ = writeln "About to type/field fl_Some ..."
+  val _ = tracing "About to type/field fl_Some ..."
   val fl_Some_thms = let
       fun fl_thm' (fl, (name, _, _)) = let
           val concl_lhs = mk_field_lookup_nofs (recty, name)
           val thm =
               Simplifier.asm_full_rewrite ((thy2ctxt thy) addsimps [fl])
-                                          (cterm_of thy concl_lhs) |>
+                                          (Thm.cterm_of (thy2ctxt thy) concl_lhs) |>
                                           Drule.export_without_context
       in
           ((Binding.name(recname^ "_" ^ name ^ "_fl_Some"), thm), [])
@@ -519,7 +517,7 @@ fun umm_struct_calculation ((recname, flds), st, thy) = let
   val (fl_Some_thms, thy) = Global_Theory.add_thms fl_Some_thms thy
 
   val _ = phase "FLTI"
-  val _ = writeln "About to type/field fl_ti ..."
+  val _ = tracing "About to type/field fl_ti ..."
   val fl_ti_thms = let
       val rl = @{thm "field_lookup_field_ti"}
 
@@ -537,7 +535,7 @@ fun umm_struct_calculation ((recname, flds), st, thy) = let
   val upd_lift_other_thms = []
 
   val _ = phase "NAMES"
-  val _ = writeln "About to td_names ..."
+  val _ = tracing "About to td_names ..."
   val td_names_name = recname ^ "_td_names";
   val td_names_thm =
       Simplifier.asm_full_rewrite
@@ -545,7 +543,7 @@ fun umm_struct_calculation ((recname, flds), st, thy) = let
                       [tag_def_thm, typtag_thm,
                        @{thm "pad_typ_name_def"}, @{thm "insert_commute"},
                        @{thm "nat_to_bin_string.simps"}])
-          (cterm_of thy (mk_td_names typtag_lhs)) |> Drule.export_without_context
+          (Thm.cterm_of (thy2ctxt thy) (mk_td_names typtag_lhs)) |> Drule.export_without_context
 
   (* Declare the td_names (typ_info_t ..) = ... and add it to the simpset *)
   val (td_names_thm, thy) =
@@ -558,7 +556,7 @@ fun umm_struct_calculation ((recname, flds), st, thy) = let
                (Simplifier.map_ss
                     (fn ss => ss addsimps (recthms @ flthms @ fgthms)))
   val _ = phase "END"
-  val _ = writeln "done"
+  val _ = tracing "done"
 in
   (st |> add_st_thms fgthms [typtag_thm] td_names_thm typ_name_thm
                      upd_lift_thms upd_lift_other_thms recthms
@@ -566,7 +564,7 @@ in
       |> add_record_done recname,
    thy)
 end handle TYPE (s, tps, ts) => let
-             val _ = writeln ("EXN: " ^ s)
+             val _ = tracing ("EXN: " ^ s)
            in
              raise (TYPE (s, tps, ts))
            end
@@ -579,7 +577,7 @@ in
   if Binaryset.member(#szclass_done st, (tyname, szclass)) then (st, thy)
   else let
       fun tac thy _ =
-          Class.intro_classes_tac [] THEN asm_full_simp_tac (thy2ctxt thy) 1
+          Class.intro_classes_tac(thy2ctxt thy) [] THEN asm_full_simp_tac (thy2ctxt thy) 1
 
       val instance_t = Logic.mk_of_class(ty, szclass)
       val instance_thm =
@@ -587,7 +585,7 @@ in
       val thy = Axclass.add_arity instance_thm thy
       val st = add_szclass_done (tyname, szclass) st
     in
-      writeln("Proved "^tyname^" :: "^szclass);
+      Output.state("Proved "^tyname^" :: "^szclass);
       (st, thy)
     end
 end
@@ -596,7 +594,7 @@ end
   (* prove that the new type is an instance of the class finite *)
   (* prove that the new type is an instance of the class fourthousand_count *)
 fun umm_array_calculation el_ty n st thy = let
-  val _ = writeln ("Proving that an array of "^Int.toString n^" "^
+  val _ = tracing ("Proving that an array of "^Int.toString n^" "^
                    Syntax.string_of_typ (thy2ctxt thy) el_ty ^" is a mem_type")
 
   (* Unlike in the struct case, we don't need to establish the new type as
@@ -642,8 +640,6 @@ in
       fun ex() = error ("Can't compute an element size class for " ^
                         Syntax.string_of_typ (thy2ctxt thy) el_ty)
       val (tyname, args) = case el_ty of Type p => p | _ => ex()
-      val _ = writeln ("Element type is "^ Syntax.string_of_typ (thy2ctxt thy) el_ty)
-      val _ = writeln ("Element type name is " ^ tyname)
       val (st,thy) =
           case args of
             [] => (* will be a record type *)

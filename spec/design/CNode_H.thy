@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-header "CNodes"
+chapter "CNodes"
 
 theory CNode_H
 imports

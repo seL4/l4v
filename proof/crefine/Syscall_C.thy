@@ -21,8 +21,6 @@ crunch sch_act_wf [wp]: replyFromKernel "\<lambda>s. sch_act_wf (ksSchedulerActi
 
 context kernel_m begin
 
-declare split_if [split del]
-
 (* FIXME: should do this from the beginning *)
 declare true_def [simp] false_def [simp]
 
@@ -981,7 +979,7 @@ lemma handleInvocation_ccorres:
                  apply (clarsimp simp add: intr_and_se_rel_def exception_defs
                                            syscall_error_rel_def cintr_def
                                     split: sum.split_asm)
-                apply (simp add: conj_ac)
+                apply (simp add: conj_comms)
                 apply (wp getMRs_sysargs_rel)
                apply (simp add: )
                apply vcg

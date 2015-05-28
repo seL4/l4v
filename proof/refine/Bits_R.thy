@@ -526,7 +526,7 @@ next
   thus "tcb_at' (t + x - y) s" using tat by simp
 qed
 
-lemma set_ep_arch' :   "\<lbrace>\<lambda>s. P (ksArchState s)\<rbrace> setEndpoint aep p \<lbrace>\<lambda>_ s. P (ksArchState s)\<rbrace>"
+lemma set_ep_arch':  "\<lbrace>\<lambda>s. P (ksArchState s)\<rbrace> setEndpoint aep p \<lbrace>\<lambda>_ s. P (ksArchState s)\<rbrace>"
   apply (simp add: setEndpoint_def setObject_def split_def)
   apply (wp updateObject_default_inv|simp)+
   done

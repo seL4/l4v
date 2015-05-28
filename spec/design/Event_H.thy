@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-header "Kernel Events"
+chapter "Kernel Events"
 
 theory Event_H
 imports "../machine/MachineTypes"

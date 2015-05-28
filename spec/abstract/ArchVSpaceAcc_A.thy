@@ -12,7 +12,7 @@
 Accessor functions for architecture specific parts of the specification. 
 *)
 
-header "Accessing the ARM VSpace"
+chapter "Accessing the ARM VSpace"
 
 theory ArchVSpaceAcc_A
 imports KHeap_A
@@ -26,14 +26,6 @@ text {*
 *}
 
 section "Encodings"
-
-text {* The lowest virtual address in the kernel window. The kernel reserves the
-virtual addresses from here up in every virtual address space. *}
-(* Moved to Deterministic_A
-definition
-  kernel_base :: "vspace_ref" where
-  "kernel_base \<equiv> 0xf0000000"
-*)
 
 text {* The high bits of a virtual ASID. *}
 definition

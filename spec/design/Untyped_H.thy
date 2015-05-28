@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-header "Untyped Objects"
+chapter "Untyped Objects"
 
 theory Untyped_H
 imports

@@ -12,7 +12,7 @@
   Top-level system call interface of reduced kernel API.
 *)
 
-header "Separation Kernel Abstract Specification"
+chapter "Separation Kernel Abstract Specification"
 
 theory Syscall_SA
 imports Decode_SA

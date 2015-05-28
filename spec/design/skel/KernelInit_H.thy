@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-header "Initialisation"
+chapter "Initialisation"
 
 theory KernelInit_H
 imports

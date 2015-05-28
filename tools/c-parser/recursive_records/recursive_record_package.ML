@@ -9,6 +9,7 @@
  *)
 
 (* this is an -*- sml -*- file *)
+
 signature RECURSIVE_RECORD_PACKAGE =
 sig
 
@@ -54,12 +55,12 @@ fun define_accessor arg (({fldname, fldty}, result), thy) = let
   val bnm = Binding.name
   val acc_t = Free(fldname, acc_ty)
   val defn = TermsTypes.mk_prop (TermsTypes.mk_eqt(acc_t $ arg, result))
-  val ((_, simps), thy) =
-    Primrec.add_primrec_global
+  val (_, thy) =
+    BNF_LFP_Compat.primrec_global
          [(bnm fldname, NONE, NoSyn)]
          [((bnm (fldname ^ "_def"), []), defn)] thy
 in
-  add_recursive_record_thms simps [] thy
+  thy
 end
 
 fun define_updator arg (i, {fldname, fldty}) thy = let
@@ -74,12 +75,12 @@ fun define_updator arg (i, {fldname, fldty}) thy = let
   val modified_args = Library.nth_map i (fn t => f $ t) args
   val rhs_t = foldl (fn (a,t) => t $ a) con modified_args
   val defn = TermsTypes.mk_prop(TermsTypes.mk_eqt(lhs_t, rhs_t))
-  val ((_, simps), thy) =
-    Primrec.add_primrec_global
+  val (_, thy) =
+    BNF_LFP_Compat.primrec_global
          [(bnm upd_name, NONE, NoSyn)]
          [((bnm (upd_name ^ "_def"), []), defn)] thy
 in
-  add_recursive_record_thms simps [] thy
+  thy
 end
 
 fun define_functions (r as {record_name, fields}) thy = let
@@ -100,7 +101,7 @@ in
        |> RecursiveRecordPP.install_translations r
        |> Sign.parent_path)
   before
-  writeln("Defined accessor and update functions for record "^record_name)
+  tracing("Defined accessor and update functions for record "^record_name)
 end
 
 fun cprod_less_diag list = let
@@ -145,11 +146,11 @@ fun add_term_vars (t, vars: term list) = case t of
 
 fun term_vars t = add_term_vars(t,[]);
 in
-val [updvar] = term_vars (nth (prems_of updcong_foldE) 1)
+val [updvar] = term_vars (nth (Thm.prems_of updcong_foldE) 1)
 end
 
 fun prove_record_rewrites ({record_name, fields}, thy) = let
-  val _ = writeln("Proving rewrites for struct "^record_name)
+  val _ = tracing("Proving rewrites for struct "^record_name)
   val rty = Type(Sign.intern_type thy record_name, [])
   val r_var = Free("r", rty)
   val r_var' = Free("r'", rty)
@@ -162,7 +163,7 @@ fun prove_record_rewrites ({record_name, fields}, thy) = let
   fun prove g =
       Goal.prove_global_future thy [] [] (mk_prop g)
                         (fn {prems=_,context} =>
-                            case_tac context "r" 1 THEN
+                            case_tac context "r" [] NONE 1 THEN
                             asm_full_simp_tac context 1)
   fun mk_upd_t {fldname,fldty} =
       Const(Sign.intern_const thy (suffix updateN fldname),
@@ -178,7 +179,6 @@ fun prove_record_rewrites ({record_name, fields}, thy) = let
     prove (mk_eqt(lhs_t, rhs_t))
   end
   val accupd_sames = map prove_accupd_same fields
-  val _ = writeln "  proved accupd_same"
 
   fun prove_accupd_diff (acc, upd) = let
     val {fldname = accname, fldty = accty} = acc
@@ -192,7 +192,6 @@ fun prove_record_rewrites ({record_name, fields}, thy) = let
     prove(mk_eqt(lhs_t, rhs_t))
   end
   val accupd_diffs = map prove_accupd_diff (cprod_less_diag fields)
-  val _ = writeln "  proved accupd_diffs"
 
   fun prove_updupd_same (fld as {fldname=_, fldty}) = let
     val ffty = fldty --> fldty
@@ -206,7 +205,6 @@ fun prove_record_rewrites ({record_name, fields}, thy) = let
     prove(mk_eqt(lhs_t, rhs_t))
   end
   val updupd_sames = map prove_updupd_same fields
-  val _ = writeln "  proved updupd_sames"
 
   fun prove_updupd_diff (upd1, upd2) = let
     val {fldname = _, fldty = updty1} = upd1
@@ -221,7 +219,6 @@ fun prove_record_rewrites ({record_name, fields}, thy) = let
     prove(mk_eqt(rhs_t, lhs_t))
   end
   val updupd_diffs = map prove_updupd_diff (lower_triangle fields)
-  val _ = writeln "  proved updupd_diffs"
 
   fun prove_idupdates (fld as {fldname, fldty}) = let
     val upd_t = mk_upd_t fld
@@ -231,7 +228,6 @@ fun prove_record_rewrites ({record_name, fields}, thy) = let
     prove(mk_eqt(upd_t $ (K $ (acc_t $ r_var)) $ r_var, r_var))
   end
   val idupdates = map prove_idupdates fields
-  val _ = writeln "  proved idupdates"
 
   (* proves that (| fld1 = fld1 v, fld2 = fld2 v, fld3 = fld3 v,..|) = v *)
   val idupd_value1 = let
@@ -243,7 +239,6 @@ fun prove_record_rewrites ({record_name, fields}, thy) = let
   in
     prove(mk_eqt(List.foldl mk_arg constructor_t fields, r_var))
   end
-  val _ = writeln "  proved idupd_value1"
 
   (* proves that u (| fld1 := fld1 v, fld2 := fld2 v, ... |) = v *)
   val idupd_value2 = let
@@ -258,19 +253,18 @@ fun prove_record_rewrites ({record_name, fields}, thy) = let
     Goal.prove_global_future
       thy [] []
       (mk_prop (mk_eqt(List.foldl mk_arg r_var' fields, r_var)))
-      (fn {context,...} => case_tac context "r" 1 THEN
-                         case_tac context "r'" 1 THEN
+      (fn {context,...} => case_tac context "r" [] NONE 1 THEN
+                         case_tac context "r'" [] NONE 1 THEN
                          asm_full_simp_tac context 1)
   end
-  val _ = writeln "  proved idupd_value2"
 
   (* proves a fold congruence, used for eliminating the accessor
      within the body of the updator more generally than the idupdate
      case. *)
   fun prove_fold_cong (idupdate, updupd_same) = let
     val upd = (head_of o fst o HOLogic.dest_eq
-                 o HOLogic.dest_Trueprop o concl_of) idupdate;
-    val ct  = cterm_of thy;
+                 o HOLogic.dest_Trueprop o Thm.concl_of) idupdate;
+    val ct  = Thm.cterm_of (Proof_Context.init_global thy);
     val cgE = cterm_instantiate [(ct updvar, ct upd)] updcong_foldE;
   in [idupdate, updupd_same] MRS cgE end;
 
@@ -309,17 +303,16 @@ fun define_record_type records thy = let
       ((Binding.name record_name, [], NoSyn),
        [(Binding.name record_name, map (fn f => #fldty f) fields, NoSyn)])
   val (_, thy) =
-      Datatype.add_datatype
-          Datatype.default_config
+      BNF_LFP_Compat.add_datatype
+          []
           (map mk_one_type records)
           thy
-  val _ = writeln("Defined struct types: "^
+  val _ = tracing("Defined struct types: "^
                   String.concat (map (fn x => #record_name x ^ " ") records))
   val thy =
       List.foldl (fn (r, thy) => define_functions r thy) thy records
 
   val thy = List.foldl prove_record_rewrites thy records
-
 in
   thy
 end;

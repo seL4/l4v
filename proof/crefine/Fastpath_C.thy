@@ -16,8 +16,6 @@ imports
   "../../lib/clib/MonadicRewrite_C"
 begin
 
-declare option.weak_case_cong[cong]
-
 definition
  "fastpaths sysc \<equiv> case sysc of
   SysCall \<Rightarrow> doE
@@ -604,7 +602,7 @@ lemma lookup_fp_ccorres':
                        in ccorres_cond_both'[where Q=\<top>])
            apply (clarsimp simp: from_bool_0)
           apply (rule ccorres_rhs_assoc)+
-          apply (rule_tac P="ccorres ?r ?xf ?Gd ?Gd' ?hs ?a" in rsubst)
+          apply (rule_tac P="ccorres r xf Gd Gd' hs a" for r xf Gd Gd' hs a in rsubst)
            apply (rule "1.hyps",
                   (rule refl in_returns in_bind[THEN iffD2, OF exI, OF exI, OF conjI]
                        acc_CNodeCap_repr
@@ -879,7 +877,7 @@ lemma heap_relation_user_word_at_cross_over:
    apply (drule obj_at_ko_at', clarsimp)
    apply (rule conjI, rule exI, erule ko_at_projectKO_opt)
    apply (rule refl)
-  apply (thin_tac "heap_to_page_data ?a ?b ?c = ?d")
+  apply (thin_tac "heap_to_page_data a b c = d" for a b c d)
   apply (cut_tac x=p and w="~~ mask pageBits" in word_plus_and_or_coroll2)
   apply (rule conjI)
    apply (clarsimp simp: user_word_at_def pointerInUserData_def)
@@ -921,7 +919,7 @@ lemma heap_relation_user_word_at_cross_over:
     apply simp
    apply (fastforce simp add: typ_info_word)
   apply simp
-  apply (rule_tac f="h_val ?hp" in arg_cong)
+  apply (rule_tac f="h_val hp" for hp in arg_cong)
   apply simp
   apply (simp add: field_lvalue_def)
   apply (simp add: ucast_nat_def ucast_ucast_mask)
@@ -1104,7 +1102,7 @@ lemma switchToThread_fp_ccorres:
                         pd_at_asid'_def word_0_sle_from_less
                         isCap_simps invs_valid_pspace'
               simp del: Collect_const rf_sr_upd_safe)
-  apply (frule_tac P="\<lambda>Sf. Sf ?x = ?S'"
+  apply (frule_tac P="\<lambda>Sf. Sf x = S'" for x S'
             in subst[OF meta_eq_to_obj_eq, OF asid_map_pd_to_hwasids_def])
   apply (clarsimp simp: isCap_simps dest!: isValidVTableRootD)
   apply (rule context_conjI)
@@ -1516,7 +1514,7 @@ lemma mi_check_messageInfo_raw:
    apply (simp add: linorder_not_less msgMaxLength_def n_msgRegisters_def)
    apply (erule order_trans, simp)
   apply simp
-  apply (thin_tac "?P")
+  apply (thin_tac "P" for P)
   apply word_bitwise
   done
 
@@ -1552,7 +1550,7 @@ lemma isValidVTableRoot_fp_lemma:
                         to_bool_def bool_mask[folded word_neq_0_conv]
                         cap_page_directory_cap_lift_def
                  elim!: ccap_relationE split: split_if)
-  apply (thin_tac "?P")
+  apply (thin_tac "P" for P)
   apply word_bitwise
   done
 
@@ -1828,6 +1826,7 @@ lemma fastpath_enqueue_ccorres:
   apply (cases ep,
          simp_all add: isSendEP_def cendpoint_relation_def Let_def
                        tcb_queue_relation'_def)
+   apply (rename_tac list)
    apply (clarsimp simp: NULL_ptr_val[symmetric] tcb_queue_relation_last_not_NULL
                          ct_in_state'_def
                   dest!: trans [OF sym [OF ptr_val_def] arg_cong[where f=ptr_val]])
@@ -2007,6 +2006,8 @@ lemma getCTE_setCTE_rf_sr:
   done
 
 lemma ccte_relation_eq_ccap_relation:
+  notes option.case_cong_weak [cong]
+  shows
   "ccte_relation cte ccte
       = (ccap_relation (cteCap cte) (cte_C.cap_C ccte)
             \<and> mdb_node_to_H (mdb_node_lift (cteMDBNode_C ccte))
@@ -2014,7 +2015,7 @@ lemma ccte_relation_eq_ccap_relation:
   apply (simp add: ccte_relation_def option_map_Some_eq2 cte_lift_def
                    ccap_relation_def)
   apply (simp add: cte_to_H_def split: option.split)
-  apply (cases cte, clarsimp simp: c_valid_cte_def conj_ac)
+  apply (cases cte, clarsimp simp: c_valid_cte_def conj_comms)
   done
 
 lemma cap_reply_cap_ptr_new_np_updateCap_ccorres:
@@ -2089,16 +2090,6 @@ lemma switchToThread_ksCurThread:
   apply (simp add: switchToThread_def setCurThread_def)
   apply (wp | simp)+
   done
-
-(* Not true as we truncate bits
-lemma wordFromMessageInfo_messageInfoFromWord:
-  "wordFromMessageInfo (messageInfoFromWord msginfo) = msginfo"
-  apply (simp add: messageInfoFromWord_def Let_def wordFromMessageInfo_def
-                msgLengthBits_def msgExtraCapBits_def
-                shiftr_shiftl1 mask_def shiftl_over_and_dist
-                word_bw_assocs mask_eq_x_eq_0 msgMaxExtraCaps_def
-                shiftL_nat)
-*)
 
 lemma updateCap_cte_wp_at_cteMDBNode:
   "\<lbrace>cte_wp_at' (\<lambda>cte. P (cteMDBNode cte)) p\<rbrace>
@@ -2320,8 +2311,7 @@ lemma fastpath_call_ccorres:
              apply (drule isValidVTableRootD)
              apply (rule_tac P="pd_cap_c_ptr_maybe = capUntypedPtr (cteCap pd_cap)"
                          in ccorres_gen_asm2)
-             apply (simp add: ccap_relation_pd_helper cap_get_tag_isCap_ArchObject2
-                         del: Collect_const WordSetup.ptr_add_def cong: call_ignore_cong)
+             apply (simp add: ccap_relation_pd_helper cong: call_ignore_cong)
              apply (rule stored_hw_asid_get_ccorres_split[where P=\<top>], ceqv)
              apply (rule ccorres_move_c_guard_tcb ccorres_Guard_Seq)+
              apply (rule ccorres_symb_exec_l3[OF _ threadGet_inv _ empty_fail_threadGet])
@@ -2377,8 +2367,7 @@ lemma fastpath_call_ccorres:
                    apply (rule rev_bexI, erule threadGet_eq)
                    apply (clarsimp simp: ctcb_relation_def isBlockedOnReceive_def
                                          cthread_state_relation_def)
-                   apply (simp add: thread_state_lift_def word_size
-                                    from_bool_to_bool_and_1)
+                   apply (simp add: thread_state_lift_def word_size)
                   apply ceqv
                  apply (rename_tac send_state send_state_c)
                  apply csymbr
@@ -2500,11 +2489,10 @@ lemma fastpath_call_ccorres:
                                 apply (clarsimp simp: cte_wp_at_ctes_of size_of_def
                                                       tcb_cnode_index_defs tcbCallerSlot_def
                                                       tcbReplySlot_def cte_level_bits_def
-                                                      tcb_ptr_to_ctcb_ptr_mask
                                                       valid_mdb'_def valid_mdb_ctes_def)
                                 apply (subst aligned_add_aligned, erule tcb_aligned',
                                        simp add: is_aligned_def, simp add: word_bits_def, simp)
-                                apply (rule_tac x="hd (epQueue send_ep) + ?v"
+                                apply (rule_tac x="hd (epQueue send_ep) + v" for v
                                           in cmap_relationE1[OF cmap_relation_cte], assumption+)
                                 apply (clarsimp simp: typ_heap_simps' updateMDB_def Let_def)
                                 apply (subst if_not_P)
@@ -2528,8 +2516,7 @@ lemma fastpath_call_ccorres:
                                   apply (rule allI, rule conseqPre, vcg)
                                   apply (clarsimp simp: cte_wp_at_ctes_of size_of_def
                                                         tcb_cnode_index_defs tcbCallerSlot_def
-                                                        tcbReplySlot_def cte_level_bits_def
-                                                        tcb_ptr_to_ctcb_ptr_mask)
+                                                        tcbReplySlot_def cte_level_bits_def)
                                   apply (subst aligned_add_aligned, erule tcb_aligned',
                                          simp add: is_aligned_def, simp add: word_bits_def, simp)
                                   apply (rule_tac x="curThread + 0x20" in cmap_relationE1[OF cmap_relation_cte],
@@ -2695,18 +2682,18 @@ lemma fastpath_call_ccorres:
    apply (drule_tac x = x in bspec)
     apply fastforce
    apply (clarsimp simp:obj_at_tcbs_of)
-   apply (frule_tac ptr = x in tcbs_of_aligned')
+   apply (frule_tac ptr2 = x in tcbs_of_aligned')
     apply (simp add:invs_pspace_aligned')
-   apply (frule_tac ptr = x in tcbs_of_cte_wp_at_vtable)
+   apply (frule_tac ptr2 = x in tcbs_of_cte_wp_at_vtable)
    apply (clarsimp simp:size_of_def field_simps word_sless_def word_sle_def
       dest!:ptr_val_tcb_ptr_mask2[unfolded mask_def, simplified])
-   apply (frule_tac p="x + ?offs" in ctes_of_valid', clarsimp)
+   apply (frule_tac p="x + offs" for offs in ctes_of_valid', clarsimp)
    apply (clarsimp simp: isCap_simps valid_cap'_def invs_valid_pde_mappings'
                   dest!: isValidVTableRootD)
    apply (clarsimp simp: invs_sym'
                          cte_wp_at_ctes_of tcbCallerSlot_def
                          tcbVTableSlot_def tcbReplySlot_def
-                         conj_ac tcb_cnode_index_defs field_simps
+                         conj_comms tcb_cnode_index_defs field_simps
                          obj_at_tcbs_of)
    apply (clarsimp simp: cte_level_bits_def isValidVTableRoot_def
                          ArchVSpace_H.isValidVTableRoot_def
@@ -2732,9 +2719,7 @@ lemma fastpath_call_ccorres:
     apply (simp add:objBits_simps)
    apply (clarsimp simp: obj_at_tcbs_of split: list.split)
    apply (erule_tac x = v0 in valid_objsE'[OF invs_valid_objs',rotated])
-    apply (clarsimp simp: valid_obj'_def valid_ep'_def isRecvEP_def
-      neq_Nil_conv size_of_def
-      tcb_ptr_to_ctcb_ptr_mask
+    apply (clarsimp simp: valid_obj'_def valid_ep'_def isRecvEP_def neq_Nil_conv size_of_def
       split: Structures_H.endpoint.split_asm
       cong: list.case_cong)
     apply (simp add:obj_at_tcbs_of)
@@ -2781,7 +2766,7 @@ lemma isMasterReplyCap_fp_conv:
                  elim!: ccap_relationE)
   apply (simp add: mask_def cap_reply_cap_def word_bw_assocs
                    to_bool_def)
-  apply (thin_tac "?P")
+  apply (thin_tac "P" for P)
   apply (rule iffI)
    apply (drule_tac f="\<lambda>v. v >> 4" in arg_cong)
    apply (simp add: shiftr_over_and_dist)
@@ -3261,7 +3246,7 @@ lemma fastpath_reply_wait_ccorres:
                     apply (vcg exspec=endpoint_ptr_mset_epQueue_tail_state_modifies
                                exspec=endpoint_ptr_set_epQueue_head_np_modifies
                                exspec=endpoint_ptr_get_epQueue_tail_modifies)
-                   apply (simp add: valid_pspace'_def pred_conj_def conj_ac
+                   apply (simp add: valid_pspace'_def pred_conj_def conj_comms
                                     valid_mdb'_def)
                    apply (wp threadSet_cur threadSet_tcbState_valid_objs
                              threadSet_state_refs_of' threadSet_ctes_of
@@ -3327,16 +3312,16 @@ lemma fastpath_reply_wait_ccorres:
    apply (frule_tac p = a in ctes_of_valid',clarsimp)
     apply (simp add:valid_cap_simps')
    apply (clarsimp simp:cte_level_bits_def)
-   apply (frule_tac p="?p + tcbCallerSlot * 0x10" in ctes_of_valid',clarsimp)
+   apply (frule_tac p="p + tcbCallerSlot * 0x10" for p in ctes_of_valid',clarsimp)
    apply (clarsimp simp: valid_capAligned)
-   apply (frule_tac ptr = v0a in  tcbs_of_cte_wp_at_vtable)
-   apply (frule_tac ptr = v0a in tcbs_of_aligned')
+   apply (frule_tac ptr2 = v0a in  tcbs_of_cte_wp_at_vtable)
+   apply (frule_tac ptr2 = v0a in tcbs_of_aligned')
     apply (simp add:invs_pspace_aligned')
    apply (clarsimp simp:size_of_def field_simps cte_wp_at_ctes_of
      word_sle_def word_sless_def
      dest!:ptr_val_tcb_ptr_mask2[unfolded mask_def])
    apply (clarsimp simp: valid_cap_simps' obj_at_tcbs_of)
-   apply (frule_tac p="?p + tcbVTableSlot * 0x10" in ctes_of_valid', clarsimp)
+   apply (frule_tac p="p + tcbVTableSlot * 0x10" for p in ctes_of_valid', clarsimp)
    apply (clarsimp simp: isCap_simps valid_cap_simps' capAligned_def
                          invs_valid_pde_mappings' obj_at_tcbs_of
                   dest!: isValidVTableRootD)
@@ -3734,7 +3719,7 @@ lemma getObject_get_assert:
   apply (simp add: lookupAround2_known1 assert_opt_def
                    obj_at'_def projectKO_def2
             split: option.split)
-  apply (clarsimp simp: fail_def fst_return conj_ac project_inject
+  apply (clarsimp simp: fail_def fst_return conj_comms project_inject
                         objBits_def)
   apply (simp only: assert2[symmetric],
          rule bind_apply_cong[OF refl])
@@ -4150,7 +4135,7 @@ lemma setThreadState_blocked_rewrite:
                | (simp only: getCurThread_def getSchedulerAction_def
                       , rule empty_fail_gets))+)+
      apply (rule monadic_rewrite_refl)
-    apply (simp add: conj_ac, wp)
+    apply (simp add: conj_comms, wp)
     apply (rule_tac Q="\<lambda>rv s. obj_at' (Not o runnable' o tcbState) t s"
                in hoare_post_imp)
      apply (clarsimp simp: obj_at'_def sch_act_simple_def st_tcb_at'_def)
@@ -5179,7 +5164,7 @@ lemma fastpath_callKernel_SysCall_corres:
                   cong: if_cong)
   apply (rename_tac blockedThread ys tcba tcbb st v tcbc)
   apply (frule invs_mdb')
-  apply (thin_tac "Ball ?S ?P")+
+  apply (thin_tac "Ball S P" for S P)+
   apply (clarsimp simp: invs'_def valid_state'_def)
   apply (frule_tac t="blockedThread" in valid_queues_not_runnable_not_queued)
     apply (simp)
@@ -5302,7 +5287,7 @@ lemma resolveAddressBits_def_functional:
   unfolding resolveAddressBits_functional_def
   using resolveAddressBits_ctes_of_equality[of cap cptr bits]
   apply (elim exE)
-  apply (erule_tac P="\<lambda>fn. ?ra = gets_the (fn o (only_cnode_caps o ctes_of))" in someI)
+  apply (erule_tac P="\<lambda>fn. ra = gets_the (fn o (only_cnode_caps o ctes_of))" for ra in someI)
   done
 
 lemma injection_handler_catch:
@@ -5833,7 +5818,7 @@ lemma emptySlot_replymaster_rewrite[OF refl]:
        apply (rule_tac P="mdbFirstBadged (cteMDBNode ctea) \<and> mdbRevocable (cteMDBNode ctea)"
                    in monadic_rewrite_gen_asm)
        apply (rule monadic_rewrite_refl2)
-       apply (case_tac ctea, case_tac mdbnode)
+       apply (case_tac ctea, rename_tac mdbnode, case_tac mdbnode)
        apply simp
       apply (rule monadic_rewrite_refl)
      apply (wp getCTE_wp')
@@ -5841,7 +5826,7 @@ lemma emptySlot_replymaster_rewrite[OF refl]:
   apply fastforce
   done
 
-(* FIXME: Move to appropriate place *)
+(* FIXME: Move *)
 lemma asUser_obj_at_not_queued[wp]:
   "\<lbrace>obj_at' (\<lambda>tcb. \<not> tcbQueued tcb) p\<rbrace> asUser t m \<lbrace>\<lambda>rv. obj_at' (\<lambda>tcb. \<not> tcbQueued tcb) p\<rbrace>"
   apply (simp add: asUser_def split_def)
@@ -5898,7 +5883,7 @@ lemma fastpath_callKernel_SysReplyWait_corres:
         apply (rule monadic_rewrite_alternative_l)
        apply (simp add: lookupCap_def liftME_def lookupCapAndSlot_def
                         lookupSlotForThread_def bindE_assoc
-                        split_def lookupSlotForThread_def getThreadCSpaceRoot_def
+                        split_def getThreadCSpaceRoot_def
                         locateSlot_conv liftE_bindE bindE_bind_linearise
                         capFaultOnFailure_def rethrowFailure_injection
                         injection_handler_catch bind_bindE_assoc
@@ -6075,7 +6060,7 @@ lemma fastpath_callKernel_SysReplyWait_corres:
                          apply (rule monadic_rewrite_bind)
                            apply (rule monadic_rewrite_refl2)
                            apply (clarsimp simp: isSendEP_def split: Structures_H.endpoint.split)
-                          apply (rule_tac Q="\<lambda>rv. (\<lambda>_. rv = callerCTE) and ?Q'"
+                          apply (rule_tac Q="\<lambda>rv. (\<lambda>_. rv = callerCTE) and Q'" for Q'
                                     in monadic_rewrite_symb_exec_r, wp)
                            apply (rule monadic_rewrite_gen_asm, simp)
                            apply (rule monadic_rewrite_trans, rule monadic_rewrite_bind_head,
@@ -6129,7 +6114,7 @@ lemma fastpath_callKernel_SysReplyWait_corres:
   apply (frule cte_wp_at_valid_objs_valid_cap', clarsimp,
          clarsimp simp: isCap_simps, simp add: valid_cap_simps')
   apply (clarsimp simp: maskCapRights_def isCap_simps)
-  apply (frule_tac p="?p' + 2 ^ cte_level_bits * tcbCallerSlot"
+  apply (frule_tac p="p' + 2 ^ cte_level_bits * tcbCallerSlot" for p'
               in cte_wp_at_valid_objs_valid_cap', clarsimp+)
   apply (clarsimp simp: valid_cap_simps')
   apply (subst tcb_at_cte_at_offset,

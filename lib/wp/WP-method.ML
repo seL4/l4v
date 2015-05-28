@@ -33,6 +33,7 @@ sig
   val apply_once_args: bool -> (Proof.context -> Method.method) context_parser;
 
   val setup: theory -> theory;
+  val warn_unused: bool Config.T
 
   val wp_add: Thm.attribute;
   val wp_del: Thm.attribute;
@@ -53,7 +54,7 @@ type wp_rules = {trips: thm list * (theory -> term -> term),
 
 fun accum_last_occurence' [] _ = ([], Termtab.empty)
   | accum_last_occurence' ((t, v) :: ts) tt1 = let
-      val tm = prop_of t;
+      val tm = Thm.prop_of t;
       val tt2 = Termtab.insert_list (K false) (tm, v) tt1;
       val (ts', tt3) = accum_last_occurence' ts tt2;
   in case Termtab.lookup tt3 tm of
@@ -87,9 +88,9 @@ fun add_rule_inner trip_conv t (trips, n, others) = (
 
 fun del_rule_inner trip_conv t (trips, n, others) =
     case get_key trip_conv t of
-      SOME k => (Net.delete_term_safe (Thm.eq_thm_prop o pairself snd)
+      SOME k => (Net.delete_term_safe (Thm.eq_thm_prop o apply2 snd)
                  (k, (n, t)) trips, n, others)
-    | _ => (trips, n, remove (Thm.eq_thm_prop o pairself snd) (n, t) others)
+    | _ => (trips, n, remove (Thm.eq_thm_prop o apply2 snd) (n, t) others)
 
 val no_rules = (Net.empty, 0, []);
 
@@ -253,12 +254,18 @@ fun trace_used_thms false _ _ = Seq.empty
       in map (fn rule => tracing (pretty_rule ctxt rule)) used_thms
         |> Seq.of_list end;
 
-fun warn_unused_thms thms extra_rules used_rules =
-  let val used_thms = map (fn rule => Thm.get_name_hint rule) (!used_rules)
-      val unused_thms = map Thm.get_name_hint (!extra_rules @ thms) |> subtract (op =) used_thms
-  in if not (null unused_thms)
-     then "Unused theorems: " ^ commas_quote unused_thms |> warning
-     else () end;
+val warn_unused = Attrib.setup_config_bool @{binding wp_warn_unused} (K false);
+
+fun warn_unused_thms ctxt thms extra_rules used_rules =
+  if Config.get ctxt warn_unused
+  then
+    let val used_thms = map (fn rule => Thm.get_name_hint rule) (!used_rules)
+        val unused_thms = map Thm.get_name_hint (!extra_rules @ thms) |> subtract (op =) used_thms
+    in if not (null unused_thms)
+       then "Unused theorems: " ^ commas_quote unused_thms |> warning
+       else ()
+    end
+  else ()
 
 fun warn_unsafe_thms unsafe_thms n ctxt t =
   let val used_rules = Unsynchronized.ref [] : thm list Unsynchronized.ref;
@@ -276,7 +283,7 @@ let
   val rules = get_rules ctxt extras;
   val used_rules = Unsynchronized.ref [] : thm list Unsynchronized.ref
 in
-  (fn t => Seq.map (fn thm => (warn_unused_thms extras extras_ref used_rules;
+  (fn t => Seq.map (fn thm => (warn_unused_thms ctxt extras extras_ref used_rules;
                                trace_used_thms trace used_rules ctxt; thm))
     (CHANGED (REPEAT_DETERM (resolve_ruleset_tac ctxt rules used_rules n)) t)) THEN_ELSE
   (fn t => (warn_unsafe_thms (#unsafe_rules rules) n ctxt t; all_tac t),
@@ -286,12 +293,12 @@ end;
 fun apply_rules_tac trace ctxt extras extras_ref = apply_rules_tac_n trace ctxt extras extras_ref 1;
 fun apply_once_tac trace ctxt extras extras_ref t =
   let val used_rules = Unsynchronized.ref [] : thm list Unsynchronized.ref;
-  in Seq.map (fn thm => (warn_unused_thms extras extras_ref used_rules;
+  in Seq.map (fn thm => (warn_unused_thms ctxt extras extras_ref used_rules;
                          trace_used_thms trace used_rules ctxt; thm))
     (resolve_ruleset_tac ctxt (get_rules ctxt extras) used_rules 1 t) end
 
 fun clear_rules ({combs, rules, trips, splits, unsafe_rules}) =
-  {combs = combs, rules = no_rules, trips=trips, splits=splits, unsafe_rules=unsafe_rules}
+  {combs=combs, rules=no_rules, trips=trips, splits=splits, unsafe_rules=unsafe_rules}
 
 fun wp_modifiers extras_ref =
  [Args.add -- Args.colon >> K (I, fn att => (add_extra_rule (#2 att) extras_ref; wp_add att)),
@@ -346,4 +353,3 @@ fun apply_once_args trace xs =
 end;
 
 structure WeakestPreInst : WP = WeakestPre;
-

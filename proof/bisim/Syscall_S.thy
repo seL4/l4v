@@ -566,7 +566,7 @@ lemma cap_delete_one_sep [wp]:
         apply (wp)
        apply assumption
       apply (wp get_cap_inv hoare_drop_imps)
-    apply (simp add: conj_ac)
+    apply (simp add: conj_comms)
     apply (rule separate_state_pres)
     apply (rule hoare_pre)
      apply (wps )
@@ -652,11 +652,12 @@ lemma handle_reply_bisim:
 
 lemma handle_event_bisim:
   "bisim (dc \<oplus> op =) \<top> (separate_state and cur_tcb and valid_objs) (handle_event ev) (Syscall_A.handle_event ev)"
-  apply (cases ev, simp_all add: handle_send_def Syscall_A.handle_send_def
-                            handle_call_def Syscall_A.handle_call_def
-                            handle_reply_def
-                           cong: syscall.case_cong)
-
+  apply (cases ev; simp add: handle_send_def Syscall_A.handle_send_def
+                             handle_call_def Syscall_A.handle_call_def
+                             handle_reply_def
+                        cong: syscall.case_cong)
+  
+  apply (rename_tac syscall)
   apply (case_tac syscall, simp_all)[1]
 
   apply (rule bisim_guard_imp_both, rule handle_invocation_bisim, simp)
@@ -687,6 +688,7 @@ lemma handle_event_bisim:
   apply (rule bisim_refl)
   apply simp
 
+  apply (rename_tac vmfault_type)
   apply (rule bisim_guard_imp_both)
   apply (rule bisim_split_refl)
   apply (rule bisim_split_catch_req)
@@ -789,15 +791,12 @@ lemma separate_state_machine_state:
   "separate_state (s\<lparr>machine_state := ms\<rparr>) = separate_state s"
   unfolding separate_state_def by simp
 
-;
 crunch separate_state [wp]: set_thread_state "separate_state"
    (wp: separate_state_pres' crunch_wps simp: crunch_simps)
 
-;
 crunch separate_state [wp]: set_async_ep "separate_state"
    (wp: separate_state_pres' crunch_wps simp: crunch_simps)
 
-;
 crunch separate_state [wp]: "Syscall_SA.handle_event" "separate_state"
    (wp: crunch_wps without_preemption_wp syscall_valid simp: crunch_simps separate_state_machine_state ignore: set_thread_state do_machine_op)
 

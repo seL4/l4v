@@ -422,7 +422,7 @@ lemma empty_slointegrity_spec:
             empty_slot_extended.list_integ_lift empty_slot_list_integrity[where m="cdt s"] |
          simp add: set_cdt_def |
          wpc)+
-  apply (clarsimp simp: cases_simp_options pas_refined_all_children)
+  apply (clarsimp simp: pas_refined_all_children)
   apply (simp add: integrity_def |
         (clarsimp simp: integrity_cdt_def) |
         (drule(1) pas_refined_mem[OF sta_cdt], simp) |
@@ -450,7 +450,7 @@ lemma set_cdt_pas_refined:
    apply (intro allI, case_tac "cdt s x = Some y")
     apply (auto intro: auth_graph_map_memI state_bits_to_policy.intros)[1]
    apply (fastforce dest!: spec elim!: mp)
-  apply (thin_tac "\<forall>a b aa. ?P a b aa")
+  apply (thin_tac "\<forall>a b aa. P a b aa" for P)
   apply (erule state_bits_to_policy.cases)
   apply (auto intro: auth_graph_map_memI state_bits_to_policy.intros
               split: split_if_asm | blast)+
@@ -856,7 +856,7 @@ lemma store_pte_pas_refined[wp]:
    apply (erule state_bits_to_policy.cases,
           auto intro: state_bits_to_policy.intros auth_graph_map_memI
                split: split_if_asm)[1]
-  apply (erule_tac B="state_asids_to_policy aag ?s" in subset_trans[rotated])
+  apply (erule_tac B="state_asids_to_policy aag s" for s in subset_trans[rotated])
   apply (auto intro: state_asids_to_policy_aux.intros
               elim!: state_asids_to_policy_aux.cases
               split: split_if_asm)
@@ -905,7 +905,7 @@ lemma store_pde_pas_refined[wp]:
    apply (erule state_bits_to_policy.cases,
           auto intro: state_bits_to_policy.intros auth_graph_map_memI
                split: split_if_asm)[1]
-  apply (erule_tac B="state_asids_to_policy aag ?s" in subset_trans[rotated])
+  apply (erule_tac B="state_asids_to_policy aag s" for s in subset_trans[rotated])
   apply (auto intro: state_asids_to_policy_aux.intros
               elim!: state_asids_to_policy_aux.cases
               split: split_if_asm)
@@ -1255,6 +1255,7 @@ lemma update_cap_obj_refs_subset:
   apply (case_tac cap,
          simp_all add: update_cap_data_closedform
                 split: split_if_asm)
+  apply (rename_tac arch_cap)
   apply (case_tac arch_cap, simp_all add: aobj_ref_cases arch_update_cap_data_def)
   done
 

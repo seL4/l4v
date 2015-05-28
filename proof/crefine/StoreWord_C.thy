@@ -545,8 +545,8 @@ proof -
       apply (simp add: pointerInUserData_def mask_lower_twice pageBits_def)
      apply (simp add: Aligned.is_aligned_neg_mask)
     apply (erule iffD1[rotated],
-           rule_tac f="\<lambda>a b. (a, b) \<in> rf_sr" and c="globals_update ?f ?s"
-                 in arg_cong2)
+           rule_tac f="\<lambda>a b. (a, b) \<in> rf_sr" and c="globals_update f s"
+                 for f s in arg_cong2)
      apply (rule kernel_state.fold_congs[OF refl refl], simp only:)
      apply (rule machine_state.fold_congs[OF refl refl], simp only:)
      apply (cut_tac p=ptr in unat_mask_2_less_4)
@@ -585,7 +585,7 @@ proof -
                      nth_list_update nth_rev TWO
                 del: list_update.simps   cong: if_cong)
     apply (simp only: If_rearrage)
-    apply (subgoal_tac "?P")
+    apply (subgoal_tac "P" for P)
      apply (rule if_cong)
        apply assumption
       apply simp

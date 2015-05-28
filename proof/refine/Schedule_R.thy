@@ -15,9 +15,6 @@ begin
 lemma gsa_wf [wp]: "\<lbrace>invs'\<rbrace> getSchedulerAction \<lbrace>sch_act_wf\<rbrace>"
   by (simp add: getSchedulerAction_def invs'_def valid_state'_def | wp)+
 
-lemma gts_inv': "\<lbrace>P\<rbrace> getThreadState t \<lbrace>\<lambda>rv. P\<rbrace>"
-  by (unfold getThreadState_def, wp)
-
 lemma corres_if2:
  "\<lbrakk> G = G'; G \<Longrightarrow> corres r P P' a c; \<not> G' \<Longrightarrow> corres r Q Q' b d \<rbrakk>
     \<Longrightarrow> corres r (if G then P else Q) (if G' then P' else Q') (if G then a else b) (if G' then c else d)"
@@ -1735,7 +1732,7 @@ lemma corres_symb_exec_r':
   apply (rule corres_guard_imp)
     apply (subst gets_bind_ign[symmetric], rule corres_split)
        apply (rule z)
-      apply (rule_tac P'="?a' and ?a''" in corres_noop3)
+      apply (rule_tac P'="a' and a''" for a' a'' in corres_noop3)
         apply (simp add: simpler_gets_def exs_valid_def)
        apply clarsimp
        apply (erule x)
@@ -2523,6 +2520,7 @@ lemma schedule_invs': "\<lbrace>invs'\<rbrace> ThreadDecls_H.schedule \<lbrace>\
        apply clarsimp
        apply (wp)[3]
     -- "action = SwitchToThread"
+    apply (rename_tac word)
     apply (rule_tac hoare_seq_ext, rename_tac r)
      apply (wp ssa_invs')
       apply (clarsimp)
@@ -2609,13 +2607,14 @@ lemma schedule_ct_activatable'[wp]: "\<lbrace>invs'\<rbrace> ThreadDecls_H.sched
       apply (wp)[1]
      -- "action = ChooseNewThread"
      apply (rule_tac hoare_seq_ext, rename_tac r)
-      apply (rule hoare_seq_ext, simp add: K_bind_def)
+      apply (rule hoare_seq_ext, simp)
       apply (rule hoare_seq_ext)
       apply (rule seq_ext[OF schedule_ChooseNewThread_fragment_invs' _, simplified bind_assoc])
       apply (wp ssa_invs')
        apply (clarsimp simp: ct_in_state'_def, simp)
        apply (wp)[3]
     -- "action = SwitchToThread"
+    apply (rename_tac word)
     apply (rule_tac hoare_seq_ext, rename_tac r)
      apply (wp ssa_invs')
        apply (clarsimp simp: ct_in_state'_def, simp)
@@ -2692,9 +2691,9 @@ lemma possibleSwitchTo_corres:
    apply (clarsimp simp: is_etcb_at_def valid_sched_action_def weak_valid_sched_action_def)
   apply (clarsimp simp: cur_tcb'_def)
   apply (frule (1) valid_objs'_maxDomain)
-  apply (frule (1) valid_objs'_maxDomain) back
+  apply (frule (1) valid_objs'_maxDomain [where t=t])
   apply (frule (1) valid_objs'_maxPriority)
-  apply (frule (1) valid_objs'_maxPriority) back
+  apply (frule (1) valid_objs'_maxPriority [where t=t])
   apply (clarsimp simp: cur_tcb'_def obj_at'_def projectKOs objBits_simps)
   apply (rule_tac x=obje in exI)
   apply (auto simp: tcb_in_cur_domain'_def obj_at'_def projectKOs objBits_simps)
@@ -2705,17 +2704,17 @@ lemma attemptSwitchTo_corres:
     (Invariants_H.valid_queues and valid_queues' and
     (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s) and cur_tcb' and tcb_at' t and st_tcb_at' runnable' t and valid_objs')
      (attempt_switch_to t) (attemptSwitchTo t)"
-using possibleSwitchTo_corres
-apply (simp add: attempt_switch_to_def attemptSwitchTo_def)
-done
+  using possibleSwitchTo_corres
+  apply (simp add: attempt_switch_to_def attemptSwitchTo_def)
+  done
 
 lemma switchIfRequiredTo_corres:
   "corres dc (valid_etcbs and weak_valid_sched_action and cur_tcb and st_tcb_at runnable t)
     (Invariants_H.valid_queues and valid_queues' and
     (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s) and cur_tcb' and tcb_at' t and st_tcb_at' runnable' t and valid_objs')
      (switch_if_required_to t) (switchIfRequiredTo t)"
-using possibleSwitchTo_corres
-apply (simp add: switch_if_required_to_def switchIfRequiredTo_def)
-done
+  using possibleSwitchTo_corres
+  apply (simp add: switch_if_required_to_def switchIfRequiredTo_def)
+  done
 
 end

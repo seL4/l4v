@@ -12,7 +12,7 @@
    Miscellaneous library definitions and lemmas.
 *)
 
-header "Distinct Proposition"
+chapter "Distinct Proposition"
 
 theory DistinctProp
 imports
@@ -41,7 +41,7 @@ lemma distinct_prop_append:
     (distinct_prop P xs \<and> distinct_prop P ys \<and> (\<forall>x \<in> set xs. \<forall>y \<in> set ys. P x y))"
   apply (induct xs arbitrary: ys)
    apply simp
-  apply (simp add: conj_ac ball_Un)
+  apply (simp add: conj_comms ball_Un)
   done
 
 lemma distinct_prop_distinct:

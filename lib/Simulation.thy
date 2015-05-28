@@ -12,7 +12,7 @@
    A general calculus of refinement in Isabelle.
 *)
 
-header "Refinement Calculus"
+chapter "Refinement"
 
 theory Simulation
 imports "~~/src/HOL/Main"

@@ -85,7 +85,7 @@ fun focus use_asms state =
   end;
   
 val _ =
-  Outer_Syntax.command @{command_spec "focus"} "focus subgoal"
+  Outer_Syntax.command @{command_keyword "focus"} "focus subgoal"
     ((Scan.optional (Args.parens (Args.$$$ "no_asm") >> K false) true) >> 
       (fn mode => Toplevel.print o Toplevel.proofs (Seq.make_results o Seq.single o focus mode)));
 
@@ -93,7 +93,7 @@ val _ =
 (* Note that "qed" is still necessary to unfocus if we went into structured proof mode,
    so this is not a total solution *)
 val _ =
-  Outer_Syntax.command @{command_spec "unfocus"} "done proof"
+  Outer_Syntax.command @{command_keyword "unfocus"} "done proof"
     (Scan.succeed Isar_Cmd.done_proof);
   
   *}  

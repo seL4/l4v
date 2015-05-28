@@ -128,7 +128,7 @@ setup {*
 *}
 
 ML {*
-Outer_Syntax.command @{command_spec "diff_attributes"}
+Outer_Syntax.command @{command_keyword "diff_attributes"}
   "Show commands needed to make the current theory file's simpset closer to its old version."
   (Scan.succeed (
     Toplevel.unknown_theory o Toplevel.keep (fn state =>
@@ -149,7 +149,7 @@ Outer_Syntax.command @{command_spec "diff_attributes"}
 *}
 
 ML {*
-Outer_Syntax.command @{command_spec "save_attributes"}
+Outer_Syntax.command @{command_keyword "save_attributes"}
   "Create a .trace_attribs file for the current theory."
   (Scan.succeed (
     Toplevel.unknown_theory o Toplevel.keep (fn state =>

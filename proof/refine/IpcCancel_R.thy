@@ -115,13 +115,9 @@ end
 
 declare if_weak_cong [cong]
 
-declare delete_remove1[simp]
+declare delete_remove1 [simp]
 
 declare delete.simps [simp del]
-
-lemma invs_sym_refs'[elim!]:
-  "invs' s \<Longrightarrow> sym_refs (state_refs_of' s)"
-  by (simp add: invs'_def valid_state'_def)
 
 lemma invs_weak_sch_act_wf[elim!]:
   "invs' s \<Longrightarrow> weak_sch_act_wf (ksSchedulerAction s) s"
@@ -157,6 +153,7 @@ lemma blocked_ipc_cancel_corres:
       apply (case_tac rv)
         apply (simp add: ep_relation_def)
        apply (simp add: get_ep_queue_def ep_relation_def split del: split_if)
+       apply (rename_tac list)
        apply (case_tac "remove1 t list")
         apply simp
         apply (rule corres_guard_imp)
@@ -204,6 +201,7 @@ lemma blocked_ipc_cancel_corres:
        apply (auto simp add: valid_obj'_def valid_tcb'_def 
                              valid_tcb_state'_def)[1]
       apply (simp add: get_ep_queue_def ep_relation_def split del: split_if)
+      apply (rename_tac list)
       apply (case_tac "remove1 t list")
        apply simp
        apply (rule corres_guard_imp)
@@ -282,6 +280,7 @@ lemma ac_corres:
       apply (case_tac "aepa")
         apply (simp add: aep_relation_def isWaitingAEP_def)
        apply (simp add: isWaitingAEP_def aep_relation_def split del: split_if)
+       apply (rename_tac list)
        apply (rule_tac R="remove1 t list = []" in corres_cases)
         apply (simp del: dc_simp)
         apply (rule corres_split [OF _ set_aep_corres])
@@ -315,8 +314,7 @@ lemma ac_corres:
    apply (clarsimp simp: valid_obj'_def valid_tcb'_def valid_tcb_state'_def)
    apply (drule sym, simp)
   apply (clarsimp simp: invs_weak_sch_act_wf)
-  apply (drule invs_sym_refs') 
-  apply (drule (1) sym_refs_st_tcb_atD')
+  apply (drule sym_refs_st_tcb_atD', fastforce)
   apply (fastforce simp: isWaitingAEP_def ko_wp_at'_def obj_at'_def projectKOs
                   split: async_endpoint.splits)
   done
@@ -376,7 +374,8 @@ proof -
                 capClass (cteCap cte') = ReplyClass t \<longrightarrow>
                 ptr = t + 0x20"
     apply (intro allI impI)
-    apply (case_tac cte', case_tac capability, simp_all)
+    apply (case_tac cte', rename_tac cap node, case_tac cap, simp_all)
+    apply (rename_tac arch_capability)
     apply (case_tac arch_capability, simp_all)
     done
 
@@ -774,7 +773,7 @@ proof -
               | simp add: valid_tcb_state'_def split del: split_if
               | wpc)+
     apply (rule hoare_strengthen_post [OF get_ep_sp'])
-    apply (clarsimp simp: st_tcb_at_tcb_at' fun_upd_def[symmetric] conj_ac
+    apply (clarsimp simp: st_tcb_at_tcb_at' fun_upd_def[symmetric] conj_comms
                split del: split_if cong: if_cong)
     apply (rule conjI, clarsimp simp: valid_idle'_def st_tcb_at'_def obj_at'_def projectKOs)
     apply (frule obj_at_valid_objs', clarsimp)
@@ -786,9 +785,11 @@ proof -
     apply (rule conjI)
      apply (clarsimp split: Structures_H.endpoint.split_asm list.split
                       simp: valid_ep'_def)
+      apply (rename_tac list x xs)
       apply (frule distinct_remove1[where x=t])
       apply (cut_tac xs=list in set_remove1_subset[where x=t])
       apply auto[1]
+     apply (rename_tac list x xs)
      apply (frule distinct_remove1[where x=t])
      apply (cut_tac xs=list in set_remove1_subset[where x=t])
      apply auto[1]
@@ -1884,6 +1885,7 @@ lemma aep_cancel_corres:
                   weak_sch_act_wf_lift_linear setThreadState_not_st
                   set_thread_state_runnable_weak_valid_sched_action
              | simp)+
+       apply (rename_tac list)
        apply (rule_tac R="\<lambda>_ s. (\<forall>x\<in>set list. tcb_at' x s) \<and> valid_objs' s"
                     in hoare_post_add)
        apply (rule mapM_x_wp')
@@ -2204,6 +2206,7 @@ lemma aepCancelAll_valid_objs'[wp]:
   apply (case_tac aepa, simp_all)
     apply (wp, simp)
    apply (wp, simp)
+  apply (rename_tac list)
   apply (rule_tac Q="\<lambda>rv s. valid_objs' s \<and> (\<forall>x\<in>set list. tcb_at' x s)"
                   in hoare_post_imp)
    apply (simp add: valid_aep'_def)
@@ -2498,7 +2501,7 @@ lemma ep_cancel_badged_sends_corres:
       apply (simp add: ep_relation_def)
      apply (wp hoare_vcg_const_Ball_lift weak_sch_act_wf_lift_linear set_ep_valid_objs'
                 | simp)+
-   apply (clarsimp simp: conj_ac)
+   apply (clarsimp simp: conj_comms)
    apply (frule sym_refs_ko_atD, clarsimp+)
    apply (rule obj_at_valid_objsE, assumption+, clarsimp+)
    apply (clarsimp simp: valid_obj_def valid_ep_def valid_sched_def valid_sched_action_def)

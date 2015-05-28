@@ -144,7 +144,7 @@ lemma andCapRights_ac:
   "andCapRights (andCapRights a b) c = andCapRights a (andCapRights b c)"
   "andCapRights a b = andCapRights b a"
   "andCapRights a (andCapRights b c) = andCapRights b (andCapRights a c)"
-  by (simp add: andCapRights_def conj_ac split: cap_rights.split)+
+  by (simp add: andCapRights_def conj_comms split: cap_rights.split)+
 
 lemma wordFromRights_rightsFromWord:
   "wordFromRights (rightsFromWord w) = w && mask 3"
@@ -218,7 +218,7 @@ next
      apply (erule_tac t = capptr in ssubst)
      apply csymbr+
      apply (simp add: cap_get_tag_isCap split del: split_if)
-     apply (thin_tac "ret__unsigned_long = ?X")
+     apply (thin_tac "ret__unsigned_long = X" for X)
      apply (rule ccorres_split_throws [where P = "valid_pspace' and valid_cap' cap' and K (guard' \<le> 32)"])
       apply (rule_tac G' = "\<lambda>w_rightsMask. ({s. nodeCap_' s = nodeCap} 
                               \<inter> {s. unat (n_bits_' s) = guard'})"
@@ -475,12 +475,12 @@ next
                     (option_map cteCap (ctes_of s ?p) = Some rva
                     \<and> (ccap_relation rva (h_val (hrs_mem (t_hrs_' (globals s'))) (Ptr &(Ptr ?p :: cte_C ptr\<rightarrow>[''cap_C'']) :: cap_C ptr))))"
                     in ccorres_req [where Q' = "\<lambda>s'. s' \<Turnstile>\<^sub>c (Ptr ?p :: cte_C ptr)"])
-                apply (thin_tac "rva = ?X")
+                apply (thin_tac "rva = X" for X)
                 apply (clarsimp simp: h_t_valid_clift_Some_iff typ_heap_simps)
                 apply (rule ccte_relation_ccap_relation)
                 apply (erule (2) rf_sr_cte_relation)
                apply (elim conjE)
-               apply (rule_tac nodeCap = "nodeCapa" in ih)
+               apply (rule_tac nodeCap1 = "nodeCapa" in ih)
                       apply simp
                      apply simp 
                     apply simp
@@ -643,7 +643,7 @@ lemma lookupSlotForThread_ccorres':
      apply wp
    apply vcg
   apply (rule conjI)
-   apply (clarsimp simp add: conj_ac word_size tcbSlots Kernel_C.tcbCTable_def)
+   apply (clarsimp simp add: conj_comms word_size tcbSlots Kernel_C.tcbCTable_def)
    apply (rule conjI)
     apply fastforce
    apply (erule tcb_at_cte_at')

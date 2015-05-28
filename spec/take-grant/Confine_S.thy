@@ -1002,7 +1002,7 @@ lemma leak_conTrans [rule_format]:
   by (auto intro: leakImplyConnectedTrans tgs_connected_preserved)
 
 lemma leakage_rule:
-  "\<lbrakk>s' \<in> execute cmds s; \<not> s \<turnstile> x \<leftrightarrow>* y\<rbrakk> \<Longrightarrow> \<not> s' \<turnstile> x \<rightarrow> y"
+  "\<lbrakk>s' \<in> execute cmds s; \<not> s \<turnstile> x \<leftrightarrow>* y\<rbrakk> \<Longrightarrow> \<not> (s' \<turnstile> x \<rightarrow> y)"
   by(auto simp add: leak_conTrans)
 
 

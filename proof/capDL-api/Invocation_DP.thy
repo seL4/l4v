@@ -389,7 +389,7 @@ lemma handle_event_syscall_no_exception:
          apply (rule corrupt_ipc_buffer_hold)
         apply (wp has_restart_cap_sep_wp[where cap = RestartCap])[1]
        apply (rule_tac P = "y = cur_thread" in hoare_gen_asmEx)
-       apply (simp add:conj_ac)
+       apply (simp add:conj_comms)
        apply (rule perform_invocation_hold)
       apply (rule_tac P = "y = cur_thread" in hoare_gen_asm)
       apply simp
@@ -887,7 +887,7 @@ lemma handle_event_syscall_allow_error:
          apply (rule corrupt_ipc_buffer_hold)
         apply (wp has_restart_cap_sep_wp[where cap = RestartCap])[1]
        apply (rule_tac P = "y = cur_thread" in hoare_gen_asmEx)
-       apply (simp add:conj_ac)
+       apply (simp add:conj_comms)
        apply (rule perform_invocation_hold)
       apply (rule_tac P = "y = cur_thread" in hoare_gen_asm)
       apply simp

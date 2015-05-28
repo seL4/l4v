@@ -88,7 +88,7 @@ let
 
   (* Retrieve facts which are explicitly mentioned in the method invocation. *)
   val mentioned_facts = Apply_Trace.mentioned_facts ctxt text
-  |> map (fn thm => ((Thm.get_name_hint thm, NONE), prop_of thm))
+  |> map (fn thm => ((Thm.get_name_hint thm, NONE), Thm.prop_of thm))
 
   (* Fetch canonical names and theorems. *)
   val (deps,mentioned_facts) = chop (length deps) (map (fn (ident, term) => adjust_thm_name ctxt ident term) (deps @ mentioned_facts))
@@ -116,7 +116,7 @@ end
 
 
 val _ =
-  Outer_Syntax.command @{command_spec "apply_trace"} "initial refinement step (unstructured)"
+  Outer_Syntax.command @{command_keyword "apply_trace"} "initial refinement step (unstructured)"
     (Method.parse >> (Toplevel.proofs o (Apply_Trace.apply_results {silent_fail = false} print_deps)));
 
 *}

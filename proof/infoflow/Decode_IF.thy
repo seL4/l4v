@@ -406,6 +406,7 @@ lemma cte_wp_at_diminished_PageDirectoryCap:
   apply(clarsimp simp: cte_wp_at_def diminished_def mask_cap_def)
   apply(case_tac capa)
   apply(clarsimp simp: cap_rights_update_def)+
+  apply(rename_tac arch_cap)
   apply(case_tac arch_cap, simp_all add: acap_rights_update_def)
   done
 
@@ -415,6 +416,7 @@ lemma cte_wp_at_diminished_PageTableCap:
   apply(clarsimp simp: cte_wp_at_def diminished_def mask_cap_def)
   apply(case_tac capa)
   apply(clarsimp simp: cap_rights_update_def)+
+  apply(rename_tac arch_cap)
   apply(case_tac arch_cap, simp_all add: acap_rights_update_def)
   done
 
@@ -695,6 +697,7 @@ lemma decode_invocation_reads_respects_f:
    apply (rule conjI, assumption)
    apply (rule impI, erule subst, rule pas_refined_sita_mem [OF sita_controlled], auto
           simp: cte_wp_at_caps_of_state diminshed_IRQControlCap_eq)[1]
+  apply (rename_tac arch_cap)
   apply (subgoal_tac "(\<forall>x\<in>cap_asid' (ArchObjectCap arch_cap). is_subject_asid aag x) \<and>
           (\<forall>x\<in>set excaps. \<forall>v\<in>cap_asid' (fst x). is_subject_asid aag v)")
   prefer 2

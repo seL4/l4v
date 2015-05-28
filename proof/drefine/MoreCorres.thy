@@ -72,12 +72,12 @@ lemma corres_if_rhs:
 
 (* Bind distributes over non-deterministic choice. *)
 lemma alternative_bind_distrib: "((f \<sqinter> g) >>= h) = ((f >>= h) \<sqinter> (g >>= h))"
-  apply (auto simp: alternative_def bind_def split_def intro!: ext prod_eqI)
+  apply (auto simp: alternative_def bind_def split_def intro!: prod_eqI)
   done
 
 (* Bind distributes over non-deterministic choice. *)
 lemma alternative_bind_distrib_2: "(do f; (a \<sqinter> b) od) = ((do f; a od) \<sqinter> (do f; b od))"
-  apply (auto simp: alternative_def bind_def split_def intro!: ext prod_eqI)
+  apply (auto simp: alternative_def bind_def split_def intro!: prod_eqI)
   done
 
 (* "bindE" distributes over non-deterministic choice. *)

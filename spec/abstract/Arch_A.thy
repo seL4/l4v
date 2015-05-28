@@ -12,7 +12,7 @@
 Entry point for architecture dependent definitions.
 *)
 
-header "Toplevel ARM Definitions"
+chapter "Toplevel ARM Definitions"
 
 theory Arch_A
 imports CSpace_A

@@ -47,12 +47,12 @@ theorem spec_refine:
   apply (intro spec_statefn_simulates_lookup_tree_Node spec_statefn_simulates_lookup_tree_Leaf)
   apply (tactic {* ALLGOALS (asm_simp_tac (put_simpset HOL_ss @{context} addsimps @{thms switch.simps fst_conv snd_conv} addsimprocs [unfold_bodies]))
               THEN ALLGOALS (TRY o rtac @{thm exec_statefn_simulates_refl}) *})
-  apply (tactic {* ALLGOALS (REPEAT_ALL_NEW (resolve_tac @{thms exec_statefn_simulates_comI
+  apply (tactic {* ALLGOALS (REPEAT_ALL_NEW (resolve_tac @{context} @{thms exec_statefn_simulates_comI
                       exec_statefn_simulates_additionals})) *})
   apply (unfold id_apply)
-  apply (tactic {* ALLGOALS (TRY o resolve_tac @{thms refl bij_id}) *})
+  apply (tactic {* ALLGOALS (TRY o resolve_tac @{context} @{thms refl bij_id}) *})
   apply (tactic {* ALLGOALS (TRY o (rtac @{thm subsetI} THEN' rtac @{thm CollectI}
-           THEN' REPEAT_ALL_NEW (eresolve_tac @{thms IntE CollectE conjE exE h_t_valid_c_guard conjI} ORELSE' atac))) *})
+           THEN' REPEAT_ALL_NEW (eresolve_tac @{context} @{thms IntE CollectE conjE exE h_t_valid_c_guard conjI} ORELSE' atac))) *})
   (*
     apply (tactic {* ALLGOALS (TRY o ((REPEAT_ALL_NEW (rtac @{thm c_guard_field}) THEN' etac @{thm h_t_valid_c_guard})
                           THEN_ALL_NEW simp_tac @{simpset}

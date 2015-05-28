@@ -53,7 +53,7 @@ lemma dcorres_call_kernel:
       apply (clarsimp simp: invs_def valid_state_def)
      apply (wp hoare_vcg_if_lift2 hoare_drop_imp he_invs
             | strengthen valid_etcbs_sched valid_idle_invs_strg
-            | simp add: conj_ac cong: conj_cong)+
+            | simp add: conj_comms cong: conj_cong)+
     apply (rule valid_validE2)
       apply (rule hoare_vcg_conj_lift)
        apply (rule he_invs)

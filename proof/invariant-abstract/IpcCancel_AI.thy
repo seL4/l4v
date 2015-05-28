@@ -857,8 +857,8 @@ lemma ep_cancel_badged_sends_filterM_helper':
   apply (rule conjI[rotated])
    apply blast
   apply clarsimp
-  apply (thin_tac "ep_at epptr ?s")
-  apply (thin_tac "tcb_at ?x ?s")
+  apply (thin_tac "ep_at epptr s" for s)
+  apply (thin_tac "tcb_at x s" for x s)
   apply (frule singleton_eqD, drule state_refs_of_elemD)
   apply (frule(1) if_live_then_nonz_capD, rule refs_of_live, clarsimp)
   apply (clarsimp simp: st_tcb_at_refs_of_rev)
@@ -891,7 +891,7 @@ lemma ep_cancel_badged_sends_invs[wp]:
      apply clarsimp
      apply blast
     apply (wp valid_irq_node_typ)
-   apply (clarsimp simp: valid_ep_def conj_ac)
+   apply (clarsimp simp: valid_ep_def conj_comms)
    apply (subst obj_at_weakenE[where P'=is_ep], assumption)
     apply (clarsimp simp: is_ep_def)
    apply (frule(1) sym_refs_ko_atD, clarsimp)

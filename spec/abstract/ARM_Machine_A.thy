@@ -13,7 +13,7 @@ Types and operations to access the underlying machine, instantiated
 for ARM. 
 *)
 
-header "ARM Machine Instantiation"
+chapter "ARM Machine Instantiation"
 
 theory ARM_Machine_A
 imports

@@ -12,7 +12,7 @@
 Non-deterministic scheduler functionality.
 *)
 
-header "Scheduler"
+chapter "Scheduler"
 
 theory Schedule_A
 imports Arch_A

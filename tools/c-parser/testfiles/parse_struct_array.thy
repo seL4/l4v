@@ -29,7 +29,7 @@ begin
 
 ML {*
   val bthm = @{thm "ts20110511_1_body_def"}
-  val b_t = concl_of bthm
+  val b_t = Thm.concl_of bthm
   val cs = Term.add_consts b_t []
 *}
 

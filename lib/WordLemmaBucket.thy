@@ -377,36 +377,13 @@ lemma word_bits_len_of: "len_of TYPE (32) = word_bits"
 
 lemmas unat_power_lower32 [simp] = unat_power_lower[where 'a=32, unfolded word_bits_len_of]
 
-lemma eq_zero_set_bl: "(w = 0) = (True \<notin> set (to_bl w))"
-  apply (subst word_bl.Rep_inject[symmetric])
-  apply (subst to_bl_0)
-  apply (rule iffI)
-   apply clarsimp
-  apply (drule list_of_false)
-  apply simp
-  done
-
 lemmas and_bang = word_and_nth
 
 lemma of_drop_to_bl:
   "of_bl (drop n (to_bl x)) = (x && mask (size x - n))"
-  apply (clarsimp simp: bang_eq and_bang test_bit_of_bl
-                        rev_nth
-                  cong: rev_conj_cong)
+  apply (clarsimp simp: bang_eq test_bit_of_bl rev_nth cong: rev_conj_cong)
   apply (safe, simp_all add: word_size to_bl_nth)
   done
-
-lemma less_is_drop_replicate:
-  fixes x :: "'a :: len word"
-  assumes lt: "x < 2 ^ n"
-  shows   "to_bl x = replicate (len_of TYPE('a) - n) False @ drop (len_of TYPE('a) - n) (to_bl x)"
-proof -
-  show ?thesis
-    apply (subst less_mask_eq [OF lt, symmetric])
-    apply (subst bl_and_mask)
-    apply simp
-    done
-qed
 
 lemma word_add_offset_less:
   fixes x :: "'a :: len word"
@@ -431,19 +408,19 @@ proof (subst mn)
   apply (subst word_less_nat_alt)
   apply (subst unat_word_ariths word_bits_len_of)+
   apply (subst mod_less)
-   apply (simp add: unat_power_lower)
+   apply simp
    apply (subst mult.commute)
    apply (rule nat_less_power_trans [OF _ order_less_imp_le [OF nv]])
     apply (rule order_less_le_trans [OF unat_mono [OF xv']])
     apply (cases "n = 0")
-       apply (simp add: unat_power_lower)
-      apply (simp add: unat_power_lower)
+       apply simp
+      apply simp
     apply (subst unat_power_lower[OF nv])
     apply (subst mod_less)
    apply (erule order_less_le_trans [OF nat_add_offset_less], assumption)
     apply (rule mn)
    apply simp
-  apply (simp add: mn mnv unat_power_lower)
+  apply (simp add: mn mnv)
   apply (erule nat_add_offset_less)
   apply simp+
   done
@@ -460,12 +437,12 @@ lemma word_less_power_trans:
   apply (subst word_less_nat_alt)
   apply (subst unat_word_ariths)
   apply (subst mod_less)
-   apply (simp add: unat_power_lower)
+   apply simp
    apply (rule nat_less_power_trans)
     apply (erule order_less_trans [OF unat_mono])
-    apply (simp add: unat_power_lower)
+    apply simp
    apply simp
-  apply (simp add: unat_power_lower)
+  apply simp
   apply (rule nat_less_power_trans)
    apply (subst unat_power_lower[where 'a = 'a, symmetric])
     apply simp
@@ -578,7 +555,7 @@ proof -
   also have "\<dots> = ((2 ^ us - 1) + 2 ^ sz) div 2 ^ us" using szv
     apply (subst unat_minus_one)
      apply (simp add: p2_eq_0)
-    apply (simp add: unat_power_lower)
+    apply simp
     done
 
   also have "\<dots> = 2 ^ q + ((2 ^ us - 1) div 2 ^ us)"
@@ -618,7 +595,7 @@ lemma upto_enum_red2:
   map of_nat [0 ..< 2 ^ sz]" using szv
   apply (subst unat_power_lower[OF szv, symmetric])
   apply (rule upto_enum_red')
-  apply (subst word_le_nat_alt, simp add: unat_power_lower)
+  apply (subst word_le_nat_alt, simp)
   done
 
 (* FIXME: WordEnum.upto_enum_step_def is fixed to word32. *)
@@ -746,8 +723,7 @@ lemma upto_enum_less:
   shows   "x < 2 ^ n"
 proof (cases n)
   case 0
-  thus ?thesis using xin
-    by (simp add: upto_enum_set_conv)
+  thus ?thesis using xin by simp
 next
   case (Suc m)
   show ?thesis using xin nv by simp
@@ -1459,7 +1435,7 @@ lemma less_two_pow_divD:
     \<Longrightarrow> n \<ge> m \<and> (x < 2 ^ (n - m))"
   apply (rule context_conjI)
    apply (rule ccontr)
-   apply (simp add: div_less power_strict_increasing)
+   apply (simp add: power_strict_increasing)
   apply (simp add: power_sub)
   done
 
@@ -1636,7 +1612,7 @@ proof -
   moreover
   from nm have "m - n \<le> 2 ^ s2 - 1"
     by - (rule word_diff_ls', (simp add: field_simps)+)
-  hence "(2::'a word) ^ s1 * of_nat (mq - 2 ^ sq * nq) < 2 ^ s2" using mn s2wb by (simp add: field_simps word_less_sub_le)
+  hence "(2::'a word) ^ s1 * of_nat (mq - 2 ^ sq * nq) < 2 ^ s2" using mn s2wb by (simp add: field_simps)
   hence "of_nat (mq - 2 ^ sq * nq) < (2::'a word) ^ (s2 - s1)"
   proof (rule word_power_less_diff)
     have mm: "mq - 2 ^ sq * nq < 2 ^ (len_of TYPE('a) - s1)" using mq by simp
@@ -1998,7 +1974,7 @@ lemma add_mask_lower_bits:
    apply (erule_tac x=na in allE)+
    apply simp
   apply (rule word_eqI)
-  apply (clarsimp simp: word_size is_aligned_nth nth_mask word_ops_nth_size)
+  apply (clarsimp simp: word_size is_aligned_nth word_ops_nth_size)
   apply (erule_tac x=na in allE)+
   apply (case_tac "na < n")
    apply simp
@@ -3028,8 +3004,7 @@ lemma word_and_1_shiftl:
   fixes x :: "('a :: len) word" shows
   "x && (1 << n) = (if x !! n then (1 << n) else 0)"
   apply (rule word_eqI)
-  apply (simp add: word_size nth_shiftl word_nth_1 split: split_if
-              del: shiftl_t2n shiftl_1)
+  apply (simp add: word_size nth_shiftl split: split_if del: shiftl_1)
   apply auto
   done
 
@@ -3400,7 +3375,7 @@ lemma Collect_Diff_restrict_simp:
 
 lemma Collect_Int_pred_eq:
   "{x \<in> S. P x} \<inter> {x \<in> T. P x} = {x \<in> (S \<inter> T). P x}"
-  by (simp add: Collect_conj_eq [symmetric] conj_ac)
+  by (simp add: Collect_conj_eq [symmetric] conj_comms)
 
 lemma Collect_restrict_predR:
   "{x. P x} \<inter> T = {} \<Longrightarrow> {x. P x} \<inter> {x \<in> T. Q x} = {}"
@@ -3679,7 +3654,9 @@ qed
 lemma nat_mod_power_lem:
   fixes a :: nat
   shows "1 < a \<Longrightarrow> a ^ n mod a ^ m = (if m \<le> n then 0 else a ^ n)"
-  by (clarsimp, clarsimp simp add: le_iff_add power_add)
+  apply (clarsimp)
+  apply (clarsimp simp add: le_iff_add power_add)
+  done
 
 lemma power_mod_div:
   fixes x :: "nat"
@@ -3987,7 +3964,7 @@ lemma mod_div_equality_div_eq:
 
 lemma zmod_helper:
   "n mod m = k \<Longrightarrow> ((n :: int) + a) mod m = (k + a) mod m"
-  by (clarsimp simp: pull_mods)
+  by (metis add.commute mod_add_right_eq)
 
 lemma int_div_sub_1:
   "\<lbrakk> m \<ge> 1 \<rbrakk> \<Longrightarrow> (n - (1 :: int)) div m = (if m dvd n then (n div m) - 1 else n div m)"
@@ -3996,7 +3973,7 @@ lemma int_div_sub_1:
   apply (subst mult_cancel_right[symmetric])
   apply (simp only: left_diff_distrib split: split_if)
   apply (simp only: mod_div_equality_div_eq)
-  apply (clarsimp simp: field_simps dvd_mult_div_cancel)
+  apply (clarsimp simp: field_simps)
   apply (clarsimp simp: dvd_eq_mod_eq_0)
   apply (cases "m = 1")
    apply simp
@@ -4217,14 +4194,8 @@ lemma word_less_power_trans_ofnat:
     apply (simp add: word_less_nat_alt)
     apply (subst unat_of_nat_eq)
      apply (erule order_less_trans)
-     apply (simp add: unat_power_lower)+
+     apply simp+
     done
-
-lemma upto_enum_step_red':
-  "\<lbrakk> c < word_bits; b \<le> c; is_aligned a c \<rbrakk> \<Longrightarrow>
-  [a, a + 2 ^ b .e. a + 2 ^ c - 1] = map (op + a) [0, 2 ^ b .e. 2 ^ c - 1]"
-  unfolding upto_enum_step_def
-  by (auto simp: upto_enum_word dest:is_aligned_no_overflow)
 
 lemma div_power_helper:
   "\<lbrakk> x \<le> y; y < word_bits \<rbrakk> \<Longrightarrow> (2 ^ y - 1) div (2 ^ x :: word32) = 2 ^ (y - x) - 1"
@@ -4274,7 +4245,7 @@ lemma power_helper:
    apply (rule power_strict_increasing)
     apply (simp add: word_bits_def)
    apply simp
-  apply (simp add: power_add[symmetric] del: power_add)
+  apply (simp add: power_add[symmetric])
   done
 
 lemma word_1_le_power:
@@ -4367,21 +4338,11 @@ lemma dom_eqI:
 lemma dvd_reduce_multiple:
   fixes k :: nat
   shows "(k dvd k * m + n) = (k dvd n)"
-  apply (induct m)
-   apply simp
-  apply simp
-  apply (subst add.assoc, subst add.commute)
-  apply (subst dvd_reduce)
-  apply assumption
-  done
+  by (induct m) (auto simp: add_ac)
 
 lemma image_iff:
   "inj f \<Longrightarrow> f x \<in> f ` S = (x \<in> S)"
-  apply rule
-   apply (erule imageE)
-   apply (simp add: inj_eq)
-  apply (erule imageI)
-  done
+  by (rule inj_image_mem_iff)
 
 lemma of_nat_power:
   shows "\<lbrakk> p < 2 ^ x; x < len_of TYPE ('a :: len) \<rbrakk> \<Longrightarrow> of_nat p < (2 :: 'a :: len word) ^ x"
@@ -4993,7 +4954,7 @@ proof -
   have P: "unat x < 2 ^ len_of TYPE('b)" "unat y < 2 ^ len_of TYPE('b)"
     by (fastforce intro!: less_le_trans[OF unat_lt2p])+
   thus ?thesis
-    by (simp add: unat_arith_simps unat_ucast split assms[simplified unat_arith_simps])
+    by (simp add: unat_arith_simps unat_ucast assms[simplified unat_arith_simps])
 qed
 
 lemma word_1_0:
@@ -5039,7 +5000,7 @@ lemma sint_1_cases:
    apply clarsimp
    apply (metis Abs_fnat_hom_0 Suc_1 lessI of_nat_1 zero_less_Suc)
   apply clarsimp
-  apply (metis One_nat_def arith_is_1 le_def len_gt_0 sint_eq_uint uint_1 word_msb_1)
+  apply (metis One_nat_def arith_is_1 le_def len_gt_0)
   done
 
 lemma sint_int_min:
@@ -5054,7 +5015,8 @@ lemma sint_int_max_plus_1:
   "sint (2 ^ (len_of TYPE('a) - Suc 0) :: ('a::len) word) = - (2 ^ (len_of TYPE('a) - Suc 0))"
   apply (subst word_of_int_2p [symmetric])
   apply (subst int_word_sint)
-  apply (clarsimp simp: comm_semiring_1_class.normalizing_semiring_rules(27))
+  apply clarsimp
+  apply (metis Suc_pred int_word_uint len_gt_0 power_Suc uint_eq_0 word_of_int_2p word_pow_0)
   done
 
 lemma word32_bounds:
@@ -5379,7 +5341,7 @@ lemma smod_int_range:
    apply (insert pos_mod_conj [where a="-a" and b=b])[1]
    apply (clarsimp simp: smod_int_alt_def sign_simps sgn_if
               abs_if not_less add1_zle_eq [simplified add.commute])
-   apply (metis add_le_cancel_left comm_monoid_add_class.add.right_neutral
+   apply (metis add_le_cancel_left monoid_add_class.add.right_neutral
              int_one_le_iff_zero_less less_le_trans mod_minus_right neg_less_0_iff_less
              neg_mod_conj not_less pos_mod_conj)
   apply (insert neg_mod_conj [where a=a and b="b"])[1]
@@ -5813,7 +5775,7 @@ definition
 
 lemma to_bool_and_1:
   "to_bool (x && 1) = (x !! 0)"
-  apply (simp add: to_bool_def del: word_neq_0_conv)
+  apply (simp add: to_bool_def)
   apply (rule iffI)
    apply (rule classical, erule notE, rule word_eqI)
    apply clarsimp
@@ -5932,7 +5894,7 @@ lemma neg_mask_add_mask:
     apply clarsimp
     apply (subst word_plus_and_or_coroll)
     apply (rule iffD1[OF is_aligned_mask])
-    apply (simp add:is_aligned_neg_mask word_or_nth word_size not_less)+
+    apply (simp add:is_aligned_neg_mask word_size not_less)+
   apply (cut_tac w = "((x && ~~ mask n) + mask n)" and
       m = n and n = "na - n" in nth_shiftr[symmetric])
   apply clarsimp
@@ -6021,7 +5983,7 @@ lemma is_aligned_sub_helper:
 lemma mask_twice:
   "(x && mask n) && mask m = x && mask (min m n)"
   apply (rule word_eqI)
-  apply (simp add: word_size conj_ac)
+  apply (simp add: word_size conj_comms)
   done
 
 lemma is_aligned_after_mask:
@@ -6312,7 +6274,7 @@ lemma word_lsb_nat:"lsb w = (unat w mod 2 = 1)"
   by (metis (no_types, hide_lams) nat_mod_distrib nat_numeral not_mod_2_eq_1_eq_0 numeral_One uint_eq_0 uint_nonnegative unat_0 unat_def zero_le_numeral)
 
 lemma odd_iff_lsb:"odd (unat (x::('a::len) word)) = x !! 0"
-  apply (simp add:even_def)
+  apply (simp add:even_iff_mod_2_eq_zero)
   apply (subst word_lsb_nat[unfolded One_nat_def, symmetric])
   apply (rule word_lsb_alt)
   done
@@ -6352,9 +6314,8 @@ lemma shiftr1_irrelevant_lsb:"(x::('a::len) word) !! 0 \<or> x >> 1 = (x + 1) >>
   apply clarsimp
   apply (case_tac "even (unat x)")
    apply (subgoal_tac "unat x div 2 = Suc (unat x) div 2")
-    apply clarsimp
+    apply metis
    apply (subst numeral_2_eq_2)+
-   apply (rule even_nat_plus_one_div_two[symmetric])
    apply simp
   apply (simp add:odd_iff_lsb)
   done
@@ -6455,7 +6416,7 @@ lemma dvd_not_suc:"\<lbrakk> 2 ^ n dvd (p::nat); n > 0; i > 0; i < 2 ^ n; p + i 
   by (metis dvd_def dvd_reduce_multiple nat_dvd_not_less)
 
 lemma word32_gr0_conv_Suc:"(m::word32) > 0 \<Longrightarrow> \<exists>n. m = n + 1"
-  by (metis comm_semiring_1_class.normalizing_semiring_rules(24) zadd_diff_inverse)
+  by (metis add.commute add_minus_cancel)
 
 lemma offset_not_aligned:
   "\<lbrakk> is_aligned (p::word32) n; i > 0; i < 2 ^ n; n < 32\<rbrakk>

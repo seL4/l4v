@@ -12,7 +12,7 @@
 Decoding system calls
 *)
 
-header "Decoding System Calls"
+chapter "Decoding System Calls"
 
 theory Decode_A
 imports
@@ -448,31 +448,6 @@ where
   odE
 | _ \<Rightarrow> throwError TruncatedMessage"
 
-
-primrec
-  tc_new_fault_ep :: "tcb_invocation \<Rightarrow> cap_ref option"
-where
-  "tc_new_fault_ep (ThreadControl target slot faultep prio croot vroot buffer) = faultep"
-
-primrec
-  tc_new_priority :: "tcb_invocation \<Rightarrow> word8 option"
-where
-  "tc_new_priority (ThreadControl target slot faultep prio croot vroot buffer) = prio"
-
-primrec
-  tc_new_croot :: "tcb_invocation \<Rightarrow> (cap \<times> cslot_ptr) option"
-where
-  "tc_new_croot (ThreadControl target slot faultep prio croot vroot buffer) = croot"
-
-primrec
-  tc_new_vroot :: "tcb_invocation \<Rightarrow> (cap \<times> cslot_ptr) option"
-where
-  "tc_new_vroot (ThreadControl target slot faultep prio croot vroot buffer) = vroot"
-
-primrec
-  tc_new_buffer :: "tcb_invocation \<Rightarrow> (vspace_ref \<times> (cap \<times> cslot_ptr) option) option"
-where
-  "tc_new_buffer (ThreadControl target slot faultep prio croot vroot buffer) = buffer"
 
 definition
   decode_set_priority :: "data list \<Rightarrow> cap \<Rightarrow> cslot_ptr \<Rightarrow> (tcb_invocation,'z::state_ext) se_monad"

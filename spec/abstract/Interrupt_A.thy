@@ -12,7 +12,7 @@
 Formalisation of interrupt handling.
 *)
 
-header "Interrupts"
+chapter "Interrupts"
 
 theory Interrupt_A
 imports Ipc_A

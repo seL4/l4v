@@ -97,8 +97,7 @@ lemma empty_fail_getAsyncEP [intro!, wp, simp]:
 lemma empty_fail_lookupIPCBuffer [intro!, wp, simp]:
   "empty_fail (lookupIPCBuffer a b)"
   by (clarsimp simp: lookupIPCBuffer_def ArchVSpace_H.lookupIPCBuffer_def
-                     Let_def empty_fail_threadGet
-                     getThreadBufferSlot_def locateSlot_def)
+                     Let_def getThreadBufferSlot_def locateSlot_def)
 
 lemma empty_fail_updateObject_default [intro!, wp, simp]:
   "empty_fail (updateObject_default v ko a b c)"
@@ -112,13 +111,7 @@ lemma empty_fail_getThreadState[iff]:
   "empty_fail (getThreadState t)"
   by (simp add: getThreadState_def)
 
-lemma empty_fail_stateAssert [intro!, wp, simp]:
-  "empty_fail (stateAssert P l)"
-  by (simp add: stateAssert_def empty_fail_def get_def assert_def
-                return_def fail_def bind_def)
-
-lemma empty_fail_setRegister [intro!, wp, simp]:
-  "empty_fail (setRegister r v)"
-  by (simp add: setRegister_def)
+declare empty_fail_stateAssert [wp]
+declare setRegister_empty_fail [intro!, simp]
 
 end

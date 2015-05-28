@@ -507,7 +507,7 @@ lemma reduceZombie_ccorres1:
                apply (rule ccorres_Cond_rhs_Seq)
                 apply (rule_tac P="\<exists>s. s \<turnstile>' cap \<and> s \<turnstile>' cteCap rv"
                               in ccorres_gen_asm)
-                apply (subgoal_tac "?P", subst if_P, assumption)
+                apply (subgoal_tac "P" for P, subst if_P, assumption)
                  prefer 2
                  apply (clarsimp simp: word_unat.Abs_inject
                                        valid_cap_capZombieNumber_unats)
@@ -539,7 +539,7 @@ lemma reduceZombie_ccorres1:
                      apply (rule order_trans, rule diff_le_self)
                      apply (simp add: unat_of_nat)
                     apply clarsimp
-                    apply (erule_tac P="\<lambda>cap. ccap_relation cap ?cap'" in rsubst)
+                    apply (erule_tac P="\<lambda>cap. ccap_relation cap cap'" for cap' in rsubst)
                     apply (clarsimp simp: isCap_simps capAligned_def)
                     apply (drule valid_cap_capZombieNumber_unats | simp)+
                     apply (simp add: word_unat.Abs_inverse)
@@ -561,7 +561,7 @@ lemma reduceZombie_ccorres1:
               apply (simp add: guard_is_UNIV_def)+
            apply (rule ccorres_fail)
           apply (simp add: guard_is_UNIV_def)
-         apply (simp add: conj_ac)
+         apply (simp add: conj_comms)
          apply (wp getCTE_wp)
         apply simp
         apply (rule ccorres_split_throws)
@@ -807,7 +807,7 @@ proof (induct rule: finaliseSlot'.induct[where ?a0.0=slot and ?a1.0=exposed and 
                 apply (wp cutMon_validE_drop reduceZombie_invs reduceZombie_sch_act_simple)
                 apply (wp reduceZombie_cap_to[simplified imp_conv_disj, simplified])
                apply (simp add: guard_is_UNIV_def)
-              apply (simp add: conj_ac)
+              apply (simp add: conj_comms)
               apply (wp make_zombie_invs' updateCap_cte_wp_at_cases
                         updateCap_cap_to' hoare_vcg_disj_lift static_imp_wp)
             apply (simp add: guard_is_UNIV_def)
@@ -918,7 +918,7 @@ proof (induct rule: cteRevoke.induct[where ?a0.0=slot and ?a1.0=s])
           apply vcg
           apply (clarsimp simp: cte_wp_at_ctes_of)
           apply (frule_tac p="slot'" in ctes_of_valid', clarsimp)
-          apply (frule_tac p="mdbNext ?m" in ctes_of_valid', clarsimp)
+          apply (frule_tac p="mdbNext m" for m in ctes_of_valid', clarsimp)
           apply (drule(1) rf_sr_ctes_of_clift[rotated])+
           apply (clarsimp simp: ccte_relation_def)
           apply (auto intro: valid_capAligned)[1]

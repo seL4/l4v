@@ -236,8 +236,8 @@ let
         SOME _ =>
           (* Prepend the L1_init code. *)
           Utils.named_cterm_instantiate
-            [("X", cterm_of (Proof_Context.theory_of ctxt) (the ret_var_setter)),
-             ("X'", cterm_of (Proof_Context.theory_of ctxt) (the ret_var_getter))]
+            [("X", Thm.cterm_of ctxt (the ret_var_setter)),
+             ("X'", Thm.cterm_of ctxt (the ret_var_getter))]
             (try_unify [
                 (fn _ => @{thm L1corres_prepend_unknown_var_recguard} OF [thm]),
                 (fn _ => @{thm L1corres_prepend_unknown_var} OF [thm]),
@@ -349,7 +349,7 @@ fun get_l1corres_thm prog_info fn_info ctxt do_opt trace_opt fn_name
    *)
 in
   mk_L1corres_call_prop ctxt prog_info fn_info fn_name monad
-  |> cterm_of thy
+  |> Thm.cterm_of ctxt
   |> Goal.init
   |> apply_tac "unfold SIMPL body"
         (case impl_thm of

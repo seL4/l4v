@@ -14,14 +14,14 @@ begin
 
 definition
   spec_valid :: "'s \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> ('s, 'r) nondet_monad \<Rightarrow> ('r \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> bool"
-                 ("_ \<turnstile> /\<lbrace>_\<rbrace>/ _ /\<lbrace>_\<rbrace>")
+                 ("_ \<turnstile> /\<lbrace>_\<rbrace>/ _ /\<lbrace>_\<rbrace>" [60,0,0,0] 100)
 where
  "spec_valid st P f Q \<equiv> valid (\<lambda>s. s = st \<and> P s) f Q"
 
 definition
   spec_validE :: "'s \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> ('s, 'e + 'r) nondet_monad \<Rightarrow> 
                    ('r \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('e \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> bool"
-                 ("_ \<turnstile> /\<lbrace>_\<rbrace>/ _ /(\<lbrace>_\<rbrace>, /\<lbrace>_\<rbrace>)")
+                 ("_ \<turnstile> /\<lbrace>_\<rbrace>/ _ /(\<lbrace>_\<rbrace>, /\<lbrace>_\<rbrace>)" [60,0,0,0] 100)
 where
  "spec_validE st P f Q E \<equiv> validE (\<lambda>s. s = st \<and> P s) f Q E"
 
@@ -34,14 +34,14 @@ lemma use_spec':
   apply (erule(1) my_BallE, simp)
   done
 
-lemma use_spec:
-  "\<lbrakk> \<And>s. s \<turnstile> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>"
+lemma use_specE':
   "\<lbrakk> \<And>s. s \<turnstile> \<lbrace>P'\<rbrace> f' \<lbrace>Q'\<rbrace>,\<lbrace>E\<rbrace> \<rbrakk> \<Longrightarrow> \<lbrace>P'\<rbrace> f' \<lbrace>Q'\<rbrace>,\<lbrace>E\<rbrace>"
-  apply (simp add: use_spec')
   apply (simp add: validE_def spec_validE_def)
   apply (fold spec_valid_def)
   apply (simp add: use_spec')
-  done
+  done  
+
+lemmas use_spec = use_spec' use_specE'
 
 lemma drop_equalled_validE:
   "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace> \<Longrightarrow> \<lbrace>\<lambda>s. s = s' \<and> P s\<rbrace> f \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"
@@ -133,7 +133,7 @@ lemma spec_valid_conj_lift:
      \<Longrightarrow> s \<turnstile> \<lbrace>\<lambda>s. P s \<and> P' s\<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<and> Q' rv s\<rbrace>"
   apply (simp add: spec_valid_def)
   apply (drule(1) hoare_vcg_conj_lift)
-  apply (simp add: conj_ac)
+  apply (simp add: conj_comms)
   done
 
 lemma spec_valid_conj_liftE1:
@@ -141,7 +141,7 @@ lemma spec_valid_conj_liftE1:
      \<Longrightarrow> s \<turnstile> \<lbrace>\<lambda>s. P s \<and> P' s\<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<and> Q' rv s\<rbrace>,\<lbrace>E'\<rbrace>"
   apply (simp add: spec_validE_def)
   apply (drule(1) hoare_vcg_conj_liftE1)
-  apply (simp add: conj_ac pred_conj_def)
+  apply (simp add: conj_comms pred_conj_def)
   done
 
 lemma spec_valid_conj_liftE2:
@@ -149,7 +149,7 @@ lemma spec_valid_conj_liftE2:
      \<Longrightarrow> s \<turnstile> \<lbrace>\<lambda>s. P s \<and> P' s\<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<and> Q' rv s\<rbrace>,\<lbrace>E'\<rbrace>"
   apply (simp add: spec_validE_def)
   apply (drule(1) hoare_vcg_conj_liftE1)
-  apply (simp add: conj_ac pred_conj_def)
+  apply (simp add: conj_comms pred_conj_def)
   done
 
 lemma hoare_pre_spec_valid:

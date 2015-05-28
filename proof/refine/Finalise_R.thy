@@ -15,8 +15,6 @@ imports
   Retype_R
 begin
 
-declare if_cong[cong]
-
 text {* Properties about empty_slot/emptySlot *}
 
 lemma case_Null_If:
@@ -241,8 +239,8 @@ lemma n_cap:
                then cap = NullCap
                else cap' = cap)"
   apply (clarsimp simp: n_def modify_map_if initMDBNode_def split: split_if_asm)
-  apply (cases node)
-  apply auto
+   apply (cases node)
+   apply auto
   done
 
 lemma m_cap:
@@ -482,7 +480,7 @@ proof -
      (* using mdb_chunked to show cap in between is same as on either side *)
      apply (subgoal_tac "capMasterCap s_cap = capMasterCap cap'")
       prefer 2
-      apply (thin_tac "\<forall>p. ?P p")
+      apply (thin_tac "\<forall>p. P p" for P)
       apply (drule mdb_chunked2D[OF chunked])
            apply (fastforce simp: mdb_next_unfold)
           apply assumption+
@@ -534,21 +532,18 @@ lemma to_slot_eq [simp]:
 
 lemma n_parent_of:
   "\<lbrakk> n \<turnstile> p parentOf p'; p \<noteq> slot; p' \<noteq> slot \<rbrakk> \<Longrightarrow> m \<turnstile> p parentOf p'"
-  apply (clarsimp simp add: parentOf_def)
+  apply (clarsimp simp: parentOf_def)
   apply (case_tac cte, case_tac cte')
   apply clarsimp
   apply (frule_tac p=p in n_cap)
   apply (frule_tac p=p in n_badged)
   apply (drule_tac p=p in n_revokable)
-  apply (clarsimp cong: if_cong)
+  apply (clarsimp)
   apply (frule_tac p=p' in n_cap)
   apply (frule_tac p=p' in n_badged)
   apply (drule_tac p=p' in n_revokable)
-  apply (clarsimp cong: if_cong split: split_if_asm)
-     apply (clarsimp simp: isMDBParentOf_def isCap_simps split: split_if_asm)
-    apply (clarsimp simp: isMDBParentOf_def isCap_simps split: split_if_asm)
-   apply (clarsimp simp: isMDBParentOf_def isCap_simps split: split_if_asm)
-  apply (clarsimp simp: isMDBParentOf_def isCap_simps split: split_if_asm)
+  apply (clarsimp split: split_if_asm;
+         clarsimp simp: isMDBParentOf_def isCap_simps split: split_if_asm cong: if_cong)
   done
 
 lemma m_parent_of:
@@ -564,9 +559,8 @@ lemma m_parent_of:
   apply (frule_tac p=p' in m_badged)
   apply (drule_tac p=p' in m_revokable)
   apply clarsimp
-  apply (simp split: split_if_asm)
-   apply (clarsimp simp: isMDBParentOf_def isCap_simps split: split_if_asm)
-  apply (clarsimp simp: isMDBParentOf_def isCap_simps split: split_if_asm)
+  apply (simp split: split_if_asm;
+         clarsimp simp: isMDBParentOf_def isCap_simps split: split_if_asm cong: if_cong)
   done
 
 lemma m_parent_of_next:
@@ -579,16 +573,13 @@ lemma m_parent_of_next:
   apply (frule_tac p=p in m_cap)
   apply (frule_tac p=p in m_badged)
   apply (drule_tac p=p in m_revokable)
-  apply clarsimp
   apply (frule_tac p="mdbNext s_node" in m_cap)
   apply (frule_tac p="mdbNext s_node" in m_badged)
   apply (drule_tac p="mdbNext s_node" in m_revokable)
-  apply clarsimp
   apply (frule_tac p="slot" in m_cap)
   apply (frule_tac p="slot" in m_badged)
   apply (drule_tac p="slot" in m_revokable)
-  apply clarsimp
-  apply (clarsimp simp: isMDBParentOf_def isCap_simps split: split_if_asm)
+  apply (clarsimp simp: isMDBParentOf_def isCap_simps split: split_if_asm cong: if_cong)
   done
 
 lemma parency_n:
@@ -637,11 +628,12 @@ proof induct
     apply (drule spec[where x=slot])
     apply (simp add: slot prev_slot_next)
     apply (case_tac cte, case_tac cte')
+    apply (rename_tac cap'' node'')
     apply (clarsimp simp: isMDBParentOf_CTE)
     apply (frule n_cap, drule n_badged)
     apply (frule n_cap, drule n_badged)
     apply clarsimp
-    apply (case_tac capabilityc, simp_all add: isCap_simps)[1]
+    apply (case_tac cap'', simp_all add: isCap_simps)[1]
      apply (clarsimp simp: sameRegionAs_def3 isCap_simps)
     apply (clarsimp simp: sameRegionAs_def3 isCap_simps)
     done
@@ -670,9 +662,10 @@ next
        apply (frule n_parent_of, simp, simp)
        apply (clarsimp simp: parentOf_def slot)
        apply (case_tac cte'a)
+       apply (rename_tac cap node)
        apply (case_tac ctea)
        apply clarsimp
-       apply (subgoal_tac "sameRegionAs capability s_cap")
+       apply (subgoal_tac "sameRegionAs cap s_cap")
         prefer 2
         apply (insert chunked)[1]
         apply (simp add: mdb_chunked_def)
@@ -696,7 +689,7 @@ next
         apply (erule impE)
          apply clarsimp
         apply clarsimp
-        apply (thin_tac "?s \<longrightarrow> ?t")
+        apply (thin_tac "s \<longrightarrow> t" for s t)
         apply (simp add: is_chunk_def)
         apply (erule_tac x=slot in allE)
         apply (erule impE, fastforce)
@@ -707,6 +700,7 @@ next
        apply (drule spec[where x=slot], drule spec[where x="mdbNext s_node"])
        apply (simp add: slot m_slot_next)
        apply (case_tac cte, case_tac cte')
+       apply (rename_tac cap'' node'')
        apply (clarsimp simp: isMDBParentOf_CTE)
        apply (frule n_cap, drule n_badged)
        apply (frule n_cap, drule n_badged)
@@ -717,7 +711,7 @@ next
         apply (rule trancl.intros(2)[OF _ m_slot_next])
         apply (rule trancl.intros(1), rule prev_slot_next)
         apply simp
-       apply (case_tac capabilityc, simp_all add: isCap_simps)[1]
+       apply (case_tac cap'', simp_all add: isCap_simps)[1]
         apply (clarsimp simp: sameRegionAs_def3 isCap_simps)
        apply (clarsimp simp: sameRegionAs_def3 isCap_simps)
       apply (rule m_slot_next)
@@ -1553,11 +1547,11 @@ lemma empty_slot_corres:
    apply (rule set_cap_revokable_update)
    apply (erule set_cap_cdt_update)
   apply clarsimp
-  apply (thin_tac "ctes_of ?t = ?s")+
-  apply (thin_tac "ksMachineState ?t = ?p")+
-  apply (thin_tac "ksCurThread ?t = ?p")+
-  apply (thin_tac "ksReadyQueues ?t = ?p")+
-  apply (thin_tac "ksSchedulerAction ?t = ?p")+
+  apply (thin_tac "ctes_of t = s" for t s)+
+  apply (thin_tac "ksMachineState t = p" for t p)+
+  apply (thin_tac "ksCurThread t = p" for t p)+
+  apply (thin_tac "ksReadyQueues t = p" for t p)+
+  apply (thin_tac "ksSchedulerAction t = p" for t p)+
   apply (clarsimp simp: cte_wp_at_ctes_of)
   apply (case_tac rv')
   apply (rename_tac s_cap s_node)
@@ -1695,9 +1689,9 @@ lemma empty_slot_corres:
   apply (subgoal_tac "cte_map slot \<notin> descendants_of' (cte_map (aa,bb)) (ctes_of b)")  
    apply simp
   apply (erule_tac x=aa in allE, erule allE, erule (1) impE)
-  apply (drule_tac s="cte_map ` ?u" in sym)
+  apply (drule_tac s="cte_map ` u" for u in sym)
   apply clarsimp
-  apply (drule cte_map_inj_eq, assumption)  
+  apply (drule cte_map_inj_eq, assumption)
       apply (erule descendants_of_cte_at, fastforce)
      apply fastforce
     apply fastforce
@@ -2054,7 +2048,7 @@ lemma final_cap_corres':
    apply (erule_tac x=ba in allE)
    apply (clarsimp simp: cte_wp_at_caps_of_state)
    apply (clarsimp simp: sameObjectAs_def3 obj_refs_Master cap_irqs_relation_Master
-                         obj_irq_refs_Int)
+                         obj_irq_refs_Int cong: if_cong)
   apply (clarsimp simp: isFinal_def is_final_cap'_def3)
   apply (rule_tac x="fst ptr" in exI)
   apply (rule_tac x="snd ptr" in exI)
@@ -2121,6 +2115,11 @@ definition
   finaliseCapTrue_standin_simple_def:
   "finaliseCapTrue_standin cap fin \<equiv> finaliseCap cap fin True"
 
+context
+begin
+
+declare if_cong [cong]
+
 lemmas finaliseCapTrue_standin_def
     = finaliseCapTrue_standin_simple_def
         [unfolded finaliseCap_def, simplified]
@@ -2132,6 +2131,8 @@ lemmas cteDeleteOne_def
 
 crunch typ_at'[wp]: cteDeleteOne, suspend "\<lambda>s. P (typ_at' T p s)"
   (wp: crunch_wps simp: crunch_simps unless_def)
+
+end
 
 lemmas epCancelAll_typs[wp] = typ_at_lifts [OF epCancelAll_typ_at']
 lemmas aepCancelAll_typs[wp] = typ_at_lifts [OF aepCancelAll_typ_at']
@@ -3366,6 +3367,7 @@ lemma recycleCap_invs:
   apply (cases cap, simp_all add: isCap_simps)
             defer 6 (* Zombie *)
             apply ((wp arch_recycleCap_invs [where slot=slot] | simp)+)[10]
+  apply (rename_tac word zombie_type nat)
   apply (case_tac zombie_type, simp_all add: threadGet_def curDomain_def)
    apply (rule hoare_seq_ext [OF _ assert_sp]
                hoare_seq_ext [OF _ getObject_tcb_sp]
@@ -3472,7 +3474,7 @@ lemma arch_recycle_cap_corres:
   apply (simp add: arch_recycle_cap_def ArchRetype_H.recycleCap_def final_matters'_def split_def
                     split del: split_if)
   apply (cases cap, simp_all add: isCap_simps split del: split_if)
-  -- "ASID pool"
+     -- "ASID pool"
      apply (simp add: makeObject_asidpool const_None_empty)
      apply (rule corres_guard_imp)
        apply (rule corres_split [OF _ corres_gets_asid])
@@ -3490,39 +3492,40 @@ lemma arch_recycle_cap_corres:
                   apply (clarsimp simp: up_ucast_inj_eq)
                  apply (wp | simp add: inv_def)+
       apply (auto simp: valid_cap_def valid_cap'_def inv_def mask_def)[2]
-      -- "PageCap"
+    -- "PageCap"
+    apply (rename_tac word vmrights vmpage_size option)
     apply (rule corres_guard_imp)
       apply (rule corres_split [where r' = dc])
-         apply (rule corres_split
-                     [where R = "\<top>\<top>" and R' = "\<top>\<top>" and r' = cap_relation])
+         apply (rule corres_split [where R = "\<top>\<top>" and R' = "\<top>\<top>" and r' = cap_relation])
             apply (simp add: acap_relation_reset_mapping)
            apply (rule arch_finalise_cap_corres [where sl = slot])
             apply (simp add:final_matters'_def)
            apply simp
           apply wp
         apply (rule_tac F = "is_aligned word 2" in corres_gen_asm2)
-        apply (rule corres_machine_op) 
+        apply (rule corres_machine_op)
         apply (rule corres_guard_imp)
-          apply (simp add:shiftL_nat)
+          apply (simp add: shiftL_nat)
           apply (rule clearMemory_corres)
          apply simp
         apply assumption
        apply simp
        apply (wp do_machine_op_valid_cap no_irq_clearMemory)
-      apply simp
      apply simp
+    apply simp
     apply (clarsimp simp add: valid_cap'_def capAligned_def final_matters'_def)
     apply (erule is_aligned_weaken)
     apply (case_tac vmpage_size, simp_all)[1]
    -- "PageTable"
-   apply (simp add: mapM_x_mapM
-                    objBits_simps archObjSize_def split del: split_if)
+   apply (rename_tac word option)
+   apply (simp add: mapM_x_mapM objBits_simps archObjSize_def split del: split_if)
    apply (rule_tac F="is_aligned word pt_bits" in corres_req)
     apply (clarsimp simp: valid_cap_def cap_aligned_def
                           pt_bits_def pageBits_def)
    apply (simp add: upto_enum_step_subtract[where x=x and y="x + 4" for x]
-                is_aligned_no_overflow pt_bits_stuff
-                upto_enum_step_red[where us=2, simplified] split del: split_if)
+                    is_aligned_no_overflow pt_bits_stuff
+                    upto_enum_step_red[where us=2, simplified]
+               split del: split_if)
    apply (rule corres_guard_imp)
      apply (rule corres_split_nor)
         apply (rule corres_split_nor)
@@ -3603,7 +3606,7 @@ lemma arch_recycle_cap_corres:
    apply (simp add: word_less_nat_alt unat_of_nat)
   -- "PageDirectory"
   apply (rule corres_guard_imp)
-    apply (rule corres_split) 
+    apply (rule corres_split)
        prefer 2
        apply (simp add: liftM_def[symmetric] o_def dc_def[symmetric]
                         mapM_x_mapM)
@@ -3616,7 +3619,7 @@ lemma arch_recycle_cap_corres:
                       in corres_mapM_list_all2, simp_all)[1]
             apply (rule corres_guard_imp, rule store_pde_corres)
               apply (simp add:pde_relation_aligned_def)
-           apply (wp hoare_vcg_const_Ball_lift | simp)+
+             apply (wp hoare_vcg_const_Ball_lift | simp)+
          apply (simp add: list_all2_refl)
         apply assumption
        apply assumption
@@ -3673,8 +3676,7 @@ lemma arch_recycle_cap_corres:
      apply (erule order_le_less_trans)
      apply (simp add: pageBits_def)
     apply clarsimp
-   apply (subst is_aligned_add_helper[OF _ shiftl_less_t2n],
-          simp_all add: kernel_base_def pd_bits_14)[1]
+   apply (subst is_aligned_add_helper[OF _ shiftl_less_t2n]; simp add: kernel_base_def pd_bits_14)
     apply (erule order_le_less_trans, simp)
    apply (clarsimp simp: cte_wp_at_caps_of_state)
    apply (drule valid_global_refsD2, clarsimp)
@@ -3891,7 +3893,8 @@ lemma recycle_cap_corres:
       apply (rule corres_guard_imp, rule ep_cancel_badged_sends_corres)
       apply (simp add: valid_cap_def)
      apply (simp add: valid_cap'_def)
-    apply (case_tac option, simp_all)
+    apply (rename_tac word option nat)
+    apply (case_tac option; simp)
      apply (simp add: Let_def zbits_map_def allRights_def
                       get_thread_state_def)
      apply (rule stronger_corres_guard_imp)
@@ -3919,7 +3922,7 @@ lemma recycle_cap_corres:
         apply (wp threadGet_const gts_st_tcb_at)
       apply (clarsimp simp: valid_cap_def st_tcb_def2 tcb_at_def)
       apply (frule zombie_not_ex_cap_to, clarsimp)
-      apply (rule ccontr, erule notE, rule_tac P="op = ?v" in st_tcb_ex_cap)
+      apply (rule ccontr, erule notE, rule_tac P="op = v" for v in st_tcb_ex_cap)
         apply (simp add: st_tcb_def2)
        apply clarsimp
       apply (clarsimp simp: valid_sched_def split: Structures_A.thread_state.split_asm)
@@ -3951,8 +3954,8 @@ lemma recycle_cap_corres:
   apply (rule corres_guard_imp)
     apply (simp add: o_def)
     apply (rule arch_recycle_cap_corres)
-    apply (force simp: valid_sched_def)+
-    done
+     apply (force simp: valid_sched_def)+
+  done
 
 crunch typ_at'[wp]: recycleCap "\<lambda>s. P (typ_at' T p s)"
   (ignore: filterM 
@@ -4068,12 +4071,10 @@ lemma cteDeleteOne_ct_not_ksQ:
    apply (simp add: finaliseCapTrue_standin_simple_def)
    apply wp
    apply (clarsimp)
-  apply (wp emptySlot_cteCaps_of
-            hoare_lift_Pf2 [OF emptySlot_ksQ emptySlot_ct])
+  apply (wp emptySlot_cteCaps_of hoare_lift_Pf2 [OF emptySlot_ksQ emptySlot_ct])
     apply (simp add: cteCaps_of_def)
     apply (wp_once hoare_drop_imps)
-    apply (wp finaliseCapTrue_standin_ct_not_ksQ
-              isFinalCapability_inv)
+    apply (wp finaliseCapTrue_standin_ct_not_ksQ isFinalCapability_inv)
   apply (clarsimp)
   done
 

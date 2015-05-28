@@ -12,7 +12,7 @@
 Dummy initial kernel state. Real kernel boot up is more complex.
 *)
 
-header "An Initial Kernel State"
+chapter "An Initial Kernel State"
 
 theory Init_A
 imports Retype_A

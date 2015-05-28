@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-header "Physical Memory Structure"
+chapter "Physical Memory Structure"
 
 theory PSpaceStruct_H
 imports

@@ -1544,7 +1544,8 @@ next
           apply (clarsimp simp: cap_irq_opt_def cte_wp_at_def is_zombie_def
                          split: cap.split_asm split_if_asm
                          elim!: ranE dest!: caps_of_state_cteD)
-          apply(clarsimp cong: conj_cong simp: conj_ac)
+          apply(clarsimp cong: conj_cong simp: conj_comms)
+          apply(rename_tac word option nat)
           apply(drule_tac s="{word}" in sym)
           apply clarsimp
           apply(rule conjI, fastforce)
@@ -1560,7 +1561,7 @@ next
           apply(clarsimp simp: cte_wp_at_def appropriate_cte_cap_def)
           apply(drule_tac x="cap" in fun_cong)
           apply(clarsimp simp: appropriate_cte_cap_def split: cap.splits)
-         apply(clarsimp cong: conj_cong simp: conj_ac)
+         apply(clarsimp cong: conj_cong simp: conj_comms)
         apply(wp drop_spec_ev[OF liftE_ev] is_final_cap_reads_respects | simp)+
 
 
@@ -1825,17 +1826,17 @@ lemma fast_finalise_globals_equiv:
 
 lemma tcb_sched_action_enqueue_valid_ko_at_arm[wp]:
   "\<lbrace>valid_ko_at_arm\<rbrace> tcb_sched_action tcb_sched_enqueue word \<lbrace>\<lambda>_. valid_ko_at_arm\<rbrace>"
-apply (simp add: tcb_sched_action_def)
-apply wp
-apply (simp add: etcb_at_def)
-done
+  apply (simp add: tcb_sched_action_def)
+  apply wp
+  apply (simp add: etcb_at_def)
+  done
 
 lemma tcb_sched_action_dequeue_valid_ko_at_arm[wp]:
   "\<lbrace>valid_ko_at_arm\<rbrace> tcb_sched_action tcb_sched_dequeue word \<lbrace>\<lambda>_. valid_ko_at_arm\<rbrace>"
-apply (simp add: tcb_sched_action_def)
-apply wp
-apply (simp add: etcb_at_def)
-done
+  apply (simp add: tcb_sched_action_def)
+  apply wp
+  apply (simp add: etcb_at_def)
+ done
 
 crunch valid_ko_at_arm[wp]: fast_finalise "valid_ko_at_arm" (wp: mapM_x_wp' dxo_wp_weak ignore: reschedule_required)
 crunch valid_ko_at_arm[wp]: set_original "valid_ko_at_arm" (simp: valid_ko_at_arm_def)
@@ -1856,8 +1857,8 @@ lemma transfer_caps_valid_ko_at_arm[wp]:
   unfolding transfer_caps_def
   apply (wp | wpc)+
   apply (wp transfer_caps_loop_pres cap_insert_valid_ko_at_arm)
-  apply (simp add: transfer_caps_loop.simps)
-done
+  apply (simp)
+  done
 
 lemma empty_slot_globals_equiv:
   "\<lbrace>globals_equiv st and valid_ko_at_arm\<rbrace> empty_slot s b\<lbrace>\<lambda>_. globals_equiv st\<rbrace>"

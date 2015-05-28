@@ -87,61 +87,8 @@ lemma memcpy_char:
   apply unat_arith
  done
 
-lemma is_aligned_add_not_aligned:
-    "\<lbrakk>is_aligned (p::word32) n; \<not> is_aligned (q::word32) n\<rbrakk> \<Longrightarrow>
-          \<not> is_aligned (p + q) n"
-  by (metis is_aligned_addD1)
-
-(* Possibly useful for something later *)
-lemma "\<lbrakk> 2 ^ n dvd (p::nat); n > 0; i > 0; i < 2 ^ n; p + i > p; n < 32\<rbrakk> \<Longrightarrow>
-          \<not> (2 ^ n dvd (p + i))"
-  by (metis dvd_def dvd_reduce_multiple nat_dvd_not_less)
-
-(* FIXME: MOVE *)
-lemma word32_gr0_conv_Suc:"(m::word32) > 0 \<Longrightarrow> \<exists>n. m = n + 1"
-  by (metis comm_semiring_1_class.normalizing_semiring_rules(24) zadd_diff_inverse)
-
-(* FIXME: MOVE *)
-lemma offset_not_aligned:
-  "\<lbrakk> is_aligned (p::word32) n; i > 0; i < 2 ^ n; n < 32\<rbrakk>
-     \<Longrightarrow> \<not> is_aligned (p + of_nat i) n"
-  apply (erule is_aligned_add_not_aligned)
-  unfolding is_aligned_def apply clarsimp
-  apply (subst (asm) unat_of_nat_len)
-   apply (metis len32 unat_less_word_bits unat_power_lower32 word_bits_conv)
-  apply (metis nat_dvd_not_less)
-  done
-
 lemma of_nat_prop_exp: "n < 32 \<Longrightarrow> of_nat (2 ^ n) = 2 ^ (of_nat n)"
   by clarsimp
-
-lemma neg_mask_add_aligned:
-  "\<lbrakk> is_aligned p n; q < 2 ^ n \<rbrakk>
-     \<Longrightarrow> (p + q) && ~~ mask n = p && ~~ mask n"
-  by (metis is_aligned_add_helper is_aligned_neg_mask_eq)
-
-lemma neq_imp_bytes_disjoint:
-  "\<lbrakk> c_guard (x::'a::c_type ptr); c_guard y; unat j < align_of TYPE('a);
-        unat i < align_of TYPE('a); x \<noteq> y; 2 ^ n = align_of TYPE('a); n < 32\<rbrakk> \<Longrightarrow>
-    ptr_val x + j \<noteq> ptr_val y + i"
-  apply (rule ccontr)
-  apply (subgoal_tac "is_aligned (ptr_val x) n")
-   apply (subgoal_tac "is_aligned (ptr_val y) n")
-    apply (subgoal_tac "(ptr_val x + j && ~~ mask n) = (ptr_val y + i && ~~ mask n)")
-     apply (subst (asm) neg_mask_add_aligned, simp, simp add: word_less_nat_alt)
-     apply (subst (asm) neg_mask_add_aligned, simp, simp add: word_less_nat_alt)
-     apply (clarsimp simp: is_aligned_neg_mask_eq)
-    apply simp
-   apply (clarsimp simp: c_guard_def ptr_aligned_def is_aligned_def)
-  apply (clarsimp simp: c_guard_def ptr_aligned_def is_aligned_def)
-  done
-
-lemma from_bytes_eq [simp]:
-  "from_bytes [x] = x"
-  apply (clarsimp simp:from_bytes_def update_ti_t_def typ_info_word)
-  apply (simp add:word_rcat_def)
-  apply (simp add:bin_rcat_def)
-  by (metis len8 word_of_int_uint word_ubin.Abs_norm)
 
 lemma memcpy_word:
   "\<lbrace> \<lambda>s. c_guard (x::32 word ptr) \<and>
@@ -185,7 +132,7 @@ lemma memcpy_word:
         apply (subst h_val_heap_update_disjoint)
 
          (* The current goal should be obvious to unat_arith, but for some reason isn't *)
-         apply (clarsimp simp:ptr_add_def intvl_def ptr_val_def disjoint_iff_not_equal)
+         apply (clarsimp simp:ptr_add_def intvl_def disjoint_iff_not_equal)
          apply (erule_tac x="ptr_val x + a" in allE, clarsimp)
          apply (erule impE)
           apply (rule_tac x="unat a" in exI, clarsimp)
@@ -243,8 +190,7 @@ lemma memcpy_word:
     apply (rule_tac x=2 in allE, assumption, erule impE, unat_arith)
     apply (rule_tac x=3 in allE, assumption, erule impE, unat_arith)
     apply (simp add:CTypesDefs.ptr_add_def)
-    apply (metis comm_semiring_1_class.normalizing_semiring_rules(24))
-   apply clarsimp
+    apply (simp add: add.commute from_bytes_eq)
    apply clarsimp
   apply (clarsimp simp:intvl_def disjoint_iff_not_equal)
   apply (drule_tac x=x and y=y and j="of_nat k" and i="of_nat ka" and n=2 in neq_imp_bytes_disjoint)
@@ -489,8 +435,7 @@ lemma le_uint_max_imp_id: "x \<le> UINT_MAX \<Longrightarrow> unat ((of_nat x)::
 lemma update_bytes_id: "update_bytes s p [] = s"
   apply (clarsimp simp:update_bytes_def)
   apply (subst heap_update_list_base')
-  by (metis (erased, lifting) DEADID.map_id globals.surjective globals.update_convs(1) hrs_htd_def
-                              hrs_htd_mem_update hrs_mem_def hrs_mem_f prod.collapse)
+  by (simp add: hrs_mem_update_id3)
 
 lemma a_horse_by_any_other_name: "t_hrs_'_update f s = s\<lparr>t_hrs_' := f (t_hrs_' s)\<rparr>"
   by auto
@@ -781,24 +726,23 @@ lemma memcpy_int_wp'[unfolded memcpy_int_spec_def]: "memcpy_int_spec dst src"
                       deref s (byte_cast src) # (heap_list (hrs_mem (t_hrs_' s)) 3 (ptr_val src + 1))")
    prefer 2
    apply (clarsimp simp:h_val_def)
-   apply (subst heap_list_rec[symmetric])
-   apply simp
+   apply (metis Suc_numeral from_bytes_eq heap_list_rec semiring_norm(2) semiring_norm(8))
   apply (subgoal_tac "heap_list (hrs_mem (t_hrs_' s)) 3 (ptr_val src + 1) = 
                       deref s (byte_cast src +\<^sub>p 1) # (heap_list (hrs_mem (t_hrs_' s)) 2 (ptr_val src + 2))")
    prefer 2
    apply (clarsimp simp:h_val_def ptr_add_def)
    apply (cut_tac h="hrs_mem (t_hrs_' s)" and p="ptr_val src + 1" and n=2 in heap_list_rec)
    apply clarsimp
-   apply (metis add.commute)
+   apply (simp add: add.commute from_bytes_eq)
   apply clarsimp
   apply (subgoal_tac "heap_list (hrs_mem (t_hrs_' s)) 2 (ptr_val src + 2) = 
                       deref s (byte_cast src +\<^sub>p 2) # (heap_list (hrs_mem (t_hrs_' s)) 1 (ptr_val src + 3))")
    prefer 2
    apply (cut_tac h="hrs_mem (t_hrs_' s)" and p="ptr_val src + 2" and n=3 in heap_list_rec)
-   apply (clarsimp simp:h_val_def ptr_add_def)
+   apply (clarsimp simp:h_val_def ptr_add_def from_bytes_eq)
    apply (metis (no_types, hide_lams) Suc_eq_plus1 heap_list_base heap_list_rec is_num_normalize(1)
                 monoid_add_class.add.left_neutral one_add_one one_plus_numeral semiring_norm(3))
-  apply (clarsimp simp:h_val_def ptr_add_def)
+  apply (clarsimp simp:h_val_def ptr_add_def from_bytes_eq)
   done
 
 text {* memcpying a typed variable is equivalent to assignment. *}
@@ -847,7 +791,7 @@ lemma memcpy_int_wp''[unfolded memcpy_int_spec_def]: "memcpy_int_spec dst src"
   apply (subgoal_tac "heap_list (hrs_mem (t_hrs_' s)) 4 (ptr_val src) = 
                       deref s (byte_cast src) # (heap_list (hrs_mem (t_hrs_' s)) 3 (ptr_val src + 1))")
    prefer 2
-   apply (clarsimp simp:h_val_def)
+   apply (clarsimp simp:h_val_def from_bytes_eq)
    apply (subst heap_list_rec[symmetric])
    apply simp
   apply (subgoal_tac "heap_list (hrs_mem (t_hrs_' s)) 3 (ptr_val src + 1) = 
@@ -855,17 +799,17 @@ lemma memcpy_int_wp''[unfolded memcpy_int_spec_def]: "memcpy_int_spec dst src"
    prefer 2
    apply (clarsimp simp:h_val_def ptr_add_def)
    apply (cut_tac h="hrs_mem (t_hrs_' s)" and p="ptr_val src + 1" and n=2 in heap_list_rec)
-   apply clarsimp
+   apply (clarsimp simp: from_bytes_eq)
    apply (metis add.commute)
   apply clarsimp
   apply (subgoal_tac "heap_list (hrs_mem (t_hrs_' s)) 2 (ptr_val src + 2) = 
                       deref s (byte_cast src +\<^sub>p 2) # (heap_list (hrs_mem (t_hrs_' s)) 1 (ptr_val src + 3))")
    prefer 2
    apply (cut_tac h="hrs_mem (t_hrs_' s)" and p="ptr_val src + 2" and n=3 in heap_list_rec)
-   apply (clarsimp simp:h_val_def ptr_add_def)
+   apply (clarsimp simp:h_val_def ptr_add_def from_bytes_eq)
    apply (metis (no_types, hide_lams) Suc_eq_plus1 heap_list_base heap_list_rec is_num_normalize(1)
                 monoid_add_class.add.left_neutral one_add_one one_plus_numeral semiring_norm(3))
-  apply (clarsimp simp:h_val_def ptr_add_def)
+  apply (clarsimp simp:h_val_def ptr_add_def from_bytes_eq)
   done
 
 lemma bytes_of_imp_at[simp]: "bytes_of s x bs \<Longrightarrow> bytes_at s x bs"
@@ -920,6 +864,8 @@ lemma update_ti_eq:
 
 lemma from_bytes_cong: "x = y \<Longrightarrow> from_bytes x = from_bytes y"
   by simp
+
+declare from_bytes_eq [simp]
 
 text {*
   If you dereference a pointer, the value you get is the same as the underlying bytes backing that

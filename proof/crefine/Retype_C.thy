@@ -1980,37 +1980,39 @@ proof (intro impI allI)
 qed
 
 lemma ccte_relation_makeObject:
-  "ccte_relation makeObject (from_bytes (replicate (size_of TYPE(cte_C)) 0))"
+  notes option.case_cong_weak [cong]
+  shows "ccte_relation makeObject (from_bytes (replicate (size_of TYPE(cte_C)) 0))"
   apply (simp add: Let_def makeObject_cte size_of_def ccte_relation_def option_map_Some_eq2)
   apply (simp add: from_bytes_def)
   apply (simp add: typ_info_simps cte_C_tag_def  cte_lift_def 
     size_td_lt_final_pad size_td_lt_ti_typ_pad_combine Let_def size_of_def)
-  apply (simp add: final_pad_def Let_def size_td_lt_ti_typ_pad_combine Let_def 
+  apply (simp add: final_pad_def Let_def size_td_lt_ti_typ_pad_combine
     size_of_def padup_def align_td_array' size_td_array update_ti_adjust_ti
-    ti_typ_pad_combine_def Let_def ti_typ_combine_def empty_typ_info_def align_of_def
+    ti_typ_pad_combine_def ti_typ_combine_def empty_typ_info_def align_of_def
     typ_info_simps cap_C_tag_def mdb_node_C_tag_def split: option.splits)
   apply (simp add: typ_info_array array_tag_def eval_nat_numeral array_tag_n.simps)   
-  apply (simp add: final_pad_def Let_def size_td_lt_ti_typ_pad_combine Let_def 
+  apply (simp add: final_pad_def Let_def size_td_lt_ti_typ_pad_combine 
     size_of_def padup_def align_td_array' size_td_array update_ti_adjust_ti
-    ti_typ_pad_combine_def Let_def ti_typ_combine_def empty_typ_info_def update_ti_t_word32_0s)
+    ti_typ_pad_combine_def ti_typ_combine_def empty_typ_info_def update_ti_t_word32_0s)
   apply (simp add: cap_lift_def Let_def cap_get_tag_def cap_tag_defs cte_to_H_def cap_to_H_def mdb_node_to_H_def 
     mdb_node_lift_def nullMDBNode_def c_valid_cte_def)
   done
 
 lemma ccte_relation_nullCap:
-  "ccte_relation (CTE NullCap (MDB 0 0 False False)) (from_bytes (replicate (size_of TYPE(cte_C)) 0))"
+  notes option.case_cong_weak [cong]
+  shows "ccte_relation (CTE NullCap (MDB 0 0 False False)) (from_bytes (replicate (size_of TYPE(cte_C)) 0))"
   apply (simp add: Let_def makeObject_cte size_of_def ccte_relation_def option_map_Some_eq2)
   apply (simp add: from_bytes_def)
   apply (simp add: typ_info_simps cte_C_tag_def  cte_lift_def 
     size_td_lt_final_pad size_td_lt_ti_typ_pad_combine Let_def size_of_def)
-  apply (simp add: final_pad_def Let_def size_td_lt_ti_typ_pad_combine Let_def 
+  apply (simp add: final_pad_def Let_def size_td_lt_ti_typ_pad_combine
     size_of_def padup_def align_td_array' size_td_array update_ti_adjust_ti
-    ti_typ_pad_combine_def Let_def ti_typ_combine_def empty_typ_info_def align_of_def
+    ti_typ_pad_combine_def ti_typ_combine_def empty_typ_info_def align_of_def
     typ_info_simps cap_C_tag_def mdb_node_C_tag_def split: option.splits)
   apply (simp add: typ_info_array array_tag_def eval_nat_numeral array_tag_n.simps)   
-  apply (simp add: final_pad_def Let_def size_td_lt_ti_typ_pad_combine Let_def 
+  apply (simp add: final_pad_def Let_def size_td_lt_ti_typ_pad_combine 
     size_of_def padup_def align_td_array' size_td_array update_ti_adjust_ti
-    ti_typ_pad_combine_def Let_def ti_typ_combine_def empty_typ_info_def update_ti_t_word32_0s)
+    ti_typ_pad_combine_def ti_typ_combine_def empty_typ_info_def update_ti_t_word32_0s)
   apply (simp add: cap_lift_def Let_def cap_get_tag_def cap_tag_defs cte_to_H_def cap_to_H_def mdb_node_to_H_def 
     mdb_node_lift_def nullMDBNode_def c_valid_cte_def)
   done
@@ -2658,6 +2660,7 @@ lemmas ccorres_liftM_getCTE_cte_at = ccorres_guard_from_wp_liftM [OF getCTE_pre_
   ccorres_guard_from_wp_bind_liftM [OF getCTE_pre_cte_at empty_fail_getCTE]
 
 lemma insertNewCap_ccorres_helper:
+  notes option.case_cong_weak [cong]
   shows "ccap_relation cap rv'b
        \<Longrightarrow> ccorres dc xfdc (cte_at' slot and K (is_aligned next 3 \<and> is_aligned parent 3))
            UNIV hs (setCTE slot (CTE cap (MDB next parent True True)))
@@ -3054,6 +3057,7 @@ lemma tcb_queue_update_other:
   tcb_queue_relation next prev mp tcbs qe qh"
   apply (induct tcbs arbitrary: qh qe)  
    apply simp
+  apply (rename_tac a tcbs qh qe)
   apply simp
   apply (subgoal_tac "p \<noteq> tcb_ptr_to_ctcb_ptr a")
    apply (simp cong: conj_cong)
@@ -4097,7 +4101,7 @@ proof (intro impI allI)
     apply -
     apply (rule allI)
     apply (subst i1)
-    apply (simp add: byte_to_word_heap_def Let_def nca nca [where x = 0, simplified])
+    apply (simp add: byte_to_word_heap_def Let_def nca nca [where x2 = 0, simplified])
     apply (simp add: word_rcat_bl)
     done
 
@@ -4127,13 +4131,13 @@ proof (intro impI allI)
       apply simp
      apply (rule rc)
     apply (rule ext)
-    apply (frule_tac off = off in nca_neg[rotated,where x = 0])
+    apply (frule_tac off2 = off in nca_neg[rotated,where x2 = 0])
      apply (simp add:p2dist)+
-    apply (frule_tac off = off in nca_neg[rotated,where x = 1])
+    apply (frule_tac off2 = off in nca_neg[rotated,where x2 = 1])
      apply (simp add:p2dist)+
-    apply (frule_tac off = off in nca_neg[rotated,where x = 2])
+    apply (frule_tac off2 = off in nca_neg[rotated,where x2 = 2])
      apply (simp add:p2dist)+
-    apply (frule_tac off = off in nca_neg[rotated,where x = 3])
+    apply (frule_tac off2 = off in nca_neg[rotated,where x2 = 3])
      apply (simp add:p2dist)+
     done
 
@@ -4363,6 +4367,7 @@ lemma getObjectSize_symb:
    apply (simp_all add:object_type_from_H_def Kernel_C_defs
      ARMSmallPageBits_def ARMLargePageBits_def ARMSectionBits_def ARMSuperSectionBits_def
      APIType_capBits_def objBits_simps)
+   apply (rename_tac apiobject_type)
    apply (case_tac apiobject_type)
    apply (simp_all add:object_type_from_H_def Kernel_C_defs
      ARMSmallPageBits_def ARMLargePageBits_def ARMSectionBits_def ARMSuperSectionBits_def
@@ -4435,6 +4440,8 @@ lemma getObjectSize_min_size:
  * to placing a number of objects into the PSpace.
  *)
 lemma placeNewObject_eq:
+  notes option.case_cong_weak [cong]
+  shows
   "\<lbrakk> groupSizeBits < word_bits; is_aligned ptr (groupSizeBits + objBitsKO (injectKOS object));
     no_fail (op = s) (placeNewObject ptr object groupSizeBits) \<rbrakk> \<Longrightarrow>
   ((), (s\<lparr>ksPSpace := foldr (\<lambda>addr. data_map_insert addr (injectKOS object)) (new_cap_addrs (2 ^ groupSizeBits) ptr (injectKOS object)) (ksPSpace s)\<rparr>))
@@ -4869,7 +4876,7 @@ lemma placeNewObject_user_data:
      apply simp
     apply (rule le_refl)
    apply (rule bexI [rotated])
-    apply (rule_tac rv1 = "((),?b)" in in_bind_split[THEN iffD2])
+    apply (rule_tac rv1 = "((),b)" for b in in_bind_split[THEN iffD2])
     apply (rule exI)
     apply (rule conjI)
      apply (subst simpler_placeNewObject_def)
@@ -5807,8 +5814,8 @@ lemma pspace_no_overlap_induce_tcb:
   apply (subgoal_tac "xa\<in>tcb_ptr_to_ctcb_ptr ` dom (map_to_tcbs (ksPSpace s))")
     prefer 2
     apply (simp add:domI)
-  apply (thin_tac "?S = dom ?K")+
-  apply (thin_tac "\<forall>x\<in> ?S. ?K x")+
+  apply (thin_tac "S = dom K" for S K)+
+  apply (thin_tac "\<forall>x\<in> S. K x" for S K)+
   apply (clarsimp simp: image_def projectKO_opt_tcb map_comp_def
                  split: option.splits kernel_object.split_asm)
   apply (frule(1) pspace_no_overlapD')
@@ -5830,8 +5837,8 @@ lemma pspace_no_overlap_induce_endpoint:
   apply (subgoal_tac "xa\<in>ep_Ptr ` dom (map_to_eps (ksPSpace s))")
    prefer 2
    apply (simp add: domI)
-  apply (thin_tac "?S = dom ?K")+
-  apply (thin_tac "\<forall>x\<in> ?S. ?K x")+
+  apply (thin_tac "S = dom K" for S K)+
+  apply (thin_tac "\<forall>x\<in> S. K x" for S K)+
   apply (clarsimp simp: image_def projectKO_opt_ep map_comp_def
                  split: option.splits kernel_object.split_asm)
   apply (frule(1) pspace_no_overlapD')
@@ -5860,8 +5867,8 @@ lemma pspace_no_overlap_induce_async_endpoint:
   apply (subgoal_tac "xa\<in>aep_Ptr ` dom (map_to_aeps (ksPSpace s))")
    prefer 2
    apply (simp add: domI)
-  apply (thin_tac "?S = dom ?K")+
-  apply (thin_tac "\<forall>x\<in> ?S. ?K x")+
+  apply (thin_tac "S = dom K" for S K)+
+  apply (thin_tac "\<forall>x\<in> S. K x" for S K)+
   apply (clarsimp simp: image_def projectKO_opt_aep map_comp_def
                  split: option.splits kernel_object.split_asm)
   apply (frule(1) pspace_no_overlapD')
@@ -5897,7 +5904,7 @@ lemma ctes_of_ko_at_strong:
    apply (rule order_trans[OF word_and_le2])
   apply clarsimp
   apply clarsimp
-  apply (thin_tac "?P \<or> ?Q")
+  apply (thin_tac "P \<or> Q" for P Q)
   apply (erule order_trans)
   apply (subst word_plus_and_or_coroll2[where x = p and w = "mask 9",symmetric])
   apply (clarsimp simp:tcb_cte_cases_def field_simps split:split_if_asm)
@@ -5940,8 +5947,8 @@ lemma pspace_no_overlap_induce_cte:
   apply (subgoal_tac "xa\<in>cte_Ptr ` dom (ctes_of s)")
    prefer 2
    apply (simp add:domI)
-  apply (thin_tac "?S = dom ?K")+
-  apply (thin_tac "\<forall>x\<in> ?S. ?K x")+
+  apply (thin_tac "S = dom K" for S K)+
+  apply (thin_tac "\<forall>x\<in> S. K x" for S K)+
   apply (clarsimp simp: image_def projectKO_opt_cte map_comp_def
                  split: option.splits kernel_object.split_asm)
   apply (frule ctes_of_is_aligned)
@@ -5968,8 +5975,8 @@ lemma pspace_no_overlap_induce_asidpool:
   apply (subgoal_tac "xa\<in>ap_Ptr ` dom (map_to_asidpools (ksPSpace s))")
     prefer 2
     apply (simp add:domI)
-  apply (thin_tac "?S = dom ?K")+
-  apply (thin_tac "\<forall>x\<in> ?S. ?K x")+
+  apply (thin_tac "S = dom K" for S K)+
+  apply (thin_tac "\<forall>x\<in> S. K x" for S K)+
   apply (clarsimp simp:image_def projectKO_opt_asidpool
     map_comp_def split:option.splits kernel_object.split_asm)
   apply (frule(1) pspace_no_overlapD')
@@ -5999,8 +6006,8 @@ lemma pspace_no_overlap_induce_user_data:
   apply (subgoal_tac "xa\<in>Ptr ` dom (heap_to_page_data (ksPSpace s) (underlying_memory (ksMachineState s)))")
     prefer 2
     apply (simp add:domI)
-  apply (thin_tac "?S = dom ?K")+
-  apply (thin_tac "\<forall>x\<in> ?S. ?K x")+
+  apply (thin_tac "S = dom K" for S K)+
+  apply (thin_tac "\<forall>x\<in> S. K x" for S K)+
   apply (clarsimp simp:image_def heap_to_page_data_def projectKO_opt_user_data
     map_comp_def split:option.splits kernel_object.splits)
   apply (frule(1) pspace_no_overlapD')
@@ -6072,8 +6079,8 @@ lemma pspace_no_overlap_induce_pte:
   apply (subgoal_tac "xa\<in>pte_Ptr ` dom (map_to_ptes (ksPSpace s))")
     prefer 2
     apply (simp add:domI)
-  apply (thin_tac "?S = dom ?K")+
-  apply (thin_tac "\<forall>x\<in> ?S. ?K x")+
+  apply (thin_tac "S = dom K" for S K)+
+  apply (thin_tac "\<forall>x\<in> S. K x" for S K)+
   apply (clarsimp simp:image_def projectKO_opt_pte
     map_comp_def split:option.splits kernel_object.split_asm)
   apply (frule(1) pspace_no_overlapD')
@@ -6098,8 +6105,8 @@ lemma pspace_no_overlap_induce_pde:
   apply (subgoal_tac "xa\<in>pde_Ptr ` dom (map_to_pdes (ksPSpace s))")
     prefer 2
     apply (simp add:domI)
-  apply (thin_tac "?S = dom ?K")+
-  apply (thin_tac "\<forall>x\<in> ?S. ?K x")+
+  apply (thin_tac "S = dom K" for S K)+
+  apply (thin_tac "\<forall>x\<in> S. K x" for S K)+
   apply (clarsimp simp:image_def projectKO_opt_pde
     map_comp_def split:option.splits kernel_object.split_asm)
   apply (frule(1) pspace_no_overlapD')
@@ -6429,7 +6436,7 @@ lemma createObject_valid_cap':
   apply (simp add:createObject_def3)
   apply (rule hoare_pre)
   apply wp
-   apply (rule_tac Q = "\<lambda>r s. r \<noteq> [] \<and> ?Q r s" in hoare_strengthen_post)
+   apply (rule_tac Q = "\<lambda>r s. r \<noteq> [] \<and> Q r s" for Q in hoare_strengthen_post)
    apply (rule hoare_vcg_conj_lift)
      apply (rule hoare_strengthen_post[OF createNewCaps_ret_len])
       apply clarsimp
@@ -6501,7 +6508,7 @@ lemma createObject_caps_overlap_reserved_ret':
   apply (simp add:createObject_def3)
   apply (rule hoare_pre)
   apply wp
-   apply (rule_tac Q = "\<lambda>r s. r \<noteq> [] \<and> ?Q r s" in hoare_strengthen_post)
+   apply (rule_tac Q = "\<lambda>r s. r \<noteq> [] \<and> Q r s" for Q in hoare_strengthen_post)
    apply (rule hoare_vcg_conj_lift)
      apply (rule hoare_strengthen_post[OF createNewCaps_ret_len])
       apply clarsimp
@@ -6523,7 +6530,7 @@ lemma createObject_descendants_range':
   apply (simp add:createObject_def3)
   apply (rule hoare_pre)
   apply wp
-   apply (rule_tac Q = "\<lambda>r s. r \<noteq> [] \<and> ?Q r s" in hoare_strengthen_post)
+   apply (rule_tac Q = "\<lambda>r s. r \<noteq> [] \<and> Q r s" for Q in hoare_strengthen_post)
    apply (rule hoare_vcg_conj_lift)
      apply (rule hoare_strengthen_post[OF createNewCaps_ret_len])
       apply clarsimp
@@ -6554,7 +6561,7 @@ lemma createObject_idlethread_range:
   apply (simp add:createObject_def3)
   apply (rule hoare_pre)
   apply wp
-   apply (rule_tac Q = "\<lambda>r s. r \<noteq> [] \<and> ?Q r s" in hoare_strengthen_post)
+   apply (rule_tac Q = "\<lambda>r s. r \<noteq> [] \<and> Q r s" for Q in hoare_strengthen_post)
    apply (rule hoare_vcg_conj_lift)
      apply (rule hoare_strengthen_post[OF createNewCaps_ret_len])
       apply clarsimp
@@ -6574,7 +6581,7 @@ lemma createObject_IRQHandler:
   apply (simp add:createObject_def3)
   apply (rule hoare_pre)
   apply wp
-   apply (rule_tac Q = "\<lambda>r s. r \<noteq> [] \<and> ?Q r s" in hoare_strengthen_post)
+   apply (rule_tac Q = "\<lambda>r s. r \<noteq> [] \<and> Q r s" for Q in hoare_strengthen_post)
    apply (rule hoare_vcg_conj_lift)
      apply (rule hoare_strengthen_post[OF createNewCaps_ret_len])
       apply clarsimp
@@ -6591,7 +6598,7 @@ lemma createObject_capClass[wp]:
   apply (simp add:createObject_def3)
   apply (rule hoare_pre)
   apply wp
-   apply (rule_tac Q = "\<lambda>r s. r \<noteq> [] \<and> ?Q r s" in hoare_strengthen_post)
+   apply (rule_tac Q = "\<lambda>r s. r \<noteq> [] \<and> Q r s" for Q in hoare_strengthen_post)
    apply (rule hoare_vcg_conj_lift)
      apply (rule hoare_strengthen_post[OF createNewCaps_ret_len])
       apply clarsimp
@@ -6619,6 +6626,7 @@ lemma createObject_child:
    apply (case_tac "(capfn ptr)")
    apply (simp_all add:capUntypedPtr_def sameRegionAs_def Let_def isCap_simps)+
     apply clarsimp+
+    apply (rename_tac arch_capability v0 v1 f)
     apply (case_tac arch_capability)
      apply (simp add:ArchRetype_H.capUntypedSize_def)+
      apply (simp add: is_aligned_no_wrap' field_simps)
@@ -6962,10 +6970,10 @@ shows  "ccorres dc xfdc
    apply simp
   apply (cinit lift: t_' parent_' slots_' regionBase_' userSize_')
    apply csymbr
-   apply (rule_tac Q' = "?Q' 
+   apply (rule_tac Q' = "Q' 
      \<inter> {s. objectSize_' s = of_nat (APIType_capBits newType userSize)}
      \<inter> {s. nextFreeArea_' s = Ptr ptr } "
-     in  ccorres_symb_exec_r)
+     for Q' in ccorres_symb_exec_r)
      apply (cinitlift objectSize_' nextFreeArea_')
      apply (clarsimp simp: whileAnno_def)
      apply (rule ccorres_rel_imp)
@@ -7016,7 +7024,7 @@ shows  "ccorres dc xfdc
                  ptr.. (ptr && ~~ mask sz) + 2 ^ sz  - 1} srcSlot (ctes_of s)"
               in hoare_pre(1))
              apply wp
-            apply (clarsimp simp:createObject_hs_preconds_def field_simps conj_ac 
+            apply (clarsimp simp:createObject_hs_preconds_def field_simps conj_comms 
                    invs_valid_pspace' invs_pspace_distinct' invs_pspace_aligned'
                    invs_ksCurDomain_maxDomain')
             apply (subst intvl_range_conv)
@@ -7066,7 +7074,7 @@ shows  "ccorres dc xfdc
         apply (rule conseqPre, vcg exspec=insertNewCap_modifies exspec=createObject_modifies)
         apply clarsimp
 
-       apply (clarsimp simp:conj_ac field_simps
+       apply (clarsimp simp:conj_comms field_simps
                        createObject_hs_preconds_def range_cover_sz')
        apply (subgoal_tac "is_aligned (ptr + (1 + of_nat n << APIType_capBits newType userSize))
          (APIType_capBits newType userSize)")
@@ -7080,7 +7088,7 @@ shows  "ccorres dc xfdc
                  insertNewCap_untypedRange hoare_vcg_all_lift insertNewCap_cte_at static_imp_wp)
          apply (wp insertNewCap_cte_wp_at_other)
         apply (wp hoare_vcg_all_lift static_imp_wp insertNewCap_cte_at)
-       apply (clarsimp simp:conj_ac | 
+       apply (clarsimp simp:conj_comms | 
          strengthen impI[OF invs_valid_pspace'] impI[OF invs_pspace_aligned']
          impI[OF invs_pspace_distinct'])+
        apply (frule range_cover.range_cover_n_less)
@@ -7100,7 +7108,7 @@ shows  "ccorres dc xfdc
         apply (erule range_cover_sz')
        apply (rule hoare_pre)
         apply (strengthen pspace_no_overlap'_strg[where sz = sz])
-        apply (clarsimp simp:range_cover.sz conj_ac)
+        apply (clarsimp simp:range_cover.sz conj_comms)
         apply (wp createObject_invs'
                   createObject_caps_overlap_reserved_ret' createObject_valid_cap'
                   createObject_descendants_range' createObject_idlethread_range
@@ -7113,9 +7121,9 @@ shows  "ccorres dc xfdc
          apply (wp createObject_cte_wp_at' createObject_ex_cte_cap_wp_to
                    createObject_no_inter[where sz = sz] hoare_vcg_all_lift static_imp_wp)
        apply (clarsimp simp:invs_pspace_aligned' invs_pspace_distinct' invs_valid_pspace'
-         field_simps range_cover.sz conj_ac range_cover.aligned range_cover_sz'
+         field_simps range_cover.sz conj_comms range_cover.aligned range_cover_sz'
          is_aligned_shiftl_self aligned_add_aligned[OF range_cover.aligned])
-       apply (drule_tac x = n and  P = "\<lambda>x. x< length destSlots \<longrightarrow> ?Q x" in spec)+
+       apply (drule_tac x = n and  P = "\<lambda>x. x< length destSlots \<longrightarrow> Q x" for Q in spec)+
        apply clarsimp
        apply (intro conjI)
                        apply (simp add: word_bits_def range_cover_def)
@@ -7203,7 +7211,7 @@ shows  "ccorres dc xfdc
    apply (frule range_cover.aligned)
    apply (frule range_cover_full[OF range_cover.aligned])
     apply (simp add:range_cover_def word_bits_def)
-   apply (clarsimp simp: invs_valid_pspace' conj_ac intvl_range_conv
+   apply (clarsimp simp: invs_valid_pspace' conj_comms intvl_range_conv
         createObject_hs_preconds_def range_cover.aligned range_cover_full)
    apply (simp add: intvl_range_conv[OF range_cover.aligned range_cover_sz'])
    apply (intro conjI)

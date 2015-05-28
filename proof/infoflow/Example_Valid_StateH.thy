@@ -9,8 +9,9 @@
  *)
 
 theory Example_Valid_StateH
-imports    "Example_Valid_State" "ADT_IF_Refine"
-
+imports
+  Example_Valid_State
+  ADT_IF_Refine
 begin
 
 section {* Haskell state *}
@@ -1287,7 +1288,7 @@ lemma map_to_ctes_kh0H:
    apply (clarsimp simp add: map_to_ctes_def Let_def objBitsKO_def)
    apply (rule conjI)
     apply clarsimp
-    apply (thin_tac "?x \<inter> ?y = {}")
+    apply (thin_tac "x \<inter> y = {}" for x y)
     apply (frule kh0H_dom_tcb)
     apply (elim disjE)
       apply (clarsimp simp: option_update_range_def)
@@ -1357,7 +1358,8 @@ lemma map_to_ctes_kh0H:
            rule impI,
            (subst is_aligned_neg_mask_eq,
             simp add: is_aligned_def s0_ptr_defs objBitsKO_def)+,
-           ((clarsimp simp: option_update_range_def kh0H_dom_distinct not_in_range_cte_None | clarsimp simp: idle_tcb_cte_def High_tcb_cte_def Low_tcb_cte_def)+)[1],
+           ((clarsimp simp: option_update_range_def kh0H_dom_distinct not_in_range_cte_None |
+             clarsimp simp: idle_tcb_cte_def High_tcb_cte_def Low_tcb_cte_def)+)[1],
           rule impI,
           (subst(asm) is_aligned_neg_mask_eq,
            simp add: is_aligned_def s0_ptr_defs objBitsKO_def)+,
@@ -1450,7 +1452,7 @@ lemma map_to_ctes_kh0H:
           clarsimp simp: kh0H_dom s0_ptr_defs cnode_offs_range_def pd_offs_range_def pt_offs_range_def irq_node_offs_range_def cte_level_bits_def,
           (elim disjE,
            (clarsimp simp: s0_ptr_defs,
-           drule_tac b="?x + ?y * 0x10" and n=4 in aligned_le_sharp,
+           drule_tac b="x + y * 0x10" and n=4 for x y in aligned_le_sharp,
             fastforce simp: is_aligned_def,
            clarsimp simp: add.commute,
            subst(asm) mask_out_add_aligned[symmetric],
@@ -1486,7 +1488,7 @@ lemma map_to_ctes_kh0H:
            (elim disjE,
              (clarsimp simp: s0_ptr_defs objBitsKO_def,
              erule notE[rotated],
-             rule_tac x="?x::word32" in gt_imp_neq,
+             rule_tac x="x::word32" for x in gt_imp_neq,
              rule less_le_trans[rotated, OF aligned_le_sharp],
                erule word_plus_mono_right2[rotated],
                simp,
@@ -1519,7 +1521,7 @@ lemma map_to_ctes_kh0H:
            elim disjE,
              ((clarsimp simp: s0_ptr_defs objBitsKO_def,
              erule notE[rotated],
-             rule_tac x="?x::word32" in gt_imp_neq,
+             rule_tac x="x::word32" for x in gt_imp_neq,
              rule less_le_trans[rotated, OF aligned_le_sharp],
                erule word_plus_mono_right2[rotated],
                fastforce,
@@ -1527,7 +1529,7 @@ lemma map_to_ctes_kh0H:
              fastforce)+)[2],
            clarsimp simp: s0_ptr_defs objBitsKO_def,
            erule notE[rotated],
-            rule_tac x="?x::word32" in less_imp_neq,
+            rule_tac x="x::word32" for x in less_imp_neq,
            rule le_less_trans[OF mask_neg_le],
            unat_arith,
           rule impI,

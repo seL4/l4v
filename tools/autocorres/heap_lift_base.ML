@@ -83,8 +83,7 @@ let
            => (get_name x) ^ "'ptr"
        | (@{type_name "array"}, [x,y])
            => (get_name x) ^ "'array_" ^ (PolyML.makestring (get_num_type y))
-       | (x, y) => (Long_Name.base_name x)
-       | _ => raise TYPE ("name_from_type/get_name", [x], [])
+       | (x, _) => (Long_Name.base_name x)
 in
   (get_name T)
 end
@@ -137,7 +136,7 @@ let
       (* Fetch body of "fn_name". *)
       FunctionInfo.get_function_def fn_info fn_name
       |> #definition
-      |> prop_of
+      |> Thm.prop_of
       |> Utils.rhs_of_eq
 
       (* Fetch types from function body. *)

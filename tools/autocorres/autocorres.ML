@@ -378,7 +378,7 @@ let
       val def =
         FunctionInfo.get_function_def fn_info fn_name
         |> #definition
-        |> prop_of
+        |> Thm.prop_of
         |> Utils.rhs_of
     in
       (Syntax.check_term lthy def; NONE)

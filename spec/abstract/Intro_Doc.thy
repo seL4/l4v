@@ -12,7 +12,7 @@
 Documentation file, introduction to the abstract specification.
 *)
 
-header "Introduction"
+chapter "Introduction"
 
 (*<*)
 theory Intro_Doc

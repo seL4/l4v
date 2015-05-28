@@ -26,7 +26,6 @@ partial_function (tailrec)
   tailrec :: "('a \<Rightarrow> 'a) \<Rightarrow> ('a \<Rightarrow> 'b) \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> 'a \<Rightarrow> 'b"
 where
  "tailrec f1 f2 g x = (if g x then tailrec f1 f2 g (f1 x) else f2 x)"
-declare tailrec.simps[simp del]
 
 lemma tailrec_steps:
   "g x \<Longrightarrow> tailrec f1 f2 g x = tailrec f1 f2 g (f1 x)"
@@ -53,7 +52,7 @@ lemma tailrec_pre_lemma:
     apply (clarsimp simp: funpow_swap1)
     apply auto[1]
    apply clarsimp
-   apply (drule_tac x="Suc ?n" in spec, simp add: funpow_swap1)
+   apply (drule_tac x="Suc n" for n in spec, simp add: funpow_swap1)
    apply (erule mp)
    apply clarsimp
    apply (case_tac m, simp_all add: funpow_swap1)[1]

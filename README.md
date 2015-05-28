@@ -1,3 +1,11 @@
+!UNDER CONSTRUCTION!
+====================
+
+The proofs are in the process of being updated to Isabelle2015.
+
+Here be dragons.
+
+
 [The L4.verified Proofs][1]
 ===========================
 
@@ -104,14 +112,14 @@ Dependencies
 
 Almost all proofs in this repository should work within 4GB of RAM. Proofs
 involving the C refinement, will usually need the 64bit mode of polyml and
-about 12GB of RAM.
+about 16GB of RAM.
 
 The proofs distribute reasonably well over multiple cores, up to about 8
-cores.
+cores are useful.
 
 ### Software
 
-The proofs in this repository use `Isabelle2014`. A copy of Isabelle
+The proofs in this repository use `Isabelle2015`. A copy of Isabelle
 is included in the repository setup.
 
 The dependencies for installing Isabelle are
@@ -201,7 +209,7 @@ These commands perform the following steps:
  * build basic Isabelle images, including `HOL-Word` to ensure that
    the installation works. This may take a few minutes.
 
-Alternatively, it is possible to use the official Isabelle2014 release
+Alternatively, it is possible to use the official Isabelle2015 release
 bundle for your platform from the [Isabelle website][2]. In this case, the
 installation steps above can be skipped, and you would replace the directory
 `verification/isabelle/` with a symbolic link to the Isabelle home directory

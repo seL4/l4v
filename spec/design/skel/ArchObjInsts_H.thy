@@ -12,7 +12,7 @@
 	Defines the instances of pspace_storable objects.
 *)
 
-header "Storable Arch Object Instances"
+chapter "Storable Arch Object Instances"
 
 theory ArchObjInsts_H
 imports

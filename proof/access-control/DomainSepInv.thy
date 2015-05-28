@@ -919,7 +919,8 @@ lemma invoke_irq_handler_domain_sep_inv:
     invoke_irq_handler blah
    \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
   apply(case_tac blah)
-    apply(wp cap_insert_domain_sep_inv' | simp )+
+    apply(wp cap_insert_domain_sep_inv' | simp)+
+    apply(rename_tac irq cap cslot_ptr s)
     apply(case_tac cap, simp_all add: domain_sep_inv_cap_def)[1]
    apply(fastforce simp: domain_sep_inv_def)
   apply(wp | simp )+
@@ -1064,7 +1065,7 @@ lemma receive_ipc_domain_sep_inv:
           apply(rule_tac Q="\<lambda> r s. domain_sep_inv irqs st s" in hoare_strengthen_post)
           apply(wp do_ipc_transfer_domain_sep_inv hoare_vcg_all_lift | wpc | simp)+
      apply(wp hoare_vcg_imp_lift [OF set_endpoint_get_tcb, unfolded disj_not1] hoare_vcg_all_lift get_endpoint_wp)
-  apply (clarsimp simp: conj_ac)
+  apply (clarsimp simp: conj_comms)
   apply (fastforce simp: valid_objs_def valid_obj_def obj_at_def
                          ep_redux_simps neq_Nil_conv valid_ep_def case_list_cons_cong)
   done
@@ -1262,14 +1263,15 @@ lemma handle_invocation_domain_sep_inv:
                   valid_objs and
                   sym_refs \<circ> state_refs_of and
                   valid_mdb and
-                  (\<lambda>y. valid_fault ft)" and R="?Q" in hoare_post_impErr)
+                  (\<lambda>y. valid_fault ft)" and R="Q" and Q=Q for Q in hoare_post_impErr)
          apply(wp
               | simp | clarsimp)+
      apply(rule_tac E="\<lambda>ft. domain_sep_inv irqs st and
-                  valid_objs and
-                  sym_refs \<circ> state_refs_of and
-                  valid_mdb and
-                  (\<lambda>y. valid_fault (CapFault x False ft))" and R="?Q" in hoare_post_impErr)
+                            valid_objs and
+                            sym_refs \<circ> state_refs_of and
+                            valid_mdb and
+                            (\<lambda>y. valid_fault (CapFault x False ft))" and R="Q" and Q=Q 
+                  for Q in hoare_post_impErr)
        apply (wp lcs_ex_cap_to2
              | clarsimp)+
   apply (auto intro: st_tcb_ex_cap simp: ct_in_state_def)
@@ -1350,7 +1352,7 @@ lemma handle_event_domain_sep_inv:
                  handle_wait_domain_sep_inv handle_reply_domain_sep_inv
                  hy_inv
             | simp add: invs_valid_objs invs_mdb invs_sym_refs valid_fault_def)+
-     apply(rule_tac E="\<lambda>rv s. domain_sep_inv irqs st s \<and> invs s \<and> valid_fault rv" and R="?Q" in hoare_post_impErr)
+     apply(rule_tac E="\<lambda>rv s. domain_sep_inv irqs st s \<and> invs s \<and> valid_fault rv" and R="Q" and Q=Q for Q in hoare_post_impErr)
      apply(wp handle_vm_fault_domain_sep_inv | simp add: invs_valid_objs invs_mdb invs_sym_refs valid_fault_def | auto)+
   done
 
@@ -1382,4 +1384,4 @@ apply (wp handle_interrupt_domain_sep_inv handle_event_domain_sep_inv schedule_d
      | simp)+
 done
 
-end (* a comment *)
+end

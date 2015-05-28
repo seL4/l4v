@@ -831,7 +831,7 @@ lemma create_mapping_entries_valid [wp]:
    apply (clarsimp simp: word_size nth_shiftr nth_shiftl is_aligned_nth p_le_0xF_helper word_bits_def)
    apply (frule_tac w=vptr in test_bit_size)
    apply (simp add: word_size)
-   apply (thin_tac "All ?P")
+   apply (thin_tac "All P" for P)
    apply (erule_tac x="18+n" in allE)
    apply simp
   apply (clarsimp simp: a_type_simps)
@@ -1414,11 +1414,12 @@ lemma set_pt_table_caps [wp]:
               in caps_of_state_after_update[folded fun_upd_def])
    apply (simp add: obj_at_def)
   apply (clarsimp simp del: HOL.imp_disjL)
-  apply (thin_tac "ALL x. ?P x")
+  apply (thin_tac "ALL x. P x" for P)
   apply (case_tac cap, simp_all add: is_pd_cap_def is_pt_cap_def)
   apply (erule disjE)
    apply (simp add: valid_caps_def)
    apply ((drule spec)+, erule impE, assumption)
+   apply (rename_tac arch_cap)
    apply (case_tac arch_cap,
           simp_all add: valid_cap_def obj_at_def a_type_simps)
   apply clarsimp
@@ -1468,7 +1469,7 @@ lemma set_pt_valid_arch_objs[wp]:
    apply (erule vs_lookupI)
    apply (erule rtrancl.induct, simp)
    apply (subgoal_tac "(b \<rhd>1 c) s", erule (1) rtrancl_into_rtrancl)
-   apply (thin_tac "?x : rtrancl ?r")+
+   apply (thin_tac "x : rtrancl r" for x r)+
    apply (clarsimp simp add: vs_lookup1_def obj_at_def vs_refs_def
                       split: split_if_asm)
   apply simp
@@ -1482,8 +1483,10 @@ lemma set_pt_valid_arch_objs[wp]:
     apply (drule bspec, assumption, clarsimp)
    apply clarsimp
    apply (drule_tac x=x in spec)
+   apply (rename_tac "fun" x)
    apply (case_tac "fun x", (clarsimp simp: obj_at_def a_type_simps)+)
   apply (drule bspec, simp)
+  apply (rename_tac "fun" x)
   apply (case_tac "fun x", (clarsimp simp: obj_at_def a_type_simps)+)
   done
 
@@ -1532,28 +1535,28 @@ lemma set_pt_valid_vs_lookup [wp]:
    apply (subst caps_of_state_after_update, simp add: obj_at_def)
    apply fastforce
   apply (clarsimp simp: fun_upd_def  split: split_if_asm)
-   apply (thin_tac "valid_arch_objs ?s", thin_tac "valid_arch_state ?s")
+   apply (thin_tac "valid_arch_objs s" for s, thin_tac "valid_arch_state s" for s)
    apply (subst caps_of_state_after_update, simp add: obj_at_def)
-   apply (thin_tac "\<forall>p ref. ?P p ref")
+   apply (thin_tac "\<forall>p ref. P p ref" for P)
    apply (drule_tac x="[VSRef (ucast c) (Some APageDirectory),
                         VSRef (ucast b) (Some AASIDPool),
                         VSRef (ucast a) None]" in spec)
-   apply (thin_tac "valid_pte ?pte ?s")
+   apply (thin_tac "valid_pte pte s" for pte s)
    apply (erule impE, fastforce intro: vs_lookup_pdI)
    apply (drule_tac x=d in spec)
    apply (erule impE)
     apply (erule (5) vs_lookup_pdI[THEN vs_lookup_pages_vs_lookupI])
    apply (drule spec, drule spec, erule impE, assumption)
    apply assumption
-  apply (thin_tac "valid_arch_objs ?s", thin_tac "valid_arch_state ?s")
+  apply (thin_tac "valid_arch_objs s" for s, thin_tac "valid_arch_state s" for s)
   apply (subst caps_of_state_after_update, simp add: obj_at_def)
-  apply (thin_tac "\<forall>ref. (ref \<unrhd> p) s \<longrightarrow> ?P ref")
+  apply (thin_tac "\<forall>ref. (ref \<unrhd> p) s \<longrightarrow> P ref" for P)
   apply (drule_tac x=pa in spec)
   apply (drule_tac x="[VSRef (ucast d) (Some APageTable),
                        VSRef (ucast c) (Some APageDirectory),
                        VSRef (ucast b) (Some AASIDPool),
                        VSRef (ucast a) None]" in spec)
-  apply (thin_tac "(\<exists>\<rhd> p) s \<longrightarrow> ?P")
+  apply (thin_tac "(\<exists>\<rhd> p) s \<longrightarrow> P" for P)
   apply (erule impE, fastforce intro: vs_lookup_pages_ptI)
   apply simp
   done
@@ -1722,7 +1725,7 @@ lemma set_pt_invs:
   apply (frule (1) valid_global_refsD2)
   apply (clarsimp simp add: cap_range_def is_pt_cap_def)
 
-  apply (thin_tac "ALL x. ?P x")+
+  apply (thin_tac "ALL x. P x" for P)+
   apply (clarsimp simp: valid_arch_caps_def unique_table_caps_def)
   apply (drule_tac x=aa in spec, drule_tac x=ba in spec)
   apply (drule_tac x=a in spec, drule_tac x=b in spec)
@@ -1790,7 +1793,7 @@ lemma store_pte_invs [wp]:
     apply clarsimp
     apply (drule (1) valid_arch_objsD, fastforce)
     apply simp
-   apply (thin_tac "All ?P")
+   apply (thin_tac "All P" for P)
    apply (rule exI)+
    apply (rule conjI, assumption)
    apply (case_tac asid)
@@ -1818,7 +1821,7 @@ lemma store_pte_invs [wp]:
    apply (rule shiftr_less_t2n)
    using and_mask_less'[of 10 p]
    apply (simp add: pt_bits_def pageBits_def)
-  apply (thin_tac "All ?P", thin_tac "?P \<longrightarrow> ?Q", thin_tac "?P | ?Q")
+  apply (thin_tac "All P" for P, thin_tac "P \<longrightarrow> Q" for P Q, thin_tac "P \<or> Q" for P Q)
   apply (frule invs_valid_vs_lookup)
   apply (simp add: valid_vs_lookup_def)
   apply (drule_tac x=pa in spec)
@@ -2116,7 +2119,7 @@ lemma set_asid_pool_restrict_asid_map:
   apply (clarsimp simp: obj_at_def)
   apply (erule rtranclE)
    apply (clarsimp simp: vs_refs_def graph_of_def)
-   apply (rule_tac x="(?lhs, ?rhs)" in image_eqI)
+   apply (rule_tac x="(lhs, rhs)" for lhs rhs in image_eqI)
     apply (simp add: split_def)
    apply (clarsimp simp: restrict_map_def)
    apply (drule ucast_up_inj, simp)
@@ -2320,7 +2323,7 @@ lemma lookup_pt_slot_looks_up [wp]:
     apply (drule (2) valid_arch_objsD)
     apply clarsimp
     apply (erule_tac x="ucast (vptr >> 20 << 2 >> 2)" in ballE)
-    apply (thin_tac "obj_at ?P ?x s")+
+    apply (thin_tac "obj_at P x s" for P x)+
     apply (clarsimp simp: obj_at_def invs_def valid_state_def valid_pspace_def pspace_aligned_def)
     apply (drule bspec, blast)
     apply (clarsimp simp: a_type_def
@@ -2333,7 +2336,7 @@ lemma lookup_pt_slot_looks_up [wp]:
    apply (subgoal_tac "(vptr >> 12) && 0xFF << 2 < 2 ^ 10")
     apply (subst is_aligned_add_or, (simp add: pt_bits_def pageBits_def)+)
     apply (subst word_ao_dist)
-    apply (subst mask_out_sub_mask) back
+    apply (subst mask_out_sub_mask [where x="(vptr >> 12) && 0xFF << 2"])
     apply (subst less_mask_eq, simp+)
     apply (subst is_aligned_neg_mask_eq, simp)
     apply (clarsimp simp: valid_arch_state_def valid_global_pts_def)
@@ -2394,7 +2397,7 @@ lemma lookup_pt_slot_reachable2 [wp]:
     apply (drule (2) valid_arch_objsD)
     apply clarsimp
     apply (erule_tac x="ucast (vptr >> 20 << 2 >> 2)" in ballE)
-    apply (thin_tac "obj_at ?P ?x s")+
+    apply (thin_tac "obj_at P x s" for P x)+
     apply (clarsimp simp: obj_at_def pspace_aligned_def)
     apply (drule bspec, blast)
     apply (clarsimp simp: a_type_def
@@ -2412,7 +2415,7 @@ lemma lookup_pt_slot_reachable2 [wp]:
     apply simp
    apply (clarsimp simp: pt_bits_def pageBits_def)
    apply (clarsimp simp: upto_enum_step_def word32_shift_by_2 p_le_0xF_helper)
-   apply (thin_tac "pda ?x = ?t")
+   apply (thin_tac "pda x = t" for x t)
    apply (subst (asm) word_plus_and_or_coroll)
     apply (rule word_eqI)
     apply (clarsimp simp: word_size word_bits_def nth_shiftr nth_shiftl is_aligned_nth word32_FF_is_mask)
@@ -2450,7 +2453,7 @@ lemma lookup_pt_slot_reachable3 [wp]:
   apply (clarsimp del: ballI)
   apply (subgoal_tac "is_aligned (Platform.ptrFromPAddr x) 10")
    prefer 2
-   apply (thin_tac "ko_at ?P ?p s")+
+   apply (thin_tac "ko_at P p s" for P p)+
    apply (clarsimp simp: obj_at_def add.commute add.left_commute pspace_aligned_def)
    apply (drule bspec, blast)
    apply (clarsimp simp: a_type_def split: Structures_A.kernel_object.splits arch_kernel_obj.splits split_if_asm)
@@ -2473,7 +2476,7 @@ lemma lookup_pt_slot_reachable3 [wp]:
     apply simp
    apply (clarsimp simp: pt_bits_def pageBits_def)
    apply (clarsimp simp: upto_enum_step_def word32_shift_by_2 p_le_0xF_helper)
-   apply (thin_tac "pda ?x = ?t")
+   apply (thin_tac "pda x = t" for x t)
    apply (subst (asm) word_plus_and_or_coroll)
     apply (rule word_eqI)
     apply (clarsimp simp: word_size word_bits_def nth_shiftr nth_shiftl is_aligned_nth word32_FF_is_mask)
@@ -2768,7 +2771,7 @@ lemma create_mapping_entries_valid_slots [wp]:
    apply wp
   apply simp
   apply (elim conjE)
-  apply (thin_tac "is_aligned base ?b")
+  apply (thin_tac "is_aligned base b" for b)
   apply (subgoal_tac "is_aligned pd 14")
    prefer 2
    apply (clarsimp simp: pd_aligned)
@@ -2941,7 +2944,7 @@ lemma lookup_pd_slot_add_eq:
   apply clarsimp
   apply (subst (asm) word_plus_and_or_coroll)
    apply (rule word_eqI)
-   apply (thin_tac "is_aligned pd ?n")
+   apply (thin_tac "is_aligned pd n" for n)
    apply (clarsimp simp: word_size nth_shiftl nth_shiftr is_aligned_nth)
    apply (erule_tac x="18 + n" in allE)
    apply (frule_tac n="18 + n" in test_bit_size)
@@ -3212,6 +3215,7 @@ lemma set_pd_unmap_mappings:
   apply clarsimp
   apply (erule_tac x=x in ballE)
    apply (clarsimp simp: valid_kernel_mappings_def ran_def valid_kernel_mappings_if_pd_def)
+   apply (rename_tac "fun")
    apply (erule_tac x="(ArchObj (PageDirectory fun))" in allE)
    apply clarsimp
    apply (erule impE)
@@ -3345,8 +3349,9 @@ lemma set_pd_vms[wp]:
 lemma vs_refs_pages_subset: "vs_refs ko \<subseteq> vs_refs_pages ko"
   apply (clarsimp simp: vs_refs_pages_def vs_refs_def graph_of_def pde_ref_def pde_ref_pages_def
                   split: Structures_A.kernel_object.splits arch_kernel_obj.splits ARM_Structs_A.pde.splits)
+  apply (rename_tac "fun" a b)
   apply (cut_tac A="{(x, y). (if x \<in> kernel_mapping_slots then None else pde_ref_pages (fun x)) = Some y}"
-             and f="(\<lambda>(r, y). (VSRef (ucast r) (Some APageDirectory), y))" and x="(aa,ba)"
+             and f="(\<lambda>(r, y). (VSRef (ucast r) (Some APageDirectory), y))" and x="(a,b)"
               in imageI)
    apply (clarsimp simp: pde_ref_def pde_ref_pages_def split: if_splits ARM_Structs_A.pde.splits)+
   done
@@ -3360,15 +3365,19 @@ lemma vs_refs_pages_subset2:
   apply clarsimp
   apply (drule (1) subsetD[OF _ subsetD[OF vs_refs_pages_subset]])
   apply (case_tac ko, simp_all add: vs_refs_def)
+   apply (rename_tac arch_kernel_obj)
    apply (case_tac arch_kernel_obj, simp_all add: vs_refs_def)
    apply (case_tac ko', simp_all add: vs_refs_pages_def)
+   apply (rename_tac arch_kernel_obja)
    apply (case_tac arch_kernel_obja, simp_all)
     apply clarsimp+
   apply (case_tac ko', simp_all add: vs_refs_pages_def)
+  apply (rename_tac arch_kernel_obj)
   apply (case_tac arch_kernel_obj, simp_all)
    apply clarsimp
   apply (clarsimp simp: graph_of_def split: if_splits)
-  apply (cut_tac A="{(x, y). (if x \<in> kernel_mapping_slots then None else pde_ref (funa x)) = Some y}"
+  apply (rename_tac "fun" a b)
+  apply (cut_tac A="{(x, y). (if x \<in> kernel_mapping_slots then None else pde_ref (fun x)) = Some y}"
              and f="(\<lambda>(r, y). (VSRef (ucast r) (Some APageDirectory), y))" and x="(a,b)"
               in imageI)
    apply (clarsimp simp: pde_ref_def pde_ref_pages_def split: ARM_Structs_A.pde.splits)

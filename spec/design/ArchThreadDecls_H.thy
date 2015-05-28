@@ -12,7 +12,7 @@
 	Declarations from SEL4.Kernel.Thread.
 *)
 
-header "Function Declarations for Threads"
+chapter "Function Declarations for Threads"
 
 theory ArchThreadDecls_H
 imports

@@ -10,7 +10,7 @@
 
 (* Architecture-specific data types shared by spec and abstract. *)
 
-header "Common, Architecture-Specific Data Types"
+chapter "Common, Architecture-Specific Data Types"
 
 theory ARM_Structs_B
 imports "~~/src/HOL/Main"

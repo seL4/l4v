@@ -175,7 +175,7 @@ lemma of_int_sint_scast:
 
 ML {*
 fun preserve_skel_conv consts arg_conv ct = let
-    val (hd, xs) = strip_comb (term_of ct)
+    val (hd, xs) = strip_comb (Thm.term_of ct)
     val self = preserve_skel_conv consts arg_conv
   in if is_Const hd andalso member (op =) consts
         (fst (dest_Const hd))
@@ -203,15 +203,14 @@ fun fold_of_nat_eq_Ifs ctxt tm = let
       | get_pat t t' = (t aconv t' orelse raise TERM ("fold_array_conditional: get_pat", [t, t'])
               ; t)
     val pat = lambda n (get_pat (nth vs 0) (nth vs 1))
-    val thy = Proof_Context.theory_of ctxt
     val m = HOLogic.mk_number @{typ nat} (length vs - 1)
     val conv = preserve_skel_conv [fst (dest_Const @{term "op ==>"}),
             @{const_name Trueprop}, fst (dest_Const @{term "op =="}),
             @{const_name If}]
         (Simplifier.rewrite ctxt)
     val thm = @{thm fold_of_nat_eq_Ifs}
-      |> cterm_instantiate [(@{cpat "?f :: nat \<Rightarrow> ?'a"}, cterm_of thy pat),
-          (@{cpat "?m :: nat"}, cterm_of thy m)]
+      |> cterm_instantiate [(@{cpat "?f :: nat \<Rightarrow> ?'a"}, Thm.cterm_of ctxt pat),
+          (@{cpat "?m :: nat"}, Thm.cterm_of ctxt m)]
       |> simplify (put_simpset HOL_basic_ss ctxt
           addsimprocs [Word_Bitwise_Tac.expand_upt_simproc]
           addsimps @{thms foldr.simps id_apply o_apply})
@@ -273,7 +272,7 @@ fun get_c_type_size ctxt (Type (@{type_name array}, [elT, nT])) =
   | get_c_type_size ctxt (T as Type (s, _)) = let
     val thm = Proof_Context.get_thm ctxt (s ^ "_size")
       handle ERROR _ => raise TYPE ("get_c_type_size: couldn't get size", [T], [])
-  in Thm.rhs_of thm |> term_of |> HOLogic.dest_number |> snd end
+  in Thm.rhs_of thm |> Thm.term_of |> HOLogic.dest_number |> snd end
   | get_c_type_size _ T = raise TYPE ("get_c_type_size:", [T], [])
 
 fun enum_simps csenv ctxt = let
@@ -315,7 +314,7 @@ fun get_disjoint_h_val_globals_swap ctxt =
 
 fun prove_heap_update_id ctxt = DETERM o let
     val thm = get_disjoint_h_val_globals_swap ctxt
-  in fn i => (resolve_tac @{thms heap_update_id_Array heap_update_id} i
+  in fn i => (resolve_tac ctxt @{thms heap_update_id_Array heap_update_id} i
         ORELSE except_tac ctxt "prove_heap_update_id: couldn't init" i)
     THEN (simp_tac ctxt
     THEN_ALL_NEW (* simp_tac will solve goal unless globals swap involved *)
@@ -496,8 +495,8 @@ fun decompose_mem_goals trace ctxt = SUBGOAL (fn (t, i) =>
       end
     | _ => all_tac)
 
-fun unat_mono_tac ctxt = resolve_tac @{thms unat_mono_intro}
-    THEN' ((((TRY o REPEAT_ALL_NEW (resolve_tac @{thms unat_mono_thms}))
+fun unat_mono_tac ctxt = resolve_tac ctxt @{thms unat_mono_intro}
+    THEN' ((((TRY o REPEAT_ALL_NEW (resolve_tac ctxt @{thms unat_mono_thms}))
                 THEN_ALL_NEW rtac @{thm order_refl})
             THEN_ALL_NEW except_tac ctxt "unat_mono_tac: escaped order_refl")
         ORELSE' except_tac ctxt "unat_mono_tac: couldn't get started")
@@ -579,8 +578,7 @@ fun graph_refine_proof_tacs csenv ctxt = let
                         ptr_equalities_to_ptr_val
                         extra_sle_sless_unfolds
                         word_neq_0_conv_neg_conv
-                        ucast_nat_def
-                        (* ucast_id *) scast_id of_int_sint_scast
+                        ucast_nat_def of_int_sint_scast
                         ptr_val_inj[symmetric]
                         fold_all_htd_updates
                 }

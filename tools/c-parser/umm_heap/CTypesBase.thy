@@ -117,7 +117,8 @@ abbreviation
 
 section "dt_pair: a reimplementation of 2 item tuples"
 
-datatype ('a,'b) dt_pair = DTPair 'a 'b
+datatype (plugins del: size)
+    ('a,'b) dt_pair = DTPair 'a 'b
 
 primrec
   dt_fst :: "('a,'b) dt_pair \<Rightarrow> 'a"
@@ -169,24 +170,19 @@ lemma NULL_ptr_val:
 instantiation ptr :: (type) finite
 begin
 instance
-  apply (intro_classes)
-  apply (rule finite_imageD [where f=ptr_val])
-   apply (metis finite_code)   
-  apply (rule injI)
-  apply clarsimp
-  done
+  by (intro_classes)
+     (auto intro!: finite_code finite_imageD [where f=ptr_val] injI)
 end
 
 section "Properties of the raw heap"
 
 lemma heap_list_length [simp]:
-  "\<And>p. length (heap_list h n p) = n"
-  by (induct n, auto)
+  "length (heap_list h n p) = n"
+  by (induct n arbitrary: p) auto
 
 lemma heap_list_split:
-  shows "\<And>k x. k \<le> n \<Longrightarrow> heap_list h n x =
-            heap_list h k x @ heap_list h (n - k) (x + of_nat k)"
-proof (induct n)
+  shows "k \<le> n \<Longrightarrow> heap_list h n x = heap_list h k x @ heap_list h (n - k) (x + of_nat k)"
+proof (induct n arbitrary: k x)
   case 0 thus ?case by simp
 next
   case (Suc n) thus ?case
@@ -225,10 +221,15 @@ lemma intvl_start_inter:
   by (force simp: disjoint_iff_not_equal dest: intvl_self)
 
 lemma intvl_overflow:
-  "2^len_of TYPE('a) \<le> n \<Longrightarrow> {(p::'a::len word)..+n} = UNIV"
-  by (auto simp: intvl_def, rule_tac x="unat (x - p)" in exI, simp, unat_arith)
+  assumes "2^len_of TYPE('a) \<le> n"
+  shows "{(p::'a::len word)..+n} = UNIV"
+proof -
+  have witness:
+    "\<And>x. x = p + of_nat (unat (x - p)) \<and> unat (x - p) < n"
+    using assms by simp unat_arith 
+  show ?thesis unfolding intvl_def by (auto intro!: witness)
+qed
 
-declare of_nat_2p [simp]
 declare of_nat_diff [simp]
 
 lemma intvl_self_offset:
@@ -246,34 +247,33 @@ qed
 lemma intvl_mem_offset:
   "\<lbrakk> q \<in> {p..+unat x}; q \<notin> {p..+unat y}; unat y \<le> unat x \<rbrakk> \<Longrightarrow>
       q \<in> {p + y..+unat x - unat y}"
-  by (clarsimp simp: intvl_def, subgoal_tac "unat y \<le> k")
-     (rule_tac x="k - unat y" in exI, simp add: of_nat_diff, force)
+  by (clarsimp simp: intvl_def) (rule_tac x="k - unat y" in exI, auto)
 
 lemma intvl_plus_sub_offset:
   "x \<in> {p + y..+q - unat y} \<Longrightarrow> x \<in> {p..+q}"
-  by (clarsimp simp: intvl_def)
-     (rule_tac x="k + unat y" in exI, clarsimp, arith)
+  by (clarsimp simp: intvl_def) (rule_tac x="k + unat y" in exI, auto)
 
 lemma intvl_plus_sub_Suc:
   "x \<in> {p + 1..+q - Suc 0} \<Longrightarrow> x \<in> {p..+q}"
-  by (rule_tac y=1 in intvl_plus_sub_offset, simp)
-
-declare word_neq_0_conv [simp del]
+  by (rule intvl_plus_sub_offset [where y=1], simp)
 
 lemma intvl_neq_start:
   "\<lbrakk> (q::'a::len word) \<in> {p..+n}; p \<noteq> q \<rbrakk> \<Longrightarrow> q \<in> {p + 1..+n - Suc 0}"
   by (clarsimp simp: intvl_def)
-     (rule_tac x="k - 1" in exI, subgoal_tac "0 < k", simp,
-      force intro: ccontr)
+     (metis (no_types) Suc_diff_1 add.commute add_Suc_right diff_diff_left neq0_conv
+                       of_nat_Suc semiring_1_class.of_nat_0 zero_less_diff)
 
-lemmas unat_simps' = word_arith_nat_defs word_unat.eq_norm len_of_addr_card
-    mod_less
+lemmas unat_simps' =
+  word_arith_nat_defs word_unat.eq_norm len_of_addr_card mod_less
 
 lemma intvl_offset_nmem:
   "\<lbrakk> q \<in> {(p::'a::len word)..+unat x}; y \<le>  2^len_of TYPE('a) - unat x \<rbrakk> \<Longrightarrow>
       q \<notin> {p + x..+y}"
-  by (clarsimp simp: intvl_def, simp only: unat_simps')
-     (subst (asm) word_unat.Abs_inject, auto simp: unats_def)
+  apply (clarsimp simp: intvl_def)
+  apply (simp only: unat_simps')
+  apply (subst (asm) word_unat.Abs_inject)
+    apply (auto simp: unats_def)
+  done
 
 lemma intvl_Suc_nmem' [simp]:
   "n < 2^len_of TYPE('a) \<Longrightarrow> (p::'a::len word) \<notin> {p + 1..+n - Suc 0}"
@@ -294,8 +294,9 @@ proof -
   moreover hence "unat (y - x) = unat y - unat x"
     by (simp add: word_le_nat_alt, unat_arith)
   ultimately show ?thesis
-    by - (rule, force dest: intvl_offset_nmem elim: intvl_plus_sub_offset,
-          force simp: word_le_nat_alt dest: intvl_mem_offset)
+    by (force dest: intvl_offset_nmem intvl_mem_offset elim: intvl_plus_sub_offset
+              simp: word_le_nat_alt)
+
 qed
 
 end

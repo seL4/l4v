@@ -13,7 +13,7 @@ sig
 
   (* Types *)
   val typ_ord : typ * typ -> order
-  val expand_tyabbrevs : theory -> typ -> typ
+  val expand_tyabbrevs : Proof.context -> typ -> typ
 
   val alpha : typ
   val beta : typ
@@ -200,10 +200,6 @@ fun dest_list_type ty =
     case ty of
       Type("List.list", args) => hd args
     | _ => raise TYPE( "dest_list_type: not a list type", [ty], [])
-fun dest_array_type ty =
-    case ty of
-      Type("Arrays.array", args) => (hd args, hd (tl args))
-    | _ => raise TYPE("dest_array_type: not an array type", [ty], [])
 
 val alpha = TFree("'a", ["HOL.type"])
 val beta = TFree("'b", ["HOL.type"])
@@ -239,7 +235,7 @@ fun dest_numeral_type ty =
     | @{typ "Numeral_Type.num1"} => 1
     | ty => raise TYPE ("Not a numeral type", [ty], [])
 
-fun expand_tyabbrevs sg ty = #T (rep_ctyp (ctyp_of sg ty))
+fun expand_tyabbrevs sg ty = Thm.typ_of (Thm.ctyp_of sg ty)
 
 (* ----------------------------------------------------------------------
     Terms
@@ -269,7 +265,7 @@ end
 fun mk_abs (v, t) = lambda v t
 
 fun mk_forall(v,t) = let
-  val Free (vnm,ty) = v
+  val Free (_,ty) = v
 in
   Const(@{const_name "HOL.All"}, (ty --> bool) --> bool) $ mk_abs(v, t)
 end handle Bind => raise TERM ("Not a variable", [v])
@@ -302,7 +298,7 @@ in
 end
 
 fun mk_fst t = let
-  val (ty1, ty2) = dest_prod_ty (type_of t)
+  val (ty1, _) = dest_prod_ty (type_of t)
 in
   Const(@{const_name "fst"}, type_of t --> ty1) $ t
 end
@@ -325,7 +321,7 @@ end
 fun list_mk_pair tlist =
     case tlist of
       [] => unit_value
-    | h::t => let val (front,last) = split_last tlist
+    | _::_ => let val (front,last) = split_last tlist
               in
                 List.foldr mk_pair last front
               end
@@ -347,7 +343,7 @@ fun list_mk_pabs (vs, bdy) =
     case vs of
       [] => bdy
     | [v] => mk_abs(v, bdy)
-    | [v1, v2] => mk_split(list_mk_abs(vs, bdy))
+    | [_,_] => mk_split(list_mk_abs(vs, bdy))
     | h::t => mk_split(mk_abs(h, list_mk_pabs(t, bdy)))
 
 fun mk_case_option (none_t, some_f, opt) =
@@ -465,11 +461,6 @@ fun list_mk_set ty list = List.foldl mk_insert (mk_empty ty) list
 
 
 (* numerals *)
-local
-  val bit0_t = @{term "Num.num.Bit0"}
-  val bit1_t = @{term "Num.num.Bit1"}
-  val pls_t = @{term "Num.num.One"}
-in
 fun mk_zero ty = Const(@{const_name "Groups.zero_class.zero"}, ty)
 fun mk_one ty = Const(@{const_name "Groups.one_class.one"}, ty)
 
@@ -494,14 +485,12 @@ fun calc acc base t =
 
 fun numb_to_int t =
     case t of
-      Const(@{const_name "Groups.zero_class.zero"}, ty) => 0
-    | Const(@{const_name "Groups.one_class.one"}, ty) => 1
+      Const(@{const_name "Groups.zero_class.zero"}, _) => 0
+    | Const(@{const_name "Groups.one_class.one"}, _) => 1
     | Const(@{const_name "Suc"}, _) $
            Const(@{const_name "Groups.zero_class.zero"}, _) => 1
     | Const(@{const_name "Num.numeral_class.numeral"}, _) $ t => calc 0 1 t
     | t => raise TERM ("TermsTypes.numb_to_int: not a number term", [t])
-
-end (* local *)
 
 (* arithmetic *)
 fun mk_leq(t1, t2) = let
@@ -557,14 +546,14 @@ fun cstrip_comb t = let
     val (f,x) = dest_comb t
   in
     recurse (x::acc) f
-  end handle CTERM s => (t, acc)
+  end handle CTERM _ => (t, acc)
 in
   recurse [] t
 end
 
 fun hd_has_name s t = let
-  val (f, args) = cstrip_comb t
-  val t = #t (rep_cterm f)
+  val (f, _) = cstrip_comb t
+  val t = Thm.term_of f
 in
   case t of
     Const(s', _) => s = s'
@@ -572,7 +561,7 @@ in
 end
 fun dest_binop ischeck t =
     if ischeck t then let
-        val (f, args) = cstrip_comb t
+        val (_, args) = cstrip_comb t
       in
         (hd args, hd (tl args))
       end handle Empty => raise CTERM ("doesn't have 2 arguments", [t])
@@ -601,10 +590,7 @@ val is_seq = hd_has_name "Language.com.Seq"
 val dest_seq = dest_binop is_seq
 val strip_seq = strip_binop dest_seq
 
-fun thy2ctxt thy =
-    Context.Theory thy
-    |> Context.proof_of
-    |> Context_Position.set_visible false
+val thy2ctxt = Context_Position.set_visible false o Proof_Context.init_global
 
 fun mk_arbitrary ty = Const(@{const_name "undefined"}, ty)
 
@@ -613,7 +599,7 @@ fun prim_mk_defn s t thy = let
   val fvar = Free(s, ty)
   val eqn = Logic.mk_equals(fvar, t)
   val binding0 = Binding.make(s ^ "_def", Position.none)
-  val binding = (binding0, []) (* [] is a Args.src list *)
+  val binding = (binding0, []) (* [] is a Token.src list *)
   val lthy = Named_Target.theory_init thy
   val (_, lthy') = Specification.definition (NONE, (binding, eqn)) lthy
 in

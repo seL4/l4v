@@ -10,7 +10,7 @@
 
 (* Miscellaneous Isabelle tools. *)
 theory NICTATools
-imports Apply_Trace_Cmd Solves_Tac
+imports (* Apply_Trace_Cmd *) Solves_Tac
 begin
 
 section "Detect unused meta-forall"
@@ -35,14 +35,14 @@ fun find_unused_metaall (Const (@{const_name "Pure.all"}, _) $ Abs (n, _, t)) =
       find_unused_metaall a @ find_unused_metaall b
   | find_unused_metaall _ = []
 
-(* Given a proof state, analyse its assumptions for unsued
+(* Given a proof state, analyse its assumptions for unused
  * meta-foralls. *)
 fun detect_unused_meta_forall _ (state : Proof.state) =
 let
   (* Fetch all assumptions and the main goal, and analyse them. *)
   val {context = lthy, goal = goal, ...} = Proof.goal state
   val checked_terms =
-      [concl_of goal] @ map term_of (Assumption.all_assms_of lthy)
+      [Thm.concl_of goal] @ map Thm.term_of (Assumption.all_assms_of lthy)
   val results = List.concat (map find_unused_metaall checked_terms)
 
   (* Produce a message. *)
@@ -62,13 +62,12 @@ let
       warning (message results |> Pretty.str_of)
     else ()
 in
-  (false, ("", state))
+  (false, ("", []))
 end
 
 (* Setup the tool, stealing the "auto_solve_direct" option. *)
 val _ = Try.tool_setup ("unused_meta_forall",
     (1, @{system_option auto_solve_direct}, detect_unused_meta_forall))
-
 *}
 
 lemma test_unused_meta_forall: "\<And>x. y \<or> \<not> y"
@@ -87,7 +86,7 @@ lemma test_unused_meta_forall: "\<And>x. y \<or> \<not> y"
 
 ML {*
 fun solved_tac thm =
-  if nprems_of thm = 0 then Seq.single thm else Seq.empty
+  if Thm.nprems_of thm = 0 then Seq.single thm else Seq.empty
 *}
 
 method_setup solved = {*

@@ -111,7 +111,7 @@ heapstatetype.ML
   Code that proves a record of global variables is indeed an instance
   of the typeclass SepFrame.heap_state_type
 
-hoare-package/
+Simpl/
   Directory containing a version of Norbert Schirmer's SIMPL-based VCG
   environment.  We use record-based states rather than Schirmer's
   statespace approach.

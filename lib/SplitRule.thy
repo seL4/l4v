@@ -31,7 +31,7 @@ fun was_split t = let
 
 fun apply_split split t = Seq.of_list let
     val (t', thaw) = Misc_Legacy.freeze_thaw t;
-  in (map thaw (filter (was_split o prop_of) ([t'] RL [split]))) end;
+  in (map thaw (filter (was_split o Thm.prop_of) ([t'] RL [split]))) end;
 
 fun forward_tac rules t = Seq.of_list ([t] RL rules);
 
@@ -44,7 +44,7 @@ val get_rules_once_split =
 
 fun do_split split = let
     val split' = split RS iffD1;
-    val split_rhs = concl_of (fst (Misc_Legacy.freeze_thaw split'));
+    val split_rhs = Thm.concl_of (fst (Misc_Legacy.freeze_thaw split'));
   in if was_split split_rhs
      then apply_split split' THEN get_rules_once_split
      else raise TERM ("malformed split rule: " ^ (str_of_term split_rhs), [split_rhs])

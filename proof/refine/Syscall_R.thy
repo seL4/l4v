@@ -16,8 +16,6 @@ theory Syscall_R
 imports Tcb_R Arch_R Interrupt_R
 begin
 
-declare if_weak_cong [cong]
-
 (*
 syscall has 5 sections: m_fault h_fault m_error h_error m_finalise
 
@@ -195,6 +193,7 @@ lemma decode_invocation_corres:
          -- "ReplyCap"
          apply (simp add: isCap_defs Let_def returnOk_def)
         -- "CNodeCap"
+        apply (rename_tac word nat list)
         apply (simp add: isCap_defs Let_def CanModify_def
                     split del: split_if cong: if_cong)
         apply (clarsimp simp add: o_def)
@@ -236,7 +235,6 @@ lemma decode_invocation_corres:
                         is_cap_simps)
   done
 
-(* Levity: added (20090126 19:32:38) *)
 declare mapME_Nil [simp]
 
 crunch inv' [wp]: lookupCapAndSlot P
@@ -388,8 +386,7 @@ lemma threadSet_tcbDomain_update_sch_act_wf[wp]:
   "\<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s \<and> sch_act_not t s\<rbrace>
     threadSet (tcbDomain_update (\<lambda>_. domain)) t
    \<lbrace>\<lambda>_ s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
-  apply (simp add: sch_act_wf_cases
-            split: scheduler_action.split)
+  apply (simp add: sch_act_wf_cases split: scheduler_action.split)
   apply (wp hoare_vcg_conj_lift)
    apply (simp add: threadSet_def)
    apply wp
@@ -397,6 +394,7 @@ lemma threadSet_tcbDomain_update_sch_act_wf[wp]:
    apply (wp static_imp_wp getObject_tcb_wp)+
    apply (clarsimp simp: obj_at'_def)
   apply (rule hoare_vcg_all_lift)
+  apply (rename_tac word)
   apply (rule_tac Q="\<lambda>_ s. ksSchedulerAction s = SwitchToThread word \<longrightarrow> st_tcb_at' runnable' word s \<and> tcb_in_cur_domain' word s \<and> word \<noteq> t"
                in hoare_strengthen_post)
   apply (wp hoare_vcg_all_lift hoare_vcg_conj_lift hoare_imp_lift_something)+
@@ -417,27 +415,15 @@ lemma threadSet_tcbDomain_update_invs':
   apply (rule hoare_gen_asm)
   apply (simp add: invs'_def valid_state'_def split del: split_if)
   apply (rule hoare_pre)
-  apply (wp_trace
-               threadSet_valid_pspace'
-               threadSet_valid_queues
-               threadSet_valid_queues'
-               threadSet_state_refs_of'T_P[where f'=id and P'=False and Q=\<bottom>]
-               threadSet_iflive'T
-               threadSet_ifunsafe'T
-               threadSet_idle'T
-               threadSet_global_refsT
-               threadSet_cur
-               irqs_masked_lift
-               valid_irq_node_lift
-               valid_irq_handlers_lift''
-               threadSet_ctes_ofT
-               threadSet_tcbDomain_update_ct_not_inQ
-               threadSet_valid_dom_schedule'
-               threadSet_tcbDomain_update_sch_act_wf
-               threadSet_tcbDomain_update_ct_idle_or_in_cur_domain'
+  apply (wp_trace threadSet_valid_pspace' threadSet_valid_queues
+               threadSet_valid_queues' threadSet_state_refs_of'T_P[where f'=id and P'=False and Q=\<bottom>]
+               threadSet_iflive'T threadSet_ifunsafe'T threadSet_idle'T threadSet_global_refsT
+               threadSet_cur irqs_masked_lift valid_irq_node_lift valid_irq_handlers_lift''
+               threadSet_ctes_ofT threadSet_tcbDomain_update_ct_not_inQ threadSet_valid_dom_schedule'
+               threadSet_tcbDomain_update_sch_act_wf threadSet_tcbDomain_update_ct_idle_or_in_cur_domain'
              | clarsimp simp: tcb_cte_cases_def)+
   apply (auto simp: inQ_def obj_at'_def)
-done
+  done
 
 lemma set_domain_setDomain_corres:
   "corres dc
@@ -483,7 +469,7 @@ lemma set_domain_setDomain_corres:
     apply simp+
    apply (auto elim: tcb_at_is_etcb_at valid_objs'_maxDomain valid_objs'_maxPriority st_tcb'_weakenE
                simp: valid_sched_def valid_sched_action_def)
-done
+  done
 
 
 lemma pinv_corres:
@@ -587,7 +573,7 @@ lemma invokeTCB_typ_at'[wp]:
          simp_all add: invokeTCB_def
                        getThreadBufferSlot_def locateSlot_conv
             split del: split_if)
-   apply (simp only: cases_simp if_cancel simp_thms conj_ac pred_conj_def
+   apply (simp only: cases_simp if_cancel simp_thms conj_comms pred_conj_def
                      Let_def split_def getThreadVSpaceRoot
           | (simp split del: split_if cong: if_cong)
           | (wp mapM_x_wp[where S=UNIV, simplified]
@@ -636,6 +622,7 @@ lemma sts_valid_inv'[wp]:
   "\<lbrace>valid_invocation' i\<rbrace> setThreadState st t \<lbrace>\<lambda>rv. valid_invocation' i\<rbrace>"
   apply (case_tac i, simp_all add: sts_valid_untyped_inv' sts_valid_arch_inv')
         apply (wp | simp)+
+     apply (rename_tac tcbinvocation) 
      apply (case_tac tcbinvocation,
             simp_all add: setThreadState_tcb',
             auto  intro!: hoare_vcg_conj_lift hoare_vcg_disj_lift
@@ -644,10 +631,13 @@ lemma sts_valid_inv'[wp]:
                           sts_cap_to' sts_cte_cap_to'
                           setThreadState_typ_ats
                    split: option.splits)[1]
+    apply (rename_tac cnode_invocation)
     apply (case_tac cnode_invocation, simp_all add: cte_wp_at_ctes_of)
           apply (wp | simp)+
+   apply (rename_tac irqcontrol_invocation)
    apply (case_tac irqcontrol_invocation, simp_all)
    apply (wp | simp add: irq_issued'_def)+
+  apply (rename_tac irqhandler_invocation)
   apply (case_tac irqhandler_invocation, simp_all)
   apply (wp hoare_vcg_ex_lift ex_cte_cap_to'_pres | simp)+
   done
@@ -1675,7 +1665,7 @@ lemma hw_corres':
                 hoare_vcg_all_lift
                 deleteCallerCap_ct_not_ksQ)
    apply (simp add: invs_valid_objs tcb_at_invs invs_psp_aligned invs_cur)
-   apply (clarsimp simp add: ct_in_state_def conj_ac)
+   apply (clarsimp simp add: ct_in_state_def conj_comms)
   apply (clarsimp simp add: ct_in_state'_def)
   apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def
                         ct_in_state'_def sch_act_sane_not)
@@ -2183,6 +2173,7 @@ proof -
       apply (case_tac event)
           apply (simp_all add: handleEvent_def)
           
+          apply (rename_tac syscall)
           apply (case_tac syscall)
           apply (auto intro: corres_guard_imp[OF hs_corres]
                              corres_guard_imp[OF hw]
@@ -2266,7 +2257,7 @@ lemma hv_inv':
   apply (rule hoare_pre)
    apply (wp dmo_inv' getDFSR_inv getFAR_inv getIFSR_inv getRestartPC_inv 
              det_getRestartPC asUser_inv
-          |wpc|simp add: throw_def)+
+          |wpc|simp)+
   done
 
 lemma ct_not_idle':
@@ -2311,6 +2302,7 @@ proof -
     by (clarsimp)
   show ?thesis
     apply (case_tac event, simp_all add: handleEvent_def)
+        apply (rename_tac syscall)
         apply (case_tac syscall,
                (wp handleReply_sane handleReply_nonz_cap_to_ct handleReply_ksCurThread
                    handleReply_ct_not_ksQ

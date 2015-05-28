@@ -1623,6 +1623,7 @@ lemma sub_big_steps_not_PSched:
   apply(case_tac "sys_mode_of s", simp_all add: sys_mode_of_def)
   apply(case_tac "sys_mode_of s'", simp_all add: sys_mode_of_def)
       apply(case_tac "sys_mode_of t", simp_all add: sys_mode_of_def big_step_R_def split: if_splits)
+       apply(rename_tac event)
        apply(case_tac event, simp_all)
       apply((fastforce simp: ADT_A_if_def global_automaton_if_def)+)[2]
     apply(case_tac "sys_mode_of t", simp_all add: sys_mode_of_def big_step_R_def split: if_splits)
@@ -1727,11 +1728,11 @@ lemma integrity_part:
   apply(rule partsSubjectAffects_bounds_subjects_affects)
                 apply(fastforce dest: Step_partitionIntegrity)
                apply(fastforce dest: pas_refined_initial_aag_reachable simp: pas_refined_cur)
-              apply(frule_tac s3="?s" in pas_refined_current_aag'[OF _ Step_current_aag_unchanged[symmetric], OF reachable_Step'], simp+)
-             apply(fastforce intro: invs_valid_objs dest!: reachable_invs_if simp: invs_if_def Invs_def)
-            apply(fastforce intro: invs_valid_objs dest!: reachable_invs_if[OF reachable_Step'] simp: invs_if_def Invs_def)
-           apply(fastforce intro: invs_valid_objs dest!: reachable_invs_if simp: invs_if_def Invs_def)
-          apply(fastforce intro: invs_valid_objs dest!: reachable_invs_if[OF reachable_Step'] simp: invs_if_def Invs_def)
+              apply(frule_tac s3="s" for s in pas_refined_current_aag'[OF _ Step_current_aag_unchanged[symmetric], OF reachable_Step'], simp+)
+             apply(fastforce dest!: reachable_invs_if simp: invs_if_def Invs_def)
+            apply(fastforce dest!: reachable_invs_if[OF reachable_Step'] simp: invs_if_def Invs_def)
+           apply(fastforce  dest!: reachable_invs_if simp: invs_if_def Invs_def)
+          apply(fastforce  dest!: reachable_invs_if[OF reachable_Step'] simp: invs_if_def Invs_def)
          apply(fastforce dest: silc_inv_initial_aag_reachable simp: silc_inv_cur)
         apply(frule Step_current_aag_unchanged[symmetric], simp+)
         apply(fastforce dest: silc_inv_initial_aag_reachable[OF reachable_Step'] simp: silc_inv_cur)
@@ -1959,7 +1960,7 @@ lemma ev2_invisible':
   apply (erule_tac x="op = (exclusive_state (machine_state s))" in allE)
   apply (erule_tac x="op = (exclusive_state (machine_state t))" in allE)
   apply(clarsimp simp: valid_def)
-  apply (thin_tac "\<forall>x y. ?P x y")
+  apply (thin_tac "\<forall>x y. P x y" for P)
   apply (erule_tac x=s in allE)
   apply (erule_tac x=t in allE)
   apply fastforce
@@ -2076,10 +2077,10 @@ lemma choose_thread_reads_respects_g:
     apply force
    apply (simp add: etcb_at_def)
   apply (simp add: max_non_empty_queue_def)
-  apply (erule_tac P="hd ?A \<in> ?B" in notE)
+  apply (erule_tac P="hd A \<in> B" for A B in notE)
   apply (rule Max_prop)
    apply force+
-   done
+  done
 
 lemma scheduler_action_switch_thread_is_subject:
   "\<lbrakk>valid_sched s;
@@ -2886,6 +2887,7 @@ lemma small_Step_confidentiality_part_not_PSched:
        apply(drule_tac s=s and t=t and u=u and s'="(aa,ba)" in check_active_irq_A_if_retval_eq, simp+)
       apply(drule check_active_irq_A_if_confidentiality''[where s=s and t=t and s'=s' and t'=t' and u=u],simp+)
      (* KernelEntry event -- where event \<noteq> Interrupt *)
+     apply(rename_tac event)
      apply(subgoal_tac "event \<noteq> Interrupt")
       prefer 2
       apply(case_tac t, simp)
@@ -3136,7 +3138,8 @@ lemma confidentiality_part_not_PSched:
      apply(fastforce simp: small_step_reachable)
     apply assumption
    apply(simp del: split_paired_All)
-   apply(thin_tac "(?x,?y) \<in> data_type.Step ?A ?b" | thin_tac "big_step_R ?a ?b")+
+   apply(thin_tac "(x,y) \<in> data_type.Step A b" for x y A b
+         | thin_tac "big_step_R a b" for a b)+
    apply(intro allI impI | elim conjE)+
    apply(rename_tac x_s x_t x_s' x_t')
    apply(subgoal_tac "part x_s' = part x_s")
@@ -3169,9 +3172,7 @@ lemma confidentiality_part_not_PSched:
   done
   
 
-lemma 
-
-    preemption_interrupt_scheduler_invisible: 
+lemma preemption_interrupt_scheduler_invisible: 
     "equiv_valid_2 (scheduler_equiv aag) (scheduler_affects_equiv aag l) (scheduler_affects_equiv aag l) (\<lambda>r r'. r = uc \<and> snd r' = uc')  
       (einvs and pas_refined aag and guarded_pas_domain aag and domain_sep_inv False st and silc_inv aag st' and (\<lambda>s. irq_masks_of_state st = irq_masks_of_state s) and (\<lambda>s. ct_idle s \<longrightarrow> uc = idle_context s)
   and (\<lambda>s. \<not> is_domain aag l s) and guarded_pas_domain aag)

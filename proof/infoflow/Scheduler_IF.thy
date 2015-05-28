@@ -2571,7 +2571,8 @@ lemma ev2_sym:
   apply(blast intro: symA symB symI symR)
   done
 
-lemma SilcLabel_affects_scheduler_equiv: "scheduler_equiv aag s t \<Longrightarrow> scheduler_affects_equiv aag SilcLabel s t"
+lemma SilcLabel_affects_scheduler_equiv:
+  "scheduler_equiv aag s t \<Longrightarrow> scheduler_affects_equiv aag SilcLabel s t"
   apply (simp add:  scheduler_affects_equiv_def reads_scheduler_def
                    states_equiv_for_def equiv_for_def scheduler_equiv_def equiv_asids_def
                    equiv_asid_def globals_equiv_scheduler_def)

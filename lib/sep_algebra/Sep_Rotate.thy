@@ -34,9 +34,9 @@ ML {*
 
  fun rotator' ctxt lens tactic = rotator lens tactic ctxt
 
- fun sep_apply_tactic lens_tac thms =
+ fun sep_apply_tactic ctxt lens_tac thms =
           lens_tac THEN'
-          eresolve_tac thms
+          eresolve_tac ctxt thms
 *}
 
 

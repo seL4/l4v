@@ -254,7 +254,7 @@ next
     done
 
   ultimately show ?RHS
-    by metis
+    by (metis (mono_tags))
 qed
 
 

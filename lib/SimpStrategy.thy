@@ -85,7 +85,7 @@ lemma simp_strategy_Eq_True:
   by (simp add: simp_strategy_def)
 
 ML {*
-fun simp_strategy_True_conv ct = case term_of ct of
+fun simp_strategy_True_conv ct = case Thm.term_of ct of
     (Const (@{const_name simp_strategy}, _) $ _ $ @{term True})
       => cterm_instantiate [(@{cpat "?name :: nat"}, Thm.dest_arg1 ct)]
           @{thm simp_strategy_Eq_True}
@@ -94,7 +94,7 @@ fun simp_strategy_True_conv ct = case term_of ct of
 fun new_simp_strategy thy (name : term) ss rewr_True =
   Simplifier.simproc_global_i thy ("simp_strategy_" ^ fst (dest_Const name))
     [@{term simp_strategy} $ name $ @{term x}]
-    (fn ctxt => fn t => cterm_of (Proof_Context.theory_of ctxt) t
+    (fn ctxt => fn t => Thm.cterm_of ctxt t
         |> (Conv.arg_conv (Simplifier.rewrite (put_simpset ss ctxt))
           then_conv (if rewr_True then simp_strategy_True_conv
                       else Conv.all_conv))

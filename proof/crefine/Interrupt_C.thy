@@ -56,7 +56,7 @@ proof -
       apply (ctac(no_vcg) add: cteInsert_ccorres)
      apply (simp add: pred_conj_def)
      apply (strengthen aep_badge_derived_enough_strg[unfolded o_def]
-                       vmdb_invs'_strg valid_objs_invs'_strg)
+                       invs_mdb_strengthen' valid_objs_invs'_strg)
      apply (wp cteDeleteOne_other_cap[unfolded o_def])[1]
     apply (simp add: getIRQSlot_def getInterruptState_def locateSlot_conv)
     apply wp

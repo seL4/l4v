@@ -182,10 +182,11 @@ lemma requiv_pd_of_thread_global_pd:
    apply (simp add: reads_lrefl)
   apply (clarsimp simp: get_pd_of_thread_def2
                   split: option.splits kernel_object.splits cap.splits arch_cap.splits)
-  apply (subgoal_tac "aag_can_read_asid aag x2a")
-   apply (subgoal_tac "s \<turnstile> ArchObjectCap (PageDirectoryCap word (Some x2a))")
+  apply (rename_tac tcb word word' p apool)
+  apply (subgoal_tac "aag_can_read_asid aag word'")
+   apply (subgoal_tac "s \<turnstile> ArchObjectCap (PageDirectoryCap word (Some word'))")
     apply (clarsimp simp: equiv_asids_def equiv_asid_def valid_cap_def)
-    apply (drule_tac x=x2a in spec)
+    apply (drule_tac x=word' in spec)
     apply (clarsimp simp: word_gt_0 typ_at_eq_kheap_obj)
     apply (drule invs_valid_global_refs)
     apply (drule_tac ptr="((cur_thread s), tcb_cnode_index 1)" in valid_global_refsD2[rotated])
@@ -195,9 +196,9 @@ lemma requiv_pd_of_thread_global_pd:
      apply simp
     apply (simp add: cap_range_def global_refs_def)
 
-   apply (cut_tac s=s and t="cur_thread s" and tcb=tcb_ext in objs_valid_tcb_vtable)
+   apply (cut_tac s=s and t="cur_thread s" and tcb=tcb in objs_valid_tcb_vtable)
      apply (fastforce simp: invs_valid_objs get_tcb_def)+
-  apply (subgoal_tac "(pasObjectAbs aag (cur_thread s), Control, pasASIDAbs aag x2a)
+  apply (subgoal_tac "(pasObjectAbs aag (cur_thread s), Control, pasASIDAbs aag word')
                           \<in> state_asids_to_policy aag s")
    apply (frule pas_refined_Control_into_is_subject_asid)
     apply (fastforce simp: pas_refined_def)

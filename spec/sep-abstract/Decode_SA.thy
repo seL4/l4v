@@ -12,7 +12,7 @@
 Decoding system calls
 *)
 
-header "Decoding System Calls"
+chapter "Decoding System Calls"
 
 theory Decode_SA
 imports    "Ipc_SA"

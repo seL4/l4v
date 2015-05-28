@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-header "Machine Types"
+chapter "Machine Types"
 
 theory MachineTypes
 imports ARMMachineTypes

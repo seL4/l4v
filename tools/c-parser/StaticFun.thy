@@ -99,14 +99,14 @@ fun define_partial_map_tree name mappings ord ctxt = let
 
 fun prove_partial_map_thms thm ctxt = let
     val init = thm RS @{thm tree_eq_fun_in_range_from_def}
-    fun rec_tree thm = case concl_of thm of
+    fun rec_tree thm = case Thm.concl_of thm of
     @{term Trueprop} $ (Const (@{const_name tree_eq_fun_in_range}, _)
         $ (Const (@{const_name Node}, _) $ z $ v $ _ $ _) $ _ $ _ $ _) => let
         val t' = thm RS @{thm tree_eq_fun_in_range_split}
         val solve_simp_tac = SUBGOAL (fn (t, i) =>
             (simp_tac ctxt THEN_ALL_NEW SUBGOAL (fn (t', _) =>
                 raise TERM ("prove_partial_map_thms: unsolved", [t, t']))) i)
-        val r = t' |> (resolve_tac @{thms optional_strict_rangeI}
+        val r = t' |> (resolve_tac ctxt @{thms optional_strict_rangeI}
             THEN_ALL_NEW solve_simp_tac) 1 |> Seq.hd
         val l = r RS @{thm conjunct1}
         val kr = r RS @{thm conjunct2}
@@ -131,7 +131,7 @@ fun define_tree_and_save_thms name names mappings ord exsimps ctxt = let
 fun define_tree_and_thms_with_defs name names key_defs opt_values ord ctxt = let
     val data = names ~~ (key_defs ~~ opt_values)
         |> map_filter (fn (_, (_, NONE)) => NONE | (nm, (thm, SOME v))
-            => SOME (nm, (fst (Logic.dest_equals (concl_of thm)), v)))
+            => SOME (nm, (fst (Logic.dest_equals (Thm.concl_of thm)), v)))
     val (names, mappings) = map_split I data
   in define_tree_and_save_thms name names mappings ord key_defs ctxt end
 

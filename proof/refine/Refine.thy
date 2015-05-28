@@ -63,6 +63,7 @@ lemma typ_at_AIntDataI:
                         pde_relation_def
               split: Structures_A.kernel_object.split_asm
                      split_if_asm arch_kernel_obj.split_asm)
+  apply (rename_tac vmpage_size n)
   apply (rule_tac x = vmpage_size in exI)
   apply (subst conjunct2 [OF is_aligned_add_helper])
     apply (drule (1) pspace_alignedD)
@@ -657,13 +658,13 @@ lemma ckernel_invariant:
    apply (fastforce simp: Init_H_def)
   apply (clarsimp simp: ADT_A_def ADT_H_def global_automaton_def)
 
-  apply (erule_tac P="?a \<and> (\<exists>x. ?b x)" in disjE)
+  apply (erule_tac P="a \<and> (\<exists>x. b x)" for a b in disjE)
    apply ((clarsimp simp: kernel_call_H_def
         | drule use_valid[OF _ valid_corres_combined
             [OF kernel_entry_invs entry_corres], 
              OF _ kernelEntry_invs'[THEN hoare_weaken_pre]]
         | fastforce simp: ex_abs_def sch_act_simple_def ct_running_related sched_act_rct_related)+)[1]
-  apply (erule_tac P="?a \<and> ?b \<and> ?c \<and> ?d \<and> ?e" in disjE)
+  apply (erule_tac P="a \<and> b" for a b in disjE)
    apply (clarsimp simp add: do_user_op_H_def monad_to_transition_def)
    apply (drule use_valid)
      apply (rule hoare_vcg_conj_lift)
@@ -675,7 +676,7 @@ lemma ckernel_invariant:
     apply (fastforce simp: ex_abs_def ct_running_related sched_act_rct_related)
    apply (fastforce simp: ex_abs_def)
 
-  apply (erule_tac P="?a \<and> ?b \<and> ?c \<and> (\<exists>x. ?d x)" in disjE)
+  apply (erule_tac P="a \<and> b \<and> c \<and> (\<exists>x. d x)" for a b c d in disjE)
    apply (clarsimp simp add: do_user_op_H_def monad_to_transition_def)
    apply (drule use_valid)
      apply (rule hoare_vcg_conj_lift)
@@ -687,7 +688,7 @@ lemma ckernel_invariant:
     apply (fastforce simp: ex_abs_def ct_running_related sched_act_rct_related)
    apply (fastforce simp: ex_abs_def)
 
-  apply (erule_tac P="?a \<and> ?b \<and> ?c \<and> ?d \<and> ?e" in disjE)
+  apply (erule_tac P="a \<and> b" for a b in disjE)
    apply (clarsimp simp: check_active_irq_H_def)
    apply (drule use_valid)
      apply (rule hoare_vcg_conj_lift)
@@ -698,7 +699,7 @@ lemma ckernel_invariant:
     apply (fastforce simp: ex_abs_def ct_running_related sched_act_rct_related)
    apply (fastforce simp: ex_abs_def)
 
-  apply (erule_tac P="?a \<and> ?b \<and> ?c \<and> ?d \<and> ?e" in disjE)
+  apply (erule_tac P="a \<and> b" for a b in disjE)
    apply (clarsimp simp: check_active_irq_H_def)
    apply (drule use_valid)
      apply (rule hoare_vcg_conj_lift)
@@ -737,7 +738,7 @@ lemma fw_sim_A_H:
    apply (rename_tac tc ak m ev tc' ck' m' ev' ck)
    apply (simp add: global_automaton_def)
 
-   apply (erule_tac P="?a \<and> (\<exists>x. ?b x)" in disjE)
+   apply (erule_tac P="a \<and> (\<exists>x. b x)" for a b in disjE)
     apply (clarsimp simp add: kernel_call_H_def kernel_call_A_def)
     apply (rule rev_mp, rule_tac tc=tc and event=x in entry_corres)
     apply (clarsimp simp: corres_underlying_def)
@@ -759,7 +760,7 @@ lemma fw_sim_A_H:
     apply (frule (1) ct_idle_related)
     apply (clarsimp simp: ct_in_state_def st_tcb_at_def obj_at_def)
 
-   apply (erule_tac P="?a \<and> ?b \<and> ?c \<and> ?d \<and> ?e" in disjE)
+   apply (erule_tac P="a \<and> b" for a b in disjE)
     apply (clarsimp simp: do_user_op_H_def do_user_op_A_def monad_to_transition_def)
     apply (rule rev_mp, rule_tac tc1=tc and f1=uop and P="ct_running and einvs" in corres_guard_imp2[OF do_user_op_corres])
      apply simp
@@ -768,7 +769,7 @@ lemma fw_sim_A_H:
     apply (drule (1) bspec, clarsimp) 
     apply fastforce
 
-   apply (erule_tac P="?a \<and> ?b \<and> ?c \<and> (\<exists>x. ?d x)" in disjE)
+   apply (erule_tac P="a \<and> b \<and> c \<and> (\<exists>x. d x)" for a b c d in disjE)
     apply (clarsimp simp: do_user_op_H_def do_user_op_A_def monad_to_transition_def)
     apply (rule rev_mp, rule_tac tc1=tc and f1=uop and P="ct_running and einvs" in corres_guard_imp2[OF do_user_op_corres])
      apply simp
@@ -777,13 +778,13 @@ lemma fw_sim_A_H:
     apply (drule (1) bspec, clarsimp) 
     apply fastforce
 
-   apply (erule_tac P="?a \<and> ?b \<and> ?c \<and> ?d \<and> ?e" in disjE)
+   apply (erule_tac P="a \<and> b" for a b in disjE)
     apply (clarsimp simp: check_active_irq_H_def check_active_irq_A_def)
     apply (rule rev_mp, rule check_active_irq_corres)
     apply (clarsimp simp: corres_underlying_def)
     apply fastforce
 
-   apply (erule_tac P="?a \<and> ?b \<and> ?c \<and> ?d \<and> ?e" in disjE)
+   apply (erule_tac P="a \<and> b" for a b in disjE)
     apply (clarsimp simp: check_active_irq_H_def check_active_irq_A_def)
     apply (rule rev_mp, rule check_active_irq_corres)
     apply (clarsimp simp: corres_underlying_def)

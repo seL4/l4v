@@ -17,8 +17,8 @@ ML {*
 
 fun push_asms_to_concl ctxt nasms thm =
 let
-  val cert = Thm.cterm_of (Proof_Context.theory_of ctxt)  
-  val all_prems = Drule.strip_imp_prems (cprop_of thm)  
+  val cert = Thm.cterm_of ctxt
+  val all_prems = Drule.strip_imp_prems (Thm.cprop_of thm)  
   val asms = take nasms all_prems
  
   val B_names = map (fn i => "B" ^ Int.toString i) (1 upto (length all_prems - nasms))
@@ -50,8 +50,6 @@ let
 fun focus use_asms state =
   let
     val _ = Proof.assert_backward state
-    val thy = Proof.theory_of state;
-    val cert = Thm.cterm_of thy;
     
     val {goal = goal, context = ctxt} = Proof.simple_goal state
 
@@ -90,7 +88,7 @@ fun focus use_asms state =
     
     val concl = 
       let 
-        val concl = (Logic.unprotect (concl_of focused_goal'))
+        val concl = (Logic.unprotect (Thm.concl_of focused_goal'))
       in
         the_default concl (try HOLogic.dest_Trueprop concl) end
   in
@@ -103,7 +101,7 @@ fun focus use_asms state =
   end;
   
 val _ =
-  Outer_Syntax.command @{command_spec "subgoal"} "focus subgoal"
+  Outer_Syntax.command @{command_keyword "subgoal"} "focus subgoal"
     ((Scan.optional (Args.parens (Args.$$$ "no_asm") >> K false) true) >> 
       (fn mode => Toplevel.proofs (Seq.make_results o Seq.single o focus mode)));
   

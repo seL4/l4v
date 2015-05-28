@@ -429,8 +429,7 @@ lemma transform_intent_isnot_UntypedIntent:
    apply(unfold transform_intent_untyped_retype_def)
    apply (clarsimp split: list.split, safe, simp_all)[1]
    apply (clarsimp simp: transform_type_def)
-   apply (simp add: linorder_not_less eval_nat_numeral word_le_nat_alt
-                    le_Suc_eq unat_arith_simps)
+   apply (simp add: linorder_not_less eval_nat_numeral le_Suc_eq unat_arith_simps)
   apply(erule disjE)
    apply(auto simp: transform_intent_def option_map_def split: invocation_label.split option.split_asm)[1]
   apply (erule disjE)

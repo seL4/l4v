@@ -1217,7 +1217,7 @@ lemma choose_thread_guarded_pas_domain: "\<lbrace>pas_refined aag and valid_queu
     apply force
    apply (simp add: etcb_at_def)
   apply (simp add: max_non_empty_queue_def)
-  apply (erule_tac P="hd ?A \<in> ?B" in notE)
+  apply (erule_tac P="hd A \<in> B" for A B in notE)
   apply (rule Max_prop)
    apply force+
    done
@@ -1681,7 +1681,7 @@ lemma handle_event_domain_fields:
   apply(rule hoare_gen_asm)
   apply(rule hoare_pre)
   apply(case_tac e)
-       apply simp
+       apply(rename_tac syscall)
        apply(case_tac syscall)
              apply(wp | simp add: handle_call_def)+
   done
@@ -2843,7 +2843,7 @@ lemma cap_recycle_irq_state_inv:
 
    apply(wp hoare_unless_wp  finalise_slot_irq_state_inv[where st=st and irq=irq] 
             cap_revoke_irq_state_inv[folded validE_R_def] 
-        | simp add: conj_ac |  wp_once irq_state_inv_triv)+
+        | simp add: conj_comms |  wp_once irq_state_inv_triv)+
   apply(rule validE_validE_R[OF hoare_post_impErr, OF cap_revoke_domain_sep_inv], simp+)
   apply(auto)
   done
@@ -2910,7 +2910,8 @@ lemma invoke_tcb_irq_state_inv:
         |wp_once hoare_drop_imps | clarsimp split: option.splits | intro impI conjI allI)+
   done
 
-lemma do_reply_transfer_irq_state_inv_triv[wp]: "\<lbrace>irq_state_inv st\<rbrace> do_reply_transfer a b c \<lbrace>\<lambda>_. irq_state_inv st\<rbrace>"
+lemma do_reply_transfer_irq_state_inv_triv[wp]:
+  "\<lbrace>irq_state_inv st\<rbrace> do_reply_transfer a b c \<lbrace>\<lambda>_. irq_state_inv st\<rbrace>"
   apply (wp irq_state_inv_triv)
   done
 
@@ -3013,6 +3014,7 @@ lemma handle_event_irq_state_inv:
   apply(rule hoare_pre)
   apply(case_tac event)
       apply simp
+      apply(rename_tac syscall)
       apply(case_tac syscall)
              apply(simp add: handle_send_def handle_call_def | wp handle_invocation_irq_state_inv)+
           apply((simp | wp_trace add: irq_state_inv_triv hy_inv | blast | (elim conjE, (intro conjI | assumption)+))+)[9]
@@ -3226,7 +3228,7 @@ lemma ADT_A_if_Step_measure_if':
                  apply simp
                  apply(simp add: kernel_call_A_if_def)
                  apply(elim exE conjE)
-                 apply(rule_tac event=event in kernel_entry_if_irq_measure)
+                 apply(rule_tac event=x3 in kernel_entry_if_irq_measure)
                      apply((simp add: invs_if_def Invs_def only_timer_irq_inv_def | elim conjE | assumption)+)[4]
                  apply(simp)
                 apply(simp add: kernel_call_A_if_def | elim conjE exE)+
@@ -3318,7 +3320,7 @@ lemma ADT_A_if_Step_measure_if'':
             apply simp
             apply(simp add: kernel_call_A_if_def)
             apply(elim exE conjE)
-            apply(rule_tac event=event in kernel_entry_if_irq_measure)
+            apply(rule_tac event=x3 in kernel_entry_if_irq_measure)
                 apply((simp add: invs_if_def Invs_def only_timer_irq_inv_def | elim conjE | assumption)+)[4]
             apply(simp)                
            apply(clarsimp split: if_splits)

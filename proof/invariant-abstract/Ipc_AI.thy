@@ -580,7 +580,8 @@ lemma is_derived_cap_rights2[simp]:
   apply (simp_all add:cap_rights_update_def)
   apply (clarsimp simp:is_derived_def is_cap_simps cap_master_cap_def 
     vs_cap_ref_def split:cap.splits )+
-  apply (case_tac arch_cap)
+  apply (rename_tac acap1 acap2)
+  apply (case_tac acap1)
    apply (simp_all add:acap_rights_update_def)
   done
 
@@ -590,6 +591,7 @@ lemma weak_derived_update_rights:
   apply (case_tac cap)
   apply (clarsimp simp:weak_derived_def same_object_as_def
     is_cap_simps cap_rights_update_def acap_rights_update_def copy_of_def)+
+  apply (rename_tac arch_cap)
   apply (case_tac arch_cap)
   apply (simp_all add: cap_asid_def cap_vptr_def)
   apply (clarsimp simp:valid_cap_def cap_aligned_def)
@@ -684,7 +686,7 @@ lemma transfer_caps_loop_presM:
        apply (rule derive_cap_is_derived_foo)
       apply (rule_tac Q' ="\<lambda>cap' s. (vo \<longrightarrow> cap'\<noteq> cap.NullCap \<longrightarrow> 
           cte_wp_at (is_derived (cdt s) (aa, b) cap') (aa, b) s)
-          \<and> (cap'\<noteq> cap.NullCap \<longrightarrow> ?QM s cap')"
+          \<and> (cap'\<noteq> cap.NullCap \<longrightarrow> QM s cap')" for QM
           in hoare_post_imp_R)
         prefer 2
         apply clarsimp
@@ -699,7 +701,7 @@ lemma transfer_caps_loop_presM:
              split del: split_if)
   apply (clarsimp simp: remove_rights_def caps_of_state_valid
                         neq_Nil_conv cte_wp_at_caps_of_state
-                        imp_conjR[symmetric] conj_ac
+                        imp_conjR[symmetric] conj_comms
                  split del: if_splits)
   apply (intro conjI)
    apply clarsimp
@@ -829,6 +831,7 @@ lemma derive_cap_idle[wp]:
   apply (rule hoare_pre)
    apply (wpc| wp | simp add: arch_derive_cap_def)+
   apply (case_tac cap, simp_all add: cap_range_def)
+  apply (rename_tac arch_cap)
   apply (case_tac arch_cap, simp_all)
   done
 
@@ -1693,7 +1696,7 @@ lemma lookup_ipc_buffer_in_user_frame[wp]:
                                            mask (pageBitsForSize xc))) s", simp)
   apply (drule (1) cte_wp_valid_cap)
   apply (clarsimp simp add: valid_cap_def cap_aligned_def in_user_frame_def)
-  apply (thin_tac "case_option ?a ?b ?c")
+  apply (thin_tac "case_option a b c" for a b c)
   apply (rule_tac x=xc in exI)
   apply (subgoal_tac "(xa + (tcb_ipc_buffer tcb && mask (pageBitsForSize xc)) &&
             ~~ mask (pageBitsForSize xc)) = xa", simp)
@@ -2280,7 +2283,7 @@ lemma is_derived_ReplyCap [simp]:
   apply (subst fun_eq_iff)
   apply clarsimp
   apply (case_tac x, simp_all add: is_derived_def is_cap_simps
-                                   cap_master_cap_def conj_ac is_pt_cap_def
+                                   cap_master_cap_def conj_comms is_pt_cap_def
                                    vs_cap_ref_def)
   done
 
@@ -2373,7 +2376,7 @@ lemma update_waiting_invs[wp]:
   apply (wp |simp)+
     apply (simp add: invs_def valid_state_def valid_pspace_def)
     apply (wp valid_irq_node_typ sts_only_idle)
-   apply (simp add: valid_tcb_state_def conj_ac)
+   apply (simp add: valid_tcb_state_def conj_comms)
    apply (simp add: cte_wp_at_caps_of_state)
    apply (wp set_aep_valid_objs hoare_post_imp [OF disjI1]
              valid_irq_node_typ | assumption |
@@ -2790,6 +2793,7 @@ lemma ri_invs':
      receive_ipc t cap \<lbrace>\<lambda>r s. invs s \<and> Q s\<rbrace>"
   apply (simp add: receive_ipc_def split_def)
   apply (cases cap, simp_all)
+  apply (rename_tac ep badge rights)
   apply (rule hoare_seq_ext[OF _ get_endpoint_sp])
   apply (case_tac x)
     apply (simp add: invs_def valid_state_def valid_pspace_def)
@@ -2800,7 +2804,7 @@ lemma ri_invs':
     apply (rule conjI, clarsimp elim!: obj_at_weakenE simp: is_ep_def)
     apply (rule conjI, clarsimp simp: st_tcb_at_reply_cap_valid)
     apply (rule conjI)
-     apply (subgoal_tac "word1 \<noteq> t")
+     apply (subgoal_tac "ep \<noteq> t")
       apply (drule obj_at_state_refs_ofD)
       apply (drule active_st_tcb_at_state_refs_ofD)
       apply (erule delta_sym_refs)
@@ -2921,6 +2925,7 @@ lemma rai_invs':
    \<lbrace>\<lambda>r s. invs s \<and> Q s\<rbrace>"
   apply (simp add: receive_async_ipc_def)
   apply (cases cap, simp_all)
+  apply (rename_tac aep badge rights)
   apply (rule hoare_seq_ext [OF _ get_aep_sp])
   apply (case_tac x)
     apply (simp add: invs_def valid_state_def valid_pspace_def)
@@ -2931,7 +2936,7 @@ lemma rai_invs':
     apply (rule conjI, clarsimp elim!: obj_at_weakenE simp: is_aep_def)
     apply (rule conjI, clarsimp simp: st_tcb_at_reply_cap_valid)
     apply (rule conjI)
-     apply (subgoal_tac "t \<noteq> word1")
+     apply (subgoal_tac "t \<noteq> aep")
       apply (drule ko_at_state_refs_ofD)
       apply (drule active_st_tcb_at_state_refs_ofD)
       apply (erule delta_sym_refs)
@@ -3070,6 +3075,7 @@ lemma si_invs':
      apply (fastforce dest: idle_no_ex_cap valid_reply_capsD
                      simp: st_tcb_def2)
     apply (wp, simp)
+   apply (rename_tac list)
    apply (cases bl, simp_all)[1]
     apply (simp add: invs_def valid_state_def valid_pspace_def)
     apply (wp valid_irq_node_typ)
@@ -3092,6 +3098,7 @@ lemma si_invs':
     apply (drule(1) sym_refs_ko_atD, clarsimp simp: st_tcb_at_refs_of_rev)
     apply (drule(1) bspec, clarsimp simp: st_tcb_at_def obj_at_def)
    apply (wp, simp)
+  apply (rename_tac list)
   apply (case_tac list, simp_all)
   apply (simp add: invs_def valid_state_def valid_pspace_def)
   apply (rule hoare_pre)
@@ -3103,7 +3110,7 @@ lemma si_invs':
             | strengthen reply_cap_doesnt_exist_strg
                          disjI2_strg[where Q="cte_wp_at (\<lambda>cp. is_master_reply_cap cp \<and> R cp) p s" for R p s]
             | (wp hoare_vcg_conj_lift static_imp_wp | wp dxo_wp_weak | simp)+)+
-  apply (clarsimp simp: ep_redux_simps conj_ac
+  apply (clarsimp simp: ep_redux_simps conj_comms
                   cong: list.case_cong if_cong)
   apply (frule(1) sym_refs_ko_atD)
   apply (clarsimp simp: st_tcb_at_refs_of_rev st_tcb_at_tcb_at)
@@ -3263,6 +3270,7 @@ lemma si_blk_makes_simple:
    apply (wp sts_st_tcb_at_cases)
    apply clarsimp
   apply (rule hoare_gen_asm[simplified])
+  apply (rename_tac list)
   apply (case_tac list, simp_all)
   apply (rule hoare_seq_ext [OF _ set_ep_st_tcb_at])
   apply (rule hoare_seq_ext [OF _ gts_sp])

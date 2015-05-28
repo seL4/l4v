@@ -201,7 +201,7 @@ local structure P = Parse and K = Keyword in
 
 val treeP =
     Outer_Syntax.command
-        @{command_spec "test_tree"}
+        @{command_keyword "test_tree"}
         "Create an example tree with associated lemmas"
         (P.name -- P.nat
 		>> (fn (name, sz) => Toplevel.local_theory NONE
@@ -209,7 +209,7 @@ val treeP =
 
 val treeP =
     Outer_Syntax.command
-        @{command_spec "test_tree2"}
+        @{command_keyword "test_tree2"}
         "Create an example tree with associated lemmas"
         (P.name -- P.nat
 		>> (fn (name, sz) => Toplevel.local_theory NONE

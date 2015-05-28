@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-header "Asynchronous Endpoints"
+chapter "Asynchronous Endpoints"
 
 theory AsyncEndpoint_H
 imports

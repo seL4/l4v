@@ -146,6 +146,7 @@ lemma get_asid_pool_revrv':
     apply(simp)
     apply(case_tac rv')
         apply(simp | rule fail_ev2_l)+
+    apply(rename_tac arch_kernel_obj)
     apply(case_tac arch_kernel_obj)
        apply(simp | rule return_ev2 | rule fail_ev2_l)+
    apply(clarsimp simp: equiv_valid_2_def)
@@ -153,8 +154,9 @@ lemma get_asid_pool_revrv':
        apply(clarsimp simp: fail_def)+
    apply(case_tac rv')
        apply(clarsimp simp: fail_def)+
+   apply(rename_tac arch_kernel_obj arch_kernel_obj')
    apply(case_tac arch_kernel_obj)
-      apply(case_tac arch_kernel_obja)
+      apply(case_tac arch_kernel_obj')
          apply(clarsimp simp: fail_def return_def)+
   apply(rule get_object_inv)
   done
@@ -168,12 +170,13 @@ lemma get_pt_revrv:
    apply(case_tac rv)
        apply(simp | rule fail_ev2_l)+
    apply(case_tac rv')
-      apply(simp | rule fail_ev2_r)+
+       apply(simp | rule fail_ev2_r)+
+   apply(rename_tac arch_kernel_obj arch_kernel_obj')
    apply(case_tac arch_kernel_obj)
-       apply(simp | rule fail_ev2_l)+
-      apply(case_tac arch_kernel_obja)
-         apply(simp | rule fail_ev2_r | rule return_ev2)+
-    apply(case_tac arch_kernel_obja)
+      apply(simp | rule fail_ev2_l)+
+     apply(case_tac arch_kernel_obj')
+        apply(simp | rule fail_ev2_r | rule return_ev2)+
+    apply(case_tac arch_kernel_obj')
        apply(simp | rule fail_ev2_l)+
   apply(rule get_object_inv)
   done
@@ -190,8 +193,8 @@ lemma set_pt_reads_respects:
       apply(subst equiv_valid_def2[symmetric])
       apply(rule set_object_reads_respects)
      apply(rule assert_ev2, simp)
-     apply(wp wp_post_taut | simp)+
-     done
+    apply(wp wp_post_taut | simp)+
+  done
 
 lemma get_pt_reads_respects:
   "reads_respects aag l (K (is_subject aag ptr)) (get_pt ptr)"
@@ -217,10 +220,7 @@ lemma get_asid_pool_rev:
 
 lemma assertE_reads_respects:
   "reads_respects aag l \<top> (assertE P)"
-  unfolding assertE_def
-  apply(wp)
-  apply(simp)
-  done
+  by (rule assertE_ev)
 
 lemma gets_applyE:
   "liftE (gets f) >>=E (\<lambda> f. g (f x)) = liftE (gets_apply f x) >>=E g"
@@ -228,20 +228,12 @@ lemma gets_applyE:
   apply(rule gets_apply)
   done
 
-lemma gets_apply_wp:
-  "\<lbrace>\<lambda> s. P (f s x) s\<rbrace> gets_apply f x \<lbrace>P\<rbrace>"
-  apply(simp add: gets_apply_def)
-  apply wp
-  done
-
-
 lemma aag_can_read_own_asids:
   "is_subject_asid aag asid \<Longrightarrow> aag_can_read_asid aag asid"
   apply(drule sym)
   apply simp
   apply(rule reads_lrefl)
   done
-
 
 lemma get_asid_pool_revrv:
   "reads_equiv_valid_rv_inv (affects_equiv aag l) aag
@@ -380,14 +372,7 @@ lemma states_equiv_for_arm_hwasid_table_update2:
 
 lemma states_equiv_for_arm_hwasid_table_update':
   "states_equiv_for P Q R S X t (s\<lparr> arch_state := (arch_state s)\<lparr> arm_hwasid_table := Y \<rparr>\<rparr>) = states_equiv_for P Q R S X t s"
-  apply(rule iffI)
-   apply(drule states_equiv_for_sym)
-   apply(rule states_equiv_for_sym)
-   apply(simp add: states_equiv_for_arm_hwasid_table_update1)
-  apply(drule states_equiv_for_sym)
-  apply(rule states_equiv_for_sym)
-  apply(simp add: states_equiv_for_arm_hwasid_table_update1)
-  done
+  by (rule states_equiv_for_arm_hwasid_table_update2)
 
 lemmas states_equiv_for_arm_hwasid_table_update = 
   states_equiv_for_arm_hwasid_table_update1
@@ -421,85 +406,6 @@ lemma states_equiv_for_arm_asid_map_update2:
 lemmas states_equiv_for_arm_asid_map_update = 
   states_equiv_for_arm_asid_map_update1
   states_equiv_for_arm_asid_map_update2
-
-(*
-(* this works while we don't have either arm_asid_map or arm_hwasid_table in the
-   state relation because it doesn't read from either *)
-lemma store_hw_asid_reads_respects:
-  "reads_respects aag l (pas_refined aag and pspace_aligned and valid_arch_objs and
-    K (is_subject_asid aag asid))
-  (store_hw_asid asid hw_asid)"
-  unfolding store_hw_asid_def
-  apply simp
-  apply(rule bind_ev_pre)
-     apply(subst equiv_valid_def2)     
-     apply(rule equiv_valid_2_bind)
-        apply(rule equiv_valid_2_bind)
-           apply(rule equiv_valid_2_bind)
-              apply(rule modify_ev2)
-              apply(clarsimp simp: reads_equiv_def affects_equiv_def states_equiv_for_arm_hwasid_table_update)
-             apply(rule equiv_valid_rv_trivial)
-             apply wp
-          apply(rule modify_ev2)
-          apply(rule conjI, rule TrueI)
-          apply(clarsimp simp: reads_equiv_def affects_equiv_def states_equiv_for_arm_asid_map_update)
-         apply wp
-       apply(rule equiv_valid_rv_trivial| wp find_pd_for_asid_assert_reads_respects | simp | rule conjI | rule TrueI)+
-  done
-  
-       
-(* these two unused for now, may be totally unusable because for the moment we
-   are trying to assert that the relationship between hwasids and asids is 
-   unobservable and so when we call these functions in two executions, it probably
-   won't be the case that the arguments will be the same *)
-lemma invalidate_hw_asid_entry_reads_respects:
-  "reads_respects aag l \<top> (invalidate_hw_asid_entry hw_asid)"
-  unfolding invalidate_hw_asid_entry_def
-  apply(simp add: equiv_valid_def2)
-  apply(rule equiv_valid_rv_bind)
-    apply(rule equiv_valid_rv_trivial)
-    apply wp
-   apply(rule modify_ev2)
-   apply(clarsimp simp: reads_equiv_def affects_equiv_def states_equiv_for_arm_hwasid_table_update)
-  by wp
-
-
-lemma invalidate_asid_reads_respects:
-  "reads_respects aag l \<top> (invalidate_asid asid)"
-  unfolding invalidate_asid_def
-  apply(simp add: equiv_valid_def2)
-  apply(rule equiv_valid_rv_bind)
-    apply(rule equiv_valid_rv_trivial)
-    apply wp
-   apply(rule modify_ev2)
-   apply(clarsimp simp: reads_equiv_def affects_equiv_def states_equiv_for_arm_asid_map_update)
-  by wp
-*)
-
-(*
-lemma invalidate_hw_asid_entry_ev2:
-  "equiv_valid_2 (reads_equiv aag) (affects_equiv aag l) (affects_equiv aag l) (op =) \<top> \<top> (invalidate_hw_asid_entry hw_asid) (invalidate_hw_asid_entry hw_asid')"
-  unfolding invalidate_hw_asid_entry_def
-  apply(rule equiv_valid_2_guard_imp)
-    apply(rule_tac R'="\<top>\<top>" in equiv_valid_2_bind)
-       apply(simp)
-      apply(rule modify_ev2)
-      apply(clarsimp simp: reads_equiv_def affects_equiv_def states_equiv_for_arm_hwasid_table_update)
-     apply(rule equiv_valid_2_trivial, wp, simp+)
-  done
-
-
-lemma invalidate_asid_ev2:
-  "equiv_valid_2 (reads_equiv aag) (affects_equiv aag l) (affects_equiv aag l) (op =) \<top> \<top> (invalidate_asid asid) (invalidate_asid asid')"
-  unfolding invalidate_asid_def
-  apply(rule equiv_valid_2_guard_imp)
-    apply(rule_tac R'="\<top>\<top>" in equiv_valid_2_bind)
-       apply(simp)
-      apply(rule modify_ev2)
-      apply(clarsimp simp: reads_equiv_def affects_equiv_def states_equiv_for_arm_asid_map_update)
-     apply(rule equiv_valid_2_trivial, wp, simp+)
-  done
-*)
 
 (* for things that only modify parts of the state not in the state relations,
    we don't care what they read since these reads are unobservable anyway;
@@ -1470,7 +1376,7 @@ lemma set_asid_pool_delete_ev2:
   apply(clarsimp)
   apply(case_tac "pool_ptr=a")
    apply(clarsimp)+
-   done
+  done
 
 crunch kheap: invalidate_asid, invalidate_hw_asid_entry, load_hw_asid "\<lambda>s. kheap s x = y"
 
@@ -2239,6 +2145,7 @@ lemma perform_asid_control_invocation_globals_equiv:
   unfolding perform_asid_control_invocation_def
   apply(rule hoare_pre)
    apply wpc
+   apply (rename_tac word1 cslot_ptr1 cslot_ptr2 word2)
    apply (wp modify_wp cap_insert_globals_equiv''
              retype_region_ASIDPoolObj_globals_equiv[simplified]
              retype_region_invs_extras(5)[where sz=pageBits]
@@ -2255,8 +2162,8 @@ lemma perform_asid_control_invocation_globals_equiv:
    apply(rule_tac Q="\<lambda> a b. globals_equiv s b \<and> 
                             invs b \<and> valid_ko_at_arm b \<and> word1 \<noteq> arm_global_pd (arch_state b) \<and> 
                             word1 \<noteq> idle_thread b \<and>
-                            (\<exists> idx. cte_wp_at (op = (UntypedCap word1 pageBits idx)) prod2 b) \<and> 
-                             descendants_of prod2 (cdt b) = {} \<and>
+                            (\<exists> idx. cte_wp_at (op = (UntypedCap word1 pageBits idx)) cslot_ptr2 b) \<and> 
+                             descendants_of cslot_ptr2 (cdt b) = {} \<and>
                              pspace_no_overlap word1 pageBits b" 
          in hoare_strengthen_post)
     prefer 2
@@ -2281,9 +2188,9 @@ lemma perform_asid_control_invocation_globals_equiv:
             delete_objects_globals_equiv delete_objects_valid_ko_at_arm
             hoare_vcg_ex_lift 
         | simp add: page_bits_def)+
-  apply (clarsimp simp: conj_ac invs_valid_ko_at_arm invs_psp_aligned invs_valid_objs valid_aci_def)
+  apply (clarsimp simp: conj_comms invs_valid_ko_at_arm invs_psp_aligned invs_valid_objs valid_aci_def)
   apply (clarsimp simp: cte_wp_at_caps_of_state)
-  apply (frule_tac cap="UntypedCap ?a ?b ?c" in caps_of_state_valid, assumption)
+  apply (frule_tac cap="UntypedCap a b c" for a b c  in caps_of_state_valid, assumption)
   apply (clarsimp simp: valid_cap_def cap_aligned_def)
   apply (frule_tac slot="(aa,ba)" in untyped_caps_do_not_overlap_global_refs[rotated, OF invs_valid_global_refs])
    apply (clarsimp simp: cte_wp_at_caps_of_state)
@@ -2341,7 +2248,7 @@ lemma arch_perform_invocation_globals_equiv:
   apply wp
   apply(rule hoare_weaken_pre)
    apply(wpc)
-      apply(wp perform_page_table_invocation_globals_equiv perform_page_directory_invocation_globals_equiv perform_page_invocation_globals_equiv perform_asid_control_invocation_globals_equiv perform_asid_pool_invocation_globals_equiv)
+       apply(wp perform_page_table_invocation_globals_equiv perform_page_directory_invocation_globals_equiv perform_page_invocation_globals_equiv perform_asid_control_invocation_globals_equiv perform_asid_pool_invocation_globals_equiv)
   apply(auto simp: authorised_for_globals_arch_inv_def dest: valid_arch_state_ko_at_arm simp: invs_def valid_state_def valid_arch_inv_def invs_valid_vs_lookup)
   done
 
@@ -2366,15 +2273,16 @@ lemma decode_arch_invocation_authorised_for_globals:
   unfolding arch_decode_invocation_def authorised_for_globals_arch_inv_def
   apply (rule hoare_pre)
    apply (simp add: split_def Let_def
-     cong: cap.case_cong arch_cap.case_cong if_cong option.case_cong split del: split_if)
+               cong: cap.case_cong arch_cap.case_cong if_cong option.case_cong
+               split del: split_if)
    apply (wp select_wp select_ext_weak_wp whenE_throwError_wp check_vp_wpR unlessE_wp get_pde_wp get_master_pde_wp
              find_pd_for_asid_authority3 create_mapping_entries_parent_for_refs
            | wpc
            | simp add:  authorised_for_globals_page_inv_def
-                  del: hoare_post_taut hoare_True_E_R
+                  del: hoare_True_E_R
                   split del: split_if)+
-           apply(simp cong: if_cong)
-           apply(wp hoare_vcg_if_lift2)
+     apply(simp cong: if_cong)
+     apply(wp hoare_vcg_if_lift2)
      apply(rule hoare_conjI)
       apply(rule hoare_drop_imps)
       apply(simp add: authorised_for_globals_page_table_inv_def)
@@ -2385,24 +2293,25 @@ lemma decode_arch_invocation_authorised_for_globals:
                         neq_Nil_conv invs_psp_aligned invs_arch_objs cli_no_irqs)
   apply (drule diminished_cte_wp_at_valid_cap, clarsimp+)
   apply (cases cap, simp_all)
-   -- "PageCap"
+    -- "PageCap"
     apply (clarsimp simp: valid_cap_simps cli_no_irqs)
-    apply (cases "invocation_type label", simp_all)
-   -- "Map"
-       apply(clarsimp simp: isPageFlush_def isPDFlush_def | rule conjI)+
-        apply(drule diminished_cte_wp_at_valid_cap)
-         apply(clarsimp simp: invs_def valid_state_def)
-        apply(simp add: valid_cap_def)
-       apply(simp add: vmsz_aligned_def)
-       apply(drule_tac ptr="msg ! 0" and off="2 ^ pageBitsForSize vmpage_size - 1" in is_aligned_no_wrap')
-        apply(insert pbfs_less_wb)
-        apply(clarsimp)
-       apply(fastforce simp: x_power_minus_1)
-   -- "Remap"
-      apply(clarsimp)
-      apply(fastforce dest: diminished_cte_wp_at_valid_cap simp: invs_def valid_state_def valid_cap_def)
-   -- "Unmap"
-     apply(simp add: authorised_for_globals_page_inv_def)+
+    apply (cases "invocation_type label"; simp add: isPageFlush_def isPDFlush_def)
+           -- "Map"
+           apply (rename_tac word cap_rights vmpage_size option)
+           apply(clarsimp simp: isPageFlush_def isPDFlush_def | rule conjI)+
+            apply(drule diminished_cte_wp_at_valid_cap)
+             apply(clarsimp simp: invs_def valid_state_def)
+            apply(simp add: valid_cap_def)
+           apply(simp add: vmsz_aligned_def)
+           apply(drule_tac ptr="msg ! 0" and off="2 ^ pageBitsForSize vmpage_size - 1" in is_aligned_no_wrap')
+            apply(insert pbfs_less_wb)
+            apply(clarsimp)
+           apply(fastforce simp: x_power_minus_1)
+          -- "Remap"
+          apply(clarsimp)
+          apply(fastforce dest: diminished_cte_wp_at_valid_cap simp: invs_def valid_state_def valid_cap_def)
+         -- "Unmap"
+         apply(simp add: authorised_for_globals_page_inv_def)+
    apply(clarsimp)
    -- "PageTableCap"
    apply(simp add: authorised_for_globals_page_table_inv_def)
@@ -2426,7 +2335,6 @@ lemma decode_arch_invocation_authorised_for_globals:
   done
 
 
-
 lemma as_user_valid_ko_at_arm[wp]:
   "\<lbrace> valid_ko_at_arm \<rbrace>
   as_user thread f
@@ -2436,16 +2344,14 @@ lemma as_user_valid_ko_at_arm[wp]:
      apply (case_tac x)
      apply (simp | wp select_wp)+
   apply(fastforce simp: valid_ko_at_arm_def get_tcb_ko_at obj_at_def)
-done
+  done
 
-
-(*FIXME: Not sure where these should go. Proved while working on Tcb_IF but not needed anymore.*)
 lemma valid_arch_arm_asid_table_unmap:
   "valid_arch_state s
        \<and> tab = arm_asid_table (arch_state s)
      \<longrightarrow> valid_arch_state (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := tab(asid_high_bits_of base := None)\<rparr>\<rparr>)"
   apply (clarsimp simp: valid_state_def valid_arch_state_unmap_strg)
-done
+  done
 
 crunch valid_arch_state[wp]: load_hw_asid "valid_arch_state"
 
@@ -2454,7 +2360,7 @@ lemma valid_arch_objs_arm_asid_table_unmap:
        \<and> tab = arm_asid_table (arch_state s)
      \<longrightarrow> valid_arch_objs (s\<lparr>arch_state := arch_state s\<lparr>arm_asid_table := tab(asid_high_bits_of base := None)\<rparr>\<rparr>)"
   apply (clarsimp simp: valid_state_def valid_arch_objs_unmap_strg)
-done
+  done
 
 crunch valid_arch_objs[wp]: set_vm_root "valid_arch_objs"
 crunch valid_arch_objs[wp]: invalidate_asid_entry "valid_arch_objs"
@@ -2471,7 +2377,7 @@ lemma delete_asid_pool_valid_arch_obsj[wp]:
      apply simp
      apply (rule hoare_vcg_conj_lift)
       apply (wp mapM_wp' | simp)+
-done
+  done
 
 crunch pspace_aligned[wp]: cap_swap_for_delete, set_cap, empty_slot "pspace_aligned" (ignore: empty_slot_ext wp: dxo_wp_weak)
 crunch pspace_aligned[wp]: finalise_cap "pspace_aligned"
@@ -2487,14 +2393,9 @@ lemma set_asid_pool_arch_objs_unmap'':
   apply (rule hoare_gen_asm)
   apply simp
   apply (rule set_asid_pool_arch_objs_unmap)
-done
-
-
-lemma restrict_eq_asn_none: "f(N := None) = f |` {s. s \<noteq> N}"
-  apply (rule ext)
-  apply (case_tac "x = N")
-   apply (simp add: restrict_map_def)+
   done
+
+lemma restrict_eq_asn_none: "f(N := None) = f |` {s. s \<noteq> N}" by auto
 
 lemma delete_asid_valid_arch_objs[wp]:
   "\<lbrace>valid_arch_objs and pspace_aligned\<rbrace> delete_asid a b \<lbrace>\<lambda>_. valid_arch_objs\<rbrace>"
@@ -2507,27 +2408,14 @@ lemma delete_asid_valid_arch_objs[wp]:
       apply simp
      apply wp
   apply fastforce
-done
+  done
 
 crunch valid_arch_objs[wp]: finalise_cap "valid_arch_objs"
   (wp: mapM_wp' mapM_x_wp' select_wp hoare_vcg_if_lift2 dxo_wp_weak hoare_drop_imps store_pde_arch_objs_unmap
    simp: crunch_simps pde_ref_def unless_def
    ignore: tcb_sched_action reschedule_required)
 
-lemma get_cap_not_global_refs[wp]: "\<lbrace>valid_global_refs\<rbrace> get_cap a \<lbrace>\<lambda>rv s. global_refs s \<inter> cap_range rv = {}\<rbrace>"
-  apply (induct a)
-  apply (rule hoare_add_post)
-    apply (rule get_cap_cte_wp_at)
-   apply simp
-  apply (unfold get_cap_def)
-  apply simp
-  apply wp
-   prefer 2
-   apply (rule get_object_inv)
-  apply (case_tac x,simp_all)
-   apply wp
-   apply (clarsimp simp: valid_global_refs_def valid_refs_def cte_wp_at_def | wp)+
-done
+declare get_cap_global_refs[wp]
 
 crunch valid_global_refs[wp]: cap_swap_for_delete "valid_global_refs"
   (wp: set_cap_globals dxo_wp_weak
@@ -2543,7 +2431,7 @@ lemma thread_set_fault_valid_global_refs[wp]:
   "\<lbrace>valid_global_refs\<rbrace> thread_set (tcb_fault_update A) thread \<lbrace>\<lambda>_. valid_global_refs\<rbrace>"
   apply (wp thread_set_global_refs_triv thread_set_refs_trivial thread_set_obj_at_impossible | simp)+
   apply (rule ball_tcb_cap_casesI, simp+)
-done
+  done
 
 
 lemma cap_swap_for_delete_valid_arch_caps[wp]:
@@ -2551,7 +2439,7 @@ lemma cap_swap_for_delete_valid_arch_caps[wp]:
   unfolding cap_swap_for_delete_def
   apply (wp get_cap_wp)
   apply (clarsimp simp: cte_wp_at_weakenE)
-done
+  done
 
 lemma mapM_x_swp_store_pte_reads_respects':
   "reads_respects aag l (invs and (cte_wp_at (op = (ArchObjectCap (PageTableCap word option))) slot) and K (is_subject aag word))
@@ -2583,30 +2471,30 @@ lemma mapM_x_swp_store_pde_reads_respects':
   apply (wp mapM_x_ev)
    apply simp
    apply (rule equiv_valid_guard_imp)
-   apply (wp store_pde_reads_respects)
+    apply (wp store_pde_reads_respects)
    apply clarsimp
    apply (subgoal_tac "is_aligned word pd_bits")
-   apply (simp add: pd_bits_store_pde_helper)
+    apply (simp add: pd_bits_store_pde_helper)
    apply (frule (1) cte_wp_valid_cap)
    apply (simp add: valid_cap_def cap_aligned_def pd_bits_def pageBits_def)
-   apply simp
-   apply wp
-   apply (clarsimp simp: wellformed_pde_def)+
-done
+  apply simp
+  apply wp
+    apply (clarsimp simp: wellformed_pde_def)+
+  done
 
 lemma mapM_x_swp_store_pte_pas_refined_simple:
   "invariant  (mapM_x (swp store_pte InvalidPTE) A) (pas_refined aag)"
   apply (wp mapM_x_wp')
   apply simp
   apply (wp store_pte_pas_refined_simple)
-done
+  done
 
 lemma mapM_x_swp_store_pde_pas_refined_simple:
   "invariant (mapM_x (swp store_pde InvalidPDE) A) (pas_refined aag)"
   apply (wp mapM_x_wp')
   apply simp
   apply (wp store_pde_pas_refined_simple)
-done
+  done
 
 
 end

@@ -46,7 +46,7 @@ declare hoare_wp_combs(3)  [wp del, wp_comb del]
 
 (* Machinery for generating final corres thm *)
 lemma corresTA_trivial: "corresTA (\<lambda>_. True) (\<lambda>x. x) (\<lambda>x. x) A A"
-  apply (auto simp: corresTA_def intro: corresXF_I)
+  apply (auto intro: corresXF_I)
   done
 
 (* Dummy precondition for more convenient usage *)
@@ -140,7 +140,7 @@ ML_file "autocorres.ML"
 
 (* Setup "autocorres" keyword. *)
 ML {*
-  Outer_Syntax.command @{command_spec "autocorres"}
+  Outer_Syntax.command @{command_keyword "autocorres"}
     "Abstract the output of the C parser into a monadic representation."
     (AutoCorres.autocorres_parser >>
       (Toplevel.theory o (fn (opt, filename) => AutoCorres.do_autocorres opt filename)))

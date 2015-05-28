@@ -253,7 +253,7 @@ lemma map_snd_zip_prefix:
 
 lemma nth_upt_0 [simp]:
   "i < length xs \<Longrightarrow> [0..<length xs] ! i = i"
-  by (metis comm_monoid_add_class.add.left_neutral nth_upt)
+  by simp
 
 lemma take_insert_nth:
   "i < length xs\<Longrightarrow>
@@ -589,7 +589,7 @@ lemma distinct_sets_update:
    apply (drule (2) distinct_sets_take_nth)
    apply blast
   apply clarsimp
-  apply (thin_tac "?P \<subseteq> ?Q")
+  apply (thin_tac "P \<subseteq> Q" for P Q)
   apply (subst (asm) id_take_nth_drop, assumption)
   apply (drule distinct_sets_append_Cons)
   apply (erule (2) distinct_sets_append_distinct)
@@ -629,15 +629,9 @@ lemma fold_and_true:"fold (op \<and>) xs True \<Longrightarrow> \<forall>i < len
   apply clarsimp
   apply (induct xs)
    apply simp
-  apply (case_tac "i = 0")
-   apply simp
-   apply (case_tac a)
-    apply simp
-   apply (simp add:fold_and_false)
-  apply simp
-  apply (case_tac a)
-   apply simp
-  apply (simp add:fold_and_false)
+  apply (case_tac "i = 0"; simp)
+   apply (case_tac a; simp)
+  apply (case_tac a; simp)
   done
 
 lemma fold_or_true[simp]:"fold (op \<or>) xs True"

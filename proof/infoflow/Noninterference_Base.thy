@@ -77,8 +77,7 @@ lemma Run_mid:
 
 lemma Run_trans':
   "\<forall> s t u bs. (s,t) \<in> Run Stepf as \<and> (t,u) \<in> Run Stepf bs \<longrightarrow> (s,u) \<in> Run Stepf (as @ bs)"
-  apply(induct_tac as)
-   by(auto intro!: relcompI)
+  by (induct_tac as) auto
 
 lemma Run_trans:
   "\<lbrakk>(s,t) \<in> Run Stepf as; (t,u) \<in> Run Stepf bs\<rbrakk> \<Longrightarrow> (s,u) \<in> Run Stepf (as @ bs)"
@@ -912,7 +911,7 @@ lemma sources_eq':
   apply(rule un_eq)
    apply(simp only: Union_eq, simp only: UNION_eq[symmetric])
    apply(rule Un_eq, clarsimp)
-     apply(metis "Cons.hyps"[rule_format] sched_equiv_preserved reachable_Step enabled_Step)
+     apply(metis "Cons.hyps"[rule_format] sched_equiv_preserved reachable_Step)
     apply(fastforce intro: enabled_Step)
    apply(fastforce intro: enabled_Step)
   apply(clarsimp simp: schedIncludesCurrentDom)
@@ -1148,7 +1147,7 @@ lemma Noninfluence_gen:
   apply(clarsimp, rename_tac s')
   apply(case_tac "dom a s = schedDomain")
    apply(cut_tac s=s and a=a and as=as and u=u in schedDomain_in_sources_Cons, assumption+)
-   apply(metis schedIncludesCurrentDom sources_eq[OF conf] uwr_sym)
+   apply(metis schedIncludesCurrentDom sources_eq[OF conf])
   apply(rule Cons.hyps[rule_format])
      apply(blast intro: reachable_Step)
     apply(rename_tac tb)

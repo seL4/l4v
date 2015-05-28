@@ -34,12 +34,12 @@ setup SepSelectAsm_Rules.setup
 ML {*
   fun sep_selects_tactic ns ctxt =
       let val thms = SepSelect_Rules.get ctxt in
-      sep_select_tactic (resolve_tac thms) ns ctxt  
+      sep_select_tactic (resolve_tac ctxt thms) ns ctxt  
   end;
   
   fun sep_select_asms_tactic ns ctxt =
       let val thms = SepSelectAsm_Rules.get ctxt in
-      sep_select_tactic (dresolve_tac thms) ns ctxt  
+      sep_select_tactic (dresolve_tac ctxt thms) ns ctxt  
   end; 
 
   fun sep_select_asms_method ns ctxt = SIMPLE_METHOD' 
@@ -65,7 +65,7 @@ method_setup sep_select = {*
 
 ML {* 
  fun sep_select_generic_method_inner ((lens, n), asm) ctxt =
-   let val lens_tac = (if asm then (dresolve_tac lens) else (resolve_tac lens))
+   let val lens_tac = (if asm then (dresolve_tac ctxt lens) else (resolve_tac ctxt lens))
     in sep_select_method lens_tac n ctxt
   end;
 

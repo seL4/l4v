@@ -124,6 +124,7 @@ apply(auto simp: lift_state_def split: s_heap_index.splits option.splits)
  apply(drule s_footprintD)
  apply(drule intvlD, clarsimp simp: size_of_def)
  apply(frule s_footprintD2)
+apply(rename_tac nat)
 apply(drule s_footprintD)
 apply(drule intvlD, clarsimp)
 apply(drule_tac x=k in spec)
@@ -293,7 +294,7 @@ lemma sep_map_any_singleton:
 
 lemma proj_h_heap_merge:
   "proj_h (s ++ t) = (\<lambda>x. if (x,SIndexVal) \<in>  dom t then proj_h t x else proj_h s x)"
-  by (force simp: proj_h_def intro: ext split: option.splits)
+  by (force simp: proj_h_def split: option.splits)
 
 lemma s_valid_heap_merge_right:
   "s\<^sub>1,g \<Turnstile>\<^sub>s p \<Longrightarrow> s\<^sub>0 ++ s\<^sub>1,g \<Turnstile>\<^sub>s p"
@@ -441,11 +442,11 @@ qed
 
 lemma sep_conj_com:
   "(P \<and>\<^sup>* Q) = (Q \<and>\<^sup>* P)"
-  by (rule ext) (auto simp: map_ac_simps map_disj_com sep_conjI dest!: sep_conjD)
+  by (rule ext) (auto simp: map_ac_simps sep_conjI dest!: sep_conjD)
 
 lemma sep_conj_false_right [simp]:
   "(P \<and>\<^sup>* sep_false) = sep_false"
-  by (force dest: sep_conjD intro!: ext)
+  by (force dest: sep_conjD)
 
 lemma sep_conj_false_left [simp]:
   "(sep_false \<and>\<^sup>* P) = sep_false"
@@ -535,11 +536,11 @@ lemma sep_conj_conj:
 
 lemma sep_conj_exists1:
   "((\<lambda>s. \<exists>x. P x s) \<and>\<^sup>* Q) = (\<lambda>s. (\<exists>x. (P x \<and>\<^sup>* Q) s))"
-  by (force intro: sep_conjI intro!: ext dest: sep_conjD)
+  by (force intro: sep_conjI dest: sep_conjD)
 
 lemma sep_conj_exists2:
   "(P \<and>\<^sup>* (\<lambda>s. \<exists>x. Q x s)) = (\<lambda>s. (\<exists>x. (P \<and>\<^sup>* Q x) s))"
-  by (force intro: sep_conjI intro!: ext dest: sep_conjD)
+  by (force intro: sep_conjI dest: sep_conjD)
 
 lemmas sep_conj_exists = sep_conj_exists1 sep_conj_exists2
 
@@ -583,7 +584,8 @@ lemma sep_implD:
 
 lemma sep_emp_sep_impl [simp]:
   "(\<box> \<longrightarrow>\<^sup>* P) = P"
-apply(auto simp: sep_impl_def intro!: ext)
+apply(rule ext)
+apply(auto simp: sep_impl_def)
  apply(drule_tac x=empty in spec)
  apply auto
 apply(drule sep_empD)
@@ -592,11 +594,11 @@ done
 
 lemma sep_impl_sep_true [simp]:
   "(P \<longrightarrow>\<^sup>* sep_true) = sep_true"
-  by (force intro: sep_implI intro!: ext)
+  by (force intro: sep_implI)
 
 lemma sep_impl_sep_false [simp]:
   "(sep_false \<longrightarrow>\<^sup>* P) = sep_true"
-  by (force intro: sep_implI intro!: ext)
+  by (force intro: sep_implI)
 
 lemma sep_impl_sep_true_P:
   "(sep_true \<longrightarrow>\<^sup>* P) s \<Longrightarrow> P s"
@@ -604,7 +606,7 @@ lemma sep_impl_sep_true_P:
 
 lemma sep_impl_sep_true_false [simp]:
   "(sep_true \<longrightarrow>\<^sup>* sep_false) = sep_false"
-  by (force intro!: ext dest: sep_impl_sep_true_P)
+  by (force dest: sep_impl_sep_true_P)
 
 lemma sep_impl_impl:
   "(P \<longrightarrow>\<^sup>* Q \<longrightarrow>\<^sup>* R) = (P \<and>\<^sup>* Q \<longrightarrow>\<^sup>* R)"
@@ -712,14 +714,14 @@ proof cases
   with disj show ?x
     by (clarsimp simp: sep_map'_def sep_conj_ac dest!: sep_conjD)
        (rename_tac s\<^sub>0' s\<^sub>1', rule_tac s\<^sub>1="s\<^sub>1'" and s\<^sub>0="s\<^sub>0' ++ s\<^sub>1" in sep_conjI,
-         auto simp: map_add_disj map_ac_simps)
+         auto simp: map_ac_simps)
 next
   assume "\<not> (p \<hookrightarrow>\<^sub>g v) s\<^sub>0"
   with map'_v have "(p \<hookrightarrow>\<^sub>g v) s\<^sub>1" by simp
   with disj show ?x
     by (clarsimp simp: sep_map'_def sep_conj_ac dest!: sep_conjD)
        (rename_tac s\<^sub>0' s\<^sub>1', rule_tac s\<^sub>1="s\<^sub>1'" and s\<^sub>0="s\<^sub>0 ++ s\<^sub>0'" in sep_conjI,
-        auto simp: map_add_disj map_ac_simps)
+        auto simp: map_ac_simps)
 qed
 
 lemma sep_conj_overlapD:
@@ -783,7 +785,7 @@ lemma pure_sep_fasle:
 
 lemma pure_split:
   "pure P = (P = sep_true \<or> P = sep_false)"
-  by (force simp: pure_def intro!: ext)
+  by (force simp: pure_def)
 
 lemma pure_sep_conj:
   "\<lbrakk> pure P; pure Q \<rbrakk> \<Longrightarrow> pure (P \<and>\<^sup>* Q)"
@@ -947,7 +949,7 @@ lemma intuitionistic_sep_conj_sep_true_P:
 
 lemma intuitionistic_sep_conj_sep_true_simp:
   "intuitionistic P \<Longrightarrow> (P \<and>\<^sup>* sep_true) = P"
-  by (fast intro: sep_conj_sep_true intro!: ext elim: intuitionistic_sep_conj_sep_true_P)
+  by (fast intro: sep_conj_sep_true elim: intuitionistic_sep_conj_sep_true_P)
 
 lemma intuitionistic_sep_impl_sep_true_P:
   "\<lbrakk> P s; intuitionistic P \<rbrakk> \<Longrightarrow> (sep_true \<longrightarrow>\<^sup>* P) s"
@@ -955,8 +957,7 @@ lemma intuitionistic_sep_impl_sep_true_P:
 
 lemma intuitionistic_sep_impl_sep_true_simp:
   "intuitionistic P \<Longrightarrow> (sep_true \<longrightarrow>\<^sup>* P) = P"
-  by (fast intro!: ext
-           elim: sep_impl_sep_true_P intuitionistic_sep_impl_sep_true_P)
+  by (fast elim: sep_impl_sep_true_P intuitionistic_sep_impl_sep_true_P)
 
 (* Domain exact *)
 
@@ -987,7 +988,7 @@ lemma dom_exact_sep_conj_conj:
 
 lemma sep_conj_conj_simp:
   "dom_exact R \<Longrightarrow> ((\<lambda>s. P s \<and> Q s) \<and>\<^sup>* R) = (\<lambda>s. (P \<and>\<^sup>* R) s \<and> (Q \<and>\<^sup>* R) s)"
-  by (fast intro!: sep_conj_conj dom_exact_sep_conj_conj ext)
+  by (fast intro!: sep_conj_conj dom_exact_sep_conj_conj)
 
 definition dom_eps :: "('a,'b) map_assert \<Rightarrow> 'a set" where
   "dom_eps P \<equiv> THE x. \<forall>s. P s \<longrightarrow> x = dom s"
@@ -1008,15 +1009,15 @@ lemma dom_eps:
 
 lemma map_restrict_dom_exact:
   "\<lbrakk> dom_exact P; P s \<rbrakk> \<Longrightarrow> s |` dom_eps P = s"
-  by (force simp: restrict_map_def None_com intro: dom_epsI ext)
+  by (force simp: restrict_map_def None_com intro: dom_epsI)
 
 lemma map_restrict_dom_exact2:
   "\<lbrakk> dom_exact P; P s\<^sub>0; s\<^sub>0 \<bottom> s\<^sub>1 \<rbrakk> \<Longrightarrow> (s\<^sub>1 |` dom_eps P) = empty"
-  by (force simp: restrict_map_def map_disj_def intro: ext dest: dom_epsD)
+  by (force simp: restrict_map_def map_disj_def dest: dom_epsD)
 
 lemma map_restrict_dom_exact3:
   "\<lbrakk> dom_exact P; P s \<rbrakk> \<Longrightarrow> s |` (UNIV - dom_eps P) = empty"
-  by (force simp: restrict_map_def intro: ext dest: dom_epsI)
+  by (force simp: restrict_map_def dest: dom_epsI)
 
 lemma map_add_restrict_dom_exact:
   "\<lbrakk> dom_exact P; s\<^sub>0 \<bottom> s\<^sub>1; P s\<^sub>1 \<rbrakk> \<Longrightarrow> (s\<^sub>1 ++ s\<^sub>0) |` (dom_eps P) = s\<^sub>1"
@@ -1047,7 +1048,7 @@ qed
 
 lemma sep_conj_forall_simp:
   "dom_exact Q \<Longrightarrow> ((\<lambda>s. \<forall>x. P x s) \<and>\<^sup>* Q) = (\<lambda>s. \<forall>x. (P x \<and>\<^sup>* Q) s)"
-  by (fast dest: sep_conj_forall dom_exact_sep_conj_forall intro!: ext)
+  by (fast dest: sep_conj_forall dom_exact_sep_conj_forall)
 
 lemma dom_exact_sep_map:
   "dom_exact (i \<mapsto>\<^sub>g x)"
@@ -1076,14 +1077,6 @@ lemma strictly_exactI:
 lemma strictly_exact_dom_exact:
   "strictly_exact P \<Longrightarrow> dom_exact P"
   by (force simp: strictly_exact_def dom_exact_def)
-
-(* Need a stronger def. such as (op =) (singleton p (v::'a)) s \<and> g p" for
-   sep_map for this to hold
-
-lemma strictly_exact_sep_map:
-  "strictly_exact (x \<mapsto>\<^sub>g y)"
-  by (clarsimp simp: strictly_exact_def sep_map_def lift_typ_heap_def split: option.splits)
-*)
 
 lemma strictly_exact_sep_emp:
   "strictly_exact \<box>"

@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-header "The API"
+chapter "The API"
 
 theory API_H
 imports Syscall_H Delete_H

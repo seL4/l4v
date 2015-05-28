@@ -12,7 +12,7 @@
 Specification of Inter-Process Communication.
 *)
 
-header "IPC"
+chapter "IPC"
 
 theory Ipc_SA
 imports "../abstract/Syscall_A"

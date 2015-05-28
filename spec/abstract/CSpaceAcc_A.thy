@@ -12,7 +12,7 @@
 Accessor functions for capability spaces.
 *)
 
-header "Accessing CSpace"
+chapter "Accessing CSpace"
 
 theory CSpaceAcc_A
 imports KHeap_A

@@ -23,12 +23,8 @@ lemma f_result:
   apply (clarsimp simp: sdiv_word_def sdiv_int_def)
   done
 
-lemma word_not_minus_one [simp]:
-  "0 \<noteq> (-1 :: word32)"
-  by (metis word_msb_0 word_msb_n1)
-
 lemma f_overflow:
-  shows "\<lbrakk> a_' s = of_int (-2^31); b_' s = -1 \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> \<langle> Call f_'proc ,Normal s\<rangle> \<Rightarrow> Fault SignedArithmetic"
+  shows "\<lbrakk> a_' s = of_int (- (2^31)); b_' s = -1 \<rbrakk> \<Longrightarrow> \<Gamma> \<turnstile> \<langle> Call f_'proc ,Normal s\<rangle> \<Rightarrow> Fault SignedArithmetic"
   apply (rule exec.Call [where \<Gamma>=\<Gamma>, OF f_impl, simplified f_body_def creturn_def])
   apply (rule exec.CatchMiss)
   apply (subst exec.simps, clarsimp simp del: word_neq_0_conv simp: sdiv_word_def sdiv_int_def)+
@@ -47,6 +43,7 @@ lemma h_result:
   apply (simp add: word_div_def uint_word_ariths)
   done
 
+(* FIXME: f! *)
 lemma i_result:
   "\<Gamma> \<turnstile> \<lbrace> True \<rbrace> \<acute>ret__int :== CALL f(5, -1) \<lbrace> \<acute>ret__int = -5 \<rbrace>"
   apply vcg

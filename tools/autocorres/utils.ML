@@ -58,7 +58,7 @@ fun term_nth_arg t n =
 (* Convert a term into a string. *)
 fun term_to_string ctxt t =
   Syntax.check_term ctxt t
-  |> cterm_of (Proof_Context.theory_of ctxt)
+  |> Thm.cterm_of ctxt
   |> PolyML.makestring
 
 (* Warning with 'autocorres' prefix. *)
@@ -104,7 +104,7 @@ fun define_const name term lthy =
  *)
 fun define_const_args name hidden term args lthy =
   let
-    fun maybe_hide x = if hidden then Binding.conceal x else x
+    fun maybe_hide x = if hidden then Binding.concealed x else x
 
     (* Generate a header for the term. *)
     val head = betapplys (Free (name, (map snd args) ---> fastype_of term), args |> map Free)
@@ -119,7 +119,7 @@ fun define_const_args name hidden term args lthy =
     val lthy' = Local_Theory.restore lthy
     val thm' = Morphism.thm (Local_Theory.target_morphism lthy) thm
   in
-    (prop_of thm' |> lhs_of |> Term.head_of, thm', lthy')
+    (Thm.prop_of thm' |> lhs_of |> Term.head_of, thm', lthy')
   end
 
 (* Define lemmas into the local theory. *)
@@ -195,8 +195,8 @@ fun named_cterm_instantiate values thm =
 let
   fun match name ((name', _), _) = name = name'
   fun getvar name =
-    (case find_first (match name) (Term.add_vars (prop_of thm) []) of
-          SOME var => cterm_of (theory_of_thm thm) (Var var)
+    (case find_first (match name) (Term.add_vars (Thm.prop_of thm) []) of
+          SOME var => Thm.cterm_of (Proof_Context.init_global (Thm.theory_of_thm thm)) (Var var)
         | NONE => raise THM ("named_cterm_instantiate: " ^ name, 0, [thm]));
 in
   cterm_instantiate (map (apfst getvar) values) thm
@@ -208,7 +208,7 @@ end
 fun get_vars t =
 let
   val all_vars = fold_aterms (fn x => fn l =>
-    (case x of Var (a, b) => (x :: l) | _ => l)) t []
+    (case x of Var _ => (x :: l) | _ => l)) t []
 in
   sort_distinct Term_Ord.fast_term_ord all_vars
 end
@@ -219,14 +219,14 @@ end
  *
  * If NONE is returned, the variable is left as-is.
  *)
-fun instantiate_thm_vars thy f thm =
+fun instantiate_thm_vars ctxt f thm =
 let
   (* Fetch all vars. *)
-  val all_vars = get_vars (prop_of thm)
+  val all_vars = get_vars (Thm.prop_of thm)
 
   (* Get instantiations. *)
   val insts = map_filter (fn Var var =>
-    Option.map (fn x => (cterm_of thy (Var var), x)) (f var)) all_vars
+    Option.map (fn x => (Thm.cterm_of ctxt (Var var), x)) (f var)) all_vars
 in
   cterm_instantiate insts thm
 end
@@ -235,11 +235,11 @@ end
  * Given a list of name/cterm pairs, instantiate schematic variables in the
  * given "thm" with the given name with the cterm values.
  *)
-fun instantiate_thm thy vars thm =
+fun instantiate_thm ctxt vars thm =
 let
   val dict = Symtab.make vars
 in
-  instantiate_thm_vars thy (fn ((n, _), _) => Symtab.lookup dict n) thm
+  instantiate_thm_vars ctxt (fn ((n, _), _) => Symtab.lookup dict n) thm
 end
 
 (* Apply a conversion to the n'th argument of a term. If n < 0, count from the end. *)
@@ -273,8 +273,6 @@ let
 in
   map_aterms
     (fn Var ((x, _), T) => Free (singleton (Name.variant_list term_names) x, T)
-      | Var (xi, _) =>
-          raise TERM ("unsafe-varify: Illegal schematic variable: " ^ quote (Term.string_of_vname xi), [term])
       | x => x) term
   |> map_types Logic.unvarifyT_global
 end
@@ -299,7 +297,7 @@ let
       | (_, other) => other
   val renamed_prop = restore_names (Thm.prop_of old_thm) (Thm.prop_of new_thm)
 in
-  cterm_of (Proof_Context.theory_of ctxt) renamed_prop
+  Thm.cterm_of ctxt renamed_prop
   |> Goal.init
   |> rtac new_thm 1
   |> Seq.hd
@@ -354,12 +352,12 @@ let
          (S :: rest, base)
        end
     | strip_typ _ _ = raise TERM ("Invalid number of arguments", term :: args)
-  val (argT, baseT) = strip_typ (fastype_of term) (List.length args)
+  val (argT, _) = strip_typ (fastype_of term) (List.length args)
 
   (* Match arguments types to the input arguments. *)
   val env = fold (Sign.typ_match thy)
       ((map Logic.varifyT_global argT) ~~ (map fastype_of args)) (Vartab.empty)
-      handle TYPE_MATCH =>
+      handle Type.TYPE_MATCH =>
         raise TERM ("Could not construct constant due to type errors", term :: args)
 
   (* Apply the type to our constant. *)
@@ -498,7 +496,7 @@ fun simp_del thms =
  *)
 fun define_functions func_defs hidden is_recursive lthy =
 let
-  fun maybe_hide x = if hidden then Binding.conceal x else x
+  fun maybe_hide x = if hidden then Binding.concealed x else x
 
   (* Define a set of mutually recursive functions. The function package
    * refuses to make a definition that doesn't take any arguments, so we
@@ -512,7 +510,7 @@ let
       THEN auto_tac ctxt
     fun prove_termination lthy =
       Function.prove_termination NONE
-        (Function_Common.get_termination_prover lthy) lthy
+        (Function_Common.termination_prover_tac lthy) lthy
 
     (* Get the list of function bindings. *)
     val function_bindings = map (fn (name, _, _) =>
@@ -723,7 +721,7 @@ fun isa_str_list_to_ml t =
  * Each input has the form "%s. P s", where "s" is of type "stateT".
  *)
 fun chain_preds stateT [] = Abs ("s", stateT, @{term "HOL.True"})
-  | chain_preds stateT [x] = x
+  | chain_preds     _ [x] = x
   | chain_preds stateT (x::xs) =
       Const (@{const_name "pred_conj"},
           (stateT --> @{typ bool}) --> (stateT --> @{typ bool}) --> (stateT --> @{typ bool}))
@@ -809,12 +807,12 @@ fun inst_args vals thm =
 let
   (* Fetch schematic variables on the LHS, stripping away locale assumptions
    * and locale fixed variables first. *)
-  val vars = cprop_of thm
+  val vars = Thm.cprop_of thm
     |> Drule.strip_imp_concl
     |> clhs_of
     |> Drule.strip_comb
     |> snd
-    |> filter (term_of #> is_Var)
+    |> filter (Thm.term_of #> is_Var)
 in
   Drule.cterm_instantiate ((take (length vals) vars) ~~ vals) thm
 end
@@ -824,17 +822,18 @@ end
  *)
 fun first_order_rule_tac thm n goal_thm =
 let
-  val thy = theory_of_thm goal_thm
+  val thy = Thm.theory_of_thm goal_thm
+  val ctxt = Proof_Context.init_global thy
 
   (* First-order match "thm" against the n'th premise of our goal. *)
-  val thm_term = concl_of thm
-  val goal_term = Logic.nth_prem (n, prop_of goal_thm)
+  val thm_term = Thm.concl_of thm
+  val goal_term = Logic.nth_prem (n, Thm.prop_of goal_thm)
   val tenv = Pattern.first_order_match thy (thm_term, goal_term)
       (Vartab.empty, Vartab.empty) |> snd
 
   (* Instantiate "thm" with the matched values. *)
   val inst = map (fn (var_name, (var_type, value)) =>
-        (cterm_of thy (Var (var_name, var_type)), cterm_of thy value))
+        (Thm.cterm_of ctxt (Var (var_name, var_type)), Thm.cterm_of ctxt value))
       (Vartab.dest tenv)
   val new_thm = cterm_instantiate inst thm
 in
@@ -904,18 +903,17 @@ in
 end
 
 (* Expand type abbreviations. *)
-fun expand_type_abbrevs thy t = #T (rep_ctyp (ctyp_of thy t))
+fun expand_type_abbrevs ctxt t = Thm.typ_of (Thm.ctyp_of ctxt t)
 
 (*
  * Instantiate the schematics in a thm from the given environment.
  *)
 fun instantiate_normalize_from_env ctxt env =
 let
-  val thy = Proof_Context.theory_of ctxt
   fun prep_type (x, (S, ty)) =
-    (ctyp_of thy (TVar (x, S)), ctyp_of thy ty)
+    (Thm.ctyp_of ctxt (TVar (x, S)), Thm.ctyp_of ctxt ty)
   fun prep_term (x, (T, t)) =
-    (cterm_of thy (Var (x, T)), cterm_of thy t)
+    (Thm.cterm_of ctxt (Var (x, T)), Thm.cterm_of ctxt t)
   val term_vals = Vartab.dest (Envir.term_env env)
   val typ_vals = Vartab.dest (Envir.type_env env)
 in
@@ -936,14 +934,14 @@ end
 fun subst_conv_raw ctxt thm ct =
 let
   val thy = Proof_Context.theory_of ctxt
-  val lhs = lhs_of (concl_of thm)
+  val lhs = lhs_of (Thm.concl_of thm)
 
   (* Determine if the types match. *)
   val maybe_match =
-    (Sign.typ_unify thy (fastype_of lhs, fastype_of (term_of ct)) (Vartab.empty, 0); true)
+    (Sign.typ_unify thy (fastype_of lhs, fastype_of (Thm.term_of ct)) (Vartab.empty, 0); true)
     handle Type.TUNIFY => false
   val maybe_match2 =
-    (Type.raw_unify  (fastype_of lhs, fastype_of (term_of ct)) (Vartab.empty); true)
+    (Type.raw_unify  (fastype_of lhs, fastype_of (Thm.term_of ct)) (Vartab.empty); true)
     handle Type.TUNIFY => false
 
   val _ = if maybe_match <> maybe_match2 then
@@ -952,7 +950,7 @@ let
   (* If so, attempt to unify. *)
   val env =
     if maybe_match then
-      Unify.matchers thy [(lhs, term_of ct)]
+      Unify.matchers (Context.Proof ctxt) [(lhs, Thm.term_of ct)]
       handle ListPair.UnequalLengths => Seq.empty
            | Term.TERM _ => Seq.empty
     else
@@ -1001,7 +999,7 @@ fun exec_background f lthy =
 
 (* Assert no flex flex pairs in the given theorem. *)
 fun no_flexflex_tac thm =
-  if not (null (#tpairs (rep_thm thm))) then
+  if not (null (#tpairs (Thm.rep_thm thm))) then
     (raise THM ("Flex-flex pairs in goal", 1, [thm]))
   else
     all_tac thm
@@ -1062,11 +1060,11 @@ fun APPEND_LIST tacs = fold_rev (curry op APPEND) tacs no_tac;
 (* Version of "OF'" where an arbitrary resolution is taken in the event that
  * multiple exist. *)
 infix 0 OF'
-fun OF' (b, a) =
+fun op OF' (b, a) =
 let
   fun aux_of b [] = Seq.single b
     | aux_of b (x::xs) = Seq.maps (fn b => aux_of b xs)
-        (Thm.biresolution false [(false, x)] 1 b)
+        (Thm.biresolution NONE false [(false, x)] 1 b)
   val result = aux_of b a
     |> Seq.list_of
     |> distinct Thm.eq_thm
@@ -1095,4 +1093,4 @@ fun mk_fun_upd rangeT domT f src dest =
 
 (* Succeed only if there are no subgoals. *)
 fun solved_tac thm =
-  if nprems_of thm = 0 then Seq.single thm else Seq.empty
+  if Thm.nprems_of thm = 0 then Seq.single thm else Seq.empty

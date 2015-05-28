@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-header "Kernel Objects"
+chapter "Kernel Objects"
 
 theory Object_H
 imports

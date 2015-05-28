@@ -882,12 +882,13 @@ lemma sep_map_exists_rewrite':
   \<Longrightarrow> ((obj_id, slots) \<mapsto>S' obj) s"
   apply (clarsimp simp: intent_reset_def sep_map_S'_def sep_map_general_def
     split: cdl_object.splits)
+  apply (rename_tac cdl_tcb cdl_tcb')
   apply (rule ext)
   apply (clarsimp simp: sep_map_S'_def sep_map_general_def intent_reset_def
                         object_slots_object_clean object_to_sep_state_def object_project_def
                  split: split_if_asm)
-  apply (case_tac cdl_tcb_ext,clarsimp)
-  apply (case_tac cdl_tcb_exta,clarsimp simp:object_slots_def)
+  apply (case_tac cdl_tcb,clarsimp)
+  apply (case_tac cdl_tcb',clarsimp simp:object_slots_def)
   apply (intro conjI |
         clarsimp simp: object_slots_object_clean |
         clarsimp simp: object_slots_def)+

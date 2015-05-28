@@ -36,7 +36,7 @@ fun get_var_names_ret t =
       SOME (Utils.isa_str_list_to_ml v)
   | (Const (@{const_name "L2_while"}, _) $ _ $ _ $ _ $ v) =>
       SOME (Utils.isa_str_list_to_ml v)
-  | (Const (@{const_name "L2_throw"}, _) $ _ $ v) =>
+  | (Const (@{const_name "L2_throw"}, _) $ _ $ _) =>
       NONE
   | (Const (@{const_name "L2_condition"}, _) $ _ $ L $ R) =>
       try_both
@@ -66,9 +66,9 @@ fun get_var_names_throw t =
       get_var_names_throw M
   | (Const (@{const_name "case_prod"}, _) $ M) =>
       get_var_names_throw M
-  | (Const (@{const_name "L2_gets"}, _) $ _ $ v) =>
+  | (Const (@{const_name "L2_gets"}, _) $ _ $ _) =>
       NONE
-  | (Const (@{const_name "L2_while"}, _) $ _ $ B $ _ $ v) =>
+  | (Const (@{const_name "L2_while"}, _) $ _ $ B $ _ $ _) =>
       get_var_names_throw B
   | (Const (@{const_name "L2_throw"}, _) $ _ $ v) =>
       SOME (Utils.isa_str_list_to_ml v)
@@ -133,9 +133,8 @@ fun map_term_bottom f (a $ b)
 (* Generate a theorem that "ct_l = ct_r", assuming it can be trivially proven. *)
 fun rename_abs_thm ctxt ct_l ct_r =
 let
-  val thy = Proof_Context.theory_of ctxt
-  val input_type = fastype_of (term_of ct_l)
-  val eq_op = cterm_of thy (
+  val input_type = fastype_of (Thm.term_of ct_l)
+  val eq_op = Thm.cterm_of ctxt (
       Const (@{const_name "Pure.eq"}, input_type --> input_type --> @{typ prop}))
   val result = Drule.list_comb (eq_op, [ct_l, ct_r])
 in
@@ -149,7 +148,7 @@ end
  * names. *)
 fun pretty_bound_vars_thm ctxt ct keep_going =
 let
-  val rhs = map_term_bottom pretty_bound_vars (term_of ct)
+  val rhs = map_term_bottom pretty_bound_vars (Thm.term_of ct)
 
   (* (JIRA VER-281) We want to track down stray uu_ that appear in user-visible
    * output. So this code fails hard if it finds one. *)
@@ -159,15 +158,15 @@ let
                                    detect_visible_bad_vars barf body)
       | f $ x => (detect_visible_bad_vars barf f; detect_visible_bad_vars barf x)
       | _ => ()
-  fun barf_uu var typ term =
+  fun barf_uu var typ _ =
     if String.isSuffix "_" var
        then Utils.CTERM_non_critical keep_going
                 ("autocorres: Internal var " ^ var ^ "::" ^
                  PolyML.makestring typ ^ " is exposed.")
-                [ct, cterm_of (Proof_Context.theory_of ctxt) rhs]
+                [ct, Thm.cterm_of ctxt rhs]
        else ()
   val _ = detect_visible_bad_vars barf_uu rhs
-  val crhs = cterm_of (Proof_Context.theory_of ctxt) rhs
+  val crhs = Thm.cterm_of ctxt rhs
 in
   rename_abs_thm ctxt ct crhs
 end

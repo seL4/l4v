@@ -854,13 +854,13 @@ lemma perform_asid_control_invocation_pas_refined [wp]:
         | strengthen pas_refined_set_asid_strg
         | wpc
         | simp add: delete_objects_def2 fun_upd_def[symmetric])+
-   (*apply (rule hoare_triv[of P _ "%_. P" for P])*)
-   apply (wp retype_region_pas_refined'[where sz=pageBits]
+      apply (wp retype_region_pas_refined'[where sz=pageBits]
              max_index_upd_invs_simple max_index_upd_caps_overlap_reserved
              hoare_vcg_ex_lift set_cap_cte_wp_at hoare_vcg_disj_lift
              set_cap_descendants_range_in set_cap_no_overlap get_cap_wp
              hoare_vcg_all_lift static_imp_wp
-         | simp add: do_machine_op_def split_def)+
+            | simp add: do_machine_op_def split_def)+
+   apply(rename_tac word1 prod1 prod2 word2 cap)
    apply(rule_tac Q="\<lambda> rv s. (\<exists> idx. cte_wp_at (op = (UntypedCap word1 pageBits idx)) prod2 s) \<and>
                      (\<forall> x\<in>ptr_range word1 pageBits. is_subject aag x) \<and>
                      pas_refined aag s \<and>
@@ -1157,6 +1157,7 @@ lemma decode_arch_invocation_authorised:
    apply (clarsimp simp: aag_cap_auth_def cli_no_irqs cap_links_asid_slot_def cap_auth_conferred_def is_page_cap_def
      pde_ref2_def pas_refined_all_auth_is_owns pas_refined_refl pd_shifting [folded pd_bits_14] )
   -- "Unmap"
+   apply (rename_tac word option)
    apply (clarsimp simp: aag_cap_auth_def cli_no_irqs cap_links_asid_slot_def cap_auth_conferred_def is_page_cap_def
      pde_ref2_def pas_refined_all_auth_is_owns pas_refined_refl  )
    apply (subgoal_tac "x && ~~ mask pt_bits = word")

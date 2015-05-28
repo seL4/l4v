@@ -30,6 +30,8 @@ where
 
 ML_file "WP-method.ML"
 
+declare [[wp_warn_unused = false]]
+
 setup WeakestPre.setup
 
 method_setup wp = {* WeakestPre.apply_rules_args false *}

@@ -58,15 +58,20 @@ where
 
 
 
-primrec available_range :: "cdl_cap \<Rightarrow> cdl_object_id set"
-  where "available_range (UntypedCap r available) = available"
+primrec (nonexhaustive)
+  available_range :: "cdl_cap \<Rightarrow> cdl_object_id set"
+where
+  "available_range (UntypedCap r available) = available"
 
-primrec set_available_range :: "cdl_cap \<Rightarrow> cdl_object_id set \<Rightarrow> cdl_cap"
-  where "set_available_range (UntypedCap r available) nrange = UntypedCap r nrange"
+primrec (nonexhaustive)
+  set_available_range :: "cdl_cap \<Rightarrow> cdl_object_id set \<Rightarrow> cdl_cap"
+where
+  "set_available_range (UntypedCap r available) nrange = UntypedCap r nrange"
 
 definition
   set_untyped_cap_as_full :: "cdl_cap \<Rightarrow> cdl_cap \<Rightarrow> cdl_cap_ref \<Rightarrow> unit k_monad"
-where "set_untyped_cap_as_full src_cap new_cap src_slot \<equiv>
+where
+  "set_untyped_cap_as_full src_cap new_cap src_slot \<equiv>
   if (is_untyped_cap src_cap \<and> is_untyped_cap new_cap
      \<and> cap_objects src_cap = cap_objects new_cap) then
      (set_cap src_slot (set_available_range src_cap {}))
@@ -235,7 +240,7 @@ lemma fast_finalise_def2:
      assert (result = (NullCap, None))
    od"
   apply (cases cap, simp_all add: liftM_def assert_def can_fast_finalise_def)
-  apply (case_tac option,simp+)+
+  apply (rename_tac option, case_tac option, simp+)+ (* FIXME *)
   done
 
 (*

@@ -14,8 +14,6 @@ imports
   "../refine/Invariants_H"
 begin
 
-declare option.weak_case_cong[cong]
-
 section "ctes"
 
 subsection "capabilities"
@@ -367,8 +365,8 @@ lemma tcb_cte_cases_proj_eq [simp]:
   by (auto split: split_if_asm)
 
 lemma map_to_ctes_upd_cte':
-  "[| ksPSpace s p = Some (KOCTE cte'); is_aligned p 4; ps_clear p 4 s |]
-  ==> map_to_ctes (ksPSpace s(p |-> KOCTE cte)) = (map_to_ctes (ksPSpace s))(p |-> cte)"
+  "\<lbrakk> ksPSpace s p = Some (KOCTE cte'); is_aligned p 4; ps_clear p 4 s \<rbrakk>
+  \<Longrightarrow> map_to_ctes (ksPSpace s(p |-> KOCTE cte)) = (map_to_ctes (ksPSpace s))(p |-> cte)"
   apply (erule (1) map_to_ctes_upd_cte)
   apply (simp add: field_simps ps_clear_def3)
   done
@@ -397,7 +395,7 @@ declare insert_dom [simp]
 
 lemma in_alignCheck':
   "(z \<in> fst (alignCheck x n s)) = (snd z = s \<and> is_aligned x n)"
-  by (cases z, simp add: in_alignCheck)
+  by (cases z, simp)
 
 lemma fst_alignCheck_empty [simp]:
    "(fst (alignCheck x n s) = {}) = (\<not> is_aligned x n)"
@@ -406,6 +404,7 @@ lemma fst_alignCheck_empty [simp]:
   done
 
 lemma fst_setCTE0:
+  notes option.case_cong_weak [cong]
   assumes ct: "cte_at' dest s"
   shows   "\<exists>(v, s') \<in> fst (setCTE dest cte s).
            (s' = s \<lparr> ksPSpace := ksPSpace s' \<rparr>)
@@ -476,12 +475,7 @@ lemma pspace_alignedD' [intro?]:
   apply simp
   done
 
-lemma pspace_distinctD' [intro?]:
-  "\<lbrakk> ksPSpace s x = Some v; pspace_distinct' s \<rbrakk> \<Longrightarrow> ps_clear x (objBitsKO v) s"
-  apply (simp add: pspace_distinct'_def)
-  apply (drule bspec, erule domI)
-  apply simp
-  done
+declare pspace_distinctD' [intro?]
 
 lemma ctes_of_ksI [intro?]:
   fixes s :: "kernel_state"
@@ -1806,15 +1800,14 @@ lemma user_word_at_cross_over:
    apply (drule obj_at_ko_at', clarsimp)
    apply (rule conjI, rule exI, erule ko_at_projectKO_opt)
    apply (rule refl)
-  apply (thin_tac "heap_to_page_data ?a ?b ?c = ?d")
+  apply (thin_tac "heap_to_page_data a b c = d" for a b c d)
   apply (cut_tac x=p and w="~~ mask pageBits" in word_plus_and_or_coroll2)
   apply (rule conjI)
    apply (clarsimp simp: user_word_at_def pointerInUserData_def)
    apply (simp add: c_guard_def c_null_guard_def ptr_aligned_def)
    apply (drule lift_t_g)
    apply (clarsimp simp: )
-   apply (simp add: align_of_def user_data_C_size_of user_data_C_align_of
-                    size_of_def user_data_C_typ_name)
+   apply (simp add: align_of_def size_of_def)
    apply (fold is_aligned_def[where n=2, simplified], simp)
    apply (erule contra_subsetD[rotated])
    apply (rule order_trans[rotated])
@@ -1833,7 +1826,7 @@ lemma user_word_at_cross_over:
    apply (insert int_and_leR [where a="uint (p >> 2)" and b=1023], clarsimp)[1]
   apply (simp add: field_lvalue_def
             field_lookup_offset_eq[OF trans, OF _ arg_cong[where f=Some, symmetric], OF _ pair_collapse]
-            word32_shift_by_2 shiftr_shiftl1 is_aligned_neg_mask_eq is_aligned_andI1)
+            word32_shift_by_2 shiftr_shiftl1 is_aligned_andI1)
   apply (drule_tac x="ucast (p >> 2)" in spec)
   apply (simp add: byte_to_word_heap_def Let_def ucast_ucast_mask)
   apply (fold shiftl_t2n[where n=2, simplified, simplified mult.commute mult.left_commute])
@@ -1848,7 +1841,7 @@ lemma user_word_at_cross_over:
     apply simp
    apply (fastforce simp add: typ_info_word)
   apply simp
-  apply (rule_tac f="h_val ?hp" in arg_cong)
+  apply (rule_tac f="h_val hp" for hp in arg_cong)
   apply simp
   apply (simp add: field_lvalue_def)
   apply (simp add: ucast_nat_def ucast_ucast_mask)
@@ -1973,8 +1966,3 @@ lemma rf_sr_armKSGlobalPD:
 end
 end
 
-(*
- * Local Variables: ***
- * indent-tabs-mode: nil ***
- * End: ***
- *)

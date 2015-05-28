@@ -834,7 +834,7 @@ lemma sameRegionAs_def2:
            split del: split_if cong: if_cong)
   apply (clarsimp simp: capRange_def Let_def)
   apply (simp add: range_subset_eq2 cong: conj_cong)
-  apply (simp add: interval_empty conj_ac)
+  apply (simp add: interval_empty conj_comms)
   done
 
 lemma sameObjectAs_def2:
@@ -888,7 +888,7 @@ lemma sameObjectAs_sameRegionAs:
 
 lemma sameObjectAs_sym:
   "sameObjectAs c d = sameObjectAs d c"
-  by (simp add: sameObjectAs_def2 eq_commute conj_ac)
+  by (simp add: sameObjectAs_def2 eq_commute conj_comms)
 
 lemma untypedRange_Master:
   "untypedRange (capMasterCap cap) = untypedRange cap"
@@ -988,21 +988,21 @@ lemma sameRegionAs_trans:
 lemma capMasterCap_maskCapRights[simp]:
   "capMasterCap (maskCapRights msk cap)
     = capMasterCap cap"
-  apply (cases cap,
-         simp_all add: maskCapRights_def Let_def isCap_simps
-                       capMasterCap_def)
-  apply (case_tac arch_capability,
-         simp_all add: ArchRetype_H.maskCapRights_def Let_def isCap_simps)
+  apply (cases cap;
+         simp add: maskCapRights_def Let_def isCap_simps capMasterCap_def)
+  apply (rename_tac arch_capability)
+  apply (case_tac arch_capability;
+         simp add: ArchRetype_H.maskCapRights_def Let_def isCap_simps)
   done
 
 lemma capBadge_maskCapRights[simp]:
   "capBadge (maskCapRights msk cap)
     = capBadge cap"
-  apply (cases cap,
-         simp_all add: maskCapRights_def Let_def isCap_simps
-                       capBadge_def)
-  apply (case_tac arch_capability,
-         simp_all add: ArchRetype_H.maskCapRights_def Let_def isCap_simps)
+  apply (cases cap;
+         simp add: maskCapRights_def Let_def isCap_simps capBadge_def)
+  apply (rename_tac arch_capability)
+  apply (case_tac arch_capability;
+         simp add: ArchRetype_H.maskCapRights_def Let_def isCap_simps)
   done
 
 lemma maskCapRights_region [simp]:
@@ -1312,7 +1312,7 @@ qed
 
 lemma cte_refs_capRange:
   "\<lbrakk> s \<turnstile>' c; \<forall>irq. c \<noteq> IRQHandlerCap irq \<rbrakk> \<Longrightarrow> cte_refs' c x \<subseteq> capRange c"
-  apply (cases c, simp_all add: capRange_def isCap_simps)
+  apply (cases c; simp add: capRange_def isCap_simps)
     apply (clarsimp dest!: valid_capAligned
                     simp: capAligned_def objBits_simps
                           field_simps)
@@ -1324,6 +1324,8 @@ lemma cte_refs_capRange:
     apply (erule is_aligned_no_wrap')
     apply simp
    defer
+   -- "CNodeCap"
+   apply (rename_tac word1 nat1 word2 nat2) 
    apply (clarsimp simp: objBits_simps capAligned_def dest!: valid_capAligned)
    apply (subgoal_tac "xa * 0x10 < 2 ^ (4 + nat1)")
     apply (intro conjI)
@@ -1340,6 +1342,8 @@ lemma cte_refs_capRange:
     apply simp
    apply (simp only: power_add)
    apply (simp add: word_bits_def)
+  -- "Zombie"
+  apply (rename_tac word zombie_type nat)
   apply (clarsimp simp: capAligned_def valid_cap'_def objBits_simps)
   apply (subgoal_tac "xa * 0x10 < 2 ^ zBits zombie_type")
    apply (intro conjI)
@@ -1798,6 +1802,7 @@ lemma untyped_mdb_init:
    apply (drule untypedCapRange)+
    apply simp
   apply (cases cte)
+  apply (rename_tac capability mdbnode)
   apply clarsimp
   apply (subgoal_tac "mdb_ptr (ctes_of s) p capability mdbnode")
    prefer 2
@@ -1820,9 +1825,7 @@ lemma aligned_untypedRange_non_empty:
   done
 
 lemma untypedRange_not_emptyD: "untypedRange c' \<noteq> {} \<Longrightarrow> isUntypedCap c'"
-  apply (case_tac c')
-    apply (simp_all add:isCap_simps)
-  done
+  by (case_tac c'; simp add: isCap_simps)
 
 lemma usableRange_subseteq:
   "\<lbrakk>capAligned c';isUntypedCap c'\<rbrakk> \<Longrightarrow> usableUntypedRange c' \<subseteq> untypedRange c'"
@@ -1833,10 +1836,7 @@ lemma usableRange_subseteq:
  done
 
 lemma untypedRange_in_capRange: "untypedRange x \<subseteq> capRange x"
-  apply (case_tac x)
-    apply(simp_all add:capRange_def)
-  done
-
+  by (case_tac x; simp add: capRange_def)
 
 lemma untyped_inc_init:
   "\<lbrakk> valid_mdb_ctes m; m p = Some cte; no_mdb cte;
@@ -1858,7 +1858,7 @@ lemma untyped_inc_init:
     apply (drule (1) aligned_untypedRange_non_empty)
     apply assumption
    apply (drule(1) aligned_untypedRange_non_empty)+
-   apply (thin_tac "All ?P")
+   apply (thin_tac "All P" for P)
     apply (subgoal_tac "untypedRange cap \<inter> untypedRange c' = {}")
     apply (intro conjI)
          apply simp
@@ -1873,6 +1873,7 @@ lemma untyped_inc_init:
    apply (simp add:Int_ac)
   apply clarsimp
   apply (cases cte)
+  apply (rename_tac capability mdbnode)
   apply clarsimp
   apply (subgoal_tac "mdb_ptr (ctes_of s) p capability mdbnode")
    prefer 2
@@ -1890,7 +1891,7 @@ lemma untyped_inc_init:
    apply assumption
   apply (drule (1) aligned_untypedRange_non_empty)+
   apply (drule untypedCapRange)+
-  apply (thin_tac "All ?P")
+  apply (thin_tac "All P" for P)
    apply (subgoal_tac "untypedRange cap \<inter> untypedRange c = {}")
    apply (intro conjI)
         apply simp
@@ -2068,9 +2069,11 @@ lemma distinct_zombies_init:
         capAligned (cteCap cte); \<forall>x cte. m x = Some cte \<longrightarrow> capAligned (cteCap cte) \<rbrakk>
        \<Longrightarrow> distinct_zombies (m (p \<mapsto> cte))"
   apply (erule distinct_zombies_seperateE)
+  apply (rename_tac y cte')
   apply (clarsimp simp: caps_no_overlap'_def)
   apply (drule_tac x=y in spec)+
-  apply (case_tac ctea)
+  apply (case_tac cte')
+  apply (rename_tac capability mdbnode)
   apply clarsimp
   apply (subgoal_tac "capRange capability \<noteq> capRange (cteCap cte)")
    apply (clarsimp simp: capRange_def)

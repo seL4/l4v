@@ -77,7 +77,7 @@ fun after_qed thm_name thms lthy =
 in
 
 val _ =
-   Outer_Syntax.local_theory_to_proof @{command_spec "distinct"}
+   Outer_Syntax.local_theory_to_proof @{command_keyword "distinct"}
       "prove distinctness of a list of terms"
       (distinct_parser
         >> (fn (thm_name, terms) => fn lthy =>

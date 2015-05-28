@@ -467,8 +467,7 @@ lemma generated_no_pds_pts_frames:
    apply (case_tac "map_of (map (\<lambda>(n, y). (the_id_of n, y)) (tcb_objs spec)) xa")
     apply clarsimp
     apply (case_tac "map_of (map (\<lambda>(n, y). (the_id_of n, y)) (ep_objs spec)) xa")
-     apply clarsimp
-     apply (metis is_none_code(1))
+     apply (clarsimp; fail)
     apply clarsimp
     apply (insert ep_objs_only_eps[where spec=spec], clarsimp)
     apply (drule helper13)

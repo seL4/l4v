@@ -926,7 +926,7 @@ lemma tcbSchedEnqueue_ccorres:
             apply (simp add: valid_queues_valid_q)
            apply (clarsimp simp: typ_heap_simps h_t_valid_clift_Some_iff numPriorities_def
                                  cready_queues_index_to_C_def2)
-           apply (erule_tac S="{t, ?v}" in state_relation_queue_update_helper,
+           apply (erule_tac S="{t, v}" for v in state_relation_queue_update_helper,
                   simp_all add: cready_queues_index_to_C_def2 numPriorities_def
                                  typ_heap_simps maxDom_to_H maxPrio_to_H)[1]
               apply (simp add: upd_unless_null_def)
@@ -1333,7 +1333,7 @@ lemma tcbSchedAppend_ccorres:
            apply (clarsimp simp: h_val_field_clift' h_t_valid_clift
                                  h_t_valid_c_guard [OF h_t_valid_field, OF h_t_valid_clift]
                                  h_t_valid_field[OF h_t_valid_clift])
-           apply (erule_tac S="{t, ?v}" in state_relation_queue_update_helper,
+           apply (erule_tac S="{t, v}" for v in state_relation_queue_update_helper,
                   simp_all add: typ_heap_simps if_Some_helper numPriorities_def
                                 cready_queues_index_to_C_def2
                           cong: if_cong split del: split_if
@@ -2402,8 +2402,3 @@ lemma ipcCancel_ccorres1:
 end
 end
 
-(*
- * Local Variables: ***
- * indent-tabs-mode: nil ***
- * End: ***
- *)

@@ -12,7 +12,7 @@
 Utilities for the machine level which are not machine-dependent.
 *)
 
-header "Machine Accessor Functions"
+chapter "Machine Accessor Functions"
 
 theory MiscMachine_A
 imports ARM_Machine_A

@@ -16,7 +16,7 @@ begin
 
 definition
   kernelEntry_if
-  where
+where
   "kernelEntry_if e tc \<equiv> do
     t \<leftarrow> getCurThread;
     threadSet (tcbContext_update  (\<lambda>_. tc)) t;
@@ -984,7 +984,8 @@ lemmas preserves_lifts = preserves_lift_ret preserves_lift preserves_lift'
 
 
 
-defs step_restrict_def: "step_restrict \<equiv> \<lambda>s. s \<in> has_srel_state (lift_fst_rel (lift_snd_rel state_relation)) full_invs_if'"
+defs step_restrict_def: 
+  "step_restrict \<equiv> \<lambda>s. s \<in> has_srel_state (lift_fst_rel (lift_snd_rel state_relation)) full_invs_if'"
 
 
 lemma abstract_invs: "global_automaton_invs check_active_irq_A_if (do_user_op_A_if uop)
@@ -1526,13 +1527,11 @@ lemma (in valid_initial_state_noenabled) uop_sane:
   done
 
 sublocale valid_initial_state_noenabled \<subseteq> valid_initial_state
-  apply (unfold_locales)
-      apply (cut_tac uop=utf and ?s0.0=s0 in ADT_A_if_enabled)
-       apply (thin_tac "?P")
-       apply (rule uop_sane)
+     apply (unfold_locales)
+      using ADT_A_if_enabled[of utf s0, OF uop_sane]
       apply (fastforce simp: enabled_system_def s0_def)
-     using ADT_A_if_Init_Fin_serial[OF uop_sane, where ?s0.0=s0]
+     using ADT_A_if_Init_Fin_serial[OF uop_sane, of s0]
      apply (simp only: Init_Fin_serial_def serial_system_def Init_Fin_serial_axioms_def s0_def)+
-     done
+  done
  
 end

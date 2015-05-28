@@ -77,7 +77,7 @@ lemma setObject_ccorres_helper:
   apply (clarsimp simp: HoarePartialDef.valid_def)
   apply (simp add: typ_at_to_obj_at' koTypeOf_injectKO)
   apply (drule obj_at_ko_at', clarsimp)
-  apply (cut_tac \<sigma>=\<sigma> and ko'=koa in valid)
+  apply (cut_tac \<sigma>1=\<sigma> and ko'1=koa in valid)
   apply (drule hoare_sound,
          clarsimp simp: cvalid_def HoarePartialDef.valid_def)
   apply (elim allE, drule(1) mp)

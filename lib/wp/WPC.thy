@@ -73,16 +73,16 @@ signature WPC = sig
   val iffd2_thm: thm;
   val wpc_helperI: thm;
 
-  val instantiate_concl_pred: theory -> cterm -> thm -> thm;
+  val instantiate_concl_pred: Proof.context -> cterm -> thm -> thm;
 
-  val detect_term: theory -> thm -> cterm -> (cterm * term) list;
-  val detect_terms: theory -> (term -> cterm -> thm -> tactic) -> tactic;
+  val detect_term: Proof.context -> thm -> cterm -> (cterm * term) list;
+  val detect_terms: Proof.context -> (term -> cterm -> thm -> tactic) -> tactic;
 
   val split_term: thm list -> Proof.context -> term -> cterm -> thm -> tactic;
 
   val wp_cases_tac: thm list -> Proof.context -> tactic;
   val wp_debug_tac: thm list -> Proof.context -> tactic;
-  val wp_cases_method: thm list -> (Proof.context -> Method.method) Parse.context_parser;
+  val wp_cases_method: thm list -> (Proof.context -> Method.method) context_parser;
 
 end;
 
@@ -90,13 +90,12 @@ structure WPCPredicateAndFinals = Theory_Data
 (struct
     type T = (cterm * thm) list
     val empty = []
-    val copy = I
     val extend = I
     fun merge (xs, ys) =
         (* Order of predicates is important, so we can't reorder *)
-        let val tms = map (term_of o fst) xs
+        let val tms = map (Thm.term_of o fst) xs
             fun inxs x = exists (fn y => x aconv y) tms
-            val ys' = filter (not o inxs o term_of o fst) ys
+            val ys' = filter (not o inxs o Thm.term_of o fst) ys
         in
             xs @ ys'
         end
@@ -114,12 +113,12 @@ val foo_thm = @{thm "wpc_foo"};
 (* it looks like cterm_instantiate would do the job better,
    but this handles the case where ?'a must be instantiated
    to ?'a \<times> ?'b *)
-fun instantiate_concl_pred thy pred thm =
+fun instantiate_concl_pred ctxt pred thm =
 let
-  val get_concl_pred  = (fst o strip_comb o HOLogic.dest_Trueprop o concl_of);
-  val get_concl_predC = (cterm_of thy o get_concl_pred);
+  val get_concl_pred  = (fst o strip_comb o HOLogic.dest_Trueprop o Thm.concl_of);
+  val get_concl_predC = (Thm.cterm_of ctxt o get_concl_pred);
 
-  val get_pred_tvar   = (ctyp_of thy o domain_type o typ_of o ctyp_of_term);
+  val get_pred_tvar   = (Thm.ctyp_of ctxt o domain_type o Thm.typ_of o Thm.ctyp_of_cterm);
   val thm_pred        = get_concl_predC thm;
   val thm_pred_tvar   = get_pred_tvar thm_pred;
   val pred_tvar       = get_pred_tvar pred;
@@ -131,22 +130,22 @@ in
   Thm.instantiate ([], [(thm2_pred, pred)]) thm2
 end;
 
-fun detect_term thy thm tm =
+fun detect_term ctxt thm tm =
 let
-  val foo_thm_tm   = instantiate_concl_pred thy tm foo_thm;
-  val matches      = resolve_tac [foo_thm_tm] 1 thm; 
+  val foo_thm_tm   = instantiate_concl_pred ctxt tm foo_thm;
+  val matches      = resolve_tac ctxt [foo_thm_tm] 1 thm; 
   val outcomes     = Seq.list_of matches;
   val get_goalterm = (HOLogic.dest_Trueprop o Logic.strip_assums_concl
-                       o Envir.beta_eta_contract o hd o prems_of);
+                       o Envir.beta_eta_contract o hd o Thm.prems_of);
   val get_argument = hd o snd o strip_comb;
 in
   map (pair tm o get_argument o get_goalterm) outcomes
 end;
 
-fun detect_terms (thy : theory) tactic2 thm =
+fun detect_terms ctxt tactic2 thm =
 let
-  val pfs           = WPCPredicateAndFinals.get thy;
-  val detects       = map (fn (tm, rl) => (detect_term thy thm tm, rl)) pfs;
+  val pfs           = WPCPredicateAndFinals.get (Proof_Context.theory_of ctxt);
+  val detects       = map (fn (tm, rl) => (detect_term ctxt thm tm, rl)) pfs;
   val detects2      = filter (not o null o fst) detects;
   val ((pred, arg), fin)   = case detects2 of
                                 [] => raise WPCFailed ("detect_terms: no match", [], [thm])
@@ -155,15 +154,15 @@ in
   tactic2 arg pred fin thm
 end;
 
-fun resolve_single_tac rules n thm =
-  case Seq.chop 2 (resolve_tac rules n thm)
-  of ([], seq) => raise WPCFailed
+fun resolve_single_tac ctxt rules n thm =
+  case Seq.chop 2 (resolve_tac ctxt rules n thm)
+  of ([], _) => raise WPCFailed
                         ("resolve_single_tac: no rules could apply",
                          [], thm :: rules)
-   | (x :: y :: zs, seq) => raise WPCFailed
+   | (_ :: _ :: _, _) => raise WPCFailed
                         ("resolve_single_tac: multiple rules applied",
                          [], thm :: rules)
-   | ([x], seq) => Seq.single x;
+   | ([x], _) => Seq.single x;
 
 fun split_term processors ctxt target pred fin t =
 let
@@ -174,46 +173,46 @@ let
       SOME sugar => #split sugar
     | _ => raise WPCFailed ("split_term: not a case", [hdTarget], []);
   val subst         = split RS iffd2_thm;
-  val subst2        = instantiate_concl_pred (Proof_Context.theory_of ctxt) pred subst;
+  val subst2        = instantiate_concl_pred ctxt pred subst;
 in
- ((resolve_tac [subst2] 1)
+ ((resolve_tac ctxt [subst2] 1)
     THEN
-  (resolve_tac [wpc_helperI] 1)
+  (resolve_tac ctxt [wpc_helperI] 1)
     THEN
-  (REPEAT_ALL_NEW (resolve_tac processors)
+  (REPEAT_ALL_NEW (resolve_tac ctxt processors)
      THEN_ALL_NEW
-   resolve_single_tac [fin]) 1
+   resolve_single_tac ctxt [fin]) 1
  ) t
 end;
 
 (* n.b. need to concretise the lazy sequence via a list to ensure exceptions
   have been raised already and catch them *)
 fun wp_cases_tac processors ctxt thm =
-  detect_terms (Proof_Context.theory_of ctxt) (split_term processors ctxt) thm
+  detect_terms ctxt (split_term processors ctxt) thm
       |> Seq.list_of |> Seq.of_list
     handle WPCFailed _ => no_tac thm;
 
 fun wp_debug_tac processors ctxt  =
-  detect_terms (Proof_Context.theory_of ctxt)  (split_term processors ctxt);
+  detect_terms ctxt (split_term processors ctxt);
 
 fun wp_cases_method processors = Scan.succeed (fn ctxt =>
   Method.SIMPLE_METHOD (wp_cases_tac processors ctxt));
 
 local structure P = Parse and K = Keyword in
 
-fun add_wpc tm thm ctxt = let
-  val thy  = Proof_Context.theory_of ctxt
-  val tm' = (Syntax.read_term ctxt tm) |> cterm_of thy o Logic.varify_global
+fun add_wpc tm thm lthy = let
+  val ctxt = Local_Theory.target_of lthy
+  val tm' = (Syntax.read_term ctxt tm) |> Thm.cterm_of ctxt o Logic.varify_global
   val thm' = Proof_Context.get_thm ctxt thm
 in
-  Local_Theory.background_theory (WPCPredicateAndFinals.map (fn xs => (tm', thm') :: xs)) ctxt
-end;
+  Local_Theory.background_theory (WPCPredicateAndFinals.map (fn xs => (tm', thm') :: xs)) lthy
+end; 
   
-val wpcP =  
+val _ =  
     Outer_Syntax.command 
-        @{command_spec "wpc_setup"}
+        @{command_keyword "wpc_setup"}
         "Add wpc stuff"
-        (P.term -- P.name >> (fn (tm, thm) => Toplevel.local_theory NONE (add_wpc tm thm)))
+        (P.term -- P.name >> (fn (tm, thm) => Toplevel.local_theory NONE NONE (add_wpc tm thm)))
 
 end;    
 end;
@@ -251,7 +250,7 @@ lemma wpc_helper_validF:
 setup {*
 
 let
-  val tm  = cterm_of @{theory} (Logic.varify_global @{term "\<lambda>R. wpc_test P R S"});
+  val tm  = Thm.cterm_of @{context} (Logic.varify_global @{term "\<lambda>R. wpc_test P R S"});
   val thm = @{thm wpc_helper_validF};
 in
   WPCPredicateAndFinals.map (fn xs => (tm, thm) :: xs)
@@ -272,5 +271,6 @@ lemma case_options_weak_wp:
    apply assumption
   apply simp
   done
+
 
 end

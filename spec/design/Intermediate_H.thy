@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-header "Intermediate"
+chapter "Intermediate"
 
 theory Intermediate_H
 imports API_H

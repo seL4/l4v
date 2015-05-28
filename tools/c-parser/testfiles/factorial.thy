@@ -353,9 +353,8 @@ apply(rule intra_mem_safe)
                      free_body_def alloc_body_def factorial_body_def creturn_def
                 split: split_if_asm option.splits)
 apply((erule disjE)?, simp,
-      (thin_tac "C=?x", (thin_tac "\<Gamma> ?x = ?y")+,
+      (thin_tac "C=x" for x, (thin_tac "\<Gamma> x = y" for x y)+,
        force simp: intra_sc)?)+
 done
-
 
 end

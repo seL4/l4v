@@ -12,7 +12,7 @@
    datatypes/records for the various kernel data structures.
 *)
 
-header "Kernel Data Structures"
+chapter "Kernel Data Structures"
 
 theory Structures_H
 imports

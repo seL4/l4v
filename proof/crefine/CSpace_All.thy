@@ -64,7 +64,7 @@ lemma lookupCap_ccorres':
   apply (clarsimp simp: valid_pspace_valid_objs')
   apply (intro impI conjI allI)
     apply (simp add: lookupSlot_raw_rel_def)
-    apply (rule_tac y="ret___struct_lookupCap_ret_C_' ?s" 
+    apply (rule_tac y="ret___struct_lookupCap_ret_C_' s" for s
                     in arg_cong, fastforce)
    apply simp
   apply (case_tac err, simp+) [1]

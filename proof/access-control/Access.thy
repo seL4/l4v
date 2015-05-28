@@ -773,7 +773,7 @@ where
 lemma caps_of_state_tcb:
   "\<lbrakk> get_tcb p s = Some tcb; option_map fst (tcb_cap_cases idx) = Some getF \<rbrakk> \<Longrightarrow> caps_of_state s (p, idx) = Some (getF tcb)"
   apply (drule get_tcb_SomeD)
-  apply (clarsimp simp: map_option_eq_Some)
+  apply clarsimp
   apply (drule (1) cte_wp_at_tcbI [where t = "(p, idx)" and P = "op = (getF tcb)", simplified])
   apply simp
   apply (clarsimp simp: cte_wp_at_caps_of_state)
@@ -927,8 +927,8 @@ lemma tro_trans:
     | erule integrity_obj.cases
     | erule disjE
     | drule(1) clear_asidpool_trans
-    | drule_tac s="Some ?s'" in sym
-    | blast intro: integrity_obj.intros)+ (* took ages *)
+    | drule_tac s="Some s'" for s' in sym
+    | blast intro: integrity_obj.intros)+ (* takes ages *)
   done
 
 lemma tre_trans:
@@ -971,7 +971,7 @@ lemma trasids_trans:
      (\<forall>x. integrity_asids aag subjects x (arm_asid_table (arch_state s') (asid_high_bits_of x)) (arm_asid_table (arch_state s'') (asid_high_bits_of x)))\<rbrakk>
    \<Longrightarrow>
      (\<forall>x. integrity_asids aag subjects x (arm_asid_table (arch_state s) (asid_high_bits_of x)) (arm_asid_table (arch_state s'') (asid_high_bits_of x)))"
-  apply (clarsimp simp add: integrity_asids_def del: split_paired_All)
+  apply (clarsimp simp: integrity_asids_def)
   apply metis
   done
 
@@ -979,7 +979,7 @@ lemma trrqs_trans:
   "\<lbrakk> (\<forall>d p. integrity_ready_queues aag subjects (pasDomainAbs aag d) (ready_queues s d p) (ready_queues s' d p));
      (\<forall>d p. integrity_ready_queues aag subjects (pasDomainAbs aag d) (ready_queues s' d p) (ready_queues s'' d p)) \<rbrakk>
    \<Longrightarrow> (\<forall>d p. integrity_ready_queues aag subjects (pasDomainAbs aag d) (ready_queues s d p) (ready_queues s'' d p))"
-apply (clarsimp simp add: integrity_ready_queues_def del: split_paired_All)
+apply (clarsimp simp: integrity_ready_queues_def)
 apply (metis append_assoc)
 done
 
@@ -1134,13 +1134,8 @@ lemma eintegrity_sa_update[simp]: "integrity aag X st (scheduler_action_update f
   apply (simp add: integrity_subjects_def trans_state_update'[symmetric])
   done
 
-lemma trans_state_extra[simp]: "(trans_state (\<lambda>_. e) (trans_state f s)) = (trans_state (\<lambda>_. e) s)"
-  apply simp
-  done
-
 lemma trans_state_back[simp]: "trans_state (\<lambda>_. exst s) s = s"
-  apply simp
-  done
+  by simp
 
 declare wrap_ext_op_det_ext_ext_def[simp]
 
@@ -1240,7 +1235,7 @@ done
 lemma as_user_state_vrefs[wp]:
   "\<lbrace>\<lambda>s. P (state_vrefs s)\<rbrace> as_user t f \<lbrace>\<lambda>rv s. P (state_vrefs s)\<rbrace>"
   apply (simp add: as_user_def set_object_def split_def)
-  apply (wp get_object_wp)
+  apply wp
   apply (clarsimp simp: state_vrefs_def vs_refs_no_global_pts_def get_tcb_def
                  elim!: rsubst[where P=P, OF _ ext]
                  split: option.split_asm Structures_A.kernel_object.split)
@@ -1249,7 +1244,7 @@ lemma as_user_state_vrefs[wp]:
 lemma as_user_tcb_states[wp]:
   "\<lbrace>\<lambda>s. P (tcb_states_of_state s)\<rbrace> as_user t f \<lbrace>\<lambda>rv s. P (tcb_states_of_state s)\<rbrace>"
   apply (simp add: as_user_def set_object_def split_def tcb_states_of_state_def)
-  apply (wp get_object_wp)
+  apply wp
   apply (clarsimp simp: thread_states_def get_tcb_def
                  elim!: rsubst[where P=P, OF _ ext] split: option.split)
   done
@@ -1265,16 +1260,14 @@ crunch cdt_preserved[wp]: as_user "\<lambda>s. P (cdt s)"
 lemma tcb_domain_map_wellformed_lift:
   assumes 1: "\<And>P. \<lbrace>\<lambda>s. P (ekheap s)\<rbrace> f \<lbrace>\<lambda>rv s. P (ekheap s)\<rbrace>"
   shows "\<lbrace>tcb_domain_map_wellformed aag\<rbrace> f \<lbrace>\<lambda>rv. tcb_domain_map_wellformed aag\<rbrace>"
-unfolding tcb_domain_map_wellformed_aux_def get_etcb_def
-apply (wp 1)
-done
+  by (rule 1)
 
 lemma as_user_pas_refined[wp]:
   "\<lbrace>pas_refined aag\<rbrace> as_user t f \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
 apply (simp add: pas_refined_def state_objs_to_policy_def)
 apply (rule hoare_pre)
  apply wps
- apply (wp tcb_domain_map_wellformed_lift)
+ apply wp
 apply simp
 done
 
@@ -1310,14 +1303,10 @@ lemma hoare_vcg_all_liftE:
   apply (erule hoare_vcg_all_lift)
   done
 
-(* FIXME: move *)
+(* FIXME: eliminate *)
 lemma hoare_weak_lift_impE:
   "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, \<lbrace>Q'\<rbrace> \<Longrightarrow> \<lbrace>\<lambda>s. R \<longrightarrow> P s\<rbrace> f \<lbrace>\<lambda>rv s. R \<longrightarrow> Q rv s\<rbrace>, \<lbrace>\<lambda>rv s. R \<longrightarrow> Q' rv s\<rbrace>"
-  unfolding validE_def
-  apply (cases R)
-   apply (simp cong: sum.case_cong)
-  apply (simp add: hoare_post_taut cong: sum.case_cong)
-  done
+  by (rule wp_throw_const_impE)
 
 (* FIXME: move *)
 lemma hoare_use_ex_R:
@@ -1345,7 +1334,7 @@ lemma get_endpoint_wp:
   done
 
 (* stronger *)
-(* MOVE *)
+(* FIXME: MOVE *)
 lemma ep_queued_st_tcb_at':
   "\<And>P. \<lbrakk>ko_at (Endpoint ep) ptr s; (t, rt) \<in> ep_q_refs_of ep;
          valid_objs s; sym_refs (state_refs_of s);
@@ -1475,8 +1464,7 @@ lemma new_range_subset':
   using al
 proof (rule is_aligned_get_word_bits)
   assume p0: "ptr = 0" and szv': "len_of TYPE ('a) \<le> sz"
-  hence "(2 :: 'a word) ^ sz = 0"
-    by (simp add: p2_eq_0)
+  hence "(2 :: 'a word) ^ sz = 0" by simp
 
   thus ?thesis using p0
     apply -

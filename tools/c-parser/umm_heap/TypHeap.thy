@@ -214,12 +214,12 @@ where
 
 
 definition
-  sub_typ :: "'a::c_type itself \<Rightarrow> 'b::c_type itself \<Rightarrow> bool" ("_ \<le>\<^sub>\<tau> _")
+  sub_typ :: "'a::c_type itself \<Rightarrow> 'b::c_type itself \<Rightarrow> bool" ("_ \<le>\<^sub>\<tau> _" [51, 51] 50)
 where
   "s \<le>\<^sub>\<tau> t \<equiv> typ_uinfo_t s \<le> typ_uinfo_t t"
 
 definition
-  sub_typ_proper :: "'a::c_type itself \<Rightarrow> 'b::c_type itself \<Rightarrow> bool" ("_ <\<^sub>\<tau> _")
+  sub_typ_proper :: "'a::c_type itself \<Rightarrow> 'b::c_type itself \<Rightarrow> bool" ("_ <\<^sub>\<tau> _" [51, 51] 50)
 where
   "s <\<^sub>\<tau> t \<equiv> typ_uinfo_t s < typ_uinfo_t t"
 
@@ -308,7 +308,7 @@ text {* ---- *}
 
 lemma wf_heap_val_SIndexVal_STyp_simp [simp]:
   "wf_heap_val s \<Longrightarrow> s (x,SIndexVal) \<noteq> Some (STyp t)"
-apply(auto simp: wf_heap_val_def wf_heap_val_def)
+apply(clarsimp simp: wf_heap_val_def)
 apply(drule_tac x=x in spec)
 apply clarsimp
 apply(case_tac t, simp)
@@ -520,7 +520,7 @@ lemma s_valid_g:
 lemma lift_typ_heap_if:
   "lift_typ_heap g s = (\<lambda>(p::'a::c_type ptr). if s,g \<Turnstile>\<^sub>s p then Some (from_bytes
       (heap_list_s s (size_of TYPE('a)) (ptr_val p))) else None)"
-  by (force simp: lift_typ_heap_def intro: ext)
+  by (force simp: lift_typ_heap_def)
 
 lemma lift_typ_heap_s_valid:
   "lift_typ_heap g s p = Some x \<Longrightarrow> s,g \<Turnstile>\<^sub>s p"
@@ -566,9 +566,9 @@ lemma fun2list_nth [simp]:
 
 lemma proj_d_lift_state:
   "proj_d (lift_state (h,d)) = d"
-apply(auto simp: proj_d_def Let_def intro!: ext split: option.splits)
+apply(rule ext)
 apply(case_tac "d x")
-apply(auto simp: lift_state_def split: option.splits)
+apply(auto simp: proj_d_def lift_state_def Let_def split: option.splits)
 done
 
 lemma lift_state_proj [simp]:
@@ -709,7 +709,7 @@ lemma lift_t_if:
   "lift_t g (h,d) = (\<lambda>p. if d,g \<Turnstile>\<^sub>t p then Some (h_val h (p::'a::c_type ptr)) else
       None)"
   by (force simp: lift_t_def lift_typ_heap_if h_t_s_valid h_val_def
-                 heap_list_s_heap_list h_t_valid_taut intro: ext)
+                 heap_list_s_heap_list h_t_valid_taut)
 
 lemma lift_lift_t:
   "d,g \<Turnstile>\<^sub>t (p::'a::c_type ptr) \<Longrightarrow> lift h p = the (lift_t g (h,d) p)"
@@ -730,7 +730,7 @@ next
   case (Cons x xs)
   have "heap_update_list (p + of_nat k) (x # xs) h p =
       heap_update_list (p + of_nat (k + 1)) xs (h(p + of_nat k := x)) p"
-    by (simp add: add.assoc of_nat_add ac_simps)
+    by (simp add: ac_simps)
   also have "\<dots> = (h(p + of_nat k := x)) p"
   proof -
     from Cons have "k + 1 \<le> addr_card - length xs" by simp
@@ -852,7 +852,7 @@ apply(auto simp: ladder_set_def)
  apply(drule_tac x=m in spec)
  apply(drule_tac x=0 in spec)
  apply force
-apply(thin_tac "All ?P")
+apply(thin_tac "All P" for P)
 apply(drule_tac x="m + size_td (dt_fst dt_pair)" in spec)
 apply(drule_tac x="n - size_td (dt_fst dt_pair)" in spec)
 apply(case_tac dt_pair)
@@ -981,7 +981,8 @@ apply(induct t and st and xs and x)
     apply auto[4]
  apply clarsimp
  apply(case_tac dt_pair, clarsimp)
- apply(thin_tac "All ?P")
+ apply(rename_tac a)
+ apply(thin_tac "All P" for P)
  apply(drule_tac x=s in spec)
  apply(drule_tac x="k - size_td a" in spec)
  apply clarsimp
@@ -1023,9 +1024,7 @@ lemma typ_slice_0_True':
   "\<forall>x. x \<in> set (typ_slice_struct st 0) \<longrightarrow> snd x = True"
   "\<forall>x. x \<in> set (typ_slice_list xs 0) \<longrightarrow> snd x = True"
   "\<forall>x. x \<in> set (typ_slice_pair y 0) \<longrightarrow> snd x = True"
-apply(induct t and st and xs and y)
-    apply auto
-done
+  by (induct t and st and xs and y)  auto
 
 lemma typ_slice_0_True:
   "x \<in> set (typ_slice_t t 0) \<Longrightarrow> snd x = True"
@@ -1033,9 +1032,7 @@ lemma typ_slice_0_True:
 
 lemma typ_slice_False_self:
   "k \<noteq> 0 \<Longrightarrow> (t,False) \<in> set (typ_slice_t t k)"
-apply(case_tac t)
-apply simp
-done
+  by (cases t) simp
 
 lemma tag_prefix_True:
   "typ_slice_t s k \<le> typ_slice_t t 0 \<Longrightarrow> k = 0"
@@ -1163,12 +1160,9 @@ lemma sub_typ_proper_not_same [simp]:
 
 lemma sub_typ_proper_not_simple [simp]:
   "\<not> TYPE('a::c_type) <\<^sub>\<tau> TYPE('b::simple_mem_type)"
-apply(simp add: sub_typ_proper_def)
-apply(case_tac "typ_uinfo_t TYPE('b)")
-apply simp
-apply(case_tac typ_struct)
- apply simp
-apply clarsimp
+apply(cases "typ_uinfo_t TYPE('b)")
+apply(rename_tac typ_struct xs)
+apply(case_tac typ_struct, auto simp: sub_typ_proper_def)
 done
 
 lemma field_of_sub:
@@ -1206,6 +1200,7 @@ apply(drule (1) map_prefix_same_cases[where xs="typ_slice_t (typ_uinfo_t TYPE('a
 apply(erule disjE)
  apply(drule typ_slice_sub)
  apply(case_tac "typ_info_t TYPE('b)")
+ apply(rename_tac typ_struct xs)
  apply(case_tac "typ_struct")
   apply clarsimp
   apply(simp add: typ_tag_le_def)
@@ -1214,6 +1209,7 @@ apply(erule disjE)
  apply simp
 apply(drule typ_slice_sub)
 apply(case_tac "typ_info_t TYPE('a)")
+apply(rename_tac typ_struct xs)
 apply(case_tac "typ_struct")
  apply clarsimp
  apply(simp add: typ_tag_le_def typ_uinfo_t_def)
@@ -1253,20 +1249,15 @@ lemma peer_typ_simple [simp]:
 apply(clarsimp simp: peer_typ_def tag_disj_def typ_tag_le_def typ_uinfo_t_def)
 apply(erule disjE)
  apply(case_tac "typ_info_t TYPE('b)", simp)
+ apply(rename_tac typ_struct xs)
  apply(case_tac typ_struct, simp+)
 apply(case_tac "typ_info_t TYPE('a)", simp)
+apply(rename_tac typ_struct xs)
 apply(case_tac typ_struct, simp+)
 done
 
-lemma peer_typ_nlt:
-  "peer_typ TYPE('a::c_type) TYPE('b::c_type) \<Longrightarrow> \<not> TYPE('a) <\<^sub>\<tau> TYPE('b)"
-apply(clarsimp simp: peer_typ_def sub_typ_proper_def typ_uinfo_t_def)
-apply(erule disjE)
- apply simp
-apply(clarsimp simp: tag_disj_def)
-apply(drule order_less_imp_le)
-apply simp
-done
+(* FIXME: remove *)
+lemmas peer_typ_nlt = peer_typD
 
 lemma peer_typ_not_field_of:
   "\<lbrakk> peer_typ TYPE('a::c_type) TYPE('b::c_type); ptr_val p \<noteq> ptr_val q \<rbrakk> \<Longrightarrow>
@@ -1303,13 +1294,14 @@ lemma heap_list_update_list [rule_format]:
       heap_list (heap_update_list p v h) n (p + of_nat x) = take n (drop x v)"
 apply(induct_tac v)
  apply simp
-apply auto
+apply(rename_tac a list)
+apply clarsimp
 apply(case_tac x)
  apply clarsimp
  apply(case_tac n)
   apply clarsimp
  apply clarsimp
- apply rule
+ apply (rule conjI)
   apply(subgoal_tac "heap_update_list (p + of_nat 1) list (h(p := a)) p = a")
    apply simp
   apply(subst heap_update_list_same)
@@ -1350,6 +1342,7 @@ apply(induct t and st and ts and x)
   apply simp
  apply(erule notE)
  apply(case_tac dt_pair, clarsimp)
+ apply(rename_tac a)
  apply(subgoal_tac "size_td s + n \<le> size_td a")
   apply simp
  apply(drule_tac  td_set_offset_size_m)
@@ -1357,6 +1350,7 @@ apply(induct t and st and ts and x)
 apply(rotate_tac)
 apply(drule_tac x=s in spec)
 apply(case_tac dt_pair, clarsimp)
+apply(rename_tac a)
 apply(drule_tac x="m + size_td a" in spec)
 apply(drule_tac x="n - size_td a" in spec)
 apply(drule_tac x="k" in spec)
@@ -1768,7 +1762,7 @@ apply(induct t and st and ts and x)
   apply(drule_tac x=m in spec)
   apply(drule_tac x=f in spec)
   apply clarsimp
- apply(thin_tac "All ?P")
+ apply(thin_tac "All P" for P)
  apply(drule_tac x="m + size_td (dt_fst dt_pair)" in spec)
  apply(drule_tac x=f in spec)
  apply clarsimp
@@ -1778,7 +1772,8 @@ done
 
 lemma dt_snd_field_names_list_simp [simp]:
   "\<forall>f fs s. f \<notin> dt_snd ` set xs \<longrightarrow> \<not> f#fs \<in> set (field_names_list xs s)"
-apply(induct_tac xs, auto)
+apply(induct_tac xs, clarsimp)
+apply(rename_tac a list)
 apply(case_tac a, auto)
 done
 
@@ -1808,7 +1803,7 @@ lemma field_names_SomeD:
   by (simp add: field_names_Some)
 
 lemma lift_t_sub_field_update' [rule_format]:
-  "\<lbrakk> d,g' \<Turnstile>\<^sub>t p; \<not> (TYPE('a) <\<^sub>\<tau> TYPE('b)) (*; guard_mono g' p g*) \<rbrakk> \<Longrightarrow> fs_consistent fs TYPE('a) TYPE('b) \<longrightarrow>
+  "\<lbrakk> d,g' \<Turnstile>\<^sub>t p; \<not> (TYPE('a) <\<^sub>\<tau> TYPE('b)) \<rbrakk> \<Longrightarrow> fs_consistent fs TYPE('a) TYPE('b) \<longrightarrow>
       (\<forall>K. K = UNIV - (((field_offset_footprint p (field_names (typ_info_t TYPE('a)) (typ_uinfo_t TYPE('b))))) - (field_offset_footprint p fs)) \<longrightarrow>
       lift_t g (heap_update p (v::'a::mem_type) h,d) |` K =
            sub_field_update_t fs p v ((lift_t g (h,d))::'b::mem_type typ_heap) |` K)"
@@ -1831,11 +1826,12 @@ apply(induct_tac fs)
  apply clarsimp
  apply(drule field_names_SomeD3)
  apply simp
+apply(rename_tac a list)
 apply clarify
 apply clarsimp
 apply(erule impE)
  apply(clarsimp simp: fs_consistent_def)
-apply rule
+apply (rule conjI)
  prefer 2
  apply clarsimp
  apply(rule ccontr, clarsimp)
@@ -2025,7 +2021,7 @@ done
 lemma uvt1':
   "update_value_t (f#fs) v (w::'b) x = (if x=field_offset TYPE('b) f then
       update_ti_t (field_typ TYPE('b) f) (to_bytes_p (v::'a::c_type)) (w::'b::c_type) else update_value_t fs v w x)"
-  by (simp add: uvt1)
+  by simp
 
 lemma field_typ_self [simp]:
   "field_typ TYPE('a) [] = typ_info_t TYPE('a::c_type)"
@@ -2130,7 +2126,7 @@ apply(erule disjE)
    apply(rule max_size)
   apply(rule sz_nzero)
  apply(subst len_of_addr_card)
- apply(thin_tac "?P \<in> ?Q")
+ apply(thin_tac "x \<in> S" for x S)
  apply(simp add: field_of_t_def field_of_def)
  apply(drule td_set_offset_size)
  apply(simp add: size_of_def)
@@ -2190,23 +2186,11 @@ apply(subst drop_heap_list_le)
 apply simp
 done
 
-lemma update_field_update' [rule_format]:
-  "n \<in> (\<lambda>f. field_offset TYPE('b) f) ` set fs \<longrightarrow>
+lemma update_field_update':
+  "n \<in> (\<lambda>f. field_offset TYPE('b) f) ` set fs \<Longrightarrow>
       (\<exists>f. update_value_t fs (v::'a::c_type) (v'::'b::c_type) n =
           field_update (field_desc (field_typ TYPE('b) f)) (to_bytes_p v) v' \<and> f \<in> set fs \<and> n = field_offset TYPE('b) f)"
-apply(induct_tac fs)
- apply simp
-apply clarsimp
-apply(rule, clarsimp)
- apply rule
-  apply(rule_tac x=a in exI)
-  apply simp
- apply clarsimp
- apply(rule_tac x=a in exI)
- apply simp
-apply clarsimp
-apply force
-done
+  by (induct fs) auto
 
 lemma update_field_update:
   "field_of_t (p::'a ptr) (x::'b ptr) \<Longrightarrow>
@@ -2279,7 +2263,7 @@ apply(frule_tac bs="access_ti t v bs" in wf_fd_norm_tuD)
    apply assumption
   apply simp+
 apply(clarsimp simp: access_ti\<^sub>0_def)
-apply(thin_tac "norm_tu ?X ?Y = ?Z")+
+apply(thin_tac "norm_tu X Y = Z" for X Y Z)+
 apply(subst (asm) fa_fu_v [where w=v])
    apply fast
   apply(subst length_fa_ti)
@@ -3000,7 +2984,7 @@ proof -
     apply(auto simp: field_lvalue_def split: option.splits)
        apply(frule_tac v=v and v'=v' in update_field_update)
        apply clarsimp
-       apply(thin_tac "?P = update_ti_t ?x ?y ?z")
+       apply(thin_tac "P = update_ti_t x y z" for P x y z)
        apply(clarsimp simp: field_of_t_def field_of_def typ_uinfo_t_def)
        apply(frule_tac m=0 in field_names_SomeD2)
         apply simp

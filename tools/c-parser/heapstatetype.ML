@@ -48,10 +48,10 @@ fun hst_prove_globals fullrecname thy = let
   val recty = Type(fullrecname, [TVar(("'a",0), ["HOL.type"])])
   val hst'_instance_t =
       Logic.mk_of_class(recty, "SepFrame.heap_state_type'")
-  val hst'_instance_ct = cterm_of thy hst'_instance_t
+  val hst'_instance_ct = Thm.cterm_of (thy2ctxt thy) hst'_instance_t
   val is_hst'_thm =
       Goal.prove_internal (thy2ctxt thy) [] hst'_instance_ct
-                          (fn _ => Class.intro_classes_tac [])
+                          (fn _ => Class.intro_classes_tac (thy2ctxt thy) [])
   val thy = Axclass.add_arity is_hst'_thm thy
   val recty' =  Type(fullrecname, [alpha])
   val hrs = Sign.intern_const thy NameGeneration.global_heap_var
@@ -69,13 +69,13 @@ fun hst_prove_globals fullrecname thy = let
   val thy' = thy |> Context.theory_map (Simplifier.map_ss (fn ss => ss addsimps hst_thms))
   val hst_instance_t =
       Logic.mk_of_class(recty, "SepFrame.heap_state_type")
-  val hst_instance_ct = cterm_of thy' hst_instance_t
+  val hst_instance_ct = Thm.cterm_of (thy2ctxt thy') hst_instance_t
   val hst_thms = @{thms "hrs_simps"} @ [@{thm "split_def"}]
   val is_hst_thm =
-      Goal.prove_internal (thy2ctxt thy)
+      Goal.prove_internal (thy2ctxt thy')
           [] hst_instance_ct
           (fn _ =>
-              Class.intro_classes_tac [] THEN
+              Class.intro_classes_tac (thy2ctxt thy') [] THEN
               ALLGOALS (asm_full_simp_tac
                             (thy2ctxt thy' addsimps hst_thms)))
 in

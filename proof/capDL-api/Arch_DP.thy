@@ -209,7 +209,7 @@ lemma seL4_Page_Table_Map:
             in hoare_gen_asmEx)
          apply clarsimp
          apply wp
-         apply (rule_tac P1 = "?P1 \<and>* ?P2 " in hoare_strengthen_post
+         apply (rule_tac P1 = "P1 \<and>* P2" for P1 P2 in hoare_strengthen_post
            [OF invoke_page_table_wp])
           apply fastforce
          apply (rule conjI)
@@ -252,7 +252,7 @@ lemma seL4_Page_Table_Map:
          apply (simp add:cap_has_object_def)
         apply clarsimp
         apply (sep_solve)
-       apply (simp add:lookup_extra_caps_def conj_ac mapME_singleton)
+       apply (simp add:lookup_extra_caps_def conj_comms mapME_singleton)
        apply (rule wp_no_exception_seq)
         apply wp[1]
        apply (rule lookup_cap_and_slot_rvu[where r = root_size
@@ -349,7 +349,7 @@ lemma seL4_Section_Map_wp:
              in hoare_gen_asmEx)
            apply clarsimp
            apply wp
-           apply (rule_tac P1 = "\<lambda>iv. ?P1 \<and>* ?P2 " in hoare_strengthen_post
+           apply (rule_tac P1 = "\<lambda>iv. P1 \<and>* P2" for P1 P2 in hoare_strengthen_post
             [OF invoke_page_wp[where fake = Real
               and fake' = Fake and x = "[cdl_lookup_pd_slot pd_ptr vaddr]" ]])
             apply (rule refl)
@@ -395,7 +395,7 @@ lemma seL4_Section_Map_wp:
          apply simp
         apply clarsimp
         apply sep_solve
-       apply (simp add:lookup_extra_caps_def conj_ac mapME_singleton)
+       apply (simp add:lookup_extra_caps_def conj_comms mapME_singleton)
        apply (rule wp_no_exception_seq)
         apply wp[1]
        apply (rule lookup_cap_and_slot_rvu[where r = root_size
@@ -419,9 +419,7 @@ lemma seL4_Section_Map_wp:
    defer
   apply clarsimp
   using misc sz
-  apply (intro conjI impI allI,
-    simp_all add:
-    reset_cap_asid_simps2)
+  apply (intro conjI impI allI, simp_all add: reset_cap_asid_simps2)
         apply (sep_solve)
        apply simp
        apply sep_solve
@@ -496,7 +494,7 @@ lemma seL4_Page_Map_wp:
              in hoare_gen_asmEx)
            apply clarsimp
            apply wp
-           apply (rule_tac P1 = "\<lambda>iv. ?P1 \<and>* ?P2 " in hoare_strengthen_post
+           apply (rule_tac P1 = "\<lambda>iv. P1 \<and>* P2" for P1 P2 in hoare_strengthen_post
             [OF invoke_page_wp[where fake = Real
               and fake' = Fake
               and x = "[(pt_ptr, unat ((vaddr >> 12) && 0xFF))]" ]])
@@ -538,13 +536,13 @@ lemma seL4_Page_Map_wp:
           apply wp[1]
          apply wp
          apply (rule validE_validE_R)
-         apply (rule_tac P = "<?P>" in hoare_weaken_preE)
+         apply (rule_tac P = "<P>" for P in hoare_weaken_preE)
          apply (wp decode_page_map_intent_rv_16_12[where p = pt_ptr])[1]
           apply simp
          apply simp
         apply clarsimp
         apply sep_solve
-       apply (simp add:lookup_extra_caps_def conj_ac mapME_singleton)
+       apply (simp add:lookup_extra_caps_def conj_comms mapME_singleton)
        apply (rule wp_no_exception_seq)
         apply wp[1]
        apply (rule lookup_cap_and_slot_rvu[where r = root_size
@@ -568,9 +566,7 @@ lemma seL4_Page_Map_wp:
    defer
   apply clarsimp
   using misc sz
-  apply (intro conjI impI allI,
-    simp_all add:
-    reset_cap_asid_simps2)
+  apply (intro conjI impI allI, simp_all add: reset_cap_asid_simps2)
          apply (sep_solve)
         apply (simp add:cdl_lookup_pd_slot_def)
         apply sep_solve
@@ -631,6 +627,7 @@ lemma invoke_asid_pool_wp:
     \<and>* (\<And>* off\<in>{off. off < 2 ^ asid_low_bits}. (p, off) \<mapsto>c -)
     \<and>* R > s\<rbrace>"
   apply (clarsimp simp:invoke_asid_pool_def | wp| wpc)+
+          apply (rename_tac word cdl_frame_cap_type option)
           apply (rule_tac P = "word = pd" in hoare_gen_asm)
           apply simp
           apply (rule hoare_strengthen_post[OF set_cap_wp])
@@ -640,6 +637,7 @@ lemma invoke_asid_pool_wp:
              apply simp+
           apply (clarsimp simp: sep_conj_assoc)
           apply (sep_erule_concl sep_any_imp, sep_solve)
+         apply (rename_tac word cdl_frame_cap_type option)
          apply (wp hoare_vcg_conj_lift)
          apply (rule_tac P = "word = pd" in hoare_gen_asm)
          apply simp
@@ -664,8 +662,6 @@ lemma sep_map_c_asid_simp:
   "(slot \<mapsto>c PageTableCap ptr real option) = (slot \<mapsto>c PageTableCap ptr real None)"
   "(slot \<mapsto>c PageDirectoryCap ptr real option') = (slot \<mapsto>c PageDirectoryCap ptr real None)"
   by (simp_all add:sep_map_c_asid_reset)
-
-
 
 
 lemma seL4_ASIDPool_Assign_wp:
@@ -726,7 +722,7 @@ lemma seL4_ASIDPool_Assign_wp:
           apply (rule_tac P = "\<exists>asid. cs = [(PageDirectoryCap pd Real asid,(cnode_id,pd_offset))]" in hoare_gen_asmE)
           apply clarsimp
           apply (rule decode_invocation_asid_pool_assign)
-         apply (clarsimp simp:conj_ac lookup_extra_caps_def mapME_singleton)
+         apply (clarsimp simp:conj_comms lookup_extra_caps_def mapME_singleton)
          apply (rule wp_no_exception_seq)
           apply wp[1]
          apply (rule lookup_cap_and_slot_rvu[where r = root_size
@@ -750,17 +746,13 @@ lemma seL4_ASIDPool_Assign_wp:
    defer
   apply clarsimp
   using misc sz
-  apply (intro conjI impI allI,
-    simp_all add: reset_cap_asid_simps2)
+  apply (intro conjI impI allI, simp_all add: reset_cap_asid_simps2)
         apply sep_solve
        apply sep_solve
-      apply (clarsimp simp:user_pointer_at_def Let_def
-         word_bits_def sep_conj_assoc)
+      apply (clarsimp simp:user_pointer_at_def Let_def word_bits_def sep_conj_assoc)
       apply (sep_solve)
-     apply (clarsimp dest!:reset_cap_asid_simps2
-       simp:ep_related_cap_def)
-    apply (clarsimp simp:user_pointer_at_def Let_def
-      word_bits_def sep_conj_assoc)
+     apply (clarsimp dest!:reset_cap_asid_simps2 simp: ep_related_cap_def)
+    apply (clarsimp simp:user_pointer_at_def Let_def word_bits_def sep_conj_assoc)
     apply (sep_solve)
     apply (sep_solve)
     apply (simp)

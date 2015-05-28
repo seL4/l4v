@@ -937,7 +937,7 @@ lemma fetch_returned:
   apply (induct vs arbitrary: xs st)
    apply (simp add: acc_vars_def)
   apply (case_tac xs, simp_all add: save_vals_def acc_vars_def)
-  apply (rule_tac P="\<lambda>st. var_acc ?a st = ?b" and Q="\<lambda>x. x \<in> set ?xs"
+  apply (rule_tac P="\<lambda>st. var_acc a st = b" and Q="\<lambda>x. x \<in> set xs" for a b xs
             in fold_invariant, simp)
    apply simp
   apply (clarsimp simp: var_acc_var_upd set_zip)
@@ -1112,7 +1112,7 @@ lemma simpl_to_graph_call_next_step:
   apply (drule_tac x="initf sst" in spec)
   apply (clarsimp simp: exec_trace_inputs_def graph)
   apply (subst(asm) trace_drop_n_init, (assumption | rule graph)+)
-  apply (clarsimp simp: init_vars_def fetch_returned len)
+  apply (clarsimp simp: init_vars_def fetch_returned)
   apply (elim disjE exE conjE)
     apply (frule(1) c_trace_may_extend_steps)
       apply (rule rtranclp_trans)
@@ -1149,7 +1149,7 @@ lemma simpl_to_graph_call_next_step:
   apply (clarsimp simp: return_vars_def)
   apply (frule(3) exec_graph_trace_must_take_steps)
   apply (cut_tac tr=tr and tr'=trace' and n''="n'' + ja"
-      and sst="f' ?a ?b ?c" in simpl_to_graphD[OF cont])
+      and sst="f' a b c" for a b c in simpl_to_graphD[OF cont])
    apply auto[1]
   apply (metis restrict_map_eq_mono[OF le_add1])
   done
@@ -1199,7 +1199,7 @@ lemma simpl_to_graph_lvar_nondet_init:
 lemma c_guard_ptr_val_gt_0:
   "c_guard (p :: ('a :: mem_type) ptr) \<Longrightarrow> ptr_val p > 0"
   apply (simp only: word_neq_0_conv[symmetric], rule notI)
-  apply (cases p, simp add: c_guard_NULL_simp)
+  apply (cases p, simp)
   done
 
 lemma h_val_ptr:
@@ -1620,7 +1620,7 @@ val store_word32s_equality_simproc = Simplifier.simproc_global_i
             $ HOLogic.mk_number @{typ word32} pivot 
       in store_word32_trace "success" (SOME (cterm_instantiate
           [(@{cpat "?P :: word32 \<Rightarrow> bool"},
-              cterm_of (Proof_Context.theory_of ctxt) pred)]
+              Thm.cterm_of ctxt pred)]
           @{thm store_word32s_equality_split}
               |> mk_meta_eq))
       end handle TERM _ => store_word32_trace "failed" NONE)
@@ -1733,14 +1733,13 @@ fun simpl_to_graph_nn (Const (@{const_name simpl_to_graph}, _)
 
 fun SUBGOAL tfun i t = Tactical.SUBGOAL tfun i t
   handle TYPE (s, tps, ts) => raise TYPE ("SUBGOAL " ^ s,
-    tps, [cprem_of t i |> term_of] @ ts)
+    tps, [Thm.cprem_of t i |> Thm.term_of] @ ts)
 
 val standard_GG = @{term "GG :: string \<Rightarrow> graph_function option"}
 
 fun graph_gamma_tac ctxt = SUBGOAL (fn (t, i) => let
     val (lhs, _) = HOLogic.dest_Trueprop (Logic.strip_assums_concl
         (Envir.beta_eta_contract t)) |> HOLogic.dest_eq
-    val thy = Proof_Context.theory_of ctxt
     val _ = (head_of lhs = standard_GG andalso length (snd (strip_comb lhs)) = 1)
       orelse raise TERM ("GG lhs", [])
     val nm = the_single (snd (strip_comb lhs)) |> HOLogic.dest_string
@@ -1750,7 +1749,7 @@ fun graph_gamma_tac ctxt = SUBGOAL (fn (t, i) => let
     val _ = dest_Const (head_of gfun)
     val GG_assum = HOLogic.mk_eq
             (lhs, @{term "Some :: graph_function \<Rightarrow> _"} $ gfun)
-        |> HOLogic.mk_Trueprop |> cterm_of thy |> Thm.assume
+        |> HOLogic.mk_Trueprop |> Thm.cterm_of ctxt |> Thm.assume
         |> simplify (put_simpset HOL_basic_ss ctxt addsimps [gfun_def])
   in rtac GG_assum i end
     handle TERM (s, ts) => raise TERM ("graph_gamma_tac: " ^ s, t :: ts))
@@ -1798,7 +1797,7 @@ fun apply_graph_refines_ex_tac funs ctxt = SUBGOAL (fn (t, i) => case
     (Logic.strip_assums_concl (Envir.beta_eta_contract t)) of
     @{term Trueprop} $ (Const (@{const_name graph_fun_refines}, _)
         $ _ $ _ $ _ $ _ $ _ $ _ $ s)
-        => (rtac (Thm.assume (cterm_of (Proof_Context.theory_of ctxt)
+        => (rtac (Thm.assume (Thm.cterm_of ctxt
             (mk_graph_refines funs ctxt (HOLogic.dest_string s)))) i)
         | _ => raise TERM ("apply_graph_refines_ex_tac", [t]))
 
@@ -1833,7 +1832,7 @@ fun is_safe_eq_impl (p as (@{term Trueprop}
 fun eq_impl_assume_tac ctxt = DETERM o SUBGOAL (fn (t, i) => let
     val p = Logic.strip_assums_concl (Envir.beta_eta_contract t)
   in if is_safe_eq_impl p
-    then rtac (Thm.assume (cterm_of (Proof_Context.theory_of ctxt) p)) i
+    then rtac (Thm.assume (Thm.cterm_of ctxt p)) i
     else no_tac
   end)
 
@@ -1877,12 +1876,12 @@ fun apply_simpl_to_graph_tac funs hints ctxt =
     THEN' DETERM o (FIRST' [
         apply_hint_thm ctxt hints,
         rtac @{thm simpl_to_graph_Basic_triv},
-        resolve_tac @{thms simpl_to_graph_lvar_nondet_init
+        resolve_tac ctxt @{thms simpl_to_graph_lvar_nondet_init
             simpl_to_graph_Skip
             simpl_to_graph_Throw
             simpl_to_graph_cbreak
             simpl_to_graph_creturn_void},
-        resolve_tac @{thms
+        resolve_tac ctxt @{thms
                 simpl_to_graph_ccatchbrk_Break
                 simpl_to_graph_ccatchbrk_Return}
             THEN' (simp_tac ctxt
@@ -1916,10 +1915,10 @@ fun apply_simpl_to_graph_tac funs hints ctxt =
         rtac @{thm simpl_to_graph_nearly_done}
             THEN' inst_graph_tac ctxt
     ] THEN_ALL_NEW (TRY o REPEAT_ALL_NEW
-        (resolve_tac immediates)))
+        (resolve_tac ctxt immediates)))
 
 fun trace_cache _ (SOME thm) = tracing
-  ("Adding thm to cache with " ^ string_of_int (nprems_of thm) ^ " prems.")
+  ("Adding thm to cache with " ^ string_of_int (Thm.nprems_of thm) ^ " prems.")
   | trace_cache _ NONE = tracing "Adding NONE to cache."
 
 fun simpl_to_graph_cache_tac funs hints cache nm ctxt =
@@ -1931,15 +1930,14 @@ fun simpl_to_graph_cache_tac funs hints cache nm ctxt =
                 (Logic.strip_assums_concl (Envir.beta_eta_contract t)))) of
             SOME thm => rtac thm i | _ => no_tac)
             handle TERM _ => no_tac),
-        resolve_tac @{thms simpl_to_graph_done2
+        resolve_tac ctxt @{thms simpl_to_graph_done2
             simpl_to_graph_Skip_immediate[where nn=Ret]
             simpl_to_graph_Throw_immediate[where nn=Ret]},
         eq_impl_assume_tac ctxt
     ]
 
 and mk_simpl_to_graph_thm funs hints cache nm ctxt tm = let
-    val thy = Proof_Context.theory_of ctxt
-    val ct = cterm_of thy (HOLogic.mk_Trueprop tm)
+    val ct = Thm.cterm_of ctxt (HOLogic.mk_Trueprop tm)
   in Thm.trivial ct
     |> (apply_simpl_to_graph_tac funs hints ctxt
         THEN_ALL_NEW (TRY o simpl_to_graph_cache_tac funs hints cache nm ctxt)
@@ -1980,11 +1978,10 @@ fun simpl_to_graph_While_tac hints nm ctxt =
         (Envir.beta_eta_contract t))
     val _ = get_while t
     val skel = simpl_to_graph_skel hints nm t
-    val thy = Proof_Context.theory_of ctxt
-    val ct = cterm_of thy (HOLogic.mk_Trueprop skel)
+    val ct = Thm.cterm_of ctxt (HOLogic.mk_Trueprop skel)
   in
     rtac (Thm.trivial ct |> Drule.generalize ([], ["n", "trS"])) i
-        THEN resolve_tac @{thms simpl_to_graph_While_Guard[OF refl]
+        THEN resolve_tac ctxt @{thms simpl_to_graph_While_Guard[OF refl]
                 simpl_to_graph_While_UNIV[OF refl]} i
         THEN inst_graph_tac ctxt i
   end handle TERM _ => no_tac)
@@ -2056,7 +2053,7 @@ fun get_var_deps nodes ep outputs = let
         val node = Inttab.lookup nodes point |> the
         val conts = map dest_next_node (get_conts node)
         val (lvs, rvs) = get_lvals_rvals node
-          |> pairself (Ord_List.make string_ord)
+          |> apply2 (Ord_List.make string_ord)
         val cont_vars = maps (Inttab.lookup_list tab) conts
           |> Ord_List.make string_ord
         val vars = Ord_List.merge string_ord (rvs,
@@ -2100,10 +2097,9 @@ fun mk_hints (funs : ParseGraph.funs) ctxt nm = case Symtab.lookup funs nm of
     hint_tactics = all_tacs} end
 
 fun init_graph_refines_proof funs nm ctxt = let
-    val thy = Proof_Context.theory_of ctxt
     val body_thm = Proof_Context.get_thm ctxt
             (Long_Name.base_name nm ^ "_body_def")
-    val ct = mk_graph_refines funs ctxt nm |> cterm_of thy
+    val ct = mk_graph_refines funs ctxt nm |> Thm.cterm_of ctxt
   in Thm.trivial ct
     |> (rtac @{thm graph_fun_refines_from_simpl_to_graph} 1
         THEN apply_impl_thm ctxt 1
@@ -2123,7 +2119,7 @@ val thin_While_assums_rule =
 
 fun eq_impl_unassume_tac t = let
     val hyps = t |> Thm.crep_thm |> #hyps
-        |> filter (term_of #> is_safe_eq_impl)
+        |> filter (Thm.term_of #> is_safe_eq_impl)
   in (* tracing ("Restoring " ^ string_of_int (length hyps) ^ " hyps.") ; *)
     fold Thm.implies_intr hyps t |> Seq.single end
 

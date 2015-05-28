@@ -12,7 +12,7 @@
 Abstract model of CSpace.
 *)
 
-header "CSpace"
+chapter "CSpace"
 
 theory CSpace_A
 imports
@@ -66,7 +66,7 @@ where
   "free_index_update g cap \<equiv>
    case cap of UntypedCap ref sz f \<Rightarrow> UntypedCap ref sz (g f) | _ \<Rightarrow> cap"
 
-primrec
+primrec (nonexhaustive)
   untyped_sz_bits :: "cap \<Rightarrow> nat"
 where
   "untyped_sz_bits (UntypedCap ref sz f) = sz"
@@ -552,8 +552,11 @@ where
   apply (case_tac x)
   apply (case_tac a)
     apply (auto)[2]
+  apply (rename_tac cap cslot_ptr bool)
   apply (case_tac cap, safe)
              apply auto[10]
+   -- Zombie
+   apply (rename_tac obj_ref option nat)
    apply (case_tac bool)
     apply (case_tac nat, auto)[1]
    apply (metis (full_types) nat.exhaust)

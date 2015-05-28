@@ -8,13 +8,11 @@
  * @TAG(GD_GPL)
  *)
 
-header "Toplevel Refinement Statement"
+chapter "Toplevel Refinement Statement"
 
 theory Refine_C
 imports Init_C Fastpath_C "../../lib/clib/CToCRefine"
 begin
-
-declare if_cong[cong]
 
 crunch ksQ[wp]: handleVMFault "\<lambda>s. P (ksReadyQueues s)"
   (ignore: getFAR getDFSR getIFSR)
@@ -39,7 +37,7 @@ lemma handleInterruptEntry_ccorres:
            (callKernel Interrupt) (Call handleInterruptEntry_'proc)"
   apply (cinit')
    apply (simp add: callKernel_def handleEvent_def minus_one_norm)
-   apply (simp add: liftE_bind bind_assoc liftE_handle)
+   apply (simp add: liftE_bind bind_assoc)
    apply (ctac (no_vcg) add: getActiveIRQ_ccorres)
     apply (rule ccorres_Guard_Seq)?
     apply (rule_tac P="rv \<noteq> Some 0xFF" in ccorres_gen_asm)
@@ -83,7 +81,7 @@ lemma handleUnknownSyscall_ccorres:
            (callKernel (UnknownSyscall n)) (Call handleUnknownSyscall_'proc)"
   apply (cinit' lift: w_')
    apply (simp add: callKernel_def handleEvent_def)
-   apply (simp add: liftE_bind bind_assoc liftE_handle)
+   apply (simp add: liftE_bind bind_assoc)
    apply (rule ccorres_symb_exec_r)
      apply (rule ccorres_pre_getCurThread)
      apply (ctac (no_vcg) add: handleFault_ccorres)
@@ -119,7 +117,7 @@ lemma handleVMFaultEvent_ccorres:
            (callKernel (VMFaultEvent vmfault_type)) (Call handleVMFaultEvent_'proc)"
   apply (cinit' lift:vm_faultType_')
    apply (simp add: callKernel_def handleEvent_def)
-   apply (simp add: liftE_bind bind_assoc liftE_handle)
+   apply (simp add: liftE_bind bind_assoc)
    apply (rule ccorres_pre_getCurThread)
    apply (simp add: catch_def)
    apply (rule ccorres_rhs_assoc2)
@@ -167,7 +165,7 @@ lemma handleUserLevelFault_ccorres:
            (callKernel (UserLevelFault word1 word2)) (Call handleUserLevelFault_'proc)"
   apply (cinit' lift:w_a_' w_b_')
    apply (simp add: callKernel_def handleEvent_def)
-   apply (simp add: liftE_bind bind_assoc liftE_handle)
+   apply (simp add: liftE_bind bind_assoc)
    apply (rule ccorres_symb_exec_r)
      apply (rule ccorres_pre_getCurThread)
      apply (ctac (no_vcg) add: handleFault_ccorres)
@@ -206,7 +204,7 @@ lemmas syscall_defs =
 
 lemma ct_active_not_idle'_strengthen:
   "invs' s \<and> ct_active' s \<longrightarrow> ksCurThread s \<noteq> ksIdleThread s"
-  by (clarsimp simp: ct_active_not_idle')
+  by clarsimp
 
 lemma handleSyscall_ccorres:
   "ccorres dc xfdc 
@@ -540,7 +538,7 @@ lemma ccorres_get_registers:
   apply (clarsimp simp: ctcb_relation_def ccontext_relation_def
                         State_H.msgInfoRegister_def State_H.capRegister_def
                         ARMMachineTypes.msgInfoRegister_def ARMMachineTypes.capRegister_def
-                        msgInfoRegister_def capRegister_def "StrictC'_register_defs")
+                        "StrictC'_register_defs")
   done
 
 lemma callKernel_withFastpath_corres_C:
@@ -728,13 +726,15 @@ apply (induct e)
  apply simp
  apply (subgoal_tac
           "ksMachineState_update (underlying_memory_update (\<lambda>m. m)) a = a")
-  apply (simp (no_asm_simp))+
+  apply (simp (no_asm_simp))
+ apply simp
+apply (rename_tac x xs)
 apply (simp add: foldl_fun_upd_eq_foldr)
-apply (case_tac "aa \<in> dom um", simp_all)
-apply (frule_tac ptr=aa and b="the (um aa)" in storeByteUser_rf_sr_upd)
+apply (case_tac "x \<in> dom um", simp_all)
+apply (frule_tac ptr=x and b="the (um x)" in storeByteUser_rf_sr_upd)
    apply simp
   apply simp
- apply (thin_tac "(?x,?y) : rf_sr")+
+ apply (thin_tac "(x,y) : rf_sr" for x y)+
  apply (fastforce simp add: pointerInUserData_def dom_user_mem')
 apply (simp add: o_def hrs_mem_update_def)
 done
@@ -762,15 +762,16 @@ lemma user_memory_update_corres_C:
    apply (clarsimp simp add: doMachineOp_def user_memory_update_def
                      simpler_modify_def simpler_gets_def select_f_def
                      NonDetMonad.bind_def return_def)
-   apply (thin_tac ?P)+
+   apply (thin_tac P for P)+
    apply (case_tac a, clarsimp)
    apply (case_tac ksMachineStatea, clarsimp)
    apply (rule ext)
    apply (simp add: foldl_fun_upd_value dom_def split: option.splits)
   apply (clarsimp simp add: simpler_modify_def)
-  apply (thin_tac "doMachineOp ?op ?s = ?x")
+  apply (thin_tac "doMachineOp p s = x" for p s x)
   apply (drule sym, simp)
-by (rule user_memory_update_corres_C_helper)
+  apply (rule user_memory_update_corres_C_helper, auto)
+  done
 
 lemma do_user_op_corres_C:
   "corres_underlying rf_sr True (op =) (invs' and ex_abs einvs) \<top>
@@ -807,7 +808,7 @@ lemma do_user_op_corres_C:
                                        where R="\<top>\<top>" and R'="\<top>\<top>"])
                 apply (wp select_wp | simp)+
    apply (clarsimp simp add: invs'_def valid_state'_def valid_pspace'_def)
-   apply (thin_tac "(?a,?b) \<in> fst (f ?c ?d ?e ?f)")
+   apply (thin_tac "(a,b) \<in> fst (f c d e g)" for a b c d e g)
    apply (clarsimp simp: user_mem'_def ex_abs_def restrict_map_def
                   split: if_splits)
    apply (erule ptable_rights_imp_UserData[rotated -1])
@@ -845,7 +846,7 @@ lemma check_active_irq_corres_C:
   apply (rule corres_guard_imp)
     apply (subst bind_assoc[symmetric])
     apply (rule corres_split[OF _ ccorres_corres_u_xf, where R="\<lambda>_. \<top>" and R'="\<lambda>_. \<top>"])
-        apply (simp add: corres_return)
+        apply simp
        apply (rule ccorres_rel_imp, rule ccorres_guard_imp)
           apply (ctac add:getActiveIRQ_ccorres)
          apply (rule TrueI)
@@ -884,7 +885,7 @@ lemma refinement2_both:
   apply (clarsimp simp: rel_semi_def global_automaton_def relcomp_unfold
                         in_lift_state_relation_eq)
 
-  apply (erule_tac P="?a \<and> (\<exists>x. ?b x)" in disjE)
+  apply (erule_tac P="a \<and> (\<exists>x. b x)" for a b in disjE)
   apply (clarsimp simp add: kernel_call_C_def kernel_call_H_def)
   apply (subgoal_tac "all_invs' x b")
    apply (drule_tac fp=fp and tc=af in entry_refinement_C, simp+)
@@ -898,13 +899,13 @@ lemma refinement2_both:
    apply (rule_tac x=bf in exI)
    apply simp
 
-  apply (erule_tac P="?a \<and> ?b \<and> ?c \<and> ?d \<and> ?e" in disjE)
+  apply (erule_tac P="a \<and> b \<and> c \<and> d \<and> e" for a b c d e in disjE)
    apply (clarsimp simp add: do_user_op_C_def do_user_op_H_def monad_to_transition_def)
    apply (rule rev_mp, rule_tac f="uop" and tc=af in do_user_op_corres_C)
    apply (clarsimp simp: corres_underlying_def invs_def ex_abs_def)
    apply (fastforce simp: full_invs'_def ex_abs_def)
 
-  apply (erule_tac P="?a \<and> ?b \<and> ?c \<and> (\<exists>x. ?e x)" in disjE)
+  apply (erule_tac P="a \<and> b \<and> c \<and> (\<exists>x. e x)" for a b c d e in disjE)
    apply (clarsimp simp add: do_user_op_C_def do_user_op_H_def monad_to_transition_def)
    apply (rule rev_mp, rule_tac f="uop" and tc=af in do_user_op_corres_C)
    apply (clarsimp simp: corres_underlying_def invs_def ex_abs_def)
@@ -963,8 +964,7 @@ lemma monadic_rewrite_\<Gamma>:
   using spec_refine [of symbol_table domain]
   using spec_simulates_to_exec_simulates
   apply (clarsimp simp: spec_statefn_simulates_via_statefn
-                   o_def map_option_case
-                   monadic_rewrite_def exec_C_def
+                        o_def map_option_case monadic_rewrite_def exec_C_def
                    split: option.splits
                    cong: option.case_cong)
   apply blast
