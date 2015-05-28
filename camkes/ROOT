@@ -31,6 +31,30 @@ session CamkesAdlSpec (Camkes) in "adl-spec" = HOL +
     "root.tex"
     "comment.sty"
 
+(* Base session for CAmkES<->CapDL reasoning. This session is intended to be simply a combination
+ * of CamkesAdlSpec and DSpec, and is defined because we can't easily depend on both.
+ *)
+session CamkesCdlBase (Camkes) in "adl-spec" = DSpec +
+  theories
+    "Wellformed_CAMKES"
+    "Examples_CAMKES"
+  document_files
+    "imgs/compilation.pdf"
+    "imgs/composite-passthrough.pdf"
+    "imgs/dataport.pdf"
+    "imgs/echo.pdf"
+    "imgs/event.pdf"
+    "imgs/NICTA_logo.pdf"
+    "imgs/terminal.pdf"
+    "intro.tex"
+    "root.tex"
+    "comment.sty"
+
+(* CAmkES<->CapDL reasoning. *)
+session CamkesCdlRefine (Camkes) in "cdl-refine" = CamkesCdlBase +
+  theories
+    Generator_CAMKES_CDL
+
 session CamkesGlueSpec (Camkes) in "glue-spec" = HOL +
   options [document = pdf]
   theories

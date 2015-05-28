@@ -482,7 +482,7 @@ lemma get_hw_asid_corres:
   apply simp
   done
 
-lemma set_current_asid_corres:
+lemma arm_context_switch_corres:
   "corres dc 
           (pd_at_asid a pd and K (a \<noteq> 0 \<and> a \<le> mask asid_bits)
            and unique_table_refs o caps_of_state
@@ -491,15 +491,15 @@ lemma set_current_asid_corres:
            and pspace_aligned and pspace_distinct
            and valid_arch_state)
           (pspace_aligned' and pspace_distinct' and no_0_obj')
-          (set_current_asid a) (setCurrentASID a)"
-  apply (simp add: set_current_asid_def setCurrentASID_def)
+          (arm_context_switch pd a) (armv_contextSwitch pd a)"
+  apply (simp add: arm_context_switch_def armv_contextSwitch_def armv_contextSwitch_HWASID_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqr [OF _ get_hw_asid_corres[where pd=pd]])
       apply (rule corres_machine_op)
-      apply (rule corres_no_failI)
-       apply (rule no_fail_setHardwareASID)
-      apply fastforce
-     apply (wp | simp)+
+      apply (rule corres_rel_imp)
+       apply (rule corres_underlying_trivial)
+       apply (rule no_fail_pre)
+        apply (wp no_fail_setCurrentPD no_fail_setHardwareASID no_irq_setCurrentPD | clarsimp)+
   done
 
 lemma hv_corres: 
@@ -651,6 +651,25 @@ lemma find_pd_for_asid_pd_at_asid_again:
     apply clarsimp+
   done
 
+lemmas setCurrentPD_no_fails = no_fail_dsb no_fail_isb no_fail_writeTTBR0
+
+lemmas setCurrentPD_no_irqs = no_irq_dsb no_irq_isb no_irq_writeTTBR0
+
+lemma setCurrentPD_corres:
+  "corres dc \<top> \<top> (do_machine_op (setCurrentPD addr)) (doMachineOp (setCurrentPD addr))"
+  apply (simp add: setCurrentPD_def)
+  apply (rule corres_machine_op)
+  apply (rule corres_guard_imp)
+    apply (rule corres_split_eqr)
+       apply (rule corres_split_eqr)
+          apply (rule corres_rel_imp)
+           apply (wp 
+                | rule corres_underlying_trivial
+                | rule setCurrentPD_no_fails
+                | rule setCurrentPD_no_irqs
+                | simp add: dc_def)+
+  done
+           
 lemma set_vm_root_corres:
   "corres dc (tcb_at t and valid_arch_state and valid_objs and valid_asid_map 
               and unique_table_refs o caps_of_state and valid_vs_lookup
@@ -662,18 +681,14 @@ lemma set_vm_root_corres:
 proof -
   have P: "corres dc \<top> \<top>
         (do global_pd \<leftarrow> gets (arm_global_pd \<circ> arch_state);
-            do_machine_op (setCurrentPD (Platform.addrFromPPtr global_pd))
+            do_machine_op (MachineOps.setCurrentPD (Platform.addrFromPPtr global_pd))
          od)
         (do globalPD \<leftarrow> gets (armKSGlobalPD \<circ> ksArchState);
             doMachineOp (setCurrentPD (addrFromPPtr globalPD))
          od)"
     apply (rule corres_guard_imp)
       apply (rule corres_split_eqr)
-         apply (rule corres_machine_op)
-         apply (rule corres_rel_imp)
-          apply (rule corres_underlying_trivial)
-          apply (rule no_fail_setCurrentPD)
-         apply simp
+         apply (rule setCurrentPD_corres)
         apply (subst corres_gets)
         apply (clarsimp simp: state_relation_def arch_state_relation_def)
        apply (wp | simp)+
@@ -695,7 +710,7 @@ proof -
     done
   show ?thesis
     unfolding set_vm_root_def setVMRoot_def locateSlot_def
-                     getThreadVSpaceRoot_def armv_contextSwitch_def
+                     getThreadVSpaceRoot_def 
     apply (rule corres_guard_imp)
       apply (rule corres_split' [where r'="op = \<circ> cte_map"])
          apply (simp add: tcbVTableSlot_def cte_map_def objBits_def
@@ -740,12 +755,8 @@ proof -
                    apply (simp add: lookup_failure_map_def)
                   apply simp
                  apply simp
-                 apply (rule corres_split)
-                    apply (rule_tac pd=pd' in set_current_asid_corres)
-                   apply (rule corres_machine_op)
-                   apply (rule corres_underlying_trivial)
-                   apply (rule no_fail_setCurrentPD)
-                  apply (wp | simp | wp_once hoare_drop_imps)+
+                 apply (rule arm_context_switch_corres)
+                apply (wp | simp | wp_once hoare_drop_imps)+
                apply (simp add: whenE_def split del: split_if, wp)[1]
               apply (rule find_pd_for_asid_pd_at_asid_again)
              apply wp
@@ -1087,7 +1098,7 @@ lemma set_vm_root_for_flush_corres:
           (pspace_aligned' and pspace_distinct' and no_0_obj')
           (set_vm_root_for_flush pd asid)
           (setVMRootForFlush pd asid)"
-proof -
+proof - 
   have X: "corres op = (pd_at_asid asid pd and K (asid \<noteq> 0 \<and> asid \<le> mask asid_bits)
                           and valid_asid_map and valid_vs_lookup
                           and valid_arch_objs and valid_global_objs
@@ -1095,22 +1106,16 @@ proof -
                           and valid_arch_state
                           and pspace_aligned and pspace_distinct)
                        (pspace_aligned' and pspace_distinct' and no_0_obj')
-           (do y \<leftarrow> do_machine_op (setCurrentPD (Platform.addrFromPPtr pd));
-               y \<leftarrow> set_current_asid asid;
+           (do arm_context_switch pd asid;
                return True
             od)
-           (do y \<leftarrow> doMachineOp (setCurrentPD (addrFromPPtr pd));
-               y \<leftarrow> setCurrentASID asid;
+           (do armv_contextSwitch pd asid;
                return True
             od)"
     apply (rule corres_guard_imp)
-      apply (rule corres_split [OF _ corres_machine_op [where r=dc]])
-         apply (rule corres_split [OF _ set_current_asid_corres[where pd=pd]])
-           apply (rule corres_trivial, simp)
-          apply wp
-        apply (rule corres_Id, rule refl, simp)
-        apply (rule no_fail_setCurrentPD)
-       apply (wp | simp)+
+      apply (rule corres_split [OF _ arm_context_switch_corres])
+        apply (rule corres_trivial)
+        apply (wp | simp)+
     done
   show ?thesis
   apply (simp add: set_vm_root_for_flush_def setVMRootForFlush_def getThreadVSpaceRoot_def locateSlot_def)
@@ -1131,7 +1136,7 @@ proof -
           apply (case_tac rv, simp_all add: isCap_simps)[1]
           apply (rename_tac arch_cap)
           apply (case_tac arch_cap, auto)[1]
-         apply (case_tac rv, simp_all add: isCap_simps X[simplified])[1]
+         apply (case_tac rv, simp_all add: isCap_simps[simplified] X[simplified])[1]
          apply (rename_tac arch_cap)
          apply (case_tac arch_cap, auto simp: X[simplified] split: option.splits)[1]
         apply (simp add: cte_map_def objBits_simps tcb_cnode_index_def tcbVTableSlot_def to_bl_1)
@@ -1143,7 +1148,7 @@ proof -
   done
 qed
 
-crunch typ_at' [wp]: setCurrentASID "\<lambda>s. P (typ_at' T p s)"
+crunch typ_at' [wp]: armv_contextSwitch "\<lambda>s. P (typ_at' T p s)"
   (simp: crunch_simps)
 
 crunch typ_at' [wp]: findPDForASID "\<lambda>s. P (typ_at' T p s)"
@@ -2650,9 +2655,9 @@ lemma pap_corres:
   apply (clarsimp simp: cte_wp_at_ctes_of valid_apinv'_def)
   done
 
-lemma setCurrentASID_obj_at [wp]:
-  "\<lbrace>\<lambda>s. P (obj_at' P' t s)\<rbrace> setCurrentASID a \<lbrace>\<lambda>rv s. P (obj_at' P' t s)\<rbrace>"
-  apply (simp add: setCurrentASID_def getHWASID_def)
+lemma armv_contextSwitch_obj_at [wp]:
+  "\<lbrace>\<lambda>s. P (obj_at' P' t s)\<rbrace> armv_contextSwitch pd a \<lbrace>\<lambda>rv s. P (obj_at' P' t s)\<rbrace>"
+  apply (simp add: armv_contextSwitch_def armv_contextSwitch_HWASID_def getHWASID_def)
   apply (wp doMachineOp_obj_at|wpc|simp)+
   done
 
@@ -2752,28 +2757,61 @@ lemma getHWASID_invs_no_cicd':
   apply simp
   done
 
-lemma setCurrentASID_invs [wp]:
-  "\<lbrace>invs'\<rbrace> setCurrentASID asid \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: setCurrentASID_def)
-  apply (wp dmo_invs' no_irq_setHardwareASID)
+lemmas armv_ctxt_sw_defs = armv_contextSwitch_HWASID_def setHardwareASID_def setCurrentPD_def
+                           writeTTBR0_def isb_def dsb_def
+
+lemma dmo_armv_contextSwitch_HWASID_invs'[wp]:
+  "\<lbrace>invs'\<rbrace> doMachineOp (armv_contextSwitch_HWASID pd hwasid) \<lbrace>\<lambda>_. invs'\<rbrace>"
+  apply (wp dmo_invs')
+   apply (simp add: armv_contextSwitch_HWASID_def)
+   apply (wp no_irq_setCurrentPD no_irq_setHardwareASID)
+  apply safe
+  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
+         in use_valid)
+    apply (simp add: machine_op_lift_def machine_rest_lift_def split_def armv_ctxt_sw_defs
+              | wp)+
+  done
+
+
+lemma dmo_armv_contextSwitch_HWASID_invs_no_cicd':
+  "\<lbrace>invs_no_cicd'\<rbrace> doMachineOp (armv_contextSwitch_HWASID pd hwasid) \<lbrace>\<lambda>_. invs_no_cicd'\<rbrace>"
+  apply (wp dmo_invs_no_cicd')
+   apply (simp add: armv_contextSwitch_HWASID_def)
+   apply (wp no_irq_setCurrentPD no_irq_setHardwareASID)
+  apply safe
+  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
+         in use_valid)
+    apply (simp add: machine_op_lift_def machine_rest_lift_def split_def armv_ctxt_sw_defs
+              | wp)+
+  done
+
+lemma no_irq_armv_contextSwitch_HWASID:
+  "no_irq (armv_contextSwitch_HWASID pd hwasid)"
+  apply (simp add: armv_contextSwitch_HWASID_def)
+  apply (wp no_irq_setCurrentPD no_irq_setHardwareASID)
+  done
+
+lemma armv_contextSwitch_invs [wp]:
+  "\<lbrace>invs'\<rbrace> armv_contextSwitch pd asid \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  apply (simp add: armv_contextSwitch_def)
+  apply (wp dmo_invs' no_irq_armv_contextSwitch_HWASID)
   apply (rule hoare_post_imp[rotated], wp)
   apply clarsimp
   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
          in use_valid)
-    apply (clarsimp simp: setHardwareASID_def machine_op_lift_def
-                          machine_rest_lift_def split_def | wp)+
+    apply (simp add: machine_op_lift_def machine_rest_lift_def split_def armv_ctxt_sw_defs
+              | wp)+
   done
 
-lemma setCurrentASID_invs_no_cicd':
-  "\<lbrace>invs_no_cicd'\<rbrace> setCurrentASID asid \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
-  apply (simp add: setCurrentASID_def)
-  apply (wp dmo_invs_no_cicd' no_irq_setHardwareASID)
+lemma armv_contextSwitch_invs_no_cicd':
+  "\<lbrace>invs_no_cicd'\<rbrace> armv_contextSwitch pd asid \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
+  apply (simp add: armv_contextSwitch_def armv_contextSwitch_HWASID_def)
+  apply (wp dmo_invs_no_cicd' no_irq_setHardwareASID no_irq_setCurrentPD)
   apply (rule hoare_post_imp[rotated], wp getHWASID_invs_no_cicd')
   apply clarsimp
   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
          in use_valid)
-    apply (clarsimp simp: setHardwareASID_def machine_op_lift_def
-                          machine_rest_lift_def split_def | wp)+
+    apply (clarsimp simp: machine_op_lift_def machine_rest_lift_def split_def armv_ctxt_sw_defs | wp)+
   done
 
 lemma dmo_setCurrentPD_invs'[wp]:
@@ -2782,7 +2820,7 @@ lemma dmo_setCurrentPD_invs'[wp]:
   apply clarsimp
   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
          in use_valid)
-  apply (clarsimp simp: setCurrentPD_def machine_op_lift_def
+  apply (clarsimp simp: setCurrentPD_def machine_op_lift_def writeTTBR0_def dsb_def isb_def
                         machine_rest_lift_def split_def | wp)+
   done
 
@@ -2792,24 +2830,26 @@ lemma dmo_setCurrentPD_invs_no_cicd':
   apply clarsimp
   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
          in use_valid)
-  apply (clarsimp simp: setCurrentPD_def machine_op_lift_def
+  apply (clarsimp simp: setCurrentPD_def machine_op_lift_def writeTTBR0_def dsb_def isb_def
                         machine_rest_lift_def split_def | wp)+
   done
 
 lemma setVMRoot_invs [wp]:
   "\<lbrace>invs'\<rbrace> setVMRoot p \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: setVMRoot_def getThreadVSpaceRoot_def armv_contextSwitch_def)
+  apply (simp add: setVMRoot_def getThreadVSpaceRoot_def)
   apply (rule hoare_pre)
    apply (wp hoare_drop_imps | wpcw
-          | simp add: whenE_def checkPDNotInASIDMap_def armv_contextSwitch_def split del: split_if)+
+          | simp add: whenE_def checkPDNotInASIDMap_def split del: split_if)+
   done
 
 lemma setVMRoot_invs_no_cicd':
   "\<lbrace>invs_no_cicd'\<rbrace> setVMRoot p \<lbrace>\<lambda>rv. invs_no_cicd'\<rbrace>"
   apply (simp add: setVMRoot_def getThreadVSpaceRoot_def)
   apply (rule hoare_pre)
-   apply (wp dmo_setCurrentPD_invs_no_cicd' hoare_drop_imps setCurrentASID_invs_no_cicd' | wpcw
-          | simp add: whenE_def checkPDNotInASIDMap_def armv_contextSwitch_def split del: split_if)+
+   apply (wp hoare_drop_imps armv_contextSwitch_invs_no_cicd' getHWASID_invs_no_cicd'
+             dmo_setCurrentPD_invs_no_cicd'
+          | wpcw
+          | simp add: whenE_def checkPDNotInASIDMap_def split del: split_if)+
   done
 
 crunch nosch [wp]: setVMRoot "\<lambda>s. P (ksSchedulerAction s)"

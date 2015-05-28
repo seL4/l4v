@@ -36,7 +36,7 @@ consts
 deletingIRQHandler :: "irq \<Rightarrow> unit kernel"
 
 consts
-initInterruptController :: "capability kernel_init"
+initInterruptController :: "capability \<Rightarrow> machine_word \<Rightarrow> capability kernel_init"
 
 consts
 handleInterrupt :: "irq \<Rightarrow> unit kernel"
@@ -133,22 +133,24 @@ defs deletedIRQHandler_def:
     setIRQState IRQInactive irq"
 
 defs initInterruptController_def:
-"initInterruptController\<equiv> (do
+"initInterruptController rootCNCap biCapIRQC\<equiv> (doE
     frame \<leftarrow> allocFrame;
     doKernelOp $ (do
         haskell_assert (length [minBound .e. (maxBound::irq)]
                `~shiftL~` (objBits (makeObject ::cte)) \<le> bit pageBits)
             [];
         placeNewObject (ptrFromPAddr frame) (makeObject ::cte)
-              (bit pageBits `~shiftR~` objBits (makeObject ::cte));
+              (pageBits - objBits (makeObject ::cte));
         doMachineOp $ mapM_x (maskInterrupt True) [minBound  .e.  maxBound];
         irqTable \<leftarrow> return ( funArray $ const IRQInactive);
         setInterruptState $ InterruptState (ptrFromPAddr frame) irqTable;
         timerIRQ \<leftarrow> doMachineOp configureTimer;
-        setIRQState IRQTimer timerIRQ
+        setIRQState IRQTimer timerIRQ;
+        slot \<leftarrow> locateSlot (capCNodePtr rootCNCap) biCapIRQC;
+        insertInitCap slot IRQControlCap
     od);
-    return IRQControlCap
-od)"
+    returnOk IRQControlCap
+odE)"
 
 defs handleInterrupt_def:
 "handleInterrupt irq\<equiv> (do

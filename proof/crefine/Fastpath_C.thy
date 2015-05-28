@@ -956,60 +956,6 @@ lemma ccorres_bind_assoc_rev:
          (do x \<leftarrow> a1; y \<leftarrow> a2 x; a3 y od) c"
   by (simp add: bind_assoc)
 
-lemma armv_contextSwitch_fp_ccorres:
-  "ccorres dc xfdc \<top>
-          (UNIV \<inter> {s. cap_pd_' s = pde_Ptr (ptrFromPAddr pd)}
-               \<inter> {s. hw_asid_' s = ucast hw_asid}) []
-        (do x \<leftarrow> doMachineOp (setCurrentPD pd);
-                doMachineOp (setHardwareASID hw_asid)
-             od)
-        (Call armv_contextSwitch_fp_'proc)"
-proof -
-  (* these are obtained from the locale here to avoid nasty parameter passing
-     everywhere else *)
-  obtain DSB setHWASID_no_DSB where
-      setCurrentPD_fp_ccorres: "\<forall> pd.
-    ccorres dc xfdc \<top> (UNIV \<inter> \<lbrace>\<acute>pd_addr = pd\<rbrace>) []
-           (doMachineOp (setCurrentPD pd))
-           (Call setCurrentPD_fp_'proc)"
-  and setHardwareASID_fp_ccorres: "\<forall>hw_asid.
-    ccorres dc xfdc \<top> (UNIV \<inter> \<lbrace>\<acute>asid___unsigned_char = ucast hw_asid\<rbrace>) []
-           (doMachineOp (setHWASID_no_DSB hw_asid))
-           (Call setHardwareASID_fp_'proc)"
-  and DSB_fp_ccorres: "ccorres dc xfdc \<top> UNIV []
-           (doMachineOp DSB) (Call dsb_fp_'proc)"
-  and do_eq: "\<forall>hw_asid pd.
-     (do (x :: unit) \<leftarrow> DSB; setCurrentPD pd; setHWASID_no_DSB hw_asid od)
-       = (do setCurrentPD pd; setHardwareASID hw_asid od)"
-    using setCurrentPD_setHardwareASID_dsb_fp_ccorres
-    by auto
-  have dmo_split:
-    "(do x \<leftarrow> doMachineOp (setCurrentPD pd);
-            doMachineOp (setHardwareASID hw_asid)
-         od) = (do doMachineOp DSB; doMachineOp (setCurrentPD pd);
-                       doMachineOp (setHWASID_no_DSB hw_asid) od)"
-    apply (simp add: doMachineOp_bind[symmetric]
-                     setCurrentPD_empty_fail setHardwareASID_empty_fail
-                     do_eq[rule_format, simplified, symmetric])
-    apply (rule ext)
-    apply (simp add: doMachineOp_def exec_gets exec_modify split_def bind_assoc
-                     bind_select_f_bind[symmetric]
-            | rule select_bind_eq)+
-    apply (simp add: simpler_modify_def)
-    done
-  show ?thesis
-  apply (cinit' lift: cap_pd_' hw_asid_')
-   apply (simp only: dmo_split, simp)
-   apply (ctac(no_vcg) add: DSB_fp_ccorres)
-    apply csymbr
-    apply (simp only:)
-    apply (ctac(no_vcg) add: setCurrentPD_fp_ccorres[rule_format])
-     apply (ctac add: setHardwareASID_fp_ccorres[rule_format, unfolded dc_def])
-    apply wp
-  apply (simp add: Collect_const_mem addrFromPPtr_def)
-  done
-qed
-
 lemma monadic_rewrite_gets_l:
   "(\<And>x. monadic_rewrite F E (P x) (g x) m)
     \<Longrightarrow> monadic_rewrite F E (\<lambda>s. P (f s) s) (gets f >>= (\<lambda>x. g x)) m"
@@ -1019,14 +965,14 @@ lemma pd_at_asid_inj':
   "pd_at_asid' pd asid s \<Longrightarrow> pd_at_asid' pd' asid s \<Longrightarrow> pd' = pd"
   by (clarsimp simp: pd_at_asid'_def obj_at'_def)
 
-lemma setCurrentASID_setCurrentHWASID_rewrite:
+lemma armv_contextSwitch_HWASID_fp_rewrite:
   "monadic_rewrite True False
     (pd_has_hwasid pd and pd_at_asid' pd asid and
         (\<lambda>s. asid_map_pd_to_hwasids (armKSASIDMap (ksArchState s)) pd
                                      = set_option (pde_stored_asid v)))
-    (setCurrentASID asid)
-    (doMachineOp (setHardwareASID (the (pde_stored_asid v))))"
-  apply (simp add: setCurrentASID_def getHWASID_def
+    (armv_contextSwitch pd asid)
+    (doMachineOp (armv_contextSwitch_HWASID pd (the (pde_stored_asid v))))"
+  apply (simp add: getHWASID_def armv_contextSwitch_def
                         bind_assoc loadHWASID_def
                         findPDForASIDAssert_def
                         checkPDAt_def checkPDUniqueToASID_def
@@ -1102,18 +1048,14 @@ lemma switchToThread_fp_ccorres:
                          catch_throwError)
         apply (rule ccorres_stateAssert)
         apply (rule ccorres_False[where P'=UNIV])
-       apply (simp add: catch_liftE bind_assoc armv_contextSwitch_def
+       apply (simp add: catch_liftE bind_assoc 
                    del: Collect_const cong: call_ignore_cong)
        apply (rule monadic_rewrite_ccorres_assemble[rotated])
-        apply (rule monadic_rewrite_bind_tail)
-         apply (rule monadic_rewrite_bind_head)
-         apply (rule_tac pd=pd and v=v
-                     in setCurrentASID_setCurrentHWASID_rewrite)
-        apply (simp add: pd_has_hwasid_def)
-        apply (wp doMachineOp_pd_at_asid')
-       apply (rule ccorres_bind_assoc_rev)
-       apply (ctac(no_vcg) add: armv_contextSwitch_fp_ccorres)
-         apply (simp add: storeWordUser_def bind_assoc case_option_If2
+        apply (rule monadic_rewrite_bind_head)
+        apply (rule_tac pd=pd and v=v
+                     in armv_contextSwitch_HWASID_fp_rewrite)
+       apply (ctac(no_vcg) add: armv_contextSwitch_HWASID_ccorres)
+        apply (simp add: storeWordUser_def bind_assoc case_option_If2
                          split_def
                     del: Collect_const)
         apply (rule ccorres_symb_exec_l[OF _ gets_inv _ empty_fail_gets])
@@ -1146,7 +1088,6 @@ lemma switchToThread_fp_ccorres:
         apply wp
         apply (simp add: obj_at'_weakenE[OF _ TrueI])
         apply (wp hoare_drop_imps)[1]
-       apply (wp doMachineOp_no_0')[1]
       apply (simp add: bind_assoc checkPDNotInASIDMap_def
                        checkPDASIDMapMembership_def)
       apply (rule ccorres_stateAssert)
@@ -4060,7 +4001,7 @@ lemma setVMRoot_isolatable:
   apply (simp add: setVMRoot_def getThreadVSpaceRoot_def
                    locateSlot_conv getSlotCap_def
                    cap_case_isPageDirectoryCap if_bool_simps
-                   whenE_def liftE_def setCurrentASID_def
+                   whenE_def liftE_def 
                    checkPDNotInASIDMap_def stateAssert_def2
                    checkPDASIDMapMembership_def armv_contextSwitch_def
              cong: if_cong)
@@ -4325,7 +4266,7 @@ lemma oblivious_setVMRoot_schact:
   apply (simp add: setVMRoot_def getThreadVSpaceRoot_def locateSlot_conv
                    getSlotCap_def getCTE_def armv_contextSwitch_def)
   apply (safe intro!: oblivious_bind oblivious_bindE oblivious_catch
-             | simp_all add: liftE_def setCurrentASID_def getHWASID_def
+             | simp_all add: liftE_def getHWASID_def
                              findPDForASID_def liftME_def loadHWASID_def
                              findPDForASIDAssert_def checkPDAt_def
                              checkPDUniqueToASID_def

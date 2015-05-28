@@ -153,11 +153,10 @@ instance
 
 end
 
+(* This is hard coded since using funArray in haskell for 2^32 bound is risky *)
+
 instantiation asidpool :: pspace_storable
 begin
-
-(* asidpool extra instance defs *)
-
 
 definition
   makeObject_asidpool: "(makeObject :: asidpool)  \<equiv> ASIDPool $
@@ -172,7 +171,6 @@ definition
   updateObject_asidpool[simp]:
  "updateObject (val :: asidpool) \<equiv>
     updateObject_default val"
-
 
 instance
   apply (intro_classes)

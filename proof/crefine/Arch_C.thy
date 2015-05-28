@@ -2137,33 +2137,8 @@ lemma setVMRootForFlush_ccorres2:
             rule ccorres_rhs_assoc2,
             rule ccorres_symb_exec_r)
        apply simp
-       apply (subst bind_assoc[symmetric])
-       apply (rule ccorres_split_nothrow_call_novcg)
-             apply (rule ccorres_Call)
-              apply (rule armv_contextSwitch_impl[unfolded armv_contextSwitch_body_def])
-             apply simp
-             apply (rule ccorres_rhs_assoc)
-             apply (rule ccorres_symb_exec_r)
-               apply simp
-               apply (ctac(no_vcg) add:setCurrentPD_ccorres)
-                apply (rule ccorres_call)
-                   apply (ctac(no_vcg) add: setCurrentASID_ccorres)
-                  apply simp
-                 unfolding xfdc_def apply simp
-                apply simp
-               apply (wp dmo_setCurrentPD_invs_no_cicd')
-              apply simp
-              apply vcg
-             apply simp
-             apply (rule conseqPre)
-              apply vcg
-             apply (rule subsetI)
-             apply simp
-            apply simp
-           apply simp
-          apply simp
-         apply ceqv
-        apply (ctac add:ccorres_return_C)
+       apply (ctac (no_vcg) add: armv_contextSwitch_ccorres)
+        apply (ctac add: ccorres_return_C)
        apply wp
       apply (simp add: true_def from_bool_def)
       apply vcg

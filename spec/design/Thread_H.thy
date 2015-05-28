@@ -20,10 +20,10 @@ imports
 begin
 
 defs configureIdleThread_def:
-"configureIdleThread tcb\<equiv> (do
+"configureIdleThread tcb\<equiv> (doE
     ArchThreadDecls_H.configureIdleThread tcb;
     doKernelOp $ setThreadState IdleThreadState tcb
-od)"
+odE)"
 
 defs activateInitialThread_def:
 "activateInitialThread threadPtr entry infoPtr\<equiv> (do

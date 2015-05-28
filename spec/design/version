@@ -1,3 +1,5 @@
-Built from git repo at ../../../seL4/haskell by kleing
+Built from git repo at /Users/kleing/verification/seL4/haskell by kleing
 
-eff5683 add support for XN attribute in Haskell
+Generated from changeset:
+cf53dfa removed setCurrentASID
+

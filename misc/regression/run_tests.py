@@ -45,7 +45,7 @@ ANSI_RESET = "\033[0m"
 ANSI_RED = "\033[31;1m"
 ANSI_GREEN = "\033[32m"
 ANSI_YELLOW = "\033[33m"
-ANSI_WHITE = "\033[38m"
+ANSI_WHITE = "\033[37m"
 ANSI_BOLD = "\033[1m"
 
 def output_color(color, s):
@@ -185,7 +185,7 @@ def print_test_line_start(test_name):
 
 def print_test_line_end(test_name, color, status, time_taken, mem):
     if mem:
-        # Report meory usage in gigabytes.
+        # Report memory usage in gigabytes.
         mem = '%5.2fGB' % round(float(mem) / 1024 / 1024 / 1024, 2)
     if time_taken:
         # Strip milliseconds for better printing.

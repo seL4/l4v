@@ -688,10 +688,10 @@ lemma midstrength_scheduler_affects_equiv_unobservable:
 
 lemma dmo_mol_exclusive_state[wp]:
   "invariant (do_machine_op (machine_op_lift mop)) (\<lambda>s. P (exclusive_state (machine_state s)))"
-  by(wp mol_exclusive_state dmo_wp | simp add: split_def)+
+  by(wp mol_exclusive_state dmo_wp | simp add: split_def dmo_bind_valid writeTTBR0_def isb_def dsb_def )+
 
 crunch exclusive_state[wp]: set_vm_root "\<lambda>s. P (exclusive_state (machine_state s))"
-  (ignore: do_machine_op simp: invalidateTLB_ASID_def setHardwareASID_def setCurrentPD_def crunch_simps)
+  (ignore: do_machine_op simp: invalidateTLB_ASID_def setHardwareASID_def setCurrentPD_def dsb_def isb_def writeTTBR0_def dmo_bind_valid crunch_simps)
 
 lemmas set_vm_root_scheduler_affects_equiv[wp] = scheduler_affects_equiv_unobservable[OF set_vm_root_states_equiv_for set_vm_root_cur_domain _ _ _ set_vm_root_idle_thread set_vm_root_exclusive_state]
 

@@ -882,7 +882,7 @@ crunch arm_asid_table_inv[wp]: invalidate_asid_entry
 crunch st_tcb_at_P [wp]: find_free_hw_asid "\<lambda>s. P (st_tcb_at Q p s)"
 
 
-crunch st_tcb_at [wp]: set_current_asid "\<lambda>s. P (st_tcb_at Q p s)"
+crunch st_tcb_at [wp]: arm_context_switch "\<lambda>s. P (st_tcb_at Q p s)"
 
 
 crunch st_tcb_at [wp]: find_pd_for_asid "\<lambda>s. P (st_tcb_at Q p s)"
@@ -973,7 +973,7 @@ lemma svmrff_asid_mapped [wp]:
   "\<lbrace>valid_asid asid\<rbrace> 
   set_vm_root_for_flush pd asid 
   \<lbrace>\<lambda>rv. valid_asid asid\<rbrace>"
-  apply (simp add: set_vm_root_for_flush_def set_current_asid_def 
+  apply (simp add: set_vm_root_for_flush_def arm_context_switch_def 
                    get_hw_asid_def store_hw_asid_def find_free_hw_asid_def
                    load_hw_asid_def
               cong: if_cong option.case_cong)
@@ -1021,10 +1021,10 @@ lemma store_hw_asid_asid_map [wp]:
   done
 
 
-lemma set_current_asid_asid_map [wp]:
+lemma arm_context_switch_asid_map [wp]:
   "\<lbrace>valid_asid_map and K (asid \<le> mask asid_bits)\<rbrace>
-  set_current_asid asid \<lbrace>\<lambda>_. valid_asid_map\<rbrace>"
-  apply (simp add: set_current_asid_def get_hw_asid_def)
+  arm_context_switch pd asid \<lbrace>\<lambda>_. valid_asid_map\<rbrace>"
+  apply (simp add: arm_context_switch_def get_hw_asid_def)
   apply (wp load_hw_asid_wp|wpc|simp)+
   done
 
@@ -1681,19 +1681,20 @@ lemma get_hw_asid_invs [wp]:
   apply simp
   done
 
-lemma set_current_asid_invs [wp]:
-  "\<lbrace>invs and K (a \<le> mask asid_bits)\<rbrace> set_current_asid a \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (simp add: set_current_asid_def)
+lemma arm_context_switch_invs [wp]:
+  "\<lbrace>invs and K (a \<le> mask asid_bits)\<rbrace> arm_context_switch pd a \<lbrace>\<lambda>_. invs\<rbrace>"
+  apply (simp add: arm_context_switch_def)
   apply (wp dmo_invs)
   apply (rule hoare_post_imp[rotated])
   apply (rule get_hw_asid_invs[simplified])
   apply safe
    apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
           in use_valid)
-     apply ((clarsimp simp: setHardwareASID_def machine_op_lift_def
-                           machine_rest_lift_def split_def | wp)+)[3]
+     apply ((clarsimp simp: setHardwareASID_def setCurrentPD_def writeTTBR0_def 
+                            isb_def dsb_def machine_op_lift_def
+                            machine_rest_lift_def split_def | wp)+)[3]
   apply(erule use_valid)
-   apply(wp | simp add: no_irq_setHardwareASID)+
+   apply(wp | simp add: no_irq_setHardwareASID no_irq_setCurrentPD)+
   done
 
 (* FIXME: move *)
@@ -1706,63 +1707,33 @@ lemma invs_valid_irq_states[elim!]:
   "invs s \<Longrightarrow> valid_irq_states s"
   by(auto simp: invs_def valid_state_def)
 
+lemmas setCurrentPD_irq_masks = no_irq[OF no_irq_setCurrentPD]
+lemmas setHardwareASID_irq_masks = no_irq[OF no_irq_setHardwareASID]
+
+lemma dmo_setCurrentPD_invs[wp]: "\<lbrace>invs\<rbrace> do_machine_op (setCurrentPD addr) \<lbrace>\<lambda>y. invs\<rbrace>"
+  apply (wp dmo_invs)
+  apply safe
+   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
+          in use_valid)
+     apply ((clarsimp simp: setCurrentPD_def writeTTBR0_def dsb_def isb_def machine_op_lift_def
+                           machine_rest_lift_def split_def | wp)+)[3]
+  apply(erule (1) use_valid[OF _ setCurrentPD_irq_masks])
+  done
+
 lemma svr_invs [wp]:
   "\<lbrace>invs\<rbrace> set_vm_root t' \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: set_vm_root_def)
   apply (rule hoare_pre)
-   apply (wp dmo_invs hoare_whenE_wp find_pd_for_asid_inv hoare_vcg_all_lift
-          | wpc | simp)+
-         apply (rule_tac Q="\<top>\<top>" in hoare_post_imp)
-          apply safe
-           apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p =
-                                     underlying_memory m p"
-                  in use_valid)
-             apply (clarsimp simp: setCurrentPD_def machine_op_lift_def
-                                   machine_rest_lift_def split_def)
-             apply ((wp | simp)+)[3]
-          apply(erule use_valid, wp no_irq_setCurrentPD, assumption)
-         apply(wp dmo_invs | clarsimp)+
-      apply (simp add: whenE_def)
-      apply (intro conjI impI)
-       apply wp
-      apply (simp add: returnOk_E')
-     apply (simp add: whenE_def)
-     apply (intro conjI[rotated] impI)
-      apply wp
-     apply (simp add: throwError_R')
-    apply wp
+   apply (wp hoare_whenE_wp find_pd_for_asid_inv hoare_vcg_all_lift | wpc | simp add: split_def)+
     apply (rule_tac Q'="\<lambda>_ s. invs s \<and> x2 \<le> mask asid_bits" in hoare_post_imp_R)
      prefer 2
-     apply safe
-      apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
-             in use_valid)
-        apply (clarsimp simp: setCurrentPD_def machine_op_lift_def
-                              machine_rest_lift_def split_def)
-       apply ((wp | clarsimp simp: split_def)+)[3]
-     apply(erule use_valid, wp no_irq_setCurrentPD, assumption)
-    apply(wp | clarsimp simp: split_def)+
-   apply (rule_tac Q="\<lambda>c s. invs s \<and> s \<turnstile> c \<and>
-            (\<forall>m. \<forall>x\<in>fst (setCurrentPD (Platform.addrFromPPtr
-                             (arm_global_pd (arch_state s))) m).
-                    (\<forall>p. in_user_frame p s \<or>
-                        underlying_memory (snd x) p = underlying_memory m p) \<and>
-                    (m = machine_state s \<longrightarrow>
-                     (\<forall>irq. interrupt_states s irq = IRQInactive \<longrightarrow>
-                            irq_masks (snd x) irq \<or>
-                            irq_masks (snd x) irq =
-                            irq_masks (machine_state s) irq)))"
-          in hoare_strengthen_post)
+     apply simp
+    apply (rule valid_validE_R)
+    apply (wp find_pd_for_asid_inv | simp add: split_def)+
+   apply (rule_tac Q="\<lambda>c s. invs s \<and> s \<turnstile> c" in hoare_strengthen_post)
     apply wp
    apply (clarsimp simp: valid_cap_def mask_def)
   apply(simp add: invs_valid_objs)
-  apply safe
-   apply (clarsimp simp add: invs_def valid_state_def valid_pspace_def)
-   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
-          in use_valid)
-     apply ((clarsimp simp: setCurrentPD_def machine_op_lift_def
-                           machine_rest_lift_def split_def valid_irq_states_def | wp)+)[3]
-  apply(subst snd_conv)
-  apply(erule use_valid, wp no_irq_setCurrentPD, assumption)
   done
 
 lemma svr_st_tcb [wp]:
@@ -3276,13 +3247,7 @@ lemma set_vm_root_for_flush_invs:
   "\<lbrace>invs and K (asid \<le> mask asid_bits)\<rbrace> 
   set_vm_root_for_flush pd asid \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: set_vm_root_for_flush_def)
-  apply (wp dmo_invs hoare_drop_imps hoare_vcg_all_lift |wpc|simp)+
-  apply safe
-  apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory x p"
-         in use_valid)
-    apply ((clarsimp simp: setCurrentPD_def machine_op_lift_def
-                          machine_rest_lift_def split_def | wp)+)[3]
-  apply(erule use_valid, wp no_irq_setCurrentPD, assumption)
+  apply (wp hoare_drop_imps hoare_vcg_all_lift |wpc|simp)+
   done
 
 lemma flush_table_invs[wp]:

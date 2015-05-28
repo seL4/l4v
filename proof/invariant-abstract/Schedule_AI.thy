@@ -112,8 +112,8 @@ lemma dmo_kheap_arch_state[wp]:
 lemma set_vm_root_kheap_arch_state[wp]:
   "\<lbrace>\<lambda>s. P (kheap s) (arm_globals_frame (arch_state s))\<rbrace> set_vm_root a
    \<lbrace>\<lambda>_ s. P (kheap s) (arm_globals_frame (arch_state s))\<rbrace>" (is "valid ?P _ _")
-  apply (simp add: set_vm_root_def set_current_asid_def)
-  apply (wp | wpcw | simp add: set_current_asid_def get_hw_asid_def
+  apply (simp add: set_vm_root_def arm_context_switch_def)
+  apply (wp | wpcw | simp add: arm_context_switch_def get_hw_asid_def
            store_hw_asid_def find_pd_for_asid_assert_def find_free_hw_asid_def
            invalidate_hw_asid_entry_def invalidate_asid_def load_hw_asid_def)+
      apply (simp add: whenE_def, intro conjI impI)

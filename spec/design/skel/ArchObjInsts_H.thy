@@ -125,10 +125,24 @@ instance
 
 end
 
+(* This is hard coded since using funArray in haskell for 2^32 bound is risky *)
+
 instantiation asidpool :: pspace_storable
 begin
 
-#INCLUDE_HASKELL SEL4/Object/Instances/ARM.lhs instanceproofs bodies_only ONLY ASIDPool
+definition
+  makeObject_asidpool: "(makeObject :: asidpool)  \<equiv> ASIDPool $
+        funArray (const Nothing)"
+
+definition
+  loadObject_asidpool[simp]:
+ "(loadObject p q n obj) :: asidpool kernel \<equiv>
+    loadObject_default p q n obj"
+
+definition
+  updateObject_asidpool[simp]:
+ "updateObject (val :: asidpool) \<equiv>
+    updateObject_default val"
 
 instance
   apply (intro_classes)
