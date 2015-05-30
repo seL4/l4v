@@ -502,6 +502,122 @@ lemma generated_objects_disjoint:
    apply (clarsimp simp:helper12)
   by (clarsimp simp:generate_def merge_cdl_def merge_objs_def)
 
+lemma helper16: "(a, b) \<in> set (enumerate x ys) \<Longrightarrow> b \<in> set ys"
+  by (metis enumerate_eq_zip in_set_zip2)
+
+lemma only_endpoint_caps:
+  "\<forall>cap \<in> ran (cap_map a xs). case cap of EndpointCap _ _ _ \<Rightarrow> True
+                                        | AsyncEndpointCap _ _ _ \<Rightarrow> True
+                                        | _ \<Rightarrow> False"
+  apply (clarsimp simp:cap_map_def)
+  apply (subst (asm) ran_distinct)
+   apply clarsimp+
+  apply (drule helper16)
+  apply clarsimp
+  apply (rename_tac connection irrelevant)
+  apply (case_tac "conn_type connection = seL4RPC", simp_all)
+   by (case_tac "from_component connection = xs", simp_all)+
+
+lemma helper17: "distinct (map fst xs) \<Longrightarrow> ran (map_of xs) = set (map snd xs)"
+  apply (cut_tac xs="map fst xs" and ys="map snd xs" in ran_map_of_zip[symmetric])
+    apply clarsimp+
+  by (simp add: ran_distinct)
+
+lemma helper18: "x \<in> ran (map_of xs) \<Longrightarrow> x \<in> set (map snd xs)"
+  by (metis (mono_tags, hide_lams) helper8 map_of_SomeD ranE set_map snd_conv)
+
+lemma helper19: "x \<in> ran (xs ++ ys ++ zs) \<Longrightarrow> x \<in> ran xs \<or> x \<in> ran ys \<or> x \<in> ran zs"
+  by (smt map_add_Some_iff ranE ranI)
+
+lemma helper21: "None \<notin> S \<Longrightarrow> Some x \<in> S = (x \<in> the ` S)"
+  apply (rule iffI)
+   apply force
+  apply (subst in_these_eq[symmetric])
+  apply (clarsimp simp:these_def)
+  apply (case_tac "\<exists>y. xa = Some y")
+   by clarsimp+
+
+lemma helper20: "the ` Set.filter (\<lambda>s. \<not> Option.is_none s) (range f) = ran f"
+  apply (rule subset_antisym)
+   apply clarsimp
+   apply (case_tac "f x", simp_all)
+   apply (simp add: ranI)
+  apply clarsimp
+  apply (subst helper21[symmetric])
+   apply clarsimp+
+  apply (erule ranE)
+  by (metis range_eqI)
+
+text {* All the caps in a generated spec are only to endpoints. *}
+lemma generated_caps_limited:
+  "generate spec extra = Some cdl \<Longrightarrow>
+     \<forall>cnode \<in> ((\<lambda>c. case c of CNode c' \<Rightarrow> c') `
+                 (Set.filter (\<lambda>c. case c of CNode _ \<Rightarrow> True | _ \<Rightarrow> False)
+                   (Map.ran (cdl_objects cdl)))).
+       \<forall>cap \<in> (Map.ran (cdl_cnode_caps cnode)).
+         case cap of EndpointCap _ _ _ \<Rightarrow> True
+                   | AsyncEndpointCap _ _ _ \<Rightarrow> True
+                   | _ \<Rightarrow> False"
+  apply (clarsimp simp:generate_def)
+  apply (subgoal_tac "valid_extra (generate' spec) extra")
+   prefer 2
+   apply (rule ccontr)
+   apply clarsimp+
+  apply (clarsimp simp:merge_objs_def)
+  apply (frule_tac u="SOME x. cdl_objects (merge_cdl (generate' spec) (generate' spec\<lparr>cdl_objects := extra\<rparr>)) x = Some cnode"
+               and v=cnode in merge_contained)
+   apply clarsimp
+   apply (meson ranE someI)
+  apply clarsimp
+  apply (erule disjE)
+   apply (subgoal_tac "cnode \<in> ran (cdl_objects (generate' spec))")
+    prefer 2
+    apply (simp add: ranI)
+   apply (clarsimp simp:generate'_def)
+   apply (subgoal_tac "cnode \<in> ran (obj_heap spec)")
+    prefer 2
+    apply (simp add: ranI)
+   apply (clarsimp simp:obj_heap_def)
+   apply (erule disjE)
+    apply (subgoal_tac "cnode \<in> ran (map_of (map (\<lambda>(n, y). (the_id_of n, y)) (cnode_objs spec)))")
+     prefer 2
+     apply (simp add:ranI)
+    apply (drule helper18)
+    apply (clarsimp simp:cnode_objs_def)
+    apply (cut_tac xs=xa in only_endpoint_caps[where a=spec])
+    apply (erule_tac x=x in ballE)
+     apply clarsimp+
+   apply (erule disjE)
+    apply (subgoal_tac "cnode \<in> ran (map_of (map (\<lambda>(n, y). (the_id_of n, y)) (tcb_objs spec)))")
+     prefer 2
+     apply (simp add:ranI)
+    apply (drule helper18)
+    apply clarsimp
+    apply (cut_tac tcb_objs_only_tcbs[where spec=spec])
+    apply clarsimp
+    apply (erule_tac x="(a, b)" in ballE)
+     apply clarsimp
+     apply (case_tac b, simp_all)
+   apply (subgoal_tac "cnode \<in> ran (map_of (map (\<lambda>(n, y). (the_id_of n, y)) (ep_objs spec)))")
+    prefer 2
+    apply clarsimp
+    apply (simp add:ranI)
+   apply (drule helper18)
+   apply clarsimp
+   apply (cut_tac ep_objs_only_eps[where spec=spec])
+   apply clarsimp
+   apply (erule_tac x="(a, b)" in ballE)
+    apply clarsimp
+    apply (case_tac b, simp_all)
+  apply (subgoal_tac "cnode \<in> ran extra")
+   prefer 2
+   apply (simp add:ranI)
+  apply (drule valid_only_pds_pts_frames)
+  apply (erule_tac x=cnode in ballE)
+   apply (case_tac cnode, simp_all)
+  apply (subst (asm) helper20)
+  by clarsimp
+
 end
 
 end
