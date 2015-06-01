@@ -10,7 +10,13 @@
 
 (* Miscellaneous Isabelle tools. *)
 theory NICTATools
-imports (* Apply_Trace_Cmd *) Solves_Tac
+imports 
+(* Apply_Trace_Cmd *) 
+  Solves_Tac
+  "subgoal_focus/Subgoal_Focus"
+  "subgoal_focus/Noting"
+  "subgoal_focus/Subgoal_Methods"
+  Eisbach_Methods
 begin
 
 section "Detect unused meta-forall"
