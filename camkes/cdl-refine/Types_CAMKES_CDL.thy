@@ -10,9 +10,6 @@ abbreviation "TODO \<equiv> undefined"
 text {* A CAmkES system is completely specified by its top-level assembly definition. *}
 type_synonym camkes_state = assembly
 
-text {* The IRQ map we generate. TODO *}
-consts irq_map :: "cdl_irq \<Rightarrow> cdl_object_id"
-
 text {*
   Symbolic names for capability slots.
   XXX: Move this to DSpec?

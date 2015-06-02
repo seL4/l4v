@@ -64,6 +64,27 @@ abbreviation "W \<equiv> {AllowWrite}"
 abbreviation "WG \<equiv> {AllowWrite, AllowGrant}"
 
 text {*
+  A type for representing extra information relating to hardware interrupts that will be appended
+  to a generated CapDL specification. We would prefer not to deal with interrupts, but CapDL
+  represents each interrupt as a mapping to a single-slot CNode. We need to note the existence of
+  these artificial CNodes for the final correspondence proof.
+*}
+record irqs =
+  irqs_map :: "cdl_irq \<Rightarrow> cdl_object_id"
+  irqs_objects :: cdl_heap
+
+definition
+  valid_irqs :: "cdl_state \<Rightarrow> cdl_heap \<Rightarrow> irqs \<Rightarrow> bool"
+where
+  "valid_irqs initial extra irqs \<equiv>
+     range (irqs_map irqs) = dom (irqs_objects irqs) \<and>
+     dom (cdl_objects initial) \<inter> dom (irqs_objects irqs) = {} \<and>
+     dom extra \<inter> dom (irqs_objects irqs) = {} \<and>
+     (\<forall>x \<in> ran (irqs_objects irqs). case x of
+        CNode c \<Rightarrow> c = \<lparr>cdl_cnode_caps = empty, cdl_cnode_size_bits = 1\<rparr>
+      | _ \<Rightarrow> False)"
+
+text {*
   We assume that the user, when instantiating the following locale to use the contained lemmas, will
   provide us with a function to find the object IDs of the IPC buffers. We need to assume this
   because the IPC buffer frames (and caps to them) are inferred late in the CapDL generation
@@ -359,7 +380,7 @@ where
      cdl_objects = obj_heap spec,
      cdl_cdt = empty,
      cdl_current_thread = undefined,
-     cdl_irq_node = irq_map,
+     cdl_irq_node = undefined,
      cdl_asid_table = empty,
      cdl_current_domain = undefined\<rparr>"
 
@@ -368,15 +389,22 @@ text {*
   above.
 *}
 definition
-  generate :: "camkes_state \<Rightarrow> cdl_heap \<Rightarrow> cdl_state option"
+  generate :: "camkes_state \<Rightarrow> cdl_heap \<Rightarrow> irqs \<Rightarrow> cdl_state option"
 where
-  "generate spec extra \<equiv>
-     if valid_extra (generate' spec) extra then
-       Some (merge_objs (generate' spec) extra)
+  "generate spec extra irqs \<equiv>
+     if valid_extra (generate' spec) extra \<and> valid_irqs (generate' spec) extra irqs then
+       Some ((merge_objs
+               (merge_objs (generate' spec) extra) (irqs_objects irqs))
+                 \<lparr>cdl_irq_node := irqs_map irqs\<rparr>)
      else
        None"
 
-lemma generated_implies_valid: "generate spec extra = Some cdl \<Longrightarrow> valid_extra (generate' spec) extra"
+lemma generated_implies_valid:
+  "generate spec extra irqs = Some cdl \<Longrightarrow> valid_extra (generate' spec) extra"
+  by (metis generate_def option.distinct(1))
+
+lemma generated_implies_valid2:
+  "generate spec extra irqs = Some cdl \<Longrightarrow> valid_irqs (generate' spec) extra irqs"
   by (metis generate_def option.distinct(1))
 
 lemma merge_contained:
@@ -495,12 +523,24 @@ lemma helper12: "valid_extra a b \<Longrightarrow> dom (cdl_objects a) \<inter> 
   by (clarsimp simp:valid_extra_def)
 
 lemma generated_objects_disjoint:
-  "generate spec extra = Some cdl \<Longrightarrow> obj_count (generate' spec) + obj_count' extra = obj_count cdl"
-  apply (frule generated_implies_valid)
-  apply (subst card_Un_disjoint[symmetric])
-     apply clarsimp+
+  "generate spec extra irqs = Some cdl \<Longrightarrow>
+     obj_count (generate' spec) + obj_count' extra + obj_count' (irqs_objects irqs) = obj_count cdl"
+  apply (frule generated_implies_valid, frule generated_implies_valid2)
+  apply (subst card_Un_disjoint[symmetric], simp_all)
    apply (clarsimp simp:helper12)
-  by (clarsimp simp:generate_def merge_cdl_def merge_objs_def)
+  apply (subst card_Un_disjoint[symmetric], simp_all)
+   apply (subgoal_tac "dom extra \<inter> dom (irqs_objects irqs) = {}")
+    prefer 2
+    apply (rule ccontr)
+    apply (subst (asm) not_empty_eq)
+    apply clarsimp
+    apply (rename_tac obj1 obj2)
+    apply (clarsimp simp:valid_irqs_def)
+    apply blast
+   apply (clarsimp simp:valid_irqs_def)
+   apply blast
+  apply (clarsimp simp:generate_def merge_cdl_def merge_objs_def)
+  by (simp add: Un_assoc)
 
 lemma helper16: "(a, b) \<in> set (enumerate x ys) \<Longrightarrow> b \<in> set ys"
   by (metis enumerate_eq_zip in_set_zip2)
@@ -548,9 +588,34 @@ lemma helper20: "the ` Set.filter (\<lambda>s. \<not> Option.is_none s) (range f
   apply (erule ranE)
   by (metis range_eqI)
 
+lemma helper23:
+  "x \<in> ran (cdl_objects (merge_objs a b)) \<Longrightarrow> x \<in> ran (cdl_objects a) \<or> x \<in> ran b"
+  apply (clarsimp simp:merge_objs_def merge_cdl_def)
+  using helper19 by force
+
+lemma valid_only_empty_cnodes:
+  "valid_irqs spec extra irqs \<Longrightarrow> \<forall>obj \<in> ran (irqs_objects irqs). case obj of
+     CNode c \<Rightarrow> c = \<lparr>cdl_cnode_caps = empty, cdl_cnode_size_bits = 1\<rparr>
+   | _ \<Rightarrow> False"
+  by (clarsimp simp:valid_irqs_def)
+
+lemma only_endpoint_caps2:
+  "\<forall>(name, cnode) \<in> set (cnode_objs spec). case cnode of
+     CNode c \<Rightarrow> (\<forall>cap \<in> ran (cdl_cnode_caps c). case cap of
+       EndpointCap _ _ _ \<Rightarrow> True
+     | AsyncEndpointCap _ _ _ \<Rightarrow> True
+     | _ \<Rightarrow> False)
+   | _ \<Rightarrow> False"
+  apply (clarsimp simp:cnode_objs_def)
+  apply (rename_tac name cap)
+  apply (cut_tac a=spec and xs=name in only_endpoint_caps)
+  apply (erule_tac x=cap in ballE)
+   apply assumption
+  by clarsimp
+
 text {* All the caps in a generated spec are only to endpoints. *}
 lemma generated_caps_limited:
-  "generate spec extra = Some cdl \<Longrightarrow>
+  "generate spec extra irqs = Some cdl \<Longrightarrow>
      \<forall>cnode \<in> ((\<lambda>c. case c of CNode c' \<Rightarrow> c') `
                  (Set.filter (\<lambda>c. case c of CNode _ \<Rightarrow> True | _ \<Rightarrow> False)
                    (Map.ran (cdl_objects cdl)))).
@@ -559,63 +624,55 @@ lemma generated_caps_limited:
                    | AsyncEndpointCap _ _ _ \<Rightarrow> True
                    | _ \<Rightarrow> False"
   apply (clarsimp simp:generate_def)
+  apply (rename_tac cap)
   apply (subgoal_tac "valid_extra (generate' spec) extra")
    prefer 2
    apply (rule ccontr)
    apply clarsimp+
-  apply (clarsimp simp:merge_objs_def)
-  apply (frule_tac u="SOME x. cdl_objects (merge_cdl (generate' spec) (generate' spec\<lparr>cdl_objects := extra\<rparr>)) x = Some cnode"
-               and v=cnode in merge_contained)
-   apply clarsimp
-   apply (meson ranE someI)
-  apply clarsimp
-  apply (erule disjE)
-   apply (subgoal_tac "cnode \<in> ran (cdl_objects (generate' spec))")
-    prefer 2
-    apply (simp add: ranI)
-   apply (clarsimp simp:generate'_def)
-   apply (subgoal_tac "cnode \<in> ran (obj_heap spec)")
-    prefer 2
-    apply (simp add: ranI)
-   apply (clarsimp simp:obj_heap_def)
-   apply (erule disjE)
-    apply (subgoal_tac "cnode \<in> ran (map_of (map (\<lambda>(n, y). (the_id_of n, y)) (cnode_objs spec)))")
-     prefer 2
-     apply (simp add:ranI)
-    apply (drule helper18)
-    apply (clarsimp simp:cnode_objs_def)
-    apply (cut_tac xs=xa in only_endpoint_caps[where a=spec])
-    apply (erule_tac x=x in ballE)
-     apply clarsimp+
-   apply (erule disjE)
-    apply (subgoal_tac "cnode \<in> ran (map_of (map (\<lambda>(n, y). (the_id_of n, y)) (tcb_objs spec)))")
-     prefer 2
-     apply (simp add:ranI)
-    apply (drule helper18)
-    apply clarsimp
-    apply (cut_tac tcb_objs_only_tcbs[where spec=spec])
-    apply clarsimp
-    apply (erule_tac x="(a, b)" in ballE)
-     apply clarsimp
-     apply (case_tac b, simp_all)
-   apply (subgoal_tac "cnode \<in> ran (map_of (map (\<lambda>(n, y). (the_id_of n, y)) (ep_objs spec)))")
-    prefer 2
-    apply clarsimp
-    apply (simp add:ranI)
-   apply (drule helper18)
-   apply clarsimp
-   apply (cut_tac ep_objs_only_eps[where spec=spec])
-   apply clarsimp
-   apply (erule_tac x="(a, b)" in ballE)
-    apply clarsimp
-    apply (case_tac b, simp_all)
-  apply (subgoal_tac "cnode \<in> ran extra")
+  apply (subgoal_tac "valid_irqs (generate' spec) extra irqs")
    prefer 2
-   apply (simp add:ranI)
-  apply (drule valid_only_pds_pts_frames)
+   apply (rule ccontr)
+   apply clarsimp+
+  apply (drule helper23)
+  apply (erule disjE)
+   apply (drule helper23)
+   apply (erule disjE)
+    apply (clarsimp simp:generate'_def obj_heap_def)
+    apply (drule helper19)
+    apply (case_tac "cnode \<in> ran (map_of (map (\<lambda>(n, y). (the_id_of n, y)) (ep_objs spec)))")
+     apply (drule helper18)
+     apply clarsimp
+     apply (rename_tac name cnode)
+     apply (cut_tac spec=spec in ep_objs_only_eps)
+     apply (erule_tac x="(name, cnode)" in ballE)
+      apply clarsimp
+      apply (case_tac cnode; simp_all)
+     apply clarsimp
+    apply (case_tac "cnode \<in> ran (map_of (map (\<lambda>(n, y). (the_id_of n, y)) (tcb_objs spec)))")
+     apply (drule helper18)
+     apply clarsimp
+     apply (rename_tac name cnode)
+     apply (cut_tac spec=spec in tcb_objs_only_tcbs)
+     apply (erule_tac x="(name, cnode)" in ballE)
+      apply clarsimp
+      apply (case_tac cnode; simp_all)
+     apply clarsimp
+    apply clarsimp
+    apply (drule helper18)
+    apply clarsimp
+    apply (rename_tac name cnode)
+    apply (cut_tac spec=spec in only_endpoint_caps2)
+    apply (erule_tac x="(name, cnode)" in ballE)
+     apply clarsimp
+     apply (case_tac cnode; simp_all)
+    apply clarsimp
+   apply (drule valid_only_pds_pts_frames)
+   apply (erule_tac x=cnode in ballE)
+    apply (case_tac cnode; simp_all)
+   apply (simp add: helper20)
+  apply (drule valid_only_empty_cnodes)
   apply (erule_tac x=cnode in ballE)
-   apply (case_tac cnode, simp_all)
-  apply (subst (asm) helper20)
+   apply (case_tac cnode; simp_all)
   by clarsimp
 
 end
