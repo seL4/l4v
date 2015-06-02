@@ -7,7 +7,6 @@ Methods for managing subgoals collectively.
 theory Subgoal_Methods
 imports Main
 begin
-
 ML \<open>
 signature SUBGOAL_METHODS =
 sig
@@ -141,6 +140,34 @@ fun distinct_subgoals ctxt raw_st =
     Drule.implies_intr_list subgoals' st'
     |> singleton (Variable.export inner_ctxt ctxt)
   end;
+  
+(* Variant of filter_prems_tac that recovers premise order *)
+fun filter_prems_tac' ctxt pred =
+  let
+    fun Then NONE tac = SOME tac
+      | Then (SOME tac) tac' = SOME (tac THEN' tac');
+    fun thins H (tac, n, i) =
+      (if pred H then (tac, n + 1, i)
+       else (Then tac (rotate_tac n THEN' eresolve_tac ctxt [thin_rl]), 0, i + n));
+  in
+    SUBGOAL (fn (goal, i) =>
+      let val Hs = Logic.strip_assums_hyp goal in
+        (case fold thins Hs (NONE, 0, 0) of
+          (NONE, _, _) => no_tac
+        | (SOME tac, _, n) => tac i THEN rotate_tac (~ n) i)
+      end)
+  end;
+  
+fun trim_prems_tac ctxt rules = 
+let
+  fun matches (prem,rule) =
+  let
+    val ((_,prem'),ctxt') = Variable.focus prem ctxt;
+    val rule_prop = Thm.prop_of rule;
+  in Unify.matches_list (Context.Proof ctxt') [rule_prop] [prem'] end;
+  
+in filter_prems_tac' ctxt (not o member matches rules) end;
+
 
 fun unfold_subgoals_tac ctxt =
   Method.intros_tac ctxt @{thms conjunctionI} []
@@ -156,7 +183,11 @@ val _ =
       "recover subgoals after folding" #>
     Method.setup @{binding distinct_subgoals}
       (Scan.succeed (fn ctxt => SIMPLE_METHOD (PRIMITIVE (distinct_subgoals ctxt))))
-     "trim all subgoals to be (logically) distinct");
+     "trim all subgoals to be (logically) distinct" #>
+    Method.setup @{binding trim}
+      (Attrib.thms >> (fn thms => fn ctxt => 
+         SIMPLE_METHOD (HEADGOAL (trim_prems_tac ctxt thms))))
+     "trim all premises that match the given rules");
 
 end;
 \<close>

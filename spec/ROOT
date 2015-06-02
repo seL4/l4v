@@ -128,8 +128,5 @@ session ASepSpec = ASpec +
  *)
 
 session Word = "HOL-Word" +
-  theories [condition = "USE_RICH_METHODS"]
-    "../lib/eisbach/Focus"
   theories
     "../lib/NICTACompat"
-

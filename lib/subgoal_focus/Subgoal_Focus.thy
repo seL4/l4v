@@ -19,9 +19,9 @@ ML \<open>
 signature SUBGOAL_FOCUS =
 sig
   val subgoal_focus: Attrib.binding -> Attrib.binding ->
-    (binding * typ option * mixfix) list -> Proof.state -> Proof.state
+    (binding * typ option * mixfix) list -> bool -> Proof.state -> Proof.state
   val subgoal_focus_cmd: Attrib.binding -> Attrib.binding ->
-    (binding * string option * mixfix) list -> Proof.state -> Proof.state
+    (binding * string option * mixfix) list -> bool -> Proof.state -> Proof.state
 end;
 
 structure Subgoal_Focus: SUBGOAL_FOCUS =
@@ -33,7 +33,7 @@ fun find_matching pred (fix :: fs) (goal_param :: gps) =
       if pred (fix, goal_param)
       then fst fix :: find_matching pred fs gps
       else goal_param :: find_matching pred (fix :: fs) gps
-  | find_matching _ [] _ = []
+  | find_matching _ [] gps = gps
   | find_matching _ ((_, b) :: _) [] =
       error ("Couldn't find parameter in subgoal" ^ Position.here (Binding.pos_of b));
 
@@ -46,7 +46,7 @@ fun check_unique_fixes' checked (((x, _), b) :: fs) =
 fun check_unique_fixes fs = check_unique_fixes' [] fs;
 
 fun gen_focus prep_vars prep_atts
-    raw_binding raw_prems_binding raw_fixes state =
+    raw_binding raw_prems_binding raw_fixes no_prems state =
   let
     val _ = Proof.assert_backward state;
     val ctxt = Proof.context_of state;
@@ -105,13 +105,14 @@ fun gen_focus prep_vars prep_atts
   in
     (* FIXME more conventional block structure, like Proof.begin_block *)
     Proof.begin_notepad focus_ctxt
-    |> Proof.local_goal (K (K ())) (K I) (pair o rpair I) "subgoal" NONE after_qed
-      [(Thm.empty_binding, [Thm.term_of (#concl focus)])]
     |> Proof.map_context (snd o
         Proof_Context.note_thmss ""
           [((Binding.name "prems", []), [(#prems focus, [])]),
            (prems_binding, [(#prems focus, [])])])
     |> Proof.bind_terms [((Auto_Bind.thesisN, 0), SOME thesis)]
+    |> Proof.local_goal (K (K ())) (K I) (pair o rpair I) "subgoal" NONE after_qed
+      [(Thm.empty_binding, [Thm.term_of (#concl focus)])]
+    |> (not no_prems) ? Proof.refine_insert (#prems focus)
   end;
 
 in
@@ -128,8 +129,9 @@ val _ =
   Outer_Syntax.command @{command_keyword subgoal} "focus subgoal"
     (opt_fact_binding --
       (Scan.optional (@{keyword "premises"} |-- Parse.!!! fact_binding) Attrib.empty_binding) --
-      Parse.for_fixes >>
-      (fn ((a, b), c) => Toplevel.proofs (Seq.make_results o Seq.single o subgoal_focus_cmd a b c)));
+      Parse.for_fixes -- Args.mode "no_prems" >>
+      (fn (((a, b), c),d) => 
+         Toplevel.proofs (Seq.make_results o Seq.single o subgoal_focus_cmd a b c d)));
 
 end;
 \<close>
