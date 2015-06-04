@@ -81,7 +81,7 @@ where
      dom (cdl_objects initial) \<inter> dom (irqs_objects irqs) = {} \<and>
      dom extra \<inter> dom (irqs_objects irqs) = {} \<and>
      (\<forall>x \<in> ran (irqs_objects irqs). case x of
-        CNode c \<Rightarrow> c = \<lparr>cdl_cnode_caps = empty, cdl_cnode_size_bits = 1\<rparr>
+        CNode c \<Rightarrow> c = \<lparr>cdl_cnode_caps = empty, cdl_cnode_size_bits = 0\<rparr>
       | _ \<Rightarrow> False)"
 
 text {*
@@ -595,7 +595,7 @@ lemma helper23:
 
 lemma valid_only_empty_cnodes:
   "valid_irqs spec extra irqs \<Longrightarrow> \<forall>obj \<in> ran (irqs_objects irqs). case obj of
-     CNode c \<Rightarrow> c = \<lparr>cdl_cnode_caps = empty, cdl_cnode_size_bits = 1\<rparr>
+     CNode c \<Rightarrow> c = \<lparr>cdl_cnode_caps = empty, cdl_cnode_size_bits = 0\<rparr>
    | _ \<Rightarrow> False"
   by (clarsimp simp:valid_irqs_def)
 
