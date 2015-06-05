@@ -39,17 +39,6 @@ definition merge_objs :: "cdl_state \<Rightarrow> cdl_heap \<Rightarrow> cdl_sta
 definition sum :: "nat list \<Rightarrow> nat"
   where "sum xs \<equiv> fold (\<lambda>a b. a + b) xs 0"
 
-text {* Convenience abbreviation for not being in a syscall. *}
-definition
-  no_intent :: cdl_full_intent
-where
-  "no_intent \<equiv> \<lparr>
-     cdl_intent_op = None,
-     cdl_intent_error = False,
-     cdl_intent_cap = 0,
-     cdl_intent_extras = [],
-     cdl_intent_recv_slot = None\<rparr>"
-
 (* convenience *)
 definition enumerate' :: "word32 \<Rightarrow> 'a list \<Rightarrow> (word32 \<times> 'a) list"
   where "enumerate' start xs = map (\<lambda>(a, b). (of_nat a, b)) (enumerate (unat start) xs)"
@@ -251,7 +240,7 @@ where
        ipc_buffer_slot \<mapsto> FrameCap (the_ipc_buffer n 0) RW 12 Real None,
        fault_ep_slot \<mapsto> NullCap],
                         cdl_tcb_fault_endpoint = 0,
-                        cdl_tcb_intent = no_intent,
+                        cdl_tcb_intent = undefined,
                         cdl_tcb_has_fault = False,
                         cdl_tcb_domain = 0\<rparr>) # 
 
@@ -265,7 +254,7 @@ where
        ipc_buffer_slot \<mapsto> FrameCap (the_ipc_buffer n (i + 1)) RW 12 Real None,
        fault_ep_slot \<mapsto> NullCap],
                    cdl_tcb_fault_endpoint = 0,
-                   cdl_tcb_intent = no_intent,
+                   cdl_tcb_intent = undefined,
                    cdl_tcb_has_fault = False,
                    cdl_tcb_domain = 0\<rparr>))
          (enumerate 0 (map fst (provides c) @ map fst (requires c) @ map fst (emits c) @
