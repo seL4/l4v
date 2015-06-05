@@ -693,7 +693,8 @@ let
     val replay_failure_start = 1
     val replay_failures = Unsynchronized.ref replay_failure_start
     val (thm, trace) =
-         case AutoCorresTrace.trace_solve_tac ctxt true false (K tactics) goal NONE replay_failures of
+         case AutoCorresTrace.maybe_trace_solve_tac ctxt (member (op =) trace_funcs fn_name)
+                true false (K tactics) goal NONE replay_failures of
             NONE => (* intentionally generate a TRACE_SOLVE_TAC_FAIL *)
                     (AutoCorresTrace.trace_solve_tac ctxt false false (K tactics) goal NONE (Unsynchronized.ref 0);
                      (* never reached *) error "heap_lift fail tac: impossible")

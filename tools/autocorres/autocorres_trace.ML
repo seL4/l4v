@@ -211,6 +211,49 @@ fun trace_solve_tac (ctxt : Proof.context)
         in try (get_tacs goal) end
   end
 
+(* Same result as trace_solve_tac, but without the tracing. *)
+fun fast_solve_tac (ctxt : Proof.context)
+                   (backtrack : bool) (backtrack_subgoals : bool)
+                   (get_tacs : term -> (thm * tactic) list)
+                   (state : thm)
+                   (depth : int option)
+                   (num_subgoals : int)
+                   : thm option =
+  let val n = length (Thm.prems_of state)
+      fun try [] = if backtrack then NONE else raise TRACE_SOLVE_TAC_FAIL [(state, @{thm reflexive})]
+        | try ((tag, tactic) :: rules_rest) =
+            case tactic state |> Seq.pull of
+                NONE => try rules_rest
+              | SOME (next, _) =>
+                case fast_solve_tac ctxt backtrack backtrack_subgoals get_tacs next
+                                    (Option.map (fn d => d - 1) depth) n
+                     handle TRACE_SOLVE_TAC_FAIL tr => raise TRACE_SOLVE_TAC_FAIL ((state, tag) :: tr) of
+                    NONE => if backtrack then try rules_rest else
+                            raise TRACE_SOLVE_TAC_FAIL [(state, tag), (next, @{thm reflexive})]
+                  | SOME state' =>
+                    case fast_solve_tac ctxt backtrack backtrack_subgoals get_tacs state'
+                                        depth num_subgoals of
+                        NONE => if backtrack_subgoals then try rules_rest else NONE
+                      | SOME thm => SOME thm
+  in if depth = SOME 0 then raise TRACE_SOLVE_TAC_FAIL [(state, @{thm reflexive})] else
+     if n = 0 orelse n < num_subgoals then SOME state else
+     try (get_tacs (hd (Thm.prems_of state)))
+  end
+
+fun maybe_trace_solve_tac (ctxt : Proof.context)
+                          (do_trace : bool)
+                          (backtrack : bool) (backtrack_subgoals : bool)
+                          (get_tacs : term -> (thm * tactic) list)
+                          (state : thm)
+                          (depth : int option)
+                          (replay_failures : int Unsynchronized.ref)
+                          : (thm * thm RuleTrace list) option =
+  if do_trace
+  then trace_solve_tac ctxt backtrack backtrack_subgoals get_tacs state depth replay_failures
+  else fast_solve_tac ctxt backtrack backtrack_subgoals get_tacs state depth 1
+       |> Option.map (fn thm => (thm, [ RuleTrace { input = Thm.cprop_of state, output = thm,
+                                                    step = (@{thm TrueI}, all_tac), trace = [] } ]))
+
 
 
 datatype SimpTrace = SimpTrace of { equation : thm, thms : (string * cterm) list }
