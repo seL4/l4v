@@ -170,7 +170,8 @@ in filter_prems_tac' ctxt (not o member matches rules) end;
 
 
 fun unfold_subgoals_tac ctxt =
-  Method.intros_tac ctxt @{thms conjunctionI} []
+  (Method.intros_tac ctxt @{thms conjunctionI} [] ORELSE
+    Goal.conjunction_tac 1)
   THEN (PRIMITIVE (Raw_Simplifier.norm_hhf ctxt));
 
 val _ =
