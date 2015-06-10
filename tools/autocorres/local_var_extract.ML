@@ -1367,8 +1367,12 @@ fun get_l2corres_thm ctxt prog_info fn_info do_opt trace_opt fn_name
 
   (* Cleanup. *)
   val _ = writeln ("Simplifying (L2) " ^ fn_name)
-  val new_thm = Simplifier.simplify (put_simpset HOL_basic_ss ctxt addsimps @{thms L2_unknown_bind}) new_thm
+  val new_thm = Simplifier.simplify (put_simpset HOL_basic_ss ctxt addsimps
+                                       (* this rule is expensive *)
+                                       (if do_opt then @{thms L2_unknown_bind} else []))
+                                    new_thm
 
+  val _ = writeln ("Simplifying (L2opt) " ^ fn_name)
   (* HACK: we need to avoid these simps until heap_lift *)
   val cleanup_del = @{thms ptr_coerce.simps ptr_add_0_id}
   val (new_thm, traces) = L2Opt.cleanup_thm_tagged (ctxt delsimps cleanup_del) new_thm
