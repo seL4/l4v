@@ -182,9 +182,9 @@ where
   "cap_map spec instance \<equiv> map_of (enumerate (cap_offset spec instance) (concat (
      map (\<lambda>(n, c, _). if conn_type c = seL4RPC then (
                         if fst (conn_from c) = instance then
-                          [EndpointCap (the_id_of n) 0 RWG]
+                          [EndpointCap (the_id_of n) 0 RW]
                         else if fst (conn_to c) = instance then
-                          [EndpointCap (the_id_of n) 0 R]
+                          [EndpointCap (the_id_of n) 0 RW]
                         else
                           [])
                       else if conn_type c = seL4Asynch then (
