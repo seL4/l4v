@@ -118,23 +118,6 @@ where
      dom (cdl_objects initial) \<inter> dom extra = {}"
 
 text {*
-  Various minutiae related to CNode sizes. Ordinarily, in a hand-written system, this would not be a
-  big deal. However, in CAmkES we automatically infer the CNode size based on the number of
-  capabilities it needs to contain.
-*}
-definition cnode_size_bits :: "camkes_state \<Rightarrow> string \<Rightarrow> nat"
-  where "cnode_size_bits spec name \<equiv> 12" (* TODO *)
-definition cnode_size :: "camkes_state \<Rightarrow> string \<Rightarrow> nat"
-  where "cnode_size spec instance \<equiv> 2 ^ (cnode_size_bits spec instance)" (* TODO *)
-
-definition cnode_guard_size :: "camkes_state \<Rightarrow> string \<Rightarrow> nat"
-  where "cnode_guard_size spec instance \<equiv> 32 - cnode_size_bits spec instance"
-
-text {* All CNodes have a guard of 0. *}
-definition cnode_guard :: "camkes_state \<Rightarrow> string \<Rightarrow> 32 word"
-  where "cnode_guard _ _ \<equiv> 0"
-
-text {*
   Now, for each of the types of items present in a base CAmkES-derived CapDL specification (CNodes,
   TCBs, endpoints), we define two things:
    * count - How many of this type of object we have; and
@@ -213,6 +196,26 @@ where
                           [])
                       else
                         []) (ep_objs' spec))))"
+
+text {*
+  Various minutiae related to CNode sizes. Ordinarily, in a hand-written system, this would not be a
+  big deal. However, in CAmkES we automatically infer the CNode size based on the number of
+  capabilities it needs to contain. The definition below is intended to replicate the calculation in
+  the python-capdl module.
+*}
+definition cnode_size_bits :: "camkes_state \<Rightarrow> string \<Rightarrow> nat"
+  where "cnode_size_bits spec name \<equiv>
+    LEAST bits. 2 ^ bits > Max (dom (cap_map spec name) \<union> {2})"
+
+definition cnode_size :: "camkes_state \<Rightarrow> string \<Rightarrow> nat"
+  where "cnode_size spec instance \<equiv> 2 ^ (cnode_size_bits spec instance)"
+
+definition cnode_guard_size :: "camkes_state \<Rightarrow> string \<Rightarrow> nat"
+  where "cnode_guard_size spec instance \<equiv> 32 - cnode_size_bits spec instance"
+
+text {* All CNodes have a guard of 0. *}
+definition cnode_guard :: "camkes_state \<Rightarrow> string \<Rightarrow> 32 word"
+  where "cnode_guard _ _ \<equiv> 0"
 
 definition
   cnode_objs :: "camkes_state \<Rightarrow> (string \<times> cdl_object) list"
