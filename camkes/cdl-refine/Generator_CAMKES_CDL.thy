@@ -167,7 +167,7 @@ text {*
   fault, rather than incorrectly invoking an endpoint.
 *}
 definition cap_offset :: "camkes_state \<Rightarrow> string \<Rightarrow> nat"
-  where "cap_offset spec instance \<equiv> 1 +
+  where "cap_offset spec instance \<equiv> 2 +
     (\<lambda>(_, c). length (requires c) + length (provides c) + length (dataports c) +
               length (emits c) + length (consumes c))
       (hd (filter (\<lambda>(n, _). n = instance) (components (composition spec))))"
