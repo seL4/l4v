@@ -154,4 +154,148 @@ lemma if_fold[simp]:"(if P then Q else if P then R else S) = (if P then Q else S
 lemma disjoint_subset_both:"\<lbrakk>A' \<subseteq> A; B' \<subseteq> B; A \<inter> B = {}\<rbrakk> \<Longrightarrow> A' \<inter> B' = {}"
   by blast
 
+lemma union_split: "\<lbrakk>A \<inter> C = {}; B \<inter> C = {}\<rbrakk> \<Longrightarrow> (A \<union> B) \<inter> C = {}"
+  by (simp add: inf_sup_distrib2)
+
+lemma dom_expand: "dom (\<lambda>x. if P x then Some y else None) = {x. P x}"
+  using if_option_Some by fastforce
+
+lemma range_translate: "(range f = range g) = ((\<forall>x. \<exists>y. f x = g y) \<and> (\<forall>x. \<exists>y. f y = g x))"
+  by (rule iffI,
+       rule conjI,
+        clarsimp,
+        blast,
+       clarsimp,
+       metis f_inv_into_f range_eqI,
+      clarsimp,
+      subst set_eq_subset,
+      rule conjI,
+       clarsimp,
+       rename_tac arg,
+       erule_tac x=arg and P="\<lambda>x. (\<exists>y. f x = g y)" in allE,
+       clarsimp,
+      clarsimp,
+      rename_tac arg,
+      erule_tac x=arg and P="\<lambda>x. (\<exists>y. f y = g x)" in allE,
+      clarsimp,
+      metis range_eqI)
+
+lemma ran_expand: "\<exists>x. P x \<Longrightarrow> ran (\<lambda>x. if P x then Some y else None) = {y}"
+  by (rule subset_antisym,
+       (clarsimp simp:ran_def)+)
+
+lemma map_upd_expand: "f(x \<mapsto> y) = f ++ (\<lambda>z. if z = x then Some y else None)"
+  by (rule ext, rename_tac w,
+      case_tac "w = x",
+       simp,
+      simp add:map_add_def)
+
+lemma map_upd_subI: "\<lbrakk>f \<subseteq>\<^sub>m g; f x = None\<rbrakk> \<Longrightarrow> f \<subseteq>\<^sub>m g(x \<mapsto> y)"
+  by (rule_tac f="\<lambda>i. if i = x then Some y else None" in map_add_le_mapE,
+      simp add:map_le_def,
+      rule ballI, rename_tac a,
+      rule conjI,
+       erule_tac x=x in ballE,
+        clarsimp,
+        erule disjE,
+         clarsimp,
+        clarsimp simp:map_add_def,
+       clarsimp,
+       erule disjE,
+        clarsimp,
+       clarsimp simp:map_add_def,
+      clarsimp simp:map_add_def,
+      erule_tac x=a in ballE,
+       erule disjE,
+        (case_tac "g a"; simp_all),
+       clarsimp+)
+
+lemma all_ext: "\<forall>x. f x = g x \<Longrightarrow> f = g"
+  by presburger
+
+lemma conjI2: "\<lbrakk>B; B \<longrightarrow> A\<rbrakk> \<Longrightarrow> A \<and> B"
+  by auto
+
+(* Trivial lemmas for dealing with messy CNode obligations. *)
+lemma Least2: "\<lbrakk>\<not>P 0; \<not>P 1; P (2::nat)\<rbrakk> \<Longrightarrow> Least P = 2"
+  by (simp add: Least_Suc eval_nat_numeral(2) eval_nat_numeral(3))
+lemma Least3: "\<lbrakk>\<not>P 0; \<not>P 1; \<not>P 2; P (3::nat)\<rbrakk> \<Longrightarrow> Least P = 3"
+  by (simp add: Least_Suc eval_nat_numeral(2) eval_nat_numeral(3))
+lemma Least4: "\<lbrakk>\<not>P 0; \<not>P 1; \<not>P 2; \<not>P 3; P (4::nat)\<rbrakk> \<Longrightarrow> Least P = 4"
+  by (simp add: Least_Suc eval_nat_numeral(2) eval_nat_numeral(3))
+lemma Least5: "\<lbrakk>\<not>P 0; \<not>P 1; \<not>P 2; \<not>P 3; \<not>P 4; P (5::nat)\<rbrakk> \<Longrightarrow> Least P = 5"
+  by (simp add: Least_Suc eval_nat_numeral(2) eval_nat_numeral(3))
+lemma Least6: "\<lbrakk>\<not>P 0; \<not>P 1; \<not>P 2; \<not>P 3; \<not>P 4; \<not>P 5; P (6::nat)\<rbrakk> \<Longrightarrow> Least P = 6"
+  by (simp add: Least_Suc eval_nat_numeral(2) eval_nat_numeral(3))
+lemma Least7: "\<lbrakk>\<not>P 0; \<not>P 1; \<not>P 2; \<not>P 3; \<not>P 4; \<not>P 5; \<not>P 6; P (7::nat)\<rbrakk> \<Longrightarrow> Least P = 7"
+  by (simp add: Least_Suc eval_nat_numeral(2) eval_nat_numeral(3))
+lemma Least8: "\<lbrakk>\<not>P 0; \<not>P 1; \<not>P 2; \<not>P 3; \<not>P 4; \<not>P 5; \<not>P 6; \<not>P 7; P (8::nat)\<rbrakk> \<Longrightarrow> Least P = 8"
+  by (simp add: Least_Suc eval_nat_numeral(2) eval_nat_numeral(3))
+lemma Least9: "\<lbrakk>\<not>P 0; \<not>P 1; \<not>P 2; \<not>P 3; \<not>P 4; \<not>P 5; \<not>P 6; \<not>P 7; \<not>P 8; P (9::nat)\<rbrakk> \<Longrightarrow> Least P = 9"
+  by (simp add: Least_Suc eval_nat_numeral(2) eval_nat_numeral(3))
+lemma Least10: "\<lbrakk>\<not>P 0; \<not>P 1; \<not>P 2; \<not>P 3; \<not>P 4; \<not>P 5; \<not>P 6; \<not>P 7; \<not>P 8; \<not>P 9; P (10::nat)\<rbrakk> \<Longrightarrow> Least P
+                 = 10"
+  by (simp add: Least_Suc eval_nat_numeral(2) eval_nat_numeral(3))
+lemma Least11: "\<lbrakk>\<not>P 0; \<not>P 1; \<not>P 2; \<not>P 3; \<not>P 4; \<not>P 5; \<not>P 6; \<not>P 7; \<not>P 8; \<not>P 9; \<not>P 10; P (11::nat)\<rbrakk> \<Longrightarrow>
+                 Least P = 11"
+  by (simp add: Least_Suc eval_nat_numeral(2) eval_nat_numeral(3))
+lemma Least12: "\<lbrakk>\<not>P 0; \<not>P 1; \<not>P 2; \<not>P 3; \<not>P 4; \<not>P 5; \<not>P 6; \<not>P 7; \<not>P 8; \<not>P 9; \<not>P 10; \<not>P 11; P
+                 (12::nat)\<rbrakk> \<Longrightarrow> Least P = 12"
+  by (simp add: Least_Suc eval_nat_numeral(2) eval_nat_numeral(3))
+lemma Least13: "\<lbrakk>\<not>P 0; \<not>P 1; \<not>P 2; \<not>P 3; \<not>P 4; \<not>P 5; \<not>P 6; \<not>P 7; \<not>P 8; \<not>P 9; \<not>P 10; \<not>P 11; \<not>P 12; P
+                 (13::nat)\<rbrakk> \<Longrightarrow> Least P = 13"
+  by (simp add: Least_Suc eval_nat_numeral(2) eval_nat_numeral(3))
+lemma Least14: "\<lbrakk>\<not>P 0; \<not>P 1; \<not>P 2; \<not>P 3; \<not>P 4; \<not>P 5; \<not>P 6; \<not>P 7; \<not>P 8; \<not>P 9; \<not>P 10; \<not>P 11; \<not>P 12; \<not>P
+                 13; P (14::nat)\<rbrakk> \<Longrightarrow> Least P = 14"
+  by (simp add: Least_Suc eval_nat_numeral(2) eval_nat_numeral(3))
+lemma Least15: "\<lbrakk>\<not>P 0; \<not>P 1; \<not>P 2; \<not>P 3; \<not>P 4; \<not>P 5; \<not>P 6; \<not>P 7; \<not>P 8; \<not>P 9; \<not>P 10; \<not>P 11; \<not>P 12; \<not>P
+                 13; \<not>P 14; P (15::nat)\<rbrakk> \<Longrightarrow> Least P = 15"
+  by (simp add: Least_Suc eval_nat_numeral(2) eval_nat_numeral(3))
+lemma Least16: "\<lbrakk>\<not>P 0; \<not>P 1; \<not>P 2; \<not>P 3; \<not>P 4; \<not>P 5; \<not>P 6; \<not>P 7; \<not>P 8; \<not>P 9; \<not>P 10; \<not>P 11; \<not>P 12; \<not>P
+                 13; \<not>P 14; \<not>P 15; P (16::nat)\<rbrakk> \<Longrightarrow> Least P = 16"
+  by (simp add: Least_Suc eval_nat_numeral(2) eval_nat_numeral(3))
+lemma Least17: "\<lbrakk>\<not>P 0; \<not>P 1; \<not>P 2; \<not>P 3; \<not>P 4; \<not>P 5; \<not>P 6; \<not>P 7; \<not>P 8; \<not>P 9; \<not>P 10; \<not>P 11; \<not>P 12; \<not>P
+                 13; \<not>P 14; \<not>P 15; \<not>P 16; P (17::nat)\<rbrakk> \<Longrightarrow> Least P = 17"
+  by (simp add: Least_Suc eval_nat_numeral(2) eval_nat_numeral(3))
+lemma Least18: "\<lbrakk>\<not>P 0; \<not>P 1; \<not>P 2; \<not>P 3; \<not>P 4; \<not>P 5; \<not>P 6; \<not>P 7; \<not>P 8; \<not>P 9; \<not>P 10; \<not>P 11; \<not>P 12; \<not>P
+                 13; \<not>P 14; \<not>P 15; \<not>P 16; \<not>P 17; P (18::nat)\<rbrakk> \<Longrightarrow> Least P = 18"
+  by (simp add: Least_Suc eval_nat_numeral(2) eval_nat_numeral(3))
+lemma Least19: "\<lbrakk>\<not>P 0; \<not>P 1; \<not>P 2; \<not>P 3; \<not>P 4; \<not>P 5; \<not>P 6; \<not>P 7; \<not>P 8; \<not>P 9; \<not>P 10; \<not>P 11; \<not>P 12; \<not>P
+                 13; \<not>P 14; \<not>P 15; \<not>P 16; \<not>P 17; \<not>P 18; P (19::nat)\<rbrakk> \<Longrightarrow> Least P = 19"
+  by (simp add: Least_Suc eval_nat_numeral(2) eval_nat_numeral(3))
+lemma Least20: "\<lbrakk>\<not>P 0; \<not>P 1; \<not>P 2; \<not>P 3; \<not>P 4; \<not>P 5; \<not>P 6; \<not>P 7; \<not>P 8; \<not>P 9; \<not>P 10; \<not>P 11; \<not>P 12; \<not>P
+                 13; \<not>P 14; \<not>P 15; \<not>P 16; \<not>P 17; \<not>P 18; \<not>P 19; P (20::nat)\<rbrakk> \<Longrightarrow> Least P = 20"
+  by (simp add: Least_Suc eval_nat_numeral(2) eval_nat_numeral(3))
+lemma Least21: "\<lbrakk>\<not>P 0; \<not>P 1; \<not>P 2; \<not>P 3; \<not>P 4; \<not>P 5; \<not>P 6; \<not>P 7; \<not>P 8; \<not>P 9; \<not>P 10; \<not>P 11; \<not>P 12; \<not>P
+                 13; \<not>P 14; \<not>P 15; \<not>P 16; \<not>P 17; \<not>P 18; \<not>P 19; \<not>P 20; P (21::nat)\<rbrakk> \<Longrightarrow> Least P = 21"
+  by (simp add: Least_Suc eval_nat_numeral(2) eval_nat_numeral(3))
+lemma Least22: "\<lbrakk>\<not>P 0; \<not>P 1; \<not>P 2; \<not>P 3; \<not>P 4; \<not>P 5; \<not>P 6; \<not>P 7; \<not>P 8; \<not>P 9; \<not>P 10; \<not>P 11; \<not>P 12; \<not>P
+                 13; \<not>P 14; \<not>P 15; \<not>P 16; \<not>P 17; \<not>P 18; \<not>P 19; \<not>P 20; \<not>P 21; P (22::nat)\<rbrakk> \<Longrightarrow> Least P
+                 = 22"
+  by (simp add: Least_Suc eval_nat_numeral(2) eval_nat_numeral(3))
+lemma Least23: "\<lbrakk>\<not>P 0; \<not>P 1; \<not>P 2; \<not>P 3; \<not>P 4; \<not>P 5; \<not>P 6; \<not>P 7; \<not>P 8; \<not>P 9; \<not>P 10; \<not>P 11; \<not>P 12; \<not>P
+                 13; \<not>P 14; \<not>P 15; \<not>P 16; \<not>P 17; \<not>P 18; \<not>P 19; \<not>P 20; \<not>P 21; \<not>P 22; P (23::nat)\<rbrakk> \<Longrightarrow>
+                 Least P = 23"
+  by (simp add: Least_Suc eval_nat_numeral(2) eval_nat_numeral(3))
+lemma Least24: "\<lbrakk>\<not>P 0; \<not>P 1; \<not>P 2; \<not>P 3; \<not>P 4; \<not>P 5; \<not>P 6; \<not>P 7; \<not>P 8; \<not>P 9; \<not>P 10; \<not>P 11; \<not>P 12; \<not>P
+                 13; \<not>P 14; \<not>P 15; \<not>P 16; \<not>P 17; \<not>P 18; \<not>P 19; \<not>P 20; \<not>P 21; \<not>P 22; \<not>P 23; P
+                 (24::nat)\<rbrakk> \<Longrightarrow> Least P = 24"
+  by (simp add: Least_Suc eval_nat_numeral(2) eval_nat_numeral(3))
+lemma Least25: "\<lbrakk>\<not>P 0; \<not>P 1; \<not>P 2; \<not>P 3; \<not>P 4; \<not>P 5; \<not>P 6; \<not>P 7; \<not>P 8; \<not>P 9; \<not>P 10; \<not>P 11; \<not>P 12; \<not>P
+                 13; \<not>P 14; \<not>P 15; \<not>P 16; \<not>P 17; \<not>P 18; \<not>P 19; \<not>P 20; \<not>P 21; \<not>P 22; \<not>P 23; \<not>P 24; P
+                 (25::nat)\<rbrakk> \<Longrightarrow> Least P = 25"
+  by (simp add: Least_Suc eval_nat_numeral(2) eval_nat_numeral(3))
+lemma Least26: "\<lbrakk>\<not>P 0; \<not>P 1; \<not>P 2; \<not>P 3; \<not>P 4; \<not>P 5; \<not>P 6; \<not>P 7; \<not>P 8; \<not>P 9; \<not>P 10; \<not>P 11; \<not>P 12; \<not>P
+                 13; \<not>P 14; \<not>P 15; \<not>P 16; \<not>P 17; \<not>P 18; \<not>P 19; \<not>P 20; \<not>P 21; \<not>P 22; \<not>P 23; \<not>P 24; \<not>P
+                 25; P (26::nat)\<rbrakk> \<Longrightarrow> Least P = 26"
+  by (simp add: Least_Suc eval_nat_numeral(2) eval_nat_numeral(3))
+lemma Least27: "\<lbrakk>\<not>P 0; \<not>P 1; \<not>P 2; \<not>P 3; \<not>P 4; \<not>P 5; \<not>P 6; \<not>P 7; \<not>P 8; \<not>P 9; \<not>P 10; \<not>P 11; \<not>P 12; \<not>P
+                 13; \<not>P 14; \<not>P 15; \<not>P 16; \<not>P 17; \<not>P 18; \<not>P 19; \<not>P 20; \<not>P 21; \<not>P 22; \<not>P 23; \<not>P 24; \<not>P
+                 25; \<not>P 26; P (27::nat)\<rbrakk> \<Longrightarrow> Least P = 27"
+  by (simp add: Least_Suc eval_nat_numeral(2) eval_nat_numeral(3))
+lemma Least28: "\<lbrakk>\<not>P 0; \<not>P 1; \<not>P 2; \<not>P 3; \<not>P 4; \<not>P 5; \<not>P 6; \<not>P 7; \<not>P 8; \<not>P 9; \<not>P 10; \<not>P 11; \<not>P 12; \<not>P
+                 13; \<not>P 14; \<not>P 15; \<not>P 16; \<not>P 17; \<not>P 18; \<not>P 19; \<not>P 20; \<not>P 21; \<not>P 22; \<not>P 23; \<not>P 24; \<not>P
+                 25; \<not>P 26; \<not>P 27; P (28::nat)\<rbrakk> \<Longrightarrow> Least P = 28"
+  by (simp add: Least_Suc eval_nat_numeral(2) eval_nat_numeral(3))
+
 end
