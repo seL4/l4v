@@ -84,12 +84,12 @@ weaken this in the future.
 The booleans @{text pasMayActivate} and @{text pasMayEditReadyQueues}
 are used to weaken the integrity property. When @{const True}, 
 @{text pasMayActivate} causes the integrity property to permit
-actiation of newly-scheduled threads. Likewise, @{text pasMayEditReadyQueues}
+activation of newly-scheduled threads. Likewise, @{text pasMayEditReadyQueues}
 has the integrity property permit the removal of threads from ready queues,
 as occurs when scheduling a new domain for instance. By setting each of these
 @{const False} we get a more constrained integrity property that is useful for
 establishing some of the proof obligations for the infoflow proofs, particularly
-those over @{const handle_event} that netiher activates new threads nor schedules
+those over @{const handle_event} that neither activates new threads nor schedules
 new domains.
 
 *}
