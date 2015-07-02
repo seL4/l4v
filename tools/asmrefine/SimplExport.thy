@@ -886,6 +886,13 @@ fun emit outfile s = TextIO.output (outfile, s ^ "\n")
 
 fun emit_body ctxt outfile params (Const (@{const_name Seq}, _) $ a $ b) n c e = let
     val (n, nm) = emit_body ctxt outfile params b n c e
+
+fun add_global_valid_assertion ctxt params t n =
+  case get_global_valid_assertion ctxt params t of NONE =>
+        (n + 1, string_of_int n)
+      | SOME ass => (emit (string_of_int (n + 1) ^ " Cond " ^ string_of_int n ^ " Err " ^ ass);
+        (n + 2, string_of_int (n + 1)))
+
         handle TERM (s, ts) => raise TERM (s, b :: ts)
             | Empty => raise TERM ("emit_body: got Empty", [b])
     val (n, nm) = emit_body ctxt outfile params a n nm e
@@ -909,7 +916,7 @@ fun emit_body ctxt outfile params (Const (@{const_name Seq}, _) $ a $ b) n c e =
     val s = convert_fetch ctxt params (reduce_set_mem ctxt (s_st ctxt) S)
   in
     emit outfile (string_of_int n ^ " Cond " ^ nm_a ^ " " ^ nm_b ^ " " ^ s);
-    (n + 1, string_of_int n)
+    add_global_valid_assertion ctxt params S n
   end
   | emit_body ctxt outfile params (Const (@{const_name Guard}, T) $ F $ G $
             (Const (@{const_name Guard}, _) $ _ $ G' $ a)) n c e
@@ -928,7 +935,7 @@ fun emit_body ctxt outfile params (Const (@{const_name Seq}, _) $ a $ b) n c e =
     val s = convert_fetch ctxt params (reduce_set_mem ctxt (s_st ctxt) G)
   in
     emit outfile (string_of_int n ^ " Cond " ^ nm ^ " Err " ^ s);
-    (n + 1, string_of_int n)
+    add_global_valid_assertion ctxt params G n
   end
   | emit_body _ _ _ (Const (@{const_name com.Basic}, _) $ Abs (_, _, Bound 0)) n c _
     = (n, c)
@@ -939,10 +946,7 @@ fun emit_body ctxt outfile params (Const (@{const_name Seq}, _) $ a $ b) n c e =
 
   in
     emit outfile (string_of_int n ^ " Basic " ^ c ^ " " ^ space_pad_list upds);
-    case get_global_valid_assertion ctxt params f of NONE =>
-        (n + 1, string_of_int n)
-      | SOME ass => (emit outfile (string_of_int (n + 1) ^ " Cond " ^ string_of_int n ^ " Err " ^ ass);
-        (n + 2, string_of_int (n + 1)))
+    add_global_valid_assertion ctxt params f n
   end
   | emit_body ctxt outfile params (Const (@{const_name call}, _) $ f $ Const (p, _)
         $ _ $ r2) n c e = let
@@ -971,20 +975,23 @@ fun emit_body ctxt outfile params (Const (@{const_name Seq}, _) $ a $ b) n c e =
 
   in emit outfile (string_of_int n ^ " Call " ^ nm_save ^ " " ^ (unsuffix "_'proc" p)
     ^ " " ^ space_pad_list args ^ " " ^ space_pad_list out);
-    (n + 1, string_of_int n)
+     add_global_valid_assertion ctxt params f n
   end
   | emit_body _ _ _ (Const (@{const_name lvar_nondet_init}, _) $ _ $ _) n c _
     = (n, c)
-  | emit_body ctxt outfile params (Const (@{const_name whileAnno}, _) $ C $ _ $ _ $ a) n c e = let
+  | emit_body ctxt outfile params (Const (@{const_name whileAnno}, _) $ C $ _ $ _ $ a) bd = let
     fun sn i = string_of_int (n + i)
     val lc = "loop#" ^ sn 0 ^ "#count" ^ " Word 32"
-    val (n', nm) = emit_body ctxt outfile params a (n + 3) (sn 0) e
+    val (n', nm) = emit_body ctxt outfile params a (n + 4) (sn 0) e
     val cond = convert_fetch ctxt params (reduce_set_mem ctxt (s_st ctxt) C)
-  in emit outfile (sn 0 ^ " Basic " ^ sn 1 ^ " 1 " ^ lc
+    val err_cond = case get_global_valid_assertion ctxt params C
+        of NONE => "Op True Bool 0"
+        | SOME s => s
       ^ " Op Plus Word 32 2 Var " ^ lc ^ " Num 1 Word 32");
     emit outfile (sn 1 ^ " Cond " ^ nm ^ " " ^ c ^ " " ^ cond);
     emit outfile (sn 2 ^ " Basic " ^ sn 1 ^ " 1 " ^ lc ^ " Num 0 Word 32");
-    (n', sn 2)
+    emit (sn 3 ^ " Basic " ^ sn 1 ^ " 1 " ^ lc ^ " Num 0 Word 32");
+    (n', sn 3)
   end
   | emit_body _ _ _ t _ _ _ = raise TERM ("emit_body", [t])
 
