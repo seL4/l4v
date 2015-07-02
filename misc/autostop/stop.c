@@ -307,9 +307,21 @@ int is_system_unstable(
 /* Determine what signal the given string parses to. */
 int parse_signal(const char *input, int *signal, const char **signame)
 {
+    if (!strcmp(input, "SIGABRT") || !strcmp(input, "6")) {
+        *signal = SIGABRT;
+        *signame = "SIGABRT";
+        return 0;
+    }
+
     if (!strcmp(input, "SIGSTOP") || !strcmp(input, "17")) {
         *signal = SIGSTOP;
         *signame = "SIGSTOP";
+        return 0;
+    }
+
+    if (!strcmp(input, "SIGTERM") || !strcmp(input, "15")) {
+        *signal = SIGTERM;
+        *signame = "SIGTERM";
         return 0;
     }
 
