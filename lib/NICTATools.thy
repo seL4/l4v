@@ -15,7 +15,7 @@ imports
   Solves_Tac
   "subgoal_focus/Subgoal_Focus"
   "subgoal_focus/Subgoal_Methods"
-  "subgoal_focus/Rule_By_Method"
+  Rule_By_Method
   Eisbach_Methods
   "~~/src/HOL/Eisbach/Eisbach_Tools"
 begin
