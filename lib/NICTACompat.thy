@@ -17,6 +17,7 @@ imports
   "~~/src/HOL/Word/WordBitwise"
   SignedWords
   NICTATools
+  Eisbach_Compat
 begin
 
 (* all theories should import from NICTACompat rather than any ancestors *)
