@@ -53,6 +53,11 @@ fun focus_named_params ctxt do_prems (param_suffix, raw_param_specs) subgoal =
     val n = length goal_params;
     val m = length raw_param_specs;
 
+    val _ =
+      m <= n orelse
+        error ("Excessive subgoal parameter specification" ^
+          Position.here_list (map snd (drop n raw_param_specs)));
+
     val param_specs =
       raw_param_specs |> map
         (fn (NONE, _) => NONE
