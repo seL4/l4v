@@ -140,7 +140,7 @@ fun distinct_subgoals ctxt raw_st =
     Drule.implies_intr_list subgoals' st'
     |> singleton (Variable.export inner_ctxt ctxt)
   end;
-  
+
 (* Variant of filter_prems_tac that recovers premise order *)
 fun filter_prems_tac' ctxt pred =
   let
@@ -157,22 +157,33 @@ fun filter_prems_tac' ctxt pred =
         | (SOME tac, _, n) => tac i THEN rotate_tac (~ n) i)
       end)
   end;
-  
-fun trim_prems_tac ctxt rules = 
+
+fun trim_prems_tac ctxt rules =
 let
   fun matches (prem,rule) =
   let
     val ((_,prem'),ctxt') = Variable.focus prem ctxt;
     val rule_prop = Thm.prop_of rule;
   in Unify.matches_list (Context.Proof ctxt') [rule_prop] [prem'] end;
-  
+
 in filter_prems_tac' ctxt (not o member matches rules) end;
 
+val adhoc_conjunction_tac = REPEAT_ALL_NEW
+  (SUBGOAL (fn (goal, i) =>
+    if can Logic.dest_conjunction (Logic.strip_imp_concl goal)
+    then resolve0_tac [Conjunction.conjunctionI] i
+    else no_tac));
 
 fun unfold_subgoals_tac ctxt =
-  (Method.intros_tac ctxt @{thms conjunctionI} [] ORELSE
-    Goal.conjunction_tac 1)
+  TRY (adhoc_conjunction_tac 1)
   THEN (PRIMITIVE (Raw_Simplifier.norm_hhf ctxt));
+
+fun subgoal_cases ctxt st =
+  let
+    val ((_,[st']),ctxt') = Variable.importT [st] ctxt
+    val (case_names,_) = Rule_Cases.get st';
+    val cases = Rule_Cases.make_common ctxt' (Thm.prop_of st') case_names;
+  in CASES cases all_tac st' end;
 
 val _ =
   Theory.setup
@@ -186,9 +197,12 @@ val _ =
       (Scan.succeed (fn ctxt => SIMPLE_METHOD (PRIMITIVE (distinct_subgoals ctxt))))
      "trim all subgoals to be (logically) distinct" #>
     Method.setup @{binding trim}
-      (Attrib.thms >> (fn thms => fn ctxt => 
+      (Attrib.thms >> (fn thms => fn ctxt =>
          SIMPLE_METHOD (HEADGOAL (trim_prems_tac ctxt thms))))
-     "trim all premises that match the given rules");
+     "trim all premises that match the given rules" #>
+    Method.setup @{binding goals}
+      (Scan.succeed (fn ctxt => METHOD_CASES (K (subgoal_cases ctxt))))
+     "make cases from all subgoals");
 
 end;
 \<close>
