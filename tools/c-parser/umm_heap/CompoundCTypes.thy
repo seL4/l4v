@@ -360,8 +360,7 @@ apply(induct t and st and ts and x)
  apply rule
   apply(rule ext)
   apply simp
- apply(rule ext)
- apply(rule ext)
+ apply(rule ext)+
  apply(simp add: fg_cons_def)
 apply(clarsimp simp: update_desc_def)
 apply rule
