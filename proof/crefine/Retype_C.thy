@@ -5774,8 +5774,6 @@ proof -
                (unat userSizea)" in
          ccorres_guard_imp2)
        apply (rule ccorres_Guard_Seq)+
-       apply (rule ccorres_basic_srnoop2, simp)
-       apply (rule ccorres_Guard_Seq)+
        apply (subst unat_add_simple)
         apply (simp add:word_bits_def)
        apply (simp add:field_simps hrs_htd_update)
@@ -7067,8 +7065,8 @@ shows  "ccorres dc xfdc
      \<inter> {s. objectSize_' s = of_nat (APIType_capBits newType userSize)}
      \<inter> {s. nextFreeArea_' s = Ptr ptr } "
      and R="(\<lambda>s. unat (num << (APIType_capBits newType userSize) :: word32)
-        \<le> gsMaxObjectSize s) and ?R''"
-     for Q' in ccorres_symb_exec_r)
+        \<le> gsMaxObjectSize s) and R''"
+     for Q' R'' in ccorres_symb_exec_r)
      apply (rule ccorres_guard_imp[where A="X and Q"
          and A'=Q' and Q=Q and Q'=Q' for X Q Q', rotated]
          (* this moves the gsMaxObjectSize bit into the ccorres_symb_exec_r
@@ -7354,7 +7352,8 @@ shows  "ccorres dc xfdc
              nAPIObjects_def APIType_capBits_def o_def split:apiobject_type.splits)[1]
           apply (simp add:unat_eq_def word_unat.Rep_inverse' word_less_nat_alt)
          apply (clarsimp simp:objBits_simps,unat_arith)
-        apply (clarsimp simp:objBits_simps unat_eq_def word_unat.Rep_inverse')+
+        apply (clarsimp simp: objBits_simps unat_eq_def word_unat.Rep_inverse'
+                              word_less_nat_alt)+
      apply (clarsimp simp: ARMSmallPageBits_def ARMLargePageBits_def
                            ARMSectionBits_def ARMSuperSectionBits_def)+
   done

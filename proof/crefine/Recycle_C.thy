@@ -183,7 +183,9 @@ lemma flex_user_page_at_rf_sr_dom_s:
 
 lemma clearMemory_PageCap_ccorres:
   "ccorres dc xfdc (invs' and valid_cap' (ArchObjectCap (PageCap ptr undefined sz None))
-           and K ({ptr .. ptr + 2 ^ (pageBitsForSize sz) - 1} \<inter> kernel_data_refs = {}))
+           and (\<lambda>s. 2 ^ pageBitsForSize sz \<le> gsMaxObjectSize s)
+           and K ({ptr .. ptr + 2 ^ (pageBitsForSize sz) - 1} \<inter> kernel_data_refs = {})
+           )
       (UNIV \<inter> {s. bits_' s = of_nat (pageBitsForSize sz)}
             \<inter> {s. ptr___ptr_to_unsigned_long_' s = Ptr ptr})
       []
@@ -209,6 +211,7 @@ lemma clearMemory_PageCap_ccorres:
       apply (rule conjI)
        apply (rule is_aligned_power2)
        apply (clarsimp simp: pageBitsForSize_def split: vmpage_size.splits)
+      apply (clarsimp simp: ghost_assertion_size_logic[unfolded o_def])
       apply (simp add: flex_user_page_at_rf_sr_dom_s)
       apply (clarsimp simp: field_simps word_size_def mapM_x_storeWord_step)
       apply (simp add: doMachineOp_def split_def exec_gets)
@@ -474,6 +477,11 @@ end
 crunch pde_mappings'[wp]: invalidateTLBByASID "valid_pde_mappings'"
 crunch ksArchState[wp]: invalidateTLBByASID "\<lambda>s. P (ksArchState s)"
 
+crunch gsMaxObjectSize[wp]: invalidateTLBByASID "\<lambda>s. P (gsMaxObjectSize s)"
+crunch gsMaxObjectSize[wp]: deleteASIDPool "\<lambda>s. P (gsMaxObjectSize s)"
+  (ignore: setObject getObject wp: crunch_wps getObject_inv loadObject_default_inv
+     simp: crunch_simps)
+
 context kernel_m begin
 
 lemma page_table_at_rf_sr_dom_s:
@@ -515,7 +523,9 @@ lemma page_directory_at_rf_sr_dom_s:
   done
 
 lemma clearMemory_setObject_PTE_ccorres:
-  "ccorres dc xfdc (page_table_at' ptr and (\<lambda>_. is_aligned ptr ptBits \<and> ptr \<noteq> 0 \<and> pstart = addrFromPPtr ptr))
+  "ccorres dc xfdc (page_table_at' ptr
+                and (\<lambda>s. 2 ^ ptBits \<le> gsMaxObjectSize s)
+                and (\<lambda>_. is_aligned ptr ptBits \<and> ptr \<noteq> 0 \<and> pstart = addrFromPPtr ptr))
             (UNIV \<inter> {s. ptr___ptr_to_unsigned_long_' s = Ptr ptr} \<inter> {s. bits_' s = of_nat ptBits}) []
        (do x \<leftarrow> mapM_x (\<lambda>a. setObject a Hardware_H.pte.InvalidPTE)
                        [ptr , ptr + 2 ^ objBits Hardware_H.pte.InvalidPTE .e. ptr + 2 ^ ptBits - 1];
@@ -526,9 +536,13 @@ lemma clearMemory_setObject_PTE_ccorres:
   apply (cinit' lift: ptr___ptr_to_unsigned_long_' bits_')
    apply (rule ccorres_Guard_Seq)
    apply (rule ccorres_split_nothrow_novcg_dc)
-      apply (rule_tac P="page_table_at' ptr"
+      apply (rule_tac P="page_table_at' ptr and (\<lambda>s. 2 ^ ptBits \<le> gsMaxObjectSize s)"
                in ccorres_from_vcg_nofail[where P'=UNIV])
       apply (rule allI, rule conseqPre, vcg)
+      apply clarsimp
+      apply (subst ghost_assertion_size_logic[unfolded o_def])
+        apply (simp add: ptBits_def pageBits_def)
+       apply simp
       apply (clarsimp simp: replicateHider_def[symmetric])
       apply (frule is_aligned_no_overflow')
       apply (intro conjI)
@@ -560,14 +574,13 @@ lemma clearMemory_setObject_PTE_ccorres:
       apply csymbr
      apply (rule ccorres_Guard)
      apply (ctac add: cleanCacheRange_PoU_ccorres)
-    apply wp
+    apply (wp mapM_x_wp' setObject_ksPSpace_only updateObject_default_inv | simp)+
    apply (clarsimp simp: guard_is_UNIV_def ptBits_def pageBits_def)
   apply (clarsimp simp: ptBits_def pageBits_def)
   apply (frule is_aligned_addrFromPPtr_n, simp)
   apply (clarsimp simp: is_aligned_no_overflow'[where n=10, simplified] pageBits_def
                         field_simps is_aligned_mask[symmetric] mask_AND_less_0)
   done
-
 
 lemma ccorres_make_xfdc:
   "ccorresG rf_sr \<Gamma> r xf P P' h a c \<Longrightarrow> ccorresG rf_sr \<Gamma> dc xfdc P P' h a c"
@@ -633,7 +646,8 @@ lemma arch_recycleCap_ccorres_helper:
   notes Collect_const [simp del]
   notes ccorres_if_True_False_simps [simp]
   shows "ccorres (\<lambda>a. ccap_relation (ArchObjectCap a)) ret__struct_cap_C_' 
-           (invs' and valid_cap' (ArchObjectCap cp) and K (ccap_relation (ArchObjectCap cp) cap))
+           (invs' and valid_cap' (ArchObjectCap cp) and (\<lambda>s. 2 ^ acapBits cp \<le> gsMaxObjectSize s)
+               and K (ccap_relation (ArchObjectCap cp) cap))
            UNIV [SKIP]
            (do y \<leftarrow> ArchRetypeDecls_H.finaliseCap cp is_final;
                return (resetMemMapping cp)
@@ -653,7 +667,8 @@ lemma arch_recycleCap_ccorres_helper':
   notes Collect_const [simp del]
   notes ccorres_if_True_False_simps [simp]
   shows "ccorres (\<lambda>a. ccap_relation (ArchObjectCap a)) ret__struct_cap_C_'
-                 (invs' and valid_cap' (ArchObjectCap cp) and K (ccap_relation (ArchObjectCap cp) cap))
+                 (invs' and valid_cap' (ArchObjectCap cp) and (\<lambda>s. 2 ^ acapBits cp \<le> gsMaxObjectSize s)
+                    and K (ccap_relation (ArchObjectCap cp) cap))
                  UNIV 
             [SKIP]
            (do y \<leftarrow> ArchRetypeDecls_H.finaliseCap cp is_final;
@@ -684,6 +699,7 @@ lemma arch_recycleCap_ccorres:
   notes if_cong[cong]
   shows "ccorres (ccap_relation o ArchObjectCap) ret__struct_cap_C_'
          (invs' and valid_cap' (ArchObjectCap cp)
+                and (\<lambda>s. 2 ^ acapBits cp \<le> gsMaxObjectSize s)
                 and (\<lambda>s. capRange (ArchObjectCap cp) \<inter> kernel_data_refs = {}))
          (UNIV \<inter> {s. (is_final_' s) = from_bool is_final} \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
          ) []
@@ -699,11 +715,17 @@ lemma arch_recycleCap_ccorres:
     apply (simp add: ccorres_cond_iffs Collect_True
                 del: Collect_const)
     apply (rule ccorres_rhs_assoc)+
-    apply (csymbr, csymbr)
-    apply (simp add: doMachineOp_bind shiftL_nat)
-    apply (ctac (no_vcg) add: clearMemory_PageCap_ccorres)
-     apply (rule arch_recycleCap_ccorres_helper)
-    apply wp
+    apply (rule ccorres_symb_exec_r)
+      apply (rule ccorres_Guard_Seq)
+
+      apply (rule ccorres_basic_srnoop2, simp)
+      apply csymbr
+      apply (simp add: doMachineOp_bind shiftL_nat)
+      apply (ctac (no_vcg) add: clearMemory_PageCap_ccorres)
+       apply (rule arch_recycleCap_ccorres_helper)
+      apply wp
+     apply vcg
+    apply (rule conseqPre, vcg, clarsimp)
    apply (rule ccorres_if_lhs)
     apply (simp add: ccorres_cond_iffs Collect_True Collect_False
                      Let_def
@@ -735,7 +757,8 @@ lemma arch_recycleCap_ccorres:
        apply simp
       apply simp
       apply (wp hoare_drop_imps)[1] 
-     apply (rule_tac Q="\<lambda>rv. invs' and valid_cap' (ArchObjectCap cp)"
+     apply (rule_tac Q="\<lambda>rv. invs' and valid_cap' (ArchObjectCap cp)
+                     and (\<lambda>s. 2 ^ acapBits cp \<le> gsMaxObjectSize s)"
                  in hoare_post_imp)
       apply (clarsimp simp: valid_cap'_def isCap_simps mask_def)
      apply (wp mapM_x_wp' | simp)+
@@ -757,12 +780,16 @@ lemma arch_recycleCap_ccorres:
     apply (rule ccorres_split_nothrow_novcg_dc)
        apply (rule_tac P="capPDBasePtr_CL (cap_page_directory_cap_lift cap) = capPDBasePtr cp"
                          in ccorres_gen_asm2)
-       apply (rule_tac P="valid_cap' (ArchObjectCap cp) and K (capPDBasePtr cp \<noteq> 0)"
+       apply (rule_tac P="valid_cap' (ArchObjectCap cp) and (\<lambda>s. 2 ^ acapBits cp \<le> gsMaxObjectSize s)
+                      and K (capPDBasePtr cp \<noteq> 0)"
                    in ccorres_from_vcg_nofail[where P'=UNIV])
        apply (rule allI, rule conseqPre, vcg)
        apply (clarsimp simp: replicateHider_def[symmetric] valid_cap'_def
                              capAligned_def)
-       apply (clarsimp simp: isCap_simps storePDE_def)
+       apply (clarsimp simp: isCap_simps storePDE_def o_def)
+       apply (subst ghost_assertion_size_logic[unfolded o_def, rotated])
+         apply simp
+        apply simp
        apply (subst is_aligned_no_wrap', assumption)
         apply simp
        apply clarsimp
@@ -889,7 +916,8 @@ lemma arch_recycleCap_ccorres:
         apply (rule ccorres_rhs_assoc)+
         apply (ctac(no_vcg) add: deleteASIDPool_ccorres)
          apply (rule ccorres_split_nothrow_novcg_dc)
-            apply (rule_tac P="valid_cap' (ArchObjectCap cp) and no_0_obj'"
+            apply (rule_tac P="valid_cap' (ArchObjectCap cp) and (\<lambda>s. 2 ^ acapBits cp \<le> gsMaxObjectSize s)
+                          and no_0_obj'"
                        in ccorres_from_vcg[where P'=UNIV])
             apply (rule allI, rule conseqPre, vcg)
             apply (clarsimp simp: cap_get_tag_isCap_ArchObject[symmetric]
@@ -898,6 +926,10 @@ lemma arch_recycleCap_ccorres:
             apply (clarsimp simp: ccap_relation_def cap_asid_pool_cap_lift
                                   cap_to_H_def valid_cap'_def capAligned_def
                                   typ_at_to_obj_at_arches)
+            apply (subst ghost_assertion_size_logic[unfolded o_def, rotated],
+              assumption)
+             apply (erule order_trans[rotated])
+             apply (simp add: asid_low_bits_def)
             apply (drule obj_at_ko_at', clarsimp)
             apply (rule cmap_relationE1[OF rf_sr_cpspace_asidpool_relation],
                     assumption)
@@ -994,6 +1026,7 @@ lemma arch_recycleCap_ccorres:
                            order_le_less_trans[OF word_and_le1]
                            valid_cap'_def capAligned_def
                            get_capSizeBits_CL_def get_capPtr_CL_def
+                           ghost_assertion_size_logic[unfolded o_def]
                     elim!: ccap_relationE cong: conj_cong)
      apply (simp add: cap_tag_defs)
     apply (frule(1) cap_get_tag_isCap_unfolded_H_cap)
@@ -1006,7 +1039,9 @@ lemma arch_recycleCap_ccorres:
                           gen_framesize_to_H_is_framesize_to_H_if_not_ARMSmallPage
                           c_valid_cap_def cl_valid_cap_def
                    elim!: ccap_relationE cong: conj_cong)
-    apply (simp add: pageBitsForSize_def cap_tag_defs split: vmpage_size.split)
+    apply (simp add: pageBitsForSize_def cap_tag_defs
+                     ghost_assertion_size_logic[unfolded o_def]
+              split: vmpage_size.split_asm)[1]
    apply (frule cap_get_tag_isCap_unfolded_H_cap)
    apply (clarsimp simp: cap_lift_page_table_cap cap_to_H_def
                          cap_page_table_cap_lift_def
@@ -1527,10 +1562,15 @@ lemma coerce_memset_to_heap_update:
                    replicateHider_def)
   done
 
+lemma isArchObjectCap_capBits:
+  "isArchObjectCap cap \<Longrightarrow> capBits cap = acapBits (capCap cap)"
+  by (clarsimp simp: isCap_simps)
+
 declare Kernel_C.tcb_C_size [simp del]
 lemma recycleCap_ccorres':
   "ccorres ccap_relation ret__struct_cap_C_'
-     (invs' and valid_cap' cp and (\<lambda>s. capRange cp \<inter> kernel_data_refs = {}))
+     (invs' and valid_cap' cp and (\<lambda>s. 2 ^ capBits cp \<le> gsMaxObjectSize s)
+         and (\<lambda>s. capRange cp \<inter> kernel_data_refs = {}))
      (UNIV \<inter> {s. (is_final_' s) = from_bool is_final} \<inter> {s. ccap_relation cp (cap_' s)}) []
      (recycleCap is_final cp) (Call recycleCap_'proc)"
   apply (rule ccorres_gen_asm)
@@ -1587,13 +1627,17 @@ lemma recycleCap_ccorres':
        apply (rule ccorres_pre_curDomain)
        apply (rule ccorres_rhs_assoc2, rule ccorres_rhs_assoc2, rule ccorres_rhs_assoc2,
               rule ccorres_split_nothrow_novcg_dc)
-          apply (rule_tac P="op = tcb" and P'="\<lambda>s. invs' s \<and> rv = ksCurDomain s"
+          apply (rule_tac P="op = tcb" and P'="\<lambda>s. invs' s \<and> rv = ksCurDomain s
+                            \<and> size_of TYPE(tcb_C) \<le> gsMaxObjectSize s"
                      in threadSet_ccorres_lemma3, vcg)
           apply (simp only: replicateHider_def[symmetric])
           apply clarsimp
           apply (clarsimp simp: get_capZombiePtr_CL_def get_capZombieBits_CL_def
                                 isZombieTCB_C_def ZombieTCB_C_def word_bits_conv
                                 is_aligned_no_wrap' capAligned_def)
+          apply (subst ghost_assertion_size_logic[unfolded o_def, rotated])
+            apply assumption
+           apply (simp add: tcb_C_size)
           apply (subst h_t_valid_dom_s, erule h_t_valid_clift)
             apply (simp add: tcb_ptr_to_ctcb_ptr_def ctcb_offset_def)
            apply (simp add: tcb_C_size)
@@ -1699,6 +1743,7 @@ lemma recycleCap_ccorres':
                            ctcb_offset_def get_capZombiePtr_CL_def
                            get_capZombieBits_CL_def valid_cap'_def
                            Let_def isDomainCap[symmetric] isArchObjectCap_Cap_capCap
+                           isArchObjectCap_capBits tcb_C_size
                  simp del: isDomainCap
                     dest!: cap_get_tag_to_H
                     split: split_if_asm)+
@@ -1711,7 +1756,7 @@ lemma recycleCap_ccorres:
      (recycleCap is_final cp) (Call recycleCap_'proc)"
   apply (rule ccorres_guard_imp2, rule recycleCap_ccorres')
   apply (clarsimp simp: cte_wp_at_ctes_of)
-  apply (auto dest: valid_global_refsD')
+  apply (auto dest: valid_global_refsD_with_objSize)
   done
 
 lemma cteRecycle_ccorres:

@@ -94,7 +94,9 @@ lemma performInvocation_AsyncEndpoint_ccorres:
 lemma performInvocation_Reply_ccorres:
   "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
        (invs' and tcb_at' receiver and st_tcb_at' active' sender and sch_act_simple
-              and (\<lambda>s. ksCurThread s = sender))
+             and ((Not o real_cte_at' slot) or cte_wp_at' (\<lambda>cte. isReplyCap (cteCap cte)) slot)
+             and cte_wp_at' (\<lambda>cte. cteCap cte = capability.NullCap \<or> isReplyCap (cteCap cte))
+                 slot and (\<lambda>s. ksCurThread s = sender))
        (UNIV \<inter> {s. thread_' s = tcb_ptr_to_ctcb_ptr receiver}
              \<inter> {s. slot_' s = cte_Ptr slot}) []
      (liftE (doReplyTransfer sender receiver slot))
@@ -278,6 +280,7 @@ lemma decodeInvocation_ccorres:
       apply (simp add: cur_tcb'_def[symmetric])
       apply (rule_tac R="\<lambda>rv s. ksCurThread s = thread" in hoare_post_add)
       apply (simp cong: conj_cong)
+      apply (strengthen imp_consequent)
       apply (wp sts_invs_minor' sts_st_tcb_at'_cases)
      apply simp
      apply (vcg exspec=setThreadState_modifies)
@@ -1077,6 +1080,18 @@ lemma ccorres_return_void_catchbrk:
   apply fastforce
   done
 
+lemma real_cte_tcbCallerSlot:
+  "tcb_at' t s \<Longrightarrow> \<not> real_cte_at' (t + 2 ^ cte_level_bits * tcbCallerSlot) s"
+  apply (clarsimp simp: obj_at'_def projectKOs objBits_simps
+                        cte_level_bits_def tcbCallerSlot_def)
+  apply (drule_tac x=t and y="t + a" for a in ps_clearD, assumption)
+    apply (rule le_neq_trans, simp_all)[1]
+    apply (erule is_aligned_no_wrap')
+    apply simp
+   apply (subst field_simps[symmetric], rule is_aligned_no_overflow3, assumption, simp_all)
+  apply (simp add: word_bits_def)
+  done
+
 lemma handleReply_ccorres:
   "ccorres dc xfdc   
        (\<lambda>s. invs' s \<and> st_tcb_at' (\<lambda>a. \<not> isReply a) (ksCurThread s) s \<and> sch_act_simple s)
@@ -1162,9 +1177,11 @@ lemma handleReply_ccorres:
   apply clarsimp
   apply (intro allI conjI impI,
         simp_all add: cap_get_tag_isCap_unfolded_H_cap cap_tag_defs)
-     apply (rule tcb_aligned', rule tcb_at_invs', simp)
-    apply (auto simp: cte_wp_at_ctes_of valid_cap'_def
-                   dest!: ctes_of_valid')[1]
+       apply (rule tcb_aligned', rule tcb_at_invs', simp)
+      apply (auto simp: cte_wp_at_ctes_of valid_cap'_def
+                     dest!: ctes_of_valid')[1]
+     apply (simp add: real_cte_tcbCallerSlot[OF st_tcb_at_tcb_at'])
+    apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps)
    apply clarsimp
    apply (frule cap_get_tag_isCap_unfolded_H_cap)
    apply (simp add: cap_get_tag_ReplyCap)
@@ -1193,11 +1210,22 @@ lemma deleteCallerCap_ccorres [corres]:
        apply (drule ptr_val_tcb_ptr_mask2)
        apply (simp add: mask_def)
       apply ceqv
-     apply (ctac add:  cteDeleteOne_stronger_ccorres)
-    apply wp
+     apply (rule ccorres_Guard_Seq)
+     apply (rule ccorres_symb_exec_l)
+        apply (rule ccorres_symb_exec_l)
+           apply (rule ccorres_symb_exec_r)
+             apply (ctac add:  cteDeleteOne_stronger_ccorres[where w="ucast cap_reply_cap"])
+            apply vcg
+           apply (rule conseqPre, vcg, clarsimp simp: rf_sr_def
+             gs_set_assn_Delete_cstate_relation[unfolded o_def])
+          apply (wp | simp)+
+      apply (simp add: getSlotCap_def)
+      apply (wp getCTE_wp)
    apply clarsimp
-   apply (simp add: guard_is_UNIV_def)
-  apply clarsimp
+   apply (simp add: guard_is_UNIV_def ghost_assertion_data_get_def
+                        ghost_assertion_data_set_def)
+  apply (clarsimp simp: cte_wp_at_ctes_of cap_get_tag_isCap[symmetric]
+                        cap_tag_defs)
   done
 
 

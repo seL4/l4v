@@ -2202,16 +2202,6 @@ lemma getThreadState_ccorres_foo:
   apply (clarsimp simp: ctcb_relation_def obj_at'_def)
   done
 
-lemma gs_set_assn_Delete_cstate_relation:
-  "cstate_relation s (ghost'state_'_update (gs_set_assn cteDeleteOne_'proc v) gs)
-    = cstate_relation s gs"
-  apply (cases "ghost'state_' gs")
-  apply (auto simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def
-                    cmachine_state_relation_def ghost_assertion_data_set_def
-                    ghost_size_rel_def ghost_assertion_data_get_def
-                    cteDeleteOne_'proc_def cap_get_capSizeBits_'proc_def)
-  done
-
 lemma ipcCancel_ccorres_reply_helper:
   assumes cteDeleteOne_ccorres:
   "\<And>w slot. ccorres dc xfdc
@@ -2277,7 +2267,7 @@ lemma ipcCancel_ccorres_reply_helper:
          apply (rule ccorres_symb_exec_l[OF _ _ _ empty_fail_stateAssert])
            apply (simp only: dc_def[symmetric])
            apply (rule ccorres_symb_exec_r)
-             apply (ctac add: cteDeleteOne_ccorres[where w="scast cap_reply_cap"])
+             apply (ctac add: cteDeleteOne_ccorres[where w1="scast cap_reply_cap"])
             apply vcg
            apply (rule conseqPre, vcg, clarsimp simp: rf_sr_def
               gs_set_assn_Delete_cstate_relation[unfolded o_def])

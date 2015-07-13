@@ -24,6 +24,14 @@ lemma ksPSpace_update_eq_ExD:
 crunch ctes_of[wp]: unmapPageTable "\<lambda>s. P (ctes_of s)"
   (wp: crunch_wps simp: crunch_simps ignore: getObject setObject)
 
+crunch gsMaxObjectSize[wp]: unmapPageTable "\<lambda>s. P (gsMaxObjectSize s)"
+
+crunch inv[wp]: pteCheckIfMapped "P"
+  (ignore: getObject setObject)
+
+crunch inv[wp]: pdeCheckIfMapped "P"
+  (ignore: getObject setObject)
+
 context kernel_m begin
 
 lemma performPageTableInvocationUnmap_ccorres:
@@ -104,7 +112,7 @@ lemma performPageTableInvocationUnmap_ccorres:
   apply (clarsimp simp: cap_get_tag_isCap_ArchObject[symmetric] cte_wp_at_ctes_of)
   apply (frule ctes_of_valid', clarsimp)
   apply (frule_tac x=s in fun_cong[OF diminished_valid'])
-  apply (frule valid_global_refsD', clarsimp)
+  apply (frule valid_global_refsD_with_objSize, clarsimp)
   apply (clarsimp simp: cap_lift_page_table_cap cap_to_H_def
                         cap_page_table_cap_lift_def isCap_simps
                         valid_cap'_def get_capSizeBits_CL_def
@@ -115,7 +123,6 @@ lemma performPageTableInvocationUnmap_ccorres:
                  dest!: diminished_capMaster)
   apply (drule spec[where x=0], clarsimp)
   done
-
 lemma cap_case_PageDirectoryCap2:
   "(case cap of ArchObjectCap (PageDirectoryCap pd mapdata)
                    \<Rightarrow> f pd mapdata | _ \<Rightarrow> g)
@@ -315,6 +322,9 @@ proof -
    apply vcg
   apply (clarsimp simp: cte_wp_at_ctes_of split: split_if_asm)
   apply (frule(1) ctes_of_valid', clarsimp)
+  apply (subst ghost_assertion_size_logic[unfolded o_def, rotated], assumption)
+   apply (drule(1) valid_global_refsD_with_objSize)
+   apply (simp add: ARMSmallPageBits_def pageBits_def)
   apply (erule valid_untyped_capE)
   apply (subst simpler_placeNewObject_def)
       apply ((simp add:word_bits_conv objBits_simps archObjSize_def
@@ -365,6 +375,19 @@ lemma ccorres_move_Guard_Seq_strong:
    apply assumption
   apply auto
   done
+
+lemma ghost_assertion_data_get_gs_clear_region:
+  "gs_get_assn proc (gs_clear_region addr n gs) = gs_get_assn proc gs"
+  by (clarsimp simp: ghost_assertion_data_get_def gs_clear_region_def)
+
+lemma ghost_assertion_size_logic_flex:
+  "unat (sz :: word32) \<le> gsMaxObjectSize s
+    \<Longrightarrow> (s, \<sigma>') \<in> rf_sr
+    \<Longrightarrow> gs_get_assn cap_get_capSizeBits_'proc (ghost'state_' (globals \<sigma>'))
+        = gs_get_assn cap_get_capSizeBits_'proc gs
+    \<Longrightarrow> gs_get_assn cap_get_capSizeBits_'proc gs = 0 \<or>
+            sz \<le> gs_get_assn cap_get_capSizeBits_'proc gs"
+  by (metis ghost_assertion_size_logic)
 
 lemma performASIDControlInvocation_ccorres:
 notes replicate_numeral[simp del]
@@ -516,7 +539,13 @@ shows
   apply (clarsimp simp: hrs_htd_update_def split_def 
                          pageBits_def 
                    split: split_if)
-  apply (clarsimp simp:ARMSmallPageBits_def word_sle_def is_aligned_mask[symmetric])
+  apply (clarsimp simp: ARMSmallPageBits_def word_sle_def is_aligned_mask[symmetric]
+                        ghost_assertion_data_get_gs_clear_region[unfolded o_def])
+  apply (subst ghost_assertion_size_logic_flex[unfolded o_def, rotated])
+     apply assumption
+    apply (simp add: ghost_assertion_data_get_gs_clear_region[unfolded o_def])
+   apply (drule valid_global_refsD_with_objSize, clarsimp)+
+   apply clarsimp+
   apply (cut_tac ptr=frame and bits=12 and s="globals_update (t_hrs_'_update (hrs_htd_update
                (typ_region_bytes frame 12))) s'" in typ_region_bytes_actually_is_bytes)
    apply (simp add: hrs_htd_update)
@@ -1347,14 +1376,14 @@ lemma int_unat [simp]: "int (unat x) = uint x"
   by (clarsimp simp: unat_def)
 
 definition
- "valid_pte_slots'2 slots \<equiv> case slots of Inl (pte,xs) \<Rightarrow> (\<exists>sz. sz < 12 \<and> length xs = 2^sz \<and> is_aligned (hd xs) (sz+2))
+ "valid_pte_slots'2 slots \<equiv> case slots of Inl (pte,xs) \<Rightarrow> (\<exists>sz. sz \<le> 4 \<and> length xs = 2^sz \<and> is_aligned (hd xs) (sz+2))
      | Inr _ => True"
 
 
 definition
  "valid_pde_slots'2 slots \<equiv> case slots of Inl _ \<Rightarrow> True
      | Inr (pde, xs) \<Rightarrow> (\<forall>x \<in> set xs. valid_pde_mapping_offset' (x && mask pdBits))
-                       \<and> (\<exists>sz. sz < 12 \<and> length xs = 2^sz \<and> is_aligned (hd xs) (sz+2))" 
+                       \<and> (\<exists>sz. sz \<le> 4 \<and> length xs = 2^sz \<and> is_aligned (hd xs) (sz+2))" 
 
 lemma obj_at_pte_aligned:
   "obj_at' (\<lambda>a\<Colon>Hardware_H.pte. True) ptr s ==> is_aligned ptr 2"
@@ -1420,10 +1449,25 @@ lemma pdeCheckIfMapped_ccorres:
                              split: split_if)
   done
 
+lemma mapping_two_power_16_64_inequality:
+  assumes sz: "sz \<le> 4" and len: "unat (len :: word32) = 2 ^ sz"
+  shows "unat (len * 4 - 1) \<le> 63"
+proof -
+  have len2: "len = 2 ^ sz"
+    apply (rule word_unat.Rep_eqD, simp only: len)
+    using sz
+    apply simp
+    done
+
+  show ?thesis using two_power_increasing_less_1[where 'a=32 and n="sz + 2" and m=6]
+    by (simp add: word_le_nat_alt sz len2 field_simps)
+qed
+
 (* FIXME: move *)
 lemma performPageInvocationMapPTE_ccorres:
   "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
-       (invs' and cte_at' slot and (\<lambda>_. valid_pte_slots'2 mapping \<and> asid \<le> mask asid_bits))
+       (invs' and cte_at' slot and (\<lambda>s. 63 \<le> gsMaxObjectSize s)
+           and (\<lambda>_. valid_pte_slots'2 mapping \<and> asid \<le> mask asid_bits))
        (UNIV \<inter> {s. pte_range_relation (snd (theLeft mapping)) (pte_entries_' s)}
              \<inter> {s. cpte_relation (fst (theLeft mapping)) (pte_' s)}
              \<inter> {s. ccap_relation cap (cap_' s)}
@@ -1444,6 +1488,9 @@ lemma performPageInvocationMapPTE_ccorres:
       apply (simp add: mapM_discarded whileAnno_def
                        Collect_False
                   del: Collect_const)
+      apply (rule ccorres_Guard_Seq)
+      apply (rule ccorres_basic_srnoop2, simp)
+      apply csymbr
       apply (rule ccorres_split_nothrow_novcg)
           apply (rule_tac F="\<top>\<top>" in ccorres_mapM_x_while' [where i=0])
               apply clarsimp
@@ -1482,7 +1529,9 @@ lemma performPageInvocationMapPTE_ccorres:
         apply (wp hoare_vcg_const_imp_lift) [1]
        apply (clarsimp simp: to_bool_def)
        apply (rule hoare_strengthen_post)
-        apply (rule hoare_vcg_conj_lift[where Q'="\<lambda>rv s. valid_pde_mappings' s"])
+        apply (rule_tac Q'="\<lambda>rv s. valid_pde_mappings' s
+                \<and> unat (last (snd (theLeft mapping)) + 3
+                    - hd (snd (theLeft mapping))) \<le> gsMaxObjectSize s" in hoare_vcg_conj_lift)
          apply (rule mapM_x_accumulate_checks)
           apply (simp add: storePTE_def)
           apply (rule obj_at_setObject3)
@@ -1502,19 +1551,23 @@ lemma performPageInvocationMapPTE_ccorres:
           objBits_simps archObjSize_def hd_conv_nth)
         apply (clarsimp simp:pte_range_relation_def ptr_range_to_list_def ptr_add_def)
         apply (frule is_aligned_addrFromPPtr_n,simp)
-        apply (cut_tac n = "sz+2" in  power_not_zero[where 'a="32"])
+        apply (cut_tac n = "sz + 2" in  power_not_zero[where 'a="32"])
          apply simp
         apply (subst is_aligned_no_wrap', assumption, fastforce simp: field_simps)
-        apply (subst add_diff_eq [symmetric])
-        apply (subst is_aligned_no_wrap', assumption, fastforce simp: field_simps)
+        apply (subst add_diff_eq [symmetric], subst is_aligned_no_wrap', assumption, fastforce simp: field_simps)
         apply (simp add:addrFromPPtr_mask_5)
        apply (clarsimp simp:pte_range_relation_def ptr_add_def ptr_range_to_list_def)
       apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem hd_conv_nth last_conv_nth ucast_minus)
       apply (clarsimp simp: pte_range_relation_def ptr_range_to_list_def objBits_simps archObjSize_def)
       apply (simp add: CTypesDefs.ptr_add_def ucast_nat_def word_0_sle_from_less)
-     apply ((wp | simp add: pteCheckIfMapped_def)+)
-   apply (clarsimp simp: pte_range_relation_def map_is_Nil_conv hd_map_simp ptr_range_to_list_def)
-  apply (clarsimp simp: pte_range_relation_def ptr_range_to_list_def unat_1_0)
+     apply wp
+   apply (clarsimp simp: pte_range_relation_def map_is_Nil_conv hd_map_simp
+                         ptr_range_to_list_def valid_pte_slots'2_def
+                         word_le_nat_alt power_increasing[where a="2 :: nat" and N=4, simplified])
+  apply (clarsimp simp: pte_range_relation_def ptr_range_to_list_def unat_1_0
+                        valid_pte_slots'2_def isLeft_def last_map hd_map
+                        ptr_add_def)
+  apply (auto elim!: order_trans[rotated] simp: mapping_two_power_16_64_inequality)
   done
 
 lemma pde_align_ptBits:
@@ -1645,7 +1698,8 @@ lemma mapM_x_storePDE_pde_mappings':
 
 lemma performPageInvocationMapPDE_ccorres:
   "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
-       (invs' and cte_at' slot and (\<lambda>_. valid_pde_slots'2 mapping \<and> asid \<le> mask asid_bits))
+       (invs' and cte_at' slot and (\<lambda>s. 63 \<le> gsMaxObjectSize s)
+              and (\<lambda>_. valid_pde_slots'2 mapping \<and> asid \<le> mask asid_bits))
        (UNIV \<inter> {s. pde_range_relation (snd (theRight mapping)) (pde_entries_' s)}
              \<inter> {s. cpde_relation (fst (theRight mapping)) (pde_' s)}
              \<inter> {s. ccap_relation cap (cap_' s)}
@@ -1666,6 +1720,9 @@ lemma performPageInvocationMapPDE_ccorres:
       apply (simp add: mapM_discarded whileAnno_def
                        Collect_False
                   del: Collect_const)
+      apply (rule ccorres_Guard_Seq)
+      apply (rule ccorres_basic_srnoop2, simp)
+      apply csymbr
       apply (rule ccorres_split_nothrow_novcg)
           apply (rule_tac F="\<top>\<top>" in ccorres_mapM_x_while' [where i=0])
               apply clarsimp
@@ -1705,16 +1762,16 @@ lemma performPageInvocationMapPDE_ccorres:
         apply (wp hoare_vcg_const_imp_lift) [1]
        apply (clarsimp simp: to_bool_def)
        apply (rule hoare_strengthen_post)
-        apply (rule hoare_vcg_conj_lift[where Q'="\<lambda>rv s. valid_pde_mappings' s"])
+        apply (rule_tac Q'="\<lambda>rv s. valid_pde_mappings' s
+                \<and> unat (last (snd (theRight mapping)) + 3
+                    - hd (snd (theRight mapping))) \<le> gsMaxObjectSize s" in hoare_vcg_conj_lift)
          apply (rule mapM_x_accumulate_checks)
           apply (simp add: storePDE_def)
           apply (rule obj_at_setObject3)
            apply simp
           apply (simp add: objBits_simps archObjSize_def)
          apply (simp add: typ_at_to_obj_at_arches[symmetric])
-         apply (wp mapM_x_storePDE_pde_mappings')
-         apply simp
-        apply simp
+         apply (wp mapM_x_storePDE_pde_mappings' mapM_x_wp' | simp)+
        apply clarsimp
        apply (simp add: typ_at_to_obj_at_arches)
        apply (frule bspec, erule hd_in_set)
@@ -1738,14 +1795,20 @@ lemma performPageInvocationMapPDE_ccorres:
       apply (clarsimp simp: pde_range_relation_def ptr_range_to_list_def)     
       apply (simp add: CTypesDefs.ptr_add_def ucast_nat_def ucast_minus objBits_simps archObjSize_def
         word_0_sle_from_less)
-     apply (wp | simp add: pdeCheckIfMapped_def)+
-   apply (clarsimp simp: pde_range_relation_def map_is_Nil_conv hd_map_simp ptr_range_to_list_def)
-  apply (clarsimp simp: pde_range_relation_def ptr_range_to_list_def unat_1_0)
+     apply (wp | simp)+
+   apply (clarsimp simp: pde_range_relation_def map_is_Nil_conv hd_map_simp
+                         ptr_range_to_list_def valid_pde_slots'2_def
+                         word_le_nat_alt power_increasing[where a="2 :: nat" and N=4, simplified])
+  apply (clarsimp simp: pde_range_relation_def ptr_range_to_list_def unat_1_0
+                        valid_pde_slots'2_def isRight_def last_map hd_map
+                        ptr_add_def)
+  apply (auto elim!: order_trans[rotated] simp: mapping_two_power_16_64_inequality)
   done
 
 lemma performPageInvocationRemapPDE_ccorres:
   "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
-       (invs' and (\<lambda>_. valid_pde_slots'2 mapping \<and> asid \<le> mask asid_bits))
+       (invs' and (\<lambda>s. 63 \<le> gsMaxObjectSize s)
+           and (\<lambda>_. valid_pde_slots'2 mapping \<and> asid \<le> mask asid_bits))
        (UNIV \<inter> {s. pde_range_relation (snd (theRight mapping)) (pde_entries_' s)}
              \<inter> {s. cpde_relation (fst (theRight mapping)) (pde_' s)}
              \<inter> {s. asid_' s = asid}
@@ -1761,9 +1824,12 @@ lemma performPageInvocationRemapPDE_ccorres:
    apply (clarsimp simp: isRight_def simp del: Collect_const)
    apply (ctac(no_vcg) add: pdeCheckIfMapped_ccorres)
     apply csymbr
+    apply (rule ccorres_Guard_Seq)
+    apply (rule ccorres_basic_srnoop2, simp)
     apply (simp add: mapM_discarded whileAnno_def
                      Collect_False
                 del: Collect_const)
+    apply csymbr
     apply (rule ccorres_split_nothrow_novcg)
         apply (rule_tac F="\<top>\<top>" in ccorres_mapM_x_while' [where i=0])
             apply clarsimp
@@ -1802,16 +1868,16 @@ lemma performPageInvocationRemapPDE_ccorres:
       apply (wp hoare_vcg_const_imp_lift) [1]
      apply (clarsimp simp: to_bool_def)
      apply (rule hoare_strengthen_post)
-      apply (rule hoare_vcg_conj_lift[where Q'="\<lambda>rv s. valid_pde_mappings' s"])
+      apply (rule_tac Q'="\<lambda>rv s. valid_pde_mappings' s
+                \<and> unat (last (snd (theRight mapping)) + 3
+                    - hd (snd (theRight mapping))) \<le> gsMaxObjectSize s" in hoare_vcg_conj_lift)
        apply (rule mapM_x_accumulate_checks)
         apply (simp add: storePDE_def)
         apply (rule obj_at_setObject3)
          apply simp
         apply (simp add: objBits_simps archObjSize_def)
        apply (simp add: typ_at_to_obj_at_arches[symmetric])
-       apply (wp mapM_x_storePDE_pde_mappings')
-       apply simp
-      apply (simp)
+       apply (wp mapM_x_storePDE_pde_mappings' mapM_x_wp' | simp)+
      apply clarsimp
      apply (simp add: typ_at_to_obj_at_arches)
      apply (frule bspec, erule hd_in_set)
@@ -1835,13 +1901,18 @@ lemma performPageInvocationRemapPDE_ccorres:
     apply (clarsimp simp: pde_range_relation_def ptr_range_to_list_def)
     apply (simp add: CTypesDefs.ptr_add_def ucast_minus ucast_nat_def 
       objBits_simps archObjSize_def word_0_sle_from_less)
-   apply (wp | simp add: pdeCheckIfMapped_def)+
-  apply (clarsimp simp: pde_range_relation_def ptr_range_to_list_def unat_1_0 hd_map_simp)
+   apply (wp | simp)+
+  apply (clarsimp simp: pde_range_relation_def ptr_range_to_list_def unat_1_0
+                        valid_pde_slots'2_def isLeft_def last_map hd_map
+                        ptr_add_def
+                        word_le_nat_alt power_increasing[where a="2 :: nat" and N=4, simplified])
+  apply (auto elim!: order_trans[rotated] simp: mapping_two_power_16_64_inequality)
   done
 
 lemma performPageInvocationRemapPTE_ccorres:
   "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
-       (invs' and (\<lambda>_. valid_pte_slots'2 mapping \<and> asid \<le> mask asid_bits))
+       (invs' and (\<lambda>s. 63 \<le> gsMaxObjectSize s)
+           and (\<lambda>_. valid_pte_slots'2 mapping \<and> asid \<le> mask asid_bits))
        (UNIV \<inter> {s. pte_range_relation (snd (theLeft mapping)) (pte_entries_' s)}
              \<inter> {s. cpte_relation (fst (theLeft mapping)) (pte_' s)}
              \<inter> {s. asid_' s = asid}
@@ -1857,9 +1928,12 @@ lemma performPageInvocationRemapPTE_ccorres:
    apply (clarsimp simp: isLeft_def simp del: Collect_const)
    apply (ctac (no_vcg) add: pteCheckIfMapped_ccorres)
     apply csymbr
+    apply (rule ccorres_Guard_Seq)
+    apply (rule ccorres_basic_srnoop2, simp)
     apply (simp add: mapM_discarded whileAnno_def
                      Collect_False
                 del: Collect_const)
+    apply csymbr
     apply (rule ccorres_split_nothrow_novcg)
         apply (rule_tac F="\<top>\<top>" in ccorres_mapM_x_while' [where i=0])
             apply clarsimp
@@ -1897,7 +1971,9 @@ lemma performPageInvocationRemapPTE_ccorres:
       apply (wp hoare_vcg_const_imp_lift) [1]
      apply (clarsimp simp: to_bool_def)
      apply (rule hoare_strengthen_post)
-      apply (rule hoare_vcg_conj_lift[where Q'="\<lambda>rv s. valid_pde_mappings' s"])
+      apply (rule_tac Q'="\<lambda>rv s. valid_pde_mappings' s
+                \<and> unat (last (snd (theLeft mapping)) + 3
+                    - hd (snd (theLeft mapping))) \<le> gsMaxObjectSize s" in hoare_vcg_conj_lift)
        apply (rule mapM_x_accumulate_checks)
         apply (simp add: storePTE_def)
         apply (rule obj_at_setObject3)
@@ -1929,7 +2005,11 @@ lemma performPageInvocationRemapPTE_ccorres:
     apply (simp add: CTypesDefs.ptr_add_def  ucast_minus ucast_nat_def 
       archObjSize_def objBits_simps word_0_sle_from_less)
    apply (wp | simp add: pteCheckIfMapped_def)+
-  apply (clarsimp simp: pte_range_relation_def hd_map_simp ptr_range_to_list_def unat_1_0)
+  apply (clarsimp simp: pte_range_relation_def ptr_range_to_list_def unat_1_0
+                        valid_pte_slots'2_def isLeft_def last_map hd_map
+                        ptr_add_def
+                        word_le_nat_alt power_increasing[where a="2 :: nat" and N=4, simplified])
+  apply (auto elim!: order_trans[rotated] simp: mapping_two_power_16_64_inequality)
   done
 
 lemma vmsz_aligned_addrFromPPtr':
@@ -2288,6 +2368,31 @@ lemma resolveVAddr_ccorres:
                  split: pde.splits)
   done
 
+lemma cte_wp_at_diminished_gsMaxObjectSize:
+  "cte_wp_at' (diminished' cap o cteCap) slot s
+    \<Longrightarrow> valid_global_refs' s
+    \<Longrightarrow> 2 ^ capBits cap \<le> gsMaxObjectSize s"
+  apply (clarsimp simp: cte_wp_at_ctes_of)
+  apply (drule(1) valid_global_refsD_with_objSize)
+  apply (clarsimp simp: diminished'_def capMaster_eq_capBits_eq[OF capMasterCap_maskCapRights])
+  done
+
+lemma two_nat_power_pageBitsForSize_le:
+  "(2 :: nat) ^ pageBits \<le> 2 ^ pageBitsForSize vsz"
+  by (cases vsz, simp_all add: pageBits_def)
+
+lemma unat_sub_le_strg:
+  "unat v \<le> v2 \<and> x \<le> v \<and> y \<le> v \<and> y < (x :: ('a :: len) word)
+    \<longrightarrow> unat (x + (- 1 - y)) \<le> v2"
+  apply clarsimp
+  apply (erule order_trans[rotated])
+  apply (fold word_le_nat_alt)
+  apply (rule order_trans[rotated], assumption)
+  apply (rule order_trans[rotated], rule word_sub_le[where y="y + 1"])
+   apply (erule Word.inc_le)
+  apply (simp add: field_simps)
+  done
+
 lemma decodeARMFrameInvocation_ccorres:
   notes if_cong[cong] tl_drop_1[simp]
   shows
@@ -2413,6 +2518,9 @@ lemma decodeARMFrameInvocation_ccorres:
                   apply (rule ccorres_return_CE, simp+)[1]
                  apply (rule ccorres_inst[where P=\<top> and P'=UNIV], simp)
                 apply wp
+               apply simp
+               apply (strengthen unat_sub_le_strg[where v="2 ^ pageBitsForSize (capVPSize cp)"])
+               apply (simp add: linorder_not_less linorder_not_le order_less_imp_le)
                apply (wp sts_invs_minor')
               apply simp
               apply (vcg exspec=setThreadState_modifies)
@@ -2906,6 +3014,8 @@ lemma decodeARMFrameInvocation_ccorres:
    apply simp
    apply (vcg exspec=getSyscallArg_modifies)
   apply (rule conjI)
+   apply clarsimp
+   apply (frule cte_wp_at_diminished_gsMaxObjectSize, clarsimp)
    apply (clarsimp simp: cte_wp_at_ctes_of
                          is_aligned_mask[symmetric] vmsz_aligned'_def
                          vmsz_aligned_addrFromPPtr)
@@ -2923,7 +3033,8 @@ lemma decodeARMFrameInvocation_ccorres:
       | rule conjI | erule st_tcb'_weakenE disjE
       | erule(3) is_aligned_no_overflow3[OF vmsz_aligned_addrFromPPtr(3)[THEN iffD2]]
       | drule st_tcb_at_idle_thread' interpret_excaps_eq
-      | erule order_le_less_trans[rotated]
+      | erule order_le_less_trans[rotated] order_trans[where x=63, rotated]
+      | rule order_trans[where x=63, OF _ two_nat_power_pageBitsForSize_le, unfolded pageBits_def]
       | clarsimp simp: neq_Nil_conv
       | (drule_tac p2 = v0 in is_aligned_weaken[OF vmsz_aligned_addrFromPPtr(3)[THEN iffD2]
       , where y = 5,OF _ le_trans[OF  _ pbfs_atleast_pageBits]],simp add:pageBits_def)
@@ -3038,7 +3149,7 @@ lemma isPDFlush_fold:
 lemma injection_handler_liftE:
   "injection_handler a (liftE f) = liftE f"
   by (simp add:injection_handler_def)
-  
+
 lemma pageBase_spec:
 "\<forall>s. \<Gamma> \<turnstile> \<lbrace>s. \<acute>size && mask 2 = \<acute>size\<rbrace>
   Call pageBase_'proc
@@ -3053,6 +3164,13 @@ lemma liftE_case_sum:
 
 crunch inv': resolveVAddr "P"
   (wp: crunch_wps simp: crunch_simps ignore: getObject setObject)
+
+
+
+lemma flush_range_le1:
+  "\<lbrakk>page_base start a = page_base end a; start \<le> end \<rbrakk>
+       \<Longrightarrow> unat (end - start) \<le> 2 ^ pageBitsForSize a"
+  sorry
 
 lemma flush_range_le:
   "\<lbrakk>page_base start a = page_base end a; start \<le> end; w && mask (pageBitsForSize a) = start && mask (pageBitsForSize a)\<rbrakk>
@@ -3124,6 +3242,11 @@ lemma rel_option_alt_def:
       \<or> (\<exists>x y. a = Some x \<and>  b = Some y \<and> f x y))"
   apply (case_tac a, case_tac b, simp, simp, case_tac b, auto)
   done
+
+lemma injection_handler_stateAssert_relocate:
+  "injection_handler Inl (stateAssert ass xs >>= f) >>=E g
+    = do v \<leftarrow> stateAssert ass xs; injection_handler Inl (f ()) >>=E g od"
+  by (simp add: injection_handler_def handleE'_def bind_bindE_assoc bind_assoc)
 
 lemma decodeARMPageDirectoryInvocation_ccorres:
   notes if_cong[cong] tl_drop_1[simp]
@@ -3261,8 +3384,9 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
              apply (simp add:injection_handler_whenE 
                injection_bindE[OF refl refl] bindE_assoc 
                if_to_top_of_bindE injection_handler_throwError
-               injection_handler_returnOk
+               injection_handler_returnOk injection_handler_stateAssert_relocate
              )
+             apply (rule ccorres_stateAssert)
              apply (rule_tac Q=\<top> and Q'=\<top> in ccorres_if_cond_throws[rotated -1])
                 apply vcg
                apply (clarsimp simp add:page_base_def resolve_ret_rel_def
@@ -3320,7 +3444,10 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
              apply (simp add:mask_add_aligned mask_twice)
             apply (subgoal_tac "5 \<le> pageBitsForSize a")
              apply (frule(1) is_aligned_weaken)
-             apply (simp add:mask_add_aligned mask_twice)
+             apply (simp add:mask_add_aligned mask_twice validMappingSize_def)
+             apply (erule order_trans[rotated])
+             apply (erule flush_range_le1, simp add: linorder_not_le)
+             apply (erule word_less_sub_1)
             apply (case_tac a,simp+)[1]
            apply simp
            apply (vcg exspec=resolveVAddr_modifies)

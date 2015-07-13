@@ -1263,7 +1263,9 @@ definition (in state_rel)
 where
   "cstate_to_H s \<equiv>
    \<lparr>ksPSpace = cstate_to_pspace_H s,
-    gsUserPages = fst (ghost'state_' s), gsCNodes = snd (ghost'state_' s),
+    gsUserPages = fst (ghost'state_' s), gsCNodes = fst (snd (ghost'state_' s)),
+    gsMaxObjectSize = (let v = unat (gs_get_assn cap_get_capSizeBits_'proc (ghost'state_' s))
+        in if v = 0 then card (UNIV :: word32 set) else v),
     ksDomScheduleIdx = unat (ksDomScheduleIdx_' s),
     ksDomSchedule = cDomSchedule_to_H kernel_all_global_addresses.ksDomSchedule,
     ksCurDomain = ucast (ksCurDomain_' s),
@@ -1284,15 +1286,18 @@ lemma (in kernel_m) cstate_to_H_correct:
   shows "cstate_to_H cs = as"
   apply (subgoal_tac "cstate_to_machine_H cs = ksMachineState as")
    apply (rule kernel_state.equality, simp_all add: cstate_to_H_def)
-                apply (rule cstate_to_pspace_H_correct)
-                 using valid
-                 apply (simp add: valid_state'_def)
+                 apply (rule cstate_to_pspace_H_correct)
+                  using valid
+                  apply (simp add: valid_state'_def)
+                 using cstate_rel
+                 apply (clarsimp simp: cstate_relation_def Let_def)
                 using cstate_rel
-                apply (clarsimp simp: cstate_relation_def Let_def)
+                apply (clarsimp simp: cstate_relation_def Let_def Pair_fst_snd_eq)
                using cstate_rel
-               apply (clarsimp simp: cstate_relation_def Let_def)
+               apply (clarsimp simp: cstate_relation_def Let_def Pair_fst_snd_eq)
               using cstate_rel
-              apply (clarsimp simp: cstate_relation_def Let_def)
+              apply (auto simp: cstate_relation_def Let_def ghost_size_rel_def unat_eq_0
+                             split: split_if)[1]
              using valid cstate_rel
              apply (rule cDomScheduleIdx_to_H_correct)
              using cstate_rel

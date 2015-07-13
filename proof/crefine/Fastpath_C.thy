@@ -5392,6 +5392,21 @@ lemma cteDeleteOne_nullcap_rewrite:
   apply (clarsimp simp: cte_wp_at_ctes_of)
   done
 
+lemma deleteCallerCap_nullcap_rewrite:
+  "monadic_rewrite True False
+     (cte_wp_at' (\<lambda>cte. cteCap cte = NullCap) (thread + 2 ^ cte_level_bits * tcbCallerSlot))
+     (deleteCallerCap thread)
+     (return ())"
+  apply (simp add: deleteCallerCap_def getThreadCallerSlot_def locateSlot_conv
+                   getSlotCap_def)
+  apply (rule monadic_rewrite_imp)
+  apply (rule monadic_rewrite_symb_exec_l, wp empty_fail_getCTE)
+    apply (rule monadic_rewrite_assert)
+    apply (rule cteDeleteOne_nullcap_rewrite)
+   apply (wp getCTE_wp)
+  apply (clarsimp simp: cte_wp_at_ctes_of)
+  done
+
 end
 
 lemma emptySlot_cnode_caps:
@@ -5889,7 +5904,7 @@ lemma fastpath_callKernel_SysReplyWait_corres:
                         injection_handler_catch bind_bindE_assoc
                         resolveAddressBits_def_functional
                         getThreadCallerSlot_def bind_assoc
-                        getSlotCap_def deleteCallerCap_def
+                        getSlotCap_def
                         case_bool_If o_def
                         isRight_def[where x="Inr v" for v]
                         isRight_def[where x="Inl v" for v]
@@ -5970,7 +5985,7 @@ lemma fastpath_callKernel_SysReplyWait_corres:
                      apply (rule_tac rv=thread in monadic_rewrite_symb_exec_l_known,
                             wp empty_fail_getCurThread)
                       apply (rule monadic_rewrite_bind)
-                        apply (rule cteDeleteOne_nullcap_rewrite)
+                        apply (rule deleteCallerCap_nullcap_rewrite)
                        apply (rule_tac rv=cptr in monadic_rewrite_symb_exec_l_known,
                               wp empty_fail_asUser empty_fail_getRegister)
                         apply (rule monadic_rewrite_bind)

@@ -607,7 +607,7 @@ lemma ccorres_trim_redundant_throw:
   apply (rule ccorres_trim_redundant_throw')
     apply simp
    apply simp
-  apply simp
+  apply (simp add: rf_sr_upd_safe)
   done
 
 end

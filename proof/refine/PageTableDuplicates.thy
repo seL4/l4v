@@ -2754,6 +2754,7 @@ crunch valid_duplicates'[wp]:
 
 crunch valid_duplicates'[wp]:
   deleteCallerCap "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+  (wp: crunch_wps)
 
 crunch valid_duplicates'[wp]:
   handleReply "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"

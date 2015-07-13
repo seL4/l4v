@@ -759,10 +759,11 @@ fun corres_symb_rhs_exec_tac (trace : trace_opts)
     val spec_rules = [proc_spec] RLN (3, lift_rhss)
     val rule       = case ([proc_mod] RLN (3, spec_rules)) of
                          [rule] => rule
-                       | [] => raise TACTIC ("corres_symb_rhs_exec_tac: No unifiers for lhs: "
-                                             ^ Syntax.string_of_term ctxt lhs)
-                       | _  => raise TACTIC ("corres_symb_rhs_exec_tac: Multiple unifiers for lhs: "
-                                             ^ Syntax.string_of_term ctxt lhs)
+                       | [] => raise THM ("corres_symb_rhs_exec_tac: No unifiers for " ^ proc_name,
+                                             3, [proc_spec, proc_mod] @ [@{thm TrueI}] @ spec_rules @ [@{thm TrueI}] @ lift_rhss)
+                       | xs  => raise THM ("corres_symb_rhs_exec_tac: Multiple unifiers for " ^ proc_name,
+                                             3, [proc_spec, proc_mod] @ [@{thm TrueI}] @ spec_rules @ [@{thm TrueI}] @ lift_rhss
+                                                 @[@{thm TrueI}] @ xs)
 in
     prim_trace_tac' (#trace_this trace) depth ("CSYMBR (" ^ proc_name ^ ")") ctxt
                     (Rule_Insts.res_inst_tac ctxt insts [] rule THEN_ALL_NEW ccorres_rename_cleanup trace depth' xf ctxt) n t
@@ -836,7 +837,10 @@ let
             prim_trace_tac' (#trace_this trace) depth "CSYMBR (Basic)" ctxt
                             ((Rule_Insts.res_inst_tac ctxt xf_inst [] basic_thm) THEN_ALL_NEW (ccorres_norename_cleanup trace depth' ctxt))
 
-        val call_thms = inst_tp (Proof_Context.get_thms ctxt ("ccorres_lift_rhss" ^ record_suffix))
+        val call_thms' = Proof_Context.get_thms ctxt ("ccorres_lift_rhss" ^ record_suffix)
+        val call_thms = inst_tp call_thms'
+        val _ = forall (fn (t, t') => Thm.concl_of t <> Thm.concl_of t') (call_thms ~~ call_thms')
+            orelse raise THM ("corres_symb_rhs_tac: failed to inst_tp", 1, call_thms @ call_thms')
         val call_tac  = EVERY' [corres_symb_rhs_exec_tac trace depth ctxt lhs (xf_inst @ xfr_inst) call_thms new_xf_name,
                                 (* Yes, simp should ignore assumptions -- this simplifies away the state dep. on i *)
                                     TRY' (simp_tac ss),

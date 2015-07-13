@@ -836,6 +836,7 @@ proof (induct rule: finaliseSlot'.induct[where ?a0.0=slot and ?a1.0=exposed and 
         apply (frule valid_globals_cte_wpD'[rotated], clarsimp)
         apply (clarsimp simp: cte_wp_at_ctes_of false_def from_bool_def)
         apply (erule(1) cmap_relationE1 [OF cmap_relation_cte])
+        apply (frule valid_global_refsD_with_objSize, clarsimp)
         apply (auto simp: typ_heap_simps dest!: ccte_relation_ccap_relation)[1]
        apply (wp isFinalCapability_inv static_imp_wp | wp_once isFinal[where x=slot'])+
       apply vcg

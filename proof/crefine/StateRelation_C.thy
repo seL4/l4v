@@ -583,8 +583,9 @@ where
 definition
   ghost_size_rel :: "cghost_state \<Rightarrow> nat \<Rightarrow> bool"
 where
-  "ghost_size_rel gs maxSize = ((gs_get_assn cap_get_capSizeBits_'proc gs = 0)
-    \<or> (maxSize \<le> unat (gs_get_assn cap_get_capSizeBits_'proc gs)))"
+  "ghost_size_rel gs maxSize = ((gs_get_assn cap_get_capSizeBits_'proc gs = 0
+            \<and> maxSize = card (UNIV :: word32 set))
+    \<or> (maxSize > 0 \<and> maxSize = unat (gs_get_assn cap_get_capSizeBits_'proc gs)))"
 
 definition (in state_rel)
   cstate_relation :: "KernelStateData_H.kernel_state \<Rightarrow> globals \<Rightarrow> bool"

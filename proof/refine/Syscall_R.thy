@@ -1537,7 +1537,24 @@ lemma delete_caller_cap_corres:
   apply (simp add: delete_caller_cap_def deleteCallerCap_def
                    getThreadCallerSlot_map)
   apply (rule corres_guard_imp)
-    apply (rule cap_delete_one_corres)
+    apply (rule_tac P'="cte_at' (cte_map (t, tcb_cnode_index 3))" in corres_symb_exec_r_conj)
+       apply (rule_tac F="isReplyCap rv \<or> rv = capability.NullCap"
+             and P="cte_wp_at (\<lambda>cap. is_reply_cap cap \<or> cap = cap.NullCap) (t, tcb_cnode_index 3)
+                 and einvs"
+             and P'="invs' and cte_wp_at' (\<lambda>cte. cteCap cte = rv)
+                 (cte_map (t, tcb_cnode_index 3))" in corres_req)
+        apply (clarsimp simp: cte_wp_at_caps_of_state state_relation_def)
+        apply (drule caps_of_state_cteD)
+        apply (drule(1) pspace_relation_cte_wp_at, clarsimp+)
+        apply (clarsimp simp: cte_wp_at_ctes_of is_reply_cap_relation cap_relation_NullCapI)
+       apply simp
+       apply (rule corres_guard_imp, rule cap_delete_one_corres)
+        apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps)
+        apply (auto simp: can_fast_finalise_def)[1]
+       apply (clarsimp simp: cte_wp_at_ctes_of)
+      apply (wp getCTE_wp' | simp add: getSlotCap_def)+
+    apply (rule no_fail_pre, wp)
+    apply clarsimp
    apply clarsimp
    apply (frule tcb_at_cte_at[where ref="tcb_cnode_index 3"])
     apply clarsimp
@@ -1545,22 +1562,25 @@ lemma delete_caller_cap_corres:
    apply (frule tcb_cap_valid_caps_of_stateD, clarsimp)
    apply (drule(1) tcb_cnode_index_3_reply_or_null)
    apply (auto simp: can_fast_finalise_def is_cap_simps
-              intro: tcb_at_cte_at_map tcb_at_cte_at)
+              intro: tcb_at_cte_at_map tcb_at_cte_at)[1]
+  apply clarsimp
+  apply (frule_tac offs="tcb_cnode_index 3" in tcb_at_cte_at_map)
+   apply (simp add: tcb_cap_cases_def)
+  apply (clarsimp simp: cte_wp_at_ctes_of)
   done
 
 lemma deleteCallerCap_invs[wp]:
   "\<lbrace>invs'\<rbrace> deleteCallerCap t \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: deleteCallerCap_def getThreadCallerSlot_def
                 locateSlot_conv)
-  apply (wp cteDeleteOne_invs)
+  apply (wp cteDeleteOne_invs hoare_drop_imps)
   done
 
 lemma deleteCallerCap_simple[wp]:
   "\<lbrace>st_tcb_at' simple' t\<rbrace> deleteCallerCap t' \<lbrace>\<lambda>rv. st_tcb_at' simple' t\<rbrace>"
   apply (simp add: deleteCallerCap_def getThreadCallerSlot_def
                    locateSlot_conv)
-  apply (wp cteDeleteOne_st_tcb_at)
-  apply simp
+  apply (wp cteDeleteOne_st_tcb_at hoare_drop_imps | simp)+
   done
 
 lemma cteDeleteOne_st_tcb_at[wp]:
@@ -1585,20 +1605,22 @@ lemma deleteCallerCap_nonz_cap:
       deleteCallerCap t
    \<lbrace>\<lambda>rv. ex_nonz_cap_to' p\<rbrace>"
   apply (simp add: deleteCallerCap_def getThreadCallerSlot_def
-                   locateSlot_conv ex_nonz_cap_to'_def)
-  apply (rule_tac P="\<lambda>s. \<exists>cref. cte_wp_at' (\<lambda>cte. isThreadCap (cteCap cte)
-                                             \<and> p \<in> zobj_refs' (cteCap cte)) cref s"
-                   in hoare_chain)
-    apply (rule hoare_vcg_ex_lift, rule cteDeleteOne_cte_wp_at_preserved)
-    apply (clarsimp simp: isCap_simps finaliseCap_def)
-   apply (clarsimp simp: cte_wp_at_ctes_of)
-   apply (rule_tac x=cref in exI)
-   apply clarsimp
-   apply (drule(1) ctes_of_valid')
-   apply (drule(2) valid_cap_tcb_at_thread_or_zomb')
-   apply (clarsimp simp: isCap_simps)
-  apply (erule exEI)
+                   locateSlot_conv ex_nonz_cap_to'_def getSlotCap_def)
+  apply wp
+    apply (rule_tac P="\<lambda>s. \<exists>cref. cte_wp_at' (\<lambda>cte. isThreadCap (cteCap cte)
+                                               \<and> p \<in> zobj_refs' (cteCap cte)) cref s"
+                     in hoare_strengthen_post)
+     apply (rule hoare_vcg_ex_lift, rule cteDeleteOne_cte_wp_at_preserved)
+     apply (clarsimp simp: isCap_simps finaliseCap_def)
+    apply (clarsimp simp: cte_wp_at_ctes_of)
+    apply fastforce
+   apply wp
+   apply (rule hoare_drop_imps, wp)
   apply (clarsimp simp: cte_wp_at_ctes_of)
+  apply (frule(1) ctes_of_valid')
+  apply (drule(2) valid_cap_tcb_at_thread_or_zomb')
+  apply (clarsimp simp: isCap_simps)
+  apply fastforce
   done
 
 crunch sch_act_sane[wp]: cteDeleteOne sch_act_sane
@@ -1607,6 +1629,7 @@ crunch sch_act_sane[wp]: cteDeleteOne sch_act_sane
    lift: sch_act_sane_lift)
 
 crunch sch_act_sane[wp]: deleteCallerCap sch_act_sane
+  (wp: crunch_wps)
 
 lemma hw_corres':
    "corres dc (einvs and ct_in_state active 

@@ -2861,6 +2861,7 @@ shows
     apply wp
    apply simp
    apply (vcg exspec=getSyscallArg_modifies)
+  apply clarsimp
   apply (clarsimp simp: hd_drop_conv_nth2 hd_conv_nth neq_Nil_lengthI
                         ct_in_state'_def st_tcb_at_tcb_at'
                         rf_sr_ksCurThread mask_eq_iff_w2p
@@ -2887,9 +2888,10 @@ shows
                         ccap_rights_relation_def word_sle_def
                         rightsFromWord_wordFromRights
                         excaps_in_mem_def slotcap_in_mem_def
-                        word_sle_def word_sless_def
                         signed_shift_guard_simpler_32
-                 elim!: inl_inrE)
+                        extra_sle_sless_unfolds
+                 elim!: inl_inrE
+              simp del: rf_sr_upd_safe)
   apply (clarsimp simp:cap_get_tag_isCap[symmetric])
   apply (rule conjI)
    apply (clarsimp simp: cap_get_tag_isCap[symmetric]
@@ -2928,11 +2930,11 @@ shows
    apply (rule conjI,assumption)
     apply (rule conjI,erule(2) rf_sr_cte_relation)
     apply (frule(1) h_t_valid_and_cslift_and_c_guard_field_mdbNext_CL[rotated -1])
-      apply (clarsimp simp:cte_wp_at_ctes_of)
+      apply (clarsimp simp:cte_wp_at_ctes_of simp del: rf_sr_upd_safe)
      apply fastforce
-    apply (clarsimp simp:typ_heap_simps)
+    apply (clarsimp simp:typ_heap_simps simp del: rf_sr_upd_safe)
    apply (frule_tac p = slot in valid_mdb_ctes_of_next[rotated])
-     apply simp
+     apply (simp del: rf_sr_upd_safe)
     apply fastforce
    apply (clarsimp simp:cte_wp_at_ctes_of)
    apply (frule_tac src = "(mdbNext_CL (cteMDBNode_CL ctel'))" in  rf_sr_cte_relation)

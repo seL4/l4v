@@ -2133,8 +2133,9 @@ lemma deleteCallerCap_ct_not_ksQ:
           and (\<lambda>s. ksCurThread s \<notin> set (ksReadyQueues s p))\<rbrace>
    deleteCallerCap t
    \<lbrace>\<lambda>rv s. ksCurThread s \<notin> set (ksReadyQueues s p)\<rbrace>"
-  apply (simp add: deleteCallerCap_def)
-  apply (wp getThreadCallerSlot_inv cteDeleteOne_ct_not_ksQ)
+  apply (simp add: deleteCallerCap_def getSlotCap_def getThreadCallerSlot_def locateSlot_def)
+  apply (wp getThreadCallerSlot_inv cteDeleteOne_ct_not_ksQ getCTE_wp)
+  apply (clarsimp simp: cte_wp_at_ctes_of)
   done
 
 lemma finaliseCapTrue_standin_tcb_at' [wp]:

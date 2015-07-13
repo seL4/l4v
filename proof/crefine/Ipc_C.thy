@@ -4041,9 +4041,87 @@ lemma cteDeleteOne_tcbFault:
           | simp add: Let_def)+
   done
 
+lemma transferCapsToSlots_local_slots:
+  assumes weak: "\<And>c cap. P (maskedAsFull c cap) = P c"
+  shows
+  "\<lbrace> cte_wp_at' (\<lambda>cte. P (cteCap cte)) slot and K (slot \<notin> set destSlots) \<rbrace>
+    transferCapsToSlots ep dim rcvBuffer x caps destSlots mi
+   \<lbrace>\<lambda>tag'. cte_wp_at' (\<lambda>cte. P (cteCap cte)) slot\<rbrace>"
+proof (rule hoare_gen_asm, induct caps arbitrary: x mi destSlots)
+  case Nil show ?case by simp
+next
+  case (Cons cp cps)
+  show ?case using Cons.prems
+    apply (clarsimp simp: Let_def split del: split_if)
+    apply (rule hoare_pre)
+     apply (wp Cons.hyps cteInsert_weak_cte_wp_at2
+         | wpc | simp add: weak whenE_def split del: split_if)+
+    done
+qed
+
+lemma transferCaps_local_slots:
+  assumes weak: "\<And>c cap. P (maskedAsFull c cap) = P c"
+  shows "\<lbrace> valid_objs' and (Not o real_cte_at' slot) and cte_wp_at' (\<lambda>cte. P (cteCap cte)) slot \<rbrace>
+    transferCaps tag caps ep receiver receiveBuffer dim 
+   \<lbrace>\<lambda>tag'. cte_wp_at' (\<lambda>cte. P (cteCap cte)) slot\<rbrace>"
+  apply (simp add: transferCaps_def pred_conj_def)
+  apply (rule hoare_seq_ext[rotated])
+   apply (rule hoare_vcg_conj_lift)
+    apply (rule get_rs_real_cte_at')
+   apply (rule get_recv_slot_inv')
+  apply (rule hoare_pre)
+   apply (wp transferCapsToSlots_local_slots weak | wpc)+
+  apply clarsimp
+  done
+
+lemma doNormalTransfer_local_slots:
+  assumes weak: "\<And>c cap. P (maskedAsFull c cap) = P c"
+  shows "\<lbrace> valid_objs' and (Not o real_cte_at' slot)
+        and cte_wp_at' (\<lambda>cte. P (cteCap cte)) slot \<rbrace>
+    doNormalTransfer sender sendBuffer ep badge grant receiver receiveBuffer dim 
+   \<lbrace>\<lambda>rv. cte_wp_at' (\<lambda>cte. P (cteCap cte)) slot\<rbrace>"
+  apply (simp add: doNormalTransfer_def)
+  apply (wp transferCaps_local_slots weak copyMRs_typ_at'[where T=CTET, unfolded typ_at_cte]
+    | simp)+
+  done
+
+lemma doIPCTransfer_local_slots:
+  assumes weak: "\<And>c cap. P (maskedAsFull c cap) = P c"
+  shows "\<lbrace> valid_objs' and (Not o real_cte_at' slot)
+        and cte_wp_at' (\<lambda>cte. P (cteCap cte)) slot \<rbrace>
+    doIPCTransfer sender ep badge grant receiver dim
+    \<lbrace> \<lambda>rv. cte_wp_at' (\<lambda>cte. P (cteCap cte)) slot \<rbrace>"
+  apply (simp add: doIPCTransfer_def)
+  apply (wp doNormalTransfer_local_slots weak threadGet_wp | wpc)+
+  apply simp
+  done
+
+lemma doIPCTransfer_reply_or_replyslot:
+  "\<lbrace> cte_wp_at' (\<lambda>cte. isReplyCap (cteCap cte)) slot
+      or (valid_objs' and (Not o real_cte_at' slot)
+          and  cte_wp_at' (\<lambda>cte. cteCap cte = capability.NullCap \<or> isReplyCap (cteCap cte)) slot)\<rbrace>
+    doIPCTransfer sender ep badge grant receiver dim
+    \<lbrace> \<lambda>rv. cte_wp_at' (\<lambda>cte. cteCap cte = capability.NullCap \<or> isReplyCap (cteCap cte)) slot\<rbrace>"
+  apply (rule hoare_name_pre_state)
+  apply (case_tac "cte_wp_at' (\<lambda>cte. isReplyCap (cteCap cte)) slot s")
+   apply (rule hoare_pre, rule hoare_strengthen_post,
+        rule_tac P="isReplyCap" and ptr=slot in doIPCTransfer_non_null_cte_wp_at2')
+      apply (clarsimp simp: isCap_simps)
+     apply (clarsimp simp: isCap_simps)
+    apply (clarsimp simp: cte_wp_at_ctes_of)
+   apply simp
+  apply (wp doIPCTransfer_local_slots)
+   apply (clarsimp simp: maskedAsFull_def cap_get_tag_isCap isCap_simps)
+  apply simp
+  done
+
 lemma doReplyTransfer_ccorres [corres]:
   "ccorres dc xfdc
-    (invs' and st_tcb_at' (Not \<circ> isReply) sender and tcb_at' receiver and sch_act_simple)
+    (invs' and st_tcb_at' (Not \<circ> isReply) sender
+        and tcb_at' receiver and sch_act_simple
+        and ((Not o real_cte_at' slot) or cte_wp_at' (\<lambda>cte. isReplyCap (cteCap cte)) slot)
+        and cte_wp_at' (\<lambda>cte. cteCap cte = capability.NullCap \<or> isReplyCap (cteCap cte))
+         slot)
     (UNIV \<inter> \<lbrace>\<acute>sender = tcb_ptr_to_ctcb_ptr sender\<rbrace>
           \<inter> \<lbrace>\<acute>receiver = tcb_ptr_to_ctcb_ptr receiver\<rbrace>
           \<inter> \<lbrace>\<acute>slot = Ptr slot\<rbrace>)  []
@@ -4082,7 +4160,7 @@ proof -
      apply (ctac(no_vcg))
       apply (rule ccorres_Guard_Seq)
       apply (rule ccorres_symb_exec_r)
-        apply (ctac(no_vcg) add: cteDeleteOne_stronger_ccorres[where w="-1"])
+        apply (ctac(no_vcg) add: cteDeleteOne_stronger_ccorres[where w="scast cap_reply_cap"])
          apply (ctac(no_vcg) add: setThreadState_ccorres)
           apply (ctac add: attemptSwitchTo_ccorres)
          apply (wp sts_running_valid_queues setThreadState_st_tcb | simp)+
@@ -4092,10 +4170,12 @@ proof -
       apply (simp(no_asm_use) add: gs_set_assn_Delete_cstate_relation[unfolded o_def]
                                    subset_iff rf_sr_def)
      apply wp
-     apply simp
+     apply (simp add: cap_get_tag_isCap)
      apply (strengthen invs_weak_sch_act_wf_strg
+                       cte_wp_at_imp_consequent'[where P="\<lambda>ct. Ex (ccap_relation (cteCap ct))" for ct]
                        invs_valid_queues_strg)
-     apply wp
+     apply (simp add: cap_reply_cap_def)
+     apply (wp doIPCTransfer_reply_or_replyslot)
     apply (clarsimp simp: fault_null_fault_def ccorres_cond_iffs
                           fault_to_fault_tag_nonzero
                split del: split_if)
@@ -4104,7 +4184,7 @@ proof -
     apply csymbr
     apply (rule ccorres_Guard_Seq)
     apply (rule ccorres_symb_exec_r)
-      apply (ctac (no_vcg) add: cteDeleteOne_stronger_ccorres[where w="-1"])
+      apply (ctac (no_vcg) add: cteDeleteOne_stronger_ccorres[where w="scast cap_reply_cap"])
        apply (rule_tac A'=UNIV in stronger_ccorres_guard_imp)
          apply (rule ccorres_split_nothrow_novcg [OF ccorres_call,
                                                   OF handleFaultReply_ccorres,
@@ -4152,9 +4232,11 @@ proof -
                          option_to_ptr_def option_to_0_def false_def
                          ThreadState_Running_def mask_def
                          ghost_assertion_data_get_def ghost_assertion_data_set_def
+                         cap_tag_defs
                   split: option.splits)
-  apply (clarsimp simp: st_tcb_at_tcb_at')
-  apply (clarsimp simp: st_tcb_at'_def obj_at'_def cte_wp_at_ctes_of)
+  apply (clarsimp simp: st_tcb_at_tcb_at' invs_valid_objs')
+  apply (clarsimp simp: st_tcb_at'_def obj_at'_def cte_wp_at_ctes_of
+                        cap_get_tag_isCap)
   apply fastforce
   done
 qed
