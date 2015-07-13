@@ -225,6 +225,9 @@ consts
 checkVPAlignment :: "vmpage_size \<Rightarrow> vptr \<Rightarrow> ( syscall_error , unit ) kernel_f"
 
 consts
+validMappingSize :: "vmpage_size \<Rightarrow> kernel_state \<Rightarrow> bool"
+
+consts
 performARMMMUInvocation :: "ArchRetypeDecls_H.invocation \<Rightarrow> machine_word list kernel_p"
 
 consts

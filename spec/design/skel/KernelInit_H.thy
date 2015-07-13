@@ -50,6 +50,7 @@ where
         ksPSpace= newPSpace,
         gsUserPages= (\<lambda>x. None),
         gsCNodes= (\<lambda>x. None),
+        gsMaxObjectSize = card (UNIV :: machine_word set),
         ksDomScheduleIdx = newKSDomScheduleIdx,
         ksDomSchedule = newKSDomSchedule,
         ksCurDomain = newKSCurDomain,

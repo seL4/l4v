@@ -1,5 +1,8 @@
-Built from git repo at /Users/kleing/verification/seL4/haskell by kleing
+Built from git repo at /home/tsewell/dev/verification/seL4/haskell by tsewell
 
 Generated from changeset:
-cf53dfa removed setCurrentASID
+99efd6e Assertions to lean on abstract refinement.
 
+
+Warning - uncomitted changes used:
+?? ../rbuild/
