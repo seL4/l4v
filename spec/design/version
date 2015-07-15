@@ -1,7 +1,7 @@
 Built from git repo at /home/tsewell/dev/verification/seL4/haskell by tsewell
 
 Generated from changeset:
-99efd6e Assertions to lean on abstract refinement.
+25155ca haskell: Add assertion about IRQ handler cap.
 
 
 Warning - uncomitted changes used:

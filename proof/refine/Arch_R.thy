@@ -1247,7 +1247,7 @@ shows
                and valid_global_refs'" in corres_inst[where P="\<top>"])
          apply (rule corres_returnOk)
          apply (clarsimp simp: archinv_relation_def page_directory_invocation_map_def)
-        apply (clarsimp simp: Let_def liftE_bindE)
+        apply (clarsimp simp: Let_def liftE_bindE checkValidMappingSize_def)
         apply (rule corres_stateAssert_implied[where P'="\<top>", simplified])
          apply (rule corres_guard_imp)
            apply (rule whenE_throwError_corres, simp)
@@ -1257,7 +1257,7 @@ shows
            apply (clarsimp simp: archinv_relation_def page_directory_invocation_map_def
                            flush_type_map)+
 
-        apply (clarsimp simp: validMappingSize_def state_relation_def)
+        apply (clarsimp simp: state_relation_def)
         apply (frule pspace_relation_cte_wp_at,
           simp add: cte_wp_at_caps_of_state, simp+)
         apply (clarsimp simp: cte_wp_at_ctes_of)

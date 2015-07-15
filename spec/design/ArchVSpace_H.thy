@@ -1040,9 +1040,7 @@ defs decodeARMMMUInvocation_def:
             (case frameInfo of
                   None \<Rightarrow>   returnOk $ InvokePageDirectory PageDirectoryNothing
                 | Some frameInfo \<Rightarrow>   (doE
-                    withoutFailure $ stateAssert
-                        (validMappingSize (fst frameInfo))
-                        [];
+                    withoutFailure $ checkValidMappingSize (fst frameInfo);
                     baseStart \<leftarrow> returnOk ( pageBase (VPtr start) (fst frameInfo));
                     baseEnd \<leftarrow> returnOk ( pageBase (VPtr end - 1) (fst frameInfo));
                     whenE (baseStart \<noteq> baseEnd) $
@@ -1439,7 +1437,8 @@ defs storePTE_def:
 od)"
 
 
-defs validMappingSize_def:
-  "validMappingSize sz s == (2 ^ pageBitsForSize sz <= gsMaxObjectSize s)"
+defs checkValidMappingSize_def:
+  "checkValidMappingSize sz \<equiv> stateAssert
+    (\<lambda>s. 2 ^ pageBitsForSize sz <= gsMaxObjectSize s) []"
 
 end

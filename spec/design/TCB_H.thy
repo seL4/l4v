@@ -455,7 +455,7 @@ defs deleteCallerCap_def:
 "deleteCallerCap receiver\<equiv> (do
     callerSlot \<leftarrow> getThreadCallerSlot receiver;
     callerCap \<leftarrow> getSlotCap callerSlot;
-    haskell_assert (isReplyCap callerCap \<or> callerCap = NullCap)
+    haskell_assert (isReplyCap callerCap \<or> isNullCap callerCap)
         [];
     cteDeleteOne callerSlot
 od)"

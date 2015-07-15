@@ -6882,8 +6882,10 @@ lemma finaliseCap2_st_tcb_at':
              cong: if_cong split del: split_if)
   apply (rule hoare_pre)
    apply ((wp epCancelAll_st_tcb_at aepCancelAll_st_tcb_at
-              suspend_st_tcb_at' cteDeleteOne_st_tcb_at
-             | simp add: isCap_simps split del: split_if
+              suspend_st_tcb_at' cteDeleteOne_st_tcb_at getCTE_wp'
+             | simp add: isCap_simps getSlotCap_def getIRQSlot_def
+                         locateSlot_conv getInterruptState_def
+                  split del: split_if
              | wpc))+
   done
 

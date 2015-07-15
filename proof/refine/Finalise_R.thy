@@ -2390,10 +2390,11 @@ lemma deletingIRQHandler_removeable':
    \<lbrace>\<lambda>rv s. removeable' slot s cap\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (simp add: deletingIRQHandler_def getIRQSlot_def locateSlot_conv
-                   getInterruptState_def)
+                   getInterruptState_def getSlotCap_def)
   apply (simp add: removeable'_def tree_cte_cteCap_eq[unfolded o_def])
   apply (subst tree_cte_cteCap_eq[unfolded o_def])+
-  apply (wp hoare_use_eq_irq_node' [OF cteDeleteOne_irq_node' cteDeleteOne_cteCaps_of])
+  apply (wp hoare_use_eq_irq_node' [OF cteDeleteOne_irq_node' cteDeleteOne_cteCaps_of]
+            getCTE_wp')
   apply (clarsimp simp: cte_level_bits_def ucast_nat_def split: option.split_asm)
   done
 
@@ -2421,8 +2422,8 @@ lemma deletingIRQHandler_final:
      deletingIRQHandler irq
    \<lbrace>\<lambda>rv s. isFinal cap slot (cteCaps_of s)\<rbrace>"
   apply (simp add: deletingIRQHandler_def isFinal_def getIRQSlot_def
-                   getInterruptState_def locateSlot_conv)
-  apply (wp cteDeleteOne_cteCaps_of)
+                   getInterruptState_def locateSlot_conv getSlotCap_def)
+  apply (wp cteDeleteOne_cteCaps_of getCTE_wp')
   apply (auto simp: sameObjectAs_def3)
   done
 
@@ -2570,8 +2571,9 @@ lemma deletingIRQHandler_cte_preserved:
   shows "\<lbrace>cte_wp_at' (\<lambda>cte. P (cteCap cte)) p\<rbrace>
            deletingIRQHandler irq
          \<lbrace>\<lambda>rv. cte_wp_at' (\<lambda>cte. P (cteCap cte)) p\<rbrace>"
-  apply (simp add: deletingIRQHandler_def)
-  apply (wp cteDeleteOne_cte_wp_at_preserved
+  apply (simp add: deletingIRQHandler_def getSlotCap_def
+                   getIRQSlot_def locateSlot_conv getInterruptState_def)
+  apply (wp cteDeleteOne_cte_wp_at_preserved getCTE_wp' 
               | simp add: x)+
   done
 
@@ -2965,7 +2967,11 @@ declare cteDeleteOne_invs[wp]
 
 lemma deletingIRQHandler_invs' [wp]:
   "\<lbrace>invs'\<rbrace> deletingIRQHandler i \<lbrace>\<lambda>_. invs'\<rbrace>"
-  by (simp add: deletingIRQHandler_def) wp
+  apply (simp add: deletingIRQHandler_def getSlotCap_def
+                   getIRQSlot_def locateSlot_conv getInterruptState_def)
+  apply (wp getCTE_wp')
+  apply simp
+  done
 
 lemma finaliseCap_invs:
   "\<lbrace>invs' and sch_act_simple and valid_cap' cap
@@ -3040,8 +3046,27 @@ crunch nosch[wp]: "ArchRetypeDecls_H.finaliseCap" "\<lambda>s. P (ksSchedulerAct
    ignore: getObject)
 
 crunch sch_act_simple[wp]: finaliseCap sch_act_simple
-  (simp: crunch_simps 
+  (simp: crunch_simps wp: crunch_wps
    lift: sch_act_simple_lift)
+
+lemma interrupt_cap_null_or_aep:
+  "invs s
+    \<Longrightarrow> cte_wp_at (\<lambda>cp. is_aep_cap cp \<or> cp = cap.NullCap) (interrupt_irq_node s irq, []) s"
+  apply (frule invs_valid_irq_node)
+  apply (clarsimp simp: valid_irq_node_def)
+  apply (drule_tac x=irq in spec)
+  apply (drule cte_at_0)
+  apply (clarsimp simp: cte_wp_at_caps_of_state)
+  apply (drule caps_of_state_cteD)
+  apply (frule if_unsafe_then_capD, clarsimp+)
+  apply (clarsimp simp: ex_cte_cap_wp_to_def cte_wp_at_caps_of_state)
+  apply (frule cte_refs_obj_refs_elem, erule disjE)
+   apply (clarsimp | drule caps_of_state_cteD valid_global_refsD[rotated]
+     | rule irq_node_global_refs[where irq=irq])+
+   apply (simp add: cap_range_def)
+  apply (clarsimp simp: appropriate_cte_cap_def
+                 split: cap.split_asm)
+  done
 
 lemma (in delete_one) deleting_irq_corres:
   "corres dc (einvs) (invs' and sch_act_simple) 
@@ -3050,8 +3075,27 @@ lemma (in delete_one) deleting_irq_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ get_irq_slot_corres])
       apply simp
-      apply (rule delete_one_corres)
-     apply (wp | simp)+
+      apply (rule_tac P'="cte_at' (cte_map slot)" in corres_symb_exec_r_conj)
+         apply (rule_tac F="isAsyncEndpointCap rv \<or> rv = capability.NullCap"
+             and P="cte_wp_at (\<lambda>cp. is_aep_cap cp \<or> cp = cap.NullCap) slot
+                 and einvs"
+             and P'="invs' and cte_wp_at' (\<lambda>cte. cteCap cte = rv)
+                 (cte_map slot) and sch_act_simple" in corres_req)
+          apply (clarsimp simp: cte_wp_at_caps_of_state state_relation_def)
+          apply (drule caps_of_state_cteD)
+          apply (drule(1) pspace_relation_cte_wp_at, clarsimp+)
+          apply (auto simp: cte_wp_at_ctes_of is_cap_simps isCap_simps)[1]
+         apply simp
+         apply (rule corres_guard_imp, rule delete_one_corres[unfolded dc_def])
+          apply (auto simp: cte_wp_at_caps_of_state is_cap_simps can_fast_finalise_def)[1]
+         apply (clarsimp simp: cte_wp_at_ctes_of)
+        apply (wp getCTE_wp' | simp add: getSlotCap_def)+
+      apply (rule no_fail_pre, wp)
+      apply (clarsimp simp: cte_wp_at_ctes_of)
+     apply (wp | simp add: get_irq_slot_def getIRQSlot_def
+                           locateSlot_conv getInterruptState_def)+
+   apply (clarsimp simp: ex_cte_cap_wp_to_def interrupt_cap_null_or_aep)
+  apply (clarsimp simp: cte_wp_at_ctes_of)
   done
 
 lemma arch_finalise_cap_corres:
@@ -3969,9 +4013,13 @@ lemma no_fail_getSlotCap:
   done
 
 crunch idle_thread[wp]: deleteCallerCap "\<lambda>s. P (ksIdleThread s)"
+  (wp: crunch_wps)
 crunch sch_act_simple: deleteCallerCap sch_act_simple
+  (wp: crunch_wps)
 crunch sch_act_not[wp]: deleteCallerCap "sch_act_not t"
+  (wp: crunch_wps)
 crunch typ_at'[wp]: deleteCallerCap "\<lambda>s. P (typ_at' T p s)"
+  (wp: crunch_wps)
 lemmas deleteCallerCap_typ_ats[wp] = typ_at_lifts [OF deleteCallerCap_typ_at']
 
 crunch ksQ[wp]: emptySlot "\<lambda>s. P (ksReadyQueues s p)"

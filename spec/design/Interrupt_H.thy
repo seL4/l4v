@@ -125,6 +125,9 @@ defs invokeIRQHandler_def:
 defs deletingIRQHandler_def:
 "deletingIRQHandler irq\<equiv> (do
     slot \<leftarrow> getIRQSlot irq;
+    cap \<leftarrow> getSlotCap slot;
+    haskell_assert (isAsyncEndpointCap cap \<or> isNullCap cap)
+        [];
     cteDeleteOne slot
 od)"
 

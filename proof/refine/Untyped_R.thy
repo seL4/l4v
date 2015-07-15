@@ -5605,8 +5605,25 @@ crunch ksDomScheduleIdx[wp]: insertNewCap "\<lambda>s. P (ksDomScheduleIdx s)"
 lemma capRange_subset_capBits:
   "capAligned cap \<Longrightarrow> capAligned cap'
     \<Longrightarrow> capRange cap \<subseteq> capRange cap'
+    \<Longrightarrow> capRange cap \<noteq> {}
     \<Longrightarrow> capBits cap \<le> capBits cap'"
-  sorry
+  apply (simp add: capRange_def capAligned_def is_aligned_no_overflow
+            split: split_if_asm del: atLeastatMost_subset_iff)
+  apply (frule_tac c="capUntypedPtr cap" in subsetD)
+   apply (simp only: mask_in_range[symmetric])
+   apply (simp add: is_aligned_neg_mask_eq)
+  apply (drule_tac c="(capUntypedPtr cap && ~~ mask (capBits cap))
+        || (~~ capUntypedPtr cap' && mask (capBits cap))" in subsetD)
+   apply (simp_all only: mask_in_range[symmetric])
+   apply (simp add: word_ao_dist is_aligned_neg_mask_eq)
+  apply (simp add: word_ao_dist)
+  apply (cases "capBits cap = 0")
+   apply simp
+  apply (drule_tac f="\<lambda>x. x !! (capBits cap - 1)"
+        and x="a || b" for a b in arg_cong)
+  apply (simp add: word_ops_nth_size word_bits_def word_size)
+  apply auto
+  done
 
 lemma insertNewCap_invs':
   "\<lbrace>invs' and ct_active'

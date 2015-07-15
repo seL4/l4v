@@ -258,6 +258,9 @@ od))
 (
 (\<lambda>irq.  (do
     slot \<leftarrow> getIRQSlot irq;
+    cap \<leftarrow> getSlotCap slot;
+    haskell_assert (isAsyncEndpointCap cap \<or> isNullCap cap)
+        [];
     cteDeleteOne slot
 od))
 
