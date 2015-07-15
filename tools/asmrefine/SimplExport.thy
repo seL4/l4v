@@ -244,7 +244,7 @@ fun dest_global_mem_acc_addr (params : export_params) t = let
     val const = #const_globals params t
     val T = fastype_of t
   in case (const, acc) of
-      (SOME nm, _) => SOME (TermsTypes.mk_global_addr_ptr (nm, T))
+      (SOME nm, _) => NONE (* SOME (TermsTypes.mk_global_addr_ptr (nm, T)) *)
     | (NONE, SOME nm) => SOME (TermsTypes.mk_global_addr_ptr (nm, T))
     | (NONE, NONE) => NONE
   end
@@ -595,6 +595,20 @@ fun convert_fetch_ph2 ctxt params [] (t as (Const (@{const_name CTypesDefs.ptr_a
     val t'' = #cons_field_upds params t'
   in if t'' aconv t' then raise TERM ("convert_fetch_ph2: irreducible upd:", [t'])
     else convert_fetch_ph2 ctxt params (tl accs) t'' end
+  else if #const_globals params t <> NONE
+  then let
+    val s = the (#const_globals params t)
+    fun is_const (Const (@{const_name Arrays.index}, _) $ i)
+        = (try HOLogic.dest_number i <> NONE)
+      | is_const (Const _) = true
+      | is_const v = raise TERM ("convert_fetch_ph2: unexpected acc", [v])
+    val rhs = Proof_Context.get_thm ctxt (s ^ "_def")
+      |> safe_mk_meta_eq |> Thm.rhs_of |> Thm.term_of
+      |> convert_fetch_phase1 params
+    val mem = mk_memacc (TermsTypes.mk_global_addr_ptr (s, fastype_of rhs))
+  in if forall is_const accs
+    then convert_fetch_ph2 ctxt params accs rhs
+    else convert_fetch_ph2 ctxt params accs mem end
   else list_comb (f, map (convert_fetch_ph2 ctxt params []) xs) end
 
 fun convert_upd_ph2_worker ctxt params s v T accs =
