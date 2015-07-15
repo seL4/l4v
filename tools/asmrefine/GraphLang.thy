@@ -28,6 +28,7 @@ datatype variable =
   | VarWord64 word64
   | VarMem "word32 \<Rightarrow> word8"
   | VarDom "word32 set"
+  | VarWordArray64_32 "word64 \<Rightarrow> word32"
   | VarHTD "heap_typ_desc"
   | VarMS "unit \<times> nat"
   | VarBool bool
@@ -57,6 +58,10 @@ definition
 definition
   "var_word64 nm st = (case var_acc nm st of
     VarWord64 w \<Rightarrow> w | _ \<Rightarrow> 0)"
+
+definition
+  "var_wordarray_64_32 nm st = (case var_acc nm st of
+    VarWordArray64_32 arr \<Rightarrow> arr | _ \<Rightarrow> (\<lambda>_. 0))"
 
 definition
   "var_mem nm st = (case var_acc nm st of
@@ -527,6 +532,7 @@ fun parse_typ ("Word" :: n :: ss) = let
     val (n, ss) = case ss of (n :: ss) => (parse_int n, ss)
         | [] => raise PARSEGRAPH ["parse_typ: array index"]
   in (Type (@{type_name array}, [el_typ, mk_binT n]), ss) end
+  | parse_typ ("WordArray" :: "64" :: "32" :: ss) = (@{typ "64 word \<Rightarrow> 32 word"}, ss)
   | parse_typ ("Struct" :: nm :: ss) = (Type (nm, []), ss)
   | parse_typ ("Ptr" :: ss) = let
     val (obj_typ, ss) = parse_typ ss
@@ -561,6 +567,8 @@ val opers = Symtab.make [
       ("BWNot", @{const_name "bitNOT"}),
       ("WordCast", @{const_name "ucast"}),
       ("WordCastSigned", @{const_name "scast"}),
+      ("WordArrayAccess", @{const_name "fun_app"}),
+      ("WordArrayUpdate", @{const_name "fun_upd"}),
       ("CountLeadingZeroes", @{const_name "bv_clz"}),
       ("True", @{const_name "True"}),
       ("False", @{const_name "False"}),
@@ -585,6 +593,7 @@ fun mk_acc nm typ st = (case typ of
       | @{typ word64} => @{term var_word64}
       | @{typ "word32 \<Rightarrow> word8"} => @{term var_mem}
       | @{typ "word32 set"} => @{term var_dom}
+      | @{typ "word64 \<Rightarrow> word32"} => @{term var_wordarray_64_32}
       | @{typ "heap_typ_desc"} => @{term var_htd}
       | @{typ "nat"} => @{term var_ms}
       | @{typ bool} => @{term var_bool}
@@ -631,6 +640,7 @@ fun mk_var_typ T = (case T of
         => let val uT = Type (@{type_name word}, [T2])
         in Abs ("t", T, mk_var_typ uT $ (Const (@{const_name ucast}, T --> uT) $ Bound 0)) end
       | @{typ "word32 \<Rightarrow> word8"} => @{term VarMem}
+      | @{typ "word64 \<Rightarrow> word32"} => @{term VarWordArray64_32}
       | @{typ "word32 set"} => @{term VarDom}
       | @{typ "heap_typ_desc"} => @{term VarHTD}
       | @{typ "unit \<times> nat"} => @{term VarMS}

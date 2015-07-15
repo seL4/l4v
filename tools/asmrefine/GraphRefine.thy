@@ -825,14 +825,30 @@ lemma simpl_to_graph_steps_Fault:
   done
 
 lemma simpl_to_graph_Guard:
-  "\<lbrakk> simpl_to_graph SGamma GGamma gf nn (add_cont c con) n Q (P \<inter> G) I eqs2 out_eqs;
+  "\<lbrakk> nn = NextNode m; GGamma gf = Some gfc; function_graph gfc m = Some (Cond l Err cond);
+        eq_impl nn eqs (\<lambda>gst sst. sst \<in> G \<longrightarrow> cond gst) (I \<inter> P);
+        simpl_to_graph SGamma GGamma gf l (add_cont c con) (Suc n) Q (G \<inter> P) I eqs2 out_eqs;
         eq_impl nn eqs eqs2 (P \<inter> I \<inter> G) \<rbrakk>
     \<Longrightarrow> simpl_to_graph SGamma GGamma gf nn (add_cont (com.Guard F G c) con) n Q P I eqs out_eqs"
+  apply clarsimp
+  apply (rule_tac S=G in simpl_to_graph_cases)
+   apply (erule_tac nn'=l in simpl_to_graph_step[rotated])
+   apply (simp add: exec_graph_step_image_node)
+   apply (fastforce dest: eq_implD intro: step.intros add_cont_step)[1]
+  apply (rule simpl_to_graph_steps_Fault)
+  apply (blast intro: step.GuardFault)
+  done
+
+lemma simpl_to_graph_double_Guard:
+  "simpl_to_graph SGamma GGamma gf nn (add_cont (com.Guard F' G' c) con) n Q (P \<inter> G) I eqs2 out_eqs
+    \<Longrightarrow> eq_impl nn eqs eqs2 (I \<inter> P \<inter> G)
+    \<Longrightarrow> simpl_to_graph SGamma GGamma gf nn (add_cont (com.Guard F G (com.Guard F' G' c)) con) n Q P I eqs out_eqs"
   apply (rule_tac S=G in simpl_to_graph_cases)
    apply (rule simpl_to_graph_step_R_unchanged[rotated])
     apply (erule simpl_to_graph_weaken_eq_impl[rotated])
     apply (simp add: Int_ac)
-   apply (fastforce dest: eq_implD intro: step.intros add_cont_step)[1]
+   apply (rule add_cont_step)
+   apply (rule step.Guard, simp)
   apply (rule simpl_to_graph_steps_Fault)
   apply (blast intro: step.GuardFault)
   done
@@ -1240,9 +1256,10 @@ lemma image_fst_cart_UNIV_subset:
   "S \<subseteq> (fst ` S) \<times> UNIV"
   by (auto elim: image_eqI[rotated])
 
-lemma simpl_to_graph_Err_check:
+lemma simpl_to_graph_known_extra_check:
   "\<lbrakk> nn = NextNode m; GGamma fname = Some gf;
       function_graph gf m = Some (node.Cond l Err Check);
+      \<And>s. Check s \<longrightarrow> True;
       eq_impl nn eqs (\<lambda>gst sst. Check gst) (P \<inter> I);
       simpl_to_graph SGamma GGamma fname l com n traces P I eqs2 out_eqs;
       eq_impl nn eqs eqs2 (P \<inter> I) \<rbrakk>
@@ -1636,7 +1653,7 @@ fun mk_simpl_acc ctxt sT nm = let
     val sst = Free ("sst", sT)
     val globals_sst = Syntax.read_term ctxt "globals :: globals myvars \<Rightarrow> _"
         $ sst
-    val _ = type_of globals_sst (* does type checkig *)
+    val _ = type_of globals_sst (* does type checking *)
 
     val t_hrs = Syntax.read_term ctxt "t_hrs_' :: globals \<Rightarrow> _"
     val pms = Syntax.read_term ctxt "phantom_machine_state_' :: globals \<Rightarrow> _"
@@ -1644,9 +1661,14 @@ fun mk_simpl_acc ctxt sT nm = let
     fun do_pms_encode t = case pms_encode of Const _ => pms_encode $ t
       | _ => raise TERM ("mk_simpl_acc: requires `encode_machine_state :: machine_state => unit \<times> nat'", [t])
 
+    val ghost_assns_fetch = Syntax.read_term ctxt "ghost_assns_from_globals"
+    fun get_ghost_assns_fetch () = case head_of ghost_assns_fetch of Const _ => ghost_assns_fetch
+      | _ => raise TERM ("mk_simpl_acc: requires `ghost_assns_from_globals :: globals => word64 => word32", [])
+
     fun mk_sst_acc "Mem" = @{term hrs_mem} $ (t_hrs $ ((! globals_swap) globals_sst))
       | mk_sst_acc "HTD" = @{term hrs_htd} $ (t_hrs $ globals_sst)
       | mk_sst_acc "PMS" = do_pms_encode (pms $ globals_sst)
+      | mk_sst_acc "GhostAssertions" = get_ghost_assns_fetch () $ globals_sst
       | mk_sst_acc nm = if String.isPrefix "rv#space#" nm
               then mk_sst_acc (unprefix "rv#space#" nm)
               else if String.isSuffix "#v" nm
@@ -1673,8 +1695,7 @@ fun foldr1_default _ v [] = v
   | foldr1_default f _ xs = foldr1 f xs
 
 datatype hints = Hints of { deps: (string * term) list Inttab.table,
-    hint_tactics: (Proof.context -> int -> tactic) Inttab.table,
-    err_nns: unit Inttab.table }
+    hint_tactics: (Proof.context -> int -> tactic) Inttab.table }
 
 fun mk_graph_eqs Gamma (Hints hints) nm n = let
     val vs = case (Inttab.lookup (#deps hints) n) of
@@ -1820,6 +1841,18 @@ fun eq_impl_assume_tac ctxt = DETERM o SUBGOAL (fn (t, i) => let
     else no_tac
   end)
 
+fun is_pglobal_valid_conjs (Const (@{const_name conj}, _) $ p $ q)
+    = is_pglobal_valid_conjs p andalso is_pglobal_valid_conjs q
+  | is_pglobal_valid_conjs (Const (@{const_name "pglobal_valid"}, _) $ _ $ _ $ _)
+    = true
+  | is_pglobal_valid_conjs _ = false
+
+fun check_is_pglobal_valid ctxt = SUBGOAL (fn (t, i) =>
+    (if is_pglobal_valid_conjs (Logic.strip_assums_concl (Envir.beta_eta_contract t)
+        |> HOLogic.dest_Trueprop |> HOLogic.dest_imp |> fst)
+    then simp_tac (put_simpset HOL_ss ctxt) i else no_tac)
+        )
+
 fun simpl_ss ctxt = put_simpset HOL_basic_ss ctxt
     addsimps @{thms switch.simps fst_conv snd_conv
         length_Cons singletonI triv_forall_equality
@@ -1841,15 +1874,6 @@ fun apply_hint_thm ctxt (Hints hints) = SUBGOAL (fn (t, i) => let
       | NONE => no_tac end
     handle TERM _ => no_tac)
 
-fun prove_Err_check ctxt (Hints hints) = SUBGOAL (fn (t, i) => let
-    val nn = Logic.strip_assums_concl t |> Envir.beta_eta_contract
-        |> HOLogic.dest_Trueprop |> simpl_to_graph_nn
-  in case Inttab.lookup (#err_nns hints) nn
-    of SOME () => rtac @{thm simpl_to_graph_Err_check[OF refl]} i
-            THEN inst_graph_tac ctxt i
-      | NONE => no_tac end
-    handle TERM _ => no_tac)
-
 fun apply_simpl_to_graph_tac funs hints ctxt =
         simp_tac (simpl_ss ctxt
             addsimps @{thms One_nat_def whileAnno_def
@@ -1868,8 +1892,12 @@ fun apply_simpl_to_graph_tac funs hints ctxt =
             THEN' (simp_tac ctxt
                 THEN_ALL_NEW except_tac ctxt
                     "apply_simpl_to_graph_tac: exn eq unsolved"),
-        rtac @{thm simpl_to_graph_Guard},
-        prove_Err_check ctxt hints,
+        rtac @{thm simpl_to_graph_known_extra_check[OF refl]}
+            THEN' inst_graph_tac ctxt
+            THEN' check_is_pglobal_valid ctxt,
+        rtac @{thm simpl_to_graph_double_Guard},
+        rtac @{thm simpl_to_graph_Guard[OF refl]}
+            THEN' inst_graph_tac ctxt,
         rtac @{thm simpl_to_graph_Cond[OF refl]}
             THEN' inst_graph_tac ctxt,
         rtac @{thm simpl_to_graph_Basic}
@@ -2052,13 +2080,9 @@ fun get_loop_var_upd_nodes nodes =
         #> (fn xs => not (null xs) andalso forall (String.isSuffix "#count") xs))
     |> map fst
 
-fun is_err_guard (@{term node.Cond} $ _ $ @{term Err} $ _) = true
-  | is_err_guard _ = false
-
 fun mk_hints (funs : ParseGraph.funs) ctxt nm = case Symtab.lookup funs nm of
     NONE => raise TERM ("mk_var_deps_hints: miss " ^ nm, [])
-  | SOME (_, _, NONE) => Hints {deps = Inttab.empty, hint_tactics = Inttab.empty,
-        err_nns = Inttab.empty}
+  | SOME (_, _, NONE) => Hints {deps = Inttab.empty, hint_tactics = Inttab.empty}
   | SOME (_, outputs, SOME (ep, nodes, _)) => let
     val sT = Syntax.read_typ ctxt "globals myvars"
     val deps = snd (get_var_deps (Inttab.make nodes) ep outputs)
@@ -2073,10 +2097,9 @@ fun mk_hints (funs : ParseGraph.funs) ctxt nm = case Symtab.lookup funs nm of
     val loop_tacs = get_loop_var_upd_nodes nodes
         |> map (rpair (fn ctxt => rtac @{thm simpl_to_graph_noop_Basic}
             THEN' inst_graph_tac ctxt))
-    val err_nums = filter (is_err_guard o snd) nodes |> map fst
     val all_tacs = Inttab.make (no_deps_tacs @ loop_tacs)
   in Hints {deps = all_deps,
-    hint_tactics = all_tacs, err_nns = Inttab.make_set err_nums} end
+    hint_tactics = all_tacs} end
 
 fun init_graph_refines_proof funs nm ctxt = let
     val body_thm = Proof_Context.get_thm ctxt

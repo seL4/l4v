@@ -122,8 +122,17 @@ lemma drop_sign_number[simp]:
   "drop_sign 0 = 0" "drop_sign 1 = 1"
   by (simp_all add: drop_sign_def ucast_def)
 
+lemma drop_sign_projections:
+  "unat x = unat (drop_sign x)"
+  "uint x = uint (drop_sign x)"
+  "sint x = sint (drop_sign x)"
+  apply (simp_all add: sint_drop_sign_isomorphism)
+  apply (auto simp: unat_def uint_up_ucast drop_sign_def is_up_def
+                    source_size_def target_size_def word_size)
+  done
+
 lemmas drop_sign_isomorphism
-    = drop_sign_isomorphism_ariths
+    = drop_sign_isomorphism_ariths drop_sign_projections
         drop_sign_isomorphism_bitwise
         ucast_id 
 
@@ -221,8 +230,20 @@ fun fold_of_nat_eq_Ifs ctxt tm = let
 val fold_of_nat_eq_Ifs_simproc = Simplifier.simproc_global_i
   @{theory} "fold_of_nat_eq_Ifs"
   [@{term "If (x = 0) y z"}] (try o fold_of_nat_eq_Ifs)
-*}
 
+fun unfold_assertion_data_get_set_conv ctxt tm = let
+    val (f, xs) = strip_comb tm
+    val (f_nm, _) = dest_Const f
+    val procs = map_filter (fn (Const (s, _)) => if String.isSuffix "_'proc" s
+        then SOME s else NONE | _ => NONE) xs
+    val defs = map (suffix "_def" #> Proof_Context.get_thm ctxt) (f_nm :: procs)
+  in Simplifier.rewrite (ctxt addsimps defs) (Thm.cterm_of ctxt tm) end
+
+val unfold_assertion_data_get_set = Simplifier.simproc_global_i
+  @{theory} "unfold_assertion_data_get"
+  [@{term "ghost_assertion_data_get k acc s"}, @{term "ghost_assertion_data_set k v upd"}]
+  (SOME oo unfold_assertion_data_get_set_conv)
+*}
 
 ML {*
 fun wrap_tac tac i t = let
@@ -534,6 +555,7 @@ fun graph_refine_proof_tacs csenv ctxt = let
             "simpl->graph that are extraneous"],
         asm_full_simp_tac (ctxt addsimps @{thms eq_impl_def
                     var_word32_def var_word8_def var_mem_def
+                    var_word64_def var_word16_def var_wordarray_64_32_def
                     var_htd_def var_acc_var_upd
                     var_ms_def init_vars_def
                     return_vars_def upd_vars_def save_vals_def
@@ -552,8 +574,8 @@ fun graph_refine_proof_tacs csenv ctxt = let
                    representation does this, and we need to normalise
                    word arithmetic the same way on both sides. *)
                 addsimps (enum_simps csenv ctxt)
-                (* and fold up expanded array accesses *)
-                addsimprocs [fold_of_nat_eq_Ifs_simproc]
+                (* and fold up expanded array accesses, and clean up assertion_data get/set *)
+                addsimprocs [fold_of_nat_eq_Ifs_simproc, unfold_assertion_data_get_set]
             )),
         (["step 3: split into goals with safe steps",
             "also derive ptr_safe assumptions from h_t_valid"],
