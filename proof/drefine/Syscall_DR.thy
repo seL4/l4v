@@ -1449,45 +1449,49 @@ lemma receive_ipc_cur_thread:
 lemma cap_delete_one_st_tcb_at_and_valid_etcbs:
   "\<lbrace>st_tcb_at P t and K (\<forall>st. active st \<longrightarrow> P st) and valid_etcbs\<rbrace> cap_delete_one ptr \<lbrace>\<lambda>rv s. st_tcb_at P t s \<and> valid_etcbs s\<rbrace>"
  by (wp cap_delete_one_st_tcb_at cap_delete_one_valid_etcbs | simp)+
-
+ 
+crunch ct_it[wp]: cap_delete_one "\<lambda>s. P (cur_thread s) (idle_thread s)"
+     (wp: crunch_wps set_thread_state_ext_extended.all_but_exst dxo_wp_weak 
+    simp: crunch_simps unless_def)
+ 
 lemma handle_wait_corres:
   "dcorres dc \<top> (invs and (\<lambda>s. not_idle_thread (cur_thread s) s \<and> st_tcb_at active (cur_thread s) s) and valid_etcbs)
   Syscall_D.handle_wait Syscall_A.handle_wait"
   apply (simp add: Syscall_D.handle_wait_def Syscall_A.handle_wait_def delete_caller_cap_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split[OF _ get_cur_thread_corres])
-      apply (rule_tac P'="\<lambda>rv. invs and not_idle_thread thread and valid_etcbs
-          and (\<lambda>s. thread = cur_thread s \<and> st_tcb_at active thread s )"
-            in corres_underlying_split[where r'="dc" and P="\<lambda>rv. \<top>"])
-         prefer 3
-         apply (simp add:not_idle_thread_def)
-         apply wp
-         apply (rule_tac t1 = thread in hoare_post_imp[OF _ cap_delete_one_st_tcb_at_and_valid_etcbs])
-         apply (fastforce simp:obj_at_def generates_pending_def st_tcb_at_def)
-        apply (simp add: transform_tcb_slot_simp[symmetric])
-        apply (rule corres_guard_imp[OF delete_cap_simple_corres])
-         prefer 3
-         apply wp
-       apply (wp | clarsimp simp:emptyable_def not_idle_thread_def)+
       apply (simp add:liftM_def select_f_get_register get_thread_def bind_assoc)
-      apply (rule dcorres_gets_the)
-       apply (clarsimp, frule(1) valid_etcbs_get_tcb_get_etcb)
+      apply (rule_tac P=\<top> and P'="invs and valid_etcbs and (\<lambda>s. thread = cur_thread s
+                          \<and> not_idle_thread thread s \<and> st_tcb_at active thread s)"
+                          in dcorres_gets_the)
+       apply (clarsimp simp: not_idle_thread_def, frule(1) valid_etcbs_get_tcb_get_etcb)
        apply (clarsimp simp:opt_object_tcb gets_def transform_tcb_def)
        apply (simp add:transform_full_intent_def Let_def cap_fault_injection)
        apply (rule corres_guard_imp)
          apply (rule corres_split_catch[where f= dc,OF handle_fault_corres])
            apply (rule dcorres_injection_handler_rhs)
            apply (rule_tac R' ="\<lambda>rv s. (\<forall>ref badge rights. rv = cap.EndpointCap ref badge rights \<longrightarrow> (ep_at ref s)) \<and> not_idle_thread (cur_thread s') s
-                \<and> not_idle_thread (cur_thread s) s
-                \<and> (st_tcb_at active (cur_thread s') s \<and> invs s \<and> valid_etcbs s) \<and> ko_at (TCB obj') (cur_thread s') s " and R= "\<lambda>r. \<top>"
-                in corres_splitEE[where r'="\<lambda>x y. x = transform_cap y"])
+                                  \<and> not_idle_thread (cur_thread s) s
+                                  \<and> (st_tcb_at active (cur_thread s') s \<and> invs s \<and> valid_etcbs s) \<and> ko_at (TCB obj') (cur_thread s') s " and R= "\<lambda>r. \<top>"
+                                in corres_splitEE[where r'="\<lambda>x y. x = transform_cap y"])
               apply (rule dcorres_expand_pfx)
               apply (clarsimp split:cap.splits arch_cap.splits simp:transform_cap_def)
                apply (rename_tac word1 word2 set)
                apply (rule corres_guard_imp)
-                 apply (rule_tac epptr = word1 in recv_sync_ipc_corres)
-                   apply (simp add:cap_ep_ptr_def )+
-               apply (clarsimp simp:st_tcb_at_def obj_at_def dest!:get_tcb_SomeD get_etcb_SomeD)
+                 apply (rule corres_split[where r'=dc])
+                    apply (rule_tac epptr=word1 in recv_sync_ipc_corres)
+                      apply (simp add: cap_ep_ptr_def delete_caller_cap_def)+
+                   apply (simp add: transform_tcb_slot_simp[symmetric])
+                   apply (rule delete_cap_simple_corres)
+                  apply (wp | clarsimp simp: delete_caller_cap_def not_idle_thread_def)+
+                 apply (rule hoare_vcg_conj_lift)
+                  apply (rule_tac t1="cur_thread s'" in hoare_post_imp[OF _ cap_delete_one_st_tcb_at_and_valid_etcbs])
+                  apply (fastforce simp: obj_at_def generates_pending_def st_tcb_at_def)
+                 apply (rule_tac Q="\<lambda>rv. invs and valid_etcbs" in hoare_strengthen_post)
+                  apply wp
+                 apply (clarsimp simp: invs_def)
+                apply clarsimp
+               apply (clarsimp simp: emptyable_def not_idle_thread_def)
               defer(* NEED RECEIVE ASYNC IPC *)
               apply (rule lookup_cap_corres, simp)
               apply (simp add: Types_D.word_bits_def)
@@ -1518,10 +1522,10 @@ lemma handle_wait_corres:
           apply (clarsimp simp add: valid_fault_def)
          apply clarsimp+
         apply (clarsimp dest!: get_tcb_SomeD
-       simp: invs_valid_tcb_ctable valid_state_def invs_def
-       obj_at_def valid_pspace_def not_idle_thread_def)
+                         simp: invs_valid_tcb_ctable valid_state_def invs_def
+                               obj_at_def valid_pspace_def not_idle_thread_def)
        apply (clarsimp, frule(1) valid_etcbs_get_tcb_get_etcb)
-       apply (clarsimp simp:opt_object_tcb)
+       apply (clarsimp simp:opt_object_tcb not_idle_thread_def)
       apply wp
     apply simp
    apply (clarsimp simp:emptyable_def not_idle_thread_def)

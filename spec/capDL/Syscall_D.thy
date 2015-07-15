@@ -153,7 +153,6 @@ where
     do
       (* Get the current thread. *)
       tcb_id \<leftarrow> gets_the cdl_current_thread;
-      delete_cap_simple (tcb_id, tcb_caller_slot);
       tcb \<leftarrow> get_thread tcb_id;
       (* Get the endpoint it is trying to receive from. *)
       (doE
@@ -162,7 +161,10 @@ where
         (case ep_cap of
           EndpointCap o_id badge rights \<Rightarrow>
             if Read \<in> rights then
-              liftE $ receive_ipc tcb_id (cap_object ep_cap)
+              liftE $ do
+                   delete_cap_simple (tcb_id, tcb_caller_slot);
+                   receive_ipc tcb_id (cap_object ep_cap)
+                od
             else
               throw
         | AsyncEndpointCap o_id badge rights \<Rightarrow>

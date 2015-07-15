@@ -2405,7 +2405,7 @@ lemma handle_wait_valid_sched:
    handle_wait \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
   apply (simp add: handle_wait_def Let_def ep_aep_cap_case_helper
               cong: if_cong)
-  apply (wp handle_fault_valid_sched receive_ipc_valid_sched receive_async_ipc_valid_sched | simp)+
+  apply (wp handle_fault_valid_sched delete_caller_cap_not_queued receive_ipc_valid_sched receive_async_ipc_valid_sched | simp)+
      apply (rule hoare_vcg_E_elim)
       apply (simp add: lookup_cap_def lookup_slot_for_thread_def)
       apply wp
@@ -2415,6 +2415,7 @@ lemma handle_wait_valid_sched:
      apply (wp hoare_drop_imps)
     apply (wp delete_caller_cap_not_queued | simp | strengthen invs_valid_tcb_ctable_strengthen)+
   apply (simp add: ct_in_state_def tcb_at_invs)
+  apply (auto simp: objs_valid_tcb_ctable)
   done
 
 lemma handle_wait_valid_sched':

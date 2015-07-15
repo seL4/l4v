@@ -393,8 +393,13 @@ lemma handle_wait_pas_refined:
             get_cap_auth_wp [where aag=aag] lookup_slot_for_cnode_op_authorised
             lookup_slot_for_thread_authorised lookup_slot_for_thread_cap_fault
             hoare_vcg_all_lift_R 
-       | wpc | simp)+
-  apply (rule_tac Q' = "\<lambda>rv s. pas_refined aag s \<and> invs s \<and> is_subject aag (cur_thread s) \<and> is_subject aag thread" in hoare_post_imp_R [rotated])
+       | wpc | simp
+       | rename_tac word1 word2 word3, rule_tac Q="\<lambda>rv s. invs s \<and> is_subject aag thread 
+                     \<and> (pasSubject aag, Receive, pasObjectAbs aag word1) \<in> pasPolicy aag" 
+              in hoare_strengthen_post, wp, clarsimp simp: invs_valid_objs invs_sym_refs)+
+  apply (rule_tac Q' = "\<lambda>rv s. pas_refined aag s \<and> invs s \<and> tcb_at thread s 
+                  \<and> cur_thread s = thread \<and> is_subject aag (cur_thread s) 
+                  \<and> is_subject aag thread" in hoare_post_imp_R [rotated])
    apply (fastforce simp: aag_cap_auth_def cap_auth_conferred_def cap_rights_to_auth_def valid_fault_def)
   apply (wp user_getreg_inv | strengthen invs_vobjs_strgs invs_sym_refs_strg | simp)+
   apply clarsimp
@@ -410,11 +415,18 @@ lemma handle_wait_integrity:
      handle_wait
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply (simp add: handle_wait_def Let_def lookup_cap_def lookup_cap_def split_def)
-  apply (wp handle_fault_integrity_autarch receive_ipc_integrity_autarch receive_async_ipc_integrity_autarch lookup_slot_for_thread_authorised lookup_slot_for_thread_cap_fault
-            get_cap_auth_wp [where aag=aag]
-       | wpc | simp)+
-  apply (rule_tac Q' = "\<lambda>rv s. pas_refined aag s \<and> invs s \<and> is_subject aag (cur_thread s) \<and> is_subject aag thread \<and> integrity aag X st s" in hoare_post_imp_R [rotated])
-   apply (fastforce simp: aag_cap_auth_def cap_auth_conferred_def cap_rights_to_auth_def valid_fault_def)
+  apply (wp handle_fault_integrity_autarch receive_ipc_integrity_autarch 
+            receive_async_ipc_integrity_autarch lookup_slot_for_thread_authorised 
+            lookup_slot_for_thread_cap_fault get_cap_auth_wp [where aag=aag]
+       | wpc | simp
+       | rule_tac Q="\<lambda>rv s. invs s \<and> is_subject aag thread 
+                     \<and> (pasSubject aag, Receive, pasObjectAbs aag x31) \<in> pasPolicy aag" 
+              in hoare_strengthen_post, wp, clarsimp simp: invs_valid_objs invs_sym_refs)+
+  apply (rule_tac Q' = "\<lambda>rv s. pas_refined aag s \<and> einvs s \<and> is_subject aag (cur_thread s)
+                         \<and> tcb_at thread s \<and> cur_thread s = thread 
+            \<and> is_subject aag thread \<and> integrity aag X st s" in hoare_post_imp_R [rotated])
+   apply (fastforce simp: aag_cap_auth_def cap_auth_conferred_def
+                     cap_rights_to_auth_def valid_fault_def)
 
   apply (wp user_getreg_inv | strengthen invs_vobjs_strgs invs_sym_refs_strg invs_mdb_strgs | simp)+
   apply clarsimp
