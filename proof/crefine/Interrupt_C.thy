@@ -38,6 +38,12 @@ lemma getIRQSlot_ccorres:
                         )
   done
 
+lemma cte_at_irq_node':
+  "invs' s \<Longrightarrow>
+    cte_at' (irq_node' s + 2 ^ cte_level_bits * ucast (irq :: 8 word)) s"
+  by (clarsimp simp: invs'_def valid_state'_def valid_irq_node'_def
+                     cte_level_bits_def real_cte_at')
+
 lemma invokeIRQHandler_SetIRQHandler_ccorres:
   "ccorres dc xfdc
           (invs' and sch_act_simple and irq_handler_inv_valid' (SetIRQHandler irq cp slot))
@@ -52,21 +58,25 @@ proof -
   apply (cinit lift: irq_' slot_' cap_')
    apply (simp only:)
    apply (ctac(no_vcg) add: getIRQSlot_ccorres)
-sorry (*
-     apply (ctac(no_vcg) add: cteDeleteOne_ccorres)
-      apply (ctac(no_vcg) add: cteInsert_ccorres)
-     apply (simp add: pred_conj_def)
-     apply (strengthen aep_badge_derived_enough_strg[unfolded o_def]
-                       invs_mdb_strengthen' valid_objs_invs'_strg)
-     apply (wp cteDeleteOne_other_cap[unfolded o_def])[1]
+     apply (rule ccorres_Guard_Seq)
+     apply (rule ccorres_symb_exec_r)
+       apply (ctac(no_vcg) add: cteDeleteOne_ccorres[where w="-1"])
+        apply (ctac(no_vcg) add: cteInsert_ccorres)
+       apply (simp add: pred_conj_def)
+       apply (strengthen aep_badge_derived_enough_strg[unfolded o_def]
+                         invs_mdb_strengthen' valid_objs_invs'_strg)
+       apply (wp cteDeleteOne_other_cap[unfolded o_def])[1]
+      apply vcg
+     apply (rule conseqPre, vcg, clarsimp simp: rf_sr_def
+        gs_set_assn_Delete_cstate_relation[unfolded o_def])
     apply (simp add: getIRQSlot_def getInterruptState_def locateSlot_conv)
     apply wp
-   apply (simp add: guard_is_UNIV_def)
+   apply (simp add: guard_is_UNIV_def ghost_assertion_data_get_def
+                    ghost_assertion_data_set_def)
+  apply (clarsimp simp: cte_at_irq_node' ucast_nat_def)
   apply (clarsimp simp: invs_pspace_aligned' cte_wp_at_ctes_of badge_derived'_def)
-  apply (drule valid_globals_ex_cte_cap_irq, clarsimp+)
-  apply (fastforce simp: ucast_nat_def comp_def)
+  apply (drule valid_globals_ex_cte_cap_irq[where irq=irq], clarsimp+)
   done
-*)
 qed
 
 lemma invokeIRQHandler_ClearIRQHandler_ccorres:
@@ -77,11 +87,18 @@ lemma invokeIRQHandler_ClearIRQHandler_ccorres:
   apply (cinit lift: irq_')
    apply (simp only: )
    apply (ctac(no_vcg) add: getIRQSlot_ccorres)
-sorry (*
-     apply (ctac add: cteDeleteOne_ccorres)
-    apply (wp | simp)+
+     apply (rule ccorres_Guard_Seq)
+     apply (rule ccorres_symb_exec_r)
+       apply (ctac add: cteDeleteOne_ccorres[where w="-1"])
+      apply vcg
+     apply (rule conseqPre, vcg, clarsimp simp: rf_sr_def
+        gs_set_assn_Delete_cstate_relation[unfolded o_def])
+    apply (simp add: getIRQSlot_def getInterruptState_def locateSlot_conv)
+    apply wp
+   apply (simp add: guard_is_UNIV_def ghost_assertion_data_get_def
+                    ghost_assertion_data_set_def)
+  apply (clarsimp simp: cte_at_irq_node' ucast_nat_def)
   done
-*)
 
 lemma aep_case_can_send:
   "(case cap of AsyncEndpointCap x1 x2 x3 x4 \<Rightarrow> f x3

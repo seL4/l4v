@@ -7001,15 +7001,18 @@ lemma range_cover_gsMaxObjectSize:
     \<Longrightarrow> unat num = length destSlots
     \<Longrightarrow> unat (num << (APIType_capBits newType userSize) :: word32) \<le> gsMaxObjectSize s
         \<and> 2 ^ APIType_capBits newType userSize \<le> gsMaxObjectSize s"
-  apply (clarsimp simp: valid_global_refs'_def
-                        valid_cap_sizes'_def cte_wp_at_ctes_of)
-  apply (drule bspec, erule ranI)
-  sorry (*
+  apply (clarsimp simp: cte_wp_at_ctes_of)
+  apply (drule (1) valid_global_refsD_with_objSize)
+  apply clarsimp
+  apply (rule conjI)
+   apply (frule range_cover.range_cover_compare_bound)
+   apply (drule range_cover.unat_of_nat_n_shift, rule order_refl)
+   apply (drule_tac s="unat num" in sym)
+   apply simp
+  apply (clarsimp simp: range_cover_def)
   apply (erule order_trans[rotated])
-  apply (clarsimp simp: shiftl_t2n)
-  apply (subst unat_mult_simple)
-   apply (frule range_cover.string)
- *)
+  apply simp
+  done
 
 lemma createNewObjects_ccorres:
 notes blah[simp del] =  atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff

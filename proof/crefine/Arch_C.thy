@@ -3166,42 +3166,54 @@ crunch inv': resolveVAddr "P"
   (wp: crunch_wps simp: crunch_simps ignore: getObject setObject)
 
 
-
-lemma flush_range_le1:
-  "\<lbrakk>page_base start a = page_base end a; start \<le> end \<rbrakk>
-       \<Longrightarrow> unat (end - start) \<le> 2 ^ pageBitsForSize a"
-  sorry
-
 lemma flush_range_le:
-  "\<lbrakk>page_base start a = page_base end a; start \<le> end; w && mask (pageBitsForSize a) = start && mask (pageBitsForSize a)\<rbrakk>
-       \<Longrightarrow> w \<le> w + (end - start)"
-  apply (rule word32_plus_mono_right_split[where sz = "pageBitsForSize a"])
-   apply (subgoal_tac "unat (w && mask (pageBitsForSize a)) + unat (end - start)
-    = unat ((w && mask (pageBitsForSize a)) + (end - start))")
-    prefer 2
-    apply (rule unat_plus_simple[THEN iffD1,symmetric])
+  assumes assms:"page_base start a = page_base end a"
+        "start \<le> end" "w && mask (pageBitsForSize a) = start && mask (pageBitsForSize a)"
+  shows "w \<le> w + (end - start)" "unat (end - start) \<le> 2 ^ pageBitsForSize a"
+proof -
+  have q: "w && mask (pageBitsForSize a) \<le> (w && mask (pageBitsForSize a)) + (end - start)"
+    using assms
     apply (subst AND_NOT_mask_plus_AND_mask_eq
       [where w = start,symmetric,where n = "pageBitsForSize a"])
     apply (simp add:sign_simps page_base_def)
     apply (drule word_le_minus_mono_left[where x= "start && ~~ mask (pageBitsForSize a)"])
      apply (rule word_and_le2)
-    apply (simp (no_asm_use),simp)
-   apply (simp add:field_simps)
-   apply (rule unat_less_helper)
-   apply (simp add:word_unat_power[symmetric])
-   apply (subgoal_tac "end + (start && mask (pageBitsForSize a)) - start 
-     = end - (start && ~~ mask (pageBitsForSize a))")
-    prefer 2
-    apply (simp add:mask_out_sub_mask)
-   apply (rule_tac P =" \<lambda>x. x < y" for y in ssubst)
-    apply assumption
-   apply (subst AND_NOT_mask_plus_AND_mask_eq
-     [where w = "end",symmetric,where n = "pageBitsForSize a"])
-   apply (simp add:page_base_def)
-   apply (rule and_mask_less')
-   apply simp
-  apply (simp add:pbfs_less_wb')
- done
+    apply (simp(no_asm_use), simp)
+    done
+  have a: "unat (w && mask (pageBitsForSize a)) + unat (end - start)
+    = unat ((w && mask (pageBitsForSize a)) + (end - start))"
+    apply (rule unat_plus_simple[THEN iffD1,symmetric])
+    apply (rule q)
+    done
+  have b: "end + (start && mask (pageBitsForSize a)) - start 
+     = end - (start && ~~ mask (pageBitsForSize a))"
+    by (simp add:mask_out_sub_mask)
+  have c: "unat (w && mask (pageBitsForSize a)) + unat (end - start) < 2 ^ pageBitsForSize a"
+    using assms a
+    apply (simp add:field_simps)
+    apply (rule unat_less_helper)
+    apply simp
+    apply (rule_tac P =" \<lambda>x. x < y" for y in ssubst[OF b])
+    apply (subst AND_NOT_mask_plus_AND_mask_eq
+      [where w = "end",symmetric,where n = "pageBitsForSize a"])
+    apply (simp add:page_base_def)
+    apply (rule and_mask_less')
+    apply simp
+    done
+
+  show "w \<le> w + (end - start)"
+    using assms
+    apply -
+    apply (rule word32_plus_mono_right_split, rule c)
+    apply (simp add:pbfs_less_wb')
+    done
+
+  show "unat (end - start) \<le> 2 ^ pageBitsForSize a"
+    using q c
+    by (simp add: olen_add_eqv)
+qed
+
+lemmas flush_range_le1 = flush_range_le(2)[OF _ _ refl]
 
 lemma resolveVAddr_ret:
   "\<lbrace>valid_objs' and P \<rbrace> resolveVAddr p start
@@ -3385,6 +3397,7 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
                injection_bindE[OF refl refl] bindE_assoc 
                if_to_top_of_bindE injection_handler_throwError
                injection_handler_returnOk injection_handler_stateAssert_relocate
+               checkValidMappingSize_def
              )
              apply (rule ccorres_stateAssert)
              apply (rule_tac Q=\<top> and Q'=\<top> in ccorres_if_cond_throws[rotated -1])
@@ -3444,7 +3457,7 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
              apply (simp add:mask_add_aligned mask_twice)
             apply (subgoal_tac "5 \<le> pageBitsForSize a")
              apply (frule(1) is_aligned_weaken)
-             apply (simp add:mask_add_aligned mask_twice validMappingSize_def)
+             apply (simp add:mask_add_aligned mask_twice)
              apply (erule order_trans[rotated])
              apply (erule flush_range_le1, simp add: linorder_not_le)
              apply (erule word_less_sub_1)

@@ -1581,20 +1581,22 @@ lemma deletingIRQHandler_ccorres:
           ucast_nat_def uint_up_ucast is_up)
        apply (erule getIRQSlot_ccorres_stuff)
       apply ceqv
-     apply (rule ccorres_Guard_Seq)
-     apply (rule ccorres_symb_exec_r)
-       apply (ctac add: cteDeleteOne_ccorres[where w="scast cap_async_endpoint_cap"])
-      apply vcg
-     apply (rule conseqPre, vcg, clarsimp simp: rf_sr_def
-          gs_set_assn_Delete_cstate_relation[unfolded o_def])
-    apply (simp add: getIRQSlot_def locateSlot_def getInterruptState_def)
-    apply wp
+     apply (rule ccorres_symb_exec_l)
+        apply (rule ccorres_symb_exec_l)
+           apply (rule ccorres_Guard_Seq)
+           apply (rule ccorres_symb_exec_r)
+             apply (ctac add: cteDeleteOne_ccorres[where w="scast cap_async_endpoint_cap"])
+            apply vcg
+           apply (rule conseqPre, vcg, clarsimp simp: rf_sr_def
+                gs_set_assn_Delete_cstate_relation[unfolded o_def])
+          apply (wp getCTE_wp' | simp add: getSlotCap_def getIRQSlot_def locateSlot_conv
+                                           getInterruptState_def)+
    apply vcg
   apply (clarsimp simp: cap_get_tag_isCap ghost_assertion_data_get_def
                         ghost_assertion_data_set_def)
   apply (simp add: cap_tag_defs)
-  sorry (* oops we never put this in the haskell invariants 
-  done *)
+  apply (clarsimp simp: cte_wp_at_ctes_of)
+  done
 
 lemma Zombie_new_spec:
   "\<forall>s. \<Gamma>\<turnstile> ({s} \<inter> {s. type_' s = 32 \<or> type_' s < 31}) Call Zombie_new_'proc
