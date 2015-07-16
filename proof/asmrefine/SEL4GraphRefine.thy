@@ -32,7 +32,8 @@ val csenv = let
     val the_csenv = CalculateState.get_csenv @{theory} "c/kernel_all.c_pp" |> the
   in fn () => the_csenv end
 *}
-
+term ghost_assertion_data_get
+term ghost'state_'
 consts
   encode_machine_state :: "machine_state \<Rightarrow> unit \<times> nat"
 
@@ -52,6 +53,27 @@ where
   "simpl_invariant = {s. const_globals_in_memory symbol_table globals_list
             (hrs_mem (t_hrs_' (globals s)))
         \<and> htd_safe domain (hrs_htd (t_hrs_' (globals s)))}"
+
+abbreviation(input) "ghost_assns_from_globals
+    \<equiv> (snd o snd o ghost'state_' :: globals \<Rightarrow> _)"
+
+lemma snd_snd_gs_new_frames_new_cnodes[simp]:
+  "snd (snd (gs_new_frames sz ptr bits gs)) = snd (snd gs)"
+  "snd (snd (gs_new_cnodes sz' ptr bits gs)) = snd (snd gs)"
+  "snd (snd (gs_clear_region ptr sz' gs)) = snd (snd gs)"
+  "snd (snd ((if P then f else g) gs)) = (if P then snd (snd (f gs)) else snd (snd (g gs)))"
+  by (simp_all add: gs_new_frames_def gs_new_cnodes_def gs_clear_region_def)
+
+(*
+ML {* val nm = "Kernel_C.invokeUntyped_Retype" *}
+
+local_setup {*  define_graph_fun_short funs nm *}
+
+ML {*
+    val ctxt = @{context}
+    val v = ProveSimplToGraphGoals.test_graph_refine_proof funs (csenv ()) ctxt nm
+*}
+*)
 
 ML {* ProveSimplToGraphGoals.test_all_graph_refine_proofs_after
     funs (csenv ()) @{context} NONE  *} 

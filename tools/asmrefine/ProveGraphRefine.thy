@@ -623,9 +623,10 @@ fun graph_refine_proof_full_tac csenv ctxt = EVERY
         (t ORELSE' except_tac ctxt ("FAILED: " ^ space_implode "\n" ss)))
         (graph_refine_proof_tacs csenv ctxt))
 
-fun graph_refine_proof_full_goal_tac csenv ctxt
+fun graph_refine_proof_full_goal_tac csenv ctxt i t
     = (foldr1 (op THEN_ALL_NEW)
-        (map snd (graph_refine_proof_tacs csenv ctxt)))
+        (map snd (graph_refine_proof_tacs csenv ctxt)) i t)
+        |> try Seq.hd |> (fn NONE => Seq.empty | SOME t => Seq.single t)
 
 fun simpl_to_graph_thm funs csenv ctxt nm = let
     val hints = SimplToGraphProof.mk_hints funs ctxt nm
@@ -638,6 +639,17 @@ fun simpl_to_graph_thm funs csenv ctxt nm = let
   in res_thm end
 
 fun test_graph_refine_proof funs csenv ctxt nm = case
+    Symtab.lookup funs nm of SOME (_, _, NONE) => ("skipped " ^ nm, @{thm TrueI})
+  | _ => let
+    val hints = SimplToGraphProof.mk_hints funs ctxt nm
+    val init_thm = SimplToGraphProof.simpl_to_graph_upto_subgoals funs hints nm ctxt
+    val res_thm = init_thm |> ALLGOALS (graph_refine_proof_full_goal_tac csenv ctxt)
+        |> Seq.hd
+    val succ = case Thm.nprems_of res_thm of 0 => "success on "
+        | n => string_of_int n ^ " failed goals: "
+  in (succ ^ nm, res_thm) end
+
+fun test_graph_refine_proof_with_def funs csenv ctxt nm = case
     Symtab.lookup funs nm of SOME (_, _, NONE) => "skipped " ^ nm
   | _ => let
     val ctxt = define_graph_fun_short funs nm ctxt
@@ -650,7 +662,7 @@ fun test_all_graph_refine_proofs_after funs csenv ctxt nm = let
     val ss = if n = ~1 then ss else drop (n + 1) ss
     val err = prefix "ERROR for: " #> error
     val _ = map (fn s => (writeln ("testing: " ^ s);
-        writeln (test_graph_refine_proof funs csenv ctxt s))
+        writeln (test_graph_refine_proof_with_def funs csenv ctxt s))
       handle TERM _ => err s | TYPE _ => err s | THM _ => err s) ss
   in "success" end
 
