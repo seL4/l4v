@@ -1100,6 +1100,7 @@ where
           High_cnode_ptr \<mapsto> 10,
           Silc_cnode_ptr \<mapsto> 10,
           irq_cnode_ptr  \<mapsto> 0),
+    gsMaxObjectSize = card (UNIV :: word32 set),
     ksDomScheduleIdx = 0,
     ksDomSchedule = [(0 ,10), (1, 10)],
     ksCurDomain = 0,
@@ -1892,6 +1893,31 @@ lemma mask_neg_add_aligned:
 lemma kh_s0H[simp]:
   "ksPSpace s0H_internal = kh0H"
   by (simp add: s0H_internal_def)
+
+lemma pspace_distinct'_split:
+  notes less_1_simp[simp del] shows
+  "(\<forall>(y, ko) \<in> graph_of (ksPSpace ks). (x \<le> y \<or> y + (1 << objBitsKO ko) - 1 < x)
+        \<and> y \<le> y + (1 << objBitsKO ko) - 1)
+    \<Longrightarrow> pspace_distinct' (ks \<lparr>ksPSpace := restrict_map (ksPSpace ks) {..< x}\<rparr>)
+    \<Longrightarrow> pspace_distinct' (ks \<lparr>ksPSpace := restrict_map (ksPSpace ks) {x ..}\<rparr>)
+    \<Longrightarrow> pspace_distinct' ks"
+  apply (clarsimp simp: pspace_distinct'_def)
+  apply (drule bspec, erule graph_ofI, clarsimp)
+  apply (simp add: Ball_def)
+  apply (drule_tac x=xa in spec)+
+  apply (erule disjE)
+   apply (simp add: domI)
+   apply (thin_tac "P \<longrightarrow> Q" for P Q)
+   apply (simp add: ps_clear_def)
+   apply (erule trans[rotated])
+   apply auto[1]
+  apply (clarsimp simp add: domI)
+  apply (drule mp, erule(1) order_le_less_trans)
+  apply (thin_tac "P \<longrightarrow> Q" for P Q)
+  apply (simp add: ps_clear_def)
+  apply (erule trans[rotated])
+  apply auto[1]
+  done
 
 lemma s0H_pspace_distinct':
   "pspace_distinct' s0H_internal"
