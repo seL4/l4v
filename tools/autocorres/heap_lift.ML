@@ -714,11 +714,17 @@ let
     fun const_gone term name =
         if not (contains_const name term) then ()
         else Utils.TERM_non_critical keep_going
-               ("autocorres heap lift: could not remove " ^ name) [term]
+               ("Heap lift: could not remove " ^ name ^ " in " ^ fn_name ^ ".") [term]
+    fun const_old_heap term name =
+        if not (contains_const name term) then ()
+        else warning ("Heap lift: could not remove " ^ name ^ " in " ^ fn_name ^
+                      ". Output program may be unprovable.")
     val _ = if Symset.contains unliftable_functions fn_name then []
-            else map (const_gone (term_of_thm thm))
-                     [@{const_name "field_lvalue"}, @{const_name "c_guard"},
-                      @{const_name "heap_lift__h_val"}]
+            else (map (const_gone (term_of_thm thm))
+                      [@{const_name "heap_lift__h_val"}];
+                  map (const_old_heap (term_of_thm thm))
+                      [@{const_name "field_lvalue"}, @{const_name "c_guard"}]
+                 )
 
     (* Gather statistics. *)
     val _ = Statistics.gather ctxt "HL" fn_name
