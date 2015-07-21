@@ -1361,7 +1361,7 @@ lemma heap_abs_expr_c_guard_array [heap_abs]:
   apply simp
   done
 
-(* begin machinery for abs_array_update *)
+(* begin machinery for heap_abs_array_update *)
 lemma fold_over_st:
   "\<lbrakk> xs = ys; P s;
      \<And>s x. x \<in> set xs \<and> P s \<Longrightarrow> P (g x s) \<and> f x (st s) = st (g x s)
@@ -1601,18 +1601,21 @@ lemma fourthousand_index:
          rule fourthousand_size)+
   done
 
-(* end machinery for abs_array_update *)
+(* end machinery for heap_abs_array_update *)
 
-theorem abs_array_update [heap_abs]:
- "\<lbrakk>  valid_typ_heap st (getter :: 's \<Rightarrow> 'a ptr \<Rightarrow> 'a) setter
-                    vgetter vsetter t_hrs t_hrs_update;
-     abs_expr st Pb b' b \<rbrakk> \<Longrightarrow>
-      abs_modifies st (\<lambda>s. Pb s \<and> n < CARD('b) \<and>
+theorem heap_abs_array_update [heap_abs]:
+ "\<lbrakk> valid_typ_heap st (getter :: 's \<Rightarrow> 'a ptr \<Rightarrow> 'a) setter
+                   vgetter vsetter t_hrs t_hrs_update;
+    abs_expr st Pb b' b;
+    abs_expr st Pn n' n;
+    abs_expr st Pv v' v
+  \<rbrakk> \<Longrightarrow>
+    abs_modifies st (\<lambda>s. Pb s \<and> Pn s \<and> Pv s \<and> n' s < CARD('b) \<and>
                          (\<forall>ptr \<in> set (array_addrs (ptr_coerce (b' s)) CARD('b)). (vgetter s ptr)))
-        (\<lambda>s. setter (\<lambda>v. v(ptr_coerce (b' s) +\<^sub>p int n := val)) s)
-        (\<lambda>s. t_hrs_update (hrs_mem_update (
+      (\<lambda>s. setter (\<lambda>v. v(ptr_coerce (b' s) +\<^sub>p int (n' s) := v' s)) s)
+      (\<lambda>s. t_hrs_update (hrs_mem_update (
               heap_update (b s) (Arrays.update ((h_val (hrs_mem (t_hrs s)) (b s))
-                       :: ('a::oneMB_size)['b::fourthousand_count]) n val))) s)"
+                                 :: ('a::oneMB_size)['b::fourthousand_count]) (n s) (v s)))) s)"
   apply (clarsimp simp: abs_modifies_def abs_expr_def)
   (* rewrite heap_update of array *)
   apply (subst array_update_split
@@ -1624,9 +1627,9 @@ theorem abs_array_update [heap_abs]:
   (* rewrite array reads to pointer reads *)
   apply (subst fold_cong[OF refl refl,
            where g = "\<lambda>i. setter (\<lambda>x. x(ptr_coerce (b' (st s)) +\<^sub>p int i :=
-                         if i = n then val else getter (st s) (ptr_coerce (b' (st s)) +\<^sub>p int i)))"])
+                         if i = n' (st s) then v' (st s) else getter (st s) (ptr_coerce (b' (st s)) +\<^sub>p int i)))"])
    apply (rule_tac f = setter in arg_cong)
-   apply (case_tac "x = n")
+   apply (case_tac "x = n' (st s)")
     apply simp
    apply (subst index_update2)
      apply simp
@@ -1638,7 +1641,7 @@ theorem abs_array_update [heap_abs]:
    apply metis
 
   (* split away the indices that don't change *)
-  apply (subst split_upt_on_n[where n = n])
+  apply (subst split_upt_on_n[where n = "n s"])
    apply simp
   apply clarsimp
 
@@ -1663,7 +1666,7 @@ theorem abs_array_update [heap_abs]:
    apply (subst read_write_valid_def1[where r = getter and w = setter])
     apply assumption
    apply (clarsimp simp: ptr_add_def)
-   apply (subgoal_tac "of_nat (i * size_of TYPE('a)) \<noteq> of_nat (n * size_of TYPE('a))")
+   apply (subgoal_tac "of_nat (i * size_of TYPE('a)) \<noteq> of_nat (n s * size_of TYPE('a))")
     apply force
    apply (subst fourthousand_index[symmetric])
      apply assumption
@@ -1671,6 +1674,23 @@ theorem abs_array_update [heap_abs]:
    apply simp
   apply simp
   done
+
+(* Array access, which is considerably simpler than updating. *)
+lemma heap_abs_array_access[heap_abs]:
+ "\<lbrakk> valid_typ_heap st (getter :: 's \<Rightarrow> ('a::mem_type) ptr \<Rightarrow> 'a) setter
+                   vgetter vsetter t_hrs t_hrs_update;
+    abs_expr st Pb b' b;
+    abs_expr st Pn n' n
+  \<rbrakk> \<Longrightarrow>
+    abs_expr st (\<lambda>s. Pb s \<and> Pn s \<and> n' s < CARD('b::finite) \<and> vgetter s (ptr_coerce (b' s) +\<^sub>p int (n' s)))
+      (\<lambda>s. getter s (ptr_coerce (b' s) +\<^sub>p int (n' s)))
+      (\<lambda>s. index (h_val (hrs_mem (t_hrs s)) (b s :: ('a['b]) ptr)) (n s))"
+  apply (clarsimp simp: valid_typ_heap_def abs_expr_def)
+  apply (subst heap_access_Array_element)
+   apply simp
+  apply (simp add: set_array_addrs)
+  done
+
 
 lemma the_fun_upd_lemma1:
     "(\<lambda>x. the (f x))(p := v) = (\<lambda>x. the ((f (p := Some v)) x))"
