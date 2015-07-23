@@ -616,8 +616,6 @@ lemma handle_wait_bisim:
   apply (simp add: Let_def)
   apply (rule bisim_guard_imp_both)
    apply (rule bisim_split_refl)
-     apply (rule bisim_symb_exec_r_bs)
-      apply (rule delete_caller_cap_bisim)
        apply (rule bisim_split_refl)
            apply (rule bisim_split_catch_req)
               apply (simp add: cap_fault_injection)

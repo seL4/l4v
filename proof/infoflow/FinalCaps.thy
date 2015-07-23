@@ -3052,24 +3052,27 @@ lemma handle_wait_silc_inv:
    handle_wait
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   apply (simp add: handle_wait_def Let_def lookup_cap_def split_def)
-  apply (wp hoare_vcg_all_lift 
+  apply (wp hoare_vcg_all_lift delete_caller_cap_silc_inv 
             receive_ipc_silc_inv 
             lookup_slot_for_thread_authorised
             lookup_slot_for_thread_cap_fault
             get_cap_auth_wp[where aag=aag]
-        | wpc | simp)+
-     apply (rule_tac Q'="\<lambda>r s. silc_inv aag st s \<and> invs s \<and> pas_refined aag s  \<and> is_subject aag thread" in hoare_post_imp_R)
-      apply wp
-     apply ((clarsimp simp add: invs_valid_objs invs_sym_refs 
+        | wpc | simp
+        | rule_tac Q="\<lambda>rv s. invs s \<and> pas_refined aag s \<and> is_subject aag thread 
+                        \<and> (pasSubject aag, Receive, pasObjectAbs aag x31) \<in> pasPolicy aag"
+                    in hoare_strengthen_post, wp, clarsimp simp: invs_valid_objs invs_sym_refs)+
+    apply (rule_tac Q'="\<lambda>r s. silc_inv aag st s \<and> invs s \<and> pas_refined aag s  
+                           \<and> is_subject aag thread \<and> tcb_at thread s 
+                           \<and> cur_thread s = thread" in hoare_post_imp_R)
+     apply wp
+    apply ((clarsimp simp add: invs_valid_objs invs_sym_refs 
            | intro impI allI conjI
            | rule cte_wp_valid_cap caps_of_state_cteD
            | fastforce simp: aag_cap_auth_def cap_auth_conferred_def 
              cap_rights_to_auth_def valid_fault_def
            )+)[1]
-    apply (wp delete_caller_cap_silc_inv | simp add: split_def cong: conj_cong)+
-   apply(rule_tac Q="\<lambda>rva s. 
-           invs s \<and> is_subject aag thread" in hoare_strengthen_post)
-    apply(wp | simp add: invs_valid_objs invs_mdb invs_sym_refs tcb_at_invs)+
+   apply (wp delete_caller_cap_silc_inv | simp add: split_def cong: conj_cong)+
+  apply(wp | simp add: invs_valid_objs invs_mdb invs_sym_refs tcb_at_invs)+
   done
 
 lemma handle_interrupt_silc_inv:

@@ -924,7 +924,6 @@ lemma tcb_cnode_index_3_reply_or_null:
   apply (clarsimp split: Structures_A.thread_state.split_asm)
   done
 
-
 lemma ex_nonz_cap_to_tcb_strg:
   "(\<exists>cref. cte_wp_at (\<lambda>cap. is_thread_cap cap \<and> p \<in> zobj_refs cap) cref s)
        \<longrightarrow> ex_nonz_cap_to p s"
@@ -938,18 +937,22 @@ lemma ex_tcb_cap_to_tcb_at_strg:
   apply (drule(1) caps_of_state_valid_cap[rotated])
   apply (drule(2) valid_cap_tcb_at_tcb_or_zomb)
   apply fastforce
-  done
-
+  done  
+  
 lemma delete_caller_cap_nonz_cap:
-  "\<lbrace>ex_nonz_cap_to p and tcb_at p and valid_objs\<rbrace>
+  "\<lbrace>ex_nonz_cap_to p and tcb_at t and valid_objs\<rbrace>
       delete_caller_cap t
    \<lbrace>\<lambda>rv. ex_nonz_cap_to p\<rbrace>"
-  apply (simp add: delete_caller_cap_def)
-  apply (strengthen ex_nonz_cap_to_tcb_strg)
-  apply (wp hoare_vcg_ex_lift cap_delete_one_cte_wp_at_preserved)
-   apply (clarsimp simp: is_cap_simps can_fast_finalise_def)
-  apply (strengthen ex_tcb_cap_to_tcb_at_strg)
-  apply simp
+  apply (simp add: delete_caller_cap_def ex_nonz_cap_to_def cte_wp_at_caps_of_state)
+  apply (rule hoare_pre)
+  apply (wp hoare_vcg_ex_lift cap_delete_one_caps_of_state)
+  apply (clarsimp simp: cte_wp_at_caps_of_state)
+  apply (rule_tac x=a in exI)
+  apply (rule_tac x=b in exI)
+  apply clarsimp
+  apply (drule (1) tcb_cap_valid_caps_of_stateD)
+  apply (drule (1) tcb_cnode_index_3_reply_or_null)
+  apply (auto simp: is_cap_simps)
   done
 
 lemma delete_caller_cap_invs[wp]:
@@ -989,18 +992,19 @@ by (clarsimp simp: invs_valid_tcb_ctable)
 lemma hw_invs[wp]: "\<lbrace>invs and ct_active\<rbrace> handle_wait \<lbrace>\<lambda>r. invs\<rbrace>"
   apply (simp add: handle_wait_def Let_def ep_aep_cap_case_helper
              cong: if_cong)
-  apply (wp hoare_drop_imps delete_caller_cap_nonz_cap | simp)+
+  apply (wp hoare_drop_imps delete_caller_cap_nonz_cap hoare_vcg_ball_lift | simp)+
      apply (rule hoare_vcg_E_elim)
       apply (simp add: lookup_cap_def lookup_slot_for_thread_def)
       apply wp
        apply (simp add: split_def)
        apply (wp resolve_address_bits_valid_fault2)
-     apply (wp delete_caller_cap_nonz_cap | simp add: valid_fault_def)+
-     apply (wp hoare_drop_imps)
-    apply (wp delete_caller_cap_nonz_cap | simp
+    apply (wp hoare_drop_imps | simp add: valid_fault_def)+
+      apply (simp add: ball_conj_distrib)
+      apply (wp lookup_cap_ex_cap hoare_drop_imps)
+   apply (wp delete_caller_cap_nonz_cap | simp add: valid_fault_def
            | strengthen invs_valid_tcb_ctable_strengthen)+
   apply (simp add: ct_in_state_def)
-  apply (fastforce elim!: st_tcb_ex_cap)
+  apply (fastforce elim!: invs_valid_tcb_ctable st_tcb_ex_cap)
   done
 
 crunch typ_at[wp]: delete_caller_cap "\<lambda>s. P (typ_at T p s)"

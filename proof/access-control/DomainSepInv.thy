@@ -1318,10 +1318,12 @@ lemma handle_wait_domain_sep_inv:
    \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
   apply (simp add: handle_wait_def Let_def lookup_cap_def split_def)
   apply (wp hoare_vcg_all_lift lookup_slot_for_thread_cap_fault
-            receive_ipc_domain_sep_inv
-            get_cap_wp
-        | wpc | simp)+
-     apply (rule_tac Q'="\<lambda>r s. domain_sep_inv irqs st s \<and> invs s" in hoare_post_imp_R)
+            receive_ipc_domain_sep_inv delete_caller_cap_domain_sep_inv
+            get_cap_wp 
+        | wpc | simp
+        | rule_tac Q="\<lambda>rv. invs and (\<lambda>s. cur_thread s = thread)" in hoare_strengthen_post, wp, 
+          clarsimp simp: invs_valid_objs invs_sym_refs)+
+     apply (rule_tac Q'="\<lambda>r s. domain_sep_inv irqs st s \<and> invs s \<and> tcb_at thread s \<and> thread = cur_thread s" in hoare_post_imp_R)
       apply wp
      apply ((clarsimp simp add: invs_valid_objs invs_sym_refs
            | intro impI allI conjI
@@ -1329,8 +1331,6 @@ lemma handle_wait_domain_sep_inv:
            | fastforce simp:  valid_fault_def
            )+)[1]
     apply (wp delete_caller_cap_domain_sep_inv | simp add: split_def cong: conj_cong)+
-   apply(rule_tac Q="\<lambda>rva s.
-           invs s" in hoare_strengthen_post)
     apply(wp | simp add: invs_valid_objs invs_mdb invs_sym_refs tcb_at_invs)+
   done
 

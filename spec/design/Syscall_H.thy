@@ -116,13 +116,15 @@ od)"
 defs handleWait_def:
 "handleWait\<equiv> (do
     thread \<leftarrow> getCurThread;
-    deleteCallerCap thread;
     epCPtr \<leftarrow> asUser thread $ liftM CPtr $ getRegister capRegister;
     (capFaultOnFailure epCPtr True $ (doE
         epCap \<leftarrow> lookupCap thread epCPtr;
         (case epCap of
               EndpointCap _ _ _ True _ \<Rightarrow>  
-                withoutFailure $ receiveIPC thread epCap
+                withoutFailure $ (do
+                    deleteCallerCap thread;
+                    receiveIPC thread epCap
+                od)
             | AsyncEndpointCap _ _ _ True \<Rightarrow>  
                 withoutFailure $ receiveAsyncIPC thread epCap
             | _ \<Rightarrow>   throw $ MissingCapability_ \<lparr> missingCapBitsLeft= 0 \<rparr>)

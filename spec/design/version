@@ -1,8 +1,5 @@
-Built from git repo at /home/tsewell/dev/verification/seL4/haskell by tsewell
+Built from git repo at /home/jbeeren/nfshome/work/replycap/seL4/haskell by jbeeren
 
 Generated from changeset:
-25155ca haskell: Add assertion about IRQ handler cap.
+827a47e SELFOUR-220: only delete reply cap when waiting on sync endpoint
 
-
-Warning - uncomitted changes used:
-?? ../rbuild/

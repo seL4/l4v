@@ -1600,29 +1600,35 @@ lemma valid_cap_tcb_at_thread_or_zomb':
                      obj_at'_def projectKOs
               split: capability.split_asm)
 
+lemma cteDeleteOne_reply_cap_to''[wp]:
+  "\<lbrace>ex_nonz_cap_to' p and
+    cte_wp_at' (\<lambda>c. isReplyCap (cteCap c) \<or> isNullCap (cteCap c)) slot\<rbrace>
+   cteDeleteOne slot
+   \<lbrace>\<lambda>rv. ex_nonz_cap_to' p\<rbrace>"
+  apply (simp add: cteDeleteOne_def ex_nonz_cap_to'_def unless_def)
+  apply (rule hoare_seq_ext [OF _ getCTE_sp])
+  apply (rule hoare_assume_pre)
+  apply (subgoal_tac "isReplyCap (cteCap cte) \<or> isNullCap (cteCap cte)")
+   apply (wp hoare_vcg_ex_lift emptySlot_cte_wp_cap_other isFinalCapability_inv
+        | clarsimp simp: finaliseCap_def isCap_simps | simp)+
+   apply (fastforce simp: cte_wp_at_ctes_of)
+  apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps)
+  done  
+
 lemma deleteCallerCap_nonz_cap:
-  "\<lbrace>ex_nonz_cap_to' p and tcb_at' p and valid_objs'\<rbrace>
+  "\<lbrace>ex_nonz_cap_to' p and tcb_at' t and valid_objs'\<rbrace>
       deleteCallerCap t
    \<lbrace>\<lambda>rv. ex_nonz_cap_to' p\<rbrace>"
-  apply (simp add: deleteCallerCap_def getThreadCallerSlot_def
-                   locateSlot_conv ex_nonz_cap_to'_def getSlotCap_def)
-  apply wp
-    apply (rule_tac P="\<lambda>s. \<exists>cref. cte_wp_at' (\<lambda>cte. isThreadCap (cteCap cte)
-                                               \<and> p \<in> zobj_refs' (cteCap cte)) cref s"
-                     in hoare_strengthen_post)
-     apply (rule hoare_vcg_ex_lift, rule cteDeleteOne_cte_wp_at_preserved)
-     apply (clarsimp simp: isCap_simps finaliseCap_def)
-    apply (clarsimp simp: cte_wp_at_ctes_of)
-    apply fastforce
-   apply wp
-   apply (rule hoare_drop_imps, wp)
-  apply (clarsimp simp: cte_wp_at_ctes_of)
-  apply (frule(1) ctes_of_valid')
-  apply (drule(2) valid_cap_tcb_at_thread_or_zomb')
-  apply (clarsimp simp: isCap_simps)
-  apply fastforce
+   apply (simp add: deleteCallerCap_def getSlotCap_def getThreadCallerSlot_map
+                    locateSlot_conv )
+  apply (rule hoare_pre)
+  apply (wp cteDeleteOne_reply_cap_to'' getCTE_wp')
+  apply clarsimp
+  apply (frule_tac offs="tcb_cnode_index 3" in tcb_at_cte_at_map)
+  apply (clarsimp simp: tcb_cap_cases_def)
+  apply (auto simp: ex_nonz_cap_to'_def isCap_simps cte_wp_at_ctes_of)
   done
-
+  
 crunch sch_act_sane[wp]: cteDeleteOne sch_act_sane
   (wp: crunch_wps ss_sch_act_sane_weak
    simp: crunch_simps unless_def
@@ -1631,6 +1637,13 @@ crunch sch_act_sane[wp]: cteDeleteOne sch_act_sane
 crunch sch_act_sane[wp]: deleteCallerCap sch_act_sane
   (wp: crunch_wps)
 
+lemma delete_caller_cap_valid_ep_cap:
+  "\<lbrace>valid_cap (cap.EndpointCap r a b)\<rbrace> delete_caller_cap thread \<lbrace>\<lambda>rv. valid_cap (cap.EndpointCap r a b)\<rbrace>"
+  apply (clarsimp simp: delete_caller_cap_def cap_delete_one_def valid_cap_def)
+  apply (rule hoare_pre)
+   by (wp get_cap_wp fast_finalise_typ_at abs_typ_at_lifts(1) 
+       | simp add: unless_def valid_cap_def)+
+   
 lemma hw_corres':
    "corres dc (einvs and ct_in_state active 
                     and (\<lambda>s. ex_nonz_cap_to (cur_thread s) s))
@@ -1644,51 +1657,29 @@ lemma hw_corres':
              cong: if_cong cap.case_cong capability.case_cong bool.case_cong)
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqr [OF _ gct_corres])
-      apply (rule corres_split_nor [OF _ delete_caller_cap_corres])
-        apply (rule corres_split_eqr [OF _ user_getreg_corres])
-          apply (rule corres_split_catch)
-             apply (erule hf_corres)
-            apply (rule corres_cap_fault)
-            apply (rule corres_splitEE [OF _ lc_corres])
-              apply (clarsimp split: cap_relation_split_asm arch_cap.split_asm
-                               simp: lookup_failure_map_def)
-                (* evil, get us different preconds for the cases *)
-               apply (rule corres_guard_imp[rotated], erule conjunct1, erule conjunct1)
+      apply (rule corres_split_eqr [OF _ user_getreg_corres])
+        apply (rule corres_split_catch)
+           apply (erule hf_corres)
+          apply (rule corres_cap_fault)
+          apply (rule corres_splitEE [OF _ lc_corres])
+            apply (clarsimp split: cap_relation_split_asm arch_cap.split_asm
+                             simp: lookup_failure_map_def)
+             (* evil, get us different preconds for the cases *)
+             apply (rule corres_guard_imp[rotated], erule conjunct1, erule conjunct1)
+             apply (rule corres_split_nor[OF _ delete_caller_cap_corres])
                apply (rule receive_ipc_corres, simp+)[1]
-              apply (rule corres_guard_imp[rotated], erule conjunct2, erule conjunct2)
-              apply (rule receive_async_ipc_corres, simp+)
-             apply (wp | wpcw | simp)+
-           apply (rule hoare_vcg_E_elim)
-            apply (simp add: lookup_cap_def lookup_slot_for_thread_def)
-            apply wp
-             apply (simp add: split_def)
-             apply (wp resolve_address_bits_valid_fault2)
-           apply (wp | wpcw | simp add: valid_fault_def)+
-       apply (rule_tac Q="\<lambda>rv. einvs and st_tcb_at active thread
-                                 and ex_nonz_cap_to thread
-                                 and cte_wp_at (\<lambda>c. c = cap.NullCap)
-                                                  (thread, tcb_cnode_index 3)"
-                    in hoare_post_imp)
-        apply (clarsimp simp: st_tcb_at_tcb_at invs_def valid_state_def
-                              valid_pspace_def objs_valid_tcb_ctable)
-       apply (wp delete_caller_cap_nonz_cap)
-      apply (simp add: invs_valid_objs' invs_pspace_aligned'
-                       invs_pspace_distinct' invs_cur'
-                 cong: conj_cong)
-      apply (simp add: invs_valid_objs' invs_pspace_aligned'
-                       invs_pspace_distinct' invs_cur'
-                 cong: rev_conj_cong)
-      apply (rule_tac Q="\<lambda>rv. invs' and (\<lambda>s. thread = ksCurThread s)
-                                    and sch_act_not thread
-                                    and (\<lambda>s. \<forall>p. ksCurThread s \<notin> set (ksReadyQueues s p))
-                                    and st_tcb_at' simple' thread
-                                    and ex_nonz_cap_to' thread"
-               in hoare_post_imp, clarsimp)
-      apply (wp deleteCallerCap_nonz_cap
-                hoare_vcg_all_lift
-                deleteCallerCap_ct_not_ksQ)
+              apply (wp delete_caller_cap_nonz_cap delete_caller_cap_valid_ep_cap)
+            apply (rule corres_guard_imp[rotated], erule conjunct2, erule conjunct2)
+            apply (rule receive_async_ipc_corres, simp+)
+           apply (wp | wpcw | simp)+
+         apply (rule hoare_vcg_E_elim)
+          apply (simp add: lookup_cap_def lookup_slot_for_thread_def)
+          apply wp
+           apply (simp add: split_def)
+           apply (wp resolve_address_bits_valid_fault2)
+         apply (wp | wpcw | simp add: valid_fault_def)+
    apply (simp add: invs_valid_objs tcb_at_invs invs_psp_aligned invs_cur)
-   apply (clarsimp simp add: ct_in_state_def conj_comms)
+   apply (clarsimp simp add: ct_in_state_def conj_comms invs_valid_tcb_ctable)
   apply (clarsimp simp add: ct_in_state'_def)
   apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def
                         ct_in_state'_def sch_act_sane_not)
@@ -1711,7 +1702,18 @@ lemma hw_corres:
 lemma lookupCap_refs[wp]:
   "\<lbrace>invs'\<rbrace> lookupCap t ref \<lbrace>\<lambda>rv s. \<forall>r\<in>zobj_refs' rv. ex_nonz_cap_to' r s\<rbrace>,-"
   by (simp add: lookupCap_def split_def | wp | simp add: o_def)+
-
+  
+lemma deleteCallerCap_ksQ_ct':
+  "\<lbrace>invs' and ct_in_state' simple' and sch_act_sane and
+     (\<lambda>s. ksCurThread s \<notin> set (ksReadyQueues s p) \<and> thread = ksCurThread s)\<rbrace>
+      deleteCallerCap thread
+   \<lbrace>\<lambda>rv s. thread \<notin> set (ksReadyQueues s p)\<rbrace>"
+  apply (rule_tac Q="\<lambda>rv s. thread = ksCurThread s \<and> ksCurThread s \<notin> set (ksReadyQueues s p)"
+            in hoare_strengthen_post)
+   apply (wp deleteCallerCap_ct_not_ksQ)
+    apply auto
+  done
+     
 lemma hw_invs'[wp]:
   "\<lbrace>invs' and ct_in_state' simple' and sch_act_sane
           and (\<lambda>s. ex_nonz_cap_to' (ksCurThread s) s)
@@ -1721,37 +1723,30 @@ lemma hw_invs'[wp]:
   apply (simp add: handleWait_def cong: if_cong)
   apply (rule hoare_pre)
    apply ((wp | wpc | simp)+)[1]
-      apply (rule validE_validE_R)
-      apply (rule_tac Q="\<lambda>rv s. invs' s
-                              \<and> sch_act_sane s
-                              \<and> (\<forall>p. ksCurThread s \<notin> set (ksReadyQueues s p))
-                              \<and> thread = ksCurThread s
-                              \<and> ct_in_state' simple' s
-                              \<and> ex_nonz_cap_to' thread s
-                              \<and> thread \<noteq> ksIdleThread s
-                              \<and> (\<forall>x \<in> zobj_refs' rv. ex_nonz_cap_to' x s)"
-                  and E="\<lambda>_ _. True"
-               in hoare_post_impErr[rotated])
-        apply (clarsimp simp: isCap_simps ct_in_state'_def
-                              sch_act_sane_not)
-       apply (assumption)
-      apply (wp)
-    apply (rule_tac Q="\<lambda>rv s. invs' s
-                            \<and> sch_act_sane s
-                            \<and> (\<forall>p. ksCurThread s \<notin> set (ksReadyQueues s p))
-                            \<and> thread = ksCurThread s
-                            \<and> ct_in_state' simple' s
-                            \<and> ex_nonz_cap_to' thread s
-                            \<and> thread \<noteq> ksIdleThread s"
-             in hoare_post_imp)
-     apply (clarsimp simp: ct_in_state'_def)+
-    apply (wp deleteCallerCap_nonz_cap
-              hoare_vcg_all_lift
-              deleteCallerCap_ct_not_ksQ
-              hoare_lift_Pf2 [OF deleteCallerCap_simple
-                                 deleteCallerCap_ct'])
+              apply (clarsimp simp: ct_in_state'_def)
+              apply (wp deleteCallerCap_nonz_cap hoare_vcg_all_lift
+                        deleteCallerCap_ksQ_ct'
+                        hoare_lift_Pf2[OF deleteCallerCap_simple
+                        deleteCallerCap_ct']
+                      | wpc | simp)+
+     apply (rule validE_validE_R)
+     apply (rule_tac Q="\<lambda>rv s. invs' s
+                             \<and> sch_act_sane s
+                             \<and> (\<forall>p. ksCurThread s \<notin> set (ksReadyQueues s p))
+                             \<and> thread = ksCurThread s
+                             \<and> ct_in_state' simple' s
+                             \<and> ex_nonz_cap_to' thread s
+                             \<and> thread \<noteq> ksIdleThread s
+                            \<and> (\<forall>x \<in> zobj_refs' rv. ex_nonz_cap_to' x s)"
+              and E="\<lambda>_ _. True"
+           in hoare_post_impErr[rotated])
+       apply (clarsimp simp: isCap_simps ct_in_state'_def
+                             sch_act_sane_not st_tcb_at_tcb_at'
+                             invs_valid_objs')
+      apply (assumption)
+     apply (wp)
   apply (clarsimp)
-  apply (auto elim: st_tcb_ex_cap'' st_tcb'_weakenE 
+  apply (auto elim: st_tcb_ex_cap'' st_tcb'_weakenE
              dest!: st_tcb_at_idle_thread'
               simp: ct_in_state'_def sch_act_sane_def)
   done

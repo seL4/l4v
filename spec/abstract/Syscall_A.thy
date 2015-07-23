@@ -268,8 +268,6 @@ definition
   "handle_wait \<equiv> do
      thread \<leftarrow> gets cur_thread;
 
-     delete_caller_cap thread;
-
      ep_cptr \<leftarrow> liftM data_to_cptr $ as_user thread $
                  get_register cap_register;
 
@@ -281,7 +279,10 @@ definition
         case ep_cap
           of EndpointCap ref badge rights \<Rightarrow>
              (if AllowRecv \<in> rights
-              then liftE $ receive_ipc thread ep_cap
+              then liftE $ do
+                 delete_caller_cap thread;
+                 receive_ipc thread ep_cap
+                od
               else flt)
            | AsyncEndpointCap ref badge rights \<Rightarrow>
              (if AllowRecv \<in> rights
