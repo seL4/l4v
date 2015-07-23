@@ -387,7 +387,8 @@ def type_sig_transform (tree_element):
 
 ignore_classes = {'Error':1}
 hand_classes = {'Bits': ['HS_bit'],
-    'Num': ['minus', 'one', 'zero', 'plus', 'numeral']}
+    'Num': ['minus', 'one', 'zero', 'plus', 'numeral'],
+    'FiniteBits': ['finiteBit']}
 
 def type_transform (string):
 	"""Performs transformations on a type signature, whether
