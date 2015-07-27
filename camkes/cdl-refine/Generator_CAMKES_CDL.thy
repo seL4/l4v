@@ -376,9 +376,9 @@ text {*
   above.
 *}
 definition
-  generate :: "camkes_state \<Rightarrow> cdl_heap \<Rightarrow> irqs \<Rightarrow> cdl_state option"
+  state_of :: "camkes_state \<Rightarrow> cdl_heap \<Rightarrow> irqs \<Rightarrow> cdl_state option"
 where
-  "generate spec extra irqs \<equiv>
+  "state_of spec extra irqs \<equiv>
      if valid_extra (generate' spec) extra \<and> valid_irqs (generate' spec) extra irqs then
        Some ((merge_objs
                (merge_objs (generate' spec) extra) (irqs_objects irqs))
@@ -386,13 +386,13 @@ where
      else
        None"
 
-lemma generated_implies_valid:
-  "generate spec extra irqs = Some cdl \<Longrightarrow> valid_extra (generate' spec) extra"
-  by (metis generate_def option.distinct(1))
+lemma state_of_implies_valid:
+  "state_of spec extra irqs = Some cdl \<Longrightarrow> valid_extra (generate' spec) extra"
+  by (metis state_of_def option.distinct(1))
 
-lemma generated_implies_valid2:
-  "generate spec extra irqs = Some cdl \<Longrightarrow> valid_irqs (generate' spec) extra irqs"
-  by (metis generate_def option.distinct(1))
+lemma state_of_implies_valid2:
+  "state_of spec extra irqs = Some cdl \<Longrightarrow> valid_irqs (generate' spec) extra irqs"
+  by (metis state_of_def option.distinct(1))
 
 lemma merge_contained:
   "\<lbrakk>z = merge_cdl x y; cdl_objects z u = Some v\<rbrakk>
@@ -510,9 +510,9 @@ lemma helper12: "valid_extra a b \<Longrightarrow> dom (cdl_objects a) \<inter> 
   by (clarsimp simp:valid_extra_def)
 
 lemma generated_objects_disjoint:
-  "generate spec extra irqs = Some cdl \<Longrightarrow>
+  "state_of spec extra irqs = Some cdl \<Longrightarrow>
      obj_count (generate' spec) + obj_count' extra + obj_count' (irqs_objects irqs) = obj_count cdl"
-  apply (frule generated_implies_valid, frule generated_implies_valid2)
+  apply (frule state_of_implies_valid, frule state_of_implies_valid2)
   apply (subst card_Un_disjoint[symmetric], simp_all)
    apply (clarsimp simp:helper12)
   apply (subst card_Un_disjoint[symmetric], simp_all)
@@ -526,7 +526,7 @@ lemma generated_objects_disjoint:
     apply blast
    apply (clarsimp simp:valid_irqs_def)
    apply blast
-  apply (clarsimp simp:generate_def merge_cdl_def merge_objs_def)
+  apply (clarsimp simp:state_of_def merge_cdl_def merge_objs_def)
   by (simp add: Un_assoc)
 
 lemma helper16: "(a, b) \<in> set (enumerate x ys) \<Longrightarrow> b \<in> set ys"
@@ -602,7 +602,7 @@ lemma only_endpoint_caps2:
 
 text {* All the caps in a generated spec are only to endpoints. *}
 lemma generated_caps_limited:
-  "generate spec extra irqs = Some cdl \<Longrightarrow>
+  "state_of spec extra irqs = Some cdl \<Longrightarrow>
      \<forall>cnode \<in> ((\<lambda>c. case c of Types_D.CNode c' \<Rightarrow> c') `
                  (Set.filter (\<lambda>c. case c of Types_D.CNode _ \<Rightarrow> True | _ \<Rightarrow> False)
                    (Map.ran (cdl_objects cdl)))).
@@ -610,7 +610,7 @@ lemma generated_caps_limited:
          case cap of Types_D.EndpointCap _ _ _ \<Rightarrow> True
                    | Types_D.AsyncEndpointCap _ _ _ \<Rightarrow> True
                    | _ \<Rightarrow> False"
-  apply (clarsimp simp:generate_def)
+  apply (clarsimp simp:state_of_def)
   apply (rename_tac cap)
   apply (subgoal_tac "valid_extra (generate' spec) extra")
    prefer 2
