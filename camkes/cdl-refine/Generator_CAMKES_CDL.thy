@@ -235,7 +235,7 @@ definition
 where
   "tcb_objs spec \<equiv> concat (
      (* The 'control' TCB *)
-     map (\<lambda>(n, c). (n @ ''_tcb__control'', Types_D.Tcb \<lparr>cdl_tcb_caps = [
+     map (\<lambda>(n, c). (n @ ''_tcb_0_control'', Types_D.Tcb \<lparr>cdl_tcb_caps = [
        cspace \<mapsto> Types_D.CNodeCap (the_cnode_of n) (cnode_guard spec n) (cnode_guard_size spec n)
                    (cnode_size_bits spec n),
        vspace \<mapsto> Types_D.PageDirectoryCap (the_pd_of n) Real None,
