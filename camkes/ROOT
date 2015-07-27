@@ -34,22 +34,16 @@ session CamkesAdlSpec (Camkes) in "adl-spec" = HOL +
 (* Base session for CAmkES<->CapDL reasoning. This session is intended to be simply a combination
  * of CamkesAdlSpec and DSpec, and is defined because we can't easily depend on both.
  *)
-session CamkesCdlBase (Camkes) in "adl-spec" = DSpec +
+session CamkesCdlBase (Camkes) in "adl-spec" = DPolicy +
   theories
-    "Wellformed_CAMKES"
-    "Examples_CAMKES"
-    "../../lib/WordLemmaBucket"
-  document_files
-    "imgs/compilation.pdf"
-    "imgs/composite-passthrough.pdf"
-    "imgs/dataport.pdf"
-    "imgs/echo.pdf"
-    "imgs/event.pdf"
-    "imgs/NICTA_logo.pdf"
-    "imgs/terminal.pdf"
-    "intro.tex"
-    "root.tex"
-    "comment.sty"
+    (* DSpec *)
+      "../spec/capDL/Syscall_D"
+    (* CamkesAdlSpec *)
+      "Wellformed_CAMKES"
+      "Examples_CAMKES"
+    (* Lemma buckets *)
+      "../../lib/WordLemmaBucket"
+      "../../lib/LemmaBucket"
 
 (* CAmkES<->CapDL reasoning. *)
 session CamkesCdlRefine (Camkes) in "cdl-refine" = CamkesCdlBase +

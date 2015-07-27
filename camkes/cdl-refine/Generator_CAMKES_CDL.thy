@@ -4,6 +4,7 @@ theory Generator_CAMKES_CDL imports
   "../../spec/capDL/Syscall_D"
   Types_CAMKES_CDL
   "../../lib/WordLemmaBucket"
+  "../../proof/access-control/Dpolicy"
 begin
 
 text {*
@@ -70,7 +71,7 @@ where
      dom (cdl_objects initial) \<inter> dom (irqs_objects irqs) = {} \<and>
      dom extra \<inter> dom (irqs_objects irqs) = {} \<and>
      (\<forall>x \<in> ran (irqs_objects irqs). case x of
-        CNode c \<Rightarrow> c = \<lparr>cdl_cnode_caps = empty, cdl_cnode_size_bits = 0\<rparr>
+        Types_D.CNode c \<Rightarrow> c = \<lparr>cdl_cnode_caps = empty, cdl_cnode_size_bits = 0\<rparr>
       | _ \<Rightarrow> False)"
 
 text {*
@@ -111,9 +112,9 @@ where
   "valid_extra initial extra \<equiv>
      (\<forall>obj \<in> range extra. case obj of
           None \<Rightarrow> True
-        | Some (PageDirectory _) \<Rightarrow> True
-        | Some (PageTable _) \<Rightarrow> True
-        | Some (Frame _) \<Rightarrow> True
+        | Some (Types_D.PageDirectory _) \<Rightarrow> True
+        | Some (Types_D.PageTable _) \<Rightarrow> True
+        | Some (Types_D.Frame _) \<Rightarrow> True
         | _ \<Rightarrow> False) \<and>
      dom (cdl_objects initial) \<inter> dom extra = {}"
 
@@ -146,9 +147,9 @@ definition
 where
   "ep_objs' spec \<equiv> concat (map (\<lambda>(n, c).
      if conn_type c = seL4RPC then
-       [(n @ ''_ep'', c, Endpoint)]
+       [(n @ ''_ep'', c, Types_D.Endpoint)]
      else if conn_type c = seL4Asynch then
-       [(n @ ''_aep'', c, AsyncEndpoint)]
+       [(n @ ''_aep'', c, Types_D.AsyncEndpoint)]
      else
        []) (connections (composition spec)))"
 
@@ -182,16 +183,16 @@ where
   "cap_map spec instance \<equiv> map_of (enumerate (cap_offset spec instance) (concat (
      map (\<lambda>(n, c, _). if conn_type c = seL4RPC then (
                         if fst (conn_from c) = instance then
-                          [EndpointCap (the_id_of n) 0 RW]
+                          [Types_D.EndpointCap (the_id_of n) 0 RW]
                         else if fst (conn_to c) = instance then
-                          [EndpointCap (the_id_of n) 0 RW]
+                          [Types_D.EndpointCap (the_id_of n) 0 RW]
                         else
                           [])
                       else if conn_type c = seL4Asynch then (
                         if fst (conn_from c) = instance then
-                          [AsyncEndpointCap (the_id_of n) 0 W]
+                          [Types_D.AsyncEndpointCap (the_id_of n) 0 W]
                         else if fst (conn_to c) = instance then
-                          [AsyncEndpointCap (the_id_of n) 0 R]
+                          [Types_D.AsyncEndpointCap (the_id_of n) 0 R]
                         else
                           [])
                       else
@@ -222,8 +223,8 @@ definition
 where
   "cnode_objs spec \<equiv>
      map (\<lambda>n. (''cnode_'' @ n,
-               CNode \<lparr>cdl_cnode_caps = cap_map spec n,
-                      cdl_cnode_size_bits = cnode_size_bits spec n\<rparr>))
+               Types_D.CNode \<lparr>cdl_cnode_caps = cap_map spec n,
+                              cdl_cnode_size_bits = cnode_size_bits spec n\<rparr>))
        (instance_names spec)"
 
 lemma cnode_count_correct: "cnode_count spec = length (cnode_objs spec)"
@@ -234,22 +235,22 @@ definition
 where
   "tcb_objs spec \<equiv> concat (
      (* The 'control' TCB *)
-     map (\<lambda>(n, c). (n @ ''_tcb__control'', Tcb \<lparr>cdl_tcb_caps = [
-       cspace \<mapsto> CNodeCap (the_cnode_of n) (cnode_guard spec n) (cnode_guard_size spec n)
+     map (\<lambda>(n, c). (n @ ''_tcb__control'', Types_D.Tcb \<lparr>cdl_tcb_caps = [
+       cspace \<mapsto> Types_D.CNodeCap (the_cnode_of n) (cnode_guard spec n) (cnode_guard_size spec n)
                    (cnode_size_bits spec n),
-       vspace \<mapsto> PageDirectoryCap (the_pd_of n) Real None,
-       ipc_buffer_slot \<mapsto> FrameCap (the_ipc_buffer n 0) RWG 12 Real None],
+       vspace \<mapsto> Types_D.PageDirectoryCap (the_pd_of n) Real None,
+       ipc_buffer_slot \<mapsto> Types_D.FrameCap (the_ipc_buffer n 0) RWG 12 Real None],
                         cdl_tcb_fault_endpoint = 0,
                         cdl_tcb_intent = undefined,
                         cdl_tcb_has_fault = False,
                         cdl_tcb_domain = 0\<rparr>) # 
 
      (* The interface TCBs *)
-     map (\<lambda>(i, inf). (n @ ''_tcb_'' @ inf, Tcb \<lparr>cdl_tcb_caps = [
-       cspace \<mapsto> CNodeCap (the_cnode_of n) (cnode_guard spec n) (cnode_guard_size spec n)
+     map (\<lambda>(i, inf). (n @ ''_tcb_'' @ inf, Types_D.Tcb \<lparr>cdl_tcb_caps = [
+       cspace \<mapsto> Types_D.CNodeCap (the_cnode_of n) (cnode_guard spec n) (cnode_guard_size spec n)
                    (cnode_size_bits spec n),
-       vspace \<mapsto> PageDirectoryCap (the_pd_of n) Real None,
-       ipc_buffer_slot \<mapsto> FrameCap (the_ipc_buffer n (i + 1)) RWG 12 Real None],
+       vspace \<mapsto> Types_D.PageDirectoryCap (the_pd_of n) Real None,
+       ipc_buffer_slot \<mapsto> Types_D.FrameCap (the_ipc_buffer n (i + 1)) RWG 12 Real None],
                    cdl_tcb_fault_endpoint = 0,
                    cdl_tcb_intent = undefined,
                    cdl_tcb_has_fault = False,
@@ -407,19 +408,19 @@ abbreviation "objs cdl \<equiv> the ` (Set.filter is_some (range (cdl_objects cd
 abbreviation "objs' extra \<equiv> the ` (Set.filter is_some (range extra))"
 
 lemma valid_only_pds_pts_frames:
-  "valid_extra init cdl \<Longrightarrow> \<forall>i \<in> objs' cdl. case i of PageDirectory _ \<Rightarrow> True
-                                                   | PageTable _ \<Rightarrow> True
-                                                   | Frame _ \<Rightarrow> True
-                                                   | _ \<Rightarrow> False"
+  "valid_extra initial cdl \<Longrightarrow> \<forall>i \<in> objs' cdl. case i of Types_D.PageDirectory _ \<Rightarrow> True
+                                                       | Types_D.PageTable _ \<Rightarrow> True
+                                                       | Types_D.Frame _ \<Rightarrow> True
+                                                       | _ \<Rightarrow> False"
   apply (clarsimp simp:valid_extra_def)
   apply (erule_tac x=xa in allE)
   by (metis case_option_If2 is_none_def)
 
 lemma cnode_objs_only_cnodes:
-  "\<forall>(_, i) \<in> set (cnode_objs spec). case i of CNode _ \<Rightarrow> True | _ \<Rightarrow> False"
+  "\<forall>(_, i) \<in> set (cnode_objs spec). case i of Types_D.CNode _ \<Rightarrow> True | _ \<Rightarrow> False"
   by (clarsimp simp:cnode_objs_def)
 
-lemma tcb_objs_only_tcbs: "\<forall>(_, i) \<in> set (tcb_objs spec). case i of Tcb _ \<Rightarrow> True | _ \<Rightarrow> False"
+lemma tcb_objs_only_tcbs: "\<forall>(_, i) \<in> set (tcb_objs spec). case i of Types_D.Tcb _ \<Rightarrow> True | _ \<Rightarrow> False"
   apply (clarsimp simp:tcb_objs_def)
   apply (erule disjE)                                       
    by clarsimp+
@@ -431,7 +432,7 @@ lemma helper9: "(a \<in> (snd \<circ> snd) ` (set (enumerate i xs))) = (a \<in> 
   by (metis map_map map_snd_enumerate set_map)
 
 lemma ep_objs_only_eps:
-  "\<forall>(_, i) \<in> set (ep_objs spec). case i of Endpoint \<Rightarrow> True | AsyncEndpoint \<Rightarrow> True | _ \<Rightarrow> False"
+  "\<forall>(_, i) \<in> set (ep_objs spec). case i of Types_D.Endpoint \<Rightarrow> True | Types_D.AsyncEndpoint \<Rightarrow> True | _ \<Rightarrow> False"
   apply (clarsimp simp:ep_objs_def ep_objs'_def)
   by (metis cdl_object.simps(98) cdl_object.simps(99))
 
@@ -470,9 +471,9 @@ lemma helper13: "map_of (map (\<lambda>(n, y). (the_id_of n, y)) xs) x = Some z 
 
 lemma generated_no_pds_pts_frames:
   "generate' spec = cdl \<Longrightarrow>
-     \<not>(\<exists>x \<in> objs cdl. case x of PageDirectory _ \<Rightarrow> True
-                               | PageTable _ \<Rightarrow> True
-                               | Frame _ \<Rightarrow> True
+     \<not>(\<exists>x \<in> objs cdl. case x of Types_D.PageDirectory _ \<Rightarrow> True
+                               | Types_D.PageTable _ \<Rightarrow> True
+                               | Types_D.Frame _ \<Rightarrow> True
                                | _ \<Rightarrow> False)"
   apply (clarsimp simp:generate'_def obj_heap_def)
   apply (subst (asm) helper15)+
@@ -532,8 +533,8 @@ lemma helper16: "(a, b) \<in> set (enumerate x ys) \<Longrightarrow> b \<in> set
   by (metis enumerate_eq_zip in_set_zip2)
 
 lemma only_endpoint_caps:
-  "\<forall>cap \<in> ran (cap_map a xs). case cap of EndpointCap _ _ _ \<Rightarrow> True
-                                        | AsyncEndpointCap _ _ _ \<Rightarrow> True
+  "\<forall>cap \<in> ran (cap_map a xs). case cap of Types_D.EndpointCap _ _ _ \<Rightarrow> True
+                                        | Types_D.AsyncEndpointCap _ _ _ \<Rightarrow> True
                                         | _ \<Rightarrow> False"
   apply (clarsimp simp:cap_map_def)
   apply (subst (asm) ran_distinct)
@@ -581,15 +582,15 @@ lemma helper23:
 
 lemma valid_only_empty_cnodes:
   "valid_irqs spec extra irqs \<Longrightarrow> \<forall>obj \<in> ran (irqs_objects irqs). case obj of
-     CNode c \<Rightarrow> c = \<lparr>cdl_cnode_caps = empty, cdl_cnode_size_bits = 0\<rparr>
+     Types_D.CNode c \<Rightarrow> c = \<lparr>cdl_cnode_caps = empty, cdl_cnode_size_bits = 0\<rparr>
    | _ \<Rightarrow> False"
   by (clarsimp simp:valid_irqs_def)
 
 lemma only_endpoint_caps2:
   "\<forall>(name, cnode) \<in> set (cnode_objs spec). case cnode of
-     CNode c \<Rightarrow> (\<forall>cap \<in> ran (cdl_cnode_caps c). case cap of
-       EndpointCap _ _ _ \<Rightarrow> True
-     | AsyncEndpointCap _ _ _ \<Rightarrow> True
+     Types_D.CNode c \<Rightarrow> (\<forall>cap \<in> ran (cdl_cnode_caps c). case cap of
+       Types_D.EndpointCap _ _ _ \<Rightarrow> True
+     | Types_D.AsyncEndpointCap _ _ _ \<Rightarrow> True
      | _ \<Rightarrow> False)
    | _ \<Rightarrow> False"
   apply (clarsimp simp:cnode_objs_def)
@@ -602,12 +603,12 @@ lemma only_endpoint_caps2:
 text {* All the caps in a generated spec are only to endpoints. *}
 lemma generated_caps_limited:
   "generate spec extra irqs = Some cdl \<Longrightarrow>
-     \<forall>cnode \<in> ((\<lambda>c. case c of CNode c' \<Rightarrow> c') `
-                 (Set.filter (\<lambda>c. case c of CNode _ \<Rightarrow> True | _ \<Rightarrow> False)
+     \<forall>cnode \<in> ((\<lambda>c. case c of Types_D.CNode c' \<Rightarrow> c') `
+                 (Set.filter (\<lambda>c. case c of Types_D.CNode _ \<Rightarrow> True | _ \<Rightarrow> False)
                    (Map.ran (cdl_objects cdl)))).
        \<forall>cap \<in> (Map.ran (cdl_cnode_caps cnode)).
-         case cap of EndpointCap _ _ _ \<Rightarrow> True
-                   | AsyncEndpointCap _ _ _ \<Rightarrow> True
+         case cap of Types_D.EndpointCap _ _ _ \<Rightarrow> True
+                   | Types_D.AsyncEndpointCap _ _ _ \<Rightarrow> True
                    | _ \<Rightarrow> False"
   apply (clarsimp simp:generate_def)
   apply (rename_tac cap)
