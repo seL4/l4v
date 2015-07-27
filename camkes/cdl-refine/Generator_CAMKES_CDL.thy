@@ -239,7 +239,7 @@ where
        cspace \<mapsto> Types_D.CNodeCap (the_cnode_of n) (cnode_guard spec n) (cnode_guard_size spec n)
                    (cnode_size_bits spec n),
        vspace \<mapsto> Types_D.PageDirectoryCap (the_pd_of n) Real None,
-       ipc_buffer_slot \<mapsto> Types_D.FrameCap (the_ipc_buffer n 0) RWG 12 Real None],
+       ipc_buffer_slot \<mapsto> Types_D.FrameCap (the_ipc_buffer n 0) RW 12 Real None],
                         cdl_tcb_fault_endpoint = 0,
                         cdl_tcb_intent = undefined,
                         cdl_tcb_has_fault = False,
@@ -250,7 +250,7 @@ where
        cspace \<mapsto> Types_D.CNodeCap (the_cnode_of n) (cnode_guard spec n) (cnode_guard_size spec n)
                    (cnode_size_bits spec n),
        vspace \<mapsto> Types_D.PageDirectoryCap (the_pd_of n) Real None,
-       ipc_buffer_slot \<mapsto> Types_D.FrameCap (the_ipc_buffer n (i + 1)) RWG 12 Real None],
+       ipc_buffer_slot \<mapsto> Types_D.FrameCap (the_ipc_buffer n (i + 1)) RW 12 Real None],
                    cdl_tcb_fault_endpoint = 0,
                    cdl_tcb_intent = undefined,
                    cdl_tcb_has_fault = False,
