@@ -748,8 +748,11 @@ fun get_funs thy file = let
     fun get () = case TextIO.inputLine f
       of NONE => []
       | SOME s => unsuffix "\n" s :: get ()
-  in fun_groups [] (map (Library.space_explode " "
-    #> filter (fn s => s <> "")) (get ())) end
+    val lines = get ()
+      |> map (Library.space_explode " " #> filter (fn s => s <> ""))
+      |> filter_out null
+      |> filter_out (fn (s :: _) => String.isPrefix "#" s | _ => false)
+  in fun_groups [] lines end
 
 type funs = (string list * string list * (int * (int * term) list * term) option) Symtab.table
 

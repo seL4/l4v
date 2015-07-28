@@ -825,30 +825,16 @@ lemma simpl_to_graph_steps_Fault:
   done
 
 lemma simpl_to_graph_Guard:
-  "\<lbrakk> nn = NextNode m; GGamma gf = Some gfc; function_graph gfc m = Some (Cond l Err cond);
-        eq_impl nn eqs (\<lambda>gst sst. sst \<in> G \<longrightarrow> cond gst) (I \<inter> P);
-        simpl_to_graph SGamma GGamma gf l (add_cont c con) (Suc n) Q (G \<inter> P) I eqs2 out_eqs;
-        eq_impl nn eqs eqs2 (P \<inter> I \<inter> G) \<rbrakk>
+  "\<lbrakk> nn = NextNode m; eq_impl nn eqs eqs2 (P \<inter> I \<inter> G);
+        simpl_to_graph SGamma GGamma gf nn (add_cont c con) n Q (G \<inter> P) I eqs2 out_eqs \<rbrakk>
     \<Longrightarrow> simpl_to_graph SGamma GGamma gf nn (add_cont (com.Guard F G c) con) n Q P I eqs out_eqs"
   apply clarsimp
   apply (rule_tac S=G in simpl_to_graph_cases)
-   apply (erule_tac nn'=l in simpl_to_graph_step[rotated])
-   apply (simp add: exec_graph_step_image_node)
-   apply (fastforce dest: eq_implD intro: step.intros add_cont_step)[1]
-  apply (rule simpl_to_graph_steps_Fault)
-  apply (blast intro: step.GuardFault)
-  done
-
-lemma simpl_to_graph_double_Guard:
-  "simpl_to_graph SGamma GGamma gf nn (add_cont (com.Guard F' G' c) con) n Q (P \<inter> G) I eqs2 out_eqs
-    \<Longrightarrow> eq_impl nn eqs eqs2 (I \<inter> P \<inter> G)
-    \<Longrightarrow> simpl_to_graph SGamma GGamma gf nn (add_cont (com.Guard F G (com.Guard F' G' c)) con) n Q P I eqs out_eqs"
-  apply (rule_tac S=G in simpl_to_graph_cases)
    apply (rule simpl_to_graph_step_R_unchanged[rotated])
-    apply (erule simpl_to_graph_weaken_eq_impl[rotated])
-    apply (simp add: Int_ac)
+    apply (erule simpl_to_graph_weaken)
+    apply (simp add: eq_impl_def)
    apply (rule add_cont_step)
-   apply (rule step.Guard, simp)
+   apply (blast intro: step.Guard)
   apply (rule simpl_to_graph_steps_Fault)
   apply (blast intro: step.GuardFault)
   done
@@ -1256,10 +1242,9 @@ lemma image_fst_cart_UNIV_subset:
   "S \<subseteq> (fst ` S) \<times> UNIV"
   by (auto elim: image_eqI[rotated])
 
-lemma simpl_to_graph_known_extra_check:
+lemma simpl_to_graph_Err_cond:
   "\<lbrakk> nn = NextNode m; GGamma fname = Some gf;
       function_graph gf m = Some (node.Cond l Err Check);
-      \<And>s. Check s \<longrightarrow> True;
       eq_impl nn eqs (\<lambda>gst sst. Check gst) (P \<inter> I);
       simpl_to_graph SGamma GGamma fname l com n traces P I eqs2 out_eqs;
       eq_impl nn eqs eqs2 (P \<inter> I) \<rbrakk>
@@ -1695,7 +1680,8 @@ fun foldr1_default _ v [] = v
   | foldr1_default f _ xs = foldr1 f xs
 
 datatype hints = Hints of { deps: (string * term) list Inttab.table,
-    hint_tactics: (Proof.context -> int -> tactic) Inttab.table }
+    hint_tactics: (Proof.context -> int -> tactic) Inttab.table,
+    err_conds: Inttab.set }
 
 fun mk_graph_eqs Gamma (Hints hints) nm n = let
     val vs = case (Inttab.lookup (#deps hints) n) of
@@ -1847,12 +1833,6 @@ fun is_pglobal_valid_conjs (Const (@{const_name conj}, _) $ p $ q)
     = true
   | is_pglobal_valid_conjs _ = false
 
-fun check_is_pglobal_valid ctxt = SUBGOAL (fn (t, i) =>
-    (if is_pglobal_valid_conjs (Logic.strip_assums_concl (Envir.beta_eta_contract t)
-        |> HOLogic.dest_Trueprop |> HOLogic.dest_imp |> fst)
-    then simp_tac (put_simpset HOL_ss ctxt) i else no_tac)
-        )
-
 fun simpl_ss ctxt = put_simpset HOL_basic_ss ctxt
     addsimps @{thms switch.simps fst_conv snd_conv
         length_Cons singletonI triv_forall_equality
@@ -1874,6 +1854,14 @@ fun apply_hint_thm ctxt (Hints hints) = SUBGOAL (fn (t, i) => let
       | NONE => no_tac end
     handle TERM _ => no_tac)
 
+fun check_err_cond_tac (Hints hints) = SUBGOAL (fn (t, _) => let
+    val nn = Logic.strip_assums_concl t |> Envir.beta_eta_contract
+        |> HOLogic.dest_Trueprop |> simpl_to_graph_nn
+  in case Inttab.lookup (#err_conds hints) nn
+    of SOME () => all_tac
+      | NONE => no_tac end
+    handle TERM _ => no_tac)
+
 fun apply_simpl_to_graph_tac funs hints ctxt =
         simp_tac (simpl_ss ctxt
             addsimps @{thms One_nat_def whileAnno_def
@@ -1892,11 +1880,9 @@ fun apply_simpl_to_graph_tac funs hints ctxt =
             THEN' (simp_tac ctxt
                 THEN_ALL_NEW except_tac ctxt
                     "apply_simpl_to_graph_tac: exn eq unsolved"),
-        rtac @{thm simpl_to_graph_known_extra_check[OF refl]}
-            THEN' inst_graph_tac ctxt
-            THEN' check_is_pglobal_valid ctxt,
-        rtac @{thm simpl_to_graph_double_Guard},
-        rtac @{thm simpl_to_graph_Guard[OF refl]}
+        rtac @{thm simpl_to_graph_Guard[OF refl]},
+        check_err_cond_tac hints
+            THEN' rtac @{thm simpl_to_graph_Err_cond[OF refl]}
             THEN' inst_graph_tac ctxt,
         rtac @{thm simpl_to_graph_Cond[OF refl]}
             THEN' inst_graph_tac ctxt,
@@ -2080,9 +2066,15 @@ fun get_loop_var_upd_nodes nodes =
         #> (fn xs => not (null xs) andalso forall (String.isSuffix "#count") xs))
     |> map fst
 
+fun get_err_conds nodes =
+    nodes
+    |> filter (snd #> (fn (@{term Cond} $ _ $ @{term Err} $ _) => true | _ => false))
+    |> map fst
+
 fun mk_hints (funs : ParseGraph.funs) ctxt nm = case Symtab.lookup funs nm of
     NONE => raise TERM ("mk_var_deps_hints: miss " ^ nm, [])
-  | SOME (_, _, NONE) => Hints {deps = Inttab.empty, hint_tactics = Inttab.empty}
+  | SOME (_, _, NONE) => Hints {deps = Inttab.empty, hint_tactics = Inttab.empty,
+        err_conds = Inttab.empty}
   | SOME (_, outputs, SOME (ep, nodes, _)) => let
     val sT = Syntax.read_typ ctxt "globals myvars"
     val deps = snd (get_var_deps (Inttab.make nodes) ep outputs)
@@ -2098,8 +2090,10 @@ fun mk_hints (funs : ParseGraph.funs) ctxt nm = case Symtab.lookup funs nm of
         |> map (rpair (fn ctxt => rtac @{thm simpl_to_graph_noop_Basic}
             THEN' inst_graph_tac ctxt))
     val all_tacs = Inttab.make (no_deps_tacs @ loop_tacs)
+    val ec = get_err_conds nodes |> Inttab.make_set
   in Hints {deps = all_deps,
-    hint_tactics = all_tacs} end
+    hint_tactics = all_tacs,
+    err_conds = ec} end
 
 fun init_graph_refines_proof funs nm ctxt = let
     val body_thm = Proof_Context.get_thm ctxt

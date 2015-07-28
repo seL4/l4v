@@ -65,7 +65,7 @@ lemma snd_snd_gs_new_frames_new_cnodes[simp]:
   by (simp_all add: gs_new_frames_def gs_new_cnodes_def gs_clear_region_def)
 
 (*
-ML {* val nm = "Kernel_C.invokeUntyped_Retype" *}
+ML {* val nm = "Kernel_C.memcpy" *}
 
 local_setup {*  define_graph_fun_short funs nm *}
 
