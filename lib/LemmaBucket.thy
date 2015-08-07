@@ -298,4 +298,7 @@ lemma Least28: "\<lbrakk>\<not>P 0; \<not>P 1; \<not>P 2; \<not>P 3; \<not>P 4; 
                  25; \<not>P 26; \<not>P 27; P (28::nat)\<rbrakk> \<Longrightarrow> Least P = 28"
   by (simp add: Least_Suc eval_nat_numeral(2) eval_nat_numeral(3))
 
+lemma dom_split:"\<lbrakk>\<forall>x \<in> S. \<exists>y. f x = Some y; \<forall>x. x \<notin> S \<longrightarrow> f x = None\<rbrakk> \<Longrightarrow> dom f = S"
+  by (auto simp:dom_def)
+
 end
