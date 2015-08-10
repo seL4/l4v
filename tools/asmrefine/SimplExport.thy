@@ -1023,7 +1023,8 @@ fun emit_func_body ctxt outfile eparams name = let
 
     val full_nm = read_const ctxt (name ^ "_'proc")
         |> dest_Const |> fst |> unsuffix "_'proc"
-  in emit outfile ("Function " ^ full_nm ^ " " ^ space_pad_list inputs
+  in emit outfile "";
+    emit outfile ("Function " ^ full_nm ^ " " ^ space_pad_list inputs
                 ^ " " ^ space_pad_list outputs);
     case body of Const (@{const_name Spec}, _) $ _
         => ()
