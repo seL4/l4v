@@ -424,4 +424,7 @@ lemma none_some_map2: "the ` Set.filter (\<lambda>s. \<not> Option.is_none s) (r
 lemma prop_map_of_prop:"\<lbrakk>\<forall>z \<in> set xs. P (g z); map_of (map (\<lambda>x. (f x, g x)) xs) y = Some a\<rbrakk> \<Longrightarrow> P a"
   using map_of_SomeD by fastforce
 
+lemma range_subsetI: "\<forall>y\<in>A. \<exists>x. f x = y \<Longrightarrow> A \<subseteq> range f"
+ by fast
+
 end
