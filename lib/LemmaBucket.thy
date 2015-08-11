@@ -301,4 +301,127 @@ lemma Least28: "\<lbrakk>\<not>P 0; \<not>P 1; \<not>P 2; \<not>P 3; \<not>P 4; 
 lemma dom_split:"\<lbrakk>\<forall>x \<in> S. \<exists>y. f x = Some y; \<forall>x. x \<notin> S \<longrightarrow> f x = None\<rbrakk> \<Longrightarrow> dom f = S"
   by (auto simp:dom_def)
 
+lemma map_set_in: "x \<in> f ` S = (\<exists>y\<in>S. f y = x)"
+  by blast
+
+lemma map_length_split:
+  "map (length \<circ> (\<lambda>(a, b). P a b # map (f a b) (Q a b))) xs = map (\<lambda>(a, b). 1 + length (Q a b)) xs"
+  by clarsimp
+
+lemma sum_suc: "(\<Sum>x \<leftarrow> xs. Suc (f x)) = length xs + (\<Sum>x \<leftarrow> xs. f x)"
+  apply (induct xs)
+   by clarsimp+
+
+lemma sum_suc_pair: "(\<Sum>(a, b) \<leftarrow> xs. Suc (f a b)) = length xs + (\<Sum>(a, b) \<leftarrow> xs. f a b)"
+  apply (induct xs)
+   by clarsimp+
+
+lemma fold_add_sum: "fold op + ((map (\<lambda>(a, b). f a b) xs)::nat list) 0 = (\<Sum>(a, b) \<leftarrow> xs. f a b)"
+  apply (subst fold_plus_listsum_rev)
+  apply (subst listsum_rev)
+  by clarsimp
+
+lemma set_of_enumerate:"card (set (enumerate n xs)) = length xs"
+  by (metis distinct_card distinct_enumerate length_enumerate)
+
+lemma collapse_fst: "fst ` (\<lambda>x. (f x, g x)) ` s = f ` s"
+  by force
+
+lemma collapse_fst2: "fst ` (\<lambda>(x, y). (f x, g y)) ` s = (\<lambda>x. f (fst x)) ` s"
+  by force
+
+lemma collapse_fst3: "(\<lambda>x. f (fst x)) ` set (enumerate n xs) = f ` set [n..<n + length xs]"
+  by (metis image_image list.set_map map_fst_enumerate)
+
+lemma card_of_dom_bounded:
+  fixes f :: "'a \<Rightarrow> 'b option"
+  assumes "finite (UNIV::'a set)"
+  shows "card (dom f) \<le> CARD('a)"
+  by (simp add: assms card_mono)
+
+lemma third_in: "(a, b, c) \<in> S \<Longrightarrow> c \<in> (snd \<circ> snd) ` S"
+  by (metis (erased, hide_lams) map_set_in image_comp snd_conv)
+
+lemma third_in2: "(a \<in> (snd \<circ> snd) ` (set (enumerate i xs))) = (a \<in> snd ` (set xs))"
+  by (metis map_map map_snd_enumerate set_map)
+
+lemma map_of_enum: "map_of (enumerate n xs) x = Some y \<Longrightarrow> y \<in> set xs"
+  apply (clarsimp)
+  by (metis enumerate_eq_zip in_set_zipE)
+
+lemma map_of_append:
+  "(map_of xs ++ map_of ys) x = (case map_of ys x of None \<Rightarrow> map_of xs x | Some x' \<Rightarrow> Some x')"
+  by (simp add: map_add_def)
+
+lemma map_of_append2:
+  "(map_of xs ++ map_of ys ++ map_of zs) x =
+     (case map_of zs x of None \<Rightarrow> (case map_of ys x of None \<Rightarrow> map_of xs x
+                                                     | Some x' \<Rightarrow> Some x')
+                        | Some x' \<Rightarrow> Some x')"
+  by (simp add: map_add_def)
+
+lemma map_of_in_set_map: "map_of (map (\<lambda>(n, y). (f n, y)) xs) x = Some z \<Longrightarrow> z \<in> snd ` set xs"
+  proof -
+    assume "map_of (map (\<lambda>(n, y). (f n, y)) xs) x = Some z"
+    hence "(x, z) \<in> (\<lambda>(uu, y). (f uu, y)) ` set xs" using map_of_SomeD by fastforce
+    thus "z \<in> snd ` set xs" using map_set_in by fastforce
+  qed
+
+lemma pair_in_enum: "(a, b) \<in> set (enumerate x ys) \<Longrightarrow> b \<in> set ys"
+  by (metis enumerate_eq_zip in_set_zip2)
+
+lemma distinct_map_via_ran: "distinct (map fst xs) \<Longrightarrow> ran (map_of xs) = set (map snd xs)"
+  apply (cut_tac xs="map fst xs" and ys="map snd xs" in ran_map_of_zip[symmetric])
+    apply clarsimp+
+  by (simp add: ran_distinct)
+
+lemma in_ran_in_set: "x \<in> ran (map_of xs) \<Longrightarrow> x \<in> set (map snd xs)"
+  by (metis (mono_tags, hide_lams) map_set_in map_of_SomeD ranE set_map snd_conv)
+
+lemma in_ran_map_app: "x \<in> ran (xs ++ ys ++ zs) \<Longrightarrow> x \<in> ran xs \<or> x \<in> ran ys \<or> x \<in> ran zs"
+  proof -
+    assume a1: "x \<in> ran (xs ++ ys ++ zs)"
+    obtain bb :: "'a \<Rightarrow> ('b \<Rightarrow> 'a option) \<Rightarrow> 'b" where
+      "\<forall>x0 x1. (\<exists>v2. x1 v2 = Some x0) = (x1 (bb x0 x1) = Some x0)"
+      by moura
+    hence f2: "\<forall>f a. (\<not> (\<exists>b. f b = Some a) \<or> f (bb a f) = Some a) \<and> ((\<exists>b. f b = Some a) \<or> (\<forall>b. f b \<noteq> Some a))"
+      by blast
+    have "\<exists>b. (xs ++ ys ++ zs) b = Some x"
+      using a1 by (simp add: ran_def)
+    hence f3: "(xs ++ ys ++ zs) (bb x (xs ++ ys ++ zs)) = Some x"
+      using f2 by meson
+    { assume "ys (bb x (xs ++ ys ++ zs)) \<noteq> None \<or> xs (bb x (xs ++ ys ++ zs)) \<noteq> Some x"
+      { assume "ys (bb x (xs ++ ys ++ zs)) \<noteq> Some x \<and> (ys (bb x (xs ++ ys ++ zs)) \<noteq> None \<or> xs (bb x (xs ++ ys ++ zs)) \<noteq> Some x)"
+        hence "\<exists>b. zs b = Some x"
+          using f3 by auto
+        hence ?thesis
+          by (simp add: ran_def) }
+      hence ?thesis
+        using ran_def by fastforce }
+    thus ?thesis
+      using ran_def by fastforce
+  qed
+
+lemma none_some_map: "None \<notin> S \<Longrightarrow> Some x \<in> S = (x \<in> the ` S)"
+  apply (rule iffI)
+   apply force
+  apply (subst in_these_eq[symmetric])
+  apply (clarsimp simp:these_def)
+  apply (case_tac "\<exists>y. xa = Some y")
+   by clarsimp+
+
+lemma none_some_map2: "the ` Set.filter (\<lambda>s. \<not> Option.is_none s) (range f) = ran f"
+  apply (rule subset_antisym)
+   apply clarsimp
+   apply (case_tac "f x", simp_all)
+   apply (simp add: ranI)
+  apply clarsimp
+  apply (subst none_some_map[symmetric])
+   apply clarsimp+
+  apply (erule ranE)
+  by (metis range_eqI)
+
+lemma prop_map_of_prop:"\<lbrakk>\<forall>z \<in> set xs. P (g z); map_of (map (\<lambda>x. (f x, g x)) xs) y = Some a\<rbrakk> \<Longrightarrow> P a"
+  using map_of_SomeD by fastforce
+
 end

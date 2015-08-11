@@ -6526,4 +6526,42 @@ lemma constraint_expand:
   shows "x \<in> {y. lower \<le> y \<and> y \<le> upper} = (lower \<le> x \<and> x \<le> upper)"
   by simp
 
+lemma card_map_elide:
+  "n \<le> CARD(32 word) \<Longrightarrow> card ((of_nat::nat \<Rightarrow> 32 word) ` {0..<n}) = card {0..<n}"
+  apply clarsimp
+  apply (induct n)
+   apply clarsimp+
+  apply (subgoal_tac "{0..<Suc n} = {0..<n} \<union> {n}")
+   prefer 2
+   apply clarsimp
+   apply fastforce
+  apply clarsimp
+  apply (subst card_insert_disjoint)
+    apply clarsimp
+   apply (subst atLeast0LessThan)
+   apply (subgoal_tac "(of_nat::nat \<Rightarrow> 32 word) ` {..<n} = {..<of_nat n}")
+    prefer 2
+    apply (rule equalityI)
+     apply clarsimp
+     apply (subst (asm) card_word)
+     apply clarsimp
+     apply (rule of_nat_mono_maybe)
+      apply clarsimp+
+      apply (subgoal_tac "x \<in> of_nat ` {..<n} = (\<exists>y\<in>{..<n}. of_nat y = x)")
+       prefer 2
+       apply blast
+      apply simp
+      apply (rule bexI) (* sorry for schematics *)
+       apply (rule word_unat.Rep_inverse')
+       apply force
+      apply clarsimp 
+      apply (subst (asm) card_word)
+      apply clarsimp
+      apply (metis (erased, hide_lams) Divides.mod_less_eq_dividend order_less_le_trans unat_of_nat word_less_nat_alt)
+     by clarsimp+
+
+lemma card_map_elide2: "n \<le> CARD(32 word) \<Longrightarrow> card ((of_nat::nat \<Rightarrow> 32 word) ` {0..<n}) = n"
+  apply (subst card_map_elide)
+   by clarsimp+
+
 end
