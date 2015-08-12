@@ -6564,4 +6564,35 @@ lemma card_map_elide2: "n \<le> CARD(32 word) \<Longrightarrow> card ((of_nat::n
   apply (subst card_map_elide)
    by clarsimp+
 
+lemma le_max_word_ucast_id:
+  "(x::'a::len word) \<le> ucast (max_word::'b::len word) \<Longrightarrow> ucast ((ucast x)::'b word) = x"
+  apply (unfold ucast_def)
+  apply (subst word_ubin.eq_norm)
+  apply (subst and_mask_bintr[symmetric])
+  apply (subst and_mask_eq_iff_le_mask)
+  apply (clarsimp simp:max_word_def mask_def)
+  proof -
+    assume a1: "x \<le> word_of_int (uint (word_of_int (2 ^ len_of (TYPE('b)\<Colon>'b itself) - 1)\<Colon>'b word))"
+    have f2: "((\<exists>i ia. (0\<Colon>int) \<le> i \<and> \<not> 0 \<le> i + - 1 * ia \<and> i mod ia \<noteq> i) \<or> \<not> (0\<Colon>int) \<le> - 1 + 2 ^ len_of (TYPE('b)\<Colon>'b itself) \<or> (0\<Colon>int) \<le> - 1 + 2 ^ len_of (TYPE('b)\<Colon>'b itself) + - 1 * 2 ^ len_of (TYPE('b)\<Colon>'b itself) \<or> (- (1\<Colon>int) + 2 ^ len_of (TYPE('b)\<Colon>'b itself)) mod 2 ^ len_of (TYPE('b)\<Colon>'b itself) = - 1 + 2 ^ len_of (TYPE('b)\<Colon>'b itself)) = ((\<exists>i ia. (0\<Colon>int) \<le> i \<and> \<not> 0 \<le> i + - 1 * ia \<and> i mod ia \<noteq> i) \<or> \<not> (1\<Colon>int) \<le> 2 ^ len_of (TYPE('b)\<Colon>'b itself) \<or> 2 ^ len_of (TYPE('b)\<Colon>'b itself) + - (1\<Colon>int) * ((- 1 + 2 ^ len_of (TYPE('b)\<Colon>'b itself)) mod 2 ^ len_of (TYPE('b)\<Colon>'b itself)) = 1)"
+      by force
+    have f3: "\<forall>i ia. \<not> (0\<Colon>int) \<le> i \<or> 0 \<le> i + - 1 * ia \<or> i mod ia = i"
+      using mod_pos_pos_trivial by force
+    have "(1\<Colon>int) \<le> 2 ^ len_of (TYPE('b)\<Colon>'b itself)"
+      by simp
+    hence "2 ^ len_of (TYPE('b)\<Colon>'b itself) + - (1\<Colon>int) * ((- 1 + 2 ^ len_of (TYPE('b)\<Colon>'b itself)) mod 2 ^ len_of (TYPE('b)\<Colon>'b itself)) = 1"
+      using f3 f2 by blast
+    hence f4: "- (1\<Colon>int) + 2 ^ len_of (TYPE('b)\<Colon>'b itself) = (- 1 + 2 ^ len_of (TYPE('b)\<Colon>'b itself)) mod 2 ^ len_of (TYPE('b)\<Colon>'b itself)"
+      by linarith
+    have f5: "x \<le> word_of_int (uint (word_of_int (- 1 + 2 ^ len_of (TYPE('b)\<Colon>'b itself))\<Colon>'b word))"
+      using a1 by force
+    have f6: "2 ^ len_of (TYPE('b)\<Colon>'b itself) + - (1\<Colon>int) = - 1 + 2 ^ len_of (TYPE('b)\<Colon>'b itself)"
+      by force
+    have f7: "- (1\<Colon>int) * 1 = - 1"
+      by auto
+    have "\<forall>x0 x1. (x1\<Colon>int) - x0 = x1 + - 1 * x0"
+      by force
+    thus "x \<le> 2 ^ len_of (TYPE('b)\<Colon>'b itself) - 1"
+      using f7 f6 f5 f4 by (metis uint_word_of_int wi_homs(2) word_arith_wis(8) word_of_int_2p)
+  qed
+
 end

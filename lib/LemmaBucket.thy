@@ -298,6 +298,9 @@ lemma Least28: "\<lbrakk>\<not>P 0; \<not>P 1; \<not>P 2; \<not>P 3; \<not>P 4; 
                  25; \<not>P 26; \<not>P 27; P (28::nat)\<rbrakk> \<Longrightarrow> Least P = 28"
   by (simp add: Least_Suc eval_nat_numeral(2) eval_nat_numeral(3))
 
+lemma map_add_discard: "\<not> cond x \<Longrightarrow> (f ++ (\<lambda>x. if cond x then (g x) else None)) x = f x"
+  by (simp add: map_add_def)
+
 lemma dom_split:"\<lbrakk>\<forall>x \<in> S. \<exists>y. f x = Some y; \<forall>x. x \<notin> S \<longrightarrow> f x = None\<rbrakk> \<Longrightarrow> dom f = S"
   by (auto simp:dom_def)
 
