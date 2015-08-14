@@ -6526,4 +6526,12 @@ lemma constraint_expand:
   shows "x \<in> {y. lower \<le> y \<and> y \<le> upper} = (lower \<le> x \<and> x \<le> upper)"
   by simp
 
+(*enumerations of words*)
+lemma remdups_enum_upto: fixes s::"'a::len word" shows "remdups [s .e. e] = [s .e. e]" by(simp)
+
+lemma card_enum_upto: fixes s::"'a::len word" shows "card (set [s .e. e]) = Suc (unat e) - unat s"
+  apply(subst List.card_set)
+  apply(simp add: remdups_enum_upto)
+  done
+
 end
