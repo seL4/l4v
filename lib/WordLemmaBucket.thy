@@ -6595,4 +6595,12 @@ lemma le_max_word_ucast_id:
       using f7 f6 f5 f4 by (metis uint_word_of_int wi_homs(2) word_arith_wis(8) word_of_int_2p)
   qed
 
+(*enumerations of words*)
+lemma remdups_enum_upto: fixes s::"'a::len word" shows "remdups [s .e. e] = [s .e. e]" by(simp)
+
+lemma card_enum_upto: fixes s::"'a::len word" shows "card (set [s .e. e]) = Suc (unat e) - unat s"
+  apply(subst List.card_set)
+  apply(simp add: remdups_enum_upto)
+  done
+
 end
