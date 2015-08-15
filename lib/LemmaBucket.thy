@@ -430,4 +430,19 @@ lemma prop_map_of_prop:"\<lbrakk>\<forall>z \<in> set xs. P (g z); map_of (map (
 lemma range_subsetI2: "\<forall>y\<in>A. \<exists>x. f x = y \<Longrightarrow> A \<subseteq> range f"
  by fast
 
+lemma insert_strip: "x \<noteq> y \<Longrightarrow> (x \<in> insert y S) = (x \<in> S)"
+  by simp
+
+lemma dom_map_add: "dom ys = A \<Longrightarrow> dom (xs ++ ys) = A \<union> dom xs"
+  by simp
+
+lemma set_compre_unwrap: "({x. P x} \<subseteq> S) = (\<forall>x. P x \<longrightarrow> x \<in> S)"
+  by blast
+
+lemma map_add_same: "\<lbrakk>xs = ys; zs = ws\<rbrakk> \<Longrightarrow> xs ++ zs = ys ++ ws"
+  by simp
+
+lemma map_add_find_left: "n k = None \<Longrightarrow> (m ++ n) k = m k"
+  by (simp add:map_add_def)
+
 end
