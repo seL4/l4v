@@ -262,7 +262,7 @@ fun add_field_h_val_rewrites lthy =
   Local_Theory.note ((@{binding field_h_val_rewrites}, []),
       get_field_h_val_rewrites lthy) lthy |> snd
 *}
-ML Global_Theory.facts_of
+
 ML {*
 fun get_field_to_bytes_rewrites lthy = let
     val fl_thms = Global_Theory.facts_of (Proof_Context.theory_of lthy)

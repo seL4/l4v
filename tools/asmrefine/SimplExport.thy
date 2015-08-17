@@ -244,7 +244,7 @@ fun dest_global_mem_acc_addr (params : export_params) t = let
     val const = #const_globals params t
     val T = fastype_of t
   in case (const, acc) of
-      (SOME nm, _) => SOME (TermsTypes.mk_global_addr_ptr (nm, T))
+      (SOME _, _) => NONE
     | (NONE, SOME nm) => SOME (TermsTypes.mk_global_addr_ptr (nm, T))
     | (NONE, NONE) => NONE
   end
@@ -514,6 +514,26 @@ fun mk_acc_array i xs = let
       | inner [] = error "mk_acc_array: empty"
   in inner (xs ~~ (0 upto (n - 1))) end
 
+fun phase2_convert_global ctxt params accs
+    ((idx as Const (@{const_name Arrays.index}, _)) $ i $ t)
+    = phase2_convert_global ctxt params ((idx $ try_norm_index ctxt i) :: accs) t
+  | phase2_convert_global ctxt params accs (Const acc $ t)
+    = phase2_convert_global ctxt params (Const acc :: accs) t
+  | phase2_convert_global ctxt params accs t = case #const_globals params t
+  of SOME nm => let
+    val known_offs = forall (fn Const (@{const_name Arrays.index}, _) $ i
+          => (try dest_nat i) <> NONE
+        | _ => true) accs
+    val (c, _) = dest_Const t
+    val c_def = Proof_Context.get_thm ctxt (c ^ "_def")
+    val def_body = safe_mk_meta_eq c_def |> Thm.rhs_of |> Thm.term_of
+        |> Envir.beta_eta_contract
+    val p = TermsTypes.mk_global_addr_ptr (nm, fastype_of t)
+    val t' = if known_offs then def_body else mk_memacc p
+    val t_thm = if known_offs then SOME c_def else NONE
+  in SOME (t', t_thm) end
+    | _ => NONE
+
 fun convert_fetch_ph2 ctxt params [] (t as (Const (@{const_name CTypesDefs.ptr_add}, T) $ _ $ _))
     = convert_fetch_ph2 ctxt params [] (ptr_simp_term ctxt "ptr_add"
         (head_of t $ Free ("p", domain_type T) $ Free ("n", @{typ int})) t)
@@ -523,7 +543,7 @@ fun convert_fetch_ph2 ctxt params [] (t as (Const (@{const_name CTypesDefs.ptr_a
   | convert_fetch_ph2 ctxt params ((Const (@{const_name Arrays.index}, _) $ i) :: accs)
             (t as (Const (@{const_name fupdate}, _) $ _ $ _ $ _)) = let
         val xs = dest_array_init (#cons_field_upds (params : export_params) t)
-      in case (try dest_nat (try_norm_index ctxt i)) of
+      in case (try dest_nat i) of
         SOME i => convert_fetch_ph2 ctxt params accs (nth xs i)
       | NONE => mk_acc_array (convert_fetch_ph2 ctxt params [] i)
             (map (convert_fetch_ph2 ctxt params accs) xs)
@@ -531,7 +551,7 @@ fun convert_fetch_ph2 ctxt params [] (t as (Const (@{const_name CTypesDefs.ptr_a
   | convert_fetch_ph2 ctxt params ((Const (@{const_name Arrays.index}, _) $ i) :: accs)
             (t as (Const (@{const_name FCP}, _) $ _)) = let
         val xs = dest_array_init (#cons_field_upds params t)
-      in case (try dest_nat (try_norm_index ctxt i)) of
+      in case (try dest_nat i) of
         SOME i => convert_fetch_ph2 ctxt params accs (nth xs i)
       | NONE => mk_acc_array (convert_fetch_ph2 ctxt params [] i)
             (map (convert_fetch_ph2 ctxt params accs) xs)
@@ -546,7 +566,7 @@ fun convert_fetch_ph2 ctxt params [] (t as (Const (@{const_name CTypesDefs.ptr_a
          val eq = HOLogic.mk_eq (i, i')
          val eq = ptr_simp_term ctxt "idx_eq_simp" eq eq handle TERM _ => eq
          val x = convert_fetch_ph2 ctxt params accs v
-         val y = convert_fetch_ph2 ctxt params (idx $ try_norm_index ctxt i :: accs) arr'
+         val y = convert_fetch_ph2 ctxt params (idx $ i :: accs) arr'
          val T = fastype_of x
       in case eq of @{term True} => x | @{term False} => y
         | _ => Const (@{const_name If}, HOLogic.boolT --> T --> T --> T)
@@ -568,7 +588,7 @@ fun convert_fetch_ph2 ctxt params [] (t as (Const (@{const_name CTypesDefs.ptr_a
     val T = get_acc_type accs T
     fun canon s [] = mk_pseudo_acc s T
       | canon s (Const (@{const_name Arrays.index}, idxT) $ i :: accs) = (case
-            (try dest_nat (try_norm_index ctxt i))
+            (try dest_nat i)
         of SOME i => canon (s ^ "." ^ string_of_int i) accs
           | NONE => let val (_, n) = dest_arrayT (domain_type idxT)
           in mk_acc_array (convert_fetch_ph2 ctxt params [] i)
@@ -585,9 +605,12 @@ fun convert_fetch_ph2 ctxt params [] (t as (Const (@{const_name CTypesDefs.ptr_a
   | convert_fetch_ph2 ctxt params accs t = let
     val (f, xs) = strip_comb t
     val (c, _) = dest_Const f
+    val cnv = phase2_convert_global ctxt params accs f
+        |> Option.map (fst #> convert_fetch_phase1 params)
   in if (get_field ctxt c |> Option.map #3) = SOME false
     then case xs of [x] => convert_fetch_ph2 ctxt params (f :: accs) x
         | _ => raise TERM ("convert_fetch_ph2: expected single", f :: xs)
+  else if cnv <> NONE then convert_fetch_ph2 ctxt params accs (the cnv)
   else if (get_field ctxt c <> NONE orelse #cons_fields params c <> NONE)
   then let
     val _ = (accs <> []) orelse raise TERM ("convert_fetch_ph2: no accs", [t])

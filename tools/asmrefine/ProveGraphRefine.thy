@@ -360,13 +360,33 @@ fun get_globals_rewrites ctxt = let
         handle ERROR _ => raise THM
             ("run add_globals_swap_rewrites on ctxt", 1, [])
 
-fun normalise_mem_accs ctxt = DETERM o let
+fun add_symbols (Free (_, T) $ s) xs = (case try HOLogic.dest_string s
+        of SOME str => str :: xs | _ => xs)
+  | add_symbols (f $ x) xs = add_symbols f (add_symbols x xs)
+  | add_symbols (Abs (_, _, t)) xs = add_symbols t xs
+  | add_symbols _ xs = xs
+
+fun get_symbols t = add_symbols t [] |> Ord_List.make fast_string_ord
+
+fun adj_globals_rewrite_for_symbols ctxt symbs thm = let
+    (* we don't want to do rewrites that introduce symbols that
+       aren't already in the goal. instead we just unfold those
+       constant globals *)
+    val t_symbs = get_symbols (Thm.concl_of thm)
+    val (c, _) = Thm.concl_of thm |> HOLogic.dest_Trueprop
+      |> HOLogic.dest_eq |> fst |> dest_Const
+  in if Ord_List.subset fast_string_ord (t_symbs, symbs)
+    then thm
+    else Proof_Context.get_thm ctxt (c ^ "_def") end
+
+fun normalise_mem_accs ctxt = DETERM o SUBGOAL (fn (t, i) => let
+    val gr = get_globals_rewrites ctxt
+    val symbs = get_symbols t
     val init_simps = @{thms hrs_mem_update
                        heap_access_Array_element'
                        o_def
             } @ get_field_h_val_rewrites ctxt
-        @ #2 (get_globals_rewrites ctxt)
-        @ #1 (get_globals_rewrites ctxt)
+        @ #1 gr @ map (adj_globals_rewrite_for_symbols ctxt symbs) (#2 gr)
     val h_val = get_disjoint_h_val_globals_swap ctxt
     val disjoint_h_val_tac
     = (eqsubst_asm_wrap_tac ctxt [h_val] ORELSE' eqsubst_wrap_tac ctxt [h_val])
@@ -389,7 +409,7 @@ fun normalise_mem_accs ctxt = DETERM o let
               => prove_ptr_safe "normalise_mem_accs" ctxt i
             | _ => all_tac)
     THEN_ALL_NEW full_simp_tac (ctxt addsimps @{thms h_val_ptr h_val_word32 h_val_word8})
-  end
+  end i)
 
 val heap_update_id_nonsense
     = Thm.trivial @{cpat "Trueprop

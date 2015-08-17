@@ -32,8 +32,7 @@ val csenv = let
     val the_csenv = CalculateState.get_csenv @{theory} "c/kernel_all.c_pp" |> the
   in fn () => the_csenv end
 *}
-term ghost_assertion_data_get
-term ghost'state_'
+
 consts
   encode_machine_state :: "machine_state \<Rightarrow> unit \<times> nat"
 
@@ -65,7 +64,7 @@ lemma snd_snd_gs_new_frames_new_cnodes[simp]:
   by (simp_all add: gs_new_frames_def gs_new_cnodes_def gs_clear_region_def)
 
 (*
-ML {* val nm = "Kernel_C.memcpy" *}
+ML {* val nm = "Kernel_C.resolveVAddr" *}
 
 local_setup {*  define_graph_fun_short funs nm *}
 
