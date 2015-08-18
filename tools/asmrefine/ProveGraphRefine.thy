@@ -182,6 +182,12 @@ lemma of_int_sint_scast:
   "of_int (sint x) = scast x"
   by (simp add: scast_def word_of_int)
 
+lemma array_index_update_If:
+  "i < CARD ('b :: finite)
+    \<Longrightarrow> Arrays.index (Arrays.update arr j x) i
+        = (if i = j then x else Arrays.index (arr :: ('a['b])) i)"
+  by simp
+
 ML {*
 fun preserve_skel_conv consts arg_conv ct = let
     val (hd, xs) = strip_comb (Thm.term_of ct)
@@ -368,25 +374,24 @@ fun add_symbols (Free (_, T) $ s) xs = (case try HOLogic.dest_string s
 
 fun get_symbols t = add_symbols t [] |> Ord_List.make fast_string_ord
 
-fun adj_globals_rewrite_for_symbols ctxt symbs thm = let
-    (* we don't want to do rewrites that introduce symbols that
-       aren't already in the goal. instead we just unfold those
-       constant globals *)
-    val t_symbs = get_symbols (Thm.concl_of thm)
-    val (c, _) = Thm.concl_of thm |> HOLogic.dest_Trueprop
-      |> HOLogic.dest_eq |> fst |> dest_Const
-  in if Ord_List.subset fast_string_ord (t_symbs, symbs)
-    then thm
-    else Proof_Context.get_thm ctxt (c ^ "_def") end
+fun get_expand_const_globals ctxt goal = let
+    val goal_symbs = get_symbols goal
+    val cgr = #2 (get_globals_rewrites ctxt)
+    val cgr_missing = filter_out (fn t => Ord_List.subset fast_string_ord
+        (get_symbols (Thm.concl_of t), goal_symbs)) cgr
+    val cgs_unfold = map (Thm.concl_of #> HOLogic.dest_Trueprop
+        #> HOLogic.dest_eq #> fst #> dest_Const #> fst) cgr_missing
+    val cgs_unfold_defs = map (suffix "_def"
+        #> Proof_Context.get_thm ctxt) cgs_unfold
+  in cgs_unfold_defs end
 
-fun normalise_mem_accs ctxt = DETERM o SUBGOAL (fn (t, i) => let
+fun normalise_mem_accs ctxt = DETERM o let
     val gr = get_globals_rewrites ctxt
-    val symbs = get_symbols t
     val init_simps = @{thms hrs_mem_update
                        heap_access_Array_element'
-                       o_def
+                       o_def fupdate_def
             } @ get_field_h_val_rewrites ctxt
-        @ #1 gr @ map (adj_globals_rewrite_for_symbols ctxt symbs) (#2 gr)
+        @ #1 gr @ #2 gr
     val h_val = get_disjoint_h_val_globals_swap ctxt
     val disjoint_h_val_tac
     = (eqsubst_asm_wrap_tac ctxt [h_val] ORELSE' eqsubst_wrap_tac ctxt [h_val])
@@ -409,7 +414,7 @@ fun normalise_mem_accs ctxt = DETERM o SUBGOAL (fn (t, i) => let
               => prove_ptr_safe "normalise_mem_accs" ctxt i
             | _ => all_tac)
     THEN_ALL_NEW full_simp_tac (ctxt addsimps @{thms h_val_ptr h_val_word32 h_val_word8})
-  end i)
+  end
 
 val heap_update_id_nonsense
     = Thm.trivial @{cpat "Trueprop
@@ -573,7 +578,8 @@ fun graph_refine_proof_tacs csenv ctxt = let
               addsimps [Proof_Context.get_thm ctxt "simpl_invariant_def"])),
         (["step 2: normalise a lot of things that occur in",
             "simpl->graph that are extraneous"],
-        asm_full_simp_tac (ctxt addsimps @{thms eq_impl_def
+        SUBGOAL (fn (t, i) =>
+            asm_full_simp_tac (ctxt addsimps @{thms eq_impl_def
                     var_word32_def var_word8_def var_mem_def
                     var_word64_def var_word16_def var_wordarray_64_32_def
                     var_htd_def var_acc_var_upd
@@ -594,9 +600,12 @@ fun graph_refine_proof_tacs csenv ctxt = let
                    representation does this, and we need to normalise
                    word arithmetic the same way on both sides. *)
                 addsimps (enum_simps csenv ctxt)
+                (* unfold constant globals unless we can see their symbols
+                   somewhere else in the goal *)
+                addsimps (get_expand_const_globals ctxt t)
                 (* and fold up expanded array accesses, and clean up assertion_data get/set *)
                 addsimprocs [fold_of_nat_eq_Ifs_simproc, unfold_assertion_data_get_set]
-            )),
+            ) i)),
         (["step 3: split into goals with safe steps",
             "also derive ptr_safe assumptions from h_t_valid"],
         (TRY o safe_goal_tac ctxt)
