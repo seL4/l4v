@@ -5,7 +5,7 @@
 *)
 
 theory Eisbach_WP
-imports Eisbach_Methods NonDetMonadVCG
+imports "../Eisbach_Methods" NonDetMonadVCG
 begin
 
 
