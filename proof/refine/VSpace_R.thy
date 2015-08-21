@@ -2962,6 +2962,12 @@ lemma storePDE_inQ[wp]:
   apply (clarsimp simp: projectKOs obj_at'_def ko_wp_at'_def)
   done
 
+crunch norqL1[wp]: storePDE "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
+  (simp: updateObject_default_def ignore: setObject)
+
+crunch norqL2[wp]: storePDE "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
+  (simp: updateObject_default_def ignore: setObject)
+
 lemma storePDE_valid_queues [wp]:
   "\<lbrace>Invariants_H.valid_queues\<rbrace> storePDE p pde \<lbrace>\<lambda>_. Invariants_H.valid_queues\<rbrace>"
   by (wp valid_queues_lift | simp add: st_tcb_at'_def)+
@@ -3149,6 +3155,12 @@ lemma storePTE_inQ[wp]:
   apply (clarsimp simp: projectKOs obj_at'_def ko_wp_at'_def)
   done
 
+crunch norqL1[wp]: storePTE "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
+  (simp: updateObject_default_def ignore: setObject)
+
+crunch norqL2[wp]: storePTE "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
+  (simp: updateObject_default_def ignore: setObject)
+
 lemma storePTE_valid_queues [wp]:
   "\<lbrace>Invariants_H.valid_queues\<rbrace> storePTE p pde \<lbrace>\<lambda>_. Invariants_H.valid_queues\<rbrace>"
   by (wp valid_queues_lift | simp add: st_tcb_at'_def)+
@@ -3332,6 +3344,14 @@ lemma setASIDPool_inQ[wp]:
    apply (simp add: pageBits_def)
   apply (clarsimp simp: obj_at'_def ko_wp_at'_def projectKOs)
   done
+
+lemma setASIDPool_qsL1 [wp]:
+  "\<lbrace>\<lambda>s. P (ksReadyQueuesL1Bitmap s)\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>rv s. P (ksReadyQueuesL1Bitmap s)\<rbrace>" 
+  by (wp setObject_qs updateObject_default_inv|simp)+
+
+lemma setASIDPool_qsL2 [wp]:
+  "\<lbrace>\<lambda>s. P (ksReadyQueuesL2Bitmap s)\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>rv s. P (ksReadyQueuesL2Bitmap s)\<rbrace>"
+  by (wp setObject_qs updateObject_default_inv|simp)+
 
 lemma setASIDPool_valid_queues [wp]:
   "\<lbrace>Invariants_H.valid_queues\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>_. Invariants_H.valid_queues\<rbrace>"

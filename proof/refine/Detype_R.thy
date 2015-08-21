@@ -1197,7 +1197,8 @@ proof (simp add: invs'_def valid_state'_def valid_pspace'_def
     done
 
   from vq show "valid_queues ?s"
-    apply (clarsimp simp: valid_queues_def)
+    apply (clarsimp simp: valid_queues_def bitmapQ_defs)
+    apply (clarsimp simp: valid_queues_no_bitmap_def)
     apply (drule spec, drule spec, drule conjunct1, drule(1) bspec)
     apply (clarsimp simp: obj_at'_real_def)
     apply (frule if_live_then_nonz_capE'[OF iflive, OF ko_wp_at'_weakenE])

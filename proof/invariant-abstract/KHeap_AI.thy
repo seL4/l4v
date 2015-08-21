@@ -892,7 +892,7 @@ lemma no_fail_obj_at [wp]:
   "no_fail (obj_at \<top> ptr) (get_object ptr)"
   apply (simp add: get_object_def)
   apply (rule no_fail_pre, wp)
-  apply (clarsimp simp: obj_at_def)
+  apply (fastforce simp: obj_at_def)
   done
 
 

@@ -767,7 +767,7 @@ lemma invs'_irq_state_independent [simp, intro!]:
           valid_idle'_def valid_global_refs'_def
           valid_arch_state'_def valid_irq_node'_def
           valid_irq_handlers'_def valid_irq_states'_def
-          irqs_masked'_def
+          irqs_masked'_def bitmapQ_defs valid_queues_no_bitmap_def
           valid_queues'_def valid_pde_mappings'_def 
           pspace_domain_valid_def cur_tcb'_def
           valid_machine_state'_def tcb_in_cur_domain'_def
@@ -5261,6 +5261,10 @@ crunch pde_mappings'[wp]: cteSwap "valid_pde_mappings'"
 
 crunch vq'[wp]: cteSwap "valid_queues'"
 
+crunch ksqsL1[wp]: cteSwap "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
+
+crunch ksqsL2[wp]: cteSwap "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
+
 crunch st_tcb_at'[wp]: cteSwap "st_tcb_at' P t"
 
 crunch vms'[wp]: cteSwap "valid_machine_state'"
@@ -6204,6 +6208,22 @@ lemma ipcCancel_cap_to'[wp]:
                | wpcw | wp_once hoare_drop_imps)+
   done
 
+lemma ex_cte_cap_wp_to'_ksReadyQueuesL1Bitmap[simp]:
+   "ex_cte_cap_wp_to' P p (s\<lparr> ksReadyQueuesL1Bitmap := x \<rparr>) = ex_cte_cap_wp_to' P p s"
+   unfolding ex_cte_cap_wp_to'_def by simp
+
+lemma ex_cte_cap_wp_to'_ksReadyQueuesL2Bitmap[simp]:
+   "ex_cte_cap_wp_to' P p (s\<lparr> ksReadyQueuesL2Bitmap := x \<rparr>) = ex_cte_cap_wp_to' P p s"
+   unfolding ex_cte_cap_wp_to'_def by simp
+
+lemma removeFromBitmap_cte_cap_to'[wp]:
+  "\<lbrace>ex_cte_cap_wp_to' P p\<rbrace> removeFromBitmap d prio \<lbrace>\<lambda>rv. ex_cte_cap_wp_to' P p\<rbrace>"
+  apply (simp add: bitmap_fun_defs)
+  apply (wp ex_cte_cap_to'_pres [OF threadSet_cte_wp_at']
+            ex_cte_cap_to'_pres [OF setQueue_cte_wp_at']
+              | simp)+
+  done
+
 lemma tcbSchedDequeue_cte_cap_to'[wp]:
   "\<lbrace>ex_cte_cap_wp_to' P p\<rbrace> tcbSchedDequeue t \<lbrace>\<lambda>rv. ex_cte_cap_wp_to' P p\<rbrace>"
   apply (simp add: tcbSchedDequeue_def)
@@ -6460,10 +6480,11 @@ lemma reduceZombie_invs'':
 
 lemma invs'_wu [simp, intro!]:
   "invs' (ksWorkUnitsCompleted_update f s) = invs' s"
-apply (simp add: invs'_def cur_tcb'_def valid_state'_def Invariants_H.valid_queues_def
-                 valid_queues'_def valid_irq_node'_def valid_machine_state'_def
-                 ct_not_inQ_def ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
-done
+  apply (simp add: invs'_def cur_tcb'_def valid_state'_def Invariants_H.valid_queues_def
+                   valid_queues'_def valid_irq_node'_def valid_machine_state'_def
+                   ct_not_inQ_def ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def
+                   bitmapQ_defs valid_queues_no_bitmap_def)
+  done
 
 lemma preemptionPoint_invs [wp]:
   "\<lbrace>invs'\<rbrace> preemptionPoint \<lbrace>\<lambda>_. invs'\<rbrace>"

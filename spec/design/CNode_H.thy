@@ -631,14 +631,14 @@ defs getReceiveSlots_def:
 
 defs loadCapTransfer_def:
 "loadCapTransfer buffer\<equiv> (do
-        intSize \<leftarrow> return ( fromIntegral $ finiteBitSize (undefined::machine_word) div 8);
+        intSize \<leftarrow> return ( fromIntegral wordSize);
         offset \<leftarrow> return ( msgMaxLength + msgMaxExtraCaps + 2);
         capTransferFromWords (buffer + PPtr (offset*intSize))
 od)"
 
 defs capTransferFromWords_def:
 "capTransferFromWords ptr\<equiv> (do
-        intSize \<leftarrow> return ( fromIntegral $ finiteBitSize (undefined::machine_word) div 8);
+        intSize \<leftarrow> return ( fromIntegral wordSize);
         w0 \<leftarrow> loadWordUser ptr;
         w1 \<leftarrow> loadWordUser $ ptr + PPtr intSize;
         w2 \<leftarrow> loadWordUser $ ptr + PPtr (2 * intSize);

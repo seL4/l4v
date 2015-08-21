@@ -58,6 +58,8 @@ crunch cur_tcb'[wp]: emptySlot "cur_tcb'"
   (ignore: setObject wp: cur_tcb_lift)
 
 crunch ksRQ[wp]: deletedIRQHandler "\<lambda>s. P (ksReadyQueues s)"
+crunch ksRQL1[wp]: deletedIRQHandler "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
+crunch ksRQL2[wp]: deletedIRQHandler "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
 crunch obj_at'[wp]: deletedIRQHandler "obj_at' P p"
 
 lemmas deletedIRQHandler_valid_queues[wp] =
@@ -2634,7 +2636,7 @@ crunch sch_act_simple[wp]: cteDeleteOne sch_act_simple
    lift: sch_act_simple_lift)
 
 crunch valid_queues[wp]: setSchedulerAction "Invariants_H.valid_queues"
-  (simp: Invariants_H.valid_queues_def)
+  (simp: Invariants_H.valid_queues_def bitmapQ_defs valid_queues_no_bitmap_def)
 
 lemma rescheduleRequired_sch_act_not[wp]:
   "\<lbrace>\<top>\<rbrace> rescheduleRequired \<lbrace>\<lambda>rv. sch_act_not t\<rbrace>"

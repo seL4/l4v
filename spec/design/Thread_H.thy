@@ -150,25 +150,32 @@ defs schedule_def:
             )
 od)"
 
+defs countLeadingZeros_def:
+"countLeadingZeros w \<equiv>
+    length \<circ> takeWhile Not \<circ> reverse \<circ> map (testBit w) $ [0  .e.  finiteBitSize w - 1]"
+
+defs wordLog2_def:
+"wordLog2 w \<equiv> finiteBitSize w - 1 - countLeadingZeros w"
+
 defs chooseThread_def:
-"chooseThread \<equiv>
-    let
-        chooseThread' = (\<lambda>  qdom prio. (do
-            q \<leftarrow> getQueue qdom prio;
-            (case q of
-                  thread # _ \<Rightarrow>   (do
-                   switchToThread thread;
-                   return True
-                  od)
-                | [] \<Rightarrow>   return False
-                )
-        od))
-    in
-                      (do
-        curdom \<leftarrow> curDomain;
-        r \<leftarrow> findM (chooseThread' curdom) (reverse [0  .e.  maxPriority]);
-        when (r = Nothing) $ switchToIdleThread
-                      od)"
+"chooseThread\<equiv> (do
+    curdom \<leftarrow> if numDomains > 1 then curDomain else return 0;
+    l1 \<leftarrow> getReadyQueuesL1Bitmap curdom;
+    if l1 \<noteq> 0
+        then (do
+            l1index \<leftarrow> return ( wordLog2 l1);
+            l2 \<leftarrow> getReadyQueuesL2Bitmap curdom l1index;
+            l2index \<leftarrow> return ( wordLog2 l2);
+            prio \<leftarrow> return ( l1IndexToPrio l1index || fromIntegral l2index);
+            queue \<leftarrow> getQueue curdom prio;
+            thread \<leftarrow> return ( head queue);
+            runnable \<leftarrow> isRunnable thread;
+            haskell_assert runnable [];
+            switchToThread thread
+        od)
+        else
+            switchToIdleThread
+od)"
 
 defs switchToThread_def:
 "switchToThread thread\<equiv> (do
@@ -258,6 +265,51 @@ defs setThreadState_def:
             rescheduleRequired
 od)"
 
+defs prioToL1Index_def:
+"prioToL1Index prio \<equiv> fromIntegral $ prio `~shiftR~` wordRadix"
+
+defs l1IndexToPrio_def:
+"l1IndexToPrio i\<equiv> (fromIntegral i) `~shiftL~` wordRadix"
+
+defs getReadyQueuesL1Bitmap_def:
+"getReadyQueuesL1Bitmap tdom\<equiv> gets (\<lambda> ks. ksReadyQueuesL1Bitmap ks tdom)"
+
+defs modifyReadyQueuesL1Bitmap_def:
+"modifyReadyQueuesL1Bitmap tdom f\<equiv> (do
+    l1 \<leftarrow> getReadyQueuesL1Bitmap tdom;
+    modify (\<lambda> ks. ks \<lparr> ksReadyQueuesL1Bitmap :=
+                            ksReadyQueuesL1Bitmap ks  aLU  [(tdom, f l1)]\<rparr>)
+od)"
+
+defs getReadyQueuesL2Bitmap_def:
+"getReadyQueuesL2Bitmap tdom i\<equiv> gets (\<lambda> ks. ksReadyQueuesL2Bitmap ks (tdom, i))"
+
+defs modifyReadyQueuesL2Bitmap_def:
+"modifyReadyQueuesL2Bitmap tdom i f\<equiv> (do
+    l2 \<leftarrow> getReadyQueuesL2Bitmap tdom i;
+    modify (\<lambda> ks. ks \<lparr> ksReadyQueuesL2Bitmap :=
+                            ksReadyQueuesL2Bitmap ks  aLU  [((tdom, i), f l2)]\<rparr>)
+od)"
+
+defs addToBitmap_def:
+"addToBitmap tdom prio\<equiv> (do
+    l1index \<leftarrow> return ( prioToL1Index prio);
+    l2bit \<leftarrow> return ( fromIntegral ((fromIntegral prio && mask wordRadix)::machine_word));
+    modifyReadyQueuesL1Bitmap tdom (\<lambda> w. w || bit l1index);
+    modifyReadyQueuesL2Bitmap tdom l1index
+        (\<lambda> w. w || bit l2bit)
+od)"
+
+defs removeFromBitmap_def:
+"removeFromBitmap tdom prio\<equiv> (do
+    l1index \<leftarrow> return ( prioToL1Index prio);
+    l2bit \<leftarrow> return ( fromIntegral((fromIntegral prio && mask wordRadix)::machine_word));
+    modifyReadyQueuesL2Bitmap tdom l1index (\<lambda> w. w && (complement $ bit l2bit));
+    l2 \<leftarrow> getReadyQueuesL2Bitmap tdom l1index;
+    when (l2 = 0) $
+        modifyReadyQueuesL1Bitmap tdom (\<lambda> w. w && (complement $ bit l1index))
+od)"
+
 defs tcbSchedEnqueue_def:
 "tcbSchedEnqueue thread\<equiv> (do
     queued \<leftarrow> threadGet tcbQueued thread;
@@ -266,6 +318,7 @@ defs tcbSchedEnqueue_def:
         prio \<leftarrow> threadGet tcbPriority thread;
         queue \<leftarrow> getQueue tdom prio;
         setQueue tdom prio $ thread # queue;
+        when (null queue) $ addToBitmap tdom prio;
         threadSet (\<lambda> t. t \<lparr> tcbQueued := True \<rparr>) thread
     od)
 od)"
@@ -278,6 +331,7 @@ defs tcbSchedAppend_def:
         prio \<leftarrow> threadGet tcbPriority thread;
         queue \<leftarrow> getQueue tdom prio;
         setQueue tdom prio $ queue @ [thread];
+        when (null queue) $ addToBitmap tdom prio;
         threadSet (\<lambda> t. t \<lparr> tcbQueued := True \<rparr>) thread
     od)
 od)"
@@ -289,7 +343,9 @@ defs tcbSchedDequeue_def:
         tdom \<leftarrow> threadGet tcbDomain thread;
         prio \<leftarrow> threadGet tcbPriority thread;
         queue \<leftarrow> getQueue tdom prio;
-        setQueue tdom prio $ filter (\<lambda>x. x \<noteq>thread) queue;
+        queue' \<leftarrow> return ( filter (\<lambda>x. x \<noteq>thread) queue);
+        setQueue tdom prio queue';
+        when (null queue') $ removeFromBitmap tdom prio;
         threadSet (\<lambda> t. t \<lparr> tcbQueued := False \<rparr>) thread
     od)
 od)"
@@ -328,8 +384,7 @@ where
 | "transferCapsToSlots ep diminish rcvBuffer n (arg#caps) slots mi = (
     let
        transferAgain = transferCapsToSlots ep diminish rcvBuffer (n + 1) caps;
-       bitN = 1 `~shiftL~` n;
-       miCapUnfolded = mi \<lparr> msgCapsUnwrapped := msgCapsUnwrapped mi || bitN \<rparr>;
+       miCapUnfolded = mi \<lparr> msgCapsUnwrapped := msgCapsUnwrapped mi || bit n\<rparr>;
        (cap, srcSlot) = arg
     in
     constOnFailure (mi \<lparr> msgExtraCaps := fromIntegral n \<rparr>) $ (

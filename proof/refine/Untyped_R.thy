@@ -5438,6 +5438,10 @@ crunch inQ[wp]: insertNewCap "obj_at' (inQ d p) t"
   (wp: crunch_wps)
 crunch norq[wp]: insertNewCap "\<lambda>s. P (ksReadyQueues s)"
   (wp: crunch_wps)
+crunch norqL1[wp]: insertNewCap "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
+  (wp: crunch_wps)
+crunch norqL2[wp]: insertNewCap "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
+  (wp: crunch_wps)
 crunch ct[wp]: insertNewCap "\<lambda>s. P (ksCurThread s)"
   (wp: crunch_wps)
 crunch state_refs_of'[wp]: insertNewCap "\<lambda>s. P (state_refs_of' s)"

@@ -60,7 +60,8 @@ lemma setIRQState_invs[wp]:
                         global_refs'_def valid_machine_state'_def
                         if_unsafe_then_cap'_def ex_cte_cap_to'_def
                         valid_irq_handlers'_def irq_issued'_def
-                        cteCaps_of_def valid_irq_masks'_def)
+                        cteCaps_of_def valid_irq_masks'_def
+                        bitmapQ_defs valid_queues_no_bitmap_def)
   apply (rule conjI, clarsimp)
   apply (clarsimp simp: irqs_masked'_def ct_not_inQ_def)
   apply (rule conjI)

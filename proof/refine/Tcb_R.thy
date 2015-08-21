@@ -661,19 +661,20 @@ lemma isRunnable_wp':
   apply (clarsimp simp: st_tcb_at'_def obj_at'_def projectKOs objBitsKO_def)
   done
 
+thm chooseThread_def
 
 lemma threadSet_valid_queues_no_state:
   "\<lbrace>Invariants_H.valid_queues and (\<lambda>s. \<forall>p. t \<notin> set (ksReadyQueues s p))\<rbrace>
      threadSet f t \<lbrace>\<lambda>_. Invariants_H.valid_queues\<rbrace>"
   apply (simp add: threadSet_def)
   apply wp
-   apply (simp add: Invariants_H.valid_queues_def' st_tcb_at'_def)
+   apply (simp add: valid_queues_def valid_queues_no_bitmap_def' st_tcb_at'_def)
    apply (wp setObject_queues_unchanged_tcb
              hoare_Ball_helper
              hoare_vcg_all_lift
              setObject_tcb_strongest)[1]
   apply (wp getObject_tcb_wp)
-  apply (clarsimp simp: valid_queues_def' st_tcb_at'_def)
+  apply (clarsimp simp: valid_queues_def valid_queues_no_bitmap_def' st_tcb_at'_def)
   apply (clarsimp simp: obj_at'_def)
   done
 
@@ -721,8 +722,9 @@ lemma tcbSchedDequeue_not_in_queue:
    \<lbrace>\<lambda>rv s. t \<notin> set (ksReadyQueues s p)\<rbrace>"
   apply (rule_tac Q="\<lambda>rv. Invariants_H.valid_queues and obj_at' (Not \<circ> tcbQueued) t"
                in hoare_post_imp)
-   apply (fastforce simp: Invariants_H.valid_queues_def obj_at'_def projectKOs inQ_def )
-  apply (wp tcbSchedDequeue_not_queued | simp add: valid_objs'_maxDomain valid_objs'_maxPriority)+
+   apply (fastforce simp: valid_queues_def valid_queues_no_bitmap_def obj_at'_def projectKOs inQ_def )
+  apply (wp tcbSchedDequeue_not_queued tcbSchedDequeue_valid_queues |
+         simp add: valid_objs'_maxDomain valid_objs'_maxPriority)+
   done
 
 lemma threadSet_ct_in_state':
@@ -781,6 +783,7 @@ lemma sp_corres2:
                           gts_wp isRunnable_wp' threadSet_st_tcb_no_state threadSet_valid_queues_no_state
                           threadSet_valid_queues'_no_state threadSet_valid_objs_tcbPriority_update threadSet_weak_sch_act_wf
                           tcbSchedDequeue_not_in_queue threadSet_ct_in_state'[simplified ct_in_state'_def]
+                          tcbSchedDequeue_valid_queues
                           tcbSchedDequeue_ct_in_state'[simplified ct_in_state'_def] | simp add: etcb_relation_def)+
    apply (force simp: valid_etcbs_def tcb_at_st_tcb_at[symmetric] state_relation_def
                 dest: pspace_relation_tcb_at)
@@ -839,7 +842,7 @@ lemma setP_vq[wp]:
    \<lbrace>\<lambda>rv. Invariants_H.valid_queues\<rbrace>"
   apply (simp add: setPriority_def)
   apply (wp threadSet_valid_queues threadSet_valid_objs_tcbPriority_update threadSet_weak_sch_act_wf hoare_drop_imps hoare_vcg_all_lift
-            tcbSchedDequeue_not_in_queue tcbSchedEnqueue_valid_objs'
+            tcbSchedDequeue_not_in_queue tcbSchedEnqueue_valid_objs' tcbSchedDequeue_valid_queues
          | clarsimp simp: st_tcb_at'_def o_def)+
   apply (fastforce elim: valid_objs'_maxDomain valid_objs'_maxPriority
          | clarsimp simp: st_tcb_at'_def o_def
@@ -1572,7 +1575,8 @@ lemma setSchedulerAction_invs'[wp]:
   apply (simp add: setSchedulerAction_def)
   apply wp
   apply (clarsimp simp add: invs'_def valid_state'_def valid_irq_node'_def
-                valid_queues_def cur_tcb'_def ct_not_inQ_def)
+                valid_queues_def valid_queues_no_bitmap_def bitmapQ_defs cur_tcb'_def
+                ct_not_inQ_def)
   apply (simp add:ct_idle_or_in_cur_domain'_def)
   done
 

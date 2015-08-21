@@ -80,7 +80,7 @@ lemma no_fail_getObject_tcb [wp]:
    apply (simp add: field_simps)
    apply (erule is_aligned_no_wrap')
    apply simp
-  apply (clarsimp split: option.split_asm simp: objBits_simps archObjSize_def)
+  apply (fastforce split: option.split_asm simp: objBits_simps archObjSize_def)
   done
 
 lemma typ_at_to_obj_at':
@@ -1262,6 +1262,20 @@ lemma setObject_qs[wp]:
   apply (wp x | simp)+
   done
 
+lemma setObject_qsL1[wp]:
+  assumes x: "\<And>q n obj. \<lbrace>\<lambda>s. P (ksReadyQueuesL1Bitmap s)\<rbrace> updateObject v obj p q n \<lbrace>\<lambda>rv s. P (ksReadyQueuesL1Bitmap s)\<rbrace>"
+  shows      "\<lbrace>\<lambda>s. P (ksReadyQueuesL1Bitmap s)\<rbrace> setObject p v \<lbrace>\<lambda>rv s. P (ksReadyQueuesL1Bitmap s)\<rbrace>"
+  apply (simp add: setObject_def split_def)
+  apply (wp x | simp)+
+  done
+
+lemma setObject_qsL2[wp]:
+  assumes x: "\<And>q n obj. \<lbrace>\<lambda>s. P (ksReadyQueuesL2Bitmap s)\<rbrace> updateObject v obj p q n \<lbrace>\<lambda>rv s. P (ksReadyQueuesL2Bitmap s)\<rbrace>"
+  shows      "\<lbrace>\<lambda>s. P (ksReadyQueuesL2Bitmap s)\<rbrace> setObject p v \<lbrace>\<lambda>rv s. P (ksReadyQueuesL2Bitmap s)\<rbrace>"
+  apply (simp add: setObject_def split_def)
+  apply (wp x | simp)+
+  done
+
 lemma setObject_ifunsafe':
   fixes v :: "'a :: pspace_storable"
   assumes x: "\<And>x n tcb s t. \<lbrakk> t \<in> fst (updateObject v (KOTCB tcb) ptr x n s); P s;
@@ -1454,16 +1468,41 @@ lemma set_ep_valid_pspace'[wp]:
      apply auto
   done
 
-lemma set_ep_valid_queues[wp]:
-  "\<lbrace>Invariants_H.valid_queues\<rbrace> setEndpoint epptr ep \<lbrace>\<lambda>rv. Invariants_H.valid_queues\<rbrace>"
+lemma set_ep_valid_bitmapQ[wp]:
+  "\<lbrace>Invariants_H.valid_bitmapQ\<rbrace> setEndpoint epptr ep \<lbrace>\<lambda>rv. Invariants_H.valid_bitmapQ\<rbrace>"
   apply (unfold setEndpoint_def)
   apply (rule setObject_ep_pre)
+  apply (simp add: bitmapQ_defs setObject_def split_def)
+  apply (wp hoare_Ball_helper hoare_vcg_all_lift updateObject_default_inv | simp add: bitmapQ_def)+
+  done
+
+lemma set_ep_bitmapQ_no_L1_orphans[wp]:
+  "\<lbrace> bitmapQ_no_L1_orphans \<rbrace> setEndpoint epptr ep \<lbrace>\<lambda>rv. bitmapQ_no_L1_orphans \<rbrace>"
+  apply (unfold setEndpoint_def)
+  apply (rule setObject_ep_pre)
+  apply (simp add: bitmapQ_defs setObject_def split_def)
+  apply (wp hoare_Ball_helper hoare_vcg_all_lift updateObject_default_inv | simp add: bitmapQ_def)+
+  done
+
+lemma set_ep_bitmapQ_no_L2_orphans[wp]:
+  "\<lbrace> bitmapQ_no_L2_orphans \<rbrace> setEndpoint epptr ep \<lbrace>\<lambda>rv. bitmapQ_no_L2_orphans \<rbrace>"
+  apply (unfold setEndpoint_def)
+  apply (rule setObject_ep_pre)
+  apply (simp add: bitmapQ_defs setObject_def split_def)
+  apply (wp hoare_Ball_helper hoare_vcg_all_lift updateObject_default_inv | simp add: bitmapQ_def)+
+  done
+
+lemma set_ep_valid_queues[wp]:
+  "\<lbrace>Invariants_H.valid_queues\<rbrace> setEndpoint epptr ep \<lbrace>\<lambda>rv. Invariants_H.valid_queues\<rbrace>"
   apply (simp add: Invariants_H.valid_queues_def)
-  apply (wp hoare_Ball_helper hoare_vcg_all_lift)
-    apply (rule obj_at_setObject2)
-     apply (clarsimp simp: updateObject_default_def in_monad)
-    apply (simp add: setObject_def split_def)
-    apply (wp updateObject_default_inv | simp)+
+  apply (rule hoare_pre)
+   apply (wp hoare_vcg_conj_lift)
+    apply (simp add: setEndpoint_def valid_queues_no_bitmap_def)
+    apply (wp hoare_Ball_helper hoare_vcg_all_lift)
+      apply (rule obj_at_setObject2)
+      apply (clarsimp simp: updateObject_default_def in_monad)
+     apply (wp updateObject_default_inv set_ep_valid_bitmapQ[unfolded setEndpoint_def]
+            | simp add: valid_queues_no_bitmap_def)+
   done
 
 lemma set_ep_valid_queues'[wp]:
@@ -1658,15 +1697,41 @@ lemma set_aep_valid_pspace'[wp]:
      apply auto
   done
 
-lemma set_aep_valid_queues[wp]:
-  "\<lbrace>Invariants_H.valid_queues\<rbrace> setAsyncEP p aep \<lbrace>\<lambda>rv. Invariants_H.valid_queues\<rbrace>"
+lemma set_aep_valid_bitmapQ[wp]:
+  "\<lbrace>Invariants_H.valid_bitmapQ\<rbrace> setAsyncEP p aep \<lbrace>\<lambda>rv. Invariants_H.valid_bitmapQ\<rbrace>"
   apply (unfold setAsyncEP_def)
   apply (rule setObject_aep_pre)
+  apply (simp add: bitmapQ_defs setObject_def split_def)
+  apply (wp hoare_Ball_helper hoare_vcg_all_lift updateObject_default_inv | simp)+
+  done
+
+lemma set_aep_bitmapQ_no_L1_orphans[wp]:
+  "\<lbrace> bitmapQ_no_L1_orphans \<rbrace> setAsyncEP p aep \<lbrace>\<lambda>rv. bitmapQ_no_L1_orphans \<rbrace>"
+  apply (unfold setAsyncEP_def)
+  apply (rule setObject_aep_pre)
+  apply (simp add: bitmapQ_defs setObject_def split_def)
+  apply (wp hoare_Ball_helper hoare_vcg_all_lift updateObject_default_inv | simp)+
+  done
+
+lemma set_aep_bitmapQ_no_L2_orphans[wp]:
+  "\<lbrace> bitmapQ_no_L2_orphans \<rbrace> setAsyncEP p aep \<lbrace>\<lambda>rv. bitmapQ_no_L2_orphans \<rbrace>"
+  apply (unfold setAsyncEP_def)
+  apply (rule setObject_aep_pre)
+  apply (simp add: bitmapQ_defs setObject_def split_def)
+  apply (wp hoare_Ball_helper hoare_vcg_all_lift updateObject_default_inv | simp)+
+  done
+
+lemma set_aep_valid_queues[wp]:
+  "\<lbrace>Invariants_H.valid_queues\<rbrace> setAsyncEP p aep \<lbrace>\<lambda>rv. Invariants_H.valid_queues\<rbrace>"
   apply (simp add: Invariants_H.valid_queues_def)
-  apply (wp hoare_Ball_helper hoare_vcg_all_lift)
-    apply (rule obj_at_setObject2)
-     apply (clarsimp simp: updateObject_default_def in_monad)
-    apply (wp updateObject_default_inv | simp)+
+  apply (rule hoare_pre)
+   apply (wp hoare_vcg_conj_lift)
+    apply (simp add: setAsyncEP_def valid_queues_no_bitmap_def)
+    apply (wp hoare_Ball_helper hoare_vcg_all_lift)
+      apply (rule obj_at_setObject2)
+      apply (clarsimp simp: updateObject_default_def in_monad)
+     apply (wp updateObject_default_inv set_ep_valid_bitmapQ[unfolded setEndpoint_def]
+            | simp add: valid_queues_no_bitmap_def)+
   done
 
 lemma set_aep_valid_queues'[wp]:
@@ -2219,7 +2284,7 @@ lemma doMachineOp_invs_bits[wp]:
   "\<lbrace>cur_tcb'\<rbrace> doMachineOp m \<lbrace>\<lambda>rv. cur_tcb'\<rbrace>"
   "\<lbrace>if_unsafe_then_cap'\<rbrace> doMachineOp m \<lbrace>\<lambda>rv. if_unsafe_then_cap'\<rbrace>"
   by (simp add: doMachineOp_def split_def
-                valid_pspace'_def valid_queues_def
+                valid_pspace'_def valid_queues_def valid_queues_no_bitmap_def bitmapQ_defs
        | wp cur_tcb_lift sch_act_wf_lift tcb_in_cur_domain'_lift
        | fastforce elim: valid_objs'_pspaceI state_refs_of'_pspaceI
                         if_live_then_nonz_cap'_pspaceI)+

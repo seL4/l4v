@@ -2521,7 +2521,7 @@ lemma distinct_prop_nth:
   apply simp
   done
 
-lemma shiftl_mask_is_0 :
+lemma shiftl_mask_is_0[simp]:
   "(x << n) && mask n = 0"
   apply (rule iffD1 [OF is_aligned_mask])
   apply (rule is_aligned_shiftl_self)
@@ -6601,6 +6601,95 @@ lemma remdups_enum_upto: fixes s::"'a::len word" shows "remdups [s .e. e] = [s .
 lemma card_enum_upto: fixes s::"'a::len word" shows "card (set [s .e. e]) = Suc (unat e) - unat s"
   apply(subst List.card_set)
   apply(simp add: remdups_enum_upto)
+  done
+
+lemma unat_mask:
+  "unat (mask n :: 'a :: len word) = 2 ^ (min n (len_of TYPE('a))) - 1"
+  apply (subst min.commute)
+  apply (simp add: mask_def not_less min_def  split: split_if_asm)
+  apply (intro conjI impI)
+   apply (simp add: unat_sub_if_size)
+   apply (simp add: power_overflow word_size)
+  apply (simp add: unat_sub_if_size)
+  done
+
+lemmas unat_mask_word32 = unat_mask[where 'a=32, folded word_bits_def]
+
+lemma Suc_unat_mask_div:
+  "Suc (unat (mask sz div word_size::word32)) = 2 ^ (min sz word_bits - 2)"
+  apply (case_tac "sz < word_bits")
+   apply (case_tac "2\<le>sz")
+    apply (clarsimp simp: word_size_def word_bits_def min_def mask_def)
+    apply (drule (2) Suc_div_unat_helper
+           [where 'a=32 and sz=sz and us=2, simplified, symmetric])
+   apply (simp add: not_le word_size_def word_bits_def)
+   apply (case_tac sz, simp add: unat_word_ariths)
+   apply (case_tac nat, simp add: unat_word_ariths
+                                  unat_mask_word32 min_def word_bits_def)
+   apply simp
+  apply (simp add: unat_word_ariths
+                   unat_mask_word32 min_def word_bits_def word_size_def)
+  done
+
+lemma word_div_0: "(0::'a::len word) div x = 0"
+  by (simp add: word_arith_nat_div)
+
+lemma word_shiftr_lt:
+  fixes w :: "'a::len word"
+  shows "unat (w >> n) < (2 ^ (len_of(TYPE('a)) - n))"
+  apply (subst shiftr_div_2n')
+  by (metis nat_mod_lem nat_zero_less_power_iff power_mod_div
+      word_unat.Rep_inverse word_unat.eq_norm zero_less_numeral)
+
+lemma complement_nth_w2p:
+  shows "n' < len_of(TYPE('a)) \<Longrightarrow> (~~ (2 ^ n :: ('a::len word))) !! n' = (n' \<noteq> n)"
+  by (fastforce simp: word_ops_nth_size word_size nth_w2p)
+
+lemma word_unat_and_lt:
+  "unat x < n \<or> unat y < n \<Longrightarrow> unat (x && y) < n"
+  by (meson le_less_trans word_and_le1 word_and_le2 word_le_nat_alt)
+
+lemma word_unat_mask_lt:
+  "m \<le> size w \<Longrightarrow> unat ((w::'a::len word) && mask m) < 2 ^ m"
+  by (rule word_unat_and_lt)
+     (simp add: unat_mask word_size)
+
+lemma unat_shiftr_less_t2n:
+  fixes x :: "('a :: len) word"
+  shows "unat x < 2 ^ (n + m) \<Longrightarrow> unat (x >> n) < 2 ^ m"
+  by (simp add: shiftr_div_2n' power_add mult.commute td_gal_lt)
+
+lemma le_or_mask:
+  "w \<le> w' \<Longrightarrow> w || mask x \<le> w' || mask x"
+  by (metis WordLemmaBucket.neg_mask_add_mask add.commute
+            le_word_or1 mask_2pm1 neg_mask_mono_le
+            word_plus_mono_left)
+
+lemma le_shiftr1':
+  "\<lbrakk> shiftr1 u \<le> shiftr1 v ; shiftr1 u \<noteq> shiftr1 v \<rbrakk> \<Longrightarrow> u \<le> v"
+  apply (unfold word_le_def shiftr1_def word_ubin.eq_norm)
+  apply (unfold bin_rest_trunc_i
+                trans [OF bintrunc_bintrunc_l word_ubin.norm_Rep,
+                          unfolded word_ubin.norm_Rep,
+                       OF order_refl [THEN le_SucI]])
+  apply (case_tac "uint u" rule: bin_exhaust)
+  apply (rename_tac bs bit)
+  apply (case_tac "uint v" rule: bin_exhaust)
+  apply (rename_tac bs' bit')
+  apply (case_tac "bit")
+   apply (case_tac "bit'", auto simp: less_eq_int_code le_Bits intro: basic_trans_rules)[1]
+  apply (case_tac bit')
+   apply (simp add: le_Bits less_eq_int_code)
+  apply (auto simp: le_Bits less_eq_int_code)
+  done
+
+lemma le_shiftr':
+  "\<lbrakk> u >> n \<le> v >> n ; u >> n \<noteq> v >> n \<rbrakk> \<Longrightarrow> (u::'a::len0 word) \<le> v"
+  apply (induct n, simp)
+  apply (unfold shiftr_def)
+  apply (case_tac "(shiftr1 ^^ n) u = (shiftr1 ^^ n) v")
+   apply simp
+  apply (fastforce dest: le_shiftr1')
   done
 
 end

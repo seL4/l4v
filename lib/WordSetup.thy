@@ -43,7 +43,7 @@ definition
 
 definition
   complement :: "('a :: len) word \<Rightarrow> 'a word"  where
- "complement x \<equiv> x xor -1"
+ "complement x \<equiv> ~~ x"
 
 definition
   alignUp :: "'a::len word \<Rightarrow> nat \<Rightarrow> 'a word" where

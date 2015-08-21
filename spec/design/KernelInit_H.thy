@@ -109,7 +109,6 @@ defs allocRegion_def:
 
 defs initKernel_def:
 "initKernel entry initFrames initOffset kernelFrames bootFrames\<equiv> (do
-        wordSize \<leftarrow> return ( finiteBitSize entry);
         uiRegion \<leftarrow> return ( coverOf $ map (\<lambda> x. Region (ptrFromPAddr x, (ptrFromPAddr x) + bit (pageBits))) initFrames);
         kernelRegion \<leftarrow> return ( coverOf $ map (\<lambda> x. Region (ptrFromPAddr x, (ptrFromPAddr x) + bit (pageBits))) kernelFrames);
         kePPtr \<leftarrow> return ( fst $ fromRegion $ uiRegion);
@@ -210,7 +209,7 @@ defs createUntypedObject_def:
     freemem \<leftarrow> noInitFailure $ gets initFreeMemory;
     (flip mapME) (take maxNumFreememRegions freemem)
         (\<lambda> reg. (
-            (\<lambda> f. mapME (f reg) [4  .e.  (finiteBitSize (undefined::machine_word)) - 2])
+            (\<lambda> f. mapME (f reg) [4  .e.  wordBits - 2])
                 (\<lambda> reg bits. (doE
                     reg' \<leftarrow> (if Not (isAligned (regStartPAddr reg) (bits + 1))
                                 \<and> (regEndPAddr reg) - (regStartPAddr reg) \<ge> bit bits
@@ -305,6 +304,8 @@ where
         ksCurDomain = newKSCurDomain,
         ksDomainTime = newKSDomainTime,
         ksReadyQueues= const [],
+        ksReadyQueuesL1Bitmap = const 0,
+        ksReadyQueuesL2Bitmap = const 0,
         ksCurThread= error [],
         ksIdleThread= error [],
         ksSchedulerAction= ResumeCurrentThread,

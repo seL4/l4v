@@ -1094,9 +1094,7 @@ lemma setDomain_invs':
       in hoare_strengthen_post[rotated])
     apply (clarsimp simp:invs'_def valid_state'_def)
    apply (wp hoare_vcg_imp_lift)
-   apply (clarsimp simp:invs'_def valid_pspace'_def valid_state'_def)
-   apply (rule conjI)
-    apply (erule(1) valid_objs_valid_tcbE,simp add:valid_tcb'_def)+
+   apply (clarsimp simp:invs'_def valid_state'_def)
   apply simp
   done
 
@@ -1307,6 +1305,9 @@ lemma setTCB_valid_duplicates'[wp]:
   done
 
 crunch valid_duplicates'[wp]: threadSet "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+(ignore: getObject setObject wp: setObject_ksInterrupt updateObject_default_inv)
+
+crunch valid_duplicates'[wp]: addToBitmap "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
 (ignore: getObject setObject wp: setObject_ksInterrupt updateObject_default_inv)
 
 lemma tcbSchedEnqueue_valid_duplicates'[wp]:
@@ -1793,7 +1794,7 @@ lemma hy_corres:
       apply (rule corres_split[OF _ tcbSchedDequeue_corres])
         apply (rule corres_split[OF _ tcbSchedAppend_corres])
           apply (rule rescheduleRequired_corres)
-         apply (wp weak_sch_act_wf_lift_linear | simp add: )+
+         apply (wp weak_sch_act_wf_lift_linear tcbSchedDequeue_valid_queues | simp add: )+
    apply (simp add: invs_def valid_sched_def valid_sched_action_def
                 cur_tcb_def tcb_at_is_etcb_at)
   apply clarsimp

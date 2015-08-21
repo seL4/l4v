@@ -710,9 +710,14 @@ lemma non_fail_modify [wp,simp]:
   "no_fail \<top> (modify f)"
   by (simp add: no_fail_def modify_def get_def put_def bind_def)
 
-lemma non_fail_gets [simp]:
+lemma non_fail_gets_simp[simp]:
+  "no_fail P (gets f)"
+  unfolding no_fail_def gets_def get_def return_def bind_def
+  by simp
+
+lemma non_fail_gets:
   "no_fail \<top> (gets f)"
-  by (simp add: no_fail_def simpler_gets_def)
+  by simp
 
 lemma non_fail_select [simp]:
   "no_fail \<top> (select S)"

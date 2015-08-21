@@ -56,6 +56,8 @@ where
         ksCurDomain = newKSCurDomain,
         ksDomainTime = newKSDomainTime,
         ksReadyQueues= const [],
+        ksReadyQueuesL1Bitmap = const 0,
+        ksReadyQueuesL2Bitmap = const 0,
         ksCurThread= error [],
         ksIdleThread= error [],
         ksSchedulerAction= ResumeCurrentThread,

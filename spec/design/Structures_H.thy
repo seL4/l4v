@@ -1879,6 +1879,15 @@ consts
 dschLength :: "(domain * machine_word) \<Rightarrow> machine_word"
 
 consts
+wordBits :: "nat"
+
+consts
+wordRadix :: "nat"
+
+consts
+wordSize :: "nat"
+
+consts
 wordSizeCase :: "'a \<Rightarrow> 'a \<Rightarrow> 'a"
 
 consts
@@ -1938,10 +1947,19 @@ defs dschDomain_def:
 defs dschLength_def:
 "dschLength \<equiv> snd"
 
+defs wordBits_def:
+"wordBits\<equiv> finiteBitSize (undefined::machine_word)"
+
+defs wordRadix_def:
+"wordRadix \<equiv> wordSizeCase 5 6"
+
+defs wordSize_def:
+"wordSize \<equiv> wordBits div 8"
+
 defs wordSizeCase_def:
-"wordSizeCase a b\<equiv> (if finiteBitSize (undefined::machine_word) = 32
+"wordSizeCase a b\<equiv> (if wordBits = 32
         then  a
-        else if finiteBitSize (undefined::machine_word) = 64
+        else if wordBits = 64
         then  b
         else  error []
         )"

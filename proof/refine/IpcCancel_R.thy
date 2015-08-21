@@ -609,7 +609,8 @@ lemma asyncIPCCancel_invs':
   proof -
     have NIQ: "\<And>s. \<lbrakk> Invariants_H.valid_queues s; st_tcb_at' (Not \<circ> runnable') t s \<rbrakk>
                                          \<Longrightarrow> \<forall>x. t \<notin> set (ksReadyQueues s x)"
-      apply (clarsimp simp add: st_tcb_at'_def Invariants_H.valid_queues_def)
+      apply (clarsimp simp add: st_tcb_at'_def Invariants_H.valid_queues_def
+                                valid_queues_no_bitmap_def)
       apply (drule spec | drule(1) bspec | clarsimp simp: obj_at'_def inQ_def)+
       done
     have AEPSN: "\<And>aep aep'.
@@ -741,7 +742,7 @@ proof -
     by (clarsimp split: list.split)
   have NIQ: "\<And>s. \<lbrakk> Invariants_H.valid_queues s; st_tcb_at' (Not \<circ> runnable') t s \<rbrakk>
                                        \<Longrightarrow> \<forall>x. t \<notin> set (ksReadyQueues s x)"
-    apply (clarsimp simp add: st_tcb_at'_def Invariants_H.valid_queues_def)
+    apply (clarsimp simp add: st_tcb_at'_def Invariants_H.valid_queues_def valid_queues_no_bitmap_def)
     apply (drule spec | drule(1) bspec | clarsimp simp: obj_at'_def inQ_def)+
     done
   have EPSCHN: "\<And>eeptr ep'. \<lbrace>\<lambda>s. sch_act_not (ksCurThread s) s\<rbrace>
@@ -1149,13 +1150,16 @@ lemma tcbSchedDequeue_corres':
   apply (simp add: unless_def when_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split[where r'="op =", OF _ ethreadget_corres])
-       apply simp
+       apply (simp split del: split_if)
        apply (rule corres_split_eqr[OF _ ethreadget_corres])
           apply (rule corres_split_eqr[OF _ getQueue_corres])
-            apply simp
+            apply (simp split del: split_if)
             apply (subst bind_return_unit, rule corres_split[where r'=dc])
-               apply (simp add: dc_def[symmetric])
-               apply (rule threadSet_corres_noop, simp_all add: tcb_relation_def exst_same_def)[1]
+               apply (rule corres_split_noop_rhs)
+                 apply (simp add: dc_def[symmetric])
+                 apply (rule threadSet_corres_noop, simp_all add: tcb_relation_def exst_same_def)[1]
+                apply (clarsimp, rule removeFromBitmap_corres_noop)
+               apply wp
               apply (simp add: tcb_sched_dequeue_def)
               apply (rule setQueue_corres)
              apply (wp | simp add: etcb_relation_def)+
@@ -1193,31 +1197,69 @@ lemma threadSet_valid_inQ_queues:
   apply (fastforce)
   done
 
+lemma valid_inQ_queues_ksReadyQueuesL1Bitmap_upd[simp]:
+  "valid_inQ_queues (s\<lparr>ksReadyQueuesL1Bitmap := f\<rparr>) = valid_inQ_queues s"
+  unfolding valid_inQ_queues_def
+  by simp
+
+lemma valid_inQ_queues_ksReadyQueuesL2Bitmap_upd[simp]:
+  "valid_inQ_queues (s\<lparr>ksReadyQueuesL2Bitmap := f\<rparr>) = valid_inQ_queues s"
+  unfolding valid_inQ_queues_def
+  by simp
+
+(* reorder the threadSet before the setQueue, useful for lemmas that don't refer to bitmap *)
+lemma setQueue_after_addToBitmap:
+  "(setQueue d p q >>= (\<lambda>rv. (when P (addToBitmap d p)) >>= (\<lambda>rv. threadSet f t))) =
+   (when P (addToBitmap d p) >>= (\<lambda>rv. (threadSet f t) >>= (\<lambda>rv. setQueue d p q)))"
+  apply (case_tac P, simp_all)
+   prefer 2
+   apply (simp add: setQueue_after)
+  apply (simp add: setQueue_def when_def)
+  apply (subst oblivious_modify_swap)
+  apply (simp add: threadSet_def getObject_def setObject_def
+                   loadObject_default_def bitmap_fun_defs
+                   split_def projectKO_def2 alignCheck_assert
+                   magnitudeCheck_assert updateObject_default_def)
+  apply (intro oblivious_bind, simp_all)
+  apply (clarsimp simp: bind_assoc)
+  done
+
 lemma tcbSchedEnqueue_valid_inQ_queues[wp]:
   "\<lbrace>valid_inQ_queues\<rbrace> tcbSchedEnqueue t \<lbrace>\<lambda>_. valid_inQ_queues\<rbrace>"
-  apply (simp add: tcbSchedEnqueue_def setQueue_after)
+  apply (simp add: tcbSchedEnqueue_def setQueue_after_addToBitmap)
   apply (rule hoare_pre)
    apply (rule_tac B="\<lambda>rv. valid_inQ_queues and obj_at' (\<lambda>obj. tcbQueued obj = rv) t"
                 in hoare_seq_ext)
     apply (rename_tac queued)
-    apply (case_tac queued, simp_all add: unless_def when_def)[1]
+    apply (case_tac queued, simp_all add: unless_def)[1]
      apply (wp setQueue_valid_inQ_queues threadSet_valid_inQ_queues threadGet_wp
                hoare_vcg_const_Ball_lift
-          | simp add: inQ_def
+          | simp add: inQ_def bitmap_fun_defs
           | fastforce simp: valid_inQ_queues_def inQ_def obj_at'_def)+
-     done
+  done
+
+definition (* FIXME RAF prevent wp from splitting on the when *)
+  "removeFromBitmap_conceal d p q t \<equiv> when (null [x\<leftarrow>q . x \<noteq> t]) (removeFromBitmap d p)"
+
+lemma removeFromBitmap_conceal_valid_inQ_queues[wp]:
+  "\<lbrace> valid_inQ_queues \<rbrace> removeFromBitmap_conceal d p q t \<lbrace> \<lambda>_. valid_inQ_queues \<rbrace>"
+  unfolding bitmap_fun_defs valid_inQ_queues_def removeFromBitmap_conceal_def
+  by wp clarsimp
 
 lemma tcbSchedDequeue_valid_inQ_queues[wp]:
   "\<lbrace>valid_inQ_queues\<rbrace> tcbSchedDequeue t \<lbrace>\<lambda>_. valid_inQ_queues\<rbrace>"
-  apply (simp add: tcbSchedDequeue_def)
+  apply (simp add: tcbSchedDequeue_def removeFromBitmap_conceal_def[symmetric])
   apply (rule hoare_pre)
    apply (rule_tac B="\<lambda>rv. valid_inQ_queues and obj_at' (\<lambda>obj. tcbQueued obj = rv) t"
-                in hoare_seq_ext)
+            in hoare_seq_ext)
     apply (rename_tac queued)
     apply (case_tac queued, simp_all add: when_def)[1]
-     apply (wp threadSet_valid_inQ_queues setQueue_valid_inQ_queues threadGet_wp
-          | simp add: setQueue_def
-          | fastforce simp: valid_inQ_queues_def inQ_def obj_at'_def)+
+     apply (wp threadSet_valid_inQ_queues)
+         apply (rule hoare_pre_post, assumption)
+         apply (clarsimp simp: removeFromBitmap_conceal_def bitmap_fun_defs, wp, clarsimp)
+        apply (wp threadSet_valid_inQ_queues setQueue_valid_inQ_queues threadGet_wp
+               | simp add: setQueue_def
+               | fastforce simp: valid_inQ_queues_def inQ_def obj_at'_def)+
   done
 
 lemma rescheduleRequired_valid_inQ_queues[wp]:
@@ -1268,8 +1310,8 @@ lemma (in delete_one_conc_pre) ipcCancel_valid_inQ_queues[wp]:
 
 lemma valid_queues_inQ_queues:
   "Invariants_H.valid_queues s \<Longrightarrow> valid_inQ_queues s"
-  apply (force simp: Invariants_H.valid_queues_def valid_inQ_queues_def obj_at'_def)
-  done
+  by (force simp: Invariants_H.valid_queues_def valid_inQ_queues_def obj_at'_def
+                  valid_queues_no_bitmap_def)
 
 lemma (in delete_one) suspend_corres:
   "corres dc (einvs and tcb_at t) (invs' and sch_act_simple and tcb_at' t)
@@ -1317,10 +1359,14 @@ lemma tcbSchedDequeue_notksQ:
   "\<lbrace>\<lambda>s. t' \<notin> set(ksReadyQueues s p)\<rbrace>
     tcbSchedDequeue t
    \<lbrace>\<lambda>_ s. t' \<notin> set(ksReadyQueues s p)\<rbrace>"
-  apply (simp add: tcbSchedDequeue_def)
-  apply (wp)
-   apply (rule_tac Q="\<lambda>_ s. t' \<notin> set(ksReadyQueues s p)" in hoare_post_imp)
-    apply (wp | clarsimp)+
+  apply (simp add: tcbSchedDequeue_def  removeFromBitmap_conceal_def[symmetric])
+  apply wp
+       apply (rule hoare_pre_post, assumption)
+       apply (clarsimp simp: bitmap_fun_defs removeFromBitmap_conceal_def, wp, clarsimp)
+      apply wp
+    apply clarsimp
+    apply (rule_tac Q="\<lambda>_ s. t' \<notin> set(ksReadyQueues s p)" in hoare_post_imp)
+     apply (wp | clarsimp)+
   done
 
 lemma rescheduleRequired_oa_queued:
@@ -1359,10 +1405,13 @@ lemma tcbSchedDequeue_ksQ_distinct[wp]:
   "\<lbrace>\<lambda>s. distinct (ksReadyQueues s p)\<rbrace>
     tcbSchedDequeue t
    \<lbrace>\<lambda>_ s. distinct (ksReadyQueues s p)\<rbrace>"
-  apply (simp add: tcbSchedDequeue_def)
-  apply (wp)
-   apply (rule_tac Q="\<lambda>_ s. distinct (ksReadyQueues s p)" in hoare_post_imp)
-    apply (clarsimp | wp)+
+  apply (simp add: tcbSchedDequeue_def  removeFromBitmap_conceal_def[symmetric])
+  apply wp
+       apply (rule hoare_pre_post, assumption)
+       apply (clarsimp simp: bitmap_fun_defs removeFromBitmap_conceal_def, wp, clarsimp)
+      apply wp
+    apply (rule_tac Q="\<lambda>_ s. distinct (ksReadyQueues s p)" in hoare_post_imp)
+     apply (clarsimp | wp)+
   done
 
 lemma sts_valid_queues_partial:
@@ -1383,13 +1432,14 @@ lemma sts_valid_queues_partial:
                \<or> \<not> (sch_act_simple s))
                   \<longrightarrow> (obj_at'(\<lambda>tcb. tcbQueued tcb \<and> tcbDomain tcb = d \<and> tcbPriority tcb = p) t' s
                        \<and> st_tcb_at' runnable' t' s))" in hoare_pre_imp)
-    apply (fastforce simp: Invariants_H.valid_queues_def st_tcb_at'_def obj_at'_def inQ_def)
+    apply (fastforce simp: Invariants_H.valid_queues_def valid_queues_no_bitmap_def
+                           st_tcb_at'_def obj_at'_def inQ_def)
    apply (rule hoare_vcg_all_lift)+
     apply (rule hoare_convert_imp)
      apply (wp sts_ksQ setThreadState_oa_queued hoare_impI sts_st_tcb_neq'
             | clarsimp)+
   apply (rule_tac Q="\<lambda>s. \<forall>d p. ?DISTINCT d p s \<and> sch_act_simple s" in hoare_pre_imp)
-   apply (clarsimp simp: Invariants_H.valid_queues_def)
+   apply (clarsimp simp: Invariants_H.valid_queues_def valid_queues_no_bitmap_def)
   apply (wp hoare_vcg_all_lift sts_ksQ)
   apply (clarsimp)
   done
@@ -1404,8 +1454,11 @@ lemma tcbSchedDequeue_t_notksQ:
                in hoare_pre_imp, clarsimp)
   apply (rule hoare_pre_disj)
    apply (wp tcbSchedDequeue_notksQ)[1]
-  apply (simp add: tcbSchedDequeue_def)
-  apply (wp threadGet_wp)
+  apply (simp add: tcbSchedDequeue_def  removeFromBitmap_conceal_def[symmetric])
+  apply wp
+       apply (rule hoare_pre_post, assumption)
+       apply (clarsimp simp: bitmap_fun_defs removeFromBitmap_conceal_def, wp, clarsimp)
+      apply (wp threadGet_wp)
   apply (auto simp: obj_at'_real_def ko_wp_at'_def)
   done
 
@@ -1415,7 +1468,7 @@ lemma tcbSchedDequeue_valid_queues_partial:
                     \<and> (t' \<noteq> t \<longrightarrow> st_tcb_at' runnable' t' s))
                   \<and> distinct (ksReadyQueues s (d, p)) \<and> (maxDomain < d \<or> maxPriority < p \<longrightarrow> ksReadyQueues s (d, p) = [])\<rbrace>
    tcbSchedDequeue t
-   \<lbrace>\<lambda>_. Invariants_H.valid_queues\<rbrace>"
+   \<lbrace>\<lambda>_. valid_queues_no_bitmap \<rbrace>"
   proof -
     let ?queued = "(\<lambda>d p tcb. tcbQueued tcb \<and> tcbDomain tcb = d \<and> tcbPriority tcb = p)"
     have tcbSchedDequeue_oa_queued:
@@ -1430,7 +1483,8 @@ lemma tcbSchedDequeue_valid_queues_partial:
                       \<and> st_tcb_at' runnable' t' s))
                  \<and> distinct (ksReadyQueues s (d, p)) \<and> (maxDomain < d \<or> maxPriority < p \<longrightarrow> ksReadyQueues s (d, p) = [])"
           in hoare_post_imp)
-       apply (fastforce simp: Invariants_H.valid_queues_def st_tcb_at'_def obj_at'_def inQ_def)
+       apply (fastforce simp: Invariants_H.valid_queues_def valid_queues_no_bitmap_def
+                              st_tcb_at'_def obj_at'_def inQ_def)
       apply (wp hoare_vcg_all_lift hoare_vcg_conj_lift)
        apply (case_tac "t'=t")
         apply (clarsimp)
@@ -1440,11 +1494,30 @@ lemma tcbSchedDequeue_valid_queues_partial:
        apply (clarsimp)
        apply (wp hoare_convert_imp tcbSchedDequeue_oa_queued tcbSchedDequeue_notksQ
             | clarsimp)+
-       apply (simp add: tcbSchedDequeue_def)
+       apply (simp add: tcbSchedDequeue_def removeFromBitmap_conceal_def[symmetric])
        apply (wp threadGet_wp)+
+            apply (rule hoare_pre_post, assumption)
+            apply (clarsimp simp: removeFromBitmap_conceal_def bitmap_fun_defs, wp, clarsimp)
+           apply (wp threadGet_wp)
        apply (fastforce simp: obj_at'_real_def ko_wp_at'_def)
        done
    qed
+
+(* FIXME RAF I have many things proved for valid_queues, but they are actually supposed
+   to be proved for valid_queues_no_bitmap, and then the bitmap stuff comes in separately *)
+
+(* FIXME RAF MOVE, also can we automate this somehow?! *)
+lemma hoare_post_conjD1:
+  "\<lbrace> P \<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<and> Q' rv s \<rbrace> \<Longrightarrow> \<lbrace> P \<rbrace> f \<lbrace> Q \<rbrace>"
+  apply (rule valid_prove_more)
+  apply (simp add: conj_commute)
+  done
+
+lemma hoare_post_conjD2:
+  "\<lbrace> P \<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<and> Q' rv s \<rbrace> \<Longrightarrow> \<lbrace> P \<rbrace> f \<lbrace> Q' \<rbrace>"
+  apply (rule valid_prove_more)
+  apply (simp add: conj_commute)
+  done
 
 lemma sts_invs_minor'_no_valid_queues:
   "\<lbrace>st_tcb_at' (\<lambda>st'. tcb_st_refs_of' st' = tcb_st_refs_of' st
@@ -1460,6 +1533,9 @@ lemma sts_invs_minor'_no_valid_queues:
              (obj_at' (\<lambda>tcb. tcbQueued tcb \<and> tcbDomain tcb = d \<and> tcbPriority tcb = p) t' s
               \<and> (t' \<noteq> t \<longrightarrow> st_tcb_at' runnable' t' s)))
             \<and> distinct (ksReadyQueues s (d, p)) \<and> (maxDomain < d \<or> maxPriority < p \<longrightarrow> ksReadyQueues s (d, p) = [])) \<and>
+         valid_bitmapQ s \<and>
+         bitmapQ_no_L2_orphans s \<and>
+         bitmapQ_no_L1_orphans s \<and>
          valid_pspace' s \<and>
          sch_act_wf (ksSchedulerAction s) s \<and>
          sym_refs (state_refs_of' s) \<and>
@@ -1482,17 +1558,30 @@ lemma sts_invs_minor'_no_valid_queues:
          valid_dom_schedule' s \<and>
          cur_tcb' s \<and>
          tcb_at' t s\<rbrace>"
-  apply (simp add: invs'_def valid_state'_def)
+  apply (simp add: invs'_def valid_state'_def valid_queues_def)
   apply (wp sts_valid_queues_partial sts_ksQ
             setThreadState_oa_queued sts_st_tcb_at'_cases
             irqs_masked_lift
-            valid_irq_node_lift sts_valid_queues
+            valid_irq_node_lift
             setThreadState_ct_not_inQ
+            sts_valid_bitmapQ_sch_act_simple
+            sts_valid_bitmapQ_no_L2_orphans_sch_act_simple
+            sts_valid_bitmapQ_no_L1_orphans_sch_act_simple
             hoare_vcg_conj_lift hoare_vcg_imp_lift hoare_vcg_all_lift)+
-  apply clarsimp
+  apply (clarsimp simp: disj_imp)
   apply (intro conjI)
-       apply ((fastforce simp: valid_queues_def inQ_def st_tcb_at' st_tcb_at'_def
-                        elim!: st_tcb_at' st_tcb_ex_cap'' obj_at'_weakenE)+)[2]
+        apply (clarsimp simp: valid_queues_def)
+        apply (rule conjI, clarsimp)
+         apply (drule valid_queues_no_bitmap_objD, assumption)
+         apply (clarsimp simp: inQ_def comp_def)
+         apply (rule conjI)
+          apply (erule obj_at'_weaken)
+          apply (simp add: inQ_def)
+         apply (clarsimp simp: st_tcb_at'_def)
+         apply (erule obj_at'_weaken)
+         apply (simp add: inQ_def)
+        apply (simp add: valid_queues_no_bitmap_def)
+       apply clarsimp
      apply (clarsimp simp: st_tcb_at'_def)
      apply (drule obj_at_valid_objs')
       apply (clarsimp simp: valid_pspace'_def)
@@ -1508,12 +1597,26 @@ lemma sts_invs_minor'_no_valid_queues:
 
 crunch ct_idle_or_in_cur_domain'[wp]: tcbSchedDequeue ct_idle_or_in_cur_domain'
 
+lemma
+"((\<forall>t' d p.
+            (t' \<in> set(ksReadyQueues s (d, p)) \<longrightarrow>
+             (obj_at' (\<lambda>tcb. tcbQueued tcb \<and> tcbDomain tcb = d \<and> tcbPriority tcb = p) t' s
+              \<and> (t' \<noteq> t \<longrightarrow> st_tcb_at' runnable' t' s)))
+            \<and> distinct (ksReadyQueues s (d, p)) \<and> (maxDomain < d \<or> maxPriority < p \<longrightarrow> ksReadyQueues s (d, p) = [])))
+  \<Longrightarrow>
+  valid_queues_no_bitmap_except t s"
+  unfolding valid_queues_no_bitmap_except_def
+  by (fastforce simp: obj_at'_def inQ_def st_tcb_at'_def)
+
 lemma tcbSchedDequeue_invs'_no_valid_queues:
    "\<lbrace>\<lambda>s. (\<forall>t' d p.
             (t' \<in> set(ksReadyQueues s (d, p)) \<longrightarrow>
              (obj_at' (\<lambda>tcb. tcbQueued tcb \<and> tcbDomain tcb = d \<and> tcbPriority tcb = p) t' s
               \<and> (t' \<noteq> t \<longrightarrow> st_tcb_at' runnable' t' s)))
             \<and> distinct (ksReadyQueues s (d, p)) \<and> (maxDomain < d \<or> maxPriority < p \<longrightarrow> ksReadyQueues s (d, p) = [])) \<and>
+         valid_bitmapQ s \<and>
+         bitmapQ_no_L2_orphans s \<and>
+         bitmapQ_no_L1_orphans s \<and>
          valid_pspace' s \<and>
          sch_act_wf (ksSchedulerAction s) s \<and>
          sym_refs (state_refs_of' s) \<and>
@@ -1539,10 +1642,16 @@ lemma tcbSchedDequeue_invs'_no_valid_queues:
     tcbSchedDequeue t
    \<lbrace>\<lambda>_. invs' \<rbrace>"
   apply (simp add: invs'_def valid_state'_def)
-  apply (wp tcbSchedDequeue_valid_queues_partial valid_irq_handlers_lift
+  apply (wp tcbSchedDequeue_valid_queues_weak valid_irq_handlers_lift
             valid_irq_node_lift valid_irq_handlers_lift'
             tcbSchedDequeue_irq_states irqs_masked_lift cur_tcb_lift
-         | clarsimp simp add: cteCaps_of_def)+
+        | clarsimp simp add: cteCaps_of_def valid_queues_def)+
+    apply (rule conjI)
+     apply (fastforce simp: obj_at'_def inQ_def st_tcb_at'_def valid_queues_no_bitmap_except_def)
+    apply (rule conjI, clarsimp simp: correct_queue_def)
+    apply (fastforce simp: valid_pspace'_def intro: obj_at'_conjI
+                     elim: valid_objs'_maxDomain valid_objs'_maxPriority)
+   apply simp_all
   done
 
 lemmas sts_tcbSchedDequeue_invs' =
@@ -1553,7 +1662,7 @@ lemma (in delete_one_conc) suspend_invs'[wp]:
   "\<lbrace>invs' and sch_act_simple and tcb_at' t and (\<lambda>s. t \<noteq> ksIdleThread s)\<rbrace>
    ThreadDecls_H.suspend t \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: suspend_def)
-  apply (wp sts_tcbSchedDequeue_invs')
+  apply (wp_trace sts_tcbSchedDequeue_invs')
   apply (simp | strengthen no_refs_simple_strg')+
   apply (wp hoare_vcg_all_lift hoare_vcg_imp_lift
             ipcCancel_simple [simplified] ipcCancel_invs
@@ -1605,14 +1714,14 @@ lemmas (in delete_one_conc_pre) suspend_makes_simple' =
 
 lemma valid_queues_rq_distinctD:
   "Invariants_H.valid_queues s \<Longrightarrow> distinct (ksReadyQueues s (d, p))"
-  by (clarsimp simp: Invariants_H.valid_queues_def)
+  by (clarsimp simp: Invariants_H.valid_queues_def valid_queues_no_bitmap_def)
 
 lemma valid_queues_not_runnable'_not_ksQ:
   assumes "Invariants_H.valid_queues s" and "st_tcb_at' (Not \<circ> runnable') t s"
   shows   "\<forall>d p. t \<notin> set (ksReadyQueues s (d, p))"
   using assms
   apply -
-  apply (clarsimp simp: Invariants_H.valid_queues_def st_tcb_at'_def)
+  apply (clarsimp simp: Invariants_H.valid_queues_def valid_queues_no_bitmap_def st_tcb_at'_def)
   apply (erule_tac x=d in allE)
   apply (erule_tac x=p in allE)
   apply (clarsimp)
@@ -1668,8 +1777,8 @@ lemma tcbSchedDequeue_nonq[wp]:
     tcbSchedDequeue t \<lbrace>\<lambda>_ s. \<forall>d p. t' \<notin> set (ksReadyQueues s (d, p))\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (simp add: tcbSchedDequeue_def)
-  apply (wp threadGet_wp)
-  apply (fastforce simp: Invariants_H.valid_queues_def obj_at'_def projectKOs inQ_def)
+  apply (wp threadGet_wp|simp)+
+  apply (fastforce simp: Invariants_H.valid_queues_def valid_queues_no_bitmap_def obj_at'_def projectKOs inQ_def)
   done
 
 lemma sts_ksQ_oaQ:
@@ -1697,7 +1806,7 @@ lemma sts_ksQ_oaQ:
       apply (rule_tac Q="\<lambda>_. ?POST" in hoare_post_imp)
        apply (clarsimp simp add: sch_act_simple_def)
       apply (wp hoare_convert_imp)
-      apply (clarsimp simp: Invariants_H.valid_queues_def)
+      apply (clarsimp simp: Invariants_H.valid_queues_def valid_queues_no_bitmap_def)
       apply (drule_tac x=d in spec)
       apply (drule_tac x=p in spec)
       apply (fastforce dest: bspec elim!: obj_at'_weakenE simp: inQ_def)
@@ -1737,9 +1846,8 @@ lemma tcbSchedEnqueue_ksQset_weak:
    tcbSchedEnqueue t
    \<lbrace>\<lambda>_ s. t' \<in> set (ksReadyQueues s p)\<rbrace>" (is "\<lbrace>?PRE\<rbrace> _ \<lbrace>_\<rbrace>")
   apply (simp add: tcbSchedEnqueue_def unless_def)
-  apply (wp)
-  apply (rule_tac Q="\<lambda>_. ?PRE" in hoare_post_imp)
-   apply (wp | clarsimp)+
+  apply (wp hoare_vcg_conj_lift hoare_vcg_imp_lift hoare_vcg_if_lift)
+  apply (rule_tac Q="\<lambda>_. ?PRE" in hoare_post_imp, ((wp | clarsimp)+))+
   done
 
 lemma sts_ksQset_weak:
@@ -2261,7 +2369,7 @@ lemma setThreadState_not_tcb[wp]:
    \<lbrace>\<lambda>rv. ko_wp_at' (\<lambda>x. P x \<and> (projectKO_opt x = (None :: tcb option))) p\<rbrace>"
   apply (simp add: setThreadState_def setQueue_def
                    rescheduleRequired_def tcbSchedEnqueue_def
-                   unless_def
+                   unless_def bitmap_fun_defs
              cong: scheduler_action.case_cong  cong del: if_cong
             | wp | wpcw)+
   done
@@ -2272,7 +2380,7 @@ lemma tcbSchedEnqueue_unlive:
     tcbSchedEnqueue t
    \<lbrace>\<lambda>_. ko_wp_at' (\<lambda>x. \<not> live' x \<and> (projectKO_opt x = (None :: tcb option))) p\<rbrace>"
   apply (simp add: tcbSchedEnqueue_def unless_def)
-  apply (wp | simp add: setQueue_def)+
+  apply (wp | simp add: setQueue_def bitmap_fun_defs)+
   done
 
 lemma cancelAll_unlive_helper:
@@ -2313,7 +2421,7 @@ lemma rescheduleRequired_unlive:
    apply (simp add: tcbSchedEnqueue_def unless_def
                     threadSet_def setQueue_def threadGet_def)
    apply (wp setObject_ko_wp_at getObject_tcb_wp
-            | simp add: objBits_simps split del: split_if)+
+            | simp add: objBits_simps bitmap_fun_defs split del: split_if)+
   apply (clarsimp simp: o_def)
   apply (drule obj_at_ko_at')
   apply clarsimp
@@ -2519,9 +2627,8 @@ lemma ep_cancel_badged_sends_corres:
 lemma suspend_unqueued:
   "\<lbrace>\<top>\<rbrace> suspend t \<lbrace>\<lambda>rv. obj_at' (Not \<circ> tcbQueued) t\<rbrace>"
   apply (simp add: suspend_def unless_def tcbSchedDequeue_def)
-  apply wp
-    apply (simp add: threadGet_def)
-    apply (wp getObject_tcb_wp)
+  apply (wp hoare_vcg_if_lift hoare_vcg_conj_lift hoare_vcg_imp_lift)
+    apply (simp add: threadGet_def| wp getObject_tcb_wp)+
    apply (rule hoare_strengthen_post, rule hoare_post_taut)
    apply (fastforce simp: obj_at'_def projectKOs)
   apply (rule hoare_post_taut)

@@ -1174,45 +1174,97 @@ lemma cap_move_corres:
 lemmas cur_tcb_lift =
   hoare_lift_Pf [where f = ksCurThread and P = tcb_at', folded cur_tcb'_def]
 
-lemma valid_queues_lift:
-  assumes tat1: "\<And>d p tcb. \<lbrace>obj_at' (inQ d p) tcb\<rbrace> f \<lbrace>\<lambda>_. obj_at' (inQ d p) tcb\<rbrace>"
-  and     tat2: "\<And>p tcb. \<lbrace>st_tcb_at' runnable' tcb\<rbrace> f \<lbrace>\<lambda>_. st_tcb_at' runnable' tcb\<rbrace>"
-  and     prq: "\<And>P. \<lbrace>\<lambda>s. P (ksReadyQueues s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ksReadyQueues s)\<rbrace>"
-  shows   "\<lbrace>Invariants_H.valid_queues\<rbrace> f \<lbrace>\<lambda>_. Invariants_H.valid_queues\<rbrace>"
+lemma valid_bitmapQ_lift:
+  assumes prq: "\<And>P. \<lbrace>\<lambda>s. P (ksReadyQueues s) \<rbrace> f \<lbrace>\<lambda>_ s. P (ksReadyQueues s)\<rbrace>"
+  and     prqL1: "\<And>P. \<lbrace>\<lambda>s. P (ksReadyQueuesL1Bitmap s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ksReadyQueuesL1Bitmap s)\<rbrace>"
+  and     prqL2: "\<And>P. \<lbrace>\<lambda>s. P (ksReadyQueuesL2Bitmap s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ksReadyQueuesL2Bitmap s)\<rbrace>"
+  shows   "\<lbrace>Invariants_H.valid_bitmapQ\<rbrace> f \<lbrace>\<lambda>_. Invariants_H.valid_bitmapQ\<rbrace>"
+  unfolding valid_bitmapQ_def bitmapQ_def 
+  apply (wp hoare_vcg_all_lift)
+  apply (rule hoare_pre)
+  apply (wps prq prqL1 prqL2)
+  apply (rule hoare_vcg_prop, assumption)
+  done
+
+lemma bitmapQ_no_L1_orphans_lift:
+  assumes prq: "\<And>P. \<lbrace>\<lambda>s. P (ksReadyQueues s) \<rbrace> f \<lbrace>\<lambda>_ s. P (ksReadyQueues s)\<rbrace>"
+  and     prqL1: "\<And>P. \<lbrace>\<lambda>s. P (ksReadyQueuesL1Bitmap s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ksReadyQueuesL1Bitmap s)\<rbrace>"
+  and     prqL2: "\<And>P. \<lbrace>\<lambda>s. P (ksReadyQueuesL2Bitmap s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ksReadyQueuesL2Bitmap s)\<rbrace>"
+  shows   "\<lbrace> bitmapQ_no_L1_orphans \<rbrace> f \<lbrace>\<lambda>_. bitmapQ_no_L1_orphans \<rbrace>"
+  unfolding valid_bitmapQ_def bitmapQ_def bitmapQ_no_L1_orphans_def
+  apply (wp hoare_vcg_all_lift)
+  apply (rule hoare_pre)
+  apply (wps prq prqL1 prqL2)
+  apply (rule hoare_vcg_prop, assumption)
+  done
+
+lemma bitmapQ_no_L2_orphans_lift:
+  assumes prq: "\<And>P. \<lbrace>\<lambda>s. P (ksReadyQueues s) \<rbrace> f \<lbrace>\<lambda>_ s. P (ksReadyQueues s)\<rbrace>"
+  and     prqL1: "\<And>P. \<lbrace>\<lambda>s. P (ksReadyQueuesL1Bitmap s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ksReadyQueuesL1Bitmap s)\<rbrace>"
+  and     prqL2: "\<And>P. \<lbrace>\<lambda>s. P (ksReadyQueuesL2Bitmap s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ksReadyQueuesL2Bitmap s)\<rbrace>"
+  shows   "\<lbrace> bitmapQ_no_L2_orphans \<rbrace> f \<lbrace>\<lambda>_. bitmapQ_no_L2_orphans \<rbrace>"
+  unfolding valid_bitmapQ_def bitmapQ_def bitmapQ_no_L2_orphans_def
+  apply (wp hoare_vcg_all_lift)
+  apply (rule hoare_pre)
+  apply (wps prq prqL1 prqL2)
+  apply (rule hoare_vcg_prop, assumption)
+  done
+
+lemma valid_queues_lift_asm:
+  assumes tat1: "\<And>d p tcb. \<lbrace>obj_at' (inQ d p) tcb and Q \<rbrace> f \<lbrace>\<lambda>_. obj_at' (inQ d p) tcb\<rbrace>"
+  and     tat2: "\<And>tcb. \<lbrace>st_tcb_at' runnable' tcb and Q \<rbrace> f \<lbrace>\<lambda>_. st_tcb_at' runnable' tcb\<rbrace>"
+  and     prq: "\<And>P. \<lbrace>\<lambda>s. P (ksReadyQueues s) \<rbrace> f \<lbrace>\<lambda>_ s. P (ksReadyQueues s)\<rbrace>"
+  and     prqL1: "\<And>P. \<lbrace>\<lambda>s. P (ksReadyQueuesL1Bitmap s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ksReadyQueuesL1Bitmap s)\<rbrace>"
+  and     prqL2: "\<And>P. \<lbrace>\<lambda>s. P (ksReadyQueuesL2Bitmap s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ksReadyQueuesL2Bitmap s)\<rbrace>"
+  shows   "\<lbrace>Invariants_H.valid_queues and Q\<rbrace> f \<lbrace>\<lambda>_. Invariants_H.valid_queues\<rbrace>"
   proof -
-    have tat:  "\<And>d p tcb. \<lbrace>obj_at' (inQ d p) tcb and st_tcb_at' runnable' tcb\<rbrace> f
+    have tat:  "\<And>d p tcb. \<lbrace>obj_at' (inQ d p) tcb and st_tcb_at' runnable' tcb and Q\<rbrace> f
                          \<lbrace>\<lambda>_. obj_at' (inQ d p) tcb and st_tcb_at' runnable' tcb\<rbrace>"
       apply (rule hoare_chain [OF hoare_vcg_conj_lift [OF tat1 tat2]])
        apply (fastforce)+
        done
-    have tat_combined: "\<And>d p tcb. \<lbrace>obj_at' (inQ d p and runnable' \<circ> tcbState) tcb\<rbrace> f
+    have tat_combined: "\<And>d p tcb. \<lbrace>obj_at' (inQ d p and runnable' \<circ> tcbState) tcb and Q\<rbrace> f
                          \<lbrace>\<lambda>_. obj_at' (inQ d p and runnable' \<circ> tcbState) tcb\<rbrace>"
       apply (rule hoare_chain [OF tat])
        apply (fastforce simp add: obj_at'_and st_tcb_at'_def)+
       done
-    show ?thesis
-      apply (clarsimp simp: Invariants_H.valid_queues_def)
-      apply (wp tat_combined prq hoare_vcg_all_lift hoare_vcg_conj_lift hoare_Ball_helper)
-      done
+    show ?thesis unfolding valid_queues_def valid_queues_no_bitmap_def
+      by (wp tat_combined prq prqL1 prqL2 valid_bitmapQ_lift bitmapQ_no_L2_orphans_lift
+             bitmapQ_no_L1_orphans_lift hoare_vcg_all_lift hoare_vcg_conj_lift hoare_Ball_helper)
+         simp_all
   qed
+
+lemmas valid_queues_lift = valid_queues_lift_asm[where Q="\<lambda>_. True", simplified]
 
 lemma valid_queues_lift':
   assumes tat: "\<And>d p tcb. \<lbrace>\<lambda>s. \<not> obj_at' (inQ d p) tcb s\<rbrace> f \<lbrace>\<lambda>_ s. \<not> obj_at' (inQ d p) tcb s\<rbrace>"
   and     prq: "\<And>P. \<lbrace>\<lambda>s. P (ksReadyQueues s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ksReadyQueues s)\<rbrace>"
   shows   "\<lbrace>valid_queues'\<rbrace> f \<lbrace>\<lambda>_. valid_queues'\<rbrace>"
-  apply (simp only: valid_queues'_def imp_conv_disj)
-  apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift
-            tat prq)
-  done
+  unfolding valid_queues'_def imp_conv_disj
+  by (wp hoare_vcg_all_lift hoare_vcg_disj_lift tat prq)
 
 lemma setCTE_norq [wp]:
   "\<lbrace>\<lambda>s. P (ksReadyQueues s)\<rbrace> setCTE ptr cte \<lbrace>\<lambda>r s. P (ksReadyQueues s) \<rbrace>"
+  by (clarsimp simp: valid_def dest!: setCTE_pspace_only)
+
+lemma setCTE_norqL1 [wp]:
+  "\<lbrace>\<lambda>s. P (ksReadyQueuesL1Bitmap s)\<rbrace> setCTE ptr cte \<lbrace>\<lambda>r s. P (ksReadyQueuesL1Bitmap s) \<rbrace>"
+  by (clarsimp simp: valid_def dest!: setCTE_pspace_only)
+
+lemma setCTE_norqL2 [wp]:
+  "\<lbrace>\<lambda>s. P (ksReadyQueuesL2Bitmap s)\<rbrace> setCTE ptr cte \<lbrace>\<lambda>r s. P (ksReadyQueuesL2Bitmap s) \<rbrace>"
   by (clarsimp simp: valid_def dest!: setCTE_pspace_only)
 
 crunch nosch[wp]: cteInsert "\<lambda>s. P (ksSchedulerAction s)"
   (wp: updateObject_cte_inv hoare_drop_imps)
 
 crunch norq[wp]: cteInsert "\<lambda>s. P (ksReadyQueues s)"
+  (wp: updateObject_cte_inv hoare_drop_imps)
+
+crunch norqL1[wp]: cteInsert "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
+  (wp: updateObject_cte_inv hoare_drop_imps)
+
+crunch norqL2[wp]: cteInsert "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
   (wp: updateObject_cte_inv hoare_drop_imps)
 
 crunch typ_at'[wp]: cteInsert "\<lambda>s. P (typ_at' T p s)"
@@ -3285,10 +3337,14 @@ lemma cteInsert_invs:
   \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (rule hoare_pre)
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
+  apply (wp cur_tcb_lift tcb_in_cur_domain'_lift sch_act_wf_lift
+            valid_irq_node_lift valid_queues_lift' irqs_masked_lift
+            cteInsert_norq | simp add: st_tcb_at'_def)+
   apply (wp cur_tcb_lift tcb_in_cur_domain'_lift sch_act_wf_lift CSpace_R.valid_queues_lift
             valid_irq_node_lift valid_queues_lift' irqs_masked_lift
             cteInsert_norq | simp add: st_tcb_at'_def)+
-  apply (auto simp: invs'_def valid_state'_def valid_pspace'_def elim: valid_capAligned)
+  apply (auto simp: invs'_def valid_state'_def valid_pspace'_def elim: 
+  valid_capAligned)
   done
 
 lemma derive_cap_corres:
@@ -4143,6 +4199,8 @@ crunch obj_at'_inQ[wp]: setupReplyMaster "obj_at' (inQ d p) t"
 crunch tcbDomain_inv[wp]: setupReplyMaster "obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t"
 crunch tcbPriority_inv[wp]: setupReplyMaster "obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t"
 crunch ready_queues[wp]: setupReplyMaster "\<lambda>s. P (ksReadyQueues s)"
+crunch ready_queuesL1[wp]: setupReplyMaster "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
+crunch ready_queuesL2[wp]: setupReplyMaster "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
 
 crunch ksDomScheduleIdx[wp]: setupReplyMaster "\<lambda>s. P (ksDomScheduleIdx s)"
 
@@ -4422,7 +4480,6 @@ lemma arch_update_setCTE_invs:
              valid_irq_node_lift setCTE_typ_at' setCTE_irq_handlers'
              valid_queues_lift' setCTE_st_tcb_at' irqs_masked_lift
              setCTE_norq hoare_vcg_disj_lift| simp add: st_tcb_at'_def)+
-  apply clarsimp
   apply (clarsimp simp: valid_global_refs'_def is_arch_update'_def cte_wp_at_ctes_of isCap_simps)
   apply (frule capMaster_eq_capBits_eq)
   apply (drule capMaster_capRange)
@@ -5882,7 +5939,8 @@ lemma cteInsert_simple_invs:
              valid_irq_node_lift valid_queues_lift' irqs_masked_lift
              cteInsert_simple_mdb' cteInsert_valid_globals_simple
              cteInsert_norq | simp add: st_tcb_at'_def)+
-  apply (auto simp: invs'_def valid_state'_def valid_pspace'_def elim: valid_capAligned)
+  apply (auto simp: invs'_def valid_state'_def valid_pspace'_def
+              elim: valid_capAligned)
   done
 
 
@@ -6246,7 +6304,7 @@ lemma updateFreeIndex_invs':
         invs' s \<and> cte_wp_at' (\<lambda>c. cteCap c = cap) src s\<rbrace>
    updateCap src (capFreeIndex_update (\<lambda>_. idx) cap)
    \<lbrace>\<lambda>r s. invs' s\<rbrace>"
-   apply (clarsimp simp:invs'_def valid_state'_def )
+   apply (clarsimp simp:invs'_def valid_state'_def)
    apply (wp updateFreeIndex_pspace' sch_act_wf_lift valid_queues_lift updateCap_iflive' tcb_in_cur_domain'_lift
              | simp add: st_tcb_at'_def)+
         apply (rule hoare_pre)

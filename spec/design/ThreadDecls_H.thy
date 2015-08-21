@@ -61,6 +61,12 @@ consts
 schedule :: "unit kernel"
 
 consts
+countLeadingZeros :: "('b :: {HS_bit, finiteBit}) \<Rightarrow> nat"
+
+consts
+wordLog2 :: "('b :: {HS_bit, finiteBit}) \<Rightarrow> nat"
+
+consts
 chooseThread :: "unit kernel"
 
 consts
@@ -92,6 +98,30 @@ getThreadState :: "machine_word \<Rightarrow> thread_state kernel"
 
 consts
 setThreadState :: "thread_state \<Rightarrow> machine_word \<Rightarrow> unit kernel"
+
+consts
+prioToL1Index :: "priority \<Rightarrow> nat"
+
+consts
+l1IndexToPrio :: "nat \<Rightarrow> priority"
+
+consts
+getReadyQueuesL1Bitmap :: "domain \<Rightarrow> (machine_word) kernel"
+
+consts
+modifyReadyQueuesL1Bitmap :: "domain \<Rightarrow> (machine_word \<Rightarrow> machine_word) \<Rightarrow> unit kernel"
+
+consts
+getReadyQueuesL2Bitmap :: "domain \<Rightarrow> nat \<Rightarrow> (machine_word) kernel"
+
+consts
+modifyReadyQueuesL2Bitmap :: "domain \<Rightarrow> nat \<Rightarrow> (machine_word \<Rightarrow> machine_word) \<Rightarrow> unit kernel"
+
+consts
+addToBitmap :: "domain \<Rightarrow> priority \<Rightarrow> unit kernel"
+
+consts
+removeFromBitmap :: "domain \<Rightarrow> priority \<Rightarrow> unit kernel"
 
 consts
 tcbSchedEnqueue :: "machine_word \<Rightarrow> unit kernel"

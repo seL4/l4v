@@ -119,7 +119,7 @@ lemma load_ct_corres:
                    capTransferDataSize_def capTransferFromWords_def
                    msgExtraCapBits_def word_size add.commute add.left_commute
                    msg_max_length_def msg_max_extra_caps_def word_size_def
-                   msgMaxLength_def msgMaxExtraCaps_def msgLengthBits_def 
+                   msgMaxLength_def msgMaxExtraCaps_def msgLengthBits_def wordSize_def wordBits_def
               del: upt.simps)
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ load_word_corres])
@@ -262,7 +262,7 @@ lemma get_extra_cptrs_corres:
                          msg_max_length_def msgMaxLength_def
                          msgLengthBits_def max_ipc_words word_less_nat_alt)
        apply (simp add: word_size_def word_size field_simps
-                        msg_max_length_def msgMaxLength_def
+                        msg_max_length_def msgMaxLength_def wordSize_def wordBits_def
                         msgLengthBits_def max_ipc_words word_less_nat_alt)
       apply wp
     apply (simp add: map_Suc_upt[symmetric] upt_lhs_sub_map[where x=msg_max_length]
@@ -363,7 +363,7 @@ lemma corres_set_extra_badge:
   apply (drule store_word_offs_corres [where a=buffer and w=b])
   apply (simp add: set_extra_badge_def setExtraBadge_def buffer_cptr_index_def
                    bufferCPtrOffset_def Let_def)
-  apply (simp add: word_size word_size_def
+  apply (simp add: word_size word_size_def wordSize_def wordBits_def
                    bufferCPtrOffset_def buffer_cptr_index_def msgMaxLength_def 
                    msg_max_length_def msgLengthBits_def store_word_offs_def
                    add.commute add.left_commute)
@@ -386,7 +386,7 @@ lemma get_extra_cptr_corres:
   apply (rule corres_gen_asm2)
   apply (simp add: get_extra_cptr_def getExtraCPtr_def buffer_cptr_index_def 
                    word_size_def msg_max_length_def word_size bufferCPtrOffset_def
-                   msgMaxLength_def msgLengthBits_def)
+                   msgMaxLength_def msgLengthBits_def wordSize_def wordBits_def)
   apply (simp add: field_simps)
   apply (rule corres_guard_imp, rule corres_rel_imp,
          rule load_word_offs_corres', simp_all)
@@ -933,6 +933,8 @@ crunch ksCurDomain[wp]: setExtraBadge "\<lambda>s. P (ksCurDomain s)"
 crunch obj_at' [wp]: setExtraBadge "\<lambda>s. P' (obj_at' P p s)"
   (simp: storeWordUser_def)
 crunch queues [wp]: setExtraBadge "\<lambda>s. P (ksReadyQueues s)"
+crunch queuesL1 [wp]: setExtraBadge "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
+crunch queuesL2 [wp]: setExtraBadge "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
 
 lemma tcts_sch_act[wp]:
   "\<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s\<rbrace>
@@ -1619,6 +1621,7 @@ lemma lec_corres:
                    word_size_def msg_max_length_def liftM_def
                    Suc_unat_diff_1 word_le_sub1 mapM_map_simp
                    upt_lhs_sub_map[where x=buffer_cptr_index]
+                   wordSize_def wordBits_def
               del: upt.simps)
   apply (rule corres_guard_imp)
     apply (rule corres_split')
@@ -2973,7 +2976,7 @@ lemma possibleSwitchTo_sch_act[wp]:
   "\<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s \<and> st_tcb_at' runnable' t s\<rbrace>
      possibleSwitchTo t b
    \<lbrace>\<lambda>rv s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
-  apply (simp add: possibleSwitchTo_def tcbSchedEnqueue_def curDomain_def)
+  apply (simp add: possibleSwitchTo_def curDomain_def)
   apply (wp static_imp_wp threadSet_sch_act setQueue_sch_act threadGet_wp
        | simp add: unless_def | wpc)+
   apply (auto simp: obj_at'_def projectKOs tcb_in_cur_domain'_def)

@@ -1,5 +1,8 @@
-Built from git repo at /home/jbeeren/nfshome/work/replycap/seL4/haskell by jbeeren
+Built from git repo at /home/x/repos/priority-bitmap/seL4/haskell by x
 
 Generated from changeset:
-827a47e SELFOUR-220: only delete reply cap when waiting on sync endpoint
+eb651de Haskell: factor out wordLog2 as a separate function
 
+
+Warning - uncomitted changes used:
+ M src/SEL4/Kernel/Thread.lhs

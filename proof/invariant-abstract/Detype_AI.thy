@@ -1110,43 +1110,6 @@ next
     done
 qed
 
-
-(* FIXME: move *)
-lemma unat_mask:
-  "unat (mask n :: 'a :: len word) = 2 ^ (min n (len_of TYPE('a))) - 1"
-  apply (subst min.commute)
-  apply (simp add: mask_def not_less min_def  split: split_if_asm)
-  apply (intro conjI impI)
-   apply (simp add: unat_sub_if_size)
-   apply (simp add: power_overflow word_size)
-  apply (simp add: unat_sub_if_size)
-  done
-
-
-(* FIXME: move *)
-lemmas unat_mask_word32 = unat_mask[where 'a=32, folded word_bits_def]
-
-
-lemma Suc_unat_mask_div:
-  "Suc (unat (mask sz div word_size::word32)) = 2 ^ (min sz word_bits - 2)"
-  apply (case_tac "sz < word_bits")
-   apply (case_tac "2\<le>sz")
-    apply (clarsimp simp: word_size_def word_bits_def min_def mask_def)
-    apply (drule (2) Suc_div_unat_helper
-           [where 'a=32 and sz=sz and us=2, simplified, symmetric])
-   apply (simp add: not_le word_size_def word_bits_def)
-   apply (case_tac sz, simp add: unat_word_ariths)
-   apply (case_tac nat, simp add: unat_word_ariths
-                                  unat_mask_word32 min_def word_bits_def)
-   apply simp
-  apply (simp add: unat_word_ariths
-                   unat_mask_word32 min_def word_bits_def word_size_def)
-  done
-
-(* FIXME: move *)
-lemma word_div_0: "(0::'a::len word) div x = 0"
-  by (simp add: word_arith_nat_div)
-
 (* FIXME: move *)
 lemma gets_modify_comm2:
   "\<forall>s. g (f s) = g s \<Longrightarrow>

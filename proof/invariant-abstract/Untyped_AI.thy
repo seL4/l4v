@@ -306,9 +306,7 @@ lemma data_to_obj_type_sp:
 lemma alignUp_def2:
   "alignUp a sz = a + 2 ^ sz - 1 && ~~ mask sz"
    unfolding alignUp_def[unfolded complement_def]
-   apply (subst word_log_esimps)
-   apply (simp add:mask_def[symmetric,unfolded shiftl_t2n,simplified])
-   done
+   by (simp add:mask_def[symmetric,unfolded shiftl_t2n,simplified])
 
 
 lemma is_aligned_triv2:

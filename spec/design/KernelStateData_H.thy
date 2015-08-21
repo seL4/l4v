@@ -43,6 +43,8 @@ record kernel_state =
   ksCurDomain          :: domain
   ksDomainTime         :: machine_word
   ksReadyQueues        :: "domain \<times> priority \<Rightarrow> ready_queue"
+  ksReadyQueuesL1Bitmap :: "domain \<Rightarrow> machine_word"
+  ksReadyQueuesL2Bitmap :: "domain \<times> nat \<Rightarrow> machine_word"
   ksCurThread          :: machine_word
   ksIdleThread         :: machine_word
   ksSchedulerAction    :: scheduler_action

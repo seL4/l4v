@@ -180,6 +180,32 @@ crunch no_orphans [wp]: threadGet "no_orphans"
 
 crunch no_orphans [wp]: getAsyncEP "no_orphans"
 
+lemma no_orphans_ksReadyQueuesL1Bitmap_update[simp]:
+  "no_orphans (s\<lparr> ksReadyQueuesL1Bitmap := x \<rparr>) = no_orphans s"
+  unfolding no_orphans_def all_active_tcb_ptrs_def all_queued_tcb_ptrs_def is_active_tcb_ptr_def
+  by auto
+
+lemma no_orphans_ksReadyQueuesL2Bitmap_update[simp]:
+  "no_orphans (s\<lparr> ksReadyQueuesL2Bitmap := x \<rparr>) = no_orphans s"
+  unfolding no_orphans_def all_active_tcb_ptrs_def all_queued_tcb_ptrs_def is_active_tcb_ptr_def
+  by auto
+
+crunch no_orphans [wp]: addToBitmap "no_orphans"
+crunch no_orphans [wp]: removeFromBitmap "no_orphans"
+
+lemma almost_no_orphans_ksReadyQueuesL1Bitmap_update[simp]:
+  "almost_no_orphans t (s\<lparr> ksReadyQueuesL1Bitmap := x \<rparr>) = almost_no_orphans t s"
+  unfolding almost_no_orphans_def all_active_tcb_ptrs_def all_queued_tcb_ptrs_def is_active_tcb_ptr_def
+  by auto
+
+lemma almost_no_orphans_ksReadyQueuesL2Bitmap_update[simp]:
+  "almost_no_orphans t (s\<lparr> ksReadyQueuesL2Bitmap := x \<rparr>) = almost_no_orphans t s"
+  unfolding almost_no_orphans_def all_active_tcb_ptrs_def all_queued_tcb_ptrs_def is_active_tcb_ptr_def
+  by auto
+
+crunch almost_no_orphans [wp]: addToBitmap "almost_no_orphans x"
+crunch almost_no_orphans [wp]: removeFromBitmap "almost_no_orphans x"
+
 lemma setCTE_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<rbrace>
    setCTE p cte
@@ -575,10 +601,13 @@ lemma tcbSchedDequeue_all_queued_tcb_ptrs:
            in hoare_pre_imp, clarsimp)
   apply (rule hoare_gen_asm)
   apply (clarsimp simp: tcbSchedDequeue_def all_queued_tcb_ptrs_def)
-  apply (wp hoare_ex_wp)
-  apply (rule_tac Q="\<lambda>_ s. x \<in> set (ksReadyQueues s (a, b))"
-           in hoare_post_imp, clarsimp)
-  apply (wp hoare_vcg_all_lift | simp)+
+  apply (rule hoare_pre)
+   apply (wp, clarsimp)
+       apply (wp hoare_ex_wp)
+     apply (rename_tac d p)
+     apply (rule_tac Q="\<lambda>_ s. x \<in> set (ksReadyQueues s (d, p))"
+                     in hoare_post_imp, clarsimp)
+     apply (wp hoare_vcg_all_lift | simp)+
   done
 
 lemma tcbSchedDequeue_all_active_tcb_ptrs[wp]:
@@ -681,9 +710,16 @@ lemma tcbSchedDequeue_not_empty:
    \<lbrace> \<lambda>rv s. \<exists>tcb. tcb \<in> set (ksReadyQueues s p) \<and> st_tcb_at' P tcb s \<rbrace>"
   unfolding tcbSchedDequeue_def
   apply wp
-      apply (wp hoare_ex_wp threadSet_st_tcb_no_state)
+         apply (wp hoare_ex_wp threadSet_st_tcb_no_state)
+         apply clarsimp
+        apply (wp setQueue_deq_not_empty)
+       apply clarsimp
+       apply (rule hoare_pre_post, assumption)
+       apply (clarsimp simp: bitmap_fun_defs)
+       apply wp
+       apply clarsimp
       apply clarsimp
-     apply (wp setQueue_deq_not_empty)
+      apply (wp setQueue_deq_not_empty)
    apply (rule_tac Q="\<lambda>rv s. \<not> st_tcb_at' P thread s" in hoare_post_imp)
     apply fastforce
    apply (wp weak_if_wp | clarsimp)+
@@ -702,25 +738,24 @@ lemma chooseThread_no_orphans [wp]:
    chooseThread
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   (is "\<lbrace>?PRE\<rbrace> _ \<lbrace>_\<rbrace>")
-  apply (clarsimp simp: chooseThread_def cong: if_cong)
-  apply (wp | clarsimp)+
-
-   apply (rule_tac I="all_invs_but_ct_idle_or_in_cur_domain'" in findM_on_outcome)
-   apply (clarsimp)
-   apply (wp, wpc)
-     apply (wp static_imp_wp)
-     apply (rule ThreadDecls_H_switchToThread_no_orphans)
-    apply (simp only: not_True_eq_False simp_thms)
-    apply (rule wp_post_taut)
-   apply (clarsimp)+
-   apply (rule_tac Q="\<lambda>ksq s. (\<forall>t\<in>set(ksq). st_tcb_at' runnable' t s) \<and> ?PRE s"
-            in hoare_post_imp)
-    apply (fastforce simp: all_active_tcb_ptrs_def)
-   apply (wp gq_wp)
-   apply (fastforce simp: all_invs_but_ct_idle_or_in_cur_domain'_def valid_state'_def
-                          valid_queues_def st_tcb_at'_def
-                   elim!: obj_at'_weakenE)
-  apply (wp | clarsimp)+
+  unfolding chooseThread_def Let_def numDomains_def curDomain_def
+  apply (simp only: return_bind, simp)
+  apply (rule hoare_seq_ext[where B="\<lambda>rv s. ?PRE s \<and> rv = ksCurDomain s"])
+   apply (rule_tac B="\<lambda>rv s. ?PRE s \<and> curdom = ksCurDomain s \<and>
+    rv = ksReadyQueuesL1Bitmap s curdom" in hoare_seq_ext)
+    apply (rename_tac l1)
+    apply (case_tac "l1 = 0")
+     (* switch to idle thread *)
+     apply (simp, wp_once, simp)
+    (* we have a thread to switch to *)
+    apply (clarsimp simp: bitmap_fun_defs)
+    apply (wp assert_inv ThreadDecls_H_switchToThread_no_orphans)
+    apply (clarsimp simp: all_invs_but_ct_idle_or_in_cur_domain'_def valid_state'_def
+                          valid_queues_def st_tcb_at'_def)
+    apply (fold lookupBitmapPriority_def)
+    apply (fastforce dest!: lookupBitmapPriority_obj_at' elim: obj_at'_weaken
+                     simp: all_active_tcb_ptrs_def)
+   apply (simp add: bitmap_fun_defs | wp)+
   done
 
 lemma hoare_neg_imps:

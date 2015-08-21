@@ -731,10 +731,62 @@ where
  "inQ d p tcb \<equiv> tcbQueued tcb \<and> tcbPriority tcb = p \<and> tcbDomain tcb = d"
 
 definition
+  (* for given domain and priority, the scheduler bitmap indicates a thread is in the queue *)
+  bitmapQ :: "domain \<Rightarrow> priority \<Rightarrow> kernel_state \<Rightarrow> bool"
+where
+  "bitmapQ d p s \<equiv> ksReadyQueuesL1Bitmap s d !! prioToL1Index p
+                     \<and> ksReadyQueuesL2Bitmap s (d, prioToL1Index p) !! unat (p && mask wordRadix)"
+
+definition
+  valid_queues_no_bitmap :: "kernel_state \<Rightarrow> bool"
+where
+ "valid_queues_no_bitmap \<equiv> \<lambda>s.
+   (\<forall>d p. (\<forall>t \<in> set (ksReadyQueues s (d, p)). obj_at' (inQ d p and runnable' \<circ> tcbState) t s)
+    \<and>  distinct (ksReadyQueues s (d, p))
+    \<and> (d > maxDomain \<or> p > maxPriority \<longrightarrow> ksReadyQueues s (d,p) = []))"
+
+definition
+  (* A priority is used as a two-part key into the bitmap structure. If an L2 bitmap entry
+     is set without an L1 entry, updating the L1 entry (shared by many priorities) may make
+     unexpected threads schedulable *)
+  bitmapQ_no_L2_orphans :: "kernel_state \<Rightarrow> bool"
+where
+  "bitmapQ_no_L2_orphans \<equiv> \<lambda>s.
+    \<forall>d i j. ksReadyQueuesL2Bitmap s (d, i) !! j \<longrightarrow> (ksReadyQueuesL1Bitmap s d !! i)"
+
+definition
+  (* If the scheduler finds a set bit in L1 of the bitmap, it must find some bit set in L2
+     when it looks there. This lets it omit a check.
+     L2 entries have wordBits bits each. That means the L1 word only indexes
+     a small number of L2 entries, despite being stored in a wordBits word.
+     We allow only bits corresponding to L2 indices to be set.
+  *)
+  bitmapQ_no_L1_orphans :: "kernel_state \<Rightarrow> bool"
+where
+  "bitmapQ_no_L1_orphans \<equiv> \<lambda>s.
+    \<forall>d i. ksReadyQueuesL1Bitmap s d !! i \<longrightarrow> ksReadyQueuesL2Bitmap s (d, i) \<noteq> 0 \<and>
+                                             i < numPriorities div wordBits"
+
+definition
+  valid_bitmapQ :: "kernel_state \<Rightarrow> bool"
+where
+  "valid_bitmapQ \<equiv> \<lambda>s. (\<forall>d p. bitmapQ d p s \<longleftrightarrow> ksReadyQueues s (d,p) \<noteq> [])"
+
+definition
   valid_queues :: "kernel_state \<Rightarrow> bool"
 where
- "valid_queues \<equiv> \<lambda>s. (\<forall>d p. (\<forall>t \<in> set (ksReadyQueues s (d, p)). obj_at' (inQ d p and runnable' \<circ> tcbState) t s)
-                           \<and>  distinct (ksReadyQueues s (d, p)) \<and> (d > maxDomain \<or> p > maxPriority \<longrightarrow> ksReadyQueues s (d,p) = []))"
+ "valid_queues \<equiv> \<lambda>s. valid_queues_no_bitmap s \<and> valid_bitmapQ s \<and> 
+                     bitmapQ_no_L2_orphans s \<and> bitmapQ_no_L1_orphans s"
+
+definition
+  (* when a thread gets added to / removed from a queue, but before bitmap updated *)
+  valid_bitmapQ_except :: "domain \<Rightarrow> priority \<Rightarrow> kernel_state \<Rightarrow> bool"
+where
+  "valid_bitmapQ_except d' p' \<equiv> \<lambda>s.
+    (\<forall>d p. (d \<noteq> d' \<or> p \<noteq> p') \<longrightarrow> (bitmapQ d p s \<longleftrightarrow> ksReadyQueues s (d,p) \<noteq> []))"
+
+lemmas bitmapQ_defs = valid_bitmapQ_def valid_bitmapQ_except_def bitmapQ_def
+                       bitmapQ_no_L2_orphans_def bitmapQ_no_L1_orphans_def
 
 definition
   valid_queues' :: "kernel_state \<Rightarrow> bool"
@@ -1053,6 +1105,8 @@ definition
            \<and> ksCurDomain s \<le> maxDomain
            \<and> valid_dom_schedule' s"
 
+lemmas invs_no_cicd'_def = all_invs_but_ct_idle_or_in_cur_domain'_def
+
 lemma all_invs_but_ct_idle_or_in_cur_domain_check':
   "(all_invs_but_ct_idle_or_in_cur_domain' and ct_idle_or_in_cur_domain') = invs'"
   by (simp add: all_invs_but_ct_idle_or_in_cur_domain'_def pred_conj_def
@@ -1083,6 +1137,8 @@ section "Lemmas"
 
 lemmas objBits_simps = objBits_def objBitsKO_def word_size_def
 lemmas objBitsKO_simps = objBitsKO_def word_size_def objBits_simps
+
+lemmas wordRadix_def' = wordRadix_def[simplified]
 
 lemma valid_duplicates'_D:
   "\<lbrakk>vs_valid_duplicates' m; m (p::word32) = Some ko;is_aligned p' 2;
@@ -1122,7 +1178,7 @@ lemma singleton_in_magnitude_check:
          split: split_if_asm option.split_asm)
 
 lemma wordSizeCase_simp [simp]: "wordSizeCase a b = a"
-  by (simp add: wordSizeCase_def word_size)
+  by (simp add: wordSizeCase_def wordBits_def word_size)
 
 lemma projectKO_eq:
   "(fst (projectKO ko c) = {(obj, c)}) = (projectKO_opt ko = Some obj)"
@@ -2586,6 +2642,14 @@ interpretation ready_queue_update:
   P_Arch_Idle_Int_Cur_update_eq "ksReadyQueues_update f"
   by unfold_locales auto
 
+interpretation ready_queue_bitmap1_update:
+  P_Arch_Idle_Int_Cur_update_eq "ksReadyQueuesL1Bitmap_update f"
+  by unfold_locales auto
+
+interpretation ready_queue_bitmap2_update:
+  P_Arch_Idle_Int_Cur_update_eq "ksReadyQueuesL2Bitmap_update f"
+  by unfold_locales auto
+
 interpretation cur_thread_update':
   P_Arch_Idle_Int_update_eq "ksCurThread_update f"
   by unfold_locales auto
@@ -2618,6 +2682,22 @@ interpretation gsUserPages_update: P_Arch_Idle_update_eq "gsUserPages_update f"
 lemma ko_wp_at_aligned:
   "ko_wp_at' (op = ko) p s \<Longrightarrow> is_aligned p (objBitsKO ko)"
   by (simp add: ko_wp_at'_def)
+
+interpretation ksCurDomain:
+  P_Arch_Idle_Int_update_eq "ksCurDomain_update f"
+  by unfold_locales auto
+
+interpretation ksDomScheduleIdx:
+  P_Arch_Idle_Int_Cur_update_eq "ksDomScheduleIdx_update f"
+  by unfold_locales auto
+
+interpretation ksDomSchedule:
+  P_Arch_Idle_Int_Cur_update_eq "ksDomSchedule_update f"
+  by unfold_locales auto
+
+interpretation ksDomainTime:
+  P_Arch_Idle_Int_Cur_update_eq "ksDomainTime_update f"
+  by unfold_locales auto
 
 lemma ko_wp_at_norm:
   "ko_wp_at' P p s \<Longrightarrow> \<exists>ko. P ko \<and> ko_wp_at' (op = ko) p s"
@@ -2743,7 +2823,7 @@ lemma sch_act_wf_arch [simp]:
 
 lemma valid_queues_arch [simp]:
   "valid_queues (ksArchState_update f s) = valid_queues s"
-  by (simp add: valid_queues_def)
+  by (simp add: valid_queues_def valid_queues_no_bitmap_def bitmapQ_defs)
 
 lemma if_unsafe_then_cap_arch' [simp]:
   "if_unsafe_then_cap' (ksArchState_update f s) = if_unsafe_then_cap' s"
@@ -2763,7 +2843,7 @@ lemma sch_act_wf_machine_state [simp]:
 
 lemma valid_queues_machine_state [simp]:
   "valid_queues (ksMachineState_update f s) = valid_queues s"
-  by (simp add: valid_queues_def)
+  by (simp add: valid_queues_def valid_queues_no_bitmap_def bitmapQ_defs)
 
 lemma valid_queues_arch' [simp]:
   "valid_queues' (ksArchState_update f s) = valid_queues' s"
@@ -2868,7 +2948,8 @@ lemma typ_at_aligned':
 lemma valid_queues_obj_at'D:
    "\<lbrakk> t \<in> set (ksReadyQueues s (d, p)); valid_queues s \<rbrakk>
         \<Longrightarrow> obj_at' (inQ d p) t s"
-  apply (clarsimp simp: valid_queues_def)
+  apply (unfold valid_queues_def valid_queues_no_bitmap_def)
+  apply (elim conjE)
   apply (drule_tac x=d in spec)
   apply (drule_tac x=p in spec)
   apply (clarsimp)
@@ -2881,19 +2962,20 @@ lemma obj_at'_and:
   "obj_at' (P and P') t s = (obj_at' P t s \<and> obj_at' P' t s)"
   by (rule iffI, (clarsimp simp: obj_at'_def)+)
 
-lemma valid_queues_def':
-  "valid_queues = (\<lambda>s. \<forall>d p. (\<forall>t\<in>set (ksReadyQueues s (d, p)).
-                             obj_at' (inQ d p) t s \<and> st_tcb_at' runnable' t s) \<and>
-                          distinct (ksReadyQueues s (d, p)) \<and> (d > maxDomain \<or> p > maxPriority \<longrightarrow> ksReadyQueues s (d,p) = []))"
+lemma valid_queues_no_bitmap_def':
+  "valid_queues_no_bitmap =
+     (\<lambda>s. \<forall>d p. (\<forall>t\<in>set (ksReadyQueues s (d, p)).
+                  obj_at' (inQ d p) t s \<and> st_tcb_at' runnable' t s) \<and>
+                  distinct (ksReadyQueues s (d, p)) \<and> (d > maxDomain \<or> p > maxPriority \<longrightarrow> ksReadyQueues s (d,p) = []))"
   apply (rule ext, rule iffI)
-  apply (clarsimp simp: valid_queues_def obj_at'_and st_tcb_at'_def
+  apply (clarsimp simp: valid_queues_def valid_queues_no_bitmap_def obj_at'_and st_tcb_at'_def
                   elim!: obj_at'_weakenE)+
   done
 
 lemma valid_queues_running:
   assumes Q: "t \<in> set(ksReadyQueues s (d, p))" "valid_queues s"
   shows "st_tcb_at' runnable' t s"
-  using assms by (clarsimp simp add: valid_queues_def')
+  using assms by (clarsimp simp add: valid_queues_def valid_queues_no_bitmap_def')
 
 lemma valid_refs'_cteCaps:
   "valid_refs' S (ctes_of s) = (\<forall>c \<in> ran (cteCaps_of s). S \<inter> capRange c = {})"
@@ -3010,13 +3092,14 @@ lemma invs_no_0_obj'[elim!]:
 lemma invs'_ksSchedulerAction:
   "\<lbrakk> invs' s; sch_act_wf sa s; sa \<noteq> ResumeCurrentThread \<rbrakk> \<Longrightarrow>
    invs' (s \<lparr>ksSchedulerAction := sa\<rparr>)"
-  by (clarsimp simp add: invs'_def valid_state'_def valid_queues_def
-                valid_irq_node'_def valid_queues'_def cur_tcb'_def ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def
-                ct_not_inQ_def)
+  by (clarsimp simp add: invs'_def valid_state'_def valid_queues_def valid_queues_no_bitmap_def
+                bitmapQ_defs valid_irq_node'_def valid_queues'_def cur_tcb'_def 
+                ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def ct_not_inQ_def)
 
 lemma invs'_gsCNodes_update[simp]:
   "invs' (gsCNodes_update f s') = invs' s'"
-  apply (clarsimp simp: invs'_def valid_state'_def valid_queues_def
+  apply (clarsimp simp: invs'_def valid_state'_def valid_queues_def valid_queues_no_bitmap_def
+             bitmapQ_defs
              valid_queues'_def valid_irq_node'_def valid_irq_handlers'_def
              irq_issued'_def irqs_masked'_def valid_machine_state'_def
              cur_tcb'_def)
@@ -3026,7 +3109,8 @@ lemma invs'_gsCNodes_update[simp]:
 
 lemma invs'_gsUserPages_update[simp]:
   "invs' (gsUserPages_update f s') = invs' s'"
-  apply (clarsimp simp: invs'_def valid_state'_def valid_queues_def
+  apply (clarsimp simp: invs'_def valid_state'_def valid_queues_def valid_queues_no_bitmap_def
+             bitmapQ_defs
              valid_queues'_def valid_irq_node'_def valid_irq_handlers'_def
              irq_issued'_def irqs_masked'_def valid_machine_state'_def
              cur_tcb'_def)
@@ -3059,5 +3143,35 @@ unfolding invs'_def valid_state'_def by clarsimp
 lemma invs'_ksDomScheduleIdx:
   "invs' s \<Longrightarrow> KernelStateData_H.ksDomScheduleIdx s < length (KernelStateData_H.ksDomSchedule (newKernelState undefined))"
 unfolding invs'_def valid_state'_def by clarsimp
+
+lemma valid_bitmap_valid_bitmapQ_exceptE:
+  "\<lbrakk> valid_bitmapQ_except d p s ; (bitmapQ d p s \<longleftrightarrow> ksReadyQueues s (d,p) \<noteq> []) ;
+     bitmapQ_no_L2_orphans s \<rbrakk>
+   \<Longrightarrow> valid_bitmapQ s"
+  unfolding valid_bitmapQ_def valid_bitmapQ_except_def
+  by force
+
+lemma valid_bitmap_valid_bitmapQ_exceptI[intro]:
+  "valid_bitmapQ s \<Longrightarrow> valid_bitmapQ_except d p s"
+  unfolding valid_bitmapQ_except_def valid_bitmapQ_def
+  by simp
+
+(* FIXME RAF DOCUMENT THIS TECHNIQUE *)
+context begin
+
+private definition
+  "ko_at'_defn v \<equiv> ko_at' v"
+
+private lemma ko_at_defn_unique:
+  "ko_at'_defn ko p s \<Longrightarrow> (obj_at' P p s = P ko)"
+  unfolding ko_at'_defn_def
+  by (auto simp: obj_at'_def)
+
+method normalise_obj_at' =
+  (clarsimp?, elim obj_at_ko_at'[folded ko_at'_defn_def, elim_format],
+   clarsimp simp: ko_at_defn_unique, clarsimp simp: ko_at'_defn_def)
+
+end
+
 
 end

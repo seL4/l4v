@@ -1378,6 +1378,16 @@ lemma invokeArch_tcb_at':
   apply (wp, clarsimp simp: st_tcb_at_tcb_at')
   done 
 
+(* FIXME random place to have these *)
+lemma pspace_no_overlap_queuesL1 [simp]:
+  "pspace_no_overlap' w sz (ksReadyQueuesL1Bitmap_update f s) = pspace_no_overlap' w sz s"
+  by (simp add: pspace_no_overlap'_def)
+
+(* FIXME random place to have these *)
+lemma pspace_no_overlap_queuesL2 [simp]:
+  "pspace_no_overlap' w sz (ksReadyQueuesL2Bitmap_update f s) = pspace_no_overlap' w sz s"
+  by (simp add: pspace_no_overlap'_def)
+
 crunch pspace_no_overlap'[wp]: setThreadState "pspace_no_overlap' w s"
   (simp: unless_def)
 
@@ -1434,6 +1444,10 @@ lemma ko_wp_at'_cong:
 
 crunch vs_entry_align'[wp]:
   threadSet "ko_wp_at' (\<lambda>ko. P (vs_entry_align ko)) p"
+  (ignore: getObject setObject wp:crunch_wps)
+
+crunch vs_entry_align'[wp]:
+  addToBitmap "ko_wp_at' (\<lambda>ko. P (vs_entry_align ko)) p"
   (ignore: getObject setObject wp:crunch_wps)
 
 lemma tcbSchedEnqueue_vs_entry_align[wp]:

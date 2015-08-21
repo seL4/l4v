@@ -427,8 +427,8 @@ lemma tcbSchedAppend_valid_objs':
 lemma tcbSchedAppend_sch_act_wf:
   "\<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s\<rbrace> tcbSchedAppend thread 
   \<lbrace>\<lambda>rv s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
-  apply (simp add:tcbSchedAppend_def)
-  apply (wp hoare_unless_wp setQueue_sch_act threadGet_wp)
+  apply (simp add:tcbSchedAppend_def bitmap_fun_defs)
+  apply (wp hoare_unless_wp setQueue_sch_act threadGet_wp|simp)+
   apply (fastforce simp:typ_at'_def obj_at'_def)
   done
 
@@ -597,7 +597,7 @@ lemma invs_ChooseNewThread:
   "invs' s \<Longrightarrow> invs' (s\<lparr>ksSchedulerAction := ChooseNewThread\<rparr>)"
   by (auto simp add: invs'_def valid_state'_def valid_queues'_def 
                      valid_queues_def valid_irq_node'_def cur_tcb'_def
-                     ct_not_inQ_def)
+                     ct_not_inQ_def bitmapQ_defs valid_queues_no_bitmap_def)
 
 lemma ksDomainTime_invs[simp]:
   "invs' (a\<lparr>ksDomainTime := t\<rparr>) = invs' a"

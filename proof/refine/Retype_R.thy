@@ -1634,9 +1634,6 @@ corres r (\<lambda>s. R (kheap s) (ekheap s) s) (\<lambda>s. R' (ksPSpace s) s) 
          apply clarsimp
          apply (simp add: state_relation_def)
         apply (wp gets_exs_valid | simp)+
-  apply (rule no_fail_pre)
-   apply (rule non_fail_gets)
-  apply simp
   done
 
 (*
@@ -4248,6 +4245,10 @@ lemma createWordObjects_iflive[wp]:
 
 crunch ksReadyQueues[wp]: copyGlobalMappings "\<lambda>s. P (ksReadyQueues s)"
   (ignore: getObject setObject wp: updateObject_default_inv crunch_wps)
+crunch ksReadyQueuesL1[wp]: copyGlobalMappings "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
+  (ignore: getObject setObject wp: updateObject_default_inv crunch_wps)
+crunch ksReadyQueuesL2[wp]: copyGlobalMappings "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
+  (ignore: getObject setObject wp: updateObject_default_inv crunch_wps)
 
 lemma storePDE_valid_idle'[wp]:
   "\<lbrace>valid_idle'\<rbrace> storePDE ptr pde \<lbrace>\<lambda>rv. valid_idle'\<rbrace>"
@@ -4316,12 +4317,60 @@ lemma createObjects'_qs[wp]:
   "\<lbrace>\<lambda>s. P (ksReadyQueues s)\<rbrace> createObjects' ptr n val gbits \<lbrace>\<lambda>rv s. P (ksReadyQueues s)\<rbrace>"
   by (rule createObjects_pspace_only, simp)
 
+lemma createObjects'_qsL1[wp]:
+  "\<lbrace>\<lambda>s. P (ksReadyQueuesL1Bitmap s)\<rbrace> createObjects' ptr n val gbits \<lbrace>\<lambda>rv s. P (ksReadyQueuesL1Bitmap s)\<rbrace>"
+  by (rule createObjects_pspace_only, simp)
+
+lemma createObjects'_qsL2[wp]:
+  "\<lbrace>\<lambda>s. P (ksReadyQueuesL2Bitmap s)\<rbrace> createObjects' ptr n val gbits \<lbrace>\<lambda>rv s. P (ksReadyQueuesL2Bitmap s)\<rbrace>"
+  by (rule createObjects_pspace_only, simp)
+
 crunch qs[wp]: createWordObjects "\<lambda>s. P (ksReadyQueues s)"
   (ignore: clearMemory)
+crunch qsL1[wp]: createWordObjects "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
+  (ignore: clearMemory)
+crunch qsL2[wp]: createWordObjects "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
+  (ignore: clearMemory)
+
 crunch qs[wp]: createObjects "\<lambda>s. P (ksReadyQueues s)"
+crunch qsL1[wp]: createObjects "\<lambda>s. P (ksReadyQueuesL1Bitmap s)"
+crunch qsL2[wp]: createObjects "\<lambda>s. P (ksReadyQueuesL2Bitmap s)"
 
 lemma createNewCaps_qs[wp]:
   "\<lbrace>\<lambda>s. P (ksReadyQueues s)\<rbrace> createNewCaps ty ptr n us \<lbrace>\<lambda>rv s. P (ksReadyQueues s)\<rbrace>"
+  apply (clarsimp simp: createNewCaps_def toAPIType_def ArchTypes_H.toAPIType_def
+             split del: split_if)
+  apply (cases ty, simp_all add: createNewCaps_def Arch_createNewCaps_def
+                      split del: split_if)
+        apply (rename_tac apiobject_type)
+        apply (case_tac apiobject_type, simp_all split del: split_if)[1]
+           apply (rule hoare_pre, wp, simp)
+              apply (wp mapM_x_wp' | simp add: curDomain_def)+
+  done
+
+(* FIXME move these 2 to TcbAcc_R *)
+lemma threadSet_qsL1[wp]:
+  "\<lbrace>\<lambda>s. P (ksReadyQueuesL1Bitmap s)\<rbrace> threadSet f t \<lbrace>\<lambda>rv s. P (ksReadyQueuesL1Bitmap s)\<rbrace>"
+  by (simp add: threadSet_def | wp updateObject_default_inv)+
+
+lemma threadSet_qsL2[wp]:
+  "\<lbrace>\<lambda>s. P (ksReadyQueuesL2Bitmap s)\<rbrace> threadSet f t \<lbrace>\<lambda>rv s. P (ksReadyQueuesL2Bitmap s)\<rbrace>"
+  by (simp add: threadSet_def | wp updateObject_default_inv)+
+
+lemma createNewCaps_qsL1[wp]:
+  "\<lbrace>\<lambda>s. P (ksReadyQueuesL1Bitmap s)\<rbrace> createNewCaps ty ptr n us \<lbrace>\<lambda>rv s. P (ksReadyQueuesL1Bitmap s)\<rbrace>"
+  apply (clarsimp simp: createNewCaps_def toAPIType_def ArchTypes_H.toAPIType_def
+             split del: split_if)
+  apply (cases ty, simp_all add: createNewCaps_def Arch_createNewCaps_def
+                      split del: split_if)
+        apply (rename_tac apiobject_type)
+        apply (case_tac apiobject_type, simp_all split del: split_if)[1]
+           apply (rule hoare_pre, wp, simp)
+              apply (wp mapM_x_wp' | simp add: curDomain_def)+
+  done
+
+lemma createNewCaps_qsL2[wp]:
+  "\<lbrace>\<lambda>s. P (ksReadyQueuesL2Bitmap s)\<rbrace> createNewCaps ty ptr n us \<lbrace>\<lambda>rv s. P (ksReadyQueuesL2Bitmap s)\<rbrace>"
   apply (clarsimp simp: createNewCaps_def toAPIType_def ArchTypes_H.toAPIType_def
              split del: split_if)
   apply (cases ty, simp_all add: createNewCaps_def Arch_createNewCaps_def
@@ -4361,44 +4410,6 @@ lemma sch_act_wf_lift_asm:
   apply (frule use_valid [OF _ tcbDomain], fastforce)
   apply auto
   done
-
-lemma valid_queues_lift_asm:
-  assumes tat1: "\<And>d p t. \<lbrace>obj_at' (inQ d p) t and Q\<rbrace> f \<lbrace>\<lambda>_. obj_at' (inQ d p) t\<rbrace>"
-  and     tat2: "\<And>t. \<lbrace>st_tcb_at' runnable' t and Q\<rbrace> f \<lbrace>\<lambda>_. st_tcb_at' runnable' t\<rbrace>"
-  and     prq: "\<And>P. \<lbrace>\<lambda>s. P (ksReadyQueues s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ksReadyQueues s)\<rbrace>"
-  shows   "\<lbrace>valid_queues and Q\<rbrace> f \<lbrace>\<lambda>_. valid_queues\<rbrace>"
-  proof -
-    from tat1 and tat2
-    have "\<And>d p t. \<lbrace>obj_at' (inQ d p) t and Q and (obj_at' (runnable' \<circ> tcbState) t and Q)\<rbrace>
-                 f \<lbrace>(\<lambda>_. obj_at' (inQ d p) t) And (\<lambda>_. obj_at' (runnable' \<circ> tcbState) t)\<rbrace>"
-      apply -
-      apply (atomize)
-      apply (erule allE)+
-      apply (simp only: st_tcb_at'_def)
-      by (drule(1) hoare_conj)
-    hence tat: "\<And>d p t. \<lbrace>obj_at' (inQ d p and runnable' \<circ> tcbState) t and Q\<rbrace> f
-                         \<lbrace>\<lambda>_. obj_at' (inQ d p and runnable' \<circ> tcbState) t\<rbrace>"
-      apply -
-      apply (atomize)
-      apply (erule allE)+
-      apply (erule hoare_chain)
-       apply (fastforce simp: pred_conj_def elim!: obj_at'_weakenE elim!: obj_at_conj')
-       apply (clarsimp simp: pred_conj_def elim!: obj_at'_weakenE elim!: obj_at_conj')
-      done
-    show ?thesis
-      apply (clarsimp simp: valid_def valid_queues_def)
-      apply (rule conjI)
-       apply clarsimp
-       apply (rule use_valid [OF _ tat], assumption)
-       apply simp
-       apply (rule ccontr)
-       apply (erule notE[where P="x \<in> S" for x S, rotated],
-              erule use_valid [OF _ prq])
-       apply fastforce
-      apply (erule use_valid [OF _ prq])
-      apply simp
-      done
-qed
 
 lemma valid_queues_lift_asm':
   assumes tat: "\<And>d p t. \<lbrace>\<lambda>s. \<not> obj_at' (inQ d p) t s \<and> Q d p s\<rbrace> f \<lbrace>\<lambda>_ s. \<not> obj_at' (inQ d p) t s\<rbrace>"
