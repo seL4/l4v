@@ -46,6 +46,7 @@ HEAPS += SepTactics SepTacticsExamples
 # Additional dependencies
 
 CKernel CSpec CBaseRefine CRefine: c-kernel
+SimplExportAndRefine SimplExportOnly: c-kernel
 
 # Preprocess the kernel's source code and bitfield theory files.
 c-kernel: .FORCE
