@@ -528,10 +528,7 @@ lemma corresTA_L2_condition:
   done
 
 
-(*
- * Fix up mismatches between a called function and the
- * result we expect from it.
- *)
+(* Backup rule to corresTA_L2_call. Converts the return type of the function call. *)
 lemma corresTA_L2_call':
   "\<lbrakk> \<And>s. corresTA P f1 x1 A B;
                valid_typ_abs_fn Q1 Q1' f1 f1';
@@ -550,7 +547,7 @@ lemma corresTA_L2_call':
 
 lemma corresTA_L2_call:
   "\<lbrakk> corresTA P rx ex A B \<rbrakk> \<Longrightarrow>
-        corresTA P rx ex (L2_call A) (L2_call B)"
+        corresTA P rx ex' (L2_call A) (L2_call B)"
   apply (clarsimp simp: L2_defs L2_call_def corresXF_def)
   apply (monad_eq split: sum.splits)
   apply fastforce
