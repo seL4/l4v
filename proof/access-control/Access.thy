@@ -353,19 +353,21 @@ where
 | "obj_refs cap.DomainCap = UNIV" (* hack, see above *)
 
 inductive_set
-  state_bits_to_policy for caps thread_sts cdt vrefs
+  state_bits_to_policy for caps thread_sts thread_bas cdt vrefs
 where
   sbta_caps: "\<lbrakk> caps ptr = Some cap; oref \<in> obj_refs cap;
                 auth \<in> cap_auth_conferred cap \<rbrakk>
-           \<Longrightarrow> (fst ptr, auth, oref) \<in> state_bits_to_policy caps thread_sts cdt vrefs"
+           \<Longrightarrow> (fst ptr, auth, oref) \<in> state_bits_to_policy caps thread_sts thread_bas cdt vrefs"
 | sbta_untyped: "\<lbrakk> caps ptr = Some cap; oref \<in> untyped_range cap \<rbrakk>
-           \<Longrightarrow> (fst ptr, Control, oref) \<in> state_bits_to_policy caps thread_sts cdt vrefs"
+           \<Longrightarrow> (fst ptr, Control, oref) \<in> state_bits_to_policy caps thread_sts thread_bas cdt vrefs"
 | sbta_ts: "\<lbrakk> (oref', auth) \<in> thread_sts oref \<rbrakk>
-           \<Longrightarrow> (oref, auth, oref') \<in> state_bits_to_policy caps thread_sts cdt vrefs"
+           \<Longrightarrow> (oref, auth, oref') \<in> state_bits_to_policy caps thread_sts thread_bas cdt vrefs"
+| sbta_bounds: "\<lbrakk>thread_bas oref = Some oref'; auth \<in> {Receive, Reset} \<rbrakk>
+           \<Longrightarrow> (oref, auth, oref') \<in> state_bits_to_policy caps thread_sts thread_bas cdt vrefs"
 | sbta_cdt: "\<lbrakk> cdt slot' = Some slot \<rbrakk>
-           \<Longrightarrow> (fst slot, Control, fst slot') \<in> state_bits_to_policy caps thread_sts cdt vrefs"
+           \<Longrightarrow> (fst slot, Control, fst slot') \<in> state_bits_to_policy caps thread_sts thread_bas cdt vrefs"
 | sbta_vref: "\<lbrakk> (ptr', ref, auth) \<in> vrefs ptr \<rbrakk>
-           \<Longrightarrow> (ptr, auth, ptr') \<in> state_bits_to_policy caps thread_sts cdt vrefs"
+           \<Longrightarrow> (ptr, auth, ptr') \<in> state_bits_to_policy caps thread_sts thread_bas cdt vrefs"
 
 fun
   cap_asid' :: "cap \<Rightarrow> asid set"
@@ -431,7 +433,10 @@ definition
   "thread_states s = option_case {} tcb_st_to_auth \<circ> tcb_states_of_state s"
 
 definition
-  "state_objs_to_policy s = state_bits_to_policy (caps_of_state s) (thread_states s) (cdt s) (state_vrefs s)"
+  "thread_bound_aeps s \<equiv> \<lambda>p. case (get_tcb p s) of None \<Rightarrow> None | Some tcb \<Rightarrow> tcb_bound_aep tcb"
+
+definition
+  "state_objs_to_policy s = state_bits_to_policy (caps_of_state s) (thread_states s) (thread_bound_aeps s) (cdt s) (state_vrefs s)"
 
 lemmas state_objs_to_policy_mem = eqset_imp_iff[OF state_objs_to_policy_def]
 
@@ -441,8 +446,9 @@ lemmas state_objs_to_policy_intros
 lemmas sta_caps = state_objs_to_policy_intros(1)
   and sta_untyped = state_objs_to_policy_intros(2)
   and sta_ts = state_objs_to_policy_intros(3)
-  and sta_cdt = state_objs_to_policy_intros(4)
-  and sta_vref = state_objs_to_policy_intros(5)
+  and sta_bas = state_objs_to_policy_intros(4)
+  and sta_cdt = state_objs_to_policy_intros(5)
+  and sta_vref = state_objs_to_policy_intros(6)
 
 lemmas state_objs_to_policy_cases
     = state_bits_to_policy.cases[OF state_objs_to_policy_mem[THEN iffD1]]
@@ -454,6 +460,9 @@ lemma state_vrefs[iff]: "state_vrefs (f s) = state_vrefs s"
 
 lemma thread_states[iff]: "thread_states (f s) = thread_states s"
   by (simp add: thread_states_def pspace get_tcb_def swp_def tcb_states_of_state_def)
+
+lemma thread_bound_aeps[iff]: "thread_bound_aeps (f s) = thread_bound_aeps s"
+  by (simp add: thread_bound_aeps_def pspace get_tcb_def swp_def split: option.splits)
 
 (*
   lemma ipc_buffers_of_state[iff]: "ipc_buffers_of_state (f s) = ipc_buffers_of_state s"
@@ -474,13 +483,18 @@ lemma thread_states_preserved:
      \<Longrightarrow> thread_states (s\<lparr>kheap := kheap s(thread \<mapsto> TCB tcb')\<rparr>) = thread_states s"
   by (simp add: tcb_states_of_state_preserved thread_states_def)
 
+lemma thread_bound_aeps_preserved:
+  "\<lbrakk> get_tcb thread s = Some tcb; tcb_bound_aep tcb' = tcb_bound_aep tcb \<rbrakk>
+     \<Longrightarrow> thread_bound_aeps (s\<lparr>kheap := kheap s(thread \<mapsto> TCB tcb')\<rparr>) = thread_bound_aeps s"
+  by (auto simp:  thread_bound_aeps_def get_tcb_def split: option.splits)
+
 (* FIXME: move *)
 lemma null_filterI:
   "\<lbrakk> cs p = Some cap; cap \<noteq> cap.NullCap \<rbrakk> \<Longrightarrow> null_filter cs p = Some cap"
   unfolding null_filter_def by auto
 
 lemma sbta_null_filter:
-  "state_bits_to_policy (null_filter cs) sr cd vr = state_bits_to_policy cs sr cd vr"
+  "state_bits_to_policy (null_filter cs) sr bar cd vr = state_bits_to_policy cs sr bar cd vr"
   apply (rule)
   apply clarsimp
   apply (erule state_bits_to_policy.induct, auto intro: state_bits_to_policy.intros elim: null_filterE)[1]
@@ -671,6 +685,31 @@ change @{term "ko"} to @{term "ko'"} when the address of @{term "ko"}
 
 *}
 
+definition
+  tcb_bound_aep_reset_integrity :: "obj_ref option \<Rightarrow> obj_ref option
+    \<Rightarrow> 'a set \<Rightarrow> 'a PAS \<Rightarrow> bool"
+where
+  "tcb_bound_aep_reset_integrity aep aep' subjects aag
+    = ((aep = aep') (*NO CHANGE TO BOUND AEP *) 
+       \<or> (aep' = None \<and> aag_subjects_have_auth_to subjects aag Reset (the aep)) (* AEP IS UNBOUND *))" 
+
+definition direct_send :: "'a set \<Rightarrow> 'a PAS \<Rightarrow> obj_ref \<Rightarrow> tcb \<Rightarrow> bool"
+where
+  "direct_send subjects aag ep tcb \<equiv> receive_blocked_on ep (tcb_state tcb) \<and> 
+                                   (aag_subjects_have_auth_to subjects aag SyncSend ep 
+                                     \<or> aag_subjects_have_auth_to subjects aag AsyncSend ep)"
+
+abbreviation ep_recv_blocked :: "obj_ref \<Rightarrow> thread_state \<Rightarrow> bool"
+where
+  "ep_recv_blocked ep ts \<equiv> case ts of BlockedOnReceive w b \<Rightarrow> w = ep
+                             | _ \<Rightarrow> False"
+
+definition indirect_send :: "'a set \<Rightarrow> 'a PAS \<Rightarrow> obj_ref \<Rightarrow> obj_ref \<Rightarrow> tcb \<Rightarrow> bool"
+where
+  "indirect_send subjects aag aep recv_ep tcb \<equiv> ep_recv_blocked recv_ep (tcb_state tcb) (* tcb is blocked on sync ep *)
+                                         \<and> (tcb_bound_aep tcb = Some aep)
+                                         \<and> aag_subjects_have_auth_to subjects aag AsyncSend aep"
+
 inductive
   integrity_obj for aag activate subjects l' ko ko'
 where
@@ -687,31 +726,45 @@ where
              auth \<in> {Receive, SyncSend, Reset};
              (\<exists>s \<in> subjects. (s, auth, l') \<in> pasPolicy aag) \<rbrakk>
            \<Longrightarrow> integrity_obj aag activate subjects l' ko ko'"
+| tro_ep_unblock: "\<lbrakk> ko  = Some (Endpoint ep);
+             ko' = Some (Endpoint ep');
+             \<exists>tcb aep. (tcb, Receive, pasObjectAbs aag aep) \<in> pasPolicy aag \<and> 
+                       (tcb, Receive, l') \<in> pasPolicy aag \<and> 
+                       aag_subjects_have_auth_to subjects aag AsyncSend aep \<rbrakk>
+           \<Longrightarrow> integrity_obj aag activate subjects l' ko ko'"
+
 | tro_tcb_send: "\<lbrakk> ko  = Some (TCB tcb);
-                   ko' = Some (TCB tcb');
-                   \<exists>ctxt'. tcb' = tcb \<lparr>tcb_context := ctxt', tcb_state := Structures_A.Running\<rparr>;
-                   receive_blocked_on ep (tcb_state tcb);
-                   aag_subjects_have_auth_to subjects aag SyncSend ep \<or>
-                   aag_subjects_have_auth_to subjects aag AsyncSend ep \<rbrakk>
+                   ko' = Some (TCB tcb'); 
+                   \<exists>ctxt'. tcb' = tcb \<lparr>tcb_context := ctxt', tcb_state := Structures_A.Running,
+                     tcb_bound_aep := aep'\<rparr>;
+                   tcb_bound_aep_reset_integrity (tcb_bound_aep tcb) aep' subjects aag;
+                   direct_send subjects aag ep tcb \<or> indirect_send subjects aag ep recv tcb \<rbrakk>
         \<Longrightarrow> integrity_obj aag activate subjects l' ko ko'"
 | tro_tcb_receive: "\<lbrakk> ko  = Some (TCB tcb);
                       ko' = Some (TCB tcb');
-                      tcb' = tcb \<lparr>tcb_state := new_st\<rparr>;
+                      tcb' = tcb \<lparr>tcb_state := new_st, tcb_bound_aep := aep'\<rparr>;
                       new_st = Structures_A.Running
                           \<or> (new_st = Structures_A.Inactive \<and>
                                   (send_is_call (tcb_state tcb) \<or> tcb_fault tcb \<noteq> None)); (* maybe something about can_grant here? *)
+                      tcb_bound_aep_reset_integrity (tcb_bound_aep tcb) aep' subjects aag;
                       send_blocked_on ep (tcb_state tcb);
                       aag_subjects_have_auth_to subjects aag Receive ep \<rbrakk>
         \<Longrightarrow> integrity_obj aag activate subjects l' ko ko'"
 | tro_tcb_restart: "\<lbrakk> ko  = Some (TCB tcb);
                       ko' = Some (TCB tcb');
-                      tcb' = tcb\<lparr>tcb_context := tcb_context tcb', tcb_state := tcb_state tcb'\<rparr>;
-                      (tcb_state tcb' = Structures_A.Restart \<and> tcb_context tcb' = tcb_context tcb) \<or>
+                      tcb' = tcb\<lparr>tcb_context := tcb_context tcb', tcb_state := tcb_state tcb', tcb_bound_aep := aep'\<rparr>;
+                      (tcb_state tcb' = Structures_A.Restart \<and> tcb_context tcb' = tcb_context tcb) \<or>                      
                       (* to handle activation *)
                       (tcb_state tcb' = Structures_A.Running \<and> tcb_context tcb' = (tcb_context tcb)(LR_svc := tcb_context tcb FaultInstruction));
+                      tcb_bound_aep_reset_integrity (tcb_bound_aep tcb) aep' subjects aag;
                       blocked_on ep (tcb_state tcb);
                       aag_subjects_have_auth_to subjects aag Reset ep \<rbrakk>
         \<Longrightarrow> integrity_obj aag activate subjects l' ko ko'"
+| tro_tcb_unbind: "\<lbrakk> ko  = Some (TCB tcb);
+                     ko' = Some (TCB tcb');
+                     tcb' = tcb \<lparr>tcb_bound_aep := None\<rparr>;
+                     tcb_bound_aep_reset_integrity (tcb_bound_aep tcb) None subjects aag \<rbrakk>
+                 \<Longrightarrow> integrity_obj aag activate subjects l' ko ko'"
 | tro_asidpool_clear: "\<lbrakk> ko = Some (ArchObj (ARM_Structs_A.ASIDPool pool));
                          ko' = Some (ArchObj (ARM_Structs_A.ASIDPool pool'));
                          \<forall>x. pool' x \<noteq> pool x \<longrightarrow> pool' x = None
@@ -719,8 +772,10 @@ where
         \<Longrightarrow> integrity_obj aag activate subjects l' ko ko'"
 | tro_tcb_activate: "\<lbrakk> ko  = Some (TCB tcb);
                        ko' = Some (TCB tcb');
-                       tcb' = tcb \<lparr>tcb_context := (tcb_context tcb)(LR_svc := tcb_context tcb FaultInstruction), tcb_state := Structures_A.Running\<rparr>;
+                       tcb' = tcb \<lparr>tcb_context := (tcb_context tcb)(LR_svc := tcb_context tcb FaultInstruction), tcb_state := Structures_A.Running, tcb_bound_aep := aep'\<rparr>;
                        tcb_state tcb = Structures_A.Restart;
+                       (* to handle unbind *)
+                       tcb_bound_aep_reset_integrity (tcb_bound_aep tcb) aep' subjects aag;
                        activate \<rbrakk> (* Anyone can do this *)
         \<Longrightarrow> integrity_obj aag activate subjects l' ko ko'"
 
@@ -914,21 +969,29 @@ lemma clear_asidpool_trans:
   apply auto
   done
 
-lemma tro_trans:
+lemma tcb_bound_aep_reset_integrity_trans[elim]:
+  "\<lbrakk> tcb_bound_aep_reset_integrity aep aep' subjects aag;
+    tcb_bound_aep_reset_integrity aep' aep'' subjects aag \<rbrakk>
+    \<Longrightarrow> tcb_bound_aep_reset_integrity aep aep'' subjects aag"
+  by (auto simp: tcb_bound_aep_reset_integrity_def)
+
+lemma tro_trans: (* this takes a long time to process *)
   "\<lbrakk>(\<forall>x. integrity_obj aag activate es (pasObjectAbs aag x) (kheap s x) (kheap s' x));
     (\<forall>x. integrity_obj aag activate es (pasObjectAbs aag x) (kheap s' x) (kheap s'' x)) \<rbrakk> \<Longrightarrow>
     (\<forall>x. integrity_obj aag activate es (pasObjectAbs aag x) (kheap s x) (kheap s'' x))"
   apply clarsimp
   apply (drule_tac x = x in spec)+
   apply (erule integrity_obj.cases)
-  prefer 7
-  apply (erule integrity_obj.cases, (fastforce intro: integrity_obj.intros)+)[1] (* slowish *)
-  apply (clarsimp
-    | erule integrity_obj.cases
-    | erule disjE
-    | drule(1) clear_asidpool_trans
-    | drule_tac s="Some ?s'" in sym
-    | blast intro: integrity_obj.intros)+ (* took ages *)
+           apply (((fastforce intro: integrity_obj.intros simp: indirect_send_def direct_send_def) 
+                              | erule integrity_obj.cases)+)[9]
+   apply ((clarsimp
+       | erule integrity_obj.cases
+       | erule disjE
+       | drule(1) clear_asidpool_trans
+       | drule_tac s="Some ?s'" in sym
+       | blast intro: integrity_obj.intros)+)[1]
+  apply (((fastforce intro: integrity_obj.intros simp: indirect_send_def direct_send_def) 
+                    | erule integrity_obj.cases)+)
   done
 
 lemma tre_trans:
@@ -1017,7 +1080,7 @@ lemma tsos_tro_running:
           pasObjectAbs aag p \<notin> subjects \<rbrakk>
      \<Longrightarrow> tcb_states_of_state s' p = Some Structures_A.Running"
   apply (drule_tac x = p in spec)
-  apply (erule integrity_obj.cases, simp_all add: tcb_states_of_state_def get_tcb_def)
+  apply (erule integrity_obj.cases, simp_all add: tcb_states_of_state_def get_tcb_def indirect_send_def direct_send_def)
   done
 
 lemma integrity_trans:
@@ -1260,6 +1323,14 @@ lemma as_user_thread_state[wp]:
   apply wp
   done
 
+lemma as_user_thread_bound_aep[wp]:
+  "\<lbrace>\<lambda>s. P (thread_bound_aeps s)\<rbrace> as_user t f \<lbrace>\<lambda>rv s. P (thread_bound_aeps s)\<rbrace>"
+  apply (simp add: as_user_def set_object_def split_def thread_bound_aeps_def)
+  apply (wp get_object_wp)
+  apply (clarsimp simp: thread_states_def get_tcb_def
+                 elim!: rsubst[where P=P, OF _ ext] split: option.split)
+  done
+
 crunch cdt_preserved[wp]: as_user "\<lambda>s. P (cdt s)"
 
 lemma tcb_domain_map_wellformed_lift:
@@ -1373,13 +1444,15 @@ lemma ep_rcv_queued_st_tcb_at:
 
 (* FIXME: move. *)
 lemma aep_queued_st_tcb_at':
-  "\<And>P. \<lbrakk>ko_at (AsyncEndpoint aep) aepptr s; (t, rt) \<in> aep_q_refs_of aep;
+  "\<And>P. \<lbrakk>ko_at (AsyncEndpoint aep) aepptr s; (t, rt) \<in> aep_q_refs_of (aep_obj aep);
          valid_objs s; sym_refs (state_refs_of s);
          P (Structures_A.BlockedOnAsyncEvent aepptr) \<rbrakk>
    \<Longrightarrow> st_tcb_at P t s"
-  apply (case_tac aep, simp_all)
-  apply (frule(1) sym_refs_ko_atD, clarsimp, erule (1) my_BallE,
-         clarsimp simp: st_tcb_at_def refs_of_rev elim!: obj_at_weakenE)+
+  apply (case_tac "aep_obj aep", simp_all)
+  apply (frule(1) sym_refs_ko_atD)
+  apply (clarsimp) 
+  apply (erule_tac y="(t, AEPAsync)" in my_BallE, clarsimp)
+  apply (clarsimp simp: pred_tcb_at_def refs_of_rev elim!: obj_at_weakenE)+
   done
 
 (* FIXME: move *)
@@ -1555,9 +1628,9 @@ lemma integrity_mono:
   apply (rule conjI)
    apply clarsimp
    apply (drule_tac x=x in spec)+
-   apply (erule integrity_obj.cases,
-          auto intro: integrity_obj.intros,
-          blast intro: tro_asidpool_clear)[1]
+   apply (erule integrity_obj.cases[OF _ integrity_obj.intros],
+          auto simp: tcb_bound_aep_reset_integrity_def indirect_send_def direct_send_def)[1]
+   apply (blast intro: tro_asidpool_clear)
   apply (rule conjI)
    apply clarsimp
    apply (drule_tac x=x in spec)+

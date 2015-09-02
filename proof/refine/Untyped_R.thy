@@ -653,7 +653,6 @@ lemma valid_global_refsD2':
   global_refs' s \<inter> capRange (cteCap cte) = {}"
   by (blast dest: valid_global_refsD')
 
-
 lemma cte_cap_in_untyped_range:
   "\<lbrakk> ptr \<le> x; x \<le> ptr + 2 ^ bits - 1; cte_wp_at' (\<lambda>cte. cteCap cte = UntypedCap ptr bits idx) cref s;
      descendants_of' cref (ctes_of s) = {}; invs' s;
@@ -3777,7 +3776,7 @@ lemma updateCap_ct_active':
 apply (simp add: updateCap_def ct_in_state'_def)
 apply wp
 apply (wps setCTE_ct)
-apply (wp setCTE_st_tcb_at')
+apply (wp setCTE_pred_tcb_at')
 done
 
 (* FIXME: move to CSpace_R *)
@@ -4494,7 +4493,7 @@ lemma deleteObjects_ct_active':
   apply (rule hoare_pre)
   apply wps
   apply (wp deleteObjects_st_tcb_at')
-  apply (auto simp: ct_in_state'_def elim: st_tcb'_weakenE)
+  apply (auto simp: ct_in_state'_def elim: pred_tcb'_weakenE)
 done
 
 
@@ -5227,10 +5226,10 @@ lemma inv_untyped_corres:
      (invoke_untyped ui) (invokeUntyped ui')"
   by (case_tac ui, erule(1) inv_untyped_corres')
 
-crunch st_tcb_at'[wp]: insertNewCap "st_tcb_at' P t"
+crunch pred_tcb_at'[wp]: insertNewCap "pred_tcb_at' proj P t"
   (wp: crunch_wps)
 
-crunch st_tcb_at'[wp]: doMachineOp "st_tcb_at' P t"
+crunch pred_tcb_at'[wp]: doMachineOp "pred_tcb_at' proj P t"
   (wp: crunch_wps)
 
 
@@ -5318,7 +5317,7 @@ proof -
            apply simp+
        apply (simp add: insertNewCaps_def split_def bind_assoc zipWithM_x_mapM
              cong: capability.case_cong)
-       apply (wp mapM_wp' createNewCaps_st_tcb_at'
+         apply (wp mapM_wp' createNewCaps_pred_tcb_at'
         deleteObjects_st_tcb_at' createNewObjects_wp_helper
         updateFreeIndex_pspace_no_overlap'[where sz = sz] | wpc)+
       apply (rule hoare_vcg_conj_lift)
@@ -5342,7 +5341,7 @@ proof -
    apply (clarsimp simp:invs_pspace_aligned' invs_pspace_distinct' invs_valid_pspace'
        cte_wp_at_ctes_of conj_ac field_simps shiftl_t2n shiftL_nat invs_ksCurDomain_maxDomain')
    apply (intro conjI)
-       apply (rule st_tcb'_weakenE[OF st_tcb])
+         apply (rule pred_tcb'_weakenE[OF st_tcb])
        apply simp
       apply (clarsimp dest!:invokeUntyped_proofs.slots_invD[OF pf])
      apply (simp add:range_cover_unat[OF cover]
@@ -5356,7 +5355,7 @@ proof -
           apply simp+
       apply (simp add: insertNewCaps_def split_def bind_assoc zipWithM_x_mapM
              cong: capability.case_cong)
-      apply (wp mapM_wp' createNewCaps_st_tcb_at'
+        apply (wp mapM_wp' createNewCaps_pred_tcb_at'
         deleteObjects_st_tcb_at' createNewObjects_wp_helper
         updateFreeIndex_pspace_no_overlap'[where sz = sz] | wpc)+
      apply (rule hoare_vcg_conj_lift)
@@ -5420,9 +5419,9 @@ lemma inv_untyp_tcb'[wp]:
      invokeUntyped ui
    \<lbrace>\<lambda>rv. tcb_at' tptr\<rbrace>"
   apply (rule hoare_chain [OF inv_untyp_st_tcb_at'[where tptr=tptr and P="\<top>"]])
-   apply (clarsimp elim!: st_tcb'_weakenE)
+   apply (clarsimp elim!: pred_tcb'_weakenE)
    apply fastforce
-  apply (clarsimp simp: st_tcb_at'_def)
+  apply (clarsimp simp: pred_tcb_at'_def)
   done
 
 crunch irq_node[wp]: set_thread_state "\<lambda>s. P (interrupt_irq_node s)"
@@ -5630,7 +5629,7 @@ lemma insertNewCap_ct_active'[wp]:
 apply (simp add: ct_in_state'_def)
 apply (rule hoare_pre)
 apply (wps insertNewCap_ksCurThread)
-apply (wp insertNewCap_st_tcb_at')
+apply (wp insertNewCap_pred_tcb_at')
 apply simp
 done
 
@@ -5829,7 +5828,7 @@ lemma createNewCaps_ct_active':
 apply (simp add: ct_in_state'_def)
 apply (rule hoare_pre)
 apply wps
-apply (wp createNewCaps_st_tcb_at'[where sz=sz])
+apply (wp createNewCaps_pred_tcb_at'[where sz=sz])
 apply simp
 done
 
@@ -6040,7 +6039,7 @@ lemma invokeUntyped_invs'':
    using misc
    apply -
    apply (frule invs_valid_idle')
-   apply (clarsimp simp:valid_idle'_def st_tcb_at'_def obj_at'_def)
+   apply (clarsimp simp:valid_idle'_def pred_tcb_at'_def obj_at'_def)
    apply (frule obj_at_in_obj_range')
      apply (simp add:invs_pspace_aligned')
    apply (drule(1) pspace_no_overlapD')

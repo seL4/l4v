@@ -112,7 +112,12 @@ where
            vspace_root_cap_ref \<leftarrow> returnOk $ vspace_root;
            returnOk (ThreadControl (cap_object target) slot (Some fault_ep)
                (Some cspace_root_cap_ref) (Some vspace_root_cap_ref) None)
+        odE \<sqinter> throw
+     | TcbBindAEPIntent \<Rightarrow> doE
+           (aep_cap, _) \<leftarrow> throw_on_none $ get_index caps 0;
+           returnOk (AsyncEndpointControl (cap_object target) (Some (cap_object aep_cap)))
          odE \<sqinter> throw
+     | TcbUnbindAEPIntent \<Rightarrow> returnOk (AsyncEndpointControl (cap_object target) None) \<sqinter> throw
   "
 
 
@@ -222,6 +227,11 @@ where
   "suspend target_tcb \<equiv> CSpace_D.ipc_cancel target_tcb >>= K (KHeap_D.set_cap (target_tcb,tcb_pending_op_slot) cdl_cap.NullCap)"
 
 definition
+  bind_async_endpoint :: "cdl_object_id \<Rightarrow> cdl_object_id \<Rightarrow> unit k_monad"
+where
+  "bind_async_endpoint tcb_id aep_id \<equiv> set_cap (tcb_id, tcb_boundaep_slot) (BoundAsyncCap aep_id)"
+
+definition
   invoke_tcb :: "cdl_tcb_invocation \<Rightarrow> unit preempt_monad"
 where
   "invoke_tcb params \<equiv> case params of
@@ -274,9 +284,13 @@ where
           (* Possibly update Ipc Buffer *)
           case ipc_buffer of
               Some x \<Rightarrow> tcb_update_ipc_buffer target_tcb tcb_cap_slot x
-            | None \<Rightarrow> returnOk () \<sqinter> (doE tcb_empty_thread_slot target_tcb tcb_ipcbuffer_slot;
-                 liftE $ corrupt_tcb_intent target_tcb odE)
-        odE"
+            | None \<Rightarrow> (returnOk () \<sqinter> (doE tcb_empty_thread_slot target_tcb tcb_ipcbuffer_slot;
+                 liftE $ corrupt_tcb_intent target_tcb odE))
+        odE
+    | AsyncEndpointControl tcb aep \<Rightarrow>
+          liftE $ (case aep of
+             Some aep_id \<Rightarrow> bind_async_endpoint tcb aep_id
+           | None \<Rightarrow> unbind_async_endpoint tcb)"
 
 
 definition

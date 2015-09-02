@@ -83,7 +83,8 @@ definition
     tcb_fault_handler = replicate word_bits False,
     tcb_ipc_buffer = 0,
     tcb_context = empty_context,
-    tcb_fault = None
+    tcb_fault = None,
+    tcb_bound_aep = None
   \<rparr>, 
   init_globals_frame \<mapsto> ArchObj (DataPage ARMSmallPage),
   init_global_pd \<mapsto> ArchObj (PageDirectory global_pd)

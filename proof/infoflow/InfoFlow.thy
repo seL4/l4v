@@ -95,10 +95,6 @@ where
    b \<in> subjectReads g l"
 
 
-
-
-
-
 abbreviation aag_can_read :: "'a PAS \<Rightarrow> word32 \<Rightarrow> bool"
 where
 "aag_can_read aag x \<equiv> (pasObjectAbs aag x) \<in> subjectReads (pasPolicy aag) (pasSubject aag)"
@@ -690,7 +686,13 @@ for g :: "'a auth_graph" and l :: "'a" where
      l'' \<in> subjectAffects g l" |
   (* if you alter an asid mapping, you affect the domain who owns that asid *)
   affects_asidpool_map:
-    "(l,ASIDPoolMapsASID,l') \<in> g \<Longrightarrow> l' \<in> subjectAffects g l"
+    "(l,ASIDPoolMapsASID,l') \<in> g \<Longrightarrow> l' \<in> subjectAffects g l" |
+  (* if you are sending to an aep, which is bound to a tcb that is
+     receive blocked on an ep, then you can affect that ep *)
+  affects_ep_bound_trans:
+    "\<lbrakk>\<exists>tcb aep. (tcb, Receive, aep) \<in> g \<and> (tcb, Receive, ep) \<in> g \<and>
+                (l, AsyncSend, aep) \<in> g\<rbrakk> \<Longrightarrow>
+        ep \<in> subjectAffects g l"
 
 (* We define when the current subject can affect another domain whose label is
    l. This occurs when the current subject can affect some label d that is 

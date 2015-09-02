@@ -1883,6 +1883,7 @@ lemma createObjects_ccorres_aep:
                          (t_hrs_' (globals x)))\<rparr>\<rparr>) \<in> rf_sr"
   (is "\<forall>\<sigma> x. ?P \<sigma> x \<longrightarrow> 
     (\<sigma>\<lparr>ksPSpace := ?ks \<sigma>\<rparr>, x\<lparr>globals := globals x\<lparr>t_hrs_' := ?ks' x\<rparr>\<rparr>) \<in> rf_sr")
+
 proof (intro impI allI)
   fix \<sigma> x
   let ?thesis = "(\<sigma>\<lparr>ksPSpace := ?ks \<sigma>\<rparr>, x\<lparr>globals := globals x\<lparr>t_hrs_' := ?ks' x\<rparr>\<rparr>) \<in> rf_sr"
@@ -1921,7 +1922,7 @@ proof (intro impI allI)
     apply (simp add: final_pad_def Let_def size_td_lt_ti_typ_pad_combine Let_def 
       size_of_def padup_def align_td_array' size_td_array update_ti_adjust_ti
       ti_typ_pad_combine_def Let_def ti_typ_combine_def empty_typ_info_def)
-    apply (simp add: update_ti_t_word32_0s AEPState_Idle_def)
+    apply (simp add: update_ti_t_word32_0s AEPState_Idle_def option_to_ctcb_ptr_def)
     done
   
   (* /obj specific *)
@@ -1982,6 +1983,7 @@ proof (intro impI allI)
                 simp del: async_endpoint_C_size)
     done
 qed
+
 
 lemma ccte_relation_makeObject:
   "ccte_relation makeObject (from_bytes (replicate (size_of TYPE(cte_C)) 0))"
@@ -3176,6 +3178,7 @@ lemma cnc_tcb_helper:
                    (hrs_htd_update (\<lambda>xa. ptr_retyps 5 (cte_Ptr (ctcb_ptr_to_tcb_ptr p)) (ptr_retyp p xa)) a)))) x)
              \<in> rf_sr"
   (is "(\<sigma>\<lparr>ksPSpace := ?ks\<rparr>, globals_update ?gs' x) \<in> rf_sr")
+
 proof -
   def ko \<equiv> "(KOCTE (makeObject :: cte))"  
   let ?ptr = "(cte_Ptr (ctcb_ptr_to_tcb_ptr p))"
@@ -3537,7 +3540,8 @@ proof -
        tcbPriority_C := 0, tcbDomain_C := 0, tcbTimeSlice_C := 0,
        tcbFaultHandler_C := 0, tcbIPCBuffer_C := 0,
        tcbSchedNext_C := tcb_Ptr 0, tcbSchedPrev_C := tcb_Ptr 0,
-       tcbEPNext_C := tcb_Ptr 0, tcbEPPrev_C := tcb_Ptr 0\<rparr>"
+       tcbEPNext_C := tcb_Ptr 0, tcbEPPrev_C := tcb_Ptr 0,
+       boundAsyncEndpoint_C := aep_Ptr 0\<rparr>"
   have fbtcb: "from_bytes (replicate (size_of TYPE(tcb_C)) 0) = ?tcb"
     apply (simp add: from_bytes_def)
     apply (simp add: typ_info_simps tcb_C_tag_def) 
@@ -3569,8 +3573,8 @@ proof -
     apply (simp add: timeSlice_def) 
     apply (simp add: cfault_rel_def fault_lift_def fault_get_tag_def Let_def 
       lookup_fault_lift_def lookup_fault_get_tag_def lookup_fault_invalid_root_def
-      eval_nat_numeral fault_null_fault_def
-      split: split_if)    
+      eval_nat_numeral fault_null_fault_def option_to_ptr_def option_to_0_def
+      split: split_if)+    
     done
   
   have pks: "ks (ctcb_ptr_to_tcb_ptr p) = None"
@@ -3602,7 +3606,7 @@ proof -
     apply (simp add: ko_wp_at'_def)
     done
 
-  have ep3 [simplified]: "\<And>p' list. map_to_aeps (ksPSpace ?sp) p' = Some (Structures_H.async_endpoint.WaitingAEP list)
+  have ep3 [simplified]: "\<And>p' list boundTCB. map_to_aeps (ksPSpace ?sp) p' = Some (Structures_H.async_endpoint.AEP (Structures_H.aep.WaitingAEP list) boundTCB)
        \<Longrightarrow> ctcb_ptr_to_tcb_ptr p \<notin> set list"
     using symref pks pal pds
     apply -
@@ -3611,7 +3615,7 @@ proof -
      apply simp
     apply (drule (1) sym_refs_ko_atD')
     apply clarsimp
-    apply (drule (1) bspec)
+    apply (drule_tac x="(ctcb_ptr_to_tcb_ptr p, AEPAsync)" in bspec, simp)
     apply (simp add: ko_wp_at'_def)
     done
 
@@ -3678,12 +3682,12 @@ proof -
   -- "aep"
    apply (erule iffD2 [OF cmap_relation_cong, OF refl refl, rotated -1])
    apply (simp add: casync_endpoint_relation_def Let_def)
-     apply (subst async_endpoint.case_cong)
+     apply (subst aep.case_cong)
       apply (rule refl)
      apply (simp add: tcb_queue_update_other' del: tcb_queue_relation'_empty)
     apply (simp add: tcb_queue_update_other' del: tcb_queue_relation'_empty)
-   apply (simp add: tcb_queue_update_other' ep3)
-  apply clarsimp
+   apply (case_tac a, simp add: tcb_queue_update_other' ep3)
+  apply (clarsimp simp: typ_heap_simps)
   done
   thus ?thesis
     using rfsr
@@ -3695,6 +3699,7 @@ proof -
     apply (simp add: kstcb tcb_queue_update_other')
     done
 qed
+
 
 lemma cnc_foldl_foldr:
   defines "ko \<equiv> (KOTCB makeObject)"
@@ -6298,8 +6303,7 @@ lemma insertNewCap_ct_active'[wp]:
   apply (simp add:ct_in_state'_def)
   apply (rule hoare_pre)
   apply wps
-  apply (wp Untyped_R.insertNewCap_st_tcb_at')
-  apply simp
+  apply (wp insertNewCap_ct | simp)+
   done
 
 lemma updateMDB_ctes_of_cap:
@@ -6415,7 +6419,7 @@ lemma createObject_ct_active'[wp]:
  apply (rule hoare_pre)
  apply wp
  apply wps
- apply (wp createNewCaps_st_tcb_at')
+ apply (wp createNewCaps_pred_tcb_at')
  apply (intro conjI)
  apply (auto simp:range_cover_full)
  done
@@ -7160,7 +7164,7 @@ shows  "ccorres dc xfdc
                apply (rule less_diff_gt0)
                apply (simp add:word_of_nat_less range_cover.unat_of_nat_n blah)
               apply (clarsimp simp:field_simps)
-             apply (clarsimp simp:valid_idle'_def st_tcb_at'_def 
+               apply (clarsimp simp:valid_idle'_def pred_tcb_at'_def 
                dest!:invs_valid_idle' elim!:obj_atE')
              apply (drule(1) pspace_no_overlapD')
              apply (erule_tac x = "ksIdleThread s" in in_empty_interE[rotated])

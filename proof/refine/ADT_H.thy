@@ -259,10 +259,12 @@ definition
                    | Structures_H.RecvEP q \<Rightarrow> Structures_A.RecvEP q"
 
 definition
-  "AEndpointMap aep \<equiv> case aep of
+  "AEndpointMap aep \<equiv>
+      \<lparr> aep_obj = case aepObj aep of
                        Structures_H.IdleAEP \<Rightarrow> Structures_A.IdleAEP
                      | Structures_H.WaitingAEP q \<Rightarrow> Structures_A.WaitingAEP q
-                     | Structures_H.ActiveAEP b m \<Rightarrow> Structures_A.ActiveAEP b m"
+                     | Structures_H.ActiveAEP b \<Rightarrow> Structures_A.ActiveAEP b
+      , aep_bound_tcb = aepBoundTCB aep \<rparr>"
 
 fun
   CapabilityMap :: "capability \<Rightarrow> cap"
@@ -412,7 +414,8 @@ definition
       tcb_fault_handler = to_bl (tcbFaultHandler tcb),
       tcb_ipc_buffer = tcbIPCBuffer tcb,
       tcb_context = tcbContext tcb,
-      tcb_fault = Option.map FaultMap (tcbFault tcb)\<rparr>"
+      tcb_fault = Option.map FaultMap (tcbFault tcb),
+      tcb_bound_aep = tcbBoundAEP tcb\<rparr>"
 
 definition
  "absCNode sz h a \<equiv> CNode sz (%bl.
@@ -615,9 +618,9 @@ proof -
           apply (case_tac ko, simp_all add: other_obj_relation_def)
             apply (clarsimp simp add: cte_relation_def split: split_if_asm)
            apply (clarsimp simp add: aep_relation_def AEndpointMap_def
-                    split: Structures_A.async_ep.splits)
+                    split: Structures_A.aep.splits)
           apply (clarsimp simp add: AEndpointMap_def
-                   split: Structures_A.async_ep.splits)
+                   split: Structures_A.aep.splits)
           apply (case_tac arch_kernel_obj, simp_all add:other_obj_relation_def)
             apply (clarsimp simp add: pte_relation_def)
            apply (clarsimp simp add: pde_relation_def)
@@ -668,7 +671,7 @@ proof -
        apply (case_tac tcb, clarsimp)
        apply (case_tac tcb_exta, clarsimp)
        apply (simp add: thread_state_relation_imp_ThStateMap)
-       apply (subgoal_tac "Option.map FaultMap option = tcb_fault")
+       apply (subgoal_tac "Option.map FaultMap option1 = tcb_fault")
         prefer 2
         apply (simp add: fault_option_relation_def)
         using valid_objs[simplified valid_objs_def dom_def fun_app_def,

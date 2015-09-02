@@ -159,7 +159,10 @@ od))
   else if isAsyncEndpointCap v1
   then let ptr = capAEPPtr v1; final = v2
   in   (do
-    when final $ aepCancelAll ptr;
+    when final $ (do
+        unbindMaybeAEP ptr;
+        aepCancelAll ptr
+    od);
     return (NullCap, Nothing)
   od)
   else if isReplyCap v1
@@ -178,6 +181,7 @@ od))
   then let tcb = capTCBPtr v1
   in   (do
     cte_ptr \<leftarrow> getThreadCSpaceRoot tcb;
+    unbindAsyncEndpoint tcb;
     suspend tcb;
     return (Zombie cte_ptr ZombieTCB 5, Nothing)
   od)
@@ -219,7 +223,8 @@ od))
                 slot \<leftarrow> getThreadReplySlot tptr;
                 callerCap \<leftarrow> liftM (mdbNext \<circ> cteMDBNode) $ getCTE slot;
                 when (callerCap \<noteq> nullPointer) $ (do
-                    stateAssert (capHasProperty callerCap isReplyCap)
+                    stateAssert (capHasProperty callerCap (\<lambda> cap. isReplyCap cap \<and>
+                                                                 Not (capReplyMaster cap)))
                         [];
                     cteDeleteOne callerCap
                 od)

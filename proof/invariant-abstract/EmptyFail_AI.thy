@@ -283,12 +283,13 @@ lemma OR_choice_empty_fail[wp]:
   "\<lbrakk>empty_fail f; empty_fail g\<rbrakk> \<Longrightarrow> empty_fail (OR_choice c f g)"
   by (simp add: OR_choice_def mk_ef_def split_def | wp)+
 
-crunch (empty_fail) empty_fail[wp]: decode_tcb_configure
+crunch (empty_fail) empty_fail[wp]: decode_tcb_configure, decode_bind_aep, decode_unbind_aep
   (simp: cap.splits arch_cap.splits split_def)
 
 lemma decode_tcb_invocation_empty_fail[wp]:
   "empty_fail (decode_tcb_invocation a b (ThreadCap p) d e)"
-  by (simp add: decode_tcb_invocation_def split: invocation_label.splits | wp | intro conjI impI)+
+  apply (simp add: decode_tcb_invocation_def split: invocation_label.splits | wp | intro conjI impI)+
+  done
 
 crunch (empty_fail) empty_fail[wp]: find_pd_for_asid, get_master_pde, check_vp_alignment,
                    create_mapping_entries, ensure_safe_mapping, get_asid_pool, resolve_vaddr
@@ -333,7 +334,7 @@ lemma arch_decode_ARMASIDPoolAssign_empty_fail:
 lemma arch_decode_invocation_empty_fail[wp]:
   "empty_fail (arch_decode_invocation label b c d e f)"
   apply (case_tac "invocation_type label")
-                                  apply ((simp add: arch_decode_invocation_def Let_def split: arch_cap.splits cap.splits option.splits | wp | intro conjI impI allI)+)[39]
+                                  apply ((simp add: arch_decode_invocation_def Let_def split: arch_cap.splits cap.splits option.splits | wp | intro conjI impI allI)+)[41]
    apply (simp add: arch_decode_ARMASIDControlMakePool_empty_fail arch_decode_ARMASIDPoolAssign_empty_fail)+
    done
 
@@ -343,8 +344,6 @@ crunch (empty_fail) empty_fail[wp]: maskInterrupt, empty_slot,
   (simp: Let_def catch_def split_def OR_choiceE_def mk_ef_def option.splits endpoint.splits
          async_ep.splits thread_state.splits sum.splits cap.splits arch_cap.splits
          kernel_object.splits vmpage_size.splits pde.splits bool.splits list.splits)
-
-
 
 crunch (empty_fail) empty_fail[wp]: setRegister, setNextPC
 
@@ -442,7 +441,7 @@ lemma schedule_empty_fail[wp]:
   apply (simp add: schedule_def)
   apply wp
   apply (rule disjI2)
-  apply wp
+   apply wp
   done
 
 crunch (empty_fail) empty_fail[wp]: set_scheduler_action, next_domain, reschedule_required

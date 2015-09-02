@@ -131,12 +131,7 @@ lemma set_mrs_reads_respects:
   apply(auto intro: reads_affects_equiv_get_tcb_eq)
   done
 
-lemma thread_get_reads_respects:
-  "reads_respects aag l (K (aag_can_read aag thread \<or> aag_can_affect aag l thread)) (thread_get f thread)"
-  unfolding thread_get_def fun_app_def
-  apply (wp gets_the_ev)
-  apply (auto intro: reads_affects_equiv_get_tcb_eq)
-  done
+
 
 
 lemma get_object_reads_respects:
@@ -277,6 +272,8 @@ definition all_to_which_has_auth where
 definition all_with_auth_to where
   "all_with_auth_to aag auth target \<equiv> {x. (x, auth, target) \<in> pasPolicy aag}"
 
+
+(* FIXME: delete?
 lemma do_async_transfer_equiv_but_for_labels:
   "\<lbrace> equiv_but_for_labels aag L st and valid_objs and pas_refined aag and
      (K (pasObjectAbs aag thread \<in> L \<and> 
@@ -316,43 +313,27 @@ lemma do_async_transfer_reads_respects:
    apply(rule ev2_invisible[OF _ _ do_async_transfer_modifies_at_most do_async_transfer_modifies_at_most])
       apply(auto simp: labels_are_invisible_def aag_can_affect_label_def dest: reads_read_page_read_thread simp: all_to_which_has_auth_def)
   done
+*)
 
 lemma valid_aep_WaitingAEP_tl:
-  "\<lbrakk>valid_aep (WaitingAEP list) s; tl list \<noteq> []\<rbrakk> \<Longrightarrow>
-   valid_aep (WaitingAEP (tl list)) s"
+  "\<lbrakk>aep_obj aep = (WaitingAEP list); valid_aep aep s; tl list \<noteq> []; aep' = aep\<lparr>aep_obj := (WaitingAEP (tl list))\<rparr> \<rbrakk> \<Longrightarrow>
+   valid_aep aep' s"
   apply(case_tac list, simp_all)
   apply(rename_tac a lista)
   apply(case_tac lista, simp_all)
-  apply(clarsimp simp: valid_aep_def)
+  apply(clarsimp simp: valid_aep_def split: option.splits)
   done
 
 lemma update_waiting_aep_reads_respects:
   notes tl_drop_1[simp del]
   shows
-  "reads_respects aag l (valid_objs and sym_refs \<circ> state_refs_of and pas_refined aag and pas_cur_domain aag and ko_at (AsyncEndpoint (WaitingAEP queue)) aepptr and (\<lambda>s. is_subject aag (cur_thread s))) (update_waiting_aep aepptr queue badge val)"
+  "reads_respects aag l (valid_objs and sym_refs \<circ> state_refs_of and pas_refined aag and pas_cur_domain aag and ko_at (AsyncEndpoint aep) aepptr and (\<lambda>s. is_subject aag (cur_thread s)) and K (aep_obj aep = WaitingAEP queue)) (update_waiting_aep aepptr queue bound_tcb badge)"
   unfolding update_waiting_aep_def fun_app_def
   apply (wp assert_sp switch_if_required_to_reads_respects gets_cur_thread_ev | simp add: split_def)+
-  apply (wp do_async_transfer_reads_respects set_thread_state_reads_respects
+  apply (wp as_user_set_register_reads_respects' set_thread_state_reads_respects
             set_async_ep_reads_respects set_thread_state_pas_refined
             set_aep_valid_objs hoare_vcg_disj_lift set_async_ep_pas_refined
         | simp add: split_def reads_lrefl)+
-  apply (clarsimp simp: conj_ac)
-  apply(frule_tac P="receive_blocked_on aepptr" and t="hd queue" in aep_queued_st_tcb_at')
-      apply(fastforce)
-     apply assumption
-    apply assumption
-   apply simp
-  apply(rule conjI, clarsimp split: list.splits)
-  apply(rule conjI, fastforce simp: valid_aep_def)
-  apply clarsimp
-  apply(drule_tac s="tl queue" in sym)
-  apply simp
-  apply(rule valid_aep_WaitingAEP_tl)
-   apply(fastforce simp: valid_objs_def valid_obj_def obj_at_def)
-  apply clarsimp
-  apply(rule disjI1)
-  apply(erule st_tcb_weakenE)
-  apply(case_tac st, simp_all)
   done
 
 (*
@@ -448,16 +429,20 @@ lemma update_waiting_aep_equiv_but_for_labels:
   notes tl_drop_1[simp del]
   shows
   "\<lbrace> equiv_but_for_labels aag L st and pas_refined aag and valid_objs and 
-     ko_at (AsyncEndpoint (WaitingAEP list)) aepptr and
+     ko_at (AsyncEndpoint aep) aepptr and
      sym_refs \<circ> state_refs_of and
      (\<lambda>s. \<forall>t\<in> set list. etcb_at (\<lambda>etcb. tcb_domain etcb \<noteq> cur_domain s) t s) and
-     K (pasObjectAbs aag aepptr \<in> L \<and>
+     K (aep_obj aep = WaitingAEP list \<and> pasObjectAbs aag aepptr \<in> L \<and>
         all_with_auth_to aag Receive (pasObjectAbs aag aepptr) \<subseteq> L \<and> 
        \<Union> ((all_to_which_has_auth aag Write) ` (all_with_auth_to aag Receive (pasObjectAbs aag aepptr))) \<subseteq> L)\<rbrace>
-   update_waiting_aep aepptr list badge val
+   update_waiting_aep aepptr list boundtcb badge
    \<lbrace> \<lambda>_. equiv_but_for_labels aag L st \<rbrace>"
   unfolding update_waiting_aep_def
-  apply (wp static_imp_wp do_async_transfer_equiv_but_for_labels set_thread_state_runnable_equiv_but_for_labels set_thread_state_pas_refined set_async_ep_equiv_but_for_labels set_aep_valid_objs_at set_async_ep_st_tcb_at set_async_ep_cte_wp_at set_async_ep_pas_refined hoare_vcg_disj_lift switch_if_required_to_equiv_but_for_labels | wpc | simp add: split_def)+
+  apply (wp static_imp_wp as_user_equiv_but_for_labels set_thread_state_runnable_equiv_but_for_labels 
+            set_thread_state_pas_refined set_async_ep_equiv_but_for_labels set_aep_valid_objs_at 
+            set_async_ep_pred_tcb_at set_async_ep_cte_wp_at set_async_ep_pas_refined 
+            hoare_vcg_disj_lift switch_if_required_to_equiv_but_for_labels 
+        | wpc | simp add: split_def)+
   apply (clarsimp simp: conj_ac)
   apply(frule_tac P="receive_blocked_on aepptr" and t="hd list" in aep_queued_st_tcb_at')
       apply(fastforce)
@@ -465,19 +450,7 @@ lemma update_waiting_aep_equiv_but_for_labels:
     apply assumption
    apply simp
   apply (subgoal_tac "pasObjectAbs aag (hd list) \<in> all_with_auth_to aag Receive (pasObjectAbs aag aepptr)")
-   apply(rule conjI, fastforce)
-   apply(rule conjI, fastforce)
-   apply(rule conjI, clarsimp split: list.splits)
-    apply(rule conjI, fastforce simp: valid_aep_def)
-    apply clarsimp
-    apply(drule_tac s="tl list" in sym)
-    apply simp
-    apply(rule valid_aep_WaitingAEP_tl)
-    apply(fastforce simp: valid_objs_def valid_obj_def obj_at_def)
-   apply clarsimp
-   apply(rule disjI1)
-   apply(erule st_tcb_weakenE)
-   apply(case_tac sta, simp_all)
+   apply(fastforce)
   apply(clarsimp simp: all_with_auth_to_def)
   apply (erule pas_refined_mem[rotated])
   apply (rule sta_ts)
@@ -492,10 +465,10 @@ lemma update_waiting_aep_modifies_at_most:
            all_with_auth_to aag Receive (pasObjectAbs aag aepptr) \<union>
            \<Union> ((all_to_which_has_auth aag Write) ` (all_with_auth_to aag Receive (pasObjectAbs aag aepptr)))) 
           (pas_refined aag and valid_objs and 
-           ko_at (AsyncEndpoint (WaitingAEP list)) aepptr and
+           ko_at (AsyncEndpoint aep) aepptr and
            (\<lambda>s. \<forall>t\<in> set list. etcb_at (\<lambda>etcb. tcb_domain etcb \<noteq> cur_domain s) t s) and
-           sym_refs \<circ> state_refs_of)  
-          (update_waiting_aep aepptr list badge val)"
+           sym_refs \<circ> state_refs_of and K (aep_obj aep = WaitingAEP list))  
+          (update_waiting_aep aepptr list boundtcb badge)"
   apply(rule modifies_at_mostI)
   apply(wp update_waiting_aep_equiv_but_for_labels | fastforce)+
   done
@@ -513,8 +486,8 @@ lemma invisible_aep_invisible_receivers_and_ipcbuffers:
   done
 
 lemma read_queued_thread_reads_aep:
-  "\<lbrakk>ko_at (AsyncEndpoint (WaitingAEP queue)) aepptr s; t \<in> set queue; aag_can_read aag t;
-    valid_objs s; sym_refs (state_refs_of s); pas_refined aag s;
+  "\<lbrakk>ko_at (AsyncEndpoint aep) aepptr s; t \<in> set queue; aag_can_read aag t;
+    valid_objs s; sym_refs (state_refs_of s); pas_refined aag s; aep_obj aep = WaitingAEP queue;
     (pasSubject aag, AsyncSend, pasObjectAbs aag aepptr) \<in> pasPolicy aag\<rbrakk>
   \<Longrightarrow> aag_can_read aag aepptr"
   apply(frule_tac P="receive_blocked_on aepptr" and t=t in aep_queued_st_tcb_at')
@@ -545,36 +518,112 @@ lemma not_etcb_at_not_cdom_can_read:
   done
 
 lemma tcb_at_aep_queue:
-  "\<lbrakk>valid_objs s; t \<in> set queue; ko_at (AsyncEndpoint (WaitingAEP queue)) aepptr s\<rbrakk>
+  "\<lbrakk>valid_objs s; t \<in> set queue; ko_at (AsyncEndpoint aep) aepptr s; aep_obj aep = WaitingAEP queue\<rbrakk>
   \<Longrightarrow> tcb_at t s"
   apply (erule valid_objsE, force simp: obj_at_def)
   apply (simp add: valid_obj_def valid_aep_def)
   done
 
-lemma send_async_ipc_reads_respects:
-  "reads_respects aag l (pas_refined aag and pas_cur_domain aag and (\<lambda>s. is_subject aag (cur_thread s)) and valid_objs and valid_etcbs and sym_refs \<circ> state_refs_of and K ((pasSubject aag, AsyncSend, pasObjectAbs aag aepptr) \<in> pasPolicy aag)) (send_async_ipc aepptr badge val)"
+
+lemma invisible_ep_invisible_receiver:
+  "\<lbrakk>labels_are_invisible aag l {pasObjectAbs aag epptr};
+    (pasObjectAbs aag tcb, Receive, pasObjectAbs aag epptr) \<in> pasPolicy aag; 
+    (pasObjectAbs aag tcb, Reset, pasObjectAbs aag epptr) \<in> pasPolicy aag\<rbrakk>
+   \<Longrightarrow> labels_are_invisible aag l
+          ({pasObjectAbs aag epptr} \<union> {pasObjectAbs aag tcb})"
+  apply (auto simp: labels_are_invisible_def aag_can_affect_label_def
+                    all_with_auth_to_def
+                  dest: reads_ep reads_read_queued_thread_read_ep)
+  done
+
+
+lemma ipc_cancel_reads_respects':
+  "reads_respects aag l (silc_inv aag st and pas_refined aag and invs 
+                          and st_tcb_at receive_blocked t 
+                          and bound_tcb_at (\<lambda>aep. aep = Some aepptr) t 
+                          and (\<lambda>s. is_subject aag (cur_thread s))
+                          and K ((pasObjectAbs aag t, Receive, pasObjectAbs aag aepptr) \<in> pasPolicy aag 
+                            \<and> (pasSubject aag, AsyncSend, pasObjectAbs aag aepptr) \<in> pasPolicy aag
+                            \<and> (pasObjectAbs aag t, Receive, pasObjectAbs aag x) \<in> pasPolicy aag
+                            \<and> (pasObjectAbs aag t, Reset, pasObjectAbs aag x) \<in> pasPolicy aag))
+           (blocked_ipc_cancel (BlockedOnReceive x xa) t)"
+  unfolding blocked_ipc_cancel_def get_blocking_ipc_endpoint_def
+  apply clarsimp
+apply (case_tac "aag_can_read_label aag (pasObjectAbs aag x) \<or> aag_can_affect aag l x")
+-- "boring case, can read or affect ep"
+apply (rule pre_ev)
+apply ((wp set_thread_state_reads_respects set_endpoint_reads_respects get_ep_queue_reads_respects
+          get_endpoint_reads_respects get_blocking_ipc_endpoint_reads_respects | simp add: get_blocking_ipc_endpoint_def get_thread_state_rev)+)[2]
+-- "interesting case, can't read ep"
+unfolding get_endpoint_def
+apply (rule gen_asm_ev)
+apply (subst(asm) label_is_invisible[symmetric])
+apply(clarsimp simp: equiv_valid_def2 simp del: K_def)
+  apply(rule equiv_valid_rv_guard_imp)
+apply (rule_tac Q="(pas_refined aag and pas_cur_domain aag and valid_objs and valid_etcbs and sym_refs \<circ> state_refs_of and K ((pasSubject aag, AsyncSend, pasObjectAbs aag aepptr) \<in> pasPolicy aag))" in ev2_invisible)
+apply (erule invisible_ep_invisible_receiver | simp)+
+apply (rule modifies_at_mostI)
+apply wp
+
+  apply (clarsimp)
+  sorry
+
+
+lemma send_async_ipc_reads_respects_f:
+  "reads_respects_f aag l (pas_refined aag and pas_cur_domain aag and silc_inv aag st and (\<lambda>s. is_subject aag (cur_thread s)) and invs and valid_etcbs and K ((pasSubject aag, AsyncSend, pasObjectAbs aag aepptr) \<in> pasPolicy aag)) (send_async_ipc aepptr badge)"
   unfolding send_async_ipc_def fun_app_def
+  apply (rule gen_asm_ev)
+apply (rule pre_ev)
+apply (rule_tac P''="pas_refined aag and pas_cur_domain aag and silc_inv aag st and (\<lambda>s. is_subject aag (cur_thread s)) and invs and valid_etcbs" in bind_ev[OF _ get_async_ep_reads_respects[THEN reads_respects_f, where st=st and Q=\<top>, simplified, OF get_async_ep_silc_inv] get_aep_sp])
+apply (case_tac "aep_obj rv = IdleAEP \<and> aep_bound_tcb rv \<noteq> None")
+(* bound case *)
+apply clarsimp 
+apply ((wp reads_respects_f[OF get_thread_state_rev, where Q=\<top> and st=st, simplified ] 
+          get_async_ep_reads_respects[THEN reads_respects_f, where st=st and Q=\<top>]   
+          as_user_set_register_reads_respects'[THEN reads_respects_f, where st=st and Q=\<top>] 
+          set_thread_state_reads_respects[THEN reads_respects_f, where st=st and Q=\<top>] 
+          set_thread_state_pas_refined ipc_cancel_reads_respects_f[where st=st] 
+          ipc_cancel_indirect_silc_inv[where st=st]
+          set_async_ep_reads_respects[THEN reads_respects_f, where st=st and Q=\<top>] 
+          hoare_vcg_imp_lift gts_st_tcb_at
+          switch_if_required_to_reads_respects[THEN reads_respects_f, where st=st and Q=\<top>] 
+          update_waiting_aep_reads_respects[THEN reads_respects_f, where st=st and Q=\<top>] get_aep_wp
+        | clarsimp split: split_if)+)[1] 
+(* NOTES: * need to be able to ipc_cancel without is_subject
+          * need to be able to get_thread_state without is_subject *)
+
+defer
+(* normal case *)
+apply clarsimp          
   apply(case_tac "aag_can_read aag aepptr \<or> aag_can_affect aag l aepptr")
-   apply (wp set_async_ep_reads_respects update_waiting_aep_reads_respects 
-             get_async_ep_reads_respects | wpc)+
-    unfolding get_async_ep_def
-    apply (wp get_object_wp | wpc | simp)+
-   apply clarsimp
-  apply(rule gen_asm_ev)
-  apply(subst (asm) label_is_invisible[symmetric])
+apply (rule pre_ev)
+apply (rule reads_respects_f[where st=st and Q=\<top>, simplified])
+   apply ((wp set_async_ep_reads_respects update_waiting_aep_reads_respects 
+             get_async_ep_reads_respects | wpc | clarsimp simp: invs_valid_objs invs_sym_refs | rule hoare_pre | fastforce)+)[3]
+apply (rule pre_ev)
+apply (rule reads_respects_f[where st=st and Q=\<top>, simplified])
+apply(subst (asm) label_is_invisible[symmetric])
   apply(clarsimp simp: equiv_valid_def2 simp del: K_def)
   apply(rule equiv_valid_rv_guard_imp)
    (* we take the strategy of showing that the entire composition here modifies only
       things that are invisible. This works only because the 
       composite-monads in question have a return-type of unit, so inferring equality of 
       return-values is trivial. Otherwise, this strategy would probably not be so good. *)
-   apply(rule_tac Q="(pas_refined aag and pas_cur_domain aag and valid_objs and valid_etcbs and sym_refs \<circ> state_refs_of and K ((pasSubject aag, AsyncSend, pasObjectAbs aag aepptr) \<in> pasPolicy aag))" in ev2_invisible)
+   apply(rule_tac Q="(pas_refined aag and pas_cur_domain aag and (ko_at (AsyncEndpoint rv) aepptr) and invs and valid_etcbs and K ((pasSubject aag, AsyncSend, pasObjectAbs aag aepptr) \<in> pasPolicy aag))" in ev2_invisible)
        apply(erule (1) invisible_aep_invisible_receivers_and_ipcbuffers)+
-     apply(rule modifies_at_mostI | wp set_async_ep_equiv_but_for_labels update_waiting_aep_equiv_but_for_labels get_object_wp | wpc | fastforce
-      | clarsimp, rule conjI, clarsimp, rule ccontr,
-                   frule(2) tcb_at_aep_queue, drule(4) not_etcb_at_not_cdom_can_read,
-               drule(6) read_queued_thread_reads_aep, simp add: labels_are_invisible_def)+
-     done
+         apply ((rule modifies_at_mostI 
+         | rule_tac aep=rv in update_waiting_aep_equiv_but_for_labels 
+         | wp set_async_ep_equiv_but_for_labels  get_object_wp 
+         | wpc 
+         | fastforce 
+         | rule hoare_pre 
+         | (rule conjI, clarsimp)
+         | (rule ccontr, frule(3) tcb_at_aep_queue[OF invs_valid_objs], 
+            drule(4) not_etcb_at_not_cdom_can_read, 
+            drule(7) read_queued_thread_reads_aep[OF _ _ _ invs_valid_objs invs_sym_refs], 
+            (simp add: labels_are_invisible_def | fastforce)+))+)[6]
+(* end normal case *)
+sorry
 
 lemma receive_async_ipc_reads_respects:
   "reads_respects aag l (valid_objs and pas_refined aag and
@@ -584,7 +633,7 @@ lemma receive_async_ipc_reads_respects:
              \<in> pasPolicy aag \<and> is_subject aag thread)))
          (receive_async_ipc thread cap)"
   unfolding receive_async_ipc_def fun_app_def
-  apply(wp set_async_ep_reads_respects set_thread_state_reads_respects do_async_transfer_reads_respects get_async_ep_reads_respects hoare_vcg_all_lift
+  apply(wp set_async_ep_reads_respects set_thread_state_reads_respects as_user_set_register_reads_respects' get_async_ep_reads_respects hoare_vcg_all_lift
        | wpc
        | wp_once hoare_drop_imps)+
   apply(force dest: reads_ep)
@@ -1569,6 +1618,7 @@ lemma receive_ipc_reads_respects:
             gets_cur_thread_ev set_thread_state_pas_refined
         | wpc
         | simp)+
+  sorry (*
               apply (rule_tac Q="\<lambda>rv s. pas_refined aag s \<and> pas_cur_domain aag s \<and> is_subject aag (cur_thread s) \<and> (sender_can_grant rvd \<longrightarrow> is_subject aag (hd list))" in hoare_strengthen_post)
                apply(wp set_endpoint_reads_respects
                         hoare_vcg_imp_lift [OF set_endpoint_get_tcb, unfolded disj_not1] hoare_vcg_all_lift
@@ -1623,7 +1673,7 @@ lemma receive_ipc_reads_respects:
    apply simp
   apply simp
   done
-
+ *)
 
 
 lemma receive_endpoint_threads_blocked:
@@ -2246,7 +2296,7 @@ lemma send_ipc_globals_equiv:
     apply(simp)+
   apply (frule_tac x=xa in receive_endpoint_threads_blocked,simp+)
   apply (clarsimp simp add: valid_idle_def st_tcb_at_def obj_at_def)
-  done
+  sorry
 
 lemma valid_ep_recv_dequeue':
   "\<lbrakk> ko_at (Endpoint (Structures_A.endpoint.RecvEP (t # ts))) epptr s;
@@ -2275,6 +2325,7 @@ lemma receive_ipc_globals_equiv:
             setup_caller_cap_globals_equiv dxo_wp_weak | wpc | simp split del: split_if)+
           apply(rule_tac Q="\<lambda>_. globals_equiv st and valid_ko_at_arm and valid_global_objs"
                 in hoare_strengthen_post)
+  sorry (*
            apply(wp, simp)
          apply(wp do_ipc_transfer_globals_equiv static_imp_wp)
         apply(wpc)
@@ -2296,6 +2347,7 @@ lemma receive_ipc_globals_equiv:
    apply(wp | wpc)+
   apply(simp)
   done
+*)
 
 subsection "Async IPC"
 
@@ -2305,6 +2357,7 @@ lemma do_async_transfer_globals_equiv:
     and (\<lambda>s. thread \<noteq> idle_thread s)\<rbrace>
     do_async_transfer badge msg_word thread
     \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
+  sorry (*
   unfolding do_async_transfer_def
   apply(wp set_message_info_globals_equiv as_user_globals_equiv
         set_mrs_globals_equiv)
@@ -2341,21 +2394,23 @@ lemma do_async_transfer_globals_equiv:
     apply(simp)
    apply(simp add: word_size_def)
   apply(simp add:valid_arch_state_ko_at_arm)
-  done
+  done *)
 
 lemma valid_aep_dequeue:
-  "\<lbrakk> ko_at (AsyncEndpoint (WaitingAEP (t # ts))) aepptr s;
+  "\<lbrakk> ko_at (AsyncEndpoint aep) aepptr s; aep_obj aep = (WaitingAEP (t # ts));
      valid_objs s; ts \<noteq> []\<rbrakk>
-     \<Longrightarrow> valid_aep (WaitingAEP ts) s"
+     \<Longrightarrow> valid_aep aep s"
   unfolding valid_objs_def valid_obj_def valid_aep_def obj_at_def
   apply (drule bspec)
   apply (auto split: list.splits)
   done
 
 
+(* FIXME: AEP OBJECT CHANGED *)
+
 lemma update_waiting_aep_globals_equiv:
-  "\<lbrace>globals_equiv s and valid_objs and valid_arch_state and valid_global_refs and ko_at (AsyncEndpoint (WaitingAEP queue)) aepptr and pspace_distinct and sym_refs \<circ> state_refs_of and (\<lambda>s. idle_thread s \<notin> set queue)\<rbrace>
-    update_waiting_aep aepptr queue badge val
+  "\<lbrace>globals_equiv s and valid_objs and valid_arch_state and valid_global_refs and ko_at (AsyncEndpoint aep) aepptr and pspace_distinct and sym_refs \<circ> state_refs_of and (\<lambda>s. idle_thread s \<notin> set queue) and K (aep_obj aep = WaitingAEP queue)\<rbrace>
+    update_waiting_aep aepptr queue bound_tcb badge
     \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   unfolding update_waiting_aep_def
   apply(wp)
@@ -2363,6 +2418,7 @@ lemma update_waiting_aep_globals_equiv:
     apply(wp do_async_transfer_globals_equiv set_thread_state_globals_equiv
              set_async_ep_globals_equiv set_async_ep_valid_ko_at_arm
              dxo_wp_weak | simp)+
+  sorry (*
     apply(wp set_aep_valid_objs_at)
     apply(rule_tac Q="\<lambda>s. (st_tcb_at (\<lambda>st. \<not> halted st) (fst xa) s \<or>
               cte_wp_at (\<lambda>c. is_master_reply_cap c \<and> obj_ref_of c = fst xa)
@@ -2388,44 +2444,36 @@ lemma update_waiting_aep_globals_equiv:
   apply(rule aep_queued_st_tcb_at)
       apply(simp)+
       apply (case_tac queue,clarsimp+)
-      done
+      done *)
 
 lemma send_async_ipc_globals_equiv:
-  "\<lbrace>globals_equiv s and valid_objs and valid_arch_state and valid_global_refs and sym_refs \<circ> state_refs_of and pspace_distinct and valid_idle\<rbrace> send_async_ipc aepptr badge val
+  "\<lbrace>globals_equiv s and valid_objs and valid_arch_state and valid_global_refs and sym_refs \<circ> state_refs_of and pspace_distinct and valid_idle\<rbrace> send_async_ipc aepptr badge
     \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   unfolding send_async_ipc_def
+  sorry (*
   apply(wp set_async_ep_globals_equiv update_waiting_aep_globals_equiv | wpc)+
   apply(rule_tac Q="\<lambda>rv. globals_equiv s and valid_objs and valid_arch_state and valid_global_refs and sym_refs \<circ> state_refs_of and ko_at (AsyncEndpoint rv) aepptr and pspace_distinct and valid_idle"
         in hoare_strengthen_post)
    apply (wp get_aep_ko | clarsimp simp: valid_arch_state_ko_at_arm)+
   apply (drule_tac t="idle_thread sa" and P="\<lambda>ref. \<not> idle ref" in aep_queued_st_tcb_at',simp+)
   apply (fastforce simp: valid_idle_def st_tcb_at_def obj_at_def)
-   done
-
-lemma do_async_transfer_valid_global_objs:
-  "\<lbrace>valid_global_objs\<rbrace> do_async_transfer badge msg_word thread
-    \<lbrace>\<lambda>_. valid_global_objs\<rbrace>"
-  unfolding do_async_transfer_def
-  by wp
+   done *)
 
 
 (*FIXME: belongs in Arch_IF*)
-crunch valid_ko_at_arm[wp]: do_async_transfer "valid_ko_at_arm"
 
 lemma receive_async_ipc_globals_equiv:
   "\<lbrace>globals_equiv s and valid_objs and valid_arch_state and valid_global_refs and pspace_distinct and (\<lambda>s. thread \<noteq> idle_thread s)\<rbrace> receive_async_ipc thread cap
     \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
   unfolding receive_async_ipc_def
+  apply (rule hoare_pre)
   apply(wp set_async_ep_globals_equiv set_thread_state_globals_equiv
-           do_async_transfer_globals_equiv do_async_transfer_valid_global_objs
-       | wpc)+
+           as_user_globals_equiv get_aep_wp
+       | wpc)+ (*
    apply(rule_tac Q="\<lambda>_. globals_equiv s and valid_objs and valid_arch_state and valid_global_refs and pspace_distinct and (\<lambda>s. thread \<noteq> idle_thread s)"
-        in hoare_strengthen_post)
-    apply(wp)
+        in hoare_strengthen_post) 
+    apply(wp) *)
    apply(simp add: valid_arch_state_ko_at_arm)
-  apply(rule hoare_pre)
-   apply(wp | wpc)+
-  apply(simp)
   done
 
 lemma set_object_valid_global_refs:
@@ -2534,7 +2582,7 @@ lemma do_reply_transfer_globals_equiv:
   unfolding do_reply_transfer_def
   apply(wp set_thread_state_globals_equiv cap_delete_one_globals_equiv  do_ipc_transfer_globals_equiv thread_set_globals_equiv handle_fault_reply_globals_equiv dxo_wp_weak | wpc | simp split del: split_if)+
     apply(rule_tac Q="\<lambda>_. globals_equiv st and valid_ko_at_arm and valid_objs and valid_arch_state and valid_global_refs and pspace_distinct and valid_global_objs and (\<lambda>s. receiver \<noteq> idle_thread s) and valid_idle" in hoare_strengthen_post)
-    apply (wp gts_wp | fastforce simp: valid_arch_state_ko_at_arm st_tcb_at_def obj_at_def valid_idle_def)+
+    apply (wp gts_wp | fastforce simp: valid_arch_state_ko_at_arm pred_tcb_at_def obj_at_def valid_idle_def)+
     done
 
 lemma handle_reply_globals_equiv:
@@ -2591,12 +2639,13 @@ section "reads_respects_g"
 subsection "Async IPC"
 
 lemma send_async_ipc_reads_respects_g:
-  "reads_respects_g aag l (pas_refined aag and pas_cur_domain aag and valid_etcbs and valid_objs and valid_global_objs and valid_arch_state and valid_global_refs and pspace_distinct and valid_idle and sym_refs \<circ> state_refs_of and is_subject aag \<circ> cur_thread and K ((pasSubject aag, AsyncSend, pasObjectAbs aag aepptr) \<in> pasPolicy aag)) (send_async_ipc aepptr badge val)"
+  "reads_respects_g aag l (pas_refined aag and pas_cur_domain aag and valid_etcbs and valid_objs and valid_global_objs and valid_arch_state and valid_global_refs and pspace_distinct and valid_idle and sym_refs \<circ> state_refs_of and is_subject aag \<circ> cur_thread and K ((pasSubject aag, AsyncSend, pasObjectAbs aag aepptr) \<in> pasPolicy aag)) (send_async_ipc aepptr badge)"
   apply(rule equiv_valid_guard_imp[OF reads_respects_g])
+  sorry (*
     apply(rule send_async_ipc_reads_respects)
    apply(rule doesnt_touch_globalsI)
    apply(wp send_async_ipc_globals_equiv | simp)+
-  done
+  done *)
 
 lemma receive_async_ipc_reads_respects_g:
   "reads_respects_g aag l (valid_global_objs and valid_objs and valid_arch_state and valid_global_refs and pspace_distinct and pas_refined aag and (\<lambda>s. thread \<noteq> idle_thread s) and is_subject aag \<circ> cur_thread and K ((\<forall>aepptr\<in>Access.obj_refs cap.

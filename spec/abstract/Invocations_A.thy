@@ -44,6 +44,7 @@ datatype tcb_invocation =
                   "(vspace_ref * (cap * cslot_ptr) option) option"
   | Suspend "word32"
   | Resume "word32"
+  | AsyncEndpointControl "obj_ref" "obj_ref option"
 
 datatype irq_control_invocation =
     IRQControl irq cslot_ptr cslot_ptr
@@ -57,7 +58,7 @@ datatype irq_handler_invocation =
 datatype invocation =
     InvokeUntyped untyped_invocation
   | InvokeEndpoint obj_ref word32 bool
-  | InvokeAsyncEndpoint obj_ref word32 word32
+  | InvokeAsyncEndpoint obj_ref word32
   | InvokeReply obj_ref cslot_ptr
   | InvokeTCB tcb_invocation
   | InvokeDomain obj_ref word8

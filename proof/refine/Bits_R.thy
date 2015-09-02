@@ -180,7 +180,7 @@ lemma obj_at_valid_objs':
 
 lemma tcb_in_valid_state':
   "\<lbrakk> st_tcb_at' P t s; valid_objs' s \<rbrakk> \<Longrightarrow> \<exists>st. P st \<and> valid_tcb_state' st s"
-  apply (clarsimp simp: st_tcb_at'_def)
+  apply (clarsimp simp: pred_tcb_at'_def)
   apply (drule obj_at_valid_objs')
    apply fastforce
   apply (clarsimp simp: projectKOs)
@@ -339,13 +339,13 @@ lemma ep'_cases_weak_wp:
 lemma aep'_cases_weak_wp:
   assumes "\<lbrace>P_A\<rbrace> a \<lbrace>Q\<rbrace>"
   assumes "\<And>q. \<lbrace>P_B\<rbrace> b q \<lbrace>Q\<rbrace>"
-  assumes "\<And>bdg msg. \<lbrace>P_C\<rbrace> c bdg msg \<lbrace>Q\<rbrace>"
+  assumes "\<And>bdg. \<lbrace>P_C\<rbrace> c bdg \<lbrace>Q\<rbrace>"
   shows
   "\<lbrace>P_A and P_B and P_C\<rbrace>
     case ts of
       IdleAEP \<Rightarrow> a
     | WaitingAEP q \<Rightarrow> b q
-    | ActiveAEP bdg msg \<Rightarrow> c bdg msg \<lbrace>Q\<rbrace>"
+    | ActiveAEP bdg \<Rightarrow> c bdg \<lbrace>Q\<rbrace>"
   apply (cases ts)
   apply (simp, rule hoare_weaken_pre, rule assms, simp)+
   done

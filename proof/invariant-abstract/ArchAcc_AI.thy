@@ -192,30 +192,30 @@ lemma set_asid_pool_cte_wp_at:
   done
 
 
-lemma set_pt_st_tcb_at[wp]:
-  "\<lbrace>st_tcb_at P t\<rbrace> set_pt ptr val \<lbrace>\<lambda>_. st_tcb_at P t\<rbrace>"
+lemma set_pt_pred_tcb_at[wp]:
+  "\<lbrace>pred_tcb_at proj P t\<rbrace> set_pt ptr val \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>"
   apply (simp add: set_pt_def set_object_def)
   apply wp
   apply (rule hoare_strengthen_post [OF get_object_sp])
-  apply (clarsimp simp: st_tcb_at_def obj_at_def)
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def)
   done
 
 
-lemma set_pd_st_tcb_at[wp]:
-  "\<lbrace>st_tcb_at P t\<rbrace> set_pd ptr val \<lbrace>\<lambda>_. st_tcb_at P t\<rbrace>"
+lemma set_pd_pred_tcb_at[wp]:
+  "\<lbrace>pred_tcb_at proj P t\<rbrace> set_pd ptr val \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>"
   apply (simp add: set_pd_def set_object_def)
   apply wp
   apply (rule hoare_strengthen_post [OF get_object_sp])
-  apply (clarsimp simp: st_tcb_at_def obj_at_def)
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def)
   done
 
 
-lemma set_asid_pool_st_tcb_at[wp]:
-  "\<lbrace>st_tcb_at P t\<rbrace> set_asid_pool ptr val \<lbrace>\<lambda>_. st_tcb_at P t\<rbrace>"
+lemma set_asid_pool_pred_tcb_at[wp]:
+  "\<lbrace>pred_tcb_at proj P t\<rbrace> set_asid_pool ptr val \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>"
   apply (simp add: set_asid_pool_def set_object_def)
   apply wp
   apply (rule hoare_strengthen_post [OF get_object_sp])
-  apply (clarsimp simp: st_tcb_at_def obj_at_def)
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def)
   done
 
 

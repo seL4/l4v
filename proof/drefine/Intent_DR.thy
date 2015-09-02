@@ -28,11 +28,11 @@ where "not_idle_thread x \<equiv> (\<lambda>s. x \<noteq> idle_thread s)"
 
 lemma ep_not_idle:
   "\<lbrakk>valid_idle s;obj_at is_ep epptr s\<rbrakk> \<Longrightarrow> not_idle_thread epptr s"
-  by (clarsimp simp:valid_idle_def obj_at_def is_cap_table_def st_tcb_at_def is_ep_def not_idle_thread_def)
+  by (clarsimp simp:valid_idle_def obj_at_def is_cap_table_def pred_tcb_at_def is_ep_def not_idle_thread_def)
 
 lemma aep_not_idle:
   "\<lbrakk>valid_idle s;obj_at is_aep epptr s\<rbrakk> \<Longrightarrow> not_idle_thread epptr s"
-  by (clarsimp simp:valid_idle_def obj_at_def is_cap_table_def st_tcb_at_def is_aep_def not_idle_thread_def)
+  by (clarsimp simp:valid_idle_def obj_at_def is_cap_table_def pred_tcb_at_def is_aep_def not_idle_thread_def)
 
 lemma cte_wp_at_zombie_not_idle:
   "\<lbrakk>cte_wp_at (op = (cap.Zombie ptr' zbits n)) ptr s; invs s\<rbrakk> \<Longrightarrow> not_idle_thread (fst ptr) s"
@@ -40,7 +40,7 @@ lemma cte_wp_at_zombie_not_idle:
   by (auto dest!: zombie_cap_two_nonidles simp: cte_wp_at_caps_of_state not_idle_thread_def)
 
 lemmas tcb_slots = Types_D.tcb_caller_slot_def Types_D.tcb_cspace_slot_def Types_D.tcb_ipcbuffer_slot_def
-  Types_D.tcb_pending_op_slot_def Types_D.tcb_replycap_slot_def Types_D.tcb_vspace_slot_def
+  Types_D.tcb_pending_op_slot_def Types_D.tcb_replycap_slot_def Types_D.tcb_vspace_slot_def Types_D.tcb_boundaep_slot_def
 
 lemma tcb_cap_casesE:
   assumes cs: "tcb_cap_cases p = Some (gf, sf, restr)"
@@ -117,7 +117,8 @@ lemma opt_cap_tcb:
   "\<lbrakk> get_tcb y s = Some tcb; (\<exists>etcb. get_etcb y s = Some etcb); y \<noteq> idle_thread s \<rbrakk> \<Longrightarrow>
   opt_cap (y, sl) (transform s) =
   (if sl \<in> tcb_abstract_slots then (option_map (\<lambda>(getF, _, _). transform_cap (getF tcb)) (tcb_cap_cases (tcb_cnode_index sl)))
-  else (if sl = tcb_pending_op_slot then (Some (infer_tcb_pending_op y (tcb_state tcb))) else None))"
+  else (if sl = tcb_pending_op_slot then (Some (infer_tcb_pending_op y (tcb_state tcb))) 
+   else (if sl = tcb_boundaep_slot then (Some  (infer_tcb_bound_aep (tcb_bound_aep tcb))) else None)))"
   by (fastforce simp add: opt_cap_def KHeap_D.slots_of_def opt_object_tcb object_slots_def transform_tcb_def tcb_slots)
 
 lemma cdl_objects_cnode:
@@ -125,7 +126,7 @@ lemma cdl_objects_cnode:
     \<Longrightarrow> cdl_objects (transform s') y =
     Some (cdl_object.CNode \<lparr>cdl_cnode_caps = transform_cnode_contents sz obj', cdl_cnode_size_bits = sz\<rparr>)"
   apply (subgoal_tac "y \<noteq> idle_thread s'")
-  apply (auto simp:obj_at_def is_cap_table_def valid_idle_def st_tcb_at_def
+  apply (auto simp:obj_at_def is_cap_table_def valid_idle_def pred_tcb_at_def
          transform_def transform_objects_def)
   done
 
@@ -134,7 +135,7 @@ lemma transform_objects_cnode:
     Some (cdl_object.CNode \<lparr>cdl_cnode_caps = transform_cnode_contents sz obj', cdl_cnode_size_bits = sz\<rparr>)"
   apply (subgoal_tac "y \<noteq> idle_thread s'")
   apply (simp add: transform_objects_def)
-  apply (clarsimp simp add: valid_idle_def obj_at_def st_tcb_at_def)+
+  apply (clarsimp simp add: valid_idle_def obj_at_def pred_tcb_at_def)+
   done
 
 lemmas lift_simp =
@@ -150,6 +151,13 @@ lemma transform_objects_update_other:
 
 lemma caps_of_object_update_state [simp]:
   "(\<lambda>n. Option.map (\<lambda>(f, _). f (tcb_state_update stf tcb)) (tcb_cap_cases n)) =
+   (\<lambda>n. Option.map (\<lambda>(f, _). f tcb) (tcb_cap_cases n))"
+  apply (rule ext)
+  apply (simp add: tcb_cap_cases_def split: split_if)
+  done
+
+lemma caps_of_object_update_boundaep [simp]:
+  "(\<lambda>n. Option.map (\<lambda>(f, _). f (tcb_bound_aep_update stf tcb)) (tcb_cap_cases n)) =
    (\<lambda>n. Option.map (\<lambda>(f, _). f tcb) (tcb_cap_cases n))"
   apply (rule ext)
   apply (simp add: tcb_cap_cases_def split: split_if)
@@ -1556,8 +1564,8 @@ lemma store_word_corres_helper:
   apply (drule(1) valid_etcbs_tcb_etcb, clarsimp simp:restrict_map_def transform_object_def transform_tcb_def
           split:cdl_object.split_asm Structures_A.kernel_object.split_asm split_if_asm)+
   defer
-    apply (simp add:tcb_ipcframe_id_def split:split_if_asm)
-     apply (simp add:tcb_ipcbuffer_slot_def tcb_pending_op_slot_def)
+    apply (simp add:tcb_ipcframe_id_def tcb_boundaep_slot_def tcb_ipcbuffer_slot_def split:split_if_asm)
+     apply (simp add:tcb_ipcbuffer_slot_def tcb_pending_op_slot_def tcb_boundaep_slot_def)
     apply (frule_tac thread = thread in valid_tcb_objs)
      apply (simp add: get_tcb_rev)
     apply (clarsimp simp:valid_tcb_def tcb_cap_cases_def)
@@ -1889,13 +1897,13 @@ lemma ex_cte_cap_wp_to_not_idle:
       apply (clarsimp simp:cap_range_def)+
       apply (clarsimp simp:valid_idle_def valid_irq_node_def)
       apply (drule_tac x = word in spec)
-        apply (clarsimp simp:st_tcb_at_def obj_at_def is_cap_table_def)
+        apply (clarsimp simp:pred_tcb_at_def obj_at_def is_cap_table_def)
       apply (clarsimp simp:cap_range_def)+
     apply (case_tac "get tcb")
       apply clarsimp+
       apply (clarsimp simp:valid_idle_def valid_irq_node_def)
       apply (drule_tac x = word in spec)
-        apply (clarsimp simp:st_tcb_at_def obj_at_def is_cap_table_def)
+        apply (clarsimp simp:st_tcb_at_def pred_tcb_at_def obj_at_def is_cap_table_def)
       apply clarsimp+
   done
 
@@ -2059,10 +2067,10 @@ shows "dcorres dc \<top> P (corrupt_frame buf) g"
   apply (frule imp)
   apply (erule allE, erule (1) impE)
   apply (drule_tac x = "(a,ba)" in bspec)
-    apply simp+
+   apply simp+
   apply (clarsimp simp:bind_def)
   apply (rule_tac x = "((),transform ba)" in bexI)
-    apply simp
+   apply simp
   apply (clarsimp simp:corrupt_tcb_intent_def bind_def)
   apply (clarsimp simp:update_thread_def gets_the_def gets_def get_def bind_def in_monad)
   apply (clarsimp simp:ipc_frame_wp_at_def obj_at_def)
@@ -2072,24 +2080,24 @@ shows "dcorres dc \<top> P (corrupt_frame buf) g"
   apply (clarsimp simp:simpler_modify_def corrupt_intents_def)
   apply (drule(1) valid_etcbs_tcb_etcb, clarsimp)
   apply (subst(asm) opt_object_tcb)
-    apply (erule get_tcb_rev)
+     apply (erule get_tcb_rev)
     apply (erule get_etcb_rev)
-    apply (simp add:not_idle_thread_def)
+   apply (simp add:not_idle_thread_def)
   apply (clarsimp simp:transform_tcb_def in_monad set_object_def)
   apply (rule_tac x = x in exI)
   apply (clarsimp simp:transform_def KHeap_D.set_object_def simpler_modify_def)
   apply (case_tac "transform b")
-    apply (clarsimp simp:transform_def map_add_def)
+  apply (clarsimp simp:transform_def map_add_def)
   apply (rule ext)
   apply (drule_tac x = xa in fun_cong)
   apply (case_tac xa)
   apply (clarsimp simp:not_idle_thread_def tcb_ipcframe_id_def restrict_map_def transform_objects_def
       split: split_if)
   apply (clarsimp dest!:get_tcb_rev simp: transform_objects_tcb
-      tcb_ipcbuffer_slot_def tcb_pending_op_slot_def)
+      tcb_ipcbuffer_slot_def tcb_pending_op_slot_def tcb_boundaep_slot_def)
   apply (clarsimp simp: tcb_ipcbuffer_slot_def tcb_ipcframe_id_def | rule conjI)+
-  apply (clarsimp simp:transform_def transform_object_def transform_tcb_def tcb_ipcframe_id_def
-        tcb_ipcbuffer_slot_def tcb_pending_op_slot_def dest!:get_tcb_SomeD)
+    apply (clarsimp simp:transform_def transform_object_def transform_tcb_def tcb_ipcframe_id_def
+          tcb_ipcbuffer_slot_def tcb_pending_op_slot_def tcb_boundaep_slot_def dest!:get_tcb_SomeD)
 done
 
 lemma corrupt_frame_include_self':
@@ -2122,7 +2130,7 @@ shows "dcorres dc \<top> P (corrupt_frame buf) g"
   apply (clarsimp split:cap.splits arch_cap.splits)
   apply (drule(1) valid_etcbs_tcb_etcb)
   apply (fastforce simp:opt_object_def transform_tcb_def tcb_ipcframe_id_def tcb_pending_op_slot_def
-      tcb_ipcbuffer_slot_def)+
+      tcb_ipcbuffer_slot_def tcb_boundaep_slot_def)+
 done
 
 lemma dcorres_set_mrs:

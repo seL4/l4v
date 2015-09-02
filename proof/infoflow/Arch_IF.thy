@@ -61,7 +61,6 @@ crunch irq_state_of_state[wp]: schedule "\<lambda>(s::det_state). P (irq_state_o
 
 crunch irq_state_of_state[wp]: reply_from_kernel "\<lambda>s. P (irq_state_of_state s)"
 
-crunch irq_state_of_state[wp]: send_async_ipc "\<lambda>s. P (irq_state_of_state s)"
 
 lemma detype_irq_state_of_state[simp]:
   "irq_state_of_state (detype S s) = irq_state_of_state s"
@@ -86,6 +85,7 @@ crunch irq_state_of_state[wp]: arch_perform_invocation "\<lambda>(s::det_state).
 crunch irq_state_of_state[wp]: finalise_cap "\<lambda>(s::det_state). P (irq_state_of_state s)"
   (wp: select_wp modify_wp crunch_wps dmo_wp simp: crunch_simps invalidateTLB_ASID_def cleanCaches_PoU_def dsb_def invalidate_I_PoU_def clean_D_PoU_def)
 
+crunch irq_state_of_state[wp]: send_async_ipc "\<lambda>s. P (irq_state_of_state s)"
 
 crunch irq_state_of_state[wp]: cap_swap_for_delete "\<lambda>(s::det_state). P (irq_state_of_state s)"
 
@@ -1411,6 +1411,16 @@ lemma set_thread_state_globals_equiv:
                  split: option.splits kernel_object.splits)+
   done
 
+lemma set_bound_aep_globals_equiv:
+  "\<lbrace>globals_equiv s and valid_ko_at_arm\<rbrace> set_bound_aep ref ts \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
+  unfolding set_bound_aep_def
+  apply(wp set_object_globals_equiv dxo_wp_weak |simp)+
+  apply (intro impI conjI allI)
+  apply(clarsimp simp: valid_ko_at_arm_def obj_at_def tcb_at_def2 get_tcb_def is_tcb_def 
+                 dest: get_tcb_SomeD
+                split: option.splits kernel_object.splits)+
+  done
+
 lemma set_object_valid_ko_at_arm[wp]:
   "\<lbrace>valid_ko_at_arm and (\<lambda>s. ptr = arm_global_pd (arch_state s) \<longrightarrow>
    a_type obj = AArch APageDirectory)\<rbrace>
@@ -1426,6 +1436,13 @@ lemma valid_ko_at_arm_exst_update[simp]: "valid_ko_at_arm (trans_state f s) = va
 lemma set_thread_state_valid_ko_at_arm[wp]:
   "\<lbrace>valid_ko_at_arm\<rbrace> set_thread_state ref ts \<lbrace>\<lambda>_. valid_ko_at_arm\<rbrace>"
   unfolding set_thread_state_def
+  apply(wp set_object_valid_ko_at_arm dxo_wp_weak |simp)+
+  apply(fastforce simp: valid_ko_at_arm_def get_tcb_ko_at obj_at_def)
+  done
+
+lemma set_bound_aep_valid_ko_at_arm[wp]:
+  "\<lbrace>valid_ko_at_arm\<rbrace> set_bound_aep ref ts \<lbrace>\<lambda>_. valid_ko_at_arm\<rbrace>"
+  unfolding set_bound_aep_def
   apply(wp set_object_valid_ko_at_arm dxo_wp_weak |simp)+
   apply(fastforce simp: valid_ko_at_arm_def get_tcb_ko_at obj_at_def)
   done

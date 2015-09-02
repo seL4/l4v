@@ -75,13 +75,15 @@ lemma performInvocation_Endpoint_ccorres:
   apply (clarsimp simp add: rf_sr_ksCurThread sch_act_sane_not)
   done
 
+(* This lemma now assumes 'weak_sch_act_wf (ksSchedulerAction s) s' in place of 'sch_act_simple'. *)
+
 lemma performInvocation_AsyncEndpoint_ccorres:
   "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
-       invs'
+       (invs' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s))
        (UNIV \<inter> {s. aep_' s = aep_Ptr aepptr}
              \<inter> {s. badge_' s = badge}
              \<inter> {s. message_' s = message}) []
-     (liftE (sendAsyncIPC aepptr badge message))
+     (liftE (sendAsyncIPC aepptr badge))
      (Call performInvocation_AsyncEndpoint_'proc)"
   apply cinit
    apply (ctac add: sendAsyncIPC_ccorres)
@@ -109,8 +111,9 @@ lemma performInvocation_Reply_ccorres:
    apply simp
    apply (vcg exspec=doReplyTransfer_modifies)
   apply (simp add: rf_sr_ksCurThread)
-  apply (auto simp: isReply_def elim!: st_tcb'_weakenE)
+  apply (auto simp: isReply_def elim!: pred_tcb'_weakenE)
   done
+
 
 lemma decodeInvocation_ccorres:
   "interpret_excaps extraCaps' = excaps_map extraCaps
@@ -205,7 +208,7 @@ lemma decodeInvocation_ccorres:
     apply vcg
    apply (rule ccorres_Cond_rhs)
     apply (rule ccorres_rhs_assoc)+
-    apply (csymbr, csymbr)
+    apply (csymbr)
     apply (simp add: if_to_top_of_bind Collect_const[symmetric]
                 del: Collect_const)
     apply (rule ccorres_if_cond_throws2[where Q=\<top> and Q'=\<top>])
@@ -216,41 +219,21 @@ lemma decodeInvocation_ccorres:
       apply (simp add: throwError_bind invocationCatch_def)
       apply (rule syscall_error_throwError_ccorres_n)
       apply (simp add: syscall_error_to_H_cases)
-     apply (rule ccorres_add_return,
-            rule_tac xf'=msg_' and r'="\<lambda>rv rv'. rv'=(case args of [] \<Rightarrow> 0 | x # xs \<Rightarrow> x)"
-               in ccorres_split_nothrow)
-         apply (rule ccorres_Cond_rhs)
-          apply (rule ccorres_from_vcg[where P=\<top> and P'=UNIV])
-          apply (rule allI, rule conseqPre, vcg)
-          apply (simp add: return_def)
-         apply (rule ccorres_add_return, rule iffD1 [OF ccorres_seq_skip'])
-         apply (ctac add: getSyscallArg_ccorres_foo[where args=args and n=0 and buffer=buffer])
-           apply (rule ccorres_return_Skip')
-          apply wp
-         apply simp
-         apply (subgoal_tac "args \<noteq> []")
-          apply (simp add: list_case_helper hd_conv_nth)
-          apply (vcg exspec=getSyscallArg_modifies)
-         apply (clarsimp simp: unat_eq_0)
-        apply ceqv
-       apply (simp add: returnOk_bind ccorres_invocationCatch_Inr
-                        performInvocation_def bindE_assoc)
-       apply (simp add: liftE_bindE)
-       apply (ctac add: setThreadState_ccorres)
-         apply csymbr
-         apply csymbr
-         apply (simp only: liftE_bindE[symmetric])
-         apply (ctac(no_vcg) add: performInvocation_AsyncEndpoint_ccorres)
-           apply (rule ccorres_alternative2)
-           apply (rule ccorres_return_CE, simp+)[1]
-          apply (rule ccorres_return_C_errorE, simp+)[1]
-         apply wp
-        apply (wp sts_invs_minor')
-       apply simp
-       apply (vcg exspec=setThreadState_modifies)
-      apply wp
+     apply (simp add: returnOk_bind ccorres_invocationCatch_Inr
+                      performInvocation_def bindE_assoc)
+     apply (simp add: liftE_bindE)
+     apply (ctac add: setThreadState_ccorres)
+       apply csymbr
+       apply csymbr
+       apply (simp only: liftE_bindE[symmetric])
+       apply (ctac(no_vcg) add: performInvocation_AsyncEndpoint_ccorres)
+         apply (rule ccorres_alternative2)
+         apply (rule ccorres_return_CE, simp+)[1]
+        apply (rule ccorres_return_C_errorE, simp+)[1]
+       apply wp
+      apply (wp sts_invs_minor')
      apply simp
-     apply (vcg exspec=getSyscallArg_modifies)
+     apply (vcg exspec=setThreadState_modifies)
     apply vcg
    apply (rule ccorres_Cond_rhs)
     apply (simp add: if_to_top_of_bind)
@@ -286,11 +269,11 @@ lemma decodeInvocation_ccorres:
     apply vcg
    apply (rule ccorres_Cond_rhs)
     apply (simp add: if_to_top_of_bind)
-     apply (rule ccorres_trim_returnE, simp+)
-     apply (simp add: liftME_invocationCatch o_def)
-     apply (rule ccorres_call, rule decodeTCBInvocation_ccorres)
-        apply assumption
-       apply (simp+)[3]
+    apply (rule ccorres_trim_returnE, simp+)
+    apply (simp add: liftME_invocationCatch o_def)
+    apply (rule ccorres_call, rule decodeTCBInvocation_ccorres)
+       apply assumption
+      apply (simp+)[3]
    apply (rule ccorres_Cond_rhs)
     apply (rule ccorres_trim_returnE, simp+)
     apply (simp add: liftME_invocationCatch o_def)
@@ -329,7 +312,7 @@ lemma decodeInvocation_ccorres:
                          simple_sane_strg)
    apply (clarsimp simp: cte_wp_at_ctes_of valid_cap'_def isCap_simps from_bool_neq_0
                          unat_eq_0 sysargs_rel_n_def n_msgRegisters_def valid_tcb_state'_def
-             | rule conjI | erule st_tcb'_weakenE disjE
+             | rule conjI | erule pred_tcb'_weakenE disjE
              | drule st_tcb_at_idle_thread')+
    apply fastforce
   apply (simp add: cap_lift_capEPBadge_mask_eq)
@@ -686,7 +669,7 @@ lemma sendFaultIPC_ccorres:
                apply (ctac (no_vcg) add: sendIPC_ccorres)
                 apply (ctac (no_vcg) add: ccorres_return_CE [unfolded returnOk_def comp_def])
                apply wp
-              apply (wp threadSet_st_tcb_no_state threadSet_invs_trivial threadSet_typ_at_lifts
+              apply (wp threadSet_pred_tcb_no_state threadSet_invs_trivial threadSet_typ_at_lifts
                      | simp)+
 
              apply (clarsimp simp: guard_is_UNIV_def) 
@@ -734,7 +717,7 @@ lemma sendFaultIPC_ccorres:
                  in hoare_post_impErr)
           apply (wp)
          apply (clarsimp simp: isCap_simps)
-         apply (clarsimp simp: valid_cap'_def st_tcb_at')
+         apply (clarsimp simp: valid_cap'_def pred_tcb_at')
         apply simp
       
        apply (clarsimp simp: if_1_0_0) 
@@ -784,7 +767,7 @@ lemma handleFault_ccorres:
    apply clarsimp
    apply (rule conseqPre, vcg)
    apply clarsimp
-  apply (clarsimp simp: st_tcb_at')
+  apply (clarsimp simp: pred_tcb_at')
   done
 
 lemma getMessageInfo_less_4:
@@ -1046,9 +1029,9 @@ lemma handleInvocation_ccorres:
    apply (simp add: fault_cap_fault_lift is_cap_fault_def)
    apply (frule lookup_failure_rel_fault_lift, assumption)
    apply clarsimp
-  apply (clarsimp simp: ct_in_state'_def st_tcb_at_tcb_at')
+  apply (clarsimp simp: ct_in_state'_def pred_tcb_at')
   apply (auto simp: ct_in_state'_def sch_act_simple_def intro!: active_ex_cap' 
-              elim!: st_tcb'_weakenE dest!: st_tcb_at_idle_thread')[1]
+              elim!: pred_tcb'_weakenE dest!: st_tcb_at_idle_thread')[1]
   done
 
 lemma ccorres_return_void_catchbrk:
@@ -1248,6 +1231,35 @@ lemma invs_valid_objs_strengthen:
 lemma ct_not_ksQ_strengthen:
   "thread = ksCurThread s \<and> ksCurThread s \<notin> set (ksReadyQueues s p) \<longrightarrow> thread \<notin> set (ksReadyQueues s p)" by fastforce
 
+lemma option_to_ctcb_ptr_valid_aep:
+  "valid_aep' aep s ==> (option_to_ctcb_ptr (aepBoundTCB aep) = NULL) = (aepBoundTCB aep = None)"
+  apply (cases "aepBoundTCB aep", simp_all add: option_to_ctcb_ptr_def)
+  apply (clarsimp simp: valid_aep'_def tcb_at_not_NULL)
+  done
+
+
+lemma deleteCallerCap_valid_aep'[wp]:
+  "\<lbrace>\<lambda>s. valid_aep' x s\<rbrace> deleteCallerCap c \<lbrace>\<lambda>rv s. valid_aep' x s\<rbrace>"
+  apply (wp hoare_vcg_ex_lift hoare_vcg_all_lift hoare_vcg_ball_lift hoare_vcg_imp_lift 
+            | simp add: valid_aep'_def split: aep.splits)+
+   apply auto
+  done
+
+lemma hoare_vcg_imp_liftE:
+  "\<lbrakk>\<lbrace>P'\<rbrace> f \<lbrace>\<lambda>rv s. \<not> P rv s\<rbrace>, \<lbrace>E\<rbrace>; \<lbrace>Q'\<rbrace> f \<lbrace>Q\<rbrace>, \<lbrace>E\<rbrace>\<rbrakk> \<Longrightarrow>  \<lbrace>\<lambda>s. P' s \<or> Q' s\<rbrace> f \<lbrace>\<lambda>rv s. P rv s \<longrightarrow> Q rv s\<rbrace>, \<lbrace>E\<rbrace>"
+  apply (simp add: validE_def valid_def split_def split: sum.splits)
+  done
+
+
+lemma not_obj_at'_aep:
+  "(\<not>obj_at' (P::Structures_H.async_endpoint \<Rightarrow> bool) t s) = (\<not> typ_at' AsyncEndpointT t s \<or> obj_at' (Not \<circ> P) t s)"
+  apply (simp add: obj_at'_real_def projectKOs typ_at'_def ko_wp_at'_def objBits_simps)
+  apply (rule iffI)
+   apply (clarsimp)
+   apply (case_tac ko)
+   apply (clarsimp)+
+  done
+ 
 lemma handleWait_ccorres:
   "ccorres dc xfdc   
        (\<lambda>s. invs' s \<and> st_tcb_at' simple' (ksCurThread s) s
@@ -1323,53 +1335,89 @@ lemma handleWait_ccorres:
            apply clarsimp
            apply (vcg exspec=handleFault_modifies)
 
-          apply (clarsimp simp: capFaultOnFailure_if_sum_case bool_case_If)
+          apply (clarsimp simp: bool_case_If capFaultOnFailure_if_sum_case capFault_bindE)
+          apply (simp add: liftE_bindE bind_bindE_assoc bind_assoc)
           apply (rule ccorres_cond_both' [where Q=\<top> and Q'=\<top>])
             apply clarsimp
 
            apply (rule ccorres_rhs_assoc)+ 
            apply csymbr
-           apply (simp add: bool_case_If capFaultOnFailure_if_sum_case)
+           apply csymbr
+           apply csymbr
+           apply csymbr
+           apply (rename_tac aepptr)
+           apply (rule_tac P="valid_cap' rv" in ccorres_cross_over_guard)
+           apply (simp only: capFault_injection injection_handler_If injection_liftE 
+                            injection_handler_throwError if_to_top_of_bind)
+           apply csymbr
+           apply (rule ccorres_abstract_cleanup)
+           apply csymbr
+           apply csymbr
+           apply (rule ccorres_if_lhs)
+            
+            apply (rule ccorres_pre_getAsyncEP)
+            apply (rename_tac aep)
+            apply (rule_tac Q="valid_aep' aep and (\<lambda>s. thread = ksCurThread s)"
+                      and Q'="\<lambda>s. ret__unsigned_longa = ptr_val (option_to_ctcb_ptr (aepBoundTCB aep))"
+                in ccorres_if_cond_throws_break2)
+               apply (clarsimp simp: cap_get_tag_isCap[symmetric] cap_get_tag_AsyncEndpointCap
+                                     option_to_ctcb_ptr_valid_aep rf_sr_ksCurThread)
+               apply (auto simp: option_to_ctcb_ptr_def)[1]
+              apply (rule ccorres_rhs_assoc)+
 
-           apply (rule ccorres_if_cond_throws_break2 [where Q=\<top> and Q'=\<top>])
+              apply (simp add: capFaultOnFailure_def rethrowFailure_def
+                               handleE'_def throwError_def)
+              apply (rule ccorres_cross_over_guard[where P=\<top>])
+              apply (rule ccorres_symb_exec_r)
+                apply (rule ccorres_cross_over_guard[where P=\<top>])
+                apply (rule ccorres_symb_exec_r)
+                  apply (rule ccorres_add_return2)
+                  apply (rule ccorres_split_nothrow_call[where xf'=xfdc and d'="\<lambda>_. break_C"
+                                               and Q="\<lambda>_ _. True" and Q'="\<lambda>_ _. UNIV"])
+                         apply (ctac add: handleFault_ccorres[unfolded dc_def])
+                        apply simp+
+                     apply ceqv
+                    apply (rule ccorres_break_return)
+                     apply simp+
+                   apply wp
+                  apply (vcg exspec=handleFault_modifies)
+
+                 apply vcg
+                apply (rule conseqPre, vcg)
+                apply clarsimp
+
+               apply vcg
+              apply (rule conseqPre, vcg)
               apply clarsimp
 
-              apply (simp add: cap_get_tag_isCap[symmetric] cap_get_tag_AsyncEndpointCap
-                del: Collect_const)
-              apply (simp add: to_bool_def)
+             apply (simp add: liftE_bind) 
+             apply (ctac  add: receiveAsyncIPC_ccorres[unfolded dc_def])
 
+            apply clarsimp
+            apply (vcg exspec=handleFault_modifies)
+           apply (rule ccorres_cond_true_seq)
+           apply (rule ccorres_split_throws)
+            apply (rule ccorres_rhs_assoc)+
+            apply (simp add: capFaultOnFailure_def rethrowFailure_def
+                                      handleE'_def throwError_def)
+            apply (rule ccorres_cross_over_guard[where P=\<top>])
+            apply (rule ccorres_symb_exec_r)
+              apply (rule ccorres_cross_over_guard[where P=\<top>])
+              apply (rule ccorres_symb_exec_r)
+                apply (rule ccorres_add_return2)
+                apply (ctac add: handleFault_ccorres[unfolded dc_def])
+                  apply (rule ccorres_break_return[where P=\<top> and P'=UNIV])
+                   apply simp+
+                 apply wp
+                apply (vcg exspec=handleFault_modifies)
 
-             apply (rule ccorres_rhs_assoc)+
+               apply vcg
+              apply (rule conseqPre, vcg)
+              apply clarsimp
 
-             apply (simp add: capFaultOnFailure_def rethrowFailure_def
-                              handleE'_def throwError_def)
-             apply (rule ccorres_cross_over_guard[where P=\<top>])
-             apply (rule ccorres_symb_exec_r)
-               apply (rule ccorres_cross_over_guard[where P=\<top>])
-               apply (rule ccorres_symb_exec_r)
-                 apply (rule ccorres_add_return2)
-                 apply (rule ccorres_split_nothrow_call[where xf'=xfdc and d'="\<lambda>_. break_C"
-                                              and Q="\<lambda>_ _. True" and Q'="\<lambda>_ _. UNIV"])
-                        apply (ctac add: handleFault_ccorres[unfolded dc_def])
-                       apply simp+
-                    apply ceqv
-                   apply (rule ccorres_break_return)
-                    apply simp+
-                  apply wp
-                 apply (vcg exspec=handleFault_modifies)
-
-                apply vcg
-               apply (rule conseqPre, vcg)
-               apply clarsimp
-
-              apply vcg
-             apply (rule conseqPre, vcg)
-             apply clarsimp
-
-            apply (simp add: liftE_bind) 
-            apply (ctac  add: receiveAsyncIPC_ccorres[unfolded dc_def])
-
-           apply clarsimp
+             apply vcg
+            apply (rule conseqPre, vcg)
+            apply clarsimp
            apply (vcg exspec=handleFault_modifies)
 
           apply (rule ccorres_cond_univ)
@@ -1405,9 +1453,15 @@ lemma handleWait_ccorres:
           apply vcg
          apply (rule conseqPre, vcg)
          apply clarsimp
-        apply (wp) apply clarsimp 
-        apply (wp hoare_drop_imps)
-
+        apply (wp)
+        apply clarsimp 
+        apply (rule_tac Q="(\<lambda>rv s. invs' s \<and> st_tcb_at' simple' thread s
+               \<and> sch_act_sane s \<and> (\<forall>p. thread \<notin> set (ksReadyQueues s p)) \<and> thread = ksCurThread s
+               \<and> valid_cap' rv s)" in strengthen_validE_R_cong[rule_format])
+         apply (clarsimp simp: sch_act_sane_def)
+         apply (auto dest!: obj_at_valid_objs'[OF _ invs_valid_objs']
+                      simp: projectKOs valid_obj'_def)[1]
+        apply (wp)
        apply clarsimp
        apply (vcg exspec=isBlocked_modifies exspec=lookupCap_modifies) 
 
@@ -1415,7 +1469,7 @@ lemma handleWait_ccorres:
      apply vcg
     apply clarsimp
     apply (strengthen ct_not_ksQ_strengthen invs_valid_objs_strengthen)
-    apply (wp deleteCallerCap_ct_not_ksQ hoare_vcg_all_lift)
+    apply (wp deleteCallerCap_ct_not_ksQ hoare_vcg_all_lift | simp)+
 
    apply (vcg exspec=deleteCallerCap_modifies)
 
@@ -1425,9 +1479,22 @@ lemma handleWait_ccorres:
   apply (simp add: Kernel_C.capRegister_def State_H.capRegister_def ct_in_state'_def
                     ARMMachineTypes.capRegister_def Kernel_C.R0_def)
   apply (intro conjI impI allI)
-        apply (rule_tac s=s in tcb_aligned')
+             apply (rule_tac s=s in tcb_aligned')
+             apply (clarsimp simp: cfault_rel_def fault_cap_fault_lift 
+                              lookup_fault_missing_capability_lift is_cap_fault_def)+
+         apply (clarsimp simp: cap_get_tag_AsyncEndpointCap)
+         apply (rule cmap_relationE1[OF cmap_relation_aep], assumption, erule ko_at_projectKO_opt)
+         apply (clarsimp simp: casync_endpoint_relation_def Let_def)
         apply (clarsimp simp: cfault_rel_def fault_cap_fault_lift
-                         lookup_fault_missing_capability_lift is_cap_fault_def)+
+                                 lookup_fault_missing_capability_lift is_cap_fault_def)+
+     apply (clarsimp simp: cap_get_tag_AsyncEndpointCap)
+     apply (simp add: ccap_relation_def to_bool_def)
+    apply (clarsimp simp: cap_get_tag_AsyncEndpointCap valid_cap'_def)
+    apply (drule obj_at_ko_at', clarsimp)
+    apply (rule cmap_relationE1[OF cmap_relation_aep], assumption, erule ko_at_projectKO_opt)
+    apply (clarsimp simp: typ_heap_simps)
+   apply (clarsimp simp: cfault_rel_def fault_cap_fault_lift
+                            lookup_fault_missing_capability_lift is_cap_fault_def)+
   apply (case_tac w, clarsimp+)
   done
 
@@ -1619,9 +1686,9 @@ lemma handleInterrupt_ccorres:
     apply wp
   apply (rule conjI)
    apply (clarsimp simp: cte_wp_at_ctes_of)
-   apply (auto simp: word_less_alt word_le_def maxIRQ_def uint_up_ucast is_up_def 
-                         source_size_def target_size_def word_size
-                  intro: word_0_sle_from_less sless_positive)[1]
+   apply (auto simp: word_less_alt word_le_def maxIRQ_def uint_up_ucast is_up_def
+                     source_size_def target_size_def word_size
+              intro: word_0_sle_from_less sless_positive)[1]
   apply (simp add: if_1_0_0 Collect_const_mem)
   apply (clarsimp simp: Kernel_C.IRQTimer_def Kernel_C.IRQNotifyAEP_def
                         cte_wp_at_ctes_of)
@@ -1632,9 +1699,6 @@ lemma handleInterrupt_ccorres:
   apply (frule cap_get_tag_isCap_unfolded_H_cap)
   apply (frule cap_get_tag_to_H, assumption)
   apply (clarsimp simp: to_bool_def)
-  apply (clarsimp simp: unat_word_ariths word_size word_less_nat_alt
-                        signed_shift_guard_simpler_32 maxIRQ_def
-                        word_sless_alt word_sle_def)
   done
 
 end

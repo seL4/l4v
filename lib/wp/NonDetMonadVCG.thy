@@ -1556,11 +1556,16 @@ lemma wpc_helper_no_fail_final:
   "no_fail Q f \<Longrightarrow> wpc_helper (P, P') (Q, Q') (no_fail P f)"
   by (clarsimp simp: wpc_helper_def elim!: no_fail_pre)
 
+lemma wpc_helper_empty_fail_final:
+  "empty_fail f \<Longrightarrow> wpc_helper (P, P') (Q, Q') (empty_fail f)"
+  by (clarsimp simp: wpc_helper_def)
+
 wpc_setup "\<lambda>m. \<lbrace>P\<rbrace> m \<lbrace>Q\<rbrace>" wpc_helper_valid
 wpc_setup "\<lambda>m. \<lbrace>P\<rbrace> m \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>" wpc_helper_validE
 wpc_setup "\<lambda>m. \<lbrace>P\<rbrace> m \<lbrace>Q\<rbrace>,-" wpc_helper_validE_R
 wpc_setup "\<lambda>m. \<lbrace>P\<rbrace> m -,\<lbrace>E\<rbrace>" wpc_helper_validR_R
 wpc_setup "\<lambda>m. no_fail P m" wpc_helper_no_fail_final
+wpc_setup "\<lambda>m. empty_fail m" wpc_helper_empty_fail_final
 
 section "FIXME: More Hoare Rules"
 

@@ -30,7 +30,7 @@ lemma tcb_cap_valid_NullCapD:
   "\<And>cap sl. \<lbrakk> tcb_cap_valid cap sl s; \<not> is_master_reply_cap cap \<rbrakk> \<Longrightarrow>
    tcb_cap_valid cap.NullCap sl s"
   apply (clarsimp simp: tcb_cap_valid_def valid_ipc_buffer_cap_def
-                 elim!: st_tcb_weakenE split: option.splits)
+                 elim!: pred_tcb_weakenE split: option.splits)
   apply (rename_tac get set restr)
   apply (subgoal_tac "(get, set, restr) \<in> ran tcb_cap_cases")
    apply (fastforce simp: ran_tcb_cap_cases is_cap_simps
@@ -43,7 +43,7 @@ lemma emptyable_valid_NullCapD:
   "\<lbrakk> emptyable sl s; valid_objs s \<rbrakk> \<Longrightarrow> tcb_cap_valid cap.NullCap sl s"
   apply (clarsimp simp: emptyable_def tcb_cap_valid_def
                         valid_ipc_buffer_cap_def)
-  apply (clarsimp simp: st_tcb_at_def obj_at_def is_tcb split: option.split)
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def is_tcb split: option.split)
   apply (erule(1) valid_objsE)
   apply (clarsimp simp: valid_obj_def valid_tcb_def tcb_cap_cases_def
                  split: Structures_A.thread_state.split)
@@ -57,7 +57,7 @@ lemma emptyable_valid_NullCap_strg:
 
 lemma tcb_cap_valid_pspaceI[intro]:
   "\<lbrakk> tcb_cap_valid cap sl s; kheap s = kheap s' \<rbrakk> \<Longrightarrow> tcb_cap_valid cap sl s'"
-  by (clarsimp simp: tcb_cap_valid_def obj_at_def st_tcb_at_def)
+  by (clarsimp simp: tcb_cap_valid_def obj_at_def pred_tcb_at_def)
 
 
 crunch valid_objs[wp]: deleted_irq_handler "valid_objs"
@@ -291,7 +291,7 @@ proof -
     using vr rc unfolding valid_reply_caps_def
     by (fastforce simp add: has_reply_cap_def cte_wp_at_caps_of_state
                  simp del: split_paired_Ex
-                    elim!: st_tcb_weakenE)
+                    elim!: pred_tcb_weakenE)
   show ?thesis
     using tcb_halted tcb_not_halted
     by (clarsimp simp: st_tcb_def2)
@@ -462,7 +462,7 @@ lemma empty_slot_final_cap_at:
   done
 
 
-crunch st_tcb_at[wp]: empty_slot "st_tcb_at P t"
+crunch pred_tcb_at[wp]: empty_slot "pred_tcb_at proj P t"
 
 
 declare if_cong[cong]
@@ -554,20 +554,10 @@ lemma empty_slot_caps_of_state:
 crunch caps_of_state[wp]: ep_cancel_all "\<lambda>s. P (caps_of_state s)"
   (wp: mapM_x_wp' crunch_wps)
 
-crunch caps_of_state[wp]: aep_cancel_all "\<lambda>s. P (caps_of_state s)"
-  (wp: mapM_x_wp' crunch_wps)
+crunch caps_of_state[wp]: fast_finalise, unbind_async_endpoint "\<lambda>s. P (caps_of_state s)"
+  (wp: mapM_x_wp' crunch_wps thread_set_caps_of_state_trivial
+   simp: tcb_cap_cases_def)
 
-lemma fast_finalise_caps_of_state[wp]:
-"\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> fast_finalise a f \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
-  apply (case_tac a,simp_all)
-  apply (wp | clarsimp)+
-  done
-
-
-(* why the following does not work?
-  crunch caps_of_state[wp]: fast_finalise "\<lambda>s. P (caps_of_state s)"
-  (wp: mapM_x_wp' crunch_wps)
-*)
 
 lemma cap_delete_one_caps_of_state:
   "\<lbrace>\<lambda>s. cte_wp_at can_fast_finalise p s
@@ -667,13 +657,24 @@ lemma cap_delete_one_final_cap:
   apply clarsimp
   done
 
+lemma unbind_async_endpoint_cte_wp_at[wp]:
+  "\<lbrace>\<lambda>s. cte_wp_at P slot s\<rbrace> unbind_async_endpoint t \<lbrace>\<lambda>rv s. cte_wp_at P slot s\<rbrace>"
+  by (wp thread_set_cte_wp_at_trivial hoare_drop_imp | wpc | simp add: unbind_async_endpoint_def tcb_cap_cases_def)+
+
+
+lemma unbind_async_endpoint_final[wp]:
+  "\<lbrace>is_final_cap' cap\<rbrace> unbind_async_endpoint t \<lbrace> \<lambda>rv. is_final_cap' cap\<rbrace>"
+  unfolding unbind_async_endpoint_def
+  apply (wp final_cap_lift thread_set_caps_of_state_trivial hoare_drop_imps
+       | wpc | simp add: tcb_cap_cases_def)+
+  done
 
 lemma deleting_irq_handler_final:
   "\<lbrace>is_final_cap' cap and cte_wp_at (op = cap) slot
           and K (\<not> can_fast_finalise cap)\<rbrace>
       deleting_irq_handler irq
    \<lbrace>\<lambda>rv. is_final_cap' cap\<rbrace>"
-  apply (rule hoare_gen_asm)
+  apply  (rule hoare_gen_asm)
   apply (simp add: deleting_irq_handler_def)
   apply (wp cap_delete_one_final_cap[where slot=slot])
   apply simp
@@ -756,6 +757,11 @@ lemma valid_cap_Null_ext:
   "valid_cap cap.NullCap = \<top>"
   by (rule ext) simp
 
+lemma unbind_async_endpoint_valid_cap[wp]:
+  "\<lbrace>valid_cap cap\<rbrace> unbind_async_endpoint t \<lbrace>\<lambda>rv. valid_cap cap\<rbrace>"
+  unfolding unbind_async_endpoint_def
+  by (wp abs_typ_at_lifts hoare_drop_imps | wpc | clarsimp)+ 
+
 lemma finalise_cap_new_valid_cap[wp]:
   "\<lbrace>valid_cap cap\<rbrace> finalise_cap cap x \<lbrace>\<lambda>rv. valid_cap (fst rv)\<rbrace>"
   apply (cases cap, simp_all)
@@ -767,6 +773,7 @@ lemma finalise_cap_new_valid_cap[wp]:
               completely random irrelevant wp lemmas in the proof *)
                            split del: if_splits
                      | clarsimp | rule conjI)+
+
   apply (simp add: arch_finalise_cap_def)
   apply (rule hoare_pre)
   apply (wp|simp add: o_def valid_cap_def cap_aligned_def
@@ -853,6 +860,51 @@ lemma arch_finalise_cap_invs[wp]:
   apply (auto simp: mask_def vmsz_aligned_def)
   done
 
+lemma refs_in_aep_q_refs:
+  "(x, ref) \<in> aep_q_refs_of aep \<Longrightarrow> ref = AEPAsync"
+  by (clarsimp simp: aep_q_refs_of_def split: aep.splits)
+
+lemma aep_q_refs_no_TCBAsync:
+  "(x, TCBAsync) \<notin> aep_q_refs_of aep"
+  by (clarsimp simp: aep_q_refs_of_def split: aep.splits)
+
+lemma tcb_st_refs_no_TCBBound:
+  "(x, TCBBound) \<notin> tcb_st_refs_of ts"
+  by (clarsimp simp: tcb_st_refs_of_def split: thread_state.splits)
+
+lemma unbind_maybe_aep_invs:
+  "\<lbrace>invs\<rbrace> unbind_maybe_aep aepptr \<lbrace>\<lambda>rv. invs\<rbrace>"
+  apply (simp add: unbind_maybe_aep_def invs_def valid_state_def valid_pspace_def)
+  apply (rule hoare_seq_ext [OF _ get_aep_sp])
+  apply (rule hoare_pre)
+   apply (wp valid_irq_node_typ set_aep_valid_objs | wpc | simp)+
+  apply safe
+  defer 3 defer 6
+          apply (auto elim!: obj_at_weakenE obj_at_valid_objsE if_live_then_nonz_capD2
+                       simp: valid_aep_set_bound_None is_aep valid_obj_def)[6]
+  apply (rule delta_sym_refs, assumption)
+   apply (fastforce simp: obj_at_def is_tcb
+                   dest!: pred_tcb_at_tcb_at ko_at_state_refs_ofD
+                   split: split_if_asm)
+  apply (clarsimp split: split_if_asm)
+   apply (subst (asm) ko_at_state_refs_ofD, assumption)
+   apply (fastforce simp: aep_q_refs_no_AEPBound symreftype_inverse'  is_tcb refs_of_rev
+                  dest!: refs_in_aep_q_refs)
+  apply (rule delta_sym_refs, assumption)
+   apply (clarsimp split: split_if_asm)
+   apply (subst (asm) ko_at_state_refs_ofD, assumption)
+   apply (frule refs_in_aep_q_refs)
+   apply (fastforce)
+  apply (clarsimp split: split_if_asm)
+   apply (frule_tac P="op = (Some aepptr)" in aep_bound_tcb_at, simp_all add: obj_at_def)[1]
+   apply (fastforce simp: aep_q_refs_no_AEPBound tcb_at_no_aep_bound tcb_aep_is_bound_def 
+                          obj_at_def tcb_st_refs_no_TCBBound
+                   dest!: pred_tcb_at_tcb_at bound_tcb_at_state_refs_ofD)
+  apply (subst (asm) ko_at_state_refs_ofD, assumption)
+  apply (fastforce simp: aep_q_refs_no_AEPBound symreftype_inverse'  is_tcb refs_of_rev
+                 dest!: refs_in_aep_q_refs)
+  done
+
 crunch invs[wp]: fast_finalise "invs"
 
 crunch invs: page_table_mapped "invs"
@@ -874,7 +926,7 @@ lemma tcb_cap_valid_imp':
             \<and> (\<forall>ptr. valid_ipc_buffer_cap cap ptr
                        \<longrightarrow> valid_ipc_buffer_cap newcap ptr))
      \<longrightarrow> (tcb_cap_valid cap sl s \<longrightarrow> tcb_cap_valid newcap sl s)"
-  by (fastforce simp: tcb_cap_valid_def elim!: st_tcb_weakenE
+  by (fastforce simp: tcb_cap_valid_def elim!: pred_tcb_weakenE
               split: option.split)
 
 
@@ -984,9 +1036,12 @@ crunch tcb_at: unmap_page "\<lambda>s. P (ko_at (TCB tcb) t s)"
   (simp: crunch_simps wp: crunch_wps set_pt_tcb_at set_pd_tcb_at)
 
 
-lemma st_tcb_at_def2:
-  "st_tcb_at P t \<equiv> \<lambda>s. \<exists>tcb. ko_at (TCB tcb) t s \<and> P (tcb_state tcb)"
-  by (rule eq_reflection, rule ext) (fastforce simp: st_tcb_at_def obj_at_def)
+lemma pred_tcb_at_def2:
+  "pred_tcb_at proj P t \<equiv> \<lambda>s. \<exists>tcb. ko_at (TCB tcb) t s \<and> P (proj (tcb_to_itcb tcb))"
+  by (rule eq_reflection, rule ext) (fastforce simp: pred_tcb_at_def obj_at_def)
+
+(* sseefried: 'st_tcb_at_def2' only exists to make existing proofs go through. Can use 'pred_tcb_at_def2' instead *)
+lemmas st_tcb_at_def2 = pred_tcb_at_def2[where proj=itcb_state,simplified]
 
 
 lemma unmap_page_tcb_cap_valid:
@@ -995,7 +1050,7 @@ lemma unmap_page_tcb_cap_valid:
   \<lbrace>\<lambda>rv s. tcb_cap_valid cap r s\<rbrace>"
   apply (rule tcb_cap_valid_typ_st)
   apply wp
-  apply (simp add: st_tcb_at_def2)
+  apply (simp add: pred_tcb_at_def2)
   apply (wp unmap_page_tcb_at hoare_vcg_ex_lift hoare_vcg_all_lift)
   done
 
@@ -1061,14 +1116,8 @@ lemmas tcb_cap_valid_imp = mp [OF mp [OF tcb_cap_valid_imp'], rotated]
 crunch irq_node[wp]: ep_cancel_all "\<lambda>s. P (interrupt_irq_node s)"
   (wp: crunch_wps simp: crunch_simps unless_def)
 
-crunch irq_node[wp]: aep_cancel_all "\<lambda>s. P (interrupt_irq_node s)"
+crunch irq_node[wp]: aep_cancel_all, fast_finalise "\<lambda>s. P (interrupt_irq_node s)"
   (wp: crunch_wps simp: crunch_simps unless_def)
-
-lemma fast_finalise_irq_node[wp]:
-"\<lbrace>\<lambda>s. P (interrupt_irq_node s)\<rbrace> fast_finalise a f \<lbrace>\<lambda>_ s. P (interrupt_irq_node s)\<rbrace>"
-  apply (case_tac a,simp_all)
-  apply (wp ep_cancel_all_irq_node | clarsimp)+
-  done
 
 crunch irq_node[wp]: cap_delete_one "\<lambda>s. P (interrupt_irq_node s)"
   (wp: crunch_wps simp: crunch_simps unless_def)
@@ -1150,13 +1199,57 @@ lemma suspend_no_cap_to_obj_ref[wp]:
                  dest!: obj_ref_none_no_asid[rule_format])
   done
 
+lemma unbind_async_endpoint_not_bound:
+  "\<lbrace>\<lambda>s. obj_at (\<lambda>ko. \<exists>aep. ko = AsyncEndpoint aep \<and> aep_bound_tcb aep = Some tcbptr) aepptr s
+      \<and> valid_objs s \<and> sym_refs (state_refs_of s)\<rbrace>
+     unbind_async_endpoint tcbptr
+   \<lbrace>\<lambda>_. obj_at (\<lambda>ko. \<exists>aep. ko = AsyncEndpoint aep \<and> aep_bound_tcb aep = None) aepptr\<rbrace>"
+  apply (simp add: unbind_async_endpoint_def)
+  apply (rule hoare_pre)
+   apply (rule hoare_seq_ext[OF _ gba_wp[where P="\<lambda>ptr _. ptr = (Some aepptr)"]])
+   apply (rule hoare_gen_asm[where P'=\<top>, simplified])
+   apply (wp sba_obj_at_impossible set_async_ep_obj_at | wpc | simp)+
+  apply (clarsimp simp: obj_at_def)
+  apply (rule valid_objsE, simp+)
+  apply (drule_tac P="op = (Some aepptr)" in aep_bound_tcb_at, simp+)
+  apply (auto simp: obj_at_def valid_obj_def is_tcb valid_aep_def pred_tcb_at_def)
+  done
+
+ lemma unbind_maybe_aep_not_bound:
+   "\<lbrace>\<lambda>s. aep_at aepptr s \<and> valid_objs s \<and> sym_refs (state_refs_of s)\<rbrace>
+      unbind_maybe_aep aepptr
+    \<lbrace>\<lambda>_. obj_at (\<lambda>ko. \<exists>aep. ko = AsyncEndpoint aep \<and> aep_bound_tcb aep = None) aepptr\<rbrace>"
+  apply (simp add: unbind_maybe_aep_def)
+  apply (rule hoare_pre)
+   apply (wp get_aep_wp sba_obj_at_impossible set_async_ep_obj_at | wpc | simp)+
+  apply (clarsimp simp: obj_at_def)
+  done
+
+lemma unbind_async_endpoint_bound_tcb_at[wp]:
+  "\<lbrace>\<top>\<rbrace> unbind_async_endpoint tcbptr \<lbrace>\<lambda>_. bound_tcb_at (op = None) tcbptr\<rbrace>"
+  apply (simp add: unbind_async_endpoint_def)
+  apply (wp sba_bound_tcb_at' | wpc | clarsimp)+
+  apply (rule gba_bound_tcb[THEN hoare_strengthen_post])
+  apply clarsimp
+  done
+
+crunch valid_mdb[wp]: unbind_async_endpoint "valid_mdb"
+crunch tcb_at[wp]: unbind_async_endpoint "tcb_at t"
+
+lemma unbind_async_endpoint_no_cap_to_obj_ref[wp]:
+  "\<lbrace>no_cap_to_obj_with_diff_ref cap S\<rbrace>
+     unbind_async_endpoint tcbptr
+   \<lbrace>\<lambda>_. no_cap_to_obj_with_diff_ref cap S\<rbrace>"
+  apply (simp add: no_cap_to_obj_with_diff_ref_def cte_wp_at_caps_of_state)
+  apply (wp unbind_async_endpoint_caps_of_state)
+  done
 
 lemma finalise_cap_replaceable:
-  "\<lbrace>\<lambda>s. s \<turnstile> cap \<and> x = is_final_cap' cap s
-        \<and> cte_wp_at (op = cap) sl s
+  "\<lbrace>\<lambda>s. s \<turnstile> cap \<and> x = is_final_cap' cap s \<and> valid_mdb s
+        \<and> cte_wp_at (op = cap) sl s \<and> valid_objs s \<and> sym_refs (state_refs_of s)
         \<and> (cap_irqs cap \<noteq> {} \<longrightarrow> if_unsafe_then_cap s \<and> valid_global_refs s)
         \<and> (is_arch_cap cap \<longrightarrow> pspace_aligned s \<and>
-                               valid_arch_objs s \<and> valid_objs s \<and>
+                               valid_arch_objs s \<and>
                                valid_arch_state s)\<rbrace>
      finalise_cap cap x
    \<lbrace>\<lambda>rv s. replaceable s sl (fst rv) cap\<rbrace>"
@@ -1168,6 +1261,9 @@ lemma finalise_cap_replaceable:
             apply (rule hoare_pre)
             apply (wp suspend_unlive[unfolded o_def]
                       suspend_final_cap[where sl=sl]
+                      unbind_maybe_aep_not_bound
+                      get_aep_ko
+                      unbind_async_endpoint_valid_objs
                    | clarsimp simp: o_def dom_tcb_cap_cases_lt
                                      ran_tcb_cap_cases is_cap_simps
                                      cap_range_def
@@ -1189,7 +1285,9 @@ lemma finalise_cap_replaceable:
                            aep_cancel_all_unlive[unfolded o_def])
                    | ((wp_once hoare_drop_imps)?,
                       (wp_once hoare_drop_imps)?,
-                      wp_once deleting_irq_handler_empty))+
+                      wp_once deleting_irq_handler_empty)
+                   | wpc
+                   | simp add: valid_cap_simps)+
   apply (rule hoare_chain)
     apply (rule arch_finalise_cap_replaceable[where sl=sl])
    apply (clarsimp simp: replaceable_def reachable_pg_cap_def
@@ -1211,10 +1309,13 @@ lemma empty_slot_cte_wp_elsewhere:
 lemma fast_finalise_lift:
 assumes ep:"\<And>r. \<lbrace>P\<rbrace>ep_cancel_all r \<lbrace>\<lambda>r s. P s\<rbrace>"
 and aep:"\<And>r. \<lbrace>P\<rbrace>aep_cancel_all r \<lbrace>\<lambda>r s. P s\<rbrace>"
+and unbind:"\<And>r. \<lbrace>P\<rbrace> unbind_async_endpoint r \<lbrace> \<lambda>r s. P s\<rbrace>"
+and unbind2: "\<And>r. \<lbrace>P\<rbrace> unbind_maybe_aep r \<lbrace> \<lambda>r s. P s\<rbrace>"
 shows "\<lbrace>P\<rbrace> fast_finalise cap final \<lbrace>\<lambda>r s. P s\<rbrace>"
   apply (case_tac cap,simp_all)
-  apply (wp ep aep | clarsimp)+
+  apply (wp ep aep unbind unbind2 hoare_drop_imps | clarsimp | wpc)+
   done
+
 
 crunch cte_wp_at[wp]: fast_finalise "cte_wp_at P p"
   (wp:fast_finalise_lift)
@@ -1251,12 +1352,17 @@ lemma finalise_cap_equal_cap[wp]:
   apply (cases cap, simp_all split del: split_if)
        apply (wp suspend_cte_wp_at_preserved
                  deleting_irq_handler_cte_preserved
-               | clarsimp simp: can_fast_finalise_def)+
+                 hoare_drop_imp thread_set_cte_wp_at_trivial
+               | clarsimp simp: can_fast_finalise_def unbind_maybe_aep_def unbind_async_endpoint_def
+                                tcb_cap_cases_def
+               | wpc )+
   done
+  
 
 lemma fast_finalise_replaceable[wp]:
   "\<lbrace>\<lambda>s. s \<turnstile> cap \<and> x = is_final_cap' cap s
-     \<and> cte_wp_at (op = cap) sl s \<and> valid_asid_table (arm_asid_table (arch_state s)) s\<rbrace>
+     \<and> cte_wp_at (op = cap) sl s \<and> valid_asid_table (arm_asid_table (arch_state s)) s
+     \<and> valid_mdb s \<and> valid_objs s \<and> sym_refs (state_refs_of s)\<rbrace>
      fast_finalise cap x
    \<lbrace>\<lambda>rv s. cte_wp_at (replaceable s sl cap.NullCap) sl s\<rbrace>"
   apply (cases "cap_irqs cap = {}")
@@ -1296,7 +1402,7 @@ lemma sts_emptyable:
   apply (simp add: emptyable_def)
   apply (subst imp_conv_disj)+
   apply (wp hoare_vcg_disj_lift sts_st_tcb_at_cases | simp add: tcb_at_typ)+
-  apply (clarsimp simp: st_tcb_at_def obj_at_def)
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def)
   done
 
 
@@ -1311,20 +1417,29 @@ lemma cancel_all_emptyable_helper:
      apply simp+
   done
 
+lemma unbind_async_endpoint_emptyable[wp]:
+  "\<lbrace> emptyable sl \<rbrace> unbind_async_endpoint t \<lbrace> \<lambda>rv. emptyable sl\<rbrace>"
+  unfolding unbind_async_endpoint_def
+  apply (wp emptyable_lift hoare_drop_imps thread_set_no_change_tcb_state | wpc |simp)+
+  done
+
+lemma unbind_maybe_aep_emptyable[wp]:
+  "\<lbrace> emptyable sl \<rbrace> unbind_maybe_aep r \<lbrace> \<lambda>rv. emptyable sl\<rbrace>"
+  unfolding unbind_maybe_aep_def
+  apply (wp emptyable_lift hoare_drop_imps thread_set_no_change_tcb_state | wpc |simp)+
+  done
 
 lemma aep_cancel_all_emptyable[wp]:
   "\<lbrace>invs and emptyable sl\<rbrace> aep_cancel_all ptr \<lbrace>\<lambda>_. emptyable sl\<rbrace>"
-  apply (simp add: aep_cancel_all_def)
-  apply (rule hoare_seq_ext [OF _ get_aep_sp])
-  apply (case_tac aep, simp_all)
-    apply (wp, simp)
-   apply (wp, simp, wp cancel_all_emptyable_helper hoare_vcg_const_Ball_lift)
-    apply (clarsimp simp: invs_def valid_state_def valid_pspace_def
-                          aep_queued_st_tcb_at obj_at_def)
-   apply (simp)
-  apply (wp, simp)
+  unfolding aep_cancel_all_def unbind_maybe_aep_def
+  apply (rule hoare_seq_ext[OF _ get_aep_sp])
+  apply (rule hoare_pre)
+  apply (wp cancel_all_emptyable_helper
+            hoare_vcg_const_Ball_lift
+       | wpc
+       | simp)+
+  apply (auto elim: aep_queued_st_tcb_at)
   done
-
 
 lemma ep_cancel_all_emptyable[wp]:
   "\<lbrace>invs and emptyable sl\<rbrace> ep_cancel_all ptr \<lbrace>\<lambda>_. emptyable sl\<rbrace>"
@@ -1339,13 +1454,13 @@ lemma ep_cancel_all_emptyable[wp]:
   done
 
 
-
 lemma fast_finalise_emptyable[wp]:
   "\<lbrace>invs and emptyable sl\<rbrace> fast_finalise cap fin \<lbrace>\<lambda>rv. emptyable sl\<rbrace>"
   apply (simp add: fast_finalise_def2)
   apply (case_tac cap, simp_all add: can_fast_finalise_def)
-      apply (wp | simp add: o_def)+
+      apply (wp unbind_maybe_aep_invs hoare_drop_imps | simp add: o_def  | wpc)+
   done
+ 
 
 lemma cap_delete_one_invs[wp]:
   "\<lbrace>invs and emptyable ptr\<rbrace> cap_delete_one ptr \<lbrace>\<lambda>rv. invs\<rbrace>"
@@ -1353,7 +1468,7 @@ lemma cap_delete_one_invs[wp]:
   apply (rule hoare_pre)
   apply (wp empty_slot_invs get_cap_wp)
   apply clarsimp
-  apply (drule cte_wp_at_valid_objs_valid_cap, clarsimp+)
+  apply (drule cte_wp_at_valid_objs_valid_cap, fastforce+)
   done
 
 lemma cap_delete_one_deletes[wp]:
@@ -1389,9 +1504,9 @@ lemma cap_delete_one_deletes_reply:
 
 
 lemma cap_delete_one_reply_st_tcb_at:
-  "\<lbrace>st_tcb_at P t and cte_wp_at (op = (cap.ReplyCap t' False)) slot\<rbrace>
+  "\<lbrace>pred_tcb_at proj P t and cte_wp_at (op = (cap.ReplyCap t' False)) slot\<rbrace>
     cap_delete_one slot
-   \<lbrace>\<lambda>rv. st_tcb_at P t\<rbrace>"
+   \<lbrace>\<lambda>rv. pred_tcb_at proj P t\<rbrace>"
   apply (simp add: cap_delete_one_def unless_def is_final_cap_def)
   apply (rule hoare_seq_ext [OF _ get_cap_sp])
   apply (rule hoare_assume_pre)
@@ -1410,11 +1525,15 @@ lemma get_irq_slot_emptyable[wp]:
 
 crunch invs[wp]: deleting_irq_handler "invs"
 
+crunch tcb_at[wp]: unbind_async_endpoint "tcb_at t"
+
 lemma finalise_cap_invs:
   shows "\<lbrace>invs and cte_wp_at (op = cap) slot\<rbrace> finalise_cap cap x \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (cases cap, simp_all split del: split_if)
-         apply (wp ep_cancel_all_invs aep_cancel_all_invs
-                  | simp add: o_def split del: split_if cong: if_cong)+
+         apply (wp ep_cancel_all_invs aep_cancel_all_invs unbind_async_endpoint_invs 
+                   unbind_maybe_aep_invs
+                  | simp add: o_def split del: split_if cong: if_cong
+                  | wpc )+
       apply clarsimp (* thread *)
       apply (frule cte_wp_at_valid_objs_valid_cap, clarsimp)
       apply (clarsimp simp: valid_cap_def)
@@ -1425,7 +1544,7 @@ lemma finalise_cap_invs:
   apply (auto dest: cte_wp_at_valid_objs_valid_cap)
   done
 
-crunch irq_node[wp]: suspend "\<lambda>s. P (interrupt_irq_node s)"
+crunch irq_node[wp]: suspend, unbind_maybe_aep, unbind_async_endpoint "\<lambda>s. P (interrupt_irq_node s)"
   (wp: crunch_wps select_wp simp: crunch_simps)
 
 crunch irq_node[wp]: deleting_irq_handler "\<lambda>s. P (interrupt_irq_node s)"
@@ -1455,21 +1574,33 @@ lemmas suspend_cte_irq_node[wp]
 lemmas arch_finalise_cte_irq_node[wp]
     = hoare_use_eq_irq_node [OF arch_finalise_cap_irq_node arch_finalise_cap_cte_wp_at]
 
+lemmas unbind_async_endpoint_cte_irq_node[wp]
+    = hoare_use_eq_irq_node [OF unbind_async_endpoint_irq_node unbind_async_endpoint_cte_wp_at]
+
+lemmas unbind_maybe_aep_cte_irq_node[wp]
+    = hoare_use_eq_irq_node [OF unbind_maybe_aep_irq_node unbind_maybe_aep_cte_wp_at]
+
 lemmas deleting_irq_handler_cte_preserved_irqn
   = hoare_use_eq_irq_node [OF deleting_irq_handler_irq_node
                               deleting_irq_handler_cte_preserved]
 
+lemma unbind_async_endpoint_cte_cap_to[wp]:
+"\<lbrace>ex_cte_cap_wp_to P sl\<rbrace> unbind_async_endpoint t \<lbrace>\<lambda>rv. ex_cte_cap_wp_to P sl\<rbrace>"
+  by (wp ex_cte_cap_to_pres)
+
+lemma unbind_maybe_aep_cte_cap_to[wp]:
+"\<lbrace>ex_cte_cap_wp_to P sl\<rbrace> unbind_maybe_aep t \<lbrace>\<lambda>rv. ex_cte_cap_wp_to P sl\<rbrace>"
+  by (wp ex_cte_cap_to_pres)
 
 lemma finalise_cap_cte_cap_to[wp]:
   "\<lbrace>ex_cte_cap_wp_to P sl\<rbrace> finalise_cap cap fin \<lbrace>\<lambda>rv. ex_cte_cap_wp_to P sl\<rbrace>"
   apply (cases cap, simp_all add: ex_cte_cap_wp_to_def split del: split_if)
-       apply (wp hoare_vcg_ex_lift
+       apply (wp hoare_vcg_ex_lift hoare_drop_imps
                  deleting_irq_handler_cte_preserved_irqn
                  | simp
-                 | clarsimp simp: can_fast_finalise_def
-                           split: cap.split_asm)+
+                 | clarsimp simp: can_fast_finalise_def 
+                           split: cap.split_asm | wpc)+
   done
-
 
 lemma finalise_cap_zombie_cap[wp]:
   "\<lbrace>cte_wp_at (\<lambda>cp. is_zombie cp \<and> P cp) sl\<rbrace>
@@ -1481,7 +1612,7 @@ lemma finalise_cap_zombie_cap[wp]:
   done
 
 
-crunch st_tcb_at[wp]: arch_finalise_cap "st_tcb_at P t"
+crunch pred_tcb_at[wp]: arch_finalise_cap "pred_tcb_at proj P t"
   (simp: crunch_simps wp: crunch_wps)
 
 
@@ -1508,7 +1639,7 @@ lemma cap_delete_one_st_tcb_at:
   done
 
 
-crunch st_tcb_at[wp]: set_irq_state "st_tcb_at P t"
+crunch pred_tcb_at[wp]: set_irq_state "pred_tcb_at proj P t"
 
 
 lemma deleting_irq_handler_st_tcb_at:
@@ -2508,7 +2639,16 @@ lemma gts_wp:
   apply (wp thread_get_wp')
   apply clarsimp
   apply (drule spec, erule mp)
-  apply (clarsimp simp: st_tcb_at_def obj_at_def)
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def)
+  done
+
+lemma gba_wp:
+  "\<lbrace>\<lambda>s. \<forall>aep. bound_tcb_at (op = aep) t s \<longrightarrow> P aep s\<rbrace> get_bound_aep t \<lbrace>P\<rbrace>"
+  unfolding get_bound_aep_def
+  apply (wp thread_get_wp')
+  apply (clarsimp)
+  apply (drule spec, erule mp)
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def)
   done
 
 lemma cap_recycle_replaceable:
@@ -2525,7 +2665,7 @@ lemma cap_recycle_replaceable:
             -- "Zombie"
     apply (simp add: recycle_cap_def replaceable_def replaceable_or_arch_update_def)
     apply (wpc, simp_all)[1]
-    apply (wp gts_wp static_imp_wp
+    apply (wp gts_wp static_imp_wp gba_wp
                hoare_vcg_disj_lift thread_set_final_cap
                ball_tcb_cap_casesI hoare_vcg_const_Ball_lift
                thread_set_cte_wp_at_trivial
@@ -3052,8 +3192,8 @@ lemma arch_recycle_cap_invs:
 
 lemma st_tcb_at_idle_thread:
   "\<lbrakk> st_tcb_at P (idle_thread s) s; valid_idle s \<rbrakk>
-        \<Longrightarrow> P Structures_A.IdleThreadState"
-  by (clarsimp simp: valid_idle_def st_tcb_def2)
+        \<Longrightarrow> P Structures_A.IdleThreadState" 
+  by (clarsimp simp: valid_idle_def st_tcb_def2 pred_tcb_def2)
 
 
 lemma tcb_state_merge_tcb_state_default:
@@ -3061,6 +3201,10 @@ lemma tcb_state_merge_tcb_state_default:
   "tcb_state default_tcb = Structures_A.Inactive"
   by (auto simp add: tcb_registers_caps_merge_def default_tcb_def)
 
+lemma tcb_bound_aep_merge_tcb_state_default:
+  "tcb_bound_aep (tcb_registers_caps_merge tcb tcb') = tcb_bound_aep tcb"
+  "tcb_bound_aep default_tcb = None"
+  by (auto simp add: tcb_registers_caps_merge_def default_tcb_def)
 
 (*Lift hoare triples from an instantiation to the nondeterministic hoare triple version.
   Since bcorres states that f refines g with respect to the non_extended state,
@@ -3097,18 +3241,26 @@ lemma recycle_cap_invs:
            apply ((wp | simp)+)[9]
    -- "Zombie"
    apply (case_tac option, simp_all)
-    apply (rule hoare_seq_ext[rotated], rule assert_sp gts_sp)+
+    apply (rule hoare_seq_ext[rotated], rule assert_sp gts_sp gba_sp)+
     apply (rule hoare_seq_ext)
      apply (wp, simp)[1]
     apply (rule use_bcorres[OF thread_set_bcorres])
     apply (simp add: o_def) (* Nothing cares about the extended state*)
-    apply (simp add: thread_set_split_out_set_thread_state[where 'a="unit",simplified  gets_bind_ign dxo_noop bind_return_unit[symmetric]] tcb_registers_caps_merge_def) (*Use the nondeterministic version of set_thread_state and
-                  go through refinement/bcorres *)
+    apply (simp add: thread_set_split_out_set_thread_state[where 'a="unit", 
+                                       simplified gets_bind_ign dxo_noop bind_return_unit[symmetric]] 
+                     thread_set_split_out_set_bound_aep[where 'a="unit"] 
+                     tcb_registers_caps_merge_def)  (* Use the nondeterministic version of set_thread_state and
+                                                       go through refinement/bcorres *)
     apply (fold tcb_registers_caps_merge_def)
     apply (rule hoare_pre, wp sts_invs_minor)
-     apply (simp add: cte_wp_at_caps_of_state
+      apply (simp add: cte_wp_at_caps_of_state
                       tcb_state_merge_tcb_state_default)
+      apply (wp set_bound_aep_it has_reply_cap_cte_lift sba_invs_minor)
+     apply (simp add: cte_wp_at_caps_of_state
+                      tcb_state_merge_tcb_state_default
+                      tcb_bound_aep_merge_tcb_state_default)
      apply (wp thread_set_no_change_tcb_state
+               thread_set_no_change_tcb_bound_aep
                thread_set_caps_of_state_trivial2
                hoare_vcg_disj_lift hoare_vcg_all_lift
                thread_set_invs_trivial [OF ball_tcb_cap_casesI]
@@ -3119,13 +3271,13 @@ lemma recycle_cap_invs:
                        word_bits_def)
      apply (simp add: default_tcb_def tcb_registers_caps_merge_def)
     apply (clarsimp simp: cte_wp_at_caps_of_state default_tcb_def)
-    apply (rule conjI, erule st_tcb_weakenE, (auto)[1])
+    apply (rule conjI, erule pred_tcb_weakenE, (auto)[1])
     apply (frule_tac r="idle_thread s"
               in  valid_global_refsD [OF _ caps_of_state_cteD, rotated])
       apply (simp add: global_refs_def)
      apply clarsimp
     apply (strengthen reply_cap_doesnt_exist_strg)
-    apply (fastforce simp: cap_range_def elim!: st_tcb_weakenE)
+    apply (fastforce simp: cap_range_def elim!: pred_tcb_weakenE)
    apply (wp arch_recycle_cap_invs[where slot=slot] | simp)+
   done
 
@@ -3204,7 +3356,7 @@ lemma valid_idle_has_null_cap:
   apply (clarsimp simp: ex_cte_cap_wp_to_def cte_wp_at_caps_of_state)
   apply (frule(1) valid_global_refsD2)
   apply (case_tac capa, simp_all add: cap_range_def global_refs_def)[1]
-  apply (clarsimp simp: valid_irq_node_def valid_idle_def st_tcb_at_def
+  apply (clarsimp simp: valid_irq_node_def valid_idle_def pred_tcb_at_def
                         obj_at_def is_cap_table_def)
   apply (drule_tac x=word in spec, simp)
   done
@@ -3321,7 +3473,7 @@ lemma emptyable_cte_wp_atD: (* Levity: moved from Ipc_R (20090126 19:32:27) *)
   "\<lbrakk> cte_wp_at P sl s; valid_objs s;
      \<forall>cap. P cap \<longrightarrow> \<not> is_master_reply_cap cap \<rbrakk>
    \<Longrightarrow> emptyable sl s"
-  apply (clarsimp simp: emptyable_def st_tcb_at_def obj_at_def
+  apply (clarsimp simp: emptyable_def pred_tcb_at_def obj_at_def
                         is_tcb cte_wp_at_cases)
   apply (erule(1) pspace_valid_objsE)
   apply (clarsimp simp: valid_obj_def valid_tcb_def ran_tcb_cap_cases)

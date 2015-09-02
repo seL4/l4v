@@ -593,8 +593,7 @@ lemma seL4_CNode_Move_sep:
 lemma update_cap_rights_reset_cap_asid:
   "\<lbrakk>reset_cap_asid cap = reset_cap_asid cap'; rights = rights'\<rbrakk>
   \<Longrightarrow> reset_cap_asid (update_cap_rights rights cap) = reset_cap_asid (update_cap_rights rights' cap')"
-  by (case_tac cap',auto simp:reset_cap_asid_simps update_cap_rights_def
-     dest!:reset_cap_asid_simps2 )
+  by (case_tac cap', auto simp: update_cap_rights_def dest!: reset_cap_asid_simps2)
 
 
 

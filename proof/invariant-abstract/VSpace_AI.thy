@@ -890,13 +890,13 @@ crunch arm_asid_table_inv[wp]: invalidate_asid_entry
     "\<lambda>s. P (arm_asid_table (arch_state s))"
 
 
-crunch st_tcb_at_P [wp]: find_free_hw_asid "\<lambda>s. P (st_tcb_at Q p s)"
+crunch pred_tcb_at_P [wp]: find_free_hw_asid "\<lambda>s. P (pred_tcb_at proj Q p s)"
 
 
-crunch st_tcb_at [wp]: set_current_asid "\<lambda>s. P (st_tcb_at Q p s)"
+crunch pred_tcb_at [wp]: set_current_asid "\<lambda>s. P (pred_tcb_at proj Q p s)"
 
 
-crunch st_tcb_at [wp]: find_pd_for_asid "\<lambda>s. P (st_tcb_at Q p s)"
+crunch pred_tcb_at [wp]: find_pd_for_asid "\<lambda>s. P (pred_tcb_at proj Q p s)"
   (simp: crunch_simps)
 
 
@@ -1786,15 +1786,15 @@ lemma svr_invs [wp]:
   apply(erule use_valid, wp no_irq_setCurrentPD, assumption)
   done
 
-lemma svr_st_tcb [wp]:
-  "\<lbrace>st_tcb_at P t\<rbrace> set_vm_root t \<lbrace>\<lambda>_. st_tcb_at P t\<rbrace>"
+lemma svr_pred_st_tcb[wp]:
+  "\<lbrace>pred_tcb_at proj P t\<rbrace> set_vm_root t \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>"
   apply (simp add: set_vm_root_def)
   apply wp
    apply (rename_tac cap, case_tac cap, (simp add: throwError_def | wp)+)
    apply (case_tac arch_cap, (simp add: throwError_def | wp)+)
    apply (rename_tac mapped, case_tac mapped, (simp add: throwError_def | wp)+)
     apply(case_tac "word \<noteq> pd'")
-     apply (simp add: whenE_def | wp find_pd_for_asid_st_tcb_at)+
+     apply (simp add: whenE_def | wp find_pd_for_asid_pred_tcb_at)+
   done
 
 crunch typ_at [wp]: set_vm_root "\<lambda>s. P (typ_at T p s)"

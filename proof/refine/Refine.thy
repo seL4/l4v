@@ -314,7 +314,7 @@ lemma doMachineOp_ct_running':
   "\<lbrace>ct_running'\<rbrace> doMachineOp f \<lbrace>\<lambda>_. ct_running'\<rbrace>"
   apply (simp add: ct_in_state'_def doMachineOp_def split_def)
   apply wp
-  apply (simp add: st_tcb_at'_def o_def)
+  apply (simp add: pred_tcb_at'_def o_def)
   done
 
 lemma kernelEntry_invs':
@@ -429,7 +429,7 @@ lemma kernel_corres:
           apply simp
           apply (wp hoare_drop_imps)[1]
          apply simp
-         apply (rule_tac Q="\<lambda>irq s. invs' s \<and> 
+         apply (rule_tac Q="\<lambda>irq s. invs' s \<and>
                               (\<forall>irq'. irq = Some irq' \<longrightarrow>
                                  intStateIRQTable (ksInterruptState s ) irq' \<noteq>
                                  IRQInactive)" 

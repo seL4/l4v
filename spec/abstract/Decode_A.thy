@@ -569,6 +569,44 @@ where
                               (tc_new_buffer set_params)
    odE" 
 
+definition
+  decode_bind_aep ::
+  "cap \<Rightarrow> (cap \<times> cslot_ptr) list \<Rightarrow> (tcb_invocation,'z::state_ext) se_monad"
+where
+  "decode_bind_aep cap extra_caps \<equiv> case cap of
+    ThreadCap tcb \<Rightarrow> doE
+     whenE (length extra_caps = 0) $ throwError TruncatedMessage;
+     aEP \<leftarrow> liftE $ get_bound_aep tcb;
+     case aEP of
+         Some _ \<Rightarrow> throwError IllegalOperation
+       | None \<Rightarrow> returnOk ();
+     (aepptr, rights) \<leftarrow> case fst (hd extra_caps) of
+         AsyncEndpointCap ptr _ r \<Rightarrow> returnOk (ptr, r)
+       | _ \<Rightarrow> throwError IllegalOperation;
+     aep \<leftarrow> liftE  $ get_async_ep aepptr;
+     case (aep_obj aep, aep_bound_tcb aep) of
+         (IdleAEP, None) \<Rightarrow> returnOk ()
+       | (ActiveAEP _, None) \<Rightarrow> returnOk ()
+       | _ \<Rightarrow> throwError IllegalOperation;
+     (if AllowRecv \<in> rights
+      then returnOk $ AsyncEndpointControl tcb (Some aepptr)
+      else throwError IllegalOperation)
+   odE
+ | _ \<Rightarrow> throwError IllegalOperation"
+     
+     
+definition 
+  decode_unbind_aep :: "cap \<Rightarrow> (tcb_invocation,'z::state_ext) se_monad"
+where
+  "decode_unbind_aep cap \<equiv> case cap of
+     ThreadCap tcb \<Rightarrow> doE
+       aEP \<leftarrow> liftE $ get_bound_aep tcb;
+       case aEP of
+           None \<Rightarrow> throwError IllegalOperation
+         | Some _ \<Rightarrow> returnOk ();
+       returnOk $ AsyncEndpointControl tcb None
+    odE
+ | _ \<Rightarrow> throwError IllegalOperation"
 
 definition
   decode_tcb_invocation :: 
@@ -586,6 +624,8 @@ where
     | TCBSetPriority \<Rightarrow> decode_set_priority args cap slot 
     | TCBSetIPCBuffer \<Rightarrow> decode_set_ipc_buffer args cap slot excs
     | TCBSetSpace \<Rightarrow> decode_set_space args cap slot excs
+    | TCBBindAEP \<Rightarrow> decode_bind_aep cap excs
+    | TCBUnbindAEP \<Rightarrow> decode_unbind_aep cap
     | _ \<Rightarrow> throwError IllegalOperation"
 
 definition
@@ -789,7 +829,7 @@ where
       else throwError $ InvalidCapability 0
   | AsyncEndpointCap ptr badge rights \<Rightarrow>
       if AllowSend \<in> rights then
-        returnOk $ InvokeAsyncEndpoint ptr badge (if args = [] then 0 else hd args)
+        returnOk $ InvokeAsyncEndpoint ptr badge
       else throwError $ InvalidCapability 0
   | ReplyCap thread False \<Rightarrow>
       returnOk $ InvokeReply thread slot

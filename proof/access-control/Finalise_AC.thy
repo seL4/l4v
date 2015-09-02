@@ -129,6 +129,56 @@ lemma tcb_sched_action_tcb_domain_map_wellformed[wp]:
   "\<lbrace>tcb_domain_map_wellformed aag\<rbrace> tcb_sched_action p1 p2 \<lbrace>\<lambda>_. tcb_domain_map_wellformed aag\<rbrace>"
 by (wp tcb_domain_map_wellformed_lift)
 
+lemma gba_pas_refined[wp]:
+  "\<lbrace>pas_refined aag\<rbrace> get_bound_aep t \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
+  by (wp get_bound_aep_inv)
+
+lemma set_bound_aep_ekheap[wp]:
+  "\<lbrace>\<lambda>s. P (ekheap s)\<rbrace> set_bound_aep t st \<lbrace>\<lambda>rv s. P (ekheap s)\<rbrace>"
+apply (simp add: set_bound_aep_def)
+apply (wp set_scheduler_action_wp | simp)+
+done
+
+lemma sba_thread_states[wp]:
+  "\<lbrace>\<lambda>s. P (thread_states s)\<rbrace> set_bound_aep t aep \<lbrace>\<lambda>rv s. P (thread_states s)\<rbrace>"
+  apply (simp add: set_bound_aep_def set_object_def)
+  apply (wp dxo_wp_weak |simp)+
+  apply (clarsimp simp: get_tcb_def thread_states_def tcb_states_of_state_def
+                 elim!: rsubst[where P=P, OF _ ext])
+  done
+
+lemma sba_st_vrefs[wp]:
+  "\<lbrace>\<lambda>s. P (state_vrefs s)\<rbrace> set_bound_aep t st \<lbrace>\<lambda>rv s. P (state_vrefs s)\<rbrace>"
+  apply (simp add: set_bound_aep_def set_object_def)
+  apply (wp dxo_wp_weak |simp)+
+  apply (clarsimp simp: state_vrefs_def vs_refs_no_global_pts_def
+                 elim!: rsubst[where P=P, OF _ ext]
+                 dest!: get_tcb_SomeD)
+  done
+
+lemma sba_pas_refined[wp]:
+  "\<lbrace>pas_refined aag and K (case aep of None \<Rightarrow> True | Some aep' \<Rightarrow>\<forall>auth \<in> {Receive, Reset}. (pasObjectAbs aag t, auth, pasObjectAbs aag aep') \<in> pasPolicy aag )\<rbrace> set_bound_aep t aep \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
+  apply (simp add: pas_refined_def state_objs_to_policy_def)
+  apply (rule hoare_pre)
+   apply (wp tcb_domain_map_wellformed_lift | wps)+
+  apply (clarsimp dest!: auth_graph_map_memD)
+  apply (erule state_bits_to_policy.cases)
+  apply (auto intro: state_bits_to_policy.intros auth_graph_map_memI
+              split: split_if_asm)
+  done
+
+lemma unbind_async_endpoint_pas_refined[wp]:
+  "\<lbrace>pas_refined aag\<rbrace> unbind_async_endpoint t \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
+  apply (clarsimp simp: unbind_async_endpoint_def)
+  apply (wp set_async_ep_pas_refined | wpc | simp)+
+  done    
+
+lemma unbind_maybe_aep_pas_refined[wp]:
+  "\<lbrace>pas_refined aag\<rbrace> unbind_maybe_aep a \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
+  apply (clarsimp simp: unbind_maybe_aep_def)
+  apply (wp set_async_ep_pas_refined | wpc | simp)+
+  done  
+
 crunch pas_refined[wp]: cap_delete_one "pas_refined aag"
   (wp: crunch_wps thread_set_pas_refined_triv select_wp set_thread_state_pas_refined
      ignore: tcb_sched_action
@@ -182,18 +232,97 @@ lemma aep_cancel_all_respects [wp]:
         | blast)+
   apply (frule sym_refs_ko_atD, clarsimp+)
   apply (rule obj_at_valid_objsE, assumption, assumption)
-  apply (clarsimp simp: valid_obj_def valid_aep_def st_tcb_at_refs_of_rev st_tcb_def2)
-  apply fastforce
+  apply (clarsimp simp: valid_obj_def valid_aep_def st_tcb_at_refs_of_rev st_tcb_def2
+                 split: option.splits)
+  apply fastforce+
+  done
+
+lemma gba_respects[wp]:
+  "\<lbrace>integrity aag X st\<rbrace> get_bound_aep t \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
+  by (wp get_bound_aep_inv)
+
+lemma sba_unbind_respects[wp]:
+  "\<lbrace>  integrity aag X st and (\<lambda>s. (\<exists>aep. bound_tcb_at (\<lambda>a. a = Some aep) t s \<and> (pasSubject aag, Reset, pasObjectAbs aag aep) \<in> pasPolicy aag))\<rbrace> set_bound_aep t None \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
+    apply (simp add: set_bound_aep_def set_object_def)
+  apply wp
+  apply clarsimp
+  apply (erule integrity_trans)
+  apply (clarsimp simp: integrity_def obj_at_def pred_tcb_at_def)
+  apply (rule tro_tcb_unbind)
+      apply (fastforce dest!: get_tcb_SomeD)
+      apply (fastforce dest!: get_tcb_SomeD)
+     apply simp
+    apply simp
+   apply (simp add: tcb_bound_aep_reset_integrity_def)
+  done
+
+lemma bound_tcb_at_thread_bound_aeps:
+  "bound_tcb_at (op = aep) t s \<Longrightarrow> thread_bound_aeps s t = aep"
+  by (clarsimp simp: thread_bound_aeps_def pred_tcb_at_def obj_at_def get_tcb_def split: option.splits)
+
+
+lemma bound_tcb_at_implies_receive:
+  "\<lbrakk>pas_refined aag s; bound_tcb_at (op = (Some x)) t s\<rbrakk>
+          \<Longrightarrow> (pasObjectAbs aag t, Receive, pasObjectAbs aag x) \<in> pasPolicy aag"
+  by (fastforce dest!: bound_tcb_at_thread_bound_aeps sta_bas pas_refined_mem)
+
+lemma bound_tcb_at_implies_reset:
+  "\<lbrakk>pas_refined aag s; bound_tcb_at (op = (Some x)) t s\<rbrakk>
+          \<Longrightarrow> (pasObjectAbs aag t, Reset, pasObjectAbs aag x) \<in> pasPolicy aag"
+  by (fastforce dest!: bound_tcb_at_thread_bound_aeps sta_bas pas_refined_mem)
+
+lemma unbind_async_endpoint_bound_respects:
+  "\<lbrace>integrity aag X st and pas_refined aag and (\<lambda>s. bound_tcb_at (\<lambda>a. a = Some aep) t s \<and> 
+     (pasSubject aag, Reset, pasObjectAbs aag aep) \<in> pasPolicy aag)\<rbrace> unbind_async_endpoint t \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
+  apply (clarsimp simp: unbind_async_endpoint_def)
+  apply (wp_trace set_aep_respects hoare_vcg_imp_lift hoare_vcg_ex_lift gba_wp | wpc | simp del: set_bound_aep_def)+
+   apply clarsimp 
+   apply (fastforce simp: pred_tcb_at_def obj_at_def)+
+  done
+
+lemma unbind_async_endpoint_noop_respects:
+  "\<lbrace>integrity aag X st and bound_tcb_at (\<lambda>a. a = None) t\<rbrace> unbind_async_endpoint t \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
+  apply (clarsimp simp: unbind_async_endpoint_def)
+  apply (wp set_aep_respects hoare_vcg_ex_lift gba_wp | wpc | simp)+
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def)
+  done
+
+lemma unbind_async_endpoint_respects:
+  "\<lbrace>integrity aag X st and pas_refined aag and
+    bound_tcb_at (\<lambda>a. case a of None \<Rightarrow> True | Some aep \<Rightarrow> (pasSubject aag, Reset, pasObjectAbs aag aep) \<in> pasPolicy aag) t\<rbrace>
+     unbind_async_endpoint t \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
+  apply (clarsimp simp: unbind_async_endpoint_def)
+  apply (rule hoare_seq_ext[OF _ gba_sp])
+  apply (rule hoare_pre)
+  apply (wp set_aep_respects hoare_vcg_ex_lift gba_wp | wpc | simp)+
+  apply (fastforce simp: pred_tcb_at_def obj_at_def split: option.splits)
+  done
+
+lemma unbind_maybe_aep_respects:
+  "\<lbrace>integrity aag X st and invs and pas_refined aag and
+    obj_at (\<lambda>ko. \<exists>aep. ko = (AsyncEndpoint aep) \<and> (case (aep_bound_tcb aep) of None \<Rightarrow> True | Some t \<Rightarrow> (pasSubject aag, Reset, pasObjectAbs aag a) \<in> pasPolicy aag)) a \<rbrace>
+     unbind_maybe_aep a \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
+  apply (clarsimp simp: unbind_maybe_aep_def)
+  apply (rule hoare_pre)
+   apply (wp set_aep_respects get_aep_wp hoare_vcg_ex_lift gba_wp | wpc | simp)+
+  apply clarsimp
+  apply (frule_tac P="\<lambda>aep. aep = Some a" in aep_bound_tcb_at[OF invs_sym_refs invs_valid_objs], (simp add: obj_at_def)+)
+  apply (auto simp: pred_tcb_at_def obj_at_def split: option.splits)
   done
 
 lemma fast_finalise_respects[wp]:
-  "\<lbrace>integrity aag X st and invs and K (pas_cap_cur_auth aag cap)\<rbrace>
+  "\<lbrace>integrity aag X st and invs and pas_refined aag and valid_cap cap and K (pas_cap_cur_auth aag cap)\<rbrace>
       fast_finalise cap fin
    \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
   apply (cases cap, simp_all)
-   apply (wp | simp add: cap_auth_conferred_def cap_rights_to_auth_def aag_cap_auth_def
-               split: split_if_asm
-             | (auto)[1])+
+     apply (wp unbind_maybe_aep_valid_objs get_aep_wp unbind_maybe_aep_respects
+             | wpc 
+             | simp add: cap_auth_conferred_def cap_rights_to_auth_def aag_cap_auth_def when_def 
+                  split: split_if_asm 
+             | fastforce)+
+      apply (clarsimp simp: obj_at_def valid_cap_def is_aep invs_def valid_state_def valid_pspace_def 
+                     split: option.splits)+
+  apply (wp, simp)
   done
 
 lemma cap_delete_one_respects[wp]:
@@ -203,10 +332,10 @@ lemma cap_delete_one_respects[wp]:
   apply (simp add: cap_delete_one_def unless_def bind_assoc)
   apply (wp hoare_drop_imps get_cap_auth_wp [where aag = aag]
               | simp)+
+  apply (clarsimp simp: caps_of_state_valid)
   done
 
 crunch thread_set_exst[wp]: thread_set "\<lambda>s. P (exst s)"
-
 
 lemma reply_ipc_cancel_respects[wp]:
   "\<lbrace>integrity aag X st and einvs and K (is_subject aag t) and pas_refined aag\<rbrace>
@@ -303,11 +432,40 @@ lemma finalise_cap_respects[wp]:
     and K (pas_cap_cur_auth aag cap)\<rbrace>
        finalise_cap cap final \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply (cases cap, simp_all, safe)
-  apply (wp | simp add: if_apply_def2 split del: split_if
-            | clarsimp simp: cap_auth_conferred_def cap_rights_to_auth_def is_cap_simps pas_refined_all_auth_is_owns aag_cap_auth_def
-                 deleting_irq_handler_def cap_links_irq_def invs_valid_objs
-                 split del: split_if
-                   elim!: pas_refined_Control [symmetric])+
+                apply (wp |clarsimp simp: invs_valid_objs invs_sym_refs cap_auth_conferred_def 
+                                          cap_rights_to_auth_def aag_cap_auth_def)+
+              (*AEP Cap*)
+              apply ((wp unbind_maybe_aep_valid_objs get_aep_wp 
+                         unbind_maybe_aep_respects 
+                         | wpc 
+                         | simp add: cap_auth_conferred_def cap_rights_to_auth_def aag_cap_auth_def                               split: split_if_asm 
+                         | fastforce)+)[3]
+                apply (clarsimp simp: obj_at_def valid_cap_def is_aep invs_def 
+                                      valid_state_def valid_pspace_def 
+                                     split: option.splits)+
+                              (*other caps*)
+            apply ((wp unbind_async_endpoint_invs 
+                   | fastforce simp: cap_auth_conferred_def cap_rights_to_auth_def 
+                                         aag_cap_auth_def unbind_maybe_aep_def 
+                              elim!: pas_refined_Control[symmetric])+)[3]
+            (* tcb cap *)
+         apply (wp unbind_async_endpoint_respects unbind_async_endpoint_invs 
+                 | clarsimp simp: cap_auth_conferred_def cap_rights_to_auth_def aag_cap_auth_def 
+                                  unbind_maybe_aep_def 
+                           elim!: pas_refined_Control[symmetric]
+                 | simp add: if_apply_def2 split del: split_if )+
+         apply (clarsimp simp: valid_cap_def pred_tcb_at_def obj_at_def is_tcb 
+                        dest!: tcb_at_ko_at)
+         apply (clarsimp split: option.splits elim!: pas_refined_Control[symmetric])
+         apply (frule bound_tcb_at_implies_reset, fastforce simp add: pred_tcb_at_def obj_at_def)
+         apply (drule pas_refined_Control, simp, simp)
+         (* other caps *)
+        apply (wp | simp add: if_apply_def2 split del: split_if
+                  | clarsimp simp: cap_auth_conferred_def cap_rights_to_auth_def is_cap_simps 
+                                   pas_refined_all_auth_is_owns aag_cap_auth_def
+                                   deleting_irq_handler_def cap_links_irq_def invs_valid_objs
+                        split del: split_if
+                            elim!: pas_refined_Control [symmetric])+
   done
 
 lemma finalise_cap_auth:
@@ -384,7 +542,7 @@ lemma finalise_cap_makes_halted:
     finalise_cap cap ex
    \<lbrace>\<lambda>rv s. \<forall>t \<in> obj_refs (fst rv). halted_if_tcb t s\<rbrace>"
   apply (case_tac cap, simp_all)
-            apply (wp
+            apply (wp unbind_async_endpoint_valid_objs
                  | clarsimp simp: o_def valid_cap_def cap_table_at_typ
                                   is_tcb obj_at_def
                  | clarsimp simp: halted_if_tcb_def
@@ -713,7 +871,7 @@ lemma recycle_cap_respects_pre:
        recycle_cap is_final cap \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply (simp add: recycle_cap_def)
   apply (rule hoare_pre)
-  apply (wp set_object_integrity_autarch arch_recycle_cap_respects
+  apply (wp set_object_integrity_autarch arch_recycle_cap_respects gba_wp
             ethread_set_integrity_autarch recycle_cap_ext_integrity_autarch
              | wpc | simp add: thread_set_def  get_thread_state_def thread_get_def)+
   apply clarsimp
@@ -724,20 +882,27 @@ lemma recycle_cap_respects_pre:
 crunch pas_refined[wp]: ep_cancel_badged_sends "pas_refined aag"
   (wp: crunch_wps simp: filterM_mapM crunch_simps ignore: filterM)
 
-lemma thread_set_pas_refined_triv_stT:
+lemma rsubst':
+  "\<lbrakk>P s s'; s=t; s'=t'\<rbrakk> \<Longrightarrow> P t t'"
+  by auto
+
+lemma thread_set_pas_refined_triv_idleT:
   assumes cps: "\<And>tcb. \<forall>(getF, v)\<in>ran tcb_cap_cases. getF (f tcb) = getF tcb"
        and st: "\<And>tcb. P (tcb_state tcb) \<longrightarrow> tcb_state (f tcb) = tcb_state tcb"
-     shows "\<lbrace>pas_refined aag and st_tcb_at P t\<rbrace> thread_set f t \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
+       and ba: "\<And>tcb. Q (tcb_bound_aep tcb) \<longrightarrow> tcb_bound_aep (f tcb) = tcb_bound_aep tcb"
+     shows "\<lbrace>pas_refined aag and idle_tcb_at (\<lambda>p. P (fst p) \<and> Q (snd p)) t\<rbrace> thread_set f t \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
   apply (simp add: pas_refined_def state_objs_to_policy_def)
   apply (rule hoare_pre)
    apply (wps thread_set_caps_of_state_trivial[OF cps])
    apply (simp add: thread_set_def set_object_def)
    apply wp
-  apply (clarsimp simp: st_tcb_def2 fun_upd_def[symmetric]
+  apply (clarsimp simp: pred_tcb_def2 fun_upd_def[symmetric]
                    del: subsetI)
-  apply (erule_tac P="\<lambda> ts. auth_graph_map ?a (state_bits_to_policy ?cps ts ?cd ?vr) \<subseteq> ?ag" in rsubst)
+  apply (erule_tac P="\<lambda> ts ba. auth_graph_map ?a (state_bits_to_policy ?cps ts ba ?cd ?vr) \<subseteq> ?ag" in rsubst')
+   apply (drule get_tcb_SomeD)
+   apply (rule ext, clarsimp simp add: thread_states_def get_tcb_def st tcb_states_of_state_def)
   apply (drule get_tcb_SomeD)
-  apply (rule ext, clarsimp simp add: thread_states_def get_tcb_def st tcb_states_of_state_def)
+  apply (rule ext, clarsimp simp: thread_bound_aeps_def get_tcb_def ba)
   done
 
 lemma copy_global_mappings_pas_refined2:
@@ -813,13 +978,13 @@ lemma recycle_cap_pas_refined_pre:
    \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
   apply (simp add: recycle_cap_def)
   apply (rule hoare_pre)
-   apply (wpc
-         | wp recycle_cap_ext_extended.pas_refined_tcb_domain_map_wellformed'
-              recycle_cap_ext_pas_refined thread_set_pas_refined_triv_stT[where P=inactive]
-         | rule ball_tcb_cap_casesI
-         | clarsimp | simp add: tcb_registers_caps_merge_def default_tcb_def)+
+apply (wpc 
+       | wp recycle_cap_ext_extended.pas_refined_tcb_domain_map_wellformed' gba_wp
+            recycle_cap_ext_pas_refined thread_set_pas_refined_triv_idleT[where P=inactive and Q="op = None"]
+       | rule ball_tcb_cap_casesI
+       | clarsimp | simp add: default_tcb_def tcb_registers_caps_merge_def)+
      apply (rule_tac P="pas_refined aag and pas_cur_domain aag and K (is_subject aag word)" in hoare_strengthen_post[OF gts_sp])
-     apply (clarsimp simp: st_tcb_def2)
+     apply (clarsimp simp: pred_tcb_def2)
     apply (wp arch_recycle_cap_pas_refined[where slot=slot] | simp)+
   apply (auto simp: aag_cap_auth_def cap_auth_conferred_def dest: aag_Control_into_owns)
   done
@@ -899,9 +1064,13 @@ lemma finalise_cap_caps_of_state_nullinv:
   finalise_cap cap final
   \<lbrace>\<lambda>rv s. P (caps_of_state s)\<rbrace>"
   apply (cases cap, simp_all split del: split_if)
-  apply (wp ep_cancel_all_caps_of_state suspend_caps_of_state | clarsimp split del: split_if | fastforce simp: fun_upd_def)+
-  apply (rule hoare_pre)
-  apply (wp deleting_irq_handler_caps_of_state_nullinv | clarsimp split del: split_if | fastforce simp: fun_upd_def)+
+             apply (wp suspend_caps_of_state unbind_async_endpoint_caps_of_state 
+                       unbind_async_endpoint_cte_wp_at 
+                       hoare_vcg_all_lift hoare_drop_imps 
+                    | simp split del: split_if 
+                    | fastforce simp: fun_upd_def )+
+    apply (rule hoare_pre)
+     apply (wp deleting_irq_handler_caps_of_state_nullinv | clarsimp split del: split_if | fastforce simp: fun_upd_def)+
   done
 
 lemma finalise_cap_cte_wp_at_nullinv:

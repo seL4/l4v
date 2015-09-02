@@ -244,6 +244,7 @@ where
   | PendingSyncSendCap _ f2 f3 f4 f5 \<Rightarrow> PendingSyncSendCap obj_id f2 f3 f4 f5
   | PendingSyncRecvCap _ f2 \<Rightarrow> PendingSyncRecvCap obj_id f2
   | PendingAsyncRecvCap _ \<Rightarrow> PendingAsyncRecvCap obj_id
+  | BoundAsyncCap _ \<Rightarrow> BoundAsyncCap obj_id
   | _ \<Rightarrow> cap"
 
 definition update_cap_objects :: "cdl_object_id set \<Rightarrow> cdl_cap \<Rightarrow> cdl_cap"

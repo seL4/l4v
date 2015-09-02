@@ -44,6 +44,7 @@ where
     | cdl_cap.AsidControlCap \<Rightarrow> {Control}
     | cdl_cap.AsidPoolCap oref asid \<Rightarrow> {Control}
     | cdl_cap.ZombieCap ptr \<Rightarrow> {Control}
+    | cdl_cap.BoundAsyncCap word \<Rightarrow> {Receive, Reset}
     | _ \<Rightarrow> {}"
 
 fun
@@ -70,6 +71,7 @@ where
 | "cdl_obj_refs (cdl_cap.AsidPoolCap p asid) = {p}"
 | "cdl_obj_refs cdl_cap.AsidControlCap = {}"
 | "cdl_obj_refs (cdl_cap.ZombieCap ptr) = {ptr}"
+| "cdl_obj_refs (cdl_cap.BoundAsyncCap word) = {word}"
 | "cdl_obj_refs _ = {}"
 
 inductive_set
@@ -260,6 +262,13 @@ where
   | _ \<Rightarrow> False"
 
 definition
+  is_bound_aep_cap :: "cdl_cap \<Rightarrow> bool"
+where
+  "is_bound_aep_cap cap \<equiv> case cap of
+     BoundAsyncCap a \<Rightarrow> True
+   | _ \<Rightarrow> False"
+
+definition
   is_real_cap :: "cdl_cap \<Rightarrow> bool"
 where
   "is_real_cap cap \<equiv> case cap of
@@ -276,6 +285,10 @@ lemma is_real_cap_infer_tcb_pending_op:
   "is_real_cap (infer_tcb_pending_op a tcb)"
   by (auto simp:infer_tcb_pending_op_def is_real_cap_def split:Structures_A.thread_state.splits)
 
+lemma is_real_cap_infer_tcb_bound_aep:
+  "is_real_cap (infer_tcb_bound_aep a)"
+  by (auto simp: infer_tcb_bound_aep_def is_real_cap_def split: cdl_cap.splits option.splits) 
+
 definition
   is_untyped_cap :: "cdl_cap \<Rightarrow> bool"
 where
@@ -285,7 +298,7 @@ where
 
 lemma caps_of_state_transform_opt_cap_rev:
   "\<lbrakk> einvs s; opt_cap ptr (transform s) = Some cap;
-     is_real_cap cap; \<not> is_thread_state_cap cap; \<not> is_null_cap cap \<rbrakk> \<Longrightarrow>
+     is_real_cap cap; \<not> is_thread_state_cap cap; \<not> is_null_cap cap; \<not> is_bound_aep_cap cap \<rbrakk> \<Longrightarrow>
      \<exists>cap' ptr'. cap = transform_cap cap' \<and> ptr = transform_cslot_ptr ptr' \<and>
                  caps_of_state s ptr' = Some cap'"
   apply clarify
@@ -296,7 +309,7 @@ lemma caps_of_state_transform_opt_cap_rev:
   apply (rule_tac P="a=idle_thread s" in case_split)
    apply (clarsimp simp: map_add_def object_slots_def)
   apply (case_tac "kheap s a")
-  apply (clarsimp simp: map_add_def object_slots_def)
+   apply (clarsimp simp: map_add_def object_slots_def)
   apply (clarsimp simp:valid_objs_def dom_def)
   apply (drule_tac x=a in spec, clarsimp)
   apply (case_tac aa, simp_all add:object_slots_def caps_of_state_def2)
@@ -309,8 +322,10 @@ lemma caps_of_state_transform_opt_cap_rev:
    apply (drule valid_etcbs_tcb_etcb [rotated], fastforce)
    apply clarsimp
    apply (clarsimp simp:transform_tcb_def tcb_slot_defs split:split_if_asm)
-        apply (simp add:is_thread_state_cap_def infer_tcb_pending_op_def is_null_cap_def
-                    split:Structures_A.thread_state.splits)
+         apply (clarsimp simp: is_null_cap_def is_bound_aep_cap_def infer_tcb_bound_aep_def 
+                         split: option.splits)
+        apply (simp add:is_thread_state_cap_def infer_tcb_pending_op_def is_null_cap_def is_real_cap_def
+                    split:Structures_A.thread_state.splits option.splits)
        apply (rule exI, rule conjI, simp, rule exI, rule conjI,
               (rule bl_to_bin_tcb_cnode_index | rule bl_to_bin_tcb_cnode_index[symmetric]),
               simp, simp add:tcb_cap_cases_def)+
@@ -359,7 +374,7 @@ lemma opt_cap_None_word_bits:
     apply (rule power_strict_increasing, simp+)
    apply (frule valid_etcbs_tcb_etcb[rotated], fastforce)
    apply (clarsimp simp:transform_tcb_def tcb_slot_defs WordSetup.word_bits_def
-                        tcb_pending_op_slot_def)
+                        tcb_pending_op_slot_def tcb_boundaep_slot_def)
   apply (case_tac arch_kernel_obj, simp_all)
     apply (simp add:transform_asid_pool_contents_def transform_page_table_contents_def
                     transform_page_directory_contents_def unat_map_def WordSetup.word_bits_def)+
@@ -406,11 +421,30 @@ lemma thread_states_transform:
                                                                  simplified])
       apply simp
      apply simp
-    apply (rule notI, drule invs_valid_idle, simp add:valid_idle_def st_tcb_def2)
+    apply (rule notI, drule invs_valid_idle, simp add:valid_idle_def pred_tcb_def2)
    apply (simp add:infer_tcb_pending_op_def, case_tac "tcb_state a",
                                               (simp add:split_if_asm| erule disjE)+)
   apply (simp add:infer_tcb_pending_op_def cdl_cap_auth_conferred_def,
                     case_tac "tcb_state a", (simp add:split_if_asm| erule disjE)+)
+  done
+
+lemma thread_bound_aeps_transform:
+  "\<lbrakk> einvs s; thread_bound_aeps s oref = Some oref'; auth \<in> {Receive, Reset} \<rbrakk> \<Longrightarrow>
+         (oref, auth, oref') \<in> cdl_state_objs_to_policy (transform s)"
+  apply clarify
+  apply (simp add: thread_bound_aeps_def  )
+  apply (cases "get_tcb oref s")
+   apply simp+
+  apply (frule valid_etcbs_get_tcb_get_etcb[rotated], fastforce)
+  apply clarsimp
+  apply (rule_tac cap="infer_tcb_bound_aep (tcb_bound_aep a)" in csta_caps[where ptr="(oref, tcb_boundaep_slot)"
+                          and auth=auth and oref=oref' and s="transform s", simplified])
+    apply (unfold tcb_boundaep_slot_def)
+    apply (rule opt_cap_tcb[where sl=6, unfolded tcb_boundaep_slot_def tcb_pending_op_slot_def tcb_slot_defs, simplified])
+      apply simp
+     apply simp
+    apply (rule notI, drule invs_valid_idle, simp add:valid_idle_def pred_tcb_def2)
+   apply (clarsimp simp: infer_tcb_bound_aep_def cdl_cap_auth_conferred_def)+
   done
 
 lemma thread_state_cap_transform_tcb:
@@ -436,6 +470,30 @@ lemma thread_state_cap_transform_tcb:
                    split:split_if_asm ARM_Structs_A.pde.splits)
   done
 
+lemma thread_bound_aep_cap_transform_tcb:
+  "\<lbrakk> opt_cap ptr (transform s) = Some cap; is_bound_aep_cap cap \<rbrakk> \<Longrightarrow>
+     \<exists>tcb. get_tcb (fst ptr) s = Some tcb"
+  apply (case_tac ptr)
+  apply (simp add:opt_cap_def slots_of_def opt_object_def transform_def transform_objects_def)
+  apply (rule_tac P="a = idle_thread s" in case_split)
+   apply (clarsimp simp: map_add_def object_slots_def)
+  apply (case_tac "kheap s (fst ptr)")
+   apply (clarsimp simp: map_add_def object_slots_def)
+  apply (simp add:get_tcb_def object_slots_def)
+  apply (case_tac aa, simp_all)
+   apply (clarsimp simp:transform_cnode_contents_def)
+   apply (case_tac z, simp_all add:is_bound_aep_cap_def split:split_if_asm)
+   apply (case_tac arch_cap, simp_all)
+  apply (case_tac arch_kernel_obj, simp_all)
+    apply (clarsimp simp:transform_asid_pool_contents_def unat_map_def transform_asid_pool_entry_def
+                    split:split_if_asm option.splits)
+   apply (clarsimp simp:transform_page_table_contents_def unat_map_def transform_pte_def
+                   split:split_if_asm ARM_Structs_A.pte.splits)
+  apply (clarsimp simp:transform_page_directory_contents_def unat_map_def transform_pde_def
+                   split:split_if_asm ARM_Structs_A.pde.splits)
+  done
+
+
 lemma thread_states_transform_rev:
   "\<lbrakk> einvs s; opt_cap ptr (transform s) = Some cap; is_thread_state_cap cap;
      oref \<in> cdl_obj_refs cap; auth \<in> cdl_cap_auth_conferred cap; (fst ptr) \<noteq> idle_thread s \<rbrakk> \<Longrightarrow>
@@ -448,7 +506,25 @@ lemma thread_states_transform_rev:
   apply (clarsimp split:split_if_asm)
    apply (case_tac "aa tcb", simp_all add:is_thread_state_cap_def split:split_if_asm)
    apply (case_tac "arch_cap", simp_all split:split_if_asm)
-  apply (case_tac "tcb_state tcb", auto simp:infer_tcb_pending_op_def cdl_cap_auth_conferred_def)
+  apply (case_tac "tcb_state tcb", auto simp:infer_tcb_pending_op_def cdl_cap_auth_conferred_def 
+                                             infer_tcb_bound_aep_def split: option.splits)
+  done
+
+lemma thread_bound_aeps_transform_rev:
+  "\<lbrakk> einvs s; opt_cap ptr (transform s) = Some cap; is_bound_aep_cap cap;
+     oref \<in> cdl_obj_refs cap; auth \<in> cdl_cap_auth_conferred cap; (fst ptr) \<noteq> idle_thread s \<rbrakk> \<Longrightarrow>
+     thread_bound_aeps s (fst ptr) = Some oref"
+  apply (frule thread_bound_aep_cap_transform_tcb, simp)
+  apply (case_tac ptr)
+  apply (clarsimp simp:thread_bound_aeps_def)
+  apply (frule valid_etcbs_get_tcb_get_etcb[rotated], fastforce)
+  apply (frule_tac sl=b in opt_cap_tcb, assumption, simp)
+  apply (clarsimp split:split_if_asm)
+    apply (case_tac "aa tcb", simp_all add:is_bound_aep_cap_def split:split_if_asm)
+    apply (case_tac "arch_cap", simp_all split:split_if_asm)
+   apply (clarsimp simp: infer_tcb_pending_op_def split: Structures_A.thread_state.splits)
+  apply (case_tac "tcb_bound_aep tcb", auto simp:infer_tcb_pending_op_def cdl_cap_auth_conferred_def 
+                                             infer_tcb_bound_aep_def split: option.splits)
   done
 
 lemma idle_thread_null_cap:
@@ -600,7 +676,8 @@ lemma state_vrefs_transform_rev:
   apply (case_tac aa, simp_all add:transform_object_def object_slots_def)
     apply (clarsimp simp:transform_cnode_contents_def is_real_cap_transform)
    apply (frule valid_etcbs_tcb_etcb [rotated], fastforce)
-   apply (clarsimp simp:transform_tcb_def is_real_cap_transform is_real_cap_infer_tcb_pending_op
+   apply (clarsimp simp: transform_tcb_def is_real_cap_transform is_real_cap_infer_tcb_pending_op 
+                         is_real_cap_infer_tcb_bound_aep
                    split:split_if_asm)
   apply (case_tac arch_kernel_obj, simp_all add:vs_refs_no_global_pts_def graph_of_def)
     apply (clarsimp simp:transform_asid_pool_contents_def unat_map_def split:split_if_asm)
@@ -672,6 +749,7 @@ lemma state_objs_transform:
       apply (case_tac cap, (simp add:untyped_range_transform del:untyped_range.simps(1))+)
      apply (case_tac cap, (simp add:cdl_cap_auth_conferred_def)+)
     apply (rule thread_states_transform, simp+)
+apply (rule thread_bound_aeps_transform, simp+)
    apply (simp add:fst_transform_cslot_ptr)
    apply (rule_tac slot="transform_cslot_ptr slot" and slot'="transform_cslot_ptr slot'"
                               and s="transform s" in csta_cdt)
@@ -682,7 +760,7 @@ lemma state_objs_transform:
   apply (subgoal_tac "ptr \<noteq> idle_thread s")
    apply (simp add:state_vrefs_transform)
   apply (clarsimp simp:state_vrefs_def vs_refs_no_global_pts_def invs_def valid_state_def
-                       valid_idle_def st_tcb_at_def obj_at_def)
+                       valid_idle_def pred_tcb_at_def obj_at_def)
   done
 
 lemma state_objs_transform_rev:
@@ -703,6 +781,13 @@ lemma state_objs_transform_rev:
    apply (subgoal_tac "\<not> is_null_cap cap")
     prefer 2
     apply (clarsimp simp:is_null_cap_def split:cdl_cap.splits)
+   apply (rule_tac P="is_bound_aep_cap cap" in case_split)
+    apply simp
+    apply (rule sta_bas)
+     apply (rule thread_bound_aeps_transform_rev, simp+)
+     apply (clarsimp simp: opt_cap_def transform_def transform_objects_def slots_of_def opt_object_def)
+     apply (clarsimp simp: map_add_def object_slots_def)
+    apply (clarsimp simp: cdl_cap_auth_conferred_def is_bound_aep_cap_def split: cdl_cap.splits)
    apply (frule caps_of_state_transform_opt_cap_rev, simp+)
    apply (rule_tac P="is_untyped_cap cap" in case_split)
     apply (subgoal_tac "a = Control")
@@ -831,8 +916,9 @@ lemma opt_cap_Some_asid_real:
   apply (case_tac aa, simp_all add:object_slots_def valid_objs_def)
     apply (clarsimp simp:transform_cnode_contents_def is_real_cap_transform)
    apply (frule valid_etcbs_tcb_etcb[rotated], fastforce)
-   apply (clarsimp simp:transform_tcb_def tcb_slot_defs is_real_cap_transform
-                        is_real_cap_infer_tcb_pending_op split:split_if_asm)
+   apply (clarsimp simp: transform_tcb_def tcb_slot_defs is_real_cap_infer_tcb_bound_aep 
+                         is_real_cap_transform is_real_cap_infer_tcb_pending_op 
+                  split: split_if_asm)
   apply (case_tac arch_kernel_obj, simp_all)
     apply (clarsimp simp:transform_asid_pool_contents_def unat_map_def split:split_if_asm)
     apply (clarsimp simp:transform_asid_pool_entry_def split:option.splits)
@@ -882,6 +968,8 @@ lemma state_asids_transform_rev:
   apply (erule cdl_state_asids_to_policy_aux.induct)
     apply (rule_tac P="is_thread_state_cap cap" in case_split)
      apply (clarsimp simp:is_thread_state_cap_def split:cdl_cap.splits)
+    apply (rule_tac P="is_bound_aep_cap cap" in case_split)
+     apply (clarsimp simp: is_bound_aep_cap_def split: cdl_cap.splits)
     apply (rule_tac P="\<not> is_real_cap cap" in case_split)
      apply (clarsimp simp:opt_cap_Some_asid_real)
     apply (rule_tac P="is_null_cap cap" in case_split)
@@ -940,6 +1028,8 @@ lemma state_irqs_transform_rev:
   apply (erule cdl_state_irqs_to_policy_aux.induct)
   apply (rule_tac P="is_thread_state_cap cap" in case_split)
    apply (clarsimp simp:is_thread_state_cap_def split:cdl_cap.splits)
+  apply (rule_tac P="is_bound_aep_cap cap" in case_split)
+   apply (clarsimp simp:is_bound_aep_cap_def split:cdl_cap.splits)
   apply (rule_tac P="\<not> is_real_cap cap" in case_split)
    apply (clarsimp simp:is_real_cap_def split:cdl_cap.splits)
   apply (rule_tac P="is_null_cap cap" in case_split)
@@ -965,7 +1055,7 @@ lemma einvs_idle:
 lemma einvs_idle_domain:
   "einvs s \<Longrightarrow> \<exists>etcb. ekheap s idle_thread_ptr = Some etcb \<and> tcb_domain etcb = default_domain"
   apply (clarsimp simp: valid_sched_def valid_idle_etcb_def etcb_at_def
-                        valid_etcbs_def invs_def valid_state_def valid_idle_def st_tcb_at_def obj_at_def is_etcb_at_def
+                        valid_etcbs_def invs_def valid_state_def valid_idle_def pred_tcb_at_def obj_at_def is_etcb_at_def
                        split: option.splits)
   apply (erule_tac x="idle_thread s" in allE)
   apply simp

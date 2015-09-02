@@ -672,11 +672,17 @@ lemma suspend_ctes_of_thread:
    \<lbrace>\<lambda>rv s. \<exists>node. ctes_of s x = Some (CTE (ThreadCap t) node)\<rbrace>"
   apply (rule hoare_chain)
   apply (rule suspend_cte_wp_at'[where P="op = (ThreadCap t)" and p=x])
-    apply (clarsimp simp add: finaliseCap_def isCap_simps)
+    apply (clarsimp simp add: finaliseCap_def Let_def isCap_simps)
    apply (clarsimp simp: cte_wp_at_ctes_of)
   apply (clarsimp simp: cte_wp_at_ctes_of)
   apply (case_tac cte, simp)
   done
+
+lemma unbindAsyncEndpoint_ctes_of_thread:
+  "\<lbrace>\<lambda>s. \<exists>node. ctes_of s x = Some (CTE (ThreadCap t) node)\<rbrace>
+     unbindAsyncEndpoint t
+   \<lbrace>\<lambda>rv s. \<exists>node. ctes_of s x = Some (CTE (ThreadCap t) node)\<rbrace>" 
+  by wp
 
 lemma suspend_not_recursive_ctes:
   "\<lbrace>\<lambda>s. P (not_recursive_ctes s)\<rbrace>
@@ -688,7 +694,15 @@ lemma suspend_not_recursive_ctes:
   apply (wp ipcCancel_cteCaps_of)
   apply (clarsimp elim!: rsubst[where P=P] intro!: set_eqI)
   apply (clarsimp simp: cte_wp_at_ctes_of cteCaps_of_def)
-  apply (auto simp: isCap_simps finaliseCap_def)
+  apply (auto simp: isCap_simps finaliseCap_def Let_def)
+  done
+
+lemma unbindAsyncEndpoint_not_recursive_ctes:
+  "\<lbrace>\<lambda>s. P (not_recursive_ctes s)\<rbrace>
+     unbindAsyncEndpoint t
+   \<lbrace>\<lambda>rv s. P (not_recursive_ctes s)\<rbrace>"
+  apply (simp only: not_recursive_ctes_def cteCaps_of_def)
+  apply wp
   done
 
 definition
@@ -822,14 +836,16 @@ termination finaliseSlot'
    apply (case_tac rv, simp)
    apply (simp add: isCap_simps, elim conjE disjE exE)
       apply simp
-     apply (clarsimp simp: finaliseCap_def isCap_simps in_monad
+     apply (clarsimp simp: finaliseCap_def Let_def isCap_simps in_monad
                            getThreadCSpaceRoot_def locateSlot_conv)
-     apply (frule(1) use_valid [OF _ suspend_ctes_of_thread, OF _ exI])
+     apply (frule(1) use_valid [OF _ unbindAsyncEndpoint_ctes_of_thread, OF _ exI])
+     apply (frule(1) use_valid [OF _ suspend_ctes_of_thread])
      apply clarsimp
      apply (erule use_valid [OF _ suspend_not_recursive_ctes])
+     apply (erule use_valid [OF _ unbindAsyncEndpoint_not_recursive_ctes])
      apply simp
-    apply (clarsimp simp: finaliseCap_def isCap_simps in_monad)
-   apply (clarsimp simp: finaliseCap_def isCap_simps in_monad)
+    apply (clarsimp simp: finaliseCap_def Let_def isCap_simps in_monad)
+   apply (clarsimp simp: finaliseCap_def Let_def isCap_simps in_monad)
   apply (clarsimp simp: in_monad Let_def locateSlot_conv
                         finaliseSlot_recset_def wf_sum_def
                         cte_wp_at_ctes_of)
@@ -846,7 +862,7 @@ termination finaliseSlot'
    apply (case_tac ourCTE, case_tac rv,
           clarsimp simp: isCap_simps)
    apply (elim disjE conjE exE, simp_all)[1]
-   apply (clarsimp simp: finaliseCap_def isCap_simps in_monad)
+   apply (clarsimp simp: finaliseCap_def Let_def isCap_simps in_monad)
   apply (frule use_valid [OF _ finaliseCap_cases], simp)
   apply (case_tac rv, case_tac ourCTE)
   apply (clarsimp simp: isCap_simps cte_wp_at_ctes_of)
@@ -5756,7 +5772,7 @@ proof (rule mdb_chunked_update_final [OF chunk, OF slot])
     apply simp
     done
 
-qed    
+qed   
 
 crunch tcb_in_cur_domain'[wp]: updateCap "tcb_in_cur_domain' t"
   (wp: crunch_wps simp: crunch_simps lift: tcb_in_cur_domain'_lift)
@@ -5775,6 +5791,7 @@ lemma make_zombie_invs':
                          \<or> isZombie (cteCap cte)) \<and> \<not> isUntypedCap (cteCap cte) \<and>
                       (\<forall>p \<in> threadCapRefs (cteCap cte).
                             st_tcb_at' (op = Inactive) p s
+                             \<and> bound_tcb_at' (op = None) p s
                              \<and> obj_at' (Not \<circ> tcbQueued) p s
                              \<and> (\<forall>pr. p \<notin> set (ksReadyQueues s pr)))) sl s\<rbrace>
     updateCap sl cap 
@@ -5800,12 +5817,12 @@ lemma make_zombie_invs':
      apply (clarsimp simp: cte_wp_at_ctes_of)
      apply (drule bspec[where x=sl], simp)
      apply (clarsimp simp: isCap_simps)
-
-    apply (fastforce elim: if_unsafe_then_capD' simp: isCap_simps)
+    apply (auto elim: if_unsafe_then_capD' simp: isCap_simps)[1]
    apply (clarsimp simp: cte_wp_at_ctes_of)
    apply (subgoal_tac "st_tcb_at' (op = Inactive) p' s
-                               \<and> obj_at' (Not \<circ> tcbQueued) p' s")
-    apply (clarsimp simp: st_tcb_at'_def obj_at'_def ko_wp_at'_def projectKOs)
+                               \<and> obj_at' (Not \<circ> tcbQueued) p' s
+                               \<and> bound_tcb_at' (op = None) p' s")
+    apply (clarsimp simp: pred_tcb_at'_def obj_at'_def ko_wp_at'_def projectKOs)
    apply (auto dest!: isCapDs)[1]
   apply (clarsimp simp: cte_wp_at_ctes_of disj_ac
                  dest!: isCapDs)
@@ -5894,7 +5911,7 @@ lemma make_zombie_invs':
   apply (erule(1) ztc_replace_update_final, simp_all)
    apply (simp add: cteCaps_of_def)
   apply (erule(1) ctes_of_valid_cap')
-  done
+done
 
 
 lemma make_zombie_cnode_invs':
@@ -5924,11 +5941,12 @@ lemma make_zombie_tcb_invs':
         cte_wp_at' (\<lambda>cte. isThreadCap (cteCap cte) \<and> 
                           cap = Zombie (capTCBPtr (cteCap cte)) ZombieTCB 5) sl s
          \<and> st_tcb_at' (op = Inactive) (capZombiePtr cap) s
+         \<and> bound_tcb_at' (op = None) (capZombiePtr cap) s
          \<and> obj_at' (Not \<circ> tcbQueued) (capZombiePtr cap) s
          \<and> (\<forall>p. capZombiePtr cap \<notin> set (ksReadyQueues s p))\<rbrace> 
     updateCap sl cap 
   \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (wp make_zombie_invs')
+  apply (wp_trace make_zombie_invs')
   apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps)
   apply (simp add: capRange_def objBits_simps final_matters'_def)
   apply (rule context_conjI)
@@ -6183,7 +6201,7 @@ lemma cteDeleteOne_cap_to'[wp]:
   apply (rule hoare_pre)
    apply (rule hoare_use_eq_irq_node'[OF cteDeleteOne_irq_node'])
    apply (wp hoare_vcg_ex_lift cteDeleteOne_cte_wp_at_preserved)
-   apply (case_tac cap, simp_all add: finaliseCap_def isCap_simps)[1]
+   apply (case_tac cap, simp_all add: finaliseCap_def Let_def isCap_simps)[1]
   apply simp
   done
 
@@ -6868,17 +6886,11 @@ lemma cteDelete_sch_act_simple:
 
 crunch st_tcb_at'[wp]: emptySlot "st_tcb_at' P t" (simp: case_Null_If)
 
-lemma updateCap_st_tcb_at'[wp]:
-  "\<lbrace>st_tcb_at' P t\<rbrace> updateCap sl cap \<lbrace>\<lambda>rv. st_tcb_at' P t\<rbrace>"
-  apply (simp add: updateCap_def)
-  apply (wp setCTE_st_tcb_at')
-  done
 
 (* FIXME: move to Finalise_R *)
-crunch st_tcb_at'[wp]: "ArchRetypeDecls_H.finaliseCap" "st_tcb_at' P t"
+crunch st_tcb_at'[wp]: "ArchRetypeDecls_H.finaliseCap", unbindMaybeAEP "st_tcb_at' P t"
   (ignore: getObject setObject simp: crunch_simps
-   wp: crunch_wps getObject_inv loadObject_default_inv
-       )
+   wp: crunch_wps getObject_inv loadObject_default_inv)
 
 lemma finaliseCap2_st_tcb_at':
   assumes x[simp]: "\<And>st. simple' st \<Longrightarrow> P st"
@@ -6983,7 +6995,7 @@ crunch rvk_prog': finaliseCap
     "\<lambda>s. revoke_progress_ord m (\<lambda>x. option_map capToRPO (cteCaps_of s x))"
   (wp: crunch_wps emptySlot_rvk_prog' threadSet_ctesCaps_of
        getObject_inv loadObject_default_inv 
-        simp: crunch_simps unless_def
+        simp: crunch_simps unless_def setBoundAEP_def
       ignore: getObject setObject setCTE)
 
 lemmas finalise_induct3 = finaliseSlot'.induct[where P=
@@ -8245,7 +8257,7 @@ crunch st_tcb_at'[wp]: "ArchRetypeDecls_H.recycleCap" "st_tcb_at' P t"
 lemma threadSet_st_tcb_at2:
   assumes x: "\<forall>tcb. P (tcbState tcb) \<longrightarrow> P (tcbState (f tcb))"
   shows      "\<lbrace>st_tcb_at' P t\<rbrace> threadSet f t' \<lbrace>\<lambda>rv. st_tcb_at' P t\<rbrace>"
-  apply (simp add: threadSet_def st_tcb_at'_def)
+  apply (simp add: threadSet_def pred_tcb_at'_def)
   apply (wp setObject_tcb_strongest)
   apply (rule hoare_strengthen_post, rule getObject_tcb_sp)
   apply (clarsimp simp: obj_at'_def x)
@@ -8277,7 +8289,7 @@ lemma cteRecycle_st_tcb_at':
   shows      "\<lbrace>st_tcb_at' P t\<rbrace> cteRecycle ptr \<lbrace>\<lambda>rv. st_tcb_at' P t\<rbrace>"
   apply (rule hoare_chain)
     apply (rule cteRecycle_st_tcb_at_simplish[where P=P and t=t])
-   apply (auto simp: x elim!: st_tcb'_weakenE)
+   apply (auto simp: x elim!: pred_tcb'_weakenE)
   done
 
 lemma invokeCNode_st_tcb_at':

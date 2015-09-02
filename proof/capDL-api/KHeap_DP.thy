@@ -79,10 +79,11 @@ lemma reset_cap_asid_simps2:
   "reset_cap_asid cap = (IOSpaceCap a1) \<Longrightarrow> cap = (IOSpaceCap a1)"
   "reset_cap_asid cap = (IOPageTableCap a2) \<Longrightarrow> cap = (IOPageTableCap a2)"
   "reset_cap_asid cap = (ZombieCap a3) \<Longrightarrow> cap = (ZombieCap a3)"
+  "reset_cap_asid cap = (BoundAsyncCap a4) \<Longrightarrow> cap = (BoundAsyncCap a4)"
   "reset_cap_asid cap = (FrameCap aa real sz rset as) \<Longrightarrow> \<exists>asid. cap = FrameCap aa real sz rset asid"
   "reset_cap_asid cap = (PageTableCap aa rights as) \<Longrightarrow> \<exists>asid. cap = PageTableCap aa rights asid"
   "reset_cap_asid cap = (PageDirectoryCap aa rights as) \<Longrightarrow> \<exists>asid. cap = PageDirectoryCap aa rights asid"
-  by (clarsimp simp: reset_cap_asid_def split: cdl_cap.splits)+
+by (clarsimp simp: reset_cap_asid_def split: cdl_cap.splits)+
 
 lemma sep_map_c_any:
   "(p \<mapsto>c cap \<and>* R) s \<Longrightarrow> (p \<mapsto>c - \<and>* R) s"

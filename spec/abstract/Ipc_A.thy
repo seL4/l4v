@@ -345,6 +345,29 @@ text {* Handle a message receive operation performed on an endpoint by a thread.
 If a sender is waiting then transfer the message, otherwise put the thread in
 the endpoint receiving queue. *}
 definition
+  isActive :: "async_ep \<Rightarrow> bool"
+where
+  "isActive aep \<equiv> case aep_obj aep
+     of ActiveAEP _ \<Rightarrow> True
+      | _ \<Rightarrow> False" 
+
+
+text{* Helper function for performing async ipc when receiving on a normal
+endpoint *}
+definition
+  complete_async_ipc :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
+where
+  "complete_async_ipc aepptr tcb \<equiv> do
+     aep \<leftarrow> get_async_ep aepptr;
+     case aep_obj aep of
+       ActiveAEP badge \<Rightarrow> do
+           as_user tcb $ set_register badge_register badge;
+           set_async_ep aepptr $ aep_set_obj aep IdleAEP
+         od
+     | _ \<Rightarrow> fail
+   od"
+
+definition
   receive_ipc :: "obj_ref \<Rightarrow> cap \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
   "receive_ipc thread cap \<equiv> do
@@ -353,68 +376,63 @@ where
                         | _ \<Rightarrow> fail);
      diminish \<leftarrow> return (AllowSend \<notin> rights);
      ep \<leftarrow> get_endpoint epptr;
-     case ep
-       of IdleEP \<Rightarrow> do
-            set_thread_state thread (BlockedOnReceive epptr diminish);
-            set_endpoint epptr (RecvEP [thread])
-          od
-        | RecvEP queue \<Rightarrow> do
-            set_thread_state thread (BlockedOnReceive epptr diminish);
-            set_endpoint epptr (RecvEP (queue @ [thread]))
-          od
-        | SendEP q \<Rightarrow> do
-            assert (q \<noteq> []);
-            queue \<leftarrow> return $ tl q;
-            sender \<leftarrow> return $ hd q;
-            set_endpoint epptr $
-              (case queue of [] \<Rightarrow> IdleEP | _ \<Rightarrow> SendEP queue);
-            sender_state \<leftarrow> get_thread_state sender;
-            data \<leftarrow> (case sender_state
-                     of BlockedOnSend ref data \<Rightarrow> return data
-                      | _ \<Rightarrow> fail);
-            do_ipc_transfer sender (Some epptr)
-                      (sender_badge data) (sender_can_grant data)
-                      thread diminish;
-            fault \<leftarrow> thread_get tcb_fault sender;
-            if ((sender_is_call data) \<or> (fault \<noteq> None))
-            then
-              if sender_can_grant data \<and> \<not> diminish
-              then setup_caller_cap sender thread
-              else set_thread_state sender Inactive
-            else do
-              set_thread_state sender Running;
-              do_extended_op (switch_if_required_to sender)
+     aepptr \<leftarrow> get_bound_aep thread;
+     aep \<leftarrow> option_case (return default_async_ep) get_async_ep aepptr;
+     if (aepptr \<noteq> None \<and> isActive aep)
+     then 
+       complete_async_ipc (the aepptr) thread
+     else 
+       case ep
+         of IdleEP \<Rightarrow> do
+              set_thread_state thread (BlockedOnReceive epptr diminish);
+              set_endpoint epptr (RecvEP [thread])
             od
-          od
+            | RecvEP queue \<Rightarrow> do
+              set_thread_state thread (BlockedOnReceive epptr diminish);
+              set_endpoint epptr (RecvEP (queue @ [thread]))
+            od
+          | SendEP q \<Rightarrow> do
+              assert (q \<noteq> []);
+              queue \<leftarrow> return $ tl q;
+              sender \<leftarrow> return $ hd q;
+              set_endpoint epptr $
+                (case queue of [] \<Rightarrow> IdleEP | _ \<Rightarrow> SendEP queue);
+              sender_state \<leftarrow> get_thread_state sender;
+              data \<leftarrow> (case sender_state
+                       of BlockedOnSend ref data \<Rightarrow> return data
+                        | _ \<Rightarrow> fail);
+              do_ipc_transfer sender (Some epptr)
+                        (sender_badge data) (sender_can_grant data)
+                        thread diminish;
+              fault \<leftarrow> thread_get tcb_fault sender;
+              if ((sender_is_call data) \<or> (fault \<noteq> None))
+              then
+                if sender_can_grant data \<and> \<not> diminish
+                then setup_caller_cap sender thread
+                else set_thread_state sender Inactive
+              else do
+                set_thread_state sender Running;
+                do_extended_op (switch_if_required_to sender)
+              od
+            od
    od"
 
 section {* Asynchronous Message Transfers *}
 
-text {* Transfer an asynchronous message to a thread. *}
-definition
-  do_async_transfer :: "badge \<Rightarrow> message \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
-where
-  "do_async_transfer badge msg_word thread \<equiv> do
-    receive_buffer \<leftarrow> lookup_ipc_buffer True thread;
-    msg_transferred \<leftarrow> set_mrs thread receive_buffer [msg_word];
-    as_user thread $ set_register badge_register badge;
-    set_message_info thread $ MI msg_transferred 0 0 0
-   od"
-
 text {* Helper function to handle an asynchronous send operation in the case
 where a receiver is waiting. *}
 definition
-  update_waiting_aep :: "obj_ref \<Rightarrow> obj_ref list \<Rightarrow> badge \<Rightarrow> message \<Rightarrow>
+  update_waiting_aep :: "obj_ref \<Rightarrow> obj_ref list \<Rightarrow> obj_ref option \<Rightarrow> badge \<Rightarrow> 
                          (unit,'z::state_ext) s_monad"
 where
-  "update_waiting_aep aepptr queue badge val \<equiv> do
+  "update_waiting_aep aepptr queue bound_tcb badge \<equiv> do
      assert (queue \<noteq> []);
      (dest,rest) \<leftarrow> return $ (hd queue, tl queue);
-
-     set_async_ep aepptr $
-         (case rest of [] \<Rightarrow> IdleAEP | _ \<Rightarrow> WaitingAEP rest);
+     set_async_ep aepptr $ \<lparr>
+         aep_obj = (case rest of [] \<Rightarrow> IdleAEP | _ \<Rightarrow> WaitingAEP rest),
+         aep_bound_tcb = bound_tcb \<rparr>;
      set_thread_state dest Running;
-     do_async_transfer badge val dest;
+     as_user dest $ set_register badge_register badge;
      do_extended_op (switch_if_required_to dest)
 
    od"
@@ -422,18 +440,37 @@ where
 text {* Handle a message send operation performed on an asynchronous endpoint.
 If a receiver is waiting then transfer the message, otherwise combine the new
 message with whatever message is currently waiting. *}
+
+(* helper function for checking if thread is blocked *)
 definition
-  send_async_ipc :: "obj_ref \<Rightarrow> badge \<Rightarrow> message \<Rightarrow> (unit,'z::state_ext) s_monad"
+  receive_blocked :: "thread_state \<Rightarrow> bool"
 where
-  "send_async_ipc aepptr badge val \<equiv> do
+  "receive_blocked st \<equiv> case st of
+       BlockedOnReceive _ _ \<Rightarrow> True
+     | _ \<Rightarrow> False"
+
+definition
+  send_async_ipc :: "obj_ref \<Rightarrow> badge \<Rightarrow> (unit,'z::state_ext) s_monad"
+where
+  "send_async_ipc aepptr badge \<equiv> do
     aep \<leftarrow> get_async_ep aepptr;
-    case aep
-      of IdleAEP \<Rightarrow> set_async_ep aepptr $ ActiveAEP badge val
-       | WaitingAEP queue \<Rightarrow> update_waiting_aep aepptr queue badge val
-       | ActiveAEP badge' val' \<Rightarrow>
-           set_async_ep aepptr $
+    case (aep_obj aep, aep_bound_tcb aep) of
+          (IdleAEP, Some tcb) \<Rightarrow> do
+                  st \<leftarrow> get_thread_state tcb;
+                  if (receive_blocked st)
+                  then do
+                      ipc_cancel tcb;
+                      set_thread_state tcb Running;
+                      as_user tcb $ set_register badge_register badge;
+                      do_extended_op (switch_if_required_to tcb)
+                    od
+                  else set_async_ep aepptr $ aep_set_obj aep (ActiveAEP badge)
+            od
+       | (IdleAEP, None) \<Rightarrow> set_async_ep aepptr $ aep_set_obj aep (ActiveAEP badge)
+       | (WaitingAEP queue, bound_tcb) \<Rightarrow> update_waiting_aep aepptr queue bound_tcb badge 
+       | (ActiveAEP badge', _) \<Rightarrow> 
+           set_async_ep aepptr $ aep_set_obj aep $
              ActiveAEP (combine_aep_badges badge badge')
-                       (combine_aep_msgs val val')
    od"
 
 text {* Handle a receive operation performed on an asynchronous endpoint by a
@@ -448,18 +485,18 @@ where
         of AsyncEndpointCap aepptr badge rights \<Rightarrow> return aepptr
          | _ \<Rightarrow> fail;
     aep \<leftarrow> get_async_ep aepptr;
-    case aep
+    case aep_obj aep
       of IdleAEP \<Rightarrow> do
                    set_thread_state thread (BlockedOnAsyncEvent aepptr);
-                   set_async_ep aepptr $ WaitingAEP [thread]
+                   set_async_ep aepptr $ aep_set_obj aep $ WaitingAEP [thread]
                  od
        | WaitingAEP queue \<Rightarrow> do
                    set_thread_state thread (BlockedOnAsyncEvent aepptr);
-                   set_async_ep aepptr $ WaitingAEP (queue @ [thread])
+                   set_async_ep aepptr $ aep_set_obj aep $ WaitingAEP (queue @ [thread])
                  od
-       | ActiveAEP badge current_val \<Rightarrow> do
-                     do_async_transfer badge current_val thread;
-                     set_async_ep aepptr $ IdleAEP
+       | ActiveAEP badge \<Rightarrow> do
+                     as_user thread $ set_register badge_register badge;
+                     set_async_ep aepptr $ aep_set_obj aep IdleAEP 
                    od
     od"
 
@@ -505,5 +542,7 @@ where
           <catch> handle_double_fault thread ex;
      return ()
    od"
+
+
 
 end

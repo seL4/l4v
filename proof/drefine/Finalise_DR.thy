@@ -74,8 +74,6 @@ proof -
     done
 qed
 
-
-
 (* Fast finalise is done in TCB_DR, this file only deals with finalise *)
 lemma dcorres_unmap_page_empty:
   "dcorres dc \<top> \<top> (PageTableUnmap_D.unmap_page x) (return a)"
@@ -182,7 +180,6 @@ lemma finite_descendants_if_from_transform:
   apply (simp add:cte_wp_at_set_finite)
 done
 
-
 lemma delete_cdt_slot_shrink_descendants:
   "\<lbrace>\<lambda>s. valid_mdb s \<and> x = cdt s \<and> slot \<in> CSpaceAcc_A.descendants_of p x \<and> x = y \<rbrace>
     set_cdt ((\<lambda>p. if x p = Some slot then x slot else x p)(slot := None))
@@ -260,7 +257,6 @@ lemma cap_delete_one_cte_at:
     apply (wp|clarsimp)+
 done
 
-
 lemma caps_of_state_transform_opt_cap_no_idle:
   "\<lbrakk>caps_of_state s p = Some cap; valid_etcbs s\<rbrakk>
    \<Longrightarrow> opt_cap (transform_cslot_ptr p) (transform s)
@@ -286,8 +282,8 @@ lemma caps_of_state_transform_opt_cap_no_idle:
                         slots_of_def opt_object_def restrict_map_def
                         transform_def object_slots_def transform_objects_def
                         valid_irq_node_def obj_at_def is_cap_table_def
-                        transform_tcb_def tcb_slot_defs
-                        tcb_pending_op_slot_def tcb_cap_cases_def
+                        transform_tcb_def tcb_slot_defs infer_tcb_bound_aep_def
+                        tcb_pending_op_slot_def tcb_cap_cases_def tcb_boundaep_slot_def
                         bl_to_bin_tcb_cnode_index bl_to_bin_tcb_cnode_index_le0
                  split: split_if_asm option.splits)
   done
@@ -352,10 +348,14 @@ lemma dcorres_revoke_the_cap_corres:
   apply (clarsimp simp:finite_descendants_if_from_transform)
   done
 
-lemma valid_aep_after_reomve_slot:
-  "valid_aep (async_ep.WaitingAEP list) s'\<Longrightarrow>
-  valid_aep (case remove1 ptr list of [] \<Rightarrow> async_ep.IdleAEP | a # lista \<Rightarrow> async_ep.WaitingAEP (remove1 ptr list)) s'"
-  by (clarsimp simp:valid_aep_def split:async_ep.splits list.split_asm)
+lemma valid_aep_after_remove_slot:
+  "\<lbrakk>valid_aep aep s'; aep_obj aep = (Structures_A.aep.WaitingAEP list)\<rbrakk>
+   \<Longrightarrow> valid_aep (aep_set_obj aep 
+           (case remove1 ptr list of [] \<Rightarrow> Structures_A.aep.IdleAEP 
+                            | a # lista \<Rightarrow> Structures_A.aep.WaitingAEP (remove1 ptr list))) s'"
+  apply (clarsimp simp: valid_aep_def distinct_remove1 
+                 split: aep.splits list.split_asm list.splits option.splits)
+  by (metis (mono_tags) distinct.simps(2) distinct_length_2_or_more distinct_remove1 set_remove1)
 
 lemma finalise_ipc_cancel:
   "dcorres dc \<top> (not_idle_thread ptr and invs and valid_etcbs)
@@ -363,34 +363,34 @@ lemma finalise_ipc_cancel:
     (ipc_cancel ptr)"
   apply (simp add:CSpace_D.ipc_cancel_def ipc_cancel_def get_thread_state_def thread_get_def)
   apply (rule dcorres_gets_the)
-  apply (simp add:opt_object_tcb not_idle_thread_def transform_tcb_def, clarsimp)
-  apply (frule(1) valid_etcbs_get_tcb_get_etcb)
-  apply (clarsimp simp: opt_cap_tcb tcb_pending_op_slot_def
-                        tcb_caller_slot_def tcb_cspace_slot_def tcb_ipcbuffer_slot_def
-                        tcb_replycap_slot_def tcb_vspace_slot_def assert_opt_def)
-  apply (case_tac "tcb_state obj'")
-    apply (simp_all add:not_idle_thread_def infer_tcb_pending_op_def
-      tcb_pending_op_slot_def[symmetric] tcb_replycap_slot_def[symmetric])
+   apply (simp add:opt_object_tcb not_idle_thread_def transform_tcb_def, clarsimp)
+   apply (frule(1) valid_etcbs_get_tcb_get_etcb)
+   apply (clarsimp simp: opt_cap_tcb tcb_pending_op_slot_def
+                         tcb_caller_slot_def tcb_cspace_slot_def tcb_ipcbuffer_slot_def
+                         tcb_replycap_slot_def tcb_vspace_slot_def assert_opt_def)
+   apply (case_tac "tcb_state obj'")
+          apply (simp_all add:not_idle_thread_def infer_tcb_pending_op_def
+            tcb_pending_op_slot_def[symmetric] tcb_replycap_slot_def[symmetric])
       apply (simp add:blocked_ipc_cancel_def)
       apply (rule corres_guard_imp)
         apply (rule corres_symb_exec_r)
-          apply (rule corres_symb_exec_r)
-            apply (rule corres_symb_exec_r)
-              apply (rule corres_dummy_return_pl)
-              apply (rule corres_split[ OF _ corres_dummy_set_sync_ep])
-              apply clarsimp
-              apply (rule corres_dummy_return_pr)
-              apply (rule corres_split [OF _ dcorres_revoke_cap_unnecessary])
-                apply (simp add:K_bind_def when_def dc_def[symmetric])
-                apply (rule set_thread_state_corres)
-           apply (wp sts_only_idle sts_st_tcb_at' valid_ep_queue_subset |  clarsimp simp:not_idle_thread_def)+
-           apply (simp add:get_blocking_ipc_endpoint_def | wp)+
-         apply (clarsimp dest!:get_tcb_rev simp:invs_def )
-         apply (frule(1) valid_tcb_if_valid_state)
-         apply (clarsimp simp:valid_tcb_def valid_tcb_state_def
-          valid_state_def valid_pspace_def infer_tcb_pending_op_def
-          st_tcb_at_def generates_pending_def obj_at_def dest!:get_tcb_SomeD)
-         apply (rule tcb_at_cte_at_2,clarsimp simp:tcb_at_def dest!:get_tcb_rev,simp)
+           apply (rule corres_symb_exec_r)
+              apply (rule corres_symb_exec_r)
+                 apply (rule corres_dummy_return_pl)
+                 apply (rule corres_split[ OF _ corres_dummy_set_sync_ep])
+                   apply clarsimp
+                   apply (rule corres_dummy_return_pr)
+                   apply (rule corres_split [OF _ dcorres_revoke_cap_unnecessary])
+                     apply (simp add:K_bind_def when_def dc_def[symmetric])
+                     apply (rule set_thread_state_corres)
+                    apply (wp sts_only_idle sts_st_tcb_at' valid_ep_queue_subset |  clarsimp simp:not_idle_thread_def)+
+          apply (simp add:get_blocking_ipc_endpoint_def | wp)+
+      apply (clarsimp dest!:get_tcb_rev simp:invs_def )
+      apply (frule(1) valid_tcb_if_valid_state)
+      apply (clarsimp simp:valid_tcb_def valid_tcb_state_def
+       valid_state_def valid_pspace_def infer_tcb_pending_op_def
+       st_tcb_at_def generates_pending_def obj_at_def dest!:get_tcb_SomeD)
+      apply (rule tcb_at_cte_at_2,clarsimp simp:tcb_at_def dest!:get_tcb_rev,simp)
      apply (simp add:blocked_ipc_cancel_def)
      apply (rule corres_guard_imp)
        apply (rule corres_symb_exec_r)
@@ -406,50 +406,50 @@ lemma finalise_ipc_cancel:
                    apply (wp sts_only_idle sts_st_tcb_at' valid_ep_queue_subset
                      | clarsimp simp:not_idle_thread_def)+
          apply (simp add:get_blocking_ipc_endpoint_def | wp)+
-    apply (clarsimp dest!:get_tcb_rev simp:invs_def)
-    apply (frule(1) valid_tcb_if_valid_state)
-    apply (clarsimp simp:valid_tcb_def valid_tcb_state_def
-          valid_state_def valid_pspace_def infer_tcb_pending_op_def
-          st_tcb_at_def generates_pending_def obj_at_def dest!:get_tcb_SomeD)
-    apply (rule tcb_at_cte_at_2,clarsimp simp:tcb_at_def dest!:get_tcb_rev,simp)
-   apply (simp add:reply_ipc_cancel_def)
-   apply (rule corres_guard_imp)
-     apply (rule corres_split[OF _ thread_set_fault_corres])
-        apply (rule corres_symb_exec_r)
-        apply (simp add:when_False revoke_cap_simple.simps )
-        apply (subst transform_tcb_slot_simp[symmetric])
-        apply (rule dcorres_revoke_the_cap_corres)
-        apply (wp thread_set_invs_trivial[OF ball_tcb_cap_casesI]
-                  thread_set_cte_at|clarsimp)+
-        apply (clarsimp simp: not_idle_thread_def
-          tcb_at_cte_at_2[unfolded tcb_at_def])
-   apply (simp add:async_ipc_cancel_def)
-     apply (rule corres_guard_imp)
-       apply (rule_tac Q'="\<lambda>r. valid_aep r and op=s'" in corres_symb_exec_r)
+     apply (clarsimp dest!:get_tcb_rev simp:invs_def)
+     apply (frule(1) valid_tcb_if_valid_state)
+     apply (clarsimp simp:valid_tcb_def valid_tcb_state_def
+           valid_state_def valid_pspace_def infer_tcb_pending_op_def
+           st_tcb_at_def generates_pending_def obj_at_def dest!:get_tcb_SomeD)
+     apply (rule tcb_at_cte_at_2,clarsimp simp:tcb_at_def dest!:get_tcb_rev,simp)
+    apply (simp add:reply_ipc_cancel_def)
+    apply (rule corres_guard_imp)
+      apply (rule corres_split[OF _ thread_set_fault_corres])
          apply (rule corres_symb_exec_r)
+            apply (simp add:when_False revoke_cap_simple.simps )
+            apply (subst transform_tcb_slot_simp[symmetric])
+            apply (rule dcorres_revoke_the_cap_corres)
+           apply (wp thread_set_invs_trivial[OF ball_tcb_cap_casesI]
+                     thread_set_cte_at|clarsimp)+
+    apply (clarsimp simp: not_idle_thread_def
+      tcb_at_cte_at_2[unfolded tcb_at_def])
+   apply (simp add:async_ipc_cancel_def)
+   apply (rule corres_guard_imp)
+     apply (rule_tac Q'="\<lambda>r. valid_aep r and op=s'" in corres_symb_exec_r)
+        apply (rule corres_symb_exec_r)
            apply (rule corres_dummy_return_pl)
-             apply (rule corres_split[ OF _ corres_dummy_set_async_ep])
-               unfolding K_bind_def
+           apply (rule corres_split[ OF _ corres_dummy_set_async_ep])
+             unfolding K_bind_def
              apply (rule corres_dummy_return_pr)
              apply (rule corres_split[OF _ dcorres_revoke_cap_unnecessary])
                unfolding K_bind_def
-           apply (rule set_thread_state_corres)
-         apply (wp set_aep_valid_objs | clarsimp simp:not_idle_thread_def)+
-         apply (clarsimp simp:valid_def fail_def return_def split:async_ep.splits)+
-      apply (clarsimp simp:invs_def)
-      apply (frule(1) valid_tcb_if_valid_state)
-      apply (clarsimp simp:valid_tcb_def tcb_at_cte_at_2
-        valid_tcb_state_def invs_def valid_state_def valid_pspace_def
-        st_tcb_at_def generates_pending_def obj_at_def infer_tcb_pending_op_def
-        dest!:get_tcb_SomeD)
-      apply (simp add:valid_aep_after_reomve_slot)
-    apply (wp | clarsimp split:async_ep.splits)+
-    apply (clarsimp simp:invs_def, frule(1) valid_tcb_if_valid_state)
-    apply (clarsimp simp:valid_tcb_def tcb_at_cte_at_2 valid_tcb_state_def invs_def valid_state_def valid_pspace_def
-         st_tcb_at_def generates_pending_def obj_at_def dest!:get_tcb_SomeD)
-   apply (clarsimp, frule(1) valid_etcbs_get_tcb_get_etcb)
-   apply (clarsimp simp:opt_object_tcb opt_cap_tcb)
-done
+               apply (rule set_thread_state_corres)
+              apply (wp set_aep_valid_objs | clarsimp simp:not_idle_thread_def)+
+           apply (clarsimp simp:valid_def fail_def return_def split:Structures_A.aep.splits)+
+           apply (clarsimp simp:invs_def)
+           apply (frule(1) valid_tcb_if_valid_state)
+           apply (clarsimp simp:valid_tcb_def tcb_at_cte_at_2
+             valid_tcb_state_def invs_def valid_state_def valid_pspace_def
+             st_tcb_at_def generates_pending_def obj_at_def infer_tcb_pending_op_def
+             dest!:get_tcb_SomeD)
+           apply (simp add:valid_aep_after_remove_slot)
+          apply (wp | clarsimp split:Structures_A.aep.splits)+
+   apply (clarsimp simp:invs_def, frule(1) valid_tcb_if_valid_state)
+   apply (clarsimp simp:valid_tcb_def tcb_at_cte_at_2 valid_tcb_state_def invs_def valid_state_def valid_pspace_def
+        st_tcb_at_def generates_pending_def obj_at_def dest!:get_tcb_SomeD)
+  apply (clarsimp, frule(1) valid_etcbs_get_tcb_get_etcb)
+  apply (clarsimp simp:opt_object_tcb opt_cap_tcb)
+  done
 
 lemma dcorres_get_irq_slot:
   "dcorres (\<lambda>r r'. r = transform_cslot_ptr r') \<top> \<top> (gets (CSpace_D.get_irq_slot x)) (KHeap_A.get_irq_slot x)"
@@ -544,7 +544,6 @@ lemma flush_space_dwp[wp]:
     apply wp
 done
 
-
 lemma invalidate_asid_dwp[wp]:
   "\<lbrace>\<lambda>ps. transform ps = cs\<rbrace> invalidate_asid (the (hw_asid_table next_asid)) \<lbrace>\<lambda>x ps. transform ps = cs\<rbrace>"
   apply (clarsimp simp:invalidate_asid_def)
@@ -612,7 +611,7 @@ done
 
 lemma arch_obj_not_idle:
   "\<lbrakk>valid_idle s;kheap s ptr = Some (ArchObj x )\<rbrakk> \<Longrightarrow> not_idle_thread ptr s"
-  by (clarsimp simp:not_idle_thread_def valid_idle_def obj_at_def st_tcb_at_def)
+  by (clarsimp simp:not_idle_thread_def valid_idle_def obj_at_def pred_tcb_at_def)
 
 lemma asid_pool_at_rev:
   "\<lbrakk> kheap s a = Some (ArchObj (arch_kernel_obj.ASIDPool fun)) \<rbrakk> \<Longrightarrow> asid_pool_at a s"
@@ -623,7 +622,7 @@ done
 
 lemma asid_pool_not_idle:
   "\<lbrakk> valid_idle s; asid_pool_at a s \<rbrakk> \<Longrightarrow> not_idle_thread a s"
-  apply (clarsimp simp:obj_at_def valid_idle_def st_tcb_at_def)
+  apply (clarsimp simp:obj_at_def valid_idle_def pred_tcb_at_def)
   apply (clarsimp simp:a_type_def not_idle_thread_def
     split:arch_kernel_obj.splits Structures_A.kernel_object.split_asm if_splits arch_kernel_object.splits)
 done
@@ -829,21 +828,21 @@ lemma transform_cap_not_new_invented:
 
 lemma page_table_not_idle:
   "\<lbrakk>valid_idle s;page_table_at a s\<rbrakk> \<Longrightarrow> not_idle_thread a s"
-  apply (clarsimp simp:obj_at_def valid_idle_def st_tcb_at_def)
+  apply (clarsimp simp:obj_at_def valid_idle_def pred_tcb_at_def)
   apply (clarsimp simp:a_type_def not_idle_thread_def
     split:arch_kernel_obj.splits Structures_A.kernel_object.split_asm if_splits arch_kernel_object.splits)
 done
 
 lemma page_directory_not_idle:
   "\<lbrakk>valid_idle s;page_directory_at a s\<rbrakk> \<Longrightarrow> not_idle_thread a s"
-  apply (clarsimp simp:obj_at_def valid_idle_def st_tcb_at_def)
+  apply (clarsimp simp:obj_at_def valid_idle_def pred_tcb_at_def)
   apply (clarsimp simp:a_type_def not_idle_thread_def
     split:arch_kernel_obj.splits Structures_A.kernel_object.split_asm if_splits arch_kernel_object.splits)
 done
 
 lemma page_table_at_rev:
   "\<lbrakk>kheap s a = Some (ArchObj (arch_kernel_obj.PageTable fun))\<rbrakk> \<Longrightarrow> page_table_at a s"
-  apply (clarsimp simp:obj_at_def valid_idle_def st_tcb_at_def)
+  apply (clarsimp simp:obj_at_def valid_idle_def pred_tcb_at_def)
   apply (clarsimp simp:a_type_def
     split:arch_kernel_obj.splits Structures_A.kernel_object.split_asm if_splits arch_kernel_object.splits)
 done
@@ -904,7 +903,6 @@ where "pd_super_section_relation pd pt offset s \<equiv>
   \<exists>fun u v ref1. ( kheap s pd = Some (ArchObj (arch_kernel_obj.PageDirectory fun))
   \<and> fun (ucast (offset && mask pd_bits >> 2)) = ARM_Structs_A.pde.SuperSectionPDE ref1 u v
   \<and> pt = Platform.ptrFromPAddr ref1 )"
-
 
 definition pt_page_relation :: "word32\<Rightarrow>word32\<Rightarrow>word32\<Rightarrow>vmpage_size set\<Rightarrow>'z::state_ext state\<Rightarrow>bool"
 where "pt_page_relation pt page offset S s \<equiv>
@@ -1227,7 +1225,6 @@ lemma dcorres_set_pde_cap:
       apply (erule transform_page_directory_contents_upd)
    apply (clarsimp simp: transform_objects_def restrict_map_def map_add_def)
 done
-
 
 lemma dcorres_delete_cap_simple_set_pde:
   " ucast (ptr && mask pd_bits >> 2) \<notin> kernel_mapping_slots
@@ -2439,22 +2436,24 @@ lemma dcorres_finalise_cap:
         apply (rule corres_guard_imp[OF dcorres_ep_cancel_all])
          apply (clarsimp simp:invs_def valid_state_def)+
       apply (rule corres_rel_imp)
-       apply (rule corres_guard_imp[OF dcorres_aep_cancel_all])
-        apply ((clarsimp simp:invs_def valid_state_def)+)[3]
+       apply (rule corres_guard_imp)
+         apply (rule corres_split[OF dcorres_aep_cancel_all dcorres_unbind_maybe_aep])
+          apply (wp unbind_maybe_aep_valid_etcbs | simp | wpc)+
+       apply ((clarsimp simp:invs_def valid_state_def)+)[2]
      apply (simp add:IpcCancel_A.suspend_def bind_assoc)
      apply clarsimp
      apply (rule corres_guard_imp)
-       apply (rule corres_split[OF _ finalise_ipc_cancel])
-         apply (rule corres_split)
-            unfolding K_bind_def
-            apply (rule dcorres_rhs_noop_above_True[OF tcb_sched_action_dcorres[where P=\<top> and P'=\<top>]])
-            apply (rule iffD2[OF corres_return[where P=\<top> and P'=\<top>]])
-            apply (clarsimp simp:transform_cap_def)
-           apply (rule set_cap_set_thread_state_inactive)
-          apply wp
-       apply (simp add:not_idle_thread_def)
-       apply wp
-      apply (simp+)
+       apply (rule corres_split[OF _ dcorres_unbind_async_endpoint])
+         apply (rule corres_split[OF _ finalise_ipc_cancel])
+           apply (rule corres_split)
+              unfolding K_bind_def
+              apply (rule dcorres_rhs_noop_above_True[OF tcb_sched_action_dcorres[where P=\<top> and P'=\<top>]])
+              apply (rule iffD2[OF corres_return[where P=\<top> and P'=\<top>]])
+              apply (clarsimp simp:transform_cap_def)
+             apply (rule set_cap_set_thread_state_inactive)
+            apply wp
+         apply (simp add:not_idle_thread_def)
+         apply (wp unbind_async_endpoint_invs | simp add: not_idle_thread_def)+
      apply clarsimp
      apply (drule(1) thread_in_thread_cap_not_idle[OF invs_valid_global_refs])
      apply (simp add:not_idle_thread_def)
@@ -2463,57 +2462,57 @@ lemma dcorres_finalise_cap:
       apply (rule corres_split[OF _ dcorres_deleting_irq_handler])
         apply (rule iffD2[OF corres_return[where P=\<top> and P'=\<top>]])
         apply (clarsimp simp:transform_cap_def)
-      apply (wp|clarsimp)+
-    apply (clarsimp simp:assert_def corres_free_fail)
-    apply (case_tac arch_cap)
+       apply (wp|clarsimp)+
+   apply (clarsimp simp:assert_def corres_free_fail)
+  apply (case_tac arch_cap)
       apply (simp_all add: transform_cap_simps arch_finalise_cap_def split:arch_cap.split_asm)
-        apply clarsimp
+     apply clarsimp
 -- arch_cap.ASIDPoolCap
-      apply (rule corres_guard_imp)
-        apply (rule corres_split[OF _ dcorres_delete_asid_pool])
-          apply (rule iffD2[OF corres_return[where P=\<top> and P'=\<top>]])
-          apply (clarsimp simp:transform_cap_def)
+     apply (rule corres_guard_imp)
+       apply (rule corres_split[OF _ dcorres_delete_asid_pool])
+         apply (rule iffD2[OF corres_return[where P=\<top> and P'=\<top>]])
+         apply (clarsimp simp:transform_cap_def)
         apply (wp|clarsimp)+
-      apply (clarsimp split:option.splits | rule conjI)+
--- arch_cap.PageCap
-        apply (rule corres_dummy_return_pr)
-          apply (rule corres_guard_imp)
-            apply (rule corres_split[OF _ dcorres_unmap_page_empty])
-            unfolding K_bind_def
-            apply (rule iffD2[OF corres_return[where P=\<top> and P'=\<top>]])
-            apply (clarsimp simp:transform_cap_def)
-        apply (wp|clarsimp split:)+
-          apply (rule corres_guard_imp)
-            apply (rule_tac fun1 = "set" in  corres_split[OF _ dcorres_unmap_page])
-              apply (rule iffD2[OF corres_return[where P=\<top> and P'=\<top>]])
-              apply (clarsimp simp:transform_cap_def)
-            apply (wp | clarsimp )+
     apply (clarsimp split:option.splits | rule conjI)+
-      apply (rule corres_dummy_return_pr)
-        apply (rule corres_guard_imp)
-          apply (rule corres_split[OF _ dcorres_unmap_page_table_empty])
-            unfolding K_bind_def
-            apply (rule iffD2[OF corres_return[where P=\<top> and P'=\<top>]])
-            apply (clarsimp simp:transform_cap_def)
-        apply (wp|clarsimp)+
+-- arch_cap.PageCap
+     apply (rule corres_dummy_return_pr)
+     apply (rule corres_guard_imp)
+       apply (rule corres_split[OF _ dcorres_unmap_page_empty])
+         unfolding K_bind_def
+         apply (rule iffD2[OF corres_return[where P=\<top> and P'=\<top>]])
+         apply (clarsimp simp:transform_cap_def)
+        apply (wp|clarsimp split:)+
+    apply (rule corres_guard_imp)
+      apply (rule_tac fun1 = "set" in  corres_split[OF _ dcorres_unmap_page])
+        apply (rule iffD2[OF corres_return[where P=\<top> and P'=\<top>]])
+        apply (clarsimp simp:transform_cap_def)
+       apply (wp | clarsimp )+
+   apply (clarsimp split:option.splits | rule conjI)+
+    apply (rule corres_dummy_return_pr)
+    apply (rule corres_guard_imp)
+      apply (rule corres_split[OF _ dcorres_unmap_page_table_empty])
+        unfolding K_bind_def
+        apply (rule iffD2[OF corres_return[where P=\<top> and P'=\<top>]])
+        apply (clarsimp simp:transform_cap_def)
+       apply (wp|clarsimp)+
 --arch_cap.PageTableCap
-      apply (rule dcorres_expand_pfx)
-      apply (rule corres_guard_imp)
-        apply (rule corres_split[OF _ dcorres_unmap_page_table])
+   apply (rule dcorres_expand_pfx)
+   apply (rule corres_guard_imp)
+     apply (rule corres_split[OF _ dcorres_unmap_page_table])
           apply (rule iffD2[OF corres_return[where P=\<top> and P'=\<top>]])
           apply (clarsimp simp:transform_cap_def)
-        apply ((wp|clarsimp )+)[4]
-          apply (rule iffD1[OF le_mask_iff_lt_2n,THEN iffD2],simp add:word_size asid_bits_def)
-          apply (clarsimp simp:valid_cap_def cap_aligned_def  )+
-          apply (simp add:vmsz_aligned_def)
-        apply (wp|clarsimp)+
-      apply (rule conjI | clarsimp split:option.splits)+
-      apply (rule corres_guard_imp)
-        apply (rule corres_split[OF _ dcorres_delete_asid])
-          apply (rule iffD2[OF corres_return[where P=\<top> and P'=\<top>]])
-          apply (clarsimp simp:transform_cap_def)
-         apply (wp|clarsimp split:option.splits)+
-done
+         apply ((wp|clarsimp )+)[4]
+         apply (rule iffD1[OF le_mask_iff_lt_2n,THEN iffD2],simp add:word_size asid_bits_def)
+         apply (clarsimp simp:valid_cap_def cap_aligned_def  )+
+       apply (simp add:vmsz_aligned_def)
+      apply (wp|clarsimp)+
+  apply (rule conjI | clarsimp split:option.splits)+
+  apply (rule corres_guard_imp)
+    apply (rule corres_split[OF _ dcorres_delete_asid])
+      apply (rule iffD2[OF corres_return[where P=\<top> and P'=\<top>]])
+      apply (clarsimp simp:transform_cap_def)
+     apply (wp|clarsimp split:option.splits)+
+  done
 
 lemma dcorres_splits:
   "\<lbrakk> T a \<Longrightarrow> dcorres r P (Q a) f (g a);
@@ -2539,24 +2538,21 @@ lemma finalise_cap_remainder:
   "\<lbrace>\<top>\<rbrace>CSpace_A.finalise_cap cap final \<lbrace>\<lambda>r s. fst (r) = (remainder_cap final cap) \<rbrace>"
   apply (case_tac cap)
     apply (simp_all add:CSpace_A.finalise_cap.simps remainder_cap_def)
-    apply (wp|clarsimp)+
-     apply (fastforce simp:valid_def)
-     apply (simp|clarify)+
-   apply (wp|clarsimp)+
-     apply (fastforce simp:valid_def)
-     apply (simp|clarify)+
-   apply (wp|clarsimp|rule conjI)+
-   apply (simp add:arch_finalise_cap_def)
-     apply (cases final)
-       apply (case_tac arch_cap)
-         apply (simp_all)
-         apply (wp|clarsimp)+
-         apply (simp_all split:option.splits)
-         apply (wp | clarsimp | rule conjI)+
-       apply (case_tac arch_cap)
-         apply simp_all
-       apply (wp|clarsimp split:option.splits | rule conjI)+
-done
+             apply (wp|clarsimp)+
+            apply (fastforce simp:valid_def)
+           apply (simp add: liftM_def |clarify)+
+          apply (wp|clarsimp|rule conjI)+
+  apply (simp add:arch_finalise_cap_def)
+  apply (cases final)
+   apply (case_tac arch_cap)
+       apply (simp_all)
+       apply (wp|clarsimp)+
+     apply (simp_all split:option.splits)
+     apply (wp | clarsimp | rule conjI)+
+  apply (case_tac arch_cap)
+      apply simp_all
+      apply (wp|clarsimp split:option.splits | rule conjI)+
+  done
 
 lemma obj_ref_not_idle:
   "\<lbrakk>valid_objs s;valid_global_refs s;cte_at slot s\<rbrakk> \<Longrightarrow> cte_wp_at (\<lambda>cap. \<forall>x\<in>obj_refs cap. not_idle_thread x s) slot s"
@@ -2567,7 +2563,6 @@ lemma obj_ref_not_idle:
   apply (drule_tac x = b in spec)
   apply (clarsimp simp:cte_wp_at_def not_idle_thread_def cap_range_def global_refs_def)
 done
-
 
 lemma singleton_set_eq:
   "\<lbrakk>x = {a}; b\<in> x\<rbrakk>\<Longrightarrow> b = a"
@@ -3003,7 +2998,6 @@ lemma underlying_memory_irq_state_independent[intro!, simp]:
    = underlying_memory s"
   by simp
 
-
 lemma get_ipc_buffer_words_irq_state_independent[intro!, simp]:
   "get_ipc_buffer_words (s\<lparr>irq_state := f (irq_state s)\<rparr>)
    = get_ipc_buffer_words s"
@@ -3397,18 +3391,26 @@ next
     apply (clarsimp simp: tcb_at_def cap_range_def global_refs_def
                           opt_cap_tcb
                    split: option.split_asm split_if_asm | drule(1) valid_etcbs_get_tcb_get_etcb)+
-      apply (rule_tac x="tcb_cnode_index b" in exI)
-      apply (clarsimp simp: transform_cslot_ptr_def dest!: get_tcb_SomeD)
-      apply (rule conjI, rule sym, rule bl_to_bin_tcb_cnode_index)
-       apply (auto simp: tcb_slot_defs)[1]
-      apply (rule iffD1[OF cte_wp_at_caps_of_state cte_wp_at_tcbI], (simp | rule conjI)+)
+       apply (rule_tac x="tcb_cnode_index b" in exI)
+       apply (clarsimp simp: transform_cslot_ptr_def dest!: get_tcb_SomeD)
+       apply (rule conjI, rule sym, rule bl_to_bin_tcb_cnode_index)
+        apply (auto simp: tcb_slot_defs)[1]
+       apply (rule iffD1[OF cte_wp_at_caps_of_state cte_wp_at_tcbI], (simp | rule conjI)+)
+      apply (frule final_zombie_not_live[rotated 1, OF caps_of_state_cteD], clarsimp)
+       apply (rule ccontr, erule zombies_finalE)
+         apply (simp add: is_cap_simps)
+        apply clarsimp
+       apply (erule caps_of_state_cteD)
+     
+      apply (clarsimp simp: obj_at_def dest!: get_tcb_SomeD)
+      apply (auto simp: infer_tcb_pending_op_def)[1]
      apply (frule final_zombie_not_live[rotated 1, OF caps_of_state_cteD], clarsimp)
       apply (rule ccontr, erule zombies_finalE)
         apply (simp add: is_cap_simps)
        apply clarsimp
       apply (erule caps_of_state_cteD)
      apply (clarsimp simp: obj_at_def dest!: get_tcb_SomeD)
-     apply (auto simp: infer_tcb_pending_op_def)[1]
+     apply (auto simp: infer_tcb_bound_aep_def)[1]
     apply (clarsimp simp: obj_at_def is_cap_table_def)
     apply (clarsimp simp: opt_cap_cnode
                    split: Structures_A.kernel_object.split_asm)

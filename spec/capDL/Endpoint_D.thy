@@ -205,6 +205,18 @@ where
          (((cdl_tcb_caps a) tcb_pending_op_slot) = Some (PendingSyncSendCap target b call grant rights)) }"
 
 (*
+ * Get the set of threads which are bound to the given aep, but are
+ * also waiting on sync IPC
+ *)
+definition
+  get_waiting_sync_bound_aep_threads :: "cdl_object_id \<Rightarrow> cdl_state \<Rightarrow> cdl_object_id set"
+where
+  "get_waiting_sync_bound_aep_threads aep_id state \<equiv>
+     {x. \<exists>a ep_id. (cdl_objects state) x = Some (Tcb a) \<and>
+         (((cdl_tcb_caps a) tcb_pending_op_slot) = Some (PendingSyncRecvCap ep_id False)) \<and>
+         (((cdl_tcb_caps a) tcb_boundaep_slot) = Some (BoundAsyncCap aep_id))}"
+
+(*
  * Mark a thread blocked on IPC.
  *
  * Theads get a new implicit "send once" or "receive once" capability
@@ -285,7 +297,7 @@ definition
 where
   "do_async_transfer receiver_id \<equiv> do
       set_cap (receiver_id,tcb_pending_op_slot) RunningCap;
-      corrupt_ipc_buffer receiver_id True
+      corrupt_tcb_intent receiver_id
    od"
 
 (*
@@ -294,18 +306,32 @@ where
  * If someone is blocked on the endpoint, we wake them up. Otherwise,
  * this is a no-op.
  *)
+
+(* FIXME names *)
+definition
+  send_async_bound :: "cdl_object_id \<Rightarrow> unit k_monad"
+where
+  "send_async_bound aep_id \<equiv> do
+      bound_tcbs \<leftarrow> gets $ get_waiting_sync_bound_aep_threads aep_id;
+      if (bound_tcbs \<noteq> {}) then do
+          t \<leftarrow> select bound_tcbs;
+          ipc_cancel t;
+          do_async_transfer t
+        od
+      else return ()
+    od"
+
 definition
   send_async_ipc :: "cdl_object_id \<Rightarrow> unit k_monad"
 where
   "send_async_ipc ep_id \<equiv>
-    do
-      waiters \<leftarrow> gets $ get_waiting_async_recv_threads ep_id;
-      t \<leftarrow> option_select waiters;
-      case t of
-        None \<Rightarrow> return ()
-      | Some receiver \<Rightarrow> do_async_transfer receiver
-    od
-   "
+    (do waiters \<leftarrow> gets $ get_waiting_async_recv_threads ep_id;
+          t \<leftarrow> option_select waiters;
+          case t of
+              None \<Rightarrow> return ()
+            | Some receiver \<Rightarrow> do_async_transfer receiver
+     od)
+            \<sqinter> send_async_bound ep_id"
 
 (*
  * Receive an async IPC.
@@ -320,7 +346,7 @@ where
      waiters \<leftarrow> gets $ get_waiting_async_recv_threads ep_id;
      if (waiters = {}) then 
        block_thread_on_ipc tcb_id_receiver (PendingAsyncRecvCap ep_id)
-       \<sqinter> corrupt_ipc_buffer tcb_id_receiver True
+       \<sqinter> corrupt_tcb_intent tcb_id_receiver
      else
        block_thread_on_ipc tcb_id_receiver (PendingAsyncRecvCap ep_id)
    od"
@@ -357,13 +383,11 @@ where
  * Receive an IPC from the given endpoint. If someone is waiting, we
  * wake them up. Otherwise, we put the receiver to sleep.
  *)
-
 definition
-  receive_ipc :: "cdl_object_id \<Rightarrow> cdl_object_id \<Rightarrow> unit k_monad"
+  receive_sync :: "cdl_object_id \<Rightarrow> cdl_object_id \<Rightarrow> unit k_monad"
 where
-  "receive_ipc thread ep_id \<equiv>
-    do
-      waiters \<leftarrow> gets $ get_waiting_sync_send_threads ep_id;
+  "receive_sync thread ep_id \<equiv> do
+    waiters \<leftarrow> gets $ get_waiting_sync_send_threads ep_id;
       t \<leftarrow> option_select waiters;
       (case t of
           None \<Rightarrow>
@@ -380,8 +404,14 @@ where
 
         od)
       )
-    od
-   "
+    od"
+
+(* This is more nonderministic than is really required, but
+   it makes the refinement proofs much easier *)
+definition
+  receive_ipc :: "cdl_object_id \<Rightarrow> cdl_object_id \<Rightarrow> unit k_monad"
+where
+  "receive_ipc thread ep_id \<equiv> corrupt_tcb_intent thread \<sqinter> receive_sync thread ep_id"
 
 definition
   invoke_endpoint :: "bool \<Rightarrow> bool \<Rightarrow> cdl_endpoint_invocation \<Rightarrow> unit k_monad"

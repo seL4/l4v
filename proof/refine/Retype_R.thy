@@ -213,8 +213,11 @@ lemma obj_bits_default_EndpointObject:
 lemma other_obj_relation_default_AsyncEndpointObject:
   "other_obj_relation (default_object Structures_A.apiobject_type.AsyncEndpointObject us)
   (injectKO (makeObject :: async_endpoint))"
-  unfolding other_obj_relation_def aep_relation_def default_async_ep_def default_object_def  
+  unfolding other_obj_relation_def aep_relation_def default_async_ep_def 
+            default_object_def default_aep_def
+  
   by (simp add: makeObject_async_endpoint)
+
 
 lemma obj_bits_default_AsyncEndpointObject:
   "obj_bits (default_object  Structures_A.apiobject_type.AsyncEndpointObject us) 
@@ -2617,7 +2620,7 @@ lemma other_objs_default_relation:
                         tcb_relation_def default_tcb_def makeObject_tcb
                         makeObject_cte new_context_def newContext_def
                         default_ep_def makeObject_endpoint default_async_ep_def
-                        makeObject_async_endpoint
+                        makeObject_async_endpoint default_aep_def
                         fault_option_relation_def
                         initContext_def
                  split: Structures_A.apiobject_type.split_asm)
@@ -3483,7 +3486,8 @@ proof (intro conjI impI)
     apply (subst mult_commute)
     apply (case_tac obj, simp_all add: valid_obj'_def)
         apply (case_tac endpoint, simp_all add: valid_ep'_def obj_at_disj')
-       apply (case_tac async_endpoint, simp_all add: valid_aep'_def obj_at_disj')
+       apply (case_tac async_endpoint, simp_all add: valid_aep'_def valid_bound_tcb'_def obj_at_disj')
+       apply (case_tac aep, simp_all, (clarsimp simp: obj_at_disj' split:option.splits)+)
       apply (case_tac tcb, clarsimp simp add: valid_tcb'_def)
       apply (frule pspace_alignedD' [OF _ ad(1)])
       apply (frule pspace_distinctD' [OF _ ad(2)])
@@ -3496,7 +3500,9 @@ proof (intro conjI impI)
        apply (rule_tac ptr="x + xa" in cte_wp_at_tcbI', assumption+)
         apply fastforce
        apply simp
-      apply (case_tac thread_state, simp_all add: valid_tcb_state'_def obj_at_disj')[1]
+      apply (case_tac thread_state, simp_all add: valid_tcb_state'_def 
+                                                  valid_bound_aep'_def obj_at_disj' 
+                                           split: option.splits)[2]
      apply (simp add: valid_cte'_def)
      apply (frule pspace_alignedD' [OF _ ad(1)])
      apply (frule pspace_distinctD' [OF _ ad(2)])
@@ -4363,7 +4369,7 @@ lemma valid_queues_lift_asm:
       apply -
       apply (atomize)
       apply (erule allE)+
-      apply (simp only: st_tcb_at'_def)
+      apply (simp add: pred_tcb_at'_def o_def)
       by (drule(1) hoare_conj)
     hence tat: "\<And>d p t. \<lbrace>obj_at' (inQ d p and runnable' \<circ> tcbState) t and Q\<rbrace> f
                          \<lbrace>\<lambda>_. obj_at' (inQ d p and runnable' \<circ> tcbState) t\<rbrace>"
@@ -4585,9 +4591,9 @@ lemma createNewCaps_obj_at':
    \<lbrace>\<lambda>rv s. obj_at' P p s\<rbrace>"
   by (wp createNewCaps_obj_at'', auto)
 
-lemmas createNewCaps_st_tcb_at'
-     = createNewCaps_obj_at'[where P="Q \<circ> tcbState", standard,
-                             folded st_tcb_at'_def, simplified]
+lemmas createNewCaps_pred_tcb_at'
+     = createNewCaps_obj_at'[where P="\<lambda>ko. (Q :: 'a :: type \<Rightarrow> bool) (proj (tcb_to_itcb' ko))",
+                             standard, folded pred_tcb_at'_def, simplified]
 
 lemma createNewCaps_cur:
   "\<lbrakk>range_cover ptr sz (APIType_capBits ty us) n ; n \<noteq> 0\<rbrakk> \<Longrightarrow>
@@ -4670,13 +4676,14 @@ lemma createObjects_idle':
   \<lbrace>\<lambda>rv. valid_idle'\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (rule hoare_pre)
-   apply (clarsimp simp add: valid_idle'_def st_tcb_at'_def)
+   apply (clarsimp simp add: valid_idle'_def pred_tcb_at'_def)
    apply (rule hoare_as_subst [OF createObjects'_it])
+
    apply (wp createObjects_orig_obj_at'
              createObjects_orig_cte_wp_at2'
              hoare_vcg_all_lift | simp)+
   apply (clarsimp simp: valid_idle'_def projectKOs o_def
-                        st_tcb_at'_def valid_pspace'_def
+                        pred_tcb_at'_def valid_pspace'_def
                   cong: option.case_cong)
   apply auto
   done
@@ -4968,7 +4975,7 @@ apply (rule hoare_gen_asm)
 apply (wp valid_queues_lift_asm createNewCaps_obj_at2[where sz=sz])
 apply (clarsimp simp: projectKO_opts_defs)
 apply (simp add: inQ_def)
-apply (wp createNewCaps_st_tcb_at'[where sz=sz] | simp)+
+apply (wp createNewCaps_pred_tcb_at'[where sz=sz] | simp)+
 done
 
 lemma createWordObjects_valid_pspace_untyped:
@@ -5216,7 +5223,7 @@ lemma createNewCaps_sch_act_wf:
      createNewCaps ty ptr n us
    \<lbrace>\<lambda>_ s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
 apply (wp sch_act_wf_lift_asm_futz
-          createNewCaps_st_tcb_at'[where sz=sz]
+          createNewCaps_pred_tcb_at'[where sz=sz]
           createNewCaps_obj_at'[where sz=sz]
      | simp)+
 done
@@ -5293,7 +5300,7 @@ proof (rule hoare_gen_asm, erule conjE)
                createNewCaps_irq_handlers' createNewCaps_vms
                createNewCaps_valid_queues
                createNewCaps_valid_queues'
-               createNewCaps_st_tcb_at' cnc_ct_not_inQ
+               createNewCaps_pred_tcb_at' cnc_ct_not_inQ
                createNewCaps_ct_idle_or_in_cur_domain'
                createNewCaps_sch_act_wf
            | simp)+
@@ -5396,11 +5403,11 @@ lemma createObjects_pspace_no_overlap':
   apply (simp add:p_assoc_help)+
 done
 
-lemma createObjects_st_tcb_at':
-  "\<lbrace>st_tcb_at' P t and K (range_cover ptr sz (objBitsKO (injectKOS val) + gbits) n \<and> n \<noteq> 0) and 
-    pspace_aligned' and pspace_distinct' and pspace_no_overlap' ptr sz\<rbrace>
-  createObjects ptr n val gbits \<lbrace>\<lambda>rv. st_tcb_at' P t\<rbrace>"
-  apply (simp add: st_tcb_at'_def createObjects_def)
+lemma createObjects_pred_tcb_at':
+  "\<lbrace>pred_tcb_at' proj P t and K (range_cover ptr sz (objBitsKO (injectKOS val) + gbits) n \<and> n \<noteq> 0) 
+     and pspace_aligned' and pspace_distinct' and pspace_no_overlap' ptr sz\<rbrace>
+  createObjects ptr n val gbits \<lbrace>\<lambda>rv. pred_tcb_at' proj P t\<rbrace>"
+  apply (simp add: pred_tcb_at'_def createObjects_def)
   apply (wp createObjects_orig_obj_at')
   apply auto
   done
@@ -5450,7 +5457,7 @@ lemma createObjects_sch:
   createObjects ptr n val gbits 
   \<lbrace>\<lambda>rv s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
 apply (rule hoare_gen_asm)
-apply (wp sch_act_wf_lift_asm createObjects_st_tcb_at' createObjects_orig_obj_at3 | force)+
+apply (wp sch_act_wf_lift_asm createObjects_pred_tcb_at' createObjects_orig_obj_at3 | force)+
 done
 
 lemma createObjects_queues:
@@ -5459,7 +5466,7 @@ lemma createObjects_queues:
   createObjects ptr n val gbits 
   \<lbrace>\<lambda>rv. valid_queues\<rbrace>"
   apply (wp valid_queues_lift_asm [unfolded pred_conj_def, OF createObjects_orig_obj_at3]
-            createObjects_st_tcb_at' [unfolded pred_conj_def])
+            createObjects_pred_tcb_at' [unfolded pred_conj_def])
     apply fastforce
    apply (wp)
   apply fastforce

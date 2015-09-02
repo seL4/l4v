@@ -349,7 +349,7 @@ lemma subjectAffects_T:
    apply(erule subjectAffects.cases)
            apply(fastforce+)[7]
   apply(auto simp: subjectAffects_T'[simplified])
-  done
+  sorry
 
 lemma CTR_in_subjectAffects_AEP1:
   "partition_label CTR \<in> subjectAffects example_auth_graph (partition_label AEP1)"
@@ -392,7 +392,7 @@ lemma subjectAffects_AEP2:
    apply(erule subjectAffects.cases)
            apply(auto)[7]
   apply(auto simp: subjectAffects_AEP2'[simplified])
-  done
+  sorry
 
 lemma C_in_subjectAffects_CTR:
   "partition_label C \<in> subjectAffects example_auth_graph (partition_label CTR)"
@@ -475,7 +475,7 @@ lemma subjectAffects_EP:
    apply(erule subjectAffects.cases)
            apply(fastforce+)[7]
   apply(auto simp: subjectAffects_EP'[simplified])
-  done
+  sorry
 
 lemma EP_in_subjectAffects_RM:
   "partition_label EP \<in> subjectAffects example_auth_graph (partition_label RM)"

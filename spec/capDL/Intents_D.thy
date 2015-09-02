@@ -110,6 +110,10 @@ datatype cdl_tcb_intent =
  |  TcbSetIPCBufferIntent word32
     (* SetSpace: (target), fault_ep, (cspace_root), cspace_root_data, (vspace_root), vspace_root_data *)
  |  TcbSetSpaceIntent word32 cdl_raw_capdata cdl_raw_capdata
+    (* BindAEP: (target), (aep) *)
+ |  TcbBindAEPIntent
+    (* UnbindAEP: (target) *)
+ |  TcbUnbindAEPIntent
 
 datatype cdl_untyped_intent =
     (* Retype: (target), type, size_bits, (root), node_index, node_depth, node_offset, node_window, has_children *)

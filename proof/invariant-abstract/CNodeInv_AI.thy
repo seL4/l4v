@@ -848,6 +848,15 @@ lemma suspend_not_recursive:
   done
 
 
+lemma unbind_aep_not_recursive:
+  "\<lbrace>\<lambda>s. P (not_recursive_cspaces s)\<rbrace>
+     unbind_async_endpoint tcb
+   \<lbrace>\<lambda>rv s. P (not_recursive_cspaces s)\<rbrace>"
+  apply (simp add: not_recursive_cspaces_def cte_wp_at_caps_of_state)
+  apply (wp unbind_async_endpoint_caps_of_state)
+  done
+
+
 lemma get_cap_det2:
   "(r, s') \<in> fst (get_cap p s) \<Longrightarrow> get_cap p s = ({(r, s)}, False) \<and> s' = s"
   apply (rule conjI)
@@ -1045,9 +1054,11 @@ termination rec_del
    apply (clarsimp simp: in_monad cte_wp_at_caps_of_state
                          fst_cte_ptrs_def
                   split: split_if_asm)
-   apply (frule(1) use_valid [OF _ suspend_thread_cap])
+   apply (frule(1) use_valid [OF _ unbind_async_endpoint_caps_of_state],
+          frule(1) use_valid [OF _ suspend_thread_cap])
    apply clarsimp
    apply (erule use_valid [OF _ suspend_not_recursive])
+   apply (erule use_valid [OF _ unbind_aep_not_recursive])
    apply simp
   apply (clarsimp simp: in_monad cte_wp_at_caps_of_state
                         fst_cte_ptrs_def zombie_cte_bits_def
@@ -1753,8 +1764,8 @@ lemma cap_swap_fd_zombies[wp]:
   done
 
 
-lemma cap_swap_st_tcb_at[wp]:
-  "\<lbrace>st_tcb_at P t\<rbrace> cap_swap c sl c' sl' \<lbrace>\<lambda>rv. st_tcb_at P t\<rbrace>"
+lemma cap_swap_pred_tcb_at[wp]:
+  "\<lbrace>pred_tcb_at proj P t\<rbrace> cap_swap c sl c' sl' \<lbrace>\<lambda>rv. pred_tcb_at proj P t\<rbrace>"
   unfolding cap_swap_def by (wp | simp)+
   
 
@@ -2681,7 +2692,7 @@ lemma suspend_makes_halted[wp]:
   "\<lbrace>valid_objs\<rbrace> IpcCancel_A.suspend thread \<lbrace>\<lambda>_. st_tcb_at halted thread\<rbrace>"
   unfolding IpcCancel_A.suspend_def
   by (wp hoare_strengthen_post [OF sts_st_tcb_at]
-    | clarsimp elim!: st_tcb_weakenE)+
+    | clarsimp elim!: pred_tcb_weakenE)+
 
 
 lemma finalise_cap_makes_halted:
@@ -2690,14 +2701,14 @@ lemma finalise_cap_makes_halted:
     finalise_cap cap ex
    \<lbrace>\<lambda>rv s. \<forall>t \<in> obj_refs (fst rv). halted_if_tcb t s\<rbrace>"
   apply (case_tac cap, simp_all)
-            apply (wp
+            apply (wp unbind_async_endpoint_valid_objs
                  | clarsimp simp: o_def valid_cap_def cap_table_at_typ
                                   is_tcb obj_at_def 
                  | clarsimp simp: halted_if_tcb_def
                            split: option.split
                  | intro impI conjI
                  | rule hoare_drop_imp)+
-   apply (fastforce simp: st_tcb_at_def obj_at_def is_tcb
+   apply (fastforce simp: pred_tcb_at_def obj_at_def is_tcb
                   dest!: final_zombie_not_live)
   apply (case_tac arch_cap, simp_all add: arch_finalise_cap_def)
       apply (wp
@@ -2775,25 +2786,9 @@ lemma get_irq_slot_cte_at[wp]:
   "\<lbrace>invs\<rbrace> get_irq_slot irq \<lbrace>cte_at\<rbrace>"
   by wp
 
-crunch emptyable[wp]: deleting_irq_handler "emptyable sl"
-  (simp: crunch_simps lift: emptyable_lift 
-     wp: crunch_wps suspend_emptyable)
-
-crunch emptyable[wp]: arch_finalise_cap "emptyable sl"
-  (simp: crunch_simps lift: emptyable_lift 
-     wp: crunch_wps suspend_emptyable)
-
-lemma finalise_cap_emptyable[wp]:
-"\<lbrace>invs and emptyable sl\<rbrace> finalise_cap a b \<lbrace>\<lambda>_. emptyable sl\<rbrace>"
-  apply (case_tac a,simp_all)
-   apply (wp|clarsimp|intro conjI)+
-  done
-
-(* Why the following is no longer true ?
 crunch emptyable[wp]: finalise_cap "emptyable sl"
   (simp: crunch_simps lift: emptyable_lift 
-     wp: crunch_wps suspend_emptyable)
-*)
+     wp: crunch_wps suspend_emptyable unbind_async_endpoint_invs unbind_maybe_aep_invs)
 
 lemma cap_swap_for_delete_emptyable[wp]:
   "\<lbrace>emptyable sl and emptyable sl'\<rbrace> cap_swap_for_delete sl' sl \<lbrace>\<lambda>rv. emptyable sl\<rbrace>"
@@ -2832,7 +2827,7 @@ lemma cte_wp_at_emptyableD:
   apply (clarsimp simp add: obj_at_def is_tcb)
   apply (erule(1) valid_objsE)
   apply (clarsimp simp: cte_wp_at_cases valid_obj_def valid_tcb_def
-                        tcb_cap_cases_def st_tcb_at_def obj_at_def
+                        tcb_cap_cases_def pred_tcb_at_def obj_at_def
                  split: Structures_A.thread_state.splits)
   done
 
@@ -2986,7 +2981,8 @@ next
      apply (clarsimp simp: cte_wp_at_caps_of_state replaceable_def)
     apply (frule cte_wp_at_valid_objs_valid_cap, clarsimp+)
     apply (frule invs_valid_asid_table)
-    apply (clarsimp simp add: invs_def valid_state_def 
+    apply (frule invs_sym_refs)
+    apply (clarsimp simp add: invs_def valid_state_def
       invs_valid_objs invs_psp_aligned)
     apply (drule(1) if_unsafe_then_capD, clarsimp+)
     done
@@ -3164,7 +3160,7 @@ lemma cap_delete_typ_at:
 
 
 lemma cap_swap_fd_st_tcb_at[wp]:
-  "\<lbrace>st_tcb_at P t\<rbrace> cap_swap_for_delete sl sl' \<lbrace>\<lambda>rv. st_tcb_at P t\<rbrace>"
+  "\<lbrace>pred_tcb_at proj P t\<rbrace> cap_swap_for_delete sl sl' \<lbrace>\<lambda>rv. pred_tcb_at proj P t\<rbrace>"
   unfolding cap_swap_for_delete_def
   by (wp, simp)
 
@@ -4177,7 +4173,7 @@ lemma cap_move_src_slot_Null:
   by (wp set_cdt_cte_wp_at set_cap_cte_wp_at' | simp)+
 
 
-crunch st_tcb[wp]: cap_move "st_tcb_at P t"
+crunch pred_tcb_at[wp]: cap_move "pred_tcb_at proj P t"
 
 
 lemmas cap_revoke_cap_table[wp] = cap_table_at_lift_valid [OF cap_revoke_typ_at]
@@ -4190,10 +4186,10 @@ lemma recycle_cap_appropriateness:
   "\<lbrace>valid_cap cap\<rbrace> recycle_cap is_final cap \<lbrace>\<lambda>rv s. appropriate_cte_cap rv = appropriate_cte_cap cap\<rbrace>"
   apply (simp add: recycle_cap_def)
   apply (rule hoare_pre)
-   apply (wp gts_st_tcb_at | wpc | simp)+
+   apply (wp thread_get_wp gts_wp | wpc | simp add: get_bound_aep_def)+
    apply (simp add: arch_recycle_cap_def o_def split del: split_if)   
    apply (wp | wpc | simp add: | wp_once hoare_drop_imps)+
-  apply (auto simp: appropriate_cte_cap_def fun_eq_iff valid_cap_def tcb_at_st_tcb_at)
+  apply (auto simp: appropriate_cte_cap_def fun_eq_iff valid_cap_def tcb_at_st_tcb_at pred_tcb_at_def)
   done
 
 
@@ -4345,7 +4341,7 @@ lemma invoke_cnode_invs[wp]:
   done
 
 
-crunch st_tcb_at[wp]: cap_move "st_tcb_at P t"
+crunch pred_tcb_at[wp]: cap_move "pred_tcb_at proj P t"
 
 
 (* FIXME: rename, move *)

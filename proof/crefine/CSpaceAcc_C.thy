@@ -172,7 +172,7 @@ lemma updateMDB_pre_cte_at:
   unfolding updateMDB_def Let_def
   apply simp
   apply (intro impI)
-  apply (wp getCTE_wp)
+  apply (wp_trace getCTE_wp)
   apply clarsimp
   done
 

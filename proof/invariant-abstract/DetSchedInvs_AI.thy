@@ -32,7 +32,7 @@ definition st_tcb_at_kh where
 "st_tcb_at_kh test \<equiv> obj_at_kh (\<lambda>ko. \<exists>tcb. ko = TCB tcb \<and> test (tcb_state tcb))"
 
 lemma st_tcb_at_kh_simp[simp]: "st_tcb_at_kh test t (kheap st) = st_tcb_at test t st"
-  apply (simp add: st_tcb_at_def st_tcb_at_kh_def)
+  apply (simp add: pred_tcb_at_def st_tcb_at_kh_def)
   done
 
 

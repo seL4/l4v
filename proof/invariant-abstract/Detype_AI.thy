@@ -31,10 +31,10 @@ lemma cte_wp_at_detype[simp]:
   done
 
 
-lemma st_tcb_at_detype[simp]:
-  "(st_tcb_at P t (detype S s))
-    = (st_tcb_at P t s \<and> t \<notin> S)"
-  by (fastforce simp add: st_tcb_at_def)
+lemma pred_tcb_at_detype[simp]:
+  "(pred_tcb_at proj P t (detype S s))
+    = (pred_tcb_at proj P t s \<and> t \<notin> S)"
+  by (fastforce simp add: pred_tcb_at_def)
 
 
 lemma cdt_detype[simp]:
@@ -459,7 +459,7 @@ lemma valid_cap2:
      apply (fastforce simp: cte_wp_at_caps_of_state dest: non_null_caps)
     apply (drule has_reply_cap_cte_wpD)
     apply (drule valid_reply_capsD [OF _ vreply])
-    apply (simp add: st_tcb_at_def)
+    apply (simp add: pred_tcb_at_def)
     apply (fastforce dest: live_okE)
     done
 
@@ -475,14 +475,7 @@ proof (simp add: invs_def valid_state_def valid_pspace_def
   have refsym: "sym_refs (state_refs_of s)"
     using invs by (simp add: invs_def valid_state_def valid_pspace_def)
   have refs_of: "\<And>obj p. \<lbrakk> ko_at obj p s \<rbrakk> \<Longrightarrow> refs_of obj \<subseteq> (UNIV - untyped_range cap \<times> UNIV)"
-    apply (drule sym_refs_ko_atD [OF _ refsym])
-    apply clarsimp
-    apply (drule(1) bspec)
-    apply clarsimp
-    apply (drule live_okE)
-     apply (rule refs_of_live, clarsimp)
-    apply simp
-    done
+    by (fastforce intro: refs_of_live dest!: sym_refs_ko_atD[OF _ refsym] live_okE)
   have refs_of2: "\<And>obj p. kheap s p = Some obj
                        \<Longrightarrow> refs_of obj \<subseteq> (UNIV - untyped_range cap \<times> UNIV)"
     by (simp add: refs_of obj_at_def)
@@ -504,12 +497,13 @@ proof (simp add: invs_def valid_state_def valid_pspace_def
         apply (clarsimp elim!: ranE)
         apply (erule valid_cap [OF _ valid_cap2])
         apply (fastforce intro!: cte_wp_at_tcbI)
-       apply (clarsimp simp: valid_tcb_state_def
-                      split: Structures_A.thread_state.split_asm)
+       apply (clarsimp simp: valid_tcb_state_def valid_bound_aep_def
+                      split: Structures_A.thread_state.split_asm option.splits)
       apply (frule refs_of)
       apply (case_tac endpoint, (fastforce simp: valid_ep_def)+)
      apply (frule refs_of)
-     apply (case_tac async_ep, (fastforce simp: valid_aep_def)+)
+     apply (case_tac "aep_obj async_ep_ext")
+       apply (auto simp: valid_aep_def aep_bound_refs_def split: option.splits)
     done
 
   show "valid_objs (detype (untyped_range cap) s)"
@@ -544,7 +538,7 @@ proof (simp add: invs_def valid_state_def valid_pspace_def
     apply (insert ct_act invs)
     apply (drule tcb_at_invs)
     apply (simp add: cur_tcb_def ct_in_state_def)
-    apply (clarsimp simp: detype_def st_tcb_at_def)
+    apply (clarsimp simp: detype_def pred_tcb_at_def)
     apply (drule live_okE)
      apply fastforce
     apply simp
@@ -691,7 +685,7 @@ proof (simp add: invs_def valid_state_def valid_pspace_def
      apply (erule allEI)
      apply (rule impI)
      apply (elim impE exE conjE, intro exI, assumption)
-     apply (simp add: st_tcb_at_def)
+     apply (simp add: pred_tcb_at_def)
      apply (fastforce dest: live_okE)
     apply (clarsimp simp: unique_reply_caps_def)
     done
@@ -1761,8 +1755,8 @@ lemma monad_eq_split_tail:
 
 
 lemma shift_distinct_helper:
-  "\<lbrakk> (x :: 'a :: len word) < bound; y < bound; x \<noteq> y; x << n = y << n; n < len_of TYPE('a);
-      bound - 1 \<le> 2 ^ ((len_of TYPE('a)) - n) - 1 \<rbrakk>
+  "\<lbrakk> (x :: 'a :: len word) < bnd; y < bnd; x \<noteq> y; x << n = y << n; n < len_of TYPE('a);
+      bnd - 1 \<le> 2 ^ ((len_of TYPE('a)) - n) - 1 \<rbrakk>
     \<Longrightarrow> P"
   apply (cases "n = 0")
    apply simp

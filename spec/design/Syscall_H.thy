@@ -123,8 +123,13 @@ defs handleWait_def:
         (case epCap of
               EndpointCap _ _ _ True _ \<Rightarrow>  
                 withoutFailure $ receiveIPC thread epCap
-            | AsyncEndpointCap _ _ _ True \<Rightarrow>  
-                withoutFailure $ receiveAsyncIPC thread epCap
+            | AsyncEndpointCap ptr _ _ True \<Rightarrow>   (doE
+                aep \<leftarrow> withoutFailure $ getAsyncEP ptr;
+                boundTCB \<leftarrow> returnOk $ aepBoundTCB aep;
+                if boundTCB = Just thread \<or> boundTCB = Nothing
+                 then withoutFailure $ receiveAsyncIPC thread epCap
+                 else throw $ MissingCapability_ \<lparr> missingCapBitsLeft= 0 \<rparr>
+            odE)
             | _ \<Rightarrow>   throw $ MissingCapability_ \<lparr> missingCapBitsLeft= 0 \<rparr>)
             
     odE)

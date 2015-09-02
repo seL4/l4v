@@ -428,12 +428,16 @@ where
 | "finalise_cap (ReplyCap r m)           final = return (NullCap, None)"
 | "finalise_cap (EndpointCap r b R)      final =
       (liftM (K (NullCap, None)) $ when final $ ep_cancel_all r)"
-| "finalise_cap (AsyncEndpointCap r b R) final =
-      (liftM (K (NullCap, None)) $ when final $ aep_cancel_all r)"
+| "finalise_cap (AsyncEndpointCap r b R) final = 
+      (liftM (K (NullCap, None)) $ when final $ do
+          unbind_maybe_aep r;
+          aep_cancel_all r
+        od)"
 | "finalise_cap (CNodeCap r bits g)  final =
       return (if final then Zombie r (Some bits) (2 ^ bits) else NullCap, None)"
 | "finalise_cap (ThreadCap r)            final =
       do
+         when final $ unbind_async_endpoint r;
          when final $ suspend r;
          return (if final then (Zombie r None 5) else NullCap, None)
       od"
@@ -463,6 +467,8 @@ text {* This operation is used to delete a capability when it is known that a
 long-running operation is impossible. It is equivalent to calling the regular
 finalisation operation. It cannot be defined in that way as doing so
 would create a circular definition. *}
+
+
 lemma fast_finalise_def2:
   "fast_finalise cap final = do
      assert (can_fast_finalise cap);
@@ -830,7 +836,8 @@ definition
     (case tp of
           None \<Rightarrow> do
             st \<leftarrow> get_thread_state ptr;
-            assert (st = Inactive);
+            aep \<leftarrow> get_bound_aep ptr;
+            assert (st = Inactive \<and> aep = None);
             thread_set (tcb_registers_caps_merge default_tcb) ptr;
             do_extended_op (recycle_cap_ext ptr);
             return $ ThreadCap ptr

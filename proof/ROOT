@@ -44,7 +44,7 @@ session BaseRefine = AInvs +
     "refine/Include"
 
 session AInvs = ASpec +
-  options [timeout=3600]
+  options [timeout=3600, quick_and_dirty]
   theories
     "invariant-abstract/AInvs"
     "invariant-abstract/EmptyFail_AI"
@@ -94,9 +94,9 @@ session Access in "access-control" = AInvs +
     "ExampleSystem"
 
 session InfoFlow in "infoflow" = Access +
-  theories
+  theories [quick_and_dirty]
     "Noninterference"
-  theories
+  theories [quick_and_dirty]
     "Noninterference_Base_Refinement"
     "PolicyExample"
     "PolicySystemSAC"

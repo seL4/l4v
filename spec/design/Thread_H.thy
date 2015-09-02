@@ -115,18 +115,6 @@ defs doFaultTransfer_def:
         asUser receiver $ setRegister badgeRegister badge
 od)"
 
-defs doAsyncTransfer_def:
-"doAsyncTransfer badge msgWord thread\<equiv> (do
-        receiveBuffer \<leftarrow> lookupIPCBuffer True thread;
-        msgTransferred \<leftarrow> setMRs thread receiveBuffer [msgWord];
-        asUser thread $ setRegister badgeRegister badge;
-        setMessageInfo thread $ MI_ \<lparr>
-            msgLength= msgTransferred,
-            msgExtraCaps= 0,
-            msgCapsUnwrapped= 0,
-            msgLabel= 0 \<rparr>
-od)"
-
 defs schedule_def:
 "schedule\<equiv> (do
         curThread \<leftarrow> getCurThread;
@@ -257,6 +245,12 @@ defs setThreadState_def:
         when (Not runnable \<and> curThread = tptr \<and> action = ResumeCurrentThread) $
             rescheduleRequired
 od)"
+
+defs getBoundAEP_def:
+"getBoundAEP \<equiv> threadGet tcbBoundAEP"
+
+defs setBoundAEP_def:
+"setBoundAEP aepptr tptr\<equiv> threadSet (\<lambda> t. t \<lparr> tcbBoundAEP := aepptr \<rparr>) tptr"
 
 defs tcbSchedEnqueue_def:
 "tcbSchedEnqueue thread\<equiv> (do

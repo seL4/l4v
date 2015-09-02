@@ -801,7 +801,7 @@ lemma decodeARMPageTableInvocation_ccorres:
                         if_1_0_0 word_sle_def word_sless_def)
   apply (rule conjI)
    apply (auto simp: ct_in_state'_def isCap_simps valid_tcb_state'_def
-              elim!: st_tcb'_weakenE dest!: st_tcb_at_idle_thread')[1]
+              elim!: pred_tcb'_weakenE dest!: st_tcb_at_idle_thread')[1]
   apply (rule conjI)
    apply (clarsimp simp: isCap_simps)
    apply (subgoal_tac "s \<turnstile>' fst (extraCaps ! 0)")
@@ -812,8 +812,8 @@ lemma decodeARMPageTableInvocation_ccorres:
                           mask_add_aligned page_directory_at'_def
                           less_kernelBase_valid_pde_offset''
                           word_le_nat_alt[symmetric])
-    apply (auto simp: ct_in_state'_def st_tcb_at_tcb_at' mask_def valid_tcb_state'_def
-               elim!: st_tcb'_weakenE dest!: st_tcb_at_idle_thread')[1]
+    apply (auto simp: ct_in_state'_def pred_tcb_at' mask_def valid_tcb_state'_def
+               elim!: pred_tcb'_weakenE dest!: st_tcb_at_idle_thread')[1]
    apply (clarsimp simp: neq_Nil_conv excaps_in_mem_def
                          slotcap_in_mem_def)
    apply (auto dest: ctes_of_valid')[1]
@@ -2937,7 +2937,7 @@ lemma decodeARMFrameInvocation_ccorres:
                            excaps_map_def valid_tcb_state'_def
                            plus_minus_one_rewrite32
                  simp del: less_1_simp
-      | rule conjI | erule st_tcb'_weakenE disjE
+              | rule conjI | erule pred_tcb'_weakenE disjE
       | erule(3) is_aligned_no_overflow3[OF vmsz_aligned_addrFromPPtr(3)[THEN iffD2]]
       | drule st_tcb_at_idle_thread' interpret_excaps_eq
       | erule order_le_less_trans[rotated]
@@ -3367,25 +3367,25 @@ lemma decodeARMPageDirectoryInvocation_ccorres:
            linorder_not_less linorder_not_le valid_cap_simps')
          apply (clarsimp dest!:ct_active_runnable')
          apply (simp add:ct_in_state'_def)
-         apply (erule st_tcb'_weakenE)
+         apply (erule pred_tcb'_weakenE)
           apply (case_tac st,simp+)
         apply (clarsimp simp: sysargs_rel_to_n word_le_nat_alt mask_def
           linorder_not_less linorder_not_le valid_cap_simps')
         apply (clarsimp dest!:ct_active_runnable')
         apply (simp add:ct_in_state'_def)
-        apply (erule st_tcb'_weakenE)
+        apply (erule pred_tcb'_weakenE)
         apply (case_tac st,simp+)
        apply (clarsimp simp: sysargs_rel_to_n word_le_nat_alt mask_def
          linorder_not_less linorder_not_le valid_cap_simps')
        apply (clarsimp dest!:ct_active_runnable')
        apply (simp add:ct_in_state'_def)
-       apply (erule st_tcb'_weakenE)
+       apply (erule pred_tcb'_weakenE)
        apply (case_tac st,simp+)
       apply (clarsimp simp: sysargs_rel_to_n word_le_nat_alt mask_def
         linorder_not_less linorder_not_le valid_cap_simps')
       apply (clarsimp dest!:ct_active_runnable')
       apply (simp add:ct_in_state'_def)
-      apply (erule st_tcb'_weakenE)
+      apply (erule pred_tcb'_weakenE)
       apply (case_tac st,simp+)
      apply (frule cap_get_tag_isCap_unfolded_H_cap(15))
      apply (clarsimp simp: cap_lift_page_directory_cap hd_conv_nth
@@ -4051,7 +4051,7 @@ lemma Arch_decodeInvocation_ccorres:
     apply (intro conjI)
           apply (simp add:Invariants_H.invs_queues)
          apply (simp add: valid_tcb_state'_def)
-        apply (fastforce elim!:st_tcb'_weakenE dest!:st_tcb_at_idle_thread')
+        apply (fastforce elim!:pred_tcb'_weakenE dest!:st_tcb_at_idle_thread')
        apply (clarsimp simp:st_tcb_at'_def obj_at'_def)
        apply (case_tac "tcbState obja", (simp add: runnable'_def)+)
       apply fastforce
@@ -4085,7 +4085,7 @@ lemma Arch_decodeInvocation_ccorres:
     apply simp
    apply (auto simp: ct_in_state'_def valid_tcb_state'_def
               dest!: st_tcb_at_idle_thread'
-              elim!: st_tcb'_weakenE)[1]
+              elim!: pred_tcb'_weakenE)[1]
   apply (clarsimp simp: if_1_0_0 cte_wp_at_ctes_of asidHighBits_handy_convs
                         word_sle_def word_sless_def asidLowBits_handy_convs
                         rf_sr_ksCurThread "StrictC'_thread_state_defs"

@@ -59,6 +59,7 @@ lemma findPDForASIDAssert_pd_at_wp:
 
 crunch inv[wp]: findPDForASIDAssert "P"
   (simp: const_def crunch_simps wp: loadObject_default_inv crunch_wps)
+
 lemma pspace_relation_pd:
   assumes p: "pspace_relation (kheap a) (ksPSpace c)" 
   assumes pa: "pspace_aligned a"
@@ -454,6 +455,7 @@ lemma find_free_hw_asid_corres:
 
 crunch aligned'[wp]: findFreeHWASID "pspace_aligned'"
   (simp: crunch_simps)
+
 crunch distinct'[wp]: findFreeHWASID "pspace_distinct'"
   (simp: crunch_simps)
 
@@ -2807,23 +2809,23 @@ lemmas performPageInvocation_typ_ats' [wp] =
 lemmas performASIDPoolInvocation_typ_ats' [wp] =
   typ_at_lifts [OF performASIDPoolInvocation_typ_at']
 
-lemma storePDE_st_tcb_at' [wp]:
-  "\<lbrace>st_tcb_at' P t\<rbrace> storePDE p pde \<lbrace>\<lambda>_. st_tcb_at' P t\<rbrace>"
-  apply (simp add: storePDE_def st_tcb_at'_def)
+lemma storePDE_pred_tcb_at' [wp]:
+  "\<lbrace>pred_tcb_at' proj P t\<rbrace> storePDE p pde \<lbrace>\<lambda>_. pred_tcb_at' proj P t\<rbrace>"
+  apply (simp add: storePDE_def pred_tcb_at'_def)
   apply (rule obj_at_setObject2)
   apply (clarsimp simp add: updateObject_default_def in_monad)
   done
 
-lemma storePTE_st_tcb_at' [wp]:
-  "\<lbrace>st_tcb_at' P t\<rbrace> storePTE p pte \<lbrace>\<lambda>_. st_tcb_at' P t\<rbrace>"
-  apply (simp add: storePTE_def st_tcb_at'_def)
+lemma storePTE_pred_tcb_at' [wp]:
+  "\<lbrace>pred_tcb_at' proj P t\<rbrace> storePTE p pte \<lbrace>\<lambda>_. pred_tcb_at' proj P t\<rbrace>"
+  apply (simp add: storePTE_def pred_tcb_at'_def)
   apply (rule obj_at_setObject2)
   apply (clarsimp simp add: updateObject_default_def in_monad)
   done
 
-lemma setASID_st_tcb_at' [wp]:
-  "\<lbrace>st_tcb_at' P t\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>_. st_tcb_at' P t\<rbrace>"
-  apply (simp add: st_tcb_at'_def)
+lemma setASID_pred_tcb_at' [wp]:
+  "\<lbrace>pred_tcb_at' proj P t\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>_. pred_tcb_at' proj P t\<rbrace>"
+  apply (simp add: pred_tcb_at'_def)
   apply (rule obj_at_setObject2)
   apply (clarsimp simp add: updateObject_default_def in_monad)
   done
@@ -2854,7 +2856,7 @@ lemma storePDE_inQ[wp]:
 
 lemma storePDE_valid_queues [wp]:
   "\<lbrace>Invariants_H.valid_queues\<rbrace> storePDE p pde \<lbrace>\<lambda>_. Invariants_H.valid_queues\<rbrace>"
-  by (wp valid_queues_lift | simp add: st_tcb_at'_def)+
+  by (wp valid_queues_lift | simp add: pred_tcb_at'_def)+
 
 lemma storePDE_valid_queues' [wp]:
   "\<lbrace>valid_queues'\<rbrace> storePDE p pde \<lbrace>\<lambda>_. valid_queues'\<rbrace>"
@@ -3035,7 +3037,7 @@ lemma storePTE_inQ[wp]:
 
 lemma storePTE_valid_queues [wp]:
   "\<lbrace>Invariants_H.valid_queues\<rbrace> storePTE p pde \<lbrace>\<lambda>_. Invariants_H.valid_queues\<rbrace>"
-  by (wp valid_queues_lift | simp add: st_tcb_at'_def)+
+  by (wp valid_queues_lift | simp add: pred_tcb_at'_def)+
 
 lemma storePTE_valid_queues' [wp]:
   "\<lbrace>valid_queues'\<rbrace> storePTE p pde \<lbrace>\<lambda>_. valid_queues'\<rbrace>"
@@ -3077,7 +3079,7 @@ lemma storePTE_ifunsafe [wp]:
    apply wp
   apply simp
   done
-  
+
 lemma storePTE_idle [wp]:
   "\<lbrace>valid_idle'\<rbrace> storePTE p pte \<lbrace>\<lambda>rv. valid_idle'\<rbrace>"
   unfolding valid_idle'_def
@@ -3219,7 +3221,7 @@ lemma setASIDPool_inQ[wp]:
 
 lemma setASIDPool_valid_queues [wp]:
   "\<lbrace>Invariants_H.valid_queues\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>_. Invariants_H.valid_queues\<rbrace>"
-  by (wp valid_queues_lift | simp add: st_tcb_at'_def)+
+  by (wp valid_queues_lift | simp add: pred_tcb_at'_def)+
 
 lemma setASIDPool_valid_queues' [wp]:
   "\<lbrace>valid_queues'\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>_. valid_queues'\<rbrace>"
@@ -3263,7 +3265,9 @@ lemma setASIDPool_it' [wp]:
 lemma setASIDPool_idle [wp]:
   "\<lbrace>valid_idle'\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>rv. valid_idle'\<rbrace>"
   unfolding valid_idle'_def
-  apply (rule hoare_lift_Pf [where f="ksIdleThread"]) by wp
+  apply (rule hoare_lift_Pf [where f="ksIdleThread"])
+  apply wp
+  done
 
 lemma setASIDPool_irq_states' [wp]: 
   "\<lbrace>valid_irq_states'\<rbrace> setObject p (ap::asidpool) \<lbrace>\<lambda>_. valid_irq_states'\<rbrace>"

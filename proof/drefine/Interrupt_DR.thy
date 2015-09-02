@@ -37,7 +37,6 @@ definition
 where
   "cdl_irq_control_invocation_relation x y \<equiv> x = translate_irq_control_invocation y"
 
-
 lemma decode_irq_control_corres:
   "\<lbrakk> Some (IrqControlIntent ui) = transform_intent (invocation_type label') args';
      cap = transform_cap cap';
@@ -99,7 +98,6 @@ lemma decode_irq_control_corres:
     apply (cases ui)
      apply (auto simp: dcorres_alternative_throw)
   done
-
 
 (* Interrupt Handler Invocations *)
 
@@ -322,7 +320,7 @@ prefer 4
       apply (rule dcorres_rhs_noop_above[OF timer_tick_dcorres])
       apply (rule dcorres_symb_exec_r[OF dcorres_machine_op_noop])
       apply (wp dmo_dwp hoare_TrueI| simp)+
-  apply (clarsimp simp:transform_def invs_def valid_state_def dest!: valid_irq_node_cte_at_irq_slot )+
+  apply (clarsimp simp:transform_def invs_def valid_state_def dest!: valid_irq_node_cte_at_irq_slot)+
   apply (simp add:cte_wp_at_caps_of_state)
 done
 
@@ -387,7 +385,6 @@ lemma dcorres_invoke_irq_control:
   apply (wp set_irq_state_dwp,simp)
   done
 
-
 lemma op_eq_simp:"(op = y) = (\<lambda>x. x = y)"
   apply (rule ext)
   apply auto
@@ -410,7 +407,6 @@ lemma get_irq_slot_ex_cte_cap_wp_to:
     apply clarsimp
 done
 
-
 crunch is_original[wp] : fast_finalise "\<lambda>s. is_original_cap s slot"
   (wp: crunch_wps dxo_wp_weak simp: crunch_simps)
 
@@ -424,7 +420,6 @@ lemma cap_delete_one_original:
   apply (clarsimp simp:set_cdt_def)
   apply (wp dxo_wp_weak | clarsimp)+
 done
-
 
 lemma cte_wp_at_neq_slot_set_cap:
   "slot\<noteq> slot'  \<Longrightarrow> \<lbrace>cte_wp_at P slot and cte_at slot'\<rbrace>

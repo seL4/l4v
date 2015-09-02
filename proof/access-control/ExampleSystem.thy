@@ -316,7 +316,8 @@ where
      tcb_fault_handler = undefined, 
      tcb_ipc_buffer    = undefined,
      tcb_context       = undefined,
-     tcb_fault         = undefined \<rparr>"
+     tcb_fault         = undefined, 
+     tcb_bound_aep     = None \<rparr>"
 
 
 text {* T1's tcb *}
@@ -336,7 +337,8 @@ where
      tcb_fault_handler = undefined, 
      tcb_ipc_buffer    = undefined,
      tcb_context       = undefined,
-     tcb_fault         = undefined \<rparr>"
+     tcb_fault         = undefined,
+     tcb_bound_aep     = None \<rparr>"
 
 definition
  "obj1_10 \<equiv> Structures_A.CNode 10 (Map.empty([] \<mapsto> cap.NullCap))"
@@ -542,6 +544,14 @@ lemma tcb_states_of_state_1:
   apply (simp add: kh1_def kh1_obj_def )
   done
 
+lemma thread_bound_aeps_1:
+  "thread_bound_aeps s1 = empty"
+  unfolding s1_def thread_bound_aeps_def
+  apply (rule ext)
+  apply (simp add: get_tcb_def)
+  apply (simp add: kh1_def kh1_obj_def )
+  done
+
 declare AllowSend_def[simp] AllowRecv_def[simp]
   
 lemma domains_of_state_s1[simp]:
@@ -557,24 +567,25 @@ lemma domains_of_state_s1[simp]:
 lemma "pas_refined Sys1PAS s1"
   apply (clarsimp simp: pas_refined_def)
   apply (intro conjI)
-    apply (simp add: Sys1_wellformed)
-    apply (simp add: irq_map_wellformed_aux_def s1_def Sys1AgentMap_simps Sys1PAS_def)
-   apply (clarsimp simp: auth_graph_map_def 
-                         Sys1PAS_def
-                         state_objs_to_policy_def
-                         state_bits_to_policy_def tcb_domain_map_wellformed_aux_def
-                         )+
-   apply (erule state_bits_to_policyp.cases, simp_all, clarsimp)
+       apply (simp add: Sys1_wellformed)
+      apply (simp add: irq_map_wellformed_aux_def s1_def Sys1AgentMap_simps Sys1PAS_def)
+     apply (clarsimp simp: auth_graph_map_def 
+                           Sys1PAS_def
+                           state_objs_to_policy_def
+                           state_bits_to_policy_def tcb_domain_map_wellformed_aux_def
+                           )+
+    apply (erule state_bits_to_policyp.cases, simp_all, clarsimp)
+         apply (drule s1_caps_of_state, clarsimp)
+         apply (simp add: Sys1AuthGraph_def complete_AuthGraph_def Sys1AuthGraph_aux_def)
+         apply (elim disjE conjE, auto simp: Sys1AgentMap_simps cap_auth_conferred_def cap_rights_to_auth_def)[1]
         apply (drule s1_caps_of_state, clarsimp)
-        apply (simp add: Sys1AuthGraph_def complete_AuthGraph_def Sys1AuthGraph_aux_def)
-        apply (elim disjE conjE, auto simp: Sys1AgentMap_simps cap_auth_conferred_def cap_rights_to_auth_def)[1]
-       apply (drule s1_caps_of_state, clarsimp)
-       apply (elim disjE, simp_all)[1]
-      apply (clarsimp simp: state_refs_of_def thread_states_def tcb_states_of_state_1
-             Sys1AuthGraph_def Sys1AgentMap_simps
-             complete_AuthGraph_def
-             Sys1AuthGraph_aux_def
-             split: if_splits)
+        apply (elim disjE, simp_all add: thread_bound_aeps_def)[1]
+       apply (clarsimp simp: state_refs_of_def thread_states_def tcb_states_of_state_1
+              Sys1AuthGraph_def Sys1AgentMap_simps
+              complete_AuthGraph_def
+              Sys1AuthGraph_aux_def
+              split: if_splits)
+      apply (simp add:  thread_bound_aeps_1)
      apply (simp add: s1_def) (* this is OK because cdt is empty..*)
 
     apply (clarsimp simp: state_vrefs_def 
@@ -587,13 +598,13 @@ lemma "pas_refined Sys1PAS s1"
                      dest!: graph_ofD
                      split: if_splits)
 
-  apply (rule subsetI, clarsimp)
-  apply (erule state_asids_to_policy_aux.cases)
-   apply clarsimp
-   apply (drule s1_caps_of_state, clarsimp)
-   apply (simp add: Sys1AuthGraph_def complete_AuthGraph_def Sys1AuthGraph_aux_def Sys1PAS_def Sys1ASIDMap_def)
-   apply (elim disjE conjE, simp_all add: Sys1AgentMap_simps cap_auth_conferred_def cap_rights_to_auth_def asid1_3065_def asid1_3063_def 
-     asid_low_bits_def asid_high_bits_of_def )[1]
+   apply (rule subsetI, clarsimp)
+   apply (erule state_asids_to_policy_aux.cases)
+     apply clarsimp
+     apply (drule s1_caps_of_state, clarsimp)
+     apply (simp add: Sys1AuthGraph_def complete_AuthGraph_def Sys1AuthGraph_aux_def Sys1PAS_def Sys1ASIDMap_def)
+     apply (elim disjE conjE, simp_all add: Sys1AgentMap_simps cap_auth_conferred_def cap_rights_to_auth_def asid1_3065_def asid1_3063_def 
+       asid_low_bits_def asid_high_bits_of_def )[1]
     apply (clarsimp simp: state_vrefs_def 
                            vs_refs_no_global_pts_def
                            s1_def kh1_def  Sys1AgentMap_simps
@@ -606,11 +617,11 @@ lemma "pas_refined Sys1PAS s1"
    apply (clarsimp simp: s1_def)
   apply (rule subsetI, clarsimp)
   apply (erule state_irqs_to_policy_aux.cases)
-   apply (simp add: Sys1AuthGraph_def complete_AuthGraph_def Sys1AuthGraph_aux_def Sys1PAS_def Sys1ASIDMap_def)
-   apply (drule s1_caps_of_state)
-   apply (simp add: Sys1AuthGraph_def complete_AuthGraph_def Sys1AuthGraph_aux_def Sys1PAS_def Sys1ASIDMap_def)
-   apply (elim disjE conjE, simp_all add: Sys1AgentMap_simps cap_auth_conferred_def cap_rights_to_auth_def asid1_3065_def asid1_3063_def 
-     asid_low_bits_def asid_high_bits_of_def )[1]
+  apply (simp add: Sys1AuthGraph_def complete_AuthGraph_def Sys1AuthGraph_aux_def Sys1PAS_def Sys1ASIDMap_def)
+  apply (drule s1_caps_of_state)
+  apply (simp add: Sys1AuthGraph_def complete_AuthGraph_def Sys1AuthGraph_aux_def Sys1PAS_def Sys1ASIDMap_def)
+  apply (elim disjE conjE, simp_all add: Sys1AgentMap_simps cap_auth_conferred_def cap_rights_to_auth_def asid1_3065_def asid1_3063_def 
+    asid_low_bits_def asid_high_bits_of_def )[1]
    done
 
 
@@ -848,7 +859,8 @@ where
      tcb_fault_handler = undefined, 
      tcb_ipc_buffer    = undefined,
      tcb_context       = undefined,
-     tcb_fault         = undefined \<rparr>"
+     tcb_fault         = undefined,
+     tcb_bound_aep     = None \<rparr>"
 
 
 text {* T1's tcb *}
@@ -868,7 +880,8 @@ where
      tcb_fault_handler = undefined, 
      tcb_ipc_buffer    = undefined,
      tcb_context       = undefined,
-     tcb_fault         = undefined \<rparr>"
+     tcb_fault         = undefined,
+     tcb_bound_aep     = None \<rparr>"
 
 (* the boolean in BlockedOnReceive is True if the object can receive but not send.
 but Tom says it only matters if the sender can grant - which is not the case of the UT1 - I think *)
@@ -1058,6 +1071,14 @@ lemma domains_of_state_s2[simp]:
    apply(erule domains_of_state_aux.induct)
    apply(simp add: s2_def exst1_def)
   apply simp
+  done
+
+lemma thread_bound_aeps_2[simp]:
+  "thread_bound_aeps s2 = empty"
+  unfolding s2_def thread_bound_aeps_def
+  apply (rule ext)
+  apply (simp add: get_tcb_def)
+  apply (simp add: kh2_def kh2_obj_def)
   done
 
 lemma "pas_refined Sys2PAS s2"

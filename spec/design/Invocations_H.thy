@@ -19,6 +19,7 @@ datatype tcbinvocation =
     Suspend machine_word
   | Resume machine_word
   | ThreadControl machine_word machine_word "cptr option" "priority option" "(capability * machine_word) option" "(capability * machine_word) option" "(vptr * (capability * machine_word) option) option"
+  | AsyncEndpointControl machine_word "(machine_word) option"
   | WriteRegisters machine_word bool "machine_word list" ArchRetypeDecls_H.copy_register_sets
   | ReadRegisters machine_word bool machine_word ArchRetypeDecls_H.copy_register_sets
   | CopyRegisters machine_word machine_word bool bool bool bool ArchRetypeDecls_H.copy_register_sets
@@ -87,6 +88,16 @@ primrec
   tcThread :: "tcbinvocation \<Rightarrow> machine_word"
 where
   "tcThread (ThreadControl v0 v1 v2 v3 v4 v5 v6) = v0"
+
+primrec
+  aepPtr :: "tcbinvocation \<Rightarrow> (machine_word) option"
+where
+  "aepPtr (AsyncEndpointControl v0 v1) = v1"
+
+primrec
+  aepTCB :: "tcbinvocation \<Rightarrow> machine_word"
+where
+  "aepTCB (AsyncEndpointControl v0 v1) = v0"
 
 primrec
   copyRegsResumeTarget :: "tcbinvocation \<Rightarrow> bool"
@@ -209,6 +220,16 @@ where
   "tcThread_update f (ThreadControl v0 v1 v2 v3 v4 v5 v6) = ThreadControl (f v0) v1 v2 v3 v4 v5 v6"
 
 primrec
+  aepPtr_update :: "(((machine_word) option) \<Rightarrow> ((machine_word) option)) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
+where
+  "aepPtr_update f (AsyncEndpointControl v0 v1) = AsyncEndpointControl v0 (f v1)"
+
+primrec
+  aepTCB_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
+where
+  "aepTCB_update f (AsyncEndpointControl v0 v1) = AsyncEndpointControl (f v0) v1"
+
+primrec
   copyRegsResumeTarget_update :: "(bool \<Rightarrow> bool) \<Rightarrow> tcbinvocation \<Rightarrow> tcbinvocation"
 where
   "copyRegsResumeTarget_update f (CopyRegisters v0 v1 v2 v3 v4 v5 v6) = CopyRegisters v0 v1 v2 (f v3) v4 v5 v6"
@@ -279,6 +300,11 @@ where
   "ThreadControl_ \<lparr> tcThread= v0, tcThreadCapSlot= v1, tcNewFaultEP= v2, tcNewPriority= v3, tcNewCRoot= v4, tcNewVRoot= v5, tcNewIPCBuffer= v6 \<rparr> == ThreadControl v0 v1 v2 v3 v4 v5 v6"
 
 abbreviation (input)
+  AsyncEndpointControl_trans :: "(machine_word) \<Rightarrow> ((machine_word) option) \<Rightarrow> tcbinvocation" ("AsyncEndpointControl'_ \<lparr> aepTCB= _, aepPtr= _ \<rparr>")
+where
+  "AsyncEndpointControl_ \<lparr> aepTCB= v0, aepPtr= v1 \<rparr> == AsyncEndpointControl v0 v1"
+
+abbreviation (input)
   WriteRegisters_trans :: "(machine_word) \<Rightarrow> (bool) \<Rightarrow> (machine_word list) \<Rightarrow> (ArchRetypeDecls_H.copy_register_sets) \<Rightarrow> tcbinvocation" ("WriteRegisters'_ \<lparr> writeRegsThread= _, writeRegsResume= _, writeRegsValues= _, writeRegsArch= _ \<rparr>")
 where
   "WriteRegisters_ \<lparr> writeRegsThread= v0, writeRegsResume= v1, writeRegsValues= v2, writeRegsArch= v3 \<rparr> == WriteRegisters v0 v1 v2 v3"
@@ -312,6 +338,13 @@ definition
 where
  "isThreadControl v \<equiv> case v of
     ThreadControl v0 v1 v2 v3 v4 v5 v6 \<Rightarrow> True
+  | _ \<Rightarrow> False"
+
+definition
+  isAsyncEndpointControl :: "tcbinvocation \<Rightarrow> bool"
+where
+ "isAsyncEndpointControl v \<equiv> case v of
+    AsyncEndpointControl v0 v1 \<Rightarrow> True
   | _ \<Rightarrow> False"
 
 definition
@@ -872,7 +905,7 @@ where
 datatype invocation =
     InvokeUntyped untyped_invocation
   | InvokeEndpoint machine_word machine_word bool
-  | InvokeAsyncEndpoint machine_word machine_word machine_word
+  | InvokeAsyncEndpoint machine_word machine_word
   | InvokeReply machine_word machine_word
   | InvokeDomain machine_word domain
   | InvokeTCB tcbinvocation

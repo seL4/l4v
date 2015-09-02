@@ -848,8 +848,18 @@ lemma cthread_state_rel_imp_eq:
     ThreadState_Restart_def)+
   done
 
+lemma ksPSpace_valid_objs_tcbBoundAEP_nonzero:
+  "\<exists>s. ksPSpace s = ah \<and> no_0_obj' s \<and> valid_objs' s
+     \<Longrightarrow> map_to_tcbs ah p = Some tcb \<Longrightarrow> tcbBoundAEP tcb \<noteq> Some 0"
+  apply (clarsimp simp: map_comp_def split: option.splits)
+  apply (erule(1) valid_objsE')
+  apply (clarsimp simp: projectKOs valid_obj'_def valid_tcb'_def)
+  done
+
 lemma cpspace_tcb_relation_unique:
   assumes tcbs: "cpspace_tcb_relation ah ch" "cpspace_tcb_relation ah' ch"
+      and   vs: "\<exists>s. ksPSpace s = ah \<and> no_0_obj' s \<and> valid_objs' s"
+      and   vs': "\<exists>s. ksPSpace s = ah' \<and> no_0_obj' s \<and> valid_objs' s"
   assumes ctes: " \<forall>tcb tcb'. (\<exists>p. map_to_tcbs ah p = Some tcb \<and>
                                   map_to_tcbs ah' p = Some tcb') \<longrightarrow>
                   (\<forall>x\<in>ran tcb_cte_cases. fst x tcb' = fst x tcb)"
@@ -866,10 +876,13 @@ lemma cpspace_tcb_relation_unique:
    apply (rename_tac p x y)
    apply (cut_tac ctes)
    apply (drule_tac x=x in spec, drule_tac x=y in spec, erule impE, fastforce)
+   apply (frule ksPSpace_valid_objs_tcbBoundAEP_nonzero[OF vs])
+   apply (frule ksPSpace_valid_objs_tcbBoundAEP_nonzero[OF vs'])
    apply (thin_tac "map_to_tcbs ?x ?y = Some ?z")+
    apply (case_tac x, case_tac y, case_tac "the (clift ch (tcb_Ptr (p+0x100)))")
    apply (clarsimp simp: ctcb_relation_def ran_tcb_cte_cases)
    apply (drule up_ucast_inj_eq[THEN iffD1,rotated], simp+)
+   apply (clarsimp simp: option_to_ptr_def option_to_0_def split: option.splits)
    apply (auto simp: cfault_rel_imp_eq cthread_state_rel_imp_eq
                      ccontext_relation_imp_eq up_ucast_inj_eq)
   done
@@ -894,13 +907,47 @@ lemma cpspace_ep_relation_unique:
            split: endpoint.splits)
   done
 
+lemma ksPSpace_valid_pspace_aepBoundTCB_nonzero:
+  "\<exists>s. ksPSpace s = ah \<and> valid_pspace' s
+     \<Longrightarrow> map_to_aeps ah p = Some aep \<Longrightarrow> aepBoundTCB aep \<noteq> Some 0"
+  apply (clarsimp simp: map_comp_def valid_pspace'_def split: option.splits)
+  apply (erule(1) valid_objsE')
+  apply (clarsimp simp: projectKOs valid_obj'_def valid_aep'_def)
+  done
+
+lemma tcb_ptr_to_ctcb_ptr_inj:
+  "tcb_ptr_to_ctcb_ptr x = tcb_ptr_to_ctcb_ptr y \<Longrightarrow> x = y"
+  by (auto simp: tcb_ptr_to_ctcb_ptr_def ctcb_offset_def)
+
 lemma cpspace_aep_relation_unique:
-  assumes "cpspace_aep_relation ah ch" "cpspace_aep_relation ah' ch"
-  shows   "map_to_aeps ah' = map_to_aeps ah"
-  apply (rule cmap_relation_unique[OF inj_Ptr _ assms])
-  by (clarsimp simp: AEPState_Active_def AEPState_Idle_def AEPState_Waiting_def
-          casync_endpoint_relation_def Let_def tcb_queue_rel'_clift_unique
-        split: async_endpoint.splits)
+  assumes aeps: "cpspace_aep_relation ah ch" "cpspace_aep_relation ah' ch"
+      and   vs: "\<exists>s. ksPSpace s = ah \<and> valid_pspace' s"
+      and   vs': "\<exists>s. ksPSpace s = ah' \<and> valid_pspace' s"
+  shows   "map_to_aeps ah' = map_to_aeps ah" 
+  using aeps
+  apply (clarsimp simp: cmap_relation_def)
+  apply (drule inj_image_inv[OF inj_Ptr])+
+  apply simp
+  apply (rule ext)
+  apply (case_tac "x:dom (map_to_aeps ah)")
+   apply (drule bspec, assumption)+
+   apply (simp add: dom_def Collect_eq, drule_tac x=x in spec)
+   apply (clarsimp)
+   apply (frule ksPSpace_valid_pspace_aepBoundTCB_nonzero[OF vs])
+   apply (frule ksPSpace_valid_pspace_aepBoundTCB_nonzero[OF vs'])
+   apply (cut_tac vs vs')
+   apply (clarsimp simp: valid_pspace'_def)
+   apply (frule (2) map_to_ko_atI)
+   apply (frule_tac v=ya in map_to_ko_atI, simp+)
+   apply (clarsimp dest!: obj_at_valid_objs' simp: projectKOs split: option.splits)
+   apply (thin_tac "map_to_aeps ?x ?y = Some ?z")+
+   apply (case_tac y, case_tac ya, case_tac "the (clift ch (aep_Ptr x))")
+   apply (auto simp: AEPState_Active_def AEPState_Idle_def AEPState_Waiting_def typ_heap_simps
+                     casync_endpoint_relation_def Let_def tcb_queue_rel'_clift_unique 
+                     option_to_ctcb_ptr_def valid_obj'_def valid_aep'_def valid_bound_tcb'_def 
+                     kernel.tcb_at_not_NULL tcb_ptr_to_ctcb_ptr_inj
+              split: aep.splits option.splits) (* long *)
+  done
 
 (* FIXME: move *)
 lemma of_bool_inject[iff]: "of_bool a = of_bool b \<longleftrightarrow> a=b"
@@ -1109,19 +1156,24 @@ proof -
   have valid_objs: "valid_objs' s"    and valid_objs': "valid_objs' s'"
    and aligned: "pspace_aligned' s"   and aligned': "pspace_aligned' s'"
    and distinct: "pspace_distinct' s" and distinct': "pspace_distinct' s'"
-    by clarsimp+
+   and no_0_objs: "no_0_obj' s"       and no_0_objs': "no_0_obj' s'"
+    by auto
 
   show "PROP ?goal"
   apply (clarsimp simp add: cpspace_relation_def)
   apply (drule (1) cpspace_cte_relation_unique)
   apply (drule (1) cpspace_ep_relation_unique)
   apply (drule (1) cpspace_aep_relation_unique)
+    apply (fastforce intro: valid_pspaces)
+   apply (fastforce intro: valid_pspaces)
   apply (drule (1) cpspace_pde_relation_unique)
   apply (drule (1) cpspace_pte_relation_unique)
   apply (drule (1) cpspace_asidpool_relation_unique[
                      OF valid_objs'_imp_wf_asid_pool'[OF valid_objs]
                         valid_objs'_imp_wf_asid_pool'[OF valid_objs']])
   apply (drule (1) cpspace_tcb_relation_unique)
+     apply (fastforce intro: no_0_objs no_0_objs' valid_objs valid_objs')
+    apply (fastforce intro: no_0_objs no_0_objs' valid_objs valid_objs')
    apply (intro allI impI,elim exE conjE)
    apply (rule_tac p=p in map_to_ctes_tcb_ctes, assumption)
     apply (frule (1) map_to_ko_atI[OF _ aligned distinct])
@@ -1170,10 +1222,11 @@ lemma ksPSpace_eq_imp_valid_cap'_eq:
 lemma ksPSpace_eq_imp_valid_tcb'_eq:
   assumes ksPSpace: "ksPSpace s' = ksPSpace s"
   shows "valid_tcb' tcb s' = valid_tcb' tcb s"
+
   by (auto simp: ksPSpace_eq_imp_obj_at'_eq[OF ksPSpace]
                  ksPSpace_eq_imp_valid_cap'_eq[OF ksPSpace]
-                 valid_tcb'_def valid_tcb_state'_def
-          split: thread_state.splits)
+                 valid_tcb'_def valid_tcb_state'_def valid_bound_aep'_def
+          split: thread_state.splits option.splits)
 
 lemma ksPSpace_eq_imp_valid_arch_obj'_eq:
   assumes ksPSpace: "ksPSpace s' = ksPSpace s"
@@ -1192,8 +1245,8 @@ lemma ksPSpace_eq_imp_valid_objs'_eq:
                      ksPSpace_eq_imp_valid_tcb'_eq[OF ksPSpace]
                      ksPSpace_eq_imp_valid_cap'_eq[OF ksPSpace]
                      ksPSpace_eq_imp_valid_arch_obj'_eq[OF ksPSpace]
-                     valid_aep'_def valid_cte'_def
-              split: kernel_object.splits endpoint.splits async_endpoint.splits)
+                     valid_aep'_def valid_cte'_def valid_bound_tcb'_def
+              split: kernel_object.splits endpoint.splits aep.splits option.splits)
 
 lemma ksPSpace_eq_imp_valid_pspace'_eq:
   assumes ksPSpace: "ksPSpace s' = ksPSpace s"

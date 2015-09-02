@@ -318,15 +318,40 @@ lemma resetTimer_invs[wp]:
   apply(erule use_valid, wp no_irq_resetTimer, assumption)
   done
 
-crunch interrupt_states[wp]: send_async_ipc "\<lambda>s. P (interrupt_states s)"
+crunch interrupt_states[wp]: update_waiting_aep, async_ipc_cancel, blocked_ipc_cancel "\<lambda>s. P (interrupt_states s)" (wp: mapM_x_wp_inv)
+
+lemma ipc_cancel_noreply_interrupt_states:
+  "\<lbrace>\<lambda>s. st_tcb_at (\<lambda>st. st \<noteq> BlockedOnReply) t s \<and> P (interrupt_states s) \<rbrace> ipc_cancel t \<lbrace> \<lambda>_ s. P (interrupt_states s) \<rbrace>"
+  apply (simp add: ipc_cancel_def)
+  apply (wp | wpc | simp)+
+     apply (rule hoare_pre_cont)
+    apply (wp)
+  apply (rule hoare_pre)
+   apply (wp gts_wp)
+  apply (auto simp: pred_tcb_at_def obj_at_def)
+  done
+
+lemma send_async_ipc_interrupt_states[wp_unsafe]:
+  "\<lbrace>\<lambda>s. P (interrupt_states s) \<and> valid_objs s\<rbrace> send_async_ipc a b \<lbrace>\<lambda>_ s. P (interrupt_states s)\<rbrace>"
+  apply (simp add: send_async_ipc_def)
+  apply (rule hoare_seq_ext [OF _ get_aep_sp])
+  apply (rule hoare_pre)
+  apply (wp ipc_cancel_noreply_interrupt_states gts_wp hoare_vcg_all_lift thread_get_wp | wpc | simp)+
+  apply (clarsimp)
+  apply (erule (1) obj_at_valid_objsE)
+  apply (clarsimp simp: valid_obj_def valid_aep_def obj_at_def is_tcb_def)
+  apply (case_tac ko, simp_all)
+  apply (auto simp: pred_tcb_at_def obj_at_def receive_blocked_def)
+  done
+
 
 lemma handle_interrupt_invs[wp]:
   "\<lbrace>invs\<rbrace> handle_interrupt irq \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: handle_interrupt_def ackInterrupt_def)
   apply (wp maskInterrupt_invs | wpc)+
-     apply (wp get_cap_wp)
+     apply (wp get_cap_wp send_async_ipc_interrupt_states)
     apply (rule_tac Q="\<lambda>rv. invs and (\<lambda>s. st = interrupt_states s irq)" in hoare_post_imp)
-     apply (clarsimp simp: ex_nonz_cap_to_def)
+     apply (clarsimp simp: ex_nonz_cap_to_def invs_valid_objs)
      apply (intro allI exI, erule cte_wp_at_weakenE)
      apply (clarsimp simp: is_cap_simps)
     apply (wp hoare_drop_imps | simp add: get_irq_state_def)+

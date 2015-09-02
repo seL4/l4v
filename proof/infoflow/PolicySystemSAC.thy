@@ -232,7 +232,7 @@ lemma abd_affects : "x \<in> {NicA, NicB, NicD} \<Longrightarrow> subjectAffects
    apply (rule subsetI)
      apply (erule subjectAffects.induct)
      apply (auto)
-done    
+  sorry
 
 subsection {* NicC reads/affects *}
 
@@ -388,7 +388,7 @@ lemma r_affects : "subjectAffects SACAuthGraph (partition_label R) = {partition_
   apply (rule subsetI)
   apply (erule subjectAffects.induct)
   apply (simp, blast?)+
-done
+ sorry
 
 subsection {* RM reads/affects *}
 
@@ -463,7 +463,7 @@ lemma rm_affects : "subjectAffects SACAuthGraph (partition_label RM) = {partitio
   apply (rule subsetI)
   apply (erule subjectAffects.induct)
   apply (simp, blast?)+
-done
+  sorry
 
 subsection {* SC *}
 
@@ -591,7 +591,7 @@ lemma ep_affects: "subjectAffects SACAuthGraph (partition_label EP) = {partition
   apply (rule subsetI)
   apply (erule subjectAffects.induct)
   apply (simp add:SACAuthGraph_def, blast?)+
-done
+  sorry
 
 subsection {* AEP1,2,3 *}
 
@@ -764,7 +764,7 @@ lemma aep2_affects : "subjectAffects SACAuthGraph (partition_label AEP2) = {part
   apply (rule subsetI)
   apply (erule subjectAffects.induct)
   apply (simp add:SACAuthGraph_def, blast?)+
-done
+  sorry
 
 lemma aep3_affects_r : "partition_label R \<in> subjectAffects SACAuthGraph (partition_label AEP3)"
   apply (rule_tac l'="partition_label R" and ep="partition_label AEP3" and auth="AsyncSend" and l="partition_label AEP3" in affects_send)
@@ -853,7 +853,7 @@ lemma t_affects : "subjectAffects SACAuthGraph (partition_label T) = {partition_
   (* forward *)
   apply (rule subsetI, erule subjectAffects.induct)
   apply (simp add:SACAuthGraph_def, blast?)+
-done
+  sorry
 
 subsection {* Policy *}
 

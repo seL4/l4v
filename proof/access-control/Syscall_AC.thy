@@ -25,7 +25,7 @@ where
                \<exists>ep. ko_at (Endpoint ep) epptr s \<and>
                     (can_grant \<longrightarrow>  (\<forall>r \<in> ep_q_refs_of ep. snd r = EPRecv \<longrightarrow> is_subject aag (fst r)) \<and> aag_has_auth_to aag Grant epptr)
              \<and> aag_has_auth_to aag SyncSend epptr
-   | Invocations_A.InvokeAsyncEndpoint ep badge message \<Rightarrow> aag_has_auth_to aag AsyncSend ep
+   | Invocations_A.InvokeAsyncEndpoint ep badge \<Rightarrow> aag_has_auth_to aag AsyncSend ep
    | Invocations_A.InvokeReply thread slot \<Rightarrow> is_subject aag thread \<and> is_subject aag (fst slot)
    | Invocations_A.InvokeTCB i' \<Rightarrow> tcb_inv_wf i' s \<and> authorised_tcb_inv aag i'
    | Invocations_A.InvokeDomain thread slot \<Rightarrow> False
@@ -52,7 +52,7 @@ lemma perform_invocation_pas_refined:
   done
 
 lemma aep_gives_obj_at:
-  "invs s \<Longrightarrow> (\<exists>aep. ko_at (AsyncEndpoint aep) aepptr s \<and> (\<forall>x\<in>aep_q_refs_of aep. (\<lambda>(t, rt). obj_at (\<lambda>tcb. ko_at tcb t s) t s) x)) = aep_at aepptr s"
+  "invs s \<Longrightarrow> (\<exists>aep. ko_at (AsyncEndpoint aep) aepptr s \<and> (\<forall>x\<in>aep_q_refs_of (aep_obj aep). (\<lambda>(t, rt). obj_at (\<lambda>tcb. ko_at tcb t s) t s) x)) = aep_at aepptr s"
   apply (rule iffI)
    apply (clarsimp simp: obj_at_def is_aep)
   apply (clarsimp simp: obj_at_def is_aep)
@@ -68,7 +68,7 @@ lemma pi_cases:
      Invocations_A.InvokeUntyped i \<Rightarrow> perform_invocation block call (Invocations_A.InvokeUntyped i) 
     | Invocations_A.InvokeEndpoint ep badge canGrant 
       \<Rightarrow> perform_invocation block call (Invocations_A.InvokeEndpoint ep badge canGrant) 
-    |  Invocations_A.InvokeAsyncEndpoint ep badge message \<Rightarrow> perform_invocation block call ( Invocations_A.InvokeAsyncEndpoint ep badge message)  
+    |  Invocations_A.InvokeAsyncEndpoint ep badge \<Rightarrow> perform_invocation block call ( Invocations_A.InvokeAsyncEndpoint ep badge)
     |  Invocations_A.InvokeTCB i \<Rightarrow> perform_invocation block call ( Invocations_A.InvokeTCB i)
     |  Invocations_A.InvokeDomain thread slot \<Rightarrow> perform_invocation block call ( Invocations_A.InvokeDomain thread slot)
     |  Invocations_A.InvokeReply thread slot \<Rightarrow> perform_invocation block call ( Invocations_A.InvokeReply thread slot)
@@ -216,30 +216,32 @@ lemma set_thread_state_authorised[wp]:
    \<lbrace>\<lambda>rv. authorised_invocation aag i\<rbrace>"
   apply (cases i)
   apply (simp_all add: authorised_invocation_def)
-  apply (wp sts_valid_untyped_inv ct_in_state_set
-            hoare_vcg_ex_lift sts_obj_at_impossible
-            set_thread_state_authorised_untyped_inv_state
-       | simp)+
-  apply clarsimp
-  apply (case_tac tcb_invocation, simp_all)
-  apply (wp hoare_option_case_wp sts_typ_ats set_thread_state_cte_wp_at
-            hoare_vcg_conj_lift static_imp_wp
-       | simp)+
-  apply ((clarsimp split: option.splits)+)[3]
-  apply (wp
-       | simp)+
-  apply (case_tac cnode_invocation,
-         simp_all add: cnode_inv_auth_derivations_def authorised_cnode_inv_def)
-  apply (wp set_thread_state_cte_wp_at
-       | simp)+
+          apply (wp sts_valid_untyped_inv ct_in_state_set
+                    hoare_vcg_ex_lift sts_obj_at_impossible
+                    set_thread_state_authorised_untyped_inv_state
+               | simp)+
+      apply clarsimp
+      apply (case_tac tcb_invocation, simp_all)
+            apply (wp hoare_option_case_wp sts_typ_ats set_thread_state_cte_wp_at
+                      hoare_vcg_conj_lift static_imp_wp
+                 | simp)+
+           apply ((clarsimp split: option.splits)+)[3]
+        apply ((wp
+             | simp)+)[2]
+      apply (case_tac option, simp_all)[1]
+       apply (wp set_thread_state_tcb_at sts_obj_at_impossible | simp add: authorised_tcb_inv_def)+
+     apply (case_tac cnode_invocation,
+            simp_all add: cnode_inv_auth_derivations_def authorised_cnode_inv_def)
+           apply (wp set_thread_state_cte_wp_at
+                | simp)+
   apply (case_tac arch_invocation, simp_all add: valid_arch_inv_def)
-  apply (case_tac page_table_invocation, simp_all add: valid_pti_def)
-  apply (wp sts_typ_ats sts_obj_at_impossible ct_in_state_set
-            hoare_vcg_ex_lift hoare_vcg_conj_lift
-       | simp add: valid_pdi_def)+
-  apply (case_tac asid_control_invocation, simp_all add: valid_aci_def)
-  apply (wp ct_in_state_set
-       | simp)+
+      apply (case_tac page_table_invocation, simp_all add: valid_pti_def)
+       apply (wp sts_typ_ats sts_obj_at_impossible ct_in_state_set
+                 hoare_vcg_ex_lift hoare_vcg_conj_lift
+            | simp add: valid_pdi_def)+
+     apply (case_tac asid_control_invocation, simp_all add: valid_aci_def)
+    apply (wp ct_in_state_set
+         | simp)+
   apply (case_tac asid_pool_invocation, simp_all add: valid_apinv_def)
   apply (wp sts_obj_at_impossible ct_in_state_set
             hoare_vcg_ex_lift
@@ -302,8 +304,8 @@ lemma guarded_pas_domain_lift:
   done
 
 lemma guarded_to_cur_domain: "\<lbrakk>invs s; ct_in_state x s; \<not> x IdleThreadState; guarded_pas_domain aag s; is_subject aag (cur_thread s)\<rbrakk> \<Longrightarrow> pas_cur_domain aag s"
-  apply (clarsimp simp add: invs_def valid_state_def valid_idle_def st_tcb_at_def
-                   obj_at_def ct_in_state_def guarded_pas_domain_def)
+  apply (auto simp: invs_def valid_state_def valid_idle_def pred_tcb_at_def obj_at_def
+                    ct_in_state_def guarded_pas_domain_def)
   done
 
 
@@ -384,14 +386,14 @@ lemma lookup_slot_for_thread_cap_fault:
   apply clarsimp
   apply (erule (1) invs_valid_tcb_ctable)
   done
-  
+
 lemma handle_wait_pas_refined:
   "\<lbrace>pas_refined aag and invs and is_subject aag \<circ> cur_thread\<rbrace> handle_wait \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
   apply (simp add: handle_wait_def Let_def lookup_cap_def lookup_cap_def split_def)
   apply (wp handle_fault_pas_refined receive_ipc_pas_refined receive_async_ipc_pas_refined
             get_cap_auth_wp [where aag=aag] lookup_slot_for_cnode_op_authorised
             lookup_slot_for_thread_authorised lookup_slot_for_thread_cap_fault
-            hoare_vcg_all_lift_R 
+            hoare_vcg_all_lift_R get_aep_wp
        | wpc | simp)+
   apply (rule_tac Q' = "\<lambda>rv s. pas_refined aag s \<and> invs s \<and> is_subject aag (cur_thread s) \<and> is_subject aag thread" in hoare_post_imp_R [rotated])
    apply (fastforce simp: aag_cap_auth_def cap_auth_conferred_def cap_rights_to_auth_def valid_fault_def)
@@ -410,7 +412,7 @@ lemma handle_wait_integrity:
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply (simp add: handle_wait_def Let_def lookup_cap_def lookup_cap_def split_def)
   apply (wp handle_fault_integrity_autarch receive_ipc_integrity_autarch receive_async_ipc_integrity_autarch lookup_slot_for_thread_authorised lookup_slot_for_thread_cap_fault
-            get_cap_auth_wp [where aag=aag]
+            get_cap_auth_wp [where aag=aag] get_aep_wp
        | wpc | simp)+
   apply (rule_tac Q' = "\<lambda>rv s. pas_refined aag s \<and> invs s \<and> is_subject aag (cur_thread s) \<and> is_subject aag thread \<and> integrity aag X st s" in hoare_post_imp_R [rotated])
    apply (fastforce simp: aag_cap_auth_def cap_auth_conferred_def cap_rights_to_auth_def valid_fault_def)
@@ -698,9 +700,9 @@ lemma set_thread_state_restart_to_running_respects:
   apply (erule integrity_trans)
   apply (clarsimp simp: integrity_def obj_at_def st_tcb_at_def)
   apply (clarsimp dest!: get_tcb_SomeD)
-  apply (rule tro_tcb_activate [OF refl refl])
+  apply (rule_tac aep'="tcb_bound_aep ya" in tro_tcb_activate [OF refl refl])
   apply clarsimp
-  apply simp+
+  apply (simp add: tcb_bound_aep_reset_integrity_def)+
   done
 
 lemma activate_thread_respects:
@@ -721,7 +723,7 @@ lemma activate_thread_integrity:
   apply (simp add: activate_thread_def arch_activate_idle_thread_def)
   apply (rule hoare_pre)
   apply (wp gts_wp set_thread_state_integrity_autarch as_user_integrity_autarch | wpc |  simp add: arch_activate_idle_thread_def)+
-  apply(clarsimp simp: valid_idle_def st_tcb_at_def obj_at_def)
+  apply(clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def)
   done
 
 lemma activate_thread_pas_refined:
@@ -954,10 +956,11 @@ lemma schedule_pas_refined:
   done
 
 lemma handle_interrupt_arch_state [wp]:
-  "\<lbrace>\<lambda>s. P (arch_state s)\<rbrace> handle_interrupt irq \<lbrace>\<lambda> _ s. P (arch_state s)\<rbrace>"
+  "\<lbrace>\<lambda>s :: det_ext state. P (arch_state s)\<rbrace> handle_interrupt irq \<lbrace>\<lambda>_ s. P (arch_state s)\<rbrace>"
   unfolding handle_interrupt_def
   apply (rule hoare_pre)
-  apply (wp get_cap_inv dxo_wp_weak | wpc | simp add: get_irq_state_def)+
+  apply clarsimp
+  apply (wp get_cap_inv dxo_wp_weak send_async_ipc_arch_state | wpc | simp add: get_irq_state_def)+
   done
 
 lemmas sequence_x_mapM_x = mapM_x_def [symmetric]

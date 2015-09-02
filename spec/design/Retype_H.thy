@@ -49,7 +49,10 @@ defs finaliseCap_def:
   else if isAsyncEndpointCap v1
   then let ptr = capAEPPtr v1; final = v2
   in   (do
-    when final $ aepCancelAll ptr;
+    when final $ (do
+        unbindMaybeAEP ptr;
+        aepCancelAll ptr
+    od);
     return (NullCap, Nothing)
   od)
   else if isReplyCap v1
@@ -68,6 +71,7 @@ defs finaliseCap_def:
   then let tcb = capTCBPtr v1
   in   (do
     cte_ptr \<leftarrow> getThreadCSpaceRoot tcb;
+    unbindAsyncEndpoint tcb;
     suspend tcb;
     return (Zombie cte_ptr ZombieTCB 5, Nothing)
   od)
@@ -105,10 +109,7 @@ defs recycleCap_def:
                 tcbPtr \<leftarrow> return ( (PPtr \<circ> fromPPtr) ptr);
                 tcb \<leftarrow> threadGet id tcbPtr;
                 flip haskell_assert []
-                    $ (case tcbState tcb of
-                          Inactive \<Rightarrow>   True
-                        | _ \<Rightarrow>   False
-                        );
+                    $ tcbState tcb = Inactive \<and> isNothing (tcbBoundAEP tcb);
                 flip haskell_assert []
                     $ Not (tcbQueued tcb);
                 curdom \<leftarrow> curDomain;
@@ -346,13 +347,9 @@ defs decodeInvocation_def:
     returnOk $ InvokeEndpoint
         (capEPPtr cap) (capEPBadge cap) (capEPCanGrant cap)
   else if isAsyncEndpointCap cap \<and> capAEPCanSend cap
-  then   (doE
-    msg \<leftarrow> returnOk ( (case args of
-              (x#_) \<Rightarrow>   x
-            | _ \<Rightarrow>   0
-            ));
-    returnOk $ InvokeAsyncEndpoint (capAEPPtr cap) (capAEPBadge cap) msg
-  odE)
+  then   (
+    returnOk $ InvokeAsyncEndpoint (capAEPPtr cap) (capAEPBadge cap)
+  )
   else if isReplyCap cap \<and> \<not> capReplyMaster cap
   then   (
     returnOk $ InvokeReply (capTCBPtr cap) slot
@@ -400,8 +397,8 @@ defs performInvocation_def:
     sendIPC block call badge canGrant thread ep;
     return $ []
   od)
-  | (InvokeAsyncEndpoint ep badge message) \<Rightarrow>    (doE
-    withoutPreemption $ sendAsyncIPC ep badge message;
+  | (InvokeAsyncEndpoint ep badge) \<Rightarrow>    (doE
+    withoutPreemption $ sendAsyncIPC ep badge;
     returnOk $ []
   odE)
   | (InvokeReply thread slot) \<Rightarrow>    withoutPreemption $ (do

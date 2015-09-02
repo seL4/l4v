@@ -75,6 +75,19 @@ definition
 where
   "get_thread_state ref \<equiv> thread_get tcb_state ref"
 
+definition
+  get_bound_aep :: "obj_ref \<Rightarrow> (32 word option,'z::state_ext) s_monad" 
+where
+  "get_bound_aep ref \<equiv> thread_get tcb_bound_aep ref"
+
+definition
+  set_bound_aep :: "obj_ref \<Rightarrow> 32 word option \<Rightarrow> (unit, 'z::state_ext) s_monad" 
+where
+  "set_bound_aep ref aep \<equiv> do
+     tcb \<leftarrow> gets_the $ get_tcb ref;
+     set_object ref (TCB (tcb \<lparr> tcb_bound_aep := aep \<rparr>))
+   od"
+
 definition set_thread_state_ext :: "obj_ref \<Rightarrow> unit det_ext_monad" where
   "set_thread_state_ext t \<equiv> do
      ts \<leftarrow> get_thread_state t;

@@ -28,7 +28,7 @@ where
 
 lemma is_active_tcb_ptr_runnable':
   "is_active_tcb_ptr t s = st_tcb_at' runnable' t s"
-  by (auto simp: is_active_tcb_ptr_def st_tcb_at'_def obj_at'_def
+  by (auto simp: is_active_tcb_ptr_def pred_tcb_at'_def obj_at'_def
                  is_active_thread_state_def isRunning_def isRestart_def
           split: Structures_H.thread_state.split_asm)
 
@@ -46,16 +46,16 @@ where
 
 lemma st_tcb_at_neg':
   "(st_tcb_at' (\<lambda> ts. \<not> P ts) t s) = (tcb_at' t s \<and> \<not> st_tcb_at' P t s)"
-  by (auto simp: st_tcb_at'_def obj_at'_def)
+  by (auto simp: pred_tcb_at'_def obj_at'_def)
 
 lemma st_tcb_at_neg2:
   "(\<not> st_tcb_at' P t s) = (st_tcb_at' (\<lambda> ts. \<not> P ts) t s \<or> \<not> tcb_at' t s)" 
-  by (auto simp: st_tcb_at'_def obj_at'_def)
+  by (auto simp: pred_tcb_at'_def obj_at'_def)
 
 lemma st_tcb_at_double_neg':
   "(st_tcb_at' (\<lambda> ts. \<not> P ts \<and> \<not> Q ts) t s) =
    ((st_tcb_at' (\<lambda> ts. \<not> P ts) t s) \<and> (st_tcb_at' (\<lambda> ts. \<not> Q ts) t s))"
-  apply (auto simp: st_tcb_at'_def obj_at'_def)
+  apply (auto simp: pred_tcb_at'_def obj_at'_def)
   done
 
 definition
@@ -79,7 +79,7 @@ lemma no_orphans_disj:
   apply (rule ext)
   apply (unfold no_orphans_def all_active_tcb_ptrs_def
                 is_active_tcb_ptr_def st_tcb_at_neg' typ_at_tcb')
-  apply (auto intro: st_tcb_at_tcb_at')
+  apply (auto intro: pred_tcb_at')
   done
 
 lemma no_orphans_lift:
@@ -159,7 +159,7 @@ lemma almost_no_orphans_disj:
   apply (rule ext)
   apply (unfold almost_no_orphans_def all_active_tcb_ptrs_def
                 is_active_tcb_ptr_def st_tcb_at_neg' typ_at_tcb')
-  apply (auto intro: st_tcb_at_tcb_at')
+  apply (auto intro: pred_tcb_at')
   done
 
 (****************************************************************************************************)
@@ -187,7 +187,7 @@ lemma setCTE_no_orphans [wp]:
    setCTE p cte
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   apply (rule no_orphans_lift)
-  apply (wp setCTE_typ_at' setCTE_st_tcb_at')
+  apply (wp setCTE_typ_at' setCTE_pred_tcb_at')
   done
 
 lemma setCTE_almost_no_orphans [wp]:
@@ -195,7 +195,7 @@ lemma setCTE_almost_no_orphans [wp]:
    setCTE p cte
    \<lbrace> \<lambda>rv s. almost_no_orphans tcb_ptr s \<rbrace>"
   unfolding almost_no_orphans_disj all_queued_tcb_ptrs_def
-  apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift setCTE_typ_at' setCTE_st_tcb_at')
+  apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift setCTE_typ_at' setCTE_pred_tcb_at')
   done
 
 crunch no_orphans [wp]: activateIdleThread "no_orphans"
@@ -397,7 +397,7 @@ lemma setThreadState_current_no_orphans:
    apply clarsimp
   apply (wp threadSet_valid_queues')
    apply (unfold no_orphans_disj all_queued_tcb_ptrs_def)
-   apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift threadSet_st_tcb_at_state)
+   apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift threadSet_pred_tcb_at_state)
    apply (auto simp: inQ_def)
   done
 
@@ -411,7 +411,7 @@ lemma setThreadState_isRestart_no_orphans:
    apply clarsimp
   apply (wp threadSet_valid_queues')
    apply (unfold no_orphans_disj all_queued_tcb_ptrs_def is_active_thread_state_def)
-   apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift threadSet_st_tcb_at_state)
+   apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift threadSet_pred_tcb_at_state)
    apply (auto simp: st_tcb_at_double_neg' st_tcb_at_neg' inQ_def)
   done
 
@@ -425,7 +425,7 @@ lemma setThreadState_almost_no_orphans [wp]:
    apply clarsimp
   apply (wp threadSet_valid_queues')
    apply (unfold no_orphans_disj almost_no_orphans_disj all_queued_tcb_ptrs_def)
-   apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift threadSet_st_tcb_at_state)
+   apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift threadSet_pred_tcb_at_state)
    apply (auto simp: inQ_def)
   done
 
@@ -440,7 +440,7 @@ lemma setThreadState_not_active_no_orphans:
    apply clarsimp
   apply (wp threadSet_valid_queues')
    apply (unfold no_orphans_disj all_queued_tcb_ptrs_def is_active_thread_state_def)
-   apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift threadSet_st_tcb_at_state)
+   apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift threadSet_pred_tcb_at_state)
    apply (auto simp: isRunning_def isRestart_def inQ_def)
   done
 
@@ -455,7 +455,7 @@ lemma setThreadState_not_active_almost_no_orphans:
    apply clarsimp
   apply (wp threadSet_valid_queues')
    apply (unfold almost_no_orphans_disj all_queued_tcb_ptrs_def is_active_thread_state_def)
-   apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift threadSet_st_tcb_at_state)
+   apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift threadSet_pred_tcb_at_state)
    apply (auto simp: isRunning_def isRestart_def inQ_def)
   done
 
@@ -465,7 +465,7 @@ lemma activateThread_no_orphans [wp]:
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   unfolding activateThread_def
   apply (wp gts_wp' setThreadState_isRestart_no_orphans | wpc | clarsimp)+
-  apply (auto simp: ct_in_state'_def st_tcb_at'_def obj_at'_def isRestart_def)
+  apply (auto simp: ct_in_state'_def pred_tcb_at'_def obj_at'_def isRestart_def)
   done
 
 lemma setQueue_no_orphans_deq:
@@ -601,7 +601,7 @@ lemma setCurThread_almost_no_orphans:
   done
 
 lemmas ArchThreadDecls_H_switchToThread_all_active_tcb_ptrs[wp] =
-  st_tcb_at'_all_active_tcb_ptrs_lift [OF Arch_switchToThread_st_tcb']
+  st_tcb_at'_all_active_tcb_ptrs_lift [OF Arch_switchToThread_pred_tcb']
 
 lemmas ArchThreadDecls_H_switchToThread_all_queued_tcb_ptrs_lift[wp] =
   ksQ_all_queued_tcb_ptrs_lift [OF arch_switch_thread_ksQ]
@@ -681,7 +681,7 @@ lemma tcbSchedDequeue_not_empty:
    \<lbrace> \<lambda>rv s. \<exists>tcb. tcb \<in> set (ksReadyQueues s p) \<and> st_tcb_at' P tcb s \<rbrace>"
   unfolding tcbSchedDequeue_def
   apply wp
-      apply (wp hoare_ex_wp threadSet_st_tcb_no_state)
+      apply (wp hoare_ex_wp threadSet_pred_tcb_no_state)
       apply clarsimp
      apply (wp setQueue_deq_not_empty)
    apply (rule_tac Q="\<lambda>rv s. \<not> st_tcb_at' P thread s" in hoare_post_imp)
@@ -718,7 +718,7 @@ lemma chooseThread_no_orphans [wp]:
     apply (fastforce simp: all_active_tcb_ptrs_def)
    apply (wp gq_wp)
    apply (fastforce simp: all_invs_but_ct_idle_or_in_cur_domain'_def valid_state'_def
-                          valid_queues_def st_tcb_at'_def
+                          valid_queues_def pred_tcb_at'_def
                    elim!: obj_at'_weakenE)
   apply (wp | clarsimp)+
   done
@@ -813,16 +813,16 @@ lemma schedule_no_orphans [wp]:
      apply (wp)
   apply (case_tac "ksSchedulerAction s")
     apply (clarsimp)
-   apply (clarsimp simp: st_tcb_at'_def is_active_tcb_ptr_def)
+   apply (clarsimp simp: pred_tcb_at'_def is_active_tcb_ptr_def)
    apply (rule conjI, clarsimp simp: invs'_def valid_state'_def cur_tcb'_def)
    apply (clarsimp simp: is_active_thread_state_def comp_def
                          all_invs_but_ct_idle_or_in_cur_domain'_strg)
    apply (drule(1) obj_at_not_obj_at_conj)
    apply (subgoal_tac "obj_at' (\<lambda>_. False) (ksCurThread s) s", clarsimp)
    apply (erule obj_at'_weakenE)
-   apply (case_tac "tcbState k", (clarsimp simp: isRunning_def isRestart_def)+)
+   apply (case_tac "tcbState k", (clarsimp simp: isRunning_def isRestart_def is_active_thread_state_def)+)
   apply (rule conjI, clarsimp simp: invs'_def valid_state'_def cur_tcb'_def)
-  apply (clarsimp simp: st_tcb_at'_def all_active_tcb_ptrs_def comp_def
+  apply (clarsimp simp: pred_tcb_at'_def all_active_tcb_ptrs_def comp_def
                         is_active_thread_state_def is_active_tcb_ptr_def)
   apply (drule(1) obj_at_not_obj_at_conj)
   apply (subgoal_tac "obj_at' (\<lambda>_. False) (ksCurThread s) s", clarsimp)
@@ -843,23 +843,8 @@ crunch no_orphans [wp]: doMachineOp "no_orphans"
 
 crunch no_orphans [wp]: setMessageInfo "no_orphans"
 
-crunch no_orphans [wp]: doAsyncTransfer "no_orphans"
+crunch no_orphans [wp]: completeAsyncIPC "no_orphans"
 (simp: crunch_simps wp: crunch_wps)
-
-crunch ksReadyQueues [wp]: doAsyncTransfer "\<lambda>s. P (ksReadyQueues s)"
-(simp: crunch_simps wp: crunch_wps)
-
-crunch st_tcb' [wp]: doAsyncTransfer "st_tcb_at' (\<lambda>st. P st) t"
-
-crunch valid_queues' [wp]: doAsyncTransfer "valid_queues'"
-
-lemma doAsyncTransfer_almost_no_orphans [wp]:
-  "\<lbrace> \<lambda>s. almost_no_orphans target s \<rbrace> 
-   doAsyncTransfer badge msgWord thread
-   \<lbrace> \<lambda>rv s. almost_no_orphans target s \<rbrace>"
-  unfolding almost_no_orphans_disj all_queued_tcb_ptrs_def
-  apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift)
-  done
 
 lemma possibleSwitchTo_almost_no_orphans [wp]:
   "\<lbrace> \<lambda>s. almost_no_orphans target s \<and> valid_queues' s \<and> st_tcb_at' runnable' target s \<rbrace>
@@ -884,14 +869,6 @@ lemma switchIfRequiredTo_schedule_no_orphans [wp]:
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   unfolding switchIfRequiredTo_def by wp
 
-lemma sendAsyncIPC_no_orphans [wp]:
-  "\<lbrace> \<lambda>s. no_orphans s \<and> valid_queues' s \<rbrace>
-   sendAsyncIPC aepptr badge val
-   \<lbrace> \<lambda>_ s. no_orphans s \<rbrace>"
-  unfolding sendAsyncIPC_def
-  apply (rule hoare_pre)
-   apply (wp hoare_drop_imps hoare_vcg_all_lift sts_st_tcb' | wpc | clarsimp)+
-  done 
 
 lemma tcbSchedAppend_no_orphans:
   "\<lbrace> \<lambda>s. no_orphans s \<rbrace>
@@ -944,14 +921,6 @@ lemma timerTick_no_orphans [wp]:
   apply auto
   done
 
-lemma handleInterrupt_no_orphans [wp]:
-  "\<lbrace> \<lambda>s. no_orphans s \<and> invs' s \<rbrace>
-   handleInterrupt irq
-   \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
-  unfolding handleInterrupt_def
-  apply (rule hoare_pre)
-   apply (wp hoare_drop_imps hoare_vcg_all_lift getIRQState_inv | wpc | clarsimp)+
-  done
 
 lemma handleDoubleFault_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> valid_queues' s \<rbrace>
@@ -1001,7 +970,7 @@ lemma setupCallerCap_almost_no_orphans [wp]:
 crunch ksReadyQueues [wp]: doIPCTransfer "\<lambda>s. P (ksReadyQueues s)"
 (wp: transferCapsToSlots_pres1 crunch_wps)
 
-crunch no_orphans [wp]: doIPCTransfer "no_orphans"
+crunch no_orphans [wp]: doIPCTransfer, setMRs "no_orphans"
 (wp: no_orphans_lift)
 
 crunch ksQ'[wp]: setEndpoint "\<lambda>s. P (ksReadyQueues s)"
@@ -1099,16 +1068,16 @@ lemma createObjects_no_orphans [wp]:
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   apply (clarsimp simp: no_orphans_def all_active_tcb_ptrs_def
                         is_active_tcb_ptr_def all_queued_tcb_ptrs_def)
-  apply (simp only: imp_conv_disj st_tcb_at'_def createObjects_def)
+  apply (simp only: imp_conv_disj pred_tcb_at'_def createObjects_def)
   apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift createObjects_orig_obj_at2')
   apply clarsimp
   apply (erule(1) impE)
   apply clarsimp
   apply (drule_tac x = x in spec)
   apply (erule impE)
-   apply (clarsimp simp:obj_at'_def)
+   apply (clarsimp simp:obj_at'_def projectKOs split: option.splits)
   apply simp
-done
+  done
 
 lemma createWordObjects_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> pspace_aligned' s \<and> pspace_distinct' s 
@@ -1260,7 +1229,7 @@ lemma deleteObjects_no_orphans [wp]:
                         all_queued_tcb_ptrs_def is_active_tcb_ptr_def
                         ksMachineState_ksPSpace_upd_comm)
   apply (drule_tac x=tcb_ptr in spec)
-  apply (clarsimp simp: st_tcb_at'_def obj_at_delete'[unfolded field_simps]
+  apply (clarsimp simp: pred_tcb_at'_def obj_at_delete'[unfolded field_simps]
                   cong: if_cong)
   done
 
@@ -1441,13 +1410,33 @@ lemma aepCancelAll_no_orphans [wp]:
   apply (wp get_aep_sp' | clarsimp)+
   done
 
+crunch no_orphans[wp]: setBoundAEP "no_orphans"
+
+lemma unbindAsyncEndpoint_no_orphans[wp]:
+  "\<lbrace>\<lambda>s. no_orphans s\<rbrace>
+    unbindAsyncEndpoint t 
+   \<lbrace> \<lambda>rv s. no_orphans s\<rbrace>"
+  unfolding unbindAsyncEndpoint_def
+  apply (rule hoare_seq_ext[OF _ gba_sp'])
+  apply (case_tac aepptr, simp_all, wp, simp)
+  apply (rule hoare_seq_ext[OF _ get_aep_sp'])
+  apply (wp | simp)+
+  done
+
+lemma unbindMaybeAEP_no_orphans[wp]:
+  "\<lbrace>\<lambda>s. no_orphans s\<rbrace>
+    unbindMaybeAEP a 
+   \<lbrace> \<lambda>rv s. no_orphans s\<rbrace>"
+  unfolding unbindMaybeAEP_def
+  by (wp getAsyncEP_wp | simp | wpc)+
+
 lemma finaliseCapTrue_standin_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> valid_queues' s \<and> valid_objs' s \<rbrace>
     finaliseCapTrue_standin cap final 
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   unfolding finaliseCapTrue_standin_def
   apply (rule hoare_pre)
-   apply (wp | clarsimp)+
+   apply (wp | clarsimp simp: Let_def | wpc)+
   done
 
 lemma cteDeleteOne_no_orphans [wp]:
@@ -1480,6 +1469,34 @@ lemma ipcCancel_no_orphans [wp]:
              threadSet_valid_queues' threadSet_valid_objs' threadSet_no_orphans | wpc
           | clarsimp simp: is_active_thread_state_def isRestart_def isRunning_def
                            inQ_def valid_tcb'_def tcb_cte_cases_def)+
+  done
+
+
+lemma asUser_almost_no_orphans:
+  "\<lbrace>almost_no_orphans t\<rbrace> asUser a f \<lbrace>\<lambda>_. almost_no_orphans t\<rbrace>"
+  unfolding almost_no_orphans_disj all_queued_tcb_ptrs_def
+  apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift)
+  done
+
+crunch almost_no_orphans[wp]: asUser "almost_no_orphans t"
+  (simp: almost_no_orphans_disj all_queued_tcb_ptrs_def wp: hoare_vcg_all_lift hoare_vcg_disj_lift crunch_wps)
+
+lemma sendAsyncIPC_no_orphans [wp]:
+  "\<lbrace> \<lambda>s. no_orphans s \<and> valid_queues' s \<and> valid_objs' s \<and> sch_act_wf (ksSchedulerAction s) s\<rbrace>
+   sendAsyncIPC aepptr badge
+   \<lbrace> \<lambda>_ s. no_orphans s \<rbrace>"
+  unfolding sendAsyncIPC_def
+  apply (rule hoare_pre)
+   apply (wp  sts_st_tcb' gts_wp' getAsyncEP_wp asUser_almost_no_orphans | wpc | clarsimp)+
+  done
+
+lemma handleInterrupt_no_orphans [wp]:
+  "\<lbrace> \<lambda>s. no_orphans s \<and> invs' s \<rbrace>
+   handleInterrupt irq
+   \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
+  unfolding handleInterrupt_def
+  apply (rule hoare_pre)
+   apply (wp hoare_drop_imps hoare_vcg_all_lift getIRQState_inv | wpc | clarsimp simp: invs'_def valid_state'_def)+
   done
 
 lemma suspend_no_orphans [wp]:
@@ -1621,7 +1638,7 @@ lemma finaliseCap_no_orphans [wp]:
   apply (simp add: finaliseCap_def Let_def
               cong: if_cong split del: split_if)
   apply (rule hoare_pre)
-   apply (wp | clarsimp simp: o_def)+
+   apply (wp | clarsimp simp: o_def | wpc)+
   apply (auto simp: valid_cap'_def dest!: isCapDs)
   done
 
@@ -2036,7 +2053,7 @@ lemma setPriority_no_orphans [wp]:
   apply (wp hoare_drop_imps | clarsimp)+
       apply (wp hoare_drop_imps tcbSchedEnqueue_almost_no_orphans)
    apply (rule_tac Q="\<lambda>rv s. almost_no_orphans tptr s \<and> valid_queues' s" in hoare_post_imp)
-    apply (clarsimp simp: is_active_tcb_ptr_runnable' st_tcb_at'_def
+    apply (fastforce simp: is_active_tcb_ptr_runnable' pred_tcb_at'_def obj_at'_def 
                           almost_no_orphans_no_orphans)
    apply (wp threadSet_almost_no_orphans threadSet_valid_queues' | clarsimp simp: inQ_def)+
   apply (rule_tac Q="\<lambda>rv. obj_at' (Not \<circ> tcbQueued) tptr and invs'" in hoare_post_imp)
@@ -2079,6 +2096,11 @@ lemma tc_no_orphans:
   apply (auto simp: isCap_simps dest!: isValidVTableRootD)
   done
 
+lemma bindAsyncEndpoint_no_orphans[wp]:
+  "\<lbrace>no_orphans\<rbrace> bindAsyncEndpoint t aep \<lbrace>\<lambda>_. no_orphans\<rbrace>"
+  unfolding bindAsyncEndpoint_def
+  by wp
+
 lemma invokeTCB_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> invs' s \<and> sch_act_simple s \<and> tcb_inv_wf' tinv s \<rbrace>
    invokeTCB tinv
@@ -2090,6 +2112,8 @@ lemma invokeTCB_no_orphans [wp]:
       apply (wp, clarsimp)
      apply (wp tc_no_orphans)
      apply (clarsimp split: option.splits simp: msg_align_bits elim!:is_aligned_weaken)
+     apply (case_tac option)
+      apply ((wp | simp add: invokeTCB_def)+)[2]
     apply (wp writereg_no_orphans readreg_no_orphans copyreg_no_orphans | clarsimp)+
   done
 
@@ -2251,7 +2275,7 @@ lemma setDomain_no_orphans [wp]:
        | clarsimp simp: st_tcb_at_neg2 not_obj_at')+
    apply (auto simp: tcb_at_typ_at' st_tcb_at_neg' is_active_tcb_ptr_runnable'
                      cur_tcb'_def obj_at'_def
-               dest: st_tcb_at')
+               dest: pred_tcb_at')
   done
 
 lemma performInvocation_no_orphans [wp]:
@@ -2271,7 +2295,7 @@ lemma getThreadState_restart [wp]:
    \<lbrace> \<lambda>rv s. rv = Structures_H.thread_state.Restart \<longrightarrow> st_tcb_at' isRestart thread s \<rbrace>"
   apply (rule hoare_strengthen_post)
    apply (rule gts_st_tcb')
-  apply (clarsimp simp add: st_tcb_at'_def obj_at'_def isRestart_def)
+  apply (clarsimp simp add: pred_tcb_at'_def obj_at'_def isRestart_def)
   done
 
 lemma K_bind_hoareE [wp]:
@@ -2304,7 +2328,7 @@ lemma handleInvocation_no_orphans [wp]:
                  | simp add: split_def split del: split_if)+
   apply (clarsimp)
   apply (frule(1) ct_not_ksQ)
-  apply (auto simp: ct_in_state'_def st_tcb_at'_def obj_at'_def invs'_def
+  apply (auto simp: ct_in_state'_def pred_tcb_at'_def obj_at'_def invs'_def
                     cur_tcb'_def valid_state'_def valid_idle'_def)
   done
 
@@ -2316,6 +2340,7 @@ lemma receiveAsyncIPC_no_orphans [wp]:
   apply (wp hoare_drop_imps setThreadState_not_active_no_orphans | wpc
          | clarsimp simp: is_active_thread_state_def isRunning_def isRestart_def)+
   done
+  
 
 lemma receiveIPC_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> invs' s \<rbrace>
@@ -2347,7 +2372,7 @@ lemma handleWait_no_orphans [wp]:
    handleWait 
    \<lbrace> \<lambda>rv . no_orphans \<rbrace>"
   unfolding handleWait_def
-  apply (wp hoare_drop_imps | wpc | clarsimp)+ (*takes a while*)
+  apply (clarsimp simp: whenE_def split del: split_if | wp hoare_drop_imps getAsyncEP_wp | wpc )+ (*takes a while*)
      apply (rule_tac Q'="\<lambda>rv s. no_orphans s \<and> invs' s" in hoare_post_imp_R)
       apply (wp, fastforce)
     apply (rule_tac Q="\<lambda>rv s. no_orphans s \<and> invs' s" in hoare_post_imp)
@@ -2379,7 +2404,7 @@ lemma handleYield_no_orphans [wp]:
 
 lemma activatable_from_running':
   "ct_running' s \<Longrightarrow> ct_in_state' activatable' s"
-  by (clarsimp simp: ct_in_state'_def elim!: st_tcb'_weakenE)
+  by (clarsimp simp: ct_in_state'_def elim!: pred_tcb'_weakenE)
 
 lemma handleEvent_no_orphans [wp]:
   "\<lbrace> \<lambda>s. invs' s \<and> vs_valid_duplicates' (ksPSpace s) \<and>

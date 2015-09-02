@@ -124,10 +124,12 @@ where
 definition
   aep_relation :: "Structures_A.async_ep \<Rightarrow> Structures_H.async_endpoint \<Rightarrow> bool"
 where
- "aep_relation \<equiv> \<lambda>aep aep'. case aep of
-    Structures_A.IdleAEP       \<Rightarrow> aep' = Structures_H.IdleAEP
-  | Structures_A.WaitingAEP q  \<Rightarrow> aep' = Structures_H.WaitingAEP q
-  | Structures_A.ActiveAEP b m \<Rightarrow> aep' = Structures_H.ActiveAEP b m"
+ "aep_relation \<equiv> \<lambda>aep aep'.
+    (case aep_obj aep of
+      Structures_A.IdleAEP       \<Rightarrow> aepObj aep' = Structures_H.IdleAEP
+    | Structures_A.WaitingAEP q  \<Rightarrow> aepObj aep' = Structures_H.WaitingAEP q
+    | Structures_A.ActiveAEP b \<Rightarrow> aepObj aep' = Structures_H.ActiveAEP b)
+  \<and> aep_bound_tcb aep = aepBoundTCB aep'"
 
 definition
   ep_relation :: "Structures_A.endpoint \<Rightarrow> Structures_H.endpoint \<Rightarrow> bool"
@@ -176,7 +178,8 @@ where
   \<and> cap_relation (tcb_vtable tcb) (cteCap (tcbVTable tcb'))
   \<and> cap_relation (tcb_reply tcb) (cteCap (tcbReply tcb'))
   \<and> cap_relation (tcb_caller tcb) (cteCap (tcbCaller tcb'))
-  \<and> cap_relation (tcb_ipcframe tcb) (cteCap (tcbIPCBufferFrame tcb'))"
+  \<and> cap_relation (tcb_ipcframe tcb) (cteCap (tcbIPCBufferFrame tcb'))
+  \<and> tcb_bound_aep tcb = tcbBoundAEP tcb'"
 
 definition
   other_obj_relation :: "Structures_A.kernel_object \<Rightarrow> Structures_H.kernel_object \<Rightarrow> bool"

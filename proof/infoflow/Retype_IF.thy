@@ -793,7 +793,7 @@ lemma retype_region_globals_equiv:
    apply (erule updates_not_idle)
    apply(clarsimp simp: pspace_no_overlap_def)
    apply(drule_tac x="idle_thread sa" in spec)
-   apply(clarsimp simp: invs_def valid_state_def valid_global_objs_def valid_ao_at_def obj_at_def ptr_add_def valid_idle_def st_tcb_at_def)
+   apply(clarsimp simp: invs_def valid_state_def valid_global_objs_def valid_ao_at_def obj_at_def ptr_add_def valid_idle_def pred_tcb_at_def)
    apply(frule_tac p=a in range_cover_subset)
      apply(simp add: blah)
     apply simp

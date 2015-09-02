@@ -63,6 +63,55 @@ where
            | _ \<Rightarrow> obj)
           \<circ> (cdl_objects s)\<rparr>)"
 
+-- "Is the given thread bound to the given aep?"
+definition
+  is_thread_bound_to_aep :: "cdl_tcb \<Rightarrow> cdl_object_id \<Rightarrow> bool"
+where
+  "is_thread_bound_to_aep t aep \<equiv>
+    case (cdl_tcb_caps t tcb_boundaep_slot) of
+        Some (BoundAsyncCap a) \<Rightarrow> a = aep
+      | _ \<Rightarrow> False"
+
+-- "find all tcbs that are bound to a given aep"
+definition
+  get_bound_aep_threads :: "cdl_object_id \<Rightarrow> cdl_state \<Rightarrow> cdl_object_id set"
+where
+  "get_bound_aep_threads aep_id state \<equiv>
+     {x. \<exists>a. (cdl_objects state) x = Some (Tcb a) \<and>
+         (((cdl_tcb_caps a) tcb_boundaep_slot) = Some (BoundAsyncCap aep_id))}"
+
+definition
+  modify_bound_aep :: "cdl_tcb \<Rightarrow> cdl_cap \<Rightarrow> cdl_tcb"
+where
+  "modify_bound_aep t cap \<equiv> t \<lparr> cdl_tcb_caps := (cdl_tcb_caps t)(tcb_boundaep_slot \<mapsto> cap)\<rparr>"
+ 
+
+abbreviation
+  do_unbind_aep :: "cdl_object_id \<Rightarrow> unit k_monad"
+where
+  "do_unbind_aep tcb \<equiv> set_cap (tcb, tcb_boundaep_slot) NullCap"
+
+definition
+  unbind_async_endpoint :: "cdl_object_id \<Rightarrow> unit k_monad"
+where
+  "unbind_async_endpoint tcb \<equiv> do
+     cap \<leftarrow> KHeap_D.get_cap (tcb, tcb_boundaep_slot);
+     (case cap of
+      BoundAsyncCap _ \<Rightarrow> do_unbind_aep tcb
+    | _ \<Rightarrow> return ())
+   od"
+  
+definition
+  unbind_maybe_aep :: "cdl_object_id \<Rightarrow> unit k_monad"
+where
+  "unbind_maybe_aep aep_id \<equiv> do
+     bound_tcbs \<leftarrow> gets $ get_bound_aep_threads aep_id;
+     t \<leftarrow> option_select bound_tcbs;
+     (case t of
+       None \<Rightarrow> return ()
+     | Some tcb \<Rightarrow> do_unbind_aep tcb)
+  od"
+
 definition
   can_fast_finalise :: "cdl_cap \<Rightarrow> bool" where
  "can_fast_finalise cap \<equiv> case cap of ReplyCap r \<Rightarrow> True
@@ -92,7 +141,10 @@ where
 | "fast_finalise (EndpointCap r b R)      final =
       (when final $ ep_cancel_all r)"
 | "fast_finalise (AsyncEndpointCap r b R) final =
-      (when final $ ep_cancel_all r)"
+      (when final $ do
+            unbind_maybe_aep r;
+            ep_cancel_all r
+          od)"
 | "fast_finalise (PendingSyncSendCap r _ _ _ _) final =  return()"
 | "fast_finalise (PendingSyncRecvCap r _)   final = return()"
 | "fast_finalise  (PendingAsyncRecvCap r) final = return()"
@@ -117,6 +169,7 @@ definition
   | PendingSyncRecvCap _ _ \<Rightarrow> False
   | PendingAsyncRecvCap _ \<Rightarrow> False
   | DomainCap \<Rightarrow> False
+  | BoundAsyncCap _ \<Rightarrow> False
   | IrqControlCap  \<Rightarrow> False
   | AsidControlCap \<Rightarrow> False
   | IOSpaceMasterCap \<Rightarrow> False

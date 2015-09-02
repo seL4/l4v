@@ -19,6 +19,12 @@ lemma get_object_wp:
   apply (clarsimp simp: obj_at_def)
   done
 
+lemma get_aep_wp:
+  "\<lbrace>\<lambda>s. \<forall>aep. ko_at (AsyncEndpoint aep) aepptr s \<longrightarrow> P aep s\<rbrace> get_async_ep aepptr \<lbrace>P\<rbrace>"
+  apply (simp add: get_async_ep_def)
+  apply (wp get_object_wp | wpc)+
+  apply clarsimp
+  done
 
 lemma get_object_inv [wp]: "\<lbrace>P\<rbrace> get_object t \<lbrace>\<lambda>rv. P\<rbrace>"
   by (wp get_object_wp) simp
@@ -103,22 +109,21 @@ lemma valid_obj_same_type:
       apply (clarsimp simp add: valid_obj_def valid_cs_def)
       apply (drule (1) bspec)
       apply (erule (2) valid_cap_same_type)
-     apply (clarsimp simp add: valid_obj_def valid_tcb_def)
+     apply (clarsimp simp add: valid_obj_def valid_tcb_def valid_bound_aep_def)
      apply (fastforce elim: valid_cap_same_type typ_at_same_type
-                     simp: valid_tcb_state_def ep_at_typ
-                           aep_at_typ tcb_at_typ
-                    split: Structures_A.thread_state.splits)
+                      simp: valid_tcb_state_def ep_at_typ
+                            aep_at_typ tcb_at_typ
+                     split: Structures_A.thread_state.splits option.splits)
     apply (clarsimp simp add: valid_obj_def valid_ep_def)
     apply (fastforce elim: typ_at_same_type
                     simp: tcb_at_typ
                     split: Structures_A.endpoint.splits)
-   apply (clarsimp simp add: valid_obj_def valid_aep_def)
-   apply (fastforce elim: typ_at_same_type
+   apply (clarsimp simp add: valid_obj_def valid_aep_def valid_bound_tcb_def)
+   apply (auto elim: typ_at_same_type
                    simp: tcb_at_typ
-                  split: Structures_A.async_ep.splits)
+                  split: Structures_A.aep.splits option.splits)
   apply (clarsimp simp add: valid_obj_def)
   done
-
 
 lemma valid_arch_obj_same_type:
   "\<lbrakk>valid_arch_obj ao s;  kheap s p = Some ko; a_type ko' = a_type ko\<rbrakk>
@@ -190,6 +195,20 @@ lemma sts_ep_at_inv[wp]:
 lemma sts_aep_at_inv[wp]:
   "\<lbrace> aep_at ep \<rbrace> set_thread_state t s \<lbrace> \<lambda>rv. aep_at ep \<rbrace>"
   apply (simp add: set_thread_state_def)
+  apply (wp | simp add: set_object_def)+
+  apply (clarsimp simp: obj_at_def is_aep is_tcb get_tcb_def)
+  done
+
+lemma sba_ep_at_inv[wp]:
+  "\<lbrace> ep_at ep \<rbrace> set_bound_aep t aep \<lbrace> \<lambda>rv. ep_at ep \<rbrace>"
+  apply (simp add: set_bound_aep_def)
+  apply (wp | simp add: set_object_def)+
+  apply (clarsimp simp: obj_at_def is_ep is_tcb get_tcb_def)
+  done
+
+lemma sba_aep_at_inv[wp]:
+  "\<lbrace> aep_at ep \<rbrace> set_bound_aep t aep \<lbrace> \<lambda>rv. aep_at ep \<rbrace>"
+  apply (simp add: set_bound_aep_def)
   apply (wp | simp add: set_object_def)+
   apply (clarsimp simp: obj_at_def is_aep is_tcb get_tcb_def)
   done
@@ -354,7 +373,7 @@ lemma get_ep_valid_ep[wp]:
 done
 
 lemma get_aep_actual_aep[wp]:
-  "\<lbrace> invs and aep_at aep \<rbrace> 
+  "\<lbrace> aep_at aep \<rbrace> 
    get_async_ep aep 
    \<lbrace> \<lambda>rv. obj_at (\<lambda>k. k = AsyncEndpoint rv) aep \<rbrace>"
    apply (clarsimp simp add: get_async_ep_def get_object_def bind_def 
@@ -364,14 +383,14 @@ lemma get_aep_actual_aep[wp]:
 done
 
 lemma get_aep_valid_aep[wp]:
-  "\<lbrace> invs and aep_at aep \<rbrace> 
+  "\<lbrace> valid_objs and aep_at aep \<rbrace> 
    get_async_ep aep 
    \<lbrace> valid_aep \<rbrace>"
   apply (simp add: get_async_ep_def)
   apply (rule hoare_seq_ext)
    prefer 2
    apply (rule hoare_pre_imp [OF _ get_object_valid])
-   apply (simp add: invs_def valid_state_def valid_pspace_def)
+   apply (simp add: valid_objs_def valid_state_def valid_pspace_def)
   apply (case_tac kobj, simp_all)
       apply (wp | simp add: valid_obj_def)+
 done
@@ -733,10 +752,9 @@ lemma set_aep_distinct[wp]:
   apply (case_tac ko, simp_all add: a_type_def)
   done
 
-
 lemma set_aep_refs_of[wp]:
-  "\<lbrace>\<lambda>s. P ((state_refs_of s) (aep := aep_q_refs_of val))\<rbrace>
-     set_async_ep aep val
+  "\<lbrace>\<lambda>s. P ((state_refs_of s) (aepptr := aep_q_refs_of (aep_obj aep) \<union> aep_bound_refs (aep_bound_tcb aep)))\<rbrace>
+     set_async_ep aepptr aep
    \<lbrace>\<lambda>rv s. P (state_refs_of s)\<rbrace>"
   apply (simp add: set_async_ep_def set_object_def)
   apply (rule hoare_seq_ext [OF _ get_object_sp])
@@ -745,7 +763,6 @@ lemma set_aep_refs_of[wp]:
                  elim!: rsubst [where P=P]
                 intro!: ext)
   done
-
 
 lemma set_aep_cur_tcb[wp]:
   "\<lbrace>cur_tcb\<rbrace> set_async_ep aep v \<lbrace>\<lambda>rv. cur_tcb\<rbrace>"
@@ -993,11 +1010,11 @@ lemma set_aep_tcb[wp]:
   by (simp add: tcb_at_typ) wp
 
 
-lemma set_ep_st_tcb_at [wp]:
-  "\<lbrace> st_tcb_at f t \<rbrace> 
+lemma set_ep_pred_tcb_at [wp]:
+  "\<lbrace> pred_tcb_at proj f t \<rbrace> 
    set_endpoint ep v 
-   \<lbrace> \<lambda>rv. st_tcb_at f t \<rbrace>"
-  apply (simp add: set_endpoint_def st_tcb_at_def)
+   \<lbrace> \<lambda>rv. pred_tcb_at proj f t \<rbrace>"
+  apply (simp add: set_endpoint_def pred_tcb_at_def)
   apply wp
     defer
     apply (rule assert_sp)
@@ -1016,6 +1033,14 @@ lemma set_endpoint_ep_at[wp]:
 lemma set_endpoint_obj_at:
   "\<lbrace>\<lambda>s. P (Endpoint ep)\<rbrace> set_endpoint ptr ep \<lbrace>\<lambda>rv. obj_at P ptr\<rbrace>"
   apply (simp add: set_endpoint_def)
+  apply (wp obj_set_prop_at)
+  apply (rule hoare_drop_imps, wp)
+  done
+
+
+lemma set_async_ep_obj_at:
+  "\<lbrace>\<lambda>s. P (AsyncEndpoint ep)\<rbrace> set_async_ep ptr ep \<lbrace>\<lambda>rv. obj_at P ptr\<rbrace>"
+  apply (simp add: set_async_ep_def)
   apply (wp obj_set_prop_at)
   apply (rule hoare_drop_imps, wp)
   done
@@ -1057,10 +1082,10 @@ lemma set_ep_ex_cap[wp]:
 
 
 lemma set_aep_st_tcb [wp]:
-  "\<lbrace>st_tcb_at P t\<rbrace> set_async_ep aep x \<lbrace>\<lambda>rv. st_tcb_at P t\<rbrace>"
+  "\<lbrace>pred_tcb_at proj P t\<rbrace> set_async_ep aep x \<lbrace>\<lambda>rv. pred_tcb_at proj P t\<rbrace>"
   apply (simp add: set_async_ep_def set_object_def get_object_def)
   apply wp
-  apply (clarsimp simp: st_tcb_at_def obj_at_def is_aep)
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def is_aep)
   done
 
 
@@ -1078,27 +1103,31 @@ lemma set_endpoint_idle[wp]:
    set_endpoint ptr ep \<lbrace>\<lambda>_. valid_idle\<rbrace>"
   apply (simp add: set_endpoint_def set_object_def get_object_def)
   apply (wp hoare_drop_imp)
-  apply (clarsimp simp: valid_idle_def st_tcb_at_def obj_at_def is_ep_def)
+  apply (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def is_ep_def)
   done
 
+
+(* FIXME-AEP *)
 
 lemma ep_redux_simps:
   "valid_ep (case xs of [] \<Rightarrow> Structures_A.IdleEP | y # ys \<Rightarrow> Structures_A.SendEP (y # ys))
         = (\<lambda>s. distinct xs \<and> (\<forall>t\<in>set xs. tcb_at t s))"
   "valid_ep (case xs of [] \<Rightarrow> Structures_A.IdleEP | y # ys \<Rightarrow> Structures_A.RecvEP (y # ys))
         = (\<lambda>s. distinct xs \<and> (\<forall>t\<in>set xs. tcb_at t s))"
-  "valid_aep (case xs of [] \<Rightarrow> Structures_A.IdleAEP | y # ys \<Rightarrow> Structures_A.WaitingAEP (y # ys))
-        = (\<lambda>s. distinct xs \<and> (\<forall>t\<in>set xs. tcb_at t s))"
+  "valid_aep (aep\<lparr>aep_obj := (case xs of [] \<Rightarrow> Structures_A.IdleAEP | y # ys \<Rightarrow> Structures_A.WaitingAEP (y # ys))\<rparr>)
+        = (\<lambda>s. distinct xs \<and> (\<forall>t\<in>set xs. tcb_at t s)
+             \<and> (case aep_bound_tcb aep of
+                 Some t \<Rightarrow> tcb_at t s \<and> (case xs of y # ys \<Rightarrow> xs = [t] | _ \<Rightarrow> True)
+               | _ \<Rightarrow> True))"
   "ep_q_refs_of (case xs of [] \<Rightarrow> Structures_A.IdleEP | y # ys \<Rightarrow> Structures_A.SendEP (y # ys))
         = (set xs \<times> {EPSend})"
   "ep_q_refs_of (case xs of [] \<Rightarrow> Structures_A.IdleEP | y # ys \<Rightarrow> Structures_A.RecvEP (y # ys))
         = (set xs \<times> {EPRecv})"
   "aep_q_refs_of (case xs of [] \<Rightarrow> Structures_A.IdleAEP | y # ys \<Rightarrow> Structures_A.WaitingAEP (y # ys))
         = (set xs \<times> {AEPAsync})"
-  by (fastforce split: list.splits
-                simp: valid_ep_def valid_aep_def
-              intro!: ext)+
-
+  by (fastforce split: list.splits option.splits
+                 simp: valid_ep_def valid_aep_def valid_bound_tcb_def
+               intro!: ext)+
 
 crunch it[wp]: set_async_ep "\<lambda>s. P (idle_thread s)"
   (wp: crunch_wps simp: crunch_simps)
@@ -1128,7 +1157,7 @@ lemma set_async_ep_idle[wp]:
    \<lbrace>\<lambda>_. valid_idle\<rbrace>"
   apply (simp add: set_async_ep_def set_object_def get_object_def)
   apply (wp hoare_drop_imp)
-  apply (clarsimp simp: valid_idle_def st_tcb_at_def obj_at_def is_aep_def)
+  apply (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def is_aep_def)
   done
 
 
@@ -1408,6 +1437,14 @@ lemma sts_vs_lookup_pages [wp]:
                   split: Structures_A.kernel_object.splits option.splits)
   done
 
+crunch arch_objs[wp]: set_bound_aep "valid_arch_objs"
+  (simp: vs_refs_def)
+
+crunch vs_lookup[wp]: set_bound_aep "\<lambda>s. P (vs_lookup s)"
+  (simp: vs_refs_def)
+
+crunch vs_lookup_pages[wp]: set_bound_aep "\<lambda>s. P (vs_lookup_pages s)"
+  (simp: vs_refs_pages_def)
 
 lemma thread_set_arch_objs [wp]:
   "\<lbrace>valid_arch_objs\<rbrace> thread_set f p \<lbrace>\<lambda>_. valid_arch_objs\<rbrace>"
@@ -1903,15 +1940,15 @@ crunch valid_irq_states[wp]: set_cap "valid_irq_states"
 crunch valid_irq_states[wp]: thread_set "valid_irq_states"
   (wp: crunch_wps simp: crunch_simps)
 
-crunch valid_irq_states[wp]: set_thread_state "valid_irq_states"
+crunch valid_irq_states[wp]: set_thread_state, set_bound_aep "valid_irq_states"
   (wp: crunch_wps simp: crunch_simps)
 
 lemma set_aep_minor_invs:
   "\<lbrace>invs and aep_at ptr
-         and obj_at (\<lambda>ko. refs_of ko = aep_q_refs_of val) ptr
+         and obj_at (\<lambda>ko. refs_of ko = aep_q_refs_of (aep_obj val) \<union> aep_bound_refs (aep_bound_tcb val)) ptr
          and valid_aep val
-         and (\<lambda>s. \<forall>typ. (idle_thread s, typ) \<notin> aep_q_refs_of val)
-         and (\<lambda>s. (\<exists>ts. val = async_ep.WaitingAEP ts) \<longrightarrow> ex_nonz_cap_to ptr s)\<rbrace>
+         and (\<lambda>s. \<forall>typ. (idle_thread s, typ) \<notin> aep_q_refs_of (aep_obj val))
+         and (\<lambda>s. live (AsyncEndpoint val) \<longrightarrow> ex_nonz_cap_to ptr s)\<rbrace>
      set_async_ep ptr val
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: invs_def valid_state_def valid_pspace_def)
@@ -1984,6 +2021,9 @@ lemma sts_asid_map [wp]:
   apply (clarsimp simp: vs_refs_def obj_at_def get_tcb_def 
                   split: option.splits Structures_A.kernel_object.splits)
   done
+
+crunch asid_map[wp]: set_bound_aep "valid_asid_map"
+  (simp: vs_refs_def)
 
 
 lemma dmo_aligned[wp]:
@@ -2066,12 +2106,11 @@ lemma dmo_cap_to[wp]:
   "\<lbrace>ex_nonz_cap_to p\<rbrace> do_machine_op mop \<lbrace>\<lambda>rv. ex_nonz_cap_to p\<rbrace>"
   by (simp add: ex_nonz_cap_to_def, wp hoare_vcg_ex_lift)
 
-
 lemma dmo_st_tcb [wp]:
-  "\<lbrace>st_tcb_at P t\<rbrace> do_machine_op f \<lbrace>\<lambda>_. st_tcb_at P t\<rbrace>"
+  "\<lbrace>pred_tcb_at proj P t\<rbrace> do_machine_op f \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>"
   apply (simp add: do_machine_op_def split_def)
   apply (wp select_wp)
-  apply (clarsimp simp: st_tcb_at_def obj_at_def)
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def)
   done
 
 
@@ -2206,8 +2245,8 @@ lemma valid_table_caps_ptD:
   done
 
 
-lemma store_pde_st_tcb_at:
-  "\<lbrace>st_tcb_at P t\<rbrace> store_pde ptr val \<lbrace>\<lambda>rv. st_tcb_at P t\<rbrace>"
+lemma store_pde_pred_tcb_at:
+  "\<lbrace>pred_tcb_at proj P t\<rbrace> store_pde ptr val \<lbrace>\<lambda>rv. pred_tcb_at proj P t\<rbrace>"
   apply (simp add: store_pde_def set_pd_def set_object_def
                    get_pd_def bind_assoc)
   apply (rule hoare_seq_ext [OF _ get_object_sp])
@@ -2215,7 +2254,7 @@ lemma store_pde_st_tcb_at:
   apply (case_tac arch_kernel_obj, simp_all)
   apply (rule hoare_seq_ext [OF _ get_object_sp])
   apply wp
-  apply (clarsimp simp: st_tcb_at_def obj_at_def)
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def)
   done
    
 
@@ -2259,6 +2298,5 @@ lemma as_user_asid_map:
 
 
 crunch valid_ioc[wp]: do_machine_op valid_ioc
-
 
 end

@@ -67,6 +67,12 @@ defs sendIPC_def:
             )
 od)"
 
+defs isActive_def:
+"isActive x0\<equiv> (case x0 of
+    (AEP (ActiveAEP _) _) \<Rightarrow>    True
+  | _ \<Rightarrow>    False
+  )"
+
 defs receiveIPC_def:
 "receiveIPC thread x1\<equiv> (let cap = x1 in
   if isEndpointCap cap
@@ -74,7 +80,11 @@ defs receiveIPC_def:
         epptr \<leftarrow> return ( capEPPtr cap);
         ep \<leftarrow> getEndpoint epptr;
         diminish \<leftarrow> return ( Not $ capEPCanSend cap);
-        (case ep of
+        aepptr \<leftarrow> getBoundAEP thread;
+        aep \<leftarrow> maybe (return $ AEP IdleAEP Nothing) (getAsyncEP) aepptr;
+        if (isJust aepptr \<and> isActive aep)
+          then completeAsyncIPC (fromJust aepptr) thread
+          else (case ep of
               IdleEP \<Rightarrow>   (do
                 setThreadState (BlockedOnReceive_ \<lparr>
                     blockingIPCEndpoint= epptr,
@@ -139,7 +149,8 @@ defs ipcCancel_def:
                 slot \<leftarrow> getThreadReplySlot tptr;
                 callerCap \<leftarrow> liftM (mdbNext \<circ> cteMDBNode) $ getCTE slot;
                 when (callerCap \<noteq> nullPointer) $ (do
-                    stateAssert (capHasProperty callerCap isReplyCap)
+                    stateAssert (capHasProperty callerCap (\<lambda> cap. isReplyCap cap \<and>
+                                                                 Not (capReplyMaster cap)))
                         [];
                     cteDeleteOne callerCap
                 od)

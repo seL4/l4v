@@ -875,7 +875,7 @@ proof
 qed
 
 fun
-  aepQ :: "async_endpoint \<Rightarrow> word32 list"
+  aepQ :: "aep \<Rightarrow> word32 list"
   where
   "aepQ (WaitingAEP ts) = ts"
   | "aepQ _ = []"
@@ -883,17 +883,18 @@ fun
 lemma aep_queue_live:
   assumes invs: "invs' s"
   and     koat: "ko_at' aep p s"
-  shows   "\<forall>t \<in> set (aepQ aep). ko_wp_at' live' t s"
+  shows   "\<forall>t \<in> set (aepQ (aepObj aep)). ko_wp_at' live' t s"
 proof
   fix t
-  assume tin: "t \<in> set (aepQ aep)"
+  assume tin: "t \<in> set (aepQ (aepObj aep))"
   
   from invs koat tin show "ko_wp_at' live' t s"
     apply -
     apply (drule sym_refs_ko_atD')
      apply clarsimp
-    apply (cases aep)
-    apply (auto elim!: ko_wp_at'_weakenE [OF _ refs_of_live'])
+    apply (cases "aepObj aep")
+      apply (auto elim!: ko_wp_at'_weakenE [OF _ refs_of_live']
+                  dest!: bspec)
     done
 qed
 
@@ -969,7 +970,7 @@ proof -
   from meps have koat: "ko_at' aep p s" by (rule map_to_ko_atI') fact+
   
   show ?thesis
-  proof (cases aep)
+  proof (cases "aepObj aep")
     case (WaitingAEP ts)
     
     with vep have tats: "\<forall>t \<in> set ts. tcb_at' t s"

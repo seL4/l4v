@@ -1200,12 +1200,10 @@ lemma cendpoint_relation_q_cong:
   done
 
 lemma casync_endpoint_relation_q_cong:
-  "\<lbrakk> \<And>t rf. (t, rf) \<in> aep_q_refs_of' aep \<Longrightarrow> hp (tcb_ptr_to_ctcb_ptr t) = hp' (tcb_ptr_to_ctcb_ptr t) \<rbrakk>
-      \<Longrightarrow> casync_endpoint_relation hp aep aep' = casync_endpoint_relation hp' aep aep'"
-  apply (cases aep, simp_all add: casync_endpoint_relation_def Let_def)
-  apply (rule conj_cong [OF refl])
-  apply (rule tcb_queue_relation'_cong[OF refl refl refl])
-  apply clarsimp
+  "\<lbrakk>\<And>t rf. (t, rf) \<in> aep_q_refs_of' (aepObj aep) \<Longrightarrow>  hp (tcb_ptr_to_ctcb_ptr t) = hp' (tcb_ptr_to_ctcb_ptr t)\<rbrakk>
+      \<Longrightarrow>  casync_endpoint_relation hp aep aep' = casync_endpoint_relation hp' aep aep'"
+  apply (cases "aepObj aep", simp_all add: casync_endpoint_relation_def Let_def)
+  apply (auto intro: iffD1[OF tcb_queue_relation'_cong[OF refl refl refl]])
   done
 
 lemma tcbSchedEnqueue_ep_at:
@@ -1227,6 +1225,16 @@ lemma ctcb_relation_unat_tcbPriority_C:
 lemma ccorres_duplicate_guard:
   "ccorres r xf (P and P) Q hs f f' \<Longrightarrow> ccorres r xf P Q hs f f'"
   by (erule ccorres_guard_imp, auto)
+
+
+lemma ep_q_refs'_no_AEPBound[simp]:
+  "(x, AEPBound) \<notin> ep_q_refs_of' ep"
+  by (auto simp: ep_q_refs_of'_def split: endpoint.splits)
+
+
+lemma aep_q_refs'_no_AEPBound[simp]:
+  "(x, AEPBound) \<notin> aep_q_refs_of' aep"
+  by (auto simp: aep_q_refs_of'_def split: aep.splits)
 
 lemma epCancelBadgedSends_ccorres:
   "ccorres dc xfdc (invs' and ep_at' ptr)
@@ -1285,7 +1293,7 @@ lemma epCancelBadgedSends_ccorres:
           apply (rule_tac P="\<lambda>xs s. (\<forall>x \<in> set xs \<union> set list.
                    st_tcb_at' (\<lambda>st. isBlockedOnSend st \<and> blockingIPCEndpoint st = ptr) x s)
                               \<and> distinct (xs @ list) \<and> ko_at' IdleEP ptr s
-                              \<and> (\<forall>p. \<forall>x \<in> set (xs @ list). \<forall>rf. (x, rf) \<notin> state_refs_of' s p)
+                              \<and> (\<forall>p. \<forall>x \<in> set (xs @ list). \<forall>rf. (x, rf) \<notin> {r \<in> state_refs_of' s p. snd r \<noteq> AEPBound})
                               \<and> valid_queues s \<and> pspace_aligned' s \<and> pspace_distinct' s
                               \<and> sch_act_wf (ksSchedulerAction s) s \<and> valid_objs' s"
                      and P'="\<lambda>xs. {s. ep_queue_relation' (cslift s) (xs @ list)
@@ -1319,7 +1327,7 @@ lemma epCancelBadgedSends_ccorres:
                apply (erule(1) cpspace_relation_ep_update_ep2)
                 apply (simp add: cendpoint_relation_def Let_def)
                apply simp
-              apply (clarsimp simp: tcb_at_not_NULL[OF st_tcb_at_tcb_at']
+              apply (clarsimp simp: tcb_at_not_NULL[OF pred_tcb_at']
                                     setEndpoint_def)
               apply (rule rev_bexI, rule setObject_eq,
                       (simp add: objBits_simps)+)
@@ -1338,7 +1346,7 @@ lemma epCancelBadgedSends_ccorres:
              apply (ctac add: rescheduleRequired_ccorres[unfolded dc_def])
             apply (rule hoare_pre, wp weak_sch_act_wf_lift_linear set_ep_valid_objs')
             apply (clarsimp simp: weak_sch_act_wf_def sch_act_wf_def)
-            apply (fastforce simp: valid_ep'_def st_tcb_at' split: list.splits)
+            apply (fastforce simp: valid_ep'_def pred_tcb_at' split: list.splits)
            apply (simp add: guard_is_UNIV_def)
           apply (rule allI)
           apply (rule iffD1 [OF ccorres_expand_while_iff_Seq])
@@ -1379,7 +1387,7 @@ lemma epCancelBadgedSends_ccorres:
                 apply (rule ccorres_add_return, rule ccorres_split_nothrow[OF _ ceqv_refl])
                    apply (rule_tac rrel=dc and xf=xfdc
                                and P="\<lambda>s. (\<forall>t \<in> set (x @ a # lista). tcb_at' t s)
-                                          \<and> (\<forall>p. \<forall>t \<in> set (x @ a # lista). \<forall>rf. (t, rf) \<notin> state_refs_of' s p)
+                                          \<and> (\<forall>p. \<forall>t \<in> set (x @ a # lista). \<forall>rf. (t, rf) \<notin> {r \<in> state_refs_of' s p. snd r \<noteq> AEPBound})
                                           \<and> valid_queues s \<and> distinct (x @ a # lista)
                                           \<and> pspace_aligned' s \<and> pspace_distinct' s"
                               and P'="{s. ep_queue_relation' (cslift s) (x @ a # lista)
@@ -1393,7 +1401,7 @@ lemma epCancelBadgedSends_ccorres:
                     (* FIXME: Isabelle2013-1 bug? Converting the "fastforce+" into an
                      * "auto" mucks up schematics in other subgoals, despite this goal
                      * not containing a schematic. *)
-                    apply (intro conjI[rotated], assumption, (fastforce intro: intro: st_tcb_at_tcb_at')+)[1]
+                    apply (intro conjI[rotated], assumption, (fastforce intro: intro: pred_tcb_at')+)[1]
                    apply (clarsimp simp: return_def rf_sr_def cstate_relation_def Let_def)
                    apply (rule conjI)
                     apply (clarsimp simp: cpspace_relation_def)
@@ -1410,15 +1418,16 @@ lemma epCancelBadgedSends_ccorres:
                      apply (drule ko_at_state_refs_ofD')
                      apply clarsimp
                      apply (drule_tac x=p in spec)
-                     apply auto[1]
+                     apply fastforce
                     apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
                     apply clarsimp
                     apply (drule(2) map_to_ko_atI2, drule ko_at_state_refs_ofD')
+
                     apply (rule casync_endpoint_relation_q_cong)
                     apply (rule sym, erule restrict_map_eqI)
                     apply (clarsimp simp: image_iff)
                     apply (drule_tac x=p in spec)
-                    apply auto[1]
+                    apply fastforce
                    apply (rule conjI)
                     apply (erule cready_queues_relation_not_queue_ptrs,
                            auto dest: null_ep_schedD[unfolded o_def] simp: o_def)[1]
@@ -1445,12 +1454,12 @@ lemma epCancelBadgedSends_ccorres:
             apply vcg
            apply (vcg spec=modifies)
           apply (thin_tac "\<forall>x. ?P x")
-          apply (clarsimp simp: st_tcb_at_tcb_at' ball_Un)
+          apply (clarsimp simp: pred_tcb_at' ball_Un)
           apply (rule conjI)
            apply (clarsimp split: split_if)
            apply (fastforce simp: valid_tcb_state'_def valid_objs'_maxDomain
-                                  valid_objs'_maxPriority dest: st_tcb_at_tcb_at')
-          apply (clarsimp simp: tcb_at_not_NULL [OF st_tcb_at_tcb_at'])
+                                  valid_objs'_maxPriority dest: pred_tcb_at')
+          apply (clarsimp simp: tcb_at_not_NULL [OF pred_tcb_at'])
           apply (clarsimp simp: typ_heap_simps st_tcb_at'_def)
           apply (drule(1) obj_at_cslift_tcb)
           apply (clarsimp simp: ctcb_relation_blocking_ipc_badge)
@@ -1502,23 +1511,27 @@ lemma epCancelBadgedSends_ccorres:
   apply (frule sym_refs_ko_atD', clarsimp)
   apply (clarsimp simp: st_tcb_at_refs_of_rev')
   apply (rule conjI)
-   apply (auto simp: isBlockedOnSend_def elim!: st_tcb'_weakenE)[1]
+   apply (auto simp: isBlockedOnSend_def elim!: pred_tcb'_weakenE)[1]
   apply (rule conjI)
    apply (clarsimp split: split_if)
    apply (drule sym_refsD, clarsimp)
-   apply (auto dest!: st_tcb_at_state_refs_ofD')[1]
-  apply auto
+   apply (drule(1) bspec)+
+   apply (auto simp: obj_at'_def projectKOs state_refs_of'_def pred_tcb_at'_def tcb_bound_refs'_def 
+              dest!: symreftype_inverse')
   done
+
 
 lemma tcb_ptr_to_ctcb_ptr_force_fold:
   "x + 0x100 = ptr_val (tcb_ptr_to_ctcb_ptr x)"
   by (simp add: tcb_ptr_to_ctcb_ptr_def ctcb_offset_def)
+
 
 lemma coerce_memset_to_heap_update:
   "heap_update_list x (replicateHider (size_of (TYPE (tcb_C))) 0)
       = heap_update (tcb_Ptr x)
              (tcb_C (user_context_C (FCP (\<lambda>x. 0)))
                     (thread_state_C (FCP (\<lambda>x. 0)))
+                    (NULL)
                     (fault_C (FCP (\<lambda>x. 0)))
                     (lookup_fault_C (FCP (\<lambda>x. 0)))
                       0 0 0 0 0 NULL NULL NULL NULL)"
@@ -1540,6 +1553,7 @@ lemma coerce_memset_to_heap_update:
   apply (simp add: typ_info_word typ_info_ptr word_rsplit_0
                    replicateHider_def)
   done
+
 
 declare Kernel_C.tcb_C_size [simp del]
 lemma recycleCap_ccorres':
@@ -1615,9 +1629,10 @@ lemma recycleCap_ccorres':
                  simp add: tcb_ptr_to_ctcb_ptr_def ctcb_offset_def)
           apply (rule conjI)
            apply (simp add: size_of_def)
-           apply (drule is_aligned_no_wrap'[OF is_aligned_tcb_ptr_to_ctcb_ptr, where off="0x87"])
+           apply (drule is_aligned_no_wrap'[OF is_aligned_tcb_ptr_to_ctcb_ptr, where off="0x8B"])
             apply simp
            apply (simp add: field_simps tcb_ptr_to_ctcb_ptr_def ctcb_offset_def)
+
           apply (rule conjI)
            apply (erule aligned_add_aligned)
              apply (clarsimp simp: is_aligned_def)
@@ -1632,9 +1647,9 @@ lemma recycleCap_ccorres':
           apply (clarsimp cong: StateSpace.state.fold_congs globals.fold_congs)
           apply (rule rf_sr_tcb_update_not_in_queue2,
                  (simp add: typ_heap_simps' tcb_ptr_to_ctcb_ptr_def ctcb_offset_def
-                      cong: if_weak_cong)+)
-             apply (simp split: Structures_H.thread_state.split_asm)
-            apply simp
+                      cong: if_weak_cong)+) (*
+             apply (clarsimp split: Structures_H.thread_state.split_asm)
+            apply simp *)
            apply (rule ball_tcb_cte_casesI, simp_all)[1]
           apply (clarsimp simp: ctcb_relation_def makeObject_tcb minBound_word
                                 fault_lift_null_fault fault_null_fault_def
@@ -1643,7 +1658,8 @@ lemma recycleCap_ccorres':
                                 lookup_fault_get_tag_def Let_def
                                 thread_state_lift_def cthread_state_relation_def
                                 "StrictC'_thread_state_defs" ccontext_relation_def
-                                newContext_def2 rf_sr_ksCurDomain)
+                                newContext_def2 option_to_ptr_def option_to_0_def
+                                rf_sr_ksCurDomain)
           apply (clarsimp simp add: timeSlice_def is_cap_fault_def)
           apply (case_tac r, simp_all add: "StrictC'_register_defs" fcp_beta)[1]
          apply csymbr

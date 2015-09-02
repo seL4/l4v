@@ -19,12 +19,12 @@ begin
 lemma st_tcb_at_nostate_upd:
   "\<lbrakk> get_tcb t s = Some y; tcb_state y = tcb_state y' \<rbrakk> \<Longrightarrow>
   st_tcb_at P t' (s \<lparr>kheap := kheap s(t \<mapsto> TCB y')\<rparr>) = st_tcb_at P t' s"
-  by (clarsimp simp add: st_tcb_at_def obj_at_def dest!: get_tcb_SomeD)
+  by (clarsimp simp add: pred_tcb_at_def obj_at_def dest!: get_tcb_SomeD)
 
-lemma st_tcb_at_upd_apply:
-  "st_tcb_at P t (s\<lparr>kheap := p'\<rparr>) =
-  st_tcb_at P t (s\<lparr>kheap := (kheap s)(t := p' t)\<rparr>)"
-  by (simp add: st_tcb_at_def obj_at_def)
+lemma pred_tcb_at_upd_apply:
+  "pred_tcb_at proj P t (s\<lparr>kheap := p'\<rparr>) =
+  pred_tcb_at proj P t (s\<lparr>kheap := (kheap s)(t := p' t)\<rparr>)"
+  by (simp add: pred_tcb_at_def obj_at_def)
 
 
 text {* The top-level invariance *}
@@ -52,7 +52,7 @@ lemma akernel_invs_det_ext:
 (* FIXME: move *)
 lemma ct_running_machine_op:
   "\<lbrace>ct_running\<rbrace> do_machine_op f \<lbrace>\<lambda>_. ct_running\<rbrace>"
-  apply (simp add: ct_in_state_def st_tcb_at_def obj_at_def)
+  apply (simp add: ct_in_state_def pred_tcb_at_def obj_at_def)
   apply (rule hoare_lift_Pf [where f=cur_thread])
   by wp
 
