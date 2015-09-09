@@ -445,4 +445,15 @@ lemma map_add_same: "\<lbrakk>xs = ys; zs = ws\<rbrakk> \<Longrightarrow> xs ++ 
 lemma map_add_find_left: "n k = None \<Longrightarrow> (m ++ n) k = m k"
   by (simp add:map_add_def)
 
+lemma map_length_split_triple:
+  "map (length \<circ> (\<lambda>(a, b, c). P a b c # map (f a b c) (Q a b c))) xs =
+     map (\<lambda>(a, b, c). 1 + length (Q a b c)) xs"
+  by fastforce
+
+lemma sum_suc_triple: "(\<Sum>(a, b, c)\<leftarrow>xs. Suc (f a b c)) = length xs + (\<Sum>(a, b, c)\<leftarrow>xs. f a b c)"
+  by (induct xs; clarsimp)
+
+lemma sum_enumerate: "(\<Sum>(a, b)\<leftarrow>enumerate n xs. P b) = (\<Sum>b\<leftarrow>xs. P b)"
+  by (induct xs arbitrary:n; clarsimp)
+
 end
