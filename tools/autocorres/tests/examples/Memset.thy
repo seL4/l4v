@@ -9,7 +9,7 @@
  *)
 
 theory Memset
-imports AutoCorres
+imports "../../AutoCorres"
 begin
 
 install_C_file "memset.c"
@@ -93,7 +93,7 @@ proof -
           apply arith
          apply (metis diff_Suc_diff_eq2 diff_diff_left minus_nat.diff_0 replicate_Suc_append)
         apply (clarsimp simp: ptr_add_def)
-        apply (metis (hide_lams, no_types) add_less_cancel_right comm_monoid_add_class.add.left_neutral intvl_inter_le le0 le_add_diff_inverse of_nat_diff semiring_1_class.of_nat_0)
+        apply (metis (hide_lams, no_types) add_less_cancel_right add.left_neutral intvl_inter_le le0 le_add_diff_inverse of_nat_diff semiring_1_class.of_nat_0)
        apply clarsimp
       apply (clarsimp simp: hrs_mem_update_def)
       done
@@ -132,7 +132,7 @@ lemma (in memset) zero_node:
   apply (clarsimp simp: zero_node'_def)
   apply (wp add: memset [THEN validNF_make_schematic_post, simplified])
   apply (fastforce dest: simple_lift_c_guard simp: addr_card lift_global_heap_def
-          heap_update_zero_node update_node_def typ_simple_heap_simps
+          heap_update_zero_node memset.update_node_def typ_simple_heap_simps
           fun_upd_def)
   done
 

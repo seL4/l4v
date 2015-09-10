@@ -12,7 +12,7 @@
 	 The fault datatype. 
 *)
 
-header "Fault Structures"
+chapter "Fault Structures"
 
 theory Fault_H
 imports Types_H

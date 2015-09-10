@@ -10,17 +10,14 @@
 
 theory SEL4GraphRefine
 
-imports "../../tools/asmrefine/GraphRefine"
-  "../../tools/asmrefine/FieldAccessors"
+imports "../../tools/asmrefine/ProveGraphRefine"
   "../../spec/cspec/Substitute"
-  "SEL4GlobalsSwap"
+  "SEL4GlobalsSwap" "SEL4SimplExport"
 
 begin
 
-ML {* Toplevel.debug := true *}
-
 ML {*
-val funs = ParseGraph.funs @{theory} "../../spec/cspec/CFunDump.txt"
+val funs = ParseGraph.funs @{theory} "CFunDump.txt"
 *}
 
 ML {*
@@ -30,86 +27,56 @@ fun define_all funs = fold (fn s => let val s' = Long_Name.base_name s
   (Symtab.dest funs |> filter (fn (_, v) => #3 v <> NONE) |> map fst)
 *}
 
+ML {*
+val csenv = let
+    val the_csenv = CalculateState.get_csenv @{theory} "c/kernel_all.c_pp" |> the
+  in fn () => the_csenv end
+*}
+
 consts
   encode_machine_state :: "machine_state \<Rightarrow> unit \<times> nat"
+
+local_setup {* add_field_h_val_rewrites #> add_field_to_bytes_rewrites *}
+
+context graph_refine_locale begin
+
+ML {* SimplToGraphProof.globals_swap
+ := (fn t => @{term "globals_swap t_hrs_' t_hrs_'_update symbol_table globals_list"} $ t)
+*}
+
+local_setup {* add_globals_swap_rewrites @{thms kernel_all_global_addresses.global_data_mems} *}
 
 definition
   simpl_invariant :: "globals myvars set"
 where
-  "simpl_invariant = UNIV"
+  "simpl_invariant = {s. const_globals_in_memory symbol_table globals_list
+            (hrs_mem (t_hrs_' (globals s)))
+        \<and> htd_safe domain (hrs_htd (t_hrs_' (globals s)))}"
 
-local_setup {* add_field_h_val_rewrites #> add_field_to_bytes_rewrites *}
+abbreviation(input) "ghost_assns_from_globals
+    \<equiv> (snd o snd o ghost'state_' :: globals \<Rightarrow> _)"
 
-ML {* val nm = "Kernel_C.lookupSlotForCNodeOp" *}
+lemma snd_snd_gs_new_frames_new_cnodes[simp]:
+  "snd (snd (gs_new_frames sz ptr bits gs)) = snd (snd gs)"
+  "snd (snd (gs_new_cnodes sz' ptr bits gs)) = snd (snd gs)"
+  "snd (snd (gs_clear_region ptr sz' gs)) = snd (snd gs)"
+  "snd (snd ((if P then f else g) gs)) = (if P then snd (snd (f gs)) else snd (snd (g gs)))"
+  by (simp_all add: gs_new_frames_def gs_new_cnodes_def gs_clear_region_def)
 
-locale graph_refine = kernel_all_substitute
-    + assumes globals_list_distinct:
-        "globals_list_distinct domain symbol_table globals_list"
-      assumes halt_halts: "\<exists>ft. (\<forall>s xs. (\<Gamma> \<turnstile> \<langle>com.Call halt_'proc, Normal s\<rangle> \<Rightarrow> xs)
-            = (xs = Fault ft))"
-begin
+(*
+ML {* val nm = "Kernel_C.resolveVAddr" *}
 
-local_setup {* define_graph_fun_short funs nm *}
-
-ML {* UseHints.globals_swap
- := (fn t => @{term "globals_swap t_hrs_' t_hrs_'_update symbol_table globals_list"} $ t)
-*}
-
-ML {*
-val hints = UseHints.mk_var_deps_hints funs @{context} @{typ "globals myvars"} nm
-*}
-
-ML {* init_graph_refines_proof funs nm @{context} *}
+local_setup {*  define_graph_fun_short funs nm *}
 
 ML {*
-
-val global_data_mems = @{thms kernel_all_global_addresses.global_data_mems[
-       unfolded global_data_defs]}
-
-val pglobal_valids = (*
-(global_data_mems RL
-    @{thms ptr_inverse_safe_htd_safe_global_data[OF globals_list_distinct]
-            ptr_inverse_safe_htd_safe_const_global_data[OF globals_list_distinct]})
-  |> map (full_simplify (HOL_basic_ss addsimps @{thms symbols_in_table_simps
-                    pglobal_valid_fold c_guard_to_word_ineq}))
-  |> map (full_simplify (@{simpset} addsimps @{thms align_td_array' mask_def}))
-*) []
-
-val globals_swap_rewrites2
-    = @{thms globals_list_distinct} RL globals_swap_rewrites
-
+    val ctxt = @{context}
+    val v = ProveSimplToGraphGoals.test_graph_refine_proof funs (csenv ()) ctxt nm
 *}
+*)
 
-schematic_lemma "PROP ?P"
-  apply (tactic {* rtac it 1 *})
-  apply (tactic {* full_simpl_to_graph_tac funs [] hints nm @{context} *})
+ML {* ProveSimplToGraphGoals.test_all_graph_refine_proofs_after
+    funs (csenv ()) @{context} NONE  *} 
 
-
-  apply (tactic {* ALLGOALS (nth (graph_refine_proof_tacs @{context}) 0) *})
-  apply (tactic {* ALLGOALS (nth (graph_refine_proof_tacs @{context}) 1) *})
-  apply (tactic {* ALLGOALS (nth (graph_refine_proof_tacs @{context}) 2) *})
-
-  apply (tactic {* ALLGOALS (simp_tac (@{context} addsimps @{thms
-                       hrs_mem_update
-                       hrs_htd_globals_swap mex_def meq_def}
-                       addsimps globals_swap_rewrites2)) *})
-
-  apply (tactic {* ALLGOALS (nth (graph_refine_proof_tacs @{context}) 3) *})
-  apply (tactic {* ALLGOALS (nth (graph_refine_proof_tacs @{context}) 4) *})
-  apply (tactic {* ALLGOALS (nth (graph_refine_proof_tacs @{context}) 5) *})
-  apply (tactic {* ALLGOALS (nth (graph_refine_proof_tacs @{context}) 6) *})
-
-  apply (simp_all add: field_h_val_rewrites field_to_bytes_rewrites heap_update_def
-                       to_bytes_array upt_rec take_heap_list_min drop_heap_list_general
-                       heap_update_list_append heap_list_update_ptr heap_list_update_word32
-                       store_store_word32_commute_offset field_simps
-                       heap_access_Array_element h_val_word32 h_val_ptr
-                       field_lvalue_offset_eq)
-
-
-
-  apply (auto simp: mex_def meq_def)
-  done
-
+end
 
 end

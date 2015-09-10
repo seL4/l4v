@@ -84,12 +84,12 @@ weaken this in the future.
 The booleans @{text pasMayActivate} and @{text pasMayEditReadyQueues}
 are used to weaken the integrity property. When @{const True}, 
 @{text pasMayActivate} causes the integrity property to permit
-actiation of newly-scheduled threads. Likewise, @{text pasMayEditReadyQueues}
+activation of newly-scheduled threads. Likewise, @{text pasMayEditReadyQueues}
 has the integrity property permit the removal of threads from ready queues,
 as occurs when scheduling a new domain for instance. By setting each of these
 @{const False} we get a more constrained integrity property that is useful for
 establishing some of the proof obligations for the infoflow proofs, particularly
-those over @{const handle_event} that netiher activates new threads nor schedules
+those over @{const handle_event} that neither activates new threads nor schedules
 new domains.
 
 *}
@@ -373,11 +373,11 @@ fun
   cap_asid' :: "cap \<Rightarrow> asid set"
 where
   "cap_asid' (Structures_A.ArchObjectCap (ARM_Structs_A.PageCap _ _ _ mapping))
-      = fst ` Option.set mapping"
+      = fst ` set_option mapping"
   | "cap_asid' (Structures_A.ArchObjectCap (ARM_Structs_A.PageTableCap _ mapping))
-      = fst ` Option.set mapping"
+      = fst ` set_option mapping"
   | "cap_asid' (Structures_A.ArchObjectCap (ARM_Structs_A.PageDirectoryCap _ asid_opt))
-      = Option.set asid_opt"
+      = set_option asid_opt"
   | "cap_asid' (Structures_A.ArchObjectCap (ARM_Structs_A.ASIDPoolCap _ asid))
           = {x. asid_high_bits_of x = asid_high_bits_of asid \<and> x \<noteq> 0}"
   | "cap_asid' (Structures_A.ArchObjectCap ARM_Structs_A.ASIDControlCap) = UNIV"
@@ -420,7 +420,7 @@ abbreviation
   "irq_map_wellformed aag s \<equiv> irq_map_wellformed_aux aag (interrupt_irq_node s)"
 
 definition
- "state_vrefs s = option_case {} vs_refs_no_global_pts o kheap s"
+ "state_vrefs s = case_option {} vs_refs_no_global_pts o kheap s"
 
 abbreviation
   "state_asids_to_policy aag s \<equiv> state_asids_to_policy_aux aag (caps_of_state s)
@@ -430,7 +430,7 @@ definition
   "tcb_states_of_state s \<equiv> \<lambda>p. option_map tcb_state (get_tcb p s)"
 
 definition
-  "thread_states s = option_case {} tcb_st_to_auth \<circ> tcb_states_of_state s"
+  "thread_states s = case_option {} tcb_st_to_auth \<circ> tcb_states_of_state s"
 
 definition
   "thread_bound_aeps s \<equiv> \<lambda>p. case (get_tcb p s) of None \<Rightarrow> None | Some tcb \<Rightarrow> tcb_bound_aep tcb"
@@ -828,7 +828,7 @@ where
 lemma caps_of_state_tcb:
   "\<lbrakk> get_tcb p s = Some tcb; option_map fst (tcb_cap_cases idx) = Some getF \<rbrakk> \<Longrightarrow> caps_of_state s (p, idx) = Some (getF tcb)"
   apply (drule get_tcb_SomeD)
-  apply (clarsimp simp: option_map_eq_Some)
+  apply clarsimp
   apply (drule (1) cte_wp_at_tcbI [where t = "(p, idx)" and P = "op = (getF tcb)", simplified])
   apply simp
   apply (clarsimp simp: cte_wp_at_caps_of_state)
@@ -866,7 +866,7 @@ where
   | trm_orefl: "\<lbrakk> w = w' \<rbrakk> \<Longrightarrow> integrity_mem aag subjects p ts ts' ipcbufs globals w w'"
   | trm_write: "\<lbrakk> aag_subjects_have_auth_to subjects aag Write p \<rbrakk> \<Longrightarrow> integrity_mem aag subjects p ts ts' ipcbufs globals w w'"
   | trm_globals: "\<lbrakk> p \<in> globals \<rbrakk> \<Longrightarrow> integrity_mem aag subjects p ts ts' ipcbufs globals w w'"
-  | trm_ipc: "\<lbrakk> option_case False (receive_blocked_on ep) (ts p'); ts' p' = Some Structures_A.Running;
+  | trm_ipc: "\<lbrakk> case_option False (receive_blocked_on ep) (ts p'); ts' p' = Some Structures_A.Running;
                 p \<in> ipcbufs p'; pasObjectAbs aag p' \<notin> subjects
         \<rbrakk> \<Longrightarrow> integrity_mem aag subjects p ts ts' ipcbufs globals w w'"
 
@@ -982,17 +982,15 @@ lemma tro_trans: (* this takes a long time to process *)
   apply clarsimp
   apply (drule_tac x = x in spec)+
   apply (erule integrity_obj.cases)
-           apply (((fastforce intro: integrity_obj.intros simp: indirect_send_def direct_send_def) 
-                              | erule integrity_obj.cases)+)[9]
+  prefer 10
    apply ((clarsimp
        | erule integrity_obj.cases
        | erule disjE
        | drule(1) clear_asidpool_trans
-       | drule_tac s="Some ?s'" in sym
+       | drule sym[where s = "Some x" for x]
        | blast intro: integrity_obj.intros)+)[1]
-  apply (((fastforce intro: integrity_obj.intros simp: indirect_send_def direct_send_def) 
-                    | erule integrity_obj.cases)+)
-  done
+  by (((fastforce intro: integrity_obj.intros simp: indirect_send_def direct_send_def) 
+                              | erule integrity_obj.cases)+)
 
 lemma tre_trans:
   "\<lbrakk>(\<forall>x. integrity_eobj aag es (pasObjectAbs aag x) (ekh x) (ekh' x));
@@ -1034,7 +1032,7 @@ lemma trasids_trans:
      (\<forall>x. integrity_asids aag subjects x (arm_asid_table (arch_state s') (asid_high_bits_of x)) (arm_asid_table (arch_state s'') (asid_high_bits_of x)))\<rbrakk>
    \<Longrightarrow>
      (\<forall>x. integrity_asids aag subjects x (arm_asid_table (arch_state s) (asid_high_bits_of x)) (arm_asid_table (arch_state s'') (asid_high_bits_of x)))"
-  apply (clarsimp simp add: integrity_asids_def del: split_paired_All)
+  apply (clarsimp simp: integrity_asids_def)
   apply metis
   done
 
@@ -1042,7 +1040,7 @@ lemma trrqs_trans:
   "\<lbrakk> (\<forall>d p. integrity_ready_queues aag subjects (pasDomainAbs aag d) (ready_queues s d p) (ready_queues s' d p));
      (\<forall>d p. integrity_ready_queues aag subjects (pasDomainAbs aag d) (ready_queues s' d p) (ready_queues s'' d p)) \<rbrakk>
    \<Longrightarrow> (\<forall>d p. integrity_ready_queues aag subjects (pasDomainAbs aag d) (ready_queues s d p) (ready_queues s'' d p))"
-apply (clarsimp simp add: integrity_ready_queues_def del: split_paired_All)
+apply (clarsimp simp: integrity_ready_queues_def)
 apply (metis append_assoc)
 done
 
@@ -1114,7 +1112,7 @@ proof -
 
         show ?thesis
         proof (rule integrity_mem.trm_ipc)
-          from trm_ipc show "option_case False (receive_blocked_on ep) (tcb_states_of_state s p')"
+          from trm_ipc show "case_option False (receive_blocked_on ep) (tcb_states_of_state s p')"
             by (fastforce split: option.splits dest: tsos_tro [OF tro1])
 
           from trm_ipc show "x \<in> auth_ipc_buffers s p'"
@@ -1197,13 +1195,8 @@ lemma eintegrity_sa_update[simp]: "integrity aag X st (scheduler_action_update f
   apply (simp add: integrity_subjects_def trans_state_update'[symmetric])
   done
 
-lemma trans_state_extra[simp]: "(trans_state (\<lambda>_. e) (trans_state f s)) = (trans_state (\<lambda>_. e) s)"
-  apply simp
-  done
-
 lemma trans_state_back[simp]: "trans_state (\<lambda>_. exst s) s = s"
-  apply simp
-  done
+  by simp
 
 declare wrap_ext_op_det_ext_ext_def[simp]
 
@@ -1303,7 +1296,7 @@ done
 lemma as_user_state_vrefs[wp]:
   "\<lbrace>\<lambda>s. P (state_vrefs s)\<rbrace> as_user t f \<lbrace>\<lambda>rv s. P (state_vrefs s)\<rbrace>"
   apply (simp add: as_user_def set_object_def split_def)
-  apply (wp get_object_wp)
+  apply wp
   apply (clarsimp simp: state_vrefs_def vs_refs_no_global_pts_def get_tcb_def
                  elim!: rsubst[where P=P, OF _ ext]
                  split: option.split_asm Structures_A.kernel_object.split)
@@ -1312,7 +1305,7 @@ lemma as_user_state_vrefs[wp]:
 lemma as_user_tcb_states[wp]:
   "\<lbrace>\<lambda>s. P (tcb_states_of_state s)\<rbrace> as_user t f \<lbrace>\<lambda>rv s. P (tcb_states_of_state s)\<rbrace>"
   apply (simp add: as_user_def set_object_def split_def tcb_states_of_state_def)
-  apply (wp get_object_wp)
+  apply wp
   apply (clarsimp simp: thread_states_def get_tcb_def
                  elim!: rsubst[where P=P, OF _ ext] split: option.split)
   done
@@ -1336,16 +1329,14 @@ crunch cdt_preserved[wp]: as_user "\<lambda>s. P (cdt s)"
 lemma tcb_domain_map_wellformed_lift:
   assumes 1: "\<And>P. \<lbrace>\<lambda>s. P (ekheap s)\<rbrace> f \<lbrace>\<lambda>rv s. P (ekheap s)\<rbrace>"
   shows "\<lbrace>tcb_domain_map_wellformed aag\<rbrace> f \<lbrace>\<lambda>rv. tcb_domain_map_wellformed aag\<rbrace>"
-unfolding tcb_domain_map_wellformed_aux_def get_etcb_def
-apply (wp 1)
-done
+  by (rule 1)
 
 lemma as_user_pas_refined[wp]:
   "\<lbrace>pas_refined aag\<rbrace> as_user t f \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
 apply (simp add: pas_refined_def state_objs_to_policy_def)
 apply (rule hoare_pre)
  apply wps
- apply (wp tcb_domain_map_wellformed_lift)
+ apply wp
 apply simp
 done
 
@@ -1381,14 +1372,10 @@ lemma hoare_vcg_all_liftE:
   apply (erule hoare_vcg_all_lift)
   done
 
-(* FIXME: move *)
+(* FIXME: eliminate *)
 lemma hoare_weak_lift_impE:
   "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, \<lbrace>Q'\<rbrace> \<Longrightarrow> \<lbrace>\<lambda>s. R \<longrightarrow> P s\<rbrace> f \<lbrace>\<lambda>rv s. R \<longrightarrow> Q rv s\<rbrace>, \<lbrace>\<lambda>rv s. R \<longrightarrow> Q' rv s\<rbrace>"
-  unfolding validE_def
-  apply (cases R)
-   apply (simp cong: sum.case_cong)
-  apply (simp add: hoare_post_taut cong: sum.case_cong)
-  done
+  by (rule wp_throw_const_impE)
 
 (* FIXME: move *)
 lemma hoare_use_ex_R:
@@ -1416,7 +1403,7 @@ lemma get_endpoint_wp:
   done
 
 (* stronger *)
-(* MOVE *)
+(* FIXME: MOVE *)
 lemma ep_queued_st_tcb_at':
   "\<And>P. \<lbrakk>ko_at (Endpoint ep) ptr s; (t, rt) \<in> ep_q_refs_of ep;
          valid_objs s; sym_refs (state_refs_of s);
@@ -1456,16 +1443,16 @@ lemma aep_queued_st_tcb_at':
   done
 
 (* FIXME: move *)
-lemma prod_case_wp:
+lemma case_prod_wp:
   "(\<And>a b. x = (a, b) \<Longrightarrow> \<lbrace>P a b\<rbrace> f a b \<lbrace>Q\<rbrace>)
-  \<Longrightarrow> \<lbrace>P (fst x) (snd x)\<rbrace> prod_case f x \<lbrace>Q\<rbrace>"
+  \<Longrightarrow> \<lbrace>P (fst x) (snd x)\<rbrace> case_prod f x \<lbrace>Q\<rbrace>"
  by (cases x, simp)
 
 (* FIXME: move *)
-lemma sum_case_wp:
+lemma case_sum_wp:
   "\<lbrakk> (\<And>a. x = Inl a \<Longrightarrow> \<lbrace>P a\<rbrace> f a \<lbrace>Q\<rbrace>);
      (\<And>a. x = Inr a \<Longrightarrow> \<lbrace>P' a\<rbrace> g a \<lbrace>Q\<rbrace>) \<rbrakk>
-  \<Longrightarrow> \<lbrace>\<lambda>s. (\<forall>a. x = Inl a \<longrightarrow> P a s) \<and> (\<forall>a. x = Inr a \<longrightarrow> P' a s)\<rbrace> sum_case f g x \<lbrace>Q\<rbrace>"
+  \<Longrightarrow> \<lbrace>\<lambda>s. (\<forall>a. x = Inl a \<longrightarrow> P a s) \<and> (\<forall>a. x = Inr a \<longrightarrow> P' a s)\<rbrace> case_sum f g x \<lbrace>Q\<rbrace>"
   by (cases x, simp_all)
 
 (* MOVE *)
@@ -1548,8 +1535,7 @@ lemma new_range_subset':
   using al
 proof (rule is_aligned_get_word_bits)
   assume p0: "ptr = 0" and szv': "len_of TYPE ('a) \<le> sz"
-  hence "(2 :: 'a word) ^ sz = 0"
-    by (simp add: p2_eq_0)
+  hence "(2 :: 'a word) ^ sz = 0" by simp
 
   thus ?thesis using p0
     apply -
@@ -1568,7 +1554,7 @@ next
     apply (intro range_subsetI)
      apply (rule is_aligned_no_wrap' [OF al xsz])
     apply (simp only: add_diff_eq[symmetric])
-    apply (subst add_ac, rule word_plus_mono_right)
+    apply (subst add.assoc, rule word_plus_mono_right)
     apply (subst iffD1 [OF le_m1_iff_lt])
     apply (simp add: p2_gt_0 word_bits_conv)
     apply (rule is_aligned_add_less_t2n[OF al' _ szv xsz])
@@ -1600,7 +1586,7 @@ lemma ipcframe_subset_page:
   done
 
 lemma trm_ipc':
-  "\<lbrakk> pas_refined aag s; valid_objs s; option_case False (receive_blocked_on ep) (tcb_states_of_state s p');
+  "\<lbrakk> pas_refined aag s; valid_objs s; case_option False (receive_blocked_on ep) (tcb_states_of_state s p');
      (tcb_states_of_state s' p') = Some Structures_A.Running;
      p \<in> auth_ipc_buffers s p' \<rbrakk> \<Longrightarrow>
     integrity_mem aag subjects p

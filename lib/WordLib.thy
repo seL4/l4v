@@ -25,10 +25,6 @@ lemma shiftl_power:
   apply (simp add: shiftl1_2t)
   done
 
-lemma to_bl_use_of_bl:
-   "(to_bl w = bl) = (w = of_bl bl \<and> length bl = length (to_bl w))"
-  by (fastforce elim!: word_bl.Abs_inverse [simplified])
-
 lemmas of_bl_reasoning = to_bl_use_of_bl of_bl_append
 
 lemma uint_of_bl_is_bl_to_bin:
@@ -55,13 +51,8 @@ lemma word_ops_nth [simp]:
   by ((cases "n < size x",
       auto dest: test_bit_size simp: word_ops_nth_size word_size)[1])+
 
-lemma word_nth_1 [iff]:
-  "(1::'a::len word) !! n = (n = 0)"
-proof -
-  have "(2 ^ 0 ::'a::len word) !! n = (n = 0)"
-    by (subst nth_w2p) auto
-  thus ?thesis by simp
-qed
+(* simp del to avoid warning on the simp add in iff *)
+declare test_bit_1 [simp del, iff]
 
 (* test: *)
 lemma "1 < (1024::32 word) \<and> 1 \<le> (1024::32 word)" by simp
@@ -86,7 +77,7 @@ lemma nth_w2p_same: "(2^n :: 'a :: len word) !! n = (n < len_of TYPE('a::len))"
   by (simp add : nth_w2p)
 
 lemma p2_gt_0: "(0 < (2 ^ n :: 'a :: len word)) = (n < len_of TYPE('a))"
-  apply (simp add : word_gt_0 del : word_neq_0_conv)
+  apply (simp add : word_gt_0)
   apply safe
    apply (erule swap)
    apply (rule word_eqI)
@@ -123,7 +114,7 @@ lemma neg_mask_is_div: "w AND NOT mask n = ((w div (2 ^ n)) * (2 ^ n))"
   apply (erule neg_mask_is_div')
   apply (simp add : word_size)
   apply (frule p2_gt_0 [THEN Not_eq_iff [THEN iffD2], THEN iffD2])
-  apply (simp add : word_gt_0 del : word_neq_0_conv)
+  apply (simp add : word_gt_0)
   apply (rule word_eqI)
   apply (simp add : word_ops_nth_size word_size)
   done
@@ -132,7 +123,7 @@ lemma and_mask_arith':
   "0 < n \<Longrightarrow> w AND mask n = ((w * (2 ^ (size w - n))) div (2 ^ (size w - n)))"
   apply (simp add : and_mask)
   apply (simp add : shiftr_div_2n_w shiftl_t2n word_size)
-  apply (simp add : mult_commute)
+  apply (simp add : mult.commute)
   done
 
 lemma mask_0 [simp]: "mask 0 = 0"
@@ -155,22 +146,17 @@ lemma mask_2pm1: "mask n = 2 ^ n - 1"
 
 lemma is_aligned_AND_less_0:
   "u && mask n = 0 \<Longrightarrow> v < 2^n \<Longrightarrow> u && v = 0"
-apply (drule less_mask_eq)
-apply (simp add: mask_2pm1)
-apply (rule word_eqI)
-apply (clarsimp simp add: word_size)
-apply (drule_tac x=na in word_eqD)
-apply (drule_tac x=na in word_eqD)
-apply simp
-done
-
-lemma len_0_eq: "len_of (TYPE('a :: len0)) = 0 ==> (x :: 'a :: len0 word) = y"
-  apply (rule word_uint.Rep_eqD)
-  apply (rule box_equals)
-    apply (rule_tac [2] word_ubin.norm_Rep)
-   apply (rule_tac [2] word_ubin.norm_Rep)
+  apply (drule less_mask_eq)
+  apply (simp add: mask_2pm1)
+  apply (rule word_eqI)
+  apply (clarsimp simp add: word_size)
+  apply (drule_tac x=na in word_eqD)
+  apply (drule_tac x=na in word_eqD)
   apply simp
   done
+
+lemma len_0_eq: "len_of (TYPE('a :: len0)) = 0 ==> (x :: 'a :: len0 word) = y"
+  by (rule size_0_same)
 
 lemma le_shiftr1: "u <= v ==> shiftr1 u <= shiftr1 v"
   apply (unfold word_le_def shiftr1_def word_ubin.eq_norm)
@@ -264,7 +250,7 @@ lemmas bin_sc_minus_simps =
 
 lemma NOT_eq: "NOT (x :: 'a :: len word) = - x - 1"
   apply (cut_tac x = "x" in word_add_not)
-  apply (drule add_commute [THEN trans])
+  apply (drule add.commute [THEN trans])
   apply (drule eq_diff_eq [THEN iffD2])
   by simp
 
@@ -289,7 +275,7 @@ lemma le_m1_iff_lt: "(x > (0 :: 'a :: len word)) = ((y \<le> x - 1) = (y < x))"
   done
 
 lemmas gt0_iff_gem1 =
-  iffD1 [OF iffD1 [OF eq_left_commute le_m1_iff_lt] order_refl]
+  iffD1 [OF iffD1 [OF iff_left_commute le_m1_iff_lt] order_refl]
 
 lemmas power_2_ge_iff = trans [OF gt0_iff_gem1 [THEN sym] power_2_pos_iff]
 
@@ -354,7 +340,7 @@ lemma shiftl_over_and_dist:
   fixes a::"'a::len word"
   shows "(a AND b) << c = (a << c) AND (b << c)"
   apply(rule word_eqI)
-  apply(simp add:nth_shiftl word_ao_nth nth_shiftl, safe)
+  apply(simp add: word_ao_nth nth_shiftl, safe)
 done
 
 lemma shiftr_over_and_dist:
@@ -402,7 +388,7 @@ lemma shiftl_shiftl:
   shows "a << b << c = a << (b + c)"
  apply(rule word_eqI)
  apply(auto simp:word_size nth_shiftl
-                 add_commute add_left_commute)
+                 add.commute add.left_commute)
 done
 
 lemma shiftr_shiftr:
@@ -410,7 +396,7 @@ lemma shiftr_shiftr:
   shows "a >> b >> c = a >> (b + c)"
  apply(rule word_eqI)
  apply(simp add:word_size nth_shiftr
-                add_left_commute add_commute)
+                add.left_commute add.commute)
 done
 
 lemma shiftl_shiftr1:
@@ -502,10 +488,7 @@ lemma scast_scast_id':
   fixes x :: "('a::len) word"
   assumes is_up: "is_up (scast :: 'a word \<Rightarrow> ('b::len) word)"
   shows "scast (scast x :: 'b word) = (x :: 'a word)"
-  apply (subst scast_up_scast)
-   apply fact
-  apply (rule scast_id)
-  done
+  using assms by (rule scast_up_scast_id)
 
 lemma scast_scast_id [simp]:
   "scast (scast x :: ('a::len) signed word) = (x :: 'a word)"
@@ -551,13 +534,13 @@ lemma sint_1 [simp]:
    apply (metis diff_is_0_eq sbintrunc_0_numeral(1) sint_n1 word_1_wi
            word_m1_wi word_msb_1 word_msb_n1 word_sbin.Abs_norm)
   apply (metis bin_nth_1 diff_is_0_eq neq0_conv sbintrunc_minus_simps(4)
-            sint_word_ariths(9) uint_1 word_msb_1 word_msb_nth)
+            sint_word_ariths(8) uint_1 word_msb_1 word_msb_nth)
   done
 
 lemma scast_1':
   "(scast (1::'a::len word) :: 'b::len word) =
    (word_of_int (sbintrunc (len_of TYPE('a::len) - Suc 0) (1::int)))"
-  by (clarsimp simp only: scast_sbintr semiring_norm)
+  by (metis One_nat_def scast_def sint_word_ariths(8))
 
 lemma scast_1 [simp]:
   "(scast (1::'a::len word) :: 'b::len word) =
@@ -582,8 +565,7 @@ lemma scast_ucast_norm [simp]:
 
 lemma of_bl_drop:
   "of_bl (drop n xs) = (of_bl xs && mask (length xs - n))"
-  apply (clarsimp simp: bang_eq word_and_nth test_bit_of_bl
-                        rev_nth
+  apply (clarsimp simp: bang_eq test_bit_of_bl rev_nth
                   cong: rev_conj_cong)
   apply (safe, simp_all add: word_size to_bl_nth)
   done
@@ -599,13 +581,11 @@ lemma shiftr_mask2:
   apply arith
   done
 
-(* from GeneralLib *)
 corollary word_plus_and_or_coroll:
   "x && y = 0 \<Longrightarrow> x + y = x || y"
   using word_plus_and_or[where x=x and y=y]
   by simp
 
-(* from GeneralLib *)
 corollary word_plus_and_or_coroll2:
   "(x && w) + (x && ~~ w) = x"
   apply (subst word_plus_and_or_coroll)
@@ -627,6 +607,23 @@ lemma less_le_mult_nat':
   done
 
 lemmas less_le_mult_nat = less_le_mult_nat'[simplified distrib_right, simplified]
+
+(* FIXME: these should be moved to Word and declared [simp]
+   but that will probably break everything. *)
+lemmas extra_sle_sless_unfolds
+    = word_sle_def[where a=0 and b=1]
+    word_sle_def[where a=0 and b="numeral n"]
+    word_sle_def[where a=1 and b=0]
+    word_sle_def[where a=1 and b="numeral n"]
+    word_sle_def[where a="numeral n" and b=0]
+    word_sle_def[where a="numeral n" and b=1]
+    word_sless_alt[where a=0 and b=1]
+    word_sless_alt[where a=0 and b="numeral n"]
+    word_sless_alt[where a=1 and b=0]
+    word_sless_alt[where a=1 and b="numeral n"]
+    word_sless_alt[where a="numeral n" and b=0]
+    word_sless_alt[where a="numeral n" and b=1]
+  for n
 
 (*
  * Signed division: when the result of a division is negative,

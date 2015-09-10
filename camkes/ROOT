@@ -19,16 +19,36 @@ session CamkesAdlSpec (Camkes) in "adl-spec" = HOL +
   theories
     "Wellformed_CAMKES"
     "Examples_CAMKES"
-  files
-    "document/imgs/compilation.pdf"
-    "document/imgs/composite-passthrough.pdf"
-    "document/imgs/dataport.pdf"
-    "document/imgs/echo.pdf"
-    "document/imgs/event.pdf"
-    "document/imgs/terminal.pdf"
-    "document/intro.tex"
-    "document/root.tex"
-    "document/comment.sty"
+  document_files
+    "imgs/compilation.pdf"
+    "imgs/composite-passthrough.pdf"
+    "imgs/dataport.pdf"
+    "imgs/echo.pdf"
+    "imgs/event.pdf"
+    "imgs/NICTA_logo.pdf"
+    "imgs/terminal.pdf"
+    "intro.tex"
+    "root.tex"
+    "comment.sty"
+
+(* Base session for CAmkES<->CapDL reasoning. This session is intended to be simply a combination
+ * of CamkesAdlSpec and DSpec, and is defined because we can't easily depend on both.
+ *)
+session CamkesCdlBase (Camkes) in "adl-spec" = DPolicy +
+  theories
+    (* DSpec *)
+      "../spec/capDL/Syscall_D"
+    (* CamkesAdlSpec *)
+      "Wellformed_CAMKES"
+      "Examples_CAMKES"
+    (* Lemma buckets *)
+      "../../lib/WordLemmaBucket"
+      "../../lib/LemmaBucket"
+
+(* CAmkES<->CapDL reasoning. *)
+session CamkesCdlRefine (Camkes) in "cdl-refine" = CamkesCdlBase +
+  theories
+    Generator_CAMKES_CDL
 
 session CamkesGlueSpec (Camkes) in "glue-spec" = HOL +
   options [document = pdf]
@@ -43,18 +63,19 @@ session CamkesGlueSpec (Camkes) in "glue-spec" = HOL +
     "example-dataport/GenDataportSystem"
     "example-untrusted/EgTop"
     "example-trusted/EgTop2"
-  files
-    "document/dataport.camkes"
-    "document/event.camkes"
-    "document/imgs/echo.pdf"
-    "document/imgs/filter.pdf"
-    "document/imgs/NICTA_logo.pdf"
-    "document/imgs/thydeps.pdf"
-    "document/intro.tex"
-    "document/root.bib"
-    "document/root.tex"
-    "document/simple.camkes"
-    "document/comment.sty"
+  document_files
+    "dataport.camkes"
+    "event.camkes"
+    "imgs/echo.pdf"
+    "imgs/filter.pdf"
+    "imgs/NICTA_logo.pdf"
+    "imgs/thydeps.pdf"
+    "intro.tex"
+    "root.bib"
+    "root.tex"
+    "filter.camkes"
+    "simple.camkes"
+    "comment.sty"
 
 session CamkesGlueProofs (Camkes) in "glue-proofs" = AutoCorres +
   options [document = pdf, quick_and_dirty]
@@ -66,19 +87,20 @@ session CamkesGlueProofs (Camkes) in "glue-proofs" = AutoCorres +
     EventTo
     DataIn
   files
-    "document/eventfrom-emit-underlying.c"
-    "document/eventto-poll.c"
-    "document/eventto-wait.c"
-    "document/from-echo-int.c"
-    "document/intro.tex"
-    "document/root.bib"
-    "document/root.tex"
-    "document/simple.camkes"
-    "document/to-echo-int.c"
-    "document/imgs/NICTA_logo.pdf"
-    "document/comment.sty"
     "RPCFrom.c"
     "RPCTo.c"
     "EventFrom.c"
     "EventTo.c"
     "DataIn.c"
+  document_files
+    "eventfrom-emit-underlying.c"
+    "eventto-poll.c"
+    "eventto-wait.c"
+    "from-echo-int.c"
+    "intro.tex"
+    "root.bib"
+    "root.tex"
+    "simple.camkes"
+    "to-echo-int.c"
+    "imgs/NICTA_logo.pdf"
+    "comment.sty"

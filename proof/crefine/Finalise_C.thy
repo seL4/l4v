@@ -119,7 +119,7 @@ lemma ep_queue_relation_shift:
    apply simp
   apply simp
   apply (simp add: option_map2_def fun_eq_iff
-                   option_map_def)
+                   map_option_case)
   apply (drule_tac x=qHead in spec)+
   apply (clarsimp split: option.split_asm)
   done
@@ -275,6 +275,7 @@ next
      apply (clarsimp simp: cscheduler_action_relation_def
                            st_tcb_at'_def
                     split: scheduler_action.split_asm)
+     apply (rename_tac word)
      apply (frule_tac x=word in tcbSchedEnqueue_cslift_precond_discharge)
         apply simp
        apply clarsimp
@@ -315,6 +316,7 @@ lemma epCancelAll_ccorres:
      apply (rule_tac A="invs' and ko_at' rv epptr"
                   in ccorres_guard_imp2[where A'=UNIV])
       apply wpc
+        apply (rename_tac list)
         apply (simp add: endpoint_state_defs
                          Collect_False Collect_True
                          ccorres_cond_iffs
@@ -364,6 +366,7 @@ lemma epCancelAll_ccorres:
         apply vcg
        apply (simp add: ccorres_cond_iffs dc_def[symmetric])
        apply (rule ccorres_return_Skip)
+      apply (rename_tac list)
       apply (simp add: endpoint_state_defs
                        Collect_False Collect_True
                        ccorres_cond_iffs dc_def[symmetric]
@@ -453,6 +456,7 @@ lemma aepCancelAll_ccorres:
        apply (simp add: async_endpoint_state_defs ccorres_cond_iffs
                         dc_def[symmetric])
        apply (rule ccorres_return_Skip)
+      apply (rename_tac list)
       apply (simp add: async_endpoint_state_defs ccorres_cond_iffs
                        dc_def[symmetric] Collect_True
                   del: Collect_const)
@@ -523,8 +527,6 @@ lemma tcb_fields_ineq_helper:
   apply (clarsimp dest!: tcb_aligned'[OF obj_at'_weakenE, OF _ TrueI]
                          ctcb_ptr_to_tcb_ptr_aligned)
   apply (clarsimp simp: field_lvalue_def)
-  apply (subst(asm) field_lookup_offset_eq, fastforce)+
-  apply simp
   apply (subgoal_tac "is_aligned (ptr_val y - ptr_val x) 8")
    apply (drule sym, fastforce simp: is_aligned_def dvd_def)
   apply (erule(1) aligned_sub_aligned)
@@ -551,7 +553,7 @@ lemma use_tcb_queue_relation2:
            \<and> qhead = (hd (map tcb_ptr_to_ctcb_ptr xs @ [tcb_Ptr 0])))"
   apply (induct xs arbitrary: qhead qprev)
    apply simp
-  apply (simp add: conj_ac cong: conj_cong)
+  apply (simp add: conj_comms cong: conj_cong)
   done
 
 lemma tcb_queue_relation2_concat:
@@ -563,8 +565,9 @@ lemma tcb_queue_relation2_concat:
               ys (last (before # xs)) after)"
   apply (induct xs arbitrary: before)
    apply simp
+  apply (rename_tac x xs before)
   apply (simp split del: split_if)
-  apply (case_tac "hp a")
+  apply (case_tac "hp x")
    apply simp
   apply simp
   done
@@ -574,6 +577,7 @@ lemma tcb_queue_relation2_cong:
    \<And>p. p \<in> set queue' \<Longrightarrow> mp p = mp' p\<rbrakk>
   \<Longrightarrow> tcb_queue_relation2 getNext getPrev mp queue before after =
      tcb_queue_relation2 getNext getPrev mp' queue' before' after'"
+  using [[hypsubst_thin = true]]
   apply clarsimp
   apply (induct queue' arbitrary: before')
    apply simp+
@@ -595,8 +599,11 @@ lemma setThreadState_ccorres_valid_queues'_simple:
 
 lemma suspend_ccorres:
   assumes cteDeleteOne_ccorres:
-  "\<And>slot. ccorres dc xfdc
-   (invs') (UNIV \<inter> {s. slot_' s = Ptr slot}) []
+  "\<And>w slot. ccorres dc xfdc
+   (invs' and cte_wp_at' (\<lambda>ct. w = -1 \<or> cteCap ct = NullCap
+        \<or> (\<forall>cap'. ccap_relation (cteCap ct) cap' \<longrightarrow> cap_get_tag cap' = w)) slot)
+   ({s. gs_get_assn cteDeleteOne_'proc (ghost'state_' (globals s)) = w}
+        \<inter> {s. slot_' s = Ptr slot}) []
    (cteDeleteOne slot) (Call cteDeleteOne_'proc)"
   shows
   "ccorres dc xfdc
@@ -765,7 +772,7 @@ lemma unbindAsyncEndpoint_ccorres:
       apply (rule ccorres_cond_false)
       apply (rule ccorres_return_Skip[unfolded dc_def])
      apply (rule ccorres_cond_true)
-     apply (ctac (no_vcg) add: doUnbindAEP_ccorres[unfolded dc_def])
+     apply (ctac (no_vcg) add: doUnbindAEP_ccorres[unfolded dc_def, simplified])
     apply (wp gba_wp')
    apply vcg
   apply (clarsimp simp: option_to_ptr_def option_to_0_def pred_tcb_at'_def
@@ -799,7 +806,7 @@ lemma unbindMaybeAEP_ccorres:
       apply (rule ccorres_return_Skip)
      apply (rule ccorres_cond_true)
      apply (rule ccorres_call[where xf'=xfdc])
-        apply (rule doUnbindAEP_ccorres')
+        apply (rule doUnbindAEP_ccorres'[simplified])
        apply simp
       apply simp
      apply simp
@@ -827,7 +834,7 @@ lemma finaliseCap_True_cases_ccorres:
   apply (cinit lift: cap_' final_' exposed_' cong: call_ignore_cong)
    apply csymbr
    apply (simp add: cap_get_tag_isCap Collect_False del: Collect_const)
-   apply (fold bool_case_If)
+   apply (fold case_bool_If)
    apply (simp add: false_def)
    apply csymbr
    apply wpc
@@ -865,7 +872,7 @@ lemma finaliseCap_True_cases_ccorres:
           apply (subgoal_tac "cap_get_tag capa = scast cap_async_endpoint_cap") prefer 2
           apply (clarsimp simp: ccap_relation_def isAsyncEndpointCap_def)
           apply (case_tac cap, simp_all)[1]
-          apply (clarsimp simp: Option.map_def split: option.splits)
+          apply (clarsimp simp: option_map_def split: option.splits)
           apply (drule (2) cap_to_H_AEPCap_tag[OF sym])
          apply (rule ccorres_rhs_assoc)
          apply (rule ccorres_rhs_assoc)
@@ -939,7 +946,7 @@ lemma finaliseCap_True_standin_ccorres:
                         \<inter> {s. exposed_' s = from_bool True (* dave has name wrong *)}) []
    (finaliseCapTrue_standin cap final) (Call finaliseCap_'proc)"
   unfolding finaliseCapTrue_standin_simple_def
-  apply (case_tac "?P :: bool")
+  apply (case_tac "P :: bool" for P)
    apply (erule finaliseCap_True_cases_ccorres)
   apply (simp add: finaliseCap_def ccorres_fail')
   done
@@ -1177,7 +1184,7 @@ lemma deleteASID_ccorres:
      apply (rule_tac xf'=ret__int_'
                  and val="from_bool (inv ASIDPool pool (asid && mask asid_low_bits)
                                             = Some pdPtr)"
-                   and R="ko_at' pool a and K (pdPtr \<noteq> 0)"
+                   and R="ko_at' pool x2 and K (pdPtr \<noteq> 0)"
                 in ccorres_symb_exec_r_known_rv_UNIV[where R'=UNIV])
         apply (vcg, clarsimp)
         apply (clarsimp dest!: rf_sr_cpspace_asidpool_relation)
@@ -1202,7 +1209,7 @@ lemma deleteASID_ccorres:
          apply (rule ccorres_move_c_guard_ap)
          apply (rule ccorres_Guard_Seq)+
          apply (rule ccorres_split_nothrow_novcg_dc)
-            apply (rule_tac P="ko_at' pool a" in ccorres_from_vcg[where P'=UNIV])
+            apply (rule_tac P="ko_at' pool x2" in ccorres_from_vcg[where P'=UNIV])
             apply (rule allI, rule conseqPre, vcg)
             apply clarsimp
             apply (rule cmap_relationE1[OF rf_sr_cpspace_asidpool_relation],
@@ -1314,7 +1321,7 @@ lemma pageTableMapped_ccorres:
    apply (simp add: ignoreFailure_def catch_def
                     bindE_bind_linearise liftE_def
                del: Collect_const cong: call_ignore_cong)
-   apply (rule ccorres_split_nothrow_novcg_sum_case)
+   apply (rule ccorres_split_nothrow_novcg_case_sum)
          apply clarsimp
          apply (ctac (no_vcg) add: findPDForASID_ccorres)
         apply ceqv
@@ -1399,7 +1406,7 @@ lemma unmapPageTable_ccorres:
       apply (ctac add: cleanByVA_PoU_ccorres)
         apply (ctac(no_vcg) add:flushTable_ccorres)
        apply wp
-      apply vcg
+      apply (vcg exspec=cleanByVA_PoU_modifies)
      apply wp
     apply (fastforce simp: guard_is_UNIV_def Collect_const_mem Let_def
       shiftl_t2n field_simps lookup_pd_slot_def)
@@ -1431,7 +1438,8 @@ lemma no_0_pd_at'[elim!]:
 lemma Arch_finaliseCap_ccorres:
   "\<And>final.
    ccorres ccap_relation ret__struct_cap_C_'
-   (invs' and valid_cap' (ArchObjectCap cap))
+   (invs' and valid_cap' (ArchObjectCap cap)
+       and (\<lambda>s. 2 ^ acapBits cap \<le> gsMaxObjectSize s))
    (UNIV \<inter> {s. ccap_relation (ArchObjectCap cap) (cap_' s)}
                         \<inter> {s. final_' s = from_bool final}) []
    (ArchRetypeDecls_H.finaliseCap cap final) (Call Arch_finaliseCap_'proc)"
@@ -1440,7 +1448,7 @@ lemma Arch_finaliseCap_ccorres:
    apply (simp add: ArchRetype_H.finaliseCap_def cap_get_tag_isCap_ArchObject
                del: Collect_const)
    apply (wpc, simp_all add: isCap_simps Collect_False Collect_True
-                             bool_case_If
+                             case_bool_If
                         del: Collect_const)[1]
        apply (rule ccorres_if_lhs)
         apply (simp add: from_bool_0 true_def)
@@ -1457,7 +1465,7 @@ lemma Arch_finaliseCap_ccorres:
       apply (frule(1) cap_get_tag_isCap_unfolded_H_cap)
       apply (frule small_frame_cap_is_mapped_alt)
       apply (clarsimp simp: cap_small_frame_cap_lift cap_to_H_def
-                            option_case_over_if
+                            case_option_over_if
                      elim!: ccap_relationE simp del: Collect_const)
       apply (rule ccorres_rhs_assoc)+
       apply csymbr
@@ -1475,7 +1483,7 @@ lemma Arch_finaliseCap_ccorres:
      apply (frule(1) cap_get_tag_isCap_unfolded_H_cap)
      apply (frule frame_cap_is_mapped_alt)
      apply (clarsimp simp: cap_frame_cap_lift cap_to_H_def
-                           option_case_over_if
+                           case_option_over_if
                     elim!: ccap_relationE simp del: Collect_const)
      apply (rule ccorres_Cond_rhs_Seq, simp_all del: Collect_const)[1]
       apply (rule ccorres_rhs_assoc)+
@@ -1493,7 +1501,7 @@ lemma Arch_finaliseCap_ccorres:
      apply csymbr
      apply (frule cap_get_tag_isCap_unfolded_H_cap)
      apply (clarsimp simp: cap_page_table_cap_lift cap_to_H_def
-                           option_case_over_if if_1_0_0
+                           case_option_over_if if_1_0_0
                     elim!: ccap_relationE
                  simp del: Collect_const)
      apply (rule ccorres_Cond_rhs_Seq)
@@ -1509,7 +1517,7 @@ lemma Arch_finaliseCap_ccorres:
      apply (rule return_Null_ccorres)
     apply (simp only: bool.simps)
     apply (simp cong: option.case_cong
-                 add: option_case_If)
+                 add: case_option_If)
     apply (rule ccorres_cond_false_seq)
     apply simp
     apply (rule return_Null_ccorres)
@@ -1522,7 +1530,7 @@ lemma Arch_finaliseCap_ccorres:
     apply (simp only: if_1_0_0 simp_thms)
     apply (frule cap_get_tag_isCap_unfolded_H_cap)
     apply (clarsimp simp: cap_page_directory_cap_lift cap_to_H_def
-                          option_case_over_if
+                          case_option_over_if
                    elim!: ccap_relationE simp del: Collect_const)
      apply (rule ccorres_Cond_rhs_Seq)
      apply (rule ccorres_rhs_assoc)+
@@ -1534,7 +1542,7 @@ lemma Arch_finaliseCap_ccorres:
      apply wp
     apply simp
     apply (rule return_Null_ccorres)
-   apply (simp cong: option.case_cong add: option_case_If)
+   apply (simp cong: option.case_cong add: case_option_If)
    apply (rule ccorres_cond_false_seq, simp)
    apply (rule return_Null_ccorres)
   apply (clarsimp simp: from_bool_0 Collect_const_mem)
@@ -1680,28 +1688,32 @@ lemma isFinalCapability_ccorres:
               elim!: valid_capAligned)
   done
 
-lemma cteDeleteOne_stronger_ccorres:
+lemma cteDeleteOne_ccorres:
   "ccorres dc xfdc
-   (invs' ) (UNIV \<inter> {s. slot_' s = Ptr slot}) []
-   (cteDeleteOne slot) (Call cteDeleteOne_'proc)"  
+   (invs' and cte_wp_at' (\<lambda>ct. w = -1 \<or> cteCap ct = NullCap
+        \<or> (\<forall>cap'. ccap_relation (cteCap ct) cap' \<longrightarrow> cap_get_tag cap' = w)) slot)
+   ({s. gs_get_assn cteDeleteOne_'proc (ghost'state_' (globals s)) = w}
+        \<inter> {s. slot_' s = Ptr slot}) []
+   (cteDeleteOne slot) (Call cteDeleteOne_'proc)"
   unfolding cteDeleteOne_def
   apply (rule ccorres_symb_exec_l'
                 [OF _ getCTE_inv getCTE_sp empty_fail_getCTE])
   apply (cinit' lift: slot_' cong: call_ignore_cong)
    apply (rule ccorres_move_c_guard_cte)
-   apply (rule ccorres_symb_exec_r)
-     apply (rule_tac xf'=ret__unsigned_long_' in ccorres_abstract)
-      apply ceqv
-     apply (rule ccorres_gen_asm2,
-            erule_tac t="rv' = scast cap_null_cap"
-                  and s="cteCap cte = NullCap"
-                   in ssubst)
-     apply (clarsimp simp only: when_def unless_def dc_def[symmetric])
-     apply (rule ccorres_cond2[where R=\<top>])
-       apply (clarsimp simp: Collect_const_mem)
-      apply (rule ccorres_rhs_assoc)+
-      apply csymbr
-      apply csymbr
+   apply csymbr
+   apply (rule ccorres_abstract_cleanup)
+   apply (rule ccorres_gen_asm2,
+          erule_tac t="cap_type = scast cap_null_cap"
+                and s="cteCap cte = NullCap"
+                 in ssubst)
+   apply (clarsimp simp only: when_def unless_def dc_def[symmetric])
+   apply (rule ccorres_cond2[where R=\<top>])
+     apply (clarsimp simp: Collect_const_mem)
+    apply (rule ccorres_rhs_assoc)+
+    apply csymbr
+    apply csymbr
+    apply (rule ccorres_Guard_Seq)
+    apply (rule ccorres_basic_srnoop)
       apply (ctac(no_vcg) add: isFinalCapability_ccorres[where slot=slot])
        apply (rule_tac A="invs'  and cte_wp_at' (op = cte) slot"
                      in ccorres_guard_imp2[where A'=UNIV])
@@ -1713,31 +1725,21 @@ lemma cteDeleteOne_stronger_ccorres:
          apply (simp add: dc_def[symmetric])
          apply (ctac add: emptySlot_ccorres)
         apply (simp add: pred_conj_def finaliseCapTrue_standin_simple_def)
-        apply (strengthen vmdb_invs'_strg) 
+        apply (strengthen invs_mdb_strengthen') 
         apply (wp typ_at_lifts isFinalCapability_inv)
        apply (clarsimp simp: from_bool_def true_def irq_opt_relation_def
                              invs_pspace_aligned' cte_wp_at_ctes_of)
        apply (erule(1) cmap_relationE1 [OF cmap_relation_cte])
        apply (clarsimp simp: typ_heap_simps ccte_relation_ccap_relation)
-      apply (wp isFinalCapability_inv)
-     apply (rule ccorres_return_Skip)
+      apply (wp isFinalCapability_inv)  
+     apply simp
     apply (simp del: Collect_const add: false_def)
-    apply vcg
-   apply (rule conseqPre, vcg)
-   apply clarsimp
+   apply (rule ccorres_return_Skip)
   apply (clarsimp simp: Collect_const_mem cte_wp_at_ctes_of)
   apply (erule(1) cmap_relationE1 [OF cmap_relation_cte])
   apply (clarsimp simp: typ_heap_simps cap_get_tag_isCap
                  dest!: ccte_relation_ccap_relation)
-  done
-
-lemma cteDeleteOne_ccorres:
-  "ccorres dc xfdc
-   (invs') (UNIV \<inter> {s. slot_' s = Ptr slot}) []
-   (cteDeleteOne slot) (Call cteDeleteOne_'proc)"
-  apply (rule ccorres_guard_imp2)
-  apply (rule cteDeleteOne_stronger_ccorres)
-  apply clarsimp
+  apply (auto simp: o_def)
   done
 
 (* FIXME : move *)
@@ -1751,7 +1753,7 @@ lemma getIRQSlot_ccorres_stuff:
      = Ptr (irq_node' s + 2 ^ objBits (x :: cte) * ucast irq)"
   apply (clarsimp simp add: rf_sr_def cstate_relation_def Let_def
                             cinterrupt_relation_def)
-  apply (simp add: objBits_simps size_of_def mult_ac of_int_uint_ucast )
+  apply (simp add: objBits_simps size_of_def mult.commute mult.left_commute of_int_uint_ucast )
   done
 
 lemma deletingIRQHandler_ccorres:
@@ -1771,11 +1773,21 @@ lemma deletingIRQHandler_ccorres:
           ucast_nat_def uint_up_ucast is_up)
        apply (erule getIRQSlot_ccorres_stuff)
       apply ceqv
-     apply (simp add: dc_def[symmetric])
-     apply (ctac add: cteDeleteOne_ccorres)
-    apply wp
+     apply (rule ccorres_symb_exec_l)
+        apply (rule ccorres_symb_exec_l)
+           apply (rule ccorres_Guard_Seq)
+           apply (rule ccorres_symb_exec_r)
+             apply (ctac add: cteDeleteOne_ccorres[where w="scast cap_async_endpoint_cap"])
+            apply vcg
+           apply (rule conseqPre, vcg, clarsimp simp: rf_sr_def
+                gs_set_assn_Delete_cstate_relation[unfolded o_def])
+          apply (wp getCTE_wp' | simp add: getSlotCap_def getIRQSlot_def locateSlot_conv
+                                           getInterruptState_def)+
    apply vcg
-  apply simp
+  apply (clarsimp simp: cap_get_tag_isCap ghost_assertion_data_get_def
+                        ghost_assertion_data_set_def)
+  apply (simp add: cap_tag_defs)
+  apply (clarsimp simp: cte_wp_at_ctes_of)
   done
 
 lemma Zombie_new_spec:
@@ -1822,13 +1834,14 @@ lemma finaliseCap_ccorres:
    ccorres (\<lambda>rv rv'. ccap_relation (fst rv) (finaliseCap_ret_C.remainder_C rv')
                    \<and> irq_opt_relation (snd rv) (finaliseCap_ret_C.irq_C rv'))
    ret__struct_finaliseCap_ret_C_'
-   (invs' and sch_act_simple and valid_cap' cap and (\<lambda>s. ksIdleThread s \<notin> capRange cap))
+   (invs' and sch_act_simple and valid_cap' cap and (\<lambda>s. ksIdleThread s \<notin> capRange cap)
+          and (\<lambda>s. 2 ^ capBits cap \<le> gsMaxObjectSize s))
    (UNIV \<inter> {s. ccap_relation cap (cap_' s)} \<inter> {s. final_' s = from_bool final}
                         \<inter> {s. exposed_' s = from_bool flag (* dave has name wrong *)}) []
    (finaliseCap cap final flag) (Call finaliseCap_'proc)"
   apply (rule_tac F="capAligned cap" in Corres_UL_C.ccorres_req)
    apply (clarsimp simp: valid_capAligned)
-  apply (case_tac "?P :: bool")
+  apply (case_tac "P :: bool" for P)
    apply (rule ccorres_guard_imp2, erule finaliseCap_True_cases_ccorres)
    apply simp
   apply (subgoal_tac "\<exists>acap. (0 <=s (-1 :: word8)) \<or> acap = capCap cap")
@@ -1890,9 +1903,9 @@ lemma finaliseCap_ccorres:
     apply (simp add: mod_mask_drop[where n=5] mask_def[where n=5]
                      less_imp_neq [OF word_mod_less_divisor]
                      less_imp_neq Let_def)
-    apply (thin_tac "?a = ?b")+
-    apply (subgoal_tac "?P")
-     apply (subst add_commute, subst unatSuc, assumption)+
+    apply (thin_tac "a = b" for a b)+
+    apply (subgoal_tac "P" for P)
+     apply (subst add.commute, subst unatSuc, assumption)+
      apply (rule conjI)
       apply (rule word_eqI)
       apply (simp add: word_size word_ops_nth_size nth_w2p
@@ -1905,7 +1918,7 @@ lemma finaliseCap_ccorres:
      apply (simp add: word_size word_ops_nth_size nth_w2p
                       is_aligned_nth less_Suc_eq_le)
      apply (safe, simp_all)[1]
-    apply (subst add_commute, subst eq_diff_eq[symmetric])
+    apply (subst add.commute, subst eq_diff_eq[symmetric])
     apply (clarsimp simp: minus_one_norm)
    apply (rule ccorres_if_lhs)
     apply (simp add: Let_def getThreadCSpaceRoot_def locateSlot_conv
@@ -1934,7 +1947,7 @@ lemma finaliseCap_ccorres:
                         word_bool_alg.conj_disj_distrib2
                         word_bw_assocs)
        apply (simp add: objBits_simps ctcb_ptr_to_tcb_ptr_def)
-       apply (frule is_aligned_add_helper[where p="tcbptr - ctcb_offset" and d=ctcb_offset, standard])
+       apply (frule is_aligned_add_helper[where p="tcbptr - ctcb_offset" and d=ctcb_offset for tcbptr])
         apply (simp add: ctcb_offset_def)
        apply (simp add: mask_def irq_opt_relation_def)
       apply (simp add: cap_get_tag_isCap)
@@ -1991,6 +2004,7 @@ lemma finaliseCap_ccorres:
   apply (clarsimp simp: cap_get_tag_isCap word_sle_def Collect_const_mem
                         false_def from_bool_def)
   apply (intro impI conjI)
+         apply (clarsimp split: bool.splits)
         apply (clarsimp split: bool.splits)
          apply clarsimp
         apply (clarsimp simp: valid_cap'_def isCap_simps)

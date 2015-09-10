@@ -25,8 +25,14 @@ datatype fnspec = fnspec of string wrap
                 | didnt_translate
                 | gcc_attribs of gcc_attribute list
 
+datatype storage_class =
+         SC_EXTERN | SC_STATIC | SC_AUTO | SC_REGISTER | SC_THRD_LOCAL
+
 datatype declaration =
-         VarDecl of (expr ctype * string wrap * bool * initializer option *
+         VarDecl of (expr ctype *
+                     string wrap *
+                     storage_class list *
+                     initializer option *
                      gcc_attribute list)
          (* VarDecl's bool is true if the declaration is not an extern;
             if the declaration is "genuine".
@@ -90,6 +96,7 @@ end
 signature STMT_DECL =
 sig
   datatype gcc_attribute = datatype StmtDeclDatatype.gcc_attribute
+  datatype storage_class = datatype StmtDeclDatatype.storage_class
   datatype fnspec = datatype StmtDeclDatatype.fnspec
   datatype declaration = datatype StmtDeclDatatype.declaration
   datatype trappable = datatype StmtDeclDatatype.trappable
@@ -115,6 +122,9 @@ sig
   val stmt_type : statement -> string
 
   val stmt_fail : statement * string -> exn
+
+  val is_extern : storage_class list -> bool
+  val is_static : storage_class list -> bool
 
 end
 
@@ -224,11 +234,10 @@ fun stmt_type s =
     | LocalInit _ => "LocalInit"
     | _ => "[whoa!  Unknown stmt type]"
 
-
-
-val bogus_emptystmt = swrap(EmptyStmt, bogus, bogus)
-
 fun stmt_fail (Stmt w, msg) =
     Fail (Region.toString (Region.Wrap.region w) ^ ": " ^ msg)
+
+val is_extern = List.exists (fn x => x = SC_EXTERN)
+val is_static = List.exists (fn x => x = SC_STATIC)
 
 end

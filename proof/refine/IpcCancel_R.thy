@@ -146,14 +146,9 @@ end
 
 declare if_weak_cong [cong]
 
-(* Annotation added by Simon Winwood (Thu Jul  1 20:43:09 2010) using taint-mode *)
-declare delete_remove1[simp]
+declare delete_remove1 [simp]
 
 declare delete.simps [simp del]
-
-lemma invs_sym_refs'[elim!]:
-  "invs' s \<Longrightarrow> sym_refs (state_refs_of' s)"
-  by (simp add: invs'_def valid_state'_def)
 
 lemma invs_weak_sch_act_wf[elim!]:
   "invs' s \<Longrightarrow> weak_sch_act_wf (ksSchedulerAction s) s"
@@ -189,6 +184,7 @@ lemma blocked_ipc_cancel_corres:
       apply (case_tac rv)
         apply (simp add: ep_relation_def)
        apply (simp add: get_ep_queue_def ep_relation_def split del: split_if)
+       apply (rename_tac list)
        apply (case_tac "remove1 t list")
         apply simp
         apply (rule corres_guard_imp)
@@ -236,6 +232,7 @@ lemma blocked_ipc_cancel_corres:
        apply (auto simp add: valid_obj'_def valid_tcb'_def 
                              valid_tcb_state'_def)[1]
       apply (simp add: get_ep_queue_def ep_relation_def split del: split_if)
+      apply (rename_tac list)
       apply (case_tac "remove1 t list")
        apply simp
        apply (rule corres_guard_imp)
@@ -314,6 +311,7 @@ lemma ac_corres:
       apply (case_tac "aep_obj aepa")
         apply (simp add: aep_relation_def isWaitingAEP_def)
        apply (simp add: isWaitingAEP_def aep_relation_def split del: split_if)
+       apply (rename_tac list)
        apply (rule_tac R="remove1 t list = []" in corres_cases)
         apply (simp del: dc_simp)
         apply (rule corres_split [OF _ set_aep_corres])
@@ -346,8 +344,7 @@ lemma ac_corres:
    apply (clarsimp simp: valid_obj'_def valid_tcb'_def valid_tcb_state'_def)
    apply (drule sym, simp)
   apply (clarsimp simp: invs_weak_sch_act_wf)
-  apply (drule invs_sym_refs') 
-  apply (drule (1) sym_refs_st_tcb_atD')
+  apply (drule sym_refs_st_tcb_atD', fastforce)
   apply (fastforce simp: isWaitingAEP_def ko_wp_at'_def obj_at'_def projectKOs
                          aep_bound_refs'_def
                   split: async_endpoint.splits aep.splits option.splits)
@@ -408,7 +405,8 @@ proof -
                 capClass (cteCap cte') = ReplyClass t \<longrightarrow>
                 ptr = t + 0x20"
     apply (intro allI impI)
-    apply (case_tac cte', case_tac capability, simp_all)
+    apply (case_tac cte', rename_tac cap node, case_tac cap, simp_all)
+    apply (rename_tac arch_capability)
     apply (case_tac arch_capability, simp_all)
     done
 
@@ -521,7 +519,7 @@ lemma (in delete_one) reply_ipc_cancel_corres:
                in corres_split')
      apply (rule corres_guard_imp)
        apply (rule threadset_corresT)
-          apply (simp add: tcb_relation_def fault_option_relation_def)
+          apply (simp add: tcb_relation_def fault_rel_optionation_def)
          apply (simp add: tcb_cap_cases_def)
         apply (simp add: tcb_cte_cases_def)
        apply (simp add: exst_same_def)
@@ -624,7 +622,6 @@ lemma valid_ep_remove:
 (* Levity: added (20090201 10:50:13) *)
 declare cart_singleton_empty [simp]
 
-(* Annotation added by Simon Winwood (Thu Jul  1 20:29:10 2010) using taint-mode *)
 declare cart_singleton_empty2[simp]
 
 crunch ksQ[wp]: setAsyncEP "\<lambda>s. P (ksReadyQueues s p)"
@@ -826,7 +823,7 @@ proof -
               | simp add: valid_tcb_state'_def split del: split_if
               | wpc)+
     apply (rule hoare_strengthen_post [OF get_ep_sp'])
-    apply (clarsimp simp: pred_tcb_at' fun_upd_def[symmetric] conj_ac
+    apply (clarsimp simp: pred_tcb_at' fun_upd_def[symmetric] conj_comms
                split del: split_if cong: if_cong)
     apply (rule conjI, clarsimp simp: valid_idle'_def pred_tcb_at'_def obj_at'_def projectKOs)
     apply (frule obj_at_valid_objs', clarsimp)
@@ -841,9 +838,11 @@ proof -
     apply (rule conjI)
      apply (clarsimp split: Structures_H.endpoint.split_asm list.split
                       simp: valid_ep'_def)
+      apply (rename_tac list x xs)
       apply (frule distinct_remove1[where x=t])
       apply (cut_tac xs=list in set_remove1_subset[where x=t])
       apply auto[1]
+     apply (rename_tac list x xs)
      apply (frule distinct_remove1[where x=t])
      apply (cut_tac xs=list in set_remove1_subset[where x=t])
      apply auto[1]
@@ -914,7 +913,7 @@ lemma asyncIPCCancel_st_tcb_at:
    \<lbrace>\<lambda>rv. st_tcb_at' P t\<rbrace>"
   apply (simp add: asyncIPCCancel_def Let_def list_case_If)
   apply (wp sts_st_tcb_at'_cases hoare_vcg_const_imp_lift
-            hoare_drop_imp[where R="%rv s. P' rv", standard])
+            hoare_drop_imp[where R="%rv s. P' rv" for P'])
    apply clarsimp+
   done
 
@@ -1992,6 +1991,7 @@ lemma aep_cancel_corres:
                   weak_sch_act_wf_lift_linear setThreadState_not_st
                   set_thread_state_runnable_weak_valid_sched_action
              | simp)+
+       apply (rename_tac list)
        apply (rule_tac R="\<lambda>_ s. (\<forall>x\<in>set list. tcb_at' x s) \<and> valid_objs' s"
                     in hoare_post_add)
        apply (rule mapM_x_wp')
@@ -2319,6 +2319,7 @@ lemma aepCancelAll_valid_objs'[wp]:
   apply (case_tac "aepObj aepa", simp_all)
     apply (wp, simp)
    apply (wp, simp)
+  apply (rename_tac list)
   apply (rule_tac Q="\<lambda>rv s. valid_objs' s \<and> (\<forall>x\<in>set list. tcb_at' x s)"
                   in hoare_post_imp)
    apply (simp add: valid_aep'_def)
@@ -2631,7 +2632,7 @@ lemma ep_cancel_badged_sends_corres:
       apply (simp add: ep_relation_def)
      apply (wp hoare_vcg_const_Ball_lift weak_sch_act_wf_lift_linear set_ep_valid_objs'
                 | simp)+
-   apply (clarsimp simp: conj_ac)
+   apply (clarsimp simp: conj_comms)
    apply (frule sym_refs_ko_atD, clarsimp+)
    apply (rule obj_at_valid_objsE, assumption+, clarsimp+)
    apply (clarsimp simp: valid_obj_def valid_ep_def valid_sched_def valid_sched_action_def)
@@ -2646,7 +2647,6 @@ lemma ep_cancel_badged_sends_corres:
                         invs'_def valid_state'_def)
   done
 
-(* Levity: moved from Finalise_R (20090126 19:32:22) *)
 lemma suspend_unqueued:
   "\<lbrace>\<top>\<rbrace> suspend t \<lbrace>\<lambda>rv. obj_at' (Not \<circ> tcbQueued) t\<rbrace>"
   apply (simp add: suspend_def unless_def tcbSchedDequeue_def)

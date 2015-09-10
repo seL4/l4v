@@ -28,7 +28,7 @@ The translation tool builds on various open source projects by others.
 
 1. Norbert Schirmer's Simpl language and associated VCG tool.
 
-   Sources for this are found in the hoare_package directory.  The
+   Sources for this are found in the Simpl/ directory.  The
    code is covered by an LGPL licence.
 
    See http://afp.sourceforge.net/entries/Simpl.shtml

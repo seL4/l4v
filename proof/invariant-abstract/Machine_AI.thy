@@ -69,9 +69,6 @@ lemma ef_machine_op_lift [simp]:
   by (simp add: machine_op_lift_def)
 
 
-lemma no_fail_setCurrentPD: "no_fail \<top> (setCurrentPD w)"
-  by (simp add: setCurrentPD_def)
-
 
 lemma no_fail_setNextPC: "no_fail \<top> (setNextPC pc)"
   by (simp add: setNextPC_def setRegister_def)
@@ -96,6 +93,14 @@ lemma no_fail_dsb: "no_fail \<top> dsb"
 
 lemma no_fail_dmb: "no_fail \<top> dmb"
   by (simp add: dmb_def)
+
+lemma no_fail_writeTTBR0: "no_fail \<top> (writeTTBR0 w)"
+  by (simp add: writeTTBR0_def)
+
+lemma no_fail_setCurrentPD: "no_fail \<top> (setCurrentPD w)"
+  apply (simp add: setCurrentPD_def)
+  apply (rule no_fail_pre, wp no_fail_dsb no_fail_writeTTBR0 no_fail_isb, simp)
+  done
 
 lemma no_fail_cleanByVA: "no_fail \<top> (cleanByVA w p)"
   by (simp add: cleanByVA_def)
@@ -422,10 +427,9 @@ lemma no_irq_writeContextID: "no_irq  writeContextID"
 lemma no_irq_setHardwareASID: "no_irq (setHardwareASID hw_asid)"
   by (simp add: setHardwareASID_def)
 
-
-lemma no_irq_setCurrentPD: "no_irq (setCurrentPD pd)"
-  by (simp add: setCurrentPD_def)
-
+lemma no_irq_writeTTBR0: "no_irq (writeTTBR0 pd)"
+  by (simp add: writeTTBR0_def)
+ 
 lemma no_irq_gets [simp]:
   "no_irq (gets f)"
   by (simp add: no_irq_def)
@@ -527,6 +531,10 @@ lemma no_irq_modify:
   apply (clarsimp simp: in_monad)
   done
 
+lemma no_irq_setCurrentPD: "no_irq (setCurrentPD pd)"
+  apply (clarsimp simp: setCurrentPD_def)
+  apply (wp no_irq_dsb no_irq_writeTTBR0 no_irq_isb)
+  done
 
 lemma no_irq_clearExMonitor: "no_irq clearExMonitor"
   apply (simp add: clearExMonitor_def)

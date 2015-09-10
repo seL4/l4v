@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-header "Initialisation"
+chapter "Initialisation"
 
 theory KI_Decls_H
 imports
@@ -16,6 +16,6 @@ imports
   KernelInitMonad_H
 begin
 
-#INCLUDE_HASKELL SEL4/Kernel/Init.lhs decls_only NOT funArray newKernelState distinct rangesBy InitData doKernelOp runInit
+#INCLUDE_HASKELL SEL4/Kernel/Init.lhs decls_only NOT isAligned funArray newKernelState distinct rangesBy doKernelOp runInit
 
 end

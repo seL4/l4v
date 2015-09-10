@@ -9,10 +9,9 @@
  *)
 
 theory GlobalsSwap
-
-imports    "CTranslation"
-    "PackedTypes"
-
+imports
+  "CTranslation"
+  "PackedTypes"
 begin
 
 datatype 'g global_data =
@@ -193,9 +192,10 @@ lemma foldr_update_commutes:
   by (induct xs, simp_all)
 
 definition
- "globals_list_valid g_hrs g_hrs_upd xs =
+ "globals_list_valid symtab g_hrs g_hrs_upd xs =
     (distinct_prop global_data_swappable xs
-        \<and> (\<forall>x \<in> set xs. global_data_valid g_hrs g_hrs_upd x))"
+        \<and> (\<forall>x \<in> set xs. global_data_valid g_hrs g_hrs_upd x)
+        \<and> (\<forall>x \<in> set xs. global_data_ok symtab x))"
 
 lemma global_data_swappable_sym:
   "global_data_swappable x y = global_data_swappable y x"
@@ -223,7 +223,8 @@ where
     (D # map (global_data_region symtab) gds)"
 
 lemma globals_swap_twice_helper:
-  "\<lbrakk> globals_list_valid g_hrs g_hrs_upd xs; global_acc_valid g_hrs g_hrs_upd;
+  "\<lbrakk> globals_list_valid symtab g_hrs g_hrs_upd xs;
+        global_acc_valid g_hrs g_hrs_upd;
         globals_list_distinct D symtab xs \<rbrakk>
    \<Longrightarrow> globals_swap g_hrs g_hrs_upd symtab xs (globals_swap g_hrs g_hrs_upd symtab xs gs) = gs"
   apply (simp add: globals_swap_def)
@@ -231,7 +232,7 @@ lemma globals_swap_twice_helper:
   apply (induct xs)
    apply simp
   apply (clarsimp simp: globals_list_distinct_def)
-  apply (subst foldr_update_commutes[where f="global_swap g_hrs g_hrs_upd symtab v", standard])
+  apply (subst foldr_update_commutes[where f="global_swap g_hrs g_hrs_upd symtab v" for v])
    apply (rule global_swap_swap, auto)[1]
   apply (simp add: global_swap_cancel foldr_hrs_htd_global_swap)
   done
@@ -358,7 +359,7 @@ proof -
   show ?thesis
     apply (simp add: global_data_valid_def global_data_def)
     apply (simp add: all_to_xs order_less_imp_le[OF max_size]
-                     inj_eq[OF to_bytes_p_inj] conj_ac K_def)
+                     inj_eq[OF to_bytes_p_inj] conj_comms K_def)
     apply (safe, simp_all add: to_bytes_p_from_bytes)
     apply (drule_tac x="to_bytes_p (from_bytes xs :: 'a)" in spec, drule mp)
      apply simp
@@ -367,7 +368,7 @@ proof -
 qed
 
 lemma globals_swap_reorder_append:
-  "\<lbrakk> globals_list_valid g_hrs g_hrs_upd (xs @ ys);
+  "\<lbrakk> globals_list_valid symtab g_hrs g_hrs_upd (xs @ ys);
         global_acc_valid g_hrs g_hrs_upd;
         globals_list_distinct D symtab (xs @ ys) \<rbrakk>
     \<Longrightarrow> globals_swap g_hrs g_hrs_upd symtab (xs @ ys) = globals_swap g_hrs g_hrs_upd symtab (ys @ xs)"
@@ -384,7 +385,7 @@ lemma globals_swap_reorder_append:
   done
 
 lemma globals_swap_reorder_append_n:
-  "\<lbrakk> globals_list_valid g_hrs g_hrs_upd xs; global_acc_valid g_hrs g_hrs_upd;
+  "\<lbrakk> globals_list_valid symtab g_hrs g_hrs_upd xs; global_acc_valid g_hrs g_hrs_upd;
         globals_list_distinct D symtab xs \<rbrakk> \<Longrightarrow>
     globals_swap g_hrs g_hrs_upd symtab xs = globals_swap g_hrs g_hrs_upd symtab (drop n xs @ take n xs)"
   using globals_swap_reorder_append
@@ -405,7 +406,7 @@ lemma heap_list_update_eq:
 lemma globals_swap_absorb_update:
   "\<lbrakk> global_acc_valid g_hrs g_hrs_upd;
      \<forall>s. v (g_hrs s) = v'; length v' = m;
-     globals_list_valid g_hrs g_hrs_upd (GlobalData nm m ok g s # xs);
+     globals_list_valid symtab g_hrs g_hrs_upd (GlobalData nm m ok g s # xs);
      globals_list_distinct D symtab (GlobalData nm m ok g s # xs) \<rbrakk>
     \<Longrightarrow> s v' (globals_swap g_hrs g_hrs_upd symtab (GlobalData nm m ok g s # xs) gs)
         = globals_swap g_hrs g_hrs_upd symtab (GlobalData nm m ok g s # xs)
@@ -419,10 +420,11 @@ lemma globals_swap_absorb_update:
                     heap_list_update_eq order_less_imp_le
                del: SepCode.inv_p)
   apply (drule meta_mp, simp add: globals_list_valid_def globals_list_distinct_def)+
+  apply (rename_tac x xs)
   apply (subgoal_tac "\<forall>gs. 
-                globals_swap g_hrs g_hrs_upd symtab (GlobalData nm m ok g s # a # xs) gs
-                 = global_swap g_hrs g_hrs_upd symtab a (globals_swap g_hrs g_hrs_upd symtab (GlobalData nm m ok g s # xs) gs)")
-   apply (subgoal_tac "\<forall>gs. s v' (global_swap g_hrs g_hrs_upd symtab a gs) = global_swap g_hrs g_hrs_upd symtab a (s v' gs)")
+                globals_swap g_hrs g_hrs_upd symtab (GlobalData nm m ok g s # x # xs) gs
+                 = global_swap g_hrs g_hrs_upd symtab x (globals_swap g_hrs g_hrs_upd symtab (GlobalData nm m ok g s # xs) gs)")
+   apply (subgoal_tac "\<forall>gs. s v' (global_swap g_hrs g_hrs_upd symtab x gs) = global_swap g_hrs g_hrs_upd symtab x (s v' gs)")
     apply (simp add: global_acc_valid_def)
    apply (clarsimp simp: globals_list_valid_def global_data_swappable_def
                          global_data_def global_swap_def K_def
@@ -439,7 +441,7 @@ lemma append_2nd_simp_backward:
 
 lemma globals_swap_access_mem_raw:
   "\<lbrakk> global_acc_valid g_hrs g_hrs_upd;
-     globals_list_valid g_hrs g_hrs_upd xs; globals_list_distinct D symtab xs;
+     globals_list_valid symtab g_hrs g_hrs_upd xs; globals_list_distinct D symtab xs;
      GlobalData nm m ok g s \<in> set xs; size_of TYPE('a) = m \<rbrakk>
     \<Longrightarrow> h_val (hrs_mem (g_hrs gs)) (Ptr (symtab nm) :: ('a :: c_type) ptr)
             = from_bytes (g (globals_swap g_hrs g_hrs_upd symtab xs gs))"
@@ -466,7 +468,7 @@ lemma globals_swap_access_mem_raw:
 lemma globals_swap_access_mem:
   "\<lbrakk> global_data nm g u \<in> set xs;
      global_acc_valid g_hrs g_hrs_upd;
-     globals_list_valid g_hrs g_hrs_upd xs; 
+     globals_list_valid symtab g_hrs g_hrs_upd xs; 
      globals_list_distinct D symtab xs \<rbrakk>
     \<Longrightarrow> g (globals_swap g_hrs g_hrs_upd symtab xs gs) = h_val (hrs_mem (g_hrs gs)) (Ptr (symtab nm))"
   by (simp add: global_data_def globals_swap_access_mem_raw)
@@ -474,7 +476,7 @@ lemma globals_swap_access_mem:
 lemma globals_swap_access_mem2:
   "\<lbrakk> global_data nm g u \<in> set xs;
      global_acc_valid g_hrs g_hrs_upd;
-     globals_list_valid g_hrs g_hrs_upd xs; 
+     globals_list_valid symtab g_hrs g_hrs_upd xs; 
      globals_list_distinct D symtab xs \<rbrakk>
     \<Longrightarrow> g gs = h_val (hrs_mem (g_hrs (globals_swap g_hrs g_hrs_upd symtab xs gs))) (Ptr (symtab nm))"
   using globals_swap_twice_helper globals_swap_access_mem
@@ -483,7 +485,7 @@ lemma globals_swap_access_mem2:
 lemma globals_swap_update_mem_raw:
   "\<lbrakk> global_acc_valid g_hrs g_hrs_upd;
      \<forall>hmem. (v hmem) = v'; length v' = m;
-     globals_list_valid g_hrs g_hrs_upd xs;
+     globals_list_valid symtab g_hrs g_hrs_upd xs;
      globals_list_distinct D symtab xs;
      GlobalData nm m ok g st \<in> set xs \<rbrakk>
     \<Longrightarrow> globals_swap g_hrs g_hrs_upd symtab xs (g_hrs_upd (hrs_mem_update
@@ -507,7 +509,7 @@ lemma to_bytes_p_from_bytes_eq:
 lemma globals_swap_update_mem:
   "\<lbrakk> global_data nm g u \<in> set xs;
      global_acc_valid g_hrs g_hrs_upd;
-     globals_list_valid g_hrs g_hrs_upd xs;
+     globals_list_valid symtab g_hrs g_hrs_upd xs;
      globals_list_distinct D symtab xs \<rbrakk>
     \<Longrightarrow> u (\<lambda>_. v) (globals_swap g_hrs g_hrs_upd symtab xs gs)
         = globals_swap g_hrs g_hrs_upd symtab xs (g_hrs_upd (hrs_mem_update
@@ -523,7 +525,7 @@ lemma globals_swap_update_mem:
 lemma globals_swap_update_mem2:
   assumes prems: "global_data nm g u \<in> set xs"
      "global_acc_valid g_hrs g_hrs_upd"
-     "globals_list_valid g_hrs g_hrs_upd xs"
+     "globals_list_valid symtab g_hrs g_hrs_upd xs"
      "globals_list_distinct D symtab xs"
   shows "globals_swap g_hrs g_hrs_upd symtab xs (u (\<lambda>_. v) gs)
         = g_hrs_upd (hrs_mem_update (\<lambda>hrs. heap_update (Ptr (symtab nm)) v hrs))
@@ -533,7 +535,7 @@ lemma globals_swap_update_mem2:
 
 lemma globals_swap_hrs_htd_update:
   "\<lbrakk> global_acc_valid g_hrs g_hrs_upd;
-        globals_list_valid g_hrs g_hrs_upd xs \<rbrakk>
+        globals_list_valid symtab g_hrs g_hrs_upd xs \<rbrakk>
     \<Longrightarrow> g_hrs_upd (hrs_htd_update ufn) (globals_swap g_hrs g_hrs_upd symtab xs gs)
          = globals_swap g_hrs g_hrs_upd symtab xs (g_hrs_upd (hrs_htd_update ufn) gs)"
   apply (clarsimp simp: globals_swap_def hrs_htd_update
@@ -585,7 +587,8 @@ lemma distinct_prop_swappable_optimisation:
 lemma globals_list_valid_optimisation:
   "distinct_prop global_data_swappable (filter is_global_data gs)
     \<Longrightarrow> \<forall>g \<in> set gs. global_data_valid g_hrs g_hrs_upd g
-    \<Longrightarrow> globals_list_valid g_hrs g_hrs_upd gs"
+    \<Longrightarrow> \<forall>g \<in> set gs. global_data_ok symtab g
+    \<Longrightarrow> globals_list_valid symtab g_hrs g_hrs_upd gs"
   using globals_list_valid_def distinct_prop_swappable_optimisation
   by blast
 
@@ -685,40 +688,41 @@ fun dest_conjs t = (t RS @{thm conjunct1})
         :: dest_conjs (t RS @{thm conjunct2})
     handle THM _ => [t]
 
-fun define_globals_list mungedb globloc globty thy = let
+fun define_globals_list (mungedb:CalculateState.mungedb) globloc globty thy = let
     open CalculateState NameGeneration
 
     val sT = @{typ string}
     val gdT = Type (@{type_name global_data}, [globty])
 
-    val ctxt = Named_Target.context_cmd (globloc,Position.none) thy
+    val ctxt = Named_Target.begin (globloc, Position.none) thy
 
     fun glob (_, _, _, Local _) = error "define_globals_list: Local"
       | glob (nm, typ, _, UntouchedGlobal) = let
             val cname = NameGeneration.untouched_global_name nm
-            val init = Syntax.read_term ctxt cname
+            val init = Syntax.read_term ctxt (MString.dest cname)
         in Const (@{const_name "const_global_data"}, sT --> typ --> gdT)
-            $ HOLogic.mk_string nm $ init end
+            $ HOLogic.mk_string (MString.dest nm) $ init end
       | glob (nm, typ, _, NSGlobal) = let
             (* FIXME: _' hackery (or more generally, hackery) *)
-            val acc = (Sign.intern_const thy (global_rcd_name ^ "." ^ nm ^ "_'"
-),
-                globty --> typ)
+            val acc = (Sign.intern_const thy (global_rcd_name ^ "." ^ 
+                                              MString.dest nm ^ "_'"),
+                       globty --> typ)
             val upd = (Sign.intern_const thy
-                    (global_rcd_name ^ "." ^ nm ^ "_'" ^ Record.updateN),
+                          (global_rcd_name ^ "." ^ MString.dest nm ^ "_'" ^ 
+                           Record.updateN),
                 (typ --> typ) --> globty --> globty)
         in Const (@{const_name "global_data"}, sT
                 --> snd acc --> snd upd --> gdT)
-            $ HOLogic.mk_string nm $ Const acc $ Const upd end
+            $ HOLogic.mk_string (MString.dest nm) $ Const acc $ Const upd end
       | glob (nm, typ, _, AddressedGlobal) =
         Const (@{const_name "addressed_global_data"},
                 sT --> Term.itselfT typ --> gdT)
-            $ HOLogic.mk_string nm $ Logic.mk_type typ
+            $ HOLogic.mk_string (MString.dest nm) $ Logic.mk_type typ
 
     val naming = Binding.name o NameGeneration.global_data_name
     val globs = CNameTab.dest mungedb |> map snd
         |> filter (fn v => case #4 v of Local _ => false | _ => true)
-        |> map (fn g => (naming (#1 g), glob g))
+        |> map (fn g => (g |> #1 |> MString.dest |> naming, glob g))
 
     val (xs, ctxt) = fold_map (fn (nm, tm) => Local_Theory.define
         ((nm, NoSyn), ((Thm.def_binding nm, []), tm))) globs ctxt
@@ -742,7 +746,7 @@ fun define_globals_list mungedb globloc globty thy = let
                 addsimps [gdl_def]) 1))
 
     val mems = simplify (put_simpset HOL_basic_ss ctxt addsimps
-            @{thms set.simps insert_subset empty_subsetI simp_thms}) thm
+            @{thms set_simps insert_subset empty_subsetI simp_thms}) thm
         |> dest_conjs
 
     val (_, ctxt) = Local_Theory.note ((@{binding "global_data_mems"}, []),
@@ -759,6 +763,131 @@ fun define_globals_list_i s globty thy = let
 
 end
 
+*}
+
+lemma globals_list_distinct_filter_member:
+  "x \<in> set xs \<Longrightarrow> globals_list_distinct D symtab xs
+    \<Longrightarrow> \<not> P x
+    \<Longrightarrow> globals_list_distinct (global_data_region symtab x) symtab
+        (filter P xs)"
+  apply (clarsimp simp: globals_list_distinct_def)
+  apply (rule conjI)
+   apply (clarsimp simp: in_set_conv_decomp[where x="x"]
+                         distinct_prop_append)
+   apply auto[1]
+  apply (simp add: distinct_prop_map distinct_prop_filter)
+  apply (erule distinct_prop_weaken, simp)
+  done
+
+lemma s_footprint_intvl_subset:
+  "s_footprint (p :: 'a ptr) \<subseteq> {ptr_val p ..+ size_of TYPE ('a :: c_type)} \<times> UNIV"
+  by (auto simp: s_footprint_def s_footprint_untyped_def
+                 intvl_def size_of_def)
+
+lemma h_val_globals_swap_in_const_global:
+  "\<lbrakk> global_acc_valid g_hrs g_hrs_upd;
+        globals_list_distinct D symtab xs;
+        const_global_data s (v :: 'a :: c_type) \<in> set xs;
+        unat offs + size_of TYPE('b) \<le> size_of TYPE('a) \<rbrakk>
+    \<Longrightarrow> h_val (hrs_mem (g_hrs (globals_swap g_hrs g_hrs_upd symtab xs gs)))
+            (Ptr (symtab s + offs) :: ('b :: c_type) ptr)
+         = h_val (hrs_mem (g_hrs gs)) (Ptr (symtab s + offs))"
+  apply (erule disjoint_h_val_globals_swap_filter,
+    erule(1) globals_list_distinct_filter_member)
+   apply simp
+  apply (rule order_trans, rule s_footprint_intvl_subset)
+  apply (simp add: global_data_region_def const_global_data_def
+                   Times_subset_cancel2)
+  apply (erule intvl_sub_offset)
+  done
+
+lemmas h_val_globals_swap_in_const_global_both
+    = h_val_globals_swap_in_const_global
+        h_val_globals_swap_in_const_global[where offs=0, simplified]
+
+lemma const_globals_in_memory_to_h_val_with_swap:
+  "\<lbrakk> global_acc_valid g_hrs g_hrs_upd;
+    globals_list_distinct D symtab xs;
+    const_global_data nm v \<in> set xs;
+    const_globals_in_memory symtab xs (hrs_mem (g_hrs gs)) \<rbrakk>
+    \<Longrightarrow> v = h_val (hrs_mem (g_hrs (globals_swap g_hrs g_hrs_upd symtab xs gs)))
+        (Ptr (symtab nm))"
+  apply (subst disjoint_h_val_globals_swap_filter, assumption,
+    erule(1) globals_list_distinct_filter_member)
+    apply simp
+   apply (simp add: global_data_region_def const_global_data_def)
+   apply (rule order_trans, rule s_footprint_intvl_subset)
+   apply simp
+  apply (erule(1) const_globals_in_memory_h_val[symmetric])
+  done
+
+text {* This alternative ptr_safe definition will apply to all
+  global pointers given globals_list_distinct etc. It supports
+  the same nonoverlapping properties with h_t_valid as h_t_valid
+  itself. *}
+definition
+  ptr_inverse_safe :: "('a :: mem_type) ptr \<Rightarrow> heap_typ_desc \<Rightarrow> bool"
+where
+  "ptr_inverse_safe p htd = (c_guard p
+        \<and> (fst ` s_footprint p \<inter> fst ` dom_s htd = {}))"
+
+lemma global_data_implies_ptr_inverse_safe:
+  "\<lbrakk>  global_data nm (accr :: 'a \<Rightarrow> ('b :: packed_type)) updr \<in> set glist;
+        globals_list_distinct D symtab glist;
+        globals_list_valid symtab t_hrs t_hrs_upd glist;
+        htd_safe D htd
+        \<rbrakk>
+    \<Longrightarrow> ptr_inverse_safe (Ptr (symtab nm) :: 'b ptr) htd"
+  apply (clarsimp simp add: ptr_inverse_safe_def globals_list_valid_def
+                            htd_safe_def globals_list_distinct_def)
+  apply (drule(1) bspec)+
+  apply (simp add: global_data_region_def global_data_ok_def global_data_def)
+  apply (auto dest!: s_footprint_intvl_subset[THEN subsetD])
+  done
+
+ML {*
+fun add_globals_swap_rewrites member_thms ctxt = let
+    val gav = Proof_Context.get_thm ctxt "global_acc_valid"
+    val glv = Proof_Context.get_thm ctxt "globals_list_valid"
+    val gld = Proof_Context.get_thm ctxt "globals_list_distinct"
+    val acc = [Thm.trivial @{cpat "PROP ?P"}, gav, glv, gld]
+        MRS @{thm globals_swap_access_mem2}
+    val upd = [Thm.trivial @{cpat "PROP ?P"}, gav, glv, gld]
+        MRS @{thm globals_swap_update_mem2}
+    val cg_with_swap = [gav, gld]
+        MRS @{thm const_globals_in_memory_to_h_val_with_swap}
+    val pinv_safe = [Thm.trivial @{cpat "PROP ?P"}, gld, glv]
+        MRS @{thm global_data_implies_ptr_inverse_safe}
+    val empty_ctxt = put_simpset HOL_basic_ss ctxt
+    fun unfold_mem thm = let
+        val (x, _) = HOLogic.dest_mem (HOLogic.dest_Trueprop (Thm.concl_of thm))
+        val (s, _) = dest_Const (head_of x)
+      in if s = @{const_name global_data} orelse s = @{const_name const_global_data}
+        orelse s = @{const_name addressed_global_data}
+        then thm
+        else simplify (empty_ctxt addsimps [Proof_Context.get_thm ctxt (s ^ "_def")]) thm
+      end
+
+    val member_thms = map unfold_mem member_thms
+
+    val globals_swap_rewrites = member_thms RL [acc, upd]
+    val const_globals_rewrites = member_thms RL @{thms const_globals_in_memory_h_val[symmetric]}
+    val const_globals_swap_rewrites = member_thms RL [cg_with_swap]
+    val pinv_safe_intros = member_thms RL [pinv_safe]
+  in ctxt
+    |> Local_Theory.note ((@{binding "globals_swap_rewrites"}, []),
+            globals_swap_rewrites)
+    |> snd
+    |> Local_Theory.note ((@{binding "const_globals_rewrites"}, []),
+            const_globals_rewrites)
+    |> snd
+    |> Local_Theory.note ((@{binding "const_globals_rewrites_with_swap"}, []),
+            const_globals_swap_rewrites)
+    |> snd
+    |> Local_Theory.note ((@{binding "pointer_inverse_safe_global_rules"}, []),
+            pinv_safe_intros)
+    |> snd
+  end
 *}
 
 end

@@ -12,7 +12,7 @@
 Monad instantiations, handling of faults, errors, and interrupts.
 *)
 
-header "Basic Kernel and Exception Monads"
+chapter "Basic Kernel and Exception Monads"
 
 theory Exceptions_A
 imports Deterministic_A
@@ -61,21 +61,14 @@ definition
 where without_preemption_def[simp]:
  "without_preemption \<equiv> liftE"
 
-text {* Allow preemption at this point. *}(*
-definition
-  preemption_point :: "(unit,'z::state_ext) p_monad" where
- "preemption_point \<equiv> (liftE $ do_machine_op getActiveIRQ) >>=E
-                       option_case (returnOk ()) (throwError \<circ> Interrupted)
-                     \<sqinter> returnOk ()"
-*)
-
+text {* Allow preemption at this point. *}
 definition
   preemption_point :: "(unit,'z::state_ext) p_monad" where
  "preemption_point \<equiv> doE liftE $ do_extended_op update_work_units;
                          OR_choiceE (work_units_limit_reached)
                            (doE liftE $ do_extended_op reset_work_units;
                                 irq_opt \<leftarrow> liftE $ do_machine_op getActiveIRQ;
-                                option_case (returnOk ()) (throwError \<circ> Interrupted) irq_opt
+                                case_option (returnOk ()) (throwError \<circ> Interrupted) irq_opt
                            odE) (returnOk ())
                      odE"
 
@@ -91,7 +84,7 @@ definition
 
 definition
   null_cap_on_failure :: "(cap,'z::state_ext) lf_monad \<Rightarrow> (cap,'z::state_ext) s_monad" where
- "null_cap_on_failure \<equiv> liftM (sum_case (\<lambda>x. NullCap) id)"
+ "null_cap_on_failure \<equiv> liftM (case_sum (\<lambda>x. NullCap) id)"
 
 definition
   unify_failure :: "('f + 'a,'z::state_ext) s_monad \<Rightarrow> (unit + 'a,'z::state_ext) s_monad" where
@@ -104,12 +97,5 @@ definition
 definition
   const_on_failure :: "'a \<Rightarrow> ('f + 'a,'z::state_ext) s_monad \<Rightarrow> ('a,'z::state_ext) s_monad" where
  "const_on_failure c m \<equiv> m <catch> (\<lambda>x. return c)"
-
-
-
-
-
-
-
 
 end

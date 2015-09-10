@@ -58,7 +58,7 @@ lemma array_unique:
 lemma array_concat [simp]:
   "array s p (a @ b) = (array s p a \<and> array s (p +\<^sub>p int (length a)) b)"
   apply (induct a arbitrary: p)
-   apply (clarsimp simp: )
+   apply clarsimp
   apply clarsimp
   apply atomize
   apply (erule_tac x="p +\<^sub>p 1" in allE)

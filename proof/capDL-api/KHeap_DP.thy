@@ -80,8 +80,8 @@ lemma reset_cap_asid_simps2:
   "reset_cap_asid cap = (IOPageTableCap a2) \<Longrightarrow> cap = (IOPageTableCap a2)"
   "reset_cap_asid cap = (ZombieCap a3) \<Longrightarrow> cap = (ZombieCap a3)"
   "reset_cap_asid cap = (BoundAsyncCap a4) \<Longrightarrow> cap = (BoundAsyncCap a4)"
-  "reset_cap_asid cap = (FrameCap aa real sz rset as) \<Longrightarrow> \<exists>asid. cap = FrameCap aa real sz rset asid"
-  "reset_cap_asid cap = (PageTableCap aa rights as) \<Longrightarrow> \<exists>asid. cap = PageTableCap aa rights asid"
+  "reset_cap_asid cap = (FrameCap aa real sz rset ma) \<Longrightarrow> \<exists>asid. cap = FrameCap aa real sz rset asid"
+  "reset_cap_asid cap = (PageTableCap aa rights ma) \<Longrightarrow> \<exists>asid. cap = PageTableCap aa rights asid"
   "reset_cap_asid cap = (PageDirectoryCap aa rights as) \<Longrightarrow> \<exists>asid. cap = PageDirectoryCap aa rights asid"
 by (clarsimp simp: reset_cap_asid_def split: cdl_cap.splits)+
 
@@ -91,7 +91,7 @@ lemma sep_map_c_any:
 
 lemma pure_extract:
   "\<lbrakk> <P \<and>* Q> s; pure P \<rbrakk> \<Longrightarrow> <P> s"
-  by (fastforce simp: pure_def state_sep_projection_def sep_conj_def)
+  by (fastforce simp: pure_def sep_state_projection_def sep_conj_def)
 
 lemma throw_on_none_rv:
   "\<lbrace>\<lambda>s. case x of Some y \<Rightarrow> P y s | otherwise \<Rightarrow> False\<rbrace> throw_on_none x \<lbrace>P\<rbrace>, \<lbrace>Q\<rbrace>"
@@ -164,19 +164,19 @@ lemma obj_exists_map_i:
   apply (clarsimp simp: opt_object_def sep_map_o_conj)
   apply (case_tac "cdl_objects s obj_id")
    apply (drule_tac x = "(obj_id,Fields)" in fun_cong)
-    apply (clarsimp simp: lift_def obj_to_sep_state_def object_project_def
-      object_at_heap_def state_sep_projection_def
+    apply (clarsimp simp: lift_def object_to_sep_state_def object_project_def
+      object_at_heap_def sep_state_projection_def
       sep_conj_def Let_unfold)
   apply (rule_tac x = a in exI,simp)
   apply (rule object_eqI)
    apply (drule_tac x = "(obj_id,Fields)" in fun_cong)
-   apply (clarsimp simp: lift_def obj_to_sep_state_def object_project_def
-      object_at_heap_def state_sep_projection_def
+   apply (clarsimp simp: lift_def object_to_sep_state_def object_project_def
+      object_at_heap_def sep_state_projection_def
       Let_unfold)
   apply (rule ext)
   apply (drule_tac x= "(obj_id,Slot x)" in fun_cong)
-  apply (clarsimp simp: lift_def obj_to_sep_state_def
-      object_project_def state_sep_projection_def
+  apply (clarsimp simp: lift_def object_to_sep_state_def
+      object_project_def sep_state_projection_def
       Let_unfold)
   done
 
@@ -185,12 +185,12 @@ lemma obj_exists_map_f:
   \<exists>obj'. (opt_object obj_id s = Some obj' \<and> object_type obj = object_type obj')"
   apply (clarsimp simp: opt_object_def sep_map_f_conj Let_def)
   apply (case_tac "cdl_objects s obj_id")
-   apply (clarsimp simp: lift_def obj_to_sep_state_def object_project_def
-      object_at_heap_def state_sep_projection_def
+   apply (clarsimp simp: lift_def object_to_sep_state_def object_project_def
+      object_at_heap_def sep_state_projection_def
       sep_conj_def Let_unfold)
   apply (rule_tac x = a in exI,simp)
-  apply (clarsimp simp: lift_def obj_to_sep_state_def object_project_def
-      object_at_heap_def state_sep_projection_def
+  apply (clarsimp simp: lift_def object_to_sep_state_def object_project_def
+      object_at_heap_def sep_state_projection_def
       Let_unfold)
   apply (drule_tac f = object_type in arg_cong)
   apply simp
@@ -212,7 +212,7 @@ lemma opt_cap_sep_imp:
   apply (clarsimp simp:  sep_map_c_def lift_def
     opt_object_def split_def
     sep_any_def sep_map_general_def slots_of_def
-    state_sep_projection_def object_project_def
+    sep_state_projection_def object_project_def
     object_slots_object_clean
     Let_unfold split:sep_state.splits option.splits)
 done
@@ -224,7 +224,7 @@ lemma opt_cap_sep_any_imp:
   apply (clarsimp simp:  sep_map_c_def lift_def
     opt_object_def split_def object_slots_object_clean
     sep_any_def sep_map_general_def slots_of_def
-    state_sep_projection_def object_project_def
+    sep_state_projection_def object_project_def
     Let_unfold split:sep_state.splits option.splits)
 done
 
@@ -235,7 +235,7 @@ lemma sep_f_size_opt_cnode:
   apply (clarsimp simp:sep_map_f_conj Let_def)
   apply (case_tac obj)
   apply (auto simp: intent_reset_def empty_cnode_def
-    opt_cnode_def update_slots_def state_sep_projection_def
+    opt_cnode_def update_slots_def sep_state_projection_def
     opt_object_def object_wipe_slots_def
     object_project_def object_clean_def asid_reset_def
     split:cdl_cap.splits cdl_object.splits)
@@ -249,7 +249,7 @@ lemma swap_parents_wp:
   "\<lbrace><R>\<rbrace>
    swap_parents src dest
   \<lbrace>\<lambda>_.  <R>\<rbrace>"
-  by (clarsimp simp: swap_parents_def lift_def state_sep_projection_def)
+  by (clarsimp simp: swap_parents_def lift_def sep_state_projection_def)
 
 lemma insert_cap_orphan_wp:
    "\<lbrace><dest \<mapsto>c - \<and>* R>\<rbrace>
@@ -283,7 +283,7 @@ lemma set_parent_wp:
   "\<lbrace><P>\<rbrace>
     set_parent child parent
    \<lbrace>\<lambda>_.<P>\<rbrace>"
-  apply (clarsimp simp: set_parent_def state_sep_projection_def)
+  apply (clarsimp simp: set_parent_def sep_state_projection_def)
   apply wp
   apply clarsimp
   done
@@ -317,7 +317,7 @@ lemma remove_parent_wp:
   "\<lbrace><P>\<rbrace>
    remove_parent obj
    \<lbrace>\<lambda>_.  <P>\<rbrace>"
-   by (clarsimp simp: remove_parent_def lift_def state_sep_projection_def)
+   by (clarsimp simp: remove_parent_def lift_def sep_state_projection_def)
 
 lemma get_cap_wp:
   "\<lbrace>P\<rbrace>
@@ -550,14 +550,12 @@ lemma cap_object_reset_cap_asid:
 
 lemma cap_type_reset_cap_asid[simp]:
   "cap_type (reset_cap_asid cap) = cap_type cap"
-  apply (clarsimp simp: reset_cap_asid_def split: cdl_cap.splits)
-  apply (clarsimp simp: cap_type_def)
-  done
+  by (clarsimp simp: reset_cap_asid_def split: cdl_cap.splits)
 
 lemma cap_guard_reset_cap_asid:
   "is_cnode_cap cap \<Longrightarrow> cap_guard (reset_cap_asid cap) = cap_guard cap"
   "is_cnode_cap cap \<Longrightarrow> cap_guard_size (reset_cap_asid cap) = cap_guard_size cap"
-  by (case_tac cap,simp_all add:reset_cap_asid_def cap_guard_def, simp add: cap_type_def)+
+  by (case_tac cap,simp_all add:reset_cap_asid_def cap_guard_def)+
 
 lemma lookup_slot_for_cnode_op_rvu':
      "\<lbrace>\<lambda>s. Q ((cap_object cnode_cap), offset cap_ptr r) s \<and> remaining_size \<le> word_bits
@@ -654,9 +652,7 @@ lemma ensure_empty_no_exception:
 lemma reset_cap_asid_cap_type:
   "reset_cap_asid cap = reset_cap_asid cap'
   \<Longrightarrow> cap_type cap = cap_type cap'"
-  apply (clarsimp simp: reset_cap_asid_def split: cdl_cap.splits)
-  apply (clarsimp simp: cap_type_def)
-  done
+  by (clarsimp simp: reset_cap_asid_def split: cdl_cap.splits)
 
 lemma ep_related_cap_update_cap_rights[simp]:
   "ep_related_cap (update_cap_rights rights cap) = ep_related_cap cap"
@@ -682,7 +678,7 @@ lemma cap_rights_reset_cap_asid:
   "reset_cap_asid cap = reset_cap_asid cap'
  \<Longrightarrow> cap_rights cap = cap_rights cap'"
   apply (clarsimp simp: cap_rights_def reset_cap_asid_def)
-  apply (case_tac cap, (case_tac cap', simp_all)+)
+  apply (case_tac cap; (case_tac cap'; simp))
   done
 
 (* Lemmas about valid_src_cap *)
@@ -1026,7 +1022,7 @@ lemma decode_cnode_mint_rvu:
     apply (clarsimp simp:sep_conj_assoc)
     apply (sep_erule sep_cancel, assumption)
    apply (clarsimp dest!: mapu_dest_opt_cap
-     simp:conj_ac is_exclusive_cap_update_cap_data
+     simp:conj_comms is_exclusive_cap_update_cap_data
      safe_for_derive_not_non valid_src_cap_def)
    apply (intro conjI impI allI)
       apply (metis reset_cap_asid_cap_type)
@@ -1087,7 +1083,7 @@ lemma decode_cnode_mutate_rvu:
     apply (clarsimp simp:sep_conj_assoc)
     apply (sep_solve)
    apply (clarsimp dest!: mapu_dest_opt_cap
-     simp: conj_ac update_cap_data_non cong:non_cap_cong)
+     simp: conj_comms update_cap_data_non cong:non_cap_cong)
    apply (metis reset_cap_asid_cap_type reset_cap_asid_ep_related_cap valid_src_cap_asid_cong)
   apply sep_solve
   done

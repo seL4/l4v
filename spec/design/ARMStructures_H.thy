@@ -210,26 +210,6 @@ asidRange :: "(asid * asid)"
 consts
 asidHighBitsOf :: "asid \<Rightarrow> asid"
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 defs archObjSize_def:
 "archObjSize a\<equiv> (case a of
                   KOASIDPool v1 \<Rightarrow>   pageBits

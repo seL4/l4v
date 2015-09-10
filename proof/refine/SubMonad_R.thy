@@ -50,7 +50,7 @@ lemma doMachineOp_mapM_x:
 
 lemma submonad_args_ksPSpace:
   "submonad_args ksPSpace (ksPSpace_update o (\<lambda>x _. x)) \<top>"
-  by (simp add: submonad_args_def K_def)
+  by (simp add: submonad_args_def)
 
 definition
   "asUser_fetch \<equiv> \<lambda>t s. case (ksPSpace s t) of
@@ -98,13 +98,16 @@ lemma submonad_asUser:
                      split: kernel_object.split option.split)
      apply (clarsimp simp: asUser_replace_def Let_def
                     split: kernel_object.split option.split)
+     apply (rename_tac tcb)
      apply (case_tac tcb, simp)
     apply (clarsimp simp: asUser_fetch_def asUser_replace_def Let_def
                           fun_upd_idem
                    split: kernel_object.splits option.splits)
+    apply (rename_tac tcb)
     apply (case_tac tcb, simp add: map_upd_triv)
    apply (clarsimp simp: obj_at'_def asUser_replace_def Let_def projectKOs
                   split: kernel_object.splits option.splits)
+   apply (rename_tac tcb)
    apply (case_tac tcb, simp add: objBitsKO_def ps_clear_def)
   apply (rule ext)
   apply (clarsimp simp: submonad_fn_def asUser_def bind_assoc split_def)

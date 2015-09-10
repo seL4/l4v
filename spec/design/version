@@ -1,6 +1,7 @@
-Built from git repo at ../../../seL4/haskell on squires by jbeeren
+Built from git repo at /home/jbeeren/nfshome/work/replycap/seL4/haskell by jbeeren
 
 Generated from changeset:
+827a47e SELFOUR-220: only delete reply cap when waiting on sync endpoint
 
 
 Warning - uncomitted changes used:

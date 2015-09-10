@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-header "Threads"
+chapter "Threads"
 
 theory ArchThread_H
 imports

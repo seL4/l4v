@@ -20,14 +20,10 @@ ML {*
 
 structure strengthen_congs = Generic_Data
 (struct
-    val name = "HOL/strengthen/congs"
     type T = thm list
     val empty = [@{thm "strengthen_congs_base"}]
     val extend = I
     val merge = Thm.merge_thms;
-    fun print context rules =
-        Pretty.writeln (Pretty.big_list "strengthening congruence rules:"
-        (map (Display.pretty_thm (Context.proof_of context)) rules));
 end);
 
 structure Strengthen = struct
@@ -51,20 +47,20 @@ fun DIVCONQ (tac1, tac2) goal =
 (* This is a little magic as it relies on A \<longrightarrow> A, the 
   first cong rule, eventually working *)
   
-fun apply_rules_tac thy extras =
+fun apply_rules_tac ctxt extras =
 let
-  val r = strengthen_congs.get (Context.Theory thy);
+  val r = strengthen_congs.get (Context.Proof ctxt);
 in
   (CHANGED (rtac mp 1 THEN (DIVCONQ 
-                             (((resolve_tac extras) 
-                                THEN_ALL_NEW (fn g => TRY (assume_tac g))), 
-                             (fn g => DETERM (resolve_tac r g))) 1)))
+                             (((resolve_tac ctxt extras) 
+                                THEN_ALL_NEW (fn g => TRY (assume_tac ctxt g))), 
+                             (fn g => DETERM (resolve_tac ctxt r g))) 1)))
 end;
 
 val apply_rules_args = 
   Attrib.thms >> curry (fn (extras, ctxt) =>
     Method.SIMPLE_METHOD (
-      apply_rules_tac (Proof_Context.theory_of ctxt) extras
+      apply_rules_tac ctxt extras
     )
   );
 
@@ -138,7 +134,7 @@ lemma del_asm_rule:
 
 ML {*
 
-val p_prop_var = cterm_of @{theory} (Logic.varify_global @{term "P :: prop"});
+val p_prop_var = Thm.cterm_of @{context} (Logic.varify_global @{term "P :: prop"});
 
 fun del_asm_tac asm =
   etac (cterm_instantiate [(p_prop_var, asm)] @{thm del_asm_rule});
@@ -146,12 +142,12 @@ fun del_asm_tac asm =
 fun subgoal_asm_as_thm tac =
   Subgoal.FOCUS_PARAMS (fn focus => SUBGOAL (fn (t, _) => let
     val asms = Logic.strip_assums_hyp t;
-    val thy = Proof_Context.theory_of (#context focus);
+    val ctxt = #context focus;
     fun asm_tac asm = (Subgoal.FOCUS_PREMS (fn focus => let
-        fun is_asm asm' = asm aconv (concl_of asm');
+        fun is_asm asm' = asm aconv (Thm.concl_of asm');
         val (asm' :: _) = filter is_asm (#prems focus);
       in tac asm' end) (#context focus)
-        THEN_ALL_NEW del_asm_tac (cterm_of thy asm)) 1;
+        THEN_ALL_NEW del_asm_tac (Thm.cterm_of ctxt asm)) 1;
   in
     FIRST (map asm_tac asms)
   end) 1);
@@ -165,7 +161,7 @@ fun eta_flat (Abs (name, tp, (Abs a)))
           else subst_bound (Bound 0, t)
   | eta_flat (Abs (name, tp, t $ Abs a))
         = eta_flat (Abs (name, tp, t $ eta_flat (Abs a)))
-  | eta_flat v = raise SAME;
+  | eta_flat _ = raise SAME;
 
 fun const_spine t = case strip_comb t of
     (Const c, xs) => SOME (c, xs)
@@ -231,7 +227,7 @@ val in_mresults_ctxt =
 
 fun prove_qad ctxt term tac = Goal.prove ctxt [] [] term
   (K (if Config.get ctxt quick_and_dirty andalso false
-      then ALLGOALS (Skip_Proof.cheat_tac)
+      then ALLGOALS (Skip_Proof.cheat_tac ctxt)
       else tac));
 
 val preannotate_ss =
@@ -250,9 +246,9 @@ val in_mresults_cs = Classical.claset_of (Proof_Context.init_global @{theory Lib
 
 fun annotate_tac ctxt asm = let 
     val asm' = simplify (put_simpset preannotate_ss ctxt) asm;
-    val annotated = build_annotate (concl_of asm');
+    val annotated = build_annotate (Thm.concl_of asm');
     val ctxt' = Classical.put_claset in_mresults_cs (put_simpset in_mresults_ss ctxt)
-    val thm = prove_qad ctxt (Logic.mk_implies (concl_of asm', annotated))
+    val thm = prove_qad ctxt (Logic.mk_implies (Thm.concl_of asm', annotated))
                    (auto_tac ctxt'
                     THEN ALLGOALS (TRY o blast_tac ctxt'));
   in
@@ -293,15 +289,14 @@ fun dest_mresults_tac t = Seq.of_list ([t] RL mresults_export_bindD);
    as an introduction rule or if of form ?P x --> ?P y to use it
    as y = x *)
 fun get_rule_uses ctxt rule = let
-    val thy = Proof_Context.theory_of ctxt
-    val (p, q) = (concl_of #> Envir.beta_eta_contract #> HOLogic.dest_Trueprop
+    val (p, q) = (Thm.concl_of #> Envir.beta_eta_contract #> HOLogic.dest_Trueprop
                     #> HOLogic.dest_imp) rule;
-    fun mk_eqthm v (n, (x, y)) = let
+    fun mk_eqthm v (n, (x, _)) = let
         val (_, tp) = dest_Var v;
         val (argtps, tp') = strip_type tp;
         val _ = if (tp' = @{typ bool}) then ()
                 else error "get_rule_uses: range type <> bool";
-        val ct = cterm_of thy;
+        val ct = Thm.cterm_of ctxt;
         val eq = HOLogic.eq_const (nth argtps (n - 1))
                     $ Bound (length argtps - n) $ x;
         val v' = fold_rev Term.abs (map (pair "x") argtps) eq;
@@ -314,19 +309,18 @@ fun get_rule_uses ctxt rule = let
         if v = v' andalso length args = length args'
         then (map (mk_eqthm v) ((1 upto length args) ~~ (args ~~ args')), [])
         else ([], [])
-    | (_, (v as Var _, _)) => ([], [])
+    | (_, (Var _, _)) => ([], [])
     | _ => ([], [rule])
   end;
 
 fun get_wp_simps_strgs ctxt rules asms = let
-    val thy = Proof_Context.theory_of ctxt;
     val wp_rules = rules @ (WeakestPre.debug_get ctxt |> #rules |> WeakestPre.dest_rules);
-    val wp_rules' = filter (null o prems_of) wp_rules;
+    val wp_rules' = filter (null o Thm.prems_of) wp_rules;
     val asms' = maps (Seq.list_of o REPEAT dest_mresults_tac) asms;
     val uses = asms' RL [use_valid_mresults];
     val wp_rules'' = wp_rules' RL uses;
   in
-    pairself flat (map_split (get_rule_uses ctxt) wp_rules'')
+    apply2 flat (map_split (get_rule_uses ctxt) wp_rules'')
   end;
 
 fun tac_with_wp_simps_strgs ctxt rules tac =
@@ -350,7 +344,7 @@ val wp_default_ss =
     |> Splitter.del_split @{thm split_if}
     |> simpset_of
 
-fun raise_tac s = all_tac THEN (fn t => error s);
+fun raise_tac s = all_tac THEN (fn _ => error s);
 
 fun wpx_tac ctxt rules
   = TRY (rtac mresults_validI 1)
@@ -359,7 +353,7 @@ fun wpx_tac ctxt rules
     THEN tac_with_wp_simps_strgs ctxt rules (fn (simps, strgs) =>
       REPEAT_DETERM1
         (CHANGED (full_simp_tac (put_simpset wp_default_ss ctxt addsimps simps) 1)
-          ORELSE Strengthen.apply_rules_tac (Proof_Context.theory_of ctxt) strgs)
+          ORELSE Strengthen.apply_rules_tac ctxt strgs)
     ) 1;
 
 val wpx_method = Attrib.thms >> curry (fn (ts, ctxt) =>
@@ -414,14 +408,19 @@ ML {*
 val valid_strengthen_with_mresults = @{thm valid_strengthen_with_mresults};
 val wpex_name_for_idE = @{thm wpex_name_for_idE};
 
-fun wps_tac ctxt rules
-  = rtac valid_strengthen_with_mresults 1
-    THEN (safe_simp_tac (put_simpset postcond_ss ctxt) 1)
-    THEN Subgoal.FOCUS (fn focus => let
-        val ctxt = #context focus;
-        val (simps, strgs) = get_wp_simps_strgs ctxt rules (#prems focus);
-      in CHANGED (simp_tac (put_simpset wp_default_ss ctxt addsimps simps) 1) end) ctxt 1
-    THEN etac wpex_name_for_idE 1;
+fun wps_tac ctxt rules =
+let
+  (* avoid duplicate simp rule etc warnings: *)
+  val ctxt = Context_Position.set_visible false ctxt
+in
+  rtac valid_strengthen_with_mresults 1
+  THEN (safe_simp_tac (put_simpset postcond_ss ctxt) 1)
+  THEN Subgoal.FOCUS (fn focus => let
+      val ctxt = #context focus;
+      val (simps, _) = get_wp_simps_strgs ctxt rules (#prems focus);
+    in CHANGED (simp_tac (put_simpset wp_default_ss ctxt addsimps simps) 1) end) ctxt 1
+  THEN etac wpex_name_for_idE 1
+end
 
 val wps_method = Attrib.thms >> curry
   (fn (ts, ctxt) => Method.SIMPLE_METHOD (wps_tac ctxt ts));

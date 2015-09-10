@@ -96,7 +96,7 @@ lemma setContext_C_corres:
    apply assumption
   apply clarsimp
   apply (clarsimp simp: typ_heap_simps')
-  apply (thin_tac "(?a,?b) \<in> fst ?t")+
+  apply (thin_tac "(a,b) \<in> fst t" for a b t)+
   apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def cpspace_relation_def
                         carch_state_relation_def cmachine_state_relation_def
                         typ_heap_simps' update_tcb_map_tos)
@@ -290,6 +290,7 @@ lemma cint_rel_to_H:
    cint_state_to_H n t = (ksInterruptState s)"
   apply (simp add: irqs_masked'_def)
   apply (cases "ksInterruptState s")
+  apply (rename_tac "fun")
   apply (clarsimp simp: cinterrupt_relation_def cint_state_to_H_def
                         Platform.maxIRQ_def Kernel_C.maxIRQ_def)
   apply (rule ext)
@@ -358,8 +359,8 @@ lemma user_mem_C_relation:
                         Ptr ` dom (heap_to_page_data (ksPSpace s') (underlying_memory (ksMachineState s')))")
     apply simp
     apply clarsimp
-   apply (thin_tac "Ball ?A ?P")
-   apply (thin_tac "?t = dom (clift (t_hrs_' s))")
+   apply (thin_tac "Ball A P" for A P)
+   apply (thin_tac "t = dom (clift (t_hrs_' s))" for t)
    apply (rule imageI)
    apply (clarsimp simp: dom_def heap_to_page_data_def obj_at'_def projectKOs)
   apply (clarsimp simp: pointerInUserData_def)
@@ -452,7 +453,7 @@ lemma array_map_conv_Some[simp]: "array_map_conv Some n c = array_to_map n c"
   by (simp add: array_map_conv_def map_comp_def)
 lemma map_comp_array_map_conv_comm:
  "map_comp f (array_map_conv g n c) = array_map_conv (map_comp f g) n c"
-  by (rule ext) (simp add: array_map_conv_def2 Option.map_def map_comp_def)
+  by (rule ext) (simp add: array_map_conv_def2 map_option_def map_comp_def)
 lemma ran_array_map_conv:
   "ran (array_map_conv f n c) = {y. \<exists>i\<le>n. f (index c (unat i)) = Some y}"
   by (auto simp add: array_map_conv_def2 ran_def Collect_eq)
@@ -509,7 +510,7 @@ definition
   :: "(word32[256]) \<Rightarrow> (pde_C ptr \<rightharpoonup> pde_C) \<Rightarrow> asid \<rightharpoonup> hw_asid \<times> obj_ref"
   where
   "casid_map_to_H hw_asid_table pdes \<equiv>
-   (\<lambda>asid. Option.map
+   (\<lambda>asid. map_option
              (\<lambda>hw_asid. (hw_asid,
                          the (the_inv_map (pde_stored_asid  \<circ>\<^sub>m pdes \<circ>\<^sub>m
                                            pd_pointer_to_asid_slot) hw_asid)))
@@ -526,8 +527,8 @@ lemma ran_map_comp_subset: "ran (map_comp f g) <= (ran f)"
 
 (* FIXME: move *)(* NOTE: unused. *)
 lemma inj_on_option_map:
- "inj_on (Option.map f o m) (dom m) \<Longrightarrow> inj_on m (dom m)"
-  by (auto simp add: inj_on_def Option.map_def dom_def)
+ "inj_on (map_option f o m) (dom m) \<Longrightarrow> inj_on m (dom m)"
+  by (auto simp add: inj_on_def map_option_def dom_def)
 
 lemma eq_option_to_0_rev:
   "Some 0 ~: A \<Longrightarrow> \<forall>x. \<forall>y\<in>A.
@@ -535,9 +536,9 @@ lemma eq_option_to_0_rev:
   by (clarsimp simp: option_to_0_def split: option.splits)
 
 lemma inj_hwasidsI:
-  "asid_map_pd_to_hwasids m = Option.set \<circ> c \<Longrightarrow>
-   inj_on (Option.map snd \<circ> m) (dom m) \<Longrightarrow>
-   inj_on (Option.map fst \<circ> m) (dom m) \<Longrightarrow>
+  "asid_map_pd_to_hwasids m = set_option \<circ> c \<Longrightarrow>
+   inj_on (map_option snd \<circ> m) (dom m) \<Longrightarrow>
+   inj_on (map_option fst \<circ> m) (dom m) \<Longrightarrow>
    inj_on c (dom c)"
   apply (clarsimp simp: asid_map_pd_to_hwasids_def inj_on_def)
   apply (clarsimp simp: fun_eq_iff set_eq_iff)
@@ -555,6 +556,7 @@ lemma (in kernel_m)
      armKSASIDMap (ksArchState astate)"
   apply (rule ext)
   using valid rel
+  using [[hypsubst_thin]]
   apply (clarsimp simp: valid_arch_state'_def carch_state_relation_def
                         casid_map_to_H_def)
   apply (drule array_relation_map_conv2[OF _ eq_option_to_0_rev])
@@ -581,7 +583,7 @@ lemma (in kernel_m)
      apply (simp add: valid_asid_map'_def)
     apply (frule is_inv_inj2, simp add: dom_option_map)
    apply simp
-  apply (thin_tac "array_map_conv ?f ?n ?c = ?a")
+  apply (thin_tac "array_map_conv f n c = a" for f n c a)
   apply (clarsimp simp: asid_map_pd_to_hwasids_def ran_def)
   apply (subst (asm) fun_eq_iff)
   apply fastforce
@@ -878,7 +880,7 @@ lemma cpspace_tcb_relation_unique:
    apply (drule_tac x=x in spec, drule_tac x=y in spec, erule impE, fastforce)
    apply (frule ksPSpace_valid_objs_tcbBoundAEP_nonzero[OF vs])
    apply (frule ksPSpace_valid_objs_tcbBoundAEP_nonzero[OF vs'])
-   apply (thin_tac "map_to_tcbs ?x ?y = Some ?z")+
+   apply (thin_tac "map_to_tcbs x y = Some z" for x y z)+
    apply (case_tac x, case_tac y, case_tac "the (clift ch (tcb_Ptr (p+0x100)))")
    apply (clarsimp simp: ctcb_relation_def ran_tcb_cte_cases)
    apply (drule up_ucast_inj_eq[THEN iffD1,rotated], simp+)
@@ -940,14 +942,13 @@ lemma cpspace_aep_relation_unique:
    apply (frule (2) map_to_ko_atI)
    apply (frule_tac v=ya in map_to_ko_atI, simp+)
    apply (clarsimp dest!: obj_at_valid_objs' simp: projectKOs split: option.splits)
-   apply (thin_tac "map_to_aeps ?x ?y = Some ?z")+
+   apply (thin_tac "map_to_aeps x y = Some z" for x y z)+
    apply (case_tac y, case_tac ya, case_tac "the (clift ch (aep_Ptr x))")
-   apply (auto simp: AEPState_Active_def AEPState_Idle_def AEPState_Waiting_def typ_heap_simps
+   by (auto simp: AEPState_Active_def AEPState_Idle_def AEPState_Waiting_def typ_heap_simps
                      casync_endpoint_relation_def Let_def tcb_queue_rel'_clift_unique 
                      option_to_ctcb_ptr_def valid_obj'_def valid_aep'_def valid_bound_tcb'_def 
                      kernel.tcb_at_not_NULL tcb_ptr_to_ctcb_ptr_inj
               split: aep.splits option.splits) (* long *)
-  done
 
 (* FIXME: move *)
 lemma of_bool_inject[iff]: "of_bool a = of_bool b \<longleftrightarrow> a=b"
@@ -1005,6 +1006,7 @@ lemma cpspace_asidpool_relation_unique:
    using invs
    apply (clarsimp simp: casid_pool_relation_def Let_def
                   split: asidpool.splits asid_pool_C.splits)
+   apply (rename_tac "fun" array)
    apply (drule bspec, fastforce)+
    apply (drule array_relation_to_map)+
    apply (rule ext, rename_tac y)
@@ -1084,7 +1086,7 @@ lemma map_to_cnes_eq:
    apply (drule_tac x="x-n" in spec)
    apply (clarsimp simp add: map_comp_def projectKO_opt_tcb
                    split: option.splits kernel_object.splits)
-   apply (frule_tac x="x-n" in SR_lemmas_C.pspace_distinctD'[OF _ distinct'])
+   apply (frule_tac x="x-n" in pspace_distinctD'[OF _ distinct'])
    apply (simp add: objBitsKO_def)
    apply (erule_tac y=x and s=s' and getF=a and setF=b
           in tcb_space_clear[rotated], assumption+, simp+)
@@ -1099,7 +1101,7 @@ lemma map_to_cnes_eq:
    apply (drule_tac x="x-n" in spec)
    apply (clarsimp simp add: map_comp_def projectKO_opt_tcb
                    split: option.splits kernel_object.splits)
-   apply (frule_tac x="x-n" in SR_lemmas_C.pspace_distinctD'[OF _ distinct])
+   apply (frule_tac x="x-n" in pspace_distinctD'[OF _ distinct])
    apply (simp add: objBitsKO_def)
    apply (erule_tac y=x and s=s and getF=a and setF=b
           in tcb_space_clear[rotated], assumption+, simp+)
@@ -1109,7 +1111,7 @@ lemma map_to_cnes_eq:
    apply (simp add: cte_wp_at'_obj_at')
    apply (elim disjE)
       apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def)
-     apply (thin_tac "Bex ?A ?P")
+     apply (thin_tac "Bex A P" for A P)
      apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def projectKO_opt_cte)
     apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def
                           projectKO_opt_cte projectKO_opt_tcb)
@@ -1118,7 +1120,7 @@ lemma map_to_cnes_eq:
            in tcb_space_clear[rotated], assumption+)
      apply (drule_tac x=x in spec, simp add: projectKO_opt_tcb)
     apply simp
-   apply (thin_tac "Bex ?A ?P")
+   apply (thin_tac "Bex A P" for A P)
    apply (clarsimp simp: obj_at'_real_def ko_wp_at'_def
                          projectKO_opt_cte projectKO_opt_tcb)
    apply (case_tac ko, simp_all, clarsimp simp: objBitsKO_def)
@@ -1180,7 +1182,7 @@ proof -
    apply (frule (1) map_to_ko_atI[OF _ aligned' distinct'])
   apply (drule (1) map_to_cnes_eq[OF aligned aligned' distinct distinct'])
   apply (drule (1) cpspace_user_data_relation_unique)
-  apply (thin_tac "cmap_relation ?a ?c ?f ?r")+
+  apply (thin_tac "cmap_relation a c f r" for a c f r)+
   apply (cut_tac no_kdatas)
   apply (clarsimp simp add: ran_def fun_eq_iff)
   apply (drule_tac x=x in spec)+
@@ -1232,7 +1234,9 @@ lemma ksPSpace_eq_imp_valid_arch_obj'_eq:
   assumes ksPSpace: "ksPSpace s' = ksPSpace s"
   shows "valid_arch_obj' ao s' = valid_arch_obj' ao s"
   apply (case_tac ao, simp)
-  apply (case_tac pte, simp_all add: valid_mapping'_def)
+   apply (rename_tac pte)
+   apply (case_tac pte, simp_all add: valid_mapping'_def)
+  apply (rename_tac pde)
   apply (case_tac pde, simp_all add: valid_mapping'_def)
   done
 
@@ -1256,8 +1260,8 @@ lemma ksPSpace_eq_imp_valid_pspace'_eq:
         pspace_distinct'_def ps_clear_def no_0_obj'_def valid_mdb'_def
         ksPSpace_eq_imp_valid_objs'_eq[OF ksPSpace])
 
-(* FIXME: The awkwardness of this definition is only caused by the fact
-          that valid_pspace' is defined over the complete state. *)
+(* The awkwardness of this definition is only caused by the fact
+   that valid_pspace' is defined over the complete state. *)
 definition
   cstate_to_pspace_H :: "globals \<Rightarrow> word32 \<rightharpoonup> kernel_object"
 where
@@ -1311,7 +1315,9 @@ definition (in state_rel)
 where
   "cstate_to_H s \<equiv>
    \<lparr>ksPSpace = cstate_to_pspace_H s,
-    gsUserPages = fst (ghost'state_' s), gsCNodes = snd (ghost'state_' s),
+    gsUserPages = fst (ghost'state_' s), gsCNodes = fst (snd (ghost'state_' s)),
+    gsMaxObjectSize = (let v = unat (gs_get_assn cap_get_capSizeBits_'proc (ghost'state_' s))
+        in if v = 0 then card (UNIV :: word32 set) else v),
     ksDomScheduleIdx = unat (ksDomScheduleIdx_' s),
     ksDomSchedule = cDomSchedule_to_H kernel_all_global_addresses.ksDomSchedule,
     ksCurDomain = ucast (ksCurDomain_' s),
@@ -1332,15 +1338,18 @@ lemma (in kernel_m) cstate_to_H_correct:
   shows "cstate_to_H cs = as"
   apply (subgoal_tac "cstate_to_machine_H cs = ksMachineState as")
    apply (rule kernel_state.equality, simp_all add: cstate_to_H_def)
-                apply (rule cstate_to_pspace_H_correct)
-                 using valid
-                 apply (simp add: valid_state'_def)
+                 apply (rule cstate_to_pspace_H_correct)
+                  using valid
+                  apply (simp add: valid_state'_def)
+                 using cstate_rel
+                 apply (clarsimp simp: cstate_relation_def Let_def)
                 using cstate_rel
-                apply (clarsimp simp: cstate_relation_def Let_def)
+                apply (clarsimp simp: cstate_relation_def Let_def Pair_fst_snd_eq)
                using cstate_rel
-               apply (clarsimp simp: cstate_relation_def Let_def)
+               apply (clarsimp simp: cstate_relation_def Let_def Pair_fst_snd_eq)
               using cstate_rel
-              apply (clarsimp simp: cstate_relation_def Let_def)
+              apply (auto simp: cstate_relation_def Let_def ghost_size_rel_def unat_eq_0
+                             split: split_if)[1]
              using valid cstate_rel
              apply (rule cDomScheduleIdx_to_H_correct)
              using cstate_rel

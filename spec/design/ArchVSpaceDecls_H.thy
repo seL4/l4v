@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-header "Retyping Objects"
+chapter "Retyping Objects"
 
 theory ArchVSpaceDecls_H
 imports ArchRetypeDecls_H InvocationLabels_H
@@ -27,46 +27,61 @@ consts
 idleThreadCode :: "machine_word list"
 
 consts
-initKernelVM :: "unit kernel"
+mapKernelWindow :: "unit kernel"
 
 consts
-initVSpace :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit kernel_init"
-
-consts
-createGlobalPD :: "unit kernel"
-
-consts
-activateGlobalPD :: "unit kernel"
-
-consts
-mapKernelRegion :: "(paddr * paddr) \<Rightarrow> unit kernel"
-
-consts
-mapKernelFrame :: "paddr \<Rightarrow> vptr \<Rightarrow> vmrights \<Rightarrow> vmattributes \<Rightarrow> unit kernel"
-
-consts
-allocKernelPT :: "(machine_word) kernel"
+createSectionPDE :: "vptr \<Rightarrow> unit kernel"
 
 consts
 mapKernelDevice :: "(paddr * machine_word) \<Rightarrow> unit kernel"
 
 consts
-createGlobalsFrame :: "unit kernel"
+activateGlobalPD :: "unit kernel"
+
+consts
+createITPDPTs :: "capability \<Rightarrow> vptr \<Rightarrow> vptr \<Rightarrow> capability kernel_init"
+
+consts
+writeITPDPTs :: "capability \<Rightarrow> capability \<Rightarrow> unit kernel_init"
+
+consts
+createITASIDPool :: "capability \<Rightarrow> capability kernel_init"
+
+consts
+writeITASIDPool :: "capability \<Rightarrow> capability \<Rightarrow> unit kernel"
+
+consts
+mapITPTCap :: "capability \<Rightarrow> capability \<Rightarrow> unit kernel"
+
+consts
+mapITFrameCap :: "capability \<Rightarrow> capability \<Rightarrow> unit kernel"
+
+consts
+createIPCBufferFrame :: "capability \<Rightarrow> vptr \<Rightarrow> capability kernel_init"
+
+consts
+createBIFrame :: "capability \<Rightarrow> vptr \<Rightarrow> word32 \<Rightarrow> word32 \<Rightarrow> capability kernel_init"
+
+consts
+createITFrameCap :: "machine_word \<Rightarrow> vptr \<Rightarrow> asid option \<Rightarrow> bool \<Rightarrow> capability kernel_init"
+
+consts
+createFramesOfRegion :: "capability \<Rightarrow> region \<Rightarrow> bool \<Rightarrow> vptr \<Rightarrow> unit kernel_init"
 
 consts
 mapGlobalsFrame :: "unit kernel"
 
 consts
-createInitialRoot :: "machine_word \<Rightarrow> capability kernel_init"
+writeIdleCode :: "unit kernel"
 
 consts
-populateInitialRoot :: "capability \<Rightarrow> capability \<Rightarrow> unit kernel_init"
+mapKernelFrame :: "paddr \<Rightarrow> vptr \<Rightarrow> vmrights \<Rightarrow> vmattributes \<Rightarrow> unit kernel"
 
 consts
-allocUserPT :: "asid \<Rightarrow> vptr \<Rightarrow> (machine_word) kernel_init"
+getARMGlobalPT :: "(machine_word) kernel"
 
 consts
-mapUserFrame :: "machine_word \<Rightarrow> asid \<Rightarrow> paddr \<Rightarrow> vptr \<Rightarrow> unit kernel_init"
+createDeviceFrames :: "capability \<Rightarrow> unit kernel_init"
 
 consts
 copyGlobalMappings :: "machine_word \<Rightarrow> unit kernel"
@@ -129,6 +144,9 @@ consts
 checkMappingPPtr :: "machine_word \<Rightarrow> vmpage_size \<Rightarrow> (machine_word) + (machine_word) \<Rightarrow> ( lookup_failure , unit ) kernel_f"
 
 consts
+armv_contextSwitch_HWASID :: "machine_word \<Rightarrow> hardware_asid \<Rightarrow> unit machine_monad"
+
+consts
 armv_contextSwitch :: "machine_word \<Rightarrow> asid \<Rightarrow> unit kernel"
 
 consts
@@ -142,12 +160,6 @@ isValidVTableRoot :: "capability \<Rightarrow> bool"
 
 consts
 checkValidIPCBuffer :: "vptr \<Rightarrow> capability \<Rightarrow> ( syscall_error , unit ) kernel_f"
-
-consts
-createInitPage :: "paddr \<Rightarrow> capability kernel"
-
-consts
-createDeviceCap :: "(paddr * paddr) \<Rightarrow> capability kernel"
 
 consts
 maskVMRights :: "vmrights \<Rightarrow> cap_rights \<Rightarrow> vmrights"
@@ -175,9 +187,6 @@ findFreeHWASID :: "hardware_asid kernel"
 
 consts
 getHWASID :: "asid \<Rightarrow> hardware_asid kernel"
-
-consts
-setCurrentASID :: "asid \<Rightarrow> unit kernel"
 
 consts
 doFlush :: "flush_type \<Rightarrow> vptr \<Rightarrow> vptr \<Rightarrow> paddr \<Rightarrow> unit machine_monad"
@@ -214,6 +223,9 @@ decodeARMPageFlush :: "machine_word \<Rightarrow> machine_word list \<Rightarrow
 
 consts
 checkVPAlignment :: "vmpage_size \<Rightarrow> vptr \<Rightarrow> ( syscall_error , unit ) kernel_f"
+
+consts
+checkValidMappingSize :: "vmpage_size \<Rightarrow> unit kernel"
 
 consts
 performARMMMUInvocation :: "ArchRetypeDecls_H.invocation \<Rightarrow> machine_word list kernel_p"

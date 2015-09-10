@@ -16,6 +16,7 @@ imports
   "~~/src/HOL/Library/Prefix_Order"
 begin
 
+
 lemma fu_commutes:
   "fu_commutes f g \<Longrightarrow> f bs (g bs' v) = g bs' (f bs v)"
   by (simp add: fu_commutes_def)
@@ -34,7 +35,7 @@ lemma access_ti_append:
 proof (induct xs)
   case Nil show ?case by simp
 next
-  case (Cons x xs) thus ?case by (simp add: min_def add_ac drop_take)
+  case (Cons x xs) thus ?case by (simp add: min_def ac_simps drop_take)
 qed
 
 lemma update_ti_append [simp]:
@@ -44,7 +45,7 @@ lemma update_ti_append [simp]:
 proof (induct xs)
   case Nil show ?case by simp
 next
-  case (Cons x xs) thus ?case by (simp add: drop_take add_ac min_def)
+  case (Cons x xs) thus ?case by (simp add: drop_take ac_simps min_def)
 qed
 
 lemma update_ti_struct_t_typscalar [simp]:
@@ -62,8 +63,7 @@ lemma update_ti_list_t_cons [simp]:
           update_ti_pair_t x (take (size_td_pair x) bs)
               (update_ti_list_t xs (drop (size_td_pair x) bs) v) else
           v)"
-  by (force simp: update_ti_list_t_def update_ti_pair_t_def min_def
-            intro!: ext)
+  by (force simp: update_ti_list_t_def update_ti_pair_t_def min_def)
 
 lemma update_ti_append_s [simp]:
   "\<And>bs. update_ti_list_t (xs@ys) bs v = (
@@ -74,7 +74,7 @@ lemma update_ti_append_s [simp]:
 proof (induct xs)
   case Nil show ?case by (simp add: update_ti_list_t_def)
 next
-  case (Cons x xs) thus ?case by (simp add: min_def drop_take add_ac)
+  case (Cons x xs) thus ?case by (simp add: min_def drop_take ac_simps)
 qed
 
 lemma update_ti_pair_t_dtpair [simp]:
@@ -86,7 +86,7 @@ text {* --------------------------------------------------------------- *}
 lemma field_desc_empty [simp]:
   "field_desc (TypDesc (TypAggregate []) nm) = \<lparr> field_access = \<lambda>x bs. [],
       field_update = \<lambda>x. id \<rparr>"
-  by (force simp: field_desc_def update_ti_t_def intro: ext)
+  by (force simp: update_ti_t_def)
 
 
 lemma export_uinfo_typdesc_simp [simp]:
@@ -95,12 +95,14 @@ lemma export_uinfo_typdesc_simp [simp]:
 
 lemma map_td_list_append [simp]:
   "map_td_list f (xs@ys) = map_td_list f xs @ map_td_list f ys"
-  by (induct_tac xs, auto)
+  by (induct_tac xs) auto
 
 
 lemma dt_snd_map_td_list:
   "dt_snd ` set (map_td_list f ts) = dt_snd ` set ts"
-  by (induct_tac ts, simp, case_tac a, auto)
+proof (induct ts)
+  case (Cons x xs) thus ?case by (cases x) auto
+qed simp
 
 lemma wf_desc_map:
   shows "wf_desc (map_td f t) = wf_desc t" and
@@ -111,28 +113,6 @@ proof (induct t and st and ts and x)
   case (Cons_typ_desc x xs) thus ?case
     by (cases x, auto simp: dt_snd_map_td_list)
 qed auto
-
-(* FIXME:
-lemma wf_desc_map:
-  shows "wf_desc (map_td f t) = wf_desc t" and
-      "wf_desc_struct (map_td_struct f st) = wf_desc_struct st" and
-      "wf_desc_list (map_td_list f ts) = wf_desc_list ts" and
-      "wf_desc_pair (map_td_pair f x) = wf_desc_pair x"
-proof (induct t and st and ts and x)
-  case (TypDesc st nm) show ?case by simp
-next
-  case (TypScalar sz algn f) show ?case by simp
-next
-  case (TypAggregate ts) show ?case by simp
-next
-  case Nil_typ_desc show ?case by simp
-next
-  case (Cons_typ_desc x xs) thus ?case
-    by (cases x, auto simp: dt_snd_map_td_list)
-next
-  case (DTPair_typ_desc x fn) show ?case by simp
-qed
-*)
 
 lemma wf_desc_list_append [simp]:
   "wf_desc_list (xs@ys) = (wf_desc_list xs \<and> wf_desc_list ys \<and>
@@ -147,7 +127,7 @@ lemma norm_tu_list_append [simp]:
   "\<And>bs. norm_tu_list (xs@ys) bs = norm_tu_list xs
             (take (size_td_list xs) bs) @
             norm_tu_list ys (drop (size_td_list xs) bs)"
-  by (induct xs, auto simp: min_def add_ac drop_take)
+  by (induct xs, auto simp: min_def ac_simps drop_take)
 
 lemma wf_size_desc_gt:
   shows "wf_size_desc (t::'a typ_desc) \<Longrightarrow> 0 < size_td t" and
@@ -155,7 +135,7 @@ lemma wf_size_desc_gt:
       "\<lbrakk> ts \<noteq> []; wf_size_desc_list ts \<rbrakk> \<Longrightarrow>
           0 < size_td_list (ts::'a typ_pair list)" and
       "wf_size_desc_pair x \<Longrightarrow> 0 < size_td_pair (x::'a typ_pair)"
-  by (induct t and st and ts and x, auto)
+  by (induct t and st and ts and x rule: typ_desc_typ_struct_inducts, auto)
 
 lemma field_lookup_empty [simp]:
   "field_lookup t [] n = Some (t,n)"
@@ -184,18 +164,20 @@ proof (induct xs)
 next
   case (Cons x xs) thus ?case
     by (cases x)
-       (auto simp: add_ac split: option.splits)
+       (auto simp: ac_simps split: option.splits)
 qed
 
 lemma field_lookup_list_None:
   "\<And>f fs m. f \<notin> dt_snd ` set ts \<Longrightarrow> field_lookup_list ts (f#fs) m = None"
-  by (induct ts, clarsimp)
-     (case_tac a, auto)
+proof (induct ts)
+  case (Cons x _) thus ?case by (cases x) auto
+qed simp
 
-lemma field_lookup_list_Some [rule_format]:
-  "\<And>f fs m. f \<in> dt_snd ` set ts \<Longrightarrow> field_lookup_list ts [f] m \<noteq> None"
-  by (induct ts, clarsimp)
-     (case_tac a, auto)
+lemma field_lookup_list_Some:
+  "f \<in> dt_snd ` set ts \<Longrightarrow> field_lookup_list ts [f] m \<noteq> None"
+proof (induct ts arbitrary: f m)
+  case (Cons x _) thus ?case by (cases x) auto
+qed simp
 
 lemma field_lookup_offset_le:
   shows "\<And>s m n f. field_lookup t f m = Some ((s::'a typ_desc),n) \<Longrightarrow>
@@ -237,7 +219,7 @@ proof (induct t and st and ts and x)
             clarsimp simp: Cons_typ_desc [where m'=m],
             clarsimp dest!: field_lookup_offset_le, arith)
       ultimately show "?X" using ls
-        by (clarsimp simp: add_assoc [symmetric])
+        by (clarsimp simp: add.assoc [symmetric])
            (subst (asm) Cons_typ_desc [where m'="m' + size_td (dt_fst x)"],
             fast)
     next
@@ -262,7 +244,7 @@ proof (induct t and st and ts and x)
             clarsimp simp: Cons_typ_desc [where m'=m'],
             clarsimp dest!: field_lookup_offset_le, arith)
       ultimately show "?X" using ls
-        by (clarsimp simp: add_assoc [symmetric])
+        by (clarsimp simp: add.assoc [symmetric])
            (subst (asm) Cons_typ_desc [where m'="m + size_td (dt_fst x)"],
             fast)
     next
@@ -533,18 +515,12 @@ apply(clarsimp split: option.splits)
  apply(subst (asm) field_lookup_prefix_None', assumption)
   apply clarsimp
  apply simp
-apply(rule conjI, clarsimp)
  apply(drule_tac x=f in spec, drule_tac x=g in spec, drule_tac x=t' in spec)
- apply simp
  apply(case_tac dt_pair)
  apply clarsimp
  apply(case_tac f, clarsimp+)
  apply(clarsimp split: split_if_asm)
  apply(simp add: field_lookup_list_None)
-apply clarsimp
-apply(rule sym)
-apply(drule_tac x=f in spec, drule_tac x=g in spec, drule_tac x=t' in spec)
-apply simp
 done
 
 lemma field_lookup_prefix_Some' [rule_format]:
@@ -592,11 +568,9 @@ lemma td_set_wf_size_desc [rule_format]:
 lemma td_set_size_lte':
   "(\<forall>s k m. ((s::'a typ_desc),k) \<in> td_set t m \<longrightarrow> size s = size t \<and> s=t \<and> k=m \<or> size s < size t)"
   "(\<forall>s k m. ((s::'a typ_desc),k) \<in> td_set_struct st m \<longrightarrow> size s < size st)"
-  "(\<forall>s k m. ((s::'a typ_desc),k) \<in> td_set_list xs m \<longrightarrow> size s < list_size (dt_pair_size size (list_size char_size)) xs)"
-  "(\<forall>s k m. ((s::'a typ_desc),k) \<in> td_set_pair x m \<longrightarrow> size s < dt_pair_size size (list_size char_size) x)"
-  apply(induct t and st and xs and x)
-       apply (force simp add: char_size_def)+
-  done
+  "(\<forall>s k m. ((s::'a typ_desc),k) \<in> td_set_list xs m \<longrightarrow> size s < size_list (size_dt_pair size (size_list size_char)) xs)"
+  "(\<forall>s k m. ((s::'a typ_desc),k) \<in> td_set_pair x m \<longrightarrow> size s < size_dt_pair size (size_list size_char) x)"
+  by (induct t and st and xs and x) (force simp add: size_char_def)+
 
 lemma td_set_size_lte:
   "(s,k) \<in> td_set t m \<Longrightarrow> size s = size t \<and> s=t \<and> k=m \<or>
@@ -608,7 +582,7 @@ lemma td_set_struct_size_lte:
   by (simp add: td_set_size_lte')
 
 lemma td_set_list_size_lte:
-  "(s,k) \<in> td_set_list ts m \<Longrightarrow> size s < list_size (dt_pair_size size (list_size char_size)) ts"
+  "(s,k) \<in> td_set_list ts m \<Longrightarrow> size s < size_list (size_dt_pair size (size_list size_char)) ts"
   by (simp add: td_set_size_lte')
 
 lemma td_aggregate_not_in_td_set_list [simp]:
@@ -814,16 +788,18 @@ apply(induct t and st and ts and x)
      apply((erule allE)+, erule (1) impE)
      apply clarsimp
      apply(case_tac f, clarsimp+)
-     apply(rule_tac x="a#listb" in exI)
+     apply(rename_tac x xs)
+     apply(rule_tac x="x#xs" in exI)
      apply clarsimp
     apply clarsimp+
  apply(rule, clarsimp)
   apply((erule allE)+, erule (1) impE)
   apply(clarsimp, case_tac f, clarsimp+)
-  apply(rule_tac x="a#lista" in exI)
+  apply(rename_tac x xs)
+  apply(rule_tac x="x#xs" in exI)
   apply(clarsimp)
  apply clarsimp
- apply(thin_tac "\<forall>s. ?P s")
+ apply(thin_tac "\<forall>s. P s" for P)
  apply(drule_tac x=s in spec)
  apply(drule_tac x="m + size_td (dt_fst dt_pair)" in spec)
  apply(drule_tac x="n - size_td (dt_fst dt_pair)" in spec)
@@ -869,7 +845,7 @@ apply(induct t and st and ts and x)
      apply fast
     apply clarsimp+
  apply(clarsimp split: option.splits)
-  apply(thin_tac "All ?P")
+  apply(thin_tac "All P" for P)
   apply(drule_tac x=s in spec)
   apply(drule_tac x="m + size_td (dt_fst dt_pair)" in spec)
   apply(drule_tac x="n - size_td (dt_fst dt_pair)" in spec)
@@ -909,7 +885,7 @@ apply rule
  apply(drule_tac x=0 in spec)
  apply(drule_tac x=b in spec)
  apply clarsimp
-apply(thin_tac "All ?P")
+apply(thin_tac "All P" for P)
 apply(drule_tac x=a in spec)
 apply(drule_tac x=0 in spec)
 apply(drule_tac x=b in spec)
@@ -933,7 +909,7 @@ lemma td_set_struct_field_lookup_structD:
 apply(insert td_set_field_lookup_rev' [of undefined st undefined undefined])
 apply clarsimp
 apply(case_tac k, clarsimp)
-apply(thin_tac "All ?P")
+apply(thin_tac "All P" for P)
 apply(drule_tac x=a in spec)
 apply(drule_tac x=m in spec)
 apply(drule_tac x="b - m" in spec)
@@ -956,8 +932,8 @@ lemma td_set_list_field_lookup_listD:
 apply(insert td_set_field_lookup_rev' [of undefined undefined xs undefined])
 apply clarsimp
 apply(case_tac k, clarsimp)
-apply(thin_tac "All ?P")
-apply(thin_tac "All ?P")
+apply(thin_tac "All P" for P)
+apply(thin_tac "All P" for P)
 apply(drule_tac x=a in spec)
 apply(drule_tac x=m in spec)
 apply(drule_tac x="b - m" in spec)
@@ -970,9 +946,9 @@ lemma td_set_pair_field_lookup_pairD:
 apply(insert td_set_field_lookup_rev' [of undefined undefined undefined x])
 apply clarsimp
 apply(case_tac k, clarsimp)
-apply(thin_tac "All ?P")
-apply(thin_tac "All ?P")
-apply(thin_tac "All ?P")
+apply(thin_tac "All P" for P)
+apply(thin_tac "All P" for P)
+apply(thin_tac "All P" for P)
 apply(drule_tac x=a in spec)
 apply(drule_tac x=m in spec)
 apply(drule_tac x="b - m" in spec)
@@ -1003,7 +979,7 @@ apply(induct t and st and ts and x)
    apply(frule td_set_pair_field_lookup_pairD)
    apply(drule field_lookup_offset_le)
    apply(drule td_set_pair_offset_size_m)
-   apply(thin_tac "\<forall>f g. ?P f g")+
+   apply(thin_tac "\<forall>f g. P f g" for P)+
    apply(case_tac dt_pair, simp )
    apply(subgoal_tac "0 < size_td a")
     apply simp
@@ -1012,7 +988,7 @@ apply(induct t and st and ts and x)
   apply(frule td_set_pair_field_lookup_pairD)
   apply(drule field_lookup_offset_le)
   apply(drule td_set_pair_offset_size_m)
-  apply(thin_tac "\<forall>f g. ?P f g")+
+  apply(thin_tac "\<forall>f g. P f g" for P)+
   apply(case_tac dt_pair, simp )
   apply(subgoal_tac "0 < size_td a")
    apply simp
@@ -1115,8 +1091,7 @@ lemma fd_cons_update_access_list_append:
 (* FIXME MOVE *)
 lemma min_ll:
   "min (x + y) x = (x::nat)"
-  by (simp add: min_def)
-
+  by simp
 
 lemma fd_cons_access_update_list_append:
   "\<lbrakk> fd_cons_access_update (field_desc_list xs) (size_td_list xs);
@@ -1128,7 +1103,7 @@ apply(drule_tac x="take (size_td_list xs) bs" in spec)
 apply clarsimp
 apply(erule impE)
  apply(clarsimp simp: min_def)
-apply(simp add: access_ti_append min_ll)
+apply(simp add: access_ti_append)
 apply(drule_tac x="drop (size_td_list xs) bs" in spec)
 apply clarsimp
 apply(drule_tac x="take (size_td_list xs) bs'" in spec)
@@ -1194,7 +1169,8 @@ lemma tf4:  "tf_set_list (x#xs) = tf_set_pair x \<union> {t. t \<in> tf_set_list
 apply(clarsimp simp: tf_set_list_def tf_set_pair_def)
 apply(case_tac x)
 apply clarsimp
-apply(rule, clarsimp)
+apply(rename_tac a b)
+apply(rule equalityI, clarsimp)
  apply(case_tac ba, auto)
        apply(drule field_lookup_list_offset2, fast)
       apply(clarsimp split: option.splits)
@@ -1386,15 +1362,15 @@ apply(induct t and st and ts and x)
  apply(drule tf4D)
  apply clarsimp
  apply(erule disjE)
-  apply(thin_tac "All ?P")
-  apply(thin_tac "All ?P")
+  apply(thin_tac "All P" for P)
+  apply(thin_tac "All P" for P)
   apply(drule_tac x="t2d (a,b)" in spec)
-  apply(thin_tac "\<forall>x y. ?P x y")
+  apply(thin_tac "\<forall>x y. P x y" for P)
   apply(drule_tac x="y" in spec)
   apply(fastforce simp: t2d_def image_def)
- apply(thin_tac "All ?P")
- apply(thin_tac "All ?P")
- apply(thin_tac "All ?P")
+ apply(thin_tac "All P" for P)
+ apply(thin_tac "All P" for P)
+ apply(thin_tac "All P" for P)
  apply(drule_tac x="t2d (a,b)" in spec)
  apply(drule_tac x="y" in spec)
  apply(fastforce simp: t2d_def image_def)
@@ -1403,7 +1379,7 @@ apply(rotate_tac)
 apply(subst (asm) ti_ind_fn)
 apply(simp add: t2d_def)
 apply(clarsimp simp: ti_ind_def)
-apply(thin_tac "All ?P")
+apply(thin_tac "All P" for P)
 apply(drule_tac x="t2d (aa,ba)" in spec)
 apply(drule_tac x=y in spec)
 apply(fastforce simp: t2d_def image_def)
@@ -1452,9 +1428,11 @@ done
 lemma ln_fn_disj [rule_format]:
   "\<forall>x. dt_snd x \<notin> dt_snd ` set xs \<longrightarrow>
       lf_fn ` lf_set_pair x fn \<inter> lf_fn ` lf_set_list xs fn = {}"
-apply(induct_tac xs, auto)
-apply(case_tac x, auto)
-apply(case_tac a, auto)
+apply(induct_tac xs, clarsimp)
+apply(rename_tac a list)
+apply auto (* FIXME! *)
+apply(case_tac x, auto) (* FIXME! *)
+apply(case_tac a, auto) (* FIXME! *)
 apply(drule lf_set_fn)+
 apply clarsimp
 apply(clarsimp simp: prefixeq_def less_eq_list_def)
@@ -1527,9 +1505,9 @@ apply(induct t and st and ts and x)
   apply(clarsimp simp: fd_cons_access_update_def field_desc_list_def)
   apply(simp add: fu_commutes_def)
   apply(clarsimp simp: fa_fu_ind_def field_desc_pair_def field_desc_list_def)
-  apply(thin_tac "All ?P")
-  apply(thin_tac "All ?P")
-  apply(thin_tac "All ?P")
+  apply(thin_tac "All P" for P)
+  apply(thin_tac "All P" for P)
+  apply(thin_tac "All P" for P)
   apply(rotate_tac -4)
   apply(drule_tac x="take (size_td_pair dt_pair) bs" in spec)
   apply clarsimp
@@ -1679,6 +1657,7 @@ lemma fu_commutes_ts [rule_format]:
       fu_commutes d (update_ti_list_t ts)"
 apply(induct_tac ts)
  apply(clarsimp simp: fu_commutes_def)
+apply(rename_tac a list)
 apply(clarsimp simp: fu_commutes_def)
 apply(case_tac a, clarsimp)
 done
@@ -1690,6 +1669,7 @@ lemma fa_fu_ind_ts [rule_format]:
            (size_td_list ts) n"
 apply(induct_tac ts)
  apply(clarsimp simp: fa_fu_ind_def)
+apply(rename_tac a list)
 apply(clarsimp simp: fa_fu_ind_def)
 apply(case_tac a, clarsimp)
 done
@@ -1701,6 +1681,7 @@ lemma fa_fu_ind_ts2 [rule_format]:
            n (size_td_list ts)"
 apply(induct_tac ts)
  apply(clarsimp simp: fa_fu_ind_def)
+apply(rename_tac a list)
 apply(clarsimp simp: fa_fu_ind_def)
 apply(case_tac a, clarsimp)
 done
@@ -1732,6 +1713,7 @@ apply(induct t and st and ts and x)
   apply fast
  apply(clarsimp simp: wf_fdp_def)
  apply(case_tac dt_pair, clarsimp)
+ apply(rename_tac a b)
  apply(frule_tac x=a in spec)
  apply(drule_tac x="[b]" in spec)
  apply clarsimp
@@ -1742,6 +1724,7 @@ apply(induct t and st and ts and x)
   apply(drule_tac x="dt_fst x" in spec, erule impE, rule_tac x="[dt_snd x]" in exI)
    apply clarsimp
    apply(case_tac x, clarsimp)
+   apply(rename_tac aa ba)
    apply(simp add: tf_set_list_mem)
    apply(rule, clarsimp)
     apply(clarsimp simp: image_def)
@@ -1756,6 +1739,7 @@ apply(induct t and st and ts and x)
   apply(drule_tac x="dt_fst x" in spec, erule impE, rule_tac x="[dt_snd x]" in exI)
    apply clarsimp
    apply(case_tac x, clarsimp)
+   apply(rename_tac aa ba)
    apply(simp add: tf_set_list_mem)
    apply(rule, clarsimp)
     apply(clarsimp simp: image_def)
@@ -1767,11 +1751,12 @@ apply(induct t and st and ts and x)
  apply(drule_tac x=t in spec)
  apply clarsimp
  apply(case_tac x, clarsimp)
+ apply(rename_tac aa ba)
  apply(drule_tac x="[ba]" in spec)
  apply clarsimp
  apply(simp add: tf_set_list_mem)
  apply clarsimp
- apply(thin_tac "All ?P")
+ apply(thin_tac "All P" for P)
  apply(drule_tac x=a in spec)
  apply (erule impE, rule_tac x="[b]" in exI)
   apply simp
@@ -2019,15 +2004,14 @@ apply(clarsimp simp: field_lvalue_def  field_ti_def field_offset_def
 apply(subst field_lookup_prefix_Some')
   apply(drule field_lookup_export_uinfo_Some)
   apply(simp add: typ_uinfo_t_def)
-  apply fast
- apply(simp add: typ_uinfo_t_def export_uinfo_def)
- apply(simp add: wf_desc_map)
+ apply(simp add: typ_uinfo_t_def export_uinfo_def wf_desc_map)
 apply(simp add: typ_uinfo_t_def)
 apply(drule field_lookup_export_uinfo_Some)
 apply(simp add: export_uinfo_def)
 apply(drule field_lookup_export_uinfo_Some)
 apply(simp add: export_uinfo_def)
-apply(subgoal_tac "field_lookup (typ_uinfo_t TYPE('a)) g b = Some (export_uinfo aa, b + ba)")
+apply(rename_tac m n)
+apply(subgoal_tac "field_lookup (typ_uinfo_t TYPE('a)) g m = Some (export_uinfo k, m + n)")
  apply(simp add: typ_uinfo_t_def export_uinfo_def)
 apply(simp add: typ_uinfo_t_def field_lookup_offset export_uinfo_def)
 done
@@ -2061,7 +2045,7 @@ apply(induct t and st and ts and x)
     apply clarsimp+
  apply(clarsimp simp: fd_cons_desc_def split: option.splits)
   apply(case_tac f, clarsimp+)
-  apply(thin_tac "All ?P")
+  apply(thin_tac "All P" for P)
   apply(drule_tac x="a#lista" in spec)
   apply(drule_tac x="s" in spec)
   apply(drule_tac x="m + size_td (dt_fst dt_pair)" in spec)
@@ -2083,7 +2067,7 @@ apply(induct t and st and ts and x)
  apply(subst drop_take)
  apply simp
  apply(drule td_set_field_lookupD)
- apply(fastforce dest: td_set_offset_size_m simp: add_ac min_def)
+ apply(fastforce dest: td_set_offset_size_m simp: ac_simps min_def)
 apply clarsimp
 done
 
@@ -2093,9 +2077,7 @@ lemma field_access_update_take_dropD:
       field_access (field_desc s) (field_update (field_desc t) bs v) bs'
           = field_access (field_desc s) (field_update (field_desc s)
               (take (size_td (s::'a typ_info)) (drop n bs)) undefined) bs'"
-apply(insert field_access_update_take_drop(1) [of t])
-apply clarsimp
-done
+by (rule field_access_update_take_drop)
 
 lemma fi_fa_consistentD:
   "\<lbrakk> field_lookup (typ_info_t TYPE('a::wf_type)) f 0 = Some (d,n);
@@ -2116,7 +2098,7 @@ apply(frule field_access_update_take_dropD [where v=undefined and m=0 and bs'="r
    apply fast
   apply simp
  apply simp
-apply(simp add: field_desc_def min_def access_ti\<^sub>0_def)
+apply(simp add: min_def access_ti\<^sub>0_def)
 done
 
 lemma length_super_update_bs [simp]:
@@ -2175,7 +2157,7 @@ lemma fi_fu_consistent [rule_format]:
 apply(induct t and st and ts and x)
      apply clarsimp
      apply(drule wf_fd_cons_structD)
-     apply(clarsimp simp: fd_cons_struct_def fd_cons_double_update_def field_desc_def super_update_bs_def fd_cons_desc_def)
+     apply(clarsimp simp: fd_cons_struct_def fd_cons_double_update_def super_update_bs_def fd_cons_desc_def)
     apply clarsimp+
  apply(case_tac f, clarsimp+)
  apply(clarsimp simp: fd_cons_desc_def split: option.splits)
@@ -2190,6 +2172,7 @@ apply(induct t and st and ts and x)
   apply(drule td_set_list_field_lookup_listD)
   apply(drule td_set_list_offset_size_m)
   apply(case_tac dt_pair, clarsimp+)
+  apply(rename_tac aa ba)
   apply(drule_tac x="drop (size_td aa) bs" in spec)
   apply simp
   apply(drule_tac x=v in spec)
@@ -2462,7 +2445,7 @@ lemma fa_fu_lookup_disj:
 apply(induct t and st and ts and x)
      apply (auto simp: disj_fn_def)
  apply(clarsimp simp: split: option.splits)
-    apply(thin_tac "All ?P")
+    apply(thin_tac "All P" for P)
     apply(drule_tac x=f in spec)
     apply(drule_tac x="m + size_td (dt_fst dt_pair)" in spec)
     apply(drule_tac x=d in spec)
@@ -2481,7 +2464,7 @@ apply(induct t and st and ts and x)
  apply(drule_tac x=m in spec)
  apply(drule_tac x=d in spec)
  apply clarsimp
- apply(thin_tac "All ?P")
+ apply(thin_tac "All P" for P)
  apply(drule_tac x=f' in spec)
  apply(drule_tac x=m' in spec)
  apply(drule_tac x=d' in spec)
@@ -2631,7 +2614,7 @@ lemma fa_fu_lookup_disj_inter:
 apply(induct t and st and ts and x)
      apply(auto simp: disj_fn_def)
  apply(clarsimp split: option.splits)
-    apply(thin_tac "All ?P")
+    apply(thin_tac "All P" for P)
     apply(drule_tac x=f in spec)
     apply(drule_tac x=d in spec)
     apply(drule_tac x=n in spec)
@@ -2658,7 +2641,7 @@ apply(induct t and st and ts and x)
  apply(drule_tac x=f in spec)
  apply(drule_tac x=d in spec)
  apply(drule_tac x=n in spec)
- apply(thin_tac "All ?P")
+ apply(thin_tac "All P" for P)
  apply(drule_tac x=f' in spec)
  apply(drule_tac x="m" in spec)
  apply clarsimp
@@ -2694,6 +2677,7 @@ lemma fa_fu_lookup_disj_inter_listD:
 apply(insert fa_fu_lookup_disj_inter(3) [of ts])
 apply clarsimp
 done
+
 
 lemma upd_rf:
   "length bs = size_of TYPE('a) \<Longrightarrow>
@@ -2740,9 +2724,30 @@ apply(subgoal_tac "align_of (TYPE('a)) dvd size_of ((TYPE('a)))")
 apply(rule align_size_of)
 done
 
+lemma to_bytes_inj:
+  "to_bytes (v::'a::mem_type) = to_bytes (v'::'a) \<Longrightarrow> v=v'"
+apply (drule_tac x="replicate (size_of TYPE('a)) 0" in fun_cong)
+apply (drule_tac f="from_bytes::byte list \<Rightarrow> 'a" in arg_cong)
+apply (simp add: inv)
+done
+
 lemmas unat_simps = unat_simps' max_size
 
 lemmas mem_type_simps [simp] = inv len sz_nzero max_size align
+
+lemma ptr_aligned_plus:
+  assumes aligned: "ptr_aligned (p::'a::mem_type ptr) "
+  shows "ptr_aligned (p +\<^sub>p i)"
+proof -
+  have "int (align_of TYPE('a)) dvd (i * int (size_of TYPE('a)))"
+    by (metis dvd_mult zdvd_int align_size_of)
+  with aligned show ?thesis
+    apply (case_tac p, simp add: ptr_aligned_def ptr_add_def scast_id)
+    apply (simp only: unat_simps len_signed)
+    apply (metis align align_size_of dvd_add dvd_mod dvd_mult2 mult.commute)
+    done
+qed
+
 
 lemma mem_type_self [simp]:
   "ptr_val (p::'a::mem_type ptr) \<in> {ptr_val p..+size_of TYPE('a)}"
@@ -2759,8 +2764,9 @@ lemma wf_size_desc_typ_uinfo_t_simp [simp]:
 
 lemma aggregate_map [simp]:
   "aggregate (map_td f t) = aggregate t"
-apply(case_tac t, simp)
-apply(case_tac typ_struct, simp+)
+apply(case_tac t)
+apply(rename_tac st n)
+apply(case_tac st, simp+)
 done
 
 
@@ -2807,8 +2813,9 @@ lemma field_of_t_simple:
   "field_of_t p (x::'a::simple_mem_type ptr) \<Longrightarrow> ptr_val p = ptr_val x"
 apply(clarsimp simp: field_of_t_def)
 apply(case_tac "typ_uinfo_t TYPE('a)")
+apply(rename_tac st n)
 apply clarsimp
-apply(case_tac typ_struct)
+apply(case_tac st)
  apply clarsimp
  apply(clarsimp simp: field_of_def)
  apply(subst (asm) unat_eq_zero)
@@ -2816,26 +2823,6 @@ apply(case_tac typ_struct)
 apply simp
 done
 
-(* FIXME: move to where class defined *)
-lemma to_bytes_inj:
-  "to_bytes (v::'a::mem_type) = to_bytes (v'::'a) \<Longrightarrow> v=v'"
-apply(drule_tac x="replicate (size_of TYPE('a)) 0" in fun_cong)
-apply (drule_tac f="from_bytes::byte list \<Rightarrow> 'a" in arg_cong)
-apply simp
-done
-
-lemma ptr_aligned_plus:
-  assumes aligned: "ptr_aligned (p::'a::mem_type ptr) "
-  shows "ptr_aligned (p +\<^sub>p i)"
-proof -
-  have "int (align_of TYPE('a)) dvd (i * int (size_of TYPE('a)))"
-    by (metis dvd_mult zdvd_int align_size_of)
-  with aligned show ?thesis
-    apply (case_tac p, simp add: ptr_aligned_def ptr_add_def scast_id)
-    apply (simp only: unat_simps len_signed)
-    apply (metis align align_size_of dvd_add dvd_mod dvd_mult2 nat_mult_commute)
-    done
-qed
 
 lemma fold_td'_unfold:
  "fold_td' t =  (let (f,s) = t in (case s of TypDesc st nm \<Rightarrow> case st of
@@ -2854,9 +2841,9 @@ lemma fold_td_alt_def':
            TypScalar n algn d \<Rightarrow> d |
            TypAggregate ts \<Rightarrow> f nm (map (\<lambda>x. (fold_td f (dt_fst x),dt_snd x)) ts))"
 apply(case_tac t)
-apply auto
-apply(auto simp: fold_td_def split: typ_desc.split typ_struct_splits dt_pair.splits)
-apply(subgoal_tac "map ( \<lambda>x. (fold_td' (f, dt_fst x), dt_snd x)) lista = map (dt_pair_case (\<lambda>a. Pair (fold_td' (f, a)))) lista")
+apply(auto split: typ_desc.split typ_struct_splits dt_pair.splits) (* FIXME *)
+apply(rename_tac xs)
+apply(subgoal_tac "map ( \<lambda>x. (fold_td' (f, dt_fst x), dt_snd x)) xs = map (case_dt_pair (\<lambda>a. Pair (fold_td' (f, a)))) xs")
  apply(simp only:)
 apply auto
 apply(clarsimp split: dt_pair.splits)
@@ -2926,27 +2913,8 @@ apply(insert align_td_fm'(1) [of t])
 apply auto
 done
 
-lemma blah0 [rule_format]:
-  "\<forall>f t n. DTPair t n \<in> set (map_td_list f ts) \<longrightarrow> (n \<in> dt_snd ` set ts)"
-apply(induct_tac ts)
- apply auto
- apply(case_tac a, auto)
-done
-
-lemma blah1:
-  "map_td_pair f x = DTPair a b \<Longrightarrow> b = dt_snd x"
-apply(case_tac x)
-apply simp
-done
-
-lemma blah2 [rule_format]:
-  "\<forall>aa a b. (DTPair aa b \<in> set ts \<longrightarrow>
-      b \<in> dt_snd ` set (map_td_list (\<lambda>n x d. True) ts))"
-apply(induct_tac ts, auto)
-done
-
-lemma dt_pair_case:
-  "snd ` dt_pair_case (\<lambda>t. Pair (f t)) ` X = dt_snd ` X"
+lemma case_dt_pair:
+  "snd ` case_dt_pair (\<lambda>t. Pair (f t)) ` X = dt_snd ` X"
 apply(auto simp: image_def split: dt_pair.splits)
  apply(rule_tac x=xa in bexI)
   apply(case_tac xa, clarsimp)
@@ -2957,33 +2925,24 @@ apply(rule_tac x=xa in bexI)
 apply assumption
 done
 
+lemma map_DTPair_dt_snd:
+  "map_td_pair f x = DTPair a b \<Longrightarrow> b = dt_snd x"
+  by (metis dt_pair.inject map_td'_map'(4))
+
 lemma wf_desc_fm':
   "wf_desc (t::'a typ_desc) = fold_td wfd (map_td (\<lambda>n x d. True) t)"
   "wf_desc_struct (st::'a typ_struct) = fold_td_struct (typ_name t) wfd (map_td_struct (\<lambda>n x d. True) st)"
   "wf_desc_list (ts::'a typ_pair list) = fold_td_list (typ_name t) wfd (map_td_list (\<lambda>n x d. True) ts)"
   "wf_desc_pair (x::'a typ_pair) = fold_td_pair wfd (map_td_pair (\<lambda>n x d. True) x)"
 apply(induct t and st and ts and x)
-     apply(auto simp: wfd_def image_compose split: dt_pair.splits)
- apply(drule blah0)
- apply simp
- apply(drule blah1)
- apply simp
-apply(drule blah1)
-apply simp
-apply(case_tac x)
-apply simp
-apply(case_tac dt_pair, simp)
-apply(clarsimp simp: dt_pair_case)
-apply(drule blah2)
-apply simp
+     apply(auto simp: wfd_def image_comp[symmetric] split: dt_pair.splits) (* FIXME *)
+ apply (metis (no_types, lifting) dt_snd.simps dt_snd_map_td_list image_eqI map_td'_map'(4))
+apply (metis map_DTPair_dt_snd case_dt_pair dt_snd_map_td_list image_eqI)
 done
-
 
 lemma wf_desc_fm:
   "wf_desc (t::'a typ_desc) \<equiv> fold_td wfd (map_td (\<lambda>n algn d. True) t)"
-apply(insert wf_desc_fm'(1) [of t])
-apply auto
-done
+  using wf_desc_fm'(1) [of t] by auto
 
 lemma update_tag_list_empty [simp]:
   "(map_td_list f xs = []) = (xs = [])"
@@ -3000,8 +2959,6 @@ done
 
 lemma wf_size_desc_fm:
   "wf_size_desc (t::'a typ_desc) \<equiv> fold_td wfsd (map_td (\<lambda>n algn d. 0 < n) t)"
-apply(insert wf_size_desc_fm'(1) [of t])
-apply auto
-done
+  using wf_size_desc_fm'(1) [of t] by auto
 
 end

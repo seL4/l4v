@@ -10,7 +10,7 @@
 
 structure CrunchTheoryData = Theory_Data
 (struct
-    type T = ((Args.src list -> string -> string -> (string * xstring) list
+    type T = ((Token.src list -> string -> string -> (string * xstring) list
          -> string list -> local_theory -> local_theory) * (string list -> string list -> theory -> theory)) Symtab.table
     val empty = Symtab.empty
     val extend = I
@@ -123,7 +123,7 @@ struct
 
 local structure P = Parse and K = Keyword in
 
-(* FIXME *)
+(* FIXME: Slightly outdated: *)
 (*
  example: crunch inv[wp]: f P (wp: h_P simp: .. ignore: ..)
 
@@ -157,10 +157,10 @@ fun read_sections sections =
 
 val crunchP =
     Outer_Syntax.local_theory
-        @{command_spec "crunch"}
+        @{command_keyword "crunch"}
         "crunch through monadic definitions with a given property"
         (((Scan.optional (P.$$$ "(" |-- P.name --| P.$$$ ")") "" -- P.name
-         -- Parse_Spec.opt_attribs --| P.$$$ ":") -- P.list1 P.name -- Scan.optional P.term ""
+         -- Parse.opt_attribs --| P.$$$ ":") -- P.list1 P.name -- Scan.optional P.term ""
          -- Scan.optional
            (P.$$$ "(" |-- read_sections [wp_sect,ignore_sect,simp_sect,lift_sect,ignore_del_sect,unfold_sect] --| P.$$$ ")")
            []
@@ -177,7 +177,7 @@ val del_sect = "del";
 
 val crunch_ignoreP =
     Outer_Syntax.local_theory
-         @{command_spec "crunch_ignore"}
+         @{command_keyword "crunch_ignore"}
         "add to and delete from list of things that crunch should ignore in finding prerequisites"
         ((Scan.optional (P.$$$ "(" |-- P.name --| P.$$$ ")") "" -- Scan.optional
           (P.$$$ "(" |-- read_sections [add_sect, del_sect] --| P.$$$ ")")
@@ -194,7 +194,7 @@ val crunch_ignoreP =
                    | SOME x => snd x);
                in
                   Local_Theory.raw_theory (crunch_ignore_add_del add del) lthy
-                  |> (fn lthy => Named_Target.reinit lthy lthy)
+                  (* |> (fn lthy => Named_Target.reinit lthy lthy) *)
                end));
 
 end;

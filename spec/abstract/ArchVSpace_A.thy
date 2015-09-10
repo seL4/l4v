@@ -12,7 +12,7 @@
 Higher level functions for manipulating virtual address spaces
 *)
 
-header "ARM VSpace Functions"
+chapter "ARM VSpace Functions"
 
 theory ArchVSpace_A
 imports Retype_A
@@ -166,13 +166,13 @@ where
 "handle_vm_fault thread ARMDataAbort = doE
     addr \<leftarrow> liftE $ do_machine_op getFAR;
     fault \<leftarrow> liftE $ do_machine_op getDFSR;
-    throwError $ VMFault addr [0, fault && mask 12]
+    throwError $ VMFault addr [0, fault && mask 14]
 odE"
 |
 "handle_vm_fault thread ARMPrefetchAbort = doE
     pc \<leftarrow> liftE $ as_user thread $ getRestartPC;
     fault \<leftarrow> liftE $ do_machine_op getIFSR;
-    throwError $ VMFault pc [1, fault && mask 12]
+    throwError $ VMFault pc [1, fault && mask 14]
 odE"
 
 text {* Load the optional hardware ASID currently associated with this virtual
@@ -283,14 +283,20 @@ get_hw_asid :: "asid \<Rightarrow> (hardware_asid,'z::state_ext) s_monad" where
   od)
 od"
 
-text {* Set the current virtual ASID by setting the hardware ASID to one
-associated with it. *}
+
+abbreviation
+  "arm_context_switch_hwasid pd hwasid \<equiv> do
+              setCurrentPD $ addrFromPPtr pd;
+              setHardwareASID hwasid
+          od" 
+
 definition
-set_current_asid :: "asid \<Rightarrow> (unit,'z::state_ext) s_monad" where
-"set_current_asid asid \<equiv> do
-    hw_asid \<leftarrow> get_hw_asid asid;
-    do_machine_op $ setHardwareASID hw_asid
-od"
+  arm_context_switch :: "word32 \<Rightarrow> asid \<Rightarrow> (unit, 'z::state_ext) s_monad"
+where
+  "arm_context_switch pd asid \<equiv> do
+      hwasid \<leftarrow> get_hw_asid asid;
+      do_machine_op $ arm_context_switch_hwasid pd hwasid
+    od"
 
 text {* Switch into the address space of a given thread or the global address
 space if none is correctly configured. *}
@@ -303,10 +309,7 @@ definition
        ArchObjectCap (PageDirectoryCap pd (Some asid)) \<Rightarrow> doE
            pd' \<leftarrow> find_pd_for_asid asid;
            whenE (pd \<noteq> pd') $ throwError InvalidRoot;
-           liftE $ do
-               do_machine_op $ setCurrentPD $ addrFromPPtr pd;
-               set_current_asid asid
-           od
+           liftE $ arm_context_switch pd asid
        odE
      | _ \<Rightarrow> throwError InvalidRoot) <catch>
     (\<lambda>_. do
@@ -368,8 +371,7 @@ set_vm_root_for_flush :: "word32 \<Rightarrow> asid \<Rightarrow> (bool,'z::stat
                     ArchObjectCap (PageDirectoryCap cur_pd (Some _)) \<Rightarrow> return (cur_pd \<noteq> pd)
                   | _ \<Rightarrow> return True);
     (if not_is_pd then do
-        do_machine_op $ setCurrentPD $ addrFromPPtr pd;
-        set_current_asid asid;
+        arm_context_switch pd asid;
         return True
     od
     else return False)
@@ -709,8 +711,9 @@ mapping is to have. *}
 definition
 attribs_from_word :: "word32 \<Rightarrow> vm_attributes" where
 "attribs_from_word w \<equiv>
-  let V = (if w !!0 then {PageCacheable} else {})
-  in if w!!1 then insert ParityEnabled V else V"
+  let V = (if w !!0 then {PageCacheable} else {});
+      V' = (if w!!1 then insert ParityEnabled V else V)
+  in if w!!2 then insert XNever V' else V'"
 
 text {* Update the mapping data saved in a page or page table capability. *}
 definition

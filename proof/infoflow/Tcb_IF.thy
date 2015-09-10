@@ -97,7 +97,6 @@ lemma as_user_valid_ko_at_arm[wp]:
   apply(fastforce simp: valid_ko_at_arm_def get_tcb_ko_at obj_at_def)
 done
 
-(* FIXME: maybe not need here anymore, but probably useful in arch *)
 lemma cap_ne_global_pd : "ex_nonz_cap_to word s \<Longrightarrow> valid_global_refs s \<Longrightarrow> word \<noteq> arm_global_pd (arch_state s)"
   unfolding ex_nonz_cap_to_def
   apply (simp only : cte_wp_at_caps_of_state zobj_refs_to_obj_refs)
@@ -202,7 +201,7 @@ next
           apply (rule spec_valid_conj_liftE1, rule rec_del_emptyable)
           apply (rule "2.hyps", assumption+)
          apply simp
-         apply (simp add: conj_ac)
+         apply (simp add: conj_comms)
          apply (wp set_cap_P set_cap_Q replace_cap_invs
                   final_cap_same_objrefs set_cap_cte_cap_wp_to
                   set_cap_cte_wp_at hoare_vcg_const_Ball_lift static_imp_wp
@@ -236,16 +235,16 @@ next
      apply (simp add: is_final_cap_def)
      apply wp
      apply (wp get_cap_wp)
-     apply (clarsimp simp: cte_wp_at_caps_of_state conj_ac)
+     apply (clarsimp simp: cte_wp_at_caps_of_state conj_comms)
      apply (frule (1) caps_of_state_valid)
-    apply (clarsimp simp:   conj_ac invs_def valid_state_def valid_pspace_def valid_arch_caps_def invs_R)
+    apply (clarsimp simp:   conj_comms invs_def valid_state_def valid_pspace_def valid_arch_caps_def invs_R)
     apply (frule if_unsafe_then_capD [OF caps_of_state_cteD],clarsimp+)
 done
 next
 
   case (3 ptr bits n slot s)
   show ?case    
-    apply (simp add: rec_del_call.cases simp_thms spec_validE_def)
+    apply (simp add: rec_del_call.simps simp_thms spec_validE_def)
     apply (rule hoare_pre, wp cap_swap_for_delete_P cap_swap_for_delete_Q)
     apply (clarsimp simp: invs_valid_ko_at_arm)
     done
@@ -341,7 +340,7 @@ shows "
    apply (rule_tac P="case ep of Some v \<Rightarrow> length v = word_bits | _ \<Rightarrow> True"
                 in hoare_gen_asm)
    apply wp
-      apply ((simp add: conj_ac(1, 2) del: hoare_post_taut hoare_True_E_R
+      apply ((simp add: conj_comms(1, 2) del: hoare_post_taut hoare_True_E_R
         | rule wp_split_const_if wp_split_const_if_R
                    hoare_vcg_all_lift_R
                    hoare_vcg_E_elim hoare_vcg_const_imp_lift_R
@@ -349,17 +348,17 @@ shows "
         | (wp 
              
              check_cap_inv2[where Q="\<lambda>_. pas_refined aag"]
-             out_invs_trivial option_case_wpE cap_delete_deletes
+             out_invs_trivial case_option_wpE cap_delete_deletes
              cap_delete_valid_cap cap_insert_valid_cap out_cte_at
              cap_insert_cte_at cap_delete_cte_at out_valid_cap out_tcb_valid
              hoare_vcg_const_imp_lift_R hoare_vcg_all_lift_R
              thread_set_tcb_ipc_buffer_cap_cleared_invs
              thread_set_invs_trivial[OF ball_tcb_cap_casesI]
              hoare_vcg_all_lift thread_set_valid_cap out_emptyable
-             check_cap_inv [where P="valid_cap c", standard]
-             check_cap_inv [where P="tcb_cap_valid c p", standard]
-             check_cap_inv[where P="cte_at p0", standard]
-             check_cap_inv[where P="tcb_at p0", standard]
+             check_cap_inv [where P="valid_cap c" for c]
+             check_cap_inv [where P="tcb_cap_valid c p" for c p]
+             check_cap_inv[where P="cte_at p0" for p0]
+             check_cap_inv[where P="tcb_at p0" for p0]
              thread_set_cte_at
              thread_set_cte_wp_at_trivial[where Q="\<lambda>x. x", OF ball_tcb_cap_casesI]
              thread_set_no_cap_to_trivial[OF ball_tcb_cap_casesI]
@@ -443,13 +442,14 @@ lemma invoke_tcb_globals_equiv:
               | clarsimp simp add: invs_valid_ko_at_arm split del: split_if)+
        apply (simp_all del: tcb_inv_wf.simps split del: split_if)
        apply (wp | clarsimp simp: invs_valid_ko_at_arm no_cap_to_idle_thread | intro conjI impI)+
+       apply (rename_tac word1 word2 bool1 bool2 bool3 bool4 arm_copy_register_sets)
        apply (rule_tac Q="\<lambda>_. valid_ko_at_arm and globals_equiv st and (\<lambda>s. word1 \<noteq> idle_thread s) 
                               and (\<lambda>s. word2 \<noteq> idle_thread s)" in hoare_strengthen_post)
         apply (wp mapM_x_wp' as_user_globals_equiv invoke_tcb_AEPControl_globals_equiv 
                | simp add: invs_valid_ko_at_arm 
                | intro conjI impI 
                | clarsimp simp: no_cap_to_idle_thread)+
-  done
+       done
    
 
 section "reads respects"
@@ -661,6 +661,7 @@ lemma invoke_tcb_reads_respects_f:
      defer
      apply((wp suspend_reads_respects_f[where st=st] restart_reads_respects_f[where st=st]  | simp add: authorised_tcb_inv_def)+)[2]
     -- "AEPControl"
+   apply (rename_tac option)
    apply (case_tac option, simp_all)[1]
     apply ((wp unbind_async_endpoint_is_subj_reads_respects unbind_async_endpoint_silc_inv
           bind_async_endpoint_reads_respects 
@@ -668,7 +669,6 @@ lemma invoke_tcb_reads_respects_f:
         | rule_tac Q=\<top> and st=st in reads_respects_f)+)[2]
 -- "ThreadControl"
   apply (simp add: split_def cong: option.case_cong)
-
   apply(wp reads_respects_f[OF cap_insert_reads_respects, where st=st]
             reads_respects_f[OF thread_set_reads_respects, where st=st and Q="\<top>"]
             set_priority_reads_respects[THEN reads_respects_f[where aag=aag and st=st and Q=\<top>]]
@@ -701,8 +701,8 @@ lemma invoke_tcb_reads_respects_f:
             thread_set_tcb_fault_handler_update_only_timer_irq_inv
         | simp add: tcb_cap_cases_def | wpc)+
   apply (clarsimp simp: authorised_tcb_inv_def authorised_tcb_inv_extra_def emptyable_def)
-  apply(clarsimp simp: is_cap_simps is_cnode_or_valid_arch_def is_valid_vtable_root_def | intro impI | rule conjI)+
-  done (*Extra slow*)
+  by (clarsimp simp: is_cap_simps is_cnode_or_valid_arch_def is_valid_vtable_root_def | intro impI | rule conjI)+
+  (*Extra slow*)
 
 
 lemma invoke_tcb_reads_respects_f_g:
@@ -737,9 +737,3 @@ lemma decode_tcb_invocation_authorised_extra:
   done
  
 end
-
-
-
-
-
-

@@ -171,15 +171,6 @@ where
   odE"
 
 
-(* Modify the TCB's IpcBuffer or Registers in an arbitrary fashion. *)
-definition
-  corrupt_tcb_intent :: "cdl_object_id \<Rightarrow> unit k_monad"
-where
-  "corrupt_tcb_intent target_tcb \<equiv>
-    do
-      new_intent \<leftarrow> select UNIV;
-      update_thread target_tcb (\<lambda>t. t\<lparr>cdl_tcb_intent := new_intent\<rparr>)
-    od"
 
 (* Modify the TCB's intent to indicate an error during decode. *)
 definition
@@ -215,7 +206,7 @@ where
      (do
        CSpace_D.ipc_cancel target_tcb;
        KHeap_D.set_cap (target_tcb,tcb_replycap_slot) (cdl_cap.MasterReplyCap target_tcb);
-       KHeap_D.set_cap (target_tcb,tcb_pending_op_slot) (cdl_cap.RestartCap) \<sqinter> return ()
+       KHeap_D.set_cap (target_tcb,tcb_pending_op_slot) (cdl_cap.RestartCap)
       od)
   od"
 
@@ -236,11 +227,11 @@ definition
 where
   "invoke_tcb params \<equiv> case params of
     (* Modify a thread's registers. *)
-      WriteRegisters target_tcb _ _ _ \<Rightarrow>
+      WriteRegisters target_tcb resume _ _ \<Rightarrow>
         liftE $ 
         do
           corrupt_tcb_intent target_tcb;
-          restart target_tcb \<sqinter> return ()
+          when resume $ restart target_tcb
         od
 
     (* Read a thread's registers. *)
@@ -262,7 +253,7 @@ where
 
     (* Resume this thread. *)
     | Resume target_tcb \<Rightarrow>
-        liftE $ restart target_tcb \<sqinter> return ()
+        liftE $ restart target_tcb
 
     (* Update a thread's options. *)
     | ThreadControl target_tcb tcb_cap_slot faultep croot vroot ipc_buffer \<Rightarrow>

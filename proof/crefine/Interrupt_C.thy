@@ -34,9 +34,15 @@ lemma getIRQSlot_ccorres:
   apply (simp add: simpler_gets_def bind_def return_def)
   apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                         cinterrupt_relation_def size_of_def
-                        cte_level_bits_def mult_ac ucast_nat_def
+                        cte_level_bits_def mult.commute mult.left_commute ucast_nat_def
                         )
   done
+
+lemma cte_at_irq_node':
+  "invs' s \<Longrightarrow>
+    cte_at' (irq_node' s + 2 ^ cte_level_bits * ucast (irq :: 8 word)) s"
+  by (clarsimp simp: invs'_def valid_state'_def valid_irq_node'_def
+                     cte_level_bits_def real_cte_at')
 
 lemma invokeIRQHandler_SetIRQHandler_ccorres:
   "ccorres dc xfdc
@@ -52,18 +58,24 @@ proof -
   apply (cinit lift: irq_' slot_' cap_')
    apply (simp only:)
    apply (ctac(no_vcg) add: getIRQSlot_ccorres)
-     apply (ctac(no_vcg) add: cteDeleteOne_ccorres)
-      apply (ctac(no_vcg) add: cteInsert_ccorres)
-     apply (simp add: pred_conj_def)
-     apply (strengthen aep_badge_derived_enough_strg[unfolded o_def]
-                       vmdb_invs'_strg valid_objs_invs'_strg)
-     apply (wp cteDeleteOne_other_cap[unfolded o_def])[1]
+     apply (rule ccorres_Guard_Seq)
+     apply (rule ccorres_symb_exec_r)
+       apply (ctac(no_vcg) add: cteDeleteOne_ccorres[where w="-1"])
+        apply (ctac(no_vcg) add: cteInsert_ccorres)
+       apply (simp add: pred_conj_def)
+       apply (strengthen aep_badge_derived_enough_strg[unfolded o_def]
+                         invs_mdb_strengthen' valid_objs_invs'_strg)
+       apply (wp cteDeleteOne_other_cap[unfolded o_def])[1]
+      apply vcg
+     apply (rule conseqPre, vcg, clarsimp simp: rf_sr_def
+        gs_set_assn_Delete_cstate_relation[unfolded o_def])
     apply (simp add: getIRQSlot_def getInterruptState_def locateSlot_conv)
     apply wp
-   apply (simp add: guard_is_UNIV_def)
+   apply (simp add: guard_is_UNIV_def ghost_assertion_data_get_def
+                    ghost_assertion_data_set_def)
+  apply (clarsimp simp: cte_at_irq_node' ucast_nat_def)
   apply (clarsimp simp: invs_pspace_aligned' cte_wp_at_ctes_of badge_derived'_def)
-  apply (drule valid_globals_ex_cte_cap_irq, clarsimp+)
-  apply (fastforce simp: ucast_nat_def comp_def)
+  apply (drule valid_globals_ex_cte_cap_irq[where irq=irq], clarsimp+)
   done
 qed
 
@@ -75,8 +87,17 @@ lemma invokeIRQHandler_ClearIRQHandler_ccorres:
   apply (cinit lift: irq_')
    apply (simp only: )
    apply (ctac(no_vcg) add: getIRQSlot_ccorres)
-     apply (ctac add: cteDeleteOne_ccorres)
-    apply (wp | simp)+
+     apply (rule ccorres_Guard_Seq)
+     apply (rule ccorres_symb_exec_r)
+       apply (ctac add: cteDeleteOne_ccorres[where w="-1"])
+      apply vcg
+     apply (rule conseqPre, vcg, clarsimp simp: rf_sr_def
+        gs_set_assn_Delete_cstate_relation[unfolded o_def])
+    apply (simp add: getIRQSlot_def getInterruptState_def locateSlot_conv)
+    apply wp
+   apply (simp add: guard_is_UNIV_def ghost_assertion_data_get_def
+                    ghost_assertion_data_set_def)
+  apply (clarsimp simp: cte_at_irq_node' ucast_nat_def)
   done
 
 lemma aep_case_can_send:
@@ -84,6 +105,37 @@ lemma aep_case_can_send:
         | _ \<Rightarrow> v) = (if isAsyncEndpointCap cap then f (capAEPCanSend cap)
                      else v)"
   by (cases cap, simp_all add: isCap_simps)
+
+
+lemma setInterruptMode_ccorres:
+  "ccorres dc xfdc \<top> (UNIV \<inter> {s. irq_' s = ucast irq} 
+           \<inter> {s. levelTrigger_' s = from_bool trig} 
+           \<inter> {s. polarityLow_' s = from_bool pol}) []
+     (doMachineOp  $ (setInterruptMode irq trig pol))
+     (Call setInterruptMode_'proc)"
+  apply (cinit lift: irq_' levelTrigger_' polarityLow_')
+   apply (rule ccorres_return_Skip)
+  apply simp
+  done
+  
+
+lemma invokeIRQHandler_SetMode_ccorres:
+  notes setInterruptMode_def[simp del]
+  shows
+  "ccorres dc xfdc \<top> 
+     (UNIV \<inter> {s. irq_' s = ucast irq} \<inter> {s. levelTrigger_' s = from_bool trig} 
+           \<inter> {s. polarityLow_' s = from_bool pol}) []
+     (invokeIRQHandler (SetMode irq trig pol))
+     (Call invokeIRQHandler_SetMode_'proc)"
+  apply (cinit lift: irq_' levelTrigger_' polarityLow_')
+   apply (ctac add: setInterruptMode_ccorres[unfolded fun_app_def])
+  apply auto
+  done
+
+lemma list_length_geq_helper[simp]:
+  "\<lbrakk>\<not> length args < 2\<rbrakk>
+       \<Longrightarrow> \<exists>y ys. args = y # ys"
+  by (frule length_ineq_not_Nil(3), simp, metis list.exhaust)
 
 lemma decodeIRQHandlerInvocation_ccorres:
   notes if_cong[cong]
@@ -93,16 +145,20 @@ lemma decodeIRQHandlerInvocation_ccorres:
        (invs' and (\<lambda>s. ksCurThread s = thread) 
               and ct_active' and sch_act_simple
               and (excaps_in_mem extraCaps o ctes_of)
+              and (sysargs_rel args buffer)
               and (\<lambda>s. \<exists>slot. cte_wp_at' (\<lambda>cte. cteCap cte = IRQHandlerCap irq) slot s)
               and (\<lambda>s. \<forall>v \<in> set extraCaps.
                              ex_cte_cap_wp_to' isCNodeCap (snd v) s))
        (UNIV
-            \<inter> {s. label_' s = label} \<inter> {s. irq_' s = ucast irq}
-            \<inter> {s. extraCaps_' s = extraCaps'}) []
-     (decodeIRQHandlerInvocation label irq extraCaps
+            \<inter> {s. label_' s = label} 
+            \<inter> {s. unat (length_' s) = length args} 
+            \<inter> {s. irq_' s = ucast irq}
+            \<inter> {s. extraCaps_' s = extraCaps'}
+            \<inter> {s. buffer_' s = option_to_ptr buffer}) []
+     (decodeIRQHandlerInvocation label args irq extraCaps
             >>= invocationCatch thread isBlocking isCall InvokeIRQHandler)
      (Call decodeIRQHandlerInvocation_'proc)"
-  apply (cinit' lift: label_' irq_' extraCaps_' 
+  apply (cinit' lift: label_' length_' irq_' extraCaps_' buffer_' 
            simp: decodeIRQHandlerInvocation_def invocation_eq_use_types)
    apply (rule ccorres_Cond_rhs)
     apply (simp add: returnOk_bind ccorres_invocationCatch_Inr)
@@ -198,6 +254,38 @@ lemma decodeIRQHandlerInvocation_ccorres:
       apply (rule ccorres_alternative2)
       apply (rule ccorres_return_CE, simp+)[1]
      apply (wp sts_invs_minor')
+   apply (rule ccorres_Cond_rhs)
+    apply (rule ccorres_rhs_assoc)+
+    apply csymbr
+    apply csymbr
+    apply (simp add: list_case_If2 split_def del: Collect_const)
+    apply (rule ccorres_Cond_rhs_Seq)
+     apply clarsimp
+     apply (subst (asm) word_less_nat_alt, simp)
+     apply (rule ccorres_from_vcg_split_throws[where P=\<top> and P'=UNIV])
+      apply vcg
+     apply (rule conseqPre, vcg)
+     apply (clarsimp simp: throwError_bind invocationCatch_def)
+     apply (simp add: throwError_def return_def syscall_error_rel_def syscall_error_to_H_cases exception_defs)
+    apply (clarsimp )
+    apply (subgoal_tac "(List.length args) \<ge> 2")
+     prefer 2
+     apply (auto simp: word_less_nat_alt)[1]
+    apply (frule length_ineq_not_Nil(2), clarsimp)
+    apply (rule ccorres_add_return)
+    apply (ctac add: getSyscallArg_ccorres_foo[where args=args and n=0 and buffer=buffer])
+      apply (rule ccorres_add_return)
+      apply (ctac add: getSyscallArg_ccorres_foo[where args=args and n=1 and buffer=buffer])
+        apply (simp add: returnOk_bind invocationCatch_def performInvocation_def liftE_bindE bind_assoc bind_bindE_assoc)
+        apply (ctac(no_vcg) add: setThreadState_ccorres)
+         apply (ctac(no_vcg) add: invokeIRQHandler_SetMode_ccorres)
+          apply (simp add: liftE_alternative returnOk_liftE[symmetric])
+          apply (rule ccorres_alternative2)
+          apply (rule ccorres_return_CE, simp+)[1]
+         apply (wp sts_invs_minor')
+      apply (vcg exspec=setThreadState_modifies)
+     apply wp
+    apply (vcg exspec=getSyscallArg_modifies)
    apply (rule ccorres_equals_throwError)
     apply (fastforce simp: invocationCatch_def throwError_bind
                    split: invocation_label.split)
@@ -212,13 +300,12 @@ lemma decodeIRQHandlerInvocation_ccorres:
                         mask_def[where n=4]
                         "StrictC'_thread_state_defs")
   apply (subst pred_tcb'_weakenE, assumption, fastforce)+
-  apply (clarsimp simp: rf_sr_ksCurThread word_sle_def word_sless_def)
-  apply (auto simp: cte_wp_at_ctes_of neq_Nil_conv
-                    excaps_map_def excaps_in_mem_def
-                    slotcap_in_mem_def valid_tcb_state'_def
-             dest!: interpret_excaps_eq,
+  apply (clarsimp simp: rf_sr_ksCurThread word_sle_def word_sless_def sysargs_rel_n_def word_less_nat_alt)
+  by (auto simp: cte_wp_at_ctes_of neq_Nil_conv sysargs_rel_def n_msgRegisters_def
+                    excaps_map_def excaps_in_mem_def word_less_nat_alt hd_conv_nth
+                    slotcap_in_mem_def valid_tcb_state'_def from_bool_def toBool_def
+             dest!: interpret_excaps_eq split: bool.splits,
          auto dest: st_tcb_at_idle_thread' ctes_of_valid')
-  done
 
 lemma invokeIRQControl_ccorres:
   "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')

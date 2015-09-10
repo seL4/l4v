@@ -36,7 +36,7 @@ or more of the following types:
    - a list of historical terms that mean the same thing.
 *)
 
-header "Glossary"
+chapter "Glossary"
 
 (*<*)
 

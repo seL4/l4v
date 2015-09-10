@@ -1,0 +1,67 @@
+HOLLemmaBucket.thy:
+    Generic theorems about HOL.
+
+Aligned.thy:
+    Theorems about alignment of words.
+
+DistinctProp.thy:
+    Definitions and theorems about "distinct_prof", which ensures a
+    property P holds across all pairs of elements in a list.
+
+Enumeration.thy:
+WordEnum.thy:
+   Type class for enumerations, and an instantiation for Words.
+
+Lib.thy:
+    Miscellaneous HOL theorems.
+
+MoreDivides.thy:
+    Miscellaneous theorems relating to division.
+
+WordSetup.thy:
+WordLib.thy:
+SignedWords.thy:
+WordLemmaBucket.thy:
+    Lemmas and definitions relating to Words.
+
+OptionMonad.thy:
+OptionMonadND.thy:
+OptionMonadWP.thy:
+    Definition of Option Monad and its relation to the non-deterministic option
+    monad.
+
+NonDetMonadLemmaBucket.thy:
+wp/NonDetMonad.thy:
+wp/NonDetMonadLemmas.thy:
+wp/NonDetMonadVCG.thy:
+WhileLoopRules.thy:
+WhileLoopRulesCompleteness.thy:
+MonadEq.thy:
+DistinctPropLemmaBucket.thy:
+    Non-deterministic state monad definitions, lemmas and tools.
+
+wp/WP-method.ML:
+wp/WP.thy:
+wp/WPC.thy:
+    "Weakest-precondition" method for operating on Hoare-triples.
+
+StringOrd.thy:
+    Ostensibly required by the C parser.
+
+NICTACompat.thy:
+NICTATools.thy:
+Apply_Trace.thy:
+Apply_Trace_Cmd.thy:
+Trace_Attribs.thy:
+trace_attribs.ML:
+more_xml.ML:
+Solves_Tac.thy:
+    Compatibility libraries for NICTA developments.
+
+set.ML:
+    A simple set abstract data type in SML.
+
+LemmaBucket_C.thy:
+TypHeapLib.thy:
+    Proofs relating to Tuch's heap lift framework.
+

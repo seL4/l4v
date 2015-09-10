@@ -73,13 +73,23 @@ fun term_search_bf_first pred prune term = let
   val _ = term_search_bf (fn result => K (r := SOME result)) pred prune term
 in !r end
 
+(* From Pure/Tools/find_theorems.ML, because Florian made it private *)
+fun matches_subterm thy (pat, obj) =
+  let
+    fun msub bounds obj = Pattern.matches thy (pat, obj) orelse
+      (case obj of
+        Abs (_, T, t) => msub (bounds + 1) (snd (Term.dest_abs (Name.bound bounds, T, t)))
+      | t $ u => msub bounds t orelse msub bounds u
+      | _ => false)
+  in msub 0 obj end;
+
 fun grep_term ctxt pattern =
 let
   val thy = Proof_Context.theory_of ctxt
 in
   term_search_bf_first
       (fn term => Pattern.matches thy (pattern, term))
-      (fn term => not (Pattern.matches_subterm thy (pattern, term)))
+      (fn term => not (matches_subterm thy (pattern, term)))
 end
 
 (* Check whether the term is in L2_monad notation. *)
@@ -103,7 +113,7 @@ let
   val lthy = Utils.set_hidden_ctxt lthy
   val rules = if forward then #lift_rules mt else #unlift_rules mt
   val rules' = dest_ss rules |> #simps |> map #2
-  val cterm = cterm_of (Proof_Context.theory_of lthy) term
+  val cterm = Thm.cterm_of lthy term
   (* Just apply the simplifier and hope that it works. *)
   val thm = Simplifier.rewrite (
       put_simpset HOL_ss lthy addsimps rules' addsimps more_facts) cterm
@@ -122,40 +132,47 @@ end
  * Return the new theorem.
  *)
 local
-  val prod_case_eta_contract_thm =
-      @{lemma "(%x. (prod_case s) x) == (prod_case s)" by simp}
+  val case_prod_eta_contract_thm =
+      @{lemma "(%x. (case_prod s) x) == (case_prod s)" by simp}
 in
-fun polish ctxt (mt : Monad_Types.monad_type) thm =
+fun polish ctxt (mt : Monad_Types.monad_type) do_opt thm =
 let
   (* Apply any polishing rules. *)
   val ctxt = Utils.set_hidden_ctxt ctxt
-  val solver = Raw_Simplifier.mk_solver "simp solver"
-      (K (asm_full_simp_tac ctxt))
-  val simps = PolishSimps.get ctxt
+  val simps = if do_opt then PolishSimps.get ctxt else []
 
   (* Simplify using polish rules. *)
-  val simp_conv =
-      Simplifier.rewrite (put_simpset (#polish_rules mt) ctxt addsimps simps)
+  val simp_conv = Simplifier.rewrite (put_simpset (#polish_rules mt) ctxt addsimps simps)
 
-  (* eta-contract "prod_case" clauses, so that they render as:
+  (* eta-contract "case_prod clauses, so that they render as:
    * "%(a, b). P a b" instead of "case x of (a, b) => P a b". *)
-  val prod_case_conv =
+  val case_prod_conv =
     Conv.bottom_conv (
-        K (Conv.try_conv (Conv.rewr_conv prod_case_eta_contract_thm))) ctxt
+        K (Conv.try_conv (Conv.rewr_conv case_prod_eta_contract_thm))) ctxt
 
   val thm_p =
     Conv.fconv_rule (Conv.arg_conv (Utils.rhs_conv (
-        simp_conv then_conv prod_case_conv))) thm
+        simp_conv then_conv case_prod_conv))) thm
 in
   thm_p
 end
 end
 
+(*
+ * Wrap a tactic that doesn't handle invalid subgoal numbers to return
+ * "Seq.empty" when appropriate.
+ *)
+fun handle_invalid_subgoals (tac : int -> tactic) n =
+  fn thm =>
+    if Logic.count_prems (term_of_thm thm) < n then
+      no_tac thm
+    else
+      tac n thm
 
 (*
  * monad_convert tactic.
  *)
-fun monad_convert_tac (ctxt : Proof.context) (monad_name : string)
+fun monad_convert_tac (ctxt : Proof.context) (monad_name : string) (do_opt : bool)
                       (pattern_str : string) (n : int) : tactic =
   fn state => let
     val all_rules = Monad_Types.TSRules.get (Context.Proof ctxt)
@@ -188,7 +205,7 @@ fun monad_convert_tac (ctxt : Proof.context) (monad_name : string)
                                  [m_term, unlift_term]))
 
     (* Polish result. *)
-    val relift_thm' = polish ctxt target_rule relift_thm
+    val relift_thm' = polish ctxt target_rule do_opt relift_thm
 
     val translate_thm = Thm.transitive unlift_thm relift_thm'
 
@@ -207,9 +224,10 @@ fun monad_convert_tac (ctxt : Proof.context) (monad_name : string)
 val _ = Context.>> (Context.map_theory
           (Method.setup (Binding.name "monad_convert")
             (* Based on subgoal_tac parser *)
-            (Args.goal_spec -- Scan.lift (Parse.name -- Args.name_source) >>
+            (Args.goal_spec -- Scan.lift (Parse.name -- Args.name_inner_syntax) >>
             (fn (quant, (monad_name, term_str)) => fn ctxt =>
-                SIMPLE_METHOD'' quant (monad_convert_tac ctxt monad_name term_str)))
+                SIMPLE_METHOD'' quant (handle_invalid_subgoals (
+                    monad_convert_tac ctxt monad_name true term_str))))
            "autocorres monad conversion"))
 
 end

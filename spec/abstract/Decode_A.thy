@@ -12,9 +12,7 @@
 Decoding system calls
 *)
 
-header "Decoding System Calls"
-
-(* FIXME: GenericLib for alignUp, remove *)
+chapter "Decoding System Calls"
 
 theory Decode_A
 imports
@@ -224,6 +222,8 @@ where
                 (end + vaddr - 1) (addrFromPPtr p + start) pd asid
     odE
     else throwError TruncatedMessage
+    else if invocation_type label = ARMPageGetAddress
+    then returnOk $ InvokePage $ PageGetAddr p
   else  throwError IllegalOperation
 
 | ASIDControlCap \<Rightarrow>
@@ -449,31 +449,6 @@ where
 | _ \<Rightarrow> throwError TruncatedMessage"
 
 
-primrec
-  tc_new_fault_ep :: "tcb_invocation \<Rightarrow> cap_ref option"
-where
-  "tc_new_fault_ep (ThreadControl target slot faultep prio croot vroot buffer) = faultep"
-
-primrec
-  tc_new_priority :: "tcb_invocation \<Rightarrow> word8 option"
-where
-  "tc_new_priority (ThreadControl target slot faultep prio croot vroot buffer) = prio"
-
-primrec
-  tc_new_croot :: "tcb_invocation \<Rightarrow> (cap \<times> cslot_ptr) option"
-where
-  "tc_new_croot (ThreadControl target slot faultep prio croot vroot buffer) = croot"
-
-primrec
-  tc_new_vroot :: "tcb_invocation \<Rightarrow> (cap \<times> cslot_ptr) option"
-where
-  "tc_new_vroot (ThreadControl target slot faultep prio croot vroot buffer) = vroot"
-
-primrec
-  tc_new_buffer :: "tcb_invocation \<Rightarrow> (vspace_ref \<times> (cap \<times> cslot_ptr) option) option"
-where
-  "tc_new_buffer (ThreadControl target slot faultep prio croot vroot buffer) = buffer"
-
 definition
   decode_set_priority :: "data list \<Rightarrow> cap \<Rightarrow> cslot_ptr \<Rightarrow> (tcb_invocation,'z::state_ext) se_monad"
 where
@@ -676,11 +651,15 @@ definition
          $ arch_decode_interrupt_control args cps
   else throwError IllegalOperation)"
 
+definition
+  data_to_bool :: "data \<Rightarrow> bool"
+where
+  "data_to_bool d \<equiv> d \<noteq> 0" 
 
 definition
-  decode_irq_handler_invocation :: "data \<Rightarrow> irq \<Rightarrow> (cap \<times> cslot_ptr) list
+  decode_irq_handler_invocation :: "data \<Rightarrow> data list \<Rightarrow> irq \<Rightarrow> (cap \<times> cslot_ptr) list
                                      \<Rightarrow> (irq_handler_invocation,'z::state_ext) se_monad" where
- "decode_irq_handler_invocation label irq cps \<equiv>
+ "decode_irq_handler_invocation label args irq cps \<equiv>
   if invocation_type label = IRQAckIRQ
     then returnOk $ ACKIrq irq
   else if invocation_type label = IRQSetIRQHandler
@@ -692,6 +671,11 @@ definition
     else throwError TruncatedMessage
   else if invocation_type label = IRQClearIRQHandler
     then returnOk $ ClearIRQHandler irq
+  else if invocation_type label = IRQSetMode
+    then if length args \<ge> 2
+      then let trig = args ! 0; pol = args ! 1 in 
+        returnOk $ SetMode irq (data_to_bool trig) (data_to_bool pol)
+      else throwError TruncatedMessage
   else throwError IllegalOperation"
 
 section "Untyped"
@@ -838,7 +822,7 @@ where
         $ decode_irq_control_invocation label args slot (map fst excaps)
   | IRQHandlerCap irq \<Rightarrow>
       liftME InvokeIRQHandler
-        $ decode_irq_handler_invocation label irq excaps
+        $ decode_irq_handler_invocation label args irq excaps
   | ThreadCap ptr \<Rightarrow>
       liftME InvokeTCB $ decode_tcb_invocation label args cap slot excaps
   | DomainCap \<Rightarrow>

@@ -12,7 +12,7 @@
    Types visible in the API. 
 *)
 
-header "Arch-dependant Types visible in the API"
+chapter "Arch-dependant Types visible in the API"
 
 theory ArchTypes_H
 imports

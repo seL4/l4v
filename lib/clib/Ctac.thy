@@ -1569,13 +1569,6 @@ lemma xpres_triv:
   by (simp add: xpres_def)
 
 
-lemma exec_Guard:
-  "(G \<turnstile> \<langle>Guard Err S c, Normal s\<rangle> \<Rightarrow> s')
-       = (if s \<in> S then G \<turnstile> \<langle>c, Normal s\<rangle> \<Rightarrow> s'
-                else s' = Fault Err)"
-  by (auto split: split_if elim!: exec_elim_cases
-           intro: exec.intros)
-
 lemma ceqv_Guard_UNIV:
   "ceqv G xf v s s' (Guard Err UNIV c) c'
        = ceqv G xf v s s' c c'"
@@ -1588,10 +1581,11 @@ lemma ceqv_guard_into_seq:
 ML {*
 fun tac ctxt =
   rtac @{thm ccorres_abstract[where xf'="\<lambda>s. ()"]} 1
-  THEN (REPEAT_DETERM ((resolve_tac @{thms ceqv_remove_eqv_skip'} 1 THEN SOLVED' (REPEAT_ALL_NEW (resolve_tac @{thms ceqv_Guard_UNIV[THEN iffD2] ceqv_refl})) 1)
-          ORELSE resolve_tac @{thms While_ceqv[OF impI, OF refl] Cond_ceqv[OF impI, OF refl] Seq_ceqv ceqv_Guard_UNIV[THEN iffD2] ceqv_refl} 1
-          ORELSE (CHANGED (simp_tac
-                 (ctxt addsimps @{thms xpres_def} |> Splitter.del_split @{thm "split_if"}) 1))))
+  THEN (REPEAT_DETERM
+    ((resolve_tac ctxt @{thms ceqv_remove_eqv_skip'} 1
+        THEN SOLVED' (REPEAT_ALL_NEW (resolve_tac ctxt @{thms ceqv_Guard_UNIV[THEN iffD2] ceqv_refl})) 1)
+     ORELSE resolve_tac ctxt @{thms While_ceqv[OF impI, OF refl] Cond_ceqv[OF impI, OF refl] Seq_ceqv ceqv_Guard_UNIV[THEN iffD2] ceqv_refl} 1
+     ORELSE (CHANGED (simp_tac (ctxt addsimps @{thms xpres_def} |> Splitter.del_split @{thm "split_if"}) 1))))
 *}
 
 end

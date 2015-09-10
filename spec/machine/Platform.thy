@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-header "Platform Definitions"
+chapter "Platform Definitions"
 
 theory Platform
 imports
@@ -26,7 +26,8 @@ text {*
 type_synonym irq = word8
 type_synonym paddr = word32
 
-abbreviation "toPAddr \<equiv> id"
+abbreviation (input) "toPAddr \<equiv> id"
+abbreviation (input) "fromPAddr \<equiv> id"
 
 definition
   pageColourBits :: nat where

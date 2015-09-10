@@ -12,7 +12,7 @@
 Data types for syscall invocations
 *)
 
-header "Kernel Object Invocations"
+chapter "Kernel Object Invocations"
 
 theory Invocations_A
 imports ArchInvocation_A
@@ -39,9 +39,10 @@ datatype tcb_invocation =
     WriteRegisters word32 bool "word32 list" arm_copy_register_sets
   | ReadRegisters word32 bool word32 arm_copy_register_sets
   | CopyRegisters word32 word32 bool bool bool bool arm_copy_register_sets
-  | ThreadControl word32 cslot_ptr "cap_ref option" "word8 option"
-                  "(cap * cslot_ptr) option" "(cap * cslot_ptr) option"
-                  "(vspace_ref * (cap * cslot_ptr) option) option"
+  | ThreadControl word32 cslot_ptr
+                  (tc_new_fault_ep: "cap_ref option") (tc_new_priority: "word8 option")
+                  (tc_new_croot: "(cap * cslot_ptr) option") (tc_new_vroot: "(cap * cslot_ptr) option")
+                  (tc_new_buffer: "(vspace_ref * (cap * cslot_ptr) option) option")
   | Suspend "word32"
   | Resume "word32"
   | AsyncEndpointControl "obj_ref" "obj_ref option"
@@ -54,6 +55,7 @@ datatype irq_handler_invocation =
     ACKIrq irq
   | SetIRQHandler irq cap cslot_ptr
   | ClearIRQHandler irq
+  | SetMode irq bool bool
 
 datatype invocation =
     InvokeUntyped untyped_invocation

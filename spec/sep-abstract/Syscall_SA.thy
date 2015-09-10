@@ -1,0 +1,250 @@
+(*
+ * Copyright 2014, NICTA
+ *
+ * This software may be distributed and modified according to the terms of
+ * the GNU General Public License version 2. Note that NO WARRANTY is provided.
+ * See "LICENSE_GPLv2.txt" for details.
+ *
+ * @TAG(NICTA_GPL)
+ *)
+
+(*
+  Top-level system call interface of reduced kernel API.
+*)
+
+chapter "Separation Kernel Abstract Specification"
+
+theory Syscall_SA
+imports Decode_SA
+begin
+
+section "Introduction"
+
+text {*
+
+  The Separation Kernel maintains separation between processes by limiting the capabilities that are
+  present in the system. We call these the "restricted capabilities" in the documentation that
+  follows.
+
+  The specification described here, the Separation Kernel Abstract Specification (abbreviated
+  \texttt{sep-abstract} from here on in), is identical to the Abstract Specification
+  (aka. \texttt{abstract}), except that the following system calls have been overridden to
+  provide reduced (fully static) functionality only.
+
+  \begin{itemize}
+  \item{handle_fault}
+  \item{invoke_irq_handler}
+  \item{decode_invocation}
+  \item{perform_invocation}
+  \item{handle_invocation}
+  \item{handle_reply}
+  \item{handle_event}
+  \item{call_kernel}
+  \end{itemize}
+
+  The resulting kernel API is simplified significantly compared to full seL4.
+  The changes to the original abstract specification are minimal, except that it contains
+  much fewer system calls.
+
+  We achieve this by modifying the cases distinctions that determine which API call is
+  to by executed. The new case distinctions 
+  on capabilities only provide code for the restricted capabilities in our reduced setup, 
+  otherwise they fail (i.e. throw an exception).
+
+  We then prove that \texttt{sep-abstract} and \texttt{abstract} have the same behaviour under the
+  restricted capabilities of the separation kernel via bi-simulation. This simply requires that we
+  prove refinement in both directions. This proof implies that the missing (failing) code branches
+  in the reduced specification can never be executed.
+
+  It is clear that the behaviour will be the same for the "mostly identical" overridden
+  definitions. In a few cases, which are documented below, the definitions have bigger differencess.
+  We provide ab informal explanation at the site of the overriden definition in each of these
+  cases. (The bi-simulation proof provides the formal demonstration.)
+
+*}
+
+section {* Generic system call structure\label{s:spec_syscall} *}
+
+section {* System call entry point *}
+
+fun
+  perform_invocation :: "bool \<Rightarrow> bool \<Rightarrow> invocation \<Rightarrow> (data list,'z::state_ext) p_monad"
+where
+  "perform_invocation block call (InvokeAsyncEndpoint ep badge message) =
+    doE
+      without_preemption $ send_async_ipc ep badge message;
+      returnOk []
+    odE"
+| "perform_invocation _ _ _ = fail"
+
+definition
+  handle_invocation :: "bool \<Rightarrow> bool \<Rightarrow> (unit,'z::state_ext) p_monad"
+where
+  "handle_invocation calling blocking \<equiv> doE
+    thread \<leftarrow> liftE $ gets cur_thread;
+    info \<leftarrow> without_preemption $ get_message_info thread;
+    ptr \<leftarrow> without_preemption $ liftM data_to_cptr $
+          as_user thread $ get_register cap_register;
+    syscall
+      (doE
+         (cap, slot) \<leftarrow> cap_fault_on_failure (of_bl ptr) False $ lookup_cap_and_slot thread ptr;
+         buffer \<leftarrow> liftE $ lookup_ipc_buffer False thread;
+         extracaps \<leftarrow> lookup_extra_caps thread buffer info;
+         returnOk (slot, cap, extracaps, buffer)
+       odE)
+      (\<lambda>fault. when blocking $ handle_fault thread fault)
+      (\<lambda>(slot,cap,extracaps,buffer). doE
+            args \<leftarrow> liftE $ get_mrs thread buffer info;
+            decode_invocation (mi_label info) args ptr slot cap extracaps
+       odE)
+      (\<lambda>err. when calling $
+            reply_from_kernel thread $ msg_from_syscall_error err)
+      (\<lambda>oper. doE
+            without_preemption $ set_thread_state thread Restart;
+            reply \<leftarrow> perform_invocation blocking calling oper;
+            without_preemption $ do
+                state \<leftarrow> get_thread_state thread;
+                case state of
+                      Restart \<Rightarrow> do
+                          when calling $
+                              reply_from_kernel thread (0, reply);
+                          set_thread_state thread Running
+	                    od
+                    | _ \<Rightarrow>  return ()
+            od
+       odE)
+  odE"
+
+definition
+  handle_yield :: "(unit,'z::state_ext) s_monad" where
+  "handle_yield \<equiv> do
+     thread \<leftarrow> gets cur_thread;
+     do_extended_op (tcb_sched_action (tcb_sched_dequeue) thread);
+     do_extended_op (tcb_sched_action (tcb_sched_append) thread);
+     do_extended_op reschedule_required
+   od"
+
+definition
+  handle_send :: "bool \<Rightarrow> (unit,'z::state_ext) p_monad" where
+  "handle_send bl \<equiv> handle_invocation False bl"
+
+definition
+  handle_call :: "(unit,'z::state_ext) p_monad" where
+ "handle_call \<equiv> handle_invocation True True"
+
+text {*
+
+  This definition of \texttt{handle_wait} is almost identical to the abstract specification's definition
+  for the restricted capabilities. Also, a call to \texttt{delete_caller_cap} has been removed. They have
+  the same behaviour under the restricted capabilities since there are no caller capabilities in
+  \texttt{sep-abstract}.
+
+*}
+
+definition
+  handle_wait :: "(unit,'z::state_ext) s_monad" where
+  "handle_wait \<equiv> do
+     thread \<leftarrow> gets cur_thread;
+
+     ep_cptr \<leftarrow> liftM data_to_cptr $ as_user thread $
+                 get_register cap_register;
+
+     (cap_fault_on_failure (of_bl ep_cptr) True $ doE
+        ep_cap \<leftarrow> lookup_cap thread ep_cptr;
+
+        let flt = (throwError $ MissingCapability 0)
+        in
+        case ep_cap
+          of
+            AsyncEndpointCap ref badge rights \<Rightarrow>
+             (if AllowRecv \<in> rights
+              then liftE $ receive_async_ipc thread ep_cap
+              else flt)
+           | _ \<Rightarrow> flt
+      odE)
+      <catch> handle_fault thread
+   od"
+
+text {*
+
+  The definition here has been specialised to \texttt{return ()}. The behaviour
+  is identical with the abstract specification under restricted capabilities because there
+  are no \texttt{Reply} capabilities in \texttt{sep-abstract}.
+
+*}
+
+definition
+  handle_reply :: "(unit,'z::state_ext) s_monad" where
+ "handle_reply \<equiv> return ()"
+
+section {* Top-level event handling  *}
+
+text {*
+
+  The definition here is almost identical to that of the abstract specification (for the restricted
+  capablities), except that a call to \texttt{handle_reply} has been removed. Since there
+  are no \texttt{Reply}s in the restricted capabilities the behaviour is the same.
+
+*}
+
+
+fun
+  handle_event :: "event \<Rightarrow> (unit,'z::state_ext) p_monad"
+where
+  "handle_event (SyscallEvent call) =
+   (case call of
+          SysSend \<Rightarrow> handle_send True
+        | SysNBSend \<Rightarrow> handle_send False
+        | SysCall \<Rightarrow> handle_call
+        | SysWait \<Rightarrow> without_preemption handle_wait
+        | SysYield \<Rightarrow> without_preemption handle_yield
+        | SysReply \<Rightarrow> without_preemption handle_reply
+        | SysReplyWait \<Rightarrow> without_preemption handle_wait)"
+
+| "handle_event (UnknownSyscall n) = (without_preemption $ do
+    thread \<leftarrow> gets cur_thread;
+    handle_fault thread $ UnknownSyscallException $ of_nat n;
+    return ()
+  od)"
+
+| "handle_event (UserLevelFault w1 w2) = (without_preemption $ do
+    thread \<leftarrow> gets cur_thread;
+    handle_fault thread $ UserException w1 (w2 && mask 29);
+    return ()
+  od)"
+
+| "handle_event Interrupt = (without_preemption $ do
+    active \<leftarrow> do_machine_op getActiveIRQ;
+    case active of
+       Some irq \<Rightarrow> handle_interrupt irq
+     | None \<Rightarrow> return ()
+  od)"
+
+| "handle_event (VMFaultEvent fault_type) = (without_preemption $ do
+    thread \<leftarrow> gets cur_thread;
+    handle_vm_fault thread fault_type <catch> handle_fault thread;
+    return ()
+  od)"
+
+
+section {* Kernel entry point  *}
+
+text {*
+  This function is the main kernel entry point. The main event loop of the
+  kernel handles events, handles a potential preemption interrupt, schedules
+  and switches back to the active thread.
+*}
+
+definition
+  call_kernel :: "event \<Rightarrow> (unit,'z::state_ext_sched) s_monad" where
+  "call_kernel ev \<equiv> do
+       handle_event ev <handle>
+           (\<lambda>_. without_preemption $ do
+                  irq \<leftarrow> do_machine_op getActiveIRQ;
+                  when (irq \<noteq> None) $ handle_interrupt (the irq)
+                od);
+       schedule;
+       activate_thread
+   od"
+
+end

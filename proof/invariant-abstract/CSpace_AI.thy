@@ -192,7 +192,8 @@ proof (induct args rule: resolve_address_bits'.induct)
     apply (cases cap)
               defer 6 (* cnode *)
           apply (auto simp: in_monad)[11]
-    apply (simp only: cap.cases)
+    apply (rename_tac obj_ref nat list)
+    apply (simp only: cap.simps)
     apply (case_tac "nat + length list = 0")
      apply (simp add: fail_def)
     apply (simp only: if_False)
@@ -370,7 +371,7 @@ qed
 lemma of_bl_take:
   "length xs < len_of TYPE('a) \<Longrightarrow> of_bl (take n xs) = ((of_bl xs) >> (length xs - n) :: ('a :: len) word)"
   apply (clarsimp simp: bang_eq and_bang test_bit_of_bl
-                        rev_take conj_ac nth_shiftr)
+                        rev_take conj_comms nth_shiftr)
   apply safe
         apply simp_all
    apply (clarsimp elim!: rsubst[where P="\<lambda>x. rev xs ! x"])+
@@ -778,7 +779,7 @@ lemma descendants_of_insert_child:
    apply (simp del: fun_upd_apply)
    apply (rule iffI)
    apply (simp only: disj_imp)
-    apply (erule_tac b="x" in trancl_induct)
+    apply (erule_tac b="xa" in trancl_induct)
      apply fastforce
     apply clarsimp
     apply (erule impE)
@@ -789,12 +790,12 @@ lemma descendants_of_insert_child:
     apply assumption
    apply (erule disjE)
     apply fastforce
-   apply (case_tac "x = dest")
+   apply (case_tac "xa = dest")
     apply fastforce
-   apply (rule_tac P="x \<noteq> dest" in mp)
+   apply (rule_tac P="xa \<noteq> dest" in mp)
     prefer 2
     apply assumption
-   apply (erule_tac b=x in trancl_induct)
+   apply (erule_tac b=xa in trancl_induct)
     apply fastforce
    apply (clarsimp simp del: fun_upd_apply)
    apply (erule impE)
@@ -1323,6 +1324,7 @@ lemma master_cap_class:
   \<Longrightarrow> cap_class a = cap_class b"
   apply (case_tac a)
    apply (clarsimp simp: cap_master_cap_simps dest!:cap_master_cap_eqDs)+
+  apply (rename_tac arch_cap)
   apply (case_tac arch_cap)
    apply (clarsimp simp: cap_master_cap_simps dest!:cap_master_cap_eqDs)+
   done
@@ -1749,7 +1751,6 @@ lemma update_cdt_mdb_cte_at:
   apply (clarsimp simp: update_cdt_def gets_def get_def set_cdt_def 
                         put_def bind_def return_def valid_def)
   apply (clarsimp simp: mdb_cte_at_def split:option.splits)+
-  apply auto
   done
 
 
@@ -1764,11 +1765,11 @@ lemma set_cap_mdb_cte_at:
      apply (erule use_valid[OF _ set_cap_caps_of_state])
      apply simp
      apply (rule impI)
-     apply (erule_tac P = "?x\<in> ran ?G" in mp)
+     apply (erule_tac P = "x\<in> ran G" for x G in mp)
      apply (rule ranI,simp)
    apply (erule use_valid[OF _ set_cap_caps_of_state])
    apply (drule spec)+
-   apply (drule_tac P = "cdt ?x ?y = ?z" in mp)
+   apply (drule_tac P = "cdt x y = z" for x y z in mp)
    apply simp+
   apply clarsimp
   done
@@ -1995,13 +1996,13 @@ lemma cap_insert_mdb_cte_at:
   apply (wp | simp cong: update_original_mdb_cte_at split del: split_if)+
   apply (wp update_cdt_mdb_cte_at set_cap_mdb_cte_at[simplified swp_def] | simp split del: split_if)+
   apply wps
-  apply (wp valid_option_case_post_wp hoare_vcg_if_lift hoare_impI mdb_cte_at_set_untyped_cap_as_full[simplified swp_def] 
+  apply (wp valid_case_option_post_wp hoare_vcg_if_lift hoare_impI mdb_cte_at_set_untyped_cap_as_full[simplified swp_def] 
     set_cap_cte_wp_at get_cap_wp)
   apply (clarsimp simp:free_index_update_def split:cap.splits)
   apply (wp)
-  apply (clarsimp simp:if_True conj_ac split del:if_splits cong:split_weak_cong)
+  apply (clarsimp simp:if_True conj_comms split del:if_splits cong:split_weak_cong)
   apply (wps)
-  apply (wp valid_option_case_post_wp get_cap_wp hoare_vcg_if_lift
+  apply (wp valid_case_option_post_wp get_cap_wp hoare_vcg_if_lift
     hoare_impI set_untyped_cap_as_full_cte_wp_at )
   apply (unfold swp_def)
   apply (intro conjI | clarify)+
@@ -2215,7 +2216,7 @@ lemma set_free_index_valid_mdb:
    apply simp
    apply (intro conjI)
       apply (elim conjE)
-      apply (thin_tac "?P\<longrightarrow>?Q")+
+      apply (thin_tac "P\<longrightarrow>Q" for P Q)+
       apply (simp add:untyped_range_simp)+
      apply (intro impI)
      apply (elim conjE | simp)+
@@ -3473,14 +3474,12 @@ lemma cap_move_mdb [wp]:
     apply (rule conjI)
      apply fastforce
     apply clarsimp
-    apply fastforce
-   apply clarsimp
+   apply fastforce
   apply (subgoal_tac "mdb_move_abs src dest (cdt s) s")
    prefer 2
    apply (rule mdb_move_abs.intro)
       apply (simp add: valid_mdb_def swp_def cte_wp_at_caps_of_state
                        mdb_cte_at_def)
-      apply fastforce
      apply (simp add: cte_wp_at_caps_of_state)
     apply (rule refl)
    apply (clarsimp simp: cte_wp_at_caps_of_state)
@@ -3656,9 +3655,10 @@ lemma set_free_index_invs:
    apply clarsimp
    apply (clarsimp simp:valid_irq_node_def)
    apply (clarsimp simp:no_cap_to_obj_with_diff_ref_def cte_wp_at_caps_of_state vs_cap_ref_def)
-   apply (case_tac cap)
+   apply (case_tac capa)
     apply (simp_all add:table_cap_ref_def)
-   apply (case_tac arch_cap)
+    apply (rename_tac arch_cap)
+    apply (case_tac arch_cap)
     apply simp_all
   apply (clarsimp simp:cap_refs_in_kernel_window_def
               valid_refs_def simp del:split_paired_All)
@@ -3927,14 +3927,8 @@ lemma cap_insert_valid_global_refs[wp]:
 crunch irq_node[wp]: cap_insert "\<lambda>s. P (interrupt_irq_node s)"
   (wp: crunch_wps)
 
-
 crunch arch_objs [wp]: cap_insert "valid_arch_objs"
   (wp: crunch_wps simp: crunch_simps)
-
-
-crunch executable_arch_objs [wp]: cap_insert "executable_arch_objs"
-  (wp: crunch_wps simp: crunch_simps)
-
 
 crunch arch_caps[wp]: update_cdt "valid_arch_caps"
 
@@ -4011,7 +4005,7 @@ lemma unique_table_refs_upd_eqD:
   apply simp
   apply (intro allI impI)
   apply (case_tac "p=p'")
-   apply (thin_tac " \<forall>p. ?P p")
+   apply (thin_tac " \<forall>p. P p" for P)
    apply simp
   apply (case_tac "a=p")
    apply (erule_tac x=p in allE)
@@ -4104,8 +4098,8 @@ lemma set_untyped_cap_as_full_is_final_cap'_neg:
   apply (rule hoare_pre)
   apply (simp add:is_final_cap'_def2)
      apply (wp hoare_vcg_all_lift hoare_vcg_ex_lift)
-       apply (rule_tac Q = "cte_wp_at ?Q ?slot" 
-         and Q'="cte_wp_at (op = src_cap) src" in P_bool_lift' )
+       apply (rule_tac Q = "cte_wp_at Q slot" 
+         and Q'="cte_wp_at (op = src_cap) src" for Q slot in P_bool_lift' )
        apply (wp set_untyped_cap_as_full_cte_wp_at)
        apply clarsimp
      apply (wp set_untyped_cap_as_full_cte_wp_at_neg)
@@ -4123,8 +4117,8 @@ lemma set_untyped_cap_as_full_not_final_not_pg_cap:
             \<and> cte_wp_at (\<lambda>cap. obj_irq_refs cap = obj_irq_refs cap' \<and> \<not> is_pg_cap cap) (a, b) s)\<rbrace>"
   apply (rule hoare_pre)
   apply (wp hoare_vcg_ex_lift)
-   apply (rule_tac Q = "cte_wp_at ?Q ?slot" 
-               and Q'="cte_wp_at (op = src_cap) src" in P_bool_lift' )
+   apply (rule_tac Q = "cte_wp_at Q slot"
+               and Q'="cte_wp_at (op = src_cap) src" for Q slot in P_bool_lift' )
     apply (wp set_untyped_cap_as_full_cte_wp_at)
     apply (auto simp: cte_wp_at_caps_of_state is_cap_simps masked_as_full_def cap_bits_untyped_def)[1]
    apply (wp set_untyped_cap_as_full_cte_wp_at_neg)
@@ -4611,6 +4605,7 @@ lemma mask_cap_valid[simp]:
                              cap_aligned_def
                              acap_rights_update_def)
   using valid_validate_vm_rights[simplified valid_vm_rights_def]
+  apply (rename_tac arch_cap)
   by (case_tac arch_cap, simp_all)
 
 
@@ -4749,6 +4744,7 @@ lemma valid_cap_update_rights[simp]:
          simp_all add: cap_rights_update_def valid_cap_def cap_aligned_def
                        acap_rights_update_def)
   using valid_validate_vm_rights[simplified valid_vm_rights_def]
+  apply (rename_tac arch_cap)
   apply (case_tac arch_cap, simp_all)
   done
 
@@ -4760,6 +4756,7 @@ lemma update_cap_data_validI:
      apply (simp add: valid_cap_def cap_aligned_def)
     apply (simp add: valid_cap_def cap_aligned_def)
    apply (simp add: the_cnode_cap_def valid_cap_def cap_aligned_def)
+  apply (rename_tac arch_cap)
   apply (case_tac arch_cap)
       apply (simp_all add: is_cap_defs arch_update_cap_data_def)
   done
@@ -4964,7 +4961,7 @@ lemma no_reply_caps_for_thread:
   apply (subgoal_tac "st_tcb_at halted t s")
    apply (fastforce simp: invs_def valid_state_def valid_reply_caps_def
                          has_reply_cap_def cte_wp_at_caps_of_state st_tcb_def2)
-  apply (thin_tac "cte_wp_at ?P (a, b) s")
+  apply (thin_tac "cte_wp_at _ (a, b) s")
   apply (fastforce simp: pred_tcb_at_def obj_at_def is_tcb valid_obj_def
                         valid_tcb_def cte_wp_at_cases tcb_cap_cases_def
                   dest: invs_valid_objs
@@ -5078,8 +5075,6 @@ crunch arch[wp]: setup_reply_master "valid_arch_state"
   (simp: crunch_simps)
 
 crunch arch_objs[wp]: setup_reply_master "valid_arch_objs"
-
-crunch executable_arch_objs[wp]: setup_reply_master "executable_arch_objs"
 
 
 lemma setup_reply_master_irq_handlers[wp]:
@@ -5391,6 +5386,7 @@ lemma same_region_as_cap_class:
    apply (fastforce simp: cap_range_def arch_is_physical_def is_cap_simps
      is_physical_def split:cap.splits arch_cap.splits)+
  apply (clarsimp split: arch_cap.splits cap.splits)
+ apply (rename_tac arch_cap arch_capa)
  apply (case_tac arch_cap)
   apply (case_tac arch_capa,clarsimp+)+
  done
@@ -5506,8 +5502,8 @@ lemma cap_insert_simple_invs:
    apply (clarsimp simp: is_cap_simps)
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   apply (drule_tac p="(a,b)" in caps_of_state_valid_cap, fastforce)
-  apply (clarsimp dest!: is_cap_simps' [THEN iffD1]) 
-  apply (auto simp add: valid_cap_def [where c="cap.Zombie a b x", standard] 
+  apply (clarsimp dest!: is_cap_simps' [THEN iffD1])
+  apply (auto simp add: valid_cap_def [where c="cap.Zombie a b x" for a b x]
               dest: obj_ref_is_tcb obj_ref_is_cap_table split: option.splits)
   done
 

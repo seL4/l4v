@@ -20,9 +20,6 @@ begin
 datatype 'a partition = Partition 'a | PSched
 
 
-
-
-
 fun scheduler_modes where
   "scheduler_modes KernelPreempted = True" |
   "scheduler_modes (KernelEntry Interrupt) = True" |
@@ -393,8 +390,6 @@ lemma kernel_entry_if_integrity:
    apply simp
    apply(subgoal_tac "kheap st (cur_thread st) \<noteq> None")
     apply clarsimp
-    apply(rule state.equality, simp_all)
-    apply(rule ext, simp_all)
    apply(drule tcb_at_invs, clarsimp simp:  tcb_at_def get_tcb_def split: kernel_object.splits option.splits)
   apply(rule conjI)
    apply assumption
@@ -722,7 +717,7 @@ lemma partitionIntegrity_subjectAffects_mem:
    apply(drule subsetD[rotated, OF _ Access.ptr_range_subset[where x="0", simplified]])
       apply(blast intro: arm_globals_frame_aligned[OF invs_arch_state invs_psp_aligned])
      apply simp+
-  apply(erule option_caseE)
+  apply(erule case_optionE)
    apply blast
   (* need to appeal to object_integrity to reason about the tcb state change *)
 
@@ -1388,13 +1383,6 @@ lemma handle_ev[wp]:
    apply(simp split: sum.splits)
   by simp
 
-
-lemma guarded_pas_domain_machine_state_update[simp]: "guarded_pas_domain aag
-               (s\<lparr>machine_state := x\<rparr>) =
-       guarded_pas_domain aag s"
-  apply (simp add: guarded_pas_domain_def)
-  done
-
 (*
 lemma Step[simp]:
   "ni.Step = system.Step (big_step_ADT_A_if utf)"
@@ -1524,15 +1512,6 @@ lemma user_small_Step_partitionIntegrity:
   apply assumption
   done
 
-lemma Step_ADT_A_if:
-  "data_type.Step (ADT_A_if utf) = (\<lambda>u. global_automaton_if check_active_irq_A_if
-          (do_user_op_A_if utf) kernel_call_A_if
-          kernel_handle_preemption_if kernel_schedule_if
-          kernel_exit_A_if \<inter>
-         {(s, y). step_restrict y})"
-  apply(simp add: ADT_A_if_def)
-  done
-
 lemma silc_inv_refl:
   "silc_inv aag st s \<Longrightarrow> silc_inv aag s s"
   apply(clarsimp simp: silc_inv_def silc_dom_equiv_def equiv_for_refl)
@@ -1587,7 +1566,7 @@ lemma small_Step_partitionIntegrity:
     partitionIntegrity (current_aag (internal_state_if s)) (internal_state_if s)
            (internal_state_if t)"
   apply(case_tac "sys_mode_of s")
-  apply(simp_all add: part_def split: if_splits add: Step_ADT_A_if global_automaton_if_def | safe )+
+  apply(simp_all add: part_def split: if_splits add: Step_ADT_A_if_def_global_automaton_if global_automaton_if_def | safe )+
            apply(fastforce dest: ADT_A_if_reachable_invs_if simp: invs_if_def intro: user_small_Step_partitionIntegrity check_active_irq_A_if_partitionIntegrity)+
      apply(fastforce dest: ADT_A_if_reachable_invs_if simp: invs_if_def not_schedule_modes_KernelEntry intro: kernel_call_A_if_partitionIntegrity)+
    defer
@@ -1647,6 +1626,7 @@ lemma sub_big_steps_not_PSched:
   apply(case_tac "sys_mode_of s", simp_all add: sys_mode_of_def)
   apply(case_tac "sys_mode_of s'", simp_all add: sys_mode_of_def)
       apply(case_tac "sys_mode_of t", simp_all add: sys_mode_of_def big_step_R_def split: if_splits)
+       apply(rename_tac event)
        apply(case_tac event, simp_all)
       apply((fastforce simp: ADT_A_if_def global_automaton_if_def)+)[2]
     apply(case_tac "sys_mode_of t", simp_all add: sys_mode_of_def big_step_R_def split: if_splits)
@@ -1751,11 +1731,11 @@ lemma integrity_part:
   apply(rule partsSubjectAffects_bounds_subjects_affects)
                 apply(fastforce dest: Step_partitionIntegrity)
                apply(fastforce dest: pas_refined_initial_aag_reachable simp: pas_refined_cur)
-              apply(frule_tac s3="?s" in pas_refined_current_aag'[OF _ Step_current_aag_unchanged[symmetric], OF reachable_Step'], simp+)
-             apply(fastforce intro: invs_valid_objs dest!: reachable_invs_if simp: invs_if_def Invs_def)
-            apply(fastforce intro: invs_valid_objs dest!: reachable_invs_if[OF reachable_Step'] simp: invs_if_def Invs_def)
-           apply(fastforce intro: invs_valid_objs dest!: reachable_invs_if simp: invs_if_def Invs_def)
-          apply(fastforce intro: invs_valid_objs dest!: reachable_invs_if[OF reachable_Step'] simp: invs_if_def Invs_def)
+              apply(frule_tac s3="s" for s in pas_refined_current_aag'[OF _ Step_current_aag_unchanged[symmetric], OF reachable_Step'], simp+)
+             apply(fastforce dest!: reachable_invs_if simp: invs_if_def Invs_def)
+            apply(fastforce dest!: reachable_invs_if[OF reachable_Step'] simp: invs_if_def Invs_def)
+           apply(fastforce  dest!: reachable_invs_if simp: invs_if_def Invs_def)
+          apply(fastforce  dest!: reachable_invs_if[OF reachable_Step'] simp: invs_if_def Invs_def)
          apply(fastforce dest: silc_inv_initial_aag_reachable simp: silc_inv_cur)
         apply(frule Step_current_aag_unchanged[symmetric], simp+)
         apply(fastforce dest: silc_inv_initial_aag_reachable[OF reachable_Step'] simp: silc_inv_cur)
@@ -1812,7 +1792,7 @@ lemma relation_preserved_across_sub_big_steps:
            (sa,sa') \<in> data_type.Step A () \<and> (ta,ta') \<in> data_type.Step A () \<longrightarrow>
               X sa' ta'\<rbrakk> \<Longrightarrow>
       X s' t'"
-  apply clarsimp
+  apply hypsubst_thin
   apply(induct as arbitrary: s t s' t' rule: rev_induct)
    apply(drule sub_big_steps_Nil)+
    apply simp
@@ -1824,7 +1804,7 @@ lemma relation_preserved_across_sub_big_steps:
   apply(drule_tac x=s'a in meta_spec)
   apply(drule_tac x=s'aa in meta_spec)
   apply simp
-  apply fastforce
+  apply metis
   done
 
 (* FIXME: move these next lemmas culminating in reads_respects_g 
@@ -1853,7 +1833,7 @@ lemma get_thread_state_reads_respects_g:
    apply(drule_tac Q="\<lambda>rv s. s = st \<and> idle rv" in use_valid[OF _ gts_wp])
     apply(simp add: valid_idle_def)
     apply(clarsimp simp: st_tcb_at_def obj_at_def)
-   apply(drule_tac Q="\<lambda>rv s. s = t \<and> idle rv" in use_valid[OF _ gts_wp])
+   apply(drule_tac Q="\<lambda>rv s. s = ta \<and> idle rv" in use_valid[OF _ gts_wp])
     apply(simp add: valid_idle_def)
     apply(fastforce simp: pred_tcb_at_def obj_at_def reads_equiv_g_def globals_equiv_idle_thread_ptr)
    apply (simp add: pred_tcb_at_def obj_at_def)
@@ -1984,7 +1964,7 @@ lemma ev2_invisible':
   apply (erule_tac x="op = (exclusive_state (machine_state s))" in allE)
   apply (erule_tac x="op = (exclusive_state (machine_state t))" in allE)
   apply(clarsimp simp: valid_def)
-  apply (thin_tac "\<forall>x y. ?P x y")
+  apply (thin_tac "\<forall>x y. P x y" for P)
   apply (erule_tac x=s in allE)
   apply (erule_tac x=t in allE)
   apply fastforce
@@ -2101,10 +2081,10 @@ lemma choose_thread_reads_respects_g:
     apply force
    apply (simp add: etcb_at_def)
   apply (simp add: max_non_empty_queue_def)
-  apply (erule_tac P="hd ?A \<in> ?B" in notE)
+  apply (erule_tac P="hd A \<in> B" for A B in notE)
   apply (rule Max_prop)
    apply force+
-   done
+  done
 
 lemma scheduler_action_switch_thread_is_subject:
   "\<lbrakk>valid_sched s;
@@ -2138,7 +2118,7 @@ lemma schedule_def2:
 do cur \<leftarrow> gets cur_thread;
    cur_ts \<leftarrow> get_thread_state cur;
    gets scheduler_action >>=
-   scheduler_action_case
+   case_scheduler_action
     (do id \<leftarrow> gets idle_thread;
         assert (runnable cur_ts \<or> cur = id);
         return ()
@@ -2567,7 +2547,7 @@ lemma kernel_schedule_if_confidentiality:
   apply(simp split: prod.splits)
   apply(case_tac s', case_tac t')
   apply(simp add: split_paired_all)
-  apply(frule_tac s=bba and t=bc and aag1="current_aag bba" in use_ev[OF schedule_if_reads_respects_f_g[where st=s0_internal]])
+  apply(frule_tac s=x2 and t=x2a and aag1="current_aag x2" in use_ev[OF schedule_if_reads_respects_f_g[where st=s0_internal]])
        apply assumption
       apply(clarsimp simp: invs_if_def Invs_def current_aag_def)
      apply(clarsimp simp: invs_if_def Invs_def)
@@ -2818,22 +2798,22 @@ lemma kernel_exit_A_if_confidentiality:
   apply(simp split: prod.splits)
   apply(case_tac "fst s'", simp)
   apply(case_tac "fst t'", simp)
-  apply(frule_tac s=bb and t=bc and aag1="current_aag bb" in use_ev2[OF kernel_exit_if_reads_respects_f_g_2[where st=s0_internal]])
+  apply(frule_tac s=x2 and t=x2a and aag1="current_aag x2" in use_ev2[OF kernel_exit_if_reads_respects_f_g_2[where st=s0_internal]])
        apply assumption
       apply(clarsimp simp: invs_if_def Invs_def current_aag_def guarded_pas_domain_def)
      apply(clarsimp simp: invs_if_def Invs_def)
      apply(drule uwr_PSched_cur_domain)
-     apply(clarsimp simp: current_aag_def guarded_pas_domain_def)
+     subgoal by (clarsimp simp: current_aag_def guarded_pas_domain_def)
     apply simp
    apply fastforce
   apply simp
   apply(elim conjE)
   apply(drule state_unchanged[OF kernel_exit_if_inv])+
-  apply(subgoal_tac "ct_running bd = ct_running be")
+  apply(subgoal_tac "ct_running bb = ct_running bc")
    apply simp
    apply(rule reads_equiv_f_g_affects_equiv_uwr)
             apply simp+
-        apply(fastforce simp: invs_if_def Invs_def)
+        subgoal by (fastforce simp: invs_if_def Invs_def)
        apply simp
       apply simp
       apply(rule partitionIntegrity_refl)
@@ -2841,7 +2821,7 @@ lemma kernel_exit_A_if_confidentiality:
      apply(rule partitionIntegrity_refl)
     apply(simp add: sys_mode_of_def)
    apply(simp add: user_context_of_def)
-  apply(frule_tac bd=bd in reads_equiv_g_ct_running_eq[OF reads_equiv_f_g_reads_equiv_g])
+  apply(frule_tac bd=bb in reads_equiv_g_ct_running_eq[OF reads_equiv_f_g_reads_equiv_g])
      apply(fastforce simp: invs_if_def)
     apply(fastforce simp: invs_if_def)
    apply(fastforce simp: reads_equiv_f_g_def reads_equiv_def current_aag_def)
@@ -2885,8 +2865,7 @@ lemma small_Step_confidentiality_part_not_PSched:
   apply(frule_tac s=t' in ADT_A_if_reachable_invs_if)
   apply(case_tac "sys_mode_of s")
        (* InUserMode *)
-       apply((simp add: Step_ADT_A_if  
-                      global_automaton_if_def 
+       apply((simp add: Step_ADT_A_if_def_global_automaton_if global_automaton_if_def 
                  split: if_splits 
               | intro impI allI 
               | elim exE conjE disjE 
@@ -2902,8 +2881,7 @@ lemma small_Step_confidentiality_part_not_PSched:
         apply(drule_tac s=s and t=t and u=u and s'="(ad,bd)" in check_active_irq_A_if_retval_eq, simp+)
        apply(drule check_active_irq_A_if_confidentiality'[where s=s and t=t and s'=s' and t'=t' and u=u], simp+)
       (* InIdleMode *)
-      apply((simp add: Step_ADT_A_if  
-                       global_automaton_if_def 
+      apply((simp add: Step_ADT_A_if_def_global_automaton_if global_automaton_if_def 
                   split: if_splits 
              | intro impI allI 
              | elim exE conjE disjE 
@@ -2913,12 +2891,12 @@ lemma small_Step_confidentiality_part_not_PSched:
        apply(drule_tac s=s and t=t and u=u and s'="(aa,ba)" in check_active_irq_A_if_retval_eq, simp+)
       apply(drule check_active_irq_A_if_confidentiality''[where s=s and t=t and s'=s' and t'=t' and u=u],simp+)
      (* KernelEntry event -- where event \<noteq> Interrupt *)
+     apply(rename_tac event)
      apply(subgoal_tac "event \<noteq> Interrupt")
       prefer 2
       apply(case_tac t, simp)
       apply(case_tac event, (fastforce simp: part_def split: if_splits)+)[1]
-     apply((simp add: Step_ADT_A_if  
-                      global_automaton_if_def 
+     apply((simp add: Step_ADT_A_if_def_global_automaton_if global_automaton_if_def 
                  split: if_splits 
             | intro impI allI 
             | elim exE conjE disjE 
@@ -2930,16 +2908,14 @@ lemma small_Step_confidentiality_part_not_PSched:
     (* KernelPreempted *)
     apply(simp add: part_def)
     (* KernelSchedule bool -- where \<not> bool *)
-   apply((simp add: Step_ADT_A_if  
-                    global_automaton_if_def 
+   apply((simp add: Step_ADT_A_if_def_global_automaton_if global_automaton_if_def 
                split: if_splits 
          | intro impI allI 
          | elim exE conjE disjE 
          | simp_all add: not_schedule_modes_KernelEntry)+)[1]
    apply(drule kernel_schedule_if_confidentiality'[where s=s and t=t and s'=s' and t'=t' and u=u],simp+)
   (* KernelExit *)
-  apply((simp add: Step_ADT_A_if  
-                   global_automaton_if_def 
+  apply((simp add: Step_ADT_A_if_def_global_automaton_if global_automaton_if_def 
               split: if_splits 
         | intro impI allI 
         | elim exE conjE disjE 
@@ -3166,7 +3142,8 @@ lemma confidentiality_part_not_PSched:
      apply(fastforce simp: small_step_reachable)
     apply assumption
    apply(simp del: split_paired_All)
-   apply(thin_tac "(?x,?y) \<in> data_type.Step ?A ?b" | thin_tac "big_step_R ?a ?b")+
+   apply(thin_tac "(x,y) \<in> data_type.Step A b" for x y A b
+         | thin_tac "big_step_R a b" for a b)+
    apply(intro allI impI | elim conjE)+
    apply(rename_tac x_s x_t x_s' x_t')
    apply(subgoal_tac "part x_s' = part x_s")
@@ -3199,9 +3176,7 @@ lemma confidentiality_part_not_PSched:
   done
   
 
-lemma 
-
-    preemption_interrupt_scheduler_invisible: 
+lemma preemption_interrupt_scheduler_invisible: 
     "equiv_valid_2 (scheduler_equiv aag) (scheduler_affects_equiv aag l) (scheduler_affects_equiv aag l) (\<lambda>r r'. r = uc \<and> snd r' = uc')  
       (einvs and pas_refined aag and guarded_pas_domain aag and domain_sep_inv False st and silc_inv aag st' and (\<lambda>s. irq_masks_of_state st = irq_masks_of_state s) and (\<lambda>s. ct_idle s \<longrightarrow> uc = idle_context s)
   and (\<lambda>s. \<not> is_domain aag l s) and guarded_pas_domain aag)
@@ -3394,10 +3369,7 @@ lemma scheduler_affects_equiv_uwr:
 
 lemma cur_domain_reads: "(s,s') \<in> uwr u \<Longrightarrow> is_domain initial_aag (label_for_partition u) (internal_state_if s) \<Longrightarrow> (user_modes (sys_mode_of s) \<longrightarrow> user_context_of s = user_context_of s') \<and> sys_mode_of s = sys_mode_of s'"
   apply (case_tac u)
-  prefer 2
-  apply simp
-  apply (simp add: reads_scheduler_def)+
-  apply (clarsimp simp add: uwr_def sameFor_def sameFor_subject_def)
+  apply (auto simp: reads_scheduler_def uwr_def sameFor_def sameFor_subject_def)
   done
 
 lemmas domain_can_read_context = cur_domain_reads[THEN conjunct1]

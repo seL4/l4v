@@ -45,10 +45,10 @@ lemma det_wp_return [wp]:
   "det_wp \<top> (return x)"
   by (simp add: det_wp_def return_def)
 
-lemma det_wp_option_case [wp]:
+lemma det_wp_case_option [wp]:
   "\<lbrakk> x = None \<Longrightarrow> det_wp P f;
      \<And>y. x = Some y \<Longrightarrow> det_wp (Q y) (g y) \<rbrakk> \<Longrightarrow>
-  det_wp (\<lambda>s. (x = None \<longrightarrow> P s) \<and> (\<forall>y. x = Some y \<longrightarrow> Q y s)) (option_case f g x)"
+  det_wp (\<lambda>s. (x = None \<longrightarrow> P s) \<and> (\<forall>y. x = Some y \<longrightarrow> Q y s)) (case_option f g x)"
   by (cases x) auto
 
 lemma det_wp_mapM [wp]:

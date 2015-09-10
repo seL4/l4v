@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-header "Kernel Invocation Labels"
+chapter "Kernel Invocation Labels"
 
 theory InvocationLabels_H
 imports "../../lib/Enumeration"
@@ -46,6 +46,7 @@ datatype invocation_label =
   | IRQAckIRQ
   | IRQSetIRQHandler
   | IRQClearIRQHandler
+  | IRQSetMode
   | DomainSetSet
   | ARMPDClean_Data
   | ARMPDInvalidate_Data
@@ -60,6 +61,7 @@ datatype invocation_label =
   | ARMPageInvalidate_Data
   | ARMPageCleanInvalidate_Data
   | ARMPageUnify_Instruction
+  | ARMPageGetAddress
   | ARMASIDControlMakePool
   | ARMASIDPoolAssign
 
@@ -118,6 +120,7 @@ definition
       IRQAckIRQ,
       IRQSetIRQHandler,
       IRQClearIRQHandler,
+      IRQSetMode,
       DomainSetSet,
       ARMPDClean_Data,
       ARMPDInvalidate_Data,
@@ -132,6 +135,7 @@ definition
       ARMPageInvalidate_Data,
       ARMPageCleanInvalidate_Data,
       ARMPageUnify_Instruction,
+      ARMPageGetAddress,
       ARMASIDControlMakePool,
       ARMASIDPoolAssign
     ]"
@@ -165,7 +169,6 @@ instance by (intro_classes, simp add: enum_alt_invocation_label)
 end
 
 (*>*)
-
 
 
 end

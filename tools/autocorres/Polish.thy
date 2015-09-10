@@ -152,22 +152,24 @@ declare simple_bind_fail [polish]
 declare simple_bindE_fail [polish]
 declare condition_bind_fail [polish]
 
-lemma simple_K_bind_fail [polish]:
+lemma simple_K_bind_fail [polish, simp]:
   "(guard X >>= K_bind (fail)) = fail"
   "(modify M >>= K_bind (fail)) = fail"
-  "(return X >>= K_bind (fail)) = fail"
-  "(gets X >>= K_bind (fail)) = fail"
+  "(return Y >>= K_bind (fail)) = fail"
+  "(gets Z >>= K_bind (fail)) = fail"
   "(skip >>= K_bind (fail)) = fail"
-  apply (auto simp: skip_def)
+  apply -
+  apply monad_eq+
   done
 
 lemma simple_K_bindE_fail [polish]:
   "(guardE X >>=E K_bind (fail)) = fail"
   "(modifyE M >>=E K_bind (fail)) = fail"
-  "(returnOk X >>=E K_bind (fail)) = fail"
-  "(getsE X >>=E K_bind (fail)) = fail"
+  "(returnOk Y >>=E K_bind (fail)) = fail"
+  "(getsE Z >>=E K_bind (fail)) = fail"
   "(skipE >>=E K_bind (fail)) = fail"
-  apply auto
+  apply -
+  apply monad_eq+
   done
 
 declare whileLoop_fail [polish]
@@ -363,12 +365,12 @@ lemma Suc_0_eq_1 [polish]: "Suc 0 = 1"
   by simp
 
 (*
- * Return / prod_case combinations.
+ * Return / case_prod combinations.
  *
  * These can probably be improved to avoid duplication.
  *)
 
-lemma bind_return_prod_case [polish, simp]:
+lemma bind_return_case_prod [polish, simp]:
   "(do (a) \<leftarrow> A1; return (a) od) = A1"
   "(do (a, b) \<leftarrow> A2; return (a, b) od) = A2"
   "(do (a, b, c) \<leftarrow> A3; return (a, b, c) od) = A3"
@@ -441,11 +443,30 @@ lemmas if_P_then_t_else_f_eq_f_simps [L2opt, polish] =
   if_P_then_t_else_f_eq_f [where t = "1 :: int" and f = "0 :: int", simplified zero_neq_one_class.one_neq_zero simp_thms]
   if_P_then_t_else_f_eq_t [where t = "1 :: int" and f = "0 :: int", simplified zero_neq_one_class.one_neq_zero simp_thms]
 
+lemma boring_bind_K_bind [simp, polish]:
+    "(gets X >>= K_bind M) = M"
+    "(return Y >>= K_bind M) = M"
+    "(skip >>= K_bind M) = M"
+  apply -
+  apply monad_eq+
+  done
+
+lemma boringE_bind_K_bind [simp, polish]:
+    "(getsE X >>=E K_bind M) = M"
+    "(returnOk Y >>=E K_bind M) = M"
+    "(skipE >>=E K_bind M) = M"
+  apply -
+  apply monad_eq+
+  done
+
 (* Misc *)
 
 declare pred_and_true_var [L2opt, polish]
 declare pred_and_true [L2opt, polish]
 
 lemmas [polish] = rel_simps eq_numeral_extra
+
+declare ptr_add_0_id[polish]
+declare ptr_coerce.simps[polish]
 
 end

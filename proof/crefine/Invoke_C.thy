@@ -490,7 +490,7 @@ lemma ccorres_add_specific_return:
    \<Longrightarrow> ccorres_underlying sr \<Gamma> r xf arrel axf P P' hs (f val) c"
   by simp
 
-(* FIXME: also in Tcb_C, and painfully ugly *)
+(* FIXME: also in Tcb_C *)
 lemma ccorres_subgoal_tailE:
   "\<lbrakk> ccorres rvr xf Q Q' hs (b ()) d;
       ccorres rvr xf Q Q' hs (b ()) d \<Longrightarrow> ccorres rvr xf P P' hs (a >>=E b) (c ;; d) \<rbrakk>
@@ -614,7 +614,6 @@ lemma ctes_of_valid_strengthen:
   done
 
 lemma decodeCNodeInvocation_ccorres:
-  notes tl_drop_1[simp]
   shows
   "interpret_excaps extraCaps' = excaps_map extraCaps \<Longrightarrow>
    ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
@@ -650,7 +649,7 @@ lemma decodeCNodeInvocation_ccorres:
                simp del: Collect_const
                    cong: call_ignore_cong globals.fold_congs
                          StateSpace.state.fold_congs bool.case_cong
-               cong del: invocation_label.weak_case_cong)
+               cong del: invocation_label.case_cong_weak)
    apply (rule ccorres_Cond_rhs_Seq)
     apply (simp add: unlessE_def throwError_bind invocationCatch_def)
     apply (rule syscall_error_throwError_ccorres_n)
@@ -898,7 +897,7 @@ lemma decodeCNodeInvocation_ccorres:
                                     apply (wp sts_valid_pspace_hangers)
                                    apply (simp add: Collect_const_mem)
                                    apply (vcg exspec=setThreadState_modifies)
-                                  apply (simp add: conj_ac valid_tcb_state'_def)
+                                  apply (simp add: conj_comms valid_tcb_state'_def)
                                   apply (wp injection_wp_E[OF refl])
                                   apply (rule hoare_post_imp_R)
                                    apply (rule_tac Q'="\<lambda>rv. valid_pspace' and valid_queues
@@ -1010,14 +1009,13 @@ lemma decodeCNodeInvocation_ccorres:
                        apply (wp getCTE_wp')
                       apply (simp add: Collect_const_mem)
                       apply vcg
-                     apply (simp add: cte_wp_at_ctes_of[where P="op = cte", standard]
-                                      cte_wp_at_ctes_of[where P="\<lambda>cte. Q cte \<and> R cte", standard]
+                     apply (simp add: cte_wp_at_ctes_of[where P="op = cte" for cte]
+                                      cte_wp_at_ctes_of[where P="\<lambda>cte. Q cte \<and> R cte" for Q R]
                                       badge_derived_updateCapData)
                      apply (rule validE_R_validE)
                      apply (rule_tac Q'="\<lambda>a b. cte_wp_at' (\<lambda>x. True) a b \<and> invs' b \<and> 
                        tcb_at' thread b  \<and> sch_act_wf (ksSchedulerAction b) b \<and> valid_tcb_state' Restart b
-                       \<and> ?Q2 b"
-                                               in  hoare_post_imp_R)
+                       \<and> Q2 b" for Q2 in  hoare_post_imp_R)
                        prefer 2
                        apply (clarsimp simp:cte_wp_at_ctes_of)
                        apply (drule ctes_of_valid')
@@ -1786,7 +1784,7 @@ lemma invokeUntyped_Retype_ccorres_side_case:
     apply (clarsimp simp: hrs_htd_update rf_sr_def cstate_relation_def
                           Let_def kernel_data_refs_domain_eq_rotate)
    apply (clarsimp simp: cte_wp_at_ctes_of invs_valid_objs' invs_valid_pspace'
-                         conj_ac)
+                         conj_comms)
    apply (frule invokeUntyped_proofs.usableRange_disjoint)
    apply (frule invokeUntyped_proofs.descendants_range)
    apply (frule invokeUntyped_proofs.descendants_range(2))
@@ -1987,7 +1985,7 @@ lemma invokeUntyped_Retype_ccorres:
              apply vcg
             apply (rule conseqPre, vcg, clarsimp)
            apply (cut_tac cover us_misc proofs misc us_misc')
-           apply (clarsimp simp: getFreeIndex_def conj_ac)
+           apply (clarsimp simp: getFreeIndex_def conj_comms)
            apply (rule_tac Q = "\<lambda>r. invs' and sch_act_simple and ct_active' and
                     cte_wp_at' (\<lambda>c. cteCap c = UntypedCap ptr_base sz idx) cref and 
                     (\<lambda>s. \<forall>slot\<in>set destSlots. cte_wp_at' (\<lambda>c. cteCap c = NullCap) slot s) and
@@ -2008,7 +2006,7 @@ lemma invokeUntyped_Retype_ccorres:
                                 invokeUntyped_proofs.slots_invD[OF proofs])
                     apply (erule is_aligned_weaken[OF range_cover.aligned])
                     apply (clarsimp simp: APIType_capBits_low)
-                   apply (rule_tac us1="unat us" in is_aligned_weaken
+                   apply (rule_tac us1="unat userSize" in is_aligned_weaken
                             [OF _ APIType_capBits_low[where newType = newType]])
                      apply (simp add: is_aligned_def)
                      apply (drule range_cover.unat_of_nat_n_shift
@@ -2167,7 +2165,8 @@ lemma mapME_ensureEmptySlot':
   apply (induct slots arbitrary: P)
    apply simp
    apply wp 
-  apply (simp add: mapME_def sequenceE_def Let_def) 
+  apply (rename_tac a slots P)
+  apply (simp add: mapME_def sequenceE_def Let_def)
   apply (rule_tac Q="\<lambda>rv. P and (\<lambda>s. \<exists>cte. cteCap cte = capability.NullCap \<and> ctes_of s (f a) = Some cte)" in validE_R_sp) 
    apply (simp add: ensureEmptySlot_def unlessE_def) 
    apply (wp injection_wp_E[OF refl] getCTE_wp')
@@ -2208,8 +2207,8 @@ lemma TripleSuc:
   "Suc (Suc (Suc 0)) = 3"
   by simp
 
-lemma sum_case_distrib:
-  "sum_case a b x >>= f = sum_case (\<lambda>x. a x >>= f) (\<lambda>x. b x >>= f) x"
+lemma case_sum_distrib:
+  "case_sum a b x >>= f = case_sum (\<lambda>x. a x >>= f) (\<lambda>x. b x >>= f) x"
   by (case_tac x,simp+)
 
 lemma alignUp_spec:
@@ -2228,9 +2227,9 @@ lemma checkFreeIndex_ccorres:
   (\<acute>status :== CALL ensureNoChildren(cte_Ptr slot);;
   (Cond \<lbrace>\<acute>status \<noteq> scast EXCEPTION_NONE\<rbrace> (\<acute>freeIndex :== CALL cap_untyped_cap_get_capFreeIndex(cap))
   (\<acute>freeIndex :== 0)))"
-  apply (simp add: constOnFailure_def catch_def liftE_def bindE_bind_linearise bind_assoc sum_case_distrib)
+  apply (simp add: constOnFailure_def catch_def liftE_def bindE_bind_linearise bind_assoc case_sum_distrib)
   apply (rule ccorres_guard_imp2)
-   apply (rule ccorres_split_nothrow_sum_case)
+   apply (rule ccorres_split_nothrow_case_sum)
         apply (ctac add:ensureNoChildren_ccorres)
        apply (ceqv)
        apply (rule ccorres_from_vcg[where P' = UNIV])
@@ -2716,26 +2715,6 @@ shows
                             apply (clarsimp simp:toEnum_object_type_to_H 
                               unat_of_nat_APIType_capBits word_size hd_conv_nth length_ineq_not_Nil
                               split:if_splits)
-(*
-                         apply assumption
-                        apply (rule_tac P = "APIType_capBits (object_type_to_H (args ! 0)) (unat (args ! Suc 0)) < 32" in ccorres_gen_asm)
-                        apply (subgoal_tac "\<not> (0x20::word32) \<le> of_nat (APIType_capBits (object_type_to_H (args ! 0)) (unat (args ! Suc 0)))")
-                         prefer 2
-                         apply (clarsimp simp:not_le)
-                         apply (erule of_nat_power[where x = 5,simplified])
-                         apply simp
-
-                        apply simp
-                        apply (rule ccorres_Guard_Seq)
-                        apply csymbr
-                        apply (rule ccorres_split_when_throwError_cond[where Q = \<top> and Q' = UNIV])
-                           apply (clarsimp simp: ccap_relation_untyped_CL_simps shiftL_nat
-                             valid_untyped_capBlockSize_misc
-                             of_nat_shiftR)
-                           apply (clarsimp simp:toEnum_object_type_to_H 
-                             unat_of_nat_APIType_capBits word_size hd_conv_nth length_ineq_not_Nil
-                             split:if_splits)
-*)
                           apply (rule syscall_error_throwError_ccorres_n)
                           apply (clarsimp simp: syscall_error_rel_def
                             ccap_relation_untyped_CL_simps shiftL_nat
@@ -2839,19 +2818,6 @@ shows
                    apply (clarsimp split:if_splits simp:not_less toEnum_object_type_to_H 
                              word_size hd_conv_nth length_ineq_not_Nil)
                    apply (case_tac "tcbState obja", (simp add: runnable'_def valid_tcb_state'_def)+)
-(*                    apply (intro conjI impI)
-                     apply (rule shiftR_gt0_le32)
-                      apply (erule less_le_trans[rotated])
-                      apply (simp add:word_le_nat_alt)
-                     apply (clarsimp simp:shiftL_nat isCap_simps valid_cap_simps',simp add:word_bits_def)
-
-                    apply (rule shiftR_gt0_le32)
-                     apply (erule less_le_trans[rotated])
-                     apply (simp add:word_le_nat_alt)
-                    apply (clarsimp simp:shiftL_nat isCap_simps valid_cap_simps')
-                    apply (rule le_less_trans[OF diff_le_self])
-                    apply (rule power_strict_increasing,simp add:word_bits_def,simp)
-*)
                   apply (wp mapME_wp'[unfolded mapME_def])
                   apply (rule hoare_pre)
                    apply (rule validE_R_validE)
@@ -2895,6 +2861,7 @@ shows
     apply wp
    apply simp
    apply (vcg exspec=getSyscallArg_modifies)
+  apply clarsimp
   apply (clarsimp simp: hd_drop_conv_nth2 hd_conv_nth neq_Nil_lengthI
                         ct_in_state'_def pred_tcb_at'
                         rf_sr_ksCurThread mask_eq_iff_w2p
@@ -2921,9 +2888,10 @@ shows
                         ccap_rights_relation_def word_sle_def
                         rightsFromWord_wordFromRights
                         excaps_in_mem_def slotcap_in_mem_def
-                        word_sle_def word_sless_def
                         signed_shift_guard_simpler_32
-                 elim!: inl_inrE)
+                        extra_sle_sless_unfolds
+                 elim!: inl_inrE
+              simp del: rf_sr_upd_safe)
   apply (clarsimp simp:cap_get_tag_isCap[symmetric])
   apply (rule conjI)
    apply (clarsimp simp: cap_get_tag_isCap[symmetric]
@@ -2962,11 +2930,11 @@ shows
    apply (rule conjI,assumption)
     apply (rule conjI,erule(2) rf_sr_cte_relation)
     apply (frule(1) h_t_valid_and_cslift_and_c_guard_field_mdbNext_CL[rotated -1])
-      apply (clarsimp simp:cte_wp_at_ctes_of)
+      apply (clarsimp simp:cte_wp_at_ctes_of simp del: rf_sr_upd_safe)
      apply fastforce
-    apply (clarsimp simp:typ_heap_simps)
+    apply (clarsimp simp:typ_heap_simps simp del: rf_sr_upd_safe)
    apply (frule_tac p = slot in valid_mdb_ctes_of_next[rotated])
-     apply simp
+     apply (simp del: rf_sr_upd_safe)
     apply fastforce
    apply (clarsimp simp:cte_wp_at_ctes_of)
    apply (frule_tac src = "(mdbNext_CL (cteMDBNode_CL ctel'))" in  rf_sr_cte_relation)

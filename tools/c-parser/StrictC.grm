@@ -160,14 +160,12 @@ type struct_id_decl = string wrap * struct_fields
 
 local val scount = ref 0
 in
-fun gen_struct_id () = (scount := !scount + 1;
-                        "ISA_anon_struct___"^Int.toString (!scount))
-fun gen_enum_name () = (scount := !scount + 1;
-                        wrap("ISA_anon_enum___" ^ Int.toString (!scount),
-                             SourcePos.bogus, SourcePos.bogus))
+fun gen_struct_id () =
+      (scount := !scount + 1;
+       NameGeneration.internalAnonStructPfx^Int.toString (!scount))
 end
 
-datatype storage_class_specifier = TypeDef | Extern | Static | Auto | Register
+datatype storage_class_specifier = TypeDef | Extern | Static | Auto | Register | Thread_Local
 datatype type_qualifier = Const | Volatile | Restrict
 datatype typespectok = ts_unsigned
                      | ts_signed
@@ -198,6 +196,19 @@ datatype decl_specifier = Storage of storage_class_specifier wrap
                         | TypeQual of type_qualifier wrap
                         | TypeSpec of type_specifier
                         | FunSpec of Absyn.fnspec wrap
+
+fun scs_to_SC scs =
+  case scs of
+      Extern => SOME SC_EXTERN
+    | Static => SOME SC_STATIC
+    | Thread_Local => SOME SC_THRD_LOCAL
+    | Register => SOME SC_REGISTER
+    | Auto => SOME SC_AUTO
+    | TypeDef => NONE
+
+val extract_storage_specs =
+  List.mapPartial (fn Storage scs_w => scs_to_SC (node scs_w)
+                    | _ => NONE)
 
 fun dslleft [] = raise Fail "dslleft: nil"
   | dslleft (h :: t) =
@@ -504,6 +515,7 @@ let
                  NONE => []
                | SOME es => [wrap(EnumDecl (node es), left es, right es)]
   val fnspecs = extract_fnspecs (node dsl)
+  val storage_specs = extract_storage_specs (node dsl)
 
   fun handle_declarator idw = let
     val (d : addecl wrap, iopt : initializer option) = node idw
@@ -537,7 +549,7 @@ let
                 errorStr'(left idw, right idw, "Don't initialise externs")
               else ()
         in
-          wrap(VarDecl(finaltype, nm, not is_extern, iopt, attrs),
+          wrap(VarDecl(finaltype, nm, storage_specs, iopt, attrs),
                left idw, right idw)
         end
   end
@@ -810,7 +822,7 @@ end
     | NUMERIC_CONSTANT of Absyn.numliteral_info
     | STRUCT | UNION | TYPEDEF | EXTERN | CONST | VOLATILE | RESTRICT
     | INVARIANT
-    | INLINE | STATIC
+    | INLINE | STATIC | NORETURN | THREAD_LOCAL | AUTO
     | FNSPEC
     | RELSPEC
     | AUXUPD
@@ -855,9 +867,15 @@ storage_class_specifier : TYPEDEF (wrap(TypeDef, TYPEDEFleft, TYPEDEFright))
                         | EXTERN (wrap(Extern, EXTERNleft, EXTERNright))
                         | STATIC (wrap(Static, STATICleft, STATICright))
                         | YREGISTER (wrap(Register, YREGISTERleft, YREGISTERright))
+                        | AUTO (wrap(Auto, AUTOleft, AUTOright))
+                        | THREAD_LOCAL (wrap(Thread_Local, THREAD_LOCALleft,
+                                             THREAD_LOCALright))
 
 function_specifiers
 : INLINE        (wrap([], INLINEleft, INLINEright)) (* totally ignored by us *)
+| NORETURN      (wrap([wrap(gcc_attribs [GCC_AttribID "noreturn"],
+                            NORETURNleft, NORETURNright)],
+                      NORETURNleft, NORETURNright))
 | special_function_specs SPEC_BLOCKEND
                 (special_function_specs)
 | attribute_specifier
@@ -890,6 +908,7 @@ attribute
                  in
                    SOME (GCC_AttribID idstr)
                  end)
+| CONST         (SOME (GCC_AttribID "const"))
 | ID LPAREN RPAREN
                 (SOME (GCC_AttribFn (ID, [])))
 | ID LPAREN attribute_parameter_list1 RPAREN

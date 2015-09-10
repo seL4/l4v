@@ -67,13 +67,13 @@ definition
   Poll_Collector_ev :: "(Collector_channel \<Rightarrow> channel) \<Rightarrow>
     ('cs local_state \<Rightarrow> bool \<Rightarrow> 'cs local_state) \<Rightarrow> (channel, 'cs) comp"
 where
-  "Poll_Collector_ev ch embed \<equiv> EventPoll (ch Collector_ev) embed"
+  "Poll_Collector_ev ch embed_data \<equiv> EventPoll (ch Collector_ev) embed_data"
 
 definition
   Wait_Collector_ev :: "(Collector_channel \<Rightarrow> channel) \<Rightarrow>
     ('cs local_state \<Rightarrow> bool \<Rightarrow> 'cs local_state) \<Rightarrow> (channel, 'cs) comp"
 where
-  "Wait_Collector_ev ch embed \<equiv> EventWait (ch Collector_ev) embed"
+  "Wait_Collector_ev ch embed_data \<equiv> EventWait (ch Collector_ev) embed_data"
 
 text {*
   For each component type with an @{term emits} interface, a single primitive is

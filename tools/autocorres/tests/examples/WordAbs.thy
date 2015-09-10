@@ -15,7 +15,6 @@ begin
 install_C_file "word_abs.c"
 autocorres [unsigned_word_abs = f] "word_abs.c"
 
-(* resulting program does not work for x = 0 *)
 thm word_abs.f'_def
 
 end

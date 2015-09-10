@@ -370,12 +370,12 @@ lemma valid_typ_abs_fn_sint:
 
 lemma valid_typ_abs_fn_tuple:
   "\<lbrakk> valid_typ_abs_fn P_a Q_a abs_a conc_a; valid_typ_abs_fn P_b Q_b abs_b conc_b \<rbrakk> \<Longrightarrow>
-          valid_typ_abs_fn (\<lambda>(a, b). P_a a \<and> P_b b) (\<lambda>(a, b). Q_a a \<and> Q_b b) (map_pair abs_a abs_b) (map_pair conc_a conc_b)"
+          valid_typ_abs_fn (\<lambda>(a, b). P_a a \<and> P_b b) (\<lambda>(a, b). Q_a a \<and> Q_b b) (map_prod abs_a abs_b) (map_prod conc_a conc_b)"
   by clarsimp
 
 lemma introduce_typ_abs_fn_tuple:
   "\<lbrakk> introduce_typ_abs_fn abs_a; introduce_typ_abs_fn abs_b \<rbrakk> \<Longrightarrow>
-         introduce_typ_abs_fn (map_pair abs_a abs_b)"
+         introduce_typ_abs_fn (map_prod abs_a abs_b)"
   by clarsimp
 
 definition [simp]:
@@ -528,10 +528,7 @@ lemma corresTA_L2_condition:
   done
 
 
-(*
- * Fix up mismatches between a called function and the
- * result we expect from it.
- *)
+(* Backup rule to corresTA_L2_call. Converts the return type of the function call. *)
 lemma corresTA_L2_call':
   "\<lbrakk> \<And>s. corresTA P f1 x1 A B;
                valid_typ_abs_fn Q1 Q1' f1 f1';
@@ -550,7 +547,7 @@ lemma corresTA_L2_call':
 
 lemma corresTA_L2_call:
   "\<lbrakk> corresTA P rx ex A B \<rbrakk> \<Longrightarrow>
-        corresTA P rx ex (L2_call A) (L2_call B)"
+        corresTA P rx ex' (L2_call A) (L2_call B)"
   apply (clarsimp simp: L2_defs L2_call_def corresXF_def)
   apply (monad_eq split: sum.splits)
   apply fastforce
@@ -600,6 +597,12 @@ lemma corresTA_precond_to_asm:
   "\<lbrakk> \<And>s. P s \<Longrightarrow> corresTA \<top> rx ex A A' \<rbrakk> \<Longrightarrow> corresTA P rx ex A A'"
   by (clarsimp simp: corresXF_def)
 
+lemma L2_guard_true: "L2_seq (L2_guard \<top>) A = A ()"
+  by (monad_eq simp: L2_defs)
+lemma corresTA_simp_trivial_guard:
+  "corresTA P rx ex (L2_seq (L2_guard \<top>) A) C \<equiv> corresTA P rx ex (A ()) C"
+  by (simp add: L2_guard_true)
+
 definition "L2_assume P \<equiv> condition P (returnOk ()) (selectE {})"
 
 lemma L2_assume_alt_def:
@@ -632,38 +635,38 @@ lemma corresTA_extract_preconds_of_call_final':
            \<Longrightarrow> corresTA (\<lambda>s. C) rx ex A A'"
   by (clarsimp simp: corresXF_def)
 
-lemma corresTA_prod_case:
+lemma corresTA_case_prod:
  "\<lbrakk> introduce_typ_abs_fn rx1;
     introduce_typ_abs_fn rx2;
-    abstract_val (Q x) x (map_pair rx1 rx2) x';
+    abstract_val (Q x) x (map_prod rx1 rx2) x';
       \<And>a b a' b'. \<lbrakk> abs_var a rx1 a'; abs_var  b rx2 b' \<rbrakk>
                       \<Longrightarrow>  corresTA (P a b) rx ex (M a b) (M' a' b') \<rbrakk>  \<Longrightarrow>
     corresTA (\<lambda>s. case x of (a, b) \<Rightarrow> P a b s \<and> Q (a, b)) rx ex (case x of (a, b) \<Rightarrow> M a b) (case x' of (a, b) \<Rightarrow> M' a b)"
   apply clarsimp
   apply (rule corresXF_assume_pre)
-  apply (clarsimp simp: split_def map_pair_def)
+  apply (clarsimp simp: split_def map_prod_def)
   done
 
-lemma abstract_val_prod_case:
-  "\<lbrakk> abstract_val True r (map_pair f g) r';
+lemma abstract_val_case_prod:
+  "\<lbrakk> abstract_val True r (map_prod f g) r';
        \<And>a b a' b'. \<lbrakk>  abs_var a f a'; abs_var  b g b' \<rbrakk>
                      \<Longrightarrow> abstract_val (P a b) (M a b) h (M' a' b') \<rbrakk>
        \<Longrightarrow> abstract_val (P (fst r) (snd r))
             (case r of (a, b) \<Rightarrow> M a b) h
             (case r' of (a, b) \<Rightarrow> M' a b)"
   apply (case_tac r, case_tac r')
-  apply (clarsimp simp: map_pair_def)
+  apply (clarsimp simp: map_prod_def)
   done
 
-lemma abstract_val_prod_case_fun_app:
-  "\<lbrakk> abstract_val True r (map_pair f g) r';
+lemma abstract_val_case_prod_fun_app:
+  "\<lbrakk> abstract_val True r (map_prod f g) r';
        \<And>a b a' b'. \<lbrakk>  abs_var a f a'; abs_var b g b' \<rbrakk>
                      \<Longrightarrow> abstract_val (P a b) (M a b s) h (M' a' b' s) \<rbrakk>
        \<Longrightarrow> abstract_val (P (fst r) (snd r))
             ((case r of (a, b) \<Rightarrow> M a b) s) h
             ((case r' of (a, b) \<Rightarrow> M' a b) s)"
   apply (case_tac r, case_tac r')
-  apply (clarsimp simp: map_pair_def)
+  apply (clarsimp simp: map_prod_def)
   done
 
 lemma abstract_val_of_nat:
@@ -677,7 +680,7 @@ lemma abstract_val_of_int:
 lemma abstract_val_tuple:
   "\<lbrakk> abstract_val P a absL a';
      abstract_val Q b absR b' \<rbrakk> \<Longrightarrow>
-         abstract_val (P \<and> Q) (a, b) (map_pair absL absR) (a', b')"
+         abstract_val (P \<and> Q) (a, b) (map_prod absL absR) (a', b')"
   by clarsimp
 
 lemma abstract_val_func:
@@ -821,7 +824,7 @@ lemmas [word_abs] =
   corresTA_L2_condition
   corresTA_L2_unknown
   corresTA_L2_recguard
-  corresTA_prod_case
+  corresTA_case_prod
   corresTA_L2_call_exec_concrete
   corresTA_L2_call_exec_abstract
   corresTA_L2_call'
@@ -832,7 +835,7 @@ lemmas [word_abs] =
   abstract_val_tuple
   abstract_val_conj
   abstract_val_disj
-  abstract_val_prod_case
+  abstract_val_case_prod
   abstract_val_trivial
   abstract_val_of_int
   abstract_val_of_nat

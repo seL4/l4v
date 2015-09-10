@@ -77,8 +77,7 @@ lemma Run_mid:
 
 lemma Run_trans':
   "\<forall> s t u bs. (s,t) \<in> Run Stepf as \<and> (t,u) \<in> Run Stepf bs \<longrightarrow> (s,u) \<in> Run Stepf (as @ bs)"
-  apply(induct_tac as)
-   by(auto intro!: relcompI)
+  by (induct_tac as) auto
 
 lemma Run_trans:
   "\<lbrakk>(s,t) \<in> Run Stepf as; (t,u) \<in> Run Stepf bs\<rbrakk> \<Longrightarrow> (s,u) \<in> Run Stepf (as @ bs)"
@@ -91,25 +90,30 @@ lemma Run_app:
   apply(fastforce intro: Run_trans)
   done
 
-
+(* An ADT with an initial state. *)
 locale system =
   fixes A :: "('a,'s,'e) data_type"  
   and s0 :: "'s"  (* an initial state *)
 
 context system begin
 
+(* State 's' is reachable from the initial state 's0'. *)
 definition reachable where
   "reachable s \<equiv> \<exists> js. s \<in> execution A s0 js"
 
 definition Step where
   "Step a \<equiv> {(s,s') . s' \<in> execution A s [a]}"
 
+(* The system is "observationally deterministic": that is, the
+ * observable part of the system is always deterministic. *)
 definition obs_det where
   "obs_det \<equiv> \<forall> s js. (\<exists> s'. execution A s js = {s'})"
 
 lemma obs_detD:
   "obs_det \<Longrightarrow> \<exists> s'. execution A s js = {s'}" by (simp add: obs_det_def)
 
+(* The abstraction/concretisation functions "Init"/"Fin"
+ * don't abstract away information. *)
 definition no_abs where
   "no_abs \<equiv> \<forall> x s as . reachable s \<longrightarrow> x \<in> steps (Simulation.Step A) (Init A s) as \<longrightarrow>  Init A (Fin A x) = {x}"
    
@@ -118,6 +122,12 @@ lemma no_absD:
 
 end
 
+(*
+ * A system that is always enabled.
+ *
+ * In particular, the system will never be in deadlock, and there
+ * is always an enabled transition from every reachable state.
+ *)
 locale enabled_system = system +
   assumes enabled: "(\<exists> js. s \<in> execution A s0 js) \<Longrightarrow> \<exists> s'. s' \<in> execution A s js"
 
@@ -455,6 +465,8 @@ locale noninterference_system = enabled_system A s0 + noninterference_policy dom
 
 context noninterference_system begin
 
+(* The set of domains (which carry out actions in the list "as") which
+ * may influence "u", assuming we start in state "s". *)
 primrec  
  sources :: "'e list \<Rightarrow> 's \<Rightarrow> 'd \<Rightarrow> 'd set" where
  sources_Nil: "sources [] s u = {u}"|
@@ -736,7 +748,8 @@ definition confidentiality_u_weak where
 
 lemma confidentiality_u_confidentiality_u_weak:
   "confidentiality_u \<Longrightarrow> confidentiality_u_weak"
-  apply(fastforce simp: confidentiality_u_def confidentiality_u_weak_def)
+  apply (simp add: confidentiality_u_def confidentiality_u_weak_def)
+  apply blast
   done
 
 lemma impCE':
@@ -898,7 +911,7 @@ lemma sources_eq':
   apply(rule un_eq)
    apply(simp only: Union_eq, simp only: UNION_eq[symmetric])
    apply(rule Un_eq, clarsimp)
-     apply(metis "Cons.hyps"[rule_format] sched_equiv_preserved reachable_Step enabled_Step)
+     apply(metis "Cons.hyps"[rule_format] sched_equiv_preserved reachable_Step)
     apply(fastforce intro: enabled_Step)
    apply(fastforce intro: enabled_Step)
   apply(clarsimp simp: schedIncludesCurrentDom)
@@ -1134,7 +1147,7 @@ lemma Noninfluence_gen:
   apply(clarsimp, rename_tac s')
   apply(case_tac "dom a s = schedDomain")
    apply(cut_tac s=s and a=a and as=as and u=u in schedDomain_in_sources_Cons, assumption+)
-   apply(metis schedIncludesCurrentDom sources_eq[OF conf] uwr_sym)
+   apply(metis schedIncludesCurrentDom sources_eq[OF conf])
   apply(rule Cons.hyps[rule_format])
      apply(blast intro: reachable_Step)
     apply(rename_tac tb)

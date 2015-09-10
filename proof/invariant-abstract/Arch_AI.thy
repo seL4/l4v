@@ -46,7 +46,7 @@ lemma asid_low_bits_pageBits:
   "Suc (Suc asid_low_bits) = pageBits"
   by (simp add: pageBits_def asid_low_bits_def)
 
-(* FIXME: 32-bit version of Detype_AI.range_cover_full *)
+(* 32-bit instance of Detype_AI.range_cover_full *)
 lemma range_cover_full:
   "\<lbrakk>is_aligned ptr sz;sz<word_bits\<rbrakk> \<Longrightarrow> range_cover (ptr::word32) sz sz (Suc 0)"
    by (clarsimp simp:range_cover_def unat_eq_0 le_mask_iff[symmetric] word_and_le1 word_bits_def)
@@ -258,7 +258,7 @@ lemma ucast_fst_hd_assocs:
   apply (simp add: asid_low_bits_def minus_one_norm)
   apply (simp add: ord_le_eq_trans [OF word_n1_ge])
   apply (simp add: word_le_make_less)
-  apply (subgoal_tac "?P")  (* cut_tac but more awesome *)
+  apply (subgoal_tac "P" for P)  (* cut_tac but more awesome *)
    apply (subst hd_map, assumption)
    apply simp
    apply (rule sym, rule ucast_ucast_len)
@@ -321,7 +321,7 @@ lemma perform_asid_control_invocation_tcb_at:
   apply (clarsimp simp: ex_nonz_cap_to_def valid_aci_def)
   apply (frule invs_untyped_children)
   apply (clarsimp simp:cte_wp_at_caps_of_state)
-  apply (erule_tac ptr="(aa,ba)" in untyped_children_in_mdbE[where P="\<lambda>c. t \<in> zobj_refs c", standard])
+  apply (erule_tac ptr="(aa,ba)" in untyped_children_in_mdbE[where P="\<lambda>c. t \<in> zobj_refs c" for t])
       apply (simp add: cte_wp_at_caps_of_state)
      apply simp
     apply (simp add:cte_wp_at_caps_of_state)
@@ -364,7 +364,7 @@ lemma invoke_arch_tcb:
   apply (clarsimp simp: ex_nonz_cap_to_def)
   apply (frule invs_untyped_children)
   apply (clarsimp simp:cte_wp_at_caps_of_state)
-  apply (erule_tac ptr="(aa,ba)" in untyped_children_in_mdbE[where P="\<lambda>c. t \<in> zobj_refs c", standard])
+  apply (erule_tac ptr="(aa,ba)" in untyped_children_in_mdbE[where P="\<lambda>c. t \<in> zobj_refs c" for t])
       apply (simp add: cte_wp_at_caps_of_state)+
      apply fastforce
    apply (clarsimp simp: zobj_refs_to_obj_refs cte_wp_at_caps_of_state)
@@ -772,7 +772,7 @@ lemma cap_insert_ap_invs:
   apply (clarsimp simp: cte_wp_at_caps_of_state)
   apply (drule_tac p="(a,b)" in caps_of_state_valid_cap, fastforce)
   apply (auto simp: obj_at_def is_tcb_def is_cap_table_def 
-                    valid_cap_def [where c="cap.Zombie a b x", standard] 
+                    valid_cap_def [where c="cap.Zombie a b x" for a b x] 
               dest: obj_ref_is_tcb obj_ref_is_cap_table split: option.splits)
   done
 
@@ -824,9 +824,10 @@ lemma perform_asid_control_invocation_st_tcb_at:
     perform_asid_control_invocation aci 
   \<lbrace>\<lambda>y. st_tcb_at P t\<rbrace>"
   apply (clarsimp simp: perform_asid_control_invocation_def split: asid_control_invocation.splits)
+  apply (rename_tac word1 a b aa ba word2)
   apply (wp hoare_vcg_const_imp_lift retype_region_st_tcb_at set_cap_no_overlap|simp)+
     apply (strengthen impI[OF invs_valid_objs] impI[OF invs_psp_aligned])
-    apply (clarsimp simp:conj_ac)
+    apply (clarsimp simp:conj_comms)
     apply (wp max_index_upd_invs_simple get_cap_wp)
    apply (rule hoare_name_pre_state)
    apply (subgoal_tac "is_aligned word1 page_bits")
@@ -857,7 +858,7 @@ lemma perform_asid_control_invocation_st_tcb_at:
    apply (clarsimp simp: ex_nonz_cap_to_def)
    apply (frule invs_untyped_children)
    apply (clarsimp simp:cte_wp_at_caps_of_state)
-   apply (erule_tac ptr="(aa,ba)" in untyped_children_in_mdbE[where P="\<lambda>c. t \<in> zobj_refs c", standard])
+   apply (erule_tac ptr="(aa,ba)" in untyped_children_in_mdbE[where P="\<lambda>c. t \<in> zobj_refs c" for t])
        apply (simp add: cte_wp_at_caps_of_state)+
       apply fastforce
     apply (clarsimp simp: zobj_refs_to_obj_refs)
@@ -869,7 +870,7 @@ lemma perform_asid_control_invocation_st_tcb_at:
     in detype_invariants[rotated 3],clarsimp+)
     apply (simp add:cte_wp_at_caps_of_state 
       empty_descendants_range_in descendants_range_def2)+
-  apply (thin_tac "?x = Some cap.NullCap")+
+  apply (thin_tac "x = Some cap.NullCap" for x)+
   apply (drule(1) caps_of_state_valid_cap[OF _ invs_valid_objs])
   apply (intro conjI)
     apply (clarsimp simp:valid_cap_def cap_aligned_def range_cover_full 
@@ -922,6 +923,7 @@ lemma aci_invs':
   show ?thesis
   apply (clarsimp simp: perform_asid_control_invocation_def valid_aci_def 
     split: asid_control_invocation.splits)
+  apply (rename_tac word1 a b aa ba word2)
   apply (rule hoare_pre)
    apply (wp hoare_vcg_const_imp_lift)
      apply (wp cap_insert_invsQ hoare_vcg_ex_lift
@@ -933,7 +935,7 @@ lemma aci_invs':
     apply (wp hoare_vcg_const_imp_lift set_free_index_invs
               retype_region_plain_invs[where sz = pageBits]
               retype_cte_wp_at[where sz = pageBits] hoare_vcg_ex_lift
-              retype_region_obj_at_other3[where P="is_cap_table n" and sz = pageBits, standard]
+              retype_region_obj_at_other3[where P="is_cap_table n" and sz = pageBits for n]
               retype_region_ex_cte_cap_to[where sz = pageBits]
               retype_region_ap[simplified]
               retype_region_ap'[simplified] 
@@ -960,7 +962,7 @@ lemma aci_invs':
    apply (simp add:descendants_range_def2 empty_descendants_range_in)
   apply (simp add:invs_mdb invs_valid_pspace invs_psp_aligned invs_valid_objs)
   apply (clarsimp dest!:caps_of_state_cteD)
-  apply (frule(1) unsafe_protected[where p=t and p'=t, standard])
+  apply (frule(1) unsafe_protected[where p=t and p'=t for t])
      apply (simp add:empty_descendants_range_in)+
     apply fastforce
    apply clarsimp
@@ -1003,10 +1005,10 @@ lemma aci_invs':
        apply (erule(1) cap_to_protected)
        apply (simp add:empty_descendants_range_in descendants_range_def2)+
       apply (clarsimp simp: no_cap_to_obj_with_diff_ref_def)
-      apply (thin_tac "cte_wp_at (op = cap.NullCap) ?p ?s")
+      apply (thin_tac "cte_wp_at (op = cap.NullCap) p s" for p s)
       apply (subst(asm) eq_commute,
-          erule(1) untyped_children_in_mdbE[where cap="cap.UntypedCap word1 bits idx",
-                                         simplified, standard, rotated])
+          erule(1) untyped_children_in_mdbE[where cap="cap.UntypedCap p bits idx" for p bits idx,
+                                         simplified, rotated])
         apply (simp add: is_aligned_no_overflow)
        apply simp
       apply clarsimp
@@ -1077,12 +1079,14 @@ lemma sts_valid_pdi_inv[wp]:
 lemma sts_valid_arch_inv:
   "\<lbrace>valid_arch_inv ai\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. valid_arch_inv ai\<rbrace>"
   apply (cases ai, simp_all add: valid_arch_inv_def)
+     apply (rename_tac page_table_invocation)
      apply (case_tac page_table_invocation, simp_all add: valid_pti_def)[1]
       apply ((wp valid_pde_lift set_thread_state_valid_cap 
                  hoare_vcg_all_lift hoare_vcg_const_imp_lift
                  hoare_vcg_ex_lift set_thread_state_ko 
                  sts_typ_ats set_thread_state_cte_wp_at
                | clarsimp simp: is_tcb_def)+)[4]
+   apply (rename_tac asid_control_invocation)
    apply (case_tac asid_control_invocation)
    apply (clarsimp simp: valid_aci_def cte_wp_at_caps_of_state)
    apply (rule hoare_pre, wp hoare_vcg_ex_lift cap_table_at_typ_at)
@@ -1424,10 +1428,6 @@ lemma diminished_pd_self:
   apply (clarsimp simp: acap_rights_update_def split: cap.splits arch_cap.splits)
   done
 
-lemma XNever_attribs_from_word[simp]:
-  "XNever \<notin> attribs_from_word w"
-  by (simp add: attribs_from_word_def)
-
 lemma cte_wp_at_page_cap_weaken:
   "cte_wp_at (diminished (ArchObjectCap (PageCap word seta vmpage_size None))) slot s \<Longrightarrow>
    cte_wp_at (\<lambda>a. \<exists>p R sz m. a = ArchObjectCap (PageCap p R sz m)) slot s"
@@ -1442,6 +1442,7 @@ lemma arch_decode_inv_wf[wp]:
      arch_decode_invocation label args cap_index slot arch_cap excaps
    \<lbrace>valid_arch_inv\<rbrace>,-"
   apply (cases arch_cap)
+      apply (rename_tac word1 word2)
       apply (simp add: arch_decode_invocation_def Let_def split_def cong: if_cong split del: split_if)
       apply (rule hoare_pre)
        apply ((wp whenE_throwError_wp check_vp_wpR ensure_empty_stronger select_wp select_ext_weak_wp|
@@ -1452,7 +1453,7 @@ lemma arch_decode_inv_wf[wp]:
       apply (elim conjE exE)
       apply simp
       apply (clarsimp simp: dom_def neq_Nil_conv)
-      apply (thin_tac "Ball ?S ?P")+
+      apply (thin_tac "Ball S P" for S P)+
       apply (clarsimp simp: valid_cap_def)
       apply (rule conjI)
        apply (clarsimp simp: obj_at_def)
@@ -1534,6 +1535,7 @@ lemma arch_decode_inv_wf[wp]:
     apply (simp add: arch_decode_invocation_def Let_def split_def 
                 cong: if_cong split del: split_if)
     apply (cases "invocation_type label = ARMPageMap")
+     apply (rename_tac word rights vmpage_size option)
      apply (simp split del: split_if)
      apply (rule hoare_pre)
       apply ((wp whenE_throwError_wp check_vp_wpR hoare_vcg_const_imp_lift_R
@@ -1557,7 +1559,7 @@ lemma arch_decode_inv_wf[wp]:
                            typ_at (AArch (AIntData vmpage_size)) word s \<and>
                            is_aligned (addrFromPPtr word) pageBits \<and>
                            args ! 0 < kernel_base \<and>
-                           s \<turnstile> ArchObjectCap (PageCap word set vmpage_size (Some (snd p, args ! 0))) \<and>
+                           s \<turnstile> ArchObjectCap (PageCap word rights vmpage_size (Some (snd p, args ! 0))) \<and>
                            snd p \<le> mask asid_bits \<and>
                            snd p \<noteq> 0 \<and>
                            invs s \<and>
@@ -1578,7 +1580,7 @@ lemma arch_decode_inv_wf[wp]:
                        cap_rights_update_def acap_rights_update_def 
                 split:option.split vmpage_size.split)
      apply (rule conjI, fastforce dest!: cte_wp_at_page_cap_weaken)+
-     apply (frule diminished_cte_wp_at_valid_cap[where p="(a, b)", standard],
+     apply (frule diminished_cte_wp_at_valid_cap[where p="(a, b)" for a b],
                   clarsimp+)
      apply (clarsimp simp: valid_cap_def
                            cap_aligned_def)
@@ -1600,7 +1602,7 @@ lemma arch_decode_inv_wf[wp]:
          apply (simp add: mask_asid_low_bits_ucast_ucast)+
       apply (fastforce simp: diminished_pd_self)
      apply (simp add: vmsz_aligned_def split: vmpage_size.splits)
-     apply (simp add: conj_ac)
+     apply (simp add: conj_comms)
      apply (rule conjI, simp, rule conjI, simp add: mask_def)
      apply (rule conjI)
       apply (rule is_aligned_addrFromPPtr)
@@ -1616,6 +1618,7 @@ lemma arch_decode_inv_wf[wp]:
       apply simp
      apply (case_tac vmpage_size, simp_all)[1]
     apply (cases "invocation_type label = ARMPageRemap")
+     apply (rename_tac word rights vmpage_size option)
      apply (simp split del: split_if)
      apply (rule hoare_pre)
       apply ((wp whenE_throwError_wp check_vp_wpR hoare_vcg_const_imp_lift_R
@@ -1675,7 +1678,7 @@ lemma arch_decode_inv_wf[wp]:
           apply (rule impI)
           apply (subst eq_commute[where b="snd p"])
           apply assumption
-         apply (simp add: conj_ac)
+         apply (simp add: conj_comms)
          apply ((wp_trace whenE_throwError_wp check_vp_wpR hoare_vcg_const_imp_lift_R
                     hoare_drop_impE_R create_mapping_entries_parent_for_refs
                | wpc
@@ -1712,7 +1715,7 @@ lemma arch_decode_inv_wf[wp]:
      apply (simp split del: split_if)
      apply (rule hoare_pre, wp)
      apply (clarsimp simp: valid_arch_inv_def valid_page_inv_def)
-     apply (thin_tac "Ball ?S ?P")
+     apply (thin_tac "Ball S P" for S P)
      apply (rule conjI)
       apply (clarsimp split: option.split)
       apply (clarsimp simp: valid_cap_def cap_aligned_def)
@@ -1727,11 +1730,17 @@ lemma arch_decode_inv_wf[wp]:
         apply (simp add: valid_arch_inv_def valid_page_inv_def)
         apply (wp find_pd_for_asid_pd_at_asid | wpc)+
      apply (clarsimp simp: valid_cap_def mask_def)
-    apply simp
+    apply (simp split del: split_if)
+    apply (cases "invocation_type label = ARMPageGetAddress")
+     apply (simp split del: split_if)
+     apply (rule hoare_pre, wp)
+     apply (clarsimp simp: valid_arch_inv_def valid_page_inv_def)
     apply (rule hoare_pre, wp)
+   apply (simp)
    apply (simp add: arch_decode_invocation_def Let_def split_def
                     is_final_cap_def
                cong: if_cong split del: split_if)
+   apply (rename_tac word option)
    apply (rule hoare_pre)
     apply ((wp whenE_throwError_wp check_vp_wpR get_master_pde_wp hoare_vcg_all_lift_R|
             wpc|
@@ -1742,7 +1751,7 @@ lemma arch_decode_inv_wf[wp]:
          apply (rule_tac Q'="\<lambda>a b. ko_at (ArchObj (PageDirectory pd))
                                     (a + (args ! 0 >> 20 << 2) && ~~ mask pd_bits) b \<longrightarrow>
                                     pd (ucast (a + (args ! 0 >> 20 << 2) && mask pd_bits >> 2)) =
-                                    InvalidPDE \<longrightarrow> ?L word option p pd a b" in hoare_post_imp_R[rotated])
+                                    InvalidPDE \<longrightarrow> L word option p pd a b" for L in hoare_post_imp_R[rotated])
           apply (intro impI)
           apply (erule impE)
            apply clarsimp
@@ -1763,8 +1772,7 @@ lemma arch_decode_inv_wf[wp]:
     apply (rule conjI, fastforce)
     apply (rule conjI, fastforce)
     apply (clarsimp simp: neq_Nil_conv)
-    apply (thin_tac "Ball ?S ?P")
-    apply clarsimp
+    apply (thin_tac "Ball S P" for S P)
     apply (rule conjI)
      apply (clarsimp simp: valid_cap_def cap_aligned_def)
     apply (rule conjI)
@@ -1808,7 +1816,7 @@ lemma arch_decode_inv_wf[wp]:
           apply (simp add: resolve_vaddr_def)
           apply (wp get_master_pte_wp get_master_pde_wp whenE_throwError_wp | wpc | simp)+
         apply (clarsimp simp: valid_arch_inv_def valid_pdi_def)+
-        apply (rule_tac Q'="\<lambda>pd' s. pd_at_asid ba pd' s \<and> ba \<le> mask asid_bits \<and> ba \<noteq> 0" in hoare_post_imp_R)
+        apply (rule_tac Q'="\<lambda>pd' s. pd_at_asid x2 pd' s \<and> x2 \<le> mask asid_bits \<and> x2 \<noteq> 0" in hoare_post_imp_R)
          apply wp
         apply clarsimp
        apply (wp | wpc)+
@@ -1827,7 +1835,6 @@ lemma delete_objects_st_tcb_at:
     delete_objects ptr bits
   \<lbrace>\<lambda>y. pred_tcb_at proj P t\<rbrace>"
   by (wp|simp add: delete_objects_def do_machine_op_def split_def)+
-
 
 lemma arch_pinv_st_tcb_at:
   "\<lbrace>invs and valid_arch_inv ai and ct_active and 
@@ -1857,7 +1864,8 @@ lemma get_cap_diminished:
     apply fastforce+
   apply (clarsimp simp add: wellformed_acap_def
            split: cap.splits arch_cap.splits)
-  apply (rule_tac x=set in exI)
+  apply (rename_tac rights vmpage_size option)
+  apply (rule_tac x=rights in exI)
   apply auto
   done
 

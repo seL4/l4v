@@ -178,7 +178,7 @@ lemma valid_simple_footprint_ptr_retyp:
   apply (erule_tac x="k + 1" in allE)
   apply (erule impE)
    apply (metis One_nat_def less_diff_conv size_of_def)
-  apply (subst add_assoc, subst heap_type_tag_ptr_retyp_rest)
+  apply (subst add.assoc, subst heap_type_tag_ptr_retyp_rest)
      apply clarsimp
     apply (case_tac "1 + of_nat k = (0 :: word32)")
      apply (metis Suc_le_D diff_Suc_1 less_imp_diff_less less_trans_Suc nat_less_le one_plus_x_zero)
@@ -410,37 +410,17 @@ lemma h_val_field_from_bytes':
   apply (clarsimp simp: hrs_mem_def)
   done
 
-(* Clagged from "super_field_update_lookup". *)
 lemma simple_lift_super_field_update_lookup:
-  "\<lbrakk> field_lookup (typ_info_t TYPE('b::mem_type)) f 0 = Some (s,n);
-      typ_uinfo_t TYPE('a) = export_uinfo s; simple_lift h p = Some v' \<rbrakk> \<Longrightarrow>
-      (super_field_update_t (Ptr (&(p\<rightarrow>f))) (v::'a::mem_type) ((simple_lift h)::'b ptr \<Rightarrow> 'b option)) =
+  fixes dummy :: "'b :: mem_type"
+  assumes "field_lookup (typ_info_t TYPE('b::mem_type)) f 0 = Some (s,n)"
+    and "typ_uinfo_t TYPE('a) = export_uinfo s"
+    and "simple_lift h p = Some v'"
+  shows "(super_field_update_t (Ptr (&(p\<rightarrow>f))) (v::'a::mem_type) ((simple_lift h)::'b ptr \<Rightarrow> 'b option)) =
           ((simple_lift h)(p \<mapsto> field_update (field_desc s) (to_bytes_p v) v'))"
-  apply (clarsimp simp: super_field_update_t_def)
-  apply (rule ext)
-  apply (clarsimp simp: field_lvalue_def split: option.splits)
-  apply (safe, simp_all)
-     apply (subst field_lookup_offset_eq)
-      apply fast
-     apply (subst (asm) field_lookup_offset_eq)
-      apply fast
-     apply (frule_tac v=v and v'=v' in update_field_update)
-     apply clarsimp
-     apply (thin_tac "?P = update_ti_t ?x ?y ?z")
-     apply (clarsimp simp: field_of_t_def field_of_def typ_uinfo_t_def)
-     apply (frule_tac m=0 in field_names_SomeD2)
-      apply simp
-     apply clarsimp
-     apply (simp add: field_typ_def field_typ_untyped_def)
-     apply (frule field_lookup_export_uinfo_Some)
-     apply (frule_tac s=k in field_lookup_export_uinfo_Some)
-     apply simp
-     apply (subst (asm) field_lookup_offset_eq)
-      apply fast
-     apply (subst (asm) field_lookup_offset_eq)
-      apply fast
-     apply (subst (asm) unat_of_nat)
-     apply (subst (asm) mod_less)
+proof -
+  from assms have [simp]: "unat (of_nat n :: 32 word) = n"
+     apply (subst unat_of_nat)
+     apply (subst mod_less)
       apply (drule td_set_field_lookupD)+
       apply (drule td_set_offset_size)+
       apply (subst len_of_addr_card)
@@ -449,53 +429,45 @@ lemma simple_lift_super_field_update_lookup:
        apply arith
       apply simp
      apply simp
-     apply (drule (1) field_lookup_inject)
-      apply (subst typ_uinfo_t_def [symmetric, where t="TYPE('b)"])
+     done
+  from assms show ?thesis
+    apply (clarsimp simp: super_field_update_t_def)
+    apply (rule ext)
+    apply (clarsimp simp: field_lvalue_def split: option.splits)
+    apply (safe, simp_all)
+       apply (frule_tac v=v and v'=v' in update_field_update)
+       apply (clarsimp simp: field_of_t_def field_of_def typ_uinfo_t_def)
+       apply (frule_tac m=0 in field_names_SomeD2)
+        apply simp
+       apply clarsimp
+       apply (simp add: field_typ_def field_typ_untyped_def)
+       apply (frule field_lookup_export_uinfo_Some)
+       apply (frule_tac s=k in field_lookup_export_uinfo_Some)
+       apply simp
+       apply (drule (1) field_lookup_inject)
+        apply (subst typ_uinfo_t_def [symmetric, where t="TYPE('b)"])
+        apply simp
+       apply simp
+      apply (drule field_of_t_mem)+
+      apply (case_tac h)
+      apply (clarsimp simp: simple_lift_def split: split_if_asm)
+      apply (drule (1) heap_ptr_valid_neq_disjoint)
+       apply simp
+      apply fast
+     apply (clarsimp simp: field_of_t_def field_of_def)
+     apply (subst (asm) td_set_field_lookup)
       apply simp
      apply simp
-    apply (drule field_of_t_mem)+
-    apply (case_tac h)
-    apply (clarsimp simp: simple_lift_def split: split_if_asm)
-    apply (drule (1) heap_ptr_valid_neq_disjoint)
+     apply (frule field_lookup_export_uinfo_Some)
+     apply (simp add: typ_uinfo_t_def)
+    apply (clarsimp simp: field_of_t_def field_of_def)
+    apply (subst (asm) td_set_field_lookup)
      apply simp
-    apply fast
-   apply (clarsimp simp: field_of_t_def field_of_def)
-   apply (subst (asm) field_lookup_offset_eq)
-    apply fast
-   apply (subst (asm) td_set_field_lookup)
     apply simp
-   apply simp
-   apply (frule field_lookup_export_uinfo_Some)
-   apply (simp add: typ_uinfo_t_def)
-   apply (subst (asm) unat_of_nat)
-   apply (subst (asm) mod_less)
-    apply (subst len_of_addr_card)
-    apply (drule td_set_field_lookupD)+
-    apply (drule td_set_offset_size)+
-    apply (subst (asm) size_of_def [symmetric, where t="TYPE('b)"])
-    apply (subgoal_tac "size_of TYPE('b) < addr_card")
-     apply arith
-    apply simp
-   apply simp
-  apply (clarsimp simp: field_of_t_def field_of_def)
-  apply (subst (asm) field_lookup_offset_eq)
-   apply fast
-  apply (subst (asm) td_set_field_lookup)
-   apply simp
-  apply simp
-  apply (frule field_lookup_export_uinfo_Some)
-  apply (simp add: typ_uinfo_t_def)
-  apply (subst (asm) unat_of_nat)
-  apply (subst (asm) mod_less)
-   apply (subst len_of_addr_card)
-   apply (drule td_set_field_lookupD)+
-   apply (drule td_set_offset_size)+
-   apply (subst (asm) size_of_def [symmetric, where t="TYPE('b)"])
-   apply (subgoal_tac "size_of TYPE('b) < addr_card")
-    apply arith
-   apply simp
-  apply simp
-  done
+    apply (frule field_lookup_export_uinfo_Some)
+    apply (simp add: typ_uinfo_t_def)
+    done
+qed
 
 lemma field_offset_addr_card:
     "\<exists>x. field_lookup (typ_info_t TYPE('a::mem_type)) f 0 = Some x \<Longrightarrow> field_offset TYPE('a) f < addr_card"
@@ -519,15 +491,16 @@ lemma unat_of_nat_field_offset:
   done
 
 lemma field_of_t_field_lookup:
-  "\<lbrakk> field_lookup (typ_info_t TYPE('a::mem_type)) f 0 = Some (s, n);
-     export_uinfo s = typ_uinfo_t TYPE('b::mem_type);
-     n = field_offset TYPE('a) f  \<rbrakk> \<Longrightarrow>
-       field_of_t (Ptr &(ptr\<rightarrow>f) :: ('b ptr)) (ptr :: 'a ptr)"
+  assumes a: "field_lookup (typ_info_t TYPE('a::mem_type)) f 0 = Some (s, n)"
+  assumes b: "export_uinfo s = typ_uinfo_t TYPE('b::mem_type)"
+  assumes n: "n = field_offset TYPE('a) f"
+  shows "field_of_t (Ptr &(ptr\<rightarrow>f) :: ('b ptr)) (ptr :: 'a ptr)"
   apply (clarsimp simp del: field_lookup_offset_eq
       simp: field_of_t_def field_of_def)
   apply (subst td_set_field_lookup)
    apply (rule wf_desc_typ_tag)
   apply (rule exI [where x=f])
+  using a[simplified n] b
   apply (clarsimp simp: typ_uinfo_t_def)
   apply (subst field_lookup_export_uinfo_Some)
    apply assumption
@@ -724,7 +697,7 @@ lemma c_guard_array_c_guard:
   apply clarsimp
   apply (drule_tac x="k mod size_of TYPE('b)" in spec)
   apply (clarsimp simp: CTypesDefs.ptr_add_def)
-  apply (subst (asm) semigroup_add_class.add_assoc)
+  apply (subst (asm) add.assoc)
   apply (subst (asm) of_nat_mod_div_decomp [symmetric])
   apply clarsimp
   done
@@ -754,9 +727,10 @@ lemma zero_not_in_intvl_no_overflow:
   apply (drule_tac x="2 ^ len_of TYPE('a) - unat a" in spec)
   apply (clarsimp simp: not_less)
   apply (erule disjE)
-   apply (metis (hide_lams, mono_tags) comm_monoid_diff_class.diff_cancel diff_0 diff_le_self diff_minus diff_zero not_less0 of_nat_2p unat_minus' unat_sub_if_size word_less_nat_alt word_unat.Rep_inverse)
+  apply (metis (erased, hide_lams) diff_add_inverse less_imp_add_positive of_nat_2p of_nat_add
+           unat_lt2p word_neq_0_conv word_unat.Rep_inverse)
   apply (metis le_add_diff_inverse le_antisym le_diff_conv le_refl
-           less_imp_le_nat nat_add_commute not_add_less1 unat_lt2p)
+           less_imp_le_nat add.commute not_add_less1 unat_lt2p)
   done
 
 lemma intvl_split:
@@ -777,7 +751,7 @@ lemma intvl_split:
    apply (metis le_unat_uoi less_or_eq_imp_le not_less order_trans)
   apply clarsimp
   apply (metis le_def le_eq_less_or_eq le_unat_uoi less_diff_conv
-    nat_add_commute of_nat_add)
+    add.commute of_nat_add)
   done
 
 lemma heap_ptr_valid_range_not_NULL:

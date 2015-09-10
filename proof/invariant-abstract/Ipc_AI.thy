@@ -21,8 +21,7 @@ lemmas lookup_slot_wrapper_defs[simp] =
 lemma get_mi_inv[wp]: "\<lbrace>I\<rbrace> get_message_info a \<lbrace>\<lambda>x. I\<rbrace>"
   by (simp add: get_message_info_def user_getreg_inv | wp)+
 
-lemma set_mi_invs[wp]: "\<lbrace>invs\<rbrace> set_message_info t a \<lbrace>\<lambda>x. invs\<rbrace>"
-  by (simp add: set_message_info_def, wp)
+
 
 lemma set_mi_tcb [wp]:
   "\<lbrace> tcb_at t \<rbrace> set_message_info receiver msg \<lbrace>\<lambda>rv. tcb_at t\<rbrace>"
@@ -236,6 +235,7 @@ lemma arch_derive_cap_cte:
   unfolding arch_derive_cap_def
   apply(cases c', simp_all add: is_cap_simps)
       apply(rule hoare_pre, wp ensure_no_children_wp, clarsimp)+
+    apply wp?
     apply(erule cte_wp_at_weakenE)
     apply(case_tac c, (clarsimp simp: is_derived_def cap_master_cap_def is_cap_simps 
                                       cap_asid_def is_pt_cap_def vs_cap_ref_def
@@ -254,7 +254,6 @@ lemma derive_cap_cte:
   unfolding derive_cap_def 
   apply (cases c', simp_all add: is_cap_simps)
           apply ((rule hoare_pre, wp ensure_no_children_wp, simp)+)[11]
-  apply clarsimp
   apply (rule hoare_pre, wp)
    apply (simp add: o_def)
    apply (wp arch_derive_cap_cte)
@@ -581,7 +580,8 @@ lemma is_derived_cap_rights2[simp]:
   apply (simp_all add:cap_rights_update_def)
   apply (clarsimp simp:is_derived_def is_cap_simps cap_master_cap_def 
     vs_cap_ref_def split:cap.splits )+
-  apply (case_tac arch_cap)
+  apply (rename_tac acap1 acap2)
+  apply (case_tac acap1)
    apply (simp_all add:acap_rights_update_def)
   done
 
@@ -591,6 +591,7 @@ lemma weak_derived_update_rights:
   apply (case_tac cap)
   apply (clarsimp simp:weak_derived_def same_object_as_def
     is_cap_simps cap_rights_update_def acap_rights_update_def copy_of_def)+
+  apply (rename_tac arch_cap)
   apply (case_tac arch_cap)
   apply (simp_all add: cap_asid_def cap_vptr_def)
   apply (clarsimp simp:valid_cap_def cap_aligned_def)
@@ -685,7 +686,7 @@ lemma transfer_caps_loop_presM:
        apply (rule derive_cap_is_derived_foo)
       apply (rule_tac Q' ="\<lambda>cap' s. (vo \<longrightarrow> cap'\<noteq> cap.NullCap \<longrightarrow> 
           cte_wp_at (is_derived (cdt s) (aa, b) cap') (aa, b) s)
-          \<and> (cap'\<noteq> cap.NullCap \<longrightarrow> ?QM s cap')"
+          \<and> (cap'\<noteq> cap.NullCap \<longrightarrow> QM s cap')" for QM
           in hoare_post_imp_R)
         prefer 2
         apply clarsimp
@@ -700,7 +701,7 @@ lemma transfer_caps_loop_presM:
              split del: split_if)
   apply (clarsimp simp: remove_rights_def caps_of_state_valid
                         neq_Nil_conv cte_wp_at_caps_of_state
-                        imp_conjR[symmetric] conj_ac
+                        imp_conjR[symmetric] conj_comms
                  split del: if_splits)
   apply (intro conjI)
    apply clarsimp
@@ -830,6 +831,7 @@ lemma derive_cap_idle[wp]:
   apply (rule hoare_pre)
    apply (wpc| wp | simp add: arch_derive_cap_def)+
   apply (case_tac cap, simp_all add: cap_range_def)
+  apply (rename_tac arch_cap)
   apply (case_tac arch_cap, simp_all)
   done
 
@@ -857,9 +859,9 @@ lemma tcl_it[wp]:
 
 
 lemma arch_derive_cap_objrefs_iszombie:
-  "\<lbrace>\<lambda>s . P (Option.set (aobj_ref cap)) False s\<rbrace>
+  "\<lbrace>\<lambda>s . P (set_option (aobj_ref cap)) False s\<rbrace>
      arch_derive_cap cap
-   \<lbrace>\<lambda>rv s. P (Option.set (aobj_ref rv)) False s\<rbrace>,-"
+   \<lbrace>\<lambda>rv s. P (set_option (aobj_ref rv)) False s\<rbrace>,-"
   apply(cases cap, simp_all add: is_zombie_def arch_derive_cap_def)
       apply(rule hoare_pre, wpc?, wp, simp)+
   done
@@ -1059,22 +1061,11 @@ lemma transfer_caps_loop_irq_handlers[wp]:
 crunch valid_arch_objs [wp]: set_extra_badge valid_arch_objs
 
 
-crunch executable_arch_objs [wp]: set_extra_badge executable_arch_objs
-
-
 lemma transfer_caps_loop_arch_objs[wp]:
   "\<lbrace>valid_arch_objs\<rbrace>
    transfer_caps_loop ep diminish buffer n caps slots mi
    \<lbrace>\<lambda>rv. valid_arch_objs\<rbrace>"
   by (rule transfer_caps_loop_pres) wp
-
-
-lemma transfer_caps_loop_executable_arch_objs[wp]:
-  "\<lbrace>executable_arch_objs\<rbrace>
-   transfer_caps_loop ep diminish buffer n caps slots mi
-   \<lbrace>\<lambda>rv. executable_arch_objs\<rbrace>"
-  by (rule transfer_caps_loop_pres) wp
-
 
 crunch valid_arch_caps [wp]: set_extra_badge valid_arch_caps
 
@@ -1445,8 +1436,8 @@ lemma cte_wp_at_orth:
 declare sym_ex_elim[elim!]
 
 
-lemma no_irq_option_case:
-  "\<lbrakk> no_irq f; \<And>x. no_irq (g x) \<rbrakk> \<Longrightarrow> no_irq (option_case f g x)"
+lemma no_irq_case_option:
+  "\<lbrakk> no_irq f; \<And>x. no_irq (g x) \<rbrakk> \<Longrightarrow> no_irq (case_option f g x)"
   apply (subst no_irq_def)
   apply clarsimp
   apply (rule hoare_pre)
@@ -1460,51 +1451,6 @@ lemma get_mrs_inv[wp]:
           | wp dmo_inv loadWord_inv mapM_wp' | wpc)+
 
 
-lemma set_mrs_typ_at[wp]:
-  "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> set_mrs t buf mrs \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
-  apply (simp add: set_mrs_def zipWithM_x_mapM split_def
-                   store_word_offs_def set_object_def
-              cong: option.case_cong
-              split del: split_if)
-  apply (wp hoare_vcg_split_option_case)
-    apply (rule mapM_wp [where S=UNIV, simplified])
-    apply (wp | simp)+
-  apply (clarsimp simp: obj_at_def a_type_def
-                  dest!: get_tcb_SomeD)
-  done
-
-
-lemma set_mrs_tcb[wp]:
-  "\<lbrace> tcb_at t \<rbrace> set_mrs receiver recv_buf mrs \<lbrace>\<lambda>rv. tcb_at t \<rbrace>"
-  by (simp add: tcb_at_typ, wp)
-
-
-lemma set_mrs_aep_at[wp]:
-  "\<lbrace> aep_at p \<rbrace> set_mrs receiver recv_buf mrs \<lbrace>\<lambda>rv. aep_at p \<rbrace>"
-  by (simp add: aep_at_typ, wp)
-
-
-lemmas set_mrs_redux =
-   set_mrs_def bind_assoc[symmetric]
-   thread_set_def[simplified, symmetric]
-
-lemma set_mrs_invs[wp]:
-  "\<lbrace> invs and tcb_at receiver \<rbrace> set_mrs receiver recv_buf mrs \<lbrace>\<lambda>rv. invs \<rbrace>"
-  apply (simp add: set_mrs_redux)
-  apply wp
-   apply (rule_tac P="invs" in hoare_triv)
-   apply (case_tac recv_buf)
-    apply simp
-   apply (simp add: zipWithM_x_mapM split del: split_if)
-   apply wp
-   apply (rule mapM_wp)
-    apply (simp add: split_def store_word_offs_def)
-    apply (wp storeWord_invs)
-    apply simp
-   apply blast
-  apply (wp thread_set_invs_trivial)
-  apply (auto simp: tcb_cap_cases_def)
-  done
 
 lemma copy_mrs_typ_at[wp]:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> copy_mrs s sb r rb n \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
@@ -1512,7 +1458,7 @@ lemma copy_mrs_typ_at[wp]:
                    store_word_offs_def set_object_def
               cong: option.case_cong
               split del: split_if)
-  apply (wp hoare_vcg_split_option_case mapM_wp')
+  apply (wp hoare_vcg_split_case_option mapM_wp')
    apply (wp hoare_drop_imps mapM_wp')
    apply simp_all
   done
@@ -1605,7 +1551,7 @@ lemmas get_tcb_ko_atI = get_tcb_ko_at [THEN iffD1]
 
 
 crunch "distinct" [wp]: set_mrs pspace_distinct
-  (wp: select_wp hoare_vcg_split_option_case mapM_wp 
+  (wp: select_wp hoare_vcg_split_case_option mapM_wp 
        hoare_drop_imps  refl
    simp: zipWithM_x_mapM)
 
@@ -1741,7 +1687,7 @@ lemma valid_recv_ep_tcb:
 
 lemma lookup_ipc_buffer_in_user_frame[wp]:
   "\<lbrace>valid_objs and tcb_at t\<rbrace> lookup_ipc_buffer b t
-   \<lbrace>option_case (\<lambda>_. True) in_user_frame\<rbrace>"
+   \<lbrace>case_option (\<lambda>_. True) in_user_frame\<rbrace>"
   apply (simp add: lookup_ipc_buffer_def)
   apply (wp get_cap_wp thread_get_wp | wpc | simp)+
   apply (clarsimp simp add: obj_at_def is_tcb)
@@ -1749,7 +1695,7 @@ lemma lookup_ipc_buffer_in_user_frame[wp]:
                                            mask (pageBitsForSize xc))) s", simp)
   apply (drule (1) cte_wp_valid_cap)
   apply (clarsimp simp add: valid_cap_def cap_aligned_def in_user_frame_def)
-  apply (thin_tac "option_case ?a ?b ?c")
+  apply (thin_tac "case_option a b c" for a b c)
   apply (rule_tac x=xc in exI)
   apply (subgoal_tac "(xa + (tcb_ipc_buffer tcb && mask (pageBitsForSize xc)) &&
             ~~ mask (pageBitsForSize xc)) = xa", simp)
@@ -1781,22 +1727,7 @@ crunch vmdb[wp]: do_ipc_transfer "valid_mdb"
   (ignore: as_user simp: crunch_simps ball_conj_distrib
        wp: crunch_wps hoare_vcg_const_Ball_lift transfer_caps_loop_valid_mdb)
 
-lemma set_mrs_thread_set_dmo:
-  assumes ts: "\<And>c. \<lbrace>P\<rbrace> thread_set (\<lambda>tcb. tcb\<lparr>tcb_context := c tcb\<rparr>) r \<lbrace>\<lambda>rv. Q\<rbrace>"
-  assumes dmo: "\<And>x y. \<lbrace>Q\<rbrace> do_machine_op (storeWord x y) \<lbrace>\<lambda>rv. Q\<rbrace>"
-  shows "\<lbrace>P\<rbrace> set_mrs r t mrs \<lbrace>\<lambda>rv. Q\<rbrace>"
-  apply (simp add: set_mrs_redux)
-  apply (case_tac t)
-   apply simp
-   apply wp
-   apply (rule ts)
-  apply (simp add: zipWithM_x_mapM store_word_offs_def split_def
-              split del: split_if)
-  apply (wp mapM_wp dmo)
-    apply simp
-   apply blast
-  apply (rule ts)
-  done
+
 
 
 lemma copy_mrs_thread_set_dmo:
@@ -1970,10 +1901,6 @@ crunch arch_objs[wp]: do_ipc_transfer "valid_arch_objs"
   (wp: crunch_wps simp: zipWithM_x_mapM crunch_simps)
 
 
-crunch executable_arch_objs[wp]: do_ipc_transfer "executable_arch_objs"
-  (wp: crunch_wps simp: zipWithM_x_mapM crunch_simps)
-
-
 lemmas set_mrs_valid_global_objs[wp]
     = set_mrs_thread_set_dmo [OF thread_set_valid_globals do_machine_op_valid_global_objs]
 
@@ -2121,7 +2048,6 @@ lemma as_user_vms[wp]:
   by (simp add: valid_machine_state_def)
      (wp hoare_vcg_all_lift hoare_vcg_disj_lift)
 
-(* FIXME: should we not consistently use thread_set instead of set_object? *)
 lemma set_mrs_def2:
   "set_mrs thread buf msgs \<equiv>
    do thread_set
@@ -2166,7 +2092,7 @@ lemma do_ipc_transfer_invs[wp]:
          apply (subst ball_conj_distrib)
          apply (wp get_rs_cte_at2 thread_get_wp static_imp_wp
                    hoare_vcg_ball_lift hoare_vcg_all_lift hoare_vcg_conj_lift)
-  apply (rule hoare_strengthen_post[of P _ "\<lambda>_. P", standard])
+  apply (rule hoare_strengthen_post[of P _ "\<lambda>_. P" for P])
    apply (wp lookup_ipc_buffer_inv)
   apply (clarsimp simp: obj_at_def is_tcb invs_valid_objs)
   done
@@ -2356,7 +2282,7 @@ lemma is_derived_ReplyCap [simp]:
   apply (subst fun_eq_iff)
   apply clarsimp
   apply (case_tac x, simp_all add: is_derived_def is_cap_simps
-                                   cap_master_cap_def conj_ac is_pt_cap_def
+                                   cap_master_cap_def conj_comms is_pt_cap_def
                                    vs_cap_ref_def)
   done
 
@@ -2386,7 +2312,6 @@ lemma do_ipc_transfer_tcb_caps:
   apply (wp do_normal_transfer_tcb_caps hoare_drop_imps
        | wpc | simp add:imp)+
   done
-
 
 lemma set_mrs_pred_tcb [wp]:
   "\<lbrace>pred_tcb_at proj P t\<rbrace> set_mrs r t' mrs \<lbrace>\<lambda>rv. pred_tcb_at proj P t\<rbrace>"
@@ -2446,7 +2371,7 @@ lemma update_waiting_invs:
    apply (wp |simp)+
     apply (simp add: invs_def valid_state_def valid_pspace_def)
     apply (wp valid_irq_node_typ sts_only_idle)
-   apply (simp add: valid_tcb_state_def conj_ac)
+   apply (simp add: valid_tcb_state_def conj_comms)
    apply (simp add: cte_wp_at_caps_of_state)
 
    apply (wp set_aep_valid_objs hoare_post_imp [OF disjI1]
@@ -2895,8 +2820,6 @@ crunch irq_handlers[wp]: set_endpoint "valid_irq_handlers"
 
 crunch arch_objs [wp]: setup_caller_cap "valid_arch_objs"
 
-crunch executable_arch_objs [wp]: setup_caller_cap "executable_arch_objs"
-
 crunch v_ker_map[wp]: setup_caller_cap "valid_kernel_mappings"
 
 crunch eq_ker_map[wp]: setup_caller_cap "equal_kernel_mappings"
@@ -2970,11 +2893,12 @@ lemma ri_invs':
      receive_ipc t cap \<lbrace>\<lambda>r s. invs s \<and> Q s\<rbrace>" (is "\<lbrace>?pre\<rbrace> _ \<lbrace>_\<rbrace>")
   apply (simp add: receive_ipc_def split_def)
   apply (cases cap, simp_all)
+  apply (rename_tac ep badge rights)
   apply (rule hoare_seq_ext[OF _ get_endpoint_sp])
   apply (rule hoare_seq_ext[OF _ gba_sp])
   apply (rule hoare_seq_ext)
   (* set up precondition for old proof *)
-   apply (rule_tac R="ko_at (Endpoint x) word1 and ?pre" in hoare_vcg_split_if)
+   apply (rule_tac R="ko_at (Endpoint x) ep and ?pre" in hoare_vcg_split_if)
     apply (wp complete_async_ipc_invs)
    apply (case_tac x)
      apply (simp add: invs_def valid_state_def valid_pspace_def)
@@ -2985,7 +2909,7 @@ lemma ri_invs':
      apply (rule conjI, clarsimp elim!: obj_at_weakenE simp: is_ep_def)
      apply (rule conjI, clarsimp simp: st_tcb_at_reply_cap_valid)
      apply (rule conjI)
-      apply (subgoal_tac "word1 \<noteq> t")
+      apply (subgoal_tac "ep \<noteq> t")
        apply (drule obj_at_state_refs_ofD)
        apply (drule active_st_tcb_at_state_refs_ofD)
        apply (erule delta_sym_refs)
@@ -3010,12 +2934,12 @@ lemma ri_invs':
     apply (clarsimp simp: st_tcb_at_refs_of_rev st_tcb_at_tcb_at
                           valid_obj_def ep_redux_simps
                     cong: list.case_cong if_cong)
-    apply (frule(1) st_tcb_ex_cap[where P="\<lambda>ts. \<exists>pl. ts = st pl", standard],
+    apply (frule(1) st_tcb_ex_cap[where P="\<lambda>ts. \<exists>pl. ts = st pl" for st],
            clarsimp+)
     apply (clarsimp simp: valid_ep_def)
     apply (frule active_st_tcb_at_state_refs_ofD)
     apply (frule st_tcb_at_state_refs_ofD
-                 [where P="\<lambda>ts. \<exists>pl. ts = st pl", standard])
+                 [where P="\<lambda>ts. \<exists>pl. ts = st pl" for st])
     apply (subgoal_tac "y \<noteq> t \<and> y \<noteq> idle_thread s \<and> t \<noteq> idle_thread s \<and>
                         idle_thread s \<notin> set ys")
      apply (clarsimp simp: st_tcb_def2 obj_at_def is_ep_def)
@@ -3145,8 +3069,8 @@ lemma rai_invs':
    \<lbrace>\<lambda>r s. invs s \<and> Q s\<rbrace>"
   apply (simp add: receive_async_ipc_def)
   apply (cases cap, simp_all)
+  apply (rename_tac aep badge rights)
   apply (rule hoare_seq_ext [OF _ get_aep_sp])
-  apply clarsimp
   apply (case_tac "aep_obj x")
     apply (simp add: invs_def valid_state_def valid_pspace_def)
     apply (rule hoare_pre)
@@ -3160,7 +3084,7 @@ lemma rai_invs':
                                 dest!: st_tcb_at_tcb_at
                                 split: option.splits)
     apply (rule conjI)
-     apply (subgoal_tac "t \<noteq> word1")
+     apply (subgoal_tac "t \<noteq> aep")
       apply (drule ko_at_state_refs_ofD)
       apply (drule active_st_tcb_at_state_refs_ofD)
       apply (erule delta_sym_refs)
@@ -3312,6 +3236,7 @@ lemma si_invs':
      apply (fastforce dest: idle_no_ex_cap valid_reply_capsD
                      simp: st_tcb_def2)
     apply (wp, simp)
+   apply (rename_tac list)
    apply (cases bl, simp_all)[1]
     apply (simp add: invs_def valid_state_def valid_pspace_def)
     apply (wp valid_irq_node_typ)
@@ -3338,6 +3263,7 @@ lemma si_invs':
     apply (drule(1) sym_refs_ko_atD, clarsimp simp: st_tcb_at_refs_of_rev)
     apply (drule(1) bspec, clarsimp simp: pred_tcb_at_def obj_at_def)
    apply (wp, simp)
+  apply (rename_tac list)
   apply (case_tac list, simp_all)
   apply (simp add: invs_def valid_state_def valid_pspace_def)
   apply (rule hoare_pre)
@@ -3347,10 +3273,9 @@ lemma si_invs':
                     sts_only_idle hoare_vcg_if_lift hoare_vcg_disj_lift thread_get_wp' hoare_vcg_all_lift
                | clarsimp simp:is_cap_simps  | wpc
                | strengthen reply_cap_doesnt_exist_strg
-                            disjI2_strg[where Q="cte_wp_at (\<lambda>cp. is_master_reply_cap cp \<and> R cp) p s", standard]
+                            disjI2_strg[where Q="cte_wp_at (\<lambda>cp. is_master_reply_cap cp \<and> R cp) p s"]
                | (wp hoare_vcg_conj_lift static_imp_wp | wp dxo_wp_weak | simp)+)+
-  apply (clarsimp simp: ep_redux_simps conj_ac
-                  cong: list.case_cong if_cong)
+  apply (clarsimp simp: ep_redux_simps conj_ac cong: list.case_cong if_cong)
   apply (frule(1) sym_refs_ko_atD)
   apply (clarsimp simp: st_tcb_at_refs_of_rev st_tcb_at_tcb_at)
   apply (frule ko_at_state_refs_ofD)
@@ -3446,15 +3371,15 @@ lemma rai_pred_tcb_neq:
   \<lbrace>\<lambda>rv. pred_tcb_at proj P t'\<rbrace>"
   apply (simp add: receive_async_ipc_def) 
   apply (cases cap, simp_all)
-  apply clarsimp
   apply (rule hoare_seq_ext [OF _ get_aep_sp])
+  apply (rename_tac x aep)
   apply (case_tac "aep_obj aep")
     apply (wp sts_st_tcb_at_neq | clarsimp)+
   done
 
 
 crunch ct[wp]: set_mrs "\<lambda>s. P (cur_thread s)" 
-  (wp: option_case_wp mapM_wp)
+  (wp: case_option_wp mapM_wp)
 
 
 lemma get_ep_ko [wp]:
@@ -3512,6 +3437,7 @@ lemma si_blk_makes_simple:
    apply (wp sts_st_tcb_at_cases)
    apply clarsimp
   apply (rule hoare_gen_asm[simplified])
+  apply (rename_tac list)
   apply (case_tac list, simp_all)
   apply (rule hoare_seq_ext [OF _ set_ep_pred_tcb_at])
   apply (rule hoare_seq_ext [OF _ gts_sp])
@@ -3568,7 +3494,8 @@ lemma ri_makes_simple:
   apply (rule hoare_seq_ext [OF _ get_endpoint_sp])
   apply (rule hoare_seq_ext [OF _ gba_sp])
   apply (rule hoare_seq_ext)
-   apply (rule_tac R="ko_at (Endpoint x) word1 and ?pre" in hoare_vcg_split_if)
+   apply (rename_tac ep I DO x CARE NOT)
+   apply (rule_tac R="ko_at (Endpoint x) ep and ?pre" in hoare_vcg_split_if)
     apply (wp complete_async_ipc_invs)
    apply (case_tac x, simp_all)
      apply (wp sts_st_tcb_at_cases, simp)

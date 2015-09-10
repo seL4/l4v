@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-header "CSpace"
+chapter "CSpace"
 
 theory CSpace_H
 imports CSpaceDecls_H Object_H

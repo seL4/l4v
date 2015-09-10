@@ -43,16 +43,6 @@ fun suspicious_term ctxt s t = if Term.add_var_names t [] = [] then ()
 
 val debug_trace = ref (Bound 0);
 
-(*
-fun add_conv tm tm' convs = let
-    val argTs = pairself (fst o strip_type o fastype_of) (tm, tm');
-    val argLs = pairself length argTs
-    val tm'' = if fst argLs > snd argLs
-      then list_abs (map (pair "_") (take (fst argLs - snd argLs) (fst argTs)),
-          tm') else tm';
-  in Termtab.insert (K true) (tm, tm'') convs end
-*)
-
 fun convert prefix src_ctxt proc (tm as Const (name, _)) (convs, ctxt) =
   (term_convert prefix convs tm; (convs, ctxt))
   handle Option =>
@@ -102,38 +92,33 @@ fun prove_impl_tac ctxt ss =
       in simp_tac (put_simpset ss ctxt addsimps unfolds) n
       end);
 
-fun convert_impls prefix src_ctxt convs ctxt = let
+fun convert_impls ctxt = let
 
-    val tree_lemmata = StaticFun.prove_tree_lemmata ctxt
-      (Proof_Context.get_thm ctxt "\<Gamma>_def");
+    val thm = Proof_Context.get_thm ctxt "\<Gamma>_def"
 
-    val ss = simpset_of (put_simpset HOL_ss ctxt addsimps tree_lemmata);
+    val proc_defs = (Term.add_const_names (Thm.concl_of thm) [])
+      |> filter (String.isSuffix Hoare.proc_deco)
+      |> map (suffix "_def" #> Proof_Context.get_thm ctxt)
 
-    fun convert_impl (impl, long_name) = let
-        val prop = Thm.prop_of impl;
-        val conv_prop = map_aterms (term_convert prefix convs) prop
-          |> Envir.beta_eta_contract;
-        val name = Long_Name.base_name long_name;
-      in
-        (name, Goal.prove ctxt [] [] conv_prop
-             (fn v => prove_impl_tac (#context v) ss 1))
-      end
+    val tree_lemmata = StaticFun.prove_partial_map_thms thm
+        (ctxt addsimps proc_defs)
 
-    val impls = Termtab.keys convs
-      |> map (dest_Const #> fst #> Long_Name.base_name)
-      |> filter (String.isSuffix "_body")
-      |> map (suffix "_impl" o unsuffix "_body")
-      |> map_filter (try (` (Proof_Context.get_thm src_ctxt)))
-      |> map convert_impl;
+    fun impl_name_from_proc (Const (s, _)) = s
+            |> Long_Name.base_name
+            |> unsuffix Hoare.proc_deco
+            |> suffix HoarePackage.implementationN
+      | impl_name_from_proc t = raise TERM ("impl_name_from_proc", [t])
 
-  in Local_Theory.notes (map (fn (n, t) => ((Binding.name n, []), [([t], [])])) impls)
+    val saves = tree_lemmata |> map (apfst (fst #> impl_name_from_proc))
+
+  in Local_Theory.notes (map (fn (n, t) => ((Binding.name n, []), [([t], [])])) saves)
     ctxt |> snd end
 
 fun take_all_actions prefix src_ctxt proc tm csenv
-      styargs loc_name ctxt = let
-    val (convs, ctxt) = convert prefix src_ctxt proc tm (Termtab.empty, ctxt);
+      styargs ctxt = let
+    val (_, ctxt) = convert prefix src_ctxt proc tm (Termtab.empty, ctxt);
   in ctxt
-    |> convert_impls prefix src_ctxt convs
+    |> convert_impls
     |> Modifies_Proofs.prove_all_modifies_goals_local csenv (fn _ => true) styargs
   end
 
@@ -243,7 +228,7 @@ ML {*
 
 (* the unvarify sets ?symbol_table back to symbol_table. be careful *)
 val global_datas = @{thms global_data_defs}
-  |> map (concl_of #> Logic.unvarify_global
+  |> map (Thm.concl_of #> Logic.unvarify_global
         #> Logic.dest_equals #> snd #> Envir.beta_eta_contract)
 
 val const_globals = map_filter
@@ -287,7 +272,7 @@ val grab_name_str = head_of #> dest_Const #> fst #> Long_Name.base_name
 in
 
 fun const_global_asserts ctxt cond
-  (t as (Const (@{const_name index}, T) $ arr $ n)) = if member op= consts arr
+  (t as (Const (@{const_name index}, _) $ arr $ n)) = if member op= consts arr
     then [(index_eq_set_helper $ grab_name_str arr
         $ lambda s t $ lambda s n $ cond) |> Syntax.check_term ctxt]
     else []
@@ -299,21 +284,19 @@ fun const_global_asserts ctxt cond
     then [(eq_set_helper $ grab_name_str (f $ x) $ (f $ x) $ cond)
         |> Syntax.check_term ctxt]
     else const_global_asserts ctxt cond f @ const_global_asserts ctxt cond x
-  | const_global_asserts ctxt cond (a as Abs (_, @{typ "globals myvars"}, t))
+  | const_global_asserts ctxt cond (a as Abs (_, @{typ "globals myvars"}, _))
     = const_global_asserts ctxt cond (betapply (a, s))
-  | const_global_asserts ctxt cond (Abs (s, T, t))
+  | const_global_asserts ctxt cond (Abs (_, _, t))
     = const_global_asserts ctxt cond t
   | const_global_asserts _ _ _ = []
 
 fun guard_rewritable_globals const_cond ctxt =
   Pattern.rewrite_term @{theory} [hrs_htd_update_guard_rew2] []
   o Pattern.rewrite_term @{theory} [hrs_htd_update_guard_rew1] []
-  o com_rewrite (fn t => let
-    val cns = Term.add_const_names t [];
-  in (t, map (pair @{term C_Guard})
+  o com_rewrite (fn t => 
+     (t, map (pair @{term C_Guard})
         (case const_cond of SOME cond => const_global_asserts ctxt cond t
-                | NONE => []))
-  end)
+                | NONE => [])))
 
 val guard_htd_updates_with_domain = com_rewrite 
   (fn t => if fastype_of t = @{typ "globals myvars \<Rightarrow> globals myvars"}
@@ -323,11 +306,16 @@ val guard_htd_updates_with_domain = com_rewrite
               \<and> htd_safe domain (hrs_htd (t_hrs_' (globals (f s))))}"}, t))])
         else (t, []))
 
+val guard_halt = com_rewrite
+  (fn t => if t = @{term "halt_'proc"}
+    then (t, [(@{term DontReach}, @{term "{} :: globals myvars set"})])
+    else (t, []))
+
 end
 
 *}
 
-ML {* Modifies_Proofs.sorry_modifies_proofs := true *}
+ML {* Modifies_Proofs.sorry_modifies_proofs := true *} (* FIXME *)
 
 local_setup {*
 SubstituteSpecs.take_all_actions
@@ -336,11 +324,11 @@ SubstituteSpecs.take_all_actions
   (fn ctxt => fn s => guard_rewritable_globals NONE ctxt
     o (strengthen_c_guards ["memset_body", "memcpy_body", "memzero_body"]
           (Proof_Context.theory_of ctxt) s)
+    o guard_halt
     o guard_htd_updates_with_domain)
   @{term kernel_all_global_addresses.\<Gamma>}
   (CalculateState.get_csenv @{theory} "c/kernel_all.c_pp" |> the)
   [@{typ "globals myvars"}, @{typ int}, @{typ strictc_errortype}]
-  "kernel_all_substitute"
 *}
 
 end

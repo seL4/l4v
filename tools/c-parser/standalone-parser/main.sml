@@ -20,11 +20,12 @@ fun warn s = (TextIO.output(TextIO.stdErr, s^"\n");
 val execname = CommandLine.name
 
 fun usage() = die ("Usage: \n  "^execname()^
-                   " [-v<verboseness>] [-l<int>] [-I<include-dir>]* filename\n\
+                   " [--cpp=path|--nocpp] [-v<verboseness>] [-l<int>] [-I<include-dir>]* filename\n\
                    \Use -l to adjust error lookahead.  (The higher the number, the more the parser\n\
                    \will try to make sense of stuff with parse errors.)\n\
                    \\n\
-                   \Also, add any of the following for additional analyses:\n\
+                   \For no analyses at all (not even typechecking), add --rawsyntaxonly\n\
+                   \Alternatively, add any of the following for additional analyses:\n\
                    \  --addressed_vars\n\
                    \  --bogus_const\n\
                    \  --bogus_pure\n\
@@ -59,11 +60,10 @@ fun print_addressed_vars cse = let
   val _ = writeln (String.concat
                        (separate "\n   " (pfx1 :: map srcname globs)))
   val addressed = get_addressed cse
-  val addr_vars = Symtab.keys addressed
+  val addr_vars = map MString.dest (MSymTab.keys addressed)
   val pfx2 = "There are "^Int.toString (length addr_vars)^
              " addressed variables: "
-  val _ = writeln (String.concat
-                       (separate "\n   " (pfx2 :: addr_vars)))
+  val _ = writeln (String.concatWith "\n  " (pfx2 :: addr_vars))
 in
   ()
 end
@@ -147,7 +147,10 @@ fun print_unmodified_globals cse = let
 in
   writeln "Unmodifed, unaddressed globals:";
   writeln ("   " ^
-           commas (Symtab.keys (ProgramAnalysis.calc_untouched_globals cse)))
+           (cse |> ProgramAnalysis.calc_untouched_globals
+                |> MSymTab.keys
+                |> map MString.dest
+                |> commas))
 end
 
 val filename = ref ""
@@ -408,6 +411,9 @@ val verbosity = Feedback.verbosity_level
 fun add_analysis f = analyses := f :: !analyses
 fun add_cse_analysis f = analyses := (fn cse => fn ast => f cse) :: !analyses
 
+val cpp = ref (SOME "/usr/bin/cpp")
+val parse_only = ref false
+
 fun handler sopt =
     case sopt of
       ("h", _) => usage()
@@ -428,6 +434,7 @@ fun handler sopt =
     | ("addressed_vars", NONE) => add_cse_analysis print_addressed_vars
     | ("bogus_const", NONE) => add_cse_analysis print_bogus_consts
     | ("bogus_pure", NONE) => add_cse_analysis print_bogus_pures
+    | ("cpp", SOME v) => if v = "" then cpp := NONE else cpp := SOME v
     | ("embedded_fncalls", NONE) => add_cse_analysis print_embedded_fncalls
     | ("fnslocs", NONE) => add_analysis print_fnslocs
     | ("fnspecs", NONE) => add_cse_analysis print_fnspecs
@@ -435,6 +442,7 @@ fun handler sopt =
     | ("modifies", NONE) => add_cse_analysis print_modifies
     | ("nolinedirectives", NONE) =>
          (SourceFile.observe_line_directives := false)
+    | ("nocpp", NONE) => (cpp := NONE)
     | ("protoes", NONE) => add_cse_analysis print_protoes
     | ("reads", NONE) => add_cse_analysis print_reads
     | ("toposort", NONE) => add_cse_analysis produce_toposort
@@ -442,28 +450,48 @@ fun handler sopt =
     | ("unannotated_protoes", NONE) => add_cse_analysis print_unannotated_protoes
     | ("uncalledfns", NONE) => add_cse_analysis print_uncalledfns
     | ("unmodifiedglobs", NONE) => add_cse_analysis print_unmodified_globals
+    | ("rawsyntaxonly", NONE) => (parse_only := true)
     | _ => usage()
+
+fun docpp (SOME p) {includes, filename} =
+  let
+    val includes_string = String.concat (map (fn s => "-I\""^s^"\" ") includes)
+    open OS.FileSys OS.Process
+    val tmpname = tmpName()
+    val cmdline =
+        p ^ " " ^ includes_string ^ " -CC \"" ^ filename ^ "\" > " ^ tmpname
+  in
+    if isSuccess (system cmdline) then tmpname
+    else raise Feedback.WantToExit ("cpp failed on "^filename)
+  end
+  | docpp NONE {filename, ...} = filename
 
 fun doit args =
     case cmdline_options handler args of
       [] => usage()
-    | [fname] => let
-        val (ast,n) = StrictCParser.parse (!error_lookahead) (List.rev (!includes)) fname
-        val ((ast', inits), cse) = ProgramAnalysis.process_decls
-                                       {anon_vars = false, owners = [],
-                                        allow_underscore_idents = false}
-                                       (SyntaxTransforms.remove_typedefs ast)
-        val _ = filename := fname
-        fun do_analyses alist =
-            case alist of
-              [] => exit (if !Feedback.numErrors = 0 then success else failure)
-            | f::fs => let
-                val () = f cse ast'
-              in
-                do_analyses fs
-              end
+    | [fname] =>
+      let
+        val (ast,n) = StrictCParser.parse (docpp (!cpp)) (!error_lookahead) (List.rev (!includes)) fname
       in
-        do_analyses (List.rev (!analyses))
+        if !parse_only then ()
+        else
+          let
+            val ((ast', inits), cse) = ProgramAnalysis.process_decls
+                                           {anon_vars = false, owners = [],
+                                            allow_underscore_idents = false}
+                                           (SyntaxTransforms.remove_typedefs ast)
+            val _ = filename := fname
+            fun do_analyses alist =
+                case alist of
+                  [] => exit (if !Feedback.numErrors = 0 then success else failure)
+                | f::fs => let
+                    val () = f cse ast'
+                  in
+                    do_analyses fs
+                  end
+          in
+            do_analyses (List.rev (!analyses))
+          end
       end
     | _ => usage()
 

@@ -9,11 +9,9 @@
  *)
 
 theory VSpace_C
-imports TcbAcc_C CSpace_C PSpace_C
+imports TcbAcc_C CSpace_C PSpace_C TcbQueue_C
 begin
 
-
-declare empty_fail_error_bits[simp]
 
 (* FIXME: move *)
 lemma empty_fail_findPDForASID[iff]:
@@ -35,6 +33,7 @@ lemma empty_fail_findPDForASIDAssert[iff]:
   apply (intro empty_fail_bind, simp_all split: sum.split)
   done
 
+(* FIXME: move *)
 lemma mask_AND_less_0:
   "\<lbrakk>x && mask n = 0; m \<le> n\<rbrakk> \<Longrightarrow> x && mask m = 0"
   apply (case_tac "len_of TYPE('a) \<le> n")
@@ -96,7 +95,6 @@ proof -
   done
 qed
 
-declare word_neq_0_conv [simp del]
 
 lemma rf_asidTable:
   "\<lbrakk> (\<sigma>, x) \<in> rf_sr; valid_arch_state' \<sigma>; idx \<le> mask asid_high_bits \<rbrakk>
@@ -160,7 +158,7 @@ lemma asid_high_bits_word_bits:
 lemma rf_sr_asid_map_pd_to_hwasids:
   "(s, s') \<in> rf_sr \<Longrightarrow>
    asid_map_pd_to_hwasids (armKSASIDMap (ksArchState s))
-       = Option.set \<circ> (pde_stored_asid \<circ>\<^sub>m cslift s' \<circ>\<^sub>m pd_pointer_to_asid_slot)"
+       = set_option \<circ> (pde_stored_asid \<circ>\<^sub>m cslift s' \<circ>\<^sub>m pd_pointer_to_asid_slot)"
   by (simp add: rf_sr_def cstate_relation_def Let_def
                 carch_state_relation_def)
 
@@ -533,7 +531,7 @@ lemma rf_sr_asidTable_None:
   apply (erule_tac x="asid >> asid_low_bits" in allE)
   apply (erule impE)
    prefer 2
-   apply (drule sym [where t="index a b", standard])
+   apply (drule sym [where t="index a b" for a b])
    apply (simp add: option_to_0_def option_to_ptr_def split: option.splits)
    apply (clarsimp simp: valid_arch_state'_def valid_asid_table'_def ran_def)
   apply (simp add: and_mask_eq_iff_le_mask)
@@ -877,10 +875,12 @@ lemma cap_case_isPageDirectoryCap:
                 | _ => g)
     = (if ( if (isArchObjectCap cap) then if (isPageDirectoryCap (capCap cap)) then capPDMappedASID (capCap cap) \<noteq> None else False else False)
                 then fn (capPDBasePtr (capCap cap)) (the ( capPDMappedASID (capCap cap))) else g)"
-  apply (cases cap, simp_all add: isArchObjectCap_def)
+  apply (cases cap; simp add: isArchObjectCap_def)
+  apply (rename_tac arch_capability)
   apply (case_tac arch_capability, simp_all add: isPageDirectoryCap_def)
-  apply (case_tac option, simp_all)
-done
+  apply (rename_tac option)
+  apply (case_tac option; simp)
+  done
 
 (* FIXME: MOVE to CSpaceAcc_C *)
 lemma ccorres_pre_gets_armKSASIDTable_ksArchState:
@@ -937,6 +937,7 @@ lemma ccorres_pre_getObject_asidpool:
   apply simp
   done 
 
+(* FIXME: move *)
 lemma ccorres_from_vcg_throws_nofail:
   "\<forall>\<sigma>. \<Gamma>\<turnstile> {s. P \<sigma> \<and> s \<in> P' \<and> (\<sigma>, s) \<in> srel} c {},
   {s. \<not>snd (a \<sigma>) \<longrightarrow> (\<exists>(rv, \<sigma>')\<in>fst (a \<sigma>). (\<sigma>', s) \<in> srel \<and> arrel rv (axf s))} \<Longrightarrow>
@@ -1016,7 +1017,7 @@ lemma findPDForASID_ccorres:
       apply (case_tac "asidTable (ucast (asid_high_bits_of asid))", clarsimp, clarsimp) 
 
      apply simp
-     apply (thin_tac "?a = (if ?b then ?c else ?d)")
+     apply (thin_tac "a = (if b then c else d)" for a b c d)
 
      apply (rule_tac Q="\<lambda>s. asidTable = (armKSASIDTable (ksArchState s))\<and> valid_arch_state' s \<and> no_0_obj' s \<and> (asid \<le> mask asid_bits) " 
                  and Q'="\<lambda>s'. option_to_ptr (asidTable (ucast (asid_high_bits_of asid))) = 
@@ -1061,6 +1062,7 @@ lemma findPDForASID_ccorres:
       apply (simp add: array_relation_def)
       apply (erule_tac x="(asid && 2 ^ asid_low_bits - 1)" in allE)
       apply (simp add: word_and_le1 mask_def option_to_ptr_def option_to_0_def)
+      apply (rename_tac "fun" array)
       apply (case_tac "fun (asid && 2 ^ asid_low_bits - 1)", clarsimp)
        apply (clarsimp simp: throwError_def  return_def )
        apply (clarsimp simp: EXCEPTION_NONE_def EXCEPTION_LOOKUP_FAULT_def)
@@ -1082,7 +1084,6 @@ lemma findPDForASID_ccorres:
 done
 
 
-(* FIXME: no need to specify type of Ptr?  *)
 lemma ccorres_pre_gets_armKSGlobalPD_ksArchState:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
   shows   "ccorres r xf 
@@ -1115,7 +1116,7 @@ lemma flushSpace_ccorres:
    apply (ctac (no_vcg) add: loadHWASID_ccorres)
     apply (ctac (no_vcg) add: cleanCaches_PoU_ccorres)
      apply csymbr
-     apply (simp add: option_case_If2)
+     apply (simp add: case_option_If2)
      apply (rule_tac Q=\<top> and Q'=\<top> in ccorres_if_cond_throws2)
         apply (clarsimp simp: Collect_const_mem pde_stored_asid_def)
         apply (simp add: split_if_eq1 to_bool_def)
@@ -1264,7 +1265,7 @@ lemma findFreeHWASID_ccorres:
    apply csymbr
    apply (rule ccorres_pre_gets_armKSHWASIDTable_ksArchState)
    apply (rule ccorres_pre_gets_armKSNextASID_ksArchState)
-   apply (simp add: whileAnno_def option_case_find_give_me_a_map
+   apply (simp add: whileAnno_def case_option_find_give_me_a_map
                     mapME_def 
                del: Collect_const map_append)
    apply (rule ccorres_splitE_novcg)
@@ -1315,9 +1316,9 @@ lemma findFreeHWASID_ccorres:
        apply (simp add: minBound_word init_def maxBound_word minus_one_norm)
        apply (simp add: upto_enum_word)
        apply (rule nth_equalityI)
-        apply (simp add: min_max.inf_absorb2
+        apply (simp add: min.absorb2
                     del: upt.simps)
-       apply (simp add: min_max.inf_absorb2
+       apply (simp add: min.absorb2
                    del: upt.simps)
        apply (simp add: nth_append
                  split: split_if)
@@ -1430,15 +1431,30 @@ lemma getHWASID_ccorres:
   apply (auto simp: all_invs_but_ct_idle_or_in_cur_domain'_def)
   done
 
-lemma setCurrentASID_ccorres:
+lemma armv_contextSwitch_HWASID_ccorres:
+  "ccorres dc xfdc \<top> (UNIV \<inter> {s. cap_pd_' s = pde_Ptr pd} \<inter> {s. hw_asid_' s = hwasid}) []
+     (doMachineOp (armv_contextSwitch_HWASID pd hwasid)) (Call armv_contextSwitch_HWASID_'proc)"
+  apply (cinit' lift: cap_pd_' hw_asid_')
+   apply (simp add: armv_contextSwitch_HWASID_def doMachineOp_bind setCurrentPD_empty_fail 
+                    setHardwareASID_empty_fail )
+   apply csymbr
+   apply (ctac (no_vcg) add: setCurrentPD_ccorres)
+    apply (fold dc_def)
+    apply (ctac (no_vcg) add: setHardwareASID_ccorres)
+   apply wp
+  apply clarsimp
+  done
+ 
+
+lemma armv_contextSwitch_ccorres:
   "ccorres dc xfdc (all_invs_but_ct_idle_or_in_cur_domain' and (\<lambda>s. asid \<le> mask asid_bits))
-                   (UNIV \<inter> {s. asid_' s = asid}) []
-       (setCurrentASID asid) (Call setCurrentASID_'proc)"
-  apply (cinit lift: asid_')
+                   (UNIV \<inter> {s. cap_pd_' s =  pde_Ptr pd} \<inter> {s. asid_' s = asid} ) []
+       (armv_contextSwitch pd asid) (Call armv_contextSwitch_'proc)"
+  apply (cinit lift: cap_pd_' asid_')
    apply simp
    apply (ctac(no_vcg) add: getHWASID_ccorres)
     apply (fold dc_def)
-    apply (ctac add: setHardwareASID_ccorres)
+    apply (ctac (no_vcg)add: armv_contextSwitch_HWASID_ccorres)
    apply wp
   apply clarsimp
   done
@@ -1452,14 +1468,9 @@ lemma ptr_val_tcb_ptr_mask:
   apply (simp add: is_aligned_add_helper ctcb_offset_def objBits_simps)
   done
 
-(* FIXME: move *)
-
-
-
 lemmas ptr_val_tcb_ptr_mask'
     = ptr_val_tcb_ptr_mask[unfolded mask_def, simplified]
 
-(* FIME: adding h_t_valid of armKSGlobal into state_relation *)
 lemma ccorres_h_t_valid_armKSGlobalPD:
   "ccorres r xf P P' hs f (f' ;; g') \<Longrightarrow>
    ccorres r xf P P' hs f 
@@ -1472,24 +1483,6 @@ lemma ccorres_h_t_valid_armKSGlobalPD:
    apply simp
   apply (simp add:rf_sr_def cstate_relation_def Let_def)
   done
-
-(* FIXME: This may not be required.
-
-lemma armv_contextSwitch_ccorres:
-  "ccorres dc xfdc (invs' and K (asid \<le> mask asid_bits))
-          (UNIV \<inter> {s. cap_pd_' s = pde_Ptr (Hardware_H.ptrFromPAddr pd)} \<inter> {s. asid_' s = asid}) []
-        (do x \<leftarrow> doMachineOp (setCurrentPD pd);
-                setCurrentASID asid
-             od)
-        (Call armv_contextSwitch_'proc)"
-  apply (cinit' lift: cap_pd_' asid_')
-   apply (simp only: ) 
-   apply csymbr
-   apply (ctac(no_vcg) add: setCurrentPD_ccorres)
-    apply (ctac add: setCurrentASID_ccorres)
-   apply (wp dmo_setCurrentPD_invs')
-  apply (simp add: Collect_const_mem)
-  done *)
 
 lemma setVMRoot_ccorres:
   "ccorres dc xfdc (all_invs_but_ct_idle_or_in_cur_domain' and tcb_at' thread) (UNIV \<inter> {s. tcb_' s = tcb_ptr_to_ctcb_ptr thread}) []
@@ -1545,7 +1538,7 @@ lemma setVMRoot_ccorres:
 
      apply (rule_tac f'=lookup_failure_rel and r'="\<lambda>pdeptrc pdeptr. pdeptr = pde_Ptr pdeptrc" 
                  and xf'=find_ret_'
-                 in ccorres_split_nothrow_sum_case)
+                 in ccorres_split_nothrow_case_sum)
           apply (ctac add: findPDForASID_ccorres)
          apply ceqv
         apply (rule_tac P="capPDBasePtr_CL (cap_page_directory_cap_lift threadRoot)
@@ -1567,26 +1560,7 @@ lemma setVMRoot_ccorres:
           apply vcg
          apply wp
         apply (simp add: whenE_def returnOk_def)
-        apply (unfold armv_contextSwitch_def)
-        apply (rule ccorres_call)
-           apply (rule ccorres_Call)
-            apply (rule armv_contextSwitch_impl [unfolded armv_contextSwitch_body_def])
-           apply simp
-           apply (rule ccorres_rhs_assoc)
-           apply (rule ccorres_symb_exec_r)
-             apply (ctac(no_vcg) add: setCurrentPD_ccorres)
-              apply (ctac add: setCurrentASID_ccorres[unfolded dc_def])
-             apply (wp dmo_setCurrentPD_invs_no_cicd')
-            apply simp
-            apply vcg
-           apply simp
-           apply (rule conseqPre)
-            apply vcg
-           apply (rule subsetI)
-           apply simp
-          apply simp
-         apply simp
-        apply simp
+        apply (ctac add: armv_contextSwitch_ccorres[unfolded dc_def])
        apply (simp add: checkPDNotInASIDMap_def checkPDASIDMapMembership_def)
        apply (rule ccorres_stateAssert)
        apply (rule ccorres_rhs_assoc)+
@@ -1662,33 +1636,8 @@ lemma setVMRootForFlush_ccorres:
             rule ccorres_rhs_assoc2,
             rule ccorres_symb_exec_r)
        apply simp
-       apply (subst bind_assoc[symmetric])
-       apply (rule ccorres_split_nothrow_call_novcg)
-             apply (rule ccorres_Call)
-              apply (rule armv_contextSwitch_impl[unfolded armv_contextSwitch_body_def])
-             apply simp
-             apply (rule ccorres_rhs_assoc)
-             apply (rule ccorres_symb_exec_r)
-               apply simp
-               apply (ctac(no_vcg) add:setCurrentPD_ccorres)
-                apply (rule ccorres_call)
-                   apply (ctac(no_vcg) add: setCurrentASID_ccorres)
-                  apply simp
-                 unfolding xfdc_def apply simp
-                apply simp
-               apply (wp dmo_setCurrentPD_invs_no_cicd')
-              apply simp
-              apply vcg
-             apply simp
-             apply (rule conseqPre)
-              apply vcg
-             apply (rule subsetI)
-             apply simp
-            apply simp
-           apply simp
-          apply simp
-         apply ceqv
-        apply (ctac add:ccorres_return_C)
+       apply (ctac (no_vcg)add: armv_contextSwitch_ccorres)
+        apply (ctac add: ccorres_return_C)
        apply wp
       apply (simp add: true_def from_bool_def)
       apply vcg
@@ -1744,7 +1693,7 @@ lemma framesize_from_H_mask:
 lemma dmo_invalidateCacheRange_RAM_invs'[wp]:
   "valid invs' (doMachineOp (invalidateCacheRange_RAM vs ve ps)) (\<lambda>rv. invs')"
   apply (wp dmo_invs' no_irq_invalidateCacheRange_RAM)
-  apply (clarsimp simp: disj_commute[of "pointerInUserData p s", standard])
+  apply (clarsimp simp: disj_commute[of "pointerInUserData p s" for p s])
   apply (erule use_valid)
    apply (wp, simp)
   done
@@ -1770,47 +1719,61 @@ definition
   | ArchRetypeDecls_H.flush_type.Unify \<Rightarrow> (label = Kernel_C.ARMPageUnify_Instruction \<or> label = Kernel_C.ARMPDUnify_Instruction)"
 
 lemma doFlush_ccorres:
-  "ccorres dc xfdc (\<lambda>_. vs \<le> ve \<and> ps \<le> ps + (ve - vs) \<and> vs && mask 5 = ps && mask 5)
+  "ccorres dc xfdc (\<lambda>s. vs \<le> ve \<and> ps \<le> ps + (ve - vs) \<and> vs && mask 5 = ps && mask 5
+        \<and> unat (ve - vs) \<le> gsMaxObjectSize s)
      (\<lbrace>flushtype_relation t \<acute>label___int\<rbrace> \<inter> \<lbrace>\<acute>start = vs\<rbrace> \<inter> \<lbrace>\<acute>end = ve\<rbrace> \<inter> \<lbrace>\<acute>pstart = ps\<rbrace>) []
      (doMachineOp (doFlush t vs ve ps)) (Call doFlush_'proc)" 
   apply (cinit' lift: label___int_' start_' end_' pstart_')
-  apply (unfold doMachineOp_bind doFlush_def)
-   apply (simp only: dmo_flushtype_case)
-   apply wpc
+   apply (unfold doMachineOp_bind doFlush_def)
+   apply (rule ccorres_Guard_Seq)
+   apply (rule ccorres_basic_srnoop)
+     apply (simp only: dmo_flushtype_case)
+     apply wpc
+        apply (rule ccorres_cond_true)
+        apply (ctac (no_vcg) add: cleanCacheRange_RAM_ccorres)
+       apply (rule ccorres_cond_false)
+       apply (rule ccorres_cond_true)
+       apply (ctac (no_vcg) add: invalidateCacheRange_RAM_ccorres)
+      apply (rule ccorres_cond_false)
+      apply (rule ccorres_cond_false)
       apply (rule ccorres_cond_true)
-      apply (ctac (no_vcg) add: cleanCacheRange_RAM_ccorres)
+      apply (ctac (no_vcg) add: cleanInvalidateCacheRange_RAM_ccorres)
+      apply (rule ccorres_cond_false)
+     apply (rule ccorres_cond_false)
      apply (rule ccorres_cond_false)
      apply (rule ccorres_cond_true)
-     apply (ctac (no_vcg) add: invalidateCacheRange_RAM_ccorres)
-    apply (rule ccorres_cond_false)
-    apply (rule ccorres_cond_false)
-    apply (rule ccorres_cond_true)
-    apply (ctac (no_vcg) add: cleanInvalidateCacheRange_RAM_ccorres)
-   apply (rule ccorres_cond_false)
-   apply (rule ccorres_cond_false)
-   apply (rule ccorres_cond_false)
-   apply (rule ccorres_cond_true)
-   apply (simp add: empty_fail_cleanCacheRange_PoU empty_fail_dsb empty_fail_invalidateCacheRange_I empty_fail_branchFlushRange empty_fail_isb doMachineOp_bind)
-   apply (rule ccorres_rhs_assoc)+
-   apply (fold dc_def)
-   apply (ctac (no_vcg) add: cleanCacheRange_PoU_ccorres)
-    apply (ctac (no_vcg) add: dsb_ccorres)
-     apply (ctac (no_vcg) add: invalidateCacheRange_I_ccorres)
-      apply (ctac (no_vcg) add: branchFlushRange_ccorres)
-       apply (ctac (no_vcg) add: isb_ccorres)
-      apply wp
-  apply (auto simp: flushtype_relation_def 
+     apply (simp add: empty_fail_cleanCacheRange_PoU empty_fail_dsb empty_fail_invalidateCacheRange_I empty_fail_branchFlushRange empty_fail_isb doMachineOp_bind)
+     apply (rule ccorres_rhs_assoc)+
+     apply (fold dc_def)
+     apply (ctac (no_vcg) add: cleanCacheRange_PoU_ccorres)
+      apply (ctac (no_vcg) add: dsb_ccorres)
+       apply (ctac (no_vcg) add: invalidateCacheRange_I_ccorres)
+        apply (ctac (no_vcg) add: branchFlushRange_ccorres)
+         apply (ctac (no_vcg) add: isb_ccorres)
+        apply wp
+    apply simp
+   apply (clarsimp simp: Collect_const_mem)
+  apply (auto simp: flushtype_relation_def o_def
                         Kernel_C.ARMPageClean_Data_def Kernel_C.ARMPDClean_Data_def
                         Kernel_C.ARMPageInvalidate_Data_def Kernel_C.ARMPDInvalidate_Data_def
                         Kernel_C.ARMPageCleanInvalidate_Data_def Kernel_C.ARMPDCleanInvalidate_Data_def
                         Kernel_C.ARMPageUnify_Instruction_def Kernel_C.ARMPDUnify_Instruction_def
+                  dest: ghost_assertion_size_logic[rotated]
                  split: ArchRetypeDecls_H.flush_type.splits)
   done
+
+end
+
+crunch gsMaxObjectSize[wp]: setVMRootForFlush "\<lambda>s. P (gsMaxObjectSize s)"
+  (wp: crunch_wps)
+
+context kernel_m begin
 
 lemma performPageFlush_ccorres:
   "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
        (invs' and K (asid \<le> mask asid_bits)
-              and (\<lambda>_. ps \<le> ps + (ve - vs) \<and> vs && mask 5 = ps && mask 5))
+              and (\<lambda>s. ps \<le> ps + (ve - vs) \<and> vs && mask 5 = ps && mask 5
+                  \<and> unat (ve - vs) \<le> gsMaxObjectSize s))
        (\<lbrace>\<acute>pd = Ptr pd\<rbrace> \<inter> \<lbrace>\<acute>asid = asid\<rbrace> \<inter> 
                \<lbrace>\<acute>start = vs\<rbrace> \<inter> \<lbrace>\<acute>end =  ve\<rbrace> \<inter> \<lbrace>\<acute>pstart = ps\<rbrace> \<inter> \<lbrace>flushtype_relation typ \<acute>label___int \<rbrace>)
        []
@@ -1848,10 +1811,161 @@ lemma performPageFlush_ccorres:
   apply (clarsimp simp: order_less_imp_le)
   done
 
+lemma length_of_msgRegisters:
+  "length State_H.msgRegisters = 4"
+  by (auto simp: State_H.msgRegisters_def msgRegisters_unfold)
+
+
+(* FIXME: move *)
+lemma register_from_H_bound[simp]:
+  "unat (register_from_H v) < 18"
+  by (cases v, simp_all add: "StrictC'_register_defs")
+
+(* FIXME: move *)
+lemma register_from_H_inj:
+  "inj register_from_H"
+  apply (rule inj_onI)
+  apply (case_tac x)
+  apply (case_tac y, simp_all add: "StrictC'_register_defs")+
+  done
+
+(* FIXME: move *)
+lemmas register_from_H_eq_iff[simp]
+    = inj_on_iff [OF register_from_H_inj, simplified]
+
+
+lemma setRegister_ccorres:
+  "ccorres dc xfdc \<top>
+       (UNIV \<inter> \<lbrace>\<acute>thread = tcb_ptr_to_ctcb_ptr thread\<rbrace> \<inter> \<lbrace>\<acute>reg = register_from_H reg\<rbrace>
+             \<inter> {s. w_' s = val}) []
+       (asUser thread (setRegister reg val))
+       (Call setRegister_'proc)"
+  apply (cinit' lift: thread_' reg_' w_')
+   apply (simp add: asUser_def dc_def[symmetric] split_def split del: split_if)
+   apply (rule ccorres_pre_threadGet)
+   apply (rule ccorres_Guard)
+   apply (simp add: setRegister_def simpler_modify_def exec_select_f_singleton)
+   apply (rule_tac P="\<lambda>tcb. tcbContext tcb = rv"
+                in threadSet_ccorres_lemma2 [unfolded dc_def])
+    apply vcg
+   apply (clarsimp simp: setRegister_def HaskellLib_H.runState_def
+                         simpler_modify_def typ_heap_simps)
+   apply (subst StateSpace.state.fold_congs[OF refl refl])
+    apply (rule globals.fold_congs[OF refl refl])
+    apply (rule heap_update_field_hrs, simp)
+     apply (fastforce intro: typ_heap_simps)
+    apply simp
+   apply (erule(1) rf_sr_tcb_update_no_queue2,
+               (simp add: typ_heap_simps)+)
+    apply (rule ball_tcb_cte_casesI, simp+)
+   apply (clarsimp simp: ctcb_relation_def ccontext_relation_def
+                  split: split_if)
+  apply (clarsimp simp: Collect_const_mem register_from_H_sless
+                        register_from_H_less)
+  apply (auto intro: typ_heap_simps elim: obj_at'_weakenE)
+  done
+
+lemma wordFromMessageInfo_spec:
+  defines "mil s \<equiv> message_info_lift \<^bsup>s\<^esup>mi"
+  shows "\<forall>s. \<Gamma> \<turnstile> {s} Call wordFromMessageInfo_'proc
+                  \<lbrace>\<acute>ret__unsigned_long = (msgLabel_CL (mil s) << 12)
+                                      || (msgCapsUnwrapped_CL (mil s) << 9)
+                                      || (msgExtraCaps_CL (mil s) << 7)
+                                      || msgLength_CL (mil s)\<rbrace>"
+  unfolding mil_def
+  apply vcg
+  apply (simp add: message_info_lift_def mask_shift_simps word_sless_def word_sle_def)
+  apply word_bitwise
+  done
+
+lemmas wordFromMessageInfo_spec2 = wordFromMessageInfo_spec
+
+lemma wordFromMessageInfo_ccorres [corres]:
+  "\<And>mi. ccorres (op =) ret__unsigned_long_' \<top> {s. mi = message_info_to_H (mi_' s)} []
+           (return (wordFromMessageInfo mi)) (Call wordFromMessageInfo_'proc)"
+  apply (rule ccorres_from_spec_modifies [where P = \<top>, simplified])
+     apply (rule wordFromMessageInfo_spec)
+    apply (rule wordFromMessageInfo_modifies)
+   apply simp
+  apply simp
+  apply (simp add: return_def wordFromMessageInfo_def Let_def message_info_to_H_def 
+    Types_H.msgLengthBits_def Types_H.msgExtraCapBits_def
+    Types_H.msgMaxExtraCaps_def shiftL_nat word_bw_assocs word_bw_comms word_bw_lcs)
+  done
+
+(* FIXME move *)
+lemma unat_register_from_H_range:
+  "unat (register_from_H r) < 18"
+  by (case_tac r, simp_all add: C_register_defs)
+
+(* FIXME move *)
+lemma register_from_H_eq:
+  "(r = r') = (register_from_H r = register_from_H r')"
+  apply (case_tac r, simp_all add: C_register_defs)
+                   apply (case_tac r', simp_all add: C_register_defs)+
+  done
+
+lemma setMessageInfo_ccorres:
+  "ccorres dc xfdc (tcb_at' thread)
+           (UNIV \<inter> \<lbrace>mi = message_info_to_H mi'\<rbrace>) hs
+           (setMessageInfo thread mi)
+           (\<acute>ret__unsigned_long :== CALL wordFromMessageInfo(mi');;
+            CALL setRegister(tcb_ptr_to_ctcb_ptr thread, scast Kernel_C.msgInfoRegister, \<acute>ret__unsigned_long))"
+  unfolding setMessageInfo_def
+  apply (rule ccorres_guard_imp2)
+   apply ctac
+     apply simp
+     apply (ctac add: setRegister_ccorres)
+    apply wp
+   apply vcg
+  apply (simp add: State_H.msgInfoRegister_def ARMMachineTypes.msgInfoRegister_def
+                   Kernel_C.msgInfoRegister_def Kernel_C.R1_def)
+  done
+
+lemma performPageGetAddress_ccorres:
+  "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
+      \<top>
+      (UNIV \<inter> {s. vbase_ptr_' s = Ptr ptr}) []
+      (liftE (performPageInvocation (PageGetAddr ptr)))
+      (Call performPageGetAddress_'proc)"
+  apply (simp only: liftE_liftM ccorres_liftM_simp)
+  apply (cinit lift: vbase_ptr_')
+   apply csymbr
+   apply (rule ccorres_pre_getCurThread)
+   apply (clarsimp simp add: setMRs_def zipWithM_x_mapM_x mapM_x_Nil length_of_msgRegisters zip_singleton msgRegisters_unfold mapM_x_singleton)
+   apply (rule ccorres_Guard_Seq)+
+   apply (ctac add: setRegister_ccorres)
+     apply csymbr
+     apply (rule ccorres_add_return2)
+     apply (rule ccorres_rhs_assoc2)
+     apply (rule ccorres_split_nothrow_novcg[where r'=dc and xf'=xfdc])
+         apply (unfold setMessageInfo_def)
+         apply ctac
+           apply (simp only: fun_app_def)
+           apply (ctac add: setRegister_ccorres)
+          apply wp
+         apply vcg
+        apply ceqv
+       apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg_throws)
+        apply (rule allI, rule conseqPre, vcg)
+        apply (clarsimp simp: return_def)
+      apply wp
+     apply (simp add: guard_is_UNIV_def)
+    apply wp
+   apply vcg
+  apply (auto simp: Hardware_H.fromPAddr_def message_info_to_H_def mask_def State_H.msgInfoRegister_def
+                    ARMMachineTypes.msgInfoRegister_def Kernel_C.msgInfoRegister_def Kernel_C.R1_def 
+                    word_sle_def word_sless_def Kernel_C.R2_def 
+                    kernel_all_global_addresses.msgRegisters_def fupdate_def Arrays.update_def 
+                    fcp_beta)
+  done
+  
+
 lemma performPageDirectoryInvocationFlush_ccorres:
   "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
        (invs' and K (asid \<le> mask asid_bits)
-              and (\<lambda>_. ps \<le> ps + (ve - vs) \<and> vs && mask 5 = ps && mask 5))
+              and (\<lambda>s. ps \<le> ps + (ve - vs) \<and> vs && mask 5 = ps && mask 5
+                  \<and> unat (ve - vs) \<le> gsMaxObjectSize s))
        (\<lbrace>\<acute>pd = Ptr pd\<rbrace> \<inter> \<lbrace>\<acute>asid = asid\<rbrace> \<inter> 
                \<lbrace>\<acute>start = vs\<rbrace> \<inter> \<lbrace>\<acute>end =  ve\<rbrace> \<inter> \<lbrace>\<acute>pstart = ps\<rbrace> \<inter> \<lbrace>flushtype_relation typ \<acute>label___int \<rbrace>)
        []
@@ -1965,53 +2079,6 @@ lemma ccorres_pre_getObject_pte:
   apply simp
   done
 
-(*
-lemma checkMappingPPtr_ccorres:
-  "ccorres (K dc \<currency> dc) (liftxf errstate (from_bool \<circ> Not \<circ> to_bool) (K ()) ret__int_')
-         no_0_obj'
-        (UNIV \<inter> {s. pteptr_' s = (case tabPtr of Inl ptr' \<Rightarrow> Ptr ptr' | _ \<Rightarrow> NULL)}
-              \<inter> {s. pdeptr_' s = (case tabPtr of Inr ptr' \<Rightarrow> Ptr ptr' | _ \<Rightarrow> NULL)}
-              \<inter> {s. pptr_' s = Ptr ptr}) []
-      (checkMappingPPtr ptr tabPtr) (Call checkMappingPPtr_'proc)"
-  apply (cinit lift: pteptr_' pdeptr_' pptr_')
-   apply csymbr
-   apply wpc
-    apply (simp add: liftE_bindE del: Collect_const)
-    apply (rule ccorres_pre_getObject_pte)
-    apply (rule_tac P="tabPtr \<noteq> Inl 0" in ccorres_gen_asm)
-    apply simp
-    apply (rule_tac P="\<top>"
-               and P'="{s. \<exists>rv'. cslift s (Ptr (theLeft tabPtr)) = Some rv'
-                            \<and> cpte_relation rv rv'}"
-                in ccorres_from_vcg_split_throws)
-     apply vcg
-    apply (rule conseqPre, vcg)
-    apply (clarsimp simp: typ_heap_simps')
-    apply (auto simp: cpte_relation_def Let_def pte_lift_def pte_tag_defs
-                      throwError_def return_def from_bool_def exception_defs
-                      unlessE_def returnOk_def pte_pte_large_lift_def
-                      pte_pte_small_lift_def
-               split: Hardware_H.pte.split_asm split_if_asm split_if)[1]
-   apply (simp add: liftE_bindE Collect_False del: Collect_const)
-   apply (rule ccorres_pre_getObject_pde)
-   apply (rule_tac P="tabPtr \<noteq> Inr 0" in ccorres_gen_asm)
-   apply simp
-   apply (rule_tac P="\<top>"
-              and P'="{s. \<exists>rv'. cslift s (Ptr (theRight tabPtr)) = Some rv'
-                           \<and> cpde_relation rv rv'}"
-               in ccorres_from_vcg_split_throws)
-    apply vcg
-   apply (rule conseqPre, vcg)
-   apply (clarsimp simp: typ_heap_simps')
-   apply (simp add: cpde_relation_def Let_def pde_lift_def pde_tag_defs
-                     throwError_def return_def from_bool_def exception_defs
-                     unlessE_def returnOk_def pde_pde_section_lift_def
-              split: Hardware_H.pde.split_asm split_if_asm split_if)[1]
-  apply (clarsimp simp: Collect_const_mem typ_heap_simps')
-  apply auto
-  done
-*)
-
 lemmas unfold_checkMapping_return
     = from_bool_0[where 'a=32, folded exception_defs]
       to_bool_def
@@ -2043,7 +2110,7 @@ lemma checkMappingPPtr_pte_ccorres:
       apply (rule stronger_ccorres_guard_imp)
         apply (rule ccorres_from_vcg_might_throw[where P=\<top>])
         apply (rule allI)
-        apply (rule conseqPost, rule conseqPre, rule_tac \<sigma>=\<sigma> and pte=rv in pre)
+        apply (rule conseqPost, rule conseqPre, rule_tac \<sigma>1=\<sigma> and pte1=rv in pre)
           apply clarsimp
           apply (erule CollectE, assumption)
          apply (auto simp: in_monad Bex_def isSmallPagePTE_def isLargePagePTE_def
@@ -2078,7 +2145,7 @@ lemma checkMappingPPtr_pde_ccorres:
       apply (rule stronger_ccorres_guard_imp)
         apply (rule ccorres_from_vcg_might_throw[where P=\<top>])
         apply (rule allI)
-        apply (rule conseqPost, rule conseqPre, rule_tac \<sigma>=\<sigma> and pde=rv in pre)
+        apply (rule conseqPost, rule conseqPre, rule_tac \<sigma>1=\<sigma> and pde1=rv in pre)
           apply clarsimp
           apply (erule CollectE, assumption)
          apply (auto simp: in_monad Bex_def isSectionPDE_def isSuperSectionPDE_def
@@ -2113,9 +2180,29 @@ lemma is_aligned_cache_preconds:
   apply (drule_tac x=6 and y=5 in is_aligned_weaken, simp)+
   apply (simp add: is_aligned_mask)
   done
-    
+
+lemma pte_pte_invalid_new_spec:
+  "\<forall>s. \<Gamma> \<turnstile> {s}
+       \<acute>ret__struct_pte_C :== PROC pte_pte_invalid_new()
+       \<lbrace> pte_lift \<acute>ret__struct_pte_C = Some (Pte_pte_large
+          \<lparr> pte_pte_large_CL.address_CL = 0,
+             XN_CL = 0,
+             TEX_CL = 0,
+              nG_CL = 0,
+              S_CL = 0,
+              APX_CL = 0,
+              AP_CL = 0,
+              C_CL = 0,
+              B_CL = 0,
+              reserved_CL = 0
+          \<rparr>)\<rbrace>"
+  apply vcg
+  apply (clarsimp simp: pte_lift_def pte_get_tag_def pte_pte_large_def fupdate_def)
+  done
+
 lemma unmapPage_ccorres:
-  "ccorres dc xfdc (invs' and (\<lambda>_. asid \<le> mask asid_bits \<and> vmsz_aligned' vptr sz
+  "ccorres dc xfdc (invs' and (\<lambda>s. 2 ^ pageBitsForSize sz \<le> gsMaxObjectSize s)
+                          and (\<lambda>_. asid \<le> mask asid_bits \<and> vmsz_aligned' vptr sz
                                            \<and> vptr < kernelBase))
       (UNIV \<inter> {s. gen_framesize_to_H (page_size_' s) = sz \<and> page_size_' s < 4}
             \<inter> {s. asid_' s = asid} \<inter> {s. vptr_' s = vptr} \<inter> {s. pptr_' s = Ptr pptr}) []
@@ -2145,7 +2232,7 @@ lemma unmapPage_ccorres:
                   apply (clarsimp simp: typ_heap_simps')
                   apply (simp add: cpte_relation_def Let_def pte_lift_def
                                 isSmallPagePTE_def pte_tag_defs
-                                pte_pte_small_lift_def
+                                pte_pte_small_lift_def pte_pte_invalid_def
                          split: split_if_asm pte.split_asm)
                  apply (rule ceqv_refl)
                 apply (simp add: unfold_checkMapping_return liftE_liftM
@@ -2155,8 +2242,7 @@ lemma unmapPage_ccorres:
                 apply csymbr
                 apply (rule ccorres_split_nothrow_novcg_dc)
                    apply (rule storePTE_Basic_ccorres)
-                   apply (simp add: cpte_relation_def Let_def
-                                 pte_lift_pte_invalid)
+                   apply (simp add: cpte_relation_def Let_def)
                   apply csymbr
                   apply simp
                   apply (ctac add: cleanByVA_PoU_ccorres[unfolded dc_def])
@@ -2187,7 +2273,7 @@ lemma unmapPage_ccorres:
                   apply (clarsimp simp: typ_heap_simps')
                   apply (simp add: cpte_relation_def Let_def pte_lift_def
                                isLargePagePTE_def pte_tag_defs
-                               pte_pte_large_lift_def
+                               pte_pte_large_lift_def pte_pte_invalid_def
                         split: split_if_asm pte.split_asm)
                  apply (rule ceqv_refl)
                 apply (simp add: liftE_liftM dc_def[symmetric]
@@ -2195,7 +2281,6 @@ lemma unmapPage_ccorres:
                              Collect_False unfold_checkMapping_return word_sle_def
                         del: Collect_const)
                 apply (ccorres_remove_UNIV_guard)
-
                 apply (rule ccorres_rhs_assoc2)
                 apply (rule ccorres_split_nothrow_novcg)
                     apply (rule_tac F="\<top>\<top>" in ccorres_mapM_x_while)
@@ -2203,8 +2288,7 @@ lemma unmapPage_ccorres:
                         apply (rule ccorres_guard_imp2)
                          apply csymbr
                          apply (rule storePTE_Basic_ccorres)
-                         apply (simp add: cpte_relation_def Let_def
-                                      pte_lift_pte_invalid)
+                         apply (simp add: cpte_relation_def Let_def)
                         apply clarsimp
                         apply (simp add: upto_enum_step_def
                                      upto_enum_word
@@ -2223,6 +2307,10 @@ lemma unmapPage_ccorres:
                   apply (ctac add: cleanCacheRange_PoU_ccorres[unfolded dc_def])
                  apply (rule_tac P="is_aligned rva 6" in hoare_gen_asm)
                  apply (rule hoare_strengthen_post)
+                  apply (rule hoare_vcg_conj_lift)
+                   apply (rule_tac P="\<lambda>s. 2 ^ pageBitsForSize sz \<le> gsMaxObjectSize s"
+                      in mapM_x_wp')
+                   apply wp[1]
                   apply (rule mapM_x_accumulate_checks)
                    apply (simp add: storePTE_def)
                    apply (rule obj_at_setObject3)
@@ -2230,7 +2318,8 @@ lemma unmapPage_ccorres:
                    apply (simp add: objBits_simps archObjSize_def)
                   apply (simp add: typ_at_to_obj_at_arches[symmetric])
                   apply wp
-                 apply (subgoal_tac "?P")
+                 apply clarify
+                 apply (subgoal_tac "P" for P)
                   apply (frule bspec, erule hd_in_set)
                   apply (frule bspec, erule last_in_set)
                   apply (simp add: upto_enum_step_def upto_enum_word
@@ -2343,6 +2432,10 @@ lemma unmapPage_ccorres:
                apply (ctac add: cleanCacheRange_PoU_ccorres[unfolded dc_def])
               apply (rule_tac P="is_aligned rv pdBits" in hoare_gen_asm)
               apply (rule hoare_strengthen_post)
+               apply (rule hoare_vcg_conj_lift)
+                apply (rule_tac P="\<lambda>s. 2 ^ pageBitsForSize sz \<le> gsMaxObjectSize s"
+                   in mapM_x_wp')
+                apply wp[1]
                apply (rule mapM_x_accumulate_checks)
                 apply (simp add: storePDE_def)
                 apply (rule obj_at_setObject3)
@@ -2350,8 +2443,8 @@ lemma unmapPage_ccorres:
                 apply (simp add: objBits_simps archObjSize_def)
                apply (simp add: typ_at_to_obj_at_arches[symmetric])
                apply wp
-              apply simp
-              apply (subgoal_tac "?P")
+              apply clarsimp
+              apply (subgoal_tac "P" for P)
                apply (frule bspec, erule hd_in_set)
                apply (frule bspec, erule last_in_set)
                apply (simp add: upto_enum_step_def upto_enum_word
@@ -2426,7 +2519,8 @@ lemma generic_frame_mapped_address:
   done
     
 lemma updateCap_frame_mapped_addr_ccorres:
-  "ccorres dc xfdc 
+  notes option.case_cong_weak [cong]
+  shows "ccorres dc xfdc 
            (cte_wp_at' (\<lambda>c. ArchObjectCap cap = cteCap c) ctSlot and K (isPageCap cap))
            UNIV []
            (updateCap ctSlot (ArchObjectCap (capVPMappedAddress_update empty cap)))
@@ -2682,7 +2776,8 @@ lemma performPageInvocationUnmap_ccorres:
     apply (drule diminished_PageCap)
     apply clarsimp
     apply (drule ccap_relation_mapped_asid_0)
-    apply (drule ctes_of_valid', clarsimp)
+    apply (frule ctes_of_valid', clarsimp)
+    apply (drule valid_global_refsD_with_objSize, clarsimp)
     apply (clarsimp simp: mask_def valid_cap'_def
                           vmsz_aligned_aligned_pageBits)
    apply assumption
@@ -2735,7 +2830,8 @@ lemma makeUserPDE_spec:
   "\<forall>s. \<Gamma> \<turnstile> 
   \<lbrace>s. (\<acute>page_size = scast Kernel_C.ARMSection \<or> \<acute>page_size = scast Kernel_C.ARMSuperSection) \<and>
       \<acute>vm_rights < 4 \<and> vmsz_aligned' (\<acute>paddr) (gen_framesize_to_H \<acute>page_size)  \<and>
-      \<acute>parity && 1 = \<acute>parity \<and> \<acute>domain && 0xF = \<acute>domain \<and> \<acute>cacheable && 1 = \<acute>cacheable\<rbrace> 
+      \<acute>parity && 1 = \<acute>parity \<and> \<acute>domain && 0xF = \<acute>domain \<and> \<acute>cacheable && 1 = \<acute>cacheable \<and>
+      \<acute>nonexecutable && 1 = \<acute>nonexecutable\<rbrace> 
   Call makeUserPDE_'proc 
   \<lbrace> pde_lift \<acute>ret__struct_pde_C = Some (Pde_pde_section \<lparr>
        pde_pde_section_CL.address_CL = \<^bsup>s\<^esup>paddr,
@@ -2747,7 +2843,7 @@ lemma makeUserPDE_spec:
        AP_CL = ap_from_vm_rights (vmrights_to_H \<^bsup>s\<^esup>vm_rights), 
        P_CL = \<^bsup>s\<^esup>parity,
        Domain_CL = \<^bsup>s\<^esup>domain,
-       XN_CL = 0,
+       XN_CL = \<^bsup>s\<^esup>nonexecutable,
        C_CL = 0,
        B_CL = iwb_from_cacheable  \<^bsup>s\<^esup>cacheable
     \<rparr>) \<rbrace>"
@@ -2796,7 +2892,7 @@ lemma makeUserPTE_spec:
   "\<forall>s. \<Gamma> \<turnstile> 
   \<lbrace>s. (\<acute>page_size = scast Kernel_C.ARMSmallPage \<or> \<acute>page_size = scast Kernel_C.ARMLargePage) \<and>
       \<acute>vm_rights < 4 \<and> vmsz_aligned' \<acute>paddr (gen_framesize_to_H \<acute>page_size)  \<and>
-      \<acute>cacheable && 1 = \<acute>cacheable\<rbrace> 
+      \<acute>cacheable && 1 = \<acute>cacheable \<and> \<acute>nonexecutable && 1 = \<acute>nonexecutable\<rbrace> 
   Call makeUserPTE_'proc 
   \<lbrace> pte_lift \<acute>ret__struct_pte_C = Some (if \<^bsup>s\<^esup>page_size = scast Kernel_C.ARMSmallPage 
     then Pte_pte_small
@@ -2807,18 +2903,20 @@ lemma makeUserPTE_spec:
        TEX_CL = tex_bits_from_cacheable \<^bsup>s\<^esup>cacheable,
        AP_CL = ap_from_vm_rights (vmrights_to_H \<^bsup>s\<^esup>vm_rights),
        C_CL = 0,
-       B_CL = iwb_from_cacheable  \<^bsup>s\<^esup>cacheable
+       B_CL = iwb_from_cacheable  \<^bsup>s\<^esup>cacheable,
+       XN_CL = \<^bsup>s\<^esup>nonexecutable
      \<rparr>
     else Pte_pte_large
      \<lparr> pte_pte_large_CL.address_CL =  \<^bsup>s\<^esup>paddr,
-       XN_CL = 0, 
+       XN_CL = \<^bsup>s\<^esup>nonexecutable,
        TEX_CL = tex_bits_from_cacheable \<^bsup>s\<^esup>cacheable,
        nG_CL = 1,
        S_CL = shared_bit_from_cacheable \<^bsup>s\<^esup>cacheable,
        APX_CL = 0,
        AP_CL = ap_from_vm_rights (vmrights_to_H \<^bsup>s\<^esup>vm_rights),
        C_CL = 0,
-       B_CL =  iwb_from_cacheable  \<^bsup>s\<^esup>cacheable
+       B_CL =  iwb_from_cacheable  \<^bsup>s\<^esup>cacheable,
+       reserved_CL = 1
      \<rparr>)\<rbrace>"
   apply vcg
   apply (clarsimp simp:vmsz_aligned'_def)
@@ -2845,8 +2943,9 @@ lemma makeUserPTE_spec:
 lemma vmAttributesFromWord_spec:
   "\<forall>s. \<Gamma> \<turnstile> \<lbrace>s. True\<rbrace> Call vmAttributesFromWord_'proc 
   \<lbrace> vm_attributes_lift \<acute>ret__struct_vm_attributes_C = 
-      \<lparr> armParityEnabled_CL = (\<^bsup>s\<^esup>w >> 1) && 1,
-        armPageCacheable_CL = \<^bsup>s\<^esup>w && 1 \<rparr> \<rbrace>"
+      \<lparr>  armExecuteNever_CL =  (\<^bsup>s\<^esup>w >> 2) && 1,
+        armParityEnabled_CL = (\<^bsup>s\<^esup>w >> 1) && 1,
+        armPageCacheable_CL = \<^bsup>s\<^esup>w && 1 \<rparr>  \<rbrace>"
   by (vcg, simp add: vm_attributes_lift_def word_sless_def word_sle_def)
 
 lemma cap_to_H_PDCap_tag:
@@ -2876,10 +2975,8 @@ lemma cap_lift_PDCap_Base:
 (* FIXME: move *)
 lemma word_le_mask_eq:
   "\<lbrakk> x \<le> mask n; n < word_bits \<rbrakk> \<Longrightarrow> x && mask n = (x::word32)"
-  by (rule less_mask_eq) (simp add: mask_def)
+  by (rule le_mask_imp_and_mask)
 
-(* FIXME: move *)
-(* Annotation added by Simon Winwood (Tue Jul  6 11:24:46 2010) using taint-mode *)
 declare mask_Suc_0[simp]
 
 (* FIXME: move *)
@@ -2895,6 +2992,7 @@ lemma setCTE_asidpool':
    apply (clarsimp simp: lookupAround2_char1)
    apply (clarsimp split: split_if)
    apply (case_tac obj', auto)[1]
+   apply (rename_tac arch_kernel_object)
    apply (case_tac arch_kernel_object, auto)[1]
    apply (simp add: updateObject_cte) 
    apply (clarsimp simp: updateObject_cte typeError_def magnitudeCheck_def in_monad 
@@ -2924,8 +3022,10 @@ lemma asid_pool_at_ko:
   "asid_pool_at' p s \<Longrightarrow> \<exists>pool. ko_at' (ASIDPool pool) p s"
   apply (clarsimp simp: typ_at'_def obj_at'_def ko_wp_at'_def projectKOs)
   apply (case_tac ko, auto)
-  apply (case_tac arch_kernel_object, auto)
-  apply (case_tac asidpool, auto)
+  apply (rename_tac arch_kernel_object)
+  apply (case_tac arch_kernel_object, auto)[1]
+  apply (rename_tac asidpool)
+  apply (case_tac asidpool, auto)[1]
   done
 
 (* FIXME: move *)
@@ -2961,6 +3061,8 @@ lemma setObjectASID_Basic_ccorres:
   done
 
 lemma performASIDPoolInvocation_ccorres:
+  notes option.case_cong_weak [cong]
+  shows
   "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
        (invs' and cte_wp_at' (isPDCap o cteCap) ctSlot and asid_pool_at' poolPtr 
         and K (asid \<le> mask asid_bits))
@@ -3015,7 +3117,7 @@ lemma performASIDPoolInvocation_ccorres:
                 apply (simp add: cte_to_H_def c_valid_cte_def)
                 apply (simp add: cap_page_directory_cap_lift)
                 apply (simp (no_asm) add: cap_to_H_def)
-                apply (simp add: to_bool_def asid_bits_def word_le_mask_eq asid_bits_def word_bits_def)
+                apply (simp add: to_bool_def asid_bits_def le_mask_imp_and_mask word_bits_def)
                 apply (erule (1) cap_lift_PDCap_Base)
                apply simp
               apply (erule_tac t = s' in ssubst)
@@ -3084,29 +3186,6 @@ lemma pte_case_isInvalidPTE:
   by (cases pte, simp_all add: isInvalidPTE_def)
 
 
-lemma cpte_relation_invalid:
-  "cpte_relation pte pte' \<Longrightarrow>
-      (pte_get_tag pte' = scast pte_pte_invalid) = isInvalidPTE pte"
-  apply (simp add: cpte_relation_def Let_def isInvalidPTE_def)
-  apply (case_tac pte) 
-    apply (simp add: Let_def isInvalidPTE_def)
-    apply (case_tac "pte_get_tag pte'=scast pte_pte_invalid", simp add: pte_lift_def)
-    apply (case_tac "pte_get_tag pte'=scast pte_pte_large", simp add: pte_lift_def)
-    apply (case_tac "pte_get_tag pte'=scast pte_pte_small", simp add: pte_lift_def)
-    apply (simp add: pte_lift_def)
-   apply (simp add: cpte_relation_def Let_def isInvalidPTE_def)
-   apply (case_tac "pte_get_tag pte'=scast pte_pte_invalid", simp add: pte_lift_def)
-   apply (case_tac "pte_get_tag pte'=scast pte_pte_large", simp add: pte_lift_def)
-   apply (case_tac "pte_get_tag pte'=scast pte_pte_small", simp add: pte_lift_def)
-   apply (simp add: pte_lift_def)
-  apply (simp add: cpte_relation_def Let_def isInvalidPTE_def)
-  apply (case_tac "pte_get_tag pte'=scast pte_pte_invalid", simp add: pte_lift_def)
-  apply (case_tac "pte_get_tag pte'=scast pte_pte_large", simp add: pte_lift_def)
-  apply (case_tac "pte_get_tag pte'=scast pte_pte_small", simp add: pte_lift_def)
-  apply (simp add: pte_lift_def)
-done
-
-
 lemma flushTable_ccorres:
   "ccorres dc xfdc (invs' and cur_tcb' and (\<lambda>_. asid \<le> mask asid_bits))
       (UNIV \<inter> {s. pd_' s = pde_Ptr pd} \<inter> {s. asid_' s = asid}
@@ -3126,8 +3205,6 @@ lemma flushTable_ccorres:
        apply (clarsimp simp: pde_stored_asid_def to_bool_def split: split_if)
       apply (rule ccorres_Guard_Seq ccorres_rhs_assoc)+
 
-      (* why csymbr does not work here? ... *)
-      (* Now we can csymbr *)
       apply csymbr
         apply (simp add: word_sle_def mapM_discarded whileAnno_def Collect_False
                     del: Collect_const)

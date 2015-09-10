@@ -24,6 +24,7 @@
     <test name="ExecSpec">make ExecSpec</test>
     <test name="DSpec">make DSpec</test>
     <test name="TakeGrant">make TakeGrant</test>
+    <test name="ASepSpec">make ASepSpec</test>
 
     <!-- Ensure Haskell spec and generated Isabelle theories match. -->
     <test name="SpecCheck">make spec-check</test>

@@ -253,7 +253,7 @@ lemma map_snd_zip_prefix:
 
 lemma nth_upt_0 [simp]:
   "i < length xs \<Longrightarrow> [0..<length xs] ! i = i"
-  by (metis comm_monoid_add_class.add.left_neutral nth_upt)
+  by simp
 
 lemma take_insert_nth:
   "i < length xs\<Longrightarrow>
@@ -272,11 +272,11 @@ lemma take_nth_distinct:
 
 lemma take_drop_append:
   "drop a xs = take b (drop a xs) @ drop (a + b) xs"
-  by (metis append_take_drop_id drop_drop nat_add_commute)
+  by (metis append_take_drop_id drop_drop add.commute)
 
 lemma drop_take_drop:
   "drop a (take (b + a) xs) @ drop (b + a) xs = drop a xs"
-  by (metis nat_add_commute take_drop take_drop_append)
+  by (metis add.commute take_drop take_drop_append)
 
 lemma map_fst_zip':
   "length xs \<le> length ys \<Longrightarrow> map fst (zip xs ys) = xs"
@@ -314,7 +314,7 @@ lemma map_of_zip_range:
    apply (frule_tac x=xa in map_of_zip_is_Some, clarsimp)
    apply fast
   apply (clarsimp simp: set_zip)
-  by (metis domI dom_map_of_zip nth_mem ranE ran_map_of_zip the.simps)
+  by (metis domI dom_map_of_zip nth_mem ranE ran_map_of_zip option.sel)
 
 lemma map_zip_fst:
   "length xs = length ys \<Longrightarrow> map (\<lambda>(x, y). f x) (zip xs ys) = map f xs"
@@ -589,7 +589,7 @@ lemma distinct_sets_update:
    apply (drule (2) distinct_sets_take_nth)
    apply blast
   apply clarsimp
-  apply (thin_tac "?P \<subseteq> ?Q")
+  apply (thin_tac "P \<subseteq> Q" for P Q)
   apply (subst (asm) id_take_nth_drop, assumption)
   apply (drule distinct_sets_append_Cons)
   apply (erule (2) distinct_sets_append_distinct)
@@ -613,6 +613,52 @@ lemma Union_list_update:
   apply clarsimp
    apply fastforce
   apply fastforce
+  done
+
+lemma if_fold:"(if P then Q else if P then R else S) = (if P then Q else S)"
+  by presburger
+
+lemma fold_and_false[simp]:"\<not>(fold (op \<and>) xs False)"
+  apply clarsimp
+  apply (induct xs)
+   apply simp
+  apply simp
+  done
+
+lemma fold_and_true:"fold (op \<and>) xs True \<Longrightarrow> \<forall>i < length xs. xs ! i"
+  apply clarsimp
+  apply (induct xs)
+   apply simp
+  apply (case_tac "i = 0"; simp)
+   apply (case_tac a; simp)
+  apply (case_tac a; simp)
+  done
+
+lemma fold_or_true[simp]:"fold (op \<or>) xs True"
+  by (induct xs, simp+)
+
+lemma fold_or_false:"\<not>(fold (op \<or>) xs False) \<Longrightarrow> \<forall>i < length xs. \<not>(xs ! i)"
+  apply (induct xs, simp+)
+  apply (case_tac a, simp+)
+  apply (rule allI, case_tac "i = 0", simp+)
+  done
+
+lemma fst_enumerate:"i < length xs \<Longrightarrow> fst (enumerate n xs ! i) = i + n"
+  by (metis add.commute fst_conv nth_enumerate_eq)
+
+lemma snd_enumerate:"i < length xs \<Longrightarrow> snd (enumerate n xs ! i) = xs ! i"
+  by (metis nth_enumerate_eq snd_conv)
+
+lemma pair_unpack:"((a, b) = x) = (a = fst x \<and> b = snd x)"
+  by fastforce
+
+lemma enumerate_member:"i < length xs \<Longrightarrow> (n + i, xs ! i) \<in> set (enumerate n xs)"
+  apply (subgoal_tac "(n + i, xs ! i) = enumerate n xs ! i")
+   apply clarsimp
+  apply (subst pair_unpack)
+  apply (rule conjI)
+   apply (simp add:fst_enumerate)
+  apply (simp add:snd_enumerate)
   done
 
 end

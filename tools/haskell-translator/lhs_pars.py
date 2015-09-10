@@ -78,7 +78,7 @@ def get_defs (filename):
 		return file_defs[filename]
 
 	cmdline = os.environ['L4CPP']	
-	f = os.popen ('cpp -traditional-cpp %s %s' % (cmdline, filename))
+	f = os.popen ('cpp -Wno-invalid-pp-token -traditional-cpp %s %s' % (cmdline, filename))
 	input = [line.rstrip() for line in f]
 	f.close()
 	defs = top_transform (input)
@@ -311,14 +311,18 @@ def def_lines (d, call):
 		return L
 			
 	if call.instanceproofs:
-		L = []
 		if not call.bodies_only:
-			L.extend (flatten_tree (d.get('instance_proofs', [])))
-		if not (call.decls_only or call.bodies_only):
-			L.append ('')
+			instance_proofs = flatten_tree (d.get('instance_proofs', []))
+		else:
+			instance_proofs = []
+
 		if not call.decls_only:
-			L.extend (flatten_tree (d.get('instance_extras', [])))
-		return L
+			instance_extras = flatten_tree (d.get('instance_extras', []))
+		else:
+			instance_extras = []
+
+		newline_needed = len(instance_proofs) > 0 and len(instance_extras) > 0
+		return instance_proofs + ([''] if newline_needed else []) + instance_extras
 	
 	if call.body:
 		return get_lambda_body_lines (d)
@@ -479,7 +483,6 @@ def type_conv (string):
 	elif string[0].islower():
 		result = "'%s" % string
 	elif string[0] == '[' and string[-1] == ']':
-		print "---- don't think this is even SEEN ----"
 		inner = type_conv (string[1:-1])
 		result = '%s list' % inner
 	elif str(string) in conv_table:
@@ -576,7 +579,7 @@ def typename_transform (line, header, d):
 	try:
 		[oldtype] = line.split()
 	except:
-		sys.stderr.write ('BARF: type assignment %s\n' % d['body'])
+		sys.stderr.write ('Warning: type assignment %s\n' % d['body'])
 		return
 	if oldtype.startswith('Data.Word.Word'):
 		oldtype = oldtype[10:]
@@ -857,6 +860,9 @@ def instance_transform (d):
 	assert bits[0] == 'instance'
 	classname = bits[1]
 	typename = type_conv(bits[2])
+	if classname == 'Show':
+		print "Warning: discarding class instance '%s :: Show'" % typename
+		return None;
 	if typename == '()':
 		print "Warning: discarding class instance 'unit :: %s'"\
 			% classname
@@ -1758,9 +1764,9 @@ def split_on_unmatched_bracket (elts, n = None):
 	return (elts, [], n)
 
 def monad_type_acquire (sig, type=0):
-	# note kernel appears after kernel_f/kernel_monad
+	# note kernel appears after kernel_f/kernel_monad            
 	for (key, n) in [('kernel_f', 1), ('fault_monad', 1),
-			('syscall_monad', 2), ('kernel_monad', 0),
+			('syscall_monad', 2), ('kernel_monad', 0),('kernel_init',1),
 			('kernel_p', 1), ('kernel', 0)]:
 		if key in sig:
 			sigend = sig.split(key)[-1]
@@ -1773,6 +1779,12 @@ def monad_type_transform ((line, type)):
 	if 'withoutError' in line:
 		split = 'withoutError'
 		newtype = 1
+	elif 'doKernelOp' in line:
+		split = 'doKernelOp'
+		newtype = 0
+	elif 'runInit' in line:
+		split = 'runInit'
+		newtype = 1 
 	elif 'withoutFailure' in line:
 		split = 'withoutFailure'
 		newtype = 0
@@ -1859,7 +1871,7 @@ def case_clauses_transform ((line, children)):
 			x = str(bits[0]) + ':: ' + type_transform (str(bits[1]))
 
 	if children and children[-1][0].strip().startswith('where'):
-		sys.stderr.write ('BARF: where clause in case: %r\n' \
+		sys.stderr.write ('Warning: where clause in case: %r\n' \
 					% line)
 		return (beforecase + '(* case removed *) undefined', [])
 		where_clause = where_clause_transform (children[-1])
@@ -1901,10 +1913,10 @@ def case_clauses_transform ((line, children)):
 		print line
 	conv = get_case_conv(cases)
 	if conv == '<X>':
-		sys.stderr.write ('BARF: blanked case in caseconvs\n')
+		sys.stderr.write ('Warning: blanked case in caseconvs\n')
 		return (beforecase + '(* case removed *) undefined', [])
 	if not conv:
-		sys.stderr.write ('BARF: case %r\n' % (cases,))
+		sys.stderr.write ('Warning: case %r\n' % (cases,))
 		if cases not in cases_added:
 			casestr = 'case \\x of ' + ' -> '.join(cases) + ' -> '
 			

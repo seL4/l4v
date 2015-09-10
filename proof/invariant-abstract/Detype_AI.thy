@@ -161,6 +161,7 @@ lemma caps_of_state_ko:
   "valid_cap cap s \<Longrightarrow> is_untyped_cap cap \<or> cap_range cap = {} \<or> (\<forall>ptr \<in> cap_range cap. \<exists>ko. kheap s ptr = Some ko)"
   apply (case_tac cap)
     apply (clarsimp simp:cap_range_def valid_cap_def obj_at_def is_cap_simps split:option.splits)+
+  apply (rename_tac arch_cap ptr)
   apply (case_tac arch_cap)
     apply (fastforce simp:cap_range_def obj_at_def is_cap_simps split:option.splits)+
   done
@@ -198,7 +199,7 @@ lemma untyped_cap_descendants_range:
      apply clarify
      apply (erule subset_splitE)
        apply simp
-       apply (thin_tac "?P\<longrightarrow>?Q")+
+       apply (thin_tac "P\<longrightarrow>Q" for P Q)+
        apply (clarsimp simp:descendants_of_def)
        apply (drule(1) trancl_trans)
        apply (simp add:vmdb_abs_def valid_mdb_def vmdb_abs.no_loops)
@@ -207,7 +208,7 @@ lemma untyped_cap_descendants_range:
      apply (clarsimp simp:descendants_of_def | erule disjE)+
      apply (drule(1) trancl_trans)
      apply (simp add:vmdb_abs_def valid_mdb_def vmdb_abs.no_loops)+
-   apply (thin_tac "?P\<longrightarrow>?Q")+
+   apply (thin_tac "P\<longrightarrow>Q" for P Q)+
    apply (erule(1) disjoint_subset2[OF usable_range_subseteq])
    apply (simp add:Int_ac)
   apply (drule(1) caps_of_state_valid)+
@@ -218,7 +219,7 @@ lemma untyped_cap_descendants_range:
              simp del:usable_untyped_range.simps untyped_range.simps)
   apply (rule ccontr)
   apply (clarsimp dest!: int_not_emptyD simp del:usable_untyped_range.simps untyped_range.simps)
-  apply (thin_tac "\<forall>x y z. ?P x y z")
+  apply (thin_tac "\<forall>x y z. P x y z" for P)
   apply (drule(1) bspec)
   apply (clarsimp dest!: int_not_emptyD simp del:usable_untyped_range.simps untyped_range.simps)
   apply (drule_tac x = x in spec)
@@ -288,7 +289,7 @@ lemma detype_clear_um_independent:
   by (auto simp add: detype_def clear_um_def ext)
 
 
-(* FIXME: move up? *)
+(* FIXME: move *)
 lemma (in pspace_update_eq) zombies_final_eq[iff]:
   "zombies_final (f s) = zombies_final s"
   by (simp add: zombies_final_def is_final_cap'_def)
@@ -364,11 +365,8 @@ lemma drange:"descendants_range_in (cap_range cap) ptr s"
 lemma valid_cap:
     "\<And>cap'. \<lbrakk> s \<turnstile> cap'; obj_reply_refs cap' \<subseteq> (UNIV - untyped_range cap) \<rbrakk>
     \<Longrightarrow> detype (untyped_range cap) s \<turnstile> cap'"
-    apply (clarsimp simp: valid_cap_def valid_untyped_def obj_reply_refs_def
-                split: cap.split_asm option.splits arch_cap.split_asm bool.split_asm)
-     apply auto
-    done
-
+  by (clarsimp simp: valid_cap_def valid_untyped_def obj_reply_refs_def
+              split: cap.split_asm option.splits arch_cap.split_asm bool.split_asm)
 
 lemma iflive: "if_live_then_nonz_cap s"
     using invs by (simp add: invs_def valid_state_def valid_pspace_def)
@@ -454,6 +452,7 @@ lemma valid_cap2:
       apply (simp add:cte_wp_at_caps_of_state)
      apply (simp add:untyped)
     apply (clarsimp split: cap.split_asm bool.split_asm)
+    apply (rename_tac bool)
     apply (case_tac bool, simp_all)
      apply (frule valid_reply_mastersD [OF _ vmaster])
      apply (fastforce simp: cte_wp_at_caps_of_state dest: non_null_caps)
@@ -463,8 +462,6 @@ lemma valid_cap2:
     apply (fastforce dest: live_okE)
     done
 
-(* FIXME: The following lemma does not fit that nicely into the nondet_monad
-     framework that we use everywhere. *)
 lemma invariants:
   assumes ct_act: "ct_active s"
   shows "(invs and untyped_children_in_mdb)
@@ -500,8 +497,10 @@ proof (simp add: invs_def valid_state_def valid_pspace_def
        apply (clarsimp simp: valid_tcb_state_def valid_bound_aep_def
                       split: Structures_A.thread_state.split_asm option.splits)
       apply (frule refs_of)
+      apply (rename_tac endpoint)
       apply (case_tac endpoint, (fastforce simp: valid_ep_def)+)
      apply (frule refs_of)
+     apply (rename_tac async_ep async_ep_ext)
      apply (case_tac "aep_obj async_ep_ext")
        apply (auto simp: valid_aep_def aep_bound_refs_def split: option.splits)
     done
@@ -802,9 +801,11 @@ proof (simp add: invs_def valid_state_def valid_pspace_def
        apply (rule image_eqI[rotated])
         apply (erule graph_ofI)
        apply fastforce
+      apply (rename_tac "fun")
       apply clarsimp
       apply (erule_tac x=x in allE)
       apply (case_tac "fun x", simp_all)[1]
+       apply (rename_tac word attr rights)
        apply (drule_tac p'="(Platform.ptrFromPAddr word)" in vs_lookup_pages_step[OF vs_lookup_pages_vs_lookupI])
         apply (clarsimp simp: vs_lookup_pages1_def)
         apply (rule exI, erule conjI)
@@ -815,6 +816,7 @@ proof (simp add: invs_def valid_state_def valid_pspace_def
          apply (simp add: split_def) 
         apply simp
        apply (force dest!: vs_lookup_pages_preserved)
+      apply (rename_tac word attr rights)
       apply (drule_tac p'="(Platform.ptrFromPAddr word)" in vs_lookup_pages_step[OF vs_lookup_pages_vs_lookupI])
        apply (clarsimp simp: vs_lookup_pages1_def)
        apply (rule exI, erule conjI)
@@ -825,8 +827,10 @@ proof (simp add: invs_def valid_state_def valid_pspace_def
         apply (simp add: split_def) 
        apply simp
       apply (force dest!: vs_lookup_pages_preserved)
+     apply (rename_tac "fun")
      apply clarsimp
      apply (case_tac "fun x", simp_all)[1]
+       apply (rename_tac word1 attr word2)
        apply (drule bspec, simp)
        apply (clarsimp simp: valid_pde_def)
        apply (drule_tac p'="(Platform.ptrFromPAddr word1)" in vs_lookup_pages_step[OF vs_lookup_pages_vs_lookupI])
@@ -839,6 +843,7 @@ proof (simp add: invs_def valid_state_def valid_pspace_def
          apply (simp add: split_def) 
         apply (simp add: pde_ref_pages_def)
        apply (force dest!: vs_lookup_pages_preserved)
+      apply (rename_tac word1 attr word2 rights)
       apply (drule_tac p'="(Platform.ptrFromPAddr word1)" in vs_lookup_pages_step[OF vs_lookup_pages_vs_lookupI])
        apply (clarsimp simp: vs_lookup_pages1_def)
        apply (rule exI, erule conjI)
@@ -849,17 +854,18 @@ proof (simp add: invs_def valid_state_def valid_pspace_def
         apply (simp add: split_def) 
        apply (simp add: pde_ref_pages_def)
       apply (force dest!: vs_lookup_pages_preserved)
-      apply (drule_tac p'="(Platform.ptrFromPAddr word)" in vs_lookup_pages_step[OF vs_lookup_pages_vs_lookupI])
-       apply (clarsimp simp: vs_lookup_pages1_def)
-       apply (rule exI, erule conjI)
-       apply (rule_tac x="VSRef (ucast x) (Some APageDirectory)" in exI)
-       apply (rule conjI[OF refl])
-       apply (clarsimp simp: vs_refs_pages_def graph_of_def pde_ref_pages_def)
-       apply (rule_tac x="(x, (Platform.ptrFromPAddr word))" in image_eqI)
-        apply (simp add: split_def) 
-       apply (simp add: pde_ref_pages_def)
-      apply (force dest!: vs_lookup_pages_preserved)
-     apply clarsimp
+     apply (rename_tac word attr rights)
+     apply (drule_tac p'="(Platform.ptrFromPAddr word)" in vs_lookup_pages_step[OF vs_lookup_pages_vs_lookupI])
+      apply (clarsimp simp: vs_lookup_pages1_def)
+      apply (rule exI, erule conjI)
+      apply (rule_tac x="VSRef (ucast x) (Some APageDirectory)" in exI)
+      apply (rule conjI[OF refl])
+      apply (clarsimp simp: vs_refs_pages_def graph_of_def pde_ref_pages_def)
+      apply (rule_tac x="(x, (Platform.ptrFromPAddr word))" in image_eqI)
+       apply (simp add: split_def) 
+      apply (simp add: pde_ref_pages_def)
+     apply (force dest!: vs_lookup_pages_preserved)
+    apply clarsimp
     done
 
   have "valid_arch_objs s"
@@ -868,13 +874,6 @@ proof (simp add: invs_def valid_state_def valid_pspace_def
     unfolding valid_arch_objs_def
     apply (simp add: vs_lookup)
     apply (auto intro: valid_arch_obj)
-    done
-
-  have "executable_arch_objs s"
-    using invs by fastforce 
-  thus "executable_arch_objs (detype (untyped_range cap) s)"
-    unfolding executable_arch_objs_def
-    apply (auto)
     done
 
   have unique_table_caps:
@@ -1016,6 +1015,7 @@ proof (simp add: invs_def valid_state_def valid_pspace_def
     apply (frule valid_pspace_aligned[OF valid_pspace])
     apply (drule_tac ptr'=p in mask_in_range)
     apply (case_tac ko, simp_all add: a_type_simps split: split_if_asm)
+    apply (rename_tac arch_kernel_obj)
     apply (case_tac arch_kernel_obj, simp_all add: a_type_simps)
     apply clarsimp
     using untyped cap_is_valid
@@ -1108,7 +1108,7 @@ qed
 (* FIXME: move *)
 lemma unat_mask:
   "unat (mask n :: 'a :: len word) = 2 ^ (min n (len_of TYPE('a))) - 1"
-  apply (subst min_max.inf_commute)
+  apply (subst min.commute)
   apply (simp add: mask_def not_less min_def  split: split_if_asm)
   apply (intro conjI impI)
    apply (simp add: unat_sub_if_size)
@@ -1273,7 +1273,6 @@ lemma mapM_x_storeWord_step:
   apply (subst if_not_P)
    apply (subst not_less)
    apply (erule is_aligned_no_overflow)
-  apply (simp add: plus_minus_one_rewrite32)
   apply (simp add: mapM_x_map comp_def upto_enum_word maxword_32_conv del: upt.simps)
   apply (simp add:Suc_unat_mask_div[simplified mask_2pm1 word_size_def] min_def)
   apply (subst mapM_x_storeWord) 
@@ -1322,13 +1321,14 @@ lemma intvl_range_conv':
   done
 
 (* FIXME: The following lemma is similar to StoreWord_C.intvl_range_conv *)
+(* FIXME: move *) 
 lemma intvl_range_conv:
   "\<lbrakk>is_aligned (ptr :: 'a :: len word) bits; bits \<le> len_of TYPE('a)\<rbrakk> \<Longrightarrow>
    {x. \<exists>k. x = ptr + of_nat k \<and> k < 2 ^ bits} = {ptr .. ptr + 2 ^ bits - 1}"
   by (rule set_eqI) (simp add: intvl_range_conv')
 
 
-(* FIXME: move? *)
+(* FIXME: move *)
 lemma gets_modify_def:
   "gets f >>= (\<lambda>x. modify (g x)) = modify (\<lambda>s. g (f s) s)"
 by (simp add: simpler_gets_def simpler_modify_def bind_def)
@@ -1392,7 +1392,7 @@ lemma cte_map_not_null_outside:
   apply (drule(1) if_unsafe_then_capD, simp)
   apply (drule ex_cte_cap_to_obj_ref_disj, erule disjE)
    apply (clarsimp simp del:untyped_range.simps)+
-   apply (erule(1) untyped_children_in_mdbEE [where P="\<lambda>c. fst p \<in> f c" , standard])
+   apply (erule(1) untyped_children_in_mdbEE [where P="\<lambda>c. fst p \<in> f c" for f])
       apply simp+
     apply fastforce
     apply (drule(1) descendants_range_inD)
@@ -1499,7 +1499,6 @@ lemma cte_map_not_null_outside':
    \<Longrightarrow> fst p \<notin> untyped_range (cap.UntypedCap q n m)"
   by (erule (1) cte_map_not_null_outside, simp_all)
 
-(*FIXME:name*)
 lemma refl_spec[simp]:
   "\<not> (\<forall>x. x \<noteq> y)"
   by clarsimp
@@ -1667,7 +1666,7 @@ lemma  neg_mask_diff_bound:
 proof -
   assume lt: "sz' \<le> sz"
   hence "?lhs = ptr && (mask sz && (~~ mask sz'))"
-    apply (simp add: mask_out_sub_mask field_simps mask_and_mask min_max.inf_absorb2)
+    apply (simp add: mask_out_sub_mask field_simps mask_and_mask min.absorb2)
     apply (simp add: mask_sub)
     apply (subst word_plus_and_or_coroll)
      apply (rule word_eqI, simp add: word_size word_ops_nth_size)
@@ -1717,8 +1716,8 @@ lemma range_cover_tail_mask:
    \<Longrightarrow> ptr  + ((1::word32) + of_nat n << us)  && ~~ mask sz = ptr && ~~ mask sz"
   apply (frule(1) range_cover_ptr_le)
   apply (subst word_plus_and_or_coroll2[symmetric,where w = "mask sz" and t = ptr])
-  apply (subst add_commute)
-  apply (subst add_assoc)
+  apply (subst add.commute)
+  apply (subst add.assoc)
   apply (subst is_aligned_add_helper[THEN conjunct2,OF is_aligned_neg_mask])
     apply (simp add:range_cover_def)
     apply (simp add:word_less_nat_alt)
@@ -1789,7 +1788,7 @@ lemma range_cover_unat:
        apply (rule le_less_trans)
        apply (frule range_cover.unat_of_nat_shift[OF _ le_refl le_refl])
        apply (simp add:field_simps)
-       apply (subst add_commute)
+       apply (subst add.commute)
        apply (erule range_cover.range_cover_compare_bound)
        apply (rule power_strict_increasing)
        apply (clarsimp simp:range_cover_def)+
@@ -1804,7 +1803,7 @@ lemma range_cover_offset:
   apply (clarsimp simp:range_cover_def)
   apply (intro conjI)
    apply (erule aligned_add_aligned)
-    apply (subst mult_commute)
+    apply (subst mult.commute)
     apply (simp add:is_aligned_shiftl_self[unfolded shiftl_t2n])
    apply simp
   apply (rule nat_mult_le_cancel1[where k = "2^ us",THEN iffD1])

@@ -56,8 +56,7 @@ definition all_invs_but_valid_irq_states_for where
   valid_asid_map and
   valid_global_pd_mappings and
   pspace_in_kernel_window and
-  cap_refs_in_kernel_window and cur_tcb and
-  executable_arch_objs"
+  cap_refs_in_kernel_window and cur_tcb"
 
 lemma dmo_maskInterrupt_invs:
   "\<lbrace>all_invs_but_valid_irq_states_for irq and (\<lambda>s. state = interrupt_states s irq)\<rbrace> 
@@ -78,10 +77,8 @@ lemma set_irq_state_invs[wp]:
   apply (simp add: mdb_cte_at_def valid_irq_node_def
                    valid_irq_handlers_def irq_issued_def)
   apply (rule conjI)
-   apply fastforce
-  apply (rule conjI)
-  apply  (clarsimp simp: cap_irqs_def cap_irq_opt_def 
-             split: cap.split_asm)
+   apply (clarsimp simp: cap_irqs_def cap_irq_opt_def 
+              split: cap.split_asm)
   apply(clarsimp simp: valid_machine_state_def valid_irq_states_but_def valid_irq_masks_but_def, blast elim: valid_irq_statesE)
   done
 

@@ -45,7 +45,6 @@ apply (rule_tac R="{}" in HoarePartial.Seq)
 apply (rule_tac R="\<lbrace> \<acute>e = Z \<rbrace>" in HoarePartial.Seq)
   defer
   apply vcg
-  apply simp
 apply (rule_tac R = "\<lbrace> \<acute>e = Z & \<acute>global_exn_var = Break \<rbrace>" in HoarePartial.Catch)
   defer
   apply vcg

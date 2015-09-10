@@ -17,10 +17,11 @@ lemma field_lookup_list_Some2 [rule_format]:
       field_lookup t fs (m + size_td_list ts)"
 apply(induct_tac ts)
  apply(clarsimp split: option.splits)
+apply(rename_tac a list)
 apply(clarsimp split: option.splits)
 apply auto
  apply(case_tac a, clarsimp split: split_if_asm)
-  apply(simp add: add_ac)+
+  apply(simp add: ac_simps)+
 apply(case_tac a, clarsimp split: split_if_asm)
 done
 
@@ -36,11 +37,12 @@ lemma fnl_extend_ti:
     field_lookup (extend_ti tag t fn) (f # fs) m =
       (if f=fn then field_lookup t fs (size_td tag+m) else field_lookup tag (f # fs) m)"
 apply(case_tac tag, simp)
+apply(rename_tac typ_struct xs)
 apply(case_tac typ_struct, simp)
 apply auto
  apply(subst field_lookup_list_Some2)
   apply(simp add: fnl_set)
- apply(simp add: add_ac)
+ apply(simp add: ac_simps)
 apply(subst field_lookup_list_append)
 apply(clarsimp split: option.splits)
 done
@@ -122,26 +124,14 @@ apply(induct ti and st and ts and x)
      apply auto
   apply(clarsimp simp: adjust_ti_def)
  apply(clarsimp split: option.splits)
-  apply(rule, clarsimp)
-   apply(case_tac dt_pair, clarsimp)
-  apply clarsimp
-  apply(case_tac dt_pair, clarsimp split: split_if_asm)
-  apply(drule_tac x=fn in spec)
-  apply clarsimp
-  apply(fold adjust_ti_def)
-  apply(drule field_lookup_adjust_ti)
-  apply clarsimp
  apply(rule, clarsimp)
-  apply(drule_tac x=fn in spec)
-  apply(drule_tac x="m" in spec)
-  apply(drule_tac x=s in spec)
-  apply(drule_tac x=n in spec)
-  apply clarsimp
+  apply(case_tac dt_pair, clarsimp)
  apply clarsimp
+ apply(case_tac dt_pair, clarsimp split: split_if_asm)
  apply(drule_tac x=fn in spec)
- apply(drule_tac x="m" in spec)
- apply(drule_tac x=s in spec)
- apply(drule_tac x=n in spec)
+ apply clarsimp
+ apply(fold adjust_ti_def)
+ apply(drule field_lookup_adjust_ti)
  apply clarsimp
 apply clarsimp
 done
@@ -154,7 +144,7 @@ done
 
 lemma fl_update:
   "field_lookup (adjust_ti ti f g) fs m =
-      (option_case None (\<lambda>(t,n). Some (adjust_ti t f g,n)) (field_lookup ti fs m))"
+      (case_option None (\<lambda>(t,n). Some (adjust_ti t f g,n)) (field_lookup ti fs m))"
 apply(auto split: option.splits)
  apply(rule ccontr, clarsimp)
  apply(drule field_lookup_adjust_ti, clarsimp)
@@ -218,6 +208,7 @@ lemma field_names_list:
 lemma field_names_extend_ti:
   "typ_name t \<noteq> typ_name ti \<Longrightarrow> field_names (extend_ti ti xi fn) t = field_names ti t @ (map (\<lambda>fs. fn#fs) (field_names xi t))"
 apply(cases ti, clarsimp)
+apply(rename_tac typ_struct xs)
 apply(case_tac typ_struct, auto)
 apply(simp add: field_names_list)
 done
@@ -264,19 +255,14 @@ lemma size_empty_typ_info [simp]:
   "size (empty_typ_info tn) = 2"
   by (simp add: empty_typ_info_def)
 
-lemma list_size_append [simp]:
-  "list_size (dt_pair_size size (list_size char_size)) (xs @ ys) =
-  list_size (dt_pair_size size (list_size char_size)) xs +
-  list_size (dt_pair_size size (list_size char_size)) ys"
-  by (induct xs) auto
-
 lemma list_size_char:
-  "list_size char_size xs = length xs"
+  "size_list size_char xs = length xs"
   by (induct xs) auto
 
 lemma size_ti_extend_ti [simp]:
   "aggregate ti \<Longrightarrow> size (extend_ti ti t fn) = size ti + size t + 2 + size fn"
-apply(cases ti, auto)
+apply(cases ti, clarsimp)
+apply(rename_tac typ_struct xs)
 apply(case_tac typ_struct, auto simp: list_size_char)
 done
 
@@ -405,7 +391,8 @@ apply(rule_tac s\<^sub>0="(s\<^sub>1 ++ s\<^sub>0) |` {(x,y) | x y. x \<in> {&(p
       apply(frule sep_map_dom_exc)
       apply(rotate_tac -1)
       apply(drule sym)
-      apply(clarsimp simp: restrict_map_disj_dom_empty map_add_ac sep_conj_ac)
+      apply(thin_tac "s = x" for x)
+      apply(clarsimp simp: restrict_map_disj_dom_empty map_ac_simps sep_conj_ac)
      apply(clarsimp simp: inv_footprint_def sep_conj_ac)
      apply(rule inter_sub)
       apply(clarsimp simp: sep_conj_ac)
@@ -439,7 +426,7 @@ apply(rule_tac s\<^sub>0="(s\<^sub>1 ++ s\<^sub>0) |` {(x,y) | x y. x \<in> {&(p
   apply simp
  apply(clarsimp simp: map_disj_def)
  apply blast
-apply(subst map_add_com[of "m|`S", standard])
+apply(subst map_add_com[of "m|`S" for m S])
  apply(clarsimp simp: map_disj_def)
  apply blast
 apply(subst map_add_restrict_comp_right_dom)
@@ -580,16 +567,16 @@ lemma td_names_empty_typ_info [simp]:
 
 lemma td_names_ptr [simp]:
   "td_names (typ_info_t TYPE(('a :: c_type) ptr)) = {typ_name_itself TYPE('a) @ ''+ptr''}"
-  by (simp add: typ_info_ptr pad_typ_name_def)
+  by (simp add: pad_typ_name_def)
 
 lemma td_names_word8 [simp]:
   fixes x :: "byte itself"
   shows "td_names (typ_info_t x) = {''word00010''}"
- by (simp add:typ_info_word pad_typ_name_def nat_to_bin_string.simps)
+ by (simp add: pad_typ_name_def nat_to_bin_string.simps)
 
 lemma td_names_word32 [simp]:
   "td_names (typ_info_t TYPE(32 word)) = {''word0000010''}"
-  by (simp add: typ_info_word pad_typ_name_def nat_to_bin_string.simps)
+  by (simp add: pad_typ_name_def nat_to_bin_string.simps)
 
 lemma td_names_export_uinfo [simp]:
   "td_names (export_uinfo td) = td_names td"
@@ -700,7 +687,6 @@ lemma typ_name_array_tag_n:
 lemma typ_name_array [simp]:
   "typ_name (typ_info_t TYPE('a::c_type['b :: finite])) =
     typ_name (typ_info_t TYPE('a)) @ ''_array_'' @ nat_to_bin_string (card (UNIV :: 'b set))"
-  apply (simp add: typ_info_array array_tag_def typ_name_array_tag_n)
-  done
-
+  by (simp add: typ_info_array array_tag_def typ_name_array_tag_n)
+ 
 end

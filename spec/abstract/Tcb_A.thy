@@ -12,7 +12,7 @@
 The TCB and thread related specifications.
 *)
 
-header "Threads and TCBs"
+chapter "Threads and TCBs"
 
 theory Tcb_A
 imports Schedule_A
@@ -79,24 +79,6 @@ definition
   ipc_buffer_size :: vspace_ref where
  "ipc_buffer_size \<equiv> of_nat ((number_of_mrs + captransfer_size) * word_size)"
 
-text {*
-  A pointer is inside a user frame if its top bits point to a @{text DataPage}.
-*}
-definition
-  in_user_frame :: "word32 \<Rightarrow> 'z::state_ext state \<Rightarrow> bool" where
-  "in_user_frame p s \<equiv>
-   \<exists>sz. kheap s (p && ~~ mask (pageBitsForSize sz)) =
-        Some (ArchObj (DataPage sz))"
-
-text {* Store or load a word at an offset from an IPC buffer. *}
-definition
-  store_word_offs :: "obj_ref \<Rightarrow> nat \<Rightarrow> machine_word \<Rightarrow> (unit,'z::state_ext) s_monad" where
- "store_word_offs ptr offs v \<equiv>
-    do s \<leftarrow> get;
-       assert (in_user_frame (ptr + of_nat (offs * word_size)) s);
-       do_machine_op $ storeWord (ptr + of_nat (offs * word_size)) v
-    od"
-
 definition
   load_word_offs :: "obj_ref \<Rightarrow> nat \<Rightarrow> (machine_word,'z::state_ext) s_monad" where
  "load_word_offs ptr offs \<equiv>
@@ -119,27 +101,6 @@ definition
         | Some pptr \<Rightarrow> mapM (\<lambda>x. load_word_offs pptr x)
                [length msg_registers + 1 ..< Suc msg_max_length];
      return (take (unat (mi_length info)) $ cpu_mrs @ buf_mrs)
-   od"
-
-text {* Set the message registers of a thread. *}
-definition
-  set_mrs :: "obj_ref \<Rightarrow> obj_ref option \<Rightarrow> message list \<Rightarrow> (length_type,'z::state_ext) s_monad" where
-  "set_mrs thread buf msgs \<equiv>
-   do
-     tcb \<leftarrow> gets_the $ get_tcb thread;
-     context \<leftarrow> return (tcb_context tcb);
-     new_regs \<leftarrow> return (\<lambda>reg. if reg \<in> set (take (length msgs) msg_registers)
-                              then msgs ! (the_index msg_registers reg)
-                              else context reg);
-     set_object thread (TCB (tcb \<lparr> tcb_context := new_regs \<rparr>));
-     remaining_msgs \<leftarrow> return (drop (length msg_registers) msgs);
-     case buf of
-     None      \<Rightarrow> return $ nat_to_len (min (length msg_registers) (length msgs))
-   | Some pptr \<Rightarrow> do
-       zipWithM_x (\<lambda>x. store_word_offs pptr x)
-          [length msg_registers + 1 ..< Suc msg_max_length] remaining_msgs;
-       return $ nat_to_len $ min (length msgs) msg_max_length
-     od
    od"
 
 text {* Copy message registers from one thread to another. *}
@@ -196,7 +157,7 @@ definition
 text {* Optionally update the tcb at an address. *}
 definition
   option_update_thread :: "obj_ref \<Rightarrow> ('a \<Rightarrow> tcb \<Rightarrow> tcb) \<Rightarrow> 'a option \<Rightarrow> (unit,'z::state_ext) s_monad" where
- "option_update_thread thread fn \<equiv> option_case (return ()) (\<lambda>v. thread_set (fn v) thread)"
+ "option_update_thread thread fn \<equiv> case_option (return ()) (\<lambda>v. thread_set (fn v) thread)"
 
 text {* Check that a related capability is at an address. This is done before
 calling @{const cap_insert} to avoid a corner case where the would-be parent of

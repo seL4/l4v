@@ -281,7 +281,7 @@ where
      ARM_Structs_A.ASIDPoolCap r as
        \<Rightarrow> is_aligned as asid_low_bits \<and> as \<le> 2^asid_bits - 1
    | ARM_Structs_A.PageCap r rghts sz mapdata \<Rightarrow> rghts \<in> valid_vm_rights \<and>
-     option_case True (wellformed_mapdata sz) mapdata
+     case_option True (wellformed_mapdata sz) mapdata
    | ARM_Structs_A.PageTableCap r (Some mapdata) \<Rightarrow>
      wellformed_mapdata ARMSection mapdata
    | ARM_Structs_A.PageDirectoryCap r (Some asid) \<Rightarrow>
@@ -362,7 +362,7 @@ where
                                 \<and> is_aligned vref (pageBitsForSize ARMSection))
   | ARM_Structs_A.PageDirectoryCap r mapdata \<Rightarrow>
     typ_at (AArch APageDirectory) r s \<and>
-    option_case True (\<lambda>asid. 0 < asid \<and> asid \<le> 2^asid_bits - 1) mapdata))"
+    case_option True (\<lambda>asid. 0 < asid \<and> asid \<le> 2^asid_bits - 1) mapdata))"
 
 abbreviation
   valid_cap_syn :: "'z::state_ext state \<Rightarrow> cap \<Rightarrow> bool" ("_ \<turnstile> _" [60, 60] 61)
@@ -536,7 +536,6 @@ where
          \<and> ko_at (ArchObj (PageDirectory pd')) y s
        \<longrightarrow> (\<forall>w \<in> kernel_mapping_slots. pd w = pd' w)"
 
-(* FIXME: is_aligned is redundant if we already require typ_at and have pspace_aligned *)
 primrec
   valid_pte :: "ARM_Structs_A.pte \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
@@ -548,7 +547,6 @@ where
    (\<lambda>s. is_aligned ptr pageBits \<and>
         typ_at (AArch (AIntData ARMSmallPage)) (Platform.ptrFromPAddr ptr) s)"
 
-(* FIXME: is_aligned is redundant if we already require typ_at and have pspace_aligned *)
 primrec
   valid_pde :: "ARM_Structs_A.pde \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
@@ -772,13 +770,13 @@ where
         \<and> (\<exists>use. (\<forall>x \<in> {vref .. vref + 2 ^ pte_mapping_bits - 1}. uses x = use)
              \<and> (use = ArmVSpaceKernelWindow
                     \<or> use = ArmVSpaceDeviceWindow))
-        \<and> rghts = {} \<and> XNever \<notin> atts
+        \<and> rghts = {}
   | ARM_Structs_A.LargePagePTE ptr atts rghts \<Rightarrow>
         Platform.ptrFromPAddr ptr = (vref && ~~ mask (pageBitsForSize ARMLargePage))
         \<and> (\<exists>use. (\<forall>x \<in> {vref .. vref + 2 ^ pte_mapping_bits - 1}. uses x = use)
              \<and> (use = ArmVSpaceKernelWindow
                     \<or> use = ArmVSpaceDeviceWindow))
-        \<and> rghts = {} \<and> XNever \<notin> atts"
+        \<and> rghts = {}"
 
 definition
   valid_pt_kernel_mappings :: "vspace_ref \<Rightarrow> arm_vspace_region_uses \<Rightarrow> Structures_A.kernel_object \<Rightarrow> bool"
@@ -804,12 +802,12 @@ where
              \<and> (\<exists>use. (\<forall>x \<in> {vref .. vref + 2 ^ pde_mapping_bits - 1}. uses x = use)
                    \<and> (use = ArmVSpaceKernelWindow
                             \<or> use = ArmVSpaceDeviceWindow))
-             \<and> rghts = {} \<and> XNever \<notin> atts)
+             \<and> rghts = {})
   | ARM_Structs_A.SuperSectionPDE ptr atts rghts \<Rightarrow>
         (\<lambda>s. Platform.ptrFromPAddr ptr = (vref && ~~ mask (pageBitsForSize ARMSuperSection))
              \<and> (\<forall>x \<in> {vref .. vref + 2 ^ pde_mapping_bits - 1}.
                    uses x = ArmVSpaceKernelWindow)
-             \<and> rghts = {} \<and> XNever \<notin> atts)"
+             \<and> rghts = {})"
 
 definition
   valid_pd_kernel_mappings :: "arm_vspace_region_uses \<Rightarrow> 'z::state_ext state
@@ -858,7 +856,6 @@ definition
                   \<longrightarrow> ((r \<in> S) = (x \<in> kernel_mapping_slots))
   | _ \<Rightarrow> True"
 
-(* FIXME: we could roll the property below into wellformed_pte. *)
 definition
   "aligned_pte pte \<equiv>
      case pte of
@@ -890,8 +887,8 @@ definition
 where
   "valid_global_pts \<equiv> \<lambda>s.
    \<forall>p \<in> set (arm_global_pts (arch_state s)). typ_at (AArch APageTable) p s"
-(*< FIXME: this property now follows from valid_global_objs:
-    "valid_global_objs s \<Longrightarrow> valid_global_pts s" *)
+(* this property now follows from valid_global_objs:
+   "valid_global_objs s \<Longrightarrow> valid_global_pts s" *)
 
 definition
   valid_arch_state :: "'z::state_ext state \<Rightarrow> bool"
@@ -1405,37 +1402,6 @@ definition
    \<lambda>s. \<forall>p. in_user_frame p (s::'z::state_ext state) \<or> underlying_memory (machine_state s) p = 0"
 
 definition
-  executable_pte :: "ARM_Structs_A.pte \<Rightarrow> bool"
-where
-  "executable_pte pte \<equiv> case pte of
-     ARM_Structs_A.pte.LargePagePTE p attr r \<Rightarrow>
-       XNever \<notin> attr
-   | ARM_Structs_A.pte.SmallPagePTE p attr r \<Rightarrow>
-       XNever \<notin> attr
-   | _ \<Rightarrow> True"
-
-definition
-  executable_pde :: "ARM_Structs_A.pde \<Rightarrow> bool"
-where
-  "executable_pde pde \<equiv> case pde of
-     ARM_Structs_A.pde.SectionPDE p attr mw r \<Rightarrow> XNever \<notin> attr
-   | ARM_Structs_A.pde.SuperSectionPDE p attr r \<Rightarrow> XNever \<notin> attr
-   | _ \<Rightarrow> True"
-
-definition
-  executable_arch_obj :: "arch_kernel_obj \<Rightarrow> bool"
-where
-  "executable_arch_obj ao \<equiv> case ao of
-     PageTable pt \<Rightarrow> (\<forall>pte\<in>range pt. executable_pte pte)
-   | PageDirectory pd \<Rightarrow> (\<forall>pde\<in>range pd. executable_pde pde)
-   | _ \<Rightarrow> True"
-
-definition
-  executable_arch_objs :: "'z::state_ext state \<Rightarrow> bool"
-where
-  "executable_arch_objs \<equiv> \<lambda>s. \<forall>p ao. ko_at (ArchObj ao) p s \<longrightarrow> executable_arch_obj ao"
-
-definition
   valid_state :: "'z::state_ext state \<Rightarrow> bool"
 where
   "valid_state \<equiv> valid_pspace
@@ -1460,8 +1426,7 @@ where
                   and valid_asid_map
                   and valid_global_pd_mappings
                   and pspace_in_kernel_window
-                  and cap_refs_in_kernel_window
-                  and executable_arch_objs"
+                  and cap_refs_in_kernel_window"
 
 definition
  "ct_in_state test \<equiv> \<lambda>s. st_tcb_at test (cur_thread s) s"
@@ -1550,7 +1515,6 @@ abbreviation(input)
        and equal_kernel_mappings and valid_asid_map
        and valid_global_pd_mappings
        and pspace_in_kernel_window and cap_refs_in_kernel_window
-       and executable_arch_objs
        and cur_tcb"
 
 
@@ -1794,7 +1758,8 @@ lemma valid_cap_def2:
           apply (simp_all add: valid_cap_simps wellformed_cap_simps
                                valid_cap_ref_simps
                         split: option.splits)
-    apply fastforce+
+    apply (fastforce+)[4]
+  apply (rename_tac arch_cap)
   apply (case_tac arch_cap)
     apply (auto simp add: valid_cap_simps wellformed_acap_simps
                           valid_cap_ref_simps vmsz_aligned_ARMSection
@@ -1842,7 +1807,7 @@ lemma ran_tcb_cap_cases:
                 insert_commute)
 
 lemma tcb_cnode_map_tcb_cap_cases:
-  "tcb_cnode_map tcb = (\<lambda>bl. Option.map (\<lambda>x. fst x tcb) (tcb_cap_cases bl))"
+  "tcb_cnode_map tcb = (\<lambda>bl. map_option (\<lambda>x. fst x tcb) (tcb_cap_cases bl))"
   by (rule ext) (simp add: tcb_cnode_map_def tcb_cap_cases_def)
 
 lemma ran_tcb_cnode_map:
@@ -1869,18 +1834,6 @@ lemmas
   wellformed_arch_obj_simps[simp] =
   wellformed_arch_obj_def[split_simps arch_kernel_obj.split]
  
-lemmas
-  executable_pte_simps[simp] =
-  executable_pte_def[split_simps ARM_Structs_A.pte.split]
-
-lemmas
-  executable_pde_simps[simp] =
-  executable_pde_def[split_simps ARM_Structs_A.pde.split]
-
-lemmas
-  executable_arch_obj_simps[simp] =
-  executable_arch_obj_def[split_simps arch_kernel_obj.split]
-
 lemma valid_objsI [intro]:
   "(\<And>obj x. kheap s x = Some obj \<Longrightarrow> valid_obj x obj s) \<Longrightarrow> valid_objs s"
   unfolding valid_objs_def by auto
@@ -2009,28 +1962,11 @@ lemma valid_arch_objs_stateI:
   apply (erule (3) vao)
   done
 
-lemma executable_arch_objsD:
-  "\<lbrakk> ko_at (ArchObj ao) p s; executable_arch_objs s \<rbrakk> \<Longrightarrow> executable_arch_obj ao"
-  by (fastforce simp add: executable_arch_objs_def)
-
-(* should work for unmap and non-arch ops *)
-lemma executable_arch_objs_stateI:
-  assumes 1: "executable_arch_objs s"
-  assumes vao: "\<And>p ref ao'.
-                \<lbrakk> \<forall>ao. ko_at (ArchObj ao) p s \<longrightarrow> executable_arch_obj ao;
-                  ko_at (ArchObj ao') p s' \<rbrakk> \<Longrightarrow> executable_arch_obj ao'"
-  shows "executable_arch_objs s'"
-  using 1 unfolding executable_arch_objs_def
-  apply clarsimp
-  apply (rule vao)
-   apply fastforce
-  apply fastforce
-  done
-
 lemma asid_pool_at_ko:
   "asid_pool_at p s \<Longrightarrow> \<exists>pool. ko_at (ArchObj (ARM_Structs_A.ASIDPool pool)) p s"
   apply (clarsimp simp: obj_at_def a_type_def)
   apply (case_tac ko, simp_all split: split_if_asm)
+  apply (rename_tac arch_kernel_obj)
   apply (case_tac arch_kernel_obj, auto)
   done
 
@@ -2077,7 +2013,7 @@ lemma tcb_bound_refs_simps[simp]:
   by (auto simp: tcb_bound_refs_def)
 
 lemma tcb_bound_refs_def2:
-  "tcb_bound_refs a = Option.set a \<times> {TCBBound}"
+  "tcb_bound_refs a = set_option a \<times> {TCBBound}"
 by (simp add: tcb_bound_refs_def split: option.splits)
 
 lemma refs_of_simps[simp]:
@@ -2240,12 +2176,13 @@ lemma ex_nonz_cap_toE:
 lemma refs_of_live:
   "refs_of ko \<noteq> {} \<Longrightarrow> live ko"
   apply (cases ko, simp_all)
+    apply (rename_tac tcb_ext)
      apply (case_tac "tcb_state tcb_ext", simp_all)
     apply (fastforce simp: tcb_bound_refs_def)+
-  apply (case_tac "aep_obj async_ep_ext", simp_all)
+  apply (rename_tac async_ep)
+  apply (case_tac "aep_obj async_ep", simp_all)
    apply (fastforce simp: aep_bound_refs_def)+
-  done 
-
+  done
 
 lemma refs_of_live_obj:
   "\<lbrakk> obj_at P p s; \<And>ko. \<lbrakk> P ko; refs_of ko = {} \<rbrakk> \<Longrightarrow> False \<rbrakk> \<Longrightarrow> obj_at live p s"
@@ -2312,6 +2249,7 @@ lemma physical_valid_cap_not_empty_range:
   "\<lbrakk>valid_cap cap s; cap_class cap = PhysicalClass\<rbrakk> \<Longrightarrow> cap_range cap \<noteq> {}"
   apply (case_tac cap)
    apply (simp_all add:cap_range_def valid_cap_simps cap_aligned_def is_aligned_no_overflow)
+  apply (rename_tac arch_cap)
   apply (case_tac arch_cap,simp_all)
   done
 
@@ -2404,6 +2342,7 @@ lemma in_user_frame_def:
    apply (simp add: a_type_simps)
   apply clarsimp
   apply (case_tac ko, simp_all add: a_type_simps split: split_if_asm)
+  apply (rename_tac arch_kernel_obj)
   apply (case_tac arch_kernel_obj, simp_all add: a_type_simps)
   done
 
@@ -2506,8 +2445,10 @@ lemma valid_arch_obj_pspaceI:
   apply (cases obj, simp_all)
     apply (simp add: obj_at_def)
    apply (erule allEI)
+   apply (rename_tac "fun" x)
    apply (case_tac "fun x", simp_all add: obj_at_def)
   apply (erule ballEI)
+  apply (rename_tac "fun" x)
   apply (case_tac "fun x", simp_all add: obj_at_def)
   done
 
@@ -2746,6 +2687,7 @@ lemmas  pageBitsForSize_simps[simp] =
 lemma arch_kobj_size_bounded:
   "arch_kobj_size obj < word_bits"
   apply (cases obj, simp_all add: word_bits_conv pageBits_def)
+  apply (rename_tac vmpage_size)
   apply (case_tac vmpage_size, simp_all)
   done
 
@@ -3009,7 +2951,7 @@ lemma valid_cte_at_typ:
   apply (rule hoare_vcg_prop)
   done
 
-lemma length_helper [standard]:
+lemma length_helper:
   "\<exists>y. length y = n"
   apply (rule_tac x="replicate n x" in exI)
   apply simp
@@ -3024,6 +2966,7 @@ lemma obj_bits_T:
   apply (cases v, simp_all add: obj_bits_type_def a_type_def)
    apply (clarsimp simp: obj_bits.simps well_formed_cnode_n_def
                          length_set_helper length_helper cte_level_bits_def)
+  apply (rename_tac arch_kernel_obj)
   apply (case_tac arch_kernel_obj, simp_all add: obj_bits.simps)
   done
 
@@ -3077,11 +3020,13 @@ lemma valid_cap_typ:
       apply (rule hoare_vcg_conj_lift [OF valid_untyped_typ[OF P]])
       apply (simp add: valid_def)
      apply (rule hoare_vcg_conj_lift [OF P hoare_vcg_prop])+
+   apply (rename_tac option nat)
    apply (case_tac option, simp_all add: tcb_at_typ cap_table_at_typ)[1]
     apply (rule hoare_vcg_conj_lift [OF P])
     apply (rule hoare_vcg_prop)
    apply (rule hoare_vcg_conj_lift [OF P])
    apply (rule hoare_vcg_prop)
+  apply (rename_tac arch_cap)
   apply (case_tac arch_cap,
          simp_all add: P P[where P=id, simplified]
                        hoare_vcg_prop)
@@ -3104,7 +3049,7 @@ lemma valid_tcb_typ:
   shows      "\<lbrace>\<lambda>s. valid_tcb p tcb s\<rbrace> f \<lbrace>\<lambda>rv s. valid_tcb p tcb s\<rbrace>"
   apply (simp add: valid_tcb_def valid_bound_aep_def split_def)
   apply (wp valid_tcb_state_typ valid_cap_typ P hoare_vcg_const_Ball_lift
-            valid_option_case_post_wp aep_at_typ_at)
+            valid_case_option_post_wp aep_at_typ_at)
   done
 
 lemma valid_cs_typ:
@@ -3150,8 +3095,10 @@ lemma valid_arch_obj_typ:
   apply (cases ob, simp_all)
     apply (rule hoare_vcg_const_Ball_lift [OF P])
    apply (rule hoare_vcg_all_lift)
+   apply (rename_tac "fun" x)
    apply (case_tac "fun x", simp_all add: hoare_vcg_prop P)
   apply (rule hoare_vcg_ball_lift)
+  apply (rename_tac "fun" x)
   apply (case_tac "fun x", simp_all add: hoare_vcg_prop P)
   apply (rule P)
   done
@@ -3286,47 +3233,55 @@ lemma a_type_ACapTableE:
     (!!cs. \<lbrakk>ko = CNode n cs; well_formed_cnode_n n cs\<rbrakk> \<Longrightarrow> R)\<rbrakk>
    \<Longrightarrow> R"
   by (case_tac ko, simp_all add: a_type_simps split: split_if_asm,
+      rename_tac arch_kernel_obj,
       case_tac arch_kernel_obj, simp_all add: a_type_simps)
 lemma a_type_AGarbageE:
   "\<lbrakk>a_type ko = AGarbage;
     (!!n cs. \<lbrakk>ko = CNode n cs; \<not> well_formed_cnode_n n cs\<rbrakk> \<Longrightarrow> R)\<rbrakk>
    \<Longrightarrow> R"
   apply (case_tac ko, simp_all add: a_type_simps split: split_if_asm)
-   apply fastforce
+  apply (rename_tac arch_kernel_obj)
   apply (case_tac arch_kernel_obj, simp_all add: a_type_simps)
   done
 lemma a_type_ATCBE:
   "\<lbrakk>a_type ko = ATCB; (!!tcb. ko = TCB tcb \<Longrightarrow> R)\<rbrakk> \<Longrightarrow> R"
   by (case_tac ko, simp_all add: a_type_simps split: split_if_asm,
+      rename_tac arch_kernel_obj,
       case_tac arch_kernel_obj, simp_all add: a_type_simps)
 lemma a_type_AEndpointE:
   "\<lbrakk>a_type ko = AEndpoint; (!!ep. ko = Endpoint ep \<Longrightarrow> R)\<rbrakk> \<Longrightarrow> R"
   by (case_tac ko, simp_all add: a_type_simps split: split_if_asm,
+      rename_tac arch_kernel_obj,
       case_tac arch_kernel_obj, simp_all add: a_type_simps)
 lemma a_type_AAEPE:
   "\<lbrakk>a_type ko = AAEP; (!!aep. ko = AsyncEndpoint aep \<Longrightarrow> R)\<rbrakk> \<Longrightarrow> R"
   by (case_tac ko, simp_all add: a_type_simps split: split_if_asm,
+      rename_tac arch_kernel_obj,
       case_tac arch_kernel_obj, simp_all add: a_type_simps)
 lemma a_type_AASIDPoolE:
   "\<lbrakk>a_type ko = AArch AASIDPool;
     (!!ap. ko = ArchObj (arch_kernel_obj.ASIDPool ap) \<Longrightarrow> R)\<rbrakk>
    \<Longrightarrow> R"
   by (case_tac ko, simp_all add: a_type_simps split: split_if_asm,
+      rename_tac arch_kernel_obj,
       case_tac arch_kernel_obj, simp_all add: a_type_simps)
 lemma a_type_APageDirectoryE:
   "\<lbrakk>a_type ko = AArch APageDirectory;
     (!!pd. ko = ArchObj (PageDirectory pd) \<Longrightarrow> R)\<rbrakk>
    \<Longrightarrow> R"
   by (case_tac ko, simp_all add: a_type_simps split: split_if_asm,
+      rename_tac arch_kernel_obj,
       case_tac arch_kernel_obj, simp_all add: a_type_simps)
 lemma a_type_APageTableE:
   "\<lbrakk>a_type ko = AArch APageTable; (!!pt. ko = ArchObj (PageTable pt) \<Longrightarrow> R)\<rbrakk>
    \<Longrightarrow> R"
   by (case_tac ko, simp_all add: a_type_simps split: split_if_asm,
+      rename_tac arch_kernel_obj,
       case_tac arch_kernel_obj, simp_all add: a_type_simps)
 lemma a_type_AIntDataE:
   "\<lbrakk>a_type ko = AArch (AIntData sz); ko = ArchObj (DataPage sz) \<Longrightarrow> R\<rbrakk> \<Longrightarrow> R"
   by (case_tac ko, simp_all add: a_type_simps split: split_if_asm,
+      rename_tac arch_kernel_obj,
       case_tac arch_kernel_obj, simp_all add: a_type_simps)
 
 lemmas a_type_elims[elim!] =
@@ -3539,10 +3494,6 @@ lemma valid_pd_kernel_mappings [iff]:
   "valid_pd_kernel_mappings uses (f s)
       = valid_pd_kernel_mappings uses s"
   by (rule ext, simp add: valid_pd_kernel_mappings_def)
-
-lemma executable_arch_objs_update [iff]:
-  "executable_arch_objs (f s) = executable_arch_objs s"
-  by (simp add: executable_arch_objs_def)
 
 end
 
@@ -4170,7 +4121,7 @@ lemma vs_lookup_pages_vs_lookupI: "(ref \<rhd> p) s \<Longrightarrow> (ref \<unr
     apply (erule rtrancl.induct, simp_all)
     apply (rename_tac a b c)
     apply (subgoal_tac "(b \<unrhd>1 c) s", erule (1) rtrancl_into_rtrancl)
-    apply (thin_tac "?x : rtrancl ?r")+
+    apply (thin_tac "x : rtrancl r" for x r)+
     apply (simp add: vs_lookup1_def vs_lookup_pages1_def split_def)
     apply (erule exEI)
     apply clarsimp
@@ -4304,21 +4255,21 @@ lemma valid_arch_objs_alt:
   apply (intro iffI conjI)
        apply fastforce
       apply (clarsimp simp: obj_at_def)
-      apply (thin_tac "Ball ?S ?P")
+      apply (thin_tac "Ball S P" for S P)
       apply (frule vs_lookup_atI)
       apply (drule valid_arch_objsD)
         apply (simp add: obj_at_def)
        apply assumption
       apply (clarsimp simp: obj_at_def ranI)
      apply (clarsimp simp: obj_at_def)
-     apply (thin_tac "Ball ?S ?P")
+     apply (thin_tac "Ball S P" for S P)
      apply (frule (2) vs_lookup_apI)
      apply (drule valid_arch_objsD)
        apply (simp add: obj_at_def)
       apply assumption
      apply fastforce
     apply (clarsimp simp: obj_at_def)
-    apply (thin_tac "Ball ?S ?P")
+    apply (thin_tac "Ball S P" for S P)
     apply (frule (5) vs_lookup_pdI)
     apply (drule valid_arch_objsD)
       apply (simp add: obj_at_def)
@@ -4622,7 +4573,7 @@ lemma vs_ref_order:
    apply (clarsimp simp: valid_arch_state_def valid_asid_table_def
                          ranI)
   apply (clarsimp dest!: vs_lookup1D elim!: obj_atE)
-  apply (clarsimp simp: vs_refs_def a_type_def[where ob="ArchObj ao", standard]
+  apply (clarsimp simp: vs_refs_def a_type_def[where ob="ArchObj ao" for ao]
                  split: Structures_A.kernel_object.split_asm
                         arch_kernel_obj.split_asm
                  dest!: graph_ofD)
@@ -4687,16 +4638,8 @@ lemma valid_arch_objsI [intro?]:
   "(\<And>p ao. \<lbrakk> (\<exists>\<rhd> p) s; ko_at (ArchObj ao) p s \<rbrakk> \<Longrightarrow> valid_arch_obj ao s) \<Longrightarrow> valid_arch_objs s"
   by (simp add: valid_arch_objs_def)
 
-lemma executable_arch_objsI [intro?]:
-  "(\<And>p ao. \<lbrakk> ko_at (ArchObj ao) p s \<rbrakk> \<Longrightarrow> executable_arch_obj ao) \<Longrightarrow> executable_arch_objs s"
-  by (simp add: executable_arch_objs_def)
-
 (* FIXME: duplicated with caps_of_state_valid_cap *)
-lemma caps_of_state_valid:
-  "\<lbrakk> caps_of_state s p = Some cap; valid_objs s \<rbrakk> \<Longrightarrow> s \<turnstile> cap"
-  apply (drule caps_of_state_cteD)
-  apply (erule (1) cte_wp_valid_cap)
-  done
+lemmas caps_of_state_valid =  caps_of_state_valid_cap
 
 lemma vs_lookup1_stateI2:
   assumes 1: "(r \<rhd>1 r') s"
@@ -4923,15 +4866,6 @@ lemma valid_arch_objs_lift:
             hoare_convert_imp [OF y] valid_arch_obj_typ z)
   done
 
-lemma executable_arch_objs_lift:
-  assumes z: "\<And>P p T. \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
-      and y: "\<And>ao p. \<lbrace>\<lambda>s. \<not> ko_at (ArchObj ao) p s\<rbrace> f \<lbrace>\<lambda>rv s. \<not> ko_at (ArchObj ao) p s\<rbrace>"
-  shows      "\<lbrace>executable_arch_objs\<rbrace> f \<lbrace>\<lambda>rv. executable_arch_objs\<rbrace>"
-  apply (simp add: executable_arch_objs_def)
-  apply (wp hoare_vcg_all_lift
-            hoare_convert_imp [OF y] valid_arch_obj_typ z)
-  done
-
 lemma valid_validate_vm_rights[simp]:
   "validate_vm_rights rs \<in> valid_vm_rights"
 and validate_vm_rights_subseteq[simp]:
@@ -5069,7 +5003,7 @@ lemma objs_valid_tcb_ctable:
   "\<lbrakk>valid_objs s; get_tcb t s = Some tcb\<rbrakk> \<Longrightarrow> s \<turnstile> tcb_ctable tcb"
   apply (clarsimp simp: get_tcb_def split: option.splits Structures_A.kernel_object.splits)
   apply (erule cte_wp_valid_cap[rotated])
-  apply (rule cte_wp_at_tcbI[where t="(a, b)", standard, where b="tcb_cnode_index 0"])
+  apply (rule cte_wp_at_tcbI[where t="(a, b)" for a b, where b3="tcb_cnode_index 0"])
     apply fastforce+
   done
 
@@ -5081,10 +5015,6 @@ lemma invs_valid_tcb_ctable:
 
 lemma invs_arch_objs [elim!]:
   "invs s \<Longrightarrow> valid_arch_objs s"
-  by (simp add: invs_def valid_state_def)
-
-lemma invs_executable_arch_objs [elim!]:
-  "invs s \<Longrightarrow> executable_arch_objs s"
   by (simp add: invs_def valid_state_def)
 
 lemma invs_valid_idle[elim!]:
@@ -5131,7 +5061,7 @@ lemma get_irq_slot_real_cte:
 lemma all_invs_but_sym_refs_check:
   "(all_invs_but_sym_refs and sym_refs \<circ> state_refs_of) = invs"
   by (simp add: invs_def valid_state_def valid_pspace_def
-                o_def pred_conj_def conj_ac)
+                o_def pred_conj_def conj_comms)
 
 lemma invs_unique_table_caps[elim!]:
   "invs s \<Longrightarrow> unique_table_caps (caps_of_state s)"

@@ -1,13 +1,3 @@
-(*
- * Copyright 2014, NICTA
- *
- * This software may be distributed and modified according to the terms of
- * the BSD 2-Clause license. Note that NO WARRANTY is provided.
- * See "LICENSE_BSD2.txt" for details.
- *
- * @TAG(NICTA_BSD)
- *)
-
 signature StrictC_TOKENS =
 sig
 type ('a,'b) token
@@ -27,6 +17,9 @@ val GHOSTUPD:  'a * 'a -> (svalue,'a) token
 val AUXUPD:  'a * 'a -> (svalue,'a) token
 val RELSPEC:  'a * 'a -> (svalue,'a) token
 val FNSPEC:  'a * 'a -> (svalue,'a) token
+val AUTO:  'a * 'a -> (svalue,'a) token
+val THREAD_LOCAL:  'a * 'a -> (svalue,'a) token
+val NORETURN:  'a * 'a -> (svalue,'a) token
 val STATIC:  'a * 'a -> (svalue,'a) token
 val INLINE:  'a * 'a -> (svalue,'a) token
 val INVARIANT:  'a * 'a -> (svalue,'a) token

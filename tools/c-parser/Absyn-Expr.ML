@@ -59,7 +59,7 @@ and designator =
 
 
 datatype ecenv =
-         CE of {enumenv : (int * string option) Symtab.table,
+         CE of {enumenv : (IntInf.int * string option) Symtab.table,
                           (* lookup is from econst name to value and the
                              name of the type it belongs to, if any
                              (they can be anonymous) *)
@@ -111,7 +111,7 @@ sig
 
 
   datatype ecenv = datatype ExprDatatype.ecenv (* "enumerated constant environment" *)
-  val eclookup : ecenv -> string -> (int * string option) option
+  val eclookup : ecenv -> string -> (IntInf.int * string option) option
   val constify_abtype : ecenv -> expr CType.ctype -> int CType.ctype
   val consteval : ecenv -> expr -> IntInf.int
 
@@ -157,7 +157,7 @@ fun eval_litconst lc = let
 in
   case node lc of
     NUMCONST nc => (#value nc, numconst_type nc)
-  | STRING_LIT s => (Feedback.errorStr'(left lc, right lc,
+  | STRING_LIT _ => (Feedback.errorStr'(left lc, right lc,
                                         "Don't evaluate string literals!");
                      (fi 1, Signed Int))
 end
@@ -396,7 +396,6 @@ in
 end
 
 val fi = IntInf.fromInt
-val ti = IntInf.toInt
 
 fun eval_unop (l, r, uop, (n, ty)) = let
   open IntInf
@@ -416,7 +415,6 @@ fun eclookup (CE {enumenv,...}) s = Symtab.lookup enumenv s
 
 fun consteval0 (ecenv as CE {enumenv, typing, structsize}) e = let
   val fi = IntInf.fromInt
-  val one = (fi 1, Signed Int)
   val zero = (fi 0, Signed Int)
   fun Fail s = (Feedback.errorStr'(eleft e, eright e, s); zero)
   val consteval = consteval0 ecenv
@@ -430,7 +428,7 @@ in
     in
       case Symtab.lookup enumenv s of
         NONE => Fail ("Variable "^s^ " can't appear in a constant expression")
-      | SOME (v, _) => (fi v, Signed Int)
+      | SOME (v, _) => (v, Signed Int)
     end
   | StructDot _ =>
     Fail "Can't evaluate fieldref in constant expression"
@@ -445,7 +443,7 @@ in
                   ImplementationTypes.size_t)
   | MKBOOL e => bool (#1 (consteval e) <> fi 0)
   | TypeCast(destty, e0) => let
-      val (v,ty) = consteval e0
+      val (v,_) = consteval e0
     in
       safeop (eleft e, eright e) (node destty) (fn x => x) v
     end
@@ -496,7 +494,7 @@ fun eneeds_sc_protection e =
     | Constant _ => false
     | Var _ => false
     | StructDot (e,_) => eneeds_sc_protection e
-    | ArrayDeref(e1, e2) => true (* could try to figure out if the array is
+    | ArrayDeref _ => true (* could try to figure out if the array is
                                     a pointer, but even if it isn't, there
                                     should be bounds checking going on *)
     | Deref _ => true

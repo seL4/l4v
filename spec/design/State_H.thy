@@ -12,7 +12,7 @@
 	Machine and kernel state.
 *)
 
-header "Machine State"
+chapter "Machine State"
 
 theory State_H
 imports

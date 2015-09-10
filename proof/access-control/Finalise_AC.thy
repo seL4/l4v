@@ -20,7 +20,7 @@ apply (simp add: tcb_sched_action_def)
 apply wp
 apply (clarsimp simp: integrity_def integrity_ready_queues_def pas_refined_def tcb_domain_map_wellformed_aux_def etcb_at_def get_etcb_def
            split: option.splits)
-apply (erule_tac x="(thread, tcb_domain a)" in ballE)
+apply (erule_tac x="(thread, tcb_domain (the (ekheap s thread)))" in ballE)
 apply (auto intro: domtcbs)
 done
 
@@ -32,7 +32,7 @@ apply (simp add: tcb_sched_action_def)
 apply wp
 apply (clarsimp simp: integrity_def integrity_ready_queues_def pas_refined_def tcb_domain_map_wellformed_aux_def tcb_at_def get_etcb_def tcb_sched_enqueue_def etcb_at_def
            split: option.splits)
-apply (metis append.simps)
+apply (metis append.simps) (* it says append.simps is unused, but refuses to prove the goal without *)
 done
 
 lemma tcb_sched_action_append_integrity[wp]:
@@ -43,7 +43,7 @@ apply (simp add: tcb_sched_action_def)
 apply wp
 apply (clarsimp simp: integrity_def integrity_ready_queues_def pas_refined_def tcb_domain_map_wellformed_aux_def etcb_at_def get_etcb_def
            split: option.splits)
-apply (erule_tac x="(thread, tcb_domain a)" in ballE)
+apply (erule_tac x="(thread, tcb_domain (the (ekheap s thread)))" in ballE)
 apply (auto intro: domtcbs)
 done
 
@@ -65,10 +65,10 @@ lemma ep_cancel_badged_sends_respects[wp]:
              cong: Structures_A.endpoint.case_cong)
   apply (wp set_endpoinintegrity | wpc | simp)+
      apply (rule mapM_mapM_x_valid[THEN iffD1])
-     apply (simp add: exI[where x=Reset])
-     apply (rule_tac Q="?P" and I="?P" and
+     apply (simp add: exI[where x=Reset]) thm mapM_x_inv_wp2
+     apply (rule_tac Q="P" and I="P" and
                V = "\<lambda>q s. distinct q \<and> (\<forall>x \<in> set q. st_tcb_at (blocked_on epptr) x s)"
-                in mapM_x_inv_wp2)
+               for P in mapM_x_inv_wp2)
       apply simp
      apply (simp add: bind_assoc)
      apply (rule hoare_seq_ext[OF _ gts_sp])
@@ -551,6 +551,7 @@ lemma finalise_cap_makes_halted:
                  | rule hoare_drop_imp)+
    apply (fastforce simp: st_tcb_at_def obj_at_def is_tcb
                   dest!: final_zombie_not_live)
+  apply (rename_tac arch_cap)
   apply (case_tac arch_cap, simp_all add: arch_finalise_cap_def)
       apply (wp
            | clarsimp simp: valid_cap_def split: option.split bool.split
@@ -595,7 +596,7 @@ proof (induct arbitrary: st rule: rec_del.induct,
     apply (rule spec_valid_conj_liftE1, rule valid_validE_R, rule rec_del_valid_list, rule preemption_point_inv')
       apply simp
      apply simp
-    apply (rule "1.hyps"[simplified rec_del_call.cases slot_rdcall.simps])
+    apply (rule "1.hyps"[simplified rec_del_call.simps slot_rdcall.simps])
    apply auto
     done
 
@@ -619,7 +620,7 @@ next
            apply simp
           apply (rule "2.hyps", assumption+)
          apply simp
-        apply (simp add: conj_ac)
+        apply (simp add: conj_comms)
         apply (wp set_cap_integrity_autarch replace_cap_invs
                   final_cap_same_objrefs set_cap_cte_cap_wp_to
                   set_cap_cte_wp_at hoare_vcg_const_Ball_lift static_imp_wp
@@ -651,7 +652,7 @@ next
        apply simp
       apply (simp add: is_final_cap_def)
       apply (wp get_cap_auth_wp [where aag = aag])
-    apply (clarsimp simp: pas_refined_wellformed cte_wp_at_caps_of_state conj_ac)
+    apply (clarsimp simp: pas_refined_wellformed cte_wp_at_caps_of_state conj_comms)
     apply (frule (1) caps_of_state_valid)
     apply (frule if_unsafe_then_capD [OF caps_of_state_cteD], clarsimp+)
     apply auto
@@ -662,7 +663,7 @@ next
    by (clarsimp simp: replicate_not_True)
   case (3 ptr bits n slot s)
   show ?case
-    apply (simp add: rec_del_call.cases simp_thms spec_validE_def)
+    apply (simp add: rec_del_call.simps simp_thms spec_validE_def)
     apply (rule hoare_pre, wp static_imp_wp)
     apply clarsimp
     done
@@ -726,12 +727,6 @@ lemma store_pte_respects:
   apply simp
   done
 
-lemma storeWord_respects:
-  "\<lbrace>\<lambda>ms. integrity aag X st (s\<lparr>machine_state := ms\<rparr>) \<and> (\<forall>p' \<in> ptr_range p 2. aag_has_auth_to aag Write p')\<rbrace> storeWord p v \<lbrace>\<lambda>a b. integrity aag X st (s\<lparr>machine_state := b\<rparr>)\<rbrace>"
-  unfolding storeWord_def
-  apply wp
-  apply (auto simp: integrity_def is_aligned_mask [symmetric] intro!: trm_write ptr_range_memI ptr_range_add_memI)
-  done
 
 lemma dmo_clearMemory_respects':
   "\<lbrace>integrity aag X st and K (is_aligned ptr bits \<and> bits < word_bits \<and> 2 \<le> bits \<and> (\<forall>p \<in> ptr_range ptr bits. aag_has_auth_to aag Write p))\<rbrace>
@@ -795,7 +790,7 @@ lemma arch_recycle_cap_respects:
              | wp_once hoare_drop_imps
              | elim conjE
              | (erule is_aligned_weaken, simp add: pd_bits_def pageBits_def))+
-  apply (clarsimp simp: conj_ac cases_simp_options valid_cap_def cap_aligned_def)
+  apply (clarsimp simp: conj_comms cases_simp_options valid_cap_def cap_aligned_def)
   apply (frule (1) cte_wp_valid_cap [OF _ invs_valid_objs])
   apply (simp add: cap_auth_conferred_def is_page_cap_def aag_cap_auth_def
                    pas_refined_all_auth_is_owns valid_cap_simps
@@ -803,6 +798,7 @@ lemma arch_recycle_cap_respects:
             split: arch_cap.split_asm)
      apply (fastforce simp: cap_links_asid_slot_def label_owns_asid_slot_def intro: pas_refined_Control_into_is_subject_asid)
     apply (fastforce simp: has_recycle_rights_def vspace_cap_rights_to_auth_def pageBitsForSize_def split: vmpage_size.split)
+   apply (rename_tac word option)
    apply (subgoal_tac
      "(\<forall>v\<in>List.set [word , word + 4 .e. word + 2 ^ pt_bits - 1]. is_subject aag (v && ~~ mask pt_bits)) \<and>
            (\<exists>a b. cte_wp_at
@@ -822,6 +818,7 @@ lemma arch_recycle_cap_respects:
    apply (rule conjunct2[OF is_aligned_add_helper[OF _ shiftl_less_t2n]],
      simp_all add: pt_bits_def pageBits_def )[1]
    apply unat_arith
+  apply (rename_tac word option)
   apply (subgoal_tac
     "(\<forall>sl\<le>(kernel_base >> 20) - 1. (sl << 2) + word && ~~ mask pd_bits \<notin> global_refs s) \<and>
      (\<forall>v\<le>(kernel_base >> 20) - 1. is_subject aag ((v << 2) + word && ~~ mask pd_bits)) \<and>
@@ -833,7 +830,7 @@ lemma arch_recycle_cap_respects:
     apply clarsimp
     apply (drule valid_global_refsD2, fastforce)
     apply (clarsimp simp: cap_range_def)
-   apply (subst add_commute, subst is_aligned_add_helper, simp add: pd_bits_def)
+   apply (subst add.commute, subst is_aligned_add_helper, simp add: pd_bits_def)
      apply (simp add: pageBits_def)
     apply (rule shiftl_less_t2n)
      apply (simp add: kernel_base_def)
@@ -847,17 +844,14 @@ lemma arch_recycle_cap_respects:
 
 lemma integrity_eupdate_autarch:
   "\<lbrakk> integrity aag X st s; is_subject aag ptr \<rbrakk> \<Longrightarrow> integrity aag X st (s\<lparr>ekheap := ekheap s(ptr \<mapsto> obj)\<rparr>)"
-  unfolding integrity_subjects_def
-  apply (rule conjI)
-   apply clarsimp+
-  done
+  unfolding integrity_subjects_def by auto
 
 lemma set_eobject_integrity_autarch:
   "\<lbrace>integrity aag X st and K (is_subject aag ptr)\<rbrace>
      set_eobject ptr obj
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply (simp add: set_eobject_def)
-  apply (wp gets_the_wp)
+  apply wp
   apply (rule integrity_eupdate_autarch, simp_all)
   done
 
@@ -898,7 +892,7 @@ lemma thread_set_pas_refined_triv_idleT:
    apply wp
   apply (clarsimp simp: pred_tcb_def2 fun_upd_def[symmetric]
                    del: subsetI)
-  apply (erule_tac P="\<lambda> ts ba. auth_graph_map ?a (state_bits_to_policy ?cps ts ba ?cd ?vr) \<subseteq> ?ag" in rsubst')
+  apply (erule_tac P="\<lambda> ts ba. auth_graph_map a (state_bits_to_policy cps ts ba cd vr) \<subseteq> ag" for a cps cd vr ag in rsubst')
    apply (drule get_tcb_SomeD)
    apply (rule ext, clarsimp simp add: thread_states_def get_tcb_def st tcb_states_of_state_def)
   apply (drule get_tcb_SomeD)
@@ -983,6 +977,7 @@ apply (wpc
             recycle_cap_ext_pas_refined thread_set_pas_refined_triv_idleT[where P=inactive and Q="op = None"]
        | rule ball_tcb_cap_casesI
        | clarsimp | simp add: default_tcb_def tcb_registers_caps_merge_def)+
+     apply (rename_tac word word3)
      apply (rule_tac P="pas_refined aag and pas_cur_domain aag and K (is_subject aag word)" in hoare_strengthen_post[OF gts_sp])
      apply (clarsimp simp: pred_tcb_def2)
     apply (wp arch_recycle_cap_pas_refined[where slot=slot] | simp)+
@@ -1225,7 +1220,7 @@ lemma cap_recycle_respects[wp]:
      apply (wp rec_del_respects rec_del_invs rec_del_has_recycle_rights_insts preemption_point_inv' | simp)+
     apply (clarsimp simp: cte_wp_at_caps_of_state)
     apply (auto elim: caps_of_state_valid)[1]
-   apply (simp add: conj_ac)
+   apply (simp add: conj_comms)
    apply (wp cap_revoke_respects cap_revoke_pas_refined cap_revoke_invs
              cap_revoke_has_recycle_rights
                | strengthen real_cte_emptyable_strg | simp)+

@@ -121,7 +121,7 @@ lemma rec_del_irq_masks':
          apply(wp  finalise_cap_domain_sep_inv_cap get_cap_wp 
                    finalise_cap_returns_None[where irqs=False, simplified]
                    drop_spec_validE[OF liftE_wp] set_cap_domain_sep_inv
-               |simp add: without_preemption_def split del: split_if
+               |simp split del: split_if
                |wp_once hoare_drop_imps)+
     apply(blast dest: cte_wp_at_domain_sep_inv_cap)
     done
@@ -137,7 +137,7 @@ lemma rec_del_irq_masks':
   case (4 ptr bits n slot s) show ?case
     apply(simp add: rec_del.simps)
     apply (wp drop_spec_validE[OF returnOk_wp] drop_spec_validE[OF liftE_wp] set_cap_domain_sep_inv
-              drop_spec_validE[OF assertE_wp] get_cap_wp | simp add: without_preemption_def)+
+              drop_spec_validE[OF assertE_wp] get_cap_wp | simp)+
     apply (rule spec_strengthen_postE[OF "4.hyps", simplified])
      apply(simp add: returnOk_def return_def)
     apply(clarsimp simp: domain_sep_inv_cap_def)
@@ -175,13 +175,6 @@ lemma invoke_irq_control_irq_masks:
   apply(case_tac invok)
    apply(clarsimp simp: irq_control_inv_valid_def domain_sep_inv_def valid_def)+
   done
-
-lemma no_irq_do_flush:
-  "no_irq (do_flush flush_type vstart vend pstart)"
-  apply (clarsimp simp: no_irq_def)
-  apply (cases "flush_type")
-     apply (wp dmo_cacheRangeOp_lift | simp add: do_flush_def cache_machine_op_defs do_flush_defs do_machine_op_bind when_def | clarsimp | rule conjI)+
-     done
       
 crunch irq_masks[wp]: arch_perform_invocation, bind_async_endpoint "\<lambda>s. P (irq_masks_of_state s)"
   (wp: dmo_wp crunch_wps simp: crunch_simps no_irq_cleanByVA_PoU no_irq_invalidateTLB_ASID no_irq_do_flush)
@@ -213,6 +206,7 @@ lemma invoke_tcb_irq_masks:
     defer
     apply((wp | simp )+)[2]
   (* AsyncEndpointControl *)
+   apply (rename_tac option)
    apply (case_tac option)
     apply ((wp | simp)+)[2]
   (* just ThreadControl left *)
@@ -263,8 +257,7 @@ lemma invoke_tcb_irq_masks:
             thread_set_valid_cap 
             thread_set_cte_at  thread_set_no_cap_to_trivial
        | wpc)+
-  apply fastforce+
-  done
+  by fastforce+
 
 crunch irq_masks[wp]: cap_move "\<lambda>s. P (irq_masks_of_state s)"
 
@@ -315,7 +308,7 @@ lemma finalise_slot_irq_masks:
 lemma cap_recycle_irq_masks:
   "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False st\<rbrace> cap_recycle blah \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>"     
   apply(simp add: cap_recycle_def)
-  apply(wp hoare_unless_wp  finalise_slot_irq_masks[where st=st] | simp add: conj_ac)+
+  apply(wp hoare_unless_wp  finalise_slot_irq_masks[where st=st] | simp add: conj_comms)+
   apply(rule hoare_pre(2)[OF hoare_vcg_conj_liftE1])
   apply(rule validE_validE_R[OF hoare_post_impErr, OF cap_revoke_domain_sep_inv], simp+)
   apply(wp cap_revoke_irq_masks, auto)
@@ -336,7 +329,8 @@ lemma invoke_cnode_irq_masks:
 fun irq_of_handler_inv where
   "irq_of_handler_inv (ACKIrq irq) = irq" |
   "irq_of_handler_inv (ClearIRQHandler irq) = irq" |
-  "irq_of_handler_inv (SetIRQHandler irq _ _) = irq"
+  "irq_of_handler_inv (SetIRQHandler irq _ _) = irq" |
+  "irq_of_handler_inv (SetMode irq _ _) = irq"
 
 crunch irq_masks[wp]: invoke_domain "\<lambda>s. P (irq_masks_of_state s)"
 
@@ -368,12 +362,12 @@ lemma decode_invocation_IRQHandlerCap:
                         (a, b) s))\<rbrace>,-"
   apply(simp add: decode_invocation_def split del: split_if)
   apply(rule hoare_pre)
-   apply (wp | wpc | simp add: o_def del: split_if)+
+   apply (wp | wpc | simp add: o_def)+
        apply (rule hoare_post_imp_R[where Q'="\<top>\<top>"])
         apply wp
        apply (clarsimp simp: uncurry_def)
       apply(wp | wpc | simp add: decode_irq_handler_invocation_def o_def split del: split_if)+
-  apply (safe | rule TrueI | simp add: diminished_IRQHandler op_equal | rule exI[where x="fst slot"], rule exI[where x="snd slot"])+
+  apply (safe | rule TrueI | simp add: op_equal | rule exI[where x="fst slot"], rule exI[where x="snd slot"])+
   done
 
 lemma handle_invocation_irq_masks:
@@ -415,8 +409,9 @@ lemma handle_event_irq_masks:
    handle_event ev
    \<lbrace> \<lambda> rv s. P (irq_masks_of_state s) \<rbrace>"
   apply(case_tac ev)
+      apply (rename_tac syscall)
       apply(case_tac syscall)
-             apply(simp add: handle_send_def handle_call_def | wp handle_invocation_irq_masks[where st=st] handle_interrupt_irq_masks[where st=st] hoare_vcg_all_lift | wpc | wp_once hoare_drop_imps)+
+            apply(simp add: handle_send_def handle_call_def | wp handle_invocation_irq_masks[where st=st] handle_interrupt_irq_masks[where st=st] hoare_vcg_all_lift | wpc | wp_once hoare_drop_imps)+
   done
 
 crunch irq_masks[wp]: activate_thread "\<lambda>s. P (irq_masks_of_state s)"
@@ -432,9 +427,9 @@ lemma call_kernel_irq_masks:
   apply (wp handle_interrupt_irq_masks[where st=st])+
    apply(rule_tac Q="\<lambda>_ s. P (irq_masks_of_state s) \<and> domain_sep_inv False st s" in hoare_strengthen_post)
     apply(wp | simp)+
-  apply(rule_tac Q="\<lambda> x s. P (irq_masks_of_state s) \<and> domain_sep_inv False st s" and F="?E" in hoare_post_impErr)
+  apply(rule_tac Q="\<lambda> x s. P (irq_masks_of_state s) \<and> domain_sep_inv False st s" and F="E" for E in hoare_post_impErr)
     apply(rule valid_validE)
     apply(wp handle_event_irq_masks[where st=st] valid_validE[OF handle_event_domain_sep_inv] | simp)+
   done
 
-end (* a comment *)
+end

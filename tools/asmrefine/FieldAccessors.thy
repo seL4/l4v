@@ -115,7 +115,7 @@ lemma field_access_take_drop_general:
         access_ti s v (take (size_td s) (drop (n - m) bs))"
 apply (induct t and st and ts and x)
      apply auto
- apply(thin_tac "All ?P")+
+ apply(thin_tac "All P" for P)+
  apply(subst (asm) take_all)
   apply(drule wf_fd_cons_structD)
   apply(clarsimp simp: fd_cons_struct_def fd_cons_desc_def fd_cons_length_def)
@@ -192,7 +192,7 @@ lemma field_lookup_to_bytes_split:
    apply (rule trans, rule field_lookup_to_bytes, simp+)
    apply (drule field_lookup_offset_size[OF meta_eq_to_obj_eq])
    apply (simp add: drop_heap_list_le take_heap_list_le size_of_def)
-  apply (simp add: add_commute)
+  apply (simp add: add.commute)
   done
 
 lemma field_lookup_to_bytes_split_step:
@@ -235,13 +235,27 @@ lemma drop_heap_list_general:
    apply (simp_all add: drop_heap_list_le)
   done
 
+lemma heap_update_mono_to_field_rewrite:
+  "\<lbrakk> field_lookup (typ_info_t TYPE('a)) [s] 0
+        \<equiv> field_lookup (adjust_ti (typ_info_t TYPE('b)) f upds) [] n;
+      export_uinfo (adjust_ti (typ_info_t TYPE('b)) f upds)
+        = export_uinfo (typ_info_t TYPE('b));
+      align_of TYPE('a) + size_of TYPE('a) < 2 ^ 32; align_of TYPE('a) \<noteq> 0 \<rbrakk>
+    \<Longrightarrow> heap_update (p::'a::packed_type ptr)
+           (update_ti_t (adjust_ti (typ_info_t TYPE('b)) f upds) (to_bytes_p v)
+               str) hp
+         = heap_update (Ptr (&(p\<rightarrow>[s]))::'b::packed_type ptr) v (heap_update p str hp)"
+  by (simp add: typ_uinfo_t_def heap_update_field2
+                packed_heap_update_collapse h_val_heap_update
+                field_ti_def update_ti_t_def size_of_def)
+
 ML {*
 fun get_field_h_val_rewrites lthy =
   (simpset_of lthy |> dest_ss |> #simps |> map snd
     |> map (Thm.transfer (Proof_Context.theory_of lthy))
                RL @{thms h_val_mono_to_field_rewrite
-                         (* heap_update_mono_to_field_rewrite
-                             [unfolded align_of_def size_of_def] *) })
+                         heap_update_mono_to_field_rewrite
+                             [unfolded align_of_def size_of_def] })
     |> map (asm_full_simplify lthy);
 
 fun add_field_h_val_rewrites lthy =
@@ -252,7 +266,7 @@ fun add_field_h_val_rewrites lthy =
 ML {*
 fun get_field_to_bytes_rewrites lthy = let
     val fl_thms = Global_Theory.facts_of (Proof_Context.theory_of lthy)
-        |> Facts.dest_static []
+        |> Facts.dest_static false []
         |> filter (fn (s, _) => String.isSuffix "_fl_Some" s)
         |> maps snd
         |> map (Thm.transfer (Proof_Context.theory_of lthy))
@@ -263,7 +277,7 @@ fun get_field_to_bytes_rewrites lthy = let
     fun proc thm = case (fl_thms RL [thm RS step]) of
             (thm :: _) => proc (simp_tac lthy 1 thm |> Seq.hd)
         | [] => thm
-    fun test concl = (Term.exists_Const (fn (s, T) => s = @{const_name "drop"}) concl
+    fun test concl = (Term.exists_Const (fn (s, _) => s = @{const_name "drop"}) concl
         andalso (warning ("padding: " ^ (HOLogic.dest_Trueprop concl
             |> HOLogic.dest_eq |> fst |> strip_comb |> snd |> hd
             |> fastype_of |> dest_Type |> fst)); true))

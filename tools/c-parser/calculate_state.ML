@@ -16,6 +16,7 @@ sig
   type 'a ctype = 'a Absyn.ctype
   type ecenv = Absyn.ecenv
   type 'a rcd_env = 'a ProgramAnalysis.rcd_env
+  type nm_info = ProgramAnalysis.nm_info
 
   val define_enum_consts : ecenv -> theory -> theory
 
@@ -24,10 +25,6 @@ sig
   val populate_globals : bool Config.T
   val record_globinits : bool Config.T
   val current_C_filename : string Config.T
-
-  (* the "isa_name" is the munged name, but in the form without trailing
-     _' suffixes *)
-  type nm_info = {src_name : string, isa_name : string}
 
   val ctype_to_typ : theory * int ctype -> typ
   datatype var_sort = Local of string
@@ -51,7 +48,7 @@ sig
 
   val gen_umm_types_file : csenv -> string -> unit
 
-  type mungedb = (string * typ * int ctype option * var_sort) CNameTab.table
+  type mungedb = (MString.t * typ * int ctype option * var_sort) CNameTab.table
   val mk_mungedb : (nm_info * typ * int ctype option * var_sort) list ->
                    mungedb
 
@@ -147,9 +144,6 @@ datatype isa_type = refty of (isa_type option * int ctype)
                   | existing of typ * int ctype
 type isa_senv = isa_type rcd_env
 
-type nm_info = {src_name : string, isa_name : string}
-
-
 datatype var_sort =
          Local of string | NSGlobal | AddressedGlobal | UntouchedGlobal
 type isa_var = (nm_info * isa_type * var_sort)
@@ -204,50 +198,50 @@ fun translate_vi csenv = let
       Function _ => NONE
     | ty => let
         val isaty = translate_type ty
+        val k = get_mname vi
         val var_sort =
             case get_vi_fname vi of
               SOME s => Local s
             | NONE => let
               in
-                if Symtab.defined (get_addressed csenv) (srcname vi) then
+                if MSymTab.defined (get_addressed csenv) k then
                   AddressedGlobal
-                else if Symtab.defined untoucheds (srcname vi) then
+                else if MSymTab.defined untoucheds k then
                   UntouchedGlobal
                 else
                   NSGlobal
               end
       in
-        SOME ({src_name = srcname vi, isa_name = get_mname vi}, isaty,
-              var_sort)
+        SOME (vi_nm_info vi, isaty, var_sort)
       end
   end
 in
   doit
 end
 
-fun tycon_munge thy s = Sign.intern_type thy s
-
-fun isa_type_to_typ thy (ity : isa_type) = let
-  fun m s = let val s' = tycon_munge thy s
-            in
-              if s' = s then Sign.full_name thy (Binding.name s)
-              else s'
-            end
+fun isa_type_to_typ ctxt (ity : isa_type) = let
+  fun m s = let
+    val thy = Proof_Context.theory_of ctxt
+    val known = (Syntax.parse_typ ctxt s; true) handle ERROR _ => false
+    val f = if known then Sign.intern_type thy else Sign.full_name thy o Binding.name
+  in
+    f s
+  end
   fun mk_numeral_type' sz =
       if sz = 8192 then @{typ "ty8192"}
       else mk_numeral_type sz
 in
   case ity of
     refty (NONE, _) => mk_ptr_ty unit
-  | refty (SOME ity0, _) => mk_ptr_ty (isa_type_to_typ thy ity0)
-  | recd (s, _) => Type(m s, [])
+  | refty (SOME ity0, _) => mk_ptr_ty (isa_type_to_typ ctxt ity0)
+  | recd (s, _) => Type (m s, [])
   | array (ity, sz, _) =>
-    Type("Arrays.array", [isa_type_to_typ thy ity, mk_numeral_type' sz])
+    Type("Arrays.array", [isa_type_to_typ ctxt ity, mk_numeral_type' sz])
   | existing (ty, _) => ty
 end
 
 fun ctype_to_typ (thy,c0ty) =
-    isa_type_to_typ thy (translate_inttype c0ty)
+    isa_type_to_typ (thy2ctxt thy) (translate_inttype c0ty)
 
 fun create_state cse = let
   val trans = translate_vi cse
@@ -267,7 +261,7 @@ in
   case dlist of
     [] => (List.rev lvars, List.rev gvars)
   | vdecl (s, ty, vsort) :: tail => let
-      val tuple = (s, isa_type_to_typ thy ty, SOME (isa_type_to_cty ty), vsort)
+      val tuple = (s, isa_type_to_typ (thy2ctxt thy) ty, SOME (isa_type_to_cty ty), vsort)
     in
       case vsort of
         Local _ => split_vars (tuple :: lvars, gvars) tail
@@ -321,8 +315,7 @@ end
  *)
 fun get_sorted_structs cse =
 let
-  val global_rcd = get_globals_rcd cse
-  val rcds = get_senv cse @ global_rcd
+  val rcds = get_senv cse
   val sorted_structs =
       if null rcds then []
       else let
@@ -426,14 +419,13 @@ fun mk_thy_types cse install thy = let
      for consumption by later phases of the translation.
 
   *)
-  val global_rcd = get_globals_rcd cse
-  val rcds = get_senv cse @ global_rcd
+  val rcds = get_senv cse
   val sorted_structs = get_sorted_structs cse
 
   open MemoryModelExtras
   open UserTypeDeclChecking
   val umm_prfstate = initial_state
-  fun new_rcdinfo (recname,flds) = let
+  fun new_rcdinfo (recname,flds) thy = let
     fun fldtys (fldname, cty) = (fldname, ctype_to_typ (thy,cty), cty)
   in
     (recname, map fldtys flds)
@@ -450,22 +442,21 @@ fun mk_thy_types cse install thy = let
                                       listvars #1 flds))
                     recflds
 
-        fun mk_rp_fld (fldname,cty) = {fldname = fldname,
-                                       fldty = ctype_to_typ (thy,cty)}
-        fun mk_rp_recd (recname, flds) =
-            {record_name = recname, fields = map mk_rp_fld flds}
+        fun mk_rp_fld thy (fldname,cty) = {fldname = fldname,
+                                           fldty = ctype_to_typ (thy,cty)}
+        fun mk_rp_recd thy (recname, flds) =
+            {record_name = recname, fields = map (mk_rp_fld thy) flds}
         fun mk_ctype_instance (recname, _) thy = let
-          val fullrecname = Sign.intern_type thy recname
-          val recty = Type(fullrecname, [])
+          val recty = Syntax.read_typ_global thy recname
 
           (* establish the new type as a c_type, which requires no proof, as
              there are no axioms attached to c_type *)
           val c_type_instance_t =
               Logic.mk_of_class(recty, "CTypesDefs.c_type")
-          val c_type_instance_ct = cterm_of thy c_type_instance_t
+          val c_type_instance_ct = Thm.cterm_of (thy2ctxt thy) c_type_instance_t
           val is_c_type_thm =
-              Goal.prove_internal [] c_type_instance_ct
-                                  (fn _ => Class.intro_classes_tac [])
+              Goal.prove_internal (thy2ctxt thy) [] c_type_instance_ct
+                                  (fn _ => Class.intro_classes_tac (thy2ctxt thy) [])
           val thy = Axclass.add_arity is_c_type_thm thy
 
           val _ =
@@ -476,12 +467,13 @@ fun mk_thy_types cse install thy = let
           thy
         end
       in
-        thy |> RecursiveRecordPackage.define_record_type (map mk_rp_recd recflds)
+        thy |> RecursiveRecordPackage.define_record_type (map (mk_rp_recd thy) recflds)
             |> Basics.fold mk_ctype_instance recflds
       end
     else
       thy
   end
+
   val thy = List.foldl rcddecls_phase0 thy sorted_structs
 
   (* Yuck, sorry *)
@@ -535,7 +527,7 @@ fun mk_thy_types cse install thy = let
   end
 
   fun rcddecl_phase1 (p as (recname, _ (* flds *)), (thy, st, rcdacc)) = let
-    val rcdinfo = new_rcdinfo p
+    val rcdinfo = new_rcdinfo p thy
     val (st, thy1) =
         if install then
           (informStr (2, "Proving UMM properties for struct "^recname);
@@ -571,15 +563,16 @@ in
   (thy, List.rev rcdinfo0)
 end
 
+fun simple s = {isa_name = MString.mk s, src_name = s}
+
 fun pretty_globals thy vars =
     Pretty.big_list
         "Defining global variables: record 'a globals ="
         (map (fn (nm,ity,_,_) =>
-                 Pretty.str (#isa_name nm ^ " :: " ^
+                 Pretty.str (MString.dest (#isa_name nm) ^ " :: " ^
                              Syntax.string_of_typ (thy2ctxt thy) ity))
              vars)
-    |>
-    Pretty.writeln;
+    |> Pretty.string_of |> tracing;
 
 fun categorise_globals (alladdressed, popglobs) l = let
   fun recurse (acc as (ut, ns, ad)) l =
@@ -624,8 +617,9 @@ fun mk_thy_decls state {owners,mstate_ty=pmstate_ty,gstate_ty} thy = let
           [(bnm global_heap_var, MemoryModelExtras.extended_heap_ty, NoSyn),
            (bnm (global_var phantom_state_name), pmstate_ty, NoSyn),
            (bnm (global_var ghost_state_name), gstate_ty, NoSyn)] @
-          map (fn ({src_name,...}, ty, _, _) =>
-                  (bnm (global_var src_name), ty, NoSyn)) nsglobs @
+          map (fn ({isa_name,...}, ty, _, _) =>
+                  (bnm (global_var (MString.dest isa_name)), ty, NoSyn))
+              nsglobs @
           (if null owners then []
            else [(bnm (global_var owned_by_fn_name), nat, NoSyn)])
       val thy =
@@ -636,8 +630,9 @@ fun mk_thy_decls state {owners,mstate_ty=pmstate_ty,gstate_ty} thy = let
     in
       (thy'', locale_params owners)
     end
-    val lvars = ({isa_name = global_exn_var_name, src_name = global_exn_var_name},
-        c_exntype_ty, NONE, Local "cparser'internal") :: lvars
+    val lvars = (simple global_exn_var_name,
+                 c_exntype_ty, NONE,
+                 Local "cparser'internal") :: lvars
     fun mk_locals_rcd thy =
         let
             (* the state information accumulated so far allows for local
@@ -648,7 +643,7 @@ fun mk_thy_decls state {owners,mstate_ty=pmstate_ty,gstate_ty} thy = let
                 case vs of
                   [] => []
                 | ({isa_name = nm,...}, ty, _, _) :: rest => let
-                    val nm' = HoarePackage.varname nm
+                    val nm' = HoarePackage.varname (MString.dest nm)
                   in
                     if member (op =) seen nm' then map_elim_name seen rest
                     else (bnm nm',ty,NoSyn) :: map_elim_name (nm'::seen) rest
@@ -673,7 +668,7 @@ in
   declare_vars thy
 end
 
-type mungedb = (string * typ * int ctype option * var_sort) CNameTab.table
+type mungedb = (MString.t * typ * int ctype option * var_sort) CNameTab.table
 
 fun mk_mungedb l = let
   open CNameTab

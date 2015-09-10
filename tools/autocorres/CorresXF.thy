@@ -262,22 +262,11 @@ lemma corresXF_join:
   apply (unfold bindE_def)
   apply (erule corresXF_simple_join [where P'="\<lambda>a b s. (case b of Inl r \<Rightarrow> a = Inl (E r s) | Inr r \<Rightarrow> a = Inr (V r s) \<and> P' (theRight a) r s)"])
     apply (simp add: corresXF_simple_def split: sum.splits unit.splits)
-    apply clarsimp
-     apply (clarsimp simp: NonDetMonad.lift_def
-       throwError_def return_def split: sum.splits
-       cong del: unit.case_cong)
-    apply atomize
-    apply (rule conjI)
-     apply clarsimp
-     apply (erule allE2, erule allE, erule impE, force)
-     apply clarsimp
-     apply (erule (1) my_BallE)
-     apply (clarsimp split: sum.splits cong del: unit.case_cong)
-    apply clarsimp
-    apply (erule allE2, erule allE, erule impE, force)
-    apply clarsimp
-   apply atomize
-   apply (clarsimp simp: NonDetMonad.validE_def split: sum.splits cong del: unit.case_cong)
+    apply (clarsimp simp: NonDetMonad.lift_def
+      throwError_def return_def split: sum.splits
+      cong del: unit.case_cong)
+    apply fastforce
+   apply (fastforce simp: NonDetMonad.validE_def split: sum.splits cong del: unit.case_cong)
   apply simp
   done
 
@@ -292,16 +281,7 @@ lemma corresXF_except:
     apply (clarsimp simp: NonDetMonad.lift_def throwError_def
       return_def split: sum.splits unit.splits cong del:
       unit.case_cong)
-    apply atomize
-    apply (rule conjI)
-     apply clarsimp
-     apply (erule allE2, erule allE, erule impE, force)
-     apply clarsimp
-     apply (erule (1) my_BallE)
-     apply (clarsimp split: sum.splits cong del: unit.case_cong)
-    apply clarsimp
-    apply (erule allE2, erule allE, erule impE, force)
-    apply clarsimp
+    apply fastforce
    apply (clarsimp simp: NonDetMonad.validE_def split: sum.splits cong del: unit.case_cong)
   apply simp
   done

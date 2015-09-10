@@ -223,7 +223,6 @@ lemma exec_While_final_inv':
   apply (induct arbitrary: s rule: exec.induct, simp_all)
   apply clarsimp
   apply atomize
-  apply (thin_tac "\<forall>s. B = While C B \<longrightarrow> ?x s")
   apply clarsimp
   apply (erule allE, erule (1) impE)
   apply (erule exec_elim_cases, auto)

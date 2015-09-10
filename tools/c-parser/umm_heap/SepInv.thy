@@ -133,7 +133,7 @@ done
 lemma sep_map'_any_old:
   "(p \<hookrightarrow>\<^sup>i\<^sub>g -) = (\<lambda>s. \<exists>v. (p \<hookrightarrow>\<^sup>i\<^sub>g v) s)"
 apply(rule ext)
-apply(simp add: sep_map'_inv_def sep_map'_any_inv_def sep_map'_any_def sep_conj_exists sep_conj_exists2)
+apply(simp add: sep_map'_inv_def sep_map'_any_inv_def sep_map'_any_def sep_conj_exists)
 done
 
 lemma sep_map_sep_map' [simp]:

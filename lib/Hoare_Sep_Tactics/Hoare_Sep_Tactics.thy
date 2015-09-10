@@ -263,7 +263,9 @@ local
       put_simpset HOL_basic_ss @{context}
         addsimps [(sym OF [@{thm sep_conj_assoc}])])
   fun simp ctxt thm = simplify (put_simpset simpset ctxt) thm
-  fun attrib thm ctxt thm' = thm OF [simp (ctxt) thm']
+  fun attrib thm ctxt thm' =
+    (thm OF [simp (ctxt) thm'])
+    |> Goal.norm_result ctxt
   fun wp_add_attrib thm (ctxt, thm') = WeakestPre.gen_att ( WeakestPre.add_rule o (attrib thm (Context.proof_of ctxt))) (ctxt, thm')
   fun first_working (f::fs) x  = f x
                        handle THM _ => first_working (fs) x
@@ -286,7 +288,7 @@ fun sep_wandise_helper ctxt =
                                  attrib @{thm strong_sep_impl_sep_wp_side'} ctxt,
                                  attrib @{thm strong_sep_impl_sep_wp_sideE'} ctxt,
                                  attrib @{thm strong_sep_impl_sep_wp_rv} ctxt,
-                                 attrib @{thm strong_sep_impl_sep_wp'} ctxt, 
+                                 attrib @{thm strong_sep_impl_sep_wp'} ctxt,
                                  attrib @{thm strong_sep_impl_sep_wp_rv''} ctxt]
 
 val sep_wandise = Thm.rule_attribute ((fn ctxt => (
@@ -367,9 +369,8 @@ done
 
 
 ML {*
-
    fun J f x = f x
-               handle _ => x
+               handle _ => x   (* FIXME *)
 
    fun sep_wp thms ctxt  =
    let val thms' = map (sep_wandise_helper ctxt |> J) thms;
@@ -393,7 +394,6 @@ ML {*
 method_setup sep_wp = {*
   sep_wp_parse
 *}
-
 
 
 end

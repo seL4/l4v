@@ -60,6 +60,11 @@ definition
 where
   "ccatchbrk rt \<equiv> Cond {s. rt s = Break} SKIP THROW"
 
+definition
+  cchaos :: "('b \<Rightarrow> 'a \<Rightarrow> 'a) \<Rightarrow> ('a,'c,'d) com"
+where
+  "cchaos upd \<equiv> Spec { (s0,s) . \<exists>v. s = upd v s0 }"
+
 ML_file "tools/mlyacc/mlyacclib/MLY_base-sig.ML"
 ML_file "tools/mlyacc/mlyacclib/MLY_join.ML"
 ML_file "tools/mlyacc/mlyacclib/MLY_lrtable.ML"
@@ -68,11 +73,7 @@ ML_file "tools/mlyacc/mlyacclib/MLY_parser2.ML"
 ML_file "FunctionalRecordUpdate.ML"
 ML_file "topo_sort.ML"
 
-definition
-  cchaos :: "('b \<Rightarrow> 'a \<Rightarrow> 'a) \<Rightarrow> ('a,'c,'d) com"
-where
-  "cchaos upd \<equiv> Spec { (s0,s) . \<exists>v. s = upd v s0 }"
-
+ML_file "isa_termstypes.ML"
 ML_file "StrictC.grm.sig"
 ML_file "StrictC.grm.sml"
 ML_file "StrictC.lex.sml"
@@ -125,6 +126,15 @@ lemma ccatchbrk_wp [vcg_hoare]:
   shows "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F \<^esub>P ccatchbrk exnupd Q, A"
   unfolding ccatchbrk_def
   by vcg
+
+lemma cchaos_wp [vcg_hoare]:
+  assumes "P \<subseteq>  {s. \<forall>x. (v x s) \<in> Q }"
+  shows "\<Gamma>,\<Theta>\<turnstile>\<^bsub>/F \<^esub>P cchaos v Q, A"
+  unfolding cchaos_def
+  apply (rule HoarePartial.Spec)
+  using assms
+  apply blast
+  done
 
 lemma lvar_nondet_init_wp [vcg_hoare]:
   "P \<subseteq> {s. \<forall>v. (upd (\<lambda>_. v)) s \<in> Q} \<Longrightarrow> \<Gamma>,\<Theta>\<turnstile>\<^bsub>/F \<^esub> P lvar_nondet_init accessor upd Q, A"

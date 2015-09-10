@@ -85,4 +85,14 @@ lemma recguard_induct: "\<lbrakk> P 0; \<And>n. P (recguard_dec n) \<Longrightar
   apply (metis diff_Suc_1)
   done
 
+
+(*
+ * These "optimisation" rules are actually assumed by LocalVarExtract,
+ * so better apply them even if L1opt rules are disabled by no_opt.
+ *)
+lemmas [L1except] =
+  L1_set_to_pred_def in_set_to_pred in_set_if_then (* rewrite SIMPL set notation *)
+  lvar_init_spec_to_L1_init (* rewrite variable initialisers *)
+  L1_seq_assoc (* not strictly required, but useful *)
+
 end

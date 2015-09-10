@@ -1,5 +1,7 @@
 *.pyc
 *.o
+*~
+.*.attrib_trace
 
 spec/cspec/c/api/
 spec/cspec/c/arch/
@@ -8,21 +10,28 @@ spec/cspec/c/kernel_all.c_pp
 spec/cspec/c/parsetab.py
 spec/cspec/c/plat/
 spec/cspec/c/sources_list_updated
-spec/umm_types.txt
 
-tools/autocorres/doc/quickstart/umm_types.txt
+**/CFunDump.txt
+**/umm_types.txt
+
+tools/autocorres/doc/quickstart/output/
 tools/autocorres/sel4.txt
 tools/autocorres/tests/ROOT
 tools/autocorres/tests/parse-tests/*.thy
-tools/autocorres/tests/umm_types.txt
+tools/autocorres/tests/examples/trace_demo_incr.trace
 
 tools/c-parser/standalone-parser/table.ML
+tools/c-parser/StrictC.grm.desc
+tools/c-parser/standalone-parser/c-parser
+tools/c-parser/standalone-parser/tokenizer
+tools/c-parser/tools/mllex/mllex
+tools/c-parser/tools/mlyacc/mlyacc
+tools/c-parser/tools/mlyacc/src/yacc.lex.sml
 tools/c-parser/testfiles/ROOT
 tools/c-parser/testfiles/umm_types.txt
 
 tools/haskell-translator/caseconvs-useful
 
 camkes/adl-spec/camkes.ML
-camkes/glue-proofs/umm_types.txt
 
 internal

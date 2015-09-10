@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-header "Abstract Specification Instantiations"
+chapter "Abstract Specification Instantiations"
 
 theory Deterministic_A
 imports

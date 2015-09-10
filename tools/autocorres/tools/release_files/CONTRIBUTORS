@@ -1,0 +1,20 @@
+
+Core Development Team
+---------------------
+
+    David Greenaway <david.greenaway@nicta.com.au>
+
+    Japheth Lim <japheth.lim@nicta.com.au>
+
+Contributions
+-------------
+
+    Lars Noschinski <noschinl@in.tum.de>
+
+        "owhile" definitions and related rules, as well as many other
+        contributions to the proof libraries.
+
+    Rohan Jacob-Rao <RohanBen.JacobRao@nicta.com.au>
+
+        Proof of the C "quicksort" function.
+

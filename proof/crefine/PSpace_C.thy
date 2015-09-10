@@ -77,7 +77,7 @@ lemma setObject_ccorres_helper:
   apply (clarsimp simp: HoarePartialDef.valid_def)
   apply (simp add: typ_at_to_obj_at' koTypeOf_injectKO)
   apply (drule obj_at_ko_at', clarsimp)
-  apply (cut_tac \<sigma>=\<sigma> and ko'=koa in valid)
+  apply (cut_tac \<sigma>1=\<sigma> and ko'1=koa in valid)
   apply (drule hoare_sound,
          clarsimp simp: cvalid_def HoarePartialDef.valid_def)
   apply (elim allE, drule(1) mp)
@@ -126,7 +126,8 @@ lemma storePTE_Basic_ccorres':
   apply (simp add: cready_queues_relation_def
                    carch_state_relation_def
                    cmachine_state_relation_def
-                   Let_def typ_heap_simps)
+                   Let_def typ_heap_simps
+                   cteCaps_of_def update_pte_map_tos)
   done
 
 
@@ -180,7 +181,8 @@ lemma storePDE_Basic_ccorres':
                    carch_state_relation_def
                    cmachine_state_relation_def
                    Let_def typ_heap_simps
-                   pde_stored_asid_update_valid_offset)
+                   pde_stored_asid_update_valid_offset
+                   cteCaps_of_def update_pde_map_tos)
   done
 
 lemma storePDE_Basic_ccorres:

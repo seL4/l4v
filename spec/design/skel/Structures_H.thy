@@ -12,7 +12,7 @@
    datatypes/records for the various kernel data structures.
 *)
 
-header "Kernel Data Structures"
+chapter "Kernel Data Structures"
 
 theory Structures_H
 imports
@@ -23,7 +23,8 @@ imports
   ARMStructures_H
 begin
 
-#INCLUDE_HASKELL SEL4/Object/Structures.lhs decls_only NOT isNullCap isUntypedCap isIRQControlCap isReplyCap isDomainCap
-#INCLUDE_HASKELL SEL4/Object/Structures.lhs bodies_only NOT kernelObjectTypeName isNullCap isUntypedCap isIRQControlCap isReplyCap isDomainCap
+#INCLUDE_HASKELL SEL4/Object/Structures.lhs decls_only NOT isNullCap isUntypedCap isIRQControlCap isReplyCap isDomainCap isAsyncEndpointCap
+#INCLUDE_HASKELL SEL4/Object/Structures.lhs bodies_only NOT kernelObjectTypeName isNullCap isUntypedCap isIRQControlCap isReplyCap isDomainCap isAsyncEndpointCap
+
 
 end

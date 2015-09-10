@@ -12,7 +12,7 @@
 Definition of access rights.
 *)
 
-header "Access Rights"
+chapter "Access Rights"
 
 theory CapRights_A
 imports "~~/src/HOL/Main"

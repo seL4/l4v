@@ -54,7 +54,6 @@ begin
 declare fun_upd_apply[simp del]
 
 install_C_file "schorr_waite.c"
-
 autocorres [heap_abs_syntax] "schorr_waite.c"
 
 (* AutoCorres doesn't successfully recognize all boolean variables yet,
@@ -374,7 +373,7 @@ abbreviation schorr_waite'_measure where
      let stack = (THE stack. schorr_waite'_inv s s0 R p t cond stack)
      in (card {x \<in> R. s[x]\<rightarrow>m = 0}, card {x \<in> set stack. s[x]\<rightarrow>c = 0}, length stack)"
 
-schematic_lemma schorr_waite'_prove_def [standard]:
+schematic_lemma schorr_waite'_prove_def:
   "schorr_waite' root \<equiv> ?A root (s0 :: lifted_globals) (R :: node_C ptr set)"
   apply (subst schorr_waite'_def[abs_def])
   apply (subst whileLoop_add_inv
@@ -390,7 +389,7 @@ lemma the_equality': "\<And>P a. \<lbrakk>P a; \<And>x. \<lbrakk> P a; P x \<rbr
 (* Hypothetical "wp_all" tactic *)
 ML {*
 fun wp_all_tac ctxt = let fun f n thm =
-      if n > nprems_of thm then Seq.single thm else
+      if n > Thm.nprems_of thm then Seq.single thm else
         let val thms = WeakestPre.apply_rules_tac_n false
                          ctxt [] (Unsynchronized.ref []) n thm
                        |> Seq.list_of
@@ -429,7 +428,7 @@ proof (tactic "wp_all_tac @{context}",
   {
     fix s
     assume "?Pre root s"
-    thus "\<forall>x. (?inv NULL root (Cbool (root \<noteq> NULL \<and> s[root]\<rightarrow>m = 0)) s) \<and>
+    thus "\<forall>x. ?inv NULL root (Cbool (root \<noteq> NULL \<and> s[root]\<rightarrow>m = 0)) s \<and>
               (root \<noteq> NULL \<longrightarrow> is_valid_node_C s root)"
       by (auto simp: reachable_def addrs_def)
   next

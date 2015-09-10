@@ -140,9 +140,9 @@ where
   | Structures_A.SendEP q \<Rightarrow> ep' = Structures_H.SendEP q"
 
 definition
-  fault_option_relation :: "ExceptionTypes_A.fault option \<Rightarrow> Fault_H.fault option \<Rightarrow> bool"
+  fault_rel_optionation :: "ExceptionTypes_A.fault option \<Rightarrow> Fault_H.fault option \<Rightarrow> bool"
 where
- "fault_option_relation \<equiv> \<lambda>f f'. f' = option_map fault_map f"
+ "fault_rel_optionation \<equiv> \<lambda>f f'. f' = option_map fault_map f"
 
 primrec
   thread_state_relation :: "Structures_A.thread_state \<Rightarrow> Structures_H.thread_state \<Rightarrow> bool"
@@ -173,7 +173,7 @@ where
   \<and> tcb_ipc_buffer tcb = tcbIPCBuffer tcb'
   \<and> tcb_context tcb = tcbContext tcb'
   \<and> thread_state_relation (tcb_state tcb) (tcbState tcb')
-  \<and> fault_option_relation (tcb_fault tcb) (tcbFault tcb')
+  \<and> fault_rel_optionation (tcb_fault tcb) (tcbFault tcb')
   \<and> cap_relation (tcb_ctable tcb) (cteCap (tcbCTable tcb'))
   \<and> cap_relation (tcb_vtable tcb) (cteCap (tcbVTable tcb'))
   \<and> cap_relation (tcb_reply tcb) (cteCap (tcbReply tcb'))
@@ -201,10 +201,10 @@ where
       = (x = Hardware_H.PageTablePDE ptr (ParityEnabled \<in> atts) domain)"
 | "pde_relation' (ARM_Structs_A.SectionPDE ptr atts domain rghts) x
       = (x = Hardware_H.SectionPDE ptr (ParityEnabled \<in> atts) domain
-                                (PageCacheable \<in> atts) (Global \<in> atts) (vmrights_map rghts))"
+               (PageCacheable \<in> atts) (Global \<in> atts) (XNever \<in> atts) (vmrights_map rghts))"
 | "pde_relation' (ARM_Structs_A.SuperSectionPDE ptr atts rghts) x
       = (x = Hardware_H.SuperSectionPDE ptr (ParityEnabled \<in> atts)
-                                (PageCacheable \<in> atts) (Global \<in> atts) (vmrights_map rghts))"
+               (PageCacheable \<in> atts) (Global \<in> atts) (XNever \<in> atts) (vmrights_map rghts))"
 
 
 primrec
@@ -212,16 +212,18 @@ primrec
 where
   "pte_relation'  ARM_Structs_A.InvalidPTE x = (x = Hardware_H.InvalidPTE)"
 | "pte_relation' (ARM_Structs_A.LargePagePTE ptr atts rghts) x
-      = (x = Hardware_H.LargePagePTE ptr (PageCacheable \<in> atts) (Global \<in> atts) (vmrights_map rghts))"
+      = (x = Hardware_H.LargePagePTE ptr (PageCacheable \<in> atts) (Global \<in> atts) 
+                                         (XNever \<in> atts) (vmrights_map rghts))"
 | "pte_relation' (ARM_Structs_A.SmallPagePTE ptr atts rghts) x
-      = (x = Hardware_H.SmallPagePTE ptr (PageCacheable \<in> atts) (Global \<in> atts) (vmrights_map rghts))"
+      = (x = Hardware_H.SmallPagePTE ptr (PageCacheable \<in> atts) (Global \<in> atts) 
+                                         (XNever \<in> atts) (vmrights_map rghts))"
 
 
 definition
   pde_align' :: "Hardware_H.pde \<Rightarrow> nat"
 where
  "pde_align' pde \<equiv>
-  case pde of Hardware_H.pde.SuperSectionPDE _ _ _ _ _ \<Rightarrow> 4 | _ \<Rightarrow> 0"
+  case pde of Hardware_H.pde.SuperSectionPDE _ _ _ _ _ _ \<Rightarrow> 4 | _ \<Rightarrow> 0"
 
 lemmas pde_align_simps[simp] =
   pde_align'_def[split_simps ARM_Structs_A.pde.split]
@@ -229,7 +231,7 @@ lemmas pde_align_simps[simp] =
 definition
   pte_align' :: "Hardware_H.pte \<Rightarrow> nat"
 where
- "pte_align' pte \<equiv> case pte of Hardware_H.pte.LargePagePTE _ _ _ _ \<Rightarrow> 4 | _ \<Rightarrow> 0"
+ "pte_align' pte \<equiv> case pte of Hardware_H.pte.LargePagePTE _ _ _ _ _ \<Rightarrow> 4 | _ \<Rightarrow> 0"
 
 lemmas pte_align_simps[simp] =
   pte_align'_def[split_simps ARM_Structs_A.pte.split]
@@ -478,9 +480,9 @@ schematic_lemma cap_relation_case:
   done
 
 lemmas cap_relation_split =
-  eq_trans_helper [where P=P, OF cap_relation_case cap.split[where P=P], standard]
+  eq_trans_helper [where P=P, OF cap_relation_case cap.split[where P=P]] for P
 lemmas cap_relation_split_asm =
-  eq_trans_helper [where P=P, OF cap_relation_case cap.split_asm[where P=P], standard]
+  eq_trans_helper [where P=P, OF cap_relation_case cap.split_asm[where P=P]] for P
 
 
 

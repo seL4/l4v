@@ -22,6 +22,7 @@
  * 2012 David Greenaway
  */
 
+#define _GNU_SOURCE /* for asprintf */
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -73,9 +74,33 @@ fatal(const char *str)
     exit(1);
 }
 
+/* Get the name of a process from its PID. */
+int
+name_of(int pid, char *output, size_t len) {
+    char *path;
+    if (asprintf(&path, "/proc/%d/cmdline", pid) == -1)
+        return -1;
+
+    /* Open the process's command line details from /proc. */
+    FILE *f = fopen(path, "r");
+    free(path);
+    if (f == NULL)
+        return -1;
+
+    /* Here we potentially read too much, but cmdline entries are NUL delimited
+     * so the resulting data is a valid C string of just the first argument as
+     * desired.
+     */
+    int r = fread(output, len, 1, f);
+    (void)r;
+    fclose(f);
+
+    return 0;
+}
+
 /* Iterate through processes in the system. */
 void
-iterate_processes(void (*proc_fn)(int, void *), void *data)
+iterate_processes(char **limit, void (*proc_fn)(int, void *), void *data)
 {
     /* Open /proc */
     DIR *proc_dir = opendir("/proc");
@@ -97,8 +122,44 @@ iterate_processes(void (*proc_fn)(int, void *), void *data)
 
         /* Process? */
         int p = atoi(e->d_name);
-        if (p != 0)
-            proc_fn(p, data);
+        if (p == 0)
+            continue;
+
+        if (limit != NULL) {
+            int skip = 1;
+
+            /* Find the name of the process we're looking at. */
+            char name[PATH_MAX];
+            if (name_of(p, name, PATH_MAX) != 0)
+                /* This process doesn't have a name. Poor thing. */
+                continue;
+
+            /* Determine if this process matches any of the processes we should
+             * be considering.
+             */
+            char **l;
+            for (l = limit; *l != NULL; l++) {
+                if (!strcmp(name, *l)) {
+                    skip = 0;
+                    break;
+                }
+                char *last_slash = strrchr(name, '/');
+                if (last_slash != NULL && !strcmp(last_slash + 1, *l)) {
+                    skip = 0;
+                    break;
+                }
+            }
+
+            if (skip == 1)
+                /* No match. */
+                continue;
+
+#if DEBUG
+            printf("Considering %s...\n", name);
+#endif
+        }
+
+        proc_fn(p, data);
     }
 
     /* Cleanup. */
@@ -246,9 +307,21 @@ int is_system_unstable(
 /* Determine what signal the given string parses to. */
 int parse_signal(const char *input, int *signal, const char **signame)
 {
+    if (!strcmp(input, "SIGABRT") || !strcmp(input, "6")) {
+        *signal = SIGABRT;
+        *signame = "SIGABRT";
+        return 0;
+    }
+
     if (!strcmp(input, "SIGSTOP") || !strcmp(input, "17")) {
         *signal = SIGSTOP;
         *signame = "SIGSTOP";
+        return 0;
+    }
+
+    if (!strcmp(input, "SIGTERM") || !strcmp(input, "15")) {
+        *signal = SIGTERM;
+        *signame = "SIGTERM";
         return 0;
     }
 
@@ -264,10 +337,11 @@ int parse_signal(const char *input, int *signal, const char **signame)
 void usage(int argc, char **argv)
 {
     printf("\n"
-        "usage: %s [<SIGNAL>]\n\n"
+        "usage: %s [<SIGNAL>] [<processes>]\n\n"
         "Monitors the system for high load and sends a signal to (hopefully)\n"
         "the culprit process.\n\n"
-        "<SIGNAL> must be either SIGKILL or SIGSTOP.\n\n",
+        "<SIGNAL> must be either SIGKILL or SIGSTOP.\n"
+        "If you don't pass a list of candidate processes, all are considered.\n\n",
         argc > 0 ? argv[0] : "autostop");
 }
 
@@ -277,6 +351,7 @@ int main(int argc, char **argv)
     long long last_fault_count = 0;
     int signal;
     const char *signame;
+    char **suspects;
 
     /* Determine which signal to send. */
     if (argc < 2) {
@@ -290,6 +365,9 @@ int main(int argc, char **argv)
         }
     }
 
+    /* Determine the list of candidate processes. */
+    suspects = argc > 2 ? &argv[2] : NULL;
+
     /* Set our scheduling priority higher. */
     (void)setpriority(PRIO_PROCESS, 0, SCHED_PRIO);
 
@@ -300,7 +378,7 @@ int main(int argc, char **argv)
             .worst_oom_score = MIN_OOM_SCORE,
             .total_faults = 0,
         };
-        iterate_processes(test_process, &d);
+        iterate_processes(suspects, test_process, &d);
 
         /* Determine if things are looking bad and we haven't recently stoped something. */
         if (is_system_unstable(last_fault_count, d.total_faults)) {

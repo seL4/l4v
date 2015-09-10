@@ -98,53 +98,6 @@ lemma replyOnRestart_twice[simplified]:
 
 context kernel_m begin
 
-(* FIXME: move *)
-lemma register_from_H_bound[simp]:
-  "unat (register_from_H v) < 18"
-  by (cases v, simp_all add: "StrictC'_register_defs")
-
-(* FIXME: move *)
-lemma register_from_H_inj:
-  "inj register_from_H"
-  apply (rule inj_onI)
-  apply (case_tac x)
-  apply (case_tac y, simp_all add: "StrictC'_register_defs")+
-  done
-
-(* FIXME: move *)
-lemmas register_from_H_eq_iff[simp]
-    = inj_on_iff [OF register_from_H_inj, simplified]
-
-lemma setRegister_ccorres:
-  "ccorres dc xfdc \<top>
-       (UNIV \<inter> \<lbrace>\<acute>thread = tcb_ptr_to_ctcb_ptr thread\<rbrace> \<inter> \<lbrace>\<acute>reg = register_from_H reg\<rbrace>
-             \<inter> {s. w_' s = val}) []
-       (asUser thread (setRegister reg val))
-       (Call setRegister_'proc)"
-  apply (cinit' lift: thread_' reg_' w_')
-   apply (simp add: asUser_def dc_def[symmetric] split_def split del: split_if)
-   apply (rule ccorres_pre_threadGet)
-   apply (rule ccorres_Guard)
-   apply (simp add: setRegister_def simpler_modify_def exec_select_f_singleton)
-   apply (rule_tac P="\<lambda>tcb. tcbContext tcb = rv"
-                in threadSet_ccorres_lemma2 [unfolded dc_def])
-    apply vcg
-   apply (clarsimp simp: setRegister_def HaskellLib_H.runState_def
-                         simpler_modify_def typ_heap_simps)
-   apply (subst StateSpace.state.fold_congs[OF refl refl])
-    apply (rule globals.fold_congs[OF refl refl])
-    apply (rule heap_update_field_hrs, simp)
-     apply (fastforce intro: typ_heap_simps)
-    apply simp
-   apply (erule(1) rf_sr_tcb_update_no_queue2,
-               (simp add: typ_heap_simps)+)
-    apply (rule ball_tcb_cte_casesI, simp+)
-   apply (clarsimp simp: ctcb_relation_def ccontext_relation_def
-                  split: split_if)
-  apply (clarsimp simp: Collect_const_mem register_from_H_sless
-                        register_from_H_less)
-  apply (auto intro: typ_heap_simps elim: obj_at'_weakenE)
-  done
 
 lemma isIRQPending_ccorres:
   "ccorres (\<lambda>rv rv'. rv' = from_bool (rv \<noteq> None)) ret__unsigned_long_'
@@ -218,7 +171,7 @@ lemma preemptionPoint_ccorres:
                  [where P=\<top> and P'=UNIV and r'=dc and xf'=xfdc])
          apply (rule ccorres_from_vcg)
 	 apply (rule allI, rule conseqPre, vcg)
-	 apply (thin_tac "?P")+
+	 apply (thin_tac "P" for P)+
 	 apply (clarsimp simp: setWorkUnits_def simpler_modify_def)
 	 apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
 	                       carch_state_relation_def 
@@ -242,10 +195,10 @@ lemma preemptionPoint_ccorres:
 definition
   "invocationCatch thread isBlocking isCall inject
    \<equiv>
-   sum.sum_case (throwError \<circ> Inl)
+   sum.case_sum (throwError \<circ> Inl)
     (\<lambda>oper. doE y \<leftarrow> liftE (setThreadState Structures_H.thread_state.Restart thread);
              reply \<leftarrow> RetypeDecls_H.performInvocation isBlocking isCall (inject oper)
-                           >>= sum.sum_case (throwError \<circ> Inr) returnOk;
+                           >>= sum.case_sum (throwError \<circ> Inr) returnOk;
              liftE (if reply = [] then replyOnRestart thread [] isCall \<sqinter> return ()
                         else replyOnRestart thread reply isCall)
        odE)"
@@ -337,7 +290,7 @@ lemma ccorres_alternative2:
   done
 
 lemma o_xo_injector:
-  "((f o f') \<currency> r) = ((f \<currency> r) o sum_case (Inl o f') Inr)"
+  "((f o f') \<currency> r) = ((f \<currency> r) o case_sum (Inl o f') Inr)"
   by (intro ext, simp split: sum.split)
 
 lemma ccorres_invocationCatch_Inr:
@@ -353,7 +306,7 @@ lemma ccorres_invocationCatch_Inr:
   apply (simp add: invocationCatch_def liftE_bindE o_xo_injector)
   apply (subst ccorres_liftM_simp[symmetric])
   apply (simp add: liftM_def bind_assoc bindE_def)
-  apply (rule_tac f="\<lambda>f. ccorres ?rvr ?xs P P' hs f c" in arg_cong)
+  apply (rule_tac f="\<lambda>f. ccorres rvr xs P P' hs f c" for rvr xs in arg_cong)
   apply (rule ext)
   apply (rule bind_apply_cong [OF refl])+
   apply (simp add: throwError_bind returnOk_bind lift_def liftE_def
@@ -658,7 +611,8 @@ lemma ccorres_defer:
   apply (clarsimp simp: return_def)
   apply (rule conjI)
    apply clarsimp
-   apply (erule_tac x=n in allE)
+   apply (rename_tac s)
+   apply (erule_tac x=n in allE)   
    apply (erule_tac x="Normal s" in allE)
    apply (clarsimp simp: unif_rrel_def)
   apply fastforce
@@ -672,7 +626,7 @@ lemma no_fail_loadWordUser:
   done
 
 lemma no_fail_getMRs:
-  "no_fail (tcb_at' thread and option_case \<top> valid_ipc_buffer_ptr' buffer)
+  "no_fail (tcb_at' thread and case_option \<top> valid_ipc_buffer_ptr' buffer)
            (getMRs thread buffer info)"
   apply (rule det_wp_no_fail)
   apply (rule det_wp_getMRs)
@@ -738,7 +692,7 @@ lemma getMRs_tcbContext:
   \<lbrace>\<lambda>rv s. obj_at' (\<lambda>tcb. tcbContext tcb (State_H.msgRegisters ! n) = rv ! n) (ksCurThread s) s\<rbrace>"
   apply (rule hoare_assume_pre)
   apply (elim conjE)
-  apply (thin_tac "thread = ?t")
+  apply (thin_tac "thread = t" for t)
   apply (clarsimp simp add: getMRs_def)
   apply (rule hoare_pre)
    apply (wp|wpc)+
@@ -782,7 +736,7 @@ lemma threadGet_tcbIpcBuffer_ccorres [corres]:
   done 
 
 (* FIXME: move *)
-lemma ccorres_bool_cases:
+lemma ccorres_case_bools:
   assumes P: "ccorres r xf P P' hs (a True) (c True)"
   assumes Q: "ccorres r xf Q Q' hs (a False) (c False)"
   shows "ccorres r xf (\<lambda>s. (b \<longrightarrow> P s) \<and> (\<not>b \<longrightarrow> Q s))
@@ -823,7 +777,7 @@ lemma ccap_relation_frame_tags:
   done
 
 (* FIXME: move *)
-lemma ccorres_bool_cases':
+lemma ccorres_case_bools':
   assumes P: "b \<Longrightarrow> ccorres r xf P P' hs (a True) (c True)"
   assumes Q: "\<not> b \<Longrightarrow> ccorres r xf Q Q' hs (a False) (c False)"
   shows "ccorres r xf (\<lambda>s. (b \<longrightarrow> P s) \<and> (\<not>b \<longrightarrow> Q s))
@@ -851,10 +805,10 @@ lemma lookupIPCBuffer_ccorres:
      apply (rule ccorres_move_c_guard_cte)
      apply (ctac (no_vcg))
        apply csymbr
-       apply (rule_tac b="isArchObjectCap rva \<and> isPageCap (capCap rva)" in ccorres_bool_cases')
+       apply (rule_tac b="isArchObjectCap rva \<and> isPageCap (capCap rva)" in ccorres_case_bools')
         apply simp
         apply (rule ccorres_symb_exec_r)
-          apply (rule_tac b="capVPSize (capCap rva) \<noteq> ARMSmallPage" in ccorres_bool_cases')
+          apply (rule_tac b="capVPSize (capCap rva) \<noteq> ARMSmallPage" in ccorres_case_bools')
            apply (rule ccorres_cond_true_seq)
            apply (rule ccorres_rhs_assoc)+
            apply csymbr
@@ -946,7 +900,7 @@ lemma lookupIPCBuffer_ccorres:
      apply (rule conjI)
       apply (clarsimp simp: isCap_simps word_less_nat_alt)
       apply (frule ccap_relation_frame_tags)
-      apply (simp add: generic_frame_cap_size)
+      apply simp
       apply (simp add: cap_get_tag_PageCap_small_frame cap_get_tag_PageCap_frame)
       apply (auto simp: cap_tag_defs)[1]
      apply (auto simp: cap_get_tag_isCap isArchPageCap_def isCap_simps
@@ -1026,7 +980,7 @@ lemma getMRs_user_word:
   \<lbrace>\<lambda>xs. user_word_at (xs ! unat i) (buffer + (i * 4 + 4))\<rbrace>"
   apply (rule hoare_assume_pre)
   apply (elim conjE)
-  apply (thin_tac "valid_ipc_buffer_ptr' ?x ?y")
+  apply (thin_tac "valid_ipc_buffer_ptr' x y" for x y)
   apply (simp add: getMRs_def)
   apply wp
    apply (rule_tac P="length hardwareMRValues = unat n_msgRegisters" in hoare_gen_asm)
@@ -1060,7 +1014,7 @@ lemma getMRs_user_word:
    apply simp
    apply (drule (1) order_less_le_trans)
    apply (simp add: word_less_nat_alt word_le_nat_alt)
-  apply (simp add: word_le_nat_alt add_ac mult_ac)
+  apply (simp add: word_le_nat_alt add.commute add.left_commute mult.commute mult.left_commute)
   done
 
 declare split_if [split]
@@ -1071,7 +1025,7 @@ definition
 definition
   "sysargs_rel args buffer \<equiv> 
           cur_tcb'
-          and option_case \<top> valid_ipc_buffer_ptr' buffer
+          and case_option \<top> valid_ipc_buffer_ptr' buffer
           and getMRs_rel args buffer
           and (\<lambda>_. length args > unat (scast n_msgRegisters :: word32) \<longrightarrow> buffer \<noteq> None)"
 
@@ -1084,7 +1038,7 @@ lemma sysargs_rel_to_n:
 
 lemma getMRs_rel:
   "\<lbrace>\<lambda>s. msgLength mi \<le> msgMaxLength \<and> thread = ksCurThread s \<and> 
-        option_case \<top> valid_ipc_buffer_ptr' buffer s \<and>
+        case_option \<top> valid_ipc_buffer_ptr' buffer s \<and>
         cur_tcb' s\<rbrace> 
   getMRs thread buffer mi \<lbrace>\<lambda>args. getMRs_rel args buffer\<rbrace>"
   apply (simp add: getMRs_rel_def)
@@ -1110,7 +1064,7 @@ lemma getMRs_len[simplified]:
   done
 
 lemma getMRs_sysargs_rel:  
-  "\<lbrace>(\<lambda>s. thread = ksCurThread s) and cur_tcb' and option_case \<top> valid_ipc_buffer_ptr' buffer and K (msgLength mi \<le> msgMaxLength)\<rbrace> 
+  "\<lbrace>(\<lambda>s. thread = ksCurThread s) and cur_tcb' and case_option \<top> valid_ipc_buffer_ptr' buffer and K (msgLength mi \<le> msgMaxLength)\<rbrace> 
   getMRs thread buffer mi \<lbrace>\<lambda>args. sysargs_rel args buffer\<rbrace>"
   apply (simp add: sysargs_rel_def)
   apply (wp getMRs_rel getMRs_len|simp)+
@@ -1168,16 +1122,16 @@ lemma ucast_add:
      "ucast (a + (b :: 'a :: len word)) = ucast a + (ucast b :: ('a signed word))"
   apply (case_tac "len_of TYPE('a) = 1")
    apply (clarsimp simp: ucast_def)
-   apply (metis (hide_lams, mono_tags) One_nat_def len_signed plus_word.abs_eq uint_word_arith_bintrs(2) word_ubin.Abs_norm)
+   apply (metis (hide_lams, mono_tags) One_nat_def len_signed plus_word.abs_eq uint_word_arith_bintrs(1) word_ubin.Abs_norm)
   apply (clarsimp simp: ucast_def)
-  apply (metis le_refl len_signed plus_word.abs_eq uint_word_arith_bintrs(2) wi_bintr)
+  apply (metis le_refl len_signed plus_word.abs_eq uint_word_arith_bintrs(1) wi_bintr)
   done
 
 (* FIXME: move *)
 lemma ucast_minus:
      "ucast (a - (b :: 'a :: len word)) = ucast a - (ucast b :: ('a signed word))"
   apply (insert ucast_add [where a=a and b="-b"])
-  apply (metis (hide_lams, no_types) is_num_normalize(10) is_num_normalize(8) is_num_normalize(9) minus_minus ucast_add)
+  apply (metis (no_types, hide_lams) add_diff_eq diff_add_cancel ucast_add is_num_normalize)
   done
 
 (* FIXME : move *)
@@ -1241,11 +1195,11 @@ lemma getSyscallArg_ccorres_foo:
        apply (clarsimp simp: CTypesDefs.ptr_add_def)
        apply (frule (1) user_word_at_cross_over)
         apply simp
-       apply (clarsimp simp: mult_ac ucast_nat_def')
+       apply (clarsimp simp: mult.commute mult.left_commute ucast_nat_def')
       apply (clarsimp simp: CTypesDefs.ptr_add_def)
       apply (frule (1) user_word_at_cross_over)
        apply simp
-      apply (clarsimp simp: mult_ac ucast_nat_def)
+      apply (clarsimp simp: mult.commute mult.left_commute ucast_nat_def)
      apply wp[1]
     apply (rule_tac P="\<exists>b. buffer = Some b" in hoare_gen_asm)
     apply (clarsimp simp: option_to_ptr_def option_to_0_def)
@@ -1275,62 +1229,7 @@ lemma getSyscallArg_ccorres_foo:
   apply (clarsimp simp: bind_def gets_def return_def split_def get_def)  
   done
 
-lemma wordFromMessageInfo_spec:
-  defines "mil s \<equiv> message_info_lift \<^bsup>s\<^esup>mi"
-  shows "\<forall>s. \<Gamma> \<turnstile> {s} Call wordFromMessageInfo_'proc
-                  \<lbrace>\<acute>ret__unsigned_long = (msgLabel_CL (mil s) << 12)
-                                      || (msgCapsUnwrapped_CL (mil s) << 9)
-                                      || (msgExtraCaps_CL (mil s) << 7)
-                                      || msgLength_CL (mil s)\<rbrace>"
-  unfolding mil_def
-  apply vcg
-  apply (simp add: message_info_lift_def mask_shift_simps word_sless_def word_sle_def)
-  apply word_bitwise
-  done
 
-lemmas wordFromMessageInfo_spec2 = wordFromMessageInfo_spec
-
-lemma wordFromMessageInfo_ccorres [corres]:
-  "\<And>mi. ccorres (op =) ret__unsigned_long_' \<top> {s. mi = message_info_to_H (mi_' s)} []
-           (return (wordFromMessageInfo mi)) (Call wordFromMessageInfo_'proc)"
-  apply (rule ccorres_from_spec_modifies [where P = \<top>, simplified])
-     apply (rule wordFromMessageInfo_spec)
-    apply (rule wordFromMessageInfo_modifies)
-   apply simp
-  apply simp
-  apply (simp add: return_def wordFromMessageInfo_def Let_def message_info_to_H_def 
-    Types_H.msgLengthBits_def Types_H.msgExtraCapBits_def
-    Types_H.msgMaxExtraCaps_def shiftL_nat word_bw_assocs word_bw_comms word_bw_lcs)
-  done
-
-(* FIXME move *)
-lemma unat_register_from_H_range:
-  "unat (register_from_H r) < 18"
-  by (case_tac r, simp_all add: C_register_defs)
-
-(* FIXME move *)
-lemma register_from_H_eq:
-  "(r = r') = (register_from_H r = register_from_H r')"
-  apply (case_tac r, simp_all add: C_register_defs)
-                   apply (case_tac r', simp_all add: C_register_defs)+
-  done
-
-lemma setMessageInfo_ccorres:
-  "ccorres dc xfdc (tcb_at' thread)
-           (UNIV \<inter> \<lbrace>mi = message_info_to_H mi'\<rbrace>) hs
-           (setMessageInfo thread mi)
-           (\<acute>ret__unsigned_long :== CALL wordFromMessageInfo(mi');;
-            CALL setRegister(tcb_ptr_to_ctcb_ptr thread, scast Kernel_C.msgInfoRegister, \<acute>ret__unsigned_long))"
-  unfolding setMessageInfo_def
-  apply (rule ccorres_guard_imp2)
-   apply ctac
-     apply simp
-     apply (ctac add: setRegister_ccorres)
-    apply wp
-   apply vcg
-  apply (simp add: State_H.msgInfoRegister_def ARMMachineTypes.msgInfoRegister_def
-                   Kernel_C.msgInfoRegister_def Kernel_C.R1_def)
-  done
 
 end
 

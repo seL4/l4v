@@ -15,7 +15,7 @@ imports
 begin
 
 locale sep_lifted =
-  fixes lft :: "'a \<Rightarrow> 's :: stronger_sep_algebra"
+  fixes lft :: "'a \<Rightarrow> 's :: sep_algebra"
 begin
 
 abbreviation
@@ -46,9 +46,9 @@ next
   thus ?case
     apply (simp add: sep_conj_assoc mapM_x_Cons)
     apply (wp)
-     apply (insert Cons.hyps [where R="Q x ** R"])[1]
+     apply (insert Cons.hyps [where R1="Q x ** R"])[1]
      apply (simp add: sep_conj_ac)
-    apply (insert f [where R="R ** \<And>* map P xs" and x=x ])[1]
+    apply (insert f [where R1="R ** \<And>* map P xs" and x1=x ])[1]
     apply (simp add: sep_conj_ac)
     done
 qed

@@ -988,10 +988,8 @@ proof -
   qed (simp_all add: casync_endpoint_relation_def Let_def)
 qed
 
-(* Annotation added by Simon Winwood (Mon Jul  5 18:26:06 2010) using taint-mode *)
 declare surj_Ptr[simp]
 
-(* Annotation added by Simon Winwood (Mon Jul  5 18:25:51 2010) using taint-mode *)
 declare bij_Ptr[simp]
 
 lemma surj_tcb_ptr_to_ctcb_ptr [simp]:
@@ -1045,7 +1043,6 @@ lemma cmap_relation_restrict_both_proj:
   apply simp
   done
 
-(* Annotation added by Simon Winwood (Mon Jul  5 18:26:04 2010) using taint-mode *)
 declare not_snd_assert[simp]
 
 lemma ccorres_stateAssert_fwd:
@@ -1092,7 +1089,7 @@ lemma ccorres_name_pre:
 
 lemma tcb_ptr_to_ctcb_ptr_to_Ptr:
   "tcb_ptr_to_ctcb_ptr ` {p..+b} = Ptr ` {p + ctcb_offset..+b}"
-  apply (simp add:  tcb_ptr_to_ctcb_ptr_comp image_compose)
+  apply (simp add:  tcb_ptr_to_ctcb_ptr_comp image_comp [symmetric])
   apply (rule equalityI)
    apply clarsimp
    apply (rule imageI)
@@ -1252,6 +1249,7 @@ lemma ccorres_stateAssert_after:
   apply (clarsimp simp: split_def)
   apply (rule conjI)
    apply clarsimp
+   apply (rename_tac s)
    apply (erule_tac x=n in allE)
    apply (erule_tac x="Normal s" in allE)
    apply clarsimp
@@ -1287,7 +1285,7 @@ lemma heap_to_page_data_update_region:
   apply (simp add: heap_to_page_data_def Let_def
             split: split_if)
   apply (rule conjI)
-   apply (clarsimp simp: byte_to_word_heap_def Let_def add_assoc
+   apply (clarsimp simp: byte_to_word_heap_def Let_def add.assoc
                  intro!: ext)
    apply (subst foo, assumption+,
           (rule word_add_offset_less[where n=2, simplified]
@@ -1299,7 +1297,7 @@ lemma heap_to_page_data_update_region:
   apply clarsimp
   apply (case_tac "map_to_user_data psp x")
    apply simp
-  apply (clarsimp simp: dom_def byte_to_word_heap_def Let_def add_assoc
+  apply (clarsimp simp: dom_def byte_to_word_heap_def Let_def add.assoc
                 intro!: ext)
   apply (subst foo, assumption,
          (rule word_add_offset_less[where n=2, simplified]
@@ -1574,7 +1572,7 @@ proof -
 
   { assume asid_map:
     "asid_map_pd_to_hwasids (armKSASIDMap (ksArchState s)) = 
-       Option.set \<circ> (pde_stored_asid \<circ>\<^sub>m cslift s' \<circ>\<^sub>m pd_pointer_to_asid_slot)"
+       set_option \<circ> (pde_stored_asid \<circ>\<^sub>m cslift s' \<circ>\<^sub>m pd_pointer_to_asid_slot)"
     
     hence asid:
       "\<And>p pd_ptr pde. \<lbrakk> cslift s' (pde_Ptr p) = Some pde; 
@@ -1607,8 +1605,8 @@ proof -
       apply (simp add: objBits_simps archObjSize_def) 
       done
 
-    have "Option.set \<circ> (pde_stored_asid \<circ>\<^sub>m cslift s' \<circ>\<^sub>m pd_pointer_to_asid_slot) =
-      Option.set \<circ> (pde_stored_asid \<circ>\<^sub>m clift (hrs_htd_update (typ_region_bytes ptr bits) (t_hrs_' (globals s'))) \<circ>\<^sub>m
+    have "set_option \<circ> (pde_stored_asid \<circ>\<^sub>m cslift s' \<circ>\<^sub>m pd_pointer_to_asid_slot) =
+      set_option \<circ> (pde_stored_asid \<circ>\<^sub>m clift (hrs_htd_update (typ_region_bytes ptr bits) (t_hrs_' (globals s'))) \<circ>\<^sub>m
             pd_pointer_to_asid_slot)"
       apply -
       apply (rule ext)
@@ -1675,7 +1673,7 @@ proof -
      prefer 2
      apply (rule ext)
      apply clarsimp
-    apply (simp add: Option.map_def map_comp_def
+    apply (simp add: map_option_def map_comp_def
               split: split_if_asm option.splits)
     apply (frule pspace_alignedD'[OF _ pspace_aligned'])
     apply (case_tac "pageBits \<le> bits")
@@ -1705,9 +1703,9 @@ proof -
     apply (case_tac "ptr \<le> x + 2 ^ pageBits - 1",
            simp_all only: simp_thms not_le)
     apply clarsimp
-    apply (thin_tac "?psp = Some ?ko")+
-    apply (thin_tac "ps_clear ?x ?y ?z")
-    apply (thin_tac "cteCap ?x = ?y")+
+    apply (thin_tac "psp = Some ko" for psp ko)+
+    apply (thin_tac "ps_clear x y z" for x y z)
+    apply (thin_tac "cteCap x = y" for x y)+
     apply (frule is_aligned_no_overflow)
     apply (simp only: x_power_minus_1)
     apply (frule_tac x=x in word_plus_strict_mono_right[of _ "2^pageBits"])
@@ -1736,9 +1734,12 @@ proof -
     (gsCNodes_update ?psu (gsUserPages_update ?psu s),
      globals_update (ghost'state_'_update (gs_clear_region ptr bits)) s')
     \<in> rf_sr"
-    by (simp add: rf_sr_def cstate_relation_def Let_def gs_clear_region_def
+    apply (case_tac "ghost'state_' (globals s')")
+    apply (simp add: rf_sr_def cstate_relation_def Let_def gs_clear_region_def
                   upto_intvl_eq[OF al] carch_state_relation_def
-                  cmachine_state_relation_def)
+                  cmachine_state_relation_def ghost_size_rel_def
+                  ghost_assertion_data_get_def)
+    done
 
   from gsu_in_sr[OF msu_in_sr]
   show "(?t, globals_update
@@ -1783,8 +1784,3 @@ lemma deleteObjects_ccorres[corres]:
 
 end  
 end  
-(*
- * Local Variables: ***
- * indent-tabs-mode: nil ***
- * End: ***
- *)

@@ -115,9 +115,9 @@ proof -
     done
   show Q: "init_irq_node_ptr + (ucast (irq :: irq) << cte_level_bits) + 2 ^ cte_level_bits - 1
                 \<le> init_irq_node_ptr + 2 ^ 12 - 1"
-    apply (simp only: add_diff_eq[symmetric] add_assoc)
+    apply (simp only: add_diff_eq[symmetric] add.assoc)
     apply (rule word_add_le_mono2)
-     apply (simp only: trans [OF shiftl_t2n mult_commute])
+     apply (simp only: trans [OF shiftl_t2n mult.commute])
      apply (rule nasty_split_lt[OF P])
       apply (simp_all add: cte_level_bits_def 
         word_bits_def kernel_base_def init_irq_node_ptr_def)
@@ -189,7 +189,6 @@ lemma pspace_aligned_init_A:
            simp_all add: is_aligned_def word_bits_def kernel_base_def)[1]
   done
 
-(* FIXME: horrible proof -- but it works. *)
 lemma pspace_distinct_init_A:
   "pspace_distinct init_A_st"
   apply (clarsimp simp: pspace_distinct_def state_defs pageBits_def
@@ -222,7 +221,7 @@ lemma caps_of_state_init_A_st_Null:
   done
 
 lemmas cte_wp_at_caps_of_state_eq
-    = cte_wp_at_caps_of_state[where P="op = cap", standard]
+    = cte_wp_at_caps_of_state[where P="op = cap" for cap]
 
 lemma invs_A:
   "invs init_A_st"
@@ -354,21 +353,19 @@ lemma invs_A:
    apply (intro conjI impI)
             apply (rule in_kernel_base|simp)+
          apply (erule exE,drule sym,simp add:field_simps)
-         apply (rule in_kernel_base[unfolded add_commute])
+         apply (rule in_kernel_base[unfolded add.commute])
           apply (rule word_less_add_right,simp add:cte_level_bits_def)
            apply (rule less_le_trans[OF shiftl_less_t2n'[OF ucast_less]],simp+)[1]
           apply simp
          apply (simp add:cte_level_bits_def field_simps)
-         apply (subst add_commute)
+         apply (subst add.commute)
          apply (rule le_plus')
           apply simp+
           apply (rule less_imp_le)
           apply (rule less_le_trans[OF shiftl_less_t2n'[OF ucast_less]],simp+)[1]
      apply (rule in_kernel_base|simp)+
-  apply (rule conjI)
-   apply (simp add: cap_refs_in_kernel_window_def caps_of_state_init_A_st_Null
-                   valid_refs_def[unfolded cte_wp_at_caps_of_state])
-  apply (simp add: executable_arch_objs_def obj_at_def state_defs)
+  apply (simp add: cap_refs_in_kernel_window_def caps_of_state_init_A_st_Null
+                  valid_refs_def[unfolded cte_wp_at_caps_of_state])
   apply word_bitwise
   done
 

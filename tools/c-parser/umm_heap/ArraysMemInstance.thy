@@ -209,7 +209,7 @@ begin
 instance
 apply intro_classes
      apply(simp_all add: typ_info_array array_tag_def size_of_def
-                         norm_bytes_def zero_less_card_finite)
+                         norm_bytes_def)
 
  apply clarsimp
  apply(rule fu_eq_mask)
@@ -219,7 +219,7 @@ apply intro_classes
 
 apply(clarsimp simp: align_of_def typ_info_array array_tag_def)
 apply(subst align_td_array_tag)
- apply (simp add: zero_less_card_finite)
+ apply simp
 apply(rule dvd_trans)
  apply(subgoal_tac "align_of TYPE('a) dvd size_of TYPE('a)")
   apply(simp only: align_of_def)
@@ -529,7 +529,7 @@ done
 
 instance "ty8192" :: finite
 apply intro_classes
-apply (simp add: finite univ8192)
+apply (simp add: univ8192)
 done
 
 lemma card8192[simp]: "CARD(ty8192) = CARD(8192)"
@@ -537,9 +537,7 @@ apply (simp add: univ8192 card_image inj_on_def)
 done
 
 instance "ty8192" :: fourthousand_count
-apply intro_classes
-apply (simp add: card8192)
-done
+by intro_classes simp
 
 
 end

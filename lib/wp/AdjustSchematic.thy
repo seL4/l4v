@@ -75,32 +75,31 @@ fun convertible_schem_app t = exists
     | _ => false)
   (snd (strip_comb t))
 
-val rewr_fst_snd = Simplifier.rewrite
-    (HOL_basic_ss addsimps @{thms fst_conv snd_conv})
+fun rewr_fst_snd ctxt = Simplifier.rewrite
+    (put_simpset HOL_basic_ss ctxt addsimps @{thms fst_conv snd_conv})
 
-fun apply_insts insts t = let
-    val thy = theory_of_thm t
-    val inst_pairs = map (pairself (cterm_of thy) o fst) insts
-    val rewrs = map (rewr_fst_snd o cterm_of thy o snd) insts
+fun apply_insts insts ctxt t = let
+    val inst_pairs = map (apply2 (Thm.cterm_of ctxt) o fst) insts
+    val rewrs = map (rewr_fst_snd ctxt o Thm.cterm_of ctxt o snd) insts
     val frees = map (snd #> head_of #> dest_Free #> fst) insts
 
   in cterm_instantiate inst_pairs t
     |> (ALLGOALS (CONVERSION (Thm.beta_conversion true))
-        THEN Raw_Simplifier.rewrite_goals_tac rewrs)
+        THEN Raw_Simplifier.rewrite_goals_tac ctxt rewrs)
     |> Seq.hd |> Drule.generalize ([], frees)
     |> Seq.single
   end
 
 fun schem_app_name t = (head_of t |> dest_Var |> fst |> fst, t)
 
-val tac = CSUBGOAL (fn (csg, i) => let
-    val convertibles = get_schem_apps (Envir.beta_eta_contract (term_of csg))
+fun tac ctxt = CSUBGOAL (fn (csg, i) => let
+    val convertibles = get_schem_apps (Envir.beta_eta_contract (Thm.term_of csg))
         |> filter convertible_schem_app
         |> map schem_app_name
   in if null convertibles then no_tac
     else (fn t => apply_insts (convertibles
-        |> Term.variant_frees (prop_of t)
-        |> map mk_inst) t)
+        |> Term.variant_frees (Thm.prop_of t)
+        |> map mk_inst) ctxt t)
   end)
 
 end
@@ -108,7 +107,7 @@ end
 
 schematic_lemma
   "\<And>x y z. ?P (x, y) True (a, (b, (c, d), e)) z"
-  apply (tactic {* AdjustSchematics.tac 1 *})
+  apply (tactic {* AdjustSchematics.tac @{context} 1 *})
   oops
 
 end

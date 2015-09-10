@@ -12,7 +12,7 @@
    Nondeterministic state and error monads with failure in Isabelle.
 *)
 
-header "Nondeterministic State Monad with Failure"
+chapter "Nondeterministic State Monad with Failure"
 
 theory NonDetMonad
 imports "../Lib"
@@ -196,12 +196,9 @@ text {*
   the result is true or the right monad if the result is false.
 *}
 definition
-  condition :: "('s \<Rightarrow> bool)
-      \<Rightarrow> ('s, 'r) nondet_monad
-      \<Rightarrow> ('s, 'r) nondet_monad
-      \<Rightarrow> ('s, 'r) nondet_monad"
+  condition :: "('s \<Rightarrow> bool) \<Rightarrow> ('s, 'r) nondet_monad \<Rightarrow> ('s, 'r) nondet_monad \<Rightarrow> ('s, 'r) nondet_monad"
 where
-  "(condition P L R) \<equiv> \<lambda>s. if (P s) then (L s) else (R s)"
+  "condition P L R \<equiv> \<lambda>s. if (P s) then (L s) else (R s)"
 
 notation (output)
   condition  ("(condition (_)//  (_)//  (_))" [1000,1000,1000] 1000)
@@ -356,7 +353,7 @@ subsection "Monad Laws for the Exception Monad"
 text {* More direct definition of @{const liftE}: *}
 lemma liftE_def2:
   "liftE f = (\<lambda>s. ((\<lambda>(v,s'). (Inr v, s')) ` fst (f s), snd (f s)))"
-  by (auto intro: ext simp: liftE_def return_def split_def bind_def)
+  by (auto simp: liftE_def return_def split_def bind_def)
 
 text {* Left @{const returnOk} absorbtion over @{term bindE}: *}
 lemma returnOk_bindE [simp]: "(returnOk x >>=E f) = f x"
@@ -509,7 +506,7 @@ where
 
 text {*
   Map a monadic function with two parameters over two lists,
-  going through both lists simultanously, left to right, ignoring
+  going through both lists simultaneously, left to right, ignoring
   return values.
 *}
 definition
@@ -659,8 +656,7 @@ inductive_set
   whileLoop_results :: "('r \<Rightarrow> 's \<Rightarrow> bool) \<Rightarrow> ('r \<Rightarrow> ('s, 'r) nondet_monad) \<Rightarrow> ((('r \<times> 's) option) \<times> (('r \<times> 's) option)) set"
   for C B
 where
-    "(None, None) \<in> whileLoop_results C B"
-  | "\<lbrakk> \<not> C r s \<rbrakk> \<Longrightarrow> (Some (r, s), Some (r, s)) \<in> whileLoop_results C B"
+    "\<lbrakk> \<not> C r s \<rbrakk> \<Longrightarrow> (Some (r, s), Some (r, s)) \<in> whileLoop_results C B"
   | "\<lbrakk> C r s; snd (B r s) \<rbrakk> \<Longrightarrow> (Some (r, s), None) \<in> whileLoop_results C B"
   | "\<lbrakk> C r s; (r', s') \<in> fst (B r s); (Some (r', s'), z) \<in> whileLoop_results C B  \<rbrakk>
        \<Longrightarrow> (Some (r, s), z) \<in> whileLoop_results C B"
@@ -835,7 +831,7 @@ where
 
 text {*
   It is often desired to prove non-failure and a Hoare triple
-  simulataneously, as the reasoning is often similar. The following
+  simultaneously, as the reasoning is often similar. The following
   definitions allow such reasoning to take place.
 *}
 

@@ -43,16 +43,21 @@ fun parse_thm_index name =
  * given theorem. If we can't find the correct theorem, or it is
  * ambiguous, return the original name.
  *)
-fun adjust_thm_name ctxt name term =
+fun adjust_thm_name ctxt (name,index) term =
 let
-  val possible_names = distinct (op =) [(name, NONE), parse_thm_index name]
+  val possible_names = case index of NONE => distinct (op =) [(name, NONE), parse_thm_index name]
+                                   | SOME i => [(name,SOME i)]
+
   fun match (n, i) =
   let
     val idx = the_default 0 i
     val thms = Proof_Context.get_fact ctxt (Facts.named n) handle ERROR _ => []
   in
     if idx >= 0 andalso length thms > idx then
-      SOME ((n, i), nth thms idx)
+      if length thms > 1 then
+        SOME ((n, i), nth thms idx)
+      else
+        SOME ((n,NONE), hd thms)
     else
       NONE
   end
@@ -65,7 +70,7 @@ end
 (* Render the given fact. *)
 fun pretty_fact ctxt (FoundName ((name, idx), thm)) =
       Pretty.block
-        [Pretty.mark (Proof_Context.markup_fact ctxt name) (Pretty.str name),
+        [Pretty.mark_str (Facts.markup_extern ctxt (Proof_Context.facts_of ctxt) name),
           case idx of
             SOME n => Pretty.str ("(" ^ string_of_int (n + 1) ^ "):")
           | NONE => Pretty.str ":",
@@ -79,14 +84,14 @@ fun pretty_fact ctxt (FoundName ((name, idx), thm)) =
 fun print_deps ctxt text thm deps =
 let
   (* Remove duplicates. *)
-  val deps = sort_distinct (prod_ord string_ord Term_Ord.term_ord) deps
+  val deps = sort_distinct (prod_ord (prod_ord string_ord (option_ord int_ord)) Term_Ord.term_ord) deps
 
   (* Retrieve facts which are explicitly mentioned in the method invocation. *)
-  val mentioned_facts = Apply_Trace.mentioned_facts text
-  |> map (fn thm => (Thm.get_name_hint thm, prop_of thm))
+  val mentioned_facts = Apply_Trace.mentioned_facts ctxt text
+  |> map (fn thm => ((Thm.get_name_hint thm, NONE), Thm.prop_of thm))
 
   (* Fetch canonical names and theorems. *)
-  val (deps,mentioned_facts) = chop (length deps) (map (fn (name, term) => adjust_thm_name ctxt name term) (deps @ mentioned_facts))
+  val (deps,mentioned_facts) = chop (length deps) (map (fn (ident, term) => adjust_thm_name ctxt ident term) (deps @ mentioned_facts))
 
   (* Find mentioned, but unused facts *)
   val unused_facts = subtract (fn (FoundName ((nm,_),_),FoundName ((nm',_),_)) => nm = nm' 
@@ -109,14 +114,20 @@ in
 
 end
 
+
 val _ =
-  Outer_Syntax.command @{command_spec "apply_trace"} "initial refinement step (unstructured)"
-    (Method.parse >> (Toplevel.print oo (Toplevel.proofs o (Apply_Trace.apply_results {localize_facts = true, silent_fail = false} print_deps))));
+  Outer_Syntax.command @{command_keyword "apply_trace"} "initial refinement step (unstructured)"
+    (Method.parse >> (Toplevel.proofs o (Apply_Trace.apply_results {silent_fail = false} print_deps)));
 
 *}
 
 setup {* Filter_Thms.setup *}
 
 lemmas [no_trace] = protectI protectD TrueI Eq_TrueI eq_reflection
+
+(* Test. *)
+lemma "(a \<and> b) = (b \<and> a)"
+  apply_trace auto
+  oops
 
 end

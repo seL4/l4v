@@ -53,7 +53,7 @@ definition
   ep_cancel_all :: "cdl_object_id \<Rightarrow> unit k_monad"
 where
   "ep_cancel_all ep \<equiv>
-    modify (\<lambda>s. s\<lparr>cdl_objects :=  Option.map
+    modify (\<lambda>s. s\<lparr>cdl_objects :=  map_option
         (\<lambda>obj. case obj of
             Tcb t \<Rightarrow>
               if (is_thread_blocked_on_endpoint t ep) then
@@ -266,29 +266,92 @@ where
   od) s"
   by auto
 
-  
+
+definition cdl_get_pde :: "(word32 \<times> nat)\<Rightarrow> cdl_cap k_monad"
+where "cdl_get_pde ptr \<equiv> 
+  KHeap_D.get_cap ptr"
+
+definition cdl_lookup_pd_slot :: "word32 \<Rightarrow> word32 \<Rightarrow> word32 \<times> nat "
+  where "cdl_lookup_pd_slot pd vptr \<equiv> (pd, unat (vptr >> 20))"
+
+definition cdl_lookup_pt_slot :: "word32 \<Rightarrow> word32 \<Rightarrow> (word32 \<times> nat) except_monad"
+  where "cdl_lookup_pt_slot pd vptr \<equiv> 
+    doE pd_slot \<leftarrow> returnOk (cdl_lookup_pd_slot pd vptr);
+        pdcap \<leftarrow> liftE $ cdl_get_pde pd_slot;
+        (case pdcap of cdl_cap.PageTableCap ref Fake None
+         \<Rightarrow> ( doE pt \<leftarrow> returnOk ref;
+              pt_index \<leftarrow> returnOk ((vptr >> 12) && 0xFF);
+              returnOk (pt,unat pt_index)
+         odE)
+        | _ \<Rightarrow> Monads_D.throw)
+    odE"
+
+definition
+  cdl_find_pd_for_asid :: "cdl_mapped_addr \<Rightarrow> cdl_object_id except_monad"
+where
+  "cdl_find_pd_for_asid maddr \<equiv> doE 
+     asid_table \<leftarrow> liftE $ gets cdl_asid_table;
+     asid_pool \<leftarrow> returnOk $ asid_table (fst (fst maddr));
+     pd_cap_ref \<leftarrow> (case asid_pool of Some (AsidPoolCap ptr _) \<Rightarrow> returnOk (ptr, (snd \<circ> fst) maddr) 
+              | _ \<Rightarrow> throw );
+     pd_cap \<leftarrow> liftE $ get_cap pd_cap_ref;
+     case pd_cap of (PageDirectoryCap pd _ _) \<Rightarrow> returnOk pd
+     | _ \<Rightarrow> throw
+   odE "
+
+definition cdl_page_mapping_entries :: "32 word \<Rightarrow> nat \<Rightarrow> 32 word 
+                                       \<Rightarrow> ((32 word \<times> nat) list) except_monad"
+  where "cdl_page_mapping_entries vptr pgsz pd \<equiv> 
+  if pgsz = 12 then doE
+    p \<leftarrow> cdl_lookup_pt_slot pd vptr;
+         returnOk [p]
+    odE
+
+  else if pgsz = 16 then doE
+    p \<leftarrow> cdl_lookup_pt_slot pd vptr;
+         returnOk [p]
+    odE
+  else if pgsz = 20 then doE
+    p \<leftarrow> returnOk $ (cdl_lookup_pd_slot pd vptr);
+         returnOk [p]
+    odE
+  else if pgsz = 24 then doE
+    p \<leftarrow> returnOk $ (cdl_lookup_pd_slot pd vptr);
+         returnOk [p]
+    odE
+  else throw"
+
+definition
+  cdl_page_table_mapped :: "cdl_mapped_addr \<Rightarrow> cdl_object_id \<Rightarrow> (cdl_cap_ref option) k_monad"
+where
+  "cdl_page_table_mapped maddr pt_id \<equiv> doE
+     pd \<leftarrow> cdl_find_pd_for_asid maddr;
+     pd_slot \<leftarrow> returnOk (cdl_lookup_pd_slot pd (snd maddr));
+     pdcap \<leftarrow> liftE $ cdl_get_pde pd_slot;
+     (case pdcap of 
+       cdl_cap.PageTableCap ref Fake None \<Rightarrow> 
+         (returnOk $ if ref = pt_id then Some pd_slot else None)
+     | _ \<Rightarrow> returnOk None )
+   odE <catch> (K (return None))"
 
 text {*
-  Unmap a frame.
- 
-  We can't deterministically calculate what will be unmapped without
-  modelling the complexities of ASIDs and keeping track in each frame
-  cap which ASID/slot it was used to provide a mapping in.
- 
-  Instead, we just non-deterministically choose a bunch of mappings
-  to remove. This is painful, but less painful than forcing users to
-  deal with the complexities of ASIDs.
+  Unmap a frame. 
 *}
+
 definition
-  unmap_page :: "cdl_object_id \<Rightarrow> unit k_monad"
+ "might_throw \<equiv> (returnOk ()) \<sqinter> throw"
+
+definition
+  unmap_page :: "cdl_mapped_addr  \<Rightarrow> cdl_object_id \<Rightarrow> nat \<Rightarrow> unit k_monad"
 where
-  "unmap_page frame_id \<equiv>
-    do
-      all_mappings \<leftarrow> gets $ slots_with (\<lambda>x. \<exists>rights sz asid.
-                           x = FrameCap frame_id rights sz Fake asid);
-      y \<leftarrow> select {M. set M \<subseteq> all_mappings \<and> distinct M};
-      mapM_x delete_cap_simple y
-    od"
+  "unmap_page maddr frame_id pgsz \<equiv>
+    doE
+      pd \<leftarrow> cdl_find_pd_for_asid maddr;
+      pslots \<leftarrow> cdl_page_mapping_entries (snd maddr) pgsz pd;
+      might_throw;
+      liftE $ mapM_x delete_cap_simple pslots;    
+      returnOk ()
+    odE <catch> (K $ return ())"
 
 
 text {*
@@ -298,14 +361,13 @@ text {*
   non-deterministically choose a bunch of page-tables to unmap.
 *}
 definition
-  unmap_page_table :: "cdl_object_id \<Rightarrow> unit k_monad"
+  unmap_page_table  :: "cdl_mapped_addr \<Rightarrow> cdl_object_id  \<Rightarrow> unit k_monad"
 where
-  "unmap_page_table pt_id \<equiv>
+  "unmap_page_table maddr pt_id\<equiv>
     do
-      all_mappings \<leftarrow> gets $ slots_with (\<lambda>x. \<exists>rights.
-                           x = PageTableCap pt_id Fake rights);
-      y \<leftarrow> select {M. set M \<subseteq> all_mappings \<and> distinct M};
-      mapM_x delete_cap_simple y
+      pt_slot \<leftarrow> cdl_page_table_mapped maddr pt_id;
+      case pt_slot of (Some slot) \<Rightarrow> delete_cap_simple slot
+      | None \<Rightarrow> return ()
     od"
 
 

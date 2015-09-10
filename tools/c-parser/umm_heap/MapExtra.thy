@@ -318,7 +318,7 @@ text {*
   seems to be the more common case.
   Note that when a theory includes Map again, @{text "map_add_assoc"} will
   return to the simpset and will cause infinite loops if its symmetric
-  counterpart is added (e.g. via @{text "map_add_ac"})
+  counterpart is added (e.g. via @{text "map_ac_simps"})
   *}
 
 declare map_add_assoc [simp del]
@@ -328,7 +328,7 @@ text {*
   map disjunction, we include some basic rules into the ac set.
   *}
 
-lemmas map_add_ac =
+lemmas map_ac_simps =
   map_add_assoc[symmetric] map_add_com map_disj_com
   map_add_left_commute map_add_disj map_add_disj'
 
@@ -379,9 +379,9 @@ lemma map_add_left_dom_eq:
   assumes etc: "h\<^sub>0 \<bottom> h\<^sub>1" "h\<^sub>0' \<bottom> h\<^sub>1'" "dom h\<^sub>0 = dom h\<^sub>0'"
   shows "h\<^sub>0 = h\<^sub>0'"
 proof -
-  from eq have "h\<^sub>1 ++ h\<^sub>0 = h\<^sub>1' ++ h\<^sub>0'" using etc by (simp add: map_add_ac)
+  from eq have "h\<^sub>1 ++ h\<^sub>0 = h\<^sub>1' ++ h\<^sub>0'" using etc by (simp add: map_ac_simps)
   thus ?thesis using etc
-    by (fastforce elim!: map_add_right_dom_eq simp: map_add_ac)
+    by (fastforce elim!: map_add_right_dom_eq simp: map_ac_simps)
 qed
 
 lemma map_add_left_eq:
@@ -403,7 +403,7 @@ qed
 
 lemma map_add_right_eq:
   "\<lbrakk>h ++ h\<^sub>0 = h ++ h\<^sub>1; h\<^sub>0 \<bottom> h; h\<^sub>1 \<bottom> h\<rbrakk> \<Longrightarrow> h\<^sub>0 = h\<^sub>1"
-  by (rule_tac h=h in map_add_left_eq, auto simp: map_add_ac)
+  by (rule_tac h=h in map_add_left_eq, auto simp: map_ac_simps)
 
 lemma map_disj_add_eq_dom_right_eq:
   assumes merge: "h\<^sub>0 ++ h\<^sub>1 = h\<^sub>0' ++ h\<^sub>1'" and d: "dom h\<^sub>0 = dom h\<^sub>0'" and
@@ -424,7 +424,7 @@ lemma map_disj_add_eq_dom_left_eq:
           disj: "h\<^sub>0 \<bottom> h\<^sub>1" "h\<^sub>0' \<bottom> h\<^sub>1'"
   shows "h\<^sub>0 = h\<^sub>0'"
 proof -
-  have "h\<^sub>1 ++ h\<^sub>0 = h\<^sub>1' ++ h\<^sub>0'" using add disj by (simp add: map_add_ac)
+  have "h\<^sub>1 ++ h\<^sub>0 = h\<^sub>1' ++ h\<^sub>0'" using add disj by (simp add: map_ac_simps)
   thus ?thesis using dom disj
     by - (rule map_disj_add_eq_dom_right_eq, auto simp: map_disj_com)
 qed
@@ -471,7 +471,7 @@ lemma map_add_update_right:
 lemma map_add3_update:
   "\<lbrakk> h\<^sub>0 \<bottom> h\<^sub>1 ; h\<^sub>1  \<bottom> h\<^sub>2 ; h\<^sub>0 \<bottom> h\<^sub>2 ; p \<in> dom h\<^sub>0 \<rbrakk>
   \<Longrightarrow> (h\<^sub>0 ++ h\<^sub>1 ++ h\<^sub>2)(p \<mapsto> v) = h\<^sub>0(p \<mapsto> v) ++ h\<^sub>1 ++ h\<^sub>2"
-  by (auto simp: map_add_update_left[symmetric] map_add_ac)
+  by (auto simp: map_add_update_left[symmetric] map_ac_simps)
 
 
 subsection {* Map disjunction and @{term "map_le"} *}
@@ -497,7 +497,7 @@ lemma map_le_on_disj_left:
 
 lemma map_le_on_disj_right:
   "\<lbrakk> h' \<subseteq>\<^sub>m h ; h\<^sub>0 \<bottom> h\<^sub>1 ; h' = h\<^sub>1 ++ h\<^sub>0 \<rbrakk> \<Longrightarrow> h\<^sub>0 \<subseteq>\<^sub>m h"
-  by (auto simp: map_le_on_disj_left map_add_ac)
+  by (auto simp: map_le_on_disj_left map_ac_simps)
 
 lemma map_le_add_cancel:
   "\<lbrakk> h\<^sub>0 \<bottom> h\<^sub>1 ; h\<^sub>0' \<subseteq>\<^sub>m h\<^sub>0 \<rbrakk> \<Longrightarrow> h\<^sub>0' ++ h\<^sub>1 \<subseteq>\<^sub>m h\<^sub>0 ++ h\<^sub>1"
@@ -587,7 +587,7 @@ lemma restrict_map_on_disj':
 lemma map_le_sub_dom:
   "\<lbrakk> h\<^sub>0 ++ h\<^sub>1 \<subseteq>\<^sub>m h ; h\<^sub>0 \<bottom> h\<^sub>1 \<rbrakk> \<Longrightarrow> h\<^sub>0 \<subseteq>\<^sub>m h |` (dom h - dom h\<^sub>1)"
   by (rule map_le_override_bothD, subst map_le_dom_restrict_sub_add)
-     (auto elim: map_add_le_mapE simp: map_add_ac)
+     (auto elim: map_add_le_mapE simp: map_ac_simps)
 
 lemma map_submap_break:
   "\<lbrakk> h \<subseteq>\<^sub>m h' \<rbrakk> \<Longrightarrow> h' = (h' |` (UNIV - dom h)) ++ h"
@@ -598,6 +598,6 @@ lemma map_submap_break:
 lemma map_add_disj_restrict_both:
   "\<lbrakk> h\<^sub>0 \<bottom> h\<^sub>1; S \<inter> S' = {}; T \<inter> T' = {} \<rbrakk>
    \<Longrightarrow> (h\<^sub>0 |` S) ++ (h\<^sub>1 |` T) \<bottom> (h\<^sub>0 |` S') ++ (h\<^sub>1 |` T')"
-  by (auto simp: map_add_ac intro!: restrict_map_disj_both restrict_map_disj)
+  by (auto simp: map_ac_simps intro!: restrict_map_disj_both restrict_map_disj)
 
 end

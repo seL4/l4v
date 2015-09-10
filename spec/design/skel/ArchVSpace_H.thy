@@ -19,6 +19,10 @@ imports
   ArchVSpaceDecls_H
 begin
 
-#INCLUDE_HASKELL SEL4/Kernel/VSpace/ARM.lhs bodies_only ArchInv=ArchRetypeDecls_H NOT checkPDAt checkPTAt checkPDASIDMapMembership
+#INCLUDE_HASKELL SEL4/Kernel/VSpace/ARM.lhs bodies_only ArchInv=ArchRetypeDecls_H NOT checkPDAt checkPTAt checkPDASIDMapMembership checkValidMappingSize
+
+defs checkValidMappingSize_def:
+  "checkValidMappingSize sz \<equiv> stateAssert
+    (\<lambda>s. 2 ^ pageBitsForSize sz <= gsMaxObjectSize s) []"
 
 end

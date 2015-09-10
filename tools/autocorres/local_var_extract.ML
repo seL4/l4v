@@ -88,7 +88,7 @@ let
     if return_ctype = Absyn.Void then
       empty_set
     else
-      make_set [(NameGeneration.return_var_name return_ctype,
+      make_set [(NameGeneration.return_var_name return_ctype |> MString.dest,
           #return_type fn_def)]
 in
   (inputs, outputs)
@@ -402,9 +402,9 @@ end
 
 fun mk_corresXF_thm' ctxt prog_info name_map return_vars except_vars precond_vars l2_term l1_term thm =
   mk_corresXF_thm ctxt prog_info name_map return_vars except_vars precond_vars l2_term l1_term (
-    (rewrite_goal_tac [mk_meta_eq @{thm split_def}] 1)
+    (rewrite_goal_tac ctxt [mk_meta_eq @{thm split_def}] 1)
     THEN
-    (rtac (rewrite_rule [mk_meta_eq @{thm split_def}] thm) 1)
+    (rtac (rewrite_rule ctxt [mk_meta_eq @{thm split_def}] thm) 1)
     THEN
     (REPEAT (CHANGED (asm_full_simp_tac (setup_l2_ss ctxt) 1)))
   )
@@ -616,7 +616,7 @@ let
       | other => Utils.invalid_term "a L1 term" other)
 in
   (* Generate proof. *)
-  cterm_of thy goal
+  Thm.cterm_of ctxt goal
   |> Goal.init
   |> Utils.apply_tac ("proving variable preservation for var '" ^ (fst var) ^ "'") tac
   |> Goal.finish ctxt
@@ -684,18 +684,18 @@ let
         Free (a, t) => Var ((a, 0), t)
       | x => x
   val (head $ st $ ret_xf $ ex_xf $ precond $ l2_term $ l1_term) =
-    map_aterms convert_var_to_free (concl_of thm) |> HOLogic.dest_Trueprop
+    map_aterms convert_var_to_free (Thm.concl_of thm) |> HOLogic.dest_Trueprop
   val new_l2_term = (abs_over_tuple_vars name_map vars l2_term
       $ Free ("r'", HOLogic.mk_tupleT (dest_set vars |> map snd)))
   val new_concl =
        head $ st $ ret_xf $ ex_xf $ precond $ new_l2_term $ l1_term
        |> map_aterms convert_free_to_var
        |> HOLogic.mk_Trueprop
-  val new_thm = list_implies (cprems_of thm, cterm_of (Proof_Context.theory_of ctxt) new_concl)
+  val new_thm = list_implies (cprems_of thm, Thm.cterm_of ctxt new_concl)
 in
   Goal.init new_thm
   |> asm_full_simp_tac (put_simpset HOL_basic_ss ctxt addsimps [mk_meta_eq @{thm split_def}]) 1 |> Seq.hd
-  |> rtac (rewrite_rule [mk_meta_eq @{thm split_def}] thm) 1 |> Seq.hd
+  |> rtac (rewrite_rule ctxt [mk_meta_eq @{thm split_def}] thm) 1 |> Seq.hd
   |> REPEAT (atac 1) |> Seq.hd
   |> Goal.finish ctxt
 end
@@ -813,7 +813,6 @@ let
   val l1_term = get_node_data term |> #1
   val live_vars = get_node_data term |> #2
   val modified_vars = get_node_data term |> #3
-  val thy = Proof_Context.theory_of ctxt
   val inject =
       inject_return_vals ctxt prog_info name_map needed_vars allow_excess throw_vars fn_vars term
   fun mkthm read_vars ret_vars generated_term thm =
@@ -1059,8 +1058,8 @@ in
             val invariant_precond = abs_over_tuple_vars name_map loop_iterators
                   (mk_precond prog_info name_map tracked_vars)
             val base_thm = Utils.named_cterm_instantiate [
-                  ("P", cterm_of thy invariant_precond),
-                  ("A", cterm_of thy new_body)
+                  ("P", Thm.cterm_of ctxt invariant_precond),
+                  ("A", Thm.cterm_of ctxt new_body)
                 ] @{thm L2corres_while}
           in
             mkthm (body_reads UNION read_vars UNION loop_iterators) loop_iterators generated_term
@@ -1175,7 +1174,7 @@ in
           val read_vars = union_sets (map #2 expr_list) UNION ret_read_vars
 
           (* Generate a proof. *)
-          val my_debug_tac = if false then print_tac else fn _ => all_tac
+          val my_debug_tac = if false then print_tac ctxt else fn _ => all_tac
           val L2_call_thms = @{thms L2corres_returncall L2corres_voidcall L2corres_modifycall}
           val L2_reccall_thms = @{thms L2corres_recursive_returncall L2corres_recursive_voidcall L2corres_recursive_modifycall}
           val thm =
@@ -1197,7 +1196,7 @@ in
           inject (read_vars, ret_vars, extractors, thm)
         end)
         end
-    | other => Utils.invalid_input "a parsed L1 term"
+    | _ => Utils.invalid_input "a parsed L1 term"
         (l1_term |> head_of |> PolyML.makestring)
 end
 
@@ -1237,18 +1236,16 @@ in
 end
 
 (* Extract the abstract body of a L2corres theorem. *)
-fun get_body_of_thm thm =
-  concl_of (Drule.gen_all thm)
+fun get_body_of_thm ctxt thm =
+  Thm.concl_of (Drule.gen_all (Variable.maxidx_of ctxt) thm)
   |> HOLogic.dest_Trueprop
   |> dest_L2corres_term_abs
 
-fun get_l2corres_thm ctxt prog_info fn_info fn_name
+fun get_l2corres_thm ctxt prog_info fn_info do_opt trace_opt fn_name
     callee_terms fn_args l1_term init_unfold = let
 
   (* Get information about the return variable. *)
   val fn_def = FunctionInfo.get_function_def fn_info fn_name
-
-  val thy = Proof_Context.theory_of ctxt
 
   (* Get return variables. *)
   val (fn_input_vars, fn_ret_vars) = get_fn_input_output_vars prog_info fn_info fn_name
@@ -1273,9 +1270,9 @@ fun get_l2corres_thm ctxt prog_info fn_info fn_name
    * functions.
    *)
   val l2_unfolds = map (fn x => (mk_meta_eq x) handle (THM _) => x) (L2UnfoldThms.get ctxt)
-  val init_rule = cterm_of thy l1_term
+  val init_rule = Thm.cterm_of ctxt l1_term
     |> (Conv.rewr_conv (safe_mk_meta_eq init_unfold)
-        then_conv Raw_Simplifier.rewrite false l2_unfolds)
+        then_conv Raw_Simplifier.rewrite (put_simpset HOL_basic_ss ctxt) false l2_unfolds)
 
   (* Extract the term we will be working with. *)
   val source_term = Thm.concl_of init_rule |> Logic.dest_equals |> snd
@@ -1344,7 +1341,7 @@ fun get_l2corres_thm ctxt prog_info fn_info fn_name
     mk_corresXF_prop (Proof_Context.theory_of ctxt) prog_info name_map_ext
         fn_ret_vars empty_set fn_input_vars
         term l1_term
-    |> cterm_of thy
+    |> Thm.cterm_of ctxt
     |> Goal.init
     |> apply_tac "unfold RHS" (EqSubst.eqsubst_tac ctxt [0] [init_rule] 1)
     |> apply_tac "generalise guard" (rtac @{thm L2corres_guard_imp} 1)
@@ -1360,9 +1357,9 @@ fun get_l2corres_thm ctxt prog_info fn_info fn_name
   val new_thm = Conv.fconv_rule (
       Utils.remove_meta_conv (fn ctxt =>
         Utils.nth_arg_conv 5 (
-          Raw_Simplifier.rewrite false @{thms L2_remove_scaffolding_1}
+          Raw_Simplifier.rewrite ctxt false @{thms L2_remove_scaffolding_1}
           then_conv
-          Raw_Simplifier.rewrite false @{thms L2_remove_scaffolding_2})) ctxt) new_thm
+          Raw_Simplifier.rewrite ctxt false @{thms L2_remove_scaffolding_2})) ctxt) new_thm
 
   (* Gather statistics. *)
   val _ = Statistics.gather ctxt "L2" fn_name
@@ -1370,13 +1367,22 @@ fun get_l2corres_thm ctxt prog_info fn_info fn_name
 
   (* Cleanup. *)
   val _ = writeln ("Simplifying (L2) " ^ fn_name)
-  val new_thm = L2Opt.cleanup_thm ctxt new_thm false 5
+  val new_thm = Simplifier.simplify (put_simpset HOL_basic_ss ctxt addsimps
+                                       (* this rule is expensive *)
+                                       (if do_opt then @{thms L2_unknown_bind} else []))
+                                    new_thm
+
+  val _ = writeln ("Simplifying (L2opt) " ^ fn_name)
+  (* HACK: we need to avoid these simps until heap_lift *)
+  val cleanup_del = @{thms ptr_coerce.simps ptr_add_0_id}
+  val (new_thm, traces) = L2Opt.cleanup_thm_tagged (ctxt delsimps cleanup_del) new_thm
+                                                   (if do_opt then 0 else 2) 5 trace_opt "L2"
 
   (* Gather post-simplification statistics. *)
   val _ = Statistics.gather ctxt "L2simp" fn_name
       (Thm.prop_of new_thm |> HOLogic.dest_Trueprop |> (fn t => Utils.term_nth_arg t 4))
 in
-  new_thm
+  (new_thm, traces)
 end
 
 (*
@@ -1454,7 +1460,7 @@ end
 (*
  * Translate all functions from L1 to L2 format.
  *)
-fun translate_l2 filename fn_info lthy =
+fun translate_l2 filename fn_info do_opt trace_opt lthy =
 let
   val prog_info = ProgramInfo.get_prog_info lthy filename
 
@@ -1463,12 +1469,12 @@ let
     (* Fetch the function body from L1. *)
     val l1_def = FunctionInfo.get_function_def fn_info fn_name
     val l1_body_def = #definition l1_def WHERE [
-            ("rec_measure'", cterm_of (Proof_Context.theory_of ctxt) measure_var)]
+            ("rec_measure'", Thm.cterm_of ctxt measure_var)]
   
-    val thm = get_l2corres_thm ctxt prog_info fn_info
+    val (thm, traces) = get_l2corres_thm ctxt prog_info fn_info do_opt trace_opt
         fn_name callee_terms fn_args
-	(betapply (#const l1_def, measure_var)) l1_body_def
-  in (get_body_of_thm thm, thm) end
+        (betapply (#const l1_def, measure_var)) l1_body_def
+  in (get_body_of_thm ctxt thm, thm, traces) end
 
   (* Generate a constant name for our L2 bodies. *)
   fun gen_l2_name x = "l2_" ^ x

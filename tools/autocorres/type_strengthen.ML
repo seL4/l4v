@@ -141,7 +141,7 @@ let
       val x = make_lift_equality ctxt prog_info fn_info n rule_set
                 (SOME state_typ) (SOME dec_measure_var) (Free (var, T))
     in
-      cterm_of (Proof_Context.theory_of ctxt') x
+      Thm.cterm_of ctxt' x
     end) (recursive_calls ~~ dest_fn_fixes)
     (* Our measure does not type-check for pure functions,
        causing a TERM exception from mk_term. *)
@@ -189,20 +189,18 @@ end
  *)
 fun perform_lift ctxt prog_info fn_info rule_set fn_thm fn_name =
 let
-  val thy = Proof_Context.theory_of ctxt
-
   (* Assume recursive calls can be successfully lifted into this type. *)
   val (ctxt', measure_var, thms, dict, m)
       = assume_rec_lifted ctxt prog_info fn_info rule_set fn_thm fn_name
 
   (* Extract the term from our function definition. *)
   val fn_thm' = fn_thm WHERE [("rec_measure'",
-      cterm_of (Proof_Context.theory_of ctxt') measure_var)]
+      Thm.cterm_of ctxt' measure_var)]
     handle THM _ => fn_thm
-  val ct = Thm.prop_of fn_thm' |> Utils.rhs_of |> cterm_of (Proof_Context.theory_of ctxt')
+  val ct = Thm.prop_of fn_thm' |> Utils.rhs_of |> Thm.cterm_of ctxt'
 
   (* Rewrite the term using the given rewrite rules. *)
-  val t = term_of ct
+  val t = Thm.term_of ct
   val thm = case Monad_Convert.monad_rewrite ctxt rule_set thms true t of
                 SOME t => t
               | NONE => @{thm reflexive} WHERE [("x", ct)]
@@ -228,7 +226,7 @@ end
 
 (* Like perform_lift, but also applies the polishing rules, hopefully yielding
  * an even nicer definition. *)
-fun perform_lift_and_polish ctxt prog_info fn_info rule_set
+fun perform_lift_and_polish ctxt prog_info fn_info rule_set do_opt
     fn_thm fn_name =
   case (perform_lift ctxt prog_info fn_info rule_set
         fn_thm fn_name)
@@ -240,7 +238,7 @@ fun perform_lift_and_polish ctxt prog_info fn_info rule_set
     (Thm.concl_of thm |> Utils.rhs_of)
 
   (* Apply any polishing rules. *)
-  val polish_thm = Monad_Convert.polish ctxt rule_set thm
+  val polish_thm = Monad_Convert.polish ctxt rule_set do_opt thm
 
   (* Measure the term. *)
   val _ = Statistics.gather ctxt "polish" fn_name
@@ -262,7 +260,7 @@ in (polish_thm, dict) end
  * If the lift does not succeed, the function returns NONE.
  *)
 fun lift_function_rewrite rule_set filename prog_info fn_info
-    all_callee_proofs functions lthy =
+    all_callee_proofs functions keep_going do_opt lthy =
 let
   val fn_names = map fst functions
   val fn_defs = map snd functions
@@ -303,7 +301,7 @@ let
   val lifted_functions =
     map (fn (fn_name, fn_thm) =>
         perform_lift_and_polish lthy prog_info fn_info
-            rule_set' fn_thm fn_name)
+            rule_set' do_opt fn_thm fn_name)
         (fn_names ~~ fn_defs)
 
   val lifted_functions = map (fn x =>
@@ -353,12 +351,12 @@ let
 
   (* Instantiate variables in our equivalence theorem to their newly-defined values. *)
   fun do_inst_thm thm =
-    Utils.instantiate_thm_vars (Proof_Context.theory_of lthy) (
+    Utils.instantiate_thm_vars lthy (
       fn ((name, _), t) =>
         try (unprefix "rec'") name
         |> Option.map gen_lifted_fn_name
         |> Option.map (Utils.get_term lthy)
-        |> Option.map (cterm_of (Proof_Context.theory_of lthy))) thm
+        |> Option.map (Thm.cterm_of lthy)) thm
   val inst_thms = map do_inst_thm thms
 
   (* HACK: If a heap-lifted function takes no parameters, its measure gets
@@ -375,10 +373,10 @@ let
 
   (* Convert meta-logic into HOL statements, conjunct them together and setup
    * our goal statement. *)
-  val int_props = map (Object_Logic.atomize_term (Proof_Context.theory_of lthy)) final_props
+  val int_props = map (Object_Logic.atomize_term lthy) final_props
   val goal = Utils.mk_conj_list int_props
       |> HOLogic.mk_Trueprop
-      |> cterm_of (Proof_Context.theory_of lthy)
+      |> Thm.cterm_of lthy
 
   val simps =
     #L2_simp_rules rule_set' @
@@ -391,7 +389,7 @@ let
       |> apply_tac "start induction"
           (rtac @{thm recguard_induct} 1)
       |> apply_tac "(base case) split subgoals"
-          (TRY (REPEAT_ALL_NEW (Tactic.match_tac [@{thm conjI}]) 1))
+          (TRY (REPEAT_ALL_NEW (Tactic.match_tac lthy [@{thm conjI}]) 1))
       |> apply_tac "(base case) solve base cases"
           (EVERY (map (fn (def, fn_def) =>
             SOLVES (
@@ -399,9 +397,9 @@ let
             THEN (EqSubst.eqsubst_tac lthy [0] [def] 1)
             THEN (simp_tac (put_simpset ts_simpset lthy) 1))) (defs ~~ fn_defs)))
       |> apply_tac "(rec case) spliting induct case prems"
-          (TRY (REPEAT_ALL_NEW (Tactic.ematch_tac [@{thm conjE}]) 1))
+          (TRY (REPEAT_ALL_NEW (Tactic.ematch_tac lthy [@{thm conjE}]) 1))
       |> apply_tac "(rec case) split inductive case subgoals"
-          (TRY (REPEAT_ALL_NEW (Tactic.match_tac [@{thm conjI}]) 1))
+          (TRY (REPEAT_ALL_NEW (Tactic.match_tac lthy [@{thm conjI}]) 1))
       |> apply_tac "(rec case) unfolding strengthened function definition"
           (EVERY (map (fn (def, inst_thm) =>
               ((EqSubst.eqsubst_tac lthy [0] [def] 1)
@@ -421,7 +419,7 @@ let
   (* Now, using this combined theorem, generate a theorem for each individual
    * function. *)
   fun prove_partial_pred thm pred =
-    cterm_of (Proof_Context.theory_of lthy) pred
+    Thm.cterm_of lthy pred
     |> Goal.init
     |> apply_tac "inserting hypothesis"
         (cut_tac thm 1)
@@ -431,7 +429,7 @@ let
         THEN (REPEAT (etac @{thm allE} 1)))
     |> apply_tac "solving goal" (atac 1)
     |> Goal.finish lthy
-    |> Object_Logic.rulify
+    |> Object_Logic.rulify lthy
   val new_thms = map (prove_partial_pred rewrite_thm) final_props
 
   (*
@@ -496,7 +494,7 @@ let
         lthy
     end
     handle THM _ =>
-           (Utils.THM_non_critical
+           (Utils.THM_non_critical keep_going
                 ("autocorres: failed to prove ccorres theorem for " ^ fn_name)
                 0 [l1_thm, l2_thm, hl_thm, wa_thm, ts_thm];
             lthy)
@@ -537,14 +535,14 @@ end
 
 (* Lift the given function set, trying each rule until one succeeds. *)
 fun lift_function rules force_lift filename prog_info fn_info
-    all_callee_proofs functions lthy =
+    all_callee_proofs functions keep_going do_opt lthy =
 let
   val rules' = compute_lift_rules rules force_lift (map fst functions)
 
   (* Find the first lift that works. *)
   fun first (rule::xs) =
       (lift_function_rewrite rule filename prog_info fn_info
-           all_callee_proofs functions lthy
+           all_callee_proofs functions keep_going do_opt lthy
        handle LiftingFailed _ => first xs)
     | first [] = raise AllLiftingFailed functions
 in
@@ -572,7 +570,7 @@ end
 (* Run through every function, attempting to strengthen its type. *)
 fun type_strengthen (rules : Monad_Types.monad_type list)
                     (force_lift : Monad_Types.monad_type Symtab.table)
-                    filename fn_info lthy =
+                    filename fn_info (keep_going : bool) (do_opt : bool) lthy =
 let
   (* Get all function definitions. *)
   val prog_info = ProgramInfo.get_prog_info lthy filename
@@ -588,7 +586,8 @@ let
 
     (* Prettify bound variable names in definition. *)
     val state_typ = get_hl_state_typ lthy prog_info fn_info fn_name
-    val new_def = PrettyBoundVarNames.pretty_bound_vars_thm lthy (Utils.crhs_of (cprop_of def))
+    val new_def = PrettyBoundVarNames.pretty_bound_vars_thm
+                      lthy (Utils.crhs_of (Thm.cprop_of def)) keep_going
   in
     Thm.transitive def new_def
   end
@@ -600,7 +599,7 @@ let
     val start_time = Timer.startRealTimer ()
     val (lthy, new_rewrites, monad_name) =
         lift_function rules force_lift filename prog_info fn_info
-                      all_callee_proofs functions lthy
+                      all_callee_proofs functions keep_going do_opt lthy
     val _ = writeln ("  --> " ^ monad_name)
     val _ = @{trace} ("Converted (TS) " ^ Utils.commas (map fst functions) ^ " in " ^
                       Time.toString (Timer.checkRealTimer start_time) ^ " s")

@@ -22,7 +22,7 @@ val the' = Utils.the'
 
 exception FunctionNotFound of string
 
-val simpl_conv_ss = simpset_of @{context}
+val simpl_conv_ss = AUTOCORRES_SIMPSET
 
 (*
  * Given a function constant name such as "Blah.foo_'proc", guess the underlying
@@ -77,8 +77,8 @@ fun mk_L1corres_call_prop ctxt prog_info fn_info target_fn_name term =
 (*
  * Convert a SIMPL fragment into a monadic term.
  *
- * We return the monadic version of the input fragment and
- * a proof of correspondence.
+ * We return the monadic version of the input fragment and a tactic
+ * to prove correspondence.
  *)
 fun simpl_conv'
     (prog_info : ProgramInfo.prog_info)
@@ -210,7 +210,7 @@ fun simpl_conv'
   end
 
 (* Perform post-processing on a theorem. *)
-fun cleanup_thm ctxt prog_info fn_name thm =
+fun cleanup_thm ctxt do_opt trace_opt prog_info fn_name thm =
 let
   (* Measure the term. *)
   fun gather_stats phase thm =
@@ -226,7 +226,7 @@ let
     val ret_var_name =
         Symtab.lookup (ProgramAnalysis.get_fninfo (#csenv prog_info)) fn_name
         |> the
-        |> (fn (ctype, _, _) => NameGeneration.return_var_name ctype)
+        |> (fn (ctype, _, _) => NameGeneration.return_var_name ctype |> MString.dest)
     val ret_var_setter = Symtab.lookup (#var_setters prog_info) ret_var_name
     val ret_var_getter = Symtab.lookup (#var_getters prog_info) ret_var_name
     fun try_unify (x::xs) =
@@ -236,8 +236,8 @@ let
         SOME _ =>
           (* Prepend the L1_init code. *)
           Utils.named_cterm_instantiate
-            [("X", cterm_of (Proof_Context.theory_of ctxt) (the ret_var_setter)),
-             ("X'", cterm_of (Proof_Context.theory_of ctxt) (the ret_var_getter))]
+            [("X", Thm.cterm_of ctxt (the ret_var_setter)),
+             ("X'", Thm.cterm_of ctxt (the ret_var_getter))]
             (try_unify [
                 (fn _ => @{thm L1corres_prepend_unknown_var_recguard} OF [thm]),
                 (fn _ => @{thm L1corres_prepend_unknown_var} OF [thm]),
@@ -263,16 +263,23 @@ let
   val guard_conv = Conv.top_conv (K guard_conv') ctxt
 
   (* Apply all the conversions on the generated term. *)
-  val thm = Conv.fconv_rule (l1conv guard_conv) thm
-  val thm = Conv.fconv_rule (l1conv
-      (Simplifier.rewrite (put_simpset HOL_basic_ss ctxt addsimps (L1PeepholeThms.get ctxt)))) thm
+  val (thm, guard_opt_trace) = AutoCorresTrace.fconv_rule_maybe_traced ctxt (l1conv guard_conv) thm trace_opt
+  val (thm, peephole_opt_trace) =
+      AutoCorresTrace.fconv_rule_maybe_traced ctxt
+          (l1conv (Simplifier.rewrite (put_simpset HOL_basic_ss ctxt
+                                       addsimps (if do_opt then L1PeepholeThms.get ctxt else []))))
+          thm trace_opt
   val _ = gather_stats "L1peep" thm
 
   (* Rewrite exceptions. *)
-  val thm = Conv.fconv_rule (l1conv (ExceptionRewrite.except_rewrite_conv ctxt)) thm
+  val (thm, exn_opt_trace) = AutoCorresTrace.fconv_rule_maybe_traced ctxt
+                                 (l1conv (ExceptionRewrite.except_rewrite_conv ctxt do_opt)) thm trace_opt
   val _ = gather_stats "L1except" thm
 in
-  thm
+  (thm,
+   [("L1 guard opt", guard_opt_trace), ("L1 peephole opt", peephole_opt_trace), ("L1 exception opt", exn_opt_trace)]
+   |> List.mapPartial (fn (n, tr) => case tr of NONE => NONE | SOME x => SOME (n, AutoCorresData.SimpTrace x))
+  )
 end
 
 (*
@@ -308,7 +315,7 @@ in
   (unfolded_simpl_term, unfolded_simpl_thm, impl_thm)
 end
 
-fun get_l1corres_thm prog_info fn_info ctxt fn_name
+fun get_l1corres_thm prog_info fn_info ctxt do_opt trace_opt fn_name
     callee_terms measure_var = let
   val thy = Proof_Context.theory_of ctxt
   val (simpl_term, simpl_thm, impl_thm) = get_simpl_body ctxt fn_info fn_name
@@ -342,7 +349,7 @@ fun get_l1corres_thm prog_info fn_info ctxt fn_name
    *)
 in
   mk_L1corres_call_prop ctxt prog_info fn_info fn_name monad
-  |> cterm_of thy
+  |> Thm.cterm_of ctxt
   |> Goal.init
   |> apply_tac "unfold SIMPL body"
         (case impl_thm of
@@ -350,7 +357,7 @@ in
           | SOME thm => ((rtac @{thm L1corres_Call} 1) THEN (rtac thm 1) THEN tactic))
   |> Goal.finish ctxt
   (* Apply simplifications to the L1 term. *)
-  |> cleanup_thm ctxt prog_info fn_name
+  |> cleanup_thm ctxt do_opt trace_opt prog_info fn_name
 end
 
 fun get_body_of_l1corres_thm thm =
@@ -402,16 +409,16 @@ end
  * correspondence between our generated specs and the original SIMPL
  * code).
  *)
-fun translate_simpl filename fn_info lthy =
+fun translate_simpl filename fn_info do_opt trace_opt lthy =
 let
   val prog_info = ProgramInfo.get_prog_info lthy filename
 
   (* Abstract the function to a new body with a proof of correspondence. *)
   fun convert ctxt fn_name callee_terms measure_var fn_args =
   let
-    val thm = get_l1corres_thm prog_info fn_info ctxt fn_name
-        callee_terms measure_var
-  in (get_body_of_l1corres_thm thm, thm) end
+    val (thm, opt_traces) = get_l1corres_thm prog_info fn_info ctxt do_opt trace_opt fn_name
+                                             callee_terms measure_var
+  in (get_body_of_l1corres_thm thm, thm, opt_traces) end
 
   (* Get a constant name for our function definitions. *)
   fun get_const_name x = "l1_" ^ x
@@ -422,9 +429,6 @@ let
     |> FunctionInfo.fn_def_update_definition (
         (the (AutoCorresData.get_def (Proof_Context.theory_of lthy)
             filename "L1def" (#name fn_def))))
-
-  (* We only translate functions with a SIMPL body. *)
-  fun is_valid_fun name = AutoCorresUtil.has_simpl_body_def lthy name
 
   (* Fetch the expected type of the translated function. *)
   val l1_fn_type = @{typ nat} --> mk_l1monadT (#state_type prog_info)

@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-header "Physical Memory Functions"
+chapter "Physical Memory Functions"
 
 theory PSpaceFuns_H
 imports
@@ -133,7 +133,7 @@ defs deleteObjects_def:
             [];
         doMachineOp $ freeMemory (PPtr (fromPPtr ptr)) bits;
         ps \<leftarrow> gets ksPSpace;
-        inRange \<leftarrow> return ( (\<lambda> x. x && (- mask bits) - 1 = fromPPtr ptr));
+        inRange \<leftarrow> return ( (\<lambda> x. x && ((- mask bits) - 1) = fromPPtr ptr));
         map' \<leftarrow> return ( data_map_filterWithKey
                         (\<lambda> x _. Not (inRange x))
                         (psMap ps));

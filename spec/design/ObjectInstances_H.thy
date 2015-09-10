@@ -12,7 +12,7 @@
 	Defines the instances of pspace_storable objects.
 *)
 
-header "Storable Object Instances"
+chapter "Storable Object Instances"
 
 theory ObjectInstances_H
 imports

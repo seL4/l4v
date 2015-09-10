@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-header "Initialisation"
+chapter "Initialisation"
 
 theory KernelInit_H
 imports
@@ -18,7 +18,24 @@ imports
   Config_H
 begin
 
-#INCLUDE_HASKELL SEL4/Kernel/Init.lhs bodies_only NOT funArray newKernelState distinct rangesBy InitData doKernelOp runInit
+fun coverOf :: "region list => region" 
+where "coverOf x0 = (case x0 of
+    [] =>    Region (0,0)
+  | [x] =>    x
+  | (x#xs) =>  
+    let
+        (l,h) = fromRegion x;
+        (ll,hh) = fromRegion $ coverOf xs;
+        ln = if l \<le> ll then l else ll;
+        hn = if h \<le> hh then hh else h
+    in
+    Region (ln, hn)
+  )"
+
+definition syncBIFrame :: "unit kernel_init"
+where "syncBIFrame \<equiv> returnOk ()"
+
+#INCLUDE_HASKELL SEL4/Kernel/Init.lhs bodies_only NOT isAligned funArray newKernelState distinct rangesBy InitData doKernelOp runInit noInitFailure coverOf
 
 consts
   newKSDomSchedule :: "(domain \<times> machine_word) list"
@@ -33,6 +50,7 @@ where
         ksPSpace= newPSpace,
         gsUserPages= (\<lambda>x. None),
         gsCNodes= (\<lambda>x. None),
+        gsMaxObjectSize = card (UNIV :: machine_word set),
         ksDomScheduleIdx = newKSDomScheduleIdx,
         ksDomSchedule = newKSDomSchedule,
         ksCurDomain = newKSCurDomain,

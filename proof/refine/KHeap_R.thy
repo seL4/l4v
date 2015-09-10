@@ -33,7 +33,7 @@ lemma loadObject_default_inv:
   "\<lbrace>P\<rbrace> loadObject_default addr addr' next obj \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (simp add: loadObject_default_def magnitudeCheck_def
                    alignCheck_def unless_def alignError_def
-          | wp hoare_vcg_split_option_case
+          | wp hoare_vcg_split_case_option
                hoare_drop_imps hoare_vcg_all_lift)+
   done
 
@@ -55,13 +55,13 @@ translations
 lemma no_fail_loadObject_default [wp]:
   "no_fail (\<lambda>s. \<exists>obj. projectKO_opt ko = Some (obj::'a) \<and> 
                       is_aligned p (objBits obj) \<and> q = p
-                      \<and> option_case True (\<lambda>x. 2 ^ (objBits obj) \<le> x - p) n)
+                      \<and> case_option True (\<lambda>x. 2 ^ (objBits obj) \<le> x - p) n)
            (loadObject_default p q n ko :: ('a::pre_storable) kernel)"
   apply (simp add: loadObject_default_def split_def projectKO_def
                    alignCheck_def alignError_def magnitudeCheck_def
                    unless_def)
   apply (rule no_fail_pre)
-   apply (wp option_case_wp)
+   apply (wp case_option_wp)
   apply (clarsimp simp: is_aligned_mask)
   apply (clarsimp split: option.split_asm)
   apply (clarsimp simp: is_aligned_mask[symmetric])
@@ -503,10 +503,8 @@ lemma getObject_valid_obj:
   apply (clarsimp simp: project_inject)
   done
 
-(* Annotation added by Simon Winwood (Thu Jul  1 20:55:27 2010) using taint-mode *)
 declare fail_inv[simp]
 
-(* Annotation added by Simon Winwood (Thu Jul  1 21:11:35 2010) using taint-mode *)
 declare return_inv[simp]
 
 lemma typeError_inv [wp]:
@@ -680,7 +678,7 @@ lemma set_aep_tcb' [wp]:
 lemma pspace_dom_update:
   "\<lbrakk> ps ptr = Some x; a_type x = a_type v \<rbrakk> \<Longrightarrow> pspace_dom (ps(ptr \<mapsto> v)) = pspace_dom ps"
   apply (simp add: pspace_dom_def dom_fun_upd2 del: dom_fun_upd)
-  apply (rule UN_cong [OF refl])
+  apply (rule SUP_cong [OF refl])
   apply clarsimp
   apply (simp add: obj_relation_cuts_def3)
   done
@@ -760,7 +758,6 @@ lemma map_to_ctes_upd_cte:
               add: dom_fun_upd2 field_simps objBits_simps)
   done
 
-(* Annotation added by Simon Winwood (Thu Jul  1 20:55:54 2010) using taint-mode *)
 declare overflow_plus_one_self[simp]
 
 lemma map_to_ctes_upd_tcb:
@@ -784,7 +781,7 @@ lemma map_to_ctes_upd_tcb:
      apply (simp add: field_simps objBits_simps split del: split_if
                 cong: if_cong option.case_cong)
      apply clarsimp
-    apply (subst(asm) mask_in_range[where bits="objBitsKO v", standard])
+    apply (subst(asm) mask_in_range[where bits="objBitsKO v" for v])
      apply (simp add: objBitsKO_def)
     apply (drule_tac a=x in equals0D)
     apply (simp add: dom_def objBits_simps field_simps)
@@ -794,7 +791,7 @@ lemma map_to_ctes_upd_tcb:
    apply (case_tac "tcb_cte_cases (x - p)")
     apply (simp split del: split_if cong: if_cong option.case_cong)
    apply (rule FalseE)
-   apply (subst(asm) mask_in_range[where bits="objBitsKO v", standard])
+   apply (subst(asm) mask_in_range[where bits="objBitsKO v" for v])
     apply (simp add: objBitsKO_def)
    apply (subgoal_tac "x - p < 2 ^ 9")
     apply (frule minus_one_helper3)
@@ -860,7 +857,6 @@ lemma ctes_of_setObject_cte:
                         cte_level_bits_def)
   done
 
-(* Annotation added by Simon Winwood (Thu Jul  1 20:55:29 2010) using taint-mode *)
 declare foldl_True[simp]
 
 lemma real_cte_at':
@@ -1182,7 +1178,7 @@ lemma setObject_ko_wp_at:
                  elim!: rsubst[where P=P]
              split del: split_if)
   apply (rule iffI)
-   apply (clarsimp simp: n n ps_clear_upd' objBits_def[symmetric]
+   apply (clarsimp simp: n ps_clear_upd' objBits_def[symmetric]
                   split: split_if_asm)
   apply (clarsimp simp: n project_inject objBits_def[symmetric]
                         ps_clear_upd
@@ -1193,20 +1189,24 @@ lemma typ_at'_valid_obj'_lift:
   assumes P: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
   shows      "\<lbrace>\<lambda>s. valid_obj' obj s\<rbrace> f \<lbrace>\<lambda>rv s. valid_obj' obj s\<rbrace>"
   apply (cases obj, simp_all add: valid_obj'_def)
-       apply (case_tac endpoint, simp_all add: valid_ep'_def)
+       apply (rename_tac endpoint)
+       apply (case_tac endpoint; simp add: valid_ep'_def)
          apply (wp hoare_vcg_const_Ball_lift typ_at_lifts [OF P])
-      apply (case_tac "aepObj async_endpoint", simp_all add: valid_aep'_def valid_bound_tcb'_def)
+      apply (rename_tac async_endpoint)
+      apply (case_tac "aepObj async_endpoint"; simp add: valid_aep'_def valid_bound_tcb'_def)
         prefer 3
         apply (wp hoare_vcg_const_Ball_lift typ_at_lifts [OF P])
         apply ((case_tac "aepBoundTCB async_endpoint", simp_all, wp typ_at_lifts[OF P])+)[3]
      apply wp
-    apply (case_tac "tcbState tcb",
-           simp_all add: valid_tcb'_def valid_tcb_state'_def split_def valid_bound_aep'_def)
+   apply (rename_tac tcb)
+    apply (case_tac "tcbState tcb";
+           simp add: valid_tcb'_def valid_tcb_state'_def split_def valid_bound_aep'_def)
            apply ((wp hoare_vcg_const_Ball_lift typ_at_lifts [OF P]
-                | case_tac "tcbBoundAEP tcb", simp_all)+)[8]
+                | case_tac "tcbBoundAEP tcb"; simp)+)[8]
    apply (simp add: valid_cte'_def)
    apply (wp typ_at_lifts[OF P])
-  apply (case_tac arch_kernel_object, simp_all)[1]
+  apply (rename_tac arch_kernel_object)
+  apply (case_tac arch_kernel_object; simp)
     apply (wp typ_at_lifts[OF P])
   done
 
@@ -1822,19 +1822,23 @@ lemma setEndpoint_idle'[wp]:
 crunch it[wp]: setEndpoint "\<lambda>s. P (ksIdleThread s)"
   (simp: updateObject_default_inv ignore: getObject)
 
-lemma setObject_ksMachine:
-  "\<lbrakk> \<And>p q n ko. \<lbrace>\<lambda>s. P (ksMachineState s)\<rbrace> updateObject val p q n ko \<lbrace>\<lambda>rv s. P (ksMachineState s)\<rbrace> \<rbrakk>
-     \<Longrightarrow> \<lbrace>\<lambda>s. P (ksMachineState s)\<rbrace> setObject ptr val \<lbrace>\<lambda>rv s. P (ksMachineState s)\<rbrace>"
+lemma setObject_ksPSpace_only:
+  "\<lbrakk> \<And>p q n ko. \<lbrace>P\<rbrace> updateObject val p q n ko \<lbrace>\<lambda>rv. P \<rbrace>;
+        \<And>f s. P (ksPSpace_update f s) = P s \<rbrakk>
+     \<Longrightarrow> \<lbrace>P\<rbrace> setObject ptr val \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (simp add: setObject_def split_def)
   apply (wp | simp | assumption)+
   done
 
+lemma setObject_ksMachine:
+  "\<lbrakk> \<And>p q n ko. \<lbrace>\<lambda>s. P (ksMachineState s)\<rbrace> updateObject val p q n ko \<lbrace>\<lambda>rv s. P (ksMachineState s)\<rbrace> \<rbrakk>
+     \<Longrightarrow> \<lbrace>\<lambda>s. P (ksMachineState s)\<rbrace> setObject ptr val \<lbrace>\<lambda>rv s. P (ksMachineState s)\<rbrace>"
+  by (simp add: setObject_ksPSpace_only)
+
 lemma setObject_ksInterrupt:
   "\<lbrakk> \<And>p q n ko. \<lbrace>\<lambda>s. P (ksInterruptState s)\<rbrace> updateObject val p q n ko \<lbrace>\<lambda>rv s. P (ksInterruptState s)\<rbrace> \<rbrakk>
      \<Longrightarrow> \<lbrace>\<lambda>s. P (ksInterruptState s)\<rbrace> setObject ptr val \<lbrace>\<lambda>rv s. P (ksInterruptState s)\<rbrace>"
-  apply (simp add: setObject_def split_def)
-  apply (wp | simp | assumption)+
-  done
+  by (simp add: setObject_ksPSpace_only)
 
 lemma valid_irq_handlers_lift':
   assumes x: "\<And>P. \<lbrace>\<lambda>s. P (cteCaps_of s)\<rbrace> f \<lbrace>\<lambda>rv s. P (cteCaps_of s)\<rbrace>"
@@ -1858,17 +1862,23 @@ lemma set_ep_irq_node' [wp]:
   "\<lbrace>\<lambda>s. P (irq_node' s)\<rbrace> setEndpoint ptr val \<lbrace>\<lambda>rv s. P (irq_node' s)\<rbrace>"
   by (simp add: setEndpoint_def | wp setObject_ksInterrupt updateObject_default_inv)+
 
+lemma set_ep_maxObj [wp]:
+  "\<lbrace>\<lambda>s. P (gsMaxObjectSize s)\<rbrace> setEndpoint ptr val \<lbrace>\<lambda>rv s. P (gsMaxObjectSize s)\<rbrace>"
+  by (simp add: setEndpoint_def | wp setObject_ksPSpace_only updateObject_default_inv)+
+
 lemma valid_global_refs_lift':
   assumes ctes: "\<And>P. \<lbrace>\<lambda>s. P (ctes_of s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ctes_of s)\<rbrace>"
   assumes arch: "\<And>P. \<lbrace>\<lambda>s. P (ksArchState s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ksArchState s)\<rbrace>"
   assumes idle: "\<And>P. \<lbrace>\<lambda>s. P (ksIdleThread s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ksIdleThread s)\<rbrace>"
   assumes irqn: "\<And>P. \<lbrace>\<lambda>s. P (irq_node' s)\<rbrace> f \<lbrace>\<lambda>_ s. P (irq_node' s)\<rbrace>"
+  assumes maxObj: "\<And>P. \<lbrace>\<lambda>s. P (gsMaxObjectSize s)\<rbrace> f \<lbrace>\<lambda>_ s. P (gsMaxObjectSize s)\<rbrace>"
   shows "\<lbrace>valid_global_refs'\<rbrace> f \<lbrace>\<lambda>_. valid_global_refs'\<rbrace>"
-  apply (simp add: valid_global_refs'_def valid_refs'_def global_refs'_def)
+  apply (simp add: valid_global_refs'_def valid_refs'_def global_refs'_def valid_cap_sizes'_def)
   apply (rule hoare_lift_Pf [where f="ksArchState"])
    apply (rule hoare_lift_Pf [where f="ksIdleThread"])
     apply (rule hoare_lift_Pf [where f="irq_node'"])
-     apply (wp ctes hoare_vcg_const_Ball_lift arch idle irqn)
+     apply (rule hoare_lift_Pf [where f="gsMaxObjectSize"])
+      apply (wp ctes hoare_vcg_const_Ball_lift arch idle irqn maxObj)
   done
 
 lemma valid_arch_state_lift':
@@ -1975,6 +1985,10 @@ lemma set_aep_ksInterrupt[wp]:
 lemma set_aep_ksMachine[wp]:
   "\<lbrace>\<lambda>s. P (ksMachineState s)\<rbrace> setAsyncEP ptr val \<lbrace>\<lambda>rv s. P (ksMachineState s)\<rbrace>"
   by (simp add: setAsyncEP_def | wp setObject_ksMachine updateObject_default_inv)+
+
+lemma set_aep_maxObj [wp]:
+  "\<lbrace>\<lambda>s. P (gsMaxObjectSize s)\<rbrace> setAsyncEP ptr val \<lbrace>\<lambda>rv s. P (gsMaxObjectSize s)\<rbrace>"
+  by (simp add: setAsyncEP_def | wp setObject_ksPSpace_only updateObject_default_inv)+
 
 lemma set_aep_global_refs' [wp]:
   "\<lbrace>valid_global_refs'\<rbrace> setAsyncEP ptr val \<lbrace>\<lambda>_. valid_global_refs'\<rbrace>"

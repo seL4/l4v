@@ -129,7 +129,7 @@ lemma fibo32_rec: "\<lbrakk> a < a + 2; b = a + 1; c = a + 2 \<rbrakk> \<Longrig
   apply simp
   apply safe
      apply unat_arith
-    apply (metis comm_semiring_1_class.normalizing_semiring_rules(24) less_is_non_zero_p1)
+    apply (metis not_le overflow_plus_one_self word_n1_ge word_not_simps(1))
    apply (metis word_not_simps(1))
   apply (simp add: field_simps)
   done
@@ -243,7 +243,7 @@ lemma fib_linear'_correct: "ovalid (\<lambda>_. True) (fib_linear' n) (\<lambda>
          * proofs are easier because we are using the @{typ nat} type. *)
         apply (fastforce intro: arg_cong[where f = fibo])
        apply (simp add: Suc_diff_le)
-      apply (fastforce intro: fiboI simp: add_commute)
+      apply (fastforce intro: fiboI simp: field_simps)
      apply simp
     apply (rename_tac b s, case_tac b, simp, simp)
    apply (simp_all add: fibo.simps)
@@ -269,7 +269,7 @@ lemma fib_linear'_term: "no_ofail (\<lambda>_. fibo (Suc n) < UINT_MAX) (fib_lin
          apply (fastforce intro: le_trans[rotated] add_le_mono simp: fibo_alt_def[where n = "Suc n"] fibo_mono)
         apply arith
        apply (simp add: field_simps Suc_diff_le)
-      apply (fastforce intro: fiboI simp: add_commute)
+      apply (fastforce intro: fiboI simp: field_simps)
      apply wp
      apply simp
     apply (simp_all add: fibo.simps)
@@ -318,9 +318,9 @@ lemma nondet_fib_linear'_proof: "\<lbrace> \<lambda>s. fibo (Suc n) \<le> UINT_M
     apply safe
            apply (fastforce intro: arg_cong[where f = fibo])
           apply arith
-         apply (fastforce intro: fiboI simp: add_commute)
+         apply (fastforce intro: fiboI simp: field_simps)
         apply simp
-       apply (fastforce intro: le_trans[rotated] simp: fiboI add_commute fibo_mono)
+       apply (fastforce intro: le_trans[rotated] simp: fiboI field_simps fibo_mono)
       apply simp
      apply simp
     apply (simp_all add: UINT_MAX_def fibo.simps)

@@ -22,12 +22,60 @@ begin
 definition
 initKernelVM :: "unit kernel"
 where
-"initKernelVM \<equiv> ArchVSpaceDecls_H.initKernelVM"
+"initKernelVM \<equiv> ArchVSpaceDecls_H.mapKernelWindow"
 
 definition
-initVSpace :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit kernel_init"
+initPlatform :: "unit kernel"
 where
-"initVSpace \<equiv> ArchVSpaceDecls_H.initVSpace"
+"initPlatform\<equiv> (do
+  doMachineOp $ configureTimer;
+  doMachineOp $ initL2Cache
+od)"
+
+definition
+initCPU :: "unit kernel"
+where
+"initCPU \<equiv> ArchVSpaceDecls_H.activateGlobalPD"
+
+definition
+createIPCBufferFrame :: "capability \<Rightarrow> vptr \<Rightarrow> capability kernel_init"
+where
+"createIPCBufferFrame  \<equiv> ArchVSpaceDecls_H.createIPCBufferFrame"
+
+definition
+createBIFrame :: "capability \<Rightarrow> vptr \<Rightarrow> word32 \<Rightarrow> word32 \<Rightarrow> capability kernel_init"
+where
+"createBIFrame  \<equiv> ArchVSpaceDecls_H.createBIFrame"
+
+definition
+createFramesOfRegion :: "capability \<Rightarrow> region \<Rightarrow> bool \<Rightarrow> vptr \<Rightarrow> unit kernel_init"
+where
+"createFramesOfRegion \<equiv> ArchVSpaceDecls_H.createFramesOfRegion"
+
+definition
+createITPDPTs :: "capability \<Rightarrow> vptr \<Rightarrow> vptr \<Rightarrow> capability kernel_init"
+where
+"createITPDPTs \<equiv> ArchVSpaceDecls_H.createITPDPTs"
+
+definition
+writeITPDPTs :: "capability \<Rightarrow> capability \<Rightarrow> unit kernel_init"
+where
+"writeITPDPTs \<equiv> ArchVSpaceDecls_H.writeITPDPTs"
+
+definition
+createITASIDPool :: "capability \<Rightarrow> capability kernel_init"
+where
+"createITASIDPool \<equiv> ArchVSpaceDecls_H.createITASIDPool"
+
+definition
+writeITASIDPool :: "capability \<Rightarrow> capability \<Rightarrow> unit kernel"
+where
+"writeITASIDPool \<equiv> ArchVSpaceDecls_H.writeITASIDPool"
+
+definition
+createDeviceFrames :: "capability \<Rightarrow> unit kernel_init"
+where
+"createDeviceFrames \<equiv> ArchVSpaceDecls_H.createDeviceFrames"
 
 definition
 handleVMFault :: "machine_word \<Rightarrow> vmfault_type \<Rightarrow> ( fault , unit ) kernel_f"
@@ -48,16 +96,6 @@ definition
 lookupIPCBuffer :: "bool \<Rightarrow> machine_word \<Rightarrow> ((machine_word) option) kernel"
 where
 "lookupIPCBuffer \<equiv> ArchVSpaceDecls_H.lookupIPCBuffer"
-
-definition
-createInitPage :: "paddr \<Rightarrow> capability kernel"
-where
-"createInitPage \<equiv> ArchVSpaceDecls_H.createInitPage"
-
-definition
-createDeviceCap :: "(paddr * paddr) \<Rightarrow> capability kernel"
-where
-"createDeviceCap \<equiv> ArchVSpaceDecls_H.createDeviceCap"
 
 
 end

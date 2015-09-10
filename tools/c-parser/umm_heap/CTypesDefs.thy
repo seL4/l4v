@@ -27,26 +27,57 @@ type_synonym qualified_field_name = "field_name list"
 type_synonym typ_name = string
 
 
-section "XXX: unsectioned and mostly uncommented, as in original"
-
-(* XXX FIXME TODO:
- * Figure out sectioning here first and *then* try make CTypes.thy conform
-   to that sectioning.
- * Also, all definitions from CTypes.thy are here. Some might be local-only
-   and thus might need to be put back.
- * Some definitions are closely followed by [simp] lemmas simplifying their
-   most common usage. Perhaps put these in here with the defs?
- *)
-
 text {* A typ_desc wraps a typ_struct with a typ name.
         A typ_struct is either a Scalar, with size, alignment and either a
         field accessor/updator pair (for typ_info) or a 'normalisor'
         (for typ_uinfo), or an Aggregate, with a list of typ_desc,
         field name pairs.*}
 
-datatype 'a typ_desc   = TypDesc "'a typ_struct" typ_name
+datatype (plugins del: size)
+         'a typ_desc   = TypDesc "'a typ_struct" typ_name
     and  'a typ_struct = TypScalar nat nat "'a" |
                          TypAggregate "('a typ_desc,field_name) dt_pair list"
+
+(* FIXME: eliminate eventually *)
+datatype_compat dt_pair
+datatype_compat typ_desc typ_struct
+
+(* FIXME: these recreate the precise order of subgoals of the old datatype package *)
+lemma typ_desc_induct:
+  "\<lbrakk>\<And>typ_struct list. P2 typ_struct \<Longrightarrow> P1 (TypDesc typ_struct list); \<And>nat1 nat2 a. P2 (TypScalar nat1 nat2 a);
+       \<And>list. P3 list \<Longrightarrow> P2 (TypAggregate list); P3 []; \<And>dt_pair list. \<lbrakk>P4 dt_pair; P3 list\<rbrakk> \<Longrightarrow> P3 (dt_pair # list);
+       \<And>typ_desc list. P1 typ_desc \<Longrightarrow> P4 (DTPair typ_desc list)\<rbrakk>
+      \<Longrightarrow> P1 typ_desc"
+   by (rule compat_typ_desc.induct)
+
+lemma typ_struct_induct:
+    "\<lbrakk>\<And>typ_struct list. P2 typ_struct \<Longrightarrow> P1 (TypDesc typ_struct list); \<And>nat1 nat2 a. P2 (TypScalar nat1 nat2 a);
+       \<And>list. P3 list \<Longrightarrow> P2 (TypAggregate list); P3 []; \<And>dt_pair list. \<lbrakk>P4 dt_pair; P3 list\<rbrakk> \<Longrightarrow> P3 (dt_pair # list);
+       \<And>typ_desc list. P1 typ_desc \<Longrightarrow> P4 (DTPair typ_desc list)\<rbrakk>
+      \<Longrightarrow> P2 typ_struct"
+   by (rule compat_typ_struct.induct)
+
+lemma typ_list_induct:
+    "\<lbrakk>\<And>typ_struct list. P2 typ_struct \<Longrightarrow> P1 (TypDesc typ_struct list); \<And>nat1 nat2 a. P2 (TypScalar nat1 nat2 a);
+      \<And>list. P3 list \<Longrightarrow> P2 (TypAggregate list); P3 []; \<And>dt_pair list. \<lbrakk>P4 dt_pair; P3 list\<rbrakk> \<Longrightarrow> P3 (dt_pair # list);
+      \<And>typ_desc list. P1 typ_desc \<Longrightarrow> P4 (DTPair typ_desc list)\<rbrakk>
+     \<Longrightarrow> P3 list"
+   by (rule compat_typ_desc_char_list_dt_pair_list.induct)
+
+lemma typ_dt_pair_induct:
+    "\<lbrakk>\<And>typ_struct list. P2 typ_struct \<Longrightarrow> P1 (TypDesc typ_struct list); \<And>nat1 nat2 a. P2 (TypScalar nat1 nat2 a);
+      \<And>list. P3 list \<Longrightarrow> P2 (TypAggregate list); P3 []; \<And>dt_pair list. \<lbrakk>P4 dt_pair; P3 list\<rbrakk> \<Longrightarrow> P3 (dt_pair # list);
+      \<And>typ_desc list. P1 typ_desc \<Longrightarrow> P4 (DTPair typ_desc list)\<rbrakk>
+     \<Longrightarrow> P4 dt_pair"
+   by (rule compat_typ_desc_char_list_dt_pair.induct)
+
+-- "Declare as default induct rule with old case names"
+lemmas typ_desc_typ_struct_inducts [case_names 
+  TypDesc TypScalar TypAggregate Nil_typ_desc Cons_typ_desc DTPair_typ_desc, induct type] =
+  typ_desc_induct typ_struct_induct typ_list_induct typ_dt_pair_induct
+
+-- "Make sure list induct rule is tried first"
+declare list.induct [induct type]
 
 type_synonym 'a typ_pair = "('a typ_desc,field_name) dt_pair"
 
@@ -234,7 +265,6 @@ where
 
 | wfd5: "wf_desc_pair (DTPair x n) = wf_desc x"
 
-
 primrec
   wf_size_desc :: "'a typ_desc \<Rightarrow> bool" and
   wf_size_desc_struct :: "'a typ_struct \<Rightarrow> bool" and
@@ -254,10 +284,14 @@ where
 | wfsd5: "wf_size_desc_pair (DTPair x n) = wf_size_desc x"
 
 
-primrec
+definition
   typ_struct :: "'a typ_desc \<Rightarrow> 'a typ_struct"
 where
+  "typ_struct t = (case t of TypDesc st sz \<Rightarrow> st)"
+
+lemma typ_struct [simp]:
   "typ_struct (TypDesc st sz) = st"
+  by (simp add: typ_struct_def)
 
 primrec
   typ_name :: "'a typ_desc \<Rightarrow> typ_name"
@@ -284,7 +318,7 @@ where
 
 class c_type
 
-classrel c_type < type
+instance c_type \<subseteq> type ..
 
 consts
   typ_info_t :: "'a::c_type itself \<Rightarrow> 'a typ_info"
@@ -335,14 +369,14 @@ where
 definition map_td_flr :: "(nat \<Rightarrow> nat \<Rightarrow> 'a \<Rightarrow> 'b) \<Rightarrow>
   ('a typ_desc \<times> nat) option \<Rightarrow> 'b flr"
 where
-  "map_td_flr f \<equiv> option_case None (\<lambda>(s,n). Some (map_td f s,n))"
+  "map_td_flr f \<equiv> case_option None (\<lambda>(s,n). Some (map_td f s,n))"
 
 
 definition
   import_flr :: "(nat \<Rightarrow> nat \<Rightarrow> 'b \<Rightarrow> 'a) \<Rightarrow> 'a flr \<Rightarrow> ('b typ_desc \<times> nat) option \<Rightarrow> bool"
 where
-  "import_flr f s k \<equiv> option_case (k=None)
-      (\<lambda>(s,m). option_case False (\<lambda>(t,n). n=m \<and> map_td f t=s) k )
+  "import_flr f s k \<equiv> case_option (k=None)
+      (\<lambda>(s,m). case_option False (\<lambda>(t,n). n=m \<and> map_td f t=s) k )
       s"
 
 definition
@@ -358,7 +392,7 @@ where
 definition
   field_ti :: "'a::c_type itself \<Rightarrow> qualified_field_name \<rightharpoonup> 'a typ_info"
 where
-  "field_ti t n \<equiv> option_case None (Some \<circ> fst)
+  "field_ti t n \<equiv> case_option None (Some \<circ> fst)
       (field_lookup (typ_info_t TYPE('a)) n 0)"
 
 
@@ -734,7 +768,7 @@ definition
 where
   "fold_td \<equiv> \<lambda>f t. fold_td' (f,t)"
 
-declare fold_td_def [simp add]
+declare fold_td_def [simp]
 
 definition
   fold_td_struct :: "typ_name \<Rightarrow> (typ_name \<Rightarrow> ('a \<times> field_name) list \<Rightarrow> 'a) \<Rightarrow> 'a typ_struct \<Rightarrow> 'a"
@@ -743,21 +777,21 @@ where
            TypScalar n algn d \<Rightarrow> d |
            TypAggregate ts \<Rightarrow> f tn (map (\<lambda>x. case x of DTPair t n \<Rightarrow> (fold_td' (f,t),n)) ts))"
 
-declare fold_td_struct_def [simp add]
+declare fold_td_struct_def [simp]
 
 definition
   fold_td_list :: "typ_name \<Rightarrow> (typ_name \<Rightarrow> ('a \<times> field_name) list \<Rightarrow> 'a) \<Rightarrow> 'a typ_pair list \<Rightarrow> 'a"
 where
   "fold_td_list tn f ts \<equiv> f tn (map (\<lambda>x. case x of DTPair t n \<Rightarrow> (fold_td' (f,t),n)) ts)"
 
-declare fold_td_list_def [simp add]
+declare fold_td_list_def [simp]
 
 definition
   fold_td_pair :: "(typ_name \<Rightarrow> ('a \<times> field_name) list \<Rightarrow> 'a) \<Rightarrow> 'a typ_pair \<Rightarrow> 'a"
 where
   "fold_td_pair f x \<equiv> (case x of DTPair t n \<Rightarrow> fold_td' (f,t))"
 
-declare fold_td_pair_def [simp add]
+declare fold_td_pair_def [simp]
 
 fun
   map_td' :: "(nat \<Rightarrow> nat \<Rightarrow> 'a \<Rightarrow> 'b) \<times> 'a typ_desc \<Rightarrow> 'b typ_desc"

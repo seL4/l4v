@@ -83,8 +83,7 @@ let
            => (get_name x) ^ "'ptr"
        | (@{type_name "array"}, [x,y])
            => (get_name x) ^ "'array_" ^ (PolyML.makestring (get_num_type y))
-       | (x, y) => (Long_Name.base_name x)
-       | _ => raise TYPE ("name_from_type/get_name", [x], [])
+       | (x, _) => (Long_Name.base_name x)
 in
   (get_name T)
 end
@@ -111,7 +110,7 @@ in
 end
 
 (* Determine what heap types the given program accesses. *)
-fun get_program_heap_types prog_info fn_info lthy =
+fun get_program_heap_types prog_info fn_info gen_word_heaps lthy =
 let
   (* Map the type "T" into a (possibly different) type that should appear in
    * our new heap. *)
@@ -137,7 +136,7 @@ let
       (* Fetch body of "fn_name". *)
       FunctionInfo.get_function_def fn_info fn_name
       |> #definition
-      |> prop_of
+      |> Thm.prop_of
       |> Utils.rhs_of_eq
 
       (* Fetch types from function body. *)
@@ -149,8 +148,12 @@ let
 
       (* Remove the "void" heap if it exists. *)
       |> Typset.subtract (Typset.make [@{typ "unit"}])
+
+  (* Generate all word heaps if desired. *)
+  val word_typs = if not gen_word_heaps then Typset.empty else
+                      Typset.make [@{typ word8}, @{typ word16}, @{typ word32}, @{typ word64}]
 in
-  Typset.union_sets (AutoCorresUtil.map_all fn_info process)
+  Typset.union_sets (word_typs :: AutoCorresUtil.map_all lthy fn_info process)
 end
 
 (* Get fields from the globals type that should be copied from the
@@ -202,7 +205,7 @@ let
       |> fst |> take (length copied_fields)
 
   (* Hide the constants of existing fields. *)
-  val thy = Isar_Cmd.hide_const false (map fst existing_fields) thy
+  val thy = fold (Sign.hide_const false) (map fst existing_fields) thy
 
   (* Generate a mapping from heap types to the getter/setter for that heap. *)
   val heap_fields =
@@ -404,12 +407,12 @@ in
   } : heap_info
 end
 
-fun setup prog_info fn_info lthy =
+fun setup prog_info fn_info gen_word_heaps lthy =
 let
   val old_globalsT = #globals_type prog_info
 
   (* Generate a new globals structure. *)
-  val heapTs = get_program_heap_types prog_info fn_info lthy
+  val heapTs = get_program_heap_types prog_info fn_info gen_word_heaps lthy
   val ((lifted_globalsT, heap_getters_setters, global_fields), lthy)
       = Local_Theory.raw_theory_result (
           gen_new_heap old_globalsT (Typset.dest heapTs)) lthy
@@ -417,8 +420,8 @@ let
   (*
    * HACK: Exit and enter the context again, so the simpset created by the new
    * record gets imported in. No idea what the "correct" way of doing this is.
-   *)
-  val lthy = Named_Target.reinit lthy lthy
+   *) 
+  val lthy = Local_Theory.exit_global lthy |> Named_Target.init (the (Named_Target.locale_of lthy))
 
   (* Generate a function mapping old globals to the new globals. *)
   val (lift_name, lift_def, simp_thms, lthy) = gen_heap_abs_fn

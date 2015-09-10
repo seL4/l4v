@@ -198,7 +198,7 @@ vmrights_to_H :: "word32 \<Rightarrow> vmrights" where
   else if c = scast Kernel_C.VMReadOnly then VMReadOnly
   else VMReadWrite"
 
-(* FIXME: name collisions suck *)
+(* Force clarity over name collisions *)
 abbreviation
   ARMSmallPage :: "vmpage_size" where
  "ARMSmallPage == ARMMachineTypes.ARMSmallPage"
@@ -214,7 +214,6 @@ abbreviation
 
 -- "ARMSmallFrame is treated in a separate cap in C,
     so needs special treatment in ccap_relation"
-(* FIXME: should really be option? *)
 definition
 framesize_to_H:: "word32 \<Rightarrow> vmpage_size" where
 "framesize_to_H c \<equiv>
@@ -392,7 +391,7 @@ where
 definition
 c_valid_cap :: "cap_C \<Rightarrow> bool"
 where
-"c_valid_cap c \<equiv> option_case True cl_valid_cap (cap_lift c)"
+"c_valid_cap c \<equiv> case_option True cl_valid_cap (cap_lift c)"
 
 
 definition
@@ -424,7 +423,6 @@ lemma  c_valid_cap_simps [simp]:
   unfolding c_valid_cap_def  cap_lift_def cap_tag_defs
   by (simp add: cl_valid_cap_def)+
 
-(* Levity: moved from Invoke_C (20090417 10:59:51) *)
 lemma ptr_val_tcb_ptr_mask2:
   "is_aligned thread 9
       \<Longrightarrow> ptr_val (tcb_ptr_to_ctcb_ptr thread) && (~~ mask 9)

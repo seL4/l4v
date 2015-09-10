@@ -12,14 +12,6 @@ theory signedoverflow
 imports "../CTranslation"
 begin
 
-lemma word32_sint_1[simp]:
- "sint (1::32 word) = 1"
- apply(subst word_1_no)
- apply(subst sint_numeral)
- apply(simp)
-done
-
-
   install_C_file "signedoverflow.c"
 
 context signedoverflow

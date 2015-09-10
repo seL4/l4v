@@ -758,7 +758,7 @@ shows
 "valid_list_2 t m \<Longrightarrow> next_sib src t m \<noteq> Some src"
   apply (rule notI)
   apply (simp add: next_sib_def split: option.splits)
-  apply (subgoal_tac "distinct (t a)")
+  apply (subgoal_tac "distinct (t (the (m src)))")
    apply (frule distinct_after_in_list_not_self[where src=src])
    apply simp
   apply (simp add: valid_list_2_def)
@@ -1000,7 +1000,7 @@ lemma valid_list_post:
     \<Longrightarrow> valid_list_2 (t'(p := list_insert_after (t' p) src dest)) n"
   apply (insert valid_list dest neq)
   apply (simp add: valid_list_2_def t'_def n_def)
-  apply (fastforce simp: distinct_list_insert_after list_remove_distinct list_remove_removed set_list_insert_after list_remove_removed)
+  apply (fastforce simp: distinct_list_insert_after list_remove_distinct set_list_insert_after list_remove_removed)
   done
 
 end
@@ -1118,7 +1118,7 @@ lemma next_not_child:
     apply(drule(1) next_not_child_NoneD)
     apply(rule next_not_child_NoneI)
       apply(simp add: next_sib' descendants_child no_mloop_descendants desc)
-      apply(simp add: dest_no_parent descendants_of_def)
+      apply(simp add: descendants_of_def)
      apply(simp add: next_sib')
     apply(simp add: finite_depth_insert_child)
    apply(simp add: next_slot_def split: split_if_asm)
@@ -1134,13 +1134,13 @@ lemma next_not_child:
      apply(intro allI impI conjI)
       apply(drule_tac a=src and b=q' and c=src in descendants_trans, simp)
       apply(simp)
-     apply(simp add: descendants_of_def dest_no_parent)
+     apply(simp add: descendants_of_def)
     apply(elim exE conjE)
     apply(rule_tac x=q in exI)
     apply(simp)
     apply(intro conjI impI notI allI)
       apply(simp add: desc)
-     apply(simp add: dest_no_parent descendants_of_def)
+     apply(simp add: descendants_of_def)
     apply(simp)
    apply(simp add: finite_depth_insert_child)
   apply(case_tac "next_not_child p t m")
@@ -1294,7 +1294,7 @@ lemma next_not_child_no_parent:
        else next_not_child p t m)"
   apply(simp)
   apply(intro conjI impI)
-       apply(simp add: descendants_of_def dest_no_parent)
+       apply(simp add: descendants_of_def)
       apply(simp add: no_mloop_def descendants_of_def)
      apply(subgoal_tac "next_not_child src t m = None")
       prefer 2
@@ -1312,7 +1312,7 @@ lemma next_not_child_no_parent:
      apply(simp)
      apply(drule(1) next_not_child_NoneD, rule next_not_child_NoneI)
        apply(simp add: descendants next_sib_no_parent)
-       apply(simp add: descendants_of_def dest_no_parent)
+       apply(simp add: descendants_of_def )
       apply(simp add: next_sib_no_parent)
      apply(simp add: finite_depth)
     apply(simp)
@@ -1326,7 +1326,7 @@ lemma next_not_child_no_parent:
      apply(simp)
      apply(intro allI conjI impI notI)
       apply(simp add: desc)
-     apply(simp add: descendants_of_def dest_no_parent)
+     apply(simp add: descendants_of_def)
     apply(simp add: finite_depth)
    apply(rule next_not_child_NoneI)
      apply(intro allI impI)
@@ -1360,7 +1360,7 @@ lemma next_not_child:
        else next_not_child p t m)"
   apply(simp)
   apply(intro conjI impI)
-       apply(simp add: descendants_of_def dest_no_parent)
+       apply(simp add: descendants_of_def)
       apply(simp add: no_mloop_def descendants_of_def)
      apply(erule conjE)
      apply(rule next_not_childI)
@@ -1379,7 +1379,7 @@ lemma next_not_child:
      apply(simp)
      apply(drule(1) next_not_child_NoneD, rule next_not_child_NoneI)
        apply(simp add: descendants next_sib)
-       apply(simp add: descendants_of_def dest_no_parent no_mloop_def)
+       apply(simp add: descendants_of_def no_mloop_def)
       apply(simp add: next_sib)
      apply(simp add: finite_depth)
     apply(simp)
@@ -1388,13 +1388,13 @@ lemma next_not_child:
       apply(simp add: next_sib descendants)
      apply(rule disjI2)
      apply(simp add: next_sib descendants no_mloop_descendants)
-     apply(simp add: descendants_of_def dest_no_parent)
+     apply(simp add: descendants_of_def)
      apply(elim exE conjE)
      apply(rule_tac x=q in exI)
      apply(simp)
      apply(intro conjI impI notI)
       apply(simp add: desc)
-     apply(simp add: descendants_of_def dest_no_parent)
+     apply(simp add: descendants_of_def)
     apply(simp add: finite_depth)
    apply(rule next_not_childI)
     apply(rule disjI1)
@@ -1442,7 +1442,7 @@ lemma next_slot_no_parent:
   apply(subgoal_tac "next_not_child dest t m = None")
    prefer 2
    apply((rule next_not_child_NoneI | intro allI impI
-    | simp add: descendants_of_def dest_no_parent next_sib_def finite_depth dest)+)[1]
+    | simp add: descendants_of_def next_sib_def finite_depth dest)+)[1]
   apply(subgoal_tac "next_not_child src t m = None")
    prefer 2
    apply((rule next_not_child_NoneI | intro allI impI |
@@ -1632,7 +1632,7 @@ lemma cte_at_next_slot:
   apply(subgoal_tac "next_not_child_dom (p, cdt_list s, cdt s)")
    prefer 2
    apply(simp add: next_not_child_termination valid_mdb_def valid_list_2_def)
-  apply(simp add: next_not_child.psimps split: split_if_asm)
+  apply(simp split: split_if_asm)
    apply(case_tac "cdt s p")
     apply(simp)
    apply(rule descendants_of_cte_at)
@@ -1966,7 +1966,7 @@ lemma next_not_child_no_parent:
    apply (drule_tac x="a" in meta_spec)
    apply (simp add: m'_def m''_def next_sib_def nnext nnext'' cong: if_weak_cong split: split_if_asm)
   apply (simp split del: split_if)
-  apply (thin_tac "\<And>a. \<lbrakk>False; ?Q a\<rbrakk> \<Longrightarrow> ?P a")
+  apply (thin_tac "\<And>a. \<lbrakk>False; Q a\<rbrakk> \<Longrightarrow> P a" for Q P)
   apply (simp add: m'_def m''_def next_sib_def nnext nnext'' cong: if_weak_cong split: split_if_asm | intro impI conjI)+
     apply (simp add: valid_list_2_def | drule after_in_list_in_list | clarsimp)+
     done
@@ -2403,7 +2403,7 @@ lemma (in mdb_empty_abs') valid_list_post:
   apply(rule distinct_list_replace_list)
      apply(simp)+
    apply(rule ccontr)
-   apply(fastforce dest: int_not_emptyD simp: no_mdb_loop)
+   apply(fastforce dest: int_not_emptyD)
   apply(simp)
   done
 
@@ -2547,7 +2547,7 @@ lemma (in mdb_empty_abs') next_sib:
     apply(drule after_in_list_in_list)
     apply(simp add: valid_list_2_def)
    apply(simp)
-   apply(intro conjI impI notI, simp add: no_mdb_loop)
+   apply(intro conjI impI notI, simp)
    apply(subst list_replace_after_fst_list)
      apply(frule after_in_list_in_list)
      apply(simp add: valid_list_2_def)
@@ -3456,11 +3456,11 @@ lemma after_in_listD': "after_in_list (t p) x = Some y \<Longrightarrow> (\<exis
   apply (elim exE conjE)
   apply (rule conjI)
   apply (subgoal_tac "x \<in> set (t p) \<and> y \<in> set (t p)")
-  apply (thin_tac "t p = ?Q")
+  apply (thin_tac "t p = Q" for Q)
   apply (simp add: valid_list[simplified valid_list_2_def])+
   apply (subgoal_tac "distinct (t p)")
   apply simp
-  apply (thin_tac "t p = ?Q")
+  apply (thin_tac "t p = Q" for Q)
   apply (simp add: valid_list[simplified valid_list_2_def])+
   done
 
@@ -4082,7 +4082,7 @@ lemma perform_page_invocation_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> perform_page_invocation a \<lbrace>\<lambda>_.valid_list\<rbrace>"
   apply (simp add: perform_page_invocation_def)
   apply (cases a,simp_all)
-  apply (wp mapM_x_wp' mapM_wp' crunch_wps | intro impI conjI allI | wpc | simp split: cap.splits arch_cap.splits option.splits sum.splits)+
+  apply (wp mapM_x_wp' mapM_wp' crunch_wps | intro impI conjI allI | wpc | simp add: set_message_info_def set_mrs_def split: cap.splits arch_cap.splits option.splits sum.splits)+
   done
 
 crunch valid_list[wp]: attempt_switch_to "valid_list"
@@ -4129,6 +4129,7 @@ lemma handle_event_valid_list[wp]:
         handle_event e
    \<lbrace>\<lambda>_.valid_list\<rbrace>"
   apply (case_tac e, simp_all)
+      apply (rename_tac syscall)
       apply (case_tac syscall, simp_all)
           apply ((rule hoare_pre, wp) |
                  wpc | wp hoare_drop_imps hoare_vcg_all_lift | simp)+
@@ -4413,13 +4414,11 @@ lemma next_sib_set_not_self:
   shows "valid_list_2 t m \<Longrightarrow> x \<notin> next_sib_set x t m"
   apply(simp add: next_sib_set_eq_after_in_list_set valid_list_distinct after_in_list_list_set[symmetric] split: option.splits)
   apply(intro allI impI)
-  apply(frule_tac p=a in list_eq_after_in_list)
+  apply(frule_tac p="the (m x)" in list_eq_after_in_list)
    apply(simp)
-  apply(simp add: valid_list_2_def)
-  apply(elim conjE)
-  apply(erule_tac x=a in allE)+
-  apply(erule exE)
-  apply(drule_tac x="t a" and f=distinct in arg_cong)
+  apply(clarsimp simp add: valid_list_2_def)
+  apply(erule_tac x="the (m x)" in allE)+
+  apply(drule_tac x="t x" and f=distinct for x in arg_cong)
   apply(simp)
 done
 

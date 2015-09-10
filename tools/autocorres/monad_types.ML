@@ -219,7 +219,7 @@ let
 in
   (* Order by highest precedence first. *)
   map (fn mt => (#precedence mt, mt)) needed_mts
-  |> sort (rev_order o int_ord o pairself fst)
+  |> sort (rev_order o int_ord o apply2 fst)
   |> map snd
 end
 

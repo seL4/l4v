@@ -17,20 +17,12 @@ definition padup :: "nat \<Rightarrow> nat \<Rightarrow> nat" where
 
 lemma padup_dvd:
   "0 < b \<Longrightarrow> (padup b n = 0) = (b dvd n)"
-apply(clarsimp simp: padup_def dvd_eq_mod_eq_0)
+unfolding padup_def
+apply(subst dvd_eq_mod_eq_0)
 apply(subst mod_if [where m="b - n mod b"])
 apply clarsimp
 apply(insert mod_less_divisor [of b n])
 apply arith
-done
-
-lemma mod_triv_le:
-  "0 < n \<Longrightarrow> m mod (n::nat) \<le> m"
-apply(case_tac "m < n")
- apply simp
-apply(subgoal_tac "m mod n < n")
- apply arith
-apply(erule mod_less_divisor)
 done
 
 lemma dvd_padup_add:
@@ -40,15 +32,14 @@ apply(subst mod_if [where m="x - y mod x"])
 apply(clarsimp split: split_if_asm)
 apply(rule conjI)
  apply clarsimp
- apply(subst add_ac)
+ apply(subst ac_simps)
  apply(subst diff_add_assoc)
-  apply(rule mod_triv_le)
-  apply simp
+  apply(rule mod_less_eq_dividend)
  apply(rule dvd_add)
   apply simp
  apply(subst mod_div_equality')
  apply(subst diff_diff_right)
-  apply(subst mult_ac)
+  apply(subst ac_simps)
   apply(subst mult_div_cancel)
   apply simp
  apply simp

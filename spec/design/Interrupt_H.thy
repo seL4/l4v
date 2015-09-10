@@ -24,7 +24,10 @@ consts
 invokeIRQControl :: "irqcontrol_invocation \<Rightarrow> unit kernel_p"
 
 consts
-decodeIRQHandlerInvocation :: "machine_word \<Rightarrow> irq \<Rightarrow> (capability * machine_word) list \<Rightarrow> ( syscall_error , irqhandler_invocation ) kernel_f"
+decodeIRQHandlerInvocation :: "machine_word \<Rightarrow> machine_word list \<Rightarrow> irq \<Rightarrow> (capability * machine_word) list \<Rightarrow> ( syscall_error , irqhandler_invocation ) kernel_f"
+
+consts
+toBool :: "machine_word \<Rightarrow> bool"
 
 consts
 invokeIRQHandler :: "irqhandler_invocation \<Rightarrow> unit kernel"
@@ -33,7 +36,7 @@ consts
 deletingIRQHandler :: "irq \<Rightarrow> unit kernel"
 
 consts
-initInterruptController :: "capability kernel_init"
+initInterruptController :: "capability \<Rightarrow> machine_word \<Rightarrow> capability kernel_init"
 
 consts
 handleInterrupt :: "irq \<Rightarrow> unit kernel"
@@ -82,7 +85,7 @@ defs invokeIRQControl_def:
   )"
 
 defs decodeIRQHandlerInvocation_def:
-"decodeIRQHandlerInvocation label irq extraCaps \<equiv>
+"decodeIRQHandlerInvocation label args irq extraCaps \<equiv>
     (case (invocationType label,extraCaps) of
           (IRQAckIRQ,_) \<Rightarrow>   returnOk $ AckIRQ irq
         | (IRQSetIRQHandler,(cap,slot)#_) \<Rightarrow>   (case cap of
@@ -92,8 +95,15 @@ defs decodeIRQHandlerInvocation_def:
                 )
         | (IRQSetIRQHandler,_) \<Rightarrow>   throw TruncatedMessage
         | (IRQClearIRQHandler,_) \<Rightarrow>   returnOk $ ClearIRQHandler irq
+        | (IRQSetMode,_) \<Rightarrow>   (case args of
+                  trig#pol#_ \<Rightarrow>   returnOk $ SetMode irq (toBool trig) (toBool pol)
+                | _ \<Rightarrow>   throw TruncatedMessage
+                )
         | _ \<Rightarrow>   throw IllegalOperation
         )"
+
+defs toBool_def:
+"toBool w \<equiv> w \<noteq> 0"
 
 defs invokeIRQHandler_def:
 "invokeIRQHandler x0\<equiv> (case x0 of
@@ -108,11 +118,16 @@ defs invokeIRQHandler_def:
     irqSlot \<leftarrow> getIRQSlot irq;
     cteDeleteOne irqSlot
   od)
+  | (SetMode irq trig pol) \<Rightarrow>   
+    doMachineOp $ setInterruptMode irq trig pol
   )"
 
 defs deletingIRQHandler_def:
 "deletingIRQHandler irq\<equiv> (do
     slot \<leftarrow> getIRQSlot irq;
+    cap \<leftarrow> getSlotCap slot;
+    haskell_assert (isAsyncEndpointCap cap \<or> isNullCap cap)
+        [];
     cteDeleteOne slot
 od)"
 
@@ -121,22 +136,24 @@ defs deletedIRQHandler_def:
     setIRQState IRQInactive irq"
 
 defs initInterruptController_def:
-"initInterruptController\<equiv> (do
+"initInterruptController rootCNCap biCapIRQC\<equiv> (doE
     frame \<leftarrow> allocFrame;
     doKernelOp $ (do
         haskell_assert (length [minBound .e. (maxBound::irq)]
                `~shiftL~` (objBits (makeObject ::cte)) \<le> bit pageBits)
             [];
         placeNewObject (ptrFromPAddr frame) (makeObject ::cte)
-              (bit pageBits `~shiftR~` objBits (makeObject ::cte));
+              (pageBits - objBits (makeObject ::cte));
         doMachineOp $ mapM_x (maskInterrupt True) [minBound  .e.  maxBound];
         irqTable \<leftarrow> return ( funArray $ const IRQInactive);
         setInterruptState $ InterruptState (ptrFromPAddr frame) irqTable;
         timerIRQ \<leftarrow> doMachineOp configureTimer;
-        setIRQState IRQTimer timerIRQ
+        setIRQState IRQTimer timerIRQ;
+        slot \<leftarrow> locateSlot (capCNodePtr rootCNCap) biCapIRQC;
+        insertInitCap slot IRQControlCap
     od);
-    return IRQControlCap
-od)"
+    returnOk IRQControlCap
+odE)"
 
 defs handleInterrupt_def:
 "handleInterrupt irq\<equiv> (do

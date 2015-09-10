@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-header "Machine Operations"
+chapter "Machine Operations"
 
 theory MachineOps
 imports
@@ -184,10 +184,11 @@ definition
 where "resetTimer \<equiv> machine_op_lift resetTimer_impl"
 
 consts
-  setCurrentPD_impl :: "paddr \<Rightarrow> unit machine_rest_monad"
+  writeTTBR0_impl :: "paddr \<Rightarrow> unit machine_rest_monad"
 definition
-  setCurrentPD :: "paddr \<Rightarrow> unit machine_monad"
-where "setCurrentPD pd \<equiv> machine_op_lift (setCurrentPD_impl pd)"
+  writeTTBR0 :: "paddr \<Rightarrow> unit machine_monad"
+where "writeTTBR0 pd \<equiv> machine_op_lift (writeTTBR0_impl pd)"
+
 
 consts
   setHardwareASID_impl :: "hardware_asid \<Rightarrow> unit machine_rest_monad"
@@ -218,7 +219,13 @@ definition
 where "dmb \<equiv> machine_op_lift dmb_impl"
 
 
-
+definition
+  setCurrentPD :: "paddr \<Rightarrow> unit machine_monad"
+where "setCurrentPD pd \<equiv> do
+             dsb;
+             writeTTBR0 pd;
+             isb
+          od"
 
 consts
   invalidateTLB_impl :: "unit machine_rest_monad"
@@ -234,14 +241,13 @@ definition
 where "invalidateTLB_ASID a \<equiv> machine_op_lift (invalidateTLB_ASID_impl a)"
 
 
-(*FIXME c implementation takes one argument, which is w || a*)
+(* C implementation takes one argument, which is w || a *)
 consts
   invalidateTLB_VAASID_impl :: "machine_word \<Rightarrow> unit machine_rest_monad"
 definition
   invalidateTLB_VAASID :: "machine_word \<Rightarrow> unit machine_monad"
 where "invalidateTLB_VAASID w \<equiv> machine_op_lift (invalidateTLB_VAASID_impl w)"
 
-(*FIXME: first argument should be vspace_ref?*)
 consts
   cleanByVA_impl :: "machine_word \<Rightarrow> paddr \<Rightarrow> unit machine_rest_monad"
 definition
@@ -398,6 +404,12 @@ definition
   ackInterrupt :: "irq \<Rightarrow> unit machine_monad"
 where
   "ackInterrupt \<equiv> \<lambda>irq. return ()"
+
+text {* Does nothing on imx31 *}
+definition
+  setInterruptMode :: "irq \<Rightarrow> bool \<Rightarrow> bool \<Rightarrow> unit machine_monad"
+where
+  "setInterruptMode \<equiv> \<lambda>irq levelTrigger polarityLow. return ()"
 
 definition
   lineStart :: "machine_word \<Rightarrow> machine_word"

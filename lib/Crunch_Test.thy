@@ -135,6 +135,8 @@ definition
     modify (op + x)
   od"
 
+crunch test[wp]: crunch_foo9 "\<lambda>x. x > y" (ignore: modify)
+
 (* crunch_ignore works within a locale *)
 crunch_ignore (add: modify)
 
@@ -160,8 +162,6 @@ context test_sublocale begin
 crunch test[wp]: crunch_foo8 P
 
 end
-
-(* FIXME old-school consts and defs in separate files still works, we think. *)
 
 (* check that qualified names are handled properly. *)
 

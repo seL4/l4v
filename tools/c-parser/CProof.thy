@@ -11,7 +11,7 @@
 theory CProof
 imports
   "umm_heap/SepFrame"
-  "hoare-package/Vcg"
+  "Simpl/Vcg"
   "umm_heap/StructSupport"
 begin
 
@@ -25,6 +25,7 @@ ML_file "Region.ML"
 ML_file "Binaryset.ML"
 ML_file "Feedback.ML"
 ML_file "basics.ML"
+ML_file "MString.ML"
 
 ML_file "TargetNumbers-sig.ML"
 ML_file "Target-ARM32.ML"  (* <-- change this for other machine models *)
@@ -89,10 +90,6 @@ let
 in [("_heap",K heap_assert_tr)] end;
 *}
 
-(* FIXME: scrap these syntax tricks? not really much use anyway\<dots>
-  "_sep_conj" :: "bool \<Rightarrow> bool \<Rightarrow> bool" (infixr "_ \<and>\<^sup>* _" 35)
-  "_sep_impl" :: "bool \<Rightarrow> bool \<Rightarrow> bool" (infixr "_ \<longrightarrow>\<^sup>* _" 25)
-*)
 
 (* Separation logic assertion parse translation *)
 parse_translation {*
@@ -247,7 +244,7 @@ term "\<turnstile>\<^sub>s p"
 lemma sep_map_NULL [simp]:
   "NULL \<mapsto> (v::'a::mem_type) = sep_false"
   by (force simp: sep_map_def sep_map_inv_def c_guard_def
-            dest: lift_typ_heap_g sep_conjD  c_null_guard  intro!: ext)
+            dest: lift_typ_heap_g sep_conjD c_null_guard)
 
 lemma sep_map'_NULL_simp [simp]:
   "NULL \<hookrightarrow> (v::'a::mem_type) = sep_false"
@@ -270,15 +267,7 @@ done
 
 lemma tagd_sep_false [simp]:
   "\<turnstile>\<^sub>s (NULL::'a::mem_type ptr) = sep_false"
-  apply (simp add: tagd_inv_def tagd_def)
-  apply (rule ext)
-  apply simp
-  apply (rule notI)
-  apply (drule sep_conjD)
-  apply clarsimp
-  apply (drule s_valid_g)
-  apply (simp add: c_guard_NULL_simp)
-  done
+  by (auto simp: tagd_inv_def tagd_def dest!: sep_conjD s_valid_g)
 
 (* Print translations for pointer dereferencing in program statements and
    expressions.
@@ -369,6 +358,7 @@ datatype strictc_errortype =
        | GhostStateError
        | OwnershipError
        | UndefinedFunction
+       | AdditionalError string
 
 lemmas hrs_simps = hrs_mem_update_def hrs_mem_def hrs_htd_update_def
     hrs_htd_def

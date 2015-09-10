@@ -195,8 +195,7 @@ lemma OR_choice_def2: "(\<And>P. \<lbrace>P\<rbrace> (c :: bool det_ext_monad) \
        (OR_choice c f g) = (do b \<leftarrow> c; if b then f else g od)" 
   apply (simp add: OR_choice_def wrap_ext_bool_det_ext_ext_def
                    ef_mk_ef)
-  apply (subst no_state_changes[where f=c],simp,fastforce simp: bind_assoc split_def)
-  done
+  by (subst no_state_changes[where f=c],simp,fastforce simp: bind_assoc split_def)
 
 lemma decode_set_priority_error_choice[wp]: "\<lbrace>P\<rbrace> decode_set_priority_error_choice a b \<lbrace>\<lambda>_. P\<rbrace>"
   apply (simp add: decode_set_priority_error_choice_def)
@@ -283,15 +282,12 @@ lemma decode_irq_control_invocation_rev:
 (* this one doesn't read from the state at all *)
 lemma decode_irq_handler_invocation_rev:
   "reads_equiv_valid_inv A aag \<top>
-      (decode_irq_handler_invocation label irq cps)"
+      (decode_irq_handler_invocation label args irq cps)"
   unfolding decode_irq_handler_invocation_def
   apply (wp | simp add: split_def Let_def | rule conjI impI)+
   done
 
 
-
-
-(* FIXME: cleanup this proof *)
 lemma ensure_safe_mapping_reads_respects:
   "reads_respects aag l (K (authorised_slots aag entries)) (ensure_safe_mapping entries)"
   apply(rule gen_asm_ev)
@@ -392,7 +388,7 @@ lemma cte_wp_at_diminished_cnode_cap:
    cte_wp_at (op = cap) slot s"
   apply(case_tac cap, simp_all)
   apply(clarsimp simp: cte_wp_at_def diminished_def mask_cap_def)
-  apply(case_tac cap)
+  apply(case_tac capa)
   apply(clarsimp simp: cap_rights_update_def)+
   done
 
@@ -408,8 +404,9 @@ lemma cte_wp_at_diminished_PageDirectoryCap:
   "\<lbrakk>cte_wp_at (diminished cap) slot s; cap = ArchObjectCap (PageDirectoryCap x y)\<rbrakk> \<Longrightarrow>
    cte_wp_at (op = cap) slot s"
   apply(clarsimp simp: cte_wp_at_def diminished_def mask_cap_def)
-  apply(case_tac cap)
+  apply(case_tac capa)
   apply(clarsimp simp: cap_rights_update_def)+
+  apply(rename_tac arch_cap)
   apply(case_tac arch_cap, simp_all add: acap_rights_update_def)
   done
 
@@ -417,8 +414,9 @@ lemma cte_wp_at_diminished_PageTableCap:
   "\<lbrakk>cte_wp_at (diminished cap) slot s; cap = ArchObjectCap (PageTableCap x y)\<rbrakk> \<Longrightarrow>
    cte_wp_at (op = cap) slot s"
   apply(clarsimp simp: cte_wp_at_def diminished_def mask_cap_def)
-  apply(case_tac cap)
+  apply(case_tac capa)
   apply(clarsimp simp: cap_rights_update_def)+
+  apply(rename_tac arch_cap)
   apply(case_tac arch_cap, simp_all add: acap_rights_update_def)
   done
 
@@ -687,7 +685,6 @@ lemma decode_invocation_reads_respects_f:
        | simp)+
   apply (clarsimp simp: aag_has_Control_iff_owns split_def aag_cap_auth_def)
   apply (cases cap, simp_all)
-  apply fastforce
   apply ((clarsimp simp: valid_cap_def cte_wp_at_eq_simp 
                         is_cap_simps 
                         ex_cte_cap_wp_to_weakenE[OF _ TrueI]
@@ -700,6 +697,7 @@ lemma decode_invocation_reads_respects_f:
    apply (rule conjI, assumption)
    apply (rule impI, erule subst, rule pas_refined_sita_mem [OF sita_controlled], auto
           simp: cte_wp_at_caps_of_state diminshed_IRQControlCap_eq)[1]
+  apply (rename_tac arch_cap)
   apply (subgoal_tac "(\<forall>x\<in>cap_asid' (ArchObjectCap arch_cap). is_subject_asid aag x) \<and>
           (\<forall>x\<in>set excaps. \<forall>v\<in>cap_asid' (fst x). is_subject_asid aag v)")
   prefer 2

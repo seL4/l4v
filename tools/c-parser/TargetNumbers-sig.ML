@@ -56,7 +56,7 @@ sig
   val uchar_conv : {umax:int} -> int -> int
 end
 
-structure CharLitUtil :> CHAR_LIT_UTIL =
+structure CharLitUtil : CHAR_LIT_UTIL =
 struct
 open IntInf
 exception BadChar

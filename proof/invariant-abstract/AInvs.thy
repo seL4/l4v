@@ -71,8 +71,6 @@ lemma Collect_subseteq:
   "{x. P x} <= {x. Q x} \<longleftrightarrow> (\<forall>x. P x \<longrightarrow> Q x)"
   by auto
 
-(* FIXME: not sure whether we need kernel_mappings or should just write
-          "p \<ge> kernel_base" instead of "p \<in> kernel_mappings" *)
 definition
   "kernel_mappings \<equiv> {x. x \<ge> kernel_base}"
 
@@ -100,11 +98,8 @@ lemma valid_global_pd_mappingsE:
 
 (* NOTE: we could probably add "is_aligned b (pageBitsForSize sz)"
          if we assumed "valid_global_objs s", additionally. *)
-(* NOTE: we might be able to show "p && ~~ mask a = Platform.ptrFromPAddr b"
-         with the help of valid_pde_kernel_mappings and WordLib.and_not_mask
-         (though that is not trivial) *)
 lemma some_get_page_info_kmapsD:
-  "\<lbrakk>get_page_info (\<lambda>obj. get_arch_obj (kheap s obj)) pd_ref p = Some (b, a, r);
+  "\<lbrakk>get_page_info (\<lambda>obj. get_arch_obj (kheap s obj)) pd_ref p = Some (b, a, attr, r);
     p \<in> kernel_mappings; valid_global_pd_mappings s; equal_kernel_mappings s\<rbrakk>
    \<Longrightarrow> (\<exists>sz. pageBitsForSize sz = a) \<and> r = {}"
    apply (clarsimp simp: get_page_info_def get_pd_entry_def get_arch_obj_def
@@ -143,11 +138,11 @@ lemma some_get_page_info_kmapsD:
 lemma get_page_info_gpd_kmaps:
   "\<lbrakk>valid_global_objs s; valid_arch_state s;
     get_page_info (\<lambda>obj. get_arch_obj (kheap s obj))
-                  (arm_global_pd (arch_state s)) p = Some (b, a, r)\<rbrakk>
+                  (arm_global_pd (arch_state s)) p = Some (b, a, attr, r)\<rbrakk>
    \<Longrightarrow> p \<in> kernel_mappings"
    apply (clarsimp simp: valid_global_objs_def valid_arch_state_def)
-   apply (thin_tac "Ball ?x ?y")
-   apply (thin_tac "typ_at ?data ?gframe s")
+   apply (thin_tac "Ball x y" for x y)
+   apply (thin_tac "typ_at data gframe s" for data gframe)
    apply (clarsimp simp add: obj_at_def valid_ao_at_def)
    apply (clarsimp simp: empty_table_def kernel_mappings_slots_eq)
    apply (drule_tac x="ucast (p >> 20)" in spec)
@@ -173,7 +168,7 @@ lemma is_aligned_ptrFromPAddrD:
   done
 
 lemma some_get_page_info_umapsD:
-  "\<lbrakk>get_page_info (\<lambda>obj. get_arch_obj (kheap s obj)) pd_ref p = Some (b, a, r);
+  "\<lbrakk>get_page_info (\<lambda>obj. get_arch_obj (kheap s obj)) pd_ref p = Some (b, a, attr, r);
     (\<exists>\<rhd> pd_ref) s; p \<notin> kernel_mappings; valid_arch_objs s; pspace_aligned s;
     valid_asid_table (arm_asid_table (arch_state s)) s; valid_objs s\<rbrakk>
    \<Longrightarrow> (\<exists>sz. pageBitsForSize sz = a \<and> is_aligned b a \<and>
@@ -198,7 +193,7 @@ lemma some_get_page_info_umapsD:
      apply (simp add: vs_refs_def pde_ref_def image_def graph_of_def)
      apply (rule exI, rule conjI, simp+)
     apply (frule (1) vs_lookup_step)
-    apply (drule (2) stronger_arch_objsD[where ref="x#xs", standard])
+    apply (drule (2) stronger_arch_objsD[where ref="x # xs" for x xs])
     apply clarsimp
     apply (case_tac ao, simp_all add: a_type_simps obj_at_def)[1]
     apply (simp add: get_pt_info_def get_pt_entry_def)
@@ -256,7 +251,7 @@ lemma ptable_rights_imp_user_frame:
   apply (clarsimp simp: Platform.ptrFromPAddr_def Platform.addrFromPPtr_def
                         field_simps)
   apply (rule_tac x=sz in exI)
-  apply (subst add_assoc[symmetric])
+  apply (subst add.assoc[symmetric])
   apply (subst is_aligned_add_helper)
     apply (erule aligned_add_aligned)
       apply (case_tac sz, simp_all add: physMappingOffset_def

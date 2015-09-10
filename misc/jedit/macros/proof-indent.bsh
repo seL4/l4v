@@ -10,8 +10,16 @@
 
 /*
  * Indent Isabelle apply-style proofs.
- *
  * 2013 David Greenaway.
+ *
+ * Install by dropping this file (`proof-indent.bsh`) into the directory
+ * ` ~/.isabelle/jedit/macros/`. After restarting jEdit or rescanning
+ * macros in jEdit, the macro `proof-indent` shoud appear in the `Macros`
+ * menu.
+ *
+ * You can additionally add a key binding, for instance Command-Shift-I
+ * (for Indent), to the new macro `proof-indent` by going to
+ * `Plugins -> Plugin Options -> Global Options -> jEdit/Shortcuts`
  */
 
 import isabelle.*;
@@ -20,11 +28,11 @@ import isabelle.jedit.*;
 /* Get the number of pending subgoals in the given state. */
 int num_subgoals(Command.State state)
 {
-    status_nodes = cmd_state.status();
+    status_nodes = state.status();
 
     /* Find the "PROOF_STATE" node. */
     proof_state = null;
-    for (node_list = cmd_state.status();
+    for (node_list = state.status();
             node_list.nonEmpty(); node_list = node_list.tail()) {
         n = node_list.head();
         if (n.name().equals(Markup.PROOF_STATE())) {
@@ -67,7 +75,6 @@ Boolean shouldIndent(Command cmd)
 
 /* Setup. */
 model = PIDE.document_model(textArea.buffer).get();
-model.update_perspective();
 snapshot = model.snapshot();
 
 /* Setup array of pre-calculated indents. */
@@ -88,13 +95,13 @@ for (i = 0; i < selectedLines.length; i++) {
     lineEnd = textArea.getLineEndOffset(line);
 
     /* Fetch the Isabelle state for this line. */
-    cmd_range = snapshot.node().command_range(lineStart - 1);
+    cmd_range = snapshot.node().command_iterator(lineStart - 1);
     if (!cmd_range.hasNext())
         continue;
     cmd = cmd_range.next()._1;
 
     /* Get the number of subgoals of this line. */
-    cmd_state = snapshot.state().command_state(snapshot.version(), cmd);
+    cmd_state = snapshot.state().command_states(snapshot.version(), cmd).productElement(0);
     subgoals = num_subgoals(cmd_state);
     if (shouldIndent(cmd) && subgoals > 0) {
         padding[i] = subgoals + 1;

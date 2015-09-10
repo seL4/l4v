@@ -12,7 +12,7 @@
 ARM specific data types
 *)
 
-header "ARM-Specific Data Types"
+chapter "ARM-Specific Data Types"
 
 theory ARM_Structs_A
 imports
@@ -115,7 +115,7 @@ where
 | "aobj_ref (PageDirectoryCap x as2) = Some x"
 | "aobj_ref (PageTableCap x as3) = Some x"
 
-primrec
+primrec (nonexhaustive)
   acap_rights :: "arch_cap \<Rightarrow> cap_rights"
 where
  "acap_rights (PageCap x rs sz as) = rs"

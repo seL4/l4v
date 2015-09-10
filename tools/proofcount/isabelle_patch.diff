@@ -1,0 +1,36 @@
+# HG changeset patch
+# Parent 8f4a332500e41bb67efc3e141608829473606a72
+#
+# Copyright 2014, NICTA
+#
+# This software may be distributed and modified according to the terms of
+# the BSD 2-Clause license. Note that NO WARRANTY is provided.
+# See "LICENSE_BSD2.txt" for details.
+#
+# @TAG(NICTA_BSD)
+#
+
+diff --git a/src/HOL/ROOT b/src/HOL/ROOT
+--- a/src/HOL/ROOT
++++ b/src/HOL/ROOT
+@@ -8,6 +8,8 @@
+   global_theories
+     Main
+     Complex_Main
++  theories
++    "$ISABELLE_PROOFCOUNT_HOME/ProofCount"
+   files
+     "Tools/Quickcheck/Narrowing_Engine.hs"
+     "Tools/Quickcheck/PNF_Narrowing_Engine.hs"
+diff --git a/src/Pure/Isar/outer_syntax.ML b/src/Pure/Isar/outer_syntax.ML
+--- a/src/Pure/Isar/outer_syntax.ML
++++ b/src/Pure/Isar/outer_syntax.ML
+@@ -161,7 +161,7 @@
+   in
+     Unsynchronized.change global_outer_syntax (map_commands (fn commands =>
+      (if not (Symtab.defined commands name) then ()
+-      else if ! batch_mode then
++      else if false then
+         error ("Attempt to redefine outer syntax command " ^ command_name)
+       else
+         warning ("Redefining outer syntax command " ^ command_name ^

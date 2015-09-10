@@ -26,7 +26,7 @@ lemma bind_apply_cong [fundef_cong]:
   "\<lbrakk> f s = f' s'; \<And>rv st. (rv, st) \<in> fst (f' s') \<Longrightarrow> g rv st = g' rv st \<rbrakk>
        \<Longrightarrow> (f >>= g) s = (f' >>= g') s'"
   apply (simp add: bind_def)
-  apply (auto simp: split_def intro: UN_cong [OF refl] intro: rev_image_eqI)
+  apply (auto simp: split_def intro: SUP_cong [OF refl] intro: rev_image_eqI)
   done
 
 lemma bindE_cong[fundef_cong]:
@@ -239,7 +239,7 @@ proof (rule iffI)
 next
   assume "?RHS x"
   thus "?LHS x"
-    by (metis surjective_pairing whileLoop_results.intros(2))
+    by (metis surjective_pairing whileLoop_results.intros(1))
 qed
 
 lemma whileLoop_unroll:
@@ -329,5 +329,11 @@ lemma validE_NF_make_schematic_post:
    \<lbrace> \<lambda>s. \<exists>s0. P s0 s \<and> (\<forall>rv s'. Q s0 rv s' \<longrightarrow> Q' rv s')
         \<and> (\<forall>rv s'. E s0 rv s' \<longrightarrow> E' rv s') \<rbrace> f \<lbrace> Q' \<rbrace>, \<lbrace> E' \<rbrace>!"
   by (auto simp add: validE_NF_def validE_def valid_def no_fail_def split: prod.splits sum.splits)
+
+lemma validNF_conjD1: "\<lbrace> P \<rbrace> f \<lbrace> \<lambda>rv s. Q rv s \<and> Q' rv s \<rbrace>! \<Longrightarrow> \<lbrace> P \<rbrace> f \<lbrace> Q \<rbrace>!"
+  by (fastforce simp: validNF_def valid_def no_fail_def)
+
+lemma validNF_conjD2: "\<lbrace> P \<rbrace> f \<lbrace> \<lambda>rv s. Q rv s \<and> Q' rv s \<rbrace>! \<Longrightarrow> \<lbrace> P \<rbrace> f \<lbrace> Q' \<rbrace>!"
+  by (fastforce simp: validNF_def valid_def no_fail_def)
 
 end

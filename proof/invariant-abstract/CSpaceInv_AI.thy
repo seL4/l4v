@@ -68,7 +68,8 @@ proof (induct slot rule: resolve_address_bits'.induct)
             apply (auto simp: in_monad)[5]
        defer
        apply (auto simp: in_monad)[6]
-  apply (simp only: cap.cases)
+  apply (rename_tac obj_ref nat list)
+  apply (simp only: cap.simps)
   apply (case_tac "nat + length list = 0")
    apply (simp add: fail_def)
   apply (simp only: if_False)
@@ -247,9 +248,11 @@ lemma valid_arch_obj_tcb_update':
   apply (cases obj)
      apply (fastforce elim: typ_at_same_type [rotated -1])
     apply clarsimp
+    apply (rename_tac "fun" x)
     apply (erule_tac x=x in allE)
     apply (case_tac "fun x", (clarsimp simp: obj_at_def)+)[1]
    apply clarsimp
+   apply (rename_tac "fun" x)
    apply (erule_tac x=x in ballE)
    apply (case_tac "fun x", (clarsimp simp: obj_at_def)+)[1]
    apply (fastforce elim: typ_at_same_type [rotated -1])
@@ -783,7 +786,7 @@ lemma set_cap_iflive:
   apply (clarsimp simp: cte_wp_at_def)
   apply (rule ccontr)
   apply (drule bspec)
-   apply (simp, erule(1) conjI)
+   apply simp
   apply (clarsimp simp: obj_at_def)
   done
 
@@ -895,7 +898,7 @@ lemma is_final_cap'_def3:
   apply (clarsimp simp: is_final_cap'_def2
                 intro!: ext arg_cong[where f=Ex])
   apply (subst iff_conv_conj_imp)
-  apply (clarsimp simp: all_conj_distrib conj_ac)
+  apply (clarsimp simp: all_conj_distrib conj_comms)
   apply (rule rev_conj_cong[OF _ refl])
   apply (rule arg_cong[where f=All] ext)+
   apply (clarsimp simp: cte_wp_at_caps_of_state)
@@ -974,11 +977,7 @@ lemma zombies_finalD2:
   "\<lbrakk> fst (get_cap p s) = {(cap, s)}; fst (get_cap p' s) = {(cap', s)};
      p \<noteq> p'; zombies_final s; obj_refs cap \<inter> obj_refs cap' \<noteq> {} \<rbrakk>
      \<Longrightarrow> \<not> is_zombie cap \<and> \<not> is_zombie cap'"
-  apply (simp only: zombies_final_def2 cte_wp_at_def simp_thms conj_ac)
-  apply (elim allE, erule mp, (erule conjI)+)
-  apply assumption
-  done
-
+  by (simp only: zombies_final_def2 cte_wp_at_def simp_thms conj_comms)
 
 lemma zombies_finalD3:
   "\<lbrakk> cte_wp_at P p s; cte_wp_at P' p' s; p \<noteq> p'; zombies_final s;
@@ -1012,19 +1011,8 @@ lemma set_cap_zombies':
    \<lbrace>\<lambda>rv. zombies_final\<rbrace>"
   apply (simp add: zombies_final_def2 cte_wp_at_caps_of_state)
   apply (rule hoare_pre, wp)
-  apply (clarsimp | rule conjI)+
-    apply (drule spec, drule spec, drule_tac x=cap' in spec,
-           drule(1) mp)
-    apply (erule disjE, simp+)
-   apply (drule spec, drule spec, drule_tac x=cap' in spec,
-          drule mp, erule conjI)
-    apply simp
-   apply simp
-  apply (clarsimp simp: Int_commute)
-  apply (drule spec, drule spec, drule_tac x=capaa in spec,
-         drule mp, erule conjI)
-   apply clarsimp
-  apply simp
+  apply clarsimp
+  apply (metis Int_commute Pair_eq)
   done
 
 fun ex_zombie_refs :: "(cap \<times> cap) \<Rightarrow> obj_ref set"
@@ -1041,33 +1029,8 @@ where
 
 declare ex_zombie_refs.simps [simp del]
 
-lemmas ex_zombie_refs_simps [simp] =
-  ex_zombie_refs.simps [where ?c1.0="cap.Zombie p b n" and ?c2.0="cap.NullCap", simplified, standard]
-  ex_zombie_refs.simps [where ?c1.0="cap.Zombie p b n" and ?c2.0="cap.DomainCap", simplified, standard]
-  ex_zombie_refs.simps [where ?c1.0="cap.Zombie p b n" and ?c2.0="cap.UntypedCap obj_ref nat1 nat2", simplified, standard]
-  ex_zombie_refs.simps [where ?c1.0="cap.Zombie p b n" and ?c2.0="cap.EndpointCap obj_ref badge cap_rights'", simplified, standard]
-  ex_zombie_refs.simps [where ?c1.0="cap.Zombie p b n" and ?c2.0="cap.AsyncEndpointCap obj_ref badge cap_rights'", simplified, standard]
-  ex_zombie_refs.simps [where ?c1.0="cap.Zombie p b n" and ?c2.0="cap.ReplyCap obj_ref bool", simplified, standard]
-  ex_zombie_refs.simps [where ?c1.0="cap.Zombie p b n" and ?c2.0="cap.CNodeCap obj_ref nat' bool_list", simplified, standard]
-  ex_zombie_refs.simps [where ?c1.0="cap.Zombie p b n" and ?c2.0="cap.ThreadCap obj_ref", simplified, standard]
-  ex_zombie_refs.simps [where ?c1.0="cap.Zombie p b n" and ?c2.0="cap.IRQControlCap", simplified, standard]
-  ex_zombie_refs.simps [where ?c1.0="cap.Zombie p b n" and ?c2.0="cap.IRQHandlerCap irq", simplified, standard]
-  ex_zombie_refs.simps [where ?c1.0="cap.Zombie p b n" and ?c2.0="cap.Zombie p' b' n'", simplified, standard]
-  ex_zombie_refs.simps [where ?c1.0="cap.Zombie p b n" and ?c2.0="cap.ArchObjectCap archCap", simplified, standard]
-
-
-  ex_zombie_refs.simps [where ?c1.0="cap.NullCap", simplified, standard]
-  ex_zombie_refs.simps [where ?c1.0="cap.DomainCap", simplified, standard]
-  ex_zombie_refs.simps [where ?c1.0="cap.UntypedCap obj_ref nat1 nat2", simplified, standard]
-  ex_zombie_refs.simps [where ?c1.0="cap.EndpointCap obj_ref badge cap_rights'", simplified, standard]
-  ex_zombie_refs.simps [where ?c1.0="cap.AsyncEndpointCap obj_ref badge cap_rights'", simplified, standard]
-  ex_zombie_refs.simps [where ?c1.0="cap.ReplyCap obj_ref bool", simplified, standard]
-  ex_zombie_refs.simps [where ?c1.0="cap.CNodeCap obj_ref nat' bool_list", simplified, standard]
-  ex_zombie_refs.simps [where ?c1.0="cap.ThreadCap obj_ref", simplified, standard]
-  ex_zombie_refs.simps [where ?c1.0="cap.IRQControlCap", simplified, standard]
-  ex_zombie_refs.simps [where ?c1.0="cap.IRQHandlerCap irq", simplified, standard]
-  ex_zombie_refs.simps [where ?c1.0="cap.Zombie p' b' n'", simplified, standard]
-  ex_zombie_refs.simps [where ?c1.0="cap.ArchObjectCap archCap", simplified, standard]
+lemmas ex_zombie_refs_simps [simp]
+    = ex_zombie_refs.simps[split_simps cap.split, simplified]
 
 lemma ex_zombie_refs_def2:
  "ex_zombie_refs (cap, cap') =
@@ -1096,7 +1059,7 @@ lemma set_cap_zombies:
    apply simp
   apply (simp only: ex_zombie_refs_def2 split: split_if_asm)
     apply simp
-    apply (drule bspec, simp, erule(1) conjI)
+    apply (drule bspec, simp)
     apply (elim allE, erule disjE, erule(1) notE)
     apply simp
    apply simp
@@ -1104,7 +1067,7 @@ lemma set_cap_zombies:
    apply simp
   apply simp
   apply (erule impCE)
-   apply (drule bspec, simp, erule(1) conjI)
+   apply (drule bspec, simp)
    apply (elim allE, erule impE, erule conjI)
     apply simp
    apply simp
@@ -1152,7 +1115,6 @@ lemma new_cap_zombies:
    \<lbrace>\<lambda>rv. zombies_final\<rbrace>"
   apply (wp set_cap_zombies)
   apply (clarsimp elim!: cte_wp_at_weakenE)
-  apply fastforce
   done
 
 
@@ -1321,6 +1283,7 @@ lemma range_not_empty_is_physical:
   "valid_cap cap s \<Longrightarrow> (cap_class cap = PhysicalClass) = (cap_range cap \<noteq> {})"
   apply (case_tac cap)
    apply (simp_all add:cap_range_def valid_cap_simps cap_aligned_def is_aligned_no_overflow)
+  apply (rename_tac arch_cap)
   apply (case_tac arch_cap)
    apply (simp_all add:cap_range_def aobj_ref_def)
   done
@@ -1495,7 +1458,6 @@ lemma set_cap_valid_pspace:
   apply (simp add: valid_pspace_def)
   apply (wpx set_cap_valid_objs set_cap_iflive set_cap_zombies)
   apply (clarsimp elim!: cte_wp_at_weakenE | rule conjI)+
-  apply fastforce
   done
 
 
@@ -1675,6 +1637,7 @@ lemma set_cap_valid_vs_lookup:
     apply (drule(3) unique_table_refsD)
     apply (clarsimp simp: reachable_pg_cap_def is_pg_cap_def)
     apply (case_tac cap, simp_all add: vs_cap_ref_simps)[1]
+    apply (rename_tac arch_cap)
     apply (case_tac arch_cap,
            simp_all add: vs_cap_ref_simps table_cap_ref_simps)[1]
        apply (clarsimp dest!: table_cap_ref_vs_cap_ref_Some)
@@ -1718,10 +1681,9 @@ lemma set_cap_unique_table_caps:
   apply (erule impCE)
    prefer 2
    apply (simp del: imp_disjL)
-   apply (thin_tac "\<forall>a b. ?P a b")
+   apply (thin_tac "\<forall>a b. P a b" for P)
    apply (auto simp: cte_wp_at_caps_of_state)[1]
   apply (clarsimp simp del: imp_disjL del: allI)
-  apply (drule sym[where s="obj_refs c", standard])
   apply (case_tac "cap_asid cap \<noteq> None")
    apply (clarsimp del: allI)
    apply (elim allEI | rule impI)+
@@ -1947,7 +1909,7 @@ lemma set_cap_caps_of_state2:
 
 lemma obj_irq_refs_empty:
   "(obj_irq_refs cap = {}) = (cap_irqs cap = {} \<and> obj_refs cap = {})"
-  by (simp add: obj_irq_refs_def conj_ac)
+  by (simp add: obj_irq_refs_def conj_comms)
 
 
 lemma final_NullCap:
@@ -2061,7 +2023,6 @@ lemma cap_refs_in_kernel_windowD:
   done
 
 
-(* FIXME: hideous proof *)
 lemma set_cap_valid_ioc[wp]:
   "\<lbrace>valid_ioc and (\<lambda>s. p = cap.NullCap \<longrightarrow> \<not> is_original_cap s pt)\<rbrace>
    set_cap p pt
@@ -2207,9 +2168,9 @@ lemma replace_cap_invs:
    apply (erule disjE)
     apply (simp add: fun_upd_def[symmetric] fun_upd_idem)
    apply (clarsimp simp add: reply_mdb_def)
-   apply (thin_tac "\<forall>a b. (a, b) \<in> cte_refs ?cp ?nd \<and> ?Q a b\<longrightarrow> ?R a b")
-   apply (thin_tac "is_pt_cap ?cap \<longrightarrow> ?P")+ 
-   apply (thin_tac "is_pd_cap ?cap \<longrightarrow> ?P")+
+   apply (thin_tac "\<forall>a b. (a, b) \<in> cte_refs cp nd \<and> Q a b\<longrightarrow> R a b" for cp nd Q R)
+   apply (thin_tac "is_pt_cap cap \<longrightarrow> P" for cap P)+ 
+   apply (thin_tac "is_pd_cap cap \<longrightarrow> P" for cap P)+
    apply (rule conjI)
     apply (unfold reply_caps_mdb_def)[1]
     apply (erule allEI, erule allEI)

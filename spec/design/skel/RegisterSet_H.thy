@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-header "Register Set"
+chapter "Register Set"
 
 theory RegisterSet_H
 imports

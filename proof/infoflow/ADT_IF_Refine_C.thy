@@ -247,7 +247,7 @@ lemma handleEvent_ccorres:
    apply (simp add: catch_def)
    apply (rule ccorres_rhs_assoc2)
    apply (rule ccorres_split_nothrow_novcg)
-       apply (rule ccorres_split_nothrow_sum_case)
+       apply (rule ccorres_split_nothrow_case_sum)
             apply (ctac (no_vcg) add: handleVMFault_ccorres)
            apply ceqv
           apply clarsimp
@@ -260,7 +260,6 @@ lemma handleEvent_ccorres:
          apply simp
         apply (wp hv_inv_ex')
        apply (simp add: guard_is_UNIV_def)
-       apply clarsimp
        apply (vcg exspec=handleVMFault_modifies)
       apply ceqv
      apply clarsimp
@@ -315,18 +314,22 @@ lemma kernelEntry_corres_C:
 
 end
 
+context state_rel
+begin
 
-definition (in state_rel)
+definition
   "ptable_rights_s'' s \<equiv> ptable_rights (cur_thread (cstate_to_A s)) (cstate_to_A s)"
 
-definition (in state_rel)
+definition
   "ptable_lift_s'' s \<equiv> ptable_lift (cur_thread (cstate_to_A s)) (cstate_to_A s)"
 
-definition (in state_rel)
-  "ptable_xn_s'' s \<equiv> ptable_xn (cur_thread (cstate_to_A s)) (cstate_to_A s)"
+definition
+  "ptable_attrs_s'' s \<equiv> ptable_attrs (cur_thread (cstate_to_A s)) (cstate_to_A s)"
 
-(* FIXME - is this right? *)
-definition (in state_rel)
+definition
+  "ptable_xn_s'' s \<equiv> \<lambda>addr. XNever \<in> ptable_attrs_s'' s addr"
+
+definition
   doMachineOp_C :: "(machine_state, 'a) nondet_monad \<Rightarrow> (cstate, 'a) nondet_monad"
 where
  "doMachineOp_C mop \<equiv>
@@ -337,13 +340,13 @@ where
     return r
   od"
 
-definition (in state_rel) doUserOp_C_if
+definition doUserOp_C_if
   :: "user_transition_if \<Rightarrow> user_context \<Rightarrow> (cstate, (event option \<times> user_context)) nondet_monad"
    where
   "doUserOp_C_if uop tc \<equiv>
    do 
       pr \<leftarrow> gets ptable_rights_s'';
-      pxn \<leftarrow> gets ptable_xn_s'';
+      pxn \<leftarrow> gets (\<lambda>s x. pr x \<noteq> {} \<and> ptable_xn_s'' s x);
       pl \<leftarrow> gets (\<lambda>s. restrict_map (ptable_lift_s'' s) {x. pr x \<noteq> {}});
       t \<leftarrow> gets (\<lambda>s. cur_thread (cstate_to_A s));
       um \<leftarrow> gets (\<lambda>s. restrict_map (user_mem_C (globals s) \<circ> ptrFromPAddr)
@@ -360,11 +363,12 @@ definition (in state_rel) doUserOp_C_if
    od"
 
 
-definition (in state_rel)
+definition
   do_user_op_C_if
   where
   "do_user_op_C_if uop \<equiv> {(s,e,(tc,s'))| s e tc s'. ((e,tc),s') \<in> fst (split (doUserOp_C_if uop) s)}"
 
+end
 
 context kernel_m begin
 
@@ -436,11 +440,11 @@ lemma dmo_getExMonitor_C_wp[wp]:
 
 lemma do_user_op_if_C_corres:
    "corres_underlying rf_sr True op = 
-   (invs' and ex_abs einvs and (\<lambda>_. uop_sane f)) \<top>
+   (invs' and ex_abs einvs and (\<lambda>_. uop_nonempty f)) \<top>
    (doUserOp_if f tc) (doUserOp_C_if f tc)"
   apply (rule corres_gen_asm)
-  apply (simp add: doUserOp_if_def doUserOp_C_if_def uop_sane_def del: split_paired_All)
-  apply (thin_tac "?P")
+  apply (simp add: doUserOp_if_def doUserOp_C_if_def uop_nonempty_def del: split_paired_All)
+  apply (thin_tac "P" for P)
   apply (rule corres_guard_imp)
     apply (rule_tac r'="op=" and P'=\<top> and P="invs' and ex_abs (einvs)" in corres_split)
        prefer 2
@@ -453,7 +457,8 @@ lemma do_user_op_if_C_corres:
                              invs_def valid_state_def valid_pspace_def state_relation_def)
       apply (rule_tac r'="op=" and P'=\<top> and P="invs' and ex_abs (einvs)" in corres_split)
          prefer 2
-         apply (clarsimp simp: ptable_xn_s'_def ptable_xn_s''_def cstate_to_A_def rf_sr_def)
+         apply (clarsimp simp: ptable_xn_s'_def ptable_xn_s''_def ptable_attrs_s_def
+                               ptable_attrs_s'_def ptable_attrs_s''_def cstate_to_A_def rf_sr_def)
          apply (subst cstate_to_H_correct, simp add: invs'_def,force+)+
          apply (simp only: ex_abs_def)
          apply (elim exE conjE)
@@ -499,7 +504,6 @@ lemma do_user_op_if_C_corres:
              apply (wp | simp)+
   
    apply (clarsimp simp add: invs'_def valid_state'_def valid_pspace'_def ex_abs_def)
-   apply (thin_tac "(?a,?b) : f ?c ?d ?e ?f ?g")
    apply (clarsimp simp: user_mem'_def ex_abs_def restrict_map_def invs_def
                          ptable_lift_s'_def
                   split: if_splits)
@@ -732,13 +736,13 @@ lemma full_invs_all_invs[simp]: "((tc,s),KernelEntry e) \<in> full_invs_if' \<Lo
   apply (fastforce simp: ct_running_related schedaction_related)
   done
 
-lemma c_to_haskell: "uop_sane uop \<Longrightarrow> global_automata_refine checkActiveIRQ_H_if (doUserOp_H_if uop) kernelCall_H_if
+lemma c_to_haskell: "uop_nonempty uop \<Longrightarrow> global_automata_refine checkActiveIRQ_H_if (doUserOp_H_if uop) kernelCall_H_if
      handlePreemption_H_if schedule'_H_if kernelExit_H_if full_invs_if' (ADT_H_if uop) UNIV
      check_active_irq_C_if (do_user_op_C_if uop) (kernel_call_C_if fp) handle_preemption_C_if schedule_C_if
      kernel_exit_C_if UNIV (ADT_C_if fp uop) (lift_snd_rel rf_sr) False"
   apply (simp add: global_automata_refine_def)
   apply (intro conjI)
-    apply (erule haskell_invs)
+    apply (rule haskell_invs)
    apply (unfold_locales)
                         apply (simp add: ADT_C_if_def)
                         apply blast
@@ -785,17 +789,25 @@ lemma c_to_haskell: "uop_sane uop \<Longrightarrow> global_automata_refine check
   apply (clarsimp simp: full_invs_if'_def)
   done
 
-theorem infoflow_refinement_H: "uop_sane uop \<Longrightarrow> ADT_C_if fp uop \<sqsubseteq> ADT_H_if uop"
-  apply (erule global_automata_refine.refinement[OF c_to_haskell])
+(*fw_sim lemmas as theorems and refinement as corollaries with sim_imp_refines?*)
+lemma infoflow_fw_sim_H: "uop_nonempty uop \<Longrightarrow> ADT_C_if fp uop \<sqsubseteq>\<^sub>F ADT_H_if uop"
+  apply (erule global_automata_refine.fw_simulates[OF c_to_haskell])
   done
 
-theorem infoflow_refinement_A: "uop_sane uop \<Longrightarrow> ADT_C_if fp uop \<sqsubseteq> ADT_A_if uop"
-  apply (rule refinement_trans)
-  apply (rule infoflow_refinement_H)
-  apply simp+
-  apply (erule global_automata_refine.refinement[OF haskell_to_abs])
+lemma infoflow_fw_sim_A: "uop_nonempty uop \<Longrightarrow> ADT_C_if fp uop \<sqsubseteq>\<^sub>F ADT_A_if uop"
+  apply (rule fw_simulates_trans)
+  apply (rule infoflow_fw_sim_H)
+   apply simp+
+  apply (erule global_automata_refine.fw_simulates[OF haskell_to_abs])
   done
-  
+
+theorem infoflow_refinement_H: "uop_nonempty uop \<Longrightarrow> ADT_C_if fp uop \<sqsubseteq> ADT_H_if uop"
+  apply (erule sim_imp_refines[OF infoflow_fw_sim_H])
+  done
+
+theorem infoflow_refinement_A: "uop_nonempty uop \<Longrightarrow> ADT_C_if fp uop \<sqsubseteq> ADT_A_if uop"
+  apply (erule sim_imp_refines[OF infoflow_fw_sim_A])
+  done
 
 end
 

@@ -9,7 +9,9 @@
  *)
 
 theory InfoFlow
-imports EquivValid
+imports
+  "../access-control/Syscall_AC"
+  "../../lib/EquivValid"
 begin
 
 (* We take the authority graph from the access proofs. We identify each
@@ -940,6 +942,7 @@ lemma globals_equiv_trans:
   apply (auto simp: globals_equiv_def)
   apply (metis idle_equiv_trans idle_equiv_def)+
   done
+
 (* since doesnt_touch_globals is true for all of the kernel except the scheduler,
    the following lemma shows that we can just prove reads_respects for it, and
    from there get the stronger reads_respects_g result that we need for the
@@ -1208,20 +1211,6 @@ lemma gets_ready_queues_revrv':
   done
 
 
-(* currently unused
-abbreviation
-  reads_equiv_valid_2 :: "('z state \<Rightarrow> 'z state \<Rightarrow> bool) \<Rightarrow> ('z state \<Rightarrow> 'z state \<Rightarrow> bool) \<Rightarrow> 'a PAS \<Rightarrow> ('b \<Rightarrow> 'c \<Rightarrow> bool) \<Rightarrow> 'z state set \<Rightarrow> 'z state set \<Rightarrow> (state,'b) nondet_monad \<Rightarrow> (state,'c) nondet_monad \<Rightarrow> bool"
-where
-  "reads_equiv_valid_2 A B aag R P P' f f' \<equiv> equiv_valid_2 (reads_equiv aag) A B R P P' f f'"
-
-
-lemma reads_equiv_valid_2_reads_equiv_valid:
-  "reads_equiv_valid_2 A B aag (op =) P P f f = reads_equiv_valid A B aag P f"
-  by (auto simp: equiv_valid_2_def equiv_valid_def2)
-*)
-
-
-
 (* We want to prove this kind of thing for functions that don't modify the
    state *)
 lemma gets_cur_thread_ev:
@@ -1235,7 +1224,7 @@ lemma as_user_rev:
   "reads_equiv_valid_inv A aag (K (det f \<and> (\<forall>P. invariant f P) \<and> is_subject aag thread)) (as_user thread f)"
   unfolding as_user_def fun_app_def split_def
   apply (wp set_object_rev select_f_ev)
-  apply (rule conjI, fastforce intro: requiv_get_tcb_eq)
+  apply (rule conjI, fastforce)
   apply (clarsimp split: option.split_asm kernel_object.split_asm simp: get_tcb_def)
   apply (drule state_unchanged[rotated])
    apply simp_all
@@ -1243,10 +1232,10 @@ lemma as_user_rev:
 
 lemma as_user_reads_respects:
   "reads_respects aag l (K (det f \<and> is_subject aag thread)) (as_user thread f)"
-  apply (simp add: as_user_def fun_app_def split_def)
+  apply (simp add: as_user_def split_def)
   apply (rule gen_asm_ev)
   apply (wp set_object_reads_respects select_f_ev gets_the_ev)
-  apply (fastforce intro: requiv_get_tcb_eq)
+  apply fastforce
   done
 
 lemma get_message_info_rev:
@@ -1254,25 +1243,6 @@ lemma get_message_info_rev:
   apply (simp add: get_message_info_def)
   apply (wp as_user_rev | clarsimp simp: get_register_def)+
   done
-
-(* this general one is probably more general than we will need 
-lemma syscall_rev:
-  assumes reads_res_m_fault:
-    "reads_equiv_valid A D aag P m_fault"
-  assumes reads_res_m_error:
-    "\<And> v. reads_equiv_valid D E aag (Q (Inr v)) (m_error v)"
-  assumes reads_res_h_fault:
-    "\<And> v. reads_equiv_valid D B aag (Q (Inl v)) (h_fault v)"
-  assumes reads_res_m_finalise:
-    "\<And> v. reads_equiv_valid E B aag (R (Inr v)) (m_finalise v)"
-  assumes reads_res_h_error:
-    "\<And> v. reads_equiv_valid E B aag (R (Inl v)) (h_error v)"
-  assumes m_fault_hoare:
-    "\<lbrace> P \<rbrace> m_fault \<lbrace> Q \<rbrace>"
-  assumes m_error_hoare:
-    "\<And> v. \<lbrace> Q (Inr v) \<rbrace> m_error v \<lbrace> R \<rbrace>"
-  shows "reads_equiv_valid A B aag P (Syscall_A.syscall m_fault h_fault m_error h_error m_finalise)"
-*)
 
 lemma syscall_rev:
   assumes reads_res_m_fault:
@@ -1310,9 +1280,9 @@ lemma syscall_reads_respects_g:
   assumes reads_res_h_error:
     "\<And> v. reads_respects_g aag l (R' v) (h_error v)"
   assumes m_fault_hoare:
-    "\<lbrace> P \<rbrace> m_fault \<lbrace> sum_case Q' Q'' \<rbrace>"
+    "\<lbrace> P \<rbrace> m_fault \<lbrace> case_sum Q' Q'' \<rbrace>"
   assumes m_error_hoare:
-    "\<And> v. \<lbrace> Q'' v \<rbrace> m_error v \<lbrace> sum_case R' R'' \<rbrace>"
+    "\<And> v. \<lbrace> Q'' v \<rbrace> m_error v \<lbrace> case_sum R' R'' \<rbrace>"
   shows "reads_respects_g aag l P (Syscall_A.syscall m_fault h_fault m_error h_error m_finalise)"
   unfolding Syscall_A.syscall_def without_preemption_def fun_app_def
   apply (wp assms equiv_valid_guard_imp[OF liftE_bindE_ev]
@@ -1400,7 +1370,7 @@ lemma do_machine_op_spec_rev:
          apply(drule state_unchanged[OF mo_inv], simp)
         apply simp+
       apply(clarsimp simp: equiv_valid_2_def in_monad)
-      apply(fastforce intro: equiv_forE elim: equiv_forE reads_equivE)
+      apply(fastforce intro: elim: equiv_forE reads_equivE)
      apply(wp | simp)+
   done
 
@@ -1451,7 +1421,7 @@ lemma dmo_loadWord_rev:
        apply(rule conjI)
         apply fastforce
        apply(erule orthD1)
-       apply(clarsimp simp: ptr_range_def add_commute)
+       apply(clarsimp simp: ptr_range_def add.commute)
       apply (wp wp_post_taut loadWord_inv | simp)+
   done
 

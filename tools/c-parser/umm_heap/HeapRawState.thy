@@ -18,7 +18,7 @@ type_synonym typ_base = bool
 datatype s_heap_index = SIndexVal | SIndexTyp nat
 datatype s_heap_value = SValue byte | STyp "typ_uinfo \<times> typ_base"
 
-primrec
+primrec (nonexhaustive)
   s_heap_tag :: "s_heap_value \<Rightarrow> typ_uinfo \<times> typ_base"
 where
   "s_heap_tag (STyp t) = t"

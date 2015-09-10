@@ -20,7 +20,7 @@ begin
 
 section {* Generic stuff *}
 
-translations (* XXX: do we want this more commonly? *)
+translations
   (type) "cslot_ptr" <= (type) "word32 \<times> bool list"
 
 type_synonym slot_ptr = "cslot_ptr"
@@ -403,10 +403,6 @@ definition
      do_machine_op cleanCache;
      global_pd \<leftarrow> gets (arm_global_pd \<circ> arch_state);
      do_machine_op $ setCurrentPD $ addrFromPPtr global_pd
-     (* XXX: lockTLBEntry(kernel_base)
-             lockTLBEntry(PPTR_VECTOR_TABLE)
-             (TODO: these are performance-related, should they be in the spec?)
-     *)
    od"
 
 definition
@@ -503,7 +499,7 @@ definition
   "create_it_frame_cap pptr vptr asid use_large \<equiv>
    let sz = if use_large then ARMLargePage else ARMSmallPage in
      returnOk $ ArchObjectCap $ PageCap pptr {AllowRead,AllowWrite}
-                                        sz (Option.map (\<lambda>a. (a, vptr)) asid)"
+                                        sz (map_option (\<lambda>a. (a, vptr)) asid)"
 
 definition
   create_ipcbuf_frame :: "cap \<Rightarrow> (vspace_ref \<times> vspace_ref)
@@ -859,7 +855,7 @@ definition
      return regs
    od"
 
-definition (* XXX: Gerwin wants these to be called create_untyped_caps *)
+definition
   create_untyped_obj :: "cap \<Rightarrow> (paddr \<times> paddr) \<Rightarrow> (unit,'z::state_ext) ki_monad" where
   "create_untyped_obj root_cnode_cap boot_mem_reuse_reg \<equiv> doE
 
@@ -972,7 +968,7 @@ definition
      pde \<leftarrow> return $ PageTablePDE (addrFromPPtr global_pt) {ParityEnabled} 0;
      store_pde idx pde;
 
-     (* init the PT (XXX: maybe do that before mapping it into PD?) *)
+     (* init the PT *)
      retype_region global_pt 1 PT_SIZE_BITS
                    (ArchObject PageTableObj);
 

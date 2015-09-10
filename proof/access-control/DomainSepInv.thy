@@ -785,6 +785,61 @@ lemma perform_page_invocation_domain_sep_inv_get_cap_helper:
   apply(rule wp_post_taut)
   done
 
+
+lemma set_object_tcb_context_update_neg_cte_wp_at:
+  "\<lbrace>\<lambda>s. \<not> cte_wp_at P slot s \<and> obj_at (op = (TCB tcb)) ptr s\<rbrace>
+   set_object ptr (TCB (tcb\<lparr>tcb_context := X\<rparr>))
+   \<lbrace>\<lambda>_ s. \<not> cte_wp_at P slot s\<rbrace>"
+  apply(wp set_object_wp)
+  apply clarsimp
+  apply(case_tac "ptr = fst slot")
+   apply(erule cte_wp_atE)
+    apply(fastforce simp: obj_at_def)
+   apply(erule notE)
+   apply(clarsimp simp: obj_at_def)
+   apply(rule cte_wp_at_tcbI)
+      apply(simp)
+     apply(fastforce)
+    apply(fastforce simp: tcb_cap_cases_def split: if_splits)
+  apply(fastforce elim: cte_wp_atE intro: cte_wp_at_cteI cte_wp_at_tcbI)
+  done
+
+lemma as_user_neg_cte_wp_at[wp]:
+  "\<lbrace>\<lambda>s. \<not> cte_wp_at P slot s\<rbrace>
+   as_user t f
+   \<lbrace>\<lambda>_ s. \<not> cte_wp_at P slot s\<rbrace>"
+  unfolding as_user_def
+  apply(wp set_object_tcb_context_update_neg_cte_wp_at | simp add: split_def)+
+  apply(fastforce simp: obj_at_def)
+  done
+
+crunch domain_sep_inv[wp]: as_user "domain_sep_inv irqs st"
+  (wp: domain_sep_inv_triv)
+
+lemma set_object_tcb_context_update_domain_sep_inv:
+  "\<lbrace>\<lambda>s. domain_sep_inv irqs st s \<and> obj_at (op = (TCB tcb)) ptr s\<rbrace>
+   set_object ptr (TCB (tcb\<lparr>tcb_context := X\<rparr>))
+   \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
+  apply(rule hoare_pre)
+   apply(rule domain_sep_inv_wp)
+    apply(rule hoare_pre)
+     apply(rule set_object_tcb_context_update_neg_cte_wp_at)
+    apply(fastforce)
+   apply(wp | simp | elim conjE | assumption)+
+  apply blast
+  done
+
+crunch domain_sep_inv[wp]: set_mrs "domain_sep_inv irqs st"
+  (ignore: set_object
+   wp: crunch_wps set_object_tcb_context_update_domain_sep_inv
+   simp: crunch_simps)
+
+
+crunch domain_sep_inv[wp]: send_async_ipc "domain_sep_inv irqs st" (wp: dxo_wp_weak ignore:  switch_if_required_to)
+
+crunch domain_sep_inv[wp]: copy_mrs, set_message_info "domain_sep_inv irqs st"
+  (wp: crunch_wps)
+
 lemma perform_page_invocation_domain_sep_inv:
   "\<lbrace>domain_sep_inv irqs st and valid_page_inv pi\<rbrace>
   perform_page_invocation pi
@@ -884,7 +939,8 @@ lemma invoke_irq_handler_domain_sep_inv:
     invoke_irq_handler blah
    \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
   apply(case_tac blah)
-    apply(wp cap_insert_domain_sep_inv' | simp )+
+    apply(wp cap_insert_domain_sep_inv' | simp)+
+    apply(rename_tac irq cap cslot_ptr s)
     apply(case_tac cap, simp_all add: domain_sep_inv_cap_def)[1]
    apply(wp | auto simp: domain_sep_inv_def)+
   done
@@ -904,55 +960,7 @@ lemma invoke_control_domain_sep_inv:
   apply(wp | simp)+
   done
 
-lemma set_object_tcb_context_update_neg_cte_wp_at:
-  "\<lbrace>\<lambda>s. \<not> cte_wp_at P slot s \<and> obj_at (op = (TCB tcb)) ptr s\<rbrace>
-   set_object ptr (TCB (tcb\<lparr>tcb_context := X\<rparr>))
-   \<lbrace>\<lambda>_ s. \<not> cte_wp_at P slot s\<rbrace>"
-  apply(wp set_object_wp)
-  apply clarsimp
-  apply(case_tac "ptr = fst slot")
-   apply(erule cte_wp_atE)
-    apply(fastforce simp: obj_at_def)
-   apply(erule notE)
-   apply(clarsimp simp: obj_at_def)
-   apply(rule cte_wp_at_tcbI)
-      apply(simp)
-     apply(fastforce)
-    apply(fastforce simp: tcb_cap_cases_def split: if_splits)
-  apply(fastforce elim: cte_wp_atE intro: cte_wp_at_cteI cte_wp_at_tcbI)
-  done
 
-lemma as_user_neg_cte_wp_at[wp]:
-  "\<lbrace>\<lambda>s. \<not> cte_wp_at P slot s\<rbrace>
-   as_user t f
-   \<lbrace>\<lambda>_ s. \<not> cte_wp_at P slot s\<rbrace>"
-  unfolding as_user_def
-  apply(wp set_object_tcb_context_update_neg_cte_wp_at | simp add: split_def)+
-  apply(fastforce simp: obj_at_def)
-  done
-
-crunch domain_sep_inv[wp]: as_user "domain_sep_inv irqs st"
-  (wp: domain_sep_inv_triv)
-
-lemma set_object_tcb_context_update_domain_sep_inv:
-  "\<lbrace>\<lambda>s. domain_sep_inv irqs st s \<and> obj_at (op = (TCB tcb)) ptr s\<rbrace>
-   set_object ptr (TCB (tcb\<lparr>tcb_context := X\<rparr>))
-   \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
-  apply(rule hoare_pre)
-   apply(rule domain_sep_inv_wp)
-    apply(rule hoare_pre)
-     apply(rule set_object_tcb_context_update_neg_cte_wp_at)
-    apply(fastforce)
-   apply(wp | simp | elim conjE | assumption)+
-  apply blast
-  done
-
-crunch domain_sep_inv[wp]: set_mrs "domain_sep_inv irqs st"
-  (ignore: set_object
-   wp: crunch_wps set_object_tcb_context_update_domain_sep_inv
-   simp: crunch_simps)
-
-crunch domain_sep_inv[wp]: send_async_ipc "domain_sep_inv irqs st" (wp: dxo_wp_weak ignore:  switch_if_required_to)
 
 crunch domain_sep_inv[wp]: receive_async_ipc "domain_sep_inv irqs st"
 
@@ -1001,8 +1009,6 @@ lemma transfer_caps_domain_sep_inv:
   apply simp
   done
 
-crunch domain_sep_inv[wp]: copy_mrs, set_message_info "domain_sep_inv irqs st"
-  (wp: crunch_wps)
 
 lemma do_normal_transfer_domain_sep_inv:
   "\<lbrace>domain_sep_inv irqs st and valid_objs and valid_mdb\<rbrace>
@@ -1077,7 +1083,7 @@ lemma receive_ipc_base_domain_sep_inv:
           apply(rule_tac Q="\<lambda> r s. domain_sep_inv irqs st s" in hoare_strengthen_post)
           apply(wp do_ipc_transfer_domain_sep_inv hoare_vcg_all_lift | wpc | simp)+
      apply(wp hoare_vcg_imp_lift [OF set_endpoint_get_tcb, unfolded disj_not1] hoare_vcg_all_lift get_endpoint_wp)
-  apply (clarsimp simp: conj_ac)
+  apply (clarsimp simp: conj_comms)
   apply (fastforce simp: valid_objs_def valid_obj_def obj_at_def
                          ep_redux_simps neq_Nil_conv valid_ep_def case_list_cons_cong)
   done
@@ -1226,6 +1232,7 @@ lemma invoke_tcb_domain_sep_inv:
     defer
     apply((wp | simp )+)[2]
   (* just AsyncEndpointControl and ThreadControl left *)
+  apply (rename_tac option)
   apply (case_tac option)
   apply  ((wp | simp)+)[1]
   apply (simp add: split_def cong: option.case_cong)
@@ -1293,14 +1300,15 @@ lemma handle_invocation_domain_sep_inv:
                   valid_objs and
                   sym_refs \<circ> state_refs_of and
                   valid_mdb and
-                  (\<lambda>y. valid_fault ft)" and R="?Q" in hoare_post_impErr)
+                  (\<lambda>y. valid_fault ft)" and R="Q" and Q=Q for Q in hoare_post_impErr)
          apply(wp
               | simp | clarsimp)+
      apply(rule_tac E="\<lambda>ft. domain_sep_inv irqs st and
-                  valid_objs and
-                  sym_refs \<circ> state_refs_of and
-                  valid_mdb and
-                  (\<lambda>y. valid_fault (CapFault x False ft))" and R="?Q" in hoare_post_impErr)
+                            valid_objs and
+                            sym_refs \<circ> state_refs_of and
+                            valid_mdb and
+                            (\<lambda>y. valid_fault (CapFault x False ft))" and R="Q" and Q=Q 
+                  for Q in hoare_post_impErr)
        apply (wp lcs_ex_cap_to2
              | clarsimp)+
   apply (auto intro: st_tcb_ex_cap simp: ct_in_state_def)
@@ -1347,10 +1355,12 @@ lemma handle_wait_domain_sep_inv:
    \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
   apply (simp add: handle_wait_def Let_def lookup_cap_def split_def)
   apply (wp hoare_vcg_all_lift lookup_slot_for_thread_cap_fault
-            receive_ipc_domain_sep_inv
+            receive_ipc_domain_sep_inv delete_caller_cap_domain_sep_inv
             get_cap_wp get_aep_wp
-        | wpc | simp)+
-     apply (rule_tac Q'="\<lambda>r s. domain_sep_inv irqs st s \<and> invs s" in hoare_post_imp_R)
+        | wpc | simp
+        | rule_tac Q="\<lambda>rv. invs and (\<lambda>s. cur_thread s = thread)" in hoare_strengthen_post, wp, 
+          clarsimp simp: invs_valid_objs invs_sym_refs)+
+    apply (rule_tac Q'="\<lambda>r s. domain_sep_inv irqs st s \<and> invs s \<and> tcb_at thread s \<and> thread = cur_thread s" in hoare_post_imp_R)
       apply wp
      apply ((clarsimp simp add: invs_valid_objs invs_sym_refs
            | intro impI allI conjI
@@ -1358,8 +1368,6 @@ lemma handle_wait_domain_sep_inv:
            | fastforce simp:  valid_fault_def
            )+)[1]
     apply (wp delete_caller_cap_domain_sep_inv | simp add: split_def cong: conj_cong)+
-   apply(rule_tac Q="\<lambda>rva s.
-           invs s" in hoare_strengthen_post)
     apply(wp | simp add: invs_valid_objs invs_mdb invs_sym_refs tcb_at_invs)+
   done
 
@@ -1381,7 +1389,7 @@ lemma handle_event_domain_sep_inv:
                  handle_wait_domain_sep_inv handle_reply_domain_sep_inv
                  hy_inv
             | simp add: invs_valid_objs invs_mdb invs_sym_refs valid_fault_def)+
-     apply(rule_tac E="\<lambda>rv s. domain_sep_inv irqs st s \<and> invs s \<and> valid_fault rv" and R="?Q" in hoare_post_impErr)
+     apply(rule_tac E="\<lambda>rv s. domain_sep_inv irqs st s \<and> invs s \<and> valid_fault rv" and R="Q" and Q=Q for Q in hoare_post_impErr)
      apply(wp handle_vm_fault_domain_sep_inv | simp add: invs_valid_objs invs_mdb invs_sym_refs valid_fault_def | auto)+
   done
 
@@ -1413,4 +1421,4 @@ apply (wp handle_interrupt_domain_sep_inv handle_event_domain_sep_inv schedule_d
      | simp)+
 done
 
-end (* a comment *)
+end

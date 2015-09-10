@@ -60,6 +60,9 @@ type_synonym cdl_cap_ref = "cdl_object_id \<times> cdl_cnode_index"
 (* A virtual ASID. *)
 type_synonym cdl_asid = "cdl_cnode_index \<times> cdl_cnode_index"
 
+(* mapped address  *)
+type_synonym cdl_mapped_addr = "(cdl_asid \<times> word32)"
+
 (* Number of bits in a word. *)
 definition
   word_bits
@@ -126,11 +129,11 @@ datatype cdl_cap =
   | IrqHandlerCap cdl_irq
 
   (* Virtual memory capabilties *)
-  | FrameCap cdl_object_id "cdl_right set" nat cdl_frame_cap_type "cdl_asid option"
-  | PageTableCap cdl_object_id cdl_frame_cap_type "cdl_asid option"
+  | FrameCap cdl_object_id "cdl_right set" nat cdl_frame_cap_type "cdl_mapped_addr option"
+  | PageTableCap cdl_object_id cdl_frame_cap_type "cdl_mapped_addr option"
   | PageDirectoryCap cdl_object_id cdl_frame_cap_type "cdl_asid option"
   | AsidControlCap
-  | AsidPoolCap cdl_object_id cdl_asid
+  | AsidPoolCap cdl_object_id "cdl_cnode_index"
 
   (* x86-specific capabilities *)
   | IOPortsCap cdl_object_id "cdl_io_port set"
@@ -193,6 +196,9 @@ record cdl_page_directory =
 record cdl_frame =
   cdl_frame_size_bits :: cdl_size_bits
 
+record cdl_irq_node =
+  cdl_irq_node_caps :: cdl_cap_map
+
 (*
  * Kernel objects.
  *
@@ -209,6 +215,7 @@ datatype cdl_object =
   | PageDirectory cdl_page_directory
   | Frame cdl_frame
   | Untyped
+  | IRQNode cdl_irq_node
 
 (* The architecture that we are modelling. *)
 datatype cdl_arch = IA32 | ARM11
@@ -216,18 +223,8 @@ datatype cdl_arch = IA32 | ARM11
 (* The map of objects that are in the system. *)
 type_synonym cdl_heap = "cdl_object_id \<Rightarrow> cdl_object option"
 
-(* The component map tracks which components (fields and slots) are owned by an object.
- * Fields + slots are encoded as None + Some nat.
- *)
-datatype cdl_component  = Slot nat | Fields
-type_synonym cdl_components = "cdl_component set"
-type_synonym cdl_component_map = "cdl_object_id \<Rightarrow> cdl_components"
-
 translations
   (type) "cdl_heap" <=(type) "32 word \<Rightarrow> cdl_object option"
-  (type) "cdl_components" <=(type) "cdl_component set"
-  (type) "cdl_component_map" <=(type) "32 word \<Rightarrow> cdl_components"
-
 
 (*
  * The current state of the system.
@@ -252,10 +249,12 @@ translations
  * irq_node:
  *   Which IRQs are mapped to which async endpoints.
  *
- * object_ownerships: (Ghost state, used for separation logic)
- *   Which components (fields and slots) are owned by an object.
- *   In any concrete state, this will be all of the fields and slots.
+ * asid_table:
+ *   The first level of the asid table, containing capabilities to all
+ *   of the ASIDPools.
  *
+ * current_domain:
+ *   The currently running domain.
  *)
 record cdl_state =
   cdl_arch           :: cdl_arch
@@ -277,6 +276,7 @@ where
       | AsyncEndpoint \<Rightarrow> AsyncEndpointType
       | Tcb _ \<Rightarrow> TcbType
       | CNode _ \<Rightarrow> CNodeType
+      | IRQNode _ \<Rightarrow> IRQNodeType
       | AsidPool _ \<Rightarrow> AsidPoolType
       | PageTable _ \<Rightarrow> PageTableType
       | PageDirectory _ \<Rightarrow> PageDirectoryType
@@ -312,6 +312,7 @@ lemmas tcb_slot_defs =
   tcb_replycap_slot_def
   tcb_caller_slot_def
   tcb_ipcbuffer_slot_def
+  tcb_pending_op_slot_def
 
 (*
  * Getters and setters for various data types.
@@ -319,7 +320,8 @@ lemmas tcb_slot_defs =
 
 (* Capability getters / setters *)
 
-primrec cap_objects :: "cdl_cap \<Rightarrow> cdl_object_id set"
+primrec (nonexhaustive)
+  cap_objects :: "cdl_cap \<Rightarrow> cdl_object_id set"
 where
     "cap_objects (IOPageTableCap x) = {x}"
   | "cap_objects (IOSpaceCap x) = {x}"
@@ -384,7 +386,7 @@ lemma cap_object_simps:
   "cap_object (BoundAsyncCap x) = x"
   by (simp_all add:cap_object_def Nitpick.The_psimp cap_has_object_def)
 
-primrec cap_badge :: "cdl_cap \<Rightarrow> cdl_badge"
+primrec (nonexhaustive) cap_badge :: "cdl_cap \<Rightarrow> cdl_badge"
 where
     "cap_badge (AsyncEndpointCap _ x _) = x"
   | "cap_badge (EndpointCap _ x _) = x"
@@ -423,7 +425,7 @@ where
     | PageTableCap pt1 _ pt2 \<Rightarrow> PageTableCap pt1 r pt2
     | _ \<Rightarrow> c"
 
-primrec cap_guard :: "cdl_cap \<Rightarrow> cdl_cap_guard"
+primrec (nonexhaustive) cap_guard :: "cdl_cap \<Rightarrow> cdl_cap_guard"
 where
   "cap_guard (CNodeCap _ x _ _) = x"
 
@@ -434,7 +436,7 @@ where
       CNodeCap f1 _ f3 f4 \<Rightarrow> CNodeCap f1 x f3 f4
     | _ \<Rightarrow> c"
 
-primrec cap_guard_size :: "cdl_cap \<Rightarrow> cdl_cap_guard_size"
+primrec (nonexhaustive) cap_guard_size :: "cdl_cap \<Rightarrow> cdl_cap_guard_size"
 where
   "cap_guard_size (CNodeCap _ _ x _ ) = x"
 
@@ -462,6 +464,7 @@ where
   | AsidPool x \<Rightarrow> cdl_asid_pool_caps x
   | CNode x \<Rightarrow> cdl_cnode_caps x
   | Tcb x \<Rightarrow> cdl_tcb_caps x
+  | IRQNode x \<Rightarrow> cdl_irq_node_caps x
   | _ \<Rightarrow> empty"
 
 definition
@@ -473,6 +476,7 @@ where
   | AsidPool x \<Rightarrow> AsidPool (x\<lparr>cdl_asid_pool_caps := new_val\<rparr>)
   | CNode x \<Rightarrow> CNode (x\<lparr>cdl_cnode_caps := new_val\<rparr>)
   | Tcb x \<Rightarrow> Tcb (x\<lparr>cdl_tcb_caps := new_val\<rparr>)
+  | IRQNode x \<Rightarrow> IRQNode (x\<lparr>cdl_irq_node_caps := new_val\<rparr>)
   | _ \<Rightarrow> obj"
 
 definition
@@ -484,6 +488,7 @@ where
   | AsidPool _ \<Rightarrow> True
   | CNode _ \<Rightarrow> True
   | Tcb _ \<Rightarrow> True
+  | IRQNode _ \<Rightarrow> True
   | _ \<Rightarrow> False"
 
 
@@ -526,6 +531,7 @@ where
   | PageTableCap _ _ _     \<Rightarrow> Some PageTableType
   | PageDirectoryCap _ _ _ \<Rightarrow> Some PageDirectoryType
   | FrameCap _ _ f _ _     \<Rightarrow> Some (FrameType f)
+  | IrqHandlerCap _        \<Rightarrow> Some IRQNodeType
   | _                      \<Rightarrow> None "
 
 abbreviation "is_untyped_cap cap    \<equiv> (cap_type cap = Some UntypedType)"
@@ -537,7 +543,7 @@ abbreviation "is_asidpool_cap cap   \<equiv> (cap_type cap = Some AsidPoolType)"
 abbreviation "is_pt_cap cap         \<equiv> (cap_type cap = Some PageTableType)"
 abbreviation "is_pd_cap cap         \<equiv> (cap_type cap = Some PageDirectoryType)"
 abbreviation "is_frame_cap cap      \<equiv> (\<exists>sz. cap_type cap = Some (FrameType sz))"
-definition   "is_irqhandler_cap cap \<equiv> (case cap of IrqHandlerCap _ \<Rightarrow> True | _ \<Rightarrow> False)"
+abbreviation "is_irqhandler_cap cap \<equiv> (cap_type cap = Some IRQNodeType)"
 definition   "is_irqcontrol_cap cap \<equiv> (cap = IrqControlCap)"
 
 lemma cap_type_simps [simp]:
@@ -551,11 +557,8 @@ lemma cap_type_simps [simp]:
   "is_pt_cap         (PageTableCap u v w)"
   "is_frame_cap      (FrameCap a1 a2 a3 a4 a5)"
   "is_irqhandler_cap (IrqHandlerCap a6)"
-  by (clarsimp simp: cap_type_def is_irqhandler_cap_def)+
-
-lemma is_irqhandler_cap_cap_type [simp]:
-  "is_irqhandler_cap cap \<Longrightarrow> cap_type cap = None"
-  by (clarsimp simp: is_irqhandler_cap_def cap_type_def split: cdl_cap.splits)
+  "cap_type (FrameCap obj_id rights sz rs asid) = Some (FrameType sz)"
+  by (clarsimp simp: cap_type_def)+
 
 abbreviation "cap_has_type cap \<equiv> (\<exists>type. cap_type cap = Some type)"
 
@@ -606,9 +609,9 @@ where
   "empty_cnode sz = \<lparr> cdl_cnode_caps = empty_cap_map sz, cdl_cnode_size_bits = sz \<rparr>"
 
 definition
-  empty_irq_node :: cdl_object
+  empty_irq_node :: cdl_irq_node
 where
-  "empty_irq_node \<equiv> CNode (empty_cnode 0)"
+  "empty_irq_node \<equiv> \<lparr> cdl_irq_node_caps = empty_cap_map 0 \<rparr>"
 
 (* Standard empty TCB object. *)
 definition
@@ -642,7 +645,8 @@ where
       | AsidPoolType \<Rightarrow> Some (AsidPool \<lparr> cdl_asid_pool_caps = empty_cap_map asid_low_bits \<rparr>)
       | PageTableType \<Rightarrow> Some (PageTable \<lparr> cdl_page_table_caps = empty_cap_map 8 \<rparr>)
       | PageDirectoryType \<Rightarrow> Some (PageDirectory \<lparr> cdl_page_directory_caps = empty_cap_map 12 \<rparr>)
-      | FrameType sz \<Rightarrow> Some (Frame \<lparr> cdl_frame_size_bits = sz \<rparr>)"
+      | FrameType sz \<Rightarrow> Some (Frame \<lparr> cdl_frame_size_bits = sz \<rparr>)
+      | IRQNodeType \<Rightarrow> Some (IRQNode empty_irq_node)"
 
 abbreviation "pick a \<equiv> SOME x. x\<in> a"
 
@@ -656,8 +660,9 @@ where
       | AsyncEndpointType \<Rightarrow> AsyncEndpointCap (THE i. i \<in> id_set) 0 {Read,Write}
       | TcbType \<Rightarrow> TcbCap (pick id_set)
       | CNodeType \<Rightarrow> CNodeCap (pick id_set) 0 0 sz
+      | IRQNodeType \<Rightarrow> IrqHandlerCap undefined
       | UntypedType \<Rightarrow> UntypedCap id_set id_set
-      | AsidPoolType \<Rightarrow> AsidPoolCap (pick id_set) (0, 0)
+      | AsidPoolType \<Rightarrow> AsidPoolCap (pick id_set) 0
       | PageTableType \<Rightarrow> PageTableCap (pick id_set) Real None
       | PageDirectoryType \<Rightarrow> PageDirectoryCap (pick id_set) Real None
       | FrameType frame_size \<Rightarrow> FrameCap (pick id_set) {Read, Write} frame_size Real None"

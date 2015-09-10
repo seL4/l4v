@@ -15,60 +15,8 @@ begin
 section "reads_respects"
 subsection "Async IPC"
 
-lemma modify_det:
-  "det (modify f)"
-  apply(clarsimp simp: det_def modify_def get_def put_def bind_def)
-  done
 
-lemma set_register_det:
-  "det (set_register a b)"
-  unfolding set_register_def
-  apply(rule modify_det)
-  done
 
-lemma as_user_set_register_ev2:
-  "labels_are_invisible aag l (pasObjectAbs aag ` {thread,thread'}) \<Longrightarrow>
-   equiv_valid_2 (reads_equiv aag) (affects_equiv aag l) (affects_equiv aag l) (op =) \<top> \<top> (as_user thread (set_register x y)) (as_user thread' (set_register a b))"
-  apply(simp add: as_user_def)
-  apply(rule equiv_valid_2_guard_imp)
-   apply(rule_tac L="{pasObjectAbs aag thread}" and L'="{pasObjectAbs aag thread'}" and Q="\<top>" and Q'="\<top>" in ev2_invisible)
-        apply(simp add: labels_are_invisible_def)+
-      apply((rule modifies_at_mostI | wp set_object_equiv_but_for_labels | simp add: split_def | fastforce dest: get_tcb_not_asid_pool_at)+)[2]
-    apply(auto intro!: TrueI)
-  done
-
-lemma as_user_set_register_reads_respects':
-  "reads_respects aag l \<top> (as_user thread (set_register x y))"
-  apply (case_tac "aag_can_read aag thread \<or> aag_can_affect aag l thread") 
-   apply (simp add: as_user_def fun_app_def split_def)
-   apply (rule gen_asm_ev)
-   apply (wp set_object_reads_respects select_f_ev gets_the_ev)
-   apply (auto intro: reads_affects_equiv_get_tcb_eq set_register_det)[1]
-  apply(simp add: equiv_valid_def2)
-  apply(rule as_user_set_register_ev2)
-  apply(simp add: labels_are_invisible_def)
-  done
-
-lemma set_message_info_reads_respects:
-  "reads_respects aag l \<top>
-    (set_message_info thread info)"
-  unfolding set_message_info_def fun_app_def
-  apply(rule as_user_set_register_reads_respects')
-  done
-
-lemma equiv_valid_get_assert:
-  "equiv_valid_inv I A P f \<Longrightarrow>
-   equiv_valid_inv I A P (get >>= (\<lambda> s. assert (g s) >>= (\<lambda> y. f)))"
-  apply(subst equiv_valid_def2)
-  apply(rule_tac W="\<top>\<top>" in equiv_valid_rv_bind)
-    apply(rule equiv_valid_rv_guard_imp)
-     apply(rule equiv_valid_rv_trivial)
-     apply wp
-   apply(rule_tac R'="\<top>\<top>" in equiv_valid_2_bind)
-      apply(simp add: equiv_valid_def2)
-     apply(rule assert_ev2)
-     apply (wp | simp)+
-  done
 
 lemma equiv_valid_2_get_assert:
   "equiv_valid_2 I A A R P P' f f' \<Longrightarrow>
@@ -107,29 +55,6 @@ lemma dmo_storeWord_modifies_at_most:
 
 
 
-lemma store_word_offs_reads_respects:
-  "reads_respects aag l \<top> (store_word_offs ptr offs v)"
-  apply(simp add: store_word_offs_def fun_app_def)
-  apply(rule equiv_valid_get_assert)
-  apply(simp add: storeWord_def)
-  apply(simp add: do_machine_op_bind)
-  apply(wp)
-     apply(rule use_spec_ev)
-     apply(rule do_machine_op_spec_reads_respects)
-     apply(clarsimp simp: equiv_valid_def2 equiv_valid_2_def in_monad)
-     apply(fastforce intro: equiv_forI elim: equiv_forE)
-    apply(rule use_spec_ev | rule do_machine_op_spec_reads_respects 
-         | simp add: spec_equiv_valid_def | rule assert_ev2 | wp modify_wp)+
-  done
-
-
-lemma set_mrs_reads_respects:
-  "reads_respects aag l (K (aag_can_read aag thread \<or> aag_can_affect aag l thread)) (set_mrs thread buf msgs)"
-  apply(simp add: set_mrs_def)
-  apply(wp mapM_x_ev' store_word_offs_reads_respects set_object_reads_respects
-       | wpc | simp add: split_def split del: split_if add: zipWithM_x_mapM_x)+
-  apply(auto intro: reads_affects_equiv_get_tcb_eq)
-  done
 
 
 
@@ -209,10 +134,9 @@ definition
   ipc_buffer_has_read_auth :: "'a PAS \<Rightarrow> 'a \<Rightarrow> word32 option \<Rightarrow> bool"
 where
 "ipc_buffer_has_read_auth aag l \<equiv>
-    option_case True (\<lambda>buf'. is_aligned buf' msg_align_bits \<and> (\<forall>x \<in> ptr_range buf' msg_align_bits. (l,Read,pasObjectAbs aag x) \<in> (pasPolicy aag)))"
+    case_option True (\<lambda>buf'. is_aligned buf' msg_align_bits \<and> (\<forall>x \<in> ptr_range buf' msg_align_bits. (l,Read,pasObjectAbs aag x) \<in> (pasPolicy aag)))"
 
 
-(* FIXME: ouch -- factor out the word-proof in the middle *)
 lemma set_mrs_equiv_but_for_labels:
   "\<lbrace> equiv_but_for_labels aag L st and K (pasObjectAbs aag thread \<in> L \<and> 
        (case buf of (Some buf') \<Rightarrow>
@@ -241,7 +165,7 @@ lemma set_mrs_equiv_but_for_labels:
          apply(fastforce simp: msg_max_length_def msg_align_bits)
         apply(erule order_trans)
         apply(subst p_assoc_help)
-        apply(simp add: add_assoc)
+        apply(simp add: add.assoc)
         apply(rule word_plus_mono_right)
          apply(rule word_less_sub_1)
          apply(rule_tac y="of_nat msg_max_length * of_nat word_size + 3" in le_less_trans)
@@ -399,7 +323,7 @@ lemma tcb_sched_action_equiv_but_for_labels:
    apply(fastforce simp: equiv_asids_def equiv_asid_def elim: states_equiv_forE)
   apply (clarsimp simp: pas_refined_def tcb_domain_map_wellformed_aux_def split: option.splits)
   apply (rule equiv_forI)
-  apply (erule_tac x="(thread, tcb_domain a)" in ballE)
+  apply (erule_tac x="(thread, tcb_domain (the (ekheap s thread)))" in ballE)
    apply(fastforce elim: states_equiv_forE intro: equiv_forI dest: equiv_forD[where f=ready_queues])
   apply (force intro: domtcbs)
   done
@@ -683,7 +607,7 @@ definition
   aag_can_read_or_affect_ipc_buffer :: "'a PAS \<Rightarrow> 'a \<Rightarrow> word32 option \<Rightarrow> bool"
 where
 "aag_can_read_or_affect_ipc_buffer aag l \<equiv>
-    option_case True (\<lambda>buf'. is_aligned buf' msg_align_bits \<and> (\<forall>x \<in> ptr_range buf' msg_align_bits. aag_can_read aag x \<or> aag_can_affect aag l x))"
+    case_option True (\<lambda>buf'. is_aligned buf' msg_align_bits \<and> (\<forall>x \<in> ptr_range buf' msg_align_bits. aag_can_read aag x \<or> aag_can_affect aag l x))"
 
 
 lemma lookup_ipc_buffer_aag_can_read_or_affect:
@@ -714,7 +638,7 @@ lemma cptrs_in_ipc_buffer:
 
 lemma for_each_byte_of_word_def2:
   "for_each_byte_of_word P ptr \<equiv> (\<forall> x\<in>ptr_range ptr 2. P x)"
-  apply(simp add: for_each_byte_of_word_def ptr_range_def add_commute)
+  apply(simp add: for_each_byte_of_word_def ptr_range_def add.commute)
   done
 
 lemma aag_has_auth_to_read_cptrs:
@@ -741,7 +665,7 @@ definition
   ipc_buffer_disjoint_from :: "word32 set \<Rightarrow> word32 option \<Rightarrow> bool"
 where
 "ipc_buffer_disjoint_from X  \<equiv>
-    option_case True (\<lambda>buf'. is_aligned buf' msg_align_bits \<and> (ptr_range buf' msg_align_bits) \<inter> X = {})"
+    case_option True (\<lambda>buf'. is_aligned buf' msg_align_bits \<and> (ptr_range buf' msg_align_bits) \<inter> X = {})"
 
 lemma get_extra_cptrs_rev:
   "reads_equiv_valid_inv A aag ((\<lambda> s. ipc_buffer_disjoint_from (range_of_arm_globals_frame s) buffer) and K (ipc_buffer_has_read_auth aag (pasSubject aag) buffer \<and> (buffer_cptr_index + unat (mi_extra_caps mi) < 2 ^ (msg_align_bits - 2))))
@@ -867,25 +791,6 @@ lemma reads_equiv_cdt_has_children:
   apply(erule equiv_forE)
   apply(drule_tac x=c in meta_spec)
   apply(fastforce dest: aag_can_read_self)
-  done
-
-
-(* FIXME: move to EquivValid *)
-lemma equiv_valid_rv_liftE_bindE:
-  assumes ev1:
-  "equiv_valid_rv_inv I A W P f"
-  assumes ev2:
-  "\<And> rv rv'. W rv rv' \<Longrightarrow> equiv_valid_2 I A A R (Q rv) (Q rv') (g rv) (g rv')"
-  assumes hoare:
-  "\<lbrace> P \<rbrace> f \<lbrace> Q \<rbrace>"
-  shows "equiv_valid_rv_inv I A R P ((liftE f) >>=E g)"
-  apply(unfold bindE_def)
-  apply(rule_tac Q="\<lambda> rv. K (\<forall> v. rv \<noteq> Inl v) and (\<lambda> s. \<forall> v. rv = Inr v \<longrightarrow> Q v s)" in equiv_valid_rv_bind)
-    apply(rule_tac E="dc" in equiv_valid_2_liftE)
-    apply(rule ev1)
-   apply(clarsimp simp: lift_def split: sum.split)
-   apply(insert ev2, fastforce simp: equiv_valid_2_def)[1]
-  apply(insert hoare, clarsimp simp: valid_def liftE_def bind_def return_def split_def)
   done
 
 lemma ensure_no_children_rev:
@@ -1313,7 +1218,7 @@ lemma dmo_loadWord_reads_respects:
           apply(rule assert_wp)+
         apply simp+
        apply(clarsimp simp: equiv_valid_2_def in_monad for_each_byte_of_word_def)
-       apply(fastforce elim: equiv_forD orthD1 simp: ptr_range_def add_commute)
+       apply(fastforce elim: equiv_forD orthD1 simp: ptr_range_def add.commute)
       apply (wp wp_post_taut loadWord_inv | simp)+
   done
 
@@ -1529,7 +1434,7 @@ lemma lookup_ipc_buffer_disjoint_from_globals_frame:
            ipc_buffer_disjoint_from (range_of_arm_globals_frame s) rva\<rbrace>"
   unfolding lookup_ipc_buffer_def
   apply(rule hoare_pre)
-  apply (wp get_cap_wp thread_get_wp' | wpc | simp)+
+   apply (wp get_cap_wp thread_get_wp' | wpc | simp)+
   apply (clarsimp simp: cte_wp_at_caps_of_state ipc_buffer_has_read_auth_def get_tcb_ko_at [symmetric])
   apply (rule drop_imp)
   (* CLAG from here onwards -- FIXME to remove duplication in this file *)
@@ -1569,9 +1474,11 @@ lemma lookup_ipc_buffer_disjoint_from_globals_frame:
    apply(simp)
   apply(simp add: cap_range_def)
   apply(case_tac "tcb_ipcframe tcb")
-            apply(simp)+
+             apply(simp)+
+  apply(rename_tac arch_cap)
   apply(case_tac arch_cap)
       apply(simp)+ (* word \<noteq> arm_globals_frame from valid_global_refs*)
+    apply(rename_tac word cap_rights vmpage_size option)
     apply(clarsimp simp: valid_arch_state_def obj_at_def) (* ko_at arm *)
     apply(unfold pspace_distinct_def')
     apply(erule_tac x=word in allE)
@@ -1612,6 +1519,7 @@ lemma receive_ipc_reads_respects:
   apply (rule gen_asm_ev)
   apply (simp add: receive_ipc_def thread_get_def split: cap.split)
   apply (clarsimp simp: fail_ev_pre)
+  apply (rename_tac word1 word2 set)
   apply (wp static_imp_wp set_endpoint_reads_respects set_thread_state_reads_respects
             setup_caller_cap_reads_respects do_ipc_transfer_reads_respects
             switch_if_required_to_reads_respects
@@ -1620,12 +1528,18 @@ lemma receive_ipc_reads_respects:
         | simp)+
   sorry (*
               apply (rule_tac Q="\<lambda>rv s. pas_refined aag s \<and> pas_cur_domain aag s \<and> is_subject aag (cur_thread s) \<and> (sender_can_grant rvd \<longrightarrow> is_subject aag (hd list))" in hoare_strengthen_post)
+=======
+              apply (rename_tac list rvc rvd)
+              apply (rule_tac Q="\<lambda>rv s. pas_refined aag s \<and> pas_cur_domain aag s \<and> is_subject aag (cur_thread s) \<and> 
+                                        (sender_can_grant rvd \<longrightarrow> is_subject aag (hd list))"
+                              in hoare_strengthen_post)
+>>>>>>> master
                apply(wp set_endpoint_reads_respects
                         hoare_vcg_imp_lift [OF set_endpoint_get_tcb, unfolded disj_not1] hoare_vcg_all_lift
                         set_thread_state_reads_respects get_endpoint_reads_respects
                         get_endpoint_wp do_ipc_transfer_pas_refined
                     | wpc | simp add: get_thread_state_def thread_get_def)+
-  apply (clarsimp simp: conj_ac)
+  apply (clarsimp simp: conj_comms)
   apply(rule conjI)
    apply(auto dest: reads_ep)[1]
   apply clarsimp
@@ -1720,7 +1634,10 @@ lemma send_ipc_reads_respects:
   apply (wp set_endpoint_reads_respects set_thread_state_reads_respects 
             when_ev setup_caller_cap_reads_respects thread_get_reads_respects
         | wpc | simp split del: split_if)+
-               apply(rule_tac Q="\<lambda> r s. is_subject aag (cur_thread s) \<and> (can_grant \<longrightarrow> is_subject aag a)" in hoare_strengthen_post)
+               apply(rename_tac list word list' rvb rvc)
+               apply(rule_tac Q="\<lambda>r s. is_subject aag (cur_thread s) \<and> 
+                                       (can_grant \<longrightarrow> is_subject aag (hd list))"
+                              in hoare_strengthen_post)
                 apply(wp set_thread_state_reads_respects 
                          do_ipc_transfer_reads_respects
                          set_endpoint_reads_respects
@@ -1731,19 +1648,19 @@ lemma send_ipc_reads_respects:
                          do_ipc_transfer_pas_refined
                      | wpc
                      | simp add: get_thread_state_def thread_get_def)+
-  apply (clarsimp simp: conj_ac)
+  apply (clarsimp simp: conj_comms)
   apply (rule conjI)
    apply(fastforce dest: reads_ep)
   apply clarsimp
   apply(subgoal_tac "\<forall> s t. reads_equiv aag s t \<and> affects_equiv aag l s t \<longrightarrow>
                       get_tcb xa s = get_tcb xa t")
-  apply (clarsimp simp: conj_ac cong: conj_cong)
+  apply (clarsimp simp: conj_comms cong: conj_cong)
    apply(rule conjI)
     (* clagged from Ipc_AC *)
     apply (clarsimp simp: split_def obj_at_def)
    apply(rule conjI)
     apply (rule obj_at_valid_objsE, assumption+)
-    apply (clarsimp cong: conj_cong imp_cong simp: tcb_at_st_tcb_at conj_ac)
+    apply (clarsimp cong: conj_cong imp_cong simp: tcb_at_st_tcb_at conj_comms)
     apply (auto dest: ep_queued_st_tcb_at [where P = \<top>] simp:  tcb_at_st_tcb_at valid_ep_def valid_obj_def obj_at_def split: list.split)[1]
    apply(rule receive_endpoint_reads_affects_queued)
            apply (assumption | simp)+
@@ -1863,7 +1780,7 @@ lemma do_reply_transfer_reads_respects_f:
                     cap_delete_one_silc_inv reads_respects_f[OF thread_get_reads_respects]
                     reads_respects_f[OF get_thread_state_rev]
                | simp add: invs_valid_objs invs_valid_global_refs invs_distinct invs_arch_state invs_valid_ko_at_arm | rule conjI | elim conjE | assumption)+)[8]
-  apply(clarsimp simp: conj_ac)
+  apply(clarsimp simp: conj_comms)
   apply(rule conjI, fastforce intro: reads_lrefl)+
   apply(rule allI)
   apply(rule conjI, fastforce intro: reads_lrefl)+
@@ -1922,25 +1839,6 @@ lemma setup_caller_cap_globals_equiv:
 
 
 
-lemma set_message_info_globals_equiv:
-  "\<lbrace>globals_equiv s and valid_ko_at_arm and (\<lambda>s. thread \<noteq> idle_thread s)\<rbrace> set_message_info thread info \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
-  unfolding set_message_info_def
-  apply(wp as_user_globals_equiv)
-  done
-
-lemma store_word_offs_globals_equiv:
-  "\<lbrace>globals_equiv s and
-    (\<lambda>sa. ptr_range (ptr + of_nat offs * of_nat word_size) 2 \<inter>
-          range_of_arm_globals_frame sa = {})\<rbrace>
-    store_word_offs ptr offs v
-    \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
-  unfolding store_word_offs_def fun_app_def
-  apply (wp do_machine_op_globals_equiv)
-    apply clarsimp
-    apply (erule use_valid[OF _ storeWord_globals_equiv])
-    apply (wp | simp)+
-  done
-
 lemma set_extra_badge_globals_equiv:
   "\<lbrace>globals_equiv s and (\<lambda>sa. ptr_range (buffer + (of_nat buffer_cptr_index
       + of_nat n) * of_nat word_size) 2 \<inter> range_of_arm_globals_frame sa = {})\<rbrace>
@@ -1985,13 +1883,13 @@ next
      apply(rule conjI)
       apply(fastforce)
      apply(clarsimp)
-     apply(simp add: add_assoc[symmetric])
-     apply(subst add_assoc) 
+     apply(simp add: add.assoc[symmetric])
+     apply(subst add.assoc) 
      apply(subst of_nat_Suc[symmetric])
      apply(fastforce)
     apply(clarsimp)
-    apply(simp add: add_assoc[symmetric])
-    apply(subst add_assoc)
+    apply(simp add: add.assoc[symmetric])
+    apply(subst add.assoc)
     apply(subst of_nat_Suc[symmetric])
     apply(fastforce)
     done
@@ -2081,42 +1979,7 @@ lemma do_normal_transfer_globals_equiv:
   apply(fastforce)
   done
 
-lemma length_msg_lt_msg_max:
-  "length msg_registers < msg_max_length"
-  apply(simp add: length_msg_registers msg_max_length_def)
-  done
 
-lemma set_mrs_globals_equiv:
-  "\<lbrace>globals_equiv s and valid_ko_at_arm and (\<lambda>sa. thread \<noteq> idle_thread sa) and (\<lambda>sa. \<forall>x pptr. buf = Some pptr \<and>     x\<in>set [Suc (length msg_registers)..<Suc msg_max_length] \<longrightarrow>
-    ptr_range (pptr + of_nat x * of_nat word_size) 2 \<inter>
-    range_of_arm_globals_frame sa = {})\<rbrace>
-      set_mrs thread buf msgs
-    \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
-  unfolding set_mrs_def
-  apply(wp | wpc)+
-       apply(simp add: zipWithM_x_mapM_x)
-       apply(rule conjI)
-        apply(rule impI)
-        apply(rule_tac Q="\<lambda>_. globals_equiv s and (\<lambda>sa. \<forall>rb x. (buf = Some rb \<and> x\<in>set ([Suc (length msg_registers)..<msg_max_length] @ [msg_max_length])) \<longrightarrow> ptr_range (rb + of_nat x * of_nat word_size) 2 \<inter> range_of_arm_globals_frame sa = {})"
-          in hoare_strengthen_post)
-         apply(wp mapM_x_wp')
-         apply(simp add: split_def)
-         apply(wp store_word_offs_globals_equiv)
-          apply(simp)
-         apply(clarsimp)         
-         apply(erule_tac x=aa in allE)
-         apply(clarsimp)
-         apply(erule in_set_zipE)
-         apply(clarsimp)
-         apply(fastforce)
-        apply(simp)
-       apply(clarsimp)
-       apply(insert length_msg_lt_msg_max)
-       apply(simp)
-      apply(wp set_object_globals_equiv static_imp_wp)
-     apply(wp hoare_vcg_all_lift set_object_globals_equiv static_imp_wp)
-   apply(clarsimp simp:arm_global_pd_not_tcb)+
-  done
 
 
 
@@ -2187,9 +2050,11 @@ lemma auth_ipc_buffers_do_not_overlap_arm_globals_frame:
    apply(simp)
   apply(simp add: cap_range_def)
   apply(case_tac "tcb_ipcframe tcb")
-            apply(simp)+
+             apply(simp)+
+  apply(rename_tac arch_cap)
   apply(case_tac arch_cap)
       apply(simp)+ (* word \<noteq> arm_globals_frame from valid_global_refs*)
+    apply(rename_tac word rights vmpage_size option)
     apply(clarsimp simp: valid_arch_state_def obj_at_def) (* ko_at arm *)
     apply(unfold pspace_distinct_def')
     apply(erule_tac x=word in allE)
@@ -2197,7 +2062,7 @@ lemma auth_ipc_buffers_do_not_overlap_arm_globals_frame:
     apply(erule_tac x="ArchObj (DataPage vmpage_size)" in allE)
     apply(erule_tac x="ArchObj (DataPage ARMSmallPage)" in allE)
     apply(fastforce simp: obj_range_def ptr_range_def)+
-    done
+  done
 
 
 lemma do_ipc_transfer_globals_equiv:
@@ -2239,26 +2104,26 @@ lemma do_ipc_transfer_globals_equiv:
      apply(simp)
     apply(simp add: word_bits_def)
    apply(clarsimp)
-    apply(subgoal_tac "ptr_range (pptr + of_nat xa * of_nat word_size) 2 \<subseteq> ptr_range pptr msg_align_bits")
-     apply(fastforce)
-    apply(rule ptr_range_subset)
-       apply(assumption)
-      apply(simp add: msg_align_bits)
-     apply(simp add: msg_align_bits word_bits_def)
-    apply(simp add: upto_enum_step_def)
-    apply(rule conjI)
-     apply(drule is_aligned_no_overflow)
+   apply(subgoal_tac "ptr_range (pptr + of_nat xa * of_nat word_size) 2 \<subseteq> ptr_range pptr msg_align_bits")
+    apply(fastforce)
+   apply(rule ptr_range_subset)
+      apply(assumption)
      apply(simp add: msg_align_bits)
-    apply(clarsimp simp: image_def)
-    apply(rule_tac x="of_nat xa" in exI)
-    apply(simp add: msg_align_bits word_size_def)
-    apply(subgoal_tac "of_nat xa \<le> 0x80 - (1::word32)")
-     apply(simp)
-    apply(rule word_less_sub_1)
-    apply(subgoal_tac "of_nat xa < (2::word32) ^ 7")
-     apply(simp)
-    apply(rule of_nat_less_pow)
-     apply(simp)
+    apply(simp add: msg_align_bits word_bits_def)
+   apply(simp add: upto_enum_step_def)
+   apply(rule conjI)
+    apply(drule is_aligned_no_overflow)
+    apply(simp add: msg_align_bits)
+   apply(clarsimp simp: image_def)
+   apply(rule_tac x="of_nat xa" in exI)
+   apply(simp add: msg_align_bits word_size_def)
+   apply(subgoal_tac "of_nat xa \<le> 0x80 - (1::word32)")
+    apply(simp)
+   apply(rule word_less_sub_1)
+   apply(subgoal_tac "of_nat xa < (2::word32) ^ 7")
+    apply(simp)
+   apply(rule of_nat_less_pow)
+    apply(simp)
     apply(fastforce simp: msg_max_length_def length_msg_registers)
    apply(simp add: word_bits_def)
 

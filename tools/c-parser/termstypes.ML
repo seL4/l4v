@@ -68,11 +68,11 @@ fun mk_i2w_t rty = Const(@{const_name "Word.word_of_int"},
                          int --> rty)
 
 fun mk_lshift(t1 : term, t2 : term) : term =
-    Const(@{const_name "Bit_Operations.bits_class.shiftl"},
+    Const(@{const_name "Bits.bits_class.shiftl"},
           type_of t1 --> nat --> type_of t1) $ t1 $ t2
 
 fun mk_rshift(t1, t2) =
-    Const(@{const_name "Bit_Operations.bits_class.shiftr"},
+    Const(@{const_name "Bits.bits_class.shiftr"},
           type_of t1 --> nat --> type_of t1) $ t1 $ t2
 
 
@@ -174,7 +174,8 @@ fun mk_ptr (w,ty) =
 fun mk_global_addr_ptr (gname, ty) =
     mk_ptr (symbol_table $ HOLogic.mk_string gname, ty)
 
-fun mk_fnptr _ (* thy *) s = mk_ptr (symbol_table $ HOLogic.mk_string s, unit)
+fun mk_fnptr _ (* thy *) s =
+  mk_ptr (symbol_table $ HOLogic.mk_string (MString.dest s), unit)
 
 
 
@@ -206,7 +207,7 @@ fun mk_field_lvalue (p,f,ty) =
 fun mk_field_lvalue_ptr _ (p,f,ty,res_ty) =
       mk_ptr (mk_field_lvalue (p,f,ty), res_ty)
 
-val NULLptr = mk_ptr(Const(@{const_name "Groups.zero_class.zero"}, addr_ty), mk_ptr_ty unit)
+val NULLptr = mk_ptr(Const(@{const_name "Groups.zero_class.zero"}, addr_ty), unit)
 
 fun mk_ptr_coerce(oldtm, newty) = let
   val oldty = type_of oldtm

@@ -20,17 +20,23 @@ sig
   type 'a rcd_env = (string * (string * 'a) list) list
   type senv = int ctype rcd_env
 
+
+  (* the "isa_name" is the munged name, but in the form without trailing
+     _' suffixes *)
+  type nm_info = {src_name : string, isa_name : MString.t}
+
   type var_info
   val is_global : var_info -> bool
   val srcname : var_info -> string
   val fullname : var_info -> string
-  val get_mname : var_info -> string
+  val get_mname : var_info -> MString.t
   val get_vi_fname : var_info -> string option
   val get_vi_type : var_info -> int ctype
   val get_vi_senv : var_info -> senv
   val get_vi_attrs : var_info -> StmtDecl.gcc_attribute list
   val declpos : var_info -> Region.t
   val vi_compare : var_info * var_info -> order
+  val vi_nm_info : var_info -> nm_info
 
   datatype modify_var = M of var_info | TheHeap | PhantomState | GhostState
   val mvar_compare : modify_var * modify_var -> order
@@ -50,12 +56,12 @@ sig
   val compute_callgraphs : csenv ->
                            {callgraph: string Binaryset.set Symtab.table,
                             callers : string Binaryset.set Symtab.table}
-  val get_addressed : csenv -> expr list Symtab.table
+  val get_addressed : csenv -> expr list MSymTab.table
   val get_callers   : csenv -> string Binaryset.set Symtab.table
   val get_typedefs  : csenv -> int ctype Symtab.table list
   val get_vars      : csenv -> var_info list Symtab.table
   val get_globals   : csenv -> var_info list
-  val get_globinits : csenv -> Absyn.expr Symtab.table
+  val get_globinits : csenv -> Absyn.expr MSymTab.table
   val get_params : string -> csenv -> var_info list option
   val get_embedded_fncalls : csenv -> fncall_type Binaryset.set
   val get_addressed_vis : csenv -> var_info list
@@ -70,7 +76,7 @@ sig
   val is_recursivefn : csenv -> string -> bool
   val mvar_traverse : csenv -> csenv
   val get_modified_global_locns : csenv -> string Binaryset.set MVar_Table.table
-  val calc_untouched_globals : csenv -> int ctype Symtab.table
+  val calc_untouched_globals : csenv -> int ctype MSymTab.table
 
   val fndes_callinfo : csenv -> expr -> fncall_type * (int ctype * int ctype list)
 
@@ -114,6 +120,7 @@ fun fname_str NONE = NameGeneration.initialisation_function
 
 type 'a rcd_env = (string * (string * 'a) list) list
 type senv = int ctype rcd_env
+type Mstring = string (* munged string *)
 datatype var_info =
          VI of {name : string,
                 return_var : bool,
@@ -121,10 +128,13 @@ datatype var_info =
                 struct_env : senv,
                 fname : string option,
                 proto_param : bool,
-                munged_name : string,
-                is_genuine : bool,
+                munged_name : MString.t,
                 declared_at : Region.t,
                 attrs : gcc_attribute list}
+
+type nm_info = {src_name : string, isa_name : MString.t}
+fun vi_nm_info (VI {name, munged_name, ...}) : nm_info =
+  {src_name = name, isa_name = munged_name}
 fun viToString (VI {name, fname,...}) =
     case fname of
       NONE => "global "^name
@@ -137,12 +147,12 @@ fun get_vi_fname (VI {fname,...}) = fname
 fun get_vi_type (VI {vtype,...}) = vtype
 fun get_vi_senv (VI {struct_env,...}) = struct_env
 fun declpos (VI {declared_at,...}) = declared_at
-fun is_genuine (VI {is_genuine, ...}) = is_genuine
 
 fun vi_compare(VI vi1, VI vi2) = let
   val ocmp = option_compare and pcmp = pair_compare and scmp = String.compare
+  val mscmp = MString.compare
 in
-  pcmp (ocmp scmp, pcmp (scmp, scmp))
+  pcmp (ocmp scmp, pcmp (scmp, mscmp))
        ((#fname vi1, (#name vi1, #munged_name vi1)),
         (#fname vi2, (#name vi2, #munged_name vi2)))
 end
@@ -216,7 +226,7 @@ fun mvar_compare (TheHeap, TheHeap) = EQUAL
   | mvar_compare (GhostState, GhostState) = EQUAL
 
 fun mvar_toString TheHeap = "<the heap>"
-  | mvar_toString (M vi) = get_mname vi
+  | mvar_toString (M vi) = MString.dest (get_mname vi)
   | mvar_toString PhantomState = "<phantom state>"
   | mvar_toString GhostState = "<ghost state>"
 
@@ -251,12 +261,12 @@ datatype csenv (* CalculateState environment *) =
                  scope : var_info Symtab.table list,
                  array_mentions : (int ctype * int) Binaryset.set,
                  enumenv : string wrap list *
-                           (int * string option) Symtab.table,
-                 globinits : Absyn.expr Symtab.table,
+                           (IntInf.int * string option) Symtab.table,
+                 globinits : Absyn.expr MSymTab.table,
                  heaptypes : int ctype Binaryset.set,
                  call_info : fncall_type Binaryset.set Symtab.table,
                  caller_info : string Binaryset.set Symtab.table,
-                 addressed : expr list Symtab.table,
+                 addressed : expr list MSymTab.table,
                  embedded_fncalls : fncall_type Binaryset.set,
                  recursive_functions : string Binaryset.set,
                  defined_functions : Region.Wrap.region Symtab.table,
@@ -326,19 +336,20 @@ fun emptycse ({anon_vars,owners,allow_underscore_idents = aui,...} : s2s_config)
                                                 Int.compare)),
          call_info = Symtab.empty,
          caller_info = Symtab.empty,
-         addressed = Symtab.empty,
+         addressed = MSymTab.empty,
          defined_functions = Symtab.empty,
          embedded_fncalls = Binaryset.empty fncall_cmp,
          recursive_functions = Binaryset.empty String.compare,
          modifies = Symtab.empty, modify_locs = MVar_Table.empty,
          typedefs = [], fnspecs = Symtab.empty, read_globals = Symtab.empty,
-         globinits = Symtab.empty, owners = owners}
+         globinits = MSymTab.empty, owners = owners}
 
 fun cons h t = h::t
 
 fun get_addressed_vis (CSE {vars, addressed, ...}) = let
   fun innerfold (vi,acc) =
-      if is_global vi andalso Symtab.defined addressed (srcname vi) then vi::acc
+      if is_global vi andalso MSymTab.defined addressed (get_mname vi) then
+        vi::acc
       else acc
   fun foldthis (_, vis) acc = List.foldl innerfold acc vis
 in
@@ -395,24 +406,24 @@ local
     cse_makeUpdate (from, from', to)
   end z
 
-  fun vi_makeUpdate z = makeUpdate10 z
+  fun vi_makeUpdate z = makeUpdate9 z
   fun update_VI z = let
     fun from name return_var vtype struct_env fname proto_param
-            munged_name is_genuine declared_at attrs =
+            munged_name declared_at attrs =
         {name = name, return_var = return_var, vtype = vtype,
          struct_env = struct_env, fname = fname, declared_at = declared_at,
          proto_param = proto_param, munged_name = munged_name,
-         is_genuine = is_genuine, attrs = attrs}
-    fun from' attrs declared_at is_genuine munged_name proto_param fname struct_env
+         attrs = attrs}
+    fun from' attrs declared_at munged_name proto_param fname struct_env
               vtype return_var name =
         {name = name, return_var = return_var, vtype = vtype,
          struct_env = struct_env, fname = fname, declared_at = declared_at,
          proto_param = proto_param, munged_name = munged_name,
-         is_genuine = is_genuine, attrs = attrs}
+         attrs = attrs}
     fun to f {name, return_var, vtype, struct_env, fname, proto_param,
-              munged_name, is_genuine, declared_at, attrs} =
+              munged_name, declared_at, attrs} =
         f name return_var vtype struct_env fname proto_param
-          munged_name is_genuine declared_at attrs
+          munged_name declared_at attrs
   in
     vi_makeUpdate (from, from', to)
   end z
@@ -460,8 +471,6 @@ fun cse_fupdglobinits f (CSE cse) =
 
 fun upd_mname mname (VI vi) =
     VI (update_VI vi (U #munged_name mname) $$)
-fun vi_upd_genuine b (VI vi) =
-    VI (update_VI vi (U #is_genuine b) $$)
 fun vi_upd_type ty (VI vi) =
     VI (update_VI vi (U #vtype ty) $$)
 
@@ -505,7 +514,7 @@ fun new_embedded_fncall s cse =
     cse_fupdembedded_fncalls (fn set => Binaryset.add(set,s)) cse
 
 fun new_addressed vi expr =
-    cse_fupdaddressed (Symtab.map_default (srcname vi, []) (cons expr))
+    cse_fupdaddressed (MSymTab.map_default (get_mname vi, []) (cons expr))
 
 
 fun new_array tysz =
@@ -622,27 +631,28 @@ in
 end
 
 fun calc_untouched_globals cse = let
-  open Symtab
+  open MSymTab
   fun mydelete (t,e) = delete_safe e t
   val all_globals = let
     fun foldthis (vi as VI vr, tab) =
         if #return_var vr then tab
-        else update (srcname vi, get_vi_type vi) tab
+        else
+          update (get_mname vi, get_vi_type vi) tab
   in
     List.foldl foldthis empty (get_globals cse)
   end
   val remove_modified = let
     fun foldthis (mvar, _) set =
         case mvar of
-          M vi => mydelete(set, srcname vi)
+          M vi => mydelete(set, get_mname vi)
         | _ => set
   in
     MVar_Table.fold foldthis (get_modified_global_locns cse)
   end
   val remove_addressed = let
-    fun foldthis (vname, _) set = mydelete(set, vname)
+    fun foldthis (k, _) set = mydelete(set, k)
   in
-    Symtab.fold foldthis (get_addressed cse)
+    MSymTab.fold foldthis (get_addressed cse)
   end
 in
   all_globals
@@ -759,7 +769,7 @@ fun process_enumdecl (enameopt_w,econsts) env = let
       | NONE => let
           val e_val = case eopt of
                         NONE => i
-                      | SOME e => IntInf.toInt (consteval (cse2ecenv env) e)
+                      | SOME e => consteval (cse2ecenv env) e
           val tab' = Symtab.update(node ecn_w, (e_val, node enameopt_w)) alist
         in
           (e_val + 1, ecn_w::set, tab')
@@ -874,16 +884,16 @@ fun munge_insert (v as VI vrec) cse = let
   fun merge_vis v1 v2 = let
     val ty1 = get_vi_type v1
     val ty2 = get_vi_type v2
-    val g1 = is_genuine v1
-    val g2 = is_genuine v2
   in
-    vi_upd_type (max_type ty1 ty2) (vi_upd_genuine (g1 orelse g2) v1)
+    vi_upd_type (max_type ty1 ty2) v1
   end
+  fun same_global v' =
+    is_global v' andalso srcname v' = name andalso get_mname v' = get_mname v
 
   fun vars_add v1 vlist =
       if not (is_global v1) then merge_insert(name,v1)
       else
-        case pluck (fn v' => is_global v' andalso srcname v' = name) vlist of
+        case pluck same_global vlist of
           NONE => Symtab.update(name, v::vlist)
         | SOME (v2, rest) => Symtab.update(name, merge_vis v1 v2::rest)
   fun scope_add v1 tab =
@@ -921,6 +931,7 @@ in
             val newname =
                 tag_name_with_type {name = name,
                                     typname = tyname (get_vi_type v)}
+                  |> MString.mk
             val new_vi = upd_mname newname v
           in
             (new_vi, (cse_fupdvars (merge_insert(name, new_vi)) o
@@ -931,9 +942,9 @@ in
       val allvars_in_scope = List.concat (map (map #2 o Symtab.dest) (get_scope cse))
       val varprefix = tyname (get_vi_type v) ^ "'local"
       fun foldthis (vi, c) =
-          if String.isPrefix varprefix (get_mname vi) then c + 1 else c
+          if String.isPrefix varprefix (MString.dest (get_mname vi)) then c + 1 else c
       val numdups = List.foldl foldthis 0 allvars_in_scope
-      val new_vi = upd_mname (varprefix ^ Int.toString numdups) v
+      val new_vi = upd_mname (MString.mk (varprefix ^ Int.toString numdups)) v
     in
       (new_vi, (cse_fupdvars (merge_insert(name, new_vi)) o
                 cse_fupdscope (fupd_hd (Symtab.update(name, new_vi)))) cse)
@@ -953,7 +964,7 @@ in
     NONE => munge_insert v e
   | SOME (i,_) => let
     in
-      case dest_embret name of
+      case dest_embret (get_mname v) of
         NONE => if i = length scopes - 1 (* i.e., a global *) then
                   munge_insert v e
                 else
@@ -1192,10 +1203,11 @@ fun process_expr lvstate fname (env as CSE {senv, ...}) e = let
       if count <= 0 then acc
       else let
           val nm = embret_var_name (tyname rettype, count)
-          val retvar = VI {name = nm, munged_name = nm, vtype = rettype,
-                           struct_env = senv, proto_param = false,
-                           fname = SOME "", return_var = true, attrs = [],
-                           is_genuine = true, declared_at = Region.bogus}
+          val retvar =
+              VI {name = MString.dest nm, munged_name = nm, vtype = rettype,
+                  struct_env = senv, proto_param = false,
+                  fname = SOME "", return_var = true, attrs = [],
+                  declared_at = Region.bogus}
         in
           foldthis (rettype, count - 1) (#2 (insert_var(retvar, acc)))
         end
@@ -1214,7 +1226,7 @@ fun get_modified env e = let
           fun check vi = srcname vi = s andalso get_mname vi = mnm
         in
           case find_scoped_vdecl s (get_scope env) of
-            NONE => raise Fail ("Munged Variable "^s^", "^mnm^
+            NONE => raise Fail ("Munged Variable "^s^", "^MString.dest mnm^
                                 " not in environment")
           | SOME (_, vi) => let
               val isptr = case ty of Ptr _ => true | _ => false
@@ -1224,7 +1236,7 @@ fun get_modified env e = let
                   (_, true, true) => SOME TheHeap
                 | (true, _, _) => SOME (M vi)
                 | _ => NONE
-              else raise Fail ("Munged Variable "^s^", "^mnm^
+              else raise Fail ("Munged Variable "^s^", "^MString.dest mnm^
                                " not in environment")
             end
         end
@@ -1275,9 +1287,10 @@ fun fold_pipe (f : 'env -> 'a -> 'b * 'env) (env0 : 'env) (items : 'a list) =
    level *)
 fun process_decl fname (d:declaration wrap) (e as CSE {senv,...}) = let
   val ecenv = cse2ecenv e
+  fun puredecl d = {decl = d, localinits = [], globalinits = []}
 in
   case node d of
-    VarDecl (ty,s,is_genuine,iopt,attrs) => let
+    VarDecl (ty,s,storage_specs,iopt,attrs) => let
       val s = if node s = phantom_state_name then
                 (Feedback.errorStr'
                      (left s, right s,
@@ -1294,6 +1307,17 @@ in
         if get_allow_underscores e orelse check_uscore_ok str then str
         else (Feedback.errorStr'(left s, right s, err); str)
       end
+      val is_extern = is_extern storage_specs
+      val is_static = is_static storage_specs
+      val _ = if is_static andalso is_extern then
+                Feedback.errorStr'(left s, right s,
+                                   "Var can't be declared static *and* extern")
+              else ()
+      val _ = if is_extern andalso isSome fname andalso isSome iopt then
+                Feedback.errorStr'(left s, right s,
+                                   "Can't initialise block-local extern")
+              else ()
+      val fname = if is_extern then NONE else fname
 
       val ty = fparam_norm ty
       val ty =
@@ -1305,7 +1329,7 @@ in
                 NONE => let
                 in
                   case fname of
-                    SOME fnm => if is_genuine then
+                    SOME fnm => if not is_extern then
                                   raise Fail ("Array "^str^" in function "^fnm^
                                               " must be given a size or an \
                                               \initialiser")
@@ -1328,22 +1352,31 @@ in
       val e = process_type (left d, right d) (ty, e)
       val vty = constify_abtype ecenv ty
 
+      val (fname, munged_name) =
+          if is_static andalso isSome fname then
+            (NONE, mk_localstatic {fname = valOf fname, vname = str})
+          else (fname, MString.mk str)
+
       val vi = VI {name = str, vtype = vty, attrs = attrs,
-                   munged_name = str, struct_env = senv, proto_param = false,
-                   fname = fname, return_var = false, is_genuine = is_genuine,
+                   munged_name = munged_name, struct_env = senv,
+                   proto_param = false,
+                   fname = fname, return_var = false,
                    declared_at = Region.make{left = left s, right = right s}}
       val (vi, e) = insert_var (vi, e)
+      (* inserting vi may force further munging if the name is already being
+         used at a different type *)
+      val munged_name = get_mname vi
       val bogus = SourcePos.bogus
-      val mvinfo = MungedVar {munge = get_mname vi,
+      val mvinfo = MungedVar {munge = munged_name,
                               owned_by = StmtDecl.get_owned_by attrs}
       val var_e = ewrap(Var (str, ref (SOME (vty, mvinfo))), left s, right s)
-      val (init, proc_expr_opt, e) =
+      val (inits, proc_expr_opt, e) =
           case iopt of
             NONE => let
             in
               case fname of
-                NONE => (sbogwrap EmptyStmt, NONE, e)
-              | SOME _ => (swrap(LocalInit var_e, left s, right s),
+                NONE => ([], NONE, e)
+              | SOME _ => ([swrap(LocalInit var_e, left s, right s)],
                            NONE,
                            e)
             end
@@ -1373,7 +1406,7 @@ in
                                                 \function call")
                           | SOME _ => ()
                 in
-                  (w (AssignFnCall(SOME var_e, e_fn, args)),
+                  ([w (AssignFnCall(SOME var_e, e_fn, args))],
                    case args of
                      [] => NONE
                    | h :: t => let
@@ -1385,10 +1418,10 @@ in
                 end
               | _ => let
                   val e = case fname of
-                            NONE => cse_fupdglobinits (Symtab.update (str, exp)) e
+                            NONE => cse_fupdglobinits (MSymTab.update (munged_name, exp)) e
                           | _ => e
                 in
-                  (w (Assign(var_e, exp)), SOME exp, e)
+                  ([w (Assign(var_e, exp))], SOME exp, e)
                 end
             end
           | SOME (InitList ilist) => let
@@ -1396,21 +1429,25 @@ in
               val exp = ewrap(CompLiteral(ty, ilist), bogus, bogus)
               val e =
                   case fname of
-                    NONE => cse_fupdglobinits (Symtab.update (str, exp)) e
+                    NONE => cse_fupdglobinits (MSymTab.update (munged_name, exp)) e
                   | _ => e
             in
-              (w (Assign(var_e, exp)), SOME exp, e)
+              ([w (Assign(var_e, exp))], SOME exp, e)
             end
-      val d' = wrap(VarDecl(ty,s,is_genuine,NONE,attrs), left d, right d)
+      val d' = wrap(VarDecl(ty,s,storage_specs,NONE,attrs), left d, right d)
       val e =
           case proc_expr_opt of
               NONE => e
             | SOME exp => #1 (process_expr RV fname e exp)
                           (* ignore global reads done by initialiser *)
+      val (globalinits, localinits) =
+          case fname of
+              NONE => (inits, [])
+            | SOME _ => ([], inits)
     in
-      ([BI_Decl d', BI_Stmt init], e)
+      ({decl = d', localinits = localinits, globalinits = globalinits}, e)
     end
-  | StructDecl s => ([BI_Decl d], newstr_decl s e)
+  | StructDecl s => (puredecl d, newstr_decl s e)
   | TypeDecl _ => raise Fail "collect_vars: TypeDecl unexpected, \
                              \translate these out!"
   | ExtFnDecl {rettype = rettype0,name = fname0,params,specs,...} => let
@@ -1429,9 +1466,10 @@ in
       fun do_ret e =
           if rettype = Void then e
           else let
-              val retvar = VI {name = ret_vname, munged_name = ret_vname,
+              val retvar = VI {name = MString.dest ret_vname,
+                               munged_name = ret_vname,
                                vtype = rettype, proto_param = false,
-                               struct_env = senv, is_genuine = true,
+                               struct_env = senv,
                                fname = SOME fname, return_var = true,
                                attrs = [], declared_at = Region.bogus}
             in
@@ -1443,7 +1481,7 @@ in
                    | SOME s => s
         val var =
             VI {name = name, vtype = param_norm (constify_abtype ecenv ty),
-                munged_name = name, is_genuine = true, attrs = [],
+                munged_name = MString.mk name, attrs = [],
                 struct_env = senv, proto_param = true,
                 fname = SOME fname, return_var = false,
                 declared_at = Region.bogus}
@@ -1453,8 +1491,8 @@ in
       end
       val paramtypes = map (param_norm o constify_abtype ecenv o #1) params
       val ftype = Function(rettype, paramtypes)
-      val fvi = VI {name = fname, vtype = ftype, munged_name = fname,
-                    proto_param = false, struct_env = senv, is_genuine = true,
+      val fvi = VI {name = fname, vtype = ftype, munged_name = MString.mk fname,
+                    proto_param = false, struct_env = senv,
                     fname = NONE, return_var = false, attrs = [],
                     declared_at = Region.Wrap.region d}
       val (_, e) = insert_var (fvi, e)
@@ -1504,9 +1542,9 @@ in
       end
       val e = update_hpfninfo (Decl d) e
     in
-      ([BI_Decl d], pop_scope (set_proto_params fname (List.rev pm_vis0) e))
+      (puredecl d, pop_scope (set_proto_params fname (List.rev pm_vis0) e))
     end
-  | EnumDecl eninfo => ([BI_Decl d], process_enumdecl eninfo e)
+  | EnumDecl eninfo => (puredecl d, process_enumdecl eninfo e)
 end
 
 
@@ -1514,7 +1552,13 @@ fun process_blockitem fname e bi = let
 in
   case bi of
     BI_Stmt s => apfst (map BI_Stmt) (process_stmt fname e s)
-  | BI_Decl d => process_decl (SOME fname) d e
+  | BI_Decl d =>
+    let
+      val ({decl,localinits,globalinits}, e') = process_decl (SOME fname) d e
+    in
+      (* throw away globalinits for the moment *)
+      (BI_Decl decl :: map BI_Stmt localinits, e')
+    end
 end
 and process_stmt fname e (stmt : statement) = let
   fun pex e exp = process_expr RV (SOME fname) e exp
@@ -1701,10 +1745,9 @@ fun split_decls (ds, is) bis =
 fun process_one_extdecl (env0 : csenv) edec =
     case edec of
       Decl d => let
-        val (bis, e) = process_decl NONE d env0
-        val (ds, is) = split_decls ([],[]) bis
+        val ({decl, localinits, globalinits}, e) = process_decl NONE d env0
       in
-        ((ds, is), e)
+        (([Decl decl], globalinits), e)
       end
     | FnDefn((rettype0, s), params, specs, body) => let
         val _ =
@@ -1727,24 +1770,27 @@ fun process_one_extdecl (env0 : csenv) edec =
                                        (insert_fnretty (s,rettype, env0))
         val env = new_defined_fn s env
         val rv_nm = return_var_name rettype
-        val retvar = VI {name = rv_nm, munged_name = rv_nm, attrs = [],
-                         vtype = rettype, proto_param = false,
-                         struct_env = senv, is_genuine = true,
-                         fname = SOME (node s), return_var = true,
-                         declared_at = Region.bogus}
+        val retvar =
+            VI {name = MString.dest rv_nm, munged_name = rv_nm, attrs = [],
+                vtype = rettype, proto_param = false,
+                struct_env = senv,
+                fname = SOME (node s), return_var = true,
+                declared_at = Region.bogus}
         val paramtypes = map (param_norm o constify_abtype ecenv o #1) params
         val ftype = Function(rettype, paramtypes)
-        val fvi = VI {name = node s, vtype = ftype, munged_name = node s,
-                      proto_param = false, struct_env = senv, is_genuine = true,
+        val fvi = VI {name = node s, vtype = ftype,
+                      munged_name = MString.mk (node s),
+                      proto_param = false, struct_env = senv,
                       fname = NONE, return_var = false, attrs = [],
                       declared_at = Region.Wrap.region s}
         val (_, env) = insert_var(fvi,env)
         fun to_vi (ty,pname) =
-            VI{name = node pname, munged_name = node pname, attrs = [],
+            VI{name = node pname,
+               munged_name = MString.mk (node pname),
+               attrs = [],
                vtype = param_norm (constify_abtype ecenv ty),
                struct_env = senv, proto_param = false,
                fname = fname, return_var = false,
-               is_genuine = true,
                declared_at =
                  Region.make{left = left pname, right = right pname}}
         val env = new_scope env (* new scope for parameters and body *)
@@ -1837,7 +1883,7 @@ fun mvar_traverse env = let
       case mvi of
         M vi => let
         in
-          case Symtab.lookup (get_addressed env) (srcname vi) of
+          case MSymTab.lookup (get_addressed env) (get_mname vi) of
             NONE => mvi
           | SOME _ => TheHeap
         end

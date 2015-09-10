@@ -13,7 +13,7 @@
 theory SepCode
 imports
   Separation
-  "../hoare-package/Vcg"
+  "../Simpl/Vcg"
 begin
 
 definition
@@ -47,7 +47,6 @@ where
       F \<subseteq> fields TYPE('a) \<and>
       dom s = s_footprint p - fs_footprint p F \<and> wf_heap_val s"
 
-(*XXX: 0,1000 or 1000,1000?*)
 notation (input)
   mfs_sep_map ("_ \<mapsto>\<^sub>_\<^sup>_ _" [56,0,1000,51] 56)
 
@@ -237,23 +236,23 @@ apply(case_tac "x \<in> s_footprint p")
 apply(case_tac x, clarsimp)
 apply(drule_tac x=aa in fun_cong)
 apply(auto simp: s_footprint_restrict lift_state_def
- split: s_heap_index.splits split_if_asm option.splits)
+           split: s_heap_index.splits split_if_asm option.splits) (* FIXME! *)
       apply(clarsimp simp: restrict_s_def)
      apply(clarsimp simp: restrict_s_def)
     apply(clarsimp simp: restrict_s_def)
-    apply(drule_tac x="nat" in fun_cong)
+    apply(drule_tac x="x2" in fun_cong)
     apply clarsimp
    apply(clarsimp simp: restrict_s_def)
-   apply(drule_tac x="nat" in fun_cong)
+   apply(drule_tac x="x2" in fun_cong)
    apply clarsimp
   apply(clarsimp simp: restrict_s_def)
-  apply(drule_tac x="nat" in fun_cong)
+  apply(drule_tac x="x2" in fun_cong)
   apply clarsimp
  apply(clarsimp simp: restrict_s_def)
- apply(drule_tac x="nat" in fun_cong)
+ apply(drule_tac x="x2" in fun_cong)
  apply clarsimp
 apply(clarsimp simp: restrict_s_def)
-apply(drule_tac x="nat" in fun_cong)
+apply(drule_tac x="x2" in fun_cong)
 apply clarsimp
 done
 
@@ -353,7 +352,7 @@ apply(erule impE)
  apply simp
 apply simp
 apply(subgoal_tac "unat (q - p) = unat (1::32 word) + unat (q - (p + 1))")
- apply(simp add: unat_1)
+ apply(simp)
 apply(subgoal_tac "q - (p + 1) = (q-p) - 1")
  apply(simp only:)
 apply(subst unat_minus_one)
@@ -397,7 +396,7 @@ apply(induct_tac n)
  apply simp
 apply clarsimp
 apply rule
- apply(thin_tac "All ?P")
+ apply(thin_tac "All P" for P)
  apply(drule_tac x=p in spec)
  apply(erule impE)
   apply(rule intvl_self)
@@ -697,7 +696,7 @@ oops
 
 lemma sep_map_mfs_sep_map_empty:
   "(p \<mapsto>\<^sub>g (v::'a::mem_type)) = (p \<mapsto>\<^sub>g\<^sup>({}) v)"
-  by (auto simp: sep_map_def mfs_sep_map_def map_add_dom_eq intro!: ext)
+  by (auto simp: sep_map_def mfs_sep_map_def map_add_dom_eq)
 
 lemma fd_cons_double_update:
   "\<lbrakk> fd_cons t; length bs = length  bs' \<rbrakk> \<Longrightarrow>
@@ -735,12 +734,7 @@ lemma field_footprint_SIndexVal:
   "field_lookup (typ_info_t TYPE('a::c_type)) f 0 = Some (t, n) \<Longrightarrow>
       {x. (x, SIndexVal) \<in> field_footprint (p::'a ptr) f} =
           {ptr_val p + of_nat n..+size_td t}"
-apply(auto simp: field_footprint_def s_footprint_untyped_def field_typ_def field_typ_untyped_def)
- apply(subst field_lookup_offset_eq)
-  apply assumption
- apply(erule intvlI)
-apply(subst field_lookup_offset_eq)
- apply assumption
+apply(auto simp: field_footprint_def s_footprint_untyped_def field_typ_def field_typ_untyped_def intro: intvlI)
 apply(drule intvlD, clarsimp)
 done
 
@@ -751,8 +745,6 @@ apply(unfold fs_footprint_def field_footprint_def)
 apply(clarsimp  simp: fields_def)
 apply(drule (1) subsetD)
 apply clarsimp
-apply(subst (asm) field_lookup_offset_eq)
- apply assumption
 apply(frule field_lookup_export_uinfo_Some)
 apply(drule field_ti_s_sub)
 apply(unfold field_lvalue_def)
@@ -821,7 +813,7 @@ lemma field_access_take_drop:
         access_ti\<^sub>0 s v"
 apply(induct t and st and ts and x)
      apply(auto simp: access_ti\<^sub>0_def)
- apply(thin_tac "All ?P")+
+ apply(thin_tac "All P" for P)+
  apply(subst (asm) take_all)
   apply(drule wf_fd_cons_structD)
   apply(clarsimp simp: fd_cons_struct_def fd_cons_desc_def fd_cons_length_def)
@@ -895,7 +887,6 @@ apply(subst heap_list_proj_h_lift_state)
  apply clarsimp
  apply(frule_tac p=p in field_tag_sub)
  apply(clarsimp simp: field_lvalue_def)
- apply(subst (asm) field_lookup_offset_eq, assumption)
  apply(drule (1) subsetD)
  apply(drule_tac d=empty_htd in ptr_retyp_footprint)
  apply simp
@@ -963,7 +954,7 @@ apply(rule, clarsimp)
      apply(rule fs_footprint_subset)
      apply(clarsimp simp: fields_def)
     apply(clarsimp simp: size_of_def)
-    apply(subst add_ac)
+    apply(subst ac_simps)
     apply(rule td_set_offset_size)
     apply(erule td_set_field_lookupD)
    apply simp
@@ -1008,7 +999,6 @@ lemma disjoint_fn_disjoint:
 apply(auto simp: fs_footprint_def)
 apply(auto simp: field_footprint_def s_footprint_untyped_def field_typ_def field_typ_untyped_def fields_def)
  apply(drule (1) subsetD, clarsimp)
- apply(subst (asm) field_lookup_offset_eq, assumption)+
  apply(drule (1) fa_fu_lookup_disj_interD)
     apply(clarsimp simp: disj_fn_def disjoint_fn_def)
    apply simp+
@@ -1020,7 +1010,6 @@ apply(auto simp: field_footprint_def s_footprint_untyped_def field_typ_def field
    apply force
   apply(rule intvlI, assumption)+
 apply(drule (1) subsetD, clarsimp)
-apply(subst (asm) field_lookup_offset_eq, assumption)+
 apply(drule (1) fa_fu_lookup_disj_interD)
   apply(clarsimp simp: disj_fn_def disjoint_fn_def)
   apply simp+
@@ -1044,20 +1033,17 @@ apply(clarsimp simp: mfs_sep_map_def sep_map_def)
 apply rule
  defer
  apply(clarsimp simp: field_footprint_def field_lvalue_def)
- apply(subst field_lookup_offset_eq, assumption)+
  apply(clarsimp simp: s_footprint_def field_typ_def field_typ_untyped_def)
  apply(subgoal_tac "{f} \<subseteq> fields TYPE('a)")
   apply(drule_tac p=p in fs_footprint_subset[where F="{f}"])
   apply(rotate_tac -1)
   apply(subst (asm) fs_footprint_def)
   apply(clarsimp simp: field_footprint_def)
-  apply(subst (asm) field_lookup_offset_eq, assumption)+
   apply(clarsimp simp: s_footprint_def field_typ_def field_typ_untyped_def)
   apply(subgoal_tac "fs_footprint p F \<inter> s_footprint_untyped (ptr_val p + of_nat n) (typ_uinfo_t TYPE('b)) = {}")
    apply blast
   apply(drule_tac p=p in disjoint_fn_disjoint, assumption+)
   apply(simp add: field_footprint_def field_typ_def field_typ_untyped_def)
-  apply(subst (asm) field_lookup_offset_eq, assumption)
   apply simp
  apply(clarsimp simp: fields_def)
 apply(subgoal_tac "field_footprint p f = s_footprint ((Ptr &(p\<rightarrow>f))::'b ptr)")
@@ -1108,9 +1094,9 @@ apply rule
 apply(drule sep_conjD, clarsimp)
 apply(clarsimp simp: mfs_sep_map_def sep_map_def)
 apply rule
- apply(subst map_add_ac)
+ apply(subst map_ac_simps)
  apply(subst map_add_com [where h\<^sub>0=s\<^sub>1])
-  apply(simp add: map_add_ac)
+  apply(simp add: map_ac_simps)
  apply(subst map_add_assoc)
  apply(clarsimp simp: lift_typ_heap_if split: split_if_asm)
  apply(rule, clarsimp)
@@ -1119,7 +1105,6 @@ apply rule
       apply(clarsimp simp: s_footprint_def)
       apply fast
      apply(clarsimp simp: field_lvalue_def)
-     apply(subst field_lookup_offset_eq, assumption)
      apply fast
     apply(drule field_lookup_offset_size)
     apply(drule export_size_of)
@@ -1161,7 +1146,6 @@ apply rule
    apply(simp add: size_of_def)
   apply(simp add: access_ti\<^sub>0_def)
   apply(clarsimp simp: field_lvalue_def)
-  apply(subst (asm) field_lookup_offset_eq, assumption)+
   apply(simp add: size_of_def)
   apply(subst wf_fd_norm_tuD)
     apply(erule wf_fd_field_lookupD, simp)
@@ -1206,7 +1190,6 @@ apply(rule, clarsimp simp: map_le_def)
  apply(drule_tac x=a in bspec)
   apply clarsimp
  apply(drule intvlD, clarsimp simp: field_lvalue_def)
- apply(subst (asm) field_lookup_offset_eq, assumption)+
  apply(drule_tac x=k in spec)
   apply(clarsimp simp add: size_of_def)
  apply(drule_tac x=a in bspec)
@@ -1218,12 +1201,11 @@ apply(rule, clarsimp simp: map_le_def)
    apply(subgoal_tac "size_of TYPE('b) < addr_card", simp only:size_of_def)
    apply simp
   apply simp
- apply(subst field_lookup_offset_eq, assumption)+
- apply(simp add: add_ac)
+ apply(simp add: ac_simps)
  apply(rotate_tac -1)
  apply(drule sym)
  apply simp
- apply(drule sym[where s="Some s",standard])
+ apply(drule sym[where s="Some s" for s])
  apply simp
  apply(drule field_lookup_export_uinfo_Some)
  apply(drule td_set_field_lookupD)
@@ -1264,9 +1246,7 @@ apply(subst proj_d_map_add_fst)
 apply(clarsimp split: split_if_asm)
 apply(drule s_footprintD, clarsimp)
 apply(drule intvlD, clarsimp simp: field_lvalue_def)
-apply(subst field_lookup_offset_eq, assumption)+
-apply(subst (asm) field_lookup_offset_eq, assumption)+
-apply(fastforce simp: size_of_def add_ac)
+apply(fastforce simp: size_of_def ac_simps)
 done
 
 lemma disjoint_fn_empty [simp]:
@@ -1358,7 +1338,6 @@ apply(subst heap_list_s_heap_list_dom)
  apply clarsimp
  apply(frule_tac p=p in field_tag_sub)
  apply(clarsimp simp: field_lvalue_def)
- apply(subst (asm) field_lookup_offset_eq, assumption)
  apply(drule (1) subsetD)
  apply(drule_tac n="size_of TYPE('a)" in intvlD, clarsimp)
  apply(erule s_footprintI2)
@@ -1445,6 +1424,7 @@ apply(clarsimp split: option.splits)
  apply(erule impE)
   apply simp
  apply(case_tac dt_pair, simp+)
+ apply(rename_tac a b)
  apply(drule_tac x=bs in spec)
  apply(drule_tac x="drop (size_td a) bs'" in spec)
  apply clarsimp
@@ -1504,7 +1484,7 @@ apply(subgoal_tac "\<exists>z. ka = k + z")
  apply(rule_tac x="ka - k" in exI)
  apply simp
 apply clarsimp
-apply(simp add: add_assoc [symmetric])
+apply(simp add: add.assoc [symmetric])
 apply(rule intvlI)
 apply simp
 done
@@ -1566,8 +1546,6 @@ apply(rule field_access_update_nth_disjD)
      apply simp
     apply(clarsimp simp: s_footprint_untyped_def field_lvalue_def)
     apply(drule intvlD, clarsimp)
-    apply(subst (asm) field_lookup_offset_eq, assumption)
-    apply simp
     apply(drule export_size_of, simp add: size_of_def)
    apply simp
   apply simp+
@@ -1586,10 +1564,10 @@ apply(rule ext)
 apply(auto simp: proj_d_def)
   apply(subgoal_tac "dom (singleton_t p undefined ) = dom (singleton_t p v )")
    apply blast
-  apply(simp add: singleton_t_dom)
+  apply simp
  apply(subgoal_tac "dom (singleton_t p undefined ) = dom (singleton_t p v )")
   apply blast
- apply(simp add: singleton_t_dom)
+ apply simp
 apply(rule ext)
 apply(auto simp: split: option.splits)
   apply(subgoal_tac "dom (singleton_t p undefined ) = dom (singleton_t p v )")
@@ -1610,7 +1588,7 @@ lemma from_bytes_heap_list_s_update:
         update_ti_t s (to_bytes_p w) (from_bytes (heap_list_s (singleton_t p v ++ x) (size_of TYPE('a)) (ptr_val p)))"
 apply(subst map_add_restrict_UNIV [where X="s_footprint_untyped (&(p\<rightarrow>f)) (export_uinfo s)" and h="singleton_t p v"])
   apply(clarsimp simp: fs_footprint_def field_footprint_def field_lvalue_def)
-  apply(thin_tac "dom x = ?X")
+  apply(thin_tac "dom x = X" for X)
   apply(clarsimp simp: field_typ_def field_typ_untyped_def)
   apply force
  apply simp
@@ -1620,22 +1598,18 @@ apply(subst heap_list_s_map_add_super_update_bs [where k=n and z="size_td s"])
     apply clarsimp
     apply(clarsimp simp: s_footprint_untyped_def field_lvalue_def)
     apply(drule s_footprintD)
-    apply(subst field_lookup_offset_eq, assumption)
     apply(rule intvlI)
     apply(drule export_size_of, simp add: size_of_def)
    apply clarsimp
    apply rule
     apply(frule_tac p=p in field_tag_sub)
     apply(clarsimp simp: field_lvalue_def)
-    apply(subst (asm) field_lookup_offset_eq, assumption)
     apply(drule (1) subsetD)
     apply(drule_tac n="size_of TYPE('a)" in intvlD, clarsimp)
     apply(erule s_footprintI2)
    apply(drule intvlD, clarsimp)
    apply(clarsimp simp: s_footprint_untyped_def field_lvalue_def)
    apply(rule_tac x=k in exI)
-   apply simp
-   apply(subst field_lookup_offset_eq, assumption)
    apply simp
    apply(drule export_size_of, simp add: size_of_def)
   apply(drule field_lookup_offset_size)
@@ -1662,7 +1636,6 @@ apply(subst heap_list_s_restrict)
  apply(clarsimp simp: field_lvalue_def)
  apply(rule_tac x=k in exI)
  apply simp
- apply(subst field_lookup_offset_eq, assumption, simp)
  apply(drule export_size_of, simp add: size_of_def)
 apply(subst heap_list_s_singleton_t_field_update)
   apply assumption+
@@ -1951,7 +1924,7 @@ lemma sep_cut_0 [simp]:
 
 lemma heap_merge_restrict_dom_un:
   "dom s = P \<union> Q \<Longrightarrow> (s|`P) ++ (s|`Q) = s"
-  by (force simp: map_add_def restrict_map_def intro: ext split: option.splits)
+  by (force simp: map_add_def restrict_map_def split: option.splits)
 
 lemma sep_cut_split:
   assumes sc: "sep_cut p y s" and le: "x \<le> y"
@@ -1978,7 +1951,7 @@ lemma tagd_ptr_safe_exc:
   "(g \<turnstile>\<^sub>s p \<and>\<^sup>* sep_true) (lift_state (h,d)) \<Longrightarrow> ptr_safe p d"
 apply(clarsimp simp: ptr_safe_def sep_conj_ac sep_conj_def, drule tagd_dom_exc)
 apply(drule_tac x="(a,b)" in fun_cong)
-apply(auto simp: map_add_ac lift_state_def sep_conj_ac split: option.splits s_heap_index.splits split_if_asm)
+apply(auto simp: map_ac_simps lift_state_def sep_conj_ac split: option.splits s_heap_index.splits split_if_asm)
    apply(clarsimp simp: dom_s_def sep_conj_ac)
   apply(subst (asm) merge_dom)
    apply fast

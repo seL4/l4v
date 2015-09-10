@@ -9,8 +9,9 @@
  *)
 
 theory Example_Valid_StateH
-imports    "Example_Valid_State" "ADT_IF_Refine"
-
+imports
+  Example_Valid_State
+  ADT_IF_Refine
 begin
 
 section {* Haskell state *}
@@ -52,13 +53,13 @@ where
 definition
   Low_cte' :: "10 word \<Rightarrow> Structures_H.cte option"
 where
-  "Low_cte' \<equiv> (Option.map (\<lambda>(cap, mdb). CTE cap mdb)) \<circ> Low_capsH \<circ> to_bl"
+  "Low_cte' \<equiv> (map_option (\<lambda>(cap, mdb). CTE cap mdb)) \<circ> Low_capsH \<circ> to_bl"
 
 definition
   Low_cte :: "word32 \<Rightarrow> word32 \<Rightarrow> Structures_H.kernel_object option"
 where
   "Low_cte \<equiv> \<lambda>base offs. if is_aligned offs cte_level_bits \<and> base \<le> offs \<and> offs \<le> base + 2 ^ 14 - 1
-                         then Option.map (\<lambda>cte. KOCTE cte) (Low_cte' (ucast (offs - base >> cte_level_bits))) else None"
+                         then map_option (\<lambda>cte. KOCTE cte) (Low_cte' (ucast (offs - base >> cte_level_bits))) else None"
 
 
 text {* High's Cspace *}
@@ -82,13 +83,13 @@ where
 definition
   High_cte' :: "10 word \<Rightarrow> Structures_H.cte option"
 where
-  "High_cte' \<equiv> (Option.map (\<lambda>(cap, mdb). CTE cap mdb)) \<circ> High_capsH \<circ> to_bl"
+  "High_cte' \<equiv> (map_option (\<lambda>(cap, mdb). CTE cap mdb)) \<circ> High_capsH \<circ> to_bl"
 
 definition
   High_cte :: "word32 \<Rightarrow> word32 \<Rightarrow> Structures_H.kernel_object option"
 where
   "High_cte \<equiv> \<lambda>base offs. if is_aligned offs cte_level_bits \<and> base \<le> offs \<and> offs \<le> base + 2 ^ 14 - 1
-                          then Option.map (\<lambda>cte. KOCTE cte) (High_cte' (ucast (offs - base >> cte_level_bits))) else None"
+                          then map_option (\<lambda>cte. KOCTE cte) (High_cte' (ucast (offs - base >> cte_level_bits))) else None"
 
 text {* We need a copy of boundary crossing caps owned by SilcLabel.
         The only such cap is Low's cap to the async endpoint *}
@@ -107,13 +108,13 @@ where
 definition
   Silc_cte' :: "10 word \<Rightarrow> Structures_H.cte option"
 where
-  "Silc_cte' \<equiv> (Option.map (\<lambda>(cap, mdb). CTE cap mdb)) \<circ> Silc_capsH \<circ> to_bl"
+  "Silc_cte' \<equiv> (map_option (\<lambda>(cap, mdb). CTE cap mdb)) \<circ> Silc_capsH \<circ> to_bl"
 
 definition
   Silc_cte :: "word32 \<Rightarrow> word32 \<Rightarrow> Structures_H.kernel_object option"
 where
   "Silc_cte \<equiv> \<lambda>base offs. if is_aligned offs cte_level_bits \<and> base \<le> offs \<and> offs \<le> base + 2 ^ 14 - 1
-                          then Option.map (\<lambda>cte. KOCTE cte) (Silc_cte' (ucast (offs - base >> cte_level_bits))) else None"
+                          then map_option (\<lambda>cte. KOCTE cte) (Silc_cte' (ucast (offs - base >> cte_level_bits))) else None"
 
 text {* async endpoint between Low and High *}
 
@@ -129,19 +130,21 @@ definition
   Low_pt'H :: "word8 \<Rightarrow> Hardware_H.pte " 
 where
   "Low_pt'H \<equiv> (\<lambda>_. Hardware_H.InvalidPTE)
-            (0 := Hardware_H.SmallPagePTE shared_page_ptr (PageCacheable \<in> {}) (Global \<in> {}) (vmrights_map vm_read_write))"
+            (0 := Hardware_H.SmallPagePTE shared_page_ptr (PageCacheable \<in> {}) (Global \<in> {}) (XNever \<in> {}) (vmrights_map vm_read_write))"
 
 definition 
   Low_ptH :: "word32 \<Rightarrow> word32 \<Rightarrow> Structures_H.kernel_object option"
 where
   "Low_ptH \<equiv>
-     \<lambda>base. (Option.map (\<lambda>x. Structures_H.KOArch (ARMStructures_H.KOPTE (Low_pt'H x)))) \<circ>
+     \<lambda>base. (map_option (\<lambda>x. Structures_H.KOArch (ARMStructures_H.KOPTE (Low_pt'H x)))) \<circ>
             (\<lambda>offs. if is_aligned offs 2 \<and> base \<le> offs \<and> offs \<le> base + 2 ^ 10 - 1
                     then Some (ucast (offs - base >> 2)) else None)"
 
 definition
   [simp]:
-  "global_pdH \<equiv> (\<lambda>_. Hardware_H.InvalidPDE)( ucast (kernel_base >> 20) := Hardware_H.SectionPDE (addrFromPPtr kernel_base) (ParityEnabled \<in> {}) 0 (PageCacheable \<in> {}) (Global \<in> {}) (vmrights_map {}))"
+  "global_pdH \<equiv> (\<lambda>_. Hardware_H.InvalidPDE)( ucast (kernel_base >> 20) := 
+       Hardware_H.SectionPDE (addrFromPPtr kernel_base) (ParityEnabled \<in> {}) 0 
+                             (PageCacheable \<in> {}) (Global \<in> {}) (XNever \<in> {}) (vmrights_map {}))"
 
 
 definition
@@ -152,7 +155,7 @@ where
      (0 := Hardware_H.PageTablePDE 
               (Platform.addrFromPPtr Low_pt_ptr) 
               (ParityEnabled \<in> {})
-              undefined )"
+              undefined)"
 
 (* used addrFromPPtr because proof gives me ptrFromAddr.. TODO: check
 if it's right *)
@@ -161,7 +164,7 @@ definition
   Low_pdH :: "word32 \<Rightarrow> word32 \<Rightarrow> Structures_H.kernel_object option"
 where
   "Low_pdH \<equiv>
-     \<lambda>base. (Option.map (\<lambda>x. Structures_H.KOArch (ARMStructures_H.KOPDE (Low_pd'H x)))) \<circ>
+     \<lambda>base. (map_option (\<lambda>x. Structures_H.KOArch (ARMStructures_H.KOPDE (Low_pd'H x)))) \<circ>
             (\<lambda>offs. if is_aligned offs 2 \<and> base \<le> offs \<and> offs \<le> base + 2 ^ 14 - 1
                     then Some (ucast (offs - base >> 2)) else None)"
 
@@ -174,14 +177,15 @@ definition
 where
   "High_pt'H \<equiv> 
     (\<lambda>_. Hardware_H.InvalidPTE)
-     (0 := Hardware_H.SmallPagePTE shared_page_ptr (PageCacheable \<in> {}) (Global \<in> {}) (vmrights_map vm_read_only))"
+     (0 := Hardware_H.SmallPagePTE shared_page_ptr (PageCacheable \<in> {}) (Global \<in> {}) (XNever \<in> {})
+                      (vmrights_map vm_read_only))"
 
 
 definition
   High_ptH :: "word32 \<Rightarrow> word32 \<Rightarrow> Structures_H.kernel_object option"
 where
   "High_ptH \<equiv>
-     \<lambda>base. (Option.map (\<lambda>x. Structures_H.KOArch (ARMStructures_H.KOPTE (High_pt'H x)))) \<circ>
+     \<lambda>base. (map_option (\<lambda>x. Structures_H.KOArch (ARMStructures_H.KOPTE (High_pt'H x)))) \<circ>
             (\<lambda>offs. if is_aligned offs 2 \<and> base \<le> offs \<and> offs \<le> base + 2 ^ 10 - 1
                     then Some (ucast (offs - base >> 2)) else None)"
 
@@ -203,7 +207,7 @@ definition
   High_pdH :: "word32 \<Rightarrow> word32 \<Rightarrow> Structures_H.kernel_object option" 
 where
   "High_pdH \<equiv>
-     \<lambda>base. (Option.map (\<lambda>x. Structures_H.KOArch (ARMStructures_H.KOPDE (High_pd'H x)))) \<circ>
+     \<lambda>base. (map_option (\<lambda>x. Structures_H.KOArch (ARMStructures_H.KOPDE (High_pd'H x)))) \<circ>
             (\<lambda>offs. if is_aligned offs 2 \<and> base \<le> offs \<and> offs \<le> base + 2 ^ 14 - 1
                     then Some (ucast (offs - base >> 2)) else None)"
 
@@ -289,7 +293,7 @@ definition
   global_pdH' :: "word32 \<Rightarrow> word32 \<Rightarrow> Structures_H.kernel_object option"
 where
   "global_pdH' \<equiv> \<lambda>base.
-     (Option.map (\<lambda>x. Structures_H.KOArch (ARMStructures_H.KOPDE (global_pdH (x::12 word))))) \<circ>
+     (map_option (\<lambda>x. Structures_H.KOArch (ARMStructures_H.KOPDE (global_pdH (x::12 word))))) \<circ>
      (\<lambda>offs. if is_aligned offs 2 \<and> base \<le> offs \<and> offs \<le> base + 2 ^ 14 - 1
              then Some (ucast (offs - base >> 2)) else None)"
 
@@ -347,7 +351,7 @@ lemma pd_offs_min:
 lemma pd_offs_max':
   "is_aligned ptr 14 \<Longrightarrow> (ptr::word32) + (ucast (x:: 12 word) << 2) \<le> ptr + 0x3fff"
   apply (rule word_plus_mono_right)
-   apply (simp add: shiftl_t2n mult_commute)
+   apply (simp add: shiftl_t2n mult.commute)
    apply (rule div_to_mult_word_lt)
    apply simp
    apply (rule plus_one_helper)
@@ -356,7 +360,7 @@ lemma pd_offs_max':
     apply simp
    apply simp
   apply (drule is_aligned_no_overflow)
-  apply (simp add: add_commute)
+  apply (simp add: add.commute)
   done
 
 lemma pd_offs_max:
@@ -372,7 +376,7 @@ definition pd_offs_range where
 lemma pd_offs_in_range':
   "is_aligned ptr 14 \<Longrightarrow>
      ptr + (ucast (x:: 12 word) << 2) \<in> pd_offs_range ptr"
-  apply (clarsimp simp: pd_offs_min' pd_offs_max' pd_offs_range_def add_commute)
+  apply (clarsimp simp: pd_offs_min' pd_offs_max' pd_offs_range_def add.commute)
   apply (rule is_aligned_add[OF _ is_aligned_shift])
   apply (erule is_aligned_weaken)
   apply simp
@@ -400,20 +404,21 @@ lemma pd_offs_range_correct':
   apply (rule_tac n=14 in mask_eqI)
    apply (subst mask_add_aligned)
     apply (simp add: is_aligned_def)
-   apply (simp add: mask_twice diff_def)
-   apply (subst add_commute[symmetric])
+   apply (simp add: mask_twice)
+   apply (subst diff_conv_add_uminus)
+   apply (subst add.commute[symmetric])
    apply (subst mask_add_aligned)
     apply (simp add: is_aligned_minus)
    apply simp
-  apply (simp add: diff_def)
+  apply (subst diff_conv_add_uminus)
   apply (subst add_mask_lower_bits)
     apply (simp add: is_aligned_def)
    apply clarsimp
   apply (cut_tac x=x and y="ptr + 0x3FFF" and n=14 in neg_mask_mono_le)
-   apply (simp add: add_commute)
+   apply (simp add: add.commute)
   apply (drule_tac n=14 in aligned_le_sharp)
    apply (simp add: is_aligned_def)
-  apply (simp add: add_commute)
+  apply (simp add: add.commute)
   apply (subst(asm) mask_out_add_aligned[symmetric])
    apply (erule is_aligned_weaken)
    apply simp
@@ -442,7 +447,7 @@ lemma pt_offs_min:
 lemma pt_offs_max':
   "is_aligned ptr 10 \<Longrightarrow> (ptr::word32) + (ucast (x:: 8 word) << 2) \<le> ptr + 0x3ff"
   apply (rule word_plus_mono_right)
-   apply (simp add: shiftl_t2n mult_commute)
+   apply (simp add: shiftl_t2n mult.commute)
    apply (rule div_to_mult_word_lt)
    apply simp
    apply (rule plus_one_helper)
@@ -451,7 +456,7 @@ lemma pt_offs_max':
     apply simp
    apply simp
   apply (drule is_aligned_no_overflow)
-  apply (simp add: add_commute)
+  apply (simp add: add.commute)
   done
 
 lemma pt_offs_max:
@@ -466,7 +471,7 @@ definition pt_offs_range where
 lemma pt_offs_in_range':
   "is_aligned ptr 10 \<Longrightarrow>
      ptr + (ucast (x:: 8 word) << 2) \<in> pt_offs_range ptr"
-  apply (clarsimp simp: pt_offs_min' pt_offs_max' pt_offs_range_def add_commute)
+  apply (clarsimp simp: pt_offs_min' pt_offs_max' pt_offs_range_def add.commute)
   apply (rule is_aligned_add[OF _ is_aligned_shift])
   apply (erule is_aligned_weaken)
   apply simp
@@ -493,20 +498,21 @@ lemma pt_offs_range_correct':
   apply (rule_tac n=10 in mask_eqI)
    apply (subst mask_add_aligned)
     apply (simp add: is_aligned_def)
-   apply (simp add: mask_twice diff_def)
-   apply (subst add_commute[symmetric])
+   apply (simp add: mask_twice)
+   apply (subst diff_conv_add_uminus)
+   apply (subst add.commute[symmetric])
    apply (subst mask_add_aligned)
     apply (simp add: is_aligned_minus)
    apply simp
-  apply (simp add: diff_def)
+  apply (subst diff_conv_add_uminus)
   apply (subst add_mask_lower_bits)
     apply (simp add: is_aligned_def)
    apply clarsimp
   apply (cut_tac x=x and y="ptr + 0x3FF" and n=10 in neg_mask_mono_le)
-   apply (simp add: add_commute)
+   apply (simp add: add.commute)
   apply (drule_tac n=10 in aligned_le_sharp)
    apply (simp add: is_aligned_def)
-  apply (simp add: add_commute)
+  apply (simp add: add.commute)
   apply (subst(asm) mask_out_add_aligned[symmetric])
    apply (erule is_aligned_weaken)
    apply simp
@@ -523,7 +529,6 @@ lemma bl_to_bin_le2p_aux:
   apply (induct bs arbitrary: w)
    apply clarsimp
   apply clarsimp
-  apply safe
   apply (drule meta_spec, erule xtr8 [rotated], simp add: Bit_def)+
   done
 
@@ -582,7 +587,7 @@ lemma cnode_offs_max':
     apply simp
    apply simp
   apply (drule is_aligned_no_overflow)
-  apply (simp add: add_commute)
+  apply (simp add: add.commute)
   done
 
 lemma cnode_offs_max:
@@ -598,7 +603,7 @@ definition cnode_offs_range where
 lemma cnode_offs_in_range':
   "\<lbrakk>is_aligned ptr 14; length x = 10\<rbrakk> \<Longrightarrow>
      ptr + of_bl x * 0x10 \<in> cnode_offs_range ptr"
-  apply (clarsimp simp: cnode_offs_min' cnode_offs_max' cnode_offs_range_def add_commute cte_level_bits_def)
+  apply (clarsimp simp: cnode_offs_min' cnode_offs_max' cnode_offs_range_def add.commute cte_level_bits_def)
   apply (rule is_aligned_add)
    apply (erule is_aligned_weaken)
    apply simp
@@ -650,7 +655,7 @@ lemma cnode_offs_range_correct':
    apply (rule word_diff_ls')
    apply (drule_tac a=x and n=4 in aligned_le_sharp)
     apply simp
-    apply (simp add: add_commute)
+    apply (simp add: add.commute)
     apply (subst(asm) mask_out_add_aligned[symmetric])
      apply (erule is_aligned_weaken)
      apply simp
@@ -695,7 +700,7 @@ lemma tcb_offs_max':
     apply simp
    apply simp
   apply (drule is_aligned_no_overflow)
-  apply (simp add: add_commute)
+  apply (simp add: add.commute)
   done
 
 lemma tcb_offs_max:
@@ -710,7 +715,7 @@ definition tcb_offs_range where
 lemma tcb_offs_in_range':
   "is_aligned ptr 9 \<Longrightarrow>
      ptr + ucast (x:: 9 word) \<in> tcb_offs_range ptr"
-  by (clarsimp simp: tcb_offs_min' tcb_offs_max' tcb_offs_range_def add_commute)
+  by (clarsimp simp: tcb_offs_min' tcb_offs_max' tcb_offs_range_def add.commute)
 
 lemma tcb_offs_in_range:
   "Low_tcb_ptr + ucast (x:: 9 word) \<in> tcb_offs_range Low_tcb_ptr"
@@ -727,20 +732,21 @@ lemma tcb_offs_range_correct':
   apply (rule_tac n=9 in mask_eqI)
    apply (subst mask_add_aligned)
     apply (simp add: is_aligned_def)
-   apply (simp add: mask_twice diff_def)
-   apply (subst add_commute[symmetric])
+   apply (simp add: mask_twice)
+   apply (subst diff_conv_add_uminus)
+   apply (subst add.commute[symmetric])
    apply (subst mask_add_aligned)
     apply (simp add: is_aligned_minus)
    apply simp
-  apply (simp add: diff_def)
+  apply (subst diff_conv_add_uminus)
   apply (subst add_mask_lower_bits)
     apply (simp add: is_aligned_def)
    apply clarsimp
   apply (cut_tac x=x and y="ptr + 0x1FF" and n=9 in neg_mask_mono_le)
-   apply (simp add: add_commute)
+   apply (simp add: add.commute)
   apply (drule_tac n=9 in aligned_le_sharp)
    apply (simp add: is_aligned_def)
-  apply (simp add: add_commute)
+  apply (simp add: add.commute)
   apply (subst(asm) mask_out_add_aligned[symmetric])
    apply (erule is_aligned_weaken)
    apply simp
@@ -757,13 +763,13 @@ lemma caps_dom_length_10:
   "Silc_caps x = Some y \<Longrightarrow> length x = 10"
   "High_caps x = Some y \<Longrightarrow> length x = 10"
   "Low_caps x = Some y \<Longrightarrow> length x = 10"
-  by (simp_all add: Silc_caps_def High_caps_def Low_caps_def the_nat_to_bl_10_def the_nat_to_bl_def nat_to_bl_def split: split_if_asm)
+  by (simp_all add: Silc_caps_def High_caps_def Low_caps_def the_nat_to_bl_def nat_to_bl_def split: split_if_asm)
 
 lemma dom_caps:
   "dom Silc_caps = {x. length x = 10}"
   "dom High_caps = {x. length x = 10}"
   "dom Low_caps = {x. length x = 10}"
-  apply (simp_all add: Silc_caps_def High_caps_def Low_caps_def the_nat_to_bl_10_def the_nat_to_bl_def nat_to_bl_def dom_def split: split_if_asm)
+  apply (simp_all add: Silc_caps_def High_caps_def Low_caps_def the_nat_to_bl_def nat_to_bl_def dom_def split: split_if_asm)
     apply fastforce+
     done
 
@@ -852,24 +858,6 @@ lemma kh0H_dom_distinct:
   "irq_cnode_ptr \<notin> tcb_offs_range idle_tcb_ptr"
   "aep_ptr \<notin> tcb_offs_range idle_tcb_ptr"
   by (clarsimp simp: cnode_offs_range_def pd_offs_range_def pt_offs_range_def tcb_offs_range_def kh0H_obj_def s0_ptr_defs)+
-
-lemma s0_ptrs_distinct:
-  "init_globals_frame \<noteq> idle_tcb_ptr"
-  "init_globals_frame \<noteq> High_tcb_ptr"
-  "init_globals_frame \<noteq> Low_tcb_ptr"
-  "init_globals_frame \<noteq> irq_cnode_ptr"
-  "init_globals_frame \<noteq> aep_ptr"
-  "idle_tcb_ptr \<noteq> High_tcb_ptr"
-  "idle_tcb_ptr \<noteq> Low_tcb_ptr"
-  "idle_tcb_ptr \<noteq> irq_cnode_ptr"
-  "idle_tcb_ptr \<noteq> aep_ptr"
-  "High_tcb_ptr \<noteq> Low_tcb_ptr"
-  "High_tcb_ptr \<noteq> irq_cnode_ptr"
-  "High_tcb_ptr \<noteq> aep_ptr"
-  "Low_tcb_ptr \<noteq> irq_cnode_ptr"
-  "Low_tcb_ptr \<noteq> aep_ptr"
-  "irq_cnode_ptr \<noteq> aep_ptr"
-  by (clarsimp simp: s0_ptr_defs)+
 
 lemma kh0H_dom_sets_distinct:
   "irq_node_offs_range \<inter> cnode_offs_range Silc_cnode_ptr = {}"
@@ -1027,7 +1015,7 @@ lemma kh0H_simps[simp]:
   "kh0H (High_pt_ptr + (ucast (z:: 8 word) << 2)) = High_ptH High_pt_ptr (High_pt_ptr + (ucast (z:: 8 word) << 2))"
       apply (clarsimp simp: kh0H_def option_update_range_def)
       apply fastforce
-     apply (clarsimp simp: kh0H_def option_update_range_def kh0H_dom_distinct not_in_range_None s0_ptrs_distinct)+
+     apply (clarsimp simp: kh0H_def option_update_range_def kh0H_dom_distinct not_in_range_None)+
      apply ((clarsimp simp: kh0H_def option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_None offs_in_range | simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD1] not_in_range_None | simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD2] not_in_range_None)+,
             rule conjI,
              clarsimp,
@@ -1112,6 +1100,7 @@ where
           High_cnode_ptr \<mapsto> 10,
           Silc_cnode_ptr \<mapsto> 10,
           irq_cnode_ptr  \<mapsto> 0),
+    gsMaxObjectSize = card (UNIV :: word32 set),
     ksDomScheduleIdx = 0,
     ksDomSchedule = [(0 ,10), (1, 10)],
     ksCurDomain = 0,
@@ -1198,7 +1187,7 @@ lemma mask_in_tcb_offs_range:
   "x && ~~ mask 9 = ptr \<Longrightarrow> x \<in> tcb_offs_range ptr"
   apply (clarsimp simp: tcb_offs_range_def mask_neg_le objBitsKO_def)
   apply (cut_tac and_neg_mask_plus_mask_mono[where p=x and n=9])
-  apply (simp add: add_commute mask_def)
+  apply (simp add: add.commute mask_def)
   done
 
 lemma set_mem_neq:
@@ -1300,7 +1289,7 @@ lemma map_to_ctes_kh0H:
    apply (clarsimp simp add: map_to_ctes_def Let_def objBitsKO_def)
    apply (rule conjI)
     apply clarsimp
-    apply (thin_tac "?x \<inter> ?y = {}")
+    apply (thin_tac "x \<inter> y = {}" for x y)
     apply (frule kh0H_dom_tcb)
     apply (elim disjE)
       apply (clarsimp simp: option_update_range_def)
@@ -1363,14 +1352,15 @@ lemma map_to_ctes_kh0H:
            drule kh0H_dom_tcb,
            fastforce simp: s0_ptr_defs mask_def objBitsKO_def,
           rule impI,
-          fastforce simp: option_update_range_def s0_ptrs_distinct kh0H_dom_distinct not_in_range_cte_None)
+          fastforce simp: option_update_range_def kh0H_dom_distinct not_in_range_cte_None)
    apply ((clarsimp simp: map_to_ctes_def Let_def split del: split_if,
           subst split_if_eq1,
           rule conjI,
            rule impI,
            (subst is_aligned_neg_mask_eq,
             simp add: is_aligned_def s0_ptr_defs objBitsKO_def)+,
-           ((clarsimp simp: option_update_range_def s0_ptrs_distinct kh0H_dom_distinct not_in_range_cte_None | clarsimp simp: idle_tcb_cte_def High_tcb_cte_def Low_tcb_cte_def)+)[1],
+           ((clarsimp simp: option_update_range_def kh0H_dom_distinct not_in_range_cte_None |
+             clarsimp simp: idle_tcb_cte_def High_tcb_cte_def Low_tcb_cte_def)+)[1],
           rule impI,
           (subst(asm) is_aligned_neg_mask_eq,
            simp add: is_aligned_def s0_ptr_defs objBitsKO_def)+,
@@ -1387,7 +1377,7 @@ lemma map_to_ctes_kh0H:
            drule kh0H_dom_tcb,
            fastforce simp: s0_ptr_defs mask_def objBitsKO_def,
           rule impI,
-          fastforce simp: option_update_range_def s0_ptrs_distinct kh0H_dom_distinct not_in_range_cte_None s0_ptrs_distinct s0_ptrs_distinct[symmetric])
+          fastforce simp: option_update_range_def kh0H_dom_distinct not_in_range_cte_None)
    apply (clarsimp simp: map_to_ctes_def Let_def kh0H_obj_def split del: split_if,
           subst split_if_eq1,
           rule conjI,
@@ -1428,24 +1418,24 @@ lemma map_to_ctes_kh0H:
    apply (elim disjE,
           ((clarsimp,
            drule(1) aligned_le_sharp,
-           clarsimp simp: add_commute,
+           clarsimp simp: add.commute,
            subst(asm) mask_out_add_aligned[symmetric],
             simp add: is_aligned_shiftl,
            simp add: mask_def,
            drule minus_one_helper,
-            subst add_commute,
+            subst add.commute,
             rule neq_0_no_wrap,
              erule word_plus_mono_right2[rotated],
              fastforce,
             fastforce,
-           fastforce simp: add_commute)
+           fastforce simp: add.commute)
            | unat_arith)+)[1]
    apply ((clarsimp simp: map_to_ctes_def Let_def kh0H_obj_def objBitsKO_def split: split_if_asm split del: split_if,
           subst split_if_eq1,
           rule conjI,
            rule impI,
            clarsimp simp: option_update_range_def kh0H_dom_distinct not_in_range_cte_None,
-           (clarsimp simp: option_update_range_def s0_ptrs_distinct kh0H_dom_distinct[THEN set_mem_neq] kh0H_dom_sets_distinct[THEN orthD1] not_in_range_cte_None | simp add: kh0H_dom_sets_distinct[THEN orthD2] not_in_range_cte_None)+,
+           (clarsimp simp: option_update_range_def kh0H_dom_distinct[THEN set_mem_neq] kh0H_dom_sets_distinct[THEN orthD1] not_in_range_cte_None | simp add: kh0H_dom_sets_distinct[THEN orthD2] not_in_range_cte_None)+,
            rule conjI,
             clarsimp,
            drule offs_range_correct,
@@ -1463,19 +1453,19 @@ lemma map_to_ctes_kh0H:
           clarsimp simp: kh0H_dom s0_ptr_defs cnode_offs_range_def pd_offs_range_def pt_offs_range_def irq_node_offs_range_def cte_level_bits_def,
           (elim disjE,
            (clarsimp simp: s0_ptr_defs,
-           drule_tac b="?x + ?y * 0x10" and n=4 in aligned_le_sharp,
+           drule_tac b="x + y * 0x10" and n=4 for x y in aligned_le_sharp,
             fastforce simp: is_aligned_def,
-           clarsimp simp: add_commute,
+           clarsimp simp: add.commute,
            subst(asm) mask_out_add_aligned[symmetric],
             simp add: is_aligned_mult_triv2[where n=4, simplified],
            simp add: mask_def,
            drule minus_one_helper,
-            subst add_commute,
+            subst add.commute,
             rule neq_0_no_wrap,
              erule word_plus_mono_right2[rotated],
              fastforce,
             fastforce,
-           fastforce simp: add_commute | unat_arith)+)[1])+)[3]
+           fastforce simp: add.commute | unat_arith)+)[1])+)[3]
    apply ((clarsimp simp: map_to_ctes_def Let_def split del: split_if,
           subst split_if_eq1,
           rule conjI,
@@ -1499,7 +1489,7 @@ lemma map_to_ctes_kh0H:
            (elim disjE,
              (clarsimp simp: s0_ptr_defs objBitsKO_def,
              erule notE[rotated],
-             rule_tac x="?x::word32" in gt_imp_neq,
+             rule_tac x="x::word32" for x in gt_imp_neq,
              rule less_le_trans[rotated, OF aligned_le_sharp],
                erule word_plus_mono_right2[rotated],
                simp,
@@ -1532,7 +1522,7 @@ lemma map_to_ctes_kh0H:
            elim disjE,
              ((clarsimp simp: s0_ptr_defs objBitsKO_def,
              erule notE[rotated],
-             rule_tac x="?x::word32" in gt_imp_neq,
+             rule_tac x="x::word32" for x in gt_imp_neq,
              rule less_le_trans[rotated, OF aligned_le_sharp],
                erule word_plus_mono_right2[rotated],
                fastforce,
@@ -1540,7 +1530,7 @@ lemma map_to_ctes_kh0H:
              fastforce)+)[2],
            clarsimp simp: s0_ptr_defs objBitsKO_def,
            erule notE[rotated],
-            rule_tac x="?x::word32" in less_imp_neq,
+            rule_tac x="x::word32" for x in less_imp_neq,
            rule le_less_trans[OF mask_neg_le],
            unat_arith,
           rule impI,
@@ -1577,7 +1567,7 @@ lemma map_to_ctes_kh0H_simps[simp]:
   "map_to_ctes kh0H (idle_tcb_ptr + 0x40) = idle_tcb_cte (idle_tcb_ptr + 0x40)"
      apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def)
      apply fastforce
-    apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct not_in_range_cte_None s0_ptrs_distinct)
+    apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct not_in_range_cte_None)
    apply ((clarsimp simp: map_to_ctes_kh0H option_update_range_def cnode_offs_in_range s0_ptrs_aligned kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None,
          ((clarsimp simp: offs_in_range kh0H_dom_sets_distinct[THEN orthD1] not_in_range_cte_None
         | clarsimp simp: offs_in_range kh0H_dom_sets_distinct[THEN orthD2] not_in_range_cte_None)+)[1],
@@ -1590,9 +1580,9 @@ lemma map_to_ctes_kh0H_simps[simp]:
                 rule kh0H_dom_sets_distinct
                 )+,
           clarsimp split: option.splits)+)[3]
-  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct not_in_range_cte_None s0_ptrs_distinct split: option.splits)
+  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct not_in_range_cte_None split: option.splits)
   apply (cut_tac ptr="Low_tcb_ptr" and x="0x10" in tcb_offs_in_rangeI, simp add: s0_ptr_defs, simp add: s0_ptr_defs)
-  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None s0_ptrs_distinct split: option.splits)
+  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None split: option.splits)
   apply ((simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD1] not_in_range_cte_None
         | simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD2] not_in_range_cte_None)+)[1]
   apply (intro conjI impI allI)
@@ -1611,7 +1601,7 @@ lemma map_to_ctes_kh0H_simps[simp]:
          erule notE,
          rule kh0H_dom_sets_distinct)
   apply (cut_tac ptr="Low_tcb_ptr" and x="0x20" in tcb_offs_in_rangeI, simp add: s0_ptr_defs, simp add: s0_ptr_defs)
-  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None s0_ptrs_distinct split: option.splits)
+  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None split: option.splits)
   apply ((simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD1] not_in_range_cte_None
         | simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD2] not_in_range_cte_None)+)[1]
   apply (intro conjI impI allI)
@@ -1630,7 +1620,7 @@ lemma map_to_ctes_kh0H_simps[simp]:
          erule notE,
          rule kh0H_dom_sets_distinct)
   apply (cut_tac ptr="Low_tcb_ptr" and x="0x30" in tcb_offs_in_rangeI, simp add: s0_ptr_defs, simp add: s0_ptr_defs)
-  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None s0_ptrs_distinct split: option.splits)
+  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None split: option.splits)
   apply ((simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD1] not_in_range_cte_None
         | simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD2] not_in_range_cte_None)+)[1]
   apply (intro conjI impI allI)
@@ -1649,7 +1639,7 @@ lemma map_to_ctes_kh0H_simps[simp]:
          erule notE,
          rule kh0H_dom_sets_distinct)
   apply (cut_tac ptr="Low_tcb_ptr" and x="0x40" in tcb_offs_in_rangeI, simp add: s0_ptr_defs, simp add: s0_ptr_defs)
-  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None s0_ptrs_distinct split: option.splits)
+  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None split: option.splits)
   apply ((simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD1] not_in_range_cte_None
         | simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD2] not_in_range_cte_None)+)[1]
   apply (intro conjI impI allI)
@@ -1667,9 +1657,9 @@ lemma map_to_ctes_kh0H_simps[simp]:
           assumption,
          erule notE,
          rule kh0H_dom_sets_distinct)
-  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct not_in_range_cte_None s0_ptrs_distinct split: option.splits)
+  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct not_in_range_cte_None  split: option.splits)
   apply (cut_tac ptr="High_tcb_ptr" and x="0x10" in tcb_offs_in_rangeI, simp add: s0_ptr_defs, simp add: s0_ptr_defs)
-  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None s0_ptrs_distinct split: option.splits)
+  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None  split: option.splits)
   apply ((simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD1] not_in_range_cte_None
         | simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD2] not_in_range_cte_None)+)[1]
   apply (intro conjI impI allI)
@@ -1688,7 +1678,7 @@ lemma map_to_ctes_kh0H_simps[simp]:
          erule notE,
          rule kh0H_dom_sets_distinct)
   apply (cut_tac ptr="High_tcb_ptr" and x="0x20" in tcb_offs_in_rangeI, simp add: s0_ptr_defs, simp add: s0_ptr_defs)
-  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None s0_ptrs_distinct split: option.splits)
+  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None  split: option.splits)
   apply ((simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD1] not_in_range_cte_None
         | simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD2] not_in_range_cte_None)+)[1]
   apply (intro conjI impI allI)
@@ -1707,7 +1697,7 @@ lemma map_to_ctes_kh0H_simps[simp]:
          erule notE,
          rule kh0H_dom_sets_distinct)
   apply (cut_tac ptr="High_tcb_ptr" and x="0x30" in tcb_offs_in_rangeI, simp add: s0_ptr_defs, simp add: s0_ptr_defs)
-  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None s0_ptrs_distinct split: option.splits)
+  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None  split: option.splits)
   apply ((simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD1] not_in_range_cte_None
         | simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD2] not_in_range_cte_None)+)[1]
   apply (intro conjI impI allI)
@@ -1726,7 +1716,7 @@ lemma map_to_ctes_kh0H_simps[simp]:
          erule notE,
          rule kh0H_dom_sets_distinct)
   apply (cut_tac ptr="High_tcb_ptr" and x="0x40" in tcb_offs_in_rangeI, simp add: s0_ptr_defs, simp add: s0_ptr_defs)
-  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None s0_ptrs_distinct split: option.splits)
+  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None  split: option.splits)
   apply ((simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD1] not_in_range_cte_None
         | simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD2] not_in_range_cte_None)+)[1]
   apply (intro conjI impI allI)
@@ -1744,9 +1734,9 @@ lemma map_to_ctes_kh0H_simps[simp]:
           assumption,
          erule notE,
          rule kh0H_dom_sets_distinct)
-  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct not_in_range_cte_None s0_ptrs_distinct split: option.splits)
+  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct not_in_range_cte_None  split: option.splits)
   apply (cut_tac ptr="idle_tcb_ptr" and x="0x10" in tcb_offs_in_rangeI, simp add: s0_ptr_defs, simp add: s0_ptr_defs)
-  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None s0_ptrs_distinct split: option.splits)
+  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None  split: option.splits)
   apply ((simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD1] not_in_range_cte_None
         | simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD2] not_in_range_cte_None)+)[1]
   apply (intro conjI impI allI)
@@ -1765,7 +1755,7 @@ lemma map_to_ctes_kh0H_simps[simp]:
          erule notE,
          rule kh0H_dom_sets_distinct)
   apply (cut_tac ptr="idle_tcb_ptr" and x="0x20" in tcb_offs_in_rangeI, simp add: s0_ptr_defs, simp add: s0_ptr_defs)
-  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None s0_ptrs_distinct split: option.splits)
+  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None  split: option.splits)
   apply ((simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD1] not_in_range_cte_None
         | simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD2] not_in_range_cte_None)+)[1]
   apply (intro conjI impI allI)
@@ -1784,7 +1774,7 @@ lemma map_to_ctes_kh0H_simps[simp]:
          erule notE,
          rule kh0H_dom_sets_distinct)
   apply (cut_tac ptr="idle_tcb_ptr" and x="0x30" in tcb_offs_in_rangeI, simp add: s0_ptr_defs, simp add: s0_ptr_defs)
-  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None s0_ptrs_distinct split: option.splits)
+  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None  split: option.splits)
   apply ((simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD1] not_in_range_cte_None
         | simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD2] not_in_range_cte_None)+)[1]
   apply (intro conjI impI allI)
@@ -1803,7 +1793,7 @@ lemma map_to_ctes_kh0H_simps[simp]:
          erule notE,
          rule kh0H_dom_sets_distinct)
   apply (cut_tac ptr="idle_tcb_ptr" and x="0x40" in tcb_offs_in_rangeI, simp add: s0_ptr_defs, simp add: s0_ptr_defs)
-  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None s0_ptrs_distinct split: option.splits)
+  apply (clarsimp simp: map_to_ctes_kh0H option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_cte_None  split: option.splits)
   apply ((simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD1] not_in_range_cte_None
         | simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD2] not_in_range_cte_None)+)[1]
   apply (intro conjI impI allI)
@@ -1890,19 +1880,44 @@ lemma map_to_ctes_kh0H_SomeD:
         x \<in> cnode_offs_range Low_cnode_ptr \<and> Low_cte_cte Low_cnode_ptr x \<noteq> None \<and> y = the (Low_cte_cte Low_cnode_ptr x)"
   apply (frule map_to_ctes_kh0H_SomeD')
   apply (elim disjE)
-       apply (clarsimp simp: idle_tcb_cte_def idle_tcbH_def Low_tcb_cte_def Low_tcbH_def Low_capsH_def High_tcb_cte_def High_tcbH_def High_capsH_def the_nat_to_bl_10_def the_nat_to_bl_def nat_to_bl_def)+
+       apply (clarsimp simp: idle_tcb_cte_def idle_tcbH_def Low_tcb_cte_def Low_tcbH_def Low_capsH_def High_tcb_cte_def High_tcbH_def High_capsH_def the_nat_to_bl_def nat_to_bl_def)+
      apply (drule offs_range_correct, clarsimp simp: offs_in_range)+
      done
 
 lemma mask_neg_add_aligned:
   "is_aligned q n \<Longrightarrow> p + q && ~~ mask n = (p && ~~ mask n) + q"
-  apply (subst add_commute)
+  apply (subst add.commute)
   apply (simp add: mask_out_add_aligned[symmetric])
   done
 
 lemma kh_s0H[simp]:
   "ksPSpace s0H_internal = kh0H"
   by (simp add: s0H_internal_def)
+
+lemma pspace_distinct'_split:
+  notes less_1_simp[simp del] shows
+  "(\<forall>(y, ko) \<in> graph_of (ksPSpace ks). (x \<le> y \<or> y + (1 << objBitsKO ko) - 1 < x)
+        \<and> y \<le> y + (1 << objBitsKO ko) - 1)
+    \<Longrightarrow> pspace_distinct' (ks \<lparr>ksPSpace := restrict_map (ksPSpace ks) {..< x}\<rparr>)
+    \<Longrightarrow> pspace_distinct' (ks \<lparr>ksPSpace := restrict_map (ksPSpace ks) {x ..}\<rparr>)
+    \<Longrightarrow> pspace_distinct' ks"
+  apply (clarsimp simp: pspace_distinct'_def)
+  apply (drule bspec, erule graph_ofI, clarsimp)
+  apply (simp add: Ball_def)
+  apply (drule_tac x=xa in spec)+
+  apply (erule disjE)
+   apply (simp add: domI)
+   apply (thin_tac "P \<longrightarrow> Q" for P Q)
+   apply (simp add: ps_clear_def)
+   apply (erule trans[rotated])
+   apply auto[1]
+  apply (clarsimp simp add: domI)
+  apply (drule mp, erule(1) order_le_less_trans)
+  apply (thin_tac "P \<longrightarrow> Q" for P Q)
+  apply (simp add: ps_clear_def)
+  apply (erule trans[rotated])
+  apply auto[1]
+  done
 
 lemma s0H_pspace_distinct':
   "pspace_distinct' s0H_internal"
@@ -1915,11 +1930,11 @@ lemma s0H_pspace_distinct':
         | clarsimp simp: kh0H_dom_sets_distinct[THEN orthD2]
         | fastforce simp: s0_ptr_defs objBitsKO_def pageBits_def kh0H_obj_def
         | clarsimp simp: irq_node_offs_range_def objBitsKO_def s0_ptr_defs,
-          drule_tac x="0xF" in word_plus_strict_mono_right, fastforce, simp add: add_commute,
+          drule_tac x="0xF" in word_plus_strict_mono_right, fastforce, simp add: add.commute,
           drule(1) notE[rotated, OF less_trans, OF _ _ leD, rotated 2], fastforce, simp
         | clarsimp simp: pt_offs_range_def pd_offs_range_def irq_node_offs_range_def cnode_offs_range_def objBitsKO_def archObjSize_def s0_ptr_defs kh0H_obj_def,
           drule(1) aligned_le_sharp, simp add: mask_def,
-          drule_tac x="0x3" in word_plus_mono_right, fastforce, simp add: add_commute,
+          drule_tac x="0x3" in word_plus_mono_right, fastforce, simp add: add.commute,
           (drule(1) notE[rotated, OF le_less_trans, OF _ _ leD, rotated 2], fastforce, simp
           | drule(2) notE[rotated, OF le_less_trans, OF _ _ leD[OF order_trans], rotated 2], fastforce, simp)
         | clarsimp simp: objBitsKO_def pageBits_def cnode_offs_range_def pd_offs_range_def pt_offs_range_def irq_node_offs_range_def s0_ptr_defs kh0H_obj_def,
@@ -1927,14 +1942,14 @@ lemma s0H_pspace_distinct':
                    notE[rotated, OF le_less_trans, OF _ _ leD], fastforce, simp
         | (clarsimp simp: objBitsKO_def pageBits_def cnode_offs_range_def pd_offs_range_def pt_offs_range_def irq_node_offs_range_def s0_ptr_defs kh0H_obj_def Low_cte'_def Low_capsH_def cte_level_bits_def empty_cte_def High_cte'_def High_capsH_def Silc_cte'_def Silc_capsH_def split: split_if_asm,
          (drule(1) aligned_le_sharp, simp add: mask_def,
-          drule_tac x="0xF" in word_plus_mono_right, fastforce, simp add: add_commute,
+          drule_tac x="0xF" in word_plus_mono_right, fastforce, simp add: add.commute,
           (drule(1) notE[rotated, OF le_less_trans, OF _ _ leD, rotated 2]
                     notE[rotated, OF le_less_trans, OF _ _ leD], fastforce, simp
           | drule(2) notE[rotated, OF less_trans, OF _ _ leD[OF order_trans], rotated 2]
                      notE[rotated, OF le_less_trans, OF _ _ leD[OF order_trans], rotated 2],
                fastforce, simp))+)[1]
         | clarsimp simp: objBitsKO_def irq_node_offs_range_def cnode_offs_range_def pd_offs_range_def pt_offs_range_def cte_level_bits_def s0_ptr_defs,
-          drule_tac x="0xF" in word_plus_strict_mono_right, fastforce, simp add: add_commute,
+          drule_tac x="0xF" in word_plus_strict_mono_right, fastforce, simp add: add.commute,
           drule(2) notE[rotated, OF less_trans, OF _ _ leD[OF order_trans], rotated 2]
                    notE[rotated, OF le_less_trans, OF _ _ leD[OF order_trans], rotated 2],
               fastforce, simp
@@ -1953,7 +1968,7 @@ lemma pspace_distinctD'':
 lemma cnode_offs_min2':
   "is_aligned ptr 14 \<Longrightarrow> (ptr::word32) \<le> ptr + 0x10 * (x && mask 10)"
   apply (erule is_aligned_no_wrap')
-  apply (subst mult_commute)
+  apply (subst mult.commute)
   apply (rule div_lt_mult)
    apply (cut_tac and_mask_less'[where n=10])
     apply simp
@@ -1970,7 +1985,7 @@ lemma cnode_offs_min2:
 lemma cnode_offs_max2':
   "is_aligned ptr 14 \<Longrightarrow> (ptr::word32) + 0x10 * (x && mask 10) \<le> ptr + 0x3fff"
   apply (rule word_plus_mono_right)
-   apply (subst mult_commute)
+   apply (subst mult.commute)
    apply (rule div_to_mult_word_lt)
    apply simp
    apply (rule plus_one_helper)
@@ -1979,7 +1994,7 @@ lemma cnode_offs_max2':
     apply simp
    apply simp
   apply (drule is_aligned_no_overflow)
-  apply (simp add: add_commute)
+  apply (simp add: add.commute)
   done
 
 lemma cnode_offs_max2:
@@ -1991,7 +2006,7 @@ lemma cnode_offs_max2:
 lemma cnode_offs_in_range2':
   "\<lbrakk>is_aligned ptr 14\<rbrakk> \<Longrightarrow>
      ptr + 0x10 * (x && mask 10) \<in> cnode_offs_range ptr"
-  apply (clarsimp simp: cnode_offs_min2' cnode_offs_max2' cnode_offs_range_def add_commute cte_level_bits_def)
+  apply (clarsimp simp: cnode_offs_min2' cnode_offs_max2' cnode_offs_range_def add.commute cte_level_bits_def)
   apply (rule is_aligned_add)
    apply (erule is_aligned_weaken)
    apply simp
@@ -2095,37 +2110,37 @@ lemma valid_caps_s0H[simp]:
       apply (simp add: objBitsKO_def s0_ptrs_aligned)
      apply (simp add: objBitsKO_def)
     apply (simp add: objBitsKO_def s0_ptrs_aligned mask_def)
-   apply (clarsimp simp: Low_cte_def Low_cte'_def Low_capsH_def cnode_offs_min2 cnode_offs_max2 cnode_offs_aligned2 add_commute s0_ptrs_aligned cte_level_bits_def objBitsKO_def empty_cte_def)
+   apply (clarsimp simp: Low_cte_def Low_cte'_def Low_capsH_def cnode_offs_min2 cnode_offs_max2 cnode_offs_aligned2 add.commute s0_ptrs_aligned cte_level_bits_def objBitsKO_def empty_cte_def)
    apply (rule pspace_distinctD''[OF _ s0H_pspace_distinct', simplified cte_level_bits_def])
-   apply (simp add: Low_cte_def Low_cte'_def Low_capsH_def empty_cte_def cnode_offs_min2 cnode_offs_max2 cnode_offs_aligned2 add_commute s0_ptrs_aligned cte_level_bits_def objBitsKO_def)
+   apply (simp add: Low_cte_def Low_cte'_def Low_capsH_def empty_cte_def cnode_offs_min2 cnode_offs_max2 cnode_offs_aligned2 add.commute s0_ptrs_aligned cte_level_bits_def objBitsKO_def)
    apply (simp add: valid_cap'_def capAligned_def word_bits_def objBits_def s0_ptrs_aligned obj_at'_def projectKO_eq project_inject)
    apply (intro conjI)
       apply (simp add: objBitsKO_def s0_ptrs_aligned)
      apply (simp add: objBitsKO_def)
     apply (simp add: objBitsKO_def s0_ptrs_aligned mask_def)
-   apply (clarsimp simp: High_cte_def High_cte'_def High_capsH_def cnode_offs_min2 cnode_offs_max2 cnode_offs_aligned2 add_commute s0_ptrs_aligned cte_level_bits_def objBitsKO_def empty_cte_def)
+   apply (clarsimp simp: High_cte_def High_cte'_def High_capsH_def cnode_offs_min2 cnode_offs_max2 cnode_offs_aligned2 add.commute s0_ptrs_aligned cte_level_bits_def objBitsKO_def empty_cte_def)
    apply (rule pspace_distinctD''[OF _ s0H_pspace_distinct', simplified cte_level_bits_def])
-   apply (simp add: High_cte_def High_cte'_def High_capsH_def empty_cte_def cnode_offs_min2 cnode_offs_max2 cnode_offs_aligned2 add_commute s0_ptrs_aligned cte_level_bits_def objBitsKO_def)
+   apply (simp add: High_cte_def High_cte'_def High_capsH_def empty_cte_def cnode_offs_min2 cnode_offs_max2 cnode_offs_aligned2 add.commute s0_ptrs_aligned cte_level_bits_def objBitsKO_def)
    apply (simp add: valid_cap'_def capAligned_def word_bits_def objBits_def s0_ptrs_aligned obj_at'_def projectKO_eq project_inject)
    apply (intro conjI)
       apply (simp add: objBitsKO_def s0_ptrs_aligned)
      apply (simp add: objBitsKO_def)
     apply (simp add: objBitsKO_def s0_ptrs_aligned mask_def)
-   apply (clarsimp simp: Silc_cte_def Silc_cte'_def Silc_capsH_def cnode_offs_min2 cnode_offs_max2 cnode_offs_aligned2 add_commute s0_ptrs_aligned cte_level_bits_def objBitsKO_def empty_cte_def)
+   apply (clarsimp simp: Silc_cte_def Silc_cte'_def Silc_capsH_def cnode_offs_min2 cnode_offs_max2 cnode_offs_aligned2 add.commute s0_ptrs_aligned cte_level_bits_def objBitsKO_def empty_cte_def)
    apply (rule pspace_distinctD''[OF _ s0H_pspace_distinct', simplified cte_level_bits_def])
-   apply (simp add: Silc_cte_def Silc_cte'_def Silc_capsH_def empty_cte_def cnode_offs_min2 cnode_offs_max2 cnode_offs_aligned2 add_commute s0_ptrs_aligned cte_level_bits_def objBitsKO_def)
+   apply (simp add: Silc_cte_def Silc_cte'_def Silc_capsH_def empty_cte_def cnode_offs_min2 cnode_offs_max2 cnode_offs_aligned2 add.commute s0_ptrs_aligned cte_level_bits_def objBitsKO_def)
    apply (simp add: valid_cap'_def capAligned_def word_bits_def Low_asid_def asid_low_bits_def asid_bits_def s0_ptrs_aligned page_directory_at'_def pdBits_def pageBits_def)
    apply (clarsimp simp: typ_at'_def ko_wp_at'_def)
    apply (drule less_t2n_ex_ucast[where n=12 and 'b=12, simplified])
-   apply (clarsimp simp: Low_pdH_def pd_offs_aligned pd_offs_min pd_offs_max s0_ptrs_aligned add_commute objBitsKO_def archObjSize_def)
+   apply (clarsimp simp: Low_pdH_def pd_offs_aligned pd_offs_min pd_offs_max s0_ptrs_aligned add.commute objBitsKO_def archObjSize_def)
    apply (rule pspace_distinctD''[OF _ s0H_pspace_distinct'])
-   apply (simp add: Low_pdH_def pd_offs_aligned pd_offs_min pd_offs_max s0_ptrs_aligned objBitsKO_def archObjSize_def add_commute)
+   apply (simp add: Low_pdH_def pd_offs_aligned pd_offs_min pd_offs_max s0_ptrs_aligned objBitsKO_def archObjSize_def add.commute)
    apply (simp add: valid_cap'_def capAligned_def word_bits_def High_asid_def asid_low_bits_def asid_bits_def s0_ptrs_aligned page_directory_at'_def pdBits_def pageBits_def)
    apply (clarsimp simp: typ_at'_def ko_wp_at'_def)
    apply (drule less_t2n_ex_ucast[where n=12 and 'b=12, simplified])
-   apply (clarsimp simp: High_pdH_def pd_offs_aligned pd_offs_min pd_offs_max s0_ptrs_aligned add_commute objBitsKO_def archObjSize_def)
+   apply (clarsimp simp: High_pdH_def pd_offs_aligned pd_offs_min pd_offs_max s0_ptrs_aligned add.commute objBitsKO_def archObjSize_def)
    apply (rule pspace_distinctD''[OF _ s0H_pspace_distinct'])
-   apply (simp add: High_pdH_def pd_offs_aligned pd_offs_min pd_offs_max s0_ptrs_aligned objBitsKO_def archObjSize_def add_commute)
+   apply (simp add: High_pdH_def pd_offs_aligned pd_offs_min pd_offs_max s0_ptrs_aligned objBitsKO_def archObjSize_def add.commute)
    apply (simp add: valid_cap'_def capAligned_def word_bits_def objBits_def s0_ptrs_aligned obj_at'_def projectKO_eq project_inject Low_asid_def asid_low_bits_def asid_bits_def objBitsKO_def aepH_def)
    apply (rule pspace_distinctD''[OF _ s0H_pspace_distinct', simplified])
    apply (simp add: aepH_def objBitsKO_def)
@@ -2172,8 +2187,8 @@ lemma s0H_valid_objs':
   apply (clarsimp simp: valid_obj'_def Low_ptH_def Low_pt'H_def valid_mapping'_def s0_ptr_defs is_aligned_def Platform.addrFromPPtr_def Platform.ptrFromPAddr_def physMappingOffset_def kernelBase_addr_def physBase_def split: split_if_asm)
   done
 
-lemmas the_nat_to_bl_10_simps =
-  the_nat_to_bl_10_def the_nat_to_bl_def nat_to_bl_def
+lemmas the_nat_to_bl_simps =
+  the_nat_to_bl_def nat_to_bl_def
 
 lemma ucast_shiftr_13E:
   "\<lbrakk>ucast (p - ptr >> 4) = (0x13E::10 word); p \<le> 0x3FFF + ptr; ptr \<le> p;
@@ -2299,16 +2314,16 @@ lemma map_to_ctes_kh0H_simps'[simp]:
          (MDB (High_cnode_ptr + 0x13E0) (Low_cnode_ptr + 0x13E0) False False))"
   "map_to_ctes kh0H (Silc_cnode_ptr + 0x20) = Some
     (CTE (CNodeCap Silc_cnode_ptr 10 2 10) Null_mdb)"
-           apply (clarsimp simp: map_to_ctes_kh0H_simps(3)[where x="the_nat_to_bl_10 318", simplified the_nat_to_bl_10_simps, simplified] kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_10_simps, fastforce simp: s0_ptr_defs is_aligned_def)
-          apply (clarsimp simp: map_to_ctes_kh0H_simps(3)[where x="the_nat_to_bl_10 3", simplified the_nat_to_bl_10_simps, simplified] kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_10_simps, fastforce simp: s0_ptr_defs is_aligned_def)
-         apply (clarsimp simp: map_to_ctes_kh0H_simps(3)[where x="the_nat_to_bl_10 2", simplified the_nat_to_bl_10_simps, simplified] kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_10_simps, fastforce simp: s0_ptr_defs is_aligned_def)
-        apply (clarsimp simp: map_to_ctes_kh0H_simps(3)[where x="the_nat_to_bl_10 1", simplified the_nat_to_bl_10_simps, simplified] kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_10_simps, fastforce simp: s0_ptr_defs is_aligned_def)
-       apply (clarsimp simp: map_to_ctes_kh0H_simps(4)[where x="the_nat_to_bl_10 318", simplified the_nat_to_bl_10_simps, simplified] kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_10_simps, fastforce simp: s0_ptr_defs is_aligned_def)
-      apply (clarsimp simp: map_to_ctes_kh0H_simps(4)[where x="the_nat_to_bl_10 3", simplified the_nat_to_bl_10_simps, simplified] kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_10_simps, fastforce simp: s0_ptr_defs is_aligned_def)
-     apply (clarsimp simp: map_to_ctes_kh0H_simps(4)[where x="the_nat_to_bl_10 2", simplified the_nat_to_bl_10_simps, simplified] kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_10_simps, fastforce simp: s0_ptr_defs is_aligned_def)
-    apply (clarsimp simp: map_to_ctes_kh0H_simps(4)[where x="the_nat_to_bl_10 1", simplified the_nat_to_bl_10_simps, simplified] kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_10_simps, fastforce simp: s0_ptr_defs is_aligned_def)
-   apply (clarsimp simp: map_to_ctes_kh0H_simps(5)[where x="the_nat_to_bl_10 318", simplified the_nat_to_bl_10_simps, simplified] kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_10_simps, fastforce simp: s0_ptr_defs is_aligned_def)
-  apply (clarsimp simp: map_to_ctes_kh0H_simps(5)[where x="the_nat_to_bl_10 2", simplified the_nat_to_bl_10_simps, simplified] kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_10_simps, fastforce simp: s0_ptr_defs is_aligned_def)
+           apply (clarsimp simp: map_to_ctes_kh0H_simps(3)[where x="the_nat_to_bl_10 318", simplified the_nat_to_bl_simps, simplified] kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps, fastforce simp: s0_ptr_defs is_aligned_def)
+          apply (clarsimp simp: map_to_ctes_kh0H_simps(3)[where x="the_nat_to_bl_10 3", simplified the_nat_to_bl_simps, simplified] kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps, fastforce simp: s0_ptr_defs is_aligned_def)
+         apply (clarsimp simp: map_to_ctes_kh0H_simps(3)[where x="the_nat_to_bl_10 2", simplified the_nat_to_bl_simps, simplified] kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps, fastforce simp: s0_ptr_defs is_aligned_def)
+        apply (clarsimp simp: map_to_ctes_kh0H_simps(3)[where x="the_nat_to_bl_10 1", simplified the_nat_to_bl_simps, simplified] kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps, fastforce simp: s0_ptr_defs is_aligned_def)
+       apply (clarsimp simp: map_to_ctes_kh0H_simps(4)[where x="the_nat_to_bl_10 318", simplified the_nat_to_bl_simps, simplified] kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps, fastforce simp: s0_ptr_defs is_aligned_def)
+      apply (clarsimp simp: map_to_ctes_kh0H_simps(4)[where x="the_nat_to_bl_10 3", simplified the_nat_to_bl_simps, simplified] kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps, fastforce simp: s0_ptr_defs is_aligned_def)
+     apply (clarsimp simp: map_to_ctes_kh0H_simps(4)[where x="the_nat_to_bl_10 2", simplified the_nat_to_bl_simps, simplified] kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps, fastforce simp: s0_ptr_defs is_aligned_def)
+    apply (clarsimp simp: map_to_ctes_kh0H_simps(4)[where x="the_nat_to_bl_10 1", simplified the_nat_to_bl_simps, simplified] kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps, fastforce simp: s0_ptr_defs is_aligned_def)
+   apply (clarsimp simp: map_to_ctes_kh0H_simps(5)[where x="the_nat_to_bl_10 318", simplified the_nat_to_bl_simps, simplified] kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps, fastforce simp: s0_ptr_defs is_aligned_def)
+  apply (clarsimp simp: map_to_ctes_kh0H_simps(5)[where x="the_nat_to_bl_10 2", simplified the_nat_to_bl_simps, simplified] kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps, fastforce simp: s0_ptr_defs is_aligned_def)
   done
 
 lemma mdb_next_s0H:
@@ -2324,9 +2339,9 @@ lemma mdb_next_s0H:
    apply (elim exE conjE)
    apply (frule map_to_ctes_kh0H_SomeD)
    apply (elim disjE, simp_all)[1]
-     apply (clarsimp simp: kh0H_all_obj_def' to_bl_use_of_bl the_nat_to_bl_10_simps cte_level_bits_def ucast_shiftr_13E s0_ptrs_aligned split: split_if_asm)
-    apply (clarsimp simp: kh0H_all_obj_def' to_bl_use_of_bl the_nat_to_bl_10_simps cte_level_bits_def ucast_shiftr_13E s0_ptrs_aligned split: split_if_asm)
-   apply (clarsimp simp: kh0H_all_obj_def' to_bl_use_of_bl the_nat_to_bl_10_simps cte_level_bits_def ucast_shiftr_13E s0_ptrs_aligned split: split_if_asm)
+     apply (clarsimp simp: kh0H_all_obj_def' to_bl_use_of_bl the_nat_to_bl_simps cte_level_bits_def ucast_shiftr_13E s0_ptrs_aligned split: split_if_asm)
+    apply (clarsimp simp: kh0H_all_obj_def' to_bl_use_of_bl the_nat_to_bl_simps cte_level_bits_def ucast_shiftr_13E s0_ptrs_aligned split: split_if_asm)
+   apply (clarsimp simp: kh0H_all_obj_def' to_bl_use_of_bl the_nat_to_bl_simps cte_level_bits_def ucast_shiftr_13E s0_ptrs_aligned split: split_if_asm)
   apply (clarsimp simp: next_unfold' map_to_ctes_kh0H_dom)
   apply (elim disjE, simp_all add: kh0H_all_obj_def')
   done
@@ -2345,11 +2360,11 @@ lemma mdb_prev_s0H:
    apply (frule map_to_ctes_kh0H_SomeD)
    apply (elim disjE, simp_all)[1]
      apply clarsimp
-     apply (clarsimp simp: kh0H_all_obj_def' to_bl_use_of_bl the_nat_to_bl_10_simps cte_level_bits_def ucast_shiftr_13E s0_ptrs_aligned split: split_if_asm)
+     apply (clarsimp simp: kh0H_all_obj_def' to_bl_use_of_bl the_nat_to_bl_simps cte_level_bits_def ucast_shiftr_13E s0_ptrs_aligned split: split_if_asm)
     apply clarsimp
-    apply (clarsimp simp: kh0H_all_obj_def' to_bl_use_of_bl the_nat_to_bl_10_simps cte_level_bits_def ucast_shiftr_13E ucast_shiftr_3 ucast_shiftr_2 s0_ptrs_aligned split: split_if_asm)
+    apply (clarsimp simp: kh0H_all_obj_def' to_bl_use_of_bl the_nat_to_bl_simps cte_level_bits_def ucast_shiftr_13E ucast_shiftr_3 ucast_shiftr_2 s0_ptrs_aligned split: split_if_asm)
    apply clarsimp
-   apply (clarsimp simp: kh0H_all_obj_def' to_bl_use_of_bl the_nat_to_bl_10_simps cte_level_bits_def ucast_shiftr_13E ucast_shiftr_3 ucast_shiftr_2 s0_ptrs_aligned split: split_if_asm)
+   apply (clarsimp simp: kh0H_all_obj_def' to_bl_use_of_bl the_nat_to_bl_simps cte_level_bits_def ucast_shiftr_13E ucast_shiftr_3 ucast_shiftr_2 s0_ptrs_aligned split: split_if_asm)
   apply (clarsimp simp: mdb_prev_def map_to_ctes_kh0H_dom)
   apply (elim disjE, simp_all add: kh0H_all_obj_def')
   done
@@ -2407,13 +2422,13 @@ lemma sameRegionAs_s0H:
              apply (simp add: s0_ptr_defs)
             apply (clarsimp simp: kh0H_all_obj_def' s0_ptr_defs split: split_if_asm)
            apply (clarsimp simp: kh0H_all_obj_def' s0_ptr_defs split: split_if_asm)
-          apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_10_simps ucast_shiftr_2 s0_ptrs_aligned split: split_if_asm)
+          apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps ucast_shiftr_2 s0_ptrs_aligned split: split_if_asm)
          apply (frule_tac x=p' in map_to_ctes_kh0H_SomeD)
          apply (elim disjE, simp_all add: sameRegionAs_def ArchRetype_H.sameRegionAs_def isCap_simps)[1]
             apply (simp add: s0_ptr_defs)
            apply (clarsimp simp: kh0H_all_obj_def' s0_ptr_defs split: split_if_asm)
           apply (clarsimp simp: ArchRetype_H.sameRegionAs_def isCap_simps kh0H_all_obj_def' s0_ptr_defs split: split_if_asm)
-         apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_10_simps ucast_shiftr_3 s0_ptrs_aligned split: split_if_asm)
+         apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps ucast_shiftr_3 s0_ptrs_aligned split: split_if_asm)
         apply (frule_tac x=p' in map_to_ctes_kh0H_SomeD)
         apply (elim disjE, simp_all add: sameRegionAs_def isCap_simps)[1]
           apply (clarsimp simp: kh0H_all_obj_def' s0_ptr_defs split: split_if_asm)
@@ -2423,13 +2438,13 @@ lemma sameRegionAs_s0H:
        apply (elim disjE, simp_all add: sameRegionAs_def isCap_simps)[1]
           apply (simp add: s0_ptr_defs)
          apply (clarsimp simp: kh0H_all_obj_def' s0_ptr_defs split: split_if_asm)
-        apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_10_simps ucast_shiftr_2 s0_ptrs_aligned split: split_if_asm)
+        apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps ucast_shiftr_2 s0_ptrs_aligned split: split_if_asm)
        apply (clarsimp simp: kh0H_all_obj_def' s0_ptr_defs split: split_if_asm)
       apply (frule_tac x=p' in map_to_ctes_kh0H_SomeD)
       apply (elim disjE, simp_all add: sameRegionAs_def ArchRetype_H.sameRegionAs_def isCap_simps)[1]
          apply (simp add: s0_ptr_defs)
         apply (clarsimp simp: kh0H_all_obj_def' s0_ptr_defs split: split_if_asm)
-       apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_10_simps ucast_shiftr_3 s0_ptrs_aligned split: split_if_asm)
+       apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps ucast_shiftr_3 s0_ptrs_aligned split: split_if_asm)
       apply (clarsimp simp: ArchRetype_H.sameRegionAs_def isCap_simps kh0H_all_obj_def' s0_ptr_defs split: split_if_asm)
      apply (frule_tac x=p' in map_to_ctes_kh0H_SomeD)
      apply (elim disjE, simp_all add: sameRegionAs_def isCap_simps)[1]
@@ -2439,7 +2454,7 @@ lemma sameRegionAs_s0H:
     apply (clarsimp simp: kh0H_all_obj_def' split: split_if_asm)
      apply (frule_tac x=p' in map_to_ctes_kh0H_SomeD)
      apply (elim disjE, simp_all add: sameRegionAs_def isCap_simps)[1]
-       apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_10_simps split: split_if_asm)
+       apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps split: split_if_asm)
        apply (drule(2) ucast_shiftr_13E)
          apply (rule s0_ptrs_aligned)
         apply simp
@@ -2447,13 +2462,11 @@ lemma sameRegionAs_s0H:
          apply (rule s0_ptrs_aligned)
         apply simp
        apply clarsimp
-      apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_10_simps ucast_shiftr_13E s0_ptrs_aligned split: split_if_asm)
-     apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_10_simps ucast_shiftr_13E s0_ptrs_aligned split: split_if_asm)
+      apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps ucast_shiftr_13E s0_ptrs_aligned split: split_if_asm)
+     apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps ucast_shiftr_13E s0_ptrs_aligned split: split_if_asm)
     apply (frule_tac x=p' in map_to_ctes_kh0H_SomeD)
     apply (elim disjE, simp_all add: sameRegionAs_def isCap_simps)[1]
-        apply (clarsimp simp: kh0H_all_obj_def' s0_ptr_defs split: split_if_asm)
-       apply (clarsimp simp: kh0H_all_obj_def' s0_ptr_defs split: split_if_asm)
-      apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_10_simps split: split_if_asm)
+      apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps split: split_if_asm)
       apply (drule(2) ucast_shiftr_2)
         apply (rule s0_ptrs_aligned)
        apply simp
@@ -2461,15 +2474,13 @@ lemma sameRegionAs_s0H:
         apply (rule s0_ptrs_aligned)
        apply simp
       apply clarsimp
-     apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_10_simps split: split_if_asm)
-     apply (clarsimp simp: s0_ptr_defs)
-    apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_10_simps split: split_if_asm)
-    apply (clarsimp simp: s0_ptr_defs)
+     apply (clarsimp simp: kh0H_all_obj_def' s0_ptr_defs split: split_if_asm)
+    apply (clarsimp simp: kh0H_all_obj_def' s0_ptr_defs split: split_if_asm)
    apply (clarsimp simp: kh0H_all_obj_def' split: split_if_asm)
       apply (frule_tac x=p' in map_to_ctes_kh0H_SomeD)
       apply (elim disjE, simp_all add: sameRegionAs_def isCap_simps)[1]
-        apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_10_simps ucast_shiftr_13E s0_ptrs_aligned split: split_if_asm)
-       apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_10_simps split: split_if_asm)
+        apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps ucast_shiftr_13E s0_ptrs_aligned split: split_if_asm)
+       apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps split: split_if_asm)
        apply (drule(2) ucast_shiftr_13E)
          apply (rule s0_ptrs_aligned)
         apply simp
@@ -2477,13 +2488,12 @@ lemma sameRegionAs_s0H:
          apply (rule s0_ptrs_aligned)
         apply simp
        apply clarsimp
-      apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_10_simps ucast_shiftr_13E s0_ptrs_aligned split: split_if_asm)
+      apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps ucast_shiftr_13E s0_ptrs_aligned split: split_if_asm)
      apply (frule_tac x=p' in map_to_ctes_kh0H_SomeD)
      apply (elim disjE, simp_all add: sameRegionAs_def ArchRetype_H.sameRegionAs_def isCap_simps)[1]
-         apply (clarsimp simp: kh0H_all_obj_def' s0_ptr_defs split: split_if_asm)
-        apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_10_simps ucast_shiftr_3 s0_ptrs_aligned split: split_if_asm)
-       apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_10_simps ucast_shiftr_3 s0_ptrs_aligned split: split_if_asm)
-      apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_10_simps split: split_if_asm)
+        apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps ucast_shiftr_3 s0_ptrs_aligned split: split_if_asm)
+       apply (clarsimp simp: kh0H_all_obj_def' s0_ptr_defs split: split_if_asm)
+      apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps split: split_if_asm)
       apply (drule(2) ucast_shiftr_3)
         apply (rule s0_ptrs_aligned)
        apply simp
@@ -2491,21 +2501,19 @@ lemma sameRegionAs_s0H:
         apply (rule s0_ptrs_aligned)
        apply simp
       apply clarsimp
-     apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_10_simps ucast_shiftr_3 s0_ptrs_aligned ArchRetype_H.sameRegionAs_def isCap_simps split: split_if_asm)
-     apply (clarsimp simp: kh0H_all_obj_def' s0_ptr_defs split: split_if_asm)
+     apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps split: split_if_asm)
+     apply (drule(2) ucast_shiftr_3)
+       apply (rule s0_ptrs_aligned)
+      apply simp
+     apply (drule(2) ucast_shiftr_3)
+       apply (rule s0_ptrs_aligned)
+      apply simp
+     apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps s0_ptrs_aligned ArchRetype_H.sameRegionAs_def isCap_simps split: split_if_asm)
     apply (frule_tac x=p' in map_to_ctes_kh0H_SomeD)
     apply (elim disjE, simp_all add: sameRegionAs_def isCap_simps)[1]
-        apply (clarsimp simp: kh0H_all_obj_def' s0_ptr_defs split: split_if_asm)
-       apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_10_simps ucast_shiftr_2 s0_ptrs_aligned split: split_if_asm)
-      apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_10_simps split: split_if_asm)
-      apply (drule(2) ucast_shiftr_2)
-        apply (rule s0_ptrs_aligned)
-       apply simp
-      apply (drule(2) ucast_shiftr_2)
-        apply (rule s0_ptrs_aligned)
-       apply simp
-      apply clarsimp
-     apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_10_simps split: split_if_asm)
+       apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps ucast_shiftr_2 s0_ptrs_aligned split: split_if_asm)
+      apply (clarsimp simp: kh0H_all_obj_def' s0_ptr_defs split: split_if_asm)
+     apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps split: split_if_asm)
      apply (drule(2) ucast_shiftr_2)
        apply (rule s0_ptrs_aligned)
       apply simp
@@ -2513,12 +2521,11 @@ lemma sameRegionAs_s0H:
        apply (rule s0_ptrs_aligned)
       apply simp
      apply clarsimp
-    apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_10_simps split: split_if_asm)
-    apply (clarsimp simp: s0_ptr_defs)
+    apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps split: split_if_asm)
    apply (frule_tac x=p' in map_to_ctes_kh0H_SomeD)
    apply (elim disjE, simp_all add: sameRegionAs_def isCap_simps)[1]
-     apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_10_simps ucast_shiftr_1 s0_ptrs_aligned split: split_if_asm)
-    apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_10_simps ucast_shiftr_1 s0_ptrs_aligned split: split_if_asm)
+     apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps s0_ptrs_aligned split: split_if_asm)
+    apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps split: split_if_asm)
     apply (drule(2) ucast_shiftr_1)
       apply (rule s0_ptrs_aligned)
      apply simp
@@ -2526,14 +2533,13 @@ lemma sameRegionAs_s0H:
       apply (rule s0_ptrs_aligned)
      apply simp
     apply clarsimp
-   apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_10_simps ucast_shiftr_1 s0_ptrs_aligned split: split_if_asm)
-   apply (clarsimp simp: s0_ptr_defs)
+   apply (clarsimp simp: kh0H_all_obj_def' s0_ptr_defs split: split_if_asm)
   apply (clarsimp simp: kh0H_all_obj_def' split: split_if_asm)
      apply (frule_tac x=p' in map_to_ctes_kh0H_SomeD)
      apply (elim disjE, simp_all add: sameRegionAs_def isCap_simps)[1]
-       apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_10_simps ucast_shiftr_13E s0_ptrs_aligned split: split_if_asm)
-      apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_10_simps ucast_shiftr_13E s0_ptrs_aligned split: split_if_asm)
-     apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_10_simps split: split_if_asm)
+       apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps ucast_shiftr_13E s0_ptrs_aligned split: split_if_asm)
+      apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps ucast_shiftr_13E s0_ptrs_aligned split: split_if_asm)
+     apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps split: split_if_asm)
      apply (drule(2) ucast_shiftr_13E)
        apply (rule s0_ptrs_aligned)
       apply simp
@@ -2543,12 +2549,11 @@ lemma sameRegionAs_s0H:
      apply clarsimp
     apply (frule_tac x=p' in map_to_ctes_kh0H_SomeD)
     apply (elim disjE, simp_all add: sameRegionAs_def ArchRetype_H.sameRegionAs_def isCap_simps)[1]
-        apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_10_simps ucast_shiftr_3 s0_ptrs_aligned split: split_if_asm)
+        apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps ucast_shiftr_3 s0_ptrs_aligned split: split_if_asm)
        apply (clarsimp simp: kh0H_all_obj_def' s0_ptr_defs split: split_if_asm)
-      apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_10_simps ucast_shiftr_3 s0_ptrs_aligned split: split_if_asm)
-     apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_10_simps ucast_shiftr_3 s0_ptrs_aligned ArchRetype_H.sameRegionAs_def isCap_simps split: split_if_asm)
-     apply (clarsimp simp: kh0H_all_obj_def' s0_ptr_defs split: split_if_asm)
-    apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_10_simps split: split_if_asm)
+      apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps ucast_shiftr_3 s0_ptrs_aligned split: split_if_asm)
+     apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps ucast_shiftr_3 s0_ptrs_aligned ArchRetype_H.sameRegionAs_def isCap_simps split: split_if_asm)
+    apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps ucast_shiftr_3 s0_ptrs_aligned split: split_if_asm)
     apply (drule(2) ucast_shiftr_3)
       apply (rule s0_ptrs_aligned)
      apply simp
@@ -2558,19 +2563,10 @@ lemma sameRegionAs_s0H:
     apply clarsimp
    apply (frule_tac x=p' in map_to_ctes_kh0H_SomeD)
    apply (elim disjE, simp_all add: sameRegionAs_def isCap_simps)[1]
-       apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_10_simps ucast_shiftr_2 s0_ptrs_aligned split: split_if_asm)
-      apply (clarsimp simp: kh0H_all_obj_def' s0_ptr_defs split: split_if_asm)
-     apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_10_simps split: split_if_asm)
-     apply (drule(2) ucast_shiftr_2)
-       apply (rule s0_ptrs_aligned)
-      apply simp
-     apply (drule(2) ucast_shiftr_2)
-       apply (rule s0_ptrs_aligned)
-      apply simp
-     apply clarsimp
-    apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_10_simps split: split_if_asm)
-    apply (clarsimp simp: s0_ptr_defs)
-   apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_10_simps split: split_if_asm)
+      apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps ucast_shiftr_2 s0_ptrs_aligned split: split_if_asm)
+     apply (clarsimp simp: kh0H_all_obj_def' s0_ptr_defs split: split_if_asm)
+    apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps ucast_shiftr_2 s0_ptrs_aligned split: split_if_asm)
+   apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps ucast_shiftr_2 s0_ptrs_aligned split: split_if_asm)
    apply (drule(2) ucast_shiftr_2)
      apply (rule s0_ptrs_aligned)
     apply simp
@@ -2580,10 +2576,9 @@ lemma sameRegionAs_s0H:
    apply clarsimp
   apply (frule_tac x=p' in map_to_ctes_kh0H_SomeD)
   apply (elim disjE, simp_all add: sameRegionAs_def isCap_simps)[1]
-    apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_10_simps ucast_shiftr_1 s0_ptrs_aligned split: split_if_asm)
-   apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_10_simps ucast_shiftr_1 s0_ptrs_aligned split: split_if_asm)
-   apply (clarsimp simp: s0_ptr_defs)
-  apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_10_simps ucast_shiftr_1 s0_ptrs_aligned split: split_if_asm)
+    apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps ucast_shiftr_1 s0_ptrs_aligned split: split_if_asm)
+   apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps ucast_shiftr_1 s0_ptrs_aligned split: split_if_asm)
+  apply (clarsimp simp: kh0H_all_obj_def' cte_level_bits_def to_bl_use_of_bl the_nat_to_bl_simps ucast_shiftr_1 s0_ptrs_aligned split: split_if_asm)
   apply (drule(2) ucast_shiftr_1)
     apply (rule s0_ptrs_aligned)
    apply simp
@@ -2835,7 +2830,7 @@ lemma s0H_invs:
       apply (rule_tac x="High_cnode_ptr + 0x10" in exI)
       apply (clarsimp simp: kh0H_all_obj_def' image_def)
      apply (rule_tac x="Silc_cnode_ptr + 0x20" in exI)
-     apply (clarsimp simp: kh0H_all_obj_def' image_def to_bl_use_of_bl cte_level_bits_def the_nat_to_bl_10_simps split: split_if_asm)
+     apply (clarsimp simp: kh0H_all_obj_def' image_def to_bl_use_of_bl cte_level_bits_def the_nat_to_bl_simps split: split_if_asm)
       apply (drule(2) ucast_shiftr_13E, rule s0_ptrs_aligned, simp)
       apply (rule_tac x="0x13E" in bexI)
        apply simp
@@ -2845,7 +2840,7 @@ lemma s0H_invs:
       apply simp
      apply simp
     apply (rule_tac x="High_cnode_ptr + 0x20" in exI)
-    apply (clarsimp simp: kh0H_all_obj_def' image_def to_bl_use_of_bl cte_level_bits_def the_nat_to_bl_10_simps split: split_if_asm)
+    apply (clarsimp simp: kh0H_all_obj_def' image_def to_bl_use_of_bl cte_level_bits_def the_nat_to_bl_simps split: split_if_asm)
        apply (drule(2) ucast_shiftr_13E, rule s0_ptrs_aligned, simp)
        apply (rule_tac x="0x13E" in bexI)
         apply simp
@@ -2863,7 +2858,7 @@ lemma s0H_invs:
      apply simp
     apply simp
    apply (rule_tac x="Low_cnode_ptr + 0x20" in exI)
-   apply (clarsimp simp: kh0H_all_obj_def' image_def to_bl_use_of_bl cte_level_bits_def the_nat_to_bl_10_simps split: split_if_asm)
+   apply (clarsimp simp: kh0H_all_obj_def' image_def to_bl_use_of_bl cte_level_bits_def the_nat_to_bl_simps split: split_if_asm)
       apply (drule(2) ucast_shiftr_13E, rule s0_ptrs_aligned, simp)
       apply (rule_tac x="0x13E" in bexI)
        apply simp
@@ -2941,12 +2936,13 @@ lemma s0H_invs:
   apply (rule conjI)
    apply (clarsimp simp: ct_not_inQ_def obj_at'_def projectKO_eq project_inject s0H_internal_def objBitsKO_def s0_ptrs_aligned Low_tcbH_def)
    apply (rule pspace_distinctD''[OF _ s0H_pspace_distinct', simplified s0H_internal_def])
-   apply (simp add: objBitsKO_def kh0H_simps[simplified cte_level_bits_def])
+   apply (simp add: objBitsKO_def)
+(*   apply (simp add: objBitsKO_def kh0H_simps[simplified cte_level_bits_def])*)
   apply (rule conjI)
    apply (clarsimp simp: ct_idle_or_in_cur_domain'_def obj_at'_def projectKO_eq project_inject tcb_in_cur_domain'_def s0H_internal_def Low_tcbH_def Low_domain_def objBitsKO_def s0_ptrs_aligned)
-   apply (erule notE)
    apply (rule pspace_distinctD''[OF _ s0H_pspace_distinct', simplified s0H_internal_def])
-   apply (simp add: objBitsKO_def kh0H_simps[simplified cte_level_bits_def])
+   apply (simp add: objBitsKO_def)
+(*   apply (simp add: objBitsKO_def kh0H_simps[simplified cte_level_bits_def])*)
   apply (rule conjI)
    apply (clarsimp simp: valid_pde_mappings'_def obj_at'_def projectKO_eq project_inject)
    apply (drule kh0H_SomeD)
@@ -3124,7 +3120,7 @@ lemma shiftl_shiftr_2_word8[simp]:
 
 lemma mult_shiftr_id[simp]:
   "length x = 10 \<Longrightarrow> of_bl x * (0x10::word32) >> 4 = of_bl x"
-  apply (simp add: shiftl_t2n[symmetric, where n=4, simplified mult_commute, simplified] )
+  apply (simp add: shiftl_t2n[symmetric, where n=4, simplified mult.commute, simplified] )
   apply (subst shiftl_shiftr_id)
     apply simp
    apply (rule less_trans)
@@ -3152,9 +3148,9 @@ lemma s0_pspace_rel:
                apply (clarsimp simp: kh0H_obj_def split del: split_if)
                apply (cut_tac x=ya in pd_offs_in_range(3))
                apply (clarsimp simp: pd_offs_range_def pde_relation_def pde_relation_aligned_def)
-              apply (clarsimp simp: kh0H_obj_def kh0_obj_def other_obj_relation_def tcb_relation_def fault_option_relation_def word_bits_def)
-             apply (clarsimp simp: kh0H_all_obj_def kh0_obj_def other_obj_relation_def tcb_relation_def fault_option_relation_def word_bits_def the_nat_to_bl_10_def the_nat_to_bl_def nat_to_bl_def)
-            apply (clarsimp simp: kh0H_all_obj_def kh0_obj_def other_obj_relation_def tcb_relation_def fault_option_relation_def word_bits_def the_nat_to_bl_10_def the_nat_to_bl_def nat_to_bl_def)
+              apply (clarsimp simp: kh0H_obj_def kh0_obj_def other_obj_relation_def tcb_relation_def fault_rel_optionation_def word_bits_def)
+             apply (clarsimp simp: kh0H_all_obj_def kh0_obj_def other_obj_relation_def tcb_relation_def fault_rel_optionation_def word_bits_def the_nat_to_bl_simps)
+            apply (clarsimp simp: kh0H_all_obj_def kh0_obj_def other_obj_relation_def tcb_relation_def fault_rel_optionation_def word_bits_def the_nat_to_bl_simps)
            apply (clarsimp simp: kh0H_obj_def High_pt_def High_pt'H_def High_pt'_def split del: split_if)
            apply (cut_tac x=ya in pt_offs_in_range(2))
            apply (clarsimp simp: pt_offs_range_def pte_relation_def pte_relation_aligned_def pte_relation'_def)
@@ -3174,27 +3170,23 @@ lemma s0_pspace_rel:
      apply (frule_tac m="Silc_caps" in domI)
      apply (cut_tac x=ya in cnode_offs_in_range(3))
       apply simp
-     apply (clarsimp simp: cnode_offs_range_def Silc_cte_def Silc_cte'_def Silc_capsH_def the_nat_to_bl_10_def the_nat_to_bl_def nat_to_bl_def split Silc_caps_def cte_level_bits_def empty_cte_def split: split_if_asm)
+     apply (clarsimp simp: cnode_offs_range_def Silc_cte_def Silc_cte'_def Silc_capsH_def the_nat_to_bl_simps Silc_caps_def cte_level_bits_def empty_cte_def split: split_if_asm)
     apply (clarsimp simp: kh0H_obj_def kh0_obj_def cte_relation_def cte_map_def)
     apply (cut_tac dom_caps(2))[1]
     apply (frule_tac m="High_caps" in domI)
     apply (cut_tac x=ya in cnode_offs_in_range(2))
      apply simp
-    apply (clarsimp simp: cnode_offs_range_def High_cte_def High_cte'_def High_capsH_def the_nat_to_bl_10_def the_nat_to_bl_def nat_to_bl_def split High_caps_def cte_level_bits_def empty_cte_def split: split_if_asm)
+    apply (clarsimp simp: cnode_offs_range_def High_cte_def High_cte'_def High_capsH_def the_nat_to_bl_simps High_caps_def cte_level_bits_def empty_cte_def split: split_if_asm)
    apply (clarsimp simp: kh0H_obj_def kh0_obj_def cte_relation_def cte_map_def)
    apply (cut_tac dom_caps(3))[1]
    apply (frule_tac m="Low_caps" in domI)
    apply (cut_tac x=ya in cnode_offs_in_range(1))
     apply simp
-   apply (clarsimp simp: cnode_offs_range_def Low_cte_def Low_cte'_def Low_capsH_def the_nat_to_bl_10_def the_nat_to_bl_def nat_to_bl_def split Low_caps_def cte_level_bits_def empty_cte_def split: split_if_asm)
+   apply (clarsimp simp: cnode_offs_range_def Low_cte_def Low_cte'_def Low_capsH_def the_nat_to_bl_simps Low_caps_def cte_level_bits_def empty_cte_def split: split_if_asm)
   apply (clarsimp simp: kh0H_obj_def irq_cnode_def cte_map_def cte_relation_def well_formed_cnode_n_def empty_cte_def dom_def split: split_if_asm)
   apply (drule irq_node_offs_range_correct)
   apply clarsimp
   done
-
-lemma the_nat_to_bl_10_len[simp]:
-  "x < 1024 \<Longrightarrow> length (the_nat_to_bl_10 x) = 10"
-  by (simp add: the_nat_to_bl_10_def the_nat_to_bl_def nat_to_bl_def len_bin_to_bl_aux)
 
 lemma subtree_node_Some:
   "m \<turnstile> a \<rightarrow> b \<Longrightarrow> m a \<noteq> None"
@@ -3293,20 +3285,10 @@ lemma s0_srel: "(s0_internal, s0H_internal) \<in> state_relation"
             apply (drule s0_caps_of_state)
             apply clarsimp
             apply (elim disjE)
-                   apply (((clarsimp simp: cte_map_def s0H_internal_def s0_internal_def,
-                          clarsimp simp: kh0H_all_obj_def' cte_level_bits_def cnode_offs_min cnode_offs_max s0_ptrs_aligned split: split_if_asm, simp_all add: s0_ptr_defs)[1])+)[10]
-                 apply ((clarsimp simp: cte_map_def s0H_internal_def s0_internal_def,
-                      clarsimp simp: tcb_cnode_index_def ucast_bl[symmetric] Low_tcb_cte_def Low_tcbH_def High_tcb_cte_def High_tcbH_def)+)[1]
-                apply (clarsimp simp: cte_map_def s0H_internal_def s0_internal_def)
-                apply (simp only: One_nat_def[symmetric] map_to_ctes_kh0H_simps)
+                           apply (clarsimp simp: cte_map_def s0H_internal_def s0_internal_def kh0H_all_obj_def' cte_level_bits_def split: split_if_asm)+
                 apply (clarsimp simp: tcb_cnode_index_def ucast_bl[symmetric] Low_tcb_cte_def Low_tcbH_def High_tcb_cte_def High_tcbH_def)
                apply ((clarsimp simp: cte_map_def s0H_internal_def s0_internal_def,
-                      clarsimp simp: tcb_cnode_index_def ucast_bl[symmetric] Low_tcb_cte_def Low_tcbH_def High_tcb_cte_def High_tcbH_def)+)[2]
-             apply (clarsimp simp: cte_map_def s0H_internal_def s0_internal_def)
-             apply (simp only: One_nat_def[symmetric] map_to_ctes_kh0H_simps)
-             apply (clarsimp simp: tcb_cnode_index_def ucast_bl[symmetric] Low_tcb_cte_def Low_tcbH_def High_tcb_cte_def High_tcbH_def)
-            apply ((clarsimp simp: cte_map_def s0H_internal_def s0_internal_def,
-                   clarsimp simp: tcb_cnode_index_def ucast_bl[symmetric] Low_tcb_cte_def Low_tcbH_def High_tcb_cte_def High_tcbH_def)+)[1]
+                      clarsimp simp: tcb_cnode_index_def ucast_bl[symmetric] Low_tcb_cte_def Low_tcbH_def High_tcb_cte_def High_tcbH_def)+)[5]
            apply (clarsimp simp: s0_internal_def s0H_internal_def arch_state_relation_def arch_state0_def arch_state0H_def)
           apply (clarsimp simp: s0_internal_def exst0_def s0H_internal_def interrupt_state_relation_def irq_state_relation_def)
          apply (clarsimp simp: s0_internal_def exst0_def s0H_internal_def)
@@ -3343,13 +3325,12 @@ lemma step_restrict_s0:
      apply (simp only: ex_abs_def)
      apply (rule_tac x="s0_internal" in exI)
      apply (simp only: einvs_s0 s0_srel)
-     apply simp
     apply (clarsimp simp: vs_valid_duplicates'_def split: option.splits)
     apply (frule kh0H_SomeD)
     apply (elim disjE, simp_all add: vs_ptr_align_def kh0H_all_obj_def')[1]
-           apply (clarsimp simp: the_nat_to_bl_10_simps split: split_if_asm)
-          apply (clarsimp simp: the_nat_to_bl_10_simps split: split_if_asm)
-         apply (clarsimp simp: the_nat_to_bl_10_simps split: split_if_asm)
+           apply (clarsimp simp: the_nat_to_bl_simps split: split_if_asm)
+          apply (clarsimp simp: the_nat_to_bl_simps split: split_if_asm)
+         apply (clarsimp simp: the_nat_to_bl_simps split: split_if_asm)
         apply (clarsimp split: split_if_asm)
        apply (clarsimp simp: High_pd'H_def split: split_if_asm)
       apply (clarsimp simp: Low_pd'H_def split: split_if_asm)
@@ -3363,10 +3344,10 @@ lemma step_restrict_s0:
   done
 
 lemma Sys1_valid_initial_state_noenabled:
-  assumes utf_det: "\<forall>pl pr pxn tc um s. det_inv InUserMode tc s \<and> einvs s \<and> context_matches_state pl pr pxn um s \<and> ct_running s
-                   \<longrightarrow> (\<exists>x. utf (cur_thread s) pl pr pxn (tc, um) = {x})"
-  assumes utf_non_empty: "\<forall>t pl pr pxn tc um. utf t pl pr pxn (tc, um) \<noteq> {}"
-  assumes utf_non_interrupt: "\<forall>t pl pr pxn tc um e f g. (e,f,g) \<in> utf t pl pr pxn (tc, um) \<longrightarrow> e \<noteq> Some Interrupt"
+  assumes utf_det: "\<forall>pl pr pxn tc um es s. det_inv InUserMode tc s \<and> einvs s \<and> context_matches_state pl pr pxn um es s \<and> ct_running s
+                   \<longrightarrow> (\<exists>x. utf (cur_thread s) pl pr pxn (tc, um, es) = {x})"
+  assumes utf_non_empty: "\<forall>t pl pr pxn tc um es. utf t pl pr pxn (tc, um, es) \<noteq> {}"
+  assumes utf_non_interrupt: "\<forall>t pl pr pxn tc um es e f g. (e,f,g) \<in> utf t pl pr pxn (tc, um, es) \<longrightarrow> e \<noteq> Some Interrupt"
   assumes det_inv_invariant: "invariant_over_ADT_if det_inv utf"
   assumes det_inv_s0: "det_inv KernelExit (cur_context s0_internal) s0_internal"
   shows "valid_initial_state_noenabled det_inv utf s0_internal Sys1PAS timer_irq s0_context"

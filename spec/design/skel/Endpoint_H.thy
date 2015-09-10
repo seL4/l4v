@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-header "Endpoints"
+chapter "Endpoints"
 
 theory Endpoint_H
 imports

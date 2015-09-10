@@ -501,7 +501,6 @@ lemma  big_steps_I_holds:
   "\<lbrakk>(xa, x) \<in> big_steps A R exmap j; xa \<in> I; A [> I\<rbrakk>
        \<Longrightarrow> x \<in> I"
   apply (erule big_stepsE)
-  apply clarsimp
   apply (frule sub_big_steps_I_holds, assumption+)
   apply (simp add: inv_holds_def)
   apply blast
@@ -1218,7 +1217,7 @@ lemma choose_thread_guarded_pas_domain: "\<lbrace>pas_refined aag and valid_queu
     apply force
    apply (simp add: etcb_at_def)
   apply (simp add: max_non_empty_queue_def)
-  apply (erule_tac P="hd ?A \<in> ?B" in notE)
+  apply (erule_tac P="hd A \<in> B" for A B in notE)
   apply (rule Max_prop)
    apply force+
    done
@@ -1237,7 +1236,7 @@ lemma switch_within_domain: "\<lbrakk>scheduler_action s = switch_thread x;valid
 lemma schedule_guarded_pas_domain: "\<lbrace>guarded_pas_domain aag and einvs and pas_refined aag\<rbrace> schedule \<lbrace>\<lambda>_. guarded_pas_domain aag\<rbrace>"
   apply (simp add: schedule_def)
   apply (wp guarded_pas_domain_lift[where f="activate_thread"]
-            guarded_pas_domain_lift[where f="set_scheduler_action f",standard]
+            guarded_pas_domain_lift[where f="set_scheduler_action f" for f]
             guarded_switch_to_lift
             switch_to_thread_guarded_pas_domain
             activate_thread_cur_thread | wpc | simp)+
@@ -1682,7 +1681,7 @@ lemma handle_event_domain_fields:
   apply(rule hoare_gen_asm)
   apply(rule hoare_pre)
   apply(case_tac e)
-       apply simp
+       apply(rename_tac syscall)
        apply(case_tac syscall)
              apply(wp | simp add: handle_call_def)+
   done
@@ -1828,12 +1827,12 @@ lemma not_in_global_refs_vs_lookup:
    small page, since the invariants tell us that the 
    arm_globals_frame is only a small page *)
 lemma get_page_info_arm_globals_frame:
-  "\<lbrakk>get_page_info (\<lambda>obj. get_arch_obj (kheap s obj)) (get_pd_of_thread (kheap s) (arch_state s) t) p = Some (b, a, r);
+  "\<lbrakk>get_page_info (\<lambda>obj. get_arch_obj (kheap s obj)) (get_pd_of_thread (kheap s) (arch_state s) t) p = Some (base, sz, attr, r);
     get_pd_of_thread (kheap s) (arch_state s) t \<noteq> arm_global_pd (arch_state s);
     valid_arch_state s; valid_arch_objs s; valid_global_pd_mappings s; 
     equal_kernel_mappings s; valid_vs_lookup s; valid_global_objs s;
     valid_global_refs s;
-    b = addrFromPPtr (arm_globals_frame (arch_state s))\<rbrakk> \<Longrightarrow> r = {}"
+    base = addrFromPPtr (arm_globals_frame (arch_state s))\<rbrakk> \<Longrightarrow> r = {}"
   apply(case_tac "p \<in> kernel_mappings")
    apply(blast dest: some_get_page_info_kmapsD)
   apply(clarsimp simp: get_pd_of_thread_def split: option.splits kernel_object.splits cap.splits arch_cap.splits if_splits)
@@ -1899,41 +1898,42 @@ lemma ptrFromPAddr_add_helper:
   done
 
 lemma get_page_info_is_arm_globals_frame:
-  notes blah[simp del] = atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
-          Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
+  notes [simp del] = atLeastAtMost_iff atLeastatMost_subset_iff atLeastLessThan_iff
+                     Int_atLeastAtMost atLeastatMost_empty_iff split_paired_Ex
   shows
-  "\<lbrakk>x \<in> range_of_arm_globals_frame sa; invs sa;
-        get_page_info (\<lambda>obj. get_arch_obj (kheap sa obj))
-         (get_pd_of_thread (kheap sa) (arch_state sa) t) xa =
-        Some (a, aa, b);
-        a + (xa && mask aa) = addrFromPPtr x;
-        get_pd_of_thread (kheap sa) (arch_state sa) t \<noteq> arm_global_pd (arch_state sa);
-        xa \<notin> kernel_mappings\<rbrakk> \<Longrightarrow>
-       ptrFromPAddr a = (arm_globals_frame (arch_state sa))"
+  "\<lbrakk>x \<in> range_of_arm_globals_frame s; invs s;
+        get_page_info (\<lambda>obj. get_arch_obj (kheap s obj))
+         (get_pd_of_thread (kheap s) (arch_state s) t) x' =
+        Some (base, psz, attr, r);
+        base + (x' && mask psz) = addrFromPPtr x;
+        get_pd_of_thread (kheap s) (arch_state s) t \<noteq> arm_global_pd (arch_state s);
+        x' \<notin> kernel_mappings\<rbrakk> \<Longrightarrow>
+       ptrFromPAddr base = (arm_globals_frame (arch_state s))"
   apply(frule some_get_page_info_umapsD)
         (* following two lines clagged from ADT_AC.ptr_offset_in_ptr_range *)
         apply (clarsimp simp: get_pd_of_thread_reachable invs_arch_objs
                               invs_psp_aligned invs_valid_asid_table invs_valid_objs)+
-  apply(subgoal_tac "typ_at (AArch (AIntData ARMSmallPage)) (arm_globals_frame (arch_state sa)) sa")
+  apply(rename_tac sz)
+  apply(subgoal_tac "typ_at (AArch (AIntData ARMSmallPage)) (arm_globals_frame (arch_state s)) s")
    apply(clarsimp simp: obj_at_def)  
    prefer 2
    apply(fastforce dest: invs_arch_state simp: valid_arch_state_def)
   apply(frule invs_distinct)
   apply(clarsimp simp: pspace_distinct_def)
-  apply(drule_tac x="ptrFromPAddr a" in spec, drule_tac x="arm_globals_frame (arch_state sa)" in spec)
+  apply(drule_tac x="ptrFromPAddr base" in spec, drule_tac x="arm_globals_frame (arch_state s)" in spec)
   apply simp
-  apply(case_tac "ptrFromPAddr a = arm_globals_frame (arch_state sa)")
+  apply(case_tac "ptrFromPAddr base = arm_globals_frame (arch_state s)")
    apply assumption
   apply(frule ptr_offset_in_ptr_range)
      apply (simp+)
   apply(simp add: ptr_range_def)
-  apply(subgoal_tac "ptrFromPAddr a + (xa && mask (pageBitsForSize sz)) \<in> {arm_globals_frame
-            (arch_state sa)..arm_globals_frame (arch_state sa) + 0xFFF}")
+  apply(subgoal_tac "ptrFromPAddr base + (x' && mask (pageBitsForSize sz)) \<in> {arm_globals_frame
+            (arch_state s)..arm_globals_frame (arch_state s) + 0xFFF}")
    apply(simp only: p_assoc_help)
    apply blast
   apply(drule_tac y="addrFromPPtr x" and f=ptrFromPAddr in arg_cong)
   apply(simp only: ptrFromPAddr_add_helper)
-  apply(simp add: add_commute)
+  apply(simp add: add.commute)
   done
   
   
@@ -1958,8 +1958,10 @@ lemma empty_rights_in_arm_globals_frame:
     apply(erule invs_equal_kernel_mappings)
    apply blast
   apply(rule get_page_info_arm_globals_frame)
-           apply (simp add: invs_arch_state invs_arch_objs invs_valid_global_pd_mappings invs_equal_kernel_mappings invs_valid_vs_lookup invs_valid_global_objs invs_valid_global_refs)+
-  apply(drule get_page_info_is_arm_globals_frame, simp+)
+           apply (simp add: invs_arch_state invs_arch_objs invs_valid_global_pd_mappings 
+                            invs_equal_kernel_mappings invs_valid_vs_lookup invs_valid_global_objs
+                            invs_valid_global_refs)+
+  apply(drule get_page_info_is_arm_globals_frame, simp+)[1]
   apply(fastforce dest: arg_cong[where f=addrFromPPtr])
   done
 
@@ -2535,7 +2537,7 @@ lemma next_irq_state_le:
       apply -
       apply(induct rule: inc_induct)
        apply(clarsimp simp: is_irq_at_next_irq_state[OF i])
-      apply(case_tac "is_irq_at s irq i")
+      apply(case_tac "is_irq_at s irq n")
        apply(simp add: is_irq_at_next_irq_state)
       apply(subst next_irq_state.psimps)
        apply(rule is_irq_at_next_irq_state_dom[OF _ i])
@@ -2562,7 +2564,7 @@ lemma next_irq_state_mono:
       apply -
       apply(induct rule: inc_induct)
        apply simp
-      apply(case_tac "is_irq_at s irq i")
+      apply(case_tac "is_irq_at s irq n")
        apply(simp add: is_irq_at_next_irq_state)
        apply(rule less_imp_le_nat)
        apply(erule less_le_trans)
@@ -2841,7 +2843,7 @@ lemma cap_recycle_irq_state_inv:
 
    apply(wp hoare_unless_wp  finalise_slot_irq_state_inv[where st=st and irq=irq] 
             cap_revoke_irq_state_inv[folded validE_R_def] 
-        | simp add: conj_ac |  wp_once irq_state_inv_triv)+
+        | simp add: conj_comms |  wp_once irq_state_inv_triv)+
   apply(rule validE_validE_R[OF hoare_post_impErr, OF cap_revoke_domain_sep_inv], simp+)
   apply(auto)
   done
@@ -2908,7 +2910,8 @@ lemma invoke_tcb_irq_state_inv:
         |wp_once hoare_drop_imps | clarsimp split: option.splits | intro impI conjI allI)+
   sorry
 
-lemma do_reply_transfer_irq_state_inv_triv[wp]: "\<lbrace>irq_state_inv st\<rbrace> do_reply_transfer a b c \<lbrace>\<lambda>_. irq_state_inv st\<rbrace>"
+lemma do_reply_transfer_irq_state_inv_triv[wp]:
+  "\<lbrace>irq_state_inv st\<rbrace> do_reply_transfer a b c \<lbrace>\<lambda>_. irq_state_inv st\<rbrace>"
   apply (wp irq_state_inv_triv)
   done
 
@@ -3011,6 +3014,7 @@ lemma handle_event_irq_state_inv:
   apply(rule hoare_pre)
   apply(case_tac event)
       apply simp
+      apply(rename_tac syscall)
       apply(case_tac syscall)
              apply(simp add: handle_send_def handle_call_def | wp handle_invocation_irq_state_inv)+
           apply((simp | wp_trace add: irq_state_inv_triv hy_inv | blast | (elim conjE, (intro conjI | assumption)+))+)[9]
@@ -3224,7 +3228,7 @@ lemma ADT_A_if_Step_measure_if':
                  apply simp
                  apply(simp add: kernel_call_A_if_def)
                  apply(elim exE conjE)
-                 apply(rule_tac event=event in kernel_entry_if_irq_measure)
+                 apply(rule_tac event=x3 in kernel_entry_if_irq_measure)
                      apply((simp add: invs_if_def Invs_def only_timer_irq_inv_def | elim conjE | assumption)+)[4]
                  apply(simp)
                 apply(simp add: kernel_call_A_if_def | elim conjE exE)+
@@ -3316,7 +3320,7 @@ lemma ADT_A_if_Step_measure_if'':
             apply simp
             apply(simp add: kernel_call_A_if_def)
             apply(elim exE conjE)
-            apply(rule_tac event=event in kernel_entry_if_irq_measure)
+            apply(rule_tac event=x3 in kernel_entry_if_irq_measure)
                 apply((simp add: invs_if_def Invs_def only_timer_irq_inv_def | elim conjE | assumption)+)[4]
             apply(simp)                
            apply(clarsimp split: if_splits)
@@ -3624,9 +3628,10 @@ lemma LI_sub_big_steps:
      apply assumption+
   apply (subgoal_tac "Fin A t = Fin C s")
    apply (subgoal_tac "Fin A y = Fin C z")
-    apply (force simp: internal_R_def)
+    apply (simp(no_asm_use) add: internal_R_def)
+    apply metis
    apply force+
-   done
+  done
 
 lemma LI_big_steps:
   "\<lbrakk>(s, s') \<in> big_steps C (internal_R C R) exmap ev;
@@ -3657,9 +3662,9 @@ lemma LI_big_steps:
    apply (subgoal_tac "Fin A t = Fin C s")
     apply (subgoal_tac "s' \<in> Ic")
      apply (subgoal_tac "Fin A y = Fin C s'")
-      apply force
-     apply force
-    apply (clarsimp simp: invariant_holds_def, blast)
+      apply metis
+     apply metis
+    apply (simp(no_asm_use) add: invariant_holds_def, blast)
    apply force
   apply simp
   done
@@ -3739,4 +3744,20 @@ lemma refines_refines':
   apply(auto simp: refines_def refines'_def)
   done
 
-end (* a comment *)
+text {* Two validity requirements on the user operation (uop) of the infoflow adt.
+        These definitions are mostly only needed in ADT_A_if_Refine. *}
+
+text {* uop_nonempty is required to prove corres between do_user_op_if and doUserOp_if *}
+definition
+  uop_nonempty :: "user_transition_if \<Rightarrow> bool"
+where
+  "uop_nonempty uop \<equiv> \<forall>t pl pr pxn tc um es. uop t pl pr pxn (tc, um, es) \<noteq> {}"
+
+text {* uop_sane is required to prove that the infoflow adt describes an enabled system *}
+definition
+  uop_sane :: "user_transition_if \<Rightarrow> bool"
+where
+  "uop_sane f \<equiv> \<forall>t pl pr pxn tcu. (f t pl pr pxn tcu) \<noteq> {} \<and> 
+                (\<forall>tc um es. (Some Interrupt, tc, um, es) \<notin> (f t pl pr pxn tcu))"
+
+end

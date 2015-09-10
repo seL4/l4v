@@ -62,8 +62,10 @@ lemma blah[code]:"communication_mode = (\<lambda>s. if s = seL4Asynch then Outgo
   by (rule ext, clarsimp simp:seL4AsynchMode)
 
 (* Sanity check that Communication is executable. *)
-code_const communication_mode
-  (SML "!(raise/ Fail/ \"undefined\")")
+code_printing
+  constant communication_mode \<rightharpoonup>
+    (SML) "!(raise/ Fail/ \"undefined\")"
+
 export_code Communication in SML module_name "Camkes" file "/dev/null"
 
 end

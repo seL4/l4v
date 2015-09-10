@@ -153,7 +153,7 @@ let
     Outer_Syntax.scan Position.start str
     |> filter Token.is_proper
     |> Args.name
-  val tactic_args = Args.src ((tactic_name, tactic_arg_tokens), Position.start)
+  val tactic_args = Token.src ((tactic_name, tactic_arg_tokens), Position.start)
 
   (* Parse a list of theorems. *)
   fun parsed_thms _ = Method.syntax Attrib.thms tactic_args ctxt |> fst

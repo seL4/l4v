@@ -52,7 +52,7 @@ sig
 
   val expr_term : Proof.context -> ProgramAnalysis.csenv ->
                   varinfo TermsTypes.termbuilder ->
-                  (string -> varinfo option) -> Absyn.expr -> expr_info
+                  (MString.t -> varinfo option) -> Absyn.expr -> expr_info
 
 end
 
@@ -174,7 +174,7 @@ end
 fun is_litzero ei =
     ctype_of ei = Signed Int andalso
     (rval_of ei True = IntInfo.numeral2w (Signed Int) 0
-     handle _ => false)
+     handle Fail _ => false)
 
 (* Given a term-generating function "term_gen_fn" a list of subexpressions
  * "eis", a destination type "result_type" and boolean indicating whether the
@@ -364,13 +364,13 @@ in
                                  " taking address of value without one"))
     end
   | BitNegate => let val ei' = strip_kb (intprom_ei thy ei)
-                     val _ = writeln("After prom, argument to bitNOT has type "^
+                     val _ = tracing("After prom, argument to bitNOT has type "^
                                      tyname (ctype_of ei'))
                      val result =
                          lmk_comb(@{const_name "bitNOT"},
                                   [ei'], First, ctype_of ei', false)
                  in
-                   writeln("bitNOT result has type "^tyname (ctype_of result));
+                   tracing("bitNOT result has type "^tyname (ctype_of result));
                    result
                  end
 end handle TYPE (s,tys,tms) => raise TYPE ("unop_term: "^s, tys, tms)
@@ -542,7 +542,7 @@ in
                             ei2, ei1)
 
   | Equals => let
-      val _ = writeln ("EQ_OP("^tyname (ctype_of ei1)^", "
+      val _ = tracing ("EQ_OP("^tyname (ctype_of ei1)^", "
                        ^tyname (ctype_of ei2)^")")
     in
       mk_relbinop thy (@{const_name "HOL.eq"}, @{const_name "HOL.eq"}, ei1, ei2)
@@ -730,7 +730,8 @@ in
       Signed _ => mk_zero (ctype_to_typ(thy, cty))
     | Unsigned _ => mk_zero (ctype_to_typ(thy, cty))
     | PlainChar => mk_zero IntInfo.char
-    | Ptr _ => mk_zero (ctype_to_typ(thy, cty))
+    | Ptr Void => mk_ptr (mk_zero addr_ty, @{typ unit})
+    | Ptr cty0 => mk_ptr (mk_zero addr_ty, ctype_to_typ(thy,cty0))
     | StructTy s => let
         val flds = case assoc(senv, s) of
                      NONE => raise Fail ("zero_term: no s. info for "^s)
@@ -758,7 +759,6 @@ end
 
 fun mk_complit_upd thy cty rootty ((pth,value), ei) = let
   open complit
-  val ctxt = Proof_Context.init_global thy
   fun mk_upds ty upds base =
       case upds of
         [] => K_rec ty $ base
@@ -772,7 +772,7 @@ fun mk_complit_upd thy cty rootty ((pth,value), ei) = let
         end
       | fld s :: rest => let
           val _ = Feedback.informStr(7, "mk_complit_upd: Field "^s^" in type "^
-                                         Syntax.string_of_typ ctxt ty)
+                                         Syntax.string_of_typ (thy2ctxt thy) ty)
           val recd_ty = case ty of
                           Type(fullname, _) => fullname
                         | _ => raise Fail "mk_complit_upd: bad struct tyname"
@@ -932,12 +932,18 @@ in
   | Var (s, ref extra) => let
       val _ = Feedback.informStr'(5, eleft e, eright e,
                                   "Looking up variable information for " ^ s)
+      fun p (x as (ec, is_fn, s)) =
+        (Feedback.informStr(5,
+                            "Information is: ec = " ^ Bool.toString ec ^
+                            ", is_fn = "^Bool.toString is_fn^
+                            ", munge_name = "^MString.destPP s);
+         x)
       val (ec, is_fn, s) =
           case extra of
-              NONE => (false, false, s)
-            | SOME (_, MungedVar {munge = s',...}) => (false, false, s')
-            | SOME (_, EnumC) => (true, false, s)
-            | SOME (_, FunctionName) => (false, true, s)
+              NONE => p (false, false, MString.mk s)
+            | SOME (_, MungedVar {munge = s',...}) => p (false, false, s')
+            | SOME (_, EnumC) => p (true, false, MString.mk s)
+            | SOME (_, FunctionName) => p (false, true, MString.mk s)
       fun mk_ec s = let
         val constname = Sign.intern_const thy s
         fun rval _ = Const(constname, IntInfo.int)
@@ -945,7 +951,7 @@ in
         mk_rval(rval, Signed Int)
       end
     in
-      if ec then mk_ec s
+      if ec then mk_ec (MString.dest s)
       else if is_fn then
         mk_rval((fn _ => mk_fnptr thy s), Ptr (#1 (valOf extra)))
       else
@@ -963,7 +969,7 @@ in
             case vsort of
               AddressedGlobal => let
                 val _ = Feedback.informStr'(5, eleft e, eright e,
-                                            "Variable " ^ s ^
+                                            "Variable " ^ MString.dest s ^
                                             " is an addressed global")
                 open NameGeneration CalculateState
 
@@ -979,10 +985,12 @@ in
             | UntouchedGlobal => let
                 open NameGeneration
                 val _ = Feedback.informStr'(5, eleft e, eright e,
-                                            "Variable " ^ s ^
+                                            "Variable " ^ MString.dest s ^
                                             " is an untouched global")
-                val constname = Consts.intern (Proof_Context.consts_of ctxt)
-                                              (untouched_global_name s)
+                val constname =
+                    s |> untouched_global_name
+                      |> MString.dest
+                      |> Consts.intern (Proof_Context.consts_of ctxt)
                 val const =
                     Syntax.check_term ctxt (Const(constname,dummyT))
                 fun rval _ = const
@@ -992,7 +1000,7 @@ in
             | _ => let
                 (* locals and NSGlobals are treated the same *)
                 val _ = Feedback.informStr'(5, eleft e, eright e,
-                                            "Variable " ^ s ^
+                                            "Variable " ^ MString.dest s ^
                                             " is a local/NSglobal")
                 val ownership_guard =
                     case vsort of
@@ -1035,11 +1043,11 @@ in
         | NONE => let
             val _ = warnStr'(eleft e, eright e,
                              "Confused that this code is executing at variable "
-                             ^ s)
+                             ^ MString.dest s)
           in
-            case eclookup ecenv s of
-              NONE => error (": bad variable reference "^s)
-            | SOME _ => mk_ec s
+            case eclookup ecenv (MString.dest s) of
+              NONE => error (": bad variable reference "^MString.dest s)
+            | SOME _ => mk_ec (MString.dest s)
           end
     end
   | CondExp(g,te,ee) => let
@@ -1194,7 +1202,7 @@ in
                             (map (fn (vp,_) => vpl_toString vp ^ ", ") updates))
       val zero_tm = zero_term thy senv cty
       val _ = informStr(7, "Compound literal base zero is: "^
-                           Syntax.string_of_term (Proof_Context.init_global thy)
+                           Syntax.string_of_term (thy2ctxt thy)
                                                  zero_tm)
       val ei0 = mk_rval((fn _ => zero_tm), cty)
       val typ = CalculateState.ctype_to_typ (thy, cty)

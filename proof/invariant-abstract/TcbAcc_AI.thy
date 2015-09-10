@@ -896,8 +896,8 @@ lemma take_min_len:
   "take (min (length xs) n) xs = take n xs"
   apply (cases "length xs \<le> n")
    apply simp
-  apply (subst min_max.inf_commute)
-  apply (subst min_max.inf_absorb1)
+  apply (subst min.commute)
+  apply (subst min.absorb1)
    apply simp
   apply simp
   done
@@ -1695,9 +1695,6 @@ lemma sts_invs_minor2:
   apply (drule(1) valid_reply_capsD)
   apply (clarsimp simp: pred_tcb_at_def obj_at_def)
   done (* FIXME tidy *)
-
-
-crunch executable_arch_objs[wp]: set_bound_aep, get_bound_aep "executable_arch_objs"
 
 lemma sba_invs_minor:
   "\<lbrace>bound_tcb_at (\<lambda>aep'. tcb_bound_refs aep' = tcb_bound_refs aep) t 

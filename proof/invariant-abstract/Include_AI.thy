@@ -11,6 +11,7 @@
 theory Include_AI
 imports
   BCorres_AI
+  "../../lib/wp/Eisbach_WP"
   "../../spec/abstract/Syscall_A"
   "../../lib/LemmaBucket"
   "../../lib/ListLibLemmas"

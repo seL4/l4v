@@ -147,8 +147,8 @@ lemma skip_nf [wp]: "\<lbrace> P () \<rbrace> skip \<lbrace> P \<rbrace>!"
   apply (monad_eq simp: validNF_def valid_def no_fail_def skip_def)
   done
 
-declare valid_prod_case [wp]
-declare validE_prod_case [wp]
+declare valid_case_prod [wp]
+declare validE_case_prod [wp]
 
 lemma getsE_to_returnOk [simp]: "getsE (\<lambda>s. v) = returnOk v"
   apply (monad_eq simp: getsE_def)
@@ -357,11 +357,11 @@ lemma snd_whileLoopE_monad_eq [monad_eq]:
         (\<lambda>(r, s). snd (B r s)) r s))"
   by (clarsimp simp: whileLoopE_ME_def)
 
-lemma in_fst_prod_case [monad_eq]: "((r, s) \<in> fst ((case z of (x, y) \<Rightarrow> B x y) s'))
+lemma in_fst_case_prod [monad_eq]: "((r, s) \<in> fst ((case z of (x, y) \<Rightarrow> B x y) s'))
           = ((r, s) \<in> fst (B (fst z) (snd z) s'))"
   by (clarsimp simp: split_def)
 
-lemma snd_prod_case [monad_eq]: "(snd ((case z of (x, y) \<Rightarrow> B x y) s'))
+lemma snd_case_prod [monad_eq]: "(snd ((case z of (x, y) \<Rightarrow> B x y) s'))
           = (snd (B (fst z) (snd z) s'))"
   by (clarsimp simp: split_def)
 

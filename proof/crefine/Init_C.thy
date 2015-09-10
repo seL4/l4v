@@ -19,6 +19,6 @@ text {*
 *}
 
 axiomatization where init_refinement_C:
-  "Init_C s \<subseteq> lift_state_relation rf_sr `` Init_H a b c d e f"
+  "Init_C s \<subseteq> lift_state_relation rf_sr `` Init_H"
 
 end

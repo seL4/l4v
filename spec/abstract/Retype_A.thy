@@ -12,7 +12,7 @@
 Retyping and untyped invocation
 *)
 
-header "Retyping and Untyped Invocations"
+chapter "Retyping and Untyped Invocations"
 
 theory Retype_A
 imports

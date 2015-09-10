@@ -92,7 +92,6 @@ lemma more_pageBits_inner_beauty:
   apply (clarsimp simp: pageBits_def)
   done
 
-(* Annotation added by Simon Winwood (Mon Jul  5 19:20:15 2010) using taint-mode *)
 declare unat_ucast_10_32[simp]
 
 lemma byte_to_word_heap_upd_outside_range:
@@ -326,7 +325,7 @@ proof (intro allI impI)
      apply (simp add: word_less_nat_alt)
     apply (simp add: ptr_add_def word32_shift_by_2 shiftr_shiftl1)
     apply (simp add: is_aligned_neg_mask_eq al is_aligned_andI1)
-    apply (simp add: word_plus_and_or_coroll2 add_commute)
+    apply (simp add: word_plus_and_or_coroll2 add.commute)
     done
 
   have cud:
@@ -425,7 +424,7 @@ proof (intro allI impI)
     apply clarsimp
     apply (subgoal_tac "Some v = heap_to_page_data (ksPSpace \<sigma>)
                              (underlying_memory (ksMachineState \<sigma>)) x")
-     apply (clarsimp simp: heap_to_page_data_def Let_def option_map_def
+     apply (clarsimp simp: heap_to_page_data_def Let_def map_option_case
                     split: option.split_asm)
      apply (fastforce simp: cmap_relation_def dest: bspec)
     apply (clarsimp simp: heap_to_page_data_def Let_def)
@@ -546,8 +545,8 @@ proof -
       apply (simp add: pointerInUserData_def mask_lower_twice pageBits_def)
      apply (simp add: Aligned.is_aligned_neg_mask)
     apply (erule iffD1[rotated],
-           rule_tac f="\<lambda>a b. (a, b) \<in> rf_sr" and c="globals_update ?f ?s"
-                 in arg_cong2)
+           rule_tac f="\<lambda>a b. (a, b) \<in> rf_sr" and c="globals_update f s"
+                 for f s in arg_cong2)
      apply (rule kernel_state.fold_congs[OF refl refl], simp only:)
      apply (rule machine_state.fold_congs[OF refl refl], simp only:)
      apply (cut_tac p=ptr in unat_mask_2_less_4)
@@ -560,7 +559,7 @@ proof -
       apply (simp add: word_unat.Rep_inject[symmetric]
                   del: word_unat.Rep_inject)
       apply arith
-     apply (subst add_commute, rule word_plus_and_or_coroll2)
+     apply (subst add.commute, rule word_plus_and_or_coroll2)
     apply (rule StateSpace.state.fold_congs[OF refl refl])
     apply (rule globals.fold_congs[OF refl refl])
     apply (clarsimp simp: hrs_mem_update_def simp del: list_update.simps)
@@ -586,7 +585,7 @@ proof -
                      nth_list_update nth_rev TWO
                 del: list_update.simps   cong: if_cong)
     apply (simp only: If_rearrage)
-    apply (subgoal_tac "?P")
+    apply (subgoal_tac "P" for P)
      apply (rule if_cong)
        apply assumption
       apply simp

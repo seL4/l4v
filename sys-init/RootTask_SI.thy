@@ -24,7 +24,7 @@ begin
 consts
   si_cnode_id      :: cdl_object_id
   si_asidpool_id   :: cdl_object_id
-  si_asidpool_base :: cdl_asid
+  si_asidpool_base :: nat
 
 definition
   si_cnode_size :: cdl_size_bits
@@ -94,7 +94,7 @@ definition
 where
   "si_asid \<equiv>
   (si_cnode_id, unat seL4_CapInitThreadASIDPool) \<mapsto>c AsidPoolCap si_asidpool_id si_asidpool_base \<and>*
-  si_asidpool_id \<mapsto>f AsidPool empty_asid \<and>*
+    si_asidpool_id \<mapsto>f AsidPool empty_asid \<and>*
    (\<And>* offset\<in>{offset. offset < 2 ^ asid_low_bits}.
                (si_asidpool_id, offset) \<mapsto>c -)"
 
@@ -127,7 +127,7 @@ where
   "si_objects_extra_caps obj_ids free_cptrs untyped_cptrs spec \<equiv> \<lambda>s.
    \<exists>untyped_caps all_available_ids.
     ((\<And>* (cptr, cap) \<in> set (zip untyped_cptrs untyped_caps). (si_cnode_id, unat cptr) \<mapsto>c cap) \<and>*
-     (\<And>* cptr \<in> set (drop (card obj_ids + card {obj_id \<in> obj_ids. real_cnode_or_tcb_at obj_id spec}) free_cptrs).
+     (\<And>* cptr \<in> set (drop (card obj_ids + card {obj_id \<in> obj_ids. cnode_or_tcb_at obj_id spec}) free_cptrs).
          (si_cnode_id, unat cptr) \<mapsto>c NullCap) \<and>*
      (\<And>* obj_id\<in>all_available_ids. obj_id \<mapsto>o Untyped)) s"
 
@@ -140,14 +140,14 @@ lemma si_objects_extra_caps'_si_objects_extra_caps:
   "distinct free_slots \<Longrightarrow>
      si_objects_extra_caps' obj_ids free_slots untyped_cptrs =
     (si_objects_extra_caps obj_ids free_slots untyped_cptrs spec \<and>*
-    (\<And>* cptr \<in> set (take (card {obj_id \<in> obj_ids. real_cnode_or_tcb_at obj_id spec})
+    (\<And>* cptr \<in> set (take (card {obj_id \<in> obj_ids. cnode_or_tcb_at obj_id spec})
                        (drop (card obj_ids) free_slots)).
            (si_cnode_id, unat cptr) \<mapsto>c NullCap))"
   apply (rule ext)
   apply (clarsimp simp: si_objects_extra_caps'_def si_objects_extra_caps_def sep_conj_exists)
   apply (rule ex_eqI)+
   apply (subst take_drop_append [where a="card obj_ids" and
-               b="card {obj_id \<in> obj_ids . real_cnode_or_tcb_at obj_id spec}"])
+               b="card {obj_id \<in> obj_ids. cnode_or_tcb_at obj_id spec}"])
   apply clarsimp
   apply (subst sep.setprod.union_disjoint, (simp add: distinct_take_drop_append)+)+
   apply (clarsimp simp: sep_conj_ac)
@@ -158,7 +158,7 @@ definition
 where
   "si_irq_nodes spec \<equiv>
      (\<lambda>s. \<exists>k_irq_table. (\<And>* irq\<in>used_irqs spec. irq \<mapsto>irq k_irq_table irq \<and>*
-                                                 k_irq_table irq \<mapsto>o empty_irq_node) s)"
+                                                 k_irq_table irq \<mapsto>o IRQNode empty_irq_node) s)"
 
 
 (***************************************
@@ -521,7 +521,7 @@ where
    (\<And>* obj_id\<in>(\<Union>cap\<in>set untyped_caps. cap_free_ids cap). obj_id \<mapsto>o Untyped) \<and>*
     si_objects \<and>* si_irq_nodes spec) s \<and>
    card (dom (cdl_objects spec)) +
-   card {obj_id. real_cnode_or_tcb_at obj_id spec} \<le> unat fend - unat fstart \<and>
+   card {obj_id. cnode_or_tcb_at obj_id spec} \<le> unat fend - unat fstart \<and>
    length untyped_caps = unat uend - unat ustart \<and>
    distinct_sets (map cap_free_ids untyped_caps) \<and>
    list_all is_full_untyped_cap untyped_caps \<and>
@@ -542,12 +542,12 @@ where
     ((\<And>*  cptr \<in> set (take (card (dom (cdl_objects spec))) free_cptrs).
           (si_cnode_id, unat cptr) \<mapsto>c NullCap) \<and>*
      (\<And>*  cptr \<in> set (drop (card (dom (cdl_objects spec)) +
-                             card ({obj_id. real_cnode_or_tcb_at obj_id spec})) free_cptrs).
+                             card ({obj_id. cnode_or_tcb_at obj_id spec})) free_cptrs).
           (si_cnode_id, unat cptr) \<mapsto>c NullCap) \<and>*
      (\<And>* (cptr, untyped_cap) \<in> set (zip untyped_cptrs untyped_caps).
           (si_cnode_id, unat cptr) \<mapsto>c untyped_cap) \<and>*
      (\<And>*  obj_id \<in> all_available_ids. obj_id \<mapsto>o Untyped) \<and>*
-     (\<And>*  obj_id \<in> {obj_id. real_cnode_or_tcb_at obj_id spec}. (si_cap_at t dup_caps spec obj_id)) \<and>*
+     (\<And>*  obj_id \<in> {obj_id. cnode_or_tcb_at obj_id spec}. (si_cap_at t dup_caps spec obj_id)) \<and>*
       si_objects) s"
 
 (********************************************************
@@ -556,10 +556,10 @@ where
 
 lemma orig_cap_rewrite:
   "Set.filter (\<lambda>cap_ref. original_cap_at cap_ref spec \<and> cap_at cap_has_object cap_ref spec)
-               (SIGMA obj_id:{obj_id. real_cnode_at obj_id spec}.
+               (SIGMA obj_id:{obj_id. cnode_at obj_id spec}.
                       dom (slots_of obj_id spec)) =
    {cap_ref. original_cap_at cap_ref spec \<and> object_cap_ref cap_ref spec}"
-  by (auto simp: object_cap_ref_def opt_cap_def object_at_def cap_at_def real_cnode_at_def real_object_at_def
+  by (auto simp: object_cap_ref_def opt_cap_def object_at_def cap_at_def real_object_at_def
           split: option.splits)
 
 lemma slots_tcb:
@@ -579,6 +579,15 @@ lemma slots_tcb:
                         tcb_pending_op_slot_def)
   done
 
+lemma object_at_dom_cdl_objects:
+  "object_at P obj_id s \<Longrightarrow> obj_id \<in> dom (cdl_objects s)"
+  by (clarsimp simp: object_at_def)
+
+lemma foo:
+  "\<lbrakk>well_formed spec; irq_node_at obj_id spec\<rbrakk>
+  \<Longrightarrow> obj_id \<in> irq_nodes spec"
+  by (metis irq_nodes_def mem_Collect_eq)
+
 lemma well_formed_irqhandler_cap_in_cnode:
   "\<lbrakk>well_formed spec; opt_cap (obj_id, slot) spec = Some cap;
     is_irqhandler_cap cap; cdl_objects spec obj_id = Some obj\<rbrakk>
@@ -590,15 +599,18 @@ lemma well_formed_irqhandler_cap_in_cnode:
         apply (drule (1) well_formed_well_formed_tcb)
         apply (clarsimp simp: well_formed_tcb_def opt_cap_def slots_of_def opt_object_def)
         apply (erule allE [where x=slot])
-        apply (simp add: tcb_slot_defs tcb_pending_op_slot_def)
+        apply (simp add: tcb_slot_defs cap_type_def split: cdl_cap.splits)
        apply (fastforce simp: opt_cap_def slots_of_def object_slots_def opt_object_def
                               is_cnode_def object_at_def is_asidpool_def)
       apply (frule_tac obj_id=obj_id in well_formed_asidpool_at, simp add: object_at_def)
      apply (frule (1) well_formed_pt, simp add: object_at_def, simp+)
     apply (frule (1) well_formed_pd, simp add: object_at_def, simp+)
-    apply (clarsimp simp: is_fake_pt_cap_def is_irqhandler_cap_def split: cdl_cap.splits)
+    apply (clarsimp simp: is_fake_pt_cap_def split: cdl_cap.splits)
    apply (fastforce simp: opt_cap_def slots_of_def object_slots_def opt_object_def
                          is_cnode_def object_at_def is_asidpool_def)+
+   apply (frule (1) well_formed_well_formed_irq_node)
+   apply (fastforce simp: well_formed_irq_node_def opt_cap_def slots_of_def opt_object_def
+                          object_at_def irq_nodes_def is_irq_node_def)
   done
 
 lemma well_formed_irqhandler_cap_in_cnode_at:
@@ -612,7 +624,7 @@ lemma well_formed_irqhandler_cap_in_cnode_at:
 lemma irqhandler_cap_rewrite:
    "well_formed spec \<Longrightarrow>
     Set.filter (\<lambda>irq. irqhandler_cap_at irq spec)
-                (SIGMA obj_id:{obj_id. real_cnode_at obj_id spec}.
+                (SIGMA obj_id:{obj_id. cnode_at obj_id spec}.
                        dom (slots_of obj_id spec)) =
     {cap_ref. irqhandler_cap_at cap_ref spec}"
    apply (clarsimp simp: object_cap_ref_def object_at_def cap_at_def
@@ -624,24 +636,21 @@ lemma irqhandler_cap_rewrite:
    apply (frule opt_cap_dom_slots_of, clarsimp)
    apply (frule (3) well_formed_irqhandler_cap_in_cnode)
    apply (frule (1) well_formed_well_formed_irq_node)
-   apply (clarsimp simp: well_formed_irq_node_def  real_cnode_at_def object_at_def
+   apply (clarsimp simp: well_formed_irq_node_def object_at_def
                          opt_cap_def slots_of_def opt_object_def dom_def)
-   apply (frule (1) well_formed_irq_node_slot_0)
-    apply (simp add: opt_cap_def slots_of_def opt_object_def)
-   apply fastforce
    done
 
 lemma well_formed_object_cap_real:
   "well_formed spec
   \<Longrightarrow> object_cap_ref cap_ref spec =
      (cap_at_to_real_object cap_ref spec \<and>
-      real_cnode_at (fst cap_ref) spec)"
+      cnode_at (fst cap_ref) spec)"
   apply (clarsimp simp: cap_at_def cap_at_to_real_object_def object_cap_ref_def)
   apply (rule iffI)
    apply clarsimp
    apply (drule (1) well_formed_well_formed_cap_to_real_object', simp)
-   apply (clarsimp simp: well_formed_cap_to_real_object_def real_object_at_def real_cnode_at_def)
-  apply (clarsimp simp: real_object_at_def opt_cap_dom_cdl_objects real_cnode_at_def)
+   apply (clarsimp simp: well_formed_cap_to_real_object_def real_object_at_def)
+  apply (clarsimp simp: real_object_at_def opt_cap_dom_cdl_objects)
   done
 
 (* This lemma converts between the two represenatations of the fact that the
@@ -657,7 +666,7 @@ lemma well_formed_object_cap_real:
 lemma si_caps_at_conversion:
   "\<lbrakk>well_formed spec;
     real_ids = {obj_id. real_object_at obj_id spec};
-    cnode_ids = {obj_id. real_cnode_at obj_id spec}\<rbrakk>
+    cnode_ids = {obj_id. cnode_at obj_id spec}\<rbrakk>
   \<Longrightarrow> si_objs_caps_at t si_caps spec cnode_ids =
       si_caps_at t si_caps spec real_ids"
   apply (clarsimp simp: si_objs_caps_at_def si_obj_caps_at_def [abs_def]
@@ -680,7 +689,7 @@ lemma si_caps_at_conversion:
 lemma si_null_caps_at_conversion:
   "\<lbrakk>well_formed spec;
     real_ids = {obj_id. real_object_at obj_id spec};
-    cnode_ids = {obj_id. real_cnode_at obj_id spec}\<rbrakk>
+    cnode_ids = {obj_id. cnode_at obj_id spec}\<rbrakk>
   \<Longrightarrow> si_spec_objs_null_caps_at t si_caps spec cnode_ids =
       si_null_caps_at t si_caps spec real_ids"
   apply (clarsimp simp: si_spec_objs_null_caps_at_def si_spec_obj_null_caps_at_def [abs_def]
@@ -744,7 +753,7 @@ lemma si_null_caps_at_simplified_helper:
 lemma si_null_caps_at_simplified:
   "\<lbrakk>(si_spec_objs_null_caps_at t si_caps spec cnode_ids) s;
     well_formed spec;
-    cnode_ids = {obj_id. real_cnode_at obj_id spec};
+    cnode_ids = {obj_id. cnode_at obj_id spec};
     real_ids = {obj_id. real_object_at obj_id spec};
     real_ids = set obj_ids;
     distinct obj_ids; distinct free_cptrs;
@@ -761,9 +770,12 @@ lemma map_of_zip_range':
   \<Longrightarrow> (\<lambda>x. (the (map_of (zip xs ys) x))) ` X = set ys"
   by (metis map_of_zip_range)
 
+
+
+
 lemma si_irq_caps_at_conversion:
   "\<lbrakk>well_formed spec;
-    cnode_ids = {obj_id. real_cnode_at obj_id spec};
+    cnode_ids = {obj_id. cnode_at obj_id spec};
     irqs = used_irqs spec\<rbrakk>
   \<Longrightarrow> si_spec_irqs_caps_at irq_caps spec cnode_ids =
       si_irq_caps_at irq_caps spec irqs"
@@ -820,24 +832,23 @@ lemma well_formed_non_aep_in_real_object:
 
 lemma irqhandler_cap_at_simp:
   "well_formed spec \<Longrightarrow>
-   {(obj_id, slot). real_cnode_at obj_id spec \<and> irqhandler_cap_at (obj_id, slot) spec} =
+   {(obj_id, slot). cnode_at obj_id spec \<and> irqhandler_cap_at (obj_id, slot) spec} =
    {(obj_id, slot). irqhandler_cap_at (obj_id, slot) spec}"
   apply (safe)
   apply (clarsimp simp: cap_at_def)
   apply (frule (2) well_formed_irqhandler_cap_in_cnode_at)
   apply (frule (1) well_formed_non_aep_in_real_object, simp+)
-  apply (fastforce simp: real_cnode_at_def2)
   done
 
 lemma orig_cap_rewrite_v2:
-  "(SIGMA obj_id:{obj_id. real_cnode_at obj_id spec}. dom (slots_of obj_id spec)) =
-   {(obj_id, slot). real_cnode_at obj_id spec \<and> slots_of obj_id spec slot \<noteq> None}"
+  "(SIGMA obj_id:{obj_id. cnode_at obj_id spec}. dom (slots_of obj_id spec)) =
+   {(obj_id, slot). cnode_at obj_id spec \<and> slots_of obj_id spec slot \<noteq> None}"
   by auto
 
 lemma rewrite_irqhandler_cap_at:
   "well_formed spec \<Longrightarrow>
   Set.filter (\<lambda>cap_ref. irqhandler_cap_at cap_ref spec)
-             (SIGMA obj_id:{obj_id. real_cnode_at obj_id spec}. dom (slots_of obj_id spec)) =
+             (SIGMA obj_id:{obj_id. cnode_at obj_id spec}. dom (slots_of obj_id spec)) =
   {(obj_id, slot). irqhandler_cap_at (obj_id, slot) spec}"
   apply (subst irqhandler_cap_at_simp [symmetric])
   by (auto simp: opt_cap_def cap_at_def)
@@ -852,7 +863,7 @@ lemma well_formed_used_irqs_rewrite:
 
 
 lemma si_irq_null_caps_at_simplified:
-  "\<lbrakk>(si_spec_irqs_null_caps_at irq_caps spec {obj_id. real_cnode_at obj_id spec}) s;
+  "\<lbrakk>(si_spec_irqs_null_caps_at irq_caps spec {obj_id. cnode_at obj_id spec}) s;
     well_formed spec;
     distinct irqs; distinct free_cptrs;
     set irqs = used_irqs spec;
@@ -887,7 +898,7 @@ lemma si_irq_null_caps_at_simplified:
     apply clarsimp
    apply (rule_tac x="the (map_of (zip irqs free_cptrs) a)" in exI)
    apply clarsimp
-   apply (frule_tac x="(cap_irq (the (opt_cap (aa, b) spec)))" in map_of_zip_is_Some'[THEN iffD1, standard], clarsimp)
+   apply (frule_tac x1="(cap_irq (the (opt_cap (aa, b) spec)))" in map_of_zip_is_Some'[THEN iffD1], clarsimp)
     apply (fastforce simp: cap_at_def used_irqs_def all_caps_def)
    apply (clarsimp simp: cap_ref_irq_def)
   apply simp

@@ -132,8 +132,8 @@ lemma ccorres_split_nothrowE:
   shows "ccorres_underlying sr \<Gamma> r xf arrel axf (P and R) (P' \<inter> R') hs
                (a >>=E (\<lambda>rv. b rv)) (c ;; d)"
   unfolding bindE_def
-  apply (rule_tac R="sum_case QE Q"
-             and R'="\<lambda>rv. {s. s \<in> sum_case ?QE' ?QR' rv (xf' s)}"
+  apply (rule_tac R="case_sum QE Q"
+             and R'="\<lambda>rv. {s. s \<in> case_sum QE' QR' rv (xf' s)}" for QE' QR'
            in ccorres_master_split_hs)
       apply (rule ac)
      apply (rule ccorres_abstract[OF ceqv])
@@ -174,8 +174,8 @@ lemma ccorres_split_nothrow_novcgE:
                               (\<lambda>rv rv'. {s. ef' (xf' s) \<noteq> scast EXCEPTION_NONE \<longrightarrow> s \<in> Q'' err rv rv'})"
   shows "ccorres_underlying sr \<Gamma> r xf arrel axf (P and R) P' hs (a >>=E (\<lambda>rv. b rv)) (c ;; d)"
   unfolding bindE_def
-  apply (rule_tac R="sum_case QE Q"
-             and R'="\<lambda>rv. {s. s \<in> sum_case ?QE' ?QR' rv (xf' s)}"
+  apply (rule_tac R="case_sum QE Q"
+             and R'="\<lambda>rv. {s. s \<in> case_sum QE' QR' rv (xf' s)}" for QE' QR'
            in ccorres_master_split_nohs_UNIV)
      apply (rule ac)
     apply (rule ccorres_abstract[OF ceqv])
@@ -288,7 +288,7 @@ abbreviation
 
 lemma ccorres_basic_srnoop:
   assumes asm: "ccorres_underlying rf_sr Gamm r xf arrel axf G G' hs a c"
-  and   gsr: "\<And>s s'. globals (g s') = globals s'" 
+  and   gsr: "\<And>s'. globals (g s') = globals s'" 
   and   gG: "\<And>s'. s' \<in> G' \<Longrightarrow> g s' \<in> G'" 
   shows "ccorres_underlying rf_sr Gamm r xf arrel axf G G' hs a (Basic g ;; c)"
   using asm unfolding rf_sr_def
@@ -296,6 +296,19 @@ lemma ccorres_basic_srnoop:
    apply (simp add: gsr)
   apply (erule gG)
   done
+
+lemma ccorres_basic_srnoop2:
+  assumes gsr: "\<And>s'. globals (g s') = globals s'" 
+  assumes asm: "ccorres_underlying rf_sr Gamm r xf arrel axf G G' hs a c"
+  shows "ccorres_underlying rf_sr Gamm r xf arrel axf G {s. g s \<in> G'} hs a (Basic g ;; c)"
+  apply (rule ccorres_guard_imp2)
+   apply (rule ccorres_symb_exec_r)
+     apply (rule asm)
+    apply vcg
+   apply (rule conseqPre, vcg, clarsimp simp: rf_sr_def gsr)
+  apply clarsimp
+  done
+
 
 (* The naming convention here is that xf', xfr, and xfru are the terms we instantiate *)
 lemma ccorres_call:
@@ -412,8 +425,8 @@ lemma ccorres_split_nothrow_call_novcgE:
   ) hs (a >>=E b) (call i f (\<lambda>s t. s\<lparr>globals := globals t\<rparr>) (\<lambda>x y. Basic (g x y));;
  d)" (is "ccorres_underlying rf_sr \<Gamma> ?r ?xf arrel axf ?P (?Q1 \<inter> ?Q2) hs ?A ?B")
   unfolding bindE_def
-  apply (rule_tac R="sum_case QE Q"
-             and R'="\<lambda>rv. {s. s \<in> sum_case ?QE' ?QR' rv (xf' s)}"
+  apply (rule_tac R="case_sum QE Q"
+             and R'="\<lambda>rv. {s. s \<in> case_sum QE' QR' rv (xf' s)}" for QE' QR'
                in ccorres_master_split_nohs)
      apply (rule ccorres_callE [OF ac])
 	apply (rule gg)
@@ -426,7 +439,7 @@ lemma ccorres_split_nothrow_call_novcgE:
      apply (rule_tac xf'=errstate in ccorres_abstract[OF ceqv_refl])
      apply (rule ccorres_gen_asm2)
      apply (rule ccorres_gen_asm2)
-     apply (erule_tac err'=rv'a in err, assumption)
+     apply (erule_tac err'1=rv'a in err, assumption)
     apply (rule ccorres_gen_asm2)
     apply (rule ccorres_gen_asm2)
     apply (erule(1) bd)
@@ -594,14 +607,14 @@ lemma ccorres_trim_redundant_throw:
   apply (rule ccorres_trim_redundant_throw')
     apply simp
    apply simp
-  apply simp
+  apply (simp add: rf_sr_upd_safe)
   done
 
 end
 
 
 lemmas in_magnitude_check' =
-  in_magnitude_check [where v = "fst z" and s' = "snd z", folded surjective_pairing, standard]
+  in_magnitude_check [where v = "fst z" and s' = "snd z" for z, folded surjective_pairing]
 
 
 (* Defined in terms of access_ti for convenience *)
@@ -1206,7 +1219,7 @@ lemma ccorres_sequenceE_while:
 
 context kernel begin
 
-lemma ccorres_split_nothrow_novcg_sum_case:
+lemma ccorres_split_nothrow_novcg_case_sum:
   "\<lbrakk>ccorresG sr \<Gamma> (f' \<currency> r') (liftxf es ef' vf' xf') P P' [] a c;
     \<And>rv' t t'. ceqv \<Gamma> xf' rv' t t' d (d' rv');
     \<And>rv rv'. \<lbrakk> r' rv (vf' rv'); ef' rv' = scast EXCEPTION_NONE \<rbrakk>
@@ -1218,8 +1231,8 @@ lemma ccorres_split_nothrow_novcg_sum_case:
                                (\<lambda>rv rv'. {s. ef' rv' = scast EXCEPTION_NONE \<longrightarrow> s \<in> Q' rv rv'});
     \<And>err. guard_is_UNIV (\<lambda>rv. f' err (ef' rv)) es
              (\<lambda>rv rv'. {s. ef' (xf' s) \<noteq> scast EXCEPTION_NONE \<longrightarrow> s \<in> Q'' err rv rv'})\<rbrakk>
-      \<Longrightarrow> ccorres_underlying sr \<Gamma> r xf arrel axf (P and R) P' hs (a >>= sum_case e b) (c;;d)"
-  apply (rule_tac R="sum_case QE Q" and R'="sum_case ?QE' ?QR'"
+      \<Longrightarrow> ccorres_underlying sr \<Gamma> r xf arrel axf (P and R) P' hs (a >>= case_sum e b) (c;;d)"
+  apply (rule_tac R="case_sum QE Q" and R'="case_sum QE' QR'" for QE' QR'
               in ccorres_master_split_nohs_UNIV)
      apply assumption
     apply (case_tac rv, simp_all)[1]
@@ -1238,7 +1251,7 @@ lemma ccorres_split_nothrow_novcg_sum_case:
                  split: sum.split)
   done
 
-lemma ccorres_split_nothrow_sum_case:
+lemma ccorres_split_nothrow_case_sum:
   "\<lbrakk>ccorresG sr \<Gamma> (f' \<currency> r') (liftxf es ef' vf' xf') P P' hs a c;
     \<And>rv' t t'. ceqv \<Gamma> xf' rv' t t' d (d' rv');
     \<And>rv rv'. \<lbrakk> r' rv (vf' rv'); ef' rv' = scast EXCEPTION_NONE \<rbrakk>
@@ -1250,8 +1263,8 @@ lemma ccorres_split_nothrow_sum_case:
                                                  \<longrightarrow>  s \<in> Q' rv' (xf' s))
                                    \<and> (\<forall>ft. ef' (xf' s) \<noteq> scast EXCEPTION_NONE \<longrightarrow> f' ft (ef' (xf' s)) (es s)
                                                  \<longrightarrow> s \<in> Q'' ft (xf' s) (es s))} \<rbrakk>
-      \<Longrightarrow> ccorres_underlying sr \<Gamma> r xf arrel axf (P and R) (P' \<inter> R') hs (a >>= sum_case e b) (c;;d)"
-  apply (erule_tac R="sum_case QE Q" and R'="sum_case ?QE' ?QR'"
+      \<Longrightarrow> ccorres_underlying sr \<Gamma> r xf arrel axf (P and R) (P' \<inter> R') hs (a >>= case_sum e b) (c;;d)"
+  apply (erule_tac R="case_sum QE Q" and R'="case_sum QE' QR'" for QE' QR'
            in ccorres_master_split_hs)
      apply (case_tac rv, simp_all)[1]
       apply (erule ccorres_abstract)

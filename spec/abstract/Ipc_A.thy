@@ -12,20 +12,13 @@
 Specification of Inter-Process Communication.
 *)
 
-header "IPC"
+chapter "IPC"
 
 theory Ipc_A
 imports Tcb_A
 begin
 
 section {* Getting and setting the message info register. *}
-
-definition
-  set_message_info :: "obj_ref \<Rightarrow> message_info \<Rightarrow> (unit,'z::state_ext) s_monad"
-where
-  "set_message_info thread info \<equiv>
-     as_user thread $ set_register msg_info_register $
-                      message_info_to_data info"
 
 definition
   get_message_info :: "obj_ref \<Rightarrow> (message_info,'z::state_ext) s_monad"
@@ -377,7 +370,7 @@ where
      diminish \<leftarrow> return (AllowSend \<notin> rights);
      ep \<leftarrow> get_endpoint epptr;
      aepptr \<leftarrow> get_bound_aep thread;
-     aep \<leftarrow> option_case (return default_async_ep) get_async_ep aepptr;
+     aep \<leftarrow> case_option (return default_async_ep) get_async_ep aepptr;
      if (aepptr \<noteq> None \<and> isActive aep)
      then 
        complete_async_ipc (the aepptr) thread

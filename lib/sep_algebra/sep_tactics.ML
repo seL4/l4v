@@ -36,7 +36,7 @@ fun is_sep_conj_term
   | is_sep_conj_term _ = false;
 
 fun is_sep_conj_prop
-      (Const Trueprop $ t) = is_sep_conj_term t
+      (Const _ $ t) = is_sep_conj_term t
   | is_sep_conj_prop _ = false;
 
 fun strip_sep_conj (Const (@{const_name sep_conj},_) $ t1 $ t2 $ _) =
@@ -130,7 +130,7 @@ end;
 fun conj_length ctxt ct =
     let 
         val ((_, ct'), _) = Variable.focus_cterm ct ctxt;
-        val concl = ct' |> Drule.strip_imp_concl |> term_of;
+        val concl = ct' |> Drule.strip_imp_concl |> Thm.term_of;
       in  concl |> HOLogic.dest_Trueprop |> SepConj.strip_sep_conj
                 |> length
  end;
@@ -142,11 +142,6 @@ in
   let
     fun sep_select_tac' ctxt ns (ct, i) =
       let
-        (* digging out conclusions *)
-        val ((_, ct'), _) = Variable.focus_cterm ct ctxt;
-        val concl = ct' |> Drule.strip_imp_concl |> term_of;
-        val p = concl |> HOLogic.dest_Trueprop |> SepConj.strip_sep_conj
-                |> length;
         fun th ns = mk_sep_select_rule ctxt false ((conj_length ctxt ct),ns)
       in
         if not (all_uniq ns) then error ("Duplicate numbers in arguments")
@@ -158,7 +153,7 @@ in
 end; 
 
 fun UNSOLVED' tac i st =
-  tac i st |> Seq.filter (fn st' => nprems_of st' = nprems_of st);
+  tac i st |> Seq.filter (fn st' => Thm.nprems_of st' = Thm.nprems_of st);
 
 fun sep_flatten ctxt = 
        let fun simptac i = CHANGED_PROP (full_simp_tac
@@ -175,7 +170,7 @@ fun sep_select_tactic lens_tac ns ctxt =
        in lens_tac THEN'
           rtac iffI THEN'
           (sep_select ns) THEN'
-          assume_tac THEN'         
+          assume_tac ctxt THEN'         
           (sep_conj_ac_tac)
     end;
 

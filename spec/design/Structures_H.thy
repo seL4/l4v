@@ -12,7 +12,7 @@
    datatypes/records for the various kernel data structures.
 *)
 
-header "Kernel Data Structures"
+chapter "Kernel Data Structures"
 
 theory Structures_H
 imports
@@ -2099,9 +2099,9 @@ defs dschLength_def:
 "dschLength \<equiv> snd"
 
 defs wordSizeCase_def:
-"wordSizeCase a b\<equiv> (if bitSize (undefined::machine_word) = 32
+"wordSizeCase a b\<equiv> (if finiteBitSize (undefined::machine_word) = 32
         then  a
-        else if bitSize (undefined::machine_word) = 64
+        else if finiteBitSize (undefined::machine_word) = 64
         then  b
         else  error []
         )"
@@ -2126,6 +2126,7 @@ defs isReply_def:
 
 defs maxFreeIndex_def:
 "maxFreeIndex magnitudeBits \<equiv> bit magnitudeBits"
+
 
 
 end

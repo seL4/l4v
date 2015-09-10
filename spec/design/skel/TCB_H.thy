@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-header "Thread Control Blocks"
+chapter "Thread Control Blocks"
 
 theory TCB_H
 imports

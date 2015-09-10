@@ -20,13 +20,6 @@ imports
   Interrupt_AI
 begin
 
-(*
-lemmas schedule_ct_activateable'[wp] = use_bcorres[where Q="\<lambda>_. ct_in_state activatable" and P="invs",simplified o_def,simplified, OF schedule_bcorres schedule_ct_activateable]
-*)
-
-(*
-lemmas schedule_invs'[wp] = use_bcorres[where Q="\<lambda>_. invs" and P="invs",simplified o_def,simplified, OF schedule_bcorres schedule_invs]
-*)
 
 lemma schedule_invs[wp]: "\<lbrace>invs\<rbrace> (Schedule_A.schedule :: (unit,det_ext) s_monad) \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: Schedule_A.schedule_def)
@@ -65,9 +58,9 @@ lemma syscall_valid:
   shows "\<lbrace>P\<rbrace> Syscall_A.syscall m_flt h_flt m_err h_err m_fin \<lbrace>Q\<rbrace>, \<lbrace>E\<rbrace>"
   apply (simp add: Syscall_A.syscall_def liftE_bindE
              cong: sum.case_cong)
-  apply (rule hoare_split_bind_sum_caseE)
+  apply (rule hoare_split_bind_case_sumE)
     apply (wp x)[1]
-   apply (rule hoare_split_bind_sum_caseE)
+   apply (rule hoare_split_bind_case_sumE)
      apply (wp x|simp)+
   done
 
@@ -212,7 +205,7 @@ lemma handle_fault_reply_cte_wp_at:
       apply (drule_tac P=P and p=p in cte_wp_at_after_update)
       apply (drule sym)
       apply (clarsimp)
-      apply (rule_tac x="s \<lparr> kheap := ?p \<rparr>" in arg_cong)
+      apply (rule_tac x="s \<lparr> kheap := p \<rparr>" for p in arg_cong)
       apply (clarsimp)
       done
     show ?thesis
@@ -395,7 +388,7 @@ lemma sts_nasty_bit:
               \<longrightarrow> cte_wp_at (Not \<circ> is_zombie) (a, b) s \<and> \<not> is_zombie cap\<rbrace>"
   apply (wp hoare_vcg_const_Ball_lift hoare_vcg_all_lift
             hoare_vcg_imp_lift hoare_vcg_disj_lift valid_cte_at_neg_typ
-          | simp add: cte_wp_at_neg2[where P="\<lambda>c. x \<in> obj_refs c", standard])+
+          | simp add: cte_wp_at_neg2[where P="\<lambda>c. x \<in> obj_refs c" for x])+
   apply (clarsimp simp: o_def cte_wp_at_def)
   done
 
@@ -413,18 +406,21 @@ lemma sts_valid_inv[wp]:
   apply (case_tac i, simp_all add: aep_at_typ ep_at_typ 
                                    sts_valid_untyped_inv sts_valid_arch_inv)
          apply (wp | simp)+
+      apply (rename_tac tcb_invocation)
       apply (case_tac tcb_invocation, 
              (wp set_thread_state_valid_cap|
               simp add: tcb_at_typ split: option.split|
               safe | 
              wp sts_obj_at_impossible)+)
-
+    apply (rename_tac cnode_invocation)
     apply (case_tac cnode_invocation, simp_all)[1]
     apply (case_tac cnode_invocation,
            (wp set_thread_state_valid_cap sts_nasty_bit hoare_vcg_const_imp_lift            
               | simp)+)
+   apply (rename_tac irq_control_invocation)
    apply (case_tac irq_control_invocation,
            (wp | simp)+)
+  apply (rename_tac irq_handler_invocation)
   apply (case_tac irq_handler_invocation, simp_all)
   apply (wp ex_cte_cap_to_pres hoare_vcg_ex_lift set_thread_state_valid_cap)
   done
@@ -525,30 +521,30 @@ lemma decode_inv_wf[wp]:
              cap_rights_update_def ex_cte_cap_wp_to_weakenE[OF _ TrueI]
              cte_wp_at_caps_of_state
            split: cap.splits)
-       apply (thin_tac " \<forall>x\<in>set excaps. ?P x & ?Q x")+
+       apply (thin_tac " \<forall>x\<in>set excaps. P x \<and> Q x" for P Q)+
        apply (drule (1) bspec)+
        apply (subst split_paired_Ex[symmetric], rule exI, simp)
-      apply (thin_tac " \<forall>x\<in>set excaps. ?P x & ?Q x")+
+      apply (thin_tac " \<forall>x\<in>set excaps. P x \<and> Q x" for P Q)+
       apply (rule conjI)
        apply (subst split_paired_Ex[symmetric], rule_tac x=slot in exI, simp)
       apply clarsimp
       apply (drule (1) bspec)+
       apply (subst split_paired_Ex[symmetric], rule exI, simp)
-     apply (thin_tac " \<forall>x\<in>set excaps. ?P x & ?Q x")+
+     apply (thin_tac " \<forall>x\<in>set excaps. P x \<and> Q x" for P Q)+
      apply (drule (1) bspec)+
      apply (clarsimp simp add: ex_cte_cap_wp_to_weakenE[OF _ TrueI])
      apply (rule diminished_no_cap_to_obj_with_diff_ref)
       apply (fastforce simp add: cte_wp_at_caps_of_state)
      apply (simp add: invs_valid_arch_caps)
     apply (simp add: invs_valid_objs invs_valid_global_refs)
-   apply (thin_tac " \<forall>x\<in>set excaps. ?P x & ?Q x")+
+   apply (thin_tac " \<forall>x\<in>set excaps. P x \<and> Q x" for P Q)+
    apply (rule conjI)
     apply clarsimp
     apply (drule (1) bspec)+
     apply (subst split_paired_Ex[symmetric], rule exI, simp)
    apply (clarsimp simp add: diminished_def mask_cap_def cap_rights_update_def
                    split: cap.splits)
-  apply (thin_tac " \<forall>x\<in>set excaps. ?P x & ?Q x")+
+  apply (thin_tac " \<forall>x\<in>set excaps. P x \<and> Q x" for P Q)+
   apply (subst split_paired_Ex[symmetric], rule exI, simp)
   done
 
@@ -610,7 +606,7 @@ lemma lookup_extras_real_ctes[wp]:
   apply (rule hoare_pre)
    apply (wp mapME_set)
       apply (simp add: lookup_cap_and_slot_def split_def)
-      apply (wp option_cases_weak_wp mapM_wp'
+      apply (wp case_options_weak_wp mapM_wp'
                  | simp add: load_word_offs_word_def)+
   done
 
@@ -629,7 +625,7 @@ lemma lsft_ex_cte_cap_to:
   apply (wp rab_cte_cap_to)
   apply (clarsimp simp: ex_cte_cap_wp_to_def)
   apply (clarsimp dest!: get_tcb_SomeD)
-  apply (frule cte_wp_at_tcbI[where t="(t', tcb_cnode_index 0)" and P="op = v", standard, simplified])
+  apply (frule cte_wp_at_tcbI[where t="(t', tcb_cnode_index 0)" and P="op = v" for t' v, simplified])
     apply fastforce
    apply fastforce
   apply (intro exI, erule cte_wp_at_weakenE)
@@ -887,8 +883,7 @@ lemma hinv_invs':
   apply (rule hoare_vcg_E_elim)
   apply (wp | simp add: if_apply_def2)+
   apply (auto simp: ct_in_state_def elim: st_tcb_ex_cap)
-done
-
+  done
 
 lemmas hinv_invs[wp] = hinv_invs'[where Q=\<top>,simplified hoare_post_taut, OF TrueI TrueI TrueI TrueI,simplified]
 
@@ -929,7 +924,6 @@ lemma tcb_cnode_index_3_reply_or_null:
   apply (clarsimp split: Structures_A.thread_state.split_asm)
   done
 
-
 lemma ex_nonz_cap_to_tcb_strg:
   "(\<exists>cref. cte_wp_at (\<lambda>cap. is_thread_cap cap \<and> p \<in> zobj_refs cap) cref s)
        \<longrightarrow> ex_nonz_cap_to p s"
@@ -943,18 +937,22 @@ lemma ex_tcb_cap_to_tcb_at_strg:
   apply (drule(1) caps_of_state_valid_cap[rotated])
   apply (drule(2) valid_cap_tcb_at_tcb_or_zomb)
   apply fastforce
-  done
-
+  done  
+  
 lemma delete_caller_cap_nonz_cap:
-  "\<lbrace>ex_nonz_cap_to p and tcb_at p and valid_objs\<rbrace>
+  "\<lbrace>ex_nonz_cap_to p and tcb_at t and valid_objs\<rbrace>
       delete_caller_cap t
    \<lbrace>\<lambda>rv. ex_nonz_cap_to p\<rbrace>"
-  apply (simp add: delete_caller_cap_def)
-  apply (strengthen ex_nonz_cap_to_tcb_strg)
-  apply (wp hoare_vcg_ex_lift cap_delete_one_cte_wp_at_preserved)
-   apply (clarsimp simp: is_cap_simps can_fast_finalise_def)
-  apply (strengthen ex_tcb_cap_to_tcb_at_strg)
-  apply simp
+  apply (simp add: delete_caller_cap_def ex_nonz_cap_to_def cte_wp_at_caps_of_state)
+  apply (rule hoare_pre)
+  apply (wp hoare_vcg_ex_lift cap_delete_one_caps_of_state)
+  apply (clarsimp simp: cte_wp_at_caps_of_state)
+  apply (rule_tac x=a in exI)
+  apply (rule_tac x=b in exI)
+  apply clarsimp
+  apply (drule (1) tcb_cap_valid_caps_of_stateD)
+  apply (drule (1) tcb_cnode_index_3_reply_or_null)
+  apply (auto simp: is_cap_simps)
   done
 
 lemma delete_caller_cap_invs[wp]:
@@ -994,20 +992,20 @@ lemma hw_invs[wp]: "\<lbrace>invs and ct_active\<rbrace> handle_wait \<lbrace>\<
   apply (simp add: handle_wait_def Let_def ep_aep_cap_case_helper
     cong: if_cong)
   apply (wp get_aep_wp | clarsimp)+
+  apply (wp delete_caller_cap_nonz_cap get_aep_wp hoare_vcg_ball_lift | simp)+
      apply (rule hoare_vcg_E_elim)
       apply (simp add: lookup_cap_def lookup_slot_for_thread_def)
       apply wp
        apply (simp add: split_def)
        apply (wp resolve_address_bits_valid_fault2)
      apply (simp add: valid_fault_def)
-     apply (wp hoare_vcg_all_lift_R
+     apply ((wp hoare_vcg_all_lift_R lookup_cap_ex_cap
           | simp add: obj_at_def
-          | simp add: conj_disj_distribL
-          | wp_once hoare_drop_imps)+
-   apply (wp delete_caller_cap_nonz_cap static_imp_wp | simp
-        | strengthen invs_valid_tcb_ctable_strengthen)+
+          | simp add: conj_disj_distribL ball_conj_distrib
+          | wp_once hoare_drop_imps)+)
   apply (simp add: ct_in_state_def)
-  apply (fastforce elim!: st_tcb_ex_cap)
+  apply (fold obj_at_def)
+  apply (fastforce elim!: invs_valid_tcb_ctable st_tcb_ex_cap)
   done
 
 crunch typ_at[wp]: delete_caller_cap "\<lambda>s. P (typ_at T p s)"
@@ -1253,6 +1251,7 @@ lemma he_invs[wp]:
   handle_event e 
   \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (case_tac e, simp_all)
+      apply (rename_tac syscall)
       apply (case_tac syscall, simp_all)
       apply ((rule hoare_pre, wp hvmf_active hr_invs hy_inv) | 
                  wpc | wp hoare_drop_imps hoare_vcg_all_lift |

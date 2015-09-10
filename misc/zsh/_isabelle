@@ -11,6 +11,14 @@
 #
 #
 # Isabelle completion script for zsh.
+# To use, point fpath to the directory containing _isabelle (this file)
+# and isabelle_session_names.py. For example, add to .zshrc:
+#
+#   fpath=(directory/for/this/script $fpath)
+#   # The following lines probably exist already
+#   autoload -U compinit
+#   compinit
+#
 #
 # Caution
 # ----
@@ -18,10 +26,19 @@
 #            *** running isabelle and parsing the output ***
 # so it may break and do strange things, especially if your Isabelle is not
 # configured properly, or its version has changed since this script
-# was written (Isabelle 2013-2).
+# was written (Isabelle 2015).
 #
+#
+# Known problems
+# ----
+# * Should quote $session_dirs when passing it around.
+# * Need to update the list of unsafe subcommands.
+# * If subcommand isn't understood, should fall back to filename completion.
+# * Shouldn't assume that -d option always refers to session dirs.
 #
 # Report bugs to: Japheth
+
+_isabelle_completer_path=$(dirname "${(%):-%x}")
 
 _isabelle() {
     local -x _isabelle_path
@@ -41,28 +58,20 @@ _isabelle() {
         case "$cmd" in
             # Isabelle forwards these commands to external programs,
             # so run the completions for those programs.
-            make)
-		# Trick _make into getting completions for IsaMakefile
-		if [[ ! "$words" =~ '-f' ]]; then
-		    words=(make -f IsaMakefile "${(@)words[2,$#words]}")
-		    (( CURRENT += 2 ))
-		fi
-		_dispatch :complete:make make -default-
-                ;;
             env)
-		_dispatch :complete:env env -default-
+                _dispatch :complete:env env -default-
                 ;;
-	    # NB: these programs are internal to the Isabelle distribution,
-	    #     so there may not be completions for them
+            # NB: these programs are internal to the Isabelle distribution,
+            #     so there may not be completions for them
             java)
-		_dispatch :complete:java java -default-
+                _dispatch :complete:java java -default-
                 ;;
-	    scala)
-		_dispatch :complete:scala scala -default-
-		;;
-	    scalac)
-		_dispatch :complete:scalac scalac -default-
-		;;
+            scala)
+                _dispatch :complete:scala scala -default-
+                ;;
+            scalac)
+                _dispatch :complete:scalac scalac -default-
+                ;;
 
             # These are unsafe for running in _isabelle_usage_to_completion
             # because they do not parse options properly. Skip them.
@@ -98,8 +107,18 @@ _isabelle_usage_to_completion() {
         return
     fi
 
+    local opt line allopts fileopts session_dirs
+
+    # collect -d option values (session directories)
+    # FIXME: -d may have different meanings in other subcommands
+    session_dirs=()
+    for i in `seq $(($#words - 1))`; do
+      if [[ ${words[i]} == '-d' ]]; then
+        session_dirs+=${words[i+1]}
+      fi
+    done
+
     # parse option list
-    local opt line allopts fileopts
     allopts=()
     # some option descriptions are multi-line; join them
     echo "$usage" | sed -e '/Options are:/,/^$/ !d' -e '/Options are:/ d' | \
@@ -108,7 +127,7 @@ _isabelle_usage_to_completion() {
             line="$(echo "$line" | sed -e 's/^ *//' -e 's/ *$//')"
             if [[ "$line" =~ '^ *-' ]]; then
                 if [[ "$opt" =~ '^ *-' ]]; then
-                    optspec="$(_isabelle_parse_option "$opt")"
+                    optspec="$(_isabelle_parse_option "$opt" "$session_dirs")"
                     allopts+="$optspec"
                 fi
                 opt=
@@ -123,35 +142,35 @@ _isabelle_usage_to_completion() {
 
     # non-OPTION arguments
     if [[ ${words[CURRENT][1]} != '-' ]]; then
-	opt=( $(echo "$usage" | \
+        opt=( $(echo "$usage" | \
             sed -e "/Usage: isabelle $cmd/ !d" \
             -e 's/Usage: isabelle '$cmd' \([][A-Z_]\+ *\)*.*$/\1/' \
             -e 's/[][]//g' -e 's/OPTION\(S\)\?//g') )
 
         # file and directory arguments
-	if [[ "$opt" =~ .*FILE.* ]]; then
+        if [[ "$opt" =~ .*FILE.* ]]; then
             fileopts=($(echo "$opt" | grep -Eo '[A-Z_]*FILE[A-Z_]*'))
             opt=($(echo "$opt" | sed -e 's/[A-Z_]*FILE[A-Z_]*//g'))
             allopts+='*:'"${(j., .)fileopts}:_files"
-	fi
-	if [[ "$opt" =~ .*DIR.* ]]; then
+        fi
+        if [[ "$opt" =~ .*DIR.* ]]; then
             fileopts=($(echo "$opt" | grep -Eo '[A-Z_]*DIR[A-Z_]*'))
             opt=($(echo "$opt" | sed -e 's/[A-Z_]*DIR[A-Z_]*//g'))
             allopts+='*:'"${(j., .)fileopts}:_files -/"
-	fi
+        fi
 
-	# session names
-	if [[ "$opt" =~ .*SESSION.* ]]; then
+        # session names
+        if [[ "$opt" =~ .*SESSION.* ]]; then
             fileopts=($(echo "$opt" | grep -Eo '[A-Z_]*SESSION[A-Z_]*'))
             opt=($(echo "$opt" | sed -e 's/[A-Z_]*SESSION[A-Z_]*//g'))
-            allopts+='*:'"${(j., .)fileopts}:_isabelle_session_name"
-	fi
+            allopts+='*:'"${(j., .)fileopts}:{_isabelle_session_name $session_dirs}"
+        fi
 
         # remaining arguments -- we don't understand them,
         # but we can print what they are called
-	if [[ $#opt > 0 ]]; then
+        if [[ $#opt > 0 ]]; then
             allopts+='*:'"${(j., .)opt}"
-	fi
+        fi
     fi
 
     if [[ $#allopts > 0 ]]; then
@@ -160,7 +179,7 @@ _isabelle_usage_to_completion() {
 }
 
 _isabelle_parse_option() {
-    local opt="$1"
+    local opt="$1" session_dirs="${@:2}"
 
     # Parse option:
     #     "   -a   ARG    description of a (and more stuff)"
@@ -177,11 +196,11 @@ _isabelle_parse_option() {
 
     if [[ -n "$arg" ]]; then
         # short version for tab completing argument
-	local shorthelp="$(echo "$help" | sed -e 's/ \?([^)]*\()\|$\)//g')"
+        local shorthelp="$(echo "$help" | sed -e 's/ \?([^)]*\()\|$\)//g')"
         # if it mentions $arg, prepend $arg
-	if echo "$shorthelp" | grep -qF "$arg"; then
-	    shorthelp="$arg: $shorthelp"
-	fi
+        if echo "$shorthelp" | grep -qF "$arg"; then
+            shorthelp="$arg: $shorthelp"
+        fi
         optspec+=":${shorthelp/:/\:}"
     fi
     case "$arg" in
@@ -195,11 +214,11 @@ _isabelle_parse_option() {
         *DIR*)
             optspec+=":_files -/"
             ;;
-	*)
+        *)
             # we can also complete session names
-	    if [[ "$shorthelp" =~ 'logic (image|session) name' ]]; then
-		optspec+=':_isabelle_session_name'
-	    fi
+            if [[ "$shorthelp" =~ 'logic (image|session) name' ]]; then
+                optspec+=':{_isabelle_session_name '"$session_dirs"'}'
+            fi
     esac
 
     # return to caller
@@ -207,10 +226,15 @@ _isabelle_parse_option() {
 }
 
 _isabelle_session_name() {
-    # FIXME: for isabelle build, we need session names from ROOT files
-    _tags sessions
-    _requested sessions expl 'session name' \
-	compadd -- $("$_isabelle_path" findlogics)
+    # Read heaps and session specs
+    _tags isa_heaps isa_sessions
+    local heap_names session_names
+    heap_names=$("$_isabelle_path" env sh -c 'echo -n "$ISABELLE_PATH"' | \
+                 xargs "-d:" sh -c 'find "$@" -maxdepth 2 -type f' . 2>/dev/null | \
+                 xargs -d'\n' -n1 basename | sort -u)
+    session_names=$(python "${_isabelle_completer_path}/isabelle_session_names.py" "$@" | sort -u)
+    _requested isa_heaps expl 'heap name' compadd -- ${=heap_names}
+    _requested isa_sessions expl 'session name' compadd -- ${=session_names}
 }
 
 _isabelle "$@"

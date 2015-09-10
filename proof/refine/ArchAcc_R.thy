@@ -34,7 +34,8 @@ lemma get_asid_pool_corres:
   apply (rule corres_no_failI)
    apply (rule no_fail_pre, wp)
    apply (clarsimp simp: typ_at'_def ko_wp_at'_def)
-   apply (case_tac ko, simp_all)[1]
+   apply (case_tac ko; simp)
+   apply (rename_tac arch_kernel_object)
    apply (case_tac arch_kernel_object, simp_all)[1]
    apply (clarsimp simp: lookupAround2_known1
                          projectKOs)
@@ -167,8 +168,9 @@ lemma set_asid_pool_corres:
          apply assumption
         apply (simp add: typ_at'_def obj_at'_def ko_wp_at'_def projectKOs)
         apply clarsimp
-        apply (case_tac ko, simp_all)[1]
-        apply (case_tac arch_kernel_object, simp_all)[1]
+        apply (case_tac ko; simp)
+        apply (rename_tac arch_kernel_object)
+        apply (case_tac arch_kernel_object; simp)
        prefer 5
        apply (rule get_object_sp)
       apply (clarsimp simp: obj_at_def exs_valid_def assert_def a_type_def return_def fail_def)
@@ -208,8 +210,9 @@ lemma get_pde_corres:
   apply (rule corres_no_failI)
    apply (rule no_fail_pre, wp)
    apply (clarsimp simp: ko_wp_at'_def typ_at'_def lookupAround2_known1) 
-   apply (case_tac ko, simp_all)[1]
-   apply (case_tac arch_kernel_object, simp_all add: projectKOs)[1]
+   apply (case_tac ko; simp)
+   apply (rename_tac arch_kernel_object)
+   apply (case_tac arch_kernel_object; simp add: projectKOs)
    apply (clarsimp simp: objBits_def cong: option.case_cong)
    apply (erule (1) ps_clear_lookupAround2)
      apply simp
@@ -255,7 +258,7 @@ lemma aligned_distinct_relation_pde_atI'[elim]:
   apply (simp add: shiftr_shiftl1)
   apply (subst(asm) is_aligned_neg_mask_eq[where n=2])
    apply (erule is_aligned_andI1)
-  apply (subst(asm) add_commute,
+  apply (subst(asm) add.commute,
          subst(asm) word_plus_and_or_coroll2)
   apply (clarsimp simp: pde_relation_def)
   apply (drule(2) aligned_distinct_pde_atI')
@@ -316,6 +319,7 @@ lemma get_master_pde_corres:
      apply (rule no_fail_pre, wp)
      apply (clarsimp simp: ko_wp_at'_def typ_at'_def lookupAround2_known1) 
      apply (case_tac ko, simp_all)[1]
+     apply (rename_tac arch_kernel_object)
      apply (case_tac arch_kernel_object, simp_all add: projectKOs)[1]
      apply (clarsimp simp: objBits_def cong: option.case_cong)
      apply (erule (1) ps_clear_lookupAround2)
@@ -329,7 +333,6 @@ lemma get_master_pde_corres:
     apply (clarsimp simp: pde_at_def obj_at_def)
     apply (clarsimp split:ARM_Structs_A.pde.splits)
     apply (intro conjI impI)
-      (*FIXME: Now comes the interesting part,it was ugly to duplicate the proof ... *)
   -- "master_pde = InvaliatePTE"
        apply (clarsimp simp add: a_type_def return_def get_pd_def
                   bind_def get_pde_def get_object_def gets_def get_def
@@ -421,8 +424,9 @@ lemma get_master_pde_corres:
       apply simp
      apply simp
     apply (clarsimp simp:typ_at'_def ko_wp_at'_def)
-    apply (case_tac ko,simp_all)
-    apply (case_tac arch_kernel_object, simp_all add: projectKOs)[1]
+    apply (case_tac ko; simp)
+    apply (rename_tac arch_kernel_object)
+    apply (case_tac arch_kernel_object; simp add: projectKOs)
     apply clarsimp
     apply (frule_tac x = "(ucast ((p && ~~ mask 6 )&& mask pd_bits >> 2))" in pde_relation_alignedD)
       apply assumption
@@ -430,6 +434,7 @@ lemma get_master_pde_corres:
      apply (subst mask_pd_bits_inner_beauty)
       apply (simp add:is_aligned_neg_mask)
      apply assumption
+    apply (rename_tac pde)
     apply (case_tac pde)
      apply (simp add: pde_relation_aligned_def
                       is_aligned_mask[where 'a=32, symmetric])+
@@ -479,6 +484,7 @@ lemma get_pte_corres:
    apply (rule no_fail_pre, wp)
    apply (clarsimp simp: ko_wp_at'_def typ_at'_def lookupAround2_known1) 
    apply (case_tac ko, simp_all)[1]
+   apply (rename_tac arch_kernel_object)
    apply (case_tac arch_kernel_object, simp_all add: projectKOs)[1]
    apply (clarsimp simp: objBits_def cong: option.case_cong)
    apply (erule (1) ps_clear_lookupAround2)
@@ -537,7 +543,7 @@ lemma aligned_distinct_relation_pte_atI'[elim]:
   apply (simp add: shiftr_shiftl1)
   apply (subst(asm) is_aligned_neg_mask_eq[where n=2])
    apply (erule is_aligned_andI1)
-  apply (subst(asm) add_commute,
+  apply (subst(asm) add.commute,
          subst(asm) word_plus_and_or_coroll2)
   apply (clarsimp simp: pte_relation_def)
   apply (drule(2) aligned_distinct_pte_atI')
@@ -585,6 +591,7 @@ lemma get_master_pte_corres:
      apply (rule no_fail_pre, wp)
      apply (clarsimp simp: ko_wp_at'_def typ_at'_def lookupAround2_known1) 
      apply (case_tac ko, simp_all)[1]
+     apply (rename_tac arch_kernel_object)
      apply (case_tac arch_kernel_object, simp_all add: projectKOs)[1]
      apply (clarsimp simp: objBits_def cong: option.case_cong)
      apply (erule (1) ps_clear_lookupAround2)
@@ -598,7 +605,6 @@ lemma get_master_pte_corres:
     apply (clarsimp simp: pte_at_def obj_at_def)
     apply (clarsimp split:ARM_Structs_A.pte.splits)
     apply (intro conjI impI)
-      (*FIXME: Now comes the interesting part,it was ugly to duplicate the proof ... *)
   -- "master_pde = InvaliatePTE"
       apply (clarsimp simp add: a_type_def return_def get_pt_def
                   bind_def get_pte_def get_object_def gets_def get_def
@@ -638,7 +644,8 @@ lemma get_master_pte_corres:
        apply simp
       apply simp
      apply (clarsimp simp:typ_at'_def ko_wp_at'_def)
-     apply (case_tac ko,simp_all)
+     apply (case_tac ko; simp)
+     apply (rename_tac arch_kernel_object)
      apply (case_tac arch_kernel_object, simp_all add: projectKOs)[1]
      apply clarsimp
      apply (frule_tac x = "(ucast ((p && ~~ mask 6 )&& mask pt_bits >> 2))" in pte_relation_alignedD)
@@ -647,6 +654,7 @@ lemma get_master_pte_corres:
       apply (subst mask_pt_bits_inner_beauty)
        apply (simp add:is_aligned_neg_mask)
       apply assumption
+     apply (rename_tac pte)
      apply (case_tac pte)
        apply (simp_all add:pte_relation_aligned_def
          is_aligned_mask[symmetric])+
@@ -709,7 +717,7 @@ lemma get_master_pte_corres':
    apply auto
   done
 
-(* FIXME: move to invariant-abstract? *)
+(* FIXME: move *)
 lemma pd_slot_eq:
   "((p::word32) && ~~ mask pd_bits) + (ucast x << 2) = p \<Longrightarrow>
     (x::12 word) = ucast (p && mask pd_bits >> 2)"
@@ -718,7 +726,7 @@ lemma pd_slot_eq:
   apply clarsimp
   done
 
-(* FIXME: move to invariant-abstract? *)
+(* FIXME: move *)
 lemma pt_slot_eq:
   "((p::word32) && ~~ mask pt_bits) + (ucast x << 2) = p \<Longrightarrow>
     (x::word8) = ucast (p && mask pt_bits >> 2)"
@@ -741,6 +749,7 @@ lemma set_pd_corres:
     apply simp
    apply (clarsimp simp: obj_at'_def ko_wp_at'_def typ_at'_def lookupAround2_known1 projectKOs) 
    apply (case_tac ko, simp_all)[1]
+   apply (rename_tac arch_kernel_object)
    apply (case_tac arch_kernel_object, simp_all add: projectKOs)[1]
    apply (simp add: objBits_simps archObjSize_def word_bits_def)
   apply (clarsimp simp: setObject_def in_monad split_def updateObject_default_def projectKOs)
@@ -818,6 +827,7 @@ lemma set_pt_corres:
     apply simp
    apply (clarsimp simp: obj_at'_def ko_wp_at'_def typ_at'_def lookupAround2_known1 projectKOs) 
    apply (case_tac ko, simp_all)[1]
+   apply (rename_tac arch_kernel_object)
    apply (case_tac arch_kernel_object, simp_all add: projectKOs)[1]
    apply (simp add: objBits_simps archObjSize_def word_bits_def)
   apply (clarsimp simp: setObject_def in_monad split_def updateObject_default_def projectKOs)
@@ -880,18 +890,6 @@ lemma set_pt_corres:
   apply (simp add: caps_of_state_after_update obj_at_def swp_cte_at_caps_of)
   done
 
-lemma word_from_vm_rights [simp]:
-  "fromEnum (vmrights_map R) = unat (word_from_vm_rights R)"
-  by (simp add: vmrights_map_def fromEnum_def enum_vmrights word_from_vm_rights_def 
-                vm_read_only_def vm_kernel_only_def vm_read_write_def)  
-
-lemma word_from_pde_corres:
-  "pde_relation' pde pde' \<Longrightarrow> wordFromPDE pde'= word_from_pde pde"
-  apply (simp add: word_from_pde_def wordFromPDE_def)
-  apply (cases pde)
-     apply (auto simp: ucast_id shiftL_nat shiftl_t2n)
-  done
-
 lemma store_pde_corres:
   "pde_relation_aligned (p >> 2) pde pde' \<Longrightarrow> 
   corres dc (pde_at p and pspace_aligned and valid_etcbs) (pde_at' p) (store_pde p pde) (storePDE p pde')"
@@ -918,13 +916,6 @@ lemma store_pde_corres':
   apply (rule stronger_corres_guard_imp,
          erule store_pde_corres)
    apply auto
-  done
-
-lemma word_from_pte_corres:
-  "pte_relation' pte pte' \<Longrightarrow> wordFromPTE pte'= word_from_pte pte"
-  apply (simp add: word_from_pte_def wordFromPTE_def) 
-  apply (cases pte)
-     apply (auto simp: ucast_id word_from_vm_rights shiftL_nat shiftl_t2n field_simps)
   done
 
 lemma store_pte_corres:
@@ -1012,7 +1003,7 @@ lemma page_table_at_state_relation:
     apply (rule_tac x = "ucast y" in exI)
     apply (simp add:ucast_ucast_len)
    apply fastforce
-  apply (thin_tac "dom ?a = ?b")
+  apply (thin_tac "dom a = b" for a b)
   apply (frule(1) pspace_alignedD)
   apply (clarsimp simp:ucast_ucast_len
     split:if_splits)
@@ -1050,7 +1041,7 @@ lemma page_directory_at_state_relation:
     apply (rule_tac x = "ucast y" in exI)
     apply (simp add:ucast_ucast_len)
    apply fastforce
-  apply (thin_tac "dom ?a = ?b")
+  apply (thin_tac "dom a = b" for a b)
   apply (frule(1) pspace_alignedD)
   apply (clarsimp simp:ucast_ucast_len
     split:if_splits)
@@ -1245,7 +1236,7 @@ lemma arch_derive_corres:
   done
 
 definition
-  "vmattributes_map \<equiv> \<lambda>R. VMAttributes (PageCacheable \<in> R) (ParityEnabled \<in> R)"
+  "vmattributes_map \<equiv> \<lambda>R. VMAttributes (PageCacheable \<in> R) (ParityEnabled \<in> R) (XNever \<in> R)"
 
 definition 
   mapping_map :: "ARM_Structs_A.pte \<times> word32 list + ARM_Structs_A.pde \<times> word32 list \<Rightarrow> 
@@ -1302,16 +1293,15 @@ definition
 
 lemma valid_slots_typ_at':
   assumes x: "\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at' T p\<rbrace>"
-  assumes y: "\<And>arch p. \<lbrace>ko_wp_at' (op = (KOArch arch)) p\<rbrace> f \<lbrace>\<lambda>rv. ko_wp_at' (op = (KOArch arch)) p\<rbrace>"
   shows "\<lbrace>valid_slots' m\<rbrace> f \<lbrace>\<lambda>rv. valid_slots' m\<rbrace>"
   unfolding valid_slots'_def
   apply (cases m)
    apply (case_tac a)
    apply simp
-   apply (wp x y hoare_vcg_const_Ball_lift valid_pte_lift')
+   apply (wp x valid_pte_lift')
   apply (case_tac b)
   apply simp
-  apply (wp x y hoare_vcg_const_Ball_lift valid_pde_lift')
+  apply (wp x valid_pde_lift')
   done
 
 lemma createMappingEntries_valid_slots' [wp]:
@@ -1411,7 +1401,7 @@ lemma find_pd_for_asid_corres'':
   apply (simp add: liftE_bindE)
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ get_asid_pool_corres'])
-      apply (rule_tac P="option_case \<top> page_directory_at (pool (ucast asid)) and pspace_aligned"
+      apply (rule_tac P="case_option \<top> page_directory_at (pool (ucast asid)) and pspace_aligned"
                  and P'="no_0_obj' and pspace_distinct'" in corres_inst)
       apply (rule_tac F="pool (ucast asid) \<noteq> Some 0" in corres_req)
        apply (clarsimp simp: obj_at_def no_0_obj'_def state_relation_def
@@ -1576,10 +1566,10 @@ lemma getASID_wp:
 lemma pde_at_aligned_vptr':
   "\<lbrakk>x \<in> set [0 , 4 .e. 0x3C]; page_directory_at' pd s; is_aligned vptr 24 \<rbrakk> \<Longrightarrow> 
   pde_at' (x + lookup_pd_slot pd vptr) s"
-  apply (simp add: lookup_pd_slot_def Let_def page_directory_at'_def add_ac)
+  apply (simp add: lookup_pd_slot_def Let_def page_directory_at'_def add.commute add.left_commute)
   apply (clarsimp simp: upto_enum_step_def)
   apply (clarsimp simp: shiftl_t2n)
-  apply (subst mult_commute)
+  apply (subst mult.commute)
   apply (subst ring_distribs [symmetric])
   apply (erule allE)
   apply (erule impE)

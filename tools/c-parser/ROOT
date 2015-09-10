@@ -12,7 +12,7 @@ chapter "C-Parser"
 
 session "Simpl-VCG" = "HOL-Word" +
   theories
-    "hoare-package/Vcg"
+    "Simpl/Vcg"
 
 session CParser = "Simpl-VCG" +
   theories

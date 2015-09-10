@@ -23,7 +23,7 @@ structure L1UnfoldThms =
 
 structure L1PeepholeThms =
   Named_Thms (
-    val name = Binding.name "L1peephole"
+    val name = Binding.name "L1opt"
     val description = "Peephole optimisations carried out after L1 SIMPL to monadic conversion."
     )
 

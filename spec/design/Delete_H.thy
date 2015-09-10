@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-header "Deleting Capabilities"
+chapter "Deleting Capabilities"
 
 theory Delete_H
 imports
@@ -263,6 +263,9 @@ od))
 (
 (\<lambda>irq.  (do
     slot \<leftarrow> getIRQSlot irq;
+    cap \<leftarrow> getSlotCap slot;
+    haskell_assert (isAsyncEndpointCap cap \<or> isNullCap cap)
+        [];
     cteDeleteOne slot
 od))
 

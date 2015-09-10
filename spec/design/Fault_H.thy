@@ -12,7 +12,7 @@
 	 The fault datatype. 
 *)
 
-header "Fault Structures"
+chapter "Fault Structures"
 
 theory Fault_H
 imports Types_H
@@ -260,6 +260,9 @@ where
  "isUnknownSyscallException v \<equiv> case v of
     UnknownSyscallException v0 \<Rightarrow> True
   | _ \<Rightarrow> False"
+
+datatype init_failure =
+    InitFailure
 
 datatype syscall_error =
     IllegalOperation

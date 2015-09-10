@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-header "System Calls"
+chapter "System Calls"
 
 theory Syscall_H
 imports Kernel_H Event_H
@@ -116,13 +116,15 @@ od)"
 defs handleWait_def:
 "handleWait\<equiv> (do
     thread \<leftarrow> getCurThread;
-    deleteCallerCap thread;
     epCPtr \<leftarrow> asUser thread $ liftM CPtr $ getRegister capRegister;
     (capFaultOnFailure epCPtr True $ (doE
         epCap \<leftarrow> lookupCap thread epCPtr;
         (case epCap of
               EndpointCap _ _ _ True _ \<Rightarrow>  
-                withoutFailure $ receiveIPC thread epCap
+                withoutFailure $ (do
+                    deleteCallerCap thread;
+                    receiveIPC thread epCap
+                od)
             | AsyncEndpointCap ptr _ _ True \<Rightarrow>   (doE
                 aep \<leftarrow> withoutFailure $ getAsyncEP ptr;
                 boundTCB \<leftarrow> returnOk $ aepBoundTCB aep;

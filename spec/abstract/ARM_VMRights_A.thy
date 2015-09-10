@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-header "ARM-Specific Virtual-Memory Rights"
+chapter "ARM-Specific Virtual-Memory Rights"
 
 theory ARM_VMRights_A
 imports CapRights_A

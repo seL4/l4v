@@ -198,7 +198,6 @@ lemma whileLoop_results_induct_lemma2 [consumes 1]:
      a = Some (x :: 'a \<times> 'b); b = Some y;
      P x; \<And>s t. \<lbrakk> P s; t \<in> fst (B (fst s) (snd s)); C (fst s) (snd s) \<rbrakk> \<Longrightarrow> P t \<rbrakk> \<Longrightarrow> P y"
   apply (induct arbitrary: x y rule: whileLoop_results.induct)
-     apply simp
     apply simp
    apply simp
   apply atomize
@@ -545,9 +544,9 @@ lemma whileLoop_results_bisim:
    apply (metis fail_step)
   apply (case_tac z)
    apply (clarsimp simp: option.splits)
-  apply (metis cond_match inv_step refine whileLoop_results.intros(4))
+  apply (metis cond_match inv_step refine whileLoop_results.intros(3))
    apply (clarsimp simp: option.splits)
- apply (metis cond_match inv_step refine whileLoop_results.intros(4))
+ apply (metis cond_match inv_step refine whileLoop_results.intros(3))
  done
 
 lemma whileLoop_terminates_liftE:
@@ -715,7 +714,7 @@ lemma validNF_whileLoopE:
     apply clarsimp
    apply clarsimp
   apply (clarsimp split: sum.splits)
-  apply (metis post_cond)
+  apply (blast intro: post_cond)
   done
 
 lemma validNF_whileLoopE_inv [wp]:

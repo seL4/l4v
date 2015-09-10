@@ -179,24 +179,6 @@ text {*
   (e.g. because the VTable entry is not set or a reference has been invalid),
   the function returns the global kernel mapping.
 
-  @{text get_page_info} takes the architecture-specific part of the kernel heap,
-  a reference to the page directory, and a virtual memory address.
-  It returns a triple containing
-  (a) the physical address, where the associated page table starts,
-  (b) the page table's size in bits, and
-  (c) the access rights (a subset of @{term "{AllowRead, AllowWrite}"}).
-
-  NOTE: it should not be necessary to use these functions directly.
-  For the user's convenience,
-  the functions @{text ptable_lift} and @{text ptable_rights} are
-  defined below using @{text get_page_info} and @{text get_pd_of_thread}.
-*}
-consts
-  get_pd_of_thread :: "kheap \<Rightarrow> arch_state \<Rightarrow> obj_ref \<Rightarrow> obj_ref"
-  get_page_info :: "(obj_ref \<rightharpoonup> arch_kernel_obj) \<Rightarrow> obj_ref \<Rightarrow>
-                    word32 \<rightharpoonup> (word32 \<times> nat \<times> vm_rights)"
-
-text {*
   Looking up the page directory for a thread reference involves the following
   steps:
 
@@ -207,7 +189,9 @@ text {*
   Note that the mapping data might become stale.
   Hence, we have to follow the mapping data through the ASID table.
 *}
-defs
+definition
+  get_pd_of_thread :: "kheap \<Rightarrow> arch_state \<Rightarrow> obj_ref \<Rightarrow> obj_ref"
+where
   get_pd_of_thread_def:
   "get_pd_of_thread khp astate tcb_ref \<equiv>
    case khp tcb_ref of Some (TCB tcb) \<Rightarrow>
@@ -225,12 +209,14 @@ defs
       | _ \<Rightarrow>  arm_global_pd astate)
    | _ \<Rightarrow>  arm_global_pd astate"
 
+
 lemma VSRef_AASIDPool_in_vs_refs:
   "(VSRef (asid && mask asid_low_bits) (Some AASIDPool), r) \<in> vs_refs ko =
    (\<exists>apool. ko = ArchObj (arch_kernel_obj.ASIDPool apool) \<and>
             apool (ucast (asid && mask asid_low_bits)) = Some r)"
   apply (simp add: vs_refs_def)
   apply (case_tac ko, simp_all)
+  apply (rename_tac arch_kernel_obj)
   apply (case_tac arch_kernel_obj, simp_all add: image_def graph_of_def)
   apply clarsimp
   apply (rule iffI)
@@ -357,7 +343,7 @@ text {* The following function is used to extract the
   architecture-specific objects from the kernel heap  *}
 definition
   "get_arch_obj ==
-   option_case None (%x. case x of ArchObj a \<Rightarrow> Some a | _ \<Rightarrow> None)"
+   case_option None (%x. case x of ArchObj a \<Rightarrow> Some a | _ \<Rightarrow> None)"
 
 text {* Non-monad versions of @{term get_pte} and @{term get_pde}.
   The parameters are:
@@ -488,17 +474,30 @@ done
 definition
   "get_pt_info ahp pt_ref vptr \<equiv>
    case get_pt_entry ahp pt_ref vptr of
-     Some (ARM_Structs_A.SmallPagePTE base _ rights) \<Rightarrow> Some (base, 12, rights)
-   | Some (ARM_Structs_A.LargePagePTE base _ rights) \<Rightarrow> Some (base, 16, rights)
+     Some (ARM_Structs_A.SmallPagePTE base attrs rights) \<Rightarrow> Some (base, 12, attrs, rights)
+   | Some (ARM_Structs_A.LargePagePTE base attrs rights) \<Rightarrow> Some (base, 16, attrs, rights)
    | _ \<Rightarrow> None"
-defs
+
+text {*
+  @{text get_page_info} takes the architecture-specific part of the kernel heap,
+  a reference to the page directory, and a virtual memory address.
+  It returns a tuple containing
+  (a) the physical address, where the associated page table starts,
+  (b) the page table's size in bits, and
+  (c) the page attributes (cachable, XNever, etc)
+  (d) the access rights (a subset of @{term "{AllowRead, AllowWrite}"}).
+*}
+definition
+  get_page_info :: "(obj_ref \<rightharpoonup> arch_kernel_obj) \<Rightarrow> obj_ref \<Rightarrow>
+                    word32 \<rightharpoonup> (word32 \<times> nat \<times> vm_attributes \<times> vm_rights)"
+where
   get_page_info_def:
   "get_page_info ahp pd_ref vptr \<equiv>
    case get_pd_entry ahp pd_ref vptr of
      Some (ARM_Structs_A.PageTablePDE p _ _) \<Rightarrow>
        get_pt_info ahp (Platform.ptrFromPAddr p) vptr
-   | Some (ARM_Structs_A.SectionPDE base _ _ rights) \<Rightarrow> Some (base, 20, rights)
-   | Some (ARM_Structs_A.SuperSectionPDE base _ rights) \<Rightarrow> Some (base,24,rights)
+   | Some (ARM_Structs_A.SectionPDE base attrs _ rights) \<Rightarrow> Some (base, 20, attrs, rights)
+   | Some (ARM_Structs_A.SuperSectionPDE base attrs rights) \<Rightarrow> Some (base,24, attrs, rights)
    | _ \<Rightarrow> None"
 
 
@@ -586,15 +585,15 @@ by (clarsimp simp add: lookup_pt_slot_def lookup_pd_slot_def liftE_def bindE_def
       split: sum.splits split_if_asm kernel_object.splits arch_kernel_obj.splits
              ARM_Structs_A.pde.splits)
 
-lemma
+lemma get_page_info_pte:
   "is_aligned pd_ref pd_bits \<Longrightarrow>
    lookup_pt_slot pd_ref vptr s = ({(Inr x,s)},False) \<Longrightarrow>
    is_aligned (x - ((vptr >> 12) && 0xFF << 2)) pt_bits \<Longrightarrow>
    get_pte x s = ({(pte,s)},False) \<Longrightarrow>
    get_page_info (\<lambda>obj. get_arch_obj (kheap s obj)) pd_ref vptr =
    (case pte of
-     ARM_Structs_A.SmallPagePTE base _ rights \<Rightarrow> Some (base, 12, rights)
-   | ARM_Structs_A.LargePagePTE base _ rights \<Rightarrow> Some (base, 16, rights)
+     ARM_Structs_A.SmallPagePTE base attrs rights \<Rightarrow> Some (base, 12, attrs, rights)
+   | ARM_Structs_A.LargePagePTE base attrs rights \<Rightarrow> Some (base, 16, attrs, rights)
    | _ \<Rightarrow> None)"
 apply (clarsimp simp add: get_page_info_def get_pd_entry_def
                 split: option.splits)
@@ -612,35 +611,35 @@ apply (intro conjI impI)
  apply (drule get_pt_entry_None_iff_get_pte_fail[where s=s and vptr=vptr])
  apply (simp add: pt_bits_def pageBits_def mask_def)
 apply clarsimp
-apply (drule_tac x=a in get_pt_entry_Some_eq_get_pte[where s=s and vptr=vptr])
+apply (drule_tac x=x2 in get_pt_entry_Some_eq_get_pte[where s=s and vptr=vptr])
 apply (simp add: pt_bits_def pageBits_def mask_def)
 done
 
-lemma
+lemma get_page_info_section:
   "is_aligned pd_ref pd_bits \<Longrightarrow>
    get_pde (lookup_pd_slot pd_ref vptr) s =
-     ({(ARM_Structs_A.SectionPDE base XX YY rights,s)},False) \<Longrightarrow>
+     ({(ARM_Structs_A.SectionPDE base attrs X rights, s)},False) \<Longrightarrow>
    get_page_info (\<lambda>obj. get_arch_obj (kheap s obj)) pd_ref vptr =
-     Some (base, 20, rights)"
+     Some (base, 20, attrs, rights)"
 apply (simp add: lookup_pd_slot_def get_page_info_def split: option.splits)
 apply (intro conjI impI allI)
  apply (drule get_pd_entry_None_iff_get_pde_fail[where s=s and vptr=vptr])
  apply (simp split: option.splits)
-apply (drule_tac x=a in get_pd_entry_Some_eq_get_pde[where s=s and vptr=vptr])
+apply (drule_tac x=x2 in get_pd_entry_Some_eq_get_pde[where s=s and vptr=vptr])
 apply clarsimp
 done
 
-lemma
+lemma get_page_info_super_section:
   "is_aligned pd_ref pd_bits \<Longrightarrow>
    get_pde (lookup_pd_slot pd_ref vptr) s =
-     ({(ARM_Structs_A.SuperSectionPDE base XX rights,s)},False) \<Longrightarrow>
+     ({(ARM_Structs_A.SuperSectionPDE base attrs rights,s)},False) \<Longrightarrow>
    get_page_info (\<lambda>obj. get_arch_obj (kheap s obj)) pd_ref vptr =
-     Some (base, 24, rights)"
+     Some (base, 24, attrs, rights)"
 apply (simp add: lookup_pd_slot_def get_page_info_def split: option.splits)
 apply (intro conjI impI allI)
  apply (drule get_pd_entry_None_iff_get_pde_fail[where s=s and vptr=vptr])
  apply (simp split: option.splits)
-apply (drule_tac x=a in get_pd_entry_Some_eq_get_pde[where s=s and vptr=vptr])
+apply (drule_tac x=x2 in get_pd_entry_Some_eq_get_pde[where s=s and vptr=vptr])
 apply clarsimp
 done
 
@@ -652,13 +651,13 @@ text {*
 definition
   ptable_lift :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> word32 \<rightharpoonup> word32" where
   "ptable_lift tcb s \<equiv> \<lambda>addr.
-   option_case None (\<lambda>(base, bits, rights). Some (base + (addr && mask bits)))
+   case_option None (\<lambda>(base, bits, rights). Some (base + (addr && mask bits)))
      (get_page_info (\<lambda>obj. get_arch_obj (kheap s obj))
         (get_pd_of_thread (kheap s) (arch_state s) tcb) addr)"
 definition
   ptable_rights :: "obj_ref \<Rightarrow> 'z state \<Rightarrow> word32 \<Rightarrow> vm_rights" where
  "ptable_rights tcb s \<equiv> \<lambda>addr.
-  option_case {} (snd o snd)
+  case_option {} (snd o snd o snd)
      (get_page_info (\<lambda>obj. get_arch_obj (kheap s obj))
         (get_pd_of_thread (kheap s) (arch_state s) tcb) addr)"
 

@@ -1,0 +1,6 @@
+*:
+   NICTA -> NICTA_BSD_release
+   NICTA_CORE -> NICTA_BSD_release
+   KARLSRUHE_BSD -> STRIP
+   OTHER_BSD -> STRIP
+

@@ -31,7 +31,7 @@ chapter "Specifications"
  *)
 
 session ASpec in "abstract" = Word +
-  options [document=pdf, document_graph, timeout=600]
+  options [document=pdf, timeout=600]
   theories [document = false]
     "../../lib/NICTACompat"
     "../../lib/Lib"
@@ -45,12 +45,18 @@ session ASpec in "abstract" = Word +
   theories
     "Syscall_A"
     "Glossary_Doc"
-  files
-	"document/VERSION"
-    "document/root.tex"
-    "document/root.bib"
-    "document/defs.bib"
-    "document/comment.sty"
+  document_files
+    "VERSION"
+    "root.tex"
+    "root.bib"
+    "defs.bib"
+    "imgs/CDT.pdf"
+    "imgs/seL4-background_01.pdf"
+    "imgs/seL4-background_03.pdf"
+    "imgs/seL4-background_04.pdf"
+    "imgs/sel4objects_01.pdf"
+    "imgs/sel4objects_05.pdf"
+    "imgs/sel4_internals_01.pdf"
 
 (*
  * Executable/Design Specification
@@ -79,8 +85,6 @@ session CKernel = CParser +
     "cspec/Kernel_C"
   theories
     "cspec/Kernel_C"
-  theories [condition = "COUNT_PROOFS"]
-    "../lib/proof_counting/ProofCount"
   files
     "cspec/c/kernel_all.c_pp"
 
@@ -110,14 +114,19 @@ session TakeGrant in "take-grant" = "HOL-Word" +
 
 
 (*
+ * Separation Kernel Setup Specification
+ *)
+
+session ASepSpec = ASpec +
+  options [document = false, timeout=600]
+  theories
+    "sep-abstract/Syscall_SA"
+
+
+(*
  * Libraries
  *)
 
 session Word = "HOL-Word" +
-  theories [condition = "USE_RICH_METHODS"]
-    "../lib/eisbach/Focus"
-  theories [condition = "COUNT_PROOFS"]
-    "../lib/proof_counting/ProofCount"
   theories
     "../lib/NICTACompat"
-

@@ -43,7 +43,7 @@ sig
       (typ,'a,'b) Element.ctxt list ->
                                  (* globals living in the globals locale *)
       theory ->
-      (string * (binding * thm list) list * theory)
+      (string * theory)
 
 
 end
@@ -72,7 +72,7 @@ fun mk_fninfo thy csenv includeP decllist : fninfo list = let
   fun parse_spec fname fspec =
       case fspec of
         fnspec spec => let
-          val toklist = Outer_Syntax.scan Position.none (node spec)
+          val toklist = Token.explode (Thy_Header.get_keywords thy) Position.none (node spec)
                         (* it might be nice to remember where the spec came
                            from so we could put in a reasonable pos'n above *)
           val filtered = List.filter Token.is_proper toklist
@@ -100,7 +100,7 @@ fun mk_fninfo thy csenv includeP decllist : fninfo list = let
       List.concat (map (parse_spec fname) fspecs)
   fun mk_ret rettype =
       if rettype = Void then []
-      else [(return_var_name rettype,
+      else [(MString.dest (return_var_name rettype),
              CalculateState.ctype_to_typ (thy, rettype),
              rettype)]
   fun to_param vi = let
@@ -108,7 +108,7 @@ fun mk_fninfo thy csenv includeP decllist : fninfo list = let
     val cty = get_vi_type vi
     val typ = ctype_to_typ (thy,cty)
   in
-    (get_mname vi, typ, SOME cty)
+    (MString.dest (get_mname vi), typ, SOME cty)
   end
   fun foldthis (_, d) acc =
       case d of
@@ -140,7 +140,7 @@ fun mk_fninfo thy csenv includeP decllist : fninfo list = let
                          raise Fail ("mk_fninfo: No function information for "^
                                      fname)
               val rettype = valOf (get_rettype fname csenv)
-	      val _ = writeln ("Added external decl for " ^ fname ^
+	      val _ = tracing ("Added external decl for " ^ fname ^
 			       " with " ^ Int.toString (length params) ^
                                " args.")
               val spec = parse_specs fname specs
@@ -302,23 +302,22 @@ let
   val localename_b = Binding.name localename
   val thy = thy |> Context.theory_map (HoarePackage.set_default_state_kind
                                        HoarePackage.Record)
-  val writeln = fn s => writeln("HPInter.mfd: " ^ s)
   val name_pars =
       map (fn {fname,inparams,outparams,recursivep,...} =>
                 (fname, recursivep, map #1 inparams, map #1 outparams))
           fninfo
   val name_specs = map (fn {fname,spec,...} => (fname,spec)) fninfo
   val thy = List.foldr (uncurry add_syntax) thy name_pars
-  val lthy = Named_Target.init I globloc thy
+  val lthy = Named_Target.init globloc thy
   val name_body = compile_fninfos cse styargs compfn lthy fninfo
-  val _ = writeln "Translated all functions"
+  val _ = tracing "Translated all functions"
   val globs = extract_fixes globals_elems
 
   val body_elems = map (create_bodyloc_elems globs thy) name_body
 
   fun add_body_defs ((elems, _ (* name-body *)), lthy) = let
     fun foldthis (e, lthy) = let
-      val _ = writeln ("Adding body_def for " ^ Binding.name_of (#1 (#1 e)))
+      val _ = tracing ("Adding body_def for " ^ Binding.name_of (#1 (#1 e)))
     in
       Local_Theory.restore (#2 (Local_Theory.define e lthy))
     end
@@ -326,15 +325,13 @@ let
     List.foldl foldthis lthy elems
   end
   val lthy = List.foldl add_body_defs lthy body_elems
-  val lthy = Local_Theory.exit lthy
-  val ctxt = lthy
+  val thy = Local_Theory.exit_global lthy
 
   (* set up _impl by defining \<Gamma> *)
-  val (defs, ctxt) =
+  val thy =
       if List.exists (isSome o #body) fninfo then let
-          val lthy =
-              Named_Target.init I globloc (Proof_Context.theory_of ctxt)
-          fun expfname fni = let
+          val lthy = Named_Target.init globloc thy
+          fun get_body fni = let
             val nm = #fname fni
           in
             case (#body fni, #mod_annotated_protop fni) of
@@ -346,37 +343,29 @@ let
                 SOME (Syntax.check_term lthy (Const(realnm, dummyT)))
               end
           end
-          val blist' = map expfname fninfo
-          val bnm = ListPair.zip (blist',nmdefs)
-          val triples =
-              ListPair.zip (bnm,
-                            map (suffix HoarePackage.implementationN o #fname)
-                                fninfo)
-          val (defs, lthy) =
-              StaticFun.define_tree_and_thms "\<Gamma>" triples lthy
-          val lthy' = Local_Theory.restore lthy
-          val morph = Proof_Context.export_morphism lthy lthy'
-          val defs' = map (fn (n, t) =>
-                              (Morphism.binding morph (Binding.name n),
-                               map (Morphism.thm morph) t))
-                          defs
+          (* name for thm, (proc constant, body constant) *)
+          val (_, lthy) = StaticFun.define_tree_and_thms_with_defs
+              @{binding \<Gamma>} (map (suffix HoarePackage.implementationN o #fname) fninfo)
+              nmdefs (map get_body fninfo) @{term "id :: int => int"} lthy
         in
-          (defs', Local_Theory.exit lthy')
+          Local_Theory.exit_global lthy
         end
-      else ([], ctxt)
+      else thy
 
   val globloc_expr = ([(globloc, (("", false), Expression.Named []))], [])
 
   (* three levels of folding - woohoo *)
-  fun add_spec_locales ((name,specs), (localemap, ctxt)) = let
+  fun add_spec_locales ((name,specs), (localemap, thy)) = let
     (* add any spec locales *)
-    fun foldthis ((_, e), (localemap, ctxt)) = let
+    fun foldthis ((_, e), (localemap, thy)) = let
       val lnm_strs = extract_element_asms e
-      fun innerfold (((speclocalename_b,_), tstr), (localemap, ctxt)) = let
+      fun innerfold (((speclocalename_b,_), tstr), (localemap, thy)) = let
         val speclocalename = Binding.name_of speclocalename_b
-        val thy = Proof_Context.theory_of ctxt
-        val t = Syntax.read_term ctxt tstr
-        val _ = writeln ("Adding spec locale "^speclocalename^
+        (* jump into an lthy corresponding to globloc to parse the tstr; this lthy
+           is dropped and not used again *)
+        val lthy = Named_Target.init globloc thy
+        val t = Syntax.read_term lthy tstr
+        val _ = tracing ("Adding spec locale "^speclocalename^
                          (if speclocalename = "" then "" else " ")^
                          "for function "^name ^ " (" ^ tstr ^ ")")
         val e' = Element.Assumes [((speclocalename_b,[]),
@@ -387,7 +376,7 @@ let
                                             else s)
                                    speclocalename_b
         val (locname, ctxt') =
-            Expression.add_locale I
+            Expression.add_locale
                 speclocalename_b
                 speclocalename_b
                 globloc_expr
@@ -396,24 +385,24 @@ let
         (* localename is the name we wanted, locname is the name Isabelle
            gives back to us.  This will be properly qualified yadda yadda *)
       in
-        (Symtab.update (speclocalename, locname) localemap, ctxt')
+        (Symtab.update (speclocalename, locname) localemap,
+         Local_Theory.exit_global ctxt')
       end
     in
-      List.foldl innerfold (localemap,ctxt) lnm_strs
+      List.foldl innerfold (localemap,thy) lnm_strs
     end
-    val (speclocnames,ctxt) = List.foldl foldthis (localemap, ctxt) specs
+    val (speclocnames,thy) = List.foldl foldthis (localemap, thy) specs
   in
-    (speclocnames, ctxt)
+    (speclocnames, thy)
   end
-  val (_ (* specloc_names *), ctxt) =
-      List.foldl add_spec_locales (Symtab.empty, ctxt) name_specs
+  val (_ (* specloc_names *), thy) =
+      List.foldl add_spec_locales (Symtab.empty, thy) name_specs
 
   val (globloc, ctxt) =
-      Expression.add_locale I localename_b localename_b globloc_expr []
-                            (Proof_Context.theory_of ctxt)
+      Expression.add_locale localename_b localename_b globloc_expr [] thy
 
 in
-  (globloc, defs, Local_Theory.exit_global ctxt)
+  (globloc, Local_Theory.exit_global ctxt)
 end
 
 

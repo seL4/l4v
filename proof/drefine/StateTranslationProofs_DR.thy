@@ -81,7 +81,7 @@ done
 
 lemma msg_registers_lt_msg_max_length [simp]:
   "length msg_registers < msg_max_length"
-  by (simp add: msg_registers_def msgRegisters_unfold msg_max_length_def )
+  by (simp add: msgRegisters_unfold msg_max_length_def)
 
 lemma get_tcb_mrs_update_state :
   "get_tcb_mrs ms (tcb_state_update f tcb) = get_tcb_mrs ms tcb"
@@ -174,27 +174,27 @@ lemmas caps_of_state_upds = caps_of_state_update_tcb caps_of_state_update_same_c
 
 lemma transform_cdt_kheap_update [simp]:
   "transform_cdt (kheap_update f s) = transform_cdt s"
-  by (clarsimp simp: transform_cdt_def cong: if_cong)
+  by (clarsimp simp: transform_cdt_def)
 
 lemma transform_cdt_update_machine [simp]:
   "transform_cdt (update_machine ms s) = transform_cdt s "
-  by (clarsimp simp: transform_cdt_def cong: if_cong)
+  by (clarsimp simp: transform_cdt_def)
 
 lemma transform_cdt_update_original_cap [simp]:
   "transform_cdt (b\<lparr>is_original_cap := x\<rparr>) = transform_cdt b"
-  by (clarsimp simp: transform_cdt_def cong: if_cong)
+  by (clarsimp simp: transform_cdt_def)
 
 lemma transform_asid_table_kheap_update [simp]:
   "transform_asid_table (kheap_update f s) = transform_asid_table s"
-  by (clarsimp simp: transform_asid_table_def cong: if_cong)
+  by (clarsimp simp: transform_asid_table_def)
 
 lemma transform_asid_table_update_machine [simp]:
   "transform_asid_table (update_machine ms s) = transform_asid_table s "
-  by (clarsimp simp: transform_asid_table_def cong: if_cong)
+  by (clarsimp simp: transform_asid_table_def)
 
 lemma transform_asid_table_update_original_cap [simp]:
   "transform_asid_table (b\<lparr>is_original_cap := x\<rparr>) = transform_asid_table b"
-  by (clarsimp simp: transform_asid_table_def cong: if_cong)
+  by (clarsimp simp: transform_asid_table_def)
 
 lemma transform_objects_update_kheap_same_caps:
   "\<lbrakk> kh ptr = Some ko; caps_of_object ko' = caps_of_object ko; a_type ko' = a_type ko\<rbrakk> \<Longrightarrow>
@@ -205,7 +205,7 @@ lemma transform_objects_update_kheap_same_caps:
          (transform_objects (update_kheap kh s))(ptr \<mapsto> transform_object (machine_state s) ptr (ekheap s ptr) ko'))"
   unfolding transform_objects_def
   apply (rule ext)
-  apply (simp add: option_map_def restrict_map_def map_add_def )
+  apply (simp add: map_option_case restrict_map_def map_add_def )
   done
 
 lemma transform_objects_update_same:
@@ -241,14 +241,14 @@ proof -
   show ?thesis
     by (auto simp add: map_lift_over_def P[THEN inv_into_f_f] domI
                        inj_on_iff[where f=f]
-           | rule ccontr[where P="v = None", standard])+
+           | rule ccontr[where P="v = None" for v])+
 qed
 
 lemma map_lift_over_f_eq:
   "inj_on f ({x} \<union> dom m \<union> ran m) \<Longrightarrow>
-   (map_lift_over f m (f x) = v) = (v = Option.map f (m x))"
+   (map_lift_over f m (f x) = v) = (v = map_option f (m x))"
   apply (cases v, simp_all add: map_lift_over_eq_None map_lift_over_eq_Some)
-   apply (auto simp: Option.map_def split: option.split)
+   apply (auto simp: option_map_def split: option.split)
   done
 
 lemma map_lift_over_eq_cases[unfolded map_lift_over_eq_None map_lift_over_eq_Some]:
@@ -258,9 +258,9 @@ lemma map_lift_over_eq_cases[unfolded map_lift_over_eq_None map_lift_over_eq_Som
   by (simp split: option.split)
 
 lemma map_lift_over_upd:
-  assumes inj_f: "inj_on f ({x} \<union> Option.set y \<union> dom m \<union> ran m)"
+  assumes inj_f: "inj_on f ({x} \<union> set_option y \<union> dom m \<union> ran m)"
   shows "(map_lift_over f (m(x := y)))
-           = ((map_lift_over f m) (f x := Option.map f y))"
+           = ((map_lift_over f m) (f x := map_option f y))"
 proof -
   have Q: "inj_on f (dom m \<union> ran m)"
       "inj_on f (insert x (dom m \<union> ran (m(x := y))))"
@@ -283,11 +283,11 @@ proof -
 qed
 
 lemma map_lift_over_if_eq_twice:
-  assumes inj_f: "inj_on f (dom m \<union> ran m \<union> {y, y'} \<union> Option.set z \<union> Option.set z')"
+  assumes inj_f: "inj_on f (dom m \<union> ran m \<union> {y, y'} \<union> set_option z \<union> set_option z')"
   shows
   "map_lift_over f (\<lambda>x. if m x = Some y then z else if m x = Some y' then z' else m x)
-       = (\<lambda>x. if map_lift_over f m x = Some (f y) then Option.map f z
-              else if map_lift_over f m x = Some (f y') then Option.map f z'
+       = (\<lambda>x. if map_lift_over f m x = Some (f y) then map_option f z
+              else if map_lift_over f m x = Some (f y') then map_option f z'
               else map_lift_over f m x)"
   (is "map_lift_over f ?ifeq = ?rhs")
 proof -
@@ -299,7 +299,7 @@ proof -
   with inj_f
   have 2: "inj_on f (dom ?ifeq)"
     by (auto elim!: subset_inj_on)
-  have "dom ?ifeq \<union> ran ?ifeq \<subseteq> dom m \<union> ran m \<union> Option.set z \<union> Option.set z'"
+  have "dom ?ifeq \<union> ran ?ifeq \<subseteq> dom m \<union> ran m \<union> set_option z \<union> set_option z'"
     by (auto simp: ran_def)
   with inj_f
   have "inj_on f (dom ?ifeq \<union> ran ?ifeq)"
@@ -315,17 +315,17 @@ proof -
      apply (simp add: Q[THEN inv_into_f_f] domI ranI inj_on_iff[OF inj_f]
                split: split_if_asm)
     apply (subst if_not_P, simp, rule allI, fastforce)+
-    apply (auto simp: Option.map_def Q[THEN inv_into_f_f] domI ranI
+    apply (auto simp: option_map_def Q[THEN inv_into_f_f] domI ranI
                       inj_on_iff[OF inj_f]
                split: split_if option.split)
     done
 qed
 
 lemma map_lift_over_if_eq:
-  assumes inj_f: "inj_on f (dom m \<union> ran m \<union> {y} \<union> Option.set z)"
+  assumes inj_f: "inj_on f (dom m \<union> ran m \<union> {y} \<union> set_option z)"
   shows
   "map_lift_over f (\<lambda>x. if m x = Some y then z else m x)
-       = (\<lambda>x. if map_lift_over f m x = Some (f y) then Option.map f z
+       = (\<lambda>x. if map_lift_over f m x = Some (f y) then map_option f z
               else map_lift_over f m x)"
   using inj_f map_lift_over_if_eq_twice[where f=f and m=m and y=y and z=z and y'=y and z'=z]
   apply (simp del: inj_on_insert)

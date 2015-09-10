@@ -18,7 +18,14 @@ sig
   val get_def: theory -> string -> string -> string -> thm option
   val add_def: string -> string -> string -> thm -> theory -> theory
 
-  val debug : theory -> ((string * string * string) * thm) list
+  datatype Trace =
+      RuleTrace of thm AutoCorresTrace.RuleTrace
+    | SimpTrace of AutoCorresTrace.SimpTrace
+
+  val add_trace: string -> string -> string -> Trace -> theory -> theory
+  val get_trace: theory -> string -> string -> string -> Trace option
+
+  val debug : theory -> ((string * string * string) * thm) list * ((string * string * string) * Trace) list
 end
 
 structure AutoCorresData : AUTOCORRES_DATA =
@@ -34,9 +41,22 @@ structure Symtab3 = Table(
   val ord = triple_ord fast_string_ord fast_string_ord fast_string_ord
 );
 
+
+(*
+ * Container type for various trace data.
+ * TODO: consolidate these in a better way.
+ *)
+
+datatype Trace =
+    RuleTrace of thm AutoCorresTrace.RuleTrace (* HeapLift and WordAbstract main stages *)
+  | SimpTrace of AutoCorresTrace.SimpTrace (* simp lemma bucket for L2Opt and TypeStrengthen *)
+
+
+
 (* AutoCorres Context Data. *)
 type ac_record = {
-  proofs : thm Symtab3.table
+  proofs : thm Symtab3.table,
+  traces : Trace Symtab3.table
 };
 datatype ac_data = ACData of ac_record;
 
@@ -45,13 +65,30 @@ fun dest_ac_data (ACData x) = x
 (* Instantiate AutoCorres Data. *)
 structure Terms = Theory_Data(
   type T = ac_data;
-  val empty = ACData { proofs = Symtab3.empty };
+  val empty = ACData { proofs = Symtab3.empty, traces = Symtab3.empty };
   val extend = I;
   fun merge (ACData ts1, ACData ts2) =
     ACData {
-      proofs = Symtab3.merge Thm.eq_thm (#proofs ts1, #proofs ts2)
+      proofs = Symtab3.merge Thm.eq_thm (#proofs ts1, #proofs ts2),
+      traces = Symtab3.merge (K true) (#traces ts1, #traces ts2)
     }
 )
+
+(* Fetch a trace. *)
+fun get_trace thy filename module fn_name =
+  Terms.get thy
+  |> dest_ac_data
+  |> #traces
+  |> (fn x => Symtab3.lookup x (filename, module, fn_name))
+
+(* Add a trace. *)
+fun add_trace filename module fn_name trace =
+  Terms.map (fn ACData x =>
+    ACData {
+      proofs = #proofs x,
+      traces = Symtab3.update_new
+          ((filename, module, fn_name), trace) (#traces x)
+    })
 
 (* Fetch a theorem. *)
 fun get_thm thy filename module fn_name =
@@ -65,7 +102,8 @@ fun add_thm filename module fn_name thm thy =
   Terms.map (fn ACData x =>
     ACData {
       proofs = Symtab3.update_new
-          ((filename, module, fn_name), thm) (#proofs x)
+          ((filename, module, fn_name), thm) (#proofs x),
+      traces = #traces x
     }) thy
 
 (* Fetch a definition. *)
@@ -77,6 +115,6 @@ fun add_def filename module fn_name =
   add_thm filename (module ^ "'def") fn_name
 
 (* Dump everything. *)
-fun debug thy = Terms.get thy |> dest_ac_data |> #proofs |> Symtab3.dest
+fun debug thy = Terms.get thy |> dest_ac_data |> (fn x => (Symtab3.dest (#proofs x), Symtab3.dest (#traces x)))
 
 end

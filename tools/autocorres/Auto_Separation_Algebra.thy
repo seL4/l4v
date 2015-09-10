@@ -529,7 +529,7 @@ Adhoc_Overloading.is_overloaded @{context} "\<mapsto>"
 
 ML {*
 val _ =
-  Outer_Syntax.command @{command_spec "sep_instance"} "instantiate and prove type arity" 
+  Outer_Syntax.command @{command_keyword "sep_instance"} "instantiate and prove type arity" 
   (Parse.path >>
    (fn str =>  tester str |> Toplevel.begin_local_theory true #> Toplevel.end_local_theory));
 

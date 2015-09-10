@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-header "Thread Control Blocks"
+chapter "Thread Control Blocks"
 
 theory TCB_H
 imports
@@ -384,7 +384,7 @@ od)"
 
 defs setMRs_def:
 "setMRs thread buffer messageData\<equiv> (do
-        intSize \<leftarrow> return ( fromIntegral $ bitSize (undefined::machine_word) div 8);
+        intSize \<leftarrow> return ( fromIntegral $ finiteBitSize (undefined::machine_word) div 8);
         hardwareMRs \<leftarrow> return ( msgRegisters);
         bufferMRs \<leftarrow> return ( (case buffer of
                   Some bufferPtr \<Rightarrow>  
@@ -404,7 +404,7 @@ od)"
 
 defs getMRs_def:
 "getMRs thread buffer info\<equiv> (do
-        intSize \<leftarrow> return ( fromIntegral $ bitSize (undefined::machine_word) div 8);
+        intSize \<leftarrow> return ( fromIntegral $ finiteBitSize (undefined::machine_word) div 8);
         hardwareMRs \<leftarrow> return ( msgRegisters);
         hardwareMRValues \<leftarrow> asUser thread $ mapM getRegister hardwareMRs;
         bufferMRValues \<leftarrow> (case buffer of
@@ -422,7 +422,7 @@ od)"
 
 defs copyMRs_def:
 "copyMRs sender sendBuf receiver recvBuf n\<equiv> (do
-        intSize \<leftarrow> return ( fromIntegral $ bitSize (undefined::machine_word) div 8);
+        intSize \<leftarrow> return ( fromIntegral $ finiteBitSize (undefined::machine_word) div 8);
         hardwareMRs \<leftarrow> return ( take (fromIntegral n) msgRegisters);
         forM hardwareMRs (\<lambda> r. (do
             v \<leftarrow> asUser sender $ getRegister r;
@@ -443,7 +443,7 @@ od)"
 defs getExtraCPtrs_def:
 "getExtraCPtrs buffer x1\<equiv> (case x1 of
     (MI _ count _ _) \<Rightarrow>    (do
-        intSize \<leftarrow> return ( fromIntegral $ bitSize (undefined::machine_word) div 8);
+        intSize \<leftarrow> return ( fromIntegral $ finiteBitSize (undefined::machine_word) div 8);
         (case buffer of
               Some bufferPtr \<Rightarrow>   (do
                 offset \<leftarrow> return ( msgMaxLength+1);
@@ -465,7 +465,7 @@ odE)"
 
 defs getExtraCPtr_def:
 "getExtraCPtr buffer n\<equiv> (do
-        intSize \<leftarrow> return ( fromIntegral $ bitSize (undefined::machine_word) div 8);
+        intSize \<leftarrow> return ( fromIntegral $ finiteBitSize (undefined::machine_word) div 8);
         ptr \<leftarrow> return ( buffer + bufferCPtrOffset +
                   PPtr ((fromIntegral n) * intSize));
         cptr \<leftarrow> loadWordUser ptr;
@@ -474,7 +474,7 @@ od)"
 
 defs setExtraBadge_def:
 "setExtraBadge buffer badge n\<equiv> (do
-        intSize \<leftarrow> return ( fromIntegral $ bitSize (undefined::machine_word) div 8);
+        intSize \<leftarrow> return ( fromIntegral $ finiteBitSize (undefined::machine_word) div 8);
         badgePtr \<leftarrow> return ( buffer + bufferCPtrOffset +
                        PPtr ((fromIntegral n) * intSize));
         storeWordUser badgePtr badge
@@ -482,7 +482,7 @@ od)"
 
 defs bufferCPtrOffset_def:
 "bufferCPtrOffset \<equiv>
-        let intSize = fromIntegral $ bitSize (undefined::machine_word) div 8
+        let intSize = fromIntegral $ finiteBitSize (undefined::machine_word) div 8
         in PPtr ((msgMaxLength+2)*intSize)"
 
 defs setupCallerCap_def:
@@ -506,6 +506,9 @@ od)"
 defs deleteCallerCap_def:
 "deleteCallerCap receiver\<equiv> (do
     callerSlot \<leftarrow> getThreadCallerSlot receiver;
+    callerCap \<leftarrow> getSlotCap callerSlot;
+    haskell_assert (isReplyCap callerCap \<or> isNullCap callerCap)
+        [];
     cteDeleteOne callerSlot
 od)"
 

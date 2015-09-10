@@ -147,7 +147,7 @@ declare L1_set_to_pred_def [L1opt]
 (*
  * The following sets of rules are used to simplify conditionals,
  * removing set notation (converting into predicate notation) and
- * generally removing logical cruft without being too aggresive in our
+ * generally removing logical cruft without being too aggressive in our
  * simplification.
  *)
 

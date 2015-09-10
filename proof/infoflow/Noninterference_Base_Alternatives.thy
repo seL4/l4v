@@ -33,16 +33,16 @@ lemma in_xources_ConsD:
   "x \<in> (xources (a # as) s u) \<Longrightarrow>
    (\<forall> s'. (s,s') \<in> Step a \<longrightarrow> x \<in> xources as s' u) \<or> 
    (x = dom a s \<and> (\<forall> s'. (s,s') \<in> Step a \<longrightarrow> (\<exists> v. dom a s \<leadsto> v \<and> v \<in> xources as s' u)))"
-  by(auto simp: xources_Cons)
+  by auto
 
 lemma in_xources_ConsI1:
   "\<lbrakk>\<forall> s'. (s,s') \<in> Step a \<longrightarrow> x \<in> xources as s' u\<rbrakk> \<Longrightarrow> x \<in> xources (a#as) s u"
-  by(auto simp: xources_Cons)
+  by auto
 
 lemma in_xources_ConsI2:
   "\<lbrakk>x = dom a s; \<forall> s'. (s,s') \<in> Step a \<longrightarrow> (\<exists> v. dom a s \<leadsto> v \<and> v \<in> xources as s' u)\<rbrakk> \<Longrightarrow> 
   x \<in> xources (a#as) s u"
-  by(auto simp: xources_Cons)
+  by auto
 
 
 declare xources_Nil [simp del]     
@@ -471,18 +471,6 @@ lemma xNonleakage_gen:
   apply(erule Nonleakage_gen)
   done
 
-lemma xources_Step:
-  "\<lbrakk>reachable s; (dom a s, u) \<notin> policy\<rbrakk> \<Longrightarrow>
-  xources [a] s u = {u}"
-  apply(auto simp: xources_Cons xources_Nil enabled_Step dest: enabled_Step)
-  done
-
-lemma xources_Step_2:
-  "\<lbrakk>reachable s; (dom a s, u) \<in> policy\<rbrakk> \<Longrightarrow>
-  xources [a] s u = {dom a s,u}"
-  apply(auto simp: xources.xources_Cons xources.xources_Nil enabled_Step dest: enabled_Step)
-  done
-
 lemma xNonleakage_gen_confidentiality_u:
   "xNonleakage_gen \<Longrightarrow> confidentiality_u"
   apply(clarsimp simp: xNonleakage_gen_def confidentiality_u_def)
@@ -677,4 +665,4 @@ lemma Noninfluence_strong_uwr_equiv_Noninfluence_strong_uwr_pg:
 end
 
 
-end (* a comment *)
+end

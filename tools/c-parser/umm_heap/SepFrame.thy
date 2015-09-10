@@ -16,7 +16,7 @@ begin
 
 class heap_state_type'
 
-classrel heap_state_type' < type
+instance heap_state_type' \<subseteq> type ..
 
 consts
   hst_mem :: "'a::heap_state_type' \<Rightarrow> heap_mem"
@@ -240,7 +240,7 @@ proof (rule, rule hoare_complete, simp only: valid_def, clarify)
       pre: "(P (f x) \<and>\<^sup>* R (h x)) (lift_hst x)"
   then obtain s\<^sub>0 and s\<^sub>1 where pre_P: "P (f x) s\<^sub>0" and pre_R: "R (h x) s\<^sub>1" and
       disj: "s\<^sub>0 \<bottom> s\<^sub>1" and m: "lift_hst x = s\<^sub>1 ++ s\<^sub>0"
-    by (clarsimp simp: sep_conj_def map_add_ac)
+    by (clarsimp simp: sep_conj_def map_ac_simps)
   with orig_spec hi_f have nofault: "\<not> exec_fatal C \<Gamma>
       (restrict_htd x (dom s\<^sub>0))"
     by (force simp: exec_fatal_def image_def lift_hst_def cvalid_def valid_def
@@ -636,7 +636,7 @@ apply(subgoal_tac "(a,b) \<notin> s_footprint (p (restrict_htd s X))")
  apply(drule (1) subsetD)
  apply(clarsimp simp: restrict_htd_def)
  apply(drule dom_restrict_s, clarsimp)
- apply(thin_tac "?P \<notin> ?Q")
+ apply(thin_tac "P \<notin> Q" for P Q)
 apply(auto simp: restrict_htd_def  lift_state_def split_def split: s_heap_index.splits split: option.splits)
      apply(subst (asm) ptr_retyp_d_eq_fst)
      apply(clarsimp split: split_if_asm)

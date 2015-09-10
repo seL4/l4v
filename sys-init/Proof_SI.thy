@@ -17,6 +17,7 @@ imports
   InitTCB_SI
   InitCSpace_SI
   InitIRQ_SI
+  StartThreads_SI
 begin
 
 lemma parse_bootinfo_sep:
@@ -50,7 +51,7 @@ lemma parse_spec_inv:
   "\<lbrace>\<lambda>s. \<guillemotleft>R\<guillemotright> s\<rbrace>
      parse_spec spec obj_ids
    \<lbrace>\<lambda>rv s. \<guillemotleft>R\<guillemotright> s\<rbrace>"
-  apply (clarsimp simp: parse_spec_def state_sep_projection2_def)
+  apply (clarsimp simp: parse_spec_def sep_state_projection2_def)
   apply (wp)
   apply clarsimp
   done
@@ -63,14 +64,6 @@ lemma parse_spec_sep:
   apply (wp)
   apply clarsimp
   done
-
-(* FIXME, this requires scheduler proofs. *)
-axiomatization where
-  start_threads_sep:
-  "\<lbrace>\<guillemotleft>R\<guillemotright>\<rbrace>
-     start_threads spec dup_caps obj_ids
-   \<lbrace>\<lambda>_. \<guillemotleft>R\<guillemotright>\<rbrace>"
-
 
 (* This isn't actually all the combinations, but enough of them for what I needed. *)
 lemma object_types_distinct:
@@ -103,28 +96,21 @@ lemma real_objects_some_type:
                         is_ep_def is_aep_def is_asidpool_def is_frame_def is_untyped_def)
   apply (clarsimp split: cdl_object.splits)
   apply (drule_tac obj_id=x in well_formed_asidpool_at)
-  apply (clarsimp simp: real_object_at_def object_at_def is_asidpool_def split: cdl_object.splits)
+  apply (clarsimp simp: real_object_at_def object_at_def is_asidpool_def irq_nodes_def is_irq_node_def
+                 split: cdl_object.splits)
   by metis
 
-lemma object_at_irq_cnode_cnode_at:
-  "\<lbrakk>well_formed spec; object_at P obj_id spec; obj_id \<in> irq_cnodes spec\<rbrakk> \<Longrightarrow> cnode_at obj_id spec"
+lemma object_at_irq_node_irq_node_at:
+  "\<lbrakk>well_formed spec; object_at P obj_id spec; obj_id \<in> irq_nodes spec\<rbrakk> \<Longrightarrow> irq_node_at obj_id spec"
   apply (clarsimp simp: object_at_def)
-  apply (frule (2) well_formed_irq_cnodes_object_type)
+  apply (frule (2) well_formed_irq_nodes_object_type)
   apply (simp add: object_type_is_object)
-  done
-
-lemma real_object_only_cnode:
-  "well_formed spec \<Longrightarrow> (real_object_at obj_id spec \<and> tcb_at obj_id spec) = tcb_at obj_id spec"
-  "well_formed spec \<Longrightarrow> (real_object_at obj_id spec \<and> table_at obj_id spec) = table_at obj_id spec"
-  "well_formed spec \<Longrightarrow> (real_object_at obj_id spec \<and> capless_at obj_id spec) = capless_at obj_id spec"
-  apply (insert object_at_irq_cnode_cnode_at [where spec=spec and obj_id=obj_id])
-  apply (fastforce simp: real_object_at_def object_at_def object_type_is_object)+
   done
 
 lemma capdl_objects_by_parts:
   "well_formed spec \<Longrightarrow>
    (sep_map_set_conj P {obj_id. real_object_at obj_id spec}) =
-   (sep_map_set_conj P {obj_id. real_cnode_at obj_id spec} \<and>*
+   (sep_map_set_conj P {obj_id. cnode_at obj_id spec} \<and>*
     sep_map_set_conj P {obj_id. tcb_at obj_id spec} \<and>*
     sep_map_set_conj P {obj_id. table_at obj_id spec} \<and>*
     sep_map_set_conj P {obj_id. capless_at obj_id spec})"
@@ -133,16 +119,14 @@ lemma capdl_objects_by_parts:
   apply (subst (6) sep_map_set_conj_restrict [where t = "(\<lambda>obj. tcb_at obj spec)"], simp)
   apply (subst (7) sep_map_set_conj_restrict [where t = "(\<lambda>obj. table_at obj spec)"], simp)
   apply (subst (8) sep_map_set_conj_restrict [where t = "(\<lambda>obj. capless_at obj spec)"], simp)
-  apply (clarsimp simp: object_types_distinct sep.mult_ac
-                        real_cnode_at_def2 real_object_only_cnode
-                        real_objects_some_type
+  apply (clarsimp simp: object_types_distinct real_object_not_irq_node real_objects_some_type
                   cong: rev_conj_cong)
   done
 
 lemma objects_empty_by_parts:
   "well_formed spec \<Longrightarrow>
    (objects_empty spec t {obj_id. real_object_at obj_id spec}) =
-   (objects_empty spec t {obj_id. real_cnode_at obj_id spec} \<and>*
+   (objects_empty spec t {obj_id. cnode_at obj_id spec} \<and>*
     objects_empty spec t {obj_id. tcb_at obj_id spec} \<and>*
     objects_empty spec t {obj_id. table_at obj_id spec} \<and>*
     objects_empty spec t {obj_id. capless_at obj_id spec})"
@@ -151,7 +135,7 @@ lemma objects_empty_by_parts:
 lemma objects_initialised_by_parts:
   "well_formed spec \<Longrightarrow>
    (objects_initialised spec t {obj_id. real_object_at obj_id spec}) =
-   (objects_initialised spec t {obj_id. real_cnode_at obj_id spec} \<and>*
+   (objects_initialised spec t {obj_id. cnode_at obj_id spec} \<and>*
     objects_initialised spec t {obj_id. tcb_at obj_id spec} \<and>*
     objects_initialised spec t {obj_id. table_at obj_id spec} \<and>*
     objects_initialised spec t {obj_id. capless_at obj_id spec})"
@@ -178,7 +162,7 @@ lemma objects_empty_objects_initialised_capless:
   apply (clarsimp simp: object_empty_object_initialised_capless)
   done
 
-lemma valid_prod_case':
+lemma valid_case_prod':
   "(\<And>x y. \<lbrace>P x y\<rbrace> f x y \<lbrace>Q\<rbrace>) \<Longrightarrow> \<lbrace>P (fst v) (snd v)\<rbrace> case v of (x, y) \<Rightarrow> f x y \<lbrace>Q\<rbrace>"
   by (clarsimp split: prod.splits)
 
@@ -204,11 +188,15 @@ lemma dom_map_of_zip':
   apply (subst dom_map_of_zip, simp+)
   done
 
+
+(* Dirty hack that is sadly needed to make the below proof work. *)
+declare [[unify_search_bound = 1000]]
+
 lemma small_one:
   "\<lbrakk>well_formed spec;
    set obj_ids = dom (cdl_objects spec); distinct obj_ids;
    real_ids = [obj_id \<leftarrow> obj_ids. real_object_at obj_id spec];
-   length obj_ids + length [obj\<leftarrow>obj_ids. real_cnode_or_tcb_at obj spec] \<le> unat fend - unat fstart;
+   length obj_ids + length [obj\<leftarrow>obj_ids. cnode_or_tcb_at obj spec] \<le> unat fend - unat fstart;
    length untyped_caps = unat uend - unat ustart;
    distinct_sets (map cap_free_ids untyped_caps);
    list_all is_full_untyped_cap untyped_caps;
@@ -222,7 +210,7 @@ lemma small_one:
    uend \<noteq> 0; fend \<noteq> 0;
    [ustart .e. uend - 1] = untyped_cptrs;
    [fstart .e. fend - 1] = free_cptrs;
-   (map_of (zip [obj\<leftarrow>obj_ids . real_cnode_or_tcb_at obj spec] (drop (length obj_ids) [fstart .e. fend - 1]))) = dup_caps
+   (map_of (zip [obj\<leftarrow>obj_ids . cnode_or_tcb_at obj spec] (drop (length obj_ids) [fstart .e. fend - 1]))) = dup_caps
    \<rbrakk> \<Longrightarrow>
    \<lbrace>\<guillemotleft>(\<And>* (cptr, cap) \<in> set (zip untyped_cptrs untyped_caps). (si_cnode_id, unat cptr) \<mapsto>c cap) \<and>*
      (\<And>* cptr \<in> set free_cptrs. (si_cnode_id, unat cptr) \<mapsto>c NullCap)  \<and>*
@@ -233,7 +221,7 @@ lemma small_one:
     \<guillemotleft>objects_initialised spec t {obj_id. real_object_at obj_id spec} \<and>*
      irqs_initialised spec t (used_irqs spec) \<and>*
     (\<And>* cptr\<in>set (take (card (dom (cdl_objects spec))) free_cptrs). (si_cnode_id, unat cptr) \<mapsto>c NullCap) \<and>*
-     si_caps_at t dup_caps spec {obj_id. real_cnode_or_tcb_at obj_id spec} \<and>*
+     si_caps_at t dup_caps spec {obj_id. cnode_or_tcb_at obj_id spec} \<and>*
      si_objects \<and>*
      si_objects_extra_caps (dom (cdl_objects spec))
                             (free_cptrs :: 32 word list)
@@ -243,22 +231,24 @@ lemma small_one:
   apply (frule (1) le_list_all [where start = ustart])
   apply (frule (1) le_list_all [where start = fstart])
   apply (frule well_formed_objects_card)
-  apply (insert distinct_card [symmetric, where xs ="[obj\<leftarrow>obj_ids . real_cnode_or_tcb_at obj spec]"], simp)
+  apply (insert distinct_card [symmetric, where xs ="[obj\<leftarrow>obj_ids . cnode_or_tcb_at obj spec]"], simp)
   apply (frule distinct_card [symmetric])
-  apply (clarsimp simp: init_system_def, wp valid_prod_case' start_threads_sep)
+  apply (clarsimp simp: init_system_def, wp valid_case_prod')
+           apply (rule hoare_ex_wp, rename_tac t, rule_tac t=t in start_threads_sep [sep_wandise], simp)
           apply (rule hoare_ex_wp, rename_tac t, rule_tac t=t and
-                                                 free_cptrs="[fstart .e. fend - 1]" in init_cspace_sep [sep_wandise, standard])
-         apply (rule hoare_ex_wp, rename_tac t, rule_tac t=t in init_tcbs_sep [sep_wandise, standard])
-        apply (rule hoare_ex_wp, rename_tac t, rule_tac t=t in init_vspace_sep [sep_wandise, standard])
-       apply (rule hoare_ex_wp, rename_tac t, rule_tac t=t in init_pd_asids_sep [sep_wandise, standard])
-      apply (rule hoare_ex_wp, rename_tac t, rule_tac t=t in init_irqs_sep [sep_wandise, standard])
+                                                 free_cptrs="[fstart .e. fend - 1]" in init_cspace_sep [sep_wandise])
+         apply (rule hoare_ex_wp, rename_tac t, rule_tac t=t in init_tcbs_sep [sep_wandise])
+        apply (rule hoare_ex_wp, rename_tac t, rule_tac t=t in init_vspace_sep [sep_wandise])
+       apply (rule hoare_ex_wp, rename_tac t, rule_tac t=t in init_pd_asids_sep [sep_wandise])
+      apply (rule hoare_ex_wp, rename_tac t, rule_tac t=t in init_irqs_sep [sep_wandise])
      apply (rule hoare_ex_wp, rename_tac t, rule_tac t=t and
                                             untyped_cptrs = "[ustart .e. uend - 1]" and
-                                            free_cptrs_orig = "[fstart .e. fend - 1]" in duplicate_caps_sep [sep_wandise, standard])
-     apply (rule create_irq_caps_sep [sep_wandise, standard,
+                                            free_cptrs_orig = "[fstart .e. fend - 1]" in duplicate_caps_sep [sep_wandise])
+     apply (rule create_irq_caps_sep [sep_wandise,
             where free_cptrs_orig = "[fstart .e. fend - 1]"
               and untyped_cptrs = "[ustart .e. uend - 1]"
-              and orig_caps = "map_of (zip [obj\<leftarrow>obj_ids. real_object_at obj spec] [fstart .e. fend - 1])"])
+              and orig_caps = "map_of (zip [obj\<leftarrow>obj_ids. real_object_at obj spec] [fstart .e. fend - 1])"
+              and spec = spec])
     apply (wp sep_wp: create_objects_sep [where untyped_caps = untyped_caps])
     apply (wp sep_wp: parse_bootinfo_sep [where fstart = fstart
                                             and fend = fend
@@ -287,7 +277,7 @@ lemma small_one:
   apply (erule (1) le_list_all)
   done
 
-(* FIXME, make the aquiring of the object_ids part of sys_init, not a parameter. *)
+(* FIXME, make the acquiring of the object_ids part of sys_init, not a parameter. *)
 
 
 
@@ -311,7 +301,7 @@ lemma sys_init:
      si_final_objects spec t \<and>* R\<guillemotright> s \<and>
      inj_on t (set obj_ids) \<and> dom t = set obj_ids\<rbrace>"
   apply (frule distinct_card)
-  apply (insert distinct_card [where xs = "[obj\<leftarrow>obj_ids . real_cnode_or_tcb_at obj spec]"], simp)
+  apply (insert distinct_card [where xs = "[obj\<leftarrow>obj_ids . cnode_or_tcb_at obj spec]"], simp)
   apply (clarsimp simp: valid_boot_info_def si_final_objects_def
                         sep_conj_exists sep_conj_assoc)
   apply (subst ex_conj_increase)+
@@ -326,7 +316,7 @@ lemma sys_init:
   apply (clarsimp)
   apply (clarsimp simp: si_objects_extra_caps_def si_caps_at_def
                         sep_conj_exists sep_conj_assoc)
-  apply (rule_tac x="(map_of (zip [obj\<leftarrow>obj_ids . real_cnode_or_tcb_at obj spec] (drop (length obj_ids) [fstart .e. fend - 1])))" in exI)
+  apply (rule_tac x="(map_of (zip [obj\<leftarrow>obj_ids . cnode_or_tcb_at obj spec] (drop (length obj_ids) [fstart .e. fend - 1])))" in exI)
   apply (rule_tac x="[x .e. xa - 1]" in exI)
   apply (rule_tac x="[fstart .e. fend - 1]" in exI)
   apply (rule_tac x=untyped_capsa in exI)

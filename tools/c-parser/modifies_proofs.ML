@@ -29,7 +29,7 @@ sig
                         ProgramAnalysis.modify_var list -> term
   (* [gen_modify_goal thy tys tm fname vs]
      tys is the three types that are parameters to all HoarePackage constants
-     tm is the Γ that houses the lookup table from fn names to bodies
+     tm is the \<Gamma> that houses the lookup table from fn names to bodies
      fname is the name of the function being called
      vs is the list of variables allowed to be modified.
 
@@ -46,10 +46,9 @@ sig
                                  typ list -> string -> theory
    (* string is the name of the locale where the theorems about Gamma live *)
 
-  val time_limit : int ref
-
   val sorry_modifies_proofs : bool ref
 
+  val calculate_modifies_proofs : bool Config.T
 end
 
 structure Modifies_Proofs : MODIFIES_PROOFS =
@@ -58,13 +57,16 @@ struct
 open TermsTypes
 type csenv = ProgramAnalysis.csenv
 
-val time_limit = ref 0
-
 val sorry_modifies_proofs = ref false
+
+(* Config item to determine if "modifies" thms should be generated. *)
+val (calculate_modifies_proofs, calculate_modifies_proofs_setup) =
+    Attrib.config_bool (Binding.name "calculate_modifies_proofs") (K true)
+val _ = Context.>> (Context.map_theory calculate_modifies_proofs_setup)
 
 fun gen_modify_goalstring csenv fname modstrings = let
   fun foldthis (vname, vset) =
-      case Symtab.lookup (ProgramAnalysis.get_addressed csenv) vname of
+      case MSymTab.lookup (ProgramAnalysis.get_addressed csenv) (MString.mk vname) of
         NONE => Binaryset.add(vset, vname)
       | SOME _ => Binaryset.add(vset, NameGeneration.global_heap)
   val vset = List.foldl foldthis (Binaryset.empty String.compare) modstrings
@@ -80,7 +82,7 @@ fun mvar_to_string mv = let
 in
   case mv of
     TheHeap => NameGeneration.global_heap
-  | M vi => srcname vi
+  | M vi => MString.dest (get_mname vi)
   | PhantomState => NameGeneration.phantom_state_name
   | GhostState => NameGeneration.ghost_state_name
 end
@@ -175,30 +177,21 @@ in
                      arg5_t $ arg6_t)
 end
 
-fun munge_tactic ctxt goal goalid tac = let
+fun munge_tactic ctxt goal tac = let
   fun tacticfn {prems = _,context} st =
       if !sorry_modifies_proofs then
-         Skip_Proof.cheat_tac 1 st
+         Skip_Proof.cheat_tac ctxt 1 st
       else
          tac context st
-  val limiter = if !time_limit > 0 then
-                  TimeLimit.timeLimit (Time.fromSeconds (!time_limit))
-                else I
 in
-  SOME (limiter (Goal.prove ctxt [] [] (TermsTypes.mk_prop goal)) tacticfn)
-  handle ERROR s =>
-         (writeln ("Modifies proof for "^goalid^" failed with error "^s);
-          NONE)
-       | TimeLimit.TimeOut =>
-         (writeln ("Modifies proof for "^goalid^" took too long");
-          NONE)
+  Goal.prove_future ctxt [] [] (TermsTypes.mk_prop goal) tacticfn
 end
 
 fun prove_all_modifies_goals_local csenv includeP tyargs lthy = let
   open ProgramAnalysis
-  val _ = writeln "Proving automatically calculated modifies proofs"
+  val _ = tracing "Proving automatically calculated modifies proofs"
   val globs_all_addressed = Config.get lthy CalculateState.globals_all_addressed
-  val _ = writeln ("Globals_all_addressed mode = " ^ Bool.toString globs_all_addressed)
+  val _ = tracing ("Globals_all_addressed mode = " ^ Bool.toString globs_all_addressed)
   (* first enter the locale where \<Gamma> exists, and where all the
      mappings from function name to function body exist *)
   val lconsts = Proof_Context.consts_of lthy
@@ -212,7 +205,7 @@ fun prove_all_modifies_goals_local csenv includeP tyargs lthy = let
       fun modifies_msg msg = let
           val {usr, sys} = Timer.checkCPUTimer timer
         in
-          writeln ("modifies:" ^ fname ^ ":" ^
+          tracing ("modifies:" ^ fname ^ ":" ^
                    Int.toString (Time.toSeconds usr + Time.toSeconds sys) ^
                    "s:" ^ msg)
         end;
@@ -238,22 +231,20 @@ fun prove_all_modifies_goals_local csenv includeP tyargs lthy = let
                 val geq = Proof_Context.get_thm ctxt "globals.equality"
               in
                 HoarePackage.vcg_tac "_modifies" "false" [] ctxt 1 THEN
-                ALLGOALS (REPEAT_ALL_NEW (resolve_tac [exI, geq])) THEN
+                ALLGOALS (REPEAT_ALL_NEW (resolve_tac ctxt [exI, geq])) THEN
                 ALLGOALS (asm_full_simp_tac ctxt)
               end
             in
-              case munge_tactic lthy goal fname tac of
-                NONE => (Binaryset.add (failedsofar, fname), lthy)
-                        before modifies_msg "proof failed"
-              | SOME th => let
-                  val (_, lthy) =
+              let
+                val th = munge_tactic lthy goal tac
+                val (_, lthy) =
                       Local_Theory.note
                           ((Binding.name (fname ^ "_modifies"), []), [th])
                           lthy
-                in
-                  (failedsofar, lthy) before
-                  modifies_msg "successful"
-                end
+              in
+                (failedsofar, lthy) before
+                modifies_msg "successful"
+              end
             end
           else let
               val example = valOf (Binaryset.find (fn _ => true) i)
@@ -270,7 +261,7 @@ fun prove_all_modifies_goals_local csenv includeP tyargs lthy = let
     val n = length fnlist (* >= 1 *)
     val rec_thm = HoarePackage.gen_proc_rec lthy HoarePackage.Partial n
     val mods = valOf (get_modifies csenv (hd fnlist))
-        handle Option => (writeln ("No modifies info for "^hd fnlist);
+        handle Option => (tracing ("No modifies info for "^hd fnlist);
                           raise NoMods (Binaryset.addList(failedsofar, fnlist)))
     val mvlist = Binaryset.listItems mods
     fun gen_modgoal (fname : string) : term = let
@@ -285,7 +276,7 @@ fun prove_all_modifies_goals_local csenv includeP tyargs lthy = let
                         gamma_t fname mvlist
       else let
           val example = valOf (Binaryset.find (fn _ => true) i)
-          val _ = writeln ("Not attempting modifies proof for "^fname^
+          val _ = tracing ("Not attempting modifies proof for "^fname^
                            " (or its recursive component) as it calls a\
                            \ function ("^example^") that has failed")
         in
@@ -297,25 +288,20 @@ fun prove_all_modifies_goals_local csenv includeP tyargs lthy = let
         HoarePackage.hoare_rule_tac ctxt [rec_thm] 1 THEN
         ALLGOALS (HoarePackage.vcg_tac "_modifies" "false" [] ctxt)
   in
-    case munge_tactic lthy nway_goal ("Clique including "^hd fnlist) tac of
-      SOME nway_thm => let
-        val nway_thms = HOLogic.conj_elims nway_thm
-        val _ = length nway_thms = length fnlist orelse
-                raise Fail "CONJUNCTS nway_thm and fnlist don't match up!"
-        fun note_it (nm, th, lthy) =
-            (writeln ("Modifies proof for "^nm^" successful");
-             #2 (Local_Theory.note ((Binding.name (nm ^ "_modifies"), []),
-                                    [th])
-                                   lthy))
-        val noted = ListPair.foldl note_it lthy (fnlist, nway_thms)
-      in
-        (failedsofar, noted)
-      end
-    | NONE => let
-      in
-        writeln ("Modifies proof for "^hd fnlist^" and its SCC failed");
-        (Binaryset.addList(failedsofar, fnlist), lthy)
-      end
+    let
+      val nway_thm = munge_tactic lthy nway_goal tac
+      val nway_thms = HOLogic.conj_elims lthy nway_thm
+      val _ = length nway_thms = length fnlist orelse
+              raise Fail "CONJUNCTS nway_thm and fnlist don't match up!"
+      fun note_it (nm, th, lthy) =
+          (tracing ("Modifies proof for "^nm^" successful");
+           #2 (Local_Theory.note ((Binding.name (nm ^ "_modifies"), []),
+                                  [th])
+                                 lthy))
+      val noted = ListPair.foldl note_it lthy (fnlist, nway_thms)
+    in
+      (failedsofar, noted)
+    end
   end handle NoMods newset => (newset, lthy)
 
 
@@ -345,14 +331,17 @@ in
   lthy
 end
 
-fun prove_all_modifies_goals thy csenv includeP tyargs globloc = let
-  val lthy = Named_Target.init I globloc thy
-in
-  lthy
-    |> prove_all_modifies_goals_local csenv includeP tyargs
-    |> Local_Theory.restore
-    |> Local_Theory.exit
-    |> Proof_Context.theory_of
-end
+fun prove_all_modifies_goals thy csenv includeP tyargs globloc =
+  if Config.get_global thy calculate_modifies_proofs then
+    let
+      val lthy = Named_Target.init globloc thy
+    in
+      lthy
+        |> prove_all_modifies_goals_local csenv includeP tyargs
+        |> Local_Theory.restore
+        |> Local_Theory.exit_global
+    end
+  else
+    thy
 
 end (* struct *)

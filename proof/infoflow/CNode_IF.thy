@@ -633,7 +633,7 @@ lemma preemption_point_def2:
            if rv then doE
              liftE reset_work_units;
              liftE (do_machine_op getActiveIRQ) >>=E
-             option_case (returnOk ()) (throwError \<circ> Interrupted)
+             case_option (returnOk ()) (throwError \<circ> Interrupted)
            odE else returnOk()
        odE"
   apply (rule ext)
@@ -777,31 +777,6 @@ lemma only_timer_irq_inv_domain_sep_inv[intro]:
   apply(simp add: only_timer_irq_inv_def)
   done
 
-(* FIXME: Move somewhere *)
-lemma gen_asm_ev2_r:
-  "\<lbrakk>P' \<Longrightarrow> equiv_valid_2 I A B R P Q f f'\<rbrakk> \<Longrightarrow>
-   equiv_valid_2 I A B R P  (Q and (K P')) f f'"
-  apply(fastforce simp: equiv_valid_2_def)
-  done
-
-lemma gen_asm_ev2_l:
-  "\<lbrakk>P \<Longrightarrow> equiv_valid_2 I A B R Q P' f f'\<rbrakk> \<Longrightarrow>
-   equiv_valid_2 I A B R (Q and (K P)) P' f f'"
-  apply(fastforce simp: equiv_valid_2_def)
-  done
-
-lemma gen_asm_ev2_r':
-  "\<lbrakk>P' \<Longrightarrow> equiv_valid_2 I A B R P \<top> f f'\<rbrakk> \<Longrightarrow>
-   equiv_valid_2 I A B R P (\<lambda>s. P') f f'"
-  apply(fastforce simp: equiv_valid_2_def)
-  done
-
-lemma gen_asm_ev2_l':
-  "\<lbrakk>P \<Longrightarrow> equiv_valid_2 I A B R \<top> P' f f'\<rbrakk> \<Longrightarrow>
-   equiv_valid_2 I A B R (\<lambda>s. P) P' f f'"
-  apply(fastforce simp: equiv_valid_2_def)
-  done
-
 (* FIXME: repalce Infoflow.do_machine_op_spec_reads_respects' with this *)
 lemma do_machine_op_spec_reads_respects':
   assumes equiv_dmo:
@@ -939,125 +914,6 @@ lemma preemption_point_reads_respects:
   apply force
   done
 
-lemma assertE_ev[wp]:
-  "equiv_valid_inv I A \<top> (assertE b)"
-  unfolding assertE_def
-  apply wp
-  by simp
-
-lemma equiv_valid_2_bindE:
-  assumes g: "\<And>rv rv'. R' rv rv' \<Longrightarrow>
-      equiv_valid_2 D A A (E \<oplus> R) (Q rv) (Q' rv') (g rv) (g' rv')"
-  assumes h1: "\<lbrace>S\<rbrace> f \<lbrace>Q\<rbrace>,-"
-  assumes h2: "\<lbrace>S'\<rbrace> f' \<lbrace>Q'\<rbrace>,-"
-  assumes f: "equiv_valid_2 D A A (E \<oplus> R') P P' f f'"
-  shows "equiv_valid_2 D A A (E \<oplus> R) (P and S) (P' and S') (f >>=E g) (f' >>=E g')"
-  apply(unfold bindE_def)
-  apply(rule equiv_valid_2_guard_imp)
-    apply(rule_tac R'="E \<oplus> R'" and Q="sum_case \<top>\<top> Q" and Q'="sum_case \<top>\<top> Q'" and S=S and S'=S' in equiv_valid_2_bind)
-       apply(clarsimp simp: lift_def split: sum.splits)
-       apply(intro impI conjI allI)
-          apply(simp add: throwError_def)
-          apply(rule return_ev2)
-          apply simp
-         apply(simp)
-        apply(simp)
-       apply(fastforce intro: g)
-      apply(rule f)
-     apply(insert h1, fastforce simp: valid_def validE_R_def validE_def split: sum.splits)[1]
-    apply(insert h2, fastforce simp: valid_def validE_R_def validE_def split: sum.splits)[1]
-   by auto
-
-lemma rel_sum_comb_equals:
-  "((op =) \<oplus> (op =)) = (op =)"
-  apply(rule ext)
-  apply(rule ext)
-  apply(rename_tac a b)
-  apply(case_tac a, auto)
-  done
-
-(* FIXME: move to EquivValid *)
-definition spec_equiv_valid_2_inv where
-  "spec_equiv_valid_2_inv s I A R P P' f f' \<equiv> 
-      equiv_valid_2 I A A R (P and (op = s)) P' f f'"
-
-lemma spec_equiv_valid_def2:
-  "spec_equiv_valid s I A A P f =
-   spec_equiv_valid_2_inv s I A (op =) P P f f"
-  apply(simp add: spec_equiv_valid_def spec_equiv_valid_2_inv_def)
-  done
-
-lemma drop_spec_ev2_inv:
-  "equiv_valid_2 I A A R P P' f f' \<Longrightarrow> 
-   spec_equiv_valid_2_inv s I A R P P' f f'"
-  apply(simp add: spec_equiv_valid_2_inv_def)
-  apply(erule equiv_valid_2_guard_imp, auto)
-  done
-  
-
-lemma spec_equiv_valid_2_inv_guard_imp:
-  "\<lbrakk>spec_equiv_valid_2_inv s I A R Q Q' f f'; \<And> s. P s \<Longrightarrow> Q s; \<And> s. P' s \<Longrightarrow> Q' s\<rbrakk> \<Longrightarrow>
-    spec_equiv_valid_2_inv s I A R P P' f f'"
-  by(auto simp: spec_equiv_valid_2_inv_def equiv_valid_2_def)
-
-lemma bind_spec_ev2:
-  assumes reads_res_2: "\<And> rv s' rv'. \<lbrakk>(rv, s') \<in> fst (f s); R' rv rv'\<rbrakk> \<Longrightarrow> spec_equiv_valid_2_inv s' I A R (Q rv) (Q' rv') (g rv) (g' rv')"
-  assumes reads_res_1: "spec_equiv_valid_2_inv s I A R' P P' f f'"
-  assumes hoare: "\<lbrace>S\<rbrace> f \<lbrace>Q\<rbrace>"
-  assumes hoare': "\<lbrace>S'\<rbrace> f' \<lbrace>Q'\<rbrace>"
-  shows "spec_equiv_valid_2_inv s I A R (P and S) (P' and S') (f >>= g) (f' >>= g')"
-  using reads_res_1
-  apply (clarsimp simp: spec_equiv_valid_2_inv_def equiv_valid_2_def bind_def split_def)
-  apply (erule_tac x=t in allE)
-  apply clarsimp
-  apply (drule_tac x="(a, b)" in bspec, assumption)
-  apply (drule_tac x="(ab, bb)" in bspec, assumption)
-  apply clarsimp
-  apply (cut_tac rv="a" and s'="b" in reads_res_2)
-    apply assumption
-   apply assumption
-  apply (clarsimp simp: spec_equiv_valid_2_inv_def equiv_valid_2_def)
-  apply(drule_tac x=bb in spec)
-  apply clarsimp
-  using hoare hoare'
-  apply (fastforce simp: valid_def)+
-  done
-
-lemma spec_equiv_valid_2_inv_bindE:
-  assumes g: "\<And>rv s' rv'. \<lbrakk>(Inr rv, s') \<in> fst (f s); R' rv rv'\<rbrakk> \<Longrightarrow>
-      spec_equiv_valid_2_inv s' I A (E \<oplus> R) (Q rv) (Q' rv') (g rv) (g' rv')"
-  assumes h1: "\<lbrace>S\<rbrace> f \<lbrace>Q\<rbrace>,-"
-  assumes h2: "\<lbrace>S'\<rbrace> f' \<lbrace>Q'\<rbrace>,-"
-  assumes f: "spec_equiv_valid_2_inv s I A (E \<oplus> R') P P' f f'"
-  shows "spec_equiv_valid_2_inv s I A (E \<oplus> R) (P and S) (P' and S') (f >>=E g) (f' >>=E g')"
-  apply(unfold bindE_def)
-  apply(rule spec_equiv_valid_2_inv_guard_imp)
-    apply(rule_tac R'="E \<oplus> R'" and Q="sum_case \<top>\<top> Q" and Q'="sum_case \<top>\<top> Q'" and S=S and S'=S' in bind_spec_ev2)
-       apply(clarsimp simp: lift_def split: sum.splits)
-       apply(intro impI conjI allI)
-          apply(simp add: throwError_def)
-          apply(rule drop_spec_ev2_inv[OF return_ev2])
-          apply simp
-         apply(simp)
-        apply(simp)
-       apply(fastforce intro: g)
-      apply(rule f)
-     apply(insert h1, fastforce simp: valid_def validE_R_def validE_def split: sum.splits)[1]
-    apply(insert h2, fastforce simp: valid_def validE_R_def validE_def split: sum.splits)[1]
-   by auto
-
-lemma trancl_subset_equivalence:
-  "\<lbrakk>(a, b) \<in> r'\<^sup>+; \<forall>x. (a, x)\<in>r'\<^sup>+ \<longrightarrow> Q x; \<forall>x y. Q x \<longrightarrow> ((y, x) \<in> r) = ((y, x) \<in> r')\<rbrakk> \<Longrightarrow> (a, b) \<in> r\<^sup>+"
-  apply(induct a b rule: trancl.induct)
-   apply(blast)
-  apply(simp)
-  apply(rule_tac b=b in trancl_into_trancl)
-   apply(simp)
-  apply(erule_tac x=c in allE)
-  apply(subgoal_tac "(a, c) \<in> r'\<^sup>+")
-   apply(auto)
-   done
-
 lemma descendants_of_all_children: "\<lbrakk>all_children P s; p \<in> descendants_of q s; P q\<rbrakk> \<Longrightarrow> P p"
  apply (simp add: descendants_of_def cdt_parent_rel_def is_cdt_parent_def)
  apply (erule_tac P="P q" in rev_mp)
@@ -1102,44 +958,6 @@ lemma gets_descendants_of_revrv:
   apply clarsimp
   apply (rule descendants_of_eq)
   apply (assumption)+
-  done
-
-lemma equiv_valid_rv_gets_compD:
-  "equiv_valid_rv_inv I A R P (gets (f \<circ> g)) \<Longrightarrow>
-   equiv_valid_rv_inv I A (\<lambda> rv rv'. R (f rv) (f rv')) P (gets g)"
-  apply(clarsimp simp: equiv_valid_2_def gets_def bind_def return_def get_def)
-  done
-
-
-lemma liftE_ev2:
-  "equiv_valid_2 I A B R P P' f f' \<Longrightarrow>
-   equiv_valid_2 I A B (E \<oplus> R) P P' (liftE f) (liftE f')"
-  apply(clarsimp simp: liftE_def equiv_valid_2_def bind_def return_def)
-  apply fastforce
-  done
-
-lemma whenE_spec_ev2_inv:
-  assumes a: "b \<Longrightarrow> spec_equiv_valid_2_inv s I A R P P' m m'"
-  assumes r: "\<And> x. R x x"
-  shows "spec_equiv_valid_2_inv s I A R P P' (whenE b m) (whenE b m')"
-  unfolding whenE_def 
-  apply (auto intro: a simp: returnOk_def intro!: drop_spec_ev2_inv[OF return_ev2] intro: r)
-  done
-
-lemma whenE_spec_ev:
-  assumes a: "b \<Longrightarrow> spec_equiv_valid_inv s I A P m"
-  shows "spec_equiv_valid_inv s I A P  (whenE b m) "
-  unfolding whenE_def 
-  apply (auto intro: a simp: returnOk_def intro!: drop_spec_ev[OF return_ev_pre])
-  done
-
-
-lemma spec_equiv_valid_2_inv_by_spec_equiv_valid:
-  "\<lbrakk>spec_equiv_valid s I A A P f; P' = P; f' = f;
-    (\<And> a. R a a)\<rbrakk> \<Longrightarrow>
-       spec_equiv_valid_2_inv s I A R P P' f f'"
-  apply(clarsimp simp: spec_equiv_valid_def spec_equiv_valid_2_inv_def)
-  apply(fastforce simp: equiv_valid_2_def)
   done
 
 lemma silc_dom_equiv_trans:
@@ -1203,7 +1021,7 @@ where
 
 lemma reads_equiv_f_g_conj:
   "reads_equiv_f_g aag s s' \<equiv> reads_equiv_f aag s s' \<and> reads_equiv_g aag s s'"
-  apply(simp add: reads_equiv_f_g_def reads_equiv_f_def reads_equiv_g_def conj_ac)
+  apply(simp add: reads_equiv_f_g_def reads_equiv_f_def reads_equiv_g_def conj_comms)
   done
 
 lemma reads_respects_f_g:

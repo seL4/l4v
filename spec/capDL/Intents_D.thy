@@ -65,6 +65,7 @@ datatype cdl_object_type =
   | AsyncEndpointType
   | TcbType
   | CNodeType
+  | IRQNodeType
   | UntypedType
   | AsidPoolType
   | PageTableType
@@ -126,6 +127,8 @@ datatype cdl_irq_handler_intent =
  |  IrqHandlerSetEndpointIntent
     (* Clear: (target) *)
  |  IrqHandlerClearIntent
+    (* SetMode: (target) trig pol *)
+ |  IrqHandlerSetModeIntent bool bool 
 
 datatype cdl_irq_control_intent =
     (* IssueIrqHandler: (target), irq, (root), index, depth *)
@@ -153,6 +156,8 @@ datatype cdl_page_intent =
  |  PageUnmapIntent
     (* FlushCaches: (target) *)
  |  PageFlushCachesIntent 
+    (* GetAddress *)
+ | PageGetAddressIntent
   
 
 datatype cdl_page_directory_intent =

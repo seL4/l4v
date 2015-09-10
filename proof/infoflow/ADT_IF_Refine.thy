@@ -16,7 +16,7 @@ begin
 
 definition
   kernelEntry_if
-  where
+where
   "kernelEntry_if e tc \<equiv> do
     t \<leftarrow> getCurThread;
     threadSet (tcbContext_update  (\<lambda>_. tc)) t;
@@ -116,12 +116,15 @@ definition
   "ptable_lift_s' s \<equiv> ptable_lift (ksCurThread s) (absKState s)"
 
 definition
-  "ptable_xn_s' s \<equiv> ptable_xn (ksCurThread s) (absKState s)"
+  "ptable_attrs_s' s \<equiv> ptable_attrs (ksCurThread s) (absKState s)"
+
+definition
+  "ptable_xn_s' s \<equiv>  \<lambda>addr. XNever \<in> ptable_attrs_s' s addr"
 
 definition doUserOp_if :: "user_transition_if \<Rightarrow> user_context \<Rightarrow> (kernel_state, (event option \<times> user_context)) nondet_monad" where
   "doUserOp_if uop tc \<equiv>
   do pr \<leftarrow> gets ptable_rights_s';
-     pxn \<leftarrow> gets ptable_xn_s';
+     pxn \<leftarrow> gets (\<lambda>s x. pr x \<noteq> {} \<and> ptable_xn_s' s x);
      pl \<leftarrow> gets (\<lambda>s. ptable_lift_s' s |` {x. pr x \<noteq> {}});
      t \<leftarrow> getCurThread;
      um \<leftarrow>
@@ -199,7 +202,7 @@ lemma do_user_op_if_corres:
        apply (clarsimp elim!: state_relationE)
       apply (rule_tac r'="op=" and P=einvs and P'=invs' in corres_split)
          prefer 2
-         apply (clarsimp simp: ptable_xn_s_def ptable_xn_s'_def)
+         apply (clarsimp simp: ptable_attrs_s'_def ptable_attrs_s_def ptable_xn_s'_def ptable_xn_s_def)
          apply (subst absKState_correct, fastforce, assumption+)
          apply (clarsimp elim!: state_relationE)
         apply (rule_tac r'="op=" and P=einvs and P'=invs' in corres_split)
@@ -374,7 +377,7 @@ lemma do_user_op_if_corres':
       apply (rule_tac r'="op=" and P=einvs and P'=invs' in corres_split)
          prefer 2
          apply (clarsimp simp: absArchState_correct curthread_relation ptable_xn_s'_def
-                               ptable_xn_s_def)
+                               ptable_xn_s_def ptable_attrs_s_def ptable_attrs_s'_def)
          apply (subst absKState_correct, fastforce, assumption+)
          apply simp
          apply (clarsimp elim!: state_relationE)
@@ -981,7 +984,8 @@ lemmas preserves_lifts = preserves_lift_ret preserves_lift preserves_lift'
 
 
 
-defs step_restrict_def: "step_restrict \<equiv> \<lambda>s. s \<in> has_srel_state (lift_fst_rel (lift_snd_rel state_relation)) full_invs_if'"
+defs step_restrict_def: 
+  "step_restrict \<equiv> \<lambda>s. s \<in> has_srel_state (lift_fst_rel (lift_snd_rel state_relation)) full_invs_if'"
 
 
 lemma abstract_invs: "global_automaton_invs check_active_irq_A_if (do_user_op_A_if uop)
@@ -1031,11 +1035,7 @@ definition ADT_H_if where
                               kernelCall_H_if handlePreemption_H_if
                               schedule'_H_if kernelExit_H_if)\<rparr>"
 
-definition uop_sane  where
-"uop_sane f \<equiv> \<forall>t pl pr pxn tcu. (f t pl pr pxn tcu) \<noteq> {} \<and> 
-                (\<forall>tc um es. (Some Interrupt,tc,um, es) \<notin> (f t pl pr pxn tcu))"
-
-lemma haskell_invs: "uop_sane uop \<Longrightarrow> global_automaton_invs checkActiveIRQ_H_if (doUserOp_H_if uop)
+lemma haskell_invs: "global_automaton_invs checkActiveIRQ_H_if (doUserOp_H_if uop)
                                      kernelCall_H_if handlePreemption_H_if
                                      schedule'_H_if kernelExit_H_if full_invs_if' (ADT_H_if uop) UNIV"
   apply (unfold_locales)
@@ -1044,11 +1044,11 @@ lemma haskell_invs: "uop_sane uop \<Longrightarrow> global_automaton_invs checkA
   apply (simp_all add: checkActiveIRQ_H_if_def doUserOp_H_if_def 
                                     kernelCall_H_if_def handlePreemption_H_if_def
                                     schedule'_H_if_def kernelExit_H_if_def split del: split_if)[12]
-             apply (rule preserves_lifts | wp | simp add: full_invs_if'_def uop_sane_def)+
+             apply (rule preserves_lifts | wp | simp add: full_invs_if'_def)+
            apply (wp_once hoare_disjI1)
-            apply (rule preserves_lifts | wp | simp add: full_invs_if'_def uop_sane_def)+
+            apply (rule preserves_lifts | wp | simp add: full_invs_if'_def)+
           apply (wp_once hoare_disjI2)
-           apply (rule preserves_lifts | wp | simp add: full_invs_if'_def uop_sane_def)+
+           apply (rule preserves_lifts | wp | simp add: full_invs_if'_def)+
            apply (rule hoare_pre)
             apply (rule hoare_vcg_conj_lift)
              apply (rule hoare_drop_imps)
@@ -1171,13 +1171,16 @@ lemma extras_inter'[dest!]: "(t,mode) \<in> has_srel_state (lift_fst_rel srel) i
     apply (fastforce intro!: srel_Fin simp: lift_fst_rel_def)
     done
 
-  lemma refinement: "ADT_conc \<sqsubseteq> ADT_abs"
-    apply (rule sim_imp_refines)
+  lemma fw_simulates: "ADT_conc \<sqsubseteq>\<^sub>F ADT_abs"
     apply (rule L_invariantI)
       apply (rule abs.ADT_invs)
      apply (rule conc.ADT_invs)
     apply (rule fw_sim_abs_conc)
-   done
+    done
+
+  lemma refinement: "ADT_conc \<sqsubseteq> ADT_abs"
+    apply (rule sim_imp_refines[OF fw_simulates])
+    done
 
   lemma conc_serial:
     assumes uop_sane: "\<And>s e t. (s,e,t) \<in> do_user_op_conc \<Longrightarrow> 
@@ -1399,7 +1402,7 @@ lemma ct_idle'_related: "\<lbrakk>(a, c) \<in> state_relation; invs' c; ct_idle 
   apply (case_tac st, simp_all)[1]
   done
 
-lemma haskell_to_abs: "uop_sane uop \<Longrightarrow> global_automata_refine 
+lemma haskell_to_abs: "uop_nonempty uop \<Longrightarrow> global_automata_refine 
                                check_active_irq_A_if (do_user_op_A_if uop)
                                kernel_call_A_if kernel_handle_preemption_if
                                kernel_schedule_if kernel_exit_A_if 
@@ -1411,7 +1414,7 @@ lemma haskell_to_abs: "uop_sane uop \<Longrightarrow> global_automata_refine
   apply (simp add: global_automata_refine_def)
   apply (intro conjI)
     apply (rule abstract_invs)
-   apply (erule haskell_invs)
+   apply (rule haskell_invs)
   apply (unfold_locales)
            apply (simp add: step_restrict_def)
           apply (simp add: ADT_H_if_def ADT_A_if_def)
@@ -1443,8 +1446,8 @@ lemma haskell_to_abs: "uop_sane uop \<Longrightarrow> global_automata_refine
       apply (rule step_corres_lifts)
        apply (rule corres_guard_imp)
          apply (rule do_user_op_if_corres)
-        apply (fastforce simp: full_invs_if_def uop_sane_def)
-       apply (simp add: full_invs_if'_def uop_sane_def)
+        apply (fastforce simp: full_invs_if_def uop_nonempty_def)
+       apply (simp add: full_invs_if'_def uop_nonempty_def)
       apply (rule doUserOp_if_empty_fail)
      apply (simp add: kernelCall_H_if_def kernel_call_A_if_def)
      apply (rule step_corres_lifts)
@@ -1490,13 +1493,12 @@ lemma doUserOp_if_no_interrupt: "\<lbrace>K(uop_sane uop)\<rbrace> doUserOp_if u
   apply (clarsimp simp: uop_sane_def simp del: split_paired_All)
   done
 
-
 lemma ADT_A_if_Init_Fin_serial: "uop_sane uop \<Longrightarrow>
        Init_Fin_serial (ADT_A_if uop) s0 (full_invs_if \<inter> {s. step_restrict s})"
   apply (simp add: Init_Fin_serial_def)
   apply (rule conjI)
    apply (rule global_automata_refine.abs_serial[OF haskell_to_abs])
-      apply simp
+      apply (simp add: uop_sane_def uop_nonempty_def)
      apply (fastforce simp: step_restrict_def has_srel_state_def)
    apply (clarsimp simp add: doUserOp_H_if_def)
    apply (frule use_valid[OF _ doUserOp_if_no_interrupt])
@@ -1505,7 +1507,6 @@ lemma ADT_A_if_Init_Fin_serial: "uop_sane uop \<Longrightarrow>
    apply (clarsimp simp: ADT_A_if_def)+
   done
 
-
 lemma ADT_A_if_enabled:
   "uop_sane uop \<Longrightarrow> enabled_system (ADT_A_if uop) s0"
   apply (rule Init_Fin_serial.enabled)
@@ -1513,24 +1514,24 @@ lemma ADT_A_if_enabled:
   apply simp
   done
 
+lemma (in valid_initial_state_noenabled) uop_nonempty:
+  "uop_nonempty utf"
+  apply (simp add: uop_nonempty_def utf_non_empty)
+  done
+
 lemma (in valid_initial_state_noenabled) uop_sane:
   "uop_sane utf"
-  apply (simp add: uop_sane_def)
-   apply (intro allI conjI)
-    apply (cut_tac utf_non_empty)
-    apply blast
-   apply (cut_tac utf_non_interrupt)
-   apply blast
-   done
+  apply (simp add: uop_sane_def utf_non_empty)
+  apply (cut_tac utf_non_interrupt)
+  apply blast
+  done
 
 sublocale valid_initial_state_noenabled \<subseteq> valid_initial_state
-  apply (unfold_locales)
-      apply (cut_tac uop=utf and ?s0.0=s0 in ADT_A_if_enabled)
-       apply (thin_tac "?P")
-       apply (rule uop_sane)
+     apply (unfold_locales)
+      using ADT_A_if_enabled[of utf s0, OF uop_sane]
       apply (fastforce simp: enabled_system_def s0_def)
-     using ADT_A_if_Init_Fin_serial[OF uop_sane, where ?s0.0=s0]
+     using ADT_A_if_Init_Fin_serial[OF uop_sane, of s0]
      apply (simp only: Init_Fin_serial_def serial_system_def Init_Fin_serial_axioms_def s0_def)+
-     done
+  done
  
 end

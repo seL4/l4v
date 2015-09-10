@@ -172,7 +172,6 @@ lemma ignoreFailure_empty_fail[intro!, wp, simp]:
 crunch (empty_fail) empty_fail[intro!, wp, simp]: ipcCancel, setThreadState, tcbSchedDequeue, setupReplyMaster, isBlocked, switchIfRequiredTo
 (simp: Let_def)
 
-(*FIXME: naming problems*)
 crunch (empty_fail) "_H_empty_fail": "ThreadDecls_H.suspend"
 lemma ThreadDecls_H_suspend_empty_fail[intro!, wp, simp]:
   "empty_fail (ThreadDecls_H.suspend target)"
@@ -188,7 +187,7 @@ crunch (empty_fail) empty_fail[intro!, wp, simp]: finaliseCap, preemptionPoint, 
 (wp: empty_fail_catch simp:  Let_def ignore: cacheRangeOp)
 
 lemmas finalise_spec_empty_fail_induct = finaliseSlot'.induct[where P=
-    "\<lambda>sl exp s. spec_empty_fail (finaliseSlot' sl exp) s", standard]
+    "\<lambda>sl exp s. spec_empty_fail (finaliseSlot' sl exp) s"]
 
 lemma spec_empty_fail_If:
   "\<lbrakk> P \<Longrightarrow> spec_empty_fail f s; \<not> P \<Longrightarrow> spec_empty_fail g s \<rbrakk>
@@ -300,7 +299,6 @@ crunch (empty_fail) empty_fail[intro!, wp, simp]: getDomainTime
 crunch (empty_fail) empty_fail[intro!, wp, simp]: nextDomain
 
 
-(*FIXME: naming problems*)
 lemma ThreadDecls_H_schedule_empty_fail[intro!, wp, simp]:
   "empty_fail schedule"
   apply (simp add: schedule_def)

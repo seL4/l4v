@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-header "ARM Machine Types"
+chapter "ARM Machine Types"
 
 theory ARMMachineTypes
 imports
@@ -111,29 +111,6 @@ instance by (intro_classes, simp add: enum_alt_register)
 end
 
 (*>*)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 (*>*)
 definition
@@ -294,8 +271,6 @@ where
   | ARMSuperSection \<Rightarrow>    24
   )"
 
-
-
 (* vmpage_size instance proofs *)
 (*<*)
 instantiation vmpage_size :: enum begin
@@ -337,9 +312,6 @@ instance by (intro_classes, simp add: enum_alt_vmpage_size)
 end
 
 (*>*)
-
-
-
 
 
 end

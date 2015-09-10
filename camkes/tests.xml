@@ -19,6 +19,7 @@
 -->
 <testsuite timeout="3600" depends="isabelle">
     <test name="CamkesAdlSpec">make CamkesAdlSpec</test>
+    <test name="CamkesCdlRefine" depends="CamkesAdlSpec DSpec">make CamkesCdlRefine</test>
     <test name="CamkesGlueSpec">make CamkesGlueSpec</test>
     <test name="CamkesGlueProofs" depends="AutoCorres">make CamkesGlueProofs</test>
 </testsuite>

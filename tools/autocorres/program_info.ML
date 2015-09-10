@@ -10,7 +10,7 @@
 
 (*
  * Functions for extracting information from the C parser in a format more
- * convienient for us to work with.
+ * convenient for us to work with.
  *)
 structure ProgramInfo =
 struct
@@ -68,7 +68,7 @@ let
   val hol_type = CalculateState.ctype_to_typ
       (thy, ProgramAnalysis.get_vi_type csenv_var)
   val (getter, setter) = get_record_getter_setter
-      ctxt state_typ (HoarePackage.varname munged_name)
+      ctxt state_typ (HoarePackage.varname (MString.dest munged_name))
 in
   (munged_name, pretty_name, hol_type, getter, setter)
 end
@@ -145,33 +145,16 @@ fun get_prog_info ctxt filename : prog_info =
     val csenv = CalculateState.get_csenv thy filename |> the;
 
     (* Get the type of the state record and the globals record. *)
-    fun expand_type_abbrevs t = #T (rep_ctyp (ctyp_of thy t))
+    fun expand_type_abbrevs t = Thm.typ_of (Thm.ctyp_of ctxt t)
     val globals_type = Type (Sign.intern_type thy "globals", []) |> expand_type_abbrevs
     val state_type = Type (Sign.intern_type thy "myvars", [globals_type]) |> expand_type_abbrevs
 
     (* Get the gamma variable, mapping function numbers to function bodies in
      * SIMPL. *)
     val gamma =
-      Const (Consts.intern (Proof_Context.consts_of ctxt) "\<Gamma>", dummyT)
-      |> Syntax.check_term ctxt
-
-    (*
-     * Extract variables from the C parser's data structures into
-     * a form more convenient for us to work with.
-     *)
-    val variables =
-        ProgramAnalysis.get_vars csenv
-        |> (fn x => map snd (Symtab.dest x))
-        |> foldl (fn (a, b) => a @ b) []
-        |> filter (not o Absyn.function_type o ProgramAnalysis.get_vi_type);
-
-    (* Split local and global variables *)
-    val local_variables = variables
-        |> filter (not o ProgramAnalysis.is_global)
-        |> map (get_local_variable_info ctxt state_type)
-    val global_variables = variables
-        |> filter (ProgramAnalysis.is_global)
-        |> map (get_global_variable_info ctxt)
+      (Const (Consts.intern (Proof_Context.consts_of ctxt) "\<Gamma>", dummyT)
+       |> Syntax.check_term ctxt)
+      handle TERM _ => error "autocorres: could not find any functions -- \<Gamma> is not defined."
 
     (*
      * Return a Const term of the local-variable getters/setters for the given

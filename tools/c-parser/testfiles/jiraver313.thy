@@ -14,12 +14,18 @@ begin
 
 ML {* Feedback.verbosity_level := 6 *}
 
+declare [[calculate_modifies_proofs = false ]]
+
 install_C_file memsafe "jiraver313.c"
 
 ML {*
 local
 open Absyn
-val (decls, _) = StrictCParser.parse 15 [] (IsarInstall.mk_thy_relative @{theory} "jiraver313.c");
+val cpp_record =
+    {cpp_path = SOME "/usr/bin/cpp", error_detail = 10}
+val (decls, _) =
+  StrictCParser.parse (IsarInstall.do_cpp cpp_record) 15 []
+    (IsarInstall.mk_thy_relative @{theory} "jiraver313.c");
 in
 val Decl d = hd decls
 val VarDecl vd = RegionExtras.node d

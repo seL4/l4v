@@ -52,7 +52,7 @@ where
 
 termination anotherBL_ord
   apply (rule anotherBL_ord.termination)
-      apply (rule wf_measure[where f="prod_size size size"])
+      apply (rule wf_measure[where f="size_prod size size"])
      apply simp+
   done
 

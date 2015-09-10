@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-header "Deleting Capabilities"
+chapter "Deleting Capabilities"
 
 theory Delete_H
 imports

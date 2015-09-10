@@ -50,22 +50,16 @@ context kernel_m begin
 definition big_step_ADT_C_if where
   "big_step_ADT_C_if utf \<equiv> big_step_adt (ADT_C_if fp utf) (internal_R (ADT_C_if fp utf) big_step_R) big_step_evmap"
 
+(*Note: Might be able to generalise big_step_adt_refines for fw_sim*)
 lemma big_step_ADT_C_if_big_step_ADT_A_if_refines:
-  "uop_sane utf \<Longrightarrow> refines (big_step_ADT_C_if utf) (big_step_ADT_A_if utf) "
+  "uop_nonempty utf \<Longrightarrow> refines (big_step_ADT_C_if utf) (big_step_ADT_A_if utf) "
   apply (simp add: big_step_ADT_A_if_def big_step_ADT_C_if_def)
   apply (rule big_step_adt_refines[where A="ADT_A_if utf", simplified internal_R_ADT_A_if])
     apply (rule LI_trans)
-      apply (rule global_automata_refine.fw_sim_abs_conc)
-      apply (rule haskell_to_abs)
-      apply simp
-     apply (rule global_automata_refine.fw_sim_abs_conc)
-     apply (rule c_to_haskell)
-     apply simp
-    apply (rule global_automaton_invs.ADT_invs)
-    apply (rule haskell_invs)
-    apply simp
-   apply (rule global_automaton_invs.ADT_invs)
-   apply (rule abstract_invs)
+      apply (erule global_automata_refine.fw_sim_abs_conc[OF haskell_to_abs])
+     apply (erule global_automata_refine.fw_sim_abs_conc[OF c_to_haskell])
+    apply (rule global_automaton_invs.ADT_invs[OF haskell_invs])
+   apply (rule global_automaton_invs.ADT_invs[OF abstract_invs])
   apply simp
   done
 
@@ -105,10 +99,7 @@ lemma LI_sub_big_steps':
       apply assumption+
     apply (erule sub_big_steps_I_holds)
      apply assumption+
-  apply (subgoal_tac "Fin A t = Fin C s")
-   apply (subgoal_tac "Fin A y = Fin C z")
-    apply (force simp: internal_R_def)
-   apply force+
+   apply (force simp: internal_R_def)
    done
 
 lemma LI_rel_terminate:
@@ -230,26 +221,24 @@ lemma LI_abs_to_c:
    (full_invs_if \<times> UNIV)"
   apply (rule LI_trans)
     apply (rule global_automata_refine.fw_sim_abs_conc[OF haskell_to_abs])
-    apply (rule uop_sane)
+    apply (rule uop_nonempty)
    apply (rule global_automata_refine.fw_sim_abs_conc[OF c_to_haskell])
-   apply (rule uop_sane)
+   apply (rule uop_nonempty)
   apply (rule global_automaton_invs.ADT_invs[OF haskell_invs])
-  apply (rule uop_sane)
   done
 
 lemma ADT_C_if_Init_Fin_serial:
   "Init_Fin_serial (ADT_C_if fp utf) s {s'. \<exists>hs. (hs, s') \<in> lift_fst_rel (lift_snd_rel rf_sr) \<and> hs \<in> full_invs_if'}"
   apply (unfold_locales)
-     apply (subgoal_tac "ADT_C_if fp utf \<Turnstile> ?P")
+     apply (subgoal_tac "ADT_C_if fp utf \<Turnstile> P" for P)
       prefer 2
       apply (rule fw_inv_transport)
         apply (rule global_automaton_invs.ADT_invs)
         apply (rule haskell_invs)
-        apply (rule uop_sane)
        apply (rule invariant_T)
       apply (rule global_automata_refine.fw_sim_abs_conc)
       apply (rule c_to_haskell)
-      apply (rule uop_sane)
+      apply (rule uop_nonempty)
      apply simp
     apply (rule ADT_C_if_serial[rule_format])
     apply simp
@@ -323,9 +312,9 @@ lemma ADT_C_if_Init_transport:
             (\<exists>as. (as, hs) \<in> lift_fst_rel (lift_snd_rel state_relation) \<and>
                   invs_if as)}"
   apply clarsimp
-  apply (frule set_mp[OF global_automata_refine.init_refinement[OF c_to_haskell[OF uop_sane]]])
+  apply (frule set_mp[OF global_automata_refine.init_refinement[OF c_to_haskell[OF uop_nonempty]]])
   apply (clarsimp simp: Image_def lift_fst_rel_def lift_snd_rel_def)
-  apply (frule set_mp[OF global_automata_refine.init_refinement[OF haskell_to_abs[OF uop_sane]]])
+  apply (frule set_mp[OF global_automata_refine.init_refinement[OF haskell_to_abs[OF uop_nonempty]]])
   apply (clarsimp simp: Image_def lift_fst_rel_def lift_snd_rel_def)
   apply (rule_tac x=bb in exI)
   apply simp
@@ -359,9 +348,9 @@ lemma ADT_C_if_big_step_R_terminate:
           apply assumption
          apply simp
         apply (clarsimp simp: invs_if_full_invs_if extras_s0)
-       apply (drule set_mp[OF global_automata_refine.init_refinement[OF c_to_haskell[OF uop_sane]]])
+       apply (drule set_mp[OF global_automata_refine.init_refinement[OF c_to_haskell[OF uop_nonempty]]])
        apply (clarsimp simp: Image_def lift_fst_rel_def lift_snd_rel_def)
-       apply (frule set_mp[OF global_automata_refine.init_refinement[OF haskell_to_abs[OF uop_sane]]])
+       apply (frule set_mp[OF global_automata_refine.init_refinement[OF haskell_to_abs[OF uop_nonempty]]])
        apply (clarsimp simp: Image_def lift_fst_rel_def lift_snd_rel_def)
        apply (rule_tac x="((aa, bc), bd)" in bexI)
         apply (rule_tac b="((aa, bb), bd)" in relcompI)
@@ -406,7 +395,7 @@ sublocale valid_initial_state_C \<subseteq>
    apply(insert big_step_ADT_C_if_enabled_system)[1]
    apply(fastforce simp: enabled_system_def)
   apply(rule big_step_ADT_C_if_big_step_ADT_A_if_refines)
-  apply (rule uop_sane)
+  apply (rule uop_nonempty)
   done
 
 context valid_initial_state_C begin
@@ -419,4 +408,4 @@ lemma xnonleakage_C:
 
 end
 
-end (* a comment *)
+end

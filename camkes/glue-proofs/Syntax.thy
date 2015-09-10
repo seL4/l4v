@@ -10,9 +10,8 @@
 header {* Syntax *}
 (*<*)
 theory Syntax imports
-  "../../c-parser/CTranslation"
-  "../../autocorres/AutoCorres"
-  "../../autocorres/NonDetMonadEx"
+  "../../tools/c-parser/CTranslation"
+  "../../tools/autocorres/AutoCorres"
 begin
 (*>*)
 

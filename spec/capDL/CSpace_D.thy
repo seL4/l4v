@@ -58,15 +58,20 @@ where
 
 
 
-primrec available_range :: "cdl_cap \<Rightarrow> cdl_object_id set"
-  where "available_range (UntypedCap r available) = available"
+primrec (nonexhaustive)
+  available_range :: "cdl_cap \<Rightarrow> cdl_object_id set"
+where
+  "available_range (UntypedCap r available) = available"
 
-primrec set_available_range :: "cdl_cap \<Rightarrow> cdl_object_id set \<Rightarrow> cdl_cap"
-  where "set_available_range (UntypedCap r available) nrange = UntypedCap r nrange"
+primrec (nonexhaustive)
+  set_available_range :: "cdl_cap \<Rightarrow> cdl_object_id set \<Rightarrow> cdl_cap"
+where
+  "set_available_range (UntypedCap r available) nrange = UntypedCap r nrange"
 
 definition
   set_untyped_cap_as_full :: "cdl_cap \<Rightarrow> cdl_cap \<Rightarrow> cdl_cap_ref \<Rightarrow> unit k_monad"
-where "set_untyped_cap_as_full src_cap new_cap src_slot \<equiv>
+where
+  "set_untyped_cap_as_full src_cap new_cap src_slot \<equiv>
   if (is_untyped_cap src_cap \<and> is_untyped_cap new_cap
      \<and> cap_objects src_cap = cap_objects new_cap) then
      (set_cap src_slot (set_available_range src_cap {}))
@@ -105,11 +110,11 @@ where
  * Delete an ASID pool.
  *)
 definition
-  delete_asid_pool :: "cdl_asid \<Rightarrow> cdl_object_id \<Rightarrow> unit k_monad"
+  delete_asid_pool :: "cdl_cnode_index \<Rightarrow> cdl_object_id \<Rightarrow> unit k_monad"
 where
   "delete_asid_pool base ptr \<equiv> do
     asid_table \<leftarrow> gets cdl_asid_table;
-    asid_table' \<leftarrow> return $ asid_table (fst base \<mapsto> NullCap);
+    asid_table' \<leftarrow> return $ asid_table (base \<mapsto> NullCap);
     modify (\<lambda>s. s \<lparr>cdl_asid_table := asid_table'\<rparr>)
   od \<sqinter> return ()"
 
@@ -124,7 +129,7 @@ where
     asid_table \<leftarrow> gets cdl_asid_table;
     case asid_table (fst asid) of
        Some NullCap \<Rightarrow> return ()
-     | Some (AsidPoolCap p _) \<Rightarrow> set_cap (p, snd asid) NullCap
+     | Some (AsidPoolCap p _) \<Rightarrow> set_cap (p, (snd asid)) NullCap
      | _ \<Rightarrow> fail
   od \<sqinter> return ()"
 
@@ -216,15 +221,15 @@ where
          return (NullCap, None)
        od
        else return (NullCap, None))"
-| "finalise_cap (PageTableCap ptr x asid)     final = (
+| "finalise_cap (PageTableCap ptr x (Some asid))     final = (
        if (final \<and> x = Real) then do
-         unmap_page_table ptr;
+         unmap_page_table asid ptr;
          return (NullCap, None)
        od
        else return (NullCap, None))"
-| "finalise_cap (FrameCap ptr _ _ x asid)       final = (
+| "finalise_cap (FrameCap ptr _ s x (Some asid))       final = (
        if x = Real then do
-         unmap_page ptr;
+         unmap_page asid ptr s;
          return (NullCap, None)
        od
        else return (NullCap, None))"
@@ -242,8 +247,7 @@ lemma fast_finalise_def2:
      assert (result = (NullCap, None))
    od"
   apply (cases cap, simp_all add: liftM_def assert_def can_fast_finalise_def)
-  apply (case_tac option)
-   apply simp+
+  apply (rename_tac option, case_tac option, simp+)+ (* FIXME *)
   done
 
 (*
@@ -273,10 +277,10 @@ where
   od"
 
 definition
-  monadic_option_relation_form :: "('a \<Rightarrow> ('s, 'b) nondet_monad)
+  monadic_rel_optionation_form :: "('a \<Rightarrow> ('s, 'b) nondet_monad)
       \<Rightarrow> (('a \<times> 's) option \<times> ('b \<times> 's) option) set"
 where
- "monadic_option_relation_form f =
+ "monadic_rel_optionation_form f =
     {(x, y). (x \<noteq> None \<and> y \<noteq> None \<and> the y \<in> fst (split f (the x)))
            \<or> (x \<noteq> None \<and> y = None \<and> snd (split f (the x)))
            \<or> (x = None \<and> y = None)}"
@@ -287,8 +291,8 @@ where
  "monadic_option_dest S = (Some -` S, None \<in> S)"
 
 lemma use_option_form:
-  "f x = (\<lambda>s. monadic_option_dest  (monadic_option_relation_form f `` {Some (x, s)}))"
-  by (simp add: monadic_option_relation_form_def monadic_option_dest_def)
+  "f x = (\<lambda>s. monadic_option_dest  (monadic_rel_optionation_form f `` {Some (x, s)}))"
+  by (simp add: monadic_rel_optionation_form_def monadic_option_dest_def)
 
 lemma ex_option: " (\<exists>x. P x) = ((\<exists>y. P (Some y)) \<or> P None)"
   apply safe
@@ -297,9 +301,9 @@ lemma ex_option: " (\<exists>x. P x) = ((\<exists>y. P (Some y)) \<or> P None)"
 
 lemma use_option_form_bind:
   "f x >>= g = (\<lambda>s. monadic_option_dest
-       ((monadic_option_relation_form f O monadic_option_relation_form g) `` {Some (x, s)}))"
+       ((monadic_rel_optionation_form f O monadic_rel_optionation_form g) `` {Some (x, s)}))"
   apply (rule ext)
-  apply (simp add: monadic_option_relation_form_def monadic_option_dest_def
+  apply (simp add: monadic_rel_optionation_form_def monadic_option_dest_def
                    bind_def split_def)
   apply (simp add: relcomp_unfold ex_option image_def Pair_fst_snd_eq Bex_def)
   apply fastforce
@@ -309,7 +313,7 @@ definition
   monadic_trancl :: "('a \<Rightarrow> ('s, 'a) nondet_monad)
        \<Rightarrow> 'a \<Rightarrow> ('s, 'a) nondet_monad"
 where
- "monadic_trancl f x = (\<lambda>s. monadic_option_dest ((monadic_option_relation_form f)\<^sup>* `` {Some (x, s)}))"
+ "monadic_trancl f x = (\<lambda>s. monadic_option_dest ((monadic_rel_optionation_form f)\<^sup>* `` {Some (x, s)}))"
 
 definition
   monadic_trancl_preemptible ::
@@ -440,7 +444,7 @@ definition
   ep_cancel_badged_sends :: "cdl_object_id \<Rightarrow> cdl_badge \<Rightarrow> unit k_monad"
 where
   "ep_cancel_badged_sends ep badge \<equiv>
-    modify (\<lambda>s. s\<lparr>cdl_objects := Option.map
+    modify (\<lambda>s. s\<lparr>cdl_objects := map_option
         (\<lambda>obj. case obj of
             Tcb t \<Rightarrow>
               if (is_thread_blocked_on_endpoint t ep
@@ -548,7 +552,7 @@ where
       delete_asid_pool base ptr;
       clear_object_caps ptr;
       asid_table \<leftarrow> gets cdl_asid_table;
-      asid_table' \<leftarrow> return $ asid_table (fst base \<mapsto> AsidPoolCap ptr (0, 0));
+      asid_table' \<leftarrow> return $ asid_table (base \<mapsto> AsidPoolCap ptr 0);
       modify (\<lambda>s. s \<lparr>cdl_asid_table := asid_table'\<rparr>);
       return cap
     od \<sqinter> return cap
@@ -726,5 +730,19 @@ where
    | PageTableCap _ _ _ \<Rightarrow> throw \<sqinter> returnOk cap
    | PageDirectoryCap _ _ _ \<Rightarrow> throw \<sqinter> returnOk cap
    | _ \<Rightarrow> returnOk cap"
+
+
+(* This function is here to make it available in both Tcb_D and
+   PageTable_D *)
+
+(* Modify the TCB's IpcBuffer or Registers in an arbitrary fashion. *)
+definition
+  corrupt_tcb_intent :: "cdl_object_id \<Rightarrow> unit k_monad"
+where
+  "corrupt_tcb_intent target_tcb \<equiv>
+    do
+      new_intent \<leftarrow> select UNIV;
+      update_thread target_tcb (\<lambda>t. t\<lparr>cdl_tcb_intent := new_intent\<rparr>)
+    od"
 
 end

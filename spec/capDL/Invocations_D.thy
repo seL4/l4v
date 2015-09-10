@@ -45,6 +45,7 @@ datatype cdl_irq_handler_invocation =
     AckIrq cdl_irq
   | SetIrqHandler cdl_irq cdl_cap cdl_cap_ref
   | ClearIrqHandler cdl_irq
+  | SetMode cdl_irq bool bool
 
 datatype cdl_endpoint_invocation =
     (* badge, grant, ep *)
@@ -63,11 +64,11 @@ datatype cdl_reply_invocation =
 datatype cdl_page_table_invocation =
     (* PageTableMap <real_pt_cap> <pt_cap> <pt_cap_ref> <pd_target_slot> *)
     PageTableMap cdl_cap cdl_cap cdl_cap_ref cdl_cap_ref
-    (* PageTableUnmap <pt_cap_ref> <pt_cap_ref> *)
-  | PageTableUnmap cdl_object_id cdl_cap_ref
+    (* PageTableUnmap <mapped_addr option> <pt_obj_id> <pt_cap_ref> *)
+  | PageTableUnmap "cdl_mapped_addr option"  cdl_object_id cdl_cap_ref
 
 datatype cdl_asid_control_invocation =
-    MakePool cdl_cap cdl_cap_ref "cdl_object_id set" cdl_cap_ref cdl_asid
+    MakePool cdl_cap cdl_cap_ref "cdl_object_id set" cdl_cap_ref nat
 
 datatype cdl_asid_pool_invocation =
     Assign cdl_asid cdl_cap_ref cdl_cap_ref
@@ -78,8 +79,9 @@ datatype flush =
 datatype cdl_page_invocation =
     PageMap cdl_cap cdl_cap cdl_cap_ref "cdl_cap_ref list"
   | PageRemap cdl_cap "cdl_cap_ref list"
-  | PageUnmap cdl_object_id cdl_cap_ref
+  | PageUnmap "cdl_mapped_addr option" cdl_object_id "cdl_cap_ref" nat
   | PageFlushCaches flush
+  | PageGetAddress 
 
 
 datatype cdl_page_directory_invocation =

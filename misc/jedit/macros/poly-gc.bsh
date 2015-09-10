@@ -1,0 +1,17 @@
+/*
+ * Copyright 2014, NICTA
+ *
+ * This software may be distributed and modified according to the terms of
+ * the BSD 2-Clause license. Note that NO WARRANTY is provided.
+ * See "LICENSE_BSD2.txt" for details.
+ *
+ * @TAG(NICTA_BSD)
+ */
+
+/* Insert proof text to force a PolyML garbage collection. This is useful when
+ * a `try` or `sledgehammer` invocation has forced your machine into swap and
+ * has refused to return memory even after it has stopped running. Recommended
+ * usage is to bind this to a keyboard shortcut.
+ */
+
+textArea.setSelectedText("ML {* PolyML.fullGC () *}");

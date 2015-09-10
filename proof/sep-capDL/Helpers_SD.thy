@@ -60,7 +60,7 @@ definition
 notation (xsymbols)
   map_comp'  (infixl "\<circ>\<^sub>M" 55)
 
-lemma map_comp'_apply [simp]: "(f \<circ>\<^sub>M g) x = option_case None (\<lambda>x. Some (f x)) (g x)"
+lemma map_comp'_apply [simp]: "(f \<circ>\<^sub>M g) x = case_option None (\<lambda>x. Some (f x)) (g x)"
   by (clarsimp simp: map_comp'_def)
 
 lemma map_comp'_empty [simp]:
@@ -158,56 +158,14 @@ lemma all_capsE [elim!]:
   apply (clarsimp simp: all_caps_def|fast)+
   by (metis surj_pair)
 
-definition
-  irq_cnodes :: "cdl_state \<Rightarrow> cdl_object_id set"
-where
-  "irq_cnodes \<equiv> \<lambda>s. range (cdl_irq_node s)"
-
-definition
-  bound_irqs :: "cdl_state \<Rightarrow> cdl_irq set"
-where
-  "bound_irqs \<equiv> \<lambda>s. {irq. \<exists>cap. slots_of (cdl_irq_node s irq) s 0 = Some cap \<and> cap \<noteq> NullCap}"
-
-definition
-  bound_irq_list :: "cdl_state \<Rightarrow> cdl_irq list"
-where
-  "bound_irq_list \<equiv> \<lambda>s. sorted_list_of_set (bound_irqs s)"
-
-definition
-  used_irqs :: "cdl_state \<Rightarrow> cdl_irq set"
-where
-  "used_irqs \<equiv> \<lambda>s. {irq. \<exists>cap. cap \<in> all_caps s \<and> is_irqhandler_cap cap \<and> cap_irq cap = irq}"
-
-definition
-  used_irq_list :: "cdl_state \<Rightarrow> cdl_irq list"
-where
-  "used_irq_list \<equiv> \<lambda>s. sorted_list_of_set (used_irqs s)"
-
-definition
-  used_irq_cnodes :: "cdl_state \<Rightarrow> cdl_object_id set"
-where
-  "used_irq_cnodes \<equiv> \<lambda>s. cdl_irq_node s ` used_irqs s"
-
-lemma length_sorted_list_of_set [simp]:
-  "finite A \<Longrightarrow> length (sorted_list_of_set A) = card A"
-  by (metis sorted_list_of_set distinct_card)
-
-lemma length_used_irq_list [simp]:
-  "length (used_irq_list spec) = card (used_irqs spec)"
-  by (clarsimp simp: used_irq_list_def)
-
-lemma distinct_used_irq_list [simp]:
-  "distinct (used_irq_list spec)"
-  by (simp add: used_irq_list_def)
-
-lemma set_used_irq_list [simp]:
-  "set (used_irq_list spec) = used_irqs spec"
-  by (simp add: used_irq_list_def)
-
 
 lemma default_tcb_slots:
- "[0..<tcb_pending_op_slot] = [0,1,2,3,4]"
-  by (clarsimp simp: tcb_pending_op_slot_def upt_rec)
+ "[0 ..< tcb_pending_op_slot] = [0,1,2,3,4]"
+ "[0 ..< 5] = [0,1,2,3,4]"
+ "[0 .e. tcb_pending_op_slot] = [0,1,2,3,4,5]"
+ "[0 .e. (5::nat)] = [0,1,2,3,4,5]"
+ "[0..< 6] = [0,1,2,3,4,5]"
+  by (clarsimp simp: tcb_pending_op_slot_def upt_rec)+
 
 definition "update_tcb_fault_endpoint fault_ep = cdl_tcb_fault_endpoint_update (\<lambda>_. fault_ep)"
 
@@ -414,6 +372,10 @@ definition
  "is_cnode v \<equiv> case v of CNode _ \<Rightarrow> True | _ \<Rightarrow> False"
 
 definition
+  is_irq_node :: "cdl_object \<Rightarrow> bool" where
+ "is_irq_node v \<equiv> case v of IRQNode _ \<Rightarrow> True | _ \<Rightarrow> False"
+
+definition
   is_asidpool :: "cdl_object \<Rightarrow> bool" where
  "is_asidpool v \<equiv> case v of AsidPool _ \<Rightarrow> True | _ \<Rightarrow> False"
 
@@ -510,6 +472,8 @@ abbreviation
 abbreviation
   "cnode_at \<equiv> object_at is_cnode"
 abbreviation
+  "irq_node_at \<equiv> object_at is_irq_node"
+abbreviation
   "asidpool_at \<equiv> object_at is_asidpool"
 abbreviation
   "pt_at \<equiv> object_at is_pt"
@@ -518,12 +482,48 @@ abbreviation
 abbreviation
   "frame_at \<equiv> object_at is_frame"
 
+(* Threads that are waiting to run. *)
+definition
+  is_waiting_thread :: "cdl_object \<Rightarrow> bool"
+where
+  "is_waiting_thread obj \<equiv> is_tcb obj \<and> object_slots obj tcb_pending_op_slot = Some RestartCap"
+
+abbreviation
+  "is_waiting_thread_at \<equiv> object_at is_waiting_thread"
+
+definition
+  irq_nodes :: "cdl_state \<Rightarrow> cdl_object_id set"
+where
+  "irq_nodes \<equiv> \<lambda>s. {obj_id. irq_node_at obj_id s}"
+
+definition
+  bound_irqs :: "cdl_state \<Rightarrow> cdl_irq set"
+where
+  "bound_irqs \<equiv> \<lambda>s. {irq. \<exists>cap. slots_of (cdl_irq_node s irq) s 0 = Some cap \<and> cap \<noteq> NullCap}"
+
+definition
+  bound_irq_list :: "cdl_state \<Rightarrow> cdl_irq list"
+where
+  "bound_irq_list \<equiv> \<lambda>s. sorted_list_of_set (bound_irqs s)"
+
+definition
+  used_irqs :: "cdl_state \<Rightarrow> cdl_irq set"
+where
+  "used_irqs \<equiv> \<lambda>s. {irq. \<exists>cap. cap \<in> all_caps s \<and> is_irqhandler_cap cap \<and> cap_irq cap = irq}"
+
+definition
+  used_irq_list :: "cdl_state \<Rightarrow> cdl_irq list"
+where
+  "used_irq_list \<equiv> \<lambda>s. sorted_list_of_set (used_irqs s)"
+
+definition
+  used_irq_nodes :: "cdl_state \<Rightarrow> cdl_object_id set"
+where
+  "used_irq_nodes \<equiv> \<lambda>s. cdl_irq_node s ` used_irqs s"
 
 (* Distinctions between "real objects" and IRQ objects. *)
 definition
-  "real_object_at \<equiv> \<lambda> obj_id s. obj_id \<in> dom (cdl_objects s) \<and> obj_id \<notin> irq_cnodes s"
-definition
-  "real_cnode_at  \<equiv> \<lambda>obj_id s. obj_id \<notin> irq_cnodes s \<and> cnode_at obj_id s"
+  "real_object_at \<equiv> \<lambda> obj_id s. obj_id \<in> dom (cdl_objects s) \<and> obj_id \<notin> irq_nodes s"
 
 
 (* Agregate object types. *)
@@ -535,8 +535,6 @@ abbreviation
   "cnode_or_tcb_at \<equiv> \<lambda>obj_id spec. cnode_at obj_id spec \<or> tcb_at obj_id spec"
 abbreviation
   "memory_object_at \<equiv> \<lambda>obj_id spec. pt_at obj_id spec \<or> pd_at obj_id spec \<or> frame_at obj_id spec"
-abbreviation
-  "real_cnode_or_tcb_at \<equiv> \<lambda>obj_id spec. real_cnode_at obj_id spec \<or> tcb_at obj_id spec"
 
 lemma capless_at_def2:
   "capless_at p s = object_at (\<lambda>obj. \<not> (has_slots obj)) p s"
@@ -555,18 +553,36 @@ lemma ko_at_tcb_at:
 abbreviation
   "type_at T \<equiv> object_at (\<lambda>ob. object_type ob = T)"
 
+lemma length_sorted_list_of_set [simp]:
+  "finite A \<Longrightarrow> length (sorted_list_of_set A) = card A"
+  by (metis sorted_list_of_set distinct_card)
+
+lemma length_used_irq_list [simp]:
+  "length (used_irq_list spec) = card (used_irqs spec)"
+  by (clarsimp simp: used_irq_list_def)
+
+lemma distinct_used_irq_list [simp]:
+  "distinct (used_irq_list spec)"
+  by (simp add: used_irq_list_def)
+
+lemma set_used_irq_list [simp]:
+  "set (used_irq_list spec) = used_irqs spec"
+  by (simp add: used_irq_list_def)
+
+
 lemma object_type_is_object:
   "is_untyped obj  = (object_type obj = UntypedType)"
   "is_ep obj       = (object_type obj = EndpointType)"
   "is_aep obj      = (object_type obj = AsyncEndpointType)"
   "is_tcb obj      = (object_type obj = TcbType)"
   "is_cnode obj    = (object_type obj = CNodeType)"
+  "is_irq_node obj = (object_type obj = IRQNodeType)"
   "is_asidpool obj = (object_type obj = AsidPoolType)"
   "is_pt obj       = (object_type obj = PageTableType)"
   "is_pd obj       = (object_type obj = PageDirectoryType)"
   "is_frame obj    = (\<exists>n. object_type obj = FrameType n)"
   by (simp_all add: object_type_def is_untyped_def is_ep_def is_aep_def is_tcb_def
-                    is_cnode_def is_asidpool_def is_pt_def is_pd_def is_frame_def
+                    is_cnode_def is_irq_node_def is_asidpool_def is_pt_def is_pd_def is_frame_def
              split: cdl_object.splits)
 
 lemma object_at_object_type:
@@ -575,6 +591,7 @@ lemma object_at_object_type:
   "\<lbrakk>cdl_objects spec obj_id = Some obj; aep_at obj_id spec\<rbrakk> \<Longrightarrow> object_type obj = AsyncEndpointType"
   "\<lbrakk>cdl_objects spec obj_id = Some obj; tcb_at obj_id spec\<rbrakk> \<Longrightarrow> object_type obj = TcbType"
   "\<lbrakk>cdl_objects spec obj_id = Some obj; cnode_at obj_id spec\<rbrakk> \<Longrightarrow> object_type obj = CNodeType"
+  "\<lbrakk>cdl_objects spec obj_id = Some obj; irq_node_at obj_id spec\<rbrakk> \<Longrightarrow> object_type obj = IRQNodeType"
   "\<lbrakk>cdl_objects spec obj_id = Some obj; asidpool_at obj_id spec\<rbrakk> \<Longrightarrow> object_type obj = AsidPoolType"
   "\<lbrakk>cdl_objects spec obj_id = Some obj; pt_at obj_id spec\<rbrakk> \<Longrightarrow> object_type obj = PageTableType"
   "\<lbrakk>cdl_objects spec obj_id = Some obj; pd_at obj_id spec\<rbrakk> \<Longrightarrow> object_type obj = PageDirectoryType"
@@ -586,6 +603,7 @@ lemma object_type_object_at:
   "\<lbrakk>cdl_objects spec obj_id = Some obj; object_type obj = AsyncEndpointType\<rbrakk> \<Longrightarrow> aep_at obj_id spec"
   "\<lbrakk>cdl_objects spec obj_id = Some obj; object_type obj = TcbType\<rbrakk> \<Longrightarrow> tcb_at obj_id spec"
   "\<lbrakk>cdl_objects spec obj_id = Some obj; object_type obj = CNodeType\<rbrakk> \<Longrightarrow> cnode_at obj_id spec"
+  "\<lbrakk>cdl_objects spec obj_id = Some obj; object_type obj = IRQNodeType\<rbrakk> \<Longrightarrow> irq_node_at obj_id spec"
   "\<lbrakk>cdl_objects spec obj_id = Some obj; object_type obj = AsidPoolType\<rbrakk> \<Longrightarrow> asidpool_at obj_id spec"
   "\<lbrakk>cdl_objects spec obj_id = Some obj; object_type obj = PageTableType\<rbrakk> \<Longrightarrow> pt_at obj_id spec"
   "\<lbrakk>cdl_objects spec obj_id = Some obj; object_type obj = PageDirectoryType\<rbrakk> \<Longrightarrow> pd_at obj_id spec"
@@ -596,11 +614,9 @@ lemma set_object_type [simp]:
   "{obj_id \<in> dom (cdl_objects spec). table_at obj_id spec} = {obj_id. table_at obj_id spec}"
   "{obj_id \<in> dom (cdl_objects spec). capless_at obj_id spec} = {obj_id. capless_at obj_id spec}"
   "{obj_id \<in> dom (cdl_objects spec). cnode_or_tcb_at obj_id spec} = {obj_id. cnode_or_tcb_at obj_id spec}"
-  "{obj_id \<in> dom (cdl_objects spec). real_cnode_at obj_id spec} = {obj_id. real_cnode_at obj_id spec}"
+  "{obj_id \<in> dom (cdl_objects spec). cnode_at obj_id spec} = {obj_id. cnode_at obj_id spec}"
   "{obj_id \<in> dom (cdl_objects spec). real_object_at obj_id spec} = {obj_id. real_object_at obj_id spec}"
-  "{obj_id \<in> dom (cdl_objects spec). real_cnode_at obj_id spec} = {obj_id. real_cnode_at obj_id spec}"
-  "{obj_id \<in> dom (cdl_objects spec). real_cnode_or_tcb_at obj_id spec} = {obj_id. real_cnode_or_tcb_at obj_id spec}"
-  by (auto simp: object_at_def real_cnode_at_def real_object_at_def)
+  by (auto simp: object_at_def real_object_at_def)
 
 
 definition
@@ -608,32 +624,11 @@ definition
 where
   "real_objects \<equiv> \<lambda>s. {obj_id. real_object_at obj_id s}"
 
-lemma real_cnode_at_cnode_at [elim]:
-  "real_cnode_at obj_id s \<Longrightarrow> cnode_at obj_id s"
-  by (clarsimp simp: real_cnode_at_def)
-
-lemma real_cnode_at_real_object_at:
-  "real_cnode_at obj_id s \<Longrightarrow> real_object_at obj_id s"
-  by (clarsimp simp: real_cnode_at_def real_object_at_def object_at_def)
-
-
-lemma real_cnode_at_simps:
-  "(real_object_at obj_id spec \<and> cnode_at obj_id spec) = real_cnode_at obj_id spec"
-  by (auto simp: real_object_at_def real_cnode_at_def object_at_def)
-
-lemma real_cnode_or_tcb_at_simps:
-  "(real_cnode_or_tcb_at obj_id spec \<and> real_cnode_at obj_id spec) = real_cnode_at obj_id spec"
-  "(real_cnode_or_tcb_at obj_id spec \<and> \<not> real_cnode_at obj_id spec) = tcb_at obj_id spec"
-  by (auto simp: real_object_at_def real_cnode_at_def object_at_def
-                 object_type_is_object)
 
 lemma cnode_or_tcb_at_simps:
   "(cnode_or_tcb_at obj_id spec \<and> cnode_at obj_id spec) = cnode_at obj_id spec"
   "(cnode_or_tcb_at obj_id spec \<and> \<not> cnode_at obj_id spec) = tcb_at obj_id spec"
-  by (auto simp: object_at_def object_type_is_object)+
-
-lemmas object_at_simps = real_cnode_at_simps real_cnode_or_tcb_at_simps cnode_or_tcb_at_simps
-
+  by (auto simp: object_at_def object_type_is_object)
 
 (******************************
  * Cap types and default caps *
@@ -707,7 +702,7 @@ lemma default_cap_eq:
     cnode_cap_size cap = cnode_cap_size cap';
     cap_irq cap = cap_irq cap'\<rbrakk>
   \<Longrightarrow> cap = cap'"
-  by (auto simp: is_default_cap_def is_irqhandler_cap_def cap_type_def cap_irq_def
+  by (auto simp: is_default_cap_def cap_type_def cap_irq_def
           split: cdl_cap.splits)
 
 
@@ -717,7 +712,7 @@ lemma cnode_cap_size_non_cnode [simp]:
 
 lemma irqhandler_cap_irq_non_irqhandler [simp]:
   "\<not> is_irqhandler_cap cap \<Longrightarrow> cap_irq cap = undefined"
-  by (clarsimp simp: is_irqhandler_cap_def cap_irq_def split: cdl_cap.splits)
+  by (clarsimp simp: cap_irq_def split: cdl_cap.splits)
 
 lemma default_cap_eq_non_cnode:
   "\<lbrakk>is_default_cap cap; is_default_cap cap';
@@ -726,8 +721,6 @@ lemma default_cap_eq_non_cnode:
   \<Longrightarrow> cap = cap'"
   apply (frule (1) default_cap_eq, simp+)
   apply (clarsimp simp: is_default_cap_def cap_type_def)
-  apply (auto simp: is_irqhandler_cap_def
-             split: cdl_cap.splits)
   done
 
 lemma cap_type_default_cap [simp]:
@@ -761,6 +754,7 @@ lemma asidpool_has_slots [elim!]:
 lemma object_type_has_slots [elim!]:
   "object_type obj = TcbType \<Longrightarrow> has_slots obj"
   "object_type obj = CNodeType \<Longrightarrow> has_slots obj"
+  "object_type obj = IRQNodeType \<Longrightarrow> has_slots obj"
   "object_type obj = PageTableType \<Longrightarrow> has_slots obj"
   "object_type obj = PageDirectoryType \<Longrightarrow> has_slots obj"
   "object_type obj = AsidPoolType \<Longrightarrow> has_slots obj"
@@ -790,12 +784,14 @@ lemma cap_has_object_update_cap_object [simp]:
               split: cdl_cap.splits)
 
 lemma cap_object_default_cap' [simp]:
-  "\<not>is_untyped obj \<Longrightarrow> cap_object (default_cap (object_type obj) {obj_id} sz) = obj_id"
-  by (clarsimp simp: default_cap_def  object_type_def is_untyped_def cap_object_simps
+  "\<lbrakk>\<not>is_untyped obj; \<not>is_irq_node obj\<rbrakk>
+  \<Longrightarrow> cap_object (default_cap (object_type obj) {obj_id} sz) = obj_id"
+  by (clarsimp simp: default_cap_def  object_type_def is_untyped_def is_irq_node_def cap_object_simps
               split: cdl_object_type.splits cdl_object.splits)
 
 lemma cap_object_default_cap [simp]:
-  "type \<noteq> UntypedType \<Longrightarrow> cap_object (default_cap type {obj_id} sz) = obj_id"
+  "\<lbrakk>type \<noteq> UntypedType; type \<noteq> IRQNodeType\<rbrakk>
+  \<Longrightarrow> cap_object (default_cap type {obj_id} sz) = obj_id"
   by (clarsimp simp: default_cap_def  object_type_def is_untyped_def cap_object_simps
               split: cdl_object_type.splits cdl_object.splits)
 
@@ -815,7 +811,7 @@ lemma cap_objects_update_cap_object [simp]:
               split: cdl_cap.splits)
 
 lemma  cap_has_object_default_cap [simp]:
-  "cap_has_object (default_cap type ids sz)"
+  "type \<noteq> IRQNodeType \<Longrightarrow> cap_has_object (default_cap type ids sz)"
   by (clarsimp simp: default_cap_def cap_has_object_def split: cdl_object_type.splits)
 
 lemma cap_rights_default_cap_cnode [simp]:
@@ -860,7 +856,7 @@ lemma is_cap_NullCap [simp]:
   "\<not> is_frame_cap NullCap"
   "\<not> is_fake_pt_cap NullCap"
   "\<not> is_irqhandler_cap NullCap"
-  by (clarsimp simp: cap_type_def is_fake_pt_cap_def is_irqhandler_cap_def)+
+  by (clarsimp simp: cap_type_def is_fake_pt_cap_def)+
 
 (* The slots of an object, returns an empty list for non-existing objects
    or objects that do not have caps *)
@@ -1004,6 +1000,7 @@ lemma object_default_state_def2:
       | AsyncEndpoint \<Rightarrow> AsyncEndpoint
       | Tcb tcb \<Rightarrow> Tcb (default_tcb (cdl_tcb_domain tcb))
       | CNode cnode \<Rightarrow> CNode (empty_cnode (cdl_cnode_size_bits cnode))
+      | IRQNode cnode \<Rightarrow> IRQNode empty_irq_node
       | AsidPool ap \<Rightarrow> AsidPool \<lparr>cdl_asid_pool_caps = empty_cap_map asid_low_bits\<rparr>
       | PageTable pt \<Rightarrow> PageTable \<lparr> cdl_page_table_caps = empty_cap_map 8 \<rparr>
       | PageDirectory pd \<Rightarrow> PageDirectory \<lparr> cdl_page_directory_caps = empty_cap_map 12 \<rparr>
@@ -1049,7 +1046,8 @@ lemma update_slots_same_object:
 lemma update_slots_eq_slots:
   "\<lbrakk>has_slots obj; update_slots slots obj = update_slots slots' obj'\<rbrakk> \<Longrightarrow> slots = slots'"
   by (clarsimp simp: update_slots_def has_slots_def cdl_tcb.splits cdl_cnode.splits
-                     cdl_asid_pool.splits cdl_page_table.splits cdl_page_directory.splits
+                     cdl_asid_pool.splits cdl_irq_node.splits
+                     cdl_page_table.splits cdl_page_directory.splits
               split: cdl_object.splits)
 
 lemma has_slots_object_type_has_slots:
@@ -1069,15 +1067,6 @@ lemma is_cnode_object_default_state [simp]:
   "is_cnode (object_default_state obj) = is_cnode obj"
   by (clarsimp simp: object_default_state_def2 is_cnode_def split: cdl_object.splits)
 
-(* FIXME, is this a bad idea to add to the simpset? *)
-lemma range_Slot [simp]:
-  "(range Slot) = (UNIV - {Fields})"
-   apply (clarsimp simp: image_def)
-   apply rule
-    apply clarsimp+
-   apply (case_tac x)
-    apply auto
-   done
 
 lemma update_slots_same [simp]:
   "object_slots obj = cap_map \<Longrightarrow> update_slots cap_map obj = obj"
@@ -1086,14 +1075,6 @@ lemma update_slots_same [simp]:
 lemma dom_sub_restrict [simp]:
   "dom (m `- A) = dom m \<inter> -A"
   by (auto simp: sub_restrict_map_def dom_def split: split_if_asm)
-
-lemma Slot_slot_union:
-  "insert (Slot slot) (Slot ` (UNIV - {slot})) = UNIV - {Fields}"
-   apply rule
-    apply clarsimp+
-   apply (case_tac x)
-    apply auto
-   done
 
 lemma inter_empty_not_both:
 "\<lbrakk>x \<in> A; A \<inter> B = {}\<rbrakk> \<Longrightarrow> x \<notin> B"

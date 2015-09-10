@@ -21,7 +21,7 @@ report-regression:
 #
 
 # CAmkES
-HEAPS += CamkesAdlSpec CamkesGlueSpec CamkesGlueProofs
+HEAPS += CamkesAdlSpec CamkesCdlRefine CamkesGlueSpec CamkesGlueProofs
 GROUPS += Camkes
 
 # Clean

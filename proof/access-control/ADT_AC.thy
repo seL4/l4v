@@ -41,7 +41,7 @@ lemma objs_valid_tcb_vtable:
   "\<lbrakk>valid_objs s; get_tcb t s = Some tcb\<rbrakk> \<Longrightarrow> s \<turnstile> tcb_vtable tcb"
   apply (clarsimp simp: get_tcb_def split: option.splits Structures_A.kernel_object.splits)
   apply (erule cte_wp_valid_cap[rotated])
-  apply (rule cte_wp_at_tcbI[where t="(a, b)", standard, where b="tcb_cnode_index 1"])
+  apply (rule cte_wp_at_tcbI[where t="(a, b)" for a b, where b3="tcb_cnode_index 1"])
     apply fastforce+
   done
 
@@ -52,21 +52,20 @@ lemma pd_of_thread_page_directory_at:
   apply (clarsimp simp: get_pd_of_thread_def
                   split: option.splits kernel_object.splits cap.splits arch_cap.splits
                          if_splits)
-  apply (subgoal_tac "s \<turnstile> ArchObjectCap (PageDirectoryCap word (Some aa))")
-   apply (fastforce simp: valid_cap_def2 valid_cap_ref_def)
-  apply (cut_tac s=s and t=tcb and tcb=tcb_ext in objs_valid_tcb_vtable)
-    apply (simp add: invs_valid_objs get_tcb_def)+
+  apply (frule_tac t=tcb in objs_valid_tcb_vtable[OF invs_valid_objs])
+   apply (simp add: get_tcb_def)
+  apply (fastforce simp: valid_cap_def2 valid_cap_ref_def)
   done
 
 lemma ptr_offset_in_ptr_range:
   "\<lbrakk> invs s; get_page_info (\<lambda>obj. get_arch_obj (kheap s obj))
            (get_pd_of_thread (kheap s) (arch_state s) tcb) x =
-          Some (a, aa, b); x \<notin> kernel_mappings;
+          Some (base, sz, attr, r); x \<notin> kernel_mappings;
      get_pd_of_thread (kheap s) (arch_state s) tcb \<noteq> arm_global_pd (arch_state s) \<rbrakk>
-   \<Longrightarrow> ptrFromPAddr a + (x && mask aa) \<in> ptr_range (ptrFromPAddr a) aa"
+   \<Longrightarrow> ptrFromPAddr base + (x && mask sz) \<in> ptr_range (ptrFromPAddr base) sz"
   apply (simp add: ptr_range_def mask_def)
   apply (rule conjI)
-   apply (rule_tac b="2 ^ aa - 1" in word_plus_mono_right2)
+   apply (rule_tac b="2 ^ sz - 1" in word_plus_mono_right2)
     apply (frule some_get_page_info_umapsD)
           apply (clarsimp simp: get_pd_of_thread_reachable invs_arch_objs
                                 invs_psp_aligned invs_valid_asid_table invs_valid_objs)+
@@ -152,6 +151,7 @@ lemma pt_in_pd_page_table_at:
     \<Longrightarrow> page_table_at (ptrFromPAddr word1) s"
   apply (clarsimp simp: get_pd_entry_def get_arch_obj_def
                   split: option.splits kernel_object.splits arch_kernel_obj.splits)
+  apply (rename_tac "fun")
   apply (subgoal_tac "valid_arch_obj (PageDirectory fun) s")
    apply (simp add: kernel_mappings_slots_eq)
    apply (drule bspec)
@@ -161,14 +161,14 @@ lemma pt_in_pd_page_table_at:
   done
 
 lemma get_page_info_state_objs_to_policy:
-  "\<lbrakk> invs s; auth \<in> vspace_cap_rights_to_auth b;
+  "\<lbrakk> invs s; auth \<in> vspace_cap_rights_to_auth r;
      get_page_info (\<lambda>obj. get_arch_obj (kheap s obj))
-           (get_pd_of_thread (kheap s) (arch_state s) tcb) x = Some (a, aa, b);
+           (get_pd_of_thread (kheap s) (arch_state s) tcb) x = Some (base, sz, attr, r);
      get_pd_of_thread (kheap s) (arch_state s) tcb \<noteq> arm_global_pd (arch_state s);
      get_pd_entry (\<lambda>obj. get_arch_obj (kheap s obj))
          (get_pd_of_thread (kheap s) (arch_state s) tcb) x =
         Some (PageTablePDE word1 set1 word2); x \<notin> kernel_mappings \<rbrakk>
-  \<Longrightarrow> (ptrFromPAddr word1, auth, ptrFromPAddr (a + (x && mask aa))) \<in> state_objs_to_policy s"
+  \<Longrightarrow> (ptrFromPAddr word1, auth, ptrFromPAddr (base + (x && mask sz))) \<in> state_objs_to_policy s"
   apply (simp add: state_objs_to_policy_def)
   apply (rule sbta_vref)
   apply (clarsimp simp: state_vrefs_def split: option.splits)
@@ -177,10 +177,10 @@ lemma get_page_info_state_objs_to_policy:
   apply (clarsimp simp: typ_at_eq_kheap_obj)
 
   apply (clarsimp simp: vs_refs_no_global_pts_def)
-  apply (rule_tac x="(ucast ((x >> 12) && mask 8),  ptrFromPAddr a, aa,
-                      vspace_cap_rights_to_auth b)" in bexI)
+  apply (rule_tac x="(ucast ((x >> 12) && mask 8),  ptrFromPAddr base, sz,
+                      vspace_cap_rights_to_auth r)" in bexI)
    apply clarsimp
-   apply (rule_tac x="(ptrFromPAddr a + (x && mask aa), auth)" in image_eqI)
+   apply (rule_tac x="(ptrFromPAddr base + (x && mask sz), auth)" in image_eqI)
     apply (simp add: ptrFromPAddr_def physMappingOffset_def kernelBase_addr_def physBase_def)
    apply (simp add: ptr_offset_in_ptr_range)
 

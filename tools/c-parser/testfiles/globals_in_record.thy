@@ -18,13 +18,11 @@ install_C_file "globals_in_record.c"
 context globals_in_record begin
 
 thm globals.equality
-thm adglobs_struct_idupdates adglobs_struct_tag_def
 
 find_theorems "zuzu_'"
 thm globals.zuzu_'_def
 
 find_theorems "zozo"
-thm adglobs_struct.zozo.zozo_def
 
 find_theorems "zyzy"
 thm zyzy_def

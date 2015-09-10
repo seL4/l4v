@@ -51,7 +51,7 @@ lemma is_aligned_to_bl:
     apply (erule exE)
     apply (rule_tac x=j in exI)
     apply clarsimp
-   apply (thin_tac "w !! ?t")
+   apply (thin_tac "w !! t" for t)
    apply (rule_tac x="i + n - len_of TYPE('a)" in exI)
    apply clarsimp
    apply arith
@@ -136,10 +136,7 @@ next
   next
     case (Suc m')
     thus ?thesis using prem
-      apply simp
-      apply (rule ih)
-      apply (simp add: mult_ac)
-      done
+      by (simp add: ac_simps ih)
   qed
 qed
 
@@ -336,7 +333,7 @@ qed
 corollary aligned_sub_aligned:
   "\<lbrakk>is_aligned (x::'a::len word) n; is_aligned y m; m \<le> n\<rbrakk>
    \<Longrightarrow> is_aligned (x - y) m"
-  apply (simp add: diff_def)
+  apply (simp del: add_uminus_conv_diff add:diff_conv_add_uminus)
   apply (erule aligned_add_aligned, simp_all)
   apply (erule is_alignedE)
   apply (rule_tac k="- of_nat q" in is_alignedI)
@@ -403,7 +400,7 @@ lemma is_aligned_mult_triv1: "is_aligned (2 ^ n * x  ::'a::len word) n"
   by (rule is_alignedI [OF refl])
 
 lemma is_aligned_mult_triv2: "is_aligned (x * 2 ^ n ::'a::len word) n"
-  by (subst mult_commute, simp add: is_aligned_mult_triv1)
+  by (subst mult.commute, simp add: is_aligned_mult_triv1)
 
 lemma word_power_less_0_is_0:
   fixes x :: "'a::len word"
@@ -473,7 +470,7 @@ proof -
       
       show "unat ptr + unat off < 2 ^ len_of TYPE('a)" using szv
         apply (subst uptr)
-        apply (subst mult_commute, rule nat_add_offset_less [OF _ qv])
+        apply (subst mult.commute, rule nat_add_offset_less [OF _ qv])
         apply (rule order_less_le_trans [OF unat_mono [OF off] order_eq_refl])
          apply simp_all
         done
@@ -597,11 +594,8 @@ proof -
    apply (subst x)
    apply (subst zip_append)
     apply simp
-   apply (simp add: map_append)
    apply (simp add: map_zip_replicate_False_xor drop_minus)
-  apply clarsimp
-  apply (rule word_eqI)
-  apply (simp add: word_size nth_w2p)
+  apply (auto simp add: word_size nth_w2p intro!: word_eqI)
   done
 qed
 
@@ -790,8 +784,7 @@ proof cases
   assume "n < len_of TYPE('a)"
   with al
   show ?thesis
-    apply (simp add: is_aligned_def dvd_eq_mod_eq_0 word_arith_nat_mod
-                del: word_neq_0_conv)
+    apply (simp add: is_aligned_def dvd_eq_mod_eq_0 word_arith_nat_mod)
     apply (erule of_nat_neq_0)
     apply (rule order_less_trans)
      apply (rule mod_less_divisor)
@@ -870,7 +863,7 @@ proof -
 
       show "unat ptr + off \<le> 2 ^ len_of TYPE('a)" using szv
         apply (subst uptr)
-        apply (subst mult_commute, rule nat_add_offset_le [OF off qv])
+        apply (subst mult.commute, rule nat_add_offset_le [OF off qv])
         apply simp
         done
     qed
@@ -888,8 +881,7 @@ lemma unat_minus:
   "unat (- (x :: ('a :: len) word))
     = (if x = 0 then 0 else (2 ^ size x) - unat x)"
   using unat_sub_if_size[where x="2 ^ size x" and y=x]
-  apply (clarsimp simp: word_size word_pow_0)
-  apply (simp add: unat_eq_0)
+  apply (simp add: unat_eq_0 word_size)
   done
 
 lemma is_aligned_minus:

@@ -11,7 +11,7 @@
 header "Prettier Printing for Programs"
 
 theory PrettyProgs
-imports "hoare-package/Vcg"
+imports "Simpl/Vcg"
 begin
 
 syntax (output)

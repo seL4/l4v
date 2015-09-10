@@ -12,10 +12,12 @@
   Compatibility theory to recreate syntax for NICTA developments.
 *)
 
-theory NICTACompat imports
+theory NICTACompat
+imports
   "~~/src/HOL/Word/WordBitwise"
   SignedWords
   NICTATools
+  Eisbach_Compat
 begin
 
 (* all theories should import from NICTACompat rather than any ancestors *)
@@ -89,26 +91,26 @@ in [(@{const_syntax numeral}, num_tr' "")] end
 *}
 
 lemma neg_num_bintr:
-  "(neg_numeral x :: 'a::len word) =
-  word_of_int (bintrunc (len_of TYPE('a)) (neg_numeral x))"
+  "(- numeral x :: 'a::len word) =
+  word_of_int (bintrunc (len_of TYPE('a)) (-numeral x))"
   by (simp only: word_ubin.Abs_norm word_neg_numeral_alt)
 
 (* normalise word numerals to the interval [0..2^len_of 'a) *)
 ML {*
-  fun is_refl (Const ("==", _) $ x $ y) = (x = y)
+  fun is_refl (Const (@{const_name Pure.eq}, _) $ x $ y) = (x = y)
     | is_refl _ = false;
 
-  fun typ_size_of t = Word_Lib.dest_wordT (type_of (term_of t));
+  fun typ_size_of t = Word_Lib.dest_wordT (type_of (Thm.term_of t));
 
   fun num_len (Const (@{const_name Num.Bit0}, _) $ n) = num_len n + 1
     | num_len (Const (@{const_name Num.Bit1}, _) $ n) = num_len n + 1
     | num_len (Const (@{const_name Num.One}, _)) = 1
     | num_len (Const (@{const_name numeral}, _) $ t) = num_len t
-    | num_len (Const (@{const_name neg_numeral}, _) $ t) = num_len t
+    | num_len (Const (@{const_name uminus}, _) $ t) = num_len t
     | num_len t = raise TERM ("num_len", [t])
 
   fun unsigned_norm is_neg _ ctxt ct =
-  (if is_neg orelse num_len (term_of ct) > typ_size_of ct then let
+  (if is_neg orelse num_len (Thm.term_of ct) > typ_size_of ct then let
       val btr = if is_neg
                 then @{thm neg_num_bintr} else @{thm num_abs_bintr}
       val th = [Thm.reflexive ct, mk_eq btr] MRS transitive_thm
@@ -116,7 +118,7 @@ ML {*
       (* will work in context of theory Word as well *)
       val ss = simpset_of (@{context} addsimps @{thms bintrunc_numeral})
       val cnv = simplify (put_simpset ss ctxt) th
-    in if is_refl (prop_of cnv) then NONE else SOME cnv end
+    in if is_refl (Thm.prop_of cnv) then NONE else SOME cnv end
     else NONE)
   handle TERM ("num_len", _) => NONE
        | TYPE ("dest_binT", _, _) => NONE
@@ -126,16 +128,15 @@ simproc_setup
   unsigned_norm ("numeral n::'a::len word") = {* unsigned_norm false *}
 
 simproc_setup
-  unsigned_norm_neg0 ("neg_numeral (num.Bit0 num)::'a::len word") = {* unsigned_norm true *}
+  unsigned_norm_neg0 ("-numeral (num.Bit0 num)::'a::len word") = {* unsigned_norm true *}
 
 simproc_setup
-  unsigned_norm_neg1 ("neg_numeral (num.Bit1 num)::'a::len word") = {* unsigned_norm true *}
+  unsigned_norm_neg1 ("-numeral (num.Bit1 num)::'a::len word") = {* unsigned_norm true *}
 
 lemma minus_one_norm:
- "(neg_numeral num.One :: ('a :: len) word)
+ "(-1 :: ('a :: len) word)
     = of_nat (2 ^ len_of TYPE('a) - 1)"
   by (simp add:of_nat_diff)
-
 lemma "f (7 :: 2 word) = f 3"
   apply simp
   done
@@ -144,15 +145,16 @@ lemma "f 7 = f (3 :: 2 word)"
   apply simp
   done
 
-lemma "f -2 = f (22 :: 3 word)"
+lemma "f (-2) = f (22 :: 3 word)"
   apply simp
   done
 
-lemma "f -1 = f (13 :: 'a::len word)"
+lemma "f (-1) = f (13 :: 'a::len word)"
   (* apply simp *)
   oops
 
-lemma "f -2 = f (8589934590 :: word32)"
+lemma "f (-2) = f (8589934590 :: word32)"
+  using [[simp_trace]]
   apply simp
   done
 
@@ -160,15 +162,15 @@ lemma "(-1 :: 2 word) = 3"
   apply simp
   done
 
-lemma "f -1 = f (15 :: 4 word)"
+lemma "f (-1) = f (15 :: 4 word)"
   apply (simp add: minus_one_norm)
   done
 
-lemma "f -1 = f (7 :: 3 word)"
+lemma "f (-1) = f (7 :: 3 word)"
   apply (simp add: minus_one_norm)
   done
 
-lemma "f -1 = f (0xFFFF :: 16 word)"
+lemma "f (-1) = f (0xFFFF :: 16 word)"
   by (simp add: minus_one_norm)
 
 lemma bin_nth_minus_Bit0[simp]:

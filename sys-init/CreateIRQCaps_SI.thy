@@ -44,14 +44,14 @@ lemma sep_map_irq_sep_irq_node:
 
 lemma sep_map_o_distinct:
   "(obj_id \<mapsto>o obj \<and>* obj_id' \<mapsto>o obj') s \<Longrightarrow> obj_id \<noteq> obj_id'"
-  by (fastforce simp: sep_map_o_def sep_map_general_def sep_conj_def obj_to_sep_state_def
+  by (fastforce simp: sep_map_o_def sep_map_general_def sep_conj_def object_to_sep_state_def
                       sep_disj_sep_state_def sep_state_disj_def
                       map_disj_def dom_def disjoint_iff_not_equal)
 
 lemma sep_any_map_o_false_eq:
   "(obj_id \<mapsto>o - \<and>* obj_id \<mapsto>o -) = sep_false"
   by (fastforce simp: sep_any_def sep_map_o_def sep_map_general_def sep_conj_def
-                      obj_to_sep_state_def sep_disj_sep_state_def sep_state_disj_def
+                      object_to_sep_state_def sep_disj_sep_state_def sep_state_disj_def
                       map_disj_def dom_def disjoint_iff_not_equal)
 
 lemma sep_any_map_o_false:
@@ -113,7 +113,7 @@ lemma si_irq_nodes_def2:
   "si_irq_nodes spec =
      (\<lambda>s. \<exists>k_irq_table. inj_on k_irq_table (used_irqs spec) \<and>
                         (\<And>* irq\<in>used_irqs spec. irq \<mapsto>irq k_irq_table irq \<and>*
-                                                 k_irq_table irq \<mapsto>o empty_irq_node) s)"
+                                                 k_irq_table irq \<mapsto>o IRQNode empty_irq_node) s)"
   apply (rule ext)
   apply (clarsimp simp: si_irq_nodes_def)
   apply (rule iffI)
@@ -134,19 +134,19 @@ lemma si_irq_nodes_def2:
 
 lemma well_formed_default_irq_node_empty:
   "\<lbrakk>well_formed spec; irq \<in> used_irqs spec\<rbrakk>
-    \<Longrightarrow> object_at (\<lambda>obj. object_default_state obj = empty_irq_node) (cdl_irq_node spec irq) spec"
-  apply (frule (1) well_formed_used_irqs_have_cnode, clarsimp)
-  apply (frule (1) well_formed_irq_is_cnode)
-  apply (frule (1) well_formed_size_irq_cnode)
+    \<Longrightarrow> object_at (\<lambda>obj. object_default_state obj = IRQNode empty_irq_node) (cdl_irq_node spec irq) spec"
+  apply (frule (1) well_formed_used_irqs_have_irq_node, clarsimp)
+  apply (frule (1) well_formed_irq_is_irq_node)
+  apply (frule (1) well_formed_size_irq_node)
   apply (clarsimp simp: object_at_def empty_irq_node_def object_default_state_def2
-                        is_cnode_def object_size_bits_def
+                        is_irq_node_def object_size_bits_def
                  split: cdl_object.splits)
   done
 
 lemma create_irq_cap_sep:
   "\<lbrace>\<guillemotleft>(si_cnode_id, unat free_cptr) \<mapsto>c NullCap \<and>*
       irq \<mapsto>irq kernel_irq_id \<and>*
-      kernel_irq_id \<mapsto>o empty_irq_node \<and>*
+      kernel_irq_id \<mapsto>o (IRQNode empty_irq_node) \<and>*
       si_objects \<and>* R\<guillemotright> and
     K(well_formed spec \<and>
       irq \<in> used_irqs spec \<and>
@@ -160,7 +160,7 @@ lemma create_irq_cap_sep:
      si_objects \<and>*
      R\<guillemotright>\<rbrace>"
   apply (rule hoare_gen_asm, clarsimp)
-  apply (frule (1) well_formed_used_irqs_have_cnode, clarsimp)
+  apply (frule (1) well_formed_used_irqs_have_irq_node, clarsimp)
   apply (frule (1) well_formed_default_irq_node_empty, clarsimp simp: object_at_def)
   apply (clarsimp simp: create_irq_cap_def si_objects_def si_cnode_caps
                         irq_empty_def irq_initialised_general_def
@@ -187,8 +187,8 @@ lemma create_irq_caps_sep_helper:
       si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
       si_objects \<and>* R)
     and K ((map_of (zip (used_irq_list spec) free_cptrs), drop (card (used_irqs spec)) free_cptrs) = rv \<and>
-    inj_on t' (used_irq_cnodes spec) \<and>
-    dom t' = used_irq_cnodes spec)\<guillemotright> s\<rbrace>"
+    inj_on t' (used_irq_nodes spec) \<and>
+    dom t' = used_irq_nodes spec)\<guillemotright> s\<rbrace>"
   apply clarsimp
   apply (rule hoare_gen_asm_conj)
   apply (clarsimp simp: create_irq_caps_def si_irq_nodes_def2 sep_conj_exists)
@@ -196,13 +196,13 @@ lemma create_irq_caps_sep_helper:
   apply simp
   apply (rule hoare_grab_exs2)
   apply (rule_tac x="(\<lambda>obj_id. Some ((k_irq_table \<circ> inv (cdl_irq_node spec)) obj_id))
-                     |` used_irq_cnodes spec" in hoare_exI)
+                     |` used_irq_nodes spec" in hoare_exI)
 
   apply (rule_tac P1 = "\<lambda>(irq,free_cptr). (si_cnode_id, unat free_cptr) \<mapsto>c NullCap \<and>*
                                            irq \<mapsto>irq k_irq_table irq \<and>*
-                                           k_irq_table irq \<mapsto>o empty_irq_node" and
+                                           k_irq_table irq \<mapsto>o IRQNode empty_irq_node" and
                   Q1 = "\<lambda>(irq,free_cptr). irq_empty spec ((\<lambda>obj_id. Some ((k_irq_table \<circ> inv (cdl_irq_node spec)) obj_id))
-                                                           |` used_irq_cnodes spec) irq \<and>*
+                                                           |` used_irq_nodes spec) irq \<and>*
                                           si_irq_cap_at (map_of (zip (used_irq_list spec) free_cptrs)) spec irq" and
                   I1 = "si_objects" and
                   R1 = "si_caps_at t orig_caps spec {obj_id. real_object_at obj_id spec} \<and>*
@@ -218,7 +218,7 @@ lemma create_irq_caps_sep_helper:
     apply (frule set_zip_leftD)
     apply (frule in_set_zip2)
     apply (simp add: map_of_zip_tuple_in list_all_iff unat_less_2_si_cnode_size
-                     restrict_map_def used_irq_cnodes_def)
+                     restrict_map_def used_irq_nodes_def)
 
    apply (subst sep_list_conj_sep_map_set_conj [symmetric], erule distinct_zipI2)
    apply (subst (asm) sep_list_conj_sep_map_set_conj [symmetric, where xs = "used_irq_list spec", simplified])
@@ -246,7 +246,7 @@ lemma create_irq_caps_sep_helper:
   apply (rule conjI)
    apply sep_solve
   apply (frule well_formed_inj_cdl_irq_node)
-  apply (fastforce simp: inj_on_def used_irq_cnodes_def)
+  apply (fastforce simp: inj_on_def used_irq_nodes_def)
   done
 
 
@@ -362,7 +362,7 @@ lemma si_objects_extra_caps'_split:
   ((\<And>* cptr \<in> set (take (card (used_irqs spec)) free_cptrs). (si_cnode_id, unat cptr) \<mapsto>c NullCap) \<and>*
    si_objects_extra_caps' (dom (cdl_objects spec)) free_cptrs' untyped_cptrs)"
   apply (frule well_formed_objects_card [symmetric])
-  apply (subst (asm) nat_add_commute)
+  apply (subst (asm) add.commute)
   apply (clarsimp simp: si_objects_extra_caps'_def sep_conj_exists sep_conj_assoc)
   apply (subst take_drop_append [where a="card {obj_id. real_object_at obj_id spec}"
                                    and b="card (used_irqs spec)"])
@@ -402,7 +402,7 @@ lemma create_irq_caps_sep:
   apply (rule hoare_gen_lifted_asm)
   apply (elim conjE)
   apply (subst si_objects_extra_caps'_split, assumption+)
-  apply (rule hoare_chain [OF create_irq_caps_sep_helper, standard, where orig_caps=orig_caps])
+  apply (rule hoare_chain [OF create_irq_caps_sep_helper, where orig_caps1=orig_caps])
    apply (rule pred_andI)
     apply sep_solve
    apply clarsimp
@@ -411,11 +411,11 @@ lemma create_irq_caps_sep:
   apply clarsimp
   apply (frule well_formed_objects_real_or_irq)
   apply (frule well_formed_objects_only_real_or_irq)
-  apply (clarsimp simp: used_irq_cnodes_def)
+  apply (clarsimp simp: used_irq_nodes_def)
   apply (subgoal_tac "map_disj t_real t'")
    apply (rule conjI)
     apply (subst object_empty_map_add [symmetric], assumption+)
-    apply (subst irq_empty_map_add [symmetric],simp add: used_irq_cnodes_def)
+    apply (subst irq_empty_map_add [symmetric],simp add: used_irq_nodes_def)
     apply (subst si_caps_at_map_add [symmetric], assumption+)
     apply (clarsimp simp: si_objects_extra_caps'_def sep_conj_exists sep_conj_assoc)
     apply (rule_tac x=untyped_caps in exI)

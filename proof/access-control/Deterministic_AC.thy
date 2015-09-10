@@ -120,7 +120,7 @@ lemma empty_slot_list_integrity:
   apply (simp add: empty_slot_ext_def split del: split_if)
   apply (wp update_cdt_list_wp)
   apply (intro impI conjI allI | simp add: list_filter_replace_list list_filter_remove split: option.splits | elim conjE  | simp add: list_integ_def)+
-  apply (drule_tac x=a in spec)
+  apply (drule_tac x="the slot_p" in spec)
   apply (elim disjE)
    apply (simp add: all_children_def valid_list_2_def list_filter_replace_list)+
   done

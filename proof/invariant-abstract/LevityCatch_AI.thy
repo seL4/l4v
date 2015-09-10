@@ -107,7 +107,7 @@ lemmas cap_irq_opt_simps[simp] =
   cap_irq_opt_def [split_simps cap.split sum.split]
 
 lemmas cap_irqs_simps[simp] =
-    cap_irqs_def [unfolded cap_irq_opt_def, split_simps cap.split sum.split, simplified Option.set.simps]
+    cap_irqs_def [unfolded cap_irq_opt_def, split_simps cap.split sum.split, simplified option.simps]
 
 lemma pageBits_less_word_bits [simp]:
   "pageBits < word_bits" by (simp add: pageBits_def word_bits_conv)
@@ -124,7 +124,7 @@ lemma mask_lower_twice:
 (* FIXME: move *)
 lemma mask_lower_twice2:
   "(a && ~~ mask n) && ~~ mask m = a && ~~ mask (max n m)"
-  by (rule word_eqI, simp add: neg_mask_bang conj_ac)
+  by (rule word_eqI, simp add: neg_mask_bang conj_comms)
 
 lemma all_eq_trans: "\<lbrakk> \<forall>x. P x = Q x; \<forall>x. Q x = R x \<rbrakk> \<Longrightarrow> \<forall>x. P x = R x"
   by simp
@@ -168,7 +168,7 @@ lemma ucast_mask_drop:
   done
 
 declare liftE_wp[wp]
-declare sum_case_True[simp]
+declare case_sum_True[simp]
 declare select_singleton[simp]
 
 crunch_ignore (add: cap_swap_ext 

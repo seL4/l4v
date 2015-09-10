@@ -711,8 +711,7 @@ lemma aep123_reads : "l \<in> {AEP1, AEP2, AEP3} \<Longrightarrow> subjectReads 
   (* forward *)
   apply (rule subsetI)
   apply (erule subjectReads.induct)
-  apply (simp add:SACAuthGraph_def, blast?)+
-done
+  by (simp add:SACAuthGraph_def, blast?)+
 
 subsubsection {* AEP1,2,3 affects *}
 
@@ -852,7 +851,7 @@ lemma t_affects : "subjectAffects SACAuthGraph (partition_label T) = {partition_
   apply simp
   (* forward *)
   apply (rule subsetI, erule subjectAffects.induct)
-  apply (simp add:SACAuthGraph_def, blast?)+
+  (*apply (simp add:SACAuthGraph_def, blast?)+*)
   sorry
 
 subsection {* Policy *}

@@ -306,8 +306,8 @@ lemma aligned_diff:
   apply (frule(1) is_aligned_no_overflow)
   apply (rule ccontr)
   apply (clarsimp simp:not_less p_assoc_help)
-  apply (subst (asm) add_commute[where b = "(2^ sz - 1)"])
-  apply (subst (asm) add_commute[where b = "(2^ bits - 1)"])+
+  apply (subst (asm) add.commute[where b = "(2^ sz - 1)"])
+  apply (subst (asm) add.commute[where b = "(2^ bits - 1)"])+
   apply (drule word_sub_mono2)
    apply (rule word_le_minus_mono_left)
    apply (erule(1) two_power_increasing)
@@ -381,7 +381,7 @@ lemma retype_addrs_aligned:
   shows   "is_aligned x (obj_bits_api ty us)"
   using xin unfolding retype_addrs_def ptr_add_def
   apply (clarsimp simp: word_unat_power [symmetric])
-  apply (subst mult_commute, subst shiftl_t2n [symmetric])
+  apply (subst mult.commute, subst shiftl_t2n [symmetric])
   apply (rule aligned_add_aligned[OF al is_aligned_shift])
    apply (insert assms)
    apply simp+
@@ -392,7 +392,7 @@ lemma (in pspace_update_eq) pspace_no_overlap_update [simp]:
   "pspace_no_overlap ptr bits (f s) = pspace_no_overlap ptr bits s"
   by (simp add: pspace_no_overlap_def pspace)
 
-(* FIXME: Move *)
+(* FIXME: move *)
 lemma multi_lessD:
   "\<lbrakk>(a::nat)*b < c;0<a;0<b\<rbrakk> \<Longrightarrow> a < c \<and> b < c"
   by (cases a, simp_all,cases b,simp_all)
@@ -477,7 +477,7 @@ proof -
     using aligned sz
     by (simp add:mask_twice is_aligned_mask mask_out_sub_mask min_def)
   show ?thesis using aligned sz
-  apply (drule_tac i = "?a +?b" in Nat.mult_le_mono[where k = "2^sbit",OF _ le_refl])
+  apply (drule_tac i = "a +b" for a b in Nat.mult_le_mono[where k = "2^sbit",OF _ le_refl])
   apply (subst (asm) add_mult_distrib)
   apply (clarsimp simp: power_add[symmetric])
   apply (subst (asm) unat_shiftl_absorb[where p = "sz - sbit"])
@@ -490,7 +490,7 @@ proof -
       apply simp
     apply (simp add:word_bits_def field_simps)
    apply simp
-  apply (subst (asm) mult_commute[where b = "2^sbit"],
+  apply (subst (asm) mult.commute[where b = "2^sbit"],
          subst (asm) shiftl_t2n[symmetric])
   apply (subst (asm) and_not_mask[symmetric])
   apply (simp add:mask_before_neg_mask)
@@ -526,7 +526,7 @@ proof -
 
   show ?thesis
   apply (rule less_le_trans[OF _ absolute_compare])
-  apply (subst add_commute)
+  apply (subst add.commute)
   apply clarsimp
   apply (case_tac "p = 0")
    apply (insert pointer)
@@ -584,7 +584,7 @@ lemma unat_of_nat_n :"unat ((of_nat n):: 'a :: len word) = n"
 lemma unat_of_nat_n_shift:
   "gbits \<le> sbit \<Longrightarrow> unat (((of_nat n):: 'a :: len word) << gbits) = (n * 2^ gbits)"
    apply (simp add:shiftl_t2n field_simps)
-   apply (subst mult_commute)
+   apply (subst mult.commute)
    apply (subst unat_mult_power_lem)
      apply (case_tac "gbits = sbit")
       apply (rule le_less_trans[OF range_cover_n_le(2)])
@@ -604,8 +604,8 @@ lemma unat_of_nat_n_shift:
 
 lemma unat_of_nat_shift:
   "\<lbrakk>gbits \<le> sbit;p\<le> n\<rbrakk> \<Longrightarrow> (unat (((of_nat p):: 'a :: len word) * 2 ^ gbits)) = (p * 2^ gbits)"
-   apply (subst mult_commute[where a = "of_nat p"])
-   apply (subst mult_commute[where a = "p "])
+   apply (subst mult.commute[where a = "of_nat p"])
+   apply (subst mult.commute[where a = "p "])
    apply (subst unat_mult_power_lem)
      apply (case_tac "gbits = sbit")
       apply simp
@@ -622,7 +622,7 @@ lemma unat_of_nat_shift:
 lemma range_cover_base_le:
   "(ptr && mask sz) \<le> (ptr && mask sz) + (of_nat n << sbit)"
   apply (clarsimp simp:no_olen_add_nat shiftl_t2n unat_of_nat_shift field_simps)
-  apply (subst add_commute)
+  apply (subst add.commute)
   apply (rule le_less_trans[OF range_cover_compare_bound])
   apply (rule less_le_trans[OF power_strict_increasing])
     using sz
@@ -655,7 +655,7 @@ lemma range_cover_subset:
       done
     show "ptr + of_nat p * 2 ^ sbit + 2 ^ sbit - 1 \<le> ptr + of_nat n * 2 ^ sbit - 1"
       apply (subst decomp)
-      apply (simp add:add_assoc[symmetric])
+      apply (simp add:add.assoc[symmetric])
       apply (simp add:p_assoc_help)
       apply (rule order_trans[OF word_plus_mono_left word_plus_mono_right])
          apply (rule word_plus_mono_right)
@@ -678,7 +678,7 @@ lemma range_cover_subset:
        using cover
        apply (simp add:range_cover_def)
       apply (rule olen_add_eqv[THEN iffD2])
-      apply (subst add_commute[where a = "2^sbit - 1"])
+      apply (subst add.commute[where a = "2^sbit - 1"])
      apply (subst p_assoc_help[symmetric])
      apply (rule is_aligned_no_overflow)
      apply (insert cover)
@@ -733,8 +733,8 @@ lemma retype_addrs_subset_ptr_bits:
    using cover
    apply (simp add:range_cover_def)
   apply (subst word_plus_and_or_coroll2[symmetric,where w = "mask sz"])
-  apply (subst add_commute)
-  apply (subst add_assoc)
+  apply (subst add.commute)
+  apply (subst add.assoc)
   apply (rule word_plus_mono_right)
   apply (insert cover)
   apply (drule(1) range_cover.range_cover_compare)
@@ -1029,9 +1029,9 @@ lemma range_cover_cell_subset:
       apply (simp add: range_cover.unat_of_nat_shift[where gbits = us])
    apply (simp add:range_cover_def)
   apply (subst word_plus_and_or_coroll2[symmetric,where w = "mask sz"])
-  apply (subst add_commute)
+  apply (subst add.commute)
   apply (simp add:p_assoc_help)
-  apply (subst add_assoc)+
+  apply (subst add.assoc)+
   apply (rule word_plus_mono_right)
    apply (cut_tac nasty_split_lt[where x="((ptr && mask sz) >> us) + x" and n=us and m=sz])
       apply (simp add: sh field_simps)
@@ -1062,8 +1062,8 @@ lemma range_cover_no_0:
    ptr + of_nat p * 2 ^ sbit \<noteq> 0"
   apply (subst word_plus_and_or_coroll2[symmetric,where w = "mask sz"])
   apply (case_tac  "(ptr && ~~ mask sz) \<noteq> 0")
-    apply (subst add_commute)
-    apply (subst add_assoc)
+    apply (subst add.commute)
+    apply (subst add.assoc)
     apply (rule aligned_offset_non_zero)
       apply (rule is_aligned_neg_mask[OF le_refl])
      apply (simp add:word_less_nat_alt)
@@ -1097,8 +1097,8 @@ lemma range_cover_mem:
      apply ((simp add:range_cover_def)+)[2]
     apply (subst p_assoc_help)
     apply (subst word_plus_and_or_coroll2[symmetric,where w = "mask sz"])
-    apply (subst add_commute)
-    apply (subst add_assoc)
+    apply (subst add.commute)
+    apply (subst add.assoc)
     apply (rule word_plus_mono_right)
     apply (simp add:word_le_nat_alt)
     apply (rule le_trans[OF unat_plus_gt])
@@ -1132,7 +1132,7 @@ lemma range_cover_subset_not_empty:
 
 lemma list_all2_same:
   "list_all2 P xs xs = (\<forall>x \<in> set xs. P x x)"
-  apply (simp add: list_all2_def set_zip in_set_conv_nth Ball_def)
+  apply (simp add: list_all2_iff set_zip in_set_conv_nth Ball_def)
   apply fastforce
   done
 
@@ -1174,8 +1174,8 @@ lemma retype_region_global_refs_disjoint:
      apply (simp add:range_cover_def word_bits_def)
     apply (subst p_assoc_help)
     apply (subst word_plus_and_or_coroll2[symmetric,where w = "mask sz"])
-    apply (subst add_commute)
-    apply (subst add_assoc)
+    apply (subst add.commute)
+    apply (subst add.assoc)
     apply (rule word_plus_mono_right)
     apply (simp add:word_le_nat_alt)
     apply (rule le_trans[OF unat_plus_gt])
@@ -1228,15 +1228,6 @@ lemma mdb_cte_at_store_pde[wp]:
   apply (wp hoare_vcg_disj_lift hoare_vcg_all_lift)
 done
 
-(*
-   FIXME: This didn't used to assume the slot wasn't in kernel_mapping_slots.
-          It may be necessary to put another rule in the wp set that says
-          get_pde returns an aligned pde instead of valid_pde, since that is
-          what valid_pde used to say about sections/supersecions. Pagetables 
-          in the kernel_mapping_slots have the same properties as `valid_pde'
-          Pagetable entries via valid_global_objs or somesuch. So morally this
-          is still true.
-*)
 lemma get_pde_valid[wp]:
   "\<lbrace>valid_arch_objs 
     and \<exists>\<rhd> (x && ~~mask pd_bits) 
@@ -1308,10 +1299,10 @@ lemma clearMemory_vms:
    \<forall>x\<in>fst (clearMemory ptr bits (machine_state s)).
      valid_machine_state (s\<lparr>machine_state := snd x\<rparr>)"
   apply (clarsimp simp: valid_machine_state_def
-                        disj_commute[of "in_user_frame p s", standard])
+                        disj_commute[of "in_user_frame p s" for p s])
   apply (drule_tac x=p in spec, simp)
-  apply (drule_tac P="\<lambda>m'. underlying_memory m' p = 0"
-         in use_valid[where P=P and Q="\<lambda>_. P", standard], simp_all)
+  apply (drule_tac P4="\<lambda>m'. underlying_memory m' p = 0"
+         in use_valid[where P=P and Q="\<lambda>_. P" for P], simp_all)
   apply (simp add: clearMemory_def cleanCacheRange_PoU_def machine_op_lift_def
                    machine_rest_lift_def split_def)
   apply (wp hoare_drop_imps | simp | wp mapM_x_wp_inv)+
@@ -1398,14 +1389,13 @@ abbreviation(input)
        and valid_arch_caps and valid_global_objs and valid_kernel_mappings 
        and valid_asid_map and valid_global_pd_mappings
        and pspace_in_kernel_window and cap_refs_in_kernel_window
-       and cur_tcb and valid_ioc and valid_machine_state
-       and executable_arch_objs"
+       and cur_tcb and valid_ioc and valid_machine_state"
 
 
 lemma all_invs_but_equal_kernel_mappings_restricted_eq:
   "all_invs_but_equal_kernel_mappings_restricted {}
         = invs"
-  by (rule ext, simp add: invs_def valid_state_def conj_ac restrict_map_def)
+  by (rule ext, simp add: invs_def valid_state_def conj_comms restrict_map_def)
 
 
 crunch iflive[wp]: copy_global_mappings "if_live_then_nonz_cap"
@@ -1451,7 +1441,7 @@ crunch cap_refs_in_kernel_window[wp]: copy_global_mappings "cap_refs_in_kernel_w
   (wp: crunch_wps)
 
 
-(* FIXME: move to VSpace_R? *)
+(* FIXME: move to VSpace_R *)
 lemma vs_refs_add_one'':
   "p \<in> kernel_mapping_slots \<Longrightarrow>
    vs_refs (ArchObj (PageDirectory (pd(p := pde)))) =
@@ -1462,8 +1452,8 @@ lemma vs_refs_add_one'':
 lemma glob_vs_refs_add_one':
   "glob_vs_refs (ArchObj (PageDirectory (pd(p := pde)))) =
    glob_vs_refs (ArchObj (PageDirectory pd)) 
-   - Pair (VSRef (ucast p) (Some APageDirectory)) ` Option.set (pde_ref (pd p)) 
-   \<union> Pair (VSRef (ucast p) (Some APageDirectory)) ` Option.set (pde_ref pde)"
+   - Pair (VSRef (ucast p) (Some APageDirectory)) ` set_option (pde_ref (pd p)) 
+   \<union> Pair (VSRef (ucast p) (Some APageDirectory)) ` set_option (pde_ref pde)"
   apply (simp add: glob_vs_refs_def)
   apply (rule set_eqI)
   apply clarsimp
@@ -1513,7 +1503,7 @@ lemma store_pde_map_global_valid_arch_caps:
     apply (simp add: empty_table_def)
    apply clarsimp
    apply (rule conjI, clarsimp)
-   apply (thin_tac "All ?P")
+   apply (thin_tac "All P" for P)
    apply clarsimp
    apply (frule_tac ref'="VSRef (ucast c) (Some APageDirectory) # r" and
                     p'=q in vs_lookup_pages_step)
@@ -1522,7 +1512,7 @@ lemma store_pde_map_global_valid_arch_caps:
    apply (clarsimp simp: valid_arch_caps_def valid_vs_lookup_def)
   apply clarsimp
   apply (rule conjI, clarsimp)
-  apply (thin_tac "All ?P")
+  apply (thin_tac "All P" for P)
   apply clarsimp
   apply (drule_tac ref'="VSRef (ucast c) (Some APageDirectory) # r" and
                    p'=q in vs_lookup_pages_step)
@@ -1629,7 +1619,6 @@ lemma equal_kernel_mappings_specific_def:
                         \<longrightarrow> (\<forall>w \<in> kernel_mapping_slots. pd' w = pd w))"
   apply (rule iffI)
    apply (clarsimp simp: equal_kernel_mappings_def)
-   apply blast
   apply (clarsimp simp: equal_kernel_mappings_def)
   apply (subgoal_tac "pda w = pd w \<and> pd' w = pd w")
    apply (erule conjE, erule(1) trans[OF _ sym])
@@ -1706,8 +1695,6 @@ lemma store_pde_vms[wp]:
 
 crunch valid_irq_states[wp]: store_pde "valid_irq_states"
 
-crunch executable_arch_objs[wp]: get_pde executable_arch_objs
-
 lemma copy_global_invs_mappings_restricted:
   "\<lbrace>(\<lambda>s. all_invs_but_equal_kernel_mappings_restricted (insert pd S) s)
           and (\<lambda>s. insert pd S \<inter> global_refs s = {})
@@ -1745,11 +1732,6 @@ lemma copy_global_invs_mappings_restricted:
     apply (simp add: valid_objs_def dom_def obj_at_def valid_obj_def)
     apply (drule spec, erule impE, fastforce, clarsimp)
    apply (clarsimp simp: obj_at_def empty_table_def kernel_vsrefs_def)
-   apply (rule conjI)
-    apply (clarsimp simp: obj_at_def empty_table_def kernel_vsrefs_def)
-   apply (drule executable_arch_objsD[rotated])
-    apply (fastforce simp: obj_at_def)
-   apply simp
   apply clarsimp
   apply (erule minus_one_helper5[rotated])
   apply (simp add: pd_bits_def pageBits_def)
@@ -1786,7 +1768,7 @@ lemma mapM_copy_global_invs_mappings_restricted:
   apply (fold all_invs_but_equal_kernel_mappings_restricted_eq)
   apply (induct pds, simp_all only: mapM_x_Nil mapM_x_Cons K_bind_def)
    apply (wp, simp)
-  apply (rule hoare_seq_ext, assumption, thin_tac "?P")
+  apply (rule hoare_seq_ext, assumption, thin_tac "P" for P)
   apply (rule hoare_conjI)
    apply (rule hoare_pre, rule copy_global_invs_mappings_restricted)
    apply clarsimp
@@ -1817,18 +1799,6 @@ where
     if tp = ArchObject PageDirectoryObj
     then all_invs_but_equal_kernel_mappings_restricted (set refs)
     else invs"
-
-(*FIXME sprint*)
-(* lemma dmo_ccr_vms[wp]: *)
-(*   "\<lbrace>valid_machine_state\<rbrace> *)
-(*    do_machine_op (cleanCacheRange_PoU s e p) *)
-(*    \<lbrace>\<lambda>rv. valid_machine_state\<rbrace>" *)
-(*   apply (simp add: valid_machine_state_def in_user_frame_def) *)
-(*   apply (wp hoare_vcg_ex_lift hoare_vcg_all_lift hoare_vcg_disj_lift) *)
-(*   by (clarsimp simp: do_machine_op_def simpler_gets_def simpler_modify_def *)
-(*           select_f_def bind_def return_def valid_def cleanCacheRange_PoU_def *)
-(*           machine_op_lift_def machine_rest_lift_def cacheRangeOp_def in_monad *)
-(*           mapM_x_mapM cleanByVA_PoU_def lineStart_def cacheLineBits_def cacheLine_def) *)
 
 
 lemma dmo_mapM_x_ccr_invs[wp]:
@@ -1872,7 +1842,7 @@ lemma retype_region_aligned_for_init[wp]:
                  dest!: less_two_pow_divD)
   apply (rule aligned_add_aligned)
     apply (fastforce simp:range_cover_def)
-    apply (subst mult_ac, subst shiftl_t2n[symmetric],
+    apply (subst mult.commute, subst shiftl_t2n[symmetric],
            rule is_aligned_shiftl)
     apply simp
    apply (simp add:range_cover_def)+
@@ -1967,7 +1937,7 @@ lemma unsafe_rep2:
     (\<lambda>s. if_unsafe_then_cap2 (null_filter (caps_of_state s)) (interrupt_irq_node s))"
   apply (simp only: if_unsafe_then_cap2_def o_def)
   apply (subst P_null_filter_caps_of_cte_wp_at, simp)+
-  apply (simp add: null_filter_same [where cps="caps_of_state s", standard, OF cte_wp_at_not_Null])
+  apply (simp add: null_filter_same [where cps="caps_of_state s" for s, OF cte_wp_at_not_Null])
   apply (fastforce simp: if_unsafe_then_cap2_def cte_wp_at_caps_of_state
                         if_unsafe_then_cap_def ex_cte_cap_wp_to_def
                 intro!: ext)
@@ -2203,7 +2173,7 @@ lemma retype_addrs_range_subset:
   \<Longrightarrow> {p .. p + 2 ^ obj_bits_api ty us - 1} \<subseteq> {ptr..(ptr && ~~ mask sz) + 2^sz - 1}"
   apply (clarsimp simp: retype_addrs_def ptr_add_def
               simp del: atLeastatMost_subset_iff atLeastAtMost_iff)
-  apply (frule_tac x = "of_nat p" in range_cover_cell_subset)
+  apply (frule_tac x = "of_nat pa" in range_cover_cell_subset)
     apply (erule of_nat_mono_maybe[rotated])
     apply (drule range_cover.range_cover_n_less)
    apply (simp add:word_bits_def)
@@ -2252,7 +2222,7 @@ lemma retype_addrs_obj_range_subset_strong:
       done
     show  "p + 2 ^ obj_bits (default_object ty us) - 1 \<le> ptr + of_nat n * 2 ^ obj_bits_api ty us - 1"
       apply (subst decomp)
-      apply (simp add:add_assoc[symmetric])
+      apply (simp add:add.assoc[symmetric])
       apply (simp add:p_assoc_help)
       apply (rule order_trans[OF word_plus_mono_left word_plus_mono_right])
        using mem_p not_0
@@ -2280,7 +2250,7 @@ lemma retype_addrs_obj_range_subset_strong:
        using cover
        apply (simp add:range_cover_def word_bits_def)
       apply (rule olen_add_eqv[THEN iffD2])
-      apply (subst add_commute[where a = "2^(obj_bits (default_object ty us)) - 1"])
+      apply (subst add.commute[where a = "2^(obj_bits (default_object ty us)) - 1"])
      apply (subst p_assoc_help[symmetric])
      apply (rule is_aligned_no_overflow)
      apply (insert cover)
@@ -2350,6 +2320,7 @@ lemma valid_obj_default_object:
    apply safe
     apply (simp split: split_if_asm)
    apply (clarsimp split: split_if_asm)
+  apply (rename_tac aobject_type)
   apply (case_tac aobject_type, simp_all add: default_arch_object_def)
   done
 
@@ -2469,8 +2440,9 @@ lemma valid_untyped_helper:
      apply (fastforce elim!: obj_at_pres)
     apply (fastforce elim!: obj_at_pres)
    apply (fastforce elim!: obj_at_pres)
+  apply (rename_tac word nat1 nat2)
   apply (clarsimp simp:valid_untyped_def is_cap_simps obj_at_def split:split_if_asm)
-    apply (thin_tac "\<forall>x. ?Q x")
+    apply (thin_tac "\<forall>x. Q x" for Q)
      apply (frule retype_addrs_obj_range_subset_strong[OF _ cover' tyunt])
      apply (frule usable_range_subseteq)
        apply (simp add:is_cap_simps)
@@ -2489,7 +2461,7 @@ lemma valid_untyped_helper:
     apply simp
     apply (drule(1) disjoint_subset2[rotated])
     apply (simp add:Int_ac)
-   apply (thin_tac "\<forall>x. ?Q x")
+   apply (thin_tac "\<forall>x. Q x" for Q)
    apply (frule retype_addrs_obj_range_subset[OF _ cover' tyunt])
    apply (clarsimp simp:cap_aligned_def)
     apply (frule aligned_ranges_subset_or_disjoint)
@@ -3212,38 +3184,6 @@ lemma vms:
   apply (rule_tac x=sz in exI, clarsimp simp: obj_at_def orthr)
   done
 
-lemma executable_arch_obj_default:
-  assumes tyunt: "ty \<noteq> Structures_A.apiobject_type.Untyped"
-  shows "ArchObj ao = default_object ty us \<Longrightarrow> executable_arch_obj ao"
-  apply (cases ty, simp_all add: default_object_def tyunt)
-  apply (simp add: default_arch_object_def split: aobject_type.splits)
-  done
-
-lemma executable_arch_objs':
-  assumes ea: "executable_arch_objs s" 
-  shows "executable_arch_objs s'"
-proof
-  fix p ao
-  assume "ko_at (ArchObj ao) p s'"
-  hence "ko_at (ArchObj ao) p s \<or> ArchObj ao = default_object ty us"
-    by (simp add: ps_def obj_at_def s'_def split: split_if_asm)
-  moreover
-  { assume "ArchObj ao = default_object ty us" with tyunt
-    have "executable_arch_obj ao" by (rule executable_arch_obj_default)
-  }
-  moreover
-  { assume "ko_at (ArchObj ao) p s"
-    with ea
-    have "executable_arch_obj ao"
-      by (auto simp: vs_lookup' elim: executable_arch_objsD)
-    hence "executable_arch_obj ao"
-      apply (cases ao, simp_all add: obj_at_pres)
-      done
-  }
-  ultimately
-  show "executable_arch_obj ao" by blast
-qed
-
 lemma post_retype_invs:
   "\<lbrakk> invs s; region_in_kernel_window {ptr .. (ptr && ~~ mask sz) + 2 ^ sz - 1} s \<rbrakk>
         \<Longrightarrow> post_retype_invs ty (retype_addrs ptr ty n us) s'"
@@ -3260,8 +3200,7 @@ lemma post_retype_invs:
                      valid_kernel_mappings valid_asid_map
                      valid_global_pd_mappings valid_ioc vms
                      pspace_in_kernel_window
-                     cap_refs_in_kernel_window valid_irq_states
-                     executable_arch_objs')
+                     cap_refs_in_kernel_window valid_irq_states)
 
 end
 
@@ -3274,7 +3213,7 @@ lemma use_retype_region_proofs':
   assumes y: "\<And>x s f. Q x (trans_state f s) = Q x s"
   shows
     "\<lbrakk> ty = CapTableObject \<Longrightarrow> 0 < us;
-         \<And>s. P s \<Longrightarrow> Q (retype_addrs ptr ty n us) s \<rbrakk> \<Longrightarrow>
+         \<And>s. P s \<longrightarrow> Q (retype_addrs ptr ty n us) s \<rbrakk> \<Longrightarrow>
     \<lbrace>\<lambda>s. valid_pspace s \<and> valid_mdb s \<and> range_cover ptr sz (obj_bits_api ty us) n 
         \<and> caps_overlap_reserved {ptr..ptr + of_nat n * 2 ^ obj_bits_api ty us - 1} s
         \<and> caps_no_overlap ptr sz s \<and> pspace_no_overlap ptr sz s \<and>
@@ -3292,20 +3231,20 @@ lemma use_retype_region_proofs':
 
 
 lemmas use_retype_region_proofs
-    = use_retype_region_proofs'[where Q="\<lambda>_. Q" and P=Q, simplified, standard]
-
+    = use_retype_region_proofs'[where Q="\<lambda>_. Q" and P=Q, simplified]
+      for Q
 
 lemmas retype_region_valid_pspace =
-    use_retype_region_proofs[where Q=valid_pspace, no_vars,
+    use_retype_region_proofs[where Q=valid_pspace,
                              OF retype_region_proofs.valid_pspace,
-                             simplified, standard]
-
+                             simplified]
 
 lemmas retype_region_caps_of =
     use_retype_region_proofs[
-       where Q="\<lambda>s. P (null_filter (caps_of_state s))", no_vars,
+       where Q="\<lambda>s. P (null_filter (caps_of_state s))",
        OF ssubst [where P=P, OF retype_region_proofs.null_filter],
-       simplified, standard]
+       simplified]
+    for P
 
 
 lemma retype_region_valid_cap:
@@ -3325,45 +3264,45 @@ lemma retype_region_valid_cap:
 
 
 lemmas retype_region_aligned =
-    use_retype_region_proofs[where Q=pspace_aligned, no_vars,
+    use_retype_region_proofs[where Q=pspace_aligned,
                              OF retype_region_proofs.psp_al,
-                             simplified, standard]
+                             simplified]
 
 
 lemmas retype_region_valid_idle =
-    use_retype_region_proofs[where Q=valid_idle, no_vars,
+    use_retype_region_proofs[where Q=valid_idle,
                              OF retype_region_proofs.valid_idle,
-                             simplified, standard]
+                             simplified]
 
 
 lemmas retype_region_valid_arch =
-    use_retype_region_proofs[where Q=valid_arch_state, no_vars,
+    use_retype_region_proofs[where Q=valid_arch_state,
                              OF retype_region_proofs.valid_arch_state,
-                             simplified, standard]
+                             simplified]
 
 
 lemmas retype_region_valid_globals =
-    use_retype_region_proofs[where Q=valid_global_refs, no_vars,
+    use_retype_region_proofs[where Q=valid_global_refs,
                              OF retype_region_proofs.valid_global_refs,
-                             simplified, standard]
+                             simplified]
 
 
 lemmas retype_region_valid_reply_caps =
-    use_retype_region_proofs[where Q=valid_reply_caps, no_vars,
+    use_retype_region_proofs[where Q=valid_reply_caps,
                              OF retype_region_proofs.valid_reply_caps,
-                             simplified, standard]
+                             simplified]
 
 
 lemmas retype_region_valid_reply_masters =
-    use_retype_region_proofs[where Q=valid_reply_masters, no_vars,
+    use_retype_region_proofs[where Q=valid_reply_masters,
                              OF retype_region_proofs.valid_reply_masters,
-                             simplified, standard]
+                             simplified]
 
 
 lemmas retype_region_arch_objs =
-    use_retype_region_proofs[where Q=valid_arch_objs, no_vars,
+    use_retype_region_proofs[where Q=valid_arch_objs,
                              OF retype_region_proofs.valid_arch_objs',
-                             simplified, standard]
+                             simplified]
 
 
 crunch irq_node[wp]: retype_region "\<lambda>s. P (interrupt_irq_node s)"
@@ -3511,19 +3450,19 @@ lemma swp_clearMemoryVM [simp]:
   by (rule ext,simp)
 
 
-(* FIXME: move? *)
+(* FIXME: move *)
 lemma bind_assoc_reverse:
   "(do x \<leftarrow> A; _ \<leftarrow> B x; C x od) =
    (do x \<leftarrow> do x \<leftarrow> A; _ \<leftarrow> B x; return x od; C x od)"
 by (simp only: bind_assoc return_bind)
 
 
-(* FIXME: move? *)
+(* FIXME: move *)
 lemmas do_machine_op_bind =
     submonad_bind [OF submonad_do_machine_op submonad_do_machine_op
                       submonad_do_machine_op]
 
-(* FIXME: move? *)
+(* FIXME: move *)
 lemmas do_machine_op_return =
     submonad_do_machine_op.return
 

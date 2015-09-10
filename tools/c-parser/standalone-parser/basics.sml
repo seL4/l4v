@@ -49,15 +49,11 @@ open StrictCBasics
 
 fun apsnd f (x,y) = (x,f y)
 
+
 structure Hoare =
 struct
   fun varname s = s ^ "_'"
 end
-
-datatype more_info = MungedVar of {munge : string, owned_by : string option}
-                   | EnumC
-                   | FunctionName
-
 
 infix 1 |> ||>> |->
 

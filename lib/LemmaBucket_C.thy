@@ -191,8 +191,10 @@ next
     apply (simp add: is_aligned_mask mask_def power_overflow intvl_def)
     apply (rule set_eqI)
     apply clarsimp
-    apply (case_tac x)
-    apply (rule_tac x=na in exI)
+    apply (rename_tac w)
+    apply (case_tac w)
+    apply (rename_tac m)
+    apply (rule_tac x=m in exI)
     apply simp
     apply (erule order_less_le_trans)
     apply simp
@@ -333,7 +335,7 @@ next
     apply (case_tac "x = s")
      apply simp
      apply (subst heap_update_nmem_same)
-     apply (subst add_assoc)
+     apply (subst add.assoc)
      apply (rule intvl_nowrap[OF neq0 order_less_imp_le
                                       [OF lt[unfolded word_bits_def]]])
     apply simp
@@ -478,9 +480,8 @@ lemma index_fold_update:
      = (if n \<in> set xs then f n (index v n) else index v n)"
   apply (induct xs)
    apply simp
-  apply (case_tac "a = n")
-   apply simp
-  apply simp
+  apply (rename_tac x xs)
+  apply (case_tac "x = n"; simp)
   done
 
 lemma heap_update_list_id:
@@ -505,10 +506,10 @@ lemma Guard_no_cong:
   by simp
 
 lemma heap_update_list_concat_fold:
-  "ptr' = ptr + of_nat (length ys) \<Longrightarrow>
-   heap_update_list ptr' xs (heap_update_list ptr ys s)
+  assumes "ptr' = ptr + of_nat (length ys)" 
+  shows "heap_update_list ptr' xs (heap_update_list ptr ys s)
     = heap_update_list ptr (ys @ xs) s"
-  apply clarsimp
+  unfolding assms
   apply (induct ys arbitrary: ptr s)
    apply simp
   apply simp
@@ -529,12 +530,12 @@ lemmas heap_update_list_concat_unfold
     = heap_update_list_concat_fold[OF refl, symmetric]
 
 lemma coerce_heap_update_to_heap_updates:
-  "\<lbrakk> n = chunk * m; length xs = n \<rbrakk> \<Longrightarrow>
-   heap_update_list x xs
+  assumes n: "n = chunk * m" and len: "length xs = n"
+  shows "heap_update_list x xs
       = (\<lambda>s. foldl (\<lambda>s n. heap_update_list (x + (of_nat n * of_nat chunk))
                                       (take chunk (drop (n * chunk) xs)) s)
                      s [0 ..< m])"
-  apply clarsimp
+  using len[simplified n]
   apply (induct m arbitrary: x xs)
    apply (rule ext, simp)
   apply (rule ext)
@@ -583,7 +584,7 @@ lemma update_ti_list_array':
   apply simp
   apply (rule foldr_cong, (rule refl)+)
   apply (simp add: take_drop)
-  apply (subst min_max.inf_absorb1)
+  apply (subst min.absorb1)
    apply (fold mult_Suc_right, rule mult_le_mono2)
    apply simp
   apply simp
@@ -622,8 +623,8 @@ lemma access_in_array:
     apply (rule refl)
    apply simp
   apply (drule spec, drule(1) mp)
-  apply (simp add: size_of_def mult_ac drop_take)
-  apply (subgoal_tac "length ?v = size_of TYPE('a)")
+  apply (simp add: size_of_def ac_simps drop_take)
+  apply (subgoal_tac "length v = size_of TYPE('a)" for v)
    apply (subst subst, assumption)
    apply (subst(asm) subst, assumption)
    apply simp
@@ -676,38 +677,48 @@ lemma scast_of_nat [simp]:
   by (metis (hide_lams, no_types) len_signed scast_def uint_sint
          word_of_nat word_ubin.Abs_norm word_ubin.eq_norm)
 
+definition
+  array_ptr_index :: "(('a :: c_type)['b :: finite]) ptr \<Rightarrow> bool \<Rightarrow> nat \<Rightarrow> 'a ptr"
+where
+  "array_ptr_index p coerce n = CTypesDefs.ptr_add (ptr_coerce p)
+    (if coerce \<and> n \<ge> CARD ('b) then 0 else of_nat n)"
+
+lemmas array_ptr_index_simps
+    = array_ptr_index_def[where coerce=False, simplified]
+        array_ptr_index_def[where coerce=True, simplified]
+
 lemma heap_update_Array:
   "heap_update (p ::('a::packed_type['b::finite]) ptr) arr
-     = (\<lambda>s. foldl (\<lambda>s n. heap_update (CTypesDefs.ptr_add (Ptr (ptr_val p) :: 'a ptr) (of_nat n))
+     = (\<lambda>s. foldl (\<lambda>s n. heap_update (array_ptr_index p False n)
                                      (Arrays.index arr n) s) s [0 ..< card (UNIV :: 'b set)])"
   apply (rule ext, simp add: heap_update_def)
   apply (subst coerce_heap_update_to_heap_updates
                  [OF _ refl, where chunk="size_of TYPE('a)" and m="card (UNIV :: 'b set)"])
    apply simp
   apply (rule foldl_cong[OF refl refl])
-  apply (simp add: CTypesDefs.ptr_add_def)
-  apply (rule_tac f="\<lambda>xs. heap_update_list ?p xs ?s" in arg_cong)
+  apply (simp add: array_ptr_index_def CTypesDefs.ptr_add_def)
+  apply (rule_tac f="\<lambda>xs. heap_update_list p xs s" for p s in arg_cong)
   apply (simp add: to_bytes_def size_of_def
                    packed_type_access_ti)
   apply (simp add: typ_info_array')
   apply (subst fcp_eta[symmetric], subst access_ti_list_array)
      apply simp
     apply simp
-   apply (simp add: fcp_eta packed_type_access_ti size_of_def)
+   apply (simp add: packed_type_access_ti size_of_def)
    apply fastforce
   apply (rule take_drop_foldl_concat)
    apply (simp add: size_of_def)
   apply simp
   done
 
-lemma heap_access_Array_element:
+lemma heap_access_Array_element':
   fixes p :: "('a::mem_type['b::finite]) ptr"
   assumes less: "of_nat n < card (UNIV :: 'b set)"
   shows
   "index (h_val hp p) n
-      = h_val hp (CTypesDefs.ptr_add (ptr_coerce p) (of_nat n))"
+      = h_val hp (array_ptr_index p False n)"
   using less
-  apply (simp add: CTypesDefs.ptr_add_def h_val_def)
+  apply (simp add: array_ptr_index_def CTypesDefs.ptr_add_def h_val_def)
   apply (simp add: from_bytes_def size_of_def typ_info_array')
   apply (subst update_ti_list_array'[OF refl])
      apply simp
@@ -716,10 +727,9 @@ lemma heap_access_Array_element:
    apply (rule refl)
   apply (simp add: split_upt_on_n[OF less])
   apply (rule trans, rule foldr_does_nothing_to_xf[where xf="\<lambda>s. index s n"])
-   apply (simp add: index_update2)
-  apply (simp add: index_update)
+   apply simp+
   apply (subst foldr_does_nothing_to_xf[where xf="\<lambda>s. index s n"])
-   apply (simp add: index_update2)
+   apply simp
   apply (simp add: drop_heap_list_le take_heap_list_le)
   apply (subst take_heap_list_le)
    apply (simp add: le_diff_conv2)
@@ -731,6 +741,9 @@ lemma heap_access_Array_element:
   apply (simp add: size_of_def)
   done
 
+lemmas heap_access_Array_element
+    = heap_access_Array_element'[simplified array_ptr_index_simps]
+
 lemma heap_update_id:
   "h_val hp ptr = (v :: 'a :: packed_type)
       \<Longrightarrow> heap_update ptr v hp = hp"
@@ -739,18 +752,45 @@ lemma heap_update_id:
   apply clarsimp
   apply (simp add: from_bytes_def to_bytes_def update_ti_t_def
                    size_of_def field_access_update_same
-                   td_fafu_idem wf_fd)
+                   td_fafu_idem)
   done
 
-lemma heap_update_Array_element':
-  fixes p' :: "(('a :: packed_type)['b::finite]) ptr"
-  fixes p :: "('a :: packed_type) ptr"
-  fixes hp w
-  assumes p: "p = CTypesDefs.ptr_add (ptr_coerce p') (of_nat n)"
-  assumes n: "n < CARD('b)"
-  assumes size: "CARD('b) * size_of TYPE('a) < 2 ^ 32"
-  shows "heap_update p' (Arrays.update (h_val hp p') n w) hp
-       = heap_update p w hp"
+lemma fold_cong':
+  "a = b \<Longrightarrow> xs = ys \<Longrightarrow> (\<And>x. x \<in> set xs =simp=> f x = g x)
+    \<Longrightarrow> fold f xs a = fold g ys b"
+  unfolding simp_implies_def
+  by (metis fold_cong)
+
+lemma intvl_empty2:
+  "({p ..+ n} = {}) = (n = 0)"
+  by (auto simp add: intvl_def)
+
+lemma heap_update_list_commute:
+  "{p ..+ length xs} \<inter> {q ..+ length ys} = {}
+      \<Longrightarrow> heap_update_list p xs (heap_update_list q ys hp)
+        = heap_update_list q ys (heap_update_list p xs hp)"
+  apply (cases "length xs < addr_card")
+   apply (cases "length ys < addr_card")
+    apply (rule ext, simp add: heap_update_list_value)
+    apply blast
+   apply (simp_all add: addr_card intvl_overflow intvl_empty2)
+  done
+
+lemma heap_update_commute:
+  "\<lbrakk> {ptr_val p ..+ size_of TYPE('a)} \<inter> {ptr_val q ..+ size_of TYPE('b)} = {};
+       wf_fd (typ_info_t TYPE('a)); wf_fd (typ_info_t TYPE('b)) \<rbrakk>
+        \<Longrightarrow> heap_update p v (heap_update q (u :: 'b :: c_type) h)
+              = heap_update q u (heap_update p (v :: 'a :: c_type) h)"
+  apply (simp add: heap_update_def)
+  apply (simp add: heap_update_list_commute heap_list_update_disjoint_same
+                   to_bytes_def length_fa_ti size_of_def Int_commute)
+  done
+
+lemma heap_update_Array_update:
+  assumes n: "n < CARD('b :: finite)"
+  assumes size: "CARD('b) * size_of TYPE('a :: packed_type) < 2 ^ 32"
+  shows "heap_update p (Arrays.update (arr :: 'a['b]) n v) hp
+       = heap_update (array_ptr_index p False n) v (heap_update p arr hp)"
 proof -
 
   have P: "\<And>x k. \<lbrakk> x < CARD('b); k < size_of TYPE('a) \<rbrakk>
@@ -772,26 +812,50 @@ proof -
     apply (simp add: unat_of_nat unat_add_lem[THEN iffD1])
     done
 
+  let ?key_upd = "heap_update (array_ptr_index p False n) v"
+  note commute = fold_commute_apply[where h="?key_upd"
+      and xs="[Suc n ..< CARD('b)]", where g=f' and f=f' for f']
+
   show ?thesis using n
-    apply (simp add: heap_update_Array)
-    apply (subst split_upt_on_n[OF n])
-    apply (simp add: index_update p)
-    apply (subst foldl_does_nothing[where s=hp])
-     apply (simp add: index_update2)
-     apply (rule heap_update_id)
-     apply (simp add: heap_access_Array_element)
-    apply (rule foldl_does_nothing)
-    apply (rule heap_update_id)
-    apply (simp add: heap_access_Array_element index_update2)
-    apply (simp add: h_val_def heap_update_def)
-    apply (subst heap_list_update_disjoint_same, simp_all)
-    apply (simp add: CTypesDefs.ptr_add_def intvl_def Suc_le_eq)
+    apply (simp add: heap_update_Array split_upt_on_n[OF n]
+                     foldl_conv_fold)
+    apply (subst commute)
+     apply (simp_all add: packed_heap_update_collapse
+                    cong: fold_cong')
+    apply (rule ext, simp)
+    apply (rule heap_update_commute, simp_all add: ptr_add_def)
+    apply (simp add: array_ptr_index_def CTypesDefs.ptr_add_def intvl_def Suc_le_eq)
     apply (rule set_eqI, clarsimp)
     apply (drule word_unat.Rep_inject[THEN iffD2])
     apply (clarsimp simp: P nat_eq_add_iff1)
     apply (case_tac x, simp_all add: less_Suc_eq_le Suc_diff_le)
     done
 qed
+
+lemma heap_update_id_Array:
+  fixes arr :: "('a :: packed_type)['b :: finite]"
+  shows "arr = h_val hp p
+    \<Longrightarrow> heap_update p arr hp = hp"
+  apply (simp add: heap_update_Array)
+  apply (rule foldl_does_nothing[where s=hp])
+  apply (simp add: heap_access_Array_element' heap_update_id)
+  done
+
+lemma heap_update_Array_element'':
+  fixes p' :: "(('a :: packed_type)['b::finite]) ptr"
+  fixes p :: "('a :: packed_type) ptr"
+  fixes hp w
+  assumes p: "p = array_ptr_index p' False n"
+  assumes n: "n < CARD('b)"
+  assumes size: "CARD('b) * size_of TYPE('a) < 2 ^ 32"
+  shows "heap_update p' (Arrays.update (h_val hp p') n w) hp
+       = heap_update p w hp"
+  apply (subst heap_update_Array_update[OF n size])
+  apply (simp add: heap_update_id_Array p)
+  done
+
+lemmas heap_update_Array_element'
+    = heap_update_Array_element''[simplified array_ptr_index_simps]
 
 lemma fourthousand_size:
   "CARD('b :: fourthousand_count) * size_of TYPE('a :: oneMB_size) < 2 ^ 32"
@@ -840,40 +904,82 @@ lemma typ_slice_t_array:
   apply (simp only: size_of_def mult_le_mono1)
   done
 
+lemma h_t_valid_Array_element':
+  "\<lbrakk> htd \<Turnstile>\<^sub>t (p :: (('a :: mem_type)['b :: finite]) ptr); coerce \<or> n < CARD('b) \<rbrakk>
+    \<Longrightarrow> htd \<Turnstile>\<^sub>t array_ptr_index p coerce n"
+  apply (clarsimp simp only: h_t_valid_def valid_footprint_def Let_def
+                             c_guard_def c_null_guard_def)
+  apply (subgoal_tac "\<exists>offs. array_ptr_index p coerce n = ptr_add (ptr_coerce p) (of_nat offs)
+        \<and> offs < CARD ('b)")
+   apply (clarsimp simp: size_td_array size_of_def typ_uinfo_t_def
+                         typ_info_array array_tag_def)
+   apply (intro conjI)
+     apply (clarsimp simp: CTypesDefs.ptr_add_def
+                           field_simps)
+     apply (drule_tac x="offs * size_of TYPE('a) + y" in spec)
+     apply (drule mp)
+      apply (rule_tac y="Suc offs * size_of TYPE('a)" in order_less_le_trans)
+       apply (simp add: size_of_def)
+      apply (simp only: size_of_def mult_le_mono1)
+     apply (clarsimp simp: field_simps)
+     apply (erule map_le_trans[rotated])
+     apply (rule list_map_mono)
+     apply (subst mult.commute, rule typ_slice_t_array[unfolded array_tag_def])
+      apply assumption
+     apply (simp add: size_of_def)
+    apply (simp add: ptr_aligned_def align_of_def align_td_array
+                     array_ptr_index_def
+                     CTypesDefs.ptr_add_def unat_word_ariths unat_of_nat)
+    using align_size_of[where 'a='a] align[where 'a='a]
+    apply (simp add: align_of_def size_of_def addr_card_def card_word)
+    apply (simp add: dvd_mod)
+   apply (thin_tac "\<forall>x. P x" for P)
+   apply (clarsimp simp: intvl_def)
+   apply (drule_tac x="offs * size_of TYPE('a) + k" in spec)
+   apply (drule mp)
+    apply (simp add: array_ptr_index_def CTypesDefs.ptr_add_def field_simps of_nat_nat)
+   apply (erule notE)
+   apply (rule_tac y="Suc offs * size_of TYPE('a)" in order_less_le_trans)
+    apply (simp add: size_of_def)
+   apply (simp only: size_of_def mult_le_mono1)
+  apply (auto simp add: array_ptr_index_def intro: exI[where x=0])
+  done
+
 lemma h_t_valid_Array_element:
   "\<lbrakk> htd \<Turnstile>\<^sub>t (p :: (('a :: mem_type)['b :: finite]) ptr); 0 \<le> n; n < int CARD('b) \<rbrakk>
     \<Longrightarrow> htd \<Turnstile>\<^sub>t ((ptr_coerce p :: 'a ptr) +\<^sub>p n)"
-  apply (clarsimp simp only: h_t_valid_def valid_footprint_def Let_def
-                             c_guard_def c_null_guard_def)
-  apply (clarsimp simp: size_td_array size_of_def typ_uinfo_t_def
-                        typ_info_array array_tag_def)
-  apply (intro conjI)
-    apply clarsimp
-    apply (drule_tac x="nat n * size_of TYPE('a) + y" in spec)
-    apply (drule mp)
-     apply (rule_tac y="Suc (nat n) * size_of TYPE('a)" in order_less_le_trans)
-      apply (simp add: size_of_def)
-     apply (simp only: size_of_def mult_le_mono1)
-    apply (clarsimp simp: CTypesDefs.ptr_add_def field_simps of_nat_nat)
-    apply (erule map_le_trans[rotated])
-    apply (rule list_map_mono)
-    apply (rule typ_slice_t_array[unfolded array_tag_def])
-     apply simp
+  apply (drule_tac n="nat n" and coerce=False in h_t_valid_Array_element')
+   apply simp
+  apply (simp add: array_ptr_index_def)
+  done
+
+lemma ptr_safe_Array_element:
+  "\<lbrakk> ptr_safe (p :: (('a :: mem_type)['b :: finite]) ptr) htd; coerce \<or> n < CARD('b) \<rbrakk>
+    \<Longrightarrow> ptr_safe (array_ptr_index p coerce n) htd"
+  apply (simp add: ptr_safe_def)
+  apply (erule order_trans[rotated])
+  apply (subgoal_tac "\<exists>offs. array_ptr_index p coerce n = ptr_add (ptr_coerce p) (of_nat offs)
+        \<and> offs < CARD ('b)")
+   prefer 2
+   apply (auto simp: array_ptr_index_def intro: exI[where x=0])[1]
+  apply (clarsimp simp: s_footprint_def s_footprint_untyped_def
+                        CTypesDefs.ptr_add_def
+                        size_td_array size_of_def)
+  apply (rule_tac x="offs * size_of TYPE('a) + x" in exI)
+  apply (simp add: size_of_def)
+  apply (rule conjI)
+   apply (rule_tac y="Suc offs * size_of TYPE('a)" in order_less_le_trans)
     apply (simp add: size_of_def)
-   apply (simp add: ptr_aligned_def align_of_def align_td_array
-                    CTypesDefs.ptr_add_def unat_word_ariths unat_of_nat)
-   using align_size_of[where 'a='a] align[where 'a='a]
-   apply (simp add: align_of_def size_of_def addr_card_def card_word)
-   apply (simp add: dvd_mod dvd_add dvd_mult)
-  apply (thin_tac "\<forall>x. ?P x")
-  apply (clarsimp simp: intvl_def)
-  apply (drule_tac x="nat n * size_of TYPE('a) + k" in spec)
-  apply (drule mp)
-   apply (simp add: CTypesDefs.ptr_add_def field_simps of_nat_nat)
-  apply (erule notE)
-  apply (rule_tac y="Suc (nat n) * size_of TYPE('a)" in order_less_le_trans)
+   apply (simp only: size_of_def)
+   apply (rule mult_le_mono1)
+   apply simp
+  apply (thin_tac "coerce \<or> P" for P)
+  apply (elim disjE exE conjE, simp_all add: typ_uinfo_t_def)
+  apply (erule order_less_le_trans)
+  apply (rule prefix_length_le)
+  apply (rule order_trans, erule typ_slice_t_array)
    apply (simp add: size_of_def)
-  apply (simp only: size_of_def mult_le_mono1)
+  apply (simp add: size_of_def field_simps typ_info_array)
   done
 
 lemma from_bytes_eq:
@@ -914,9 +1020,8 @@ lemma ptr_add_disjoint2:
   apply (erule swap)
   apply (rule intvl_inter_le[where k=0 and ka="unat (ptr_val x - ptr_val y)"])
     apply clarsimp
-   apply (metis (hide_lams, no_types) WordLemmaBucket.word_l_diffs(1)
-              comm_semiring_1_class.normalizing_semiring_rules(24) linorder_not_less
-              order_less_le_trans word_le_less_eq word_of_nat_le)
+   apply (metis (no_types, hide_lams) add.commute less_imp_le less_le_trans not_le unat_less_helper
+                word_diff_ls'(4))   
   apply simp
   done
 
@@ -934,12 +1039,12 @@ proof -
   have f2: "\<And>x. a + x < a + of_nat b \<or> \<not> x < of_nat b"
     using no_overflow
     by (metis PackedTypes.of_nat_mono_maybe_le add_lessD1 le_add1
-            nat_add_commute olen_add_eqv unat_of_nat_eq word_arith_nat_add
+            add.commute olen_add_eqv unat_of_nat_eq word_arith_nat_add
             word_plus_strict_mono_right)
 
   have f3: "\<forall>x y. y \<notin> {x..+b} \<or> of_nat (sk y x b) < (of_nat b :: 'a word)"
     using no_overflow f1
-    by (metis add_lessD1 nat_add_commute of_nat_mono_maybe)
+    by (metis add_lessD1 add.commute of_nat_mono_maybe)
 
   have "x < a + of_nat b \<or> \<not> of_nat (sk x a b) < (of_nat b :: 'a word) \<or> ?thesis"
     using f1 f2 by metis
@@ -955,16 +1060,58 @@ proof -
       apply (cut_tac no_overflow)
       apply (subgoal_tac "k + (b + unat a) < 2 ^ len_of (TYPE('a)) + b")
        apply (subgoal_tac "k + unat a < 2 ^ len_of (TYPE('a))")
-        apply (metis add_lessD1 le_def less_not_refl2 nat_add_commute unat_eq_of_nat word_arith_nat_add)
+        apply (metis add_lessD1 le_def less_not_refl2 add.commute unat_eq_of_nat word_arith_nat_add)
        apply clarsimp
       apply clarsimp
      apply (clarsimp simp: intvl_def)
      apply (rule exI [where x="unat (x  - a)"])
      apply (clarsimp simp: unat_sub_if_size word_le_nat_alt word_less_nat_alt)
      apply (cut_tac no_overflow)
-     apply (metis diff_le_self le_add_diff_inverse le_diff_conv le_eq_less_or_eq le_unat_uoi nat_add_commute nat_neq_iff unat_of_nat_eq word_arith_nat_add)
+     apply (metis diff_le_self le_add_diff_inverse le_diff_conv le_eq_less_or_eq le_unat_uoi add.commute nat_neq_iff unat_of_nat_eq word_arith_nat_add)
     apply simp
     done
 qed
+
+(* arg_cong specified for FCP because it does not apply as is. *)
+lemma FCP_arg_cong:"f = g \<Longrightarrow> FCP f = FCP g"
+  by simp
+
+lemma h_val_id:
+    "h_val (hrs_mem (hrs_mem_update (heap_update x y) s)) x = (y::'a::mem_type)"
+  apply (subst hrs_mem_update)
+  apply (rule h_val_heap_update)
+  done
+
+lemma heap_update_id2:
+    "hrs_mem_update (heap_update p ((h_val (hrs_mem s) p)::'a::packed_type)) s = s"
+  apply (clarsimp simp:hrs_mem_update_def case_prod_beta)
+  apply (subst heap_update_id)
+   apply (simp add:hrs_mem_def)+
+  done
+
+lemma intvlI_unat:"unat b < unat c \<Longrightarrow> a + b \<in> {a ..+ unat c}"
+  by (metis intvlI word_unat.Rep_inverse)
+
+lemma neq_imp_bytes_disjoint:
+  "\<lbrakk> c_guard (x::'a::c_type ptr); c_guard y; unat j < align_of TYPE('a);
+        unat i < align_of TYPE('a); x \<noteq> y; 2 ^ n = align_of TYPE('a); n < 32\<rbrakk> \<Longrightarrow>
+    ptr_val x + j \<noteq> ptr_val y + i"
+  apply (rule ccontr)
+  apply (subgoal_tac "is_aligned (ptr_val x) n")
+   apply (subgoal_tac "is_aligned (ptr_val y) n")
+    apply (subgoal_tac "(ptr_val x + j && ~~ mask n) = (ptr_val y + i && ~~ mask n)")
+     apply (subst (asm) neg_mask_add_aligned, simp, simp add: word_less_nat_alt)
+     apply (subst (asm) neg_mask_add_aligned, simp, simp add: word_less_nat_alt)
+     apply (clarsimp simp: is_aligned_neg_mask_eq)
+    apply simp
+   apply (clarsimp simp: c_guard_def ptr_aligned_def is_aligned_def)
+  apply (clarsimp simp: c_guard_def ptr_aligned_def is_aligned_def)
+  done
+
+lemma heap_update_list_base':"heap_update_list p [] = id"
+  by (rule ext, simp)
+
+lemma hrs_mem_update_id3: "hrs_mem_update id = id"
+  unfolding hrs_mem_update_def by simp
 
 end

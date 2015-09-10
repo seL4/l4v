@@ -26,15 +26,17 @@
     </sequence>
 
     <!-- CRefine -->
-    <sequence timeout="14400">
-        <test name="CBaseRefine">make CBaseRefine</test>
+    <sequence timeout="14400" depends="CParser">
+        <test name="CKernel">make CKernel</test>
+        <test name="CSpec">make CSpec</test>
+        <test name="CBaseRefine" depends="Refine">make CBaseRefine</test>
         <test name="CRefine">make CRefine</test>
     </sequence>
 
     <!-- DSpec / DRefine -->
     <sequence depends="DSpec">
-        <test name="DRefine">make DRefine</test>
         <test name="DBaseRefine">make DBaseRefine</test>
+        <test name="DRefine">make DRefine</test>
     </sequence>
 
     <!-- Access Control -->
@@ -44,9 +46,30 @@
         <test name="InfoFlowC" depends="CBaseRefine">make InfoFlowC</test>
     </sequence>
 
+    <!-- Access Control and capDL -->
+    <sequence depends="DRefine Access">
+        <test name="DPolicy">make DPolicy</test>
+    </sequence>
+
+    <!-- Bisim -->
+    <sequence depends="ASepSpec AInvs">
+        <test name="Bisim">make Bisim</test>
+    </sequence>
+
+    <!-- Binary Verification -->
+    <sequence depends="CSpec" timeout="9000">
+        <test name="SimplExportAndRefine">make SimplExportAndRefine</test>
+    </sequence>
+
     <!-- Separation Logic. -->
     <sequence>
         <test name="SepTactics">make SepTactics</test>
         <test name="SepTacticsExamples">make SepTacticsExamples</test>
+    </sequence>
+
+    <!-- Separation Logic on capDL. -->
+    <sequence depends="DSpec">
+        <test name="SepDSpec">make SepDSpec</test>
+        <test name="DSpecProofs">make DSpecProofs</test>
     </sequence>
 </testsuite>

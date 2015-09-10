@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-header "Untyped Objects"
+chapter "Untyped Objects"
 
 theory Untyped_H
 imports
@@ -46,7 +46,7 @@ where
         throw $ InvalidArgument 0;
     newType \<leftarrow> returnOk ( toEnum (fromIntegral newTypeW) ::object_type);
     userObjSize \<leftarrow> returnOk ( fromIntegral userObjSizeW);
-    rangeCheck userObjSize 0 $ bitSize nullPointer - 2;
+    rangeCheck userObjSize 0 $ finiteBitSize nullPointer - 2;
     whenE (newType = fromAPIType CapTableObject \<and> userObjSize = 0) $
         throw $ InvalidArgument 1;
     whenE (newType = fromAPIType Untyped \<and> userObjSize < 4) $

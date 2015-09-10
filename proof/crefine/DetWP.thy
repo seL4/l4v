@@ -12,8 +12,6 @@ theory DetWP
 imports "../../lib/clib/DetWPLib" Include_C
 begin
 
-declare option.weak_case_cong[cong]
-
 lemma det_wp_doMachineOp [wp]:
   "det_wp (\<lambda>_. P) f \<Longrightarrow> det_wp (\<lambda>_. P) (doMachineOp f)"
   apply (simp add: doMachineOp_def split_def)
@@ -34,20 +32,12 @@ lemma det_wp_loadWordUser [wp]:
   apply (clarsimp simp: is_aligned_mask)
   done
 
-lemma getRegister_inv:
-  "\<lbrace>P\<rbrace> getRegister r \<lbrace>\<lambda>_. P\<rbrace>"
-  by (simp add: getRegister_def)
-
-(* Annotation added by Simon Winwood (Mon Jul  5 17:43:04 2010) using taint-mode *)
 declare det_wp_liftM[wp]
 
-(* Annotation added by Simon Winwood (Mon Jul  5 17:43:03 2010) using taint-mode *)
 declare det_wp_assert_opt[wp]
 
-(* Annotation added by Simon Winwood (Mon Jul  5 17:43:06 2010) using taint-mode *)
 declare det_wp_when[wp]
 
-(* Annotation added by Simon Winwood (Mon Jul  5 17:43:04 2010) using taint-mode *)
 declare det_wp_unless[wp]
 
 declare word_neq_0_conv [simp del]
@@ -55,13 +45,13 @@ declare word_neq_0_conv [simp del]
 lemma det_wp_loadObject_default [wp]:
   "det_wp (\<lambda>s. \<exists>obj. projectKO_opt ko = Some (obj::'a) \<and> 
                       is_aligned p (objBits obj) \<and> q = p
-                      \<and> option_case True (\<lambda>x. 2 ^ (objBits obj) \<le> x - p) n)
+                      \<and> case_option True (\<lambda>x. 2 ^ (objBits obj) \<le> x - p) n)
            (loadObject_default p q n ko :: ('a::pre_storable) kernel)"
   apply (simp add: loadObject_default_def split_def projectKO_def
                    alignCheck_def alignError_def magnitudeCheck_def
                    unless_def)
   apply (rule det_wp_pre)
-   apply (wp option_case_wp)
+   apply (wp case_option_wp)
   apply (clarsimp simp: is_aligned_mask[symmetric])
   apply simp
   done
@@ -78,7 +68,6 @@ lemma det_wp_getTCB [wp]:
     apply simp
    apply (erule is_aligned_no_overflow)
   apply (simp add: word_bits_def)
-  apply (clarsimp split: option.split_asm simp: objBits_simps)
   done
 
 lemma det_wp_setObject_other [wp]:
@@ -140,7 +129,7 @@ lemma det_wp_asUser [wp]:
   done
   
 lemma det_wp_getMRs:
-  "det_wp (tcb_at' thread and option_case \<top> valid_ipc_buffer_ptr' buffer) (getMRs thread buffer mi)"
+  "det_wp (tcb_at' thread and case_option \<top> valid_ipc_buffer_ptr' buffer) (getMRs thread buffer mi)"
   apply (clarsimp simp: getMRs_def)
   apply (rule det_wp_pre)
    apply (wp det_mapM det_getRegister order_refl det_wp_mapM)

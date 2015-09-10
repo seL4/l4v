@@ -26,6 +26,12 @@ struct
  *                ts_force RULE_NAME = FUNC_NAMES,
  *                ts_force ... = ...,
  *                heap_abs_syntax,
+ *
+ *                trace_heap_lift = FUNC_NAMES,
+ *                trace_word_abs = FUNC_NAMES,
+ *                trace_opt,
+ *                no_opt,
+ *                gen_word_heaps,
  *                statistics,
  *                keep_going
  *              ]
@@ -70,6 +76,19 @@ type autocorres_options = {
   (* Allow set of functions to translated to be limited. *)
   scope: string list option ref,
   scope_depth: int option ref,
+
+  (* Store detailed traces for conversions of the selected functions. *)
+  trace_heap_lift : string list option ref,
+  trace_word_abs : string list option ref,
+
+  (* Disable L1Peephole, L2Peephole and L2Opt rules. *)
+  no_opt : bool option ref,
+
+  (* Trace simplification rules. Note that some simplification is performed even with no_opt set. *)
+  trace_opt : bool option ref,
+
+  (* Define word{8,16,32,64} heaps even if the program does not use them. *)
+  gen_word_heaps : bool option ref,
 
   print_stats : bool option ref,
 
@@ -168,6 +187,26 @@ val heap_abs_syntax_parser =
   Parse.reserved "heap_abs_syntax" >>
   (fn _ => none_to_some (#heap_abs_syntax) true "autocorres: heap_abs_syntax option specified multiple times")
 
+val trace_heap_lift_parser =
+  named_opt "trace_heap_lift" "function names" >>
+  (fn funcs => none_to_some (#trace_heap_lift) funcs "autocorres: trace_heap_lift option specified multiple times")
+
+val trace_word_abs_parser =
+  named_opt "trace_word_abs" "function names" >>
+  (fn funcs => none_to_some (#trace_word_abs) funcs "autocorres: trace_word_abs option specified multiple times")
+
+val no_opt_parser =
+  Parse.reserved "no_opt" >>
+  (fn _ => none_to_some (#no_opt) true "autocorres: no_opt option specified multiple times")
+
+val trace_opt_parser =
+  Parse.reserved "trace_opt" >>
+  (fn _ => none_to_some (#trace_opt) true "autocorres: trace_opt option specified multiple times")
+
+val gen_word_heaps_parser =
+  Parse.reserved "gen_word_heaps" >>
+  (fn _ => none_to_some (#gen_word_heaps) true "autocorres: gen_word_heaps option specified multiple times")
+
 val print_stats_parser =
   Parse.reserved "statistics" >>
   (fn _ => none_to_some (#print_stats) true "autocorres: statistics option specified multiple times")
@@ -193,6 +232,11 @@ fun default_opts _ = {
     heap_abs_syntax = ref NONE,
     scope = ref NONE,
     scope_depth = ref NONE,
+    trace_heap_lift = ref NONE,
+    trace_word_abs = ref NONE,
+    no_opt = ref NONE,
+    trace_opt = ref NONE,
+    gen_word_heaps = ref NONE,
     print_stats = ref NONE,
     keep_going = ref NONE
   }
@@ -211,6 +255,11 @@ let
      heap_abs_syntax_parser ||
      scope_parser ||
      scope_depth_parser ||
+     trace_heap_lift_parser ||
+     trace_word_abs_parser ||
+     no_opt_parser ||
+     trace_opt_parser ||
+     gen_word_heaps_parser ||
      print_stats_parser ||
      keep_going_parser)
     |> !! (fn xs => K ("autocorres: unknown option " ^ quote (Parse.text (fst xs) |> #1)))
@@ -238,7 +287,7 @@ let
 
   (* Enter into the correct context. *)
   val {base = locale_name,...} = OS.Path.splitBaseExt (OS.Path.file filename)
-  val lthy = Named_Target.context_cmd (locale_name, Position.none) thy
+  val lthy = Named_Target.begin (locale_name, Position.none) thy
 
   (* Fetch basic program information. *)
   val prog_info = ProgramInfo.get_prog_info lthy filename
@@ -246,7 +295,7 @@ let
   val all_functions = Symset.make (Symtab.keys (FunctionInfo.get_functions fn_info))
 
   (* Process autocorres options. *)
-  val _ = Utils.keep_going_option := (!(#keep_going opt) = SOME true)
+  val keep_going = !(#keep_going opt) = SOME true
 
   val _ = if not (!(#unsigned_word_abs opt) = NONE) andalso not (!(#skip_word_abs opt) = NONE) then
               error "autocorres: unsigned_word_abs and skip_word_abs cannot be used together."
@@ -263,6 +312,8 @@ let
         @ these (!(#no_signed_word_abs opt))
         @ these (!(#scope opt))
         @ Symtab.keys (!(#ts_force opt))
+        @ these (!(#trace_heap_lift opt))
+        @ these (!(#trace_word_abs opt))
   val invalid_functions =
         Symset.subtract all_functions (Symset.make funcs_in_options)
   val _ =
@@ -309,7 +360,11 @@ let
         in
           FunctionInfo.map_fn_info (fn def =>
             if Symset.contains valid_functions (#name def) then SOME def else NONE) fn_info
+          |> (fn fi => (let val fns = FunctionInfo.get_functions fi |> Symtab.dest |> map fst
+                            val _ = @{trace} ("autocorres scope: selected " ^ Int.toString (length fns) ^ " functions:")
+                        in map (fn f => @{trace} f) fns end; fi))
         end
+  val all_functions = Symset.make (Symtab.keys (FunctionInfo.get_functions fn_info))
 
   (*
    * Sanity check the C parser's output.
@@ -318,12 +373,12 @@ let
    * to sort constraints on constants. This doesn't violate the Isabelle
    * kernel's soundness, but does wreck havoc on us.
    *)
-  val sanity_errors = AutoCorresUtil.map_all fn_info (fn fn_name =>
+  val sanity_errors = AutoCorresUtil.map_all lthy fn_info (fn fn_name =>
     let
       val def =
         FunctionInfo.get_function_def fn_info fn_name
         |> #definition
-        |> prop_of
+        |> Thm.prop_of
         |> Utils.rhs_of
     in
       (Syntax.check_term lthy def; NONE)
@@ -337,24 +392,51 @@ let
     else
       ()
 
+  val do_opt = !(#no_opt opt) <> SOME true
+  val trace_opt = !(#trace_opt opt) = SOME true
+  val gen_word_heaps = !(#gen_word_heaps opt) = SOME true
+
+  (* Any function that was declared in the C file (but never defined) should
+   * stay in the nondet-monad unless explicitly instructed by the user to be
+   * something else. *)
+  val ts_force = let
+    val invented_functions =
+      all_functions
+      (* Select functions with an invented body. *)
+      |> Symset.filter (fn n => FunctionInfo.get_function_def fn_info n |> #invented_body)
+      (* Ignore functions which already have a "ts_force" rule applied to them. *)
+      |> Symset.subtract (Symset.make (Symtab.keys ts_force))
+      |> Symset.dest
+  in
+    (* Use the most general monadic type allowed by the user. *)
+    fold (fn n => Symtab.update_new (n, List.last ts_rules)) invented_functions ts_force
+  end
+
   (* Do the translation. *)
-  val lthy =
-    SimplConv.translate_simpl filename fn_info lthy
+  val (lthy, fn_info) =
+    SimplConv.translate_simpl filename fn_info do_opt trace_opt lthy
     |> (fn (lthy, fn_info) =>
-        LocalVarExtract.translate_l2 filename fn_info lthy)
+        LocalVarExtract.translate_l2 filename fn_info do_opt trace_opt lthy)
     |> (fn (lthy, fn_info) =>
-        HeapLift.system_heap_lift filename fn_info (these (!(#no_heap_abs opt))) (these (!(#force_heap_abs opt))) heap_abs_syntax lthy)
+        HeapLift.system_heap_lift filename fn_info (these (!(#no_heap_abs opt))) (these (!(#force_heap_abs opt))) heap_abs_syntax keep_going (these (!(#trace_heap_lift opt))) do_opt trace_opt gen_word_heaps lthy)
     |> (fn (lthy, fn_info) =>
         if skip_word_abs then (lthy, fn_info) else
         WordAbstract.word_abstract filename fn_info (these (!(#unsigned_word_abs opt)))
-                                   (these (!(#no_signed_word_abs opt))) lthy)
+                                   (these (!(#no_signed_word_abs opt))) (these (!(#trace_word_abs opt)))
+                                   do_opt trace_opt lthy)
     |> (fn (lthy, fn_info) =>
-        TypeStrengthen.type_strengthen ts_rules ts_force filename fn_info lthy)
+        TypeStrengthen.type_strengthen ts_rules ts_force filename fn_info keep_going do_opt lthy)
     |> (fn (lthy, fn_info) =>
-        lthy)
+        (lthy, fn_info))
+
+  (* Save fn_info for future reference. *)
+  val _ = @{trace} "Saving function info to AutoCorresFunctionInfo."
+  val lthy = Local_Theory.background_theory (
+	  AutoCorresFunctionInfo.map (fn tbl =>
+	    Symtab.update (filename, fn_info) tbl)) lthy
 in
   (* Exit context. *)
-  Local_Theory.exit_global lthy
+  Named_Target.exit lthy
 end
 
 end

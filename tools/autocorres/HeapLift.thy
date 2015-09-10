@@ -30,12 +30,33 @@ lemma L2Tcorres_fail:
   apply (rule corresXF_fail)
   done
 
-definition "abs_expr st P A C \<equiv> \<forall>s. P (st s) \<longrightarrow> (C s) = A (st s) "
-definition "abs_modifies st P A C \<equiv> \<forall>s. P (st s) \<longrightarrow> st (C s) = A (st s) "
+(* Abstraction predicates for inner expressions. *)
+definition "abs_guard    st   A C \<equiv> \<forall>s. A (st s) \<longrightarrow> C s"
+definition "abs_expr     st P A C \<equiv> \<forall>s. P (st s) \<longrightarrow> C s = A (st s)"
+definition "abs_modifies st P A C \<equiv> \<forall>s. P (st s) \<longrightarrow> st (C s) = A (st s)"
+
+(* Predicates to enable some transformations on the input expressions
+   (namely, rewriting uses of field_lvalue) that are best done
+   as a preprocessing stage (st = id).
+   The corresTA rules should ensure that these are used to rewrite
+   any inner expressions before handing off to the predicates above. *)
+definition "struct_rewrite_guard      A C \<equiv> \<forall>s. A s \<longrightarrow> C s"
+definition "struct_rewrite_expr     P A C \<equiv> \<forall>s. P s \<longrightarrow> C s = A s"
+definition "struct_rewrite_modifies P A C \<equiv> \<forall>s. P s \<longrightarrow> C s = A s"
+
+
+(* fun_app2 is like fun_app, but it skips an abstraction.
+ * We use this for terms like "\<lambda>s a. Array.update a k (f s)".
+ * FIXME: ideally, the first order conversion code can skip abstractions. *)
+lemma abs_expr_fun_app2 [heap_abs_fo]:
+  "\<lbrakk> abs_expr st P f' f;
+     abs_expr st Q g' g \<rbrakk> \<Longrightarrow>
+   abs_expr st (\<lambda>s. P s \<and> Q s) (\<lambda>s a. f' s a (g' s a)) (\<lambda>s a. f s a $ g s a)"
+  by (simp add: abs_expr_def)
 
 lemma abs_expr_fun_app [heap_abs_fo]:
   "\<lbrakk> abs_expr st Y b' b; abs_expr st X a' a \<rbrakk> \<Longrightarrow>
-      abs_expr st (X and Y) (\<lambda>s. a' s (b' s)) (\<lambda>s. ((a s) $ (b s)))"
+      abs_expr st (\<lambda>s. X s \<and> Y s) (\<lambda>s. a' s (b' s)) (\<lambda>s. a s $ b s)"
   apply (clarsimp simp: abs_expr_def)
   done
 
@@ -44,29 +65,43 @@ lemma abs_expr_constant [heap_abs]:
   apply (clarsimp simp: abs_expr_def)
   done
 
-lemma abs_expr_conj [heap_abs]:
-  "\<lbrakk> abs_expr st P G G'; abs_expr st Q H H' \<rbrakk>
-      \<Longrightarrow> abs_expr st (\<lambda>s. P s \<and> Q s) (\<lambda>s. G s \<and> H s) (\<lambda>s. G' s \<and> H' s)"
-  by (clarsimp simp: abs_expr_def)
+lemma abs_guard_expr [heap_abs]:
+  "abs_expr st P a' a \<Longrightarrow> abs_guard st (\<lambda>s. P s \<and> a' s) a"
+  by (simp add: abs_expr_def abs_guard_def)
+
+lemma abs_guard_constant [heap_abs]:
+  "abs_guard st (\<lambda>_. P) (\<lambda>_. P)"
+  by (clarsimp simp: abs_guard_def)
+
+lemma abs_guard_conj [heap_abs]:
+  "\<lbrakk> abs_guard st G G'; abs_guard st H H' \<rbrakk>
+      \<Longrightarrow> abs_guard st (\<lambda>s. G s \<and> H s) (\<lambda>s. G' s \<and> H' s)"
+  by (clarsimp simp: abs_guard_def)
+
 
 lemma L2Tcorres_modify [heap_abs]:
-    "\<lbrakk> abs_modifies st P a c \<rbrakk> \<Longrightarrow> L2Tcorres st (L2_seq (L2_guard P) (\<lambda>_. (L2_modify a))) (L2_modify c)"
-  apply (monad_eq simp: L2_defs abs_modifies_def L2Tcorres_def corresXF_def)
+    "\<lbrakk> struct_rewrite_modifies P b c; abs_guard st P' P;
+       abs_modifies st Q a b \<rbrakk> \<Longrightarrow>
+     L2Tcorres st (L2_seq (L2_guard (\<lambda>s. P' s \<and> Q s)) (\<lambda>_. (L2_modify a))) (L2_modify c)"
+  apply (monad_eq simp: corresXF_def L2Tcorres_def L2_defs abs_modifies_def abs_guard_def struct_rewrite_modifies_def struct_rewrite_guard_def)
   done
 
 lemma L2Tcorres_gets [heap_abs]:
-    "abs_expr st P a c \<Longrightarrow> L2Tcorres st (L2_seq (L2_guard P) (\<lambda>_. L2_gets a n)) (L2_gets c n)"
-  apply (monad_eq simp: corresXF_def L2Tcorres_def L2_defs abs_expr_def)
+    "\<lbrakk> struct_rewrite_expr P b c; abs_guard st P' P;
+       abs_expr st Q a b \<rbrakk> \<Longrightarrow>
+     L2Tcorres st (L2_seq (L2_guard (\<lambda>s. P' s \<and> Q s)) (\<lambda>_. L2_gets a n)) (L2_gets c n)"
+  apply (monad_eq simp: corresXF_def L2Tcorres_def L2_defs abs_expr_def abs_guard_def struct_rewrite_expr_def struct_rewrite_guard_def)
   done
 
 lemma L2Tcorres_gets_const [heap_abs]:
-    "L2Tcorres st (L2_gets (\<lambda>s. a) n) (L2_gets (\<lambda>s. a) n)"
-  apply (monad_eq simp: corresXF_def L2Tcorres_def L2_defs abs_expr_def)
+    "L2Tcorres st (L2_gets (\<lambda>_. a) n) (L2_gets (\<lambda>_. a) n)"
+  apply (monad_eq simp: corresXF_def L2Tcorres_def L2_defs)
   done
 
 lemma L2Tcorres_guard [heap_abs]:
-    "\<lbrakk> abs_expr st P a c \<rbrakk> \<Longrightarrow> L2Tcorres st (L2_guard (P and a)) (L2_guard c)"
-  apply (monad_eq simp: corresXF_def L2Tcorres_def L2_defs abs_expr_def)
+    "\<lbrakk> struct_rewrite_guard b c; abs_guard st a b \<rbrakk> \<Longrightarrow>
+     L2Tcorres st (L2_guard a) (L2_guard c)"
+  apply (monad_eq simp: corresXF_def L2Tcorres_def L2_defs abs_guard_def struct_rewrite_guard_def)
   done
 
 lemma L2Tcorres_recguard [heap_abs]:
@@ -76,18 +111,20 @@ lemma L2Tcorres_recguard [heap_abs]:
 
 lemma L2Tcorres_while [heap_abs]:
   assumes body_corres:  "\<And>x. L2Tcorres st (B' x) (B x)"
-  and guard_impl_cond:  "\<And>r. abs_expr st (G r) (C' r) (C r)"
-  shows "L2Tcorres st (L2_guarded_while G C' B' i n) (L2_while C B i n)"
+  and cond_rewrite:     "\<And>r. struct_rewrite_expr (G r) (C' r) (C r)"
+  and guard_abs:        "\<And>r. abs_guard st (G' r) (G r)"
+  and guard_impl_cond:  "\<And>r. abs_expr st (H r) (C'' r) (C' r)"
+  shows "L2Tcorres st (L2_guarded_while (\<lambda>i s. G' i s \<and> H i s) C'' B' i n) (L2_while C B i n)"
 proof -
-  have cond_match: "\<And>r s. G r (st s) \<Longrightarrow> C' r (st s) = C r s"
-    using guard_impl_cond
-    by (clarsimp simp: abs_expr_def)
+  have cond_match: "\<And>r s. G' r (st s) \<and> H r (st s) \<Longrightarrow> C'' r (st s) = C r s"
+    using cond_rewrite guard_abs guard_impl_cond
+    by (clarsimp simp: abs_expr_def abs_guard_def struct_rewrite_expr_def)
 
   have "corresXF st (\<lambda>r _. r) (\<lambda>r _. r) (\<lambda>_. True)
-           (doE _ \<leftarrow> guardE (G i);
-                     whileLoopE C'
+           (doE _ \<leftarrow> guardE (\<lambda>s. G' i s \<and> H i s);
+                     whileLoopE C''
                        (\<lambda>i. doE r \<leftarrow> B' i;
-                                _ \<leftarrow> guardE (G r);
+                                _ \<leftarrow> guardE (\<lambda>s. G' r s \<and> H r s);
                                 returnOk r
                        odE) i
            odE)
@@ -130,9 +167,11 @@ lemma abs_spec_constant [heap_abs]:
 lemma L2Tcorres_condition [heap_abs]:
   "\<lbrakk> L2Tcorres st L L';
      L2Tcorres st R R';
-     abs_expr st P C' C \<rbrakk> \<Longrightarrow>
-   L2Tcorres st (L2_seq (L2_guard P) (\<lambda>_. L2_condition C' L R)) (L2_condition C L' R')"
-  apply (clarsimp simp: L2_defs abs_expr_def L2Tcorres_def)
+     struct_rewrite_expr P C' C;
+     abs_guard st P' P;
+     abs_expr st Q C'' C' \<rbrakk> \<Longrightarrow>
+   L2Tcorres st (L2_seq (L2_guard (\<lambda>s. P' s \<and> Q s)) (\<lambda>_. L2_condition C'' L R)) (L2_condition C L' R')"
+  apply (clarsimp simp: L2_defs L2Tcorres_def abs_expr_def abs_guard_def struct_rewrite_expr_def struct_rewrite_guard_def)
   apply (rule corresXF_exec_abs_guard [unfolded guardE_def])
   apply (rule corresXF_cond)
     apply (metis corresXF_guard_imp)
@@ -194,7 +233,14 @@ lemma L2Tcorres_seq_unused_result [heap_abs]:
 
 lemma abs_expr_split [heap_abs]:
   "\<lbrakk> \<And>a b. abs_expr st (P a b) (A a b) (C a b) \<rbrakk>
-       \<Longrightarrow> abs_expr st (case r of (a, b) \<Rightarrow> P a b)  (case r of (a, b) \<Rightarrow> A a b) (case r of (a, b) \<Rightarrow> C a b)"
+       \<Longrightarrow> abs_expr st (case r of (a, b) \<Rightarrow> P a b)
+            (case r of (a, b) \<Rightarrow> A a b) (case r of (a, b) \<Rightarrow> C a b)"
+  apply (auto simp: split_def)
+  done
+
+lemma abs_guard_split [heap_abs]:
+  "\<lbrakk> \<And>a b. abs_guard st (A a b) (C a b) \<rbrakk>
+       \<Longrightarrow> abs_guard st (case r of (a, b) \<Rightarrow> A a b) (case r of (a, b) \<Rightarrow> C a b)"
   apply (auto simp: split_def)
   done
 
@@ -211,6 +257,11 @@ lemma L2Tcorres_abstract_fail [heap_abs]:
 
 lemma abs_expr_id [heap_abs]:
   "abs_expr id \<top> A A"
+  apply (clarsimp simp: abs_expr_def)
+  done
+
+lemma abs_expr_lambda_null [heap_abs]:
+  "abs_expr st P A C \<Longrightarrow> abs_expr st P (\<lambda>s r. A s) (\<lambda>s r. C s)"
   apply (clarsimp simp: abs_expr_def)
   done
 
@@ -259,11 +310,6 @@ lemma L2Tcorres_measure_call [heap_abs]:
   apply assumption
   done
 
-lemma abs_expr_lambda_null [heap_abs]:
-  "abs_expr st P A C \<Longrightarrow> abs_expr st P (\<lambda>s r. A s) (\<lambda>s r. C s)"
-  apply (clarsimp simp: abs_expr_def)
-  done
-
 (*
  * Assert the given abstracted heap (accessed using "getter" and "setter") for type
  * "'a" is a valid abstraction w.r.t. the given state translation functions.
@@ -275,6 +321,14 @@ definition
         \<and> (\<forall>s f. f (r s) = (r s) \<longrightarrow> w f s = s)
         \<and> (\<forall>f f' s. (f (r s) = f' (r s)) \<longrightarrow> w f s = w f' s)
         \<and> (\<forall>f g s. w f (w g s) = w (\<lambda>x. f (g x)) s)"
+
+lemma read_write_validI:
+  "\<lbrakk> \<And>f s. r (w f s) = f (r s);
+     \<And>f s. f (r s) = r s \<Longrightarrow> w f s = s;
+     \<And>f f' s. f (r s) = f' (r s) \<Longrightarrow> w f s = w f' s;
+     \<And>f g s. w f (w g s) = w (\<lambda>x. f (g x)) s
+   \<rbrakk> \<Longrightarrow> read_write_valid r w"
+  unfolding read_write_valid_def by metis
 
 lemma read_write_write_id: "read_write_valid r w \<Longrightarrow> w (\<lambda>x. x) s = s"
   by (simp add: read_write_valid_def)
@@ -361,12 +415,63 @@ lemma valid_typ_heapI [intro!]:
   apply (safe | fact | rule ext)+
   done
 
+lemma read_write_valid_fg_cons:
+  "read_write_valid r w \<Longrightarrow> fg_cons r (w \<circ> (\<lambda>x _. x))"
+  unfolding read_write_valid_def fg_cons_def o_def
+  by metis
+
 (*
  * Assert the given field ("field_getter", "field_setter") of the given structure
  * can be abstracted into the heap, and then accessed as a HOL object.
  *)
+
+(*
+ * This can deal with nested structures, but they must be packed_types.
+ * FIXME: generalise this framework to mem_types
+ *)
 definition
   valid_struct_field
+    :: "('s \<Rightarrow> 't)
+           \<Rightarrow> string list
+           \<Rightarrow> (('p::packed_type) \<Rightarrow> ('f::packed_type))
+           \<Rightarrow> (('f \<Rightarrow> 'f) \<Rightarrow> ('p \<Rightarrow> 'p))
+           \<Rightarrow> ('s \<Rightarrow> heap_raw_state)
+           \<Rightarrow> ((heap_raw_state \<Rightarrow> heap_raw_state) \<Rightarrow> 's \<Rightarrow> 's)
+           \<Rightarrow> bool"
+ where
+  "valid_struct_field st field_name field_getter field_setter t_hrs t_hrs_update \<equiv>
+     (read_write_valid field_getter field_setter
+      \<and> field_ti TYPE('p) field_name =
+          Some (adjust_ti (typ_info_t TYPE('f)) field_getter (field_setter \<circ> (\<lambda>x _. x)))
+      \<and> (\<forall>p :: 'p ptr. c_guard p \<longrightarrow> c_guard (Ptr &(p\<rightarrow>field_name) :: 'f ptr))
+      \<and> read_write_valid t_hrs t_hrs_update)"
+
+lemma valid_struct_fieldI [intro]:
+  fixes st :: "'s \<Rightarrow> 't"
+  fixes field_getter :: "('a::packed_type) \<Rightarrow> ('f::packed_type)"
+  shows "\<lbrakk>
+     \<And>s f. f (field_getter s) = (field_getter s) \<Longrightarrow> field_setter f s = s;
+     \<And>s f f'. f (field_getter s) = f' (field_getter s) \<Longrightarrow> field_setter f s = field_setter f' s;
+     \<And>s f. field_getter (field_setter f s) = f (field_getter s);
+     \<And>s f g. field_setter f (field_setter g s) = field_setter (f \<circ> g) s;
+     field_ti TYPE('a) field_name =
+         Some (adjust_ti (typ_info_t TYPE('f)) field_getter (field_setter \<circ> (\<lambda>x _. x)));
+     \<And>(p::'a ptr). c_guard p \<Longrightarrow> c_guard (Ptr &(p\<rightarrow>field_name) :: 'f ptr);
+     \<And>s x. t_hrs (t_hrs_update x s) = x (t_hrs s);
+     \<And>s f. f (t_hrs s) = t_hrs s \<Longrightarrow> t_hrs_update f s = s;
+     \<And>s f f'. f (t_hrs s) = f' (t_hrs s) \<Longrightarrow> t_hrs_update f s = t_hrs_update f' s;
+     \<And>s f g. t_hrs_update f (t_hrs_update g s) = t_hrs_update (\<lambda>x. f (g x)) s
+      \<rbrakk> \<Longrightarrow>
+    valid_struct_field st field_name field_getter field_setter t_hrs t_hrs_update"
+  apply (unfold valid_struct_field_def read_write_valid_def o_def)
+  apply (safe | assumption | rule ext)+
+  done
+
+(*
+ * This cannot deal with struct nesting, but works for general mem_types.
+ *)
+definition
+  valid_struct_field_legacy
     :: "('s \<Rightarrow> 't)
            \<Rightarrow> string list
            \<Rightarrow> ('p \<Rightarrow> ('f::c_type))
@@ -379,7 +484,7 @@ definition
            \<Rightarrow> ((heap_raw_state \<Rightarrow> heap_raw_state) \<Rightarrow> 's \<Rightarrow> 's)
            \<Rightarrow> bool"
 where
-  "valid_struct_field st field_name field_getter field_setter
+  "valid_struct_field_legacy st field_name field_getter field_setter
             getter setter vgetter vsetter t_hrs t_hrs_update \<equiv>
       (\<forall>s p. vgetter (st s) p \<longrightarrow>
           h_val (hrs_mem (t_hrs s)) (Ptr &(p\<rightarrow>field_name))
@@ -390,7 +495,7 @@ where
       \<and> (\<forall>s p. vgetter (st s) p \<longrightarrow> c_guard p)
       \<and> (\<forall>p. c_guard (p :: 'p ptr) \<longrightarrow> c_guard (Ptr &(p\<rightarrow>field_name) :: 'f ptr))"
 
-lemma valid_struct_fieldI [intro]:
+lemma valid_struct_field_legacyI [intro]:
   fixes st :: "'s \<Rightarrow> 't"
   fixes field_getter :: "('a::c_type) \<Rightarrow> ('f::c_type)"
   shows "\<lbrakk> \<And>s p. vgetter (st s) p \<Longrightarrow>
@@ -400,9 +505,11 @@ lemma valid_struct_fieldI [intro]:
              setter (\<lambda>old. old(p := (field_setter val (old p)))) (st s);
      \<And>s p. vgetter (st s) p \<Longrightarrow> c_guard p;
      \<And>(p::'a ptr). c_guard p \<Longrightarrow> c_guard (Ptr &(p\<rightarrow>field_name) :: 'f ptr) \<rbrakk> \<Longrightarrow>
-    valid_struct_field st field_name field_getter field_setter getter setter vgetter vsetter t_hrs t_hrs_update"
-  apply (fastforce simp: valid_struct_field_def)
+    valid_struct_field_legacy st field_name field_getter field_setter getter setter vgetter vsetter t_hrs t_hrs_update"
+  apply (fastforce simp: valid_struct_field_legacy_def)
   done
+
+
 
 lemma valid_typ_heap_get_hvalD:
   "\<lbrakk> valid_typ_heap st getter setter vgetter vsetter
@@ -419,63 +526,537 @@ lemma valid_typ_heap_t_hrs_updateD:
   apply (clarsimp simp: valid_typ_heap_def)
   done
 
+
 lemma heap_abs_expr_guard [heap_abs]:
-  "\<lbrakk> valid_typ_heap st getter setter vgetter vsetter t_hrs t_hrs_update; abs_expr st P x' x \<rbrakk> \<Longrightarrow>
-     abs_expr st (P and (\<lambda>s. vgetter s (x' s))) (\<lambda>s. True) (\<lambda>s. (c_guard (x s :: ('a::{c_type}) ptr)))"
-  apply (clarsimp simp: abs_expr_def simple_lift_def heap_ptr_valid_def valid_typ_heap_def)
+  "\<lbrakk> valid_typ_heap st getter setter vgetter vsetter t_hrs t_hrs_update;
+     abs_expr st P x' x \<rbrakk> \<Longrightarrow>
+     abs_guard st (\<lambda>s. P s \<and> vgetter s (x' s)) (\<lambda>s. (c_guard (x s :: ('a::c_type) ptr)))"
+  apply (clarsimp simp: abs_expr_def abs_guard_def
+                        simple_lift_def heap_ptr_valid_def valid_typ_heap_def)
   done
 
 lemma heap_abs_expr_h_val [heap_abs]:
   "\<lbrakk> valid_typ_heap st getter setter vgetter vsetter t_hrs t_hrs_update;
      abs_expr st P x' x \<rbrakk> \<Longrightarrow>
       abs_expr st
-       (P and (\<lambda>s. vgetter s (x' s)))
+       (\<lambda>s. P s \<and> vgetter s (x' s))
          (\<lambda>s. (getter s (x' s)))
          (\<lambda>s. (h_val (hrs_mem (t_hrs s))) (x s))"
   apply (clarsimp simp: abs_expr_def simple_lift_def)
   apply (metis valid_typ_heap_get_hvalD)
   done
 
-lemma heap_abs_modifies_heap_update [heap_abs]:
-  "\<lbrakk>  valid_typ_heap st getter setter vgetter vsetter t_hrs t_hrs_update;
+lemma heap_abs_modifies_heap_update__unused:
+  "\<lbrakk> valid_typ_heap st getter setter vgetter vsetter t_hrs t_hrs_update;
      abs_expr st Pb b' b;
      abs_expr st Pc c' c \<rbrakk> \<Longrightarrow>
-      abs_modifies st (Pb and Pc and (\<lambda>s. vgetter s (b' s)))
+      abs_modifies st (\<lambda>s. Pb s \<and> Pc s \<and> vgetter s (b' s))
         (\<lambda>s. setter (\<lambda>x. x(b' s := (c' s))) s)
-           (\<lambda>s. t_hrs_update (hrs_mem_update (heap_update (b s :: ('a::c_type) ptr) (c s :: 'a))) s)"
+        (\<lambda>s. t_hrs_update (hrs_mem_update (heap_update (b s :: ('a::c_type) ptr) (c s))) s)"
   apply (clarsimp simp: typ_simple_heap_simps abs_expr_def abs_modifies_def)
   apply (metis valid_typ_heap_t_hrs_updateD)
   done
 
-lemma abs_expr_field_getter [heap_abs]:
-  "\<lbrakk> valid_struct_field st field_name field_getter field_setter
+(* See comment for heap_lift__wrap_h_val. *)
+definition "heap_lift__h_val \<equiv> h_val"
+
+(* See the comment for struct_rewrite_modifies_field.
+ * In this case we rely on nice unification for ?c.
+ * The heap_abs_syntax generator also relies on this rule
+ * and would need to be modified if the previous rule was used instead. *)
+lemma heap_abs_modifies_heap_update [heap_abs]:
+  "\<lbrakk> valid_typ_heap st getter setter vgetter vsetter t_hrs t_hrs_update;
+     abs_expr st Pb b' b;
+     \<And>v. abs_expr st Pc (c' v) (c v) \<rbrakk> \<Longrightarrow>
+      abs_modifies st (\<lambda>s. Pb s \<and> Pc s \<and> vgetter s (b' s))
+        (\<lambda>s. setter (\<lambda>x. x(b' s := c' (x (b' s)) s)) s)
+        (\<lambda>s. t_hrs_update (hrs_mem_update
+               (heap_update (b s :: ('a::c_type) ptr)
+                            (c (heap_lift__h_val (hrs_mem (t_hrs s)) (b s)) s))) s)"
+  apply (clarsimp simp: typ_simple_heap_simps abs_expr_def abs_modifies_def heap_lift__h_val_def)
+  apply (rule_tac t = "h_val (hrs_mem (t_hrs s)) (b' (st s))"
+              and s = "getter (st s) (b' (st s))" in subst)
+   apply (clarsimp simp: valid_typ_heap_def)
+  apply (rule_tac f1 = "(\<lambda>x. x(b' (st s) := c' (getter (st s) (b' (st s))) (st s)))"
+               in subst[OF read_write_valid_def3[where r = getter and w = setter]])
+    apply (clarsimp simp: valid_typ_heap_def)
+   apply (rule refl)
+  apply (metis valid_typ_heap_t_hrs_updateD)
+  done
+
+
+(* Legacy rules for non-packed types. *)
+lemma abs_expr_field_getter_legacy [heap_abs]:
+  "\<lbrakk> valid_struct_field_legacy st field_name field_getter field_setter
                      getter setter vgetter vsetter t_hrs t_hrs_setter;
       abs_expr st P a c \<rbrakk> \<Longrightarrow>
-   abs_expr st (P and (\<lambda>s. vgetter s (a s))) (\<lambda>s. field_getter (getter s (a s)))
-              (\<lambda>s. h_val (hrs_mem (t_hrs s)) (Ptr &((c s)\<rightarrow>field_name)))"
-  apply (clarsimp simp: abs_expr_def valid_struct_field_def valid_typ_heap_def)
+   abs_expr st (\<lambda>s. P s \<and> vgetter s (a s))
+               (\<lambda>s. field_getter (getter s (a s)))
+               (\<lambda>s. h_val (hrs_mem (t_hrs s)) (Ptr &((c s)\<rightarrow>field_name)))"
+  apply (clarsimp simp: abs_expr_def valid_struct_field_legacy_def valid_typ_heap_def)
   done
 
-lemma abs_expr_field_setter [heap_abs]:
-  "\<lbrakk> valid_struct_field st field_name
+lemma abs_expr_field_setter_legacy [heap_abs]:
+  "\<lbrakk> valid_struct_field_legacy st field_name
           field_getter field_setter getter setter vgetter vsetter t_hrs t_hrs_update;
      abs_expr st P p p'; abs_expr st Q val val' \<rbrakk> \<Longrightarrow>
-  abs_modifies st (P and Q and (\<lambda>s. vgetter s (p s)))
+  abs_modifies st (\<lambda>s. P s \<and> Q s \<and> vgetter s (p s))
       (\<lambda>s. setter (\<lambda>old. old((p s) := field_setter (val s) (old (p s)))) s)
       (\<lambda>s. t_hrs_update (hrs_mem_update (heap_update (Ptr &((p' s)\<rightarrow>field_name)) (val' s))) s)"
-  apply (clarsimp simp: abs_expr_def valid_struct_field_def valid_typ_heap_def abs_modifies_def)
+  apply (clarsimp simp: abs_expr_def valid_struct_field_legacy_def valid_typ_heap_def abs_modifies_def)
   done
 
-lemma abs_expr_field_guard [heap_abs]:
-  "\<lbrakk> valid_struct_field st field_name
-          (field_getter :: 'p \<Rightarrow> 'f) field_setter getter setter vgetter vsetter t_hrs t_hrs_update;
-     abs_expr st P p p' \<rbrakk> \<Longrightarrow>
-  abs_expr st (P and (\<lambda>s. vgetter s (p s :: 'p :: {c_type} ptr )))
-      (\<lambda>s. True)
-      (\<lambda>s. c_guard (Ptr &((p' s)\<rightarrow>field_name) :: 'f::{c_type} ptr))"
-  apply (clarsimp simp: abs_expr_def)
-  apply (clarsimp simp: abs_expr_def valid_struct_field_def valid_typ_heap_def)
+lemma abs_expr_field_guard_legacy [heap_abs]:
+ "\<lbrakk> valid_struct_field_legacy st field_name
+      (field_getter :: 'p \<Rightarrow> 'f) field_setter getter setter vgetter vsetter t_hrs t_hrs_update;
+    abs_expr st P p p' \<rbrakk> \<Longrightarrow>
+  abs_guard st (P and (\<lambda>s. vgetter s (p s :: 'p :: {c_type} ptr )))
+               (\<lambda>s. c_guard (Ptr &((p' s)\<rightarrow>field_name) :: 'f::{c_type} ptr))"
+  apply (clarsimp simp: abs_guard_def abs_expr_def valid_struct_field_legacy_def valid_typ_heap_def)
   done
+
+
+
+(*
+ * struct_rewrite: remove uses of field_lvalue. (field_lvalue p a = &(p\<rightarrow>a))
+ * We do three transformations:
+ *   c_guard (p\<rightarrow>a)  \<Longleftarrow>  c_guard p
+ *   h_val s (p\<rightarrow>a)   =   p_C.a_C (h_val s p)
+ *   heap_update (p\<rightarrow>a) v s   =   heap_update p (p_C.a_C_update (\<lambda>_. v) (h_val s p)) s
+ * However, an inner expression may nest h_vals arbitrarily.
+ *
+ * Any output of a struct_rewrite rule should be fully rewritten.
+ * By doing this, each rule only needs to rewrite the parts of a term that it
+ * introduces by itself.
+ *)
+
+(* struct_rewrite_guard rules *)
+
+lemma struct_rewrite_guard_expr [heap_abs]:
+  "struct_rewrite_expr P a' a \<Longrightarrow> struct_rewrite_guard (\<lambda>s. P s \<and> a' s) a"
+  by (simp add: struct_rewrite_expr_def struct_rewrite_guard_def)
+
+lemma struct_rewrite_guard_constant [heap_abs]:
+  "struct_rewrite_guard (\<lambda>_. P) (\<lambda>_. P)"
+  by (simp add: struct_rewrite_guard_def)
+
+lemma struct_rewrite_guard_conj [heap_abs]:
+  "\<lbrakk> struct_rewrite_guard b' b; struct_rewrite_guard a' a \<rbrakk> \<Longrightarrow>
+       struct_rewrite_guard (\<lambda>s. a' s \<and> b' s) (\<lambda>s. a s \<and> b s)"
+  by (clarsimp simp: struct_rewrite_guard_def)
+
+lemma struct_rewrite_guard_split [heap_abs]:
+  "\<lbrakk> \<And>a b. struct_rewrite_guard (A a b) (C a b) \<rbrakk>
+       \<Longrightarrow> struct_rewrite_guard (case r of (a, b) \<Rightarrow> A a b) (case r of (a, b) \<Rightarrow> C a b)"
+  apply (auto simp: split_def)
+  done
+
+lemma struct_rewrite_guard_c_guard_field [heap_abs]:
+  "\<lbrakk> valid_struct_field st field_name (field_getter :: ('a :: packed_type) \<Rightarrow> ('f :: packed_type)) field_setter t_hrs t_hrs_update;
+     struct_rewrite_expr P p' p;
+     struct_rewrite_guard Q (\<lambda>s. c_guard (p' s)) \<rbrakk> \<Longrightarrow>
+   struct_rewrite_guard (\<lambda>s. P s \<and> Q s)
+     (\<lambda>s. c_guard (Ptr (field_lvalue (p s :: 'a ptr) field_name) :: 'f ptr))"
+  by (simp add: valid_struct_field_def struct_rewrite_expr_def struct_rewrite_guard_def)
+
+lemma align_of_array: "align_of TYPE(('a :: oneMB_size)['b' :: fourthousand_count]) = align_of TYPE('a)"
+  by (simp add: align_of_def align_td_array)
+
+lemma c_guard_array:
+  "\<lbrakk> 0 \<le> k; nat k < CARD('b); c_guard (p :: (('a::oneMB_size)['b::fourthousand_count]) ptr) \<rbrakk>
+   \<Longrightarrow> c_guard (ptr_coerce p +\<^sub>p k :: 'a ptr)"
+  apply (clarsimp simp: ptr_add_def c_guard_def c_null_guard_def)
+  apply (rule conjI[rotated])
+   apply (erule contrapos_nn)
+   apply (clarsimp simp: intvl_def)
+   apply (rename_tac i, rule_tac x = "nat k * size_of TYPE('a) + i" in exI)
+   apply clarsimp
+   apply (rule conjI)
+    apply (simp add: field_simps of_nat_nat)
+   apply (rule_tac y = "Suc (nat k) * size_of TYPE('a)" in less_le_trans)
+    apply simp
+   apply (metis less_eq_Suc_le mult_le_mono2 mult.commute)
+  apply (subgoal_tac "ptr_aligned (ptr_coerce p :: 'a ptr)")
+   apply (frule_tac p = "ptr_coerce p" and i = "k" in ptr_aligned_plus)
+   apply (clarsimp simp: ptr_add_def)
+  apply (clarsimp simp: ptr_aligned_def align_of_array)
+  done
+
+lemma struct_rewrite_guard_c_guard_Array_field [heap_abs]:
+  "\<lbrakk> valid_struct_field st field_name (field_getter :: ('a :: packed_type) \<Rightarrow> ('f::oneMB_packed ['n::fourthousand_count])) field_setter t_hrs t_hrs_update;
+     struct_rewrite_expr P p' p;
+     struct_rewrite_guard Q (\<lambda>s. c_guard (p' s)) \<rbrakk> \<Longrightarrow>
+   struct_rewrite_guard (\<lambda>s. P s \<and> Q s \<and> 0 \<le> k \<and> nat k < CARD('n))
+     (\<lambda>s. c_guard (ptr_coerce (Ptr (field_lvalue (p s :: 'a ptr) field_name) :: (('f['n]) ptr)) +\<^sub>p k :: 'f ptr))"
+  by (simp del: ptr_coerce.simps add: valid_struct_field_def struct_rewrite_expr_def struct_rewrite_guard_def c_guard_array)
+
+
+(* struct_rewrite_expr rules *)
+
+(* This is only used when heap lifting is turned off,
+ * where we expect no rewriting to happen anyway.
+ * TODO: it might be safe to enable this unconditionally,
+ *       as long as it happens after heap_abs_fo. *)
+lemma struct_rewrite_expr_id:
+  "struct_rewrite_expr \<top> A A"
+  by (simp add: struct_rewrite_expr_def)
+
+lemma struct_rewrite_expr_fun_app2 [heap_abs_fo]:
+  "\<lbrakk> struct_rewrite_expr P f' f;
+     struct_rewrite_expr Q g' g \<rbrakk> \<Longrightarrow>
+   struct_rewrite_expr (\<lambda>s. P s \<and> Q s) (\<lambda>s a. f' s a (g' s a)) (\<lambda>s a. f s a $ g s a)"
+  by (simp add: struct_rewrite_expr_def)
+
+lemma struct_rewrite_expr_fun_app [heap_abs_fo]:
+  "\<lbrakk> struct_rewrite_expr Y b' b; struct_rewrite_expr X a' a \<rbrakk> \<Longrightarrow>
+       struct_rewrite_expr (\<lambda>s. X s \<and> Y s) (\<lambda>s. a' s (b' s)) (\<lambda>s. a s $ b s)"
+  by (clarsimp simp: struct_rewrite_expr_def)
+
+lemma struct_rewrite_expr_constant [heap_abs]:
+  "struct_rewrite_expr \<top> (\<lambda>_. a) (\<lambda>_. a)"
+  by (clarsimp simp: struct_rewrite_expr_def)
+
+lemma struct_rewrite_expr_lambda_null [heap_abs]:
+  "struct_rewrite_expr P A C \<Longrightarrow> struct_rewrite_expr P (\<lambda>s _. A s) (\<lambda>s _. C s)"
+  by (clarsimp simp: struct_rewrite_expr_def)
+
+lemma struct_rewrite_expr_split [heap_abs]:
+  "\<lbrakk> \<And>a b. struct_rewrite_expr (P a b) (A a b) (C a b) \<rbrakk>
+       \<Longrightarrow> struct_rewrite_expr (case r of (a, b) \<Rightarrow> P a b)
+            (case r of (a, b) \<Rightarrow> A a b) (case r of (a, b) \<Rightarrow> C a b)"
+  apply (auto simp: split_def)
+  done
+
+lemma struct_rewrite_expr_basecase_h_val [heap_abs]:
+  "struct_rewrite_expr \<top> (\<lambda>s. h_val (h s) (p s)) (\<lambda>s. h_val (h s) (p s))"
+  by (simp add: struct_rewrite_expr_def)
+
+lemma struct_rewrite_expr_field [heap_abs]:
+  "\<lbrakk> valid_struct_field st field_name (field_getter :: ('a :: packed_type) \<Rightarrow> ('f :: packed_type)) field_setter t_hrs t_hrs_update;
+     struct_rewrite_expr P p' p;
+     struct_rewrite_expr Q a (\<lambda>s. h_val (hrs_mem (t_hrs s)) (p' s)) \<rbrakk>
+   \<Longrightarrow> struct_rewrite_expr (\<lambda>s. P s \<and> Q s) (\<lambda>s. field_getter (a s))
+        (\<lambda>s. h_val (hrs_mem (t_hrs s)) (Ptr (field_lvalue (p s) field_name)))"
+  apply (clarsimp simp: valid_struct_field_def struct_rewrite_expr_def)
+  apply (subst h_val_field_from_bytes')
+    apply assumption
+   apply (rule export_tag_adjust_ti(1)[rule_format])
+    apply (simp add: read_write_valid_fg_cons)
+   apply simp
+  apply simp
+  done
+
+lemma struct_rewrite_expr_Array_field [heap_abs]:
+  "\<lbrakk> valid_struct_field st field_name
+                        (field_getter :: ('a :: packed_type) \<Rightarrow> 'f::oneMB_packed ['n::fourthousand_count])
+                        field_setter t_hrs t_hrs_update;
+     struct_rewrite_expr P p' p;
+     struct_rewrite_expr Q a (\<lambda>s. h_val (hrs_mem (t_hrs s)) (p' s)) \<rbrakk>
+   \<Longrightarrow> struct_rewrite_expr (\<lambda>s. P s \<and> Q s \<and> k \<ge> 0 \<and> nat k < CARD('n))
+        (\<lambda>s. index (field_getter (a s)) (nat k))
+        (\<lambda>s. h_val (hrs_mem (t_hrs s))
+               (ptr_coerce (Ptr (field_lvalue (p s) field_name) :: ('f['n]) ptr) +\<^sub>p k))"
+  apply (case_tac k)
+   apply (clarsimp simp: struct_rewrite_expr_def simp del: ptr_coerce.simps)
+   apply (subst struct_rewrite_expr_field
+            [unfolded struct_rewrite_expr_def, simplified, rule_format, symmetric,
+             where field_getter = field_getter and P = P and Q = Q and p = p and p' = p'])
+       apply assumption
+      apply simp
+     apply simp
+    apply simp
+   apply (rule_tac s = "p s" and t = "p' s" in subst)
+    apply simp
+   apply (rule heap_access_Array_element[symmetric])
+   apply simp
+  apply (simp add: struct_rewrite_expr_def)
+  done
+declare struct_rewrite_expr_Array_field [unfolded ptr_coerce.simps, heap_abs]
+
+(* struct_rewrite_modifies rules *)
+
+lemma struct_rewrite_modifies_id [heap_abs]:
+  "struct_rewrite_modifies \<top> A A"
+  by (simp add: struct_rewrite_modifies_def)
+
+(* We need some valid_typ_heap, but we're really only after t_hrs_update.
+ * We artificially constrain the type of v to limit backtracking. *)
+lemma struct_rewrite_modifies_basecase [heap_abs]:
+  "\<lbrakk> valid_typ_heap st (getter :: 's \<Rightarrow> 'a ptr \<Rightarrow> ('a::c_type)) setter vgetter vsetter t_hrs t_hrs_update;
+     struct_rewrite_expr P p' p;
+     struct_rewrite_expr Q v' v \<rbrakk> \<Longrightarrow>
+   struct_rewrite_modifies (\<lambda>s. P s \<and> Q s)
+     (\<lambda>s. t_hrs_update (hrs_mem_update (heap_update (p' s) (v' s :: 'a))) s)
+     (\<lambda>s. t_hrs_update (hrs_mem_update (heap_update (p s) (v s :: 'a))) s)"
+  by (simp add: struct_rewrite_expr_def struct_rewrite_modifies_def)
+
+(* \<approx> heap_update_field *)
+lemma heap_update_field_unpacked:
+  "\<lbrakk> field_ti TYPE('a::mem_type) f = Some (t :: 'a field_desc typ_desc);
+     c_guard (p :: 'a::mem_type ptr);
+     export_uinfo t = export_uinfo (typ_info_t TYPE('b::mem_type)) \<rbrakk> \<Longrightarrow>
+   heap_update (Ptr &(p\<rightarrow>f) :: 'b ptr) v hp =
+   heap_update p (update_ti t (to_bytes_p v) (h_val hp p)) hp"
+  oops
+
+(* \<approx> heap_update_Array_element *)
+lemma heap_update_Array_element_unpacked:
+  "n < CARD('b::fourthousand_count) \<Longrightarrow>
+   heap_update (ptr_coerce p' +\<^sub>p int n) w hp =
+   heap_update (p'::('a::oneMB_size['b::fourthousand_count]) ptr)
+               (Arrays.update (h_val hp p') n w) hp"
+  oops
+
+(* helper *)
+lemma read_write_valid_hrs_mem:
+  "read_write_valid hrs_mem hrs_mem_update"
+  by (clarsimp simp: hrs_mem_def hrs_mem_update_def read_write_valid_def)
+
+
+(*
+ * heap_update is a bit harder.
+ * Recall that we want to rewrite
+ *   "heap_update (ptr\<rightarrow>a\<rightarrow>b\<rightarrow>c) val s" to
+ *   "heap_update ptr (c_update (b_update (a_update (\<lambda>_. val))) (h_val s ptr)) s".
+ * In the second term, c_update is the outer update even though
+ * c is the innermost field.
+ *
+ * We introduce a schematic update function ?u that would eventually be
+ * instantiated to be the chain "\<lambda>f. c_update (b_update (a_update f))".
+ * Observe that when we find another field "\<rightarrow>d", we can instantiate
+ *   ?u' = \<lambda>f. ?u (d_update f)
+ * so that u' is the correct update function for "ptr\<rightarrow>a\<rightarrow>b\<rightarrow>c\<rightarrow>d".
+ *
+ * This is a big hack because:
+ *  - We rely on a particular behaviour of the unifier (see below).
+ *  - We will have a chain of flex-flex pairs
+ *      ?u1 =?= \<lambda>f. ?u0 (a_update f)
+ *      ?u2 =?= \<lambda>f. ?u1 (b_update f)
+ *      etc.
+ *  - Because we are doing this transformation in steps, moving
+ *    one component of "ptr\<rightarrow>a\<rightarrow>..." at a time, we end up invoking
+ *    struct_rewrite_expr on the same subterms over and over again.
+ * In case we find out this hack doesn't scale, we can avoid the schematic ?u
+ * by traversing the chain and constructing ?u in a separate step.
+ *)
+
+(*
+ * There's more. heap_update rewrites for "ptr\<rightarrow>a\<rightarrow>b := RHS" cause a
+ * "h_val s ptr" to appear in the RHS.
+ * When we lift to the typed heap, we want this h_val to be treated
+ * differently to other "h_val s ptr" terms that were already in the RHS.
+ * Thus we define heap_lift__h_val \<equiv> h_val to carry this information around.
+ *)
+definition "heap_lift__wrap_h_val \<equiv> op ="
+
+lemma heap_lift_wrap_h_val [heap_abs]:
+  "heap_lift__wrap_h_val (heap_lift__h_val s p) (h_val s p)"
+  by (simp add: heap_lift__h_val_def heap_lift__wrap_h_val_def)
+
+lemma heap_lift_wrap_h_val_skip [heap_abs]:
+  "heap_lift__wrap_h_val (h_val s (Ptr (field_lvalue p f))) (h_val s (Ptr (field_lvalue p f)))"
+  by (simp add: heap_lift__wrap_h_val_def)
+
+lemma heap_lift_wrap_h_val_skip_array [heap_abs]:
+  "heap_lift__wrap_h_val (h_val s (ptr_coerce p +\<^sub>p k))
+                         (h_val s (ptr_coerce p +\<^sub>p k))"
+  by (simp add: heap_lift__wrap_h_val_def)
+
+(* These are valid rules, but produce redundant output. *)
+lemma struct_rewrite_modifies_field__unused:
+  "\<lbrakk> valid_struct_field (st :: 's \<Rightarrow> 't) field_name (field_getter :: ('a::packed_type) \<Rightarrow> ('f::packed_type)) field_setter t_hrs t_hrs_update;
+     struct_rewrite_expr P p' p;
+     struct_rewrite_expr Q f' f;
+     struct_rewrite_modifies R
+       (\<lambda>s. t_hrs_update (hrs_mem_update (heap_update (p'' s)
+                (u s (field_setter (\<lambda>_. f' s))))) s)
+       (\<lambda>s. t_hrs_update (hrs_mem_update (heap_update (p' s)
+                (field_setter (\<lambda>_. f' s) (h_val (hrs_mem (t_hrs s)) (p' s))))) s);
+     struct_rewrite_guard S (\<lambda>s. c_guard (p' s)) \<rbrakk> \<Longrightarrow>
+   struct_rewrite_modifies (\<lambda>s. P s \<and> Q s \<and> R s \<and> S s)
+     (\<lambda>s. t_hrs_update (hrs_mem_update (heap_update (p'' s)
+              (u s (field_setter (\<lambda>_. f' s))))) s)
+     (\<lambda>s. t_hrs_update (hrs_mem_update (heap_update (Ptr (field_lvalue (p s) field_name))
+              (f s))) s)"
+  apply (clarsimp simp: struct_rewrite_expr_def struct_rewrite_guard_def struct_rewrite_modifies_def valid_struct_field_def)
+  apply (erule_tac x = s in allE)+
+  apply (erule impE, assumption)+
+  apply (erule_tac t = "t_hrs_update (hrs_mem_update (heap_update (p'' s)
+                          (u s (field_setter (\<lambda>_. f' s))))) s"
+               and s = "t_hrs_update (hrs_mem_update (heap_update (p' s)
+                          (field_setter (\<lambda>_. f' s) (h_val (hrs_mem (t_hrs s)) (p' s))))) s"
+                in subst)
+  apply (rule read_write_valid_def3[where r = t_hrs and w = t_hrs_update])
+   apply assumption
+  apply (rule read_write_valid_def3[OF read_write_valid_hrs_mem])
+  apply (subst heap_update_field)
+     apply assumption+
+   apply (simp add: export_tag_adjust_ti(1)[rule_format] read_write_valid_fg_cons)
+  apply (subst update_ti_update_ti_t)
+   apply (simp add: size_of_def)
+  apply (subst update_ti_s_adjust_ti_to_bytes_p)
+   apply (erule read_write_valid_fg_cons)
+  apply simp
+  done
+
+lemma struct_rewrite_modifies_Array_field__unused:
+  "\<lbrakk> valid_struct_field (st :: 's \<Rightarrow> 't) field_name (field_getter :: ('a::packed_type) \<Rightarrow> (('f::oneMB_packed)['n::fourthousand_count])) field_setter t_hrs t_hrs_update;
+     struct_rewrite_expr P p' p;
+     struct_rewrite_expr Q f' f;
+     struct_rewrite_modifies R
+       (\<lambda>s. t_hrs_update (hrs_mem_update (heap_update (p'' s)
+                (u s (field_setter (\<lambda>a. Arrays.update a (nat k) (f' s)))))) s)
+       (\<lambda>s. t_hrs_update (hrs_mem_update (heap_update (p' s)
+               (field_setter (\<lambda>a. Arrays.update a (nat k) (f' s))
+                  (h_val (hrs_mem (t_hrs s)) (p' s))))) s);
+     struct_rewrite_guard S (\<lambda>s. c_guard (p' s)) \<rbrakk> \<Longrightarrow>
+   struct_rewrite_modifies (\<lambda>s. P s \<and> Q s \<and> R s \<and> S s \<and> 0 \<le> k \<and> nat k < CARD('n))
+     (\<lambda>s. t_hrs_update (hrs_mem_update (heap_update (p'' s)
+              (u s (field_setter (\<lambda>a. Arrays.update a (nat k) (f' s)))))) s)
+     (\<lambda>s. t_hrs_update (hrs_mem_update (heap_update
+            (ptr_coerce (Ptr (field_lvalue (p s) field_name) :: ('f['n]) ptr) +\<^sub>p k) (f s))) s)"
+  using ptr_coerce.simps [simp del]
+  apply (clarsimp simp: struct_rewrite_expr_def struct_rewrite_guard_def struct_rewrite_modifies_def valid_struct_field_def)
+  apply (erule_tac x = s in allE)+
+  apply (erule impE, assumption)+
+  apply (erule_tac t = "t_hrs_update (hrs_mem_update (heap_update (p'' s)
+                          (u s(field_setter (\<lambda>a. Arrays.update a (nat k) (f' s)))))) s"
+               and s = "t_hrs_update (hrs_mem_update (heap_update (p' s)
+                          (field_setter (\<lambda>a. Arrays.update a (nat k) (f' s))
+                             (h_val (hrs_mem (t_hrs s)) (p' s))))) s"
+                in subst)
+  apply (rule read_write_valid_def3[where r = t_hrs and w = t_hrs_update])
+   apply assumption
+  apply (rule read_write_valid_def3[OF read_write_valid_hrs_mem])
+  apply (case_tac k, clarsimp)
+  apply (subst heap_update_Array_element[symmetric])
+    apply assumption
+   apply (subst heap_update_field)
+      apply assumption+
+    apply (simp add: export_tag_adjust_ti(1)[rule_format] read_write_valid_fg_cons)
+   apply (subst h_val_field_from_bytes')
+     apply assumption+
+    apply (simp add: export_tag_adjust_ti(1)[rule_format] read_write_valid_fg_cons)
+   apply clarsimp
+   apply (subst update_ti_update_ti_t)
+    apply (simp add: size_of_def)
+   apply (subst update_ti_s_adjust_ti_to_bytes_p)
+    apply (erule read_write_valid_fg_cons)
+   apply clarsimp
+   apply (subst read_write_valid_def3[of field_getter field_setter])
+     apply auto
+  done
+
+
+(*
+ * These produce less redundant output (we avoid "t_update (\<lambda>_. foo (t x)) x"
+ * where x is some huge term).
+ * The catch: we rely on the unifier to produce a "greedy" instantiation for ?f.
+ * Namely, if we are matching "?f s (h_val s p)" on
+ *   "b_update (a_update (\<lambda>_. foo (h_val s p))) (h_val s p)",
+ * we expect ?f to be instantiated to
+ *   "\<lambda>s v. b_update (a_update (\<lambda>_. foo v)) v"
+ * even though there are other valid ones.
+ * It just so happens that isabelle's unifier produces such an instantiation.
+ * Are we lucky, or presumptuous?
+ *)
+lemma struct_rewrite_modifies_field [heap_abs]:
+  "\<lbrakk> valid_struct_field (st :: 's \<Rightarrow> 't) field_name (field_getter :: ('a::packed_type) \<Rightarrow> ('f::packed_type)) field_setter t_hrs t_hrs_update;
+     struct_rewrite_expr P p' p;
+     struct_rewrite_expr Q f' f;
+     \<And>s. heap_lift__wrap_h_val (h_val_p' s) (h_val (hrs_mem (t_hrs s)) (p' s));
+     struct_rewrite_modifies R
+       (\<lambda>s. t_hrs_update (hrs_mem_update (heap_update (p'' s)
+                (u s (field_setter (f' s))))) s)
+       (\<lambda>s. t_hrs_update (hrs_mem_update (heap_update (p' s)
+                (field_setter (f' s) (h_val_p' s)))) s);
+     struct_rewrite_guard S (\<lambda>s. c_guard (p' s)) \<rbrakk> \<Longrightarrow>
+   struct_rewrite_modifies (\<lambda>s. P s \<and> Q s \<and> R s \<and> S s)
+     (\<lambda>s. t_hrs_update (hrs_mem_update (heap_update (p'' s)
+              (u s (field_setter (f' s))))) s)
+     (\<lambda>s. t_hrs_update (hrs_mem_update (heap_update (Ptr (field_lvalue (p s) field_name))
+              (f s (h_val (hrs_mem (t_hrs s)) (Ptr (field_lvalue (p s) field_name)))))) s)"
+  apply (clarsimp simp: struct_rewrite_expr_def struct_rewrite_guard_def struct_rewrite_modifies_def valid_struct_field_def heap_lift__wrap_h_val_def)
+  apply (erule_tac x = s in allE)+
+  apply (erule impE, assumption)+
+  apply (erule_tac t = "t_hrs_update (hrs_mem_update (heap_update (p'' s)
+                          (u s (field_setter (f' s))))) s"
+               and s = "t_hrs_update (hrs_mem_update (heap_update (p' s)
+                          (field_setter (f' s) (h_val (hrs_mem (t_hrs s)) (p' s))))) s"
+                in subst)
+  apply (rule read_write_valid_def3[where r = t_hrs and w = t_hrs_update])
+   apply assumption
+  apply (rule read_write_valid_def3[OF read_write_valid_hrs_mem])
+  apply (subst heap_update_field)
+     apply assumption+
+   apply (simp add: export_tag_adjust_ti(1)[rule_format] read_write_valid_fg_cons)
+   apply (subst h_val_field_from_bytes')
+     apply assumption+
+    apply (simp add: export_tag_adjust_ti(1)[rule_format] read_write_valid_fg_cons)
+  apply (subst update_ti_update_ti_t)
+   apply (simp add: size_of_def)
+  apply (subst update_ti_s_adjust_ti_to_bytes_p)
+   apply (erule read_write_valid_fg_cons)
+  apply (subst read_write_valid_def3[where r = field_getter and w = field_setter])
+    apply auto
+  done
+
+(* FIXME: this is nearly a duplicate. Would a standalone array rule work instead? *)
+lemma struct_rewrite_modifies_Array_field [heap_abs]:
+  "\<lbrakk> valid_struct_field (st :: 's \<Rightarrow> 't) field_name (field_getter :: ('a::packed_type) \<Rightarrow> (('f::oneMB_packed)['n::fourthousand_count])) field_setter t_hrs t_hrs_update;
+     struct_rewrite_expr P p' p;
+     struct_rewrite_expr Q f' f;
+     \<And>s. heap_lift__wrap_h_val (h_val_p' s) (h_val (hrs_mem (t_hrs s)) (p' s));
+     struct_rewrite_modifies R
+       (\<lambda>s. t_hrs_update (hrs_mem_update (heap_update (p'' s)
+                (u s (field_setter (\<lambda>a. Arrays.update a (nat k) (f' s (index a (nat k)))))))) s)
+       (\<lambda>s. t_hrs_update (hrs_mem_update (heap_update (p' s)
+               (field_setter (\<lambda>a. Arrays.update a (nat k) (f' s (index a (nat k))))
+                  (h_val_p' s)))) s);
+     struct_rewrite_guard S (\<lambda>s. c_guard (p' s)) \<rbrakk> \<Longrightarrow>
+   struct_rewrite_modifies (\<lambda>s. P s \<and> Q s \<and> R s \<and> S s \<and> 0 \<le> k \<and> nat k < CARD('n))
+     (\<lambda>s. t_hrs_update (hrs_mem_update (heap_update (p'' s)
+              (u s (field_setter (\<lambda>a. Arrays.update a (nat k) (f' s (index a (nat k)))))))) s)
+     (\<lambda>s. t_hrs_update (hrs_mem_update (heap_update
+            (ptr_coerce (Ptr (field_lvalue (p s) field_name) :: ('f['n]) ptr) +\<^sub>p k)
+                (f s (h_val (hrs_mem (t_hrs s)) (ptr_coerce (Ptr (field_lvalue (p s) field_name) :: ('f['n]) ptr) +\<^sub>p k :: 'f ptr))))) s)"
+  using ptr_coerce.simps[simp del]
+  apply (clarsimp simp: struct_rewrite_expr_def struct_rewrite_guard_def struct_rewrite_modifies_def valid_struct_field_def heap_lift__wrap_h_val_def)
+  apply (erule_tac x = s in allE)+
+  apply (erule impE, assumption)+
+  apply (erule_tac t = "t_hrs_update (hrs_mem_update (heap_update (p'' s)
+                          (u s(field_setter (\<lambda>a. Arrays.update a (nat k) (f' s (index a (nat k)))))))) s"
+               and s = "t_hrs_update (hrs_mem_update (heap_update (p' s)
+                          (field_setter (\<lambda>a. Arrays.update a (nat k) (f' s (index a (nat k))))
+                             (h_val (hrs_mem (t_hrs s)) (p' s))))) s"
+                in subst)
+  apply (rule read_write_valid_def3[where r = t_hrs and w = t_hrs_update])
+   apply assumption
+  apply (rule read_write_valid_def3[OF read_write_valid_hrs_mem])
+  apply (case_tac k, clarsimp)
+   apply (subst heap_update_Array_element[symmetric])
+    apply assumption
+   apply (subst heap_update_field)
+      apply assumption+
+    apply (simp add: export_tag_adjust_ti(1)[rule_format] read_write_valid_fg_cons)
+   apply (subst h_val_field_from_bytes')
+     apply assumption+
+    apply (simp add: export_tag_adjust_ti(1)[rule_format] read_write_valid_fg_cons)
+   apply (subst heap_access_Array_element[symmetric])
+    apply simp
+   apply (subst h_val_field_from_bytes')
+     apply assumption+
+    apply (simp add: export_tag_adjust_ti(1)[rule_format] read_write_valid_fg_cons)
+   apply clarsimp
+   apply (subst update_ti_update_ti_t)
+    apply (simp add: size_of_def)
+   apply (subst update_ti_s_adjust_ti_to_bytes_p)
+    apply (erule read_write_valid_fg_cons)
+   apply clarsimp
+   apply (subst read_write_valid_def3[of field_getter field_setter])
+     apply auto
+  done
+
 
 (*
  * Convert gets/sets to global variables into gets/sets in the new globals record.
@@ -505,6 +1086,19 @@ lemma abs_expr_globals_setter [heap_abs]:
      \<And>old. abs_expr st (P old) (v old) (v' old) \<rbrakk>
     \<Longrightarrow> abs_modifies st (\<lambda>s. \<forall>old. P old s) (\<lambda>s. new_setter (\<lambda>old. v old s) s) (\<lambda>s. old_setter (\<lambda>old. v' old s) s)"
   apply (clarsimp simp: valid_globals_field_def abs_expr_def abs_modifies_def)
+  done
+
+lemma struct_rewrite_expr_globals_getter [heap_abs]:
+  "\<lbrakk> valid_globals_field st old_getter old_setter new_getter new_setter \<rbrakk>
+    \<Longrightarrow> struct_rewrite_expr \<top> old_getter old_getter"
+  apply (clarsimp simp: struct_rewrite_expr_def)
+  done
+
+lemma struct_rewrite_modifies_globals_setter [heap_abs]:
+  "\<lbrakk> valid_globals_field st old_getter old_setter new_getter new_setter;
+     \<And>old. struct_rewrite_expr (P old) (v' old) (v old) \<rbrakk>
+    \<Longrightarrow> struct_rewrite_modifies (\<lambda>s. \<forall>old. P old s) (\<lambda>s. old_setter (\<lambda>old. v' old s) s) (\<lambda>s. old_setter (\<lambda>old. v old s) s)"
+  apply (clarsimp simp: valid_globals_field_def struct_rewrite_expr_def struct_rewrite_modifies_def)
   done
 
 (* Signed words are stored on the heap as unsigned words. *)
@@ -570,8 +1164,7 @@ lemma word_rsplit_signed:
 lemma heap_update_signed_word [simp]:
     "heap_update (ptr_coerce p :: 'a word ptr) (scast v) = heap_update (p :: ('a::len8) signed word ptr) v"
     "heap_update (ptr_coerce p' :: 'a signed word ptr) (ucast v') = heap_update (p' :: ('a::len8) word ptr) v'"
-  apply (auto intro!: ext simp: heap_update_def to_bytes_def
-                         typ_info_word word_rsplit_def cast_simps)
+  apply (auto simp: heap_update_def to_bytes_def typ_info_word word_rsplit_def cast_simps)
   done
 
 lemma valid_typ_heap_c_guard:
@@ -631,7 +1224,7 @@ lemma valid_typ_heap_signed_word:
               (\<lambda>f. (vsetter ((\<lambda>x. cast_f' (f (cast_f' x))))))
               t_hrs t_hrs_update"
   apply (clarsimp simp: valid_typ_heap_def
-          Option.map.compositionality o_def c_guard_ptr_coerce)
+          map.compositionality o_def c_guard_ptr_coerce)
   apply (rule read_write_validE_weak [where r=getter], assumption)
   apply (rule read_write_validE_weak [where r=vgetter], assumption)
   apply (rule read_write_validE_weak [where r=t_hrs], assumption)
@@ -738,7 +1331,7 @@ lemma ptr_coerce_eq:
 lemma signed_word_heap_opt [L2opt]:
   "(scast (((\<lambda>x. ucast (a (ptr_coerce x))) (p := v :: 'a::len signed word)) (b :: 'a signed word ptr)))
   = ((a(ptr_coerce p := (scast v :: 'a word))) ((ptr_coerce b) :: 'a word ptr))"
-  by (auto simp: fun_upd_def scast_id ptr_coerce_eq)
+  by (auto simp: fun_upd_def ptr_coerce_eq)
 
 lemma signed_word_heap_ptr_coerce_opt [L2opt]:
   "(ptr_coerce (((\<lambda>x. ptr_coerce (a (ptr_coerce x))) (p := v :: 'a ptr)) (b :: 'a ptr ptr)))
@@ -752,12 +1345,11 @@ declare ucast_scast_id [L2opt]
 (* array rules *)
 lemma heap_abs_expr_c_guard_array [heap_abs]:
   "\<lbrakk> valid_typ_heap st getter setter vgetter vsetter t_hrs t_hrs_update;
-      abs_expr st P (\<lambda>s. x' s) (\<lambda>s. ptr_coerce (x s) :: 'a ptr)  \<rbrakk> \<Longrightarrow>
-     abs_expr st
-        (P and (\<lambda>s. \<forall>a \<in> set (array_addrs (x' s) CARD('b)). (vgetter s a)))
-           (\<lambda>s. True)
-           (\<lambda>s. (c_guard (x s :: ('a::oneMB_size, 'b::fourthousand_count) array ptr)))"
-  apply (clarsimp simp: abs_expr_def simple_lift_def heap_ptr_valid_def)
+      abs_expr st P x' (\<lambda>s. ptr_coerce (x s) :: 'a ptr) \<rbrakk> \<Longrightarrow>
+     abs_guard st
+        (\<lambda>s. P s \<and> (\<forall>a \<in> set (array_addrs (x' s) CARD('b)). vgetter s a))
+        (\<lambda>s. c_guard (x s :: ('a::oneMB_size, 'b::fourthousand_count) array ptr))"
+  apply (clarsimp simp: abs_expr_def abs_guard_def simple_lift_def heap_ptr_valid_def)
   apply (subgoal_tac "\<forall>a\<in>set (array_addrs (x' (st s)) CARD('b)). c_guard a")
    apply (erule allE, erule (1) impE)
    apply (rule c_guard_array_c_guard)
@@ -769,7 +1361,7 @@ lemma heap_abs_expr_c_guard_array [heap_abs]:
   apply simp
   done
 
-(* begin machinery for abs_array_update *)
+(* begin machinery for heap_abs_array_update *)
 lemma fold_over_st:
   "\<lbrakk> xs = ys; P s;
      \<And>s x. x \<in> set xs \<and> P s \<Longrightarrow> P (g x s) \<and> f x (st s) = st (g x s)
@@ -928,7 +1520,7 @@ lemma array_update_split:
   apply (clarsimp simp: heap_update_def[abs_def])
   apply (subst coerce_heap_update_to_heap_updates[unfolded foldl_conv_fold,
            where chunk = "size_of TYPE('a)" and m = "CARD('b)"])
-    apply (rule size_of_array[unfolded mult_commute])
+    apply (rule size_of_array[unfolded mult.commute])
    apply simp
 
   (* remove false dependency *)
@@ -940,14 +1532,14 @@ lemma array_update_split:
                in arg_cong)
 
   apply (subst fcp_eta[where g = arr, symmetric])
-  apply (clarsimp simp: to_bytes_def typ_info_array array_tag_def array_tag_n_eq)
+  apply (clarsimp simp: to_bytes_def typ_info_array array_tag_def array_tag_n_eq simp del: fcp_eta)
   apply (subst access_ti_list_array_unpacked)
      apply clarsimp
      apply (rule refl)
     apply (simp add: size_of_def)
    apply clarsimp
    apply (rule refl)
-  apply (clarsimp simp: fcp_eta foldl_conv_concat)
+  apply (clarsimp simp: foldl_conv_concat)
 
   (* we need this later *)
   apply (subgoal_tac
@@ -957,7 +1549,7 @@ lemma array_update_split:
    prefer 2
    apply (subst le_diff_conv2)
     apply simp
-   apply (subst mult_commute, subst mult_Suc[symmetric])
+   apply (subst mult.commute, subst mult_Suc[symmetric])
    apply (rule mult_le_mono1)
    apply simp
 
@@ -973,7 +1565,7 @@ lemma array_update_split:
   apply (subst take_heap_list_le)
    apply (simp add: size_of_def)
   apply (clarsimp simp: size_of_def)
-  apply (subst mult_commute, rule refl)
+  apply (subst mult.commute, rule refl)
   done
 
 lemma fold_update_id:
@@ -983,6 +1575,7 @@ lemma fold_update_id:
   \<rbrakk> \<Longrightarrow> fold (\<lambda>i. setter (\<lambda>x. x(ind i := val i))) xs s = s"
   apply (induct xs)
    apply simp
+  apply (rename_tac a xs)
   apply clarsimp
   apply (subgoal_tac "setter (\<lambda>x. x(ind a := getter s (ind a))) s = s")
    apply simp
@@ -1008,20 +1601,21 @@ lemma fourthousand_index:
          rule fourthousand_size)+
   done
 
-(* end machinery for abs_array_update *)
+(* end machinery for heap_abs_array_update *)
 
-theorem abs_array_update [heap_abs]:
- "\<lbrakk>  valid_typ_heap st (getter :: 's \<Rightarrow> 'a ptr \<Rightarrow> 'a) setter
-                    vgetter vsetter t_hrs t_hrs_update;
-     (*\<And>s p. getter s p = the (simple_lift (t_hrs s) p);
-     \<And>s p. vgetter s p = ((simple_lift (t_hrs s) p) \<noteq> None);*)
-     abs_expr st Pb b' b \<rbrakk> \<Longrightarrow>
-      abs_modifies st (Pb and (\<lambda>_. n < CARD('b)) and
-                         (\<lambda>s. \<forall>ptr \<in> set (array_addrs (ptr_coerce (b' s)) CARD('b)). (vgetter s ptr)))
-        (\<lambda>s. setter (\<lambda>v. v(ptr_coerce (b' s) +\<^sub>p int n := val)) s)
-        (\<lambda>s. t_hrs_update (hrs_mem_update (
+theorem heap_abs_array_update [heap_abs]:
+ "\<lbrakk> valid_typ_heap st (getter :: 's \<Rightarrow> 'a ptr \<Rightarrow> 'a) setter
+                   vgetter vsetter t_hrs t_hrs_update;
+    abs_expr st Pb b' b;
+    abs_expr st Pn n' n;
+    abs_expr st Pv v' v
+  \<rbrakk> \<Longrightarrow>
+    abs_modifies st (\<lambda>s. Pb s \<and> Pn s \<and> Pv s \<and> n' s < CARD('b) \<and>
+                         (\<forall>ptr \<in> set (array_addrs (ptr_coerce (b' s)) CARD('b)). (vgetter s ptr)))
+      (\<lambda>s. setter (\<lambda>v. v(ptr_coerce (b' s) +\<^sub>p int (n' s) := v' s)) s)
+      (\<lambda>s. t_hrs_update (hrs_mem_update (
               heap_update (b s) (Arrays.update ((h_val (hrs_mem (t_hrs s)) (b s))
-                       :: ('a::oneMB_size)['b::fourthousand_count]) n val))) s)"
+                                 :: ('a::oneMB_size)['b::fourthousand_count]) (n s) (v s)))) s)"
   apply (clarsimp simp: abs_modifies_def abs_expr_def)
   (* rewrite heap_update of array *)
   apply (subst array_update_split
@@ -1033,10 +1627,10 @@ theorem abs_array_update [heap_abs]:
   (* rewrite array reads to pointer reads *)
   apply (subst fold_cong[OF refl refl,
            where g = "\<lambda>i. setter (\<lambda>x. x(ptr_coerce (b' (st s)) +\<^sub>p int i :=
-                         if i = n then val else getter (st s) (ptr_coerce (b' (st s)) +\<^sub>p int i)))"])
+                         if i = n' (st s) then v' (st s) else getter (st s) (ptr_coerce (b' (st s)) +\<^sub>p int i)))"])
    apply (rule_tac f = setter in arg_cong)
-   apply (case_tac "x = n")
-    apply (simp add: index_update)
+   apply (case_tac "x = n' (st s)")
+    apply simp
    apply (subst index_update2)
      apply simp
     apply simp
@@ -1047,7 +1641,7 @@ theorem abs_array_update [heap_abs]:
    apply metis
 
   (* split away the indices that don't change *)
-  apply (subst split_upt_on_n[where n = n])
+  apply (subst split_upt_on_n[where n = "n s"])
    apply simp
   apply clarsimp
 
@@ -1072,7 +1666,7 @@ theorem abs_array_update [heap_abs]:
    apply (subst read_write_valid_def1[where r = getter and w = setter])
     apply assumption
    apply (clarsimp simp: ptr_add_def)
-   apply (subgoal_tac "of_nat (i * size_of TYPE('a)) \<noteq> of_nat (n * size_of TYPE('a))")
+   apply (subgoal_tac "of_nat (i * size_of TYPE('a)) \<noteq> of_nat (n s * size_of TYPE('a))")
     apply force
    apply (subst fourthousand_index[symmetric])
      apply assumption
@@ -1081,23 +1675,40 @@ theorem abs_array_update [heap_abs]:
   apply simp
   done
 
+(* Array access, which is considerably simpler than updating. *)
+lemma heap_abs_array_access[heap_abs]:
+ "\<lbrakk> valid_typ_heap st (getter :: 's \<Rightarrow> ('a::mem_type) ptr \<Rightarrow> 'a) setter
+                   vgetter vsetter t_hrs t_hrs_update;
+    abs_expr st Pb b' b;
+    abs_expr st Pn n' n
+  \<rbrakk> \<Longrightarrow>
+    abs_expr st (\<lambda>s. Pb s \<and> Pn s \<and> n' s < CARD('b::finite) \<and> vgetter s (ptr_coerce (b' s) +\<^sub>p int (n' s)))
+      (\<lambda>s. getter s (ptr_coerce (b' s) +\<^sub>p int (n' s)))
+      (\<lambda>s. index (h_val (hrs_mem (t_hrs s)) (b s :: ('a['b]) ptr)) (n s))"
+  apply (clarsimp simp: valid_typ_heap_def abs_expr_def)
+  apply (subst heap_access_Array_element)
+   apply simp
+  apply (simp add: set_array_addrs)
+  done
+
+
 lemma the_fun_upd_lemma1:
     "(\<lambda>x. the (f x))(p := v) = (\<lambda>x. the ((f (p := Some v)) x))"
-  by (auto intro!: ext simp: fun_upd_def)
+  by auto
 
 lemma the_fun_upd_lemma2:
    "\<exists>z. f p = Some z \<Longrightarrow>
        (\<lambda>x. \<exists>z. (f (p := Some v)) x = Some z) =  (\<lambda>x. \<exists>z. f x = Some z) "
-  by (auto intro!: ext simp: fun_upd_def)
+  by auto
 
 lemma the_fun_upd_lemma3:
     "((\<lambda>x. the (f x))(p := v)) x = the ((f (p := Some v)) x)"
-  by (auto intro!: ext simp: fun_upd_def)
+  by simp
 
 lemma the_fun_upd_lemma4:
    "\<exists>z. f p = Some z \<Longrightarrow>
        (\<exists>z. (f (p := Some v)) x = Some z) =  (\<exists>z. f x = Some z) "
-  by (auto intro!: ext simp: fun_upd_def)
+  by simp
 
 lemmas the_fun_upd_lemmas =
     the_fun_upd_lemma1

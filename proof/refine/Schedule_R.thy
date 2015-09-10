@@ -15,9 +15,6 @@ begin
 lemma gsa_wf [wp]: "\<lbrace>invs'\<rbrace> getSchedulerAction \<lbrace>sch_act_wf\<rbrace>"
   by (simp add: getSchedulerAction_def invs'_def valid_state'_def | wp)+
 
-lemma gts_inv': "\<lbrace>P\<rbrace> getThreadState t \<lbrace>\<lambda>rv. P\<rbrace>"
-  by (unfold getThreadState_def, wp)
-
 lemma corres_if2:
  "\<lbrakk> G = G'; G \<Longrightarrow> corres r P P' a c; \<not> G' \<Longrightarrow> corres r Q Q' b d \<rbrakk>
     \<Longrightarrow> corres r (if G then P else Q) (if G' then P' else Q') (if G then a else b) (if G' then c else d)"
@@ -1251,7 +1248,6 @@ crunch ksRQ[wp]: threadSet "\<lambda>s. P (ksReadyQueues s)"
   (ignore: setObject getObject
        wp: updateObject_default_inv)
 
-(* Annotation added by Simon Winwood (Thu Jul  1 21:16:37 2010) using taint-mode *)
 declare Cons_eq_tails[simp]
 
 lemma invs_ksReadyQueues_update_triv:
@@ -1275,9 +1271,6 @@ lemma tcbSchedDequeue_ksReadyQueues_eq:
   apply (simp add: eq_commute)
   done
 
-(* FIXME: reluctantly added in IpcCancel_AI.thy.
-   It breaks the proof below because for "valid ?P f (%_ _. False \<longrightarrow> False)",
-   a proof obligation: "valid ?Q f (%_ _. False)" is created. *)
 declare static_imp_wp[wp_split del]
 
 lemma hd_ksReadyQueues_runnable:
@@ -1291,9 +1284,10 @@ lemma hd_ksReadyQueues_runnable:
    by auto
 
 lemma chooseThread_invs_fragment: "\<lbrace>invs' and (\<lambda>s. ksCurDomain s = d)\<rbrace>
-       getQueue d r >>= list_case (return False) (\<lambda>thread x. do y \<leftarrow> ThreadDecls_H.switchToThread thread;
-                                                              return True
-                                                           od)
+       do x \<leftarrow> getQueue d r;
+        (case x of [] \<Rightarrow> return False
+          | thread # x \<Rightarrow> do y \<leftarrow> ThreadDecls_H.switchToThread thread; return True od)
+       od
        \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (rule seq_ext)
    apply (rule gq_sp)
@@ -1320,9 +1314,10 @@ crunch ksCurDomain[wp]: "ThreadDecls_H.switchToThread" "\<lambda>s. P (ksCurDoma
 
 lemma chooseThread_ksCurDomain_fragment:
   "\<lbrace>\<lambda>s. P (ksCurDomain s)\<rbrace>
-       getQueue d r >>= list_case (return False) (\<lambda>thread x. do y \<leftarrow> ThreadDecls_H.switchToThread thread;
-                                                              return True
-                                                           od)
+       do x \<leftarrow> getQueue d r;
+        (case x of [] \<Rightarrow> return False
+          | thread # x \<Rightarrow> do y \<leftarrow> ThreadDecls_H.switchToThread thread; return True od)
+       od
    \<lbrace>\<lambda>_ s. P (ksCurDomain s)\<rbrace>"
   apply (wp | wpc | clarsimp)+
   done
@@ -1347,8 +1342,6 @@ proof -
     by clarsimp
 
   with oa tp have "obj_at' (inQ d p) t s"
-    apply -
-    apply (drule(1) obj_at_conj')
     by (fastforce simp add: inQ_def obj_at'_def)
   
   with vq' have "t \<in> set (ksReadyQueues s (d, p))"
@@ -1504,10 +1497,6 @@ lemma switchToIdleThread_activatable[wp]:
                         pred_tcb_at'_def obj_at'_def)
   done
 
-(* FIXME: reluctantly added in IpcCancel_AI.thy.
-   It breaks the proof below because for
-     "valid ?P f (%_ _. (False \<longrightarrow> False) \<and> (True \<longrightarrow> True))"
-   a proof obligation: "valid ?Q f (%_ _. False)" is created. *)
 declare static_imp_conj_wp[wp_split del]
 
 lemma valid_queues_obj_at'_imp:
@@ -1691,7 +1680,7 @@ lemma corres_assert_assume_l:
 crunch cur[wp]: tcbSchedEnqueue cur_tcb'
   (simp: unless_def)
 
-(* FIXME - move *)
+(* FIXME: move *)
 lemma corres_noop3:
   assumes x: "\<And>s s'. \<lbrakk>P s; P' s'; (s, s') \<in> sr\<rbrakk>  \<Longrightarrow> \<lbrace>op = s\<rbrace> f \<exists>\<lbrace>\<lambda>r. op = s\<rbrace>"
   assumes y: "\<And>s s'. \<lbrakk>P s; P' s'; (s, s') \<in> sr\<rbrakk> \<Longrightarrow> \<lbrace>op = s'\<rbrace> g \<lbrace>\<lambda>r. op = s'\<rbrace>"
@@ -1741,7 +1730,7 @@ lemma corres_symb_exec_r':
   apply (rule corres_guard_imp)
     apply (subst gets_bind_ign[symmetric], rule corres_split)
        apply (rule z)
-      apply (rule_tac P'="?a' and ?a''" in corres_noop3)
+      apply (rule_tac P'="a' and a''" for a' a'' in corres_noop3)
         apply (simp add: simpler_gets_def exs_valid_def)
        apply clarsimp
        apply (erule x)
@@ -1861,11 +1850,6 @@ lemma corres_gets_queues_blah:
   "corres (ready_queues_relation_in_domain) \<top> \<top> (gets (\<lambda>s. ready_queues s d)) (gets (\<lambda>s p. ksReadyQueues s (d, p)))"
   by (auto simp: state_relation_def ready_queues_relation_def ready_queues_relation_in_domain_def)
 
-(* FIXME: Remove
-lemma minBound_max_enum: "[(minBound :: word8).e.maxBound] = enum"
-  apply (simp add: minBound_word)
-  apply (clarsimp simp add: enum_word_def upto_enum_word maxBound_max_word max_word_def)
-  done *)
 
 lemma Max_lt_set: "\<forall>y\<in>A. Max B < (y::word8) \<Longrightarrow> \<forall>y\<in>A. y \<notin> B"
   apply clarsimp
@@ -2007,7 +1991,6 @@ lemma domain_time_corres:
   "corres (op =) \<top> \<top> (gets domain_time) getDomainTime"
   by (simp add: getDomainTime_def state_relation_def)
 
-(* The break through in this proof was applying "Let_def" *)
 lemma next_domain_corres:
   "corres dc \<top> \<top> next_domain nextDomain"
   apply (simp add: next_domain_def nextDomain_def)
@@ -2015,7 +1998,7 @@ lemma next_domain_corres:
   apply (simp add: state_relation_def Let_def dschLength_def dschDomain_def)
   done
 
-(* FIXME: Move to Invariants_H. Think about turning valid_queues' and valid_queues lemmas into locale *)
+(* FIXME: Move to Invariants_H. *)
 
 interpretation ksCurDomain:
   P_Arch_Idle_Int_update_eq "ksCurDomain_update f"
@@ -2326,7 +2309,7 @@ lemma switchToThread_invs_no_cicd':
   done
 
 lemma chooseThread_invs_no_cicd'_fragment: "\<lbrace>invs_no_cicd' and (\<lambda>s. ksCurDomain s = d)\<rbrace>
-      findM (\<lambda>prio. getQueue d prio >>= list_case (return False) (\<lambda>thread x. do y \<leftarrow> ThreadDecls_H.switchToThread thread;
+      findM (\<lambda>prio. getQueue d prio >>= case_list (return False) (\<lambda>thread x. do y \<leftarrow> ThreadDecls_H.switchToThread thread;
                                                                                            return True
                                                                                          od))
       (rev enumPrio)
@@ -2536,6 +2519,7 @@ lemma schedule_invs': "\<lbrace>invs'\<rbrace> ThreadDecls_H.schedule \<lbrace>\
        apply clarsimp
        apply (wp)[3]
     -- "action = SwitchToThread"
+    apply (rename_tac word)
     apply (rule_tac hoare_seq_ext, rename_tac r)
      apply (wp ssa_invs')
       apply (clarsimp)
@@ -2622,13 +2606,14 @@ lemma schedule_ct_activatable'[wp]: "\<lbrace>invs'\<rbrace> ThreadDecls_H.sched
       apply (wp)[1]
      -- "action = ChooseNewThread"
      apply (rule_tac hoare_seq_ext, rename_tac r)
-      apply (rule hoare_seq_ext, simp add: K_bind_def)
+      apply (rule hoare_seq_ext, simp)
       apply (rule hoare_seq_ext)
       apply (rule seq_ext[OF schedule_ChooseNewThread_fragment_invs' _, simplified bind_assoc])
       apply (wp ssa_invs')
        apply (clarsimp simp: ct_in_state'_def, simp)
        apply (wp)[3]
     -- "action = SwitchToThread"
+    apply (rename_tac word)
     apply (rule_tac hoare_seq_ext, rename_tac r)
      apply (wp ssa_invs')
        apply (clarsimp simp: ct_in_state'_def, simp)
@@ -2642,7 +2627,6 @@ lemma schedule_ct_activatable'[wp]: "\<lbrace>invs'\<rbrace> ThreadDecls_H.sched
   apply (auto elim!: obj_at'_weakenE simp: st_tcb_at'_def )
   done
 
-(* Levity: moved from IpcCancel_R (20090723 09:16:50) *)
 lemma threadSet_sch_act_sane:
   "\<lbrace>sch_act_sane\<rbrace> threadSet f t \<lbrace>\<lambda>_. sch_act_sane\<rbrace>"
   by (wp sch_act_sane_lift)
@@ -2657,7 +2641,6 @@ lemma tcbSchedDequeue_sch_act_sane[wp]:
   "\<lbrace>sch_act_sane\<rbrace> tcbSchedDequeue t \<lbrace>\<lambda>_. sch_act_sane\<rbrace>"
   by (wp sch_act_sane_lift)
 
-(* Levity: moved from IpcCancel_R (20090725 09:07:52) *)
 lemma sts_sch_act_sane:
   "\<lbrace>sch_act_sane\<rbrace> setThreadState st t \<lbrace>\<lambda>_. sch_act_sane\<rbrace>"
   apply (simp add: setThreadState_def)
@@ -2710,12 +2693,11 @@ lemma possibleSwitchTo_corres:
    apply clarsimp
    apply (frule_tac x="cur_thread s" in tcb_at_ekheap_dom, simp)
    apply (clarsimp simp: is_etcb_at_def valid_sched_action_def weak_valid_sched_action_def)
-  (* FIXME futz needs a cleaning *)
   apply (clarsimp simp: cur_tcb'_def)
   apply (frule (1) valid_objs'_maxDomain)
-  apply (frule (1) valid_objs'_maxDomain) back
+  apply (frule (1) valid_objs'_maxDomain [where t=t])
   apply (frule (1) valid_objs'_maxPriority)
-  apply (frule (1) valid_objs'_maxPriority) back
+  apply (frule (1) valid_objs'_maxPriority [where t=t])
   apply (clarsimp simp: cur_tcb'_def obj_at'_def projectKOs objBits_simps)
   apply (rule_tac x=obje in exI)
   apply (auto simp: tcb_in_cur_domain'_def obj_at'_def projectKOs objBits_simps)
@@ -2726,17 +2708,17 @@ lemma attemptSwitchTo_corres:
     (Invariants_H.valid_queues and valid_queues' and
     (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s) and cur_tcb' and tcb_at' t and st_tcb_at' runnable' t and valid_objs')
      (attempt_switch_to t) (attemptSwitchTo t)"
-using possibleSwitchTo_corres
-apply (simp add: attempt_switch_to_def attemptSwitchTo_def)
-done
+  using possibleSwitchTo_corres
+  apply (simp add: attempt_switch_to_def attemptSwitchTo_def)
+  done
 
 lemma switchIfRequiredTo_corres:
   "corres dc (valid_etcbs and weak_valid_sched_action and cur_tcb and st_tcb_at runnable t)
     (Invariants_H.valid_queues and valid_queues' and
     (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s) and cur_tcb' and tcb_at' t and st_tcb_at' runnable' t and valid_objs')
      (switch_if_required_to t) (switchIfRequiredTo t)"
-using possibleSwitchTo_corres
-apply (simp add: switch_if_required_to_def switchIfRequiredTo_def)
-done
+  using possibleSwitchTo_corres
+  apply (simp add: switch_if_required_to_def switchIfRequiredTo_def)
+  done
 
 end

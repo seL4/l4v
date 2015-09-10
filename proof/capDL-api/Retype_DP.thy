@@ -57,13 +57,9 @@ crunch inv[wp]: generate_object_ids P
 (wp:crunch_wps select_wp)
 
 lemma pick_rev:
-  "target_object_ids = map (\<lambda>x. {x}) ids
-  \<Longrightarrow> (ids = map (\<lambda>x. pick x) target_object_ids)"
-  apply clarsimp
-   apply (induct_tac ids)
-   apply clarsimp+
-  done
-
+  assumes "target_object_ids = map (\<lambda>x. {x}) ids"
+  shows "ids = map (\<lambda>x. pick x) target_object_ids"
+  unfolding assms by (induct ids) auto
 
 lemma create_objects_wp:
   notes set_map[simp del]
@@ -88,7 +84,7 @@ lemma create_objects_wp:
   apply (simp add:set_map)
   apply sep_cancel
   apply (erule sep_list_conj_impl[rotated])
-  apply (simp add:list_all2_def)
+  apply (simp add:list_all2_iff)
   apply (clarsimp simp:zip_map1 zip_map2
     set_zip_same
     Fun.comp_def split_def)
@@ -207,7 +203,7 @@ lemma dummy_detype_if_untyped:
   \<Longrightarrow> (detype obj_range s) = s"
   apply (case_tac s,clarsimp simp:detype_def sep_set_conj_def)
   apply (rule ext)
-  apply (clarsimp simp:state_sep_projection_def sep_conj_def)
+  apply (clarsimp simp:sep_state_projection_def sep_conj_def)
   apply (subst (asm) sep.setprod.remove)
    apply simp+
   apply (clarsimp simp:sep_map_o_conj image_def)
@@ -216,7 +212,7 @@ lemma dummy_detype_if_untyped:
   apply (case_tac xa,case_tac y)
   apply (clarsimp simp:plus_sep_state_def sep_state_add_def asid_reset_def
     intent_reset_def update_slots_def object_wipe_slots_def sep_disj_sep_state_def
-    obj_to_sep_state_def object_project_def object_clean_def
+    object_to_sep_state_def object_project_def object_clean_def
     sep_state_disj_def)
   apply (drule map_disj_None_right'[rotated])
    apply simp
@@ -224,7 +220,7 @@ lemma dummy_detype_if_untyped:
   apply (case_tac z)
     apply (clarsimp simp:plus_sep_state_def sep_state_add_def asid_reset_def
     intent_reset_def update_slots_def object_wipe_slots_def sep_disj_sep_state_def
-    obj_to_sep_state_def object_project_def object_clean_def
+    object_to_sep_state_def object_project_def object_clean_def
     sep_state_disj_def)+
   done
 
@@ -280,20 +276,18 @@ lemma invoke_untyped_wp:
           \<and>  distinct (map pick new_obj_refs) \<and>
            new_obj_refs = map ((\<lambda>x. {x}) \<circ> pick) new_obj_refs \<and>
            pick ` set new_obj_refs \<subseteq> tot_free_range" in hoare_gen_asm)
-        apply (simp del:set_map split del:if_splits)
+        apply (simp del:set_map split del:split_if)
         apply (rule hoare_strengthen_post[OF update_available_range_wp])
         apply clarsimp
         apply (rule_tac x = nfr in exI)
         apply (rule conjI)
          apply (clarsimp split:if_splits)
         apply (sep_select 3,sep_select 2,simp)
-       apply (wp|simp split del:if_splits)+
+       apply (wp|simp split del:split_if)+
      apply (rule_tac P = "untyped_cap = UntypedCap obj_range free_range"
        in hoare_gen_asm)
-     apply (clarsimp simp:conj_ac
-       split del:if_splits)
-     apply (simp add: conj_assoc[symmetric]
-       del:conj_assoc split del:if_splits)+
+     apply (clarsimp simp:conj_comms split del: split_if)
+     apply (simp add: conj_assoc[symmetric] del:conj_assoc split del: split_if)+
      apply (rule hoare_vcg_conj_lift)
       apply wp
       apply (rule hoare_strengthen_post[OF generate_object_ids_rv])
@@ -527,7 +521,7 @@ lemma seL4_Untyped_Retype_sep:
   \<and>* (cap_object root_cnode_cap, offset root root_size) \<mapsto>c root_cnode_cap
   \<and>* P \<guillemotright> s )
   \<and> (\<not>has_children (root_cnode,ucptr_slot) (kernel_state s) \<longrightarrow> obj_range = free_range))  \<rbrace>"
-  apply (simp add:seL4_Untyped_Retype_def state_sep_projection2_def)
+  apply (simp add:seL4_Untyped_Retype_def sep_state_projection2_def)
   apply (rule hoare_name_pre_state)
   apply (rule hoare_pre)
    apply (rule do_kernel_op_pull_back)
@@ -545,7 +539,7 @@ lemma seL4_Untyped_Retype_sep:
          apply (rule hoare_strengthen_post[OF hoare_vcg_conj_lift])
           apply (rule invoke_untyped_one_has_children)
           apply fastforce
-         apply (rule_tac P = "?P1 \<and>* ?P2" in
+         apply (rule_tac P = "P1 \<and>* P2" for P1 P2 in
            invoke_untyped_one_wp
              [where free_range = free_range
                and obj_range = obj_range
@@ -588,12 +582,12 @@ lemma seL4_Untyped_Retype_sep:
 
       apply (clarsimp simp:user_pointer_at_def Let_def word_bits_def)
       apply (rule conjI)
-       apply (thin_tac "<?P \<and>* ?Q \<and>* (\<lambda>s. True)> ?sa ")
+       apply (thin_tac "<P \<and>* Q \<and>* (\<lambda>s. True)> s" for P Q s)
        apply (clarsimp simp:user_pointer_at_def Let_def word_bits_def)
        apply (sep_solve)
-      apply (clarsimp simp: fst_conv ep_related_cap_def
+      apply (clarsimp simp: ep_related_cap_def
         dest!: reset_cap_asid_simps2 reset_cap_asid_cnode_cap)+
-          apply (thin_tac "<?P \<and>* ?Q \<and>* (\<lambda>s. True)> ?sa ")
+          apply (thin_tac "<P \<and>* Q \<and>* (\<lambda>s. True)> s" for P Q s)
       apply (sep_cancel)
     apply (clarsimp simp:user_pointer_at_def Let_def
        word_bits_def sep_conj_assoc)
@@ -604,11 +598,11 @@ lemma seL4_Untyped_Retype_sep:
      apply (wp lookup_cap_and_slot_rvu[where r = root_size and
        cap = "root_cnode_cap" and cap' = "UntypedCap obj_range free_range"])
     apply (intro conjI impI allI)
-     apply (clarsimp simp: fst_conv ep_related_cap_def
+     apply (clarsimp simp: ep_related_cap_def
        dest!: reset_cap_asid_simps2 reset_cap_asid_cnode_cap)
     apply (clarsimp simp:user_pointer_at_def Let_def
       word_bits_def sep_conj_assoc)
-    apply (thin_tac "<?P \<and>* ?Q \<and>* sep_true> sa")
+    apply (thin_tac "<P \<and>* Q \<and>* sep_true> sa" for P Q)
     apply sep_solve
    apply (wp update_thread_intent_update)
   apply (intro conjI allI impI,simp_all)
@@ -627,7 +621,7 @@ lemma seL4_Untyped_Retype_sep:
  * We need to know the cdt only ever increases when creating objects. *
  *                                                                    *
  * If this is the case, then we can know that UntypedCaps only ever   *
- * become parents, and never lose their kids.                         *
+ * become parents, and never lose their children                      *
  **********************************************************************)
 
 
@@ -789,7 +783,7 @@ lemma seL4_Untyped_Retype_cdt_inc:
         apply (rule valid_validE)
         apply (rule_tac P = "cdl_intent_op (cdl_tcb_intent xb) \<noteq> None"
           in hoare_gen_asm)
-        apply (clarsimp split del:if_splits)
+        apply (clarsimp split del:split_if)
         apply wp
         apply (rule hoare_vcg_handle_elseE[rotated])
           apply (wp whenE_inv|simp)+
@@ -859,10 +853,9 @@ lemma seL4_Untyped_Retype_cdt_inc:
     apply sep_solve
    apply clarsimp
    apply wp
-  apply (clarsimp simp:state_sep_projection2_def)
+  apply (clarsimp simp:sep_state_projection2_def)
   apply (drule obj_exists_map_f)
-  apply (clarsimp simp:object_at_def opt_object_def
-    object_type_def)
+  apply (clarsimp simp:object_at_def opt_object_def object_type_def)
   apply (fastforce split:cdl_object.split_asm)
   done
 

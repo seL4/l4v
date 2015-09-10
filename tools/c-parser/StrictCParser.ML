@@ -26,18 +26,8 @@ in
   (#1 (StrictCParser.parse(lookahead,lexstream,print_error,pi)), !Feedback.numErrors)
 end
 
-fun parse error_lookahead (includes : string list) (fname : string) = let
-  val includes_string = String.concat (map (fn s => "-I\""^s^"\" ") includes)
-  val cpped_fname = let
-    open OS.FileSys OS.Process
-    val tmpname = tmpName()
-  in
-    if isSuccess (system ("/usr/bin/cpp " ^ includes_string ^ " -CC \"" ^ fname ^
-                          "\" > " ^ tmpname))
-    then
-      tmpname
-    else raise Feedback.WantToExit ("cpp failed on "^fname)
-  end
+fun parse docpp error_lookahead (includes : string list) fname = let
+  val cpped_fname = docpp {includes=includes,filename=fname}
   val istream = TextIO.openIn cpped_fname
   val _ = Feedback.numErrors := 0 (* FIXME - global reference *)
   val lexarg = StrictCLex.UserDeclarations.new_state fname

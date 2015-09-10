@@ -282,7 +282,6 @@ lemma threadget_corres:
 lemma threadGet_inv [wp]: "\<lbrace>P\<rbrace> threadGet f t \<lbrace>\<lambda>rv. P\<rbrace>"
   by (simp add: threadGet_def getObject_inv_tcb | wp)+
 
-(* Annotation added by Simon Winwood (Thu Jul  1 21:27:51 2010) using taint-mode *)
 declare result_in_set_wp[wp]
 
 lemma ball_tcb_cte_casesI:
@@ -554,18 +553,18 @@ lemma setObject_tcb_valid_globals' [wp]:
     obj_at' (\<lambda>tcb. (\<forall>(getF, setF) \<in> ran tcb_cte_cases. getF tcb = getF v)) t\<rbrace>
   setObject t (v :: tcb) 
   \<lbrace>\<lambda>rv. valid_global_refs'\<rbrace>"
-  unfolding pred_conj_def valid_global_refs'_def valid_refs'_def
-  apply simp
+  unfolding pred_conj_def valid_global_refs'_def
   apply (rule hoare_lift_Pf2 [where f="global_refs'"])
-   apply (subst conj_assoc [symmetric], rule setObject_ctes_of)
-    apply (clarsimp simp: updateObject_default_def in_monad projectKOs
-                          in_magnitude_check objBits_simps Pair_fst_snd_eq
-                          obj_at'_def)
-    apply fastforce
-   apply (clarsimp simp: updateObject_default_def in_monad Pair_fst_snd_eq
-                         obj_at'_def objBits_simps in_magnitude_check
-                         projectKOs bind_def)
-  apply wp
+   apply (rule hoare_lift_Pf2 [where f="gsMaxObjectSize"])
+    apply (rule setObject_ctes_of)
+     apply (clarsimp simp: updateObject_default_def in_monad projectKOs
+                           in_magnitude_check objBits_simps Pair_fst_snd_eq
+                           obj_at'_def)
+     apply fastforce
+    apply (clarsimp simp: updateObject_default_def in_monad Pair_fst_snd_eq
+                          obj_at'_def objBits_simps in_magnitude_check
+                          projectKOs bind_def)
+   apply (wp | wp setObject_ksPSpace_only updateObject_default_inv | simp)+
   done
 
 lemma setObject_tcb_irq_handlers':
@@ -1129,6 +1128,7 @@ lemma threadSet_sch_actT_P:
      apply (clarsimp simp: o_def)
     apply (clarsimp simp: o_def)
    apply (fastforce simp: obj_at'_def projectKOs)
+  apply (rename_tac word)
   apply (subgoal_tac "t \<noteq> word")
    apply (frule_tac t'1=word
                 and P1="runnable' \<circ> tcbState"
@@ -1292,8 +1292,7 @@ proof -
      apply (fastforce simp: domains ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def dest!: z z' a)
     apply (frule z)
     apply (frule a)
-    apply (fastforce simp: domains ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def dest!: z z' a)
-    done
+    by (fastforce simp: domains ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def dest!: z z' a)
 qed
 
 lemmas threadSet_invs_trivialT_P =
@@ -1406,7 +1405,6 @@ lemma corres_as_user:
   apply (simp add: invs'_def valid_state'_def valid_pspace'_def)
   done
 
-(* Annotation added by Simon Winwood (Thu Jul  1 21:21:13 2010) using taint-mode *)
 declare hoare_in_monad_post[wp]
 
 lemma asUser_inv:
@@ -1931,8 +1929,8 @@ lemma rescheduleRequired_corres:
   apply (simp add: rescheduleRequired_def reschedule_required_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split[OF _ get_sa_corres])
-      apply (rule_tac P="case action of switch_thread t \<Rightarrow> ?P t | _ \<Rightarrow> \<top>"
-              and P'="case actiona of SwitchToThread t \<Rightarrow> ?P' t | _ \<Rightarrow> \<top>" in corres_split[where r'=dc])
+      apply (rule_tac P="case action of switch_thread t \<Rightarrow> P t | _ \<Rightarrow> \<top>"
+              and P'="case actiona of SwitchToThread t \<Rightarrow> P' t | _ \<Rightarrow> \<top>" for P P' in corres_split[where r'=dc])
          apply (rule set_sa_corres)
          apply simp
         apply (case_tac action)
@@ -2286,6 +2284,7 @@ lemma threadSet_runnable_sch_act:
                  in use_valid [OF _ threadSet_obj_at'_really_strongest])
     apply (clarsimp elim!: obj_at'_weakenE)
    apply (simp add: o_def)
+  apply (rename_tac word)
   apply (rule conjI)
    apply (frule_tac t'1=word
                and P1="runnable' \<circ> tcbState"
@@ -2341,6 +2340,7 @@ lemma threadSet_sch_act_switch:
                  in use_valid [OF _ threadSet_obj_at'_really_strongest])
     apply (clarsimp simp: ct_in_state'_def pred_tcb_at'_def o_def)
    apply (clarsimp simp: ct_in_state'_def pred_tcb_at'_def o_def)
+  apply (rename_tac word)
   apply (rule conjI)
   apply (clarsimp simp: st_tcb_at'_def)
   apply (frule_tac t'1="word"
@@ -3011,7 +3011,7 @@ lemmas msgRegisters_unfold
 
 lemma get_mrs_corres:
   "corres op= (tcb_at t)
-              (tcb_at' t and option_case \<top> valid_ipc_buffer_ptr' buf)
+              (tcb_at' t and case_option \<top> valid_ipc_buffer_ptr' buf)
               (get_mrs t buf mi) (getMRs t buf (message_info_map mi))"
   proof -
   have S: "get = gets id"
@@ -3062,7 +3062,6 @@ lemma doMachineOp_bind:
  "\<lbrakk> empty_fail a; \<And>x. empty_fail (b x) \<rbrakk> \<Longrightarrow> doMachineOp (a >>= b) = (doMachineOp a >>= (\<lambda>rv. doMachineOp (b rv)))"
   by (blast intro: submonad_bind submonad_doMachineOp)
 
-(* Annotation added by Simon Winwood (Thu Jul  1 21:21:12 2010) using taint-mode *)
 declare empty_fail_sequence_x[simp]
 
 lemma zipWithM_x_doMachineOp:
@@ -3121,8 +3120,8 @@ declare word_neq_0_conv [simp del]
 lemma set_mrs_corres:
   assumes m: "mrs' = mrs"
   shows 
-  "corres op= (tcb_at t and option_case \<top> in_user_frame buf)
-              (tcb_at' t and option_case \<top> valid_ipc_buffer_ptr' buf)
+  "corres op= (tcb_at t and case_option \<top> in_user_frame buf)
+              (tcb_at' t and case_option \<top> valid_ipc_buffer_ptr' buf)
               (set_mrs t buf mrs) (setMRs t buf mrs')"
 proof -
   have setRegister_def2: "setRegister = (\<lambda>r v. modify (\<lambda>s. s ( r := v )))"
@@ -3181,13 +3180,12 @@ proof -
     apply (rule corres_guard_imp)
       apply (rule corres_split_nor [OF _ corres_as_user' [OF P]])
  	 apply (rule corres_trivial)
- 	 apply (simp add: min_max.inf_commute msgRegisters_unfold zipWithM_x_Nil)
+ 	 apply (simp add: min.commute msgRegisters_unfold zipWithM_x_Nil)
 	 apply wp
      apply (simp del: upt.simps split del: split_if)+
    -- "buf = Some a"
    apply (rule corres_guard_imp)
      apply (rule corres_split_nor [OF _ corres_as_user'])
-         apply (clarsimp split del: split_if simp del: upt.simps)
          apply (rule corres_split_nor)
             apply (rule corres_trivial, clarsimp)
             apply (rule arg_cong [where f="\<lambda>x. of_nat (min (length mrs) x)"])
@@ -3219,12 +3217,12 @@ qed
 
 lemma copy_mrs_corres:
   "corres op= (tcb_at s and tcb_at r
-               and option_case \<top> in_user_frame sb
-               and option_case \<top> in_user_frame rb
+               and case_option \<top> in_user_frame sb
+               and case_option \<top> in_user_frame rb
                and K (unat n \<le> msg_max_length))
               (tcb_at' s and tcb_at' r
-               and option_case \<top> valid_ipc_buffer_ptr' sb
-               and option_case \<top> valid_ipc_buffer_ptr' rb)
+               and case_option \<top> valid_ipc_buffer_ptr' sb
+               and case_option \<top> valid_ipc_buffer_ptr' rb)
               (copy_mrs s sb r rb n) (copyMRs s sb r rb n)"
 proof -
   have U: "unat n \<le> msg_max_length \<Longrightarrow>
@@ -3326,7 +3324,7 @@ lemma get_tcb_cap_corres:
                         bind_def assert_opt_def tcb_at_def
                         return_def
                  dest!: get_tcb_SomeD)
-  apply (drule use_valid [OF _ getCTE_sp[where P="op = s'"], OF _ refl, standard])
+  apply (drule use_valid [OF _ getCTE_sp[where P="op = s'" for s'], OF _ refl])
   apply (clarsimp simp: get_tcb_def return_def)
   apply (drule pspace_relation_ctes_ofI[OF state_relation_pspace_relation])
      apply (rule cte_wp_at_tcbI[where t="(t, ref)"], fastforce+)[1]
@@ -3350,6 +3348,7 @@ lemma pspace_dom_dom:
      apply (rule_tac x = n in exI)
      apply (clarsimp simp: of_bl_def word_of_int_hom_syms)
     apply (rule range_eqI [where x = 0], simp)+
+  apply (rename_tac vmpage_size)
   apply (rule exI [where x = 0])
   apply (case_tac vmpage_size, simp_all add: pageBits_def)
   done
@@ -3387,6 +3386,7 @@ lemma lipcb_corres':
           apply (simp add: Let_def split: cap.split arch_cap.split
                          split del: split_if cong: if_cong)
           apply (safe, simp_all add: isCap_simps)[1]
+          apply (rename_tac word rights vmpage_size option)
           apply (subgoal_tac "word + (buffer_ptr &&
                                       mask (pageBitsForSize vmpage_size)) \<noteq> 0")
            apply (simp add: cap_aligned_def
@@ -3770,12 +3770,14 @@ lemma sba_ctes_of [wp]:
 crunch ksInterruptState[wp]: setThreadState, setBoundAEP "\<lambda>s. P (ksInterruptState s)"
   (simp: unless_def crunch_simps)
 
+crunch gsMaxObjectSize[wp]: setThreadState, setBoundAEP "\<lambda>s. P (gsMaxObjectSize s)"
+  (simp: unless_def crunch_simps ignore: getObject setObject wp: setObject_ksPSpace_only updateObject_default_inv)
+
 lemmas setThreadState_irq_handlers[wp]
     = valid_irq_handlers_lift'' [OF sts_ctes_of setThreadState_ksInterruptState]
 
 lemmas setBoundAEP_irq_handlers[wp]
     = valid_irq_handlers_lift'' [OF sba_ctes_of setBoundAEP_ksInterruptState]
-
 
 lemma sts_global_reds' [wp]:
   "\<lbrace>valid_global_refs'\<rbrace> setThreadState st t \<lbrace>\<lambda>_. valid_global_refs'\<rbrace>"
@@ -3783,7 +3785,7 @@ lemma sts_global_reds' [wp]:
 
 lemma sba_global_reds' [wp]:
   "\<lbrace>valid_global_refs'\<rbrace> setBoundAEP aep t \<lbrace>\<lambda>_. valid_global_refs'\<rbrace>"
-  by (rule valid_global_refs_lift') wp 
+  by (rule valid_global_refs_lift') wp
 
 crunch irq_states' [wp]: setThreadState, setBoundAEP valid_irq_states'
   (simp: unless_def crunch_simps)
@@ -4205,8 +4207,7 @@ lemma threadSet_ct_running':
   apply wp
   done
 
-lemma asUser_global_refs': (* Levity: moved from Ipc_R (20090126 19:32:26) *)
-  "\<lbrace>valid_global_refs'\<rbrace> asUser t f \<lbrace>\<lambda>rv. valid_global_refs'\<rbrace>"
+lemma asUser_global_refs':   "\<lbrace>valid_global_refs'\<rbrace> asUser t f \<lbrace>\<lambda>rv. valid_global_refs'\<rbrace>"
   apply (simp add: asUser_def split_def)
   apply (wp threadSet_global_refs)
        apply simp+
@@ -4323,7 +4324,6 @@ lemma get_cap_corres_all_rights_P:
   apply (insert cap_relation_masks, simp)
   done
 
-(* Levity: moved from Ipc_R (20090723 09:17:04) *)
 lemma asUser_irq_handlers':
   "\<lbrace>valid_irq_handlers'\<rbrace> asUser t f \<lbrace>\<lambda>rv. valid_irq_handlers'\<rbrace>"
   apply (simp add: asUser_def split_def)
@@ -4370,10 +4370,11 @@ lemma set_eobject_corres':
    apply (clarsimp simp: is_other_obj_relation_type)
    apply (drule(1) bspec)
    apply (clarsimp simp: non_exst_same_def)
-   apply (case_tac bb, simp_all)[1]
+   apply (case_tac bb; simp)
      apply (clarsimp simp: obj_at'_def other_obj_relation_def cte_relation_def tcb_relation_def projectKOs split: split_if_asm)+
    apply (clarsimp simp: aobj_relation_cuts_def split: ARM_Structs_A.arch_kernel_obj.splits)
-   apply (case_tac arch_kernel_obj, simp_all)
+   apply (rename_tac arch_kernel_obj obj d p ts)
+   apply (case_tac arch_kernel_obj; simp)
      apply (clarsimp simp: pte_relation_def pde_relation_def is_tcb_def)+
   apply (simp only: ekheap_relation_def dom_fun_upd2 simp_thms)
   apply (frule bspec, erule domI)

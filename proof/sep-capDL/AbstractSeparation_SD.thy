@@ -15,26 +15,32 @@ imports
   "../../spec/capDL/Types_D"
 begin
 
-(* The sep_entitie are the entities we are interested in our lifted heap.
- * The entities are either objects without capabilities or capabilities.
+datatype cdl_component_id = Fields | Slot nat
+type_synonym cdl_component_ids = "cdl_component_id set"
+
+translations
+  (type) "cdl_component_ids" <=(type) "cdl_component_id set"
+
+(* The cdl_component are the pieces of capDL objects that we are interested in our lifted heap.
+ * These components are either objects without capabilities or capabilities.
  *)
-datatype sep_entity = CDL_Object cdl_object | CDL_Cap "cdl_cap option"
+datatype cdl_component = CDL_Object cdl_object | CDL_Cap "cdl_cap option"
 
 (* The state for separation logic is an option map
  * from (obj_id,component) to sep_entities
  *)
-type_synonym sep_state_heap = "(cdl_object_id \<times> cdl_component) \<Rightarrow> sep_entity option"
+type_synonym sep_state_heap = "(cdl_object_id \<times> cdl_component_id) \<Rightarrow> cdl_component option"
 type_synonym sep_state_irq_map = "cdl_irq \<Rightarrow> cdl_object_id option"
 
 translations
-  (type) "sep_state_heap" <=(type) "32 word \<times> cdl_component \<Rightarrow> sep_entity option"
+  (type) "sep_state_heap" <=(type) "32 word \<times> cdl_component_id \<Rightarrow> cdl_component option"
   (type) "sep_state_irq_map" <=(type) "8 word \<Rightarrow> 32 word option"
 
 
 (* Our lifted state contains sep_entities and the IRQ table.
  *)
 datatype sep_state =
-  SepState "(cdl_object_id \<times> cdl_component) \<Rightarrow> sep_entity option"
+  SepState "(cdl_object_id \<times> cdl_component_id) \<Rightarrow> cdl_component option"
            "cdl_irq \<Rightarrow> cdl_object_id option"
 
 (* Functions to get the object heap and the irq table from the sep_state. *)
@@ -85,9 +91,9 @@ definition "(op +) \<equiv> sep_state_add"
 
 
 
-(**********************************************
- * The proof that this is a separation logic. *
- **********************************************)
+(************************************************
+ * The proof that this is a separation algebra. *
+ ************************************************)
 
 instance
   apply default
@@ -106,8 +112,23 @@ instance
    apply (simp add: plus_sep_state_def sep_state_add_def)+
 (* x ## y + z = (x ## y \<and> x ## z) *)
    apply (clarsimp simp: sep_disj_sep_state_def)
-   apply (auto simp:map_disj_def sep_state_disj_def)
+   apply (auto simp: map_disj_def sep_state_disj_def)
   done
 end
 
+(*************************************************************
+ * The proof that this is a cancellative separation algebra. *
+ *************************************************************)
+
+instantiation "sep_state" :: cancellative_sep_algebra
+begin
+
+instance
+  apply default
+  apply (simp add: sep_disj_sep_state_def sep_state_disj_def zero_sep_state_def
+                   plus_sep_state_def sep_state_add_def)
+  by (metis map_add_left_eq sep_heap.simps sep_irq_node.simps sep_state.exhaust)
 end
+
+end
+

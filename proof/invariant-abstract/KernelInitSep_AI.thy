@@ -15,6 +15,8 @@ imports
   Invariants_AI
 begin
 
+(* UNFINISHED; paused project *)
+
 text {* Migration candidates *}
 
 lemma hoare_gen_asmE':
@@ -112,7 +114,7 @@ proof (rule ccontr, simp)
   assume pin: "p \<in> set (len_seq (p + 1) n)"
   then obtain q where q: "p + 1 + of_nat q = p" and qn: "q < n"
     by (auto simp: len_seq_map_upt_eq)
-  hence "of_nat q + 1 = (0 :: 'a word)" by (simp add: add_commute)
+  hence "of_nat q + 1 = (0 :: 'a word)" by (simp add: add.commute)
 
   moreover
   from qn have "of_nat q + (1::'a word) \<noteq> 0" using sz
@@ -1830,7 +1832,7 @@ lemma sep_update_cap_disj_add:
    apply clarsimp
    apply (drule check_components_Int_emptyD)
    apply clarsimp
-   done (* FIXME yuck *)
+   done
 
 lemma sep_map_cap_update_cap':
   assumes sep: "(sep_map_cap atyp p old_cap \<and>* P) s"
@@ -1953,45 +1955,5 @@ lemma sep_map_cap_kis_liftI:
                    simp: lift_sep_state_def sep_state_accessors)
   done
 
-
-section {* Unsorted *}
-
-
-lemma want_something_like_this:
-  (* establishing a relationship between sep logic and pspace_distinct *)
-  "\<lbrakk> pspace_distinct ks1 ; pspace_distinct ks2 ;
-     ki_kernel_state kis1 = ks1 ; ki_kernel_state kis2 = ks2 ;
-     lift_sep_state kis1 = ss1 ; lift_sep_state kis2 = ss2 ;
-     (P \<and>* Q) (sep_add ss1 ss2) ; P ss1 ; Q ss2 ;
-     kheap ks = kheap ks1 ++ kheap ks2
-   \<rbrakk>
-   \<Longrightarrow> pspace_distinct ks"
-  oops (* maybe for all states that have a heap combined from the heaps of
-          ks1 and ks2? *)
-
-
-text {*
-  TODO:
-
-  Initial definitions:
-  - maps_to
-   * don't forget "sane mappings": alignment, wf, etc
-
-*}
-text {*
-
-DEEP THOUGHTS:
-
-Invariants should come out by construction, e.g.
- * domain of kheap in kernel state should be the same as ki_components
- * available memory, free memory and used memory are disjoint
-
-Rules like this:
-(p \<mapsto> ko) s \<Longrightarrow> pspace_distinct (kheap s)
-\<lbrakk> (P \<and>* Q) (s1 ++ s2) ; pspace_distinct s1 ; pspace_distinct s2 \<rbrakk>
-  \<Longrightarrow> pspace_distinct (s1 ++ s2)
-Try build up other invariants in the same way.
-
-*}
 
 end

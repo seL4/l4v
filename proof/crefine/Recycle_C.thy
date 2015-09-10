@@ -30,7 +30,7 @@ lemma collapse_foldl_replicate:
   apply (induct ys rule: rev_induct)
    apply (simp add: replicateHider_def)
   apply (simp add: replicateHider_def)
-  apply (subst add_commute, simp add: replicate_add)
+  apply (subst add.commute, simp add: replicate_add)
   done
 
 lemma coerce_memset_to_heap_update_user_data:
@@ -38,7 +38,7 @@ lemma coerce_memset_to_heap_update_user_data:
       = heap_update (Ptr x :: user_data_C ptr)
              (user_data_C (FCP (\<lambda>_. 0)))"
   apply (intro ext, simp add: heap_update_def)
-  apply (rule_tac f="\<lambda>xs. heap_update_list x xs ?a ?b" in arg_cong)
+  apply (rule_tac f="\<lambda>xs. heap_update_list x xs a b" for a b in arg_cong)
   apply (simp add: to_bytes_def size_of_def typ_info_simps user_data_C_tag_def)
   apply (simp add: ti_typ_pad_combine_empty_ti ti_typ_pad_combine_td align_of_def padup_def
                    final_pad_def size_td_lt_ti_typ_pad_combine Let_def size_of_def)
@@ -66,6 +66,7 @@ lemma clift_foldl_hrs_mem_update:
    \<Longrightarrow>
    clift (hrs_mem_update (\<lambda>s. foldl (\<lambda>s x. heap_update (f x) v s) s xs) s)
        = foldl g (clift s :: 'a ptr \<rightharpoonup> 'a) xs"
+  using [[hypsubst_thin]]
   apply (cases s, clarsimp)
   apply (induct xs arbitrary: a b)
    apply (simp add: hrs_mem_update_def)
@@ -112,6 +113,7 @@ lemma coerce_heap_update_to_heap_updates':
   heap_update_list x (replicateHider n 0)
   = (\<lambda>s. foldl (\<lambda>s x. heap_update_list x (replicateHider chunk 0) s) s
     (map (\<lambda>n. x + (of_nat n * of_nat chunk)) [0 ..< m]))"
+  using [[hypsubst_thin]]
   apply clarsimp
   apply (induct m arbitrary: x)
    apply (rule ext, simp)
@@ -159,7 +161,7 @@ lemma intvl_2_power_times_decomp:
    apply (rule word_of_nat_less)
    apply (simp add: word_of_nat_less)
   apply (erule subsetD)
-  apply (clarsimp simp: shiftl_t2n[unfolded mult_ac, symmetric]
+  apply (clarsimp simp: shiftl_t2n[unfolded mult.commute mult.left_commute, symmetric]
                         shiftr_shiftl1)
   apply (rule_tac x="unat (of_nat k && mask m :: word32)" in exI)
   apply (simp add: field_simps word_plus_and_or_coroll2)
@@ -181,7 +183,9 @@ lemma flex_user_page_at_rf_sr_dom_s:
 
 lemma clearMemory_PageCap_ccorres:
   "ccorres dc xfdc (invs' and valid_cap' (ArchObjectCap (PageCap ptr undefined sz None))
-           and K ({ptr .. ptr + 2 ^ (pageBitsForSize sz) - 1} \<inter> kernel_data_refs = {}))
+           and (\<lambda>s. 2 ^ pageBitsForSize sz \<le> gsMaxObjectSize s)
+           and K ({ptr .. ptr + 2 ^ (pageBitsForSize sz) - 1} \<inter> kernel_data_refs = {})
+           )
       (UNIV \<inter> {s. bits_' s = of_nat (pageBitsForSize sz)}
             \<inter> {s. ptr___ptr_to_unsigned_long_' s = Ptr ptr})
       []
@@ -207,6 +211,7 @@ lemma clearMemory_PageCap_ccorres:
       apply (rule conjI)
        apply (rule is_aligned_power2)
        apply (clarsimp simp: pageBitsForSize_def split: vmpage_size.splits)
+      apply (clarsimp simp: ghost_assertion_size_logic[unfolded o_def])
       apply (simp add: flex_user_page_at_rf_sr_dom_s)
       apply (clarsimp simp: field_simps word_size_def mapM_x_storeWord_step)
       apply (simp add: doMachineOp_def split_def exec_gets)
@@ -305,7 +310,7 @@ lemma coerce_memset_to_heap_update_asidpool:
       = heap_update (Ptr x :: asid_pool_C ptr)
              (asid_pool_C (FCP (\<lambda>x. Ptr 0)))"
   apply (intro ext, simp add: heap_update_def)
-  apply (rule_tac f="\<lambda>xs. heap_update_list x xs ?a ?b" in arg_cong)
+  apply (rule_tac f="\<lambda>xs. heap_update_list x xs a b" for a b in arg_cong)
   apply (simp add: to_bytes_def size_of_def typ_info_simps asid_pool_C_tag_def)
   apply (simp add: ti_typ_pad_combine_empty_ti ti_typ_pad_combine_td align_of_def padup_def
                    final_pad_def size_td_lt_ti_typ_pad_combine Let_def size_of_def)
@@ -333,12 +338,12 @@ lemma coerce_memset_to_heap_update_pte:
       = heap_update (Ptr x :: pte_C ptr)
              (pte_C.pte_C (FCP (\<lambda>x. 0)))"
   apply (intro ext, simp add: heap_update_def)
-  apply (rule_tac f="\<lambda>xs. heap_update_list x xs ?a ?b" in arg_cong)
+  apply (rule_tac f="\<lambda>xs. heap_update_list x xs a b" for a b in arg_cong)
   apply (simp add: to_bytes_def size_of_def typ_info_simps pte_C_tag_def)
   apply (simp add: ti_typ_pad_combine_empty_ti ti_typ_pad_combine_td align_of_def padup_def
                    final_pad_def size_td_lt_ti_typ_pad_combine Let_def size_of_def)
   apply (simp add: typ_info_simps align_td_array' size_td_array)
-  apply (simp add: typ_info_array' typ_info_word word_rsplit_0 fcp_beta)
+  apply (simp add: typ_info_array' typ_info_word word_rsplit_0)
   apply (simp add: replicateHider_def)
   done
 
@@ -347,12 +352,12 @@ lemma coerce_memset_to_heap_update_pde:
       = heap_update (Ptr x :: pde_C ptr)
              (pde_C.pde_C (FCP (\<lambda>x. 0)))"
   apply (intro ext, simp add: heap_update_def)
-  apply (rule_tac f="\<lambda>xs. heap_update_list x xs ?a ?b" in arg_cong)
+  apply (rule_tac f="\<lambda>xs. heap_update_list x xs a b" for a b in arg_cong)
   apply (simp add: to_bytes_def size_of_def typ_info_simps pde_C_tag_def)
   apply (simp add: ti_typ_pad_combine_empty_ti ti_typ_pad_combine_td align_of_def padup_def
                    final_pad_def size_td_lt_ti_typ_pad_combine Let_def size_of_def)
   apply (simp add: typ_info_simps align_td_array' size_td_array)
-  apply (simp add: typ_info_array' typ_info_word word_rsplit_0 fcp_beta)
+  apply (simp add: typ_info_array' typ_info_word word_rsplit_0)
   apply (simp add: replicateHider_def)
   done
 
@@ -445,7 +450,7 @@ lemma invalidateTLBByASID_ccorres:
   apply (cinit lift: asid_')
    apply (ctac(no_vcg) add: loadHWASID_ccorres)
     apply csymbr
-    apply (simp add: option_case_If2 del: Collect_const)
+    apply (simp add: case_option_If2 del: Collect_const)
     apply (rule ccorres_if_cond_throws2[where Q=\<top> and Q'=\<top>])
        apply (clarsimp simp: pde_stored_asid_def to_bool_def split: split_if)
       apply (rule ccorres_return_void_C[unfolded dc_def])
@@ -471,6 +476,11 @@ end
 
 crunch pde_mappings'[wp]: invalidateTLBByASID "valid_pde_mappings'"
 crunch ksArchState[wp]: invalidateTLBByASID "\<lambda>s. P (ksArchState s)"
+
+crunch gsMaxObjectSize[wp]: invalidateTLBByASID "\<lambda>s. P (gsMaxObjectSize s)"
+crunch gsMaxObjectSize[wp]: deleteASIDPool "\<lambda>s. P (gsMaxObjectSize s)"
+  (ignore: setObject getObject wp: crunch_wps getObject_inv loadObject_default_inv
+     simp: crunch_simps)
 
 context kernel_m begin
 
@@ -513,7 +523,9 @@ lemma page_directory_at_rf_sr_dom_s:
   done
 
 lemma clearMemory_setObject_PTE_ccorres:
-  "ccorres dc xfdc (page_table_at' ptr and (\<lambda>_. is_aligned ptr ptBits \<and> ptr \<noteq> 0 \<and> pstart = addrFromPPtr ptr))
+  "ccorres dc xfdc (page_table_at' ptr
+                and (\<lambda>s. 2 ^ ptBits \<le> gsMaxObjectSize s)
+                and (\<lambda>_. is_aligned ptr ptBits \<and> ptr \<noteq> 0 \<and> pstart = addrFromPPtr ptr))
             (UNIV \<inter> {s. ptr___ptr_to_unsigned_long_' s = Ptr ptr} \<inter> {s. bits_' s = of_nat ptBits}) []
        (do x \<leftarrow> mapM_x (\<lambda>a. setObject a Hardware_H.pte.InvalidPTE)
                        [ptr , ptr + 2 ^ objBits Hardware_H.pte.InvalidPTE .e. ptr + 2 ^ ptBits - 1];
@@ -524,9 +536,13 @@ lemma clearMemory_setObject_PTE_ccorres:
   apply (cinit' lift: ptr___ptr_to_unsigned_long_' bits_')
    apply (rule ccorres_Guard_Seq)
    apply (rule ccorres_split_nothrow_novcg_dc)
-      apply (rule_tac P="page_table_at' ptr"
+      apply (rule_tac P="page_table_at' ptr and (\<lambda>s. 2 ^ ptBits \<le> gsMaxObjectSize s)"
                in ccorres_from_vcg_nofail[where P'=UNIV])
       apply (rule allI, rule conseqPre, vcg)
+      apply clarsimp
+      apply (subst ghost_assertion_size_logic[unfolded o_def])
+        apply (simp add: ptBits_def pageBits_def)
+       apply simp
       apply (clarsimp simp: replicateHider_def[symmetric])
       apply (frule is_aligned_no_overflow')
       apply (intro conjI)
@@ -558,14 +574,13 @@ lemma clearMemory_setObject_PTE_ccorres:
       apply csymbr
      apply (rule ccorres_Guard)
      apply (ctac add: cleanCacheRange_PoU_ccorres)
-    apply wp
+    apply (wp mapM_x_wp' setObject_ksPSpace_only updateObject_default_inv | simp)+
    apply (clarsimp simp: guard_is_UNIV_def ptBits_def pageBits_def)
   apply (clarsimp simp: ptBits_def pageBits_def)
   apply (frule is_aligned_addrFromPPtr_n, simp)
   apply (clarsimp simp: is_aligned_no_overflow'[where n=10, simplified] pageBits_def
                         field_simps is_aligned_mask[symmetric] mask_AND_less_0)
   done
-
 
 lemma ccorres_make_xfdc:
   "ccorresG rf_sr \<Gamma> r xf P P' h a c \<Longrightarrow> ccorresG rf_sr \<Gamma> dc xfdc P P' h a c"
@@ -579,24 +594,6 @@ lemma ccorres_if_True_False_simps:
   "ccorres r xf P P' hs a (IF True THEN c ELSE c' FI ;; d) = ccorres r xf P P' hs a (c ;; d)"
   "ccorres r xf P P' hs a (IF False THEN c ELSE c' FI ;; d) = ccorres r xf P P' hs a (c' ;; d)"
   by (simp_all add: ccorres_cond_iffs ccorres_seq_simps)
-
-(*
-lemma resetMemMapping_spec':
-  "\<forall>s. \<Gamma> \<turnstile> \<lbrace>s. ccap_relation acap (cap_' s)\<rbrace>
-           Call resetMemMapping_'proc
-           {s'. ccap_relation (case acap of ArchObjectCap acap' \<Rightarrow> ArchObjectCap (resetMemMapping acap') | _ \<Rightarrow> acap) 
-                               (ret__struct_cap_C_' s')}"
-  apply vcg
-  apply (subgoal_tac "\<forall>t cap. (t = cap_get_tag cap) = (cap_get_tag cap = t)")  
-  apply (erule ccap_relationE)
-  apply (intro impI allI conjI)
-   apply (auto simp: isCap_simps resetMemMapping_def cap_to_H_simps c_valid_cap_def cl_valid_cap_def cap_lifts ccap_relation_def
-     cap_to_H_simps asidInvalid_def)[4]
-  apply (clarsimp simp add: ccap_relation_def c_valid_cap_def cl_valid_cap_def cap_to_H_simps Let_def resetMemMapping_def cap_lift_def
-    split: capability.splits cap_CL.splits split_if_asm)
-  apply fastforce
-  done
-*)
 
 lemmas cap_tag_values =
   cap_untyped_cap_def
@@ -627,6 +624,7 @@ lemma resetMemMapping_spec:
    apply (auto simp: isCap_simps resetMemMapping_def cap_to_H_simps cap_lifts ccap_relation_def c_valid_cap_def cl_valid_cap_def
       asidInvalid_def)[7]
   apply (clarsimp split: capability.splits cap_CL.splits option.splits)
+  apply (rename_tac arch_capability)
   apply (case_tac arch_capability,
         auto simp: resetMemMapping_def cap_to_H_def
         cap_small_frame_cap_lift_def cap_frame_cap_lift_def
@@ -648,7 +646,8 @@ lemma arch_recycleCap_ccorres_helper:
   notes Collect_const [simp del]
   notes ccorres_if_True_False_simps [simp]
   shows "ccorres (\<lambda>a. ccap_relation (ArchObjectCap a)) ret__struct_cap_C_' 
-           (invs' and valid_cap' (ArchObjectCap cp) and K (ccap_relation (ArchObjectCap cp) cap))
+           (invs' and valid_cap' (ArchObjectCap cp) and (\<lambda>s. 2 ^ acapBits cp \<le> gsMaxObjectSize s)
+               and K (ccap_relation (ArchObjectCap cp) cap))
            UNIV [SKIP]
            (do y \<leftarrow> ArchRetypeDecls_H.finaliseCap cp is_final;
                return (resetMemMapping cp)
@@ -668,7 +667,8 @@ lemma arch_recycleCap_ccorres_helper':
   notes Collect_const [simp del]
   notes ccorres_if_True_False_simps [simp]
   shows "ccorres (\<lambda>a. ccap_relation (ArchObjectCap a)) ret__struct_cap_C_'
-                 (invs' and valid_cap' (ArchObjectCap cp) and K (ccap_relation (ArchObjectCap cp) cap))
+                 (invs' and valid_cap' (ArchObjectCap cp) and (\<lambda>s. 2 ^ acapBits cp \<le> gsMaxObjectSize s)
+                    and K (ccap_relation (ArchObjectCap cp) cap))
                  UNIV 
             [SKIP]
            (do y \<leftarrow> ArchRetypeDecls_H.finaliseCap cp is_final;
@@ -699,6 +699,7 @@ lemma arch_recycleCap_ccorres:
   notes if_cong[cong]
   shows "ccorres (ccap_relation o ArchObjectCap) ret__struct_cap_C_'
          (invs' and valid_cap' (ArchObjectCap cp)
+                and (\<lambda>s. 2 ^ acapBits cp \<le> gsMaxObjectSize s)
                 and (\<lambda>s. capRange (ArchObjectCap cp) \<inter> kernel_data_refs = {}))
          (UNIV \<inter> {s. (is_final_' s) = from_bool is_final} \<inter> {s. ccap_relation (ArchObjectCap cp) (cap_' s)}
          ) []
@@ -714,11 +715,17 @@ lemma arch_recycleCap_ccorres:
     apply (simp add: ccorres_cond_iffs Collect_True
                 del: Collect_const)
     apply (rule ccorres_rhs_assoc)+
-    apply (csymbr, csymbr)
-    apply (simp add: doMachineOp_bind shiftL_nat)
-    apply (ctac (no_vcg) add: clearMemory_PageCap_ccorres)
-     apply (rule arch_recycleCap_ccorres_helper)
-    apply wp
+    apply (rule ccorres_symb_exec_r)
+      apply (rule ccorres_Guard_Seq)
+
+      apply (rule ccorres_basic_srnoop2, simp)
+      apply csymbr
+      apply (simp add: doMachineOp_bind shiftL_nat)
+      apply (ctac (no_vcg) add: clearMemory_PageCap_ccorres)
+       apply (rule arch_recycleCap_ccorres_helper)
+      apply wp
+     apply vcg
+    apply (rule conseqPre, vcg, clarsimp)
    apply (rule ccorres_if_lhs)
     apply (simp add: ccorres_cond_iffs Collect_True Collect_False
                      Let_def
@@ -740,7 +747,7 @@ lemma arch_recycleCap_ccorres:
       apply csymbr
       apply csymbr
       apply (ctac(no_vcg) add: pageTableMapped_ccorres)
-       apply (simp add: option_case_If del: Collect_const)
+       apply (simp add: case_option_If del: Collect_const)
        apply (ctac (no_vcg, no_simp) add: ccorres_when [where R = \<top>]) -- "leave guard = goal and a call to invalidateTLB"
            apply (simp add: option_to_0_def option_to_ptr_def
                      split: option.splits)
@@ -750,7 +757,8 @@ lemma arch_recycleCap_ccorres:
        apply simp
       apply simp
       apply (wp hoare_drop_imps)[1] 
-     apply (rule_tac Q="\<lambda>rv. invs' and valid_cap' (ArchObjectCap cp)"
+     apply (rule_tac Q="\<lambda>rv. invs' and valid_cap' (ArchObjectCap cp)
+                     and (\<lambda>s. 2 ^ acapBits cp \<le> gsMaxObjectSize s)"
                  in hoare_post_imp)
       apply (clarsimp simp: valid_cap'_def isCap_simps mask_def)
      apply (wp mapM_x_wp' | simp)+
@@ -772,12 +780,16 @@ lemma arch_recycleCap_ccorres:
     apply (rule ccorres_split_nothrow_novcg_dc)
        apply (rule_tac P="capPDBasePtr_CL (cap_page_directory_cap_lift cap) = capPDBasePtr cp"
                          in ccorres_gen_asm2)
-       apply (rule_tac P="valid_cap' (ArchObjectCap cp) and K (capPDBasePtr cp \<noteq> 0)"
+       apply (rule_tac P="valid_cap' (ArchObjectCap cp) and (\<lambda>s. 2 ^ acapBits cp \<le> gsMaxObjectSize s)
+                      and K (capPDBasePtr cp \<noteq> 0)"
                    in ccorres_from_vcg_nofail[where P'=UNIV])
        apply (rule allI, rule conseqPre, vcg)
        apply (clarsimp simp: replicateHider_def[symmetric] valid_cap'_def
                              capAligned_def)
-       apply (clarsimp simp: isCap_simps storePDE_def)
+       apply (clarsimp simp: isCap_simps storePDE_def o_def)
+       apply (subst ghost_assertion_size_logic[unfolded o_def, rotated])
+         apply simp
+        apply simp
        apply (subst is_aligned_no_wrap', assumption)
         apply simp
        apply clarsimp
@@ -904,7 +916,8 @@ lemma arch_recycleCap_ccorres:
         apply (rule ccorres_rhs_assoc)+
         apply (ctac(no_vcg) add: deleteASIDPool_ccorres)
          apply (rule ccorres_split_nothrow_novcg_dc)
-            apply (rule_tac P="valid_cap' (ArchObjectCap cp) and no_0_obj'"
+            apply (rule_tac P="valid_cap' (ArchObjectCap cp) and (\<lambda>s. 2 ^ acapBits cp \<le> gsMaxObjectSize s)
+                          and no_0_obj'"
                        in ccorres_from_vcg[where P'=UNIV])
             apply (rule allI, rule conseqPre, vcg)
             apply (clarsimp simp: cap_get_tag_isCap_ArchObject[symmetric]
@@ -913,6 +926,10 @@ lemma arch_recycleCap_ccorres:
             apply (clarsimp simp: ccap_relation_def cap_asid_pool_cap_lift
                                   cap_to_H_def valid_cap'_def capAligned_def
                                   typ_at_to_obj_at_arches)
+            apply (subst ghost_assertion_size_logic[unfolded o_def, rotated],
+              assumption)
+             apply (erule order_trans[rotated])
+             apply (simp add: asid_low_bits_def)
             apply (drule obj_at_ko_at', clarsimp)
             apply (rule cmap_relationE1[OF rf_sr_cpspace_asidpool_relation],
                     assumption)
@@ -1000,6 +1017,7 @@ lemma arch_recycleCap_ccorres:
                            asid_shiftr_low_bits_less[unfolded mask_def asid_bits_def]
                            word_and_le1
                     elim!: ccap_relationE cong: conj_cong)
+    apply (rename_tac vmpage_size opt)
     apply (simp add: capAligned_def)
     apply (case_tac "vmpage_size = ARMSmallPage")
      apply (frule(1) cap_get_tag_isCap_unfolded_H_cap)
@@ -1008,6 +1026,7 @@ lemma arch_recycleCap_ccorres:
                            order_le_less_trans[OF word_and_le1]
                            valid_cap'_def capAligned_def
                            get_capSizeBits_CL_def get_capPtr_CL_def
+                           ghost_assertion_size_logic[unfolded o_def]
                     elim!: ccap_relationE cong: conj_cong)
      apply (simp add: cap_tag_defs)
     apply (frule(1) cap_get_tag_isCap_unfolded_H_cap)
@@ -1020,7 +1039,9 @@ lemma arch_recycleCap_ccorres:
                           gen_framesize_to_H_is_framesize_to_H_if_not_ARMSmallPage
                           c_valid_cap_def cl_valid_cap_def
                    elim!: ccap_relationE cong: conj_cong)
-    apply (simp add: pageBitsForSize_def cap_tag_defs split: vmpage_size.split)
+    apply (simp add: pageBitsForSize_def cap_tag_defs
+                     ghost_assertion_size_logic[unfolded o_def]
+              split: vmpage_size.split_asm)[1]
    apply (frule cap_get_tag_isCap_unfolded_H_cap)
    apply (clarsimp simp: cap_lift_page_table_cap cap_to_H_def
                          cap_page_table_cap_lift_def
@@ -1124,7 +1145,7 @@ lemma cpspace_relation_ep_update_ep2:
           (cslift t(ep_Ptr epptr \<mapsto> endpoint))
           ep_Ptr (cendpoint_relation (cslift t'))"
   apply (rule cmap_relationE1, assumption, erule ko_at_projectKO_opt)
-  apply (rule_tac P="\<lambda>a. cmap_relation a ?b ?c ?d" in rsubst,
+  apply (rule_tac P="\<lambda>a. cmap_relation a b c d" for b c d in rsubst,
                    erule cmap_relation_upd_relI, assumption+)
     apply simp+
   apply (rule ext, simp add: map_comp_def projectKO_opt_ep split: split_if)
@@ -1260,6 +1281,7 @@ lemma epCancelBadgedSends_ccorres:
       apply (rule ccorres_return_Skip)
      apply (simp add: dc_def[symmetric] ccorres_cond_iffs)
      apply (rule ccorres_return_Skip)
+    apply (rename_tac list)
     apply (simp add: Collect_True Collect_False endpoint_state_defs
                      ccorres_cond_iffs dc_def[symmetric]
                 del: Collect_const cong: call_ignore_cong)
@@ -1349,6 +1371,7 @@ lemma epCancelBadgedSends_ccorres:
             apply (fastforce simp: valid_ep'_def pred_tcb_at' split: list.splits)
            apply (simp add: guard_is_UNIV_def)
           apply (rule allI)
+          apply (rename_tac a lista x)
           apply (rule iffD1 [OF ccorres_expand_while_iff_Seq])
           apply (rule ccorres_init_tmp_lift2, ceqv)
           apply (rule ccorres_guard_imp2)
@@ -1368,7 +1391,7 @@ lemma epCancelBadgedSends_ccorres:
                                               | v # vs \<Rightarrow> tcb_ptr_to_ctcb_ptr v) \<rparr>"
                       and xf'="next___ptr_to_struct_tcb_C_'"
                            in ccorres_subst_basic_helper)
-               apply (thin_tac "\<forall>x. ?P x")
+               apply (thin_tac "\<forall>x. P x" for P)
                apply (rule myvars.fold_congs, (rule refl)+)
                apply (clarsimp simp: tcb_queue_relation'_def use_tcb_queue_relation2
                                      tcb_queue_relation2_concat)
@@ -1393,15 +1416,12 @@ lemma epCancelBadgedSends_ccorres:
                               and P'="{s. ep_queue_relation' (cslift s) (x @ a # lista)
                                            (head_C (queue_' s)) (end_C (queue_' s))}"
                                in ccorres_from_vcg)
-                   apply (thin_tac "\<forall>x. ?P x")
+                   apply (thin_tac "\<forall>x. P x" for P)
                    apply (rule allI, rule conseqPre, vcg)
                    apply (clarsimp simp: ball_Un)
                    apply (rule exI, rule conjI)
                     apply (rule exI, erule conjI)
-                    (* FIXME: Isabelle2013-1 bug? Converting the "fastforce+" into an
-                     * "auto" mucks up schematics in other subgoals, despite this goal
-                     * not containing a schematic. *)
-                    apply (intro conjI[rotated], assumption, (fastforce intro: intro: pred_tcb_at')+)[1]
+                    apply (intro conjI[rotated], assumption, (fastforce intro: pred_tcb_at') +)[1]
                    apply (clarsimp simp: return_def rf_sr_def cstate_relation_def Let_def)
                    apply (rule conjI)
                     apply (clarsimp simp: cpspace_relation_def)
@@ -1453,7 +1473,7 @@ lemma epCancelBadgedSends_ccorres:
              apply (drule_tac x="x @ [a]" in spec, simp add: dc_def[symmetric])
             apply vcg
            apply (vcg spec=modifies)
-          apply (thin_tac "\<forall>x. ?P x")
+          apply (thin_tac "\<forall>x. P x" for P)
           apply (clarsimp simp: pred_tcb_at' ball_Un)
           apply (rule conjI)
            apply (clarsimp split: split_if)
@@ -1469,6 +1489,7 @@ lemma epCancelBadgedSends_ccorres:
            apply (frule rf_sr_cscheduler_relation)
            apply (clarsimp simp: cscheduler_action_relation_def st_tcb_at'_def
                           split: scheduler_action.split_asm)
+           apply (rename_tac word)
            apply (frule_tac x=word in tcbSchedEnqueue_cslift_precond_discharge)
               apply simp
              apply clarsimp
@@ -1536,7 +1557,7 @@ lemma coerce_memset_to_heap_update:
                     (lookup_fault_C (FCP (\<lambda>x. 0)))
                       0 0 0 0 0 NULL NULL NULL NULL)"
   apply (intro ext, simp add: heap_update_def)
-  apply (rule_tac f="\<lambda>xs. heap_update_list x xs ?a ?b" in arg_cong)
+  apply (rule_tac f="\<lambda>xs. heap_update_list x xs a b" for a b in arg_cong)
   apply (simp add: to_bytes_def size_of_def typ_info_simps tcb_C_tag_def)
   apply (simp add: ti_typ_pad_combine_empty_ti ti_typ_pad_combine_td align_of_def padup_def
                    final_pad_def size_td_lt_ti_typ_pad_combine Let_def size_of_def)
@@ -1549,16 +1570,20 @@ lemma coerce_memset_to_heap_update:
                    final_pad_def size_td_lt_ti_typ_pad_combine Let_def size_of_def 
                    align_td_array' size_td_array)
   apply (simp add: typ_info_array')
-  apply (simp add: typ_info_word word_rsplit_0 fcp_beta upt_conv_Cons)
+  apply (simp add: typ_info_word word_rsplit_0 upt_conv_Cons)
   apply (simp add: typ_info_word typ_info_ptr word_rsplit_0
                    replicateHider_def)
   done
 
+lemma isArchObjectCap_capBits:
+  "isArchObjectCap cap \<Longrightarrow> capBits cap = acapBits (capCap cap)"
+  by (clarsimp simp: isCap_simps)
 
 declare Kernel_C.tcb_C_size [simp del]
 lemma recycleCap_ccorres':
   "ccorres ccap_relation ret__struct_cap_C_'
-     (invs' and valid_cap' cp and (\<lambda>s. capRange cp \<inter> kernel_data_refs = {}))
+     (invs' and valid_cap' cp and (\<lambda>s. 2 ^ capBits cp \<le> gsMaxObjectSize s)
+         and (\<lambda>s. capRange cp \<inter> kernel_data_refs = {}))
      (UNIV \<inter> {s. (is_final_' s) = from_bool is_final} \<inter> {s. ccap_relation cp (cap_' s)}) []
      (recycleCap is_final cp) (Call recycleCap_'proc)"
   apply (rule ccorres_gen_asm)
@@ -1615,13 +1640,17 @@ lemma recycleCap_ccorres':
        apply (rule ccorres_pre_curDomain)
        apply (rule ccorres_rhs_assoc2, rule ccorres_rhs_assoc2, rule ccorres_rhs_assoc2,
               rule ccorres_split_nothrow_novcg_dc)
-          apply (rule_tac P="op = tcb" and P'="\<lambda>s. invs' s \<and> rv = ksCurDomain s"
+          apply (rule_tac P="op = tcb" and P'="\<lambda>s. invs' s \<and> rv = ksCurDomain s
+                            \<and> size_of TYPE(tcb_C) \<le> gsMaxObjectSize s"
                      in threadSet_ccorres_lemma3, vcg)
           apply (simp only: replicateHider_def[symmetric])
           apply clarsimp
           apply (clarsimp simp: get_capZombiePtr_CL_def get_capZombieBits_CL_def
                                 isZombieTCB_C_def ZombieTCB_C_def word_bits_conv
                                 is_aligned_no_wrap' capAligned_def)
+          apply (subst ghost_assertion_size_logic[unfolded o_def, rotated])
+            apply assumption
+           apply (simp add: tcb_C_size)
           apply (subst h_t_valid_dom_s, erule h_t_valid_clift)
             apply (simp add: tcb_ptr_to_ctcb_ptr_def ctcb_offset_def)
            apply (simp add: tcb_C_size)
@@ -1661,7 +1690,7 @@ lemma recycleCap_ccorres':
                                 newContext_def2 option_to_ptr_def option_to_0_def
                                 rf_sr_ksCurDomain)
           apply (clarsimp simp add: timeSlice_def is_cap_fault_def)
-          apply (case_tac r, simp_all add: "StrictC'_register_defs" fcp_beta)[1]
+          apply (case_tac r, simp_all add: "StrictC'_register_defs")[1]
          apply csymbr
          apply (rule ccorres_return_C, simp+)[1]
         apply wp
@@ -1729,6 +1758,7 @@ lemma recycleCap_ccorres':
                            ctcb_offset_def get_capZombiePtr_CL_def
                            get_capZombieBits_CL_def valid_cap'_def
                            Let_def isDomainCap[symmetric] isArchObjectCap_Cap_capCap
+                           isArchObjectCap_capBits tcb_C_size
                  simp del: isDomainCap
                     dest!: cap_get_tag_to_H
                     split: split_if_asm)+
@@ -1741,7 +1771,7 @@ lemma recycleCap_ccorres:
      (recycleCap is_final cp) (Call recycleCap_'proc)"
   apply (rule ccorres_guard_imp2, rule recycleCap_ccorres')
   apply (clarsimp simp: cte_wp_at_ctes_of)
-  apply (auto dest: valid_global_refsD')
+  apply (auto dest: valid_global_refsD_with_objSize)
   done
 
 lemma cteRecycle_ccorres:

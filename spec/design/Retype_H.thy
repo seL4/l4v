@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-header "Retyping Objects"
+chapter "Retyping Objects"
 
 theory Retype_H
 imports
@@ -238,15 +238,15 @@ defs updateCapData_def:
   in  
     let
         rightsBits = 3;
-        guardBits = (if bitSize w = 32
+        guardBits = (if finiteBitSize w = 32
             then  18
-            else if bitSize w = 64
+            else if finiteBitSize w = 64
             then  48
             else  error []
             );
-        guardSizeBits = (if bitSize w = 32
+        guardSizeBits = (if finiteBitSize w = 32
             then  5
-            else if bitSize w = 64
+            else if finiteBitSize w = 64
             then  6
             else  error []
             );
@@ -256,7 +256,7 @@ defs updateCapData_def:
             mask guardBits && mask guardSize
     in
     if
-    guardSize + capCNodeBits cap > bitSize w then NullCap
+    guardSize + capCNodeBits cap > finiteBitSize w then NullCap
     else if
     True      then cap \<lparr>
         capCNodeGuard := guard,
@@ -376,7 +376,7 @@ defs decodeInvocation_def:
   then let irq = capIRQ cap
   in  
     liftME InvokeIRQHandler $
-        decodeIRQHandlerInvocation label irq extraCaps
+        decodeIRQHandlerInvocation label args irq extraCaps
   else if isArchObjectCap cap
   then let cap = capCap cap
   in  

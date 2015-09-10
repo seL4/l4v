@@ -46,7 +46,7 @@ declare hoare_wp_combs(3)  [wp del, wp_comb del]
 
 (* Machinery for generating final corres thm *)
 lemma corresTA_trivial: "corresTA (\<lambda>_. True) (\<lambda>x. x) (\<lambda>x. x) A A"
-  apply (auto simp: corresTA_def intro: corresXF_I)
+  apply (auto intro: corresXF_I)
   done
 
 (* Dummy precondition for more convenient usage *)
@@ -84,6 +84,29 @@ lemma ccorres_chain:
   apply clarsimp
   done
 
+(*
+ * Functions that don't have a body in the C file (i.e., they are
+ * prototyped and called, but are never defined) will be abstracted
+ * into a "fail" command by AutoCorres.
+ *
+ * More accurately, they will be abstracted into:
+ *
+ *     guard (\<lambda>s. INVALID_FUNCTION)
+ *
+ * where "INVALID_FUNCTION" is "False").
+ *
+ * We convert this above form into this alternative definition, so
+ * users have a better idea what is going on.
+ *)
+definition "FUNCTION_BODY_NOT_IN_INPUT_C_FILE \<equiv> fail"
+
+lemma [polish]:
+  "guard (\<lambda>s. UNDEFINED_FUNCTION) \<equiv> FUNCTION_BODY_NOT_IN_INPUT_C_FILE"
+  "(FUNCTION_BODY_NOT_IN_INPUT_C_FILE >>= m) = FUNCTION_BODY_NOT_IN_INPUT_C_FILE"
+  "unknown >>= (\<lambda>x. FUNCTION_BODY_NOT_IN_INPUT_C_FILE) = FUNCTION_BODY_NOT_IN_INPUT_C_FILE"
+  "unknown >>= (K_bind FUNCTION_BODY_NOT_IN_INPUT_C_FILE) = FUNCTION_BODY_NOT_IN_INPUT_C_FILE"
+  by (monad_eq simp: UNDEFINED_FUNCTION_def FUNCTION_BODY_NOT_IN_INPUT_C_FILE_def)+
+
 (* Rewrites that will be applied before collecting statistics. *)
 lemmas ac_statistics_rewrites =
     (* Setup "L1_seq" to have a sane lines-of-spec measurement. *)
@@ -91,11 +114,12 @@ lemmas ac_statistics_rewrites =
     (* Convert L2 to standard exception monads. *)
     L2_defs'
 
-ML_file "set.ML"
-ML_file "autocorres_data.ML"
+ML_file "../../lib/set.ML"
 ML_file "trace_antiquote.ML"
 ML_file "mkterm_antiquote.ML"
 ML_file "utils.ML"
+ML_file "autocorres_trace.ML"
+ML_file "autocorres_data.ML"
 ML_file "statistics.ML"
 ML_file "program_info.ML"
 ML_file "function_info.ML"
@@ -116,7 +140,7 @@ ML_file "autocorres.ML"
 
 (* Setup "autocorres" keyword. *)
 ML {*
-  Outer_Syntax.command @{command_spec "autocorres"}
+  Outer_Syntax.command @{command_keyword "autocorres"}
     "Abstract the output of the C parser into a monadic representation."
     (AutoCorres.autocorres_parser >>
       (Toplevel.theory o (fn (opt, filename) => AutoCorres.do_autocorres opt filename)))

@@ -617,15 +617,9 @@ lemma store_cur_thread_midstrength_reads_respects: "equiv_valid (scheduler_equiv
                     scheduler_globals_frame_equiv_def silc_dom_equiv_def
                     weak_scheduler_affects_equiv_def midstrength_scheduler_affects_equiv_def
                     idle_equiv_def)
-   apply (subgoal_tac "pspace_aligned t" "valid_arch_state t")
-   apply (frule(2) range_is_globals_frame')
-   apply simp
-   apply ((simp add: invs_def valid_state_def valid_pspace_def)+)[2]
+   apply (drule range_is_globals_frame'[rotated -1], clarsimp+)
    apply (simp add: equiv_valid_def2 equiv_valid_2_def)
    done
-
-
-
 
 lemma globals_frame_equiv_as_states_equiv: "scheduler_globals_frame_equiv st s =
          (states_equiv_for (\<lambda>x. x \<in> scheduler_affects_globals_frame s) \<bottom> \<bottom> \<bottom> (\<lambda>_. {})
@@ -694,10 +688,10 @@ lemma midstrength_scheduler_affects_equiv_unobservable:
 
 lemma dmo_mol_exclusive_state[wp]:
   "invariant (do_machine_op (machine_op_lift mop)) (\<lambda>s. P (exclusive_state (machine_state s)))"
-  by(wp mol_exclusive_state dmo_wp | simp add: split_def)+
+  by(wp mol_exclusive_state dmo_wp | simp add: split_def dmo_bind_valid writeTTBR0_def isb_def dsb_def )+
 
 crunch exclusive_state[wp]: set_vm_root "\<lambda>s. P (exclusive_state (machine_state s))"
-  (ignore: do_machine_op simp: invalidateTLB_ASID_def setHardwareASID_def setCurrentPD_def crunch_simps)
+  (ignore: do_machine_op simp: invalidateTLB_ASID_def setHardwareASID_def setCurrentPD_def dsb_def isb_def writeTTBR0_def dmo_bind_valid crunch_simps)
 
 lemmas set_vm_root_scheduler_affects_equiv[wp] = scheduler_affects_equiv_unobservable[OF set_vm_root_states_equiv_for set_vm_root_cur_domain _ _ _ set_vm_root_idle_thread set_vm_root_exclusive_state]
 
@@ -1651,7 +1645,7 @@ lemma reads_respects_scheduler_invisible_domain_switch: "reads_respects_schedule
     apply (rule equiv_valid_2_bind_pre[where R'=dc])
          apply (rule equiv_valid_2_bind_pre[where R'="op ="])
               apply simp
-              apply (rule_tac P="rv'b = choose_new_thread" in  CNode_IF.gen_asm_ev2_l)
+              apply (rule_tac P="rv'b = choose_new_thread" in  EquivValid.gen_asm_ev2_l)
               apply simp
               apply (rule equiv_valid_2_bind_pre)
                    apply (rule equiv_valid_2)
@@ -1771,7 +1765,7 @@ lemma valid_sched_valid_queues[intro]: "valid_sched s \<Longrightarrow> valid_qu
 
   
 lemma reads_respects_scheduler_invisible_no_domain_switch: "reads_respects_scheduler aag l (\<lambda>s. pas_refined aag s \<and> invs s \<and> valid_sched s \<and> guarded_pas_domain aag s \<and> domain_time s \<noteq> 0 \<and> pasDomainAbs aag (cur_domain s) \<notin> reads_scheduler aag l) schedule"
-  apply (rule reads_respects_scheduler_unobservable''[where P=Q and P'=Q and Q=Q,standard])
+  apply (rule reads_respects_scheduler_unobservable''[where P=Q and P'=Q and Q=Q for Q])
   apply (rule hoare_pre)
      apply (rule scheduler_equiv_lift'[where P="invs and (\<lambda>s. domain_time s \<noteq> 0)"])
           apply (wp schedule_no_domain_switch schedule_no_domain_fields
@@ -2577,7 +2571,8 @@ lemma ev2_sym:
   apply(blast intro: symA symB symI symR)
   done
 
-lemma SilcLabel_affects_scheduler_equiv: "scheduler_equiv aag s t \<Longrightarrow> scheduler_affects_equiv aag SilcLabel s t"
+lemma SilcLabel_affects_scheduler_equiv:
+  "scheduler_equiv aag s t \<Longrightarrow> scheduler_affects_equiv aag SilcLabel s t"
   apply (simp add:  scheduler_affects_equiv_def reads_scheduler_def
                    states_equiv_for_def equiv_for_def scheduler_equiv_def equiv_asids_def
                    equiv_asid_def globals_equiv_scheduler_def)

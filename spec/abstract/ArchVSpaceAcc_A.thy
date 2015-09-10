@@ -12,7 +12,7 @@
 Accessor functions for architecture specific parts of the specification. 
 *)
 
-header "Accessing the ARM VSpace"
+chapter "Accessing the ARM VSpace"
 
 theory ArchVSpaceAcc_A
 imports KHeap_A
@@ -26,62 +26,6 @@ text {*
 *}
 
 section "Encodings"
-
-text {* The lowest virtual address in the kernel window. The kernel reserves the
-virtual addresses from here up in every virtual address space. *}
-(* Moved to Deterministic_A
-definition
-  kernel_base :: "vspace_ref" where
-  "kernel_base \<equiv> 0xf0000000"
-*)
-
-text {* Convert a set of rights into binary form. *}
-definition
-  word_from_vm_rights :: "vm_rights \<Rightarrow> word32" where  
-  "word_from_vm_rights R \<equiv> 
-  if vm_read_write \<subseteq> R then 3
-  else if vm_read_only \<subseteq> R then 2
-  else 1"
-
-text {* Encode a page directory entry into the equivalent entry that the page
-table walker implemented in ARM hardware would parse. *}
-definition
-  word_from_pde :: "pde \<Rightarrow> machine_word" where
-  "word_from_pde pde \<equiv> case pde of
-    InvalidPDE \<Rightarrow> 0
-  | PageTablePDE table attrib domain \<Rightarrow> 1 ||
-    table && 0xfffffc00 ||
-    (if ParityEnabled \<in> attrib then 1 << 9 else 0) ||
-    ((domain && 0xf) << 5)
-  | SectionPDE frame attrib domain rights \<Rightarrow>  2 ||
-    frame && 0xfff00000 ||
-    (if ParityEnabled \<in> attrib then (1 << 9) else 0) ||
-    (if PageCacheable \<in> attrib then (1 << 2) || (1 << 3) else 0) ||
-    ((domain && 0xf) << 5) ||
-    (if Global \<in> attrib then 0 else (1 << 17)) ||
-    (word_from_vm_rights rights << 10)
-  | SuperSectionPDE frame attrib rights \<Rightarrow>  2 ||
-    (1 << 18) ||
-    (frame && 0xff000000) ||
-    (if ParityEnabled \<in> attrib then 1 << 9 else 0) ||
-    (if PageCacheable \<in> attrib then (1 << 2) || (1 << 3) else 0) ||
-    (if Global \<in> attrib then 0 else (1 << 17)) ||
-    (word_from_vm_rights rights << 10)"
-
-text {* Encode a page table entry into the equivalent entry that the page
-table walker implemented in ARM hardware would parse. *}
-definition
-  word_from_pte :: "pte \<Rightarrow> machine_word" where
-  "word_from_pte pte \<equiv> case pte of
-    InvalidPTE \<Rightarrow> 0
-  | LargePagePTE frame attrib rights \<Rightarrow>    1 ||
-    (frame && 0xffff0000) ||
-    (if PageCacheable \<in> attrib then (1 << 2) || (1 << 3) else 0) ||
-    (word_from_vm_rights rights * 85 << 4)
-  | (SmallPagePTE frame attrib rights) \<Rightarrow>    2 ||
-    (frame && 0xfffff000) ||
-    (if PageCacheable \<in> attrib then (1 << 2) || (1 << 3) else 0) ||
-    (word_from_vm_rights rights * 85 << 4)"
 
 text {* The high bits of a virtual ASID. *}
 definition

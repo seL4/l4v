@@ -13,12 +13,12 @@
  *)
 
 session AutoCorres = CParser +
-  options [timeout = 3600, quick_and_dirty]
+  options [timeout = 3600]
   theories
     "AutoCorres"
 
 session AutoCorresSEL4 = CBaseRefine +
-  options [timeout = 7200, quick_and_dirty]
+  options [timeout = 7200]
   theories
     "TestSEL4"
 

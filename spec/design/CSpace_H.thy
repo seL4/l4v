@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-header "CSpace"
+chapter "CSpace"
 
 theory CSpace_H
 imports CSpaceDecls_H Object_H
@@ -28,7 +28,7 @@ defs lookupSlotForThread_def:
 "lookupSlotForThread thread capptr\<equiv> (doE
         threadRootSlot \<leftarrow> withoutFailure $ getThreadCSpaceRoot thread;
         threadRoot \<leftarrow> withoutFailure $ getSlotCap threadRootSlot;
-        bits \<leftarrow> returnOk ( bitSize $ fromCPtr capptr);
+        bits \<leftarrow> returnOk ( finiteBitSize $ fromCPtr capptr);
         (s, _) \<leftarrow> resolveAddressBits threadRoot capptr bits;
         returnOk s
 odE)"
@@ -37,7 +37,7 @@ defs lookupSlotForCNodeOp_def:
 "lookupSlotForCNodeOp isSource x1 capptr depth\<equiv> (let root = x1 in
   if isCNodeCap root
   then   (doE
-    rangeCheck depth 1 $ bitSize capptr;
+    rangeCheck depth 1 $ finiteBitSize capptr;
     lookupErrorOnFailure isSource $ (doE
         result \<leftarrow> resolveAddressBits root capptr depth;
         (let (slot, bitsLeft) = result in

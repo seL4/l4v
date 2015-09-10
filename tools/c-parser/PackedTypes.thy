@@ -306,12 +306,6 @@ section {* Simp rules for deriving packed props from the type combinators *}
 
 subsection {* td_fafu_idem *}
 
-lemma dvd_div_mult_id:
-  fixes x :: "'a :: semiring_div"
-  shows "\<lbrakk>x \<noteq> 0; x dvd y\<rbrakk> \<Longrightarrow> y div x * x = y"
-  unfolding dvd_def
-  by (clarsimp simp add:  mult_commute div_mult_self2_is_id)
-
 lemma td_fafu_idem_final_pad:
   "padup (2 ^ align_td t) (size_td t) = 0
   \<Longrightarrow> td_fafu_idem (final_pad t) = td_fafu_idem t"
@@ -336,7 +330,7 @@ lemma td_fafu_idem_extend_ti:
   and     at: "td_fafu_idem t"
   shows "td_fafu_idem (extend_ti s t nm)" using as at
   apply (cases s)
-  apply simp
+  apply (rename_tac typ_struct xs)
   apply (case_tac typ_struct)
    apply simp
   apply (simp add: td_fafu_idem_list_append)
@@ -406,7 +400,7 @@ lemma td_fafu_idem_ti_typ_combine:
   unfolding ti_typ_combine_def using tda tds
   apply (clarsimp simp: Let_def)
   apply (cases s)
-  apply simp
+  apply (rename_tac typ_struct xs)
   apply (case_tac typ_struct)
    apply simp
    apply (subst td_fafu_idem_adjust_ti [OF fg wf_fd], assumption)
@@ -416,20 +410,19 @@ lemma td_fafu_idem_ti_typ_combine:
 
 lemma td_fafu_idem_ptr:
    "td_fafu_idem (typ_info_t TYPE('a :: c_type ptr))"
-  apply (clarsimp simp add: typ_info_ptr fa_fu_idem_def)
+  apply (clarsimp simp add: fa_fu_idem_def)
   apply (subst word_rsplit_rcat_size)
-   apply (clarsimp simp add: size_of_def typ_info_word word_size dvd_div_mult_id)
+   apply (clarsimp simp add: size_of_def word_size)
   apply simp
   done
 
 lemma td_fafu_idem_word:
    "td_fafu_idem (typ_info_t TYPE('a :: len8 word))"
-  apply(clarsimp simp add:typ_info_word fa_fu_idem_def)
+  apply(clarsimp simp add: fa_fu_idem_def)
   apply (subst word_rsplit_rcat_size)
    apply (insert len8_dv8)
-   apply (clarsimp simp add: size_of_def typ_info_word word_size dvd_div_mult_id)
-   apply (subst dvd_div_mult_id)
-     apply simp
+   apply (clarsimp simp add: size_of_def word_size)
+   apply (subst dvd_div_mult_self)
     apply simp
    apply simp
   apply simp
@@ -437,8 +430,7 @@ lemma td_fafu_idem_word:
 
 lemma fg_cons_array [simp]:
   "n < card (UNIV :: 'b :: finite set) \<Longrightarrow> fg_cons (\<lambda>x. index x n) (\<lambda>x f. Arrays.update (f :: 'a['b]) n x)"
-  unfolding fg_cons_def
-  by (simp add: index_update)
+  unfolding fg_cons_def by simp
 
 lemma td_fafu_idem_array_n:
   "\<lbrakk>td_fafu_idem (typ_info_t TYPE('a)); n \<le> card (UNIV :: 'b set) \<rbrakk> \<Longrightarrow> td_fafu_idem (array_tag_n n :: ('a :: mem_type ['b :: finite]) field_desc typ_desc)"
@@ -491,7 +483,7 @@ lemma td_fa_hi_extend_ti:
   and     at: "td_fa_hi t"
   shows "td_fa_hi (extend_ti s t nm)" using as at
   apply (cases s)
-  apply simp
+  apply (rename_tac typ_struct xs)
   apply (case_tac typ_struct)
    apply simp
   apply (simp add: td_fa_hi_list_append)
@@ -555,7 +547,7 @@ lemma td_fa_hi_ti_typ_combine:
   unfolding ti_typ_combine_def using tda tds
   apply (clarsimp simp: Let_def)
   apply (cases s)
-  apply simp
+  apply (rename_tac typ_struct xs)
   apply (case_tac typ_struct)
    apply simp
    apply (subst td_fa_hi_adjust_ti [OF fg wf_fd], assumption)
@@ -565,11 +557,11 @@ lemma td_fa_hi_ti_typ_combine:
 
 lemma td_fa_hi_ptr:
    "td_fa_hi (typ_info_t TYPE('a :: c_type ptr))"
-  by (clarsimp simp add: typ_info_ptr fa_heap_indep_def)
+  by (clarsimp simp add: fa_heap_indep_def)
 
 lemma td_fa_hi_word:
    "td_fa_hi (typ_info_t TYPE('a :: len8 word))"
-  by (clarsimp simp add:typ_info_word fa_heap_indep_def)
+  by (clarsimp simp add: fa_heap_indep_def)
 
 lemma td_fa_hi_array_n:
   "\<lbrakk>td_fa_hi (typ_info_t TYPE('a)); n \<le> card (UNIV :: 'b set) \<rbrakk> \<Longrightarrow> td_fa_hi (array_tag_n n :: ('a :: mem_type ['b :: finite]) field_desc typ_desc)"
@@ -635,7 +627,7 @@ lemma access_ti_append':
 proof(induct xs)
   case Nil show ?case by simp
 next
-  case (Cons x xs) thus ?case by (simp add: min_def add_ac drop_take)
+  case (Cons x xs) thus ?case by (simp add: min_def ac_simps drop_take)
 qed
 
 section {* Instances *}
@@ -657,9 +649,7 @@ instantiation ptr :: (c_type)packed_type
 begin
 instance
   apply intro_classes
-   apply (simp add: typ_info_ptr)
    apply (simp add: fa_fu_idem_def word_rsplit_rcat_size word_size)
-  apply (simp add: typ_info_ptr)
   apply (simp add: fa_heap_indep_def)
   done
 end
@@ -790,7 +780,7 @@ next
     case (Suc n'')
     hence "m' < n''" using `Suc m' < n'` by simp
     thus ?thesis using Suc
-      by (simp add: Suc.hyps add_ac)
+      by (simp add: Suc.hyps ac_simps)
   qed
 qed
 
@@ -893,7 +883,7 @@ proof (simp add: packed_type_access_ti, rule ext)
 
   have szt: "n + size_td t \<le> size_of TYPE('b)"
     unfolding size_of_def
-    by (subst add_commute, rule field_lookup_offset_size [OF fl])
+    by (subst add.commute, rule field_lookup_offset_size [OF fl])
   moreover have t0: "0 < size_td t" using fl wf_size_desc
     by (rule field_lookup_wf_size_desc_gt)
   ultimately have szn: "n < size_of TYPE('b)" by simp
@@ -954,14 +944,14 @@ proof (simp add: packed_type_access_ti, rule ext)
 	unfolding field_lvalue_def field_lookup_offset_eq [OF fl]
 	apply -
 	apply (drule (2) intvl_less_upper)
-	apply (simp add: add_assoc)
+	apply (simp add: add.assoc)
 	done
       moreover have "x \<in> {ptr_val p..+size_of TYPE('b)}" using fl xin
 	by (rule subsetD [OF field_tag_sub])
       ultimately have "x - ptr_val p \<le> (of_nat n + of_nat (size_td t - 1))" using al szb
 	apply -
-	apply (rule word_diff_ls(4)[where xa=x and x=x, simplified, standard])
-     apply (metis (hide_lams, mono_tags) nat_add_commute of_nat_add word_unat.Rep_inverse)
+	apply (rule word_diff_ls(4)[where xa=x and x=x for x, simplified])
+     apply (metis (hide_lams, mono_tags) add.commute of_nat_add)
 	apply (erule (2) intvl_le_lower)
 	done
       moreover have "unat (of_nat n + of_nat (size_td t - 1) :: 32 word) = n + size_td t - 1"
@@ -1019,9 +1009,9 @@ proof (simp add: packed_type_access_ti, rule ext)
 	(replicate (size_of TYPE('b)) 0) ! unat (x - ptr_val p) = hp x"
       proof (subst field_access_update_nth_disjD [OF fl])
 	have "x - ptr_val p \<le> of_nat (size_of TYPE('b) - 1)"
-	proof (rule word_diff_ls(4)[where xa=x and x=x, simplified, standard])
+	proof (rule word_diff_ls(4)[where xa=x and x=x for x, simplified])
       	  from xin show "x \<le> of_nat (size_of TYPE('b) - 1) + ptr_val p" using al szb
-	    by (subst add_commute, rule intvl_less_upper)
+	    by (subst add.commute, rule intvl_less_upper)
 	  show "ptr_val p \<le> x" using xin al szb
 	    by (rule intvl_le_lower)
 	qed

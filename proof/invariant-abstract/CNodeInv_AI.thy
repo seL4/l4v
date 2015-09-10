@@ -183,14 +183,17 @@ lemma derive_cap_objrefs:
   "\<lbrace>\<lambda>s. P (obj_refs cap)\<rbrace> derive_cap slot cap \<lbrace>\<lambda>rv s. rv \<noteq> cap.NullCap \<longrightarrow> P (obj_refs rv)\<rbrace>,-"
   apply (cases cap, simp_all add: derive_cap_def is_zombie_def)
           apply ((wp ensure_no_children_inv | simp add: o_def | rule hoare_pre)+)[11]
+  apply (rename_tac arch_cap)
   apply (case_tac arch_cap, simp_all add: arch_derive_cap_def)
       apply (wp | simp add: o_def)+
+   apply (rename_tac word option)
    apply (case_tac option)
     apply simp
     apply (rule hoare_pre, wp)
    apply simp
    apply (rule hoare_pre, wp)
    apply (simp add: aobj_ref_cases)
+  apply (rename_tac word option)
   apply (case_tac option, simp)
    apply (rule hoare_pre, wp)
   apply simp
@@ -210,14 +213,17 @@ lemma derive_cap_zobjrefs:
   "\<lbrace>\<lambda>s. P (zobj_refs cap)\<rbrace> derive_cap slot cap \<lbrace>\<lambda>rv s. rv \<noteq> cap.NullCap \<longrightarrow> P (zobj_refs rv)\<rbrace>,-"
   apply (cases cap, simp_all add: derive_cap_def is_zombie_def)
           apply ((wp ensure_no_children_inv | simp add: o_def | rule hoare_pre)+)[11]
+  apply (rename_tac arch_cap)
   apply (case_tac arch_cap, simp_all add: arch_derive_cap_def)
       apply (wp | simp add: o_def)+
+   apply (rename_tac option)
    apply (case_tac option)
     apply simp
     apply (rule hoare_pre, wp)
    apply simp
    apply (rule hoare_pre, wp)
    apply (simp add: aobj_ref_cases)
+  apply (rename_tac option)
   apply (case_tac option, simp)
    apply (rule hoare_pre, wp)
   apply simp
@@ -232,6 +238,7 @@ lemma update_cap_objrefs:
   apply (case_tac cap,
       simp_all add: update_cap_data_closedform
              split: split_if_asm)
+  apply (rename_tac arch_cap)
   apply (case_tac arch_cap, simp_all add: aobj_ref_cases arch_update_cap_data_def)
   done
 
@@ -707,7 +714,7 @@ lemma final_cap_duplicate_obj_ref:
   apply (clarsimp simp: is_final_cap'_def)
   apply (subgoal_tac "{p1, p2} \<subseteq> {(a, b)}")
    apply simp
-  apply (drule sym[where s="Collect p",standard], simp)
+  apply (drule sym[where s="Collect p" for p], simp)
   apply blast
   done
 
@@ -718,7 +725,7 @@ lemma final_cap_duplicate_irq:
   apply (clarsimp simp: is_final_cap'_def)
   apply (subgoal_tac "{p1, p2} \<subseteq> {(a, b)}")
    apply simp
-  apply (drule sym[where s="Collect p",standard], simp)
+  apply (drule sym[where s="Collect p" for p], simp)
   apply blast
   done
 
@@ -882,7 +889,6 @@ lemma set_zombie_not_recursive:
   apply (fastforce simp: fst_cte_ptrs_def cte_wp_at_def)
   done
 
-
 definition
   rdcall_finalise_ord_lift :: "((cslot_ptr \<times> 'z state) \<times> (cslot_ptr \<times> 'z state)) set
                                   \<Rightarrow> ((rec_del_call \<times> 'z state) \<times> (rec_del_call \<times> 'z state)) set"
@@ -891,14 +897,14 @@ where
       (\<lambda>(x, s). case x of CTEDeleteCall a b \<Rightarrow> 3 | FinaliseSlotCall a b \<Rightarrow> 2
                             | ReduceZombieCall cap a b \<Rightarrow> 1)
           <*mlex*>
-       ((map_pair (\<lambda>(x, s). (FinaliseSlotCall x True, s)) (\<lambda>(x, s). (FinaliseSlotCall x True, s)) ` S)
-         \<union> (map_pair (\<lambda>(x, s). (FinaliseSlotCall x False, s)) (\<lambda>(x, s). (FinaliseSlotCall x False, s)) ` S))"
+       ((map_prod (\<lambda>(x, s). (FinaliseSlotCall x True, s)) (\<lambda>(x, s). (FinaliseSlotCall x True, s)) ` S)
+         \<union> (map_prod (\<lambda>(x, s). (FinaliseSlotCall x False, s)) (\<lambda>(x, s). (FinaliseSlotCall x False, s)) ` S))"
 
 
 lemma wf_rdcall_finalise_ord_lift:
   "wf S \<Longrightarrow> wf (rdcall_finalise_ord_lift S)"
   unfolding rdcall_finalise_ord_lift_def
-  by (auto intro!: wf_mlex wf_Un wf_map_pair_image inj_onI)
+  by (auto intro!: wf_mlex wf_Un wf_map_prod_image inj_onI)
 
 
 definition
@@ -1014,10 +1020,11 @@ termination rec_del
                        mlex_prod_def,
          drule in_preempt)
   apply (case_tac exposed, simp_all)
-   apply (rule disjI1, rule map_pair_split_imageI)
+   apply (rule disjI1, rule map_prod_split_imageI)
    apply (simp only: trans_state_update'[symmetric])
    apply (clarsimp)
    apply (case_tac aa, simp_all add: fail_def rec_del.psimps)[1]
+   apply (rename_tac word option nat)
    apply (case_tac nat, simp_all)[1]
    apply (clarsimp simp: in_monad rec_del.psimps)
    apply (clarsimp simp: in_monad in_get_cap_cte_wp_at
@@ -1032,9 +1039,10 @@ termination rec_del
    apply (clarsimp simp: fst_cte_ptrs_first_cte_of)
    apply (case_tac rv, simp_all)[1]
    apply (clarsimp simp: fst_cte_ptrs_first_cte_of in_monad)
-  apply (rule disjI2, rule map_pair_split_imageI)
+  apply (rule disjI2, rule map_prod_split_imageI)
   apply clarsimp
   apply (case_tac aa, simp_all add: fail_def rec_del.psimps)[1]
+  apply (rename_tac word option nat)
   apply (case_tac nat, simp_all)
   apply (simp only: trans_state_update'[symmetric] not_recursive_cspaces_more_update)
   apply (clarsimp simp: in_monad Pair_fst_snd_eq rec_del.psimps)
@@ -1068,7 +1076,7 @@ termination rec_del
 
 
 lemmas rec_del_simps_ext =
-    rec_del.simps [THEN ext[where f="rec_del args", standard]]
+    rec_del.simps [THEN ext[where f="rec_del args" for args]]
 
 
 lemmas rec_del_fails = spec_validE_fail rec_del_simps_ext(5-)
@@ -1953,6 +1961,7 @@ lemma copy_of_reply_cap:
   "copy_of (cap.ReplyCap t False) cap \<Longrightarrow> cap = cap.ReplyCap t False"
   apply (clarsimp simp: copy_of_def is_cap_simps)
   apply (cases cap, simp_all add: same_object_as_def)
+  apply (rename_tac arch_cap)
   apply (case_tac arch_cap, simp_all)
   done
 
@@ -1963,6 +1972,7 @@ lemma copy_of_cap_irqs:
   apply (cases cap', simp_all add: same_object_as_def)
        apply (clarsimp simp: is_cap_simps bits_of_def cap_range_def
                       split: cap.split_asm)+
+  apply (rename_tac arch_cap)
   apply (case_tac arch_cap, simp_all)
       apply (clarsimp split: arch_cap.split_asm cap.split_asm)+
   done
@@ -2026,13 +2036,6 @@ crunch arch_objs [wp]: cap_swap "valid_arch_objs"
 crunch arch_objs [wp]: cap_move "valid_arch_objs"
 
 crunch arch_objs [wp]: empty_slot "valid_arch_objs"
-
-crunch executable_arch_objs [wp]: cap_swap "executable_arch_objs"
-
-crunch executable_arch_objs [wp]: cap_move "executable_arch_objs"
-
-crunch executable_arch_objs [wp]: empty_slot "executable_arch_objs"
-
 
 crunch valid_global_objs [wp]: cap_swap "valid_global_objs"
 
@@ -2290,7 +2293,7 @@ lemma final_cap_unchanged:
   done
 
 
-lemmas set_cap_cte_wp_at_cases = set_cap_cte_wp_at[unfolded if_bool_eq_conj pred_conj_def conj_ac]
+lemmas set_cap_cte_wp_at_cases = set_cap_cte_wp_at[unfolded if_bool_eq_conj pred_conj_def conj_comms]
 
 
 lemma cyclic_zombieD[dest!]:
@@ -2307,10 +2310,10 @@ lemma rec_del_abort_cases:
       | _ \<Rightarrow> True"
 proof (induct rule: rec_del.induct)
   case (2 slot exposed)
-  note wp = "2.hyps"[simplified rec_del_call.cases]
+  note wp = "2.hyps"[simplified rec_del_call.simps]
   show ?case
     apply (subst rec_del_simps_ext)
-    apply (simp only: rec_del_call.cases split_def)
+    apply (simp only: rec_del_call.simps split_def)
     apply wp
         apply (simp add: cte_wp_at_caps_of_state)
         apply (wp wp, assumption+)
@@ -2710,6 +2713,7 @@ lemma finalise_cap_makes_halted:
                  | rule hoare_drop_imp)+
    apply (fastforce simp: pred_tcb_at_def obj_at_def is_tcb
                   dest!: final_zombie_not_live)
+  apply (rename_tac arch_cap)
   apply (case_tac arch_cap, simp_all add: arch_finalise_cap_def)
       apply (wp
            | clarsimp simp: valid_cap_def split: option.split bool.split
@@ -2903,7 +2907,7 @@ proof (induct rule: rec_del.induct,
      apply (wp empty_slot_invs empty_slot_emptyable)[1]
     apply (rule hoare_pre_spec_validE)
      apply (rule spec_strengthen_postE, unfold slot_rdcall.simps)
-      apply (rule "1.hyps"[simplified rec_del_call.cases slot_rdcall.simps])
+      apply (rule "1.hyps"[simplified rec_del_call.simps slot_rdcall.simps])
      apply clarsimp
      apply (auto simp: cte_wp_at_caps_of_state)
     done
@@ -2927,7 +2931,7 @@ next
                | simp add: valid_rec_del_call_def irq_state_independent_A_def)+)[1]
         apply (simp(no_asm))
         apply (rule spec_strengthen_postE)
-        apply (rule "2.hyps"[simplified rec_del_call.cases slot_rdcall.simps conj_assoc], assumption+)
+        apply (rule "2.hyps"[simplified rec_del_call.simps slot_rdcall.simps conj_assoc], assumption+)
        apply (simp add: cte_wp_at_eq_simp
                 | wp replace_cap_invs set_cap_sets final_cap_same_objrefs
                      set_cap_cte_cap_wp_to static_imp_wp
@@ -2959,7 +2963,7 @@ next
        apply (clarsimp simp: is_cap_simps tcb_cap_valid_NullCapD
                              no_cap_to_obj_with_diff_ref_Null
                         del: disjCI)
-       apply (thin_tac "appropriate_cte_cap ?a = appropriate_cte_cap ?b")
+       apply (thin_tac "appropriate_cte_cap a = appropriate_cte_cap b" for a b)
        apply (rule conjI)
         apply (clarsimp simp: replaceable_def)
         apply (erule disjE)
@@ -2972,7 +2976,7 @@ next
        apply (drule of_bl_eq_0)
         apply (drule zombie_cte_bits_less, simp add: word_bits_def)
        apply (clarsimp simp: cte_wp_at_caps_of_state)
-      apply (drule_tac s="appropriate_cte_cap ?c" in sym)
+      apply (drule_tac s="appropriate_cte_cap c" for c in sym)
       apply (clarsimp simp: is_cap_simps appropriate_Zombie)
      apply (simp add: is_final_cap_def)
      apply wp
@@ -2992,7 +2996,7 @@ next
    by (clarsimp simp: replicate_not_True)
   case (3 ptr bits n slot s)
   show ?case
-    apply (simp add: rec_del_call.cases simp_thms)
+    apply (simp add: rec_del_call.simps simp_thms)
     apply wp
     apply clarsimp
     apply (rule context_conjI')
@@ -3037,7 +3041,7 @@ next
                                     (ptr, nat_to_cref (zombie_cte_bits bits) n) s
                              \<and> \<not> cap_removeable (cap.Zombie ptr bits (Suc n)) slot"
                   in hoare_post_imp)
-       apply (thin_tac "(?a, ?b) \<in> fst ?c")
+       apply (thin_tac "(a, b) \<in> fst c" for a b c)
        apply clarsimp
        apply (frule cte_wp_at_emptyableD, clarsimp, assumption)
        apply (rule conjI[rotated], (clarsimp simp: is_cap_simps)+)
@@ -3046,7 +3050,7 @@ next
        apply (rule conjI)
         apply (frule zombies_finalD, (clarsimp simp: is_cap_simps)+)
         apply (clarsimp simp: cte_wp_at_caps_of_state)
-        apply (erule disjE[where P="val = cap.NullCap", standard])
+        apply (erule disjE[where P="val = cap.NullCap" for val])
          apply (clarsimp simp: replaceable_def cap_range_def is_cap_simps
                                obj_irq_refs_subset vs_cap_ref_def)
          apply (rule conjI[rotated])
@@ -3063,9 +3067,9 @@ next
          apply clarsimp
          apply (rule ccontr, erule notE, erule nat_helper)
          apply clarsimp
-         apply (erule disjE[where Q="val = slot", standard])
+         apply (erule disjE[where Q="val = slot" for val])
           apply (clarsimp simp: cte_wp_at_caps_of_state)
-          apply (erule notE[rotated, where P="val = Some cap.NullCap", standard])
+          apply (erule notE[rotated, where P="val = Some cap.NullCap" for val])
           apply (drule sym, simp, subst nat_to_cref_unat_of_bl)
            apply (drule zombie_cte_bits_less, simp add: word_bits_def)
           apply assumption
@@ -3091,7 +3095,7 @@ next
      apply (rule spec_valid_conj_liftE2)
       apply (wp rec_del_delete_cases[where ex=False, simplified])[1]
      apply (rule spec_strengthen_postE)
-      apply (rule "4.hyps"[simplified rec_del_call.cases slot_rdcall.simps simp_thms pred_conj_def])
+      apply (rule "4.hyps"[simplified rec_del_call.simps slot_rdcall.simps simp_thms pred_conj_def])
       apply (simp add: in_monad)
      apply simp
     apply (clarsimp simp: halted_emptyable)
@@ -3206,7 +3210,7 @@ lemma fold_Int_sub:
   shows "setsum (f :: 'a \<Rightarrow> nat) (S \<inter> T)
           = setsum f T - setsum f (T - S)"
 proof -
-  from assms setsum_Un_disjoint[where A="S \<inter> T" and B="T - S" and g=f]
+  from assms setsum.union_disjoint[where A="S \<inter> T" and B="T - S" and g=f]
   show ?thesis
   apply simp
   apply (drule meta_mp)
@@ -3314,6 +3318,7 @@ lemma cap_swap_fd_rvk_prog:
   apply (clarsimp simp: cte_wp_at_caps_of_state obj_irq_refs_empty)
   apply (drule iffD1)
    apply (simp add: obj_irq_refs_Int)
+  apply (simp only:)
   apply simp
   done
 
@@ -3343,9 +3348,9 @@ crunch rvk_prog: deleting_irq_handler "\<lambda>s. revoke_progress_ord m (\<lamb
      wp: crunch_wps empty_slot_rvk_prog' select_wp)
 
 lemma finalise_cap_rvk_prog:
-   "\<lbrace>\<lambda>s. revoke_progress_ord m (\<lambda>x. Option.map cap_to_rpo (caps_of_state s x))\<rbrace>
+   "\<lbrace>\<lambda>s. revoke_progress_ord m (\<lambda>x. map_option cap_to_rpo (caps_of_state s x))\<rbrace>
    finalise_cap a b 
-   \<lbrace>\<lambda>_ s. revoke_progress_ord m (\<lambda>x. Option.map cap_to_rpo (caps_of_state s x))\<rbrace>"
+   \<lbrace>\<lambda>_ s. revoke_progress_ord m (\<lambda>x. map_option cap_to_rpo (caps_of_state s x))\<rbrace>"
   apply (case_tac a,simp_all add:liftM_def)
     apply (wp ep_cancel_all_rvk_prog aep_cancel_all_rvk_prog
       suspend_rvk_prog deleting_irq_handler_rvk_prog
@@ -3407,6 +3412,7 @@ next
         apply (clarsimp simp: cap_to_rpo_def is_cap_simps fst_cte_ptrs_def)
         apply (simp add: is_final_cap'_def)
        apply (case_tac rv, simp_all add: cap_to_rpo_def is_cap_simps)[1]
+       apply (rename_tac arch_cap)
        apply (case_tac arch_cap, simp_all)[1]
       apply (simp add: is_final_cap_def, wp)
      apply (simp, wp get_cap_wp)
@@ -3490,6 +3496,7 @@ function(sequential) red_zombie_will_fail :: "cap \<Rightarrow> bool"
   apply simp_all
   apply (case_tac x)
             prefer 11
+            apply (rename_tac nat) 
             apply (case_tac nat, simp_all)[1]
              apply fastforce+
   done
@@ -3541,7 +3548,7 @@ lemma cte_at_replicate_zbits:
    apply (rule cte_wp_at_tcbI, simp)
     apply (fastforce simp add: tcb_cap_cases_def tcb_cnode_index_def to_bl_1)
    apply simp
-  apply (subgoal_tac "replicate a False \<in> dom cs")
+  apply (subgoal_tac "replicate x2 False \<in> dom cs")
    apply safe[1]
    apply (rule cte_wp_at_cteI, fastforce)
      apply (simp add: well_formed_cnode_n_def length_set_helper)
@@ -3557,6 +3564,7 @@ lemma reduce_zombie_cap_somewhere:
    \<lbrace>\<lambda>rv s. \<not> exp \<longrightarrow> (\<exists>oref cref. cte_wp_at P (oref, cref) s)\<rbrace>"
   apply (cases exp, simp_all, wp)
   apply (cases cap, simp_all add: rec_del_fails)
+  apply (rename_tac word option nat)
   apply (case_tac nat, simp_all add: rec_del_simps_ext)
   apply (simp add: cte_wp_at_caps_of_state)
   apply wp
@@ -3835,7 +3843,7 @@ lemma zombies_duplicate_creation:
    \<lbrace>\<lambda>rv. zombies_final\<rbrace>"
   apply (wp set_cap_zombies)
   apply (clarsimp simp: cte_wp_at_def)
-  apply (thin_tac "?x \<noteq> ?y")
+  apply (thin_tac "x \<noteq> y" for x y)
   apply (case_tac "(a, b) = (aa, ba)")
    apply clarsimp
   apply (drule(3) zombies_finalD2)
@@ -4067,7 +4075,7 @@ lemma cap_move_invs[wp]:
      cap_move cap ptr ptr'
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   unfolding invs_def valid_state_def valid_pspace_def
-  apply (simp add: pred_conj_def conj_ac [where Q = "valid_mdb S", standard])
+  apply (simp add: pred_conj_def conj_comms [where Q = "valid_mdb S" for S])
   apply wp
    apply (rule hoare_vcg_mp)
     apply (rule hoare_pre, rule cap_move_zombies_final)

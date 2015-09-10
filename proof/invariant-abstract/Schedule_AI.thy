@@ -73,33 +73,6 @@ lemma sct_invs:
                             valid_irq_node_def valid_machine_state_def)
 
 
-lemma storeWord_invs[wp]:
-  "\<lbrace>in_user_frame p and invs\<rbrace> do_machine_op (storeWord p w) \<lbrace>\<lambda>rv. invs\<rbrace>"
-proof -
-  have aligned_offset_ignore:
-    "\<And>l sz. l<4 \<Longrightarrow> p && mask 2 = 0 \<Longrightarrow>
-       p+l && ~~ mask (pageBitsForSize sz) = p && ~~ mask (pageBitsForSize sz)"
-  proof -
-    fix l sz
-    assume al: "p && mask 2 = 0"
-    assume "(l::word32) < 4" hence less: "l<2^2" by simp
-    have le: "2 \<le> pageBitsForSize sz" by (case_tac sz, simp_all)
-    show "?thesis l sz"
-      by (rule is_aligned_add_helper[simplified is_aligned_mask,
-          THEN conjunct2, THEN mask_out_first_mask_some,
-          where n=2, OF al less le])
-  qed
-
-  show ?thesis
-    apply (wp dmo_invs)
-    apply (clarsimp simp: storeWord_def invs_def valid_state_def)
-    apply (fastforce simp: valid_machine_state_def in_user_frame_def
-               assert_def simpler_modify_def fail_def bind_def return_def
-               pageBits_def aligned_offset_ignore
-             split: split_if_asm)
-    done
-qed
-
 lemma storeWord_valid_irq_states:
   "\<lbrace>\<lambda>m. valid_irq_states (s\<lparr>machine_state := m\<rparr>)\<rbrace> storeWord x y
    \<lbrace>\<lambda>a b. valid_irq_states (s\<lparr>machine_state := b\<rparr>)\<rbrace>"
@@ -123,8 +96,6 @@ lemma dmo_mapM_storeWord_0_invs[wp]:
                         valid_machine_state_def)
   apply (rule conjI)
    apply(erule use_valid[OF _ storeWord_valid_irq_states], simp)
-  apply (clarsimp simp: disj_commute[of "in_user_frame p s", standard])
-  apply (drule_tac x=p in spec, simp)
   apply (erule use_valid)
    apply (simp add: storeWord_def word_rsplit_0)
    apply wp
@@ -141,8 +112,8 @@ lemma dmo_kheap_arch_state[wp]:
 lemma set_vm_root_kheap_arch_state[wp]:
   "\<lbrace>\<lambda>s. P (kheap s) (arm_globals_frame (arch_state s))\<rbrace> set_vm_root a
    \<lbrace>\<lambda>_ s. P (kheap s) (arm_globals_frame (arch_state s))\<rbrace>" (is "valid ?P _ _")
-  apply (simp add: set_vm_root_def set_current_asid_def)
-  apply (wp | wpcw | simp add: set_current_asid_def get_hw_asid_def
+  apply (simp add: set_vm_root_def arm_context_switch_def)
+  apply (wp | wpcw | simp add: arm_context_switch_def get_hw_asid_def
            store_hw_asid_def find_pd_for_asid_assert_def find_free_hw_asid_def
            invalidate_hw_asid_entry_def invalidate_asid_def load_hw_asid_def)+
      apply (simp add: whenE_def, intro conjI impI)

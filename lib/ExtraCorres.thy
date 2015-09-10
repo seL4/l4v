@@ -88,16 +88,6 @@ lemma corres_mapM_x:
           apply (simp | wp)+
   done
 
-lemma mapM_x_wp:
-  assumes x: "\<And>x. x \<in> S \<Longrightarrow> \<lbrace>P\<rbrace> f x \<lbrace>\<lambda>rv. P\<rbrace>"
-  shows      "set xs \<subseteq> S \<Longrightarrow> \<lbrace>P\<rbrace> mapM_x f xs \<lbrace>\<lambda>rv. P\<rbrace>"
-  apply (subst mapM_x_mapM)
-  apply wp
-  apply (rule mapM_wp)
-   apply (rule x)
-   apply assumption+
-  done
-
 lemma corres_mapME:
   assumes x: "r [] []"
   assumes y: "\<And>x xs y ys. \<lbrakk> r xs ys; r' x y \<rbrakk> \<Longrightarrow> r (x # xs) (y # ys)"

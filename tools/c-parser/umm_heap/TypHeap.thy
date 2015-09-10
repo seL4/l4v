@@ -99,13 +99,13 @@ where
 type_synonym 'a typ_heap = "'a ptr \<rightharpoonup> 'a"
 
 definition proj_h :: "heap_state \<Rightarrow> heap_mem" where
-  "proj_h s \<equiv> \<lambda>x. option_case undefined (s_heap_value_case id undefined)
+  "proj_h s \<equiv> \<lambda>x. case_option undefined (case_s_heap_value id undefined)
       (s (x,SIndexVal))"
 
 definition lift_state :: "heap_raw_state \<Rightarrow> heap_state" where
   "lift_state \<equiv> \<lambda>(h,d) (x,y). case y of
       SIndexVal \<Rightarrow> if fst (d x)then Some (SValue (h x)) else None |
-      SIndexTyp n \<Rightarrow> option_case None (Some \<circ> STyp) (snd (d x) n)"
+      SIndexTyp n \<Rightarrow> case_option None (Some \<circ> STyp) (snd (d x) n)"
 
 
 definition fun2list :: "(nat \<Rightarrow> 'a) \<Rightarrow> nat \<Rightarrow> 'a list" where
@@ -119,7 +119,7 @@ definition max_d :: "heap_state \<Rightarrow> addr \<Rightarrow> nat" where
 
 definition proj_d :: "heap_state \<Rightarrow> heap_typ_desc" where
   "proj_d s \<equiv> \<lambda>x. (s (x,SIndexVal) \<noteq> None,
-      \<lambda>n. option_case None (Some \<circ> s_heap_tag) (s (x,SIndexTyp n)))"
+      \<lambda>n. case_option None (Some \<circ> s_heap_tag) (s (x,SIndexTyp n)))"
 
 (* XXX: precedences, s_valid can be fairly high,
         maybe lower than pointer plus, inner precedences can be low *)
@@ -214,12 +214,12 @@ where
 
 
 definition
-  sub_typ :: "'a::c_type itself \<Rightarrow> 'b::c_type itself \<Rightarrow> bool" ("_ \<le>\<^sub>\<tau> _")
+  sub_typ :: "'a::c_type itself \<Rightarrow> 'b::c_type itself \<Rightarrow> bool" ("_ \<le>\<^sub>\<tau> _" [51, 51] 50)
 where
   "s \<le>\<^sub>\<tau> t \<equiv> typ_uinfo_t s \<le> typ_uinfo_t t"
 
 definition
-  sub_typ_proper :: "'a::c_type itself \<Rightarrow> 'b::c_type itself \<Rightarrow> bool" ("_ <\<^sub>\<tau> _")
+  sub_typ_proper :: "'a::c_type itself \<Rightarrow> 'b::c_type itself \<Rightarrow> bool" ("_ <\<^sub>\<tau> _" [51, 51] 50)
 where
   "s <\<^sub>\<tau> t \<equiv> typ_uinfo_t s < typ_uinfo_t t"
 
@@ -258,7 +258,7 @@ definition
   super_field_update_t :: "'a ptr \<Rightarrow> 'a::c_type \<Rightarrow> 'b::c_type typ_heap \<Rightarrow> 'b typ_heap"
 where
   "super_field_update_t p v s \<equiv> \<lambda>q. if field_of_t p q then
-      option_case None (\<lambda>w. Some (update_value_t
+      case_option None (\<lambda>w. Some (update_value_t
           (field_names (typ_info_t TYPE('b)) (typ_uinfo_t TYPE('a))) v w
           (unat (ptr_val p - ptr_val q)))) (s q) else s q"
 
@@ -308,7 +308,7 @@ text {* ---- *}
 
 lemma wf_heap_val_SIndexVal_STyp_simp [simp]:
   "wf_heap_val s \<Longrightarrow> s (x,SIndexVal) \<noteq> Some (STyp t)"
-apply(auto simp: wf_heap_val_def wf_heap_val_def)
+apply(clarsimp simp: wf_heap_val_def)
 apply(drule_tac x=x in spec)
 apply clarsimp
 apply(case_tac t, simp)
@@ -317,7 +317,7 @@ done
 
 lemma wf_heap_val_SIndexTyp_SValue_simp [simp]:
   "wf_heap_val s \<Longrightarrow> s (x,SIndexTyp n) \<noteq> Some (SValue v)"
-apply(unfold wf_heap_val_def wf_heap_val_def)
+apply(unfold wf_heap_val_def)
 apply clarify
 apply(drule_tac x=x in spec)
 apply clarsimp
@@ -328,16 +328,14 @@ lemma field_tag_sub:
       {&(p\<rightarrow>f)..+size_td t} \<subseteq> {ptr_val (p::'a ptr)..+size_of TYPE('a)}"
 apply(clarsimp simp: field_ti_def split: option.splits)
 apply(drule intvlD, clarsimp simp: field_lvalue_def field_offset_def)
-apply(simp add: field_offset_untyped_def)
 apply(drule field_lookup_export_uinfo_Some)
-apply(simp add: typ_uinfo_t_def)
-apply(subst add_assoc)
+apply(subst add.assoc)
 apply(subst Abs_fnat_homs)
 apply(rule intvlI)
 apply(simp add: size_of_def typ_uinfo_t_def)
 apply(drule td_set_field_lookupD)
 apply(drule td_set_offset_size)
-apply(simp add: map_td_size)
+apply(simp)
 done
 
 lemma typ_slice_t_not_empty [simp]:
@@ -522,7 +520,7 @@ lemma s_valid_g:
 lemma lift_typ_heap_if:
   "lift_typ_heap g s = (\<lambda>(p::'a::c_type ptr). if s,g \<Turnstile>\<^sub>s p then Some (from_bytes
       (heap_list_s s (size_of TYPE('a)) (ptr_val p))) else None)"
-  by (force simp: lift_typ_heap_def intro: ext)
+  by (force simp: lift_typ_heap_def)
 
 lemma lift_typ_heap_s_valid:
   "lift_typ_heap g s p = Some x \<Longrightarrow> s,g \<Turnstile>\<^sub>s p"
@@ -568,20 +566,18 @@ lemma fun2list_nth [simp]:
 
 lemma proj_d_lift_state:
   "proj_d (lift_state (h,d)) = d"
-apply(auto simp: proj_d_def Let_def intro!: ext split: option.splits)
+apply(rule ext)
 apply(case_tac "d x")
-apply(auto simp: lift_state_def split: option.splits)
+apply(auto simp: proj_d_def lift_state_def Let_def split: option.splits)
 done
 
 lemma lift_state_proj [simp]:
   "wf_heap_val s \<Longrightarrow> lift_state (proj_h s,proj_d s) = s"
-apply(rule ext)
-apply clarsimp
-apply(auto simp: proj_h_def proj_d_def lift_state_def
-    split: split_if_asm s_heap_index.splits option.splits intro!: ext)
-  apply(case_tac aa, simp+)
- apply(case_tac aa, simp+)
-apply(case_tac ab, simp+)
+apply(auto simp: proj_h_def proj_d_def lift_state_def fun_eq_iff
+    split: split_if_asm s_heap_index.splits option.splits)
+  apply (metis s_heap_tag.simps s_heap_value.exhaust wf_heap_val_SIndexTyp_SValue_simp)
+ apply (metis id_apply s_heap_value.exhaust s_heap_value.simps(5) wf_heap_val_SIndexVal_STyp_simp)
+apply (metis s_heap_tag.simps s_heap_value.exhaust wf_heap_val_SIndexTyp_SValue_simp)
 done
 
 lemma lift_state_Some:
@@ -713,7 +709,7 @@ lemma lift_t_if:
   "lift_t g (h,d) = (\<lambda>p. if d,g \<Turnstile>\<^sub>t p then Some (h_val h (p::'a::c_type ptr)) else
       None)"
   by (force simp: lift_t_def lift_typ_heap_if h_t_s_valid h_val_def
-                 heap_list_s_heap_list h_t_valid_taut intro: ext)
+                 heap_list_s_heap_list h_t_valid_taut)
 
 lemma lift_lift_t:
   "d,g \<Turnstile>\<^sub>t (p::'a::c_type ptr) \<Longrightarrow> lift h p = the (lift_t g (h,d) p)"
@@ -734,7 +730,7 @@ next
   case (Cons x xs)
   have "heap_update_list (p + of_nat k) (x # xs) h p =
       heap_update_list (p + of_nat (k + 1)) xs (h(p + of_nat k := x)) p"
-    by (simp add: add_assoc of_nat_add add_ac)
+    by (simp add: ac_simps)
   also have "\<dots> = (h(p + of_nat k := x)) p"
   proof -
     from Cons have "k + 1 \<le> addr_card - length xs" by simp
@@ -856,7 +852,7 @@ apply(auto simp: ladder_set_def)
  apply(drule_tac x=m in spec)
  apply(drule_tac x=0 in spec)
  apply force
-apply(thin_tac "All ?P")
+apply(thin_tac "All P" for P)
 apply(drule_tac x="m + size_td (dt_fst dt_pair)" in spec)
 apply(drule_tac x="n - size_td (dt_fst dt_pair)" in spec)
 apply(case_tac dt_pair)
@@ -985,7 +981,8 @@ apply(induct t and st and xs and x)
     apply auto[4]
  apply clarsimp
  apply(case_tac dt_pair, clarsimp)
- apply(thin_tac "All ?P")
+ apply(rename_tac a)
+ apply(thin_tac "All P" for P)
  apply(drule_tac x=s in spec)
  apply(drule_tac x="k - size_td a" in spec)
  apply clarsimp
@@ -1027,9 +1024,7 @@ lemma typ_slice_0_True':
   "\<forall>x. x \<in> set (typ_slice_struct st 0) \<longrightarrow> snd x = True"
   "\<forall>x. x \<in> set (typ_slice_list xs 0) \<longrightarrow> snd x = True"
   "\<forall>x. x \<in> set (typ_slice_pair y 0) \<longrightarrow> snd x = True"
-apply(induct t and st and xs and y)
-    apply auto
-done
+  by (induct t and st and xs and y)  auto
 
 lemma typ_slice_0_True:
   "x \<in> set (typ_slice_t t 0) \<Longrightarrow> snd x = True"
@@ -1037,9 +1032,7 @@ lemma typ_slice_0_True:
 
 lemma typ_slice_False_self:
   "k \<noteq> 0 \<Longrightarrow> (t,False) \<in> set (typ_slice_t t k)"
-apply(case_tac t)
-apply simp
-done
+  by (cases t) simp
 
 lemma tag_prefix_True:
   "typ_slice_t s k \<le> typ_slice_t t 0 \<Longrightarrow> k = 0"
@@ -1167,12 +1160,9 @@ lemma sub_typ_proper_not_same [simp]:
 
 lemma sub_typ_proper_not_simple [simp]:
   "\<not> TYPE('a::c_type) <\<^sub>\<tau> TYPE('b::simple_mem_type)"
-apply(simp add: sub_typ_proper_def)
-apply(case_tac "typ_uinfo_t TYPE('b)")
-apply simp
-apply(case_tac typ_struct)
- apply simp
-apply clarsimp
+apply(cases "typ_uinfo_t TYPE('b)")
+apply(rename_tac typ_struct xs)
+apply(case_tac typ_struct, auto simp: sub_typ_proper_def)
 done
 
 lemma field_of_sub:
@@ -1210,6 +1200,7 @@ apply(drule (1) map_prefix_same_cases[where xs="typ_slice_t (typ_uinfo_t TYPE('a
 apply(erule disjE)
  apply(drule typ_slice_sub)
  apply(case_tac "typ_info_t TYPE('b)")
+ apply(rename_tac typ_struct xs)
  apply(case_tac "typ_struct")
   apply clarsimp
   apply(simp add: typ_tag_le_def)
@@ -1218,6 +1209,7 @@ apply(erule disjE)
  apply simp
 apply(drule typ_slice_sub)
 apply(case_tac "typ_info_t TYPE('a)")
+apply(rename_tac typ_struct xs)
 apply(case_tac "typ_struct")
  apply clarsimp
  apply(simp add: typ_tag_le_def typ_uinfo_t_def)
@@ -1257,20 +1249,15 @@ lemma peer_typ_simple [simp]:
 apply(clarsimp simp: peer_typ_def tag_disj_def typ_tag_le_def typ_uinfo_t_def)
 apply(erule disjE)
  apply(case_tac "typ_info_t TYPE('b)", simp)
+ apply(rename_tac typ_struct xs)
  apply(case_tac typ_struct, simp+)
 apply(case_tac "typ_info_t TYPE('a)", simp)
+apply(rename_tac typ_struct xs)
 apply(case_tac typ_struct, simp+)
 done
 
-lemma peer_typ_nlt:
-  "peer_typ TYPE('a::c_type) TYPE('b::c_type) \<Longrightarrow> \<not> TYPE('a) <\<^sub>\<tau> TYPE('b)"
-apply(clarsimp simp: peer_typ_def sub_typ_proper_def typ_uinfo_t_def)
-apply(erule disjE)
- apply simp
-apply(clarsimp simp: tag_disj_def)
-apply(drule order_less_imp_le)
-apply simp
-done
+(* FIXME: remove *)
+lemmas peer_typ_nlt = peer_typD
 
 lemma peer_typ_not_field_of:
   "\<lbrakk> peer_typ TYPE('a::c_type) TYPE('b::c_type); ptr_val p \<noteq> ptr_val q \<rbrakk> \<Longrightarrow>
@@ -1307,13 +1294,14 @@ lemma heap_list_update_list [rule_format]:
       heap_list (heap_update_list p v h) n (p + of_nat x) = take n (drop x v)"
 apply(induct_tac v)
  apply simp
-apply auto
+apply(rename_tac a list)
+apply clarsimp
 apply(case_tac x)
  apply clarsimp
  apply(case_tac n)
   apply clarsimp
  apply clarsimp
- apply rule
+ apply (rule conjI)
   apply(subgoal_tac "heap_update_list (p + of_nat 1) list (h(p := a)) p = a")
    apply simp
   apply(subst heap_update_list_same)
@@ -1329,7 +1317,7 @@ apply(drule_tac x=nat in spec)
 apply clarsimp
 apply(drule_tac x="p+1" in spec)
 apply(subgoal_tac "p + 1 +of_nat nat = p + (of_nat nat + 1)")
- apply (simp add: add_ac)
+ apply (simp add: ac_simps)
 apply unat_arith
 done
 
@@ -1354,6 +1342,7 @@ apply(induct t and st and ts and x)
   apply simp
  apply(erule notE)
  apply(case_tac dt_pair, clarsimp)
+ apply(rename_tac a)
  apply(subgoal_tac "size_td s + n \<le> size_td a")
   apply simp
  apply(drule_tac  td_set_offset_size_m)
@@ -1361,6 +1350,7 @@ apply(induct t and st and ts and x)
 apply(rotate_tac)
 apply(drule_tac x=s in spec)
 apply(case_tac dt_pair, clarsimp)
+apply(rename_tac a)
 apply(drule_tac x="m + size_td a" in spec)
 apply(drule_tac x="n - size_td a" in spec)
 apply(drule_tac x="k" in spec)
@@ -1415,12 +1405,12 @@ apply(erule impE)
  apply(simp add: size_of_def)
 apply clarsimp
 apply(frule td_set_field_lookupD)
-apply(clarsimp simp: field_lvalue_def add_ac)
+apply(clarsimp simp: field_lvalue_def ac_simps)
 apply(drule td_set_export_uinfoD)
 apply(drule_tac k=y in typ_slice_td_set)
  apply(simp add: size_of_def typ_uinfo_t_def)
 apply(drule field_lookup_export_uinfo_Some)
-apply(simp add: field_offset_def add_ac field_offset_untyped_def typ_uinfo_t_def export_uinfo_def)
+apply(simp add: field_offset_def ac_simps field_offset_untyped_def typ_uinfo_t_def export_uinfo_def)
 apply(erule (1) map_list_map_trans)
 done
 
@@ -1459,12 +1449,12 @@ apply(clarsimp simp: valid_footprint_def Let_def size_of_tag)
 apply(drule_tac x="n+y" in spec, erule impE)
  prefer 2
  apply clarsimp
- apply(simp add: add_ac)
+ apply(simp add: ac_simps)
  apply(drule td_set_field_lookupD)
  apply(drule typ_slice_td_set)
   apply(simp add: size_of_def typ_uinfo_t_def)
  apply(erule map_list_map_trans)
- apply(clarsimp simp: add_ac)
+ apply(clarsimp simp: ac_simps)
 apply(drule td_set_field_lookupD)
 apply(drule td_set_offset_size)
 apply(simp add: size_of_def typ_uinfo_t_def)
@@ -1521,7 +1511,7 @@ apply(induct_tac n)
 apply clarsimp
 apply(case_tac k)
  apply simp
-apply(clarsimp simp: add_ac)
+apply(clarsimp simp: ac_simps)
 done
 
 lemma h_val_field_from_bytes:
@@ -1547,7 +1537,7 @@ lemma h_val_field_from_bytes:
    apply(drule td_set_offset_size)
    apply simp
   apply (fold norm_bytes_def)
-  apply (subgoal_tac "size_td a = size_of TYPE('b)")
+  apply (subgoal_tac "size_td t = size_of TYPE('b)")
    apply (clarsimp simp: norm)
   apply(clarsimp simp: size_of_def)
   apply(subst typ_uinfo_size [symmetric])
@@ -1693,10 +1683,10 @@ done
 lemma size_map_td:
   "size (map_td f t) = size t"
   "size (map_td_struct f st) = size st"
-  "list_size (dt_pair_size size (list_size char_size)) (map_td_list f ts) = list_size (dt_pair_size size (list_size char_size)) ts"
-  "dt_pair_size size (list_size char_size) (map_td_pair f x) = dt_pair_size size (list_size char_size) x"
+  "size_list (size_dt_pair size (size_list size_char)) (map_td_list f ts) = size_list (size_dt_pair size (size_list size_char)) ts"
+  "size_dt_pair size (size_list size_char) (map_td_pair f x) = size_dt_pair size (size_list size_char) x"
 apply(induct t and st and ts and x)
-apply (auto simp: char_size_def)
+apply (auto simp: size_char_def)
 done
 
 (* case where 'b is a field type of 'a *)
@@ -1704,10 +1694,10 @@ done
 lemma field_names_size':
   "field_names t s \<noteq> [] \<longrightarrow> size s \<le> size (t::'a typ_info)"
   "field_names_struct st s \<noteq> [] \<longrightarrow> size s \<le> size (st::'a field_desc typ_struct)"
-  "field_names_list ts s \<noteq> [] \<longrightarrow> size s \<le> list_size (dt_pair_size size (list_size char_size)) (ts::('a typ_info,field_name) dt_pair list)"
-  "field_names_pair x s \<noteq> [] \<longrightarrow> size s \<le> dt_pair_size size (list_size char_size) (x::('a typ_info,field_name) dt_pair)"
+  "field_names_list ts s \<noteq> [] \<longrightarrow> size s \<le> size_list (size_dt_pair size (size_list size_char)) (ts::('a typ_info,field_name) dt_pair list)"
+  "field_names_pair x s \<noteq> [] \<longrightarrow> size s \<le> size_dt_pair size (size_list size_char) (x::('a typ_info,field_name) dt_pair)"
 apply(induct t and st and ts and x)
-     apply(auto simp: size_map_td char_size_def)
+     apply(auto simp: size_map_td size_char_def)
 done
 
 lemma field_names_size:
@@ -1772,7 +1762,7 @@ apply(induct t and st and ts and x)
   apply(drule_tac x=m in spec)
   apply(drule_tac x=f in spec)
   apply clarsimp
- apply(thin_tac "All ?P")
+ apply(thin_tac "All P" for P)
  apply(drule_tac x="m + size_td (dt_fst dt_pair)" in spec)
  apply(drule_tac x=f in spec)
  apply clarsimp
@@ -1782,7 +1772,8 @@ done
 
 lemma dt_snd_field_names_list_simp [simp]:
   "\<forall>f fs s. f \<notin> dt_snd ` set xs \<longrightarrow> \<not> f#fs \<in> set (field_names_list xs s)"
-apply(induct_tac xs, auto)
+apply(induct_tac xs, clarsimp)
+apply(rename_tac a list)
 apply(case_tac a, auto)
 done
 
@@ -1812,7 +1803,7 @@ lemma field_names_SomeD:
   by (simp add: field_names_Some)
 
 lemma lift_t_sub_field_update' [rule_format]:
-  "\<lbrakk> d,g' \<Turnstile>\<^sub>t p; \<not> (TYPE('a) <\<^sub>\<tau> TYPE('b)) (*; guard_mono g' p g*) \<rbrakk> \<Longrightarrow> fs_consistent fs TYPE('a) TYPE('b) \<longrightarrow>
+  "\<lbrakk> d,g' \<Turnstile>\<^sub>t p; \<not> (TYPE('a) <\<^sub>\<tau> TYPE('b)) \<rbrakk> \<Longrightarrow> fs_consistent fs TYPE('a) TYPE('b) \<longrightarrow>
       (\<forall>K. K = UNIV - (((field_offset_footprint p (field_names (typ_info_t TYPE('a)) (typ_uinfo_t TYPE('b))))) - (field_offset_footprint p fs)) \<longrightarrow>
       lift_t g (heap_update p (v::'a::mem_type) h,d) |` K =
            sub_field_update_t fs p v ((lift_t g (h,d))::'b::mem_type typ_heap) |` K)"
@@ -1835,11 +1826,12 @@ apply(induct_tac fs)
  apply clarsimp
  apply(drule field_names_SomeD3)
  apply simp
+apply(rename_tac a list)
 apply clarify
 apply clarsimp
 apply(erule impE)
  apply(clarsimp simp: fs_consistent_def)
-apply rule
+apply (rule conjI)
  prefer 2
  apply clarsimp
  apply(rule ccontr, clarsimp)
@@ -1878,8 +1870,6 @@ apply rule
   apply(subst typ_uinfo_size [symmetric])
   apply(drule_tac m=0 in field_names_SomeD2)
    apply clarsimp+
-  apply(subst field_lookup_offset_eq)
-   apply assumption
   apply(frule_tac m=0 in td_set_field_lookupD)
   apply(clarsimp simp: field_offset_def field_offset_untyped_def typ_uinfo_t_def)
   apply(drule field_lookup_export_uinfo_Some)
@@ -1893,8 +1883,6 @@ apply rule
  apply(frule_tac bs="to_bytes v (heap_list h (size_of TYPE('a)) (ptr_val p))"  in fi_fa_consistentD)
    apply simp
  apply(simp add: size_of_def)
- apply(clarsimp simp: field_offset_def)
- apply(clarsimp simp: field_offset_untyped_def)
  apply(frule field_lookup_export_uinfo_Some)
  apply(simp add: typ_uinfo_t_def)
  apply(subgoal_tac "size_td k = size_td (typ_info_t TYPE('b))")
@@ -1977,9 +1965,7 @@ apply(rule heap_list_update_disjoint_same)
 apply simp
 apply(simp add: field_lvalue_def field_offset_def field_offset_untyped_def)
 apply(simp add: typ_uinfo_t_def field_lookup_export_uinfo_Some)
-apply(frule field_lookup_export_uinfo_Some, simp)
 apply(frule field_lookup_export_uinfo_Some[where s=c])
-apply simp
 apply(case_tac "ptr_val p = ptr_val q")
  apply clarsimp
  apply(subst intvl_disj_offset)
@@ -2035,7 +2021,7 @@ done
 lemma uvt1':
   "update_value_t (f#fs) v (w::'b) x = (if x=field_offset TYPE('b) f then
       update_ti_t (field_typ TYPE('b) f) (to_bytes_p (v::'a::c_type)) (w::'b::c_type) else update_value_t fs v w x)"
-  by (simp add: uvt1)
+  by simp
 
 lemma field_typ_self [simp]:
   "field_typ TYPE('a) [] = typ_info_t TYPE('a::c_type)"
@@ -2140,7 +2126,7 @@ apply(erule disjE)
    apply(rule max_size)
   apply(rule sz_nzero)
  apply(subst len_of_addr_card)
- apply(thin_tac "?P \<in> ?Q")
+ apply(thin_tac "x \<in> S" for x S)
  apply(simp add: field_of_t_def field_of_def)
  apply(drule td_set_offset_size)
  apply(simp add: size_of_def)
@@ -2200,23 +2186,11 @@ apply(subst drop_heap_list_le)
 apply simp
 done
 
-lemma update_field_update' [rule_format]:
-  "n \<in> (\<lambda>f. field_offset TYPE('b) f) ` set fs \<longrightarrow>
+lemma update_field_update':
+  "n \<in> (\<lambda>f. field_offset TYPE('b) f) ` set fs \<Longrightarrow>
       (\<exists>f. update_value_t fs (v::'a::c_type) (v'::'b::c_type) n =
           field_update (field_desc (field_typ TYPE('b) f)) (to_bytes_p v) v' \<and> f \<in> set fs \<and> n = field_offset TYPE('b) f)"
-apply(induct_tac fs)
- apply simp
-apply clarsimp
-apply(rule, clarsimp)
- apply rule
-  apply(rule_tac x=a in exI)
-  apply simp
- apply clarsimp
- apply(rule_tac x=a in exI)
- apply simp
-apply clarsimp
-apply force
-done
+  by (induct fs) auto
 
 lemma update_field_update:
   "field_of_t (p::'a ptr) (x::'b ptr) \<Longrightarrow>
@@ -2289,7 +2263,7 @@ apply(frule_tac bs="access_ti t v bs" in wf_fd_norm_tuD)
    apply assumption
   apply simp+
 apply(clarsimp simp: access_ti\<^sub>0_def)
-apply(thin_tac "norm_tu ?X ?Y = ?Z")+
+apply(thin_tac "norm_tu X Y = Z" for X Y Z)+
 apply(subst (asm) fa_fu_v [where w=v])
    apply fast
   apply(subst length_fa_ti)
@@ -2335,7 +2309,8 @@ apply(rule, clarsimp)
  apply(subst h_val_super_update_bs)
   apply simp
  apply(drule sym)
- apply(drule_tac v=v and v'=a in update_field_update)
+ apply (rename_tac x1 x2)
+ apply(drule_tac v=v and v'=x2 in update_field_update)
  apply clarsimp
  apply(clarsimp simp: h_val_def)
  apply(frule_tac m=0 in field_names_SomeD)
@@ -2347,7 +2322,7 @@ apply(rule, clarsimp)
    apply simp
   apply clarsimp
  apply(simp add: from_bytes_def)
- apply(frule_tac bs="heap_list h (size_of TYPE('b)) (ptr_val x)" and v="to_bytes v (heap_list h (size_of TYPE('a)) (ptr_val p))" and w=undefined in fi_fu_consistentD)
+ apply(frule_tac bs="heap_list h (size_of TYPE('b)) (ptr_val x1)" and v="to_bytes v (heap_list h (size_of TYPE('a)) (ptr_val p))" and w=undefined in fi_fu_consistentD)
     apply simp
    apply(simp add: size_of_def)
   apply(simp add: size_of_def)
@@ -2589,7 +2564,7 @@ next
   case (Cons x xs)
   have "htd_update_list (p + of_nat k) (x # xs) h p =
       htd_update_list (p + of_nat (k + 1)) xs (h(p + of_nat k := (True,snd (h (p + of_nat k)) ++ x))) p"
-    by (simp add: add_ac)
+    by (simp add: ac_simps)
   also have "\<dots> = (h(p + of_nat k := (True,snd (h (p + of_nat k)) ++ x))) p"
   proof -
     from Cons have "k + 1 \<le> addr_card - length xs" by simp
@@ -2986,95 +2961,67 @@ done
 declare field_desc_def [simp add ]
 
 lemma super_field_update_lookup:
-  "\<lbrakk> field_lookup (typ_info_t TYPE('b)) f 0 = Some (s,n);
-      typ_uinfo_t TYPE('a) = export_uinfo s; lift_t g h p = Some v' \<rbrakk> \<Longrightarrow>
-      super_field_update_t (Ptr (&(p\<rightarrow>f))) (v::'a::mem_type) ((lift_t g h)::'b::mem_type typ_heap) =
+  assumes "field_lookup (typ_info_t TYPE('b)) f 0 = Some (s,n)"
+    and "typ_uinfo_t TYPE('a) = export_uinfo s"
+    and "lift_t g h p = Some v' "
+  shows "super_field_update_t (Ptr (&(p\<rightarrow>f))) (v::'a::mem_type) ((lift_t g h)::'b::mem_type typ_heap) =
           (lift_t g h)(p \<mapsto> field_update (field_desc s) (to_bytes_p v) v')"
-apply(clarsimp simp: super_field_update_t_def)
-apply(rule ext)
-apply(auto simp: field_lvalue_def split: option.splits)
-   apply(subst field_lookup_offset_eq)
-    apply fast
-   apply(subst (asm) field_lookup_offset_eq)
-    apply fast
-   apply(frule_tac v=v and v'=v' in update_field_update)
-   apply clarsimp
-   apply(thin_tac "?P = update_ti_t ?x ?y ?z")
-   apply(clarsimp simp: field_of_t_def field_of_def typ_uinfo_t_def)
-   apply(frule_tac m=0 in field_names_SomeD2)
-    apply simp
-   apply clarsimp
-   apply(simp add: field_typ_def field_typ_untyped_def)
-   apply(frule field_lookup_export_uinfo_Some)
-   apply(frule_tac s=k in field_lookup_export_uinfo_Some)
-   apply simp
-   apply(subst (asm) field_lookup_offset_eq)
-    apply fast
-   apply(subst (asm) field_lookup_offset_eq)
-    apply fast
-   apply(subst (asm) unat_of_nat)
-   apply(subst (asm) mod_less)
-    apply(drule td_set_field_lookupD)+
-    apply(drule td_set_offset_size)+
-    apply(subst len_of_addr_card)
-    apply(subst (asm) size_of_def [symmetric, where t="TYPE('b)"])+
-    apply(subgoal_tac "size_of TYPE('b) < addr_card")
+proof -
+  from assms have "size_of TYPE('b) < addr_card" by simp
+  with assms have [simp]: "unat (of_nat n :: 32 word) = n"
+    apply(subst unat_of_nat)
+    apply(subst mod_less)
+     apply(drule td_set_field_lookupD)+
+     apply(drule td_set_offset_size)+
+     apply(subst len_of_addr_card)
+     apply(subst (asm) size_of_def [symmetric, where t="TYPE('b)"])+
      apply arith
     apply simp
-   apply simp
-   apply(drule (1) field_lookup_inject)
-    apply(subst typ_uinfo_t_def [symmetric, where t="TYPE('b)"])
+    done
+  from assms show ?thesis
+    apply(clarsimp simp: super_field_update_t_def)
+    apply(rule ext)
+    apply(auto simp: field_lvalue_def split: option.splits)
+       apply(frule_tac v=v and v'=v' in update_field_update)
+       apply clarsimp
+       apply(thin_tac "P = update_ti_t x y z" for P x y z)
+       apply(clarsimp simp: field_of_t_def field_of_def typ_uinfo_t_def)
+       apply(frule_tac m=0 in field_names_SomeD2)
+        apply simp
+       apply clarsimp
+       apply(simp add: field_typ_def field_typ_untyped_def)
+       apply(frule field_lookup_export_uinfo_Some)
+       apply(frule_tac s=k in field_lookup_export_uinfo_Some)
+       apply simp
+       apply(drule (1) field_lookup_inject)
+        apply(subst typ_uinfo_t_def [symmetric, where t="TYPE('b)"])
+        apply simp
+       apply simp
+      apply(drule field_of_t_mem)+
+      apply(case_tac h)
+      apply(clarsimp simp: lift_t_if split: split_if_asm)
+      apply(drule (1) h_t_valid_neq_disjoint)
+        apply simp
+       apply(clarsimp simp: field_of_t_def field_of_def)
+       apply(drule td_set_size_lte)
+       apply clarsimp
+       apply(subst (asm) unat_eq_zero)
+       apply clarsimp
+      apply fast
+     apply(clarsimp simp: field_of_t_def field_of_def)
+     apply(subst (asm) td_set_field_lookup)
+      apply simp
+     apply simp
+     apply(frule field_lookup_export_uinfo_Some)
+     apply(simp add: typ_uinfo_t_def)
+    apply(clarsimp simp: field_of_t_def field_of_def)
+    apply(subst (asm) td_set_field_lookup)
+     apply simp
     apply simp
-   apply simp
-  apply(drule field_of_t_mem)+
-  apply(case_tac h)
-  apply(clarsimp simp: lift_t_if split: split_if_asm)
-  apply(drule (1) h_t_valid_neq_disjoint)
-    apply simp
-   apply simp
-   apply(clarsimp simp: field_of_t_def field_of_def)
-   apply(drule td_set_size_lte)
-   apply clarsimp
-   apply(subst (asm) unat_eq_zero)
-   apply clarsimp
-  apply fast
- apply(clarsimp simp: field_of_t_def field_of_def)
- apply(subst (asm) field_lookup_offset_eq)
-  apply fast
- apply(subst (asm) td_set_field_lookup)
-  apply simp
- apply simp
- apply(frule field_lookup_export_uinfo_Some)
- apply(simp add: typ_uinfo_t_def)
- apply(subst (asm) unat_of_nat)
- apply(subst (asm) mod_less)
-  apply(subst len_of_addr_card)
-  apply(drule td_set_field_lookupD)+
-  apply(drule td_set_offset_size)+
-  apply(subst (asm) size_of_def [symmetric, where t="TYPE('b)"])
-  apply(subgoal_tac "size_of TYPE('b) < addr_card")
-   apply arith
-  apply simp
- apply simp
-apply(clarsimp simp: field_of_t_def field_of_def)
-apply(subst (asm) field_lookup_offset_eq)
- apply fast
-apply(subst (asm) td_set_field_lookup)
- apply simp
-apply simp
-apply(frule field_lookup_export_uinfo_Some)
-apply(simp add: typ_uinfo_t_def)
-apply(subst (asm) unat_of_nat)
-apply(subst (asm) mod_less)
- apply(subst len_of_addr_card)
- apply(drule td_set_field_lookupD)+
- apply(drule td_set_offset_size)+
- apply(subst (asm) size_of_def [symmetric, where t="TYPE('b)"])
- apply(subgoal_tac "size_of TYPE('b) < addr_card")
-  apply arith
- apply simp
-apply simp
-done
+    apply(frule field_lookup_export_uinfo_Some)
+    apply(simp add: typ_uinfo_t_def)
+    done
+qed
 
 
 (* Should use these in lift/heap_update reductions *)

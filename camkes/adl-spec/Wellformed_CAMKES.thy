@@ -108,7 +108,7 @@ definition
 where
   "wellformed_connector c \<equiv> (case c of
     SyncConnector t \<Rightarrow> (case t of
-      Native n \<Rightarrow> n \<in> {RPCEvent, RPC, DirectCall}
+      Native n \<Rightarrow> n \<in> {RPC}
      |Hardware h \<Rightarrow> h \<in> {HardwareIOPort}
      |Export e \<Rightarrow> e \<in> {ExportRPC})
    |AsyncConnector t \<Rightarrow> (case t of

@@ -14,8 +14,6 @@ imports
   "../refine/Invariants_H"
 begin
 
-declare option.weak_case_cong[cong]
-
 section "ctes"
 
 subsection "capabilities"
@@ -59,7 +57,7 @@ lemma cteMDBNode_C_update_lift [simp]:
 
 lemma ccap_relationE:
   "\<lbrakk>ccap_relation c v; \<And>vl. \<lbrakk> cap_lift v = Some vl; c = cap_to_H vl; c_valid_cap v\<rbrakk> \<Longrightarrow> P \<rbrakk> \<Longrightarrow> P"
-  unfolding ccap_relation_def option_map_def 
+  unfolding ccap_relation_def map_option_case 
   apply clarsimp
   apply (drule sym)
   apply (clarsimp split: option.splits)
@@ -367,8 +365,8 @@ lemma tcb_cte_cases_proj_eq [simp]:
   by (auto split: split_if_asm)
 
 lemma map_to_ctes_upd_cte':
-  "[| ksPSpace s p = Some (KOCTE cte'); is_aligned p 4; ps_clear p 4 s |]
-  ==> map_to_ctes (ksPSpace s(p |-> KOCTE cte)) = (map_to_ctes (ksPSpace s))(p |-> cte)"
+  "\<lbrakk> ksPSpace s p = Some (KOCTE cte'); is_aligned p 4; ps_clear p 4 s \<rbrakk>
+  \<Longrightarrow> map_to_ctes (ksPSpace s(p |-> KOCTE cte)) = (map_to_ctes (ksPSpace s))(p |-> cte)"
   apply (erule (1) map_to_ctes_upd_cte)
   apply (simp add: field_simps ps_clear_def3)
   done
@@ -397,9 +395,16 @@ declare insert_dom [simp]
 
 lemma in_alignCheck':
   "(z \<in> fst (alignCheck x n s)) = (snd z = s \<and> is_aligned x n)"
-  by (cases z, simp add: in_alignCheck)
+  by (cases z, simp)
+
+lemma fst_alignCheck_empty [simp]:
+   "(fst (alignCheck x n s) = {}) = (\<not> is_aligned x n)"
+  apply (subst all_not_in_conv [symmetric])
+  apply (clarsimp simp: in_alignCheck')
+  done
 
 lemma fst_setCTE0:
+  notes option.case_cong_weak [cong]
   assumes ct: "cte_at' dest s"
   shows   "\<exists>(v, s') \<in> fst (setCTE dest cte s).
            (s' = s \<lparr> ksPSpace := ksPSpace s' \<rparr>)
@@ -470,12 +475,7 @@ lemma pspace_alignedD' [intro?]:
   apply simp
   done
 
-lemma pspace_distinctD' [intro?]:
-  "\<lbrakk> ksPSpace s x = Some v; pspace_distinct' s \<rbrakk> \<Longrightarrow> ps_clear x (objBitsKO v) s"
-  apply (simp add: pspace_distinct'_def)
-  apply (drule bspec, erule domI)
-  apply simp
-  done
+declare pspace_distinctD' [intro?]
 
 lemma ctes_of_ksI [intro?]:
   fixes s :: "kernel_state"
@@ -817,7 +817,6 @@ lemma cmap_relation_updI:
   apply fact
   done
 
-(* Annotation added by Simon Winwood (Mon Jul  5 18:28:33 2010) using taint-mode *)
 declare inj_Ptr[simp]
 
 (* Ugh *)  
@@ -861,7 +860,7 @@ lemma cspace_cte_relation_upd_mdbI:
   apply simp
 done
 
-(* FIXME: generic *)
+(* FIXME: move, generic *)
 lemma aligned_neg_mask [simp]:
   "is_aligned x n \<Longrightarrow> x && ~~ mask n = x"
   apply (erule is_aligned_get_word_bits)
@@ -1050,7 +1049,7 @@ proof -
 qed
 
 lemma c_valid_cte_eq:
- "c_valid_cte c = option_case True cl_valid_cte (cte_lift c)" 
+ "c_valid_cte c = case_option True cl_valid_cte (cte_lift c)" 
  apply (clarsimp simp: c_valid_cte_def cl_valid_cte_def c_valid_cap_def  split: option.splits)
  apply (unfold cte_lift_def)
  apply simp
@@ -1121,7 +1120,7 @@ lemma rf_sr_upd:
   unfolding rf_sr_def using assms
   by simp (rule cstate_relation_only_t_hrs, auto)
 
-lemma rf_sr_upd_safe [simp]:
+lemma rf_sr_upd_safe[simp]:
   assumes rl: "(t_hrs_' (globals (g y))) = (t_hrs_' (globals y))"
   and     rq: "(ksReadyQueues_' (globals (g y))) = (ksReadyQueues_' (globals y))"  
   and     sa: "(ksSchedulerAction_' (globals (g y))) = (ksSchedulerAction_' (globals y))"
@@ -1698,7 +1697,6 @@ definition
       capAllowRead_CL = from_bool (wd !! 1),
       capAllowWrite_CL = from_bool (wd !! 0)\<rparr>"
 
-(* FIXME? *)
 definition 
   cap_rights_from_word :: "word32 \<Rightarrow> cap_rights_CL"
   where
@@ -1756,7 +1754,6 @@ lemma frame_cap_is_mapped_alt:
   apply (clarsimp simp add: word_ops_nth_size asid_low_bits_def nth_shiftl nth_shiftr)
   done
 
-(* Levity: moved from Retype_C (20090302 11:35:00) *)
 lemma cmap_relation_updI2:
   fixes am :: "word32 \<rightharpoonup> 'a" and cm :: "'b typ_heap"
   assumes cr: "cmap_relation am cm f rel"
@@ -1807,15 +1804,14 @@ lemma user_word_at_cross_over:
    apply (drule obj_at_ko_at', clarsimp)
    apply (rule conjI, rule exI, erule ko_at_projectKO_opt)
    apply (rule refl)
-  apply (thin_tac "heap_to_page_data ?a ?b ?c = ?d")
+  apply (thin_tac "heap_to_page_data a b c = d" for a b c d)
   apply (cut_tac x=p and w="~~ mask pageBits" in word_plus_and_or_coroll2)
   apply (rule conjI)
    apply (clarsimp simp: user_word_at_def pointerInUserData_def)
    apply (simp add: c_guard_def c_null_guard_def ptr_aligned_def)
    apply (drule lift_t_g)
    apply (clarsimp simp: )
-   apply (simp add: align_of_def user_data_C_size_of user_data_C_align_of
-                    size_of_def user_data_C_typ_name)
+   apply (simp add: align_of_def size_of_def)
    apply (fold is_aligned_def[where n=2, simplified], simp)
    apply (erule contra_subsetD[rotated])
    apply (rule order_trans[rotated])
@@ -1834,10 +1830,10 @@ lemma user_word_at_cross_over:
    apply (insert int_and_leR [where a="uint (p >> 2)" and b=1023], clarsimp)[1]
   apply (simp add: field_lvalue_def
             field_lookup_offset_eq[OF trans, OF _ arg_cong[where f=Some, symmetric], OF _ pair_collapse]
-            word32_shift_by_2 shiftr_shiftl1 is_aligned_neg_mask_eq is_aligned_andI1)
+            word32_shift_by_2 shiftr_shiftl1 is_aligned_andI1)
   apply (drule_tac x="ucast (p >> 2)" in spec)
   apply (simp add: byte_to_word_heap_def Let_def ucast_ucast_mask)
-  apply (fold shiftl_t2n[where n=2, simplified, simplified mult_ac])
+  apply (fold shiftl_t2n[where n=2, simplified, simplified mult.commute mult.left_commute])
   apply (simp add: aligned_shiftr_mask_shiftl pageBits_def)
   apply (rule trans[rotated], rule_tac hp="hrs_mem (t_hrs_' (globals s'))"
                                    and x="Ptr &(Ptr (p && ~~ mask 12) \<rightarrow> [''words_C''])"
@@ -1849,17 +1845,15 @@ lemma user_word_at_cross_over:
     apply simp
    apply (fastforce simp add: typ_info_word)
   apply simp
-  apply (rule_tac f="h_val ?hp" in arg_cong)
+  apply (rule_tac f="h_val hp" for hp in arg_cong)
   apply simp
   apply (simp add: field_lvalue_def)
-  apply (subst field_lookup_offset_eq)
-   apply (fastforce intro: typ_heap_simps)
   apply (simp add: ucast_nat_def ucast_ucast_mask)
-  apply (fold shiftl_t2n[where n=2, simplified, simplified mult_ac])
+  apply (fold shiftl_t2n[where n=2, simplified, simplified mult.commute mult.left_commute])
   apply (simp add: aligned_shiftr_mask_shiftl)
   done
 
-    (* FIXME: move to GenericLib *)
+(* FIXME: move to GenericLib *)
 lemmas unat32_eq_of_nat = unat_eq_of_nat[where 'a=32, folded word_bits_def]
 
 lemma user_memory_cross_over:
@@ -1875,15 +1869,15 @@ lemma user_memory_cross_over:
   apply (simp add: word_rsplit_rcat_size word_size)
   apply (drule_tac f="\<lambda>xs. xs ! unat (ptr && mask 2)" in arg_cong)
   apply (simp add: heap_list_nth unat_mask_2_less_4
-                   word_plus_and_or_coroll2 add_commute
+                   word_plus_and_or_coroll2 add.commute
                    hrs_mem_def)
   apply (cut_tac p=ptr in unat_mask_2_less_4)
   apply (subgoal_tac "(ptr && ~~ mask 2) + (ptr && mask 2) = ptr")
    apply (subgoal_tac "!n x. n < 4 \<longrightarrow> (unat (x\<Colon>word32) = n) = (x = of_nat n)")
-    apply (auto simp add: eval_nat_numeral unat_eq_0 add_commute
+    apply (auto simp add: eval_nat_numeral unat_eq_0 add.commute
                 elim!: less_SucE)[1]
     apply (clarsimp simp add: unat32_eq_of_nat word_bits_def)
-  apply (simp add: add_commute word_plus_and_or_coroll2)
+  apply (simp add: add.commute word_plus_and_or_coroll2)
   done
 
 lemma cap_get_tag_isCap_ArchObject0:
@@ -1973,11 +1967,31 @@ lemma rf_sr_armKSGlobalPD:
          = symbol_table ''armKSGlobalPD''"
   by (clarsimp simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def carch_globals_def)
 
+lemma ghost_assertion_size_logic':
+  "unat (sz :: word32) \<le> gsMaxObjectSize s
+    \<Longrightarrow> cstate_relation s gs
+    \<Longrightarrow> gs_get_assn cap_get_capSizeBits_'proc (ghost'state_' gs) = 0 \<or>
+            sz \<le> gs_get_assn cap_get_capSizeBits_'proc (ghost'state_' gs)"
+  by (clarsimp simp: rf_sr_def cstate_relation_def Let_def ghost_size_rel_def
+                     linorder_not_le word_less_nat_alt)
+
+lemma ghost_assertion_size_logic:
+  "unat (sz :: word32) \<le> gsMaxObjectSize s
+    \<Longrightarrow> (s, \<sigma>) \<in> rf_sr
+    \<Longrightarrow> gs_get_assn cap_get_capSizeBits_'proc (ghost'state_' (globals \<sigma>)) = 0 \<or>
+            sz \<le> gs_get_assn cap_get_capSizeBits_'proc (ghost'state_' (globals \<sigma>))"
+  by (clarsimp simp: rf_sr_def ghost_assertion_size_logic')
+
+lemma gs_set_assn_Delete_cstate_relation:
+  "cstate_relation s (ghost'state_'_update (gs_set_assn cteDeleteOne_'proc v) gs)
+    = cstate_relation s gs"
+  apply (cases "ghost'state_' gs")
+  apply (auto simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def
+                    cmachine_state_relation_def ghost_assertion_data_set_def
+                    ghost_size_rel_def ghost_assertion_data_get_def
+                    cteDeleteOne_'proc_def cap_get_capSizeBits_'proc_def)
+  done
+
 end
 end
 
-(*
- * Local Variables: ***
- * indent-tabs-mode: nil ***
- * End: ***
- *)

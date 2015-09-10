@@ -12,15 +12,16 @@
    Miscellaneous library definitions and lemmas.
 *)
 
-header "Library"
+chapter "Library"
 
 theory Lib
 imports "~~/src/HOL/Main"
 begin
 
+(* FIXME: eliminate *)
 lemma hd_map_simp:
   "b \<noteq> [] \<Longrightarrow> hd (map a b) = a (hd b)"
-  by (induct b,auto)
+  by (rule hd_map)
 
 lemma tl_map_simp:
   "tl (map a b) = map a (tl b)"
@@ -93,11 +94,11 @@ where
 definition
  "swp f \<equiv> \<lambda>x y. f y x"
 
-primrec
+primrec (nonexhaustive)
   theRight :: "'a + 'b \<Rightarrow> 'b" where
   "theRight (Inr x) = x"
 
-primrec
+primrec (nonexhaustive)
   theLeft :: "'a + 'b \<Rightarrow> 'a" where
   "theLeft (Inl x) = x"
 
@@ -150,9 +151,9 @@ lemma wf_sum_wf:
   done
 
 abbreviation(input)
- "option_map == Option.map"
+ "option_map == map_option"
 
-lemmas option_map_def = Option.map_def
+lemmas option_map_def = map_option_case
 
 lemma False_implies_equals [simp]:
   "((False \<Longrightarrow> P) \<Longrightarrow> PROP Q) \<equiv> PROP Q"

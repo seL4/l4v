@@ -48,66 +48,6 @@ definition
           (addr_fun ` (dom as) = dom cs) \<and>
           (\<forall>x \<in> dom as. rel (the (as x)) (the (cs (addr_fun x))))"
 
-(*
- C globals.  Those marked with a ! are in the heap
-  
-  - handled in the error return  
-  current_syscall_error :: syscall_error_C
-  current_lookup_fault :: lookup_fault_C
-  current_fault :: fault_C
-  
-  - handled in the state relation
-  ksSchedulerAction :: tcb_C ptr
-  intStateIRQNode :: cte_C ptr
-  ksCurThread :: tcb_C ptr
-  ksIdleThread :: tcb_C ptr
-  ksReadyQueues :: tcb_queue_C[256] 
-  ksWorkUnitsCompleted :: word32
-  intStateIRQTable :: word32[64]
- 
-  - kernel init (not looked at yet)
-  initFreeL2Slots :: slot_list_C ptr
-  initFreeL1Slots :: word32[8]
-  initFreeMemory :: free_list_C ptr
-  initBootMemory :: free_list_C ptr
-  initRegions :: boot_region_C[255]
-  initHeapPtr :: unit ptr
-  initL1Node :: cte_C ptr
-  initHeap :: word8[ty8192] 
-  armKSGlobalPTsOffset :: word32 ??
-  kernel_device_array :: kernel_device_C[3]
-  memory_regions :: region_list_C
-  kernel_devices :: kernel_devices_C
-  device_regions :: device_list_C
-  n_initRegions :: word32
-  main_memory :: region_C
-  devices :: device_C[42]
-  epit1 :: epit_map_C ptr
-  avic :: avic_map_C ptr
-  
-  - Unhandled
-  -- Generic
-  + Danger Will Robinson!  This looks nasty.
-  current_message :: inline_message_C
-  
-  -- Arch
-  armKSGlobalsFrame :: word32[1024]
-  armKSGlobalPD :: pde_C[4096]
-  armKSGlobalPTs :: pte_C[1024]
-  
-  -- Unknown
-  
-  + Seems to be a typo
-  platform_interrupt_t :: word32 
-
-  + These seem to be read-only
-  exceptionMessage :: word32[3]
-  syscallMessage :: word32[12]
-  frameRegisters :: word32[11]
-  msgRegisters :: word32[6]
-  gpRegisters :: word32[6] 
-*)  
-
 
 definition
   asid_map_pd_to_hwasids :: "(asid \<rightharpoonup> hw_asid \<times> obj_ref) \<Rightarrow> (obj_ref \<Rightarrow> hw_asid set)"
@@ -166,7 +106,7 @@ where
   array_relation (op = \<circ> option_to_0) 0xFF (armKSHWASIDTable astate) (armKSHWASIDTable_' cstate) \<and>
   array_relation (op = \<circ> option_to_ptr) (2^asid_high_bits - 1) (armKSASIDTable astate) (armKSASIDTable_' cstate) \<and>
   (asid_map_pd_to_hwasids (armKSASIDMap astate))
-       = Option.set \<circ> (pde_stored_asid  \<circ>\<^sub>m clift (t_hrs_' cstate) \<circ>\<^sub>m pd_pointer_to_asid_slot) \<and>
+       = set_option \<circ> (pde_stored_asid  \<circ>\<^sub>m clift (t_hrs_' cstate) \<circ>\<^sub>m pd_pointer_to_asid_slot) \<and>
   carch_globals astate"
 
 end
@@ -180,7 +120,7 @@ where
   exclusive_state s = exclusive_state (phantom_machine_state_' s') \<and>
   machine_state_rest s = machine_state_rest (phantom_machine_state_' s')"
 
-(* FIXME: ptr_range uses the wrong set construct for h_t_valid stuff *)
+(* ptr_range uses the wrong set construct for h_t_valid stuff *)
 definition
   ptr_span :: "'a::mem_type ptr \<Rightarrow> word32 set" where
   "ptr_span p \<equiv> {ptr_val p ..+ size_of TYPE('a)}"
@@ -318,7 +258,6 @@ lemma is_cap_fault_simp: "is_cap_fault cf = (\<exists> x. cf=Fault_cap_fault x)"
   by (simp add: is_cap_fault_def split:fault_CL.splits)
 
 
-(* FIXME: make a _to_H file? *)
 definition
   message_info_to_H :: "message_info_C \<Rightarrow> Types_H.message_info"
   where
@@ -445,7 +384,7 @@ where
      \<lparr> pde_pde_coarse_CL.address_CL = frame, 
        P_CL = of_bool parity, 
        Domain_CL = domain \<rparr>)
-  | SectionPDE frame parity domain cacheable global rights \<Rightarrow> 
+  | SectionPDE frame parity domain cacheable global xn rights \<Rightarrow> 
     cpde' = Some (Pde_pde_section
      \<lparr> pde_pde_section_CL.address_CL = frame, 
        size_CL = 0, 
@@ -456,11 +395,11 @@ where
        AP_CL = ap_from_vm_rights rights, 
        P_CL = of_bool parity,
        Domain_CL = domain,
-       XN_CL = 0,
+       XN_CL = of_bool xn,
        C_CL = 0,
        B_CL = b_from_cacheable cacheable
   \<rparr>)
-  | SuperSectionPDE frame parity cacheable global rights \<Rightarrow> 
+  | SuperSectionPDE frame parity cacheable global xn rights \<Rightarrow> 
     cpde' = Some (Pde_pde_section
      \<lparr> pde_pde_section_CL.address_CL = frame, 
        size_CL = 1, 
@@ -471,7 +410,7 @@ where
        AP_CL = ap_from_vm_rights rights, 
        P_CL = of_bool parity,
        Domain_CL = 0,
-       XN_CL = 0,
+       XN_CL = of_bool xn,
        C_CL = 0,
        B_CL = b_from_cacheable cacheable
   \<rparr>))"
@@ -483,20 +422,32 @@ where
   (let cpte' = pte_lift cpte in
   case pte of
     InvalidPTE \<Rightarrow> 
-    cpte' = Some (Pte_pte_invalid)
-  | LargePagePTE frame cacheable global rights \<Rightarrow> 
+    cpte' = Some (Pte_pte_large
+     \<lparr> pte_pte_large_CL.address_CL = 0,
+       XN_CL = 0, 
+       TEX_CL = 0,
+       nG_CL = 0,
+       S_CL = 0,
+       APX_CL = 0,
+       AP_CL = 0,
+       C_CL = 0,
+       B_CL = 0,
+       reserved_CL = 0
+     \<rparr>)
+  | LargePagePTE frame cacheable global xn rights \<Rightarrow> 
     cpte' = Some (Pte_pte_large
      \<lparr> pte_pte_large_CL.address_CL = frame,
-       XN_CL = 0, 
+       XN_CL = of_bool xn, 
        TEX_CL = tex_from_cacheable cacheable,
        nG_CL = of_bool (~global),
        S_CL = s_from_cacheable cacheable,
        APX_CL = 0,
        AP_CL = ap_from_vm_rights rights,
        C_CL = 0,
-       B_CL = b_from_cacheable cacheable
+       B_CL = b_from_cacheable cacheable,
+       reserved_CL = 1
      \<rparr>)
-  | SmallPagePTE frame cacheable global rights \<Rightarrow> 
+  | SmallPagePTE frame cacheable global xn rights \<Rightarrow> 
     cpte' = Some (Pte_pte_small
      \<lparr> address_CL = frame,
        nG_CL = of_bool (~global),
@@ -505,9 +456,25 @@ where
        TEX_CL = tex_from_cacheable cacheable,
        AP_CL = ap_from_vm_rights rights,
        C_CL = 0,
-       B_CL = b_from_cacheable cacheable
+       B_CL = b_from_cacheable cacheable,
+       XN_CL = of_bool xn
      \<rparr>))"
 
+(* Invalid PTEs map to large PTEs with reserved bit 0 *)
+lemma pte_0:
+  "index (pte_C.words_C cpte) 0 = 0 \<Longrightarrow> pte_lift cpte = Some (Pte_pte_large
+     \<lparr> pte_pte_large_CL.address_CL = 0,
+       XN_CL = 0, 
+       TEX_CL = 0,
+       nG_CL = 0,
+       S_CL = 0,
+       APX_CL = 0,
+       AP_CL = 0,
+       C_CL = 0,
+       B_CL = 0,
+       reserved_CL = 0
+     \<rparr>)"
+  by (simp add: pte_lift_def pte_get_tag_def pte_pte_large_def)
 
 definition
   casid_pool_relation :: "asidpool \<Rightarrow> asid_pool_C \<Rightarrow> bool"
@@ -619,6 +586,13 @@ where
      length adomSched = card (UNIV :: 'b set) \<and>
      (\<forall>n \<le> length adomSched. dom_schedule_entry_relation (adomSched ! n) (index cdomSched n))"
 
+definition
+  ghost_size_rel :: "cghost_state \<Rightarrow> nat \<Rightarrow> bool"
+where
+  "ghost_size_rel gs maxSize = ((gs_get_assn cap_get_capSizeBits_'proc gs = 0
+            \<and> maxSize = card (UNIV :: word32 set))
+    \<or> (maxSize > 0 \<and> maxSize = unat (gs_get_assn cap_get_capSizeBits_'proc gs)))"
+
 definition (in state_rel)
   cstate_relation :: "KernelStateData_H.kernel_state \<Rightarrow> globals \<Rightarrow> bool"
 where
@@ -636,7 +610,8 @@ where
                                  (ksSchedulerAction_' cstate) \<and>
        carch_state_relation (ksArchState astate) cstate \<and>
        cmachine_state_relation (ksMachineState astate) cstate \<and>
-       ghost'state_' cstate = (gsUserPages astate, gsCNodes astate) \<and>
+       apsnd fst (ghost'state_' cstate) = (gsUserPages astate, gsCNodes astate) \<and>
+       ghost_size_rel (ghost'state_' cstate) (gsMaxObjectSize astate) \<and>
        ksWorkUnitsCompleted_' cstate = ksWorkUnitsCompleted astate \<and>
        h_t_valid (hrs_htd (t_hrs_' cstate)) c_guard
          (pd_Ptr (symbol_table ''armKSGlobalPD'')) \<and>
@@ -758,7 +733,6 @@ definition
 definition
   "ccap_rights_relation cr cr' \<equiv> cr = cap_rights_to_H (cap_rights_lift cr')"
 
-(* Levity: moved from Ipc_C (20090302 10:55:29) *)
 lemma (in kernel) syscall_error_to_H_cases_rev:
   "\<And>n. syscall_error_to_H e lf = Some (InvalidArgument n) \<Longrightarrow>
         type_C e = scast seL4_InvalidArgument"
@@ -793,7 +767,6 @@ where
   | SysReplyWait \<Rightarrow> scast Kernel_C.SysReplyWait
   | SysYield \<Rightarrow> scast Kernel_C.SysYield"
 
-(* Levity: moved from Refine_C (20090417 11:00:20) *)
 lemma (in kernel) cmap_relation_cs_atD:
   "\<lbrakk> cmap_relation as cs addr_fun rel; cs (addr_fun x) = Some y; inj addr_fun \<rbrakk> \<Longrightarrow>
   \<exists>ko. as x = Some ko \<and> rel ko y"

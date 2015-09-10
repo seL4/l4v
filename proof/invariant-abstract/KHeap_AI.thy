@@ -134,9 +134,11 @@ lemma valid_arch_obj_same_type:
      apply (erule (2) typ_at_same_type)
     apply clarsimp
     apply (erule_tac x=x in allE)
+    apply (rename_tac "fun" x)
     apply (case_tac "fun x", (clarsimp simp: obj_at_def a_type_def)+)[1]
    apply clarsimp
    apply (erule_tac x=x in ballE)
+    apply (rename_tac "fun" x)
     apply (case_tac "fun x", (clarsimp simp:obj_at_def a_type_def)+)[1]
    apply simp
   apply clarsimp
@@ -235,23 +237,9 @@ lemma set_cdt_inv:
   done
 
 
-lemma cte_wp_at_cdt [simp]:
-  "cte_wp_at P p (cdt_update f s) = cte_wp_at P p s"
-  by (clarsimp simp add: cte_wp_at_cases)
-
-
-lemma obj_at_cdt [simp]:
-  "obj_at P p (cdt_update f s) = obj_at P p s"
-  by (clarsimp simp add: obj_at_def)
-
-
-lemma valid_cap_cdt [simp]:
-  "cdt_update f s \<turnstile> cap = s \<turnstile> cap"
-  apply (cases cap)
-  apply (simp_all add: valid_cap_def valid_untyped_def split_def
-                 cong: arch_cap.case_cong
-                split: option.split sum.split)
-  done
+lemmas cte_wp_at_cdt = cdt_update.cte_wp_at_update
+lemmas obj_at_cdt = cdt_update.obj_at_update
+lemmas valid_cap_cdt = cdt_update.valid_cap_update
 
 
 lemma set_object_at_obj3: 
@@ -510,9 +498,7 @@ lemma set_ep_refs_of[wp]:
   apply (simp add: set_endpoint_def set_object_def)
   apply (rule hoare_seq_ext [OF _ get_object_sp])
   apply wp
-  apply (clarsimp simp: state_refs_of_def
-                 elim!: rsubst[where P=P]
-                intro!: ext)
+  apply (fastforce simp: state_refs_of_def elim!: rsubst[where P=P])
   done
 
 
@@ -881,7 +867,6 @@ lemma mask_in_range:
      apply (simp add: word_bits_conv word_size)
     apply (rule minus_one_helper5)
      apply simp
-    apply (erule_tac P="\<lambda>y. x \<le> y" in rsubst)
     apply simp
    apply (simp add: is_aligned_mask)
    apply (rule word_eqI)
@@ -1502,67 +1487,6 @@ lemma set_cap_vs_lookup_pages [wp]:
   done
 
 
-lemma set_object_executable_arch_objs:
-  "\<lbrace>executable_arch_objs and typ_at (a_type ko) p and
-    (\<lambda>s. case ko of ArchObj ao \<Rightarrow> executable_arch_obj ao
-            | _ \<Rightarrow> True)\<rbrace>
-  set_object p ko 
-  \<lbrace>\<lambda>_. executable_arch_objs\<rbrace>"
-  apply (simp add: executable_arch_objs_def)
-  apply (subst imp_conv_disj)+
-  apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift set_object_neg_lookup set_object_neg_ko)
-  apply (clarsimp simp: pred_neg_def obj_at_def)
-  apply fastforce
-  done
-
-
-lemma set_ep_executable_arch_objs [wp]:
-  "\<lbrace>executable_arch_objs\<rbrace> set_endpoint p ep \<lbrace>\<lambda>_. executable_arch_objs\<rbrace>"
-  unfolding set_endpoint_def
-  apply (wp set_object_executable_arch_objs get_object_wp)
-  apply (clarsimp simp: vs_refs_def obj_at_def a_type_def 
-                  split: Structures_A.kernel_object.splits)
-  done
-
-
-lemma set_aep_executable_arch_objs [wp]:
-  "\<lbrace>executable_arch_objs\<rbrace> set_async_ep p aep \<lbrace>\<lambda>_. executable_arch_objs\<rbrace>"
-  unfolding set_async_ep_def
-  apply (wp set_object_executable_arch_objs get_object_wp)
-  apply (clarsimp simp: vs_refs_def obj_at_def a_type_def 
-                  split: Structures_A.kernel_object.splits)
-  done
-  
-
-lemma sts_executable_arch_objs [wp]:
-  "\<lbrace>executable_arch_objs\<rbrace> set_thread_state p st \<lbrace>\<lambda>_. executable_arch_objs\<rbrace>"
-  unfolding set_thread_state_def
-  apply (wp, simp, wp set_object_executable_arch_objs)
-  apply (fastforce simp: vs_refs_def obj_at_def a_type_def get_tcb_def
-                  split: Structures_A.kernel_object.splits option.splits)
-  done
-
-
-lemma thread_set_executable_arch_objs [wp]:
-  "\<lbrace>executable_arch_objs\<rbrace> thread_set f p \<lbrace>\<lambda>_. executable_arch_objs\<rbrace>"
-  unfolding thread_set_def
-  apply (wp set_object_executable_arch_objs)
-  apply (fastforce simp: vs_refs_def obj_at_def a_type_def get_tcb_def
-                  split: Structures_A.kernel_object.splits option.splits)
-  done
-
-
-lemma set_cap_executable_arch_objs [wp]:
-  "\<lbrace>executable_arch_objs\<rbrace> set_cap cap p \<lbrace>\<lambda>_. executable_arch_objs\<rbrace>"
-  unfolding set_cap_def split_def
-  apply (rule hoare_pre)
-   apply (wp set_object_executable_arch_objs get_object_wp
-            | wpc)+
-  apply (clarsimp simp: vs_refs_def obj_at_def simp del: fun_upd_apply)
-  apply (simp add: a_type_def wf_cs_upd)
-  done
-
-
 lemma valid_irq_handlers_lift:
   assumes x: "\<And>P. \<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> f \<lbrace>\<lambda>rv s. P (caps_of_state s)\<rbrace>"
   assumes y: "\<And>P. \<lbrace>\<lambda>s. P (interrupt_states s)\<rbrace> f \<lbrace>\<lambda>rv s. P (interrupt_states s)\<rbrace>"
@@ -1705,7 +1629,7 @@ lemma set_object_valid_kernel_mappings:
   apply wp
   apply (clarsimp simp: valid_kernel_mappings_def
                  elim!: ranE split: split_if_asm)
-  apply (fastforce intro: ranI)
+  apply fastforce
   done
 
 
@@ -1765,7 +1689,6 @@ lemma set_object_equal_mappings:
   apply (clarsimp simp: equal_kernel_mappings_def obj_at_def
              split del: split_if)
   apply (simp split: split_if_asm)
-  apply blast
   done
 
 
@@ -2173,14 +2096,6 @@ lemma do_machine_op_arch_objs [wp]:
   done
 
 
-lemma do_machine_op_executable_arch_objs [wp]:
-  "\<lbrace>executable_arch_objs\<rbrace> do_machine_op f \<lbrace>\<lambda>_. executable_arch_objs\<rbrace>"
-  apply (simp add: do_machine_op_def split_def)
-  apply wp
-  apply simp
-  done
-
-
 lemma empty_table_lift:
   assumes S: "\<And>P. \<lbrace>\<lambda>s. P (S s)\<rbrace> f \<lbrace>\<lambda>_ s. P (S s)\<rbrace>"
   assumes o: "\<And>P. \<lbrace>obj_at P p and Q\<rbrace> f \<lbrace>\<lambda>_. obj_at P p\<rbrace>"
@@ -2215,17 +2130,8 @@ lemma as_user_arch_obj:
   done
 
 
-lemma as_user_executable_arch_obj:
-  "\<lbrace>executable_arch_objs\<rbrace> as_user f t \<lbrace>\<lambda>_. executable_arch_objs\<rbrace>"
-  apply (simp add: as_user_def)
-  apply (wp set_object_executable_arch_objs hoare_drop_imps|simp add: split_def)+
-  apply (clarsimp cong: if_cong)
-  done
-
-
 lemma tcb_cap_valid_caps_of_stateD:
-  "\<And>P. \<lbrakk> caps_of_state s p = Some cap; valid_objs s \<rbrakk> \<Longrightarrow>
-   tcb_cap_valid cap p s"
+  "\<lbrakk> caps_of_state s p = Some cap; valid_objs s \<rbrakk> \<Longrightarrow> tcb_cap_valid cap p s"
   apply (rule cte_wp_tcb_cap_valid)
    apply (simp add: cte_wp_at_caps_of_state)
   apply assumption
@@ -2251,6 +2157,7 @@ lemma store_pde_pred_tcb_at:
                    get_pd_def bind_assoc)
   apply (rule hoare_seq_ext [OF _ get_object_sp])
   apply (case_tac x, simp_all)
+  apply (rename_tac arch_kernel_obj)
   apply (case_tac arch_kernel_obj, simp_all)
   apply (rule hoare_seq_ext [OF _ get_object_sp])
   apply wp
