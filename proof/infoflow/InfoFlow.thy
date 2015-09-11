@@ -70,9 +70,13 @@ where
      does a receive (for which a sender is already blocked) or reset on the ep.
      The affects on the ep here will depend on the state of any blocked
      senders. So if the ep is in l's domain, the senders better be too. *)
-  read_sync_ep_read_senders:
-  "\<lbrakk>(a,auth,ep) \<in> g; auth \<in> {Reset,Receive};
-    ep \<in> subjectReads g l; (b,SyncSend,ep) \<in> g\<rbrakk> \<Longrightarrow>
+   (* Dan: I removed the requirement that someone have Reset/Receive rights
+      to the ep because a wellformed (reflexive) policy will have the ep
+      confer this to itself, and therefore be redundant.
+      reads_sync_ep_reads_senders is the original rule that
+      (redundantly) assumes this. *)
+  read_sync_ep_read_senders_strong:
+  "\<lbrakk>ep \<in> subjectReads g l; (b,SyncSend,ep) \<in> g\<rbrakk> \<Longrightarrow>
    b \<in> subjectReads g l" |
   (* This rule allows anyone who can read a synchronous endpoint, to also be
      able to read from its receivers. The intuition is that the state of the
@@ -91,11 +95,28 @@ where
      cannot imagine a useful intransitive noninterference policy that permits
      the latter case but not the former, so the extra cost of doing away with
      this rule does not seem worth it IMO. *)
-  read_sync_ep_read_receivers:
+  (* Dan: I removed the requirement that someone have SyncSend rights
+     to the ep because a wellformed (reflexive) policy will have the ep
+     confer this to itself, and therefore be redundant.
+     read_sync_ep_read_receivers is the original rule that
+     (redundantly) assumes this. *)
+  read_sync_ep_read_receivers_strong:
+  "\<lbrakk>ep \<in> subjectReads g l; (b,Receive,ep) \<in> g\<rbrakk> \<Longrightarrow>
+   b \<in> subjectReads g l"
+
+
+lemma read_sync_ep_read_senders:
+  "\<lbrakk>(a,auth,ep) \<in> g; auth \<in> {Reset,Receive};
+    ep \<in> subjectReads g l; (b,SyncSend,ep) \<in> g\<rbrakk> \<Longrightarrow>
+   b \<in> subjectReads g l"
+   by (rule read_sync_ep_read_senders_strong)
+
+lemma read_sync_ep_read_receivers:
   "\<lbrakk>(a,auth,ep) \<in> g; auth \<in> {SyncSend};
     ep \<in> subjectReads g l; (b,Receive,ep) \<in> g\<rbrakk> \<Longrightarrow>
    b \<in> subjectReads g l"
-
+   by (rule read_sync_ep_read_receivers_strong)
+  
 
 abbreviation aag_can_read :: "'a PAS \<Rightarrow> word32 \<Rightarrow> bool"
 where
