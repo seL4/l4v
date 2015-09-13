@@ -1776,6 +1776,17 @@ lemma do_ipc_transfer_reads_respects:
 crunch pas_cur_domain[wp]: set_extra_badge, do_ipc_transfer "pas_cur_domain aag"
   (wp: crunch_wps transfer_caps_loop_pres ignore: const_on_failure simp: crunch_simps)
 
+lemma complete_async_ipc_reads_respects:
+  "reads_respects aag l ( K(aag_can_affect aag l aepptr))
+     (complete_async_ipc aepptr receiver)"
+  unfolding complete_async_ipc_def
+  apply (wp set_async_ep_reads_respects
+            get_async_ep_reads_respects
+            as_user_set_register_reads_respects'
+        | wpc
+        | simp)+
+  done
+
 lemma receive_ipc_reads_respects:
   "reads_respects aag l (valid_objs and pspace_distinct and valid_global_refs and valid_arch_state and sym_refs \<circ> state_refs_of and pas_refined aag and pas_cur_domain aag and valid_cap cap and (\<lambda>s. is_subject aag (cur_thread s)) and K (is_subject aag receiver \<and> (\<forall>epptr\<in>Access.obj_refs cap.
           (pasSubject aag, Receive, pasObjectAbs aag epptr) \<in> pasPolicy aag))) (receive_ipc receiver cap)"
