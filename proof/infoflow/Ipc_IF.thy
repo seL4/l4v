@@ -1777,7 +1777,7 @@ crunch pas_cur_domain[wp]: set_extra_badge, do_ipc_transfer "pas_cur_domain aag"
   (wp: crunch_wps transfer_caps_loop_pres ignore: const_on_failure simp: crunch_simps)
 
 lemma complete_async_ipc_reads_respects:
-  "reads_respects aag l ( K(aag_can_affect aag l aepptr))
+  "reads_respects aag l ( K(aag_can_read aag aepptr \<or> aag_can_affect aag l aepptr))
      (complete_async_ipc aepptr receiver)"
   unfolding complete_async_ipc_def
   apply (wp set_async_ep_reads_respects
@@ -1787,56 +1787,62 @@ lemma complete_async_ipc_reads_respects:
         | simp)+
   done
 
-lemma receive_ipc_reads_respects:
-  "reads_respects aag l (valid_objs and pspace_distinct and valid_global_refs and valid_arch_state and sym_refs \<circ> state_refs_of and pas_refined aag and pas_cur_domain aag and valid_cap cap and (\<lambda>s. is_subject aag (cur_thread s)) and K (is_subject aag receiver \<and> (\<forall>epptr\<in>Access.obj_refs cap.
-          (pasSubject aag, Receive, pasObjectAbs aag epptr) \<in> pasPolicy aag))) (receive_ipc receiver cap)"
+lemma receive_ipc_base_reads_respects:
+  "reads_respects aag l
+     (valid_objs
+      and valid_global_refs
+      and pspace_distinct
+      and pas_refined aag
+      and pas_cur_domain aag
+      and valid_arch_state
+      and ko_at (Endpoint ep) epptr
+      and (\<lambda>s. is_subject aag (cur_thread s) \<and> sym_refs (state_refs_of s))
+      and K (is_subject aag thread
+             \<and> (pasSubject aag, Receive, pasObjectAbs aag epptr) \<in> pasPolicy aag))
+     (receive_ipc_base aag thread ep epptr rights)"
   apply (rule gen_asm_ev)
-  apply (simp add: receive_ipc_def thread_get_def split: cap.split)
-  apply (clarsimp simp: fail_ev_pre)
-  apply (rename_tac word1 word2 set)
+  apply (simp add: thread_get_def split: endpoint.split)
+  apply (intro conjI impI)
+    prefer 2 defer
+    apply ((wp set_thread_state_reads_respects set_endpoint_reads_respects | simp | intro allI impI)+)[2]
+  apply (intro allI impI)
   apply (wp static_imp_wp set_endpoint_reads_respects set_thread_state_reads_respects
-            setup_caller_cap_reads_respects do_ipc_transfer_reads_respects
-            switch_if_required_to_reads_respects
-            gets_cur_thread_ev set_thread_state_pas_refined
-        | wpc
-        | simp)+
-  sorry (*
-              apply (rule_tac Q="\<lambda>rv s. pas_refined aag s \<and> pas_cur_domain aag s \<and> is_subject aag (cur_thread s) \<and> (sender_can_grant rvd \<longrightarrow> is_subject aag (hd list))" in hoare_strengthen_post)
-=======
-              apply (rename_tac list rvc rvd)
-              apply (rule_tac Q="\<lambda>rv s. pas_refined aag s \<and> pas_cur_domain aag s \<and> is_subject aag (cur_thread s) \<and> 
-                                        (sender_can_grant rvd \<longrightarrow> is_subject aag (hd list))"
-                              in hoare_strengthen_post)
->>>>>>> master
-               apply(wp set_endpoint_reads_respects
-                        hoare_vcg_imp_lift [OF set_endpoint_get_tcb, unfolded disj_not1] hoare_vcg_all_lift
-                        set_thread_state_reads_respects get_endpoint_reads_respects
-                        get_endpoint_wp do_ipc_transfer_pas_refined
-                    | wpc | simp add: get_thread_state_def thread_get_def)+
+           setup_caller_cap_reads_respects do_ipc_transfer_reads_respects
+           switch_if_required_to_reads_respects
+           gets_cur_thread_ev set_thread_state_pas_refined
+           | wpc
+           | simp)+
+           apply (rename_tac list rvc rvd)
+           apply (rule_tac Q="\<lambda>rv s. pas_refined aag s \<and> pas_cur_domain aag s \<and> is_subject aag (cur_thread s) \<and>
+                              (sender_can_grant rvd \<longrightarrow> is_subject aag (hd list))"
+                  in hoare_strengthen_post)
+            apply(wp set_endpoint_reads_respects
+                     hoare_vcg_imp_lift [OF set_endpoint_get_tcb, unfolded disj_not1]
+                     hoare_vcg_all_lift
+                     set_thread_state_reads_respects get_endpoint_reads_respects
+                     get_endpoint_wp do_ipc_transfer_pas_refined
+                 | wpc | simp add: get_thread_state_def thread_get_def)+
   apply (clarsimp simp: conj_comms)
-  apply(rule conjI)
-   apply(auto dest: reads_ep)[1]
-  apply clarsimp
-  apply(subgoal_tac "\<forall> s t. reads_equiv aag s t \<and> affects_equiv aag l s t \<longrightarrow>
-                      get_tcb (hd x) s = get_tcb (hd x) t")
+  apply (rename_tac x s)
+  apply (rule context_conjI[rotated])
    apply clarsimp
-   apply(rule conjI, rule impI)  
+   apply(rule conjI, rule impI)
     (* clagged from Ipc_AC *)
     apply (subgoal_tac "aag_has_auth_to aag Control (hd x)")
      apply (fastforce simp add: pas_refined_refl dest!: aag_Control_into_owns)
-    apply (rule_tac ep = "pasObjectAbs aag word1" in aag_wellformed_grant_Control_to_send [OF _ _ pas_refined_wellformed])
+    apply (rule_tac ep = "pasObjectAbs aag epptr" in aag_wellformed_grant_Control_to_send [OF _ _ pas_refined_wellformed])
       apply (rule_tac s = s in pas_refined_mem [OF sta_ts])
-       apply (clarsimp simp: tcb_at_def thread_states_def tcb_states_of_state_def dest!: st_tcb_at_tcb_at)
+       apply (clarsimp simp: tcb_at_def thread_states_def tcb_states_of_state_def dest!: pred_tcb_at_tcb_at)
        apply (frule (1) sym_refs_obj_atD)
        apply clarsimp
        apply (drule (1) bspec [OF _ hd_in_set])
-       apply (clarsimp simp: obj_at_def dest!: get_tcb_SomeD)
-      apply assumption+ 
+       apply (clarsimp simp: obj_at_def tcb_bound_refs_def dest!: get_tcb_SomeD split: option.splits)
+      apply assumption+
    apply(rule conjI)
     (* clagged from Ipc_AC *)
     apply (auto elim!: ep_queued_st_tcb_at
-                simp: tcb_at_st_tcb_at valid_ep_def valid_obj_def neq_Nil_conv
-               split: list.split)[1]
+     simp: tcb_at_st_tcb_at valid_ep_def valid_obj_def neq_Nil_conv
+     split: list.split)[1]
      apply (simp add: obj_at_def)
      apply (erule (1) valid_objsE)
      apply (fastforce simp: valid_obj_def valid_ep_def dest: distinct_drop[where i=1])
@@ -1861,8 +1867,47 @@ lemma receive_ipc_reads_respects:
    apply simp
   apply simp
   done
- *)
 
+lemma receive_ipc_reads_respects:
+  "reads_respects aag l (valid_objs and pspace_distinct and valid_global_refs and valid_arch_state and sym_refs \<circ> state_refs_of and pas_refined aag and pas_cur_domain aag and valid_cap cap and (\<lambda>s. is_subject aag (cur_thread s)) and K (is_subject aag receiver \<and> (\<forall>epptr\<in>Access.obj_refs cap.
+          (pasSubject aag, Receive, pasObjectAbs aag epptr) \<in> pasPolicy aag))) (receive_ipc receiver cap)"
+  apply (rule gen_asm_ev)
+  apply (simp add: receive_ipc_def thread_get_def split: cap.split)
+  apply (clarsimp simp: fail_ev_pre)
+  apply (rename_tac word1 word2 rights)
+  apply (wp receive_ipc_base_reads_respects[simplified AllowSend_def]
+            complete_async_ipc_reads_respects
+        | simp)+
+        apply (wp static_imp_wp set_endpoint_reads_respects set_thread_state_reads_respects
+                  setup_caller_cap_reads_respects do_ipc_transfer_reads_respects
+                  complete_async_ipc_reads_respects thread_get_reads_respects
+                  get_thread_state_reads_respects
+                  switch_if_required_to_reads_respects
+                  gets_cur_thread_ev set_thread_state_pas_refined
+                  do_ipc_transfer_pas_refined
+                  hoare_vcg_all_lift
+                  get_async_ep_reads_respects
+                  get_bound_aep_reads_respects'
+                  gba_wp
+                  get_endpoint_reads_respects
+                  get_aep_wp
+                  get_endpoint_wp
+              | wpc
+              | simp)+
+  apply (clarsimp)
+  apply(rule conjI)
+   apply(auto dest: reads_ep)[1]
+  apply clarsimp
+  apply(rule context_conjI, rule allI, rule impI)
+   apply (rule disjI1)
+   apply (frule bound_tcb_at_implies_receive)
+    apply simp
+   apply (frule bound_tcb_at_implies_read[where t = receiver])
+     apply simp
+    apply simp
+   apply simp
+  apply clarsimp
+  done
 
 lemma receive_endpoint_threads_blocked:
 "\<lbrakk>valid_objs s; (sym_refs \<circ> state_refs_of) s; 
