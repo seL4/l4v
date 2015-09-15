@@ -213,26 +213,56 @@ lemma decode_set_priority_rev:
        apply (wp reads_respects_ethread_get | simp add: reads_equiv_def)+
   done
 
+(*FIXME: goes away when this is rewritten *)
+lemma decode_bind_aep_def: 
+  "decode_bind_aep cap excaps = 
+  (case cap of
+     ThreadCap tcb \<Rightarrow>
+       doE whenE (length excaps = 0) $ throwError TruncatedMessage;
+           aEP \<leftarrow> liftE $ get_bound_aep tcb;
+           case aEP of None \<Rightarrow> returnOk () | Some x \<Rightarrow> throwError IllegalOperation;
+           (aepptr, rights) \<leftarrow>
+           case fst (hd excaps) of AsyncEndpointCap ptr x r \<Rightarrow> returnOk (ptr, r)
+           | _ \<Rightarrow> throwError IllegalOperation;         
+           whenE (AllowRecv \<notin> rights) $ throwError IllegalOperation;
+           aep \<leftarrow> liftE $ get_async_ep aepptr;
+           case (aep_obj aep, aep_bound_tcb aep) of
+           (WaitingAEP list, b) \<Rightarrow> throwError IllegalOperation
+           | (_, None) \<Rightarrow> returnOk () | (_, Some a) \<Rightarrow> throwError IllegalOperation;
+           returnOk $ AsyncEndpointControl tcb (Some aepptr)
+       odE
+     | _ \<Rightarrow> throwError IllegalOperation)"
+  sorry
+
 
 lemma decode_tcb_invocation_reads_respects_f:
-  "reads_respects_f aag l (silc_inv aag st and pas_refined aag and is_subject aag \<circ> cur_thread and valid_objs and zombies_final and (K (is_subject aag t \<and> (\<forall>x \<in> set excaps. is_subject aag (fst (snd x)))))) (decode_tcb_invocation label args (ThreadCap t) slot excaps)"
+  notes respects_f = reads_respects_f[where st=st and Q=\<top>]
+  shows
+  "reads_respects_f aag l (silc_inv aag st and pas_refined aag and is_subject aag \<circ> cur_thread and 
+                           valid_objs and zombies_final and (K (is_subject aag t \<and> 
+                           (\<forall>x \<in> set excaps. is_subject aag (fst (snd x))) \<and>
+                           (\<forall>x\<in>set excaps. pas_cap_cur_auth aag (fst x))))) 
+                           (decode_tcb_invocation label args (ThreadCap t) slot excaps)"
   unfolding decode_tcb_invocation_def decode_read_registers_def
-            decode_write_registers_def decode_copy_registers_def
-            decode_tcb_configure_def decode_set_space_def decode_bind_aep_def
-            decode_set_ipc_buffer_def fun_app_def decode_unbind_aep_def
+  decode_write_registers_def decode_copy_registers_def
+  decode_tcb_configure_def decode_set_space_def decode_bind_aep_def
+  decode_set_ipc_buffer_def fun_app_def decode_unbind_aep_def
   apply (simp add: unlessE_def[symmetric] unlessE_whenE
         split del: split_if
              cong: invocation_label.case_cong)
   apply (rule equiv_valid_guard_imp)
-  apply (wp_once requiv_cur_thread_eq range_check_ev reads_respects_f[OF derive_cap_rev, where Q="\<top>"] 
-                 derive_cap_inv slot_cap_long_running_delete_reads_respects_f
-                 reads_respects_f[OF check_valid_ipc_buffer_rev, where Q="\<top>"] check_valid_ipc_buffer_inv
-                 reads_respects_f[OF decode_set_priority_rev, where Q="\<top>"]
-       | wp_once whenE_throwError_wp
-       | wp_once hoare_drop_imps
-       | wpc
-       | simp add: unlessE_whenE split del: split_if add: o_def split_def)+
-  sorry (*
+   apply (wp_once requiv_cur_thread_eq range_check_ev
+             respects_f[OF derive_cap_rev]
+             derive_cap_inv slot_cap_long_running_delete_reads_respects_f[where st=st]
+             respects_f[OF check_valid_ipc_buffer_rev]
+             check_valid_ipc_buffer_inv
+             respects_f[OF decode_set_priority_rev]
+             respects_f[OF get_async_ep_reads_respects]
+             respects_f[OF get_bound_aep_reads_respects']
+        | wp_once whenE_throwError_wp
+        | wp_once hoare_drop_imps
+        | wpc
+        | simp add: unlessE_whenE split del: split_if add: o_def split_def)+
   unfolding get_tcb_ctable_ptr_def get_tcb_vtable_ptr_def
   apply (subgoal_tac "\<not>length excaps < 3 \<longrightarrow> is_subject aag (fst (snd (excaps ! 2)))")
    prefer 2
@@ -240,9 +270,11 @@ lemma decode_tcb_invocation_reads_respects_f:
   apply (subgoal_tac "excaps \<noteq> [] \<longrightarrow> is_subject aag (fst (snd (excaps ! 0)))")
    prefer 2
    apply (fastforce intro: nth_mem)
-  apply(fastforce simp: reads_equiv_f_def)
-  done *)
-
+  apply (intro allI impI conjI; (rule disjI1 | fastforce simp: reads_equiv_f_def))
+  apply (rule reads_ep[where auth="Receive",simplified])
+  apply (cases excaps;simp)
+  by (fastforce simp: aag_cap_auth_def cap_auth_conferred_def cap_rights_to_auth_def)
+  
 lemma get_irq_state_rev:
   "reads_equiv_valid_inv A aag (K (is_subject_irq aag irq)) (get_irq_state irq)"
   unfolding get_irq_state_def

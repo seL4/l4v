@@ -2880,6 +2880,12 @@ lemma irq_state_inv_invoke_domain[wp]: "\<lbrace>irq_state_inv st\<rbrace> invok
   done
 
 
+crunch irq_masks_of_state: bind_async_endpoint "\<lambda>s. P (irq_masks_of_state s)"
+crunch irq_state_of_state: bind_async_endpoint "\<lambda>s. P (irq_state_of_state s)"
+
+lemmas bind_async_endpoint_irq_state_inv[wp] = 
+  irq_state_inv_triv[OF bind_async_endpoint_irq_state_of_state bind_async_endpoint_irq_masks_of_state]
+
 lemma invoke_tcb_irq_state_inv:
   "\<lbrace>(\<lambda>s. irq_state_inv st s) and domain_sep_inv False sta and
     tcb_inv_wf tinv and K (irq_is_recurring irq st)\<rbrace>
@@ -2896,7 +2902,7 @@ lemma invoke_tcb_irq_state_inv:
   (* just ThreadControl left *)
   apply (simp add: split_def cong: option.case_cong)
 
-  apply (wp hoare_vcg_all_lift_R 
+  by (wp hoare_vcg_all_lift_R 
             hoare_vcg_all_lift hoare_vcg_const_imp_lift_R
             checked_cap_insert_domain_sep_inv
             cap_delete_deletes  cap_delete_irq_state_inv[where st=st and sta=sta and irq=irq]
@@ -2908,7 +2914,6 @@ lemma invoke_tcb_irq_state_inv:
         |strengthen use_no_cap_to_obj_asid_strg
         |wp_once irq_state_inv_triv
         |wp_once hoare_drop_imps | clarsimp split: option.splits | intro impI conjI allI)+
-  sorry
 
 lemma do_reply_transfer_irq_state_inv_triv[wp]:
   "\<lbrace>irq_state_inv st\<rbrace> do_reply_transfer a b c \<lbrace>\<lambda>_. irq_state_inv st\<rbrace>"

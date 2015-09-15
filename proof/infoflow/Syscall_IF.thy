@@ -210,7 +210,8 @@ lemma recycle_cap_reads_respects:
   apply (rule gen_asm_ev)+
   apply (simp add: recycle_cap_def)
   apply (wp ep_cancel_badged_sends_reads_respects thread_set_reads_respects
-            get_thread_state_rev ethread_set_reads_respects 
+            get_thread_state_rev ethread_set_reads_respects
+            get_bound_aep_reads_respects'
     | simp add: when_def invs_valid_objs invs_sym_refs split: option.splits cap.splits
     | elim conjE
     | intro conjI impI allI
@@ -219,11 +220,10 @@ lemma recycle_cap_reads_respects:
     | (rule hoare_post_subst[where B="\<lambda>_. \<top>"], fastforce simp: fun_eq_iff)
     )+
   apply (rule equiv_valid_guard_imp)
-  sorry (*
    apply (wp arch_recycle_cap_reads_respects)
   apply clarsimp
   apply assumption
-  done *)
+  done
 
 lemma recycle_cap_reads_respects_f:
   "reads_respects_f aag l (silc_inv aag st and pas_refined aag and invs and
@@ -905,7 +905,7 @@ lemma equiv_valid_vacuous:
 declare gts_st_tcb_at[wp del]
 
 lemma handle_interrupt_globals_equiv:
-  "\<lbrace>globals_equiv st and invs\<rbrace> handle_interrupt irq \<lbrace>\<lambda>r. globals_equiv st\<rbrace>"
+  "\<lbrace>globals_equiv (st :: det_ext state) and invs\<rbrace> handle_interrupt irq \<lbrace>\<lambda>r. globals_equiv st\<rbrace>"
   unfolding handle_interrupt_def
   apply (wp dmo_maskInterrupt_globals_equiv
             dmo_return_globals_equiv
