@@ -204,17 +204,16 @@ defs decodeBindAEP_def:
           AsyncEndpointCap ptr v4 v5 recv \<Rightarrow>   returnOk (ptr, recv)
         | _ \<Rightarrow>   throw IllegalOperation
         );
+    whenE (Not rights) $ throw IllegalOperation;
     aep \<leftarrow> withoutFailure $ getAsyncEP aepptr;
     (case (aepObj aep, aepBoundTCB aep) of
           (IdleAEP, None) \<Rightarrow>   returnOk ()
         | (ActiveAEP _, None) \<Rightarrow>   returnOk ()
         | _ \<Rightarrow>   throw IllegalOperation
         );
-    if rights
-     then returnOk AsyncEndpointControl_ \<lparr>
+    returnOk AsyncEndpointControl_ \<lparr>
         aepTCB= tcb,
         aepPtr= Just aepptr \<rparr>
-     else throw IllegalOperation
 odE)"
 
 defs decodeUnbindAEP_def:

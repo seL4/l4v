@@ -2248,14 +2248,18 @@ notes if_cong[cong] shows
        apply (rule corres_split_eqrE)
           apply (rule corres_split_norE)
              apply (rule corres_splitEE'[where r'="\<lambda>rv rv'. ((fst rv) = (fst rv')) \<and> ((snd rv') = (AllowRead \<in> (snd rv)))"])
-                apply (clarsimp split del: split_if)
-                apply (rule corres_splitEE[where r'=aep_relation])
-                   apply (rule corres_trivial, simp split del: split_if)
-                   apply (simp add: aep_relation_def
-                             split: Structures_A.aep.splits Structures_H.aep.splits option.splits)
-                  apply simp
-                  apply (rule get_aep_corres)
-                 apply wp
+                apply (rule corres_split_norE)
+                   apply (clarsimp split del: split_if)
+                   apply (rule corres_splitEE[where r'=aep_relation])
+                      apply (rule corres_trivial, simp split del: split_if)
+                      apply (simp add: aep_relation_def
+                                split: Structures_A.aep.splits Structures_H.aep.splits 
+                                       option.splits)
+                     apply simp
+                     apply (rule get_aep_corres)
+                    apply wp
+                  apply (rule corres_trivial, clarsimp simp: whenE_def returnOk_def)
+                 apply (wp | simp add: whenE_def split del: split_if)+
                apply (rule corres_trivial, simp)
                apply (case_tac extras, simp, clarsimp simp: list_all2_Cons1)
                apply (fastforce split: cap.splits capability.splits simp: returnOk_def)

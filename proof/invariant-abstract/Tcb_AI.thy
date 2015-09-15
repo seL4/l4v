@@ -11,7 +11,7 @@
 theory Tcb_AI
 imports CNodeInv_AI
 begin
-
+ 
 lemma ct_in_state_weaken:
   "\<lbrakk> ct_in_state Q s; \<And>st. Q st \<Longrightarrow> P st \<rbrakk> \<Longrightarrow> ct_in_state P s"
   by (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def)
@@ -1414,8 +1414,13 @@ lemma update_cap_valid:
                                      split: option.splits prod.splits)
   done
 
-crunch inv[wp]: decode_bind_aep, decode_unbind_aep P
+crunch inv[wp]:  decode_unbind_aep P
 (simp: whenE_def)
+
+lemma decode_bind_aep_inv[wp]:
+  "\<lbrace>P\<rbrace> decode_bind_aep cap excaps \<lbrace>\<lambda>_. P\<rbrace>"
+  unfolding decode_bind_aep_def
+  by (rule hoare_pre) (wp get_aep_wp gba_wp | wpc | clarsimp simp: whenE_def split del: split_if)+
 
 lemma decode_tcb_inv_inv:
   "\<lbrace>P\<rbrace> decode_tcb_invocation label args (cap.ThreadCap t) slot extras \<lbrace>\<lambda>rv. P\<rbrace>"
