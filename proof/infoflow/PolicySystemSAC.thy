@@ -189,7 +189,8 @@ lemma abd_reads : "x \<in> {NicA, NicB, NicD} \<Longrightarrow> subjectReads SAC
 done    
 
 definition abd_affects_set where
- "abd_affects_set \<equiv> {NicB, RM, R, NicA, NicD}"
+ "abd_affects_set \<equiv> {NicB, RM, R, NicA, NicD,
+                     EP, AEP2}" (* these two added for AEP binding *)
 declare abd_affects_set_def[simp]
 
 lemma abd_affects_bw : "x \<in> {NicA, NicB, NicD} \<Longrightarrow> partition_label ` abd_affects_set \<subseteq> subjectAffects SACAuthGraph (partition_label x)"
@@ -221,8 +222,19 @@ lemma abd_affects_bw : "x \<in> {NicA, NicB, NicD} \<Longrightarrow> partition_l
   apply (erule_tac a = xa in insertE)
     apply (rule_tac auth = SyncSend and ep = "partition_label x" and l' = "partition_label RM" in affects_send)
     apply (simp, simp, simp, simp)
-  apply (simp)
-done
+  apply (erule_tac a = xa in insertE)
+    apply (rule_tac ep = "xa" and l = "partition_label x" in affects_ep_bound_trans)
+    apply (rule_tac x = "partition_label RM" in exI)
+    apply (rule_tac x = "partition_label x" in exI)
+    apply (intro conjI)
+    apply (simp,simp,simp)
+  apply (erule_tac a = xa in insertE)
+    apply (rule_tac ep = "xa" and l = "partition_label x" in affects_ep_bound_trans)
+    apply (rule_tac x = "partition_label RM" in exI)
+    apply (rule_tac x = "partition_label x" in exI)
+    apply (intro conjI)
+    apply (simp,simp,simp,simp)
+  done
 
 lemma abd_affects : "x \<in> {NicA, NicB, NicD} \<Longrightarrow> subjectAffects SACAuthGraph (partition_label x) = partition_label ` abd_affects_set"
    apply (rule subset_antisym)
@@ -231,8 +243,8 @@ lemma abd_affects : "x \<in> {NicA, NicB, NicD} \<Longrightarrow> subjectAffects
    apply (simp)
    apply (rule subsetI)
      apply (erule subjectAffects.induct)
-     apply (auto)
-  sorry
+     apply auto
+  done
 
 subsection {* NicC reads/affects *}
 
