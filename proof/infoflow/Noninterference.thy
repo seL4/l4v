@@ -2825,7 +2825,7 @@ lemma kernel_exit_A_if_confidentiality:
   apply(case_tac "fst t'", simp)
   apply(frule_tac s=x2 and t=x2a and aag1="current_aag x2" in use_ev2[OF kernel_exit_if_reads_respects_f_g_2[where st=s0_internal]])
        apply assumption
-      apply(clarsimp simp: invs_if_def Invs_def current_aag_def guarded_pas_domain_def)
+      subgoal by (clarsimp simp: invs_if_def Invs_def current_aag_def guarded_pas_domain_def)
      apply(clarsimp simp: invs_if_def Invs_def)
      apply(drule uwr_PSched_cur_domain)
      subgoal by (clarsimp simp: current_aag_def guarded_pas_domain_def)

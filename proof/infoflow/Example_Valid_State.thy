@@ -897,9 +897,8 @@ lemma Sys1AgentMap_simps:
           \<Longrightarrow> Sys1AgentMap p = partition_label Low"
   unfolding Sys1AgentMap_def
   apply simp_all
-  apply (auto simp: ptrFromPAddr_def physMappingOffset_def
+  by (auto simp: ptrFromPAddr_def physMappingOffset_def
           kernelBase_addr_def physBase_def s0_ptr_defs)
-  done
 
 definition
   Sys1ASIDMap :: "(auth_graph_label subject_label) agent_asid_map" 
@@ -973,6 +972,14 @@ lemma tcb_states_of_state_s0:
   apply (simp add: kh0_def kh0_obj_def)
   done
 
+lemma thread_bounds_of_state_s0:
+  "thread_bound_aeps s0_internal = Map.empty"
+  unfolding s0_internal_def thread_bound_aeps_def
+  apply (rule ext)
+  apply (simp add: get_tcb_def)
+  apply (simp add: kh0_def kh0_obj_def)
+  done
+
 lemma Sys1_wellformed:
   "x \<in> range (pasObjectAbs Sys1PAS) - {SilcLabel} \<Longrightarrow> policy_wellformed (pasPolicy Sys1PAS) False irqs x"
   apply (clarsimp simp: Sys1PAS_def Sys1AgentMap_simps policy_wellformed_def
@@ -1025,8 +1032,8 @@ lemma Sys1_pas_refined:
        apply (elim disjE, simp_all)[1]
       apply (clarsimp simp: state_refs_of_def thread_states_def tcb_states_of_state_s0
              Sys1AuthGraph_def Sys1AgentMap_simps split: if_splits)
+      apply (clarsimp simp: state_refs_of_def thread_states_def thread_bounds_of_state_s0)
      apply (simp add: s0_internal_def) (* this is OK because cdt is empty..*)
-
     apply (clarsimp simp: state_vrefs_def 
                            vs_refs_no_global_pts_def
                            s0_internal_def kh0_def  Sys1AgentMap_simps
@@ -1034,9 +1041,9 @@ lemma Sys1_pas_refined:
                            pte_ref_def pde_ref2_def Low_pd'_def High_pd'_def
                            Sys1AuthGraph_def ptr_range_def vspace_cap_rights_to_auth_def
                            vm_read_only_def vm_read_write_def
+                           
                      dest!: graph_ofD
                      split: if_splits)
-  sorry (*
      apply (rule Sys1AgentMap_simps(13))
       apply simp
      apply (drule_tac x=ac in plus_one_helper2)
@@ -1075,7 +1082,7 @@ lemma Sys1_pas_refined:
    apply (simp add: Sys1AuthGraph_def Sys1PAS_def Sys1ASIDMap_def)
    apply (elim disjE conjE, simp_all add: Sys1AgentMap_simps cap_auth_conferred_def cap_rights_to_auth_def Low_asid_def High_asid_def 
      asid_low_bits_def asid_high_bits_of_def )[1]
-   done *)
+   done
 
 lemma Sys1_pas_cur_domain:
   "pas_cur_domain Sys1PAS s0_internal"
@@ -1119,7 +1126,7 @@ lemma silc_inv_s0:
             apply ((clarsimp simp: intra_label_cap_def cte_wp_at_cases tcb_cap_cases_def
                                    cap_points_to_label_def split: split_if_asm)+)[8]
     apply (clarsimp simp: intra_label_cap_def cap_points_to_label_def)
-    apply (drule cte_wp_at_caps_of_state s0_caps_of_state)+
+    apply (drule cte_wp_at_caps_of_state' s0_caps_of_state)+
     apply ((erule disjE |
           clarsimp simp: Sys1PAS_def Sys1AgentMap_simps
               the_nat_to_bl_def nat_to_bl_def ctes_wp_at_def cte_wp_at_cases
@@ -1144,7 +1151,7 @@ lemma only_timer_irq_s0:
 lemma domain_sep_inv_s0:
   "domain_sep_inv False s0_internal s0_internal"
   apply (clarsimp simp: domain_sep_inv_def)
-  apply (force dest: cte_wp_at_caps_of_state s0_caps_of_state
+  apply (force dest: cte_wp_at_caps_of_state' s0_caps_of_state
         | rule conjI allI | clarsimp simp: s0_internal_def)+
   done
 
@@ -1359,12 +1366,11 @@ lemma pspace_distinct_s0:
      apply (simp add: word_bits_def)
     apply simp
    apply simp
-  apply ((simp | erule disjE | clarsimp simp: kh0_obj_def cte_level_bits_def s0_ptr_defs
+  by ((simp | erule disjE | clarsimp simp: kh0_obj_def cte_level_bits_def s0_ptr_defs
         | clarsimp simp: irq_node_offs_range_def s0_ptr_defs,
           drule_tac x="0xF" in word_plus_strict_mono_right, simp, simp add: add.commute,
           drule(1) notE[rotated, OF less_trans, OF _ _ leD, rotated 2] |
-          drule(1) notE[rotated, OF le_less_trans, OF _ _ leD, rotated 2], simp, assumption)+)[1]
-  done
+          drule(1) notE[rotated, OF le_less_trans, OF _ _ leD, rotated 2], simp, assumption)+)
 
 lemma valid_pspace_s0[simp]:
   "valid_pspace s0_internal"
@@ -1431,6 +1437,7 @@ lemma valid_ioc_s0[simp]:
 lemma valid_idle_s0[simp]:
   "valid_idle s0_internal"
   apply (clarsimp simp: valid_idle_def st_tcb_at_tcb_states_of_state_eq
+                        thread_bounds_of_state_s0
                         identity_eq[symmetric] tcb_states_of_state_s0)
   apply (simp add: s0_ptr_defs s0_internal_def idle_thread_ptr_def )
   sorry
@@ -1479,7 +1486,7 @@ lemma valid_reply_caps_s0[simp]:
   "valid_reply_caps s0_internal"
   apply (clarsimp simp: valid_reply_caps_def)
   apply (rule conjI)
-   apply (force dest: cte_wp_at_caps_of_state s0_caps_of_state simp: has_reply_cap_def)
+   apply (force dest: cte_wp_at_caps_of_state' s0_caps_of_state simp: has_reply_cap_def)
   apply (clarsimp simp: unique_reply_caps_def)
   apply (drule s0_caps_of_state)+
   apply (erule disjE | simp add: is_reply_cap_def)+
@@ -1488,7 +1495,7 @@ lemma valid_reply_caps_s0[simp]:
 lemma valid_reply_masters_s0[simp]:
   "valid_reply_masters s0_internal"
   apply (clarsimp simp: valid_reply_masters_def)
-  apply (force dest: cte_wp_at_caps_of_state s0_caps_of_state)
+  apply (force dest: cte_wp_at_caps_of_state' s0_caps_of_state)
   done
 
 lemma valid_global_refs_s0[simp]:
