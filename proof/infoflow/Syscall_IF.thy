@@ -1087,7 +1087,9 @@ crunch globals_equiv[wp]: invoke_domain "globals_equiv st"
   (wp: dxo_wp_weak ignore: reschedule_required set_domain)
 
 lemma perform_invocation_globals_equiv:
-  "\<lbrace>invs and ct_active and valid_invocation oper and globals_equiv st and authorised_for_globals_inv oper and K (case oper of (InvokeUntyped i) \<Rightarrow> (0::word32) < of_nat (length (slots_of_untyped_inv i)) | _ \<Rightarrow> True)\<rbrace>
+  "\<lbrace>invs and ct_active and valid_invocation oper and globals_equiv (st :: det_ext state) and 
+    authorised_for_globals_inv oper 
+    and K (case oper of (InvokeUntyped i) \<Rightarrow> (0::word32) < of_nat (length (slots_of_untyped_inv i)) | _ \<Rightarrow> True)\<rbrace>
     perform_invocation blocking calling oper
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   apply (subst pi_cases)
