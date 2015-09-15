@@ -558,14 +558,13 @@ where
      (aepptr, rights) \<leftarrow> case fst (hd extra_caps) of
          AsyncEndpointCap ptr _ r \<Rightarrow> returnOk (ptr, r)
        | _ \<Rightarrow> throwError IllegalOperation;
+     whenE (AllowRecv \<notin> rights) $ throwError IllegalOperation;
      aep \<leftarrow> liftE  $ get_async_ep aepptr;
      case (aep_obj aep, aep_bound_tcb aep) of
          (IdleAEP, None) \<Rightarrow> returnOk ()
        | (ActiveAEP _, None) \<Rightarrow> returnOk ()
        | _ \<Rightarrow> throwError IllegalOperation;
-     (if AllowRecv \<in> rights
-      then returnOk $ AsyncEndpointControl tcb (Some aepptr)
-      else throwError IllegalOperation)
+      returnOk $ AsyncEndpointControl tcb (Some aepptr)
    odE
  | _ \<Rightarrow> throwError IllegalOperation"
      
