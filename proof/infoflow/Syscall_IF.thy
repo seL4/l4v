@@ -831,22 +831,22 @@ lemma handle_wait_reads_respects_f:
 lemma handle_wait_globals_equiv:
   "\<lbrace>globals_equiv (st :: det_state) and invs and ct_active\<rbrace> handle_wait \<lbrace>\<lambda>r. globals_equiv st\<rbrace>"
   unfolding handle_wait_def
-  apply (wp handle_fault_globals_equiv | wpc | simp add: Let_def)+
-  sorry (*
+  apply (wp handle_fault_globals_equiv get_aep_wp
+        | wpc | simp add: Let_def)+
       apply (rule_tac Q="\<lambda>r s. invs s \<and> globals_equiv st s" and
                       E = "\<lambda>r s. valid_fault (CapFault (of_bl ep_cptr) True r)" in hoare_post_impErr)
         apply (rule hoare_vcg_E_elim)
          apply (wp lookup_cap_cap_fault receive_ipc_globals_equiv
                    receive_async_ipc_globals_equiv delete_caller_cap_invs delete_caller_cap_globals_equiv
                 | wpc | simp add: Let_def invs_imps invs_valid_idle valid_fault_def
-                | rule_tac Q="\<lambda>rv s. invs s \<and> thread \<noteq> idle_thread s"
+                | rule_tac Q="\<lambda>rv s. invs s \<and> thread \<noteq> idle_thread s \<and> globals_equiv st s"
                            in hoare_strengthen_post, wp, 
                     clarsimp simp: invs_valid_objs invs_valid_global_objs invs_arch_state 
                                    invs_distinct)+
      apply (rule_tac Q'="\<lambda>r s. invs s \<and> globals_equiv st s \<and> thread \<noteq> idle_thread s \<and> tcb_at thread s \<and> cur_thread s = thread" in hoare_post_imp_R)
       apply (wp as_user_globals_equiv | simp add: invs_imps valid_fault_def)+
     apply (wp delete_caller_cap_invs delete_caller_cap_globals_equiv | simp add: invs_imps invs_valid_idle ct_active_not_idle)+
-  done *)
+  done
 
 lemma handle_wait_reads_respects_f_g:
   "reads_respects_f_g aag l (silc_inv aag st and einvs and ct_active and
