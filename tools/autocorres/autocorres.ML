@@ -99,7 +99,13 @@ type autocorres_options = {
 
   print_stats : bool option ref,
 
-  keep_going : bool option ref
+  keep_going : bool option ref,
+
+  lifted_globals_field_prefix : string option ref,
+  lifted_globals_field_suffix : string option ref,
+
+  function_name_prefix : string option ref,
+  function_name_suffix : string option ref
 }
 
 (* Get all that the given function depends on, up to "depth" functions deep. *)
@@ -226,6 +232,26 @@ val keep_going_parser =
   Parse.reserved "keep_going" >>
   (fn _ => none_to_some (#keep_going) true "autocorres: keep_going option specified multiple times")
 
+val lifted_globals_field_prefix_parser =
+  named_option Parse.text "lifted_globals_field_prefix" "function names" >>
+  (fn funcs => none_to_some (#lifted_globals_field_prefix) funcs
+                 "autocorres: lifted_globals_field_prefix option specified multiple times")
+
+val lifted_globals_field_suffix_parser =
+  named_option Parse.text "lifted_globals_field_suffix" "function names" >>
+  (fn funcs => none_to_some (#lifted_globals_field_suffix) funcs
+                 "autocorres: lifted_globals_field_suffix option specified multiple times")
+
+val function_name_prefix_parser =
+  named_option Parse.text "function_name_prefix" "function names" >>
+  (fn funcs => none_to_some (#function_name_prefix) funcs
+                 "autocorres: function_name_prefix option specified multiple times")
+
+val function_name_suffix_parser =
+  named_option Parse.text "function_name_suffix" "function names" >>
+  (fn funcs => none_to_some (#function_name_suffix) funcs
+                 "autocorres: function_name_suffix option specified multiple times")
+
 (*
  * Blank set of options.
  *
@@ -250,7 +276,11 @@ fun default_opts _ = {
     trace_opt = ref NONE,
     gen_word_heaps = ref NONE,
     print_stats = ref NONE,
-    keep_going = ref NONE
+    keep_going = ref NONE,
+    lifted_globals_field_prefix = ref NONE,
+    lifted_globals_field_suffix = ref NONE,
+    function_name_prefix = ref NONE,
+    function_name_suffix = ref NONE
   }
 
 (* Combined parser. *)
@@ -274,7 +304,11 @@ let
      trace_opt_parser ||
      gen_word_heaps_parser ||
      print_stats_parser ||
-     keep_going_parser)
+     keep_going_parser ||
+     lifted_globals_field_prefix_parser ||
+     lifted_globals_field_suffix_parser ||
+     function_name_prefix_parser ||
+     function_name_suffix_parser)
     |> !! (fn xs => K ("autocorres: unknown option " ^ quote (Parse.text (fst xs) |> #1)))
 
   val options_parser = Parse.list option_parser >> (fn opt_fns => fold I opt_fns)
@@ -360,11 +394,8 @@ let
             ()
 
   (* Check that recursive function groups are all lifted to the same monad. *)
-  (* FIXME : restore *)
-  (*
-  val _ = FunctionInfo #recursive_functions prog_info |> Symtab.dest
-          |> map (TypeStrengthen.compute_lift_rules ts_rules ts_force o snd)
-  *)
+  val _ = FunctionInfo.get_topo_sorted_functions fn_info
+          |> map (TypeStrengthen.compute_lift_rules ts_rules ts_force)
 
   (* (Finished processing options.) *)
 
@@ -432,20 +463,40 @@ let
     fold (fn n => Symtab.update_new (n, List.last ts_rules)) invented_functions ts_force
   end
 
+  (* Prefixes/suffixes for generated names. *)
+  val make_lifted_globals_field_name = let
+    val prefix = case !(#lifted_globals_field_prefix opt) of
+                     NONE => ""
+                   | SOME p => p
+    val suffix = case !(#lifted_globals_field_suffix opt) of
+                     NONE => "_''"
+                   | SOME s => s
+  in fn f => prefix ^ f ^ suffix end
+
+  (* Prefixes/suffixes for generated names. *)
+  val make_function_name = let
+    val prefix = case !(#function_name_prefix opt) of
+                     NONE => ""
+                   | SOME p => p
+    val suffix = case !(#function_name_suffix opt) of
+                     NONE => "'"
+                   | SOME s => s
+  in fn f => prefix ^ f ^ suffix end
+
   (* Do the translation. *)
   val (lthy, fn_info) =
     SimplConv.translate_simpl filename fn_info do_opt trace_opt lthy
     |> (fn (lthy, fn_info) =>
         LocalVarExtract.translate_l2 filename fn_info do_opt trace_opt lthy)
     |> (fn (lthy, fn_info) =>
-        HeapLift.system_heap_lift filename fn_info no_heap_abs (these (!(#force_heap_abs opt))) heap_abs_syntax keep_going (these (!(#trace_heap_lift opt))) do_opt trace_opt gen_word_heaps lthy)
+        HeapLift.system_heap_lift filename fn_info no_heap_abs (these (!(#force_heap_abs opt))) make_lifted_globals_field_name heap_abs_syntax keep_going (these (!(#trace_heap_lift opt))) do_opt trace_opt gen_word_heaps lthy)
     |> (fn (lthy, fn_info) =>
         if skip_word_abs then (lthy, fn_info) else
         WordAbstract.word_abstract filename fn_info (these (!(#unsigned_word_abs opt)))
                                    (these (!(#no_signed_word_abs opt))) (these (!(#trace_word_abs opt)))
                                    do_opt trace_opt lthy)
     |> (fn (lthy, fn_info) =>
-        TypeStrengthen.type_strengthen ts_rules ts_force filename fn_info keep_going do_opt lthy)
+        TypeStrengthen.type_strengthen ts_rules ts_force filename fn_info make_function_name keep_going do_opt lthy)
     |> (fn (lthy, fn_info) =>
         (lthy, fn_info))
 
