@@ -98,9 +98,9 @@ session Access in "access-control" = AInvs +
     "ExampleSystem"
 
 session InfoFlow in "infoflow" = Access +
-  theories [quick_and_dirty]
+  theories
     "Noninterference"
-  theories [quick_and_dirty]
+  theories
     "Noninterference_Base_Refinement"
     "PolicyExample"
     "PolicySystemSAC"

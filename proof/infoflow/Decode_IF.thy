@@ -213,28 +213,6 @@ lemma decode_set_priority_rev:
        apply (wp reads_respects_ethread_get | simp add: reads_equiv_def)+
   done
 
-(*FIXME: goes away when this is rewritten *)
-lemma decode_bind_aep_def: 
-  "decode_bind_aep cap excaps = 
-  (case cap of
-     ThreadCap tcb \<Rightarrow>
-       doE whenE (length excaps = 0) $ throwError TruncatedMessage;
-           aEP \<leftarrow> liftE $ get_bound_aep tcb;
-           case aEP of None \<Rightarrow> returnOk () | Some x \<Rightarrow> throwError IllegalOperation;
-           (aepptr, rights) \<leftarrow>
-           case fst (hd excaps) of AsyncEndpointCap ptr x r \<Rightarrow> returnOk (ptr, r)
-           | _ \<Rightarrow> throwError IllegalOperation;         
-           whenE (AllowRecv \<notin> rights) $ throwError IllegalOperation;
-           aep \<leftarrow> liftE $ get_async_ep aepptr;
-           case (aep_obj aep, aep_bound_tcb aep) of
-           (WaitingAEP list, b) \<Rightarrow> throwError IllegalOperation
-           | (_, None) \<Rightarrow> returnOk () | (_, Some a) \<Rightarrow> throwError IllegalOperation;
-           returnOk $ AsyncEndpointControl tcb (Some aepptr)
-       odE
-     | _ \<Rightarrow> throwError IllegalOperation)"
-  sorry
-
-
 lemma decode_tcb_invocation_reads_respects_f:
   notes respects_f = reads_respects_f[where st=st and Q=\<top>]
   shows

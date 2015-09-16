@@ -697,7 +697,7 @@ lemmas integrity_subjects_ready_queues =
 lemma partitionIntegrity_arm_globals_frame:
   "partitionIntegrity aag s s' \<Longrightarrow> arm_globals_frame (arch_state s') = arm_globals_frame (arch_state s)"
   by(fastforce simp: partitionIntegrity_def globals_equiv_scheduler_def)
-declare [[goals_limit=1]]
+  
 (* FIXME: cleanup this wonderful proof *)
 lemma partitionIntegrity_subjectAffects_mem:
   "\<lbrakk>partitionIntegrity aag s s'; pas_refined aag s; invs s;
