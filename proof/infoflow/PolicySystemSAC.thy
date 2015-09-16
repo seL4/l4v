@@ -388,8 +388,10 @@ lemma r_affects_ep : "partition_label EP \<in> subjectAffects SACAuthGraph (part
   apply (rule_tac l="partition_label R" in affects_ep_bound_trans)
   by auto
 
-declare [[goals_limit=10]]
-lemma r_affects : "subjectAffects SACAuthGraph (partition_label R) = {partition_label NicB, partition_label NicD, partition_label R, partition_label RM, partition_label NicA, partition_label AEP3, partition_label EP, partition_label AEP2}"
+lemma r_affects : "subjectAffects SACAuthGraph (partition_label R) =
+                   {partition_label NicB, partition_label NicD, partition_label R,
+                    partition_label RM, partition_label NicA, partition_label AEP3,
+                    partition_label EP, partition_label AEP2 (* these 2 added for AEP binding *) }"
   apply (rule subset_antisym)
   defer
   (* backward *)
@@ -406,9 +408,7 @@ lemma r_affects : "subjectAffects SACAuthGraph (partition_label R) = {partition_
   (* forward *)
   apply (rule subsetI)
   apply (erule subjectAffects.induct)
-  
   by (simp, blast?)+
-
 
 subsection {* RM reads/affects *}
 
@@ -470,8 +470,11 @@ lemma rm_affects_aep3 : "partition_label AEP3 \<in> subjectAffects SACAuthGraph 
   by auto
 
 
-
-lemma rm_affects : "subjectAffects SACAuthGraph (partition_label RM) = {partition_label NicA, partition_label NicB, partition_label NicD, partition_label R, partition_label SC, partition_label EP, partition_label RM, partition_label AEP2, partition_label AEP3}"
+lemma rm_affects : "subjectAffects SACAuthGraph (partition_label RM) =
+                    {partition_label NicA, partition_label NicB, partition_label NicD,
+                     partition_label R, partition_label SC, partition_label EP,
+                     partition_label RM, partition_label AEP2,
+                     partition_label AEP3 (* added for AEP binding *)}"
   apply (rule subset_antisym)
   defer
   (* backward *)
