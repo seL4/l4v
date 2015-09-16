@@ -374,33 +374,35 @@ lemma decode_tcb_corres:
       apply (simp add:translate_tcb_invocation_def)
 
       (* TCBBindAEP *)
-     apply (clarsimp simp: decode_bind_aep_def dcorres_alternative_throw whenE_def)
-     apply (rule dcorres_symb_exec_rE)
-       apply (case_tac rv, simp)
-        (* please continue scrolling *)
-        apply (case_tac "(fst (hd excaps'))", simp_all split del: split_if)[1]
-                   prefer 4
-                   apply (rule dcorres_symb_exec_rE)
-                     apply (case_tac "aep_obj rva", simp_all split del: split_if)[1]
-                       apply (case_tac "aep_bound_tcb rva", simp_all split del: split_if)[1]
-                        apply (case_tac "AllowRead \<in> x43", simp)
+      apply (clarsimp simp: decode_bind_aep_def dcorres_alternative_throw whenE_def)
+      apply (rule dcorres_symb_exec_rE)
+        apply (case_tac rv, simp)
+         (* please continue scrolling *)
+         apply (case_tac "(fst (hd excaps'))", simp_all split del: split_if)[1]
+                    prefer 4
+                    apply (case_tac "AllowRead \<notin> x43", simp)
+                     apply (rule corres_alternate2, rule dcorres_throw)
+                    apply simp
+                    apply (rule dcorres_symb_exec_rE)
+                      apply (case_tac "aep_obj rva", simp_all split del: split_if)[1]
+                        apply (case_tac "aep_bound_tcb rva", simp_all split del: split_if)[1]
                          apply (clarsimp simp: throw_on_none_def get_index_def dcorres_alternative_throw)
                          apply (case_tac "excaps' ! 0", clarsimp, rule corres_alternate1[OF dcorres_returnOk], simp add: translate_tcb_invocation_def hd_conv_nth)
-                        apply (clarsimp simp: throw_on_none_def get_index_def dcorres_alternative_throw split del: split_if)+ 
-                     apply (case_tac "aep_bound_tcb rva", simp split del: split_if)[1]
-                      apply (rename_tac rights rva word)
-                      apply ((case_tac "excaps' ! 0",clarsimp, rule corres_alternate1[OF dcorres_returnOk], simp add: translate_tcb_invocation_def hd_conv_nth)
-                             | clarsimp simp: throw_on_none_def get_index_def dcorres_alternative_throw split del: split_if
-                             | wp get_aep_wp
-                             | (case_tac "excaps' ! 0", rule dcorres_alternative_throw)
-                             | (case_tac "AllowRead \<in> rights", simp))+
+                        apply (clarsimp simp: throw_on_none_def get_index_def dcorres_alternative_throw split del: split_if)+
+                      apply (case_tac "aep_bound_tcb rva", simp split del: split_if)[1]
+                       apply (rename_tac rights rva word)
+                       apply ((case_tac "excaps' ! 0",clarsimp, rule corres_alternate1[OF dcorres_returnOk], simp add: translate_tcb_invocation_def hd_conv_nth)
+                                | clarsimp simp: throw_on_none_def get_index_def dcorres_alternative_throw split del: split_if
+                                | wp get_aep_wp
+                                | (case_tac "excaps' ! 0", rule dcorres_alternative_throw)
+                                | (case_tac "AllowRead \<in> rights", simp))+
 
-                             (* TCBUnbindAEP *)
-    apply (clarsimp simp: decode_unbind_aep_def dcorres_alternative_throw whenE_def)
-    apply (rule dcorres_symb_exec_rE)
-      apply (case_tac rv, simp, rule dcorres_alternative_throw)
-      apply (clarsimp, rule corres_alternate1[OF dcorres_returnOk], simp add: translate_tcb_invocation_def)
-     apply (wp gba_wp | clarsimp)+
+     (* TCBUnbindAEP *)
+     apply (clarsimp simp: decode_unbind_aep_def dcorres_alternative_throw whenE_def)
+     apply (rule dcorres_symb_exec_rE)
+       apply (case_tac rv, simp, rule dcorres_alternative_throw)
+       apply (clarsimp, rule corres_alternate1[OF dcorres_returnOk], simp add: translate_tcb_invocation_def)
+      apply (wp gba_wp | clarsimp)+
 
           (* IRQSetMode *)
           apply (clarsimp simp: transform_intent_def)

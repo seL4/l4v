@@ -3420,6 +3420,7 @@ lemma decodeBindAEP_ccorres:
              \<inter> {s. extraCaps_' s = extraCaps'}) []
      (decodeBindAEP cp extraCaps >>= invocationCatch thread isBlocking isCall InvokeTCB)
      (Call decodeBindAEP_'proc)"
+  using [[goals_limit=1]]
   apply (simp, rule ccorres_gen_asm)
   apply (cinit lift: cap_' extraCaps_' simp: decodeBindAEP_def)
    apply (rule ccorres_Guard_Seq)+
@@ -3448,7 +3449,7 @@ lemma decodeBindAEP_ccorres:
     apply (rule conseqPre, vcg)
     apply (clarsimp simp: throwError_def return_def syscall_error_rel_def syscall_error_to_H_cases
                           exception_defs)
-   apply (simp add: returnOk_bind ccorres_invocationCatch_Inr performInvocation_def 
+   apply (simp add: returnOk_bind ccorres_invocationCatch_Inr performInvocation_def
                     bindE_bind_linearise[symmetric] cong: call_ignore_cong)
    apply (rule ccorres_cond_false_seq)
    apply (simp cong: call_ignore_cong)
@@ -3467,26 +3468,35 @@ lemma decodeBindAEP_ccorres:
       apply (simp only: cap_get_tag_isCap(3)[symmetric] cong: call_ignore_cong, frule(1) cap_get_tag_to_H(3) )
       apply (simp add: case_bool_If if_to_top_of_bindE if_to_top_of_bind bind_assoc
                   del: Collect_const cong: if_cong call_ignore_cong)
+      apply csymbr
+      apply (clarsimp simp add: if_to_top_of_bind to_bool_eq_0[symmetric] simp del: Collect_const)
+      apply (rule ccorres_Cond_rhs_Seq)
+       apply (clarsimp simp: to_bool_def throwError_bind invocationCatch_def)
+       apply (rule ccorres_from_vcg_split_throws[where P=\<top> and P'=UNIV])
+        apply vcg
+       apply (rule conseqPre, vcg)
+       apply (clarsimp simp: throwError_def return_def syscall_error_rel_def syscall_error_to_H_cases exception_defs)
+      apply (clarsimp simp: to_bool_def)
       apply (rule ccorres_pre_getAsyncEP)
       apply (rename_tac aep)
       apply (rule ccorres_rhs_assoc2)
       apply (rule ccorres_rhs_assoc2)
-      apply (rule_tac xf'="ret__int_'" and val="from_bool (aepBoundTCB aep \<noteq> None \<or> 
-                                                 isWaitingAEP (aepObj aep))"
-         and R="ko_at' aep (capAEPPtr_CL (cap_async_endpoint_cap_lift aep_cap))
-                     and valid_aep' aep"
-                   and R'=UNIV
-         in  ccorres_symb_exec_r_known_rv_UNIV)
+      apply (rule_tac xf'="ret__int_'" and val="from_bool (aepBoundTCB aep \<noteq> None \<or>
+                                                    isWaitingAEP (aepObj aep))"
+                                       and R="ko_at' aep (capAEPPtr_CL (cap_async_endpoint_cap_lift aep_cap))
+                                                  and valid_aep' aep"
+                                       and R'=UNIV
+                                  in  ccorres_symb_exec_r_known_rv_UNIV)
          apply (rule conseqPre, vcg)
          apply (clarsimp simp: if_1_0_0)
 
          apply (erule cmap_relationE1[OF cmap_relation_aep], erule ko_at_projectKO_opt)
          apply (clarsimp simp: typ_heap_simps casync_endpoint_relation_def Let_def
                                valid_aep'_def)
-         apply (case_tac "aepObj aep", simp_all add: isWaitingAEP_def option_to_ctcb_ptr_def 
-                     false_def true_def split: option.split_asm split_if, 
-                auto simp: neq_Nil_conv tcb_queue_relation'_def tcb_at_not_NULL[symmetric] 
-                           tcb_at_not_NULL)[1]
+         apply (case_tac "aepObj aep", simp_all add: isWaitingAEP_def option_to_ctcb_ptr_def
+                             false_def true_def split: option.split_asm split_if,
+                         auto simp: neq_Nil_conv tcb_queue_relation'_def tcb_at_not_NULL[symmetric]
+                                    tcb_at_not_NULL)[1]
         apply ceqv
        apply (rule_tac P="\<lambda>s. ksCurThread s = thread" in ccorres_cross_over_guard)
        apply (simp add: bindE_bind_linearise del: Collect_const)
@@ -3496,24 +3506,14 @@ lemma decodeBindAEP_ccorres:
          apply (rule ccorres_Cond_rhs_Seq)
           apply (clarsimp simp: isWaitingAEP_def from_bool_neq_0)
           apply (simp add: bindE_bind_linearise[symmetric] injection_handler_throwError
-                     invocationCatch_use_injection_handler throwError_bind invocationCatch_def)
+                           invocationCatch_use_injection_handler throwError_bind invocationCatch_def)
           apply (rule ccorres_from_vcg_split_throws[where P=\<top> and P'=UNIV])
            apply vcg
           apply (rule conseqPre, vcg)
-          apply (clarsimp simp: throwError_def return_def syscall_error_rel_def 
+          apply (clarsimp simp: throwError_def return_def syscall_error_rel_def
                                 syscall_error_to_H_cases exception_defs)
          apply (clarsimp simp: isWaitingAEP_def from_bool_neq_0 returnOk_bind)
-         apply csymbr
-         apply (clarsimp simp: if_to_top_of_bind returnOk_bind to_bool_eq_0[symmetric] simp del: Collect_const split del: split_if)
-         apply (rule ccorres_Cond_rhs_Seq)
-          apply (clarsimp simp: throwError_bind invocationCatch_def)
-          apply (rule ccorres_from_vcg_split_throws[where P=\<top> and P'=UNIV])
-           apply vcg
-          apply (rule conseqPre, vcg)
-          apply (clarsimp simp: throwError_def return_def syscall_error_rel_def syscall_error_to_H_cases
-                                    exception_defs)
-         apply clarsimp
-         apply (clarsimp simp: isWaitingAEP_def from_bool_neq_0 returnOk_bind 
+         apply (clarsimp simp: isWaitingAEP_def from_bool_neq_0 returnOk_bind
                                ccorres_invocationCatch_Inr performInvocation_def)
          apply (ctac add: setThreadState_ccorres)
            apply (ctac add: invokeTCB_AEPControl_bind_ccorres)
@@ -3530,24 +3530,14 @@ lemma decodeBindAEP_ccorres:
         apply (rule ccorres_Cond_rhs_Seq)
          apply (clarsimp simp: isWaitingAEP_def from_bool_neq_0)
          apply (simp add: bindE_bind_linearise[symmetric] injection_handler_throwError
-                    invocationCatch_use_injection_handler throwError_bind invocationCatch_def)
+                          invocationCatch_use_injection_handler throwError_bind invocationCatch_def)
          apply (rule ccorres_from_vcg_split_throws[where P=\<top> and P'=UNIV])
           apply vcg
          apply (rule conseqPre, vcg)
-         apply (clarsimp simp: throwError_def return_def syscall_error_rel_def 
+         apply (clarsimp simp: throwError_def return_def syscall_error_rel_def
                                syscall_error_to_H_cases exception_defs)
         apply (clarsimp simp: isWaitingAEP_def from_bool_neq_0 returnOk_bind)
-        apply csymbr
-        apply (clarsimp simp: if_to_top_of_bind returnOk_bind to_bool_eq_0[symmetric] simp del: Collect_const split del: split_if)
-        apply (rule ccorres_Cond_rhs_Seq)
-         apply (clarsimp simp: throwError_bind invocationCatch_def)
-         apply (rule ccorres_from_vcg_split_throws[where P=\<top> and P'=UNIV])
-          apply vcg
-         apply (rule conseqPre, vcg)
-         apply (clarsimp simp: throwError_def return_def syscall_error_rel_def syscall_error_to_H_cases
-                                   exception_defs)
-        apply clarsimp
-        apply (clarsimp simp: isWaitingAEP_def from_bool_neq_0 returnOk_bind 
+        apply (clarsimp simp: isWaitingAEP_def from_bool_neq_0 returnOk_bind
                               ccorres_invocationCatch_Inr performInvocation_def)
         apply (ctac add: setThreadState_ccorres)
           apply (ctac add: invokeTCB_AEPControl_bind_ccorres)
@@ -3561,14 +3551,14 @@ lemma decodeBindAEP_ccorres:
          apply (wp sts_invs_minor' hoare_case_option_wp sts_bound_tcb_at' | wpc | simp)+
         apply (vcg exspec=setThreadState_modifies)
        apply (simp add: bindE_bind_linearise[symmetric] injection_handler_throwError
-                    invocationCatch_use_injection_handler throwError_bind invocationCatch_def)
+                        invocationCatch_use_injection_handler throwError_bind invocationCatch_def)
        apply (rule ccorres_cond_true_seq)
        apply (rule ccorres_from_vcg_split_throws[where P=\<top> and P'=UNIV])
         apply vcg
        apply (rule conseqPre, vcg)
-       apply (clarsimp simp: throwError_def return_def syscall_error_rel_def 
+       apply (clarsimp simp: throwError_def return_def syscall_error_rel_def
                              syscall_error_to_H_cases exception_defs)
-      apply (clarsimp simp add: guard_is_UNIV_def isWaitingAEP_def from_bool_0 
+      apply (clarsimp simp add: guard_is_UNIV_def isWaitingAEP_def from_bool_0
                                 ThreadState_Restart_def mask_def true_def
                                 rf_sr_ksCurThread capTCBPtr_eq)
      apply (simp add: hd_conv_nth bindE_bind_linearise asyncEP_case_If_ptr throwError_bind invocationCatch_def)
@@ -3581,16 +3571,16 @@ lemma decodeBindAEP_ccorres:
     apply (wp | simp | wpc | wp_once hoare_drop_imps)+
    apply vcg
   apply clarsimp
-  apply (rule conjI)                          
+  apply (rule conjI)
    apply safe[1]
-                  apply (fastforce simp: invs'_def valid_state'_def valid_pspace'_def 
+                  apply (fastforce simp: invs'_def valid_state'_def valid_pspace'_def
                                   dest!: valid_objs_boundAEP_NULL)
                  apply ((fastforce elim!: pred_tcb'_weakenE obj_at'_weakenE
-                                    simp: ct_in_state'_def from_bool_0 isCap_simps excaps_map_def 
+                                    simp: ct_in_state'_def from_bool_0 isCap_simps excaps_map_def
                                           neq_Nil_conv obj_at'_def pred_tcb_at'_def valid_tcb_state'_def)+)[12]
-     apply (clarsimp dest!: obj_at_valid_objs'[OF _ invs_valid_objs'] 
+     apply (clarsimp dest!: obj_at_valid_objs'[OF _ invs_valid_objs']
                       simp: projectKOs valid_obj'_def)
-    apply (clarsimp simp: excaps_map_Nil cte_wp_at_ctes_of excaps_map_def neq_Nil_conv 
+    apply (clarsimp simp: excaps_map_Nil cte_wp_at_ctes_of excaps_map_def neq_Nil_conv
                    dest!: interpret_excaps_eq )
    apply (clarsimp simp: excaps_map_Nil)
   apply (frule obj_at_ko_at', clarsimp)
@@ -3599,7 +3589,7 @@ lemma decodeBindAEP_ccorres:
   apply (clarsimp simp: isCap_simps)
   apply (frule cap_get_tag_isCap_unfolded_H_cap)
   apply safe[1]
-         apply (clarsimp simp: typ_heap_simps excaps_map_def neq_Nil_conv 
+         apply (clarsimp simp: typ_heap_simps excaps_map_def neq_Nil_conv
                         dest!: interpret_excaps_eq)
         apply clarsimp
         apply (frule cap_get_tag_isCap_unfolded_H_cap(3))
