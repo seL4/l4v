@@ -376,6 +376,7 @@ fun system_heap_lift
     (fn_info : FunctionInfo.fn_info)
     (no_heap_abs : string list)
     (force_heap_abs : string list)
+    (make_lifted_globals_field_name : string -> string)
     (heap_abs_syntax : bool)
     (keep_going : bool)
     (trace_funcs : string list)
@@ -388,7 +389,7 @@ let
 
   (* Create base definitions for the new program, including a new
    * "globals" record with a lifted heap. *)
-  val (heap_info, lthy) = HeapLiftBase.setup prog_info fn_info gen_word_heaps lthy
+  val (heap_info, lthy) = HeapLiftBase.setup prog_info fn_info make_lifted_globals_field_name gen_word_heaps lthy
 
   (* Do some extra lifting and create syntax (see field_syntax comment). *)
   val (syntax_lift_rules, lthy) =

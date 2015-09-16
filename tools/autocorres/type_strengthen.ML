@@ -17,9 +17,6 @@ struct
 exception AllLiftingFailed of (string * thm) list
 exception LiftingFailed of unit
 
-(* Generate a function name for the lifted function. *)
-fun gen_lifted_fn_name f = f ^ "'"
-
 val ts_simpset = simpset_of @{context}
 
 (* Misc util functions. *)
@@ -260,7 +257,7 @@ in (polish_thm, dict) end
  * If the lift does not succeed, the function returns NONE.
  *)
 fun lift_function_rewrite rule_set filename prog_info fn_info
-    all_callee_proofs functions keep_going do_opt lthy =
+    all_callee_proofs functions make_function_name keep_going do_opt lthy =
 let
   val fn_names = map fst functions
   val fn_defs = map snd functions
@@ -341,10 +338,10 @@ let
         Free (n, T) =>
           (case Symtab.lookup dict n of
                NONE => t
-             | SOME a => Free (gen_lifted_fn_name a, T))
+             | SOME a => Free (make_function_name a, T))
      | x => x) term
   in
-    (gen_lifted_fn_name fn_name, measure_param @ fn_params, term)
+    (make_function_name fn_name, measure_param @ fn_params, term)
   end
   val input_defs = map gen_fun_def_term (Utils.zip3 fn_names dicts thms)
   val (defs, lthy) = Utils.define_functions input_defs false is_recursive lthy
@@ -354,7 +351,7 @@ let
     Utils.instantiate_thm_vars lthy (
       fn ((name, _), t) =>
         try (unprefix "rec'") name
-        |> Option.map gen_lifted_fn_name
+        |> Option.map make_function_name
         |> Option.map (Utils.get_term lthy)
         |> Option.map (Thm.cterm_of lthy)) thm
   val inst_thms = map do_inst_thm thms
@@ -369,7 +366,7 @@ let
    * such as L2_call <func> = liftE $ <new_func_def> *)
   val final_props = map (fn fn_name =>
       make_lift_equality lthy prog_info fn_info fn_name rule_set'
-          NONE NONE (Utils.get_term lthy (gen_lifted_fn_name fn_name))) fn_names
+          NONE NONE (Utils.get_term lthy (make_function_name fn_name))) fn_names
 
   (* Convert meta-logic into HOL statements, conjunct them together and setup
    * our goal statement. *)
@@ -461,7 +458,7 @@ let
   let
     val mono_thm = #mono_thm (FunctionInfo.get_function_def fn_info fn_name)
     val mono_thm' = #prove_mono rule_set' rewrite_thm mono_thm
-    val (_, lthy) = Utils.define_lemma (fn_name ^ "'_mono") mono_thm' lthy
+    val (_, lthy) = Utils.define_lemma (make_function_name fn_name ^ "_mono") mono_thm' lthy
     val lthy = Utils.simp_add [mono_thm'] lthy
   in lthy end
   val lthy = if is_recursive then fold final_mono_thm (fn_names ~~ new_thms) lthy
@@ -535,14 +532,14 @@ end
 
 (* Lift the given function set, trying each rule until one succeeds. *)
 fun lift_function rules force_lift filename prog_info fn_info
-    all_callee_proofs functions keep_going do_opt lthy =
+    all_callee_proofs functions make_function_name keep_going do_opt lthy =
 let
   val rules' = compute_lift_rules rules force_lift (map fst functions)
 
   (* Find the first lift that works. *)
   fun first (rule::xs) =
       (lift_function_rewrite rule filename prog_info fn_info
-           all_callee_proofs functions keep_going do_opt lthy
+           all_callee_proofs functions make_function_name keep_going do_opt lthy
        handle LiftingFailed _ => first xs)
     | first [] = raise AllLiftingFailed functions
 in
@@ -570,7 +567,8 @@ end
 (* Run through every function, attempting to strengthen its type. *)
 fun type_strengthen (rules : Monad_Types.monad_type list)
                     (force_lift : Monad_Types.monad_type Symtab.table)
-                    filename fn_info (keep_going : bool) (do_opt : bool) lthy =
+                    filename fn_info (make_function_name : string -> string)
+                    (keep_going : bool) (do_opt : bool) lthy =
 let
   (* Get all function definitions. *)
   val prog_info = ProgramInfo.get_prog_info lthy filename
@@ -599,7 +597,7 @@ let
     val start_time = Timer.startRealTimer ()
     val (lthy, new_rewrites, monad_name) =
         lift_function rules force_lift filename prog_info fn_info
-                      all_callee_proofs functions keep_going do_opt lthy
+                      all_callee_proofs functions make_function_name keep_going do_opt lthy
     val _ = writeln ("  --> " ^ monad_name)
     val _ = @{trace} ("Converted (TS) " ^ Utils.commas (map fst functions) ^ " in " ^
                       Time.toString (Timer.checkRealTimer start_time) ^ " s")
@@ -620,4 +618,3 @@ in
 end
 
 end
-

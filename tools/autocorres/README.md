@@ -86,6 +86,16 @@ The options are:
   * `heap_abs_syntax`: Enable experimental heap abstraction
     syntactic sugar.
 
+Name compatibility options:
+
+  * `lifted_globals_field_prefix="foo"`, `lifted_globals_field_suffix="foo"`:
+    Override generated names for global variables during heap abstraction.
+    The default is `f` -> `f_''` (i.e. prefix="", suffix="_''").
+
+  * `function_name_prefix="foo"`, `function_name_suffix="foo"`:
+    Override generated names for abstracted functions.
+    The default is `f` -> `f'` (i.e. prefix="", suffix="'").
+
 Less common options (mainly for debugging):
 
   * `keep_going`: Attempt to ignore certain non-critical
@@ -131,7 +141,11 @@ is as follows:
         trace_heap_lift = c d,
         trace_word_abs = f h i,
         no_opt,
-        gen_word_heaps
+        gen_word_heaps,
+        lifted_globals_name_prefix="my_global_",
+        lifted_globals_name_suffix="",
+        function_name_prefix="my_func_",
+        function_name_suffix=""
         ] "filename.c"
 
 Examples

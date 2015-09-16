@@ -178,14 +178,18 @@ fun get_globals_t_hrs globalsT thy =
  * "globalsT" is the type of the existing globals record, while "heapTs" is a
  * list of the different types the new heap will need to support.
  *)
-fun gen_new_heap globalsT heapTs thy =
+fun gen_new_heap make_lifted_globals_field_name globalsT heapTs thy =
 let
   val existing_fields = get_real_global_vars globalsT thy
   val new_heap_rec_name = "lifted_globals"
 
   (* Generate new fields. *)
+  val new_names =
+     map (fn (name, _) => make_lifted_globals_field_name
+                            (unsuffix "_'" (Long_Name.base_name name))) existing_fields
   val copied_fields =
-     map (fn (a, b) => (Binding.name (Long_Name.base_name a), b, NoSyn)) existing_fields
+     map (fn ((name, ty), new_name) => (Binding.name new_name, ty, NoSyn))
+         (existing_fields ~~ new_names)
   val heap_fields =
      map (fn a => (Binding.name (heap_name_from_type a), mk_ptrT a --> a, NoSyn)) heapTs
   val heap_valid_fields =
@@ -204,8 +208,9 @@ let
   val new_fields = Record.get_extT_fields thy lifted_globalsT
       |> fst |> take (length copied_fields)
 
-  (* Hide the constants of existing fields. *)
-  val thy = fold (Sign.hide_const false) (map fst existing_fields) thy
+  (* Hide the constants of existing fields, if required. *)
+  val overlapped_names = filter (fn n => member op= new_names (Long_Name.base_name n)) (map fst existing_fields)
+  val thy = fold (Sign.hide_const false) overlapped_names thy
 
   (* Generate a mapping from heap types to the getter/setter for that heap. *)
   val heap_fields =
@@ -407,7 +412,7 @@ in
   } : heap_info
 end
 
-fun setup prog_info fn_info gen_word_heaps lthy =
+fun setup prog_info fn_info make_lifted_globals_field_name gen_word_heaps lthy =
 let
   val old_globalsT = #globals_type prog_info
 
@@ -415,7 +420,7 @@ let
   val heapTs = get_program_heap_types prog_info fn_info gen_word_heaps lthy
   val ((lifted_globalsT, heap_getters_setters, global_fields), lthy)
       = Local_Theory.raw_theory_result (
-          gen_new_heap old_globalsT (Typset.dest heapTs)) lthy
+          gen_new_heap make_lifted_globals_field_name old_globalsT (Typset.dest heapTs)) lthy
 
   (*
    * HACK: Exit and enter the context again, so the simpset created by the new
