@@ -70,9 +70,9 @@ section {* System call entry point *}
 fun
   perform_invocation :: "bool \<Rightarrow> bool \<Rightarrow> invocation \<Rightarrow> (data list,'z::state_ext) p_monad"
 where
-  "perform_invocation block call (InvokeAsyncEndpoint ep badge message) =
+  "perform_invocation block call (InvokeAsyncEndpoint ep badge) =
     doE
-      without_preemption $ send_async_ipc ep badge message;
+      without_preemption $ send_async_ipc ep badge;
       returnOk []
     odE"
 | "perform_invocation _ _ _ = fail"
