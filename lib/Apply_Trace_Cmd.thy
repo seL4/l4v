@@ -81,17 +81,14 @@ fun pretty_fact ctxt (FoundName ((name, idx), thm)) =
           Syntax.unparse_term ctxt prop]
 
 (* Print out the found dependencies. *)
-fun print_deps ctxt text thm deps =
+fun print_deps ctxt _ deps =
 let
   (* Remove duplicates. *)
   val deps = sort_distinct (prod_ord (prod_ord string_ord (option_ord int_ord)) Term_Ord.term_ord) deps
 
-  (* Retrieve facts which are explicitly mentioned in the method invocation. *)
-  val mentioned_facts = Apply_Trace.mentioned_facts ctxt text
-  |> map (fn thm => ((Thm.get_name_hint thm, NONE), Thm.prop_of thm))
 
   (* Fetch canonical names and theorems. *)
-  val (deps,mentioned_facts) = chop (length deps) (map (fn (ident, term) => adjust_thm_name ctxt ident term) (deps @ mentioned_facts))
+  val (deps,mentioned_facts) = chop (length deps) (map (fn (ident, term) => adjust_thm_name ctxt ident term) deps)
 
   (* Find mentioned, but unused facts *)
   val unused_facts = subtract (fn (FoundName ((nm,_),_),FoundName ((nm',_),_)) => nm = nm' 
@@ -128,6 +125,15 @@ lemmas [no_trace] = protectI protectD TrueI Eq_TrueI eq_reflection
 (* Test. *)
 lemma "(a \<and> b) = (b \<and> a)"
   apply_trace auto
+  oops
+
+(* Local assumptions might mask real facts (or each other). Probably not an issue in practice.*)
+lemma
+  assumes X: "b = a"
+  assumes Y: "b = a"
+  shows
+  "b = a"
+  apply_trace (rule Y)
   oops
 
 end

@@ -20,10 +20,8 @@ signature APPLY_TRACE =
 sig
   val apply_results :
     {silent_fail : bool} ->
-    (Proof.context -> Method.text -> thm -> ((string * int option) * term) list -> unit) -> 
+    (Proof.context -> thm -> ((string * int option) * term) list -> unit) -> 
     Method.text_range -> Proof.state -> Proof.state Seq.result Seq.seq
-
-  val mentioned_facts: Proof.context -> Method.text -> thm list
 
   (* Lower level interface. *)
   val clear_deps : thm -> thm
@@ -73,41 +71,6 @@ fun proof_body_descend' (_,("",_,body)) = fold (append o proof_body_descend') (t
 fun used_facts thm = fold (append o proof_body_descend') (thms_of (Thm.proof_body_of thm)) []
 
 fun raw_primitive_text f = Method.Basic (fn ctxt => (Method.METHOD (K (fn thm => Seq.single (f thm)))))
-
-
-fun fold_map_src f m =
-let
-  fun fold_map' m' a = case m' of
-   Method.Source src => let val (src',a') = (f src a) in (Method.Source src',a') end
- | (Method.Then (ci,ms)) => let val (ms',a') = fold_map fold_map' ms a in (Method.Then (ci,ms'),a') end
- | (Method.Orelse (ci,ms)) => let val (ms',a') = fold_map fold_map' ms a in (Method.Orelse (ci,ms'),a') end
- | (Method.Try (ci,m)) => let val (m',a') = fold_map' m a in (Method.Try (ci,m'),a') end
- | (Method.Repeat1 (ci,m)) => let val (m',a') = fold_map' m a in (Method.Repeat1 (ci,m'),a') end
- | (Method.Select_Goals (ci,i,m)) => let val (m',a') = fold_map' m a in (Method.Select_Goals (ci,i,m'),a') end
- | (Method.Basic g) => (Method.Basic g,a)
-in
-  fold_map' m end
-
-fun map_src f text = fold_map_src (fn src => fn () => (f src,())) text () |> fst
-
-fun fold_src f text a = fold_map_src (fn src => fn a => (src,f src a)) text a |> snd
-
-
-fun toks_of ctxt src = Args.syntax (Scan.lift (Scan.repeat (Scan.one (not o (Scan.is_stopper Token.stopper))))) src ctxt |> fst
-
-fun mentioned_facts_src ctxt src = 
-let
-
-  val toks = toks_of ctxt src
- 
-  fun sel t = case Token.get_value t of
-        SOME (Token.Fact f) => SOME f
-      | _ => NONE
-  val thmss = map_filter sel toks
-  
-in flat thmss end
-
-fun mentioned_facts ctxt text = fold_src (append o mentioned_facts_src ctxt) text []
     
 
 (*Find local facts from new hyps*)
@@ -142,9 +105,7 @@ let
 
   val thm = Proof.simple_goal state |> #goal
 
-  val text' = map_src Args.init_assignable text
-
-  fun save_deps deps = f ctxt (map_src Args.closure text') thm deps
+  fun save_deps deps = f ctxt thm deps
 
   fun get_used thm = 
   let
@@ -156,7 +117,7 @@ let
   
 in
  if (can_clear (Proof.theory_of state)) then  
-   Proof.refine (Method.Then (Method.no_combinator_info, [raw_primitive_text (clear_deps),text',
+   Proof.refine (Method.Combinator (Method.no_combinator_info,Method.Then, [raw_primitive_text (clear_deps),text,
 	raw_primitive_text (fn thm' => (save_deps (get_used thm');join_deps thm thm'))])) state
  else
    (if (#silent_fail args) then (save_deps [];Proof.refine text state) else error "Apply_Trace theory must be imported to trace applies")
