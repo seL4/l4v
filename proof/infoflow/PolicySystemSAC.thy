@@ -472,7 +472,16 @@ lemma rm_affects_aep2 : "partition_label AEP2 \<in> subjectAffects SACAuthGraph 
   apply simp_all
 done
 
-lemma rm_affects : "subjectAffects SACAuthGraph (partition_label RM) = {partition_label NicA, partition_label NicB, partition_label NicD, partition_label R, partition_label SC, partition_label EP, partition_label RM, partition_label AEP2}"
+lemma rm_affects_aep3 : "partition_label AEP3 \<in> subjectAffects SACAuthGraph (partition_label RM)"
+  apply (rule affects_ep_bound_trans)
+  apply auto
+done
+
+lemma rm_affects : "subjectAffects SACAuthGraph (partition_label RM) =
+                    {partition_label NicA, partition_label NicB, partition_label NicD,
+                     partition_label R, partition_label SC, partition_label EP,
+                     partition_label RM, partition_label AEP2,
+                     partition_label AEP3 (* added for AEP binding *)}"
   apply (rule subset_antisym)
   defer
   (* backward *)
@@ -485,12 +494,13 @@ lemma rm_affects : "subjectAffects SACAuthGraph (partition_label RM) = {partitio
   apply (erule insertE, simp only:, rule rm_affects_ep)
   apply (erule insertE, simp only:, rule affects_lrefl)
   apply (erule insertE, simp only:, rule rm_affects_aep2)
+  apply (erule insertE, simp only:, rule rm_affects_aep3)
   apply simp
   (* forward *)
   apply (rule subsetI)
   apply (erule subjectAffects.induct)
   apply (simp, blast?)+
-  sorry
+  done
 
 subsection {* SC *}
 
