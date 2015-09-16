@@ -1439,8 +1439,7 @@ lemma valid_idle_s0[simp]:
   apply (clarsimp simp: valid_idle_def st_tcb_at_tcb_states_of_state_eq
                         thread_bounds_of_state_s0
                         identity_eq[symmetric] tcb_states_of_state_s0)
-  apply (simp add: s0_ptr_defs s0_internal_def idle_thread_ptr_def )
-  sorry
+  by (simp add: s0_ptr_defs s0_internal_def idle_thread_ptr_def pred_tcb_at_def obj_at_def kh0_def idle_tcb_def)
 
 lemma only_idle_s0[simp]:
   "only_idle s0_internal"
