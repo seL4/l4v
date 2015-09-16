@@ -19,13 +19,17 @@ struct
  * The most general form of the command is
  *   autocorres [ no_heap_abs = FUNC_NAMES,
  *                force_heap_abs = FUNC_NAMES,
+ *       (* or *) skip_heap_abs,
+ *
+ *                heap_abs_syntax,
+ *
  *                unsigned_word_abs = FUNC_NAMES,
  *                no_signed_word_abs = FUNC_NAMES,
  *       (* or *) skip_word_abs,
+ *
  *                ts_rules = RULE_NAMES,
  *                ts_force RULE_NAME = FUNC_NAMES,
  *                ts_force ... = ...,
- *                heap_abs_syntax,
  *
  *                trace_heap_lift = FUNC_NAMES,
  *                trace_word_abs = FUNC_NAMES,
@@ -53,6 +57,9 @@ type autocorres_options = {
   (* Insist the the following functions should be lifted, even if our
    * heuristics claim it won't succeed. *)
   force_heap_abs : string list option ref,
+
+  (* Skip heap lifting for the whole program. *)
+  skip_heap_abs : bool option ref,
 
   (* Enable unsigned word abstraction for these functions. *)
   unsigned_word_abs : string list option ref,
@@ -140,6 +147,10 @@ val force_heap_abs_parser =
   named_opt "force_heap_abs" "function names" >>
   (fn funcs => none_to_some (#force_heap_abs) funcs "autocorres: force_heap_abs option specified multiple times")
 
+val skip_heap_abs_parser =
+  Parse.reserved "skip_heap_abs" >>
+  (fn _ => none_to_some (#skip_heap_abs) true "autocorres: skip_heap_abs option specified multiple times")
+
 val ts_rules_parser =
   named_opt "ts_rules" "rule names" >>
   (fn rules => none_to_some (#ts_rules) rules "autocorres: ts_rules option specified multiple times")
@@ -224,6 +235,7 @@ val keep_going_parser =
 fun default_opts _ = {
     no_heap_abs = ref NONE,
     force_heap_abs = ref NONE,
+    skip_heap_abs = ref NONE,
     unsigned_word_abs = ref NONE,
     no_signed_word_abs = ref NONE,
     skip_word_abs = ref NONE,
@@ -247,6 +259,7 @@ let
   val option_parser =
     (no_heap_abs_parser ||
      force_heap_abs_parser ||
+     skip_heap_abs_parser ||
      ts_rules_parser ||
      ts_force_parser ||
      unsigned_word_abs_parser ||
@@ -303,6 +316,13 @@ let
               error "autocorres: no_signed_word_abs and skip_word_abs cannot be used together."
           else ()
   val skip_word_abs = !(#skip_word_abs opt) = SOME true
+
+  val _ = if not (!(#force_heap_abs opt) = NONE) andalso not (!(#skip_heap_abs opt) = NONE) then
+              error "autocorres: force_heap_abs and skip_heap_abs cannot be used together."
+          else if not (!(#no_heap_abs opt) = NONE) andalso not (!(#skip_heap_abs opt) = NONE) then
+              error "autocorres: no_heap_abs and skip_heap_abs cannot be used together."
+          else ()
+  val no_heap_abs = if !(#skip_heap_abs opt) = SOME true then Symset.dest all_functions else these (!(#no_heap_abs opt))
 
   (* Disallow referring to functions that don't exist. *)
   val funcs_in_options =
@@ -418,7 +438,7 @@ let
     |> (fn (lthy, fn_info) =>
         LocalVarExtract.translate_l2 filename fn_info do_opt trace_opt lthy)
     |> (fn (lthy, fn_info) =>
-        HeapLift.system_heap_lift filename fn_info (these (!(#no_heap_abs opt))) (these (!(#force_heap_abs opt))) heap_abs_syntax keep_going (these (!(#trace_heap_lift opt))) do_opt trace_opt gen_word_heaps lthy)
+        HeapLift.system_heap_lift filename fn_info no_heap_abs (these (!(#force_heap_abs opt))) heap_abs_syntax keep_going (these (!(#trace_heap_lift opt))) do_opt trace_opt gen_word_heaps lthy)
     |> (fn (lthy, fn_info) =>
         if skip_word_abs then (lthy, fn_info) else
         WordAbstract.word_abstract filename fn_info (these (!(#unsigned_word_abs opt)))
