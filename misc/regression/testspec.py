@@ -260,7 +260,7 @@ def process_tests(tests, strict=False):
         ordering = toposort([t.name for t in tests],
                 lambda x: test_ordering[x],
                 lambda x: test_depends[x])
-    except ValueError, e:
+    except ValueError as e:
         if strict:
             raise TestSpecParseException(
                     "Cycle in dependencies: %s" % e.message)
