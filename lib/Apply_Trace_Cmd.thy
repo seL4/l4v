@@ -68,53 +68,76 @@ in
 end
 
 (* Render the given fact. *)
-fun pretty_fact ctxt (FoundName ((name, idx), thm)) =
+fun pretty_fact only_names ctxt (FoundName ((name, idx), thm)) =
       Pretty.block
-        [Pretty.mark_str (Facts.markup_extern ctxt (Proof_Context.facts_of ctxt) name),
+        ([Pretty.mark_str (Facts.markup_extern ctxt (Proof_Context.facts_of ctxt) name),
           case idx of
-            SOME n => Pretty.str ("(" ^ string_of_int (n + 1) ^ "):")
-          | NONE => Pretty.str ":",
-          Pretty.brk 1, Display.pretty_thm ctxt thm]
-  | pretty_fact ctxt (UnknownName (name, prop)) =
+            SOME n => Pretty.str ("(" ^ string_of_int (n + 1) ^ ")")
+          | NONE => Pretty.str ""] @
+          (if only_names then []
+          else [Pretty.str ":",Pretty.brk 1, Display.pretty_thm ctxt thm]))
+  | pretty_fact only_names ctxt (UnknownName (name, prop)) =
       Pretty.block
         [Pretty.str name, Pretty.str "(?) :", Pretty.brk 1,
           Syntax.unparse_term ctxt prop]
 
+fun map_str_criterion f criterion = 
+  (case criterion of 
+   Find_Theorems.Pattern str => Find_Theorems.Pattern (f str)
+ | Find_Theorems.Simp str => Find_Theorems.Simp (f str)
+ | Find_Theorems.Intro => Find_Theorems.Intro
+ | Find_Theorems.Elim => Find_Theorems.Elim
+ | Find_Theorems.Dest => Find_Theorems.Dest
+ | Find_Theorems.Solves => Find_Theorems.Solves
+ | Find_Theorems.Name str => Find_Theorems.Name str)
+
+
+fun parse_criterion ctxt = map_str_criterion (Proof_Context.read_term_pattern ctxt)
+
 (* Print out the found dependencies. *)
-fun print_deps ctxt _ deps =
+fun print_deps only_names query ctxt thm deps =
 let
   (* Remove duplicates. *)
   val deps = sort_distinct (prod_ord (prod_ord string_ord (option_ord int_ord)) Term_Ord.term_ord) deps
 
-
   (* Fetch canonical names and theorems. *)
-  val (deps,mentioned_facts) = chop (length deps) (map (fn (ident, term) => adjust_thm_name ctxt ident term) deps)
-
-  (* Find mentioned, but unused facts *)
-  val unused_facts = subtract (fn (FoundName ((nm,_),_),FoundName ((nm',_),_)) => nm = nm' 
-                               | _ => false) deps mentioned_facts
+  val deps = map (fn (ident, term) => adjust_thm_name ctxt ident term) deps
 
   (* Remove "boring" theorems. *)
   val deps = subtract (fn (a, FoundName (_, thm)) => Thm.eq_thm (thm, a)
                           | _ => false) (Filter_Thms.get ctxt) deps
 
-  val _ = if null unused_facts then () else
-  (Pretty.writeln (
-    Pretty.big_list "mentioned, but unused theorems:"
-      (map (Pretty.item o single o pretty_fact ctxt) unused_facts)))
+  val deps = case query of SOME (raw_query,pos) => 
+    let
+      val q = Find_Theorems.read_query (Position.advance_offset 1 pos) raw_query;
+      val results = Find_Theorems.find_theorems_cmd ctxt (SOME thm) (SOME 1000000000) false q |> snd;
+
+      (* Only consider theorems from our query. *)
+     
+      val deps = inter (fn (FoundName (_,thm), (_,a)) => Thm.eq_thm (thm,a)
+                                    | _ => false) results deps
+     in deps end 
+     | _ => deps
 
 in
+  if only_names then
+  Pretty.writeln (
+    Pretty.block
+      (Pretty.separate "" (map ((pretty_fact only_names) ctxt) deps)))
+  else
   (* Pretty-print resulting theorems. *)
   Pretty.writeln (
     Pretty.big_list "used theorems:"
-      (map (Pretty.item o single o pretty_fact ctxt) deps))
+      (map (Pretty.item o single o (pretty_fact only_names) ctxt) deps))
 
 end
 
 
 val _ =
   Outer_Syntax.command @{command_keyword "apply_trace"} "initial refinement step (unstructured)"
-    (Method.parse >> (Toplevel.proofs o (Apply_Trace.apply_results {silent_fail = false} print_deps)));
+    
+  (Args.mode "only_names" -- (Scan.option (Parse.position Parse.cartouche)) --  Method.parse >> 
+    (fn ((on,query),text) => Toplevel.proofs (Apply_Trace.apply_results {silent_fail = false} (print_deps on query) text)));
 
 *}
 
@@ -127,6 +150,11 @@ lemma "(a \<and> b) = (b \<and> a)"
   apply_trace auto
   oops
 
+(* Test. *)
+lemma "(a \<and> b) = (b \<and> a)"  
+  apply_trace \<open>intro\<close> auto
+  oops
+
 (* Local assumptions might mask real facts (or each other). Probably not an issue in practice.*)
 lemma
   assumes X: "b = a"
@@ -135,5 +163,6 @@ lemma
   "b = a"
   apply_trace (rule Y)
   oops
+
 
 end
