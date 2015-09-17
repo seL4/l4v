@@ -81,19 +81,6 @@ fun pretty_fact only_names ctxt (FoundName ((name, idx), thm)) =
         [Pretty.str name, Pretty.str "(?) :", Pretty.brk 1,
           Syntax.unparse_term ctxt prop]
 
-fun map_str_criterion f criterion = 
-  (case criterion of 
-   Find_Theorems.Pattern str => Find_Theorems.Pattern (f str)
- | Find_Theorems.Simp str => Find_Theorems.Simp (f str)
- | Find_Theorems.Intro => Find_Theorems.Intro
- | Find_Theorems.Elim => Find_Theorems.Elim
- | Find_Theorems.Dest => Find_Theorems.Dest
- | Find_Theorems.Solves => Find_Theorems.Solves
- | Find_Theorems.Name str => Find_Theorems.Name str)
-
-
-fun parse_criterion ctxt = map_str_criterion (Proof_Context.read_term_pattern ctxt)
-
 fun fact_ref_to_name ((Facts.Named ((nm,_), (SOME [Facts.Single i]))),thm) = FoundName ((nm,SOME i),thm)
     | fact_ref_to_name ((Facts.Named ((nm,_), (NONE))),thm) = FoundName ((nm,NONE),thm)
     | fact_ref_to_name (_,thm) = UnknownName ("",Thm.prop_of thm)
