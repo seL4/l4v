@@ -158,7 +158,13 @@ definition
           of
             AsyncEndpointCap ref badge rights \<Rightarrow>
              (if AllowRecv \<in> rights
-              then liftE $ receive_async_ipc thread ep_cap
+              then doE
+                aep \<leftarrow> liftE $ get_async_ep ref;
+                boundTCB \<leftarrow> returnOk $ aep_bound_tcb aep;
+                if boundTCB = Some thread \<or> boundTCB = None
+                then liftE $ receive_async_ipc thread ep_cap
+                else flt
+               odE
               else flt)
            | _ \<Rightarrow> flt
       odE)
