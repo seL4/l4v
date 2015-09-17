@@ -94,6 +94,10 @@ fun map_str_criterion f criterion =
 
 fun parse_criterion ctxt = map_str_criterion (Proof_Context.read_term_pattern ctxt)
 
+fun fact_ref_to_name ((Facts.Named ((nm,_), (SOME [Facts.Single i]))),thm) = FoundName ((nm,SOME i),thm)
+    | fact_ref_to_name ((Facts.Named ((nm,_), (NONE))),thm) = FoundName ((nm,NONE),thm)
+    | fact_ref_to_name (_,thm) = UnknownName ("",Thm.prop_of thm)
+
 (* Print out the found dependencies. *)
 fun print_deps only_names query ctxt thm deps =
 let
@@ -110,11 +114,13 @@ let
   val deps = case query of SOME (raw_query,pos) => 
     let
       val q = Find_Theorems.read_query (Position.advance_offset 1 pos) raw_query;
-      val results = Find_Theorems.find_theorems_cmd ctxt (SOME thm) (SOME 1000000000) false q |> snd;
+      val results = Find_Theorems.find_theorems_cmd ctxt (SOME thm) (SOME 1000000000) false q 
+                    |> snd
+                    |> map fact_ref_to_name;
 
       (* Only consider theorems from our query. *)
      
-      val deps = inter (fn (FoundName (_,thm), (_,a)) => Thm.eq_thm (thm,a)
+      val deps = inter (fn (FoundName (nmidx,_), FoundName (nmidx',_)) => nmidx = nmidx'
                                     | _ => false) results deps
      in deps end 
      | _ => deps
