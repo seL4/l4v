@@ -486,7 +486,7 @@ let
     val lthy = let
         val final_thm = @{thm ccorres_chain} OF [l1_thm, l2_thm, hl_thm, wa_thm, ts_thm]
         val final_thm' = Simplifier.simplify lthy final_thm
-        val (_, lthy) = Utils.define_lemma (fn_name ^ "'_ccorres") final_thm' lthy
+        val (_, lthy) = Utils.define_lemma (make_function_name fn_name ^ "_ccorres") final_thm' lthy
     in
         lthy
     end
