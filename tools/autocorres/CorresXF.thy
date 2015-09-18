@@ -690,7 +690,7 @@ proof -
 qed
 
 (* Merge of lemmas ccorresE and corresXF. *)
-definition "ccorres st \<Gamma> rx G \<equiv>
+definition "ac_corres st \<Gamma> rx G \<equiv>
   \<lambda>A B. \<forall>s. (G s \<and> \<not> snd (A (st s))) \<longrightarrow>
          (\<forall>t. \<Gamma> \<turnstile> \<langle>B, Normal s\<rangle> \<Rightarrow> t \<longrightarrow>
             (\<exists>s'. t = Normal s' \<and> (Inr (rx s'), st s') \<in> fst (A (st s))))
@@ -704,8 +704,8 @@ lemma ccorresE_corresXF_merge:
      \<And>s. st s = st2 (st1 s);
      \<And>r s. rx' s = rx r (st1 s);
      \<And>s. G s \<longrightarrow> (s \<in> G1 \<and> G2 (st1 s)) \<rbrakk> \<Longrightarrow>
-    ccorres st \<Gamma> rx' G A B"
-  apply (unfold ccorres_def)
+    ac_corres st \<Gamma> rx' G A B"
+  apply (unfold ac_corres_def)
   apply clarsimp
   apply (clarsimp simp: ccorresE_def)
   apply (clarsimp simp: corresXF_def)
@@ -736,16 +736,16 @@ lemma corresXF_corresXF_merge:
   apply force
   done
 
-lemma ccorres_guard_imp:
-  "\<lbrakk> ccorres st G rx P A C; \<And>s. P' s \<Longrightarrow> P s \<rbrakk> \<Longrightarrow> ccorres st G rx P' A C"
+lemma ac_corres_guard_imp:
+  "\<lbrakk> ac_corres st G rx P A C; \<And>s. P' s \<Longrightarrow> P s \<rbrakk> \<Longrightarrow> ac_corres st G rx P' A C"
   apply atomize
-  apply (clarsimp simp: ccorres_def)
+  apply (clarsimp simp: ac_corres_def)
   done
 
-lemma hoarep_from_ccorres:
-  "\<lbrakk> ccorres st G rx P' A C; \<lbrace> \<lambda>s. P s \<rbrace> A \<lbrace> \<lambda>rv s. Q rv s \<rbrace>, \<lbrace> \<lambda>rv s. True \<rbrace>!; \<And>s. P (st s) \<Longrightarrow> P' s \<rbrakk>
+lemma hoarep_from_ac_corres:
+  "\<lbrakk> ac_corres st G rx P' A C; \<lbrace> \<lambda>s. P s \<rbrace> A \<lbrace> \<lambda>rv s. Q rv s \<rbrace>, \<lbrace> \<lambda>rv s. True \<rbrace>!; \<And>s. P (st s) \<Longrightarrow> P' s \<rbrakk>
     \<Longrightarrow> hoarep G \<Theta> F {s. P (st s) } C {s. Q (rx s) (st s) } E"
-  apply (clarsimp simp: ccorres_def)
+  apply (clarsimp simp: ac_corres_def)
   apply (rule hoare_complete')
   apply (rule allI)
   apply (rule cnvalidI)
@@ -767,12 +767,12 @@ lemma hoarep_from_ccorres:
   apply force
   done
 
-lemma hoaret_from_ccorres:
-  "\<lbrakk> ccorres st G rx P' A C; \<lbrace> \<lambda>s. P s \<rbrace> A \<lbrace> \<lambda>rv s. Q rv s \<rbrace>, \<lbrace> \<lambda>rv s. True \<rbrace>!; \<And>s. P (st s) \<Longrightarrow> P' s \<rbrakk>
+lemma hoaret_from_ac_corres:
+  "\<lbrakk> ac_corres st G rx P' A C; \<lbrace> \<lambda>s. P s \<rbrace> A \<lbrace> \<lambda>rv s. Q rv s \<rbrace>, \<lbrace> \<lambda>rv s. True \<rbrace>!; \<And>s. P (st s) \<Longrightarrow> P' s \<rbrakk>
     \<Longrightarrow> hoaret G \<Theta> F {s. P (st s) } C {s. Q (rx s) (st s) } E"
   apply (rule TerminationPartial)
-   apply (erule (1) hoarep_from_ccorres, simp)
-  apply (clarsimp simp: ccorres_def validE_NF_def validNF_def no_fail_def)
+   apply (erule (1) hoarep_from_ac_corres, simp)
+  apply (clarsimp simp: ac_corres_def validE_NF_def validNF_def no_fail_def)
   done
 
 (*

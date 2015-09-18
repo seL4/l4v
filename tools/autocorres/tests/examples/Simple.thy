@@ -21,8 +21,8 @@ install_C_file "simple.c"
 autocorres [ ts_force pure = max, ts_force nondet = gcd, unsigned_word_abs = gcd ] "simple.c"
 
 (* Generated theorems and proofs. *)
-thm simple.max'_def simple.max'_ccorres
-thm simple.gcd'_def simple.gcd'_ccorres
+thm simple.max'_def simple.max'_ac_corres
+thm simple.gcd'_def simple.gcd'_ac_corres
 
 context simple begin
 

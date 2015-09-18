@@ -484,15 +484,15 @@ let
     val ts_thm = the (AutoCorresData.get_thm thy filename "TScorres" fn_name)
           handle Option => raise SimplConv.FunctionNotFound fn_name
     val lthy = let
-        val final_thm = @{thm ccorres_chain} OF [l1_thm, l2_thm, hl_thm, wa_thm, ts_thm]
+        val final_thm = @{thm ac_corres_chain} OF [l1_thm, l2_thm, hl_thm, wa_thm, ts_thm]
         val final_thm' = Simplifier.simplify lthy final_thm
-        val (_, lthy) = Utils.define_lemma (make_function_name fn_name ^ "_ccorres") final_thm' lthy
+        val (_, lthy) = Utils.define_lemma (make_function_name fn_name ^ "_ac_corres") final_thm' lthy
     in
         lthy
     end
     handle THM _ =>
            (Utils.THM_non_critical keep_going
-                ("autocorres: failed to prove ccorres theorem for " ^ fn_name)
+                ("autocorres: failed to prove ac_corres theorem for " ^ fn_name)
                 0 [l1_thm, l2_thm, hl_thm, wa_thm, ts_thm];
             lthy)
   in
