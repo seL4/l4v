@@ -42,7 +42,7 @@ lemmas [hoare_post_imps] = hoare_post_imp_R hoare_post_imp[rotated]
 method post_asm_raw methods m = 
   (drule hoare_post_imps,
    atomize (full),
-   focus (concl) 
+   focus_concl 
      \<open>intro impI allI, 
       m, 
       atomize (full),
@@ -62,14 +62,14 @@ named_theorems packed_validIs
 lemmas [packed_validIs] = packed_validI packed_validRI
 
 method post_raw methods m = 
-  (focus 
+  (focus_concl 
     \<open>rule packed_validEs,
-     focus (concl) \<open>m,fold_subgoals\<close>, 
+     focus_concl \<open>m,fold_subgoals\<close>, 
      atomize (full),
      rule packed_validI\<close>)
 
 method post methods m = 
-  (post_raw 
+  (post_raw
      \<open>intro impI conjI allI,
       distinct_subgoals,
       all \<open>m\<close>,
