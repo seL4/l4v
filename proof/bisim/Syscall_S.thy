@@ -759,15 +759,17 @@ lemma set_mrs_separate_state [wp]:
 
 lemma send_async_ipc_separate_state [wp]:
   "\<lbrace>separate_state\<rbrace> send_async_ipc a b \<lbrace>\<lambda>_. separate_state\<rbrace>"
-  apply (simp add: send_async_ipc_def)
+  unfolding send_async_ipc_def ipc_cancel_def
   apply (rule separate_state_pres)
   apply (rule hoare_pre)
-  apply (wp gts_wp ipc_cancel_caps_of_state get_aep_wp
+  apply (wp gts_wp get_aep_wp hoare_pre_cont[where a = "reply_ipc_cancel x" for x]
         | wpc | wps
-        | simp add: update_waiting_aep_def
-        (*| strengthen imp_consequent*))+
+        | simp add: update_waiting_aep_def)+
   apply (clarsimp)
-  sorry
+  apply (simp add: receive_blocked_def)
+  apply (case_tac st; clarsimp)
+  apply (clarsimp simp add: pred_tcb_at_def obj_at_def)
+  done
 
 lemma dmo_separate_state [wp]:
   "\<lbrace>separate_state\<rbrace> do_machine_op f \<lbrace>\<lambda>_. separate_state\<rbrace>"
