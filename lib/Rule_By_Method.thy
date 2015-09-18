@@ -107,7 +107,7 @@ let
     val prems = Drule.cprems_of st';
     val (asms, ctxt') = Assumption.add_assumes prems ctxt;
     val ctxt'' = fold add_rule_prem asms ctxt';
-    val st'' = Goal.conclude (Drule.implies_elim_list st' asms);
+    val st'' = Goal.conclude (Drule.implies_elim_list st' (map Thm.assume prems));
   in (ctxt'',st'') end
 
   fun defer_prems st' =
