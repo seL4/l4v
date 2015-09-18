@@ -121,7 +121,7 @@ text {* async endpoint between Low and High *}
 definition
   aepH :: Structures_H.async_endpoint
 where
-  "aepH \<equiv> Structures_H.WaitingAEP [High_tcb_ptr]"
+  "aepH \<equiv> Structures_H.AEP (Structures_H.aep.WaitingAEP [High_tcb_ptr]) None"
 
 
 text {* Low's VSpace (PageDirectory)*}
@@ -232,6 +232,7 @@ where
      (* tcbTimeSlice       = *) Low_time_slice
      (* tcbFaultHandler    = *) 0
      (* tcbIPCBuffer       = *) 0
+     (* tcbBoundAEP        = *) None
      (* tcbContext         = *) undefined"
    
 
@@ -255,6 +256,7 @@ where
      (* tcbTimeSlice       = *) High_time_slice
      (* tcbFaultHandler    = *) 0
      (* tcbIPCBuffer       = *) 0
+     (* tcbBoundAEP        = *) None
      (* tcbContext         = *) undefined"
 
    
@@ -277,6 +279,7 @@ where
      (* tcbTimeSlice       = *) time_slice
      (* tcbFaultHandler    = *) 0
      (* tcbIPCBuffer       = *) 0
+     (* tcbBoundAEP        = *) None
      (* tcbContext         = *) empty_context"
 
 definition
@@ -1925,7 +1928,7 @@ lemma s0H_pspace_distinct':
   apply (rule disjointI)
   apply clarsimp
   apply (drule kh0H_SomeD)+
-  apply (simp | erule disjE
+  by (simp | erule disjE
         | clarsimp simp: kh0H_dom_sets_distinct[THEN orthD1]
         | clarsimp simp: kh0H_dom_sets_distinct[THEN orthD2]
         | fastforce simp: s0_ptr_defs objBitsKO_def pageBits_def kh0H_obj_def
@@ -1955,7 +1958,6 @@ lemma s0H_pspace_distinct':
               fastforce, simp
         | (clarsimp simp: irq_node_offs_range_def cnode_offs_range_def pd_offs_range_def pt_offs_range_def s0_ptr_defs objBitsKO_def archObjSize_def kh0H_obj_def Low_cte'_def Low_capsH_def High_cte'_def High_capsH_def Silc_cte'_def Silc_capsH_def cte_level_bits_def empty_cte_def split: split_if_asm,
           (drule(1) aligned_le_sharp, simp add: mask_neg_add_aligned, fastforce simp: mask_def)+)[1])+
-   done
 
 lemma pspace_distinctD'':
   "\<lbrakk>\<exists>v. ksPSpace s x = Some v \<and> objBitsKO v = n; pspace_distinct' s\<rbrakk>
@@ -2876,7 +2878,7 @@ lemma s0H_invs:
     apply simp
    apply simp
   apply (rule conjI)
-   apply (clarsimp simp: valid_idle'_def st_tcb_at'_def obj_at'_def projectKO_eq project_inject objBitsKO_def)
+   apply (clarsimp simp: valid_idle'_def pred_tcb_at'_def obj_at'_def projectKO_eq project_inject objBitsKO_def)
    apply (clarsimp simp: s0H_internal_def s0_ptrs_aligned idle_tcbH_def)
    apply (rule pspace_distinctD''[OF _ s0H_pspace_distinct', simplified s0H_internal_def])
    apply (simp add: objBitsKO_def)
