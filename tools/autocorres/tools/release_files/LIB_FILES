@@ -56,6 +56,11 @@ Trace_Attribs.thy:
 trace_attribs.ML:
 more_xml.ML:
 Solves_Tac.thy:
+subgoal_focus/Subgoal_Focus.thy:
+subgoal_focus/Subgoal_Methods.thy:
+Rule_By_Method.thy:
+Eisbach_Methods.thy:
+Eisbach_Compat.thy:
     Compatibility libraries for NICTA developments.
 
 set.ML:
