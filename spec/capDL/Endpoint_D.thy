@@ -315,7 +315,7 @@ where
       bound_tcbs \<leftarrow> gets $ get_waiting_sync_bound_aep_threads aep_id;
       if (bound_tcbs \<noteq> {}) then do
           t \<leftarrow> select bound_tcbs;
-          ipc_cancel t;
+          set_cap (t, tcb_pending_op_slot) NullCap;
           do_async_transfer t
         od
       else return ()

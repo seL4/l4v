@@ -923,17 +923,17 @@ lemma send_async_ipc_corres:
   shows
   "ep_id = epptr \<Longrightarrow> dcorres dc \<top> (invs and valid_etcbs)
      (Endpoint_D.send_async_ipc ep_id)
-     (Ipc_A.send_async_ipc epptr badge)" 
+     (Ipc_A.send_async_ipc epptr badge)"
   apply (unfold Endpoint_D.send_async_ipc_def Ipc_A.send_async_ipc_def invs_def)
   apply (rule dcorres_expand_pfx)
   apply (clarsimp simp:get_async_ep_def get_object_def gets_def bind_assoc split: split_if)
   apply (rule dcorres_absorb_get_r)
-(*<<<<<<< HEAD*)
+  (*<<<<<<< HEAD*)
   apply (clarsimp simp:assert_def corres_free_fail split:Structures_A.kernel_object.splits split_if )
   apply (rename_tac async_ep_ext)
   apply (case_tac "aep_obj async_ep_ext", clarsimp)
     apply (case_tac "aep_bound_tcb async_ep_ext", clarsimp)
-    -- "Idle, not bound"
+     -- "Idle, not bound"
      apply (rule corres_alternate1)
      apply (rule dcorres_absorb_get_l)
      apply (clarsimp split del: split_if)
@@ -943,22 +943,39 @@ lemma send_async_ipc_corres:
      apply (frule get_async_ep_pick,simp)
      apply (clarsimp simp:aep_waiting_set_lift valid_state_def valid_aep_abstract_def none_is_waiting_aep_def)
      apply (rule corres_guard_imp,rule corres_dummy_set_async_ep,simp+)[1]
--- "Idle, bound"
+    -- "Idle, bound"
     apply (clarsimp simp: get_thread_state_def thread_get_def gets_the_def gets_def bind_assoc split del: split_if)
     apply (rule dcorres_absorb_get_r)
     apply (clarsimp simp: assert_opt_def corres_free_fail split: Structures_A.kernel_object.splits option.splits)
     apply (case_tac "receive_blocked (tcb_state x2)")
-    -- "receive_blocked"
+     -- "receive_blocked"
      apply (clarsimp)
      apply (rule corres_alternate2)
      apply (clarsimp simp: send_async_bound_def gets_def)
      apply (rule dcorres_absorb_get_l)
      apply (clarsimp simp: receive_blocked_waiting_syncs)
+     apply (clarsimp simp: IpcCancel_A.ipc_cancel_def get_thread_state_def thread_get_def gets_the_def gets_def bind_assoc split del: split_if)
+     apply (rule dcorres_absorb_get_r)
+     apply (clarsimp simp: assert_opt_def corres_free_fail split: Structures_A.kernel_object.splits option.splits)
+     apply (simp add: receive_blocked_def)
+     apply (case_tac "tcb_state x2";clarsimp)
      apply (rule corres_guard_imp)
-       apply (rule corres_split[OF dcorres_dat finalise_ipc_cancel])
-        apply (wp ipc_cancel_valid_idle | simp add: not_idle_thread_def invs_def valid_state_def)+
-     apply (clarsimp dest!: get_tcb_SomeD simp: receive_blocked_def valid_idle_def pred_tcb_at_def obj_at_def split: Structures_A.thread_state.splits)
-     -- "not receive_blocked"
+       apply (simp add: blocked_ipc_cancel_def bind_assoc)
+       apply (rule corres_symb_exec_r)
+          apply (rule corres_symb_exec_r)
+             apply (rule corres_symb_exec_r)
+                apply (rule corres_dummy_return_pl)
+                apply (rule corres_split[ OF _ corres_dummy_set_sync_ep])
+                  apply (simp add:K_bind_def when_def dc_def[symmetric])
+                  apply (rule corres_split[OF dcorres_dat set_thread_state_corres])
+                   apply (wp ipc_cancel_valid_idle
+                        | simp add: not_idle_thread_def invs_def valid_state_def get_blocking_ipc_endpoint_def)+
+     apply (clarsimp dest!:get_tcb_rev simp:invs_def )
+     apply (frule valid_tcb_if_valid_state[rotated], clarsimp simp: valid_state_def)
+     apply (fastforce dest!: get_tcb_SomeD
+                       simp: receive_blocked_def valid_idle_def pred_tcb_at_def obj_at_def
+                             valid_tcb_def valid_tcb_state_def infer_tcb_pending_op_def
+                      split: Structures_A.thread_state.splits)
     apply clarsimp
     apply (rule corres_alternate1)
     apply (rule dcorres_absorb_get_l)
@@ -969,7 +986,7 @@ lemma send_async_ipc_corres:
     apply (frule get_async_ep_pick,simp)
     apply (clarsimp simp:aep_waiting_set_lift valid_state_def valid_aep_abstract_def none_is_waiting_aep_def)
     apply (rule corres_guard_imp,rule corres_dummy_set_async_ep,simp+)[1]
--- "Waiting"
+   -- "Waiting"
    apply (rule corres_alternate1)
    apply (rule dcorres_absorb_get_l)
    apply (clarsimp split del: split_if)
@@ -990,7 +1007,7 @@ lemma send_async_ipc_corres:
    apply (drule_tac A="aep_waiting_set epptr s'" and x = y in eqset_imp_iff)
    apply (clarsimp simp:valid_pspace_def aep_waiting_set_def)
    apply (clarsimp simp: pred_tcb_at_def obj_at_def valid_aep_def split:list.splits option.splits)
--- "Active"
+  -- "Active"
   apply (rule corres_alternate1)
   apply (rule dcorres_absorb_get_l)
   apply (clarsimp split del: split_if)
