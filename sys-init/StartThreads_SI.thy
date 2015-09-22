@@ -10,7 +10,7 @@
 
 theory StartThreads_SI
 imports
-  InitTCB_SI "~/verification/l4v/lib/Apply_Trace_Cmd"
+  InitTCB_SI
 begin
 
 lemma is_waiting_thread_is_tcb [simp]:
