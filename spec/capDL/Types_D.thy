@@ -313,6 +313,7 @@ lemmas tcb_slot_defs =
   tcb_caller_slot_def
   tcb_ipcbuffer_slot_def
   tcb_pending_op_slot_def
+  tcb_boundaep_slot_def
 
 (*
  * Getters and setters for various data types.

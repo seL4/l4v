@@ -165,6 +165,7 @@ lemma default_tcb_slots:
  "[0 .e. tcb_pending_op_slot] = [0,1,2,3,4,5]"
  "[0 .e. (5::nat)] = [0,1,2,3,4,5]"
  "[0..< 6] = [0,1,2,3,4,5]"
+ "[0..< 7] = [0,1,2,3,4,5,6]"
   by (clarsimp simp: tcb_pending_op_slot_def upt_rec)+
 
 definition "update_tcb_fault_endpoint fault_ep = cdl_tcb_fault_endpoint_update (\<lambda>_. fault_ep)"

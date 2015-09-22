@@ -10,7 +10,7 @@
 
 theory StartThreads_SI
 imports
-  InitTCB_SI
+  InitTCB_SI "~/verification/l4v/lib/Apply_Trace_Cmd"
 begin
 
 lemma is_waiting_thread_is_tcb [simp]:
@@ -35,12 +35,20 @@ lemma is_waiting_thread_opt_cap_tcb_pending_op_slot [simp]:
   \<Longrightarrow> opt_cap (obj_id, tcb_pending_op_slot) spec = Some RestartCap"
   by (clarsimp simp: is_waiting_thread_def opt_cap_def slots_of_def opt_object_def)
 
+
 lemma is_waiting_thread_opt_cap_tcb_replycap_slot [simp]:
   "\<lbrakk>well_formed spec; cdl_objects spec obj_id = Some obj; is_waiting_thread obj\<rbrakk>
   \<Longrightarrow> opt_cap (obj_id, tcb_replycap_slot) spec = Some (MasterReplyCap obj_id)"
   apply (frule well_formed_tcb_pending_op_replycap [where obj_id=obj_id], simp add: object_at_def)
   apply (clarsimp simp: is_waiting_thread_def opt_cap_def slots_of_def opt_object_def)
   done
+
+lemma is_waiting_thread_opt_cap_tcb_boundaep_slot[simp]:
+  "\<lbrakk>well_formed spec; cdl_objects spec obj_id = Some obj; is_waiting_thread obj\<rbrakk>
+  \<Longrightarrow> opt_cap (obj_id, tcb_boundaep_slot) spec = Some NullCap"
+  apply (clarsimp simp: is_waiting_thread_def opt_cap_def slots_of_def opt_object_def)
+  apply (frule well_formed_tcb_boundaep_cap [where obj_id=obj_id], simp add: object_at_def)
+  by (clarsimp simp: is_waiting_thread_def opt_cap_def slots_of_def opt_object_def)
 
 lemma cap_transform_RestartCap [simp]:
   "cap_transform t RestartCap = RestartCap"
@@ -56,6 +64,8 @@ lemma cap_transform_MasterReplyCap:
   apply (frule cap_transform_update_cap_object [where cap="MasterReplyCap obj_id"], simp+)
   apply (clarsimp simp: cap_transform_def cap_object_def update_cap_object_def)
   done
+
+
 
 lemma start_thread_sep:
   "\<lbrace>\<guillemotleft>tcb_half_initialised spec t obj_id \<and>*
@@ -81,8 +91,8 @@ lemma start_thread_sep:
          simp add: guard_equal_si_cspace_cap' cap_object_simps is_tcb_default_cap)+
   apply (subst offset_slot_si_cnode_size', assumption)+
   apply (clarsimp simp: cap_transform_MasterReplyCap)
-  apply sep_solve
-  done
+  by sep_solve
+
 
 lemma tcb_half_id:
   "\<lbrakk>well_formed spec; is_tcb object; \<not> is_waiting_thread object;
@@ -91,6 +101,7 @@ lemma tcb_half_id:
   apply (frule well_formed_tcb_pending_op_cap [where obj_id=obj_id], simp add: object_at_def)
   apply (frule well_formed_tcb_replycap_cap [where obj_id=obj_id], simp add: object_at_def)
   apply (frule well_formed_tcb_pending_op_replycap [where obj_id=obj_id], simp add: object_at_def)
+  apply (frule well_formed_tcb_boundaep_cap [where obj_id=obj_id], simp add: object_at_def)
   apply (fastforce simp: tcb_half_def is_waiting_thread_def is_tcb_def
                          opt_cap_def slots_of_def opt_object_def object_slots_def update_slots_def
                          cdl_tcb.splits

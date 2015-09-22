@@ -323,7 +323,8 @@ lemma invoke_tcb_threadcontrol_wp':
          tcb_cap_slot \<mapsto>c TcbCap target_tcb \<and>*
          (crt_slot) \<mapsto>c crt_cap'  \<and>*
          (target_tcb, tcb_vspace_slot) \<mapsto>c NullCap \<and>*
-         (ipcbuff_slot) \<mapsto>c ipcbuff_cap \<and>* (target_tcb, tcb_ipcbuffer_slot) \<mapsto>c NullCap \<and>*
+         (ipcbuff_slot) \<mapsto>c ipcbuff_cap \<and>* 
+         (target_tcb, tcb_ipcbuffer_slot) \<mapsto>c NullCap \<and>*
          R> \<rbrace>
  invoke_tcb  (ThreadControl target_tcb tcb_cap_slot faultep croot vroot ipc_buffer)
 \<lbrace>\<lambda>_.  <(target_tcb, tcb_ipcbuffer_slot) \<mapsto>c ipcbuff_cap \<and>*
@@ -332,7 +333,8 @@ lemma invoke_tcb_threadcontrol_wp':
        (target_tcb, tcb_vspace_slot) \<mapsto>c vrt_cap    \<and>*
        (vrt_slot) \<mapsto>c vrt_cap                       \<and>*
        (target_tcb, tcb_cspace_slot) \<mapsto>c crt_cap    \<and>*
-       (crt_slot) \<mapsto>c crt_cap' \<and>* target_tcb \<mapsto>f Tcb (tcb\<lparr>cdl_tcb_fault_endpoint := fltep\<rparr>) \<and>* R >\<rbrace>, \<lbrace>E\<rbrace> "
+       (crt_slot) \<mapsto>c crt_cap' \<and>*
+       target_tcb \<mapsto>f Tcb (tcb\<lparr>cdl_tcb_fault_endpoint := fltep\<rparr>) \<and>* R >\<rbrace>, \<lbrace>E\<rbrace> "
   apply (rule hoare_name_pre_stateE)
   apply (clarsimp simp: invoke_tcb_def)
   apply (wp set_cdl_tcb_fault_endpoint_wp[sep_wand_wp] tcb_update_ipc_buffer_wp'[sep_wand_side_wpE]
@@ -957,7 +959,7 @@ assumes unify: "cnode_id = cap_object cnode_cap \<and>
      offset tcb_root root_size = tcb_cap_slot \<and>
      offset cspace_root root_size = cspace_slot \<and>
      offset vspace_root root_size = vspace_slot \<and>
-     offset buffer_frame_root root_size =  buffer_frame_slot "
+     offset buffer_frame_root root_size =  buffer_frame_slot"
 shows
   "\<lbrakk>
      is_pd_cap vspace_cap; is_frame_cap buffer_frame_cap;
@@ -1259,6 +1261,7 @@ lemma seL4_TCB_WriteRegisters_wp:
      \<and>* (root_tcb_id, tcb_cspace_slot) \<mapsto>c cnode_cap
      \<and>* tcb_id \<mapsto>f tcb
      \<and>* (tcb_id, tcb_pending_op_slot) \<mapsto>c NullCap
+     \<and>* (tcb_id, tcb_boundaep_slot) \<mapsto>c bound_aep_cap
      \<and>* cap_object cnode_cap \<mapsto>f CNode (empty_cnode root_size)
      \<and>* (cap_object cnode_cap, offset tcb_ref root_size) \<mapsto>c tcb_cap
      \<and>* R \<guillemotright> \<rbrace>
@@ -1268,6 +1271,7 @@ lemma seL4_TCB_WriteRegisters_wp:
     \<and>* (root_tcb_id, tcb_cspace_slot) \<mapsto>c cnode_cap
     \<and>* tcb_id \<mapsto>f tcb
     \<and>* (tcb_id, tcb_pending_op_slot) \<mapsto>c NullCap
+    \<and>* (tcb_id, tcb_boundaep_slot) \<mapsto>c bound_aep_cap
     \<and>* cap_object cnode_cap \<mapsto>f CNode (empty_cnode root_size)
     \<and>* (cap_object cnode_cap, offset tcb_ref root_size) \<mapsto>c tcb_cap
     \<and>* R \<guillemotright> \<rbrace>"
