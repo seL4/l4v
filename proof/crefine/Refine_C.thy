@@ -12,7 +12,14 @@ chapter "Toplevel Refinement Statement"
 
 theory Refine_C
 imports Init_C Fastpath_C "../../lib/clib/CToCRefine"
+        "../../tools/autocorres/AutoCorres"
 begin
+
+autocorres
+  [ts_rules = pure nondet, (* pure functions if possible, else nondet_monad *)
+   skip_heap_abs, skip_word_abs (* for compatibility *)
+  ] "c/kernel_all.c_pp"
+
 
 crunch ksQ[wp]: handleVMFault "\<lambda>s. P (ksReadyQueues s)"
   (ignore: getFAR getDFSR getIFSR)
