@@ -204,7 +204,7 @@ lemma setThreadState_obj_at_unchangedT:
   shows "\<lbrace>obj_at' P t\<rbrace> setThreadState t' ts \<lbrace>\<lambda>rv. obj_at' P t\<rbrace>"
   apply (simp add: setThreadState_def)
   apply (wp rescheduleRequired_obj_at_unchangedT[OF y], simp)
-  apply (wp threadSet_obj_at')
+  apply (wp threadSet_obj_at'_strongish)
   apply (clarsimp simp: obj_at'_def projectKOs x cong: if_cong)
   done
 
@@ -4306,7 +4306,7 @@ lemma oblivious_switchToThread_schact:
                    threadSet_def tcbSchedEnqueue_def unless_when
                    getQueue_def setQueue_def storeWordUser_def
                    pointerInUserData_def isRunnable_def isBlocked_def
-                   getThreadState_def tcbSchedDequeue_def)
+                   getThreadState_def tcbSchedDequeue_def bitmap_fun_defs)
   apply (safe intro!: oblivious_bind
               | simp_all add: oblivious_setVMRoot_schact)+
   done
@@ -5875,7 +5875,7 @@ lemma all_prio_not_inQ_not_tcbQueued: "\<lbrakk> obj_at' (\<lambda>a. (\<forall>
 done
 
 lemma st_tcb_at_is_Reply_imp_not_tcbQueued: "\<And>s t.\<lbrakk> invs' s; st_tcb_at' isReply t s\<rbrakk> \<Longrightarrow> obj_at' (\<lambda>a. \<not> tcbQueued a) t s"
-  apply (clarsimp simp: invs'_def valid_state'_def valid_queues_def st_tcb_at'_def)
+  apply (clarsimp simp: invs'_def valid_state'_def valid_queues_def st_tcb_at'_def valid_queues_no_bitmap_def)
   apply (rule all_prio_not_inQ_not_tcbQueued)
   apply (clarsimp simp: obj_at'_def)
   apply (erule_tac x="d" in allE)

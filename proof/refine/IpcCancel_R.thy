@@ -987,40 +987,6 @@ apply (wp hoare_vcg_conj_lift delete_one_ksCurDomain
      | simp add: getThreadReplySlot_def)+
 done
 
-(* FIXME move *)
-lemma tcbSchedEnqueue_not_st:
-  "(\<And>tcb st qd. P (tcb\<lparr>tcbState := st, tcbQueued := qd\<rparr>) \<longleftrightarrow> P tcb)
-     \<Longrightarrow> \<lbrace>obj_at' P t'\<rbrace> tcbSchedEnqueue t \<lbrace>\<lambda>_. obj_at' P t'\<rbrace>"
-apply (simp add: tcbSchedEnqueue_def unless_def)
-apply (wp threadGet_wp | simp)+
-apply (clarsimp simp: obj_at'_def)
-apply (case_tac obja)
-apply fastforce
-done
-
-(* FIXME move *)
-lemma setThreadState_not_st:
-  "(\<And>tcb st qd. P (tcb\<lparr>tcbState := st, tcbQueued := qd\<rparr>) \<longleftrightarrow> P tcb)
-     \<Longrightarrow> \<lbrace>obj_at' P t'\<rbrace> setThreadState st t \<lbrace>\<lambda>_. obj_at' P t'\<rbrace>"
-apply (simp add: setThreadState_def rescheduleRequired_def)
-apply (wp hoare_vcg_conj_lift tcbSchedEnqueue_not_st
-     | wpc
-     | rule hoare_drop_imps
-     | simp)+
-apply (clarsimp simp: obj_at'_def)
-apply (case_tac obj)
-apply fastforce
-done
-
-(* FIXME move *)
-lemma setThreadState_tcb_in_cur_domain'[wp]:
-  "\<lbrace>tcb_in_cur_domain' t'\<rbrace> setThreadState st t \<lbrace>\<lambda>_. tcb_in_cur_domain' t'\<rbrace>"
-apply (simp add: tcb_in_cur_domain'_def)
-apply (rule hoare_pre)
-apply wps
-apply (wp setThreadState_not_st | simp)+
-done
-
 lemma asyncIPCCancel_tcb_obj_at':
   "(\<And>tcb st qd. P (tcb\<lparr>tcbState := st, tcbQueued := qd\<rparr>) \<longleftrightarrow> P tcb)
      \<Longrightarrow> \<lbrace>obj_at' P t'\<rbrace> asyncIPCCancel t word \<lbrace>\<lambda>_. obj_at' P t'\<rbrace>"

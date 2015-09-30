@@ -1258,6 +1258,34 @@ lemma (in kernel_m) cDomSchedule_to_H_correct:
     apply auto
   done
 
+definition
+  cbitmap_L1_to_H :: "32 word[16] \<Rightarrow> (8 word \<Rightarrow> 32 word)"
+where
+  "cbitmap_L1_to_H l1 \<equiv> \<lambda>d. if d \<le> maxDomain then l1.[unat d] else 0"
+
+definition
+  cbitmap_L2_to_H :: "32 word[9][16] \<Rightarrow> (8 word \<times> nat \<Rightarrow> 32 word)"
+where
+  "cbitmap_L2_to_H l2 \<equiv> \<lambda>(d, i).
+    if d \<le> maxDomain \<and> i \<le> numPriorities div wordBits
+    then l2.[unat d].[i] else 0"
+
+lemma cbitmap_L1_to_H_correct:
+  "cbitmap_L1_relation cs as \<Longrightarrow>
+   cbitmap_L1_to_H cs = as"
+   unfolding cbitmap_L1_to_H_def cbitmap_L1_relation_def
+   apply (rule ext)
+   apply clarsimp
+   done
+
+lemma cbitmap_L2_to_H_correct:
+  "cbitmap_L2_relation cs as \<Longrightarrow>
+   cbitmap_L2_to_H cs = as"
+   unfolding cbitmap_L2_to_H_def cbitmap_L2_relation_def
+   apply (rule ext)
+   apply clarsimp
+   done
+
 definition (in state_rel)
   cstate_to_H :: "globals \<Rightarrow> kernel_state"
 where
@@ -1271,6 +1299,8 @@ where
     ksCurDomain = ucast (ksCurDomain_' s),
     ksDomainTime = ksDomainTime_' s,
     ksReadyQueues = cready_queues_to_H (clift (t_hrs_' s)) (ksReadyQueues_' s),
+    ksReadyQueuesL1Bitmap = cbitmap_L1_to_H (ksReadyQueuesL1Bitmap_' s),
+    ksReadyQueuesL2Bitmap = cbitmap_L2_to_H (ksReadyQueuesL2Bitmap_' s),
     ksCurThread = ctcb_ptr_to_tcb_ptr (ksCurThread_' s),
     ksIdleThread = ctcb_ptr_to_tcb_ptr (ksIdleThread_' s),
     ksSchedulerAction = cscheduler_action_to_H (ksSchedulerAction_' s),
@@ -1286,44 +1316,55 @@ lemma (in kernel_m) cstate_to_H_correct:
   shows "cstate_to_H cs = as"
   apply (subgoal_tac "cstate_to_machine_H cs = ksMachineState as")
    apply (rule kernel_state.equality, simp_all add: cstate_to_H_def)
-                 apply (rule cstate_to_pspace_H_correct)
-                  using valid
-                  apply (simp add: valid_state'_def)
+                   apply (rule cstate_to_pspace_H_correct)
+                    using valid
+                    apply (simp add: valid_state'_def)
+                   using cstate_rel
+                   apply (clarsimp simp: cstate_relation_def Let_def)
+                  using cstate_rel
+                  apply (clarsimp simp: cstate_relation_def Let_def Pair_fst_snd_eq)
                  using cstate_rel
-                 apply (clarsimp simp: cstate_relation_def Let_def)
+                 apply (clarsimp simp: cstate_relation_def Let_def Pair_fst_snd_eq)
                 using cstate_rel
-                apply (clarsimp simp: cstate_relation_def Let_def Pair_fst_snd_eq)
+                apply (fastforce simp: cstate_relation_def Let_def ghost_size_rel_def unat_eq_0
+                            split: split_if)
+               using valid cstate_rel
+               apply (rule cDomScheduleIdx_to_H_correct)
                using cstate_rel
-               apply (clarsimp simp: cstate_relation_def Let_def Pair_fst_snd_eq)
+               apply (clarsimp simp: cstate_relation_def Let_def)
+              using valid cstate_rel
+              apply (rule cDomSchedule_to_H_correct)
               using cstate_rel
-              apply (auto simp: cstate_relation_def Let_def ghost_size_rel_def unat_eq_0
-                             split: split_if)[1]
-             using valid cstate_rel
-             apply (rule cDomScheduleIdx_to_H_correct)
+              apply (clarsimp simp: cstate_relation_def Let_def)
              using cstate_rel
-             apply (clarsimp simp: cstate_relation_def Let_def)
-            using valid cstate_rel
-            apply (rule cDomSchedule_to_H_correct)
+             apply (clarsimp simp: cstate_relation_def Let_def ucast_up_ucast_id is_up_8_32)
             using cstate_rel
             apply (clarsimp simp: cstate_relation_def Let_def)
-
+           apply (rule cready_queues_to_H_correct)
            using cstate_rel
-           apply (clarsimp simp: cstate_relation_def Let_def ucast_up_ucast_id is_up_8_32)
+           apply (clarsimp simp: cstate_relation_def Let_def)
           using cstate_rel
           apply (clarsimp simp: cstate_relation_def Let_def)
-         apply (rule cready_queues_to_H_correct)
+          using cstate_rel
+          apply (clarsimp simp: cstate_relation_def Let_def)
+          apply (rule cbitmap_L1_to_H_correct)
+          apply (clarsimp simp: cstate_relation_def Let_def)
          using cstate_rel
+         apply (clarsimp simp: cstate_relation_def Let_def)
+         apply (rule cbitmap_L2_to_H_correct)
          apply (clarsimp simp: cstate_relation_def Let_def)
         using cstate_rel
         apply (clarsimp simp: cstate_relation_def Let_def)
        using cstate_rel
        apply (clarsimp simp: cstate_relation_def Let_def)
+      using cstate_rel
+      apply (clarsimp simp: cstate_relation_def Let_def)
       apply (rule csch_act_rel_to_H[THEN iffD1])
        apply (case_tac "ksSchedulerAction as", simp+)
        using valid
        apply (clarsimp simp: valid_state'_def st_tcb_at'_def
-                  obj_at'_real_def ko_wp_at'_def objBitsKO_def projectKO_opt_tcb
-                split: kernel_object.splits)
+                             obj_at'_real_def ko_wp_at'_def objBitsKO_def projectKO_opt_tcb
+                       split: kernel_object.splits)
       using cstate_rel
       apply (clarsimp simp: cstate_relation_def Let_def)
      apply (rule cint_rel_to_H)
@@ -1339,11 +1380,9 @@ lemma (in kernel_m) cstate_to_H_correct:
     using cstate_rel
     apply (clarsimp simp: cstate_relation_def Let_def)
    using cstate_rel
-   apply (clarsimp simp: cstate_relation_def Let_def
-                         carch_state_relation_def carch_globals_def)
+   apply (clarsimp simp: cstate_relation_def Let_def carch_state_relation_def carch_globals_def)
   using cstate_rel
-  apply (clarsimp simp: cstate_relation_def Let_def
-                        carch_state_relation_def carch_globals_def)
+  apply (clarsimp simp: cstate_relation_def Let_def carch_state_relation_def carch_globals_def)
   apply (rule cstate_to_machine_H_correct)
      using valid
      apply (simp add: valid_state'_def)

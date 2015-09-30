@@ -2235,7 +2235,6 @@ lemma sts'_valid_pspace'_inv[wp]:
   apply (simp add: tcb_cte_cases_def)
   done
 
-(* crunch st_tcb_at'[wp]: setQueue "\<lambda>s. P (st_tcb_at' P' t s)" FIXME RAF DECIDE*)
 crunch st_tcb_at'[wp]: setQueue "st_tcb_at' P' t"
 crunch ct'[wp]: setQueue "\<lambda>s. P (ksCurThread s)"
 crunch cur_domain[wp]: setQueue "\<lambda>s. P (ksCurDomain s)"
@@ -2625,10 +2624,9 @@ lemma prioToL1Index_bit_set:
  using prioToL1Index_max[simplified wordRadix_def]
  by (fastforce simp: nth_w2p_same)
 
-lemma prioL2Index_bit_set: (* FIXME RAF *)
+lemma prioL2Index_bit_set:
   fixes p :: priority
   shows "((2\<Colon>32 word) ^ unat (ucast p && (mask wordRadix :: machine_word))) !! unat (p && mask wordRadix)"
-  using [[show_types, show_sorts]]
   apply (simp add: nth_w2p wordRadix_def ucast_and_mask[symmetric] unat_ucast_upcast is_up)
   apply (rule unat_less_helper)
   apply (insert and_mask_less'[where w=p and n=wordRadix], simp add: wordRadix_def)
@@ -2680,15 +2678,14 @@ lemma prioToL1Index_complement_bit_set:
     apply (subgoal_tac "unat (p >> 5) < 32")
   oops
 
-lemma prioToL1Index_bit_not_set: (* FIXME RAF *)
+lemma prioToL1Index_bit_not_set:
   "\<not> (~~ ((2 :: machine_word) ^ prioToL1Index p)) !! prioToL1Index p"
   apply (subst word_ops_nth_size, simp_all add: prioToL1Index_bit_set)
-  apply (clarsimp simp: prioToL1Index_def wordRadix_def word_size)
-  apply (rule order_less_le_trans, rule word_shiftr_lt)
-  apply clarsimp
+  apply (fastforce simp: prioToL1Index_def wordRadix_def word_size
+                  intro: order_less_le_trans[OF word_shiftr_lt])
   done
 
-lemma prioToL1Index_bit_not_set_simp: (* FIXME RAF *)
+lemma prioToL1Index_bit_not_set_simp:
   "(~~ ((2 :: machine_word) ^ prioToL1Index p)) !! prioToL1Index p = False"
   by (simp add: prioToL1Index_bit_not_set)
 
@@ -2752,7 +2749,13 @@ lemma removeFromBitmap_bitmapQ_no_L2_orphans[wp]:
   apply metis
   done
 
-lemma removeFromBitmap_valid_bitmapQ_except: (* FIXME RAF cleanup *)
+(* FIXME move *)
+lemma no_other_bits_set:
+  "\<lbrakk> (w::'a::len word) && ~~ (2 ^ n) = 0 ; n' \<noteq> n ; n < size w ; n' < size w \<rbrakk>
+   \<Longrightarrow>  \<not> w !! n'"
+  by (fastforce dest!: word_eqD simp: word_ops_nth_size word_size nth_w2p)
+
+lemma removeFromBitmap_valid_bitmapQ_except:
   "\<lbrace> valid_bitmapQ_except d p \<rbrace>
    removeFromBitmap d p
    \<lbrace>\<lambda>_. valid_bitmapQ_except d p \<rbrace>"
@@ -2760,11 +2763,6 @@ proof -
   have unat_ucast_mask[simp]:
    "\<And>x. unat ((ucast (p::priority) :: machine_word) && mask x) = unat (p && mask x)"
    by (simp add: ucast_and_mask[symmetric] unat_ucast_upcast is_up)
-
-  have no_other_bits_set: (* FIXME extract this *)
-    "\<And>w n n'. \<lbrakk> (w::'a::len word) && ~~ (2 ^ n) = 0 ; n' \<noteq> n ; n < size w ; n' < size w \<rbrakk>
-              \<Longrightarrow>  \<not> w !! n'"
-    by (fastforce dest!: word_eqD simp: word_ops_nth_size word_size nth_w2p)
 
   show ?thesis
   unfolding removeFromBitmap_def
@@ -2777,40 +2775,32 @@ proof -
    apply clarsimp
    apply (subst valid_bitmapQ_except_def, clarsimp)+
    apply (clarsimp simp: bitmapQ_def)
-
-   apply (rule conjI)
-    apply clarsimp
-    apply (rule conjI)
-     apply clarsimp
-     apply (drule_tac p=pa in valid_bitmapQ_exceptE[where d=d], clarsimp)
+   apply (rule conjI; clarsimp)
+    apply (rename_tac p')
+    apply (rule conjI; clarsimp)
+     apply (drule_tac p=p' in valid_bitmapQ_exceptE[where d=d], clarsimp)
      apply (clarsimp simp: bitmapQ_def)
-        apply (drule_tac n'="unat (pa && mask wordRadix)" in no_other_bits_set)
+     apply (drule_tac n'="unat (p' && mask wordRadix)" in no_other_bits_set)
         apply (erule (1) prioToL1Index_bits_low_high_eq)
        apply (rule order_less_le_trans[OF word_unat_mask_lt])
-        apply (simp add: wordRadix_def' word_size)
-       apply (simp add: wordRadix_def' word_size)
+        apply (simp add: wordRadix_def' word_size)+
       apply (rule order_less_le_trans[OF word_unat_mask_lt])
        apply ((simp add: wordRadix_def' word_size)+)[3]
-    apply clarsimp
-    apply (drule_tac p=pa and d=d in valid_bitmapQ_exceptE, simp)
+    apply (drule_tac p=p' and d=d in valid_bitmapQ_exceptE, simp)
     apply (clarsimp simp: bitmapQ_def prioToL1Index_complement_nth_w2p)
-   apply clarsimp
    apply (drule_tac p=pa and d=da in valid_bitmapQ_exceptE, simp)
    apply (clarsimp simp: bitmapQ_def prioToL1Index_complement_nth_w2p)
   (* after clearing bit in L2, some bits in L2 field are still set *)
   apply clarsimp
   apply (subst valid_bitmapQ_except_def, clarsimp)+
   apply (clarsimp simp: bitmapQ_def)
-
-  apply (rule conjI)
-   apply clarsimp
+  apply (rule conjI; clarsimp)
    apply (frule (1) prioToL1Index_bits_low_high_eq)
    apply (drule_tac d=d and p=pa in valid_bitmapQ_exceptE, simp)
    apply (clarsimp simp: bitmapQ_def)
    apply (subst complement_nth_w2p)
     apply (rule order_less_le_trans[OF word_unat_mask_lt])
      apply ((simp add: wordRadix_def' word_size)+)[3]
-
   apply (clarsimp simp: valid_bitmapQ_except_def bitmapQ_def)
   done
 qed
@@ -2934,7 +2924,7 @@ lemma tcbSchedEnqueueOrAppend_valid_queues:
   (* f is either (t#ts) or (ts @ [t]), so we define its properties generally *)
   assumes f_set[simp]: "\<And>ts. t \<in> set (f ts)"
   assumes f_set_insert[simp]: "\<And>ts. set (f ts) = insert t (set ts)"
-  assumes f_not_empty[simp]: "\<And>ts. f ts \<noteq> []" (* FIXME follows from f_set_insert? *)
+  assumes f_not_empty[simp]: "\<And>ts. f ts \<noteq> []"
   assumes f_distinct: "\<And>ts. \<lbrakk> distinct ts ; t \<notin> set ts \<rbrakk> \<Longrightarrow> distinct (f ts)"
   shows "\<lbrace>Invariants_H.valid_queues and st_tcb_at' runnable' t and valid_objs' \<rbrace>
     do queued \<leftarrow> threadGet tcbQueued t;
@@ -4328,6 +4318,29 @@ lemma tcbSchedDequeue_ct_not_inQ[wp]:
       done
   qed
 
+lemma tcbSchedEnqueue_not_st:
+  "(\<And>tcb st qd. P (tcb\<lparr>tcbState := st, tcbQueued := qd\<rparr>) \<longleftrightarrow> P tcb)
+     \<Longrightarrow> \<lbrace>obj_at' P t'\<rbrace> tcbSchedEnqueue t \<lbrace>\<lambda>_. obj_at' P t'\<rbrace>"
+apply (simp add: tcbSchedEnqueue_def unless_def)
+apply (wp threadGet_wp | simp)+
+apply (clarsimp simp: obj_at'_def)
+apply (case_tac obja)
+apply fastforce
+done
+
+lemma setThreadState_not_st:
+  "(\<And>tcb st qd. P (tcb\<lparr>tcbState := st, tcbQueued := qd\<rparr>) \<longleftrightarrow> P tcb)
+     \<Longrightarrow> \<lbrace>obj_at' P t'\<rbrace> setThreadState st t \<lbrace>\<lambda>_. obj_at' P t'\<rbrace>"
+apply (simp add: setThreadState_def rescheduleRequired_def)
+apply (wp hoare_vcg_conj_lift tcbSchedEnqueue_not_st
+     | wpc
+     | rule hoare_drop_imps
+     | simp)+
+apply (clarsimp simp: obj_at'_def)
+apply (case_tac obj)
+apply fastforce
+done
+
 crunch ct_idle_or_in_cur_domain'[wp]: setQueue ct_idle_or_in_cur_domain'
   (simp: ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
 
@@ -4517,6 +4530,14 @@ lemma threadSet_ct_running':
    apply simp
   apply wp
   done
+
+lemma setThreadState_tcb_in_cur_domain'[wp]:
+  "\<lbrace>tcb_in_cur_domain' t'\<rbrace> setThreadState st t \<lbrace>\<lambda>_. tcb_in_cur_domain' t'\<rbrace>"
+apply (simp add: tcb_in_cur_domain'_def)
+apply (rule hoare_pre)
+apply wps
+apply (wp setThreadState_not_st | simp)+
+done
 
 lemma asUser_global_refs':   "\<lbrace>valid_global_refs'\<rbrace> asUser t f \<lbrace>\<lambda>rv. valid_global_refs'\<rbrace>"
   apply (simp add: asUser_def split_def)

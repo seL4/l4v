@@ -655,7 +655,7 @@ lemma asUser_cur_obj_at':
   apply (simp add: asUser_def split_def)
   apply (wp)
     apply (rule hoare_lift_Pf2 [where f=ksCurThread])
-    apply (wp threadSet_obj_at')
+    apply (wp threadSet_obj_at'_really_strongest)
   apply (clarsimp simp: threadGet_def)
   apply (wp getObject_tcb_wp)
   apply clarsimp
@@ -1014,7 +1014,8 @@ lemma getMRs_user_word:
    apply simp
    apply (drule (1) order_less_le_trans)
    apply (simp add: word_less_nat_alt word_le_nat_alt)
-  apply (simp add: word_le_nat_alt add.commute add.left_commute mult.commute mult.left_commute)
+  apply (simp add: word_le_nat_alt add.commute add.left_commute mult.commute mult.left_commute
+                   wordSize_def')
   done
 
 declare split_if [split]

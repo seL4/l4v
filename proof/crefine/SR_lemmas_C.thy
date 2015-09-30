@@ -1079,6 +1079,8 @@ lemma rf_sr_ctes_of_cliftE:
 lemma cstate_relation_only_t_hrs:
   "\<lbrakk> t_hrs_' s = t_hrs_' t; 
   ksReadyQueues_' s = ksReadyQueues_' t;
+  ksReadyQueuesL1Bitmap_' s = ksReadyQueuesL1Bitmap_' t;
+  ksReadyQueuesL2Bitmap_' s = ksReadyQueuesL2Bitmap_' t;
   ksSchedulerAction_' s = ksSchedulerAction_' t; 
   ksCurThread_' s = ksCurThread_' t;
   ksIdleThread_' s = ksIdleThread_' t;
@@ -1102,6 +1104,8 @@ lemma rf_sr_upd:
   assumes 
     "(t_hrs_' (globals x)) = (t_hrs_' (globals y))"
     "(ksReadyQueues_' (globals x)) = (ksReadyQueues_' (globals y))"  
+    "(ksReadyQueuesL1Bitmap_' (globals x)) = (ksReadyQueuesL1Bitmap_' (globals y))"  
+    "(ksReadyQueuesL2Bitmap_' (globals x)) = (ksReadyQueuesL2Bitmap_' (globals y))"  
     "(ksSchedulerAction_' (globals x)) = (ksSchedulerAction_' (globals y))"
     "(ksCurThread_' (globals x)) = (ksCurThread_' (globals y))"  
     "(ksIdleThread_' (globals x)) = (ksIdleThread_' (globals y))"
@@ -1123,6 +1127,8 @@ lemma rf_sr_upd:
 lemma rf_sr_upd_safe[simp]:
   assumes rl: "(t_hrs_' (globals (g y))) = (t_hrs_' (globals y))"
   and     rq: "(ksReadyQueues_' (globals (g y))) = (ksReadyQueues_' (globals y))"  
+  and     rqL1: "(ksReadyQueuesL1Bitmap_' (globals (g y))) = (ksReadyQueuesL1Bitmap_' (globals y))"  
+  and     rqL2: "(ksReadyQueuesL2Bitmap_' (globals (g y))) = (ksReadyQueuesL2Bitmap_' (globals y))"  
   and     sa: "(ksSchedulerAction_' (globals (g y))) = (ksSchedulerAction_' (globals y))"
   and     ct: "(ksCurThread_' (globals (g y))) = (ksCurThread_' (globals y))"  
   and     it: "(ksIdleThread_' (globals (g y))) = (ksIdleThread_' (globals y))"
@@ -1139,7 +1145,7 @@ lemma rf_sr_upd_safe[simp]:
   and    gs: "ghost'state_' (globals (g y)) = ghost'state_' (globals y)"
   and     wu:  "(ksWorkUnitsCompleted_' (globals (g y))) = (ksWorkUnitsCompleted_' (globals y))"
   shows "((a, (g y)) \<in> rf_sr) = ((a, y) \<in> rf_sr)"
-  using rl rq sa ct it isn ist arch wu gs dsi cdom dt by - (rule rf_sr_upd)
+  using rl rq rqL1 rqL2 sa ct it isn ist arch wu gs dsi cdom dt by - (rule rf_sr_upd)
 
 (* More of a well-formed lemma, but \<dots> *)
 lemma valid_mdb_cslift_next:

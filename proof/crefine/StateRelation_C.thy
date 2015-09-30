@@ -587,6 +587,23 @@ where
             \<and> maxSize = card (UNIV :: word32 set))
     \<or> (maxSize > 0 \<and> maxSize = unat (gs_get_assn cap_get_capSizeBits_'proc gs)))"
 
+definition
+  cbitmap_L1_relation :: "machine_word['dom::finite] \<Rightarrow> (domain \<Rightarrow> machine_word) \<Rightarrow> bool"
+where
+  "cbitmap_L1_relation cbitmap1 abitmap1 \<equiv>
+    \<forall>d. (d \<le> maxDomain \<longrightarrow> cbitmap1.[unat d] = abitmap1 d) \<and>
+        (\<not> d \<le> maxDomain \<longrightarrow> abitmap1 d = 0)"
+
+definition
+  cbitmap_L2_relation :: "machine_word['i::finite]['dom::finite]
+                          \<Rightarrow> ((domain \<times> nat) \<Rightarrow> machine_word) \<Rightarrow> bool"
+where
+  "cbitmap_L2_relation cbitmap2 abitmap2 \<equiv>
+    \<forall>d i. ((d \<le> maxDomain \<and> i \<le> numPriorities div wordBits)
+            \<longrightarrow> cbitmap2.[unat d].[i] = abitmap2 (d, i)) \<and>
+           ((\<not> (d \<le> maxDomain \<and> i \<le> numPriorities div wordBits))
+            \<longrightarrow>  abitmap2 (d, i) = 0)"
+
 definition (in state_rel)
   cstate_relation :: "KernelStateData_H.kernel_state \<Rightarrow> globals \<Rightarrow> bool"
 where
@@ -597,6 +614,8 @@ where
        cready_queues_relation (clift cheap)
                              (ksReadyQueues_' cstate)
                              (ksReadyQueues astate) \<and>
+       cbitmap_L1_relation (ksReadyQueuesL1Bitmap_' cstate) (ksReadyQueuesL1Bitmap astate) \<and>
+       cbitmap_L2_relation (ksReadyQueuesL2Bitmap_' cstate) (ksReadyQueuesL2Bitmap astate) \<and>
        ksCurThread_' cstate = (tcb_ptr_to_ctcb_ptr (ksCurThread astate)) \<and>
        ksIdleThread_' cstate = (tcb_ptr_to_ctcb_ptr (ksIdleThread astate)) \<and>
        cinterrupt_relation (ksInterruptState astate) (intStateIRQNode_' cstate) (intStateIRQTable_' cstate) \<and>

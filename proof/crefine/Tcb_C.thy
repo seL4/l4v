@@ -17,7 +17,7 @@ lemma asUser_obj_at' :
   apply (simp add: asUser_def )
   apply wp
   apply (simp add: split_def)
-  apply (wp threadSet_obj_at') 
+  apply (wp threadSet_obj_at'_strongish) 
   apply (case_tac "t=t'")
    apply clarsimp
   apply clarsimp
@@ -462,7 +462,7 @@ lemma setPriority_ccorres:
      apply simp
     apply (simp add: guard_is_UNIV_def)
    apply (simp add: inQ_def pred_conj_def conj_comms)
-   apply (wp weak_sch_act_wf_lift_linear)
+   apply (wp weak_sch_act_wf_lift_linear tcbSchedDequeue_valid_queues)
     apply (rule hoare_strengthen_post,
           rule tcbSchedDequeue_nonq[where t'=t])
    apply (clarsimp simp: valid_tcb'_def tcb_cte_cases_def)
@@ -1581,6 +1581,7 @@ lemma lookupIPCBuffer_Some_0:
 lemma invokeTCB_ReadRegisters_ccorres:
 notes
   min_simps [simp del]
+  wordSize_def' [simp]
 shows
   "ccorres ((intr_and_se_rel \<circ> Inr) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
        (invs' and (\<lambda>s. ksCurThread s = thread) and ct_in_state' (op = Restart)
@@ -1718,7 +1719,7 @@ shows
                                      apply (subst unat_add_lem[THEN iffD1], simp_all add: unat_of_nat)[1]
                                     apply (erule sym)
                                    apply (simp add: option_to_ptr_def option_to_0_def
-                                                    msg_registers_convs upto_enum_word
+                                                    msg_registers_convs upto_enum_word wordSize_def'
                                               del: upt.simps)
                                   apply (rule frame_gp_registers_convs)
                                   apply (simp add: frame_gp_registers_convs less_diff_conv)

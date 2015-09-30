@@ -1473,7 +1473,7 @@ lemma handleYield_ccorres:
        apply (ctac add: rescheduleRequired_ccorres)
       apply (wp weak_sch_act_wf_lift_linear tcbSchedAppend_valid_objs')
      apply (vcg exspec= tcbSchedAppend_modifies)
-    apply (wp weak_sch_act_wf_lift_linear)
+    apply (wp weak_sch_act_wf_lift_linear tcbSchedDequeue_valid_queues)
    apply (vcg exspec= tcbSchedDequeue_modifies)
   apply (clarsimp simp: tcb_at_invs' invs_valid_objs'
                         valid_objs'_maxPriority valid_objs'_maxDomain)

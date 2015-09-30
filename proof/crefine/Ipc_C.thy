@@ -88,6 +88,9 @@ lemma registers_less_maxlength:
   by (simp add: msgRegisters_unfold msgMaxLength_unfold)
 
 lemma setMRs_to_setMR':
+notes
+  wordSize_def' [simp]
+shows
   "setMRs thread buffer xs
    = (do
     stateAssert (tcb_at' thread) [];
@@ -520,7 +523,7 @@ lemmas syscallMessage_unfold
          unfolded toEnum_def enum_register, simplified]
 
 lemma handleFaultReply':
-  notes option.case_cong_weak [cong]
+  notes option.case_cong_weak [cong] wordSize_def'[simp]
   assumes neq: "r \<noteq> s"
   shows "do 
     tag \<leftarrow> getMessageInfo s;
@@ -1231,9 +1234,9 @@ lemma copyMRs_buffer_loop_helper:
    ccorres dc xfdc (valid_pspace' and K (is_aligned rb msg_align_bits) and K (is_aligned sb msg_align_bits))
            \<lbrace>\<acute>i = of_nat (length State_H.msgRegisters) + of_nat i\<rbrace> hs
            (do v \<leftarrow> loadWordUser
-                       (sb + mrs ! i * of_nat (size (undefined :: word32) div 8));
+                       (sb + mrs ! i * 4);
                storeWordUser
-                  (rb + mrs ! i * of_nat (size (undefined :: word32) div 8)) v
+                  (rb + mrs ! i * 4) v
             od)
            (Guard C_Guard \<lbrace>hrs_htd \<acute>t_hrs \<Turnstile>\<^sub>t (Ptr (rb + (\<acute>i * 4 + 4)) :: word32 ptr)\<rbrace>
              (Guard C_Guard \<lbrace>hrs_htd \<acute>t_hrs \<Turnstile>\<^sub>t (Ptr (sb + (\<acute>i * 4 + 4)) :: word32 ptr)\<rbrace>
@@ -1269,6 +1272,7 @@ lemma mapM_only_length:
      (rule mapM_discarded)
 
 declare split_if[split]
+
 lemma copyMRs_buffer_loop_ccorres:
   fixes n
   defines i0: "i0 \<equiv> min (of_nat (length State_H.msgRegisters)) n"
@@ -1278,9 +1282,9 @@ lemma copyMRs_buffer_loop_ccorres:
       (valid_pspace' and K (is_aligned rb msg_align_bits) and K (is_aligned sb msg_align_bits))
       \<lbrace>\<acute>i = i0\<rbrace> hs
       (mapM_x (\<lambda>i. do v \<leftarrow> loadWordUser
-                              (sb + i * of_nat (size (undefined::word32) div 8));
+                              (sb + i * 4);
                       storeWordUser
-                              (rb + i * of_nat (size (undefined::word32) div 8)) v
+                              (rb + i * 4) v
                    od)
             [1 + of_nat (length State_H.msgRegisters).e.n])
     (While \<lbrace>\<acute>i < n\<rbrace>
@@ -1328,6 +1332,9 @@ lemma length_upto_enum_cases:
 
 (* FIXME move *)
 lemma copyMRs_ccorres [corres]:
+notes
+  wordSize_def'[simp]
+shows
   "ccorres (\<lambda>r r'. r = r' && mask msgLengthBits) ret__unsigned_'
     (valid_pspace' and tcb_at' sender and tcb_at' receiver
         and K (sendBuffer \<noteq> Some 0) and K (recvBuffer \<noteq> Some 0)
@@ -1367,6 +1374,7 @@ lemma copyMRs_ccorres [corres]:
         apply (rule ccorres_split_throws, rule ccorres_return_C, simp+)
         apply vcg
        apply (subst mapM_only_length)
+       apply clarsimp
        apply (rule ccorres_split_nothrow_novcg)
            apply (rule copyMRs_buffer_loop_ccorres)
            apply (fastforce simp: msgLengthBits_def word_less_nat_alt
@@ -1994,7 +2002,7 @@ lemma capTransferFromWords_ccorres [corres]:
    apply (clarsimp simp: typ_heap_simps')
    apply (simp add: return_def)
    apply (simp add: cct_relation_def)
-  apply (clarsimp simp: word_size valid_ipc_buffer_ptr'_def)
+  apply (clarsimp simp: word_size valid_ipc_buffer_ptr'_def wordSize_def')
   apply safe
    apply (erule aligned_add_aligned | simp add: is_aligned_def word_bits_conv)+
   done
@@ -2019,7 +2027,7 @@ lemma loadCapTransfer_ccorres [corres]:
                    word_size word_sle_def
                    msgMaxLength_def msgMaxExtraCaps_def
                    msgLengthBits_def msgExtraCapBits_def)
- apply (clarsimp simp: valid_ipc_buffer_ptr'_def)
+ apply (clarsimp simp: valid_ipc_buffer_ptr'_def wordSize_def')
  apply (erule aligned_add_aligned, simp_all add: is_aligned_def)
 done
 
@@ -2043,7 +2051,7 @@ lemma getExtraCPtr_ccorres [corres]:
   apply (clarsimp simp: bufferCPtrOffset_def word_size msgMaxLength_def
                         seL4_MsgLengthBits_def  Types_H.msgLengthBits_def
                         field_simps)
-  apply (clarsimp simp: valid_ipc_buffer_ptr'_def)
+  apply (clarsimp simp: valid_ipc_buffer_ptr'_def wordSize_def')
   apply (erule aligned_add_aligned, simp_all add: word_bits_def)
    apply (rule_tac n=2 in aligned_add_aligned, simp_all add: word_bits_def)
     apply (rule is_aligned_mult_triv2 [where n = 2, simplified])
@@ -2154,7 +2162,7 @@ lemma setExtraBadge_ccorres:
    apply (rule ccorres_pre_stateAssert)
    apply (unfold K_bind_def)
    apply (ctac add: storeWord_ccorres)
-  apply (clarsimp simp: bufferCPtrOffset_def word_size msgMaxLength_def
+  apply (clarsimp simp: bufferCPtrOffset_def word_size msgMaxLength_def wordSize_def'
                         seL4_MsgLengthBits_def seL4_MsgMaxLength_def Types_H.msgLengthBits_def
                         field_simps)
   apply (subgoal_tac " is_aligned (buffer + (of_nat n * 4 + 0x1E8)) 2")
@@ -3241,7 +3249,7 @@ proof -
    apply (clarsimp simp add: valid_pspace'_def)
    apply (simp add: upto_enum_step_def
              split: split_if_asm)
-   apply (simp add: word_size upto_enum_word field_simps
+   apply (simp add: word_size upto_enum_word field_simps wordSize_def'
                del: upt.simps)
    apply unat_arith
   apply (clarsimp simp: excaps_map_def option_to_ptr_def option_to_0_def) 
@@ -3957,6 +3965,9 @@ lemma emptySlot_tcbFault:
           | simp add: updateMDB_def updateCap_def Let_def
           | rule conjI impI)+
   done
+
+(* FIXME: move *)
+lemmas threadSet_obj_at' = threadSet_obj_at'_strongish
 
 (* FIXME: move *)
 lemma tcbSchedEnqueue_tcbFault:

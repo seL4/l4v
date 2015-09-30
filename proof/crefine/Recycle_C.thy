@@ -1233,9 +1233,9 @@ lemma tcbSchedEnqueue_ep_at:
   "\<lbrace>obj_at' (P :: endpoint \<Rightarrow> bool) ep\<rbrace>
       tcbSchedEnqueue t
    \<lbrace>\<lambda>rv. obj_at' P ep\<rbrace>"
-  apply (simp add: tcbSchedEnqueue_def unless_def)
-  apply (wp threadGet_wp)
-  apply (clarsimp split: split_if)
+  apply (simp add: tcbSchedEnqueue_def unless_def null_def)
+  apply (wp threadGet_wp, clarsimp, wp)
+  apply (clarsimp split: split_if, wp)
   done
 
 lemma ctcb_relation_unat_tcbPriority_C:

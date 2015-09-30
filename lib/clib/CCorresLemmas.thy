@@ -642,6 +642,15 @@ lemma ccorres_cross_over_guard:
   apply clarsimp
   done
 
+(* FIXME replace any usage of ccorres_cross_over_guard that does not refer to state with this lemma,
+   as it doesn't create spurious (s, s') \<in> rf_sr assumptions *)
+lemma ccorres_cross_over_guard_no_st:
+  "ccorres_underlying sr Gamm rvr xf arrel axf P' Q hs af cf \<Longrightarrow>
+      ccorres_underlying sr Gamm rvr xf arrel axf (K P and P') {s'. P \<longrightarrow> s' \<in> Q} hs af cf"
+  apply (erule ccorres_guard_imp2)
+  apply clarsimp
+  done
+
 lemma sequence_x_sequence:
   "sequence_x xs = (sequence xs >>= (\<lambda>_. return ()))"
   by (induct xs, simp_all add: sequence_def sequence_x_def Let_def

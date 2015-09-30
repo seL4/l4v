@@ -12,6 +12,75 @@ theory Schedule_C
 imports Tcb_C
 begin
 
+lemma nat_add_less_by_max:
+  "\<lbrakk> (x::nat) \<le> xmax ; y < k - xmax \<rbrakk> \<Longrightarrow> x + y < k"
+  by simp
+
+lemma ucast_or_distrib:
+fixes x :: "'a::len word"
+fixes y :: "'a::len word"
+shows
+  "(ucast (x || y) :: ('b::len) word) = ucast x || ucast y"
+  unfolding ucast_def Word.bitOR_word.abs_eq uint_or
+  by blast
+
+(* FIXME move *)
+lemma of_nat_shiftl:
+  "(of_nat x << n) = (of_nat (x * 2 ^ n) :: ('a::len) word)"
+proof -
+  have "(of_nat x\<Colon>'a word) << n = of_nat (2 ^ n) * of_nat x"
+    using shiftl_t2n by auto
+  thus ?thesis by simp
+qed
+
+lemma unat_of_nat_shiftl_or_8_32: (* FIXME generalise *)
+  "\<lbrakk> x * 2 ^ n < 256 ; y < 256 \<rbrakk>
+   \<Longrightarrow> unat (((of_nat x << n) :: 8 word)  || of_nat y :: 8 word) = unat (((of_nat x << n):: machine_word) || of_nat y :: machine_word)"
+  apply (subst unat_ucast_upcast[where 'b=8 and 'a=32,symmetric])
+   apply (simp add: is_up)
+  apply (subst ucast_or_distrib)
+  apply (subst of_nat_shiftl)
+  apply (subst ucast_of_nat_small, simp)
+  apply (subst ucast_of_nat_small, simp)
+  apply (simp add: of_nat_shiftl)
+  done
+
+(* FIXME move *)
+lemma word_clz_max:
+  "word_clz w \<le> size (w::'a::len word)"
+  unfolding word_clz_def
+  apply (simp add: word_size)
+  apply (rule_tac y="length (to_bl w)" in order_trans)
+   apply (rule List.length_takeWhile_le)
+  apply simp
+  done
+
+(* FIXME move *)
+lemma word_clz_nonzero_max:
+  fixes w :: "'a::len word"
+  assumes nz: "w \<noteq> 0"
+  shows "word_clz w < size (w::'a::len word)"
+proof -
+  {
+    assume a: "word_clz w = size (w::'a::len word)"
+    hence "length (takeWhile Not (to_bl w)) = length (to_bl w)"
+      by (simp add: word_clz_def word_size)
+    hence allj: "\<forall>j\<in>set(to_bl w). \<not> j"
+      using takeWhile_take_has_property[where n="length (to_bl w)" and xs="to_bl w" and P=Not]
+      by simp
+    hence "to_bl w = replicate (length (to_bl w)) False"
+      by - (blast intro: list_of_false)
+    hence "w = 0"
+     apply simp
+     apply (subst (asm) to_bl_0[symmetric])
+     apply (drule Word.word_bl.Rep_eqD, assumption)
+     done
+    with nz have False by simp
+  }
+  thus ?thesis using word_clz_max
+    by (fastforce intro: le_neq_trans)
+qed
+
 (* FIXME: Move to an appropriate place in lib/ somewhere*)
 lemma ucast_sub_ucast:
   fixes x :: "'a::len word"
@@ -42,6 +111,17 @@ crunch valid_pspace'[wp]: switchToIdleThread, switchToThread valid_pspace'
 crunch valid_arch_state'[wp]: switchToThread valid_arch_state'
 
 context kernel_m begin
+
+thm clz_spec.clz_spec
+print_locale clz_spec
+
+thm clz_body_def
+
+lemma clz_spec:
+  "\<forall>s. \<Gamma> \<turnstile> {\<sigma>. s = \<sigma> \<and> x_' s \<noteq> 0} Call clz_'proc
+       \<lbrace>\<acute>ret__int = of_nat (word_clz (x_' s)) \<rbrace>"
+  apply vcg
+  sorry
 
 (* FIXME: MOVE to CSpaceAcc_C *)
 lemma ccorres_pre_gets_armKSGlobalsFrame_ksArchState:
@@ -238,7 +318,7 @@ lemma switchToThread_ccorres:
   "ccorres dc xfdc 
            (all_invs_but_ct_idle_or_in_cur_domain' and tcb_at' t) 
            (UNIV \<inter> \<lbrace>\<acute>thread = tcb_ptr_to_ctcb_ptr t\<rbrace>)
-           []
+           hs
            (switchToThread t)
            (Call switchToThread_'proc)"
   apply (cinit lift: thread_')
@@ -325,11 +405,6 @@ lemma activateThread_ccorres:
   apply (clarsimp simp: typ_heap_simps ThreadState_Running_def mask_def)
   done
 
-lemmas ccorres_sequenceE_while_down_prio
-    = ccorres_sequenceE_while_down
-      [where xf="p_'" and xf_update="p_'_update",
-         simplified]
-
 lemma ceqv_Guard_UNIV_Skip:
   "ceqv Gamma xf v s s' (a ;; Guard F UNIV Skip) a"
   apply (rule ceqvI)
@@ -367,156 +442,398 @@ lemma queue_in_range_pre:
 
 lemmas queue_in_range' = queue_in_range_pre[unfolded numDomains_def numPriorities_def, simplified]
 
+(* FIXME RAF WTF *)
+thm clz_spec.clz_spec[where symbol_table=symbol_table]
+
+lemmas clz_specX = clz_spec.clz_spec
+print_locale clz_spec
+thm halt_spec
+term symbol_table
+
+lemma clz_spec:
+  "\<forall>s. \<Gamma> \<turnstile> {\<sigma>. s = \<sigma> \<and> x_' s \<noteq> 0} Call clz_'proc
+       \<lbrace>\<acute>ret__int = of_nat (word_clz (x_' s)) \<rbrace>"
+  using clz_spec.clz_spec[where symbol_table=symbol_table]
+  sorry
+(* FIXME: why on earth does this locale get generated?! *)
+
+lemma l1index_to_prio_spec:
+  "\<forall>s. \<Gamma> \<turnstile> {s} Call l1index_to_prio_'proc
+       \<lbrace>\<acute>ret__unsigned_long = l1index_' s << wordRadix \<rbrace>"
+  by vcg (simp add: word_sle_def wordRadix_def')
+
+lemma getCurDomain_ccorres_dom_':
+  "ccorres (\<lambda>rv rv'. rv' = ucast rv) dom_'
+       \<top> UNIV hs curDomain (\<acute>dom :== \<acute>ksCurDomain)"
+  apply (rule ccorres_from_vcg)
+  apply (rule allI, rule conseqPre, vcg)
+  apply (clarsimp simp: curDomain_def simpler_gets_def
+                        rf_sr_ksCurDomain)
+  done
+
+lemma getReadyQueuesL1Bitmap_sp:
+  "\<lbrace>\<lambda>s. P s \<and> d \<le> maxDomain \<rbrace>
+   getReadyQueuesL1Bitmap d
+   \<lbrace>\<lambda>rv s. ksReadyQueuesL1Bitmap s d = rv \<and> d \<le> maxDomain \<and> P s\<rbrace>"
+  unfolding bitmap_fun_defs
+  by wp simp
+
+(* this doesn't actually carry over d \<le> maxDomain to the rest of the ccorres,
+   use ccorres_cross_guard to do that *)
+lemma ccorres_pre_getReadyQueuesL1Bitmap:
+  assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
+  shows   "ccorres r xf 
+                  (\<lambda>s. d \<le> maxDomain \<and> (\<forall>rv. ksReadyQueuesL1Bitmap s d = rv \<longrightarrow> P rv s))
+                  {s. \<forall>rv. (ksReadyQueuesL1Bitmap_' (globals s)).[unat d] = ucast rv
+                                 \<longrightarrow> s \<in> P' rv }
+                          hs (getReadyQueuesL1Bitmap d >>= (\<lambda>rv. f rv)) c"
+  apply (rule ccorres_guard_imp)
+  apply (rule ccorres_symb_exec_l2)
+      defer
+      defer
+      apply (rule getReadyQueuesL1Bitmap_sp)
+     apply blast
+    apply clarsimp
+    prefer 3
+    apply (clarsimp simp: bitmap_fun_defs gets_exs_valid)
+   defer
+   apply (rule ccorres_guard_imp)
+     apply (rule cc)
+    apply blast
+   apply assumption
+  apply (drule rf_sr_cbitmap_L1_relation)
+  apply (clarsimp simp: cbitmap_L1_relation_def)
+  done
+
+lemma getReadyQueuesL2Bitmap_sp:
+  "\<lbrace>\<lambda>s. P s \<and> d \<le> maxDomain \<and> i \<le> numPriorities div wordBits \<rbrace>
+   getReadyQueuesL2Bitmap d i
+   \<lbrace>\<lambda>rv s. ksReadyQueuesL2Bitmap s (d, i) = rv \<and> d \<le> maxDomain \<and> i \<le> numPriorities div wordBits \<and> P s\<rbrace>"
+  unfolding bitmap_fun_defs
+  by wp simp
+
+lemma ccorres_pre_getReadyQueuesL2Bitmap:
+  assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
+  shows   "ccorres r xf
+                  (\<lambda>s. d \<le> maxDomain \<and> i \<le> numPriorities div wordBits
+                       \<and> (\<forall>rv. ksReadyQueuesL2Bitmap s (d,i) = rv \<longrightarrow> P rv s))
+                  {s. \<forall>rv. (ksReadyQueuesL2Bitmap_' (globals s)).[unat d].[i] = ucast rv
+                                 \<longrightarrow> s \<in> P' rv }
+                          hs (getReadyQueuesL2Bitmap d i >>= (\<lambda>rv. f rv)) c"
+  apply (rule ccorres_guard_imp)
+  apply (rule ccorres_symb_exec_l2)
+      defer
+      defer
+      apply (rule getReadyQueuesL2Bitmap_sp)
+     apply blast
+    apply clarsimp
+    prefer 3
+    apply (clarsimp simp: bitmap_fun_defs gets_exs_valid)
+   defer
+   apply (rule ccorres_guard_imp)
+     apply (rule cc)
+    apply blast
+   apply assumption
+  apply (drule rf_sr_cbitmap_L2_relation)
+  apply (clarsimp simp: cbitmap_L2_relation_def)
+  done
+
+lemma switchToThread_ccorres':
+  "ccorres (\<lambda>_ _. True) xfdc 
+           (all_invs_but_ct_idle_or_in_cur_domain' and tcb_at' t) 
+           (UNIV \<inter> \<lbrace>\<acute>thread = tcb_ptr_to_ctcb_ptr t\<rbrace>)
+           hs
+           (switchToThread t)
+           (Call switchToThread_'proc)"
+  apply (rule ccorres_guard_imp2)
+      apply (ctac (no_vcg) add: switchToThread_ccorres[simplified dc_def])
+     apply auto
+  done
+
+lemma cguard_UNIV:
+  "P s \<Longrightarrow> s \<in> (if P s then UNIV else {})"
+  by fastforce
+
+lemma lookupBitmapPriority_le_maxPriority:
+  "\<lbrakk> ksReadyQueuesL1Bitmap s d \<noteq> 0 ; valid_queues s \<rbrakk>
+   \<Longrightarrow> lookupBitmapPriority d s \<le> maxPriority"
+   unfolding valid_queues_def valid_queues_no_bitmap_def
+   by (fastforce dest!: bitmapQ_from_bitmap_lookup bitmapQ_ksReadyQueuesI intro: ccontr)
+
+lemma unat_lookupBitmapPriority_32:
+  "word_log2 (ksReadyQueuesL1Bitmap s d) < numPriorities div wordBits
+   \<Longrightarrow> unat (lookupBitmapPriority d s) =
+      unat (
+       ((of_nat (word_log2 (ksReadyQueuesL1Bitmap s d)) << wordRadix) :: machine_word) ||
+        of_nat (word_log2 (ksReadyQueuesL2Bitmap s (d, word_log2 (ksReadyQueuesL1Bitmap s d)))))"
+  unfolding lookupBitmapPriority_def l1IndexToPrio_def numPriorities_def wordBits_def
+  apply (simp add: word_size)
+  apply (subst unat_of_nat_shiftl_or_8_32)
+    apply (clarsimp simp: wordRadix_def)
+   apply (rule order_less_le_trans[OF word_log2_max])
+   apply (simp add: word_size)
+  apply simp
+  done
+
+lemma rf_sr_ksReadyQueuesL1Bitmap_simp:
+  "\<lbrakk> (\<sigma>, s') \<in> rf_sr ; d \<le> maxDomain \<rbrakk>
+  \<Longrightarrow> ksReadyQueuesL1Bitmap_' (globals s').[unat d] = ksReadyQueuesL1Bitmap \<sigma> d"
+  apply (drule rf_sr_cbitmap_L1_relation)
+  apply (simp add: cbitmap_L1_relation_def)
+  done
+
+lemma rf_sr_ksReadyQueuesL1Bitmap_not_zero:
+  "\<lbrakk> (\<sigma>, s') \<in> rf_sr ; d \<le> maxDomain ; ksReadyQueuesL1Bitmap_' (globals s').[unat d] \<noteq> 0 \<rbrakk>
+  \<Longrightarrow> ksReadyQueuesL1Bitmap \<sigma> d \<noteq> 0"
+  apply (drule rf_sr_cbitmap_L1_relation)
+  apply (simp add: cbitmap_L1_relation_def)
+  done
+
+lemma ksReadyQueuesL1Bitmap_word_log2_max:
+    "\<lbrakk>valid_queues s; ksReadyQueuesL1Bitmap s d \<noteq> 0\<rbrakk>
+    \<Longrightarrow> word_log2 (ksReadyQueuesL1Bitmap s d) < numPriorities div wordBits"
+    unfolding valid_queues_def
+    by (fastforce dest: word_log2_nth_same bitmapQ_no_L1_orphansD)
+
+lemma word_log2_max_word32[simp]:
+  "word_log2 (w :: 32 word) < 32"
+  using word_log2_max[where w=w]
+  by (simp add: word_size)
+
+lemma word_log2_max_word8[simp]:
+  "word_log2 (w :: 8 word) < 8"
+  using word_log2_max[where w=w]
+  by (simp add: word_size)
+
+lemma rf_sr_ksReadyQueuesL2Bitmap_simp:
+  "\<lbrakk> (\<sigma>, s') \<in> rf_sr ; d \<le> maxDomain ; valid_queues \<sigma> ; ksReadyQueuesL1Bitmap \<sigma> d \<noteq> 0 \<rbrakk>
+   \<Longrightarrow> ksReadyQueuesL2Bitmap_' (globals s').[unat d].[word_log2 (ksReadyQueuesL1Bitmap \<sigma> d)] =
+      ksReadyQueuesL2Bitmap \<sigma> (d, word_log2 (ksReadyQueuesL1Bitmap \<sigma> d))"
+  apply (frule (1) ksReadyQueuesL1Bitmap_word_log2_max)
+  apply (frule rf_sr_cbitmap_L2_relation)
+  apply (drule (1) cbitmap_L2_relationD)
+  apply (drule less_imp_le)
+   apply assumption
+  apply simp
+  done
+
+lemma ksReadyQueuesL2Bitmap_nonzeroI:
+  "\<lbrakk> d \<le> maxDomain ; valid_queues s ; ksReadyQueuesL1Bitmap s d \<noteq> 0 \<rbrakk>
+   \<Longrightarrow> ksReadyQueuesL2Bitmap s (d, word_log2 (ksReadyQueuesL1Bitmap s d)) \<noteq> 0"
+   unfolding valid_queues_def
+   apply clarsimp
+   apply (frule bitmapQ_no_L1_orphansD)
+    apply (erule word_log2_nth_same)
+   apply clarsimp
+   done
+
+lemma unat_add_lem':
+  "(unat x + unat y < 2 ^ len_of TYPE('a)) \<Longrightarrow>
+    (unat (x + y :: 'a :: len word) = unat x + unat y)"
+  by (subst unat_add_lem[symmetric], assumption)
+
+(* FIXME RAF cleanup a bit more *)
 lemma chooseThread_ccorres:
   "ccorres dc xfdc all_invs_but_ct_idle_or_in_cur_domain' UNIV [] chooseThread (Call chooseThread_'proc)"
+proof -
+
+  note prio_and_dom_limit_helpers [simp]
+  note ksReadyQueuesL2Bitmap_nonzeroI [simp]
+  note Collect_const_mem [simp]
+
+  have signed_word_log2:
+    "\<And>w. w \<noteq> 0 \<Longrightarrow> (0x1F::32 signed word) - of_nat (word_clz (w::machine_word)) = (of_nat (word_log2 w))"
+    unfolding word_log2_def
+    by (clarsimp dest!: word_clz_nonzero_max simp: word_size)
+
+  have b[simp]:
+    "\<And>w. unat (of_nat (word_log2 (w :: machine_word)) :: machine_word) = word_log2 w"
+    by (fastforce simp add: unat_of_nat
+                  intro: mod_less order_less_le_trans[OF word_log2_max_word32])
+
+  have unat_ucast_d[simp]:
+    "\<And>d. d \<le> maxDomain \<Longrightarrow> unat (ucast d * 0x100 :: machine_word) = unat d * 256"
+    by (subst unat_mult_simple)
+       (simp add: word_bits_def maxDomain_def numDomains_def word_le_nat_alt)+
+
+  (* FIXME word automation anyone? *)
+  have word_clz_sint_upper[simp]:
+    "\<And>(w::machine_word). sint (of_nat (word_clz w) :: 32 signed word) \<le> 2147483679"
+    apply (subst sint_eq_uint)
+     apply (rule not_msb_from_less)
+     apply simp
+     apply (rule word_of_nat_less)
+     apply simp
+     apply (rule order_le_less_trans[OF word_clz_max])
+     apply (simp add: word_size)
+    apply (subst uint_nat)
+    apply (simp add: unat_of_nat)
+    apply (subst mod_less)
+     apply (rule order_le_less_trans[OF word_clz_max])
+     apply (simp add: word_size)
+    apply (subst le_nat_iff[symmetric], simp) (* FIXME RAF how to do the iffD2 trick on the fly? *)
+    apply simp
+    apply (rule order_trans[OF word_clz_max])
+    apply (simp add: word_size)
+    done
+
+  have word_clz_sint_lower[simp]:
+    "\<And>(w::machine_word). - sint (of_nat (word_clz w) :: 32 signed word) \<le> 2147483616"
+    apply (subst sint_eq_uint)
+     apply (rule not_msb_from_less)
+     apply simp
+     apply (rule word_of_nat_less)
+     apply simp
+     apply (rule order_le_less_trans[OF word_clz_max])
+     apply (simp add: word_size)
+    apply (subst uint_nat)
+    apply (simp add: unat_of_nat)
+    done
+
+  have invs_no_cicd'_max_CurDomain[intro]:
+    "\<And>s. invs_no_cicd' s \<Longrightarrow> ksCurDomain s \<le> maxDomain"
+    by (simp add: invs_no_cicd'_def)
+
+  show ?thesis
   apply (cinit)
-   apply (rule ccorres_pre_curDomain)
-   apply (rule ccorres_symb_exec_r)
-     apply (rule ccorres_abstract[where xf'=p_'], ceqv)
-     apply (rename_tac maxP_not_for_use) (* just name it something that doesn't clash *)
-     apply (simp add: findM_is_mapME mapME_x_sequenceE bindE_assoc seL4_MaxPrio_def
-                      whileAnno_def)
-     apply (rule ccorres_splitE_novcg)
-        apply (simp add: exec_eq_simps cong: ccorres_exec_congs)
-        apply (rule ccorres_abstract [where xf'="\<lambda>_. ()"])
-          apply (rule While_ceqv)
-            apply (rule impI, rule refl)
-           apply (rule ceqv_trans, rule ceqv_Guard_UNIV_Skip)
-           apply (rule ceqv_tail_Guard_onto_Skip)
-           apply simp
-          apply (simp add: xpres_def)
-         apply (rule_tac F="\<lambda>_. all_invs_but_ct_idle_or_in_cur_domain' and (\<lambda>s. curdom = ksCurDomain s)"
-                     and Q=UNIV
-                      in ccorres_sequenceE_while_down_prio[where r'=dc and xf'=xfdc])
-             apply (clarsimp simp: bind_assoc)
-             apply (rule ccorres_guard_imp2)
-              apply (rule_tac xf'=p_' in ccorres_abstract, ceqv)
-              apply (rename_tac p, rule_tac P="p = maxPrio - of_nat (length ys)"
-                                         in ccorres_gen_asm2)
-              apply (rule ccorres_rhs_assoc)
-              apply (rule_tac xf'=thread_'
-                          and r'="\<lambda>rv rv'. rv' = (case rv of [] \<Rightarrow> NULL
-                                                           | (x # xs) \<Rightarrow> tcb_ptr_to_ctcb_ptr x)"
-                           in ccorres_split_nothrow_novcg)
-                  apply (rule_tac P="\<lambda>s. ksCurDomain s \<le> maxDomain \<and> curdom = ksCurDomain s"
-                              and P'=UNIV
-                               in ccorres_from_vcg)
-                  apply (rule allI, rule conseqPre, vcg)
-                  apply (clarsimp simp: getQueue_def simpler_gets_def upto_enum_word
-                                        rev_map nth_map nth_rev
-                              simp del: upt.simps)
-                  apply (rule conjI)
-                   apply (simp add: rf_sr_ksCurDomain maxDom_to_H[symmetric])
-                   apply (rule queue_in_range')
-                    apply (simp add: ucast_le_migrate word_size maxDom_def)
-                   apply (simp add: scast_down_minus is_down_def target_size_def
-                                    word_size source_size_def seL4_MaxPrio_def)
-                   apply (rule word_sub_le)
-                   apply (simp add: maxPrio_to_H[symmetric] unat_ucast seL4_MaxPrio_def
-                                    WordLemmaBucket.of_nat_mono_maybe_le[where X=255, simplified, symmetric])
-                  apply (frule_tac p="maxPriority - of_nat (length ys)"
-                                in rf_sr_sched_queue_relation)
-                    apply (simp add: maxDom_to_H[symmetric])
-                   apply (simp add: maxPrio_to_H[symmetric])
-                   apply (rule word_sub_le)
-                   apply (simp add: maxPrio_to_H[symmetric] unat_ucast seL4_MaxPrio_def
-                                    WordLemmaBucket.of_nat_mono_maybe_le[where X=255, simplified, symmetric])
-                  apply (subst (asm) cready_queues_index_to_C_def2)
-                    apply simp
-                   apply (rule word_sub_le)
-                   apply (simp add: maxPrio_to_H[symmetric] unat_ucast seL4_MaxPrio_def
-                                    WordLemmaBucket.of_nat_mono_maybe_le[where X=255, simplified, symmetric])
-                  apply (subst (asm) cready_queues_index_to_C_def2)
-                    apply simp
-                   apply (rule word_sub_le)
-                   apply (simp add: maxPrio_to_H[symmetric] unat_ucast seL4_MaxPrio_def
-                                    WordLemmaBucket.of_nat_mono_maybe_le[where X=255, simplified, symmetric])
-                  apply (simp add: rf_sr_ksCurDomain numPriorities_def maxPrio_to_H[symmetric])
-                  apply (subgoal_tac "ucast ((ucast maxPrio :: 8 word) - of_nat (length ys))
-                                    = (scast (maxPrio - of_nat (length ys)) :: word32)")
-                   apply simp
-                   apply (auto simp: maxPrio_to_H tcb_queue_relation'_def
-                              split: list.split)[1]
-                  apply (simp add: seL4_MaxPrio_def WordLemmaBucket.of_nat_mono_maybe_le[where X=255, simplified, symmetric]
-                                   ucast_sub_ucast scast_down_minus is_down_def target_size_def
-                                   word_size source_size_def ucast_of_nat_small)
-                 apply ceqv
-                apply clarsimp
-                apply (rule ccorres_remove_tail_Guard_Skip)
-                 apply (simp add: maxPriority_def numPriorities_def seL4_MaxPrio_def Collect_const_mem
-                                  word_sint_msb_eq minus_one_norm)
-                 apply (simp add: not_msb_from_less unat_arith_simps unat_of_nat
-                                  uint_nat)
-                apply (rule_tac P="all_invs_but_ct_idle_or_in_cur_domain' and
-                            (\<lambda>s. ksReadyQueues s (curdom, maxPriority - of_nat (length ys)) = rv)"
-                           and P'="{s. thread_' s = (case rv of [] \<Rightarrow> NULL
-                                                   | (x # xs) \<Rightarrow> tcb_ptr_to_ctcb_ptr x)}"
-                             in ccorres_inst)
-                apply (induct_tac rv)
-                 apply simp
-                 apply (rule ccorres_guard_imp2, rule ccorres_cond_false)
-                  apply (rule ccorres_returnOk_skip)
-                 apply clarsimp
-                apply clarsimp
-                apply (rule ccorres_guard_imp2)
-                 apply (rule ccorres_cond_true)
-                 apply (rule ccorres_rhs_assoc)+
-                 apply (subst ccorres_seq_skip)
-                 apply (ctac(no_vcg) add: switchToThread_ccorres)
-                  apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
-                  apply (rule allI, rule conseqPre, vcg)
-                  apply (clarsimp simp: throwError_def return_def)
-                 apply wp
-                apply (clarsimp simp: invs_valid_queues')
-                apply (clarsimp simp: all_invs_but_ct_idle_or_in_cur_domain'_def valid_queues_def)
-                apply (drule_tac x="curdom" in spec)
-                apply (drule_tac x="maxPriority - of_nat (length ys)" in spec)
-                apply (clarsimp simp: obj_at'_weakenE[OF _ TrueI] filter_id_conv
-                                      tcb_at_not_NULL[OF obj_at'_weakenE])
-               apply wp
-              apply (clarsimp simp: guard_is_UNIV_def)
-             apply (clarsimp simp: upto_enum_word rev_map nth_rev
-                                   field_simps all_invs_but_ct_idle_or_in_cur_domain'_def
-                         simp del: upt.simps)
-             apply (clarsimp simp: minBound_word maxBound_word seL4_MaxPrio_def
-                                   Collect_const_mem minus_one_norm)
+   apply (simp add: numDomains_def word_sless_alt word_sle_def)
+   apply (ctac (no_vcg) add: getCurDomain_ccorres_dom_')
+     apply clarsimp
+     apply (rename_tac curdom)
+     apply (rule_tac P="curdom \<le> maxDomain" in ccorres_cross_over_guard_no_st)
+     apply (rule ccorres_Guard)
+     apply (rule ccorres_pre_getReadyQueuesL1Bitmap)
+     apply (rename_tac l1)
+     apply (rule_tac R="\<lambda>s. l1 = ksReadyQueuesL1Bitmap s curdom \<and> curdom \<le> maxDomain"
+              in ccorres_cond)
+       apply (fastforce dest!: rf_sr_cbitmap_L1_relation simp: cbitmap_L1_relation_def)
+      prefer 2
+      apply (ctac(no_vcg) add: switchToIdleThread_ccorres)
+     apply clarsimp
+     apply (rule ccorres_rhs_assoc)+
+     apply (rule ccorres_Guard_Seq)
+     apply (rule ccorres_pre_getReadyQueuesL2Bitmap)
+     apply (rename_tac l2)
+     apply (rule ccorres_pre_getQueue)
+     apply (rule_tac P="queue \<noteq> []" in ccorres_cross_over_guard_no_st)
+     apply (rule ccorres_symb_exec_l)
+        apply (rule ccorres_assert)
+     apply csymbr
+        apply (rule ccorres_abstract_cleanup)
+        apply (rule ccorres_Guard_Seq)+
+        apply csymbr
+        apply (rule ccorres_Guard_Seq)+
+        apply csymbr
+        apply (rule ccorres_abstract_cleanup)
+        apply (rule ccorres_Guard_Seq)+
+        apply csymbr
+        apply csymbr
+        apply csymbr
+        apply csymbr
+        apply (rule ccorres_Guard_Seq)+
+        apply (rule ccorres_symb_exec_r)
+          apply (simp only: ccorres_seq_skip)
+          apply (rule ccorres_call)
+              apply (rule switchToThread_ccorres')
              apply simp
-            apply (clarsimp simp: seL4_MinPrio_def maxPriority_def numPriorities_def word_sle_def
-                                  field_simps)
-            apply (drule word_unat.Abs_inverse'[rotated], simp add: unats_def)
             apply simp
-           apply (rule HoarePartial.SeqSwap)
-            apply vcg
-           apply (rule HoarePartial.SeqSwap)
-            apply (vcg exspec=switchToThread_modifies)
-           apply (rule conseqPre, vcg)
-           apply clarsimp
-          apply (simp add: when_def cong: if_cong)
-          apply (wp static_imp_wp | wpc)+
-            apply (rule_tac Q="\<lambda>_. invs' and (\<lambda>s. curdom = ksCurDomain s)" in hoare_post_imp)
-             apply (simp add: invs'_to_invs_no_cicd'_def)
-            apply (wp switchToThread_invs_no_cicd')
-           apply (rule_tac Q="\<lambda>_. invs' and (\<lambda>s. curdom = ksCurDomain s)" in hoare_post_imp)
-            apply (simp add: invs'_to_invs_no_cicd'_def)
-           apply (wp switchToThread_invs_no_cicd')
-          apply (clarsimp simp: all_invs_but_ct_idle_or_in_cur_domain'_def
-                                hd_ksReadyQueues_runnable_2 invs_no_cicd_queues_tcb_in_cur_domain')
-         apply simp
-        apply ceqv
-       apply (simp add: when_def liftE_liftM dc_def[symmetric])
-       apply (ctac add: switchToIdleThread_ccorres)
-      apply (fold mapME_def)
-      apply (wp mapME_wp')
-      apply (rule hoare_pre)
-       apply (wp | wpc | clarsimp)+
-     apply (clarsimp simp: guard_is_UNIV_def)
-    apply (simp add: guard_is_UNIV_def seL4_MaxPrio_def)
-    apply vcg
-   apply clarsimp
-   apply vcg_step
-   apply simp
-  apply (clarsimp simp: all_invs_but_ct_idle_or_in_cur_domain'_def newKernelState_def)
+           apply simp
+          apply vcg
+         apply clarsimp
+         apply vcg_step (* vcg creates a state that's not printable in a sane amount of time *)
+         apply clarsimp
+        apply wp
+      apply (simp add: isRunnable_def)
+     apply wp
+    apply (rename_tac s' d)
+    apply (clarsimp simp: Let_def)
+    apply (safe, simp_all add: invs_no_cicd'_max_CurDomain)
+    (*12 subgoals *)
+             apply (drule invs_no_cicd'_queues)
+             apply (clarsimp simp: rf_sr_ksReadyQueuesL1Bitmap_simp signed_word_log2)
+             apply (simp add: rf_sr_ksReadyQueuesL2Bitmap_simp signed_word_log2)
+             apply (case_tac queue, simp)
+             apply (clarsimp simp: tcb_queue_relation'_def cready_queues_index_to_C_def
+                                    numPriorities_def l1IndexToPrio_def)
+             apply (erule trans[rotated])
+             apply (subst unat_of_nat_shiftl_or_8_32)
+               apply (clarsimp simp: wordRadix_def)
+               apply (fastforce dest: ksReadyQueuesL1Bitmap_word_log2_max
+                                simp: numPriorities_def wordBits_def word_size)
+              apply (drule_tac s=s in ksReadyQueuesL1Bitmap_word_log2_max, assumption)
+              apply (rule order_less_le_trans[OF word_log2_max_word32] ; simp)
+
+             apply (frule (1) ksReadyQueuesL1Bitmap_word_log2_max)
+             apply (frule (1) lookupBitmapPriority_le_maxPriority)
+             apply (simp add: word_less_nat_alt word_le_nat_alt)
+             apply (simp add: unat_lookupBitmapPriority_32)
+             apply (subst unat_add_lem')
+              apply (simp add: word_less_nat_alt word_le_nat_alt)
+              apply (rule_tac x="unat d * 256" and xmax="unat maxDomain * 256" in nat_add_less_by_max)
+               apply (simp add: word_le_nat_alt)
+              apply (clarsimp simp: maxDomain_def numDomains_def maxPriority_def numPriorities_def)
+             apply (simp add: word_less_nat_alt word_le_nat_alt)
+
+            apply (rename_tac \<sigma>)
+            apply (drule invs_no_cicd'_queues)
+            apply (clarsimp simp: rf_sr_ksReadyQueuesL1Bitmap_simp rf_sr_ksReadyQueuesL2Bitmap_simp signed_word_log2)
+            apply (frule (1) ksReadyQueuesL1Bitmap_word_log2_max)
+            apply (frule (1) lookupBitmapPriority_le_maxPriority)
+            apply (simp add: word_less_nat_alt word_le_nat_alt unat_lookupBitmapPriority_32)
+            apply (subst unat_add_lem')
+             apply (simp add: word_less_nat_alt word_le_nat_alt)
+             apply (rule_tac x="unat d * 256" and xmax="unat maxDomain * 256" in nat_add_less_by_max)
+              apply (simp add: word_le_nat_alt)
+             apply (clarsimp simp: maxDomain_def numDomains_def maxPriority_def numPriorities_def)
+            apply (simp add: word_less_nat_alt word_le_nat_alt)
+
+            apply (rule_tac x="unat d * 256" and xmax="unat maxDomain * 256" in nat_add_less_by_max)
+             apply (simp add: word_le_nat_alt)
+            apply (rule order_le_less_trans)
+             apply (simp add: word_le_nat_alt)
+            apply (clarsimp simp: maxDomain_def numDomains_def maxPriority_def numPriorities_def)
+           apply (simp add: field_simps)
+
+          apply (fastforce dest!: invs_no_cicd'_queues
+                           simp: rf_sr_ksReadyQueuesL1Bitmap_simp rf_sr_ksReadyQueuesL2Bitmap_simp
+                                 signed_word_log2)
+
+         apply (rename_tac \<sigma>)
+         apply (drule invs_no_cicd'_queues)
+         apply (clarsimp simp: rf_sr_ksReadyQueuesL1Bitmap_simp rf_sr_ksReadyQueuesL2Bitmap_simp signed_word_log2)
+         apply (drule word_log2_nth_same)
+         apply (drule bitmapQ_no_L1_orphansD[rotated])
+          apply (simp add: valid_queues_def)
+         apply (fastforce intro!: cguard_UNIV word_of_nat_less
+                           simp: numPriorities_def wordBits_def word_size)
+        apply (fastforce simp: field_simps)
+       apply (fastforce dest: word_log2_nth_same bitmapQ_no_L1_orphansD[rotated] invs_no_cicd'_queues
+                        simp: valid_queues_def)
+      apply (clarsimp dest!: invs_no_cicd'_queues simp add: valid_queues_def)
+      apply (drule (2) bitmapQ_from_bitmap_lookup)
+      apply (simp only: valid_bitmapQ_bitmapQ_simp lookupBitmapPriority_def)
+
+     apply (frule invs_no_cicd'_queues)
+     apply (clarsimp simp add: valid_queues_def)
+     apply (drule (2) bitmapQ_from_bitmap_lookup)
+     apply (simp only: valid_bitmapQ_bitmapQ_simp)
+     apply (case_tac "ksReadyQueues s (ksCurDomain s, lookupBitmapPriority (ksCurDomain s) s)", simp)
+     apply (rename_tac t ts)
+     apply (frule_tac t=t in valid_queues_no_bitmap_objD)
+      apply (blast intro: cons_set_intro)
+     apply (simp add: lookupBitmapPriority_def)
+     apply normalise_obj_at'
+     apply (rule valid_queues_queued_runnable[simplified valid_queues_def])
+       apply simp
+      apply (simp add: invs_no_cicd'_def)
+     apply (clarsimp simp add: inQ_def obj_at'_def)
+
+    apply (fold lookupBitmapPriority_def)
+    apply (drule invs_no_cicd'_queues)
+    apply (erule (1) lookupBitmapPriority_le_maxPriority)
+   apply (simp add: invs_no_cicd'_def)+
   done
+qed
 
 lemma ksDomSched_length_relation[simp]:
   "\<lbrakk>cstate_relation s s'\<rbrakk> \<Longrightarrow> length (kernel_state.ksDomSchedule s) = unat (ksDomScheduleLength)"

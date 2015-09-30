@@ -1538,7 +1538,7 @@ proof -
   moreover
   from invs have "valid_queues s" ..
   hence "\<And>p. \<forall>t \<in> set (ksReadyQueues s p). tcb_at' t s \<and> ko_wp_at' live' t s"
-    apply (clarsimp simp: valid_queues_def)
+    apply (clarsimp simp: valid_queues_def valid_queues_no_bitmap_def)
     apply (drule spec, drule spec)
     apply clarsimp
     apply (drule (1) bspec)

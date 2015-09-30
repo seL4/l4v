@@ -127,7 +127,13 @@ lemma det_wp_asUser [wp]:
    apply wp
   apply simp
   done
-  
+
+(* FIXME move into Refine somewhere *)
+lemma wordSize_def':
+  "wordSize = 4"
+  unfolding wordSize_def wordBits_def
+  by (simp add: word_size)
+
 lemma det_wp_getMRs:
   "det_wp (tcb_at' thread and case_option \<top> valid_ipc_buffer_ptr' buffer) (getMRs thread buffer mi)"
   apply (clarsimp simp: getMRs_def)
@@ -137,7 +143,7 @@ lemma det_wp_getMRs:
    apply (wp asUser_inv mapM_wp' getRegister_inv)
   apply clarsimp
   apply (rule conjI)
-   apply (simp add: pointerInUserData_def)
+   apply (simp add: pointerInUserData_def wordSize_def' word_size)
    apply (erule valid_ipc_buffer_ptr'D2)
     apply (rule word_mult_less_mono1)
       apply (erule order_le_less_trans)
@@ -146,7 +152,7 @@ lemma det_wp_getMRs:
     apply (simp add: max_ipc_words)
    apply (simp add: is_aligned_mult_triv2 [where n = 2, simplified] word_bits_conv)
   apply (erule valid_ipc_buffer_ptr_aligned_2)
-  apply (simp add: is_aligned_mult_triv2 [where n = 2, simplified] word_bits_conv)
+  apply (simp add: wordSize_def' is_aligned_mult_triv2 [where n = 2, simplified] word_bits_conv)
   done
 
 end
