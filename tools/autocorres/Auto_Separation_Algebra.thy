@@ -25,7 +25,7 @@ instantiation "unit" ::  stronger_sep_algebra
  apply (default)
    apply (clarsimp simp: zero_unit_def plus_unit_def sep_disj_unit_def)+
  done
-end;
+end
 
 instantiation "bool" ::  stronger_sep_algebra
    begin
@@ -183,9 +183,7 @@ fun get_more ctxt t = "lifted_globals.more" |> Syntax.read_term ctxt
 *}
 
 
-ML {*
-print_depth 1000;
-*}
+declare [[ML_print_depth=1000]]
 
 ML {*
 fun promote subT (Const (str, typ))  =   Const (str, subT --> (typ |> range_type)); 
@@ -390,10 +388,10 @@ fun make_struct_rewrite (structs : HeapLiftBase.struct_info list) sep_info ctxt 
                                                   d <- gets g;      
                                                   return (\<lambda>a. ?P c d )         
                                                od )" (P)} setter       
-           val getter_rewrite = Goal.prove ctxt ["f"] [] getter_rewrite_term (fn _ => Skip_Proof.cheat_tac 1)      
-           val getter_rewrite' = Goal.prove ctxt ["f"] [] getter_rewrite_term' (fn _ => Skip_Proof.cheat_tac 1)            
-           val setter_rewrite = Goal.prove ctxt ["f", "g"] [] setter_rewrite_term (fn _ => Skip_Proof.cheat_tac 1)
-           val setter_rewrite' = Goal.prove ctxt ["f", "g"] [] setter_rewrite_term' (fn _ => Skip_Proof.cheat_tac 1)                                                                                              
+           val getter_rewrite = Goal.prove ctxt ["f"] [] getter_rewrite_term (fn _ => Skip_Proof.cheat_tac ctxt 1)      
+           val getter_rewrite' = Goal.prove ctxt ["f"] [] getter_rewrite_term' (fn _ => Skip_Proof.cheat_tac ctxt 1)            
+           val setter_rewrite = Goal.prove ctxt ["f", "g"] [] setter_rewrite_term (fn _ => Skip_Proof.cheat_tac ctxt 1)
+           val setter_rewrite' = Goal.prove ctxt ["f", "g"] [] setter_rewrite_term' (fn _ => Skip_Proof.cheat_tac ctxt 1)                                                                                              
        in [setter_rewrite,setter_rewrite', getter_rewrite, getter_rewrite'] end; 
      fun upd_sep_info_list info xs = info |> #sep_thms |> (fn x => x @ xs) |> upd_thms info              
    in map make_struct_rewrite_inner structs |> List.concat |> upd_sep_info_list sep_info
@@ -509,7 +507,7 @@ ML {*
                      val intros = [equality, @{thm ext}]
                   in
                          Class.default_intro_tac ctxt [] THEN 
-                         ((resolve_tac intros  ORELSE' 
+                         ((resolve_tac ctxt intros  ORELSE' 
                            force_tac simpset ) |> REPEAT_ALL_NEW |> TRYALL)
                 end; 
       in thy

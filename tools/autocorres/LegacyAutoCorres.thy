@@ -77,7 +77,8 @@ lemma ccorres_underlying_autocorres:
   apply (drule corres_underlying_L2corres[rotated], assumption)
   apply (clarsimp simp: corres_underlying_def ball_cong[OF fst_c_with_gets_xf refl]
                         snd_bindE snd_liftE snd_gets)
-  apply (drule spec, drule spec, drule_tac P="gs_sr ?a ?b" in mp, assumption)
+  apply (rename_tac s s')
+  apply (drule spec, drule spec, drule_tac P="gs_sr s (gs s')" in mp, assumption)
   apply (drule mp, blast, clarsimp)
   apply (drule(1) bspec)+
   apply (auto split: sum.splits)
@@ -119,10 +120,7 @@ lemma L2corres_trivial:
   apply (clarsimp simp: L2corres_def corresXF_def wrap_l2_def
                  split: sum.split)
   apply (clarsimp simp: snd_bind in_monad exec_get select_def)
-  apply (drule spec, drule mp, rule refl)
-  apply (clarsimp simp: select_f_def)
-  apply (drule(1) bspec)
-  apply (clarsimp simp: snd_bind put_def split: sum.split_asm)
+  apply (clarsimp simp: select_f_def snd_bind put_def split: sum.split_asm)
   apply (fastforce simp: return_def)
   done
 
@@ -142,7 +140,7 @@ definition
         (wrap_l1l2 arg_fn gs ret_xf Gamma proc args)"
 
 lemma type_strengthen_wrapper_trivial[ts_rule nondet]:
-  "L2_call f (\<lambda>measure. wrap_l1l2 arg_fn gs ret_xf Gamma proc args)
+  "L2_call (wrap_l1l2 arg_fn gs ret_xf Gamma proc args)
     = liftE (wrap_l1l2ts arg_fn gs ret_xf Gamma proc args)"
   apply (simp add: wrap_l1l2ts_def wrap_l1l2_def liftE_def liftM_def
                    wrap_l2_def bind_assoc L2_defs L2_call_def

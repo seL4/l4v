@@ -61,15 +61,15 @@ lemma corresXF_from_L2_call:
   apply force
   done
 
-(* The final ccorres theorem. *)
-lemma ccorres_chain:
+(* The final ac_corres theorem. *)
+lemma ac_corres_chain:
 "\<lbrakk> L1corres Gamma c_L1 c;
    L2corres st_L2 rx_L2 (\<lambda>_. ()) P_L2 c_L2 c_L1;
    L2Tcorres st_HL c_HL c_L2;
    corresTA P_WA rx_WA ex_WA c_WA c_HL;
    L2_call c_WA = A
  \<rbrakk> \<Longrightarrow>
-  ccorres (st_HL o st_L2) Gamma (rx_WA o rx_L2) (P_L2 and (P_WA o st_HL o st_L2)) A c"
+  ac_corres (st_HL o st_L2) Gamma (rx_WA o rx_L2) (P_L2 and (P_WA o st_HL o st_L2)) A c"
   apply (rule ccorresE_corresXF_merge)
        apply (unfold L1corres_alt_def)
        apply assumption
