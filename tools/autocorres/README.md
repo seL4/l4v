@@ -86,7 +86,7 @@ The options are:
   * `heap_abs_syntax`: Enable experimental heap abstraction
     syntactic sugar.
 
-Name compatibility options:
+Name compatibility options (see `tests/examples/AC_Rename.thy`):
 
   * `lifted_globals_field_prefix="foo"`, `lifted_globals_field_suffix="foo"`:
     Override generated names for global variables during heap abstraction.

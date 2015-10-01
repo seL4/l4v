@@ -1460,7 +1460,7 @@ end
 (*
  * Translate all functions from L1 to L2 format.
  *)
-fun translate_l2 filename fn_info do_opt trace_opt lthy =
+fun translate_l2 filename fn_info do_opt trace_opt l2_function_name lthy =
 let
   val prog_info = ProgramInfo.get_prog_info lthy filename
 
@@ -1476,12 +1476,9 @@ let
         (betapply (#const l1_def, measure_var)) l1_body_def
   in (get_body_of_thm ctxt thm, thm, traces) end
 
-  (* Generate a constant name for our L2 bodies. *)
-  fun gen_l2_name x = "l2_" ^ x
-
   (* Update function information. *)
   fun update_function_defs lthy fn_def =
-    FunctionInfo.fn_def_update_const (Utils.get_term lthy (gen_l2_name (#name fn_def))) fn_def
+    FunctionInfo.fn_def_update_const (Utils.get_term lthy (l2_function_name (#name fn_def))) fn_def
     |> FunctionInfo.fn_def_update_args (map (apfst ProgramInfo.demangle_name) (#args fn_def))
     |> FunctionInfo.fn_def_update_definition (
         (the (AutoCorresData.get_def (Proof_Context.theory_of lthy)
@@ -1491,7 +1488,7 @@ in
     (get_expected_l2_fn_type prog_info fn_info)
     (get_expected_l2_fn_thm prog_info fn_info)
     (get_expected_l2_fn_args prog_info fn_info)
-    gen_l2_name
+    l2_function_name
     convert
     l2_monad_mono
     update_function_defs

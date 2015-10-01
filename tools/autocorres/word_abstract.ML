@@ -153,11 +153,17 @@ in
 end
 
 (* Convert a program by abstracting words. *)
-fun word_abstract filename fn_info unsigned_abs no_signed_abs trace_funcs do_opt trace_opt lthy =
+fun word_abstract
+      (filename: string)
+      (fn_info: FunctionInfo.fn_info)
+      (unsigned_abs: string list)
+      (no_signed_abs: string list)
+      (trace_funcs: string list)
+      (do_opt: bool)
+      (trace_opt: bool)
+      (wa_function_name: string -> string)
+      (lthy: Proof.context) =
 let
-  (* Generate a constant name for our definitions. *)
-  fun gen_wa_name x = "wa_" ^ x
-
   (*
    * Select the rules to translate each function.
    *)
@@ -386,7 +392,7 @@ let
 
   (* Update function information. *)
   fun update_function_defs lthy fn_def =
-    FunctionInfo.fn_def_update_const (Utils.get_term lthy (gen_wa_name (#name fn_def))) fn_def
+    FunctionInfo.fn_def_update_const (Utils.get_term lthy (wa_function_name (#name fn_def))) fn_def
     |> FunctionInfo.fn_def_update_definition (
         (the (AutoCorresData.get_def (Proof_Context.theory_of lthy)
             filename "WAdef" (#name fn_def))))
@@ -398,7 +404,7 @@ in
     (fn fn_name => get_expected_fn_type (rules_for fn_name) fn_info fn_name)
     (fn ctxt => fn fn_name => get_expected_fn_thm (rules_for fn_name) fn_info ctxt fn_name)
     (fn fn_name => get_expected_fn_args (rules_for fn_name) fn_info fn_name)
-    gen_wa_name
+    wa_function_name
     convert
     LocalVarExtract.l2_monad_mono
     update_function_defs
