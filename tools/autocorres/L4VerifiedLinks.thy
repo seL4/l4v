@@ -21,7 +21,7 @@ imports
 begin
 
 (*
- * The ccorresE framework implies the ac_corres framework.
+ * The ccorresE framework implies the ccorres framework.
  *)
 lemma ccorresE_ccorres_underlying:
   " \<lbrakk> ccorresE st \<Gamma> G G' A B; \<not> exceptions_thrown B \<rbrakk>  \<Longrightarrow> ccorres_underlying {(s', s). s' = st s} \<Gamma> dc (\<lambda>_. ()) dc (\<lambda>_. ()) G G' [] A B"
@@ -40,7 +40,7 @@ lemma ccorresE_ccorres_underlying:
   done
 
 (*
- * The ccorresE framework implies the ac_corres framework.
+ * The ccorresE framework implies the ccorres framework.
  *)
 lemma ccorresE_ccorres_underlying':
   " \<lbrakk> ccorresE st \<Gamma> G G' A B; no_throw G A \<rbrakk>  \<Longrightarrow> ccorres_underlying {(s', s). s' = st s} \<Gamma> dc (\<lambda>_. ()) dc (\<lambda>_. ()) G G' [] A B"
@@ -62,7 +62,7 @@ lemma ccorresE_ccorres_underlying':
   apply simp
   done
 
-lemma ccorres_ccorres_underlying:
+lemma ac_corres_ccorres_underlying:
   "\<lbrakk> ac_corres st \<Gamma> rx (\<lambda>s. s \<in> G) A B \<rbrakk> \<Longrightarrow>
       ccorres_underlying {(a, b). a = st b} \<Gamma> ((\<lambda>_ _. False) \<oplus> (\<lambda>r s. r = rx s)) Inr ((\<lambda>_ _. False) \<oplus>  (\<lambda>r s. r = rx s)) Inr \<top> G [] A B"
   apply (clarsimp simp: ac_corres_def ccorres_underlying_def)
