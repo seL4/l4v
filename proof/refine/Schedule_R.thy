@@ -12,26 +12,10 @@ theory Schedule_R
 imports VSpace_R
 begin
 
-
  (* FIXME REMOVE and rename other uses, also there is a duplicate of this in KHeap_R too *)
 declare doMachineOp_cte_wp_at'[wp]
 
 declare static_imp_wp[wp_split del]
-
-(* FIXME move *)
-lemma setcomp_Max_has_prop:
-  assumes a: "P prio"
-  shows "P (Max {(prio::'a::{finite,linorder}). P prio})"
-proof -
-  from a have "Max {prio. P prio} \<in> {prio. P prio}"
-    by - (rule Max_in, auto intro: notemptyI)
-  thus ?thesis by auto
-qed
-
-(* FIXME move *)
-lemma cons_set_intro:
-  "lst = x # xs \<Longrightarrow> x \<in> set lst"
-  by fastforce
 
 (* FIXME: move *)
 lemma corres_gets_pre_lhs:
@@ -57,88 +41,10 @@ lemma return_wp_exs_valid [wp]: "\<lbrace> P x \<rbrace> return x \<exists>\<lbr
 lemma get_exs_valid [wp]: "\<lbrace>op = s\<rbrace> get \<exists>\<lbrace>\<lambda>r. op = s\<rbrace>"
   by (simp add: get_def exs_valid_def)
 
-(* FIXME move to word lib somewhere *)
-definition
-  word_clz :: "'a::len word \<Rightarrow> nat"
-where
-  "word_clz w \<equiv> length (takeWhile Not (to_bl w))"
-
-(* FIXME move to word lib *)
-definition
-  word_log2 :: "'a::len word \<Rightarrow> nat"
-where
-  "word_log2 (w::'a::len word) \<equiv> size w - 1 - word_clz w"
-
 lemma countLeadingZeros_word_clz[simp]:
   "countLeadingZeros w = word_clz w"
   unfolding countLeadingZeros_def word_clz_def
   by (simp add: to_bl_upt)
-
-lemma takeWhile_take_has_property:
-  "n \<le> length (takeWhile P xs) \<Longrightarrow> \<forall>x \<in> set (take n xs). P x"
-  apply (induct xs arbitrary: n)
-   apply simp
-  apply (simp split: split_if_asm)
-  apply (case_tac n, simp_all)
-  done
-
-lemma takeWhile_take_has_property_nth:
-  "\<lbrakk> n < length (takeWhile P xs) \<rbrakk> \<Longrightarrow> P (xs ! n)"
-  apply (induct xs arbitrary: n, simp)
-  apply (simp split: split_if_asm)
-  apply (case_tac n, simp_all)
-  done
-
-lemma word_log2_nth_same:
-  "w \<noteq> 0 \<Longrightarrow> w !! word_log2 w"
-  unfolding word_log2_def
-  using nth_length_takeWhile[where P=Not and xs="to_bl w"]
-  apply (simp add: word_clz_def word_size to_bl_nth)
-  apply (fastforce simp: linorder_not_less eq_zero_set_bl
-                   dest: takeWhile_take_has_property)
-  done
-
-lemma word_log2_nth_not_set:
-  "\<lbrakk> word_log2 w < i ; i < size w \<rbrakk> \<Longrightarrow> \<not> w !! i"
-  unfolding word_log2_def word_clz_def
-  using takeWhile_take_has_property_nth[where P=Not and xs="to_bl w" and n="size w - Suc i"]
-  apply (fastforce simp add: to_bl_nth word_size)
-  done
-
-lemma word_log2_highest:
-  assumes a: "w !! i"
-  shows "i \<le> word_log2 w"
-proof -
-  from a have "i < size w" by - (rule test_bit_size)
-  with a show ?thesis
-    by - (rule ccontr, simp add: word_log2_nth_not_set)
-qed
-
-lemma word_log2_max:
-  "word_log2 w < size w"
-  unfolding word_log2_def word_clz_def
-  by simp
-
-(* FIXME move to lib that's visible from WordLemmaBucket (does it exist?) *)
-lemma takeWhile_replicate:
-  "takeWhile f (replicate len x) = (if f x then replicate len x else [])"
-  by (induct_tac len) auto
-lemma takeWhile_replicate_empty:
-  "\<not> f x \<Longrightarrow> takeWhile f (replicate len x) = []"
-  by (simp add: takeWhile_replicate)
-lemma takeWhile_replicate_id:
-  "f x \<Longrightarrow> takeWhile f (replicate len x) = replicate len x"
-  by (simp add: takeWhile_replicate)
-
-lemma word_clz_0[simp]:
-  "word_clz (0::'a::len word) \<equiv> len_of (TYPE('a))"
-  unfolding word_clz_def
-  by (simp add: takeWhile_replicate)
-
-lemma word_clz_minus_one[simp]:
-  "word_clz (-1::'a::len word) \<equiv> 0"
-  unfolding word_clz_def
-  by (simp add: max_word_bl[simplified max_word_minus] takeWhile_replicate)
 
 lemma wordLog2_word_log2[simp]:
   "wordLog2 = word_log2"

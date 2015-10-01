@@ -3419,10 +3419,6 @@ lemma dom_if_None:
      = dom f - {x. P x}"
   by (simp add: dom_def, fastforce)
 
-lemma notemptyI:
-  "x \<in> S \<Longrightarrow> S \<noteq> {}"
-  by clarsimp
-
 lemma plus_Collect_helper:
   "op + x ` {xa. P (xa :: ('a :: len) word)} = {xa. P (xa - x)}"
   by (fastforce simp add: image_def)
@@ -6691,5 +6687,61 @@ lemma le_shiftr':
    apply simp
   apply (fastforce dest: le_shiftr1')
   done
+
+(* word log2 and count leading zeros, move somewhere the kernel C parse can see them *)
+
+(* FIXME move to word lib somewhere *)
+definition
+  word_clz :: "'a::len word \<Rightarrow> nat"
+where
+  "word_clz w \<equiv> length (takeWhile Not (to_bl w))"
+
+(* FIXME move to word lib *)
+definition
+  word_log2 :: "'a::len word \<Rightarrow> nat"
+where
+  "word_log2 (w::'a::len word) \<equiv> size w - 1 - word_clz w"
+
+lemma word_log2_nth_same:
+  "w \<noteq> 0 \<Longrightarrow> w !! word_log2 w"
+  unfolding word_log2_def
+  using nth_length_takeWhile[where P=Not and xs="to_bl w"]
+  apply (simp add: word_clz_def word_size to_bl_nth)
+  apply (fastforce simp: linorder_not_less eq_zero_set_bl
+                   dest: takeWhile_take_has_property)
+  done
+
+lemma word_log2_nth_not_set:
+  "\<lbrakk> word_log2 w < i ; i < size w \<rbrakk> \<Longrightarrow> \<not> w !! i"
+  unfolding word_log2_def word_clz_def
+  using takeWhile_take_has_property_nth[where P=Not and xs="to_bl w" and n="size w - Suc i"]
+  apply (fastforce simp add: to_bl_nth word_size)
+  done
+
+lemma word_log2_highest:
+  assumes a: "w !! i"
+  shows "i \<le> word_log2 w"
+proof -
+  from a have "i < size w" by - (rule test_bit_size)
+  with a show ?thesis
+    by - (rule ccontr, simp add: word_log2_nth_not_set)
+qed
+
+lemma word_log2_max:
+  "word_log2 w < size w"
+  unfolding word_log2_def word_clz_def
+  by simp
+
+lemma word_clz_0[simp]:
+  "word_clz (0::'a::len word) \<equiv> len_of (TYPE('a))"
+  unfolding word_clz_def
+  by (simp add: takeWhile_replicate)
+
+lemma word_clz_minus_one[simp]:
+  "word_clz (-1::'a::len word) \<equiv> 0"
+  unfolding word_clz_def
+  by (simp add: max_word_bl[simplified max_word_minus] takeWhile_replicate)
+
+(* end word log2 / clz *)
 
 end

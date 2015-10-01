@@ -87,6 +87,50 @@ lemma map_upt_reindex: "map f [a ..< b] = map (\<lambda>n. f (n + a)) [0 ..< b -
   apply clarsimp
   done
 
+lemma notemptyI:
+  "x \<in> S \<Longrightarrow> S \<noteq> {}"
+  by clarsimp
+
+lemma setcomp_Max_has_prop:
+  assumes a: "P x"
+  shows "P (Max {(x::'a::{finite,linorder}). P x})"
+proof -
+  from a have "Max {x. P x} \<in> {x. P x}"
+    by - (rule Max_in, auto intro: notemptyI)
+  thus ?thesis by auto
+qed
+
+lemma cons_set_intro:
+  "lst = x # xs \<Longrightarrow> x \<in> set lst"
+  by fastforce
+
+lemma takeWhile_take_has_property:
+  "n \<le> length (takeWhile P xs) \<Longrightarrow> \<forall>x \<in> set (take n xs). P x"
+  apply (induct xs arbitrary: n)
+   apply simp
+  apply (simp split: split_if_asm)
+  apply (case_tac n, simp_all)
+  done
+
+lemma takeWhile_take_has_property_nth:
+  "\<lbrakk> n < length (takeWhile P xs) \<rbrakk> \<Longrightarrow> P (xs ! n)"
+  apply (induct xs arbitrary: n, simp)
+  apply (simp split: split_if_asm)
+  apply (case_tac n, simp_all)
+  done
+
+lemma takeWhile_replicate:
+  "takeWhile f (replicate len x) = (if f x then replicate len x else [])"
+  by (induct_tac len) auto
+
+lemma takeWhile_replicate_empty:
+  "\<not> f x \<Longrightarrow> takeWhile f (replicate len x) = []"
+  by (simp add: takeWhile_replicate)
+
+lemma takeWhile_replicate_id:
+  "f x \<Longrightarrow> takeWhile f (replicate len x) = replicate len x"
+  by (simp add: takeWhile_replicate)
+
 (* These aren't used, but are generally useful *)
 
 lemma list_all2_conj_nth:
