@@ -67,7 +67,8 @@ definition
                    tcb_replycap_slot \<mapsto> NullCap,
                    tcb_caller_slot \<mapsto> NullCap,
                    tcb_ipcbuffer_slot \<mapsto> FrameCap frame_id {AllowRead, AllowWrite} small_frame_size Real None,
-                   tcb_pending_op_slot \<mapsto> NullCap],
+                   tcb_pending_op_slot \<mapsto> NullCap,
+                   tcb_boundaep_slot \<mapsto> NullCap],
    cdl_tcb_fault_endpoint = 0,
    cdl_tcb_intent = \<lparr>cdl_intent_op = None,
                      cdl_intent_error = False,
@@ -347,14 +348,13 @@ lemma well_formed_example:
    apply (fact well_formed_vspace_example)
   apply (rule conjI)
    apply (fact well_formed_irq_node_example)
-  apply (fastforce simp: example_spec_def object_size_bits_def object_default_state_def2
+  by (fastforce simp: example_spec_def object_size_bits_def object_default_state_def2
                          pd_size_def word_bits_def empty_cnode_def is_cnode_def
                          object_slots_def empty_cap_map_def tcb_slot_defs
                          default_tcb_def example_tcb_def
                          small_frame_size_def object_at_def
                          irq_nodes_def range_example_irq_node
                   split: split_if_asm)
-  done
 
 end
 
