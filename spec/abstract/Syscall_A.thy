@@ -72,7 +72,7 @@ occurred in the first operation); this second operation may result in
 an error;
 \item the error handler @{text h_error} to execute if the second
 operation resulted in an error;
-\item the third and last operation @{text h_error} to execute (if
+\item the third and last operation @{text m_finalise} to execute (if
 no error occurred in the second operation); this operation may be
 interrupted.
 \end{itemize}
