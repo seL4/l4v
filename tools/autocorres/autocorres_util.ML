@@ -432,7 +432,7 @@ fun define_funcs
     val fn_bodies = map (snd #> #2) functions
     val fn_traces = map (fn (fn_name, (_, _, traces)) => map (fn (module, trace) => (module, fn_name, trace)) traces) functions |> List.concat
 
-    val _ = writeln ("Defining (" ^ phase ^ ") " ^ (Utils.commas fn_names))
+    val _ = writeln ("Defining (" ^ phase ^ ") " ^ (Utils.commas (map get_const_name fn_names)))
 
     (*
      * Determine if we are in a recursive case by checking to see if the

@@ -382,6 +382,7 @@ fun system_heap_lift
     (trace_funcs : string list)
     (do_opt : bool)
     (trace_opt : bool)
+    (hl_function_name : string -> string)
     (gen_word_heaps : bool)
     lthy =
 let
@@ -433,9 +434,6 @@ let
       Thm.concl_of (Drule.gen_all (Variable.maxidx_of ctxt) thm)
       |> HOLogic.dest_Trueprop
       |> dest_L2Tcorres_term_abs
-
-  (* Generate a constant name for our definitions. *)
-  fun gen_hl_name x = "hl_" ^ x
 
   (* Determine which functions cannot be lifted. *)
   val unliftable_functions =
@@ -755,7 +753,7 @@ let
 
   (* Update function information. *)
   fun update_function_defs lthy fn_def =
-    FunctionInfo.fn_def_update_const (Utils.get_term lthy (gen_hl_name (#name fn_def))) fn_def
+    FunctionInfo.fn_def_update_const (Utils.get_term lthy (hl_function_name (#name fn_def))) fn_def
     |> FunctionInfo.fn_def_update_definition (
         (the (AutoCorresData.get_def (Proof_Context.theory_of lthy)
             filename "HLdef" (#name fn_def))))
@@ -765,7 +763,7 @@ in
     (get_expected_hl_fn_type prog_info fn_info heap_info unliftable_functions)
     (get_expected_hl_fn_thm prog_info fn_info heap_info unliftable_functions)
     (get_expected_hl_fn_args prog_info fn_info)
-    gen_hl_name
+    hl_function_name
     convert
     LocalVarExtract.l2_monad_mono
     update_function_defs

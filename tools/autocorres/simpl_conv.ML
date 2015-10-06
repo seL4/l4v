@@ -409,7 +409,7 @@ end
  * correspondence between our generated specs and the original SIMPL
  * code).
  *)
-fun translate_simpl filename fn_info do_opt trace_opt lthy =
+fun translate_simpl filename fn_info do_opt trace_opt l1_function_name lthy =
 let
   val prog_info = ProgramInfo.get_prog_info lthy filename
 
@@ -420,12 +420,9 @@ let
                                              callee_terms measure_var
   in (get_body_of_l1corres_thm thm, thm, opt_traces) end
 
-  (* Get a constant name for our function definitions. *)
-  fun get_const_name x = "l1_" ^ x
-
   (* Update function information. *)
   fun update_function_defs lthy fn_def =
-    FunctionInfo.fn_def_update_const (Utils.get_term lthy (get_const_name (#name fn_def))) fn_def
+    FunctionInfo.fn_def_update_const (Utils.get_term lthy (l1_function_name (#name fn_def))) fn_def
     |> FunctionInfo.fn_def_update_definition (
         (the (AutoCorresData.get_def (Proof_Context.theory_of lthy)
             filename "L1def" (#name fn_def))))
@@ -442,7 +439,7 @@ in
       (K l1_fn_type)
       get_l1_fn_assumption
       (fn _ => [])
-      get_const_name
+      l1_function_name
       convert
       l1_monad_mono
       update_function_defs

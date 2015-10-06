@@ -26,7 +26,6 @@ context factorial begin
 
 (* Termination *)
 thm factorial'.simps
-thm l1_call_factorial_def
 
 lemma ovalidNF_grab_asm2:
   "ovalidNF (\<lambda>s. G \<and> P s) f Q \<Longrightarrow> G \<Longrightarrow> ovalidNF P f Q"

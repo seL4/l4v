@@ -31,6 +31,11 @@ struct
  *                ts_force RULE_NAME = FUNC_NAMES,
  *                ts_force ... = ...,
  *
+ *                lifted_globals_field_prefix = "STRING",
+ *                lifted_globals_field_suffix = "STRING",
+ *                function_name_prefix = "STRING",
+ *                function_name_suffix = "STRING",
+ *
  *                trace_heap_lift = FUNC_NAMES,
  *                trace_word_abs = FUNC_NAMES,
  *                trace_opt,
@@ -101,9 +106,11 @@ type autocorres_options = {
 
   keep_going : bool option ref,
 
+  (* Change generated names for lifted_globals fields *)
   lifted_globals_field_prefix : string option ref,
   lifted_globals_field_suffix : string option ref,
 
+  (* Change generated function names *)
   function_name_prefix : string option ref,
   function_name_suffix : string option ref
 }
@@ -485,18 +492,27 @@ let
 
   (* Do the translation. *)
   val (lthy, fn_info) =
-    SimplConv.translate_simpl filename fn_info do_opt trace_opt lthy
+        SimplConv.translate_simpl
+            filename fn_info
+            do_opt trace_opt (prefix "l1_" o make_function_name) lthy
     |> (fn (lthy, fn_info) =>
-        LocalVarExtract.translate_l2 filename fn_info do_opt trace_opt lthy)
+        LocalVarExtract.translate_l2 filename fn_info do_opt trace_opt (prefix "l2_" o make_function_name) lthy)
     |> (fn (lthy, fn_info) =>
-        HeapLift.system_heap_lift filename fn_info no_heap_abs (these (!(#force_heap_abs opt))) make_lifted_globals_field_name heap_abs_syntax keep_going (these (!(#trace_heap_lift opt))) do_opt trace_opt gen_word_heaps lthy)
+        HeapLift.system_heap_lift filename fn_info
+            no_heap_abs (these (!(#force_heap_abs opt)))
+            make_lifted_globals_field_name heap_abs_syntax keep_going
+            (these (!(#trace_heap_lift opt))) do_opt trace_opt
+            (prefix "hl_" o make_function_name) gen_word_heaps lthy)
     |> (fn (lthy, fn_info) =>
         if skip_word_abs then (lthy, fn_info) else
-        WordAbstract.word_abstract filename fn_info (these (!(#unsigned_word_abs opt)))
-                                   (these (!(#no_signed_word_abs opt))) (these (!(#trace_word_abs opt)))
-                                   do_opt trace_opt lthy)
+        WordAbstract.word_abstract
+            filename fn_info (these (!(#unsigned_word_abs opt))) (these (!(#no_signed_word_abs opt)))
+            (these (!(#trace_word_abs opt))) do_opt trace_opt
+            (prefix "wa_" o make_function_name) lthy)
     |> (fn (lthy, fn_info) =>
-        TypeStrengthen.type_strengthen ts_rules ts_force filename fn_info make_function_name keep_going do_opt lthy)
+        TypeStrengthen.type_strengthen
+            ts_rules ts_force filename fn_info make_function_name
+            keep_going do_opt lthy)
     |> (fn (lthy, fn_info) =>
         (lthy, fn_info))
 

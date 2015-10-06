@@ -234,6 +234,7 @@ def process_tests(tests, strict=False):
                 proposed_name = "%s_%d" % (t.name, x)
                 if not proposed_name in seen_names:
                     t.name = proposed_name
+                    break
         seen_names.add(t.name)
 
     # Check dependencies.

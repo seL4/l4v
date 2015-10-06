@@ -17,7 +17,7 @@ imports SimplBucket NonDetMonadEx
 begin
 
 (*
- * A special form of "ac_corres" where either side may throw an
+ * A special form of "ccorres" where either side may throw an
  * exception if the other also throws an exception.
  *)
 definition
