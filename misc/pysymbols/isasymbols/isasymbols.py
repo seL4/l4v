@@ -32,6 +32,11 @@ class Symbol(object):
         self.font = font
         self.abbreviations = abbreviations or []
 
+def _extract_property(prop):
+    # Values of the symbol fields can contain '␣' which is intended to
+    # indicate a space.
+    return prop.replace(u'␣', ' ')
+
 class Translator(object):
     def __init__(self, symbols_text):
         assert isinstance(symbols_text, basestring)
@@ -60,22 +65,22 @@ class Translator(object):
 
                 if k == 'code:':
                     try:
-                        code = int(v, 16)
+                        code = int(_extract_property(v), 16)
                     except ValueError:
                         raise IsaSymbolsException('%d: invalid code field' %
                             number)
                     fields['code_point'] = code
 
                 elif k == 'group:':
-                    fields['group'] = v
+                    fields['group'] = _extract_property(v)
 
                 elif k == 'font:':
-                    fields['font'] = v
+                    fields['font'] = _extract_property(v)
 
                 elif k == 'abbrev:':
                     if 'abbreviations' not in fields:
                         fields['abbreviations'] = []
-                    fields['abbreviations'].append(v)
+                    fields['abbreviations'].append(_extract_property(v))
 
                 else:
                     raise IsaSymbolsException('%d: unexpected field %s' %
