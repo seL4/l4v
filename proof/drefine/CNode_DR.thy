@@ -2291,8 +2291,6 @@ lemma recycle_cap_idle_thread: "\<lbrace> \<lambda>s. P (idle_thread s) \<rbrace
     apply (wp get_thread_state_it dxo_wp_weak | rule hoare_drop_imps | simp)+
   done
 
-(* lemma double_thread_get: *)
-(*   "do ret1 \<leftarrow> thread_get f word; ret2 \<leftarrow> thread_get g word od = (ret1, ret2) \<leftarrow> thread_get (\<lambda>t. return (f t, g t)) word" *)
 
 lemma dcorres_gba_no_effect:
   "dcorres dc \<top> \<top> (return a) (get_bound_aep tcb)"
@@ -2306,17 +2304,6 @@ lemma recycle_cap_corres_pre:
   (\<lambda>s. invs s \<and> cte_wp_at (op = cap) ptr s \<and> valid_pdpt_objs s \<and> valid_etcbs s)
   (CSpace_D.recycle_cap x (transform_cap cap)) (CSpace_A.recycle_cap x cap)"
   apply (case_tac cap)
-(*<<<<<<< HEAD
-           apply (rule corres_guard_imp)
-               prefer 14 (* Using an explict goal number is so incredibly brittle *)
-               apply (simp add:recycle_cap_def)
-               apply (rule corres_guard_imp)
-                 apply (rule  arch_recycle_cap_dcorres)
-                apply (wp recycle_cap_invs [where slot = "(a, b)"] recycle_cap_idle_thread
-                  | strengthen valid_idle_invs_strg | fastforce)+
-              apply (simp_all add:recycle_cap_def CSpace_D.recycle_cap_def
-                split del:if_splits)
-=======*)
              apply (rule corres_guard_imp)
                prefer 14 -- Recycle
                apply (simp add:recycle_cap_def)
@@ -2326,7 +2313,6 @@ lemma recycle_cap_corres_pre:
                        | strengthen valid_idle_invs_strg | fastforce)+
               apply (simp_all add:recycle_cap_def CSpace_D.recycle_cap_def
                               split del: split_if)
-(*>>>>>>> master*)
      apply (rule corres_guard_imp[OF corres_free_fail [where P = \<top> and P' = \<top>]],simp+)
     apply (rule corres_guard_imp)
       apply (rule corres_split [where R = "\<top>\<top>" and R' = "\<top>\<top>"])

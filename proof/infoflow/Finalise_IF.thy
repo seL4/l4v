@@ -1025,45 +1025,6 @@ lemma aep_queues_are_invisible_or_aeps_are_equal':
   apply(case_tac "aep_obj aep", auto)
   done
 
-(*
-lemma aep_queues_are_invisible_or_aeps_are_equal:
-  "\<lbrakk>(pasSubject aag, Reset, pasObjectAbs aag aepptr) \<in> pasPolicy aag;
-    ko_at (AsyncEndpoint aep) aepptr s;
-    ko_at (AsyncEndpoint aep') aepptr s';
-    reads_equiv aag s s'; affects_equiv aag l s s';
-    valid_objs s; sym_refs (state_refs_of s); valid_objs s';
-    sym_refs (state_refs_of s'); pas_refined aag s; pas_refined aag s'\<rbrakk> \<Longrightarrow>
-  (\<not> aep_queue_invisible aag l aep \<or> \<not> aep_queue_invisible aag l aep') \<longrightarrow> aep = aep'"
-  apply(rule impI)
-  apply(erule disjE)
-   apply(blast intro!: aep_queues_are_invisible_or_aeps_are_equal'[rule_format])
-  apply(rule sym)
-  apply(erule aep_queues_are_invisible_or_aeps_are_equal'[rule_format])
-            apply (assumption | erule reads_equiv_sym | erule affects_equiv_sym)+
-  done
-
-lemma get_async_ep_revrv:
-  "reads_equiv_valid_rv_inv (affects_equiv aag l) aag
-        (\<lambda>aep aep'. (\<not> aep_queue_invisible aag l aep \<or> \<not> aep_queue_invisible aag l aep') \<longrightarrow> aep = aep')
-        (pas_refined aag and valid_objs and sym_refs \<circ> state_refs_of and
-         K ((pasSubject aag, Reset, pasObjectAbs aag aepptr) \<in> pasPolicy aag))
-        (get_async_ep aepptr)"
-  unfolding get_async_ep_def
-  apply(rule_tac Q="\<lambda> rv. ko_at rv aepptr and pas_refined aag and valid_objs and sym_refs \<circ> state_refs_of and (K ((pasSubject aag, Reset, pasObjectAbs aag aepptr) \<in> pasPolicy aag))" in equiv_valid_rv_bind)
-    apply(rule equiv_valid_rv_guard_imp[OF equiv_valid_rv_trivial])
-     apply wp
-   apply(case_tac "\<exists> aep. rv = AsyncEndpoint aep")
-    apply(case_tac "\<exists> aep. rv' = AsyncEndpoint aep")
-     apply (clarsimp split: kernel_object.splits)
-     apply (rule return_ev2)
-     apply (rule aep_queues_are_invisible_or_aeps_are_equal[simplified])
-                apply fastforce+
-    apply(clarsimp split: kernel_object.splits simp: fail_ev2_l fail_ev2_r)
-   apply(clarsimp split: kernel_object.splits simp: fail_ev2_l fail_ev2_r)
-  apply (rule hoare_strengthen_post[OF get_object_sp])
-  by simp
-*)
-
 lemma set_async_ep_equiv_but_for_labels:
   "\<lbrace>equiv_but_for_labels aag L st and K (pasObjectAbs aag aepptr \<in> L)\<rbrace>
    set_async_ep aepptr aep

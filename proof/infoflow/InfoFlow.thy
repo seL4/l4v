@@ -70,11 +70,6 @@ where
      does a receive (for which a sender is already blocked) or reset on the ep.
      The affects on the ep here will depend on the state of any blocked
      senders. So if the ep is in l's domain, the senders better be too. *)
-   (* Dan: I removed the requirement that someone have Reset/Receive rights
-      to the ep because a wellformed (reflexive) policy will have the ep
-      confer this to itself, and therefore be redundant.
-      reads_sync_ep_reads_senders is the original rule that
-      (redundantly) assumes this. *)
   read_sync_ep_read_senders_strong:
   "\<lbrakk>ep \<in> subjectReads g l; (b,SyncSend,ep) \<in> g\<rbrakk> \<Longrightarrow>
    b \<in> subjectReads g l" |
@@ -95,11 +90,6 @@ where
      cannot imagine a useful intransitive noninterference policy that permits
      the latter case but not the former, so the extra cost of doing away with
      this rule does not seem worth it IMO. *)
-  (* Dan: I removed the requirement that someone have SyncSend rights
-     to the ep because a wellformed (reflexive) policy will have the ep
-     confer this to itself, and therefore be redundant.
-     read_sync_ep_read_receivers is the original rule that
-     (redundantly) assumes this. *)
   read_sync_ep_read_receivers_strong:
   "\<lbrakk>ep \<in> subjectReads g l; (b,Receive,ep) \<in> g\<rbrakk> \<Longrightarrow>
    b \<in> subjectReads g l"

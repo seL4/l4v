@@ -392,7 +392,6 @@ lemma finalise_ipc_cancel:
       apply (simp add:blocked_ipc_cancel_def)
       apply (rule corres_guard_imp)
         apply (rule corres_symb_exec_r)
-(*<<<<<<< HEAD*)
            apply (rule corres_symb_exec_r)
               apply (rule corres_symb_exec_r)
                  apply (rule corres_dummy_return_pl)
@@ -2727,7 +2726,6 @@ where "remainder_cap final c\<equiv> case c of
 lemma finalise_cap_remainder:
   "\<lbrace>\<top>\<rbrace>CSpace_A.finalise_cap cap final \<lbrace>\<lambda>r s. fst (r) = (remainder_cap final cap) \<rbrace>"
   apply (case_tac cap)
-(*<<<<<<< HEAD*)
     apply (simp_all add:CSpace_A.finalise_cap.simps remainder_cap_def)
              apply (wp|clarsimp)+
             apply (fastforce simp:valid_def)

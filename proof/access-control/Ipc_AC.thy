@@ -458,12 +458,6 @@ lemma set_thread_state_integrity_once_ts_upd:
   apply (simp add: get_tcb_def cong: if_cong)
   done
 
-(*
-lemma bound_tcb_at_thread_bound_aeps:
-  "st_tcb_at receive_blocked t s \<Longrightarrow> thread_states s t = "
-  by (clarsimp simp: thread_bound_aeps_def pred_tcb_at_def obj_at_def get_tcb_def split: option.splits)
-*)
-
 lemma get_tcb_recv_blocked_implies_receive:
   "\<lbrakk>pas_refined aag s; get_tcb t s = Some tcb; ep_recv_blocked ep (tcb_state tcb) \<rbrakk>
           \<Longrightarrow> (pasObjectAbs aag t, Receive, pasObjectAbs aag ep) \<in> pasPolicy aag"

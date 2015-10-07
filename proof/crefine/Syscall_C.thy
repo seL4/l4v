@@ -1414,44 +1414,6 @@ lemma handleWait_ccorres:
 
              apply (simp add: liftE_bind) 
              apply (ctac  add: receiveAsyncIPC_ccorres[unfolded dc_def])
-(*
-=======
-        apply (clarsimp simp: capFaultOnFailure_if_case_sum case_bool_If)
-        apply (rule ccorres_cond_both' [where Q=\<top> and Q'=\<top>])
-          apply clarsimp
-
-         apply (rule ccorres_rhs_assoc)+
-         apply csymbr
-         apply (simp add: case_bool_If capFaultOnFailure_if_case_sum)
-
-         apply (rule ccorres_if_cond_throws_break2 [where Q=\<top> and Q'=\<top>])
-            apply clarsimp
-
-            apply (simp add: cap_get_tag_isCap[symmetric] cap_get_tag_AsyncEndpointCap
-                        del: Collect_const)
-            apply (simp add: to_bool_def)
-
-
-           apply (rule ccorres_rhs_assoc)+
-
-           apply (simp add: capFaultOnFailure_def rethrowFailure_def
-                            handleE'_def throwError_def)
-           apply (rule ccorres_cross_over_guard[where P=\<top>])
-           apply (rule ccorres_symb_exec_r)
-             apply (rule ccorres_cross_over_guard[where P=\<top>])
-             apply (rule ccorres_symb_exec_r)
-               apply (rule ccorres_add_return2)
-               apply (rule ccorres_split_nothrow_call[where xf'=xfdc and d'="\<lambda>_. break_C"
-                                                      and Q="\<lambda>_ _. True" and Q'="\<lambda>_ _. UNIV"])
-                      apply (ctac add: handleFault_ccorres[unfolded dc_def])
-                     apply simp+
-                  apply ceqv
-                 apply (rule ccorres_break_return)
-                  apply simp+
-                apply wp
-               apply (vcg exspec=handleFault_modifies)
->>>>>>> master*)
-
             apply clarsimp
             apply (vcg exspec=handleFault_modifies)
            apply (rule ccorres_cond_true_seq)
@@ -1473,24 +1435,11 @@ lemma handleWait_ccorres:
                apply vcg
               apply (rule conseqPre, vcg)
               apply clarsimp
-(* <<<<<<<<<<<<< HEAD *)
              apply vcg
             apply (rule conseqPre, vcg)
             apply clarsimp
            apply (vcg exspec=handleFault_modifies)
-(*=======
-            apply vcg
-           apply (rule conseqPre, vcg)
-           apply clarsimp
->>>>>>> master*)
-(*
-          apply (simp add: liftE_bind)
-          apply (ctac  add: receiveAsyncIPC_ccorres[unfolded dc_def])
-
-         apply clarsimp
-         apply (vcg exspec=handleFault_modifies)
-*)
-        apply (rule ccorres_cond_univ)
+       apply (rule ccorres_cond_univ)
         apply (simp add: capFaultOnFailure_def rethrowFailure_def
                          handleE'_def throwError_def)
 
@@ -1503,42 +1452,7 @@ lemma handleWait_ccorres:
            apply vcg
           apply (rule conseqPre, vcg)
           apply clarsimp
-
-(*<<<<<<< HEAD
-         apply clarsimp
-         apply (rule ccorres_add_return2)
-         apply (rule ccorres_rhs_assoc)+
-         apply (rule ccorres_cross_over_guard[where P=\<top>])
-         apply (rule ccorres_symb_exec_r)
-           apply (ctac add: handleFault_ccorres[unfolded dc_def])
-             apply (rule ccorres_split_throws)
-              apply (rule ccorres_return_void_C [unfolded dc_def])        
-             apply vcg
-
-            apply wp
-           apply (vcg exspec=handleFault_modifies)
-          apply vcg
-         apply (rule conseqPre, vcg)
-         apply clarsimp
-        apply (wp)
-        apply clarsimp 
-        apply (rule_tac Q="(\<lambda>rv s. invs' s \<and> st_tcb_at' simple' thread s
-               \<and> sch_act_sane s \<and> (\<forall>p. thread \<notin> set (ksReadyQueues s p)) \<and> thread = ksCurThread s
-               \<and> valid_cap' rv s)" in strengthen_validE_R_cong[rule_format])
-         apply (clarsimp simp: sch_act_sane_def)
-         apply (auto dest!: obj_at_valid_objs'[OF _ invs_valid_objs']
-                      simp: projectKOs valid_obj'_def)[1]
-        apply (wp)
-       apply clarsimp
-       apply (vcg exspec=isBlocked_modifies exspec=lookupCap_modifies) 
-
-      apply wp
-     apply vcg
-    apply clarsimp
-    apply (strengthen ct_not_ksQ_strengthen invs_valid_objs_strengthen)
-    apply (wp deleteCallerCap_ct_not_ksQ hoare_vcg_all_lift | simp)+
-=======*)
-         apply vcg
+        apply vcg
         apply (rule conseqPre, vcg)
         apply clarsimp
 
@@ -1551,16 +1465,12 @@ lemma handleWait_ccorres:
            apply (rule ccorres_split_throws)
             apply (rule ccorres_return_void_C [unfolded dc_def])
            apply vcg
-(*>>>>>>> master*)
-
           apply wp
          apply (vcg exspec=handleFault_modifies)
         apply vcg
        apply (rule conseqPre, vcg)
        apply clarsimp
       apply (wp) apply clarsimp
-
-
         apply (rule_tac Q="(\<lambda>rv s. invs' s \<and> st_tcb_at' simple' thread s
                \<and> sch_act_sane s \<and> (\<forall>p. thread \<notin> set (ksReadyQueues s p)) \<and> thread = ksCurThread s
                \<and> valid_cap' rv s)" in strengthen_validE_R_cong[rule_format])
