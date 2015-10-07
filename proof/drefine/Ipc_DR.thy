@@ -928,7 +928,6 @@ lemma send_async_ipc_corres:
   apply (rule dcorres_expand_pfx)
   apply (clarsimp simp:get_async_ep_def get_object_def gets_def bind_assoc split: split_if)
   apply (rule dcorres_absorb_get_r)
-  (*<<<<<<< HEAD*)
   apply (clarsimp simp:assert_def corres_free_fail split:Structures_A.kernel_object.splits split_if )
   apply (rename_tac async_ep_ext)
   apply (case_tac "aep_obj async_ep_ext", clarsimp)
