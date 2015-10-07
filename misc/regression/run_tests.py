@@ -27,7 +27,6 @@ import signal
 import subprocess
 import sys
 import testspec
-import time
 import traceback
 
 # Try importing psutil.
