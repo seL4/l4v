@@ -380,7 +380,8 @@ lemma decode_tcb_corres:
          (* please continue scrolling *)
          apply (case_tac "(fst (hd excaps'))", simp_all split del: split_if)[1]
                     prefer 4
-                    apply (case_tac "AllowRead \<notin> x43", simp)
+                    apply (rename_tac rights)
+                    apply (case_tac "AllowRead \<notin> rights", simp)
                      apply (rule corres_alternate2, rule dcorres_throw)
                     apply simp
                     apply (rule dcorres_symb_exec_rE)
@@ -390,7 +391,7 @@ lemma decode_tcb_corres:
                          apply (case_tac "excaps' ! 0", clarsimp, rule corres_alternate1[OF dcorres_returnOk], simp add: translate_tcb_invocation_def hd_conv_nth)
                         apply (clarsimp simp: throw_on_none_def get_index_def dcorres_alternative_throw split del: split_if)+
                       apply (case_tac "aep_bound_tcb rva", simp split del: split_if)[1]
-                       apply (rename_tac rights rva word)
+                       apply (rename_tac rva word)
                        apply ((case_tac "excaps' ! 0",clarsimp, rule corres_alternate1[OF dcorres_returnOk], simp add: translate_tcb_invocation_def hd_conv_nth)
                                 | clarsimp simp: throw_on_none_def get_index_def dcorres_alternative_throw split del: split_if
                                 | wp get_aep_wp
