@@ -34,7 +34,6 @@ lemma trivial_imp: "\<forall>r s. Q r s \<longrightarrow> Q r s" by simp
 lemma uncurry2: "\<forall>r s. Q r s \<and> Q' r s \<longrightarrow> Q'' r s \<Longrightarrow> \<forall>r s. Q r s \<longrightarrow> Q' r s \<longrightarrow> Q'' r s"
   by simp
 
-
 named_theorems hoare_post_imps
 
 lemmas [hoare_post_imps] = hoare_post_imp_R hoare_post_imp[rotated]
@@ -144,4 +143,74 @@ notepad begin
   by simp
 
 end
+
+text \<open>Strengthening postconditions automatically\<close>
+
+context begin
+
+private definition "not_triv_implies Q Q' \<equiv> True"
+
+private definition "strong_post P Q \<equiv> P \<longrightarrow> Q"
+
+private lemma not_triv_implies_test:
+  "(P \<Longrightarrow> not_triv_implies Q' Q'') \<Longrightarrow> not_triv_implies (strong_post P Q') Q''"
+  by (simp add: not_triv_implies_def)
+
+private lemma not_triv_implies_test':
+  "(P \<Longrightarrow> Q) \<Longrightarrow> not_triv_implies P Q"
+  by (simp add: not_triv_implies_def)
+
+private lemma not_triv_impliesI:
+  "not_triv_implies Q Q'"
+  by (simp add: not_triv_implies_def)
+
+private lemmas strong_post_cong[cong] = imp_cong[simplified strong_post_def[symmetric]]
+
+private method not_triv_implies =
+  (fails 
+    \<open>intro not_triv_implies_test not_triv_implies_test' conjI; 
+      ((elim conjE)?, assumption)\<close>, 
+   rule not_triv_impliesI)
+
+private lemma hoare_find_context:
+  "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<Longrightarrow>
+  (\<And> r s. not_triv_implies (H (Q r s) r s) (Q r s)) \<Longrightarrow>
+  \<lbrace>P'\<rbrace> f \<lbrace>\<lambda>r s. strong_post (Q r s) (H (Q r s) r s)\<rbrace> \<Longrightarrow> \<lbrace>P and P'\<rbrace> f \<lbrace>\<lambda>r s. H (Q r s) r s\<rbrace>"
+  apply (auto simp add: valid_def strong_post_def)
+  by fastforce
+
+private lemma drop_strong_post:
+  "\<lbrace>P\<rbrace> f \<lbrace>R\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>r s. strong_post (Q r s) (R r s)\<rbrace>"
+  apply (erule hoare_strengthen_post)
+  by (simp add: strong_post_def)
+
+private definition "dummy_post r s \<equiv> True"
+
+private lemma hoare_dummy:
+  "\<lbrace>P\<rbrace> f \<lbrace>dummy_post\<rbrace>"
+  apply (simp add: dummy_post_def[abs_def])
+  by wp
+
+private method no_schematic_post = (fails \<open>rule hoare_dummy\<close>)
+
+method post_strengthen methods m =
+  ((rule hoare_find_context, no_schematic_post, solves \<open>m\<close>, not_triv_implies)+,
+    simp cong: strong_post_cong,
+   (rule drop_strong_post)+)
+
+end
+
+
+notepad begin
+  fix P P' P'' and Q Q' Q'' R :: "'b \<Rightarrow> 'a \<Rightarrow> bool" and f :: "('a,'b) nondet_monad"
+  assume A[wp]: "\<lbrace>P'\<rbrace> f \<lbrace>Q\<rbrace>" and B[wp]:"\<lbrace>P''\<rbrace> f \<lbrace>Q'\<rbrace>" and C: "\<And>r s. \<not> R r s \<longrightarrow> Q'' r s"
+  have "\<lbrace>P and P' and P''\<rbrace> f \<lbrace>\<lambda>r s. (R r s \<longrightarrow> (Q r s \<and> Q' r s)) \<and> (\<not> R r s \<longrightarrow> (Q r s \<and> Q'' r s))\<rbrace>"
+  apply (rule hoare_pre)
+  apply (post_strengthen \<open>wp\<close>)
+  apply (simp add: C)
+  apply wp
+  by simp
+
+end
+
 end
