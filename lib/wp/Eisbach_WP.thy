@@ -148,34 +148,16 @@ text \<open>Strengthening postconditions automatically\<close>
 
 context begin
 
-private definition "not_triv_implies Q Q' \<equiv> True"
 
-private definition "strong_post P Q \<equiv> P \<longrightarrow> Q"
+definition "strong_post P Q \<equiv> P \<longrightarrow> Q"
 
-private lemma not_triv_implies_test:
-  "(P \<Longrightarrow> not_triv_implies Q' Q'') \<Longrightarrow> not_triv_implies (strong_post P Q') Q''"
-  by (simp add: not_triv_implies_def)
 
-private lemma not_triv_implies_test':
-  "(P \<Longrightarrow> Q) \<Longrightarrow> not_triv_implies P Q"
-  by (simp add: not_triv_implies_def)
+lemmas strong_post_cong[cong] = imp_cong[simplified strong_post_def[symmetric]]
 
-private lemma not_triv_impliesI:
-  "not_triv_implies Q Q'"
-  by (simp add: not_triv_implies_def)
 
-private lemmas strong_post_cong[cong] = imp_cong[simplified strong_post_def[symmetric]]
-
-private method not_triv_implies =
-  (fails 
-    \<open>intro not_triv_implies_test not_triv_implies_test' conjI; 
-      ((elim conjE)?, assumption)\<close>, 
-   rule not_triv_impliesI)
-
-private lemma hoare_find_context:
+lemma hoare_strong_post:
   "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<Longrightarrow>
-  (\<And> r s. not_triv_implies (H (Q r s) r s) (Q r s)) \<Longrightarrow>
-  \<lbrace>P'\<rbrace> f \<lbrace>\<lambda>r s. strong_post (Q r s) (H (Q r s) r s)\<rbrace> \<Longrightarrow> \<lbrace>P and P'\<rbrace> f \<lbrace>\<lambda>r s. H (Q r s) r s\<rbrace>"
+  \<lbrace>P'\<rbrace> f \<lbrace>\<lambda>r s. strong_post (Q r s) (H r s)\<rbrace> \<Longrightarrow> \<lbrace>P and P'\<rbrace> f \<lbrace>\<lambda>r s. H r s\<rbrace>"
   apply (auto simp add: valid_def strong_post_def)
   by fastforce
 
@@ -184,33 +166,65 @@ private lemma drop_strong_post:
   apply (erule hoare_strengthen_post)
   by (simp add: strong_post_def)
 
-private definition "dummy_post r s \<equiv> True"
 
-private lemma hoare_dummy:
-  "\<lbrace>P\<rbrace> f \<lbrace>dummy_post\<rbrace>"
-  apply (simp add: dummy_post_def[abs_def])
-  by wp
+method find_context for Q :: "'a \<Rightarrow> 'b \<Rightarrow> bool" methods m =
+  (match (Q) in 
+    "\<lambda>r s. Q' r s \<and> Q'' r s" for Q' Q'' :: "'a \<Rightarrow> 'b \<Rightarrow> bool" \<Rightarrow>
+       \<open>(find_context Q' \<open>m\<close>)?, (find_context Q'' \<open>m\<close>)?\<close>
+  \<bar> "\<lambda>r s. Q' r s \<longrightarrow> Q'' r s" for Q' Q'' :: "'a \<Rightarrow> 'b \<Rightarrow> bool" \<Rightarrow>
+       \<open>(find_context Q' \<open>m\<close>)?, (find_context Q'' \<open>m\<close>)?\<close>
+  \<bar> "\<lambda>r s. if (A r s) then Q' r s else Q'' r s" for A Q' Q'' :: "'a \<Rightarrow> 'b \<Rightarrow> bool" \<Rightarrow>
+       \<open>(find_context A \<open>m\<close>)?, (find_context Q' \<open>m\<close>)?, (find_context Q'' \<open>m\<close>)?\<close>
+  \<bar> "\<lambda>r s. Q' r s \<or> Q'' r s" for Q' Q'' :: "'a \<Rightarrow> 'b \<Rightarrow> bool" \<Rightarrow>
+       \<open>(find_context Q' \<open>m\<close>)?, (find_context Q'' \<open>m\<close>)?\<close>
+  \<bar> "\<lambda>r. Q' r and Q'' r" for Q' Q'' :: "'a \<Rightarrow> 'b \<Rightarrow> bool" \<Rightarrow>
+       \<open>(find_context Q' \<open>m\<close>)?, (find_context Q'' \<open>m\<close>)?\<close>
+  \<bar> "\<lambda>r s. \<not> Q' r s" for Q' :: "'a \<Rightarrow> 'b \<Rightarrow> bool" \<Rightarrow>
+       \<open>(find_context Q' \<open>m\<close>)?\<close>
+  \<bar> "\<lambda>(r :: 'a) (s :: 'b). Q'" for Q' :: "bool" \<Rightarrow> \<open>fail\<close>
+  \<bar> _ \<Rightarrow> \<open>rule hoare_strong_post[where Q=Q], solves \<open>m\<close>\<close>     
+   )
 
-private method no_schematic_post = (fails \<open>rule hoare_dummy\<close>)
+definition "schematic_equiv P P' \<equiv> (PROP P \<equiv> PROP P')" 
 
-method post_strengthen methods m =
-  ((rule hoare_find_context, no_schematic_post, solves \<open>m\<close>, not_triv_implies)+,
-    simp cong: strong_post_cong,
-   (rule drop_strong_post)+)
+lemma
+  hoare_pre_schematic_equiv: 
+  "\<lbrace>Q\<rbrace> a \<lbrace>R\<rbrace> \<Longrightarrow> (\<And>s. PROP schematic_equiv (Trueprop (Q s)) (Trueprop (P s)))\<Longrightarrow> \<lbrace>P\<rbrace> a \<lbrace>R\<rbrace>"
+  apply (simp add: schematic_equiv_def)
+  apply (rule hoare_pre_imp[rotated],assumption)
+  apply (drule_tac x=s in meta_spec)
+  by (erule equal_elim_rule2)
+  
+
+lemma schematic_equivI: "PROP schematic_equiv (PROP P) (PROP P)" 
+  by (simp add: schematic_equiv_def)
+  
+
+method post_strengthen methods wp' simp' =
+  (match conclusion in "\<lbrace>_\<rbrace> _ \<lbrace>Q\<rbrace>" for Q \<Rightarrow>
+    \<open>rule hoare_pre_schematic_equiv, find_context Q \<open>wp'\<close>\<close>, 
+   find_goal \<open>rule schematic_equivI\<close>,
+   simp'; ((rule drop_strong_post)+)?
+  )
+
+
+method wpstr uses add del = 
+  (post_strengthen \<open>wp_once add: add del: del\<close> \<open>simp split del: split_if\<close>)
 
 end
-
 
 notepad begin
   fix P P' P'' and Q Q' Q'' R :: "'b \<Rightarrow> 'a \<Rightarrow> bool" and f :: "('a,'b) nondet_monad"
-  assume A[wp]: "\<lbrace>P'\<rbrace> f \<lbrace>Q\<rbrace>" and B[wp]:"\<lbrace>P''\<rbrace> f \<lbrace>Q'\<rbrace>" and C: "\<And>r s. \<not> R r s \<longrightarrow> Q'' r s"
+  assume A: "\<lbrace>P'\<rbrace> f \<lbrace>Q\<rbrace>" and B[wp]:"\<lbrace>P''\<rbrace> f \<lbrace>Q'\<rbrace>" and C: "\<And>r s. \<not> R r s \<longrightarrow> Q'' r s"
   have "\<lbrace>P and P' and P''\<rbrace> f \<lbrace>\<lambda>r s. (R r s \<longrightarrow> (Q r s \<and> Q' r s)) \<and> (\<not> R r s \<longrightarrow> (Q r s \<and> Q'' r s))\<rbrace>"
   apply (rule hoare_pre)
-  apply (post_strengthen \<open>wp\<close>)
-  apply (simp add: C)
-  apply wp
+   apply (wpstr add: A del: B)
+   apply wpstr
+   apply (simp add: C)
+   apply wp
   by simp
 
 end
+
 
 end
