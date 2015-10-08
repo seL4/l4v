@@ -130,36 +130,61 @@ text \<open>Isabelle's goal mechanism wants to aggressively expand meta-conjunct
       are the top-level connective. This means that @{text fold_subgoals} will immediately
       be unfolded if there are no common assumptions to lift over.
 
-      This method simply ensures that this is the case by inserting a dummy assumption
-      as the first assumption to all subgoals, so that after folding the goal
-      looks like this: @{term "dummy_asm ==> A &&& B"}. The inner method is then
-      executed on the resulting goal, without expanding the conjuncts.
-
-      The inner method should probably clear this dummy assumption internally at
-      some point (using the provided @{text clear_dummy_asm}, 
-      but only when it doesn't need the conjunction to persist.\<close>
+      To avoid this we simply wrap conjunction inside of conjunction' to hide it
+      from the usual facilities.\<close>
 
 context begin
 
-private definition "dummy_asm == True"
-private lemma dummy_asm: "dummy_asm" by (simp add: dummy_asm_def)
+definition
+  conjunction' :: "prop \<Rightarrow> prop \<Rightarrow> prop" (infixr "&^&" 2) where 
+  "conjunction' A B \<equiv> (PROP A &&& PROP B)"
 
-method clear_dummy_asm = (erule thin_rl[of dummy_asm])?
 
-method safe_fold_subgoals methods m =
-  (all \<open>insert dummy_asm, rotate_tac -1\<close>,
-   fold_subgoals,
-   (m ; clear_dummy_asm))
+text \<open>In general the context antiquotation does not work in method definitions.
+  Here it is fine because Conv.top_sweep_conv is just over-specified to need a Proof.context
+  when anything would do.\<close>
+
+method safe_meta_conjuncts =
+  raw_tactic 
+   \<open>REPEAT_DETERM
+     (CHANGED_PROP 
+      (PRIMITIVE 
+        (Conv.gconv_rule ((Conv.top_sweep_conv (K (Conv.rewr_conv @{thm conjunction'_def[symmetric]})) @{context})) 1)))\<close>
+
+method safe_fold_subgoals = (fold_subgoals, safe_meta_conjuncts)
+
+lemma atomize_conj' [atomize]: "(A &^& B) == Trueprop (A & B)" 
+  by (simp add: conjunction'_def, rule atomize_conj)
+
+lemma context_conjunction'I:
+  "PROP P \<Longrightarrow> (PROP P \<Longrightarrow> PROP Q) \<Longrightarrow> PROP P &^& PROP Q"
+  apply (simp add: conjunction'_def)
+  apply (rule conjunctionI)
+   apply assumption
+  apply (erule meta_mp)
+  apply assumption
+  done
+
+lemma conjunction'E:
+  assumes PQ: "PROP P &^& PROP Q"
+  assumes PQR: "PROP P \<Longrightarrow> PROP Q \<Longrightarrow> PROP R"
+  shows
+  "PROP R"
+  apply (rule PQR)
+  apply (rule PQ[simplified conjunction'_def, THEN conjunctionD1])
+  by (rule PQ[simplified conjunction'_def, THEN conjunctionD2])
 
 end
 
 notepad begin
   fix D C E
   
-  assume DC: "D &&& C"
-  have "D" "C"
+  assume DC: "D \<and> C"
+  have "D" "C \<and> C"
   apply -
-  by (safe_fold_subgoals \<open>rule DC\<close>)
+  apply (safe_fold_subgoals, simp, atomize (full))
+  apply (rule DC)
+  done
 
 end
 
@@ -239,39 +264,35 @@ lemma protectE: "PROP protect P \<Longrightarrow> (PROP P \<Longrightarrow> PROP
 
 private lemmas protect_thin = thin_rl[where V="PROP protect P" for P]
 
-private lemma context_conjI_protected:
+private lemma context_conjunction'I_protected:
   assumes P: "PROP P"
   assumes PQ: "PROP protect (PROP P) \<Longrightarrow> PROP Q"
   shows
-  "PROP P &&& PROP Q"
-   apply -
+  "PROP P &^& PROP Q"
+   apply (simp add: conjunction'_def)
    apply (rule P)
   apply (rule PQ)
   apply (simp add: protect_def)
   by (rule P)
 
-private lemma conjunction_sym: "PROP P &&& PROP Q \<Longrightarrow> PROP Q &&& PROP P"
+private lemma conjunction'_sym: "PROP P &^& PROP Q \<Longrightarrow> PROP Q &^& PROP P"
+  apply (simp add: conjunction'_def)
   apply (frule conjunctionD1)
   apply (drule conjunctionD2)
   apply (rule conjunctionI)
   by assumption+
 
-private lemma conjunctionE:
-  assumes PQ: "PROP P &&& PROP Q"
-  assumes PQR: "PROP P \<Longrightarrow> PROP Q \<Longrightarrow> PROP R"
-  shows
-  "PROP R"
-  apply (rule PQR)
-  apply (rule PQ[THEN conjunctionD1])
-  by (rule PQ[THEN conjunctionD2])
+
   
-private lemmas context_conjI_protected' = context_conjI_protected[THEN conjunction_sym]
+private lemmas context_conjuncts'I =
+  context_conjunction'I_protected 
+  context_conjunction'I_protected[THEN conjunction'_sym]
 
 method distinct_subgoals_strong methods m = 
-  (safe_fold_subgoals \<open>
-   (intro context_conjI_protected context_conjI_protected'; 
-     (((elim protectE conjunctionE)?,clear_dummy_asm, solves \<open>m\<close>)
-     | (elim protect_thin)?))\<close>)?
+  (safe_fold_subgoals,
+   (intro context_conjuncts'I; 
+     (((elim protectE conjunction'E)?, solves \<open>m\<close>)
+     | (elim protect_thin)?)))?
 
 end
 
@@ -281,6 +302,7 @@ notepad begin
   fix A B C
   assume A: "A"
   have "A" "B \<Longrightarrow> A"
+  apply -
   apply (distinct_subgoals_strong \<open>assumption\<close>)
   by (rule A)
 
