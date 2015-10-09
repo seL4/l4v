@@ -163,9 +163,9 @@ where
        return []
      od)"
 
-| "perform_invocation block call (InvokeAsyncEndpoint ep badge message) =
+| "perform_invocation block call (InvokeAsyncEndpoint ep badge) =
     doE
-      without_preemption $ send_async_ipc ep badge message;
+      without_preemption $ send_async_ipc ep badge;
       returnOk []
     odE"
 
@@ -284,9 +284,15 @@ definition
                  receive_ipc thread ep_cap
                 od
               else flt)
-           | AsyncEndpointCap ref badge rights \<Rightarrow>
+           | AsyncEndpointCap ref badge rights \<Rightarrow> 
              (if AllowRecv \<in> rights
-              then liftE $ receive_async_ipc thread ep_cap
+              then doE
+                aep \<leftarrow> liftE $ get_async_ep ref;
+                boundTCB \<leftarrow> returnOk $ aep_bound_tcb aep;
+                if boundTCB = Some thread \<or> boundTCB = None
+                then liftE $ receive_async_ipc thread ep_cap
+                else flt
+               odE
               else flt)
            | _ \<Rightarrow> flt
       odE)

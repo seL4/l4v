@@ -10,53 +10,52 @@
 
 chapter "Asynchronous Endpoints"
 
-theory AsyncEndpoint_H
-imports
+theory AsyncEndpoint_H imports    "AsyncEndpointDecls_H"
+    "TCB_H"
   TCB_H
   ThreadDecls_H
   CSpaceDecls_H
   ObjectInstances_H
 begin
 
-consts
-sendAsyncIPC :: "machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> unit kernel"
-
-consts
-receiveAsyncIPC :: "machine_word \<Rightarrow> capability \<Rightarrow> unit kernel"
-
-consts
-aepCancelAll :: "machine_word \<Rightarrow> unit kernel"
-
-consts
-asyncIPCCancel :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit kernel"
-
-consts
-getAsyncEP :: "machine_word \<Rightarrow> async_endpoint kernel"
-
-consts
-setAsyncEP :: "machine_word \<Rightarrow> async_endpoint \<Rightarrow> unit kernel"
+defs receiveBlocked_def:
+"receiveBlocked st\<equiv> (case st of
+      BlockedOnReceive v1 v2 \<Rightarrow>   True
+    | _ \<Rightarrow>   False
+    )"
 
 defs sendAsyncIPC_def:
-"sendAsyncIPC aepptr badge val\<equiv> (do
+"sendAsyncIPC aepptr badge\<equiv> (do
         aEP \<leftarrow> getAsyncEP aepptr;
-        (case aEP of
-              IdleAEP \<Rightarrow>   (
-                setAsyncEP aepptr $ ActiveAEP badge val
-              )
-            | WaitingAEP (dest#queue) \<Rightarrow>   (do
-                setAsyncEP aepptr $ (case queue of
+        (case (aepObj aEP, aepBoundTCB aEP) of
+              (IdleAEP, Some tcb) \<Rightarrow>   (do
+                    state \<leftarrow> getThreadState tcb;
+                    if (receiveBlocked state)
+                      then (do
+                        ipcCancel tcb;
+                        setThreadState Running tcb;
+                        asUser tcb $ setRegister badgeRegister badge;
+                        switchIfRequiredTo tcb
+                      od)
+                      else
+                        setAsyncEP aepptr $ aEP \<lparr> aepObj := ActiveAEP badge \<rparr>
+              od)
+            | (IdleAEP, None) \<Rightarrow>   setAsyncEP aepptr $ aEP \<lparr> aepObj := ActiveAEP badge \<rparr>
+            | (WaitingAEP (dest#queue), _) \<Rightarrow>   (do
+                setAsyncEP aepptr $ aEP \<lparr>
+                  aepObj := (case queue of
                       [] \<Rightarrow>   IdleAEP
                     | _ \<Rightarrow>   WaitingAEP queue
-                    );
+                    )
+                  \<rparr>;
                 setThreadState Running dest;
-                doAsyncTransfer badge val dest;
+                asUser dest $ setRegister badgeRegister badge;
                 switchIfRequiredTo dest
             od)
-            | WaitingAEP [] \<Rightarrow>   haskell_fail []
-            | ActiveAEP badge' val' \<Rightarrow>   (do
-                newVal   \<leftarrow> return ( val || val');
+            | (WaitingAEP [], _) \<Rightarrow>   haskell_fail []
+            | (ActiveAEP badge', _) \<Rightarrow>   (do
                 newBadge \<leftarrow> return ( badge || badge');
-                setAsyncEP aepptr $ ActiveAEP newBadge newVal
+                setAsyncEP aepptr $ aEP \<lparr> aepObj := ActiveAEP newBadge \<rparr>
             od)
             )
 od)"
@@ -65,20 +64,20 @@ defs receiveAsyncIPC_def:
 "receiveAsyncIPC thread cap\<equiv> (do
         aepptr \<leftarrow> return ( capAEPPtr cap);
         aep \<leftarrow> getAsyncEP aepptr;
-        (case aep of
+        (case aepObj aep of
               IdleAEP \<Rightarrow>   (do
                 setThreadState (BlockedOnAsyncEvent_ \<lparr>
                      waitingOnAsyncEP= aepptr \<rparr> ) thread;
-                setAsyncEP aepptr $ WaitingAEP [thread]
+                setAsyncEP aepptr $ aep \<lparr>aepObj := WaitingAEP [thread] \<rparr>
               od)
             | WaitingAEP queue \<Rightarrow>   (do
                 setThreadState (BlockedOnAsyncEvent_ \<lparr>
                     waitingOnAsyncEP= aepptr \<rparr> ) thread;
-                setAsyncEP aepptr $ WaitingAEP $ queue @ [thread]
+                setAsyncEP aepptr $ aep \<lparr>aepObj := WaitingAEP (queue @ [thread]) \<rparr>
             od)
-            | ActiveAEP badge currentValue \<Rightarrow>   (do
-                doAsyncTransfer badge currentValue thread;
-                setAsyncEP aepptr $ IdleAEP
+            | ActiveAEP badge \<Rightarrow>   (do
+                asUser thread $ setRegister badgeRegister badge;
+                setAsyncEP aepptr $ aep \<lparr>aepObj := IdleAEP \<rparr>
             od)
             )
 od)"
@@ -86,9 +85,9 @@ od)"
 defs aepCancelAll_def:
 "aepCancelAll aepptr\<equiv> (do
         aep \<leftarrow> getAsyncEP aepptr;
-        (case aep of
+        (case aepObj aep of
               WaitingAEP queue \<Rightarrow>   (do
-                setAsyncEP aepptr IdleAEP;
+                setAsyncEP aepptr (aep \<lparr> aepObj := IdleAEP \<rparr>);
                 forM_x queue (\<lambda> t. (do
                     setThreadState Restart t;
                     tcbSchedEnqueue t
@@ -110,22 +109,69 @@ defs asyncIPCCancel_def:
     in
                                          (do
         aep \<leftarrow> getAsyncEP aepptr;
-        haskell_assert (isWaiting aep)
+        haskell_assert (isWaiting (aepObj aep))
             [];
-        queue' \<leftarrow> return ( delete threadPtr $ aepQueue aep);
+        queue' \<leftarrow> return ( delete threadPtr $ aepQueue $ aepObj aep);
         aep' \<leftarrow> (case queue' of
-              [] \<Rightarrow>   return IdleAEP
-            | _ \<Rightarrow>   return $ aep \<lparr> aepQueue := queue' \<rparr>
+              [] \<Rightarrow>   return $ IdleAEP
+            | _ \<Rightarrow>   return $ (aepObj aep) \<lparr> aepQueue := queue' \<rparr>
             );
-        setAsyncEP aepptr aep';
+        setAsyncEP aepptr (aep \<lparr> aepObj := aep' \<rparr>);
         setThreadState Inactive threadPtr
                                          od)"
+
+defs completeAsyncIPC_def:
+"completeAsyncIPC aepptr tcb\<equiv> (do
+        aep \<leftarrow> getAsyncEP aepptr;
+        (case aepObj aep of
+              ActiveAEP badge \<Rightarrow>   (do
+                asUser tcb $ setRegister badgeRegister badge;
+                setAsyncEP aepptr $ aep \<lparr>aepObj := IdleAEP\<rparr>
+              od)
+            | _ \<Rightarrow>   haskell_fail []
+            )
+od)"
 
 defs getAsyncEP_def:
 "getAsyncEP \<equiv> getObject"
 
 defs setAsyncEP_def:
 "setAsyncEP \<equiv> setObject"
+
+defs bindAsyncEndpoint_def:
+"bindAsyncEndpoint tcb aepptr\<equiv> (do
+    aep \<leftarrow> getAsyncEP aepptr;
+    setAsyncEP aepptr $ aep \<lparr> aepBoundTCB := Just tcb \<rparr>;
+    setBoundAEP (Just aepptr) tcb
+od)"
+
+defs doUnbindAEP_def:
+"doUnbindAEP aepptr aep tcbptr\<equiv> (do
+    aep' \<leftarrow> return ( aep \<lparr> aepBoundTCB := Nothing \<rparr>);
+    setAsyncEP aepptr aep';
+    setBoundAEP Nothing tcbptr
+od)"
+
+defs unbindAsyncEndpoint_def:
+"unbindAsyncEndpoint tcb\<equiv> (do
+    aepptr \<leftarrow> getBoundAEP tcb;
+    (case aepptr of
+          Some aepptr' \<Rightarrow>   (do
+             aep \<leftarrow> getAsyncEP aepptr';
+             doUnbindAEP aepptr' aep tcb
+          od)
+        | None \<Rightarrow>   return ()
+        )
+od)"
+
+defs unbindMaybeAEP_def:
+"unbindMaybeAEP aepptr\<equiv> (do
+    aep \<leftarrow> getAsyncEP aepptr;
+    (case aepBoundTCB aep of
+          Some t \<Rightarrow>   doUnbindAEP aepptr aep t
+        | None \<Rightarrow>   return ()
+        )
+od)"
 
 
 end

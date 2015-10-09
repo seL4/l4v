@@ -479,71 +479,105 @@ where
     SendEP v0 \<Rightarrow> True
   | _ \<Rightarrow> False"
 
-datatype async_endpoint =
+datatype aep =
     IdleAEP
-  | ActiveAEP machine_word machine_word
+  | ActiveAEP machine_word
   | WaitingAEP "machine_word list"
 
 primrec
-  aepMsgIdentifier :: "async_endpoint \<Rightarrow> machine_word"
+  aepMsgIdentifier :: "aep \<Rightarrow> machine_word"
 where
-  "aepMsgIdentifier (ActiveAEP v0 v1) = v0"
+  "aepMsgIdentifier (ActiveAEP v0) = v0"
 
 primrec
-  aepQueue :: "async_endpoint \<Rightarrow> machine_word list"
+  aepQueue :: "aep \<Rightarrow> machine_word list"
 where
   "aepQueue (WaitingAEP v0) = v0"
 
 primrec
-  aepData :: "async_endpoint \<Rightarrow> machine_word"
+  aepMsgIdentifier_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> aep \<Rightarrow> aep"
 where
-  "aepData (ActiveAEP v0 v1) = v1"
+  "aepMsgIdentifier_update f (ActiveAEP v0) = ActiveAEP (f v0)"
 
 primrec
-  aepMsgIdentifier_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> async_endpoint \<Rightarrow> async_endpoint"
-where
-  "aepMsgIdentifier_update f (ActiveAEP v0 v1) = ActiveAEP (f v0) v1"
-
-primrec
-  aepQueue_update :: "((machine_word list) \<Rightarrow> (machine_word list)) \<Rightarrow> async_endpoint \<Rightarrow> async_endpoint"
+  aepQueue_update :: "((machine_word list) \<Rightarrow> (machine_word list)) \<Rightarrow> aep \<Rightarrow> aep"
 where
   "aepQueue_update f (WaitingAEP v0) = WaitingAEP (f v0)"
 
-primrec
-  aepData_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> async_endpoint \<Rightarrow> async_endpoint"
+abbreviation (input)
+  ActiveAEP_trans :: "(machine_word) \<Rightarrow> aep" ("ActiveAEP'_ \<lparr> aepMsgIdentifier= _ \<rparr>")
 where
-  "aepData_update f (ActiveAEP v0 v1) = ActiveAEP v0 (f v1)"
+  "ActiveAEP_ \<lparr> aepMsgIdentifier= v0 \<rparr> == ActiveAEP v0"
 
 abbreviation (input)
-  ActiveAEP_trans :: "(machine_word) \<Rightarrow> (machine_word) \<Rightarrow> async_endpoint" ("ActiveAEP'_ \<lparr> aepMsgIdentifier= _, aepData= _ \<rparr>")
-where
-  "ActiveAEP_ \<lparr> aepMsgIdentifier= v0, aepData= v1 \<rparr> == ActiveAEP v0 v1"
-
-abbreviation (input)
-  WaitingAEP_trans :: "(machine_word list) \<Rightarrow> async_endpoint" ("WaitingAEP'_ \<lparr> aepQueue= _ \<rparr>")
+  WaitingAEP_trans :: "(machine_word list) \<Rightarrow> aep" ("WaitingAEP'_ \<lparr> aepQueue= _ \<rparr>")
 where
   "WaitingAEP_ \<lparr> aepQueue= v0 \<rparr> == WaitingAEP v0"
 
 definition
-  isIdleAEP :: "async_endpoint \<Rightarrow> bool"
+  isIdleAEP :: "aep \<Rightarrow> bool"
 where
  "isIdleAEP v \<equiv> case v of
     IdleAEP \<Rightarrow> True
   | _ \<Rightarrow> False"
 
 definition
-  isActiveAEP :: "async_endpoint \<Rightarrow> bool"
+  isActiveAEP :: "aep \<Rightarrow> bool"
 where
  "isActiveAEP v \<equiv> case v of
-    ActiveAEP v0 v1 \<Rightarrow> True
+    ActiveAEP v0 \<Rightarrow> True
   | _ \<Rightarrow> False"
 
 definition
-  isWaitingAEP :: "async_endpoint \<Rightarrow> bool"
+  isWaitingAEP :: "aep \<Rightarrow> bool"
 where
  "isWaitingAEP v \<equiv> case v of
     WaitingAEP v0 \<Rightarrow> True
   | _ \<Rightarrow> False"
+
+datatype async_endpoint =
+    AEP aep "(machine_word) option"
+
+primrec
+  aepBoundTCB :: "async_endpoint \<Rightarrow> (machine_word) option"
+where
+  "aepBoundTCB (AEP v0 v1) = v1"
+
+primrec
+  aepObj :: "async_endpoint \<Rightarrow> aep"
+where
+  "aepObj (AEP v0 v1) = v0"
+
+primrec
+  aepBoundTCB_update :: "(((machine_word) option) \<Rightarrow> ((machine_word) option)) \<Rightarrow> async_endpoint \<Rightarrow> async_endpoint"
+where
+  "aepBoundTCB_update f (AEP v0 v1) = AEP v0 (f v1)"
+
+primrec
+  aepObj_update :: "(aep \<Rightarrow> aep) \<Rightarrow> async_endpoint \<Rightarrow> async_endpoint"
+where
+  "aepObj_update f (AEP v0 v1) = AEP (f v0) v1"
+
+abbreviation (input)
+  AEP_trans :: "(aep) \<Rightarrow> ((machine_word) option) \<Rightarrow> async_endpoint" ("AEP'_ \<lparr> aepObj= _, aepBoundTCB= _ \<rparr>")
+where
+  "AEP_ \<lparr> aepObj= v0, aepBoundTCB= v1 \<rparr> == AEP v0 v1"
+
+lemma aepBoundTCB_aepBoundTCB_update [simp]:
+  "aepBoundTCB (aepBoundTCB_update f v) = f (aepBoundTCB v)"
+  by (cases v) simp
+
+lemma aepBoundTCB_aepObj_update [simp]:
+  "aepBoundTCB (aepObj_update f v) = aepBoundTCB v"
+  by (cases v) simp
+
+lemma aepObj_aepBoundTCB_update [simp]:
+  "aepObj (aepBoundTCB_update f v) = aepObj v"
+  by (cases v) simp
+
+lemma aepObj_aepObj_update [simp]:
+  "aepObj (aepObj_update f v) = f (aepObj v)"
+  by (cases v) simp
 
 datatype mdbnode =
     MDB machine_word machine_word bool bool
@@ -845,152 +879,162 @@ where
   | _ \<Rightarrow> False"
 
 datatype tcb =
-    Thread cte cte cte cte cte domain thread_state priority bool "fault option" nat cptr vptr user_context
+    Thread cte cte cte cte cte domain thread_state priority bool "fault option" nat cptr vptr "(machine_word) option" user_context
 
 primrec
   tcbVTable :: "tcb \<Rightarrow> cte"
 where
-  "tcbVTable (Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13) = v1"
+  "tcbVTable (Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = v1"
 
 primrec
   tcbIPCBufferFrame :: "tcb \<Rightarrow> cte"
 where
-  "tcbIPCBufferFrame (Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13) = v4"
+  "tcbIPCBufferFrame (Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = v4"
 
 primrec
   tcbState :: "tcb \<Rightarrow> thread_state"
 where
-  "tcbState (Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13) = v6"
+  "tcbState (Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = v6"
 
 primrec
   tcbCTable :: "tcb \<Rightarrow> cte"
 where
-  "tcbCTable (Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13) = v0"
+  "tcbCTable (Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = v0"
 
 primrec
   tcbFaultHandler :: "tcb \<Rightarrow> cptr"
 where
-  "tcbFaultHandler (Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13) = v11"
+  "tcbFaultHandler (Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = v11"
 
 primrec
   tcbIPCBuffer :: "tcb \<Rightarrow> vptr"
 where
-  "tcbIPCBuffer (Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13) = v12"
+  "tcbIPCBuffer (Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = v12"
 
 primrec
   tcbContext :: "tcb \<Rightarrow> user_context"
 where
-  "tcbContext (Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13) = v13"
+  "tcbContext (Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = v14"
 
 primrec
   tcbCaller :: "tcb \<Rightarrow> cte"
 where
-  "tcbCaller (Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13) = v3"
+  "tcbCaller (Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = v3"
+
+primrec
+  tcbBoundAEP :: "tcb \<Rightarrow> (machine_word) option"
+where
+  "tcbBoundAEP (Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = v13"
 
 primrec
   tcbDomain :: "tcb \<Rightarrow> domain"
 where
-  "tcbDomain (Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13) = v5"
+  "tcbDomain (Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = v5"
 
 primrec
   tcbReply :: "tcb \<Rightarrow> cte"
 where
-  "tcbReply (Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13) = v2"
+  "tcbReply (Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = v2"
 
 primrec
   tcbQueued :: "tcb \<Rightarrow> bool"
 where
-  "tcbQueued (Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13) = v8"
+  "tcbQueued (Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = v8"
 
 primrec
   tcbPriority :: "tcb \<Rightarrow> priority"
 where
-  "tcbPriority (Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13) = v7"
+  "tcbPriority (Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = v7"
 
 primrec
   tcbFault :: "tcb \<Rightarrow> fault option"
 where
-  "tcbFault (Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13) = v9"
+  "tcbFault (Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = v9"
 
 primrec
   tcbTimeSlice :: "tcb \<Rightarrow> nat"
 where
-  "tcbTimeSlice (Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13) = v10"
+  "tcbTimeSlice (Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = v10"
 
 primrec
   tcbVTable_update :: "(cte \<Rightarrow> cte) \<Rightarrow> tcb \<Rightarrow> tcb"
 where
-  "tcbVTable_update f (Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13) = Thread v0 (f v1) v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13"
+  "tcbVTable_update f (Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = Thread v0 (f v1) v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14"
 
 primrec
   tcbIPCBufferFrame_update :: "(cte \<Rightarrow> cte) \<Rightarrow> tcb \<Rightarrow> tcb"
 where
-  "tcbIPCBufferFrame_update f (Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13) = Thread v0 v1 v2 v3 (f v4) v5 v6 v7 v8 v9 v10 v11 v12 v13"
+  "tcbIPCBufferFrame_update f (Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = Thread v0 v1 v2 v3 (f v4) v5 v6 v7 v8 v9 v10 v11 v12 v13 v14"
 
 primrec
   tcbState_update :: "(thread_state \<Rightarrow> thread_state) \<Rightarrow> tcb \<Rightarrow> tcb"
 where
-  "tcbState_update f (Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13) = Thread v0 v1 v2 v3 v4 v5 (f v6) v7 v8 v9 v10 v11 v12 v13"
+  "tcbState_update f (Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = Thread v0 v1 v2 v3 v4 v5 (f v6) v7 v8 v9 v10 v11 v12 v13 v14"
 
 primrec
   tcbCTable_update :: "(cte \<Rightarrow> cte) \<Rightarrow> tcb \<Rightarrow> tcb"
 where
-  "tcbCTable_update f (Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13) = Thread (f v0) v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13"
+  "tcbCTable_update f (Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = Thread (f v0) v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14"
 
 primrec
   tcbFaultHandler_update :: "(cptr \<Rightarrow> cptr) \<Rightarrow> tcb \<Rightarrow> tcb"
 where
-  "tcbFaultHandler_update f (Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13) = Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 (f v11) v12 v13"
+  "tcbFaultHandler_update f (Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 (f v11) v12 v13 v14"
 
 primrec
   tcbIPCBuffer_update :: "(vptr \<Rightarrow> vptr) \<Rightarrow> tcb \<Rightarrow> tcb"
 where
-  "tcbIPCBuffer_update f (Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13) = Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 (f v12) v13"
+  "tcbIPCBuffer_update f (Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 (f v12) v13 v14"
 
 primrec
   tcbContext_update :: "(user_context \<Rightarrow> user_context) \<Rightarrow> tcb \<Rightarrow> tcb"
 where
-  "tcbContext_update f (Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13) = Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 (f v13)"
+  "tcbContext_update f (Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 (f v14)"
 
 primrec
   tcbCaller_update :: "(cte \<Rightarrow> cte) \<Rightarrow> tcb \<Rightarrow> tcb"
 where
-  "tcbCaller_update f (Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13) = Thread v0 v1 v2 (f v3) v4 v5 v6 v7 v8 v9 v10 v11 v12 v13"
+  "tcbCaller_update f (Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = Thread v0 v1 v2 (f v3) v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14"
+
+primrec
+  tcbBoundAEP_update :: "(((machine_word) option) \<Rightarrow> ((machine_word) option)) \<Rightarrow> tcb \<Rightarrow> tcb"
+where
+  "tcbBoundAEP_update f (Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 (f v13) v14"
 
 primrec
   tcbDomain_update :: "(domain \<Rightarrow> domain) \<Rightarrow> tcb \<Rightarrow> tcb"
 where
-  "tcbDomain_update f (Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13) = Thread v0 v1 v2 v3 v4 (f v5) v6 v7 v8 v9 v10 v11 v12 v13"
+  "tcbDomain_update f (Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = Thread v0 v1 v2 v3 v4 (f v5) v6 v7 v8 v9 v10 v11 v12 v13 v14"
 
 primrec
   tcbReply_update :: "(cte \<Rightarrow> cte) \<Rightarrow> tcb \<Rightarrow> tcb"
 where
-  "tcbReply_update f (Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13) = Thread v0 v1 (f v2) v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13"
+  "tcbReply_update f (Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = Thread v0 v1 (f v2) v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14"
 
 primrec
   tcbQueued_update :: "(bool \<Rightarrow> bool) \<Rightarrow> tcb \<Rightarrow> tcb"
 where
-  "tcbQueued_update f (Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13) = Thread v0 v1 v2 v3 v4 v5 v6 v7 (f v8) v9 v10 v11 v12 v13"
+  "tcbQueued_update f (Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = Thread v0 v1 v2 v3 v4 v5 v6 v7 (f v8) v9 v10 v11 v12 v13 v14"
 
 primrec
   tcbPriority_update :: "(priority \<Rightarrow> priority) \<Rightarrow> tcb \<Rightarrow> tcb"
 where
-  "tcbPriority_update f (Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13) = Thread v0 v1 v2 v3 v4 v5 v6 (f v7) v8 v9 v10 v11 v12 v13"
+  "tcbPriority_update f (Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = Thread v0 v1 v2 v3 v4 v5 v6 (f v7) v8 v9 v10 v11 v12 v13 v14"
 
 primrec
   tcbFault_update :: "((fault option) \<Rightarrow> (fault option)) \<Rightarrow> tcb \<Rightarrow> tcb"
 where
-  "tcbFault_update f (Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13) = Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 (f v9) v10 v11 v12 v13"
+  "tcbFault_update f (Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 (f v9) v10 v11 v12 v13 v14"
 
 primrec
   tcbTimeSlice_update :: "(nat \<Rightarrow> nat) \<Rightarrow> tcb \<Rightarrow> tcb"
 where
-  "tcbTimeSlice_update f (Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13) = Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 (f v10) v11 v12 v13"
+  "tcbTimeSlice_update f (Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14) = Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 (f v10) v11 v12 v13 v14"
 
 abbreviation (input)
-  Thread_trans :: "(cte) \<Rightarrow> (cte) \<Rightarrow> (cte) \<Rightarrow> (cte) \<Rightarrow> (cte) \<Rightarrow> (domain) \<Rightarrow> (thread_state) \<Rightarrow> (priority) \<Rightarrow> (bool) \<Rightarrow> (fault option) \<Rightarrow> (nat) \<Rightarrow> (cptr) \<Rightarrow> (vptr) \<Rightarrow> (user_context) \<Rightarrow> tcb" ("Thread'_ \<lparr> tcbCTable= _, tcbVTable= _, tcbReply= _, tcbCaller= _, tcbIPCBufferFrame= _, tcbDomain= _, tcbState= _, tcbPriority= _, tcbQueued= _, tcbFault= _, tcbTimeSlice= _, tcbFaultHandler= _, tcbIPCBuffer= _, tcbContext= _ \<rparr>")
+  Thread_trans :: "(cte) \<Rightarrow> (cte) \<Rightarrow> (cte) \<Rightarrow> (cte) \<Rightarrow> (cte) \<Rightarrow> (domain) \<Rightarrow> (thread_state) \<Rightarrow> (priority) \<Rightarrow> (bool) \<Rightarrow> (fault option) \<Rightarrow> (nat) \<Rightarrow> (cptr) \<Rightarrow> (vptr) \<Rightarrow> ((machine_word) option) \<Rightarrow> (user_context) \<Rightarrow> tcb" ("Thread'_ \<lparr> tcbCTable= _, tcbVTable= _, tcbReply= _, tcbCaller= _, tcbIPCBufferFrame= _, tcbDomain= _, tcbState= _, tcbPriority= _, tcbQueued= _, tcbFault= _, tcbTimeSlice= _, tcbFaultHandler= _, tcbIPCBuffer= _, tcbBoundAEP= _, tcbContext= _ \<rparr>")
 where
-  "Thread_ \<lparr> tcbCTable= v0, tcbVTable= v1, tcbReply= v2, tcbCaller= v3, tcbIPCBufferFrame= v4, tcbDomain= v5, tcbState= v6, tcbPriority= v7, tcbQueued= v8, tcbFault= v9, tcbTimeSlice= v10, tcbFaultHandler= v11, tcbIPCBuffer= v12, tcbContext= v13 \<rparr> == Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13"
+  "Thread_ \<lparr> tcbCTable= v0, tcbVTable= v1, tcbReply= v2, tcbCaller= v3, tcbIPCBufferFrame= v4, tcbDomain= v5, tcbState= v6, tcbPriority= v7, tcbQueued= v8, tcbFault= v9, tcbTimeSlice= v10, tcbFaultHandler= v11, tcbIPCBuffer= v12, tcbBoundAEP= v13, tcbContext= v14 \<rparr> == Thread v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14"
 
 lemma tcbVTable_tcbVTable_update [simp]:
   "tcbVTable (tcbVTable_update f v) = f (tcbVTable v)"
@@ -1022,6 +1066,10 @@ lemma tcbVTable_tcbContext_update [simp]:
 
 lemma tcbVTable_tcbCaller_update [simp]:
   "tcbVTable (tcbCaller_update f v) = tcbVTable v"
+  by (cases v) simp
+
+lemma tcbVTable_tcbBoundAEP_update [simp]:
+  "tcbVTable (tcbBoundAEP_update f v) = tcbVTable v"
   by (cases v) simp
 
 lemma tcbVTable_tcbDomain_update [simp]:
@@ -1080,6 +1128,10 @@ lemma tcbIPCBufferFrame_tcbCaller_update [simp]:
   "tcbIPCBufferFrame (tcbCaller_update f v) = tcbIPCBufferFrame v"
   by (cases v) simp
 
+lemma tcbIPCBufferFrame_tcbBoundAEP_update [simp]:
+  "tcbIPCBufferFrame (tcbBoundAEP_update f v) = tcbIPCBufferFrame v"
+  by (cases v) simp
+
 lemma tcbIPCBufferFrame_tcbDomain_update [simp]:
   "tcbIPCBufferFrame (tcbDomain_update f v) = tcbIPCBufferFrame v"
   by (cases v) simp
@@ -1134,6 +1186,10 @@ lemma tcbState_tcbContext_update [simp]:
 
 lemma tcbState_tcbCaller_update [simp]:
   "tcbState (tcbCaller_update f v) = tcbState v"
+  by (cases v) simp
+
+lemma tcbState_tcbBoundAEP_update [simp]:
+  "tcbState (tcbBoundAEP_update f v) = tcbState v"
   by (cases v) simp
 
 lemma tcbState_tcbDomain_update [simp]:
@@ -1192,6 +1248,10 @@ lemma tcbCTable_tcbCaller_update [simp]:
   "tcbCTable (tcbCaller_update f v) = tcbCTable v"
   by (cases v) simp
 
+lemma tcbCTable_tcbBoundAEP_update [simp]:
+  "tcbCTable (tcbBoundAEP_update f v) = tcbCTable v"
+  by (cases v) simp
+
 lemma tcbCTable_tcbDomain_update [simp]:
   "tcbCTable (tcbDomain_update f v) = tcbCTable v"
   by (cases v) simp
@@ -1246,6 +1306,10 @@ lemma tcbFaultHandler_tcbContext_update [simp]:
 
 lemma tcbFaultHandler_tcbCaller_update [simp]:
   "tcbFaultHandler (tcbCaller_update f v) = tcbFaultHandler v"
+  by (cases v) simp
+
+lemma tcbFaultHandler_tcbBoundAEP_update [simp]:
+  "tcbFaultHandler (tcbBoundAEP_update f v) = tcbFaultHandler v"
   by (cases v) simp
 
 lemma tcbFaultHandler_tcbDomain_update [simp]:
@@ -1304,6 +1368,10 @@ lemma tcbIPCBuffer_tcbCaller_update [simp]:
   "tcbIPCBuffer (tcbCaller_update f v) = tcbIPCBuffer v"
   by (cases v) simp
 
+lemma tcbIPCBuffer_tcbBoundAEP_update [simp]:
+  "tcbIPCBuffer (tcbBoundAEP_update f v) = tcbIPCBuffer v"
+  by (cases v) simp
+
 lemma tcbIPCBuffer_tcbDomain_update [simp]:
   "tcbIPCBuffer (tcbDomain_update f v) = tcbIPCBuffer v"
   by (cases v) simp
@@ -1358,6 +1426,10 @@ lemma tcbContext_tcbContext_update [simp]:
 
 lemma tcbContext_tcbCaller_update [simp]:
   "tcbContext (tcbCaller_update f v) = tcbContext v"
+  by (cases v) simp
+
+lemma tcbContext_tcbBoundAEP_update [simp]:
+  "tcbContext (tcbBoundAEP_update f v) = tcbContext v"
   by (cases v) simp
 
 lemma tcbContext_tcbDomain_update [simp]:
@@ -1416,6 +1488,10 @@ lemma tcbCaller_tcbCaller_update [simp]:
   "tcbCaller (tcbCaller_update f v) = f (tcbCaller v)"
   by (cases v) simp
 
+lemma tcbCaller_tcbBoundAEP_update [simp]:
+  "tcbCaller (tcbBoundAEP_update f v) = tcbCaller v"
+  by (cases v) simp
+
 lemma tcbCaller_tcbDomain_update [simp]:
   "tcbCaller (tcbDomain_update f v) = tcbCaller v"
   by (cases v) simp
@@ -1438,6 +1514,66 @@ lemma tcbCaller_tcbFault_update [simp]:
 
 lemma tcbCaller_tcbTimeSlice_update [simp]:
   "tcbCaller (tcbTimeSlice_update f v) = tcbCaller v"
+  by (cases v) simp
+
+lemma tcbBoundAEP_tcbVTable_update [simp]:
+  "tcbBoundAEP (tcbVTable_update f v) = tcbBoundAEP v"
+  by (cases v) simp
+
+lemma tcbBoundAEP_tcbIPCBufferFrame_update [simp]:
+  "tcbBoundAEP (tcbIPCBufferFrame_update f v) = tcbBoundAEP v"
+  by (cases v) simp
+
+lemma tcbBoundAEP_tcbState_update [simp]:
+  "tcbBoundAEP (tcbState_update f v) = tcbBoundAEP v"
+  by (cases v) simp
+
+lemma tcbBoundAEP_tcbCTable_update [simp]:
+  "tcbBoundAEP (tcbCTable_update f v) = tcbBoundAEP v"
+  by (cases v) simp
+
+lemma tcbBoundAEP_tcbFaultHandler_update [simp]:
+  "tcbBoundAEP (tcbFaultHandler_update f v) = tcbBoundAEP v"
+  by (cases v) simp
+
+lemma tcbBoundAEP_tcbIPCBuffer_update [simp]:
+  "tcbBoundAEP (tcbIPCBuffer_update f v) = tcbBoundAEP v"
+  by (cases v) simp
+
+lemma tcbBoundAEP_tcbContext_update [simp]:
+  "tcbBoundAEP (tcbContext_update f v) = tcbBoundAEP v"
+  by (cases v) simp
+
+lemma tcbBoundAEP_tcbCaller_update [simp]:
+  "tcbBoundAEP (tcbCaller_update f v) = tcbBoundAEP v"
+  by (cases v) simp
+
+lemma tcbBoundAEP_tcbBoundAEP_update [simp]:
+  "tcbBoundAEP (tcbBoundAEP_update f v) = f (tcbBoundAEP v)"
+  by (cases v) simp
+
+lemma tcbBoundAEP_tcbDomain_update [simp]:
+  "tcbBoundAEP (tcbDomain_update f v) = tcbBoundAEP v"
+  by (cases v) simp
+
+lemma tcbBoundAEP_tcbReply_update [simp]:
+  "tcbBoundAEP (tcbReply_update f v) = tcbBoundAEP v"
+  by (cases v) simp
+
+lemma tcbBoundAEP_tcbQueued_update [simp]:
+  "tcbBoundAEP (tcbQueued_update f v) = tcbBoundAEP v"
+  by (cases v) simp
+
+lemma tcbBoundAEP_tcbPriority_update [simp]:
+  "tcbBoundAEP (tcbPriority_update f v) = tcbBoundAEP v"
+  by (cases v) simp
+
+lemma tcbBoundAEP_tcbFault_update [simp]:
+  "tcbBoundAEP (tcbFault_update f v) = tcbBoundAEP v"
+  by (cases v) simp
+
+lemma tcbBoundAEP_tcbTimeSlice_update [simp]:
+  "tcbBoundAEP (tcbTimeSlice_update f v) = tcbBoundAEP v"
   by (cases v) simp
 
 lemma tcbDomain_tcbVTable_update [simp]:
@@ -1470,6 +1606,10 @@ lemma tcbDomain_tcbContext_update [simp]:
 
 lemma tcbDomain_tcbCaller_update [simp]:
   "tcbDomain (tcbCaller_update f v) = tcbDomain v"
+  by (cases v) simp
+
+lemma tcbDomain_tcbBoundAEP_update [simp]:
+  "tcbDomain (tcbBoundAEP_update f v) = tcbDomain v"
   by (cases v) simp
 
 lemma tcbDomain_tcbDomain_update [simp]:
@@ -1528,6 +1668,10 @@ lemma tcbReply_tcbCaller_update [simp]:
   "tcbReply (tcbCaller_update f v) = tcbReply v"
   by (cases v) simp
 
+lemma tcbReply_tcbBoundAEP_update [simp]:
+  "tcbReply (tcbBoundAEP_update f v) = tcbReply v"
+  by (cases v) simp
+
 lemma tcbReply_tcbDomain_update [simp]:
   "tcbReply (tcbDomain_update f v) = tcbReply v"
   by (cases v) simp
@@ -1582,6 +1726,10 @@ lemma tcbQueued_tcbContext_update [simp]:
 
 lemma tcbQueued_tcbCaller_update [simp]:
   "tcbQueued (tcbCaller_update f v) = tcbQueued v"
+  by (cases v) simp
+
+lemma tcbQueued_tcbBoundAEP_update [simp]:
+  "tcbQueued (tcbBoundAEP_update f v) = tcbQueued v"
   by (cases v) simp
 
 lemma tcbQueued_tcbDomain_update [simp]:
@@ -1640,6 +1788,10 @@ lemma tcbPriority_tcbCaller_update [simp]:
   "tcbPriority (tcbCaller_update f v) = tcbPriority v"
   by (cases v) simp
 
+lemma tcbPriority_tcbBoundAEP_update [simp]:
+  "tcbPriority (tcbBoundAEP_update f v) = tcbPriority v"
+  by (cases v) simp
+
 lemma tcbPriority_tcbDomain_update [simp]:
   "tcbPriority (tcbDomain_update f v) = tcbPriority v"
   by (cases v) simp
@@ -1696,6 +1848,10 @@ lemma tcbFault_tcbCaller_update [simp]:
   "tcbFault (tcbCaller_update f v) = tcbFault v"
   by (cases v) simp
 
+lemma tcbFault_tcbBoundAEP_update [simp]:
+  "tcbFault (tcbBoundAEP_update f v) = tcbFault v"
+  by (cases v) simp
+
 lemma tcbFault_tcbDomain_update [simp]:
   "tcbFault (tcbDomain_update f v) = tcbFault v"
   by (cases v) simp
@@ -1750,6 +1906,10 @@ lemma tcbTimeSlice_tcbContext_update [simp]:
 
 lemma tcbTimeSlice_tcbCaller_update [simp]:
   "tcbTimeSlice (tcbCaller_update f v) = tcbTimeSlice v"
+  by (cases v) simp
+
+lemma tcbTimeSlice_tcbBoundAEP_update [simp]:
+  "tcbTimeSlice (tcbBoundAEP_update f v) = tcbTimeSlice v"
   by (cases v) simp
 
 lemma tcbTimeSlice_tcbDomain_update [simp]:

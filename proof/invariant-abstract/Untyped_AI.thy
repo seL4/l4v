@@ -852,7 +852,7 @@ qed
 
 lemma inj_16:
   "\<lbrakk> of_nat x * 16 = of_nat y * (16 :: word32);
-     x < bound; y < bound; bound \<le> 2 ^ (word_bits - 4) \<rbrakk>
+     x < bnd; y < bnd; bnd \<le> 2 ^ (word_bits - 4) \<rbrakk>
      \<Longrightarrow> of_nat x = (of_nat y :: word32)"
   apply (fold shiftl_t2n [where n=4, simplified, simplified mult.commute])
   apply (simp only: word_bl.Rep_inject[symmetric]
@@ -1608,12 +1608,12 @@ lemma eq_or_less_helperD:
 
 
 lemma of_nat_shift_distinct_helper:
-  "\<lbrakk> x < bound; y < bound; x \<noteq> y; (of_nat x :: 'a :: len word) << n = of_nat y << n;
-        n < len_of TYPE('a); bound \<le> 2 ^ (len_of TYPE('a) - n) \<rbrakk>
+  "\<lbrakk> x < bnd; y < bnd; x \<noteq> y; (of_nat x :: 'a :: len word) << n = of_nat y << n;
+        n < len_of TYPE('a); bnd \<le> 2 ^ (len_of TYPE('a) - n) \<rbrakk>
      \<Longrightarrow> P"
   apply (cases "n = 0")
    apply (simp add: word_unat.Abs_inject unats_def)
-  apply (subgoal_tac "bound < 2 ^ len_of TYPE('a)")
+  apply (subgoal_tac "bnd < 2 ^ len_of TYPE('a)")
    apply (erule(1) shift_distinct_helper[rotated, rotated, rotated])
       defer
       apply (erule(1) of_nat_mono_maybe[rotated])
@@ -1634,8 +1634,8 @@ lemmas of_nat_shift_distinct_helper32 = of_nat_shift_distinct_helper[where 'a=32
 
 lemma ptr_add_distinct_helper:
   "\<lbrakk> ptr_add p (x * 2 ^ n) = ptr_add p (y * 2 ^ n); x \<noteq> y;
-     x < bound; y < bound; n < word_bits;
-     bound \<le> 2 ^ (word_bits - n) \<rbrakk>
+     x < bnd; y < bnd; n < word_bits;
+     bnd \<le> 2 ^ (word_bits - n) \<rbrakk>
      \<Longrightarrow> P"
   apply (clarsimp simp: ptr_add_def word_unat_power[symmetric]
                         shiftl_t2n[symmetric, simplified mult.commute])
@@ -2137,7 +2137,7 @@ lemma set_free_index_valid_pspace_simple:
   apply (clarsimp simp:valid_cap_def cap_aligned_def )
   apply (intro conjI)
   defer
-  apply (clarsimp simp add:st_tcb_at_def tcb_cap_valid_def obj_at_def is_tcb
+  apply (clarsimp simp add:pred_tcb_at_def tcb_cap_valid_def obj_at_def is_tcb
           valid_ipc_buffer_cap_def split: option.split)
   apply (rule exI)
   apply (intro conjI)
@@ -2759,23 +2759,23 @@ lemma detype_clear_um_simps[simp]:
   apply (simp add:clear_um_def)
   done
 
-crunch st_tcb_at[wp]: set_cdt "st_tcb_at P t"
-  (simp: st_tcb_at_def)
+crunch pred_tcb_at[wp]: set_cdt "pred_tcb_at proj P t"
+  (simp: pred_tcb_at_def)
 
-lemma st_tcb_at_revokable[simp]:
-  "st_tcb_at P t (is_original_cap_update f s) = st_tcb_at P t s"
-  by (simp add: st_tcb_at_def)
+lemma pred_tcb_at_revokable[simp]:
+  "pred_tcb_at proj P t (is_original_cap_update f s) = pred_tcb_at proj P t s"
+  by (simp add: pred_tcb_at_def)
 
-crunch st_tcb_at[wp]: create_cap "st_tcb_at P t"
+crunch pred_tcb_at[wp]: create_cap "pred_tcb_at proj P t"
   (simp: crunch_simps)
 
-crunch st_tcb_at[wp]: do_machine_op "st_tcb_at P t"
+crunch pred_tcb_at[wp]: do_machine_op "pred_tcb_at proj P t"
 
 crunch tcb[wp]: create_cap "tcb_at t"
   (simp: crunch_simps)
 
 
-declare store_pde_st_tcb_at [wp]
+declare store_pde_pred_tcb_at [wp]
 
 lemma valid_untyped_cap_inc:
   "\<lbrakk>s \<turnstile> cap.UntypedCap (ptr&&~~ mask sz) sz idx;
@@ -2812,10 +2812,10 @@ lemma tcb_cap_valid_untyped_cong:
   apply (rule ext)+
   apply (clarsimp simp:tcb_cap_valid_def split:option.splits)
   apply (rule iffI)
-   apply (clarsimp simp:st_tcb_at_def obj_at_def valid_ipc_buffer_cap_def)
+   apply (clarsimp simp:pred_tcb_at_def obj_at_def valid_ipc_buffer_cap_def)
    apply (clarsimp simp:tcb_cap_cases_def is_cap_simps 
      split:if_splits Structures_A.thread_state.splits)
-  apply (clarsimp simp:st_tcb_at_def obj_at_def valid_ipc_buffer_cap_def)
+  apply (clarsimp simp:pred_tcb_at_def obj_at_def valid_ipc_buffer_cap_def)
   apply (clarsimp simp:tcb_cap_cases_def is_cap_simps 
      split:if_splits Structures_A.thread_state.splits)
   done
@@ -2908,7 +2908,7 @@ lemma invoke_untyped_st_tcb_at:
    apply (clarsimp)
    apply (subgoal_tac "cap = cap.UntypedCap (word2 && ~~ mask sz) sz idx")
    apply (intro conjI)
-          apply (erule st_tcb_weakenE,simp)
+          apply (erule pred_tcb_weakenE,simp)
          apply (simp add:bits_of_def)
          apply (erule(3) cte_wp_at_pspace_no_overlapI[OF _ _ _ range_cover.sz(1)
              [where 'a=32, folded word_bits_def]])
@@ -2926,7 +2926,7 @@ lemma invoke_untyped_st_tcb_at:
   apply (rule conjI)
    apply (simp add:valid_cap_simps cap_aligned_def)
   apply (rule conjI)
-   apply (erule st_tcb_weakenE,simp)
+   apply (erule pred_tcb_weakenE,simp)
   apply (rule conjI)
    apply (simp add:valid_cap_simps cap_aligned_def)
   apply (rule context_conjI)
@@ -2978,14 +2978,13 @@ lemma invoke_untyped_st_tcb_at:
   apply (clarsimp simp:tcb_cap_valid_def)
  done
 
-
 lemma invoked_untyp_tcb[wp]:
   "\<lbrace>invs and st_tcb_at active tptr
         and valid_untyped_inv ui and ct_active\<rbrace>
      invoke_untyped ui \<lbrace>\<lambda>rv. tcb_at tptr\<rbrace>"
   apply (simp add: tcb_at_st_tcb_at)
   apply (wp invoke_untyped_st_tcb_at)
-  apply (clarsimp elim!: st_tcb_weakenE)
+  apply (clarsimp elim!: pred_tcb_weakenE)
   apply fastforce
   done
 

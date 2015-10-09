@@ -446,7 +446,7 @@ lemma invoke_cnode_cur_domain[wp]: "\<lbrace>\<lambda>s. P (cur_domain s)\<rbrac
 
 
 lemma ct_running_not_idle: "ct_running s \<Longrightarrow> valid_idle s \<Longrightarrow> cur_thread s \<noteq> idle_thread s"
-  apply (clarsimp simp add: ct_in_state_def st_tcb_at_def obj_at_def valid_idle_def)
+  apply (clarsimp simp add: ct_in_state_def pred_tcb_at_def obj_at_def valid_idle_def)
   done
 
 (* FIXME: move to PasUpdates.thy *)
@@ -697,7 +697,7 @@ lemmas integrity_subjects_ready_queues =
 lemma partitionIntegrity_arm_globals_frame:
   "partitionIntegrity aag s s' \<Longrightarrow> arm_globals_frame (arch_state s') = arm_globals_frame (arch_state s)"
   by(fastforce simp: partitionIntegrity_def globals_equiv_scheduler_def)
-
+  
 (* FIXME: cleanup this wonderful proof *)
 lemma partitionIntegrity_subjectAffects_mem:
   "\<lbrakk>partitionIntegrity aag s s'; pas_refined aag s; invs s;
@@ -725,34 +725,41 @@ lemma partitionIntegrity_subjectAffects_mem:
   apply(frule integrity_subjects_obj)
   apply(drule_tac x=p' in spec)
   apply(erule integrity_obj.cases)
-          apply fastforce
-         apply(case_tac tcbst, auto simp: tcb_states_of_state_def get_tcb_def)[1]
+            apply fastforce
+           apply(case_tac tcbst, auto simp: tcb_states_of_state_def get_tcb_def)[1]
+          apply(fastforce simp: tcb_states_of_state_def get_tcb_def)
+         apply(fastforce simp: tcb_states_of_state_def get_tcb_def)
         apply(fastforce simp: tcb_states_of_state_def get_tcb_def)
-       apply(fastforce simp: tcb_states_of_state_def get_tcb_def)
-      apply(clarsimp simp: tcb_states_of_state_def get_tcb_def)
-      apply(cut_tac ts="tcb_state tcb" and ep=ep and ep'=epa in receive_blocked_on_eq)
-        apply assumption+
-      apply (clarsimp simp: receive_blocked_on_def2)
-      apply (frule pas_refined_tcb_st_to_auth)
+       apply(clarsimp simp: tcb_states_of_state_def get_tcb_def )
+       apply (frule (2) pas_refined_tcb_st_to_auth[OF _ receive_blocked_on_def2[THEN iffD1]])
+       apply (erule disjE)
+        apply (simp add: direct_send_def)
+        apply (elim conjE)
+        apply(cut_tac ts="tcb_state tcb" and ep=ep and ep'=epa in receive_blocked_on_eq)
+          apply assumption+
+        apply(fastforce intro: affects_send auth_ipc_buffers_mem_Write')
+       apply (clarsimp simp add: indirect_send_def)
+       apply (rule affects_send[rotated 2])
+          apply (rule_tac s=s and t=p' and x=epa in bound_tcb_at_implies_receive)
+           apply assumption
+          apply (simp add: pred_tcb_at_def obj_at_def)
+         apply (fastforce intro!: auth_ipc_buffers_mem_Write')
         apply assumption
-       apply assumption
-      apply(fastforce intro: affects_send auth_ipc_buffers_mem_Write')
-     apply(clarsimp simp: tcb_states_of_state_def get_tcb_def)
-     apply(blast dest: receive_blocked_on_contradiction)
-
-    apply(clarsimp simp: tcb_states_of_state_def get_tcb_def)
-    apply(rule affects_reset)
        apply simp
-      apply(rule pas_refined_tcb_st_to_auth)
-        apply assumption
-       apply(frule receive_blocked_on_def2[THEN iffD1])
-       apply(blast dest: receive_blocked_on_eq')
-      apply assumption
-     apply simp
-    apply(fastforce intro: auth_ipc_buffers_mem_Write')
-   apply(clarsimp simp: tcb_states_of_state_def get_tcb_def)
-  apply fastforce
-  done
+      apply(clarsimp simp: tcb_states_of_state_def get_tcb_def)
+      apply(blast dest: receive_blocked_on_contradiction)
+     apply(clarsimp simp: tcb_states_of_state_def get_tcb_def)
+     apply(rule affects_reset)
+        apply simp
+       apply(rule pas_refined_tcb_st_to_auth)
+         apply assumption
+        apply(frule receive_blocked_on_def2[THEN iffD1])
+        apply(blast dest: receive_blocked_on_eq')
+       apply assumption
+      apply simp
+     apply(fastforce intro: auth_ipc_buffers_mem_Write')
+    by (fastforce simp: tcb_states_of_state_def get_tcb_def)+
+    
 
 lemma blocked_onD:
   "blocked_on ref ts \<Longrightarrow>
@@ -896,56 +903,76 @@ lemma partitionIntegrity_subjectAffects_obj:
   apply(drule integrity_subjects_obj)
   apply(drule_tac x=x in spec)
   apply(erule integrity_obj.cases)
-          apply(fastforce intro: affects_lrefl)
-         apply blast
-        apply(fastforce intro: affects_ep)
-       apply(fastforce intro: affects_ep)
-      apply (clarsimp simp: receive_blocked_on_def2)
-      apply (frule pas_refined_tcb_st_to_auth)
+            apply(fastforce intro: affects_lrefl)
+           apply blast
+          apply(fastforce intro: affects_ep)
+         apply(fastforce intro: affects_ep)
+        apply(fastforce intro: affects_ep_bound_trans)
+       apply (clarsimp simp: direct_send_def indirect_send_def)
+       apply (erule disjE)
+        apply (clarsimp simp: receive_blocked_on_def2)
+        apply (frule pas_refined_tcb_st_to_auth)
+          apply assumption
+         apply assumption
+        apply(fastforce intro: affects_send aag_wellformed_refl pas_wellformed_pasSubject_update[simplified])
+       apply clarsimp
+       apply (rule affects_send[rotated 2])
+          apply (rule_tac s=s and t=x and x=ep in bound_tcb_at_implies_receive)
+           apply assumption
+          apply (simp add: pred_tcb_at_def obj_at_def)
+         apply(blast intro: aag_wellformed_refl pas_wellformed_pasSubject_update[simplified])
         apply assumption
-       apply assumption
-      apply(fastforce intro: affects_send aag_wellformed_refl pas_wellformed_pasSubject_update[simplified])
-     apply(rule affects_recv)
-      apply fastforce
-     apply simp
-     apply(rule pas_refined_tcb_st_to_auth)
-       apply assumption
-      apply(simp add: send_blocked_on_def2)
-     apply assumption
-    apply clarsimp
-    apply(erule blocked_onD[THEN disjE])
+       apply simp
+      apply(rule affects_recv)
+       apply fastforce
+      apply simp
+      apply(rule pas_refined_tcb_st_to_auth)
+        apply assumption
+       apply(simp add: send_blocked_on_def2)
+      apply assumption
+     apply clarsimp
+     apply(erule blocked_onD[THEN disjE])
+      apply(rule_tac l'="pasObjectAbs aag x" in affects_reset)
+         apply simp
+        apply(rule pas_refined_tcb_st_to_auth)
+          apply assumption
+         apply(clarsimp simp: receive_blocked_on_def2)
+         apply assumption
+        apply assumption
+       apply simp
+      apply(blast intro!: aag_wellformed_refl pas_wellformed_pasSubject_update[simplified])
      apply(rule_tac l'="pasObjectAbs aag x" in affects_reset)
         apply simp
        apply(rule pas_refined_tcb_st_to_auth)
          apply assumption
-        apply(clarsimp simp: receive_blocked_on_def2)
+        apply(clarsimp simp: send_blocked_on_def2)
         apply assumption
        apply assumption
       apply simp
      apply(blast intro!: aag_wellformed_refl pas_wellformed_pasSubject_update[simplified])
-    apply(rule_tac l'="pasObjectAbs aag x" in affects_reset)
-       apply simp
-      apply(rule pas_refined_tcb_st_to_auth)
-        apply assumption
-       apply(clarsimp simp: send_blocked_on_def2)
+    defer
+    apply clarsimp
+    apply(drule fun_noteqD)
+    apply(erule exE, rename_tac r)
+    apply(drule_tac x=r in spec)
+    apply clarsimp
+    apply(drule owns_mapping_owns_asidpool)
+        apply blast
        apply assumption
-      apply assumption
-     apply simp
-    apply(blast intro!: aag_wellformed_refl pas_wellformed_pasSubject_update[simplified])
-   defer
+      apply(blast intro: aag_Control_into_owns)
+     apply(erule_tac s=s' in pas_wellformed_pasSubject_update, simp+)
+    apply(fastforce intro: affects_lrefl)
    apply fastforce
-  apply clarsimp
-  apply(drule fun_noteqD)
-  apply(erule exE, rename_tac r)
-  apply(drule_tac x=r in spec)
-  apply clarsimp
-  apply(drule owns_mapping_owns_asidpool)
-      apply blast
+  apply (case_tac "tcb_bound_aep tcb"; clarsimp)
+  apply (clarsimp simp: tcb_bound_aep_reset_integrity_def)
+  apply (rule affects_reset)
      apply assumption
-    apply(blast intro: aag_Control_into_owns)
-   apply(erule_tac s=s' in pas_wellformed_pasSubject_update, simp+)
-  apply(fastforce intro: affects_lrefl)
-  done
+    apply (rule_tac s=s and t=x and x=a in bound_tcb_at_implies_receive)
+     apply simp
+    apply (clarsimp simp: pred_tcb_at_def obj_at_def)
+   apply simp
+  by (blast intro!: aag_wellformed_refl pas_wellformed_pasSubject_update[simplified])
+  
 
 lemma partitionIntegrity_subjectAffects_eobj:
   "\<lbrakk>partitionIntegrity aag s s'; pas_refined aag s; valid_objs s;
@@ -1019,7 +1046,7 @@ lemma ready_queues_alters_kheap:
        apply (simp add: etcb_at_def)
       apply (simp add: is_etcb_at_def)
      using c
-     apply (clarsimp simp: st_tcb_at_def tcb_at_st_tcb_at
+     apply (clarsimp simp: pred_tcb_at_def tcb_at_st_tcb_at
                            obj_at_def valid_idle_def)+
    done
 
@@ -1076,7 +1103,7 @@ lemma partitionIntegrity_subjectAffects_asid:
   apply(case_tac "arm_asid_table (arch_state s) (asid_high_bits_of asid) = arm_asid_table (arch_state s') (asid_high_bits_of asid)")
    apply (clarsimp simp: valid_arch_state_def valid_asid_table_def)
    apply (drule_tac x=pool_ptr in bspec)
-    apply (blast intro: ranI)    
+    apply (blast intro: ranI)
    apply (drule_tac x=pool_ptr in bspec)
     apply (blast intro: ranI)
    apply (clarsimp simp: asid_pool_at_kheap)
@@ -1086,18 +1113,20 @@ lemma partitionIntegrity_subjectAffects_asid:
     apply(drule integrity_subjects_obj)
     apply(drule_tac x="pool_ptr" in spec)+
     apply(erule integrity_obj.cases)
-    apply(simp_all)[7]
-      apply(drule_tac t="pasSubject aag" in sym)
-      apply simp
-      apply(rule sata_asidpool)
-       apply assumption
-      apply assumption
+              apply(simp_all)[7]
+        apply(drule_tac t="pasSubject aag" in sym)
+        apply simp
+        apply(rule sata_asidpool)
+         apply assumption
+        apply assumption
+       apply clarsimp
+      apply clarsimp
      apply clarsimp
      apply (drule_tac x="ucast asid" in spec)+
      apply clarsimp
      apply (drule owns_mapping_owns_asidpool)
          apply (simp | blast intro: pas_refined_Control[THEN sym]
-                     | fastforce intro: pas_wellformed_pasSubject_update[simplified])+
+     | fastforce intro: pas_wellformed_pasSubject_update[simplified])+
      apply(drule_tac t="pasSubject aag" in sym)+
      apply simp
      apply(rule sata_asidpool)
@@ -1149,7 +1178,7 @@ lemma sameFor_subject_def2:
            apply(fastforce intro: equiv_forI elim: states_equiv_forE equiv_forD)+
        apply(fastforce intro: equiv_forI elim: states_equiv_forE_is_original_cap)     
       apply(fastforce intro: equiv_forI elim: states_equiv_forE equiv_forD)+
-    apply(fastforce simp: equiv_asids_def equiv_asid_def states_equiv_for_def)  
+    subgoal by (fastforce simp: equiv_asids_def equiv_asid_def states_equiv_for_def)  
    apply(fastforce intro: equiv_forI elim: states_equiv_forE_ready_queues)
   apply fastforce
   done
@@ -1197,7 +1226,7 @@ lemma partsSubjectAffects_bounds_subjects_affects:
                                  partitionIntegrity_subjectAffects_interrupt_irq_node
                                  partitionIntegrity_subjectAffects_asid
                                  partitionIntegrity_subjectAffects_ready_queues[folded guarded_is_subject_cur_thread_def]
-                           | fastforce simp: partitionIntegrity_def silc_dom_equiv_def equiv_for_def)+)[18] (* slowish *)
+                           | fastforce simp: partitionIntegrity_def silc_dom_equiv_def equiv_for_def)+)[10]
                 apply((fastforce intro: affects_lrefl simp: partitionIntegrity_def domain_fields_equiv_def)+)[16]
   done
 
@@ -1457,7 +1486,7 @@ lemma ct_running_not_ct_idle:
 lemma ct_running_cur_thread_not_idle_thread:
   "valid_idle s \<Longrightarrow> ct_running s \<Longrightarrow> cur_thread s \<noteq> idle_thread s"
   apply(simp add: ct_in_state_def valid_idle_def)
-  apply(simp add: st_tcb_at_def obj_at_def)
+  apply(simp add: pred_tcb_at_def obj_at_def)
   apply auto
   done
 
@@ -1517,7 +1546,7 @@ lemma silc_inv_refl:
 lemma ct_active_cur_thread_not_idle_thread:
   "valid_idle s \<Longrightarrow> ct_active s \<Longrightarrow> cur_thread s \<noteq> idle_thread s"
   apply(simp add: ct_in_state_def valid_idle_def)
-  apply(simp add: st_tcb_at_def obj_at_def)
+  apply(simp add: pred_tcb_at_def obj_at_def)
   apply auto
   done
 
@@ -1563,9 +1592,10 @@ lemma small_Step_partitionIntegrity:
     partitionIntegrity (current_aag (internal_state_if s)) (internal_state_if s)
            (internal_state_if t)"
   apply(case_tac "sys_mode_of s")
-  apply(simp_all add: part_def split: if_splits add: Step_ADT_A_if_def_global_automaton_if global_automaton_if_def | safe )+
-           apply(fastforce dest: ADT_A_if_reachable_invs_if simp: invs_if_def intro: user_small_Step_partitionIntegrity check_active_irq_A_if_partitionIntegrity)+
-     apply(fastforce dest: ADT_A_if_reachable_invs_if simp: invs_if_def not_schedule_modes_KernelEntry intro: kernel_call_A_if_partitionIntegrity)+
+       apply(simp_all add: part_def split: if_splits add: Step_ADT_A_if_def_global_automaton_if global_automaton_if_def | safe )+
+          apply fold_subgoals[5]
+          subgoal by (fastforce dest: ADT_A_if_reachable_invs_if simp: invs_if_def intro: user_small_Step_partitionIntegrity check_active_irq_A_if_partitionIntegrity)+
+     apply (fastforce dest: ADT_A_if_reachable_invs_if simp: invs_if_def not_schedule_modes_KernelEntry intro: kernel_call_A_if_partitionIntegrity)+
    defer
    apply(clarsimp simp: kernel_exit_A_if_def)
    apply(erule use_valid, wp, simp add: partitionIntegrity_refl)
@@ -1801,8 +1831,7 @@ lemma relation_preserved_across_sub_big_steps:
   apply(drule_tac x=s'a in meta_spec)
   apply(drule_tac x=s'aa in meta_spec)
   apply simp
-  apply metis
-  done
+  by metis
 
 (* FIXME: move these next lemmas culminating in reads_respects_g 
    for activate_thread and schedule into Schedule_IF or similar *)
@@ -1829,14 +1858,14 @@ lemma get_thread_state_reads_respects_g:
    apply(clarsimp simp: spec_equiv_valid_def equiv_valid_2_def)
    apply(drule_tac Q="\<lambda>rv s. s = st \<and> idle rv" in use_valid[OF _ gts_wp])
     apply(simp add: valid_idle_def)
-    apply(clarsimp simp: st_tcb_at_def obj_at_def)
+    apply(clarsimp simp: pred_tcb_at_def obj_at_def)
    apply(drule_tac Q="\<lambda>rv s. s = ta \<and> idle rv" in use_valid[OF _ gts_wp])
     apply(simp add: valid_idle_def)
-    apply(fastforce simp: st_tcb_at_def obj_at_def reads_equiv_g_def globals_equiv_idle_thread_ptr)
-   apply simp
+    apply(fastforce simp: pred_tcb_at_def obj_at_def reads_equiv_g_def globals_equiv_idle_thread_ptr)
+   apply (simp add: pred_tcb_at_def obj_at_def)
   apply(clarsimp simp: spec_equiv_valid_def equiv_valid_2_def)
   apply(frule get_thread_state_reads_respects_g[simplified equiv_valid_def2 equiv_valid_2_def, rule_format, OF conjI, OF _ conjI, simplified], fastforce+)
-  done
+  done 
 
 lemma activate_thread_reads_respects_g:
   "reads_respects_g aag l ((\<lambda>s. cur_thread s \<noteq> idle_thread s \<longrightarrow> is_subject aag (cur_thread s))
@@ -1852,7 +1881,7 @@ lemma activate_thread_reads_respects_g:
   apply(rule conjI)
    apply fastforce
   apply(rule impI)
-  apply(clarsimp simp: st_tcb_at_def obj_at_def valid_idle_def)
+  apply(clarsimp simp: pred_tcb_at_def obj_at_def valid_idle_def)
   apply(fastforce simp: invs_valid_ko_at_arm det_getRestartPC)
   done
 
@@ -2586,7 +2615,7 @@ lemma thread_set_tcb_context_update_runnable_globals_equiv:
   apply(rule thread_set_context_globals_equiv)
   apply clarsimp
   apply(frule invs_valid_idle)
-  apply(fastforce simp: valid_idle_def st_tcb_at_def obj_at_def)
+  apply(fastforce simp: valid_idle_def pred_tcb_at_def obj_at_def)
   done
 
 lemma thread_set_tcb_context_update_reads_respects_g:
@@ -2771,8 +2800,8 @@ lemma reads_equiv_g_ct_running_eq:
    apply(simp add: Invs_def)
    apply(elim conjE)
    apply(drule invs_valid_idle)+
-   apply(clarsimp simp: ct_in_state_def st_tcb_at_def obj_at_def valid_idle_def)
-  apply(clarsimp simp: ct_in_state_def st_tcb_at_def obj_at_def)
+   apply(clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def valid_idle_def)
+  apply(clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def)
   apply(fastforce simp: Invs_def guarded_pas_domain_def dest: is_subject_kheap_eq simp: current_aag_def)
   done
 
@@ -2796,10 +2825,10 @@ lemma kernel_exit_A_if_confidentiality:
   apply(case_tac "fst t'", simp)
   apply(frule_tac s=x2 and t=x2a and aag1="current_aag x2" in use_ev2[OF kernel_exit_if_reads_respects_f_g_2[where st=s0_internal]])
        apply assumption
-      apply(clarsimp simp: invs_if_def Invs_def current_aag_def guarded_pas_domain_def)
+      subgoal by (clarsimp simp: invs_if_def Invs_def current_aag_def guarded_pas_domain_def)
      apply(clarsimp simp: invs_if_def Invs_def)
      apply(drule uwr_PSched_cur_domain)
-     apply(clarsimp simp: current_aag_def guarded_pas_domain_def)
+     subgoal by (clarsimp simp: current_aag_def guarded_pas_domain_def)
     apply simp
    apply fastforce
   apply simp
@@ -2809,7 +2838,7 @@ lemma kernel_exit_A_if_confidentiality:
    apply simp
    apply(rule reads_equiv_f_g_affects_equiv_uwr)
             apply simp+
-        apply(fastforce simp: invs_if_def Invs_def)
+        subgoal by (fastforce simp: invs_if_def Invs_def)
        apply simp
       apply simp
       apply(rule partitionIntegrity_refl)

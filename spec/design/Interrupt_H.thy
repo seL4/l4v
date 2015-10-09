@@ -165,7 +165,6 @@ defs handleInterrupt_def:
             (case cap of
                   AsyncEndpointCap _ _ True _ \<Rightarrow>  
                     sendAsyncIPC (capAEPPtr cap) (capAEPBadge cap)
-                        (bit (fromEnum irq mod finiteBitSize (undefined::machine_word)))
                 | _ \<Rightarrow>   doMachineOp $ debugPrint $
                     [] @ show irq
                 );

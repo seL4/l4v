@@ -366,7 +366,7 @@ lemma decode_invocation_bisim:
   done
 
 abbreviation 
-  "separate_inv c \<equiv> \<exists>ptr badge rights. c = InvokeAsyncEndpoint ptr badge rights"
+  "separate_inv c \<equiv> \<exists>ptr badge. c = InvokeAsyncEndpoint ptr badge"
 
 lemma perform_invocation_bisim:
   "bisim (dc \<oplus> op =) \<top> (\<top> and K (separate_inv c))
@@ -629,7 +629,7 @@ lemma handle_wait_bisim:
                    apply (case_tac rc, simp_all)[1]
                    apply (wp get_cap_wp' lsft_sep | simp add: lookup_cap_def split_def del:  hoare_True_E_R)+
                    apply (rule handle_fault_bisim)
-                   apply (wp | wpc | simp)+
+                   apply (wp get_aep_wp | wpc | simp)+
                    apply (rule_tac Q' = "\<lambda>_. separate_state and valid_objs and tcb_at r" in hoare_post_imp_R)
                     prefer 2
                     apply simp
@@ -758,11 +758,17 @@ lemma set_mrs_separate_state [wp]:
   done
 
 lemma send_async_ipc_separate_state [wp]:
-  "\<lbrace>separate_state\<rbrace> send_async_ipc a b c \<lbrace>\<lambda>_. separate_state\<rbrace>"
-  apply (simp add: send_async_ipc_def)
+  "\<lbrace>separate_state\<rbrace> send_async_ipc a b \<lbrace>\<lambda>_. separate_state\<rbrace>"
+  unfolding send_async_ipc_def ipc_cancel_def
   apply (rule separate_state_pres)
   apply (rule hoare_pre)
-  apply (wp  | wpc | wps | simp add: update_waiting_aep_def do_async_transfer_def | strengthen imp_consequent)+
+  apply (wp gts_wp get_aep_wp hoare_pre_cont[where a = "reply_ipc_cancel x" for x]
+        | wpc | wps
+        | simp add: update_waiting_aep_def)+
+  apply (clarsimp)
+  apply (simp add: receive_blocked_def)
+  apply (case_tac st; clarsimp)
+  apply (clarsimp simp add: pred_tcb_at_def obj_at_def)
   done
 
 lemma dmo_separate_state [wp]:

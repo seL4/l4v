@@ -410,7 +410,7 @@ proof -
          apply (simp add: pt_bits_def pageBits_def)
         apply (simp add: dom_def transform_def transform_objects_def
                          restrict_map_def map_add_def)
-        apply (clarsimp simp: valid_idle_def st_tcb_at_def obj_at_def)
+        apply (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def)
         done
     next
       case ARMLargePage
@@ -451,7 +451,7 @@ proof -
            apply (simp add: kernel_mapping_slots_def)
           apply (simp add: dom_def transform_def transform_objects_def
                            restrict_map_def)
-          apply (clarsimp simp: valid_idle_def st_tcb_at_def obj_at_def)
+          apply (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def)
          apply (clarsimp simp: upto_enum_step_def pt_bits_def pageBits_def
                         split: split_if_asm)
          apply (subst add.assoc, subst is_aligned_add_helper, assumption)
@@ -1165,7 +1165,7 @@ lemma pde_opt_cap_eq:
                    transform_page_directory_contents_def transform_objects_def
                    unat_map_def ucast_nat_def
                    pde_unat_less_helper)
-  apply (clarsimp simp: valid_idle_def st_tcb_at_def obj_at_def)
+  apply (clarsimp simp: valid_idle_def st_tcb_at_def obj_at_def pred_tcb_at_def)
   done
 
 lemma corres_add_noop_rhs:
@@ -1610,7 +1610,7 @@ lemma ct_active_not_idle_etc:
   "\<lbrakk> invs s; ct_active s \<rbrakk> \<Longrightarrow> not_idle_thread (cur_thread s) s"
   apply (simp add: not_idle_thread_def ct_in_state_def)
   apply (subgoal_tac "valid_idle s")
-   apply (clarsimp simp: valid_idle_def st_tcb_at_def obj_at_def)
+   apply (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def)
   apply (clarsimp simp: invs_def valid_state_def)
   done
 
@@ -1738,11 +1738,11 @@ lemma invoke_page_corres:
            apply (clarsimp simp:cte_wp_at_caps_of_state)
            apply (clarsimp simp:is_arch_diminished_def transform_mapping_def update_map_data_def
                            dest!:diminished_page_is_page)
-          apply (wp get_cap_cte_wp_at_rv unmap_page_st_tcb_at |
+          apply (wp get_cap_cte_wp_at_rv unmap_page_pred_tcb_at |
                  clarsimp simp:valid_idle_def not_idle_thread_def)+
-     apply (rule_tac Q="\<lambda>rv s. valid_etcbs s \<and> st_tcb_at idle (idle_thread s) s \<and> a \<noteq> idle_thread s \<and> idle_thread s = idle_thread_ptr \<and>
+     apply (rule_tac Q="\<lambda>rv s. valid_etcbs s \<and> idle_tcb_at (\<lambda>p. idle (fst p) \<and> snd p = None) (idle_thread s) s \<and> a \<noteq> idle_thread s \<and> idle_thread s = idle_thread_ptr \<and>
                    cte_wp_at \<top> (a,b) s \<and> caps_of_state s' = caps_of_state s" in hoare_strengthen_post)
-      apply (wps, wp unmap_page_st_tcb_at, clarsimp simp: invs_def valid_state_def valid_idle_def)
+      apply (wps, wp unmap_page_pred_tcb_at, clarsimp simp: invs_def valid_state_def valid_idle_def)
     apply simp
    apply (clarsimp simp:cte_wp_at_def is_arch_diminished_def is_arch_cap_def is_pt_cap_def
                     dest!:diminished_page_is_page)

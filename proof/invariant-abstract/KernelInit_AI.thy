@@ -150,7 +150,7 @@ lemma init_irq_ptrs_eq:
       = (irq = irq')"
   apply safe
   apply (rule ccontr)
-  apply (erule_tac bound="ucast (max_word :: irq) + 1"
+  apply (erule_tac bnd="ucast (max_word :: irq) + 1"
               in shift_distinct_helper[rotated 3],
          safe intro!: plus_one_helper2,
          simp_all add: ucast_le_ucast_8_32 up_ucast_inj_eq,
@@ -271,13 +271,13 @@ lemma invs_A:
    apply (case_tac obj, simp_all add: cap_of_def)
    apply (clarsimp simp: init_kheap_def wf_empty split: split_if_asm)
   apply (rule conjI)
-   apply (clarsimp simp: valid_idle_def st_tcb_at_def obj_at_def state_defs)
+   apply (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def state_defs)
   apply (rule conjI)
-   apply (clarsimp simp: only_idle_def st_tcb_at_def obj_at_def state_defs)
+   apply (clarsimp simp: only_idle_def pred_tcb_at_def obj_at_def state_defs)
   apply (rule conjI)
    apply (clarsimp simp: if_unsafe_then_cap_def caps_of_state_init_A_st_Null)
   apply (clarsimp simp: valid_reply_caps_def unique_reply_caps_def
-                        has_reply_cap_def st_tcb_at_def obj_at_def
+                        has_reply_cap_def pred_tcb_at_def obj_at_def
                         caps_of_state_init_A_st_Null
                         cte_wp_at_caps_of_state_eq
                         valid_reply_masters_def valid_global_refs_def

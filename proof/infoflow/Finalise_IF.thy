@@ -151,6 +151,26 @@ lemma set_thread_state_reads_respects:
    apply (wp | simp)+
    done
 
+lemma set_bound_aep_reads_respects:
+  "reads_respects aag l (\<lambda>s. is_subject aag (cur_thread s)) (set_bound_aep ref aep)"
+  unfolding set_bound_aep_def fun_app_def
+  apply (rule pre_ev(5)[where Q=\<top>])
+   apply(case_tac "aag_can_read aag ref \<or> aag_can_affect aag l ref")
+    apply(wp set_object_reads_respects gets_the_ev)[1]
+    apply (fastforce simp: get_tcb_def split: option.splits elim: reads_equivE affects_equivE equiv_forE)
+   apply (simp add: equiv_valid_def2)
+   apply(rule equiv_valid_rv_bind)
+     apply(rule equiv_valid_rv_trivial)
+     apply (wp | simp)+
+    apply(rule_tac P="\<top>" and P'="\<top>" and L="{pasObjectAbs aag ref}" and L'="{pasObjectAbs aag ref}" in ev2_invisible)
+        apply (blast | simp add: labels_are_invisible_def)+
+      apply(rule set_object_modifies_at_most)
+     apply(rule set_object_modifies_at_most)
+    apply(simp | wp)+
+   apply(blast dest: get_tcb_not_asid_pool_at)
+  apply simp
+  done
+
 lemma set_thread_state_ext_owned_reads_respects:
   "reads_respects aag l (\<lambda>s. is_subject aag ref) (set_thread_state_ext ref)"
   apply (simp add: set_thread_state_ext_def when_def get_thread_state_def | wp thread_get_rev)+
@@ -161,6 +181,13 @@ lemma set_thread_state_owned_reads_respects:
   "reads_respects aag l (\<lambda>s. is_subject aag ref) (set_thread_state ref ts)"
   apply (simp add: set_thread_state_def fun_app_def)
   apply (wp set_object_reads_respects gets_the_ev set_thread_state_ext_owned_reads_respects)
+  apply (force elim: reads_equivE equiv_forE)
+  done
+
+lemma set_bound_aep_owned_reads_respects:
+  "reads_respects aag l (\<lambda>s. is_subject aag ref) (set_bound_aep ref aep)"
+  apply (simp add:set_bound_aep_def fun_app_def)
+  apply (wp set_object_reads_respects gets_the_ev)
   apply (force elim: reads_equivE equiv_forE)
   done
 
@@ -205,6 +232,26 @@ lemma set_thread_state_runnable_reads_respects:
    apply (subst thread_set_def[symmetric, simplified fun_app_def])
    apply (wp thread_set_st_tcb_at | simp)+
    done
+
+lemma set_bound_aep_none_reads_respects:
+  "reads_respects aag l \<top> (set_bound_aep ref None)"
+  unfolding set_bound_aep_def fun_app_def
+  apply (rule pre_ev(5)[where Q=\<top>])
+   apply(case_tac "aag_can_read aag ref \<or> aag_can_affect aag l ref")
+    apply(wp set_object_reads_respects gets_the_ev)[1]
+    apply (fastforce simp: get_tcb_def split: option.splits elim: reads_equivE affects_equivE equiv_forE)
+   apply (simp add: equiv_valid_def2)
+   apply(rule equiv_valid_rv_bind)
+     apply(rule equiv_valid_rv_trivial)
+     apply (wp | simp)+
+    apply(rule_tac P="\<top>" and P'="\<top>" and L="{pasObjectAbs aag ref}" and L'="{pasObjectAbs aag ref}" in ev2_invisible)
+        apply (blast | simp add: labels_are_invisible_def)+
+      apply(rule set_object_modifies_at_most)
+     apply(rule set_object_modifies_at_most)
+    apply(simp | wp)+
+   apply(blast dest: get_tcb_not_asid_pool_at)
+  apply simp
+  done
 
 lemma get_object_revrv:
   "reads_equiv_valid_rv_inv (affects_equiv aag l) aag \<top>\<top> \<top> (get_object ptr)"
@@ -945,9 +992,9 @@ lemma aep_queues_are_invisible_or_aeps_are_equal':
     reads_equiv aag s s'; affects_equiv aag l s s';
     valid_objs s; sym_refs (state_refs_of s); valid_objs s';
     sym_refs (state_refs_of s'); pas_refined aag s; pas_refined aag s'\<rbrakk> \<Longrightarrow>
-  \<not> aep_queue_invisible aag l aep \<longrightarrow> aep = aep'"
+  \<not> aep_queue_invisible aag l (aep_obj aep) \<longrightarrow> aep_obj aep = aep_obj aep'"
   apply(rule impI)
-  apply(case_tac "\<exists> list. aep = WaitingAEP list")
+  apply(case_tac "\<exists> list. aep_obj aep = WaitingAEP list")
    apply(erule exE)
    apply(drule (1) not_aep_queue_invisible)
    apply clarsimp
@@ -975,46 +1022,8 @@ lemma aep_queues_are_invisible_or_aeps_are_equal':
     apply(erule conjE, assumption)
    apply(drule_tac x=aepptr in reads_affects_equiv_kheap_eq, simp+)
    apply(fastforce simp: obj_at_def)
-  apply(case_tac aep, auto)
+  apply(case_tac "aep_obj aep", auto)
   done
-
-lemma aep_queues_are_invisible_or_aeps_are_equal:
-  "\<lbrakk>(pasSubject aag, Reset, pasObjectAbs aag aepptr) \<in> pasPolicy aag;
-    ko_at (AsyncEndpoint aep) aepptr s;
-    ko_at (AsyncEndpoint aep') aepptr s';
-    reads_equiv aag s s'; affects_equiv aag l s s';
-    valid_objs s; sym_refs (state_refs_of s); valid_objs s';
-    sym_refs (state_refs_of s'); pas_refined aag s; pas_refined aag s'\<rbrakk> \<Longrightarrow>
-  (\<not> aep_queue_invisible aag l aep \<or> \<not> aep_queue_invisible aag l aep') \<longrightarrow> aep = aep'"
-  apply(rule impI)
-  apply(erule disjE)
-   apply(blast intro!: aep_queues_are_invisible_or_aeps_are_equal'[rule_format])
-  apply(rule sym)
-  apply(erule aep_queues_are_invisible_or_aeps_are_equal'[rule_format])
-            apply (assumption | erule reads_equiv_sym | erule affects_equiv_sym)+
-  done
-
-lemma get_async_ep_revrv:
-  "reads_equiv_valid_rv_inv (affects_equiv aag l) aag
-        (\<lambda>aep aep'. (\<not> aep_queue_invisible aag l aep \<or> \<not> aep_queue_invisible aag l aep') \<longrightarrow> aep = aep')
-        (pas_refined aag and valid_objs and sym_refs \<circ> state_refs_of and
-         K ((pasSubject aag, Reset, pasObjectAbs aag aepptr) \<in> pasPolicy aag))
-        (get_async_ep aepptr)"
-  unfolding get_async_ep_def
-  apply(rule_tac Q="\<lambda> rv. ko_at rv aepptr and pas_refined aag and valid_objs and sym_refs \<circ> state_refs_of and (K ((pasSubject aag, Reset, pasObjectAbs aag aepptr) \<in> pasPolicy aag))" in equiv_valid_rv_bind)
-    apply(rule equiv_valid_rv_guard_imp[OF equiv_valid_rv_trivial])
-     apply wp
-   apply(case_tac "\<exists> aep. rv = AsyncEndpoint aep")
-    apply(case_tac "\<exists> aep. rv' = AsyncEndpoint aep")
-     apply (clarsimp split: kernel_object.splits)
-     apply (rule return_ev2)
-     apply (rule aep_queues_are_invisible_or_aeps_are_equal[simplified])
-                apply fastforce+
-    apply(clarsimp split: kernel_object.splits simp: fail_ev2_l fail_ev2_r)
-   apply(clarsimp split: kernel_object.splits simp: fail_ev2_l fail_ev2_r)
-  apply (rule hoare_strengthen_post[OF get_object_sp])
-  by simp
-
 
 lemma set_async_ep_equiv_but_for_labels:
   "\<lbrace>equiv_but_for_labels aag L st and K (pasObjectAbs aag aepptr \<in> L)\<rbrace>
@@ -1125,6 +1134,87 @@ lemma aep_cancel_all_reads_respects:
   done
 *)
 
+lemma get_bound_aep_reads_respects':
+  "reads_respects aag l (K(is_subject aag thread)) (get_bound_aep thread)"
+  unfolding get_bound_aep_def thread_get_def
+  apply (wp | simp)+
+  apply clarify
+  apply (rule requiv_get_tcb_eq)
+  apply simp+
+  done
+
+lemma reads_affects_equiv_get_tcb_eq:
+  "\<lbrakk>aag_can_read aag thread \<or> aag_can_affect aag l thread;
+    reads_equiv aag s t; affects_equiv aag l s t\<rbrakk> \<Longrightarrow>
+   get_tcb thread s = get_tcb thread t"
+  apply (fastforce simp: get_tcb_def split: kernel_object.splits option.splits simp: reads_affects_equiv_kheap_eq)
+  done
+
+lemma thread_get_reads_respects:
+  "reads_respects aag l (K (aag_can_read aag thread \<or> aag_can_affect aag l thread)) (thread_get f thread)"
+  unfolding thread_get_def fun_app_def
+  apply (wp gets_the_ev)
+  apply (auto intro: reads_affects_equiv_get_tcb_eq)
+  done
+
+lemma get_bound_aep_reads_respects:
+  "reads_respects aag l (\<lambda> s. aag_can_read aag thread \<or> aag_can_affect aag l thread) (get_bound_aep thread)"
+  unfolding get_bound_aep_def
+  apply(rule equiv_valid_guard_imp)
+   apply(wp thread_get_reads_respects | simp)+
+  done
+
+
+lemma bound_tcb_at_implies_read:
+  "\<lbrakk>pas_refined aag s; is_subject aag t; bound_tcb_at (op = (Some x)) t s\<rbrakk>
+     \<Longrightarrow> aag_can_read_label aag (pasObjectAbs aag x)"
+  apply (frule bound_tcb_at_implies_receive, simp)
+  apply clarsimp
+apply (frule_tac l="pasSubject aag" and auth=Receive in reads_ep, simp)
+apply (auto simp: aag_can_read_read)
+  done
+
+lemma bound_tcb_at_eq:
+  "\<lbrakk>sym_refs (state_refs_of s); valid_objs s; kheap s aepptr = Some (AsyncEndpoint aep);
+    aep_bound_tcb aep = Some tcbptr; bound_tcb_at (op = (Some aepptr')) tcbptr s\<rbrakk>
+    \<Longrightarrow> aepptr = aepptr'"
+    apply (drule_tac x=aepptr in sym_refsD[rotated])
+   apply (fastforce simp: state_refs_of_def)
+  apply (auto simp: pred_tcb_at_def obj_at_def valid_obj_def valid_aep_def is_tcb
+                    state_refs_of_def refs_of_rev
+          simp del: refs_of_simps
+             elim!: valid_objsE)
+  done
+
+lemma unbind_maybe_aep_reads_respects:
+  "reads_respects aag l 
+     (pas_refined aag and invs and K (is_subject aag aepptr))
+     (unbind_maybe_aep aepptr)"
+  apply (clarsimp simp: unbind_maybe_aep_def)
+apply wp
+  apply (case_tac "aep_bound_tcb rv")
+   apply (clarsimp, wp)[1] 
+  -- "interesting case, aep is bound"
+  apply (clarsimp)
+   apply ((wp set_bound_aep_none_reads_respects set_async_ep_reads_respects 
+              get_async_ep_reads_respects
+          | wpc
+          | simp)+)
+  done
+
+lemma unbind_async_endpoint_is_subj_reads_respects:
+  "reads_respects aag l (pas_refined aag and invs and K (is_subject aag t))
+       (unbind_async_endpoint t)"
+  apply (clarsimp simp: unbind_async_endpoint_def)
+  apply (wp set_bound_aep_owned_reads_respects set_async_ep_reads_respects 
+            get_async_ep_reads_respects get_bound_aep_reads_respects
+            gba_wp[unfolded get_bound_aep_def, simplified]
+       | wpc 
+       | simp add: get_bound_aep_def)+
+  apply (clarsimp)
+  apply (rule bound_tcb_at_implies_read, auto)
+  done
+
 lemma fast_finalise_reads_respects:
   "reads_respects aag l (pas_refined aag and invs and K (pas_cap_cur_auth aag cap) and
     K (fin \<longrightarrow> (case cap of EndpointCap r badge rights \<Rightarrow> is_subject aag r |
@@ -1134,7 +1224,11 @@ lemma fast_finalise_reads_respects:
   apply(case_tac cap, simp_all)
   apply(wp equiv_valid_guard_imp[OF ep_cancel_all_reads_respects]
            equiv_valid_guard_imp[OF aep_cancel_all_reads_respects]
-      | simp add: when_def
+           unbind_async_endpoint_is_subj_reads_respects
+           unbind_maybe_aep_reads_respects
+           get_async_ep_reads_respects get_aep_wp
+      | simp add: when_def 
+      | wpc
       | intro conjI impI
       | fastforce simp: aag_cap_auth_def cap_auth_conferred_def cap_rights_to_auth_def)+
   done
@@ -1205,12 +1299,15 @@ lemma st_tcb_at_sym:
   done
 
 lemma blocked_ipc_cancel_reads_respects:
-  "reads_respects aag l (pas_refined aag and invs and st_tcb_at (op = state) tptr and (K (is_subject aag tptr)))
+  "reads_respects aag l (pas_refined aag and invs and st_tcb_at (op = state) tptr and (\<lambda>_. (is_subject aag tptr)))
     (blocked_ipc_cancel state tptr)"
   unfolding blocked_ipc_cancel_def
   apply(wp set_thread_state_owned_reads_respects set_endpoint_reads_respects get_ep_queue_reads_respects get_endpoint_reads_respects get_blocking_ipc_endpoint_reads_respects | simp add: get_blocking_ipc_endpoint_def | wpc)+
   apply(fastforce intro: aag_can_read_self owns_thread_blocked_reads_endpoint simp: st_tcb_at_sym)
   done
+
+
+  
 
 
 lemma select_singleton_ev:
@@ -1230,7 +1327,6 @@ lemma thread_set_fault_empty_invs:
   "\<lbrace>invs\<rbrace> thread_set (tcb_fault_update Map.empty) thread \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply(wp itr_wps(27) | simp)+
   done
-
 
 lemma thread_set_reads_respects:
   "reads_respects aag l \<top> (thread_set x y)"
@@ -1371,6 +1467,9 @@ lemma finalise_cap_reads_respects:
   apply(case_tac cap, simp_all split del: split_if)
             apply ((wp ep_cancel_all_reads_respects aep_cancel_all_reads_respects
                       suspend_reads_respects_f[where st=st] deleting_irq_handler_reads_respects
+                      unbind_async_endpoint_is_subj_reads_respects
+                      unbind_maybe_aep_reads_respects
+                      unbind_async_endpoint_invs unbind_maybe_aep_invs
                   | simp add: when_def split del: split_if
                          add: invs_valid_objs invs_sym_refs aag_cap_auth_def
                               cap_auth_conferred_def cap_rights_to_auth_def
@@ -1378,10 +1477,11 @@ lemma finalise_cap_reads_respects:
                   | rule aag_Control_into_owns_irq
                   | clarsimp split del: split_if
                   | rule conjI
-                  | wp_once reads_respects_f[where st=st] | blast)+)[11]
+                  | wp_once reads_respects_f[where st=st] 
+                  | blast
+                  | clarsimp)+)[11]
   apply (rule equiv_valid_guard_imp)
-   apply (wp arch_finalise_cap_reads_respects reads_respects_f[where st=st] arch_finalise_cap_silc_inv | simp | elim conjE)+
-  done
+   by (wp arch_finalise_cap_reads_respects reads_respects_f[where st=st] arch_finalise_cap_silc_inv | simp | elim conjE)+
 
 lemma cap_swap_for_delete_reads_respects:
   "reads_respects aag l (K (is_subject aag (fst slot1) \<and> is_subject aag (fst slot2))) (cap_swap_for_delete slot1 slot2)"
@@ -1813,6 +1913,46 @@ lemma aep_cancel_all_globals_equiv:
   apply(rule hoare_strengthen_post[OF aep_cancel_all_globals_equiv'])
   by simp
 
+lemma unbind_async_endpoint_globals_equiv:
+  "\<lbrace>globals_equiv st and valid_ko_at_arm \<rbrace>
+   unbind_async_endpoint t
+   \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
+  unfolding unbind_async_endpoint_def
+  by (wp gba_wp set_bound_aep_globals_equiv set_async_ep_valid_ko_at_arm 
+            set_async_ep_globals_equiv 
+          | wpc 
+          | simp)+
+
+lemma unbind_async_endpoint_valid_ko_at_arm[wp]:
+  "\<lbrace>valid_ko_at_arm \<rbrace>
+   unbind_async_endpoint t
+   \<lbrace>\<lambda>_. valid_ko_at_arm\<rbrace>"
+  unfolding unbind_async_endpoint_def
+  by (wp gba_wp set_bound_aep_valid_ko_at_arm set_async_ep_valid_ko_at_arm 
+             
+          | wpc 
+          | simp)+
+
+lemma unbind_maybe_aep_globals_equiv:
+  "\<lbrace>globals_equiv st and valid_ko_at_arm \<rbrace>
+   unbind_maybe_aep a
+   \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
+  unfolding unbind_maybe_aep_def
+  by (wp gba_wp set_bound_aep_globals_equiv set_async_ep_valid_ko_at_arm 
+            set_async_ep_globals_equiv get_aep_wp 
+          | wpc 
+          | simp)+
+
+lemma unbind_maybe_aep_valid_ko_at_arm[wp]:
+  "\<lbrace>valid_ko_at_arm \<rbrace>
+   unbind_maybe_aep a
+   \<lbrace>\<lambda>_. valid_ko_at_arm\<rbrace>"
+  unfolding unbind_maybe_aep_def
+  by (wp gba_wp set_bound_aep_valid_ko_at_arm set_async_ep_valid_ko_at_arm 
+         get_aep_wp
+          | wpc 
+          | simp)+
+
 crunch valid_global_objs: fast_finalise "valid_global_objs"
   (wp: crunch_wps dxo_wp_weak ignore: reschedule_required)
 
@@ -1821,7 +1961,7 @@ lemma fast_finalise_globals_equiv:
    fast_finalise cap final
    \<lbrace> \<lambda>_. globals_equiv st \<rbrace>"
   apply(case_tac cap)
-  apply(clarsimp simp: when_def | wp ep_cancel_all_globals_equiv aep_cancel_all_globals_equiv | rule conjI)+
+  apply(clarsimp simp: when_def | wp ep_cancel_all_globals_equiv aep_cancel_all_globals_equiv unbind_maybe_aep_globals_equiv | rule conjI)+
   done
 
 lemma tcb_sched_action_enqueue_valid_ko_at_arm[wp]:

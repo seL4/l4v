@@ -593,7 +593,6 @@ lemma update_cap_rights_reset_cap_asid:
   by (case_tac cap',auto simp: update_cap_rights_def dest!:reset_cap_asid_simps2 )
 
 
-
 (* Slightly different to the rules above.
  * This lemma copies a cap from the root cnode to
  * the root cnode (rather than to a different cnode).

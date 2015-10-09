@@ -70,9 +70,8 @@ where
      does a receive (for which a sender is already blocked) or reset on the ep.
      The affects on the ep here will depend on the state of any blocked
      senders. So if the ep is in l's domain, the senders better be too. *)
-  read_sync_ep_read_senders:
-  "\<lbrakk>(a,auth,ep) \<in> g; auth \<in> {Reset,Receive};
-    ep \<in> subjectReads g l; (b,SyncSend,ep) \<in> g\<rbrakk> \<Longrightarrow>
+  read_sync_ep_read_senders_strong:
+  "\<lbrakk>ep \<in> subjectReads g l; (b,SyncSend,ep) \<in> g\<rbrakk> \<Longrightarrow>
    b \<in> subjectReads g l" |
   (* This rule allows anyone who can read a synchronous endpoint, to also be
      able to read from its receivers. The intuition is that the state of the
@@ -91,15 +90,23 @@ where
      cannot imagine a useful intransitive noninterference policy that permits
      the latter case but not the former, so the extra cost of doing away with
      this rule does not seem worth it IMO. *)
-  read_sync_ep_read_receivers:
-  "\<lbrakk>(a,auth,ep) \<in> g; auth \<in> {SyncSend};
-    ep \<in> subjectReads g l; (b,Receive,ep) \<in> g\<rbrakk> \<Longrightarrow>
+  read_sync_ep_read_receivers_strong:
+  "\<lbrakk>ep \<in> subjectReads g l; (b,Receive,ep) \<in> g\<rbrakk> \<Longrightarrow>
    b \<in> subjectReads g l"
 
 
+lemma read_sync_ep_read_senders:
+  "\<lbrakk>(a,auth,ep) \<in> g; auth \<in> {Reset,Receive};
+    ep \<in> subjectReads g l; (b,SyncSend,ep) \<in> g\<rbrakk> \<Longrightarrow>
+   b \<in> subjectReads g l"
+   by (rule read_sync_ep_read_senders_strong)
 
-
-
+lemma read_sync_ep_read_receivers:
+  "\<lbrakk>(a,auth,ep) \<in> g; auth \<in> {SyncSend};
+    ep \<in> subjectReads g l; (b,Receive,ep) \<in> g\<rbrakk> \<Longrightarrow>
+   b \<in> subjectReads g l"
+   by (rule read_sync_ep_read_receivers_strong)
+  
 
 abbreviation aag_can_read :: "'a PAS \<Rightarrow> word32 \<Rightarrow> bool"
 where
@@ -692,7 +699,13 @@ for g :: "'a auth_graph" and l :: "'a" where
      l'' \<in> subjectAffects g l" |
   (* if you alter an asid mapping, you affect the domain who owns that asid *)
   affects_asidpool_map:
-    "(l,ASIDPoolMapsASID,l') \<in> g \<Longrightarrow> l' \<in> subjectAffects g l"
+    "(l,ASIDPoolMapsASID,l') \<in> g \<Longrightarrow> l' \<in> subjectAffects g l" |
+  (* if you are sending to an aep, which is bound to a tcb that is
+     receive blocked on an ep, then you can affect that ep *)
+  affects_ep_bound_trans:
+    "\<lbrakk>\<exists>tcb aep. (tcb, Receive, aep) \<in> g \<and> (tcb, Receive, ep) \<in> g \<and>
+                (l, AsyncSend, aep) \<in> g\<rbrakk> \<Longrightarrow>
+        ep \<in> subjectAffects g l"
 
 (* We define when the current subject can affect another domain whose label is
    l. This occurs when the current subject can affect some label d that is 

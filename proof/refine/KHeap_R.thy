@@ -621,9 +621,9 @@ lemma setEndpoint_cte_wp_at':
                      intro!: set_eqI)+
   done
 
-lemma setEndpoint_st_tcb_at'[wp]:
-  "\<lbrace>st_tcb_at' P t\<rbrace> setEndpoint ptr val \<lbrace>\<lambda>rv. st_tcb_at' P t\<rbrace>"
-  apply (simp add: st_tcb_at'_def setEndpoint_def)
+lemma setEndpoint_pred_tcb_at'[wp]:
+  "\<lbrace>pred_tcb_at' proj P t\<rbrace> setEndpoint ptr val \<lbrace>\<lambda>rv. pred_tcb_at' proj P t\<rbrace>"
+  apply (simp add: pred_tcb_at'_def setEndpoint_def)
   apply (rule obj_at_setObject2)
   apply (clarsimp simp: updateObject_default_def in_monad)
   done
@@ -1188,17 +1188,21 @@ lemma setObject_ko_wp_at:
 lemma typ_at'_valid_obj'_lift:
   assumes P: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
   shows      "\<lbrace>\<lambda>s. valid_obj' obj s\<rbrace> f \<lbrace>\<lambda>rv s. valid_obj' obj s\<rbrace>"
-  apply (cases obj; simp add: valid_obj'_def)
+  apply (cases obj, simp_all add: valid_obj'_def)
        apply (rename_tac endpoint)
        apply (case_tac endpoint; simp add: valid_ep'_def)
          apply (wp hoare_vcg_const_Ball_lift typ_at_lifts [OF P])
       apply (rename_tac async_endpoint)
-      apply (case_tac async_endpoint; simp add: valid_aep'_def)
+      apply (case_tac "aepObj async_endpoint"; simp add: valid_aep'_def valid_bound_tcb'_def)
+        prefer 3
         apply (wp hoare_vcg_const_Ball_lift typ_at_lifts [OF P])
+        apply ((case_tac "aepBoundTCB async_endpoint", simp_all, wp typ_at_lifts[OF P])+)[3]
+     apply wp
    apply (rename_tac tcb)
-   apply (case_tac "tcbState tcb";
-          simp add: valid_tcb'_def valid_tcb_state'_def split_def)
-           apply (wp hoare_vcg_const_Ball_lift typ_at_lifts [OF P])
+    apply (case_tac "tcbState tcb";
+           simp add: valid_tcb'_def valid_tcb_state'_def split_def valid_bound_aep'_def)
+           apply ((wp hoare_vcg_const_Ball_lift typ_at_lifts [OF P]
+                | case_tac "tcbBoundAEP tcb"; simp)+)[8]
    apply (simp add: valid_cte'_def)
    apply (wp typ_at_lifts[OF P])
   apply (rename_tac arch_kernel_object)
@@ -1298,19 +1302,19 @@ lemma setObject_idle':
   shows      "\<lbrace>\<lambda>s. valid_idle' s \<and>
                    (ptr = ksIdleThread s \<longrightarrow>
                     (\<exists>obj (val :: 'a). projectKO_opt (injectKO val) = Some obj
-                                      \<and> idle' (tcbState obj))
+                                      \<and> idle' (tcbState obj) \<and> tcbBoundAEP obj = None)
                     \<longrightarrow> (\<exists>obj. projectKO_opt (injectKO v) = Some obj \<and>
-                          idle' (tcbState obj))) \<and>
+                          idle' (tcbState obj) \<and> tcbBoundAEP obj = None)) \<and>
                    P s\<rbrace>
                 setObject ptr v
               \<lbrace>\<lambda>rv s. valid_idle' s\<rbrace>"
-  apply (simp add: valid_idle'_def st_tcb_at'_def o_def)
+  apply (simp add: valid_idle'_def pred_tcb_at'_def o_def)
   apply (rule hoare_pre)
    apply (rule hoare_lift_Pf2 [where f="ksIdleThread"])
-    apply (simp add: obj_at'_real_def)
+    apply (simp add: pred_tcb_at'_def obj_at'_real_def)
     apply (rule setObject_ko_wp_at [OF R n m])
    apply (wp z)
-  apply (clarsimp simp add: obj_at'_real_def ko_wp_at'_def)
+  apply (clarsimp simp add: pred_tcb_at'_def obj_at'_real_def ko_wp_at'_def)
   apply (drule_tac x=obj in spec, simp)
   apply (clarsimp simp add: project_inject)
   apply (drule_tac x=obja in spec, simp)
@@ -1685,16 +1689,17 @@ lemma set_aep_valid_queues'[wp]:
   done
 
 lemma set_aep_state_refs_of'[wp]:
-  "\<lbrace>\<lambda>s. P ((state_refs_of' s) (epptr := aep_q_refs_of' aep))\<rbrace>
+  "\<lbrace>\<lambda>s. P ((state_refs_of' s) (epptr := aep_q_refs_of' (aepObj aep)
+                                      \<union> aep_bound_refs' (aepBoundTCB aep)))\<rbrace>
      setAsyncEP epptr aep
    \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
   unfolding setAsyncEP_def
   by (wp setObject_state_refs_of',
       simp_all add: objBits_simps fun_upd_def)
 
-lemma setAsyncEP_st_tcb_at'[wp]:
-  "\<lbrace>st_tcb_at' P t\<rbrace> setAsyncEP ptr val \<lbrace>\<lambda>rv. st_tcb_at' P t\<rbrace>"
-  apply (simp add: st_tcb_at'_def setAsyncEP_def)
+lemma setAsyncEP_pred_tcb_at'[wp]:
+  "\<lbrace>pred_tcb_at' proj P t\<rbrace> setAsyncEP ptr val \<lbrace>\<lambda>rv. pred_tcb_at' proj P t\<rbrace>"
+  apply (simp add: pred_tcb_at'_def setAsyncEP_def)
   apply (rule obj_at_setObject2)
    apply simp
   apply (clarsimp simp: updateObject_default_def in_monad)
@@ -1915,18 +1920,18 @@ lemma get_aep_sp':
                      projectKOs in_monad valid_def obj_at'_def objBits_simps
                      in_magnitude_check split_def)
 
-lemma set_aep_st_tcb_at' [wp]: 
-  "\<lbrace> st_tcb_at' P t \<rbrace> 
+lemma set_aep_pred_tcb_at' [wp]: 
+  "\<lbrace> pred_tcb_at' proj P t \<rbrace> 
    setAsyncEP ep v 
-   \<lbrace> \<lambda>rv. st_tcb_at' P t \<rbrace>"
-  apply (simp add: setAsyncEP_def st_tcb_at'_def)
+   \<lbrace> \<lambda>rv. pred_tcb_at' proj P t \<rbrace>"
+  apply (simp add: setAsyncEP_def pred_tcb_at'_def)
   apply (rule obj_at_setObject2)
   apply (clarsimp simp add: updateObject_default_def in_monad)
   done
 
 lemma set_aep_iflive'[wp]:
   "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s
-      \<and> ((\<exists>ts. v = WaitingAEP ts) \<longrightarrow> ex_nonz_cap_to' p s)\<rbrace>
+      \<and> (live' (KOAEndpoint v) \<longrightarrow> ex_nonz_cap_to' p s)\<rbrace>
      setAsyncEP p v
    \<lbrace>\<lambda>rv. if_live_then_nonz_cap'\<rbrace>"
   apply (simp add: setAsyncEP_def)
@@ -2110,9 +2115,11 @@ lemma setAsyncEP_ct_idle_or_in_cur_domain'[wp]:
   done
 
 lemma set_aep_minor_invs':
-  "\<lbrace>invs' and obj_at' (\<lambda>aep. aep_q_refs_of' aep = aep_q_refs_of' val) ptr
+  "\<lbrace>invs' and obj_at' (\<lambda>aep. aep_q_refs_of' (aepObj aep) = aep_q_refs_of' (aepObj val)
+                           \<and> aep_bound_refs' (aepBoundTCB aep) = aep_bound_refs' (aepBoundTCB val))
+                       ptr
          and valid_aep' val
-         and (\<lambda>s. (\<exists>ts. val = WaitingAEP ts) \<longrightarrow> ex_nonz_cap_to' ptr s)
+         and (\<lambda>s. live' (KOAEndpoint val) \<longrightarrow> ex_nonz_cap_to' ptr s)
          and (\<lambda>s. ptr \<noteq> ksIdleThread s) \<rbrace>
      setAsyncEP ptr val
    \<lbrace>\<lambda>rv. invs'\<rbrace>"

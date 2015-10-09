@@ -553,7 +553,7 @@ definition
 crunch (empty_fail) empty_fail: handlePreemption_if
 
 lemma handle_preemption_if_corres:
- "corres op = (invs and valid_sched)
+ "corres op = (einvs)
    (invs')
    (handle_preemption_if tc) (handlePreemption_if tc)"
   apply (simp add: handlePreemption_if_def handle_preemption_if_def)
@@ -570,7 +570,7 @@ lemma handle_preemption_if_corres:
      apply (rule dmo_getActiveIRQ_wp)
     apply (rule dmo'_getActiveIRQ_wp)
    apply clarsimp+
-  apply (clarsimp simp: invs'_def valid_state'_def irq_at_def
+  apply (clarsimp simp: invs'_def valid_state'_def irq_at_def invs_def
                         Let_def valid_irq_states'_def)
   done
 
@@ -1389,7 +1389,7 @@ lemma ct_running'_related: "\<lbrakk>(a, c) \<in> state_relation; invs' c; ct_ru
                         curthread_relation)
   apply (frule(1) st_tcb_at_coerce_haskell)
   apply (simp add: invs'_def cur_tcb'_def curthread_relation)
-  apply (erule st_tcb'_weakenE)
+  apply (erule pred_tcb'_weakenE)
   apply (case_tac st, simp_all)[1]
   done
 
@@ -1398,7 +1398,7 @@ lemma ct_idle'_related: "\<lbrakk>(a, c) \<in> state_relation; invs' c; ct_idle 
                         curthread_relation)
   apply (frule(1) st_tcb_at_coerce_haskell)
   apply (simp add: invs'_def cur_tcb'_def curthread_relation)
-  apply (erule st_tcb'_weakenE)
+  apply (erule pred_tcb'_weakenE)
   apply (case_tac st, simp_all)[1]
   done
 

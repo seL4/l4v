@@ -4078,8 +4078,6 @@ lemma perform_page_table_invocation_valid_list[wp]:
   apply (wp mapM_x_wp' | intro impI conjI allI | wpc | simp split: cap.splits arch_cap.splits option.splits)+
   done
 
-
-
 lemma perform_page_invocation_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> perform_page_invocation a \<lbrace>\<lambda>_.valid_list\<rbrace>"
   apply (simp add: perform_page_invocation_def)
@@ -4094,11 +4092,11 @@ interpretation attempt_switch_to_extended: is_extended "attempt_switch_to a"
   apply (unfold_locales)
   done
 
-crunch valid_list[wp]: perform_invocation valid_list (wp: crunch_wps simp: crunch_simps ignore: without_preemption )
+crunch valid_list[wp]: perform_invocation valid_list (wp: crunch_wps simp: crunch_simps ignore: without_preemption)
 
 crunch valid_list[wp]: handle_invocation valid_list (wp: crunch_wps syscall_valid simp: crunch_simps ignore: without_preemption)
 
-crunch valid_list[wp]: handle_wait,handle_yield,handle_call valid_list (wp: crunch_wps simp: crunch_simps)
+crunch valid_list[wp]: handle_wait, handle_yield, handle_call valid_list (wp: crunch_wps simp: crunch_simps)
 
 lemma handle_vm_fault_valid_list[wp]:
 "\<lbrace>valid_list\<rbrace> handle_vm_fault thread fault \<lbrace>\<lambda>_.valid_list\<rbrace>"
@@ -4117,7 +4115,6 @@ interpretation timer_tick_extended: is_extended "timer_tick"
   apply (unfold_locales)
   apply wp
   done
-
 
 lemma handle_interrupt_valid_list[wp]:
   "\<lbrace>valid_list\<rbrace> handle_interrupt irq \<lbrace>\<lambda>_.valid_list\<rbrace>"

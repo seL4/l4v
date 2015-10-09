@@ -60,12 +60,55 @@ abbreviation
 abbreviation
   "pte_at' \<equiv> typ_at' (ArchT PTET)"
 
+record itcb' =
+  itcbState          :: thread_state
+  itcbFaultHandler   :: cptr
+  itcbIPCBuffer      :: vptr
+  itcbBoundAEP       :: "word32 option"
+  itcbPriority       :: priority
+  itcbFault          :: "fault option"
+  itcbTimeSlice      :: nat
+
+definition "tcb_to_itcb' tcb \<equiv> \<lparr> itcbState        = tcbState tcb,
+                                 itcbFaultHandler = tcbFaultHandler tcb,
+                                 itcbIPCBuffer    = tcbIPCBuffer tcb,
+                                 itcbBoundAEP     = tcbBoundAEP tcb,
+                                 itcbPriority     = tcbPriority tcb,
+                                 itcbFault        = tcbFault tcb,
+                                 itcbTimeSlice    = tcbTimeSlice tcb \<rparr>"
+
+lemma [simp]: "itcbState (tcb_to_itcb' tcb) = tcbState tcb"
+  by (auto simp: tcb_to_itcb'_def)
+
+lemma [simp]: "itcbFaultHandler (tcb_to_itcb' tcb) = tcbFaultHandler tcb"
+  by (auto simp: tcb_to_itcb'_def)
+
+lemma [simp]: "itcbIPCBuffer (tcb_to_itcb' tcb) = tcbIPCBuffer tcb"
+  by (auto simp: tcb_to_itcb'_def)
+
+lemma [simp]: "itcbBoundAEP (tcb_to_itcb' tcb) = tcbBoundAEP tcb"
+  by (auto simp: tcb_to_itcb'_def)
+
+lemma [simp]: "itcbPriority (tcb_to_itcb' tcb) = tcbPriority tcb"
+  by (auto simp: tcb_to_itcb'_def)
+
+lemma [simp]: "itcbFault (tcb_to_itcb' tcb) = tcbFault tcb"
+  by (auto simp: tcb_to_itcb'_def)
+
+lemma [simp]: "itcbTimeSlice (tcb_to_itcb' tcb) = tcbTimeSlice tcb"
+  by (auto simp: tcb_to_itcb'_def)
 
 definition
-  st_tcb_at' :: "(Structures_H.thread_state \<Rightarrow> bool) \<Rightarrow> word32 \<Rightarrow> kernel_state \<Rightarrow> bool"
+  pred_tcb_at' :: "(itcb' \<Rightarrow> 'a) \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> word32 \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
-  "st_tcb_at' test \<equiv> obj_at' (test o tcbState)"
+  "pred_tcb_at' proj test \<equiv> obj_at' (\<lambda>ko. test (proj (tcb_to_itcb' ko)))"
 
+abbreviation "st_tcb_at' \<equiv> pred_tcb_at' itcbState"
+abbreviation "bound_tcb_at' \<equiv> pred_tcb_at' itcbBoundAEP"
+
+lemma st_tcb_at'_def:
+  "st_tcb_at' test \<equiv> obj_at' (test \<circ> tcbState)"
+  by (simp add: pred_tcb_at'_def o_def)
 
 
 text {* cte with property at *}
@@ -110,19 +153,30 @@ where
   | (SendEP q) => set q \<times> {EPSend}"
 
 definition
-  aep_q_refs_of'  :: "Structures_H.async_endpoint \<Rightarrow> (word32 \<times> reftype) set"
+  aep_q_refs_of'  :: "Structures_H.aep \<Rightarrow> (word32 \<times> reftype) set"
 where
   "aep_q_refs_of' x \<equiv> case x of  IdleAEP         => {}
   | (WaitingAEP q)      => set q \<times> {AEPAsync}
-  | (ActiveAEP b m)  => {}"
+  | (ActiveAEP b)  => {}"
+
+definition 
+  aep_bound_refs' :: "word32 option \<Rightarrow> (word32 \<times> reftype) set"
+where 
+  "aep_bound_refs' t \<equiv> set_option t \<times> {AEPBound}"
+
+definition
+  tcb_bound_refs' :: "word32 option \<Rightarrow> (word32 \<times> reftype) set"
+where
+  "tcb_bound_refs' a \<equiv> set_option a \<times> {TCBBound}"
 
 definition
   refs_of'        :: "Structures_H.kernel_object  \<Rightarrow> (word32 \<times> reftype) set"
 where
-  "refs_of' x \<equiv> case x of (KOTCB tcb) => tcb_st_refs_of' (tcbState tcb)
+  "refs_of' x \<equiv> case x of
+    (KOTCB tcb) => tcb_st_refs_of' (tcbState tcb) \<union> tcb_bound_refs' (tcbBoundAEP tcb)
   | (KOCTE cte)           => {}
   | (KOEndpoint ep)       => ep_q_refs_of' ep
-  | (KOAEndpoint aep)     => aep_q_refs_of' aep
+  | (KOAEndpoint aep)     => aep_q_refs_of' (aepObj aep) \<union> aep_bound_refs' (aepBoundTCB aep)
   | (KOUserData)          => {}
   | (KOKernelData)        => {}
   | (KOArch ako)          => {}"
@@ -142,11 +196,11 @@ primrec
   live' :: "Structures_H.kernel_object \<Rightarrow> bool"
 where
   "live' (KOTCB tcb) =
-     ((tcbState tcb \<noteq> Inactive \<and> tcbState tcb \<noteq> IdleThreadState) \<or>
-      tcbQueued tcb)"
+     (bound (tcbBoundAEP tcb) \<or>
+     (tcbState tcb \<noteq> Inactive \<and> tcbState tcb \<noteq> IdleThreadState) \<or>  tcbQueued tcb)"
 | "live' (KOCTE cte)           = False"
 | "live' (KOEndpoint ep)       = (ep \<noteq> IdleEP)"
-| "live' (KOAEndpoint aep)     = (\<exists>ts. aep = WaitingAEP ts)"
+| "live' (KOAEndpoint aep)     = (bound (aepBoundTCB aep) \<or> (\<exists>ts. aepObj aep = WaitingAEP ts))"
 | "live' (KOUserData)          = False"
 | "live' (KOKernelData)        = False"
 | "live' (KOArch ako)          = False"
@@ -357,11 +411,19 @@ where
   "valid_ipc_buffer_ptr' a s \<equiv> is_aligned a msg_align_bits \<and> typ_at' UserDataT (a && ~~ mask pageBits) s"
 
 definition
+  valid_bound_aep' :: "word32 option \<Rightarrow> kernel_state \<Rightarrow> bool"
+where
+  "valid_bound_aep' aep_opt s \<equiv> case aep_opt of
+                                 None \<Rightarrow> True
+                               | Some a \<Rightarrow> aep_at' a s"
+
+definition
   valid_tcb' :: "Structures_H.tcb \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
   "valid_tcb' t s \<equiv> (\<forall>(getF, setF) \<in> ran tcb_cte_cases. s \<turnstile>' cteCap (getF t))
                   \<and> valid_tcb_state' (tcbState t) s
                   \<and> is_aligned (tcbIPCBuffer t) msg_align_bits
+                  \<and> valid_bound_aep' (tcbBoundAEP t) s
                   \<and> tcbDomain t \<le> maxDomain
                   \<and> tcbPriority t \<le> maxPriority"
 
@@ -373,13 +435,24 @@ where
   | Structures_H.SendEP ts \<Rightarrow> (ts \<noteq> [] \<and> (\<forall>t \<in> set ts. tcb_at' t s) \<and> distinct ts)
   | Structures_H.RecvEP ts \<Rightarrow> (ts \<noteq> [] \<and> (\<forall>t \<in> set ts. tcb_at' t s) \<and> distinct ts)"
 
+
+definition
+  valid_bound_tcb' :: "word32 option \<Rightarrow> kernel_state \<Rightarrow> bool"
+where
+  "valid_bound_tcb' tcb_opt s \<equiv> case tcb_opt of
+                                 None \<Rightarrow> True
+                               | Some t \<Rightarrow> tcb_at' t s"
+
 definition
   valid_aep' :: "Structures_H.async_endpoint \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
-  "valid_aep' aep s \<equiv> case aep of
+  "valid_aep' aep s \<equiv> (case aepObj aep of 
     Structures_H.IdleAEP \<Rightarrow> True
-  | Structures_H.WaitingAEP ts \<Rightarrow> (ts \<noteq> [] \<and> (\<forall>t \<in> set ts. tcb_at' t s) \<and> distinct ts)
-  | Structures_H.ActiveAEP b m \<Rightarrow> True"
+  | Structures_H.WaitingAEP ts \<Rightarrow>
+      (ts \<noteq> [] \<and> (\<forall>t \<in> set ts. tcb_at' t s) \<and> distinct ts
+     \<and> (case aepBoundTCB aep of Some tcb \<Rightarrow> ts = [tcb] | _ \<Rightarrow> True))
+  | Structures_H.ActiveAEP b \<Rightarrow> True)
+  \<and> valid_bound_tcb' (aepBoundTCB aep) s"
 
 definition
   valid_mapping' :: "word32 \<Rightarrow> vmpage_size \<Rightarrow> kernel_state \<Rightarrow> bool"
@@ -784,10 +857,12 @@ where
 abbreviation
   "sch_act_not t \<equiv> \<lambda>s. ksSchedulerAction s \<noteq> SwitchToThread t"
 
+abbreviation "idle_tcb_at' \<equiv> pred_tcb_at' (\<lambda>t. (itcbState t, itcbBoundAEP t))"
+
 definition
   valid_idle' :: "kernel_state \<Rightarrow> bool"
 where
-  "valid_idle' \<equiv> \<lambda>s. st_tcb_at' idle' (ksIdleThread s) s"
+  "valid_idle' \<equiv> \<lambda>s. idle_tcb_at' (\<lambda>p. idle' (fst p) \<and> snd p = None) (ksIdleThread s) s"
 
 definition
   valid_irq_node' :: "word32 \<Rightarrow> kernel_state \<Rightarrow> bool"
@@ -1081,6 +1156,22 @@ locale mdb_order = mdb_next +
 -- ---------------------------------------------------------------------------
 section "Lemmas"
 
+lemma valid_bound_aep'_None[simp]:
+  "valid_bound_aep' None = \<top>"
+  by (auto simp: valid_bound_aep'_def)
+
+lemma valid_bound_aep'_Some[simp]:
+  "valid_bound_aep' (Some x) = aep_at' x"
+  by (auto simp: valid_bound_aep'_def)
+
+lemma valid_bound_tcb'_None[simp]:
+  "valid_bound_tcb' None = \<top>"
+  by (auto simp: valid_bound_tcb'_def)
+
+lemma valid_bound_tcb'_Some[simp]:
+  "valid_bound_tcb' (Some x) = tcb_at' x"
+  by (auto simp: valid_bound_tcb'_def)
+
 lemmas objBits_simps = objBits_def objBitsKO_def word_size_def
 lemmas objBitsKO_simps = objBitsKO_def word_size_def objBits_simps
 
@@ -1192,10 +1283,10 @@ lemma tcb_cte_cases_simps[simp]:
   by (simp add: tcb_cte_cases_def)+
 
 lemma refs_of'_simps[simp]:
- "refs_of' (KOTCB tcb)           = tcb_st_refs_of' (tcbState tcb)"
+ "refs_of' (KOTCB tcb)           = tcb_st_refs_of' (tcbState tcb) \<union> tcb_bound_refs' (tcbBoundAEP tcb)"
  "refs_of' (KOCTE cte)           = {}"
  "refs_of' (KOEndpoint ep)       = ep_q_refs_of' ep"
- "refs_of' (KOAEndpoint aep)     = aep_q_refs_of' aep"
+ "refs_of' (KOAEndpoint aep)     = aep_q_refs_of' (aepObj aep) \<union> aep_bound_refs' (aepBoundTCB aep)"
  "refs_of' (KOUserData)          = {}"
  "refs_of' (KOKernelData)        = {}"
  "refs_of' (KOArch ako)          = {}"
@@ -1221,8 +1312,18 @@ lemma ep_q_refs_of'_simps[simp]:
 lemma aep_q_refs_of'_simps[simp]:
  "aep_q_refs_of'  IdleAEP         = {}"
  "aep_q_refs_of' (WaitingAEP q)      = set q \<times> {AEPAsync}"
- "aep_q_refs_of' (ActiveAEP b m)  = {}"
+ "aep_q_refs_of' (ActiveAEP b)  = {}"
   by (auto simp: aep_q_refs_of'_def)
+
+lemma aep_bound_refs'_simps[simp]:
+  "aep_bound_refs' (Some t) = {(t, AEPBound)}"
+  "aep_bound_refs' None = {}"
+  by (auto simp: aep_bound_refs'_def)
+
+lemma tcb_bound_refs'_simps[simp]:
+  "tcb_bound_refs' (Some a) = {(a, TCBBound)}"
+  "tcb_bound_refs' None = {}"
+  by (auto simp: tcb_bound_refs'_def)
 
 lemma refs_of_rev':
  "(x, TCBBlockedRecv) \<in> refs_of' ko =
@@ -1236,16 +1337,22 @@ lemma refs_of_rev':
  "(x, EPSend) \<in> refs_of' ko =
     (\<exists>ep. ko = KOEndpoint ep \<and> (\<exists>q. ep = SendEP q \<and> x \<in> set q))"
  "(x, AEPAsync) \<in> refs_of' ko =
-    (\<exists>aep. ko = KOAEndpoint aep \<and> (\<exists>q. aep = WaitingAEP q \<and> x \<in> set q))"
-  by (clarsimp simp: eq_commute
-                     refs_of'_def
-                     tcb_st_refs_of'_def
-                     ep_q_refs_of'_def
-                     aep_q_refs_of'_def
-              split: Structures_H.kernel_object.splits
-                     Structures_H.thread_state.splits
-                     Structures_H.endpoint.splits
-                     Structures_H.async_endpoint.splits)+
+    (\<exists>aep. ko = KOAEndpoint aep \<and> (\<exists>q. aepObj aep = WaitingAEP q \<and> x \<in> set q))"
+ "(x, TCBBound) \<in>  refs_of' ko =
+    (\<exists>tcb. ko = KOTCB tcb \<and> (tcbBoundAEP tcb = Some x))"
+ "(x, AEPBound) \<in> refs_of' ko =
+    (\<exists>aep. ko = KOAEndpoint aep \<and> (aepBoundTCB aep = Some x))"
+  by (auto simp: refs_of'_def
+                 tcb_st_refs_of'_def
+                 ep_q_refs_of'_def
+                 aep_q_refs_of'_def
+                 aep_bound_refs'_def
+                 tcb_bound_refs'_def
+          split: Structures_H.kernel_object.splits
+                 Structures_H.thread_state.splits
+                 Structures_H.endpoint.splits
+                 Structures_H.async_endpoint.splits
+                 Structures_H.aep.splits)+
 
 lemma ko_wp_at'_weakenE:
   "\<lbrakk> ko_wp_at' P p s; \<And>ko. P ko \<Longrightarrow> Q ko \<rbrakk> \<Longrightarrow> ko_wp_at' Q p s"
@@ -1262,7 +1369,7 @@ lemma st_tcb_at_refs_of_rev':
      = st_tcb_at' (\<lambda>ts. \<exists>a b c. ts = BlockedOnSend x a b c) t s"
   "ko_wp_at' (\<lambda>ko. (x, TCBAsync) \<in> refs_of' ko) t s
      = st_tcb_at' (\<lambda>ts.      ts = BlockedOnAsyncEvent x) t s"
-  by (fastforce simp: refs_of_rev' st_tcb_at'_def obj_at'_real_def
+  by (fastforce simp: refs_of_rev' pred_tcb_at'_def obj_at'_real_def
                      projectKO_opt_tcb[where e="KOTCB y" for y]
               elim!: ko_wp_at'_weakenE
               dest!: projectKO_opt_tcbD)+
@@ -1288,9 +1395,22 @@ lemma ko_at_state_refs_ofD':
   "ko_at' ko p s \<Longrightarrow> state_refs_of' s p = refs_of' (injectKO ko)"
   by (clarsimp dest!: obj_at_state_refs_ofD')
 
+definition
+  tcb_aep_is_bound' :: "word32 option \<Rightarrow> tcb \<Rightarrow> bool"
+where
+  "tcb_aep_is_bound' aep tcb \<equiv> tcbBoundAEP tcb = aep"
+
 lemma st_tcb_at_state_refs_ofD':
-  "st_tcb_at' P t s \<Longrightarrow> \<exists>ts. P ts \<and> state_refs_of' s t = tcb_st_refs_of' ts"
-  by (fastforce simp: st_tcb_at'_def dest!: obj_at_state_refs_ofD')
+  "st_tcb_at' P t s \<Longrightarrow> \<exists>ts aepptr. P ts \<and> obj_at' (tcb_aep_is_bound' aepptr) t s
+          \<and> state_refs_of' s t = (tcb_st_refs_of' ts \<union> tcb_bound_refs' aepptr)"
+  by (auto simp: pred_tcb_at'_def tcb_aep_is_bound'_def obj_at'_def projectKO_eq 
+                 project_inject state_refs_of'_def)
+
+lemma bound_tcb_at_state_refs_ofD':
+  "bound_tcb_at' P t s \<Longrightarrow> \<exists>ts aepptr. P aepptr \<and> obj_at' (tcb_aep_is_bound' aepptr) t s
+          \<and> state_refs_of' s t = (tcb_st_refs_of' ts \<union> tcb_bound_refs' aepptr)"
+  by (auto simp: pred_tcb_at'_def obj_at'_def tcb_aep_is_bound'_def projectKO_eq
+                 project_inject state_refs_of'_def)
 
 lemma sym_refs_obj_atD':
   "\<lbrakk> obj_at' P p s; sym_refs (state_refs_of' s) \<rbrakk> \<Longrightarrow>
@@ -1311,10 +1431,32 @@ lemma sym_refs_ko_atD':
 
 lemma sym_refs_st_tcb_atD':
   "\<lbrakk> st_tcb_at' P t s; sym_refs (state_refs_of' s) \<rbrakk> \<Longrightarrow>
-     \<exists>ts. P ts \<and> state_refs_of' s t = tcb_st_refs_of' ts
-        \<and> (\<forall>(x, tp)\<in>tcb_st_refs_of' ts. ko_wp_at' (\<lambda>ko. (t, symreftype tp) \<in> refs_of' ko) x s)"
-  apply (simp add: st_tcb_at'_def, drule(1) sym_refs_obj_atD')
-  apply fastforce
+     \<exists>ts aepptr. P ts \<and> obj_at' (tcb_aep_is_bound' aepptr) t s
+        \<and> state_refs_of' s t = tcb_st_refs_of' ts \<union> tcb_bound_refs' aepptr
+        \<and> (\<forall>(x, tp)\<in>tcb_st_refs_of' ts \<union> tcb_bound_refs' aepptr. ko_wp_at' (\<lambda>ko. (t, symreftype tp) \<in> refs_of' ko) x s)"
+  apply (drule st_tcb_at_state_refs_ofD')
+  apply (erule exE)+
+  apply (rule_tac x=ts in exI)
+  apply (rule_tac x=aepptr in exI)
+  apply clarsimp
+  apply (frule obj_at_state_refs_ofD')
+  apply (drule (1)sym_refs_obj_atD')
+  apply auto
+  done
+
+lemma sym_refs_bound_tcb_atD':
+  "\<lbrakk> bound_tcb_at' P t s; sym_refs (state_refs_of' s) \<rbrakk> \<Longrightarrow>
+     \<exists>ts aepptr. P aepptr \<and> obj_at' (tcb_aep_is_bound' aepptr) t s
+        \<and> state_refs_of' s t = tcb_st_refs_of' ts \<union> tcb_bound_refs' aepptr
+        \<and> (\<forall>(x, tp)\<in>tcb_st_refs_of' ts \<union> tcb_bound_refs' aepptr. ko_wp_at' (\<lambda>ko. (t, symreftype tp) \<in> refs_of' ko) x s)"
+  apply (drule bound_tcb_at_state_refs_ofD')
+  apply (erule exE)+
+  apply (rule_tac x=ts in exI)
+  apply (rule_tac x=aepptr in exI)
+  apply clarsimp
+  apply (frule obj_at_state_refs_ofD')
+  apply (drule (1)sym_refs_obj_atD')
+  apply auto
   done
 
 lemma ex_nonz_cap_toE':
@@ -1324,11 +1466,11 @@ lemma ex_nonz_cap_toE':
 
 lemma refs_of_live':
   "refs_of' ko \<noteq> {} \<Longrightarrow> live' ko"
-  apply (cases ko; clarsimp)
+  apply (cases ko, simp_all)
+    apply clarsimp
    apply (rename_tac async_endpoint)
-   apply (case_tac async_endpoint; simp)
-  apply (rename_tac tcb)
-  apply (case_tac "tcbState tcb"; simp)
+   apply (case_tac "aepObj async_endpoint"; simp)
+    apply fastforce+
   done
 
 lemma if_live_then_nonz_capE':
@@ -1439,7 +1581,8 @@ lemma valid_pspaceE' [elim]:
 
 lemma idle'_no_refs:
   "valid_idle' s \<Longrightarrow> state_refs_of' s (ksIdleThread s) = {}"
-  by (clarsimp simp add: valid_idle'_def dest!: st_tcb_at_state_refs_ofD')
+  by (clarsimp simp: valid_idle'_def pred_tcb_at'_def obj_at'_def tcb_aep_is_bound'_def
+                     projectKO_eq project_inject state_refs_of'_def)
 
 lemma idle'_not_queued':
   "\<lbrakk>valid_idle' s; sym_refs (state_refs_of' s);
@@ -1458,9 +1601,9 @@ lemma obj_at_conj':
   "\<lbrakk> obj_at' P p s; obj_at' Q p s \<rbrakk> \<Longrightarrow> obj_at' (\<lambda>k. P k \<and> Q k) p s"
   by (auto simp: obj_at'_def)
 
-lemma st_tcb_at_conj':
-  "\<lbrakk> st_tcb_at' P t s; st_tcb_at' Q t s \<rbrakk> \<Longrightarrow> st_tcb_at' (\<lambda>st. P st \<and> Q st) t s"
-  apply (simp add: st_tcb_at'_def comp_def)
+lemma pred_tcb_at_conj':
+  "\<lbrakk> pred_tcb_at' proj P t s; pred_tcb_at' proj Q t s \<rbrakk> \<Longrightarrow> pred_tcb_at' proj (\<lambda>a. P a \<and> Q a) t s"
+  apply (simp add: pred_tcb_at'_def)
   apply (erule (1) obj_at_conj')
   done
 
@@ -1468,9 +1611,9 @@ lemma obj_at_False' [simp]:
   "obj_at' (\<lambda>k. False) t s = False"
   by (simp add: obj_at'_def)
 
-lemma st_tcb_at_False' [simp]:
-  "st_tcb_at' (\<lambda>st. False) t s = False"
-  by (simp add: st_tcb_at'_def obj_at'_def)
+lemma pred_tcb_at_False' [simp]:
+  "pred_tcb_at' proj (\<lambda>st. False) t s = False"
+  by (simp add: pred_tcb_at'_def obj_at'_def)
 
 lemma obj_at'_pspaceI:
   "obj_at' t ref s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow>  obj_at' t ref s'"
@@ -1534,18 +1677,19 @@ lemma valid_obj'_pspaceI:
   unfolding valid_obj'_def
   by (cases obj)
      (auto simp: valid_ep'_def valid_aep'_def valid_tcb'_def valid_cte'_def
-                 valid_tcb_state'_def valid_arch_obj'_pspaceI
+                 valid_tcb_state'_def valid_arch_obj'_pspaceI valid_bound_tcb'_def
+                 valid_bound_aep'_def
            split: Structures_H.endpoint.splits async_endpoint.splits
-                  Structures_H.thread_state.splits
+                  Structures_H.thread_state.splits aep.splits option.splits
            intro: obj_at'_pspaceI valid_cap'_pspaceI)
 
 lemma valid_objs'_pspaceI:
   "\<lbrakk>valid_objs' s; ksPSpace s = ksPSpace s'\<rbrakk> \<Longrightarrow> valid_objs' s'"
   by (auto simp: valid_objs'_def intro: valid_obj'_pspaceI)
 
-lemma st_tcb_at'_pspaceI:
-  "st_tcb_at' P t s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> st_tcb_at' P t s'"
-  unfolding st_tcb_at'_def by (fast intro: obj_at'_pspaceI)
+lemma pred_tcb_at'_pspaceI:
+  "pred_tcb_at' proj P t s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> pred_tcb_at' proj P t s'"
+  unfolding pred_tcb_at'_def by (fast intro: obj_at'_pspaceI)
 
 lemma valid_mdb'_pspaceI:
   "valid_mdb' s \<Longrightarrow> ksPSpace s = ksPSpace s' \<Longrightarrow> valid_mdb' s'"
@@ -1590,7 +1734,7 @@ lemma valid_idle'_pspace_itI[elim]:
   "\<lbrakk> valid_idle' s; ksPSpace s = ksPSpace s'; ksIdleThread s = ksIdleThread s' \<rbrakk>
       \<Longrightarrow> valid_idle' s'"
   apply (clarsimp simp: valid_idle'_def ex_nonz_cap_to'_def)
-  apply (erule st_tcb_at'_pspaceI, assumption)
+  apply (erule pred_tcb_at'_pspaceI, assumption)
   done
 
 lemma obj_at'_weaken:
@@ -1606,6 +1750,13 @@ lemma cte_wp_at_weakenE':
 lemma obj_at'_weakenE:
   "\<lbrakk> obj_at' P p s; \<And>k. P k \<Longrightarrow> P' k \<rbrakk> \<Longrightarrow> obj_at' P' p s"
   by (clarsimp simp: obj_at'_def)
+
+lemma pred_tcb'_weakenE:
+  "\<lbrakk> pred_tcb_at' proj P t s; \<And>st. P st \<Longrightarrow> P' st \<rbrakk> \<Longrightarrow> pred_tcb_at' proj P' t s"
+  apply (simp add: pred_tcb_at'_def)
+  apply (erule obj_at'_weakenE)
+  apply clarsimp
+  done
 
 lemma lookupBefore_fst_snd:
   "lookupBefore x s = Some v \<Longrightarrow> snd v = the (s (fst v))"
@@ -2214,6 +2365,11 @@ lemma valid_asid_pool_lift':
   shows "\<lbrace>\<lambda>s. valid_asid_pool' ap s\<rbrace> f \<lbrace>\<lambda>rv s. valid_asid_pool' ap s\<rbrace>"
   by (cases ap) (simp|wp x typ_at_lift_page_directory_at' hoare_vcg_const_Ball_lift)+
 
+lemma valid_bound_tcb_lift:
+  "(\<And>T p. \<lbrace>typ_at' T p\<rbrace> f \<lbrace>\<lambda>_. typ_at' T p\<rbrace>) \<Longrightarrow>
+  \<lbrace>valid_bound_tcb' tcb\<rbrace> f \<lbrace>\<lambda>_. valid_bound_tcb' tcb\<rbrace>"
+  by (auto simp: valid_bound_tcb'_def valid_def typ_at_tcb'[symmetric] split: option.splits)
+
 lemmas typ_at_lifts = typ_at_lift_tcb' typ_at_lift_ep'
                       typ_at_lift_aep' typ_at_lift_cte'
                       typ_at_lift_cte_at'
@@ -2225,6 +2381,8 @@ lemmas typ_at_lifts = typ_at_lift_tcb' typ_at_lift_ep'
                       valid_pde_lift'
                       valid_pte_lift'
                       valid_asid_pool_lift'
+                      valid_bound_tcb_lift
+
 lemma mdb_next_unfold:
   "s \<turnstile> c \<leadsto> c' = (\<exists>z. s c = Some z \<and> c' = mdbNext (cteMDBNode z))"
   by (auto simp add: mdb_next_rel_def mdb_next_def)
@@ -2450,9 +2608,9 @@ lemma pspace_distinct_update [iff]:
   "pspace_distinct' (f s) = pspace_distinct' s"
   by (simp add: pspace pspace_distinct'_def ps_clear_def)
 
-lemma st_tcb_at_update [iff]:
-  "st_tcb_at' P p (f s) = st_tcb_at' P p s"
-  by (simp add: st_tcb_at'_def)
+lemma pred_tcb_at_update [iff]:
+  "pred_tcb_at' proj P p (f s) = pred_tcb_at' proj P p s"
+  by (simp add: pred_tcb_at'_def)
 
 lemma valid_cap_update [iff]:
   "(f s) \<turnstile>' c = s \<turnstile>' c"
@@ -2635,13 +2793,13 @@ lemma cte_wp_at_norm':
   "cte_wp_at' P p s \<Longrightarrow> \<exists>cte. cte_wp_at' (op = cte) p s \<and> P cte"
   by (simp add: cte_wp_at'_def)
 
-lemma st_tcb_at'_disj:
-  "(st_tcb_at' P t s \<or> st_tcb_at' Q t s) = st_tcb_at' (\<lambda>ts. P ts \<or> Q ts) t s"
-  by (fastforce simp add: st_tcb_at'_def obj_at'_def)
+lemma pred_tcb_at'_disj:
+  "(pred_tcb_at' proj P t s \<or> pred_tcb_at' proj Q t s) = pred_tcb_at' proj (\<lambda>a. P a \<or> Q a) t s"
+  by (fastforce simp add: pred_tcb_at'_def obj_at'_def)
 
-lemma st_tcb_at' [elim!]:
-  "st_tcb_at' P t s \<Longrightarrow> tcb_at' t s"
-  by (auto simp add: st_tcb_at'_def obj_at'_def)
+lemma pred_tcb_at' [elim!]:
+  "pred_tcb_at' proj P t s \<Longrightarrow> tcb_at' t s"
+  by (auto simp add: pred_tcb_at'_def obj_at'_def)
 
 lemma valid_pspace_mdb' [elim!]:
   "valid_pspace' s \<Longrightarrow> valid_mdb' s"
@@ -2886,7 +3044,7 @@ lemma valid_queues_def':
                              obj_at' (inQ d p) t s \<and> st_tcb_at' runnable' t s) \<and>
                           distinct (ksReadyQueues s (d, p)) \<and> (d > maxDomain \<or> p > maxPriority \<longrightarrow> ksReadyQueues s (d,p) = []))"
   apply (rule ext, rule iffI)
-  apply (clarsimp simp: valid_queues_def obj_at'_and st_tcb_at'_def
+  apply (clarsimp simp: valid_queues_def obj_at'_and pred_tcb_at'_def o_def
                   elim!: obj_at'_weakenE)+
   done
 
@@ -2992,8 +3150,9 @@ lemma invs_ksCurDomain_maxDomain' [elim!]:
   by (simp add: invs'_def valid_state'_def)
 
 lemma simple_st_tcb_at_state_refs_ofD':
-  "st_tcb_at' simple' t s \<Longrightarrow> state_refs_of' s t = {}"
-  by (fastforce dest!: st_tcb_at_state_refs_ofD')
+  "st_tcb_at' simple' t s \<Longrightarrow> bound_tcb_at' (\<lambda>x. tcb_bound_refs' x = state_refs_of' s t) t s"
+  by (fastforce simp: pred_tcb_at'_def obj_at'_def state_refs_of'_def
+                      projectKO_eq project_inject)
 
 lemma cur_tcb_arch' [iff]:
   "cur_tcb' (ksArchState_update f s) = cur_tcb' s"
@@ -3051,6 +3210,10 @@ apply (subgoal_tac "x \<in> set (ksReadyQueues s (d, p))")
  apply (drule (1) valid_queues_obj_at'D)
  apply (auto simp: inQ_def elim: obj_at'_weakenE)
 done
+
+lemma pred_tcb'_neq_contra:
+  "\<lbrakk> pred_tcb_at' proj P p s; pred_tcb_at' proj Q p s; \<And>st. P st \<noteq> Q st \<rbrakk> \<Longrightarrow> False"
+  by (clarsimp simp: pred_tcb_at'_def obj_at'_def)
 
 lemma invs'_ksDomSchedule:
   "invs' s \<Longrightarrow> KernelStateData_H.ksDomSchedule s = KernelStateData_H.ksDomSchedule (newKernelState undefined)"

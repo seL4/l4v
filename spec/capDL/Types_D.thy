@@ -144,6 +144,9 @@ datatype cdl_cap =
   (* Zombie caps (representing objects mid-deletion) *)
   | ZombieCap cdl_object_id
 
+  (* Bound AEP caps signifying when a tcb is bound to an AEP *)
+  | BoundAsyncCap cdl_object_id
+
 (* A mapping from capability identifiers to capabilities. *)
 
 type_synonym cdl_cap_map = "cdl_cnode_index \<Rightarrow> cdl_cap option"
@@ -301,6 +304,7 @@ definition "tcb_replycap_slot   = (2 :: cdl_cnode_index)"
 definition "tcb_caller_slot     = (3 :: cdl_cnode_index)"
 definition "tcb_ipcbuffer_slot  = (4 :: cdl_cnode_index)"
 definition "tcb_pending_op_slot = (5 :: cdl_cnode_index)"
+definition "tcb_boundaep_slot  = (6 :: cdl_cnode_index)"
 
 lemmas tcb_slot_defs =
   tcb_cspace_slot_def
@@ -309,6 +313,7 @@ lemmas tcb_slot_defs =
   tcb_caller_slot_def
   tcb_ipcbuffer_slot_def
   tcb_pending_op_slot_def
+  tcb_boundaep_slot_def
 
 (*
  * Getters and setters for various data types.
@@ -337,6 +342,7 @@ where
   | "cap_objects (PendingSyncSendCap x _ _ _ _) = {x}"
   | "cap_objects (PendingSyncRecvCap x _ ) = {x}"
   | "cap_objects (PendingAsyncRecvCap x) = {x}"
+  | "cap_objects (BoundAsyncCap x) = {x}"
 
 definition
   cap_has_object :: "cdl_cap \<Rightarrow> bool"
@@ -378,6 +384,7 @@ lemma cap_object_simps:
   "cap_object (PendingSyncSendCap x s t u v) = x"
   "cap_object (PendingSyncRecvCap x t) = x"
   "cap_object (PendingAsyncRecvCap x) = x"
+  "cap_object (BoundAsyncCap x) = x"
   by (simp_all add:cap_object_def Nitpick.The_psimp cap_has_object_def)
 
 primrec (nonexhaustive) cap_badge :: "cdl_cap \<Rightarrow> cdl_badge"
@@ -612,7 +619,7 @@ definition
   default_tcb :: "word8 \<Rightarrow> cdl_tcb"
 where
   "default_tcb current_domain = \<lparr>
-    cdl_tcb_caps = \<lambda>n. if n \<le> tcb_pending_op_slot then Some NullCap else None,
+    cdl_tcb_caps = \<lambda>n. if n \<le> tcb_boundaep_slot then Some NullCap else None,
     cdl_tcb_fault_endpoint = 0,
     cdl_tcb_intent = \<lparr>
       cdl_intent_op = None,

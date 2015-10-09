@@ -378,6 +378,10 @@ lemma thread_states_detype[simp]:
   "thread_states (detype S s) = (\<lambda>x. if x \<in> S then {} else thread_states s x)"
   by (rule ext, simp add: thread_states_def get_tcb_def  o_def detype_def tcb_states_of_state_def)
 
+lemma thread_bound_aeps_detype[simp]:
+  "thread_bound_aeps (detype S s) = (\<lambda>x. if x \<in> S then None else thread_bound_aeps s x)"
+  by (rule ext, simp add: thread_bound_aeps_def get_tcb_def  o_def detype_def tcb_states_of_state_def)
+
 lemma sta_detype:
   "state_objs_to_policy (detype R s) \<subseteq> state_objs_to_policy s"
   apply (clarsimp simp add: state_objs_to_policy_def state_refs_of_detype)
@@ -696,6 +700,13 @@ lemma ts_eq[simp]: "thread_states s' = thread_states s"
             split: Structures_A.apiobject_type.split)
   done
 
+lemma bas_eq[simp]: "thread_bound_aeps s' = thread_bound_aeps s"
+  apply (rule ext)
+  apply (simp add: s'_def ps_def thread_bound_aeps_def get_tcb_def orthr tcb_states_of_state_def
+            split: option.split Structures_A.kernel_object.split)
+  apply (simp add: default_object_def default_tcb_def tyunt
+            split: Structures_A.apiobject_type.split)
+  done
 end
 
 context retype_region_proofs'

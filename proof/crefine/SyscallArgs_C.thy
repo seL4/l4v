@@ -47,8 +47,8 @@ lemma replyOnRestart_invs'[wp]:
   apply (wp setThreadState_nonqueued_state_update rfk_invs' hoare_vcg_all_lift rfk_ksQ)
  
    apply (rule hoare_strengthen_post, rule gts_sp')
-  apply (clarsimp simp: st_tcb_at_tcb_at')
-  apply (auto elim!: st_tcb'_weakenE st_tcb_ex_cap''
+  apply (clarsimp simp: pred_tcb_at')
+  apply (auto elim!: pred_tcb'_weakenE st_tcb_ex_cap''
                dest: st_tcb_at_idle_thread')
   done 
 
@@ -61,7 +61,7 @@ lemma gts_eq:
   apply (simp add: Pair_fst_snd_eq return_def)
   apply (subst conj_commute, rule context_conjI)
    apply (rule no_failD[OF no_fail_getThreadState])
-   apply (erule st_tcb_at_tcb_at')
+   apply (erule pred_tcb_at')
   apply (rule not_psubset_eq)
    apply clarsimp
    apply (drule empty_failD [OF empty_fail_getThreadState])

@@ -168,10 +168,10 @@ lemma asyncIPCCancel_ccorres_helper:
   "ccorres dc xfdc (invs' and st_tcb_at' (op = (BlockedOnAsyncEvent aep)) thread and ko_at' aep' aep)
         UNIV
         []
-        (setAsyncEP aep
-          (if remove1 thread (aepQueue aep') = []
-           then async_endpoint.IdleAEP
-           else aepQueue_update (\<lambda>_. remove1 thread (aepQueue aep')) aep'))
+        (setAsyncEP aep (aepObj_update
+          (\<lambda>_. if remove1 thread (aepQueue (aepObj aep')) = []
+           then aep.IdleAEP
+           else aepQueue_update (\<lambda>_. remove1 thread (aepQueue (aepObj aep'))) (aepObj aep')) aep'))
         (\<acute>aep_queue :== CALL aep_ptr_get_queue(Ptr aep);;
          \<acute>aep_queue :== CALL tcbEPDequeue(tcb_ptr_to_ctcb_ptr thread,\<acute>aep_queue);;
          CALL aep_ptr_set_queue(Ptr aep,\<acute>aep_queue);;
@@ -237,7 +237,6 @@ lemma asyncIPCCancel_ccorres_helper:
     apply (simp add: objBits_simps)
    apply assumption
   -- "non empty case"
-  apply clarsimp
   apply (frule tcb_queue_head_empty_iff [OF tcb_queue_relation'_queue_rel]) 
    apply (rule ballI, erule bspec)
    apply (erule subsetD [rotated])
@@ -261,8 +260,9 @@ lemma asyncIPCCancel_ccorres_helper:
           apply (erule (1) map_to_ko_atI')
          -- "aep relation"
          apply (rule cpspace_relation_aep_update_aep, assumption+)
-          apply (simp add: casync_endpoint_relation_def Let_def isWaitingAEP_def split: async_endpoint.splits split del: split_if)
-          apply (erule iffD1 [OF tcb_queue_relation'_cong [OF refl _ _ refl], rotated -1])  
+          apply (simp add: casync_endpoint_relation_def Let_def isWaitingAEP_def
+                    split: aep.splits split del: split_if)
+          apply (erule iffD1 [OF tcb_queue_relation'_cong [OF refl _ _ refl], rotated -1])
            apply (clarsimp simp add: Ptr_ptr_val h_t_valid_clift_Some_iff)
            apply (simp add: tcb_queue_relation'_next_mask_4)
           apply (clarsimp simp add: Ptr_ptr_val h_t_valid_clift_Some_iff)
@@ -1438,7 +1438,7 @@ lemma rescheduleRequired_ccorres:
             apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                                   cscheduler_action_relation_def)
             apply (clarsimp simp: weak_sch_act_wf_def tcb_at_max_word tcb_at_not_NULL
-                           split: scheduler_action.split_asm dest!: st_tcb_at')
+                           split: scheduler_action.split_asm dest!: pred_tcb_at')
            apply (ctac add: tcbSchedEnqueue_ccorres)
           apply (rule ccorres_return_Skip)
          apply ceqv
@@ -1460,19 +1460,24 @@ lemma rescheduleRequired_ccorres:
                  split: scheduler_action.split_asm)[1]
   done
 
+(* In order to remove the assumption 'sch_act_simple' from the lemma 'ipcCancel_ccorres1' below, in this lemma the same assumption has been replaced with the assumption 'valid_queues and weak_sch_act_wf (ksSchedulerAction s) s'. *)
+
 lemma rescheduleRequired_ccorres_valid_queues': 
-  "ccorresG rf_sr \<Gamma> dc xfdc (valid_queues' and sch_act_simple) UNIV [] rescheduleRequired (Call rescheduleRequired_'proc)"
+  "ccorresG rf_sr \<Gamma> dc xfdc
+    (valid_queues and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s) and valid_objs')
+    UNIV []
+    rescheduleRequired
+    (Call rescheduleRequired_'proc)"
   apply cinit
    apply (rule ccorres_symb_exec_l)
       apply (rule ccorres_split_nothrow_novcg[where r'=dc and xf'=xfdc])
           apply (simp add: scheduler_action_case_switch_to_if
                       cong: if_weak_cong split del: split_if)
-          apply (rule_tac R="\<lambda>s. action = ksSchedulerAction s \<and> sch_act_simple s"
-                     in ccorres_cond)
+          apply (rule_tac R="\<lambda>s. action = ksSchedulerAction s \<and> weak_sch_act_wf (ksSchedulerAction s) s" in ccorres_cond)
             apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                                   cscheduler_action_relation_def)
             apply (clarsimp simp: weak_sch_act_wf_def tcb_at_max_word tcb_at_not_NULL
-                           split: scheduler_action.split_asm dest!: st_tcb_at')
+                           split: scheduler_action.split_asm dest!: pred_tcb_at')
            apply (ctac add: tcbSchedEnqueue_ccorres)
           apply (rule ccorres_return_Skip)
          apply ceqv
@@ -1553,7 +1558,7 @@ lemma possibleSwitchTo_ccorres:
                   apply (simp add: word_less_nat_alt unat_ucast_8_32 up_ucast_inj_eq)
                   apply (simp add: cscheduler_action_relation_def)
                   apply (clarsimp simp: max_word_def weak_sch_act_wf_def tcb_at_not_NULL
-                                 split: scheduler_action.split_asm dest!: st_tcb_at')
+                             split: scheduler_action.split_asm dest!: pred_tcb_at')
                  apply (rule ccorres_from_vcg[where P=\<top> and P'=UNIV])
                  apply (rule allI, rule conseqPre, vcg)
                  apply (clarsimp simp: setSchedulerAction_def simpler_modify_def)
@@ -1567,7 +1572,7 @@ lemma possibleSwitchTo_ccorres:
                  apply (clarsimp simp: cscheduler_action_relation_def
                                        weak_sch_act_wf_def
                                        tcb_at_not_NULL tcb_at_max_word
-                                split: scheduler_action.split_asm dest!: st_tcb_at' )
+                            split: scheduler_action.split_asm dest!: pred_tcb_at' )
                 apply (ctac add: rescheduleRequired_ccorres)
                apply (rule ccorres_return_Skip)
               apply (simp split del: split_if)
@@ -1654,7 +1659,7 @@ lemma scheduleTCB_ccorres':
   done
 
 lemma scheduleTCB_ccorres_valid_queues'_pre:
-        "ccorresG rf_sr \<Gamma> dc xfdc (tcb_at' thread and st_tcb_at' (not runnable') thread and valid_queues' and sch_act_simple)
+        "ccorresG rf_sr \<Gamma> dc xfdc (tcb_at' thread and st_tcb_at' (not runnable') thread and valid_queues' and valid_queues and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s) and valid_objs')
          (UNIV \<inter> \<lbrace>\<acute>tptr = tcb_ptr_to_ctcb_ptr thread\<rbrace>) []
          (do (runnable, curThread, action) \<leftarrow> do
              runnable \<leftarrow> isRunnable thread;
@@ -1682,8 +1687,98 @@ lemma scheduleTCB_ccorres_valid_queues'_pre:
            apply (rule_tac P="\<lambda>s. st_tcb_at' (\<lambda>st. runnable' st = runnable) thread s 
                                  \<and> curThread = ksCurThread s 
                                  \<and> action = ksSchedulerAction s
-                                 \<and> sch_act_simple s"
+                                 \<and> weak_sch_act_wf (ksSchedulerAction s) s"
+                           and P'=UNIV in ccorres_from_vcg)
+           apply (rule allI, rule conseqPre, vcg)
+           apply (clarsimp simp: return_def if_1_0_0 split del: split_if)
+           apply (clarsimp simp: from_bool_0 rf_sr_ksCurThread)
+           apply (rule conjI)
+            apply (clarsimp simp: st_tcb_at'_def)
+            apply (drule (1) obj_at_cslift_tcb)
+            apply (clarsimp simp: typ_heap_simps)
+            apply (clarsimp simp: ctcb_relation_def cthread_state_relation_def weak_sch_act_wf_def)
+             apply (case_tac "tcbState ko", simp_all add: "StrictC'_thread_state_defs")[1]
+                 apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
+                                       cscheduler_action_relation_def max_word_def
+                                       tcb_at_not_NULL[OF obj_tcb_at'] st_tcb_at'_def
+                                split: scheduler_action.split_asm)+
+          apply wp
+        apply (simp add: getSchedulerAction_def)
+       apply wp
+     apply (simp add: isRunnable_def isBlocked_def)
+    apply wp
+   apply (simp add: guard_is_UNIV_def)
+  apply (clarsimp simp: st_tcb_at'_def obj_at'_def)
+  done
 
+
+lemmas scheduleTCB_ccorres_valid_queues'
+    = scheduleTCB_ccorres_valid_queues'_pre[unfolded bind_assoc return_bind split_conv]
+
+lemma rescheduleRequired_ccorres_valid_queues'_simple: 
+  "ccorresG rf_sr \<Gamma> dc xfdc (valid_queues' and sch_act_simple) UNIV [] rescheduleRequired (Call rescheduleRequired_'proc)"
+  apply cinit
+   apply (rule ccorres_symb_exec_l)
+      apply (rule ccorres_split_nothrow_novcg[where r'=dc and xf'=xfdc])
+          apply (simp add: scheduler_action_case_switch_to_if
+                      cong: if_weak_cong split del: split_if)
+          apply (rule_tac R="\<lambda>s. action = ksSchedulerAction s \<and> sch_act_simple s"
+                     in ccorres_cond)
+            apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
+                                  cscheduler_action_relation_def)
+            apply (clarsimp simp: weak_sch_act_wf_def tcb_at_max_word tcb_at_not_NULL
+                           split: scheduler_action.split_asm dest!: st_tcb_strg'[rule_format])
+           apply (ctac add: tcbSchedEnqueue_ccorres)
+          apply (rule ccorres_return_Skip)
+         apply ceqv
+        apply (rule ccorres_from_vcg[where P=\<top> and P'=UNIV])
+        apply (rule allI, rule conseqPre, vcg)
+        apply (clarsimp simp: setSchedulerAction_def simpler_modify_def)
+        apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
+                              cscheduler_action_relation_def
+                              carch_state_relation_def cmachine_state_relation_def
+                              max_word_def)
+       apply wp
+      apply (simp add: guard_is_UNIV_def)
+     apply wp
+   apply (simp add: getSchedulerAction_def)
+  apply (clarsimp simp: weak_sch_act_wf_def rf_sr_def cstate_relation_def
+                        Let_def cscheduler_action_relation_def)
+  apply (auto simp: tcb_at_not_NULL tcb_at_max_word
+                    tcb_at_not_NULL[THEN not_sym] tcb_at_max_word[THEN not_sym]
+                 split: scheduler_action.split_asm)
+  done
+
+lemma scheduleTCB_ccorres_valid_queues'_pre_simple:
+        "ccorresG rf_sr \<Gamma> dc xfdc (tcb_at' thread and st_tcb_at' (not runnable') thread and valid_queues' and sch_act_simple)
+         (UNIV \<inter> \<lbrace>\<acute>tptr = tcb_ptr_to_ctcb_ptr thread\<rbrace>) []
+         (do (runnable, curThread, action) \<leftarrow> do
+             runnable \<leftarrow> isRunnable thread;
+             curThread \<leftarrow> getCurThread;
+             action \<leftarrow> getSchedulerAction;
+             return (runnable, curThread, action) od;
+             when (\<not> runnable \<and> curThread = thread \<and> action = ResumeCurrentThread) rescheduleRequired
+          od)
+         (Call scheduleTCB_'proc)"
+  apply (cinit' lift: tptr_' simp del: word_neq_0_conv)
+   apply (rule ccorres_rhs_assoc2)+
+   apply (rule_tac xf'="ret__int_'" in ccorres_split_nothrow_novcg)
+       defer
+       apply ceqv
+      apply (unfold split_def)[1]
+      apply (rule ccorres_when[where R=\<top>])
+       apply (intro allI impI)
+       apply (unfold mem_simps)[1]
+       apply assumption
+      apply (ctac add: rescheduleRequired_ccorres_valid_queues'_simple)
+     prefer 4
+     apply (rule ccorres_symb_exec_l)
+        apply (rule ccorres_pre_getCurThread) 
+        apply (rule ccorres_symb_exec_l)
+           apply (rule_tac P="\<lambda>s. st_tcb_at' (\<lambda>st. runnable' st = runnable) thread s 
+                                 \<and> curThread = ksCurThread s 
+                                 \<and> action = ksSchedulerAction s
+                                 \<and> sch_act_simple s"
                            and P'=UNIV in ccorres_from_vcg)
            apply (rule allI, rule conseqPre, vcg)
            apply (clarsimp simp: return_def if_1_0_0 split del: split_if)
@@ -1711,8 +1806,8 @@ lemma scheduleTCB_ccorres_valid_queues'_pre:
   apply (clarsimp simp: st_tcb_at'_def obj_at'_def valid_queues'_def)
   done
 
-lemmas scheduleTCB_ccorres_valid_queues'
-    = scheduleTCB_ccorres_valid_queues'_pre[unfolded bind_assoc return_bind split_conv]
+lemmas scheduleTCB_ccorres_valid_queues'_simple
+    = scheduleTCB_ccorres_valid_queues'_pre_simple[unfolded bind_assoc return_bind split_conv]
 
 lemmas scheduleTCB_ccorres[corres]
     = scheduleTCB_ccorres'[unfolded bind_assoc return_bind split_conv]
@@ -1722,7 +1817,7 @@ lemma threadSet_weak_sch_act_wf_runnable':
                threadSet (tcbState_update (\<lambda>_. st)) thread
              \<lbrace> \<lambda>rv s. weak_sch_act_wf (ksSchedulerAction s) s \<rbrace>"
   apply (simp add: weak_sch_act_wf_def)
-  apply (wp hoare_vcg_all_lift hoare_vcg_imp_lift threadSet_st_tcb_at_state
+  apply (wp hoare_vcg_all_lift hoare_vcg_imp_lift threadSet_pred_tcb_at_state
             threadSet_tcbDomain_triv)
    apply simp
   apply (clarsimp)
@@ -1745,8 +1840,8 @@ lemma setThreadState_ccorres[corres]:
     \<inter> {s. tptr_' s = tcb_ptr_to_ctcb_ptr thread}) []
          (setThreadState st thread) (Call setThreadState_'proc)"
    apply (cinit lift: tptr_' cong add: call_ignore_cong)
-    apply (ctac (no_vcg) add: threadSet_tcbState_simple_corres)
-   apply (ctac add: scheduleTCB_ccorres)
+   apply (ctac (no_vcg) add: threadSet_tcbState_simple_corres)
+    apply (ctac add: scheduleTCB_ccorres)
   apply (wp threadSet_weak_sch_act_wf_runnable' threadSet_valid_queues_and_runnable'
             threadSet_valid_objs')
   apply (clarsimp simp: weak_sch_act_wf_def valid_queues_def valid_tcb'_tcbState_update)
@@ -1762,39 +1857,55 @@ done
 
 lemma setThreadState_ccorres_valid_queues':
    "ccorres dc xfdc 
-   (\<lambda>s. tcb_at' thread s \<and> valid_queues' s \<and> \<not> runnable' st \<and> sch_act_simple s)
+   (\<lambda>s. tcb_at' thread s \<and> valid_queues' s \<and> \<not> runnable' st \<and> weak_sch_act_wf (ksSchedulerAction s) s \<and> Invariants_H.valid_queues s \<and> (\<forall>p. thread \<notin> set (ksReadyQueues s p)) \<and> sch_act_not thread s \<and> valid_objs' s \<and> valid_tcb_state' st s)
      ({s'. (\<forall>cl fl. cthread_state_relation_lifted st (cl\<lparr>tsType_CL := ts_' s' && mask 4\<rparr>, fl))}
     \<inter> {s. tptr_' s = tcb_ptr_to_ctcb_ptr thread}) []
          (setThreadState st thread) (Call setThreadState_'proc)"
    apply (cinit lift: tptr_' cong add: call_ignore_cong)
-    apply (ctac (no_vcg) add: threadSet_tcbState_simple_corres)
-   apply (ctac add: scheduleTCB_ccorres_valid_queues')
-  apply (wp threadSet_valid_queues'_and_not_runnable')
-  apply (clarsimp simp: weak_sch_act_wf_def valid_queues'_def)
-done
+   apply (ctac (no_vcg) add: threadSet_tcbState_simple_corres)
+    apply (ctac add: scheduleTCB_ccorres_valid_queues')
+   apply (wp threadSet_valid_queues'_and_not_runnable' threadSet_weak_sch_act_wf_runnable' threadSet_valid_queues_and_runnable' threadSet_valid_objs') 
+  apply (clarsimp simp: valid_tcb'_def tcb_cte_cases_def)
+  done
 
 lemma simp_list_case_return:
   "(case x of [] \<Rightarrow> return e | y # ys \<Rightarrow> return f) = return (if x = [] then e else f)"
   by (clarsimp split: list.splits)
-
+  
 lemma asyncIPCCancel_ccorres [corres]:
-  "ccorres dc xfdc 
-   (invs' and st_tcb_at' (op = (Structures_H.thread_state.BlockedOnAsyncEvent aep)) thread and sch_act_simple)
-   (UNIV \<inter> {s. threadPtr_' s = tcb_ptr_to_ctcb_ptr thread} \<inter> {s. aepptr_' s = Ptr aep})
-   [] (asyncIPCCancel thread aep) (Call asyncIPCCancel_'proc)"
+     "ccorres dc xfdc 
+      (invs' and st_tcb_at' (op = (Structures_H.thread_state.BlockedOnAsyncEvent aep)) thread)
+      (UNIV \<inter> {s. threadPtr_' s = tcb_ptr_to_ctcb_ptr thread} \<inter> {s. aepptr_' s = Ptr aep})
+      [] (asyncIPCCancel thread aep) (Call asyncIPCCancel_'proc)"
   apply (cinit lift: threadPtr_' aepptr_' simp add: Let_def list_case_return cong add: call_ignore_cong)
    apply (unfold fun_app_def)   
    apply (simp only: simp_list_case_return return_bind ccorres_seq_skip) 
    apply (rule ccorres_pre_getAsyncEP)
    apply (rule ccorres_assert)
-     apply (rule ccorres_rhs_assoc2)
-     apply (rule ccorres_rhs_assoc2)
-     apply (rule ccorres_rhs_assoc2)
-     apply (ctac (no_vcg) add: asyncIPCCancel_ccorres_helper)
+   apply (rule ccorres_rhs_assoc2)
+   apply (rule ccorres_rhs_assoc2)
+   apply (rule ccorres_rhs_assoc2)
+   apply (ctac (no_vcg) add: asyncIPCCancel_ccorres_helper)
      apply (ctac add: setThreadState_ccorres_valid_queues')
-    apply wp   
+    apply ((wp setAsyncEP_sch_act_not setAsyncEP_ksQ hoare_vcg_all_lift set_aep_valid_objs' | simp add: valid_tcb_state'_def split del: split_if)+)[1]
    apply (simp add: "StrictC'_thread_state_defs")
-  apply (clarsimp simp: invs'_def valid_state'_def)
+  apply (rule conjI, clarsimp, rule conjI, clarsimp)
+    apply (frule (1) ko_at_valid_aep'[OF _ invs_valid_objs'])
+   apply ((auto simp: obj_at'_def projectKOs st_tcb_at'_def invs'_def valid_state'_def
+                     isTS_defs cte_wp_at_ctes_of "StrictC'_thread_state_defs"
+                     cthread_state_relation_def sch_act_wf_weak valid_aep'_def
+             dest!: valid_queues_not_runnable'_not_ksQ[where t=thread] |
+           clarsimp simp: eq_commute)+)[1]
+   apply (clarsimp)
+   apply (frule (1) ko_at_valid_aep'[OF _ invs_valid_objs'])
+   apply (frule (2) aep_blocked_in_queueD)
+   apply (auto simp: obj_at'_def projectKOs st_tcb_at'_def invs'_def valid_state'_def
+                     isTS_defs cte_wp_at_ctes_of "StrictC'_thread_state_defs" valid_aep'_def
+                     cthread_state_relation_def sch_act_wf_weak isWaitingAEP_def
+             dest!: valid_queues_not_runnable'_not_ksQ[where t=thread] 
+             split: aep.splits option.splits
+         |  clarsimp simp: eq_commute
+         | drule_tac x=thread in bspec)+
   done
 
 lemma ko_at_valid_ep':
@@ -2020,7 +2131,8 @@ lemma casync_endpoint_relation_ep_queue:
   and      koat': "ko_at' a aepptr s"
   shows "casync_endpoint_relation mp a b = casync_endpoint_relation mp' a b"
 proof -  
-  have rl: "\<And>p. \<lbrakk> p \<in> tcb_ptr_to_ctcb_ptr ` set (aepQueue a); isWaitingAEP a \<rbrakk>
+  have rl: "\<And>p. \<lbrakk> p \<in> tcb_ptr_to_ctcb_ptr ` set (aepQueue (aepObj a));
+                  isWaitingAEP (aepObj a) \<rbrakk>
     \<Longrightarrow> mp p = mp' p" using srs koat' koat iswaiting mpeq
     apply -
     apply (drule (4) aep_ep_disjoint)  
@@ -2032,7 +2144,7 @@ proof -
   show ?thesis
     unfolding casync_endpoint_relation_def using rl
     apply (simp add: Let_def)
-    apply (cases a)
+    apply (cases "aepObj a")
        apply (simp add: isWaitingAEP_def cong: tcb_queue_relation'_cong)+
     done
 qed
@@ -2066,8 +2178,8 @@ lemma ipcCancel_ccorres_helper:
           FI)"
   apply (rule ccorres_from_vcg)
   apply (rule allI)
-   apply (rule conseqPre)
-    apply vcg
+  apply (rule conseqPre)
+   apply vcg
   apply (clarsimp split del: split_if simp del: comp_def)
   apply (frule (2) ep_blocked_in_queueD)
   apply (frule (1) ko_at_valid_ep' [OF _ invs_valid_objs'])
@@ -2081,42 +2193,42 @@ lemma ipcCancel_ccorres_helper:
   apply (rule impI)
   apply (rule exI)
   apply (rule conjI)
-  apply (rule_tac x = \<sigma> in exI)
-       apply (intro conjI)
-    apply assumption+
-       apply (drule (2) ep_to_ep_queue)
-       apply (simp add: tcb_queue_relation'_def)
+   apply (rule_tac x = \<sigma> in exI)
+   apply (intro conjI)
+       apply assumption+
+   apply (drule (2) ep_to_ep_queue)
+   apply (simp add: tcb_queue_relation'_def)
   apply (clarsimp simp: typ_heap_simps cong: imp_cong split del: split_if simp del: comp_def)
   apply (frule null_ep_queue [simplified comp_def] null_ep_queue)
   apply (intro impI conjI allI)
    -- "empty case"
-  apply clarsimp
-  apply (frule iffD1 [OF tcb_queue_head_empty_iff [OF tcb_queue_relation'_queue_rel]])
-   apply (rule ballI, erule bspec)
-   apply (erule subsetD [rotated])
    apply clarsimp
+   apply (frule iffD1 [OF tcb_queue_head_empty_iff [OF tcb_queue_relation'_queue_rel]])
+     apply (rule ballI, erule bspec)
+     apply (erule subsetD [rotated])
+     apply clarsimp
     apply simp
-  apply (simp add: setEndpoint_def split_def)
+   apply (simp add: setEndpoint_def split_def)
    apply (rule bexI [OF _ setObject_eq])
-   apply (simp add: remove1_empty rf_sr_def cstate_relation_def Let_def cpspace_relation_def update_ep_map_tos)
+       apply (simp add: remove1_empty rf_sr_def cstate_relation_def Let_def cpspace_relation_def update_ep_map_tos)
        apply (elim conjE)
        apply (intro conjI)
        -- "tcb relation"
-       apply (erule ctcb_relation_null_queue_ptrs)
-       apply (clarsimp simp: comp_def)
-   -- "ep relation"
-   apply (rule cpspace_relation_ep_update_ep, assumption+)
-   apply (simp add: cendpoint_relation_def Let_def EPState_Idle_def)
-  apply simp
-  -- "aep relation"  
-   apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
-   apply simp
-   apply (rule casync_endpoint_relation_ep_queue [OF invs_sym'], assumption+)
-    apply simp
-   apply (erule (1) map_to_ko_atI')
-          apply (simp add: heap_to_page_data_def Let_def)
-  -- "queue relation"
-  apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
+            apply (erule ctcb_relation_null_queue_ptrs)
+            apply (clarsimp simp: comp_def)
+        -- "ep relation"
+           apply (rule cpspace_relation_ep_update_ep, assumption+)
+            apply (simp add: cendpoint_relation_def Let_def EPState_Idle_def)
+           apply simp
+           -- "aep relation"  
+          apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
+          apply simp
+          apply (rule casync_endpoint_relation_ep_queue [OF invs_sym'], assumption+)
+           apply simp
+          apply (erule (1) map_to_ko_atI')
+         apply (simp add: heap_to_page_data_def Let_def)
+ -- "queue relation"
+         apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
          apply (clarsimp simp: comp_def)
         apply (simp add: carch_state_relation_def carch_globals_def)
        apply (simp add: cmachine_state_relation_def)
@@ -2129,43 +2241,43 @@ lemma ipcCancel_ccorres_helper:
   apply (frule tcb_queue_head_empty_iff [OF tcb_queue_relation'_queue_rel]) 
    apply (rule ballI, erule bspec)
    apply (erule subsetD [rotated])
-    apply clarsimp   
+   apply clarsimp   
   apply (simp add: setEndpoint_def split_def)
-   apply (rule bexI [OF _ setObject_eq])
+  apply (rule bexI [OF _ setObject_eq])
       apply (frule (1) st_tcb_at_h_t_valid)
-   apply (simp add: remove1_empty rf_sr_def cstate_relation_def Let_def cpspace_relation_def update_ep_map_tos)
-       apply (elim conjE)
-       apply (intro conjI)
-       -- "tcb relation"
-       apply (erule ctcb_relation_null_queue_ptrs)
-       apply (clarsimp simp: comp_def)
-   -- "ep relation"       
-   apply (rule cpspace_relation_ep_update_ep, assumption+)
-   apply (simp add: cendpoint_relation_def Let_def isSendEP_def isRecvEP_def split: endpoint.splits split del: split_if)    
-   -- "recv case"
-   apply (clarsimp simp add: Ptr_ptr_val h_t_valid_clift_Some_iff  
-     tcb_queue_relation'_next_mask_4 tcb_queue_relation'_prev_mask_4 cong: tcb_queue_relation'_cong)
-    apply (intro impI conjI, simp_all)[1]
-   -- "send case"   
-   apply (clarsimp simp add: Ptr_ptr_val h_t_valid_clift_Some_iff  
-     tcb_queue_relation'_next_mask_4 tcb_queue_relation'_prev_mask_4 cong: tcb_queue_relation'_cong)
-   apply (intro impI conjI, simp_all)[1]
-  apply simp
-        -- "aep relation"       
-  apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
-  apply simp
-  apply (rule casync_endpoint_relation_ep_queue [OF invs_sym'], assumption+)
-  apply simp
-  apply (erule (1) map_to_ko_atI')
-  -- "queue relation"
-  apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
-         apply (clarsimp simp: comp_def)
-        apply (simp add: carch_state_relation_def carch_globals_def)
-       apply (simp add: cmachine_state_relation_def)
-      apply (simp add: h_t_valid_clift_Some_iff)
-     apply (simp add: objBits_simps)
+      apply (simp add: remove1_empty rf_sr_def cstate_relation_def Let_def cpspace_relation_def update_ep_map_tos)
+      apply (elim conjE)
+      apply (intro conjI)
+      -- "tcb relation"
+           apply (erule ctcb_relation_null_queue_ptrs)
+           apply (clarsimp simp: comp_def)
+       -- "ep relation"       
+          apply (rule cpspace_relation_ep_update_ep, assumption+)
+           apply (simp add: cendpoint_relation_def Let_def isSendEP_def isRecvEP_def split: endpoint.splits split del: split_if)    
+           -- "recv case"
+            apply (clarsimp simp add: Ptr_ptr_val h_t_valid_clift_Some_iff  
+              tcb_queue_relation'_next_mask_4 tcb_queue_relation'_prev_mask_4 cong: tcb_queue_relation'_cong)
+            apply (intro impI conjI, simp_all)[1]
+           -- "send case"   
+           apply (clarsimp simp add: Ptr_ptr_val h_t_valid_clift_Some_iff  
+             tcb_queue_relation'_next_mask_4 tcb_queue_relation'_prev_mask_4 cong: tcb_queue_relation'_cong)
+           apply (intro impI conjI, simp_all)[1]
+          apply simp
+                -- "aep relation"       
+         apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
+         apply simp
+         apply (rule casync_endpoint_relation_ep_queue [OF invs_sym'], assumption+)
+         apply simp
+         apply (erule (1) map_to_ko_atI')
+         -- "queue relation"
+        apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
+        apply (clarsimp simp: comp_def)
+       apply (simp add: carch_state_relation_def carch_globals_def)
+      apply (simp add: cmachine_state_relation_def)
+     apply (simp add: h_t_valid_clift_Some_iff)
     apply (simp add: objBits_simps)
-   apply assumption
+   apply (simp add: objBits_simps)
+  apply assumption
    done
 
 (* CLAG *)
@@ -2205,20 +2317,20 @@ lemma getThreadState_ccorres_foo:
 lemma ipcCancel_ccorres_reply_helper:
   assumes cteDeleteOne_ccorres:
   "\<And>w slot. ccorres dc xfdc
-   (invs' and sch_act_simple and cte_wp_at' (\<lambda>ct. w = -1 \<or> cteCap ct = NullCap
+   (invs' and cte_wp_at' (\<lambda>ct. w = -1 \<or> cteCap ct = NullCap
         \<or> (\<forall>cap'. ccap_relation (cteCap ct) cap' \<longrightarrow> cap_get_tag cap' = w)) slot)
    ({s. gs_get_assn cteDeleteOne_'proc (ghost'state_' (globals s)) = w}
         \<inter> {s. slot_' s = Ptr slot}) []
    (cteDeleteOne slot) (Call cteDeleteOne_'proc)"
   shows
-
-  "ccorres dc xfdc (invs' and st_tcb_at' (isBlockedOnReply or isBlockedOnFault) thread
-                          and sch_act_simple) UNIV hs
-     (do y \<leftarrow> threadSet (tcbFault_update Map.empty) thread;
+  "ccorres dc xfdc (invs' and st_tcb_at' (isBlockedOnReply or isBlockedOnFault) thread)
+     UNIV hs
+     (do y \<leftarrow> threadSet (tcbFault_update empty) thread;
          slot \<leftarrow> getThreadReplySlot thread;
          callerCap \<leftarrow> liftM (\<lambda>x. mdbNext (cteMDBNode x)) (getCTE slot);
          when (callerCap \<noteq> nullPointer)
-          (do y \<leftarrow> stateAssert (capHasProperty callerCap isReplyCap) [];
+          (do y \<leftarrow> stateAssert (capHasProperty callerCap (\<lambda>cap. isReplyCap cap
+                                                        \<and> \<not> capReplyMaster cap)) [];
               cteDeleteOne callerCap
            od)
       od)
@@ -2278,25 +2390,39 @@ lemma ipcCancel_ccorres_reply_helper:
                         ghost_assertion_data_set_def cap_tag_defs)
       apply (simp add: locateSlot_conv, wp)
      apply vcg
-    apply (rule_tac Q="\<lambda>rv. invs' and sch_act_simple" in hoare_post_imp)
+    apply (rule_tac Q="\<lambda>rv. invs'" in hoare_post_imp)
      apply (clarsimp simp: cte_wp_at_ctes_of capHasProperty_def cap_get_tag_isCap ucast_id)
     apply (wp hoare_vcg_all_lift threadSet_invs_trivial
                | wp_once hoare_drop_imps | simp)+
    apply (clarsimp simp: guard_is_UNIV_def tcbReplySlot_def
                          Kernel_C.tcbReply_def mask_def)
-  apply (fastforce simp: st_tcb_at_tcb_at' inQ_def tcb_aligned'[OF st_tcb_at_tcb_at'])
+  apply (fastforce simp: pred_tcb_at' inQ_def tcb_aligned'[OF pred_tcb_at'])
+  done
+
+lemma ep_blocked_in_queueD_recv:
+  "\<lbrakk>st_tcb_at' (op = (Structures_H.thread_state.BlockedOnReceive x xa)) thread \<sigma>; ko_at' ep' x \<sigma>; invs' \<sigma>\<rbrakk> \<Longrightarrow> thread \<in> set (epQueue ep') \<and> isRecvEP ep'"
+  apply (frule sym_refs_st_tcb_atD', clarsimp)
+  apply (clarsimp simp: refs_of_rev' obj_at'_def ko_wp_at'_def projectKOs)
+  apply (cases ep', simp_all add: isSendEP_def isRecvEP_def)[1]
+  done
+
+lemma ep_blocked_in_queueD_send:
+  "\<lbrakk>st_tcb_at' (op = (Structures_H.thread_state.BlockedOnSend x xa xb xc)) thread \<sigma>; ko_at' ep' x \<sigma>; invs' \<sigma>\<rbrakk> \<Longrightarrow> thread \<in> set (epQueue ep') \<and> isSendEP ep'"
+  apply (frule sym_refs_st_tcb_atD', clarsimp)
+  apply (clarsimp simp: refs_of_rev' obj_at'_def ko_wp_at'_def projectKOs)
+  apply (cases ep', simp_all add: isSendEP_def isRecvEP_def)[1]
   done
 
 lemma ipcCancel_ccorres1:
   assumes cteDeleteOne_ccorres:
   "\<And>w slot. ccorres dc xfdc
-   (invs' and sch_act_simple and cte_wp_at' (\<lambda>ct. w = -1 \<or> cteCap ct = NullCap
+   (invs' and cte_wp_at' (\<lambda>ct. w = -1 \<or> cteCap ct = NullCap
         \<or> (\<forall>cap'. ccap_relation (cteCap ct) cap' \<longrightarrow> cap_get_tag cap' = w)) slot)
    ({s. gs_get_assn cteDeleteOne_'proc (ghost'state_' (globals s)) = w}
         \<inter> {s. slot_' s = Ptr slot}) []
    (cteDeleteOne slot) (Call cteDeleteOne_'proc)"
   shows
-  "ccorres dc xfdc (tcb_at' thread and invs' and sch_act_simple)
+  "ccorres dc xfdc (tcb_at' thread and invs')
                    (UNIV \<inter> {s. tptr_' s = tcb_ptr_to_ctcb_ptr thread}) []
           (ipcCancel thread) (Call ipcCancel_'proc)"
   apply (cinit lift: tptr_' simp: Let_def cong: call_ignore_cong)
@@ -2315,26 +2441,26 @@ lemma ipcCancel_ccorres1:
             apply csymbr
             apply (rule ccorres_pre_getEndpoint)
             apply (rule ccorres_assert)
-             apply (rule ccorres_symb_exec_r) -- "ptr_get lemmas don't work so well :("
-               apply (rule ccorres_symb_exec_r)
-                 apply (simp only: fun_app_def simp_list_case_return 
-                                   return_bind ccorres_seq_skip)
-                 apply (rule ccorres_rhs_assoc2)
-                 apply (rule ccorres_rhs_assoc2)
-                 apply (rule ccorres_rhs_assoc2)
-                 apply (ctac (no_vcg) add: ipcCancel_ccorres_helper)
-                   apply (ctac add: setThreadState_ccorres_valid_queues')
-                  apply wp
-                 apply (simp add: "StrictC'_thread_state_defs")
-                apply vcg
-               apply (rule conseqPre, vcg)
-               apply clarsimp
-              apply clarsimp
+            apply (rule ccorres_symb_exec_r) -- "ptr_get lemmas don't work so well :("
+              apply (rule ccorres_symb_exec_r)
+                apply (simp only: fun_app_def simp_list_case_return 
+                                  return_bind ccorres_seq_skip)
+                apply (rule ccorres_rhs_assoc2)
+                apply (rule ccorres_rhs_assoc2)
+                apply (rule ccorres_rhs_assoc2)
+                apply (ctac (no_vcg) add: ipcCancel_ccorres_helper)
+                  apply (ctac add: setThreadState_ccorres_valid_queues')
+                 apply (wp hoare_vcg_all_lift set_ep_valid_objs' | simp add: valid_tcb_state'_def split del: split_if)+
+                apply (simp add: "StrictC'_thread_state_defs")
+               apply vcg
               apply (rule conseqPre, vcg)
-              apply (rule subset_refl)
-             apply (rule conseqPre, vcg)
+              apply clarsimp
              apply clarsimp
-           -- "BlockedOnReply case"
+             apply (rule conseqPre, vcg)
+             apply (rule subset_refl)
+            apply (rule conseqPre, vcg)
+            apply clarsimp
+          -- "BlockedOnReply case"
            apply (simp add: "StrictC'_thread_state_defs" ccorres_cond_iffs
                             Collect_False Collect_True word_sle_def
                       cong: call_ignore_cong del: Collect_const)
@@ -2368,24 +2494,24 @@ lemma ipcCancel_ccorres1:
       apply (rule ccorres_pre_getEndpoint)
       apply (rule ccorres_assert)
       apply (rule ccorres_symb_exec_r) -- "ptr_get lemmas don't work so well :("
-       apply (rule ccorres_symb_exec_r)
-       apply (simp only: fun_app_def simp_list_case_return return_bind ccorres_seq_skip)
-       apply (rule ccorres_rhs_assoc2)
-       apply (rule ccorres_rhs_assoc2)
-       apply (rule ccorres_rhs_assoc2)
-       apply (ctac (no_vcg) add: ipcCancel_ccorres_helper)
-       apply (ctac add: setThreadState_ccorres_valid_queues')
-       apply wp
+        apply (rule ccorres_symb_exec_r)
+          apply (simp only: fun_app_def simp_list_case_return return_bind ccorres_seq_skip)
+          apply (rule ccorres_rhs_assoc2)
+          apply (rule ccorres_rhs_assoc2)
+          apply (rule ccorres_rhs_assoc2)
+          apply (ctac (no_vcg) add: ipcCancel_ccorres_helper)
+            apply (ctac add: setThreadState_ccorres_valid_queues')
+           apply (wp hoare_vcg_all_lift set_ep_valid_objs' | simp add: valid_tcb_state'_def split del:split_if)+
        apply (simp add: "StrictC'_thread_state_defs")
-             apply clarsimp
-             apply (rule conseqPre, vcg, rule subset_refl)
-            apply (rule conseqPre, vcg)
-            apply clarsimp
-           apply clarsimp
-           apply (rule conseqPre, vcg, rule subset_refl)
-         apply (rule conseqPre, vcg)
          apply clarsimp
-     -- "Restart"
+         apply (rule conseqPre, vcg, rule subset_refl)
+        apply (rule conseqPre, vcg)
+        apply clarsimp
+       apply clarsimp
+       apply (rule conseqPre, vcg, rule subset_refl)
+      apply (rule conseqPre, vcg)
+      apply clarsimp
+  -- "Restart"
      apply (simp add: word_sle_def "StrictC'_thread_state_defs" ccorres_cond_iffs dc_def [symmetric] cong: call_ignore_cong, 
             rule ccorres_return_Skip)
     -- "Post wp proofs"
@@ -2400,11 +2526,43 @@ lemma ipcCancel_ccorres1:
   apply (clarsimp simp: projectKOs valid_obj'_def valid_tcb'_def
                         valid_tcb_state'_def typ_heap_simps
                         word_sle_def)
-  apply (rule conjI)
-   apply (auto simp: obj_at'_def projectKOs st_tcb_at'_def
+  apply (rule conjI, clarsimp)
+   apply (rule conjI, clarsimp)
+    apply (rule conjI)
+     apply (auto simp: projectKOs obj_at'_def pred_tcb_at'_def split: thread_state.splits)[1]
+    apply (clarsimp)
+    apply (rule conjI)
+     apply (auto simp: obj_at'_def projectKOs pred_tcb_at'_def invs'_def valid_state'_def
                      isTS_defs cte_wp_at_ctes_of
-                     cthread_state_relation_def)[1]
-  apply clarsimp
+                     cthread_state_relation_def sch_act_wf_weak valid_ep'_def
+             dest!: valid_queues_not_runnable'_not_ksQ[where t=thread] split: thread_state.splits)[1]
+    apply clarsimp
+    apply (frule (2) ep_blocked_in_queueD_recv)
+    apply (frule (1) ko_at_valid_ep'[OF _ invs_valid_objs'])
+    apply (auto simp: obj_at'_def projectKOs pred_tcb_at'_def invs'_def valid_state'_def
+                         isTS_defs cte_wp_at_ctes_of isRecvEP_def
+                         cthread_state_relation_def sch_act_wf_weak valid_ep'_def
+                 dest!: valid_queues_not_runnable'_not_ksQ[where t=thread] split: thread_state.splits endpoint.splits)[1]
+   apply (rule conjI)
+    apply (clarsimp simp: isBlockedOnReply_def pred_tcb_at'_def obj_at'_def)
+   apply (rule conjI, clarsimp)
+   apply clarsimp
+   apply (rule conjI)
+    apply (auto simp: pred_tcb_at'_def isBlockedOnReceive_def isBlockedOnSend_def obj_at'_def projectKOs split: thread_state.splits)[1]
+   apply clarsimp
+   apply (rule conjI)
+    apply (auto simp: obj_at'_def projectKOs pred_tcb_at'_def invs'_def valid_state'_def
+                         isTS_defs cte_wp_at_ctes_of
+                         cthread_state_relation_def sch_act_wf_weak valid_ep'_def
+                 dest!: valid_queues_not_runnable'_not_ksQ[where t=thread] split: thread_state.splits)[1]
+   apply clarsimp
+   apply (frule (2) ep_blocked_in_queueD_send)
+   apply (frule (1) ko_at_valid_ep'[OF _ invs_valid_objs'])
+   apply (auto simp: obj_at'_def projectKOs pred_tcb_at'_def invs'_def valid_state'_def
+                        isTS_defs cte_wp_at_ctes_of isSendEP_def
+                        cthread_state_relation_def sch_act_wf_weak valid_ep'_def
+                dest!: valid_queues_not_runnable'_not_ksQ[where t=thread] split: thread_state.splits endpoint.splits)[1]
+  apply (auto simp: isTS_defs cthread_state_relation_def typ_heap_simps weak_sch_act_wf_def)
   apply (case_tac ts,
          auto simp: isTS_defs cthread_state_relation_def typ_heap_simps)
   done

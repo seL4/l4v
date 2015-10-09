@@ -353,10 +353,10 @@ lemma updateObject_cte_tcb:
   done
 
 definition
-  tcb_no_ctes_proj :: "tcb \<Rightarrow> Structures_H.thread_state \<times> word32 \<times> word32 \<times> (ARMMachineTypes.register \<Rightarrow> word32) \<times> bool \<times> word8 \<times> word8 \<times> nat \<times> fault option"
+  tcb_no_ctes_proj :: "tcb \<Rightarrow> Structures_H.thread_state \<times> word32 \<times> word32 \<times> (ARMMachineTypes.register \<Rightarrow> word32) \<times> bool \<times> word8 \<times> word8 \<times> nat \<times> fault option \<times> word32 option"
   where
   "tcb_no_ctes_proj t \<equiv> (tcbState t, tcbFaultHandler t, tcbIPCBuffer t, tcbContext t, tcbQueued t,
-                            tcbPriority t, tcbDomain t, tcbTimeSlice t, tcbFault t)"
+                            tcbPriority t, tcbDomain t, tcbTimeSlice t, tcbFault t, tcbBoundAEP t)"
 
 lemma tcb_cte_cases_proj_eq [simp]:
   "tcb_cte_cases p = Some (getF, setF) \<Longrightarrow> 
@@ -1208,19 +1208,22 @@ lemma ko_at_valid_aep':
 (* MOVE *)
 lemma aep_blocked_in_queueD:
   "\<lbrakk> st_tcb_at' (op = (Structures_H.thread_state.BlockedOnAsyncEvent aep)) thread \<sigma>; ko_at' aep' aep \<sigma>; invs' \<sigma> \<rbrakk> 
-   \<Longrightarrow> thread \<in> set (aepQueue aep') \<and> isWaitingAEP aep'"
+   \<Longrightarrow> thread \<in> set (aepQueue (aepObj aep')) \<and> isWaitingAEP (aepObj aep')"
   apply (drule sym_refs_st_tcb_atD')
    apply clarsimp
-  apply (clarsimp simp: refs_of_rev' obj_at'_def ko_wp_at'_def projectKOs)
-  apply (cases aep')
+  apply (clarsimp simp: obj_at'_def ko_wp_at'_def projectKOs
+                        refs_of_rev'[where ko = "KOAEndpoint aep'", simplified])
+  apply (cases "aepObj aep'")
     apply (simp_all add: isWaitingAEP_def)
     done
 
 (* MOVE *)  
 lemma valid_aep_isWaitingAEPD:
-  "\<lbrakk> valid_aep' aep s; isWaitingAEP aep \<rbrakk> \<Longrightarrow> (aepQueue aep) \<noteq> [] \<and> (\<forall>t\<in>set (aepQueue aep). tcb_at' t s) \<and> distinct (aepQueue aep)"
+  "\<lbrakk> valid_aep' aep s; isWaitingAEP (aepObj aep) \<rbrakk>
+  \<Longrightarrow> (aepQueue (aepObj aep)) \<noteq> [] \<and> (\<forall>t\<in>set (aepQueue (aepObj aep)). tcb_at' t s)
+    \<and> distinct (aepQueue (aepObj aep))"
   unfolding valid_aep'_def isWaitingAEP_def
-  by (clarsimp split: async_endpoint.splits)
+  by (clarsimp split: async_endpoint.splits aep.splits)
 
 lemma cmap_relation_ko_atD:
   fixes ko :: "'a :: pspace_storable" and  mp :: "word32 \<rightharpoonup> 'a"
@@ -1254,9 +1257,9 @@ lemma cmap_relation_ko_atE:
   
 lemma aep_to_ep_queue:
   assumes ko: "ko_at' aep' aep s"
-  and     waiting: "isWaitingAEP aep'"
+  and     waiting: "isWaitingAEP (aepObj aep')"
   and     rf: "(s, s') \<in> rf_sr"
-  shows "ep_queue_relation' (cslift s') (aepQueue aep')
+  shows "ep_queue_relation' (cslift s') (aepQueue (aepObj aep'))
               (Ptr (aepQueue_head_CL
                      (async_endpoint_lift (the (cslift s' (Ptr aep))))))
               (Ptr (aepQueue_tail_CL
@@ -1269,7 +1272,8 @@ proof -
   thus ?thesis using ko waiting
     apply -
     apply (erule (1) cmap_relation_ko_atE)
-    apply (clarsimp simp: casync_endpoint_relation_def Let_def isWaitingAEP_def split: async_endpoint.splits)
+    apply (clarsimp simp: casync_endpoint_relation_def Let_def isWaitingAEP_def
+                   split: async_endpoint.splits aep.splits)
     done
 qed
 
@@ -1295,7 +1299,7 @@ lemma tcb_at_h_t_valid:
 
 lemma st_tcb_at_h_t_valid:
   "\<lbrakk> st_tcb_at' P thread s; (s, s') \<in> rf_sr \<rbrakk> \<Longrightarrow> s' \<Turnstile>\<^sub>c tcb_ptr_to_ctcb_ptr thread"
-  apply (drule st_tcb_at_tcb_at')
+  apply (drule pred_tcb_at')
   apply (erule (1) tcb_at_h_t_valid)
   done
 

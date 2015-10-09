@@ -196,7 +196,7 @@ lemma stt_activatable:
   apply (simp add: switch_to_thread_def)
   apply (wp | simp add: ct_in_state_def)+
     apply (rule hoare_post_imp [OF _ arch_stt_runnable])
-    apply (clarsimp elim!: st_tcb_weakenE)
+    apply (clarsimp elim!: pred_tcb_weakenE)
    apply (rule assert_inv)
   apply wp
   done
@@ -213,7 +213,7 @@ lemma stit_invs [wp]:
   apply wp
     apply (rule invs_upd_cur_valid)
      apply wp
-  apply (clarsimp simp: invs_def valid_state_def valid_idle_def st_tcb_at_tcb_at)
+  apply (clarsimp simp: invs_def valid_state_def valid_idle_def pred_tcb_at_tcb_at)
   apply (clarsimp simp: in_user_frame_def valid_arch_state_def)
   apply (rule_tac x=ARMSmallPage in exI)
   apply (clarsimp simp: obj_at_def)
@@ -221,12 +221,17 @@ lemma stit_invs [wp]:
   apply (drule is_aligned_neg_mask_eq, simp add: a_type_def)
   done
 
+(* FIXME move *)
+lemma pred_tcb_weaken_strongerE:
+  "\<lbrakk> pred_tcb_at proj P t s; \<And>tcb . P (proj tcb) \<Longrightarrow> P' (proj' tcb) \<rbrakk> \<Longrightarrow> pred_tcb_at proj' P' t s"
+  by (auto simp: pred_tcb_at_def elim: obj_at_weakenE)
+
 lemma stit_activatable:
   "\<lbrace>invs\<rbrace> switch_to_idle_thread \<lbrace>\<lambda>rv . ct_in_state activatable\<rbrace>"
   apply (simp add: switch_to_idle_thread_def arch_switch_to_idle_thread_def)
   apply (wp | simp add: ct_in_state_def)+
   apply (clarsimp simp: invs_def valid_state_def cur_tcb_def valid_idle_def
-                 elim!: st_tcb_weakenE)
+                 elim!: pred_tcb_weaken_strongerE)
   done
 
 lemma OR_choice_weak_wp:
@@ -247,16 +252,16 @@ lemma obj_at_machine_state [iff]:
   "obj_at P p (machine_state_update f s) = obj_at P p s"
   by (auto intro: obj_at_pspaceI)
 
-lemma dmo_st_tcb_at:
-  "\<lbrace>st_tcb_at P t\<rbrace> do_machine_op m \<lbrace>\<lambda>rv. st_tcb_at P t\<rbrace>"
+lemma dmo_pred_tcb_at:
+  "\<lbrace>pred_tcb_at proj P t\<rbrace> do_machine_op m \<lbrace>\<lambda>rv. pred_tcb_at proj P t\<rbrace>"
 proof -
-  have st_tcb_at_ms: "\<And>P addr f s.
-       st_tcb_at P addr (machine_state_update f s) = st_tcb_at P addr s"
-    by (simp add: st_tcb_at_def)
+  have pred_tcb_at_ms: "\<And>P addr f s.
+       pred_tcb_at proj P addr (machine_state_update f s) = pred_tcb_at proj P addr s"
+    by (simp add: pred_tcb_at_def)
   show ?thesis
     apply (simp add: do_machine_op_def split_def)
     apply (wp select_wp)
-    apply (simp add: st_tcb_at_ms)
+    apply (simp add: pred_tcb_at_ms)
     done
 qed
 
@@ -273,10 +278,10 @@ lemma schedule_ct_activateable[wp]:
   "\<lbrace>invs\<rbrace> (Schedule_A.schedule :: (unit,unit) s_monad) \<lbrace>\<lambda>rv. ct_in_state activatable\<rbrace>"
   proof -
   have P: "\<And>t s. ct_in_state activatable (cur_thread_update (\<lambda>_. t) s) = st_tcb_at activatable t s"
-    by (fastforce simp: ct_in_state_def st_tcb_at_def intro: obj_at_pspaceI)
+    by (fastforce simp: ct_in_state_def pred_tcb_at_def intro: obj_at_pspaceI)
   show ?thesis
     apply (simp add: Schedule_A.schedule_def allActiveTCBs_def)
-    apply (wp alternative_wp dmo_st_tcb_at
+    apply (wp alternative_wp dmo_pred_tcb_at
               select_ext_weak_wp select_wp stt_activatable stit_activatable
                | simp add: P)+
     apply (clarsimp simp: getActiveTCB_def ct_in_state_def)
@@ -284,10 +289,10 @@ lemma schedule_ct_activateable[wp]:
      apply clarsimp
      apply (case_tac "get_tcb (cur_thread s) s", simp_all add: ct_in_state_def)
      apply (drule get_tcb_SomeD)
-     apply (clarsimp simp: st_tcb_at_def obj_at_def split: split_if_asm)
+     apply (clarsimp simp: pred_tcb_at_def obj_at_def split: split_if_asm)
     apply (case_tac "get_tcb x s", simp_all)
     apply (drule get_tcb_SomeD)
-    apply (clarsimp simp: st_tcb_at_def obj_at_def split: split_if_asm)
+    apply (clarsimp simp: pred_tcb_at_def obj_at_def split: split_if_asm)
     done
 qed
 

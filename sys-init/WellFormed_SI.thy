@@ -26,6 +26,7 @@ imports
   "../lib/SimpStrategy"
 begin
 
+
 lemma cap_has_object_NullCap [simp]:
   "\<not>cap_has_object NullCap"
   by (clarsimp simp: cap_has_object_def)
@@ -284,7 +285,8 @@ where
       (slot = tcb_ipcbuffer_slot \<longrightarrow> is_frame_cap cap \<and> is_default_cap cap) \<and>
       (slot = tcb_replycap_slot \<longrightarrow> cap = NullCap \<or> cap = MasterReplyCap obj_id) \<and>
       (slot = tcb_caller_slot \<longrightarrow> cap = NullCap) \<and>
-      (slot = tcb_pending_op_slot \<longrightarrow> cap = NullCap \<or> cap = RestartCap))) \<and>
+      (slot = tcb_pending_op_slot \<longrightarrow> cap = NullCap \<or> cap = RestartCap) \<and>
+      (slot = tcb_boundaep_slot \<longrightarrow> cap = NullCap) )) \<and>
      ((object_slots obj tcb_replycap_slot = Some (MasterReplyCap obj_id)) =
       (object_slots obj tcb_pending_op_slot = Some RestartCap))"
 
@@ -895,7 +897,7 @@ lemma well_formed_cap_to_non_empty_pt:
   done
 
 lemma dom_object_slots_default_tcb:
- "dom (object_slots (Tcb (default_tcb domain))) = {0..tcb_pending_op_slot}"
+ "dom (object_slots (Tcb (default_tcb domain))) = {0..tcb_boundaep_slot}"
   by (clarsimp simp: object_slots_def default_tcb_def)
 
 lemma well_formed_tcb_has_fault:
@@ -925,7 +927,7 @@ lemma well_formed_object_domain:
 
 lemma well_formed_tcb_object_slots:
   "\<lbrakk>well_formed spec; cdl_objects spec obj_id = Some tcb; is_tcb tcb\<rbrakk>
-  \<Longrightarrow> dom (object_slots tcb) = {0..tcb_pending_op_slot}"
+  \<Longrightarrow> dom (object_slots tcb) = {0..tcb_boundaep_slot}"
   apply (frule (1) well_formed_object_slots)
   apply (clarsimp simp: object_default_state_def2 is_tcb_def split: cdl_object.splits)
   apply (rule dom_object_slots_default_tcb)
@@ -985,7 +987,7 @@ lemma well_formed_tcb_cspace_cap_cap_data:
   done
 
 lemma well_formed_tcb_opt_cap:
-  "\<lbrakk>well_formed spec; tcb_at obj_id spec; slot \<in> {0..tcb_pending_op_slot}\<rbrakk>
+  "\<lbrakk>well_formed spec; tcb_at obj_id spec; slot \<in> {0..tcb_boundaep_slot}\<rbrakk>
   \<Longrightarrow> \<exists>cap. opt_cap (obj_id, slot) spec = Some cap"
   apply (clarsimp simp: object_at_def)
   apply (drule (1) well_formed_object_slots)
@@ -995,6 +997,7 @@ lemma well_formed_tcb_opt_cap:
                   split: cdl_object.splits split_if_asm)
   done
 
+
 lemma well_formed_tcb_vspace_cap:
   "\<lbrakk>well_formed spec;
     tcb_at obj_id spec\<rbrakk>
@@ -1003,7 +1006,7 @@ lemma well_formed_tcb_vspace_cap:
   apply (frule (1) well_formed_tcb_opt_cap [where slot=tcb_vspace_slot], simp add: tcb_slot_defs)
   apply (clarsimp simp: object_at_def)
   apply (frule (1) well_formed_well_formed_tcb)
-  apply (auto simp: well_formed_tcb_def opt_cap_def slots_of_def opt_object_def)
+  apply (auto simp: well_formed_tcb_def opt_cap_def slots_of_def opt_object_def )
   done
 
 lemma well_formed_tcb_ipcbuffer_cap:
@@ -1056,6 +1059,15 @@ lemma well_formed_tcb_pending_op_replycap:
   apply (drule (1) well_formed_well_formed_tcb)
   apply (clarsimp simp: well_formed_tcb_def opt_cap_def slots_of_def opt_object_def)
   done
+
+lemma well_formed_tcb_boundaep_cap:
+  "\<lbrakk>well_formed spec; tcb_at obj_id spec\<rbrakk>
+  \<Longrightarrow> opt_cap (obj_id, tcb_boundaep_slot) spec = Some NullCap"
+  apply (frule (1) well_formed_tcb_opt_cap [where slot=tcb_boundaep_slot], simp add: tcb_slot_defs)
+  apply (elim exE)
+  apply (clarsimp simp: object_at_def)
+  apply (drule (1) well_formed_well_formed_tcb)
+  by (auto simp: well_formed_tcb_def opt_cap_def slots_of_def opt_object_def)
 
 lemma well_formed_orig_caps_unique:
   "\<lbrakk>well_formed spec; original_cap_at (obj_id, slot) spec; original_cap_at (obj_id', slot') spec;

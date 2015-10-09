@@ -169,7 +169,7 @@ where
               throw
         | AsyncEndpointCap o_id badge rights \<Rightarrow>
             if Read \<in> rights then
-              liftE $ recv_async_ipc tcb_id ep_cap
+              (liftE $ recv_async_ipc tcb_id ep_cap) \<sqinter> throw
             else
               throw
         | _ \<Rightarrow>

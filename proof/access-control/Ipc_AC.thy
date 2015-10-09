@@ -9,7 +9,7 @@
  *)
 
 theory Ipc_AC
-imports Finalise_AC
+imports Finalise_AC "../../lib/MonadicRewrite"
 begin
 
 section{* Async IPC *}
@@ -19,37 +19,86 @@ subsection{* @{term "pas_refined"} *}
 
 
 
+crunch thread_bound_aeps[wp]: do_machine_op "\<lambda>s. P (thread_bound_aeps s)"
 
-crunch pas_refined[wp]: do_async_transfer "pas_refined aag"
+crunch state_vrefs[wp]: send_async_ipc "\<lambda>s. P (state_vrefs (s :: det_ext state))" (wp: crunch_wps hoare_unless_wp select_wp dxo_wp_weak simp: crunch_simps)
 
-crunch state_vrefs[wp]: send_async_ipc "\<lambda>s. P (state_vrefs s)" (wp: dxo_wp_weak ignore: switch_if_required_to)
-crunch caps_of_state[wp]: send_async_ipc "\<lambda>s. P (caps_of_state s)" (wp: dxo_wp_weak ignore: switch_if_required_to)
+lemma ipc_cancel_receive_blocked_caps_of_state:
+  "\<lbrace>\<lambda>s. P (caps_of_state (s :: det_ext state)) \<and> st_tcb_at receive_blocked t s\<rbrace> ipc_cancel t \<lbrace>\<lambda>rv s. P (caps_of_state s)\<rbrace>"
+  apply (clarsimp simp: ipc_cancel_def)
+  apply (rule hoare_seq_ext[OF _ gts_sp])
+  apply (rule hoare_pre)
+  apply (wp gts_wp | wpc | simp)+
+     apply (rule hoare_pre_cont)+
+  apply (clarsimp simp: st_tcb_def2 receive_blocked_def)
+  apply (clarsimp split: thread_state.splits)
+  done
 
-crunch arch_state[wp]: send_async_ipc "\<lambda>s. P (arch_state s)" (wp: dxo_wp_weak ignore: switch_if_required_to)
-crunch mdb[wp]: send_async_ipc "\<lambda>s. P (cdt s)" (wp: dxo_wp_weak ignore: switch_if_required_to)
+lemma send_async_ipc_caps_of_state[wp]:
+  "\<lbrace>\<lambda>s :: det_ext state. P (caps_of_state s) \<rbrace> send_async_ipc aepptr badge \<lbrace>\<lambda>_ s. P (caps_of_state s)\<rbrace>"
+  apply (clarsimp simp: send_async_ipc_def)
+  apply (rule hoare_seq_ext[OF _ get_aep_sp])
+  apply (rule hoare_pre)  
+   apply (wp dxo_wp_weak ipc_cancel_receive_blocked_caps_of_state gts_wp static_imp_wp | wpc | simp add: update_waiting_aep_def)+
+  apply (clarsimp simp: fun_upd_def[symmetric] st_tcb_def2)
+  done
 
-crunch state_refs_of[wp]: do_async_transfer "\<lambda>s. P (state_refs_of s)"
+crunch arch_state[wp]: send_async_ipc "\<lambda>s. P (arch_state (s :: det_ext state))" (wp: crunch_wps hoare_unless_wp select_wp dxo_wp_weak simp: crunch_simps)
+
+crunch mdb[wp]: blocked_ipc_cancel, update_waiting_aep "\<lambda>s. P (cdt (s :: det_ext state))" (wp: crunch_wps hoare_unless_wp select_wp dxo_wp_weak simp: crunch_simps)
+
+lemma ipc_cancel_receive_blocked_mdb:
+  "\<lbrace>\<lambda>s. P (cdt (s :: det_ext state)) \<and> st_tcb_at receive_blocked t s\<rbrace> ipc_cancel t \<lbrace>\<lambda>rv s. P (cdt s)\<rbrace>"
+  apply (clarsimp simp: ipc_cancel_def)
+  apply (rule hoare_seq_ext[OF _ gts_sp])
+  apply (rule hoare_pre)
+  apply (wp gts_wp | wpc | simp)+
+     apply (rule hoare_pre_cont)+
+  apply (clarsimp simp: st_tcb_def2 receive_blocked_def)
+  apply (clarsimp split: thread_state.splits)
+  done
+
+lemma send_async_ipc_mdb[wp]:
+  "\<lbrace>\<lambda>s. P (cdt (s :: det_ext state))\<rbrace> send_async_ipc aepptr badge \<lbrace>\<lambda>rv s. P (cdt s)\<rbrace>"
+  apply (clarsimp simp: send_async_ipc_def)
+  apply (rule hoare_seq_ext[OF _ get_aep_sp])
+  apply (rule hoare_pre)
+   apply (wp dxo_wp_weak gts_wp ipc_cancel_receive_blocked_mdb | wpc | simp)+
+  apply (clarsimp simp: st_tcb_def2)
+  done
 
 crunch pas_refined[wp]: attempt_switch_to, switch_if_required_to "pas_refined aag"
 
 lemma update_waiting_aep_pas_refined:
   notes hoare_post_taut [simp del]
-  shows "\<lbrace>pas_refined aag and ko_at (AsyncEndpoint (async_ep.WaitingAEP queue)) aepptr\<rbrace>
+  shows "\<lbrace>pas_refined aag and ko_at (AsyncEndpoint aep) aepptr and K (aep_obj aep = WaitingAEP queue)\<rbrace>
      update_waiting_aep aepptr queue badge val
    \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
   apply (simp add: update_waiting_aep_def)
   apply (wp set_thread_state_pas_refined set_async_ep_pas_refined | simp)+
   done
 
+
+lemma ipc_cancel_receive_blocked_pas_refined:
+  "\<lbrace>pas_refined aag and st_tcb_at receive_blocked t\<rbrace> ipc_cancel t \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
+  apply (clarsimp simp: ipc_cancel_def)
+  apply (rule hoare_seq_ext[OF _ gts_sp])
+  apply (rule hoare_pre)
+  apply (wp gts_wp | wpc | simp)+
+  apply (clarsimp simp: st_tcb_def2 receive_blocked_def)
+  done
+
 lemma send_async_ipc_pas_refined:
-  "\<lbrace>pas_refined aag\<rbrace> send_async_ipc aepptr badge val \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
+  "\<lbrace>\<lambda>s. pas_refined aag s\<rbrace> send_async_ipc aepptr badge \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
   apply (simp add: send_async_ipc_def)
   apply (rule hoare_seq_ext[OF _ get_aep_sp])
   apply (rule hoare_pre)
-  apply (wp set_async_ep_pas_refined update_waiting_aep_pas_refined
+  apply (wp set_async_ep_pas_refined update_waiting_aep_pas_refined gts_wp set_thread_state_pas_refined
+            ipc_cancel_receive_blocked_pas_refined
        | wpc
        | simp)+
   apply clarsimp
+  apply (fastforce simp: st_tcb_def2)
   done
 
 lemma receive_async_ipc_pas_refined:
@@ -155,17 +204,7 @@ lemma store_word_offs_respects:
   done
 
 
-lemma set_async_ep_respects:
-  "\<lbrace>integrity aag X st and K (aag_has_auth_to aag auth epptr \<and> auth \<in> {Receive, AsyncSend, Reset})\<rbrace>
-     set_async_ep epptr aep'
-   \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
-  apply (simp add: set_async_ep_def set_object_def)
-  apply (wp get_object_wp)
-  apply (clarsimp simp: obj_at_def)
-  apply (case_tac ko, simp_all)
-  apply (erule integrity_trans)
-  apply (clarsimp simp: integrity_def tro_aep)
-  done
+
 
 lemma ipc_buffer_has_auth_None [simp]:
   "ipc_buffer_has_auth aag receiver None"
@@ -220,12 +259,17 @@ lemma lookup_ipc_buffer_has_auth [wp]:
   apply simp
   done
 
-lemma do_async_transfer_integrity_autarch:
-  "\<lbrace>integrity aag X st and pas_refined aag and valid_objs and K (is_subject aag thread) \<rbrace>
-    do_async_transfer a b thread 
-   \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
-  unfolding do_async_transfer_def 
-  by (wp as_user_integrity_autarch set_mrs_integrity_autarch | simp add: set_message_info_def)+
+lemma set_async_ep_respects:
+  "\<lbrace>integrity aag X st and K (aag_has_auth_to aag auth epptr \<and> auth \<in> {Receive, AsyncSend, Reset})\<rbrace>
+     set_async_ep epptr aep'
+   \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
+  apply (simp add: set_async_ep_def set_object_def)
+  apply (wp get_object_wp)
+  apply (clarsimp simp: obj_at_def)
+  apply (case_tac ko, simp_all)
+  apply (erule integrity_trans)
+  apply (clarsimp simp: integrity_def tro_aep)
+  done
 
 lemma receive_async_ipc_integrity_autarch:
   "\<lbrace>integrity aag X st and pas_refined aag and valid_objs 
@@ -237,9 +281,8 @@ lemma receive_async_ipc_integrity_autarch:
   apply (cases cap, simp_all)
   apply (rule hoare_seq_ext [OF _ get_aep_sp])
   apply (rule hoare_pre)
-  apply (wp set_async_ep_respects[where auth=Receive] set_thread_state_integrity_autarch
-         do_async_transfer_integrity_autarch
-       | wpc
+  apply (wp set_async_ep_respects[where auth=Receive] set_thread_state_integrity_autarch as_user_integrity_autarch
+       | wpc 
        | simp)+
   done
 
@@ -250,30 +293,22 @@ lemma length_msg_registers:
   "length msg_registers = 4"
   unfolding msg_registers_def
   by (simp add: msgRegisters_def upto_enum_def fromEnum_def enum_register)
-  
+
 lemma send_upd_ctxintegrity:
-  "\<lbrakk> st_tcb_at (receive_blocked_on ep) thread st;
-     aag_has_auth_to aag SyncSend ep \<or> 
-     aag_has_auth_to aag AsyncSend ep;
-     integrity aag X st s; st_tcb_at (op = Structures_A.thread_state.Running) thread s; get_tcb thread s = Some tcb \<rbrakk>
-     \<Longrightarrow> integrity aag X st (s\<lparr>kheap := kheap s(thread \<mapsto> TCB (tcb\<lparr>tcb_context := c'\<rparr>))\<rparr>)"
+  "\<lbrakk> direct_send {pasSubject aag} aag ep tcb \<or> indirect_send {pasSubject aag} aag ep recv tcb;
+     integrity aag X st s; st_tcb_at (op = Structures_A.thread_state.Running) thread s;
+     get_tcb thread st = Some tcb; get_tcb thread s = Some tcb' \<rbrakk>
+     \<Longrightarrow> integrity aag X st (s\<lparr>kheap := kheap s(thread \<mapsto> TCB (tcb'\<lparr>tcb_context := c'\<rparr>))\<rparr>)"
   apply (clarsimp simp: integrity_def tcb_states_of_state_preserved st_tcb_def2)  
   apply (drule get_tcb_SomeD)+
-  apply (drule spec [where x = thread], erule integrity_obj.cases, simp_all)
-    apply clarsimp
-    apply (rule tro_tcb_send [OF refl refl])
-      apply (rule_tac x = "c'" in exI)
-      apply simp
-    apply assumption
-   apply simp
-  apply (case_tac "tcb_state tcba", simp_all)
-  apply clarsimp
-  apply (rule tro_tcb_send [OF refl refl])
-      apply (rule_tac x = "c'" in exI)
-      apply simp
-    apply assumption
-   apply simp
- done
+  apply (drule spec[where x=thread], simp)
+  apply (cases "is_subject aag thread")
+   apply (rule tro_lrefl, simp)
+  apply (rule_tac aep'="tcb_bound_aep tcb'" in tro_tcb_send[OF refl refl], simp_all)
+   apply (rule_tac x = "c'" in exI)
+   apply (erule integrity_obj.cases, auto)[1]
+  apply (erule integrity_obj.cases, auto simp: tcb_bound_aep_reset_integrity_def)[1]
+  done
 
 lemma set_mrs_respects_in_async_ipc':
   "\<lbrace>integrity aag X st and st_tcb_at (op = Structures_A.Running) thread and
@@ -303,7 +338,8 @@ lemma set_mrs_respects_in_async_ipc':
   apply clarsimp
   apply (cases "is_subject aag thread")
    apply (erule (1) integrity_update_autarch)
-  apply (rule send_upd_ctxintegrity, auto)
+  apply (clarsimp simp: st_tcb_def2)
+  apply (rule send_upd_ctxintegrity[OF disjI1], auto simp: st_tcb_def2 direct_send_def)
   done
 
 lemma as_user_set_register_respects:
@@ -316,7 +352,9 @@ lemma as_user_set_register_respects:
   apply (clarsimp simp: in_monad set_register_def)
   apply (cases "is_subject aag thread")
    apply (erule (1) integrity_update_autarch [unfolded fun_upd_def])
-  apply (rule send_upd_ctxintegrity [unfolded fun_upd_def], auto)
+  apply (clarsimp simp: st_tcb_def2)
+  apply (rule send_upd_ctxintegrity [OF disjI1, unfolded fun_upd_def],
+         auto simp: direct_send_def st_tcb_def2)
   done
 
 lemma lookup_ipc_buffer_ptr_range:
@@ -336,18 +374,6 @@ lemma lookup_ipc_buffer_ptr_range:
   apply auto
   done
 
-lemma do_async_transfer_respects_in_async_ipc':
-  "\<lbrace>integrity aag X st and pas_refined aag and valid_objs and st_tcb_at (op = Structures_A.Running) thread and
-    K ((\<not> is_subject aag thread \<longrightarrow> st_tcb_at (receive_blocked_on ep) thread st) \<and> aag_has_auth_to aag AsyncSend ep) \<rbrace>
-     do_async_transfer badge msg_word thread
-   \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
-  apply (simp add: do_async_transfer_def set_message_info_def)
-  apply (wp as_user_set_register_respects [where ep = ep] set_mrs_respects_in_async_ipc' [where ep = ep]
-            lookup_ipc_buffer_ptr_range [where X = X]
-          | simp add: imp_conjR)+
-  done
-
-
 lemma set_thread_state_respects_in_async_ipc:
   "\<lbrace>integrity aag X st
              and (\<lambda>s. \<not> is_subject aag thread \<longrightarrow> st_tcb_at (receive_blocked_on aepptr) thread s)
@@ -363,8 +389,9 @@ lemma set_thread_state_respects_in_async_ipc:
   apply (drule get_tcb_SomeD)
   apply (clarsimp simp: integrity_def st_tcb_def2)
   apply (clarsimp dest!: get_tcb_SomeD)
-  apply (rule tro_tcb_send [OF refl refl], simp_all)
-   apply (rule_tac x = "tcb_context y" in exI, auto)
+  apply (rule_tac aep'="tcb_bound_aep y" and ep=aepptr in tro_tcb_send [OF refl refl], simp_all)
+   apply (rule_tac x = "tcb_context y" in exI, 
+           auto simp: tcb_bound_aep_reset_integrity_def indirect_send_def direct_send_def)
   done
 
 lemma set_async_ep_obj_at:
@@ -405,24 +432,187 @@ lemma integrity_receive_blocked_chain:
 crunch integrity[wp]: attempt_switch_to, switch_if_required_to "integrity aag X st"
   (ignore: tcb_sched_action)
 
+abbreviation
+  "integrity_once_ts_upd t ts aag X st s
+    == integrity aag X st (s \<lparr> kheap := (kheap s) ( t := Some (TCB ((the (get_tcb t s)) \<lparr>tcb_state := ts\<rparr>)))\<rparr>)"
+
+lemma set_scheduler_action_integrity_once_ts_upd:
+  "\<lbrace>integrity_once_ts_upd t ts aag X st\<rbrace>
+    set_scheduler_action sa \<lbrace>\<lambda>_. integrity_once_ts_upd t ts aag X st\<rbrace>"
+  apply (simp add: set_scheduler_action_def, wp)
+  apply clarsimp
+  apply (erule rsubst[where P="\<lambda>x. x"])
+  apply (rule trans, rule_tac f="\<lambda>x. sa" in eintegrity_sa_update[symmetric])
+  apply (rule arg_cong[where f="integrity aag X st"])
+  apply (simp add: get_tcb_def)
+  done
+
+crunch integrity_once_ts_upd: set_thread_state_ext "integrity_once_ts_upd t ts aag X st"
+
+lemma set_thread_state_integrity_once_ts_upd:
+  "\<lbrace>integrity_once_ts_upd t ts aag X st\<rbrace>
+    set_thread_state t ts' \<lbrace>\<lambda>_. integrity_once_ts_upd t ts aag X st\<rbrace>"
+  apply (simp add: set_thread_state_def set_object_def)
+  apply (wp set_thread_state_ext_integrity_once_ts_upd)
+  apply (clarsimp simp: fun_upd_def dest!: get_tcb_SomeD)
+  apply (simp add: get_tcb_def cong: if_cong)
+  done
+
+lemma get_tcb_recv_blocked_implies_receive:
+  "\<lbrakk>pas_refined aag s; get_tcb t s = Some tcb; ep_recv_blocked ep (tcb_state tcb) \<rbrakk>
+          \<Longrightarrow> (pasObjectAbs aag t, Receive, pasObjectAbs aag ep) \<in> pasPolicy aag"
+  apply (erule pas_refined_mem[rotated])
+  apply (rule sta_ts)
+  apply (simp add: thread_states_def tcb_states_of_state_def)
+  apply (case_tac "tcb_state tcb", simp_all)
+  done
+
+lemma ipc_cancel_receive_blocked_respects:
+  "\<lbrace>integrity aag X st and pas_refined aag and st_tcb_at (receive_blocked) t and 
+       (sym_refs o state_refs_of) and
+       bound_tcb_at (\<lambda>aep. aep = Some aepptr) t and 
+       K ((pasObjectAbs aag t, Receive, pasObjectAbs aag aepptr) \<in> pasPolicy aag \<and> 
+             (pasSubject aag, AsyncSend, pasObjectAbs aag aepptr) \<in> pasPolicy aag)\<rbrace>
+    ipc_cancel t \<lbrace>\<lambda>_. integrity_once_ts_upd t Running aag X st\<rbrace>"
+  apply (clarsimp simp: ipc_cancel_def bind_assoc)
+  apply (rule hoare_seq_ext[OF _ gts_sp])
+  apply (rule hoare_name_pre_state)
+  apply (subgoal_tac "case state of BlockedOnReceive x _\<Rightarrow> True | _ \<Rightarrow> False")
+   apply (simp add: blocked_ipc_cancel_def bind_assoc set_endpoint_def set_object_def
+                    get_ep_queue_def get_blocking_ipc_endpoint_def
+             split: thread_state.splits)
+   apply (rule hoare_pre)
+    apply (wp set_thread_state_integrity_once_ts_upd get_object_wp get_endpoint_wp
+        | wpc)+
+   apply (clarsimp simp: st_tcb_at_def2 obj_at_def)
+   apply (drule_tac t="tcb_state tcb" in sym)
+   apply (subgoal_tac "st_tcb_at (op = (tcb_state tcb)) t sa")
+    apply (drule(1) sym_refs_st_tcb_atD)
+    apply (clarsimp simp: obj_at_def ep_q_refs_of_def fun_upd_def get_tcb_def
+                   split: endpoint.splits cong: if_cong)
+    apply (intro impI conjI, simp_all)[1]
+    apply (erule integrity_trans)
+    apply (simp add: integrity_def)
+    apply (intro impI conjI allI)
+     apply clarsimp
+     apply (rule tro_ep_unblock, simp+)
+     apply (rule_tac x="pasObjectAbs aag t" in exI, rule_tac x=aepptr in exI, simp)
+     apply (erule get_tcb_recv_blocked_implies_receive, erule get_tcb_rev)
+     apply simp
+    apply (rename_tac word be careful tcb your dogs finaly one)
+    apply (rule_tac aep'= "tcb_bound_aep tcb" and ep="aepptr" and recv=word in tro_tcb_send, simp+)
+      apply (rule_tac x="tcb_context tcb" in exI, simp)
+     apply (simp add: tcb_bound_aep_reset_integrity_def )
+    apply (rule disjI2)
+    apply (clarsimp simp:  indirect_send_def pred_tcb_at_def obj_at_def)
+   apply (clarsimp simp: pred_tcb_at_def obj_at_def)
+  apply (clarsimp simp: pred_tcb_at_def  obj_at_def receive_blocked_def)
+  done
+
+lemma set_thread_state_integrity':
+  "\<lbrace>integrity_once_ts_upd t ts aag X st\<rbrace> set_thread_state t ts \<lbrace>\<lambda>_. integrity aag X st\<rbrace>"
+  apply (simp add: set_thread_state_def set_object_def)
+  apply (wp)
+  apply (clarsimp dest!: get_tcb_SomeD simp: fun_app_def cong: if_cong)
+  using empty_def insertI1 mk_disjoint_insert
+  by fastforce
+
+lemma as_user_set_register_respects_indirect:
+  "\<lbrace>integrity aag X st and st_tcb_at (op = Structures_A.Running) thread and
+    K ((\<not> is_subject aag thread \<longrightarrow> st_tcb_at receive_blocked thread st
+           \<and> bound_tcb_at (op = (Some aepptr)) thread st)
+        \<and> (aag_has_auth_to aag AsyncSend aepptr)) \<rbrace>
+   as_user thread (set_register r v)
+   \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
+  apply (simp add: as_user_def split_def set_object_def)
+  apply wp
+  apply (clarsimp simp: in_monad set_register_def)
+  apply (cases "is_subject aag thread")
+   apply (erule (1) integrity_update_autarch [unfolded fun_upd_def])
+  apply (clarsimp simp: st_tcb_def2 receive_blocked_def)
+  apply (simp split: thread_state.split_asm)
+  apply (rule send_upd_ctxintegrity [OF disjI2, unfolded fun_upd_def],
+         auto simp: st_tcb_def2 indirect_send_def pred_tcb_def2)
+  done
+
+lemma integrity_receive_blocked_chain':
+  "\<lbrakk> st_tcb_at receive_blocked p s; integrity aag X st s; \<not> is_subject aag p \<rbrakk> \<Longrightarrow> st_tcb_at receive_blocked p st"
+  apply (clarsimp simp: integrity_def st_tcb_at_tcb_states_of_state receive_blocked_def)
+  apply (simp split: thread_state.split_asm)
+  apply (rename_tac word kp)
+  apply (drule_tac ep=word in tsos_tro [where p = p], simp+ )
+  done
+
+lemma tba_Some:
+  "thread_bound_aeps s t = Some a \<Longrightarrow> bound_tcb_at (op = (Some a)) t s"
+  by (clarsimp simp: thread_bound_aeps_def pred_tcb_at_def obj_at_def get_tcb_def split: option.splits kernel_object.splits)
+
+
+lemma tsos_tro':
+  "\<lbrakk>\<forall>x. integrity_obj aag activate subjects (pasObjectAbs aag x) (kheap s x) (kheap s' x); thread_bound_aeps s' p = Some a;  
+    pasObjectAbs aag p \<notin> subjects \<rbrakk> \<Longrightarrow> thread_bound_aeps s p = Some a"
+  apply (drule_tac x=p in spec)
+  apply (erule integrity_obj.cases, simp_all)
+            apply (fastforce simp add: thread_bound_aeps_def get_tcb_def 
+                                        tcb_bound_aep_reset_integrity_def)+
+  done
+
+lemma integrity_receive_blocked_chain_bound:
+  "\<lbrakk> bound_tcb_at (op = (Some aepptr)) p s; integrity aag X st s; \<not> is_subject aag p \<rbrakk> \<Longrightarrow> bound_tcb_at (op = (Some aepptr)) p st"
+  apply (clarsimp simp: integrity_def)
+  apply (drule bound_tcb_at_thread_bound_aeps)
+  apply (drule tsos_tro' [where p = p], simp+ )
+  apply (clarsimp simp:tba_Some)
+  done
+
 lemma send_async_ipc_respects:
   "\<lbrace>integrity aag X st and pas_refined aag
          and valid_objs
-         and sym_refs \<circ> state_refs_of
+         and sym_refs \<circ> state_refs_of 
          and K (aag_has_auth_to aag AsyncSend aepptr)\<rbrace>
-     send_async_ipc aepptr badge val
+     send_async_ipc aepptr badge
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
-  apply (simp add: send_async_ipc_def )
+  apply (simp add: send_async_ipc_def)
   apply (rule hoare_seq_ext[OF _ get_aep_sp])
+  apply (rule hoare_name_pre_state)
+  apply (case_tac "aep_obj aep = IdleAEP \<and> aep_bound_tcb aep \<noteq> None")
+   -- "aep-binding case"
+   apply (rule hoare_pre)
+    apply (wp set_async_ep_respects[where auth=AsyncSend]
+                 as_user_set_register_respects_indirect[where aepptr=aepptr]
+                 set_thread_state_integrity' sts_st_tcb_at' static_imp_wp 
+                 ipc_cancel_receive_blocked_respects[where aepptr=aepptr]
+                 gts_wp
+               | wpc | simp)+
+   apply (clarsimp, rule conjI, clarsimp simp: st_tcb_def2)
+   apply (clarsimp simp: receive_blocked_def)
+   apply (simp split: thread_state.split_asm)
+   apply (clarsimp simp: obj_at_def)
+   apply (drule (3) aep_bound_tcb_at[where aepptr=aepptr and P="\<lambda>aep. aep = Some aepptr"], simp+)[1]
+   apply (rule conjI)
+    apply (drule_tac x=aepptr and t=y in bound_tcb_at_implies_receive)
+     apply (clarsimp simp: pred_tcb_at_def obj_at_def, simp)
+   apply clarsimp
+   apply (rule conjI)
+    apply (rule_tac s=sa in integrity_receive_blocked_chain')
+      apply (clarsimp simp add: pred_tcb_at_def obj_at_def receive_blocked_def)
+      apply (fastforce split: thread_state.split)
+     apply simp+
+   apply (rule_tac s=sa in integrity_receive_blocked_chain_bound)
+     apply (clarsimp simp: pred_tcb_at_def obj_at_def)
+    apply simp+
   apply (rule hoare_pre)
-   apply (wp set_async_ep_respects[where auth=AsyncSend] do_async_transfer_respects_in_async_ipc' [where ep = aepptr] sts_st_tcb_at'
-             set_thread_state_pas_refined set_async_ep_pas_refined
-             set_thread_state_respects_in_async_ipc [where aepptr = aepptr] set_async_ep_respects[where auth=Send]
-             set_aep_valid_objs_at hoare_vcg_disj_lift static_imp_wp
-        | wpc
-        | simp add: update_waiting_aep_def)+
+   apply clarsimp
+   apply (wpc, clarsimp)
+     apply (wp set_async_ep_respects[where auth=AsyncSend] sts_st_tcb_at' as_user_set_register_respects
+               set_thread_state_pas_refined set_async_ep_pas_refined
+               set_thread_state_respects_in_async_ipc [where aepptr = aepptr] 
+               set_async_ep_respects[where auth=Send]
+               set_aep_valid_objs_at hoare_vcg_disj_lift static_imp_wp
+          | wpc
+          | simp add: update_waiting_aep_def)+
   apply clarsimp
-  apply (subgoal_tac "st_tcb_at (receive_blocked_on aepptr) (hd x) s")
+  apply (subgoal_tac "st_tcb_at (receive_blocked_on aepptr) (hd x) sa")
    prefer 2
    apply (rule aep_queued_st_tcb_at', assumption)
       apply (fastforce simp: obj_at_def valid_obj_def valid_aep_def elim!: valid_objsE)
@@ -430,14 +620,9 @@ lemma send_async_ipc_respects:
    apply simp
   apply simp
   apply (intro impI conjI)
-     -- "valid_aep"
-    apply (erule (1) obj_at_valid_objsE)
-    apply (clarsimp simp: is_aep valid_obj_def valid_aep_def st_tcb_def2 drop_Suc0_iff neq_Nil_conv
-                   split: list.split)
-   -- "st_tcb_at not halted"
-   apply (fastforce simp: st_tcb_def2 receive_blocked_on_def3)
-  -- "st_tcb_at receive_blocked st"
-  apply (erule (2) integrity_receive_blocked_chain)
+     -- "st_tcb_at receive_blocked st"
+   apply (erule (2) integrity_receive_blocked_chain)
+  apply clarsimp
   done
 
 section{* Sync IPC *}
@@ -851,6 +1036,108 @@ lemma case_list_cons_cong:
  = (case xxs of [] \<Rightarrow> f | x # xs \<Rightarrow> g (x # xs))"
   by (simp split: list.split)
 
+lemma complete_async_ipc_integrity:
+  "\<lbrace>integrity aag X st and pas_refined aag and valid_objs 
+           and bound_tcb_at (op = (Some aepptr)) thread
+           and K (is_subject aag thread)\<rbrace>
+     complete_async_ipc aepptr thread
+   \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
+  apply (simp add: complete_async_ipc_def)
+  apply (rule hoare_seq_ext [OF _ get_aep_sp])
+  apply (rule hoare_pre)
+  apply ((wp set_async_ep_respects[where auth=Receive] set_thread_state_integrity_autarch as_user_integrity_autarch
+       | wpc 
+       | simp)+)[1]
+  apply clarsimp
+  apply (drule_tac t="pasSubject aag" in sym)
+  apply (fastforce intro!: bound_tcb_at_implies_receive)
+  done
+
+abbreviation receive_ipc_base
+where
+  "receive_ipc_base aag thread ep epptr rights \<equiv> case ep of
+                  IdleEP \<Rightarrow>
+                    do set_thread_state thread (BlockedOnReceive epptr (AllowSend \<notin> rights));
+                       set_endpoint epptr (RecvEP [thread])
+                    od
+                  | SendEP q \<Rightarrow>
+                      do assert (q \<noteq> []);
+                         queue \<leftarrow> return $ tl q;
+                         sender \<leftarrow> return $ hd q;
+                         set_endpoint epptr $ case queue of [] \<Rightarrow> IdleEP | a # list \<Rightarrow> SendEP queue;
+                         sender_state \<leftarrow> get_thread_state sender;
+                         data \<leftarrow> case sender_state of BlockedOnSend ref x \<Rightarrow> return x | _ \<Rightarrow> fail;
+                         do_ipc_transfer sender (Some epptr) (sender_badge data)
+                          (sender_can_grant data) thread (AllowSend \<notin> rights);
+                         fault \<leftarrow> thread_get tcb_fault sender;
+                         if sender_is_call data \<or> fault \<noteq> None
+                         then if sender_can_grant data \<and> \<not> AllowSend \<notin> rights
+                              then setup_caller_cap sender thread
+                              else set_thread_state sender Inactive
+                         else do set_thread_state sender Running;
+                                 do_extended_op (switch_if_required_to sender)
+                              od
+                      od
+                  | RecvEP queue \<Rightarrow>
+                      do set_thread_state thread (BlockedOnReceive epptr (AllowSend \<notin> rights));
+                         set_endpoint epptr (RecvEP (queue @ [thread]))
+                      od"
+
+lemma receive_ipc_base_pas_refined:
+  "\<lbrace>pas_refined aag and valid_objs and sym_refs \<circ> state_refs_of
+           and ko_at (Endpoint ep) epptr 
+           and K (is_subject aag thread 
+               \<and> (pasSubject aag, Receive, pasObjectAbs aag epptr) \<in> pasPolicy aag)\<rbrace>
+    receive_ipc_base aag thread ep epptr rights
+   \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
+  apply (rule hoare_gen_asm)
+  apply (clarsimp simp: thread_get_def cong: endpoint.case_cong)
+  apply (rule hoare_pre)
+   apply (wp static_imp_wp set_thread_state_pas_refined get_endpoint_wp
+        | wpc | simp add: thread_get_def split del: split_if)+
+        apply (simp add:aag_cap_auth_def clas_no_asid cli_no_irqs)
+        apply (rename_tac list sss data)
+        apply (rule_tac Q="\<lambda>rv s. pas_refined aag s \<and> (sender_can_grant data \<longrightarrow> is_subject aag (hd list))"
+                   in hoare_strengthen_post[rotated])
+         apply (clarsimp simp: cap_auth_conferred_def pas_refined_all_auth_is_owns pas_refined_refl)
+        apply (wp static_imp_wp do_ipc_transfer_pas_refined set_endpoint_pas_refined set_thread_state_pas_refined get_endpoint_wp 
+                  hoare_vcg_imp_lift [OF set_endpoint_get_tcb, unfolded disj_not1] hoare_vcg_all_lift
+             | wpc
+             | simp add: thread_get_def  get_thread_state_def)
+       apply (wp static_imp_wp do_ipc_transfer_pas_refined set_endpoint_pas_refined set_thread_state_pas_refined get_endpoint_wp
+                 hoare_vcg_imp_lift [OF set_endpoint_get_tcb, unfolded disj_not1] hoare_vcg_all_lift
+            | wpc
+            | simp add: thread_get_def  get_thread_state_def)+
+  apply (clarsimp simp: tcb_at_def [symmetric] conj_ac tcb_at_st_tcb_at)
+  apply (rule conjI)
+   apply (rule impI)
+   -- "is_subject"
+   apply (subgoal_tac "aag_has_auth_to aag Control (hd x)")
+    apply (fastforce simp add: pas_refined_refl dest!: aag_Control_into_owns)
+   apply (rule_tac ep = "pasObjectAbs aag epptr" in aag_wellformed_grant_Control_to_send [OF _ _ pas_refined_wellformed])
+     apply (rule_tac s = s in pas_refined_mem [OF sta_ts])
+      apply (clarsimp simp: tcb_at_def thread_states_def tcb_states_of_state_def dest!: st_tcb_at_tcb_at)
+      apply (frule (1) sym_refs_obj_atD)
+      apply clarsimp
+      apply (drule (1) bspec [OF _ hd_in_set])
+      apply (clarsimp simp: obj_at_def tcb_bound_refs_def dest!: get_tcb_SomeD split: option.splits)
+     apply assumption+
+  apply (fastforce simp: valid_objs_def valid_obj_def obj_at_def
+                         ep_redux_simps neq_Nil_conv valid_ep_def case_list_cons_cong)
+  done
+
+lemma complete_async_ipc_pas_refined:
+  "\<lbrace>pas_refined aag and bound_tcb_at (op = (Some aepptr)) thread\<rbrace>
+     complete_async_ipc aepptr thread
+   \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
+  apply (simp add: complete_async_ipc_def)
+  apply (rule hoare_seq_ext [OF _ get_aep_sp])
+  apply (rule hoare_pre)
+  apply (wp set_async_ep_pas_refined set_thread_state_pas_refined
+       | wpc)+
+  apply clarsimp
+  done
+
 lemma receive_ipc_pas_refined:
   "\<lbrace>pas_refined aag
          and valid_objs and sym_refs \<circ> state_refs_of 
@@ -861,39 +1148,20 @@ lemma receive_ipc_pas_refined:
   apply (rule hoare_gen_asm)
   apply (simp add: receive_ipc_def thread_get_def  split: cap.split)
   apply clarsimp
-  apply (rule hoare_pre)
-   apply (wp static_imp_wp set_thread_state_pas_refined get_endpoint_wp
-        | wpc | simp split del: split_if)+
-         apply (rename_tac list sender_state data)
-         apply (simp add:aag_cap_auth_def clas_no_asid cli_no_irqs)
-         apply (rule_tac Q="\<lambda>rv s. pas_refined aag s \<and> (sender_can_grant data \<longrightarrow> is_subject aag (hd list))"
-                    in hoare_strengthen_post[rotated])
-          apply (clarsimp simp: cap_auth_conferred_def pas_refined_all_auth_is_owns pas_refined_refl)
-         apply (wp static_imp_wp do_ipc_transfer_pas_refined set_endpoint_pas_refined set_thread_state_pas_refined get_endpoint_wp
-                   hoare_vcg_imp_lift [OF set_endpoint_get_tcb, unfolded disj_not1] hoare_vcg_all_lift
-              | wpc
-              | simp add: thread_get_def  get_thread_state_def)
-         apply (wp static_imp_wp do_ipc_transfer_pas_refined set_endpoint_pas_refined set_thread_state_pas_refined get_endpoint_wp
-                   hoare_vcg_imp_lift [OF set_endpoint_get_tcb, unfolded disj_not1] hoare_vcg_all_lift
-              | wpc
-              | simp add: thread_get_def  get_thread_state_def)+
-  apply (rename_tac word1 word2 set s)
-  apply (clarsimp simp: tcb_at_def [symmetric] conj_comms tcb_at_st_tcb_at)
-  apply (rule conjI)
-   apply (rule impI)
-   -- "is_subject"
-   apply (subgoal_tac "aag_has_auth_to aag Control (hd x)")
-    apply (fastforce simp add: pas_refined_refl dest!: aag_Control_into_owns)
-   apply (rule_tac ep = "pasObjectAbs aag word1" in aag_wellformed_grant_Control_to_send [OF _ _ pas_refined_wellformed])
-     apply (rule_tac s = s in pas_refined_mem [OF sta_ts])
-      apply (clarsimp simp: tcb_at_def thread_states_def tcb_states_of_state_def dest!: st_tcb_at_tcb_at)
-      apply (frule (1) sym_refs_obj_atD)
-      apply clarsimp
-      apply (drule (1) bspec [OF _ hd_in_set])
-      apply (clarsimp simp: obj_at_def dest!: get_tcb_SomeD)
-     apply assumption+
-  apply (fastforce simp: valid_objs_def valid_obj_def obj_at_def
-                         ep_redux_simps neq_Nil_conv valid_ep_def case_list_cons_cong)
+  apply (rule hoare_seq_ext[OF _ get_endpoint_sp])
+  apply (rule hoare_seq_ext[OF _ gba_sp])
+  apply (case_tac aepptr, simp_all)
+  (* old receive_ipc stuff *)
+   apply (rule hoare_pre)
+    apply (wp receive_ipc_base_pas_refined)[1]
+   apply clarsimp
+   (* aep-binding case *)
+  apply clarsimp
+  apply (rule hoare_seq_ext[OF _ get_aep_sp])
+  apply (case_tac "isActive aep", simp_all)
+   apply (wp complete_async_ipc_pas_refined, clarsimp)
+   (* regular case again *)
+  apply (rule hoare_pre, wp receive_ipc_base_pas_refined, clarsimp)
   done
 
 
@@ -1046,7 +1314,8 @@ lemma set_thread_state_running_respects:
   apply (erule integrity_trans)
   apply (clarsimp simp: integrity_def obj_at_def st_tcb_at_def)
   apply (clarsimp dest!: get_tcb_SomeD)
-  apply (auto intro: tro_tcb_receive)
+  apply (rule_tac aep'="tcb_bound_aep tcb" and new_st=Running in tro_tcb_receive)
+  apply (auto simp: tcb_bound_aep_reset_integrity_def)
   done
 
 (* FIXME move *)
@@ -1072,27 +1341,22 @@ lemma sts_receive_Inactive_respects:
   apply (erule integrity_trans)
   apply (clarsimp simp: integrity_def)
   apply (drule get_tcb_SomeD)
-  apply (rule tro_tcb_receive [OF _ refl refl], assumption)
-    apply simp
-   apply (fastforce simp add: st_tcb_at_def obj_at_def)
-  apply simp
+  apply (rule_tac aep'="tcb_bound_aep y" and new_st=Inactive in tro_tcb_receive, simp_all)
+   apply (clarsimp simp: tcb_bound_aep_reset_integrity_def)
+  apply (fastforce simp add: st_tcb_at_def obj_at_def)
   done
 
-
-
-lemma receive_ipc_integrity_autarch:
+lemma receive_ipc_base_integrity:
   "\<lbrace>pas_refined aag
         and integrity aag X st
         and valid_objs and valid_mdb
         and sym_refs \<circ> state_refs_of
+        and ko_at (Endpoint ep) epptr
         and K (is_subject aag receiver
-            \<and> (\<forall>epptr \<in> obj_refs cap. aag_has_auth_to aag Receive epptr))\<rbrace>
-    receive_ipc receiver cap
+            \<and> (pasSubject aag, Receive, pasObjectAbs aag epptr) \<in> pasPolicy aag)\<rbrace>
+    receive_ipc_base aag receiver ep epptr rights
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
-  apply (rule hoare_gen_asm)
-  apply (simp add: receive_ipc_def thread_get_def get_thread_state_def split: cap.splits cong: Structures_A.endpoint.case_cong)
-  apply clarsimp
-  apply (rename_tac word1 word2 set)
+  apply (clarsimp simp: thread_get_def get_thread_state_def cong: endpoint.case_cong)
   apply (rule hoare_pre)
    apply (wp set_endpoinintegrity set_thread_state_running_respects
              setup_caller_cap_integrity_autarch
@@ -1104,20 +1368,20 @@ lemma receive_ipc_integrity_autarch:
          apply (rule_tac Q="\<lambda>rv s. integrity aag X st s
                             \<and> is_subject aag receiver
                             \<and> (sender_can_grant data \<longrightarrow> is_subject aag (hd list))
-                            \<and> aag_has_auth_to aag Receive word1 \<and> st_tcb_at (send_blocked_on word1) (hd list) s 
+                            \<and> aag_has_auth_to aag Receive epptr \<and> st_tcb_at (send_blocked_on epptr) (hd list) s 
                             \<and> st_tcb_at (\<lambda>st. send_is_call st = sender_is_call data) (hd list) s"
                       in hoare_strengthen_post[rotated])
           apply (fastforce simp: st_tcb_at_def obj_at_def dest: get_tcb_SomeD)
-         apply (wp do_ipc_transfer_integrity_autarch do_ipc_transfer_st_tcb set_endpoinintegrity get_endpoint_wp
+         apply (wp do_ipc_transfer_integrity_autarch do_ipc_transfer_pred_tcb set_endpoinintegrity get_endpoint_wp
            set_thread_state_integrity_autarch[where param_a=receiver]
            hoare_vcg_imp_lift [OF set_endpoint_get_tcb, unfolded disj_not1] hoare_vcg_all_lift 
            | wpc | simp)+
   apply clarsimp
-  apply (subgoal_tac "ep_at word1 s \<and> (\<exists>auth. aag_has_auth_to aag auth word1 \<and> (auth = Receive \<or> auth = SyncSend \<or> auth = Reset))")
+  apply (subgoal_tac "ep_at epptr s \<and> (\<exists>auth. aag_has_auth_to aag auth epptr \<and> (auth = Receive \<or> auth = SyncSend \<or> auth = Reset))")
    prefer 2
    apply (fastforce simp: obj_at_def is_ep)
   apply simp
-  apply (thin_tac "ep_at word1 s \<and> (\<exists>auth. aag_has_auth_to aag auth word1 \<and> (auth = Receive \<or> auth = SyncSend \<or> auth = Reset))")
+  apply (thin_tac "ep_at epptr s \<and> (\<exists>auth. aag_has_auth_to aag auth epptr \<and> (auth = Receive \<or> auth = SyncSend \<or> auth = Reset))")
   apply (clarsimp simp: st_tcb_def2)
   (* (update the) clag from _pas_refined *)
   apply safe
@@ -1126,18 +1390,43 @@ lemma receive_ipc_integrity_autarch:
    -- "is_subject"
    apply (subgoal_tac "aag_has_auth_to aag Control (hd x)")
     apply (fastforce simp add: pas_refined_refl dest!: aag_Control_into_owns)
-   apply (rule_tac ep = "pasObjectAbs aag word1" in aag_wellformed_grant_Control_to_send [OF _ _ pas_refined_wellformed])
+   apply (rule_tac ep = "pasObjectAbs aag epptr" in aag_wellformed_grant_Control_to_send [OF _ _ pas_refined_wellformed])
      apply (rule_tac s = s in pas_refined_mem [OF sta_ts])
       apply (clarsimp simp: tcb_at_def thread_states_def tcb_states_of_state_def dest!: st_tcb_at_tcb_at)
       apply (frule (1) sym_refs_obj_atD)
       apply clarsimp
       apply (drule (1) bspec [OF _ hd_in_set])
-      apply (clarsimp simp: obj_at_def dest!: get_tcb_SomeD)
+      apply (clarsimp simp: obj_at_def tcb_bound_refs_def dest!: get_tcb_SomeD split: option.splits)
      apply assumption+
-  apply (frule_tac p = word1 in sym_refs_obj_atD, assumption)
+  apply (frule_tac p = epptr in sym_refs_obj_atD, assumption)
   apply (clarsimp)
   apply (drule (1) bspec [OF _ hd_in_set])
-  apply (clarsimp simp: obj_at_def dest!: get_tcb_SomeD)
+  apply (clarsimp simp: obj_at_def tcb_bound_refs_def dest!: get_tcb_SomeD split: option.splits)
+  done
+
+lemma receive_ipc_integrity_autarch:
+  "\<lbrace>pas_refined aag
+        and integrity aag X st
+        and valid_objs and valid_mdb
+        and sym_refs \<circ> state_refs_of
+        and K (is_subject aag receiver
+            \<and> (\<forall>epptr \<in> obj_refs cap. aag_has_auth_to aag Receive epptr))\<rbrace>
+    receive_ipc receiver cap
+   \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
+  apply (rule hoare_gen_asm)
+  apply (simp add: receive_ipc_def split: cap.splits)
+  apply clarsimp
+  apply (rule hoare_seq_ext[OF _ get_endpoint_sp])
+  apply (rule hoare_seq_ext[OF _ gba_sp])
+  apply (case_tac aepptr, simp_all)
+  (* old receive case, not bound *)
+   apply (rule hoare_pre, wp receive_ipc_base_integrity, clarsimp)
+  apply (rule hoare_seq_ext[OF _ get_aep_sp])
+  apply (case_tac "isActive aep", simp_all)
+  (* new aep-binding case *)
+   apply (rule hoare_pre, wp complete_async_ipc_integrity, clarsimp)
+   (* old receive case, bound aep not active *)
+  apply (rule hoare_pre, wp receive_ipc_base_integrity, clarsimp)
   done
 
 subsubsection{* Non-autarchy: the sender is running *}
@@ -1213,8 +1502,12 @@ lemma integrity_tcb_in_ipc_final:
   apply (rule conjI)
    apply (erule tcb_in_ipc.cases, simp_all)[1]
    apply clarsimp
-   apply (rule tro_tcb_send [OF refl refl], auto)[1]
- -- "trm"
+   apply (rule_tac aep'="tcb_bound_aep tcb" and ep=epptr in tro_tcb_send [OF refl refl])
+     apply fastforce
+    apply (clarsimp simp: tcb_bound_aep_reset_integrity_def)
+   apply (rule disjI1)
+   apply (clarsimp simp: direct_send_def)
+    -- "trm"
   apply clarsimp
   apply (cases "is_subject aag thread")
    apply (rule trm_write)

@@ -2126,12 +2126,11 @@ lemma retype_region_obj_at_other3:
    apply (simp add: field_simps)
 done
 
-
 lemma retype_region_st_tcb_at:
-  "\<lbrace>\<lambda>s. pspace_no_overlap ptr' sz s \<and> st_tcb_at P t s \<and> range_cover ptr' sz (obj_bits_api ty us) n
+  "\<lbrace>\<lambda>s. pspace_no_overlap ptr' sz s \<and> pred_tcb_at proj P t s \<and> range_cover ptr' sz (obj_bits_api ty us) n
           \<and> valid_objs s \<and> pspace_aligned s\<rbrace>
-     retype_region ptr' n us ty \<lbrace>\<lambda>rv. st_tcb_at P t\<rbrace>"
-  by (simp add: retype_region_obj_at_other3 st_tcb_at_def)
+     retype_region ptr' n us ty \<lbrace>\<lambda>rv. pred_tcb_at proj P t\<rbrace>"
+  by (simp add: retype_region_obj_at_other3 pred_tcb_at_def)
 
 
 lemma retype_region_cur_tcb[wp]:
@@ -2311,7 +2310,7 @@ lemma valid_obj_default_object:
                        tcb_cap_cases_def valid_ipc_buffer_cap_def
                        word_bits_def)
      apply (simp add: valid_ep_def default_ep_def)
-    apply (simp add: valid_aep_def default_async_ep_def)
+    apply (simp add: valid_aep_def default_async_ep_def default_aep_def valid_bound_tcb_def)
    apply (frule tyct)
    apply (clarsimp simp: valid_cs_def empty_cnode_def well_formed_cnode_n_def)
    apply safe
@@ -2520,8 +2519,8 @@ lemma cte_at_pres: "\<And>p. cte_at p s \<Longrightarrow> cte_at p s'"
   done
 
 
-lemma st_tcb_at_pres: "\<And>P t. st_tcb_at P t s \<Longrightarrow> st_tcb_at P t s'"
-  unfolding st_tcb_at_def
+lemma pred_tcb_at_pres: "\<And>P t. pred_tcb_at proj P t s \<Longrightarrow> pred_tcb_at proj P t s'"
+  unfolding pred_tcb_at_def
   by (erule obj_at_pres)
 
 
@@ -2537,14 +2536,14 @@ proof -
   {
     fix x y
     assume xne: "x \<noteq> y" and xv: "x \<in> set (retype_addrs ptr ty n us)" and yv: "y \<in> set (retype_addrs ptr ty n us)"
-        
+
     have "is_aligned x (obj_bits_api ty us)"
       apply (rule retype_addrs_aligned)
       apply fact+
       apply (insert cover)
         apply (auto simp:range_cover_def word_bits_def)
       done
-    moreover 
+    moreover
     have "is_aligned y (obj_bits_api ty us)"
       apply (rule retype_addrs_aligned)
       apply fact+
@@ -2646,10 +2645,10 @@ lemma valid_objs:
   apply (clarsimp simp:valid_objs_def)
   apply (rule valid_pspaceE[OF vp])
   apply (clarsimp simp:valid_objs_def s'_def ps_def split:if_splits)
-    apply (simp add:valid_obj_default_object[OF tyunt tyct])
+   apply (simp add:valid_obj_default_object[OF tyunt tyct])
   apply (simp (no_asm) add:valid_obj_def)
   apply (drule bspec)
-    apply (erule domI)
+   apply (erule domI)
   apply (clarsimp simp:valid_obj_def split:Structures_A.kernel_object.splits)
      apply (clarsimp simp: valid_cs_def)
      apply (drule (1) bspec)
@@ -2659,16 +2658,20 @@ lemma valid_objs:
      apply fastforce
     apply (clarsimp simp: valid_tcb_def)
     apply (rule conjI)
-      apply (rule ballI, drule(1) bspec, clarsimp elim!: ranE)
+     apply (rule ballI, drule(1) bspec, clarsimp elim!: ranE)
      apply (erule valid_cap_pres[unfolded s'_def ps_def])
-    apply (rule cte_wp_at_tcbI, fastforce+)[1]
-    apply (clarsimp simp: valid_tcb_state_def elim!: obj_at_pres[unfolded s'_def ps_def]
-                        split: Structures_A.thread_state.splits)
-   apply (clarsimp simp: valid_ep_def elim!: obj_at_pres[unfolded s'_def ps_def]
-                       split: Structures_A.endpoint.splits)
-    apply (drule (1) bspec, erule obj_at_pres[unfolded s'_def ps_def])+
-  apply (clarsimp simp: valid_aep_def split: Structures_A.async_ep.splits)
-  apply (drule (1) bspec, erule obj_at_pres[unfolded s'_def ps_def])+
+     apply (rule cte_wp_at_tcbI, fastforce+)[1]
+
+   apply (fastforce simp: valid_tcb_state_def valid_bound_aep_def
+                   elim!: obj_at_pres[unfolded s'_def ps_def]
+                   split: Structures_A.thread_state.splits option.splits)
+
+    apply (fastforce simp: valid_ep_def
+                  elim!: obj_at_pres[unfolded s'_def ps_def]
+                  split: Structures_A.endpoint.splits)
+  apply (fastforce simp: valid_aep_def valid_bound_tcb_def
+                  elim!: obj_at_pres[unfolded s'_def ps_def]
+                 split: Structures_A.aep.splits option.splits)
   done
 
 
@@ -2680,7 +2683,7 @@ lemma refs_eq:
                    split: option.splits)
   apply (cases ty, simp_all add: tyunt default_object_def
                                  default_tcb_def default_ep_def
-                                 default_async_ep_def)
+                                 default_async_ep_def default_aep_def)
   done
 
 
@@ -2708,7 +2711,7 @@ lemma iflive:
   apply (clarsimp elim!: obj_atE split: split_if_asm)
    apply (cases ty, simp_all add: default_object_def tyunt
                                   default_tcb_def default_ep_def
-                                  default_async_ep_def)
+                                  default_async_ep_def default_aep_def)
   apply (frule(1) if_live_then_nonz_capD2[OF iflive_s])
   apply (simp add: ex_nonz_cap_to_def
                    cte_retype[unfolded s'_def ps_def])
@@ -2812,7 +2815,7 @@ lemma idle_s':
 lemma valid_idle:
   "valid_idle s \<Longrightarrow> valid_idle s'"
   by (clarsimp simp add: valid_idle_def idle_s' refs_eq
-                         st_tcb_at_pres)
+                         pred_tcb_at_pres)
 
 
 lemma arch_state [simp]:
@@ -2863,7 +2866,7 @@ lemma unique_reply_caps:
 lemma valid_reply_caps:
   "valid_reply_caps s \<Longrightarrow> valid_reply_caps s'"
   by (clarsimp simp: valid_reply_caps_def unique_reply_caps has_reply_cap_def
-                     st_tcb_at_pres cte_retype)
+                     pred_tcb_at_pres cte_retype)
 
 
 lemma valid_reply_masters:
@@ -3117,7 +3120,7 @@ lemma valid_asid_map:
 lemma only_idle:
   "only_idle s \<Longrightarrow> only_idle s'"
   apply (clarsimp simp: only_idle_def)
-  apply (clarsimp simp: s'_def st_tcb_at_def obj_at_def ps_def split: split_if_asm)
+  apply (clarsimp simp: s'_def pred_tcb_at_def obj_at_def ps_def split: split_if_asm)
   apply (simp add: default_object_def tyunt split: Structures_A.apiobject_type.splits)
   apply (simp add: default_tcb_def)
   done

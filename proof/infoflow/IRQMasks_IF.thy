@@ -26,32 +26,6 @@ lemma storeWord_irq_masks[wp]:
   done
 
 
-crunch irq_masks[wp]: send_async_ipc "\<lambda>s. P (irq_masks_of_state s)"  
-  (wp: crunch_wps ignore: do_machine_op wp: dmo_wp simp: crunch_simps)
-
-lemma handle_interrupt_irq_masks:
-  notes no_irq[wp del]
-  shows
-  "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False st\<rbrace>
-   handle_interrupt irq
-   \<lbrace>\<lambda>rv s. P (irq_masks_of_state s)\<rbrace>"
-  apply(simp add: handle_interrupt_def)
-  apply(wp dmo_wp | simp add: ackInterrupt_def maskInterrupt_def split del: split_if | wpc | simp add: get_irq_state_def)+
-  apply(fastforce simp: domain_sep_inv_def)
-  done
-
-crunch irq_masks[wp]: cap_insert "\<lambda>s. P (irq_masks_of_state s)"
-  (wp: crunch_wps)
-
-
-lemma invoke_irq_handler_irq_masks:
-  shows
-  "\<lbrace>domain_sep_inv False st and (\<lambda>s. (\<exists>ptr'. cte_wp_at (op = (IRQHandlerCap irq)) ptr' s))\<rbrace> 
-    invoke_irq_handler blah 
-   \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>"
-  apply(clarsimp simp: valid_def domain_sep_inv_def)
-  done
-
 lemma detype_irq_masks[simp]:
   "irq_masks (machine_state (detype S s)) = irq_masks_of_state s"
   apply(simp add: detype_def)
@@ -68,10 +42,23 @@ lemma delete_objects_irq_masks[wp]:
 crunch irq_masks[wp]: invoke_untyped "\<lambda>s. P (irq_masks_of_state s)"
   (ignore: delete_objects wp: crunch_wps dmo_wp simp: crunch_simps no_irq_clearMemory no_irq_cleanCacheRange_PoU mapM_x_def_bak)
 
+crunch irq_masks[wp]: cap_insert "\<lambda>s. P (irq_masks_of_state s)"
+  (wp: crunch_wps)
+
 crunch irq_masks[wp]: set_extra_badge "\<lambda>s. P (irq_masks_of_state s)"
+  (wp: crunch_wps dmo_wp)
 
 crunch irq_masks[wp]: send_ipc "\<lambda>s. P (irq_masks_of_state s)"
   (wp: crunch_wps simp: crunch_simps ignore: const_on_failure wp: transfer_caps_loop_pres)
+
+lemma invoke_irq_handler_irq_masks:
+  shows
+  "\<lbrace>domain_sep_inv False st and (\<lambda>s. (\<exists>ptr'. cte_wp_at (op = (IRQHandlerCap irq)) ptr' s))\<rbrace> 
+    invoke_irq_handler blah 
+   \<lbrace>\<lambda>_ s. P (irq_masks_of_state s)\<rbrace>"
+  apply(clarsimp simp: valid_def domain_sep_inv_def)
+  done
+
 
 lemma empty_slot_irq_masks:
   "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and K (irq_opt = None)\<rbrace> 
@@ -84,8 +71,23 @@ lemma empty_slot_irq_masks:
 crunch irq_masks[wp]: do_reply_transfer "\<lambda>s. P (irq_masks_of_state s)"
   (wp: crunch_wps empty_slot_irq_masks simp: crunch_simps unless_def)
 
+
 crunch irq_masks[wp]: finalise_cap "\<lambda>s. P (irq_masks_of_state s)"
   (wp: select_wp crunch_wps dmo_wp simp: crunch_simps no_irq_setHardwareASID no_irq_setCurrentPD no_irq_invalidateTLB_ASID no_irq_invalidateTLB_VAASID no_irq_cleanByVA_PoU)
+
+crunch irq_masks[wp]: send_async_ipc "\<lambda>s. P (irq_masks_of_state s)"  
+  (wp: crunch_wps ignore: do_machine_op wp: dmo_wp simp: crunch_simps)
+
+lemma handle_interrupt_irq_masks:
+  notes no_irq[wp del]
+  shows
+  "\<lbrace>(\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False st\<rbrace>
+   handle_interrupt irq
+   \<lbrace>\<lambda>rv s. P (irq_masks_of_state s)\<rbrace>"
+  apply(simp add: handle_interrupt_def)
+  apply(wp dmo_wp | simp add: ackInterrupt_def maskInterrupt_def when_def split del: split_if | wpc | simp add: get_irq_state_def |wp_once hoare_drop_imp)+
+  apply(fastforce simp: domain_sep_inv_def)
+  done
 
 crunch irq_masks[wp]: cap_swap_for_delete "\<lambda>s. P (irq_masks_of_state s)"
 
@@ -174,7 +176,7 @@ lemma invoke_irq_control_irq_masks:
    apply(clarsimp simp: irq_control_inv_valid_def domain_sep_inv_def valid_def)+
   done
       
-crunch irq_masks[wp]: arch_perform_invocation "\<lambda>s. P (irq_masks_of_state s)"
+crunch irq_masks[wp]: arch_perform_invocation, bind_async_endpoint "\<lambda>s. P (irq_masks_of_state s)"
   (wp: dmo_wp crunch_wps simp: crunch_simps no_irq_cleanByVA_PoU no_irq_invalidateTLB_ASID no_irq_do_flush)
 
 crunch irq_masks[wp]: restart "\<lambda>s. P (irq_masks_of_state s)"
@@ -203,6 +205,10 @@ lemma invoke_tcb_irq_masks:
             | clarsimp)+)[3]
     defer
     apply((wp | simp )+)[2]
+  (* AsyncEndpointControl *)
+   apply (rename_tac option)
+   apply (case_tac option)
+    apply ((wp | simp)+)[2]
   (* just ThreadControl left *)
   apply (simp add: split_def cong: option.case_cong)
 
@@ -251,8 +257,7 @@ lemma invoke_tcb_irq_masks:
             thread_set_valid_cap 
             thread_set_cte_at  thread_set_no_cap_to_trivial
        | wpc)+
-  apply fastforce+
-  done
+  by fastforce+
 
 crunch irq_masks[wp]: cap_move "\<lambda>s. P (irq_masks_of_state s)"
 
@@ -412,7 +417,7 @@ lemma handle_event_irq_masks:
 crunch irq_masks[wp]: activate_thread "\<lambda>s. P (irq_masks_of_state s)"
 
 crunch irq_masks[wp]: schedule "\<lambda>s. P (irq_masks_of_state s)"
-  (wp: dmo_wp alternative_wp select_wp crunch_wps simp: clearExMonitor_def)
+  (wp: dmo_wp alternative_wp select_wp crunch_wps simp: crunch_simps clearExMonitor_def)
 
 lemma call_kernel_irq_masks:
   "\<lbrace> (\<lambda>s. P (irq_masks_of_state s)) and domain_sep_inv False st and einvs and (\<lambda>s. ev \<noteq> Interrupt \<longrightarrow> ct_active s)\<rbrace>

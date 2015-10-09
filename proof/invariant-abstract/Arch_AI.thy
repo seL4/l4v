@@ -850,7 +850,7 @@ lemma perform_asid_control_invocation_st_tcb_at:
       apply (simp add:page_bits_def)+
     apply (simp add:invs_valid_objs invs_psp_aligned)+
   apply (rule conjI)
-   apply (erule st_tcb_weakenE, simp)
+   apply (erule pred_tcb_weakenE, simp)
   apply (rule conjI)
    apply (frule st_tcb_ex_cap)
      apply clarsimp
@@ -1826,16 +1826,15 @@ lemma arch_decode_inv_wf[wp]:
 
 declare word_less_sub_le [simp]
 
-crunch st_tcb_at: perform_page_table_invocation, perform_page_invocation,
-           perform_asid_pool_invocation, perform_page_directory_invocation "st_tcb_at P t"
-  (wp: crunch_wps set_mrs_st_tcb simp: crunch_simps)
+crunch pred_tcb_at: perform_page_table_invocation, perform_page_invocation,
+           perform_asid_pool_invocation, perform_page_directory_invocation "pred_tcb_at proj P t"
+  (wp: crunch_wps simp: crunch_simps)
 
 lemma delete_objects_st_tcb_at:
-  "\<lbrace>st_tcb_at P t and invs and K (t \<notin> {ptr .. ptr + 2 ^ bits - 1})\<rbrace> 
+  "\<lbrace>pred_tcb_at proj P t and invs and K (t \<notin> {ptr .. ptr + 2 ^ bits - 1})\<rbrace> 
     delete_objects ptr bits
-  \<lbrace>\<lambda>y. st_tcb_at P t\<rbrace>"
+  \<lbrace>\<lambda>y. pred_tcb_at proj P t\<rbrace>"
   by (wp|simp add: delete_objects_def do_machine_op_def split_def)+
-
 
 lemma arch_pinv_st_tcb_at:
   "\<lbrace>invs and valid_arch_inv ai and ct_active and 
@@ -1843,14 +1842,14 @@ lemma arch_pinv_st_tcb_at:
      arch_perform_invocation ai
    \<lbrace>\<lambda>rv. st_tcb_at P t\<rbrace>"
   apply (cases ai, simp_all add: arch_perform_invocation_def valid_arch_inv_def)
-      apply (wp perform_page_table_invocation_st_tcb_at,
-             fastforce elim!: st_tcb_weakenE)
-     apply (wp perform_page_directory_invocation_st_tcb_at, fastforce elim: st_tcb_weakenE)
-    apply (wp perform_page_invocation_st_tcb_at, fastforce elim!: st_tcb_weakenE)
+     apply (wp perform_page_table_invocation_pred_tcb_at,
+            fastforce elim!: pred_tcb_weakenE)
+     apply (wp perform_page_directory_invocation_pred_tcb_at, fastforce elim: pred_tcb_weakenE)
+    apply (wp perform_page_invocation_pred_tcb_at, fastforce elim!: pred_tcb_weakenE)
    apply (wp perform_asid_control_invocation_st_tcb_at,
-          fastforce elim!: st_tcb_weakenE)
-  apply (wp perform_asid_pool_invocation_st_tcb_at,
-         fastforce elim!: st_tcb_weakenE)
+          fastforce elim!: pred_tcb_weakenE)
+  apply (wp perform_asid_pool_invocation_pred_tcb_at,
+         fastforce elim!: pred_tcb_weakenE)
   done
 
 lemma get_cap_diminished:

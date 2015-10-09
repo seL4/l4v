@@ -1558,6 +1558,10 @@ lemma wpc_helper_no_fail_final:
   "no_fail Q f \<Longrightarrow> wpc_helper (P, P') (Q, Q') (no_fail P f)"
   by (clarsimp simp: wpc_helper_def elim!: no_fail_pre)
 
+lemma wpc_helper_empty_fail_final:
+  "empty_fail f \<Longrightarrow> wpc_helper (P, P') (Q, Q') (empty_fail f)"
+  by (clarsimp simp: wpc_helper_def)
+
 lemma wpc_helper_validNF:
   "\<lbrace>Q\<rbrace> g \<lbrace>S\<rbrace>! \<Longrightarrow> wpc_helper (P, P') (Q, Q') \<lbrace>P\<rbrace> g \<lbrace>S\<rbrace>!"
   apply (clarsimp simp: wpc_helper_def)
@@ -1568,8 +1572,8 @@ wpc_setup "\<lambda>m. \<lbrace>P\<rbrace> m \<lbrace>Q\<rbrace>,\<lbrace>E\<rbr
 wpc_setup "\<lambda>m. \<lbrace>P\<rbrace> m \<lbrace>Q\<rbrace>,-" wpc_helper_validE_R
 wpc_setup "\<lambda>m. \<lbrace>P\<rbrace> m -,\<lbrace>E\<rbrace>" wpc_helper_validR_R
 wpc_setup "\<lambda>m. no_fail P m" wpc_helper_no_fail_final
+wpc_setup "\<lambda>m. empty_fail m" wpc_helper_empty_fail_final
 wpc_setup "\<lambda>m. \<lbrace>P\<rbrace> m \<lbrace>Q\<rbrace>!" wpc_helper_validNF
-
 
 lemma in_liftM:
  "((r, s') \<in> fst (liftM t f s)) = (\<exists>r'. (r', s') \<in> fst (f s) \<and> r = t r')"

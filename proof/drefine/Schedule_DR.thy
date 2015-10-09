@@ -22,12 +22,12 @@ lemma getActiveTCBs_subset:
   apply (rule context_conjI)
    apply (clarsimp simp: restrict_map_def)
    apply (frule invs_valid_idle)
-   apply (clarsimp simp: valid_idle_def st_tcb_def2 get_tcb_def)
+   apply (clarsimp simp: valid_idle_def pred_tcb_def2 get_tcb_def)
   apply (clarsimp simp: restrict_map_def split: split_if_asm)
   apply (clarsimp simp: transform_object_def transform_tcb_def)
   apply (clarsimp simp: infer_tcb_pending_op_def)
   apply (frule(1) valid_etcbs_tcb_etcb)
-  apply (case_tac "tcb_state y", auto)
+  apply (case_tac "tcb_state y", auto simp: tcb_pending_op_slot_def tcb_boundaep_slot_def)
   done
 
 
@@ -191,7 +191,7 @@ lemma switch_to_thread_idempotent_corres:
 lemma getActiveTCB_idle: "invs s \<Longrightarrow> getActiveTCB (idle_thread s) s = None"
   apply (frule invs_valid_idle)
   apply (clarsimp simp: valid_idle_def getActiveTCB_def)
-  apply (clarsimp simp: st_tcb_at_def get_tcb_def get_obj_def obj_at_def)
+  apply (clarsimp simp: pred_tcb_at_def get_tcb_def get_obj_def obj_at_def)
   done
 
 lemma switch_to_thread_same_corres:
@@ -292,13 +292,13 @@ lemma schedule_resume_cur_thread_dcorres:
     apply (rule schedule_resume_cur_thread_dcorres_L)
    apply (case_tac "cur \<noteq> idle_thread s'")
     apply (clarsimp simp: valid_sched_def valid_sched_action_def is_activatable_def invs_def valid_state_def
-                          st_tcb_at_def obj_at_def ct_in_cur_domain_def in_cur_domain_def)
+                          pred_tcb_at_def obj_at_def ct_in_cur_domain_def in_cur_domain_def)
     apply (frule(1) valid_etcbs_tcb_etcb)
-    apply (auto simp: transform_def transform_current_thread_def all_active_tcbs_def transform_objects_def active_tcbs_in_domain_def etcb_at_def
-                        map_add_def restrict_map_def option_map_def transform_object_def transform_tcb_def valid_idle_def st_tcb_def2 get_tcb_def
-                        transform_cnode_contents_def infer_tcb_pending_op_def transform_cap_def domIff st_tcb_at_kh_def obj_at_def only_idle_def
-                  split: option.splits split_if Structures_A.kernel_object.splits Structures_A.thread_state.splits)[1]
-   (* cur = idle_thread s' *)
+    apply (auto simp: transform_def transform_current_thread_def all_active_tcbs_def transform_objects_def active_tcbs_in_domain_def etcb_at_def tcb_boundaep_slot_def tcb_pending_op_slot_def
+                          map_add_def restrict_map_def option_map_def transform_object_def transform_tcb_def valid_idle_def st_tcb_def2 get_tcb_def
+                          transform_cnode_contents_def infer_tcb_pending_op_def transform_cap_def domIff st_tcb_at_kh_def obj_at_def only_idle_def
+                    split: option.splits split_if Structures_A.kernel_object.splits Structures_A.thread_state.splits)[1]
+     (* cur = idle_thread s' *)
    apply (subgoal_tac "cdl_current_thread s = None")
     apply (clarsimp simp: transform_def transform_current_thread_def)+
   done
@@ -311,10 +311,12 @@ lemma schedule_switch_thread_helper:
              \<rbrakk>
              \<Longrightarrow> t \<in> active_tcbs_in_domain (cur_domain s) (transform s)"
   apply (clarsimp simp: valid_sched_def valid_sched_action_def weak_valid_sched_action_def is_activatable_def invs_def
-                        valid_state_def st_tcb_at_def obj_at_def switch_in_cur_domain_def in_cur_domain_def only_idle_def)
+                        valid_state_def pred_tcb_at_def obj_at_def switch_in_cur_domain_def in_cur_domain_def only_idle_def)
   apply (frule(1) valid_etcbs_tcb_etcb)
+  apply (clarsimp simp: valid_idle_def pred_tcb_at_def)
+  apply (drule_tac s="idle_thread s" in sym)
   apply (auto simp: transform_def transform_current_thread_def all_active_tcbs_def transform_objects_def active_tcbs_in_domain_def etcb_at_def
-                        map_add_def restrict_map_def option_map_def transform_object_def transform_tcb_def valid_idle_def st_tcb_def2 get_tcb_def
+                        map_add_def restrict_map_def option_map_def transform_object_def transform_tcb_def valid_idle_def pred_tcb_at_def get_tcb_def tcb_pending_op_slot_def tcb_boundaep_slot_def
                         transform_cnode_contents_def infer_tcb_pending_op_def transform_cap_def domIff st_tcb_at_kh_def obj_at_def only_idle_def
                   split: option.splits split_if Structures_A.kernel_object.splits Structures_A.thread_state.splits)
   done
@@ -374,22 +376,24 @@ lemma schedule_choose_new_thread_helper:
              \<rbrakk>
              \<Longrightarrow> (\<exists>y. cdl_objects (transform s) t = Some y) \<and> t \<in> active_tcbs_in_domain (cur_domain s) (transform s)"
   apply (clarsimp simp: valid_sched_def valid_sched_action_def is_activatable_def invs_def
-                        valid_state_def st_tcb_at_def obj_at_def DetSchedInvs_AI.valid_queues_def
+                        valid_state_def pred_tcb_at_def obj_at_def DetSchedInvs_AI.valid_queues_def
                         max_non_empty_queue_def only_idle_def)
   apply (erule_tac x="cur_domain s" in allE)
   apply (erule_tac x="prio" in allE)
   apply clarsimp
   apply (erule_tac x="hd (ready_queues s (cur_domain s) prio)" in ballE)
+  apply (clarsimp simp: valid_idle_def pred_tcb_at_def)
+  apply (drule_tac s="idle_thread s" in sym)
   apply (auto simp: transform_def transform_current_thread_def all_active_tcbs_def transform_objects_def active_tcbs_in_domain_def etcb_at_def
                        is_etcb_at_def
                         map_add_def restrict_map_def option_map_def transform_object_def transform_tcb_def valid_idle_def st_tcb_def2 get_tcb_def
-                        transform_cnode_contents_def infer_tcb_pending_op_def transform_cap_def domIff st_tcb_at_kh_def obj_at_def only_idle_def
-                  split: option.splits split_if Structures_A.kernel_object.splits Structures_A.thread_state.splits )
+                        transform_cnode_contents_def infer_tcb_pending_op_def transform_cap_def domIff st_tcb_at_kh_def obj_at_def only_idle_def tcb_pending_op_slot_def tcb_boundaep_slot_def
+                  split: option.splits split_if Structures_A.kernel_object.splits Structures_A.thread_state.splits)
   done
 
 lemma idle_thread_not_in_queue:
   "\<lbrakk> valid_idle s; DetSchedInvs_AI.valid_queues s; ready_queues s d p \<noteq> [] \<rbrakk> \<Longrightarrow> idle_thread s \<noteq> hd (ready_queues s d p)"
-  apply (clarsimp simp: valid_idle_def DetSchedInvs_AI.valid_queues_def st_tcb_at_def obj_at_def)
+  apply (clarsimp simp: valid_idle_def DetSchedInvs_AI.valid_queues_def pred_tcb_at_def obj_at_def)
   apply (erule_tac x="d" in allE)
   apply (erule_tac x="p" in allE)
   apply clarsimp
@@ -658,7 +662,7 @@ lemma activate_thread_corres:
   apply (simp add:get_thread_state_def bind_assoc thread_get_def)
   apply (rule dcorres_absorb_gets_the)
   apply (case_tac "cdl_current_thread (transform s'a) = None")
-   apply (clarsimp simp: ct_in_state_def st_tcb_at_def obj_at_def
+   apply (clarsimp simp: ct_in_state_def pred_tcb_at_def obj_at_def
      cdl_current_thread transform_current_thread_def valid_idle_def
      arch_activate_idle_thread_def
      split : if_splits dest!:get_tcb_SomeD invs_valid_idle)
@@ -672,24 +676,25 @@ lemma activate_thread_corres:
     apply simp
    apply simp
   apply (clarsimp simp:transform_tcb_def gets_def gets_the_def has_restart_cap_def
-     get_thread_def bind_assoc cdl_current_thread transform_current_thread_def)
+    get_thread_def bind_assoc cdl_current_thread transform_current_thread_def)
   apply (rule dcorres_absorb_get_l)
   apply (simp add:assert_opt_def when_def)
   apply (case_tac  "tcb_state obj'")
-         apply (clarsimp simp:infer_tcb_pending_op_def when_def st_tcb_at_def ct_in_state_def obj_at_def
-                         dest!:get_tcb_SomeD)+
+         apply (clarsimp simp:infer_tcb_pending_op_def tcb_pending_op_slot_def tcb_boundaep_slot_def
+           when_def pred_tcb_at_def ct_in_state_def obj_at_def
+           dest!:get_tcb_SomeD)+
        apply (rule corres_guard_imp)
          apply (rule dcorres_symb_exec_r)
            apply (rule dcorres_symb_exec_r)
-             apply (rule set_thread_state_corres)
+             apply (rule set_thread_state_corres[unfolded tcb_pending_op_slot_def])
             apply simp
             apply (wp dcorres_to_wp[OF as_user_setNextPC_corres,simplified])
          apply (wp getRestartPC_inv as_user_inv)
-       apply (simp add: invs_mdb st_tcb_at_def obj_at_def invs_valid_idle generates_pending_def
-                        not_idle_thread_def)
+       apply (simp add:invs_mdb pred_tcb_at_def obj_at_def invs_valid_idle
+         generates_pending_def not_idle_thread_def)
       apply (clarsimp simp:infer_tcb_pending_op_def arch_activate_idle_thread_def
-                           when_def st_tcb_at_def ct_in_state_def obj_at_def
-                      dest!:get_tcb_SomeD)+
+             when_def pred_tcb_at_def ct_in_state_def obj_at_def tcb_pending_op_slot_def tcb_boundaep_slot_def
+             dest!:get_tcb_SomeD)+
   done
 
 end

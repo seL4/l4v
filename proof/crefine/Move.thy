@@ -32,7 +32,7 @@ lemma asyncIPCCancel_st_tcb':
   "\<lbrace>\<lambda>s. t\<noteq>t' \<and> st_tcb_at' P t' s\<rbrace> asyncIPCCancel t aep \<lbrace>\<lambda>_. st_tcb_at' P t'\<rbrace>"
   apply (simp add: asyncIPCCancel_def Let_def)
   apply (rule hoare_pre)
-   apply (wp sts_st_tcb_neq' getAsyncEP_wp|wpc)+
+   apply (wp sts_pred_tcb_neq' getAsyncEP_wp|wpc)+
   apply clarsimp
   done
 
@@ -40,12 +40,12 @@ lemma ipcCancel_st_tcb_at':
   "\<lbrace>\<lambda>s. t\<noteq>t' \<and> st_tcb_at' P t' s\<rbrace> ipcCancel t \<lbrace>\<lambda>_. st_tcb_at' P t'\<rbrace>"
   apply (simp add: ipcCancel_def Let_def getThreadReplySlot_def locateSlot_def)
   apply (rule hoare_pre)
-   apply (wp sts_st_tcb_neq' getEndpoint_wp cteDeleteOne_Reply getCTE_wp'|wpc)+
+   apply (wp sts_pred_tcb_neq' getEndpoint_wp cteDeleteOne_Reply getCTE_wp'|wpc)+
           apply (rule hoare_strengthen_post [where Q="\<lambda>_. st_tcb_at' P t'"])
            apply (wp threadSet_st_tcb_at2)
            apply simp
           apply (clarsimp simp: cte_wp_at_ctes_of capHasProperty_def)
-         apply (wp asyncIPCCancel_st_tcb' sts_st_tcb_neq' getEndpoint_wp gts_wp'|wpc)+
+         apply (wp asyncIPCCancel_st_tcb' sts_pred_tcb_neq' getEndpoint_wp gts_wp'|wpc)+
   apply clarsimp
   done
 

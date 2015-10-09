@@ -279,10 +279,14 @@ thread sends to an async endpoint, its message is stored in the endpoint
 immediately.
 *}
 
-datatype async_ep
+datatype aep
            = IdleAEP
            | WaitingAEP "obj_ref list"
-           | ActiveAEP badge message
+           | ActiveAEP badge 
+
+record async_ep = 
+  aep_obj :: aep
+  aep_bound_tcb :: "obj_ref option"
 
 
 definition
@@ -290,8 +294,14 @@ definition
   "default_ep \<equiv> IdleEP"
 
 definition
+  default_aep :: aep where
+  "default_aep \<equiv> IdleAEP"
+
+definition
   default_async_ep :: async_ep where
-  "default_async_ep \<equiv> IdleAEP"
+  "default_async_ep \<equiv> \<lparr> 
+     aep_obj = default_aep,
+     aep_bound_tcb = None \<rparr>"
 
 
 text {* Thread Control Blocks are the in-kernel representation of a thread.
@@ -345,6 +355,7 @@ record tcb =
  tcb_ipc_buffer    :: vspace_ref
  tcb_context       :: user_context
  tcb_fault         :: "fault option"
+ tcb_bound_aep     :: "obj_ref option"
 
 
 text {* Determines whether a thread in a given state may be scheduled. *}
@@ -373,7 +384,8 @@ definition
       tcb_fault_handler = to_bl (0::word32),
       tcb_ipc_buffer = 0,
       tcb_context    = new_context,
-      tcb_fault      = None \<rparr>"
+      tcb_fault      = None, 
+      tcb_bound_aep  = None \<rparr>"
 
 text {*
 All kernel objects are CNodes, TCBs, Endpoints, AsyncEndpoints or architecture

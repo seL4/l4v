@@ -1046,8 +1046,31 @@ lemma set_thread_state_silc_inv[wp]:
   apply(fastforce elim: cte_wp_atE intro: cte_wp_at_cteI cte_wp_at_tcbI)
   done
 
+lemma set_bound_aep_silc_inv[wp]:
+  "\<lbrace>silc_inv aag st\<rbrace>
+   set_bound_aep tptr aep
+   \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
+  unfolding set_bound_aep_def
+  apply(rule silc_inv_pres)
+    apply(wp set_object_wp|simp split del: split_if)+
+    apply (simp split: kernel_object.splits)
+    apply(rule impI | simp)+
+    apply(fastforce simp: silc_inv_def dest: get_tcb_SomeD simp: obj_at_def is_cap_table_def)
+   apply(wp set_object_wp | simp)+
+  apply(case_tac "tptr = fst slot")
+   apply(clarsimp split: kernel_object.splits)
+   apply(erule notE)
+   apply(erule cte_wp_atE)
+    apply(fastforce simp: obj_at_def)
+   apply(drule get_tcb_SomeD)
+   apply(rule cte_wp_at_tcbI)
+     apply(simp)
+    apply assumption
+   apply (fastforce simp: tcb_cap_cases_def split: if_splits)
+  apply(fastforce elim: cte_wp_atE intro: cte_wp_at_cteI cte_wp_at_tcbI)
+  done
 
-crunch silc_inv[wp]: fast_finalise "silc_inv aag st"
+crunch silc_inv[wp]: fast_finalise, unbind_async_endpoint "silc_inv aag st"
   (ignore: set_object wp: crunch_wps simp: crunch_simps)
 
 lemma slots_holding_overlapping_caps_lift:
@@ -1175,6 +1198,19 @@ lemma ipc_cancel_silc_inv:
                             get_blocking_ipc_endpoint_def
        | wp_once hoare_drop_imps)+
   apply auto
+  done
+
+lemma ipc_cancel_indirect_silc_inv:
+  "\<lbrace>silc_inv aag st and st_tcb_at receive_blocked t \<rbrace>
+    ipc_cancel t
+   \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
+  unfolding ipc_cancel_def
+  apply (rule hoare_seq_ext[OF _ gts_sp])
+  apply (rule hoare_name_pre_state)
+   apply (clarsimp simp: st_tcb_def2 receive_blocked_def)
+  apply (simp add: blocked_ipc_cancel_def split: thread_state.splits)
+  apply (wp)
+  apply simp
   done
 
 lemma intra_label_cap_machine_state[simp]:
@@ -1987,8 +2023,8 @@ lemma retype_region_silc_inv:
     apply(drule (1) cte_wp_at_eqD2)
     apply fastforce
    apply(erule cte_wp_atE)
-    apply(fastforce simp: default_object_def empty_cnode_def split: apiobject_type.splits if_splits)
-   apply(clarsimp simp: default_object_def default_tcb_def tcb_cap_cases_def split: apiobject_type.splits if_splits)
+    subgoal by (fastforce simp: default_object_def empty_cnode_def split: apiobject_type.splits if_splits)
+   subgoal by (clarsimp simp: default_object_def default_tcb_def tcb_cap_cases_def split: apiobject_type.splits if_splits)
   apply(subgoal_tac "cte_wp_at (op = cap) (a,b) s \<and> \<not> intra_label_cap aag (a,b) s")
    apply(drule_tac x=a in spec, drule_tac x=b in spec, drule_tac x=cap in spec, simp)
    apply(elim exE conjE, rename_tac la lb)
@@ -2006,16 +2042,15 @@ lemma retype_region_silc_inv:
       apply fastforce
      apply assumption
     apply assumption
-   apply(fastforce simp: silc_inv_def dest: retype_addrs_subset_ptr_bits[simplified retype_addrs_def]
+   subgoal by (fastforce simp: silc_inv_def dest: retype_addrs_subset_ptr_bits[simplified retype_addrs_def]
                    simp: image_def p_assoc_help power_sub)   
   apply(rule conjI)
-   apply(fastforce elim: cte_wp_atE intro: cte_wp_at_cteI cte_wp_at_tcbI)
+   subgoal by (fastforce elim: cte_wp_atE intro: cte_wp_at_cteI cte_wp_at_tcbI)
   apply(clarsimp simp: intra_label_cap_def cap_points_to_label_def)
   apply(drule (1) cte_wp_at_eqD2)
   apply(rule_tac x=capa in exI)
   apply clarsimp
-  apply(fastforce elim: cte_wp_atE intro: cte_wp_at_cteI cte_wp_at_tcbI)
-  done
+  by (fastforce elim: cte_wp_atE intro: cte_wp_at_cteI cte_wp_at_tcbI)
 
 lemma slots_holding_overlapping_caps_from_silc_inv:
   assumes a: "\<lbrace> silc_inv aag st and P \<rbrace> f \<lbrace>\<lambda>_. silc_inv aag st \<rbrace>"
@@ -2026,8 +2061,7 @@ lemma slots_holding_overlapping_caps_from_silc_inv:
   apply(case_tac x, simp)
   apply(drule  use_valid[OF _ a])
    apply simp
-  apply(fastforce simp: silc_inv_def silc_dom_equiv_def elim: equiv_forE)
-  done
+  by (fastforce simp: silc_inv_def silc_dom_equiv_def elim: equiv_forE)
 
 lemma slots_holding_overlapping_caps_eq:
   assumes "Structures_A.obj_refs cap = Structures_A.obj_refs cap'"
@@ -2142,8 +2176,7 @@ lemma invoke_untyped_silc_inv:
   apply(simp add: bits_of_UntypedCap)
   apply(drule_tac y=word2 in order_trans[rotated])
    apply(rule word_and_le2)
-  apply fastforce
-  done
+  by fastforce
 
 lemma perform_page_table_invocation_silc_ionv_get_cap_helper:
    "\<lbrace>silc_inv aag st and cte_wp_at (is_pt_cap or is_pg_cap) xa\<rbrace>
@@ -2307,8 +2340,14 @@ lemma set_mrs_silc_inv[wp]:
   apply(fastforce elim: cte_wp_atE intro: cte_wp_at_cteI cte_wp_at_tcbI)
   done
 
+crunch silc_inv[wp]: update_waiting_aep, set_message_info "silc_inv aag st"
 
-crunch silc_inv[wp]: send_async_ipc "silc_inv aag st"
+lemma send_async_ipc_silc_inv[wp]: 
+  "\<lbrace>silc_inv aag st\<rbrace> send_async_ipc param_a param_b \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
+  unfolding send_async_ipc_def
+  apply (wp get_aep_wp gts_wp ipc_cancel_indirect_silc_inv | wpc | simp)+
+  apply (clarsimp simp: receive_blocked_def pred_tcb_at_def obj_at_def)
+  done
 
 lemma perform_page_invocation_silc_inv:
   "\<lbrace>silc_inv aag st and valid_page_inv blah and K (authorised_page_inv aag blah)\<rbrace>
@@ -2598,8 +2637,6 @@ lemma invoke_irq_control_silc_inv:
   done
 
 
-
-
 crunch silc_inv[wp]: receive_async_ipc "silc_inv aag st"
 
 lemma setup_caller_cap_silc_inv:
@@ -2656,7 +2693,7 @@ lemma transfer_caps_silc_inv:
   apply simp
   done
 
-crunch silc_inv[wp]: copy_mrs "silc_inv aag st"
+crunch silc_inv[wp]: copy_mrs, set_message_info "silc_inv aag st"
   (wp: crunch_wps)
 
 
@@ -2673,7 +2710,7 @@ lemma do_normal_transfer_silc_inv:
   apply(wp transfer_caps_empty_inv | simp)+
   done
 
-crunch silc_inv[wp]: do_fault_transfer "silc_inv aag st"
+crunch silc_inv[wp]: do_fault_transfer, complete_async_ipc "silc_inv aag st"
 
 (* doesn't need sym_refs *)
 lemma valid_ep_recv_dequeue':
@@ -2719,23 +2756,30 @@ lemma send_ipc_silc_inv:
   apply(clarsimp simp: valid_ep_recv_dequeue' obj_at_def)
   done
 
-lemma receive_ipc_silc_inv:
+lemma hd_tl_in_set:
+  "tl xs = (x # xs') \<Longrightarrow> x \<in> set xs"
+  apply(case_tac xs, auto)
+  done
+
+lemma set_tl_subset:
+  "list \<noteq> [] \<Longrightarrow> set (tl list) \<subseteq> set list"
+  apply(case_tac list)
+   apply auto
+  done
+
+lemma receive_ipc_base_silc_inv:
   "\<lbrace>silc_inv aag st and valid_objs and valid_mdb and pas_refined aag and
-    sym_refs \<circ> state_refs_of and
-     K (is_subject aag receiver \<and>
-       (\<forall>epptr\<in>Access.obj_refs cap.
-           (pasSubject aag, Receive, pasObjectAbs aag epptr) \<in> pasPolicy aag))\<rbrace>
-   receive_ipc receiver cap
+    sym_refs \<circ> state_refs_of and ko_at (Endpoint ep) epptr and
+    K (is_subject aag receiver \<and> (pasSubject aag, Receive, pasObjectAbs aag epptr) \<in> pasPolicy aag)\<rbrace>
+     receive_ipc_base aag receiver ep epptr rights
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
-  unfolding receive_ipc_def
-  apply (simp add: receive_ipc_def thread_get_def get_thread_state_def split: cap.splits
-              cong: Structures_A.endpoint.case_cong)
-  apply clarsimp
-  apply (rename_tac word1 word2 righs)
-  apply (wp setup_caller_cap_silc_inv | wpc | simp split del: split_if)+
-        apply(rename_tac xs tcb data)
-        apply(rule_tac Q="\<lambda> r s. (sender_can_grant data \<longrightarrow> is_subject aag receiver \<and> is_subject aag (hd xs)) \<and> silc_inv aag st s" in hoare_strengthen_post)
-         apply(wp do_ipc_transfer_silc_inv hoare_vcg_all_lift | wpc | simp)+
+  apply (clarsimp simp: thread_get_def get_thread_state_def cong: endpoint.case_cong)
+  apply (rule hoare_pre)
+   apply (wp setup_caller_cap_silc_inv
+        | wpc | simp split del: split_if)+
+          apply (rename_tac list tcb data)
+          apply(rule_tac Q="\<lambda> r s. (sender_can_grant data \<longrightarrow> is_subject aag receiver \<and> is_subject aag (hd list)) \<and> silc_inv aag st s" in hoare_strengthen_post)
+          apply(wp do_ipc_transfer_silc_inv hoare_vcg_all_lift | wpc | simp)+
      apply(wp hoare_vcg_imp_lift [OF set_endpoint_get_tcb, unfolded disj_not1] hoare_vcg_all_lift get_endpoint_wp)
   apply (clarsimp simp: conj_comms)
   apply(rule conjI)
@@ -2753,19 +2797,44 @@ lemma receive_ipc_silc_inv:
     apply(fastforce dest: subsetD[OF set_tl_subset])
    apply(case_tac x, auto)[1]
   (* clagged from Ipc_AC.receive_ipc_integrity_autarch  *)
-  apply (subgoal_tac "word1 = xa")
+  apply (subgoal_tac "epptr = xa")
    prefer 2
-   apply (frule_tac p = word1 in sym_refs_obj_atD, assumption)
+   apply (frule_tac p = epptr in sym_refs_obj_atD, assumption)
    apply (clarsimp)
    apply (drule (1) bspec [OF _ hd_in_set])
-   apply (clarsimp simp: obj_at_def dest!: get_tcb_SomeD)
+   apply (clarsimp simp: obj_at_def tcb_bound_refs_def2 dest!: get_tcb_SomeD)
   apply clarsimp
   apply (subgoal_tac "aag_has_auth_to aag Control (hd x)")
    apply (fastforce simp add: pas_refined_refl dest!: aag_Control_into_owns)
-  apply (rule_tac ep = "pasObjectAbs aag xa" in aag_wellformed_grant_Control_to_send [OF _ _ pas_refined_wellformed])
+  apply (rule_tac ep = "pasObjectAbs aag epptr" in aag_wellformed_grant_Control_to_send [OF _ _ pas_refined_wellformed])
     apply (rule_tac s = s in pas_refined_mem [OF sta_ts])
      apply (clarsimp simp: tcb_at_def thread_states_def tcb_states_of_state_def dest!: st_tcb_at_tcb_at)
     apply assumption+
+  done
+
+lemma receive_ipc_silc_inv:
+  "\<lbrace>silc_inv aag st and valid_objs and valid_mdb and pas_refined aag and
+    sym_refs \<circ> state_refs_of and
+     K (is_subject aag receiver \<and>
+       (\<forall>epptr\<in>Access.obj_refs cap.
+           (pasSubject aag, Receive, pasObjectAbs aag epptr) \<in> pasPolicy aag))\<rbrace>
+   receive_ipc receiver cap
+   \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
+  unfolding receive_ipc_def
+  apply (rule hoare_gen_asm)
+  apply (simp del: AllowSend_def split: cap.splits)
+  apply clarsimp
+  apply (rule hoare_seq_ext[OF _ get_endpoint_sp])
+  apply (rule hoare_seq_ext[OF _ gba_sp])
+  apply (case_tac aepptr, simp_all)
+  (* old receive case, not bound *)
+   apply (rule hoare_pre, wp receive_ipc_base_silc_inv, clarsimp)
+  apply (rule hoare_seq_ext[OF _ get_aep_sp])
+  apply (case_tac "isActive aep", simp_all)
+  (* new aep-binding case *)
+   apply (rule hoare_pre, wp, clarsimp)
+   (* old receive case, bound aep not active *)
+  apply (rule hoare_pre, wp receive_ipc_base_silc_inv, clarsimp)
   done
 
 lemma send_fault_ipc_silc_inv:
@@ -2927,6 +2996,8 @@ lemma thread_set_tcb_fault_handler_update_invs:
   apply(wp itr_wps | simp)+
   done
 
+crunch silc_inv[wp]: bind_async_endpoint "silc_inv aag st"
+
 lemma invoke_tcb_silc_inv:
   notes static_imp_wp [wp]
         static_imp_conj_wp [wp]
@@ -2942,6 +3013,10 @@ lemma invoke_tcb_silc_inv:
             | clarsimp)+)[3]
     defer
     apply((wp suspend_silc_inv restart_silc_inv | simp add: authorised_tcb_inv_def)+)[2]
+  (* AsyncEndpointControl *)
+  apply (rename_tac option)
+  apply (case_tac option)
+  apply ((wp | simp)+)[2]
   (* just ThreadControl left *)
   apply (simp add: split_def cong: option.case_cong)
   apply (wp
@@ -3052,7 +3127,7 @@ lemma handle_wait_silc_inv:
    handle_wait
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   apply (simp add: handle_wait_def Let_def lookup_cap_def split_def)
-  apply (wp hoare_vcg_all_lift delete_caller_cap_silc_inv 
+  apply (wp hoare_vcg_all_lift get_aep_wp delete_caller_cap_silc_inv
             receive_ipc_silc_inv 
             lookup_slot_for_thread_authorised
             lookup_slot_for_thread_cap_fault

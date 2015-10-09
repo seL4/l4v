@@ -274,10 +274,12 @@ definition
                    | Structures_H.RecvEP q \<Rightarrow> Structures_A.RecvEP q"
 
 definition
-  "AEndpointMap aep \<equiv> case aep of
+  "AEndpointMap aep \<equiv>
+      \<lparr> aep_obj = case aepObj aep of
                        Structures_H.IdleAEP \<Rightarrow> Structures_A.IdleAEP
                      | Structures_H.WaitingAEP q \<Rightarrow> Structures_A.WaitingAEP q
-                     | Structures_H.ActiveAEP b m \<Rightarrow> Structures_A.ActiveAEP b m"
+                     | Structures_H.ActiveAEP b \<Rightarrow> Structures_A.ActiveAEP b
+      , aep_bound_tcb = aepBoundTCB aep \<rparr>"
 
 fun
   CapabilityMap :: "capability \<Rightarrow> cap"
@@ -428,7 +430,8 @@ definition
       tcb_fault_handler = to_bl (tcbFaultHandler tcb),
       tcb_ipc_buffer = tcbIPCBuffer tcb,
       tcb_context = tcbContext tcb,
-      tcb_fault = map_option FaultMap (tcbFault tcb)\<rparr>"
+      tcb_fault = map_option FaultMap (tcbFault tcb),
+      tcb_bound_aep = tcbBoundAEP tcb\<rparr>"
 
 definition
  "absCNode sz h a \<equiv> CNode sz (%bl.
@@ -630,9 +633,9 @@ proof -
           apply (case_tac ko, simp_all add: other_obj_relation_def)
             apply (clarsimp simp add: cte_relation_def split: split_if_asm)
            apply (clarsimp simp add: aep_relation_def AEndpointMap_def
-                    split: Structures_A.async_ep.splits)
+                    split: Structures_A.aep.splits)
           apply (clarsimp simp add: AEndpointMap_def
-                   split: Structures_A.async_ep.splits)
+                   split: Structures_A.aep.splits)
           apply (rename_tac arch_kernel_obj)
           apply (case_tac arch_kernel_obj, simp_all add:other_obj_relation_def)
             apply (clarsimp simp add: pte_relation_def)

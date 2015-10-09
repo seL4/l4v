@@ -65,6 +65,9 @@ abbreviation
 "update_tcb_state state tcb \<equiv> tcb \<lparr>tcb_state := state\<rparr>"
 
 abbreviation
+"update_tcb_boundaep aep_opt tcb \<equiv> tcb \<lparr>tcb_bound_aep := aep_opt\<rparr>"
+
+abbreviation
 "dupdate_cdl_object ptr obj s \<equiv>  cdl_objects_update (\<lambda>_. cdl_objects s(ptr \<mapsto> obj)) s"
 
 abbreviation

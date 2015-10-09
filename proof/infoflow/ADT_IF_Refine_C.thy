@@ -271,7 +271,7 @@ lemma handleEvent_ccorres:
   apply (auto simp: ct_in_state'_def cfault_rel_def is_cap_fault_def ct_not_ksQ isReply_def
                     cfault_rel_def fault_unknown_syscall_lift fault_user_exception_lift
                     is_cap_fault_def
-              elim: st_tcb'_weakenE st_tcb_ex_cap''
+              elim: pred_tcb'_weakenE st_tcb_ex_cap''
               dest: st_tcb_at_idle_thread')
   done
 

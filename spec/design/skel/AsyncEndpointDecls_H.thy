@@ -8,16 +8,11 @@
  * @TAG(GD_GPL)
  *)
 
-chapter "Asynchronous Endpoints"
+header "Function Declarations for Asynchronous Endpoints"
 
-theory AsyncEndpoint_H imports    "AsyncEndpointDecls_H"
-    "TCB_H"
-  TCB_H
-  ThreadDecls_H
-  CSpaceDecls_H
-  ObjectInstances_H
-begin
+theory AsyncEndpointDecls_H imports    "FaultMonad_H"
+ begin
 
-#INCLUDE_HASKELL SEL4/Object/AsyncEndpoint.lhs bodies_only
+#INCLUDE_HASKELL SEL4/Object/AsyncEndpoint.lhs decls_only
 
 end
