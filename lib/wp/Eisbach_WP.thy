@@ -157,7 +157,7 @@ lemmas strong_post_cong[cong] = imp_cong[simplified strong_post_def[symmetric]]
 
 lemma hoare_strong_post:
   "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<Longrightarrow>
-  \<lbrace>P'\<rbrace> f \<lbrace>\<lambda>r s. strong_post (Q r s) (H r s)\<rbrace> \<Longrightarrow> \<lbrace>P and P'\<rbrace> f \<lbrace>\<lambda>r s. H r s\<rbrace>"
+  \<lbrace>P'\<rbrace> f \<lbrace>\<lambda>r s. strong_post (Q r s) (H r s)\<rbrace> \<Longrightarrow> \<lbrace>\<lambda>s. P s \<and> P' s\<rbrace> f \<lbrace>\<lambda>r s. H r s\<rbrace>"
   apply (auto simp add: valid_def strong_post_def)
   by fastforce
 
@@ -169,20 +169,17 @@ private lemma drop_strong_post:
 
 method find_context for Q :: "'a \<Rightarrow> 'b \<Rightarrow> bool" methods m =
   (match (Q) in 
-    "\<lambda>r s. Q' r s \<and> Q'' r s" for Q' Q'' :: "'a \<Rightarrow> 'b \<Rightarrow> bool" \<Rightarrow>
-       \<open>(find_context Q' \<open>m\<close>)?, (find_context Q'' \<open>m\<close>)?\<close>
-  \<bar> "\<lambda>r s. Q' r s \<longrightarrow> Q'' r s" for Q' Q'' :: "'a \<Rightarrow> 'b \<Rightarrow> bool" \<Rightarrow>
-       \<open>(find_context Q' \<open>m\<close>)?, (find_context Q'' \<open>m\<close>)?\<close>
-  \<bar> "\<lambda>r s. if (A r s) then Q' r s else Q'' r s" for A Q' Q'' :: "'a \<Rightarrow> 'b \<Rightarrow> bool" \<Rightarrow>
-       \<open>(find_context A \<open>m\<close>)?, (find_context Q' \<open>m\<close>)?, (find_context Q'' \<open>m\<close>)?\<close>
-  \<bar> "\<lambda>r s. Q' r s \<or> Q'' r s" for Q' Q'' :: "'a \<Rightarrow> 'b \<Rightarrow> bool" \<Rightarrow>
-       \<open>(find_context Q' \<open>m\<close>)?, (find_context Q'' \<open>m\<close>)?\<close>
-  \<bar> "\<lambda>r. Q' r and Q'' r" for Q' Q'' :: "'a \<Rightarrow> 'b \<Rightarrow> bool" \<Rightarrow>
-       \<open>(find_context Q' \<open>m\<close>)?, (find_context Q'' \<open>m\<close>)?\<close>
-  \<bar> "\<lambda>r s. \<not> Q' r s" for Q' :: "'a \<Rightarrow> 'b \<Rightarrow> bool" \<Rightarrow>
-       \<open>(find_context Q' \<open>m\<close>)?\<close>
-  \<bar> "\<lambda>(r :: 'a) (s :: 'b). Q'" for Q' :: "bool" \<Rightarrow> \<open>fail\<close>
-  \<bar> _ \<Rightarrow> \<open>rule hoare_strong_post[where Q=Q], solves \<open>m\<close>\<close>     
+    "\<lambda>r s. Q' r s \<and> Q'' r s" (cut) for Q' Q'' :: "'a \<Rightarrow> 'b \<Rightarrow> bool" \<Rightarrow>
+       \<open>find_context Q' \<open>m\<close>, find_context Q'' \<open>m\<close>\<close>
+  \<bar> "\<lambda>r s. _ \<longrightarrow> Q'' r s" (cut)  for Q'' :: "'a \<Rightarrow> 'b \<Rightarrow> bool" \<Rightarrow>
+       \<open>find_context Q'' \<open>m\<close>\<close>
+  \<bar> "\<lambda>r s. if _ then Q' r s else Q'' r s" (cut) for Q' Q'' :: "'a \<Rightarrow> 'b \<Rightarrow> bool" \<Rightarrow>
+       \<open>find_context Q' \<open>m\<close>, find_context Q'' \<open>m\<close>\<close>
+  \<bar> "\<lambda>r s. Q' r s \<or> Q'' r s" (cut) for Q' Q'' :: "'a \<Rightarrow> 'b \<Rightarrow> bool" \<Rightarrow>
+       \<open>find_context Q' \<open>m\<close>, find_context Q'' \<open>m\<close>\<close>
+  \<bar> "\<lambda>r. Q' r and Q'' r" (cut)  for Q' Q'' :: "'a \<Rightarrow> 'b \<Rightarrow> bool" \<Rightarrow>
+       \<open>find_context Q' \<open>m\<close>, find_context Q'' \<open>m\<close>\<close>
+  \<bar> _ \<Rightarrow> \<open>(rule hoare_strong_post[where Q=Q], solves \<open>m\<close>)?\<close>
    )
 
 definition "schematic_equiv P P' \<equiv> (PROP P \<equiv> PROP P')" 
@@ -198,18 +195,19 @@ lemma
 
 lemma schematic_equivI: "PROP schematic_equiv (PROP P) (PROP P)" 
   by (simp add: schematic_equiv_def)
-  
+ 
 
 method post_strengthen methods wp' simp' =
   (match conclusion in "\<lbrace>_\<rbrace> _ \<lbrace>Q\<rbrace>" for Q \<Rightarrow>
     \<open>rule hoare_pre_schematic_equiv, find_context Q \<open>wp'\<close>\<close>, 
    find_goal \<open>rule schematic_equivI\<close>,
-   simp'; ((rule drop_strong_post)+)?
+   simp'; ((rule drop_strong_post)+)?,
+   (rule hoare_vcg_prop)?
   )
 
 
 method wpstr uses add del = 
-  (post_strengthen \<open>wp_once add: add del: del\<close> \<open>simp split del: split_if\<close>)
+  (post_strengthen \<open>wp add: add del: del\<close> \<open>simp split del: split_if\<close>)
 
 end
 
