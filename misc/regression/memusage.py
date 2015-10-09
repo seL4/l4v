@@ -20,6 +20,11 @@ import subprocess, sys, threading, time
 PSUTIL_NOT_AVAILABLE=False
 try:
     import psutil
+    if not hasattr(psutil.Process, "children") and hasattr(psutil.Process, "get_children"):
+        psutil.Process.children = psutil.Process.get_children
+    if not hasattr(psutil.Process, "memory_maps") and hasattr(psutil.Process, "get_memory_maps"):
+        psutil.Process.memory_maps = psutil.Process.get_memory_maps
+
 except ImportError:
   PSUTIL_NOT_AVAILABLE=True
 
@@ -35,7 +40,7 @@ else:
     to give us a more accurate total usage.'''
     assert isinstance(proc, psutil.Process)
     try:
-        return sum([m.pss for m in proc.get_memory_maps(grouped=True)])
+        return sum([m.pss for m in proc.memory_maps(grouped=True)])
     except psutil.AccessDenied:
         # If we don't have permission to read a particular process,
         # just return 0.
@@ -51,7 +56,7 @@ else:
     try:
         p = psutil.Process(pid)
         total += get_usage(p)
-        children = p.get_children(recursive=True) #pylint: disable=E1123
+        children = p.children(recursive=True) #pylint: disable=E1123
     except psutil.NoSuchProcess:
         return 0
 
