@@ -1,8 +1,7 @@
-
 Core Development Team
 ---------------------
 
-    David Greenaway <david.greenaway@nicta.com.au>
+    David Greenaway (inactive)
 
     Japheth Lim <japheth.lim@nicta.com.au>
 
@@ -14,7 +13,12 @@ Contributions
         "owhile" definitions and related rules, as well as many other
         contributions to the proof libraries.
 
-    Rohan Jacob-Rao <RohanBen.JacobRao@nicta.com.au>
+    Matthew Fernandez <matthew.fernandez@nicta.com.au>
 
-        Proof of the C "quicksort" function.
+        Proofs for a memcpy implementation.
+        See autocorres/tests/examples/Memcpy.thy.
 
+    Rohan Jacob-Rao (inactive)
+
+        Proof for a quicksort implementation.
+        See autocorres/tests/examples/Quicksort.thy.
