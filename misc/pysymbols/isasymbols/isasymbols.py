@@ -88,15 +88,22 @@ class Translator(object):
 
             self.symbols.append(Symbol(**fields))
 
+        # Translation dictionary that we'll lazily initialise later.
+        self._utf8_to_ascii = None
+
     def encode(self, data):
         for symbol in self.symbols:
             data = data.replace(symbol.ascii_text, unichr(symbol.code_point))
         return data
 
     def decode(self, data):
-        for symbol in self.symbols:
-            data = data.replace(unichr(symbol.code_point), symbol.ascii_text)
-        return data
+
+        if self._utf8_to_ascii is None:
+            # First time this function has been called; init the dictionary.
+            self._utf8_to_ascii = {unichr(s.code_point): s.ascii_text
+                for s in self.symbols}
+
+        return ''.join(self._utf8_to_ascii.get(c, c) for c in data)
 
 def make_translator(symbols_file):
     assert isinstance(symbols_file, basestring)
