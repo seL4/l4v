@@ -88,8 +88,9 @@ class Translator(object):
 
             self.symbols.append(Symbol(**fields))
 
-        # Translation dictionary that we'll lazily initialise later.
+        # Translation dictionaries that we'll lazily initialise later.
         self._utf8_to_ascii = None
+        self._utf8_to_tex = None
 
     def encode(self, data):
         for symbol in self.symbols:
@@ -106,6 +107,28 @@ class Translator(object):
                 for s in self.symbols}
 
         return ''.join(self._utf8_to_ascii.get(c, c) for c in data)
+
+    def to_tex(self, data):
+        '''
+        Translate a string of Isabelle text into its TeX representation. This
+        assumes the input is in unicode form. You probably do *not* want to use
+        this functionality to go straight from THY files to TeX. The motivation
+        for this is translating inline code in Markdown into something TeX-able.
+        In particular, we assume all relevant Isabelle styles and preamble are
+        already in scope.
+        '''
+
+        if self._utf8_to_tex is None:
+            # First time this function has been called; init the dictionary.
+            # XXX: Excuse this horror (don't worry; it used to be worse).
+            self._utf8_to_tex = {
+                unichr(s.code_point):
+                    '{\\isasym%s}' % s.ascii_text[2:-1]
+                for s in self.symbols
+                if s.ascii_text.startswith('\\<') and
+                    s.ascii_text.endswith('>')}
+
+        return ''.join(self._utf8_to_tex.get(c, c) for c in data)
 
 def make_translator(symbols_file):
     assert isinstance(symbols_file, basestring)
