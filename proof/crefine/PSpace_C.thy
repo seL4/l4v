@@ -94,9 +94,12 @@ lemma setObject_ccorres_helper:
   done
 
 
-
-
-
+lemma carray_map_relation_upd_triv:
+  "f x = Some (v :: 'a :: pspace_storable)
+    \<Longrightarrow> carray_map_relation n (f (x \<mapsto> y)) hp ptrf = carray_map_relation n f hp ptrf"
+  by (simp add: carray_map_relation_def objBits_def objBitsT_koTypeOf[symmetric]
+                koTypeOf_injectKO
+           del: objBitsT_koTypeOf)
 
 lemma storePTE_Basic_ccorres':
   "\<lbrakk> cpte_relation pte pte' \<rbrakk> \<Longrightarrow>
@@ -117,7 +120,8 @@ lemma storePTE_Basic_ccorres':
   apply (rule conjI)
    apply (clarsimp simp: cpspace_relation_def typ_heap_simps
                          update_pte_map_to_ptes
-                         update_pte_map_tos)
+                         update_pte_map_tos
+                         carray_map_relation_upd_triv)
 
    apply (case_tac "f x", simp)
 
@@ -127,7 +131,8 @@ lemma storePTE_Basic_ccorres':
                    carch_state_relation_def
                    cmachine_state_relation_def
                    Let_def typ_heap_simps
-                   cteCaps_of_def update_pte_map_tos)
+                   cteCaps_of_def update_pte_map_tos
+                   )
   done
 
 
@@ -174,7 +179,8 @@ lemma storePDE_Basic_ccorres':
   apply (rule conjI)
    apply (clarsimp simp: cpspace_relation_def typ_heap_simps
                          update_pde_map_to_pdes
-                         update_pde_map_tos)
+                         update_pde_map_tos
+                         carray_map_relation_upd_triv)
    apply (erule cmap_relation_updI,
           erule ko_at_projectKO_opt, simp+)
   apply (simp add: cready_queues_relation_def

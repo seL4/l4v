@@ -13,6 +13,7 @@ imports
   "umm_heap/SepFrame"
   "Simpl/Vcg"
   "umm_heap/StructSupport"
+  "umm_heap/ArrayAssertion"
 begin
 
 (* name generation is the only thing this theory wants, but that

@@ -1398,6 +1398,92 @@ lemma untyped_cap_rf_sr_ptr_bits_domain:
   apply blast
   done
 
+lemma aligned_ranges_subset_or_disjoint_coroll:
+  "\<lbrakk> is_aligned (p :: 'a :: len word) n; is_aligned (p' :: 'a :: len word) n';
+        p && ~~ mask n' \<noteq> p'; p' && ~~ mask n \<noteq> p \<rbrakk>
+     \<Longrightarrow> {p .. p + 2 ^ n - 1} \<inter> {p' .. p' + 2 ^ n' - 1} = {}"
+  using aligned_ranges_subset_or_disjoint
+  apply (simp only: mask_in_range)
+  apply (subgoal_tac "p \<in> {p .. p + 2 ^ n - 1} \<and> p' \<in> {p' .. p' + 2 ^ n' - 1}")
+   apply blast
+  apply simp
+  done
+
+lemma neg_mask_twice:
+  "x && ~~ mask n && ~~ mask m = x && ~~ mask (max n m)"
+  by (metis word_bw_assocs neg_mask_combine)
+
+lemma multiple_mask_trivia: "n \<ge> m
+    \<Longrightarrow> (x && ~~ mask n) + (x && mask n && ~~ mask m) = x && ~~ mask m"
+  apply (rule trans[rotated], rule_tac w="mask n" in word_plus_and_or_coroll2)
+  apply (simp add: word_bw_assocs word_bw_comms word_bw_lcs neg_mask_twice
+                   max_absorb2)
+  done
+
+lemma distinct_aligned_addresses_accumulate:
+  "is_aligned p n \<Longrightarrow> is_aligned ptr bits
+    \<Longrightarrow> n \<ge> m \<Longrightarrow> n < size p \<Longrightarrow> m \<le> bits
+    \<Longrightarrow> (\<forall>y<2 ^ (n - m). p + (y << m) \<notin> {ptr..ptr + 2 ^ bits - 1})
+    \<Longrightarrow> {p .. p + 2 ^ n - 1} \<inter> {ptr..ptr + 2 ^ bits - 1} = {}"
+  apply safe
+  apply (simp only: mask_in_range[symmetric])
+  apply (drule_tac x="(x && mask n) >> m" in spec)
+  apply (simp add: shiftr_shiftl1 word_bw_assocs)
+  apply (drule mp, rule shiftr_less_t2n)
+   apply (subst add_diff_inverse, simp, rule and_mask_less', simp add: word_size)
+  apply (clarsimp simp: multiple_mask_trivia word_bw_assocs neg_mask_twice max_absorb2)
+  done
+
+lemma offs_in_intvl_iff:
+  "(p + x \<in> {p ..+ n}) = (unat x < n)"
+  apply (simp add: intvl_def, safe)
+   apply (erule order_le_less_trans[rotated], simp add: unat_of_nat)
+  apply (rule exI, erule conjI[rotated])
+  apply simp
+  done
+
+lemma objBits_koTypeOf:
+  fixes v :: "'a :: pspace_storable" shows
+  "objBits v = objBitsT (koType TYPE('a))"
+  using project_inject[where v=v, THEN iffD2, OF refl]
+      project_koType[THEN iffD1, OF exI[where x=v]]
+  by (simp add: objBits_def objBitsT_koTypeOf[symmetric])
+
+lemma cmap_array_typ_region_bytes:
+  "ptrf = (Ptr :: _ \<Rightarrow> 'b ptr)
+    \<Longrightarrow> carray_map_relation bits' amap (h_t_valid htd c_guard) ptrf
+    \<Longrightarrow> is_aligned ptr bits
+    \<Longrightarrow> typ_uinfo_t TYPE('b :: c_type) \<noteq> typ_uinfo_t TYPE(8 word)
+    \<Longrightarrow> size_of TYPE('b) = 2 ^ bits'
+    \<Longrightarrow> objBitsT (koType TYPE('a :: pspace_storable)) \<le> bits
+    \<Longrightarrow> objBitsT (koType TYPE('a :: pspace_storable)) \<le> bits'
+    \<Longrightarrow> bits' < word_bits
+    \<Longrightarrow> carray_map_relation bits' (restrict_map (amap :: _ \<Rightarrow> 'a option) (- {ptr ..+ 2 ^ bits}))
+        (h_t_valid (typ_region_bytes ptr bits htd) c_guard) ptrf"
+  apply (clarsimp simp: carray_map_relation_def h_t_valid_typ_region_bytes)
+  apply (case_tac "h_t_valid htd c_guard (ptrf p)", simp_all)
+   apply (clarsimp simp: objBits_koTypeOf)
+   apply (drule spec, drule(1) iffD2, clarsimp)
+   apply (rule iffI[rotated])
+    apply clarsimp
+    apply (drule equals0D, erule notE, erule IntI[rotated])
+    apply (simp only: upto_intvl_eq is_aligned_neg_mask2 mask_in_range[symmetric])
+   apply (simp only: upto_intvl_eq, rule distinct_aligned_addresses_accumulate,
+     simp_all add: upto_intvl_eq[symmetric] word_size word_bits_def)
+   apply clarsimp
+   apply (drule_tac x="p + (y << objBitsT (koType TYPE('a)))" in spec)+
+   apply (simp add: is_aligned_add[OF is_aligned_weaken is_aligned_shiftl])
+   apply (simp add: is_aligned_add_helper shiftl_less_t2n word_bits_def)
+  apply clarsimp
+  apply (drule_tac x=p in spec)
+  apply (clarsimp simp: objBits_koTypeOf)
+  apply auto
+  done
+
+lemma map_comp_restrict_map:
+  "(f \<circ>\<^sub>m (restrict_map m S)) = (restrict_map (f \<circ>\<^sub>m m) S)"
+  by (rule ext, simp add: restrict_map_def map_comp_def)
+
 lemma deleteObjects_ccorres':
   notes if_cong[cong]
   shows
@@ -1439,7 +1525,7 @@ proof -
     and cte: "cte_wp_at' (\<lambda>cte. cteCap cte = UntypedCap ptr bits idx) p s"
     and desc_range: "descendants_range' (UntypedCap ptr bits idx) p (ctes_of s)"
     and invs: "invs' s" and "ct_active' s"
-    and "sch_act_simple s" and wb: "bits < word_bits"
+    and "sch_act_simple s" and wb: "bits < word_bits" and b2: "2 \<le> bits"
     and "deletionIsSafe ptr bits s"
     and sr: "(s, s') \<in> rf_sr"
     and safe_asids:
@@ -1500,7 +1586,15 @@ proof -
     done
 
   note cmaptcb = cmap_relation_tcb [OF sr]
-  
+  note cmap_array_helper = arg_cong2[where f=carray_map_relation, OF refl map_comp_restrict_map]
+  have trivia: "size_of TYPE(pte_C[256]) = 2 ^ ptBits"
+               "size_of TYPE(pde_C[4096]) = 2 ^ pdBits"
+    by (auto simp: ptBits_def pageBits_def pdBits_def)
+  note cmap_array = cmap_array_typ_region_bytes[where 'a=pte, OF refl _ al _ trivia(1)]
+     cmap_array_typ_region_bytes[where 'a=pde, OF refl _ al _ trivia(2)]
+  note cmap_array = cmap_array[simplified, simplified objBitsT_simps b2
+        ptBits_def pdBits_def pageBits_def word_bits_def, simplified]
+
   have cs: "cpspace_relation (ksPSpace s) (underlying_memory (ksMachineState s))
                              (t_hrs_' (globals s'))"
     using sr
@@ -1517,7 +1611,8 @@ proof -
             simp_all add: objBits_simps archObjSize_def pageBits_def projectKOs
                           heap_to_page_data_restrict)[1])+ -- "waiting ..."
     apply (simp add: map_to_ctes_delete' cmap_relation_restrict_both_proj
-                     cmap_relation_restrict_both)
+                     cmap_relation_restrict_both cmap_array_helper hrs_htd_update
+                     ptBits_def pdBits_def pageBits_def cmap_array)
     apply (intro conjI)
        apply (frule cmap_relation_restrict_both_proj
                      [where f = tcb_ptr_to_ctcb_ptr])
@@ -1645,8 +1740,7 @@ proof -
       \<Turnstile>\<^sub>t (Ptr::(32 word \<Rightarrow> (pde_C[4096]) ptr)) (symbol_table ''armKSGlobalPD'')"
       using al wb
       apply (cases "t_hrs_' (globals s')")
-      apply (simp add: hrs_htd_update_def hrs_htd_def h_t_valid_typ_region_bytes upto_intvl_eq 
-        ptr_span_def)
+      apply (simp add: hrs_htd_update_def hrs_htd_def h_t_valid_typ_region_bytes upto_intvl_eq)
       done
   }
 
@@ -1716,6 +1810,9 @@ proof -
     apply simp
     done
 
+  have s_ksPSpace_adjust: "ksPSpace_update ?psu s = s\<lparr>ksPSpace := ?psu (ksPSpace s)\<rparr>"
+    by simp
+
   from psp_in_sr
   have msu_in_sr:
        "(ksMachineState_update (underlying_memory_update ?mmu)
@@ -1724,7 +1821,8 @@ proof -
     apply (simp add: rf_sr_def)
     apply (clarsimp simp add: cstate_relation_def Let_def)
     apply (rule conjI[rotated])
-     apply (simp add: cmachine_state_relation_def)
+     apply (simp add: cmachine_state_relation_def
+                      s_ksPSpace_adjust)
     apply (clarsimp simp add: cpspace_relation_def h2pd_eq)
     done
 

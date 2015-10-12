@@ -1330,13 +1330,19 @@ lemma pageTableMapped_ccorres:
        apply csymbr
        apply (rule_tac xf'=pde_' and r'=cpde_relation in ccorres_split_nothrow_novcg)
            apply (rule ccorres_add_return2, rule ccorres_pre_getObject_pde)
-           apply (rule_tac P="ko_at' x (lookup_pd_slot rv vaddr) and no_0_obj'"
+           apply (rule_tac P="ko_at' x (lookup_pd_slot rv vaddr) and no_0_obj'
+                            and page_directory_at' rv"
                          in ccorres_from_vcg[where P'=UNIV])
            apply (rule allI, rule conseqPre, vcg)
            apply (clarsimp simp: return_def lookup_pd_slot_def Let_def)
+           apply (drule(1) page_directory_at_rf_sr)
            apply (erule cmap_relationE1[OF rf_sr_cpde_relation],
                   erule ko_at_projectKO_opt)
            apply (clarsimp simp: typ_heap_simps' shiftl_t2n field_simps)
+           apply (erule clift_array_assertion_imp, simp+)
+           apply (rule_tac x=0 in exI, simp add: unat_def[symmetric])
+           apply (rule unat_le_helper, simp)
+           apply ((thin_tac P for P)+, word_bitwise)
           apply ceqv
          apply (rule_tac P="rv \<noteq> 0" in ccorres_gen_asm)
          apply csymbr+

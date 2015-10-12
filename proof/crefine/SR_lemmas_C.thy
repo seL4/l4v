@@ -509,7 +509,8 @@ lemma fst_setCTE:
            (map_to_asidpools (ksPSpace s) = map_to_asidpools (ksPSpace s'));
            (map_to_user_data (ksPSpace s) = map_to_user_data (ksPSpace s'));
            (option_map tcb_no_ctes_proj \<circ> map_to_tcbs (ksPSpace s) 
-              = option_map tcb_no_ctes_proj \<circ> map_to_tcbs (ksPSpace s')) \<rbrakk> \<Longrightarrow> P"
+              = option_map tcb_no_ctes_proj \<circ> map_to_tcbs (ksPSpace s'));
+           \<forall>T p. typ_at' T p s = typ_at' T p s'\<rbrakk> \<Longrightarrow> P"
   shows   "P"
 proof -
   (* Unpack the existential and bind x, theorems in this.  Yuck *)
@@ -596,7 +597,12 @@ proof -
       thus "(projectKO_opt (the (ksPSpace s' x)) :: user_data option) = projectKO_opt (the (ksPSpace s x))" using ko ko' 
 	      by simp
     qed fact
-        
+    
+    note sta = setCTE_typ_at'[where P="\<lambda>x. x = y" for y]
+    show typ_at: "\<forall>T p. typ_at' T p s = typ_at' T p s'"
+      using use_valid[OF _ sta, OF thms(1), OF refl]
+      by auto
+
     show "option_map tcb_no_ctes_proj \<circ> map_to_tcbs (ksPSpace s) =
       option_map tcb_no_ctes_proj \<circ> map_to_tcbs (ksPSpace s')"
     proof (rule ext)
@@ -1997,6 +2003,17 @@ lemma gs_set_assn_Delete_cstate_relation:
                     ghost_size_rel_def ghost_assertion_data_get_def
                     cteDeleteOne_'proc_def cap_get_capSizeBits_'proc_def)
   done
+
+lemma update_typ_at:
+  assumes at: "obj_at' P p s"
+      and tp: "\<forall>obj. P obj \<longrightarrow> koTypeOf (injectKOS obj) = koTypeOf ko"
+  shows "typ_at' T p' (s \<lparr>ksPSpace := ksPSpace s(p \<mapsto> ko)\<rparr>) = typ_at' T p' s"
+  using at
+  by (auto elim!: obj_atE' simp: typ_at'_def ko_wp_at'_def
+           dest!: tp[rule_format]
+            simp: project_inject projectKO_eq split: kernel_object.splits split_if_asm,
+      simp_all add: objBits_def objBitsT_koTypeOf[symmetric] ps_clear_upd
+               del: objBitsT_koTypeOf)
 
 end
 end

@@ -44,7 +44,7 @@ fun suspicious_term ctxt s t = if Term.add_var_names t [] = [] then ()
 val debug_trace = ref (Bound 0);
 
 fun convert prefix src_ctxt proc (tm as Const (name, _)) (convs, ctxt) =
-  (term_convert prefix convs tm; (convs, ctxt))
+  ((term_convert prefix convs tm; (convs, ctxt))
   handle Option =>
  let
     val cname = unprefix prefix name;
@@ -80,7 +80,9 @@ fun convert prefix src_ctxt proc (tm as Const (name, _)) (convs, ctxt) =
       val abs_tm = list_abs (map (pair "_") lhs_argTs, tm'')
 
     in (Termtab.insert (K true) (tm, abs_tm) convs, ctxt) end
-  end
+  end)
+  | convert _ _ _ (tm) _ = raise TERM ("convert: not Const", [tm])
+
 
 fun prove_impl_tac ctxt ss =
     SUBGOAL (fn (t, n) => let
@@ -311,6 +313,29 @@ val guard_halt = com_rewrite
     then (t, [(@{term DontReach}, @{term "{} :: globals myvars set"})])
     else (t, []))
 
+fun acc_ptr_adds (Const (@{const_name h_val}, _) $ m $ (Const (@{const_name ptr_add}, _) $ p $ n))
+    = [(p, n, true)] @ maps acc_ptr_adds [m, p, n]
+  | acc_ptr_adds (Const (@{const_name heap_update}, _) $ (Const (@{const_name ptr_add}, _) $ p $ n))
+    = [(p, n, true)] @ maps acc_ptr_adds [p, n]
+  | acc_ptr_adds (Const (@{const_name ptr_add}, _) $ p $ n)
+    = [(p, n, false)] @ maps acc_ptr_adds [p, n]
+  | acc_ptr_adds (f $ x) = maps acc_ptr_adds [f, x]
+  | acc_ptr_adds (abs as Abs (_, T, t)) = if T = @{typ "globals myvars"}
+    then acc_ptr_adds (betapply (abs, @{term "s :: globals myvars"}))
+    else acc_ptr_adds t
+  | acc_ptr_adds _ = []
+
+fun mk_bool true = @{term True} | mk_bool false = @{term False}
+
+val guard_acc_ptr_adds = com_rewrite
+  (fn t => (t, acc_ptr_adds t |> map (fn (p, n, strong) => let
+    val assn = Const (@{const_name ptr_add_assertion},
+            fastype_of p --> @{typ "int \<Rightarrow> bool \<Rightarrow> heap_typ_desc \<Rightarrow> bool"})
+        $ p $ n $ mk_bool strong
+        $ @{term "hrs_htd (t_hrs_' (globals (s :: globals myvars)))"}
+    val gd = HOLogic.mk_Collect ("s", @{typ "globals myvars"}, assn)
+  in (@{term MemorySafety}, gd) end)))
+
 end
 
 *}
@@ -325,7 +350,8 @@ SubstituteSpecs.take_all_actions
     o (strengthen_c_guards ["memset_body", "memcpy_body", "memzero_body"]
           (Proof_Context.theory_of ctxt) s)
     o guard_halt
-    o guard_htd_updates_with_domain)
+    o guard_htd_updates_with_domain
+    o guard_acc_ptr_adds)
   @{term kernel_all_global_addresses.\<Gamma>}
   (CalculateState.get_csenv @{theory} "c/kernel_all.c_pp" |> the)
   [@{typ "globals myvars"}, @{typ int}, @{typ strictc_errortype}]

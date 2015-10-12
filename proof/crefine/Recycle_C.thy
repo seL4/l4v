@@ -565,7 +565,7 @@ lemma clearMemory_setObject_PTE_ccorres:
       apply (clarsimp simp: rf_sr_def Let_def cstate_relation_def typ_heap_simps)
       apply (rule conjI)
        apply (simp add: cpspace_relation_def typ_heap_simps update_pte_map_tos
-                        update_pte_map_to_ptes)
+                        update_pte_map_to_ptes carray_map_relation_upd_triv)
        apply (rule cmap_relation_updI, simp_all)[1]
        apply (simp add: cpte_relation_def Let_def pte_lift_def
                         fcp_beta pte_get_tag_def pte_tag_defs)
@@ -828,7 +828,7 @@ lemma arch_recycleCap_ccorres:
        apply (clarsimp simp: rf_sr_def Let_def cstate_relation_def typ_heap_simps)
        apply (rule conjI)
         apply (simp add: cpspace_relation_def typ_heap_simps update_pde_map_tos
-                         update_pde_map_to_pdes)
+                         update_pde_map_to_pdes carray_map_relation_upd_triv)
         apply (rule cmap_relation_updI, simp_all)[1]
         apply (simp add: cpde_relation_def Let_def pde_lift_def
                          fcp_beta pde_get_tag_def pde_tag_defs)

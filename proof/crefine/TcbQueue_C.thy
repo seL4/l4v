@@ -1101,21 +1101,6 @@ proof -
     done
 qed
 
-(* FIXME: move to SR_lemmas_C *)
-(* FIXME: remove old version *)
-lemma update_tcb_map_tos:
-  fixes P :: "tcb \<Rightarrow> bool"
-  assumes at: "obj_at' P p s"
-  shows   "map_to_eps (ksPSpace s(p \<mapsto> KOTCB ko)) = map_to_eps (ksPSpace s)"
-  and     "map_to_ntfns (ksPSpace s(p \<mapsto> KOTCB ko)) = map_to_ntfns (ksPSpace s)"
-  and     "map_to_pdes (ksPSpace s(p \<mapsto> KOTCB ko)) = map_to_pdes (ksPSpace s)"
-  and     "map_to_ptes (ksPSpace s(p \<mapsto> KOTCB ko)) = map_to_ptes (ksPSpace s)"
-  and     "map_to_asidpools (ksPSpace s(p \<mapsto> KOTCB ko)) = map_to_asidpools (ksPSpace s)"
-  and     "map_to_user_data (ksPSpace s(p \<mapsto> KOTCB ko)) = map_to_user_data (ksPSpace s)"
-  using at
-  by (auto elim!: obj_atE' intro!: map_to_ctes_upd_other map_comp_eqI
-    simp: projectKOs projectKO_opts_defs split: kernel_object.splits split_if_asm)+
-
 lemma rf_sr_tcb_update_no_queue: 
   "\<lbrakk> (s, s') \<in> rf_sr; ko_at' tcb thread s; 
   (cslift t :: tcb_C typ_heap) = (cslift s')(tcb_ptr_to_ctcb_ptr thread \<mapsto> ctcb);
@@ -1130,7 +1115,8 @@ lemma rf_sr_tcb_update_no_queue:
   \<rbrakk>
   \<Longrightarrow> (s\<lparr>ksPSpace := ksPSpace s(thread \<mapsto> KOTCB tcb')\<rparr>, x\<lparr>globals := globals s'\<lparr>t_hrs_' := t_hrs_' (globals t)\<rparr>\<rparr>) \<in> rf_sr"
   unfolding rf_sr_def state_relation_def cstate_relation_def cpspace_relation_def
-  apply (clarsimp simp: Let_def update_tcb_map_tos map_to_ctes_upd_tcb_no_ctes heap_to_page_data_def)
+  apply (clarsimp simp: Let_def update_tcb_map_tos map_to_ctes_upd_tcb_no_ctes
+                        heap_to_page_data_def)
   apply (frule (1) cmap_relation_ko_atD) 
   apply (erule obj_atE')
   apply (clarsimp simp: projectKOs)
@@ -1179,7 +1165,8 @@ lemma rf_sr_tcb_update_not_in_queue:
      \<Longrightarrow> (s\<lparr>ksPSpace := ksPSpace s(thread \<mapsto> KOTCB tcb')\<rparr>,
            x\<lparr>globals := globals s'\<lparr>t_hrs_' := t_hrs_' (globals t)\<rparr>\<rparr>) \<in> rf_sr"
   unfolding rf_sr_def state_relation_def cstate_relation_def cpspace_relation_def
-  apply (clarsimp simp: Let_def update_tcb_map_tos map_to_ctes_upd_tcb_no_ctes heap_to_page_data_def)
+  apply (clarsimp simp: Let_def update_tcb_map_tos map_to_ctes_upd_tcb_no_ctes
+                        heap_to_page_data_def)
   apply (frule (1) cmap_relation_ko_atD)
   apply (erule obj_atE')
   apply (clarsimp simp: projectKOs)

@@ -13,6 +13,7 @@ imports
   TypHeapLib
   Aligned
   WordLemmaBucket
+  "../tools/c-parser/umm_heap/ArrayAssertion"
 begin
 
 declare word_neq_0_conv [simp del]
@@ -548,26 +549,6 @@ lemma coerce_heap_update_to_heap_updates:
   apply simp
   done
 
-lemma array_tag_n_eq: 
-  "(array_tag_n n :: ('a :: c_type['b :: finite]) field_desc typ_desc) = 
-  TypDesc (TypAggregate 
-    (map (\<lambda>n. DTPair (adjust_ti (typ_info_t TYPE('a)) (\<lambda>x. index x n)
-            (\<lambda>x f. Arrays.update f n x)) (replicate n CHR ''1'')) [0..<n]))
-  (typ_name (typ_uinfo_t TYPE('a)) @ ''_array_'' @ nat_to_bin_string (card (UNIV :: 'b :: finite set)))"
-  apply (induct n)
-   apply (simp add: typ_info_array array_tag_def eval_nat_numeral array_tag_n.simps empty_typ_info_def)
-   apply (simp add: typ_info_array array_tag_def eval_nat_numeral array_tag_n.simps empty_typ_info_def)
-   apply (simp add: ti_typ_combine_def Let_def)
-   done
- 
-lemma typ_info_array':  
-  "typ_info_t TYPE ('a :: c_type['b :: finite]) = 
-  TypDesc (TypAggregate 
-    (map (\<lambda>n. DTPair (adjust_ti (typ_info_t TYPE('a)) (\<lambda>x. index x n)
-            (\<lambda>x f. Arrays.update f n x)) (replicate n CHR ''1'')) [0..<(card (UNIV :: 'b :: finite set))]))
-  (typ_name (typ_uinfo_t TYPE('a)) @ ''_array_'' @ nat_to_bin_string (card (UNIV :: 'b :: finite set)))"
-  by (simp add: typ_info_array array_tag_def array_tag_n_eq)
-
 lemma update_ti_list_array':
   "\<lbrakk> update_ti_list_t (map f [0 ..< n]) xs v = y;
      \<forall>n. size_td_pair (f n) = v3; length xs = v3 * n;
@@ -711,6 +692,32 @@ lemma heap_update_Array:
   apply simp
   done
 
+lemma from_bytes_Array_element:
+  fixes p :: "('a::mem_type['b::finite]) ptr"
+  assumes less: "of_nat n < card (UNIV :: 'b set)"
+  assumes len: "length bs = size_of TYPE('a) * CARD('b)"
+  shows
+  "index (from_bytes bs :: 'a['b]) n 
+      = from_bytes (take (size_of TYPE('a)) (drop (n * size_of TYPE('a)) bs))"
+  using less
+  apply (simp add: from_bytes_def size_of_def typ_info_array')
+  apply (subst update_ti_list_array'[OF refl])
+     apply simp
+    apply (simp add: len size_of_def)
+   apply (clarsimp simp: update_ti_s_adjust_ti)
+   apply (rule refl)
+  apply (simp add: split_upt_on_n[OF less])
+  apply (rule trans, rule foldr_does_nothing_to_xf[where xf="\<lambda>s. index s n"])
+   apply simp+
+  apply (subst foldr_does_nothing_to_xf[where xf="\<lambda>s. index s n"])
+   apply simp
+  apply (simp add: mult.commute)
+  apply (frule Suc_leI)
+  apply (drule_tac k="size_of TYPE('a)" in mult_le_mono2)
+  apply (rule upd_rf)
+  apply (simp add: size_of_def len mult.commute)
+  done
+
 lemma heap_access_Array_element':
   fixes p :: "('a::mem_type['b::finite]) ptr"
   assumes less: "of_nat n < card (UNIV :: 'b set)"
@@ -719,26 +726,14 @@ lemma heap_access_Array_element':
       = h_val hp (array_ptr_index p False n)"
   using less
   apply (simp add: array_ptr_index_def CTypesDefs.ptr_add_def h_val_def)
-  apply (simp add: from_bytes_def size_of_def typ_info_array')
-  apply (subst update_ti_list_array'[OF refl])
-     apply simp
-    apply simp
-   apply (clarsimp simp: update_ti_s_adjust_ti)
-   apply (rule refl)
-  apply (simp add: split_upt_on_n[OF less])
-  apply (rule trans, rule foldr_does_nothing_to_xf[where xf="\<lambda>s. index s n"])
-   apply simp+
-  apply (subst foldr_does_nothing_to_xf[where xf="\<lambda>s. index s n"])
-   apply simp
+  apply (simp add: from_bytes_Array_element)
   apply (simp add: drop_heap_list_le take_heap_list_le)
   apply (subst take_heap_list_le)
    apply (simp add: le_diff_conv2)
    apply (drule Suc_leI)
-   apply (drule mult_le_mono2, simp)
-   apply (erule order_trans, simp)
-  apply (simp add: field_simps)
-  apply (rule upd_rf)
-  apply (simp add: size_of_def)
+   apply (drule_tac k="size_of TYPE('a)" in mult_le_mono2)
+   apply (simp add: mult.commute)
+  apply simp
   done
 
 lemmas heap_access_Array_element
@@ -866,12 +861,6 @@ lemma fourthousand_size:
 
 lemmas heap_update_Array_element
     = heap_update_Array_element'[OF refl _ fourthousand_size]
-
-lemma map_td_list_map:
-  "map_td_list f = map (map_td_pair f)"
-  apply (rule ext)
-  apply (induct_tac x, simp_all)
-  done
 
 lemma typ_slice_list_cut:
   "\<lbrakk> (\<forall>x \<in> set xs. size_td (dt_fst x) = m); m \<noteq> 0; n < (length xs * m) \<rbrakk>
@@ -1113,5 +1102,89 @@ lemma heap_update_list_base':"heap_update_list p [] = id"
 
 lemma hrs_mem_update_id3: "hrs_mem_update id = id"
   unfolding hrs_mem_update_def by simp
+
+abbreviation
+  ptr_span :: "'a::mem_type ptr \<Rightarrow> word32 set" where
+  "ptr_span p \<equiv> {ptr_val p ..+ size_of TYPE('a)}"
+
+abbreviation (input)
+  cptr_type :: "('a :: c_type) ptr \<Rightarrow> 'a itself"
+where
+  "cptr_type p \<equiv> TYPE('a)"
+
+lemma ptr_retyp_valid_footprint_disjoint2:
+  "\<lbrakk>valid_footprint (ptr_retyp (q::'b::mem_type ptr) d) p s; {p..+size_td s} \<inter> {ptr_val q..+size_of TYPE('b)} = {} \<rbrakk>
+     \<Longrightarrow> valid_footprint d p s"
+  apply(clarsimp simp: valid_footprint_def Let_def)
+  apply (drule spec, drule (1) mp)
+  apply(subgoal_tac "p + of_nat y \<in> {p..+size_td s}")    
+  apply (subst (asm) ptr_retyp_d)
+    apply clarsimp
+    apply fast
+   apply (clarsimp simp add: ptr_retyp_d_eq_fst split: split_if_asm)
+   apply fast
+  apply (erule intvlI)
+  done
+
+lemma ptr_retyp_disjoint2:
+  "\<lbrakk>ptr_retyp (p::'a::mem_type ptr) d,g \<Turnstile>\<^sub>t q;
+    {ptr_val p..+size_of TYPE('a)} \<inter> {ptr_val q..+size_of TYPE('b)} = {} \<rbrakk>
+  \<Longrightarrow> d,g \<Turnstile>\<^sub>t (q::'b::mem_type ptr)"
+apply(clarsimp simp: h_t_valid_def)
+apply(erule ptr_retyp_valid_footprint_disjoint2)
+apply(simp add: size_of_def)
+apply fast
+done
+
+lemma ptr_retyp_disjoint_iff:
+  "{ptr_val p..+size_of TYPE('a)} \<inter> {ptr_val q..+size_of TYPE('b)} = {}
+  \<Longrightarrow> ptr_retyp (p::'a::mem_type ptr) d,g \<Turnstile>\<^sub>t q = d,g \<Turnstile>\<^sub>t (q::'b::mem_type ptr)"
+  apply rule
+   apply (erule (1) ptr_retyp_disjoint2)
+  apply (erule (1) ptr_retyp_disjoint)
+  done
+
+lemma h_t_valid_ptr_retyp_eq:
+  "\<not> cptr_type p <\<^sub>\<tau> cptr_type p' \<Longrightarrow> h_t_valid (ptr_retyp p td) g p'
+    = (if ptr_span p \<inter> ptr_span p' = {} then h_t_valid td g p'
+        else field_of_t p' p \<and> g p')"
+  apply (clarsimp simp: ptr_retyp_disjoint_iff split: split_if)
+  apply (cases "g p'")
+   apply (rule iffI)
+    apply (rule ccontr, drule h_t_valid_neq_disjoint, rule ptr_retyp_h_t_valid, simp+)
+    apply (simp add: Int_commute)
+   apply (clarsimp simp: field_of_t_def field_of_def)
+   apply (drule sub_h_t_valid[where p=p, rotated], rule ptr_retyp_h_t_valid, simp, simp)
+   apply (erule(1) h_t_valid_guard_subst)
+  apply (simp add: h_t_valid_def)
+  done
+
+lemma field_lookup_list_Some_again:
+  "dt_snd (xs ! i) = f
+    \<Longrightarrow> i < length xs
+    \<Longrightarrow> f \<notin> dt_snd ` set ((take i xs))
+    \<Longrightarrow> field_lookup_list xs [f] n
+        = Some (dt_fst (xs ! i), n + listsum (map (size_td o dt_fst) (take i xs)))"
+  apply (induct xs arbitrary: i n, simp_all)
+  apply (case_tac x1, simp)
+  apply (case_tac i, auto split: split_if)
+  done
+
+lemma field_lookup_array:
+  "n < CARD('b) \<Longrightarrow> field_lookup (typ_info_t TYPE(('a :: c_type)['b :: finite]))
+    [replicate n (CHR ''1'')] i = Some (adjust_ti (typ_info_t TYPE('a))
+        (\<lambda>x. x.[n]) (\<lambda>x f. Arrays.update f n x), i + n * size_of TYPE ('a))"
+  apply (simp add: typ_info_array array_tag_def array_tag_n_eq)
+  apply (subst field_lookup_list_Some_again[where i=n],
+    auto simp add: take_map o_def listsum_triv size_of_def)
+  done
+
+lemma array_not_sub_type:
+  "\<not> TYPE(('a :: c_type)['b :: finite]) <\<^sub>\<tau> TYPE('a)"
+  sorry
+
+lemma field_of_t_array:
+  "field_of_t p' p = (\<exists>i. p' = array_ptr_index p True i)"
+  sorry
 
 end

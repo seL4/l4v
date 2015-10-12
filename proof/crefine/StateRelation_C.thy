@@ -48,6 +48,20 @@ definition
           (addr_fun ` (dom as) = dom cs) \<and>
           (\<forall>x \<in> dom as. rel (the (as x)) (the (cs (addr_fun x))))"
 
+definition
+  carray_map_relation :: "nat \<Rightarrow> (word32 \<rightharpoonup> ('a :: pre_storable))
+    \<Rightarrow> ('b ptr \<Rightarrow> bool) \<Rightarrow> (word32 \<Rightarrow> 'b ptr) \<Rightarrow> bool"
+where
+  "carray_map_relation bits as cs addr_fun \<equiv>
+    (\<forall>p. (is_aligned p bits \<and> (\<forall>p'. p' && ~~ mask bits = p \<and> is_aligned p' (objBits (the (as p')))
+        \<longrightarrow> p' \<in> dom as)) \<longleftrightarrow> cs (addr_fun p))"
+
+definition
+  cvariable_array_map_relation :: "(word32 \<rightharpoonup> 'a) \<Rightarrow> ('a \<Rightarrow> nat)
+    \<Rightarrow> (word32 \<Rightarrow> ('c :: c_type) ptr) \<Rightarrow> heap_typ_desc \<Rightarrow> bool"
+where
+  "cvariable_array_map_relation amap szs ptrfun htd
+    \<equiv> \<forall>p v. amap p = Some v \<longrightarrow> array_assertion (ptrfun p) (szs v) htd"
 
 definition
   asid_map_pd_to_hwasids :: "(asid \<rightharpoonup> hw_asid \<times> obj_ref) \<Rightarrow> (obj_ref \<Rightarrow> hw_asid set)"
@@ -119,11 +133,6 @@ where
   irq_state s = irq_state (phantom_machine_state_' s') \<and>
   exclusive_state s = exclusive_state (phantom_machine_state_' s') \<and>
   machine_state_rest s = machine_state_rest (phantom_machine_state_' s')"
-
-(* ptr_range uses the wrong set construct for h_t_valid stuff *)
-definition
-  ptr_span :: "'a::mem_type ptr \<Rightarrow> word32 set" where
-  "ptr_span p \<equiv> {ptr_val p ..+ size_of TYPE('a)}"
 
 definition
   "globals_list_id_fudge = id"
@@ -513,13 +522,26 @@ abbreviation
 abbreviation
   "cpspace_user_data_relation ah bh ch \<equiv> cmap_relation (heap_to_page_data ah bh) (clift ch) Ptr cuser_data_relation"
 
+abbreviation
+  pd_Ptr :: "32 word \<Rightarrow> (pde_C[4096]) ptr" where "pd_Ptr == Ptr"
+
+abbreviation
+  "cpspace_pde_array_relation ah ch \<equiv> carray_map_relation pdBits (map_to_pdes ah) (h_t_valid (hrs_htd ch) c_guard) pd_Ptr"
+
+abbreviation
+  pt_Ptr :: "32 word \<Rightarrow> (pte_C[256]) ptr" where "pt_Ptr == Ptr"
+
+abbreviation
+  "cpspace_pte_array_relation ah ch \<equiv> carray_map_relation ptBits (map_to_ptes ah) (h_t_valid (hrs_htd ch) c_guard) pt_Ptr"
+
 
 definition
   cpspace_relation :: "(word32 \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> (word32 \<Rightarrow> word8) \<Rightarrow> heap_raw_state \<Rightarrow> bool"
 where
   "cpspace_relation ah bh ch \<equiv>  
   cpspace_cte_relation ah ch \<and> cpspace_tcb_relation ah ch \<and> cpspace_ep_relation ah ch \<and> cpspace_ntfn_relation ah ch \<and>
-  cpspace_pde_relation ah ch \<and> cpspace_pte_relation ah ch \<and> cpspace_asidpool_relation ah ch \<and> cpspace_user_data_relation ah bh ch"
+  cpspace_pde_relation ah ch \<and> cpspace_pte_relation ah ch \<and> cpspace_asidpool_relation ah ch \<and> cpspace_user_data_relation ah bh ch \<and>
+  cpspace_pde_array_relation ah ch \<and> cpspace_pte_array_relation ah ch"
 
 abbreviation
   "sched_queue_relation' \<equiv> tcb_queue_relation' tcbSchedNext_C tcbSchedPrev_C"
@@ -545,6 +567,11 @@ where
         \<and> (\<not> (qdom \<ge> ucast minDom \<and> qdom \<le> ucast maxDom \<and>
                   prio \<ge> ucast minPrio \<and> prio \<le> ucast maxPrio) \<longrightarrow> aqueues (qdom, prio) = [])"
 
+
+abbreviation
+  "cte_array_relation astate cstate
+    \<equiv> cvariable_array_map_relation (gsCNodes astate) (\<lambda>n. 2 ^ n)
+        cte_Ptr (hrs_htd (t_hrs_' cstate))"
 
 fun
   irqstate_to_C :: "irqstate \<Rightarrow> word32"
@@ -575,9 +602,6 @@ where
   "dom_schedule_entry_relation adomSched cdomSched \<equiv>
      ucast (fst adomSched) = dschedule_C.domain_C cdomSched \<and>
      (snd adomSched) = dschedule_C.length_C cdomSched"
-
-abbreviation
-  pd_Ptr :: "32 word \<Rightarrow> (pde_C[4096]) ptr" where "pd_Ptr == Ptr"
 
 definition
   cdom_schedule_relation :: "(8 word \<times> 32 word) list \<Rightarrow> (dschedule_C['b :: finite]) \<Rightarrow> bool"
@@ -629,6 +653,7 @@ where
                                  (ksSchedulerAction_' cstate) \<and>
        carch_state_relation (ksArchState astate) cstate \<and>
        cmachine_state_relation (ksMachineState astate) cstate \<and>
+       cte_array_relation astate cstate \<and>
        apsnd fst (ghost'state_' cstate) = (gsUserPages astate, gsCNodes astate) \<and>
        ghost_size_rel (ghost'state_' cstate) (gsMaxObjectSize astate) \<and>
        ksWorkUnitsCompleted_' cstate = ksWorkUnitsCompleted astate \<and>

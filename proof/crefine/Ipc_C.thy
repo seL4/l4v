@@ -890,12 +890,34 @@ lemmas ccorres_pre_stateAssert =
 
 declare setRegister_ccorres[corres]
 
+lemma storeWordUser_array_ipcBuffer_ccorres:
+  "ccorres dc xfdc (valid_ipc_buffer_ptr' ptr and valid_pspace' and (\<lambda>s. off < 2 ^ msg_align_bits))
+              (UNIV \<inter> {s. ptr' s = Ptr ptr} \<inter> {s. off = of_int (n' s) * 4}
+                    \<inter> {s. n'' s = Suc (nat (n' s))} \<inter> {s. w' s = w}) hs
+      (storeWordUser (ptr + off) w)
+      (Guard C_Guard \<lbrace>hrs_htd \<acute>t_hrs \<Turnstile>\<^sub>t \<acute>(\<lambda>s. ptr_add (ptr' s) (n' s))\<rbrace>
+        (Guard gname \<lbrace>array_assertion \<acute>(\<lambda>s. ptr' s) \<acute>(\<lambda>s. n'' s) (hrs_htd \<acute>t_hrs)\<rbrace>
+          (Basic (\<lambda>s. globals_update (t_hrs_'_update
+           (hrs_mem_update (heap_update (ptr_add (ptr' s) (n' s)) (w' s)))) s))))"
+  apply (rule ccorres_guard_imp2)
+   apply (rule ccorres_second_Guard)
+   apply (rule storeWordUser_ccorres)
+  apply (clarsimp simp: Collect_const_mem)
+  apply (subst valid_ipc_buffer_ptr_array, simp+)
+    defer
+   apply simp
+   defer
+  apply (clarsimp simp: valid_ipc_buffer_ptr'_def msg_align_bits
+                        is_aligned_add[OF is_aligned_weaken]
+                        is_aligned_mult_triv2[where n=2, simplified])
+  sorry
+
 lemma setMR_ccorres:
   notes if_cong[cong]
   shows
   "ccorres (\<lambda>r r'. r = unat (r' && mask msgLengthBits)) ret__unsigned_'
-     (valid_pspace' and (\<lambda>_. offset < msgMaxLength
-                           \<and> is_aligned (option_to_0 buf) msg_align_bits))
+     (valid_pspace' and  case_option \<top> valid_ipc_buffer_ptr' buf
+           and (\<lambda>s. offset < msgMaxLength))
      (UNIV \<inter> {s. offset_' s = of_nat offset} \<inter> {s. reg_' s = v}
              \<inter> {s. receiver_' s = tcb_ptr_to_ctcb_ptr thread}
              \<inter> {s. receiveIPCBuffer_' s = option_to_ptr buf}) []
@@ -914,15 +936,17 @@ lemma setMR_ccorres:
      apply (rule ccorres_return_C, simp+)[1]
     apply (simp add: option_to_ptr_def option_to_0_def Collect_True
                      ccorres_cond_iffs
-                del: Collect_const)
-    apply (simp add: storeWordUser_def bind_assoc del: Collect_const)
-    apply (rule ccorres_pre_stateAssert)
+                del: Collect_const ptr_add_def')
     apply (rule ccorres_cond_true)
-    apply (ctac add: storeWord_ccorres[simplified])
+    apply (rule ccorres_split_nothrow_novcg)
+        apply (rule storeWordUser_array_ipcBuffer_ccorres)
+       apply ceqv
       apply (rule ccorres_return_C, simp+)[1]
      apply wp
-    apply (simp del: Collect_const)
-    apply vcg
+    apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem)
+    apply (simp add: msgLengthBits_def msgMaxLength_def
+                     unat_arith_simps less_mask_eq unat_of_nat
+                del: Collect_const)
    apply ctac
      apply (rule ccorres_return_C, simp+)[1]
     apply wp
@@ -930,26 +954,14 @@ lemma setMR_ccorres:
    apply (vcg exspec=setRegister_modifies)
   apply (simp add: Collect_const_mem option_to_0_def)
   apply (intro impI conjI allI, simp_all)
-           apply (rule aligned_add_aligned[where n=msg_align_bits])
-              apply simp
-             apply (rule is_aligned_mult_triv2
-                         [where n=2, simplified, folded word_size_def])
-           apply (simp add: msg_align_bits)
-          apply (simp add: msgRegisters_unfold n_msgRegisters_def
-                           msgLengthBits_def mask_def)
-         apply (simp add: word_size_def)
-        apply (clarsimp simp: word_size_def field_simps pointerInUserData_c_guard)
-       apply (simp add: unat_of_nat32 msgMaxLength_unfold word_bits_def
-                        unat_add_lem[THEN iffD1] less_mask_eq msgLengthBits_def
-                        word_less_nat_alt)
-      apply (clarsimp simp: word_size_def field_simps pointerInUserData_h_t_valid)
-     apply (clarsimp simp: pointerInUserData_def typ_at_to_obj_at_arches
-                           mask_out_sub_mask)
-     apply (subst(asm) less_mask_eq)
-      apply (simp add: word_size_def pageBits_def msgMaxLength_unfold)
-      apply (simp add: unat_add_lem[THEN iffD1] word_less_nat_alt
-                       unat_mult_lem[THEN iffD1] unat_of_nat32 word_bits_def)
-     apply clarsimp
+        apply (simp add: msg_align_bits word_size_def msgMaxLength_def
+                         length_msgRegisters n_msgRegisters_def)
+       apply (simp add: unat_word_ariths
+                        word_less_nat_alt unat_of_nat)
+       apply (simp add: msgRegisters_unfold n_msgRegisters_def
+                        msgLengthBits_def mask_def)
+      apply (simp add: word_size_def)
+     apply (clarsimp simp: valid_ipc_buffer_ptr'_def)
     apply (simp add: unat_of_nat32 word_bits_def msgMaxLength_unfold
                      word_le_nat_alt msgRegisters_ccorres n_msgRegisters_def)
    apply (simp add: unat_of_nat32 msgMaxLength_unfold word_bits_def
@@ -960,8 +972,8 @@ lemma setMR_ccorres:
 
 lemma setMR_ccorres_dc:
   "ccorres dc xfdc
-     (valid_pspace' and (\<lambda>_. offset < msgMaxLength
-                           \<and> is_aligned (option_to_0 buf) msg_align_bits))
+     (valid_pspace' and  case_option \<top> valid_ipc_buffer_ptr' buf
+           and (\<lambda>s. offset < msgMaxLength))
      (UNIV \<inter> {s. offset_' s = of_nat offset} \<inter> {s. reg_' s = v}
              \<inter> {s. receiver_' s = tcb_ptr_to_ctcb_ptr thread}
              \<inter> {s. receiveIPCBuffer_' s = option_to_ptr buf}) []

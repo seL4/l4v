@@ -1568,6 +1568,10 @@ lemma is_aligned_the_x_strengthen:
   "x \<noteq> None \<and> case_option \<top> valid_ipc_buffer_ptr' x s \<longrightarrow> is_aligned (the x) msg_align_bits"
   by (clarsimp simp: valid_ipc_buffer_ptr'_def)
 
+lemma valid_ipc_buffer_ptr_the_strengthen:
+  "x \<noteq> None \<and> case_option \<top> valid_ipc_buffer_ptr' x s \<longrightarrow> valid_ipc_buffer_ptr' (the x) s"
+  by clarsimp
+
 lemma lookupIPCBuffer_Some_0:
   "\<lbrace>\<top>\<rbrace> lookupIPCBuffer w t \<lbrace>\<lambda>rv s. rv \<noteq> Some 0\<rbrace>"
   apply (simp add: lookupIPCBuffer_def
@@ -1579,6 +1583,32 @@ lemma lookupIPCBuffer_Some_0:
    apply simp
   apply (rule hoare_vcg_prop , simp add:hoare_TrueI)
   done
+
+lemma storeWordUser_array_ipcBuffer_ccorres:
+  "ccorres dc xfdc (valid_ipc_buffer_ptr' ptr and valid_pspace' and (\<lambda>s. off < 2 ^ msg_align_bits))
+              (UNIV \<inter> {s. ptr' s = Ptr ptr} \<inter> {s. off = of_int (n' s) * 4}
+                    \<inter> {s. n'' s = Suc (nat (n' s))} \<inter> {s. w' s = w}) hs
+      (storeWordUser (ptr + off) w)
+      (Guard C_Guard \<lbrace>hrs_htd \<acute>t_hrs \<Turnstile>\<^sub>t \<acute>(\<lambda>s. ptr_add (ptr' s) (n' s))\<rbrace>
+        (Guard gname \<lbrace>array_assertion \<acute>(\<lambda>s. ptr' s) \<acute>(\<lambda>s. n'' s) (hrs_htd \<acute>t_hrs)\<rbrace>
+          (Basic (\<lambda>s. globals_update (t_hrs_'_update
+           (hrs_mem_update (heap_update (ptr_add (ptr' s) (n' s)) (w' s)))) s))))"
+  apply (rule ccorres_guard_imp2)
+   apply (rule ccorres_second_Guard)
+   apply (rule storeWordUser_ccorres)
+  apply (clarsimp simp: Collect_const_mem)
+  apply (subst valid_ipc_buffer_ptr_array, simp+)
+    defer
+   apply simp
+   defer
+  apply (clarsimp simp: valid_ipc_buffer_ptr'_def msg_align_bits
+                        is_aligned_add[OF is_aligned_weaken]
+                        is_aligned_mult_triv2[where n=2, simplified])
+  sorry
+find_theorems lookupIPCBuffer valid_ipc_buffer_ptr'
+lemma asUser_valid_ipc_buffer_ptr':
+  "\<lbrace> valid_ipc_buffer_ptr' p \<rbrace> asUser t m \<lbrace> \<lambda>rv s. valid_ipc_buffer_ptr' p s \<rbrace>"
+  by (simp add: valid_ipc_buffer_ptr'_def, wp, auto simp: valid_ipc_buffer_ptr'_def)
 
 lemma invokeTCB_ReadRegisters_ccorres:
 notes
@@ -1703,26 +1733,29 @@ shows
                                   rule_tac F="\<lambda>m s. obj_at' (\<lambda>tcb. map (tcbContext tcb) (genericTake n
                                                       (State_H.frameRegisters @ State_H.gpRegisters))
                                                                = reply) target s
-                                                 \<and> is_aligned (the rva) msg_align_bits \<and> valid_pspace' s"
+                                                 \<and> valid_ipc_buffer_ptr' (the rva) s
+                                                 \<and> valid_pspace' s"
                                        and i="unat n_msgRegisters"
                                     in ccorres_mapM_x_while')
-                                apply (clarsimp simp: less_diff_conv)
+                                apply (intro allI impI, elim conjE exE, hypsubst, simp)
+                                apply (simp add: less_diff_conv)
                                 apply (rule ccorres_guard_imp2)
                                  apply (rule ccorres_add_return,
                                         ctac add: getRegister_ccorres_defer[where thread=target])
-                                   apply (rule storeWordUser_ccorres)
+                                   apply (rule storeWordUser_array_ipcBuffer_ccorres)
                                   apply wp
                                  apply (vcg exspec=getRegister_modifies)
                                 apply (clarsimp simp: obj_at'_weakenE[OF _ TrueI]
                                                       word_size)
                                 apply (intro conjI[rotated] impI allI)
-                                     apply (simp add: n_msgRegisters_def n_frameRegisters_def
-                                                      word_less_nat_alt)
-                                     apply (subst unat_add_lem[THEN iffD1], simp_all add: unat_of_nat)[1]
-                                    apply (erule sym)
-                                   apply (simp add: option_to_ptr_def option_to_0_def
+                                      apply (simp add: n_msgRegisters_def n_frameRegisters_def
+                                                       word_less_nat_alt)
+                                      apply (subst unat_add_lem[THEN iffD1], simp_all add: unat_of_nat)[1]
+                                     apply (erule sym)
+                                    apply (simp add: option_to_ptr_def option_to_0_def
                                                     msg_registers_convs upto_enum_word wordSize_def'
-                                              del: upt.simps)
+                                               del: upt.simps)
+                                   apply (simp add: option_to_ptr_def option_to_0_def)
                                   apply (rule frame_gp_registers_convs)
                                   apply (simp add: frame_gp_registers_convs less_diff_conv)
                                   apply (subst iffD1 [OF unat_add_lem])
@@ -1731,9 +1764,11 @@ shows
                                                     word_le_nat_alt unat_of_nat)
                                   apply (simp add: n_frameRegisters_def n_msgRegisters_def
                                                    unat_of_nat)
-                                 apply (erule aligned_add_aligned)
-                                   apply (simp add: word32_shift_by_2 is_aligned_shiftl_self)
-                                 apply (simp add: msg_align_bits)
+                                 apply (simp add: msg_registers_convs n_msgRegisters_def
+                                                  msgMaxLength_def n_frameRegisters_def
+                                                  upto_enum_word_nth msg_align_bits
+                                                  )
+                                 apply (simp add: unat_word_ariths word_less_nat_alt unat_of_nat)
                                 apply (clarsimp simp: getRegister_def submonad_asUser.guarded_gets
                                                       obj_at'_weakenE[OF _ TrueI])
                                 apply (clarsimp simp: asUser_fetch_def simpler_gets_def
@@ -1802,35 +1837,38 @@ shows
                              apply (rule_tac F="\<lambda>m s. obj_at' (\<lambda>tcb. map (tcbContext tcb) (genericTake n
                                                        (State_H.frameRegisters @ State_H.gpRegisters))
                                                                 = reply) target s
-                                                  \<and> is_aligned (the rva) msg_align_bits \<and> valid_pspace' s"
+                                                  \<and> valid_ipc_buffer_ptr' (the rva) s \<and> valid_pspace' s"
                                         and i="0" in ccorres_mapM_x_while')
                                  apply (clarsimp simp: less_diff_conv drop_zip)
                                  apply (rule ccorres_guard_imp2)
                                   apply (rule ccorres_add_return,
                                          ctac add: getRegister_ccorres_defer[where thread=target])
-                                    apply (rule storeWordUser_ccorres)
+                                    apply (rule storeWordUser_array_ipcBuffer_ccorres)
                                    apply wp
                                   apply (vcg exspec=getRegister_modifies)
                                  apply (clarsimp simp: obj_at'_weakenE[OF _ TrueI]
                                                        word_size)
                                  apply (intro conjI[rotated] impI allI)
-                                      apply (simp add: n_frameRegisters_def n_msgRegisters_def
-                                                       length_msgRegisters word_of_nat_less
-                                                       n_gpRegisters_def)
-                                     apply (erule sym)
-                                    apply (simp add: option_to_ptr_def option_to_0_def
-                                                     msg_registers_convs upto_enum_word
-                                                     n_msgRegisters_def n_frameRegisters_def
-                                                     n_gpRegisters_def msgMaxLength_def msgLengthBits_def
-                                                del: upt.simps upt_rec_numeral)
-                                    apply (simp add: min_def split: split_if_asm)
+                                       apply (simp add: n_frameRegisters_def n_msgRegisters_def
+                                                        length_msgRegisters word_of_nat_less
+                                                        n_gpRegisters_def)
+                                      apply (erule sym)
+                                     apply (simp add: option_to_ptr_def option_to_0_def
+                                                      msg_registers_convs upto_enum_word
+                                                      n_msgRegisters_def n_frameRegisters_def
+                                                      n_gpRegisters_def msgMaxLength_def msgLengthBits_def
+                                                 del: upt.simps upt_rec_numeral)
+                                     apply (simp add: min_def split: split_if_asm)
+                                    apply (simp add: option_to_ptr_def option_to_0_def)
                                    apply (rule frame_gp_registers_convs)
                                    apply (simp add: frame_gp_registers_convs n_msgRegisters_def n_frameRegisters_def
                                                     n_gpRegisters_def msgMaxLength_def msgLengthBits_def
                                                     unat_of_nat)
-                                  apply (erule aligned_add_aligned)
-                                    apply (simp add: word32_shift_by_2 is_aligned_shiftl_self)
-                                  apply (simp add: msg_align_bits)
+                                  apply (simp add: msg_registers_convs n_msgRegisters_def
+                                                   msgMaxLength_def n_frameRegisters_def
+                                                   upto_enum_word_nth msg_align_bits
+                                                   )
+                                  apply (simp add: unat_word_ariths word_less_nat_alt unat_of_nat)
                                  apply (clarsimp simp: getRegister_def submonad_asUser.guarded_gets
                                                        obj_at'_weakenE[OF _ TrueI])
                                  apply (clarsimp simp: asUser_fetch_def simpler_gets_def
@@ -1905,7 +1943,8 @@ shows
                      apply simp
                      apply (rule mapM_x_wp')
                      apply (rule hoare_pre)
-                      apply (wp asUser_obj_at'[where t'=target] static_imp_wp)
+                      apply (wp asUser_obj_at'[where t'=target] static_imp_wp
+                                asUser_valid_ipc_buffer_ptr')
                      apply clarsimp
                     apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem
                                           msg_registers_convs n_msgRegisters_def
@@ -1914,10 +1953,11 @@ shows
                                           word_less_nat_alt unat_of_nat)
                     apply (simp add: min_def split: split_if_asm)
                    apply (wp_once hoare_drop_imps)
-                   apply (wp asUser_obj_at'[where t'=target] static_imp_wp)
+                   apply (wp asUser_obj_at'[where t'=target] static_imp_wp
+                             asUser_valid_ipc_buffer_ptr')
                   apply (vcg exspec=setRegister_modifies)
                  apply simp
-                 apply (strengthen is_aligned_the_x_strengthen)
+                 apply (strengthen valid_ipc_buffer_ptr_the_strengthen)
                  apply simp
                  apply (wp lookupIPCBuffer_Some_0 | wp_once hoare_drop_imps)+
                 apply (simp add: Collect_const_mem State_H.badgeRegister_def

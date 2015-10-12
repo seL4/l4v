@@ -12,8 +12,7 @@ theory SyscallArgs_C
 imports
   TcbQueue_C
   CSpace_RAB_C
-  StoreWord_C
-  DetWP
+  StoreWord_C  DetWP
 begin
 
 declare word_neq_0_conv[simp del]
@@ -733,7 +732,7 @@ lemma threadGet_tcbIpcBuffer_ccorres [corres]:
    apply clarsimp
    apply (clarsimp simp: return_def typ_heap_simps')
   apply (clarsimp simp: obj_at'_def ctcb_relation_def)
-  done 
+  done
 
 (* FIXME: move *)
 lemma ccorres_case_bools:
@@ -1143,6 +1142,32 @@ lemma scast_ucast_add_one [simp]:
   apply clarsimp
   done
 
+lemma valid_ipc_buffer_ptr_array:
+  "valid_ipc_buffer_ptr' (ptr_val p) s \<Longrightarrow> (s, s') \<in> rf_sr
+    \<Longrightarrow> n < 2 ^ (msg_align_bits - 2)
+    \<Longrightarrow> n \<noteq> 0
+    \<Longrightarrow> array_assertion (p :: word32 ptr) n (hrs_htd (t_hrs_' (globals s')))"
+  apply (clarsimp simp: valid_ipc_buffer_ptr'_def typ_at_to_obj_at_arches)
+  apply (drule obj_at_ko_at', clarsimp)
+  apply (drule rf_sr_heap_relation)
+  apply (erule cmap_relationE1)
+   apply (clarsimp simp: heap_to_page_data_def Let_def)
+   apply (rule conjI, rule exI, erule ko_at_projectKO_opt)
+   apply (rule refl)
+  apply (drule clift_field, rule user_data_C_words_C_fl_ti, simp)
+  apply (erule clift_array_assertion_imp, simp+)
+  apply (simp add: field_lvalue_def msg_align_bits)
+  apply (rule_tac x="unat (ptr_val p && mask pageBits >> 2)" in exI,
+    simp add: word32_shift_by_2 shiftr_shiftl1
+              is_aligned_andI1[OF is_aligned_weaken])
+  apply (simp add: add.commute word_plus_and_or_coroll2)
+  apply (cut_tac x="(ptr_val p && mask pageBits ) >> 2"
+        and n="2 ^ (pageBits - 2) - 2 ^ (msg_align_bits - 2)" in unat_le_helper)
+   apply (simp add: pageBits_def msg_align_bits mask_def is_aligned_mask)
+   apply word_bitwise
+   apply simp
+  apply (simp add: msg_align_bits pageBits_def)
+  done
 
 lemma getSyscallArg_ccorres_foo:
   "ccorres (\<lambda>a rv. rv = args ! n) ret__unsigned_long_'
@@ -1186,7 +1211,8 @@ lemma getSyscallArg_ccorres_foo:
    apply (rule ccorres_seq_skip [THEN iffD2])
    apply (rule ccorres_add_return2)
    apply (rule ccorres_symb_exec_l)
-      apply (rule_tac P="\<lambda>s. user_word_at (x!n) (ptr_val (CTypesDefs.ptr_add ipc_buffer (of_nat n + 1))) s" 
+      apply (rule_tac P="\<lambda>s. user_word_at (x!n) (ptr_val (CTypesDefs.ptr_add ipc_buffer (of_nat n + 1))) s
+                      \<and> valid_ipc_buffer_ptr' (ptr_val ipc_buffer) s \<and> n < msgMaxLength"
                   and P'=UNIV 
                    in ccorres_from_vcg_throws)
       apply (simp add: return_def split del: split_if)
@@ -1198,6 +1224,10 @@ lemma getSyscallArg_ccorres_foo:
         apply simp
        apply (clarsimp simp: mult.commute mult.left_commute ucast_nat_def')
       apply (clarsimp simp: CTypesDefs.ptr_add_def)
+      apply (subst valid_ipc_buffer_ptr_array, assumption+)
+        apply (simp add: unat_def[symmetric] msg_align_bits
+                         msgMaxLength_def unat_arith_simps)
+       apply simp
       apply (frule (1) user_word_at_cross_over)
        apply simp
       apply (clarsimp simp: mult.commute mult.left_commute ucast_nat_def)
@@ -1208,7 +1238,7 @@ lemma getSyscallArg_ccorres_foo:
                            msgLength mi \<le> msgMaxLength \<and> scast n_msgRegisters \<le> i" 
                  in hoare_pre(1))
      apply (wp getMRs_user_word)
-    apply clarsimp
+    apply (clarsimp simp: msgMaxLength_def unat_less_helper)
    apply simp
   apply (clarsimp simp: sysargs_rel_def sysargs_rel_n_def)
   apply (rule conjI, clarsimp simp: unat_of_nat32 word_bits_def)
