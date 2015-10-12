@@ -1,0 +1,137 @@
+theory ArrayAssertion
+
+imports
+  "ArraysMemInstance"
+  "StructSupport"
+
+begin
+
+lemma array_tag_n_eq: 
+  "(array_tag_n n :: ('a :: c_type['b :: finite]) field_desc typ_desc) = 
+  TypDesc (TypAggregate 
+    (map (\<lambda>n. DTPair (adjust_ti (typ_info_t TYPE('a)) (\<lambda>x. index x n)
+            (\<lambda>x f. Arrays.update f n x)) (replicate n CHR ''1'')) [0..<n]))
+  (typ_name (typ_uinfo_t TYPE('a)) @ ''_array_'' @ nat_to_bin_string (card (UNIV :: 'b :: finite set)))"
+  apply (induct n)
+   apply (simp add: typ_info_array array_tag_def eval_nat_numeral array_tag_n.simps empty_typ_info_def)
+   apply (simp add: typ_info_array array_tag_def eval_nat_numeral array_tag_n.simps empty_typ_info_def)
+   apply (simp add: ti_typ_combine_def Let_def)
+   done
+
+lemma typ_info_array':  
+  "typ_info_t TYPE ('a :: c_type['b :: finite]) = 
+  TypDesc (TypAggregate 
+    (map (\<lambda>n. DTPair (adjust_ti (typ_info_t TYPE('a)) (\<lambda>x. index x n)
+            (\<lambda>x f. Arrays.update f n x)) (replicate n CHR ''1'')) [0..<(card (UNIV :: 'b :: finite set))]))
+  (typ_name (typ_uinfo_t TYPE('a)) @ ''_array_'' @ nat_to_bin_string (card (UNIV :: 'b :: finite set)))"
+  by (simp add: typ_info_array array_tag_def array_tag_n_eq)
+
+definition
+  "uinfo_array_tag_n_m (v :: 'a itself) n m = TypDesc
+    (TypAggregate (map (\<lambda>i. DTPair (typ_uinfo_t TYPE('a)) (replicate i CHR ''1'')) [0 ..< n]))
+    (typ_name (typ_uinfo_t TYPE('a :: c_type)) @ ''_array_'' @ nat_to_bin_string m)"
+
+lemma map_td_list_map:
+  "map_td_list f = map (map_td_pair f)"
+  apply (rule ext)
+  apply (induct_tac x, simp_all)
+  done
+
+lemma uinfo_array_tag_n_m_eq:
+  "n \<le> CARD('b)
+    \<Longrightarrow> export_uinfo (array_tag_n n :: (('a :: wf_type)['b :: finite]) field_desc typ_desc)
+        = uinfo_array_tag_n_m TYPE ('a) n (CARD('b))"
+  apply (clarsimp simp: uinfo_array_tag_n_m_def array_tag_n_eq
+                        map_td_list_map o_def adjust_ti_def map_td_map)
+  apply (simp add: typ_uinfo_t_def export_uinfo_def)
+  apply (rule map_td_extI)
+   apply simp
+  apply (clarsimp simp: field_norm_blah)
+  done
+
+lemma typ_uinfo_array_tag_n_m_eq:
+  "typ_uinfo_t TYPE (('a :: wf_type)['b :: finite])
+        = uinfo_array_tag_n_m TYPE ('a) (CARD('b)) (CARD('b))"
+  by (simp add: typ_uinfo_t_def typ_info_array array_tag_def
+                uinfo_array_tag_n_m_eq)
+
+text {* Assertion that pointer p is within an array that continues
+for at least n more elements. *}
+definition
+  "array_assertion (p :: ('a :: c_type) ptr) n htd
+    = (\<exists>q i j. valid_footprint htd (ptr_val q) (uinfo_array_tag_n_m TYPE ('a) j j)
+        \<and> p = ptr_add q (int i) \<and> i < j \<and> i + n \<le> j)"
+
+lemma array_assertion_shrink_right:
+  "array_assertion p n htd \<Longrightarrow> n' \<le> n \<Longrightarrow> array_assertion p n' htd"
+  by (fastforce simp: array_assertion_def)
+
+lemma array_assertion_shrink_leftD:
+  "array_assertion p n htd \<Longrightarrow> j < n \<Longrightarrow> array_assertion (ptr_add p (int j)) (n - j) htd"
+  apply (clarsimp simp: array_assertion_def)
+  apply (rule exI, rule_tac x="i + j" in exI, rule exI, erule conjI)
+  apply (simp add: ptr_add_def field_simps)
+  done
+
+lemma array_assertion_shrink_leftI:
+  "array_assertion (ptr_add p (- (int j))) (n + j) htd
+    \<Longrightarrow> n \<noteq> 0 \<Longrightarrow> array_assertion p n htd"
+  apply (drule_tac j=j in array_assertion_shrink_leftD, simp)
+  apply (simp add: ptr_add_def)
+  done
+
+lemma array_ptr_valid_array_assertionD:
+  "h_t_valid htd gd (p :: (('a :: wf_type)['b :: finite]) ptr)
+    \<Longrightarrow> array_assertion (ptr_coerce p :: 'a ptr) (CARD('b)) htd"
+  apply (clarsimp simp: h_t_valid_def array_assertion_def
+                        typ_uinfo_array_tag_n_m_eq)
+  apply (rule_tac x="ptr_coerce p" in exI, rule_tac x="0" in exI)
+  apply (rule_tac x="CARD('b)" in exI)
+  apply simp
+  done
+
+lemma array_ptr_valid_array_assertionI:
+  "h_t_valid htd gd (q :: (('a :: wf_type)['b :: finite]) ptr)
+    \<Longrightarrow> q = ptr_coerce p
+    \<Longrightarrow> n \<le> CARD('b)
+    \<Longrightarrow> array_assertion (p :: 'a ptr) n htd"
+  by (auto dest: array_ptr_valid_array_assertionD
+           simp: array_assertion_shrink_right)
+
+text {* Derived from array_assertion, an appropriate assertion for performing
+a pointer addition, or for dereferencing a pointer addition (the strong case).
+
+In either case, there must be an array connecting the two ends of the pointer
+transition, with the caveat that the last address can be just out of the array
+if the pointer is not dereferenced, thus the strong/weak distinction.
+
+If the pointer doesn't actually move, nothing is learned.
+*}
+definition
+  ptr_add_assertion :: "('a :: c_type) ptr \<Rightarrow> int \<Rightarrow> bool \<Rightarrow> heap_typ_desc \<Rightarrow> bool"
+where
+  "ptr_add_assertion ptr offs strong htd \<equiv> offs = 0
+    \<or> array_assertion (if offs < 0 then ptr_add ptr offs else ptr)
+        (if offs < 0 then nat (- offs) else if strong then Suc (nat offs) else nat offs)
+        htd"
+
+lemma ptr_add_assertion_positive:
+  "offs \<ge> 0 \<Longrightarrow> ptr_add_assertion ptr offs strong htd
+    = (offs = 0 \<or> array_assertion ptr (case strong of True \<Rightarrow> Suc (nat offs)
+        | False \<Rightarrow> nat offs) htd)"
+  by (simp add: ptr_add_assertion_def)
+
+lemma ptr_add_assertion_negative:
+  "offs < 0 \<Longrightarrow> ptr_add_assertion ptr offs strong htd
+    = array_assertion (ptr_add ptr offs) (nat (- offs)) htd"
+  by (simp add: ptr_add_assertion_def)
+
+lemma ptr_add_assertion_uint[simp]:
+  "ptr_add_assertion ptr (uint offs) strong htd
+    = (offs = 0 \<or> array_assertion ptr
+        (case strong of True \<Rightarrow> Suc (unat offs) | False \<Rightarrow> unat offs) htd)"
+  by (simp add: ptr_add_assertion_positive uint_0_iff unat_def
+         split: bool.split)
+
+end
+
