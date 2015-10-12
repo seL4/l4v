@@ -93,6 +93,8 @@ class Translator(object):
 
     def encode(self, data):
         for symbol in self.symbols:
+            if symbol.ascii_text.startswith('\\<^'):
+                continue
             data = data.replace(symbol.ascii_text, unichr(symbol.code_point))
         return data
 
