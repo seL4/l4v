@@ -16,12 +16,16 @@ text \<open>TODO: Handle quantifiers in the post condition\<close>
 context begin
 
 
-text \<open>A small wrapper around implication so we can track assumptions we've added.\<close>
+text \<open>A hoare triple with an additional slot for strengthening the postcondition,
+  and a scratchpad for keeping information as we apply rules.\<close>
 
+definition "strengthened_triple Pre P f Qstr Q == \<lbrace>P\<rbrace> f \<lbrace>\<lambda>r s. Qstr r s \<longrightarrow> Q r s\<rbrace>"
 
-definition "strong_post P Q \<equiv> P \<longrightarrow> Q"
-
-lemmas strong_post_cong = imp_cong[simplified strong_post_def[symmetric]]
+lemma
+  strengthened_triple_cong: 
+  "\<lbrakk>Qstr = Qstr'; \<And>r s. Qstr' r s \<Longrightarrow> Q r s = Q' r s; Pre = Pre'; P = P'; f = f'\<rbrakk> \<Longrightarrow> 
+      strengthened_triple Pre P f Qstr Q = strengthened_triple Pre' P' f' Qstr' Q'"
+      by (auto simp add: strengthened_triple_def)
 
 text \<open>A small utility method which succeeds only when two given terms share free variables.\<close>
 
@@ -41,22 +45,39 @@ method_setup shared_frees =
     SIMPLE_METHOD (
       if has_shared_frees t t' then all_tac else no_tac)))\<close>
 
+text \<open>
+  Method for avoiding obvious contradictions.
+  \<close>
+  
+definition "not_False B = True"
 
-text \<open>Our counterpart to hoare_add_post.\<close>
 
-lemma hoare_strong_post:
-  "\<lbrace>P'\<rbrace> f \<lbrace>Q\<rbrace> \<Longrightarrow> 
-  \<lbrace>P''\<rbrace> f \<lbrace>\<lambda>r s. strong_post (Q r s) (H r s)\<rbrace> \<Longrightarrow> \<lbrace>\<lambda>s. P' s \<and> P'' s\<rbrace> f \<lbrace>\<lambda>r s. H r s\<rbrace>"
-  by (fastforce simp add: valid_def strong_post_def)
+lemma not_False_worker: "\<not> B \<Longrightarrow> not_False B" by (simp add: not_False_def)
 
-text \<open>Similar for hoare_drop_imps. Note we can repeatedly apply this without clobbering
-      the original post condition.\<close>
+lemma not_False: "not_False B" by (simp add: not_False_def)
 
-private lemma drop_strong_post:
-  "\<lbrace>P\<rbrace> f \<lbrace>R\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>r s. strong_post (Q r s) (R r s)\<rbrace>"
-  apply (erule hoare_strengthen_post)
-  by (simp add: strong_post_def)
+method not_False = 
+  (fails \<open>rule not_False_worker, solves \<open>(simp,blast?)\<close>\<close>, 
+   rule not_False)
 
+text \<open>Our counterpart to hoare_add_post.  We avoid introducing obvious contradictions by
+  keeping track of the preconditions that we've added, and ensuring that any added triple
+  doesn't make the generated precondition trivially false.\<close>
+
+lemma strengthen_triple:
+  "\<lbrace>P'\<rbrace> f \<lbrace>Q'\<rbrace> \<Longrightarrow>
+  not_False (\<forall>s. P' s \<and> Pre s) \<Longrightarrow>
+   strengthened_triple (\<lambda>s. Pre s \<and> P' s) P f (\<lambda>r s. Q r s \<and> Q' r s) H \<Longrightarrow> 
+     strengthened_triple Pre (\<lambda>s. P' s \<and> P s) f Q H"
+   by (fastforce simp add: valid_def strengthened_triple_def)
+
+lemma strengthened_triple_init:
+  "strengthened_triple (\<lambda>_. True) P f (\<lambda>_ _. True) Q \<Longrightarrow> (\<And>s. P s = P' s) \<Longrightarrow> \<lbrace>P'\<rbrace> f \<lbrace>Q\<rbrace>"
+  by (simp add: strengthened_triple_def valid_def)
+
+lemma strengthened_triple_drop:
+  "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<Longrightarrow> strengthened_triple Pre P f Qstr Q"
+   by (auto simp add: strengthened_triple_def valid_def)
 
 text \<open>Simple test for if a function uses its first argument. This method will fail if
       handed a post condition which ignores the return value.\<close>
@@ -87,7 +108,7 @@ method find_context for f :: 'd  and C Q :: "'a \<Rightarrow> 'b \<Rightarrow> b
      
        
   \<bar> _ \<Rightarrow> 
-  \<open>(rule hoare_strong_post[where Q=Q], (* see if we know how to prove Q *)
+  \<open>(rule strengthen_triple[where Q'=Q], (* see if we know how to prove Q *)
    (solves \<open>wp_weak\<close> (* try our more specific solver first (wp only: ...) *)
    |(match (C) in "\<lambda>_ _. True" \<Rightarrow> \<open>succeed\<close> (* optimization: without context lifting is always safe *)
     \<bar> _ \<Rightarrow> \<open>fails \<open>
@@ -97,51 +118,38 @@ method find_context for f :: 'd  and C Q :: "'a \<Rightarrow> 'b \<Rightarrow> b
           | uses_arg C, shared_frees f Q (* antecedent depends on return value, consequent depends on function args *)
           | shared_frees f C, uses_arg Q (* consequent depends on return value, antecedent depends on function args *) 
           \<close>\<close>),  
-    solves \<open>wp_strong\<close> (* if we can assume that we don't actually depend on our logical context, try the real solver (wp) *)
-    ))?\<close>
+    solves \<open>wp_strong\<close>), (* if we can assume that we don't actually depend on our logical context, try the real solver (wp) *)
+    not_False (* ensure that the added precondition doesn't necessarily imply false *)
+    )?\<close>
    )
 
-
-text \<open>After matching the conclusion we are now focused and can't affect the schematic precondition.
-      To work around this, we replace the precondition with a schematic that we can resolve after
-      focusing.\<close>
-
-definition "schematic_equiv P P' \<equiv> (P \<equiv> P')" 
-
-lemma
-  hoare_pre_schematic_equiv: 
-  "\<lbrace>Q\<rbrace> a \<lbrace>R\<rbrace> \<Longrightarrow> (\<And>s. PROP schematic_equiv (Q s) (P s))\<Longrightarrow> \<lbrace>P\<rbrace> a \<lbrace>R\<rbrace>"
-  by (simp add: schematic_equiv_def valid_def)
-  
-
-lemma schematic_equivI: "PROP schematic_equiv P P" 
-  by (simp add: schematic_equiv_def)
  
 
-text \<open>We focus, schematic-ify the precondition, 
+text \<open>We focus, move the hoare triple into our strengthened triple, 
       then we enrich the postcondition. We then simplify it
-      (with our own congruence rule) and then drop our enriched postconditions.
+      (with our own congruence rule) and finally drop our enriched postconditions.
 
       Note that ";" limits us to the first subgoal, so defer_tac only pushes our generated
       subgoal down by 1, leaving us with the original hoare triple after solving it with  
-      schematic_equivI.
+      refl.
 \<close>
-
 
 method post_strengthen methods wp_weak wp_strong simp' =
   (match conclusion in "\<lbrace>_\<rbrace> f \<lbrace>Q\<rbrace>" for Q f \<Rightarrow>
-    \<open>rule hoare_pre_schematic_equiv, find_context f "\<lambda>_ _. True" Q \<open>wp_weak\<close> \<open>wp_strong\<close>\<close>, 
-   defer_tac, rule schematic_equivI,
+    \<open>rule strengthened_triple_init,
+      find_context f "\<lambda>_ _. True" Q \<open>wp_weak\<close> \<open>wp_strong\<close>\<close>, 
+   defer_tac, rule refl,
    simp'; 
-    ((rule drop_strong_post)+)
+    rule strengthened_triple_drop
   )
 
 named_theorems wpstr
 
 method wpstr uses add del declares wpstr = 
-  (post_strengthen \<open>wp only: wpstr\<close> \<open>wp add: add del: del\<close> \<open>simp split del: split_if cong: strong_post_cong\<close>)
+  (post_strengthen \<open>wp only: wpstr\<close> \<open>wp add: add del: del\<close> \<open>simp split del: split_if cong: strengthened_triple_cong\<close>)
 
 end
+
 
 notepad begin
   fix P P' P'' P''' and Q Q' Q'' :: "'a \<Rightarrow> bool" and R :: "bool \<Rightarrow> 'b \<Rightarrow> 'a \<Rightarrow> bool"
@@ -171,7 +179,12 @@ notepad begin
   apply (wpstr wpstr: B)
   apply wp
   by simp
- 
+
+  (* not_False avoids assuming contradictions *)
+  have "\<lbrace>B x\<rbrace> f x \<lbrace>\<lambda>r s. False \<longrightarrow> (\<forall>P. P)\<rbrace>"
+  apply (rule hoare_pre)
+  apply wpstr
+  by wp
 
 end
 
