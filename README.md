@@ -158,7 +158,7 @@ need a gcc-compatible C pre-processor and python. Try the following steps:
     
 
 [7]: http://mlton.org                               "MLton ML compiler"
-[8]: http://sel4.systems/Download/DebianToolChain   "seL4 tool chain setup"
+[8]: http://sel4.systems/Info/GettingStarted/DebianToolChain.pml  "seL4 tool chain setup"
 [9]: https://pypi.python.org/pypi/setuptools        "python package installer"
 
 
