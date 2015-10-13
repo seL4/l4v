@@ -57,25 +57,25 @@ lemma not_False_worker: "\<not> B \<Longrightarrow> not_False B" by (simp add: n
 lemma not_False: "not_False B" by (simp add: not_False_def)
 
 method not_False = 
-  (fails \<open>rule not_False_worker, solves \<open>(simp,blast?)\<close>\<close>, 
+  (fails \<open>rule not_False_worker, solves \<open>simp\<close>\<close>, 
    rule not_False)
 
 text \<open>Our counterpart to hoare_add_post.  We avoid introducing obvious contradictions by
   keeping track of the preconditions that we've added, and ensuring that any added triple
   doesn't make the generated precondition trivially false.\<close>
 
-lemma strengthen_triple:
+private lemma strengthen_triple:
   "\<lbrace>P'\<rbrace> f \<lbrace>Q'\<rbrace> \<Longrightarrow>
   not_False (\<forall>s. P' s \<and> Pre s) \<Longrightarrow>
    strengthened_triple (\<lambda>s. Pre s \<and> P' s) P f (\<lambda>r s. Q r s \<and> Q' r s) H \<Longrightarrow> 
      strengthened_triple Pre (\<lambda>s. P' s \<and> P s) f Q H"
    by (fastforce simp add: valid_def strengthened_triple_def)
 
-lemma strengthened_triple_init:
+private lemma strengthened_triple_init:
   "strengthened_triple (\<lambda>_. True) P f (\<lambda>_ _. True) Q \<Longrightarrow> (\<And>s. P s = P' s) \<Longrightarrow> \<lbrace>P'\<rbrace> f \<lbrace>Q\<rbrace>"
   by (simp add: strengthened_triple_def valid_def)
 
-lemma strengthened_triple_drop:
+private lemma strengthened_triple_drop:
   "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<Longrightarrow> strengthened_triple Pre P f Qstr Q"
    by (auto simp add: strengthened_triple_def valid_def)
 
@@ -146,7 +146,12 @@ method post_strengthen methods wp_weak wp_strong simp' =
 named_theorems wpstr
 
 method wpstr uses add del declares wpstr = 
-  (post_strengthen \<open>wp only: wpstr\<close> \<open>wp add: add del: del\<close> \<open>simp split del: split_if cong: strengthened_triple_cong\<close>)
+  (post_strengthen \<open>wp only: wpstr\<close> \<open>wp add: add del: del\<close> 
+        \<open>simp split del: split_if cong: strengthened_triple_cong\<close>)
+
+method wpstr_unsafe uses add del = 
+  (post_strengthen \<open>wp add: add del: del\<close> \<open>fail\<close> 
+        \<open>simp split del: split_if cong: strengthened_triple_cong\<close>)
 
 end
 
@@ -181,7 +186,7 @@ notepad begin
   by simp
 
   (* not_False avoids assuming contradictions *)
-  have "\<lbrace>B x\<rbrace> f x \<lbrace>\<lambda>r s. False \<longrightarrow> (\<forall>P. P)\<rbrace>"
+  have "\<lbrace>B x\<rbrace> f x \<lbrace>\<lambda>r s. False \<longrightarrow> (\<forall>P. False)\<rbrace>"
   apply (rule hoare_pre)
   apply wpstr
   by wp
