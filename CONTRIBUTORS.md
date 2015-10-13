@@ -38,6 +38,7 @@ order).
 * Michael Norrish, NICTA & ANU
 * Lars Noschinski
 * Liam O'Connor, NICTA
+* Corey Richardson
 * Sean Seefried, NICTA
 * Thomas Sewell, NICTA & UNSW
 * Rupert Shuttleworth, NICTA
@@ -45,3 +46,4 @@ order).
 * David Tsai, NICTA
 * Harvey Tuch, NICTA & UNSW
 * Simon Winwood, NICTA
+* Nickolai Zeldovich, MIT
