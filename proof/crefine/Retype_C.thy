@@ -2512,7 +2512,7 @@ definition
                                      (case x of ArchTypes_H.apiobject_type.Untyped \<Rightarrow> scast seL4_UntypedObject
                                               | ArchTypes_H.apiobject_type.TCBObject \<Rightarrow> scast seL4_TCBObject
                                               | ArchTypes_H.apiobject_type.EndpointObject \<Rightarrow> scast seL4_EndpointObject
-                                              | ArchTypes_H.apiobject_type.AsyncEndpointObject \<Rightarrow> scast seL4_AsyncEndpointObject
+                                              | ArchTypes_H.apiobject_type.AsyncEndpointObject \<Rightarrow> scast seL4_NotificationObject
                                               | ArchTypes_H.apiobject_type.CapTableObject \<Rightarrow> scast seL4_CapTableObject)
                             | ArchTypes_H.SmallPageObject \<Rightarrow> scast seL4_ARM_SmallPageObject
                             | ArchTypes_H.LargePageObject \<Rightarrow> scast seL4_ARM_LargePageObject  
@@ -2536,7 +2536,7 @@ definition
      (if (x = scast seL4_UntypedObject) then APIObjectType ArchTypes_H.apiobject_type.Untyped else (
       if (x = scast seL4_TCBObject) then APIObjectType ArchTypes_H.apiobject_type.TCBObject else (
        if (x = scast seL4_EndpointObject) then APIObjectType ArchTypes_H.apiobject_type.EndpointObject else (
-        if (x = scast seL4_AsyncEndpointObject) then APIObjectType ArchTypes_H.apiobject_type.AsyncEndpointObject else (
+        if (x = scast seL4_NotificationObject) then APIObjectType ArchTypes_H.apiobject_type.AsyncEndpointObject else (
          if (x = scast seL4_CapTableObject) then APIObjectType ArchTypes_H.apiobject_type.CapTableObject else (
           if (x = scast seL4_ARM_SmallPageObject) then ArchTypes_H.SmallPageObject else (
            if (x = scast seL4_ARM_LargePageObject) then ArchTypes_H.LargePageObject else (
@@ -2550,7 +2550,7 @@ theorems Kernel_C_defs =
   seL4_UntypedObject_def
   seL4_TCBObject_def
   seL4_EndpointObject_def
-  seL4_AsyncEndpointObject_def
+  seL4_NotificationObject_def
   seL4_CapTableObject_def
   seL4_ARM_SmallPageObject_def
   seL4_ARM_LargePageObject_def
@@ -2841,7 +2841,7 @@ lemma object_type_from_H_toAPIType_simps:
   "(object_type_from_H tp = scast seL4_UntypedObject) = (toAPIType tp = Some ArchTypes_H.apiobject_type.Untyped)"
   "(object_type_from_H tp = scast seL4_TCBObject) = (toAPIType tp = Some ArchTypes_H.apiobject_type.TCBObject)"
   "(object_type_from_H tp = scast seL4_EndpointObject) = (toAPIType tp = Some ArchTypes_H.apiobject_type.EndpointObject)"
-  "(object_type_from_H tp = scast seL4_AsyncEndpointObject) = (toAPIType tp = Some ArchTypes_H.apiobject_type.AsyncEndpointObject)"
+  "(object_type_from_H tp = scast seL4_NotificationObject) = (toAPIType tp = Some ArchTypes_H.apiobject_type.AsyncEndpointObject)"
   "(object_type_from_H tp = scast seL4_CapTableObject) = (toAPIType tp = Some ArchTypes_H.apiobject_type.CapTableObject)"
   "(object_type_from_H tp = scast seL4_ARM_SmallPageObject) = (tp = ArchTypes_H.SmallPageObject)"
   "(object_type_from_H tp = scast seL4_ARM_LargePageObject) = (tp = ArchTypes_H.LargePageObject)"
