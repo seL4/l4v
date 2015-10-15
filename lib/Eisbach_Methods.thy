@@ -49,6 +49,18 @@ method_setup all =
    in SIMPLE_METHOD (ALLGOALS tac) facts end)
 \<close>
 
+method_setup determ =
+ \<open>Method_Closure.parse_method >> (fn m => fn ctxt => fn facts =>
+   let
+     fun tac st' =
+       Method_Closure.method_evaluate m ctxt facts st'
+       |> Seq.map snd
+
+   in SIMPLE_METHOD (DETERM tac) facts end)
+\<close>
+
+method repeat_new methods m = (m ; (repeat_new \<open>m\<close>)?)
+
 text \<open>The following @{text fails} and @{text succeeds} methods protect the goal from the effect
       of a method, instead simply determining whether or not it can be applied to the current goal.
       The @{text fails} method inverts success, only succeeding if the given method would fail.\<close>
