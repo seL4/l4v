@@ -11,7 +11,7 @@
 # @TAG(NICTA_BSD)
 #
 
-import codecs, collections, numbers, types
+import codecs, collections, numbers, re, types
 
 class IsaSymbolsException(Exception):
     pass
@@ -91,6 +91,7 @@ class Translator(object):
         # Translation dictionaries that we'll lazily initialise later.
         self._utf8_to_ascii = None
         self._utf8_to_tex = None
+        self._hshifts_tex = None # Handling for sub-/super-scripts
 
     def encode(self, data):
         for symbol in self.symbols:
@@ -128,7 +129,20 @@ class Translator(object):
                 if s.ascii_text.startswith('\\<') and
                     s.ascii_text.endswith('>')}
 
-        return ''.join(self._utf8_to_tex.get(c, c) for c in data)
+        if self._hshifts_tex is None:
+            # XXX: Hardcoded
+            self._hshifts_tex = (
+                (re.compile(r'\\<\^sub>(.)'), r'\\textsubscript{\1}'),
+                (re.compile(r'\\<\^sup>(.)'), r'\\textsuperscript{\1}'),
+                (re.compile(r'\\<\^bold>(.)'), r'\\textbf{\1}'),
+                (re.compile(r'\\<\^bsub>'), r'\\textsubscript{'),
+                (re.compile(r'\\<\^bsup>'), r'\\textsuperscript{'),
+                (re.compile(r'\\<\^esu\(b|p\)>'), '}'),
+            )
+
+        return ''.join(self._utf8_to_tex.get(c, c) for c in
+            reduce(lambda a, (regex, rep): regex.sub(rep, a), self._hshifts_tex,
+                data))
 
 def make_translator(symbols_file):
     assert isinstance(symbols_file, basestring)
