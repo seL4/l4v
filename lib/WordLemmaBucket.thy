@@ -6690,18 +6690,6 @@ lemma le_shiftr':
 
 (* word log2 and count leading zeros, move somewhere the kernel C parse can see them *)
 
-(* FIXME move to word lib somewhere *)
-definition
-  word_clz :: "'a::len word \<Rightarrow> nat"
-where
-  "word_clz w \<equiv> length (takeWhile Not (to_bl w))"
-
-(* FIXME move to word lib *)
-definition
-  word_log2 :: "'a::len word \<Rightarrow> nat"
-where
-  "word_log2 (w::'a::len word) \<equiv> size w - 1 - word_clz w"
-
 lemma word_log2_nth_same:
   "w \<noteq> 0 \<Longrightarrow> w !! word_log2 w"
   unfolding word_log2_def

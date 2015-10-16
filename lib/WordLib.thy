@@ -668,4 +668,16 @@ lemma
   "( 5 :: word32) smod -4 =   1"
   by (simp_all add: smod_word_def smod_int_def sdiv_int_def)
 
+(* Count leading zeros and log2 of a word; proofs about these are in WordLemmaBucket *)
+
+definition
+  word_clz :: "'a::len word \<Rightarrow> nat"
+where
+  "word_clz w \<equiv> length (takeWhile Not (to_bl w))"
+
+definition
+  word_log2 :: "'a::len word \<Rightarrow> nat"
+where
+  "word_log2 (w::'a::len word) \<equiv> size w - 1 - word_clz w"
+
 end

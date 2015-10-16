@@ -9,7 +9,9 @@
  *)
 
 theory CTranslationNICTA
-imports "../tools/c-parser/CTranslation"
+imports
+  "../tools/c-parser/CTranslation"
+  WordLib
 begin
 
 declare len_of_numeral_defs [simp del]
