@@ -781,7 +781,7 @@ lemma handle_wait_reads_respects_f:
             get_aep_wp
   shows
   "reads_respects_f aag l (silc_inv aag st and einvs and ct_active and
-        pas_refined aag and pas_cur_domain aag and is_subject aag \<circ> cur_thread) handle_wait"
+        pas_refined aag and pas_cur_domain aag and is_subject aag \<circ> cur_thread) (handle_wait is_blocking)"
   apply (simp add: handle_wait_def Let_def lookup_cap_def split_def)
   apply (wp mywp | wpc | assumption | simp | clarsimp)+
   apply(rule_tac Q="\<lambda>rv' s. invs s \<and> pas_refined aag s \<and> pas_cur_domain aag s 
@@ -829,7 +829,7 @@ lemma handle_wait_reads_respects_f:
   done
 
 lemma handle_wait_globals_equiv:
-  "\<lbrace>globals_equiv (st :: det_state) and invs and ct_active\<rbrace> handle_wait \<lbrace>\<lambda>r. globals_equiv st\<rbrace>"
+  "\<lbrace>globals_equiv (st :: det_state) and invs and ct_active\<rbrace> handle_wait is_blocking \<lbrace>\<lambda>r. globals_equiv st\<rbrace>"
   unfolding handle_wait_def
   apply (wp handle_fault_globals_equiv get_aep_wp
         | wpc | simp add: Let_def)+
@@ -850,7 +850,7 @@ lemma handle_wait_globals_equiv:
 
 lemma handle_wait_reads_respects_f_g:
   "reads_respects_f_g aag l (silc_inv aag st and einvs and ct_active and
-        pas_refined aag and pas_cur_domain aag and is_subject aag \<circ> cur_thread) handle_wait"
+        pas_refined aag and pas_cur_domain aag and is_subject aag \<circ> cur_thread) (handle_wait is_blocking)"
   apply (rule equiv_valid_guard_imp)
   apply (rule reads_respects_f_g)
   apply (wp handle_wait_reads_respects_f[where st=st])
@@ -991,7 +991,7 @@ lemma handle_event_reads_respects_f_g:
                   handle_reply_valid_sched
                   reads_respects_f_g[OF reads_respects_f[where st=st and aag=aag and Q=\<top>, OF handle_yield_reads_respects] doesnt_touch_globalsI]
                   handle_reply_reads_respects_g handle_reply_silc_inv[where st=st]
-                | simp add: invs_imps | rule equiv_valid_guard_imp | force)+)[7]
+                | simp add: invs_imps | rule equiv_valid_guard_imp | force)+)[8]
      apply (wp reads_respects_f_g'[OF handle_fault_reads_respects_g, where st=st]
                | simp add: reads_equiv_f_g_conj
             | clarsimp simp: invs_imps requiv_g_cur_thread_eq schact_is_rct_simple

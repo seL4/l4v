@@ -1397,8 +1397,7 @@ lemma valid_pspace_s0[simp]:
   apply (clarsimp simp: sym_refs_def state_refs_of_def s0_internal_def)
   apply (subst(asm) kh0_def)
   apply (clarsimp split: split_if_asm)
-             apply (simp add: refs_of_def kh0_def s0_ptr_defs kh0_obj_def)+
-             done
+             by (simp add: refs_of_def kh0_def s0_ptr_defs kh0_obj_def)+
 
 lemma descendants_s0[simp]:
   "descendants_of (a, b) (cdt s0_internal) = {}"

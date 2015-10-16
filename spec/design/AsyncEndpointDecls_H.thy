@@ -20,7 +20,10 @@ consts
 sendAsyncIPC :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit kernel"
 
 consts
-receiveAsyncIPC :: "machine_word \<Rightarrow> capability \<Rightarrow> unit kernel"
+receiveAsyncIPC :: "machine_word \<Rightarrow> capability \<Rightarrow> bool \<Rightarrow> unit kernel"
+
+consts
+doPollFailedTransfer :: "machine_word \<Rightarrow> unit kernel"
 
 consts
 aepCancelAll :: "machine_word \<Rightarrow> unit kernel"

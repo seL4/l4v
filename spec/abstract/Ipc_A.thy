@@ -466,27 +466,38 @@ where
              ActiveAEP (combine_aep_badges badge badge')
    od"
 
+definition
+  do_poll_failed_transfer :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
+where
+  "do_poll_failed_transfer thread = do as_user thread $ set_register badge_register 0; return () od"
+   
 text {* Handle a receive operation performed on an asynchronous endpoint by a
 thread. If a message is waiting then perform the transfer, otherwise put the
 thread in the endpoint's receiving queue. *}
 definition
-  receive_async_ipc :: "obj_ref \<Rightarrow> cap \<Rightarrow> (unit,'z::state_ext) s_monad"
+  receive_async_ipc :: "obj_ref \<Rightarrow> cap \<Rightarrow> bool \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
-   "receive_async_ipc thread cap \<equiv> do
+   "receive_async_ipc thread cap is_blocking \<equiv> do
     aepptr \<leftarrow>
       case cap
         of AsyncEndpointCap aepptr badge rights \<Rightarrow> return aepptr
          | _ \<Rightarrow> fail;
     aep \<leftarrow> get_async_ep aepptr;
     case aep_obj aep
-      of IdleAEP \<Rightarrow> do
-                   set_thread_state thread (BlockedOnAsyncEvent aepptr);
-                   set_async_ep aepptr $ aep_set_obj aep $ WaitingAEP [thread]
-                 od
-       | WaitingAEP queue \<Rightarrow> do
-                   set_thread_state thread (BlockedOnAsyncEvent aepptr);
-                   set_async_ep aepptr $ aep_set_obj aep $ WaitingAEP (queue @ [thread])
-                 od
+      of IdleAEP \<Rightarrow>
+                   case is_blocking of 
+                     True \<Rightarrow> do
+                          set_thread_state thread (BlockedOnAsyncEvent aepptr);
+                          set_async_ep aepptr $ aep_set_obj aep $ WaitingAEP ([thread])
+                        od
+                   | False \<Rightarrow> do_poll_failed_transfer thread 
+       | WaitingAEP queue \<Rightarrow> 
+                   case is_blocking of 
+                     True \<Rightarrow> do
+                          set_thread_state thread (BlockedOnAsyncEvent aepptr);
+                          set_async_ep aepptr $ aep_set_obj aep $ WaitingAEP (queue @ [thread])
+                        od
+                   | False \<Rightarrow> do_poll_failed_transfer thread 
        | ActiveAEP badge \<Rightarrow> do
                      as_user thread $ set_register badge_register badge;
                      set_async_ep aepptr $ aep_set_obj aep IdleAEP 

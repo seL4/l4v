@@ -61,26 +61,35 @@ defs sendAsyncIPC_def:
 od)"
 
 defs receiveAsyncIPC_def:
-"receiveAsyncIPC thread cap\<equiv> (do
+"receiveAsyncIPC thread cap isBlocking\<equiv> (do
         aepptr \<leftarrow> return ( capAEPPtr cap);
         aep \<leftarrow> getAsyncEP aepptr;
         (case aepObj aep of
-              IdleAEP \<Rightarrow>   (do
-                setThreadState (BlockedOnAsyncEvent_ \<lparr>
-                     waitingOnAsyncEP= aepptr \<rparr> ) thread;
-                setAsyncEP aepptr $ aep \<lparr>aepObj := WaitingAEP [thread] \<rparr>
-              od)
-            | WaitingAEP queue \<Rightarrow>   (do
-                setThreadState (BlockedOnAsyncEvent_ \<lparr>
-                    waitingOnAsyncEP= aepptr \<rparr> ) thread;
-                setAsyncEP aepptr $ aep \<lparr>aepObj := WaitingAEP (queue @ [thread]) \<rparr>
-            od)
+              IdleAEP \<Rightarrow>   (case isBlocking of
+                  True \<Rightarrow>   (do
+                      setThreadState (BlockedOnAsyncEvent_ \<lparr>
+                                         waitingOnAsyncEP= aepptr \<rparr> ) thread;
+                      setAsyncEP aepptr $ aep \<lparr>aepObj := WaitingAEP ([thread]) \<rparr>
+                  od)
+                | False \<Rightarrow>   doPollFailedTransfer thread
+                )
+            | WaitingAEP queue \<Rightarrow>   (case isBlocking of
+                  True \<Rightarrow>   (do
+                      setThreadState (BlockedOnAsyncEvent_ \<lparr>
+                                         waitingOnAsyncEP= aepptr \<rparr> ) thread;
+                      setAsyncEP aepptr $ aep \<lparr>aepObj := WaitingAEP (queue @ [thread]) \<rparr>
+                  od)
+                | False \<Rightarrow>   doPollFailedTransfer thread
+                )
             | ActiveAEP badge \<Rightarrow>   (do
                 asUser thread $ setRegister badgeRegister badge;
                 setAsyncEP aepptr $ aep \<lparr>aepObj := IdleAEP \<rparr>
             od)
             )
 od)"
+
+defs doPollFailedTransfer_def:
+"doPollFailedTransfer thread \<equiv> asUser thread $ setRegister badgeRegister 0"
 
 defs aepCancelAll_def:
 "aepCancelAll aepptr\<equiv> (do

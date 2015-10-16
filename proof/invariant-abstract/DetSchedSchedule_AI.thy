@@ -2662,7 +2662,7 @@ done
 lemma handle_wait_valid_sched:
   "\<lbrace>valid_sched and valid_objs and ct_active and sym_refs \<circ> state_refs_of
       and ct_not_queued and scheduler_act_sane and invs\<rbrace>
-   handle_wait \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
+   handle_wait is_blocking \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
   apply (simp add: handle_wait_def Let_def ep_aep_cap_case_helper
               cong: if_cong)
   apply (wp get_aep_wp handle_fault_valid_sched delete_caller_cap_not_queued receive_ipc_valid_sched receive_async_ipc_valid_sched | simp)+
@@ -2680,7 +2680,7 @@ lemma handle_wait_valid_sched:
 
 lemma handle_wait_valid_sched':
   "\<lbrace>invs and valid_sched and ct_active and ct_not_queued and scheduler_act_sane\<rbrace>
-    handle_wait
+    handle_wait is_blocking
    \<lbrace>\<lambda>_. valid_sched\<rbrace>"
   apply (rule hoare_pre)
    apply (wp handle_wait_valid_sched)

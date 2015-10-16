@@ -342,16 +342,9 @@ definition
   recv_async_ipc :: "cdl_object_id \<Rightarrow> cdl_cap \<Rightarrow> unit k_monad"
 where
   "recv_async_ipc tcb_id_receiver ep_cap  \<equiv> do
-     ep_id \<leftarrow> return $ cap_object ep_cap;
-     waiters \<leftarrow> gets $ get_waiting_async_recv_threads ep_id;
-     if (waiters = {}) then 
-       block_thread_on_ipc tcb_id_receiver (PendingAsyncRecvCap ep_id)
-       \<sqinter> corrupt_tcb_intent tcb_id_receiver
-     else
-       block_thread_on_ipc tcb_id_receiver (PendingAsyncRecvCap ep_id)
+     ep_id \<leftarrow> return $ cap_object ep_cap; 
+     block_thread_on_ipc tcb_id_receiver (PendingAsyncRecvCap ep_id) \<sqinter> corrupt_tcb_intent tcb_id_receiver
    od"
-
-
 
 (*
  * Send an IPC to the given endpoint. If someone is waiting, we wake

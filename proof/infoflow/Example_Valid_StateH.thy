@@ -1019,7 +1019,7 @@ lemma kh0H_simps[simp]:
       apply (clarsimp simp: kh0H_def option_update_range_def)
       apply fastforce
      apply (clarsimp simp: kh0H_def option_update_range_def kh0H_dom_distinct not_in_range_None)+
-     apply ((clarsimp simp: kh0H_def option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_None offs_in_range | simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD1] not_in_range_None | simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD2] not_in_range_None)+,
+     by ((clarsimp simp: kh0H_def option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_None offs_in_range | simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD1] not_in_range_None | simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD2] not_in_range_None)+,
             rule conjI,
              clarsimp,
              drule not_disjointI,
@@ -1028,7 +1028,6 @@ lemma kh0H_simps[simp]:
              erule notE,
              rule kh0H_dom_sets_distinct,
             clarsimp split: option.splits)+
-  done
 
 lemma kh0H_dom:
   "dom kh0H = {init_globals_frame, idle_tcb_ptr, High_tcb_ptr, Low_tcb_ptr,
@@ -1048,11 +1047,10 @@ lemma kh0H_dom:
   apply (clarsimp simp: dom_def)
   apply (rule conjI, clarsimp simp: kh0H_def option_update_range_def kh0H_dom_distinct not_in_range_None split: option.splits)+
    apply (force dest: irq_node_offs_range_correct)
-  apply (rule conjI |
+  by (rule conjI |
          clarsimp simp: kh0H_def option_update_range_def kh0H_dom_distinct not_in_range_None split: option.splits,
          frule offs_range_correct,
          clarsimp simp: kh0H_all_obj_def cnode_offs_range_def pd_offs_range_def pt_offs_range_def split: split_if_asm)+
-  done
 
 lemmas kh0H_SomeD' = set_mp[OF equalityD1[OF kh0H_dom[simplified dom_def]], OF CollectI, simplified, OF exI]
 
@@ -1305,7 +1303,7 @@ lemma map_to_ctes_kh0H:
       apply (rule conjI)
        apply (fastforce simp: tcb_cte_cases_def Low_tcb_cte_def dest: neg_mask_decompose)
       apply clarsimp
-      apply (fastforce simp: Low_tcb_cte_def tcb_cte_cases_def split: split_if_asm dest: neg_mask_decompose)
+      subgoal by (fastforce simp: Low_tcb_cte_def tcb_cte_cases_def split: split_if_asm dest: neg_mask_decompose)
      apply (clarsimp simp: option_update_range_def)
      apply (frule mask_in_tcb_offs_range)
      apply (clarsimp simp: kh0H_dom_distinct[THEN set_mem_neq])
@@ -1502,7 +1500,7 @@ lemma map_to_ctes_kh0H:
           clarsimp simp: option_update_range_def kh0H_dom_distinct[THEN set_mem_neq] not_in_range_cte_None,
           ((clarsimp simp: kh0H_dom_sets_distinct[THEN orthD1] not_in_range_cte_None irq_node_offs_in_range |
           clarsimp simp: kh0H_dom_sets_distinct[THEN orthD2] not_in_range_cte_None)+)[1])+)[3]
-   apply (clarsimp simp: map_to_ctes_def Let_def split del: split_if,
+   by (clarsimp simp: map_to_ctes_def Let_def split del: split_if,
           subst split_if_eq1,
           rule conjI,
            rule impI,
@@ -1540,7 +1538,6 @@ lemma map_to_ctes_kh0H:
           clarsimp simp: option_update_range_def kh0H_dom_distinct[THEN set_mem_neq] not_in_range_cte_None,
           ((clarsimp simp: kh0H_dom_sets_distinct[THEN orthD1] not_in_range_cte_None irq_node_offs_in_range |
           clarsimp simp: kh0H_dom_sets_distinct[THEN orthD2] not_in_range_cte_None)+)[1])+
-  done
 
 lemma tcb_offs_in_rangeI:
   "\<lbrakk>ptr \<le> ptr + x; ptr + x \<le> ptr + 2 ^ 9 - 1\<rbrakk> \<Longrightarrow> ptr + x \<in> tcb_offs_range ptr"
@@ -1809,12 +1806,11 @@ lemma map_to_ctes_kh0H_simps[simp]:
            rule kh0H_dom_sets_distinct)
    apply (clarsimp simp: kh0H_dom_distinct)
   apply clarsimp
-  apply (drule not_disjointI,
+  by (drule not_disjointI,
            rule irq_node_offs_in_range,
           assumption,
          erule notE,
          rule kh0H_dom_sets_distinct)
-  done
 
 lemma map_to_ctes_kh0H_dom:
   "dom (map_to_ctes kh0H) =
@@ -1884,8 +1880,7 @@ lemma map_to_ctes_kh0H_SomeD:
   apply (frule map_to_ctes_kh0H_SomeD')
   apply (elim disjE)
        apply (clarsimp simp: idle_tcb_cte_def idle_tcbH_def Low_tcb_cte_def Low_tcbH_def Low_capsH_def High_tcb_cte_def High_tcbH_def High_capsH_def the_nat_to_bl_def nat_to_bl_def)+
-     apply (drule offs_range_correct, clarsimp simp: offs_in_range)+
-     done
+     by (drule offs_range_correct, clarsimp simp: offs_in_range)+
 
 lemma mask_neg_add_aligned:
   "is_aligned q n \<Longrightarrow> p + q && ~~ mask n = (p && ~~ mask n) + q"
@@ -2040,16 +2035,15 @@ lemma kh0H_dom_distinct2:
   "High_cnode_ptr + 0x10 * (x && mask 10) \<noteq> Low_tcb_ptr"
   "High_cnode_ptr + 0x10 * (x && mask 10) \<noteq> irq_cnode_ptr"
   "High_cnode_ptr + 0x10 * (x && mask 10) \<noteq> aep_ptr"
-  apply (cut_tac x=x in cnode_offs_in_range2(1), fastforce simp: kh0H_dom_distinct
+  by (cut_tac x=x in cnode_offs_in_range2(1), fastforce simp: kh0H_dom_distinct
          | cut_tac x=x in cnode_offs_in_range2(2), fastforce simp: kh0H_dom_distinct
          | cut_tac x=x in cnode_offs_in_range2(3), fastforce simp: kh0H_dom_distinct)+
-  done
 
 lemma kh0H_cnode_simps2[simp]:
   "kh0H (Low_cnode_ptr + 0x10 * (x && mask 10)) = Low_cte Low_cnode_ptr (Low_cnode_ptr + 0x10 * (x && mask 10))"
   "kh0H (High_cnode_ptr + 0x10 * (x && mask 10)) = High_cte High_cnode_ptr (High_cnode_ptr + 0x10 * (x && mask 10))"
   "kh0H (Silc_cnode_ptr + 0x10 * (x && mask 10)) = Silc_cte Silc_cnode_ptr (Silc_cnode_ptr + 0x10 * (x && mask 10))"
-    apply (clarsimp simp: kh0H_def option_update_range_def cnode_offs_in_range' s0_ptrs_aligned kh0H_dom_distinct kh0H_dom_distinct2 not_in_range_None,
+   by (clarsimp simp: kh0H_def option_update_range_def cnode_offs_in_range' s0_ptrs_aligned kh0H_dom_distinct kh0H_dom_distinct2 not_in_range_None,
          ((clarsimp simp: cnode_offs_in_range2 kh0H_dom_sets_distinct[THEN orthD1] not_in_range_None
         | clarsimp simp: cnode_offs_in_range2 kh0H_dom_sets_distinct[THEN orthD2] not_in_range_None)+),
             intro conjI,
@@ -2061,18 +2055,16 @@ lemma kh0H_cnode_simps2[simp]:
                 rule kh0H_dom_sets_distinct
                 )+,
           clarsimp split: option.splits)+
-    done
 
 lemma cnode_offs_aligned2:
   "is_aligned (Low_cnode_ptr + 0x10 * (addr && mask 10)) 4"
   "is_aligned (High_cnode_ptr + 0x10 * (addr && mask 10)) 4"
   "is_aligned (Silc_cnode_ptr + 0x10 * (addr && mask 10)) 4"
-  apply (rule is_aligned_add,
+  by (rule is_aligned_add,
           rule is_aligned_weaken,
            rule s0_ptrs_aligned,
           simp,
          rule is_aligned_mult_triv1[where n=4, simplified])+
-  done
 
 lemma less_t2n_ex_ucast:
   "\<lbrakk>(x::'a::len word) < 2 ^ n; len_of TYPE('b) = n\<rbrakk> \<Longrightarrow> \<exists>y. x = ucast (y::'b::len word)"
@@ -2149,7 +2141,7 @@ lemma valid_caps_s0H[simp]:
    apply (simp add: valid_cap'_def capAligned_def word_bits_def objBits_def s0_ptrs_aligned obj_at'_def projectKO_eq project_inject Low_asid_def asid_low_bits_def asid_bits_def objBitsKO_def aepH_def)
    apply (rule pspace_distinctD''[OF _ s0H_pspace_distinct'])
    apply (simp add: aepH_def objBitsKO_def)
-  apply (simp
+  by (simp
         | simp add: valid_cap'_def s0H_internal_def capAligned_def word_bits_def objBits_def s0_ptrs_aligned obj_at'_def projectKO_eq project_inject Low_asid_def asid_low_bits_def asid_bits_def,
           intro conjI,
              simp add: objBitsKO_def s0_ptrs_aligned,
@@ -2157,7 +2149,6 @@ lemma valid_caps_s0H[simp]:
            simp add: objBitsKO_def s0_ptrs_aligned mask_def,
           rule pspace_distinctD'[OF _ s0H_pspace_distinct', simplified s0H_internal_def],
           simp)+
-  done
 
 lemma s0H_valid_objs':
   "valid_objs' s0H_internal"

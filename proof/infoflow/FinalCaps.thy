@@ -3124,7 +3124,7 @@ crunch silc_inv: delete_caller_cap "silc_inv aag st"
 lemma handle_wait_silc_inv:
   "\<lbrace>silc_inv aag st and invs and pas_refined aag and 
     is_subject aag \<circ> cur_thread\<rbrace>
-   handle_wait
+   handle_wait is_blocking
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   apply (simp add: handle_wait_def Let_def lookup_cap_def split_def)
   apply (wp hoare_vcg_all_lift get_aep_wp delete_caller_cap_silc_inv

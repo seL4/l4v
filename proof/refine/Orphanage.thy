@@ -2341,17 +2341,17 @@ lemma handleInvocation_no_orphans [wp]:
                  | simp add: split_def split del: split_if)+
   apply (clarsimp)
   apply (frule(1) ct_not_ksQ)
-  apply (auto simp: ct_in_state'_def pred_tcb_at'_def obj_at'_def invs'_def
+  by (auto simp: ct_in_state'_def pred_tcb_at'_def obj_at'_def invs'_def
                     cur_tcb'_def valid_state'_def valid_idle'_def)
-  done
 
 lemma receiveAsyncIPC_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> valid_queues' s \<rbrace>
-   receiveAsyncIPC thread cap
+   receiveAsyncIPC thread cap isBlocking
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   unfolding receiveAsyncIPC_def
   apply (wp hoare_drop_imps setThreadState_not_active_no_orphans | wpc
-         | clarsimp simp: is_active_thread_state_def isRunning_def isRestart_def)+
+         | clarsimp simp: is_active_thread_state_def isRunning_def isRestart_def
+                          doPollFailedTransfer_def)+
   done
   
 
@@ -2383,7 +2383,7 @@ lemma remove_neg_strg:
 lemma handleWait_no_orphans [wp]: 
 notes if_cong[cong] shows
   "\<lbrace> \<lambda>s. no_orphans s \<and> invs' s \<rbrace>
-   handleWait 
+   handleWait isBlocking
    \<lbrace> \<lambda>rv . no_orphans \<rbrace>"
   unfolding handleWait_def
   apply (clarsimp simp: whenE_def split del: split_if | wp hoare_drop_imps getAsyncEP_wp | wpc )+ (*takes a while*)

@@ -819,9 +819,10 @@ lemma receive_async_ipc_reads_respects:
         K ((\<forall>aepptr\<in>Access.obj_refs cap.
             (pasSubject aag, Receive, pasObjectAbs aag aepptr)
              \<in> pasPolicy aag \<and> is_subject aag thread)))
-         (receive_async_ipc thread cap)"
-  unfolding receive_async_ipc_def fun_app_def
-  apply(wp set_async_ep_reads_respects set_thread_state_reads_respects as_user_set_register_reads_respects' get_async_ep_reads_respects hoare_vcg_all_lift
+         (receive_async_ipc thread cap is_blocking)"
+  unfolding receive_async_ipc_def fun_app_def do_poll_failed_transfer_def
+  apply(wp set_async_ep_reads_respects set_thread_state_reads_respects 
+           as_user_set_register_reads_respects' get_async_ep_reads_respects hoare_vcg_all_lift
        | wpc
        | wp_once hoare_drop_imps)+
   apply(force dest: reads_ep)
@@ -2609,9 +2610,11 @@ lemma send_async_ipc_globals_equiv:
 (*FIXME: belongs in Arch_IF*)
 
 lemma receive_async_ipc_globals_equiv:
-  "\<lbrace>globals_equiv s and valid_objs and valid_arch_state and valid_global_refs and pspace_distinct and (\<lambda>s. thread \<noteq> idle_thread s)\<rbrace> receive_async_ipc thread cap
+  "\<lbrace>globals_equiv s and valid_objs and valid_arch_state and valid_global_refs 
+     and pspace_distinct and (\<lambda>s. thread \<noteq> idle_thread s)\<rbrace> 
+     receive_async_ipc thread cap is_blocking
     \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
-  unfolding receive_async_ipc_def
+  unfolding receive_async_ipc_def fun_app_def do_poll_failed_transfer_def
   apply (rule hoare_pre)
   apply(wp set_async_ep_globals_equiv set_thread_state_globals_equiv
            as_user_globals_equiv get_aep_wp
@@ -2796,7 +2799,7 @@ lemma receive_async_ipc_reads_respects_g:
   "reads_respects_g aag l (valid_global_objs and valid_objs and valid_arch_state and valid_global_refs and pspace_distinct and pas_refined aag and (\<lambda>s. thread \<noteq> idle_thread s) and is_subject aag \<circ> cur_thread and K ((\<forall>aepptr\<in>Access.obj_refs cap.
           (pasSubject aag, Receive, pasObjectAbs aag aepptr)
           \<in> pasPolicy aag \<and>
-      is_subject aag thread))) (receive_async_ipc thread cap)"
+      is_subject aag thread))) (receive_async_ipc thread cap is_blocking)"
   apply(rule equiv_valid_guard_imp[OF reads_respects_g])
     apply(rule receive_async_ipc_reads_respects)
    apply(rule doesnt_touch_globalsI)

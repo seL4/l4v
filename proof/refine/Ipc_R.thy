@@ -3677,44 +3677,53 @@ lemma receive_ipc_corres:
              split: option.splits)
   done
 
+lemma do_poll_failed_transfer_corres:
+  "corres dc (tcb_at thread)
+            (tcb_at' thread)
+            (do_poll_failed_transfer thread)
+            (doPollFailedTransfer thread)"
+  unfolding do_poll_failed_transfer_def doPollFailedTransfer_def
+  by (simp add: badgeRegister_def badge_register_def, rule user_setreg_corres)
+
 lemma receive_async_ipc_corres:
  "\<lbrakk> is_aep_cap cap; cap_relation cap cap' \<rbrakk> \<Longrightarrow>
   corres dc (invs and st_tcb_at active thread and valid_cap cap and ex_nonz_cap_to thread)
             (invs' and tcb_at' thread and valid_cap' cap')
-            (receive_async_ipc thread cap) (receiveAsyncIPC thread cap')"
+            (receive_async_ipc thread cap isBlocking) (receiveAsyncIPC thread cap' isBlocking)"
   apply (simp add: receive_async_ipc_def receiveAsyncIPC_def)
   apply (case_tac cap, simp_all add: isEndpointCap_def)
   apply (rename_tac word1 word2 rights)
   apply (rule corres_guard_imp)
-    apply (rule_tac R="\<lambda>rv. invs and tcb_at thread and st_tcb_at active thread and 
+    apply (rule_tac R="\<lambda>rv. invs and tcb_at thread and st_tcb_at active thread and
                             aep_at word1 and ex_nonz_cap_to thread and
                             valid_aep rv and
-                            obj_at (\<lambda>k. k = AsyncEndpoint rv) word1" and 
-                    R'="\<lambda>rv'. invs' and tcb_at' thread and aep_at' word1 and 
-                              valid_aep' rv'" 
-                    in corres_split [OF _ get_aep_corres])
+                            obj_at (\<lambda>k. k = AsyncEndpoint rv) word1" and
+                            R'="\<lambda>rv'. invs' and tcb_at' thread and aep_at' word1 and
+                            valid_aep' rv'"
+                         in corres_split [OF _ get_aep_corres])
       apply clarsimp
       apply (case_tac "aep_obj rv")
         -- "IdleAEP"
         apply (simp add: aep_relation_def)
         apply (rule corres_guard_imp)
-          apply (rule corres_split [OF _ sts_corres])
+          apply (case_tac isBlocking; simp)
+           apply (rule corres_split [OF _ sts_corres])
+              apply (rule set_aep_corres)
+              apply (simp add: aep_relation_def)
+             apply simp
+            apply wp
+          apply (rule corres_guard_imp, rule do_poll_failed_transfer_corres, simp+)
+       -- "WaitingAEP"
+       apply (simp add: aep_relation_def)
+       apply (rule corres_guard_imp)
+         apply (case_tac isBlocking; simp)
+          apply (rule corres_split[OF _ sts_corres])
              apply (rule set_aep_corres)
              apply (simp add: aep_relation_def)
             apply simp
            apply wp
-         apply (clarsimp simp: valid_tcb_state_def)
-        apply clarsimp
-       -- "WaitingAEP"
-       apply (simp add: aep_relation_def)
-       apply (rule corres_guard_imp)
-         apply (rule corres_split [OF _ sts_corres])
-            apply (rule set_aep_corres)
-            apply (simp add: aep_relation_def)
-           apply simp
-          apply wp
-        apply (clarsimp simp: valid_tcb_state_def)
-       apply clarsimp
+         apply (rule corres_guard_imp)
+           apply (rule do_poll_failed_transfer_corres, simp+)
       -- "ActiveAEP"
       apply (simp add: aep_relation_def)
       apply (rule corres_guard_imp)
@@ -3724,7 +3733,7 @@ lemma receive_async_ipc_corres:
           apply (simp add: aep_relation_def)
          apply wp
        apply (fastforce simp: invs_def valid_state_def valid_pspace_def
-                      elim!: st_tcb_weakenE)
+                       elim!: st_tcb_weakenE)
       apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def)
      apply wp
    apply (clarsimp simp add: valid_cap_def st_tcb_at_tcb_at)
@@ -4273,7 +4282,7 @@ lemma rai_invs'[wp]:
                  \<and> capAEPPtr cap = aepptr
                  \<and> obj_at' (\<lambda>ko. aepBoundTCB ko = None \<or> aepBoundTCB ko = Some t)
                            aepptr s)\<rbrace>
-    receiveAsyncIPC t cap 
+    receiveAsyncIPC t cap isBlocking
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: receiveAsyncIPC_def)
   apply (rule hoare_seq_ext [OF _ get_aep_sp'])
@@ -4284,7 +4293,7 @@ lemma rai_invs'[wp]:
     apply (rule hoare_pre)
      apply (wp valid_irq_node_lift sts_sch_act' typ_at_lifts
                sts_valid_queues setThreadState_ct_not_inQ
-            | simp add: valid_aep'_def)+
+            | simp add: valid_aep'_def doPollFailedTransfer_def | wpc)+
     apply (clarsimp simp: pred_tcb_at' valid_tcb_state'_def)
     apply (rule conjI, clarsimp elim!: obj_at'_weakenE)
     apply (subgoal_tac "capAEPPtr cap \<noteq> t")
@@ -4320,7 +4329,7 @@ lemma rai_invs'[wp]:
   apply (rule hoare_pre)
    apply (wp hoare_vcg_const_Ball_lift valid_irq_node_lift sts_sch_act'
              sts_valid_queues setThreadState_ct_not_inQ typ_at_lifts
-        | simp add: valid_aep'_def)+
+        | simp add: valid_aep'_def doPollFailedTransfer_def | wpc)+
   apply (clarsimp simp: valid_tcb_state'_def)
   apply (frule_tac t=t in not_in_aepQueue)
      apply (simp)
@@ -4802,19 +4811,12 @@ lemma ri_makes_runnable_simple':
 
 lemma rai_makes_runnable_simple':
   "\<lbrace>st_tcb_at' P t' and K (t \<noteq> t') and K (P = runnable' \<or> P = simple')\<rbrace>
-     receiveAsyncIPC t cap
+     receiveAsyncIPC t cap isBlocking
    \<lbrace>\<lambda>rv. st_tcb_at' P t'\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (simp add: receiveAsyncIPC_def)
-  apply (rule hoare_seq_ext [OF _ get_aep_inv'])
-  apply (case_tac "aepObj x", simp_all)
-    apply (wp sts_st_tcb_at'_cases)
-    apply clarsimp
-   apply (wp sts_st_tcb_at'_cases)
-   apply clarsimp
-  apply (wp sts_st_tcb_at'_cases)
-  apply clarsimp
-  done
+  apply (rule hoare_pre)
+   by (wp sts_st_tcb_at'_cases getAsyncEP_wp | wpc | simp add: doPollFailedTransfer_def)+
 
 lemma sendAsyncIPC_st_tcb'_Running:
   "\<lbrace>st_tcb_at' (\<lambda>st. st = Running \<or> P st) t\<rbrace>

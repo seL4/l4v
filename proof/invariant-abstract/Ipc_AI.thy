@@ -3065,7 +3065,7 @@ lemma rai_invs':
          and (\<lambda>s. \<exists>aepptr. is_aep_cap cap \<and> cap_ep_ptr cap = aepptr \<and>
                      obj_at (\<lambda>ko. \<exists>aep. ko = AsyncEndpoint aep \<and> (aep_bound_tcb aep = None
                                                           \<or> aep_bound_tcb aep = Some t)) aepptr s)\<rbrace>
-     receive_async_ipc t cap
+     receive_async_ipc t cap is_blocking
    \<lbrace>\<lambda>r s. invs s \<and> Q s\<rbrace>"
   apply (simp add: receive_async_ipc_def)
   apply (cases cap, simp_all)
@@ -3075,7 +3075,7 @@ lemma rai_invs':
     apply (simp add: invs_def valid_state_def valid_pspace_def)
     apply (rule hoare_pre)
      apply (wp set_aep_valid_objs valid_irq_node_typ sts_only_idle
-              | simp add: valid_aep_def)+
+              | simp add: valid_aep_def do_poll_failed_transfer_def | wpc)+
     apply (clarsimp simp: valid_tcb_state_def st_tcb_at_tcb_at)
     apply (rule conjI, clarsimp elim!: obj_at_weakenE simp: is_aep_def)
     apply (rule conjI, clarsimp simp: st_tcb_at_reply_cap_valid)
@@ -3099,7 +3099,7 @@ lemma rai_invs':
    apply (rule hoare_pre)
     apply (wp set_aep_valid_objs hoare_vcg_const_Ball_lift
               valid_irq_node_typ sts_only_idle
-              | simp add: valid_aep_def)+
+              | simp add: valid_aep_def do_poll_failed_transfer_def | wpc)+
    apply (clarsimp simp: valid_tcb_state_def st_tcb_at_tcb_at)
    apply (rule conjI, clarsimp elim!: obj_at_weakenE simp: is_aep_def)
    apply (rule obj_at_valid_objsE, assumption+)
@@ -3367,16 +3367,11 @@ crunch pred_tcb_at[wp]: set_message_info "pred_tcb_at proj P t"
 
 lemma rai_pred_tcb_neq:
   "\<lbrace>pred_tcb_at proj P t' and K (t \<noteq> t')\<rbrace> 
-  receive_async_ipc t cap
+  receive_async_ipc t cap is_blocking
   \<lbrace>\<lambda>rv. pred_tcb_at proj P t'\<rbrace>"
-  apply (simp add: receive_async_ipc_def) 
-  apply (cases cap, simp_all)
-  apply (rule hoare_seq_ext [OF _ get_aep_sp])
-  apply (rename_tac x aep)
-  apply (case_tac "aep_obj aep")
-    apply (wp sts_st_tcb_at_neq | clarsimp)+
-  done
-
+  apply (simp add: receive_async_ipc_def)
+  apply (rule hoare_pre)
+   by (wp sts_st_tcb_at_neq get_aep_wp | wpc | clarsimp simp add: do_poll_failed_transfer_def)+
 
 crunch ct[wp]: set_mrs "\<lambda>s. P (cur_thread s)" 
   (wp: case_option_wp mapM_wp)
@@ -3404,7 +3399,7 @@ crunch typ_at[wp]: receive_async_ipc "\<lambda>s. P (typ_at T p s)"
 
 
 lemma rai_tcb [wp]:
-  "\<lbrace>tcb_at t'\<rbrace> receive_async_ipc t cap \<lbrace>\<lambda>rv. tcb_at t'\<rbrace>"
+  "\<lbrace>tcb_at t'\<rbrace> receive_async_ipc t cap is_blocking \<lbrace>\<lambda>rv. tcb_at t'\<rbrace>"
   by (simp add: tcb_at_typ) wp
 
 
@@ -3518,15 +3513,12 @@ lemma ri_makes_simple:
 
 lemma rai_makes_simple:
   "\<lbrace>st_tcb_at simple t' and K (t \<noteq> t')\<rbrace>
-     receive_async_ipc t cap
+     receive_async_ipc t cap is_blocking
    \<lbrace>\<lambda>rv. st_tcb_at simple t'\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (simp add: receive_async_ipc_def)
-  apply (cases cap, simp_all)
-  apply (rule hoare_seq_ext [OF _ get_aep_sp])
-  apply (case_tac "aep_obj x", simp_all)
-    apply (wp sts_st_tcb_at_cases, simp)+
-  done
+  apply (rule hoare_pre)
+   by (wp get_aep_wp sts_st_tcb_at_cases | wpc | simp add: do_poll_failed_transfer_def)+
 
 
 lemma thread_set_Pmdb:

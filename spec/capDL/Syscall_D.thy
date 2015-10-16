@@ -161,10 +161,10 @@ where
         (case ep_cap of
           EndpointCap o_id badge rights \<Rightarrow>
             if Read \<in> rights then
-              liftE $ do
+              (liftE $ do
                    delete_cap_simple (tcb_id, tcb_caller_slot);
                    receive_ipc tcb_id (cap_object ep_cap)
-                od
+                od) \<sqinter> throw
             else
               throw
         | AsyncEndpointCap o_id badge rights \<Rightarrow>
@@ -210,7 +210,7 @@ where
         handle_reply;
         handle_wait
       od
-  "
+    | SysPoll \<Rightarrow> liftE $ handle_wait"
 
 definition
   handle_event :: "event \<Rightarrow> unit preempt_monad"

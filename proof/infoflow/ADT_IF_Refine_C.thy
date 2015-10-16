@@ -41,7 +41,7 @@ definition handleSyscall_C_body_if
                scast true)
              ELSE
                IF s = Kernel_C.SysWait THEN
-                 CALL handleWait() ;;
+                 CALL handleWait(scast true) ;;
                  \<acute>ret__unsigned_long :== scast EXCEPTION_NONE
                ELSE
                  IF s = Kernel_C.SysReply THEN
@@ -50,15 +50,20 @@ definition handleSyscall_C_body_if
                  ELSE
                    IF s = Kernel_C.SysReplyWait THEN
                      CALL handleReply();;
-                     CALL handleWait();;
+                     CALL handleWait(scast true);;
                      \<acute>ret__unsigned_long :== scast EXCEPTION_NONE
                    ELSE
                      IF s = Kernel_C.SysYield THEN
                        CALL handleYield();;
                        \<acute>ret__unsigned_long :== scast EXCEPTION_NONE
                      ELSE
-                       IF True THEN
-                         CALL halt()
+                       IF s = Kernel_C.SysPoll THEN
+                         CALL handleWait(scast false);;
+                         \<acute>ret__unsigned_long :== scast EXCEPTION_NONE
+                       ELSE
+                         IF True THEN
+                           CALL halt()
+                         FI
                        FI
                      FI
                    FI
@@ -217,6 +222,12 @@ lemma handleEvent_ccorres:
         apply (rule allI, rule conseqPre, vcg)
         apply (clarsimp simp: return_def)
        apply wp
+      -- "SysPoll"
+          apply (ctac (no_vcg) add: handleWait_ccorres)
+           apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg)
+           apply (rule allI, rule conseqPre, vcg)
+           apply (clarsimp simp: return_def)
+          apply wp
       -- "UnknownSyscall"
       apply (simp add: liftE_def bind_assoc handleUnknownSyscall_C_body_if_def)
       apply (rule ccorres_pre_getCurThread)

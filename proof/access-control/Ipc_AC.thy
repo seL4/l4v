@@ -16,9 +16,6 @@ section{* Async IPC *}
 
 subsection{* @{term "pas_refined"} *}
 
-
-
-
 crunch thread_bound_aeps[wp]: do_machine_op "\<lambda>s. P (thread_bound_aeps s)"
 
 crunch state_vrefs[wp]: send_async_ipc "\<lambda>s. P (state_vrefs (s :: det_ext state))" (wp: crunch_wps hoare_unless_wp select_wp dxo_wp_weak simp: crunch_simps)
@@ -103,16 +100,15 @@ lemma send_async_ipc_pas_refined:
 
 lemma receive_async_ipc_pas_refined:
   "\<lbrace>pas_refined aag and K (\<forall>aepptr \<in> obj_refs cap. (pasObjectAbs aag thread, Receive, pasObjectAbs aag aepptr) \<in> pasPolicy aag)\<rbrace>
-     receive_async_ipc thread cap
+     receive_async_ipc thread cap is_blocking
    \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
   apply (simp add: receive_async_ipc_def)
   apply (cases cap, simp_all)
   apply (rule hoare_seq_ext [OF _ get_aep_sp])
   apply (rule hoare_pre)
-  apply (wp set_async_ep_pas_refined set_thread_state_pas_refined
-       | wpc)+
-  apply clarsimp
-  done
+  by (wp set_async_ep_pas_refined set_thread_state_pas_refined
+       | wpc | simp add: do_poll_failed_transfer_def)+
+
 
 subsection{* integrity *}
 
@@ -275,7 +271,7 @@ lemma receive_async_ipc_integrity_autarch:
   "\<lbrace>integrity aag X st and pas_refined aag and valid_objs 
            and K ((\<forall>aepptr \<in> obj_refs cap. aag_has_auth_to aag Receive aepptr)
                  \<and> is_subject aag thread)\<rbrace>
-     receive_async_ipc thread cap
+     receive_async_ipc thread cap is_blocking
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply (simp add: receive_async_ipc_def)
   apply (cases cap, simp_all)
@@ -283,7 +279,7 @@ lemma receive_async_ipc_integrity_autarch:
   apply (rule hoare_pre)
   apply (wp set_async_ep_respects[where auth=Receive] set_thread_state_integrity_autarch as_user_integrity_autarch
        | wpc 
-       | simp)+
+       | simp add: do_poll_failed_transfer_def)+
   done
 
 subsubsection{* Non-autarchy: the sender is running *}

@@ -1351,7 +1351,7 @@ lemma lookup_slot_for_thread_cap_fault:
 
 lemma handle_wait_domain_sep_inv:
   "\<lbrace>domain_sep_inv irqs st and invs\<rbrace>
-   handle_wait
+   handle_wait is_blocking
    \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
   apply (simp add: handle_wait_def Let_def lookup_cap_def split_def)
   apply (wp hoare_vcg_all_lift lookup_slot_for_thread_cap_fault

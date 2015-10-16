@@ -3022,8 +3022,7 @@ lemma handle_event_irq_state_inv:
       apply(rename_tac syscall)
       apply(case_tac syscall)
              apply(simp add: handle_send_def handle_call_def | wp handle_invocation_irq_state_inv)+
-          apply((simp | wp_trace add: irq_state_inv_triv hy_inv | blast | (elim conjE, (intro conjI | assumption)+))+)[9]
-  done
+  by((simp | wp_trace add: irq_state_inv_triv hy_inv | blast | (elim conjE, (intro conjI | assumption)+))+)
 
 lemma schedule_if_irq_state_inv:
   "\<lbrace>irq_state_inv st\<rbrace> schedule_if tc \<lbrace>\<lambda>_. irq_state_inv st\<rbrace>"

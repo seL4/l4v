@@ -1018,8 +1018,6 @@ lemma valid_queues_not_in_place: "valid_queues s \<Longrightarrow> t \<notin> se
                         is_etcb_at_def
                   split: option.splits)
   done
-thm valid_blocked_def
-
 
 lemma ready_queues_alters_kheap: 
    assumes a: "valid_queues s"
@@ -2186,8 +2184,7 @@ lemma schedule_reads_respects_g:
          apply(wp_once hoare_drop_imps)
          apply(wp get_thread_state_reads_respects_g gts_wp)
   apply(clarsimp simp: invs_valid_idle)
-  apply(fastforce intro: requiv_g_cur_thread_eq simp: reads_equiv_g_def reads_equiv_def globals_equiv_idle_thread_ptr dest: scheduler_action_switch_thread_is_subject simp: not_cur_thread_2_def st_tcb_at_def obj_at_def valid_sched_2_def)
-  done
+  by(fastforce intro: requiv_g_cur_thread_eq simp: reads_equiv_g_def reads_equiv_def globals_equiv_idle_thread_ptr dest: scheduler_action_switch_thread_is_subject simp: not_cur_thread_2_def st_tcb_at_def obj_at_def valid_sched_2_def)
 
 lemma schedule_if_reads_respects_g:
   "reads_respects_g aag l (einvs and pas_cur_domain aag and guarded_pas_domain aag and (\<lambda>s. domain_time s > 0) and pas_refined aag) (schedule_if tc)"
@@ -2253,7 +2250,7 @@ lemma uwr_reads_equiv_f_g_affects_equiv:
       (internal_state_if t)"
   apply(rule sameFor_reads_f_g_affects_equiv)
       apply(simp add: current_aag_def)
-     apply(fastforce simp: invs_if_def Invs_def)
+     apply (fastforce simp: invs_if_def Invs_def)
     apply(clarsimp simp: uwr_def part_def current_aag_def partition_def split: if_splits)
    apply(simp add: part_def split: if_splits add: partition_def current_aag_def flow_then_affect)
   apply(clarsimp simp: uwr_def part_def current_aag_def partition_def split: if_splits)
@@ -2365,7 +2362,7 @@ lemma check_active_irq_A_if_confidentiality_helper:
       apply assumption
      apply(clarsimp simp: invs_if_def Invs_def)
      apply(drule uwr_PSched_cur_domain)
-     apply(clarsimp simp: current_aag_def)
+     subgoal by(clarsimp simp: current_aag_def)
     apply simp
    apply fastforce
   apply simp
@@ -2472,7 +2469,7 @@ lemma do_user_op_A_if_confidentiality:
   apply(frule (6) uwr_reads_equiv_f_g_affects_equiv)
   apply(frule_tac s=y and t=yb in use_ev[OF check_active_irq_if_reads_respects_f_g[where st=s0_internal and st'=s0_internal and irq=timer_irq]])
        apply assumption
-      apply(clarsimp simp: invs_if_def Invs_def)
+      apply (clarsimp simp: invs_if_def Invs_def)
       apply assumption
      apply(clarsimp simp: invs_if_def Invs_def)
      apply(drule uwr_PSched_cur_domain)
