@@ -124,8 +124,7 @@ subsection {* \label{subsec:wconnections}Connections *}
 definition
   wellformed_connection :: "connection \<Rightarrow> bool"
 where
-  "wellformed_connection c \<equiv> True" (* TODO *)
-   (* Everything else is captured in the valid reference stuff at the moment. *)
+  "wellformed_connection c \<equiv> True"
 
 subsection {* \label{subsec:wsymbols}ADL Symbol Resolution *}
 text {*

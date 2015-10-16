@@ -36,6 +36,16 @@ where
   "seL4SharedData \<equiv> MemoryConnector (Native SharedData)"
 lemma[simp]: "wellformed_connector seL4SharedData"
   by (auto simp:wellformed_connector_def seL4SharedData_def)
+
+(* These connectors aren't literally identical, but for the purposes of the architectural model they
+ * are.
+ *)
+definition
+  seL4RPCSimple :: connector
+where
+  "seL4RPCSimple \<equiv> seL4RPC"
+lemma[simp]: "wellformed_connector seL4RPCSimple"
+  by (simp add:seL4RPCSimple_def)
 (*>*)
 
 (*<*)end(*>*)
