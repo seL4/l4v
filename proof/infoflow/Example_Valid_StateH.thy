@@ -1106,6 +1106,8 @@ where
     ksCurDomain = 0,
     ksDomainTime = 5,
     ksReadyQueues = const [],
+    ksReadyQueuesL1Bitmap = const 0,
+    ksReadyQueuesL2Bitmap = const 0,
     ksCurThread = Low_tcb_ptr,
     ksIdleThread = idle_tcb_ptr,
     ksSchedulerAction = ResumeCurrentThread,
@@ -2770,7 +2772,7 @@ lemma s0H_invs:
    apply (rule pspace_distinctD''[OF _ s0H_pspace_distinct', simplified s0H_internal_def])
    apply (simp add: objBitsKO_def)
   apply (rule conjI)
-   apply (clarsimp simp: valid_queues_def s0H_internal_def)
+   apply (clarsimp simp: valid_queues_def valid_queues_no_bitmap_def bitmapQ_defs s0H_internal_def)
   apply (rule conjI)
    apply (clarsimp simp: sym_refs_def state_refs_of'_def refs_of'_def split: option.splits)
    apply (frule kh0H_SomeD)

@@ -112,17 +112,6 @@ crunch valid_arch_state'[wp]: switchToThread valid_arch_state'
 
 context kernel_m begin
 
-thm clz_spec.clz_spec
-print_locale clz_spec
-
-thm clz_body_def
-
-lemma clz_spec:
-  "\<forall>s. \<Gamma> \<turnstile> {\<sigma>. s = \<sigma> \<and> x_' s \<noteq> 0} Call clz_'proc
-       \<lbrace>\<acute>ret__int = of_nat (word_clz (x_' s)) \<rbrace>"
-  apply vcg
-  sorry
-
 (* FIXME: MOVE to CSpaceAcc_C *)
 lemma ccorres_pre_gets_armKSGlobalsFrame_ksArchState:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
@@ -442,20 +431,13 @@ lemma queue_in_range_pre:
 
 lemmas queue_in_range' = queue_in_range_pre[unfolded numDomains_def numPriorities_def, simplified]
 
-(* FIXME RAF WTF *)
-thm clz_spec.clz_spec[where symbol_table=symbol_table]
-
-lemmas clz_specX = clz_spec.clz_spec
-print_locale clz_spec
-thm halt_spec
-term symbol_table
-
 lemma clz_spec:
   "\<forall>s. \<Gamma> \<turnstile> {\<sigma>. s = \<sigma> \<and> x_' s \<noteq> 0} Call clz_'proc
        \<lbrace>\<acute>ret__int = of_nat (word_clz (x_' s)) \<rbrace>"
   using clz_spec.clz_spec[where symbol_table=symbol_table]
   sorry
-(* FIXME: why on earth does this locale get generated?! *)
+(* FIXME: C parser generates weird things for functions annotated with
+   FNSPEC+MODIFIES+DONT_TRANSLATE *)
 
 lemma l1index_to_prio_spec:
   "\<forall>s. \<Gamma> \<turnstile> {s} Call l1index_to_prio_'proc
@@ -479,7 +461,7 @@ lemma getReadyQueuesL1Bitmap_sp:
   by wp simp
 
 (* this doesn't actually carry over d \<le> maxDomain to the rest of the ccorres,
-   use ccorres_cross_guard to do that *)
+   use ccorres_cross_over_guard to do that *)
 lemma ccorres_pre_getReadyQueuesL1Bitmap:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
   shows   "ccorres r xf 
