@@ -456,4 +456,10 @@ lemma sum_suc_triple: "(\<Sum>(a, b, c)\<leftarrow>xs. Suc (f a b c)) = length x
 lemma sum_enumerate: "(\<Sum>(a, b)\<leftarrow>enumerate n xs. P b) = (\<Sum>b\<leftarrow>xs. P b)"
   by (induct xs arbitrary:n; clarsimp)
 
+lemma dom_map_fold:"dom (fold op ++ (map (\<lambda>x. [f x \<mapsto> g x]) xs) ms) = dom ms \<union> set (map f xs)"
+  by (induct xs arbitrary:f g ms; clarsimp)
+
+lemma list_ran_prop:"map_of (map (\<lambda>x. (f x, g x)) xs) i = Some t \<Longrightarrow> \<exists>x \<in> set xs. g x = t"
+  by (induct xs arbitrary:f g t i; clarsimp split:split_if_asm)
+
 end

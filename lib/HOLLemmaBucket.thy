@@ -660,9 +660,12 @@ lemma if_flip:
   "(if (\<not> P) then T else F) = (if P then F else T)"
   by simp
 
+lemma not_in_domIff:"f x = None = (x \<notin> dom f)"
+  by blast
+
 lemma not_in_domD:
   "x \<notin> dom f \<Longrightarrow> f x = None"
-  by auto
+  by (simp add:not_in_domIff)
 
 definition
   "graph_of f \<equiv> {(x,y). f x = Some y}"

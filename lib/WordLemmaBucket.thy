@@ -6603,4 +6603,43 @@ lemma card_enum_upto: fixes s::"'a::len word" shows "card (set [s .e. e]) = Suc 
   apply(simp add: remdups_enum_upto)
   done
 
+lemma word_add_no_overflow:"(x::'a::len word) < max_word \<Longrightarrow> x < x + 1"
+  using less_x_plus_1 order_less_le by blast
+
+lemma lt_plus_1_le_word:
+  fixes x :: "'a::len word"
+  assumes bound:"n < unat (maxBound::'a word)"
+  shows "x < 1 + of_nat n = (x \<le> of_nat n)"
+  apply (subst le_less)
+  apply (rule iffI)
+   apply clarsimp
+   apply (subst (asm) add.commute)
+   apply (subst (asm) less_x_plus_1)
+    apply (cut_tac ?'a='a and Y=n and X="unat (maxBound::'a word) - 1" in of_nat_mono_maybe')
+      apply clarsimp
+      apply (simp add: less_imp_diff_less)
+     apply (insert bound[unfolded maxBound_word, simplified])
+     using order_less_trans apply blast
+    apply (metis max_word_minus word_not_simps(3) word_of_nat_less)
+   apply clarsimp
+   apply (erule disjE)
+    apply (subgoal_tac "x < of_nat (1 + n)")
+    prefer 2
+    apply (cut_tac ?'a='a and Y="unat x" and X="1 + n" in of_nat_mono_maybe)
+      apply clarsimp
+      apply (simp add: less_trans_Suc)
+     apply (simp add: less_Suc_eq unat_less_helper)
+    apply clarsimp
+   apply clarsimp
+  apply clarsimp
+  apply (cut_tac y="(of_nat n)::'a word" and x="(of_nat n)::'a word" in less_x_plus_1)
+   apply (cut_tac ?'a='a and Y=n and X="unat (maxBound::'a word) - 1" in of_nat_mono_maybe')
+     apply clarsimp
+     apply (simp add: less_imp_diff_less)
+    apply (insert bound[unfolded maxBound_word, simplified])
+    using order_less_trans apply blast
+   apply (metis max_word_minus word_not_simps(3) word_of_nat_less)
+  apply (clarsimp simp: add.commute)
+  done
+
 end
