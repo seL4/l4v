@@ -657,15 +657,12 @@ end
 text {* Arrays of packed types are in turn packed *}
 
 class oneMB_packed = packed_type + oneMB_size
+class twoToSix_packed = oneMB_packed + twoToSix_size
 
-instantiation word :: (len8)oneMB_packed
-begin
-instance
- apply(intro_classes)
-done
-end
+instance word :: (len8)oneMB_packed ..
+instance word :: (len8)twoToSix_packed ..
 
-instantiation array :: (oneMB_packed,fourthousand_count) packed_type
+instantiation array :: (oneMB_packed, fourthousand_count) packed_type
 begin
 instance
  apply(intro_classes)
@@ -673,6 +670,8 @@ instance
   apply (simp add: td_fa_hi_intro_simps)
   done
 end
+
+instance array :: (twoToSix_packed, fourthousand_count) oneMB_packed ..
 
 section {* Theorems about packed types *}
 
