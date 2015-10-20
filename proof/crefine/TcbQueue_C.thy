@@ -946,41 +946,41 @@ lemma cready_queues_relation_not_queue_ptrs:
   apply (rule same)
   done
 
-
 lemma aep_ep_disjoint:
   assumes  srs: "sym_refs (state_refs_of' s)"
   and     epat: "ko_at' ep epptr s"    
   and    aepat: "ko_at' aep aepptr s"  
-  and  aepq: "isWaitingAEP aep"
+  and  aepq: "isWaitingAEP (aepObj aep)"
   and   epq: "isSendEP ep \<or> isRecvEP ep"
-  shows  "set (epQueue ep) \<inter> set (aepQueue aep) = {}"
+  shows  "set (epQueue ep) \<inter> set (aepQueue (aepObj aep)) = {}"
   using srs epat aepat aepq epq
   apply -
   apply (subst disjoint_iff_not_equal, intro ballI, rule notI)
   apply (drule sym_refs_ko_atD', clarsimp)+
   apply clarsimp
-  apply (clarsimp simp: isWaitingAEP_def isSendEP_def isRecvEP_def split: async_endpoint.splits endpoint.splits)
-   apply (drule (1) bspec)+
-   apply (clarsimp simp: ko_wp_at'_def refs_of_rev')
-  apply (drule (1) bspec)+
-  apply (clarsimp simp: ko_wp_at'_def refs_of_rev')
+  apply (clarsimp simp: isWaitingAEP_def isSendEP_def isRecvEP_def
+                 split: aep.splits endpoint.splits)
+   apply (drule bspec, fastforce simp: ko_wp_at'_def)+
+   apply (fastforce simp: ko_wp_at'_def refs_of_rev')
+  apply (drule bspec, fastforce simp: ko_wp_at'_def)+
+  apply (fastforce simp: ko_wp_at'_def refs_of_rev')
   done
 
 lemma aep_aep_disjoint:
   assumes  srs: "sym_refs (state_refs_of' s)"
   and    aepat: "ko_at' aep aepptr s"    
   and   aepat': "ko_at' aep' aepptr' s"  
-  and     aepq: "isWaitingAEP aep"
-  and    aepq': "isWaitingAEP aep'"
+  and     aepq: "isWaitingAEP (aepObj aep)"
+  and    aepq': "isWaitingAEP (aepObj aep')"
   and      neq: "aepptr' \<noteq> aepptr"
-  shows  "set (aepQueue aep) \<inter> set (aepQueue aep') = {}"
+  shows  "set (aepQueue (aepObj aep)) \<inter> set (aepQueue (aepObj aep')) = {}"
   using srs aepat aepat' aepq aepq' neq
   apply -
   apply (subst disjoint_iff_not_equal, intro ballI, rule notI)
   apply (drule sym_refs_ko_atD', clarsimp)+
   apply clarsimp
-  apply (clarsimp simp: isWaitingAEP_def split: async_endpoint.splits)
-   apply (drule (1) bspec)+
+  apply (clarsimp simp: isWaitingAEP_def split: aep.splits)
+   apply (drule bspec, fastforce simp: ko_wp_at'_def)+
    apply (clarsimp simp: ko_wp_at'_def refs_of_rev')
   done
 
@@ -991,7 +991,7 @@ lemma tcb_queue_relation'_empty[simp]:
 
 lemma casync_endpoint_relation_aep_queue:
   fixes aep :: "async_endpoint"
-  defines "qs \<equiv> if isWaitingAEP aep then set (aepQueue aep) else {}"  
+  defines "qs \<equiv> if isWaitingAEP (aepObj aep) then set (aepQueue (aepObj aep)) else {}"  
   assumes  aep: "casync_endpoint_relation (cslift t) aep' b"
   and      srs: "sym_refs (state_refs_of' s)"
   and     koat: "ko_at' aep aepptr s"
@@ -1000,7 +1000,8 @@ lemma casync_endpoint_relation_aep_queue:
   and      neq: "aepptr' \<noteq> aepptr"
   shows  "casync_endpoint_relation (cslift t') aep' b"
 proof -  
-    have rl: "\<And>p. \<lbrakk> p \<in> tcb_ptr_to_ctcb_ptr ` set (aepQueue aep'); isWaitingAEP aep; isWaitingAEP aep'\<rbrakk>
+    have rl: "\<And>p. \<lbrakk> p \<in> tcb_ptr_to_ctcb_ptr ` set (aepQueue (aepObj aep'));
+                    isWaitingAEP (aepObj aep); isWaitingAEP (aepObj aep')\<rbrakk>
     \<Longrightarrow> cslift t p = cslift t' p" using srs koat' koat mpeq neq
     apply -
     apply (drule (3) aep_aep_disjoint [OF _ koat koat'])
@@ -1011,10 +1012,10 @@ proof -
 
   show ?thesis using aep rl mpeq unfolding casync_endpoint_relation_def 
     apply (simp add: Let_def)
-    apply (cases aep')
+    apply (cases "aepObj aep'")
        apply simp
       apply simp
-     apply (cases "isWaitingAEP aep")
+     apply (cases "isWaitingAEP (aepObj aep)")
       apply (simp add: isWaitingAEP_def cong: tcb_queue_relation'_cong)
      apply (simp add: qs_def)
     done
@@ -1022,7 +1023,7 @@ qed
 
 lemma cpspace_relation_aep_update_aep:
   fixes aep :: "async_endpoint"
-  defines "qs \<equiv> if isWaitingAEP aep then set (aepQueue aep) else {}"
+  defines "qs \<equiv> if isWaitingAEP (aepObj aep) then set (aepQueue (aepObj aep)) else {}"
   assumes koat: "ko_at' aep aepptr s"
   and     invs: "invs' s"
   and      cp: "cpspace_aep_relation (ksPSpace s) (t_hrs_' (globals t))"
@@ -1067,17 +1068,17 @@ proof -
   show ?thesis
     unfolding casync_endpoint_relation_def 
     apply (simp add: Let_def)
-    apply (cases a)
-    apply (simp add: tcb_queue_relation'_def tcb_queue_relation_only_next_prev [OF next_pres prev_pres, symmetric])+
+    apply (cases "aepObj a")
+      apply (simp add: tcb_queue_relation'_def tcb_queue_relation_only_next_prev [OF next_pres prev_pres, symmetric])+
     done
 qed
 
 lemma cendpoint_relation_aep_queue:
   assumes   srs: "sym_refs (state_refs_of' s)"
   and      koat: "ko_at' aep aepptr s"
-  and iswaiting: "isWaitingAEP aep"
-  and      mpeq: "(cslift t' |` (- (tcb_ptr_to_ctcb_ptr ` set (aepQueue aep))))
-  = (cslift t |` (- (tcb_ptr_to_ctcb_ptr ` set (aepQueue aep))))"  
+  and iswaiting: "isWaitingAEP (aepObj aep)"
+  and      mpeq: "(cslift t' |` (- (tcb_ptr_to_ctcb_ptr ` set (aepQueue (aepObj aep)))))
+  = (cslift t |` (- (tcb_ptr_to_ctcb_ptr ` set (aepQueue (aepObj aep)))))"  
   and      koat': "ko_at' a epptr s"
   shows "cendpoint_relation (cslift t) a b = cendpoint_relation (cslift t') a b"
 proof -  
@@ -1197,9 +1198,9 @@ lemma rf_sr_tcb_update_not_in_queue:
       apply blast
      apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
      apply clarsimp
-     apply (subgoal_tac "thread \<notin> (fst ` aep_q_refs_of' a)")
+     apply (subgoal_tac "thread \<notin> (fst ` aep_q_refs_of' (aepObj a))")
       apply (clarsimp simp: casync_endpoint_relation_def Let_def
-                     split: Structures_H.async_endpoint.split)
+                     split: aep.splits)
       apply (simp add: image_def tcb_queue_relation_not_in_q)[1]
      apply (drule(1) map_to_ko_atI')
      apply (drule sym_refs_ko_atD', clarsimp+)

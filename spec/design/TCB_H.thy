@@ -12,6 +12,7 @@ chapter "Thread Control Blocks"
 
 theory TCB_H
 imports
+  AsyncEndpointDecls_H
   TCBDecls_H
   CNode_H
   VSpace_H
@@ -30,6 +31,8 @@ defs decodeTCBInvocation_def:
         | TCBSetPriority \<Rightarrow>   decodeSetPriority args cap
         | TCBSetIPCBuffer \<Rightarrow>   decodeSetIPCBuffer args cap slot extraCaps
         | TCBSetSpace \<Rightarrow>   decodeSetSpace args cap slot extraCaps
+        | TCBBindAEP \<Rightarrow>   decodeBindAEP cap extraCaps
+        | TCBUnbindAEP \<Rightarrow>   decodeUnbindAEP cap
         | _ \<Rightarrow>   throw IllegalOperation
         )"
 
@@ -188,6 +191,44 @@ defs decodeSetSpace_def:
   | (_, _) \<Rightarrow>    throw TruncatedMessage
   )"
 
+defs decodeBindAEP_def:
+"decodeBindAEP cap extraCaps\<equiv> (doE
+    whenE (null extraCaps) $ throw TruncatedMessage;
+    tcb \<leftarrow> returnOk ( capTCBPtr cap);
+    aEP \<leftarrow> withoutFailure $ getBoundAEP tcb;
+    (case aEP of
+          Some v3 \<Rightarrow>   throw IllegalOperation
+        | None \<Rightarrow>   returnOk ()
+        );
+    (aepptr, rights) \<leftarrow> (case fst (head extraCaps) of
+          AsyncEndpointCap ptr v4 v5 recv \<Rightarrow>   returnOk (ptr, recv)
+        | _ \<Rightarrow>   throw IllegalOperation
+        );
+    whenE (Not rights) $ throw IllegalOperation;
+    aep \<leftarrow> withoutFailure $ getAsyncEP aepptr;
+    (case (aepObj aep, aepBoundTCB aep) of
+          (IdleAEP, None) \<Rightarrow>   returnOk ()
+        | (ActiveAEP _, None) \<Rightarrow>   returnOk ()
+        | _ \<Rightarrow>   throw IllegalOperation
+        );
+    returnOk AsyncEndpointControl_ \<lparr>
+        aepTCB= tcb,
+        aepPtr= Just aepptr \<rparr>
+odE)"
+
+defs decodeUnbindAEP_def:
+"decodeUnbindAEP cap\<equiv> (doE
+    tcb \<leftarrow> returnOk ( capTCBPtr cap);
+    aEP \<leftarrow> withoutFailure $ getBoundAEP tcb;
+    (case aEP of
+          None \<Rightarrow>   throw IllegalOperation
+        | Some v7 \<Rightarrow>   returnOk ()
+        );
+    returnOk AsyncEndpointControl_ \<lparr>
+        aepTCB= tcb,
+        aepPtr= Nothing \<rparr>
+odE)"
+
 defs invokeTCB_def:
 "invokeTCB x0\<equiv> (case x0 of
     (Suspend thread) \<Rightarrow>   
@@ -290,6 +331,16 @@ defs invokeTCB_def:
         setNextPC pc
     od);
     when resumeTarget $ restart dest;
+    return []
+  od)
+  | (AsyncEndpointControl tcb (Some aepptr)) \<Rightarrow>   
+  withoutPreemption $ (do
+    bindAsyncEndpoint tcb aepptr;
+    return []
+  od)
+  | (AsyncEndpointControl tcb None) \<Rightarrow>   
+  withoutPreemption $ (do
+    unbindAsyncEndpoint tcb;
     return []
   od)
   )"

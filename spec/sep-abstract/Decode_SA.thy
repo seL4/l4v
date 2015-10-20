@@ -36,7 +36,7 @@ where
   case cap of
     AsyncEndpointCap ptr badge rights \<Rightarrow>
       if AllowSend \<in> rights then
-        returnOk $ InvokeAsyncEndpoint ptr badge (if args = [] then 0 else hd args)
+        returnOk $ InvokeAsyncEndpoint ptr badge
       else throwError $ InvalidCapability 0
   | _ \<Rightarrow> 
       throwError $ InvalidCapability 0"

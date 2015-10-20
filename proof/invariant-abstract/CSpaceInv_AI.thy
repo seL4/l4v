@@ -31,6 +31,11 @@ lemma get_thread_state_inv [simp]:
   apply simp
   done
 
+lemma get_bound_aep_inv[simp]:
+  "\<lbrace>P\<rbrace> get_bound_aep t \<lbrace>\<lambda>r. P\<rbrace>"
+  apply (simp add: get_bound_aep_def thread_get_def gets_the_def)
+  apply (wp, simp)
+  done
 
 lemma assert_get_tcb_sp:
   assumes "\<And>s. Q s \<Longrightarrow> valid_objs s"
@@ -204,16 +209,18 @@ lemma zombies_tcb_update:
 
 lemma tcb_state_same_refs:
   "\<lbrakk> ko_at (TCB t) p s; tcb_state t = tcb_state t' \<rbrakk>
-     \<Longrightarrow> state_refs_of (s\<lparr>kheap := kheap s(p \<mapsto> TCB t')\<rparr>) = state_refs_of s"
+     \<Longrightarrow> state_refs_of (s\<lparr>kheap := kheap s(p \<mapsto> TCB t')\<rparr>) = state_refs_of s" (*
   by (clarsimp simp add: state_refs_of_def obj_at_def
-                 intro!: ext)
+                 intro!: ext) *)
+  oops
 
 
 lemma valid_idle_tcb_update:
-  "\<lbrakk>valid_idle s; ko_at (TCB t) p s; tcb_state t = tcb_state t';
+  "\<lbrakk>valid_idle s; ko_at (TCB t) p s;
+    tcb_state t = tcb_state t'; tcb_bound_aep t = tcb_bound_aep t';
     valid_tcb p t' s \<rbrakk>
    \<Longrightarrow> valid_idle (s\<lparr>kheap := kheap s(p \<mapsto> TCB t')\<rparr>)"
-  by (clarsimp simp: valid_idle_def st_tcb_at_def obj_at_def)
+  by (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def)
 
 
 lemma valid_reply_caps_tcb_update:
@@ -222,7 +229,7 @@ lemma valid_reply_caps_tcb_update:
    \<Longrightarrow> valid_reply_caps (s\<lparr>kheap := kheap s(p \<mapsto> TCB t')\<rparr>)"
   apply (frule_tac P'="same_caps (TCB t')" in obj_at_weakenE, simp)
   apply (fastforce simp: valid_reply_caps_def has_reply_cap_def
-                        st_tcb_at_def obj_at_def fun_upd_def
+                        pred_tcb_at_def obj_at_def fun_upd_def
                         cte_wp_at_after_update caps_of_state_after_update)
   done
 
@@ -288,7 +295,7 @@ lemma vs_lookup_tcb_update:
 lemma only_idle_tcb_update:
   "\<lbrakk>only_idle s; ko_at (TCB t) p s; tcb_state t = tcb_state t' \<or> \<not>idle (tcb_state t') \<rbrakk>
     \<Longrightarrow> only_idle (s\<lparr>kheap := kheap s(p \<mapsto> TCB t')\<rparr>)"
-  by (clarsimp simp: only_idle_def st_tcb_at_def obj_at_def)
+  by (clarsimp simp: only_idle_def pred_tcb_at_def obj_at_def)
 
 
 lemma tcb_update_global_pd_mappings:
@@ -351,7 +358,7 @@ lemma assert_get_tcb_ko:
 lemma gts_st_tcb_at: "\<lbrace>st_tcb_at P t\<rbrace> get_thread_state t \<lbrace>\<lambda>rv s. P rv\<rbrace>"
   apply (simp add: get_thread_state_def thread_get_def)
   apply wp
-  apply (clarsimp simp: st_tcb_at_def obj_at_def get_tcb_def is_tcb)
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def get_tcb_def is_tcb)
   done
 
 
@@ -359,14 +366,20 @@ lemma gts_st_tcb:
   "\<lbrace>\<top>\<rbrace> get_thread_state t \<lbrace>\<lambda>rv. st_tcb_at (\<lambda>st. rv = st) t\<rbrace>"
   apply (simp add: get_thread_state_def thread_get_def)
   apply wp
-  apply (clarsimp simp: st_tcb_at_def)
+  apply (clarsimp simp: pred_tcb_at_def)
   done
 
+lemma gba_bound_tcb:
+  "\<lbrace>\<top>\<rbrace> get_bound_aep t \<lbrace>\<lambda>rv. bound_tcb_at (\<lambda>aep. rv = aep) t\<rbrace>"
+  apply (simp add: get_bound_aep_def thread_get_def)
+  apply wp
+  apply (clarsimp simp: pred_tcb_at_def)
+  done
 
 lemma allActiveTCBs_valid_state:
   "\<lbrace>valid_state\<rbrace> allActiveTCBs \<lbrace>\<lambda>R s. valid_state s \<and> (\<forall>t \<in> R. st_tcb_at runnable t s) \<rbrace>"
   apply (simp add: allActiveTCBs_def, wp)
-  apply (simp add: getActiveTCB_def st_tcb_at_def obj_at_def get_tcb_def
+  apply (simp add: getActiveTCB_def pred_tcb_at_def obj_at_def get_tcb_def
               split: option.splits split_if_asm Structures_A.kernel_object.splits)
   done
 
@@ -636,7 +649,7 @@ lemma set_cap_valid_objs:
   apply (erule(1) valid_objsE)
   apply (clarsimp simp: valid_obj_def valid_tcb_def
                         ran_tcb_cap_cases)
-  apply (intro conjI impI, simp_all add: st_tcb_at_def obj_at_def)
+  apply (intro conjI impI, simp_all add: pred_tcb_at_def obj_at_def)
   done
 
 
@@ -704,18 +717,16 @@ lemma set_cap_cur [wp]:
   apply (clarsimp simp add: cur_tcb_def obj_at_def is_tcb)
   done
 
-
-lemma set_cap_st_tcb [wp]:
- "\<lbrace>st_tcb_at P t\<rbrace> set_cap c p \<lbrace>\<lambda>rv. st_tcb_at P t\<rbrace>"
+lemma set_cap_pred_tcb [wp]:
+ "\<lbrace>pred_tcb_at proj P t\<rbrace> set_cap c p \<lbrace>\<lambda>rv. pred_tcb_at proj P t\<rbrace>"
   apply (simp add: set_cap_def set_object_def split_def)
   apply (wp)
    prefer 2
-   apply (rule get_object_sp)  
+   apply (rule get_object_sp)
   apply (case_tac obj)
     apply (simp_all del: fun_upd_apply)
-   apply (clarsimp simp: st_tcb_at_def obj_at_def|rule conjI|wp)+
+   apply (clarsimp simp: pred_tcb_at_def obj_at_def tcb_to_itcb_def |rule conjI|wp)+
   done
-
 
 lemma set_cap_live[wp]:
   "\<lbrace>\<lambda>s. P (obj_at live p' s)\<rbrace>
@@ -1454,12 +1465,12 @@ lemma set_object_idle [wp]:
   "\<lbrace>valid_idle and
      (\<lambda>s. ko_at ko p s \<and> (\<not>is_tcb ko \<or> 
                    (ko = (TCB t) \<and> ko' = (TCB t') \<and>
-                    tcb_state t = tcb_state t')))\<rbrace>
+                    tcb_state t = tcb_state t' \<and> tcb_bound_aep t = tcb_bound_aep t')))\<rbrace>
    set_object p ko'
    \<lbrace>\<lambda>rv. valid_idle\<rbrace>"
   apply (simp add: set_object_def)
-  apply wpx
-  apply (fastforce simp: valid_idle_def st_tcb_at_def obj_at_def is_tcb_def)
+  apply wp
+  apply (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def is_tcb_def)
   done
 
 
@@ -1473,7 +1484,7 @@ lemma set_cap_idle:
    prefer 2
    apply (rule get_object_sp)
   apply (case_tac obj, simp_all split del: split_if)
-  apply ((clarsimp simp: st_tcb_at_def obj_at_def is_tcb_def|rule conjI|wp)+)[2]
+  apply ((clarsimp simp: pred_tcb_at_def obj_at_def is_tcb_def|rule conjI|wp)+)[2]
   done
 
 
@@ -2115,7 +2126,7 @@ lemma replace_cap_invs:
   apply (clarsimp simp: valid_pspace_def cte_wp_at_caps_of_state
                         replaceable_def)
   apply (rule conjI)
-   apply (fastforce simp: tcb_cap_valid_def tcb_at_st_tcb_at
+   apply (fastforce simp: tcb_cap_valid_def 
                   dest!: cte_wp_tcb_cap_valid [OF caps_of_state_cteD])
   apply (rule conjI)
    apply (erule_tac P="\<lambda>cps. mdb_cte_at cps (cdt s)" in rsubst)
@@ -2501,19 +2512,19 @@ lemma tcb_cap_valid_update_free_index[simp]:
   apply (rule iffI)
   apply (clarsimp simp:tcb_cap_valid_def)
   apply (intro conjI impI allI)
-    apply (clarsimp simp:tcb_at_def st_tcb_at_def is_tcb_def obj_at_def 
+    apply (clarsimp simp:tcb_at_def pred_tcb_at_def is_tcb_def obj_at_def 
       dest!:get_tcb_SomeD)
     apply (clarsimp simp:tcb_cap_cases_def free_index_update_def is_cap_simps
       split:if_splits cap.split_asm Structures_A.thread_state.split_asm)
-    apply (clarsimp simp:st_tcb_at_def obj_at_def is_cap_simps free_index_update_def
+    apply (clarsimp simp:pred_tcb_at_def obj_at_def is_cap_simps free_index_update_def
       split:cap.split_asm)
   apply (clarsimp simp:tcb_cap_valid_def)
   apply (intro conjI impI allI)
-    apply (clarsimp simp:tcb_at_def st_tcb_at_def is_tcb_def obj_at_def 
+    apply (clarsimp simp:tcb_at_def pred_tcb_at_def is_tcb_def obj_at_def 
       dest!:get_tcb_SomeD)
     apply (clarsimp simp:tcb_cap_cases_def free_index_update_def is_cap_simps
       split:if_splits cap.split_asm Structures_A.thread_state.split_asm)
-    apply (clarsimp simp:st_tcb_at_def obj_at_def is_cap_simps free_index_update_def
+    apply (clarsimp simp:pred_tcb_at_def obj_at_def is_cap_simps free_index_update_def
       valid_ipc_buffer_cap_def
       split:cap.split_asm)
     done
@@ -2550,7 +2561,7 @@ lemma set_untyped_cap_as_full_tcb_cap_valid:
     apply (case_tac "tcb_at (fst dest) s")
       apply clarsimp
       apply (intro conjI impI allI)
-      apply (drule use_valid[OF _ set_cap_st_tcb],simp+)
+      apply (drule use_valid[OF _ set_cap_pred_tcb],simp+)
         apply (clarsimp simp:valid_ipc_buffer_cap_def is_cap_simps)
     apply (clarsimp simp:tcb_at_typ)
     apply (drule use_valid[OF _ set_cap_typ_at])
@@ -2570,12 +2581,11 @@ lemma cap_insert_objs [wp]:
     | simp split del: split_if)+
   done
 
-
-crunch st_tcb_at[wp]: cap_insert "st_tcb_at P t" 
+crunch pred_tcb_at[wp]: cap_insert "pred_tcb_at proj P t"
   (wp: hoare_drop_imps)
 
 
-crunch ct [wp]: cap_insert "\<lambda>s. P (cur_thread s)" 
+crunch ct [wp]: cap_insert "\<lambda>s. P (cur_thread s)"
   (wp: crunch_wps simp: crunch_simps)
 
 

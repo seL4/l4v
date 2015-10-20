@@ -109,7 +109,7 @@ lemma setTCB_valid_duplicates'[wp]:
      apply (erule valid_duplicates'_non_pd_pt_I[rotated 3],simp+)+
   done
 
-crunch valid_duplicates'[wp]: threadSet "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+crunch valid_duplicates'[wp]: threadSet, setBoundAEP "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
 (ignore: getObject setObject wp: setObject_ksInterrupt updateObject_default_inv)
 
 lemma tcbSchedEnqueue_valid_duplicates'[wp]:
@@ -1476,9 +1476,6 @@ proof -
   qed
 
 crunch valid_duplicates'[wp]:
-  sendAsyncIPC "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
-
-crunch valid_duplicates'[wp]:
   doReplyTransfer "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
 (wp: crunch_wps isFinalCapability_inv 
  simp: crunch_simps unless_def)
@@ -1793,7 +1790,7 @@ crunch valid_duplicates'[wp]:
     ignore:getObject updateObject setObject)
 
 crunch valid_duplicates'[wp]:
-  deleteASIDPool "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+  deleteASIDPool, unbindAsyncEndpoint "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
   (wp: crunch_wps simp: crunch_simps unless_def ignore:getObject setObject)
 
 lemma archFinaliseCap_valid_duplicates'[wp]:
@@ -1818,7 +1815,7 @@ lemma finaliseCap_valid_duplicates'[wp]:
   and (valid_cap' cap)\<rbrace>
   finaliseCap cap call final \<lbrace>\<lambda>r s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
   apply (case_tac cap,simp_all add:isCap_simps finaliseCap_def)
-            apply (wp|intro conjI|clarsimp )+
+            apply (wp|intro conjI|clarsimp split: option.splits)+
   done
 
 crunch valid_duplicates'[wp]:
@@ -2242,6 +2239,9 @@ crunch valid_cap'[wp]:
   (wp: crunch_wps filterM_preserved simp: crunch_simps unless_def 
     ignore:getObject setObject)
 
+crunch valid_duplicates'[wp]:
+  sendAsyncIPC "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+
 lemma invokeIRQControl_valid_duplicates'[wp]:
   "\<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s) \<rbrace> invokeIRQControl a
   \<lbrace>\<lambda>_ s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
@@ -2640,7 +2640,7 @@ lemma tc_valid_duplicates':
                simp: isCap_simps)
   done
 
-crunch valid_duplicates' [wp]: performTransfer "(\<lambda>s. vs_valid_duplicates' (ksPSpace s))"
+crunch valid_duplicates' [wp]: performTransfer, unbindAsyncEndpoint, bindAsyncEndpoint "(\<lambda>s. vs_valid_duplicates' (ksPSpace s))"
   (ignore: getObject threadSet wp: setObject_ksInterrupt updateObject_default_inv
     simp:crunch_simps)
 
@@ -2664,7 +2664,9 @@ lemma invokeTCB_valid_duplicates'[wp]:
                      dest!: global'_no_ex_cap)
      apply (wp tc_valid_duplicates')
      apply (clarsimp split:option.splits)
-    apply (simp add:invokeTCB_def | wp mapM_x_wp' | intro impI conjI)+
+     apply (rename_tac option)
+     apply (case_tac option, simp_all)
+    apply (simp add:invokeTCB_def | wp mapM_x_wp' | intro impI conjI | wpc)+
   done
 
 lemma performInvocation_valid_duplicates'[wp]:
@@ -2698,7 +2700,7 @@ lemma hi_valid_duplicates'[wp]:
     apply (fastforce simp add: tcb_at_invs' ct_in_state'_def 
                               simple_sane_strg
                               sch_act_simple_def
-                       elim!: st_tcb'_weakenE st_tcb_ex_cap''
+                       elim!: pred_tcb'_weakenE st_tcb_ex_cap''
                         dest: st_tcb_at_idle_thread')+
   done
 
@@ -2723,7 +2725,7 @@ lemma handleInterrupt_valid_duplicates'[wp]:
   apply (simp add: handleInterrupt_def)
   apply (rule hoare_pre)
    apply (wp sai_st_tcb' hoare_vcg_all_lift hoare_drop_imps
-             threadSet_st_tcb_no_state getIRQState_inv haskell_fail_wp
+             threadSet_pred_tcb_no_state getIRQState_inv haskell_fail_wp
           |wpc|simp)+
   done
 
@@ -2742,8 +2744,8 @@ lemma activate_sch_valid_duplicates'[wp]:
     \<and> vs_valid_duplicates' (ksPSpace s)"])
    apply (rule hoare_pre)
     apply (wp | wpc | simp add: setThreadState_runnable_simp)+
-  apply (clarsimp simp: ct_in_state'_def cur_tcb'_def st_tcb_at_tcb_at'
-                 elim!: st_tcb'_weakenE)
+  apply (clarsimp simp: ct_in_state'_def cur_tcb'_def pred_tcb_at'
+                 elim!: pred_tcb'_weakenE)
   done
 
 crunch valid_duplicates'[wp]:
@@ -2751,6 +2753,7 @@ crunch valid_duplicates'[wp]:
 
 crunch valid_duplicates'[wp]:
   receiveIPC "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+(wp: getAsyncEP_wp gba_wp')
 
 crunch valid_duplicates'[wp]:
   deleteCallerCap "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
@@ -2781,13 +2784,14 @@ lemma hc_valid_duplicates'[wp]:
    \<lbrace>\<lambda>rv s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
   by (simp add: handleCall_def |  wp)+
 
-lemma hw_invs'[wp]:
+lemma handleWait_valid_duplicates'[wp]:
   "\<lbrace>(\<lambda>s. vs_valid_duplicates' (ksPSpace s))\<rbrace> 
   handleWait \<lbrace>\<lambda>r s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
   apply (simp add: handleWait_def cong: if_cong)
   apply (rule hoare_pre)
    apply wp
-       apply ((wp | wpc | simp)+)[1]
+       apply ((wp getAsyncEP_wp | wpc | simp add: whenE_def split del: split_if)+)[1]
+
       apply (rule_tac Q="\<lambda>rv s. vs_valid_duplicates' (ksPSpace s)"
 
                    in hoare_post_impErr[rotated])
@@ -2795,11 +2799,12 @@ lemma hw_invs'[wp]:
         apply (clarsimp simp: isCap_simps sch_act_sane_not)
        apply assumption
       apply (wp deleteCallerCap_nonz_cap)
-  apply (auto elim: st_tcb_ex_cap'' st_tcb'_weakenE 
+  apply (auto elim: st_tcb_ex_cap'' pred_tcb'_weakenE 
              dest!: st_tcb_at_idle_thread'
               simp: ct_in_state'_def sch_act_sane_def)
- done
+  done
 
+  
 lemma handleEvent_valid_duplicates':
   "\<lbrace>invs' and (\<lambda>s. vs_valid_duplicates' (ksPSpace s)) and
     sch_act_simple and (\<lambda>s. e \<noteq> Interrupt \<longrightarrow> ct_running' s)\<rbrace>
@@ -2824,6 +2829,7 @@ lemma callKernel_valid_duplicates':
    apply (wp activate_invs' activate_sch_act schedule_sch
              schedule_sch_act_simple he_invs'
           | simp add: no_irq_getActiveIRQ)+
+
    apply (rule hoare_post_impErr)
      apply (rule valid_validE)
      prefer 2

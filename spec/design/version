@@ -1,8 +1,5 @@
 Built from git repo at /home/x/repos/priority-bitmap/seL4/haskell by x
 
 Generated from changeset:
-eb651de Haskell: factor out wordLog2 as a separate function
+7ee969c Merge a061d1733284df4429fd8a50d9af6a6d9b78f1d1 into priority-bitmap
 
-
-Warning - uncomitted changes used:
- M src/SEL4/Kernel/Thread.lhs

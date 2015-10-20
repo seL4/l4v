@@ -929,39 +929,45 @@ lemma valid_obj':
       apply (drule(1) bspec)+
       apply (clarsimp dest!: refs_notRange)
      apply (rename_tac async_endpoint)
-     apply (case_tac async_endpoint, simp_all add: valid_aep'_def)[1]
-     apply (clarsimp dest!: sym_refs_ko_wp_atD [OF _ sym_refs])
-     apply (drule(1) bspec)+
-     apply (clarsimp dest!: refs_notRange)
+     apply (case_tac async_endpoint, simp_all add: valid_aep'_def valid_bound_tcb'_def)[1]
+     apply (rename_tac aep bound)
+     apply (case_tac aep, simp_all split:option.splits)[1]
+        apply ((clarsimp dest!: sym_refs_ko_wp_atD [OF _ sym_refs] refs_notRange)+)[4]
+      apply (drule(1) bspec)+
+      apply (clarsimp dest!: refs_notRange)
+     apply (clarsimp dest!: sym_refs_ko_wp_atD [OF _ sym_refs] refs_notRange)
     apply (frule sym_refs_ko_wp_atD [OF _ sym_refs])
-    apply (clarsimp simp: valid_tcb'_def ko_wp_at'_def objBits_simps)
+    apply (clarsimp simp: valid_tcb'_def ko_wp_at'_def
+                          objBits_simps)
     apply (rule conjI)
      apply (erule ballEI, clarsimp elim!: ranE)
      apply (rule_tac p="p + x" in valid_cap2)
      apply (erule(2) cte_wp_at_tcbI')
       apply fastforce
      apply simp
-     apply (rename_tac tcb)
-    apply (case_tac "tcbState tcb", simp_all add: valid_tcb_state'_def)[1]
-      apply (clarsimp dest!: refs_notRange)+
+    apply (rename_tac tcb)
+    apply (case_tac "tcbState tcb", simp_all add: valid_tcb_state'_def valid_bound_aep'_def
+     split:option.splits)[1]
+              apply (clarsimp dest!: refs_notRange)+
    apply (clarsimp simp: valid_cte'_def)
    apply (rule_tac p=p in valid_cap2)
-   apply (clarsimp simp: ko_wp_at'_def objBits_simps cte_level_bits_def[symmetric])
+   apply (clarsimp simp: ko_wp_at'_def objBits_simps
+                         cte_level_bits_def[symmetric])
    apply (erule(2) cte_wp_at_cteI')
    apply simp
   apply (rename_tac arch_kernel_object)
   apply (case_tac "arch_kernel_object", simp_all)
-    apply (rename_tac asidpool)
+  apply (rename_tac asidpool)
     apply (case_tac asidpool, clarsimp simp: page_directory_at'_def)
-   apply (rename_tac pte)
+  apply (rename_tac pte)
    apply (case_tac pte, simp_all add: valid_mapping'_def)
-  apply (rename_tac pde)
+apply(rename_tac pde)
   apply (case_tac pde, simp_all add: valid_mapping'_def)
   done
 
 lemma st_tcb:
     "\<And>P p. \<lbrakk> st_tcb_at' P p s; \<not> P Inactive; \<not> P IdleThreadState \<rbrakk> \<Longrightarrow> st_tcb_at' P p state'"
-    by (fastforce simp: st_tcb_at'_def obj_at'_real_def
+    by (fastforce simp: pred_tcb_at'_def obj_at'_real_def
                        projectKOs
                  dest: live_notRange)
 
@@ -1229,7 +1235,7 @@ proof (simp add: invs'_def valid_state'_def valid_pspace'_def
     apply blast
     done
   with idle show "valid_idle' ?s"
-    apply (clarsimp simp: valid_idle'_def st_tcb_at'_def obj_at'_def projectKOs)
+    apply (clarsimp simp: valid_idle'_def pred_tcb_at'_def obj_at'_def projectKOs)
     apply (clarsimp simp add: ps_clear_def dom_if_None Diff_Int_distrib)
     done
 
@@ -1239,7 +1245,7 @@ proof (simp add: invs'_def valid_state'_def valid_pspace'_def
     apply (drule st_tcb)
       apply simp
      apply simp
-    apply (simp add: st_tcb_at'_def)
+    apply (simp add: pred_tcb_at'_def)
     done
 
   let ?ctes' = ctes'
@@ -1388,7 +1394,7 @@ proof (simp add: invs'_def valid_state'_def valid_pspace'_def
   show "sch_act_wf (ksSchedulerAction s) state'"
     apply (simp add: sch_act_simple_def)
     apply (case_tac "ksSchedulerAction s", simp_all add: ct_in_state'_def)
-    apply (fastforce dest!: st_tcb elim!: st_tcb'_weakenE)
+    apply (fastforce dest!: st_tcb elim!: pred_tcb'_weakenE)
     done
 
   from invs
@@ -1422,10 +1428,10 @@ proof (simp add: invs'_def valid_state'_def valid_pspace'_def
 
   from sa_simp ctnotinQ
   show "ct_not_inQ ?state''"
-    apply (clarsimp simp: ct_not_inQ_def st_tcb_at'_def)
+    apply (clarsimp simp: ct_not_inQ_def pred_tcb_at'_def)
     apply (drule obj_at'_and
                    [THEN iffD2, OF conjI,
-                    OF ct_act [unfolded ct_in_state'_def st_tcb_at'_def]])
+                    OF ct_act [unfolded ct_in_state'_def pred_tcb_at'_def]])
     apply (clarsimp simp: obj_at'_real_def)
     apply (frule if_live_then_nonz_capE'[OF iflive, OF ko_wp_at'_weakenE])
      apply (clarsimp simp: projectKOs)
@@ -1619,13 +1625,13 @@ lemma deleteObjects_st_tcb_at':
                 [where p = t and
                        P="case_option False (P \<circ> tcbState) \<circ> projectKO_opt", 
                  simplified eq_commute])
-    apply (simp add: st_tcb_at'_def obj_at'_real_def)
+    apply (simp add: pred_tcb_at'_def obj_at'_real_def)
     apply (rule conjI)
      apply (fastforce elim: ko_wp_at'_weakenE)
     apply (erule if_live_then_nonz_capD' [rotated])
      apply (clarsimp simp: projectKOs)
     apply (clarsimp simp: invs'_def valid_state'_def)
-   apply (clarsimp simp: st_tcb_at'_def obj_at'_real_def
+   apply (clarsimp simp: pred_tcb_at'_def obj_at'_real_def
                   field_simps ko_wp_at'_def ps_clear_def
                   cong:if_cong
                   split: option.splits)
@@ -5065,7 +5071,7 @@ proof -
           apply (rule conjI)
            apply (clarsimp simp:inj_on_def)
            apply (rule ccontr)
-           apply (erule_tac bound = "2^(word_bits - 14)" in shift_distinct_helper[rotated 3])
+           apply (erule_tac bnd = "2^(word_bits - 14)" in shift_distinct_helper[rotated 3])
                 apply simp
                apply (simp add:word_bits_def)
               apply (erule less_le_trans[OF word_of_nat_less])
@@ -5079,7 +5085,7 @@ proof -
             apply (drule of_nat_inj32[THEN iffD1,rotated -1])
              apply (simp_all add: word_bits_def)[3]
            apply (clarsimp)
-           apply (erule_tac bound = "2^(word_bits - 14)" in shift_distinct_helper[rotated 3])
+           apply (erule_tac bnd = "2^(word_bits - 14)" in shift_distinct_helper[rotated 3])
                 apply simp
                apply (simp add:word_bits_def)
              apply (simp add:word_of_nat_less word_bits_def)
@@ -5172,6 +5178,7 @@ proof -
           apply simp
          apply (clarsimp simp:word_bits_def valid_pspace'_def)
          apply (clarsimp simp:aligned_add_aligned[OF range_cover.aligned] is_aligned_shiftl_self word_bits_def)+
+
     done
 qed
 

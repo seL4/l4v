@@ -788,7 +788,8 @@ fun mk_complit_upd thy cty rootty ((pth,value), ei) = let
         end
   fun rval s = mk_upds rootty pth (rval_of value s) $ (rval_of ei s)
 in
-  mk_rval(rval, cty, false, eileft ei, eiright ei) |> add_ei_guards ei
+  mk_rval(rval, cty, false, eileft ei, eiright ei)
+         |> add_ei_guards ei |> add_ei_guards value
 end
 
 

@@ -1,6 +1,29 @@
+(*
+ * Copyright 2014, General Dynamics C4 Systems
+ *
+ * This software may be distributed and modified according to the terms of
+ * the GNU General Public License version 2. Note that NO WARRANTY is provided.
+ * See "LICENSE_GPLv2.txt" for details.
+ *
+ * @TAG(GD_GPL)
+ *)
+
+(*
+  CSpace refinement
+*)
+
 theory CSpace_R
 imports CSpace1_R
 begin
+
+lemma setCTE_pred_tcb_at':
+  "\<lbrace>pred_tcb_at' proj P t\<rbrace>
+     setCTE c cte
+   \<lbrace>\<lambda>rv. pred_tcb_at' proj P t\<rbrace>"
+  unfolding pred_tcb_at'_def setCTE_def
+  apply (rule setObject_cte_obj_at_tcb')
+   apply (simp add: tcb_to_itcb'_def)+
+  done
 
 locale mdb_move =
   mdb_ptr m _ _ src src_cap src_node
@@ -1226,7 +1249,7 @@ lemma valid_queues_lift_asm:
     have tat_combined: "\<And>d p tcb. \<lbrace>obj_at' (inQ d p and runnable' \<circ> tcbState) tcb and Q\<rbrace> f
                          \<lbrace>\<lambda>_. obj_at' (inQ d p and runnable' \<circ> tcbState) tcb\<rbrace>"
       apply (rule hoare_chain [OF tat])
-       apply (fastforce simp add: obj_at'_and st_tcb_at'_def)+
+       apply (fastforce simp add: obj_at'_and pred_tcb_at'_def o_def)+
       done
     show ?thesis unfolding valid_queues_def valid_queues_no_bitmap_def
       by (wp tat_combined prq prqL1 prqL2 valid_bitmapQ_lift bitmapQ_no_L2_orphans_lift
@@ -2982,7 +3005,7 @@ lemma setCTE_idle [wp]:
   "\<lbrace>valid_idle'\<rbrace> setCTE p cte \<lbrace>\<lambda>rv. valid_idle'\<rbrace>"
   apply (simp add: valid_idle'_def)
   apply (rule hoare_lift_Pf [where f="ksIdleThread"])
-   apply (wp setCTE_st_tcb_at')
+   apply (wp setCTE_pred_tcb_at')
   done
 
 crunch it[wp]: getCTE "\<lambda>s. P (ksIdleThread s)"
@@ -3127,7 +3150,7 @@ lemma setCTE_irq_states' [wp]:
 crunch irq_states' [wp]: cteInsert valid_irq_states'
   (wp: crunch_wps)
 
-crunch st_tcb_at'[wp]: cteInsert "st_tcb_at' P t"
+crunch pred_tcb_at'[wp]: cteInsert "pred_tcb_at' proj P t"
   (wp: crunch_wps)
 
 lemma setCTE_cteCaps_of[wp]:
@@ -3342,7 +3365,7 @@ lemma cteInsert_invs:
             cteInsert_norq | simp add: st_tcb_at'_def)+
   apply (wp cur_tcb_lift tcb_in_cur_domain'_lift sch_act_wf_lift CSpace_R.valid_queues_lift
             valid_irq_node_lift valid_queues_lift' irqs_masked_lift
-            cteInsert_norq | simp add: st_tcb_at'_def)+
+            cteInsert_norq | simp add: pred_tcb_at'_def)+
   apply (auto simp: invs'_def valid_state'_def valid_pspace'_def elim: 
   valid_capAligned)
   done
@@ -4177,7 +4200,7 @@ crunch irqs_makes' [wp]: setupReplyMaster irqs_masked'
   (lift: irqs_masked_lift)
 crunch pde_mappings' [wp]: setupReplyMaster valid_pde_mappings'
 
-crunch st_tcb_at' [wp]: setupReplyMaster "st_tcb_at' P t"
+crunch pred_tcb_at' [wp]: setupReplyMaster "pred_tcb_at' proj P t"
 
 crunch ksMachine[wp]: setupReplyMaster "\<lambda>s. P (ksMachineState s)"
 
@@ -4218,9 +4241,6 @@ lemma setupReplyMaster_invs'[wp]:
                         ex_nonz_cap_not_global' dom_def)
   done
 
-crunch st_tcb'[wp]: setupReplyMaster "st_tcb_at' P t"
-  (wp: crunch_wps setCTE_st_tcb_at')
-
 lemma setupReplyMaster_cte_wp_at'':
   "\<lbrace>cte_wp_at' (\<lambda>cte. P (cteCap cte)) p and K (\<not> P NullCap)\<rbrace>
      setupReplyMaster t
@@ -4239,9 +4259,6 @@ lemma setupReplyMaster_cap_to'[wp]:
    apply (wp hoare_vcg_ex_lift setupReplyMaster_cte_wp_at')
   apply clarsimp
   done
-
-crunch st_tcb_at'[wp]: updateMDB "st_tcb_at' P p"
-crunch st_tcb_at'[wp]: cteInsert "st_tcb_at' P p"
 
 definition
   is_arch_update' :: "capability \<Rightarrow> cte \<Rightarrow> bool"
@@ -4478,8 +4495,8 @@ lemma arch_update_setCTE_invs:
    apply (wp arch_update_setCTE_mdb valid_queues_lift sch_act_wf_lift tcb_in_cur_domain'_lift ct_idle_or_in_cur_domain'_lift
              arch_update_setCTE_iflive arch_update_setCTE_ifunsafe
              valid_irq_node_lift setCTE_typ_at' setCTE_irq_handlers'
-             valid_queues_lift' setCTE_st_tcb_at' irqs_masked_lift
-             setCTE_norq hoare_vcg_disj_lift| simp add: st_tcb_at'_def)+
+             valid_queues_lift' setCTE_pred_tcb_at' irqs_masked_lift
+             setCTE_norq hoare_vcg_disj_lift | simp add: pred_tcb_at'_def)+
   apply (clarsimp simp: valid_global_refs'_def is_arch_update'_def cte_wp_at_ctes_of isCap_simps)
   apply (frule capMaster_eq_capBits_eq)
   apply (drule capMaster_capRange)
@@ -5938,7 +5955,7 @@ lemma cteInsert_simple_invs:
    apply (wp cur_tcb_lift sch_act_wf_lift valid_queues_lift tcb_in_cur_domain'_lift
              valid_irq_node_lift valid_queues_lift' irqs_masked_lift
              cteInsert_simple_mdb' cteInsert_valid_globals_simple
-             cteInsert_norq | simp add: st_tcb_at'_def)+
+             cteInsert_norq | simp add: pred_tcb_at'_def)+
   apply (auto simp: invs'_def valid_state'_def valid_pspace'_def
               elim: valid_capAligned)
   done
@@ -6306,7 +6323,7 @@ lemma updateFreeIndex_invs':
    \<lbrace>\<lambda>r s. invs' s\<rbrace>"
    apply (clarsimp simp:invs'_def valid_state'_def)
    apply (wp updateFreeIndex_pspace' sch_act_wf_lift valid_queues_lift updateCap_iflive' tcb_in_cur_domain'_lift
-             | simp add: st_tcb_at'_def)+
+             | simp add: pred_tcb_at'_def)+
         apply (rule hoare_pre)
          apply (rule hoare_vcg_conj_lift)
          apply (simp add: ifunsafe'_def3 cteInsert_def setUntypedCapAsFull_def

@@ -39,6 +39,12 @@ consts
 decodeSetSpace :: "machine_word list \<Rightarrow> capability \<Rightarrow> machine_word \<Rightarrow> (capability * machine_word) list \<Rightarrow> ( syscall_error , tcbinvocation ) kernel_f"
 
 consts
+decodeBindAEP :: "capability \<Rightarrow> (capability * machine_word) list \<Rightarrow> ( syscall_error , tcbinvocation ) kernel_f"
+
+consts
+decodeUnbindAEP :: "capability \<Rightarrow> ( syscall_error , tcbinvocation ) kernel_f"
+
+consts
 invokeTCB :: "tcbinvocation \<Rightarrow> machine_word list kernel_p"
 
 consts

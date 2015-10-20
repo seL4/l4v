@@ -8,7 +8,7 @@
  * @TAG(GD_GPL)
  *)
 
-(* 
+(*
 CSpace refinement
 *)
 
@@ -3610,7 +3610,7 @@ lemma set_free_index_valid_pspace:
    apply (erule is_aligned_no_wrap')
    apply (rule word_of_nat_less)
    apply (simp add: word_bits_def)
-  apply (clarsimp simp add: st_tcb_at_def tcb_cap_valid_def obj_at_def is_tcb
+  apply (clarsimp simp add: pred_tcb_at_def tcb_cap_valid_def obj_at_def is_tcb
                             valid_ipc_buffer_cap_def
                      split: option.split)
   apply (rule exI)
@@ -3745,7 +3745,7 @@ done
 lemma set_cdt_idle [wp]:
   "\<lbrace>valid_idle\<rbrace> set_cdt m \<lbrace>\<lambda>rv. valid_idle\<rbrace>"
   by (simp add: set_cdt_def, wp,
-      fastforce simp add: valid_idle_def st_tcb_at_def)
+      auto simp: valid_idle_def pred_tcb_at_def)
 
 lemma global_refs_update_more[simp]:
   "global_refs (exst_update f s) = global_refs s"
@@ -4476,7 +4476,6 @@ lemma valid_irq_states_exst_update[simp]:
 
 crunch valid_irq_states[wp]: cap_insert "valid_irq_states"
   (wp: crunch_wps simp: crunch_simps)
-  
 
 lemma cap_insert_invs[wp]:
  "\<lbrace>invs and cte_wp_at (\<lambda>c. c=Structures_A.NullCap) dest
@@ -4584,14 +4583,14 @@ lemma set_cap_tcb_ipc_buffer:
   done
 
 
-lemmas set_cap_tcb_cap[wp] = tcb_cap_valid_typ_st [OF set_cap_typ_at set_cap_st_tcb set_cap_tcb_ipc_buffer]
+lemmas set_cap_tcb_cap[wp] = tcb_cap_valid_typ_st [OF set_cap_typ_at set_cap_pred_tcb set_cap_tcb_ipc_buffer]
 
 
 lemma cap_swap_valid_objs:
   "\<lbrace>valid_objs and valid_cap c and valid_cap c'
         and tcb_cap_valid c' x
         and tcb_cap_valid c y\<rbrace>
-  cap_swap c x c' y 
+  cap_swap c x c' y
   \<lbrace>\<lambda>_. valid_objs\<rbrace>"
   apply (simp add: cap_swap_def)
   apply (wp set_cdt_valid_objs set_cap_valid_objs set_cap_valid_cap
@@ -4962,8 +4961,8 @@ lemma no_reply_caps_for_thread:
   apply (subgoal_tac "st_tcb_at halted t s")
    apply (fastforce simp: invs_def valid_state_def valid_reply_caps_def
                          has_reply_cap_def cte_wp_at_caps_of_state st_tcb_def2)
-  apply (thin_tac "cte_wp_at P (a, b) s" for P)
-  apply (fastforce simp: st_tcb_at_def obj_at_def is_tcb valid_obj_def
+  apply (thin_tac "cte_wp_at _ (a, b) s")
+  apply (fastforce simp: pred_tcb_at_def obj_at_def is_tcb valid_obj_def
                         valid_tcb_def cte_wp_at_cases tcb_cap_cases_def
                   dest: invs_valid_objs
                   elim: valid_objsE)
@@ -4975,6 +4974,12 @@ crunch tcb[wp]: setup_reply_master "tcb_at t"
 
 crunch idle[wp]: setup_reply_master "valid_idle"
 
+lemma tcb_at_st_tcb_at: "tcb_at = st_tcb_at \<top>"
+  apply (rule ext)+
+  apply (simp add: tcb_at_def pred_tcb_at_def obj_at_def is_tcb_def)
+  apply (rule arg_cong[where f=Ex], rule ext)
+  apply (case_tac ko, simp_all)
+  done
 
 lemma setup_reply_master_pspace[wp]:
   "\<lbrace>valid_pspace and tcb_at t\<rbrace> setup_reply_master t \<lbrace>\<lambda>rv. valid_pspace\<rbrace>"
@@ -4987,7 +4992,6 @@ lemma setup_reply_master_pspace[wp]:
    apply (fastforce dest: get_tcb_SomeD elim: my_BallE [where y=t])
   apply (clarsimp simp: tcb_cap_valid_def is_cap_simps tcb_at_st_tcb_at)
   done
-
 
 lemma setup_reply_master_mdb[wp]:
   "\<lbrace>valid_mdb\<rbrace> setup_reply_master t \<lbrace>\<lambda>rv. valid_mdb\<rbrace>"
@@ -5547,6 +5551,5 @@ proof -
     apply clarsimp
     done
 qed
-
 
 end

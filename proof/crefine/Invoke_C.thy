@@ -196,7 +196,7 @@ lemma decodeDomainInvocation_ccorres:
    apply (vcg exspec=getSyscallArg_modifies)
 
   apply (clarsimp simp: valid_tcb_state'_def invs_valid_queues' invs_valid_objs'
-                        invs_queues invs_sch_act_wf' ct_in_state'_def st_tcb_at_tcb_at'
+                        invs_queues invs_sch_act_wf' ct_in_state'_def pred_tcb_at'
                         rf_sr_ksCurThread word_sle_def word_sless_def sysargs_rel_to_n
                         mask_eq_iff_w2p mask_eq_iff_w2p word_size "StrictC'_thread_state_defs"
                         maxDomain_def numDomains_def)
@@ -206,9 +206,9 @@ lemma decodeDomainInvocation_ccorres:
    apply clarsimp
    apply (drule_tac x="extraCaps ! 0" and P="\<lambda>v. valid_cap' (fst v) s" in bspec)
     apply (clarsimp simp: nth_mem interpret_excaps_test_null excaps_map_def)
-   apply (clarsimp simp: valid_cap_simps' st_tcb'_weakenE active_runnable')
+   apply (clarsimp simp: valid_cap_simps' pred_tcb'_weakenE active_runnable')
    apply (rule conjI)
-    apply (fastforce simp: tcb_st_refs_of'_def elim:st_tcb'_weakenE)
+    apply (fastforce simp: tcb_st_refs_of'_def elim:pred_tcb'_weakenE)
    apply (simp add: word_le_nat_alt unat_ucast)
   apply (clarsimp simp: ucast_ucast_len word_less_nat_alt
                         ccap_relation_def cap_to_H_simps cap_thread_cap_lift)
@@ -1417,7 +1417,7 @@ lemma decodeCNodeInvocation_ccorres:
    apply simp
    apply (vcg exspec=getSyscallArg_modifies)
   apply (clarsimp simp: valid_tcb_state'_def invs_valid_objs' invs_valid_pspace'
-                        ct_in_state'_def st_tcb_at_tcb_at' invs_queues
+                        ct_in_state'_def pred_tcb_at' invs_queues
                         cur_tcb'_def word_sle_def word_sless_def
                         unat_lt2p[where 'a=32, folded word_bits_def])
   apply (rule conjI)
@@ -1427,7 +1427,7 @@ lemma decodeCNodeInvocation_ccorres:
                   dest!: interpret_excaps_eq)
    (* why does auto with these rules take ten times as long? *)
     apply ((rule conjI | clarsimp simp:split_def neq_Nil_conv
-                      | erule st_tcb'_weakenE disjE
+                      | erule pred_tcb'_weakenE disjE
                       | drule st_tcb_at_idle_thread')+)[1]
   apply (frule interpret_excaps_eq)
   apply (clarsimp simp: excaps_map_def mask_def[where n=4]
@@ -1458,7 +1458,7 @@ lemma setCTE_sch_act_wf[wp]:
   "\<lbrace> \<lambda>s. sch_act_wf (ksSchedulerAction s) s \<rbrace>
    setCTE src cte 
    \<lbrace>\<lambda>x s. sch_act_wf (ksSchedulerAction s) s \<rbrace>"
-  by (wp sch_act_wf_lift setCTE_st_tcb_at' setCTE_tcb_in_cur_domain')
+  by (wp sch_act_wf_lift setCTE_pred_tcb_at' setCTE_tcb_in_cur_domain')
 
 crunch sch_act_wf[wp]: insertNewCap "\<lambda>s. sch_act_wf (ksSchedulerAction s) s"
   (wp: crunch_wps ignore: setCTE)
@@ -2800,7 +2800,7 @@ shows
                       sch_act_simple and ct_active'" in hoare_post_imp_R)
                    prefer 2
                    apply (clarsimp simp:invs_valid_objs' invs_mdb'
-                      invs_queues ct_in_state'_def st_tcb_at')
+                      invs_queues ct_in_state'_def pred_tcb_at')
                    apply (subgoal_tac "ksCurThread s \<noteq> ksIdleThread sa")
                     prefer 2
                     apply clarsimp
@@ -2863,7 +2863,7 @@ shows
    apply (vcg exspec=getSyscallArg_modifies)
   apply clarsimp
   apply (clarsimp simp: hd_drop_conv_nth2 hd_conv_nth neq_Nil_lengthI
-                        ct_in_state'_def st_tcb_at_tcb_at'
+                        ct_in_state'_def pred_tcb_at'
                         rf_sr_ksCurThread mask_eq_iff_w2p
                         "StrictC'_thread_state_defs" numeral_eqs[symmetric]
                         cap_get_tag_isCap cte_wp_at_ctes_of

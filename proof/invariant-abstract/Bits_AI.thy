@@ -91,7 +91,7 @@ lemma aep_cases_weak_wp:
     case ts of 
       Structures_A.IdleAEP \<Rightarrow> a
     | Structures_A.WaitingAEP q \<Rightarrow> b q
-    | Structures_A.ActiveAEP bdg msg \<Rightarrow> c bdg msg \<lbrace>Q\<rbrace>"
+    | Structures_A.ActiveAEP bdg \<Rightarrow> c bdg msg \<lbrace>Q\<rbrace>"
   apply (cases ts)
   apply (simp, rule hoare_weaken_pre, rule assms, simp)+
   done

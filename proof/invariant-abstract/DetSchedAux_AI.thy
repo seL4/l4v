@@ -133,7 +133,7 @@ lemma retype_region_etcb_at:"\<lbrace>(\<lambda>s. etcb_at P t s) and valid_etcb
   apply (simp add: retype_region_def)
   apply (simp add: retype_region_ext_def bind_assoc)
   apply wp
-  apply (clarsimp simp add: st_tcb_at_def obj_at_def simp del: fun_upd_apply)
+  apply (clarsimp simp add: pred_tcb_at_def obj_at_def simp del: fun_upd_apply)
   apply (blast intro: retype_etcb_at_helper)
   done
 
@@ -145,17 +145,44 @@ lemma retype_region_valid_etcbs[wp]:"\<lbrace>valid_etcbs\<rbrace> retype_region
   apply (blast intro: valid_etcb_fold_update)
   done
 
-lemma create_cap_no_st_tcb_at: "\<lbrace>\<lambda>s. \<not> st_tcb_at P t s\<rbrace>
+lemma typ_at_pred_tcb_at_lift: 
+  assumes typ_lift: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> f \<lbrace>\<lambda>r s. P (typ_at T p s)\<rbrace>"
+  assumes pred_lift: "\<And>P. \<lbrace>pred_tcb_at proj P t\<rbrace> f \<lbrace>\<lambda>_. pred_tcb_at proj P t\<rbrace>"
+  shows "\<lbrace>\<lambda>s. \<not> pred_tcb_at proj P t s\<rbrace> f \<lbrace>\<lambda>r s. \<not> pred_tcb_at proj P t s\<rbrace>"
+
+  apply (simp add: valid_def obj_at_def pred_tcb_at_def)
+  apply clarsimp
+  apply (case_tac "kheap s t")
+   apply (cut_tac P="\<lambda>x. \<not> x" and p=t and T="ATCB" in typ_lift)
+   apply (simp add: valid_def obj_at_def)
+   apply force
+  apply (cut_tac P="\<lambda>x. x" and p=t and T="a_type aa" in typ_lift)
+  apply (cut_tac P="\<lambda>t. \<not> P t" in pred_lift)
+  apply (simp add: valid_def obj_at_def pred_tcb_at_def)
+  apply (drule_tac x=s in spec)
+  apply simp
+  apply (drule_tac x="(a,b)" in bspec)
+   apply simp
+  apply simp
+  apply (subgoal_tac "a_type aa = ATCB")
+   apply (erule a_type_ATCBE)
+   apply simp
+   apply force
+  apply simp
+  done
+
+
+lemma create_cap_no_pred_tcb_at: "\<lbrace>\<lambda>s. \<not> pred_tcb_at proj P t s\<rbrace>
           create_cap apiobject_type nat' prod' x
-          \<lbrace>\<lambda>r s. \<not> st_tcb_at P t s\<rbrace>"
-  apply (rule typ_at_st_tcb_at_lift)
+          \<lbrace>\<lambda>r s. \<not> pred_tcb_at proj P t s\<rbrace>"
+  apply (rule typ_at_pred_tcb_at_lift)
   apply wp
   done
 
-lemma cap_insert_no_st_tcb_at: "\<lbrace>\<lambda>s. \<not> st_tcb_at P t s\<rbrace>
+lemma cap_insert_no_pred_tcb_at: "\<lbrace>\<lambda>s. \<not> pred_tcb_at proj P t s\<rbrace>
           cap_insert cap src dest
-          \<lbrace>\<lambda>r s. \<not> st_tcb_at P t s\<rbrace>"
-  apply (rule typ_at_st_tcb_at_lift)
+          \<lbrace>\<lambda>r s. \<not> pred_tcb_at proj P t s\<rbrace>"
+  apply (rule typ_at_pred_tcb_at_lift)
   apply wp
   done
 
@@ -180,8 +207,8 @@ lemma invoke_untyped_etcb_at: "\<lbrace>(\<lambda>s :: det_ext state. etcb_at P 
   apply (cases ui)
   apply (simp add: mapM_x_def[symmetric])
   apply wp
-       apply (wp retype_region_etcb_at mapM_x_wp'  create_cap_no_st_tcb_at
-                 hoare_convert_imp typ_at_st_tcb_at_lift )
+       apply (wp retype_region_etcb_at mapM_x_wp'  create_cap_no_pred_tcb_at 
+                 hoare_convert_imp typ_at_pred_tcb_at_lift )
   apply simp
   done
 
@@ -264,16 +291,16 @@ lemma valid_sched_tcb_state_preservation:
    apply (subgoal_tac "st_tcb_at runnable t b")
     apply simp
     apply (rule conjI)
-     apply (fastforce simp: valid_etcbs_def st_tcb_at_def obj_at_def)
+     apply (fastforce simp: valid_etcbs_def pred_tcb_at_def obj_at_def)
     apply (frule_tac P1="(\<lambda>t. tcb_priority t = p \<and> tcb_domain t = d)" and t1=t in use_valid[OF _ stuff])
      apply simp
-    apply (simp add: st_tcb_at_def obj_at_def)
+    apply (simp add: pred_tcb_at_def obj_at_def)
     apply force
    apply (rule_tac use_valid[OF _ st_tcb],assumption)
    apply simp
-   apply (erule st_tcb_weakenE)
+   apply (erule pred_tcb_weakenE)
    apply simp
-   apply (case_tac st)
+   apply (case_tac "itcb_state tcb")
           apply simp+
   apply (frule_tac P1="\<lambda>ct. ct = (cur_thread s)" in use_valid[OF _ cur_thread])
    apply simp
@@ -285,20 +312,20 @@ lemma valid_sched_tcb_state_preservation:
    apply clarsimp
    apply (frule_tac P1="active" and t1="cur_thread s" in use_valid[OF _ st_tcb])
     apply (simp add: ct_in_state_def)
-    apply (erule st_tcb_weakenE)
+    apply (erule pred_tcb_weakenE)
     apply simp
-    apply (case_tac st)
+    apply (case_tac "itcb_state tcb")
            apply simp+
-   apply (erule st_tcb_weakenE)
-   apply (case_tac st)
+   apply (erule pred_tcb_weakenE)
+   apply (case_tac "itcb_state tcb")
           apply simp+
   apply (rule conjI)
    apply clarsimp
    apply (rule_tac use_valid[OF _ st_tcb],assumption)
    apply simp
-   apply (erule st_tcb_weakenE)
+  apply (erule pred_tcb_weakenE)
    apply simp
-   apply (case_tac st, simp+)
+   apply (case_tac "itcb_state tcb", simp+)
   apply (rule conjI)
    apply (clarsimp simp: switch_in_cur_domain_def in_cur_domain_def)
    apply (rule use_valid[OF _ stuff, rule_format], assumption)
@@ -325,7 +352,7 @@ lemma valid_sched_tcb_state_preservation:
   apply(frule use_valid[OF _ stuff[where t=idle_thread_ptr]])
    apply simp
   apply(erule mp)
-  apply(fastforce simp: valid_idle_def st_tcb_at_def obj_at_def)
+  apply(fastforce simp: valid_idle_def pred_tcb_at_def obj_at_def)
   done
 
 lemmas mapM_x_defsym = mapM_x_def[symmetric]
@@ -376,7 +403,7 @@ lemma perform_asid_control_etcb_at:"\<lbrace>(\<lambda>s. etcb_at P t s) and val
   apply (simp add: perform_asid_control_invocation_def)
   apply (rule hoare_pre)
    apply ( wp | wpc | simp)+
-       apply (wp hoare_imp_lift_something typ_at_st_tcb_at_lift)[1]
+       apply (wp hoare_imp_lift_something typ_at_pred_tcb_at_lift)[1]
       apply (rule hoare_drop_imps)
       apply (wp retype_region_etcb_at)
   apply simp

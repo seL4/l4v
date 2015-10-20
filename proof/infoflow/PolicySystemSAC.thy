@@ -185,11 +185,12 @@ lemma abd_reads : "x \<in> {NicA, NicB, NicD} \<Longrightarrow> subjectReads SAC
    apply (rule subsetI)
      apply (erule subjectReads.induct)
      (* warning: slow *)
-     apply (simp, blast?)+
-done    
+     by (simp, blast?)+
+ 
 
 definition abd_affects_set where
- "abd_affects_set \<equiv> {NicB, RM, R, NicA, NicD}"
+ "abd_affects_set \<equiv> {NicB, RM, R, NicA, NicD,
+                     EP, AEP2}" (* these two added for AEP binding *)
 declare abd_affects_set_def[simp]
 
 lemma abd_affects_bw : "x \<in> {NicA, NicB, NicD} \<Longrightarrow> partition_label ` abd_affects_set \<subseteq> subjectAffects SACAuthGraph (partition_label x)"
@@ -221,8 +222,19 @@ lemma abd_affects_bw : "x \<in> {NicA, NicB, NicD} \<Longrightarrow> partition_l
   apply (erule_tac a = xa in insertE)
     apply (rule_tac auth = SyncSend and ep = "partition_label x" and l' = "partition_label RM" in affects_send)
     apply (simp, simp, simp, simp)
-  apply (simp)
-done
+  apply (erule_tac a = xa in insertE)
+    apply (rule_tac ep = "xa" and l = "partition_label x" in affects_ep_bound_trans)
+    apply (rule_tac x = "partition_label RM" in exI)
+    apply (rule_tac x = "partition_label x" in exI)
+    apply (intro conjI)
+    apply (simp,simp,simp)
+  apply (erule_tac a = xa in insertE)
+    apply (rule_tac ep = "xa" and l = "partition_label x" in affects_ep_bound_trans)
+    apply (rule_tac x = "partition_label RM" in exI)
+    apply (rule_tac x = "partition_label x" in exI)
+    apply (intro conjI)
+    apply (simp,simp,simp,simp)
+  done
 
 lemma abd_affects : "x \<in> {NicA, NicB, NicD} \<Longrightarrow> subjectAffects SACAuthGraph (partition_label x) = partition_label ` abd_affects_set"
    apply (rule subset_antisym)
@@ -231,8 +243,7 @@ lemma abd_affects : "x \<in> {NicA, NicB, NicD} \<Longrightarrow> subjectAffects
    apply (simp)
    apply (rule subsetI)
      apply (erule subjectAffects.induct)
-     apply (auto)
-done    
+     by auto
 
 subsection {* NicC reads/affects *}
 
@@ -281,8 +292,7 @@ lemma c_reads : "subjectReads SACAuthGraph (partition_label NicC) = {partition_l
     (* forward *)
     apply (rule subsetI)
     apply (erule subjectReads.induct)
-    apply (simp, blast?)+
-done
+    by (simp, blast?)+
 
 lemma c_affects_self_only : "x \<in> {partition_label NicC} \<Longrightarrow> x \<in> subjectAffects SACAuthGraph (partition_label NicC)"
   apply (erule insertE)
@@ -299,8 +309,7 @@ lemma c_affects : "subjectAffects SACAuthGraph (partition_label NicC) = {partiti
     (* forward *)
     apply (rule subsetI)
     apply (erule subjectAffects.induct)
-    apply (simp, blast?)+
-done
+    by (simp, blast?)+
 
 subsection {* R reads/affects *}
 
@@ -349,8 +358,7 @@ lemma r_reads : "subjectReads SACAuthGraph (partition_label R) = {partition_labe
     (* forward *)
     apply (rule subsetI)
     apply (erule subjectReads.induct)
-    apply (simp, blast?)+
-done
+    by (simp, blast?)+
 
 lemma r_affects_bd : "x \<in> {partition_label NicB, partition_label NicD} \<Longrightarrow> x \<in> subjectAffects SACAuthGraph (partition_label R)"
   apply (rule_tac auth="Write" in affects_write)
@@ -372,7 +380,18 @@ lemma r_affects_aep3 : "partition_label AEP3 \<in> subjectAffects SACAuthGraph (
   apply simp_all
 done
 
-lemma r_affects : "subjectAffects SACAuthGraph (partition_label R) = {partition_label NicB, partition_label NicD, partition_label R, partition_label RM, partition_label NicA, partition_label AEP3}"
+lemma r_affects_aep2 : "partition_label AEP2 \<in> subjectAffects SACAuthGraph (partition_label R)"
+  apply (rule_tac l="partition_label R" in affects_ep_bound_trans)
+  by auto
+
+lemma r_affects_ep : "partition_label EP \<in> subjectAffects SACAuthGraph (partition_label R)"
+  apply (rule_tac l="partition_label R" in affects_ep_bound_trans)
+  by auto
+
+lemma r_affects : "subjectAffects SACAuthGraph (partition_label R) =
+                   {partition_label NicB, partition_label NicD, partition_label R,
+                    partition_label RM, partition_label NicA, partition_label AEP3,
+                    partition_label EP, partition_label AEP2 (* these 2 added for AEP binding *) }"
   apply (rule subset_antisym)
   defer
   (* backward *)
@@ -383,12 +402,13 @@ lemma r_affects : "subjectAffects SACAuthGraph (partition_label R) = {partition_
   apply (erule insertE, simp only:, rule r_affects_rm)
   apply (erule insertE, simp only:, rule r_affects_a)
   apply (erule insertE, simp only:, rule r_affects_aep3)
+  apply (erule insertE, simp only:, rule r_affects_ep)
+  apply (erule insertE, simp only:, rule r_affects_aep2)
   apply simp
   (* forward *)
   apply (rule subsetI)
   apply (erule subjectAffects.induct)
-  apply (simp, blast?)+
-done
+  by (simp, blast?)+
 
 subsection {* RM reads/affects *}
 
@@ -422,8 +442,7 @@ lemma rm_reads : "subjectReads SACAuthGraph (partition_label RM) = {partition_la
   (* forward *)
   apply (rule subsetI)
   apply (erule subjectReads.induct)
-  apply (simp, blast?)+
-done
+  by (simp, blast?)+
 
 lemma rm_affects_via_control : "x \<in> {partition_label R, partition_label NicA, partition_label NicB, partition_label NicD} \<Longrightarrow> x \<in> subjectAffects SACAuthGraph (partition_label RM)"
   apply (rule_tac l="partition_label RM" and auth="Control" in affects_write)
@@ -445,7 +464,17 @@ lemma rm_affects_aep2 : "partition_label AEP2 \<in> subjectAffects SACAuthGraph 
   apply simp_all
 done
 
-lemma rm_affects : "subjectAffects SACAuthGraph (partition_label RM) = {partition_label NicA, partition_label NicB, partition_label NicD, partition_label R, partition_label SC, partition_label EP, partition_label RM, partition_label AEP2}"
+lemma rm_affects_aep3 : "partition_label AEP3 \<in> subjectAffects SACAuthGraph (partition_label RM)"
+  apply (rule_tac l="partition_label RM" in affects_ep_bound_trans)
+  apply clarsimp
+  by auto
+
+
+lemma rm_affects : "subjectAffects SACAuthGraph (partition_label RM) =
+                    {partition_label NicA, partition_label NicB, partition_label NicD,
+                     partition_label R, partition_label SC, partition_label EP,
+                     partition_label RM, partition_label AEP2,
+                     partition_label AEP3 (* added for AEP binding *)}"
   apply (rule subset_antisym)
   defer
   (* backward *)
@@ -458,12 +487,12 @@ lemma rm_affects : "subjectAffects SACAuthGraph (partition_label RM) = {partitio
   apply (erule insertE, simp only:, rule rm_affects_ep)
   apply (erule insertE, simp only:, rule affects_lrefl)
   apply (erule insertE, simp only:, rule rm_affects_aep2)
+  apply (erule insertE, simp only:, rule rm_affects_aep3)
   apply simp
   (* forward *)
   apply (rule subsetI)
   apply (erule subjectAffects.induct)
-  apply (simp, blast?)+
-done
+  by (simp, blast?)+
 
 subsection {* SC *}
 
@@ -572,12 +601,16 @@ lemma ep_affects_c : "partition_label NicC \<in> subjectAffects SACAuthGraph (pa
   apply simp_all
 done
 
+lemma ep_affects_aep2 : "partition_label AEP2 \<in> subjectAffects SACAuthGraph (partition_label EP)"
+  apply (rule_tac ep="partition_label AEP2" in affects_ep_bound_trans)
+  by auto
+
 lemma ep_affects_rm_controls : "x \<in> RMControls \<Longrightarrow> x \<in> subjectAffects SACAuthGraph (partition_label EP)"
   apply (rule_tac l="partition_label EP" and ep="partition_label EP" and auth="SyncSend" and l'="partition_label RM" in affects_send)
   apply (simp_all)
 done
 
-lemma ep_affects: "subjectAffects SACAuthGraph (partition_label EP) = {partition_label EP, partition_label SC, partition_label NicC} \<union> RMControls"
+lemma ep_affects: "subjectAffects SACAuthGraph (partition_label EP) = {partition_label EP, partition_label SC, partition_label NicC, partition_label AEP2} \<union> RMControls"
   apply (rule subset_antisym)
   defer
   (* backward *)
@@ -585,13 +618,14 @@ lemma ep_affects: "subjectAffects SACAuthGraph (partition_label EP) = {partition
   apply (erule UnE)
   apply (erule insertE, simp only:, rule affects_lrefl)
   apply (erule insertE, simp only:, rule ep_affects_sc)
-  apply (erule insertE, simp only:, rule ep_affects_c, simp)
+  apply (erule insertE, simp only:, rule ep_affects_c)
+  apply (erule insertE, simp only:, rule ep_affects_aep2)
+  apply simp
   apply (rule ep_affects_rm_controls, simp)
   (* forward *)
   apply (rule subsetI)
   apply (erule subjectAffects.induct)
-  apply (simp add:SACAuthGraph_def, blast?)+
-done
+  by (simp add:SACAuthGraph_def, blast?)+
 
 subsection {* AEP1,2,3 *}
 
@@ -711,8 +745,7 @@ lemma aep123_reads : "l \<in> {AEP1, AEP2, AEP3} \<Longrightarrow> subjectReads 
   (* forward *)
   apply (rule subsetI)
   apply (erule subjectReads.induct)
-  apply (simp add:SACAuthGraph_def, blast?)+
-done
+  by (simp add:SACAuthGraph_def, blast?)+
 
 subsubsection {* AEP1,2,3 affects *}
 
@@ -746,25 +779,30 @@ lemma aep2_affects_rm : "partition_label RM \<in> subjectAffects SACAuthGraph (p
   apply (simp_all add:SACAuthGraph_def)
 done
 
+lemma aep2_affects_ep : "partition_label EP \<in> subjectAffects SACAuthGraph (partition_label AEP2)"
+  apply (rule affects_ep_bound_trans)
+  by (auto simp: SACAuthGraph_def)
+
 lemma aep2_affects_rm_controls : "x \<in> RMControls \<Longrightarrow> x \<in> subjectAffects SACAuthGraph (partition_label AEP2)"
   apply (rule_tac l="partition_label AEP2" and ep="partition_label AEP2" and auth="SyncSend" and l'="partition_label RM" in affects_send)
   apply (simp_all add:SACAuthGraph_def)
 done
 
-lemma aep2_affects : "subjectAffects SACAuthGraph (partition_label AEP2) = {partition_label AEP2, partition_label RM} \<union> RMControls"
+lemma aep2_affects : "subjectAffects SACAuthGraph (partition_label AEP2) = {partition_label AEP2, partition_label RM, partition_label EP} \<union> RMControls"
   apply (rule subset_antisym)
   defer
   (* backward *)
   apply (rule subsetI)
   apply (erule UnE)
   apply (erule insertE, simp only:, rule affects_lrefl)
-  apply (erule insertE, simp only:, rule aep2_affects_rm, simp)
+  apply (erule insertE, simp only:, rule aep2_affects_rm)
+  apply (erule insertE, simp only:, rule aep2_affects_ep)
+  apply simp
   apply (rule aep2_affects_rm_controls, simp)
   (* forward *)
   apply (rule subsetI)
   apply (erule subjectAffects.induct)
-  apply (simp add:SACAuthGraph_def, blast?)+
-done
+  by (simp add:SACAuthGraph_def, blast?)+
 
 lemma aep3_affects_r : "partition_label R \<in> subjectAffects SACAuthGraph (partition_label AEP3)"
   apply (rule_tac l'="partition_label R" and ep="partition_label AEP3" and auth="AsyncSend" and l="partition_label AEP3" in affects_send)
@@ -820,6 +858,10 @@ lemma t_affects_r : "partition_label R \<in> subjectAffects SACAuthGraph (partit
   apply (simp_all add:SACAuthGraph_def)
 done
 
+lemma t_affects_ep : "partition_label EP \<in> subjectAffects SACAuthGraph (partition_label T)"
+  apply (rule affects_ep_bound_trans)
+  by (auto simp: SACAuthGraph_def)
+
 lemma t_affects_c : "partition_label NicC \<in> subjectAffects SACAuthGraph (partition_label T)"
   apply (rule_tac l''="partition_label NicC" and l'="partition_label SC" and ep="partition_label AEP1" and auth="AsyncSend" and l="partition_label T" in affects_send)
   apply (simp_all add:SACAuthGraph_def)
@@ -835,7 +877,7 @@ lemma t_affects_bd : "l \<in> {NicB, NicD} \<Longrightarrow> partition_label l \
   apply (simp_all add:SACAuthGraph_def, blast)
 done
 
-lemma t_affects : "subjectAffects SACAuthGraph (partition_label T) = {partition_label AEP1, partition_label AEP2, partition_label AEP3} \<union> {partition_label T, partition_label SC, partition_label RM, partition_label R, partition_label NicA, partition_label NicB, partition_label NicD, partition_label NicC}"
+lemma t_affects : "subjectAffects SACAuthGraph (partition_label T) = {partition_label AEP1, partition_label AEP2, partition_label AEP3} \<union> {partition_label T, partition_label SC, partition_label RM, partition_label R, partition_label NicA, partition_label NicB, partition_label NicD, partition_label NicC, partition_label EP}"
   apply (rule subset_antisym)
   defer
   (* backward *)
@@ -849,11 +891,11 @@ lemma t_affects : "subjectAffects SACAuthGraph (partition_label T) = {partition_
   apply (erule insertE, simp only:, rule t_affects_bd, simp)
   apply (erule insertE, simp only:, rule t_affects_bd, simp)
   apply (erule insertE, simp only:, rule t_affects_c)
+  apply (erule insertE, simp only:, rule t_affects_ep)
   apply simp
   (* forward *)
   apply (rule subsetI, erule subjectAffects.induct)
-  apply (simp add:SACAuthGraph_def, blast?)+
-done
+  by (simp add:SACAuthGraph_def, blast?)+
 
 subsection {* Policy *}
 

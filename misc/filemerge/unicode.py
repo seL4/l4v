@@ -18,7 +18,6 @@
 #
 
 import sys
-import codecs
 
 # dictionary of x-symbols and their Unicode equivalent
 word_dic = {

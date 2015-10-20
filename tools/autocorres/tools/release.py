@@ -173,7 +173,7 @@ with TempDir(cleanup=(not args.no_cleanup)) as base_dir:
     shutil.copyfile(
             os.path.join(release_files_dir, "ROOTS.base_dir"),
             os.path.join(target_dir, "ROOTS"))
-    for i in ["README"]:
+    for i in ["README", "ChangeLog"]:
         shutil.copyfile(
                 os.path.join(release_files_dir, i),
                 os.path.join(target_dir, i))
@@ -251,7 +251,7 @@ with TempDir(cleanup=(not args.no_cleanup)) as base_dir:
 
     # Check for bad strings.
     print "Searching for bad strings..."
-    for s in ["davidg", "dgreenaway", "autorefine", "@LICENSE"]:
+    for s in ["davidg", "dgreenaway", "jlim", "jalim", "autorefine", "@LICENSE"]:
         ret = subprocess.call(["grep", "-i", "-r", s, base_dir])
         if not ret:
             raise Exception("Found a bad string")

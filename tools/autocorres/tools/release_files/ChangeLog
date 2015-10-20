@@ -1,16 +1,24 @@
-
-AutoCorres 0.1
+AutoCorres 1.1 (9 Oct 2015)
 --------------
 
-	* Support for Isabelle2012.
+	* Isabelle2015 edition of both AutoCorres and the C parser.
 
-	* Fix build errors in previous release.
+	* New options for changing how AutoCorres names functions and globals.
 
-	* Internal refactoring of code to simplify handling of recursive function
-	  call proofs.
+	* Incompatibility: names of global variables have changed.
+	  Names have changed from “lifted_globals.foo_'” to
+	  “lifted_globals.foo_''”. Recover the old behaviour by setting
+	  lifted_globals_field_suffix="_'".
 
-AutoCorres 0.0
+	* Minor incompatibility: intermediate function names have changed.
+	  They are now “l1_foo'”, “l2_foo'”... instead of “l1_foo”, “l2_foo”.
+
+	* Renamed “ccorres” predicate to “ac_corres” for clarity.
+
+
+AutoCorres 1.0 (16 Dec 2014)
 --------------
 
-	* Initial release for Isabelle2011-1.
+	* New option “no_opt” to turn off simplifier stages. (Experimental)
 
+	* New options for tracing some of AutoCorres's internal translations.

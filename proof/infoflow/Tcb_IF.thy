@@ -147,9 +147,11 @@ lemma finalise_cap_globals_equiv:
   apply (induct cap)
   apply (simp_all add:finalise_cap.simps)
   apply (wp liftM_wp when_def ep_cancel_all_globals_equiv ep_cancel_all_valid_global_objs
-            aep_cancel_all_globals_equiv aep_cancel_all_valid_global_objs arch_finalise_cap_globals_equiv
+            aep_cancel_all_globals_equiv aep_cancel_all_valid_global_objs 
+            arch_finalise_cap_globals_equiv unbind_maybe_aep_globals_equiv
+            unbind_async_endpoint_globals_equiv
             | simp add: valid_arch_state_ko_at_arm | intro impI conjI)+
-done
+  done
 
 crunch valid_ko_at_arm[wp]: cap_swap_for_delete, restart "valid_ko_at_arm"
   (wp: dxo_wp_weak ignore: cap_swap_ext switch_if_required_to)
@@ -404,6 +406,29 @@ lemma no_cap_to_idle_thread: "invs s \<Longrightarrow> \<not> ex_nonz_cap_to (id
 
 crunch idle_thread'[wp]: restart "\<lambda>s. P (idle_thread s)" (wp: dxo_wp_weak)
 
+lemma bind_async_endpoint_globals_equiv:
+  "\<lbrace>globals_equiv st and valid_ko_at_arm\<rbrace>
+   bind_async_endpoint t aepptr
+   \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
+  unfolding bind_async_endpoint_def
+  by (wp set_bound_aep_globals_equiv set_async_ep_globals_equiv
+            set_async_ep_valid_ko_at_arm | wpc | simp)+
+
+lemma bind_async_endpoint_valid_ko_at_arm[wp]:
+  "\<lbrace>valid_ko_at_arm\<rbrace>
+   bind_async_endpoint t aepptr
+   \<lbrace>\<lambda>_. valid_ko_at_arm\<rbrace>"
+  unfolding bind_async_endpoint_def
+  by (wp set_bound_aep_valid_ko_at_arm set_async_ep_valid_ko_at_arm | wpc | simp)+
+
+lemma invoke_tcb_AEPControl_globals_equiv:
+  "\<lbrace>globals_equiv st and valid_ko_at_arm\<rbrace>
+   invoke_tcb (AsyncEndpointControl t aep)
+   \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
+  apply (case_tac aep, simp_all)
+  apply (wp unbind_async_endpoint_globals_equiv bind_async_endpoint_globals_equiv)
+  done
+
 lemma invoke_tcb_globals_equiv:
   "\<lbrace> invs and globals_equiv st and tcb_inv_wf ti\<rbrace>
    invoke_tcb ti
@@ -417,10 +442,14 @@ lemma invoke_tcb_globals_equiv:
               | clarsimp simp add: invs_valid_ko_at_arm split del: split_if)+
        apply (simp_all del: tcb_inv_wf.simps split del: split_if)
        apply (wp | clarsimp simp: invs_valid_ko_at_arm no_cap_to_idle_thread | intro conjI impI)+
-       apply (rename_tac word1 word2 b1 b2 b3 b4 arm_copy_register_sets)
-       apply (rule_tac Q="\<lambda>_. valid_ko_at_arm and globals_equiv st and (\<lambda>s. word1 \<noteq> idle_thread s) and (\<lambda>s. word2 \<noteq> idle_thread s)" in hoare_strengthen_post)
-        apply (wp mapM_x_wp' as_user_globals_equiv | simp add: invs_valid_ko_at_arm | intro conjI impI | clarsimp simp: no_cap_to_idle_thread)+
-  done
+       apply (rename_tac word1 word2 bool1 bool2 bool3 bool4 arm_copy_register_sets)
+       apply (rule_tac Q="\<lambda>_. valid_ko_at_arm and globals_equiv st and (\<lambda>s. word1 \<noteq> idle_thread s) 
+                              and (\<lambda>s. word2 \<noteq> idle_thread s)" in hoare_strengthen_post)
+        apply (wp mapM_x_wp' as_user_globals_equiv invoke_tcb_AEPControl_globals_equiv 
+               | simp add: invs_valid_ko_at_arm 
+               | intro conjI impI 
+               | clarsimp simp: no_cap_to_idle_thread)+
+       done
    
 
 section "reads respects"
@@ -604,24 +633,42 @@ lemma thread_set_tcb_fault_handler_update_only_timer_irq_inv:
   apply (wp only_timer_irq_pres | force)+
   done
 
+lemma bind_async_endpoint_reads_respects:
+  "reads_respects aag l (pas_refined aag and invs and K (is_subject aag t \<and> (\<forall>auth\<in>{Receive, Reset}. (pasSubject aag, auth, pasObjectAbs aag aepptr) \<in> pasPolicy aag)))
+       (bind_async_endpoint t aepptr)"
+  apply (clarsimp simp: bind_async_endpoint_def)
+  apply (wp set_bound_aep_owned_reads_respects set_async_ep_reads_respects 
+            get_async_ep_reads_respects get_bound_aep_reads_respects
+            gba_wp[unfolded get_bound_aep_def, simplified]
+       | wpc 
+       | simp add: get_bound_aep_def)+
+  apply (clarsimp dest!: reads_ep)
+  done
+
 lemma invoke_tcb_reads_respects_f:
   notes validE_valid[wp del]
         static_imp_wp [wp]
   shows
   "reads_respects_f aag l (silc_inv aag st and only_timer_irq_inv irq st' and einvs and simple_sched_action and pas_refined aag and pas_cur_domain aag and tcb_inv_wf ti and (\<lambda>s. is_subject aag (cur_thread s)) and K (authorised_tcb_inv aag ti \<and> authorised_tcb_inv_extra aag ti)) (invoke_tcb ti)"
   apply(case_tac ti)
-       apply(wp when_ev restart_reads_respects_f as_user_reads_respects_f static_imp_wp | simp)+
-       apply(auto intro: requiv_cur_thread_eq intro!: det_zipWithM simp: det_setRegister det_getRestartPC det_setNextPC authorised_tcb_inv_def simp: reads_equiv_f_def)[1]
-      apply(wp as_user_reads_respects_f suspend_silc_inv when_ev suspend_reads_respects_f[where st=st] | simp | elim conjE, assumption)+
-      apply(auto simp: authorised_tcb_inv_def intro!: det_mapM[OF _ subset_refl] simp: det_getRegister simp: reads_equiv_f_def)[1]
-     apply(wp when_ev mapM_x_ev'' as_user_reads_respects_f[where st=st]  hoare_vcg_ball_lift mapM_x_wp' restart_reads_respects_f restart_silc_inv hoare_vcg_if_lift suspend_reads_respects_f suspend_silc_inv
-          | simp split del: split_if add: det_setRegister det_setNextPC)+
-     apply(auto simp add: authorised_tcb_inv_def simp: idle_no_ex_cap[OF invs_valid_global_refs invs_valid_objs] det_getRestartPC det_getRegister)[1]
-    defer
-    apply((wp suspend_reads_respects_f[where st=st] restart_reads_respects_f[where st=st] | simp add: authorised_tcb_inv_def)+)[2]
-  -- "ThreadControl"
+        apply(wp when_ev restart_reads_respects_f as_user_reads_respects_f static_imp_wp | simp)+
+        apply(auto intro: requiv_cur_thread_eq intro!: det_zipWithM simp: det_setRegister det_getRestartPC det_setNextPC authorised_tcb_inv_def simp: reads_equiv_f_def)[1]
+       apply(wp as_user_reads_respects_f suspend_silc_inv when_ev suspend_reads_respects_f[where st=st] | simp | elim conjE, assumption)+
+       apply(auto simp: authorised_tcb_inv_def intro!: det_mapM[OF _ subset_refl] simp: det_getRegister simp: reads_equiv_f_def)[1]
+      apply(wp when_ev mapM_x_ev'' as_user_reads_respects_f[where st=st]  hoare_vcg_ball_lift mapM_x_wp' restart_reads_respects_f restart_silc_inv hoare_vcg_if_lift suspend_reads_respects_f suspend_silc_inv
+           | simp split del: split_if add: det_setRegister det_setNextPC)+
+      apply(auto simp add: authorised_tcb_inv_def simp: idle_no_ex_cap[OF invs_valid_global_refs invs_valid_objs] det_getRestartPC det_getRegister)[1]
+     defer
+     apply((wp suspend_reads_respects_f[where st=st] restart_reads_respects_f[where st=st]  | simp add: authorised_tcb_inv_def)+)[2]
+    -- "AEPControl"
+   apply (rename_tac option)
+   apply (case_tac option, simp_all)[1]
+    apply ((wp unbind_async_endpoint_is_subj_reads_respects unbind_async_endpoint_silc_inv
+          bind_async_endpoint_reads_respects 
+        | clarsimp simp: authorised_tcb_inv_def
+        | rule_tac Q=\<top> and st=st in reads_respects_f)+)[2]
+-- "ThreadControl"
   apply (simp add: split_def cong: option.case_cong)
-
   apply(wp reads_respects_f[OF cap_insert_reads_respects, where st=st]
             reads_respects_f[OF thread_set_reads_respects, where st=st and Q="\<top>"]
             set_priority_reads_respects[THEN reads_respects_f[where aag=aag and st=st and Q=\<top>]]
@@ -654,9 +701,8 @@ lemma invoke_tcb_reads_respects_f:
             thread_set_tcb_fault_handler_update_only_timer_irq_inv
         | simp add: tcb_cap_cases_def | wpc)+
   apply (clarsimp simp: authorised_tcb_inv_def authorised_tcb_inv_extra_def emptyable_def)
-  apply(clarsimp simp: is_cap_simps is_cnode_or_valid_arch_def is_valid_vtable_root_def | intro impI | rule conjI)+
-  done (*Extra slow*)
-
+  by (clarsimp simp: is_cap_simps is_cnode_or_valid_arch_def is_valid_vtable_root_def | intro impI | rule conjI)+
+  (*Extra slow*)
 
 
 lemma invoke_tcb_reads_respects_f_g:
@@ -683,6 +729,8 @@ lemma decode_tcb_invocation_authorised_extra:
                               decode_tcb_configure_def
                               decode_set_priority_def
                               decode_set_ipc_buffer_def
+                              decode_bind_aep_def
+                              decode_unbind_aep_def
                               split_def decode_set_space_def
                               
                          split del: split_if)+

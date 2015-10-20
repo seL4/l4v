@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 #
 #
 # Copyright 2014, NICTA
@@ -27,7 +27,6 @@ import signal
 import subprocess
 import sys
 import testspec
-import time
 import traceback
 
 # Try importing psutil.

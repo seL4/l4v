@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 #
 # Copyright 2014, NICTA
 #
@@ -234,6 +234,7 @@ def process_tests(tests, strict=False):
                 proposed_name = "%s_%d" % (t.name, x)
                 if not proposed_name in seen_names:
                     t.name = proposed_name
+                    break
         seen_names.add(t.name)
 
     # Check dependencies.
@@ -290,7 +291,7 @@ def legacy_testspec(root):
         filename = os.path.abspath(filename)
         base_name = os.path.split(os.path.dirname(filename))[1]
         try:
-            with open("/dev/null", "w") as devnull:
+            with open(os.devnull, "w") as devnull:
                 results = subprocess.check_output(
                     [isabelle_bin, "make", "-f", filename, "report-regression"],
                     cwd=os.path.dirname(filename),

@@ -81,7 +81,7 @@ qed
 
 lemma invokeIRQHandler_ClearIRQHandler_ccorres:
   "ccorres dc xfdc
-          (invs' and sch_act_simple) (UNIV \<inter> {s. irq_' s = ucast irq}) []
+          (invs' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s)) (UNIV \<inter> {s. irq_' s = ucast irq}) []
       (invokeIRQHandler (ClearIRQHandler irq))
       (Call invokeIRQHandler_ClearIRQHandler_'proc)"
   apply (cinit lift: irq_')
@@ -299,14 +299,13 @@ lemma decodeIRQHandlerInvocation_ccorres:
                         ccap_rights_relation_def
                         mask_def[where n=4]
                         "StrictC'_thread_state_defs")
-  apply (subst st_tcb'_weakenE, assumption, fastforce)+
+  apply (subst pred_tcb'_weakenE, assumption, fastforce)+
   apply (clarsimp simp: rf_sr_ksCurThread word_sle_def word_sless_def sysargs_rel_n_def word_less_nat_alt)
-  apply (auto simp: cte_wp_at_ctes_of neq_Nil_conv sysargs_rel_def n_msgRegisters_def
+  by (auto simp: cte_wp_at_ctes_of neq_Nil_conv sysargs_rel_def n_msgRegisters_def
                     excaps_map_def excaps_in_mem_def word_less_nat_alt hd_conv_nth
                     slotcap_in_mem_def valid_tcb_state'_def from_bool_def toBool_def
              dest!: interpret_excaps_eq split: bool.splits,
          auto dest: st_tcb_at_idle_thread' ctes_of_valid')
-  done
 
 lemma invokeIRQControl_ccorres:
   "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
@@ -548,7 +547,7 @@ lemma decodeIRQControlInvocation_ccorres:
                      excaps_in_mem_def slotcap_in_mem_def
                      cte_wp_at_ctes_of numeral_eqs[symmetric]
                      valid_tcb_state'_def
-              elim!: st_tcb'_weakenE cte_wp_at_weakenE'
+              elim!: pred_tcb'_weakenE cte_wp_at_weakenE'
               dest!: st_tcb_at_idle_thread' interpret_excaps_eq)[1]
   apply (clarsimp simp: neq_Nil_conv numeral_eqs[symmetric]
                         word_sle_def word_sless_def)

@@ -241,6 +241,14 @@ lemma set_cap_tcb_states_of_state[wp]:
            | erule rsubst[where P=P, OF _ ext])+
   done
 
+lemma set_cap_thread_bound_aeps[wp]:
+  "\<lbrace> \<lambda>s. P (thread_bound_aeps s) \<rbrace> set_cap cap ptr \<lbrace> \<lambda>rv s. P (thread_bound_aeps s)\<rbrace>"
+  apply (simp add: set_cap_def split_def set_object_def)
+  apply (wp get_object_wp | wpc)+
+  apply (clarsimp simp: obj_at_def get_tcb_def thread_bound_aeps_def | rule conjI
+           | erule rsubst[where P=P, OF _ ext])+
+  done
+
 lemma sita_caps_update:
   "\<lbrakk> pas_wellformed aag;
     state_irqs_to_policy_aux aag caps \<subseteq> pasPolicy aag; cap_links_irq aag (pasObjectAbs aag (fst ptr)) cap \<rbrakk> \<Longrightarrow>
@@ -604,11 +612,10 @@ lemma sts_respects_restart_ep:
   apply clarsimp
   apply (erule integrity_trans)
   apply (clarsimp simp: integrity_def obj_at_def st_tcb_at_def)
-  apply (rule tro_tcb_restart [OF refl refl])
-    apply (fastforce dest!: get_tcb_SomeD)
-   apply (fastforce dest!: get_tcb_SomeD)
-  apply simp
-  apply simp
+  apply (rule_tac aep'="tcb_bound_aep tcb" in tro_tcb_restart [OF refl refl])
+      apply (fastforce dest!: get_tcb_SomeD)
+     apply (fastforce dest!: get_tcb_SomeD)
+    apply (simp add: tcb_bound_aep_reset_integrity_def)+
   done
 
 lemma set_endpoinintegrity:
@@ -638,11 +645,28 @@ lemma sts_st_vrefs[wp]:
                  dest!: get_tcb_SomeD)
   done
 
+lemma sts_thread_bound_aeps[wp]:
+  "\<lbrace>\<lambda>s. P (thread_bound_aeps s)\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv s. P (thread_bound_aeps s)\<rbrace>"
+  apply (simp add: set_thread_state_def set_object_def)
+  apply (wp dxo_wp_weak |simp)+
+  apply (clarsimp simp: thread_bound_aeps_def get_tcb_def 
+                 split: split_if option.splits kernel_object.splits 
+                 elim!: rsubst[where P=P, OF _ ext])
+  done
+
 lemma sts_thread_states[wp]:
   "\<lbrace>\<lambda>s. P ((thread_states s)(t := tcb_st_to_auth st))\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv s. P (thread_states s)\<rbrace>"
   apply (simp add: set_thread_state_def set_object_def)
   apply (wp dxo_wp_weak |simp)+
   apply (clarsimp simp: get_tcb_def thread_states_def tcb_states_of_state_def
+                 elim!: rsubst[where P=P, OF _ ext])
+  done
+
+lemma sba_thread_bound_aeps[wp]:
+  "\<lbrace>\<lambda>s. P ((thread_bound_aeps s)(t := aep))\<rbrace> set_bound_aep t aep \<lbrace>\<lambda>rv s. P (thread_bound_aeps s)\<rbrace>"
+  apply (simp add: set_bound_aep_def set_object_def)
+  apply (wp dxo_wp_weak |simp)+
+  apply (clarsimp simp: get_tcb_def thread_bound_aeps_def
                  elim!: rsubst[where P=P, OF _ ext])
   done
 
@@ -685,6 +709,15 @@ lemma set_ep_thread_states[wp]:
                  split: Structures_A.kernel_object.split_asm option.split)
   done
 
+lemma set_ep_thread_bound_aeps[wp]:
+  "\<lbrace>\<lambda>s. P (thread_bound_aeps s)\<rbrace> set_endpoint ptr val \<lbrace>\<lambda>rv s. P (thread_bound_aeps s)\<rbrace>"
+  apply (simp add: set_endpoint_def set_object_def)
+  apply (wp get_object_wp)
+  apply (clarsimp simp: thread_bound_aeps_def obj_at_def get_tcb_def tcb_states_of_state_def
+                 elim!: rsubst[where P=P, OF _ ext]
+                 split: Structures_A.kernel_object.split_asm option.split)
+  done
+
 (* FIXME move to AInvs *)
 lemma set_endpoint_ekheap[wp]:
   "\<lbrace>\<lambda>s. P (ekheap s)\<rbrace> set_endpoint ptr ep \<lbrace>\<lambda>rv s. P (ekheap s)\<rbrace>"
@@ -714,6 +747,15 @@ lemma set_aep_thread_states[wp]:
   apply (simp add: set_async_ep_def set_object_def)
   apply (wp get_object_wp)
   apply (clarsimp simp: thread_states_def obj_at_def get_tcb_def tcb_states_of_state_def
+                 elim!: rsubst[where P=P, OF _ ext]
+                 split: Structures_A.kernel_object.split_asm option.split)
+  done
+
+lemma set_aep_thread_bound_aeps[wp]:
+  "\<lbrace>\<lambda>s. P (thread_bound_aeps s)\<rbrace> set_async_ep ptr val \<lbrace>\<lambda>rv s. P (thread_bound_aeps s)\<rbrace>"
+  apply (simp add: set_async_ep_def set_object_def)
+  apply (wp get_object_wp)
+  apply (clarsimp simp: thread_bound_aeps_def obj_at_def get_tcb_def tcb_states_of_state_def
                  elim!: rsubst[where P=P, OF _ ext]
                  split: Structures_A.kernel_object.split_asm option.split)
   done
@@ -752,15 +794,27 @@ lemma thread_set_thread_states_trivT:
                  split: Structures_A.kernel_object.split_asm)
   done
 
+lemma thread_set_thread_bound_aeps_trivT:
+  assumes aep: "\<And>tcb. tcb_bound_aep (f tcb) = tcb_bound_aep tcb"
+  shows "\<lbrace>\<lambda>s. P (thread_bound_aeps s)\<rbrace> thread_set f t \<lbrace>\<lambda>rv s. P (thread_bound_aeps s)\<rbrace>"
+  apply (simp add: thread_set_def set_object_def)
+  apply (wp | simp)+
+  apply (clarsimp simp: aep get_tcb_def thread_bound_aeps_def tcb_states_of_state_def split: option.split
+                 elim!: rsubst[where P=P, OF _ ext]
+                 split: Structures_A.kernel_object.split_asm)
+  done
+
 lemma thread_set_pas_refined_trivT:
   assumes cps: "\<And>tcb. \<forall>(getF, v)\<in>ran tcb_cap_cases. getF (f tcb) = getF tcb"
        and st: "\<And>tcb. tcb_state (f tcb) = tcb_state tcb"
+      and aep: "\<And>tcb. tcb_bound_aep (f tcb) = tcb_bound_aep tcb"
      shows "\<lbrace>pas_refined aag\<rbrace> thread_set f t \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
   apply (simp add: pas_refined_def state_objs_to_policy_def)
   apply (rule hoare_pre)
    apply (wp tcb_domain_map_wellformed_lift
         | wps thread_set_caps_of_state_trivial[OF cps]
               thread_set_thread_states_trivT[OF st]
+              thread_set_thread_bound_aeps_trivT[OF aep]
         | simp)+
   done
 
@@ -830,6 +884,15 @@ lemma store_pte_thread_states[wp]:
                  split: Structures_A.kernel_object.split_asm option.split)
   done
 
+lemma store_pte_thread_bound_aeps[wp]:
+  "\<lbrace>\<lambda>s. P (thread_bound_aeps s)\<rbrace> store_pte p pte \<lbrace>\<lambda>rv s. P (thread_bound_aeps s)\<rbrace>"
+  apply (simp add: store_pte_def set_pt_def set_object_def)
+  apply (wp get_object_wp)
+  apply (clarsimp simp: thread_bound_aeps_def obj_at_def get_tcb_def tcb_states_of_state_def
+                 elim!: rsubst[where P=P, OF _ ext]
+                 split: Structures_A.kernel_object.split_asm option.split)
+  done
+
 lemma auth_graph_map_def2:
   "auth_graph_map f S = (\<lambda>(x, auth, y). (f x, auth, f y)) ` S"
   by (auto simp add: auth_graph_map_def image_def intro: rev_bexI)
@@ -890,6 +953,15 @@ lemma store_pde_thread_states[wp]:
                  split: Structures_A.kernel_object.split_asm option.split)
   done
 
+lemma store_pde_thread_bound_aeps[wp]:
+  "\<lbrace>\<lambda>s. P (thread_bound_aeps s)\<rbrace> store_pde p pde \<lbrace>\<lambda>rv s. P (thread_bound_aeps s)\<rbrace>"
+  apply (simp add: store_pde_def set_pd_def set_object_def)
+  apply (wp get_object_wp)
+  apply (clarsimp simp: thread_bound_aeps_def obj_at_def get_tcb_def tcb_states_of_state_def
+                 elim!: rsubst[where P=P, OF _ ext]
+                 split: Structures_A.kernel_object.split_asm option.split)
+  done
+
 lemma store_pde_pas_refined[wp]:
   "\<lbrace>pas_refined aag and K ((ucast (p && mask pd_bits >> 2)::12 word) < (ucast (kernel_base >> 20))
            \<longrightarrow> (\<forall>x. pde_ref2 pde = Some x \<longrightarrow>  (\<forall>a \<in> snd (snd x).
@@ -931,6 +1003,15 @@ lemma set_asid_pool_thread_states[wp]:
   apply (simp add: set_asid_pool_def set_object_def)
   apply (wp get_object_wp)
   apply (clarsimp simp: thread_states_def obj_at_def get_tcb_def tcb_states_of_state_def
+                 elim!: rsubst[where P=P, OF _ ext]
+                 split: Structures_A.kernel_object.split_asm option.split)
+  done
+
+lemma set_asid_pool_thread_bound_aeps[wp]:
+  "\<lbrace>\<lambda>s. P (thread_bound_aeps s)\<rbrace> set_asid_pool p pool \<lbrace>\<lambda>rv s. P (thread_bound_aeps s)\<rbrace>"
+  apply (simp add: set_asid_pool_def set_object_def)
+  apply (wp get_object_wp)
+  apply (clarsimp simp: thread_bound_aeps_def obj_at_def get_tcb_def tcb_states_of_state_def
                  elim!: rsubst[where P=P, OF _ ext]
                  split: Structures_A.kernel_object.split_asm option.split)
   done

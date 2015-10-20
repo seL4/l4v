@@ -10,15 +10,14 @@
 
 chapter "Asynchronous Endpoints"
 
-theory AsyncEndpoint_H
-imports
+theory AsyncEndpoint_H imports    "AsyncEndpointDecls_H"
+    "TCB_H"
   TCB_H
   ThreadDecls_H
   CSpaceDecls_H
   ObjectInstances_H
 begin
 
-#INCLUDE_HASKELL SEL4/Object/AsyncEndpoint.lhs decls_only
 #INCLUDE_HASKELL SEL4/Object/AsyncEndpoint.lhs bodies_only
 
 end

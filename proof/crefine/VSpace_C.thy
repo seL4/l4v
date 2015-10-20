@@ -278,10 +278,10 @@ lemma loadHWASID_ccorres:
   done
 
 lemma array_relation_update:
-  "\<lbrakk> array_relation R bound table (arr :: 'a['b :: finite]);
+  "\<lbrakk> array_relation R bnd table (arr :: 'a['b :: finite]);
                x' = unat (x :: ('td :: len) word); R v v';
-               unat bound < card (UNIV :: 'b set) \<rbrakk>
-     \<Longrightarrow> array_relation R bound (table (x := v))
+               unat bnd < card (UNIV :: 'b set) \<rbrakk>
+     \<Longrightarrow> array_relation R bnd (table (x := v))
                (Arrays.update arr x' v')"
   by (simp add: array_relation_def word_le_nat_alt split: split_if)
 

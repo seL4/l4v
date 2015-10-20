@@ -18,6 +18,9 @@ consts
 sendIPC :: "bool \<Rightarrow> bool \<Rightarrow> machine_word \<Rightarrow> bool \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> unit kernel"
 
 consts
+isActive :: "async_endpoint \<Rightarrow> bool"
+
+consts
 receiveIPC :: "machine_word \<Rightarrow> capability \<Rightarrow> unit kernel"
 
 consts

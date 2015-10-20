@@ -142,7 +142,6 @@ proof -
     done
 qed
 
-
 lemma is_arch_page_cap_def2:
   "is_arch_page_cap cap \<longleftrightarrow>
    (\<exists>buf rights sz mapdata.
@@ -418,8 +417,8 @@ lemma transform_default_tcb:
                    get_ipc_buffer_words_def)
   apply (simp add: transform_intent_def invocation_type_def fromEnum_def
                    enum_invocation_label toEnum_def)
-  apply (simp add: fun_eq_iff tcb_slot_defs)
-  apply (simp add: infer_tcb_pending_op_def guess_error_def default_etcb_def default_domain_def)
+  apply (simp add: fun_eq_iff tcb_slot_defs tcb_pending_op_slot_def tcb_boundaep_slot_def)
+  apply (simp add: infer_tcb_pending_op_def infer_tcb_bound_aep_def guess_error_def default_etcb_def default_domain_def)
   done
 
 lemma transform_unat_map_empty:
@@ -508,9 +507,8 @@ lemma transform_none_to_untyped:
   "\<lbrakk>valid_idle s'; kheap s' obj_id = None\<rbrakk>
  \<Longrightarrow> cdl_objects (transform s') obj_id = Some Types_D.Untyped"
   apply (clarsimp simp: transform_def restrict_map_def map_add_def transform_objects_def)
-  apply (clarsimp simp: valid_idle_def st_tcb_at_def obj_at_def)
+  apply (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def)
   done
-
 
 lemma retype_transform_obj_ref_available:
   "\<lbrakk>pspace_no_overlap ptr sz s'; s = transform s'; valid_pspace s'; valid_idle s';
@@ -531,7 +529,7 @@ lemma retype_transform_obj_ref_available:
   apply (drule(2) pspace_no_overlap_into_Int_none)
   apply (clarsimp simp: transform_def restrict_map_def map_add_def transform_objects_def
                  split: if_splits option.splits)
-  apply (fastforce simp: valid_idle_def st_tcb_at_def obj_at_def)
+  apply (fastforce simp: valid_idle_def pred_tcb_at_def obj_at_def)
   done
 
 lemma retype_transform_obj_ref_pick_id:
@@ -618,7 +616,7 @@ lemma retype_region_dcorres:
            apply (clarsimp simp:transform_default_object translate_object_type_not_untyped)
           defer
           apply clarsimp
-          apply (frule invs_valid_idle,clarsimp simp:valid_idle_def st_tcb_at_def obj_at_def)
+          apply (frule invs_valid_idle,clarsimp simp:valid_idle_def pred_tcb_at_def obj_at_def)
           apply (erule(3) pspace_no_overlapC)
           apply clarsimp
          apply simp
@@ -978,7 +976,6 @@ lemma create_cap_mdb_cte_at:
     apply clarsimp
   apply fastforce
 done
-
 
 lemma neg_mask_add_2p_helper:
   "\<lbrakk>is_aligned (b::word32) us;us < 32\<rbrakk> \<Longrightarrow> b + 2 ^ us - 1 && ~~ mask us = b"
@@ -1919,9 +1916,9 @@ lemma decode_untyped_corres:
       apply (clarsimp simp: cte_wp_at_caps_of_state)
       apply (frule_tac p = "(x,y)" for x y in caps_of_state_valid[rotated])
        apply simp
-      apply (clarsimp simp:valid_cap_def obj_at_def valid_idle_def st_tcb_at_def
+      apply (clarsimp simp:valid_cap_def obj_at_def valid_idle_def pred_tcb_at_def
         is_cap_simps not_idle_thread_def is_cap_table_def dest!:invs_valid_idle)
-     apply (clarsimp simp:valid_cap_def obj_at_def valid_idle_def st_tcb_at_def
+     apply (clarsimp simp:valid_cap_def obj_at_def valid_idle_def pred_tcb_at_def
        is_cap_simps not_idle_thread_def is_cap_table_def dest!:invs_valid_idle)
     apply (clarsimp simp:invs_mdb cte_wp_at_caps_of_state valid_cap_aligned)
     apply (frule(1) caps_of_state_valid)
@@ -1952,6 +1949,5 @@ lemma decode_untyped_label_not_match:
   apply (simp add:Decode_A.decode_untyped_invocation_def unlessE_def)
   apply wp
   done
-
 
 end

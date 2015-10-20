@@ -964,7 +964,7 @@ lemma idle_globals_lift_scheduler:
  
 lemma invs_pd_not_idle_thread[intro]: "invs s \<Longrightarrow> arm_global_pd (arch_state s) \<noteq> idle_thread s"
   apply (fastforce simp: invs_def valid_state_def valid_global_objs_def
-                        obj_at_def valid_idle_def st_tcb_at_def empty_table_def)
+                        obj_at_def valid_idle_def pred_tcb_at_def empty_table_def)
   done
 
 
@@ -1466,12 +1466,12 @@ definition big_step_ADT_A_if  (*:: "user_transition_if \<Rightarrow> (observable
 
 lemma guarded_active_ct_cur_domain: "\<lbrakk>guarded_pas_domain aag s; ct_active s; invs s\<rbrakk> \<Longrightarrow> pasObjectAbs aag (cur_thread s) = pasDomainAbs aag (cur_domain s)"
   apply (fastforce simp add: guarded_pas_domain_def invs_def valid_state_def valid_idle_def
-                   ct_in_state_def st_tcb_at_def obj_at_def)
+                   ct_in_state_def pred_tcb_at_def obj_at_def)
   done  
 
 lemma ct_active_not_idle: "ct_active s \<Longrightarrow> invs s \<Longrightarrow> cur_thread s \<noteq> idle_thread s"
   apply (clarsimp simp add: ct_in_state_def valid_state_def valid_idle_def
-                   st_tcb_at_def obj_at_def invs_def)
+                   pred_tcb_at_def obj_at_def invs_def)
   done
 
 (* it makes life easier to assume that all domain slies in the domain list are non-zero.
@@ -2161,7 +2161,7 @@ lemma ct_idle_lift:
 lemma idle_equiv_context_equiv: "idle_equiv s s' \<Longrightarrow> invs s' \<Longrightarrow> idle_context s' = idle_context s"
   apply (clarsimp simp add: idle_equiv_def idle_context_def invs_def valid_state_def
                             valid_idle_def)
-  apply (drule st_tcb_at_tcb_at)
+  apply (drule pred_tcb_at_tcb_at)
   apply (clarsimp simp add: tcb_at_def2 get_tcb_def)
   done
 
@@ -2880,6 +2880,12 @@ lemma irq_state_inv_invoke_domain[wp]: "\<lbrace>irq_state_inv st\<rbrace> invok
   done
 
 
+crunch irq_masks_of_state: bind_async_endpoint "\<lambda>s. P (irq_masks_of_state s)"
+crunch irq_state_of_state: bind_async_endpoint "\<lambda>s. P (irq_state_of_state s)"
+
+lemmas bind_async_endpoint_irq_state_inv[wp] = 
+  irq_state_inv_triv[OF bind_async_endpoint_irq_state_of_state bind_async_endpoint_irq_masks_of_state]
+
 lemma invoke_tcb_irq_state_inv:
   "\<lbrace>(\<lambda>s. irq_state_inv st s) and domain_sep_inv False sta and
     tcb_inv_wf tinv and K (irq_is_recurring irq st)\<rbrace>
@@ -2896,7 +2902,7 @@ lemma invoke_tcb_irq_state_inv:
   (* just ThreadControl left *)
   apply (simp add: split_def cong: option.case_cong)
 
-  apply (wp hoare_vcg_all_lift_R 
+  by (wp hoare_vcg_all_lift_R 
             hoare_vcg_all_lift hoare_vcg_const_imp_lift_R
             checked_cap_insert_domain_sep_inv
             cap_delete_deletes  cap_delete_irq_state_inv[where st=st and sta=sta and irq=irq]
@@ -2908,7 +2914,6 @@ lemma invoke_tcb_irq_state_inv:
         |strengthen use_no_cap_to_obj_asid_strg
         |wp_once irq_state_inv_triv
         |wp_once hoare_drop_imps | clarsimp split: option.splits | intro impI conjI allI)+
-  done
 
 lemma do_reply_transfer_irq_state_inv_triv[wp]:
   "\<lbrace>irq_state_inv st\<rbrace> do_reply_transfer a b c \<lbrace>\<lambda>_. irq_state_inv st\<rbrace>"

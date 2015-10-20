@@ -295,13 +295,14 @@ definition
 definition
   tcb_override :: "Structures_A.tcb \<Rightarrow> Structures_A.tcb \<Rightarrow> component set
                    \<Rightarrow> Structures_A.tcb" where
-  (* 5 fields counted as "core" (component []), plus 5 caps (tcb_cnode_index 0..4) *)
+  (* 6 fields counted as "core" (component []), plus 5 caps (tcb_cnode_index 0..4) *)
   "tcb_override t1 t2 cmps \<equiv>
      t1\<lparr> tcb_state := tcb_state (if [] \<in> cmps then t2 else t1),
          tcb_fault_handler := tcb_fault_handler (if [] \<in> cmps then t2 else t1),
          tcb_ipc_buffer := tcb_ipc_buffer (if [] \<in> cmps then t2 else t1),
          tcb_context := tcb_context (if [] \<in> cmps then t2 else t1),
          tcb_fault := tcb_fault (if [] \<in> cmps then t2 else t1),
+         tcb_bound_aep := tcb_bound_aep (if [] \<in> cmps then t2 else t1),
          tcb_ctable := tcb_ctable (if tcb_cnode_index 0 \<in> cmps then t2 else t1),
          tcb_vtable := tcb_vtable (if tcb_cnode_index 1 \<in> cmps then t2 else t1),
          tcb_reply := tcb_reply (if tcb_cnode_index 2 \<in> cmps then t2 else t1),
@@ -655,7 +656,8 @@ lemma tcb_eq: (* so the simplifier doesn't barf on tcb_override_commute *)
      tcb_vtable tcb1 = tcb_vtable tcb2 ;
      tcb_reply tcb1 = tcb_reply tcb2 ;
      tcb_caller tcb1 = tcb_caller tcb2 ;
-     tcb_ipcframe tcb1 = tcb_ipcframe tcb2 \<rbrakk> \<Longrightarrow> tcb1 = tcb2"
+     tcb_ipcframe tcb1 = tcb_ipcframe tcb2 ;
+     tcb_bound_aep tcb1 = tcb_bound_aep tcb2 \<rbrakk> \<Longrightarrow> tcb1 = tcb2"
   by (cases tcb1, cases tcb2) auto
 
 lemma tcb_cnode_index_not_Nil:
@@ -693,6 +695,7 @@ lemma tcb_field_cmp_right_simps:
                    = tcb_context tcb'"
   "[] \<in> cmps \<Longrightarrow> tcb_fault (tcb_override tcb tcb' cmps)
                    = tcb_fault tcb'"
+  "[] \<in> cmps \<Longrightarrow> tcb_bound_aep (tcb_override tcb tcb' cmps) = tcb_bound_aep tcb'"
   "tcb_cnode_index 0 \<in> cmps \<Longrightarrow> tcb_ctable (tcb_override tcb tcb' cmps)
                                   = tcb_ctable tcb'"
   "tcb_cnode_index (Suc 0) \<in> cmps \<Longrightarrow> tcb_vtable (tcb_override tcb tcb' cmps)

@@ -295,6 +295,8 @@ definition
                    (transform_intent_tcb_set_space args)
     | TCBSuspend \<Rightarrow> Some (TcbIntent TcbSuspendIntent)
     | TCBResume \<Rightarrow> Some (TcbIntent TcbResumeIntent)
+    | TCBBindAEP \<Rightarrow> Some (TcbIntent TcbBindAEPIntent)
+    | TCBUnbindAEP \<Rightarrow> Some (TcbIntent TcbUnbindAEPIntent)
     | CNodeRevoke \<Rightarrow>
           map_option CNodeIntent
                    (transform_cnode_index_and_depth CNodeRevokeIntent args)
@@ -377,9 +379,12 @@ lemma transform_tcb_intent_invocation:
    ((label = TCBSetPriority) = (ti = (TcbSetPriorityIntent (transform_priority (args ! 0))) \<and> length args \<ge> 1)) \<and>
    ((label = TCBSetSpace) = (ti = (TcbSetSpaceIntent (args ! 0) (args ! 1) (args ! 2)) \<and> length args \<ge> 3)) \<and>
    ((label = TCBSuspend) = (ti = TcbSuspendIntent)) \<and>
-   ((label = TCBResume) = (ti = TcbResumeIntent))
+   ((label = TCBResume) = (ti = TcbResumeIntent)) \<and>
+   ((label = TCBBindAEP) = (ti = TcbBindAEPIntent)) \<and>
+   ((label = TCBUnbindAEP) = (ti = TcbUnbindAEPIntent))
    ) \<and>
-   (label \<noteq> InvalidInvocation \<and>
+   (
+    label \<noteq> InvalidInvocation \<and>
     label \<noteq> UntypedRetype \<and>
     label \<noteq> CNodeRevoke \<and>
     label \<noteq> CNodeDelete \<and>
@@ -488,8 +493,6 @@ lemma transform_intent_isnot_CNodeIntent:
   apply(auto)
 done
 
-
-
 lemma transform_intent_isnot_TcbIntent:
       "(\<not> (\<exists> ti. Some (TcbIntent ti) = transform_intent label args))
        = ((label = TCBReadRegisters \<longrightarrow> length args < 2) \<and>
@@ -500,7 +503,9 @@ lemma transform_intent_isnot_TcbIntent:
           (label = TCBSetIPCBuffer \<longrightarrow> length args < 1) \<and>
           (label = TCBSetSpace \<longrightarrow> length args < 3) \<and>
           (label \<noteq> TCBSuspend) \<and>
-          (label \<noteq> TCBResume))"
+          (label \<noteq> TCBResume) \<and>
+          (label \<noteq> TCBBindAEP) \<and>
+          (label \<noteq> TCBUnbindAEP))"
   apply(rule iffI)
    apply(erule contrapos_np)
    apply(clarsimp simp: transform_intent_def)
@@ -689,7 +694,16 @@ where
       | _ \<Rightarrow> Types_D.NullCap
    "
 
-(* FIXME: MOVE *)
+(* Create a "Bound AEP" cap based on the given thread's
+ * current state. *)
+
+definition
+  infer_tcb_bound_aep :: "obj_ref option \<Rightarrow> cdl_cap"
+where
+  "infer_tcb_bound_aep a \<equiv> case a of
+      Some aep \<Rightarrow> BoundAsyncCap aep
+    | _ \<Rightarrow> Types_D.NullCap"
+
 definition
   evalMonad :: "('s, 'a) nondet_monad \<Rightarrow> 's \<Rightarrow> 'a option"
 where
@@ -767,7 +781,8 @@ where
                    tcb_replycap_slot \<mapsto> (transform_cap $ tcb_reply tcb),
                    tcb_caller_slot \<mapsto> (transform_cap $ tcb_caller tcb),
                    tcb_ipcbuffer_slot \<mapsto> (transform_cap $ tcb_ipcframe tcb),
-                   tcb_pending_op_slot \<mapsto> (infer_tcb_pending_op ptr (tcb_state tcb))
+                   tcb_pending_op_slot \<mapsto> (infer_tcb_pending_op ptr (tcb_state tcb)),
+                   tcb_boundaep_slot \<mapsto> (infer_tcb_bound_aep (tcb_bound_aep tcb))
                  ],
 
                  cdl_tcb_fault_endpoint = (of_bl (tcb_fault_handler tcb)),

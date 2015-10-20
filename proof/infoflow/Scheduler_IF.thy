@@ -1546,7 +1546,7 @@ lemma get_thread_state_reads_respects_scheduler: "reads_respects_scheduler aag l
   apply (clarsimp simp add: get_thread_state_def thread_get_def gets_the_def
                    gets_def get_def assert_opt_def get_tcb_def
                    bind_def return_def fail_def 
-                   valid_idle_def st_tcb_at_def
+                   valid_idle_def pred_tcb_at_def
                    obj_at_def
                    equiv_valid_def2 equiv_valid_2_def
                   split: option.splits kernel_object.splits
@@ -1688,7 +1688,7 @@ lemma reads_respects_scheduler_invisible_domain_switch: "reads_respects_schedule
     apply (simp add: guarded_pas_domain_def)
     apply (subgoal_tac "cur_thread s \<noteq> idle_thread s")
      apply simp
-    apply (clarsimp simp add: st_tcb_at_def obj_at_def valid_state_def
+    apply (clarsimp simp add: pred_tcb_at_def obj_at_def valid_state_def
                               valid_idle_def invs_def)+
   done
 
@@ -1748,7 +1748,7 @@ lemma tcb_sched_action_scheduler_equiv[wp]: "\<lbrace>scheduler_equiv aag st\<rb
 
 lemma cur_thread_cur_domain: "st_tcb_at (op = st) (cur_thread s) s \<Longrightarrow> \<not> idle st \<Longrightarrow> invs s \<Longrightarrow>
          guarded_pas_domain aag s \<Longrightarrow> pasObjectAbs aag (cur_thread s) = pasDomainAbs aag (cur_domain s)"
-  apply (clarsimp simp add: st_tcb_at_def invs_def valid_idle_def
+  apply (clarsimp simp add: pred_tcb_at_def invs_def valid_idle_def
                             valid_state_def
                             obj_at_def guarded_pas_domain_def)
   apply fastforce
@@ -2018,7 +2018,7 @@ lemma timer_tick_reads_respects_scheduler_cur_domain: "reads_respects_scheduler 
             get_thread_state_reads_respects_scheduler gts_wp
          | wpc | wp_once hoare_drop_imps)+
   apply (fastforce simp add: invs_def valid_state_def valid_idle_def
-                            st_tcb_at_def obj_at_def guarded_pas_domain_def 
+                            pred_tcb_at_def obj_at_def guarded_pas_domain_def 
                             scheduler_equiv_def domain_fields_equiv_def
                             valid_sched_def valid_sched_action_def
                   split: split: option.splits)+
@@ -2332,7 +2332,7 @@ lemma sts_reads_respects_scheduler: "reads_respects_scheduler aag l (K(pasObject
   apply (wp when_ev get_thread_state_reads_respects_scheduler
             gts_wp set_object_wp)
   apply (clarsimp simp: get_tcb_scheduler_equiv)
-  apply (clarsimp simp: valid_idle_def st_tcb_at_def
+  apply (clarsimp simp: valid_idle_def pred_tcb_at_def
                         obj_at_def)
   done
 
@@ -2346,7 +2346,7 @@ lemma as_user_reads_respects_scheduler: "reads_respects_scheduler aag l (K(pasOb
   done
 
 lemma restart_not_idle: "valid_idle s \<Longrightarrow> st_tcb_at (op = Restart) t s \<Longrightarrow> t \<noteq> idle_thread s"
-  apply (clarsimp simp: valid_idle_def st_tcb_at_def obj_at_def)
+  apply (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def)
   done
 
 lemma sts_silc_dom_equiv[wp]: "\<lbrace>K(pasObjectAbs aag x \<noteq> SilcLabel) and silc_dom_equiv aag st\<rbrace> set_thread_state x f
@@ -2481,7 +2481,7 @@ lemma op_eq_unit_dc: "((op = ) :: unit \<Rightarrow> unit \<Rightarrow> bool) = 
 lemma cur_thread_idle': "valid_idle s \<Longrightarrow> only_idle s \<Longrightarrow> ct_idle s = (cur_thread s = idle_thread s)"
   apply (rule iffI)
   apply (clarsimp simp: only_idle_def ct_in_state_def )
-  apply (clarsimp simp: valid_idle_def ct_in_state_def)
+  apply (clarsimp simp: valid_idle_def ct_in_state_def pred_tcb_at_def obj_at_def)
   done
 
 lemma cur_thread_idle: "invs s \<Longrightarrow> ct_idle s = (cur_thread s = idle_thread s)"

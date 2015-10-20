@@ -24,6 +24,10 @@ definition
 definition
   "option_to_ptr \<equiv> Ptr o option_to_0"
 
+(* used for bound aep/tcb *)
+definition
+  "option_to_ctcb_ptr x \<equiv> case x of None \<Rightarrow> NULL | Some t \<Rightarrow> tcb_ptr_to_ctcb_ptr t"
+
 
 definition
   byte_to_word_heap :: "(word32 \<Rightarrow> word8) \<Rightarrow> (word32 \<Rightarrow> 10 word \<Rightarrow> word32)"
@@ -308,7 +312,8 @@ where
      \<and> ucast (tcbPriority atcb) = tcbPriority_C ctcb
      \<and> tcbTimeSlice atcb    = unat (tcbTimeSlice_C ctcb)
      \<and> cfault_rel (tcbFault atcb) (fault_lift (tcbFault_C ctcb))
-                  (lookup_fault_lift (tcbLookupFailure_C ctcb))"
+                  (lookup_fault_lift (tcbLookupFailure_C ctcb))
+     \<and> option_to_ptr (tcbBoundAEP atcb) = boundAsyncEndpoint_C ctcb"
 
 abbreviation
   "ep_queue_relation' \<equiv> tcb_queue_relation' tcbEPNext_C tcbEPPrev_C"
@@ -333,15 +338,16 @@ where
      let caep'  = async_endpoint_lift caep;
          cstate = async_endpoint_CL.state_CL caep';
          chead  = (Ptr o aepQueue_head_CL) caep';
-         cend   = (Ptr o aepQueue_tail_CL) caep' in
-       case aaep of
+         cend   = (Ptr o aepQueue_tail_CL) caep';
+         cbound = ((Ptr o aepBoundTCB_CL) caep' :: tcb_C ptr)
+     in
+       (case aepObj aaep of
          IdleAEP \<Rightarrow> cstate = scast AEPState_Idle \<and> ep_queue_relation' h [] chead cend
        | WaitingAEP q \<Rightarrow> cstate = scast AEPState_Waiting \<and> ep_queue_relation' h q chead cend
-       | ActiveAEP msgid data \<Rightarrow> cstate = scast AEPState_Active \<and>
-                                data = aepData_CL caep' \<and>
-                                msgid = aepMsgIdentifier_CL caep' \<and>
-				ep_queue_relation' h [] chead cend"
-
+       | ActiveAEP msgid \<Rightarrow> cstate = scast AEPState_Active \<and>
+                           msgid = aepMsgIdentifier_CL caep' \<and>
+                           ep_queue_relation' h [] chead cend)
+       \<and> option_to_ctcb_ptr (aepBoundTCB aaep) = cbound"
 
 definition
   "ap_from_vm_rights R \<equiv> case R of 

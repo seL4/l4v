@@ -442,7 +442,7 @@ lemma maxPrio_to_H:
 abbreviation(input)
   AsyncEndpointObject :: sword32
 where
-  "AsyncEndpointObject == seL4_AsyncEndpointObject"
+  "AsyncEndpointObject == seL4_NotificationObject"
 
 abbreviation(input)
   CapTableObject :: sword32

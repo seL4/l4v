@@ -443,7 +443,7 @@ val old_quick_and_dirty =  let fun get_bool (Config.Bool b) = b in
   Config.get @{context} quick_and_dirty_raw |> get_bool
 end
 *}
-setup {* Config.put_global quick_and_dirty true *}
+local_setup {* Config.put quick_and_dirty true *}
 lemma clz_spec:
   "\<forall>s. \<Gamma> \<turnstile> {\<sigma>. s = \<sigma> \<and> x_' s \<noteq> 0} Call clz_'proc
        \<lbrace>\<acute>ret__int = of_nat (word_clz (x_' s)) \<rbrace>"
@@ -451,7 +451,7 @@ lemma clz_spec:
   sorry
 (* FIXME: C parser generates weird things for functions annotated with
    FNSPEC+MODIFIES+DONT_TRANSLATE *)
-setup {* Config.put_global quick_and_dirty old_quick_and_dirty *}
+local_setup {* Config.put quick_and_dirty old_quick_and_dirty *}
 (**** FIXME FIXME FIXME ***)
 
 lemma l1index_to_prio_spec:
@@ -1014,7 +1014,7 @@ lemma schedule_ccorres:
       prefer 2
       apply fastforce
      apply clarsimp
-     apply (drule st_tcb_at_tcb_at')
+     apply (drule pred_tcb_at')
      apply (frule_tac t=word in tcb_at_not_NULL)
      apply (frule_tac p=word in is_aligned_tcb_ptr_to_ctcb_ptr)
      apply (drule obj_at_cslift_tcb[OF tcb_at_invs'], simp)
@@ -1106,7 +1106,7 @@ lemma timerTick_ccorres:
                apply (ctac (no_vcg) add: tcbSchedAppend_ccorres)
                 apply (ctac add: rescheduleRequired_ccorres[unfolded dc_def])
                apply (wp weak_sch_act_wf_lift_linear threadSet_valid_queues
-                         threadSet_st_tcb_at_state tcbSchedAppend_valid_objs' threadSet_valid_objs' threadSet_tcbDomain_triv
+                         threadSet_pred_tcb_at_state tcbSchedAppend_valid_objs' threadSet_valid_objs' threadSet_tcbDomain_triv
                     | clarsimp simp: st_tcb_at'_def o_def split: if_splits)+
              apply (vcg exspec=tcbSchedDequeue_modifies)
         apply (simp add: "StrictC'_thread_state_defs", rule ccorres_cond_false, rule ccorres_return_Skip[unfolded dc_def])+
@@ -1138,7 +1138,7 @@ lemma timerTick_ccorres:
        apply (clarsimp simp: guard_is_UNIV_def)
       apply (wpc
            | wp threadSet_weak_sch_act_wf threadSet_valid_objs' rescheduleRequired_weak_sch_act_wf
-                tcbSchedAppend_valid_objs' weak_sch_act_wf_lift_linear threadSet_st_tcb_no_state threadSet_tcbDomain_triv
+                tcbSchedAppend_valid_objs' weak_sch_act_wf_lift_linear threadSet_pred_tcb_no_state threadSet_tcbDomain_triv
                 hoare_vcg_conj_lift hoare_vcg_all_lift
                 threadGet_wp
            | simp split del: if_splits

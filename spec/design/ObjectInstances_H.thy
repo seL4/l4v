@@ -187,7 +187,7 @@ begin
 
 
 definition
-  makeObject_async_endpoint: "(makeObject :: async_endpoint)  \<equiv> IdleAEP"
+  makeObject_async_endpoint: "(makeObject :: async_endpoint)  \<equiv> AEP IdleAEP Nothing"
 
 definition
   loadObject_async_endpoint[simp]:
@@ -353,6 +353,7 @@ definition
         tcbTimeSlice= timeSlice,
         tcbFaultHandler= CPtr 0,
         tcbIPCBuffer= VPtr 0,
+        tcbBoundAEP= Nothing,
         tcbContext= newContext \<rparr>"
 
 definition

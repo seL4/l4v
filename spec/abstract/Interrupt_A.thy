@@ -90,7 +90,7 @@ definition
       slot \<leftarrow> get_irq_slot irq;
       cap \<leftarrow> get_cap slot;
       when (is_aep_cap cap \<and> AllowSend \<in> cap_rights cap)
-        $ send_async_ipc (obj_ref_of cap) (cap_ep_badge cap) (1 << ((unat irq) mod word_bits));
+        $ send_async_ipc (obj_ref_of cap) (cap_ep_badge cap); 
       do_machine_op $ maskInterrupt True irq
     od
   | IRQTimer \<Rightarrow> do

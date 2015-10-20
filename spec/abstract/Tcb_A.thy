@@ -170,6 +170,17 @@ definition
   od"
 
 
+text {* Helper function for binding async endpoints *}
+definition
+  bind_async_endpoint :: "32 word \<Rightarrow> 32 word \<Rightarrow> (unit,'z::state_ext) s_monad"
+where
+  "bind_async_endpoint tcbptr aepptr \<equiv> do
+     aep \<leftarrow> get_async_ep aepptr;
+     aep' \<leftarrow> return $ aep_set_bound_tcb aep (Some tcbptr);
+     set_async_ep aepptr aep';
+     set_bound_aep tcbptr $ Some aepptr
+   od"
+
 text {* TCB capabilities confer authority to perform seven actions. A thread can
 request to yield its timeslice to another, to suspend or resume another, to
 reconfigure another thread, or to copy register sets into, out of or between
@@ -250,6 +261,18 @@ where
         setNextPC pc
     od;
     when resume_target $ restart dest;
+    return []
+  od)"
+
+| "invoke_tcb (AsyncEndpointControl tcb (Some aepptr)) = 
+  (liftE $ do
+    bind_async_endpoint tcb aepptr;
+    return []
+  od)"
+
+| "invoke_tcb (AsyncEndpointControl tcb None) =
+  (liftE $ do
+    unbind_async_endpoint tcb;
     return []
   od)"
 

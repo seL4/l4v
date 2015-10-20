@@ -55,9 +55,6 @@ consts
 transferCaps :: "message_info \<Rightarrow> (capability * machine_word) list \<Rightarrow> (machine_word) option \<Rightarrow> machine_word \<Rightarrow> (machine_word) option \<Rightarrow> bool \<Rightarrow> message_info kernel"
 
 consts
-doAsyncTransfer :: "machine_word \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> unit kernel"
-
-consts
 schedule :: "unit kernel"
 
 consts
@@ -98,6 +95,12 @@ getThreadState :: "machine_word \<Rightarrow> thread_state kernel"
 
 consts
 setThreadState :: "thread_state \<Rightarrow> machine_word \<Rightarrow> unit kernel"
+
+consts
+getBoundAEP :: "machine_word \<Rightarrow> ((machine_word) option) kernel"
+
+consts
+setBoundAEP :: "(machine_word) option \<Rightarrow> machine_word \<Rightarrow> unit kernel"
 
 consts
 prioToL1Index :: "priority \<Rightarrow> nat"

@@ -166,6 +166,8 @@ definition
    | _ \<Rightarrow> return ())
   od"
 
+
+
 text {* Actions that must be taken when a capability is deleted. Returns a
 Zombie capability if deletion requires a long-running operation and also a
 possible IRQ to be cleared. *}
@@ -178,14 +180,19 @@ where
 | "finalise_cap (EndpointCap r b R)      final =
       (liftM (K (NullCap, None)) $ when  final $ ep_cancel_all r)"
 | "finalise_cap (AsyncEndpointCap r b R) final =
-      (liftM (K (NullCap, None)) $ when  final $ ep_cancel_all r)"
+      (liftM (K (NullCap, None)) $ when  final $ 
+       do
+         unbind_maybe_aep r;
+         ep_cancel_all r 
+       od)"
 | "finalise_cap (ReplyCap r)             final = return (NullCap, None)"
 | "finalise_cap (MasterReplyCap r)       final = return (NullCap, None)"
 | "finalise_cap (CNodeCap r bits g sz)   final =
       (return (if final then ZombieCap r else NullCap, None))"
 | "finalise_cap (TcbCap r)               final =
       (do
-         when final $ (do ipc_cancel r;
+         when final $ (do unbind_async_endpoint r;
+         ipc_cancel r;
          KHeap_D.set_cap (r, tcb_pending_op_slot) cdl_cap.NullCap od);
          return (if final then (ZombieCap r) else NullCap, None)
        od)"
@@ -472,7 +479,7 @@ definition cdl_default_tcb :: "cdl_object"
 where "cdl_default_tcb \<equiv>  Tcb \<lparr>cdl_tcb_caps =
            [tcb_cspace_slot \<mapsto> cdl_cap.NullCap, tcb_vspace_slot \<mapsto> cdl_cap.NullCap, tcb_replycap_slot \<mapsto>
             cdl_cap.NullCap, tcb_caller_slot \<mapsto> cdl_cap.NullCap, tcb_ipcbuffer_slot \<mapsto> cdl_cap.NullCap,
-            tcb_pending_op_slot \<mapsto> cdl_cap.NullCap],
+            tcb_pending_op_slot \<mapsto> cdl_cap.NullCap, tcb_boundaep_slot \<mapsto> cdl_cap.NullCap],
            cdl_tcb_fault_endpoint = 0,
            cdl_tcb_intent =
              \<lparr>cdl_intent_op = None, cdl_intent_error = False,cdl_intent_cap = 0, cdl_intent_extras = [],
@@ -483,7 +490,7 @@ where "obj_tcb obj \<equiv> case obj of Tcb tcb \<Rightarrow> tcb"
 
 definition tcb_caps_merge :: "cdl_tcb \<Rightarrow> cdl_tcb \<Rightarrow> cdl_tcb"
   where "tcb_caps_merge regtcb captcb \<equiv> regtcb\<lparr>cdl_tcb_caps
-  := (cdl_tcb_caps captcb)(tcb_pending_op_slot \<mapsto> the (cdl_tcb_caps regtcb tcb_pending_op_slot))\<rparr>"
+  := (cdl_tcb_caps captcb)(tcb_pending_op_slot \<mapsto> the (cdl_tcb_caps regtcb tcb_pending_op_slot), tcb_boundaep_slot \<mapsto> the (cdl_tcb_caps regtcb tcb_boundaep_slot))\<rparr>"
 
 definition merge_with_dft_tcb :: "cdl_object_id \<Rightarrow> unit k_monad"
 where "merge_with_dft_tcb o_id \<equiv>

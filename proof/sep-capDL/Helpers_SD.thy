@@ -165,6 +165,7 @@ lemma default_tcb_slots:
  "[0 .e. tcb_pending_op_slot] = [0,1,2,3,4,5]"
  "[0 .e. (5::nat)] = [0,1,2,3,4,5]"
  "[0..< 6] = [0,1,2,3,4,5]"
+ "[0..< 7] = [0,1,2,3,4,5,6]"
   by (clarsimp simp: tcb_pending_op_slot_def upt_rec)+
 
 definition "update_tcb_fault_endpoint fault_ep = cdl_tcb_fault_endpoint_update (\<lambda>_. fault_ep)"
@@ -202,6 +203,7 @@ where
   | PendingSyncSendCap _ f2 f3 f4 f5 \<Rightarrow> PendingSyncSendCap obj_id f2 f3 f4 f5
   | PendingSyncRecvCap _ f2 \<Rightarrow> PendingSyncRecvCap obj_id f2
   | PendingAsyncRecvCap _ \<Rightarrow> PendingAsyncRecvCap obj_id
+  | BoundAsyncCap _ \<Rightarrow> BoundAsyncCap obj_id
   | _ \<Rightarrow> cap"
 
 definition update_cap_objects :: "cdl_object_id set \<Rightarrow> cdl_cap \<Rightarrow> cdl_cap"

@@ -1317,7 +1317,7 @@ lemma asid_pool_typ_at_ext':
 
 lemma st_tcb_strg':
   "st_tcb_at' P p s \<longrightarrow> tcb_at' p s"
-  by (auto simp: st_tcb_at_tcb_at')
+  by (auto simp: pred_tcb_at')
 
 lemma performASIDControlInvocation_tcb_at':
   "\<lbrace>st_tcb_at' active' p and invs' and ct_active' and valid_aci' aci\<rbrace> 
@@ -1352,7 +1352,7 @@ lemma performASIDControlInvocation_tcb_at':
     range_cover_full descendants_range'_def2)
   apply (intro conjI)
                apply (fastforce simp:empty_descendants_range_in')+
-         apply (erule st_tcb'_weakenE)
+         apply (erule pred_tcb'_weakenE)
           apply fastforce
         apply (fastforce simp:empty_descendants_range_in')+
        apply clarsimp
@@ -1371,11 +1371,11 @@ lemma invokeArch_tcb_at':
    \<lbrace>\<lambda>rv. tcb_at' p\<rbrace>"
   apply (simp add: ArchRetype_H.performInvocation_def performARMMMUInvocation_def)
   apply (cases ai, simp_all)
-      apply (wp, clarsimp simp: st_tcb_at_tcb_at')
-     apply (wp, clarsimp simp: st_tcb_at_tcb_at')
-    apply (wp, clarsimp simp: st_tcb_at_tcb_at')
+     apply (wp, clarsimp simp: pred_tcb_at')
+    apply (wp, clarsimp simp: pred_tcb_at')
+    apply (wp, clarsimp simp: st_tcb_strg'[rule_format])
    apply (wp performASIDControlInvocation_tcb_at', clarsimp simp: valid_arch_inv'_def)
-  apply (wp, clarsimp simp: st_tcb_at_tcb_at')
+  apply (wp, clarsimp simp: pred_tcb_at')
   done 
 
 (* FIXME random place to have these *)
@@ -2006,7 +2006,7 @@ lemma arch_pinv_nosch[wp]:
    \<lbrace>\<lambda>rv s. P (ksSchedulerAction s)\<rbrace>"
   by (simp add: ArchRetype_H.performInvocation_def) wp
 
-lemmas setObject_cte_st_tcb_at' [wp] = setCTE_st_tcb_at' [unfolded setCTE_def]
+lemmas setObject_cte_st_tcb_at' [wp] = setCTE_pred_tcb_at' [unfolded setCTE_def]
 
 crunch st_tcb_at': performPageDirectoryInvocation, performPageTableInvocation, performPageInvocation,
             performASIDPoolInvocation "st_tcb_at' P t"
@@ -2022,14 +2022,13 @@ lemma performASIDControlInvocation_st_tcb_at':
   apply (clarsimp simp: performASIDControlInvocation_def split: asidcontrol_invocation.splits)
   apply (clarsimp simp: valid_aci'_def cte_wp_at_ctes_of cong: conj_cong)
   apply (rule hoare_pre)
-   apply (wp static_imp_wp  |simp add:placeNewObject_def2)+
-    apply (simp add:st_tcb_at'_def)
-    apply (wp createObjects_orig_obj_at2')
-    apply (simp only:st_tcb_at'_def[symmetric])
-   apply (clarsimp simp: projectKO_opts_defs)
-   apply (wp deleteObjects_invs_derivatives updateCap_st_tcb_at' getSlotCap_wp
-     hoare_vcg_ex_lift deleteObjects_cte_wp_at' updateFreeIndex_pspace_no_overlap'
-     deleteObjects_st_tcb_at' deleteObjects_invs_derivatives static_imp_wp)
+   apply (wp createObjects_orig_obj_at'[where P="P \<circ> tcbState", folded st_tcb_at'_def]
+             updateFreeIndex_pspace_no_overlap' getSlotCap_wp
+             hoare_vcg_ex_lift
+             deleteObjects_cte_wp_at' deleteObjects_invs_derivatives
+             deleteObjects_st_tcb_at'
+             static_imp_wp
+        | simp add: placeNewObject_def2)+
   apply (case_tac ctea)
   apply (clarsimp)
   apply (frule ctes_of_valid_cap')
@@ -2068,27 +2067,27 @@ proof(cases ai)
     this just becomes a case distinction. *}
   case InvokePage thus ?thesis
     by (simp add: ArchRetype_H.performInvocation_def performARMMMUInvocation_def,
-        wp performPageInvocation_st_tcb_at', fastforce elim!: st_tcb'_weakenE)
+        wp performPageInvocation_st_tcb_at', fastforce elim!: pred_tcb'_weakenE)
 next
   case InvokeASIDControl thus ?thesis
     by (simp add: ArchRetype_H.performInvocation_def performARMMMUInvocation_def
                   valid_arch_inv'_def,
-        wp performASIDControlInvocation_st_tcb_at', fastforce elim!: st_tcb'_weakenE)
+        wp performASIDControlInvocation_st_tcb_at', fastforce elim!: pred_tcb'_weakenE)
 next
   case InvokeASIDPool thus ?thesis
     by (simp add: ArchRetype_H.performInvocation_def performARMMMUInvocation_def
                   valid_arch_inv'_def,
-        wp performASIDPoolInvocation_st_tcb_at', fastforce elim!: st_tcb'_weakenE)
+        wp performASIDPoolInvocation_st_tcb_at', fastforce elim!: pred_tcb'_weakenE)
 next
   case InvokePageTable thus ?thesis
     by (simp add: ArchRetype_H.performInvocation_def performARMMMUInvocation_def
                   valid_arch_inv'_def,
-        wp performPageTableInvocation_st_tcb_at', fastforce elim!: st_tcb'_weakenE)
+        wp performPageTableInvocation_st_tcb_at', fastforce elim!: pred_tcb'_weakenE)
 next
   case InvokePageDirectory thus ?thesis
     by (simp add: ArchRetype_H.performInvocation_def performARMMMUInvocation_def
                   valid_arch_inv'_def,
-        wp performPageDirectoryInvocation_st_tcb_at', fastforce elim!: st_tcb'_weakenE)
+        wp performPageDirectoryInvocation_st_tcb_at', fastforce elim!: pred_tcb'_weakenE)
 qed
 
 crunch aligned': "ArchRetypeDecls_H.finaliseCap" pspace_aligned'

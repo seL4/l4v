@@ -14,6 +14,7 @@ Functions for cancelling IPC.
 
 chapter "IPC Cancelling"
 
+
 theory IpcCancel_A
 imports CSpaceAcc_A
 begin
@@ -88,18 +89,63 @@ where
 
 text {* Cancel all message operations on threads queued in an asynchronous
 endpoint. *}
+
+text {* Miscellaneous AEP binding stuff
+FIXME! *}
+abbreviation 
+  aep_set_bound_tcb :: "async_ep \<Rightarrow> obj_ref option \<Rightarrow> async_ep"
+where
+  "aep_set_bound_tcb aep t \<equiv> aep \<lparr> aep_bound_tcb := t \<rparr>"
+
+abbreviation
+  aep_set_obj :: "async_ep \<Rightarrow> aep \<Rightarrow> async_ep"
+where
+  "aep_set_obj aep a \<equiv> aep \<lparr> aep_obj := a \<rparr>"
+
+abbreviation
+  do_unbind_aep :: "obj_ref \<Rightarrow> async_ep \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
+where
+  "do_unbind_aep aepptr aep tcbptr \<equiv> do
+      aep' \<leftarrow> return $ aep_set_bound_tcb aep None;
+      set_async_ep aepptr aep';
+      set_bound_aep tcbptr None
+    od"
+
+definition
+  unbind_async_endpoint :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
+where
+  "unbind_async_endpoint tcb \<equiv> do
+     aepptr \<leftarrow> get_bound_aep tcb;
+     case aepptr of
+         Some aepptr' \<Rightarrow> do
+             aep \<leftarrow> get_async_ep aepptr';
+             do_unbind_aep aepptr' aep tcb
+          od
+       | None \<Rightarrow> return ()
+   od"
+
+definition
+  unbind_maybe_aep :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
+where
+  "unbind_maybe_aep aepptr \<equiv> do
+     aep \<leftarrow> get_async_ep aepptr;
+     (case aep_bound_tcb aep of
+       Some t \<Rightarrow> do_unbind_aep aepptr aep t
+     | None \<Rightarrow> return ())
+   od"
+
 definition
   aep_cancel_all :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
   "aep_cancel_all aepptr \<equiv> do
      aep \<leftarrow> get_async_ep aepptr;
-     case aep of WaitingAEP queue \<Rightarrow> do
-                      _ \<leftarrow> set_async_ep aepptr IdleAEP;
+     case aep_obj aep of WaitingAEP queue \<Rightarrow> do
+                      _ \<leftarrow> set_async_ep aepptr $ aep_set_obj aep IdleAEP;
                       mapM_x (\<lambda>t. do set_thread_state t Restart;
                                      do_extended_op (tcb_sched_action tcb_sched_enqueue t) od) queue;
                       do_extended_op (reschedule_required)
                      od
-               | _ \<Rightarrow> return ()
+               | _ \<Rightarrow> return ()    
    od"
 
 text {* The endpoint pointer stored by a thread waiting for a message to be
@@ -127,7 +173,7 @@ where
      set_endpoint epptr ep';
      set_thread_state tptr Inactive
    od"
-
+ 
 text {* Finalise a capability if the capability is known to be of the kind
 which can be finalised immediately. This is a simplified version of the
 @{text finalise_cap} operation. *}
@@ -139,7 +185,10 @@ where
 | "fast_finalise (EndpointCap r b R)      final =
       (when final $ ep_cancel_all r)"
 | "fast_finalise (AsyncEndpointCap r b R) final =
-      (when final $ aep_cancel_all r)"
+      (when final $ do
+          unbind_maybe_aep r;
+          aep_cancel_all r
+       od)"
 | "fast_finalise (CNodeCap r bits g)      final = fail"
 | "fast_finalise (ThreadCap r)            final = fail"
 | "fast_finalise DomainCap                final = fail"
@@ -238,16 +287,18 @@ where
 
 text {* Cancel the message receive operation of a thread queued in an
 asynchronous endpoint. *}
+(* FIXME: need some way of easily retrieving aepBoundTCB? *)
 definition
   async_ipc_cancel :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
   "async_ipc_cancel threadptr aepptr \<equiv> do
      aep \<leftarrow> get_async_ep aepptr;
-     queue \<leftarrow> (case aep of WaitingAEP queue \<Rightarrow> return queue 
+     queue \<leftarrow> (case aep_obj aep of WaitingAEP queue \<Rightarrow> return queue 
                         | _ \<Rightarrow> fail);
      queue' \<leftarrow> return $ remove1 threadptr queue;
-     set_async_ep aepptr (case queue' of [] \<Rightarrow> IdleAEP
-                                       | _  \<Rightarrow> WaitingAEP queue');
+     newAEP \<leftarrow> return $ aep_set_obj aep (case queue' of [] \<Rightarrow> IdleAEP
+                                                      | _  \<Rightarrow> WaitingAEP queue');
+     set_async_ep aepptr newAEP;
      set_thread_state threadptr Inactive
    od"
 

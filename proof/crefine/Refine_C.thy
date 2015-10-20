@@ -153,7 +153,7 @@ lemma handleVMFaultEvent_ccorres:
    apply (simp add: guard_is_UNIV_def)
   apply (clarsimp simp: simple_sane_strg[unfolded sch_act_sane_not])
   apply (auto simp: ct_in_state'_def cfault_rel_def is_cap_fault_def ct_not_ksQ
-              elim: st_tcb'_weakenE st_tcb_ex_cap''
+              elim: pred_tcb'_weakenE st_tcb_ex_cap''
               dest: st_tcb_at_idle_thread')
   done
 
@@ -182,7 +182,7 @@ lemma handleUserLevelFault_ccorres:
   apply clarsimp
   apply (intro impI conjI allI)
       apply (simp add: ct_in_state'_def)
-      apply (erule st_tcb'_weakenE)
+      apply (erule pred_tcb'_weakenE)
       apply simp
      apply (clarsimp simp: ct_not_ksQ)
     apply (clarsimp simp add: sch_act_simple_def split: scheduler_action.split)
@@ -568,7 +568,7 @@ lemma callKernel_withFastpath_corres_C:
   apply (frule(1) obj_at_cslift_tcb[OF tcb_at_invs'])
   apply (clarsimp simp: typ_heap_simps' ct_in_state'_def
                         "StrictC'_register_defs" word_sle_def word_sless_def)
-  apply (auto elim!: st_tcb'_weakenE)
+  apply (auto elim!: pred_tcb'_weakenE)
   done
 
 lemma threadSet_all_invs_triv':

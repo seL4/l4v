@@ -53,10 +53,79 @@ abbreviation
 abbreviation
   "ko_at k \<equiv> obj_at (op = k)"
 
+(*
+ * sseefried: 'itcb' is projection of the "mostly preserved" fields of 'tcb'. Many functions
+ * in the spec will leave these fields of a TCB unchanged. The 'crunch' tool is easily able
+ * to ascertain this from the types of the fields.
+ *
+ * The 'itcb' record is closely associated with the 'pred_tcb_at' definition.
+ * 'pred_tcb_at' is used to assert an arbitrary predicate over the fields in 'itcb' for a TCB
+ * Before the introduction of this data structure 'st_tcb_at' was defined directly. It is
+ * now an abbreviation of a partial application of the 'pred_tcb_at' function, specifically
+ * a partial application to the projection function 'itcb_state'.
+ *
+ * The advantage of this approach is that we an assert 'pred_tcb_at proj P t' is preserved
+ * across calls to many functions. We get "for free" that 'st_tcb_at P t' is also preserved.
+ * In the future we may introduce other abbreviations that assert preservation over other
+ * fields in the TCB record.
+ *)
+record itcb =
+  itcb_state         :: thread_state
+  itcb_fault_handler :: cap_ref
+  itcb_ipc_buffer    :: vspace_ref
+  itcb_fault         :: "fault option"
+  itcb_bound_aep     :: "obj_ref option"
+
+
+definition "tcb_to_itcb tcb \<equiv> \<lparr> itcb_state         = tcb_state tcb,
+                                itcb_fault_handler = tcb_fault_handler tcb,
+                                itcb_ipc_buffer    = tcb_ipc_buffer tcb,
+                                itcb_fault         = tcb_fault tcb,
+                                itcb_bound_aep     = tcb_bound_aep tcb \<rparr>"
+
+(* sseefried: The simplification rules below are used to help produce
+ * lemmas that talk about fields of the 'tcb' data structure rather than
+ * the 'itcb' data structure when the lemma refers to a predicate of the
+ * form 'pred_tcb_at proj P t'.
+ *
+ * e.g. You might have a lemma that has an assumption
+ *   \<And>tcb. itcb_state (tcb_to_itcb (f tcb)) = itcb_state (tcb_to_itcb tcb)
+ *
+ * This simplifies to:
+ *   \<And>tcb. tcb_state (f tcb) = tcb_state tcb
+ *)
+
+(* Need one of these simp rules for each field in 'itcb' *)
+lemma [simp]: "itcb_state (tcb_to_itcb tcb) = tcb_state tcb"
+  by (auto simp: tcb_to_itcb_def)
+
+(* Need one of these simp rules for each field in 'itcb' *)
+lemma [simp]: "itcb_fault_handler (tcb_to_itcb tcb) = tcb_fault_handler tcb"
+  by (auto simp: tcb_to_itcb_def)
+
+(* Need one of these simp rules for each field in 'itcb' *)
+lemma [simp]: "itcb_ipc_buffer (tcb_to_itcb tcb) = tcb_ipc_buffer tcb"
+  by (auto simp: tcb_to_itcb_def)
+
+(* Need one of these simp rules for each field in 'itcb' *)
+lemma [simp]: "itcb_fault (tcb_to_itcb tcb) = tcb_fault tcb"
+  by (auto simp: tcb_to_itcb_def)
+
+(* Need one of these simp rules for each field in 'itcb' *)
+lemma [simp]: "itcb_bound_aep (tcb_to_itcb tcb) = tcb_bound_aep tcb"
+  by (auto simp: tcb_to_itcb_def)
+
 definition
-  st_tcb_at :: "(Structures_A.thread_state \<Rightarrow> bool) \<Rightarrow> word32 \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+  pred_tcb_at :: "(itcb \<Rightarrow> 'a) \<Rightarrow> ('a \<Rightarrow> bool) \<Rightarrow> word32 \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
-  "st_tcb_at test \<equiv> obj_at (\<lambda>ko. \<exists>tcb. ko = TCB tcb \<and> test (tcb_state tcb))"
+  "pred_tcb_at proj test \<equiv> obj_at (\<lambda>ko. \<exists>tcb. ko = TCB tcb \<and> test (proj (tcb_to_itcb tcb)))"
+
+abbreviation "st_tcb_at \<equiv> pred_tcb_at itcb_state"
+abbreviation "bound_tcb_at \<equiv> pred_tcb_at itcb_bound_aep"
+
+(* sseefried: 'st_tcb_at_def' only exists to make existing proofs go through. Use 'pred_tcb_at_def' from now on. *)
+lemma st_tcb_at_def: "st_tcb_at test \<equiv> obj_at (\<lambda>ko. \<exists>tcb. ko = TCB tcb \<and> test (tcb_state tcb))"
+  by (simp add: pred_tcb_at_def)
 
 text {* An alternative formulation that allows abstraction over type: *}
 
@@ -390,6 +459,36 @@ where
                      (ExceptionTypes_A.GuardMismatch n g)) \<longrightarrow> length g\<le>32"
 
 definition
+  valid_bound_aep :: "32 word option \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+where
+  "valid_bound_aep aep_opt s \<equiv> case aep_opt of
+                                 None \<Rightarrow> True
+                               | Some a \<Rightarrow> aep_at a s"
+
+definition
+  valid_bound_tcb :: "32 word option \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+where
+  "valid_bound_tcb tcb_opt s \<equiv> case tcb_opt of
+                                 None \<Rightarrow> True
+                               | Some t \<Rightarrow> tcb_at t s"
+
+abbreviation (input)
+  "bound a \<equiv> a \<noteq> None"
+
+
+definition
+  valid_aep :: "Structures_A.async_ep \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+where
+  "valid_aep aep s \<equiv> (case aep_obj aep of 
+    Structures_A.IdleAEP \<Rightarrow>  True
+  | Structures_A.WaitingAEP ts \<Rightarrow>
+      (ts \<noteq> [] \<and> (\<forall>t \<in> set ts. tcb_at t s) 
+       \<and> distinct ts
+       \<and> (case aep_bound_tcb aep of Some tcb \<Rightarrow> ts = [tcb] | _ \<Rightarrow> True))
+  | Structures_A.ActiveAEP b \<Rightarrow> True)
+ \<and> valid_bound_tcb (aep_bound_tcb aep) s"
+
+definition
   valid_tcb :: "obj_ref \<Rightarrow> Structures_A.tcb \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
   "valid_tcb p t s \<equiv>
@@ -397,8 +496,9 @@ where
        s \<turnstile> getF t \<and> restr p (tcb_state t) (getF t))
      \<and> valid_ipc_buffer_cap (tcb_ipcframe t) (tcb_ipc_buffer t)
      \<and> valid_tcb_state (tcb_state t) s
-     \<and> (case (tcb_fault t) of Some f \<Rightarrow> valid_fault f | _ \<Rightarrow> True)
-     \<and> length (tcb_fault_handler t) = word_bits"
+     \<and> (case tcb_fault t of Some f \<Rightarrow> valid_fault f | _ \<Rightarrow> True)
+     \<and> length (tcb_fault_handler t) = word_bits
+     \<and> valid_bound_aep (tcb_bound_aep t) s"
 
 definition
   tcb_cap_valid :: "cap \<Rightarrow> cslot_ptr \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
@@ -422,14 +522,7 @@ where
   | Structures_A.RecvEP ts \<Rightarrow>
       (ts \<noteq> [] \<and> (\<forall>t \<in> set ts. tcb_at t s) \<and> distinct ts)"
 
-definition
-  valid_aep :: "Structures_A.async_ep \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
-where
-  "valid_aep aep s \<equiv> case aep of
-    Structures_A.IdleAEP \<Rightarrow> True
-  | Structures_A.WaitingAEP ts \<Rightarrow>
-      (ts \<noteq> [] \<and> (\<forall>t \<in> set ts. tcb_at t s) \<and> distinct ts)
-  | Structures_A.ActiveAEP b m \<Rightarrow> True"
+
 
 definition
   kernel_mapping_slots :: "12 word set" where
@@ -825,7 +918,7 @@ where
 
 datatype reftype
   = TCBWaitingSend | TCBWaitingRecv | TCBBlockedSend | TCBBlockedRecv
-     | TCBAsync | EPSend | EPRecv | AEPAsync
+     | TCBAsync | TCBBound | EPSend | EPRecv | AEPAsync | AEPBound
 
 primrec
  symreftype :: "reftype \<Rightarrow> reftype"
@@ -835,10 +928,11 @@ where
 | "symreftype TCBBlockedSend = EPSend"
 | "symreftype TCBBlockedRecv = EPRecv"
 | "symreftype TCBAsync       = AEPAsync"
+| "symreftype TCBBound       = AEPBound"
 | "symreftype EPSend         = TCBBlockedSend"
 | "symreftype EPRecv         = TCBBlockedRecv"
 | "symreftype AEPAsync       = TCBAsync"
-
+| "symreftype AEPBound       = TCBBound"
 
 definition
   tcb_st_refs_of :: "Structures_A.thread_state  \<Rightarrow> (obj_ref \<times> reftype) set"
@@ -855,25 +949,43 @@ where
 definition
   ep_q_refs_of   :: "Structures_A.endpoint      \<Rightarrow> (obj_ref \<times> reftype) set"
 where
-  "ep_q_refs_of x \<equiv> case x of  Structures_A.IdleEP    => {}
+  "ep_q_refs_of x \<equiv> case x of  
+    Structures_A.IdleEP    => {}
   | (Structures_A.RecvEP q) => set q \<times> {EPRecv}
   | (Structures_A.SendEP q) => set q \<times> {EPSend}"
 
 definition
-  aep_q_refs_of  :: "async_ep                   \<Rightarrow> (obj_ref \<times> reftype) set"
+  aep_q_refs_of  :: "aep                   \<Rightarrow> (obj_ref \<times> reftype) set"
 where
-  "aep_q_refs_of x \<equiv> case x of Structures_A.IdleAEP         => {}
+  "aep_q_refs_of x \<equiv> case x of
+     Structures_A.IdleAEP         => {}
   | (Structures_A.WaitingAEP q)   => set q \<times> {AEPAsync}
-  | (Structures_A.ActiveAEP b m)  => {}"
+  | (Structures_A.ActiveAEP b)  => {}"
+
+(* FIXME-AEP: two new functions: aep_bound_refs and tcb_bound_refs, include below by union *)
+
+definition 
+  aep_bound_refs :: "obj_ref option \<Rightarrow> (obj_ref \<times> reftype) set"
+where 
+  "aep_bound_refs t \<equiv> case t of
+     Some tcb \<Rightarrow> {(tcb, AEPBound)}
+   | None \<Rightarrow> {}"
+
+definition
+  tcb_bound_refs :: "obj_ref option \<Rightarrow> (obj_ref \<times> reftype) set"
+where
+  "tcb_bound_refs a \<equiv> case a of
+     Some aep \<Rightarrow> {(aep, TCBBound)}
+   | None \<Rightarrow> {}"
 
 definition
   refs_of :: "Structures_A.kernel_object \<Rightarrow> (obj_ref \<times> reftype) set"
 where
   "refs_of x \<equiv> case x of
      CNode sz fun      => {}
-   | TCB tcb           => tcb_st_refs_of (tcb_state tcb)
+   | TCB tcb           => tcb_st_refs_of (tcb_state tcb) \<union> tcb_bound_refs (tcb_bound_aep tcb)
    | Endpoint ep       => ep_q_refs_of ep
-   | AsyncEndpoint aep => aep_q_refs_of aep
+   | AsyncEndpoint aep => aep_q_refs_of (aep_obj aep) \<union> aep_bound_refs (aep_bound_tcb aep)
    | ArchObj ao        => {}"
 
 definition
@@ -914,10 +1026,10 @@ primrec
   live :: "Structures_A.kernel_object \<Rightarrow> bool"
 where
   "live (CNode sz fun)      = False"
-| "live (TCB tcb)           = (tcb_state tcb \<noteq> Structures_A.Inactive \<and>
-                               tcb_state tcb \<noteq> Structures_A.IdleThreadState)"
+| "live (TCB tcb)           = (bound (tcb_bound_aep tcb) \<or> (tcb_state tcb \<noteq> Structures_A.Inactive \<and>
+                               tcb_state tcb \<noteq> Structures_A.IdleThreadState))"
 | "live (Endpoint ep)       = (ep \<noteq> Structures_A.IdleEP)"
-| "live (AsyncEndpoint aep) = (\<exists>ts. aep = Structures_A.WaitingAEP ts)"
+| "live (AsyncEndpoint aep) = (bound (aep_bound_tcb aep) \<or> (\<exists>ts. aep_obj aep = Structures_A.WaitingAEP ts))"
 | "live (ArchObj ao)        = False"
 
 fun
@@ -1099,8 +1211,11 @@ definition
                    reply_master_revocable (is_original_cap s) (caps_of_state s) \<and>
                    reply_mdb (cdt s) (caps_of_state s)"
 
+abbreviation "idle_tcb_at \<equiv> pred_tcb_at (\<lambda>t. (itcb_state t, itcb_bound_aep t))"
+
 definition
-  "valid_idle \<equiv> \<lambda>s. st_tcb_at idle (idle_thread s) s \<and> idle_thread s = idle_thread_ptr"
+  "valid_idle \<equiv> \<lambda>s. idle_tcb_at (\<lambda>p. (idle (fst p)) \<and> (snd p = None)) (idle_thread s) s 
+                   \<and> idle_thread s = idle_thread_ptr"
 
 definition
   "only_idle \<equiv> \<lambda>s. \<forall>t. st_tcb_at idle t s \<longrightarrow> t = idle_thread s"
@@ -1406,6 +1521,22 @@ abbreviation(input)
 -- ---------------------------------------------------------------------------
 section "Lemmas"
 
+lemma valid_bound_aep_None[simp]:
+  "valid_bound_aep None = \<top>"
+  by (auto simp: valid_bound_aep_def)
+
+lemma valid_bound_aep_Some[simp]:
+  "valid_bound_aep (Some x) = aep_at x"
+  by (auto simp: valid_bound_aep_def)
+
+lemma valid_bound_tcb_None[simp]:
+  "valid_bound_tcb None = \<top>"
+  by (auto simp: valid_bound_tcb_def)
+
+lemma valid_bound_tcb_Some[simp]:
+  "valid_bound_tcb (Some x) = tcb_at x"
+  by (auto simp: valid_bound_tcb_def)
+
 lemmas wellformed_acap_simps =
   wellformed_mapdata_def wellformed_acap_def[split_simps arch_cap.split]
 
@@ -1557,10 +1688,13 @@ lemma tcb_at_def:
   by (simp add: obj_at_def get_tcb_def is_tcb_def
            split: option.splits Structures_A.kernel_object.splits)
 
-lemma st_tcb_def2:
-  "st_tcb_at test addr s = (\<exists>tcb. (get_tcb addr s) = Some tcb \<and> test (tcb_state tcb))"
-  by (simp add: obj_at_def st_tcb_at_def get_tcb_def
-           split: option.splits Structures_A.kernel_object.splits)
+lemma pred_tcb_def2:
+  "pred_tcb_at proj test addr s = (\<exists>tcb. (get_tcb addr s) = Some tcb \<and> test (proj (tcb_to_itcb tcb)))"
+  by (simp add: obj_at_def pred_tcb_at_def get_tcb_def
+            split: option.splits Structures_A.kernel_object.splits)
+
+(* sseefried: 'st_tcb_def2' only exists to make existing proofs go through. Can use 'pred_tcb_at_def2' instead *)
+lemmas st_tcb_def2 = pred_tcb_def2[where proj=itcb_state,simplified]
 
 lemma obj_at_eq_helper:
   "\<lbrakk> \<And>obj. P obj = P' obj \<rbrakk> \<Longrightarrow> obj_at P = obj_at P'"
@@ -1685,7 +1819,7 @@ lemma st_tcb_idle_cap_valid_Null [simp]:
   "st_tcb_at (idle or inactive) (fst sl) s \<longrightarrow>
    tcb_cap_valid cap.NullCap sl s"
   by (fastforce simp: tcb_cap_valid_def tcb_cap_cases_def
-                     st_tcb_at_def obj_at_def
+                     pred_tcb_at_def obj_at_def
                      valid_ipc_buffer_cap_def)
 
 lemmas
@@ -1863,18 +1997,33 @@ lemma ep_q_refs_of_simps[simp]:
   by (auto simp: ep_q_refs_of_def)
 
 lemma aep_q_refs_of_simps[simp]:
- "aep_q_refs_of  Structures_A.IdleAEP         = {}"
+ "aep_q_refs_of Structures_A.IdleAEP        = {}"
  "aep_q_refs_of (Structures_A.WaitingAEP q)   = set q \<times> {AEPAsync}"
- "aep_q_refs_of (Structures_A.ActiveAEP b m)  = {}"
+ "aep_q_refs_of (Structures_A.ActiveAEP b)  = {}"
   by (auto simp: aep_q_refs_of_def)
+
+lemma aep_bound_refs_simps[simp]:
+  "aep_bound_refs (Some t) = {(t, AEPBound)}"
+  "aep_bound_refs None = {}"
+  by (auto simp: aep_bound_refs_def)
+
+lemma tcb_bound_refs_simps[simp]:
+  "tcb_bound_refs (Some a) = {(a, TCBBound)}"
+  "tcb_bound_refs None = {}"
+  by (auto simp: tcb_bound_refs_def)
+
+lemma tcb_bound_refs_def2:
+  "tcb_bound_refs a = set_option a \<times> {TCBBound}"
+by (simp add: tcb_bound_refs_def split: option.splits)
 
 lemma refs_of_simps[simp]:
  "refs_of (CNode sz cs)       = {}"
- "refs_of (TCB tcb)           = tcb_st_refs_of (tcb_state tcb)"
+ "refs_of (TCB tcb)           = tcb_st_refs_of (tcb_state tcb) \<union> tcb_bound_refs (tcb_bound_aep tcb)"
  "refs_of (Endpoint ep)       = ep_q_refs_of ep"
- "refs_of (AsyncEndpoint aep) = aep_q_refs_of aep"
+ "refs_of (AsyncEndpoint aep) = aep_q_refs_of (aep_obj aep) \<union> aep_bound_refs (aep_bound_tcb aep)"
  "refs_of (ArchObj ao)        = {}"
   by (auto simp: refs_of_def)
+
 
 lemma refs_of_rev:
  "(x, TCBBlockedRecv) \<in> refs_of ko =
@@ -1882,22 +2031,28 @@ lemma refs_of_rev:
  "(x, TCBBlockedSend) \<in> refs_of ko =
     (\<exists>tcb. ko = TCB tcb \<and> (\<exists>pl. tcb_state tcb = Structures_A.BlockedOnSend    x pl))"
  "(x, TCBAsync) \<in> refs_of ko =
-    (\<exists>tcb. ko = TCB tcb \<and> tcb_state tcb = Structures_A.BlockedOnAsyncEvent x)"
+    (\<exists>tcb. ko = TCB tcb \<and> (tcb_state tcb = Structures_A.BlockedOnAsyncEvent x))"
  "(x, EPRecv) \<in> refs_of ko =
     (\<exists>ep. ko = Endpoint ep \<and> (\<exists>q. ep = Structures_A.RecvEP q \<and> x \<in> set q))"
  "(x, EPSend) \<in> refs_of ko =
     (\<exists>ep. ko = Endpoint ep \<and> (\<exists>q. ep = Structures_A.SendEP q \<and> x \<in> set q))"
  "(x, AEPAsync) \<in> refs_of ko =
-    (\<exists>aep. ko = AsyncEndpoint aep \<and> (\<exists>q. aep = Structures_A.WaitingAEP q \<and> x \<in> set q))"
-  by (clarsimp simp: eq_commute
-                     refs_of_def
+    (\<exists>aep. ko = AsyncEndpoint aep \<and> (\<exists>q. aep_obj aep = Structures_A.WaitingAEP q \<and> x \<in> set q))"
+ "(x, TCBBound) \<in>  refs_of ko =
+    (\<exists>tcb. ko = TCB tcb \<and> (tcb_bound_aep tcb = Some x))"
+ "(x, AEPBound) \<in> refs_of ko =
+    (\<exists>aep. ko = AsyncEndpoint aep \<and> (aep_bound_tcb aep = Some x))"
+  by (auto simp:  refs_of_def
                      tcb_st_refs_of_def
                      ep_q_refs_of_def
                      aep_q_refs_of_def
+                     aep_bound_refs_def
+                     tcb_bound_refs_def
               split: Structures_A.kernel_object.splits
                      Structures_A.thread_state.splits
                      Structures_A.endpoint.splits
-                     Structures_A.async_ep.splits)+
+                     Structures_A.aep.splits
+                     option.split)
 
 lemma st_tcb_at_refs_of_rev:
   "obj_at (\<lambda>ko. (x, TCBBlockedRecv) \<in> refs_of ko) t s
@@ -1906,7 +2061,7 @@ lemma st_tcb_at_refs_of_rev:
      = st_tcb_at (\<lambda>ts. \<exists>pl. ts = Structures_A.BlockedOnSend x pl   ) t s"
   "obj_at (\<lambda>ko. (x, TCBAsync) \<in> refs_of ko) t s
      = st_tcb_at (\<lambda>ts.      ts = Structures_A.BlockedOnAsyncEvent x) t s"
-  by (simp add: refs_of_rev st_tcb_at_def)+
+  by (simp add: refs_of_rev pred_tcb_at_def)+
 
 lemma state_refs_of_elemD:
   "\<lbrakk> ref \<in> state_refs_of s x \<rbrakk> \<Longrightarrow> obj_at (\<lambda>obj. ref \<in> refs_of obj) x s"
@@ -1939,11 +2094,20 @@ lemma ko_at_state_refs_ofD:
   "ko_at ko p s \<Longrightarrow> state_refs_of s p = refs_of ko"
   by (clarsimp dest!: obj_at_state_refs_ofD)
 
+definition
+  "tcb_aep_is_bound aep ko = (case ko of TCB tcb \<Rightarrow> tcb_bound_aep tcb = aep | _ \<Rightarrow> False)"
+
 lemma st_tcb_at_state_refs_ofD:
-  "st_tcb_at P t s \<Longrightarrow> \<exists>ts. P ts \<and> state_refs_of s t = tcb_st_refs_of ts"
-  apply (clarsimp simp: st_tcb_at_def dest!: obj_at_state_refs_ofD)
-  apply fastforce
-  done
+  "st_tcb_at P t s \<Longrightarrow> \<exists>ts aepptr. P ts \<and> obj_at (tcb_aep_is_bound aepptr) t s
+          \<and> state_refs_of s t = (tcb_st_refs_of ts \<union> tcb_bound_refs aepptr)"
+  by (auto simp: pred_tcb_at_def obj_at_def tcb_aep_is_bound_def
+                 state_refs_of_def)
+
+lemma bound_tcb_at_state_refs_ofD:
+  "bound_tcb_at P t s \<Longrightarrow> \<exists>ts aepptr. P aepptr \<and> obj_at (tcb_aep_is_bound aepptr) t s
+          \<and> state_refs_of s t = (tcb_st_refs_of ts \<union> tcb_bound_refs aepptr)"
+  by (auto simp: pred_tcb_at_def obj_at_def tcb_aep_is_bound_def
+                 state_refs_of_def)
 
 lemma sym_refs_obj_atD:
   "\<lbrakk> obj_at P p s; sym_refs (state_refs_of s) \<rbrakk> \<Longrightarrow>
@@ -1964,11 +2128,18 @@ lemma sym_refs_ko_atD:
 
 lemma sym_refs_st_tcb_atD:
   "\<lbrakk> st_tcb_at P t s; sym_refs (state_refs_of s) \<rbrakk> \<Longrightarrow>
-     \<exists>ts. P ts \<and> state_refs_of s t = tcb_st_refs_of ts
-        \<and> (\<forall>(x, tp)\<in>tcb_st_refs_of ts. obj_at (\<lambda>ko. (t, symreftype tp) \<in> refs_of ko) x s)"
-  apply (simp add: st_tcb_at_def, drule(1) sym_refs_obj_atD)
-  apply fastforce
-  done
+     \<exists>ts aep. P ts \<and> obj_at (tcb_aep_is_bound aep) t s 
+        \<and> state_refs_of s t = tcb_st_refs_of ts \<union> tcb_bound_refs aep
+        \<and> (\<forall>(x, tp)\<in>tcb_st_refs_of ts \<union> tcb_bound_refs aep. obj_at (\<lambda>ko. (t, symreftype tp) \<in> refs_of ko) x s)"
+  apply (drule st_tcb_at_state_refs_ofD)
+  apply (erule exE)+
+  apply (rule_tac x=ts in exI)
+  apply (rule_tac x=aepptr in exI)
+  apply clarsimp
+  apply (frule obj_at_state_refs_ofD)
+  apply (drule (1)sym_refs_obj_atD)
+  apply auto
+  done 
 
 lemma sym_refs_simp:
   "\<lbrakk> sym_refs S \<rbrakk> \<Longrightarrow> ((y, symreftype tp) \<in> S x) = ((x, tp) \<in> S y)"
@@ -2006,10 +2177,11 @@ lemma refs_of_live:
   "refs_of ko \<noteq> {} \<Longrightarrow> live ko"
   apply (cases ko, simp_all)
     apply (rename_tac tcb_ext)
-    apply (case_tac "tcb_state tcb_ext", simp_all)
-   apply clarsimp
+     apply (case_tac "tcb_state tcb_ext", simp_all)
+    apply (fastforce simp: tcb_bound_refs_def)+
   apply (rename_tac async_ep)
-  apply (case_tac async_ep, simp_all)
+  apply (case_tac "aep_obj async_ep", simp_all)
+   apply (fastforce simp: aep_bound_refs_def)+
   done
 
 lemma refs_of_live_obj:
@@ -2043,7 +2215,6 @@ lemma caps_of_state_cte_wp_at:
 lemma cte_wp_at_caps_of_state:
  "cte_wp_at P p s = (\<exists>cap. caps_of_state s p = Some cap \<and> P cap)"
   by (clarsimp simp add: cte_wp_at_def caps_of_state_def)
-
 
 lemmas ex_cte_cap_to_def =
   ex_cte_cap_wp_to_def[where P="\<top>", simplified simp_thms]
@@ -2125,7 +2296,9 @@ lemma zobj_refs_to_obj_refs:
 
 lemma idle_no_refs:
   "valid_idle s \<Longrightarrow> state_refs_of s (idle_thread s) = {}"
-  by (clarsimp simp: valid_idle_def dest!: st_tcb_at_state_refs_ofD)
+  apply (clarsimp simp: valid_idle_def)
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def tcb_aep_is_bound_def state_refs_of_def)
+  done
 
 lemma idle_not_queued:
   "\<lbrakk>valid_idle s; sym_refs (state_refs_of s);
@@ -2264,7 +2437,7 @@ lemma valid_cap_pspaceI:
   unfolding valid_cap_def
   by (cases cap)
      (auto intro: obj_at_pspaceI cte_wp_at_pspaceI
-           simp: obj_range_def valid_untyped_def st_tcb_at_def
+           simp: obj_range_def valid_untyped_def pred_tcb_at_def
           split: arch_cap.split option.split sum.split)
 
 lemma valid_arch_obj_pspaceI:
@@ -2279,15 +2452,18 @@ lemma valid_arch_obj_pspaceI:
   apply (case_tac "fun x", simp_all add: obj_at_def)
   done
 
+(* FIXME-AEP: ugly proof *)
 lemma valid_obj_pspaceI:
   "\<lbrakk> valid_obj ptr obj s; kheap s = kheap s' \<rbrakk> \<Longrightarrow> valid_obj ptr obj s'"
   unfolding valid_obj_def
-  by (cases obj)
-     (auto simp add: valid_aep_def valid_cs_def valid_tcb_def valid_ep_def
-                     valid_tcb_state_def st_tcb_at_def
-           intro: obj_at_pspaceI valid_cap_pspaceI valid_arch_obj_pspaceI
-           split: Structures_A.async_ep.splits Structures_A.endpoint.splits
-                  Structures_A.thread_state.splits)
+  apply (cases obj)
+      apply (auto simp add: valid_aep_def valid_cs_def valid_tcb_def valid_ep_def 
+                           valid_tcb_state_def pred_tcb_at_def valid_bound_aep_def valid_bound_tcb_def
+                 intro: obj_at_pspaceI valid_cap_pspaceI valid_arch_obj_pspaceI
+                 split: Structures_A.aep.splits Structures_A.endpoint.splits
+                        Structures_A.thread_state.splits option.split
+          | auto split: kernel_object.split)+
+  done
 
 lemma valid_objs_pspaceI:
   "\<lbrakk> valid_objs s; kheap s = kheap s' \<rbrakk> \<Longrightarrow> valid_objs s'"
@@ -2326,7 +2502,7 @@ lemma ifunsafe_pspaceI:
 
 lemma valid_idle_pspaceI:
   "valid_idle s \<Longrightarrow> \<lbrakk>kheap s = kheap s'; idle_thread s = idle_thread s'\<rbrakk> \<Longrightarrow> valid_idle s'"
-  unfolding valid_idle_def st_tcb_at_def
+  unfolding valid_idle_def pred_tcb_at_def
   by (fastforce elim!: obj_at_pspaceI cte_wp_at_pspaceI)
 
 lemma obj_irq_refs_Int:
@@ -2671,21 +2847,32 @@ proof -
     by - (rule R, auto)
 qed
 
+lemma pred_tcb_weakenE:
+  "\<lbrakk> pred_tcb_at proj P t s; \<And>tcb . P (proj tcb) \<Longrightarrow> P' (proj tcb) \<rbrakk> \<Longrightarrow> pred_tcb_at proj P' t s"
+  by (auto simp: pred_tcb_at_def elim: obj_at_weakenE)
+
+(* sseefried:
+     This lemma exists only to make existing proofs go through more easily.
+     Replacing 'st_tcb_at_weakenE' with 'pred_tcb_at_weakenE' in a proof
+     should yield the same result.
+*)
 lemma st_tcb_weakenE:
-  "\<lbrakk> st_tcb_at P t s; \<And>st. P st \<Longrightarrow> P' st \<rbrakk> \<Longrightarrow> st_tcb_at P' t s"
-  by (auto simp: st_tcb_at_def elim: obj_at_weakenE)
+  "\<lbrakk> st_tcb_at P t s; \<And>st . P st \<Longrightarrow> P' st \<rbrakk> \<Longrightarrow> st_tcb_at P' t s"
+  by (auto simp: pred_tcb_weakenE)
 
 lemma tcb_at_st_tcb_at:
-  "tcb_at = st_tcb_at \<top>"
+  "tcb_at = st_tcb_at (\<lambda>_. True)"
   apply (rule ext)+
-  apply (simp add: tcb_at_def st_tcb_at_def obj_at_def is_tcb_def)
+  apply (simp add: tcb_at_def pred_tcb_at_def obj_at_def is_tcb_def)
   apply (rule arg_cong [where f=Ex], rule ext)
   apply (case_tac ko, simp_all)
   done
 
-lemma st_tcb_at_tcb_at:
-  "st_tcb_at P t s \<Longrightarrow> tcb_at t s"
-  by (auto simp: tcb_at_st_tcb_at elim:st_tcb_weakenE)
+lemma pred_tcb_at_tcb_at:
+  "pred_tcb_at proj P t s \<Longrightarrow> tcb_at t s"
+  by (auto simp: tcb_at_def pred_tcb_at_def obj_at_def is_tcb)
+
+lemmas st_tcb_at_tcb_at = pred_tcb_at_tcb_at[where proj=itcb_state, simplified]
 
 lemma cte_wp_at_weakenE:
   "\<lbrakk> cte_wp_at P t s; \<And>c. P c \<Longrightarrow> P' c \<rbrakk> \<Longrightarrow> cte_wp_at P' t s"
@@ -2853,11 +3040,16 @@ lemma valid_tcb_state_typ:
       simp_all add: valid_tcb_state_def hoare_post_taut
                     ep_at_typ P tcb_at_typ aep_at_typ)
 
+lemma aep_at_typ_at:
+  "(\<And>T p. \<lbrace>typ_at T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at T p\<rbrace>) \<Longrightarrow> \<lbrace>aep_at c\<rbrace> f \<lbrace>\<lambda>rv. aep_at c\<rbrace>"
+  by (simp add: aep_at_typ)
+
 lemma valid_tcb_typ:
   assumes P: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
   shows      "\<lbrace>\<lambda>s. valid_tcb p tcb s\<rbrace> f \<lbrace>\<lambda>rv s. valid_tcb p tcb s\<rbrace>"
-  apply (simp add: valid_tcb_def split_def)
-  apply (wp valid_tcb_state_typ valid_cap_typ P hoare_vcg_const_Ball_lift)
+  apply (simp add: valid_tcb_def valid_bound_aep_def split_def)
+  apply (wp valid_tcb_state_typ valid_cap_typ P hoare_vcg_const_Ball_lift
+            valid_case_option_post_wp aep_at_typ_at)
   done
 
 lemma valid_cs_typ:
@@ -2885,11 +3077,16 @@ lemma valid_ep_typ:
 lemma valid_aep_typ:
   assumes P: "\<And>p. \<lbrace>typ_at ATCB p\<rbrace> f \<lbrace>\<lambda>rv. typ_at ATCB p\<rbrace>"
   shows      "\<lbrace>\<lambda>s. valid_aep aep s\<rbrace> f \<lbrace>\<lambda>rv s. valid_aep aep s\<rbrace>"
-  apply (case_tac aep,
-         simp_all add: valid_aep_def hoare_post_taut tcb_at_typ)
+  apply (case_tac "aep_obj aep",
+         simp_all add: valid_aep_def valid_bound_tcb_def hoare_post_taut tcb_at_typ)
+    defer 2
+    apply ((case_tac "aep_bound_tcb aep", simp_all add: hoare_post_taut tcb_at_typ P)+)[2]
+  apply (rule hoare_vcg_conj_lift [OF hoare_vcg_prop])+
+  apply (rule hoare_vcg_conj_lift)
+   apply (rule hoare_vcg_const_Ball_lift [OF P])
   apply (rule hoare_vcg_conj_lift [OF hoare_vcg_prop])
-  apply (rule hoare_vcg_conj_lift [OF _ hoare_vcg_prop])
-  apply (rule hoare_vcg_const_Ball_lift [OF P])
+  apply (case_tac "aep_bound_tcb aep", simp_all add: hoare_post_taut tcb_at_typ P)
+  apply (rule hoare_vcg_conj_lift [OF hoare_vcg_prop], simp add: P)
   done
 
 lemma valid_arch_obj_typ:
@@ -3169,7 +3366,7 @@ lemma cte_wp_valid_cap:
 lemma cte_wp_tcb_cap_valid:
   "\<lbrakk> cte_wp_at (op = c) p s; valid_objs s \<rbrakk> \<Longrightarrow> tcb_cap_valid c p s"
   apply (clarsimp simp: tcb_cap_valid_def obj_at_def
-                        st_tcb_at_def cte_wp_at_cases)
+                        pred_tcb_at_def cte_wp_at_cases)
   apply (erule disjE, (clarsimp simp: is_tcb)+)
   apply (erule(1) valid_objsE)
   apply (clarsimp simp: valid_obj_def valid_tcb_def)
@@ -3222,9 +3419,9 @@ lemma pspace_distinct_update [iff]:
   "pspace_distinct (f s) = pspace_distinct s"
   by (simp add: pspace_distinct_def pspace)
 
-lemma st_tcb_at_update [iff]:
-  "st_tcb_at P p (f s) = st_tcb_at P p s"
-  by (simp add: st_tcb_at_def)
+lemma pred_tcb_at_update [iff]:
+  "pred_tcb_at proj P p (f s) = pred_tcb_at proj P p s"
+  by (simp add: pred_tcb_at_def)
 
 lemma valid_cap_update [iff]:
   "(f s) \<turnstile> c = s \<turnstile> c"
@@ -3592,9 +3789,9 @@ lemma valid_reply_masters_cte_lift:
   apply wp
   done
 
-lemma st_tcb_at_disj:
-  "(st_tcb_at P t s \<or> st_tcb_at Q t s) = st_tcb_at (\<lambda>ts. P ts \<or> Q ts) t s"
-  by (fastforce simp add: st_tcb_at_def obj_at_def)
+lemma pred_tcb_at_disj:
+  "(pred_tcb_at proj P t s \<or> pred_tcb_at proj Q t s) = pred_tcb_at proj (\<lambda>a. P a \<or> Q a) t s"
+  by (fastforce simp add: pred_tcb_at_def obj_at_def)
 
 lemma dom_empty_cnode: "dom (empty_cnode us) = {x. length x = us}"
   unfolding empty_cnode_def
@@ -3641,10 +3838,6 @@ lemma ep_at_typ_at:
   "(\<And>T p. \<lbrace>typ_at T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at T p\<rbrace>) \<Longrightarrow> \<lbrace>ep_at c\<rbrace> f \<lbrace>\<lambda>rv. ep_at c\<rbrace>"
   by (simp add: ep_at_typ)
 
-lemma aep_at_typ_at:
-  "(\<And>T p. \<lbrace>typ_at T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at T p\<rbrace>) \<Longrightarrow> \<lbrace>aep_at c\<rbrace> f \<lbrace>\<lambda>rv. aep_at c\<rbrace>"
-  by (simp add: aep_at_typ)
-
 lemma tcb_at_typ_at:
   "(\<And>T p. \<lbrace>typ_at T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at T p\<rbrace>) \<Longrightarrow> \<lbrace>tcb_at c\<rbrace> f \<lbrace>\<lambda>rv. tcb_at c\<rbrace>"
   by (simp add: tcb_at_typ)
@@ -3683,7 +3876,7 @@ lemmas abs_typ_at_lifts  =
   pde_at_typ pte_at_typ
 
 lemma valid_idle_lift:
-  assumes "\<And>P t. \<lbrace>st_tcb_at P t\<rbrace> f \<lbrace>\<lambda>_. st_tcb_at P t\<rbrace>"
+  assumes "\<And>P t. \<lbrace>idle_tcb_at P t\<rbrace> f \<lbrace>\<lambda>_. idle_tcb_at P t\<rbrace>"
   assumes "\<And>P. \<lbrace>\<lambda>s. P (idle_thread s)\<rbrace> f \<lbrace>\<lambda>_ s. P (idle_thread s)\<rbrace>"
   shows "\<lbrace>valid_idle\<rbrace> f \<lbrace>\<lambda>_. valid_idle\<rbrace>"
   apply (simp add: valid_idle_def)
@@ -3691,6 +3884,7 @@ lemma valid_idle_lift:
    apply (rule hoare_vcg_conj_lift)
     apply (rule assms)+
   done
+
 
 lemma pspace_alignedD [intro?]:
   "\<lbrakk> kheap s p = Some ko; pspace_aligned s \<rbrakk> \<Longrightarrow> is_aligned p (obj_bits ko)"
@@ -4466,9 +4660,9 @@ lemma valid_pspace_vo [elim!]:
   "valid_pspace s \<Longrightarrow> valid_objs s"
   by (simp add: valid_pspace_def)
 
-lemma st_tcb_at_conj_strg:
-  "st_tcb_at P t s \<and> st_tcb_at Q t s \<longrightarrow> st_tcb_at (\<lambda>st. P st \<and> Q st) t s"
-  by (clarsimp simp: st_tcb_at_def obj_at_def)
+lemma pred_tcb_at_conj_strg:
+  "pred_tcb_at proj P t s \<and> pred_tcb_at proj Q t s \<longrightarrow> pred_tcb_at proj (\<lambda>a. P a \<and> Q a) t s"
+  by (clarsimp simp: pred_tcb_at_def obj_at_def)
 
 lemma real_cte_at_typ_valid:
   "\<lbrace>typ_at (ACapTable (length (snd p))) (fst p)\<rbrace>
@@ -4488,9 +4682,9 @@ lemma cte_wp_at_eqD2:
   "\<lbrakk>cte_wp_at (op = c) p s; cte_wp_at P p s \<rbrakk> \<Longrightarrow> P c"
   by (auto elim!: cte_wp_atE split: split_if_asm)
 
-lemma not_st_tcb:
-  "(\<not>st_tcb_at P t s) = (\<not>tcb_at t s \<or> st_tcb_at (\<lambda>st. \<not>P st) t s)"
-  apply (simp add: st_tcb_at_def obj_at_def is_tcb_def)
+lemma not_pred_tcb:
+  "(\<not>pred_tcb_at proj P t s) = (\<not>tcb_at t s \<or> pred_tcb_at proj (\<lambda>a. \<not>P a) t s)"
+  apply (simp add: pred_tcb_at_def obj_at_def is_tcb_def)
   apply (auto split: Structures_A.kernel_object.splits)
   done
 
@@ -4636,7 +4830,7 @@ lemma only_idle_lift:
   shows "\<lbrace>only_idle\<rbrace> f \<lbrace>\<lambda>_. only_idle\<rbrace>"
   apply (simp add: only_idle_def)
   apply (rule hoare_vcg_all_lift)
-  apply (subst imp_conv_disj not_st_tcb)+
+  apply (subst imp_conv_disj not_pred_tcb)+ 
   apply (rule hoare_vcg_disj_lift)+
     apply (simp add: tcb_at_typ)
     apply (rule T)
@@ -4827,15 +5021,15 @@ lemma invs_valid_idle[elim!]:
   "invs s \<Longrightarrow> valid_idle s"
   by (fastforce simp: invs_def valid_state_def)
 
+
 lemma simple_st_tcb_at_state_refs_ofD:
-  "st_tcb_at simple t s \<Longrightarrow> state_refs_of s t = {}"
-  by (fastforce dest!: st_tcb_at_state_refs_ofD)
+  "st_tcb_at simple t s \<Longrightarrow> bound_tcb_at (\<lambda>x. tcb_bound_refs x = state_refs_of s t) t s"
+  by (fastforce simp: pred_tcb_at_def obj_at_def state_refs_of_def)
+
 
 lemma active_st_tcb_at_state_refs_ofD:
-  "st_tcb_at active t s \<Longrightarrow> state_refs_of s t = {}"
-  by (clarsimp dest!: st_tcb_at_state_refs_ofD
-                simp: tcb_st_refs_of_def
-               split: Structures_A.thread_state.split_asm)
+  "st_tcb_at active t s \<Longrightarrow> bound_tcb_at (\<lambda>x. tcb_bound_refs x = state_refs_of s t) t s"
+  by (fastforce simp: pred_tcb_at_def obj_at_def state_refs_of_def)
 
 lemma cur_tcb_revokable [iff]:
   "cur_tcb (is_original_cap_update f s) = cur_tcb s"
@@ -4965,5 +5159,23 @@ lemma in_dxo_interruptD:
 lemma in_dxo_archD:
   "((), s') \<in> fst (do_extended_op f s) \<Longrightarrow> arch_state s' = arch_state s"
   by (clarsimp simp: do_extended_op_def select_f_def in_monad)
+
+lemma sym_refs_bound_tcb_atD:
+  "\<lbrakk>bound_tcb_at P t s; sym_refs (state_refs_of s)\<rbrakk>
+    \<Longrightarrow> \<exists>ts aepptr.
+        P aepptr \<and>
+        obj_at (tcb_aep_is_bound aepptr) t s \<and>
+        state_refs_of s t = tcb_st_refs_of ts \<union> tcb_bound_refs aepptr \<and>
+        (\<forall>(x, tp)\<in>tcb_st_refs_of ts \<union> tcb_bound_refs aepptr.
+            obj_at (\<lambda>ko. (t, symreftype tp) \<in> refs_of ko) x s)"
+  apply (drule bound_tcb_at_state_refs_ofD)
+  apply (erule exE)+
+  apply (rule_tac x=ts in exI)
+  apply (rule_tac x=aepptr in exI)
+  apply clarsimp
+  apply (frule obj_at_state_refs_ofD)
+  apply (drule (1)sym_refs_obj_atD)
+  apply auto
+  done
 
 end

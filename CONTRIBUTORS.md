@@ -16,6 +16,7 @@ order).
 * Matthias Daum, NICTA & UNSW
 * Jeremy Dawson, NICTA
 * Philip Derrin, NICTA
+* Cornelius Diekmann, TUM
 * Dhammika Elkaduwe, NICTA & UNSW
 * Kai Engelhardt, NICTA & UNSW
 * Matthew Fernandez, NICTA & UNSW
@@ -27,6 +28,7 @@ order).
 * Rohan Jacob-Rao, NICTA
 * Gerwin Klein, NICTA & UNSW
 * Rafal Kolanski, NICTA & UNSW
+* Ramana Kumar, NICTA
 * Corey Lewis, NICTA
 * Japheth Lim, NICTA
 * Tran Ma, NICTA
@@ -38,6 +40,7 @@ order).
 * Michael Norrish, NICTA & ANU
 * Lars Noschinski
 * Liam O'Connor, NICTA
+* Corey Richardson
 * Sean Seefried, NICTA
 * Thomas Sewell, NICTA & UNSW
 * Rupert Shuttleworth, NICTA
@@ -45,3 +48,4 @@ order).
 * David Tsai, NICTA
 * Harvey Tuch, NICTA & UNSW
 * Simon Winwood, NICTA
+* Nickolai Zeldovich, MIT

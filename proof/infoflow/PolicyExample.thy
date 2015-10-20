@@ -332,6 +332,10 @@ lemma RM_in_subjectAffects_T:
   "partition_label RM \<in> subjectAffects example_auth_graph (partition_label T)
 " apply(rule affects_send[where auth="AsyncSend" and ep="partition_label AEP2"], auto)
   done
+  
+lemma EP_in_subjectAffects_T:
+  "partition_label EP \<in> subjectAffects example_auth_graph (partition_label T)"
+  by (rule affects_ep_bound_trans, auto)
 
 lemmas subjectAffects_T' = affects_lrefl[of "partition_label T"]
                            AEP1_in_subjectAffects_T
@@ -339,15 +343,18 @@ lemmas subjectAffects_T' = affects_lrefl[of "partition_label T"]
                            C_in_subjectAffects_T
                            CTR_in_subjectAffects_T
                            RM_in_subjectAffects_T
+                           EP_in_subjectAffects_T
  
 
 
 lemma subjectAffects_T:
-  "subjectAffects example_auth_graph (partition_label T) = {partition_label AEP1,partition_label AEP2,partition_label T,partition_label C, partition_label CTR, partition_label RM}"
+  "subjectAffects example_auth_graph (partition_label T) = {partition_label AEP1,partition_label AEP2,partition_label T,partition_label C, partition_label CTR, partition_label RM, partition_label EP}"
   apply(rule equalityI)
    apply(rule subsetI)
    apply(erule subjectAffects.cases)
            apply(fastforce+)[7]
+    apply clarsimp
+    apply (elim disjE conjE; simp)
   apply(auto simp: subjectAffects_T'[simplified])
   done
 
@@ -379,18 +386,26 @@ lemma RM_in_subjectAffects_AEP2:
   "partition_label RM \<in> subjectAffects example_auth_graph (partition_label AEP2)"
   apply(rule affects_send[where ep="partition_label AEP2"], auto)
   done
+  
+lemma EP_in_subjectAffects_AEP2:
+  "partition_label EP \<in> subjectAffects example_auth_graph (partition_label AEP2)"
+  apply(rule affects_ep_bound_trans, auto)
+  done
 
 
 lemmas subjectAffects_AEP2' = affects_lrefl[of "partition_label AEP2"]
                            RM_in_subjectAffects_AEP2
+                           EP_in_subjectAffects_AEP2
 
 
 lemma subjectAffects_AEP2:
-  "subjectAffects example_auth_graph (partition_label AEP2) = {partition_label AEP2,partition_label RM}"
+  "subjectAffects example_auth_graph (partition_label AEP2) = {partition_label AEP2,partition_label RM, partition_label EP}"
   apply(rule equalityI)
    apply(rule subsetI)
    apply(erule subjectAffects.cases)
            apply(auto)[7]
+   apply clarsimp
+   apply (elim disjE conjE; simp)
   apply(auto simp: subjectAffects_AEP2'[simplified])
   done
 
@@ -461,19 +476,28 @@ lemma C_in_subjectAffects_EP:
   "partition_label C \<in> subjectAffects example_auth_graph (partition_label EP)"
   apply(rule affects_reset[where ep="partition_label EP" and l'="partition_label CTR"], auto)
   done
+  
+lemma AEP2_in_subjectAffects_EP:
+  "partition_label AEP2 \<in> subjectAffects example_auth_graph (partition_label EP)"
+  apply(rule affects_ep_bound_trans, auto)
+  done
+
 
 lemmas subjectAffects_EP' = affects_lrefl[of "partition_label EP"]
                            CTR_in_subjectAffects_EP
                            C_in_subjectAffects_EP
                            RM_in_subjectAffects_EP
+                           AEP2_in_subjectAffects_EP
 
 
 lemma subjectAffects_EP:
-  "subjectAffects example_auth_graph (partition_label EP) = {partition_label EP, partition_label RM, partition_label CTR, partition_label C}"
+  "subjectAffects example_auth_graph (partition_label EP) = {partition_label EP, partition_label RM, partition_label CTR, partition_label C, partition_label AEP2}"
   apply(rule equalityI)
    apply(rule subsetI)
    apply(erule subjectAffects.cases)
            apply(fastforce+)[7]
+   apply clarsimp
+   apply (elim conjE disjE; simp)
   apply(auto simp: subjectAffects_EP'[simplified])
   done
 

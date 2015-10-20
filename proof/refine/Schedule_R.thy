@@ -195,7 +195,7 @@ lemma st_tcb_at_coerce_abstract:
   assumes sr: "(a, c) \<in> state_relation"
   shows "st_tcb_at (\<lambda>st. \<exists>st'. thread_state_relation st st' \<and> P st') t a"
   using assms
-  apply (clarsimp simp: state_relation_def st_tcb_at'_def obj_at'_def
+  apply (clarsimp simp: state_relation_def pred_tcb_at'_def obj_at'_def
                         projectKOs objBits_simps)
   apply (erule(1) pspace_dom_relatedE)
   apply (erule(1) obj_relation_cutsE, simp_all)
@@ -326,10 +326,8 @@ crunch valid_arch_state'[wp]: tcbSchedAppend valid_arch_state'
   (simp: unless_def)
 crunch valid_arch_state'[wp]: tcbSchedDequeue valid_arch_state'
 
-crunch st_tcb_at'[wp]: tcbSchedAppend "st_tcb_at' P t"
-  (wp: threadSet_st_tcb_no_state simp: unless_def ignore: getObject setObject)
-crunch st_tcb_at'[wp]: tcbSchedDequeue "st_tcb_at' P t"
-  (wp: threadSet_st_tcb_no_state)
+crunch pred_tcb_at'[wp]: tcbSchedAppend, tcbSchedDequeue "pred_tcb_at' proj P t"
+  (wp: threadSet_pred_tcb_no_state simp: unless_def tcb_to_itcb'_def ignore: getObject setObject)
 
 crunch state_refs_of'[wp]: setQueue "\<lambda>s. P (state_refs_of' s)"
 
@@ -610,11 +608,11 @@ lemma tcbSchedAppend_iflive'[wp]:
 lemma tcbSchedDequeue_iflive'[wp]:
   "\<lbrace>if_live_then_nonz_cap'\<rbrace> tcbSchedDequeue tcb \<lbrace>\<lambda>_. if_live_then_nonz_cap'\<rbrace>"
   apply (simp add: tcbSchedDequeue_def)
-  apply (wp threadSet_iflive' | simp)+
-       apply (rule hoare_pre_post, assumption)
-       apply (wp | clarsimp simp: bitmap_fun_defs)+
-     apply (rule_tac Q="\<lambda>rv. \<top>" in hoare_post_imp, clarsimp)
-     apply (wp | simp add: crunch_simps)+
+  apply (wp threadSet_iflive' hoare_when_weak_wp | simp add: crunch_simps)+
+       apply ((wp | clarsimp simp: bitmap_fun_defs)+)[1] (* deal with removeFromBitmap *)
+      apply (wp threadSet_iflive' hoare_when_weak_wp | simp add: crunch_simps)+
+      apply (rule_tac Q="\<lambda>rv. \<top>" in hoare_post_imp, fastforce)
+      apply (wp | simp add: crunch_simps)+
   done
 
 crunch ifunsafe'[wp]: tcbSchedEnqueue if_unsafe_then_cap'
@@ -922,7 +920,7 @@ lemma no_fail_isRunnable[wp]:
   "no_fail (tcb_at' t) (isRunnable t)"
   apply (simp add: isRunnable_def isBlocked_def)
   apply (rule no_fail_pre, wp)
-  apply (clarsimp simp: st_tcb_at'_def)
+  apply (clarsimp simp: pred_tcb_at'_def)
   done
 
 lemma corres_when_r:
@@ -946,17 +944,17 @@ lemma arch_switch_thread_tcb_at' [wp]: "\<lbrace>tcb_at' t\<rbrace> ArchThreadDe
 crunch typ_at'[wp]: "ThreadDecls_H.switchToThread" "\<lambda>s. P (typ_at' T p s)"
   (ignore: MachineOps.clearExMonitor)
 
-lemma Arch_switchToThread_st_tcb'[wp]:
-  "\<lbrace>\<lambda>s. P (st_tcb_at' P' t' s)\<rbrace>
-   ArchThreadDecls_H.switchToThread t \<lbrace>\<lambda>rv s. P (st_tcb_at' P' t' s)\<rbrace>"
+lemma Arch_switchToThread_pred_tcb'[wp]:
+  "\<lbrace>\<lambda>s. P (pred_tcb_at' proj P' t' s)\<rbrace>
+   ArchThreadDecls_H.switchToThread t \<lbrace>\<lambda>rv s. P (pred_tcb_at' proj P' t' s)\<rbrace>"
 proof -
-  have pos: "\<And>P t t'. \<lbrace>st_tcb_at' P t'\<rbrace> ArchThreadDecls_H.switchToThread t \<lbrace>\<lambda>rv. st_tcb_at' P t'\<rbrace>"
-    apply (simp add: ArchThread_H.switchToThread_def storeWordUser_def st_tcb_at'_def)
+  have pos: "\<And>P t t'. \<lbrace>pred_tcb_at' proj P t'\<rbrace> ArchThreadDecls_H.switchToThread t \<lbrace>\<lambda>rv. pred_tcb_at' proj P t'\<rbrace>"
+    apply (simp add: ArchThread_H.switchToThread_def storeWordUser_def pred_tcb_at'_def)
     apply (wp doMachineOp_obj_at hoare_drop_imps)+
     done
   show ?thesis
     apply (rule P_bool_lift [OF pos])
-    by (rule lift_neg_st_tcb_at' [OF ArchThreadDecls_H_switchToThread_typ_at' pos])
+    by (rule lift_neg_pred_tcb_at' [OF ArchThreadDecls_H_switchToThread_typ_at' pos])
 qed
 
 crunch ksQ[wp]: storeWordUser "\<lambda>s. P (ksReadyQueues s p)"
@@ -997,7 +995,7 @@ proof -
     apply (rule corres_guard_imp)
       apply (rule corres_split [OF _ arch_switch_thread_corres])
         apply (rule corres_split[OF cur_thread_update_corres tcbSchedDequeue_corres])
-         apply (wp|clarsimp simp: tcb_at_is_etcb_at st_tcb_at_tcb_at st_tcb_at')+
+         apply (wp|clarsimp simp: tcb_at_is_etcb_at st_tcb_at_tcb_at)+
     done
 
   show ?thesis
@@ -1068,7 +1066,7 @@ lemma setQueue_no_change_ct[wp]:
   "\<lbrace>ct_in_state' st\<rbrace> setQueue d p q \<lbrace>\<lambda>rv. ct_in_state' st\<rbrace>"
   apply (simp add: setQueue_def)
   apply wp
-  apply (simp add: ct_in_state'_def st_tcb_at'_def)
+  apply (simp add: ct_in_state'_def pred_tcb_at'_def)
   done
 
 lemma sch_act_wf:
@@ -1111,11 +1109,9 @@ lemma queued_vs_state[wp]:
   apply (rule hoare_vcg_precond_imp)
    apply (rule hoare_post_imp[where Q="\<lambda>rv s. \<exists>t. t = ksCurThread s \<and> st_tcb_at' st t s"])
     apply (simp add: ct_in_state'_def)
-   apply (unfold st_tcb_at'_def)
+   apply (unfold pred_tcb_at'_def)
    apply (wp hoare_ex_wp threadSet_ct)
-  apply (simp add: ct_in_state'_def st_tcb_at'_def)
-  apply (erule obj_at'_weakenE)
-  apply (case_tac k, simp)
+  apply (simp add: ct_in_state'_def pred_tcb_at'_def)
   done
 
 lemma threadSet_timeslice_invs:
@@ -1173,17 +1169,17 @@ lemma valid_queues_not_runnable_not_queued:
 proof (rule ccontr)
   assume "\<not> obj_at' (Not \<circ> tcbQueued) t s"
   moreover from st have "typ_at' TCBT t s"
-    by (rule st_tcb_at' [THEN tcb_at_typ_at' [THEN iffD1]])
+    by (rule pred_tcb_at' [THEN tcb_at_typ_at' [THEN iffD1]])
   ultimately have "obj_at' tcbQueued t s"
     by (clarsimp simp: not_obj_at' comp_def)
 
   moreover
-  from st [THEN st_tcb_at', THEN tcb_at'_has_tcbPriority]
+  from st [THEN pred_tcb_at', THEN tcb_at'_has_tcbPriority]
   obtain p where tp: "obj_at' (\<lambda>tcb. tcbPriority tcb = p) t s"
     by clarsimp
 
   moreover
-  from st [THEN st_tcb_at', THEN tcb_at'_has_tcbDomain]
+  from st [THEN pred_tcb_at', THEN tcb_at'_has_tcbDomain]
   obtain d where td: "obj_at' (\<lambda>tcb. tcbDomain tcb = d) t s"
     by clarsimp
   
@@ -1213,7 +1209,7 @@ proof (rule ccontr)
 
   with st show False
     apply -
-    apply (drule(1) st_tcb_at_conj')
+    apply (drule(1) pred_tcb_at_conj')
     apply (clarsimp)
     done
 qed
@@ -1228,10 +1224,7 @@ lemma idle'_not_tcbQueued':
  shows "obj_at' (Not \<circ> tcbQueued) (ksIdleThread s) s"
  proof -
    from idle have stidle: "st_tcb_at' (Not \<circ> runnable') (ksIdleThread s) s"
-     apply (simp add: valid_idle'_def)
-     apply (erule st_tcb'_weakenE)
-     apply (simp)
-     done
+     by (clarsimp simp add: valid_idle'_def pred_tcb_at'_def obj_at'_def projectKOs)
 
    with vq vq' show ?thesis
      by (rule valid_queues_not_runnable_not_queued)
@@ -1260,12 +1253,14 @@ proof -
     apply (simp add: setCurThread_def)
     apply wp
     apply (clarsimp simp add: vms'_ct ct_not_inQ_ct idle'_activatable' idle'_not_tcbQueued'[simplified o_def]
-                              all_invs_but_ct_idle_or_in_cur_domain'_def invs'_def cur_tcb'_def valid_state'_def valid_idle'_def
+                              invs'_def cur_tcb'_def valid_state'_def valid_idle'_def
                               sch_act_wf ct_in_state'_def state_refs_of'_def
                               ps_clear_def valid_irq_node'_def
-                               ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def
+                              ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def
                               valid_queues_def bitmapQ_defs valid_queues_no_bitmap_def valid_queues'_def
+                              all_invs_but_ct_idle_or_in_cur_domain'_def pred_tcb_at'_def
                         cong: option.case_cong)
+    apply (clarsimp simp: obj_at'_def projectKOs)
     done
 qed
 
@@ -1369,18 +1364,18 @@ lemma switchToThread_invs_no_cicd':
   "\<lbrace>invs_no_cicd' and st_tcb_at' runnable' t and tcb_in_cur_domain' t \<rbrace> ThreadDecls_H.switchToThread t \<lbrace>\<lambda>rv. invs' \<rbrace>"
   apply (simp add: switchToThread_def )
   apply (wp setCurThread_invs_no_cicd'
-             Arch_switchToThread_invs_no_cicd' Arch_switchToThread_st_tcb'
+             Arch_switchToThread_invs_no_cicd' Arch_switchToThread_pred_tcb'
               tcbSchedDequeue_not_tcbQueued)
-  apply (clarsimp elim!: st_tcb'_weakenE)+
+  apply (clarsimp elim!: pred_tcb'_weakenE)+
   done
 
 lemma switchToThread_invs[wp]:
   "\<lbrace>invs' and st_tcb_at' runnable' t and tcb_in_cur_domain' t \<rbrace> switchToThread t \<lbrace>\<lambda>rv. invs' \<rbrace>"
   apply (simp add: switchToThread_def )
   apply (wp threadSet_timeslice_invs setCurThread_invs
-             Arch_switchToThread_invs Arch_switchToThread_st_tcb'
-             dmo_invs' doMachineOp_obj_at tcbSchedDequeue_not_tcbQueued)
-  by (clarsimp elim!: st_tcb'_weakenE)+
+             Arch_switchToThread_invs dmo_invs'
+             doMachineOp_obj_at tcbSchedDequeue_not_tcbQueued)
+  by (clarsimp elim!: pred_tcb'_weakenE)+
 
 lemma setCurThread_ct_in_state:
   "\<lbrace>obj_at' (P \<circ> tcbState) t\<rbrace> setCurThread t \<lbrace>\<lambda>rv. ct_in_state' P\<rbrace>"
@@ -1391,7 +1386,7 @@ proof -
   show ?thesis
     apply (simp add: setCurThread_def)
     apply wp
-    apply (simp add: ct_in_state'_def st_tcb_at'_def obj_at'_ct)
+    apply (simp add: ct_in_state'_def pred_tcb_at'_def obj_at'_ct o_def)
     done
 qed
 
@@ -1583,7 +1578,7 @@ proof -
     apply clarify
     apply (drule_tac x=d in spec)
     apply (drule_tac x=p in spec)
-    apply (clarsimp simp: st_tcb_at'_def)
+    apply (clarsimp simp: pred_tcb_at'_def)
     apply (drule(1) bspec)
     apply (erule obj_at'_weakenE)
     apply (simp)
@@ -1598,6 +1593,9 @@ lemma tcb_at_typ_at':
   apply (clarsimp simp add: obj_at'_def ko_wp_at'_def projectKOs)
   apply (case_tac ko, simp_all)
   done
+
+
+
 
 
 
@@ -1694,6 +1692,7 @@ lemma switchToIdleThread_invs'[wp]:
   apply (clarsimp simp: switchToIdleThread_def ArchThread_H.switchToIdleThread_def)
   apply (wp_trace setCurThread_invs_idle_thread)
   apply clarsimp
+
   done
 
 lemma bind_dummy_ret_val:
@@ -1920,7 +1919,7 @@ lemma switchToIdleThread_activatable[wp]:
                    ArchThread_H.switchToIdleThread_def)
   apply (wp setCurThread_ct_in_state)
   apply (clarsimp simp: invs'_def valid_state'_def valid_idle'_def
-                        st_tcb_at'_def obj_at'_def)
+                        pred_tcb_at'_def obj_at'_def)
   done
 
 declare static_imp_conj_wp[wp_split del]
@@ -1998,7 +1997,7 @@ lemma getThreadState_ct_in_state:
    apply (clarsimp simp add: ct_in_state'_def)
   apply (rule hoare_vcg_precond_imp)
    apply (wp hoare_vcg_disj_lift)
-  apply (clarsimp simp add: st_tcb_at'_def obj_at'_def)
+  apply (clarsimp simp add: pred_tcb_at'_def obj_at'_def)
   done
 
 lemma gsa_wf_invs:
@@ -2330,8 +2329,8 @@ lemma guarded_switch_to_chooseThread_fragment_corres:
      apply (wp gts_st_tcb_at)
    apply (clarsimp simp: st_tcb_at_tcb_at invs_def valid_state_def valid_pspace_def valid_sched_def
                           invs_valid_vs_lookup invs_unique_refs)
-  apply (auto elim!: st_tcb'_weakenE split: thread_state.splits
-              simp: st_tcb_at' runnable'_def all_invs_but_ct_idle_or_in_cur_domain'_def)
+  apply (auto elim!: pred_tcb'_weakenE split: thread_state.splits
+              simp: pred_tcb_at' runnable'_def all_invs_but_ct_idle_or_in_cur_domain'_def)
   done
 
 lemma bitmap_lookup_queue_is_max_non_empty:
@@ -2720,7 +2719,7 @@ lemma switchToIdleThread_activatable_2[wp]:
                    ArchThread_H.switchToIdleThread_def)
   apply (wp setCurThread_ct_in_state)
   apply (clarsimp simp: all_invs_but_ct_idle_or_in_cur_domain'_def valid_state'_def valid_idle'_def
-                        st_tcb_at'_def obj_at'_def)
+                        pred_tcb_at'_def obj_at'_def)
   done
 
 lemma switchToThread_tcb_in_cur_domain':
@@ -2782,6 +2781,12 @@ lemma chooseThread_activatable_2:
   apply (rule hoare_pre, rule hoare_strengthen_post)
     apply (rule chooseThread_invs_no_cicd'_posts)
    apply simp+
+  done
+
+lemma chooseThread_activatable:
+  "\<lbrace>invs'\<rbrace> chooseThread \<lbrace>\<lambda>rv. ct_in_state' activatable'\<rbrace>"
+  apply (rule hoare_pre, rule chooseThread_activatable_2)
+  apply (simp add: invs'_to_invs_no_cicd'_def)
   done
 
 lemma chooseThread_ct_not_queued_2:
@@ -2871,7 +2876,7 @@ lemma schedule_invs': "\<lbrace>invs'\<rbrace> ThreadDecls_H.schedule \<lbrace>\
       apply (clarsimp simp:st_tcb_at'_def valid_state'_def obj_at'_def)
      apply (wp)
   apply (frule invs_sch_act_wf')
-  apply (auto elim!: obj_at'_weakenE simp: st_tcb_at'_def )
+  apply (auto elim!: obj_at'_weakenE simp: pred_tcb_at'_def)
   done
 
 lemma setCurThread_nosch:
@@ -2930,7 +2935,7 @@ proof -
   show ?thesis
     apply (unfold setSchedulerAction_def)
     apply wp
-    apply (clarsimp simp add: ct_in_state'_def st_tcb_at'_def obj_at'_sa)
+    apply (clarsimp simp add: ct_in_state'_def pred_tcb_at'_def obj_at'_sa)
     done
 qed
 
@@ -2985,6 +2990,11 @@ lemma sts_sch_act_sane:
            | simp add: threadSet_sch_act_sane sane_update)+
   done
 
+lemma sba_sch_act_sane:
+  "\<lbrace>sch_act_sane\<rbrace> setBoundAEP aep t \<lbrace>\<lambda>_. sch_act_sane\<rbrace>"
+  apply (simp add: setBoundAEP_def)
+  apply (wp | simp add: threadSet_sch_act_sane sane_update)+
+  done
 lemma possibleSwitchTo_corres:
   "corres dc (valid_etcbs and weak_valid_sched_action and cur_tcb and st_tcb_at runnable t)
     (Invariants_H.valid_queues and valid_queues' and

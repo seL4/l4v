@@ -121,6 +121,9 @@ tests/examples/*.c:
 tests/examples/*.h:
 tests/parse-tests/*.c:
 tests/parse-tests/*.h:
+tests/proof-tests/*.thy:
+tests/proof-tests/*.c:
+tests/proof-tests/*.h:
 tests/README:
     Some simple examples of the tool in use.
 

@@ -64,7 +64,8 @@ definition
                    tcb_replycap_slot \<mapsto> NullCap,
                    tcb_caller_slot \<mapsto> NullCap,
                    tcb_ipcbuffer_slot \<mapsto> FrameCap frame_a1_id {AllowRead, AllowWrite} small_frame_size Real None,
-                   tcb_pending_op_slot \<mapsto> NullCap],
+                   tcb_pending_op_slot \<mapsto> NullCap,
+                   tcb_boundaep_slot \<mapsto> NullCap],
    cdl_tcb_fault_endpoint = 0,
    cdl_tcb_intent = \<lparr>cdl_intent_op = None, cdl_intent_error = False, cdl_intent_cap = 0,
                      cdl_intent_extras = [], cdl_intent_recv_slot = None\<rparr>,
@@ -78,7 +79,8 @@ definition
                    tcb_replycap_slot \<mapsto> NullCap,
                    tcb_caller_slot \<mapsto> NullCap,
                    tcb_ipcbuffer_slot \<mapsto> FrameCap frame_b_id {AllowRead, AllowWrite} small_section_size Real None,
-                   tcb_pending_op_slot \<mapsto> NullCap],
+                   tcb_pending_op_slot \<mapsto> NullCap,
+                   tcb_boundaep_slot \<mapsto> NullCap],
    cdl_tcb_fault_endpoint = 0,
    cdl_tcb_intent = \<lparr>cdl_intent_op = None, cdl_intent_error = False, cdl_intent_cap = 0,
                      cdl_intent_extras = [], cdl_intent_recv_slot = None\<rparr>,
@@ -530,8 +532,7 @@ lemma well_formed_orig_caps_unique_example:
   "well_formed_orig_caps_unique example_spec"
   apply (clarsimp simp: well_formed_orig_caps_unique_def)
   apply (clarsimp simp: cnode_at_example_spec is_orig_cap_example_spec)
-  apply (elim disjE, (clarsimp simp: cnode_defs split: split_if_asm)+)
-  done
+  by (elim disjE, (clarsimp simp: cnode_defs split: split_if_asm)+)
 
 lemma well_formed_fake_pt_caps_unique_example:
   "well_formed_fake_pt_caps_unique example_spec"
@@ -558,12 +559,11 @@ lemma well_formed_cap_example [simp]:
     object_slots obj slot = Some cap; cap \<noteq> NullCap\<rbrakk>
   \<Longrightarrow> well_formed_cap cap"
   apply (clarsimp simp: well_formed_cap_def)
-  apply (clarsimp simp: well_formed_cap_def example_spec_def
+  by (clarsimp simp: well_formed_cap_def example_spec_def
                      obj_defs new_cap_map_def new_irq_node_def new_cnode_def
                      object_slots_def empty_cap_map_def guard_bits_def
                      tcb_slot_defs vm_read_write_def
               split: cdl_cap.splits split_if_asm)
-  done
 
 lemma well_formed_cdt_example [simp]:
   "\<lbrakk>cdl_objects example_spec obj_id = Some obj;
@@ -574,7 +574,7 @@ lemma well_formed_cdt_example [simp]:
   apply (case_tac "(obj_id = cnode_a2_id \<and> slot = 0) \<or>
                    (obj_id = cnode_b_id \<and> slot = 4)")
    apply (rule_tac x=cnode_extra_id in exI, clarsimp, rule conjI)
-    apply (fastforce simp: example_spec_def cnode_defs opt_object_def
+    subgoal by (fastforce simp: example_spec_def cnode_defs opt_object_def
                     split: split_if_asm)
    apply (rule_tac x=1 in exI)
    apply (clarsimp simp: is_orig_cap_example_spec)
@@ -606,10 +606,9 @@ lemma well_formed_orig_cap_example [simp]:
     original_cap_at (obj_id, slot) example_spec \<rbrakk>
    \<Longrightarrow> well_formed_orig_cap cap"
   apply (clarsimp simp: is_orig_cap_example_spec well_formed_orig_cap_def)
-  apply (clarsimp simp: example_spec_def object_slots_def obj_defs new_cnode_def new_cap_map_def
+  by (clarsimp simp: example_spec_def object_slots_def obj_defs new_cnode_def new_cap_map_def
                         new_irq_node_def ep_related_cap_def cap_type_def default_cap_def cap_rights_def
                 split: split_if_asm)
-  done
 
 lemma well_formed_caps_example:
   "cdl_objects example_spec obj_id = Some obj \<Longrightarrow>
@@ -641,12 +640,11 @@ lemma well_formed_caps_example:
                          onehundred_not_le_one object_type_def
                   dest!: cdl_cnode_caps_new_cnode_D new_cap_map_caps_D cdl_irq_node_caps_empty_irq_node_D
                   split: split_if_asm)
-   apply (clarsimp simp: example_spec_def obj_defs is_cnode_def is_tcb_def is_fake_vm_cap_def
+   by (clarsimp simp: example_spec_def obj_defs is_cnode_def is_tcb_def is_fake_vm_cap_def
                          object_slots_def object_type_def cap_type_def new_irq_node_def
                          empty_irq_node_def empty_cnode_def
                   dest!: cdl_cnode_caps_new_cnode_D irq_objects_some_object cdl_irq_node_caps_empty_irq_node_D
                   split: split_if_asm cdl_object.splits)
-   done
 
 lemma real_object_at_example_spec:
   "real_object_at obj_id example_spec =
@@ -742,13 +740,12 @@ lemma well_formed_cap_to_object_example:
    apply (clarsimp simp: example_spec_def)
   apply clarsimp
   apply (clarsimp simp: example_spec_def)
-  apply (clarsimp simp: opt_cap_def slots_of_def opt_object_def obj_defs
+  by (clarsimp simp: opt_cap_def slots_of_def opt_object_def obj_defs
                         object_slots_def object_size_bits_def
                         new_cap_map_def empty_cap_map_def frame_cap_not_cnode
                         empty_irq_node_def new_irq_node_def
                  split: split_if_asm
        | drule (1) cdl_cnode_caps_new_cnode_cnode_cap)+ (* Takes 20 seconds. *)
-  done
 
 lemma well_formed_cap_to_non_empty_pt_example:
   "cdl_objects example_spec obj_id = Some obj \<Longrightarrow>
@@ -783,11 +780,10 @@ lemma well_formed_irqhandler_caps_unique_example_spec:
   "well_formed_irqhandler_caps_unique example_spec"
   apply (clarsimp simp: well_formed_irqhandler_caps_unique_def)
   apply (drule (1) irq_handler_cap_example_spec)+
-  apply (clarsimp simp: example_spec_def opt_cap_def slots_of_def opt_object_def
+  by (clarsimp simp: example_spec_def opt_cap_def slots_of_def opt_object_def
                         object_slots_def obj_defs
                         new_cnode_def new_cap_map_def
                  split: split_if_asm)
-  done
 
 lemma ucast_0xFE:
   "(ucast :: 8 word \<Rightarrow> 32 word) irq = 0xFE \<Longrightarrow> irq = 0xFE"
@@ -860,10 +856,9 @@ lemma well_formed_tcb_example_spec:
    apply (case_tac "obj_id = tcb_b_id")
     apply (cut_tac obj_id = tcb_b_id in well_formed_tcb_b)
     apply (clarsimp simp: example_spec_def split: split_if_asm)
-   apply (clarsimp simp: example_spec_def well_formed_tcb_def is_tcb_def
+   by (clarsimp simp: example_spec_def well_formed_tcb_def is_tcb_def
                          empty_irq_node_def new_irq_node_def
                   split: split_if_asm)
-  done
 
 lemma well_formed_irq_node_example_spec:
   "cdl_objects example_spec obj_id = Some obj \<Longrightarrow>
@@ -894,7 +889,7 @@ lemma well_formed_example:
   apply (rule conjI)
    apply (fact well_formed_irq_node_example_spec)
   apply (clarsimp simp: cnode_at_example_spec)
-  apply (auto simp: example_spec_def object_size_bits_def object_default_state_def2
+  by (auto simp: example_spec_def object_size_bits_def object_default_state_def2
                     pd_size_def word_bits_def empty_cnode_def is_cnode_def
                     object_slots_def empty_cap_map_def tcb_slot_defs
                     default_tcb_def obj_defs
@@ -902,7 +897,6 @@ lemma well_formed_example:
                     new_cnode_def new_cap_map_def empty_irq_node_def
                     new_irq_node_def
              split: split_if_asm)
-  done
 
 end
 

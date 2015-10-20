@@ -1562,10 +1562,12 @@ lemma perform_invocation_valid_pdpt[wp]:
       perform_invocation blocking call i
          \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
   apply (cases i, simp_all)
-  apply (wp | simp)+
+  apply (wp send_async_ipc_interrupt_states | simp)+
+  apply (clarsimp simp: invocation_duplicates_valid_def)
+  apply (wp | wpc | simp)+
   apply (simp add: arch_perform_invocation_def)
   apply (rule hoare_pre)
-   apply (wp | wpc | simp)+
+  apply (wp | wpc | simp)+
   apply (auto simp: valid_arch_inv_def invocation_duplicates_valid_def)
   done
 
@@ -2188,7 +2190,7 @@ lemma call_kernel_valid_pdpt[wp]:
       apply (rule hoare_pre)
        apply (wp | simp | wpc
                  | rule conjI | clarsimp simp: ct_in_state_def
-                 | erule st_tcb_weakenE
+                 | erule pred_tcb_weakenE
                  | wp_once hoare_drop_imps)+
   done
 

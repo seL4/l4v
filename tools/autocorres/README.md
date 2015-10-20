@@ -1,3 +1,4 @@
+Note to maintainer: sync with tools/release_files/README
 
 AutoCorres
 ==========
@@ -12,42 +13,59 @@ more pleasant to reason about.
   [2]: http://ssrg.nicta.com.au/software/TS/c-parser/
 
 
+
+Contents of this README
+-----------------------
+
+  * Installation
+  * Quickstart
+  * Development and reporting bugs
+  * Options
+  * Examples
+  * Publications
+
+
+
+Installation
+------------
+
+AutoCorres is packaged as a theory for Isabelle2015:
+
+    http://isabelle.in.tum.de
+
+To build it, type
+
+    isabelle build -d . AutoCorres
+
+in the root of the L4v repository. This builds the C parser and AutoCorres itself.
+There is also a test suite, which can be run using:
+
+    make AutoCorresTest
+
+in tools/autocorres.
+
+
+
 Quickstart
 ----------
 
-To use AutoCorres, you need to (i) run the C parser, and then (ii) run
-AutoCorres. For example, assume you want to parse a file `myfile.c`
-containing a function `foo`. Start by creating an Isabelle theory file
-`Example.thy` as follows:
+A brief tutorial can be found in doc/quickstart.
+Run `make AutoCorresDoc` to generate a readable PDF document of
+the tutorial.
 
-    theory Example
-    imports AutoCorres
-    begin
 
-    (* Run the C-to-Isabelle parser. *)
-    install_C_file "myfile.c"
 
-    (* Run autocorres. *)
-    autocorres "myfile.c"
+Development and reporting bugs
+------------------------------
 
-    (* Enter the locale where all the theories reside. *)
-    context myfile begin
+AutoCorres is currently maintained by Japheth Lim <Japheth.Lim@nicta.com.au>.
 
-    (* Show the output of the C parser. *)
-    thm foo_body_def
+Additionally, the latest development version is available on GitHub
+as part of the L4.verified project:
 
-    (* Show the output of AutoCorres. *)
-    thm foo'_def
+    https://github.com/NICTA/l4v (in tools/autocorres)
 
-    end
 
-    end
-
-Each function `foo` in your input file will have a definition in
-Isabelle/HOL with the name `foo'`.
-
-You can perform some basic reasoning using the Hoare framework and
-associated tools developed by NICTA and distributed with AutoCorres.
 
 Options
 -------
@@ -86,7 +104,9 @@ The options are:
   * `heap_abs_syntax`: Enable experimental heap abstraction
     syntactic sugar.
 
-Name compatibility options:
+  * `skip_word_abs`: Completely disable _heap abstraction_.
+
+Name compatibility options (see `tests/examples/AC_Rename.thy`):
 
   * `lifted_globals_field_prefix="foo"`, `lifted_globals_field_suffix="foo"`:
     Override generated names for global variables during heap abstraction.
@@ -134,6 +154,8 @@ is as follows:
         ts_force nondet = l m n,
         no_heap_abs = a b,
         force_heap_abs = c d,
+        gen_word_heaps,
+        skip_heap_abs,  (* mutually exclusive with previous rules *)
         heap_abs_syntax,
         keep_going,
         scope = o p q,
@@ -141,17 +163,18 @@ is as follows:
         trace_heap_lift = c d,
         trace_word_abs = f h i,
         no_opt,
-        gen_word_heaps,
         lifted_globals_name_prefix="my_global_",
         lifted_globals_name_suffix="",
         function_name_prefix="my_func_",
         function_name_suffix=""
         ] "filename.c"
 
+
+
 Examples
 --------
 
-Some basic examples are in the `tests/examples` directory.
+Some examples are in the `tests/examples` directory.
 
 Many of these examples are quick-and-dirty proofs, and should not
 necessary be considered the best style.
@@ -176,14 +199,15 @@ increasing level of difficulty:
   * `ListRev.thy`: Proof of a function that carries out an
     in-place linked list reversal.
 
+  * `CList.thy`: Another list reversal, based on a proof by
+    Mehta and Nipkow. See [the paper][3].
+
   * `IsPrime.thy`: Proof of a function that determines if
     the input number is prime.
 
-  * `MemCpy.thy`: Proof of a C `memcpy` implementation.
+  * `Memset.thy`: Proof of a C `memset` implementation.
 
-  * `MemSet.thy`: Proof of a C `memset` implementation.
-
-  * `Quicksort.thy`: Proof of a simple QuickSort
+  * `Quicksort.thy`: Proof of a simple quicksort
     implementation on an array of `int`s.
 
   * `BinarySearch.thy`: Proof of a function that determines
@@ -192,26 +216,46 @@ increasing level of difficulty:
 
   * `SchorrWaite.thy`: Proof a C implementation of the
     Schorr-Waite algorithm, using Mehta and Nipkow's
-    high-level proof.
+    high-level proof. See [the paper][3].
+
+  * `Memcpy.thy`: Proof of a C `memcpy` implementation.
+    The proof connects the C parser's byte-level heap
+    with AutoCorres's type-safe heap representation.
+
+There are also some examples that aren't about program proofs,
+but demonstrate AutoCorres features:
+
+  * `AC_Rename.thy`: how to change AutoCorres-generated names.
+
+  * `TraceDemo.thy`: how to use the (experimental) tracing.
+
+  * `type_strengthen_tricks.thy`: configuring type-strengthening.
 
 
-Papers
-------
 
-AutoCorres is an ongoing research project. Papers related to the project
-are:
+Publications
+------------
 
-  * David Greenaway, June Andronick, and Gerwin Klein.
-    [_"Bridging the gap: Automatic verified abstraction of C."_][3]
-    In Interactive Theorem Proving, pp. 99-115. Springer
-    Berlin Heidelberg, 2012.
+L1 (SimplConv), L2 (LocalVarExtract) and TS (TypeStrengthen) were described in
 
-  * David Greenaway, Japheth Lim, June Andronick, and Gerwin Klein.
-    [_"Don't sweat the small stuff: formal verification of C code without the pain."_][4]
-    In Proceedings of the 35th ACM SIGPLAN Conference on
-    Programming Language Design and Implementation, p. 45.
-    ACM, 2014.
+    "Bridging the gap: Automatic verified abstraction of C"
+    David Greenaway, June Andronick, Gerwin Klein
+    Proceedings of the Third International
+            Conference on Interactive Theorem Proving (ITP), August 2012.
+    http://ssrg.nicta.com.au/publications/nictaabstracts/5662.pdf
 
-  [3]: http://www.ssrg.nicta.com.au/publications/papers/Greenaway_AK_12.pdf
-  [4]: http://www.nicta.com.au/pub?doc=7629
+HL (heap abstraction) and WA (word abstraction) were described in
 
+  [3]:
+    "Don’t sweat the small stuff --- Formal verification of C code without the pain"
+    David Greenaway, Japheth Lim, June Andronick, Gerwin Klein
+    Proceedings of the 35th ACM SIGPLAN Conference on
+            Programming Language Design and Implementation. ACM, June 2014.
+    http://ssrg.nicta.com.au/publications/nictaabstracts/7629.pdf
+
+A more comprehensive source is
+
+    "Automated proof-producing abstraction of C code"
+    David Greenaway
+    PhD thesis, March 2015.
+    http://ssrg.nicta.com.au/publications/nictaabstracts/8758.pdf

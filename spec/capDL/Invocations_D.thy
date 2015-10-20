@@ -36,6 +36,7 @@ datatype cdl_tcb_invocation =
         "(cdl_cap \<times> cdl_cap_ref) option"
   | Suspend cdl_object_id
   | Resume cdl_object_id
+  | AsyncEndpointControl cdl_object_id "cdl_object_id option"
 
 datatype cdl_irq_control_invocation =
     IssueIrqHandler cdl_irq cdl_cap_ref cdl_cap_ref

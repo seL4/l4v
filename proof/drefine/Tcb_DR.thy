@@ -18,7 +18,6 @@ begin
  *)
 abbreviation "normal_tcb_at x \<equiv> (tcb_at x) and (not_idle_thread x)"
 
-
 (*
  * Translate an abstract spec TCB invocation into a CDL TCB invocation.
  *)
@@ -50,7 +49,9 @@ where
       | Invocations_A.Suspend target_tcb \<Rightarrow>
           Invocations_D.Suspend target_tcb
       | Invocations_A.Resume target_tcb \<Rightarrow>
-          Invocations_D.Resume target_tcb"
+          Invocations_D.Resume target_tcb
+      | Invocations_A.AsyncEndpointControl target_tcb opt \<Rightarrow>
+          Invocations_D.AsyncEndpointControl target_tcb opt"
 
 lemma decode_set_ipc_buffer_translate_tcb_invocation:
   "\<lbrakk>x \<noteq> [];excaps ! 0 = (a,b,c)\<rbrakk> \<Longrightarrow>
@@ -96,7 +97,6 @@ lemma derive_cap_translate_tcb_invocation:
       apply (clarsimp simp:ensure_no_children_def whenE_def |wp)+
    apply (clarsimp split:option.splits | rule conjI | wp)+
   done
-
 
 lemma derive_cnode_cap_as_vroot:
   "\<lbrace>op = s \<rbrace> derive_cap (ba, ca) aa
@@ -247,87 +247,84 @@ lemma decode_tcb_corres:
   apply (unfold transform_cap_def)
   apply (unfold transform_cap_list_def)
   apply(case_tac "invocation_type label'")
-    apply(simp_all)
-          (* TCBReadRegisters *)
-            apply(clarsimp simp: decode_read_registers_def split: list.split)
-            apply(intro conjI impI allI)
+                                            apply(simp_all)
+                                                  (* TCBReadRegisters *)
+              apply(clarsimp simp: decode_read_registers_def split: list.split)
+              apply(intro conjI impI allI)
+                apply(auto)[1]
+               apply(auto)[1]
+              apply(unfold bindE_def)[1]
+              apply(rule corres_symb_exec_r[where Q'="\<lambda> rv s. True"])
+                 apply(case_tac rv)
+                  apply(simp add: lift_def)
+                  apply(rule corres_alternate2, simp)
+                 apply(simp add: lift_def)
+                 apply(simp add: liftE_def lift_def)
+                 apply(rule corres_symb_exec_r[where Q'="\<lambda> rv s. True"])
+                    apply(fold bindE_def)
+                    apply(rule dcorres_whenE_throwError_abstract')
+                     apply(rule corres_alternate2)
+                     apply simp
+                    apply (rule corres_alternate1)
+                    apply (clarsimp simp: returnOk_def translate_tcb_invocation_def)
+                   apply(wp)
+              apply(simp add: range_check_def unlessE_def[abs_def])
+           (* TCBWriteRegisters *)
+             apply(clarsimp simp: decode_write_registers_def split: list.split)
+             apply(intro impI conjI allI)
+               apply(auto)[1]
               apply(auto)[1]
-             apply(auto)[1]
-            apply(unfold bindE_def)[1]
-            apply(rule corres_symb_exec_r[where Q'="\<lambda> rv s. True"])
-               apply(case_tac rv)
-                apply(simp add: lift_def)
-                apply(rule corres_alternate2, simp)
-               apply(simp add: lift_def)
-               apply(simp add: liftE_def lift_def)
-               apply(rule corres_symb_exec_r[where Q'="\<lambda> rv s. True"])
-                  apply(fold bindE_def)
-                  apply(rule dcorres_whenE_throwError_abstract')
-                   apply(rule corres_alternate2)
-                   apply simp
-                  apply (rule corres_alternate1)
-                  apply (clarsimp simp: returnOk_def translate_tcb_invocation_def)
-                 apply(wp)
-            apply(simp add: range_check_def unlessE_def[abs_def])
-
-         (* TCBWriteRegisters *)
-           apply(clarsimp simp: decode_write_registers_def split: list.split)
-           apply(intro impI conjI allI)
-             apply(auto)[1]
-            apply(auto)[1]
-           apply(rule dcorres_whenE_throwError_abstract')
-            apply(fastforce intro: corres_alternate2 simp: throwError_def)
-           apply(simp add: liftE_def bindE_def lift_def)
-           apply(rule corres_symb_exec_r[where Q'="\<lambda> rv s. True"])
-              apply(fold bindE_def, rule dcorres_whenE_throwError_abstract')
-               apply(fastforce intro: corres_alternate2 simp: throwError_def)
-              apply(fastforce intro: corres_alternate1 simp: returnOk_def
-                  translate_tcb_invocation_def)
-             apply(wp)
-
-          (* TCBCopyRegisters *)
-          apply(clarsimp simp: decode_copy_registers_def)
-          apply (case_tac args')
-            apply (clarsimp simp:whenE_def dcorres_alternative_throw split:option.splits)+
-          apply (case_tac "map fst excaps'")
-            apply (clarsimp simp: dcorres_alternative_throw split:option.splits)+
-          apply (case_tac ab)
-            apply (clarsimp simp:throw_on_none_def get_index_def dcorres_alternative_throw split:option.splits)+
-            apply (rule corres_alternate1)
-            apply (clarsimp simp:returnOk_def corres_underlying_def translate_tcb_invocation_def return_def)
-            apply ((clarsimp simp:throw_on_none_def get_index_def dcorres_alternative_throw split:option.splits)+)[5]
-
-          (* TCBConfigures *)
-          apply (clarsimp simp:decode_tcb_configure_def dcorres_alternative_throw whenE_def)
-          apply (clarsimp simp:decode_set_priority_def)
-          apply (clarsimp simp:alternative_bindE_distrib bindE_assoc bind_bindE_assoc)
-          apply (rule corres_guard_imp)
-           apply (rule dcorres_symb_exec_rE)
-              apply (rule dcorres_symb_exec_r)
-                apply simp
-                apply (rule conjI[rotated])
-                 apply clarsimp
-                 apply (case_tac "excaps' ! 2")
-                 apply (case_tac "excaps' ! Suc 0")
-                 apply (case_tac "excaps' ! 0")
-                 apply clarsimp
-                 apply (rule split_return_throw_thingy)
-                   apply (rule_tac a = a and b = b and c = c in decode_set_ipc_buffer_translate_tcb_invocation)
-                    apply simp+
+             apply(rule dcorres_whenE_throwError_abstract')
+              apply(fastforce intro: corres_alternate2 simp: throwError_def)
+             apply(simp add: liftE_def bindE_def lift_def)
+             apply(rule corres_symb_exec_r[where Q'="\<lambda> rv s. True"])
+                apply(fold bindE_def, rule dcorres_whenE_throwError_abstract')
+                 apply(fastforce intro: corres_alternate2 simp: throwError_def)
+                apply(fastforce intro: corres_alternate1 simp: returnOk_def
+                    translate_tcb_invocation_def)
+               apply(wp)
+            (* TCBCopyRegisters *)
+            apply(clarsimp simp: decode_copy_registers_def)
+            apply (case_tac args')
+             apply (clarsimp simp:whenE_def dcorres_alternative_throw split:option.splits)+
+            apply (case_tac "map fst excaps'")
+             apply (clarsimp simp: dcorres_alternative_throw split:option.splits)+
+            apply (case_tac ab)
+                       apply (clarsimp simp:throw_on_none_def get_index_def dcorres_alternative_throw split:option.splits)+
+                 apply (rule corres_alternate1)
+                 apply (clarsimp simp:returnOk_def corres_underlying_def translate_tcb_invocation_def return_def)
+                apply ((clarsimp simp:throw_on_none_def get_index_def dcorres_alternative_throw split:option.splits)+)[5]
+              (* TCBConfigures *)
+           apply (clarsimp simp:decode_tcb_configure_def dcorres_alternative_throw whenE_def)
+           apply (clarsimp simp:decode_set_priority_def)
+           apply (clarsimp simp:alternative_bindE_distrib bindE_assoc bind_bindE_assoc)
+           apply (rule corres_guard_imp)
+             apply (rule dcorres_symb_exec_rE)
+               apply (rule dcorres_symb_exec_r)
+                 apply simp
+                 apply (rule conjI[rotated])
+                  apply clarsimp
+                  apply (case_tac "excaps' ! 2")
+                  apply (case_tac "excaps' ! Suc 0")
+                  apply (case_tac "excaps' ! 0")
+                  apply clarsimp
                   apply (rule split_return_throw_thingy)
-                    apply (rule decode_set_space_translate_tcb_invocation)
-                   apply (clarsimp simp:throw_on_none_def get_index_def)
-                   apply (rule conjI | clarsimp)+
+                    apply (rule_tac a = a and b = b and c = c in decode_set_ipc_buffer_translate_tcb_invocation)
+                     apply simp+
+                   apply (rule split_return_throw_thingy)
+                     apply (rule decode_set_space_translate_tcb_invocation)
+                    apply (clarsimp simp:throw_on_none_def get_index_def)
+                    apply (rule conjI | clarsimp)+
+                      apply (rule corres_alternate1,rule dcorres_returnOk)
+                      apply (clarsimp simp:translate_tcb_invocation_def update_cnode_cap_data)
+                     apply (clarsimp simp:| rule conjI)+
                      apply (rule corres_alternate1,rule dcorres_returnOk)
                      apply (clarsimp simp:translate_tcb_invocation_def update_cnode_cap_data)
-                    apply (clarsimp simp:| rule conjI)+
-                    apply (rule corres_alternate1,rule dcorres_returnOk)
-                    apply (clarsimp simp:translate_tcb_invocation_def update_cnode_cap_data)
-                   apply (clarsimp simp:no_fail_def)+
-                apply (rule dcorres_alternative_throw)
-               apply wp
-              apply ((clarsimp simp: decode_set_priority_error_choice_def | wp)+)[5]
-          (* TCBSetPriority *)
+                    apply (clarsimp simp:no_fail_def)+
+                 apply (rule dcorres_alternative_throw)
+                apply wp
+               apply ((clarsimp simp: decode_set_priority_error_choice_def | wp)+)[5]
+           (* TCBSetPriority *)
           apply (clarsimp simp: decode_set_priority_def dcorres_alternative_throw)
           apply (rule corres_guard_imp)
             apply (rule dcorres_symb_exec_rE)
@@ -342,50 +339,83 @@ lemma decode_tcb_corres:
                apply wp
               apply ((clarsimp simp: decode_set_priority_error_choice_def | wp)+)[5]
           (* TCBSetIPCBuffer *)
-          apply (clarsimp simp:transform_intent_def transform_intent_tcb_set_ipc_buffer_def)
-          apply (case_tac args')
-            apply clarsimp+
-          apply (case_tac "excaps' ! 0")
-          apply (clarsimp simp:throw_on_none_def get_index_def dcorres_alternative_throw | rule conjI)+
-            apply (rule corres_return_throw_thingy)
-            apply (rule decode_set_ipc_buffer_translate_tcb_invocation)
+         apply (clarsimp simp:transform_intent_def transform_intent_tcb_set_ipc_buffer_def)
+         apply (case_tac args')
+          apply clarsimp+
+         apply (case_tac "excaps' ! 0")
+         apply (clarsimp simp:throw_on_none_def get_index_def dcorres_alternative_throw | rule conjI)+
+           apply (rule corres_return_throw_thingy)
+             apply (rule decode_set_ipc_buffer_translate_tcb_invocation)
               apply fastforce+
-            apply (clarsimp|rule conjI)+
-              apply (clarsimp simp:translate_tcb_invocation_def translate_tcb_invocation_thread_ctrl_buffer_def
-                split:option.splits tcb_invocation.splits)
-            apply (clarsimp simp:decode_set_ipc_buffer_def dcorres_alternative_throw)+
-            apply (rule corres_alternate1[OF dcorres_returnOk])
-            apply (clarsimp simp:translate_tcb_invocation_def translate_tcb_invocation_thread_ctrl_buffer_def)
-
-          (* TCBSetSpace *)
-          apply (clarsimp simp:throw_on_none_def get_index_def dcorres_alternative_throw | rule conjI)+
+           apply (clarsimp|rule conjI)+
+           apply (clarsimp simp:translate_tcb_invocation_def translate_tcb_invocation_thread_ctrl_buffer_def
+             split:option.splits tcb_invocation.splits)
+          apply (clarsimp simp:decode_set_ipc_buffer_def dcorres_alternative_throw)+
+         apply (rule corres_alternate1[OF dcorres_returnOk])
+         apply (clarsimp simp:translate_tcb_invocation_def translate_tcb_invocation_thread_ctrl_buffer_def)
+       (* TCBSetSpace *)
+        apply (clarsimp simp:throw_on_none_def get_index_def dcorres_alternative_throw | rule conjI)+
           apply (rule corres_return_throw_thingy)
             apply (rule decode_set_space_translate_tcb_invocation)
-              apply (clarsimp split del:split_if)+
-            apply (clarsimp simp:translate_tcb_invocation_def translate_tcb_invocation_thread_ctrl_buffer_def)
-            apply (case_tac "excaps' ! 0",simp,case_tac "excaps' ! Suc 0",simp)
-            apply (simp add:update_cnode_cap_data)
-          apply (simp add:decode_set_space_def dcorres_alternative_throw | rule conjI)+
+           apply (clarsimp split del:if_splits)+
+          apply (clarsimp simp:translate_tcb_invocation_def translate_tcb_invocation_thread_ctrl_buffer_def)
+          apply (case_tac "excaps' ! 0",simp,case_tac "excaps' ! Suc 0",simp)
+          apply (simp add:update_cnode_cap_data)
+         apply (simp add:decode_set_space_def dcorres_alternative_throw | rule conjI)+
 
-          (* TCBSuspend *)
-          apply clarsimp
-          apply (rule corres_alternate1[OF dcorres_returnOk])
-          apply (simp add:translate_tcb_invocation_def)
+         (* TCBSuspend *)
+       apply clarsimp
+       apply (rule corres_alternate1[OF dcorres_returnOk])
+       apply (simp add:translate_tcb_invocation_def)
 
-          (* TCBResume *)
-          apply clarsimp
-          apply (rule corres_alternate1[OF dcorres_returnOk])
-          apply (simp add:translate_tcb_invocation_def)
+       (* TCBResume *)
+      apply clarsimp
+      apply (rule corres_alternate1[OF dcorres_returnOk])
+      apply (simp add:translate_tcb_invocation_def)
+
+      (* TCBBindAEP *)
+      apply (clarsimp simp: decode_bind_aep_def dcorres_alternative_throw whenE_def)
+      apply (rule dcorres_symb_exec_rE)
+        apply (case_tac rv, simp)
+         (* please continue scrolling *)
+         apply (case_tac "(fst (hd excaps'))", simp_all split del: split_if)[1]
+                    prefer 4
+                    apply (rename_tac rights)
+                    apply (case_tac "AllowRead \<notin> rights", simp)
+                     apply (rule corres_alternate2, rule dcorres_throw)
+                    apply simp
+                    apply (rule dcorres_symb_exec_rE)
+                      apply (case_tac "aep_obj rva", simp_all split del: split_if)[1]
+                        apply (case_tac "aep_bound_tcb rva", simp_all split del: split_if)[1]
+                         apply (clarsimp simp: throw_on_none_def get_index_def dcorres_alternative_throw)
+                         apply (case_tac "excaps' ! 0", clarsimp, rule corres_alternate1[OF dcorres_returnOk], simp add: translate_tcb_invocation_def hd_conv_nth)
+                        apply (clarsimp simp: throw_on_none_def get_index_def dcorres_alternative_throw split del: split_if)+
+                      apply (case_tac "aep_bound_tcb rva", simp split del: split_if)[1]
+                       apply (rename_tac rva word)
+                       apply ((case_tac "excaps' ! 0",clarsimp, rule corres_alternate1[OF dcorres_returnOk], simp add: translate_tcb_invocation_def hd_conv_nth)
+                                | clarsimp simp: throw_on_none_def get_index_def dcorres_alternative_throw split del: split_if
+                                | wp get_aep_wp
+                                | (case_tac "excaps' ! 0", rule dcorres_alternative_throw)
+                                | (case_tac "AllowRead \<in> rights", simp))+
+
+     (* TCBUnbindAEP *)
+     apply (clarsimp simp: decode_unbind_aep_def dcorres_alternative_throw whenE_def)
+     apply (rule dcorres_symb_exec_rE)
+       apply (case_tac rv, simp, rule dcorres_alternative_throw)
+       apply (clarsimp, rule corres_alternate1[OF dcorres_returnOk], simp add: translate_tcb_invocation_def)
+      apply (wp gba_wp | clarsimp)+
 
           (* IRQSetMode *)
           apply (clarsimp simp: transform_intent_def)
 
-          (* ARMPageMap *)
-          apply (clarsimp simp:transform_intent_def)
 
-          (* ARMASIDPoolAssign *)
-          apply (clarsimp simp:transform_intent_def)
-done
+               (* ARMPageMap *)
+   apply (clarsimp simp:transform_intent_def)
+
+   (* ARMASIDPoolAssign *)
+
+  apply (clarsimp simp:transform_intent_def)
+  done
 
 (* If the argument to "as_user" is idempotent, then so is the call. *)
 lemma dcorres_idempotent_as_user:
@@ -501,10 +531,11 @@ lemma dcorres_set_thread_state_Restart2:
   apply (clarsimp, frule(1) valid_etcbs_get_tcb_get_etcb, clarsimp)
   apply (frule opt_object_tcb, simp)
     apply (clarsimp simp:not_idle_thread_def)
-   apply (clarsimp simp:transform_tcb_def has_slots_def update_slots_def object_slots_def)
+   apply (clarsimp simp:transform_tcb_def has_slots_def update_slots_def object_slots_def tcb_slots)
    apply (rule dcorres_rhs_noop_below_True[OF set_thread_state_ext_dcorres])
    apply (rule dcorres_set_object_tcb)
-     apply (clarsimp simp:transform_tcb_def infer_tcb_pending_op_def)
+     apply (clarsimp simp:transform_tcb_def infer_tcb_pending_op_def tcb_slots)
+apply (rule conjI, fastforce)
    apply (clarsimp simp:get_etcb_SomeD)
     apply (simp add:not_idle_thread_def)
    apply (clarsimp simp:get_tcb_SomeD)
@@ -544,7 +575,7 @@ lemma restart_corres:
            apply (wp)
              apply (clarsimp simp:invs_def valid_state_def valid_pspace_def
                 tcb_at_def not_idle_thread_def)+
-         apply (clarsimp simp:valid_idle_def)
+         apply (clarsimp simp:valid_idle_def pred_tcb_at_def obj_at_def)
         apply assumption
        apply (clarsimp simp:not_idle_thread_def)+
       apply (clarsimp dest!:runnable_imply[where obj_id = obj_id])+
@@ -556,7 +587,7 @@ lemma restart_corres:
       split:Structures_A.thread_state.split_asm)+
     apply (frule(1) valid_etcbs_get_tcb_get_etcb)
   apply (fastforce simp:opt_cap_tcb not_idle_thread_def)
-done
+  done
 
 crunch no_effect [wp]: get_thread P
 crunch no_effect [wp]: getRegister P
@@ -668,174 +699,6 @@ lemma invoke_tcb_corres_copy_regs_loop:
 
 crunch idle_thread_constant [wp]: "Tcb_A.restart", "IpcCancel_A.suspend" "\<lambda>s. P (idle_thread s)"
 (wp: dxo_wp_weak)
-
-lemma not_idle_after_blocked_ipc_cancel:
-  "\<lbrace>valid_idle and not_idle_thread obj_id' and valid_objs and st_tcb_at (op = state) obj_id'\<rbrace>
-    blocked_ipc_cancel state obj_id' \<lbrace>\<lambda>y. valid_idle\<rbrace>"
-  apply (simp add:blocked_ipc_cancel_def)
-    apply wp
-    apply (clarsimp simp:not_idle_thread_def)
-    apply (clarsimp simp:get_blocking_ipc_endpoint_def)
-    apply (case_tac state)
-      apply clarsimp+
-    apply (clarsimp simp:valid_def return_def st_tcb_at_def valid_objs_def obj_at_def)
-      apply (drule_tac x = obj_id' in bspec)
-        apply (clarsimp simp:valid_obj_def valid_tcb_def valid_tcb_state_def)+
-        apply (drule_tac t = "tcb_state tcb" in sym)
-        apply (clarsimp simp:obj_at_def)
-    apply (clarsimp simp:valid_def return_def st_tcb_at_def obj_at_def valid_objs_def)
-      apply (drule_tac x = obj_id' in bspec)
-        apply (clarsimp simp:valid_obj_def valid_tcb_def valid_tcb_state_def)+
-        apply (drule_tac t = "tcb_state tcb" in sym)
-        apply (clarsimp simp:obj_at_def)
-    apply (clarsimp)+
-done
-
-lemma valid_idle_set_thread_state:
-  "\<lbrace>not_idle_thread xa and valid_idle :: det_state \<Rightarrow> bool\<rbrace> set_thread_state xa Structures_A.thread_state.Restart \<lbrace>\<lambda>xa. valid_idle\<rbrace>"
-  apply (simp add:set_thread_state_def not_idle_thread_def)
-  apply (simp add:set_object_def)
-  apply wp
-  apply (clarsimp simp:not_idle_thread_def)
-  apply (clarsimp simp:obj_at_def dest!:get_tcb_SomeD)
-  apply (auto simp:valid_idle_def st_tcb_at_def obj_at_def)
-done
-
-crunch not_idle_thread[wp]: tcb_sched_action "not_idle_thread a"
-  (wp: simp: not_idle_thread_def)
-
-lemma tcb_sched_action_tcb_at_not_idle[wp]:
-  "\<lbrace>\<lambda>s. \<forall>x\<in>set list. tcb_at x s \<and> not_idle_thread x s\<rbrace> tcb_sched_action a b
-   \<lbrace>\<lambda>x s. \<forall>x\<in>set list. tcb_at x s \<and> not_idle_thread x s\<rbrace>"
-  by (wp hoare_Ball_helper)
-
-lemma valid_idle_ep_cancel_all:
-  "\<lbrace>valid_idle and valid_state :: det_state \<Rightarrow> bool\<rbrace> IpcCancel_A.ep_cancel_all word1 \<lbrace>\<lambda>a. valid_idle\<rbrace>"
-  apply (simp add:ep_cancel_all_def)
-  apply (wp|wpc|simp)+
-      apply (rename_tac list queue)
-      apply (rule_tac I = "(\<lambda>s. (queue = list) \<and> (\<forall>a\<in> set list. tcb_at a s \<and> not_idle_thread a s))
-                           and ko_at (kernel_object.Endpoint Structures_A.endpoint.IdleEP) word1
-                           and valid_idle" in mapM_x_inv_wp)
-        apply clarsimp
-       apply (wp KHeap_DR.tcb_at_set_thread_state_wp)
-       apply (rule hoare_conjI)
-        apply (rule_tac P="(\<lambda>s. (queue = list) \<and> (\<forall>a\<in> set list. tcb_at a s \<and> not_idle_thread a s))
-                           and valid_idle and ko_at (kernel_object.Endpoint Structures_A.endpoint.IdleEP) word1"
-                           in hoare_vcg_precond_imp)
-         apply (wp | clarsimp)+
-         apply (rule set_thread_state_ko)
-        apply (simp add:is_tcb_def)
-       apply (wp valid_idle_set_thread_state)
-       apply (clarsimp simp:)+
-     apply wp
-     apply (rule hoare_vcg_conj_lift)
-      apply (rule hoare_Ball_helper)
-       apply (wp set_endpoint_obj_at | clarsimp simp :get_ep_queue_def not_idle_thread_def)+
-     apply (rename_tac list queue)
-     apply (rule_tac I = "(\<lambda>s. (queue = list) \<and> (\<forall>a\<in> set list. tcb_at a s \<and> not_idle_thread a s))
-                          and ko_at (Endpoint Structures_A.IdleEP) word1
-                          and valid_idle" in mapM_x_inv_wp)
-       apply clarsimp
-      apply (wp KHeap_DR.tcb_at_set_thread_state_wp)
-      apply (rule hoare_conjI)
-       apply (rule_tac P="(\<lambda>s. (queue = list) \<and> (\<forall>a\<in> set list. tcb_at a s \<and> not_idle_thread a s))
-                           and valid_idle and ko_at (Endpoint Structures_A.IdleEP) word1"
-                       in hoare_vcg_precond_imp)
-        apply (rule set_thread_state_ko)
-       apply (simp add:is_tcb_def)
-      apply (wp valid_idle_set_thread_state)
-      apply (clarsimp simp:)+
-    apply wp
-    apply (rule hoare_vcg_conj_lift)
-     apply (rule hoare_Ball_helper)
-      apply (wp set_endpoint_obj_at | clarsimp simp :get_ep_queue_def not_idle_thread_def)+
-  apply (rule hoare_strengthen_post[OF get_endpoint_sp])
-  apply (clarsimp  | rule conjI)+
-     apply (clarsimp simp:obj_at_def valid_pspace_def valid_state_def)
-     apply (drule(1) valid_objs_valid_ep_simp)
-     apply (clarsimp simp:is_tcb_def valid_ep_def obj_at_def)
-    apply (drule(1) pending_thread_in_send_not_idle)
-      apply (simp add:not_idle_thread_def obj_at_def is_ep_def)+
-  apply (clarsimp | rule conjI)+
-   apply (clarsimp simp:obj_at_def valid_pspace_def valid_state_def)
-   apply (drule(1) valid_objs_valid_ep_simp)
-   apply (clarsimp simp:is_tcb_def valid_ep_def obj_at_def)
-  apply (drule(1) pending_thread_in_recv_not_idle)
-    apply (simp add:not_idle_thread_def obj_at_def is_ep_def)+
-  done
-
-lemma set_aep_obj_at:
-  "\<lbrace>\<lambda>s. P (kernel_object.AsyncEndpoint ep)\<rbrace> set_async_ep ptr ep \<lbrace>\<lambda>rv. obj_at P ptr\<rbrace>"
-  apply (simp add:set_async_ep_def)
-  apply (wp obj_set_prop_at)
-  apply (simp add:get_object_def)
-  apply wp
-  apply clarsimp
-  done
-
-lemma valid_idle_aep_cancel_all:
-  "\<lbrace>valid_idle and valid_state :: det_state \<Rightarrow> bool\<rbrace> IpcCancel_A.aep_cancel_all word1 \<lbrace>\<lambda>a. valid_idle\<rbrace>"
-  apply (simp add:aep_cancel_all_def)
-  apply (wp|wpc|simp)+
-     apply (rename_tac list)
-     apply (rule_tac I = "(\<lambda>s. (\<forall>a\<in> set list. tcb_at a s \<and> not_idle_thread a s))
-                               and ko_at (kernel_object.AsyncEndpoint async_ep.IdleAEP) word1
-                               and valid_idle" in mapM_x_inv_wp)
-       apply clarsimp
-      apply (wp KHeap_DR.tcb_at_set_thread_state_wp)
-      apply (rule hoare_conjI)
-       apply (rule_tac P="(\<lambda>s. (\<forall>a\<in> set list. tcb_at a s \<and> not_idle_thread a s))
-                  and valid_idle and ko_at (kernel_object.AsyncEndpoint async_ep.IdleAEP) word1"
-                  in hoare_vcg_precond_imp)
-        apply (rule set_thread_state_ko)
-       apply (simp add:is_tcb_def)
-      apply (wp valid_idle_set_thread_state)
-      apply (clarsimp simp:)+
-    apply (rule hoare_vcg_conj_lift)
-     apply (rule hoare_Ball_helper)
-      apply (wp set_aep_tcb| clarsimp simp : not_idle_thread_def)+
-    apply (wp set_aep_obj_at)
-  apply (rule hoare_strengthen_post[OF get_aep_sp])
-  apply (clarsimp  | rule conjI)+
-    apply (clarsimp simp:obj_at_def valid_pspace_def valid_state_def)
-    apply (drule(1) valid_objs_valid_aep_simp)
-    apply (clarsimp simp:is_tcb_def valid_aep_def obj_at_def)
-   apply (drule(1) pending_thread_in_wait_not_idle)
-     apply (simp add:not_idle_thread_def obj_at_def is_aep_def)+
-  done
-
-lemma not_idle_after_reply_ipc_cancel:
-  "\<lbrace>not_idle_thread obj_id' and invs :: det_state \<Rightarrow> bool \<rbrace> reply_ipc_cancel obj_id'
-   \<lbrace>\<lambda>y. valid_idle\<rbrace>"
-  apply (simp add:reply_ipc_cancel_def)
-  apply wp
-       apply (simp add:cap_delete_one_def unless_def)
-       apply wp
-          apply (simp add:IpcCancel_A.empty_slot_def)
-          apply (wp set_cap_idle)+
-          apply simp
-          apply (rule hoare_strengthen_post[OF get_cap_idle])
-          apply simp
-         apply (case_tac capa; simp)
-           apply (clarsimp simp:when_def | rule conjI)+
-            apply (wp valid_idle_ep_cancel_all valid_idle_aep_cancel_all | clarsimp)+
-       apply (rule hoare_strengthen_post[where Q="\<lambda>r. valid_state and valid_idle"])
-        apply (wp select_inv|simp)+
-  apply (rule hoare_strengthen_post[where Q="\<lambda>r. valid_state and valid_idle"])
-   apply wp
-   apply (rule hoare_strengthen_post)
-    apply (rule hoare_vcg_precond_imp[OF thread_set_invs_trivial])
-         apply (simp add:tcb_cap_cases_def invs_def valid_state_def)+
-  done
-
-lemma not_idle_thread_async_ipc_cancel:
- "\<lbrace>not_idle_thread obj_id' and valid_idle\<rbrace> async_ipc_cancel obj_id' word \<lbrace>\<lambda>r. valid_idle\<rbrace>"
-  apply (simp add:async_ipc_cancel_def)
-  apply (wp valid_idle_set_thread_state|wpc)+
-  apply (rule hoare_strengthen_post[OF get_aep_sp])
-  apply (clarsimp simp:not_idle_thread_def obj_at_def is_aep_def)
-  done
 
 lemma not_idle_after_restart [wp]:
   "\<lbrace>invs and not_idle_thread obj_id' :: det_state \<Rightarrow> bool\<rbrace> Tcb_A.restart obj_id'
@@ -1286,7 +1149,6 @@ lemma dcorres_tcb_update_vspace_root:
     apply (erule tcb_at_cte_at,clarsimp)
 done
 
-
 lemma dcorres_tcb_update_cspace_root:
   "dcorres (dc \<oplus> dc) (\<top> ) ( invs and valid_etcbs and valid_pdpt_objs
            and not_idle_thread obj_id' and tcb_at obj_id' and
@@ -1376,7 +1238,6 @@ lemma dcorres_tcb_update_cspace_root:
   apply (simp add:tcb_cap_cases_def)
 done
 
-
 lemma tcb_fault_fault_handler_upd:
   "tcb_fault (obj'\<lparr>tcb_fault_handler := a\<rparr>) = tcb_fault obj'"
   by simp
@@ -1403,7 +1264,6 @@ lemma option_update_thread_corres:
    apply (clarsimp, frule(1) valid_etcbs_get_tcb_get_etcb)
   apply (clarsimp simp:opt_object_tcb)
 done
-
 
 lemma check_cap_at_stable:
   "\<lbrace>P\<rbrace>f\<lbrace>\<lambda>r. P\<rbrace>
@@ -1459,7 +1319,6 @@ lemma thread_set_priority_transform: "\<lbrace>\<lambda>ps. transform ps = cs\<r
   apply (rule ext)
   apply (clarsimp simp: transform_object_def transform_tcb_def restrict_map_def get_etcb_def split: option.splits Structures_A.kernel_object.splits)
   done
-
 lemma option_set_priority_corres:
   "dcorres (dc \<oplus> dc) \<top> \<top>
         (returnOk ())
@@ -1688,6 +1547,44 @@ lemma invoke_tcb_corres_resume:
   apply (rule corres_guard_imp[OF restart_corres],clarsimp+)
   done
 
+lemma dcorres_bind_async_endpoint:
+  "dcorres dc (\<lambda>_. True) (valid_etcbs and not_idle_thread t)
+   (Tcb_D.bind_async_endpoint t a) (Tcb_A.bind_async_endpoint t a)"
+  apply (clarsimp simp: Tcb_D.bind_async_endpoint_def Tcb_A.bind_async_endpoint_def
+                        get_async_ep_def get_object_def gets_def bind_assoc)
+  apply (rule dcorres_absorb_get_r)
+  apply (clarsimp simp: assert_def corres_free_fail split: Structures_A.kernel_object.splits)
+  apply (rule corres_dummy_return_pl)
+  apply (rule corres_guard_imp)
+    apply (rule corres_split[OF _ corres_dummy_set_async_ep], simp)
+      apply (rule set_bound_aep_corres)
+     apply (wp |simp add: not_idle_thread_def infer_tcb_bound_aep_def)+
+  done
+
+lemma invoke_tcb_corres_bind:
+  "\<lbrakk> t' = tcb_invocation.AsyncEndpointControl obj_id' (Some aepptr);
+     t = translate_tcb_invocation t' \<rbrakk> \<Longrightarrow>
+   dcorres (dc \<oplus> dc) \<top> (invs and not_idle_thread obj_id' and tcb_at obj_id' and valid_etcbs)
+  (Tcb_D.invoke_tcb t) (Tcb_A.invoke_tcb t')"
+  apply (clarsimp simp: Tcb_D.invoke_tcb_def translate_tcb_invocation_def)
+  apply (rule corres_dummy_return_l)
+  apply (rule corres_guard_imp)
+  apply (rule corres_split[OF corres_return_trivial dcorres_bind_async_endpoint])
+  apply (wp | simp)+
+  done
+
+lemma invoke_tcb_corres_unbind:
+  "\<lbrakk> t' = tcb_invocation.AsyncEndpointControl obj_id' None;
+     t = translate_tcb_invocation t' \<rbrakk> \<Longrightarrow>
+   dcorres (dc \<oplus> dc) \<top> (invs and not_idle_thread obj_id' and tcb_at obj_id' and valid_etcbs)
+  (Tcb_D.invoke_tcb t) (Tcb_A.invoke_tcb t')" 
+  apply (clarsimp simp: Tcb_D.invoke_tcb_def translate_tcb_invocation_def)
+  apply (rule corres_dummy_return_l)
+  apply (rule corres_guard_imp)
+  apply (rule corres_split[OF corres_return_trivial dcorres_unbind_async_endpoint])
+  apply (wp | simp)+
+  done
+
 
 lemma ex_nonz_cap_to_idle_from_invs:
   "invs s \<Longrightarrow> \<not> ex_nonz_cap_to (idle_thread s) s"
@@ -1708,12 +1605,16 @@ lemma invoke_tcb_corres:
      (Tcb_D.invoke_tcb t) (Tcb_A.invoke_tcb t')"
   apply (clarsimp)
   apply (case_tac t')
-       apply (rule corres_guard_imp [OF invoke_tcb_corres_write_regs], assumption, auto intro:invoke_tcb_rules )[1]
-      apply (rule corres_guard_imp [OF invoke_tcb_corres_read_regs], assumption, auto intro!:invoke_tcb_rules)[1]
-     apply (rule corres_guard_imp [OF invoke_tcb_corres_copy_regs], assumption, auto intro!:invoke_tcb_rules)[1]
-    apply (rule corres_guard_imp [OF invoke_tcb_corres_thread_control],assumption,auto intro!:invoke_tcb_rules)[1]
-   apply (rule corres_guard_imp [OF invoke_tcb_corres_suspend], assumption, auto intro!:invoke_tcb_rules)[1]
-  apply (rule corres_guard_imp [OF invoke_tcb_corres_resume], assumption, auto intro!:invoke_tcb_rules)[1]
+        apply (rule corres_guard_imp [OF invoke_tcb_corres_write_regs], assumption, auto intro:invoke_tcb_rules )[1]
+       apply (rule corres_guard_imp [OF invoke_tcb_corres_read_regs], assumption, auto intro!:invoke_tcb_rules)[1]
+      apply (rule corres_guard_imp [OF invoke_tcb_corres_copy_regs], assumption, auto intro!:invoke_tcb_rules)[1]
+     apply (rule corres_guard_imp [OF invoke_tcb_corres_thread_control],assumption,auto intro!:invoke_tcb_rules)[1]
+    apply (rule corres_guard_imp [OF invoke_tcb_corres_suspend], assumption, auto intro!:invoke_tcb_rules)[1]
+   apply (rule corres_guard_imp [OF invoke_tcb_corres_resume], assumption, auto intro!:invoke_tcb_rules)[1]
+  apply (rename_tac option)
+  apply (case_tac option)
+   apply (simp only:, rule corres_guard_imp[OF invoke_tcb_corres_unbind], simp , auto intro!: invoke_tcb_rules)[1]
+  apply (simp only:, rule corres_guard_imp[OF invoke_tcb_corres_bind], simp , auto intro!: invoke_tcb_rules)[1]
   done
 
 end
