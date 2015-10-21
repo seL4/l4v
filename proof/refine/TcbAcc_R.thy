@@ -1321,7 +1321,6 @@ proof -
   show ?thesis
     apply (simp add: invs'_def valid_state'_def split del: split_if)
     apply (rule hoare_pre)
-
      apply (wp x w v u
               threadSet_valid_pspace'T
               threadSet_sch_actT_P[where P=False, simplified]
@@ -1340,37 +1339,12 @@ proof -
               threadSet_valid_dom_schedule'
               threadSet_valid_queues'
               threadSet_cur
-           |simp add: y z a domains)+
-
-apply clarsimp
-apply (rule refl)
-
-     apply (wp x w v u
-              threadSet_valid_pspace'T
-              threadSet_sch_actT_P[where P=False, simplified]
-              threadSet_valid_queues
-              threadSet_state_refs_of'T[where f'=id]
-              threadSet_iflive'T
-              threadSet_ifunsafe'T
-              threadSet_idle'T
-              threadSet_global_refsT
-              irqs_masked_lift
-              valid_irq_node_lift
-              valid_irq_handlers_lift''
-              threadSet_ctes_ofT
-              threadSet_not_inQ
-              threadSet_ct_idle_or_in_cur_domain'
-              threadSet_valid_dom_schedule'
-              threadSet_valid_queues'
-              threadSet_cur| simp add: domains z )+
-
+           |clarsimp simp: y z a domains|rule refl)+
    apply (clarsimp simp: obj_at'_def projectKOs pred_tcb_at'_def)
    apply (clarsimp simp: cur_tcb'_def valid_irq_node'_def valid_queues'_def)
    apply (fastforce simp: domains ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def z a)
-
   done
-
-qed (* FIXME RAF CLEANUP *)
+qed
 
 lemmas threadSet_invs_trivial =
     threadSet_invs_trivialT [OF all_tcbI all_tcbI all_tcbI all_tcbI, OF ball_tcb_cte_casesI]

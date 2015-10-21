@@ -448,7 +448,7 @@ lemma valid_queues_no_bitmap_correct_queueI[intro]:
   by (fastforce simp: obj_at'_def inQ_def)
 
 
-lemma tcbSchedDequeue_valid_queues_weak:  (* FIXME RAF CLEANUP *)
+lemma tcbSchedDequeue_valid_queues_weak:
   "\<lbrace> valid_queues_no_bitmap_except t and valid_bitmapQ and
      bitmapQ_no_L2_orphans and bitmapQ_no_L1_orphans and
      correct_queue t and
@@ -532,7 +532,7 @@ lemma threadSet_valid_queues'_dequeue: (* threadSet_valid_queues' is too weak fo
    unfolding valid_queues'_def
    apply (rule hoare_pre)
     apply (wp hoare_vcg_all_lift)
-    apply (simp only: imp_conv_disj not_obj_at') (* FIXME RAF this is a good trick write it down *)
+    apply (simp only: imp_conv_disj not_obj_at')
    apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift)
    apply (simp add: not_obj_at')
    apply (clarsimp simp: typ_at_tcb')
@@ -1796,7 +1796,7 @@ lemma lookupBitmapPriority_obj_at':
              (hd (ksReadyQueues s (ksCurDomain s, lookupBitmapPriority (ksCurDomain s) s))) s"
   apply (drule (2) bitmapQ_from_bitmap_lookup)
   apply (simp add: valid_bitmapQ_bitmapQ_simp)
-  apply (case_tac "ksReadyQueues s (ksCurDomain s, lookupBitmapPriority (ksCurDomain s) s)") (* FIXME RAF split rule?*)
+  apply (case_tac "ksReadyQueues s (ksCurDomain s, lookupBitmapPriority (ksCurDomain s) s)") (* FIXME use a split rule?*)
    apply simp
   apply (clarsimp, rename_tac t ts)
   apply (drule cons_set_intro)

@@ -3319,7 +3319,14 @@ lemma valid_bitmap_valid_bitmapQ_exceptI[intro]:
   unfolding valid_bitmapQ_except_def valid_bitmapQ_def
   by simp
 
-(* FIXME RAF DOCUMENT THIS TECHNIQUE *)
+(* The normalise_obj_at' tactic was designed to simplify situations similar to:
+  ko_at' ko p s \<Longrightarrow>
+  obj_at' (complicated_P (obj_at' (complicated_Q (obj_at' ...)) p s)) p s
+
+  It seems to also offer assistance in cases where there is lots of st_tcb_at', ko_at', obj_at'
+  confusion. If your goal looks like that kind of mess, try it out. It can help to not unfold
+  obj_at'_def which speeds up proofs.
+ *)
 context begin
 
 private definition

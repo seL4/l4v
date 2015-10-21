@@ -1322,7 +1322,10 @@ lemma tcbSchedEnqueue_valid_inQ_queues[wp]:
           | fastforce simp: valid_inQ_queues_def inQ_def obj_at'_def)+
   done
 
-definition (* FIXME RAF prevent wp from splitting on the when *)
+ (* prevents wp from splitting on the when; stronger technique than hoare_when_weak_wp
+    FIXME: possible to replace with hoare_when_weak_wp?
+ *)
+definition
   "removeFromBitmap_conceal d p q t \<equiv> when (null [x\<leftarrow>q . x \<noteq> t]) (removeFromBitmap d p)"
 
 lemma removeFromBitmap_conceal_valid_inQ_queues[wp]:
@@ -1610,10 +1613,7 @@ lemma tcbSchedDequeue_valid_queues_partial:
        done
    qed
 
-(* FIXME RAF I have many things proved for valid_queues, but they are actually supposed
-   to be proved for valid_queues_no_bitmap, and then the bitmap stuff comes in separately *)
-
-(* FIXME RAF MOVE, also can we automate this somehow?! *)
+(* FIXME move *)
 lemma hoare_post_conjD1:
   "\<lbrace> P \<rbrace> f \<lbrace>\<lambda>rv s. Q rv s \<and> Q' rv s \<rbrace> \<Longrightarrow> \<lbrace> P \<rbrace> f \<lbrace> Q \<rbrace>"
   apply (rule valid_prove_more)
@@ -1690,11 +1690,6 @@ lemma sts_invs_minor'_no_valid_queues:
         apply (simp add: valid_queues_no_bitmap_def)
        apply clarsimp
      apply (clarsimp simp: st_tcb_at'_def)
-(* FIXME RAF merged common ancestors
-       apply ((fastforce simp: valid_queues_def inQ_def st_tcb_at' st_tcb_at'_def
-                        elim!: st_tcb_at' st_tcb_ex_cap'' obj_at'_weakenE)+)[2]
-     apply (clarsimp simp: pred_tcb_at'_def)
-*)
      apply (drule obj_at_valid_objs')
       apply (clarsimp simp: valid_pspace'_def)
      apply (clarsimp simp: valid_obj'_def valid_tcb'_def projectKOs)
