@@ -15,9 +15,6 @@ begin
 section "reads_respects"
 subsection "Async IPC"
 
-
-
-
 lemma equiv_valid_2_get_assert:
   "equiv_valid_2 I A A R P P' f f' \<Longrightarrow>
    equiv_valid_2 I A A R P P' (get >>= (\<lambda> s. assert (g s) >>= (\<lambda> y. f))) (get >>= (\<lambda> s. assert (g' s) >>= (\<lambda> y. f')))"
@@ -820,7 +817,7 @@ lemma receive_async_ipc_reads_respects:
             (pasSubject aag, Receive, pasObjectAbs aag aepptr)
              \<in> pasPolicy aag \<and> is_subject aag thread)))
          (receive_async_ipc thread cap is_blocking)"
-  unfolding receive_async_ipc_def fun_app_def do_poll_failed_transfer_def
+  unfolding receive_async_ipc_def fun_app_def do_nbwait_failed_transfer_def
   apply(wp set_async_ep_reads_respects set_thread_state_reads_respects 
            as_user_set_register_reads_respects' get_async_ep_reads_respects hoare_vcg_all_lift
        | wpc
@@ -1790,7 +1787,8 @@ lemma complete_async_ipc_reads_respects:
   done
 
 lemma receive_ipc_base_reads_respects:
-  "reads_respects aag l
+  notes do_nbwait_failed_transfer_def[simp]
+  shows "reads_respects aag l
      (valid_objs
       and valid_global_refs
       and pspace_distinct
@@ -1801,12 +1799,14 @@ lemma receive_ipc_base_reads_respects:
       and (\<lambda>s. is_subject aag (cur_thread s) \<and> sym_refs (state_refs_of s))
       and K (is_subject aag thread
              \<and> (pasSubject aag, Receive, pasObjectAbs aag epptr) \<in> pasPolicy aag))
-     (receive_ipc_base aag thread ep epptr rights)"
+     (receive_ipc_base aag thread ep epptr rights is_blocking)"
   apply (rule gen_asm_ev)
   apply (simp add: thread_get_def split: endpoint.split)
   apply (intro conjI impI)
     prefer 2 defer
-    apply ((wp set_thread_state_reads_respects set_endpoint_reads_respects | simp | intro allI impI)+)[2]
+    apply ((wp set_thread_state_reads_respects set_endpoint_reads_respects 
+               as_user_set_register_reads_respects'
+        | simp | intro allI impI | rule pre_ev, wpc)+)[2]
   apply (intro allI impI)
   apply (wp static_imp_wp set_endpoint_reads_respects set_thread_state_reads_respects
            setup_caller_cap_reads_respects do_ipc_transfer_reads_respects
@@ -1872,7 +1872,7 @@ lemma receive_ipc_base_reads_respects:
 
 lemma receive_ipc_reads_respects:
   "reads_respects aag l (valid_objs and pspace_distinct and valid_global_refs and valid_arch_state and sym_refs \<circ> state_refs_of and pas_refined aag and pas_cur_domain aag and valid_cap cap and (\<lambda>s. is_subject aag (cur_thread s)) and K (is_subject aag receiver \<and> (\<forall>epptr\<in>Access.obj_refs cap.
-          (pasSubject aag, Receive, pasObjectAbs aag epptr) \<in> pasPolicy aag))) (receive_ipc receiver cap)"
+          (pasSubject aag, Receive, pasObjectAbs aag epptr) \<in> pasPolicy aag))) (receive_ipc receiver cap is_blocking)"
   apply (rule gen_asm_ev)
   apply (simp add: receive_ipc_def thread_get_def split: cap.split)
   apply (clarsimp simp: fail_ev_pre)
@@ -2504,27 +2504,28 @@ crunch globals_equiv[wp]: complete_async_ipc "globals_equiv st"
 
 
 lemma receive_ipc_globals_equiv:
-  "\<lbrace>globals_equiv st and valid_objs and valid_arch_state and valid_global_refs and pspace_distinct and valid_global_objs and (\<lambda>s. thread \<noteq> idle_thread s)\<rbrace> receive_ipc thread cap
+  notes do_nbwait_failed_transfer_def[simp]
+  shows "\<lbrace>globals_equiv st and valid_objs and valid_arch_state and valid_global_refs and pspace_distinct and valid_global_objs and (\<lambda>s. thread \<noteq> idle_thread s)\<rbrace> 
+     receive_ipc thread cap is_blocking
     \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
   unfolding receive_ipc_def thread_get_def
   apply(wp)
    apply(simp add: split_def)
    apply(wp set_endpoint_globals_equiv set_thread_state_globals_equiv
-             setup_caller_cap_globals_equiv dxo_wp_weak
+             setup_caller_cap_globals_equiv dxo_wp_weak as_user_globals_equiv
        | wpc
        | simp split del: split_if)+
              apply (rule hoare_strengthen_post[where Q= "\<lambda>_. globals_equiv st and valid_ko_at_arm and valid_global_objs"])
-              apply (wp do_ipc_transfer_globals_equiv)
+              apply (wp do_ipc_transfer_globals_equiv as_user_globals_equiv)
              apply clarsimp
             apply (wp gts_wp get_endpoint_sp | wpc)+
           apply (wp hoare_vcg_all_lift hoare_drop_imps)[1]
-           apply(wp set_endpoint_globals_equiv)
+           apply(wp set_endpoint_globals_equiv | wpc)+
       apply(wp set_thread_state_globals_equiv)
-     apply (wp get_aep_wp gba_wp get_endpoint_wp | wpc)+
+     apply (wp get_aep_wp gba_wp get_endpoint_wp as_user_globals_equiv | wpc | simp)+
   apply (rule hoare_pre)
    apply(wpc)
               apply(rule fail_wp | rule return_wp)+
-
   by (auto intro: valid_arch_state_ko_at_arm valid_ep_send_enqueue
           simp: neq_Nil_conv cong: case_list_cons_cong)
 
@@ -2614,7 +2615,7 @@ lemma receive_async_ipc_globals_equiv:
      and pspace_distinct and (\<lambda>s. thread \<noteq> idle_thread s)\<rbrace> 
      receive_async_ipc thread cap is_blocking
     \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
-  unfolding receive_async_ipc_def fun_app_def do_poll_failed_transfer_def
+  unfolding receive_async_ipc_def fun_app_def do_nbwait_failed_transfer_def
   apply (rule hoare_pre)
   apply(wp set_async_ep_globals_equiv set_thread_state_globals_equiv
            as_user_globals_equiv get_aep_wp
@@ -2823,7 +2824,7 @@ lemma send_ipc_reads_respects_g:
 
 lemma receive_ipc_reads_respects_g:
   "reads_respects_g aag l (valid_objs and valid_global_objs and valid_arch_state and valid_global_refs and pspace_distinct and (\<lambda>s. receiver \<noteq> idle_thread s) and sym_refs \<circ> state_refs_of and pas_refined aag and pas_cur_domain aag and valid_cap cap and is_subject aag \<circ> cur_thread and K (is_subject aag receiver \<and> (\<forall>epptr\<in>Access.obj_refs cap.
-          (pasSubject aag, Receive, pasObjectAbs aag epptr) \<in> pasPolicy aag))) (receive_ipc receiver cap)"
+          (pasSubject aag, Receive, pasObjectAbs aag epptr) \<in> pasPolicy aag))) (receive_ipc receiver cap is_blocking)"
   apply(rule equiv_valid_guard_imp[OF reads_respects_g])
     apply(rule receive_ipc_reads_respects)
    apply(rule doesnt_touch_globalsI)

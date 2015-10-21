@@ -206,7 +206,7 @@ where
         | SysYield \<Rightarrow> without_preemption handle_yield
         | SysReply \<Rightarrow> without_preemption handle_reply
         | SysReplyWait \<Rightarrow> without_preemption $ handle_wait True
-        | SysPoll \<Rightarrow> without_preemption $ handle_wait False)"
+        | SysNBWait \<Rightarrow> without_preemption $ handle_wait False)"
 
 | "handle_event (UnknownSyscall n) = (without_preemption $ do
     thread \<leftarrow> gets cur_thread;

@@ -65,7 +65,7 @@ defs handleEvent_def:
             handleWait True
         od)
         | SysYield \<Rightarrow>   withoutPreemption handleYield
-        | SysPoll \<Rightarrow>   withoutPreemption $ handleWait False
+        | SysNBWait \<Rightarrow>   withoutPreemption $ handleWait False
         )
   | Interrupt \<Rightarrow>    withoutPreemption $ (do
     active \<leftarrow> doMachineOp getActiveIRQ;
@@ -121,13 +121,12 @@ defs handleWait_def:
     (capFaultOnFailure epCPtr True $ (doE
         epCap \<leftarrow> lookupCap thread epCPtr;
         (case epCap of
-              EndpointCap _ _ _ True _ \<Rightarrow>   (doE
-                whenE (Not isBlocking) $ throw $ MissingCapability_ \<lparr> missingCapBitsLeft= 0\<rparr>;
+              EndpointCap _ _ _ True _ \<Rightarrow>   (
                 withoutFailure $ (do
                     deleteCallerCap thread;
-                    receiveIPC thread epCap
+                    receiveIPC thread epCap isBlocking
                 od)
-              odE)
+              )
             | AsyncEndpointCap ptr _ _ True \<Rightarrow>   (doE
                 aep \<leftarrow> withoutFailure $ getAsyncEP ptr;
                 boundTCB \<leftarrow> returnOk $ aepBoundTCB aep;

@@ -384,7 +384,7 @@ where
       t \<leftarrow> option_select waiters;
       (case t of
           None \<Rightarrow>
-            block_thread_on_ipc thread (PendingSyncRecvCap ep_id False)
+            block_thread_on_ipc thread (PendingSyncRecvCap ep_id False) \<sqinter> corrupt_tcb_intent thread
         | Some tcb_id_sender \<Rightarrow> (do
             tcb \<leftarrow> get_thread tcb_id_sender;
             case ((cdl_tcb_caps tcb) tcb_pending_op_slot) of

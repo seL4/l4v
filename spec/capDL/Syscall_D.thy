@@ -210,7 +210,7 @@ where
         handle_reply;
         handle_wait
       od
-    | SysPoll \<Rightarrow> liftE $ handle_wait"
+    | SysNBWait \<Rightarrow> liftE $ handle_wait"
 
 definition
   handle_event :: "event \<Rightarrow> unit preempt_monad"

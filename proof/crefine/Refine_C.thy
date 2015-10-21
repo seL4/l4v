@@ -199,7 +199,7 @@ lemma handleUserLevelFault_ccorres:
 
 lemmas syscall_defs = 
   Kernel_C.SysSend_def Kernel_C.SysNBSend_def
-  Kernel_C.SysCall_def Kernel_C.SysWait_def Kernel_C.SysPoll_def
+  Kernel_C.SysCall_def Kernel_C.SysWait_def Kernel_C.SysNBWait_def
   Kernel_C.SysReply_def Kernel_C.SysReplyWait_def Kernel_C.SysYield_def
 
 lemma ct_active_not_idle'_strengthen:
@@ -365,7 +365,7 @@ lemma handleSyscall_ccorres:
         apply (ctac (no_vcg) add: handleYield_ccorres)
          apply (rule ccorres_returnOk_skip[unfolded returnOk_def, simplified])
         apply wp
-       -- "SysPoll"
+       -- "SysNBWait"
        apply (clarsimp simp: syscall_from_H_def syscall_defs)
        apply (rule ccorres_cond_empty |rule ccorres_cond_univ)+
        apply (simp add: liftE_bind)

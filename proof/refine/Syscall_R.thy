@@ -1671,7 +1671,7 @@ lemma delete_caller_cap_valid_ep_cap:
   apply (rule hoare_pre)
    by (wp get_cap_wp fast_finalise_typ_at abs_typ_at_lifts(1) 
        | simp add: unless_def valid_cap_def)+
-   
+
 lemma hw_corres':
    "corres dc (einvs and ct_in_state active 
                     and (\<lambda>s. ex_nonz_cap_to (cur_thread s) s))
@@ -1699,7 +1699,6 @@ lemma hw_corres':
                              simp: lookup_failure_map_def whenE_def)
              apply (rule corres_guard_imp)
                apply (rename_tac rights)
-               apply (case_tac isBlocking; simp split del: split_if add: case_bool_If)
                 apply (case_tac "AllowRead \<in> rights"; simp)
                  apply (rule corres_split_nor[OF _ delete_caller_cap_corres])
                    apply (rule receive_ipc_corres)

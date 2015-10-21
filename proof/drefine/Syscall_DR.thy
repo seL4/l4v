@@ -1428,7 +1428,9 @@ lemma handle_invocation_corres:
 crunch cur_thread[wp]: complete_async_ipc "\<lambda>s. P (cur_thread s)"
 
 lemma receive_ipc_cur_thread:
-  " \<lbrace>\<lambda>s. valid_objs s \<and>  P (cur_thread (s :: det_ext state))\<rbrace> receive_ipc a b \<lbrace>\<lambda>xg s. P (cur_thread s)\<rbrace>"
+  notes do_nbwait_failed_transfer_def[simp]
+  shows
+  " \<lbrace>\<lambda>s. valid_objs s \<and>  P (cur_thread (s :: det_ext state))\<rbrace> receive_ipc a b c \<lbrace>\<lambda>xg s. P (cur_thread s)\<rbrace>"
   apply (simp add:receive_ipc_def bind_assoc)
   apply (wp|wpc|clarsimp)+
                  apply (simp add:setup_caller_cap_def)
@@ -1488,26 +1490,21 @@ lemma handle_wait_corres:
                 apply (rename_tac word1 word2 set)
                 apply (rule corres_guard_imp)
                   apply (case_tac "AllowRead \<in> set"; simp split del: split_if)
-                  apply (case_tac "is_blocking"; simp)
-                   apply (rule corres_alternate1)
-                   apply clarsimp
-                   apply (rule corres_split[where r'=dc])
-                      apply (rule_tac epptr=word1 in recv_sync_ipc_corres)
-                        apply (simp add: cap_ep_ptr_def delete_caller_cap_def)+
-                     apply (simp add: transform_tcb_slot_simp[symmetric])
-                     apply (rule delete_cap_simple_corres)
-                    apply (wp | clarsimp simp: delete_caller_cap_def not_idle_thread_def)+
-                   apply (rule hoare_vcg_conj_lift)
-                    apply (rule_tac t1="cur_thread s'" in hoare_post_imp[OF _ cap_delete_one_st_tcb_at_and_valid_etcbs])
-                    apply (fastforce simp: obj_at_def generates_pending_def st_tcb_at_def)
-                   apply (rule_tac Q="\<lambda>rv. invs and valid_etcbs" in hoare_strengthen_post)
-                    apply wp
-                   apply (clarsimp simp: invs_def)
+                  apply (rule corres_alternate1)
                   apply clarsimp
-                  apply (rule corres_alternate2)
-                  apply clarsimp
+                  apply (rule corres_split[where r'=dc])
+                     apply (rule_tac epptr=word1 in recv_sync_ipc_corres)
+                       apply (simp add: cap_ep_ptr_def delete_caller_cap_def)+
+                    apply (simp add: transform_tcb_slot_simp[symmetric])
+                    apply (rule delete_cap_simple_corres)
+                   apply (wp | clarsimp simp: delete_caller_cap_def not_idle_thread_def)+
+                  apply (rule hoare_vcg_conj_lift)
+                   apply (rule_tac t1="cur_thread s'" in hoare_post_imp[OF _ cap_delete_one_st_tcb_at_and_valid_etcbs])
+                   apply (fastforce simp: obj_at_def generates_pending_def st_tcb_at_def)
+                  apply (rule_tac Q="\<lambda>rv. invs and valid_etcbs" in hoare_strengthen_post)
+                   apply wp
+                  apply (clarsimp simp: invs_def)
                  apply clarsimp
-                apply clarsimp
                 apply (clarsimp simp: emptyable_def not_idle_thread_def)
                defer(* NEED RECEIVE ASYNC IPC *)
                apply clarsimp

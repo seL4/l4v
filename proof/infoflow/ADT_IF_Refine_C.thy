@@ -57,7 +57,7 @@ definition handleSyscall_C_body_if
                        CALL handleYield();;
                        \<acute>ret__unsigned_long :== scast EXCEPTION_NONE
                      ELSE
-                       IF s = Kernel_C.SysPoll THEN
+                       IF s = Kernel_C.SysNBWait THEN
                          CALL handleWait(scast false);;
                          \<acute>ret__unsigned_long :== scast EXCEPTION_NONE
                        ELSE
@@ -222,7 +222,7 @@ lemma handleEvent_ccorres:
         apply (rule allI, rule conseqPre, vcg)
         apply (clarsimp simp: return_def)
        apply wp
-      -- "SysPoll"
+      -- "SysNBWait"
           apply (ctac (no_vcg) add: handleWait_ccorres)
            apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg)
            apply (rule allI, rule conseqPre, vcg)

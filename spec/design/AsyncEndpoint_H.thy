@@ -60,6 +60,9 @@ defs sendAsyncIPC_def:
             )
 od)"
 
+defs doNBWaitFailedTransfer_def:
+"doNBWaitFailedTransfer thread \<equiv> asUser thread $ setRegister badgeRegister 0"
+
 defs receiveAsyncIPC_def:
 "receiveAsyncIPC thread cap isBlocking\<equiv> (do
         aepptr \<leftarrow> return ( capAEPPtr cap);
@@ -71,7 +74,7 @@ defs receiveAsyncIPC_def:
                                          waitingOnAsyncEP= aepptr \<rparr> ) thread;
                       setAsyncEP aepptr $ aep \<lparr>aepObj := WaitingAEP ([thread]) \<rparr>
                   od)
-                | False \<Rightarrow>   doPollFailedTransfer thread
+                | False \<Rightarrow>   doNBWaitFailedTransfer thread
                 )
             | WaitingAEP queue \<Rightarrow>   (case isBlocking of
                   True \<Rightarrow>   (do
@@ -79,7 +82,7 @@ defs receiveAsyncIPC_def:
                                          waitingOnAsyncEP= aepptr \<rparr> ) thread;
                       setAsyncEP aepptr $ aep \<lparr>aepObj := WaitingAEP (queue @ [thread]) \<rparr>
                   od)
-                | False \<Rightarrow>   doPollFailedTransfer thread
+                | False \<Rightarrow>   doNBWaitFailedTransfer thread
                 )
             | ActiveAEP badge \<Rightarrow>   (do
                 asUser thread $ setRegister badgeRegister badge;
@@ -87,9 +90,6 @@ defs receiveAsyncIPC_def:
             od)
             )
 od)"
-
-defs doPollFailedTransfer_def:
-"doPollFailedTransfer thread \<equiv> asUser thread $ setRegister badgeRegister 0"
 
 defs aepCancelAll_def:
 "aepCancelAll aepptr\<equiv> (do

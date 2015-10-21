@@ -2351,19 +2351,21 @@ lemma receiveAsyncIPC_no_orphans [wp]:
   unfolding receiveAsyncIPC_def
   apply (wp hoare_drop_imps setThreadState_not_active_no_orphans | wpc
          | clarsimp simp: is_active_thread_state_def isRunning_def isRestart_def
-                          doPollFailedTransfer_def)+
+                          doNBWaitFailedTransfer_def)+
   done
   
 
 lemma receiveIPC_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> invs' s \<rbrace>
-   receiveIPC thread cap
+   receiveIPC thread cap is_blocking
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
   unfolding receiveIPC_def
   apply (rule hoare_pre)
    apply (wp setThreadState_not_active_no_orphans hoare_drop_imps
-             hoare_vcg_all_lift sts_st_tcb' | wpc
-          | clarsimp simp: is_active_thread_state_def isRunning_def isRestart_def)+
+             hoare_vcg_all_lift sts_st_tcb' 
+          | wpc
+          | clarsimp simp: is_active_thread_state_def isRunning_def isRestart_def
+                           doNBWaitFailedTransfer_def)+
   done
 
 crunch valid_objs' [wp]: getThreadCallerSlot "valid_objs'"

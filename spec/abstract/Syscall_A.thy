@@ -278,10 +278,10 @@ definition
         in
         case ep_cap
           of EndpointCap ref badge rights \<Rightarrow>
-             (if (AllowRecv \<in> rights \<and> is_blocking)
+             (if AllowRecv \<in> rights
               then liftE $ do
                  delete_caller_cap thread;
-                 receive_ipc thread ep_cap
+                 receive_ipc thread ep_cap is_blocking
                 od
               else flt)
            | AsyncEndpointCap ref badge rights \<Rightarrow> 
@@ -328,7 +328,7 @@ where
             handle_reply;
             handle_wait True
           od
-        | SysPoll \<Rightarrow> without_preemption $ handle_wait False)"
+        | SysNBWait \<Rightarrow> without_preemption $ handle_wait False)"
 
 | "handle_event (UnknownSyscall n) = (without_preemption $ do
     thread \<leftarrow> gets cur_thread;

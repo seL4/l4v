@@ -21,7 +21,7 @@ consts
 isActive :: "async_endpoint \<Rightarrow> bool"
 
 consts
-receiveIPC :: "machine_word \<Rightarrow> capability \<Rightarrow> unit kernel"
+receiveIPC :: "machine_word \<Rightarrow> capability \<Rightarrow> bool \<Rightarrow> unit kernel"
 
 consts
 replyFromKernel :: "machine_word \<Rightarrow> (machine_word * machine_word list) \<Rightarrow> unit kernel"

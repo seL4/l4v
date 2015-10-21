@@ -361,9 +361,14 @@ where
    od"
 
 definition
-  receive_ipc :: "obj_ref \<Rightarrow> cap \<Rightarrow> (unit,'z::state_ext) s_monad"
+  do_nbwait_failed_transfer :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
-  "receive_ipc thread cap \<equiv> do
+  "do_nbwait_failed_transfer thread = do as_user thread $ set_register badge_register 0; return () od"
+ 
+definition
+  receive_ipc :: "obj_ref \<Rightarrow> cap \<Rightarrow> bool \<Rightarrow> (unit,'z::state_ext) s_monad"
+where
+  "receive_ipc thread cap is_blocking \<equiv> do
      (epptr,rights) \<leftarrow> (case cap
                        of EndpointCap ref badge rights \<Rightarrow> return (ref,rights)
                         | _ \<Rightarrow> fail);
@@ -376,14 +381,18 @@ where
        complete_async_ipc (the aepptr) thread
      else 
        case ep
-         of IdleEP \<Rightarrow> do
-              set_thread_state thread (BlockedOnReceive epptr diminish);
-              set_endpoint epptr (RecvEP [thread])
-            od
-            | RecvEP queue \<Rightarrow> do
-              set_thread_state thread (BlockedOnReceive epptr diminish);
-              set_endpoint epptr (RecvEP (queue @ [thread]))
-            od
+         of IdleEP \<Rightarrow> case is_blocking of
+              True \<Rightarrow> do
+                  set_thread_state thread (BlockedOnReceive epptr diminish);
+                  set_endpoint epptr (RecvEP [thread])
+                od
+              | False \<Rightarrow> do_nbwait_failed_transfer thread
+            | RecvEP queue \<Rightarrow> case is_blocking of
+              True \<Rightarrow> do
+                  set_thread_state thread (BlockedOnReceive epptr diminish);
+                  set_endpoint epptr (RecvEP (queue @ [thread]))
+                od
+              | False \<Rightarrow> do_nbwait_failed_transfer thread
           | SendEP q \<Rightarrow> do
               assert (q \<noteq> []);
               queue \<leftarrow> return $ tl q;
@@ -466,11 +475,7 @@ where
              ActiveAEP (combine_aep_badges badge badge')
    od"
 
-definition
-  do_poll_failed_transfer :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
-where
-  "do_poll_failed_transfer thread = do as_user thread $ set_register badge_register 0; return () od"
-   
+  
 text {* Handle a receive operation performed on an asynchronous endpoint by a
 thread. If a message is waiting then perform the transfer, otherwise put the
 thread in the endpoint's receiving queue. *}
@@ -490,14 +495,14 @@ where
                           set_thread_state thread (BlockedOnAsyncEvent aepptr);
                           set_async_ep aepptr $ aep_set_obj aep $ WaitingAEP ([thread])
                         od
-                   | False \<Rightarrow> do_poll_failed_transfer thread 
+                   | False \<Rightarrow> do_nbwait_failed_transfer thread 
        | WaitingAEP queue \<Rightarrow> 
                    case is_blocking of 
                      True \<Rightarrow> do
                           set_thread_state thread (BlockedOnAsyncEvent aepptr);
                           set_async_ep aepptr $ aep_set_obj aep $ WaitingAEP (queue @ [thread])
                         od
-                   | False \<Rightarrow> do_poll_failed_transfer thread 
+                   | False \<Rightarrow> do_nbwait_failed_transfer thread 
        | ActiveAEP badge \<Rightarrow> do
                      as_user thread $ set_register badge_register badge;
                      set_async_ep aepptr $ aep_set_obj aep IdleAEP 

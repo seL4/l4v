@@ -2400,18 +2400,18 @@ crunch valid_sched[wp]: handle_interrupt, complete_async_ipc valid_sched
 lemma receive_ipc_valid_sched:
   "\<lbrace>valid_sched and st_tcb_at active thread and ct_active
           and not_queued thread and scheduler_act_not thread and invs\<rbrace>
-   receive_ipc thread cap
+   receive_ipc thread cap is_blocking
    \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
   apply (simp add: receive_ipc_def)
   apply (wp | wpc | simp)+
         apply (wp set_thread_state_sched_act_not_valid_sched | wpc)+
                  apply ((wp set_thread_state_sched_act_not_valid_sched
                             setup_caller_cap_sched_act_not_valid_sched
-                        | simp)+)[2]
+                        | simp add: do_nbwait_failed_transfer_def)+)[2]
                apply ((wp switch_if_required_to_valid_sched' sts_st_tcb_at' hoare_drop_imps
                           set_thread_state_runnable_valid_queues
                           set_thread_state_runnable_valid_sched_action
-                          set_thread_state_valid_blocked_except | simp | wpc)+)[2]
+                          set_thread_state_valid_blocked_except | simp | wpc)+)[3]
              apply simp
              apply (rule_tac Q="\<lambda>_. valid_sched and scheduler_act_not (sender) and not_queued (sender) and not_cur_thread (sender) and (\<lambda>s. sender \<noteq> idle_thread s)" in hoare_strengthen_post)
               apply wp
@@ -2423,7 +2423,7 @@ lemma receive_ipc_valid_sched:
                    wp hoare_drop_imps | wpc)+)[1]
           apply (wp hoare_vcg_imp_lift get_object_wp
                     set_thread_state_sched_act_not_valid_sched gba_wp
-               | simp add: get_endpoint_def get_async_ep_def
+               | simp add: get_endpoint_def get_async_ep_def do_nbwait_failed_transfer_def
                | wpc
                | wp_once hoare_vcg_all_lift hoare_vcg_ex_lift)+
   apply (subst st_tcb_at_kh_simp[symmetric])+
