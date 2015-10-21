@@ -5,7 +5,7 @@
 *)
 
 theory Eisbach_WP
-imports "../Eisbach_Methods" NonDetMonadVCG "../Conjuncts" "../Rule_By_Method" "WPU"
+imports "../Eisbach_Methods" NonDetMonadVCG "../Conjuncts" "../Rule_By_Method" "WPI"
         
 begin
 
