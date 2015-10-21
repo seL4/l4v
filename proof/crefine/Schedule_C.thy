@@ -624,12 +624,12 @@ lemma ksReadyQueuesL2Bitmap_nonzeroI:
    apply clarsimp
    done
 
+(* FIXME move *)
 lemma unat_add_lem':
   "(unat x + unat y < 2 ^ len_of TYPE('a)) \<Longrightarrow>
     (unat (x + y :: 'a :: len word) = unat x + unat y)"
   by (subst unat_add_lem[symmetric], assumption)
 
-(* FIXME RAF cleanup a bit more *)
 lemma chooseThread_ccorres:
   "ccorres dc xfdc all_invs_but_ct_idle_or_in_cur_domain' UNIV [] chooseThread (Call chooseThread_'proc)"
 proof -
@@ -668,7 +668,7 @@ proof -
     apply (subst mod_less)
      apply (rule order_le_less_trans[OF word_clz_max])
      apply (simp add: word_size)
-    apply (subst le_nat_iff[symmetric], simp) (* FIXME RAF how to do the iffD2 trick on the fly? *)
+    apply (rule iffD2 [OF le_nat_iff[symmetric]])
     apply simp
     apply (rule order_trans[OF word_clz_max])
     apply (simp add: word_size)

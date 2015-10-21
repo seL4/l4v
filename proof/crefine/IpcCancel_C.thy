@@ -1414,7 +1414,8 @@ proof -
                                           \<and> distinct (ksReadyQueues s (d, p)) \<Longrightarrow>
     \<forall>t\<in>set (ksReadyQueues s (d, p)). tcb_at' t s"
     by (fastforce dest: spec elim: obj_at'_weakenE)
-  show ?thesis (* FIXME RAF this is horrid *)
+
+  show ?thesis
   apply (cinit lift: tcb_')
    apply (rule_tac r'="\<lambda>rv rv'. rv = to_bool rv'"
               and xf'="ret__unsigned_long_'" in ccorres_split_nothrow)
@@ -1471,310 +1472,191 @@ proof -
                                  put_def bind_def return_def bitmap_fun_defs when_def
                                  null_def)
 
-apply (rule conjI;
-       clarsimp simp: queue_in_range[simplified maxDom_to_H maxPrio_to_H]
-                      )
+           apply (rule conjI; clarsimp simp: queue_in_range[simplified maxDom_to_H maxPrio_to_H])
+            apply (rule conjI; clarsimp simp: queue_in_range[simplified maxDom_to_H maxPrio_to_H])
+             apply (frule(1) valid_queuesD')
+             apply (drule (1) obj_at_cslift_tcb, clarsimp simp: inQ_def)
+             apply (frule_tac d="tcbDomain ko" and p="tcbPriority ko"
+                       in rf_sr_sched_queue_relation)
+               apply (fastforce simp: maxDom_to_H maxPrio_to_H)+
+             apply (frule_tac s=\<sigma> in tcb_queue_relation_prev_next'; (fastforce simp: ksQ_tcb_at')?)
+             apply (drule_tac s=\<sigma> in tcbSchedDequeue_update, assumption,
+                     simp_all add: remove1_filter ksQ_tcb_at')[1]
+             apply (intro conjI ;
+                     clarsimp simp: h_val_field_clift'
+                                    h_t_valid_clift[THEN h_t_valid_field] h_t_valid_clift)+
+               apply (drule(2) filter_empty_unfiltered_contr, simp)+
+             apply (rule conjI; clarsimp)
+              apply (rule conjI; clarsimp)
+               apply (subst rf_sr_drop_bitmaps_dequeue_helper, assumption)
+                 apply (fastforce intro: cbitmap_L1_relation_bit_clear)
+                apply (frule rf_sr_cbitmap_L2_relation)
+                apply (clarsimp simp: cbitmap_L2_relation_def
+                                      word_size prioToL1Index_def wordRadix_def mask_def
+                                      maxDomain_def numDomains_def word_le_nat_alt
+                                      numPriorities_def wordBits_def)
+                apply (case_tac "d = tcbDomain ko" ; fastforce)
 
-apply (rule conjI; clarsimp simp: queue_in_range[simplified maxDom_to_H maxPrio_to_H])
-           apply (frule(1) valid_queuesD')
-           apply (drule (1) obj_at_cslift_tcb, clarsimp simp: inQ_def)
-           apply (frule_tac d="tcbDomain ko" and p="tcbPriority ko"
-                      in rf_sr_sched_queue_relation)
-             apply (clarsimp simp: maxDom_to_H)
-            apply (clarsimp simp: maxPrio_to_H)
-           apply (frule_tac s=\<sigma> in tcb_queue_relation_prev_next', assumption)
-              apply simp
-             apply (simp add: ksQ_tcb_at')
-            apply assumption
-           apply (drule_tac s=\<sigma> in tcbSchedDequeue_update, assumption,
-                  simp_all add: remove1_filter ksQ_tcb_at')[1]
-           apply (intro conjI ;
-                  clarsimp simp: h_val_field_clift'
-                                 h_t_valid_c_guard [OF h_t_valid_field, OF h_t_valid_clift]
-                                 h_t_valid_clift[THEN h_t_valid_field] h_t_valid_clift
-                                 ucast_less[THEN order_less_le_trans])+
-             apply (drule(2) filter_empty_unfiltered_contr, simp)
-            apply (drule(2) filter_empty_unfiltered_contr, simp)
-           apply (rule conjI)
-            apply (clarsimp)
-            apply (rule conjI)
-             apply (clarsimp)
-             apply (subst rf_sr_drop_bitmaps_dequeue_helper, assumption)
-               apply (fastforce intro: cbitmap_L1_relation_bit_clear)
+               apply (drule (1) obj_at_cslift_tcb, clarsimp simp: inQ_def)
+               apply (frule_tac d="tcbDomain ko" and p="tcbPriority ko"
+                        in rf_sr_sched_queue_relation)
+                 apply (fastforce simp: maxDom_to_H maxPrio_to_H)+
+
+               apply (frule_tac s=\<sigma> in tcb_queue_relation_prev_next', assumption)
+                  apply (fastforce simp: ksQ_tcb_at')+
+               apply (drule_tac s=\<sigma> in tcbSchedDequeue_update, assumption,
+                      simp_all add: remove1_filter ksQ_tcb_at')[1]
+               (* trivial case, setting queue to empty *)
+               apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def
+                                     cmachine_state_relation_def)
+               apply (erule (2) cready_queues_relation_empty_queue_helper)
+              (* impossible case, C L2 update disagrees with Haskell update *)
+              apply (subst (asm) Arrays.index_update)
+               apply (simp add: maxDomain_def numDomains_def word_le_nat_alt)
+              apply (subst (asm) Arrays.index_update)
+               apply (simp add: less_eq_Suc_le)
               apply (frule rf_sr_cbitmap_L2_relation)
-              apply (clarsimp simp: cbitmap_L2_relation_def)
-              apply (clarsimp simp: word_size prioToL1Index_def wordRadix_def mask_def
-                                    maxDomain_def numDomains_def word_le_nat_alt
-                                    numPriorities_def wordBits_def)
-              apply (case_tac "d = tcbDomain ko" ; simp)
+              apply (drule_tac i="prioToL1Index (tcbPriority ko)" in cbitmap_L2_relationD, assumption)
+               apply (fastforce simp: numPriorities_def wordBits_def word_size prioToL1Index_def)
+              apply (fastforce simp: prioToL1Index_def mask_def wordRadix_def)
+             (* impossible case *)
+             apply (clarsimp simp: h_val_field_clift' h_t_valid_clift)
+             apply (drule(2) filter_empty_unfiltered_contr, fastforce)
 
+            apply (frule (1) valid_queuesD')
+            apply (drule (1) obj_at_cslift_tcb, clarsimp simp: inQ_def)
+            apply (frule_tac d="tcbDomain ko" and p="tcbPriority ko"
+                     in rf_sr_sched_queue_relation)
+              apply (fastforce simp: maxDom_to_H maxPrio_to_H)+
+            apply (clarsimp simp: h_val_field_clift'
+                                  h_t_valid_clift[THEN h_t_valid_field] h_t_valid_clift)
+            apply (frule_tac s=\<sigma> in tcb_queue_relation_prev_next', assumption)
+               apply (fastforce simp: ksQ_tcb_at')+
+            apply (drule_tac s=\<sigma> in tcbSchedDequeue_update, assumption,
+                   simp_all add: remove1_filter ksQ_tcb_at')[1]
+            apply (clarsimp simp:  filter_noteq_op upd_unless_null_def)
+            apply (rule conjI, clarsimp)
+             apply (clarsimp simp: h_val_field_clift'
+                                   h_t_valid_clift[THEN h_t_valid_field] h_t_valid_clift)
+             apply (rule conjI; clarsimp)
+              apply (simp add: typ_heap_simps)
+              apply (clarsimp simp: h_t_valid_c_guard [OF h_t_valid_field, OF h_t_valid_clift]
+                                    h_t_valid_field[OF h_t_valid_clift] h_t_valid_clift)
+              apply (erule_tac S="set (ksReadyQueues \<sigma> (tcbDomain ko, tcbPriority ko))"
+                       in state_relation_queue_update_helper', assumption,
+                     simp_all add: clift_field_update if_Some_helper numPriorities_def
+                                   cready_queues_index_to_C_def2 typ_heap_simps
+                                   maxDom_to_H maxPrio_to_H
+                  cong: if_cong split del: split_if)[1]
+              apply (fastforce simp: tcb_null_sched_ptrs_def)+
+             apply (erule_tac S="set (ksReadyQueues \<sigma> (tcbDomain ko, tcbPriority ko))"
+                      in state_relation_queue_update_helper', assumption,
+                    simp_all add: clift_field_update if_Some_helper numPriorities_def
+                                  cready_queues_index_to_C_def2
+                                  maxDom_to_H maxPrio_to_H
+                             cong: if_cong split del: split_if)[1]
+                apply (fastforce simp: typ_heap_simps)
+               apply (fastforce simp: tcb_null_sched_ptrs_def)
+              apply (simp add: typ_heap_simps)
+             apply fastforce
 
-           apply (drule (1) obj_at_cslift_tcb, clarsimp simp: inQ_def)
-           apply (frule_tac d="tcbDomain ko" and p="tcbPriority ko"
-                      in rf_sr_sched_queue_relation)
-             apply (clarsimp simp: maxDom_to_H)
-            apply (clarsimp simp: maxPrio_to_H)
-           apply (frule_tac s=\<sigma> in tcb_queue_relation_prev_next', assumption)
-              apply simp
-             apply (simp add: ksQ_tcb_at')
-            apply assumption
-           apply (drule_tac s=\<sigma> in tcbSchedDequeue_update, assumption,
-                  simp_all add: remove1_filter ksQ_tcb_at')[1]
-           apply (clarsimp simp: h_val_field_clift'
-                                 h_t_valid_c_guard [OF h_t_valid_field, OF h_t_valid_clift]
-                                 h_t_valid_clift[THEN h_t_valid_field] h_t_valid_clift
-                                 ucast_less[THEN order_less_le_trans])
-           (* trivial case, setting queue to empty *)
-           apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def
-                                 cmachine_state_relation_def)
-           apply (erule (2) cready_queues_relation_empty_queue_helper)
-          apply clarsimp
-          (* impossible case, C L2 update disagrees with Haskell update *)
-          apply (subst (asm) Arrays.index_update)
-           apply (simp add: maxDomain_def numDomains_def word_le_nat_alt)
-          apply (subst (asm) Arrays.index_update)
-           apply (simp add: less_eq_Suc_le)
-          apply (frule rf_sr_cbitmap_L2_relation)
-          apply (drule_tac i="prioToL1Index (tcbPriority ko)" in cbitmap_L2_relationD, assumption)
-           apply (simp add: numPriorities_def wordBits_def word_size prioToL1Index_def)
-          apply (simp add: prioToL1Index_def mask_def wordRadix_def)
-         (* impossible case *)
-         apply clarsimp
-         apply (clarsimp simp: h_val_field_clift' h_t_valid_clift)
-         apply (drule(2) filter_empty_unfiltered_contr, simp)
+            apply clarsimp
+            apply (rule conjI; clarsimp)
+             apply (rule conjI; clarsimp)
+              (* invalid, missing bitmap updates on haskell side *)
+              apply (fastforce dest!: tcb_queue_relation'_empty_ksReadyQueues elim: obj_at'_weaken)+
+            apply (clarsimp simp: h_val_field_clift' h_t_valid_clift)
+            apply (erule_tac S="set (ksReadyQueues \<sigma> (tcbDomain ko, tcbPriority ko))"
+                     in state_relation_queue_update_helper', assumption,
+                   simp_all add: clift_field_update if_Some_helper numPriorities_def
+                                 cready_queues_index_to_C_def2
+                                 maxDom_to_H maxPrio_to_H
+                 cong: if_cong split del: split_if)[1]
+               apply (fastforce simp: typ_heap_simps tcb_null_sched_ptrs_def)+
+           apply (rule conjI; clarsimp simp: queue_in_range[simplified maxDom_to_H maxPrio_to_H])
+            apply (frule (1) valid_queuesD')
+            apply (drule (1) obj_at_cslift_tcb, clarsimp simp: inQ_def)
+            apply (frule_tac d="tcbDomain ko" and p="tcbPriority ko"
+                     in rf_sr_sched_queue_relation)
+              apply (fastforce simp: maxDom_to_H maxPrio_to_H)+
+            apply (clarsimp simp: h_val_field_clift'
+                                  h_t_valid_clift[THEN h_t_valid_field] h_t_valid_clift)
+            apply (frule_tac s=\<sigma> in tcb_queue_relation_prev_next')
+                apply (fastforce simp: ksQ_tcb_at')+
+            apply (drule_tac s=\<sigma> in tcbSchedDequeue_update, assumption,
+                   simp_all add: remove1_filter ksQ_tcb_at')[1]
+            apply (clarsimp simp:  filter_noteq_op upd_unless_null_def)
+            apply (rule conjI; clarsimp)
+             apply (clarsimp simp: h_val_field_clift'
+                                   h_t_valid_clift[THEN h_t_valid_field] h_t_valid_clift)
+             apply (clarsimp simp: typ_heap_simps)
+             apply (rule conjI; clarsimp simp: typ_heap_simps)
+             apply (drule(2) filter_empty_unfiltered_contr[simplified filter_noteq_op], simp)
+            apply (rule conjI; clarsimp)
+             (* impossible case, C L2 update disagrees with Haskell update *)
+             apply (subst (asm) Arrays.index_update)
+              apply (simp add: maxDomain_def numDomains_def word_le_nat_alt)
+             apply (subst (asm) Arrays.index_update)
+              apply (simp add: less_eq_Suc_le)
+             apply (frule rf_sr_cbitmap_L2_relation)
+             apply (drule_tac i="prioToL1Index (tcbPriority ko)" in cbitmap_L2_relationD, assumption)
+              apply (simp add: numPriorities_def wordBits_def word_size prioToL1Index_def)
+             apply (simp add: prioToL1Index_def mask_def wordRadix_def)
+
+            apply (subst rf_sr_drop_bitmaps_dequeue_helper_L2, assumption)
+             apply (fastforce dest: rf_sr_cbitmap_L2_relation elim!: cbitmap_L2_relation_bit_clear)
+            (* trivial case, setting queue to empty *)
+            apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def
+                                  cmachine_state_relation_def)
+            apply (erule (2) cready_queues_relation_empty_queue_helper)
 
            apply (frule (1) valid_queuesD')
            apply (drule (1) obj_at_cslift_tcb, clarsimp simp: inQ_def)
            apply (frule_tac d="tcbDomain ko" and p="tcbPriority ko"
-                      in rf_sr_sched_queue_relation)
-             apply (clarsimp simp: maxDom_to_H)
-            apply (clarsimp simp: maxPrio_to_H)
+                    in rf_sr_sched_queue_relation)
+             apply (fastforce simp: maxDom_to_H maxPrio_to_H)+
            apply (clarsimp simp: h_val_field_clift'
-                                 h_t_valid_c_guard [OF h_t_valid_field, OF h_t_valid_clift]
-                                 h_t_valid_clift[THEN h_t_valid_field] h_t_valid_clift
-                                 ucast_less[THEN order_less_le_trans])
-           apply (frule_tac s=\<sigma> in tcb_queue_relation_prev_next', assumption)
-              apply simp
-             apply (simp add: ksQ_tcb_at')
-            apply assumption
-
+                                 h_t_valid_clift[THEN h_t_valid_field] h_t_valid_clift)
+           apply (frule_tac s=\<sigma> in tcb_queue_relation_prev_next')
+              apply (fastforce simp add: ksQ_tcb_at')+
            apply (drule_tac s=\<sigma> in tcbSchedDequeue_update, assumption,
                   simp_all add: remove1_filter ksQ_tcb_at')[1]
-        apply (clarsimp simp:  filter_noteq_op upd_unless_null_def)
-apply (rule conjI, clarsimp)
-
-           apply (clarsimp simp: h_val_field_clift'
-                                 h_t_valid_c_guard [OF h_t_valid_field, OF h_t_valid_clift]
-                                 h_t_valid_clift[THEN h_t_valid_field] h_t_valid_clift
-                                 ucast_less[THEN order_less_le_trans])
-
- apply (rule conjI, clarsimp)
-           apply (simp add: typ_heap_simps)
-
-           apply (clarsimp simp: h_t_valid_c_guard [OF h_t_valid_field, OF h_t_valid_clift]
-                                  h_t_valid_field[OF h_t_valid_clift] h_t_valid_clift)
-
+           apply (clarsimp simp:  filter_noteq_op upd_unless_null_def)
+           apply (rule conjI, clarsimp)
+            apply (clarsimp simp: h_val_field_clift'
+                                  h_t_valid_clift[THEN h_t_valid_field] h_t_valid_clift)
+            apply (clarsimp simp: typ_heap_simps)
+            apply (rule conjI; clarsimp simp: typ_heap_simps)
+             apply (erule_tac S="set (ksReadyQueues \<sigma> (tcbDomain ko, tcbPriority ko))"
+                      in state_relation_queue_update_helper', assumption,
+                    simp_all add: clift_field_update if_Some_helper numPriorities_def
+                                  cready_queues_index_to_C_def2
+                                  maxDom_to_H maxPrio_to_H
+                             cong: if_cong split del: split_if)[1]
+               apply (fastforce simp: typ_heap_simps tcb_null_sched_ptrs_def)+
             apply (erule_tac S="set (ksReadyQueues \<sigma> (tcbDomain ko, tcbPriority ko))"
-                         in state_relation_queue_update_helper', assumption,
+                     in state_relation_queue_update_helper', assumption,
                    simp_all add: clift_field_update if_Some_helper numPriorities_def
                                  cready_queues_index_to_C_def2
+                                 maxDom_to_H maxPrio_to_H
+                            cong: if_cong split del: split_if)[1]
+               apply (fastforce simp: typ_heap_simps tcb_null_sched_ptrs_def)+
+           apply (clarsimp)
+           apply (rule conjI; clarsimp simp: typ_heap_simps)
+            apply (rule conjI; clarsimp)
+             (* invalid, missing bitmap updates on haskell side *)
+             apply (drule tcb_queue_relation'_empty_ksReadyQueues)
+              apply (fastforce elim: obj_at'_weaken)+
+            (* invalid, missing bitmap updates on haskell side *)
+            apply (drule tcb_queue_relation'_empty_ksReadyQueues)
+             apply (fastforce elim: obj_at'_weaken)+
+           apply (erule_tac S="set (ksReadyQueues \<sigma> (tcbDomain ko, tcbPriority ko))"
+                    in state_relation_queue_update_helper', assumption,
+                  simp_all add: clift_field_update if_Some_helper numPriorities_def
+                                cready_queues_index_to_C_def2 typ_heap_simps
+                                maxDom_to_H maxPrio_to_H
                            cong: if_cong split del: split_if)[1]
-
-                 apply (rule ext, simp add: tcb_null_sched_ptrs_def)
-                apply (simp add: typ_heap_simps)
-               apply clarsimp
-              apply (clarsimp simp: maxDom_to_H)
-             apply (clarsimp simp: maxPrio_to_H)
- apply clarsimp
- apply (simp add: typ_heap_simps)
-
-            apply (erule_tac S="set (ksReadyQueues \<sigma> (tcbDomain ko, tcbPriority ko))"
-                         in state_relation_queue_update_helper', assumption,
-                   simp_all add: clift_field_update if_Some_helper numPriorities_def
-                                 cready_queues_index_to_C_def2
-                           cong: if_cong split del: split_if)[1]
-
-                    apply (simp add: typ_heap_simps)
-                 apply (rule ext, simp add: tcb_null_sched_ptrs_def)
-                apply (simp add: typ_heap_simps)
-               apply clarsimp
-              apply (clarsimp simp: maxDom_to_H)
-             apply (clarsimp simp: maxPrio_to_H)
-
-apply clarsimp
-apply (rule conjI, clarsimp)
- apply (rule conjI, clarsimp)
-  (* invalid, missing bitmap updates on haskell side *)
-  apply (drule tcb_queue_relation'_empty_ksReadyQueues)
-   apply (fastforce elim: obj_at'_weaken)
-  apply simp
- apply clarsimp
-          (* impossible case, C L2 update disagrees with Haskell update *)
-          apply (subst (asm) Arrays.index_update)
-           apply (simp add: maxDomain_def numDomains_def word_le_nat_alt)
-          apply (subst (asm) Arrays.index_update)
-           apply (simp add: less_eq_Suc_le)
-          apply (frule rf_sr_cbitmap_L2_relation)
-          apply (drule_tac i="prioToL1Index (tcbPriority ko)" in cbitmap_L2_relationD, assumption)
-           apply (simp add: numPriorities_def wordBits_def word_size prioToL1Index_def)
-          apply (simp add: prioToL1Index_def mask_def wordRadix_def)
-
-apply clarsimp
-apply (clarsimp simp: h_val_field_clift' h_t_valid_clift)
-
-            apply (erule_tac S="set (ksReadyQueues \<sigma> (tcbDomain ko, tcbPriority ko))"
-                         in state_relation_queue_update_helper', assumption,
-                   simp_all add: clift_field_update if_Some_helper numPriorities_def
-                                 cready_queues_index_to_C_def2
-                           cong: if_cong split del: split_if)[1]
-
-                    apply (simp add: typ_heap_simps)
-                 apply (rule ext, simp add: tcb_null_sched_ptrs_def)
-                apply (simp add: typ_heap_simps)
-               apply clarsimp
-              apply (clarsimp simp: maxDom_to_H)
-             apply (clarsimp simp: maxPrio_to_H)
-
-apply (rule conjI; clarsimp simp: queue_in_range[simplified maxDom_to_H maxPrio_to_H])
-
-           apply (frule (1) valid_queuesD')
-           apply (drule (1) obj_at_cslift_tcb, clarsimp simp: inQ_def)
-           apply (frule_tac d="tcbDomain ko" and p="tcbPriority ko"
-                      in rf_sr_sched_queue_relation)
-             apply (clarsimp simp: maxDom_to_H)
-            apply (clarsimp simp: maxPrio_to_H)
-           apply (clarsimp simp: h_val_field_clift'
-                                 h_t_valid_c_guard [OF h_t_valid_field, OF h_t_valid_clift]
-                                 h_t_valid_clift[THEN h_t_valid_field] h_t_valid_clift
-                                 ucast_less[THEN order_less_le_trans])
-           apply (frule_tac s=\<sigma> in tcb_queue_relation_prev_next', assumption)
-              apply simp
-             apply (simp add: ksQ_tcb_at')
-            apply assumption
-
-           apply (drule_tac s=\<sigma> in tcbSchedDequeue_update, assumption,
-                  simp_all add: remove1_filter ksQ_tcb_at')[1]
-        apply (clarsimp simp:  filter_noteq_op upd_unless_null_def)
-
- apply (rule conjI, clarsimp)
-
-           apply (clarsimp simp: h_val_field_clift'
-                                 h_t_valid_c_guard [OF h_t_valid_field, OF h_t_valid_clift]
-                                 h_t_valid_clift[THEN h_t_valid_field] h_t_valid_clift
-                                 ucast_less[THEN order_less_le_trans])
-           apply (clarsimp simp: typ_heap_simps)
-  apply (rule conjI; clarsimp simp: typ_heap_simps)
-   apply (drule(2) filter_empty_unfiltered_contr[simplified filter_noteq_op], simp)
-           apply (clarsimp simp: h_val_field_clift'
-                                 h_t_valid_c_guard [OF h_t_valid_field, OF h_t_valid_clift]
-                                 h_t_valid_clift[THEN h_t_valid_field] h_t_valid_clift
-                                 ucast_less[THEN order_less_le_trans])
-  apply (rule conjI; clarsimp)
-          (* impossible case, C L2 update disagrees with Haskell update *)
-          apply (subst (asm) Arrays.index_update)
-           apply (simp add: maxDomain_def numDomains_def word_le_nat_alt)
-          apply (subst (asm) Arrays.index_update)
-           apply (simp add: less_eq_Suc_le)
-          apply (frule rf_sr_cbitmap_L2_relation)
-          apply (drule_tac i="prioToL1Index (tcbPriority ko)" in cbitmap_L2_relationD, assumption)
-           apply (simp add: numPriorities_def wordBits_def word_size prioToL1Index_def)
-          apply (simp add: prioToL1Index_def mask_def wordRadix_def)
-
-             apply (subst rf_sr_drop_bitmaps_dequeue_helper_L2, assumption)
-              apply (frule rf_sr_cbitmap_L2_relation)
-
-           apply (erule (1) cbitmap_L2_relation_bit_clear)
-           apply simp
-
-           (* trivial case, setting queue to empty *)
-           apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def carch_state_relation_def
-                                 cmachine_state_relation_def)
-           apply (erule (2) cready_queues_relation_empty_queue_helper)
-
-
-           apply (frule (1) valid_queuesD')
-           apply (drule (1) obj_at_cslift_tcb, clarsimp simp: inQ_def)
-           apply (frule_tac d="tcbDomain ko" and p="tcbPriority ko"
-                      in rf_sr_sched_queue_relation)
-             apply (clarsimp simp: maxDom_to_H)
-            apply (clarsimp simp: maxPrio_to_H)
-           apply (clarsimp simp: h_val_field_clift'
-                                 h_t_valid_c_guard [OF h_t_valid_field, OF h_t_valid_clift]
-                                 h_t_valid_clift[THEN h_t_valid_field] h_t_valid_clift
-                                 ucast_less[THEN order_less_le_trans])
-           apply (frule_tac s=\<sigma> in tcb_queue_relation_prev_next', assumption)
-              apply simp
-             apply (simp add: ksQ_tcb_at')
-            apply assumption
-
-           apply (drule_tac s=\<sigma> in tcbSchedDequeue_update, assumption,
-                  simp_all add: remove1_filter ksQ_tcb_at')[1]
-        apply (clarsimp simp:  filter_noteq_op upd_unless_null_def)
-
- apply (rule conjI, clarsimp)
-
-           apply (clarsimp simp: h_val_field_clift'
-                                 h_t_valid_c_guard [OF h_t_valid_field, OF h_t_valid_clift]
-                                 h_t_valid_clift[THEN h_t_valid_field] h_t_valid_clift
-                                 ucast_less[THEN order_less_le_trans])
-           apply (clarsimp simp: typ_heap_simps)
-  apply (rule conjI; clarsimp simp: typ_heap_simps)
-
-            apply (erule_tac S="set (ksReadyQueues \<sigma> (tcbDomain ko, tcbPriority ko))"
-                         in state_relation_queue_update_helper', assumption,
-                   simp_all add: clift_field_update if_Some_helper numPriorities_def
-                                 cready_queues_index_to_C_def2
-                           cong: if_cong split del: split_if)[1]
-                 apply (rule ext, simp add: tcb_null_sched_ptrs_def)
-                apply (simp add: typ_heap_simps)
-               apply clarsimp
-              apply (clarsimp simp: maxDom_to_H)
-             apply (clarsimp simp: maxPrio_to_H)
-
-            apply (erule_tac S="set (ksReadyQueues \<sigma> (tcbDomain ko, tcbPriority ko))"
-                         in state_relation_queue_update_helper', assumption,
-                   simp_all add: clift_field_update if_Some_helper numPriorities_def
-                                 cready_queues_index_to_C_def2
-                           cong: if_cong split del: split_if)[1]
-                    apply (simp add: typ_heap_simps)
-                 apply (rule ext, simp add: tcb_null_sched_ptrs_def)
-                apply (simp add: typ_heap_simps)
-               apply clarsimp
-              apply (clarsimp simp: maxDom_to_H)
-             apply (clarsimp simp: maxPrio_to_H)
-
-apply (clarsimp)
-apply (rule conjI, clarsimp)
- apply (rule conjI, clarsimp)
-
-  (* invalid, missing bitmap updates on haskell side *)
-  apply (drule tcb_queue_relation'_empty_ksReadyQueues)
-   apply (fastforce elim: obj_at'_weaken)
-  apply simp
- apply clarsimp
-
-  (* invalid, missing bitmap updates on haskell side *)
-  apply (drule tcb_queue_relation'_empty_ksReadyQueues)
-   apply (fastforce elim: obj_at'_weaken)
-  apply simp
- apply (clarsimp simp: typ_heap_simps)
-
-
-            apply (erule_tac S="set (ksReadyQueues \<sigma> (tcbDomain ko, tcbPriority ko))"
-                         in state_relation_queue_update_helper', assumption,
-                   simp_all add: clift_field_update if_Some_helper numPriorities_def
-                                 cready_queues_index_to_C_def2
-                           cong: if_cong split del: split_if)[1]
-
-                    apply (simp add: typ_heap_simps)
-                 apply (rule ext, simp add: tcb_null_sched_ptrs_def)
-                apply (simp add: typ_heap_simps)
-               apply clarsimp
-              apply (clarsimp simp: maxDom_to_H)
-             apply (clarsimp simp: maxPrio_to_H)
-
-
-
+             apply (fastforce simp: typ_heap_simps tcb_null_sched_ptrs_def)+
           apply (simp add: guard_is_UNIV_def)
          apply simp
          apply (wp threadGet_wp)
