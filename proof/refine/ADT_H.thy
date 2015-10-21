@@ -248,7 +248,7 @@ lemma
    using pte_rights
    apply -[1]
    apply (erule_tac x="x + (ucast y << 2)" in allE)+
-   apply fastforce -- "NOTE: takes quite a while."
+   subgoal by fastforce -- "NOTE: takes quite a while."
   apply (clarsimp split: split_if_asm)
   using pdes
   apply (erule_tac x=x in allE)

@@ -629,19 +629,34 @@ lemma recv_async_ipc_corres:
   "cap = transform_cap cap' \<Longrightarrow>
   dcorres dc \<top> (invs and not_idle_thread thread and st_tcb_at active thread and valid_etcbs)
              (recv_async_ipc thread cap)
-             (receive_async_ipc thread cap')"
+             (receive_async_ipc thread cap' is_blocking)"
   apply (clarsimp simp:receive_async_ipc_def invs_def recv_async_ipc_def corres_free_fail split:cap.splits)
   apply (rename_tac word1 word2 rights)
   apply (rule dcorres_expand_pfx)
   apply (rule_tac Q' = "\<lambda>r. op = s' and ko_at (kernel_object.AsyncEndpoint r) word1 and valid_aep r" in corres_symb_exec_r)
      apply (rule dcorres_expand_pfx)
      apply (clarsimp simp:obj_at_def is_aep_def)
-     apply (simp add:gets_def bind_assoc option_select_def)
-     apply (rule dcorres_absorb_get_l)
-     apply (frule get_async_ep_pick,simp)
-     apply (case_tac "aep_obj rv")
-       apply (clarsimp simp:aep_waiting_set_lift valid_state_def cap_object_simps
-         valid_aep_abstract_def none_is_waiting_aep_def )
+     apply (case_tac "aep_obj rv"; simp)
+       apply (clarsimp simp: aep_waiting_set_lift valid_state_def cap_object_simps
+                             valid_aep_abstract_def none_is_waiting_aep_def )
+       apply (case_tac is_blocking; simp)
+        apply (rule corres_guard_imp)
+          apply (rule corres_alternate1)
+          apply (rule corres_dummy_return_l)
+          apply (rule corres_split[OF _ set_thread_state_block_on_async_recv_corres])
+            apply  (rule corres_dummy_set_async_ep,simp)
+          apply (wp|simp)+
+        apply (clarsimp simp:st_tcb_at_def tcb_at_def obj_at_def get_tcb_rev)
+       apply (simp add: do_nbwait_failed_transfer_def)
+       apply (rule corres_guard_imp)
+         apply (rule corres_alternate2)
+         apply (rule corrupt_tcb_intent_as_user_corres)
+        apply simp
+       apply simp
+      (* WaitingAEP *)
+      apply (clarsimp simp: aep_waiting_set_lift valid_state_def
+                            valid_aep_abstract_def none_is_waiting_aep_def cap_object_simps)
+      apply (case_tac is_blocking; simp)
        apply (rule corres_guard_imp)
          apply (rule corres_alternate1)
          apply (rule corres_dummy_return_l)
@@ -649,21 +664,15 @@ lemma recv_async_ipc_corres:
            apply  (rule corres_dummy_set_async_ep,simp)
          apply (wp|simp)+
        apply (clarsimp simp:st_tcb_at_def tcb_at_def obj_at_def get_tcb_rev)
-      (* WaitingAEP *)
-      apply (clarsimp simp:aep_waiting_set_lift valid_state_def
-                           valid_aep_abstract_def none_is_waiting_aep_def cap_object_simps)
-      apply (rule conjI)
-       apply (clarsimp simp:neq_Nil_conv)
-      apply clarsimp
+      apply (simp add: do_nbwait_failed_transfer_def)
       apply (rule corres_guard_imp)
-        apply (rule corres_dummy_return_l)
-        apply (rule corres_split[OF _ set_thread_state_block_on_async_recv_corres])
-          apply  (rule corres_dummy_set_async_ep,simp+)
-      apply (fastforce simp:st_tcb_at_def obj_at_def get_tcb_rev)
-
-(* Active AEP list *)
-     apply (clarsimp simp:aep_waiting_set_lift valid_state_def
-       valid_aep_abstract_def none_is_waiting_aep_def cap_object_simps)
+        apply (rule corres_alternate2)
+        apply (rule corrupt_tcb_intent_as_user_corres)
+       apply simp
+      apply simp
+     (* Active AEP *)
+     apply (clarsimp simp: aep_waiting_set_lift valid_state_def
+                           valid_aep_abstract_def none_is_waiting_aep_def cap_object_simps)
      apply (rule corres_alternate2)
      apply (rule corres_guard_imp )
        apply (rule corres_dummy_return_l)
@@ -1388,7 +1397,7 @@ next
         apply wp
        apply (wp hoare_vcg_ex_lift valid_irq_node_typ hoare_vcg_ball_lift)[3]
     apply simp
-   apply (fastforce simp: not_idle_thread_def ipc_frame_wp_at_def ipc_buffer_def)
+   subgoal by (fastforce simp: not_idle_thread_def ipc_frame_wp_at_def ipc_buffer_def)
   apply (subgoal_tac "\<not>(Types_D.is_ep_cap (transform_cap cap) \<and>
                        (\<exists>z. ep' = Some z \<and> z = cap_object (transform_cap cap)))")
    prefer 2
@@ -1500,8 +1509,7 @@ next
      apply (drule(1) bspec,clarsimp)+
   apply (case_tac "capb = aa")
    apply (clarsimp simp:masked_as_full_def split:split_if_asm)
-  apply (clarsimp simp:masked_as_full_def free_index_update_def is_cap_simps)
-  done
+  by (clarsimp simp:masked_as_full_def free_index_update_def is_cap_simps)
 qed
 
 lemma load_cap_transfer_def':
@@ -1514,7 +1522,7 @@ lemma load_cap_transfer_def':
   apply (simp add:msg_max_length_def msg_max_extra_caps_def cong: if_weak_cong)
   apply (clarsimp simp:load_word_offs_def mapM_def sequence_def bind_assoc)
   apply (simp add:word_size_def add.commute)
-done
+  done
 
 lemma get_ipc_buffer_words_receive_slots:
   "\<lbrakk> tcb_ipcframe obj = cap.ArchObjectCap (arch_cap.PageCap b rs sz mapdata); valid_cap (tcb_ipcframe obj) s;
@@ -2403,11 +2411,12 @@ lemma dcorres_receive_sync:
     dcorres dc (op = (transform s)) (op = s) 
         (receive_sync thread word1)
         (case rv of
-            Structures_A.endpoint.IdleEP \<Rightarrow>
-                do set_thread_state thread
+            Structures_A.endpoint.IdleEP \<Rightarrow> case is_blocking of
+                True \<Rightarrow> do set_thread_state thread
                       (Structures_A.thread_state.BlockedOnReceive word1 (AllowWrite \<notin> rights));
-                   set_endpoint word1 (Structures_A.endpoint.RecvEP [thread])
-                od
+                       set_endpoint word1 (Structures_A.endpoint.RecvEP [thread])
+                   od
+                | False \<Rightarrow> do_nbwait_failed_transfer thread
           | Structures_A.endpoint.SendEP q \<Rightarrow>
                 do assert (q \<noteq> []);
                    queue \<leftarrow> return $ tl q;
@@ -2429,11 +2438,12 @@ lemma dcorres_receive_sync:
                            do_extended_op (switch_if_required_to sender)
                         od
                 od
-          | Structures_A.endpoint.RecvEP queue \<Rightarrow>
-                do set_thread_state thread
+          | Structures_A.endpoint.RecvEP queue \<Rightarrow> case is_blocking of
+              True \<Rightarrow> do set_thread_state thread
                      (Structures_A.thread_state.BlockedOnReceive word1 (AllowWrite \<notin> rights));
-                   set_endpoint word1 (Structures_A.endpoint.RecvEP (queue @ [thread]))
-                od)"
+                      set_endpoint word1 (Structures_A.endpoint.RecvEP (queue @ [thread]))
+                   od
+              | False \<Rightarrow> do_nbwait_failed_transfer thread)"
   apply (clarsimp simp: receive_sync_def gets_def)
   apply (rule dcorres_absorb_get_l)
   apply (case_tac rv)
@@ -2445,10 +2455,18 @@ lemma dcorres_receive_sync:
       apply (simp add:valid_state_def)
      apply simp
     apply (clarsimp simp:valid_ep_abstract_def none_is_sending_ep_def option_select_def)
-    apply (rule corres_dummy_return_l)
+    apply (case_tac is_blocking; simp)
+     apply (rule corres_guard_imp)
+       apply (rule corres_alternate1)
+       apply (rule corres_dummy_return_l)
+       apply (rule corres_guard_imp)
+         apply (rule corres_split[OF corres_dummy_set_sync_ep set_thread_state_block_on_receive_corres])
+          apply (wp|simp)+
+    apply (rule corres_alternate2)
+    apply (simp add: do_nbwait_failed_transfer_def)
     apply (rule corres_guard_imp)
-      apply (rule corres_split[OF corres_dummy_set_sync_ep set_thread_state_block_on_receive_corres])
-       apply (wp|clarsimp)+
+      apply (rule corrupt_tcb_intent_as_user_corres, simp, simp)
+    apply (simp add: valid_state_def)
  (* SendEP *)
    apply (frule get_endpoint_pick)
     apply (simp add:obj_at_def)
@@ -2532,10 +2550,17 @@ lemma dcorres_receive_sync:
     apply (simp add:valid_state_def)
    apply simp
   apply (clarsimp simp:valid_ep_abstract_def none_is_sending_ep_def option_select_def)
-  apply (rule corres_dummy_return_l)
+  apply (case_tac is_blocking; simp)
+   apply (rule corres_guard_imp)
+     apply (rule corres_alternate1)
+     apply (rule corres_dummy_return_l)
+     apply (rule corres_guard_imp)
+       apply (rule corres_split[OF corres_dummy_set_sync_ep set_thread_state_block_on_receive_corres])
+        apply (wp|simp)+
+  apply (simp add: do_nbwait_failed_transfer_def)
+  apply (rule corres_alternate2)
   apply (rule corres_guard_imp)
-    apply (rule corres_split[OF corres_dummy_set_sync_ep set_thread_state_block_on_receive_corres])
-     apply (wp|clarsimp)+
+    apply (rule corrupt_tcb_intent_as_user_corres, (simp add: valid_state_def)+)
   done
 
 lemma dcorres_complete_async_ipc:
@@ -2558,8 +2583,7 @@ lemma recv_sync_ipc_corres:
       and st_tcb_at active thread
       and valid_state and valid_etcbs)
      (Endpoint_D.receive_ipc tcb_id_receiver ep_id )
-     (Ipc_A.receive_ipc thread ep_cap)
-  "
+     (Ipc_A.receive_ipc thread ep_cap is_blocking)"
   apply (clarsimp simp:corres_free_fail cap_ep_ptr_def Ipc_A.receive_ipc_def
                  split:cap.splits Structures_A.endpoint.splits)
   apply (rule dcorres_expand_pfx)

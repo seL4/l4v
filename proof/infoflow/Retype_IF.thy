@@ -1222,9 +1222,7 @@ region_in_kernel_window
              (unat
                ((word2 && mask sz) + of_nat (length list) * 2 ^ obj_bits_api apiobject_type nat))) \<inter>
           {word2..word2 +
-                  of_nat (length list) * 2 ^ obj_bits_api apiobject_type nat -
-                  1} =
-          {}")
+                  of_nat (length list) * 2 ^ obj_bits_api apiobject_type nat - 1} = {}")
                          apply(subgoal_tac "word2 && mask sz = 0", clarsimp simp: shiftl_t2n mult.commute)
                          apply(erule subst, rule mask_neg_mask_is_zero)
                         apply(rule usable_range_disjoint, simp+)

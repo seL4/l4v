@@ -28,6 +28,7 @@ datatype syscall =
   | SysReply
   | SysReplyWait
   | SysYield
+  | SysNBWait
 
 datatype event =
     SyscallEvent syscall

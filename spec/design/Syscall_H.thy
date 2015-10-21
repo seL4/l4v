@@ -44,7 +44,7 @@ consts
 handleReply :: "unit kernel"
 
 consts
-handleWait :: "unit kernel"
+handleWait :: "bool \<Rightarrow> unit kernel"
 
 consts
 handleYield :: "unit kernel"
@@ -58,13 +58,14 @@ defs handleEvent_def:
           SysSend \<Rightarrow>   handleSend True
         | SysNBSend \<Rightarrow>   handleSend False
         | SysCall \<Rightarrow>   handleCall
-        | SysWait \<Rightarrow>   withoutPreemption handleWait
+        | SysWait \<Rightarrow>   withoutPreemption $ handleWait True
         | SysReply \<Rightarrow>   withoutPreemption handleReply
         | SysReplyWait \<Rightarrow>   withoutPreemption $ (do
             handleReply;
-            handleWait
+            handleWait True
         od)
         | SysYield \<Rightarrow>   withoutPreemption handleYield
+        | SysNBWait \<Rightarrow>   withoutPreemption $ handleWait False
         )
   | Interrupt \<Rightarrow>    withoutPreemption $ (do
     active \<leftarrow> doMachineOp getActiveIRQ;
@@ -114,22 +115,23 @@ defs handleReply_def:
 od)"
 
 defs handleWait_def:
-"handleWait\<equiv> (do
+"handleWait isBlocking\<equiv> (do
     thread \<leftarrow> getCurThread;
     epCPtr \<leftarrow> asUser thread $ liftM CPtr $ getRegister capRegister;
     (capFaultOnFailure epCPtr True $ (doE
         epCap \<leftarrow> lookupCap thread epCPtr;
         (case epCap of
-              EndpointCap _ _ _ True _ \<Rightarrow>  
+              EndpointCap _ _ _ True _ \<Rightarrow>   (
                 withoutFailure $ (do
                     deleteCallerCap thread;
-                    receiveIPC thread epCap
+                    receiveIPC thread epCap isBlocking
                 od)
+              )
             | AsyncEndpointCap ptr _ _ True \<Rightarrow>   (doE
                 aep \<leftarrow> withoutFailure $ getAsyncEP ptr;
                 boundTCB \<leftarrow> returnOk $ aepBoundTCB aep;
                 if boundTCB = Just thread \<or> boundTCB = Nothing
-                 then withoutFailure $ receiveAsyncIPC thread epCap
+                 then withoutFailure $ receiveAsyncIPC thread epCap isBlocking
                  else throw $ MissingCapability_ \<lparr> missingCapBitsLeft= 0 \<rparr>
             odE)
             | _ \<Rightarrow>   throw $ MissingCapability_ \<lparr> missingCapBitsLeft= 0 \<rparr>)

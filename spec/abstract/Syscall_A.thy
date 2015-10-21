@@ -264,8 +264,8 @@ definition
  "delete_caller_cap t \<equiv> cap_delete_one (t, tcb_cnode_index 3)"
 
 definition
-  handle_wait :: "(unit,'z::state_ext) s_monad" where
-  "handle_wait \<equiv> do
+  handle_wait :: "bool \<Rightarrow> (unit,'z::state_ext) s_monad" where
+  "handle_wait is_blocking \<equiv> do
      thread \<leftarrow> gets cur_thread;
 
      ep_cptr \<leftarrow> liftM data_to_cptr $ as_user thread $
@@ -281,7 +281,7 @@ definition
              (if AllowRecv \<in> rights
               then liftE $ do
                  delete_caller_cap thread;
-                 receive_ipc thread ep_cap
+                 receive_ipc thread ep_cap is_blocking
                 od
               else flt)
            | AsyncEndpointCap ref badge rights \<Rightarrow> 
@@ -290,7 +290,7 @@ definition
                 aep \<leftarrow> liftE $ get_async_ep ref;
                 boundTCB \<leftarrow> returnOk $ aep_bound_tcb aep;
                 if boundTCB = Some thread \<or> boundTCB = None
-                then liftE $ receive_async_ipc thread ep_cap
+                then liftE $ receive_async_ipc thread ep_cap is_blocking
                 else flt
                odE
               else flt)
@@ -321,13 +321,14 @@ where
           SysSend \<Rightarrow> handle_send True
         | SysNBSend \<Rightarrow> handle_send False
         | SysCall \<Rightarrow> handle_call
-        | SysWait \<Rightarrow> without_preemption handle_wait
+        | SysWait \<Rightarrow> without_preemption $ handle_wait True
         | SysYield \<Rightarrow> without_preemption handle_yield
         | SysReply \<Rightarrow> without_preemption handle_reply
         | SysReplyWait \<Rightarrow> without_preemption $ do
             handle_reply;
-            handle_wait
-          od)"
+            handle_wait True
+          od
+        | SysNBWait \<Rightarrow> without_preemption $ handle_wait False)"
 
 | "handle_event (UnknownSyscall n) = (without_preemption $ do
     thread \<leftarrow> gets cur_thread;

@@ -988,7 +988,7 @@ lemma invs_valid_tcb_ctable_strengthen:
                invs s \<and> s \<turnstile> tcb_ctable (the (get_tcb thread s)))"
   by (clarsimp simp: invs_valid_tcb_ctable)
 
-lemma hw_invs[wp]: "\<lbrace>invs and ct_active\<rbrace> handle_wait \<lbrace>\<lambda>r. invs\<rbrace>"
+lemma hw_invs[wp]: "\<lbrace>invs and ct_active\<rbrace> handle_wait is_blocking \<lbrace>\<lambda>r. invs\<rbrace>"
   apply (simp add: handle_wait_def Let_def ep_aep_cap_case_helper
     cong: if_cong)
   apply (wp get_aep_wp | clarsimp)+
@@ -1013,7 +1013,7 @@ crunch typ_at[wp]: delete_caller_cap "\<lambda>s. P (typ_at T p s)"
 lemmas delete_caller_cap_tcb[wp]
   = tcb_at_typ_at [OF delete_caller_cap_typ_at]
 
-lemma hw_tcb[wp]: "\<lbrace>tcb_at t\<rbrace> handle_wait \<lbrace>\<lambda>rv. tcb_at t\<rbrace>"
+lemma hw_tcb[wp]: "\<lbrace>tcb_at t\<rbrace> handle_wait is_blocking \<lbrace>\<lambda>rv. tcb_at t\<rbrace>"
   apply (simp add: handle_wait_def Let_def ep_aep_cap_case_helper
              cong: if_cong)
   apply (wp hoare_vcg_if_lift2 hoare_vcg_conj_lift hoare_drop_imps | wpc | simp)+

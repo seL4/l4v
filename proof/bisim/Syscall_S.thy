@@ -611,7 +611,7 @@ lemma bisim_guard_imp_both:
   unfolding bisim_underlying_def by auto
 
 lemma handle_wait_bisim:
-  "bisim op = \<top> (separate_state and cur_tcb and valid_objs) handle_wait Syscall_A.handle_wait"
+  "bisim op = \<top> (separate_state and cur_tcb and valid_objs) (handle_wait is_blocking) (Syscall_A.handle_wait is_blocking)"
   unfolding handle_wait_def Syscall_A.handle_wait_def
   apply (simp add: Let_def)
   apply (rule bisim_guard_imp_both)
@@ -672,6 +672,8 @@ lemma handle_event_bisim:
   
   apply (simp add: handle_yield_def Syscall_A.handle_yield_def)
   apply (rule bisim_guard_imp_both, rule bisim_refl', simp)
+  
+  apply (rule bisim_guard_imp_both, rule handle_wait_bisim, simp)
 
   apply (rule bisim_split_refl)
   apply (rule handle_fault_bisim)

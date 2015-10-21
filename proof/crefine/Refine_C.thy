@@ -199,7 +199,7 @@ lemma handleUserLevelFault_ccorres:
 
 lemmas syscall_defs = 
   Kernel_C.SysSend_def Kernel_C.SysNBSend_def
-  Kernel_C.SysCall_def Kernel_C.SysWait_def
+  Kernel_C.SysCall_def Kernel_C.SysWait_def Kernel_C.SysNBWait_def
   Kernel_C.SysReply_def Kernel_C.SysReplyWait_def Kernel_C.SysYield_def
 
 lemma ct_active_not_idle'_strengthen:
@@ -219,7 +219,43 @@ lemma handleSyscall_ccorres:
    apply (simp add: handleE_def handleE'_def)
    apply (rule ccorres_split_nothrow_novcg)
        apply wpc
-             -- "SysSend"
+              -- "SysSend"
+              apply (clarsimp simp: syscall_from_H_def syscall_defs)
+              apply (rule ccorres_cond_empty |rule ccorres_cond_univ)+
+              apply (simp add: handleSend_def)
+              apply (rule ccorres_split_nothrow_case_sum)
+                   apply (ctac (no_vcg) add: handleInvocation_ccorres)
+                  apply ceqv
+                 apply clarsimp
+                 apply (rule ccorres_cond_empty)
+                 apply (rule ccorres_returnOk_skip[unfolded returnOk_def,simplified])
+                apply clarsimp
+                apply (rule ccorres_cond_univ)
+                apply (simp add: liftE_def bind_assoc)
+                apply (ctac (no_vcg) add: getActiveIRQ_ccorres)
+                 apply (rule ccorres_Guard)?
+                 apply (simp only: irqInvalid_def)?
+                 apply (rule_tac P="rv \<noteq> Some 0xFF" in ccorres_gen_asm)
+                 apply (subst ccorres_seq_skip'[symmetric])
+                 apply (rule ccorres_split_nothrow_novcg)
+                     apply (rule_tac R=\<top> and xf=xfdc in ccorres_when)
+                      apply (case_tac rv, clarsimp, clarsimp simp: ucast_not_helper)
+                     apply (ctac (no_vcg) add: handleInterrupt_ccorres)
+                    apply ceqv
+                   apply (rule_tac r=dc and xf=xfdc in ccorres_returnOk_skip[unfolded returnOk_def,simplified])
+                  apply wp
+                 apply (simp add: guard_is_UNIV_def)
+                apply clarsimp
+                apply (rule_tac Q="\<lambda>rv s. invs' s \<and>
+                 (\<forall>x. rv = Some x \<longrightarrow> x \<le> Platform.maxIRQ) \<and> rv \<noteq> Some 0xFF"
+                                             in hoare_post_imp)
+                 apply (clarsimp simp: Kernel_C.maxIRQ_def Platform.maxIRQ_def)
+                apply (wp getActiveIRQ_le_maxIRQ getActiveIRQ_neq_Some0xFF | simp)+
+               apply (rule_tac Q=" invs' " in hoare_post_imp_dc2E, wp)
+               apply (simp add: invs'_def valid_state'_def)
+              apply clarsimp
+              apply (vcg exspec=handleInvocation_modifies)
+             -- "SysNBSend"
              apply (clarsimp simp: syscall_from_H_def syscall_defs)
              apply (rule ccorres_cond_empty |rule ccorres_cond_univ)+
              apply (simp add: handleSend_def)
@@ -231,36 +267,33 @@ lemma handleSyscall_ccorres:
                 apply (rule ccorres_returnOk_skip[unfolded returnOk_def,simplified])
                apply clarsimp
                apply (rule ccorres_cond_univ)
-               apply (simp add: liftE_def bind_assoc)
+               apply (simp add: liftE_def bind_assoc irqInvalid_def)
                apply (ctac (no_vcg) add: getActiveIRQ_ccorres)
-                apply (rule ccorres_Guard)?
-                apply (simp only: irqInvalid_def)?
                 apply (rule_tac P="rv \<noteq> Some 0xFF" in ccorres_gen_asm)
                 apply (subst ccorres_seq_skip'[symmetric])
                 apply (rule ccorres_split_nothrow_novcg)
-                    apply (rule_tac R=\<top> and xf=xfdc
-                           in ccorres_when)
+                    apply (rule ccorres_Guard)?
+                    apply (rule_tac R=\<top> and xf=xfdc in ccorres_when)
                      apply (case_tac rv, clarsimp, clarsimp simp: ucast_not_helper)
                     apply (ctac (no_vcg) add: handleInterrupt_ccorres)
                    apply ceqv
-                  apply (rule_tac r=dc and xf=xfdc 
-                         in ccorres_returnOk_skip[unfolded returnOk_def,simplified])
+                  apply (rule_tac ccorres_returnOk_skip[unfolded returnOk_def,simplified])
                  apply wp
                 apply (simp add: guard_is_UNIV_def)
                apply clarsimp
-               apply (rule_tac Q="\<lambda>rv s. invs' s \<and> 
-                       (\<forall>x. rv = Some x \<longrightarrow> x \<le> Platform.maxIRQ) \<and> rv \<noteq> Some 0xFF" 
-                       in hoare_post_imp)
+               apply (rule_tac Q="\<lambda>rv s. invs' s \<and>
+                (\<forall>x. rv = Some x \<longrightarrow> x \<le> Platform.maxIRQ) \<and> rv \<noteq> Some 0xFF"
+                                     in hoare_post_imp)
                 apply (clarsimp simp: Kernel_C.maxIRQ_def Platform.maxIRQ_def)
                apply (wp getActiveIRQ_le_maxIRQ getActiveIRQ_neq_Some0xFF | simp)+
-              apply (rule_tac Q=" invs' " in hoare_post_imp_dc2E, wp) 
+              apply (rule_tac Q=" invs' " in hoare_post_imp_dc2E, wp)
               apply (simp add: invs'_def valid_state'_def)
              apply clarsimp
              apply (vcg exspec=handleInvocation_modifies)
-            -- "SysNBSend"
+            -- "SysCall"
             apply (clarsimp simp: syscall_from_H_def syscall_defs)
             apply (rule ccorres_cond_empty |rule ccorres_cond_univ)+
-            apply (simp add: handleSend_def)
+            apply (simp add: handleCall_def)
             apply (rule ccorres_split_nothrow_case_sum)
                  apply (ctac (no_vcg) add: handleInvocation_ccorres)
                 apply ceqv
@@ -275,100 +308,69 @@ lemma handleSyscall_ccorres:
                apply (subst ccorres_seq_skip'[symmetric])
                apply (rule ccorres_split_nothrow_novcg)
                    apply (rule ccorres_Guard)?
-                   apply (rule_tac R=\<top> and xf=xfdc
-                          in ccorres_when)
+                   apply (rule_tac R=\<top> and xf=xfdc in ccorres_when)
                     apply (case_tac rv, clarsimp, clarsimp simp: ucast_not_helper)
                    apply (ctac (no_vcg) add: handleInterrupt_ccorres)
                   apply ceqv
-                 apply (rule_tac ccorres_returnOk_skip
-                            [unfolded returnOk_def,simplified])
+                 apply (rule_tac ccorres_returnOk_skip[unfolded returnOk_def,simplified])
                 apply wp
                apply (simp add: guard_is_UNIV_def)
               apply clarsimp
-              apply (rule_tac Q="\<lambda>rv s. invs' s \<and> 
-                      (\<forall>x. rv = Some x \<longrightarrow> x \<le> Platform.maxIRQ) \<and> rv \<noteq> Some 0xFF" 
-                      in hoare_post_imp)
+              apply (rule_tac Q="\<lambda>rv s. invs' s \<and>
+               (\<forall>x. rv = Some x \<longrightarrow> x \<le> Platform.maxIRQ) \<and> rv \<noteq> Some 0xFF"
+                                        in hoare_post_imp)
                apply (clarsimp simp: Kernel_C.maxIRQ_def Platform.maxIRQ_def)
               apply (wp getActiveIRQ_le_maxIRQ getActiveIRQ_neq_Some0xFF | simp)+
-             apply (rule_tac Q=" invs' " in hoare_post_imp_dc2E, wp) 
+             apply (rule_tac Q=" invs' " in hoare_post_imp_dc2E, wp)
              apply (simp add: invs'_def valid_state'_def)
             apply clarsimp
             apply (vcg exspec=handleInvocation_modifies)
-           -- "SysCall"
+           -- "SysWait"
            apply (clarsimp simp: syscall_from_H_def syscall_defs)
            apply (rule ccorres_cond_empty |rule ccorres_cond_univ)+
-           apply (simp add: handleCall_def)
-           apply (rule ccorres_split_nothrow_case_sum)
-                apply (ctac (no_vcg) add: handleInvocation_ccorres)
-               apply ceqv
-              apply clarsimp
-              apply (rule ccorres_cond_empty)
-              apply (rule ccorres_returnOk_skip[unfolded returnOk_def,simplified])
-             apply clarsimp
-             apply (rule ccorres_cond_univ)
-             apply (simp add: liftE_def bind_assoc irqInvalid_def)
-             apply (ctac (no_vcg) add: getActiveIRQ_ccorres)
-              apply (rule_tac P="rv \<noteq> Some 0xFF" in ccorres_gen_asm)
-              apply (subst ccorres_seq_skip'[symmetric])
-              apply (rule ccorres_split_nothrow_novcg)
-                  apply (rule ccorres_Guard)?
-                  apply (rule_tac R=\<top> and xf=xfdc
-                         in ccorres_when)
-                   apply (case_tac rv, clarsimp, clarsimp simp: ucast_not_helper)
-                  apply (ctac (no_vcg) add: handleInterrupt_ccorres)
-                 apply ceqv
-                apply (rule_tac ccorres_returnOk_skip
-                           [unfolded returnOk_def,simplified])
-               apply wp
-              apply (simp add: guard_is_UNIV_def)
-             apply clarsimp
-             apply (rule_tac Q="\<lambda>rv s. invs' s \<and> 
-                     (\<forall>x. rv = Some x \<longrightarrow> x \<le> Platform.maxIRQ) \<and> rv \<noteq> Some 0xFF" 
-                     in hoare_post_imp)
-              apply (clarsimp simp: Kernel_C.maxIRQ_def Platform.maxIRQ_def)
-             apply (wp getActiveIRQ_le_maxIRQ getActiveIRQ_neq_Some0xFF | simp)+
-           apply (rule_tac Q=" invs' " in hoare_post_imp_dc2E, wp) 
-           apply (simp add: invs'_def valid_state'_def)
-          apply clarsimp
-          apply (vcg exspec=handleInvocation_modifies)
-          -- "SysWait"
+           apply (simp add: liftE_bind)
+           apply (subst ccorres_seq_skip'[symmetric])
+           apply (ctac (no_vcg) add: handleWait_ccorres)
+            apply (rule ccorres_returnOk_skip[unfolded returnOk_def, simplified])
+           apply wp
+          -- "SysReply"
           apply (clarsimp simp: syscall_from_H_def syscall_defs)
           apply (rule ccorres_cond_empty |rule ccorres_cond_univ)+
           apply (simp add: liftE_bind)
           apply (subst ccorres_seq_skip'[symmetric])
-          apply (ctac (no_vcg) add: handleWait_ccorres)
+          apply (ctac (no_vcg) add: handleReply_ccorres)
            apply (rule ccorres_returnOk_skip[unfolded returnOk_def, simplified])
           apply wp
-         -- "SysReply"
+         -- "SysReplyWait"
          apply (clarsimp simp: syscall_from_H_def syscall_defs)
          apply (rule ccorres_cond_empty |rule ccorres_cond_univ)+
-         apply (simp add: liftE_bind)
-         apply (subst ccorres_seq_skip'[symmetric])
+         apply (simp add: liftE_bind bind_assoc)
          apply (ctac (no_vcg) add: handleReply_ccorres)
-          apply (rule ccorres_returnOk_skip[unfolded returnOk_def, simplified])
+          apply (subst ccorres_seq_skip'[symmetric])
+          apply (ctac (no_vcg) add: handleWait_ccorres)
+           apply (rule ccorres_returnOk_skip[unfolded returnOk_def, simplified])
+          apply wp[1]
+         apply clarsimp
          apply wp
-        -- "SysReplyWait"
+         apply (rule_tac Q="\<lambda>rv s. ct_in_state' simple' s \<and> sch_act_sane s \<and>
+                            (\<forall>p. ksCurThread s \<notin> set (ksReadyQueues s p))"
+                              in hoare_post_imp)
+          apply (simp add: ct_in_state'_def)
+         apply (wp handleReply_sane handleReply_ct_not_ksQ)
+        -- "SysYield"
         apply (clarsimp simp: syscall_from_H_def syscall_defs)
         apply (rule ccorres_cond_empty |rule ccorres_cond_univ)+
-        apply (simp add: liftE_bind bind_assoc)
-        apply (ctac (no_vcg) add: handleReply_ccorres)
-         apply (subst ccorres_seq_skip'[symmetric])
-         apply (ctac (no_vcg) add: handleWait_ccorres)
-          apply (rule ccorres_returnOk_skip[unfolded returnOk_def, simplified])
-         apply wp[1]
-        apply clarsimp        
+        apply (simp add: liftE_bind)
+        apply (subst ccorres_seq_skip'[symmetric])
+        apply (ctac (no_vcg) add: handleYield_ccorres)
+         apply (rule ccorres_returnOk_skip[unfolded returnOk_def, simplified])
         apply wp
-        apply (rule_tac Q="\<lambda>rv s. ct_in_state' simple' s \<and> sch_act_sane s \<and>
-                                  (\<forall>p. ksCurThread s \<notin> set (ksReadyQueues s p))"
-                in hoare_post_imp)
-         apply (simp add: ct_in_state'_def)
-        apply (wp handleReply_sane handleReply_ct_not_ksQ)
-       -- "SysYield"
+       -- "SysNBWait"
        apply (clarsimp simp: syscall_from_H_def syscall_defs)
        apply (rule ccorres_cond_empty |rule ccorres_cond_univ)+
        apply (simp add: liftE_bind)
        apply (subst ccorres_seq_skip'[symmetric])
-       apply (ctac (no_vcg) add: handleYield_ccorres)
+       apply (ctac (no_vcg) add: handleWait_ccorres)
         apply (rule ccorres_returnOk_skip[unfolded returnOk_def, simplified])
        apply wp
       -- " rest of body"
@@ -385,12 +387,16 @@ lemma handleSyscall_ccorres:
           | wp hoare_drop_imp handleReply_sane handleReply_nonz_cap_to_ct schedule_invs'
                handleReply_ct_not_ksQ[simplified]
           | strengthen ct_active_not_idle'_strengthen invs_valid_objs_strengthen)+
+      apply (rule_tac  Q="\<lambda>rv. invs' and ct_active'" in hoare_post_imp, simp)
+      apply (wp hy_invs')
+     apply (clarsimp simp add: liftE_def)
+     apply wp
      apply (rule_tac  Q="\<lambda>rv. invs' and ct_active'" in hoare_post_imp, simp)
      apply (wp hy_invs')
-    apply (clarsimp simp add: liftE_def)
-    apply wp
-    apply (rule_tac  Q="\<lambda>rv. invs' and ct_active'" in hoare_post_imp, simp)
-    apply (wp hy_invs')
+    apply (clarsimp simp: liftE_def)
+    apply (wp)
+    apply (rule_tac Q="\<lambda>_. invs'" in hoare_post_imp, simp)
+    apply (wp hw_invs')
    apply (simp add: guard_is_UNIV_def)
   apply clarsimp
   apply (drule active_from_running')

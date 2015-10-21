@@ -74,7 +74,7 @@ defs isActive_def:
   )"
 
 defs receiveIPC_def:
-"receiveIPC thread x1\<equiv> (let cap = x1 in
+"receiveIPC thread x1 isBlocking\<equiv> (let cap = x1 in
   if isEndpointCap cap
   then   (do
         epptr \<leftarrow> return ( capEPPtr cap);
@@ -85,18 +85,24 @@ defs receiveIPC_def:
         if (isJust aepptr \<and> isActive aep)
           then completeAsyncIPC (fromJust aepptr) thread
           else (case ep of
-              IdleEP \<Rightarrow>   (do
-                setThreadState (BlockedOnReceive_ \<lparr>
-                    blockingIPCEndpoint= epptr,
-                    blockingIPCDiminishCaps= diminish \<rparr>) thread;
-                setEndpoint epptr $ RecvEP [thread]
-              od)
-            | RecvEP queue \<Rightarrow>   (do
-                setThreadState (BlockedOnReceive_ \<lparr>
-                    blockingIPCEndpoint= epptr,
-                    blockingIPCDiminishCaps= diminish \<rparr>) thread;
-                setEndpoint epptr $ RecvEP $ queue @ [thread]
-            od)
+              IdleEP \<Rightarrow>   (case isBlocking of
+                True \<Rightarrow>   (do
+                  setThreadState (BlockedOnReceive_ \<lparr>
+                      blockingIPCEndpoint= epptr,
+                      blockingIPCDiminishCaps= diminish \<rparr>) thread;
+                  setEndpoint epptr $ RecvEP [thread]
+                od)
+              | False \<Rightarrow>   doNBWaitFailedTransfer thread
+              )
+            | RecvEP queue \<Rightarrow>   (case isBlocking of
+                True \<Rightarrow>   (do
+                  setThreadState (BlockedOnReceive_ \<lparr>
+                      blockingIPCEndpoint= epptr,
+                      blockingIPCDiminishCaps= diminish \<rparr>) thread;
+                  setEndpoint epptr $ RecvEP $ queue @ [thread]
+                od)
+              | False \<Rightarrow>   doNBWaitFailedTransfer thread
+              )
             | SendEP (sender#queue) \<Rightarrow>   (do
                 setEndpoint epptr $ (case queue of
                       [] \<Rightarrow>   IdleEP

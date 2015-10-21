@@ -277,7 +277,7 @@ lemma invoke_tcb_tc_respects_aag:
   (* clocked at around 3min 20secs on my home machine - TS *)
      
   apply (clarsimp simp: authorised_tcb_inv_def)
-  apply (clarsimp simp: tcb_at_cte_at_0 tcb_at_cte_at_1[simplified]
+  by (clarsimp simp: tcb_at_cte_at_0 tcb_at_cte_at_1[simplified]
                         is_cap_simps is_valid_vtable_root_def
                         is_cnode_or_valid_arch_def tcb_cap_valid_def
                         tcb_at_st_tcb_at[symmetric] invs_valid_objs
@@ -286,7 +286,6 @@ lemma invoke_tcb_tc_respects_aag:
                         emptyable_def
                  split: option.split_asm
        | rule conjI | erule pas_refined_refl)+ (*takes a while*)
-  done
 
 lemma invoke_tcb_unbind_aep_respects:
   "\<lbrace>integrity aag X st and pas_refined aag

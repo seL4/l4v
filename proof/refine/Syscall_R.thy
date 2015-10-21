@@ -1671,7 +1671,7 @@ lemma delete_caller_cap_valid_ep_cap:
   apply (rule hoare_pre)
    by (wp get_cap_wp fast_finalise_typ_at abs_typ_at_lifts(1) 
        | simp add: unless_def valid_cap_def)+
-   
+
 lemma hw_corres':
    "corres dc (einvs and ct_in_state active 
                     and (\<lambda>s. ex_nonz_cap_to (cur_thread s) s))
@@ -1679,54 +1679,58 @@ lemma hw_corres':
                      and sch_act_sane
                      and (\<lambda>s. \<forall>p. ksCurThread s \<notin> set (ksReadyQueues s p)) 
                      and (\<lambda>s. ex_nonz_cap_to' (ksCurThread s) s))
-                    handle_wait handleWait"
-  (is "corres dc (?pre1) (?pre2) handle_wait handleWait")
+                    (handle_wait isBlocking) (handleWait isBlocking)"
+  (is "corres dc (?pre1) (?pre2) (handle_wait _) (handleWait _)")
   apply (simp add: handle_wait_def handleWait_def liftM_bind Let_def
                    cap_register_def capRegister_def
              cong: if_cong cap.case_cong capability.case_cong bool.case_cong)
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqr [OF _ gct_corres])
-        apply (rule corres_split_eqr [OF _ user_getreg_corres])
-          apply (rule corres_split_catch)
-             apply (erule hf_corres)
-            apply (rule corres_cap_fault)
-            apply (rule corres_splitEE [OF _ lc_corres])
-              apply (rule_tac P="?pre1 and tcb_at thread 
-                              and (\<lambda>s. (cur_thread s) = thread  )
-                              and valid_cap rv" 
-                          and P'="?pre2 and tcb_at' thread and valid_cap' rv'" in corres_inst)
-              apply (clarsimp split: cap_relation_split_asm arch_cap.split_asm
-                               simp: lookup_failure_map_def)
-               apply (rule corres_guard_imp)
-             apply (rule corres_split_nor[OF _ delete_caller_cap_corres])
-                 apply (rule receive_ipc_corres)
-                  apply (clarsimp)+
-apply (wp delete_caller_cap_nonz_cap delete_caller_cap_valid_ep_cap)
-                  apply (clarsimp)+
-              apply (rule corres_guard_imp)
-                apply (rule_tac r'=aep_relation in corres_splitEE)
-                   apply (rule corres_if)
-                     apply (clarsimp simp: aep_relation_def)
-                    apply (clarsimp, rule receive_async_ipc_corres)
-                     prefer 3
-                     apply (rule corres_trivial)
-                     apply (clarsimp simp: lookup_failure_map_def)+
-                  apply (rule get_aep_corres)
-                 apply (wp get_aep_wp getAsyncEP_wp | wpcw | simp)+
-               apply (clarsimp simp: valid_cap_def ct_in_state_def)
-              apply (clarsimp simp: valid_cap'_def)
-             apply (wp get_aep_wp | wpcw | simp)+
-           apply (rule hoare_vcg_E_elim)
-            apply (simp add: lookup_cap_def lookup_slot_for_thread_def)
-            apply wp
-             apply (simp add: split_def)
-             apply (wp resolve_address_bits_valid_fault2)
-           apply (wp getAsyncEP_wp | wpcw | simp add: valid_fault_def)+
-        apply (clarsimp simp: st_tcb_at_tcb_at invs_def valid_state_def
-                              valid_pspace_def objs_valid_tcb_ctable ct_in_state_def)
-   apply (simp add: invs_valid_objs tcb_at_invs invs_psp_aligned invs_cur)
-   apply (clarsimp simp add: ct_in_state_def conj_comms invs_valid_tcb_ctable)
-  apply (clarsimp simp add: ct_in_state'_def)
+      apply (rule corres_split_eqr [OF _ user_getreg_corres])
+        apply (rule corres_split_catch)
+           apply (erule hf_corres)
+          apply (rule corres_cap_fault)
+          apply (rule corres_splitEE [OF _ lc_corres])
+            apply (rule_tac P="?pre1 and tcb_at thread
+                               and (\<lambda>s. (cur_thread s) = thread  )
+                               and valid_cap rv"
+                       and P'="?pre2 and tcb_at' thread and valid_cap' rv'" in corres_inst)
+            apply (clarsimp split: cap_relation_split_asm arch_cap.split_asm split del: split_if
+                             simp: lookup_failure_map_def whenE_def)
+             apply (rule corres_guard_imp)
+               apply (rename_tac rights)
+                apply (case_tac "AllowRead \<in> rights"; simp)
+                 apply (rule corres_split_nor[OF _ delete_caller_cap_corres])
+                   apply (rule receive_ipc_corres)
+                    apply (clarsimp)+
+                  apply (wp delete_caller_cap_nonz_cap delete_caller_cap_valid_ep_cap)
+                apply (clarsimp)+
+                apply (clarsimp simp: lookup_failure_map_def)+
+             apply (clarsimp simp: valid_cap'_def capAligned_def)
+            apply (rule corres_guard_imp)
+              apply (rename_tac rights)
+              apply (case_tac "AllowRead \<in> rights"; simp)
+               apply (rule_tac r'=aep_relation in corres_splitEE)
+                  apply (rule corres_if)
+                    apply (clarsimp simp: aep_relation_def)
+                   apply (clarsimp, rule receive_async_ipc_corres)
+                    prefer 3
+                    apply (rule corres_trivial)
+                    apply (clarsimp simp: lookup_failure_map_def)+
+                 apply (rule get_aep_corres)
+                apply (wp get_aep_wp getAsyncEP_wp | wpcw | simp)+
+              apply (clarsimp simp: lookup_failure_map_def)
+             apply (clarsimp simp: valid_cap_def ct_in_state_def)
+            apply (clarsimp simp: valid_cap'_def capAligned_def)
+           apply (wp get_aep_wp | wpcw | simp)+
+         apply (rule hoare_vcg_E_elim)
+          apply (simp add: lookup_cap_def lookup_slot_for_thread_def)
+          apply wp
+           apply (simp add: split_def)
+           apply (wp resolve_address_bits_valid_fault2)
+         apply (wp getAsyncEP_wp | wpcw | simp add: valid_fault_def whenE_def split del: split_if)+
+  apply (clarsimp simp add: ct_in_state_def  ct_in_state'_def conj_comms invs_valid_tcb_ctable 
+                            invs_valid_objs tcb_at_invs invs_psp_aligned invs_cur)
   apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def
                         ct_in_state'_def sch_act_sane_not)
   done
@@ -1735,7 +1739,7 @@ lemma hw_corres:
   "corres dc (einvs and ct_active)
              (invs' and ct_active' and sch_act_sane and
                     (\<lambda>s. \<forall>p. ksCurThread s \<notin> set (ksReadyQueues s p)))
-            handle_wait handleWait"
+            (handle_wait isBlocking) (handleWait isBlocking)"
   apply (rule corres_guard_imp)
     apply (rule hw_corres')
    apply (clarsimp simp: ct_in_state_def)
@@ -1765,16 +1769,22 @@ lemma hw_invs'[wp]:
           and (\<lambda>s. ex_nonz_cap_to' (ksCurThread s) s)
           and (\<lambda>s. ksCurThread s \<noteq> ksIdleThread s)
           and (\<lambda>s. \<forall>p. ksCurThread s \<notin> set (ksReadyQueues s p))\<rbrace>
-   handleWait \<lbrace>\<lambda>r. invs'\<rbrace>"
+   handleWait isBlocking \<lbrace>\<lambda>r. invs'\<rbrace>"
   apply (simp add: handleWait_def cong: if_cong)
   apply (rule hoare_pre)
    apply ((wp getAsyncEP_wp | wpc | simp)+)[1]
-              apply (clarsimp simp: ct_in_state'_def)
-              apply (wp deleteCallerCap_nonz_cap hoare_vcg_all_lift
-                        deleteCallerCap_ksQ_ct'                        
-                        hoare_lift_Pf2[OF deleteCallerCap_simple
-                        deleteCallerCap_ct']
-                      | wpc | simp)+
+                apply (clarsimp simp: ct_in_state'_def)
+                apply ((wp deleteCallerCap_nonz_cap hoare_vcg_all_lift
+                           deleteCallerCap_ksQ_ct'
+                           hoare_lift_Pf2[OF deleteCallerCap_simple
+                           deleteCallerCap_ct']
+                      | wpc | simp)+)[1]
+               apply simp
+               apply (wp deleteCallerCap_nonz_cap hoare_vcg_all_lift
+                         deleteCallerCap_ksQ_ct'
+                         hoare_lift_Pf2[OF deleteCallerCap_simple
+                         deleteCallerCap_ct']
+                    | wpc | simp add: ct_in_state'_def whenE_def split del: split_if)+
      apply (rule validE_validE_R)
      apply (rule_tac Q="\<lambda>rv s. invs' s
                              \<and> sch_act_sane s
@@ -1796,9 +1806,9 @@ lemma hw_invs'[wp]:
               simp: ct_in_state'_def sch_act_sane_def)
   done
 
-lemma hw_tcb'[wp]: "\<lbrace>tcb_at' t\<rbrace> handleWait \<lbrace>\<lambda>rv. tcb_at' t\<rbrace>"
+lemma hw_tcb'[wp]: "\<lbrace>tcb_at' t\<rbrace> handleWait isBlocking \<lbrace>\<lambda>rv. tcb_at' t\<rbrace>"
   apply (simp add: handleWait_def cong: if_cong)
-  apply (clarsimp simp add: whenE_def | wp  hoare_whenE_wp hoare_drop_imps
+  apply (clarsimp simp add: whenE_def split del: split_if | wp  hoare_whenE_wp hoare_drop_imps
               | wpcw)+
   done
 
@@ -2191,8 +2201,8 @@ lemma handleReply_ct_not_ksQ:
 lemma hrw_corres:
   "corres dc (einvs and ct_running)
              (invs' and ct_running' and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
-         (do x \<leftarrow> handle_reply; handle_wait od)
-         (do x \<leftarrow> handleReply; handleWait od)"
+         (do x \<leftarrow> handle_reply; handle_wait True od)
+         (do x \<leftarrow> handleReply; handleWait True od)"
   apply (rule corres_guard_imp)
     apply (rule corres_split_nor [OF _ hr_corres])
       apply (rule hw_corres')
@@ -2205,7 +2215,6 @@ lemma hrw_corres:
   apply (fastforce elim: pred_tcb'_weakenE)
   done
 
-
 (* FIXME: move *)
 lemma he_corres: 
   "corres (intr \<oplus> dc) (einvs and (\<lambda>s. event \<noteq> Interrupt \<longrightarrow> ct_running s) and
@@ -2217,10 +2226,10 @@ lemma he_corres:
   (is "?he_corres")
 proof -
   have hw:
-    "corres dc (einvs and ct_running and (\<lambda>s. scheduler_action s = resume_cur_thread))
+    "\<And>isBlocking. corres dc (einvs and ct_running and (\<lambda>s. scheduler_action s = resume_cur_thread))
                (invs' and ct_running'
                       and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
-               handle_wait handleWait"
+               (handle_wait isBlocking) (handleWait isBlocking)"
     apply (rule corres_guard_imp [OF hw_corres])
      apply (clarsimp simp: ct_in_state_def ct_in_state'_def
                      elim!: st_tcb_weakenE pred_tcb'_weakenE
@@ -2239,7 +2248,7 @@ proof -
                              corres_guard_imp[OF hc_corres]
                              corres_guard_imp[OF hy_corres]
                              active_from_running active_from_running'
-                      simp: simple_sane_strg)[7]
+                      simp: simple_sane_strg)[8]
          apply (rule corres_split')
             apply (rule corres_guard_imp[OF gct_corres], simp+)
            apply (rule hf_corres)

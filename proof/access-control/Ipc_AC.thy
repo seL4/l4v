@@ -16,9 +16,6 @@ section{* Async IPC *}
 
 subsection{* @{term "pas_refined"} *}
 
-
-
-
 crunch thread_bound_aeps[wp]: do_machine_op "\<lambda>s. P (thread_bound_aeps s)"
 
 crunch state_vrefs[wp]: send_async_ipc "\<lambda>s. P (state_vrefs (s :: det_ext state))" (wp: crunch_wps hoare_unless_wp select_wp dxo_wp_weak simp: crunch_simps)
@@ -103,16 +100,15 @@ lemma send_async_ipc_pas_refined:
 
 lemma receive_async_ipc_pas_refined:
   "\<lbrace>pas_refined aag and K (\<forall>aepptr \<in> obj_refs cap. (pasObjectAbs aag thread, Receive, pasObjectAbs aag aepptr) \<in> pasPolicy aag)\<rbrace>
-     receive_async_ipc thread cap
+     receive_async_ipc thread cap is_blocking
    \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
   apply (simp add: receive_async_ipc_def)
   apply (cases cap, simp_all)
   apply (rule hoare_seq_ext [OF _ get_aep_sp])
   apply (rule hoare_pre)
-  apply (wp set_async_ep_pas_refined set_thread_state_pas_refined
-       | wpc)+
-  apply clarsimp
-  done
+  by (wp set_async_ep_pas_refined set_thread_state_pas_refined
+       | wpc | simp add: do_nbwait_failed_transfer_def)+
+
 
 subsection{* integrity *}
 
@@ -275,7 +271,7 @@ lemma receive_async_ipc_integrity_autarch:
   "\<lbrace>integrity aag X st and pas_refined aag and valid_objs 
            and K ((\<forall>aepptr \<in> obj_refs cap. aag_has_auth_to aag Receive aepptr)
                  \<and> is_subject aag thread)\<rbrace>
-     receive_async_ipc thread cap
+     receive_async_ipc thread cap is_blocking
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply (simp add: receive_async_ipc_def)
   apply (cases cap, simp_all)
@@ -283,7 +279,7 @@ lemma receive_async_ipc_integrity_autarch:
   apply (rule hoare_pre)
   apply (wp set_async_ep_respects[where auth=Receive] set_thread_state_integrity_autarch as_user_integrity_autarch
        | wpc 
-       | simp)+
+       | simp add: do_nbwait_failed_transfer_def)+
   done
 
 subsubsection{* Non-autarchy: the sender is running *}
@@ -1055,11 +1051,12 @@ lemma complete_async_ipc_integrity:
 
 abbreviation receive_ipc_base
 where
-  "receive_ipc_base aag thread ep epptr rights \<equiv> case ep of
-                  IdleEP \<Rightarrow>
-                    do set_thread_state thread (BlockedOnReceive epptr (AllowSend \<notin> rights));
-                       set_endpoint epptr (RecvEP [thread])
-                    od
+  "receive_ipc_base aag thread ep epptr rights is_blocking \<equiv> case ep of
+                  IdleEP \<Rightarrow> case is_blocking of
+                    True \<Rightarrow> do set_thread_state thread (BlockedOnReceive epptr (AllowSend \<notin> rights));
+                        set_endpoint epptr (RecvEP [thread])
+                      od
+                    | False \<Rightarrow> do_nbwait_failed_transfer thread
                   | SendEP q \<Rightarrow>
                       do assert (q \<noteq> []);
                          queue \<leftarrow> return $ tl q;
@@ -1078,23 +1075,24 @@ where
                                  do_extended_op (switch_if_required_to sender)
                               od
                       od
-                  | RecvEP queue \<Rightarrow>
-                      do set_thread_state thread (BlockedOnReceive epptr (AllowSend \<notin> rights));
+                  | RecvEP queue \<Rightarrow> case is_blocking of
+                     True \<Rightarrow> do set_thread_state thread (BlockedOnReceive epptr (AllowSend \<notin> rights));
                          set_endpoint epptr (RecvEP (queue @ [thread]))
-                      od"
+                      od
+                     | False \<Rightarrow> do_nbwait_failed_transfer thread"
 
 lemma receive_ipc_base_pas_refined:
   "\<lbrace>pas_refined aag and valid_objs and sym_refs \<circ> state_refs_of
            and ko_at (Endpoint ep) epptr 
            and K (is_subject aag thread 
                \<and> (pasSubject aag, Receive, pasObjectAbs aag epptr) \<in> pasPolicy aag)\<rbrace>
-    receive_ipc_base aag thread ep epptr rights
+    receive_ipc_base aag thread ep epptr rights is_blocking
    \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (clarsimp simp: thread_get_def cong: endpoint.case_cong)
   apply (rule hoare_pre)
    apply (wp static_imp_wp set_thread_state_pas_refined get_endpoint_wp
-        | wpc | simp add: thread_get_def split del: split_if)+
+        | wpc | simp add: thread_get_def do_nbwait_failed_transfer_def split del: split_if)+
         apply (simp add:aag_cap_auth_def clas_no_asid cli_no_irqs)
         apply (rename_tac list sss data)
         apply (rule_tac Q="\<lambda>rv s. pas_refined aag s \<and> (sender_can_grant data \<longrightarrow> is_subject aag (hd list))"
@@ -1107,7 +1105,7 @@ lemma receive_ipc_base_pas_refined:
        apply (wp static_imp_wp do_ipc_transfer_pas_refined set_endpoint_pas_refined set_thread_state_pas_refined get_endpoint_wp
                  hoare_vcg_imp_lift [OF set_endpoint_get_tcb, unfolded disj_not1] hoare_vcg_all_lift
             | wpc
-            | simp add: thread_get_def  get_thread_state_def)+
+            | simp add: thread_get_def get_thread_state_def do_nbwait_failed_transfer_def)+
   apply (clarsimp simp: tcb_at_def [symmetric] conj_ac tcb_at_st_tcb_at)
   apply (rule conjI)
    apply (rule impI)
@@ -1143,7 +1141,7 @@ lemma receive_ipc_pas_refined:
          and valid_objs and sym_refs \<circ> state_refs_of 
          and K (is_subject aag thread
               \<and> (\<forall>epptr \<in> obj_refs ep_cap. aag_has_auth_to aag Receive epptr))\<rbrace>
-     receive_ipc thread ep_cap
+     receive_ipc thread ep_cap is_blocking
    \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (simp add: receive_ipc_def thread_get_def  split: cap.split)
@@ -1347,14 +1345,15 @@ lemma sts_receive_Inactive_respects:
   done
 
 lemma receive_ipc_base_integrity:
-  "\<lbrace>pas_refined aag
+  notes do_nbwait_failed_transfer_def[simp]
+  shows "\<lbrace>pas_refined aag
         and integrity aag X st
         and valid_objs and valid_mdb
         and sym_refs \<circ> state_refs_of
         and ko_at (Endpoint ep) epptr
         and K (is_subject aag receiver
             \<and> (pasSubject aag, Receive, pasObjectAbs aag epptr) \<in> pasPolicy aag)\<rbrace>
-    receive_ipc_base aag receiver ep epptr rights
+    receive_ipc_base aag receiver ep epptr rights is_blocking
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply (clarsimp simp: thread_get_def get_thread_state_def cong: endpoint.case_cong)
   apply (rule hoare_pre)
@@ -1363,6 +1362,7 @@ lemma receive_ipc_base_integrity:
              do_ipc_transfer_integrity_autarch
              set_thread_state_integrity_autarch[where param_a=receiver]
              sts_receive_Inactive_respects
+             as_user_integrity_autarch
        | wpc | simp)+
          apply (rename_tac list tcb data)
          apply (rule_tac Q="\<lambda>rv s. integrity aag X st s
@@ -1375,6 +1375,7 @@ lemma receive_ipc_base_integrity:
          apply (wp do_ipc_transfer_integrity_autarch do_ipc_transfer_pred_tcb set_endpoinintegrity get_endpoint_wp
            set_thread_state_integrity_autarch[where param_a=receiver]
            hoare_vcg_imp_lift [OF set_endpoint_get_tcb, unfolded disj_not1] hoare_vcg_all_lift 
+           as_user_integrity_autarch
            | wpc | simp)+
   apply clarsimp
   apply (subgoal_tac "ep_at epptr s \<and> (\<exists>auth. aag_has_auth_to aag auth epptr \<and> (auth = Receive \<or> auth = SyncSend \<or> auth = Reset))")
@@ -1411,7 +1412,7 @@ lemma receive_ipc_integrity_autarch:
         and sym_refs \<circ> state_refs_of
         and K (is_subject aag receiver
             \<and> (\<forall>epptr \<in> obj_refs cap. aag_has_auth_to aag Receive epptr))\<rbrace>
-    receive_ipc receiver cap
+    receive_ipc receiver cap is_blocking
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (simp add: receive_ipc_def split: cap.splits)

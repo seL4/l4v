@@ -784,6 +784,7 @@ where
   | SysWait \<Rightarrow> scast Kernel_C.SysWait
   | SysReply \<Rightarrow> scast Kernel_C.SysReply
   | SysReplyWait \<Rightarrow> scast Kernel_C.SysReplyWait
+  | SysNBWait \<Rightarrow> scast Kernel_C.SysNBWait
   | SysYield \<Rightarrow> scast Kernel_C.SysYield"
 
 lemma (in kernel) cmap_relation_cs_atD:

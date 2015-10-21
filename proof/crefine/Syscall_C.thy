@@ -1282,23 +1282,21 @@ lemma handleWait_ccorres:
   "ccorres dc xfdc   
        (\<lambda>s. invs' s \<and> st_tcb_at' simple' (ksCurThread s) s
                \<and> sch_act_sane s \<and> (\<forall>p. ksCurThread s \<notin> set (ksReadyQueues s p)))
-       UNIV
+       {s. isBlocking_' s = from_bool isBlocking}
        []
-       (handleWait) 
+       (handleWait isBlocking) 
        (Call handleWait_'proc)"
-  apply cinit
+  apply (cinit lift: isBlocking_')
    apply (rule ccorres_pre_getCurThread)
    apply (ctac)
      apply (simp add: catch_def)
      apply (simp add: capFault_bindE)
      apply (simp add: bindE_bind_linearise)
-
      apply (rule_tac xf'=lu_ret___struct_lookupCap_ret_C_'
                         in ccorres_split_nothrow_case_sum)
           apply (rule  capFaultOnFailure_ccorres)
           apply (ctac add: lookupCap_ccorres)
          apply ceqv
-
         apply clarsimp
         apply (rule ccorres_Catch)
         apply csymbr
@@ -1307,23 +1305,17 @@ lemma handleWait_ccorres:
                               capFaultOnFailure_if_case_sum)
         apply (rule ccorres_cond_both' [where Q=\<top> and Q'=\<top>])
           apply clarsimp
-
          apply (rule ccorres_rhs_assoc)+
          apply csymbr
          apply (simp add: case_bool_If capFaultOnFailure_if_case_sum)
-
          apply (rule ccorres_if_cond_throws_break2 [where Q=\<top> and Q'=\<top>])
             apply clarsimp
-
             apply (simp add: cap_get_tag_isCap[symmetric] cap_get_tag_EndpointCap
-            del: Collect_const)
+                        del: Collect_const)
             apply (simp add: to_bool_def)
-
-
            apply (rule ccorres_rhs_assoc)+
-
            apply (simp add: capFaultOnFailure_def rethrowFailure_def
-           handleE'_def throwError_def)
+                            handleE'_def throwError_def)
            apply (rule ccorres_cross_over_guard[where P=\<top>])
            apply (rule ccorres_symb_exec_r)
              apply (rule ccorres_cross_over_guard[where P=\<top>])
@@ -1367,7 +1359,7 @@ lemma handleWait_ccorres:
            apply csymbr
            apply csymbr
            apply csymbr
-           apply (rename_tac rv rva aepptr)
+           apply (rename_tac thread epCPtr rv rva aepptr)
            apply (rule_tac P="valid_cap' rv" in ccorres_cross_over_guard)
            apply (simp only: capFault_injection injection_handler_If injection_liftE 
                             injection_handler_throwError if_to_top_of_bind)
@@ -1470,7 +1462,9 @@ lemma handleWait_ccorres:
         apply vcg
        apply (rule conseqPre, vcg)
        apply clarsimp
-      apply (wp) apply clarsimp
+      apply (wp) 
+      apply clarsimp
+      apply (rename_tac thread epCPtr)
         apply (rule_tac Q="(\<lambda>rv s. invs' s \<and> st_tcb_at' simple' thread s
                \<and> sch_act_sane s \<and> (\<forall>p. thread \<notin> set (ksReadyQueues s p)) \<and> thread = ksCurThread s
                \<and> valid_cap' rv s)" in strengthen_validE_R_cong[rule_format])

@@ -346,8 +346,7 @@ lemma modify_arm_next_asid_reads_respects:
           (\<lambda>s. s\<lparr>arch_state := arch_state s\<lparr>arm_next_asid := param\<rparr>\<rparr>))"
   apply(simp add: equiv_valid_def2)
   apply(rule modify_ev2)
-  apply(auto simp: reads_equiv_def affects_equiv_def states_equiv_for_def equiv_for_def intro: equiv_asids_triv)
-done
+  by(auto simp: reads_equiv_def affects_equiv_def states_equiv_for_def equiv_for_def intro: equiv_asids_triv)
 
 lemmas modify_arch_state_reads_respects = 
   modify_arm_asid_map_reads_respects

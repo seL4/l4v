@@ -305,7 +305,7 @@ lemma si_cte_at[wp]:
 
 
 lemma ri_cte_at[wp]:
-  "\<lbrace>cte_at p\<rbrace> receive_ipc t cap \<lbrace>\<lambda>_. cte_at p\<rbrace>"
+  "\<lbrace>cte_at p\<rbrace> receive_ipc t cap is_blocking \<lbrace>\<lambda>_. cte_at p\<rbrace>"
   by (wp valid_cte_at_typ)
 
 
@@ -316,7 +316,7 @@ lemma set_aep_cte_at[wp]:
 
 
 lemma rai_cte_at[wp]:
-  "\<lbrace>cte_at p\<rbrace> receive_async_ipc t cap \<lbrace>\<lambda>_. cte_at p\<rbrace>"
+  "\<lbrace>cte_at p\<rbrace> receive_async_ipc t cap is_blocking \<lbrace>\<lambda>_. cte_at p\<rbrace>"
   by (wp valid_cte_at_typ)
 
 

@@ -3538,13 +3538,22 @@ lemma complete_async_ipc_corres:
   apply (clarsimp simp: projectKOs valid_obj'_def valid_aep'_def obj_at'_def)
   done
 
+
+lemma do_nbwait_failed_transfer_corres:
+  "corres dc (tcb_at thread)
+            (tcb_at' thread)
+            (do_nbwait_failed_transfer thread)
+            (doNBWaitFailedTransfer thread)"
+  unfolding do_nbwait_failed_transfer_def doNBWaitFailedTransfer_def
+  by (simp add: badgeRegister_def badge_register_def, rule user_setreg_corres)
+  
 lemma receive_ipc_corres:
   assumes "is_ep_cap cap" and "cap_relation cap cap'"
   shows "
    corres dc (einvs and valid_sched and tcb_at thread and valid_cap cap and ex_nonz_cap_to thread
               and cte_wp_at (\<lambda>c. c = cap.NullCap) (thread, tcb_cnode_index 3))
              (invs' and tcb_at' thread and valid_cap' cap')
-             (receive_ipc thread cap) (receiveIPC thread cap')"
+             (receive_ipc thread cap isBlocking) (receiveIPC thread cap' isBlocking)"
   apply (insert assms)
   apply (simp add: receive_ipc_def receiveIPC_def
               split del: split_if)
@@ -3573,15 +3582,17 @@ lemma receive_ipc_corres:
                -- "IdleEP"
                apply (simp add: ep_relation_def)
                apply (rule corres_guard_imp)
-                 apply (rule corres_split [OF _ sts_corres])
-                    apply (rule set_ep_corres)
-                    apply (simp add: ep_relation_def)
-            apply simp
-           apply (simp add: valid_pspace_def)
-           apply wp
-         apply (clarsimp simp add: invs_def valid_state_def valid_pspace_def 
-                          valid_tcb_state_def st_tcb_at_tcb_at)
-        apply auto[1]
+                 apply (case_tac isBlocking; simp)
+                  apply (rule corres_split [OF _ sts_corres])
+                     apply (rule set_ep_corres)
+                     apply (simp add: ep_relation_def)
+                    apply simp
+                   apply wp
+                 apply (rule corres_guard_imp, rule do_nbwait_failed_transfer_corres, simp)
+                 apply simp
+                apply (clarsimp simp add: invs_def valid_state_def valid_pspace_def
+               valid_tcb_state_def st_tcb_at_tcb_at)
+               apply auto[1]
        -- "SendEP"
        apply (simp add: ep_relation_def)
        apply (rename_tac list)
@@ -3654,11 +3665,14 @@ lemma receive_ipc_corres:
              -- "RecvEP"
              apply (simp add: ep_relation_def)
              apply (rule_tac corres_guard_imp)
-               apply (rule corres_split [OF _ sts_corres])
-                  apply (rule set_ep_corres)
-                  apply (simp add: ep_relation_def)
-                 apply simp
-                apply wp
+               apply (case_tac isBlocking; simp)
+                apply (rule corres_split [OF _ sts_corres])
+                   apply (rule set_ep_corres)
+                   apply (simp add: ep_relation_def)
+                  apply simp
+                 apply wp
+               apply (rule corres_guard_imp, rule do_nbwait_failed_transfer_corres, simp)
+               apply simp
               apply (clarsimp simp: valid_tcb_state_def)
              apply (clarsimp simp add: valid_tcb_state'_def)
             apply (rule corres_option_split[rotated 2])
@@ -3684,40 +3698,41 @@ lemma receive_async_ipc_corres:
  "\<lbrakk> is_aep_cap cap; cap_relation cap cap' \<rbrakk> \<Longrightarrow>
   corres dc (invs and st_tcb_at active thread and valid_cap cap and ex_nonz_cap_to thread)
             (invs' and tcb_at' thread and valid_cap' cap')
-            (receive_async_ipc thread cap) (receiveAsyncIPC thread cap')"
+            (receive_async_ipc thread cap isBlocking) (receiveAsyncIPC thread cap' isBlocking)"
   apply (simp add: receive_async_ipc_def receiveAsyncIPC_def)
   apply (case_tac cap, simp_all add: isEndpointCap_def)
   apply (rename_tac word1 word2 rights)
   apply (rule corres_guard_imp)
-    apply (rule_tac R="\<lambda>rv. invs and tcb_at thread and st_tcb_at active thread and 
+    apply (rule_tac R="\<lambda>rv. invs and tcb_at thread and st_tcb_at active thread and
                             aep_at word1 and ex_nonz_cap_to thread and
                             valid_aep rv and
-                            obj_at (\<lambda>k. k = AsyncEndpoint rv) word1" and 
-                    R'="\<lambda>rv'. invs' and tcb_at' thread and aep_at' word1 and 
-                              valid_aep' rv'" 
-                    in corres_split [OF _ get_aep_corres])
+                            obj_at (\<lambda>k. k = AsyncEndpoint rv) word1" and
+                            R'="\<lambda>rv'. invs' and tcb_at' thread and aep_at' word1 and
+                            valid_aep' rv'"
+                         in corres_split [OF _ get_aep_corres])
       apply clarsimp
       apply (case_tac "aep_obj rv")
         -- "IdleAEP"
         apply (simp add: aep_relation_def)
         apply (rule corres_guard_imp)
-          apply (rule corres_split [OF _ sts_corres])
+          apply (case_tac isBlocking; simp)
+           apply (rule corres_split [OF _ sts_corres])
+              apply (rule set_aep_corres)
+              apply (simp add: aep_relation_def)
+             apply simp
+            apply wp
+          apply (rule corres_guard_imp, rule do_nbwait_failed_transfer_corres, simp+)
+       -- "WaitingAEP"
+       apply (simp add: aep_relation_def)
+       apply (rule corres_guard_imp)
+         apply (case_tac isBlocking; simp)
+          apply (rule corres_split[OF _ sts_corres])
              apply (rule set_aep_corres)
              apply (simp add: aep_relation_def)
             apply simp
            apply wp
-         apply (clarsimp simp: valid_tcb_state_def)
-        apply clarsimp
-       -- "WaitingAEP"
-       apply (simp add: aep_relation_def)
-       apply (rule corres_guard_imp)
-         apply (rule corres_split [OF _ sts_corres])
-            apply (rule set_aep_corres)
-            apply (simp add: aep_relation_def)
-           apply simp
-          apply wp
-        apply (clarsimp simp: valid_tcb_state_def)
-       apply clarsimp
+         apply (rule corres_guard_imp)
+           apply (rule do_nbwait_failed_transfer_corres, simp+)
       -- "ActiveAEP"
       apply (simp add: aep_relation_def)
       apply (rule corres_guard_imp)
@@ -3727,7 +3742,7 @@ lemma receive_async_ipc_corres:
           apply (simp add: aep_relation_def)
          apply wp
        apply (fastforce simp: invs_def valid_state_def valid_pspace_def
-                      elim!: st_tcb_weakenE)
+                       elim!: st_tcb_weakenE)
       apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def)
      apply wp
    apply (clarsimp simp add: valid_cap_def st_tcb_at_tcb_at)
@@ -4150,7 +4165,7 @@ lemma ri_invs' [wp]:
           and (\<lambda>s. \<forall>p. t \<notin> set (ksReadyQueues s p))
           and ex_nonz_cap_to' t
           and (\<lambda>s. \<forall>r \<in> zobj_refs' cap. ex_nonz_cap_to' r s)\<rbrace>
-  receiveIPC t cap 
+  receiveIPC t cap isBlocking
   \<lbrace>\<lambda>_. invs'\<rbrace>" (is "\<lbrace>?pre\<rbrace> _ \<lbrace>_\<rbrace>")
   apply (clarsimp simp: receiveIPC_def) 
   apply (rule hoare_seq_ext [OF _ get_ep_sp'])
@@ -4162,10 +4177,11 @@ lemma ri_invs' [wp]:
    apply (case_tac ep)
      -- "endpoint = RecvEP"
      apply (simp add: invs'_def valid_state'_def)
-     apply (rule hoare_pre, wp valid_irq_node_lift)
+     apply (rule hoare_pre, wpc, wp valid_irq_node_lift)
       apply (simp add: valid_ep'_def)
       apply (wp sts_sch_act' hoare_vcg_const_Ball_lift valid_irq_node_lift
-                sts_valid_queues setThreadState_ct_not_inQ)
+                sts_valid_queues setThreadState_ct_not_inQ 
+           | simp add: doNBWaitFailedTransfer_def)+
      apply (clarsimp simp: valid_tcb_state'_def pred_tcb_at')
      apply (rule conjI, clarsimp elim!: obj_at'_weakenE)
      apply (frule obj_at_valid_objs')
@@ -4190,10 +4206,11 @@ lemma ri_invs' [wp]:
      apply (fastforce simp: valid_pspace'_def global'_no_ex_cap idle'_not_queued)
    -- "endpoint = IdleEP"
     apply (simp add: invs'_def valid_state'_def)
-    apply (rule hoare_pre, wp valid_irq_node_lift)
+    apply (rule hoare_pre, wpc, wp valid_irq_node_lift)
      apply (simp add: valid_ep'_def)
      apply (wp sts_sch_act' valid_irq_node_lift
-               sts_valid_queues setThreadState_ct_not_inQ)
+               sts_valid_queues setThreadState_ct_not_inQ
+          | simp add: doNBWaitFailedTransfer_def)+
     apply (clarsimp simp: pred_tcb_at' valid_tcb_state'_def)
     apply (rule conjI, clarsimp elim!: obj_at'_weakenE)
     apply (subgoal_tac "t \<noteq> capEPPtr cap")
@@ -4276,7 +4293,7 @@ lemma rai_invs'[wp]:
                  \<and> capAEPPtr cap = aepptr
                  \<and> obj_at' (\<lambda>ko. aepBoundTCB ko = None \<or> aepBoundTCB ko = Some t)
                            aepptr s)\<rbrace>
-    receiveAsyncIPC t cap 
+    receiveAsyncIPC t cap isBlocking
    \<lbrace>\<lambda>_. invs'\<rbrace>"
   apply (simp add: receiveAsyncIPC_def)
   apply (rule hoare_seq_ext [OF _ get_aep_sp'])
@@ -4287,7 +4304,7 @@ lemma rai_invs'[wp]:
     apply (rule hoare_pre)
      apply (wp valid_irq_node_lift sts_sch_act' typ_at_lifts
                sts_valid_queues setThreadState_ct_not_inQ
-            | simp add: valid_aep'_def)+
+            | simp add: valid_aep'_def doNBWaitFailedTransfer_def | wpc)+
     apply (clarsimp simp: pred_tcb_at' valid_tcb_state'_def)
     apply (rule conjI, clarsimp elim!: obj_at'_weakenE)
     apply (subgoal_tac "capAEPPtr cap \<noteq> t")
@@ -4323,7 +4340,7 @@ lemma rai_invs'[wp]:
   apply (rule hoare_pre)
    apply (wp hoare_vcg_const_Ball_lift valid_irq_node_lift sts_sch_act'
              sts_valid_queues setThreadState_ct_not_inQ typ_at_lifts
-        | simp add: valid_aep'_def)+
+        | simp add: valid_aep'_def doNBWaitFailedTransfer_def | wpc)+
   apply (clarsimp simp: valid_tcb_state'_def)
   apply (frule_tac t=t in not_in_aepQueue)
      apply (simp)
@@ -4772,7 +4789,7 @@ crunch pred_tcb_at'[wp]: switchIfRequiredTo, completeAsyncIPC "pred_tcb_at' proj
 
 lemma ri_makes_runnable_simple':
   "\<lbrace>st_tcb_at' P t' and K (t \<noteq> t') and K (P = runnable' \<or> P = simple')\<rbrace>
-     receiveIPC t epCap
+     receiveIPC t epCap isBlocking
    \<lbrace>\<lambda>rv. st_tcb_at' P t'\<rbrace>"
   apply (rule hoare_gen_asm)+
   apply (simp add: receiveIPC_def)
@@ -4782,7 +4799,7 @@ lemma ri_makes_runnable_simple':
   apply wp
    apply (rename_tac ep q r)
    apply (case_tac ep, simp_all)
-     apply (wp sts_st_tcb_at'_cases)
+     apply (wp sts_st_tcb_at'_cases | wpc | simp add: doNBWaitFailedTransfer_def)+
    apply (rename_tac list)
    apply (case_tac list, simp_all add: case_bool_If case_option_If
                             split del: split_if cong: if_cong)
@@ -4805,19 +4822,12 @@ lemma ri_makes_runnable_simple':
 
 lemma rai_makes_runnable_simple':
   "\<lbrace>st_tcb_at' P t' and K (t \<noteq> t') and K (P = runnable' \<or> P = simple')\<rbrace>
-     receiveAsyncIPC t cap
+     receiveAsyncIPC t cap isBlocking
    \<lbrace>\<lambda>rv. st_tcb_at' P t'\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (simp add: receiveAsyncIPC_def)
-  apply (rule hoare_seq_ext [OF _ get_aep_inv'])
-  apply (case_tac "aepObj x", simp_all)
-    apply (wp sts_st_tcb_at'_cases)
-    apply clarsimp
-   apply (wp sts_st_tcb_at'_cases)
-   apply clarsimp
-  apply (wp sts_st_tcb_at'_cases)
-  apply clarsimp
-  done
+  apply (rule hoare_pre)
+   by (wp sts_st_tcb_at'_cases getAsyncEP_wp | wpc | simp add: doNBWaitFailedTransfer_def)+
 
 lemma sendAsyncIPC_st_tcb'_Running:
   "\<lbrace>st_tcb_at' (\<lambda>st. st = Running \<or> P st) t\<rbrace>

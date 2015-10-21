@@ -60,21 +60,30 @@ defs sendAsyncIPC_def:
             )
 od)"
 
+defs doNBWaitFailedTransfer_def:
+"doNBWaitFailedTransfer thread \<equiv> asUser thread $ setRegister badgeRegister 0"
+
 defs receiveAsyncIPC_def:
-"receiveAsyncIPC thread cap\<equiv> (do
+"receiveAsyncIPC thread cap isBlocking\<equiv> (do
         aepptr \<leftarrow> return ( capAEPPtr cap);
         aep \<leftarrow> getAsyncEP aepptr;
         (case aepObj aep of
-              IdleAEP \<Rightarrow>   (do
-                setThreadState (BlockedOnAsyncEvent_ \<lparr>
-                     waitingOnAsyncEP= aepptr \<rparr> ) thread;
-                setAsyncEP aepptr $ aep \<lparr>aepObj := WaitingAEP [thread] \<rparr>
-              od)
-            | WaitingAEP queue \<Rightarrow>   (do
-                setThreadState (BlockedOnAsyncEvent_ \<lparr>
-                    waitingOnAsyncEP= aepptr \<rparr> ) thread;
-                setAsyncEP aepptr $ aep \<lparr>aepObj := WaitingAEP (queue @ [thread]) \<rparr>
-            od)
+              IdleAEP \<Rightarrow>   (case isBlocking of
+                  True \<Rightarrow>   (do
+                      setThreadState (BlockedOnAsyncEvent_ \<lparr>
+                                         waitingOnAsyncEP= aepptr \<rparr> ) thread;
+                      setAsyncEP aepptr $ aep \<lparr>aepObj := WaitingAEP ([thread]) \<rparr>
+                  od)
+                | False \<Rightarrow>   doNBWaitFailedTransfer thread
+                )
+            | WaitingAEP queue \<Rightarrow>   (case isBlocking of
+                  True \<Rightarrow>   (do
+                      setThreadState (BlockedOnAsyncEvent_ \<lparr>
+                                         waitingOnAsyncEP= aepptr \<rparr> ) thread;
+                      setAsyncEP aepptr $ aep \<lparr>aepObj := WaitingAEP (queue @ [thread]) \<rparr>
+                  od)
+                | False \<Rightarrow>   doNBWaitFailedTransfer thread
+                )
             | ActiveAEP badge \<Rightarrow>   (do
                 asUser thread $ setRegister badgeRegister badge;
                 setAsyncEP aepptr $ aep \<lparr>aepObj := IdleAEP \<rparr>

@@ -2,13 +2,12 @@ functor StrictCLrValsFun(structure Token : TOKEN)
  : sig structure ParserData : PARSER_DATA
        structure Tokens : StrictC_TOKENS
    end
- =
+ = 
 struct
 structure ParserData=
 struct
-structure Header =
+structure Header = 
 struct
-
 (**
  ** Copyright 2014, NICTA
  **
@@ -685,10 +684,12 @@ in
                               \top level"); d)
   | _ => d
 end
+
+
 end
 structure LrTable = Token.LrTable
 structure Token = Token
-local open LrTable in
+local open LrTable in 
 val table=let val actionRows =
 "\
 \\001\000\001\000\000\000\000\000\
@@ -3325,7 +3326,7 @@ val gotoT =
 val numstates = 488
 val numrules = 284
 val s = ref "" and index = ref 0
-val string_to_int = fn () =>
+val string_to_int = fn () => 
 let val i = !index
 in index := i+2; Char.ord(String.sub(!s,i)) + Char.ord(String.sub(!s,i+1)) * 256
 end
@@ -3383,7 +3384,7 @@ end
 local open Header in
 type pos = SourcePos.t
 type arg = SourceFile.t
-structure MlyValue =
+structure MlyValue = 
 struct
 datatype svalue = VOID' | ntVOID of unit ->  unit
  | STRING_LITERAL of unit ->  (string)
@@ -3499,16 +3500,16 @@ structure EC=
 struct
 open LrTable
 val is_keyword =
-fn (T 37) => true | (T 38) => true | (T 35) => true | (T 71) => true |
-(T 39) => true | (T 36) => true | (T 59) => true | (T 61) => true | (T
-62) => true | (T 63) => true | (T 65) => true | (T 73) => true | (T 11
-) => true | (T 6) => true | (T 7) => true | _ => false
-val preferred_change =
+fn (T 37) => true | (T 38) => true | (T 35) => true | (T 71) => true
+ | (T 39) => true | (T 36) => true | (T 59) => true | (T 61) => true
+ | (T 62) => true | (T 63) => true | (T 65) => true | (T 73) => true
+ | (T 11) => true | (T 6) => true | (T 7) => true | _ => false
+val preferred_change = 
 (nil
 ,(T 11) :: nil
 )::
 nil
-val noShift =
+val noShift = 
 fn (T 0) => true | _ => false
 val showTerminal =
 fn (T 0) => "EOF"
@@ -3617,48 +3618,48 @@ fn _ => MlyValue.VOID'
 end
 val terms = (T 0) :: (T 1) :: (T 2) :: (T 3) :: (T 4) :: (T 5) :: (T 6
 ) :: (T 7) :: (T 8) :: (T 9) :: (T 10) :: (T 11) :: (T 12) :: (T 13)
- :: (T 14) :: (T 15) :: (T 16) :: (T 17) :: (T 18) :: (T 19) :: (T 20
-) :: (T 21) :: (T 22) :: (T 23) :: (T 24) :: (T 25) :: (T 26) :: (T 27
-) :: (T 28) :: (T 29) :: (T 30) :: (T 31) :: (T 32) :: (T 33) :: (T 34
-) :: (T 35) :: (T 36) :: (T 37) :: (T 38) :: (T 39) :: (T 40) :: (T 41
-) :: (T 42) :: (T 43) :: (T 44) :: (T 45) :: (T 46) :: (T 47) :: (T 48
-) :: (T 49) :: (T 50) :: (T 51) :: (T 52) :: (T 53) :: (T 54) :: (T 55
-) :: (T 56) :: (T 57) :: (T 58) :: (T 59) :: (T 60) :: (T 61) :: (T 62
-) :: (T 63) :: (T 64) :: (T 65) :: (T 66) :: (T 67) :: (T 71) :: (T 72
-) :: (T 73) :: (T 74) :: (T 75) :: (T 76) :: (T 77) :: (T 78) :: (T 79
-) :: (T 80) :: (T 81) :: (T 82) :: (T 83) :: (T 84) :: (T 85) :: (T 86
-) :: (T 87) :: (T 88) :: (T 89) :: (T 90) :: (T 91) :: (T 92) :: (T 93
-) :: (T 95) :: (T 96) :: (T 97) :: (T 98) :: nil
+ :: (T 14) :: (T 15) :: (T 16) :: (T 17) :: (T 18) :: (T 19) :: (T 20)
+ :: (T 21) :: (T 22) :: (T 23) :: (T 24) :: (T 25) :: (T 26) :: (T 27)
+ :: (T 28) :: (T 29) :: (T 30) :: (T 31) :: (T 32) :: (T 33) :: (T 34)
+ :: (T 35) :: (T 36) :: (T 37) :: (T 38) :: (T 39) :: (T 40) :: (T 41)
+ :: (T 42) :: (T 43) :: (T 44) :: (T 45) :: (T 46) :: (T 47) :: (T 48)
+ :: (T 49) :: (T 50) :: (T 51) :: (T 52) :: (T 53) :: (T 54) :: (T 55)
+ :: (T 56) :: (T 57) :: (T 58) :: (T 59) :: (T 60) :: (T 61) :: (T 62)
+ :: (T 63) :: (T 64) :: (T 65) :: (T 66) :: (T 67) :: (T 71) :: (T 72)
+ :: (T 73) :: (T 74) :: (T 75) :: (T 76) :: (T 77) :: (T 78) :: (T 79)
+ :: (T 80) :: (T 81) :: (T 82) :: (T 83) :: (T 84) :: (T 85) :: (T 86)
+ :: (T 87) :: (T 88) :: (T 89) :: (T 90) :: (T 91) :: (T 92) :: (T 93)
+ :: (T 95) :: (T 96) :: (T 97) :: (T 98) :: nil
 end
 structure Actions =
-struct
+struct 
 type int = Int.int
 exception mlyAction of int
 local open Header in
-val actions =
+val actions = 
 fn (i392:int,defaultPos,stack,
     (source):arg) =>
 case (i392,stack)
 of (0,(_,(MlyValue.translation_unit translation_unit1,
-translation_unit1left,translation_unit1right))::rest671) => let val
-result=MlyValue.begin(fn _ => let val translation_unit as
+translation_unit1left,translation_unit1right))::rest671) => let val 
+result=MlyValue.begin(fn _ => let val translation_unit as 
 translation_unit1=translation_unit1 ()
  in (translation_unit) end
 )
  in (LrTable.NT 0,(result,translation_unit1left,translation_unit1right
 ),rest671) end
 | (1,(_,(MlyValue.external_declaration external_declaration1,
-external_declaration1left,external_declaration1right))::rest671) => let
-val result=MlyValue.translation_unit(fn _ => let val
+external_declaration1left,external_declaration1right))::rest671) => 
+let val result=MlyValue.translation_unit(fn _ => let val 
 external_declaration as external_declaration1=external_declaration1 ()
  in (external_declaration) end
 )
  in (LrTable.NT 1,(result,external_declaration1left,
 external_declaration1right),rest671) end
 | (2,(_,(MlyValue.translation_unit translation_unit1,_,
-translation_unit1right))::(_,(MlyValue.external_declaration
-external_declaration1,external_declaration1left,_))::rest671) => let
-val result=MlyValue.translation_unit(fn _ => let val
+translation_unit1right))::(_,(MlyValue.external_declaration 
+external_declaration1,external_declaration1left,_))::rest671) => let 
+val result=MlyValue.translation_unit(fn _ => let val 
 external_declaration as external_declaration1=external_declaration1 ()
 val translation_unit as translation_unit1=translation_unit1 ()
  in (external_declaration @ translation_unit) end
@@ -3666,8 +3667,8 @@ val translation_unit as translation_unit1=translation_unit1 ()
  in (LrTable.NT 1,(result,external_declaration1left,
 translation_unit1right),rest671) end
 | (3,(_,(MlyValue.function_definition function_definition1,
-function_definition1left,function_definition1right))::rest671) => let
-val result=MlyValue.external_declaration(fn _ => let val
+function_definition1left,function_definition1right))::rest671) => let 
+val result=MlyValue.external_declaration(fn _ => let val 
 function_definition as function_definition1=function_definition1 ()
  in ([function_definition]) end
 )
@@ -3675,15 +3676,15 @@ function_definition as function_definition1=function_definition1 ()
 function_definition1right),rest671) end
 | (4,(_,(MlyValue.declaration declaration1,declaration1left,
 declaration1right))::rest671) => let val result=
-MlyValue.external_declaration(fn _ => let val declaration as
+MlyValue.external_declaration(fn _ => let val declaration as 
 declaration1=declaration1 ()
  in (map Decl declaration) end
 )
  in (LrTable.NT 2,(result,declaration1left,declaration1right),rest671)
  end
 | (5,(_,(_,TYPEDEFleft as TYPEDEF1left,TYPEDEFright as TYPEDEF1right))
-::rest671) => let val result=MlyValue.storage_class_specifier(fn _ => (
-wrap(TypeDef, TYPEDEFleft, TYPEDEFright)))
+::rest671) => let val result=MlyValue.storage_class_specifier(fn _ => 
+(wrap(TypeDef, TYPEDEFleft, TYPEDEFright)))
  in (LrTable.NT 5,(result,TYPEDEF1left,TYPEDEF1right),rest671) end
 | (6,(_,(_,EXTERNleft as EXTERN1left,EXTERNright as EXTERN1right))::
 rest671) => let val result=MlyValue.storage_class_specifier(fn _ => (
@@ -3693,7 +3694,7 @@ wrap(Extern, EXTERNleft, EXTERNright)))
 rest671) => let val result=MlyValue.storage_class_specifier(fn _ => (
 wrap(Static, STATICleft, STATICright)))
  in (LrTable.NT 5,(result,STATIC1left,STATIC1right),rest671) end
-| (8,(_,(_,YREGISTERleft as YREGISTER1left,YREGISTERright as
+| (8,(_,(_,YREGISTERleft as YREGISTER1left,YREGISTERright as 
 YREGISTER1right))::rest671) => let val result=
 MlyValue.storage_class_specifier(fn _ => (
 wrap(Register, YREGISTERleft, YREGISTERright)))
@@ -3702,8 +3703,8 @@ wrap(Register, YREGISTERleft, YREGISTERright)))
  => let val result=MlyValue.storage_class_specifier(fn _ => (
 wrap(Auto, AUTOleft, AUTOright)))
  in (LrTable.NT 5,(result,AUTO1left,AUTO1right),rest671) end
-| (10,(_,(_,THREAD_LOCALleft as THREAD_LOCAL1left,THREAD_LOCALright as
-THREAD_LOCAL1right))::rest671) => let val result=
+| (10,(_,(_,THREAD_LOCALleft as THREAD_LOCAL1left,THREAD_LOCALright
+ as THREAD_LOCAL1right))::rest671) => let val result=
 MlyValue.storage_class_specifier(fn _ => (
 wrap(Thread_Local, THREAD_LOCALleft,
                                              THREAD_LOCALright)
@@ -3714,7 +3715,7 @@ rest671) end
 rest671) => let val result=MlyValue.function_specifiers(fn _ => (
 wrap([], INLINEleft, INLINEright)))
  in (LrTable.NT 11,(result,INLINE1left,INLINE1right),rest671) end
-| (12,(_,(_,NORETURNleft as NORETURN1left,NORETURNright as
+| (12,(_,(_,NORETURNleft as NORETURN1left,NORETURNright as 
 NORETURN1right))::rest671) => let val result=
 MlyValue.function_specifiers(fn _ => (
 wrap([wrap(gcc_attribs [GCC_AttribID "noreturn"],
@@ -3725,15 +3726,15 @@ wrap([wrap(gcc_attribs [GCC_AttribID "noreturn"],
 | (13,(_,(_,_,SPEC_BLOCKEND1right))::(_,(
 MlyValue.special_function_specs special_function_specs1,
 special_function_specs1left,_))::rest671) => let val result=
-MlyValue.function_specifiers(fn _ => let val special_function_specs as
-special_function_specs1=special_function_specs1 ()
+MlyValue.function_specifiers(fn _ => let val special_function_specs
+ as special_function_specs1=special_function_specs1 ()
  in (special_function_specs) end
 )
  in (LrTable.NT 11,(result,special_function_specs1left,
 SPEC_BLOCKEND1right),rest671) end
 | (14,(_,(MlyValue.attribute_specifier attribute_specifier1,
-attribute_specifier1left,attribute_specifier1right))::rest671) => let
-val result=MlyValue.function_specifiers(fn _ => let val
+attribute_specifier1left,attribute_specifier1right))::rest671) => let 
+val result=MlyValue.function_specifiers(fn _ => let val 
 attribute_specifier as attribute_specifier1=attribute_specifier1 ()
  in (
 wrap ([apnode gcc_attribs attribute_specifier],
@@ -3743,10 +3744,10 @@ wrap ([apnode gcc_attribs attribute_specifier],
 )
  in (LrTable.NT 11,(result,attribute_specifier1left,
 attribute_specifier1right),rest671) end
-| (15,(_,(_,_,RPAREN2right))::_::(_,(MlyValue.attribute_list
-attribute_list1,_,_))::_::_::(_,(_,GCC_ATTRIBUTEleft as
+| (15,(_,(_,_,RPAREN2right))::_::(_,(MlyValue.attribute_list 
+attribute_list1,_,_))::_::_::(_,(_,GCC_ATTRIBUTEleft as 
 GCC_ATTRIBUTE1left,_))::rest671) => let val result=
-MlyValue.attribute_specifier(fn _ => let val attribute_list as
+MlyValue.attribute_specifier(fn _ => let val attribute_list as 
 attribute_list1=attribute_list1 ()
  in (wrap(attribute_list, GCC_ATTRIBUTEleft, RPAREN2right)) end
 )
@@ -3754,8 +3755,8 @@ attribute_list1=attribute_list1 ()
  end
 | (16,(_,(_,_,SPEC_BLOCKENDright as SPEC_BLOCKEND1right))::(_,(
 MlyValue.ID ID1,_,_))::(_,(_,OWNED_BYleft as OWNED_BY1left,_))::
-rest671) => let val result=MlyValue.attribute_specifier(fn _ => let val
-ID as ID1=ID1 ()
+rest671) => let val result=MlyValue.attribute_specifier(fn _ => let 
+val ID as ID1=ID1 ()
  in (wrap([OWNED_BY ID], OWNED_BYleft, SPEC_BLOCKENDright)) end
 )
  in (LrTable.NT 91,(result,OWNED_BY1left,SPEC_BLOCKEND1right),rest671)
@@ -3763,8 +3764,8 @@ ID as ID1=ID1 ()
 | (17,rest671) => let val result=MlyValue.attribute_list(fn _ => ([]))
  in (LrTable.NT 92,(result,defaultPos,defaultPos),rest671) end
 | (18,(_,(MlyValue.attribute attribute1,attribute1left,attribute1right
-))::rest671) => let val result=MlyValue.attribute_list(fn _ => let val
-attribute as attribute1=attribute1 ()
+))::rest671) => let val result=MlyValue.attribute_list(fn _ => let 
+val attribute as attribute1=attribute1 ()
  in (case attribute of NONE => [] | SOME a => [a]) end
 )
  in (LrTable.NT 92,(result,attribute1left,attribute1right),rest671)
@@ -3781,7 +3782,7 @@ case attribute of NONE => attribute_list
 )
  in (LrTable.NT 92,(result,attribute1left,attribute_list1right),
 rest671) end
-| (20,(_,(MlyValue.ID ID1,ID1left,ID1right))::rest671) => let val
+| (20,(_,(MlyValue.ID ID1,ID1left,ID1right))::rest671) => let val 
 result=MlyValue.attribute(fn _ => let val ID as ID1=ID1 ()
  in (
 let val idstr = if String.isPrefix "__" ID andalso
@@ -3801,15 +3802,15 @@ let val idstr = if String.isPrefix "__" ID andalso
 MlyValue.attribute(fn _ => (SOME (GCC_AttribID "const")))
  in (LrTable.NT 90,(result,CONST1left,CONST1right),rest671) end
 | (22,(_,(_,_,RPAREN1right))::_::(_,(MlyValue.ID ID1,ID1left,_))::
-rest671) => let val result=MlyValue.attribute(fn _ => let val ID as ID1
-=ID1 ()
+rest671) => let val result=MlyValue.attribute(fn _ => let val ID as 
+ID1=ID1 ()
  in (SOME (GCC_AttribFn (ID, []))) end
 )
  in (LrTable.NT 90,(result,ID1left,RPAREN1right),rest671) end
-| (23,(_,(_,_,RPAREN1right))::(_,(MlyValue.attribute_parameter_list1
+| (23,(_,(_,_,RPAREN1right))::(_,(MlyValue.attribute_parameter_list1 
 attribute_parameter_list11,_,_))::_::(_,(MlyValue.ID ID1,ID1left,_))::
-rest671) => let val result=MlyValue.attribute(fn _ => let val ID as ID1
-=ID1 ()
+rest671) => let val result=MlyValue.attribute(fn _ => let val ID as 
+ID1=ID1 ()
 val attribute_parameter_list1 as attribute_parameter_list11=
 attribute_parameter_list11 ()
  in (SOME (GCC_AttribFn (ID, attribute_parameter_list1))) end
@@ -3817,17 +3818,17 @@ attribute_parameter_list11 ()
  in (LrTable.NT 90,(result,ID1left,RPAREN1right),rest671) end
 | (24,(_,(MlyValue.rexpression rexpression1,rexpression1left,
 rexpression1right))::rest671) => let val result=
-MlyValue.attribute_parameter_list1(fn _ => let val rexpression as
+MlyValue.attribute_parameter_list1(fn _ => let val rexpression as 
 rexpression1=rexpression1 ()
  in ([rexpression]) end
 )
  in (LrTable.NT 93,(result,rexpression1left,rexpression1right),rest671
 ) end
-| (25,(_,(MlyValue.attribute_parameter_list1 attribute_parameter_list11
-,_,attribute_parameter_list11right))::_::(_,(MlyValue.rexpression
-rexpression1,rexpression1left,_))::rest671) => let val result=
-MlyValue.attribute_parameter_list1(fn _ => let val rexpression as
-rexpression1=rexpression1 ()
+| (25,(_,(MlyValue.attribute_parameter_list1 
+attribute_parameter_list11,_,attribute_parameter_list11right))::_::(_,
+(MlyValue.rexpression rexpression1,rexpression1left,_))::rest671) => 
+let val result=MlyValue.attribute_parameter_list1(fn _ => let val 
+rexpression as rexpression1=rexpression1 ()
 val attribute_parameter_list1 as attribute_parameter_list11=
 attribute_parameter_list11 ()
  in (rexpression :: attribute_parameter_list1) end
@@ -3835,10 +3836,10 @@ attribute_parameter_list11 ()
  in (LrTable.NT 93,(result,rexpression1left,
 attribute_parameter_list11right),rest671) end
 | (26,(_,(MlyValue.special_function_spec special_function_spec1,
-special_function_spec1left,special_function_spec1right))::rest671) =>
-let val result=MlyValue.special_function_specs(fn _ => let val
+special_function_spec1left,special_function_spec1right))::rest671) => 
+let val result=MlyValue.special_function_specs(fn _ => let val 
 special_function_spec as special_function_spec1=special_function_spec1
-()
+ ()
  in (
 wrap([special_function_spec], left special_function_spec,
                       right special_function_spec)
@@ -3847,11 +3848,11 @@ wrap([special_function_spec], left special_function_spec,
  in (LrTable.NT 13,(result,special_function_spec1left,
 special_function_spec1right),rest671) end
 | (27,(_,(MlyValue.special_function_specs special_function_specs1,_,
-special_function_specs1right))::(_,(MlyValue.special_function_spec
-special_function_spec1,special_function_spec1left,_))::rest671) => let
-val result=MlyValue.special_function_specs(fn _ => let val
+special_function_specs1right))::(_,(MlyValue.special_function_spec 
+special_function_spec1,special_function_spec1left,_))::rest671) => 
+let val result=MlyValue.special_function_specs(fn _ => let val 
 special_function_spec as special_function_spec1=special_function_spec1
-()
+ ()
 val special_function_specs as special_function_specs1=
 special_function_specs1 ()
  in (
@@ -3890,15 +3891,15 @@ rel_spec1 ()
 )
  in (LrTable.NT 12,(result,RELSPEC1left,rel_spec1right),rest671) end
 | (31,(_,(_,DONT_TRANSLATEleft as DONT_TRANSLATE1left,
-DONT_TRANSLATEright as DONT_TRANSLATE1right))::rest671) => let val
+DONT_TRANSLATEright as DONT_TRANSLATE1right))::rest671) => let val 
 result=MlyValue.special_function_spec(fn _ => (
 wrap(didnt_translate, DONT_TRANSLATEleft, DONT_TRANSLATEright)))
  in (LrTable.NT 12,(result,DONT_TRANSLATE1left,DONT_TRANSLATE1right),
 rest671) end
 | (32,(_,(MlyValue.STRING_LITERAL STRING_LITERAL1,_,
 STRING_LITERALright as STRING_LITERAL1right))::_::(_,(MlyValue.ID ID1,
-IDleft as ID1left,_))::rest671) => let val result=MlyValue.fnspecs(fn _
- => let val ID as ID1=ID1 ()
+IDleft as ID1left,_))::rest671) => let val result=MlyValue.fnspecs(fn 
+_ => let val ID as ID1=ID1 ()
 val STRING_LITERAL as STRING_LITERAL1=STRING_LITERAL1 ()
  in (
 wrap(ID ^ ": \"" ^ STRING_LITERAL ^ "\"", IDleft,
@@ -3908,8 +3909,8 @@ wrap(ID ^ ": \"" ^ STRING_LITERAL ^ "\"", IDleft,
  in (LrTable.NT 14,(result,ID1left,STRING_LITERAL1right),rest671) end
 | (33,(_,(MlyValue.fnspecs fnspecs1,_,fnspecs1right))::(_,(
 MlyValue.STRING_LITERAL STRING_LITERAL1,_,_))::_::(_,(MlyValue.ID ID1,
-IDleft as ID1left,_))::rest671) => let val result=MlyValue.fnspecs(fn _
- => let val ID as ID1=ID1 ()
+IDleft as ID1left,_))::rest671) => let val result=MlyValue.fnspecs(fn 
+_ => let val ID as ID1=ID1 ()
 val STRING_LITERAL as STRING_LITERAL1=STRING_LITERAL1 ()
 val fnspecs as fnspecs1=fnspecs1 ()
  in (
@@ -3921,7 +3922,7 @@ wrap((ID ^ ": \"" ^ STRING_LITERAL ^ "\"\n" ^ node fnspecs,
  in (LrTable.NT 14,(result,ID1left,fnspecs1right),rest671) end
 | (34,(_,(MlyValue.STRING_LITERAL STRING_LITERAL1,STRING_LITERALleft
  as STRING_LITERAL1left,STRING_LITERALright as STRING_LITERAL1right))
-::rest671) => let val result=MlyValue.rel_spec(fn _ => let val
+::rest671) => let val result=MlyValue.rel_spec(fn _ => let val 
 STRING_LITERAL as STRING_LITERAL1=STRING_LITERAL1 ()
  in (
 wrap("\"" ^ STRING_LITERAL ^ "\"", STRING_LITERALleft,
@@ -3932,8 +3933,8 @@ wrap("\"" ^ STRING_LITERAL ^ "\"", STRING_LITERALleft,
 rest671) end
 | (35,rest671) => let val result=MlyValue.idlist(fn _ => ([]))
  in (LrTable.NT 89,(result,defaultPos,defaultPos),rest671) end
-| (36,(_,(MlyValue.idlist idlist1,_,idlist1right))::(_,(MlyValue.ID ID1
-,IDleft as ID1left,IDright))::rest671) => let val result=
+| (36,(_,(MlyValue.idlist idlist1,_,idlist1right))::(_,(MlyValue.ID 
+ID1,IDleft as ID1left,IDright))::rest671) => let val result=
 MlyValue.idlist(fn _ => let val ID as ID1=ID1 ()
 val idlist as idlist1=idlist1 ()
  in (wrap(ID,IDleft,IDright) :: idlist) end
@@ -3949,19 +3950,19 @@ wrap(NameGeneration.phantom_state_name, LBRACKETleft,
 ) end
 )
  in (LrTable.NT 89,(result,LBRACKET1left,idlist1right),rest671) end
-| (38,(_,(_,_,YSEMI1right))::(_,(MlyValue.declaration_specifiers
-declaration_specifiers1,declaration_specifiers1left,_))::rest671) =>
-let val result=MlyValue.declaration(fn _ => let val
+| (38,(_,(_,_,YSEMI1right))::(_,(MlyValue.declaration_specifiers 
+declaration_specifiers1,declaration_specifiers1left,_))::rest671) => 
+let val result=MlyValue.declaration(fn _ => let val 
 declaration_specifiers as declaration_specifiers1=
 declaration_specifiers1 ()
  in (empty_declarator (node declaration_specifiers)) end
 )
  in (LrTable.NT 27,(result,declaration_specifiers1left,YSEMI1right),
 rest671) end
-| (39,(_,(_,_,YSEMI1right))::(_,(MlyValue.init_declarator_list
-init_declarator_list1,_,_))::(_,(MlyValue.declaration_specifiers
-declaration_specifiers1,declaration_specifiers1left,_))::rest671) =>
-let val result=MlyValue.declaration(fn _ => let val
+| (39,(_,(_,_,YSEMI1right))::(_,(MlyValue.init_declarator_list 
+init_declarator_list1,_,_))::(_,(MlyValue.declaration_specifiers 
+declaration_specifiers1,declaration_specifiers1left,_))::rest671) => 
+let val result=MlyValue.declaration(fn _ => let val 
 declaration_specifiers as declaration_specifiers1=
 declaration_specifiers1 ()
 val init_declarator_list as init_declarator_list1=
@@ -3972,7 +3973,7 @@ init_declarator_list1 ()
 rest671) end
 | (40,(_,(MlyValue.storage_class_specifier storage_class_specifier1,
 storage_class_specifier1left,storage_class_specifier1right))::rest671)
- => let val result=MlyValue.declaration_specifiers(fn _ => let val
+ => let val result=MlyValue.declaration_specifiers(fn _ => let val 
 storage_class_specifier as storage_class_specifier1=
 storage_class_specifier1 ()
  in (
@@ -3984,9 +3985,9 @@ wrap([Storage storage_class_specifier],
  in (LrTable.NT 19,(result,storage_class_specifier1left,
 storage_class_specifier1right),rest671) end
 | (41,(_,(MlyValue.declaration_specifiers declaration_specifiers1,_,
-declaration_specifiers1right))::(_,(MlyValue.storage_class_specifier
-storage_class_specifier1,storage_class_specifier1left,_))::rest671) =>
-let val result=MlyValue.declaration_specifiers(fn _ => let val
+declaration_specifiers1right))::(_,(MlyValue.storage_class_specifier 
+storage_class_specifier1,storage_class_specifier1left,_))::rest671)
+ => let val result=MlyValue.declaration_specifiers(fn _ => let val 
 storage_class_specifier as storage_class_specifier1=
 storage_class_specifier1 ()
 val declaration_specifiers as declaration_specifiers1=
@@ -4002,7 +4003,7 @@ wrap(Storage storage_class_specifier ::
 declaration_specifiers1right),rest671) end
 | (42,(_,(MlyValue.type_specifier type_specifier1,type_specifier1left,
 type_specifier1right))::rest671) => let val result=
-MlyValue.declaration_specifiers(fn _ => let val type_specifier as
+MlyValue.declaration_specifiers(fn _ => let val type_specifier as 
 type_specifier1=type_specifier1 ()
  in (
 wrap([TypeSpec type_specifier], tsleft type_specifier,
@@ -4012,9 +4013,9 @@ wrap([TypeSpec type_specifier], tsleft type_specifier,
  in (LrTable.NT 19,(result,type_specifier1left,type_specifier1right),
 rest671) end
 | (43,(_,(MlyValue.declaration_specifiers declaration_specifiers1,_,
-declaration_specifiers1right))::(_,(MlyValue.type_specifier
+declaration_specifiers1right))::(_,(MlyValue.type_specifier 
 type_specifier1,type_specifier1left,_))::rest671) => let val result=
-MlyValue.declaration_specifiers(fn _ => let val type_specifier as
+MlyValue.declaration_specifiers(fn _ => let val type_specifier as 
 type_specifier1=type_specifier1 ()
 val declaration_specifiers as declaration_specifiers1=
 declaration_specifiers1 ()
@@ -4028,7 +4029,7 @@ wrap(TypeSpec type_specifier :: node declaration_specifiers,
 declaration_specifiers1right),rest671) end
 | (44,(_,(MlyValue.type_qualifier type_qualifier1,type_qualifier1left,
 type_qualifier1right))::rest671) => let val result=
-MlyValue.declaration_specifiers(fn _ => let val type_qualifier as
+MlyValue.declaration_specifiers(fn _ => let val type_qualifier as 
 type_qualifier1=type_qualifier1 ()
  in (
 wrap([TypeQual type_qualifier],
@@ -4039,9 +4040,9 @@ wrap([TypeQual type_qualifier],
  in (LrTable.NT 19,(result,type_qualifier1left,type_qualifier1right),
 rest671) end
 | (45,(_,(MlyValue.declaration_specifiers declaration_specifiers1,_,
-declaration_specifiers1right))::(_,(MlyValue.type_qualifier
+declaration_specifiers1right))::(_,(MlyValue.type_qualifier 
 type_qualifier1,type_qualifier1left,_))::rest671) => let val result=
-MlyValue.declaration_specifiers(fn _ => let val type_qualifier as
+MlyValue.declaration_specifiers(fn _ => let val type_qualifier as 
 type_qualifier1=type_qualifier1 ()
 val declaration_specifiers as declaration_specifiers1=
 declaration_specifiers1 ()
@@ -4054,8 +4055,8 @@ wrap(TypeQual type_qualifier :: node declaration_specifiers,
  in (LrTable.NT 19,(result,type_qualifier1left,
 declaration_specifiers1right),rest671) end
 | (46,(_,(MlyValue.function_specifiers function_specifiers1,
-function_specifiers1left,function_specifiers1right))::rest671) => let
-val result=MlyValue.declaration_specifiers(fn _ => let val
+function_specifiers1left,function_specifiers1right))::rest671) => let 
+val result=MlyValue.declaration_specifiers(fn _ => let val 
 function_specifiers as function_specifiers1=function_specifiers1 ()
  in (
 wrap(map FunSpec (node function_specifiers),
@@ -4066,9 +4067,9 @@ wrap(map FunSpec (node function_specifiers),
  in (LrTable.NT 19,(result,function_specifiers1left,
 function_specifiers1right),rest671) end
 | (47,(_,(MlyValue.declaration_specifiers declaration_specifiers1,_,
-declaration_specifiers1right))::(_,(MlyValue.function_specifiers
-function_specifiers1,function_specifiers1left,_))::rest671) => let val
-result=MlyValue.declaration_specifiers(fn _ => let val
+declaration_specifiers1right))::(_,(MlyValue.function_specifiers 
+function_specifiers1,function_specifiers1left,_))::rest671) => let 
+val result=MlyValue.declaration_specifiers(fn _ => let val 
 function_specifiers as function_specifiers1=function_specifiers1 ()
 val declaration_specifiers as declaration_specifiers1=
 declaration_specifiers1 ()
@@ -4083,11 +4084,11 @@ wrap(map FunSpec (node function_specifiers) @
 declaration_specifiers1right),rest671) end
 | (48,(_,(MlyValue.compound_statement compound_statement1,_,
 compound_statement1right))::(_,(MlyValue.declarator declarator1,_,
-declaratorright))::(_,(MlyValue.declaration_specifiers
-declaration_specifiers1,declaration_specifiersleft as
+declaratorright))::(_,(MlyValue.declaration_specifiers 
+declaration_specifiers1,declaration_specifiersleft as 
 declaration_specifiers1left,_))::rest671) => let val result=
-MlyValue.function_definition(fn _ => let val declaration_specifiers as
-declaration_specifiers1=declaration_specifiers1 ()
+MlyValue.function_definition(fn _ => let val declaration_specifiers
+ as declaration_specifiers1=declaration_specifiers1 ()
 val declarator as declarator1=declarator1 ()
 val compound_statement as compound_statement1=compound_statement1 ()
  in (
@@ -4133,18 +4134,18 @@ compound_statement1right),rest671) end
 wrap([], defaultPos, defaultPos)))
  in (LrTable.NT 37,(result,defaultPos,defaultPos),rest671) end
 | (50,(_,(MlyValue.parameter_list1 parameter_list11,
-parameter_list11left,parameter_list11right))::rest671) => let val
-result=MlyValue.parameter_list(fn _ => let val parameter_list1 as
+parameter_list11left,parameter_list11right))::rest671) => let val 
+result=MlyValue.parameter_list(fn _ => let val parameter_list1 as 
 parameter_list11=parameter_list11 ()
  in (parameter_list1) end
 )
  in (LrTable.NT 37,(result,parameter_list11left,parameter_list11right)
 ,rest671) end
 | (51,(_,(MlyValue.parameter_declaration parameter_declaration1,
-parameter_declaration1left,parameter_declaration1right))::rest671) =>
-let val result=MlyValue.parameter_list1(fn _ => let val
+parameter_declaration1left,parameter_declaration1right))::rest671) => 
+let val result=MlyValue.parameter_list1(fn _ => let val 
 parameter_declaration as parameter_declaration1=parameter_declaration1
-()
+ ()
  in (
 wrap([parameter_declaration], left parameter_declaration,
                       right parameter_declaration)
@@ -4153,11 +4154,11 @@ wrap([parameter_declaration], left parameter_declaration,
  in (LrTable.NT 38,(result,parameter_declaration1left,
 parameter_declaration1right),rest671) end
 | (52,(_,(MlyValue.parameter_list1 parameter_list11,_,
-parameter_list11right))::_::(_,(MlyValue.parameter_declaration
-parameter_declaration1,parameter_declaration1left,_))::rest671) => let
-val result=MlyValue.parameter_list1(fn _ => let val
+parameter_list11right))::_::(_,(MlyValue.parameter_declaration 
+parameter_declaration1,parameter_declaration1left,_))::rest671) => 
+let val result=MlyValue.parameter_list1(fn _ => let val 
 parameter_declaration as parameter_declaration1=parameter_declaration1
-()
+ ()
 val parameter_list1 as parameter_list11=parameter_list11 ()
  in (
 wrap(parameter_declaration :: node parameter_list1,
@@ -4186,12 +4187,13 @@ let val basety = extract_type declaration_specifiers
  in (LrTable.NT 36,(result,declaration_specifiers1left,
 declarator1right),rest671) end
 | (54,(_,(MlyValue.abstract_declarator abstract_declarator1,_,
-abstract_declarator1right))::(_,(MlyValue.declaration_specifiers
-declaration_specifiers1,declaration_specifiers1left,_))::rest671) =>
-let val result=MlyValue.parameter_declaration(fn _ => let val
+abstract_declarator1right))::(_,(MlyValue.declaration_specifiers 
+declaration_specifiers1,declaration_specifiers1left,_))::rest671) => 
+let val result=MlyValue.parameter_declaration(fn _ => let val 
 declaration_specifiers as declaration_specifiers1=
 declaration_specifiers1 ()
-val abstract_declarator as abstract_declarator1=abstract_declarator1 ()
+val abstract_declarator as abstract_declarator1=abstract_declarator1 
+()
  in (
 let val basety = extract_type declaration_specifiers
                      val _ = wonky_pdec_check declaration_specifiers
@@ -4207,7 +4209,7 @@ let val basety = extract_type declaration_specifiers
 abstract_declarator1right),rest671) end
 | (55,(_,(MlyValue.declaration_specifiers declaration_specifiers1,
 declaration_specifiers1left,declaration_specifiers1right))::rest671)
- => let val result=MlyValue.parameter_declaration(fn _ => let val
+ => let val result=MlyValue.parameter_declaration(fn _ => let val 
 declaration_specifiers as declaration_specifiers1=
 declaration_specifiers1 ()
  in (
@@ -4223,9 +4225,9 @@ let val basety = extract_type declaration_specifiers
  in (LrTable.NT 36,(result,declaration_specifiers1left,
 declaration_specifiers1right),rest671) end
 | (56,(_,(_,_,RCURLYright as RCURLY1right))::(_,(
-MlyValue.block_item_list block_item_list1,_,_))::(_,(_,LCURLYleft as
+MlyValue.block_item_list block_item_list1,_,_))::(_,(_,LCURLYleft as 
 LCURLY1left,_))::rest671) => let val result=
-MlyValue.compound_statement(fn _ => let val block_item_list as
+MlyValue.compound_statement(fn _ => let val block_item_list as 
 block_item_list1=block_item_list1 ()
  in (wrap(block_item_list, LCURLYleft, RCURLYright)) end
 )
@@ -4244,14 +4246,14 @@ val block_item_list as block_item_list1=block_item_list1 ()
  in (LrTable.NT 34,(result,block_item1left,block_item_list1right),
 rest671) end
 | (59,(_,(MlyValue.declaration declaration1,declaration1left,
-declaration1right))::rest671) => let val result=MlyValue.block_item(fn
-_ => let val declaration as declaration1=declaration1 ()
+declaration1right))::rest671) => let val result=MlyValue.block_item(
+fn _ => let val declaration as declaration1=declaration1 ()
  in (map BI_Decl declaration) end
 )
  in (LrTable.NT 35,(result,declaration1left,declaration1right),rest671
 ) end
 | (60,(_,(MlyValue.statement statement1,statement1left,statement1right
-))::rest671) => let val result=MlyValue.block_item(fn _ => let val
+))::rest671) => let val result=MlyValue.block_item(fn _ => let val 
 statement as statement1=statement1 ()
  in ([BI_Stmt statement]) end
 )
@@ -4260,16 +4262,16 @@ statement as statement1=statement1 ()
 | (61,rest671) => let val result=MlyValue.statement_list(fn _ => ([]))
  in (LrTable.NT 42,(result,defaultPos,defaultPos),rest671) end
 | (62,(_,(MlyValue.statement_list1 statement_list11,
-statement_list11left,statement_list11right))::rest671) => let val
-result=MlyValue.statement_list(fn _ => let val statement_list1 as
+statement_list11left,statement_list11right))::rest671) => let val 
+result=MlyValue.statement_list(fn _ => let val statement_list1 as 
 statement_list11=statement_list11 ()
  in (statement_list1) end
 )
  in (LrTable.NT 42,(result,statement_list11left,statement_list11right)
 ,rest671) end
 | (63,(_,(MlyValue.statement statement1,statement1left,statement1right
-))::rest671) => let val result=MlyValue.statement_list1(fn _ => let val
-statement as statement1=statement1 ()
+))::rest671) => let val result=MlyValue.statement_list1(fn _ => let 
+val statement as statement1=statement1 ()
  in ([statement]) end
 )
  in (LrTable.NT 43,(result,statement1left,statement1right),rest671)
@@ -4285,17 +4287,17 @@ val statement_list1 as statement_list11=statement_list11 ()
  in (LrTable.NT 43,(result,statement1left,statement_list11right),
 rest671) end
 | (65,(_,(MlyValue.struct_declaration struct_declaration1,
-struct_declaration1left,struct_declaration1right))::rest671) => let val
-result=MlyValue.struct_declaration_list(fn _ => let val
+struct_declaration1left,struct_declaration1right))::rest671) => let 
+val result=MlyValue.struct_declaration_list(fn _ => let val 
 struct_declaration as struct_declaration1=struct_declaration1 ()
  in (struct_declaration) end
 )
  in (LrTable.NT 28,(result,struct_declaration1left,
 struct_declaration1right),rest671) end
 | (66,(_,(MlyValue.struct_declaration_list struct_declaration_list1,_,
-struct_declaration_list1right))::(_,(MlyValue.struct_declaration
-struct_declaration1,struct_declaration1left,_))::rest671) => let val
-result=MlyValue.struct_declaration_list(fn _ => let val
+struct_declaration_list1right))::(_,(MlyValue.struct_declaration 
+struct_declaration1,struct_declaration1left,_))::rest671) => let val 
+result=MlyValue.struct_declaration_list(fn _ => let val 
 struct_declaration as struct_declaration1=struct_declaration1 ()
 val struct_declaration_list as struct_declaration_list1=
 struct_declaration_list1 ()
@@ -4312,7 +4314,7 @@ let val (sflds1, siddecls1) = struct_declaration
 struct_declaration_list1right),rest671) end
 | (67,(_,(MlyValue.type_specifier type_specifier1,type_specifier1left,
 type_specifier1right))::rest671) => let val result=
-MlyValue.specifier_qualifier_list(fn _ => let val type_specifier as
+MlyValue.specifier_qualifier_list(fn _ => let val type_specifier as 
 type_specifier1=type_specifier1 ()
  in (
 wrap([TypeSpec type_specifier],
@@ -4323,9 +4325,9 @@ wrap([TypeSpec type_specifier],
  in (LrTable.NT 20,(result,type_specifier1left,type_specifier1right),
 rest671) end
 | (68,(_,(MlyValue.specifier_qualifier_list specifier_qualifier_list1,
-_,specifier_qualifier_list1right))::(_,(MlyValue.type_specifier
+_,specifier_qualifier_list1right))::(_,(MlyValue.type_specifier 
 type_specifier1,type_specifier1left,_))::rest671) => let val result=
-MlyValue.specifier_qualifier_list(fn _ => let val type_specifier as
+MlyValue.specifier_qualifier_list(fn _ => let val type_specifier as 
 type_specifier1=type_specifier1 ()
 val specifier_qualifier_list as specifier_qualifier_list1=
 specifier_qualifier_list1 ()
@@ -4338,7 +4340,7 @@ wrap(TypeSpec type_specifier :: node specifier_qualifier_list,
 specifier_qualifier_list1right),rest671) end
 | (69,(_,(MlyValue.type_qualifier type_qualifier1,type_qualifier1left,
 type_qualifier1right))::rest671) => let val result=
-MlyValue.specifier_qualifier_list(fn _ => let val type_qualifier as
+MlyValue.specifier_qualifier_list(fn _ => let val type_qualifier as 
 type_qualifier1=type_qualifier1 ()
  in (
 wrap([TypeQual type_qualifier],
@@ -4348,9 +4350,9 @@ wrap([TypeQual type_qualifier],
  in (LrTable.NT 20,(result,type_qualifier1left,type_qualifier1right),
 rest671) end
 | (70,(_,(MlyValue.specifier_qualifier_list specifier_qualifier_list1,
-_,specifier_qualifier_list1right))::(_,(MlyValue.type_qualifier
+_,specifier_qualifier_list1right))::(_,(MlyValue.type_qualifier 
 type_qualifier1,type_qualifier1left,_))::rest671) => let val result=
-MlyValue.specifier_qualifier_list(fn _ => let val type_qualifier as
+MlyValue.specifier_qualifier_list(fn _ => let val type_qualifier as 
 type_qualifier1=type_qualifier1 ()
 val specifier_qualifier_list as specifier_qualifier_list1=
 specifier_qualifier_list1 ()
@@ -4365,36 +4367,37 @@ specifier_qualifier_list1right),rest671) end
 rest671) => let val result=MlyValue.type_qualifier(fn _ => (
 wrap(Const, CONSTleft, CONSTright)))
  in (LrTable.NT 9,(result,CONST1left,CONST1right),rest671) end
-| (72,(_,(_,VOLATILEleft as VOLATILE1left,VOLATILEright as
+| (72,(_,(_,VOLATILEleft as VOLATILE1left,VOLATILEright as 
 VOLATILE1right))::rest671) => let val result=MlyValue.type_qualifier(
 fn _ => (wrap(Volatile, VOLATILEleft, VOLATILEright)))
  in (LrTable.NT 9,(result,VOLATILE1left,VOLATILE1right),rest671) end
-| (73,(_,(_,RESTRICTleft as RESTRICT1left,RESTRICTright as
+| (73,(_,(_,RESTRICTleft as RESTRICT1left,RESTRICTright as 
 RESTRICT1right))::rest671) => let val result=MlyValue.type_qualifier(
 fn _ => (wrap(Restrict, RESTRICTleft, RESTRICTright)))
  in (LrTable.NT 9,(result,RESTRICT1left,RESTRICT1right),rest671) end
 | (74,(_,(MlyValue.type_qualifier type_qualifier1,type_qualifier1left,
 type_qualifier1right))::rest671) => let val result=
-MlyValue.type_qualifier_list(fn _ => let val type_qualifier as
+MlyValue.type_qualifier_list(fn _ => let val type_qualifier as 
 type_qualifier1=type_qualifier1 ()
  in ([type_qualifier]) end
 )
  in (LrTable.NT 10,(result,type_qualifier1left,type_qualifier1right),
 rest671) end
 | (75,(_,(MlyValue.type_qualifier_list type_qualifier_list1,_,
-type_qualifier_list1right))::(_,(MlyValue.type_qualifier
+type_qualifier_list1right))::(_,(MlyValue.type_qualifier 
 type_qualifier1,type_qualifier1left,_))::rest671) => let val result=
-MlyValue.type_qualifier_list(fn _ => let val type_qualifier as
+MlyValue.type_qualifier_list(fn _ => let val type_qualifier as 
 type_qualifier1=type_qualifier1 ()
-val type_qualifier_list as type_qualifier_list1=type_qualifier_list1 ()
+val type_qualifier_list as type_qualifier_list1=type_qualifier_list1 
+()
  in (type_qualifier::type_qualifier_list) end
 )
  in (LrTable.NT 10,(result,type_qualifier1left,
 type_qualifier_list1right),rest671) end
-| (76,(_,(_,_,YSEMI1right))::(_,(MlyValue.struct_declarator_list
-struct_declarator_list1,_,_))::(_,(MlyValue.specifier_qualifier_list
+| (76,(_,(_,_,YSEMI1right))::(_,(MlyValue.struct_declarator_list 
+struct_declarator_list1,_,_))::(_,(MlyValue.specifier_qualifier_list 
 specifier_qualifier_list1,specifier_qualifier_list1left,_))::rest671)
- => let val result=MlyValue.struct_declaration(fn _ => let val
+ => let val result=MlyValue.struct_declaration(fn _ => let val 
 specifier_qualifier_list as specifier_qualifier_list1=
 specifier_qualifier_list1 ()
 val struct_declarator_list as struct_declarator_list1=
@@ -4423,8 +4426,8 @@ let val basetype = extract_type specifier_qualifier_list
  in (LrTable.NT 29,(result,specifier_qualifier_list1left,YSEMI1right),
 rest671) end
 | (77,(_,(MlyValue.struct_declarator struct_declarator1,
-struct_declarator1left,struct_declarator1right))::rest671) => let val
-result=MlyValue.struct_declarator_list(fn _ => let val
+struct_declarator1left,struct_declarator1right))::rest671) => let val 
+result=MlyValue.struct_declarator_list(fn _ => let val 
 struct_declarator as struct_declarator1=struct_declarator1 ()
  in (
 wrap ([node struct_declarator], left struct_declarator,
@@ -4434,9 +4437,9 @@ wrap ([node struct_declarator], left struct_declarator,
  in (LrTable.NT 62,(result,struct_declarator1left,
 struct_declarator1right),rest671) end
 | (78,(_,(MlyValue.struct_declarator_list struct_declarator_list1,_,
-struct_declarator_list1right))::_::(_,(MlyValue.struct_declarator
-struct_declarator1,struct_declarator1left,_))::rest671) => let val
-result=MlyValue.struct_declarator_list(fn _ => let val
+struct_declarator_list1right))::_::(_,(MlyValue.struct_declarator 
+struct_declarator1,struct_declarator1left,_))::rest671) => let val 
+result=MlyValue.struct_declarator_list(fn _ => let val 
 struct_declarator as struct_declarator1=struct_declarator1 ()
 val struct_declarator_list as struct_declarator_list1=
 struct_declarator_list1 ()
@@ -4456,7 +4459,7 @@ declarator1 ()
  in (LrTable.NT 61,(result,declarator1left,declarator1right),rest671)
  end
 | (80,(_,(MlyValue.rexpression rexpression1,_,rexpression1right))::_::
-(_,(MlyValue.declarator declarator1,declarator1left,_))::rest671) =>
+(_,(MlyValue.declarator declarator1,declarator1left,_))::rest671) => 
 let val result=MlyValue.struct_declarator(fn _ => let val declarator
  as declarator1=declarator1 ()
 val rexpression as rexpression1=rexpression1 ()
@@ -4468,7 +4471,7 @@ wrap((declarator, SOME rexpression), left declarator,
  in (LrTable.NT 61,(result,declarator1left,rexpression1right),rest671)
  end
 | (81,(_,(MlyValue.init_declarator init_declarator1,
-init_declarator1left,init_declarator1right))::rest671) => let val
+init_declarator1left,init_declarator1right))::rest671) => let val 
 result=MlyValue.init_declarator_list(fn _ => let val init_declarator
  as init_declarator1=init_declarator1 ()
  in ([init_declarator]) end
@@ -4476,9 +4479,9 @@ result=MlyValue.init_declarator_list(fn _ => let val init_declarator
  in (LrTable.NT 64,(result,init_declarator1left,init_declarator1right)
 ,rest671) end
 | (82,(_,(MlyValue.init_declarator_list init_declarator_list1,_,
-init_declarator_list1right))::_::(_,(MlyValue.init_declarator
+init_declarator_list1right))::_::(_,(MlyValue.init_declarator 
 init_declarator1,init_declarator1left,_))::rest671) => let val result=
-MlyValue.init_declarator_list(fn _ => let val init_declarator as
+MlyValue.init_declarator_list(fn _ => let val init_declarator as 
 init_declarator1=init_declarator1 ()
 val init_declarator_list as init_declarator_list1=
 init_declarator_list1 ()
@@ -4495,8 +4498,8 @@ declarator1 ()
  in (LrTable.NT 63,(result,declarator1left,declarator1right),rest671)
  end
 | (84,(_,(MlyValue.initializer initializer1,_,initializer1right))::_::
-(_,(MlyValue.declarator declarator1,declarator1left,_))::rest671) =>
-let val result=MlyValue.init_declarator(fn _ => let val declarator as
+(_,(MlyValue.declarator declarator1,declarator1left,_))::rest671) => 
+let val result=MlyValue.init_declarator(fn _ => let val declarator as 
 declarator1=declarator1 ()
 val initializer as initializer1=initializer1 ()
  in (
@@ -4512,7 +4515,7 @@ ptrdecl YSTARleft YSTARright))
  in (LrTable.NT 57,(result,YSTAR1left,YSTAR1right),rest671) end
 | (86,(_,(MlyValue.type_qualifier_list type_qualifier_list1,_,
 type_qualifier_list1right))::(_,(_,YSTARleft as YSTAR1left,_))::
-rest671) => let val result=MlyValue.pointer(fn _ => let val
+rest671) => let val result=MlyValue.pointer(fn _ => let val 
 type_qualifier_list as type_qualifier_list1=type_qualifier_list1 ()
  in (ptrdecl YSTARleft (right (List.last type_qualifier_list))) end
 )
@@ -4527,7 +4530,7 @@ MlyValue.pointer(fn _ => let val pointer as pointer1=pointer1 ()
 | (88,(_,(MlyValue.pointer pointer1,_,pointer1right))::(_,(
 MlyValue.type_qualifier_list type_qualifier_list1,_,_))::(_,(_,
 YSTARleft as YSTAR1left,_))::rest671) => let val result=
-MlyValue.pointer(fn _ => let val type_qualifier_list as
+MlyValue.pointer(fn _ => let val type_qualifier_list as 
 type_qualifier_list1=type_qualifier_list1 ()
 val pointer as pointer1=pointer1 ()
  in (
@@ -4538,7 +4541,7 @@ ooa(ptrdecl YSTARleft (right (List.last type_qualifier_list)),
  in (LrTable.NT 57,(result,YSTAR1left,pointer1right),rest671) end
 | (89,(_,(MlyValue.direct_declarator direct_declarator1,_,
 direct_declarator1right))::(_,(MlyValue.pointer pointer1,pointer1left,
-_))::rest671) => let val result=MlyValue.declarator(fn _ => let val
+_))::rest671) => let val result=MlyValue.declarator(fn _ => let val 
 pointer as pointer1=pointer1 ()
 val direct_declarator as direct_declarator1=direct_declarator1 ()
  in (ood(direct_declarator, pointer)) end
@@ -4546,11 +4549,12 @@ val direct_declarator as direct_declarator1=direct_declarator1 ()
  in (LrTable.NT 58,(result,pointer1left,direct_declarator1right),
 rest671) end
 | (90,(_,(MlyValue.direct_declarator direct_declarator1,_,
-direct_declarator1right))::(_,(MlyValue.attribute_specifier
+direct_declarator1right))::(_,(MlyValue.attribute_specifier 
 attribute_specifier1,_,_))::(_,(MlyValue.pointer pointer1,pointer1left
-,_))::rest671) => let val result=MlyValue.declarator(fn _ => let val
+,_))::rest671) => let val result=MlyValue.declarator(fn _ => let val 
 pointer as pointer1=pointer1 ()
-val attribute_specifier as attribute_specifier1=attribute_specifier1 ()
+val attribute_specifier as attribute_specifier1=attribute_specifier1 
+()
 val direct_declarator as direct_declarator1=direct_declarator1 ()
  in (
 ood(add_attributes(direct_declarator,
@@ -4561,8 +4565,8 @@ ood(add_attributes(direct_declarator,
  in (LrTable.NT 58,(result,pointer1left,direct_declarator1right),
 rest671) end
 | (91,(_,(MlyValue.direct_declarator direct_declarator1,
-direct_declarator1left,direct_declarator1right))::rest671) => let val
-result=MlyValue.declarator(fn _ => let val direct_declarator as
+direct_declarator1left,direct_declarator1right))::rest671) => let val 
+result=MlyValue.declarator(fn _ => let val direct_declarator as 
 direct_declarator1=direct_declarator1 ()
  in (direct_declarator) end
 )
@@ -4578,7 +4582,7 @@ MlyValue.calls_block(fn _ => let val idlist as idlist1=idlist1 ()
 | (93,rest671) => let val result=MlyValue.calls_block(fn _ => (NONE))
  in (LrTable.NT 103,(result,defaultPos,defaultPos),rest671) end
 | (94,(_,(MlyValue.ID ID1,IDleft as ID1left,IDright as ID1right))::
-rest671) => let val result=MlyValue.direct_declarator(fn _ => let val
+rest671) => let val result=MlyValue.direct_declarator(fn _ => let val 
 ID as ID1=ID1 ()
  in (
 wrap((wrap(ID, IDleft, IDright),
@@ -4592,7 +4596,7 @@ wrap((wrap(ID, IDleft, IDright),
 | (95,(_,(_,_,RBRACKETright as RBRACKET1right))::(_,(
 MlyValue.rexpression rexpression1,_,_))::(_,(_,LBRACKETleft,_))::(_,(
 MlyValue.direct_declarator direct_declarator1,direct_declarator1left,_
-))::rest671) => let val result=MlyValue.direct_declarator(fn _ => let
+))::rest671) => let val result=MlyValue.direct_declarator(fn _ => let 
 val direct_declarator as direct_declarator1=direct_declarator1 ()
 val rexpression as rexpression1=rexpression1 ()
  in (
@@ -4605,7 +4609,7 @@ rest671) end
 | (96,(_,(_,_,RBRACKETright as RBRACKET1right))::(_,(_,LBRACKETleft,_)
 )::(_,(MlyValue.direct_declarator direct_declarator1,
 direct_declarator1left,_))::rest671) => let val result=
-MlyValue.direct_declarator(fn _ => let val direct_declarator as
+MlyValue.direct_declarator(fn _ => let val direct_declarator as 
 direct_declarator1=direct_declarator1 ()
  in (
 ood(direct_declarator,
@@ -4614,17 +4618,17 @@ ood(direct_declarator,
 )
  in (LrTable.NT 65,(result,direct_declarator1left,RBRACKET1right),
 rest671) end
-| (97,(_,(_,_,RPARENright as RPAREN1right))::(_,(MlyValue.declarator
-declarator1,_,_))::(_,(_,LPARENleft as LPAREN1left,_))::rest671) => let
-val result=MlyValue.direct_declarator(fn _ => let val declarator as
-declarator1=declarator1 ()
+| (97,(_,(_,_,RPARENright as RPAREN1right))::(_,(MlyValue.declarator 
+declarator1,_,_))::(_,(_,LPARENleft as LPAREN1left,_))::rest671) => 
+let val result=MlyValue.direct_declarator(fn _ => let val declarator
+ as declarator1=declarator1 ()
  in (wrap(node declarator, LPARENleft, RPARENright)) end
 )
  in (LrTable.NT 65,(result,LPAREN1left,RPAREN1right),rest671) end
 | (98,(_,(MlyValue.calls_block calls_block1,_,calls_block1right))::_::
 (_,(MlyValue.parameter_list parameter_list1,_,_))::_::(_,(
 MlyValue.direct_declarator direct_declarator1,direct_declarator1left,_
-))::rest671) => let val result=MlyValue.direct_declarator(fn _ => let
+))::rest671) => let val result=MlyValue.direct_declarator(fn _ => let 
 val direct_declarator as direct_declarator1=direct_declarator1 ()
 val parameter_list as parameter_list1=parameter_list1 ()
 val calls_block1=calls_block1 ()
@@ -4642,11 +4646,12 @@ let val ps = check_params parameter_list
  in (LrTable.NT 65,(result,direct_declarator1left,calls_block1right),
 rest671) end
 | (99,(_,(MlyValue.attribute_specifier attribute_specifier1,_,
-attribute_specifier1right))::(_,(MlyValue.direct_declarator
-direct_declarator1,direct_declarator1left,_))::rest671) => let val
-result=MlyValue.direct_declarator(fn _ => let val direct_declarator as
-direct_declarator1=direct_declarator1 ()
-val attribute_specifier as attribute_specifier1=attribute_specifier1 ()
+attribute_specifier1right))::(_,(MlyValue.direct_declarator 
+direct_declarator1,direct_declarator1left,_))::rest671) => let val 
+result=MlyValue.direct_declarator(fn _ => let val direct_declarator
+ as direct_declarator1=direct_declarator1 ()
+val attribute_specifier as attribute_specifier1=attribute_specifier1 
+()
  in (
 add_attributes(direct_declarator,
                                 node attribute_specifier)
@@ -4655,25 +4660,25 @@ add_attributes(direct_declarator,
  in (LrTable.NT 65,(result,direct_declarator1left,
 attribute_specifier1right),rest671) end
 | (100,(_,(MlyValue.asm_declarator_mod asm_declarator_mod1,_,
-asm_declarator_mod1right))::(_,(MlyValue.direct_declarator
-direct_declarator1,direct_declarator1left,_))::rest671) => let val
-result=MlyValue.direct_declarator(fn _ => let val direct_declarator as
-direct_declarator1=direct_declarator1 ()
+asm_declarator_mod1right))::(_,(MlyValue.direct_declarator 
+direct_declarator1,direct_declarator1left,_))::rest671) => let val 
+result=MlyValue.direct_declarator(fn _ => let val direct_declarator
+ as direct_declarator1=direct_declarator1 ()
 val asm_declarator_mod1=asm_declarator_mod1 ()
  in (direct_declarator) end
 )
  in (LrTable.NT 65,(result,direct_declarator1left,
 asm_declarator_mod1right),rest671) end
-| (101,(_,(_,_,RPAREN1right))::(_,(MlyValue.cstring_literal
-cstring_literal1,_,_))::_::(_,(_,YASM1left,_))::rest671) => let val
+| (101,(_,(_,_,RPAREN1right))::(_,(MlyValue.cstring_literal 
+cstring_literal1,_,_))::_::(_,(_,YASM1left,_))::rest671) => let val 
 result=MlyValue.asm_declarator_mod(fn _ => let val cstring_literal1=
 cstring_literal1 ()
  in (()) end
 )
  in (LrTable.NT 66,(result,YASM1left,RPAREN1right),rest671) end
 | (102,(_,(MlyValue.ID ID1,IDleft as ID1left,IDright as ID1right))::
-rest671) => let val result=MlyValue.struct_id(fn _ => let val ID as ID1
-=ID1 ()
+rest671) => let val result=MlyValue.struct_id(fn _ => let val ID as 
+ID1=ID1 ()
  in (wrap(ID, IDleft, IDright)) end
 )
  in (LrTable.NT 69,(result,ID1left,ID1right),rest671) end
@@ -4685,7 +4690,7 @@ MlyValue.struct_id(fn _ => let val TYPEID as TYPEID1=TYPEID1 ()
  in (LrTable.NT 69,(result,TYPEID1left,TYPEID1right),rest671) end
 | (104,(_,(MlyValue.struct_id struct_id1,_,struct_id1right))::(_,(_,
 STRUCTleft as STRUCT1left,_))::rest671) => let val result=
-MlyValue.struct_or_union_specifier(fn _ => let val struct_id as
+MlyValue.struct_or_union_specifier(fn _ => let val struct_id as 
 struct_id1=struct_id1 ()
  in (
 (wrap(StructTy
@@ -4699,8 +4704,8 @@ struct_id1=struct_id1 ()
 | (105,(_,(_,_,RCURLYright as RCURLY1right))::(_,(
 MlyValue.struct_declaration_list struct_declaration_list1,_,_))::_::(_
 ,(MlyValue.struct_id struct_id1,_,_))::(_,(_,STRUCTleft as STRUCT1left
-,_))::rest671) => let val result=MlyValue.struct_or_union_specifier(fn
-_ => let val struct_id as struct_id1=struct_id1 ()
+,_))::rest671) => let val result=MlyValue.struct_or_union_specifier(
+fn _ => let val struct_id as struct_id1=struct_id1 ()
 val struct_declaration_list as struct_declaration_list1=
 struct_declaration_list1 ()
  in (
@@ -4720,7 +4725,7 @@ let val (flds, decls) = struct_declaration_list
 | (106,(_,(_,_,RCURLYright as RCURLY1right))::(_,(
 MlyValue.struct_declaration_list struct_declaration_list1,_,_))::(_,(_
 ,LCURLYleft,_))::(_,(_,STRUCTleft as STRUCT1left,STRUCTright))::
-rest671) => let val result=MlyValue.struct_or_union_specifier(fn _ =>
+rest671) => let val result=MlyValue.struct_or_union_specifier(fn _ => 
 let val struct_declaration_list as struct_declaration_list1=
 struct_declaration_list1 ()
  in (
@@ -4736,7 +4741,7 @@ let
 ) end
 )
  in (LrTable.NT 68,(result,STRUCT1left,RCURLY1right),rest671) end
-| (107,(_,(_,INTleft as INT1left,INTright as INT1right))::rest671) =>
+| (107,(_,(_,INTleft as INT1left,INTright as INT1right))::rest671) => 
 let val result=MlyValue.type_specifier(fn _ => (
 Tstok(wrap(ts_int, INTleft, INTright))))
  in (LrTable.NT 67,(result,INT1left,INT1right),rest671) end
@@ -4760,7 +4765,7 @@ Tstok(wrap(ts_void, VOIDleft, VOIDright))))
 rest671) => let val result=MlyValue.type_specifier(fn _ => (
 Tstok(wrap(ts_signed, SIGNEDleft, SIGNEDright))))
  in (LrTable.NT 67,(result,SIGNED1left,SIGNED1right),rest671) end
-| (113,(_,(_,UNSIGNEDleft as UNSIGNED1left,UNSIGNEDright as
+| (113,(_,(_,UNSIGNEDleft as UNSIGNED1left,UNSIGNEDright as 
 UNSIGNED1right))::rest671) => let val result=MlyValue.type_specifier(
 fn _ => (Tstok(wrap(ts_unsigned, UNSIGNEDleft, UNSIGNEDright))))
  in (LrTable.NT 67,(result,UNSIGNED1left,UNSIGNED1right),rest671) end
@@ -4768,10 +4773,10 @@ fn _ => (Tstok(wrap(ts_unsigned, UNSIGNEDleft, UNSIGNEDright))))
  => let val result=MlyValue.type_specifier(fn _ => (
 Tstok(wrap(ts_bool, BOOLleft, BOOLright))))
  in (LrTable.NT 67,(result,BOOL1left,BOOL1right),rest671) end
-| (115,(_,(MlyValue.struct_or_union_specifier
+| (115,(_,(MlyValue.struct_or_union_specifier 
 struct_or_union_specifier1,struct_or_union_specifier1left,
 struct_or_union_specifier1right))::rest671) => let val result=
-MlyValue.type_specifier(fn _ => let val struct_or_union_specifier as
+MlyValue.type_specifier(fn _ => let val struct_or_union_specifier as 
 struct_or_union_specifier1=struct_or_union_specifier1 ()
  in (Tsstruct struct_or_union_specifier) end
 )
@@ -4779,7 +4784,7 @@ struct_or_union_specifier1=struct_or_union_specifier1 ()
 struct_or_union_specifier1right),rest671) end
 | (116,(_,(MlyValue.enum_specifier enum_specifier1,enum_specifier1left
 ,enum_specifier1right))::rest671) => let val result=
-MlyValue.type_specifier(fn _ => let val enum_specifier as
+MlyValue.type_specifier(fn _ => let val enum_specifier as 
 enum_specifier1=enum_specifier1 ()
  in (Tsenum enum_specifier) end
 )
@@ -4792,9 +4797,9 @@ MlyValue.type_specifier(fn _ => let val TYPEID as TYPEID1=TYPEID1 ()
 )
  in (LrTable.NT 67,(result,TYPEID1left,TYPEID1right),rest671) end
 | (118,(_,(_,_,RCURLYright as RCURLY1right))::(_,(
-MlyValue.enumerator_list enumerator_list1,_,_))::_::(_,(_,YENUMleft as
-YENUM1left,YENUMright))::rest671) => let val result=
-MlyValue.enum_specifier(fn _ => let val enumerator_list as
+MlyValue.enumerator_list enumerator_list1,_,_))::_::(_,(_,YENUMleft
+ as YENUM1left,YENUMright))::rest671) => let val result=
+MlyValue.enum_specifier(fn _ => let val enumerator_list as 
 enumerator_list1=enumerator_list1 ()
  in (
 wrap((wrap(NONE, YENUMleft, YENUMright), enumerator_list),
@@ -4805,7 +4810,7 @@ wrap((wrap(NONE, YENUMleft, YENUMright), enumerator_list),
 | (119,(_,(_,_,RCURLYright as RCURLY1right))::(_,(
 MlyValue.enumerator_list enumerator_list1,_,_))::_::(_,(
 MlyValue.struct_id struct_id1,_,_))::(_,(_,YENUMleft as YENUM1left,_))
-::rest671) => let val result=MlyValue.enum_specifier(fn _ => let val
+::rest671) => let val result=MlyValue.enum_specifier(fn _ => let val 
 struct_id as struct_id1=struct_id1 ()
 val enumerator_list as enumerator_list1=enumerator_list1 ()
  in (
@@ -4815,9 +4820,9 @@ wrap((apnode SOME struct_id, enumerator_list),
 )
  in (LrTable.NT 6,(result,YENUM1left,RCURLY1right),rest671) end
 | (120,(_,(_,_,RCURLYright as RCURLY1right))::_::(_,(
-MlyValue.enumerator_list enumerator_list1,_,_))::_::(_,(_,YENUMleft as
-YENUM1left,YENUMright))::rest671) => let val result=
-MlyValue.enum_specifier(fn _ => let val enumerator_list as
+MlyValue.enumerator_list enumerator_list1,_,_))::_::(_,(_,YENUMleft
+ as YENUM1left,YENUMright))::rest671) => let val result=
+MlyValue.enum_specifier(fn _ => let val enumerator_list as 
 enumerator_list1=enumerator_list1 ()
  in (
 wrap((wrap(NONE, YENUMleft, YENUMright), enumerator_list),
@@ -4828,7 +4833,7 @@ wrap((wrap(NONE, YENUMleft, YENUMright), enumerator_list),
 | (121,(_,(_,_,RCURLYright as RCURLY1right))::_::(_,(
 MlyValue.enumerator_list enumerator_list1,_,_))::_::(_,(
 MlyValue.struct_id struct_id1,_,_))::(_,(_,YENUMleft as YENUM1left,_))
-::rest671) => let val result=MlyValue.enum_specifier(fn _ => let val
+::rest671) => let val result=MlyValue.enum_specifier(fn _ => let val 
 struct_id as struct_id1=struct_id1 ()
 val enumerator_list as enumerator_list1=enumerator_list1 ()
  in (
@@ -4837,9 +4842,9 @@ wrap((apnode SOME struct_id, enumerator_list),
 ) end
 )
  in (LrTable.NT 6,(result,YENUM1left,RCURLY1right),rest671) end
-| (122,(_,(MlyValue.struct_id struct_id1,_,struct_idright as
-struct_id1right))::(_,(_,YENUMleft as YENUM1left,_))::rest671) => let
-val result=MlyValue.enum_specifier(fn _ => let val struct_id as
+| (122,(_,(MlyValue.struct_id struct_id1,_,struct_idright as 
+struct_id1right))::(_,(_,YENUMleft as YENUM1left,_))::rest671) => let 
+val result=MlyValue.enum_specifier(fn _ => let val struct_id as 
 struct_id1=struct_id1 ()
  in (wrap((apnode SOME struct_id, []), YENUMleft, struct_idright)) end
 )
@@ -4854,7 +4859,7 @@ enumerator1 ()
  end
 | (124,(_,(MlyValue.enumerator enumerator1,_,enumerator1right))::_::(_
 ,(MlyValue.enumerator_list enumerator_list1,enumerator_list1left,_))::
-rest671) => let val result=MlyValue.enumerator_list(fn _ => let val
+rest671) => let val result=MlyValue.enumerator_list(fn _ => let val 
 enumerator_list as enumerator_list1=enumerator_list1 ()
 val enumerator as enumerator1=enumerator1 ()
  in (enumerator_list @ [enumerator]) end
@@ -4862,25 +4867,25 @@ val enumerator as enumerator1=enumerator1 ()
  in (LrTable.NT 7,(result,enumerator_list1left,enumerator1right),
 rest671) end
 | (125,(_,(MlyValue.ID ID1,IDleft as ID1left,IDright as ID1right))::
-rest671) => let val result=MlyValue.enumerator(fn _ => let val ID as
+rest671) => let val result=MlyValue.enumerator(fn _ => let val ID as 
 ID1=ID1 ()
  in ((wrap(ID,IDleft,IDright), NONE)) end
 )
  in (LrTable.NT 8,(result,ID1left,ID1right),rest671) end
 | (126,(_,(MlyValue.rexpression rexpression1,_,rexpression1right))::_
-::(_,(MlyValue.ID ID1,IDleft as ID1left,IDright))::rest671) => let val
-result=MlyValue.enumerator(fn _ => let val ID as ID1=ID1 ()
+::(_,(MlyValue.ID ID1,IDleft as ID1left,IDright))::rest671) => let 
+val result=MlyValue.enumerator(fn _ => let val ID as ID1=ID1 ()
 val rexpression as rexpression1=rexpression1 ()
  in ((wrap(ID,IDleft,IDright), SOME rexpression)) end
 )
  in (LrTable.NT 8,(result,ID1left,rexpression1right),rest671) end
 | (127,(_,(MlyValue.pointer pointer1,pointer1left,pointer1right))::
-rest671) => let val result=MlyValue.abstract_declarator(fn _ => let val
-pointer as pointer1=pointer1 ()
+rest671) => let val result=MlyValue.abstract_declarator(fn _ => let 
+val pointer as pointer1=pointer1 ()
  in (pointer) end
 )
  in (LrTable.NT 59,(result,pointer1left,pointer1right),rest671) end
-| (128,(_,(MlyValue.direct_abstract_declarator
+| (128,(_,(MlyValue.direct_abstract_declarator 
 direct_abstract_declarator1,_,direct_abstract_declarator1right))::(_,(
 MlyValue.pointer pointer1,pointer1left,_))::rest671) => let val result
 =MlyValue.abstract_declarator(fn _ => let val pointer as pointer1=
@@ -4896,11 +4901,12 @@ wrap (node direct_abstract_declarator o
 )
  in (LrTable.NT 59,(result,pointer1left,
 direct_abstract_declarator1right),rest671) end
-| (129,(_,(MlyValue.direct_abstract_declarator
+| (129,(_,(MlyValue.direct_abstract_declarator 
 direct_abstract_declarator1,direct_abstract_declarator1left,
 direct_abstract_declarator1right))::rest671) => let val result=
-MlyValue.abstract_declarator(fn _ => let val direct_abstract_declarator
- as direct_abstract_declarator1=direct_abstract_declarator1 ()
+MlyValue.abstract_declarator(fn _ => let val 
+direct_abstract_declarator as direct_abstract_declarator1=
+direct_abstract_declarator1 ()
  in (direct_abstract_declarator) end
 )
  in (LrTable.NT 59,(result,direct_abstract_declarator1left,
@@ -4908,15 +4914,15 @@ direct_abstract_declarator1right),rest671) end
 | (130,(_,(_,_,RPARENright as RPAREN1right))::(_,(
 MlyValue.abstract_declarator abstract_declarator1,_,_))::(_,(_,
 LPARENleft as LPAREN1left,_))::rest671) => let val result=
-MlyValue.direct_abstract_declarator(fn _ => let val abstract_declarator
- as abstract_declarator1=abstract_declarator1 ()
+MlyValue.direct_abstract_declarator(fn _ => let val 
+abstract_declarator as abstract_declarator1=abstract_declarator1 ()
  in (wrap(node abstract_declarator, LPARENleft, RPARENright)) end
 )
  in (LrTable.NT 60,(result,LPAREN1left,RPAREN1right),rest671) end
 | (131,(_,(_,_,RBRACKETright as RBRACKET1right))::(_,(
-MlyValue.rexpression rexpression1,_,_))::(_,(_,LBRACKETleft as
+MlyValue.rexpression rexpression1,_,_))::(_,(_,LBRACKETleft as 
 LBRACKET1left,_))::rest671) => let val result=
-MlyValue.direct_abstract_declarator(fn _ => let val rexpression as
+MlyValue.direct_abstract_declarator(fn _ => let val rexpression as 
 rexpression1=rexpression1 ()
  in (arraydecl LBRACKETleft RBRACKETright (SOME rexpression)) end
 )
@@ -4930,7 +4936,7 @@ ptrdecl LBRACKETleft RBRACKETright))
 MlyValue.rexpression rexpression1,_,_))::(_,(_,LBRACKETleft,_))::(_,(
 MlyValue.direct_abstract_declarator direct_abstract_declarator1,
 direct_abstract_declarator1left,_))::rest671) => let val result=
-MlyValue.direct_abstract_declarator(fn _ => let val
+MlyValue.direct_abstract_declarator(fn _ => let val 
 direct_abstract_declarator as direct_abstract_declarator1=
 direct_abstract_declarator1 ()
 val rexpression as rexpression1=rexpression1 ()
@@ -4942,9 +4948,9 @@ ooa(direct_abstract_declarator,
  in (LrTable.NT 60,(result,direct_abstract_declarator1left,
 RBRACKET1right),rest671) end
 | (134,(_,(_,_,RPARENright as RPAREN1right))::(_,(
-MlyValue.parameter_list parameter_list1,_,_))::(_,(_,LPARENleft as
+MlyValue.parameter_list parameter_list1,_,_))::(_,(_,LPARENleft as 
 LPAREN1left,_))::rest671) => let val result=
-MlyValue.direct_abstract_declarator(fn _ => let val parameter_list as
+MlyValue.direct_abstract_declarator(fn _ => let val parameter_list as 
 parameter_list1=parameter_list1 ()
  in (
 let val ps = check_params parameter_list
@@ -4958,7 +4964,7 @@ let val ps = check_params parameter_list
 MlyValue.parameter_list parameter_list1,_,_))::(_,(_,LPARENleft,_))::(
 _,(MlyValue.direct_abstract_declarator direct_abstract_declarator1,
 direct_abstract_declarator1left,_))::rest671) => let val result=
-MlyValue.direct_abstract_declarator(fn _ => let val
+MlyValue.direct_abstract_declarator(fn _ => let val 
 direct_abstract_declarator as direct_abstract_declarator1=
 direct_abstract_declarator1 ()
 val parameter_list as parameter_list1=parameter_list1 ()
@@ -4973,12 +4979,13 @@ let val ps = check_params parameter_list
  in (LrTable.NT 60,(result,direct_abstract_declarator1left,
 RPAREN1right),rest671) end
 | (136,(_,(MlyValue.abstract_declarator abstract_declarator1,_,
-abstract_declarator1right))::(_,(MlyValue.specifier_qualifier_list
+abstract_declarator1right))::(_,(MlyValue.specifier_qualifier_list 
 specifier_qualifier_list1,specifier_qualifier_list1left,_))::rest671)
- => let val result=MlyValue.type_name(fn _ => let val
+ => let val result=MlyValue.type_name(fn _ => let val 
 specifier_qualifier_list as specifier_qualifier_list1=
 specifier_qualifier_list1 ()
-val abstract_declarator as abstract_declarator1=abstract_declarator1 ()
+val abstract_declarator as abstract_declarator1=abstract_declarator1 
+()
  in (
 let
                    val sql = specifier_qualifier_list
@@ -4998,7 +5005,7 @@ let
 abstract_declarator1right),rest671) end
 | (137,(_,(MlyValue.specifier_qualifier_list specifier_qualifier_list1
 ,specifier_qualifier_list1left,specifier_qualifier_list1right))::
-rest671) => let val result=MlyValue.type_name(fn _ => let val
+rest671) => let val result=MlyValue.type_name(fn _ => let val 
 specifier_qualifier_list as specifier_qualifier_list1=
 specifier_qualifier_list1 ()
  in (
@@ -5018,16 +5025,16 @@ let
 specifier_qualifier_list1right),rest671) end
 | (138,(_,(MlyValue.dinitializer dinitializer1,dinitializer1left,
 dinitializer1right))::rest671) => let val result=
-MlyValue.initializer_list(fn _ => let val dinitializer as dinitializer1
-=dinitializer1 ()
+MlyValue.initializer_list(fn _ => let val dinitializer as 
+dinitializer1=dinitializer1 ()
  in ([dinitializer]) end
 )
  in (LrTable.NT 21,(result,dinitializer1left,dinitializer1right),
 rest671) end
 | (139,(_,(_,_,YCOMMA1right))::(_,(MlyValue.dinitializer dinitializer1
 ,dinitializer1left,_))::rest671) => let val result=
-MlyValue.initializer_list(fn _ => let val dinitializer as dinitializer1
-=dinitializer1 ()
+MlyValue.initializer_list(fn _ => let val dinitializer as 
+dinitializer1=dinitializer1 ()
  in ([dinitializer]) end
 )
  in (LrTable.NT 21,(result,dinitializer1left,YCOMMA1right),rest671)
@@ -5035,16 +5042,16 @@ MlyValue.initializer_list(fn _ => let val dinitializer as dinitializer1
 | (140,(_,(MlyValue.initializer_list initializer_list1,_,
 initializer_list1right))::_::(_,(MlyValue.dinitializer dinitializer1,
 dinitializer1left,_))::rest671) => let val result=
-MlyValue.initializer_list(fn _ => let val dinitializer as dinitializer1
-=dinitializer1 ()
+MlyValue.initializer_list(fn _ => let val dinitializer as 
+dinitializer1=dinitializer1 ()
 val initializer_list as initializer_list1=initializer_list1 ()
  in (dinitializer :: initializer_list) end
 )
  in (LrTable.NT 21,(result,dinitializer1left,initializer_list1right),
 rest671) end
 | (141,(_,(MlyValue.initializer initializer1,_,initializer1right))::(_
-,(MlyValue.designation designation1,designation1left,_))::rest671) =>
-let val result=MlyValue.dinitializer(fn _ => let val designation as
+,(MlyValue.designation designation1,designation1left,_))::rest671) => 
+let val result=MlyValue.dinitializer(fn _ => let val designation as 
 designation1=designation1 ()
 val initializer as initializer1=initializer1 ()
  in ((designation, node initializer)) end
@@ -5058,9 +5065,9 @@ fn _ => let val initializer as initializer1=initializer1 ()
 )
  in (LrTable.NT 22,(result,initializer1left,initializer1right),rest671
 ) end
-| (143,(_,(_,_,YEQ1right))::(_,(MlyValue.designator_list
+| (143,(_,(_,_,YEQ1right))::(_,(MlyValue.designator_list 
 designator_list1,designator_list1left,_))::rest671) => let val result=
-MlyValue.designation(fn _ => let val designator_list as
+MlyValue.designation(fn _ => let val designator_list as 
 designator_list1=designator_list1 ()
  in (designator_list) end
 )
@@ -5092,7 +5099,7 @@ rexpression1 ()
 )
  in (LrTable.NT 26,(result,LBRACKET1left,RBRACKET1right),rest671) end
 | (147,(_,(MlyValue.ID ID1,_,ID1right))::(_,(_,YDOT1left,_))::rest671)
- => let val result=MlyValue.designator(fn _ => let val ID as ID1=ID1
+ => let val result=MlyValue.designator(fn _ => let val ID as ID1=ID1 
 ()
  in (DesignFld (C_field_name ID)) end
 )
@@ -5106,9 +5113,10 @@ fn _ => let val rexpression as rexpression1=rexpression1 ()
  in (LrTable.NT 23,(result,rexpression1left,rexpression1right),rest671
 ) end
 | (149,(_,(_,_,RCURLYright as RCURLY1right))::(_,(
-MlyValue.initializer_list initializer_list1,_,_))::(_,(_,LCURLYleft as
-LCURLY1left,_))::rest671) => let val result=MlyValue.initializer(fn _
- => let val initializer_list as initializer_list1=initializer_list1 ()
+MlyValue.initializer_list initializer_list1,_,_))::(_,(_,LCURLYleft
+ as LCURLY1left,_))::rest671) => let val result=MlyValue.initializer(
+fn _ => let val initializer_list as initializer_list1=
+initializer_list1 ()
  in (wrap(InitList initializer_list, LCURLYleft, RCURLYright)) end
 )
  in (LrTable.NT 23,(result,LCURLY1left,RCURLY1right),rest671) end
@@ -5139,16 +5147,16 @@ MlyValue.assignop(fn _ => (SOME Divides))
 | (158,(_,(_,MODEQ1left,MODEQ1right))::rest671) => let val result=
 MlyValue.assignop(fn _ => (SOME Modulus))
  in (LrTable.NT 56,(result,MODEQ1left,MODEQ1right),rest671) end
-| (159,(_,(_,LSHIFTEQ1left,LSHIFTEQ1right))::rest671) => let val result
-=MlyValue.assignop(fn _ => (SOME LShift))
+| (159,(_,(_,LSHIFTEQ1left,LSHIFTEQ1right))::rest671) => let val 
+result=MlyValue.assignop(fn _ => (SOME LShift))
  in (LrTable.NT 56,(result,LSHIFTEQ1left,LSHIFTEQ1right),rest671) end
-| (160,(_,(_,RSHIFTEQ1left,RSHIFTEQ1right))::rest671) => let val result
-=MlyValue.assignop(fn _ => (SOME RShift))
+| (160,(_,(_,RSHIFTEQ1left,RSHIFTEQ1right))::rest671) => let val 
+result=MlyValue.assignop(fn _ => (SOME RShift))
  in (LrTable.NT 56,(result,RSHIFTEQ1left,RSHIFTEQ1right),rest671) end
-| (161,(_,(_,_,YSEMIright as YSEMI1right))::(_,(MlyValue.rexpression
+| (161,(_,(_,_,YSEMIright as YSEMI1right))::(_,(MlyValue.rexpression 
 rexpression1,_,_))::(_,(MlyValue.assignop assignop1,_,_))::(_,(
-MlyValue.lexpression lexpression1,lexpression1left,_))::rest671) => let
-val result=MlyValue.statement(fn _ => let val lexpression as
+MlyValue.lexpression lexpression1,lexpression1left,_))::rest671) => 
+let val result=MlyValue.statement(fn _ => let val lexpression as 
 lexpression1=lexpression1 ()
 val assignop as assignop1=assignop1 ()
 val rexpression as rexpression1=rexpression1 ()
@@ -5158,7 +5166,7 @@ swrap(parse_stdassignop(lexpression, assignop, rexpression),
 ) end
 )
  in (LrTable.NT 41,(result,lexpression1left,YSEMI1right),rest671) end
-| (162,(_,(_,_,YSEMIright as YSEMI1right))::(_,(MlyValue.rexpression
+| (162,(_,(_,_,YSEMIright as YSEMI1right))::(_,(MlyValue.rexpression 
 rexpression1,rexpression1left,_))::rest671) => let val result=
 MlyValue.statement(fn _ => let val rexpression as rexpression1=
 rexpression1 ()
@@ -5185,9 +5193,9 @@ let val e = delvoidcasts (handle_builtin_fns rexpression)
  in (LrTable.NT 41,(result,rexpression1left,YSEMI1right),rest671) end
 | (163,(_,(MlyValue.statement statement1,_,statement1right))::(_,(
 MlyValue.invariant_option invariant_option1,_,_))::_::(_,(
-MlyValue.rexpression rexpression1,_,_))::_::(_,(_,YWHILEleft as
-YWHILE1left,_))::rest671) => let val result=MlyValue.statement(fn _ =>
-let val rexpression as rexpression1=rexpression1 ()
+MlyValue.rexpression rexpression1,_,_))::_::(_,(_,YWHILEleft as 
+YWHILE1left,_))::rest671) => let val result=MlyValue.statement(fn _
+ => let val rexpression as rexpression1=rexpression1 ()
 val invariant_option as invariant_option1=invariant_option1 ()
 val statement as statement1=statement1 ()
  in (
@@ -5202,10 +5210,10 @@ let val body = swrap(Trap(ContinueT, statement), sleft statement,
 )
  in (LrTable.NT 41,(result,YWHILE1left,statement1right),rest671) end
 | (164,(_,(_,_,YSEMIright as YSEMI1right))::_::(_,(
-MlyValue.rexpression rexpression1,_,_))::_::_::(_,(MlyValue.statement
+MlyValue.rexpression rexpression1,_,_))::_::_::(_,(MlyValue.statement 
 statement1,_,_))::(_,(MlyValue.invariant_option invariant_option1,_,_)
 )::(_,(_,YDOleft as YDO1left,_))::rest671) => let val result=
-MlyValue.statement(fn _ => let val invariant_option as
+MlyValue.statement(fn _ => let val invariant_option as 
 invariant_option1=invariant_option1 ()
 val statement as statement1=statement1 ()
 val rexpression as rexpression1=rexpression1 ()
@@ -5227,8 +5235,8 @@ let val body = swrap (Trap(ContinueT, statement),
 MlyValue.invariant_option invariant_option1,_,_))::_::(_,(
 MlyValue.opt_for3_expr opt_for3_expr1,_,_))::_::(_,(
 MlyValue.opt_for2_expr opt_for2_expr1,_,_))::(_,(
-MlyValue.opt_for1_bitem opt_for1_bitem1,_,_))::_::(_,(_,YFORleft as
-YFOR1left,_))::rest671) => let val result=MlyValue.statement(fn _ =>
+MlyValue.opt_for1_bitem opt_for1_bitem1,_,_))::_::(_,(_,YFORleft as 
+YFOR1left,_))::rest671) => let val result=MlyValue.statement(fn _ => 
 let val opt_for1_bitem as opt_for1_bitem1=opt_for1_bitem1 ()
 val opt_for2_expr as opt_for2_expr1=opt_for2_expr1 ()
 val opt_for3_expr as opt_for3_expr1=opt_for3_expr1 ()
@@ -5249,9 +5257,9 @@ let val body0 = swrap(Trap(ContinueT, statement),
 ) end
 )
  in (LrTable.NT 41,(result,YFOR1left,statement1right),rest671) end
-| (166,(_,(_,_,YSEMIright as YSEMI1right))::(_,(MlyValue.rexpression
-rexpression1,_,_))::(_,(_,YRETURNleft as YRETURN1left,_))::rest671) =>
-let val result=MlyValue.statement(fn _ => let val rexpression as
+| (166,(_,(_,_,YSEMIright as YSEMI1right))::(_,(MlyValue.rexpression 
+rexpression1,_,_))::(_,(_,YRETURNleft as YRETURN1left,_))::rest671)
+ => let val result=MlyValue.statement(fn _ => let val rexpression as 
 rexpression1=rexpression1 ()
  in (
 case enode (handle_builtin_fns rexpression) of
@@ -5261,21 +5269,21 @@ case enode (handle_builtin_fns rexpression) of
 ) end
 )
  in (LrTable.NT 41,(result,YRETURN1left,YSEMI1right),rest671) end
-| (167,(_,(_,_,YSEMIright as YSEMI1right))::(_,(_,YRETURNleft as
+| (167,(_,(_,_,YSEMIright as YSEMI1right))::(_,(_,YRETURNleft as 
 YRETURN1left,_))::rest671) => let val result=MlyValue.statement(fn _
  => (swrap(Return NONE, YRETURNleft, YSEMIright)))
  in (LrTable.NT 41,(result,YRETURN1left,YSEMI1right),rest671) end
-| (168,(_,(_,_,YSEMIright as YSEMI1right))::(_,(_,YBREAKleft as
-YBREAK1left,_))::rest671) => let val result=MlyValue.statement(fn _ =>
-(swrap(Break, YBREAKleft, YSEMIright)))
+| (168,(_,(_,_,YSEMIright as YSEMI1right))::(_,(_,YBREAKleft as 
+YBREAK1left,_))::rest671) => let val result=MlyValue.statement(fn _
+ => (swrap(Break, YBREAKleft, YSEMIright)))
  in (LrTable.NT 41,(result,YBREAK1left,YSEMI1right),rest671) end
-| (169,(_,(_,_,YSEMIright as YSEMI1right))::(_,(_,YCONTINUEleft as
+| (169,(_,(_,_,YSEMIright as YSEMI1right))::(_,(_,YCONTINUEleft as 
 YCONTINUE1left,_))::rest671) => let val result=MlyValue.statement(fn _
  => (swrap(Continue,YCONTINUEleft,YSEMIright)))
  in (LrTable.NT 41,(result,YCONTINUE1left,YSEMI1right),rest671) end
 | (170,(_,(MlyValue.statement statement1,_,statement1right))::_::(_,(
 MlyValue.rexpression rexpression1,_,_))::_::(_,(_,YIFleft as YIF1left,
-_))::rest671) => let val result=MlyValue.statement(fn _ => let val
+_))::rest671) => let val result=MlyValue.statement(fn _ => let val 
 rexpression as rexpression1=rexpression1 ()
 val statement as statement1=statement1 ()
  in (
@@ -5287,9 +5295,9 @@ swrap(IfStmt (rexpression, statement,
 )
  in (LrTable.NT 41,(result,YIF1left,statement1right),rest671) end
 | (171,(_,(MlyValue.statement statement2,_,statement2right))::_::(_,(
-MlyValue.statement statement1,_,_))::_::(_,(MlyValue.rexpression
-rexpression1,_,_))::_::(_,(_,YIFleft as YIF1left,_))::rest671) => let
-val result=MlyValue.statement(fn _ => let val rexpression as
+MlyValue.statement statement1,_,_))::_::(_,(MlyValue.rexpression 
+rexpression1,_,_))::_::(_,(_,YIFleft as YIF1left,_))::rest671) => let 
+val result=MlyValue.statement(fn _ => let val rexpression as 
 rexpression1=rexpression1 ()
 val statement1=statement1 ()
 val statement2=statement2 ()
@@ -5304,24 +5312,24 @@ rest671) => let val result=MlyValue.statement(fn _ => (
 swrap(EmptyStmt,YSEMIleft,YSEMIright)))
  in (LrTable.NT 41,(result,YSEMI1left,YSEMI1right),rest671) end
 | (173,(_,(_,_,YSEMIright as YSEMI1right))::_::(_,(
-MlyValue.lexpression lexpression1,lexpression1left,_))::rest671) => let
-val result=MlyValue.statement(fn _ => let val lexpression as
+MlyValue.lexpression lexpression1,lexpression1left,_))::rest671) => 
+let val result=MlyValue.statement(fn _ => let val lexpression as 
 lexpression1=lexpression1 ()
  in (swrap(postinc lexpression, eleft lexpression, YSEMIright)) end
 )
  in (LrTable.NT 41,(result,lexpression1left,YSEMI1right),rest671) end
 | (174,(_,(_,_,YSEMIright as YSEMI1right))::_::(_,(
-MlyValue.lexpression lexpression1,lexpression1left,_))::rest671) => let
-val result=MlyValue.statement(fn _ => let val lexpression as
+MlyValue.lexpression lexpression1,lexpression1left,_))::rest671) => 
+let val result=MlyValue.statement(fn _ => let val lexpression as 
 lexpression1=lexpression1 ()
  in (swrap(postdec lexpression, eleft lexpression, YSEMIright)) end
 )
  in (LrTable.NT 41,(result,lexpression1left,YSEMI1right),rest671) end
 | (175,(_,(_,_,RCURLYright as RCURLY1right))::(_,(
 MlyValue.switchcase_list switchcase_list1,_,_))::_::_::(_,(
-MlyValue.rexpression rexpression1,_,_))::_::(_,(_,SWITCHleft as
-SWITCH1left,_))::rest671) => let val result=MlyValue.statement(fn _ =>
-let val rexpression as rexpression1=rexpression1 ()
+MlyValue.rexpression rexpression1,_,_))::_::(_,(_,SWITCHleft as 
+SWITCH1left,_))::rest671) => let val result=MlyValue.statement(fn _
+ => let val rexpression as rexpression1=rexpression1 ()
 val switchcase_list as switchcase_list1=switchcase_list1 ()
  in (
 swrap(Trap(BreakT,
@@ -5334,8 +5342,8 @@ swrap(Trap(BreakT,
 )
  in (LrTable.NT 41,(result,SWITCH1left,RCURLY1right),rest671) end
 | (176,(_,(MlyValue.compound_statement compound_statement1,
-compound_statement1left,compound_statement1right))::rest671) => let val
-result=MlyValue.statement(fn _ => let val compound_statement as
+compound_statement1left,compound_statement1right))::rest671) => let 
+val result=MlyValue.statement(fn _ => let val compound_statement as 
 compound_statement1=compound_statement1 ()
  in (
 swrap(Block (node compound_statement), left compound_statement,
@@ -5344,17 +5352,17 @@ swrap(Block (node compound_statement), left compound_statement,
 )
  in (LrTable.NT 41,(result,compound_statement1left,
 compound_statement1right),rest671) end
-| (177,(_,(_,_,SPEC_BLOCKEND1right))::(_,(MlyValue.STRING_LITERAL
-STRING_LITERAL1,_,STRING_LITERALright))::(_,(_,AUXUPDleft as
-AUXUPD1left,_))::rest671) => let val result=MlyValue.statement(fn _ =>
-let val STRING_LITERAL as STRING_LITERAL1=STRING_LITERAL1 ()
+| (177,(_,(_,_,SPEC_BLOCKEND1right))::(_,(MlyValue.STRING_LITERAL 
+STRING_LITERAL1,_,STRING_LITERALright))::(_,(_,AUXUPDleft as 
+AUXUPD1left,_))::rest671) => let val result=MlyValue.statement(fn _
+ => let val STRING_LITERAL as STRING_LITERAL1=STRING_LITERAL1 ()
  in (swrap(Auxupd STRING_LITERAL, AUXUPDleft, STRING_LITERALright))
  end
 )
  in (LrTable.NT 41,(result,AUXUPD1left,SPEC_BLOCKEND1right),rest671)
  end
-| (178,(_,(_,_,SPEC_BLOCKEND1right))::(_,(MlyValue.STRING_LITERAL
-STRING_LITERAL1,_,STRING_LITERALright))::(_,(_,GHOSTUPDleft as
+| (178,(_,(_,_,SPEC_BLOCKEND1right))::(_,(MlyValue.STRING_LITERAL 
+STRING_LITERAL1,_,STRING_LITERALright))::(_,(_,GHOSTUPDleft as 
 GHOSTUPD1left,_))::rest671) => let val result=MlyValue.statement(fn _
  => let val STRING_LITERAL as STRING_LITERAL1=STRING_LITERAL1 ()
  in (swrap(Ghostupd STRING_LITERAL, GHOSTUPDleft, STRING_LITERALright)
@@ -5362,12 +5370,12 @@ GHOSTUPD1left,_))::rest671) => let val result=MlyValue.statement(fn _
 )
  in (LrTable.NT 41,(result,GHOSTUPD1left,SPEC_BLOCKEND1right),rest671)
  end
-| (179,(_,(_,_,SPEC_BLOCKEND2right))::(_,(MlyValue.STRING_LITERAL
+| (179,(_,(_,_,SPEC_BLOCKEND2right))::(_,(MlyValue.STRING_LITERAL 
 STRING_LITERAL2,_,_))::(_,(_,_,SPEC_ENDright))::(_,(
 MlyValue.statement_list statement_list1,_,_))::_::(_,(
-MlyValue.STRING_LITERAL STRING_LITERAL1,_,_))::(_,(_,SPEC_BEGINleft as
-SPEC_BEGIN1left,_))::rest671) => let val result=MlyValue.statement(fn _
- => let val STRING_LITERAL1=STRING_LITERAL1 ()
+MlyValue.STRING_LITERAL STRING_LITERAL1,_,_))::(_,(_,SPEC_BEGINleft
+ as SPEC_BEGIN1left,_))::rest671) => let val result=MlyValue.statement
+(fn _ => let val STRING_LITERAL1=STRING_LITERAL1 ()
 val statement_list as statement_list1=statement_list1 ()
 val STRING_LITERAL2=STRING_LITERAL2 ()
  in (
@@ -5386,7 +5394,7 @@ let
 )
  in (LrTable.NT 41,(result,SPEC_BEGIN1left,SPEC_BLOCKEND2right),
 rest671) end
-| (180,(_,(_,_,YSEMIright as YSEMI1right))::_::(_,(MlyValue.asmblock
+| (180,(_,(_,_,YSEMIright as YSEMI1right))::_::(_,(MlyValue.asmblock 
 asmblock1,_,_))::_::(_,(MlyValue.optvolatile optvolatile1,_,_))::(_,(_
 ,YASMleft as YASM1left,_))::rest671) => let val result=
 MlyValue.statement(fn _ => let val optvolatile as optvolatile1=
@@ -5401,12 +5409,12 @@ swrap(AsmStmt({volatilep = optvolatile, asmblock = asmblock}),
 | (181,rest671) => let val result=MlyValue.optvolatile(fn _ => (false)
 )
  in (LrTable.NT 4,(result,defaultPos,defaultPos),rest671) end
-| (182,(_,(_,VOLATILE1left,VOLATILE1right))::rest671) => let val result
-=MlyValue.optvolatile(fn _ => (true))
+| (182,(_,(_,VOLATILE1left,VOLATILE1right))::rest671) => let val 
+result=MlyValue.optvolatile(fn _ => (true))
  in (LrTable.NT 4,(result,VOLATILE1left,VOLATILE1right),rest671) end
 | (183,(_,(MlyValue.asmmod1 asmmod11,_,asmmod11right))::(_,(
 MlyValue.cstring_literal cstring_literal1,cstring_literal1left,_))::
-rest671) => let val result=MlyValue.asmblock(fn _ => let val
+rest671) => let val result=MlyValue.asmblock(fn _ => let val 
 cstring_literal as cstring_literal1=cstring_literal1 ()
 val asmmod1 as asmmod11=asmmod11 ()
  in (
@@ -5423,8 +5431,8 @@ val asmmod1 as asmmod11=asmmod11 ()
  in (LrTable.NT 95,(result,defaultPos,defaultPos),rest671) end
 | (185,(_,(MlyValue.asmmod2 asmmod21,_,asmmod21right))::(_,(
 MlyValue.namedstringexplist namedstringexplist1,_,_))::(_,(_,
-YCOLON1left,_))::rest671) => let val result=MlyValue.asmmod1(fn _ =>
-let val namedstringexplist as namedstringexplist1=namedstringexplist1
+YCOLON1left,_))::rest671) => let val result=MlyValue.asmmod1(fn _ => 
+let val namedstringexplist as namedstringexplist1=namedstringexplist1 
 ()
 val asmmod2 as asmmod21=asmmod21 ()
  in (namedstringexplist, #1 asmmod2, #2 asmmod2) end
@@ -5434,8 +5442,8 @@ val asmmod2 as asmmod21=asmmod21 ()
  in (LrTable.NT 96,(result,defaultPos,defaultPos),rest671) end
 | (187,(_,(MlyValue.asmmod3 asmmod31,_,asmmod31right))::(_,(
 MlyValue.namedstringexplist namedstringexplist1,_,_))::(_,(_,
-YCOLON1left,_))::rest671) => let val result=MlyValue.asmmod2(fn _ =>
-let val namedstringexplist as namedstringexplist1=namedstringexplist1
+YCOLON1left,_))::rest671) => let val result=MlyValue.asmmod2(fn _ => 
+let val namedstringexplist as namedstringexplist1=namedstringexplist1 
 ()
 val asmmod3 as asmmod31=asmmod31 ()
  in ((namedstringexplist, asmmod3)) end
@@ -5450,8 +5458,8 @@ val asmmod3 as asmmod31=asmmod31 ()
 )
  in (LrTable.NT 97,(result,YCOLON1left,stringlist11right),rest671) end
 | (190,(_,(MlyValue.cstring_literal cstring_literal1,
-cstring_literal1left,cstring_literal1right))::rest671) => let val
-result=MlyValue.stringlist1(fn _ => let val cstring_literal as
+cstring_literal1left,cstring_literal1right))::rest671) => let val 
+result=MlyValue.stringlist1(fn _ => let val cstring_literal as 
 cstring_literal1=cstring_literal1 ()
  in ([node cstring_literal]) end
 )
@@ -5459,19 +5467,19 @@ cstring_literal1=cstring_literal1 ()
 ,rest671) end
 | (191,(_,(MlyValue.stringlist1 stringlist11,_,stringlist11right))::_
 ::(_,(MlyValue.cstring_literal cstring_literal1,cstring_literal1left,_
-))::rest671) => let val result=MlyValue.stringlist1(fn _ => let val
+))::rest671) => let val result=MlyValue.stringlist1(fn _ => let val 
 cstring_literal as cstring_literal1=cstring_literal1 ()
 val stringlist1 as stringlist11=stringlist11 ()
  in (node cstring_literal :: stringlist1) end
 )
  in (LrTable.NT 99,(result,cstring_literal1left,stringlist11right),
 rest671) end
-| (192,rest671) => let val result=MlyValue.namedstringexplist(fn _ => (
-[]))
+| (192,rest671) => let val result=MlyValue.namedstringexplist(fn _ => 
+([]))
  in (LrTable.NT 101,(result,defaultPos,defaultPos),rest671) end
 | (193,(_,(MlyValue.namedstringexplist1 namedstringexplist11,
-namedstringexplist11left,namedstringexplist11right))::rest671) => let
-val result=MlyValue.namedstringexplist(fn _ => let val
+namedstringexplist11left,namedstringexplist11right))::rest671) => let 
+val result=MlyValue.namedstringexplist(fn _ => let val 
 namedstringexplist1 as namedstringexplist11=namedstringexplist11 ()
  in (namedstringexplist1) end
 )
@@ -5479,18 +5487,19 @@ namedstringexplist1 as namedstringexplist11=namedstringexplist11 ()
 namedstringexplist11right),rest671) end
 | (194,(_,(MlyValue.namedstringexp namedstringexp1,namedstringexp1left
 ,namedstringexp1right))::rest671) => let val result=
-MlyValue.namedstringexplist1(fn _ => let val namedstringexp as
+MlyValue.namedstringexplist1(fn _ => let val namedstringexp as 
 namedstringexp1=namedstringexp1 ()
  in ([namedstringexp]) end
 )
  in (LrTable.NT 102,(result,namedstringexp1left,namedstringexp1right),
 rest671) end
 | (195,(_,(MlyValue.namedstringexplist1 namedstringexplist11,_,
-namedstringexplist11right))::_::(_,(MlyValue.namedstringexp
+namedstringexplist11right))::_::(_,(MlyValue.namedstringexp 
 namedstringexp1,namedstringexp1left,_))::rest671) => let val result=
-MlyValue.namedstringexplist1(fn _ => let val namedstringexp as
+MlyValue.namedstringexplist1(fn _ => let val namedstringexp as 
 namedstringexp1=namedstringexp1 ()
-val namedstringexplist1 as namedstringexplist11=namedstringexplist11 ()
+val namedstringexplist1 as namedstringexplist11=namedstringexplist11 
+()
  in (namedstringexp :: namedstringexplist1) end
 )
  in (LrTable.NT 102,(result,namedstringexp1left,
@@ -5498,7 +5507,7 @@ namedstringexplist11right),rest671) end
 | (196,(_,(_,_,RPAREN1right))::(_,(MlyValue.rexpression rexpression1,_
 ,_))::_::(_,(MlyValue.cstring_literal cstring_literal1,
 cstring_literal1left,_))::rest671) => let val result=
-MlyValue.namedstringexp(fn _ => let val cstring_literal as
+MlyValue.namedstringexp(fn _ => let val cstring_literal as 
 cstring_literal1=cstring_literal1 ()
 val rexpression as rexpression1=rexpression1 ()
  in ((NONE, node cstring_literal, rexpression)) end
@@ -5507,14 +5516,14 @@ val rexpression as rexpression1=rexpression1 ()
 ) end
 | (197,(_,(_,_,RPAREN1right))::(_,(MlyValue.rexpression rexpression1,_
 ,_))::_::(_,(MlyValue.cstring_literal cstring_literal1,_,_))::_::(_,(
-MlyValue.ID ID1,_,_))::(_,(_,LBRACKET1left,_))::rest671) => let val
+MlyValue.ID ID1,_,_))::(_,(_,LBRACKET1left,_))::rest671) => let val 
 result=MlyValue.namedstringexp(fn _ => let val ID as ID1=ID1 ()
 val cstring_literal as cstring_literal1=cstring_literal1 ()
 val rexpression as rexpression1=rexpression1 ()
  in ((SOME ID, node cstring_literal, rexpression)) end
 )
  in (LrTable.NT 100,(result,LBRACKET1left,RPAREN1right),rest671) end
-| (198,(_,(_,_,SPEC_BLOCKEND1right))::(_,(MlyValue.STRING_LITERAL
+| (198,(_,(_,_,SPEC_BLOCKEND1right))::(_,(MlyValue.STRING_LITERAL 
 STRING_LITERAL1,STRING_LITERALleft,STRING_LITERALright))::(_,(_,
 INVARIANT1left,_))::rest671) => let val result=MlyValue.invariant(fn _
  => let val STRING_LITERAL as STRING_LITERAL1=STRING_LITERAL1 ()
@@ -5549,7 +5558,7 @@ val switchcase_list as switchcase_list1=switchcase_list1 ()
 rest671) end
 | (203,(_,(MlyValue.block_item_list block_item_list1,_,
 block_item_list1right))::(_,(MlyValue.statement statement1,_,_))::(_,(
-MlyValue.labellist labellist1,labellist1left,_))::rest671) => let val
+MlyValue.labellist labellist1,labellist1left,_))::rest671) => let val 
 result=MlyValue.switchcase(fn _ => let val labellist as labellist1=
 labellist1 ()
 val statement as statement1=statement1 ()
@@ -5558,8 +5567,8 @@ val block_item_list as block_item_list1=block_item_list1 ()
 )
  in (LrTable.NT 45,(result,labellist1left,block_item_list1right),
 rest671) end
-| (204,(_,(MlyValue.label label1,label1left,label1right))::rest671) =>
-let val result=MlyValue.labellist(fn _ => let val label as label1=
+| (204,(_,(MlyValue.label label1,label1left,label1right))::rest671)
+ => let val result=MlyValue.labellist(fn _ => let val label as label1=
 label1 ()
  in (wrap([label], left label, right label)) end
 )
@@ -5572,20 +5581,20 @@ val labellist as labellist1=labellist1 ()
 )
  in (LrTable.NT 46,(result,label1left,labellist1right),rest671) end
 | (206,(_,(_,_,YCOLONright as YCOLON1right))::(_,(MlyValue.rexpression
-rexpression1,_,_))::(_,(_,CASEleft as CASE1left,_))::rest671) => let
-val result=MlyValue.label(fn _ => let val rexpression as rexpression1
-=rexpression1 ()
+ rexpression1,_,_))::(_,(_,CASEleft as CASE1left,_))::rest671) => let 
+val result=MlyValue.label(fn _ => let val rexpression as rexpression1=
+rexpression1 ()
  in (wrap(SOME rexpression, CASEleft, YCOLONright)) end
 )
  in (LrTable.NT 47,(result,CASE1left,YCOLON1right),rest671) end
-| (207,(_,(_,_,YCOLONright as YCOLON1right))::(_,(_,DEFAULTleft as
+| (207,(_,(_,_,YCOLONright as YCOLON1right))::(_,(_,DEFAULTleft as 
 DEFAULT1left,_))::rest671) => let val result=MlyValue.label(fn _ => (
 wrap(NONE, DEFAULTleft, YCOLONright)))
  in (LrTable.NT 47,(result,DEFAULT1left,YCOLON1right),rest671) end
-| (208,(_,(_,_,YSEMI1right))::(_,(MlyValue.opt_for1_expr opt_for1_expr1
-,opt_for1_expr1left,_))::rest671) => let val result=
-MlyValue.opt_for1_bitem(fn _ => let val opt_for1_expr as opt_for1_expr1
-=opt_for1_expr1 ()
+| (208,(_,(_,_,YSEMI1right))::(_,(MlyValue.opt_for1_expr 
+opt_for1_expr1,opt_for1_expr1left,_))::rest671) => let val result=
+MlyValue.opt_for1_bitem(fn _ => let val opt_for1_expr as 
+opt_for1_expr1=opt_for1_expr1 ()
  in ([BI_Stmt opt_for1_expr]) end
 )
  in (LrTable.NT 48,(result,opt_for1_expr1left,YSEMI1right),rest671)
@@ -5603,7 +5612,7 @@ swrap(EmptyStmt, defaultPos, defaultPos)))
  in (LrTable.NT 49,(result,defaultPos,defaultPos),rest671) end
 | (211,(_,(MlyValue.opt_for1_expr0 opt_for1_expr01,opt_for1_expr01left
 ,opt_for1_expr01right))::rest671) => let val result=
-MlyValue.opt_for1_expr(fn _ => let val opt_for1_expr0 as
+MlyValue.opt_for1_expr(fn _ => let val opt_for1_expr0 as 
 opt_for1_expr01=opt_for1_expr01 ()
  in (
 if length opt_for1_expr0 = 1 then
@@ -5616,17 +5625,17 @@ if length opt_for1_expr0 = 1 then
  in (LrTable.NT 49,(result,opt_for1_expr01left,opt_for1_expr01right),
 rest671) end
 | (212,(_,(MlyValue.opt_for1_exprbase opt_for1_exprbase1,
-opt_for1_exprbase1left,opt_for1_exprbase1right))::rest671) => let val
-result=MlyValue.opt_for1_expr0(fn _ => let val opt_for1_exprbase as
+opt_for1_exprbase1left,opt_for1_exprbase1right))::rest671) => let val 
+result=MlyValue.opt_for1_expr0(fn _ => let val opt_for1_exprbase as 
 opt_for1_exprbase1=opt_for1_exprbase1 ()
  in ([opt_for1_exprbase]) end
 )
  in (LrTable.NT 50,(result,opt_for1_exprbase1left,
 opt_for1_exprbase1right),rest671) end
 | (213,(_,(MlyValue.opt_for1_expr0 opt_for1_expr01,_,
-opt_for1_expr01right))::_::(_,(MlyValue.opt_for1_exprbase
-opt_for1_exprbase1,opt_for1_exprbase1left,_))::rest671) => let val
-result=MlyValue.opt_for1_expr0(fn _ => let val opt_for1_exprbase as
+opt_for1_expr01right))::_::(_,(MlyValue.opt_for1_exprbase 
+opt_for1_exprbase1,opt_for1_exprbase1left,_))::rest671) => let val 
+result=MlyValue.opt_for1_expr0(fn _ => let val opt_for1_exprbase as 
 opt_for1_exprbase1=opt_for1_exprbase1 ()
 val opt_for1_expr0 as opt_for1_expr01=opt_for1_expr01 ()
  in (opt_for1_exprbase::opt_for1_expr0) end
@@ -5635,7 +5644,7 @@ val opt_for1_expr0 as opt_for1_expr01=opt_for1_expr01 ()
 ),rest671) end
 | (214,(_,(MlyValue.rexpression rexpression1,_,rexpression1right))::_
 ::(_,(MlyValue.lexpression lexpression1,lexpression1left,_))::rest671)
- => let val result=MlyValue.opt_for1_exprbase(fn _ => let val
+ => let val result=MlyValue.opt_for1_exprbase(fn _ => let val 
 lexpression as lexpression1=lexpression1 ()
 val rexpression as rexpression1=rexpression1 ()
  in (
@@ -5660,7 +5669,7 @@ swrap(EmptyStmt,defaultPos,defaultPos)))
  in (LrTable.NT 53,(result,defaultPos,defaultPos),rest671) end
 | (218,(_,(MlyValue.opt_for3_expr0 opt_for3_expr01,opt_for3_expr01left
 ,opt_for3_expr01right))::rest671) => let val result=
-MlyValue.opt_for3_expr(fn _ => let val opt_for3_expr0 as
+MlyValue.opt_for3_expr(fn _ => let val opt_for3_expr0 as 
 opt_for3_expr01=opt_for3_expr01 ()
  in (
 if length opt_for3_expr0 = 1 then
@@ -5673,18 +5682,18 @@ if length opt_for3_expr0 = 1 then
  in (LrTable.NT 53,(result,opt_for3_expr01left,opt_for3_expr01right),
 rest671) end
 | (219,(_,(MlyValue.opt_for3_exprbase opt_for3_exprbase1,
-opt_for3_exprbase1left,opt_for3_exprbase1right))::rest671) => let val
-result=MlyValue.opt_for3_expr0(fn _ => let val opt_for3_exprbase as
+opt_for3_exprbase1left,opt_for3_exprbase1right))::rest671) => let val 
+result=MlyValue.opt_for3_expr0(fn _ => let val opt_for3_exprbase as 
 opt_for3_exprbase1=opt_for3_exprbase1 ()
  in ([opt_for3_exprbase]) end
 )
  in (LrTable.NT 54,(result,opt_for3_exprbase1left,
 opt_for3_exprbase1right),rest671) end
-| (220,(_,(_,_,SPEC_BLOCKEND1right))::(_,(MlyValue.STRING_LITERAL
+| (220,(_,(_,_,SPEC_BLOCKEND1right))::(_,(MlyValue.STRING_LITERAL 
 STRING_LITERAL1,_,STRING_LITERALright))::(_,(_,AUXUPDleft,_))::(_,(
 MlyValue.opt_for3_exprbase opt_for3_exprbase1,opt_for3_exprbase1left,_
-))::rest671) => let val result=MlyValue.opt_for3_expr0(fn _ => let val
-opt_for3_exprbase as opt_for3_exprbase1=opt_for3_exprbase1 ()
+))::rest671) => let val result=MlyValue.opt_for3_expr0(fn _ => let 
+val opt_for3_exprbase as opt_for3_exprbase1=opt_for3_exprbase1 ()
 val STRING_LITERAL as STRING_LITERAL1=STRING_LITERAL1 ()
  in (
 [opt_for3_exprbase, swrap(Auxupd STRING_LITERAL, AUXUPDleft,
@@ -5694,9 +5703,9 @@ val STRING_LITERAL as STRING_LITERAL1=STRING_LITERAL1 ()
  in (LrTable.NT 54,(result,opt_for3_exprbase1left,SPEC_BLOCKEND1right)
 ,rest671) end
 | (221,(_,(MlyValue.opt_for3_expr0 opt_for3_expr01,_,
-opt_for3_expr01right))::_::(_,(MlyValue.opt_for3_exprbase
-opt_for3_exprbase1,opt_for3_exprbase1left,_))::rest671) => let val
-result=MlyValue.opt_for3_expr0(fn _ => let val opt_for3_exprbase as
+opt_for3_expr01right))::_::(_,(MlyValue.opt_for3_exprbase 
+opt_for3_exprbase1,opt_for3_exprbase1left,_))::rest671) => let val 
+result=MlyValue.opt_for3_expr0(fn _ => let val opt_for3_exprbase as 
 opt_for3_exprbase1=opt_for3_exprbase1 ()
 val opt_for3_expr0 as opt_for3_expr01=opt_for3_expr01 ()
  in (opt_for3_exprbase::opt_for3_expr0) end
@@ -5704,7 +5713,7 @@ val opt_for3_expr0 as opt_for3_expr01=opt_for3_expr01 ()
  in (LrTable.NT 54,(result,opt_for3_exprbase1left,opt_for3_expr01right
 ),rest671) end
 | (222,(_,(MlyValue.rexpression rexpression1,_,rexpression1right))::(_
-,(MlyValue.assignop assignop1,_,_))::(_,(MlyValue.lexpression
+,(MlyValue.assignop assignop1,_,_))::(_,(MlyValue.lexpression 
 lexpression1,lexpression1left,_))::rest671) => let val result=
 MlyValue.opt_for3_exprbase(fn _ => let val lexpression as lexpression1
 =lexpression1 ()
@@ -5718,9 +5727,9 @@ swrap(parse_stdassignop(lexpression, assignop, rexpression),
  in (LrTable.NT 55,(result,lexpression1left,rexpression1right),rest671
 ) end
 | (223,(_,(_,_,PLUSPLUSright as PLUSPLUS1right))::(_,(
-MlyValue.lexpression lexpression1,lexpression1left,_))::rest671) => let
-val result=MlyValue.opt_for3_exprbase(fn _ => let val lexpression as
-lexpression1=lexpression1 ()
+MlyValue.lexpression lexpression1,lexpression1left,_))::rest671) => 
+let val result=MlyValue.opt_for3_exprbase(fn _ => let val lexpression
+ as lexpression1=lexpression1 ()
  in (
 swrap(postinc lexpression, eleft lexpression,
                        PLUSPLUSright)
@@ -5729,9 +5738,9 @@ swrap(postinc lexpression, eleft lexpression,
  in (LrTable.NT 55,(result,lexpression1left,PLUSPLUS1right),rest671)
  end
 | (224,(_,(_,_,MINUSMINUSright as MINUSMINUS1right))::(_,(
-MlyValue.lexpression lexpression1,lexpression1left,_))::rest671) => let
-val result=MlyValue.opt_for3_exprbase(fn _ => let val lexpression as
-lexpression1=lexpression1 ()
+MlyValue.lexpression lexpression1,lexpression1left,_))::rest671) => 
+let val result=MlyValue.opt_for3_exprbase(fn _ => let val lexpression
+ as lexpression1=lexpression1 ()
  in (
 swrap(postdec lexpression, eleft lexpression,
                        MINUSMINUSright)
@@ -5750,8 +5759,8 @@ rexpr_list1right))::rest671) => let val result=MlyValue.opt_rexpr_list
  in (LrTable.NT 73,(result,rexpr_list1left,rexpr_list1right),rest671)
  end
 | (227,(_,(MlyValue.rexpression rexpression1,rexpression1left,
-rexpression1right))::rest671) => let val result=MlyValue.rexpr_list(fn
-_ => let val rexpression as rexpression1=rexpression1 ()
+rexpression1right))::rest671) => let val result=MlyValue.rexpr_list(
+fn _ => let val rexpression as rexpression1=rexpression1 ()
  in (
 wrap([rexpression], eleft rexpression,
                                eright rexpression)
@@ -5760,8 +5769,8 @@ wrap([rexpression], eleft rexpression,
  in (LrTable.NT 72,(result,rexpression1left,rexpression1right),rest671
 ) end
 | (228,(_,(MlyValue.rexpr_list rexpr_list1,_,rexpr_list1right))::_::(_
-,(MlyValue.rexpression rexpression1,rexpression1left,_))::rest671) =>
-let val result=MlyValue.rexpr_list(fn _ => let val rexpression as
+,(MlyValue.rexpression rexpression1,rexpression1left,_))::rest671) => 
+let val result=MlyValue.rexpr_list(fn _ => let val rexpression as 
 rexpression1=rexpression1 ()
 val rexpr_list as rexpr_list1=rexpr_list1 ()
  in (
@@ -5772,10 +5781,10 @@ wrap (rexpression :: node rexpr_list,
  in (LrTable.NT 72,(result,rexpression1left,rexpr_list1right),rest671)
  end
 | (229,(_,(MlyValue.logical_OR_expression logical_OR_expression1,
-logical_OR_expression1left,logical_OR_expression1right))::rest671) =>
-let val result=MlyValue.rexpression(fn _ => let val
+logical_OR_expression1left,logical_OR_expression1right))::rest671) => 
+let val result=MlyValue.rexpression(fn _ => let val 
 logical_OR_expression as logical_OR_expression1=logical_OR_expression1
-()
+ ()
  in (logical_OR_expression) end
 )
  in (LrTable.NT 71,(result,logical_OR_expression1left,
@@ -5784,7 +5793,7 @@ logical_OR_expression1right),rest671) end
 ::(_,(MlyValue.rexpression rexpression1,_,_))::_::(_,(
 MlyValue.logical_OR_expression logical_OR_expression1,
 logical_OR_expression1left,_))::rest671) => let val result=
-MlyValue.rexpression(fn _ => let val logical_OR_expression as
+MlyValue.rexpression(fn _ => let val logical_OR_expression as 
 logical_OR_expression1=logical_OR_expression1 ()
 val rexpression1=rexpression1 ()
 val rexpression2=rexpression2 ()
@@ -5799,7 +5808,7 @@ ewrap(CondExp(logical_OR_expression, rexpression1,
 rexpression2right),rest671) end
 | (231,(_,(MlyValue.logical_AND_expression logical_AND_expression1,
 logical_AND_expression1left,logical_AND_expression1right))::rest671)
- => let val result=MlyValue.logical_OR_expression(fn _ => let val
+ => let val result=MlyValue.logical_OR_expression(fn _ => let val 
 logical_AND_expression as logical_AND_expression1=
 logical_AND_expression1 ()
  in (logical_AND_expression) end
@@ -5807,11 +5816,11 @@ logical_AND_expression1 ()
  in (LrTable.NT 75,(result,logical_AND_expression1left,
 logical_AND_expression1right),rest671) end
 | (232,(_,(MlyValue.logical_AND_expression logical_AND_expression1,_,
-logical_AND_expression1right))::_::(_,(MlyValue.logical_OR_expression
-logical_OR_expression1,logical_OR_expression1left,_))::rest671) => let
-val result=MlyValue.logical_OR_expression(fn _ => let val
+logical_AND_expression1right))::_::(_,(MlyValue.logical_OR_expression 
+logical_OR_expression1,logical_OR_expression1left,_))::rest671) => 
+let val result=MlyValue.logical_OR_expression(fn _ => let val 
 logical_OR_expression as logical_OR_expression1=logical_OR_expression1
-()
+ ()
 val logical_AND_expression as logical_AND_expression1=
 logical_AND_expression1 ()
  in (
@@ -5825,7 +5834,7 @@ ewrap(BinOp(LogOr, logical_OR_expression,
 logical_AND_expression1right),rest671) end
 | (233,(_,(MlyValue.inclusive_OR_expression inclusive_OR_expression1,
 inclusive_OR_expression1left,inclusive_OR_expression1right))::rest671)
- => let val result=MlyValue.logical_AND_expression(fn _ => let val
+ => let val result=MlyValue.logical_AND_expression(fn _ => let val 
 inclusive_OR_expression as inclusive_OR_expression1=
 inclusive_OR_expression1 ()
  in (inclusive_OR_expression) end
@@ -5850,7 +5859,7 @@ ewrap(BinOp(LogAnd, logical_AND_expression, inclusive_OR_expression),
 inclusive_OR_expression1right),rest671) end
 | (235,(_,(MlyValue.exclusive_OR_expression exclusive_OR_expression1,
 exclusive_OR_expression1left,exclusive_OR_expression1right))::rest671)
- => let val result=MlyValue.inclusive_OR_expression(fn _ => let val
+ => let val result=MlyValue.inclusive_OR_expression(fn _ => let val 
 exclusive_OR_expression as exclusive_OR_expression1=
 exclusive_OR_expression1 ()
  in (exclusive_OR_expression) end
@@ -5861,7 +5870,7 @@ exclusive_OR_expression1right),rest671) end
 ,exclusive_OR_expression1right))::_::(_,(
 MlyValue.inclusive_OR_expression inclusive_OR_expression1,
 inclusive_OR_expression1left,_))::rest671) => let val result=
-MlyValue.inclusive_OR_expression(fn _ => let val
+MlyValue.inclusive_OR_expression(fn _ => let val 
 inclusive_OR_expression as inclusive_OR_expression1=
 inclusive_OR_expression1 ()
 val exclusive_OR_expression as exclusive_OR_expression1=
@@ -5877,16 +5886,16 @@ ewrap(BinOp(BitwiseOr, inclusive_OR_expression,
 exclusive_OR_expression1right),rest671) end
 | (237,(_,(MlyValue.AND_expression AND_expression1,AND_expression1left
 ,AND_expression1right))::rest671) => let val result=
-MlyValue.exclusive_OR_expression(fn _ => let val AND_expression as
+MlyValue.exclusive_OR_expression(fn _ => let val AND_expression as 
 AND_expression1=AND_expression1 ()
  in (AND_expression) end
 )
  in (LrTable.NT 77,(result,AND_expression1left,AND_expression1right),
 rest671) end
 | (238,(_,(MlyValue.AND_expression AND_expression1,_,
-AND_expression1right))::_::(_,(MlyValue.exclusive_OR_expression
-exclusive_OR_expression1,exclusive_OR_expression1left,_))::rest671) =>
-let val result=MlyValue.exclusive_OR_expression(fn _ => let val
+AND_expression1right))::_::(_,(MlyValue.exclusive_OR_expression 
+exclusive_OR_expression1,exclusive_OR_expression1left,_))::rest671)
+ => let val result=MlyValue.exclusive_OR_expression(fn _ => let val 
 exclusive_OR_expression as exclusive_OR_expression1=
 exclusive_OR_expression1 ()
 val AND_expression as AND_expression1=AND_expression1 ()
@@ -5900,7 +5909,7 @@ ewrap(BinOp(BitwiseXOr, exclusive_OR_expression,
  in (LrTable.NT 77,(result,exclusive_OR_expression1left,
 AND_expression1right),rest671) end
 | (239,(_,(MlyValue.equality_expression equality_expression1,
-equality_expression1left,equality_expression1right))::rest671) => let
+equality_expression1left,equality_expression1right))::rest671) => let 
 val result=MlyValue.AND_expression(fn _ => let val equality_expression
  as equality_expression1=equality_expression1 ()
  in (equality_expression) end
@@ -5908,11 +5917,12 @@ val result=MlyValue.AND_expression(fn _ => let val equality_expression
  in (LrTable.NT 78,(result,equality_expression1left,
 equality_expression1right),rest671) end
 | (240,(_,(MlyValue.equality_expression equality_expression1,_,
-equality_expression1right))::_::(_,(MlyValue.AND_expression
+equality_expression1right))::_::(_,(MlyValue.AND_expression 
 AND_expression1,AND_expression1left,_))::rest671) => let val result=
-MlyValue.AND_expression(fn _ => let val AND_expression as
+MlyValue.AND_expression(fn _ => let val AND_expression as 
 AND_expression1=AND_expression1 ()
-val equality_expression as equality_expression1=equality_expression1 ()
+val equality_expression as equality_expression1=equality_expression1 
+()
  in (
 ewrap(BinOp(BitwiseAnd, AND_expression, equality_expression),
                        eleft AND_expression,
@@ -5922,19 +5932,19 @@ ewrap(BinOp(BitwiseAnd, AND_expression, equality_expression),
  in (LrTable.NT 78,(result,AND_expression1left,
 equality_expression1right),rest671) end
 | (241,(_,(MlyValue.relational_expression relational_expression1,
-relational_expression1left,relational_expression1right))::rest671) =>
-let val result=MlyValue.equality_expression(fn _ => let val
+relational_expression1left,relational_expression1right))::rest671) => 
+let val result=MlyValue.equality_expression(fn _ => let val 
 relational_expression as relational_expression1=relational_expression1
-()
+ ()
  in (relational_expression) end
 )
  in (LrTable.NT 79,(result,relational_expression1left,
 relational_expression1right),rest671) end
 | (242,(_,(MlyValue.relational_expression relational_expression1,_,
-relational_expression1right))::_::(_,(MlyValue.equality_expression
-equality_expression1,equality_expression1left,_))::rest671) => let val
-result=MlyValue.equality_expression(fn _ => let val equality_expression
- as equality_expression1=equality_expression1 ()
+relational_expression1right))::_::(_,(MlyValue.equality_expression 
+equality_expression1,equality_expression1left,_))::rest671) => let 
+val result=MlyValue.equality_expression(fn _ => let val 
+equality_expression as equality_expression1=equality_expression1 ()
 val relational_expression as relational_expression1=
 relational_expression1 ()
  in (
@@ -5946,10 +5956,10 @@ ewrap(BinOp(Equals, equality_expression, relational_expression),
  in (LrTable.NT 79,(result,equality_expression1left,
 relational_expression1right),rest671) end
 | (243,(_,(MlyValue.relational_expression relational_expression1,_,
-relational_expression1right))::_::(_,(MlyValue.equality_expression
-equality_expression1,equality_expression1left,_))::rest671) => let val
-result=MlyValue.equality_expression(fn _ => let val equality_expression
- as equality_expression1=equality_expression1 ()
+relational_expression1right))::_::(_,(MlyValue.equality_expression 
+equality_expression1,equality_expression1left,_))::rest671) => let 
+val result=MlyValue.equality_expression(fn _ => let val 
+equality_expression as equality_expression1=equality_expression1 ()
 val relational_expression as relational_expression1=
 relational_expression1 ()
  in (
@@ -5961,7 +5971,7 @@ ewrap(BinOp(NotEquals, equality_expression, relational_expression),
  in (LrTable.NT 79,(result,equality_expression1left,
 relational_expression1right),rest671) end
 | (244,(_,(MlyValue.shift_expression shift_expression1,
-shift_expression1left,shift_expression1right))::rest671) => let val
+shift_expression1left,shift_expression1right))::rest671) => let val 
 result=MlyValue.relational_expression(fn _ => let val shift_expression
  as shift_expression1=shift_expression1 ()
  in (shift_expression) end
@@ -5969,11 +5979,11 @@ result=MlyValue.relational_expression(fn _ => let val shift_expression
  in (LrTable.NT 80,(result,shift_expression1left,
 shift_expression1right),rest671) end
 | (245,(_,(MlyValue.shift_expression shift_expression1,_,
-shift_expression1right))::_::(_,(MlyValue.relational_expression
-relational_expression1,relational_expression1left,_))::rest671) => let
-val result=MlyValue.relational_expression(fn _ => let val
+shift_expression1right))::_::(_,(MlyValue.relational_expression 
+relational_expression1,relational_expression1left,_))::rest671) => 
+let val result=MlyValue.relational_expression(fn _ => let val 
 relational_expression as relational_expression1=relational_expression1
-()
+ ()
 val shift_expression as shift_expression1=shift_expression1 ()
  in (
 ewrap(BinOp(Lt, relational_expression, shift_expression),
@@ -5984,11 +5994,11 @@ ewrap(BinOp(Lt, relational_expression, shift_expression),
  in (LrTable.NT 80,(result,relational_expression1left,
 shift_expression1right),rest671) end
 | (246,(_,(MlyValue.shift_expression shift_expression1,_,
-shift_expression1right))::_::(_,(MlyValue.relational_expression
-relational_expression1,relational_expression1left,_))::rest671) => let
-val result=MlyValue.relational_expression(fn _ => let val
+shift_expression1right))::_::(_,(MlyValue.relational_expression 
+relational_expression1,relational_expression1left,_))::rest671) => 
+let val result=MlyValue.relational_expression(fn _ => let val 
 relational_expression as relational_expression1=relational_expression1
-()
+ ()
 val shift_expression as shift_expression1=shift_expression1 ()
  in (
 ewrap(BinOp(Gt, relational_expression, shift_expression),
@@ -5999,11 +6009,11 @@ ewrap(BinOp(Gt, relational_expression, shift_expression),
  in (LrTable.NT 80,(result,relational_expression1left,
 shift_expression1right),rest671) end
 | (247,(_,(MlyValue.shift_expression shift_expression1,_,
-shift_expression1right))::_::(_,(MlyValue.relational_expression
-relational_expression1,relational_expression1left,_))::rest671) => let
-val result=MlyValue.relational_expression(fn _ => let val
+shift_expression1right))::_::(_,(MlyValue.relational_expression 
+relational_expression1,relational_expression1left,_))::rest671) => 
+let val result=MlyValue.relational_expression(fn _ => let val 
 relational_expression as relational_expression1=relational_expression1
-()
+ ()
 val shift_expression as shift_expression1=shift_expression1 ()
  in (
 ewrap(BinOp(Leq, relational_expression, shift_expression),
@@ -6014,11 +6024,11 @@ ewrap(BinOp(Leq, relational_expression, shift_expression),
  in (LrTable.NT 80,(result,relational_expression1left,
 shift_expression1right),rest671) end
 | (248,(_,(MlyValue.shift_expression shift_expression1,_,
-shift_expression1right))::_::(_,(MlyValue.relational_expression
-relational_expression1,relational_expression1left,_))::rest671) => let
-val result=MlyValue.relational_expression(fn _ => let val
+shift_expression1right))::_::(_,(MlyValue.relational_expression 
+relational_expression1,relational_expression1left,_))::rest671) => 
+let val result=MlyValue.relational_expression(fn _ => let val 
 relational_expression as relational_expression1=relational_expression1
-()
+ ()
 val shift_expression as shift_expression1=shift_expression1 ()
  in (
 ewrap(BinOp(Geq, relational_expression, shift_expression),
@@ -6029,19 +6039,20 @@ ewrap(BinOp(Geq, relational_expression, shift_expression),
  in (LrTable.NT 80,(result,relational_expression1left,
 shift_expression1right),rest671) end
 | (249,(_,(MlyValue.additive_expression additive_expression1,
-additive_expression1left,additive_expression1right))::rest671) => let
-val result=MlyValue.shift_expression(fn _ => let val
+additive_expression1left,additive_expression1right))::rest671) => let 
+val result=MlyValue.shift_expression(fn _ => let val 
 additive_expression as additive_expression1=additive_expression1 ()
  in (additive_expression) end
 )
  in (LrTable.NT 82,(result,additive_expression1left,
 additive_expression1right),rest671) end
 | (250,(_,(MlyValue.additive_expression additive_expression1,_,
-additive_expression1right))::_::(_,(MlyValue.shift_expression
-shift_expression1,shift_expression1left,_))::rest671) => let val result
-=MlyValue.shift_expression(fn _ => let val shift_expression as
+additive_expression1right))::_::(_,(MlyValue.shift_expression 
+shift_expression1,shift_expression1left,_))::rest671) => let val 
+result=MlyValue.shift_expression(fn _ => let val shift_expression as 
 shift_expression1=shift_expression1 ()
-val additive_expression as additive_expression1=additive_expression1 ()
+val additive_expression as additive_expression1=additive_expression1 
+()
  in (
 ewrap(BinOp(LShift, shift_expression, additive_expression),
                         eleft shift_expression,
@@ -6051,11 +6062,12 @@ ewrap(BinOp(LShift, shift_expression, additive_expression),
  in (LrTable.NT 82,(result,shift_expression1left,
 additive_expression1right),rest671) end
 | (251,(_,(MlyValue.additive_expression additive_expression1,_,
-additive_expression1right))::_::(_,(MlyValue.shift_expression
-shift_expression1,shift_expression1left,_))::rest671) => let val result
-=MlyValue.shift_expression(fn _ => let val shift_expression as
+additive_expression1right))::_::(_,(MlyValue.shift_expression 
+shift_expression1,shift_expression1left,_))::rest671) => let val 
+result=MlyValue.shift_expression(fn _ => let val shift_expression as 
 shift_expression1=shift_expression1 ()
-val additive_expression as additive_expression1=additive_expression1 ()
+val additive_expression as additive_expression1=additive_expression1 
+()
  in (
 ewrap(BinOp(RShift, shift_expression, additive_expression),
                         eleft shift_expression,
@@ -6064,7 +6076,7 @@ ewrap(BinOp(RShift, shift_expression, additive_expression),
 )
  in (LrTable.NT 82,(result,shift_expression1left,
 additive_expression1right),rest671) end
-| (252,(_,(MlyValue.multiplicative_expression
+| (252,(_,(MlyValue.multiplicative_expression 
 multiplicative_expression1,multiplicative_expression1left,
 multiplicative_expression1right))::rest671) => let val result=
 MlyValue.additive_expression(fn _ => let val multiplicative_expression
@@ -6073,11 +6085,11 @@ MlyValue.additive_expression(fn _ => let val multiplicative_expression
 )
  in (LrTable.NT 81,(result,multiplicative_expression1left,
 multiplicative_expression1right),rest671) end
-| (253,(_,(MlyValue.multiplicative_expression
+| (253,(_,(MlyValue.multiplicative_expression 
 multiplicative_expression1,_,multiplicative_expression1right))::_::(_,
 (MlyValue.additive_expression additive_expression1,
 additive_expression1left,_))::rest671) => let val result=
-MlyValue.additive_expression(fn _ => let val additive_expression as
+MlyValue.additive_expression(fn _ => let val additive_expression as 
 additive_expression1=additive_expression1 ()
 val multiplicative_expression as multiplicative_expression1=
 multiplicative_expression1 ()
@@ -6089,11 +6101,11 @@ ewrap(BinOp(Plus, additive_expression, multiplicative_expression),
 )
  in (LrTable.NT 81,(result,additive_expression1left,
 multiplicative_expression1right),rest671) end
-| (254,(_,(MlyValue.multiplicative_expression
+| (254,(_,(MlyValue.multiplicative_expression 
 multiplicative_expression1,_,multiplicative_expression1right))::_::(_,
 (MlyValue.additive_expression additive_expression1,
 additive_expression1left,_))::rest671) => let val result=
-MlyValue.additive_expression(fn _ => let val additive_expression as
+MlyValue.additive_expression(fn _ => let val additive_expression as 
 additive_expression1=additive_expression1 ()
 val multiplicative_expression as multiplicative_expression1=
 multiplicative_expression1 ()
@@ -6106,18 +6118,18 @@ ewrap(BinOp(Minus, additive_expression, multiplicative_expression),
  in (LrTable.NT 81,(result,additive_expression1left,
 multiplicative_expression1right),rest671) end
 | (255,(_,(MlyValue.cast_expression cast_expression1,
-cast_expression1left,cast_expression1right))::rest671) => let val
-result=MlyValue.multiplicative_expression(fn _ => let val
+cast_expression1left,cast_expression1right))::rest671) => let val 
+result=MlyValue.multiplicative_expression(fn _ => let val 
 cast_expression as cast_expression1=cast_expression1 ()
  in (cast_expression) end
 )
  in (LrTable.NT 83,(result,cast_expression1left,cast_expression1right)
 ,rest671) end
 | (256,(_,(MlyValue.cast_expression cast_expression1,_,
-cast_expression1right))::_::(_,(MlyValue.multiplicative_expression
+cast_expression1right))::_::(_,(MlyValue.multiplicative_expression 
 multiplicative_expression1,multiplicative_expression1left,_))::rest671
-) => let val result=MlyValue.multiplicative_expression(fn _ => let val
-multiplicative_expression as multiplicative_expression1=
+) => let val result=MlyValue.multiplicative_expression(fn _ => let 
+val multiplicative_expression as multiplicative_expression1=
 multiplicative_expression1 ()
 val cast_expression as cast_expression1=cast_expression1 ()
  in (
@@ -6129,10 +6141,10 @@ ewrap(BinOp(Times, multiplicative_expression, cast_expression),
  in (LrTable.NT 83,(result,multiplicative_expression1left,
 cast_expression1right),rest671) end
 | (257,(_,(MlyValue.cast_expression cast_expression1,_,
-cast_expression1right))::_::(_,(MlyValue.multiplicative_expression
+cast_expression1right))::_::(_,(MlyValue.multiplicative_expression 
 multiplicative_expression1,multiplicative_expression1left,_))::rest671
-) => let val result=MlyValue.multiplicative_expression(fn _ => let val
-multiplicative_expression as multiplicative_expression1=
+) => let val result=MlyValue.multiplicative_expression(fn _ => let 
+val multiplicative_expression as multiplicative_expression1=
 multiplicative_expression1 ()
 val cast_expression as cast_expression1=cast_expression1 ()
  in (
@@ -6144,10 +6156,10 @@ ewrap(BinOp(Divides, multiplicative_expression, cast_expression),
  in (LrTable.NT 83,(result,multiplicative_expression1left,
 cast_expression1right),rest671) end
 | (258,(_,(MlyValue.cast_expression cast_expression1,_,
-cast_expression1right))::_::(_,(MlyValue.multiplicative_expression
+cast_expression1right))::_::(_,(MlyValue.multiplicative_expression 
 multiplicative_expression1,multiplicative_expression1left,_))::rest671
-) => let val result=MlyValue.multiplicative_expression(fn _ => let val
-multiplicative_expression as multiplicative_expression1=
+) => let val result=MlyValue.multiplicative_expression(fn _ => let 
+val multiplicative_expression as multiplicative_expression1=
 multiplicative_expression1 ()
 val cast_expression as cast_expression1=cast_expression1 ()
  in (
@@ -6159,8 +6171,8 @@ ewrap(BinOp(Modulus, multiplicative_expression, cast_expression),
  in (LrTable.NT 83,(result,multiplicative_expression1left,
 cast_expression1right),rest671) end
 | (259,(_,(MlyValue.unary_expression unary_expression1,
-unary_expression1left,unary_expression1right))::rest671) => let val
-result=MlyValue.cast_expression(fn _ => let val unary_expression as
+unary_expression1left,unary_expression1right))::rest671) => let val 
+result=MlyValue.cast_expression(fn _ => let val unary_expression as 
 unary_expression1=unary_expression1 ()
  in (unary_expression) end
 )
@@ -6180,16 +6192,16 @@ ewrap(TypeCast(type_name, cast_expression), LPARENleft,
  in (LrTable.NT 85,(result,LPAREN1left,cast_expression1right),rest671)
  end
 | (261,(_,(MlyValue.postfix_expression postfix_expression1,
-postfix_expression1left,postfix_expression1right))::rest671) => let val
-result=MlyValue.unary_expression(fn _ => let val postfix_expression as
-postfix_expression1=postfix_expression1 ()
+postfix_expression1left,postfix_expression1right))::rest671) => let 
+val result=MlyValue.unary_expression(fn _ => let val 
+postfix_expression as postfix_expression1=postfix_expression1 ()
  in (postfix_expression) end
 )
  in (LrTable.NT 84,(result,postfix_expression1left,
 postfix_expression1right),rest671) end
 | (262,(_,(MlyValue.cast_expression cast_expression1,_,
 cast_expression1right))::(_,(_,YMINUSleft as YMINUS1left,_))::rest671)
- => let val result=MlyValue.unary_expression(fn _ => let val
+ => let val result=MlyValue.unary_expression(fn _ => let val 
 cast_expression as cast_expression1=cast_expression1 ()
  in (
 ewrap(UnOp(Negate, cast_expression), YMINUSleft,
@@ -6199,8 +6211,8 @@ ewrap(UnOp(Negate, cast_expression), YMINUSleft,
  in (LrTable.NT 84,(result,YMINUS1left,cast_expression1right),rest671)
  end
 | (263,(_,(MlyValue.cast_expression cast_expression1,_,
-cast_expression1right))::(_,(_,YNOTleft as YNOT1left,_))::rest671) =>
-let val result=MlyValue.unary_expression(fn _ => let val
+cast_expression1right))::(_,(_,YNOTleft as YNOT1left,_))::rest671) => 
+let val result=MlyValue.unary_expression(fn _ => let val 
 cast_expression as cast_expression1=cast_expression1 ()
  in (
 ewrap(UnOp(Not, cast_expression),
@@ -6211,7 +6223,7 @@ ewrap(UnOp(Not, cast_expression),
  end
 | (264,(_,(MlyValue.cast_expression cast_expression1,_,
 cast_expression1right))::(_,(_,YBITNOTleft as YBITNOT1left,_))::
-rest671) => let val result=MlyValue.unary_expression(fn _ => let val
+rest671) => let val result=MlyValue.unary_expression(fn _ => let val 
 cast_expression as cast_expression1=cast_expression1 ()
  in (
 ewrap(UnOp(BitNegate, cast_expression),
@@ -6222,7 +6234,7 @@ ewrap(UnOp(BitNegate, cast_expression),
 ) end
 | (265,(_,(MlyValue.cast_expression cast_expression1,_,
 cast_expression1right))::(_,(_,YAMPERSANDleft as YAMPERSAND1left,_))::
-rest671) => let val result=MlyValue.unary_expression(fn _ => let val
+rest671) => let val result=MlyValue.unary_expression(fn _ => let val 
 cast_expression as cast_expression1=cast_expression1 ()
  in (
 ewrap(UnOp(Addr, cast_expression),
@@ -6233,7 +6245,7 @@ ewrap(UnOp(Addr, cast_expression),
 rest671) end
 | (266,(_,(MlyValue.cast_expression cast_expression1,_,
 cast_expression1right))::(_,(_,YSTARleft as YSTAR1left,_))::rest671)
- => let val result=MlyValue.unary_expression(fn _ => let val
+ => let val result=MlyValue.unary_expression(fn _ => let val 
 cast_expression as cast_expression1=cast_expression1 ()
  in (
 ewrap(Deref cast_expression, YSTARleft,
@@ -6244,7 +6256,7 @@ ewrap(Deref cast_expression, YSTARleft,
  end
 | (267,(_,(MlyValue.unary_expression unary_expression1,_,
 unary_expression1right))::(_,(_,YSIZEOFleft as YSIZEOF1left,_))::
-rest671) => let val result=MlyValue.unary_expression(fn _ => let val
+rest671) => let val result=MlyValue.unary_expression(fn _ => let val 
 unary_expression as unary_expression1=unary_expression1 ()
  in (
 ewrap(Sizeof unary_expression, YSIZEOFleft,
@@ -6253,7 +6265,7 @@ ewrap(Sizeof unary_expression, YSIZEOFleft,
 )
  in (LrTable.NT 84,(result,YSIZEOF1left,unary_expression1right),
 rest671) end
-| (268,(_,(_,_,RPARENright as RPAREN1right))::(_,(MlyValue.type_name
+| (268,(_,(_,_,RPARENright as RPAREN1right))::(_,(MlyValue.type_name 
 type_name1,_,_))::_::(_,(_,YSIZEOFleft as YSIZEOF1left,_))::rest671)
  => let val result=MlyValue.unary_expression(fn _ => let val type_name
  as type_name1=type_name1 ()
@@ -6261,9 +6273,9 @@ type_name1,_,_))::_::(_,(_,YSIZEOFleft as YSIZEOF1left,_))::rest671)
 )
  in (LrTable.NT 84,(result,YSIZEOF1left,RPAREN1right),rest671) end
 | (269,(_,(MlyValue.primary_expression primary_expression1,
-primary_expression1left,primary_expression1right))::rest671) => let val
-result=MlyValue.postfix_expression(fn _ => let val primary_expression
- as primary_expression1=primary_expression1 ()
+primary_expression1left,primary_expression1right))::rest671) => let 
+val result=MlyValue.postfix_expression(fn _ => let val 
+primary_expression as primary_expression1=primary_expression1 ()
  in (primary_expression) end
 )
  in (LrTable.NT 86,(result,primary_expression1left,
@@ -6272,7 +6284,7 @@ primary_expression1right),rest671) end
 MlyValue.rexpression rexpression1,_,_))::_::(_,(
 MlyValue.postfix_expression postfix_expression1,
 postfix_expression1left,_))::rest671) => let val result=
-MlyValue.postfix_expression(fn _ => let val postfix_expression as
+MlyValue.postfix_expression(fn _ => let val postfix_expression as 
 postfix_expression1=postfix_expression1 ()
 val rexpression as rexpression1=rexpression1 ()
  in (
@@ -6287,7 +6299,7 @@ rest671) end
 MlyValue.opt_rexpr_list opt_rexpr_list1,_,_))::_::(_,(
 MlyValue.postfix_expression postfix_expression1,
 postfix_expression1left,_))::rest671) => let val result=
-MlyValue.postfix_expression(fn _ => let val postfix_expression as
+MlyValue.postfix_expression(fn _ => let val postfix_expression as 
 postfix_expression1=postfix_expression1 ()
 val opt_rexpr_list as opt_rexpr_list1=opt_rexpr_list1 ()
  in (
@@ -6305,7 +6317,7 @@ rest671) end
 | (272,(_,(MlyValue.ID ID1,_,IDright as ID1right))::_::(_,(
 MlyValue.postfix_expression postfix_expression1,
 postfix_expression1left,_))::rest671) => let val result=
-MlyValue.postfix_expression(fn _ => let val postfix_expression as
+MlyValue.postfix_expression(fn _ => let val postfix_expression as 
 postfix_expression1=postfix_expression1 ()
 val ID as ID1=ID1 ()
  in (
@@ -6319,7 +6331,7 @@ ewrap(StructDot(postfix_expression, C_field_name ID),
 | (273,(_,(MlyValue.ID ID1,_,IDright as ID1right))::_::(_,(
 MlyValue.postfix_expression postfix_expression1,
 postfix_expression1left,_))::rest671) => let val result=
-MlyValue.postfix_expression(fn _ => let val postfix_expression as
+MlyValue.postfix_expression(fn _ => let val postfix_expression as 
 postfix_expression1=postfix_expression1 ()
 val ID as ID1=ID1 ()
  in (
@@ -6336,8 +6348,8 @@ ewrap(StructDot(ewrap(Deref postfix_expression,
 | (274,(_,(_,_,RCURLYright as RCURLY1right))::(_,(
 MlyValue.initializer_list initializer_list1,_,_))::_::_::(_,(
 MlyValue.type_name type_name1,_,_))::(_,(_,LPARENleft as LPAREN1left,_
-))::rest671) => let val result=MlyValue.postfix_expression(fn _ => let
-val type_name as type_name1=type_name1 ()
+))::rest671) => let val result=MlyValue.postfix_expression(fn _ => 
+let val type_name as type_name1=type_name1 ()
 val initializer_list as initializer_list1=initializer_list1 ()
  in (
 ewrap(CompLiteral(node type_name, initializer_list),
@@ -6346,27 +6358,27 @@ ewrap(CompLiteral(node type_name, initializer_list),
 )
  in (LrTable.NT 86,(result,LPAREN1left,RCURLY1right),rest671) end
 | (275,(_,(MlyValue.ID ID1,IDleft as ID1left,IDright as ID1right))::
-rest671) => let val result=MlyValue.primary_expression(fn _ => let val
-ID as ID1=ID1 ()
+rest671) => let val result=MlyValue.primary_expression(fn _ => let 
+val ID as ID1=ID1 ()
  in (ewrap(Var (ID, ref NONE), IDleft, IDright)) end
 )
  in (LrTable.NT 87,(result,ID1left,ID1right),rest671) end
 | (276,(_,(MlyValue.constant constant1,constant1left,constant1right))
-::rest671) => let val result=MlyValue.primary_expression(fn _ => let
+::rest671) => let val result=MlyValue.primary_expression(fn _ => let 
 val constant as constant1=constant1 ()
  in (ewrap(Constant constant, left constant, right constant)) end
 )
  in (LrTable.NT 87,(result,constant1left,constant1right),rest671) end
 | (277,(_,(_,_,RPARENright as RPAREN1right))::(_,(MlyValue.rexpression
-rexpression1,_,_))::(_,(_,LPARENleft as LPAREN1left,_))::rest671) =>
+ rexpression1,_,_))::(_,(_,LPARENleft as LPAREN1left,_))::rest671) => 
 let val result=MlyValue.primary_expression(fn _ => let val rexpression
  as rexpression1=rexpression1 ()
  in (ewrap(enode rexpression, LPARENleft, RPARENright)) end
 )
  in (LrTable.NT 87,(result,LPAREN1left,RPAREN1right),rest671) end
 | (278,(_,(MlyValue.cstring_literal cstring_literal1,
-cstring_literal1left,cstring_literal1right))::rest671) => let val
-result=MlyValue.primary_expression(fn _ => let val cstring_literal as
+cstring_literal1left,cstring_literal1right))::rest671) => let val 
+result=MlyValue.primary_expression(fn _ => let val cstring_literal as 
 cstring_literal1=cstring_literal1 ()
  in (
 let val l = left cstring_literal  and r = right cstring_literal
@@ -6380,7 +6392,7 @@ let val l = left cstring_literal  and r = right cstring_literal
 | (279,(_,(MlyValue.STRING_LITERAL STRING_LITERAL1,_,
 STRING_LITERALright as STRING_LITERAL1right))::(_,(
 MlyValue.cstring_literal cstring_literal1,cstring_literal1left,_))::
-rest671) => let val result=MlyValue.cstring_literal(fn _ => let val
+rest671) => let val result=MlyValue.cstring_literal(fn _ => let val 
 cstring_literal as cstring_literal1=cstring_literal1 ()
 val STRING_LITERAL as STRING_LITERAL1=STRING_LITERAL1 ()
  in (
@@ -6392,7 +6404,7 @@ wrap(node cstring_literal ^ STRING_LITERAL, left cstring_literal,
 rest671) end
 | (280,(_,(MlyValue.STRING_LITERAL STRING_LITERAL1,STRING_LITERALleft
  as STRING_LITERAL1left,STRING_LITERALright as STRING_LITERAL1right))
-::rest671) => let val result=MlyValue.cstring_literal(fn _ => let val
+::rest671) => let val result=MlyValue.cstring_literal(fn _ => let val 
 STRING_LITERAL as STRING_LITERAL1=STRING_LITERAL1 ()
  in (wrap(STRING_LITERAL, STRING_LITERALleft, STRING_LITERALright))
  end
@@ -6400,10 +6412,10 @@ STRING_LITERAL as STRING_LITERAL1=STRING_LITERAL1 ()
  in (LrTable.NT 98,(result,STRING_LITERAL1left,STRING_LITERAL1right),
 rest671) end
 | (281,(_,(MlyValue.NUMERIC_CONSTANT NUMERIC_CONSTANT1,
-NUMERIC_CONSTANTleft as NUMERIC_CONSTANT1left,NUMERIC_CONSTANTright as
-NUMERIC_CONSTANT1right))::rest671) => let val result=MlyValue.constant
-(fn _ => let val NUMERIC_CONSTANT as NUMERIC_CONSTANT1=
-NUMERIC_CONSTANT1 ()
+NUMERIC_CONSTANTleft as NUMERIC_CONSTANT1left,NUMERIC_CONSTANTright
+ as NUMERIC_CONSTANT1right))::rest671) => let val result=
+MlyValue.constant(fn _ => let val NUMERIC_CONSTANT as 
+NUMERIC_CONSTANT1=NUMERIC_CONSTANT1 ()
  in (
 wrap(NUMCONST NUMERIC_CONSTANT,
                                   NUMERIC_CONSTANTleft,
@@ -6413,8 +6425,8 @@ wrap(NUMCONST NUMERIC_CONSTANT,
  in (LrTable.NT 88,(result,NUMERIC_CONSTANT1left,
 NUMERIC_CONSTANT1right),rest671) end
 | (282,(_,(MlyValue.postfix_expression postfix_expression1,
-postfix_expression1left,postfix_expression1right))::rest671) => let val
-result=MlyValue.lexpression(fn _ => let val postfix_expression as
+postfix_expression1left,postfix_expression1right))::rest671) => let 
+val result=MlyValue.lexpression(fn _ => let val postfix_expression as 
 postfix_expression1=postfix_expression1 ()
  in (postfix_expression) end
 )
@@ -6422,7 +6434,7 @@ postfix_expression1=postfix_expression1 ()
 postfix_expression1right),rest671) end
 | (283,(_,(MlyValue.cast_expression cast_expression1,_,
 cast_expression1right))::(_,(_,YSTARleft as YSTAR1left,_))::rest671)
- => let val result=MlyValue.lexpression(fn _ => let val
+ => let val result=MlyValue.lexpression(fn _ => let val 
 cast_expression as cast_expression1=cast_expression1 ()
  in (
 ewrap(Deref cast_expression, YSTARleft,

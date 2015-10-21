@@ -1777,7 +1777,7 @@ lemma arch_recycle_cap_reads_respects:
   apply (unfold is_pg_cap_def)
   apply (case_tac cap, simp_all split del: split_if)
   apply (subst gets_apply)
-  apply (
+  by (
          wp static_imp_wp modify_arch_state_reads_respects
             liftE_wp assert_wp
             arm_asid_table_update_reads_respects
@@ -1827,7 +1827,6 @@ lemma arch_recycle_cap_reads_respects:
     | wp_once mapM_x_wp'[where f="swp store_pde InvalidPDE"]
     | clarify del: notI split del: split_if
     )+
-done
 
 section "globals_equiv"
 

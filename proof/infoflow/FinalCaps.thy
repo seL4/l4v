@@ -2768,10 +2768,11 @@ lemma set_tl_subset:
   done
 
 lemma receive_ipc_base_silc_inv:
-  "\<lbrace>silc_inv aag st and valid_objs and valid_mdb and pas_refined aag and
+  notes do_nbwait_failed_transfer_def[simp]
+  shows "\<lbrace>silc_inv aag st and valid_objs and valid_mdb and pas_refined aag and
     sym_refs \<circ> state_refs_of and ko_at (Endpoint ep) epptr and
     K (is_subject aag receiver \<and> (pasSubject aag, Receive, pasObjectAbs aag epptr) \<in> pasPolicy aag)\<rbrace>
-     receive_ipc_base aag receiver ep epptr rights
+     receive_ipc_base aag receiver ep epptr rights is_blocking
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   apply (clarsimp simp: thread_get_def get_thread_state_def cong: endpoint.case_cong)
   apply (rule hoare_pre)
@@ -2780,7 +2781,9 @@ lemma receive_ipc_base_silc_inv:
           apply (rename_tac list tcb data)
           apply(rule_tac Q="\<lambda> r s. (sender_can_grant data \<longrightarrow> is_subject aag receiver \<and> is_subject aag (hd list)) \<and> silc_inv aag st s" in hoare_strengthen_post)
           apply(wp do_ipc_transfer_silc_inv hoare_vcg_all_lift | wpc | simp)+
-     apply(wp hoare_vcg_imp_lift [OF set_endpoint_get_tcb, unfolded disj_not1] hoare_vcg_all_lift get_endpoint_wp)
+     apply(wp hoare_vcg_imp_lift [OF set_endpoint_get_tcb, unfolded disj_not1] 
+              hoare_vcg_all_lift get_endpoint_wp
+         | wpc)+
   apply (clarsimp simp: conj_comms)
   apply(rule conjI)
    defer
@@ -2818,7 +2821,7 @@ lemma receive_ipc_silc_inv:
      K (is_subject aag receiver \<and>
        (\<forall>epptr\<in>Access.obj_refs cap.
            (pasSubject aag, Receive, pasObjectAbs aag epptr) \<in> pasPolicy aag))\<rbrace>
-   receive_ipc receiver cap
+   receive_ipc receiver cap is_blocking
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   unfolding receive_ipc_def
   apply (rule hoare_gen_asm)
@@ -3124,7 +3127,7 @@ crunch silc_inv: delete_caller_cap "silc_inv aag st"
 lemma handle_wait_silc_inv:
   "\<lbrace>silc_inv aag st and invs and pas_refined aag and 
     is_subject aag \<circ> cur_thread\<rbrace>
-   handle_wait
+   handle_wait is_blocking
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   apply (simp add: handle_wait_def Let_def lookup_cap_def split_def)
   apply (wp hoare_vcg_all_lift get_aep_wp delete_caller_cap_silc_inv

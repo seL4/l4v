@@ -391,7 +391,7 @@ lemma lookup_slot_for_thread_cap_fault:
   done
 
 lemma handle_wait_pas_refined:
-  "\<lbrace>pas_refined aag and invs and is_subject aag \<circ> cur_thread\<rbrace> handle_wait \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
+  "\<lbrace>pas_refined aag and invs and is_subject aag \<circ> cur_thread\<rbrace> handle_wait is_blocking \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
   apply (simp add: handle_wait_def Let_def lookup_cap_def lookup_cap_def split_def)
   apply (wp handle_fault_pas_refined receive_ipc_pas_refined receive_async_ipc_pas_refined
             get_cap_auth_wp [where aag=aag] lookup_slot_for_cnode_op_authorised
@@ -416,7 +416,7 @@ lemma invs_mdb_strgs: "invs s \<longrightarrow> valid_mdb s"
 
 lemma handle_wait_integrity:
   "\<lbrace>integrity aag X st and pas_refined aag and einvs and is_subject aag \<circ> cur_thread\<rbrace>
-     handle_wait
+     handle_wait is_blocking
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply (simp add: handle_wait_def Let_def lookup_cap_def lookup_cap_def split_def)
   apply (wp handle_fault_integrity_autarch receive_ipc_integrity_autarch receive_async_ipc_integrity_autarch lookup_slot_for_thread_authorised lookup_slot_for_thread_cap_fault

@@ -1074,7 +1074,7 @@ crunch domain_sep_inv[wp]: complete_async_ipc "domain_sep_inv irqs st"
 lemma receive_ipc_base_domain_sep_inv:
   "\<lbrace>domain_sep_inv irqs st and valid_objs and valid_mdb and
     sym_refs \<circ> state_refs_of and ko_at (Endpoint ep) epptr \<rbrace>
-   receive_ipc_base aag receiver ep epptr rights
+   receive_ipc_base aag receiver ep epptr rights is_blocking
    \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
   apply (clarsimp cong: endpoint.case_cong thread_get_def get_thread_state_def)
   apply (rule hoare_pre)
@@ -1082,7 +1082,8 @@ lemma receive_ipc_base_domain_sep_inv:
         | wpc | simp split del: split_if)+
           apply(rule_tac Q="\<lambda> r s. domain_sep_inv irqs st s" in hoare_strengthen_post)
           apply(wp do_ipc_transfer_domain_sep_inv hoare_vcg_all_lift | wpc | simp)+
-     apply(wp hoare_vcg_imp_lift [OF set_endpoint_get_tcb, unfolded disj_not1] hoare_vcg_all_lift get_endpoint_wp)
+     apply(wp hoare_vcg_imp_lift [OF set_endpoint_get_tcb, unfolded disj_not1] hoare_vcg_all_lift get_endpoint_wp
+         | wpc | simp add: do_nbwait_failed_transfer_def)+
   apply (clarsimp simp: conj_comms)
   apply (fastforce simp: valid_objs_def valid_obj_def obj_at_def
                          ep_redux_simps neq_Nil_conv valid_ep_def case_list_cons_cong)
@@ -1091,7 +1092,7 @@ lemma receive_ipc_base_domain_sep_inv:
 lemma receive_ipc_domain_sep_inv:
   "\<lbrace>domain_sep_inv irqs st and valid_objs and valid_mdb and
     sym_refs \<circ> state_refs_of \<rbrace>
-   receive_ipc receiver cap
+   receive_ipc receiver cap is_blocking
    \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
   unfolding receive_ipc_def
   apply (simp add: receive_ipc_def split: cap.splits, clarsimp)
@@ -1351,7 +1352,7 @@ lemma lookup_slot_for_thread_cap_fault:
 
 lemma handle_wait_domain_sep_inv:
   "\<lbrace>domain_sep_inv irqs st and invs\<rbrace>
-   handle_wait
+   handle_wait is_blocking
    \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
   apply (simp add: handle_wait_def Let_def lookup_cap_def split_def)
   apply (wp hoare_vcg_all_lift lookup_slot_for_thread_cap_fault

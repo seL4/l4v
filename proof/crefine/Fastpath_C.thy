@@ -5480,7 +5480,7 @@ lemma receiveIPC_simple_rewrite:
   "monadic_rewrite True False
      ((\<lambda>_. isEndpointCap ep_cap \<and> \<not> isSendEP ep) and (ko_at' ep (capEPPtr ep_cap) and 
       (\<lambda>s. \<forall>aepptr. bound_tcb_at' (op = (Some aepptr)) thread s \<longrightarrow> obj_at' (Not \<circ> isActive) aepptr s)))
-     (receiveIPC thread ep_cap)
+     (receiveIPC thread ep_cap True)
      (do
        setThreadState (BlockedOnReceive (capEPPtr ep_cap) (\<not> capEPCanSend ep_cap)) thread;
        setEndpoint (capEPPtr ep_cap) (RecvEP (case ep of RecvEP q \<Rightarrow> (q @ [thread]) | _ \<Rightarrow> [thread]))
