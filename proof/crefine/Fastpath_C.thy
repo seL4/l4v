@@ -219,7 +219,7 @@ lemma setBoundAEP_obj_at_unchangedT:
   assumes x: "\<And>f. \<forall>tcb. P (tcbBoundAEP_update f tcb) = P tcb"
   shows "\<lbrace>obj_at' P t\<rbrace> setBoundAEP t' ts \<lbrace>\<lambda>rv. obj_at' P t\<rbrace>"
   apply (simp add: setBoundAEP_def)
-  apply (wp threadSet_obj_at')
+  apply (wp threadSet_obj_at'_strongish)
   apply (clarsimp simp: obj_at'_def projectKOs x cong: if_cong)
   done
 
@@ -6037,7 +6037,7 @@ lemma valid_objs_aep_at_tcbBoundAEP:
   done
 
 crunch bound_tcb_at'_Q[wp]: setThreadState "\<lambda>s. Q (bound_tcb_at' P t s)"
-  (wp: threadSet_pred_tcb_no_state crunch_wps)
+  (wp: threadSet_pred_tcb_no_state crunch_wps simp: unless_def)
 
 lemmas emptySlot_pred_tcb_at'_Q[wp] = lift_neg_pred_tcb_at'[OF emptySlot_typ_at' emptySlot_pred_tcb_at']
 

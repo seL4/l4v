@@ -438,12 +438,7 @@ lemmas queue_in_range' = queue_in_range_pre[unfolded numDomains_def numPrioritie
    In order to have a working build until the C parser is fixed, we sorry this
    proof. My apologies.
 *)
-ML {*
-val old_quick_and_dirty =  let fun get_bool (Config.Bool b) = b in
-  Config.get @{context} quick_and_dirty_raw |> get_bool
-end
-*}
-local_setup {* Config.put quick_and_dirty true *}
+context notes [[quick_and_dirty]] begin
 lemma clz_spec:
   "\<forall>s. \<Gamma> \<turnstile> {\<sigma>. s = \<sigma> \<and> x_' s \<noteq> 0} Call clz_'proc
        \<lbrace>\<acute>ret__int = of_nat (word_clz (x_' s)) \<rbrace>"
@@ -451,7 +446,7 @@ lemma clz_spec:
   sorry
 (* FIXME: C parser generates weird things for functions annotated with
    FNSPEC+MODIFIES+DONT_TRANSLATE *)
-local_setup {* Config.put quick_and_dirty old_quick_and_dirty *}
+end
 (**** FIXME FIXME FIXME ***)
 
 lemma l1index_to_prio_spec:
