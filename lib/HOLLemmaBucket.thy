@@ -997,4 +997,109 @@ lemma equiv_relation_to_projection:
 lemma range_constant [simp]: "range (\<lambda>_. k) = {k}"
   by (clarsimp simp: image_def)
 
+lemma dom_unpack:"dom (map_of (map (\<lambda>x. (f x, g x)) xs)) = set (map (\<lambda>x. f x) xs)"
+  by (simp add: dom_map_of_conv_image_fst image_image)
+
+lemma fold_to_disj:"fold op ++ ms a x = Some y \<Longrightarrow> (\<exists>b \<in> set ms. b x = Some y) \<or> a x = Some y"
+  apply (induct ms arbitrary:a x y; clarsimp)
+  apply blast
+  done
+
+lemma fold_ignore1:"a x = Some y \<Longrightarrow> fold op ++ ms a x = Some y"
+  by (induct ms arbitrary:a x y; clarsimp)
+
+lemma fold_ignore2:"fold op ++ ms a x = None \<Longrightarrow> a x = None"
+  by (metis fold_ignore1 option.collapse)
+
+lemma fold_ignore3:"fold op ++ ms a x = None \<Longrightarrow> (\<forall>b \<in> set ms. b x = None)"
+  apply (induct ms arbitrary:a x; clarsimp)
+  by (meson fold_ignore2 map_add_None)
+
+lemma fold_ignore4:"b \<in> set ms \<Longrightarrow> b x = Some y \<Longrightarrow> \<exists>y. fold op ++ ms a x = Some y"
+  apply (rule ccontr)
+  apply (subst (asm) not_ex)
+  apply clarsimp
+  apply (drule fold_ignore3)
+  apply fastforce
+  done
+
+lemma dom_unpack2:"dom (fold op ++ ms empty) = \<Union>(set (map dom ms))"
+  apply (induct ms; clarsimp simp:dom_def)
+  apply (rule equalityI; clarsimp)
+   apply (drule fold_to_disj)
+   apply (erule disjE)
+    apply clarsimp
+    apply (rename_tac b)
+    apply (erule_tac x=b in ballE; clarsimp)
+   apply clarsimp
+  apply (rule conjI)
+   apply clarsimp
+   apply (rule_tac x=y in exI)
+   apply (erule fold_ignore1)
+  apply clarsimp
+  apply (rename_tac a ms x xa y)
+  apply (erule_tac y=y in fold_ignore4; clarsimp)
+  done
+
+lemma fold_ignore5:"fold op ++ ms a x = Some y \<Longrightarrow> a x = Some y \<or> (\<exists>b \<in> set ms. b x = Some y)"
+  apply (induct ms arbitrary:a x y; clarsimp)
+  apply blast
+  done
+
+lemma dom_inter_nothing:"dom f \<inter> dom g = {} \<Longrightarrow> \<forall>x. f x = None \<or> g x = None"
+  by auto
+
+lemma fold_ignore6:"f x = None \<Longrightarrow> fold op ++ ms f x = fold op ++ ms empty x"
+  apply (induct ms arbitrary:f x; clarsimp simp:map_add_def)
+  by (metis (no_types, lifting) fold_ignore1 option.collapse option.simps(4))
+
+lemma fold_ignore7:"m x = m' x \<Longrightarrow> fold op ++ ms m x = fold op ++ ms m' x"
+  apply (case_tac "m x")
+   apply (frule_tac ms=ms in fold_ignore6)
+   apply (cut_tac f=m' and ms=ms and x=x in fold_ignore6)
+    apply clarsimp+
+  apply (rename_tac a)
+  apply (cut_tac ms=ms and a=m and x=x and y=a in fold_ignore1, clarsimp)
+  apply (cut_tac ms=ms and a=m' and x=x and y=a in fold_ignore1; clarsimp)
+  done
+
+lemma fold_ignore8:"fold op ++ ms [x \<mapsto> y] = (fold op ++ ms empty)(x \<mapsto> y)"
+  apply (rule ext)
+  apply (rename_tac xa)
+  apply (case_tac "xa = x")
+   apply clarsimp
+   apply (rule fold_ignore1)
+   apply clarsimp
+  apply (subst fold_ignore6)
+   apply clarsimp+
+  done
+
+lemma fold_ignore9:"\<lbrakk>fold op ++ ms [x \<mapsto> y] x' = Some z; x = x'\<rbrakk> \<Longrightarrow> y = z"
+  apply (subst (asm) fold_ignore8)
+  apply clarsimp
+  done
+
+lemma fold_to_map_of:"fold op ++ (map (\<lambda>x. [f x \<mapsto> g x]) xs) empty = map_of (map (\<lambda>x. (f x, g x)) xs)"
+  apply (rule ext)
+  apply (rename_tac x)
+  apply (case_tac "fold op ++ (map (\<lambda>x. [f x \<mapsto> g x]) xs) Map.empty x")
+   apply clarsimp
+   apply (drule fold_ignore3)
+   apply (clarsimp split:split_if_asm)
+   apply (rule sym)
+   apply (subst map_of_eq_None_iff)
+   apply clarsimp
+   apply (rename_tac xa)
+   apply (erule_tac x=xa in ballE; clarsimp)
+  apply clarsimp
+  apply (frule fold_ignore5; clarsimp split:split_if_asm)
+  apply (subst map_add_map_of_foldr[where m=empty, simplified])
+  apply (induct xs arbitrary:f g; clarsimp split:split_if)
+  apply (rule conjI; clarsimp)
+   apply (drule fold_ignore9; clarsimp)
+  apply (cut_tac ms="map (\<lambda>x. [f x \<mapsto> g x]) xs" and f="[f a \<mapsto> g a]" and x="f b" in fold_ignore6, clarsimp)
+  apply clarsimp
+  apply (erule disjE; clarsimp)
+  done
+
 end
