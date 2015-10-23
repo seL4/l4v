@@ -70,32 +70,41 @@ text \<open>
 
 private definition "atomic f A' A B Q = (\<forall>P. \<lbrace>\<lambda>s. P (A' s)\<rbrace> f \<lbrace>\<lambda>r s. P (A r s)\<rbrace>)"
 
-private definition "trips (Bs :: bool) = Bs"
+private definition "trip (Bs :: bool) = Bs"
 
 
 private lemma
-  init: "(atomic f (\<lambda>_. True) (\<lambda>_ _. True) (\<lambda>_ _. True) Q \<Longrightarrow> trips Ts) \<Longrightarrow> 
-          (trips Ts \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>) \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>"
+  init: "(atomic f (\<lambda>_. True) (\<lambda>_ _. True) (\<lambda>_ _. True) Q \<Longrightarrow> trip Ts) \<Longrightarrow> 
+          (trip Ts \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>) \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>"
   by (simp add: atomic_def valid_def)
 
 private lemma
-  atomic_conjE: 
+  atomic_conjE1: 
   "atomic f A' A B (\<lambda>r s. Q r s \<and> Q' r s) \<Longrightarrow> 
-    (atomic f A' A B Q \<Longrightarrow> trips Ts) \<Longrightarrow> 
-    (atomic f A' A B Q' \<Longrightarrow> trips Ts') \<Longrightarrow> trips (Ts \<and> Ts')"
-  by (simp add: atomic_def trips_def)
+    (atomic f A' A B Q \<Longrightarrow> trip Ts) \<Longrightarrow>
+    trip Ts "
+  by (simp add: atomic_def trip_def)
+
+private lemma
+  atomic_conjE2: 
+  "atomic f A' A B (\<lambda>r s. Q r s \<and> Q' r s) \<Longrightarrow> 
+    (atomic f A' A B Q' \<Longrightarrow> trip Ts) \<Longrightarrow>
+    trip Ts "
+  by (simp add: atomic_def trip_def)
 
 private lemma
   atomic_impE_curry: 
   "atomic f A' A B (\<lambda>r s. (Q r s \<and> Q' r s) \<longrightarrow> Q'' r s) \<Longrightarrow> 
-    (atomic f A' A B (\<lambda>r s. Q r s \<longrightarrow> Q' r s \<longrightarrow> Q'' r s) \<Longrightarrow> trips Ts) \<Longrightarrow> trips Ts"
+    (atomic f A' A B (\<lambda>r s. Q r s \<longrightarrow> Q' r s \<longrightarrow> Q'' r s) \<Longrightarrow> trip Ts) \<Longrightarrow> trip Ts"
   by (simp add: atomic_def )
 
 private lemma
   atomic_impE_nonpreserved: 
   "atomic f A' A B (\<lambda>r s. Q r s \<longrightarrow> Q' r s) \<Longrightarrow> 
-    (atomic f A' A (\<lambda>r s. Q r s \<and> B r s) Q' \<Longrightarrow> trips Ts) \<Longrightarrow> trips Ts"
+    (atomic f A' A (\<lambda>r s. Q r s \<and> B r s) Q' \<Longrightarrow> trip Ts) \<Longrightarrow> trip Ts"
   by (simp add: atomic_def )
+
+
 
 
 private lemma bool_function_four_cases:
@@ -106,7 +115,7 @@ private lemma
   atomic_impE_preserved: 
   "atomic f A' A B (\<lambda>r s. Pres r s \<longrightarrow> Q' r s) \<Longrightarrow>
   (\<And>P. \<lbrace>\<lambda>s. P (Pres' s)\<rbrace> f \<lbrace>\<lambda>r s. P (Pres r s)\<rbrace>) \<Longrightarrow>
-  (atomic f (\<lambda>s. A' s \<and> Pres' s) (\<lambda>r s. A r s \<and> Pres r s) B Q' \<Longrightarrow> trips Ts) \<Longrightarrow> trips Ts"
+  (atomic f (\<lambda>s. A' s \<and> Pres' s) (\<lambda>r s. A r s \<and> Pres r s) B Q' \<Longrightarrow> trip Ts) \<Longrightarrow> trip Ts"
   apply (erule meta_mp)
   apply (clarsimp simp: valid_def atomic_def)
   apply (drule_tac x=P in spec)
@@ -118,81 +127,82 @@ private lemma
 private lemma
   atomic_allE: 
   "atomic f A' A B (\<lambda>r s. \<forall>x. Q x r s) \<Longrightarrow> 
-    (\<And>x. atomic f A' A B (\<lambda>r s. Q x r s) \<Longrightarrow> trips (Ts x)) \<Longrightarrow> trips (\<forall>x. Ts x)"
-  by (simp add: atomic_def trips_def)
+    (\<And>x. atomic f A' A B (\<lambda>r s. Q x r s) \<Longrightarrow> trip (Ts x)) \<Longrightarrow> trip (\<forall>x. Ts x)"
+  by (simp add: atomic_def trip_def)
 
 private lemma
   atomic_exE: 
   "atomic f A' A B (\<lambda>r s. \<exists>x. Q x r s) \<Longrightarrow> 
-    (\<And>x. atomic f A' A B (\<lambda>r s. Q x r s) \<Longrightarrow> trips (Ts x)) \<Longrightarrow> trips (\<exists>x. Ts x)"
-  by (simp add: atomic_def trips_def)
+    (\<And>x. atomic f A' A B (\<lambda>r s. Q x r s) \<Longrightarrow> trip (Ts x)) \<Longrightarrow> trip (\<exists>x. Ts x)"
+  by (simp add: atomic_def trip_def)
 
 private lemma
   atomic_disjE: 
   "atomic f A' A B (\<lambda>r s. Q r s \<or> Q' r s) \<Longrightarrow> 
    (atomic f A' A B (\<lambda>r s. (\<not> Q r s \<longrightarrow> Q' r s) \<and> (\<not> Q' r s \<longrightarrow> Q r s))
-    \<Longrightarrow> trips Ts) \<Longrightarrow> trips Ts"
+    \<Longrightarrow> trip Ts) \<Longrightarrow> trip Ts"
   by (simp add: atomic_def )
 
-private lemmas atomic_elims = atomic_conjE atomic_allE atomic_exE atomic_disjE atomic_impE_curry
+text \<open>Decomposing a static term is a waste of time as we know we can lift it
+      out all in one go. Additionally this stops wp_drop_imp from uselessly taking it apart.\<close>
+
+
+private definition "static Q = (\<lambda>r s. Q)"
+
+private lemma
+  atomic_staticE: 
+  "atomic f A' A B (\<lambda>(_ :: 'a) (_ :: 'b). Q) \<Longrightarrow> 
+    (atomic f A' A B (static Q :: ('a \<Rightarrow> 'b \<Rightarrow> bool)) \<Longrightarrow> trip Ts) \<Longrightarrow> trip Ts"
+  by (simp add: atomic_def)
+
+
+private lemmas atomic_elims =
+   atomic_conjE1 atomic_conjE2 atomic_allE atomic_exE atomic_disjE atomic_impE_curry
 
 text \<open>At the leaves, we try to solve the atomic consequent. We then push our solved preserved
       antecedents back into the final hoare triple.\<close>
 
 private lemma
   atomicE: 
-  "atomic f A' A B Q \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<Longrightarrow> trips \<lbrace>\<lambda>s. A' s \<longrightarrow> P s\<rbrace> f \<lbrace>\<lambda>r s. A r s \<longrightarrow> Q r s\<rbrace>"
-  by (auto simp add: trips_def atomic_def valid_def;blast)
+  "atomic f A' A B Q \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<Longrightarrow> trip \<lbrace>\<lambda>s. A' s \<longrightarrow> P s\<rbrace> f \<lbrace>\<lambda>r s. A r s \<longrightarrow> Q r s\<rbrace>"
+  by (auto simp add: trip_def atomic_def valid_def;blast)
+
+text \<open>Minor annoyance because everything expects atomicE to produce a goal, but
+      we don't need wp if it's static.\<close>
+
+private lemma
+  atomicE_static: 
+  "atomic f A' A B (static Q) \<Longrightarrow> \<lbrace>\<lambda>_. True\<rbrace> f \<lbrace>\<lambda>_ _. True\<rbrace> \<Longrightarrow> 
+    trip \<lbrace>\<lambda>s. A' s \<longrightarrow> Q\<rbrace> f \<lbrace>\<lambda>r s. A r s \<longrightarrow> Q\<rbrace>"
+  by (auto simp add: trip_def atomic_def valid_def;blast)
+
+lemmas atomicEs = atomicE_static atomicE 
+
+private lemma
+  atomic_drop_trivial: 
+  "atomic f A' (\<lambda>_ _. True) (\<lambda>_ _. True) Q \<Longrightarrow> R \<Longrightarrow> R"
+  by (auto simp add: trip_def)
 
 
-private lemma trips_True: "trips True" by (simp add: trips_def)
+
+private lemma trips_True: "trip True" by (simp add: trip_def)
 
 
 text \<open>We need to push the quantifiers into the hoare triples.
       This is an unfortunate bit of manual work, but anything more than 2 levels
       of nesting is unlikely.\<close>
 
-private lemma trips_conjE: 
-  "trips (A \<and> B) \<Longrightarrow> (trips A \<Longrightarrow> trips B \<Longrightarrow> R) \<Longrightarrow> R"
-  by (simp add: trips_def)
 
-private lemma trips_conjE_all1: 
-  "trips (\<forall>x. A x \<and> B x) \<Longrightarrow> (trips (\<forall>x. A x) \<Longrightarrow> trips (\<forall>x. B x) \<Longrightarrow> R) \<Longrightarrow> R"
-  by (simp add: trips_def)
-
-private lemma trips_conjE_all2: 
-  "trips (\<forall>x y. A x y \<and> B x y) \<Longrightarrow> (trips (\<forall>x y. A x y) \<Longrightarrow> trips (\<forall>x y. B x y) \<Longrightarrow> R) \<Longrightarrow> R"
-  by (simp add: trips_def)
-
-private lemma trips_conjE_ex1: 
-  "trips (\<exists>x. A x \<and> B x) \<Longrightarrow> (trips (\<exists>x. A x) \<Longrightarrow> trips (\<exists>x. B x) \<Longrightarrow> R) \<Longrightarrow> R"
-  by (simp add: trips_def,blast)
-
-private lemma trips_conjE_ex2: 
-  "trips (\<exists>x y. A x y \<and> B x y) \<Longrightarrow> (trips (\<exists>x y. A x y) \<Longrightarrow> trips (\<exists>x y. B x y) \<Longrightarrow> R) \<Longrightarrow> R"
-  by (simp add: trips_def,blast)
-
-private lemma trips_conjE_ex_all: 
-  "trips (\<exists>x. (\<forall> y. A x y \<and> B x y)) \<Longrightarrow> (trips (\<exists>x. (\<forall> y. A x y)) \<Longrightarrow> trips (\<exists>x. (\<forall> y. B x y)) \<Longrightarrow> R) \<Longrightarrow> R"
-  by (simp add: trips_def,blast)
-
-private lemma trips_conjE_all_ex: 
-  "trips (\<forall>x. (\<exists> y. A x y \<and> B x y)) \<Longrightarrow> (trips (\<forall>x. (\<exists> y. A x y)) \<Longrightarrow> trips (\<forall>x. (\<exists> y. B x y)) \<Longrightarrow> R) \<Longrightarrow> R"
-  by (simp add: trips_def,blast)
-
-private lemmas trips_conjEs = trips_conjE trips_conjE_all1 trips_conjE_all2
-                               trips_conjE_ex1 trips_conjE_ex2
-                               trips_conjE_ex_all trips_conjE_all_ex
 
 private lemma trips_push_all1:
-  "trips (\<forall>x. \<lbrace>\<lambda>s. Q x s\<rbrace> f \<lbrace>\<lambda>r s. Q' x r s\<rbrace>) \<Longrightarrow> 
-    trips (\<lbrace>\<lambda>s. \<forall>x. Q x s\<rbrace> f \<lbrace>\<lambda>r s. \<forall>x. Q' x r s\<rbrace>)"
-   by (simp add: trips_def valid_def; blast)
+  "trip (\<forall>x. \<lbrace>\<lambda>s. Q x s\<rbrace> f \<lbrace>\<lambda>r s. Q' x r s\<rbrace>) \<Longrightarrow> 
+    trip (\<lbrace>\<lambda>s. \<forall>x. Q x s\<rbrace> f \<lbrace>\<lambda>r s. \<forall>x. Q' x r s\<rbrace>)"
+   by (simp add: trip_def valid_def; blast)
 
 private lemma trips_push_all2:
-  "trips (\<forall>x y. \<lbrace>\<lambda>s. Q x y s\<rbrace> f \<lbrace>\<lambda>r s. Q' x y r s\<rbrace>) \<Longrightarrow> 
-    trips (\<lbrace>\<lambda>s. \<forall>x y. Q x y s\<rbrace> f \<lbrace>\<lambda>r s. \<forall>x y. Q' x y r s\<rbrace>)"
-   by (simp add: trips_def valid_def; blast)
+  "trip (\<forall>x y. \<lbrace>\<lambda>s. Q x y s\<rbrace> f \<lbrace>\<lambda>r s. Q' x y r s\<rbrace>) \<Longrightarrow> 
+    trip (\<lbrace>\<lambda>s. \<forall>x y. Q x y s\<rbrace> f \<lbrace>\<lambda>r s. \<forall>x y. Q' x y r s\<rbrace>)"
+   by (simp add: trip_def valid_def; blast)
 
 text \<open>Existentials are hard, and we don't see them often 
       as the consequent in the postcondition.
@@ -204,21 +214,21 @@ text \<open>Existentials are hard, and we don't see them often
       if they're deemed unecessary.\<close>
 
 private lemma trips_push_ex1:
-  "trips (\<exists>x. \<lbrace>\<lambda>s. Q s\<rbrace> f \<lbrace>\<lambda>r s. Q' x r s\<rbrace>) \<Longrightarrow> 
-    trips (\<lbrace>\<lambda>s. Q s\<rbrace> f \<lbrace>\<lambda>r s. \<exists>x. Q' x r s\<rbrace>)"
-   by (simp add: trips_def valid_def,blast)
+  "trip (\<exists>x. \<lbrace>\<lambda>s. Q s\<rbrace> f \<lbrace>\<lambda>r s. Q' x r s\<rbrace>) \<Longrightarrow> 
+    trip (\<lbrace>\<lambda>s. Q s\<rbrace> f \<lbrace>\<lambda>r s. \<exists>x. Q' x r s\<rbrace>)"
+   by (simp add: trip_def valid_def,blast)
 
 private lemma trips_push_ex2:
-  "trips (\<exists>x y. \<lbrace>\<lambda>s. Q s\<rbrace> f \<lbrace>\<lambda>r s. Q' x y r s\<rbrace>) \<Longrightarrow> 
-    trips (\<lbrace>\<lambda>s. Q s\<rbrace> f \<lbrace>\<lambda>r s. \<exists>x y. Q' x y r s\<rbrace>)"
-   by (simp add: trips_def valid_def; blast)
+  "trip (\<exists>x y. \<lbrace>\<lambda>s. Q s\<rbrace> f \<lbrace>\<lambda>r s. Q' x y r s\<rbrace>) \<Longrightarrow> 
+    trip (\<lbrace>\<lambda>s. Q s\<rbrace> f \<lbrace>\<lambda>r s. \<exists>x y. Q' x y r s\<rbrace>)"
+   by (simp add: trip_def valid_def; blast)
 
 
 lemmas trips_pushEs[elim_format] = trips_push_all1 trips_push_all2 trips_push_ex1 trips_push_ex2
 
-private lemma trips_True_drop: "trips True \<Longrightarrow> R \<Longrightarrow> R" by -
+private lemma trips_True_drop: "trip True \<Longrightarrow> R \<Longrightarrow> R" by -
 
-private lemma trips_contr_drop: "trips \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_ _. False\<rbrace> \<Longrightarrow> R \<Longrightarrow> R" by -
+private lemma trips_contr_drop: "trip \<lbrace>P\<rbrace> f \<lbrace>\<lambda>_ _. False\<rbrace> \<Longrightarrow> R \<Longrightarrow> R" by -
 
 definition "post_imp A B == A \<longrightarrow> B" 
 
@@ -233,13 +243,10 @@ lemma trip_drop:
   by (simp add: post_imp_def)
 
 private lemma hoare_add_trip: 
-  "trips (\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>) \<Longrightarrow>
+  "trip (\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>) \<Longrightarrow>
   \<lbrace>P'\<rbrace> f \<lbrace>\<lambda>r s. post_imp (Q r s \<and> Q' r s) (R r s)\<rbrace> \<Longrightarrow> \<lbrace>\<lambda>s. P s \<and> P' s\<rbrace> f \<lbrace>\<lambda>r s. post_imp (Q' r s) (R r s)\<rbrace>"
-  by (auto simp: trips_def valid_def post_imp_def; blast)
+  by (auto simp: trip_def valid_def post_imp_def; blast)
 
-private lemma hoare_drop_trip: 
-  "trips (\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>) \<Longrightarrow> R \<Longrightarrow> R" 
-  by -
 
 lemmas post_imp_cong = imp_cong[simplified post_imp_def[symmetric]]
 
@@ -289,15 +296,14 @@ text \<open>This is the main worker method. It decomposes the postcondition and 
       are stored in "trips", otherwise the resulting
       addition to trips is just "True" and subsequently discarded.\<close>
 
-private method make_goals methods wp_weak wp_strong tests =
-  (determ \<open>(repeat_new \<open>erule atomic_elims | 
+private method make_goals methods wp_weak wp_strong tests  =
+  (repeat_new \<open>erule atomic_staticE | erule atomic_elims | 
             (erule atomic_impE_preserved, solves \<open>wp_weak | wp_strong\<close>) |
-             erule atomic_impE_nonpreserved\<close>)?\<close>;
-      (
-      (solves \<open>erule atomicE, wp_weak\<close>
+             erule atomic_impE_nonpreserved\<close>,
+      fails \<open>erule atomic_drop_trivial\<close>,
+      (solves \<open>erule atomicEs, wp_weak\<close>
       | succeeds \<open>erule trivial_test | tests\<close>, 
-          determ \<open>erule atomicE\<close>, solves \<open>wp_strong\<close>
-      | rule trips_True)))
+          determ \<open>erule atomicEs\<close>, solves \<open>wp_strong\<close>))
 
 text \<open>Once all the triples exist we simplify them all in one go to 
       find trivial or self-contradictory rules. This avoids invoking the simplifier
@@ -312,32 +318,31 @@ private lemmas simp_dels = all_simps ex_simps
 method post_strengthen methods wp_weak wp_strong simp' tests =
   (rule init, 
     determ \<open>make_goals \<open>wp_weak\<close> \<open>wp_strong\<close> \<open>tests\<close>,
-    (elim trips_conjEs trips_pushEs)?,
+    (elim trips_pushEs)?,
     rule trip_init\<close>,
     (simp add: imp_conjL del: simp_dels split del: split_if)?,
-    determ \<open>(erule trips_True_drop trips_contr_drop hoare_add_trip hoare_drop_trip)+\<close>,
+    determ \<open>(erule trips_True_drop trips_contr_drop hoare_add_trip)\<close>,
     simp',
-    rule trip_drop)
+    rule trip_drop,
+    (rule hoare_vcg_prop)?)
 
 text \<open>The "wpi" named theorem is used to avoid the safety heuristics, effectively
       saying that the presence of that postcondition indicates that it should always be lifted.\<close>
 
 named_theorems wpi
 
-text \<open>We obligate the simplifier to make additional progress in the presence of the
-      post_imp congruence rule. This enforces that wpi only succeeds when it
-      has made some measurable progress, which avoids looping.\<close>
-
 private method final_simp =
-  ((simp del: simp_dels split del: split_if)?, simp del: del: simp_dels split del: split_if cong: post_imp_cong) 
-
+  (simp del: del: simp_dels split del: split_if cong: post_imp_cong) 
 
 text \<open>By default, wpi will only solve an atomic consequent if all its antecedents
       aren't preserved. Therefore "test" is simply "fail". Unpreserved antecedents
       can only be dropped if the consequent is solved by a member of wpi.\<close>
 
-method wpi uses add del declares wpi = 
+method wpi_once uses add del declares wpi = 
   (post_strengthen \<open>wp only: wpi\<close> \<open>wp add: add del: del\<close> \<open>final_simp\<close> \<open>fail\<close>)
+
+method wpi uses add del declares wpi = ((wpi_once add: add del: del)+)[1]
+
 
 text \<open>A stronger variant handles the case where some antecedents aren't
       preserved. We drop unpreserved antecedents in the case where they
@@ -353,14 +358,68 @@ text \<open>The final variant will apply any rule that solves a consequent.
 method wpi_dangerous uses add del declares wpi = 
   (post_strengthen \<open>wp add: wpi add del: del\<close> \<open>fail\<close> \<open>final_simp\<close> \<open>fail\<close>)
 
+text \<open>With a slight abuse of the previous work we can capture the "drop" heuristic
+      as a separate method. Here we don't concern ourselves with whether or not
+      the lifted consequents can be solved, we just do it if it looks safe.
+
+      This has slightly different behaviour to wpi because it backtracks over
+      the chosen consequent. This allows us to "find" the right one by putting
+      another method after that should solve the result.\<close>
+
+private definition "term x = True"
+
+private lemma
+  trips_transport:
+  "atomic f A' A B (static Q'') \<Longrightarrow> trip (term (\<lambda>r s. Q''))"
+  "atomic f A' A B Q' \<Longrightarrow> trip (term Q')"
+  by (simp add: trip_def term_def)+
+
+private definition "post_conj A B \<equiv> A \<and> B"
+
+lemmas post_conj_cong = conj_cong[simplified post_conj_def[symmetric]]
+
+private lemma
+  trip_term_quants:
+  "trip (\<forall>x. term (Q x)) \<Longrightarrow> trip (term (\<lambda>r s. \<forall>x. Q x r s))"
+  "trip (\<forall>x y. term (Q' x y)) \<Longrightarrow> trip (term (\<lambda>r s. \<forall>x y. Q' x y r s))"
+  "trip (\<exists>x. term (Q x)) \<Longrightarrow> trip (term (\<lambda>r s. \<exists>x. Q x r s))"
+  "trip (\<exists>x y. term (Q' x y)) \<Longrightarrow> trip (term (\<lambda>r s. \<exists>x y. Q' x y r s))"
+  by (simp add: trip_def term_def)+
+
+
+private lemma
+  strengthen_trip_term: 
+  "trip (term Q') \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>r s. post_conj (Q' r s) (Q r s)\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>"
+  by (auto simp add: trip_def atomic_def valid_def post_conj_def)
+
+private lemma
+  post_conj_drop:
+  "\<lbrace>P\<rbrace> f \<lbrace>\<lambda>r s. Q' r s \<and> Q r s\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>\<lambda>r s. post_conj (Q' r s) (Q r s)\<rbrace>"
+  by (simp add: post_conj_def)
+
+method wp_drop_imp_internal methods tests = 
+  (rule init,
+   repeat_new \<open>erule atomic_staticE | erule atomic_elims atomic_impE_nonpreserved\<close>, 
+   fails \<open>erule atomic_drop_trivial\<close>,
+   succeeds \<open>erule trivial_test | tests\<close>,
+   determ \<open>erule trips_transport\<close>,
+   ((drule trip_term_quants)+)?,
+   erule strengthen_trip_term,
+   simp split del: split_if cong: post_conj_cong,
+   rule post_conj_drop)
+
+method wp_drop_imp = wp_drop_imp_internal \<open>tests\<close>
+
+method wp_strong_drop_imp = wp_drop_imp_internal \<open>succeed\<close>
+
 end
 
 
 notepad begin
   fix P P' P'' P''' and Q Q' Q'' :: "'a \<Rightarrow> bool" and R :: "bool \<Rightarrow> 'b \<Rightarrow> 'a \<Rightarrow> bool"
       and f :: "'x \<Rightarrow> ('a,'b) nondet_monad" and D D' D'' D''' D'''' y and x :: 'x
-  assume    A[wp]: "\<lbrace>P'\<rbrace> f x \<lbrace>\<lambda>_. Q\<rbrace>" and 
-            B[wp]:"\<lbrace>P''\<rbrace> f x \<lbrace>\<lambda>_. Q'\<rbrace>" and
+  assume    Q[wp]: "\<lbrace>P'\<rbrace> f x \<lbrace>\<lambda>_. Q\<rbrace>" and 
+            Q'[wp]:"\<lbrace>P''\<rbrace> f x \<lbrace>\<lambda>_. Q'\<rbrace>" and
             C: "\<And>r s.
                 (y x \<longrightarrow> D''' y) \<and>
                 ((R D r s \<longrightarrow>
@@ -371,7 +430,9 @@ notepad begin
         \<lbrace>\<lambda>r s. D'' x \<and> (R D r s \<longrightarrow> (Q s \<and> Q' s \<and> D \<and> (y x \<longrightarrow> D''' y) \<and> (D''''  \<longrightarrow> y x))) \<and> 
                 (\<not> R D r s \<longrightarrow> (Q s \<and> Q'' s))\<rbrace>"
   apply (rule hoare_pre)
-  apply wpi_unsafe
+  apply wp
+  apply (wpi wpi: Q')
+  apply (wpi wpi: Q)
   apply (rule hoare_strengthen_post[OF hoare_post_taut[where P=\<top>]])
   apply (simp add: C)
   using C
@@ -385,7 +446,6 @@ notepad begin
   have "\<lbrace>B x\<rbrace> f x \<lbrace>\<lambda>r s. R D r s \<longrightarrow> B x s\<rbrace>"
   apply (rule hoare_pre)
   apply (wpi wpi: B)
-  apply wp
   by simp
 
   (* wpi_dangerous will apply wp rules without any safety heuristics.
@@ -395,7 +455,6 @@ notepad begin
   have "\<lbrace>B x\<rbrace> f x \<lbrace>\<lambda>r s. R D r s \<longrightarrow> B x s\<rbrace>"
   apply (rule hoare_pre)
   apply (wpi_dangerous)
-  apply wp
   by simp
 
 
@@ -414,7 +473,6 @@ notepad begin
   have "\<lbrace>\<lambda>s. D \<longrightarrow> C s\<rbrace> f x \<lbrace>\<lambda>r s. D \<longrightarrow> C s\<rbrace>"
   apply (rule hoare_pre)
   apply wpi
-  apply wp
   by simp
 
 
@@ -430,19 +488,22 @@ notepad begin
   have "\<lbrace>\<lambda>s. CC s \<longrightarrow> C s\<rbrace> f x \<lbrace>\<lambda>r s. R D r s \<longrightarrow> C s\<rbrace>"
   apply (rule hoare_pre)
   apply wpi
-  apply wp
   by simp
 
-  (* implicit connections are not captured, thus why wpu is unsafe *)
+  (* implicit connections are not captured in wpi_unsafe*)
 
-  fix G G' z
-  have "\<lbrace>\<lambda>_. False\<rbrace> f x \<lbrace>\<lambda>r s. (G s \<longrightarrow> \<not> D) \<and> (G' s \<longrightarrow> D)\<rbrace>"
+  fix G G'
+  assume Failsafe: "\<And>P. P" and
+         f_G: "\<And>P :: bool \<Rightarrow> bool. \<lbrace>\<lambda>s. P (G s)\<rbrace> f x \<lbrace>\<lambda>r s. P (G s)\<rbrace>"
+  have "\<lbrace>\<lambda>s . (G s \<longrightarrow> \<not> D) \<and> ((\<not>G s) \<longrightarrow> D)\<rbrace> f x \<lbrace>\<lambda>r s. (G s \<longrightarrow> \<not> D) \<and> ((\<not>G s) \<longrightarrow> D)\<rbrace>"
+  apply (rule thin_rl[of W W for W])
   apply (rule hoare_pre)
-  apply wpi_unsafe? (* we avoid introducting contradictions directly. wpi_unsafe fails here *)
-  apply (rule hoare_vcg_conj_lift)
   apply wpi? (* wpi doesn't know how to establish G s, so it (safely) does nothing *)
-  apply (wp | wpi_unsafe)+ (* the contradiction of lifting over G and G' is invisible to wpi_unsafe's heuristics*)
-  apply (rule ccontr)
+  apply wpi_unsafe (* the heuristics fail here for wpi_unsafe, backing us into a corner *)
+  apply ((rule Failsafe)+)[2]
+
+  apply (rule hoare_pre)
+  apply (wpi add: f_G) (* by adding f_G to the wp set, we can safely lift over G *)
   by simp
 
 end
@@ -461,29 +522,28 @@ notepad begin
   have "\<lbrace>\<lambda>s. \<forall>x. P x s \<longrightarrow> Q x s\<rbrace> f a \<lbrace>\<lambda>r s. \<forall>x. P x s \<longrightarrow> Q x s\<rbrace>"
   apply (rule hoare_pre)
   apply wpi
-  apply wp
   by simp
   }
 
   {
-  fix Q''
+  fix Q'' Q'
   assume Q[wp]:"\<And>x. \<lbrace>\<lambda>s. Q x s\<rbrace> f a \<lbrace>\<lambda>r s. Q x s\<rbrace>" and 
          Q''[wp]:"\<lbrace>\<lambda>s. Q'' s\<rbrace> f a \<lbrace>\<lambda>r s. Q'' s\<rbrace>" 
          and Failsafe: "\<And>P. P"
-  have "\<lbrace>\<lambda>s. \<forall>x. P x s \<longrightarrow> Q x s\<rbrace> f a \<lbrace>\<lambda>r s. \<forall>x. P x s \<longrightarrow> (Q x s \<and> Q'' s)\<rbrace>"
+  have "\<lbrace>\<lambda>s. \<forall>x. P x s \<longrightarrow> Q x s\<rbrace> f a \<lbrace>\<lambda>r s. \<forall>x. P x s \<longrightarrow> (Q'' s \<and> Q x s)\<rbrace>"
   apply (rule thin_rl[of W W for W])
     apply (rule hoare_pre)
     apply wpi? (* wpi fails because P isn't known to be preserved by f *)
-    apply wpi_unsafe (* wpi_unsafe can lift Q'' out because it doesn't depend on x,
+    apply wpi_unsafe+ (* wpi_unsafe can lift Q'' out because it doesn't depend on x,
                         but Q is left in place because both it and P depend on x
                         and P isn't preserved by f *)
     apply (wpi wpi: Q) (* we can force it through with the wpi set *)
-    apply wp (* now we're stuck because we don't have P *)
+    apply simp (* now we're stuck because we don't have P *)
     apply (rule Failsafe) (* bail out *)
 
     apply (rule hoare_pre)
-    apply wpi_dangerous (* this forces Q through regardless. We lose P again. *)
-    apply wp (* again we've lost P *)
+    apply wpi_dangerous+ (* this forces Q through regardless. We lose P again. *)
+    apply simp (* again we've lost P *)
 
     (* This goal is actually not solvable because, in general, f could establish P from nothing *)
 
@@ -491,7 +551,8 @@ notepad begin
     
 
   }
-  
+
+
 
   (* Multiple nested universal quantifiers can be safely lifted over. *)
 
@@ -502,7 +563,6 @@ notepad begin
   have "\<lbrace>\<lambda>s. Q' s\<rbrace> f a \<lbrace>\<lambda>r s. \<forall>x. P x s \<longrightarrow> (\<forall>y. P' y s \<longrightarrow> Q' s)\<rbrace>"
   apply (rule hoare_pre)
   apply wpi
-  apply wp
   by simp
   }
 
