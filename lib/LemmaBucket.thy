@@ -462,4 +462,7 @@ lemma dom_map_fold:"dom (fold op ++ (map (\<lambda>x. [f x \<mapsto> g x]) xs) m
 lemma list_ran_prop:"map_of (map (\<lambda>x. (f x, g x)) xs) i = Some t \<Longrightarrow> \<exists>x \<in> set xs. g x = t"
   by (induct xs arbitrary:f g t i; clarsimp split:split_if_asm)
 
+lemma in_set_enumerate_eq2:"(a, b) \<in> set (enumerate n xs) \<Longrightarrow> (b = xs ! (a - n))"
+  by (simp add: in_set_enumerate_eq)
+
 end
