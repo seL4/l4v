@@ -2975,7 +2975,7 @@ lemma decode_cnode_corres:
                              apply (rule hoare_post_imp_R[OF validE_validE_R])
                              apply (rule hoareE_TrueI[where P = \<top>])
                              apply (wp|simp)+
-                          apply (strengthen impI[OF mask_cap_valid])
+                          apply (strengthen mask_cap_valid)
                           apply (wp lsfco_not_idle hoareE_TrueI[where P = \<top>] |simp)+
           apply (subgoal_tac "valid_mdb s")
            apply (fastforce simp: valid_mdb_def mdb_cte_at_def)

@@ -1467,7 +1467,7 @@ lemma handleWait_ccorres:
       apply (rename_tac thread epCPtr)
         apply (rule_tac Q="(\<lambda>rv s. invs' s \<and> st_tcb_at' simple' thread s
                \<and> sch_act_sane s \<and> (\<forall>p. thread \<notin> set (ksReadyQueues s p)) \<and> thread = ksCurThread s
-               \<and> valid_cap' rv s)" in strengthen_validE_R_cong[rule_format])
+               \<and> valid_cap' rv s)" in hoare_post_imp_R[rotated])
          apply (clarsimp simp: sch_act_sane_def)
          apply (auto dest!: obj_at_valid_objs'[OF _ invs_valid_objs']
                       simp: projectKOs valid_obj'_def,

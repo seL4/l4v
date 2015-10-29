@@ -452,7 +452,7 @@ shows
                apply (clarsimp simp: option_to_ptr_def option_to_0_def)
               apply (clarsimp simp: asid_high_bits_def)
              apply wp
-            apply (strengthen impI[OF valid_pspace_mdb'] vp_strgs' impI[OF valid_pspace_valid_objs'])
+            apply (strengthen valid_pspace_mdb' vp_strgs' valid_pspace_valid_objs')
             apply (clarsimp simp: is_simple_cap'_def isCap_simps conj_comms placeNewObject_def2)
             apply (wp createObjects_valid_pspace'[where ty="Inl (KOArch (KOASIDPool f))" and sz = pageBits]
                       createObjects_cte_wp_at'[where sz = pageBits] 
@@ -462,8 +462,8 @@ shows
            apply clarsimp
            apply vcg
           apply (clarsimp simp:conj_comms objBits_simps archObjSize_def |
-                 strengthen impI[OF valid_pspace_mdb'] vp_strgs' impI[OF invs_valid_pspace']
-                 impI[OF valid_pspace_valid_objs'] impI[OF invs_valid_global'])+
+                 strengthen valid_pspace_mdb' vp_strgs' invs_valid_pspace'
+                 valid_pspace_valid_objs' invs_valid_global')+
           apply (wp updateFreeIndex_invs_simple'[where cap = "UntypedCap frame pageBits idx",simplified]
                     updateFreeIndex_caps_no_overlap''[where cap = "UntypedCap frame pageBits idx",simplified]
                     updateFreeIndex_pspace_no_overlap'[where cap = "UntypedCap frame pageBits idx",simplified]

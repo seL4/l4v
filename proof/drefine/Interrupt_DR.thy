@@ -379,7 +379,7 @@ lemma dcorres_invoke_irq_control:
      apply (simp add:cte_wp_at_def should_be_parent_of_def)
     apply (simp add: not_idle_thread_def)
     apply wp
-    apply (strengthen impI[OF invs_valid_idle] impI[OF invs_mdb])
+    apply (strengthen invs_valid_idle invs_mdb)
     apply (wp set_irq_state_invs)
    apply (clarsimp simp:invs_def valid_state_def valid_pspace_def)
    apply (rule conjI)
@@ -493,7 +493,7 @@ lemma dcorres_invoke_irq_handler:
         apply (wp cte_wp_at_neq_slot_cap_delete_one)
          apply simp
         apply (wp cte_wp_at_neq_slot_cap_delete_one)
-        apply (strengthen impI[OF invs_valid_idle] impI[OF invs_valid_objs])
+        apply (strengthen invs_valid_idle invs_valid_objs)
         apply (wp delete_one_invs)
       apply (simp add:valid_cap_def)
       apply (wp get_irq_slot_not_idle_wp get_irq_slot_ex_cte_cap_wp_to)

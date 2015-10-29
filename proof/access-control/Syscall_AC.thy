@@ -592,11 +592,6 @@ lemma handle_vm_state_refs_of [wp]:
   apply (wp | simp)+
   done
 
-lemma validE_strengthen_cong[strg]:
-  "\<lbrakk> \<And>rv s. Q rv s \<longrightarrow> Q' rv s; \<And>ft s. E ft s \<longrightarrow> E' ft s \<rbrakk>
-      \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace> \<longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q'\<rbrace>,\<lbrace>E'\<rbrace>"
-  by (auto elim: hoare_post_impErr)
-
 lemma handle_yield_pas_refined[wp]:
   "\<lbrace>pas_refined aag\<rbrace>
     handle_yield
@@ -638,11 +633,6 @@ lemma valid_fault_User [simp]:
   "valid_fault (UserException word1 word2)"
   by (simp add: valid_fault_def)
 
-
-(* FIXME: move *)
-lemma strengthen_validE_E_cong[strg]:
-  "\<lbrakk> \<And>rv s. Q rv s \<longrightarrow> R rv s \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> f -,\<lbrace>Q\<rbrace> \<longrightarrow> \<lbrace>P\<rbrace> f -,\<lbrace>R\<rbrace>"
-  by (auto simp add: validE_E_def hoare_post_impErr)
 
 declare hy_inv[wp del]
 

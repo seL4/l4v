@@ -175,8 +175,8 @@ lemma pac_corres:
                   apply (simp add: word_size nth_ucast)
                  apply wp
              apply (strengthen safe_parent_strg[where idx = "2^pageBits"])
-             apply (strengthen impI[OF invs_valid_objs] impI[OF invs_distinct]
-                               impI[OF invs_psp_aligned] impI[OF invs_mdb]
+             apply (strengthen invs_valid_objs invs_distinct
+                               invs_psp_aligned invs_mdb
                     | simp cong:conj_cong)+
              apply (wp retype_region_plain_invs[where sz = pageBits]
                        retype_cte_wp_at[where sz = pageBits])
@@ -195,9 +195,10 @@ lemma pac_corres:
                       [where sz = pageBits and ty="Inl (KOArch (KOASIDPool ap))"])
            apply (clarsimp simp:is_cap_simps)
           apply (clarsimp simp: conj_comms obj_bits_api_def arch_kobj_size_def
-                 objBits_simps archObjSize_def default_arch_object_def)
+                 objBits_simps archObjSize_def default_arch_object_def
+                 pred_conj_def)
           apply (clarsimp simp: conj_comms
-                | strengthen impI[OF invs_mdb] impI[OF invs_valid_pspace])+
+                | strengthen invs_mdb invs_valid_pspace)+
           apply (simp add:region_in_kernel_window_def)
           apply (wp set_untyped_cap_invs_simple[where sz = pageBits]
                     set_cap_cte_wp_at
@@ -208,9 +209,8 @@ lemma pac_corres:
                                objBits_simps archObjSize_def default_arch_object_def
                                makeObjectKO_def range_cover_full
                          simp del: capFreeIndex_update.simps 
-                | strengthen
-                impI[OF invs_valid_pspace'] impI[OF invs_pspace_aligned']
-                impI[OF invs_pspace_distinct'])+
+                | strengthen invs_valid_pspace' invs_pspace_aligned'
+                             invs_pspace_distinct')+
          apply (wp updateFreeIndex_invs_simple'
            updateFreeIndex_pspace_no_overlap'
            updateFreeIndex_caps_no_overlap''
@@ -231,9 +231,8 @@ lemma pac_corres:
      apply wp
     apply (clarsimp simp: conj_comms)
     apply (clarsimp simp: conj_comms ex_disj_distrib
-           | strengthen
-             impI[OF invs_valid_pspace'] impI[OF invs_pspace_aligned']
-              impI[OF invs_pspace_distinct'])+
+           | strengthen invs_valid_pspace' invs_pspace_aligned'
+                        invs_pspace_distinct')+
     apply (wp deleteObjects_invs' deleteObjects_cte_wp_at')
     apply (rule_tac Q= "\<lambda>r s. ct_active' s \<and>
                                (\<exists>x. (x = capability.UntypedCap word1 pageBits idx \<and> F r s x))" for F
@@ -1865,11 +1864,7 @@ lemma arch_decodeInvocation_wf[wp]:
                  createMappingEntries_valid_pde_slots'
                 | wpc
                 | simp add: valid_arch_inv'_def valid_page_inv'_def)+)[6]
-        apply (rule mp [OF strengthen_validE_R_cong])
-         apply (rule impI)
-         apply (subst eq_commute [where b = "fst p"])
-         apply assumption
-        apply simp
+        apply (simp add: eq_commute[where b="fst x" for x])
         apply ((wp whenE_throwError_wp checkVP_wpR hoare_vcg_const_imp_lift_R
                    hoare_drop_impE_R findPDForASID_page_directory_at'
                    createMappingEntries_valid_pde_slots'
@@ -2196,8 +2191,8 @@ lemma performASIDControlInvocation_invs' [wp]:
          projectKOs asid_pool_typ_at_ext'
          cong: rev_conj_cong)
     apply (clarsimp simp:conj_comms | 
-      strengthen impI[OF invs_pspace_aligned'] impI[OF invs_pspace_distinct']
-      impI[OF invs_pspace_aligned'] impI[OF invs_valid_pspace'])+
+      strengthen invs_pspace_aligned' invs_pspace_distinct'
+      invs_pspace_aligned' invs_valid_pspace')+
     apply (wp updateFreeIndex_invs_simple' updateCap_ct_active'
            updateFreeIndex_pspace_no_overlap'
            updateFreeIndex_caps_no_overlap''
@@ -2209,9 +2204,8 @@ lemma performASIDControlInvocation_invs' [wp]:
      apply (wp updateFreeIndex_caps_overlap_reserved' getSlotCap_wp
                    updateCap_cte_wp_at_cases updateCap_ct_active')
   apply (clarsimp simp:conj_comms ex_disj_distrib is_aligned_mask
-           | strengthen
-             impI[OF invs_valid_pspace'] impI[OF invs_pspace_aligned']
-             impI[OF invs_pspace_distinct'])+
+           | strengthen invs_valid_pspace' invs_pspace_aligned'
+                        invs_pspace_distinct')+
      apply (wp deleteObjects_invs' deleteObjects_cte_wp_at' )
      apply (rule_tac Q= "\<lambda>r s. \<exists>x. (x = capability.UntypedCap w1 pageBits idx \<and> F r s x)"
                      for F in hoare_strengthen_post)

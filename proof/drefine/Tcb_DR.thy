@@ -1420,8 +1420,8 @@ lemma dcorres_thread_control:
           apply (wp cap_delete_deletes cap_delete_valid_cap)
           apply (strengthen tcb_cap_always_valid_strg use_no_cap_to_obj_asid_strg)
           apply (clarsimp simp:tcb_cap_cases_def)
-          apply (strengthen is_cnode_or_valid_arch_cap_asid[simplified,THEN conjunct1,THEN impI])
-          apply (strengthen is_cnode_or_valid_arch_cap_asid[simplified,THEN conjunct2,THEN impI])
+          apply (strengthen is_cnode_or_valid_arch_cap_asid[simplified,THEN conjunct1])
+          apply (strengthen is_cnode_or_valid_arch_cap_asid[simplified,THEN conjunct2])
           apply (wp hoare_case_someE)
            apply (clarsimp simp:not_idle_thread_def)
            apply (wp cap_delete_deletes cap_delete_cte_at cap_delete_valid_cap)
@@ -1464,8 +1464,8 @@ lemma dcorres_thread_control:
         apply (wp cap_delete_deletes cap_delete_valid_cap)
         apply (strengthen tcb_cap_always_valid_strg use_no_cap_to_obj_asid_strg)
         apply (simp add:tcb_cap_cases_def)
-        apply (strengthen is_cnode_or_valid_arch_cap_asid[simplified,THEN conjunct1,THEN impI])
-        apply (strengthen is_cnode_or_valid_arch_cap_asid[simplified,THEN conjunct2,THEN impI])
+        apply (strengthen is_cnode_or_valid_arch_cap_asid[simplified,THEN conjunct1])
+        apply (strengthen is_cnode_or_valid_arch_cap_asid[simplified,THEN conjunct2])
         apply simp
         apply (wp cap_delete_deletes cap_delete_cte_at cap_delete_valid_cap)
         apply (wp case_option_wpE cap_delete_valid_cap cap_delete_deletes cap_delete_cte_at hoare_case_someE

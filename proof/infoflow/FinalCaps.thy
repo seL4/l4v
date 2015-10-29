@@ -2866,11 +2866,11 @@ lemma send_fault_ipc_silc_inv:
     apply fastforce
    (* clagged from Ipc_AC.send_fault_ipc_pas_refined *)
    apply wp
-   apply (rule_tac Q="\<lambda>rv s. silc_inv aag st s \<and> pas_refined aag s
+   apply (rule_tac Q'="\<lambda>rv s. silc_inv aag st s \<and> pas_refined aag s
                           \<and> valid_objs s \<and> sym_refs (state_refs_of s) 
                           \<and> valid_mdb s                           
                           \<and> is_subject aag (fst (fst rv))"
-               in strengthen_validE_R_cong[rule_format])
+               in hoare_post_imp_R[rotated])
     apply clarsimp
     apply (frule caps_of_state_valid_cap, assumption)
     apply (clarsimp simp: valid_cap_simps obj_at_def is_ep)

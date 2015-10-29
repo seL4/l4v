@@ -1013,6 +1013,9 @@ lemma unmap_page_tcb_cap_valid:
 
 lemma imp_and_strg: "Q \<and> C \<longrightarrow> (A \<longrightarrow> Q \<and> C) \<and> C" by blast
 
+lemma cases_conj_strg: "A \<and> B \<longrightarrow> (P \<and> A) \<or> (\<not> P \<and> B)"
+  by simp
+
 lemma and_not_not_or_imp: "(~ A & ~ B | C) = ((A | B) \<longrightarrow> C)" by blast
 
 lemma arch_finalise_cap_replaceable[wp]:
@@ -1037,31 +1040,21 @@ lemma arch_finalise_cap_replaceable[wp]:
    apply (simp add: simps split: option.splits vmpage_size.splits)
    apply (wp wps
           | strengthen strg
-          | simp add: simps
-               split: option.splits vmpage_size.splits
-          | intro impI conjI allI
-          | wpc)
-       apply ((wp wps
-              | strengthen strg
-              | simp add: simps reachable_pg_cap_def
-                   split: option.splits vmpage_size.splits
-              | intro impI conjI allI
-              | wpc)+)[2]
-     apply (wpc | wp)+
-     apply (simp add: simps
-               split: option.splits vmpage_size.splits)
-     apply (strengthen strg)+
-     apply (simp add: reachable_pg_cap_def is_master_reply_cap_def
-                      is_pg_cap_def vs_cap_ref_simps)
-     apply (strengthen imp_and_strg)
-     apply (intro impI conjI)
-        apply ((wp unmap_page_tcb_cap_valid unmap_page_page_unmapped
-                   unmap_page_section_unmapped | simp)+)[4]
+          | simp add: simps reachable_pg_cap_def
+          | wpc)+
+     (* unmap_page case is a bit unpleasant *)
+     apply (strengthen cases_conj_strg[where P="\<not> is_final_cap' cap s" for cap s, simplified])
+     apply (rule hoare_post_imp, clarsimp split: vmpage_size.split, assumption)
+     apply simp
+     apply (wp hoare_vcg_disj_lift hoare_vcg_all_lift hoare_vcg_const_imp_lift
+               unmap_page_tcb_cap_valid unmap_page_page_unmapped
+                   unmap_page_section_unmapped)[1]
     apply (wp wps
            | strengthen strg imp_and_strg tcb_cap_valid_imp_NullCap
            | simp add: simps is_master_reply_cap_def reachable_pg_cap_def
            | wpc)+
   apply (auto simp: valid_cap_def obj_at_def simps is_master_reply_cap_def
+                    a_type_def
              elim!: tcb_cap_valid_imp_NullCap[rule_format, rotated]
              split: cap.splits arch_cap.splits vmpage_size.splits)[1]
   done
@@ -1214,7 +1207,7 @@ lemma finalise_cap_replaceable:
             (* TS: this seems to be necessary for deleting_irq_handler,
                    kind of nasty, not sure how to sidestep *)
             apply (rule hoare_pre)
-            apply (wp suspend_unlive[unfolded o_def]
+            apply ((wp suspend_unlive[unfolded o_def]
                       suspend_final_cap[where sl=sl]
                       unbind_maybe_aep_not_bound
                       get_aep_ko
@@ -1230,18 +1223,18 @@ lemma finalise_cap_replaceable:
                               split: Structures_A.thread_state.split_asm
                    | simp cong: conj_cong
                    | simp cong: rev_conj_cong add: no_cap_to_obj_with_diff_ref_Null
-                   | strengthen tcb_cap_valid_imp_NullCap tcb_cap_valid_imp'
+                   | (strengthen tcb_cap_valid_imp_NullCap tcb_cap_valid_imp', wp)
                    | rule conjI
-                   | erule cte_wp_at_weakenE
+                   | erule cte_wp_at_weakenE tcb_cap_valid_imp'[rule_format, rotated -1]
                    | erule(1) no_cap_to_obj_with_diff_ref_finalI
                    | (rule hoare_drop_imps,
-                       rule ep_cancel_all_unlive[unfolded o_def]
+                       wp_once ep_cancel_all_unlive[unfolded o_def]
                            aep_cancel_all_unlive[unfolded o_def])
                    | ((wp_once hoare_drop_imps)?,
                       (wp_once hoare_drop_imps)?,
                       wp_once deleting_irq_handler_empty)
                    | wpc
-                   | simp add: valid_cap_simps)+
+                   | simp add: valid_cap_simps)+)
   apply (rule hoare_chain)
     apply (rule arch_finalise_cap_replaceable[where sl=sl])
    apply (clarsimp simp: replaceable_def reachable_pg_cap_def
@@ -2473,8 +2466,8 @@ lemma arch_cap_recycle_replaceable:
             mapM_x_store_pte_valid_arch_objs
             mapM_x_swp_store_empty_table_set[unfolded swp_def]
             hoare_vcg_all_lift hoare_vcg_const_imp_lift
-       | strengthen replaceable_reset_pt_strg [OF refl] impI[OF invs_valid_objs]
-                    impI[OF invs_valid_asid_table]
+       | strengthen replaceable_reset_pt_strg [OF refl] invs_valid_objs
+                    invs_valid_asid_table
        | simp add: replaceable_or_arch_update_same swp_def if_distrib
                    if_apply_def2
        | wp_once hoare_drop_imps)+)[1]
@@ -2490,8 +2483,8 @@ lemma arch_cap_recycle_replaceable:
       mapM_x_wp' [OF store_pde_typ_ats(14)]
       mapM_x_store_pde_InvalidPDE_empty2
       hoare_vcg_all_lift hoare_vcg_const_imp_lift
-      | strengthen replaceable_reset_pd_strg [OF refl] impI[OF invs_valid_asid_table]
-        impI[OF invs_valid_objs]
+      | strengthen replaceable_reset_pd_strg [OF refl] invs_valid_asid_table
+        invs_valid_objs
       | simp add: replaceable_or_arch_update_same swp_def if_distrib
         if_apply_def2
       | wp_once hoare_drop_imps )+)[1]
@@ -2607,7 +2600,7 @@ lemma cap_recycle_replaceable:
                  | simp add: tcb_registers_caps_merge_def tcb_not_empty_table reachable_pg_cap_def
                  | simp cong: rev_conj_cong
                  | strengthen tcb_cap_valid_imp'
-                 | simp add: cte_wp_at_caps_of_state
+                 | simp add: cte_wp_at_caps_of_state o_def
                  | wp_once hoare_use_eq [OF thread_set_arch thread_set_obj_at_impossible])+
     -- "last imp goal"
   apply (simp add: replaceable_or_arch_update_same)

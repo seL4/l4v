@@ -1350,8 +1350,8 @@ lemma invokeUntyped_no_orphans' [wp]:
               hoare_vcg_ball_lift updateCap_weak_cte_wp_at
               updateFreeIndex_caps_no_overlap''
               updateFreeIndex_caps_overlap_reserved' | clarsimp)+
-   apply (strengthen impI[OF invs_pspace_aligned'] impI[OF invs_valid_pspace']
-          impI[OF invs_pspace_distinct'] impI[OF invs_arch_state] impI[OF invs_psp_aligned])
+   apply (strengthen invs_pspace_aligned' invs_valid_pspace'
+          invs_pspace_distinct' invs_arch_state invs_psp_aligned)
    apply (clarsimp simp:conj_comms invokeUntyped_proofs.slots_invD[OF ivk_pf])
    apply (rule_tac P = "cap = capability.UntypedCap (ptr && ~~ mask sz) sz idx" 
        in hoare_gen_asm)
@@ -2270,7 +2270,7 @@ lemma performASIDControlInvocation_no_orphans [wp]:
      apply (wp createObjects'_wp_subst[where c = "makeObject::asidpool"])
       apply simp
      apply (wp static_imp_wp updateFreeIndex_pspace_no_overlap'[where sz= pageBits] getSlotCap_wp | simp)+
-  apply (strengthen impI[OF invs_pspace_aligned'] impI[OF invs_pspace_distinct'] impI[OF invs_valid_pspace'])
+  apply (strengthen invs_pspace_aligned' invs_pspace_distinct' invs_valid_pspace')
   apply (clarsimp simp:conj_comms)
      apply (wp deleteObjects_invs'[where idx = idx]
        hoare_ex_wp deleteObjects_cte_wp_at'[where idx = idx] hoare_vcg_const_imp_lift )

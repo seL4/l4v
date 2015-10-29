@@ -773,7 +773,7 @@ lemma invokeTCB_ThreadControl_ccorres:
          apply (simp add: cte_is_derived_capMasterCap_strg o_def)
          apply (wp cteDelete_invs' hoare_case_option_wp cteDelete_deletes
                    cteDelete_sch_act_simple
-                | strengthen impI[OF invs_valid_objs'])+
+                | strengthen invs_valid_objs')+
          apply (rule hoare_post_imp_R[where Q' = "\<lambda>r. invs'"])
           apply (wp cteDelete_invs')
          apply (clarsimp simp:cte_wp_at_ctes_of)
@@ -845,7 +845,7 @@ lemma invokeTCB_ThreadControl_ccorres:
         apply (simp add: cte_is_derived_capMasterCap_strg o_def)
         apply (wp cteDelete_invs' hoare_case_option_wp cteDelete_deletes
                   cteDelete_sch_act_simple 
-               | strengthen impI[OF invs_valid_objs'])+
+               | strengthen invs_valid_objs')+
         apply (rule hoare_post_imp_R[where Q' = "\<lambda>r. invs'"])
          apply (wp cteDelete_invs')
         apply (clarsimp simp:cte_wp_at_ctes_of)

@@ -7198,8 +7198,8 @@ shows  "ccorres dc xfdc
          apply (wp insertNewCap_cte_wp_at_other)
         apply (wp hoare_vcg_all_lift static_imp_wp insertNewCap_cte_at)
        apply (clarsimp simp:conj_comms | 
-         strengthen impI[OF invs_valid_pspace'] impI[OF invs_pspace_aligned']
-         impI[OF invs_pspace_distinct'])+
+         strengthen invs_valid_pspace' invs_pspace_aligned'
+         invs_pspace_distinct')+
        apply (frule range_cover.range_cover_n_less)
        apply (subst upt_enum_offset_trivial)
          apply (rule minus_one_helper[OF word_of_nat_le])

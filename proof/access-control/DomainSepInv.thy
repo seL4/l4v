@@ -10,6 +10,7 @@
 
 theory DomainSepInv
 imports    "Ipc_AC" (* for transfer_caps_loop_pres_dest lec_valid_cap' set_endpoint_get_tcb thread_set_tcb_fault_update_valid_mdb *)
+  "../../lib/wp/WPBang"
 begin
 
 text {*
@@ -1113,23 +1114,9 @@ lemma send_fault_ipc_domain_sep_inv:
            thread_set_refs_trivial thread_set_obj_at_impossible
            hoare_vcg_ex_lift
        | wpc| simp add: Let_def split_def lookup_cap_def valid_tcb_fault_update split del: split_if)+
-    apply(rule_tac Q="\<lambda> handler_cap s. domain_sep_inv irqs st s \<and>
-                                       valid_objs s \<and> valid_mdb s \<and>
-                                       sym_refs (state_refs_of s) \<and>
-          (\<forall>x xa xb.
-                  handler_cap = EndpointCap x xa xb \<longrightarrow>
-                  (AllowWrite \<in> xb \<and> AllowGrant \<in> xb \<longrightarrow>    (\<exists>xa. ko_at (Endpoint xa) x s)))" in hoare_strengthen_post)
-     apply(wp get_cap_inv get_cap_wp)
-    apply fastforce
-   apply wp
-   apply (rule_tac Q="\<lambda>rv s. domain_sep_inv irqs st s
-                          \<and> valid_objs s \<and> sym_refs (state_refs_of s)
-                          \<and> valid_mdb s"
-               in strengthen_validE_R_cong[rule_format])
-    apply clarsimp
-    apply (frule cte_wp_at_valid_objs_valid_cap, assumption)
-    apply (clarsimp simp: valid_cap_simps obj_at_def is_ep)
-   apply (wp | simp)+
+    apply (wpe get_cap_inv[where P="domain_sep_inv irqs st and valid_objs and valid_mdb
+                            and sym_refs o state_refs_of"])
+    apply (wp | simp)+
   done
 
 crunch domain_sep_inv[wp]: handle_fault "domain_sep_inv irqs st"

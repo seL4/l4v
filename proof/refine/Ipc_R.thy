@@ -2753,7 +2753,7 @@ proof -
                apply (strengthen reply_cap_doesnt_exist_strg disjI2_strg)
                apply ((wp hoare_drop_imps do_ipc_transfer_tcb_caps weak_valid_sched_action_lift
                     | clarsimp simp: is_cap_simps)+)[1]
-              apply simp
+              apply (simp add: pred_conj_def)
               apply (strengthen weak_sch_act_wf)
               apply (simp add: valid_tcb_state'_def)
               apply (wp weak_sch_act_wf_lift_linear tcb_in_cur_domain'_lift hoare_drop_imps)[1]
@@ -2769,7 +2769,6 @@ proof -
         apply (clarsimp simp: st_tcb_at_refs_of_rev st_tcb_at_reply_cap_valid st_tcb_at_caller_cap_null)
         apply (fastforce simp: st_tcb_def2 valid_sched_def valid_sched_action_def)
        apply (auto simp: valid_ep'_def invs'_def valid_state'_def split: list.split)[1]
-          apply (rule sch_act_wf_weak | simp)+
       apply wp
     apply (clarsimp)+
   apply (rule corres_guard_imp)

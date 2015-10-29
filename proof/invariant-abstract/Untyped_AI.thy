@@ -107,7 +107,7 @@ lemma is_cnode_mask:
   by (case_tac c, simp_all add: mask_cap_def cap_rights_update_def is_cap_simps)
 
 
-lemma Suc_length_not_empty: 
+lemma Suc_length_not_empty:
   "length xs = length xs' \<Longrightarrow> Suc 0 \<le> length xs' = (xs \<noteq> [])"
   by (fastforce simp: le_simps)
 
@@ -748,6 +748,14 @@ lemma alignUp_eq:
     apply simp+
   done
 
+lemma map_ensure_empty_wp:
+  "\<lbrace> \<lambda>s. (\<forall>x\<in>set xs. cte_wp_at (op = NullCap) x s) \<longrightarrow> P () s \<rbrace>
+      mapME_x ensure_empty xs \<lbrace>P\<rbrace>, -"
+  by (rule hoare_post_imp_R, rule map_ensure_empty, simp)
+
+lemma cases_imp_eq:
+  "((P \<longrightarrow> Q \<longrightarrow> R) \<and> (\<not> P \<longrightarrow> Q \<longrightarrow> S)) = (Q \<longrightarrow> (P \<longrightarrow> R) \<and> (\<not> P \<longrightarrow> S))"
+  by blast
 
 lemma dui_inv_wf[wp]:
   "\<lbrace>invs and cte_wp_at (op = (cap.UntypedCap w sz idx)) slot 
@@ -775,10 +783,7 @@ proof -
     "\<And>S a f s. (\<forall>x\<in>S. cte_wp_at (op = cap.NullCap) (a, f x) s)
     \<Longrightarrow> cte_wp_at (\<lambda>c. c \<noteq> cap.NullCap) slot s
     \<longrightarrow> slot \<notin> (Pair a \<circ> f) ` S"
-    apply clarsimp
-    apply (drule(1) bspec)
-    apply (clarsimp simp:cte_wp_at_caps_of_state)
-    done
+    by (auto simp:cte_wp_at_caps_of_state)
   show ?thesis
   apply (simp add: decode_untyped_invocation_def unlessE_def[symmetric]
                    unlessE_whenE
@@ -788,14 +793,10 @@ proof -
               validE_R_sp[OF dui_sp_helper] validE_R_sp[OF map_ensure_empty])+
   apply clarsimp
   apply (rule hoare_pre)
-  apply (wp whenE_throwError_wp[THEN validE_validE_R] check_free_index_wp)
-       apply (wp hoare_post_imp_R[OF map_ensure_empty])
-       apply (clarsimp simp:distinct_map)
-       apply (strengthen nasty_strengthen)
-       apply assumption
-      apply clarsimp
-     apply (wp whenE_throwError_wp[THEN validE_validE_R] | clarsimp)+
-   apply (subgoal_tac "s \<turnstile> node_cap")
+  apply (wp whenE_throwError_wp[THEN validE_validE_R] check_free_index_wp
+            map_ensure_empty_wp)
+  apply (clarsimp simp: distinct_map cases_imp_eq)
+  apply (subgoal_tac "s \<turnstile> node_cap")
    prefer 2
    apply (erule disjE)
     apply (drule bspec [where x = "cs ! 0"],clarsimp)+
@@ -806,24 +807,25 @@ proof -
    apply (clarsimp simp:is_cap_simps diminished_def mask_cap_def 
      cap_rights_update_def ,simp split:cap.splits)
   apply (subgoal_tac "\<forall>r\<in>cte_refs node_cap (interrupt_irq_node s). ex_cte_cap_wp_to is_cnode_cap r s")
-  apply (clarsimp simp:cte_wp_at_caps_of_state)
-  apply (frule(1) caps_of_state_valid[rotated])
-  apply (clarsimp simp:not_less)
-  apply (frule(2) inj)
-  apply (clarsimp simp:comp_def)
-  apply (frule(1) caps_of_state_valid)
-  apply (intro conjI)
-   apply (intro impI)
-   apply (frule range_cover_stuff[where rv = 0 and sz = sz])
-    apply ((fastforce dest!:valid_cap_aligned simp:cap_aligned_def)+)[4]
-   apply (clarsimp simp:valid_cap_simps cap_aligned_def)
-   apply (frule alignUp_idem[OF is_aligned_weaken,where a = w])
-     apply (erule range_cover.sz)
-    apply (simp add:range_cover_def)
-   apply (clarsimp simp:get_free_ref_def is_aligned_neg_mask_eq empty_descendants_range_in)
-   apply (drule_tac x = "(obj_ref_of node_cap,nat_to_cref (bits_of node_cap) x)" in bspec)
-    apply (clarsimp simp:is_cap_simps nat_to_cref_def word_bits_def 
-      bits_of_def valid_cap_simps cap_aligned_def)+
+   apply (clarsimp simp:cte_wp_at_caps_of_state)
+   apply (frule(1) caps_of_state_valid[rotated])
+   apply (clarsimp simp:not_less)
+   apply (frule(2) inj)
+   apply (clarsimp simp:comp_def)
+   apply (frule(1) caps_of_state_valid)
+   apply (simp add: nasty_strengthen[unfolded o_def] cte_wp_at_caps_of_state)
+   apply (intro conjI)
+    apply (intro impI)
+    apply (frule range_cover_stuff[where rv = 0 and sz = sz])
+     apply ((fastforce dest!:valid_cap_aligned simp:cap_aligned_def)+)[4]
+    apply (clarsimp simp:valid_cap_simps cap_aligned_def)
+    apply (frule alignUp_idem[OF is_aligned_weaken,where a = w])
+      apply (erule range_cover.sz)
+     apply (simp add:range_cover_def)
+    apply (clarsimp simp:get_free_ref_def is_aligned_neg_mask_eq empty_descendants_range_in)
+    apply (drule_tac x = "(obj_ref_of node_cap,nat_to_cref (bits_of node_cap) slota)" in bspec)
+     apply (clarsimp simp:is_cap_simps nat_to_cref_def word_bits_def
+       bits_of_def valid_cap_simps cap_aligned_def)+
    apply (frule(1) range_cover_stuff[where sz = sz])
      apply (clarsimp dest!:valid_cap_aligned simp:cap_aligned_def word_bits_def)+
     apply simp+
@@ -4174,8 +4176,7 @@ lemma invoke_untyp_invs':
                     retype_region_aligned_for_init[where sz = sz] | simp)+)[1]
         apply (clarsimp simp:conj_comms,simp cong:conj_cong)
         apply (simp add:ball_conj_distrib conj_comms)
-        apply (strengthen imp_consequent impI[OF invs_mdb]
-                         impI[OF invs_valid_pspace]
+        apply (strengthen imp_consequent invs_mdb invs_valid_pspace
                | clarsimp simp:conj_comms)+
         apply (rule_tac P = "cap = cap.UntypedCap (ptr && ~~ mask sz) sz idx"
                      in hoare_gen_asm)
@@ -4249,8 +4250,7 @@ lemma invoke_untyp_invs':
                     retype_region_aligned_for_init[where sz = sz] | simp)+)[1]
         apply (clarsimp simp:conj_comms,simp cong:conj_cong)
         apply (simp add:ball_conj_distrib conj_comms)
-        apply (strengthen imp_consequent impI[OF invs_mdb]
-                          impI[OF invs_valid_pspace]
+        apply (strengthen imp_consequent invs_mdb invs_valid_pspace
                | clarsimp simp:conj_comms)+
         apply (rule_tac P = "cap = cap.UntypedCap ptr sz idx" in hoare_gen_asm)
         apply (simp add:bits_of_def region_in_kernel_window_def)

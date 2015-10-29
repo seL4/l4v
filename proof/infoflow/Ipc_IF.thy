@@ -2020,7 +2020,7 @@ lemma send_fault_ipc_reads_respects:
        | wpc
        | simp add: split_def del: split_if add: tcb_cap_cases_def)+
   (* clagged from Ipc_AC *)
-      apply (rule_tac Q="\<lambda>rv s. pas_refined aag s
+      apply (rule_tac Q'="\<lambda>rv s. pas_refined aag s
                           \<and> pas_cur_domain aag s
                           \<and> valid_objs s \<and> pspace_distinct s
                           \<and> valid_global_refs s \<and> valid_arch_state s
@@ -2028,7 +2028,7 @@ lemma send_fault_ipc_reads_respects:
                           \<and> valid_fault fault 
                           \<and> is_subject aag (fst (fst rv))
                           \<and> is_subject aag (cur_thread s)"
-               in strengthen_validE_R_cong[rule_format])
+               in hoare_post_imp_R[rotated])
        apply (clarsimp simp: invs_valid_objs invs_sym_refs cte_wp_at_caps_of_state
         | intro conjI)+
          apply (fastforce intro: valid_tcb_fault_update)

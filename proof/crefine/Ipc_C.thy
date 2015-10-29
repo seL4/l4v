@@ -4248,7 +4248,7 @@ proof -
        apply (erule(1) cmap_relation_ko_atE [OF cmap_relation_tcb])
        apply (clarsimp simp: ctcb_relation_def typ_heap_simps)
       apply wp 
-      apply (strengthen vp_invs_strg' impI[OF invs_valid_queues'])
+      apply (strengthen vp_invs_strg' invs_valid_queues')
       apply (wp cteDeleteOne_tcbFault cteDeleteOne_sch_act_wf)
      apply vcg
     apply (rule conseqPre, vcg)

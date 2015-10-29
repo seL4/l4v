@@ -88,7 +88,7 @@ lemma decode_irq_control_invocation_authorised [wp]:
    apply (simp add: Let_def split del: split_if cong: if_cong)
    apply (wp whenE_throwError_wp hoare_vcg_imp_lift hoare_drop_imps
               | strengthen  aag_Control_owns_strg
-              | simp del: hoare_post_taut hoare_True_E_R)+
+              | simp add: o_def del: hoare_post_taut hoare_True_E_R)+
   apply (cases args, simp_all)
   apply (cases caps, simp_all)
   apply (auto simp: is_cap_simps cap_auth_conferred_def

@@ -514,7 +514,7 @@ lemma timerTick_corres:
             apply (wp static_imp_wp threadSet_timeslice_invs threadSet_valid_queues  threadSet_valid_queues'
                threadSet_pred_tcb_at_state threadSet_weak_sch_act_wf tcbSchedAppend_valid_objs'
                rescheduleRequired_weak_sch_act_wf tcbSchedAppend_valid_queues| simp)+
-            apply (strengthen impI[OF sch_act_wf_weak])
+            apply (strengthen sch_act_wf_weak)
             apply (clarsimp simp:conj_comms)
             apply (wp tcbSchedAppend_valid_queues tcbSchedAppend_sch_act_wf)
            apply simp

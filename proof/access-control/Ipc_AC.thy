@@ -2105,12 +2105,12 @@ lemma send_fault_ipc_pas_refined:
        | wpc
        | rule hoare_drop_imps
        | simp add: split_def del: split_if)+
-  apply (rule_tac Q="\<lambda>rv s. pas_refined aag s
+  apply (rule_tac Q'="\<lambda>rv s. pas_refined aag s
                           \<and> is_subject aag (cur_thread s)
                           \<and> valid_objs s \<and> sym_refs (state_refs_of s)
                           \<and> valid_fault fault 
                           \<and> is_subject aag (fst (fst rv))"
-               in strengthen_validE_R_cong[rule_format])
+               in hoare_post_imp_R[rotated])
    apply (clarsimp simp: invs_valid_objs invs_sym_refs cte_wp_at_caps_of_state
         | intro conjI)+
     apply (fastforce intro: valid_tcb_fault_update)
