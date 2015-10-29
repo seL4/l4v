@@ -19,34 +19,6 @@ lemma corres_underlying_trivial:
   "\<lbrakk> nf \<Longrightarrow> no_fail P' f \<rbrakk> \<Longrightarrow> corres_underlying Id nf op = \<top> P' f f"
   by (auto simp add: corres_underlying_def Id_def no_fail_def)
 
-(* Strengthen *)
-
-lemma strengthen_imp [strg]:
-  "A \<longrightarrow> A' \<Longrightarrow> (B \<longrightarrow> A) \<longrightarrow> (B \<longrightarrow> A')" by clarsimp
-  
-lemma strengthen_hoare [strg]:
-  "(\<And>r s. Q r s \<longrightarrow> R r s) \<Longrightarrow> \<lbrace>P\<rbrace> a \<lbrace>Q\<rbrace> \<longrightarrow> \<lbrace>P\<rbrace> a \<lbrace>R\<rbrace>"
-  apply (rule)
-  apply (erule hoare_strengthen_post)
-  apply clarsimp
-  done
-
-lemma strengthen_validE_R_cong[strg]:
-  "\<lbrakk> \<And>rv s. Q rv s \<longrightarrow> R rv s \<rbrakk> \<Longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>,- \<longrightarrow> \<lbrace>P\<rbrace> f \<lbrace>R\<rbrace>,-"
-  by (auto intro: hoare_post_imp_R)
-
-lemma strengthen_all[strg]:
-  "(\<And>x. P x \<longrightarrow> Q x) \<Longrightarrow> (\<forall>x. P x) \<longrightarrow> (\<forall>x. Q x)"
-  by simp
-
-lemma strengthen_ex[strg]:
-  "(\<And>x. P x \<longrightarrow> Q x) \<Longrightarrow> (\<exists>x. P x) \<longrightarrow> (\<exists>x. Q x)"
-  by fastforce
-
-lemma strengthen_Ball[strg]:
-  "(\<And>x. P x \<longrightarrow> Q x) \<Longrightarrow> (\<forall>x \<in> S. P x) \<longrightarrow> (\<forall>x \<in> S. Q x)"
-  by simp
-
 lemma hoare_spec_gen_asm:
   "\<lbrakk> F \<Longrightarrow> s \<turnstile> \<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<rbrakk> \<Longrightarrow> s \<turnstile> \<lbrace>P and K F\<rbrace> f \<lbrace>Q\<rbrace>"
   "\<lbrakk> F \<Longrightarrow> s \<turnstile> \<lbrace>P\<rbrace> f' \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace> \<rbrakk> \<Longrightarrow> s \<turnstile> \<lbrace>P and K F\<rbrace> f' \<lbrace>Q\<rbrace>,\<lbrace>E\<rbrace>"

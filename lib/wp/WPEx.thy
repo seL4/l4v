@@ -9,73 +9,8 @@
  *)
 
 theory WPEx
-imports NonDetMonadVCG
+imports NonDetMonadVCG "../Strengthen"
 begin
-
-text {* Strengthen *}
-
-lemma strengthen_congs_base: "A \<longrightarrow> A" by simp
-
-ML {*
-
-structure strengthen_congs = Generic_Data
-(struct
-    type T = thm list
-    val empty = [@{thm "strengthen_congs_base"}]
-    val extend = I
-    val merge = Thm.merge_thms;
-end);
-
-structure Strengthen = struct
-
-val strg_add = Thm.declaration_attribute 
-                    (fn thm =>                      
-                        (strengthen_congs.map (Thm.add_thm thm)));
-
-val strg_del = Thm.declaration_attribute 
-                    (fn thm =>                      
-                        (strengthen_congs.map (Thm.del_thm thm))); 
-  
-val setup =
-  Attrib.setup @{binding "strg"} (Attrib.add_del strg_add strg_del)
-    "strengthening congruence rules";
-
-(* Divide and conquer *)    
-fun DIVCONQ (tac1, tac2) goal = 
-  (tac1 goal) ORELSE ((tac2 THEN_ALL_NEW (DIVCONQ (tac1, tac2))) goal)  
-
-(* This is a little magic as it relies on A \<longrightarrow> A, the 
-  first cong rule, eventually working *)
-  
-fun apply_rules_tac ctxt extras =
-let
-  val r = strengthen_congs.get (Context.Proof ctxt);
-in
-  (CHANGED (rtac mp 1 THEN (DIVCONQ 
-                             (((resolve_tac ctxt extras) 
-                                THEN_ALL_NEW (fn g => TRY (assume_tac ctxt g))), 
-                             (fn g => DETERM (resolve_tac ctxt r g))) 1)))
-end;
-
-val apply_rules_args = 
-  Attrib.thms >> curry (fn (extras, ctxt) =>
-    Method.SIMPLE_METHOD (
-      apply_rules_tac ctxt extras
-    )
-  );
-
-end
-  
-*}
-
-setup "Strengthen.setup"
-
-method_setup strengthen = {* Strengthen.apply_rules_args *}
-  "strengthen the goal"
-
-lemma strengthen_congs_conj [strg]:
-  "\<lbrakk> A \<longrightarrow> A'; B \<longrightarrow> B' \<rbrakk> \<Longrightarrow> (A \<and> B) \<longrightarrow> (A' \<and> B')" by simp
-
 
 text {* WPEx - the WP Extension Experiment *}
 
@@ -353,7 +288,7 @@ fun wpx_tac ctxt rules
     THEN tac_with_wp_simps_strgs ctxt rules (fn (simps, strgs) =>
       REPEAT_DETERM1
         (CHANGED (full_simp_tac (put_simpset wp_default_ss ctxt addsimps simps) 1)
-          ORELSE Strengthen.apply_rules_tac ctxt strgs)
+          ORELSE Strengthen.strengthen ctxt strgs 1)
     ) 1;
 
 val wpx_method = Attrib.thms >> curry (fn (ts, ctxt) =>

@@ -3771,9 +3771,7 @@ lemma If_rearrage:
      = (if P \<and> Q then x else if P then y else z)"
   by simp
 
-lemma cases_simp_left:
-  "((P \<longrightarrow> Q) \<and> (\<not> P \<longrightarrow> Q) \<and> R) = (Q \<and> R)"
-  by fastforce
+lemmas cases_simp_left = cases_simp_conj
 
 lemma disjI2_strg:
   "Q \<longrightarrow> (P \<or> Q)"
@@ -3787,9 +3785,7 @@ lemma eq_imp_strg:
   "P t \<longrightarrow> (t = s \<longrightarrow> P s)"
   by clarsimp
 
-lemma if_fun_split:
-  "(if P then \<lambda>s. Q s else (\<lambda>s. R s)) = (\<lambda>s. (P \<longrightarrow> Q s) \<and> (\<not>P \<longrightarrow> R s))"
-  by simp
+lemmas if_fun_split = if_apply_def2
 
 lemma i_hate_words_helper:
   "i \<le> (j - k :: nat) \<Longrightarrow> i \<le> j"

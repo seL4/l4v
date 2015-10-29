@@ -9,7 +9,7 @@
  *)
 
 theory NonDetMonadVCG
-imports NonDetMonadLemmas WP WPC
+imports NonDetMonadLemmas WP WPC "../Strengthen"
 begin
 
 declare K_def [simp]
@@ -2138,5 +2138,28 @@ lemma validE_NF_condition [wp]:
   apply (drule validE_NF_no_fail)+
   apply (clarsimp simp: no_fail_def condition_def)
   done
+
+text {* Strengthen setup. *}
+
+lemma strengthen_hoare [strg]:
+  "(\<And>r s. strengthen_imp (op \<longrightarrow>) (Q r s) (R r s))
+    \<Longrightarrow> strengthen_imp (op \<longrightarrow>) (\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>) (\<lbrace>P\<rbrace> f \<lbrace>R\<rbrace>)"
+  by (auto elim: hoare_strengthen_post)
+
+lemma strengthen_validE_R_cong[strg]:
+  "(\<And>r s. strengthen_imp (op \<longrightarrow>) (Q r s) (R r s))
+    \<Longrightarrow> strengthen_imp (op \<longrightarrow>) (\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, -) (\<lbrace>P\<rbrace> f \<lbrace>R\<rbrace>, -)"
+  by (auto intro: hoare_post_imp_R)
+
+lemma strengthen_validE_cong[strg]:
+  "(\<And>r s. strengthen_imp (op \<longrightarrow>) (Q r s) (R r s))
+    \<Longrightarrow> (\<And>r s. strengthen_imp (op \<longrightarrow>) (S r s) (T r s))
+    \<Longrightarrow> strengthen_imp (op \<longrightarrow>) (\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, \<lbrace>S\<rbrace>) (\<lbrace>P\<rbrace> f \<lbrace>R\<rbrace>, \<lbrace>T\<rbrace>)"
+  by (auto elim: hoare_post_impErr)
+
+lemma strengthen_validE_E_cong[strg]:
+  "(\<And>r s. strengthen_imp (op \<longrightarrow>) (S r s) (T r s))
+    \<Longrightarrow> strengthen_imp (op \<longrightarrow>) (\<lbrace>P\<rbrace> f -, \<lbrace>S\<rbrace>) (\<lbrace>P\<rbrace> f -, \<lbrace>T\<rbrace>)"
+  by (auto elim: hoare_post_impErr simp: validE_E_def)
 
 end
