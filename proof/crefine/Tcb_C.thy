@@ -681,7 +681,7 @@ lemma invokeTCB_ThreadControl_ccorres:
               apply (rule_tac P="is_aligned (fst (the buf)) msg_align_bits"
                            in hoare_gen_asm)
               apply (strengthen cte_is_derived_capMasterCap_strg
-                     impI[OF invs_valid_objs'] impI[OF invs_mdb'] impI[OF invs_pspace_aligned'],
+                     invs_valid_objs' invs_mdb' invs_pspace_aligned',
                      simp add: o_def)
                 apply (wp threadSet_ipcbuffer_trivial static_imp_wp | simp )+
                 apply (wp hoare_drop_imp)

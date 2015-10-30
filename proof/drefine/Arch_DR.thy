@@ -1902,7 +1902,7 @@ proof -
                apply simp
               apply (rule hoare_strengthen_post[OF hoare_TrueI[where P = \<top>]])
               apply simp
-            apply (clarsimp simp:conj_comms
+            apply (clarsimp simp:conj_comms pred_conj_def
               | strengthen invs_valid_pspace invs_valid_idle)+
             apply (rule_tac P = "pcap = cap.UntypedCap frame pageBits idx" in hoare_gen_asm)
             apply (wp max_index_upd_invs_simple set_cap_idle

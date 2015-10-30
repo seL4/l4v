@@ -2444,8 +2444,8 @@ lemma arch_cap_recycle_replaceable:
             mapM_x_store_pte_valid_arch_objs
             mapM_x_swp_store_empty_table_set[unfolded swp_def]
             hoare_vcg_all_lift hoare_vcg_const_imp_lift
-       | strengthen replaceable_reset_pt_strg [OF refl] impI[OF invs_valid_objs]
-                    replaceable_or_arch_update_pg impI[OF invs_valid_asid_table]
+       | strengthen replaceable_reset_pt_strg [OF refl] invs_valid_objs
+                    replaceable_or_arch_update_pg invs_valid_asid_table
        | simp add: replaceable_or_arch_update_same swp_def if_distrib
                    if_apply_def2
        | wp_once hoare_drop_imps )+)[1]
