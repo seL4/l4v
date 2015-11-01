@@ -2952,7 +2952,6 @@ lemma decodeTCBConfigure_ccorres:
                                  cong: option.case_cong)
                  apply vcg
                 apply simp
-                apply (strengthen if_n_updateCapData_valid_strg)
                 apply (wp hoare_drop_imps)
                apply (simp add: Collect_const_mem all_ex_eq_helper)
                apply vcg
