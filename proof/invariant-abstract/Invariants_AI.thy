@@ -26,7 +26,7 @@ section "Invariant Definitions for Abstract Spec"
 definition
   "is_ep ko \<equiv> case ko of Endpoint p \<Rightarrow> True | _ \<Rightarrow> False"
 definition
-  "is_aep ko \<equiv> case ko of AsyncEndpoint p \<Rightarrow> True | _ \<Rightarrow> False"
+  "is_ntfn ko \<equiv> case ko of Notification p \<Rightarrow> True | _ \<Rightarrow> False"
 definition
   "is_tcb ko \<equiv> case ko of TCB t \<Rightarrow> True | _ \<Rightarrow> False"
 definition
@@ -42,7 +42,7 @@ where
 abbreviation
   "ep_at \<equiv> obj_at is_ep"
 abbreviation
-  "aep_at \<equiv> obj_at is_aep"
+  "ntfn_at \<equiv> obj_at is_ntfn"
 abbreviation
   "tcb_at \<equiv> obj_at is_tcb"
 abbreviation
@@ -74,14 +74,14 @@ record itcb =
   itcb_fault_handler :: cap_ref
   itcb_ipc_buffer    :: vspace_ref
   itcb_fault         :: "fault option"
-  itcb_bound_aep     :: "obj_ref option"
+  itcb_bound_notification     :: "obj_ref option"
 
 
 definition "tcb_to_itcb tcb \<equiv> \<lparr> itcb_state         = tcb_state tcb,
                                 itcb_fault_handler = tcb_fault_handler tcb,
                                 itcb_ipc_buffer    = tcb_ipc_buffer tcb,
                                 itcb_fault         = tcb_fault tcb,
-                                itcb_bound_aep     = tcb_bound_aep tcb \<rparr>"
+                                itcb_bound_notification     = tcb_bound_notification tcb \<rparr>"
 
 (* sseefried: The simplification rules below are used to help produce
  * lemmas that talk about fields of the 'tcb' data structure rather than
@@ -112,7 +112,7 @@ lemma [simp]: "itcb_fault (tcb_to_itcb tcb) = tcb_fault tcb"
   by (auto simp: tcb_to_itcb_def)
 
 (* Need one of these simp rules for each field in 'itcb' *)
-lemma [simp]: "itcb_bound_aep (tcb_to_itcb tcb) = tcb_bound_aep tcb"
+lemma [simp]: "itcb_bound_notification (tcb_to_itcb tcb) = tcb_bound_notification tcb"
   by (auto simp: tcb_to_itcb_def)
 
 definition
@@ -121,7 +121,7 @@ where
   "pred_tcb_at proj test \<equiv> obj_at (\<lambda>ko. \<exists>tcb. ko = TCB tcb \<and> test (proj (tcb_to_itcb tcb)))"
 
 abbreviation "st_tcb_at \<equiv> pred_tcb_at itcb_state"
-abbreviation "bound_tcb_at \<equiv> pred_tcb_at itcb_bound_aep"
+abbreviation "bound_tcb_at \<equiv> pred_tcb_at itcb_bound_notification"
 
 (* sseefried: 'st_tcb_at_def' only exists to make existing proofs go through. Use 'pred_tcb_at_def' from now on. *)
 lemma st_tcb_at_def: "st_tcb_at test \<equiv> obj_at (\<lambda>ko. \<exists>tcb. ko = TCB tcb \<and> test (tcb_state tcb))"
@@ -138,7 +138,7 @@ datatype aa_type =
 datatype a_type =
     ATCB
   | AEndpoint
-  | AAEP
+  | ANTFN
   | ACapTable nat
   | AGarbage
   | AArch aa_type
@@ -151,7 +151,7 @@ where
                                        then ACapTable sz else AGarbage
          | TCB tcb                  \<Rightarrow> ATCB
          | Endpoint endpoint        \<Rightarrow> AEndpoint
-         | AsyncEndpoint async_ep   \<Rightarrow> AAEP
+         | Notification notification   \<Rightarrow> ANTFN
          | ArchObj ao               \<Rightarrow> AArch (case ao of
            PageTable pt             \<Rightarrow> APageTable
          | PageDirectory pd         \<Rightarrow> APageDirectory
@@ -199,7 +199,7 @@ where
   "untyped_range (cap.UntypedCap p n f)                 = {p..p + (1 << n) - 1}"
 | "untyped_range (cap.NullCap)                          = {}"
 | "untyped_range (cap.EndpointCap r badge rights)       = {}"
-| "untyped_range (cap.AsyncEndpointCap r badge rights)  = {}"
+| "untyped_range (cap.NotificationCap r badge rights)  = {}"
 | "untyped_range (cap.CNodeCap r bits guard)            = {}"
 | "untyped_range (cap.ThreadCap r)                      = {}"
 | "untyped_range (cap.DomainCap)                        = {}"
@@ -236,7 +236,7 @@ where
   "cap_bits cap.NullCap = 0"
 | "cap_bits (cap.UntypedCap r b f) = b"
 | "cap_bits (cap.EndpointCap r b R) = obj_bits (Endpoint undefined)"
-| "cap_bits (cap.AsyncEndpointCap r b R) = obj_bits (AsyncEndpoint undefined)"
+| "cap_bits (cap.NotificationCap r b R) = obj_bits (Notification undefined)"
 | "cap_bits (cap.CNodeCap r b m) = cte_level_bits + b"
 | "cap_bits (cap.ThreadCap r) = obj_bits (TCB undefined)"
 | "cap_bits (DomainCap) = 0"
@@ -294,7 +294,7 @@ where
   "wellformed_cap c \<equiv>
   case c of
     Structures_A.UntypedCap p sz idx \<Rightarrow> sz \<ge> 4
-  | Structures_A.AsyncEndpointCap r badge rights \<Rightarrow> AllowGrant \<notin> rights
+  | Structures_A.NotificationCap r badge rights \<Rightarrow> AllowGrant \<notin> rights
   | Structures_A.CNodeCap r bits guard \<Rightarrow> bits \<noteq> 0 \<and> length guard \<le> 32
   | Structures_A.IRQHandlerCap irq \<Rightarrow> irq \<le> maxIRQ
   | Structures_A.Zombie r b n \<Rightarrow> (case b of None \<Rightarrow> n \<le> 5
@@ -309,7 +309,7 @@ where
     Structures_A.NullCap \<Rightarrow> True
   | Structures_A.UntypedCap p b idx \<Rightarrow> valid_untyped c s \<and> idx \<le> 2^ b \<and> p \<noteq> 0
   | Structures_A.EndpointCap r badge rights \<Rightarrow> ep_at r s
-  | Structures_A.AsyncEndpointCap r badge rights \<Rightarrow> aep_at r s
+  | Structures_A.NotificationCap r badge rights \<Rightarrow> ntfn_at r s
   | Structures_A.CNodeCap r bits guard \<Rightarrow> cap_table_at bits r s
   | Structures_A.ThreadCap r \<Rightarrow> tcb_at r s
   | Structures_A.DomainCap \<Rightarrow> True
@@ -333,8 +333,8 @@ where
     Structures_A.NullCap \<Rightarrow> True
   | Structures_A.UntypedCap p b f \<Rightarrow> valid_untyped c s \<and> 4 \<le> b \<and> f \<le> 2 ^ b \<and> p \<noteq> 0
   | Structures_A.EndpointCap r badge rights \<Rightarrow> ep_at r s
-  | Structures_A.AsyncEndpointCap r badge rights \<Rightarrow>
-         aep_at r s \<and> AllowGrant \<notin> rights
+  | Structures_A.NotificationCap r badge rights \<Rightarrow>
+         ntfn_at r s \<and> AllowGrant \<notin> rights
   | Structures_A.CNodeCap r bits guard \<Rightarrow>
          cap_table_at bits r s \<and> bits \<noteq> 0 \<and> length guard \<le> 32
   | Structures_A.ThreadCap r \<Rightarrow> tcb_at r s
@@ -384,7 +384,7 @@ where
   "cap_class (cap.NullCap)                          = NullClass"
 | "cap_class (cap.UntypedCap p n f)                 = PhysicalClass"
 | "cap_class (cap.EndpointCap ref badge r)          = PhysicalClass"
-| "cap_class (cap.AsyncEndpointCap ref badge r)     = PhysicalClass"
+| "cap_class (cap.NotificationCap ref badge r)     = PhysicalClass"
 | "cap_class (cap.CNodeCap ref n bits)              = PhysicalClass"
 | "cap_class (cap.ThreadCap ref)                    = PhysicalClass"
 | "cap_class (cap.DomainCap)                        = DomainClass"
@@ -409,7 +409,7 @@ where
   "valid_tcb_state ts s \<equiv> case ts of
     Structures_A.BlockedOnReceive ref d \<Rightarrow> ep_at ref s
   | Structures_A.BlockedOnSend ref sp \<Rightarrow> ep_at ref s
-  | Structures_A.BlockedOnAsyncEvent ref \<Rightarrow> aep_at ref s
+  | Structures_A.BlockedOnNotification ref \<Rightarrow> ntfn_at ref s
   | _ \<Rightarrow> True"
 
 abbreviation
@@ -459,11 +459,11 @@ where
                      (ExceptionTypes_A.GuardMismatch n g)) \<longrightarrow> length g\<le>32"
 
 definition
-  valid_bound_aep :: "32 word option \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+  valid_bound_ntfn :: "32 word option \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
-  "valid_bound_aep aep_opt s \<equiv> case aep_opt of
+  "valid_bound_ntfn ntfn_opt s \<equiv> case ntfn_opt of
                                  None \<Rightarrow> True
-                               | Some a \<Rightarrow> aep_at a s"
+                               | Some a \<Rightarrow> ntfn_at a s"
 
 definition
   valid_bound_tcb :: "32 word option \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
@@ -477,16 +477,16 @@ abbreviation (input)
 
 
 definition
-  valid_aep :: "Structures_A.async_ep \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+  valid_ntfn :: "Structures_A.notification \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
-  "valid_aep aep s \<equiv> (case aep_obj aep of 
-    Structures_A.IdleAEP \<Rightarrow>  True
-  | Structures_A.WaitingAEP ts \<Rightarrow>
+  "valid_ntfn ntfn s \<equiv> (case ntfn_obj ntfn of 
+    Structures_A.IdleNtfn \<Rightarrow>  True
+  | Structures_A.WaitingNtfn ts \<Rightarrow>
       (ts \<noteq> [] \<and> (\<forall>t \<in> set ts. tcb_at t s) 
        \<and> distinct ts
-       \<and> (case aep_bound_tcb aep of Some tcb \<Rightarrow> ts = [tcb] | _ \<Rightarrow> True))
-  | Structures_A.ActiveAEP b \<Rightarrow> True)
- \<and> valid_bound_tcb (aep_bound_tcb aep) s"
+       \<and> (case ntfn_bound_tcb ntfn of Some tcb \<Rightarrow> ts = [tcb] | _ \<Rightarrow> True))
+  | Structures_A.ActiveNtfn b \<Rightarrow> True)
+ \<and> valid_bound_tcb (ntfn_bound_tcb ntfn) s"
 
 definition
   valid_tcb :: "obj_ref \<Rightarrow> Structures_A.tcb \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
@@ -498,7 +498,7 @@ where
      \<and> valid_tcb_state (tcb_state t) s
      \<and> (case tcb_fault t of Some f \<Rightarrow> valid_fault f | _ \<Rightarrow> True)
      \<and> length (tcb_fault_handler t) = word_bits
-     \<and> valid_bound_aep (tcb_bound_aep t) s"
+     \<and> valid_bound_ntfn (tcb_bound_notification t) s"
 
 definition
   tcb_cap_valid :: "cap \<Rightarrow> cslot_ptr \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
@@ -603,7 +603,7 @@ definition
 where
   "valid_obj ptr ko s \<equiv> case ko of
     Endpoint p \<Rightarrow> valid_ep p s
-  | AsyncEndpoint p \<Rightarrow> valid_aep p s
+  | Notification p \<Rightarrow> valid_ntfn p s
   | TCB t \<Rightarrow> valid_tcb ptr t s
   | CNode sz cs \<Rightarrow> valid_cs sz cs s
   | ArchObj ao \<Rightarrow> wellformed_arch_obj ao"
@@ -918,7 +918,7 @@ where
 
 datatype reftype
   = TCBWaitingSend | TCBWaitingRecv | TCBBlockedSend | TCBBlockedRecv
-     | TCBAsync | TCBBound | EPSend | EPRecv | AEPAsync | AEPBound
+     | TCBSignal | TCBBound | EPSend | EPRecv | NTFNSignal | NTFNBound
 
 primrec
  symreftype :: "reftype \<Rightarrow> reftype"
@@ -927,12 +927,12 @@ where
 | "symreftype TCBWaitingRecv = TCBWaitingSend"
 | "symreftype TCBBlockedSend = EPSend"
 | "symreftype TCBBlockedRecv = EPRecv"
-| "symreftype TCBAsync       = AEPAsync"
-| "symreftype TCBBound       = AEPBound"
+| "symreftype TCBSignal       = NTFNSignal"
+| "symreftype TCBBound       = NTFNBound"
 | "symreftype EPSend         = TCBBlockedSend"
 | "symreftype EPRecv         = TCBBlockedRecv"
-| "symreftype AEPAsync       = TCBAsync"
-| "symreftype AEPBound       = TCBBound"
+| "symreftype NTFNSignal       = TCBSignal"
+| "symreftype NTFNBound       = TCBBound"
 
 definition
   tcb_st_refs_of :: "Structures_A.thread_state  \<Rightarrow> (obj_ref \<times> reftype) set"
@@ -944,7 +944,7 @@ where
   | (Structures_A.IdleThreadState)       => {}
   | (Structures_A.BlockedOnReceive x b)  => {(x, TCBBlockedRecv)}
   | (Structures_A.BlockedOnSend x payl)  => {(x, TCBBlockedSend)}
-  | (Structures_A.BlockedOnAsyncEvent x) => {(x, TCBAsync)}"
+  | (Structures_A.BlockedOnNotification x) => {(x, TCBSignal)}"
 
 definition
   ep_q_refs_of   :: "Structures_A.endpoint      \<Rightarrow> (obj_ref \<times> reftype) set"
@@ -955,27 +955,27 @@ where
   | (Structures_A.SendEP q) => set q \<times> {EPSend}"
 
 definition
-  aep_q_refs_of  :: "aep                   \<Rightarrow> (obj_ref \<times> reftype) set"
+  ntfn_q_refs_of  :: "ntfn                   \<Rightarrow> (obj_ref \<times> reftype) set"
 where
-  "aep_q_refs_of x \<equiv> case x of
-     Structures_A.IdleAEP         => {}
-  | (Structures_A.WaitingAEP q)   => set q \<times> {AEPAsync}
-  | (Structures_A.ActiveAEP b)  => {}"
+  "ntfn_q_refs_of x \<equiv> case x of
+     Structures_A.IdleNtfn         => {}
+  | (Structures_A.WaitingNtfn q)   => set q \<times> {NTFNSignal}
+  | (Structures_A.ActiveNtfn b)  => {}"
 
-(* FIXME-AEP: two new functions: aep_bound_refs and tcb_bound_refs, include below by union *)
+(* FIXME-NTFN: two new functions: ntfn_bound_refs and tcb_bound_refs, include below by union *)
 
 definition 
-  aep_bound_refs :: "obj_ref option \<Rightarrow> (obj_ref \<times> reftype) set"
+  ntfn_bound_refs :: "obj_ref option \<Rightarrow> (obj_ref \<times> reftype) set"
 where 
-  "aep_bound_refs t \<equiv> case t of
-     Some tcb \<Rightarrow> {(tcb, AEPBound)}
+  "ntfn_bound_refs t \<equiv> case t of
+     Some tcb \<Rightarrow> {(tcb, NTFNBound)}
    | None \<Rightarrow> {}"
 
 definition
   tcb_bound_refs :: "obj_ref option \<Rightarrow> (obj_ref \<times> reftype) set"
 where
   "tcb_bound_refs a \<equiv> case a of
-     Some aep \<Rightarrow> {(aep, TCBBound)}
+     Some ntfn \<Rightarrow> {(ntfn, TCBBound)}
    | None \<Rightarrow> {}"
 
 definition
@@ -983,9 +983,9 @@ definition
 where
   "refs_of x \<equiv> case x of
      CNode sz fun      => {}
-   | TCB tcb           => tcb_st_refs_of (tcb_state tcb) \<union> tcb_bound_refs (tcb_bound_aep tcb)
+   | TCB tcb           => tcb_st_refs_of (tcb_state tcb) \<union> tcb_bound_refs (tcb_bound_notification tcb)
    | Endpoint ep       => ep_q_refs_of ep
-   | AsyncEndpoint aep => aep_q_refs_of (aep_obj aep) \<union> aep_bound_refs (aep_bound_tcb aep)
+   | Notification ntfn => ntfn_q_refs_of (ntfn_obj ntfn) \<union> ntfn_bound_refs (ntfn_bound_tcb ntfn)
    | ArchObj ao        => {}"
 
 definition
@@ -1026,10 +1026,10 @@ primrec
   live :: "Structures_A.kernel_object \<Rightarrow> bool"
 where
   "live (CNode sz fun)      = False"
-| "live (TCB tcb)           = (bound (tcb_bound_aep tcb) \<or> (tcb_state tcb \<noteq> Structures_A.Inactive \<and>
+| "live (TCB tcb)           = (bound (tcb_bound_notification tcb) \<or> (tcb_state tcb \<noteq> Structures_A.Inactive \<and>
                                tcb_state tcb \<noteq> Structures_A.IdleThreadState))"
 | "live (Endpoint ep)       = (ep \<noteq> Structures_A.IdleEP)"
-| "live (AsyncEndpoint aep) = (bound (aep_bound_tcb aep) \<or> (\<exists>ts. aep_obj aep = Structures_A.WaitingAEP ts))"
+| "live (Notification ntfn) = (bound (ntfn_bound_tcb ntfn) \<or> (\<exists>ts. ntfn_obj ntfn = Structures_A.WaitingNtfn ts))"
 | "live (ArchObj ao)        = False"
 
 fun
@@ -1067,7 +1067,7 @@ where
   "cte_refs (cap.UntypedCap p n fr) f                = {}"
 | "cte_refs (cap.NullCap) f                          = {}"
 | "cte_refs (cap.EndpointCap r badge rights) f       = {}"
-| "cte_refs (cap.AsyncEndpointCap r badge rights) f  = {}"
+| "cte_refs (cap.NotificationCap r badge rights) f  = {}"
 | "cte_refs (cap.CNodeCap r bits guard) f            =
      {r} \<times> {xs. length xs = bits}"
 | "cte_refs (cap.ThreadCap r) f                      =
@@ -1099,7 +1099,7 @@ where
  "appropriate_cte_cap cap cte_cap \<equiv>
   case cap of
     cap.NullCap \<Rightarrow> True
-  | cap.AsyncEndpointCap _ _ _ \<Rightarrow> True
+  | cap.NotificationCap _ _ _ \<Rightarrow> True
   | _ \<Rightarrow> cap_irqs cte_cap = {}"
 
 definition
@@ -1211,7 +1211,7 @@ definition
                    reply_master_revocable (is_original_cap s) (caps_of_state s) \<and>
                    reply_mdb (cdt s) (caps_of_state s)"
 
-abbreviation "idle_tcb_at \<equiv> pred_tcb_at (\<lambda>t. (itcb_state t, itcb_bound_aep t))"
+abbreviation "idle_tcb_at \<equiv> pred_tcb_at (\<lambda>t. (itcb_state t, itcb_bound_notification t))"
 
 definition
   "valid_idle \<equiv> \<lambda>s. idle_tcb_at (\<lambda>p. (idle (fst p)) \<and> (snd p = None)) (idle_thread s) s 
@@ -1262,7 +1262,7 @@ where
 definition
   irq_issued :: "irq \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
-  "irq_issued irq \<equiv> \<lambda>s. interrupt_states s irq = irq_state.IRQNotifyAEP"
+  "irq_issued irq \<equiv> \<lambda>s. interrupt_states s irq = irq_state.IRQSignal"
 
 definition
   valid_irq_handlers :: "'z::state_ext state \<Rightarrow> bool"
@@ -1468,7 +1468,7 @@ definition
   | AGarbage \<Rightarrow> 4
   | ATCB \<Rightarrow> obj_bits (TCB undefined)
   | AEndpoint \<Rightarrow> obj_bits (Endpoint undefined)
-  | AAEP \<Rightarrow> obj_bits (AsyncEndpoint undefined)
+  | ANTFN \<Rightarrow> obj_bits (Notification undefined)
   | AArch T' \<Rightarrow> (case T' of
     AASIDPool \<Rightarrow> obj_bits (ArchObj (ARM_Structs_A.ASIDPool undefined))
   | AIntData sz \<Rightarrow> obj_bits (ArchObj (DataPage sz))
@@ -1521,13 +1521,13 @@ abbreviation(input)
 -- ---------------------------------------------------------------------------
 section "Lemmas"
 
-lemma valid_bound_aep_None[simp]:
-  "valid_bound_aep None = \<top>"
-  by (auto simp: valid_bound_aep_def)
+lemma valid_bound_ntfn_None[simp]:
+  "valid_bound_ntfn None = \<top>"
+  by (auto simp: valid_bound_ntfn_def)
 
-lemma valid_bound_aep_Some[simp]:
-  "valid_bound_aep (Some x) = aep_at x"
-  by (auto simp: valid_bound_aep_def)
+lemma valid_bound_ntfn_Some[simp]:
+  "valid_bound_ntfn (Some x) = ntfn_at x"
+  by (auto simp: valid_bound_ntfn_def)
 
 lemma valid_bound_tcb_None[simp]:
   "valid_bound_tcb None = \<top>"
@@ -1554,9 +1554,9 @@ valid_cap_ref (UntypedCap (x\<Colon>word32) (xa\<Colon>nat) (xb\<Colon>nat)) (sa
 valid_cap_ref (EndpointCap (xc\<Colon>word32) (xd\<Colon>word32) (xe\<Colon>rights set))
  (sb\<Colon>'z_1\<Colon>state_ext state) =
 ep_at xc sb \<and>
-valid_cap_ref (AsyncEndpointCap (xf\<Colon>word32) (xg\<Colon>word32) (xh\<Colon>rights set))
+valid_cap_ref (NotificationCap (xf\<Colon>word32) (xg\<Colon>word32) (xh\<Colon>rights set))
  (sc\<Colon>'z_1\<Colon>state_ext state) =
-aep_at xf sc \<and>
+ntfn_at xf sc \<and>
 valid_cap_ref (ReplyCap (xi\<Colon>word32) (xj\<Colon>bool)) (sd\<Colon>'z_1\<Colon>state_ext state) =
 tcb_at xi sd \<and>
 valid_cap_ref (CNodeCap (xk\<Colon>word32) (xl\<Colon>nat) (xm\<Colon>bool list))
@@ -1598,9 +1598,9 @@ lemma valid_cap_simps :
  (4\<Colon>nat) \<le> xa \<and> xb \<le> (2\<Colon>nat) ^ xa \<and> x \<noteq> (0\<Colon>word32)) \<and>
 (sb\<Colon>'z_1\<Colon>state_ext state) \<turnstile> EndpointCap (xc\<Colon>word32) (xd\<Colon>word32) (xe\<Colon>rights set) =
 (cap_aligned (EndpointCap xc xd xe) \<and> ep_at xc sb) \<and>
-(sc\<Colon>'z_1\<Colon>state_ext state) \<turnstile> AsyncEndpointCap (xf\<Colon>word32) (xg\<Colon>word32)
+(sc\<Colon>'z_1\<Colon>state_ext state) \<turnstile> NotificationCap (xf\<Colon>word32) (xg\<Colon>word32)
                         (xh\<Colon>rights set) =
-(cap_aligned (AsyncEndpointCap xf xg xh) \<and> aep_at xf sc \<and> AllowGrant \<notin> xh) \<and>
+(cap_aligned (NotificationCap xf xg xh) \<and> ntfn_at xf sc \<and> AllowGrant \<notin> xh) \<and>
 (sd\<Colon>'z_1\<Colon>state_ext state) \<turnstile> ReplyCap (xi\<Colon>word32) (xj\<Colon>bool) =
 (cap_aligned (ReplyCap xi xj) \<and> tcb_at xi sd) \<and>
 (se\<Colon>'z_1\<Colon>state_ext state) \<turnstile> CNodeCap (xk\<Colon>word32) (xl\<Colon>nat) (xm\<Colon>bool list) =
@@ -1658,9 +1658,9 @@ lemma is_ep:
   "is_ep ko = (\<exists>ep. ko = Endpoint ep)"
   unfolding is_ep_def by (cases ko) auto
 
-lemma is_aep:
-  "is_aep ko = (\<exists>ep. ko = AsyncEndpoint ep)"
-  unfolding is_aep_def by (cases ko) auto
+lemma is_ntfn:
+  "is_ntfn ko = (\<exists>ep. ko = Notification ep)"
+  unfolding is_ntfn_def by (cases ko) auto
 
 lemma is_tcb:
   "is_tcb ko = (\<exists>tcb. ko = TCB tcb)"
@@ -1671,7 +1671,7 @@ lemma is_cap_table:
   (\<exists>cs. ko = CNode bits cs \<and> well_formed_cnode_n bits cs)"
   unfolding is_cap_table_def by (cases ko) auto
 
-lemmas is_obj_defs = is_ep is_aep is_tcb is_cap_table
+lemmas is_obj_defs = is_ep is_ntfn is_tcb is_cap_table
 
 -- "sanity check"
 lemma obj_at_get_object:
@@ -1712,10 +1712,10 @@ lemma tcb_at_typ:
             split: Structures_A.kernel_object.splits)
   done
 
-lemma aep_at_typ:
-  "aep_at = typ_at AAEP"
+lemma ntfn_at_typ:
+  "ntfn_at = typ_at ANTFN"
   apply (rule obj_at_eq_helper)
-  apply (simp add: is_aep_def a_type_def
+  apply (simp add: is_ntfn_def a_type_def
             split: Structures_A.kernel_object.splits)
   done
 
@@ -1987,7 +1987,7 @@ lemma tcb_st_refs_of_simps[simp]:
  "tcb_st_refs_of (Structures_A.IdleThreadState)       = {}"
  "\<And>x. tcb_st_refs_of (Structures_A.BlockedOnReceive x b)  = {(x, TCBBlockedRecv)}"
  "\<And>x. tcb_st_refs_of (Structures_A.BlockedOnSend x payl)  = {(x, TCBBlockedSend)}"
- "\<And>x. tcb_st_refs_of (Structures_A.BlockedOnAsyncEvent x) = {(x, TCBAsync)}"
+ "\<And>x. tcb_st_refs_of (Structures_A.BlockedOnNotification x) = {(x, TCBSignal)}"
   by (auto simp: tcb_st_refs_of_def)
 
 lemma ep_q_refs_of_simps[simp]:
@@ -1996,16 +1996,16 @@ lemma ep_q_refs_of_simps[simp]:
  "\<And>q. ep_q_refs_of (Structures_A.SendEP q) = set q \<times> {EPSend}"
   by (auto simp: ep_q_refs_of_def)
 
-lemma aep_q_refs_of_simps[simp]:
- "aep_q_refs_of Structures_A.IdleAEP        = {}"
- "aep_q_refs_of (Structures_A.WaitingAEP q)   = set q \<times> {AEPAsync}"
- "aep_q_refs_of (Structures_A.ActiveAEP b)  = {}"
-  by (auto simp: aep_q_refs_of_def)
+lemma ntfn_q_refs_of_simps[simp]:
+ "ntfn_q_refs_of Structures_A.IdleNtfn        = {}"
+ "ntfn_q_refs_of (Structures_A.WaitingNtfn q)   = set q \<times> {NTFNSignal}"
+ "ntfn_q_refs_of (Structures_A.ActiveNtfn b)  = {}"
+  by (auto simp: ntfn_q_refs_of_def)
 
-lemma aep_bound_refs_simps[simp]:
-  "aep_bound_refs (Some t) = {(t, AEPBound)}"
-  "aep_bound_refs None = {}"
-  by (auto simp: aep_bound_refs_def)
+lemma ntfn_bound_refs_simps[simp]:
+  "ntfn_bound_refs (Some t) = {(t, NTFNBound)}"
+  "ntfn_bound_refs None = {}"
+  by (auto simp: ntfn_bound_refs_def)
 
 lemma tcb_bound_refs_simps[simp]:
   "tcb_bound_refs (Some a) = {(a, TCBBound)}"
@@ -2018,9 +2018,9 @@ by (simp add: tcb_bound_refs_def split: option.splits)
 
 lemma refs_of_simps[simp]:
  "refs_of (CNode sz cs)       = {}"
- "refs_of (TCB tcb)           = tcb_st_refs_of (tcb_state tcb) \<union> tcb_bound_refs (tcb_bound_aep tcb)"
+ "refs_of (TCB tcb)           = tcb_st_refs_of (tcb_state tcb) \<union> tcb_bound_refs (tcb_bound_notification tcb)"
  "refs_of (Endpoint ep)       = ep_q_refs_of ep"
- "refs_of (AsyncEndpoint aep) = aep_q_refs_of (aep_obj aep) \<union> aep_bound_refs (aep_bound_tcb aep)"
+ "refs_of (Notification ntfn) = ntfn_q_refs_of (ntfn_obj ntfn) \<union> ntfn_bound_refs (ntfn_bound_tcb ntfn)"
  "refs_of (ArchObj ao)        = {}"
   by (auto simp: refs_of_def)
 
@@ -2030,28 +2030,28 @@ lemma refs_of_rev:
     (\<exists>tcb. ko = TCB tcb \<and> (\<exists>b.  tcb_state tcb = Structures_A.BlockedOnReceive x b))"
  "(x, TCBBlockedSend) \<in> refs_of ko =
     (\<exists>tcb. ko = TCB tcb \<and> (\<exists>pl. tcb_state tcb = Structures_A.BlockedOnSend    x pl))"
- "(x, TCBAsync) \<in> refs_of ko =
-    (\<exists>tcb. ko = TCB tcb \<and> (tcb_state tcb = Structures_A.BlockedOnAsyncEvent x))"
+ "(x, TCBSignal) \<in> refs_of ko =
+    (\<exists>tcb. ko = TCB tcb \<and> (tcb_state tcb = Structures_A.BlockedOnNotification x))"
  "(x, EPRecv) \<in> refs_of ko =
     (\<exists>ep. ko = Endpoint ep \<and> (\<exists>q. ep = Structures_A.RecvEP q \<and> x \<in> set q))"
  "(x, EPSend) \<in> refs_of ko =
     (\<exists>ep. ko = Endpoint ep \<and> (\<exists>q. ep = Structures_A.SendEP q \<and> x \<in> set q))"
- "(x, AEPAsync) \<in> refs_of ko =
-    (\<exists>aep. ko = AsyncEndpoint aep \<and> (\<exists>q. aep_obj aep = Structures_A.WaitingAEP q \<and> x \<in> set q))"
+ "(x, NTFNSignal) \<in> refs_of ko =
+    (\<exists>ntfn. ko = Notification ntfn \<and> (\<exists>q. ntfn_obj ntfn = Structures_A.WaitingNtfn q \<and> x \<in> set q))"
  "(x, TCBBound) \<in>  refs_of ko =
-    (\<exists>tcb. ko = TCB tcb \<and> (tcb_bound_aep tcb = Some x))"
- "(x, AEPBound) \<in> refs_of ko =
-    (\<exists>aep. ko = AsyncEndpoint aep \<and> (aep_bound_tcb aep = Some x))"
+    (\<exists>tcb. ko = TCB tcb \<and> (tcb_bound_notification tcb = Some x))"
+ "(x, NTFNBound) \<in> refs_of ko =
+    (\<exists>ntfn. ko = Notification ntfn \<and> (ntfn_bound_tcb ntfn = Some x))"
   by (auto simp:  refs_of_def
                      tcb_st_refs_of_def
                      ep_q_refs_of_def
-                     aep_q_refs_of_def
-                     aep_bound_refs_def
+                     ntfn_q_refs_of_def
+                     ntfn_bound_refs_def
                      tcb_bound_refs_def
               split: Structures_A.kernel_object.splits
                      Structures_A.thread_state.splits
                      Structures_A.endpoint.splits
-                     Structures_A.aep.splits
+                     Structures_A.ntfn.splits
                      option.split)
 
 lemma st_tcb_at_refs_of_rev:
@@ -2059,8 +2059,8 @@ lemma st_tcb_at_refs_of_rev:
      = st_tcb_at (\<lambda>ts. \<exists>b.  ts = Structures_A.BlockedOnReceive x b ) t s"
   "obj_at (\<lambda>ko. (x, TCBBlockedSend) \<in> refs_of ko) t s
      = st_tcb_at (\<lambda>ts. \<exists>pl. ts = Structures_A.BlockedOnSend x pl   ) t s"
-  "obj_at (\<lambda>ko. (x, TCBAsync) \<in> refs_of ko) t s
-     = st_tcb_at (\<lambda>ts.      ts = Structures_A.BlockedOnAsyncEvent x) t s"
+  "obj_at (\<lambda>ko. (x, TCBSignal) \<in> refs_of ko) t s
+     = st_tcb_at (\<lambda>ts.      ts = Structures_A.BlockedOnNotification x) t s"
   by (simp add: refs_of_rev pred_tcb_at_def)+
 
 lemma state_refs_of_elemD:
@@ -2095,18 +2095,18 @@ lemma ko_at_state_refs_ofD:
   by (clarsimp dest!: obj_at_state_refs_ofD)
 
 definition
-  "tcb_aep_is_bound aep ko = (case ko of TCB tcb \<Rightarrow> tcb_bound_aep tcb = aep | _ \<Rightarrow> False)"
+  "tcb_ntfn_is_bound ntfn ko = (case ko of TCB tcb \<Rightarrow> tcb_bound_notification tcb = ntfn | _ \<Rightarrow> False)"
 
 lemma st_tcb_at_state_refs_ofD:
-  "st_tcb_at P t s \<Longrightarrow> \<exists>ts aepptr. P ts \<and> obj_at (tcb_aep_is_bound aepptr) t s
-          \<and> state_refs_of s t = (tcb_st_refs_of ts \<union> tcb_bound_refs aepptr)"
-  by (auto simp: pred_tcb_at_def obj_at_def tcb_aep_is_bound_def
+  "st_tcb_at P t s \<Longrightarrow> \<exists>ts ntfnptr. P ts \<and> obj_at (tcb_ntfn_is_bound ntfnptr) t s
+          \<and> state_refs_of s t = (tcb_st_refs_of ts \<union> tcb_bound_refs ntfnptr)"
+  by (auto simp: pred_tcb_at_def obj_at_def tcb_ntfn_is_bound_def
                  state_refs_of_def)
 
 lemma bound_tcb_at_state_refs_ofD:
-  "bound_tcb_at P t s \<Longrightarrow> \<exists>ts aepptr. P aepptr \<and> obj_at (tcb_aep_is_bound aepptr) t s
-          \<and> state_refs_of s t = (tcb_st_refs_of ts \<union> tcb_bound_refs aepptr)"
-  by (auto simp: pred_tcb_at_def obj_at_def tcb_aep_is_bound_def
+  "bound_tcb_at P t s \<Longrightarrow> \<exists>ts ntfnptr. P ntfnptr \<and> obj_at (tcb_ntfn_is_bound ntfnptr) t s
+          \<and> state_refs_of s t = (tcb_st_refs_of ts \<union> tcb_bound_refs ntfnptr)"
+  by (auto simp: pred_tcb_at_def obj_at_def tcb_ntfn_is_bound_def
                  state_refs_of_def)
 
 lemma sym_refs_obj_atD:
@@ -2128,13 +2128,13 @@ lemma sym_refs_ko_atD:
 
 lemma sym_refs_st_tcb_atD:
   "\<lbrakk> st_tcb_at P t s; sym_refs (state_refs_of s) \<rbrakk> \<Longrightarrow>
-     \<exists>ts aep. P ts \<and> obj_at (tcb_aep_is_bound aep) t s 
-        \<and> state_refs_of s t = tcb_st_refs_of ts \<union> tcb_bound_refs aep
-        \<and> (\<forall>(x, tp)\<in>tcb_st_refs_of ts \<union> tcb_bound_refs aep. obj_at (\<lambda>ko. (t, symreftype tp) \<in> refs_of ko) x s)"
+     \<exists>ts ntfn. P ts \<and> obj_at (tcb_ntfn_is_bound ntfn) t s 
+        \<and> state_refs_of s t = tcb_st_refs_of ts \<union> tcb_bound_refs ntfn
+        \<and> (\<forall>(x, tp)\<in>tcb_st_refs_of ts \<union> tcb_bound_refs ntfn. obj_at (\<lambda>ko. (t, symreftype tp) \<in> refs_of ko) x s)"
   apply (drule st_tcb_at_state_refs_ofD)
   apply (erule exE)+
   apply (rule_tac x=ts in exI)
-  apply (rule_tac x=aepptr in exI)
+  apply (rule_tac x=ntfnptr in exI)
   apply clarsimp
   apply (frule obj_at_state_refs_ofD)
   apply (drule (1)sym_refs_obj_atD)
@@ -2179,9 +2179,9 @@ lemma refs_of_live:
     apply (rename_tac tcb_ext)
      apply (case_tac "tcb_state tcb_ext", simp_all)
     apply (fastforce simp: tcb_bound_refs_def)+
-  apply (rename_tac async_ep)
-  apply (case_tac "aep_obj async_ep", simp_all)
-   apply (fastforce simp: aep_bound_refs_def)+
+  apply (rename_tac notification)
+  apply (case_tac "ntfn_obj notification", simp_all)
+   apply (fastforce simp: ntfn_bound_refs_def)+
   done
 
 lemma refs_of_live_obj:
@@ -2297,7 +2297,7 @@ lemma zobj_refs_to_obj_refs:
 lemma idle_no_refs:
   "valid_idle s \<Longrightarrow> state_refs_of s (idle_thread s) = {}"
   apply (clarsimp simp: valid_idle_def)
-  apply (clarsimp simp: pred_tcb_at_def obj_at_def tcb_aep_is_bound_def state_refs_of_def)
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def tcb_ntfn_is_bound_def state_refs_of_def)
   done
 
 lemma idle_not_queued:
@@ -2452,15 +2452,15 @@ lemma valid_arch_obj_pspaceI:
   apply (case_tac "fun x", simp_all add: obj_at_def)
   done
 
-(* FIXME-AEP: ugly proof *)
+(* FIXME-NTFN: ugly proof *)
 lemma valid_obj_pspaceI:
   "\<lbrakk> valid_obj ptr obj s; kheap s = kheap s' \<rbrakk> \<Longrightarrow> valid_obj ptr obj s'"
   unfolding valid_obj_def
   apply (cases obj)
-      apply (auto simp add: valid_aep_def valid_cs_def valid_tcb_def valid_ep_def 
-                           valid_tcb_state_def pred_tcb_at_def valid_bound_aep_def valid_bound_tcb_def
+      apply (auto simp add: valid_ntfn_def valid_cs_def valid_tcb_def valid_ep_def 
+                           valid_tcb_state_def pred_tcb_at_def valid_bound_ntfn_def valid_bound_tcb_def
                  intro: obj_at_pspaceI valid_cap_pspaceI valid_arch_obj_pspaceI
-                 split: Structures_A.aep.splits Structures_A.endpoint.splits
+                 split: Structures_A.ntfn.splits Structures_A.endpoint.splits
                         Structures_A.thread_state.splits option.split
           | auto split: kernel_object.split)+
   done
@@ -3014,7 +3014,7 @@ lemma valid_cap_typ:
    apply (simp add: valid_def)
   apply (case_tac c,
          simp_all add: valid_cap_def hoare_post_taut P P[where P=id, simplified]
-                       ep_at_typ tcb_at_typ aep_at_typ
+                       ep_at_typ tcb_at_typ ntfn_at_typ
                        cap_table_at_typ hoare_vcg_prop
                        hoare_pre_cont)
       apply (rule hoare_vcg_conj_lift [OF valid_untyped_typ[OF P]])
@@ -3038,18 +3038,18 @@ lemma valid_tcb_state_typ:
   shows      "\<lbrace>\<lambda>s. valid_tcb_state st s\<rbrace> f \<lbrace>\<lambda>rv s. valid_tcb_state st s\<rbrace>"
   by (case_tac st,
       simp_all add: valid_tcb_state_def hoare_post_taut
-                    ep_at_typ P tcb_at_typ aep_at_typ)
+                    ep_at_typ P tcb_at_typ ntfn_at_typ)
 
-lemma aep_at_typ_at:
-  "(\<And>T p. \<lbrace>typ_at T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at T p\<rbrace>) \<Longrightarrow> \<lbrace>aep_at c\<rbrace> f \<lbrace>\<lambda>rv. aep_at c\<rbrace>"
-  by (simp add: aep_at_typ)
+lemma ntfn_at_typ_at:
+  "(\<And>T p. \<lbrace>typ_at T p\<rbrace> f \<lbrace>\<lambda>rv. typ_at T p\<rbrace>) \<Longrightarrow> \<lbrace>ntfn_at c\<rbrace> f \<lbrace>\<lambda>rv. ntfn_at c\<rbrace>"
+  by (simp add: ntfn_at_typ)
 
 lemma valid_tcb_typ:
   assumes P: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
   shows      "\<lbrace>\<lambda>s. valid_tcb p tcb s\<rbrace> f \<lbrace>\<lambda>rv s. valid_tcb p tcb s\<rbrace>"
-  apply (simp add: valid_tcb_def valid_bound_aep_def split_def)
+  apply (simp add: valid_tcb_def valid_bound_ntfn_def split_def)
   apply (wp valid_tcb_state_typ valid_cap_typ P hoare_vcg_const_Ball_lift
-            valid_case_option_post_wp aep_at_typ_at)
+            valid_case_option_post_wp ntfn_at_typ_at)
   done
 
 lemma valid_cs_typ:
@@ -3074,18 +3074,18 @@ lemma valid_ep_typ:
   apply (rule hoare_vcg_const_Ball_lift [OF P])
   done
 
-lemma valid_aep_typ:
+lemma valid_ntfn_typ:
   assumes P: "\<And>p. \<lbrace>typ_at ATCB p\<rbrace> f \<lbrace>\<lambda>rv. typ_at ATCB p\<rbrace>"
-  shows      "\<lbrace>\<lambda>s. valid_aep aep s\<rbrace> f \<lbrace>\<lambda>rv s. valid_aep aep s\<rbrace>"
-  apply (case_tac "aep_obj aep",
-         simp_all add: valid_aep_def valid_bound_tcb_def hoare_post_taut tcb_at_typ)
+  shows      "\<lbrace>\<lambda>s. valid_ntfn ntfn s\<rbrace> f \<lbrace>\<lambda>rv s. valid_ntfn ntfn s\<rbrace>"
+  apply (case_tac "ntfn_obj ntfn",
+         simp_all add: valid_ntfn_def valid_bound_tcb_def hoare_post_taut tcb_at_typ)
     defer 2
-    apply ((case_tac "aep_bound_tcb aep", simp_all add: hoare_post_taut tcb_at_typ P)+)[2]
+    apply ((case_tac "ntfn_bound_tcb ntfn", simp_all add: hoare_post_taut tcb_at_typ P)+)[2]
   apply (rule hoare_vcg_conj_lift [OF hoare_vcg_prop])+
   apply (rule hoare_vcg_conj_lift)
    apply (rule hoare_vcg_const_Ball_lift [OF P])
   apply (rule hoare_vcg_conj_lift [OF hoare_vcg_prop])
-  apply (case_tac "aep_bound_tcb aep", simp_all add: hoare_post_taut tcb_at_typ P)
+  apply (case_tac "ntfn_bound_tcb ntfn", simp_all add: hoare_post_taut tcb_at_typ P)
   apply (rule hoare_vcg_conj_lift [OF hoare_vcg_prop], simp add: P)
   done
 
@@ -3107,7 +3107,7 @@ lemma valid_obj_typ:
   assumes P: "\<And>P p T. \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
   shows      "\<lbrace>\<lambda>s. valid_obj p ob s\<rbrace> f \<lbrace>\<lambda>rv s. valid_obj p ob s\<rbrace>"
   apply (case_tac ob, simp_all add: valid_obj_def P P [where P=id, simplified]
-         valid_cs_typ valid_tcb_typ valid_ep_typ valid_aep_typ valid_arch_obj_typ)
+         valid_cs_typ valid_tcb_typ valid_ep_typ valid_ntfn_typ valid_arch_obj_typ)
   apply wp
   done
 
@@ -3161,7 +3161,7 @@ lemma is_cap_simps':
   "is_domain_cap cap = (cap = cap.DomainCap)"
   "is_untyped_cap cap = (\<exists>r bits f. cap = cap.UntypedCap r bits f)"
   "is_ep_cap cap = (\<exists>r b R. cap = cap.EndpointCap r b R)"
-  "is_aep_cap cap = (\<exists>r b R. cap = cap.AsyncEndpointCap r b R)"
+  "is_ntfn_cap cap = (\<exists>r b R. cap = cap.NotificationCap r b R)"
   "is_zombie cap = (\<exists>r b n. cap = cap.Zombie r b n)"
   "is_arch_cap cap = (\<exists>a. cap = cap.ArchObjectCap a)"
   "is_reply_cap cap = (\<exists>x. cap = cap.ReplyCap x False)"
@@ -3210,7 +3210,7 @@ lemma typ_at_range:
 lemma typ_at_eq_kheap_obj:
   "typ_at ATCB p s \<longleftrightarrow> (\<exists>tcb. kheap s p = Some (TCB tcb))"
   "typ_at AEndpoint p s \<longleftrightarrow> (\<exists>ep. kheap s p = Some (Endpoint ep))"
-  "typ_at AAEP p s \<longleftrightarrow> (\<exists>aep. kheap s p = Some (AsyncEndpoint aep))"
+  "typ_at ANTFN p s \<longleftrightarrow> (\<exists>ntfn. kheap s p = Some (Notification ntfn))"
   "typ_at (ACapTable n) p s \<longleftrightarrow>
    (\<exists>cs. kheap s p = Some (CNode n cs) \<and> well_formed_cnode_n n cs)"
   "typ_at AGarbage p s \<longleftrightarrow>
@@ -3253,8 +3253,8 @@ lemma a_type_AEndpointE:
   by (case_tac ko, simp_all add: a_type_simps split: split_if_asm,
       rename_tac arch_kernel_obj,
       case_tac arch_kernel_obj, simp_all add: a_type_simps)
-lemma a_type_AAEPE:
-  "\<lbrakk>a_type ko = AAEP; (!!aep. ko = AsyncEndpoint aep \<Longrightarrow> R)\<rbrakk> \<Longrightarrow> R"
+lemma a_type_ANTFNE:
+  "\<lbrakk>a_type ko = ANTFN; (!!ntfn. ko = Notification ntfn \<Longrightarrow> R)\<rbrakk> \<Longrightarrow> R"
   by (case_tac ko, simp_all add: a_type_simps split: split_if_asm,
       rename_tac arch_kernel_obj,
       case_tac arch_kernel_obj, simp_all add: a_type_simps)
@@ -3286,7 +3286,7 @@ lemma a_type_AIntDataE:
 
 lemmas a_type_elims[elim!] =
    a_type_ACapTableE a_type_AGarbageE a_type_ATCBE
-   a_type_AEndpointE a_type_AAEPE
+   a_type_AEndpointE a_type_ANTFNE
    a_type_AASIDPoolE a_type_APageDirectoryE a_type_APageTableE a_type_AIntDataE
 
 lemma valid_objs_caps_contained:
@@ -3808,7 +3808,7 @@ lemma obj_at_default_cap_valid:
   unfolding valid_cap_def
   by (clarsimp elim!: obj_at_weakenE
       simp: default_object_def dom_empty_cnode well_formed_cnode_n_def
-            is_tcb is_ep is_aep is_cap_table
+            is_tcb is_ep is_ntfn is_cap_table
             arch_default_cap_def default_arch_object_def
             a_type_def valid_vm_rights_def
      split: Structures_A.apiobject_type.splits
@@ -3867,9 +3867,9 @@ lemma pte_at_typ:
   by (simp add: pte_at_def | wp x)+
 
 lemmas abs_typ_at_lifts  =
-  ep_at_typ_at aep_at_typ_at tcb_at_typ_at
+  ep_at_typ_at ntfn_at_typ_at tcb_at_typ_at
   cap_table_at_typ_at
-  valid_tcb_state_typ valid_cte_at_typ valid_aep_typ
+  valid_tcb_state_typ valid_cte_at_typ valid_ntfn_typ
   valid_ep_typ valid_cs_typ valid_arch_obj_typ valid_untyped_typ
   valid_tcb_typ valid_obj_typ valid_cap_typ
   valid_pde_lift valid_pte_lift
@@ -5162,16 +5162,16 @@ lemma in_dxo_archD:
 
 lemma sym_refs_bound_tcb_atD:
   "\<lbrakk>bound_tcb_at P t s; sym_refs (state_refs_of s)\<rbrakk>
-    \<Longrightarrow> \<exists>ts aepptr.
-        P aepptr \<and>
-        obj_at (tcb_aep_is_bound aepptr) t s \<and>
-        state_refs_of s t = tcb_st_refs_of ts \<union> tcb_bound_refs aepptr \<and>
-        (\<forall>(x, tp)\<in>tcb_st_refs_of ts \<union> tcb_bound_refs aepptr.
+    \<Longrightarrow> \<exists>ts ntfnptr.
+        P ntfnptr \<and>
+        obj_at (tcb_ntfn_is_bound ntfnptr) t s \<and>
+        state_refs_of s t = tcb_st_refs_of ts \<union> tcb_bound_refs ntfnptr \<and>
+        (\<forall>(x, tp)\<in>tcb_st_refs_of ts \<union> tcb_bound_refs ntfnptr.
             obj_at (\<lambda>ko. (t, symreftype tp) \<in> refs_of ko) x s)"
   apply (drule bound_tcb_at_state_refs_ofD)
   apply (erule exE)+
   apply (rule_tac x=ts in exI)
-  apply (rule_tac x=aepptr in exI)
+  apply (rule_tac x=ntfnptr in exI)
   apply clarsimp
   apply (frule obj_at_state_refs_ofD)
   apply (drule (1)sym_refs_obj_atD)

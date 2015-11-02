@@ -43,11 +43,11 @@ lemma is_waiting_thread_opt_cap_tcb_replycap_slot [simp]:
   apply (clarsimp simp: is_waiting_thread_def opt_cap_def slots_of_def opt_object_def)
   done
 
-lemma is_waiting_thread_opt_cap_tcb_boundaep_slot[simp]:
+lemma is_waiting_thread_opt_cap_tcb_boundntfn_slot[simp]:
   "\<lbrakk>well_formed spec; cdl_objects spec obj_id = Some obj; is_waiting_thread obj\<rbrakk>
-  \<Longrightarrow> opt_cap (obj_id, tcb_boundaep_slot) spec = Some NullCap"
+  \<Longrightarrow> opt_cap (obj_id, tcb_boundntfn_slot) spec = Some NullCap"
   apply (clarsimp simp: is_waiting_thread_def opt_cap_def slots_of_def opt_object_def)
-  apply (frule well_formed_tcb_boundaep_cap [where obj_id=obj_id], simp add: object_at_def)
+  apply (frule well_formed_tcb_boundntfn_cap [where obj_id=obj_id], simp add: object_at_def)
   by (clarsimp simp: is_waiting_thread_def opt_cap_def slots_of_def opt_object_def)
 
 lemma cap_transform_RestartCap [simp]:
@@ -101,7 +101,7 @@ lemma tcb_half_id:
   apply (frule well_formed_tcb_pending_op_cap [where obj_id=obj_id], simp add: object_at_def)
   apply (frule well_formed_tcb_replycap_cap [where obj_id=obj_id], simp add: object_at_def)
   apply (frule well_formed_tcb_pending_op_replycap [where obj_id=obj_id], simp add: object_at_def)
-  apply (frule well_formed_tcb_boundaep_cap [where obj_id=obj_id], simp add: object_at_def)
+  apply (frule well_formed_tcb_boundntfn_cap [where obj_id=obj_id], simp add: object_at_def)
   apply (fastforce simp: tcb_half_def is_waiting_thread_def is_tcb_def
                          opt_cap_def slots_of_def opt_object_def object_slots_def update_slots_def
                          cdl_tcb.splits

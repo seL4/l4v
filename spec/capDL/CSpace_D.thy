@@ -146,8 +146,8 @@ where
     gets (get_irq_slot irq) >>= delete_cap_simple"
 
 definition
-  ipc_cancel ::"cdl_object_id \<Rightarrow> unit k_monad"
-  where "ipc_cancel ptr \<equiv>
+  cancel_ipc ::"cdl_object_id \<Rightarrow> unit k_monad"
+  where "cancel_ipc ptr \<equiv>
   do cap \<leftarrow> KHeap_D.get_cap (ptr,tcb_pending_op_slot);
    (case cap of
     PendingSyncRecvCap _ is_reply \<Rightarrow> ( do
@@ -159,7 +159,7 @@ definition
      revoke_cap_simple (ptr,tcb_replycap_slot);
      set_cap (ptr,tcb_pending_op_slot) NullCap
      od)
-   | PendingAsyncRecvCap _ \<Rightarrow> (do
+   | PendingNtfnRecvCap _ \<Rightarrow> (do
      revoke_cap_simple (ptr,tcb_replycap_slot);
      set_cap (ptr, tcb_pending_op_slot) NullCap
      od)
@@ -178,12 +178,12 @@ where
 | "finalise_cap RestartCap               final = return (NullCap, None)"
 | "finalise_cap (UntypedCap r a)           final = return (NullCap, None)"
 | "finalise_cap (EndpointCap r b R)      final =
-      (liftM (K (NullCap, None)) $ when  final $ ep_cancel_all r)"
-| "finalise_cap (AsyncEndpointCap r b R) final =
+      (liftM (K (NullCap, None)) $ when  final $ cancel_all_ipc r)"
+| "finalise_cap (NotificationCap r b R) final =
       (liftM (K (NullCap, None)) $ when  final $ 
        do
-         unbind_maybe_aep r;
-         ep_cancel_all r 
+         unbind_maybe_notification r;
+         cancel_all_ipc r 
        od)"
 | "finalise_cap (ReplyCap r)             final = return (NullCap, None)"
 | "finalise_cap (MasterReplyCap r)       final = return (NullCap, None)"
@@ -191,14 +191,14 @@ where
       (return (if final then ZombieCap r else NullCap, None))"
 | "finalise_cap (TcbCap r)               final =
       (do
-         when final $ (do unbind_async_endpoint r;
-         ipc_cancel r;
+         when final $ (do unbind_notification r;
+         cancel_ipc r;
          KHeap_D.set_cap (r, tcb_pending_op_slot) cdl_cap.NullCap od);
          return (if final then (ZombieCap r) else NullCap, None)
        od)"
 | "finalise_cap (PendingSyncSendCap r _ _ _ _) final = return (NullCap, None)"
 | "finalise_cap (PendingSyncRecvCap r _ ) final = return (NullCap, None)"
-| "finalise_cap (PendingAsyncRecvCap r)  final = return (NullCap, None)"
+| "finalise_cap (PendingNtfnRecvCap r)  final = return (NullCap, None)"
 | "finalise_cap IrqControlCap            final = return (NullCap, None)"
 | "finalise_cap (IrqHandlerCap irq)      final = (
        if final then do
@@ -441,9 +441,9 @@ where
  * that are using the given badge.
  *)
 definition
-  ep_cancel_badged_sends :: "cdl_object_id \<Rightarrow> cdl_badge \<Rightarrow> unit k_monad"
+  cancel_badged_sends :: "cdl_object_id \<Rightarrow> cdl_badge \<Rightarrow> unit k_monad"
 where
-  "ep_cancel_badged_sends ep badge \<equiv>
+  "cancel_badged_sends ep badge \<equiv>
     modify (\<lambda>s. s\<lparr>cdl_objects := map_option
         (\<lambda>obj. case obj of
             Tcb t \<Rightarrow>
@@ -479,7 +479,7 @@ definition cdl_default_tcb :: "cdl_object"
 where "cdl_default_tcb \<equiv>  Tcb \<lparr>cdl_tcb_caps =
            [tcb_cspace_slot \<mapsto> cdl_cap.NullCap, tcb_vspace_slot \<mapsto> cdl_cap.NullCap, tcb_replycap_slot \<mapsto>
             cdl_cap.NullCap, tcb_caller_slot \<mapsto> cdl_cap.NullCap, tcb_ipcbuffer_slot \<mapsto> cdl_cap.NullCap,
-            tcb_pending_op_slot \<mapsto> cdl_cap.NullCap, tcb_boundaep_slot \<mapsto> cdl_cap.NullCap],
+            tcb_pending_op_slot \<mapsto> cdl_cap.NullCap, tcb_boundntfn_slot \<mapsto> cdl_cap.NullCap],
            cdl_tcb_fault_endpoint = 0,
            cdl_tcb_intent =
              \<lparr>cdl_intent_op = None, cdl_intent_error = False,cdl_intent_cap = 0, cdl_intent_extras = [],
@@ -490,7 +490,7 @@ where "obj_tcb obj \<equiv> case obj of Tcb tcb \<Rightarrow> tcb"
 
 definition tcb_caps_merge :: "cdl_tcb \<Rightarrow> cdl_tcb \<Rightarrow> cdl_tcb"
   where "tcb_caps_merge regtcb captcb \<equiv> regtcb\<lparr>cdl_tcb_caps
-  := (cdl_tcb_caps captcb)(tcb_pending_op_slot \<mapsto> the (cdl_tcb_caps regtcb tcb_pending_op_slot), tcb_boundaep_slot \<mapsto> the (cdl_tcb_caps regtcb tcb_boundaep_slot))\<rparr>"
+  := (cdl_tcb_caps captcb)(tcb_pending_op_slot \<mapsto> the (cdl_tcb_caps regtcb tcb_pending_op_slot), tcb_boundntfn_slot \<mapsto> the (cdl_tcb_caps regtcb tcb_boundntfn_slot))\<rparr>"
 
 definition merge_with_dft_tcb :: "cdl_object_id \<Rightarrow> unit k_monad"
 where "merge_with_dft_tcb o_id \<equiv>
@@ -526,7 +526,7 @@ where
     od
   | EndpointCap ep b _ \<Rightarrow>
     do
-      when (b \<noteq> 0) $ ep_cancel_badged_sends ep b;
+      when (b \<noteq> 0) $ cancel_badged_sends ep b;
       return cap
     od
   | PageTableCap ptr _ _ \<Rightarrow>
@@ -692,7 +692,7 @@ where
             badge_update data cap
           else
             NullCap
-      | AsyncEndpointCap _ b _ \<Rightarrow>
+      | NotificationCap _ b _ \<Rightarrow>
           if b = 0 \<and> \<not> preserve then
             badge_update data cap
           else

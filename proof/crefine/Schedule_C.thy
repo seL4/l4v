@@ -1022,9 +1022,9 @@ lemma cep_relations_drop_fun_upd:
   "\<lbrakk> f x = Some v; tcbEPNext_C v' = tcbEPNext_C v; tcbEPPrev_C v' = tcbEPPrev_C v \<rbrakk>
       \<Longrightarrow> cendpoint_relation (f (x \<mapsto> v')) = cendpoint_relation f"
   "\<lbrakk> f x = Some v; tcbEPNext_C v' = tcbEPNext_C v; tcbEPPrev_C v' = tcbEPPrev_C v \<rbrakk>
-      \<Longrightarrow> casync_endpoint_relation (f (x \<mapsto> v')) = casync_endpoint_relation f"
+      \<Longrightarrow> cnotification_relation (f (x \<mapsto> v')) = cnotification_relation f"
   by (intro ext cendpoint_relation_upd_tcb_no_queues[where thread=x]
-                casync_endpoint_relation_upd_tcb_no_queues[where thread=x]
+                cnotification_relation_upd_tcb_no_queues[where thread=x]
           | simp split: split_if)+
 
 lemma threadSet_timeSlice_ccorres [corres]:

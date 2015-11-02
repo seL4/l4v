@@ -24,8 +24,8 @@ lemma isMDBParentOf_CTE1:
       \<and> mdbRevocable node
       \<and> (isEndpointCap cap \<longrightarrow> capEPBadge cap \<noteq> 0 \<longrightarrow>
            capEPBadge cap = capEPBadge cap' \<and> \<not> mdbFirstBadged node')
-      \<and> (isAsyncEndpointCap cap \<longrightarrow> capAEPBadge cap \<noteq> 0 \<longrightarrow>
-           capAEPBadge cap = capAEPBadge cap' \<and> \<not> mdbFirstBadged node'))"
+      \<and> (isNotificationCap cap \<longrightarrow> capNtfnBadge cap \<noteq> 0 \<longrightarrow>
+           capNtfnBadge cap = capNtfnBadge cap' \<and> \<not> mdbFirstBadged node'))"
   apply (simp add: isMDBParentOf_def Let_def split: cte.splits split del: split_if)
   apply (clarsimp simp: Let_def)
   apply (fastforce simp: isCap_simps)
@@ -1017,7 +1017,7 @@ lemma updateMDB_no_0 [wp]:
 definition
   "revokable' srcCap cap \<equiv>
   if isEndpointCap cap then capEPBadge cap \<noteq> capEPBadge srcCap
-  else if isAsyncEndpointCap cap then capAEPBadge cap \<noteq> capAEPBadge srcCap
+  else if isNotificationCap cap then capNtfnBadge cap \<noteq> capNtfnBadge srcCap
   else if isUntypedCap cap then True
   else if isIRQHandlerCap cap then isIRQControlCap srcCap
   else False"
@@ -3000,7 +3000,7 @@ using assms
 
 lemma revokable_eq:
   "\<lbrakk> cap_relation c c'; cap_relation src_cap src_cap'; sameRegionAs src_cap' c';
-     is_untyped_cap src_cap \<longrightarrow> \<not> is_ep_cap c \<and> \<not> is_aep_cap c\<rbrakk>
+     is_untyped_cap src_cap \<longrightarrow> \<not> is_ep_cap c \<and> \<not> is_ntfn_cap c\<rbrakk>
   \<Longrightarrow> revokable src_cap c = revokable' src_cap' c'"
   apply (clarsimp simp: isCap_simps objBits_simps pageBits_def
                         bits_of_def revokable_def revokable'_def
@@ -3137,7 +3137,7 @@ lemma isArchCap_simps[simp]:
   "isArchCap P (capability.ThreadCap xc) = False"
   "isArchCap P capability.NullCap = False"
   "isArchCap P capability.DomainCap = False"
-  "isArchCap P (capability.AsyncEndpointCap xca xba xaa xd) = False"
+  "isArchCap P (capability.NotificationCap xca xba xaa xd) = False"
   "isArchCap P (capability.EndpointCap xda xcb xbb xab xe) = False"
   "isArchCap P (capability.IRQHandlerCap xf) = False"
   "isArchCap P (capability.Zombie xbc xac xg) = False"
@@ -3337,9 +3337,9 @@ lemma isEndpointCap [simp]:
   "isEndpointCap cap' = isEndpointCap cap" using master
   by (simp add: capMasterCap_def isEndpointCap_def split: capability.splits)
 
-lemma isAsyncEndpointCap [simp]:
-  "isAsyncEndpointCap cap' = isAsyncEndpointCap cap" using master
-  by (simp add: capMasterCap_def isAsyncEndpointCap_def split: capability.splits)
+lemma isNotificationCap [simp]:
+  "isNotificationCap cap' = isNotificationCap cap" using master
+  by (simp add: capMasterCap_def isNotificationCap_def split: capability.splits)
 
 lemma isIRQControlCap [simp]:
   "isIRQControlCap cap' = isIRQControlCap cap" using master
@@ -3394,14 +3394,14 @@ lemmas sameRegionAs [simp] = sameRegionAs1 sameRegionAs2
 lemma isMDBParentOf1:
   assumes "\<not>isReplyCap cap"
   assumes "\<not>isEndpointCap cap"
-  assumes "\<not>isAsyncEndpointCap cap"
+  assumes "\<not>isNotificationCap cap"
   shows "isMDBParentOf c (CTE cap' m) = isMDBParentOf c (CTE cap m)"
 proof -
   from assms
   have c':
     "\<not>isReplyCap cap'" "\<not>isEndpointCap cap'"
-    "\<not>isAsyncEndpointCap cap'" by auto
-  note isReplyCap [simp del] isEndpointCap [simp del] isAsyncEndpointCap [simp del]
+    "\<not>isNotificationCap cap'" by auto
+  note isReplyCap [simp del] isEndpointCap [simp del] isNotificationCap [simp del]
   from c' assms
   show ?thesis
   apply (cases c, clarsimp)
@@ -3419,14 +3419,14 @@ qed
 lemma isMDBParentOf2:
   assumes "\<not>isReplyCap cap"
   assumes "\<not>isEndpointCap cap"
-  assumes "\<not>isAsyncEndpointCap cap"
+  assumes "\<not>isNotificationCap cap"
   shows "isMDBParentOf (CTE cap' m) c = isMDBParentOf (CTE cap m) c"
 proof -
   from assms
   have c':
     "\<not>isReplyCap cap'" "\<not>isEndpointCap cap'"
-    "\<not>isAsyncEndpointCap cap'" by auto
-  note isReplyCap [simp del] isEndpointCap [simp del] isAsyncEndpointCap [simp del]
+    "\<not>isNotificationCap cap'" by auto
+  note isReplyCap [simp del] isEndpointCap [simp del] isNotificationCap [simp del]
   from c' assms
   show ?thesis
   apply (cases c, clarsimp)
@@ -3444,7 +3444,7 @@ end
 lemma same_master_descendants:
   assumes slot: "m slot = Some cte"
   assumes master: "capMasterCap (cteCap cte) = capMasterCap cap'"
-  assumes c': "\<not>isReplyCap cap'" "\<not>isEndpointCap cap'" "\<not>isAsyncEndpointCap cap'"
+  assumes c': "\<not>isReplyCap cap'" "\<not>isEndpointCap cap'" "\<not>isNotificationCap cap'"
   defines "m' \<equiv> m(slot \<mapsto> cteCap_update (\<lambda>_. cap') cte)"
   shows "descendants_of' p m' = descendants_of' p m"
 proof (rule set_eqI, simp add: descendants_of'_def)
@@ -3456,7 +3456,7 @@ proof (rule set_eqI, simp add: descendants_of'_def)
   from c'
   have c: "\<not>isReplyCap cap"
           "\<not>isEndpointCap cap"
-          "\<not>isAsyncEndpointCap cap" by auto
+          "\<not>isNotificationCap cap" by auto
 
   note parent [simp] = isMDBParentOf [OF c]
 
@@ -3508,8 +3508,8 @@ lemma is_ep_cap_relation:
   apply (cases c, auto)
   done
 
-lemma is_aep_cap_relation:
-  "cap_relation c c' \<Longrightarrow> isAsyncEndpointCap c' = is_aep_cap c"
+lemma is_ntfn_cap_relation:
+  "cap_relation c c' \<Longrightarrow> isNotificationCap c' = is_ntfn_cap c"
   apply (simp add: isCap_simps is_cap_simps)
   apply (cases c, auto)
   done
@@ -3519,7 +3519,7 @@ lemma set_cap_same_master:
    corres dc (valid_objs and pspace_aligned and pspace_distinct and
               cte_wp_at (\<lambda>c. cap_master_cap c = cap_master_cap cap \<and>
                              \<not>is_reply_cap c \<and> \<not>is_master_reply_cap c \<and>
-                             \<not>is_ep_cap c \<and> \<not>is_aep_cap c) slot)
+                             \<not>is_ep_cap c \<and> \<not>is_ntfn_cap c) slot)
              (pspace_aligned' and pspace_distinct' and
               (\<lambda>s. ctes_of s (cte_map slot) = Some cte))
      (set_cap cap slot)
@@ -3616,8 +3616,8 @@ lemma set_cap_same_master:
     apply (drule is_ep_cap_relation)+
     apply (drule master_cap_ep)
     apply simp
-   apply (drule is_aep_cap_relation)+
-   apply (drule master_cap_aep)
+   apply (drule is_ntfn_cap_relation)+
+   apply (drule master_cap_ntfn)
    apply simp
   apply (simp add: in_set_cap_cte_at)
   done
@@ -4237,7 +4237,7 @@ lemma nullMDBNode_pointers[simp]:
 (* Arguments to capability_case need to be in the same order as the constructors in 'capabilility' data type *)
 lemma revokable'_fold:
   "revokable' srcCap cap =
-  (case cap of capability.AsyncEndpointCap _ _ _ _ \<Rightarrow> capAEPBadge cap \<noteq> capAEPBadge srcCap
+  (case cap of capability.NotificationCap _ _ _ _ \<Rightarrow> capNtfnBadge cap \<noteq> capNtfnBadge srcCap
      | capability.IRQHandlerCap _ \<Rightarrow> isIRQControlCap srcCap
      | capability.EndpointCap _ _ _ _ _ \<Rightarrow> capEPBadge cap \<noteq> capEPBadge srcCap
      | capability.UntypedCap _ _ _ \<Rightarrow> True | _ \<Rightarrow> False)"
@@ -4296,8 +4296,8 @@ lemma parentOf_preserve_oneway:
   \<and> (\<lambda>x. sameRegionAs x (cteCap cte)) = (\<lambda>x. sameRegionAs x (cteCap cte'))"
   assumes misc:"\<And>x cte cte'. \<lbrakk>m x =Some cte;m' x = Some cte'\<rbrakk> \<Longrightarrow>
   isUntypedCap (cteCap cte) = isUntypedCap (cteCap cte')
-  \<and> isAsyncEndpointCap (cteCap cte)  = isAsyncEndpointCap (cteCap cte')
-  \<and> (isAsyncEndpointCap (cteCap cte) \<longrightarrow> (capAEPBadge (cteCap cte) = capAEPBadge (cteCap cte')))
+  \<and> isNotificationCap (cteCap cte)  = isNotificationCap (cteCap cte')
+  \<and> (isNotificationCap (cteCap cte) \<longrightarrow> (capNtfnBadge (cteCap cte) = capNtfnBadge (cteCap cte')))
   \<and> (isEndpointCap (cteCap cte) = isEndpointCap (cteCap cte'))
   \<and> (isEndpointCap (cteCap cte) \<longrightarrow> (capEPBadge (cteCap cte) = capEPBadge (cteCap cte')))
   \<and> cteMDBNode cte = cteMDBNode cte'"
@@ -4328,8 +4328,8 @@ lemma parentOf_preserve:
   \<and> (\<lambda>x. sameRegionAs x (cteCap cte)) = (\<lambda>x. sameRegionAs x (cteCap cte'))"
   assumes misc:"\<And>x cte cte'. \<lbrakk>m x =Some cte;m' x = Some cte'\<rbrakk> \<Longrightarrow>
   isUntypedCap (cteCap cte) = isUntypedCap (cteCap cte')
-  \<and> isAsyncEndpointCap (cteCap cte)  = isAsyncEndpointCap (cteCap cte')
-  \<and> (isAsyncEndpointCap (cteCap cte) \<longrightarrow> (capAEPBadge (cteCap cte) = capAEPBadge (cteCap cte')))
+  \<and> isNotificationCap (cteCap cte)  = isNotificationCap (cteCap cte')
+  \<and> (isNotificationCap (cteCap cte) \<longrightarrow> (capNtfnBadge (cteCap cte) = capNtfnBadge (cteCap cte')))
   \<and> (isEndpointCap (cteCap cte) = isEndpointCap (cteCap cte'))
   \<and> (isEndpointCap (cteCap cte) \<longrightarrow> (capEPBadge (cteCap cte) = capEPBadge (cteCap cte')))
   \<and> cteMDBNode cte = cteMDBNode cte'"
@@ -4855,8 +4855,8 @@ lemma mdb_chunked_preserve:
 lemma valid_badges_preserve_oneway:
   assumes dom:"\<And>x. (x \<in> dom m) = (x \<in> dom m')"
   assumes misc:"\<And>x cte cte'. \<lbrakk>m x =Some cte;m' x = Some cte'\<rbrakk> \<Longrightarrow>
-    isAsyncEndpointCap (cteCap cte)  = isAsyncEndpointCap (cteCap cte')
-  \<and> (isAsyncEndpointCap (cteCap cte) \<longrightarrow> (capAEPBadge (cteCap cte) = capAEPBadge (cteCap cte')))
+    isNotificationCap (cteCap cte)  = isNotificationCap (cteCap cte')
+  \<and> (isNotificationCap (cteCap cte) \<longrightarrow> (capNtfnBadge (cteCap cte) = capNtfnBadge (cteCap cte')))
   \<and> (isEndpointCap (cteCap cte) = isEndpointCap (cteCap cte'))
   \<and> (isEndpointCap (cteCap cte) \<longrightarrow> (capEPBadge (cteCap cte) = capEPBadge (cteCap cte')))
   \<and> cteMDBNode cte = cteMDBNode cte'"
@@ -4887,8 +4887,8 @@ lemma valid_badges_preserve_oneway:
 lemma valid_badges_preserve:
   assumes dom:"\<And>x. (x \<in> dom m) = (x \<in> dom m')"
   assumes misc:"\<And>x cte cte'. \<lbrakk>m x =Some cte;m' x = Some cte'\<rbrakk> \<Longrightarrow>
-    isAsyncEndpointCap (cteCap cte)  = isAsyncEndpointCap (cteCap cte')
-  \<and> (isAsyncEndpointCap (cteCap cte) \<longrightarrow> (capAEPBadge (cteCap cte) = capAEPBadge (cteCap cte')))
+    isNotificationCap (cteCap cte)  = isNotificationCap (cteCap cte')
+  \<and> (isNotificationCap (cteCap cte) \<longrightarrow> (capNtfnBadge (cteCap cte) = capNtfnBadge (cteCap cte')))
   \<and> (isEndpointCap (cteCap cte) = isEndpointCap (cteCap cte'))
   \<and> (isEndpointCap (cteCap cte) \<longrightarrow> (capEPBadge (cteCap cte) = capEPBadge (cteCap cte')))
   \<and> cteMDBNode cte = cteMDBNode cte'"
@@ -4909,8 +4909,8 @@ lemma mdb_untyped'_preserve_oneway:
   assumes misc:"\<And>x cte cte'. \<lbrakk>m x =Some cte;m' x = Some cte'\<rbrakk> \<Longrightarrow>
   isUntypedCap (cteCap cte) = isUntypedCap (cteCap cte')
   \<and> untypedRange (cteCap cte) = untypedRange (cteCap cte')
-  \<and> isAsyncEndpointCap (cteCap cte)  = isAsyncEndpointCap (cteCap cte')
-  \<and> (isAsyncEndpointCap (cteCap cte) \<longrightarrow> (capAEPBadge (cteCap cte) = capAEPBadge (cteCap cte')))
+  \<and> isNotificationCap (cteCap cte)  = isNotificationCap (cteCap cte')
+  \<and> (isNotificationCap (cteCap cte) \<longrightarrow> (capNtfnBadge (cteCap cte) = capNtfnBadge (cteCap cte')))
   \<and> (isEndpointCap (cteCap cte) = isEndpointCap (cteCap cte'))
   \<and> (isEndpointCap (cteCap cte) \<longrightarrow> (capEPBadge (cteCap cte) = capEPBadge (cteCap cte')))
   \<and> capRange (cteCap cte) = capRange (cteCap cte')
@@ -4953,8 +4953,8 @@ lemma untyped_mdb'_preserve:
   assumes misc:"\<And>x cte cte'. \<lbrakk>m x =Some cte;m' x = Some cte'\<rbrakk> \<Longrightarrow>
   isUntypedCap (cteCap cte) = isUntypedCap (cteCap cte')
   \<and> untypedRange (cteCap cte) = untypedRange (cteCap cte')
-  \<and> isAsyncEndpointCap (cteCap cte)  = isAsyncEndpointCap (cteCap cte')
-  \<and> (isAsyncEndpointCap (cteCap cte) \<longrightarrow> (capAEPBadge (cteCap cte) = capAEPBadge (cteCap cte')))
+  \<and> isNotificationCap (cteCap cte)  = isNotificationCap (cteCap cte')
+  \<and> (isNotificationCap (cteCap cte) \<longrightarrow> (capNtfnBadge (cteCap cte) = capNtfnBadge (cteCap cte')))
   \<and> (isEndpointCap (cteCap cte) = isEndpointCap (cteCap cte'))
   \<and> (isEndpointCap (cteCap cte) \<longrightarrow> (capEPBadge (cteCap cte) = capEPBadge (cteCap cte')))
   \<and> capRange (cteCap cte) = capRange (cteCap cte')
@@ -4981,8 +4981,8 @@ lemma mdb_inc'_preserve_oneway:
   isUntypedCap (cteCap cte) = isUntypedCap (cteCap cte')
   \<and> untypedRange (cteCap cte) = untypedRange (cteCap cte')
   \<and> (isUntypedCap (cteCap cte) \<longrightarrow> usableUntypedRange (cteCap cte') \<subseteq> usableUntypedRange (cteCap cte))
-  \<and> isAsyncEndpointCap (cteCap cte)  = isAsyncEndpointCap (cteCap cte')
-  \<and> (isAsyncEndpointCap (cteCap cte) \<longrightarrow> (capAEPBadge (cteCap cte) = capAEPBadge (cteCap cte')))
+  \<and> isNotificationCap (cteCap cte)  = isNotificationCap (cteCap cte')
+  \<and> (isNotificationCap (cteCap cte) \<longrightarrow> (capNtfnBadge (cteCap cte) = capNtfnBadge (cteCap cte')))
   \<and> (isEndpointCap (cteCap cte) = isEndpointCap (cteCap cte'))
   \<and> (isEndpointCap (cteCap cte) \<longrightarrow> (capEPBadge (cteCap cte) = capEPBadge (cteCap cte')))
   \<and> cteMDBNode cte = cteMDBNode cte'"
@@ -5078,8 +5078,8 @@ locale mdb_inv_preserve =
   \<and> isNullCap (cteCap cte) = isNullCap (cteCap cte')
   \<and> isReplyCap (cteCap cte) = isReplyCap (cteCap cte')
   \<and> (isReplyCap (cteCap cte) \<longrightarrow> capReplyMaster (cteCap cte) = capReplyMaster (cteCap cte'))
-  \<and> isAsyncEndpointCap (cteCap cte)  = isAsyncEndpointCap (cteCap cte')
-  \<and> (isAsyncEndpointCap (cteCap cte) \<longrightarrow> (capAEPBadge (cteCap cte) = capAEPBadge (cteCap cte')))
+  \<and> isNotificationCap (cteCap cte)  = isNotificationCap (cteCap cte')
+  \<and> (isNotificationCap (cteCap cte) \<longrightarrow> (capNtfnBadge (cteCap cte) = capNtfnBadge (cteCap cte')))
   \<and> (isEndpointCap (cteCap cte) = isEndpointCap (cteCap cte'))
   \<and> (isEndpointCap (cteCap cte) \<longrightarrow> (capEPBadge (cteCap cte) = capEPBadge (cteCap cte')))
   \<and> untypedRange (cteCap cte) = untypedRange (cteCap cte')
@@ -7745,7 +7745,7 @@ definition
   let cap = cteCap cte; cap' = cteCap cte' in
   sameRegionAs cap cap' \<and>
   (isEndpointCap cap \<longrightarrow> (capEPBadge cap = capEPBadge cap' \<or> no_child' s cte)) \<and>
-  (isAsyncEndpointCap cap \<longrightarrow> (capAEPBadge cap = capAEPBadge cap' \<or> no_child' s cte))"
+  (isNotificationCap cap \<longrightarrow> (capNtfnBadge cap = capNtfnBadge cap' \<or> no_child' s cte))"
 
 lemma subtree_no_parent:
   assumes "m \<turnstile> p \<rightarrow> x"

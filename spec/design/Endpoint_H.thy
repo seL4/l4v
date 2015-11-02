@@ -17,7 +17,7 @@ imports
   ThreadDecls_H
   CSpaceDecls_H
   FaultHandlerDecls_H
-  AsyncEndpoint_H
+  Notification_H
 begin
 
 defs sendIPC_def:
@@ -26,7 +26,7 @@ defs sendIPC_def:
         (case ep of 
             IdleEP \<Rightarrow> if blocking then  (do
                 setThreadState (BlockedOnSend_ \<lparr>
-                    blockingIPCEndpoint= epptr,
+                    blockingObject= epptr,
                     blockingIPCBadge= badge,
                     blockingIPCCanGrant= canGrant,
                     blockingIPCIsCall= call \<rparr>) thread;
@@ -35,7 +35,7 @@ defs sendIPC_def:
             else  return ()
             | SendEP queue \<Rightarrow> if blocking then  (do
                 setThreadState (BlockedOnSend_ \<lparr>
-                    blockingIPCEndpoint= epptr,
+                    blockingObject= epptr,
                     blockingIPCBadge= badge,
                     blockingIPCCanGrant= canGrant,
                     blockingIPCIsCall= call \<rparr>) thread;
@@ -69,7 +69,7 @@ od)"
 
 defs isActive_def:
 "isActive x0\<equiv> (case x0 of
-    (AEP (ActiveAEP _) _) \<Rightarrow>    True
+    (NTFN (ActiveNtfn _) _) \<Rightarrow>    True
   | _ \<Rightarrow>    False
   )"
 
@@ -80,15 +80,15 @@ defs receiveIPC_def:
         epptr \<leftarrow> return ( capEPPtr cap);
         ep \<leftarrow> getEndpoint epptr;
         diminish \<leftarrow> return ( Not $ capEPCanSend cap);
-        aepptr \<leftarrow> getBoundAEP thread;
-        aep \<leftarrow> maybe (return $ AEP IdleAEP Nothing) (getAsyncEP) aepptr;
-        if (isJust aepptr \<and> isActive aep)
-          then completeAsyncIPC (fromJust aepptr) thread
+        ntfnPtr \<leftarrow> getBoundNotification thread;
+        ntfn \<leftarrow> maybe (return $ NTFN IdleNtfn Nothing) (getNotification) ntfnPtr;
+        if (isJust ntfnPtr \<and> isActive ntfn)
+          then completeSignal (fromJust ntfnPtr) thread
           else (case ep of
               IdleEP \<Rightarrow>   (case isBlocking of
                 True \<Rightarrow>   (do
                   setThreadState (BlockedOnReceive_ \<lparr>
-                      blockingIPCEndpoint= epptr,
+                      blockingObject= epptr,
                       blockingIPCDiminishCaps= diminish \<rparr>) thread;
                   setEndpoint epptr $ RecvEP [thread]
                 od)
@@ -97,7 +97,7 @@ defs receiveIPC_def:
             | RecvEP queue \<Rightarrow>   (case isBlocking of
                 True \<Rightarrow>   (do
                   setThreadState (BlockedOnReceive_ \<lparr>
-                      blockingIPCEndpoint= epptr,
+                      blockingObject= epptr,
                       blockingIPCDiminishCaps= diminish \<rparr>) thread;
                   setEndpoint epptr $ RecvEP $ queue @ [thread]
                 od)
@@ -147,8 +147,8 @@ defs replyFromKernel_def:
     od)
   )"
 
-defs ipcCancel_def:
-"ipcCancel tptr \<equiv>
+defs cancelIPC_def:
+"cancelIPC tptr \<equiv>
         let
             replyIPCCancel = (do
                 threadSet (\<lambda> tcb. tcb \<lparr>tcbFault := Nothing\<rparr>) tptr;
@@ -166,7 +166,7 @@ defs ipcCancel_def:
                 | _ \<Rightarrow>   False
                 ));
             blockedIPCCancel = (\<lambda>  state. (do
-                epptr \<leftarrow> return ( blockingIPCEndpoint state);
+                epptr \<leftarrow> return ( blockingObject state);
                 ep \<leftarrow> getEndpoint epptr;
                 haskell_assert (Not $ isIdle ep)
                     [];
@@ -184,14 +184,14 @@ defs ipcCancel_def:
         (case state of
               BlockedOnSend _ _ _ _ \<Rightarrow>   blockedIPCCancel state
             | BlockedOnReceive _ _ \<Rightarrow>   blockedIPCCancel state
-            | BlockedOnAsyncEvent _ \<Rightarrow>   asyncIPCCancel tptr (waitingOnAsyncEP state)
+            | BlockedOnNotification _ \<Rightarrow>   cancelSignal tptr (waitingOnNotification state)
             | BlockedOnReply  \<Rightarrow>   replyIPCCancel
             | _ \<Rightarrow>   return ()
             )
                         od)"
 
-defs epCancelAll_def:
-"epCancelAll epptr\<equiv> (do
+defs cancelAllIPC_def:
+"cancelAllIPC epptr\<equiv> (do
         ep \<leftarrow> getEndpoint epptr;
         (case ep of
               IdleEP \<Rightarrow>  
@@ -208,8 +208,8 @@ defs epCancelAll_def:
             )
 od)"
 
-defs epCancelBadgedSends_def:
-"epCancelBadgedSends epptr badge\<equiv> (do
+defs cancelBadgedSends_def:
+"cancelBadgedSends epptr badge\<equiv> (do
     ep \<leftarrow> getEndpoint epptr;
     (case ep of
           IdleEP \<Rightarrow>   return ()

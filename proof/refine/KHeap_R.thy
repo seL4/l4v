@@ -299,12 +299,12 @@ lemma updateObject_tcb_eta:
   "updateObject (v :: tcb) = updateObject_default v"
   by ((rule ext)+, simp)
 
-lemma updateObject_aep_eta:
-  "updateObject (v :: async_endpoint) = updateObject_default v"
+lemma updateObject_ntfn_eta:
+  "updateObject (v :: Structures_H.notification) = updateObject_default v"
   by ((rule ext)+, simp)
 
 lemmas updateObject_eta = 
-  updateObject_ep_eta updateObject_tcb_eta updateObject_aep_eta
+  updateObject_ep_eta updateObject_tcb_eta updateObject_ntfn_eta
 
 lemma objBits_type:
   "koTypeOf k = koTypeOf k' \<Longrightarrow> objBitsKO k = objBitsKO k'"
@@ -396,9 +396,9 @@ lemma setObject_ep_pre:
   apply (clarsimp simp: in_monad projectKOs in_magnitude_check)
   done
 
-lemma setObject_aep_pre:
-  assumes "\<lbrace>P and aep_at' p\<rbrace> setObject p (e::async_endpoint) \<lbrace>Q\<rbrace>"
-  shows "\<lbrace>P\<rbrace> setObject p (e::async_endpoint) \<lbrace>Q\<rbrace>" using assms
+lemma setObject_ntfn_pre:
+  assumes "\<lbrace>P and ntfn_at' p\<rbrace> setObject p (e::Structures_H.notification) \<lbrace>Q\<rbrace>"
+  shows "\<lbrace>P\<rbrace> setObject p (e::Structures_H.notification) \<lbrace>Q\<rbrace>" using assms
   apply (clarsimp simp: valid_def setObject_def in_monad
                         split_def updateObject_default_def
                         projectKOs in_magnitude_check objBits_simps)
@@ -547,8 +547,8 @@ lemma getObject_ep_inv: "\<lbrace>P\<rbrace> (getObject addr :: endpoint kernel)
   apply (simp add: loadObject_default_inv)
   done
 
-lemma getObject_aep_inv: 
-  "\<lbrace>P\<rbrace> (getObject addr :: async_endpoint kernel) \<lbrace>\<lambda>rv. P\<rbrace>"
+lemma getObject_ntfn_inv: 
+  "\<lbrace>P\<rbrace> (getObject addr :: Structures_H.notification kernel) \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (rule getObject_inv)
   apply (simp add: loadObject_default_inv)
   done
@@ -556,8 +556,8 @@ lemma getObject_aep_inv:
 lemma get_ep_inv'[wp]: "\<lbrace>P\<rbrace> getEndpoint ep \<lbrace>\<lambda>rv. P\<rbrace>"
   by (simp add: getEndpoint_def getObject_ep_inv)
 
-lemma get_aep_inv'[wp]: "\<lbrace>P\<rbrace> getAsyncEP aep \<lbrace>\<lambda>rv. P\<rbrace>"
-  by (simp add: getAsyncEP_def getObject_aep_inv)
+lemma get_ntfn_inv'[wp]: "\<lbrace>P\<rbrace> getNotification ntfn \<lbrace>\<lambda>rv. P\<rbrace>"
+  by (simp add: getNotification_def getObject_ntfn_inv)
 
 lemma get_ep'_valid_ep[wp]:
   "\<lbrace> invs' and ep_at' ep \<rbrace> getEndpoint ep \<lbrace> valid_ep' \<rbrace>"
@@ -570,9 +570,9 @@ lemma get_ep'_valid_ep[wp]:
   apply (simp add: valid_obj'_def)
   done
 
-lemma get_aep'_valid_aep[wp]:
-  "\<lbrace> invs' and aep_at' ep \<rbrace> getAsyncEP ep \<lbrace> valid_aep' \<rbrace>"
-  apply (simp add: getAsyncEP_def)
+lemma get_ntfn'_valid_ntfn[wp]:
+  "\<lbrace> invs' and ntfn_at' ep \<rbrace> getNotification ep \<lbrace> valid_ntfn' \<rbrace>"
+  apply (simp add: getNotification_def)
   apply (rule hoare_chain)
   apply (rule getObject_valid_obj)
      apply simp
@@ -628,25 +628,25 @@ lemma setEndpoint_pred_tcb_at'[wp]:
   apply (clarsimp simp: updateObject_default_def in_monad)
   done
 
-lemma get_aep_ko':
-  "\<lbrace>\<top>\<rbrace> getAsyncEP ep \<lbrace>\<lambda>rv. ko_at' rv ep\<rbrace>"
-  apply (simp add: getAsyncEP_def)
+lemma get_ntfn_ko':
+  "\<lbrace>\<top>\<rbrace> getNotification ep \<lbrace>\<lambda>rv. ko_at' rv ep\<rbrace>"
+  apply (simp add: getNotification_def)
   apply (rule getObject_ko_at)
    apply simp
   apply (simp add: objBits_simps)
   done
 
-lemma set_aep_aligned'[wp]:
-  "\<lbrace>pspace_aligned'\<rbrace> setAsyncEP p aep \<lbrace>\<lambda>rv. pspace_aligned'\<rbrace>"
-  unfolding setAsyncEP_def by wp
+lemma set_ntfn_aligned'[wp]:
+  "\<lbrace>pspace_aligned'\<rbrace> setNotification p ntfn \<lbrace>\<lambda>rv. pspace_aligned'\<rbrace>"
+  unfolding setNotification_def by wp
 
-lemma set_aep_distinct'[wp]:
-  "\<lbrace>pspace_distinct'\<rbrace> setAsyncEP p aep \<lbrace>\<lambda>rv. pspace_distinct'\<rbrace>"
-  unfolding setAsyncEP_def by wp
+lemma set_ntfn_distinct'[wp]:
+  "\<lbrace>pspace_distinct'\<rbrace> setNotification p ntfn \<lbrace>\<lambda>rv. pspace_distinct'\<rbrace>"
+  unfolding setNotification_def by wp
 
-lemma setAsyncEP_cte_wp_at':
-  "\<lbrace>cte_wp_at' P p\<rbrace> setAsyncEP ptr v \<lbrace>\<lambda>rv. cte_wp_at' P p\<rbrace>"
-  unfolding setAsyncEP_def
+lemma setNotification_cte_wp_at':
+  "\<lbrace>cte_wp_at' P p\<rbrace> setNotification ptr v \<lbrace>\<lambda>rv. cte_wp_at' P p\<rbrace>"
+  unfolding setNotification_def
   apply (rule setObject_cte_wp_at'[where Q="\<top>", simplified])
    apply (clarsimp simp add: updateObject_default_def in_monad
                              projectKOs
@@ -665,15 +665,15 @@ lemma set_ep_tcb' [wp]:
    \<lbrace> \<lambda>rv. tcb_at' t \<rbrace>"
   by (simp add: setEndpoint_def setObject_ep_tcb')
 
-lemma setObject_aep_tcb':
-  "\<lbrace>tcb_at' t\<rbrace> setObject p (e::async_endpoint) \<lbrace>\<lambda>_. tcb_at' t\<rbrace>"
+lemma setObject_ntfn_tcb':
+  "\<lbrace>tcb_at' t\<rbrace> setObject p (e::Structures_H.notification) \<lbrace>\<lambda>_. tcb_at' t\<rbrace>"
   apply (rule obj_at_setObject2)
   apply (clarsimp simp: updateObject_default_def in_monad)
   done
 
-lemma set_aep_tcb' [wp]: 
-  "\<lbrace> tcb_at' t \<rbrace> setAsyncEP aep v \<lbrace> \<lambda>rv. tcb_at' t \<rbrace>"
-  by (simp add: setAsyncEP_def setObject_aep_tcb')
+lemma set_ntfn_tcb' [wp]: 
+  "\<lbrace> tcb_at' t \<rbrace> setNotification ntfn v \<lbrace> \<lambda>rv. tcb_at' t \<rbrace>"
+  by (simp add: setNotification_def setObject_ntfn_tcb')
 
 lemma pspace_dom_update:
   "\<lbrakk> ps ptr = Some x; a_type x = a_type v \<rbrakk> \<Longrightarrow> pspace_dom (ps(ptr \<mapsto> v)) = pspace_dom ps"
@@ -1092,11 +1092,11 @@ lemma set_ep_corres:
                         gets_def get_def return_def assert_def fail_def obj_at_def)
   done
 
-lemma set_aep_corres:
-  "aep_relation ae ae' \<Longrightarrow>
-  corres dc (aep_at ptr) (aep_at' ptr)
-            (set_async_ep ptr ae) (setAsyncEP ptr ae')"
-  apply (simp add: set_async_ep_def setAsyncEP_def is_aep_def[symmetric])
+lemma set_ntfn_corres:
+  "ntfn_relation ae ae' \<Longrightarrow>
+  corres dc (ntfn_at ptr) (ntfn_at' ptr)
+            (set_notification ptr ae) (setNotification ptr ae')"
+  apply (simp add: set_notification_def setNotification_def is_ntfn_def[symmetric])
   apply (rule corres_symb_exec_l)+
         prefer 7
         apply (rule no_fail_pre, wp)
@@ -1118,16 +1118,16 @@ lemma set_aep_corres:
         apply simp
        apply (simp add: objBits_simps)
       apply (simp add: other_obj_relation_def)
-     apply (clarsimp simp: obj_at_def a_type_def is_aep)
+     apply (clarsimp simp: obj_at_def a_type_def is_ntfn)
     apply assumption
    apply (clarsimp simp: exs_valid_def assert_def return_def fail_def obj_at_def)
   apply (clarsimp simp: exs_valid_def get_object_def bind_def in_monad
                         gets_def get_def return_def assert_def fail_def obj_at_def)
   done
 
-lemma no_fail_getAsyncEP [wp]:
-  "no_fail (aep_at' ptr) (getAsyncEP ptr)"
-  apply (simp add: getAsyncEP_def getObject_def
+lemma no_fail_getNotification [wp]:
+  "no_fail (ntfn_at' ptr) (getNotification ptr)"
+  apply (simp add: getNotification_def getObject_def
                    split_def)
   apply (rule no_fail_pre)
    apply wp
@@ -1141,15 +1141,15 @@ lemma no_fail_getAsyncEP [wp]:
    apply (clarsimp split: option.split_asm simp: objBits_simps archObjSize_def)
   done
   
-lemma get_aep_corres:
-  "corres aep_relation (aep_at ptr) (aep_at' ptr)
-     (get_async_ep ptr) (getAsyncEP ptr)"
+lemma get_ntfn_corres:
+  "corres ntfn_relation (ntfn_at ptr) (ntfn_at' ptr)
+     (get_notification ptr) (getNotification ptr)"
   apply (rule corres_no_failI)
    apply wp
-  apply (simp add: get_async_ep_def getAsyncEP_def get_object_def 
+  apply (simp add: get_notification_def getNotification_def get_object_def 
                    getObject_def bind_assoc)
   apply (clarsimp simp: in_monad split_def bind_def gets_def get_def return_def)
-  apply (clarsimp simp add: assert_def fail_def obj_at_def return_def is_aep)
+  apply (clarsimp simp add: assert_def fail_def obj_at_def return_def is_ntfn)
   apply (clarsimp simp: loadObject_default_def in_monad projectKOs
                         in_magnitude_check objBits_simps)
   apply (clarsimp simp add: state_relation_def pspace_relation_def)
@@ -1192,17 +1192,17 @@ lemma typ_at'_valid_obj'_lift:
        apply (rename_tac endpoint)
        apply (case_tac endpoint; simp add: valid_ep'_def)
          apply (wp hoare_vcg_const_Ball_lift typ_at_lifts [OF P])
-      apply (rename_tac async_endpoint)
-      apply (case_tac "aepObj async_endpoint"; simp add: valid_aep'_def valid_bound_tcb'_def)
+      apply (rename_tac notification)
+      apply (case_tac "ntfnObj notification"; simp add: valid_ntfn'_def valid_bound_tcb'_def)
         prefer 3
         apply (wp hoare_vcg_const_Ball_lift typ_at_lifts [OF P])
-        apply ((case_tac "aepBoundTCB async_endpoint", simp_all, wp typ_at_lifts[OF P])+)[3]
+        apply ((case_tac "ntfnBoundTCB notification", simp_all, wp typ_at_lifts[OF P])+)[3]
      apply wp
    apply (rename_tac tcb)
     apply (case_tac "tcbState tcb";
-           simp add: valid_tcb'_def valid_tcb_state'_def split_def valid_bound_aep'_def)
+           simp add: valid_tcb'_def valid_tcb_state'_def split_def valid_bound_ntfn'_def)
            apply ((wp hoare_vcg_const_Ball_lift typ_at_lifts [OF P]
-                | case_tac "tcbBoundAEP tcb"; simp)+)[8]
+                | case_tac "tcbBoundNotification tcb"; simp)+)[8]
    apply (simp add: valid_cte'_def)
    apply (wp typ_at_lifts[OF P])
   apply (rename_tac arch_kernel_object)
@@ -1316,9 +1316,9 @@ lemma setObject_idle':
   shows      "\<lbrace>\<lambda>s. valid_idle' s \<and>
                    (ptr = ksIdleThread s \<longrightarrow>
                     (\<exists>obj (val :: 'a). projectKO_opt (injectKO val) = Some obj
-                                      \<and> idle' (tcbState obj) \<and> tcbBoundAEP obj = None)
+                                      \<and> idle' (tcbState obj) \<and> tcbBoundNotification obj = None)
                     \<longrightarrow> (\<exists>obj. projectKO_opt (injectKO v) = Some obj \<and>
-                          idle' (tcbState obj) \<and> tcbBoundAEP obj = None)) \<and>
+                          idle' (tcbState obj) \<and> tcbBoundNotification obj = None)) \<and>
                    P s\<rbrace>
                 setObject ptr v
               \<lbrace>\<lambda>rv s. valid_idle' s\<rbrace>"
@@ -1416,11 +1416,11 @@ lemma setEndpoint_nosch[wp]:
   apply simp
   done
 
-lemma setAsyncEP_nosch[wp]:
+lemma setNotification_nosch[wp]:
   "\<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace>
-    setAsyncEP val ptr
+    setNotification val ptr
    \<lbrace>\<lambda>rv s. P (ksSchedulerAction s)\<rbrace>"
-  apply (simp add: setAsyncEP_def)
+  apply (simp add: setNotification_def)
   apply (rule setObject_nosch)
   apply (simp add: updateObject_default_def)
   apply wp
@@ -1663,9 +1663,9 @@ lemma set_ep_state_refs_of'[wp]:
   by (wp setObject_state_refs_of',
       simp_all add: objBits_simps fun_upd_def[symmetric])
 
-lemma set_aep_ctes_of[wp]:
-  "\<lbrace>\<lambda>s. P (ctes_of s)\<rbrace> setAsyncEP p val \<lbrace>\<lambda>rv s. P (ctes_of s)\<rbrace>"
-  apply (simp add: setAsyncEP_def)
+lemma set_ntfn_ctes_of[wp]:
+  "\<lbrace>\<lambda>s. P (ctes_of s)\<rbrace> setNotification p val \<lbrace>\<lambda>rv s. P (ctes_of s)\<rbrace>"
+  apply (simp add: setNotification_def)
   apply (rule setObject_ctes_of[where Q="\<top>", simplified])
    apply (clarsimp simp: updateObject_default_def in_monad
                          projectKOs)
@@ -1673,64 +1673,64 @@ lemma set_aep_ctes_of[wp]:
                         projectKOs)
   done
 
-lemma set_aep_valid_mdb' [wp]:
+lemma set_ntfn_valid_mdb' [wp]:
   "\<lbrace>valid_mdb'\<rbrace> 
-    setObject epptr (aep::async_endpoint)
+    setObject epptr (ntfn::Structures_H.notification)
    \<lbrace>\<lambda>_. valid_mdb'\<rbrace>"
   apply (simp add: valid_mdb'_def)
-  apply (rule set_aep_ctes_of[simplified setAsyncEP_def])
+  apply (rule set_ntfn_ctes_of[simplified setNotification_def])
   done
 
-lemma set_aep_valid_objs':
-  "\<lbrace>valid_objs' and valid_aep' aep\<rbrace> 
-    setAsyncEP p aep 
+lemma set_ntfn_valid_objs':
+  "\<lbrace>valid_objs' and valid_ntfn' ntfn\<rbrace> 
+    setNotification p ntfn 
    \<lbrace>\<lambda>r s. valid_objs' s\<rbrace>"
-  apply (simp add: setAsyncEP_def)
+  apply (simp add: setNotification_def)
   apply (rule setObject_valid_objs')
   apply (clarsimp simp: updateObject_default_def in_monad
                         valid_obj'_def)
   done
 
-lemma set_aep_valid_pspace'[wp]:
-  "\<lbrace>valid_pspace' and valid_aep' aep\<rbrace> 
-    setAsyncEP p aep 
+lemma set_ntfn_valid_pspace'[wp]:
+  "\<lbrace>valid_pspace' and valid_ntfn' ntfn\<rbrace> 
+    setNotification p ntfn 
    \<lbrace>\<lambda>r. valid_pspace'\<rbrace>"
   apply (simp add: valid_pspace'_def)
-  apply (wp set_aep_aligned' [simplified] set_aep_valid_objs')
-      apply (simp add: setAsyncEP_def,wp)
+  apply (wp set_ntfn_aligned' [simplified] set_ntfn_valid_objs')
+      apply (simp add: setNotification_def,wp)
      apply auto
   done
 
-lemma set_aep_valid_bitmapQ[wp]:
-  "\<lbrace>Invariants_H.valid_bitmapQ\<rbrace> setAsyncEP p aep \<lbrace>\<lambda>rv. Invariants_H.valid_bitmapQ\<rbrace>"
-  apply (unfold setAsyncEP_def)
-  apply (rule setObject_aep_pre)
+lemma set_ntfn_valid_bitmapQ[wp]:
+  "\<lbrace>Invariants_H.valid_bitmapQ\<rbrace> setNotification p ntfn \<lbrace>\<lambda>rv. Invariants_H.valid_bitmapQ\<rbrace>"
+  apply (unfold setNotification_def)
+  apply (rule setObject_ntfn_pre)
   apply (simp add: bitmapQ_defs setObject_def split_def)
   apply (wp hoare_Ball_helper hoare_vcg_all_lift updateObject_default_inv | simp)+
   done
 
-lemma set_aep_bitmapQ_no_L1_orphans[wp]:
-  "\<lbrace> bitmapQ_no_L1_orphans \<rbrace> setAsyncEP p aep \<lbrace>\<lambda>rv. bitmapQ_no_L1_orphans \<rbrace>"
-  apply (unfold setAsyncEP_def)
-  apply (rule setObject_aep_pre)
+lemma set_ntfn_bitmapQ_no_L1_orphans[wp]:
+  "\<lbrace> bitmapQ_no_L1_orphans \<rbrace> setNotification p ntfn \<lbrace>\<lambda>rv. bitmapQ_no_L1_orphans \<rbrace>"
+  apply (unfold setNotification_def)
+  apply (rule setObject_ntfn_pre)
   apply (simp add: bitmapQ_defs setObject_def split_def)
   apply (wp hoare_Ball_helper hoare_vcg_all_lift updateObject_default_inv | simp)+
   done
 
-lemma set_aep_bitmapQ_no_L2_orphans[wp]:
-  "\<lbrace> bitmapQ_no_L2_orphans \<rbrace> setAsyncEP p aep \<lbrace>\<lambda>rv. bitmapQ_no_L2_orphans \<rbrace>"
-  apply (unfold setAsyncEP_def)
-  apply (rule setObject_aep_pre)
+lemma set_ntfn_bitmapQ_no_L2_orphans[wp]:
+  "\<lbrace> bitmapQ_no_L2_orphans \<rbrace> setNotification p ntfn \<lbrace>\<lambda>rv. bitmapQ_no_L2_orphans \<rbrace>"
+  apply (unfold setNotification_def)
+  apply (rule setObject_ntfn_pre)
   apply (simp add: bitmapQ_defs setObject_def split_def)
   apply (wp hoare_Ball_helper hoare_vcg_all_lift updateObject_default_inv | simp)+
   done
 
-lemma set_aep_valid_queues[wp]:
-  "\<lbrace>Invariants_H.valid_queues\<rbrace> setAsyncEP p aep \<lbrace>\<lambda>rv. Invariants_H.valid_queues\<rbrace>"
+lemma set_ntfn_valid_queues[wp]:
+  "\<lbrace>Invariants_H.valid_queues\<rbrace> setNotification p ntfn \<lbrace>\<lambda>rv. Invariants_H.valid_queues\<rbrace>"
   apply (simp add: Invariants_H.valid_queues_def)
   apply (rule hoare_pre)
    apply (wp hoare_vcg_conj_lift)
-    apply (simp add: setAsyncEP_def valid_queues_no_bitmap_def)
+    apply (simp add: setNotification_def valid_queues_no_bitmap_def)
     apply (wp hoare_Ball_helper hoare_vcg_all_lift)
       apply (rule obj_at_setObject2)
       apply (clarsimp simp: updateObject_default_def in_monad)
@@ -1738,10 +1738,10 @@ lemma set_aep_valid_queues[wp]:
             | simp add: valid_queues_no_bitmap_def)+
   done
 
-lemma set_aep_valid_queues'[wp]:
-  "\<lbrace>valid_queues'\<rbrace> setAsyncEP p aep \<lbrace>\<lambda>rv. valid_queues'\<rbrace>"
-  apply (unfold setAsyncEP_def)
-  apply (rule setObject_aep_pre)
+lemma set_ntfn_valid_queues'[wp]:
+  "\<lbrace>valid_queues'\<rbrace> setNotification p ntfn \<lbrace>\<lambda>rv. valid_queues'\<rbrace>"
+  apply (unfold setNotification_def)
+  apply (rule setObject_ntfn_pre)
   apply (simp only: valid_queues'_def imp_conv_disj
                     obj_at'_real_def)
   apply (wp hoare_vcg_all_lift hoare_vcg_disj_lift)
@@ -1753,64 +1753,64 @@ lemma set_aep_valid_queues'[wp]:
   apply (clarsimp simp: projectKOs ko_wp_at'_def)
   done
 
-lemma set_aep_state_refs_of'[wp]:
-  "\<lbrace>\<lambda>s. P ((state_refs_of' s) (epptr := aep_q_refs_of' (aepObj aep)
-                                      \<union> aep_bound_refs' (aepBoundTCB aep)))\<rbrace>
-     setAsyncEP epptr aep
+lemma set_ntfn_state_refs_of'[wp]:
+  "\<lbrace>\<lambda>s. P ((state_refs_of' s) (epptr := ntfn_q_refs_of' (ntfnObj ntfn)
+                                      \<union> ntfn_bound_refs' (ntfnBoundTCB ntfn)))\<rbrace>
+     setNotification epptr ntfn
    \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
-  unfolding setAsyncEP_def
+  unfolding setNotification_def
   by (wp setObject_state_refs_of',
       simp_all add: objBits_simps fun_upd_def)
 
-lemma setAsyncEP_pred_tcb_at'[wp]:
-  "\<lbrace>pred_tcb_at' proj P t\<rbrace> setAsyncEP ptr val \<lbrace>\<lambda>rv. pred_tcb_at' proj P t\<rbrace>"
-  apply (simp add: pred_tcb_at'_def setAsyncEP_def)
+lemma setNotification_pred_tcb_at'[wp]:
+  "\<lbrace>pred_tcb_at' proj P t\<rbrace> setNotification ptr val \<lbrace>\<lambda>rv. pred_tcb_at' proj P t\<rbrace>"
+  apply (simp add: pred_tcb_at'_def setNotification_def)
   apply (rule obj_at_setObject2)
    apply simp
   apply (clarsimp simp: updateObject_default_def in_monad)
   done
 
-lemma setObject_aep_cur_domain[wp]:
-  "\<lbrace> \<lambda>s. P (ksCurDomain s) \<rbrace> setObject ptr (aep::async_endpoint) \<lbrace> \<lambda>_s . P (ksCurDomain s) \<rbrace>"
+lemma setObject_ntfn_cur_domain[wp]:
+  "\<lbrace> \<lambda>s. P (ksCurDomain s) \<rbrace> setObject ptr (ntfn::Structures_H.notification) \<lbrace> \<lambda>_s . P (ksCurDomain s) \<rbrace>"
   apply (clarsimp simp: setObject_def split_def)
   apply (wp updateObject_default_inv | simp)+
   done
 
-lemma setObject_aep_obj_at'_tcb[wp]:
-  "\<lbrace>obj_at' (P :: tcb \<Rightarrow> bool) t \<rbrace> setObject ptr (aep::async_endpoint) \<lbrace>\<lambda>_. obj_at' (P :: tcb \<Rightarrow> bool) t\<rbrace>"
+lemma setObject_ntfn_obj_at'_tcb[wp]:
+  "\<lbrace>obj_at' (P :: tcb \<Rightarrow> bool) t \<rbrace> setObject ptr (ntfn::Structures_H.notification) \<lbrace>\<lambda>_. obj_at' (P :: tcb \<Rightarrow> bool) t\<rbrace>"
   apply (rule obj_at_setObject2)
   apply (clarsimp simp: updateObject_default_def in_monad)
   done
 
-lemma setAsyncEP_ksCurDomain[wp]:
-  "\<lbrace> \<lambda>s. P (ksCurDomain s) \<rbrace> setAsyncEP ptr (aep::async_endpoint) \<lbrace> \<lambda>_s . P (ksCurDomain s) \<rbrace>"
-   apply (simp add: setAsyncEP_def)
+lemma setNotification_ksCurDomain[wp]:
+  "\<lbrace> \<lambda>s. P (ksCurDomain s) \<rbrace> setNotification ptr (ntfn::Structures_H.notification) \<lbrace> \<lambda>_s . P (ksCurDomain s) \<rbrace>"
+   apply (simp add: setNotification_def)
    apply wp
    done
 
-lemma setAsyncEP_tcb_in_cur_domain'[wp]:
-  "\<lbrace>tcb_in_cur_domain' t\<rbrace> setAsyncEP epptr ep \<lbrace>\<lambda>_. tcb_in_cur_domain' t\<rbrace>"
-  apply (clarsimp simp: setAsyncEP_def)
+lemma setNotification_tcb_in_cur_domain'[wp]:
+  "\<lbrace>tcb_in_cur_domain' t\<rbrace> setNotification epptr ep \<lbrace>\<lambda>_. tcb_in_cur_domain' t\<rbrace>"
+  apply (clarsimp simp: setNotification_def)
   apply (rule tcb_in_cur_domain'_lift)
   apply wp
   done
 
-lemma set_aep_sch_act_wf[wp]:
+lemma set_ntfn_sch_act_wf[wp]:
   "\<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s\<rbrace>
-     setAsyncEP aepptr aep
+     setNotification ntfnptr ntfn
    \<lbrace>\<lambda>rv s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
-  apply (wp sch_act_wf_lift | clarsimp simp: setAsyncEP_def)+
-    apply (simp add: setAsyncEP_def split_def setObject_def
+  apply (wp sch_act_wf_lift | clarsimp simp: setNotification_def)+
+    apply (simp add: setNotification_def split_def setObject_def
          | wp updateObject_default_inv)+
   done
 
 lemmas cur_tcb_lift =
   hoare_lift_Pf [where f = ksCurThread and P = tcb_at', folded cur_tcb'_def]
 
-lemma set_aep_cur_tcb'[wp]:
-  "\<lbrace>cur_tcb'\<rbrace> setAsyncEP ptr aep \<lbrace>\<lambda>rv. cur_tcb'\<rbrace>"
+lemma set_ntfn_cur_tcb'[wp]:
+  "\<lbrace>cur_tcb'\<rbrace> setNotification ptr ntfn \<lbrace>\<lambda>rv. cur_tcb'\<rbrace>"
   apply (wp cur_tcb_lift)
-  apply (simp add: setAsyncEP_def setObject_def split_def)
+  apply (simp add: setNotification_def setObject_def split_def)
   apply (wp updateObject_default_inv | simp)+
   done
 
@@ -1972,34 +1972,34 @@ lemma setObject_ep_ct:
   apply (wp updateObject_default_inv | simp)+ 
   done
 
-lemma setObject_aep_ct:
-  "\<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace> setObject p (e::async_endpoint) 
+lemma setObject_ntfn_ct:
+  "\<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace> setObject p (e::Structures_H.notification) 
    \<lbrace>\<lambda>_ s. P (ksCurThread s)\<rbrace>"
   apply (simp add: setObject_def split_def)
   apply (wp updateObject_default_inv | simp)+
   done
 
-lemma get_aep_sp':
-  "\<lbrace>P\<rbrace> getAsyncEP r \<lbrace>\<lambda>t. P and ko_at' t r\<rbrace>"
-  by (clarsimp simp: getAsyncEP_def getObject_def loadObject_default_def 
+lemma get_ntfn_sp':
+  "\<lbrace>P\<rbrace> getNotification r \<lbrace>\<lambda>t. P and ko_at' t r\<rbrace>"
+  by (clarsimp simp: getNotification_def getObject_def loadObject_default_def 
                      projectKOs in_monad valid_def obj_at'_def objBits_simps
                      in_magnitude_check split_def)
 
-lemma set_aep_pred_tcb_at' [wp]: 
+lemma set_ntfn_pred_tcb_at' [wp]: 
   "\<lbrace> pred_tcb_at' proj P t \<rbrace> 
-   setAsyncEP ep v 
+   setNotification ep v 
    \<lbrace> \<lambda>rv. pred_tcb_at' proj P t \<rbrace>"
-  apply (simp add: setAsyncEP_def pred_tcb_at'_def)
+  apply (simp add: setNotification_def pred_tcb_at'_def)
   apply (rule obj_at_setObject2)
   apply (clarsimp simp add: updateObject_default_def in_monad)
   done
 
-lemma set_aep_iflive'[wp]:
+lemma set_ntfn_iflive'[wp]:
   "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s
-      \<and> (live' (KOAEndpoint v) \<longrightarrow> ex_nonz_cap_to' p s)\<rbrace>
-     setAsyncEP p v
+      \<and> (live' (KONotification v) \<longrightarrow> ex_nonz_cap_to' p s)\<rbrace>
+     setNotification p v
    \<lbrace>\<lambda>rv. if_live_then_nonz_cap'\<rbrace>"
-  apply (simp add: setAsyncEP_def)
+  apply (simp add: setNotification_def)
   apply (wp setObject_iflive'[where P="\<top>"])
        apply simp
       apply (simp add: objBits_simps)
@@ -2010,15 +2010,15 @@ lemma set_aep_iflive'[wp]:
   apply clarsimp
   done
 
-declare setAsyncEP_cte_wp_at'[wp]
+declare setNotification_cte_wp_at'[wp]
 
-lemma set_aep_cap_to'[wp]:
-  "\<lbrace>ex_nonz_cap_to' p\<rbrace> setAsyncEP p' v \<lbrace>\<lambda>rv. ex_nonz_cap_to' p\<rbrace>"
+lemma set_ntfn_cap_to'[wp]:
+  "\<lbrace>ex_nonz_cap_to' p\<rbrace> setNotification p' v \<lbrace>\<lambda>rv. ex_nonz_cap_to' p\<rbrace>"
   by (wp ex_nonz_cap_to_pres')
 
-lemma setAsyncEP_ifunsafe'[wp]:
-  "\<lbrace>if_unsafe_then_cap'\<rbrace> setAsyncEP p v \<lbrace>\<lambda>rv. if_unsafe_then_cap'\<rbrace>"
-  unfolding setAsyncEP_def
+lemma setNotification_ifunsafe'[wp]:
+  "\<lbrace>if_unsafe_then_cap'\<rbrace> setNotification p v \<lbrace>\<lambda>rv. if_unsafe_then_cap'\<rbrace>"
+  unfolding setNotification_def
   apply (rule setObject_ifunsafe'[where P="\<top>", simplified])
     apply (clarsimp simp: updateObject_default_def in_monad projectKOs
                   intro!: equals0I)+
@@ -2026,43 +2026,43 @@ lemma setAsyncEP_ifunsafe'[wp]:
   apply (wp updateObject_default_inv | simp)+
   done
 
-lemma setAsyncEP_idle'[wp]:
-  "\<lbrace>\<lambda>s. valid_idle' s\<rbrace> setAsyncEP p v \<lbrace>\<lambda>rv. valid_idle'\<rbrace>"
-  unfolding setAsyncEP_def
+lemma setNotification_idle'[wp]:
+  "\<lbrace>\<lambda>s. valid_idle' s\<rbrace> setNotification p v \<lbrace>\<lambda>rv. valid_idle'\<rbrace>"
+  unfolding setNotification_def
   apply (wp setObject_idle'[where P="\<top>"])
         apply (simp add: objBits_simps updateObject_default_inv)+
   apply (clarsimp simp: projectKOs)
   done
 
-crunch it[wp]: setAsyncEP "\<lambda>s. P (ksIdleThread s)"
+crunch it[wp]: setNotification "\<lambda>s. P (ksIdleThread s)"
   (wp: updateObject_default_inv)
 
-lemma set_aep_arch' [wp]: 
-  "\<lbrace>\<lambda>s. P (ksArchState s)\<rbrace> setAsyncEP aep p \<lbrace>\<lambda>_ s. P (ksArchState s)\<rbrace>"
-  apply (simp add: setAsyncEP_def setObject_def split_def)
+lemma set_ntfn_arch' [wp]: 
+  "\<lbrace>\<lambda>s. P (ksArchState s)\<rbrace> setNotification ntfn p \<lbrace>\<lambda>_ s. P (ksArchState s)\<rbrace>"
+  apply (simp add: setNotification_def setObject_def split_def)
   apply (wp updateObject_default_inv|simp)+
   done
 
-lemma set_aep_ksInterrupt[wp]:
-  "\<lbrace>\<lambda>s. P (ksInterruptState s)\<rbrace> setAsyncEP ptr val \<lbrace>\<lambda>rv s. P (ksInterruptState s)\<rbrace>"
-  by (simp add: setAsyncEP_def | wp setObject_ksInterrupt updateObject_default_inv)+
+lemma set_ntfn_ksInterrupt[wp]:
+  "\<lbrace>\<lambda>s. P (ksInterruptState s)\<rbrace> setNotification ptr val \<lbrace>\<lambda>rv s. P (ksInterruptState s)\<rbrace>"
+  by (simp add: setNotification_def | wp setObject_ksInterrupt updateObject_default_inv)+
 
-lemma set_aep_ksMachine[wp]:
-  "\<lbrace>\<lambda>s. P (ksMachineState s)\<rbrace> setAsyncEP ptr val \<lbrace>\<lambda>rv s. P (ksMachineState s)\<rbrace>"
-  by (simp add: setAsyncEP_def | wp setObject_ksMachine updateObject_default_inv)+
+lemma set_ntfn_ksMachine[wp]:
+  "\<lbrace>\<lambda>s. P (ksMachineState s)\<rbrace> setNotification ptr val \<lbrace>\<lambda>rv s. P (ksMachineState s)\<rbrace>"
+  by (simp add: setNotification_def | wp setObject_ksMachine updateObject_default_inv)+
 
-lemma set_aep_maxObj [wp]:
-  "\<lbrace>\<lambda>s. P (gsMaxObjectSize s)\<rbrace> setAsyncEP ptr val \<lbrace>\<lambda>rv s. P (gsMaxObjectSize s)\<rbrace>"
-  by (simp add: setAsyncEP_def | wp setObject_ksPSpace_only updateObject_default_inv)+
+lemma set_ntfn_maxObj [wp]:
+  "\<lbrace>\<lambda>s. P (gsMaxObjectSize s)\<rbrace> setNotification ptr val \<lbrace>\<lambda>rv s. P (gsMaxObjectSize s)\<rbrace>"
+  by (simp add: setNotification_def | wp setObject_ksPSpace_only updateObject_default_inv)+
 
-lemma set_aep_global_refs' [wp]:
-  "\<lbrace>valid_global_refs'\<rbrace> setAsyncEP ptr val \<lbrace>\<lambda>_. valid_global_refs'\<rbrace>"
+lemma set_ntfn_global_refs' [wp]:
+  "\<lbrace>valid_global_refs'\<rbrace> setNotification ptr val \<lbrace>\<lambda>_. valid_global_refs'\<rbrace>"
   by (rule valid_global_refs_lift') wp
 
-crunch typ_at' [wp]: setAsyncEP "\<lambda>s. P (typ_at' T p s)"
+crunch typ_at' [wp]: setNotification "\<lambda>s. P (typ_at' T p s)"
 
-lemma set_aep_valid_arch' [wp]:
-  "\<lbrace>valid_arch_state'\<rbrace> setAsyncEP ptr val \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
+lemma set_ntfn_valid_arch' [wp]:
+  "\<lbrace>valid_arch_state'\<rbrace> setNotification ptr val \<lbrace>\<lambda>_. valid_arch_state'\<rbrace>"
   by (rule valid_arch_state_lift') wp
 
 lemmas valid_irq_node_lift =
@@ -2077,9 +2077,9 @@ lemma valid_irq_states_lift':
   apply wp
   done
 
-lemmas set_aep_irq_handlers'[wp] = valid_irq_handlers_lift'' [OF set_aep_ctes_of set_aep_ksInterrupt]
+lemmas set_ntfn_irq_handlers'[wp] = valid_irq_handlers_lift'' [OF set_ntfn_ctes_of set_ntfn_ksInterrupt]
 
-lemmas set_aep_irq_states' [wp] = valid_irq_states_lift' [OF set_aep_ksInterrupt set_aep_ksMachine]
+lemmas set_ntfn_irq_states' [wp] = valid_irq_states_lift' [OF set_ntfn_ksInterrupt set_ntfn_ksMachine]
 
 lemma valid_pde_mappings'_def2:
   "valid_pde_mappings' =
@@ -2099,18 +2099,18 @@ lemma valid_pde_mappings_lift':
   apply (rule hoare_vcg_all_lift hoare_vcg_disj_lift x y)+
   done
 
-lemma set_aep_valid_pde_mappings'[wp]:
-  "\<lbrace>valid_pde_mappings'\<rbrace> setAsyncEP ptr val \<lbrace>\<lambda>rv. valid_pde_mappings'\<rbrace>"
+lemma set_ntfn_valid_pde_mappings'[wp]:
+  "\<lbrace>valid_pde_mappings'\<rbrace> setNotification ptr val \<lbrace>\<lambda>rv. valid_pde_mappings'\<rbrace>"
   apply (rule valid_pde_mappings_lift')
    apply wp
-  apply (simp add: setAsyncEP_def)
+  apply (simp add: setNotification_def)
   apply (rule obj_at_setObject2)
   apply (clarsimp simp: updateObject_default_def in_monad)
   done
 
-lemma set_aep_vms'[wp]:
-  "\<lbrace>valid_machine_state'\<rbrace> setAsyncEP ptr val \<lbrace>\<lambda>rv. valid_machine_state'\<rbrace>"
-  apply (simp add:setAsyncEP_def valid_machine_state'_def pointerInUserData_def)
+lemma set_ntfn_vms'[wp]:
+  "\<lbrace>valid_machine_state'\<rbrace> setNotification ptr val \<lbrace>\<lambda>rv. valid_machine_state'\<rbrace>"
+  apply (simp add:setNotification_def valid_machine_state'_def pointerInUserData_def)
   apply (intro hoare_vcg_all_lift hoare_vcg_disj_lift)
   by (wp setObject_typ_at_inv setObject_ksMachine updateObject_default_inv |
       simp)+
@@ -2134,7 +2134,7 @@ lemma setObject_pspace_domain_valid[wp]:
   apply (clarsimp simp: lookupAround2_char1)
   done
 
-crunch pspace_domain_valid[wp]: setAsyncEP, setEndpoint "pspace_domain_valid"
+crunch pspace_domain_valid[wp]: setNotification, setEndpoint "pspace_domain_valid"
 
 lemma ct_not_inQ_lift:
   assumes sch_act: "\<And>P. \<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace> f \<lbrace>\<lambda>_ s. P (ksSchedulerAction s)\<rbrace>"
@@ -2144,49 +2144,49 @@ lemma ct_not_inQ_lift:
   unfolding ct_not_inQ_def
   by (rule hoare_convert_imp [OF sch_act not_inQ])
 
-lemma setAsyncEP_ct_not_inQ[wp]:
-  "\<lbrace>ct_not_inQ\<rbrace> setAsyncEP ptr rval \<lbrace>\<lambda>_. ct_not_inQ\<rbrace>"
-  apply (rule ct_not_inQ_lift [OF setAsyncEP_nosch])
-  apply (simp add: setAsyncEP_def ct_not_inQ_def)
+lemma setNotification_ct_not_inQ[wp]:
+  "\<lbrace>ct_not_inQ\<rbrace> setNotification ptr rval \<lbrace>\<lambda>_. ct_not_inQ\<rbrace>"
+  apply (rule ct_not_inQ_lift [OF setNotification_nosch])
+  apply (simp add: setNotification_def ct_not_inQ_def)
   apply (rule hoare_weaken_pre)
-  apply (wps setObject_aep_ct)
+  apply (wps setObject_ntfn_ct)
   apply (rule obj_at_setObject2)
   apply (clarsimp simp add: updateObject_default_def in_monad)+
   done
 
-lemma setAsyncEP_ksCurThread[wp]:
-  "\<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace> setAsyncEP a b \<lbrace>\<lambda>rv s. P (ksCurThread s)\<rbrace>"
-  apply (simp add: setAsyncEP_def setObject_def split_def)
+lemma setNotification_ksCurThread[wp]:
+  "\<lbrace>\<lambda>s. P (ksCurThread s)\<rbrace> setNotification a b \<lbrace>\<lambda>rv s. P (ksCurThread s)\<rbrace>"
+  apply (simp add: setNotification_def setObject_def split_def)
   apply (wp updateObject_default_inv | simp)+
   done
 
-lemma setAsyncEP_ksDomSchedule[wp]:
-  "\<lbrace>\<lambda>s. P (ksDomSchedule s)\<rbrace> setAsyncEP a b \<lbrace>\<lambda>rv s. P (ksDomSchedule s)\<rbrace>"
-  apply (simp add: setAsyncEP_def setObject_def split_def)
+lemma setNotification_ksDomSchedule[wp]:
+  "\<lbrace>\<lambda>s. P (ksDomSchedule s)\<rbrace> setNotification a b \<lbrace>\<lambda>rv s. P (ksDomSchedule s)\<rbrace>"
+  apply (simp add: setNotification_def setObject_def split_def)
   apply (wp updateObject_default_inv | simp)+
   done
 
-lemma setAsyncEP_ksDomScheduleId[wp]:
-  "\<lbrace>\<lambda>s. P (ksDomScheduleIdx s)\<rbrace> setAsyncEP a b \<lbrace>\<lambda>rv s. P (ksDomScheduleIdx s)\<rbrace>"
-  apply (simp add: setAsyncEP_def setObject_def split_def)
+lemma setNotification_ksDomScheduleId[wp]:
+  "\<lbrace>\<lambda>s. P (ksDomScheduleIdx s)\<rbrace> setNotification a b \<lbrace>\<lambda>rv s. P (ksDomScheduleIdx s)\<rbrace>"
+  apply (simp add: setNotification_def setObject_def split_def)
   apply (wp updateObject_default_inv | simp)+
   done
 
-lemma setAsyncEP_ct_idle_or_in_cur_domain'[wp]:
-  "\<lbrace> ct_idle_or_in_cur_domain' \<rbrace> setAsyncEP ptr aep \<lbrace> \<lambda>_. ct_idle_or_in_cur_domain' \<rbrace>"
+lemma setNotification_ct_idle_or_in_cur_domain'[wp]:
+  "\<lbrace> ct_idle_or_in_cur_domain' \<rbrace> setNotification ptr ntfn \<lbrace> \<lambda>_. ct_idle_or_in_cur_domain' \<rbrace>"
   apply (rule ct_idle_or_in_cur_domain'_lift)
   apply (wp hoare_vcg_disj_lift| rule obj_at_setObject2
-           | clarsimp simp: updateObject_default_def in_monad setAsyncEP_def)+
+           | clarsimp simp: updateObject_default_def in_monad setNotification_def)+
   done
 
-lemma set_aep_minor_invs':
-  "\<lbrace>invs' and obj_at' (\<lambda>aep. aep_q_refs_of' (aepObj aep) = aep_q_refs_of' (aepObj val)
-                           \<and> aep_bound_refs' (aepBoundTCB aep) = aep_bound_refs' (aepBoundTCB val))
+lemma set_ntfn_minor_invs':
+  "\<lbrace>invs' and obj_at' (\<lambda>ntfn. ntfn_q_refs_of' (ntfnObj ntfn) = ntfn_q_refs_of' (ntfnObj val)
+                           \<and> ntfn_bound_refs' (ntfnBoundTCB ntfn) = ntfn_bound_refs' (ntfnBoundTCB val))
                        ptr
-         and valid_aep' val
-         and (\<lambda>s. live' (KOAEndpoint val) \<longrightarrow> ex_nonz_cap_to' ptr s)
+         and valid_ntfn' val
+         and (\<lambda>s. live' (KONotification val) \<longrightarrow> ex_nonz_cap_to' ptr s)
          and (\<lambda>s. ptr \<noteq> ksIdleThread s) \<rbrace>
-     setAsyncEP ptr val
+     setNotification ptr val
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (clarsimp simp add: invs'_def valid_state'_def)
   apply (wp irqs_masked_lift valid_irq_node_lift , simp_all)
@@ -2202,10 +2202,10 @@ lemma getEndpoint_wp:
   apply simp
   done
 
-lemma getAsyncEP_wp:
-  "\<lbrace>\<lambda>s. \<forall>aep. ko_at' aep e s \<longrightarrow> P aep s\<rbrace> getAsyncEP e \<lbrace>P\<rbrace>"
+lemma getNotification_wp:
+  "\<lbrace>\<lambda>s. \<forall>ntfn. ko_at' ntfn e s \<longrightarrow> P ntfn s\<rbrace> getNotification e \<lbrace>P\<rbrace>"
   apply (rule hoare_strengthen_post)
-   apply (rule get_aep_sp')
+   apply (rule get_ntfn_sp')
   apply simp
   done
 
@@ -2214,10 +2214,10 @@ lemma ep_redux_simps':
         = (set xs \<times> {EPSend})"
   "ep_q_refs_of' (case xs of [] \<Rightarrow> IdleEP | y # ys \<Rightarrow> RecvEP xs)
         = (set xs \<times> {EPRecv})"
-  "aep_q_refs_of' (case xs of [] \<Rightarrow> IdleAEP | y # ys \<Rightarrow> WaitingAEP xs)
-        = (set xs \<times> {AEPAsync})"
+  "ntfn_q_refs_of' (case xs of [] \<Rightarrow> IdleNtfn | y # ys \<Rightarrow> WaitingNtfn xs)
+        = (set xs \<times> {NTFNSignal})"
   by (fastforce split: list.splits
-                simp: valid_ep_def valid_aep_def
+                simp: valid_ep_def valid_ntfn_def
               intro!: ext)+
 
 

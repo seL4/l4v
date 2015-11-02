@@ -39,9 +39,9 @@ synchronous message endpoint. Threads so queued are placed in the Restart state.
 Once scheduled they will reattempt the operation that previously caused them
 to be queued here. *}
 definition
-  ep_cancel_all :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
+  cancel_all_ipc :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
-  "ep_cancel_all epptr \<equiv> do
+  "cancel_all_ipc epptr \<equiv> do
      ep \<leftarrow> get_endpoint epptr;
      case ep of IdleEP \<Rightarrow> return ()
                | _ \<Rightarrow> do
@@ -62,9 +62,9 @@ where
 text {* Cancel all message send operations on threads queued in this endpoint
 and using a particular badge. *}
 definition
-  ep_cancel_badged_sends :: "obj_ref \<Rightarrow> badge \<Rightarrow> (unit,'z::state_ext) s_monad"
+  cancel_badged_sends :: "obj_ref \<Rightarrow> badge \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
-  "ep_cancel_badged_sends epptr badge \<equiv> do
+  "cancel_badged_sends epptr badge \<equiv> do
     ep \<leftarrow> get_endpoint epptr;
     case ep of
           IdleEP \<Rightarrow> return ()
@@ -90,57 +90,57 @@ where
 text {* Cancel all message operations on threads queued in an asynchronous
 endpoint. *}
 
-text {* Miscellaneous AEP binding stuff
+text {* Miscellaneous NTFN binding stuff
 FIXME! *}
 abbreviation 
-  aep_set_bound_tcb :: "async_ep \<Rightarrow> obj_ref option \<Rightarrow> async_ep"
+  ntfn_set_bound_tcb :: "notification \<Rightarrow> obj_ref option \<Rightarrow> notification"
 where
-  "aep_set_bound_tcb aep t \<equiv> aep \<lparr> aep_bound_tcb := t \<rparr>"
+  "ntfn_set_bound_tcb ntfn t \<equiv> ntfn \<lparr> ntfn_bound_tcb := t \<rparr>"
 
 abbreviation
-  aep_set_obj :: "async_ep \<Rightarrow> aep \<Rightarrow> async_ep"
+  ntfn_set_obj :: "notification \<Rightarrow> ntfn \<Rightarrow> notification"
 where
-  "aep_set_obj aep a \<equiv> aep \<lparr> aep_obj := a \<rparr>"
+  "ntfn_set_obj ntfn a \<equiv> ntfn \<lparr> ntfn_obj := a \<rparr>"
 
 abbreviation
-  do_unbind_aep :: "obj_ref \<Rightarrow> async_ep \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
+  do_unbind_notification :: "obj_ref \<Rightarrow> notification \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
-  "do_unbind_aep aepptr aep tcbptr \<equiv> do
-      aep' \<leftarrow> return $ aep_set_bound_tcb aep None;
-      set_async_ep aepptr aep';
-      set_bound_aep tcbptr None
+  "do_unbind_notification ntfnptr ntfn tcbptr \<equiv> do
+      ntfn' \<leftarrow> return $ ntfn_set_bound_tcb ntfn None;
+      set_notification ntfnptr ntfn';
+      set_bound_notification tcbptr None
     od"
 
 definition
-  unbind_async_endpoint :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
+  unbind_notification :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
-  "unbind_async_endpoint tcb \<equiv> do
-     aepptr \<leftarrow> get_bound_aep tcb;
-     case aepptr of
-         Some aepptr' \<Rightarrow> do
-             aep \<leftarrow> get_async_ep aepptr';
-             do_unbind_aep aepptr' aep tcb
+  "unbind_notification tcb \<equiv> do
+     ntfnptr \<leftarrow> get_bound_notification tcb;
+     case ntfnptr of
+         Some ntfnptr' \<Rightarrow> do
+             ntfn \<leftarrow> get_notification ntfnptr';
+             do_unbind_notification ntfnptr' ntfn tcb
           od
        | None \<Rightarrow> return ()
    od"
 
 definition
-  unbind_maybe_aep :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
+  unbind_maybe_notification :: "obj_ref \<Rightarrow> (unit, 'z::state_ext) s_monad"
 where
-  "unbind_maybe_aep aepptr \<equiv> do
-     aep \<leftarrow> get_async_ep aepptr;
-     (case aep_bound_tcb aep of
-       Some t \<Rightarrow> do_unbind_aep aepptr aep t
+  "unbind_maybe_notification ntfnptr \<equiv> do
+     ntfn \<leftarrow> get_notification ntfnptr;
+     (case ntfn_bound_tcb ntfn of
+       Some t \<Rightarrow> do_unbind_notification ntfnptr ntfn t
      | None \<Rightarrow> return ())
    od"
 
 definition
-  aep_cancel_all :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
+  cancel_all_signals :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
-  "aep_cancel_all aepptr \<equiv> do
-     aep \<leftarrow> get_async_ep aepptr;
-     case aep_obj aep of WaitingAEP queue \<Rightarrow> do
-                      _ \<leftarrow> set_async_ep aepptr $ aep_set_obj aep IdleAEP;
+  "cancel_all_signals ntfnptr \<equiv> do
+     ntfn \<leftarrow> get_notification ntfnptr;
+     case ntfn_obj ntfn of WaitingNtfn queue \<Rightarrow> do
+                      _ \<leftarrow> set_notification ntfnptr $ ntfn_set_obj ntfn IdleNtfn;
                       mapM_x (\<lambda>t. do set_thread_state t Restart;
                                      do_extended_op (tcb_sched_action tcb_sched_enqueue t) od) queue;
                       do_extended_op (reschedule_required)
@@ -151,9 +151,9 @@ where
 text {* The endpoint pointer stored by a thread waiting for a message to be
 transferred in either direction. *}
 definition
-  get_blocking_ipc_endpoint :: "thread_state \<Rightarrow> (obj_ref,'z::state_ext) s_monad"
+  get_blocking_object :: "thread_state \<Rightarrow> (obj_ref,'z::state_ext) s_monad"
 where
- "get_blocking_ipc_endpoint state \<equiv>
+ "get_blocking_object state \<equiv>
        case state of BlockedOnReceive epptr d \<Rightarrow> return epptr
                     | BlockedOnSend epptr x \<Rightarrow> return epptr
                     | _ \<Rightarrow> fail"
@@ -161,10 +161,10 @@ where
 
 text {* Cancel whatever IPC operation a thread is engaged in. *}
 definition
-  blocked_ipc_cancel :: "thread_state \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
+  blocked_cancel_ipc :: "thread_state \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
-  "blocked_ipc_cancel state tptr \<equiv> do
-     epptr \<leftarrow> get_blocking_ipc_endpoint state;
+  "blocked_cancel_ipc state tptr \<equiv> do
+     epptr \<leftarrow> get_blocking_object state;
      ep \<leftarrow> get_endpoint epptr;
      queue \<leftarrow> get_ep_queue ep;
      queue' \<leftarrow> return $ remove1 tptr queue;
@@ -183,11 +183,11 @@ where
   "fast_finalise NullCap                  final = return ()"
 | "fast_finalise (ReplyCap r m)           final = return ()"
 | "fast_finalise (EndpointCap r b R)      final =
-      (when final $ ep_cancel_all r)"
-| "fast_finalise (AsyncEndpointCap r b R) final =
+      (when final $ cancel_all_ipc r)"
+| "fast_finalise (NotificationCap r b R) final =
       (when final $ do
-          unbind_maybe_aep r;
-          aep_cancel_all r
+          unbind_maybe_notification r;
+          cancel_all_signals r
        od)"
 | "fast_finalise (CNodeCap r bits g)      final = fail"
 | "fast_finalise (ThreadCap r)            final = fail"
@@ -272,9 +272,9 @@ definition
 text {* Cancel the message receive operation of a thread waiting for a Reply
 capability it has issued to be invoked. *}
 definition
-  reply_ipc_cancel :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
+  reply_cancel_ipc :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
- "reply_ipc_cancel tptr \<equiv> do
+ "reply_cancel_ipc tptr \<equiv> do
     thread_set (\<lambda>tcb. tcb \<lparr> tcb_fault := None \<rparr>) tptr;
     cap \<leftarrow> get_cap (tptr, tcb_cnode_index 2);
     descs \<leftarrow> gets (descendants_of (tptr, tcb_cnode_index 2) o cdt);
@@ -286,34 +286,34 @@ where
   od"
 
 text {* Cancel the message receive operation of a thread queued in an
-asynchronous endpoint. *}
-(* FIXME: need some way of easily retrieving aepBoundTCB? *)
+notification object. *}
+(* FIXME: need some way of easily retrieving ntfnBoundTCB? *)
 definition
-  async_ipc_cancel :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
+  cancel_signal :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
-  "async_ipc_cancel threadptr aepptr \<equiv> do
-     aep \<leftarrow> get_async_ep aepptr;
-     queue \<leftarrow> (case aep_obj aep of WaitingAEP queue \<Rightarrow> return queue 
+  "cancel_signal threadptr ntfnptr \<equiv> do
+     ntfn \<leftarrow> get_notification ntfnptr;
+     queue \<leftarrow> (case ntfn_obj ntfn of WaitingNtfn queue \<Rightarrow> return queue 
                         | _ \<Rightarrow> fail);
      queue' \<leftarrow> return $ remove1 threadptr queue;
-     newAEP \<leftarrow> return $ aep_set_obj aep (case queue' of [] \<Rightarrow> IdleAEP
-                                                      | _  \<Rightarrow> WaitingAEP queue');
-     set_async_ep aepptr newAEP;
+     newNTFN \<leftarrow> return $ ntfn_set_obj ntfn (case queue' of [] \<Rightarrow> IdleNtfn
+                                                      | _  \<Rightarrow> WaitingNtfn queue');
+     set_notification ntfnptr newNTFN;
      set_thread_state threadptr Inactive
    od"
 
 text {* Cancel any message operations a given thread is waiting on. *}
 definition
-  ipc_cancel :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
+  cancel_ipc :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
-  "ipc_cancel tptr \<equiv> do
+  "cancel_ipc tptr \<equiv> do
      state \<leftarrow> get_thread_state tptr;
      case state  
        of 
-          BlockedOnSend x y \<Rightarrow> blocked_ipc_cancel state tptr
-        | BlockedOnReceive x d \<Rightarrow> blocked_ipc_cancel state tptr
-        | BlockedOnAsyncEvent event \<Rightarrow> async_ipc_cancel tptr event
-        | BlockedOnReply \<Rightarrow> reply_ipc_cancel tptr
+          BlockedOnSend x y \<Rightarrow> blocked_cancel_ipc state tptr
+        | BlockedOnReceive x d \<Rightarrow> blocked_cancel_ipc state tptr
+        | BlockedOnNotification event \<Rightarrow> cancel_signal tptr event
+        | BlockedOnReply \<Rightarrow> reply_cancel_ipc tptr
         | _ \<Rightarrow> return ()
    od"
 
@@ -323,7 +323,7 @@ definition
   suspend :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
   "suspend thread \<equiv> do
-     ipc_cancel thread;
+     cancel_ipc thread;
      set_thread_state thread Inactive;
      do_extended_op (tcb_sched_action (tcb_sched_dequeue) thread)
    od"

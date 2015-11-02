@@ -545,40 +545,40 @@ where
    odE" 
 
 definition
-  decode_bind_aep ::
+  decode_bind_notification ::
   "cap \<Rightarrow> (cap \<times> cslot_ptr) list \<Rightarrow> (tcb_invocation,'z::state_ext) se_monad"
 where
-  "decode_bind_aep cap extra_caps \<equiv> case cap of
+  "decode_bind_notification cap extra_caps \<equiv> case cap of
     ThreadCap tcb \<Rightarrow> doE
      whenE (length extra_caps = 0) $ throwError TruncatedMessage;
-     aEP \<leftarrow> liftE $ get_bound_aep tcb;
-     case aEP of
+     nTFN \<leftarrow> liftE $ get_bound_notification tcb;
+     case nTFN of
          Some _ \<Rightarrow> throwError IllegalOperation
        | None \<Rightarrow> returnOk ();
-     (aepptr, rights) \<leftarrow> case fst (hd extra_caps) of
-         AsyncEndpointCap ptr _ r \<Rightarrow> returnOk (ptr, r)
+     (ntfnptr, rights) \<leftarrow> case fst (hd extra_caps) of
+         NotificationCap ptr _ r \<Rightarrow> returnOk (ptr, r)
        | _ \<Rightarrow> throwError IllegalOperation;
      whenE (AllowRecv \<notin> rights) $ throwError IllegalOperation;
-     aep \<leftarrow> liftE  $ get_async_ep aepptr;
-     case (aep_obj aep, aep_bound_tcb aep) of
-         (IdleAEP, None) \<Rightarrow> returnOk ()
-       | (ActiveAEP _, None) \<Rightarrow> returnOk ()
+     ntfn \<leftarrow> liftE  $ get_notification ntfnptr;
+     case (ntfn_obj ntfn, ntfn_bound_tcb ntfn) of
+         (IdleNtfn, None) \<Rightarrow> returnOk ()
+       | (ActiveNtfn _, None) \<Rightarrow> returnOk ()
        | _ \<Rightarrow> throwError IllegalOperation;
-      returnOk $ AsyncEndpointControl tcb (Some aepptr)
+      returnOk $ NotificationControl tcb (Some ntfnptr)
    odE
  | _ \<Rightarrow> throwError IllegalOperation"
      
      
 definition 
-  decode_unbind_aep :: "cap \<Rightarrow> (tcb_invocation,'z::state_ext) se_monad"
+  decode_unbind_notification :: "cap \<Rightarrow> (tcb_invocation,'z::state_ext) se_monad"
 where
-  "decode_unbind_aep cap \<equiv> case cap of
+  "decode_unbind_notification cap \<equiv> case cap of
      ThreadCap tcb \<Rightarrow> doE
-       aEP \<leftarrow> liftE $ get_bound_aep tcb;
-       case aEP of
+       nTFN \<leftarrow> liftE $ get_bound_notification tcb;
+       case nTFN of
            None \<Rightarrow> throwError IllegalOperation
          | Some _ \<Rightarrow> returnOk ();
-       returnOk $ AsyncEndpointControl tcb None
+       returnOk $ NotificationControl tcb None
     odE
  | _ \<Rightarrow> throwError IllegalOperation"
 
@@ -598,8 +598,8 @@ where
     | TCBSetPriority \<Rightarrow> decode_set_priority args cap slot 
     | TCBSetIPCBuffer \<Rightarrow> decode_set_ipc_buffer args cap slot excs
     | TCBSetSpace \<Rightarrow> decode_set_space args cap slot excs
-    | TCBBindAEP \<Rightarrow> decode_bind_aep cap excs
-    | TCBUnbindAEP \<Rightarrow> decode_unbind_aep cap
+    | TCBBindNotification \<Rightarrow> decode_bind_notification cap excs
+    | TCBUnbindNotification \<Rightarrow> decode_unbind_notification cap
     | _ \<Rightarrow> throwError IllegalOperation"
 
 definition
@@ -664,7 +664,7 @@ definition
   else if invocation_type label = IRQSetIRQHandler
     then if cps \<noteq> []
       then let (cap, slot) = hd cps in
-      if is_aep_cap cap \<and> AllowSend \<in> cap_rights cap
+      if is_ntfn_cap cap \<and> AllowSend \<in> cap_rights cap
       then returnOk $ SetIRQHandler irq cap slot
       else throwError $ InvalidCapability 0
     else throwError TruncatedMessage
@@ -705,7 +705,7 @@ definition
     else if n = 2 then
       returnOk $ EndpointObject
     else if n = 3 then
-      returnOk $ AsyncEndpointObject
+      returnOk $ NotificationObject
     else if n = 4 then
       returnOk $ CapTableObject
     else (case arch_data_to_obj_type (n - 5)
@@ -810,9 +810,9 @@ where
       if AllowSend \<in> rights then
         returnOk $ InvokeEndpoint ptr badge (AllowGrant \<in> rights)
       else throwError $ InvalidCapability 0
-  | AsyncEndpointCap ptr badge rights \<Rightarrow>
+  | NotificationCap ptr badge rights \<Rightarrow>
       if AllowSend \<in> rights then
-        returnOk $ InvokeAsyncEndpoint ptr badge
+        returnOk $ InvokeNotification ptr badge
       else throwError $ InvalidCapability 0
   | ReplyCap thread False \<Rightarrow>
       returnOk $ InvokeReply thread slot

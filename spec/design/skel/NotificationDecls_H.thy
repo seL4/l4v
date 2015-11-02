@@ -8,11 +8,11 @@
  * @TAG(GD_GPL)
  *)
 
-header "Function Declarations for Asynchronous Endpoints"
+header "Function Declarations for Notifications"
 
-theory AsyncEndpointDecls_H imports    "FaultMonad_H"
+theory NotificationDecls_H imports    "FaultMonad_H"
  begin
 
-#INCLUDE_HASKELL SEL4/Object/AsyncEndpoint.lhs decls_only
+#INCLUDE_HASKELL SEL4/Object/Notification.lhs decls_only
 
 end

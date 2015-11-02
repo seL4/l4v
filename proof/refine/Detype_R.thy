@@ -928,10 +928,10 @@ lemma valid_obj':
       apply (clarsimp dest!: sym_refs_ko_wp_atD [OF _ sym_refs])
       apply (drule(1) bspec)+
       apply (clarsimp dest!: refs_notRange)
-     apply (rename_tac async_endpoint)
-     apply (case_tac async_endpoint, simp_all add: valid_aep'_def valid_bound_tcb'_def)[1]
-     apply (rename_tac aep bound)
-     apply (case_tac aep, simp_all split:option.splits)[1]
+     apply (rename_tac notification)
+     apply (case_tac notification, simp_all add: valid_ntfn'_def valid_bound_tcb'_def)[1]
+     apply (rename_tac ntfn bound)
+     apply (case_tac ntfn, simp_all split:option.splits)[1]
         apply ((clarsimp dest!: sym_refs_ko_wp_atD [OF _ sym_refs] refs_notRange)+)[4]
       apply (drule(1) bspec)+
       apply (clarsimp dest!: refs_notRange)
@@ -946,7 +946,7 @@ lemma valid_obj':
       apply fastforce
      apply simp
     apply (rename_tac tcb)
-    apply (case_tac "tcbState tcb", simp_all add: valid_tcb_state'_def valid_bound_aep'_def
+    apply (case_tac "tcbState tcb", simp_all add: valid_tcb_state'_def valid_bound_ntfn'_def
      split:option.splits)[1]
               apply (clarsimp dest!: refs_notRange)+
    apply (clarsimp simp: valid_cte'_def)
@@ -2286,7 +2286,7 @@ lemma createObject_cte_wp_at':
   apply (case_tac ty)
    apply (clarsimp simp: apiGetObjectSize_def Types_H.getObjectSize_def
      Types_H.toAPIType_def ArchTypes_H.toAPIType_def tcbBlockSizeBits_def
-     ArchTypes_H.getObjectSize_def objBits_simps epSizeBits_def aepSizeBits_def
+     ArchTypes_H.getObjectSize_def objBits_simps epSizeBits_def ntfnSizeBits_def
      cteSizeBits_def pageBits_def ptBits_def archObjSize_def pdBits_def
      range_cover_full
      split:ArchTypes_H.apiobject_type.splits)+
@@ -3467,11 +3467,11 @@ lemma createObject_setCTE_commute:
         apply (case_tac apiobject_type)
             apply (simp_all add: Types_H.getObjectSize_def
                        ArchTypes_H.getObjectSize_def apiGetObjectSize_def
-                       tcbBlockSizeBits_def epSizeBits_def aepSizeBits_def
+                       tcbBlockSizeBits_def epSizeBits_def ntfnSizeBits_def
                        cteSizeBits_def)
             -- Untyped
             apply (simp add: monad_commute_guard_imp[OF return_commute])
-           -- "TCB, EP, AEP"
+           -- "TCB, EP, NTFN"
            apply (rule monad_commute_guard_imp[OF commute_commute])
             apply (rule monad_commute_split[OF monad_commute_split])
                 apply (rule monad_commute_split[OF commute_commute[OF return_commute]])
@@ -3932,14 +3932,14 @@ lemma createNewCaps_pspace_no_overlap':
    apply (case_tac ty)
          apply (simp_all add: apiGetObjectSize_def Types_H.getObjectSize_def
                               Types_H.toAPIType_def ArchTypes_H.toAPIType_def tcbBlockSizeBits_def
-                              ArchTypes_H.getObjectSize_def objBits_simps epSizeBits_def aepSizeBits_def
+                              ArchTypes_H.getObjectSize_def objBits_simps epSizeBits_def ntfnSizeBits_def
                               cteSizeBits_def pageBits_def ptBits_def archObjSize_def pdBits_def
                               createObjects_def createWordObjects_def)
         apply (rule hoare_pre)
          apply wpc
     apply (clarsimp simp: apiGetObjectSize_def Types_H.getObjectSize_def curDomain_def
                           Types_H.toAPIType_def ArchTypes_H.toAPIType_def tcbBlockSizeBits_def
-                          ArchTypes_H.getObjectSize_def objBits_simps epSizeBits_def aepSizeBits_def
+                          ArchTypes_H.getObjectSize_def objBits_simps epSizeBits_def ntfnSizeBits_def
                           cteSizeBits_def pageBits_def ptBits_def archObjSize_def pdBits_def
                           createObjects_def createWordObjects_def Arch_createNewCaps_def
                     split: ArchTypes_H.apiobject_type.splits
@@ -3951,7 +3951,7 @@ lemma createNewCaps_pspace_no_overlap':
             apply ((simp add:objBits_simps pageBits_def range_cover_def word_bits_def)+)[5]
        apply ((clarsimp simp: apiGetObjectSize_def Types_H.getObjectSize_def
                               Types_H.toAPIType_def ArchTypes_H.toAPIType_def tcbBlockSizeBits_def
-                              ArchTypes_H.getObjectSize_def objBits_simps epSizeBits_def aepSizeBits_def
+                              ArchTypes_H.getObjectSize_def objBits_simps epSizeBits_def ntfnSizeBits_def
                               cteSizeBits_def pageBits_def ptBits_def archObjSize_def pdBits_def
                               createObjects_def createWordObjects_def Arch_createNewCaps_def
                         split: ArchTypes_H.apiobject_type.splits
@@ -3968,7 +3968,7 @@ lemma objSize_eq_capBits:
  apply (case_tac ty)
   apply (clarsimp simp:ArchTypes_H.getObjectSize_def objBits_simps
     getObjectSize_def APIType_capBits_def apiGetObjectSize_def ptBits_def 
-    tcbBlockSizeBits_def epSizeBits_def aepSizeBits_def cteSizeBits_def
+    tcbBlockSizeBits_def epSizeBits_def ntfnSizeBits_def cteSizeBits_def
     pageBits_def pdBits_def
     split : ArchTypes_H.apiobject_type.splits)+
  done
@@ -4803,7 +4803,7 @@ proof -
                                  ArchTypes_H.toAPIType_def)
             -- Untyped
             apply (simp add: cteSizeBits_def pageBits_def
-              tcbBlockSizeBits_def epSizeBits_def aepSizeBits_def pdBits_def
+              tcbBlockSizeBits_def epSizeBits_def ntfnSizeBits_def pdBits_def
               bind_assoc getObjectSize_def ArchTypes_H.getObjectSize_def
               mapM_def sequence_def Retype_H.createObject_def
               Types_H.toAPIType_def ArchTypes_H.toAPIType_def
@@ -4813,9 +4813,9 @@ proof -
               apiGetObjectSize_def shiftl_t2n field_simps
               shiftL_nat mapM_x_def sequence_x_def append
               fromIntegral_def integral_inv[unfolded Fun.comp_def])
-           -- "TCB, EP, AEP"
+           -- "TCB, EP, NTFN"
            apply (simp add: cteSizeBits_def pageBits_def tcbBlockSizeBits_def
-                      epSizeBits_def aepSizeBits_def pdBits_def bind_assoc
+                      epSizeBits_def ntfnSizeBits_def pdBits_def bind_assoc
                       getObjectSize_def ArchTypes_H.getObjectSize_def
                       sequence_def Retype_H.createObject_def
                       Types_H.toAPIType_def ArchTypes_H.toAPIType_def
@@ -4888,7 +4888,7 @@ proof -
             apply simp
            apply simp
           apply (((simp add: cteSizeBits_def pageBits_def tcbBlockSizeBits_def
-                      epSizeBits_def aepSizeBits_def pdBits_def bind_assoc
+                      epSizeBits_def ntfnSizeBits_def pdBits_def bind_assoc
                       getObjectSize_def ArchTypes_H.getObjectSize_def
                       mapM_def sequence_def Retype_H.createObject_def
                       Types_H.toAPIType_def ArchTypes_H.toAPIType_def
@@ -4903,7 +4903,7 @@ proof -
                                objBits_simps placeNewObject_def2)+)+)[2]
         -- CNode
         apply (simp add: cteSizeBits_def pageBits_def tcbBlockSizeBits_def
-                      epSizeBits_def aepSizeBits_def pdBits_def bind_assoc
+                      epSizeBits_def ntfnSizeBits_def pdBits_def bind_assoc
                       getObjectSize_def ArchTypes_H.getObjectSize_def
                       mapM_def sequence_def Retype_H.createObject_def
                       Types_H.toAPIType_def ArchTypes_H.toAPIType_def
@@ -5033,7 +5033,7 @@ proof -
             apply assumption
            apply (rule monad_eq_split2[where Q = "\<lambda>r. \<top>"])
              apply (simp add: cteSizeBits_def pageBits_def field_simps
-               tcbBlockSizeBits_def epSizeBits_def aepSizeBits_def pdBits_def
+               tcbBlockSizeBits_def epSizeBits_def ntfnSizeBits_def pdBits_def
                getObjectSize_def  ptBits_def archObjSize_def
                ArchTypes_H.getObjectSize_def placeNewObject_def2
                objBits_simps mapM_x_def sequence_x_def append)
@@ -5041,7 +5041,7 @@ proof -
            apply (subst doMachineOp_bind)
             apply (wp empty_fail_mapM_x empty_fail_cleanCacheRange_PoU)
            apply (simp add: cteSizeBits_def pageBits_def field_simps
-               tcbBlockSizeBits_def epSizeBits_def aepSizeBits_def 
+               tcbBlockSizeBits_def epSizeBits_def ntfnSizeBits_def 
                pdBits_def archObjSize_def ptBits_def shiftL_nat
                getObjectSize_def ArchTypes_H.getObjectSize_def
                placeNewObject_def2 objBits_simps bind_assoc)
@@ -5050,7 +5050,7 @@ proof -
               createObjects'_pspace_no_overlap[where sz =sz]
             | clarsimp simp:field_simps
             objBits_simps cteSizeBits_def pageBits_def ptBits_def archObjSize_def
-            tcbBlockSizeBits_def epSizeBits_def aepSizeBits_def pdBits_def
+            tcbBlockSizeBits_def epSizeBits_def ntfnSizeBits_def pdBits_def
             getObjectSize_def ArchTypes_H.getObjectSize_def)+
           apply (frule range_cover_le[where n = "Suc n" ],simp)
           apply (simp add:word_bits_def)
@@ -5573,7 +5573,7 @@ lemma  APIType_capBits[simp]: "Types_H.getObjectSize a b = APIType_capBits a b"
    apply (clarsimp simp:getObjectSize_def APIType_capBits_def ArchTypes_H.getObjectSize_def
      split:ArchTypes_H.apiobject_type.splits simp:
     apiGetObjectSize_def tcbBlockSizeBits_def objBits_def objBitsKO_def pdBits_def
-    epSizeBits_def aepSizeBits_def cteSizeBits_def ptBits_def pageBits_def)+
+    epSizeBits_def ntfnSizeBits_def cteSizeBits_def ptBits_def pageBits_def)+
   done
 
 lemma createNewObjects_Cons:

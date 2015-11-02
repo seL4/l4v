@@ -19,9 +19,9 @@ lemma reset_cap_asid_reset_mem_mapping:
   "reset_cap_asid (reset_mem_mapping cap) = reset_cap_asid cap"
   by (clarsimp simp: reset_cap_asid_def cap_type_def split:cdl_cap.splits)
 
-lemma ipc_cancel_return:
-  "\<lbrace>< (tcb, tcb_pending_op_slot) \<mapsto>c NullCap \<and>* (\<lambda>_. True) > and R \<rbrace>ipc_cancel tcb\<lbrace>\<lambda>_. R\<rbrace>"
-  apply (clarsimp simp:ipc_cancel_def)
+lemma cancel_ipc_return:
+  "\<lbrace>< (tcb, tcb_pending_op_slot) \<mapsto>c NullCap \<and>* (\<lambda>_. True) > and R \<rbrace>cancel_ipc tcb\<lbrace>\<lambda>_. R\<rbrace>"
+  apply (clarsimp simp:cancel_ipc_def)
   apply wp
    apply (rule_tac P = "cap = NullCap" in hoare_gen_asm)
    apply (wp | simp)+
@@ -39,7 +39,7 @@ lemma restart_null_wp:
      \<and>* (tcb, tcb_replycap_slot) \<mapsto>c (MasterReplyCap tcb) \<and>* R > \<rbrace>"
   apply (clarsimp simp:restart_def)
   apply (wp set_cap_wp[sep_wand_wp])
-  apply (rule hoare_post_imp[OF _ ipc_cancel_return])
+  apply (rule hoare_post_imp[OF _ cancel_ipc_return])
   apply (assumption)
   apply (wp get_cap_wp)
   apply (frule opt_cap_sep_imp)
@@ -1221,7 +1221,7 @@ lemma restart_cdl_current_domain:
       \<and> P (cdl_current_domain s)\<rbrace> restart ptr \<lbrace>\<lambda>r s. P (cdl_current_domain s)\<rbrace>"
   apply (simp add:restart_def)
   apply (wp alternative_wp)
-  apply (simp add:ipc_cancel_def)
+  apply (simp add:cancel_ipc_def)
     apply wp
     apply (rule_tac P ="\<not> is_pending_cap capa" in hoare_gen_asm)
     apply (wpc,simp_all add:is_pending_cap_def,wp)
@@ -1237,7 +1237,7 @@ lemma restart_cdl_current_thread:
       \<and> P (cdl_current_thread s)\<rbrace> restart ptr \<lbrace>\<lambda>r s. P (cdl_current_thread s)\<rbrace>"
   apply (simp add:restart_def)
   apply (wp alternative_wp)
-  apply (simp add:ipc_cancel_def)
+  apply (simp add:cancel_ipc_def)
     apply wp
     apply (rule_tac P ="\<not> is_pending_cap capa" in hoare_gen_asm)
     apply (wpc,simp_all add:is_pending_cap_def,wp)
@@ -1261,7 +1261,7 @@ lemma seL4_TCB_WriteRegisters_wp:
      \<and>* (root_tcb_id, tcb_cspace_slot) \<mapsto>c cnode_cap
      \<and>* tcb_id \<mapsto>f tcb
      \<and>* (tcb_id, tcb_pending_op_slot) \<mapsto>c NullCap
-     \<and>* (tcb_id, tcb_boundaep_slot) \<mapsto>c bound_aep_cap
+     \<and>* (tcb_id, tcb_boundntfn_slot) \<mapsto>c bound_ntfn_cap
      \<and>* cap_object cnode_cap \<mapsto>f CNode (empty_cnode root_size)
      \<and>* (cap_object cnode_cap, offset tcb_ref root_size) \<mapsto>c tcb_cap
      \<and>* R \<guillemotright> \<rbrace>
@@ -1271,7 +1271,7 @@ lemma seL4_TCB_WriteRegisters_wp:
     \<and>* (root_tcb_id, tcb_cspace_slot) \<mapsto>c cnode_cap
     \<and>* tcb_id \<mapsto>f tcb
     \<and>* (tcb_id, tcb_pending_op_slot) \<mapsto>c NullCap
-    \<and>* (tcb_id, tcb_boundaep_slot) \<mapsto>c bound_aep_cap
+    \<and>* (tcb_id, tcb_boundntfn_slot) \<mapsto>c bound_ntfn_cap
     \<and>* cap_object cnode_cap \<mapsto>f CNode (empty_cnode root_size)
     \<and>* (cap_object cnode_cap, offset tcb_ref root_size) \<mapsto>c tcb_cap
     \<and>* R \<guillemotright> \<rbrace>"

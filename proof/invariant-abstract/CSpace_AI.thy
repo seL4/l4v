@@ -552,7 +552,7 @@ where
     Structures_A.NullCap \<Rightarrow> False
   | Structures_A.UntypedCap p b f \<Rightarrow> False
   | Structures_A.EndpointCap r badge rights \<Rightarrow> True
-  | Structures_A.AsyncEndpointCap r badge rights \<Rightarrow> True
+  | Structures_A.NotificationCap r badge rights \<Rightarrow> True
   | Structures_A.CNodeCap r bits guard \<Rightarrow> True
   | Structures_A.ThreadCap r \<Rightarrow> True
   | Structures_A.DomainCap \<Rightarrow> False
@@ -609,7 +609,7 @@ lemma set_cap_caps_of_state_monad:
 definition
   "revokable src_cap new_cap \<equiv>
    if is_ep_cap new_cap then cap_ep_badge new_cap \<noteq> cap_ep_badge src_cap
-   else if is_aep_cap new_cap then cap_ep_badge new_cap \<noteq> cap_ep_badge src_cap 
+   else if is_ntfn_cap new_cap then cap_ep_badge new_cap \<noteq> cap_ep_badge src_cap 
    else if \<exists>irq. new_cap = cap.IRQHandlerCap irq then src_cap = cap.IRQControlCap
    else is_untyped_cap new_cap"
 
@@ -934,7 +934,7 @@ by (case_tac sz) (case_tac sz', simp+)+
 
 lemma cap_master_cap_simps:
   "cap_master_cap (cap.EndpointCap ref bdg rghts)      = cap.EndpointCap ref 0 UNIV"
-  "cap_master_cap (cap.AsyncEndpointCap ref bdg rghts) = cap.AsyncEndpointCap ref 0 UNIV"
+  "cap_master_cap (cap.NotificationCap ref bdg rghts) = cap.NotificationCap ref 0 UNIV"
   "cap_master_cap (cap.CNodeCap ref bits gd)           = cap.CNodeCap ref bits []"
   "cap_master_cap (cap.ThreadCap ref)                  = cap.ThreadCap ref"
   "cap_master_cap (cap.ArchObjectCap (arch_cap.PageCap ref rghts sz mapdata)) =
@@ -1012,8 +1012,8 @@ lemma master_cap_ep:
   by (simp add: cap_master_cap_def is_cap_simps split: cap.splits)
 
 
-lemma master_cap_aep:
-  "cap_master_cap c = cap_master_cap c' \<Longrightarrow> is_aep_cap c = is_aep_cap c'"
+lemma master_cap_ntfn:
+  "cap_master_cap c = cap_master_cap c' \<Longrightarrow> is_ntfn_cap c = is_ntfn_cap c'"
   by (simp add: cap_master_cap_def is_cap_simps split: cap.splits)
 
 
@@ -1867,7 +1867,7 @@ lemma is_cap_free_index_update[simp]:
   "is_untyped_cap (src_cap\<lparr>free_index := f \<rparr>) = is_untyped_cap src_cap"
   "is_arch_cap (src_cap\<lparr>free_index := f \<rparr>) = is_arch_cap src_cap"
   "is_zombie (src_cap\<lparr>free_index := f \<rparr>) = is_zombie src_cap"
-  "is_aep_cap (src_cap\<lparr>free_index := f \<rparr>) = is_aep_cap src_cap"
+  "is_ntfn_cap (src_cap\<lparr>free_index := f \<rparr>) = is_ntfn_cap src_cap"
   "is_reply_cap (src_cap\<lparr>free_index := f \<rparr>) = is_reply_cap src_cap"
   "is_master_reply_cap (src_cap\<lparr>free_index := f \<rparr>) = is_master_reply_cap src_cap"
   "is_pd_cap (src_cap\<lparr>free_index := a\<rparr>) = is_pd_cap src_cap"
@@ -1908,7 +1908,7 @@ lemma maksed_as_full_test_function_stuff[simp]:
   "is_untyped_cap (masked_as_full a cap ) = is_untyped_cap a"
   "is_arch_cap (masked_as_full a cap ) = is_arch_cap a"
   "is_zombie (masked_as_full a cap ) = is_zombie a"
-  "is_aep_cap (masked_as_full a cap ) = is_aep_cap a"
+  "is_ntfn_cap (masked_as_full a cap ) = is_ntfn_cap a"
   "is_reply_cap (masked_as_full a cap ) = is_reply_cap a"
   "is_master_reply_cap (masked_as_full a cap ) = is_master_reply_cap a"
   "is_pd_cap (masked_as_full a cap ) = is_pd_cap a"
@@ -4188,7 +4188,7 @@ lemma is_derived_is_cap:
   \<and> (is_pt_cap cap = is_pt_cap cap')
   \<and> (is_pd_cap cap = is_pd_cap cap')
   \<and> (is_ep_cap cap = is_ep_cap cap')
-  \<and> (is_aep_cap cap = is_aep_cap cap')
+  \<and> (is_ntfn_cap cap = is_ntfn_cap cap')
   \<and> (is_cnode_cap cap = is_cnode_cap cap')
   \<and> (is_thread_cap cap = is_thread_cap cap')
   \<and> (is_zombie cap = is_zombie cap')
@@ -5097,7 +5097,7 @@ lemma no_cap_to_obj_with_diff_ref_triv:
   apply (clarsimp simp add: no_cap_to_obj_with_diff_ref_def)
   apply (drule(1) cte_wp_at_valid_objs_valid_cap)
   apply (clarsimp simp: table_cap_ref_def valid_cap_def
-                        obj_at_def is_ep is_aep is_tcb is_cap_table
+                        obj_at_def is_ep is_ntfn is_tcb is_cap_table
                         a_type_def is_cap_simps
                  split: cap.split_asm arch_cap.split_asm
                         split_if_asm option.split_asm)
@@ -5205,7 +5205,7 @@ definition
   "is_simple_cap cap \<equiv>
     cap \<noteq> cap.NullCap \<and> cap \<noteq> cap.IRQControlCap \<and> \<not>is_untyped_cap cap \<and>
     \<not>is_master_reply_cap cap \<and> \<not>is_reply_cap cap \<and> 
-    \<not>is_ep_cap cap \<and> \<not>is_aep_cap cap \<and> 
+    \<not>is_ep_cap cap \<and> \<not>is_ntfn_cap cap \<and> 
     \<not>is_thread_cap cap \<and> \<not>is_cnode_cap cap \<and> \<not>is_zombie cap \<and>
     \<not>is_pt_cap cap \<and> \<not> is_pd_cap cap"
 

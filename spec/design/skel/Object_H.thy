@@ -12,7 +12,7 @@ chapter "Kernel Objects"
 
 theory Object_H
 imports
-  AsyncEndpoint_H
+  Notification_H
   Endpoint_H
   Retype_H
 begin

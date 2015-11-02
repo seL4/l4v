@@ -32,8 +32,8 @@ where
 | "default_cap Untyped oref s = UntypedCap oref s 0"
 | "default_cap TCBObject oref s = ThreadCap oref"
 | "default_cap EndpointObject oref s = EndpointCap oref 0 UNIV"
-| "default_cap AsyncEndpointObject oref s =
-     AsyncEndpointCap oref 0 {AllowRead, AllowWrite}"
+| "default_cap NotificationObject oref s =
+     NotificationCap oref 0 {AllowRead, AllowWrite}"
 | "default_cap (ArchObject aobj) oref s = ArchObjectCap (arch_default_cap aobj oref s)"
 
 text {* Create and install a new capability to a newly created object. *}
@@ -65,7 +65,7 @@ definition
          | CapTableObject \<Rightarrow> CNode n (empty_cnode n)
          | TCBObject \<Rightarrow> TCB default_tcb
          | EndpointObject \<Rightarrow> Endpoint default_ep
-         | AsyncEndpointObject \<Rightarrow> AsyncEndpoint default_async_ep
+         | NotificationObject \<Rightarrow> Notification default_notification
          | ArchObject aobj \<Rightarrow> ArchObj (default_arch_object aobj n)"
 
 text {* The size in bits of the objects that will be created when a given type
@@ -77,7 +77,7 @@ definition
          | CapTableObject \<Rightarrow> obj_size_bits + slot_bits
          | TCBObject \<Rightarrow> obj_bits (TCB default_tcb)
          | EndpointObject \<Rightarrow> obj_bits (Endpoint undefined)
-         | AsyncEndpointObject \<Rightarrow> obj_bits (AsyncEndpoint undefined)
+         | NotificationObject \<Rightarrow> obj_bits (Notification undefined)
          | ArchObject aobj \<Rightarrow> obj_bits $ ArchObj $ default_arch_object aobj obj_size_bits"
 
 section "Main Retype Implementation"

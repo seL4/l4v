@@ -19,7 +19,7 @@ lemma has_slots_simps:
   "has_slots (PageTable pt)"
   "has_slots (PageDirectory pd)"
   "\<not> has_slots Endpoint"
-  "\<not> has_slots AsyncEndpoint"
+  "\<not> has_slots Notification"
   "\<not> has_slots (Frame f)"
   "\<not> has_slots Untyped"
   by (simp add: has_slots_def)+
@@ -60,7 +60,7 @@ lemma reset_cap_asid_simps2:
   "reset_cap_asid cap = RunningCap \<Longrightarrow> cap = RunningCap"
   "reset_cap_asid cap = (UntypedCap a ra) \<Longrightarrow> cap = UntypedCap a ra"
   "reset_cap_asid cap = (EndpointCap b c d) \<Longrightarrow> cap = EndpointCap b c d"
-  "reset_cap_asid cap = (AsyncEndpointCap e f g) \<Longrightarrow> cap = AsyncEndpointCap e f g"
+  "reset_cap_asid cap = (NotificationCap e f g) \<Longrightarrow> cap = NotificationCap e f g"
   "reset_cap_asid cap = (ReplyCap h) \<Longrightarrow> cap = ReplyCap h"
   "reset_cap_asid cap = (MasterReplyCap i) \<Longrightarrow> cap = MasterReplyCap i"
   "reset_cap_asid cap = (CNodeCap j k l sz) \<Longrightarrow> cap = CNodeCap j k l sz"
@@ -69,7 +69,7 @@ lemma reset_cap_asid_simps2:
   "reset_cap_asid cap = RestartCap \<Longrightarrow> cap = RestartCap"
   "reset_cap_asid cap = (PendingSyncSendCap n p q r s) \<Longrightarrow> cap = (PendingSyncSendCap n p q r s)"
   "reset_cap_asid cap = (PendingSyncRecvCap t isf ) \<Longrightarrow> cap = (PendingSyncRecvCap t isf)"
-  "reset_cap_asid cap = (PendingAsyncRecvCap u) \<Longrightarrow> cap = (PendingAsyncRecvCap u)"
+  "reset_cap_asid cap = (PendingNtfnRecvCap u) \<Longrightarrow> cap = (PendingNtfnRecvCap u)"
   "reset_cap_asid cap = IrqControlCap \<Longrightarrow> cap = IrqControlCap"
   "reset_cap_asid cap = (IrqHandlerCap v) \<Longrightarrow> cap = (IrqHandlerCap v)"
   "reset_cap_asid cap = AsidControlCap \<Longrightarrow> cap = AsidControlCap"
@@ -79,7 +79,7 @@ lemma reset_cap_asid_simps2:
   "reset_cap_asid cap = (IOSpaceCap a1) \<Longrightarrow> cap = (IOSpaceCap a1)"
   "reset_cap_asid cap = (IOPageTableCap a2) \<Longrightarrow> cap = (IOPageTableCap a2)"
   "reset_cap_asid cap = (ZombieCap a3) \<Longrightarrow> cap = (ZombieCap a3)"
-  "reset_cap_asid cap = (BoundAsyncCap a4) \<Longrightarrow> cap = (BoundAsyncCap a4)"
+  "reset_cap_asid cap = (BoundNotificationCap a4) \<Longrightarrow> cap = (BoundNotificationCap a4)"
   "reset_cap_asid cap = (FrameCap aa real sz rset ma) \<Longrightarrow> \<exists>asid. cap = FrameCap aa real sz rset asid"
   "reset_cap_asid cap = (PageTableCap aa rights ma) \<Longrightarrow> \<exists>asid. cap = PageTableCap aa rights asid"
   "reset_cap_asid cap = (PageDirectoryCap aa rights as) \<Longrightarrow> \<exists>asid. cap = PageDirectoryCap aa rights asid"
@@ -1127,7 +1127,7 @@ lemma get_thread_sep_wp_precise:
 definition nonep_invocation :: "cdl_invocation \<Rightarrow> bool"
 where "nonep_invocation iv \<equiv>  case iv of
        InvokeEndpoint cdl_endpoint_invocation \<Rightarrow> False
-     | InvokeAsyncEndpoint cdl_async_invocation \<Rightarrow> False
+     | InvokeNotification cdl_notification_invocation \<Rightarrow> False
      | InvokeReply cdl_reply_invocation \<Rightarrow> False
      | _ \<Rightarrow> True"
 

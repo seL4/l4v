@@ -133,7 +133,7 @@ where
  "cteDeleteOne' x s =
 (\<lambda> cteDeleteOne.
 (\<lambda> deletingIRQHandler.
-(\<lambda> ipcCancel.
+(\<lambda> cancelIPC.
 (\<lambda> suspend.
 (\<lambda> finaliseCap.
 (\<lambda>slot.  (do
@@ -153,15 +153,15 @@ od))
   if isEndpointCap v1
   then let ptr = capEPPtr v1; final = v2
   in   (do
-    when final $ epCancelAll ptr;
+    when final $ cancelAllIPC ptr;
     return (NullCap, Nothing)
   od)
-  else if isAsyncEndpointCap v1
-  then let ptr = capAEPPtr v1; final = v2
+  else if isNotificationCap v1
+  then let ptr = capNtfnPtr v1; final = v2
   in   (do
     when final $ (do
-        unbindMaybeAEP ptr;
-        aepCancelAll ptr
+        unbindMaybeNotification ptr;
+        cancelAllSignals ptr
     od);
     return (NullCap, Nothing)
   od)
@@ -181,7 +181,7 @@ od))
   then let tcb = capTCBPtr v1
   in   (do
     cte_ptr \<leftarrow> getThreadCSpaceRoot tcb;
-    unbindAsyncEndpoint tcb;
+    unbindNotification tcb;
     suspend tcb;
     return (Zombie cte_ptr ZombieTCB 5, Nothing)
   od)
@@ -208,7 +208,7 @@ od))
 )
 (
 (\<lambda>target.  (do
-    ipcCancel target;
+    cancelIPC target;
     setThreadState Inactive target;
     tcbSchedDequeue target
 od))
@@ -234,7 +234,7 @@ od))
                 | _ \<Rightarrow>   False
                 ));
             blockedIPCCancel = (\<lambda>  state. (do
-                epptr \<leftarrow> return ( blockingIPCEndpoint state);
+                epptr \<leftarrow> return ( blockingObject state);
                 ep \<leftarrow> getEndpoint epptr;
                 haskell_assert (Not $ isIdle ep)
                     [];
@@ -252,7 +252,7 @@ od))
         (case state of
               BlockedOnSend _ _ _ _ \<Rightarrow>   blockedIPCCancel state
             | BlockedOnReceive _ _ \<Rightarrow>   blockedIPCCancel state
-            | BlockedOnAsyncEvent _ \<Rightarrow>   asyncIPCCancel tptr (waitingOnAsyncEP state)
+            | BlockedOnNotification _ \<Rightarrow>   cancelSignal tptr (waitingOnNotification state)
             | BlockedOnReply  \<Rightarrow>   replyIPCCancel
             | _ \<Rightarrow>   return ()
             )
@@ -264,7 +264,7 @@ od))
 (\<lambda>irq.  (do
     slot \<leftarrow> getIRQSlot irq;
     cap \<leftarrow> getSlotCap slot;
-    haskell_assert (isAsyncEndpointCap cap \<or> isNullCap cap)
+    haskell_assert (isNotificationCap cap \<or> isNullCap cap)
         [];
     cteDeleteOne slot
 od))
@@ -300,7 +300,7 @@ od))
   apply (rule ext)+
   apply (subst cteDeleteOne_def1)
   apply (subst cteDeleteOne'.simps)
-  apply (unfold finaliseCap_def suspend_def ipcCancel_def
+  apply (unfold finaliseCap_def suspend_def cancelIPC_def
                 deletingIRQHandler_def cteDeleteOne_def1)
   apply (rule refl)
   done
@@ -320,14 +320,14 @@ lemma card_reduce:
 lemma isCapDs:
   "isUntypedCap cap \<Longrightarrow> \<exists>ptr size freeIndex. cap = UntypedCap ptr size freeIndex"
   "isEndpointCap cap \<Longrightarrow> \<exists>ptr bdg cans canr cang. cap = EndpointCap ptr bdg cans canr cang"
-  "isAsyncEndpointCap cap \<Longrightarrow> \<exists>ptr bdg cans canr. cap = AsyncEndpointCap ptr bdg cans canr"
+  "isNotificationCap cap \<Longrightarrow> \<exists>ptr bdg cans canr. cap = NotificationCap ptr bdg cans canr"
   "isCNodeCap cap \<Longrightarrow> \<exists>ptr bits grd gsize. cap = CNodeCap ptr bits grd gsize"
   "isThreadCap cap \<Longrightarrow> \<exists>ptr. cap = ThreadCap ptr"
   "isArchObjectCap cap \<Longrightarrow> \<exists>archcap. cap = ArchObjectCap archcap"
   "isZombie cap \<Longrightarrow> \<exists>ptr bits num. cap = Zombie ptr bits num"
   apply (case_tac cap, simp_all add: isUntypedCap_def)
   apply (case_tac cap, simp_all add: isEndpointCap_def)
-  apply (case_tac cap, simp_all add: isAsyncEndpointCap_def)
+  apply (case_tac cap, simp_all add: isNotificationCap_def)
   apply (case_tac cap, simp_all add: isCNodeCap_def)
   apply (case_tac cap, simp_all add: isThreadCap_def)
   apply (case_tac cap, simp_all add: isArchObjectCap_def)

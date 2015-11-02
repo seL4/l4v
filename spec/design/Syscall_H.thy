@@ -127,11 +127,11 @@ defs handleWait_def:
                     receiveIPC thread epCap isBlocking
                 od)
               )
-            | AsyncEndpointCap ptr _ _ True \<Rightarrow>   (doE
-                aep \<leftarrow> withoutFailure $ getAsyncEP ptr;
-                boundTCB \<leftarrow> returnOk $ aepBoundTCB aep;
+            | NotificationCap ntfnPtr _ _ True \<Rightarrow>   (doE
+                ntfn \<leftarrow> withoutFailure $ getNotification ntfnPtr;
+                boundTCB \<leftarrow> returnOk $ ntfnBoundTCB ntfn;
                 if boundTCB = Just thread \<or> boundTCB = Nothing
-                 then withoutFailure $ receiveAsyncIPC thread epCap isBlocking
+                 then withoutFailure $ receiveSignal thread epCap isBlocking
                  else throw $ MissingCapability_ \<lparr> missingCapBitsLeft= 0 \<rparr>
             odE)
             | _ \<Rightarrow>   throw $ MissingCapability_ \<lparr> missingCapBitsLeft= 0 \<rparr>)

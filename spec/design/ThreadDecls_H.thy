@@ -97,10 +97,10 @@ consts
 setThreadState :: "thread_state \<Rightarrow> machine_word \<Rightarrow> unit kernel"
 
 consts
-getBoundAEP :: "machine_word \<Rightarrow> ((machine_word) option) kernel"
+getBoundNotification :: "machine_word \<Rightarrow> ((machine_word) option) kernel"
 
 consts
-setBoundAEP :: "(machine_word) option \<Rightarrow> machine_word \<Rightarrow> unit kernel"
+setBoundNotification :: "(machine_word) option \<Rightarrow> machine_word \<Rightarrow> unit kernel"
 
 consts
 prioToL1Index :: "priority \<Rightarrow> nat"

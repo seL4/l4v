@@ -39,7 +39,7 @@ definition
  "restart thread \<equiv> do
     state \<leftarrow> get_thread_state thread;
     when (\<not> runnable state \<and> \<not> idle state) $ do
-      ipc_cancel thread;
+      cancel_ipc thread;
       setup_reply_master thread;
       set_thread_state thread Restart;
       do_extended_op (tcb_sched_action (tcb_sched_enqueue) thread);
@@ -160,15 +160,15 @@ definition
   od"
 
 
-text {* Helper function for binding async endpoints *}
+text {* Helper function for binding notifications *}
 definition
-  bind_async_endpoint :: "32 word \<Rightarrow> 32 word \<Rightarrow> (unit,'z::state_ext) s_monad"
+  bind_notification :: "32 word \<Rightarrow> 32 word \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
-  "bind_async_endpoint tcbptr aepptr \<equiv> do
-     aep \<leftarrow> get_async_ep aepptr;
-     aep' \<leftarrow> return $ aep_set_bound_tcb aep (Some tcbptr);
-     set_async_ep aepptr aep';
-     set_bound_aep tcbptr $ Some aepptr
+  "bind_notification tcbptr ntfnptr \<equiv> do
+     ntfn \<leftarrow> get_notification ntfnptr;
+     ntfn' \<leftarrow> return $ ntfn_set_bound_tcb ntfn (Some tcbptr);
+     set_notification ntfnptr ntfn';
+     set_bound_notification tcbptr $ Some ntfnptr
    od"
 
 text {* TCB capabilities confer authority to perform seven actions. A thread can
@@ -254,15 +254,15 @@ where
     return []
   od)"
 
-| "invoke_tcb (AsyncEndpointControl tcb (Some aepptr)) = 
+| "invoke_tcb (NotificationControl tcb (Some ntfnptr)) = 
   (liftE $ do
-    bind_async_endpoint tcb aepptr;
+    bind_notification tcb ntfnptr;
     return []
   od)"
 
-| "invoke_tcb (AsyncEndpointControl tcb None) =
+| "invoke_tcb (NotificationControl tcb None) =
   (liftE $ do
-    unbind_async_endpoint tcb;
+    unbind_notification tcb;
     return []
   od)"
 

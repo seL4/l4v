@@ -164,7 +164,7 @@ lemma get_tcb_truncate[simp]: "get_tcb a (truncate_state s) = get_tcb a s"
   apply (simp add: get_tcb_def)
   done
 
-crunch (bcorres)bcorres[wp]: ep_cancel_all,aep_cancel_all,unbind_maybe_aep,unbind_async_endpoint, bind_async_endpoint truncate_state (simp: gets_the_def ignore: gets_the)
+crunch (bcorres)bcorres[wp]: cancel_all_ipc,cancel_all_signals,unbind_maybe_notification,unbind_notification, bind_notification truncate_state (simp: gets_the_def ignore: gets_the)
 
 lemma fast_finalise_bcorres[wp]:
   "bcorres (fast_finalise a b) (fast_finalise a b)"

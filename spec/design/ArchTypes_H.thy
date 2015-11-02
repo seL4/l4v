@@ -25,7 +25,7 @@ datatype apiobject_type =
     Untyped
   | TCBObject
   | EndpointObject
-  | AsyncEndpointObject
+  | NotificationObject
   | CapTableObject
 (* apiobject_type instance proofs *)
 (*<*)
@@ -36,7 +36,7 @@ definition
       Untyped,
       TCBObject,
       EndpointObject,
-      AsyncEndpointObject,
+      NotificationObject,
       CapTableObject
     ]"
 
@@ -82,9 +82,9 @@ where
 "epSizeBits \<equiv> 4"
 
 definition
-aepSizeBits :: "nat"
+ntfnSizeBits :: "nat"
 where
-"aepSizeBits \<equiv> 4"
+"ntfnSizeBits \<equiv> 4"
 
 definition
 cteSizeBits :: "nat"
@@ -98,7 +98,7 @@ where
     Untyped \<Rightarrow>    magnitude
   | TCBObject \<Rightarrow>    tcbBlockSizeBits
   | EndpointObject \<Rightarrow>    epSizeBits
-  | AsyncEndpointObject \<Rightarrow>    aepSizeBits
+  | NotificationObject \<Rightarrow>    ntfnSizeBits
   | CapTableObject \<Rightarrow>    cteSizeBits + magnitude
   )"
 

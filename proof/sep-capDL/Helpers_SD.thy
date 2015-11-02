@@ -197,13 +197,13 @@ where
   | CNodeCap _ f2 f3 f4 \<Rightarrow> CNodeCap obj_id f2 f3 f4
   | MasterReplyCap _ \<Rightarrow> MasterReplyCap obj_id
   | ReplyCap _ \<Rightarrow> ReplyCap obj_id
-  | AsyncEndpointCap _ f2 f3 \<Rightarrow> AsyncEndpointCap obj_id f2 f3
+  | NotificationCap _ f2 f3 \<Rightarrow> NotificationCap obj_id f2 f3
   | EndpointCap _ f2 f3 \<Rightarrow> EndpointCap obj_id f2 f3
   | ZombieCap _ \<Rightarrow> ZombieCap obj_id
   | PendingSyncSendCap _ f2 f3 f4 f5 \<Rightarrow> PendingSyncSendCap obj_id f2 f3 f4 f5
   | PendingSyncRecvCap _ f2 \<Rightarrow> PendingSyncRecvCap obj_id f2
-  | PendingAsyncRecvCap _ \<Rightarrow> PendingAsyncRecvCap obj_id
-  | BoundAsyncCap _ \<Rightarrow> BoundAsyncCap obj_id
+  | PendingNtfnRecvCap _ \<Rightarrow> PendingNtfnRecvCap obj_id
+  | BoundNotificationCap _ \<Rightarrow> BoundNotificationCap obj_id
   | _ \<Rightarrow> cap"
 
 definition update_cap_objects :: "cdl_object_id set \<Rightarrow> cdl_cap \<Rightarrow> cdl_cap"
@@ -361,8 +361,8 @@ definition
  "is_ep v \<equiv> case v of Endpoint \<Rightarrow> True | _ \<Rightarrow> False"
 
 definition
-  is_aep :: "cdl_object \<Rightarrow> bool" where
- "is_aep v \<equiv> case v of AsyncEndpoint \<Rightarrow> True | _ \<Rightarrow> False"
+  is_ntfn :: "cdl_object \<Rightarrow> bool" where
+ "is_ntfn v \<equiv> case v of Notification \<Rightarrow> True | _ \<Rightarrow> False"
 
 definition
   is_tcb :: "cdl_object \<Rightarrow> bool" where
@@ -403,14 +403,14 @@ where
 lemma is_object_simps [simp]:
   "is_untyped Untyped"
   "is_ep Endpoint"
-  "is_aep AsyncEndpoint"
+  "is_ntfn Notification"
   "is_tcb (Tcb tcb)"
   "is_cnode (CNode c)"
   "is_asidpool (AsidPool a)"
   "is_pd (PageDirectory pd)"
   "is_pt (PageTable pt)"
   "is_frame (Frame f)"
-  by (clarsimp simp: is_untyped_def is_ep_def is_aep_def is_tcb_def is_cnode_def
+  by (clarsimp simp: is_untyped_def is_ep_def is_ntfn_def is_tcb_def is_cnode_def
                      is_asidpool_def is_pt_def is_pd_def is_frame_def)+
 
 
@@ -467,7 +467,7 @@ abbreviation
 abbreviation
   "ep_at \<equiv> object_at is_ep"
 abbreviation
-  "aep_at \<equiv> object_at is_aep"
+  "ntfn_at \<equiv> object_at is_ntfn"
 abbreviation
   "tcb_at \<equiv> object_at is_tcb"
 abbreviation
@@ -531,7 +531,7 @@ definition
 abbreviation
   "table_at \<equiv> \<lambda>obj_id s. pt_at obj_id s \<or> pd_at obj_id s"
 abbreviation
-  "capless_at \<equiv> \<lambda>obj_id s. untyped_at obj_id s \<or> ep_at obj_id s \<or> aep_at obj_id s \<or> frame_at obj_id s"
+  "capless_at \<equiv> \<lambda>obj_id s. untyped_at obj_id s \<or> ep_at obj_id s \<or> ntfn_at obj_id s \<or> frame_at obj_id s"
 abbreviation
   "cnode_or_tcb_at \<equiv> \<lambda>obj_id spec. cnode_at obj_id spec \<or> tcb_at obj_id spec"
 abbreviation
@@ -540,7 +540,7 @@ abbreviation
 lemma capless_at_def2:
   "capless_at p s = object_at (\<lambda>obj. \<not> (has_slots obj)) p s"
   apply (clarsimp simp: has_slots_def object_at_def)
-  apply (fastforce simp: is_untyped_def is_ep_def is_aep_def is_frame_def
+  apply (fastforce simp: is_untyped_def is_ep_def is_ntfn_def is_frame_def
                  split: cdl_object.splits)
   done
 
@@ -574,7 +574,7 @@ lemma set_used_irq_list [simp]:
 lemma object_type_is_object:
   "is_untyped obj  = (object_type obj = UntypedType)"
   "is_ep obj       = (object_type obj = EndpointType)"
-  "is_aep obj      = (object_type obj = AsyncEndpointType)"
+  "is_ntfn obj      = (object_type obj = NotificationType)"
   "is_tcb obj      = (object_type obj = TcbType)"
   "is_cnode obj    = (object_type obj = CNodeType)"
   "is_irq_node obj = (object_type obj = IRQNodeType)"
@@ -582,14 +582,14 @@ lemma object_type_is_object:
   "is_pt obj       = (object_type obj = PageTableType)"
   "is_pd obj       = (object_type obj = PageDirectoryType)"
   "is_frame obj    = (\<exists>n. object_type obj = FrameType n)"
-  by (simp_all add: object_type_def is_untyped_def is_ep_def is_aep_def is_tcb_def
+  by (simp_all add: object_type_def is_untyped_def is_ep_def is_ntfn_def is_tcb_def
                     is_cnode_def is_irq_node_def is_asidpool_def is_pt_def is_pd_def is_frame_def
              split: cdl_object.splits)
 
 lemma object_at_object_type:
   "\<lbrakk>cdl_objects spec obj_id = Some obj; untyped_at obj_id spec\<rbrakk> \<Longrightarrow> object_type obj = UntypedType"
   "\<lbrakk>cdl_objects spec obj_id = Some obj; ep_at obj_id spec\<rbrakk> \<Longrightarrow> object_type obj = EndpointType"
-  "\<lbrakk>cdl_objects spec obj_id = Some obj; aep_at obj_id spec\<rbrakk> \<Longrightarrow> object_type obj = AsyncEndpointType"
+  "\<lbrakk>cdl_objects spec obj_id = Some obj; ntfn_at obj_id spec\<rbrakk> \<Longrightarrow> object_type obj = NotificationType"
   "\<lbrakk>cdl_objects spec obj_id = Some obj; tcb_at obj_id spec\<rbrakk> \<Longrightarrow> object_type obj = TcbType"
   "\<lbrakk>cdl_objects spec obj_id = Some obj; cnode_at obj_id spec\<rbrakk> \<Longrightarrow> object_type obj = CNodeType"
   "\<lbrakk>cdl_objects spec obj_id = Some obj; irq_node_at obj_id spec\<rbrakk> \<Longrightarrow> object_type obj = IRQNodeType"
@@ -601,7 +601,7 @@ lemma object_at_object_type:
 lemma object_type_object_at:
   "\<lbrakk>cdl_objects spec obj_id = Some obj; object_type obj = UntypedType\<rbrakk> \<Longrightarrow> untyped_at obj_id spec"
   "\<lbrakk>cdl_objects spec obj_id = Some obj; object_type obj = EndpointType\<rbrakk> \<Longrightarrow> ep_at obj_id spec"
-  "\<lbrakk>cdl_objects spec obj_id = Some obj; object_type obj = AsyncEndpointType\<rbrakk> \<Longrightarrow> aep_at obj_id spec"
+  "\<lbrakk>cdl_objects spec obj_id = Some obj; object_type obj = NotificationType\<rbrakk> \<Longrightarrow> ntfn_at obj_id spec"
   "\<lbrakk>cdl_objects spec obj_id = Some obj; object_type obj = TcbType\<rbrakk> \<Longrightarrow> tcb_at obj_id spec"
   "\<lbrakk>cdl_objects spec obj_id = Some obj; object_type obj = CNodeType\<rbrakk> \<Longrightarrow> cnode_at obj_id spec"
   "\<lbrakk>cdl_objects spec obj_id = Some obj; object_type obj = IRQNodeType\<rbrakk> \<Longrightarrow> irq_node_at obj_id spec"
@@ -664,12 +664,12 @@ lemma is_cnode_cap_simps:
   "is_cnode_cap (TcbCap x) = False"
   "is_cnode_cap (MasterReplyCap x) = False"
   "is_cnode_cap (ReplyCap x) = False"
-  "is_cnode_cap (AsyncEndpointCap x m n) = False"
+  "is_cnode_cap (NotificationCap x m n) = False"
   "is_cnode_cap (EndpointCap x p q) = False"
   "is_cnode_cap (ZombieCap x) = False"
   "is_cnode_cap (PendingSyncSendCap x s t u v) = False"
   "is_cnode_cap (PendingSyncRecvCap x t) = False"
-  "is_cnode_cap (PendingAsyncRecvCap x) = False"
+  "is_cnode_cap (PendingNtfnRecvCap x) = False"
 
   "is_cnode_cap (CNodeCap x k l sz) = True"
   by (unfold cap_type_def, simp_all split: cdl_object_type.splits)
@@ -836,19 +836,19 @@ lemma cap_has_object_simps [simp]:
   "cap_has_object (CNodeCap x k l sz)"
   "cap_has_object (MasterReplyCap x)"
   "cap_has_object (ReplyCap x)"
-  "cap_has_object (AsyncEndpointCap x m n)"
+  "cap_has_object (NotificationCap x m n)"
   "cap_has_object (EndpointCap x p q)"
   "cap_has_object (ZombieCap x)"
   "cap_has_object (PendingSyncSendCap x s t u v)"
   "cap_has_object (PendingSyncRecvCap x t)"
-  "cap_has_object (PendingAsyncRecvCap x)"
+  "cap_has_object (PendingNtfnRecvCap x)"
   "cap_has_object (UntypedCap ids ids') = True"
   by (simp_all add:cap_has_object_def)
 
 lemma is_cap_NullCap [simp]:
   "\<not> is_untyped_cap NullCap"
   "\<not> is_ep_cap NullCap"
-  "\<not> is_aep_cap NullCap"
+  "\<not> is_ntfn_cap NullCap"
   "\<not> is_cnode_cap NullCap"
   "\<not> is_tcb_cap NullCap"
   "\<not> is_asidpool_cap NullCap"
@@ -882,7 +882,7 @@ where
   "cap_data cap \<equiv>
   if (is_ep_cap cap) then
     cap_badge cap
-  else if (is_aep_cap cap) then
+  else if (is_ntfn_cap cap) then
     cap_badge cap
   else
     guard_as_rawdata cap"
@@ -906,7 +906,7 @@ where
   "update_cap_data_det raw_data cap \<equiv>
    case cap of
         EndpointCap _ b _      \<Rightarrow> badge_update raw_data cap
-      | AsyncEndpointCap _ b _ \<Rightarrow> badge_update raw_data cap
+      | NotificationCap _ b _ \<Rightarrow> badge_update raw_data cap
       | CNodeCap object g gs _  \<Rightarrow> guard_update cap raw_data
       | _ \<Rightarrow> cap"
 
@@ -998,7 +998,7 @@ lemma object_default_state_def2:
     case obj of
         Untyped \<Rightarrow> Untyped
       | Endpoint \<Rightarrow> Endpoint
-      | AsyncEndpoint \<Rightarrow> AsyncEndpoint
+      | Notification \<Rightarrow> Notification
       | Tcb tcb \<Rightarrow> Tcb (default_tcb (cdl_tcb_domain tcb))
       | CNode cnode \<Rightarrow> CNode (empty_cnode (cdl_cnode_size_bits cnode))
       | IRQNode cnode \<Rightarrow> IRQNode empty_irq_node

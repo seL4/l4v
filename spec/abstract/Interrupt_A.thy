@@ -30,14 +30,14 @@ fun
   invoke_irq_control :: "irq_control_invocation \<Rightarrow> (unit,'z::state_ext) p_monad"
 where
   "invoke_irq_control (IRQControl irq handler_slot control_slot) = 
-     liftE (do set_irq_state IRQNotifyAEP irq;
+     liftE (do set_irq_state IRQSignal irq;
                cap_insert (IRQHandlerCap irq) control_slot handler_slot od)"
 | "invoke_irq_control (InterruptControl invok) =
      arch_invoke_irq_control invok"
 
 text {* The IRQHandler capability may be used to configure how interrupts on an
 IRQ are delivered and to acknowledge a delivered interrupt. Interrupts are
-delivered when AsyncEndpoint capabilities are installed in the relevant per-IRQ
+delivered when Notification capabilities are installed in the relevant per-IRQ
 slot. The IRQHandler operations load or clear those capabilities. *}
 
 fun
@@ -57,7 +57,7 @@ where
 
 text {* Handle an interrupt occurence. Timing and scheduling details are not
 included in this model, so no scheduling action needs to be taken on timer
-ticks. If the IRQ has a valid AsyncEndpoint cap loaded a message is
+ticks. If the IRQ has a valid Notification cap loaded a message is
 delivered. *}
 
 definition timer_tick :: "unit det_ext_monad" where
@@ -86,11 +86,11 @@ definition
  "handle_interrupt irq \<equiv> do
   st \<leftarrow> get_irq_state irq;
   case st of
-    IRQNotifyAEP \<Rightarrow> do
+    IRQSignal \<Rightarrow> do
       slot \<leftarrow> get_irq_slot irq;
       cap \<leftarrow> get_cap slot;
-      when (is_aep_cap cap \<and> AllowSend \<in> cap_rights cap)
-        $ send_async_ipc (obj_ref_of cap) (cap_ep_badge cap); 
+      when (is_ntfn_cap cap \<and> AllowSend \<in> cap_rights cap)
+        $ send_signal (obj_ref_of cap) (cap_ep_badge cap); 
       do_machine_op $ maskInterrupt True irq
     od
   | IRQTimer \<Rightarrow> do

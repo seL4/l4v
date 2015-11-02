@@ -24,7 +24,7 @@ where
       Inr (APIObjectType ArchTypes_H.Untyped) \<Rightarrow> Structures_A.Untyped
     | Inr (APIObjectType ArchTypes_H.TCBObject) \<Rightarrow> Structures_A.TCBObject
     | Inr (APIObjectType ArchTypes_H.EndpointObject) \<Rightarrow> Structures_A.EndpointObject
-    | Inr (APIObjectType ArchTypes_H.AsyncEndpointObject) \<Rightarrow> Structures_A.AsyncEndpointObject
+    | Inr (APIObjectType ArchTypes_H.NotificationObject) \<Rightarrow> Structures_A.NotificationObject
     | Inr (APIObjectType ArchTypes_H.CapTableObject) \<Rightarrow> Structures_A.CapTableObject
     | Inr PageTableObject \<Rightarrow> ArchObject PageTableObj
     | Inr PageDirectoryObject \<Rightarrow> ArchObject PageDirectoryObj
@@ -98,7 +98,7 @@ where
       APIObjectType ArchTypes_H.Untyped \<Rightarrow> us
     | APIObjectType ArchTypes_H.TCBObject \<Rightarrow> objBits (makeObject :: tcb)
     | APIObjectType ArchTypes_H.EndpointObject \<Rightarrow> objBits (makeObject :: endpoint)
-    | APIObjectType ArchTypes_H.AsyncEndpointObject \<Rightarrow> objBits (makeObject :: async_endpoint)
+    | APIObjectType ArchTypes_H.NotificationObject \<Rightarrow> objBits (makeObject :: Structures_H.notification)
     | APIObjectType ArchTypes_H.CapTableObject \<Rightarrow> objBits (makeObject :: cte) + us
     | SmallPageObject \<Rightarrow> pageBitsForSize ARMSmallPage
     | LargePageObject \<Rightarrow> pageBitsForSize ARMLargePage 
@@ -115,7 +115,7 @@ where
     | Inl (KOArch (KOASIDPool _)) \<Rightarrow> Some (KOArch (KOASIDPool makeObject))
     | Inr (APIObjectType ArchTypes_H.TCBObject) \<Rightarrow> Some (KOTCB makeObject)
     | Inr (APIObjectType ArchTypes_H.EndpointObject) \<Rightarrow> Some (KOEndpoint makeObject)
-    | Inr (APIObjectType ArchTypes_H.AsyncEndpointObject) \<Rightarrow> Some (KOAEndpoint makeObject)
+    | Inr (APIObjectType ArchTypes_H.NotificationObject) \<Rightarrow> Some (KONotification makeObject)
     | Inr (APIObjectType ArchTypes_H.CapTableObject) \<Rightarrow> Some (KOCTE makeObject)
     | Inr PageTableObject \<Rightarrow> Some (KOArch (KOPTE makeObject))
     | Inr PageDirectoryObject \<Rightarrow> Some (KOArch (KOPDE makeObject))
@@ -146,10 +146,10 @@ lemma valid_obj_makeObject_endpoint [simp]:
   unfolding valid_obj'_def valid_ep'_def
   by (clarsimp simp: makeObject_endpoint)
 
-lemma valid_obj_makeObject_async_endpoint [simp]:
-  "valid_obj' (KOAEndpoint makeObject) s"
-  unfolding valid_obj'_def valid_aep'_def
-  by (clarsimp simp: makeObject_async_endpoint)
+lemma valid_obj_makeObject_notification [simp]:
+  "valid_obj' (KONotification makeObject) s"
+  unfolding valid_obj'_def valid_ntfn'_def
+  by (clarsimp simp: makeObject_notification)
 
 lemma valid_obj_makeObject_user_data [simp]:
   "valid_obj' (KOUserData) s"
@@ -170,7 +170,7 @@ lemma valid_obj_makeObject_asid_pool[simp]:
 
 lemmas valid_obj_makeObject_rules = 
   valid_obj_makeObject_user_data valid_obj_makeObject_tcb
-  valid_obj_makeObject_endpoint valid_obj_makeObject_async_endpoint
+  valid_obj_makeObject_endpoint valid_obj_makeObject_notification
   valid_obj_makeObject_cte valid_obj_makeObject_pte valid_obj_makeObject_pde
   valid_obj_makeObject_asid_pool
 
@@ -209,18 +209,18 @@ lemma obj_bits_default_EndpointObject:
   unfolding other_obj_relation_def default_object_def 
   by (simp add: objBits_simps pageBits_def)
 
-lemma other_obj_relation_default_AsyncEndpointObject:
-  "other_obj_relation (default_object Structures_A.apiobject_type.AsyncEndpointObject us)
-  (injectKO (makeObject :: async_endpoint))"
-  unfolding other_obj_relation_def aep_relation_def default_async_ep_def 
-            default_object_def default_aep_def
+lemma other_obj_relation_default_NotificationObject:
+  "other_obj_relation (default_object Structures_A.apiobject_type.NotificationObject us)
+  (injectKO (makeObject :: Structures_H.notification))"
+  unfolding other_obj_relation_def ntfn_relation_def default_notification_def 
+            default_object_def default_ntfn_def
   
-  by (simp add: makeObject_async_endpoint)
+  by (simp add: makeObject_notification)
 
 
-lemma obj_bits_default_AsyncEndpointObject:
-  "obj_bits (default_object  Structures_A.apiobject_type.AsyncEndpointObject us) 
-  = objBits (makeObject :: async_endpoint)"
+lemma obj_bits_default_NotificationObject:
+  "obj_bits (default_object  Structures_A.apiobject_type.NotificationObject us) 
+  = objBits (makeObject :: Structures_H.notification)"
   unfolding other_obj_relation_def default_object_def 
   by (simp add: objBits_simps pageBits_def)
 
@@ -1527,19 +1527,19 @@ lemma retype_state_relation:
           simp add: EndpointObject update_gs_def)
   next
    note data_map_insert_def[simp]
-    case AsyncEndpointObject
+    case NotificationObject
     from pn2
     have [simp]: "ups_of_heap ?ps = ups_of_heap (kheap s)"
       by - (rule ext, induct (?al), simp_all add: ups_of_heap_def
-                                      default_object_def AsyncEndpointObject)
+                                      default_object_def NotificationObject)
     from pn2
     have [simp]: "cns_of_heap ?ps = cns_of_heap (kheap s)"
       by - (rule ext, induct (?al), simp_all add: cns_of_heap_def
-                                      default_object_def AsyncEndpointObject)
+                                      default_object_def NotificationObject)
    note data_map_insert_def[simp del]
     from gr show ?thesis
       by (simp add: ghost_relation_of_heap,
-          simp add: AsyncEndpointObject update_gs_def)
+          simp add: NotificationObject update_gs_def)
   next
     case CapTableObject
     note data_map_insert_def[simp]
@@ -2532,7 +2532,7 @@ proof -
         apply (fastforce intro: capAligned_epI)
         done
     next
-      case AsyncEndpointObject with Some cover ct show ?thesis
+      case NotificationObject with Some cover ct show ?thesis
         apply (clarsimp simp: Arch_createNewCaps_def createNewCaps_def)
         apply (simp_all add: set_map toAPIType_def ArchTypes_H.toAPIType_def 
                              fromIntegral_def toInteger_nat fromInteger_nat APIType_capBits_def
@@ -2546,7 +2546,7 @@ proof -
                          split: ArchTypes_H.object_type.splits)
          apply (simp add: projectKOs)
         apply (clarsimp simp: valid_cap'_def objBits_simps)
-        apply (fastforce intro: capAligned_aepI)
+        apply (fastforce intro: capAligned_ntfnI)
         done
     next
       case CapTableObject with Some cover ct show ?thesis
@@ -2604,7 +2604,7 @@ lemma createNewCaps_CapTable_ret:
 
 lemma other_objs_default_relation:
   "\<lbrakk> case ty of Structures_A.EndpointObject \<Rightarrow> ko = injectKO (makeObject :: endpoint)
-             | Structures_A.AsyncEndpointObject \<Rightarrow> ko = injectKO (makeObject :: async_endpoint)
+             | Structures_A.NotificationObject \<Rightarrow> ko = injectKO (makeObject :: Structures_H.notification)
              | Structures_A.TCBObject \<Rightarrow> ko = injectKO (makeObject :: tcb) 
              | _ \<Rightarrow> False \<rbrakk> \<Longrightarrow>
     obj_relation_retype (default_object ty n) ko"
@@ -2613,11 +2613,11 @@ lemma other_objs_default_relation:
                          is_other_obj_relation_type_def
                   split: Structures_A.apiobject_type.split_asm)
   apply (clarsimp simp: other_obj_relation_def default_object_def
-                        ep_relation_def aep_relation_def
+                        ep_relation_def ntfn_relation_def
                         tcb_relation_def default_tcb_def makeObject_tcb
                         makeObject_cte new_context_def newContext_def
-                        default_ep_def makeObject_endpoint default_async_ep_def
-                        makeObject_async_endpoint default_aep_def
+                        default_ep_def makeObject_endpoint default_notification_def
+                        makeObject_notification default_ntfn_def
                         fault_rel_optionation_def
                         initContext_def
                  split: Structures_A.apiobject_type.split_asm)
@@ -3483,10 +3483,10 @@ proof (intro conjI impI)
     apply (case_tac obj; simp add: valid_obj'_def)
         apply (rename_tac endpoint)
         apply (case_tac endpoint; simp add: valid_ep'_def obj_at_disj')
-       apply (rename_tac async_endpoint)
-       apply (case_tac async_endpoint; simp add: valid_aep'_def valid_bound_tcb'_def obj_at_disj')
-       apply (rename_tac aep xa)
-       apply (case_tac aep, simp_all, (clarsimp simp: obj_at_disj' split:option.splits)+)
+       apply (rename_tac notification)
+       apply (case_tac notification; simp add: valid_ntfn'_def valid_bound_tcb'_def obj_at_disj')
+       apply (rename_tac ntfn xa)
+       apply (case_tac ntfn, simp_all, (clarsimp simp: obj_at_disj' split:option.splits)+)
       apply (rename_tac tcb)
       apply (case_tac tcb, clarsimp simp add: valid_tcb'_def)
       apply (frule pspace_alignedD' [OF _ ad(1)])
@@ -3502,7 +3502,7 @@ proof (intro conjI impI)
        apply simp
       apply (rename_tac thread_state priority bool option nat cptr vptr bound user_context)
       apply (case_tac thread_state, simp_all add: valid_tcb_state'_def 
-                                                  valid_bound_aep'_def obj_at_disj' 
+                                                  valid_bound_ntfn'_def obj_at_disj' 
                                            split: option.splits)[2]
      apply (simp add: valid_cte'_def)
      apply (frule pspace_alignedD' [OF _ ad(1)])
@@ -4207,7 +4207,7 @@ lemma createNewCaps_state_refs_of':
            apply (wp mapM_x_wp' createObjects_state_refs_of'' threadSet_state_refs_of'
                     | simp add: not_0 pspace_no_overlap'_def objBitsKO_def APIType_capBits_def
                                 valid_pspace'_def makeObject_tcb makeObject_endpoint objBits_def
-                                makeObject_async_endpoint pageBits_def ptBits_def pdBits_def
+                                makeObject_notification pageBits_def ptBits_def pdBits_def
                                 archObjSize_def createObjects_def curDomain_def
              | intro conjI)+
   done
@@ -4304,7 +4304,7 @@ lemma createNewCaps_iflive'[wp]:
            apply (wp mapM_x_wp' createObjects_iflive' threadSet_iflive'
                 | simp add: not_0 pspace_no_overlap'_def
                                 valid_pspace'_def makeObject_tcb makeObject_endpoint
-                                 makeObject_async_endpoint objBitsKO_def 
+                                 makeObject_notification objBitsKO_def 
                                  APIType_capBits_def objBits_def pageBits_def
                                  archObjSize_def ptBits_def pdBits_def
                                  createObjects_def curDomain_def
@@ -5926,7 +5926,7 @@ lemma corres_retype_region_createNewCaps:
                 apply simp
                apply (clarsimp simp:range_cover_def)
                apply (arith+)[4]
-              -- "TCB, EP, AEP"
+              -- "TCB, EP, NTFN"
    (* suspect indentation here *)
            apply (simp_all add: retype_region2_ext_retype_region bind_cong[OF curDomain_mapM_x_futz refl, unfolded bind_assoc])[9] (* not PageDirectoryObject *)
            apply (rule corres_guard_imp)

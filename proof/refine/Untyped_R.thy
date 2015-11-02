@@ -200,7 +200,7 @@ next
       apply (rename_tac apiobject_type)
       apply (case_tac apiobject_type)
        apply (simp_all add:apiGetObjectSize_def tcbBlockSizeBits_def epSizeBits_def
-         aepSizeBits_def slot_bits_def cteSizeBits_def)
+         ntfnSizeBits_def slot_bits_def cteSizeBits_def)
       done
   note word_unat_power [symmetric, simp del]
   show ?thesis
@@ -386,11 +386,11 @@ lemma ctes_of_ko:
        apply (intro exI conjI, assumption)
        apply (clarsimp simp: projectKO_eq objBits_def obj_range'_def
                        dest!: projectKO_opt_tcbD simp: objBitsKO_def)
-      -- "AEP case"
+      -- "NTFN case"
       apply (clarsimp simp: valid_cap'_def obj_at'_def)
       apply (intro exI conjI, assumption)
       apply (clarsimp simp: projectKO_eq objBits_def
-     obj_range'_def projectKO_aep objBitsKO_def)
+     obj_range'_def projectKO_ntfn objBitsKO_def)
      -- "EP case"
      apply (clarsimp simp: valid_cap'_def obj_at'_def)
      apply (intro exI conjI, assumption)
@@ -1627,7 +1627,7 @@ where
   "apitype_of c \<equiv> case c of
     Structures_A.UntypedCap p b idx \<Rightarrow> Some ArchTypes_H.Untyped
   | Structures_A.EndpointCap r badge rights \<Rightarrow> Some EndpointObject
-  | Structures_A.AsyncEndpointCap r badge rights \<Rightarrow> Some AsyncEndpointObject
+  | Structures_A.NotificationCap r badge rights \<Rightarrow> Some NotificationObject
   | Structures_A.CNodeCap r bits guard \<Rightarrow> Some ArchTypes_H.CapTableObject
   | Structures_A.ThreadCap r \<Rightarrow> Some TCBObject
   | _ \<Rightarrow> None"
@@ -3638,7 +3638,7 @@ lemma getObjectSize_def_eq:
         apply (case_tac apiobject_type)
             apply (clarsimp simp: getObjectSize_def apiGetObjectSize_def APIType_map2_def
                                   ArchTypes_H.getObjectSize_def obj_bits_api_def tcbBlockSizeBits_def
-                                  epSizeBits_def aepSizeBits_def cteSizeBits_def slot_bits_def
+                                  epSizeBits_def ntfnSizeBits_def cteSizeBits_def slot_bits_def
                                   arch_kobj_size_def default_arch_object_def ptBits_def pageBits_def
                                   pdBits_def)+
   done

@@ -160,7 +160,7 @@ definition
            CNode sz cspace          \<Rightarrow> ACapTable sz
          | TCB tcb                  \<Rightarrow> ATCB
          | Endpoint endpoint        \<Rightarrow> AEndpoint
-         | AsyncEndpoint async_ep   \<Rightarrow> AAEP
+         | Notification notification   \<Rightarrow> ANTFN
          | ArchObj ao               \<Rightarrow> AArch (case ao of
            PageTable pt             \<Rightarrow> APageTable
          | PageDirectory pd         \<Rightarrow> APageDirectory
@@ -195,7 +195,7 @@ definition
     case t of ACapTable sz \<Rightarrow> cte_level_bits + sz
             | ATCB \<Rightarrow> 9
             | AEndpoint \<Rightarrow> 4
-            | AAEP \<Rightarrow> 4
+            | ANTFN \<Rightarrow> 4
             | AArch aot \<Rightarrow> aa_base_type_bits aot"
 
 lemmas a_base_type_bits_simps [simp] =
@@ -249,7 +249,7 @@ primrec
 | "a_base_type_components ATCB = insert [] (tcb_cnode_index ` {0,1,2,3,4})"
                                  (* core & 5 caps *)
 | "a_base_type_components AEndpoint = {[]}" (* core only *)
-| "a_base_type_components AAEP = {[]}" (* core only *)
+| "a_base_type_components ANTFN = {[]}" (* core only *)
 | "a_base_type_components (AArch aot) = aa_base_type_components aot"
 
 abbreviation
@@ -302,7 +302,7 @@ definition
          tcb_ipc_buffer := tcb_ipc_buffer (if [] \<in> cmps then t2 else t1),
          tcb_context := tcb_context (if [] \<in> cmps then t2 else t1),
          tcb_fault := tcb_fault (if [] \<in> cmps then t2 else t1),
-         tcb_bound_aep := tcb_bound_aep (if [] \<in> cmps then t2 else t1),
+         tcb_bound_notification := tcb_bound_notification (if [] \<in> cmps then t2 else t1),
          tcb_ctable := tcb_ctable (if tcb_cnode_index 0 \<in> cmps then t2 else t1),
          tcb_vtable := tcb_vtable (if tcb_cnode_index 1 \<in> cmps then t2 else t1),
          tcb_reply := tcb_reply (if tcb_cnode_index 2 \<in> cmps then t2 else t1),
@@ -322,9 +322,9 @@ definition
          | Endpoint o1 \<Rightarrow>
            (case obj2 of Endpoint o2 \<Rightarrow>
               Endpoint (if [] \<in> cmps then o2 else o1)) (* core only *)
-         | AsyncEndpoint o1 \<Rightarrow>
-           (case obj2 of AsyncEndpoint o2 \<Rightarrow>
-              AsyncEndpoint (if [] \<in> cmps then o2 else o1) (* core only *))
+         | Notification o1 \<Rightarrow>
+           (case obj2 of Notification o2 \<Rightarrow>
+              Notification (if [] \<in> cmps then o2 else o1) (* core only *))
          | ArchObj ao1 \<Rightarrow>
            (case obj2 of ArchObj ao2 \<Rightarrow> ArchObj (ao_override ao1 ao2 cmps)))"
 
@@ -355,7 +355,7 @@ definition
        of CNode sz obj \<Rightarrow> ko_override (CNode sz empty) ko cmps
         | TCB obj \<Rightarrow> ko_override (TCB undefined) ko cmps
         | Endpoint obj \<Rightarrow> ko_override (Endpoint undefined) ko cmps
-        | AsyncEndpoint obj \<Rightarrow> ko_override (AsyncEndpoint undefined) ko cmps
+        | Notification obj \<Rightarrow> ko_override (Notification undefined) ko cmps
         | ArchObj obj \<Rightarrow> ArchObj (ao_clean obj cmps))"
 
 
@@ -657,7 +657,7 @@ lemma tcb_eq: (* so the simplifier doesn't barf on tcb_override_commute *)
      tcb_reply tcb1 = tcb_reply tcb2 ;
      tcb_caller tcb1 = tcb_caller tcb2 ;
      tcb_ipcframe tcb1 = tcb_ipcframe tcb2 ;
-     tcb_bound_aep tcb1 = tcb_bound_aep tcb2 \<rbrakk> \<Longrightarrow> tcb1 = tcb2"
+     tcb_bound_notification tcb1 = tcb_bound_notification tcb2 \<rbrakk> \<Longrightarrow> tcb1 = tcb2"
   by (cases tcb1, cases tcb2) auto
 
 lemma tcb_cnode_index_not_Nil:
@@ -695,7 +695,7 @@ lemma tcb_field_cmp_right_simps:
                    = tcb_context tcb'"
   "[] \<in> cmps \<Longrightarrow> tcb_fault (tcb_override tcb tcb' cmps)
                    = tcb_fault tcb'"
-  "[] \<in> cmps \<Longrightarrow> tcb_bound_aep (tcb_override tcb tcb' cmps) = tcb_bound_aep tcb'"
+  "[] \<in> cmps \<Longrightarrow> tcb_bound_notification (tcb_override tcb tcb' cmps) = tcb_bound_notification tcb'"
   "tcb_cnode_index 0 \<in> cmps \<Longrightarrow> tcb_ctable (tcb_override tcb tcb' cmps)
                                   = tcb_ctable tcb'"
   "tcb_cnode_index (Suc 0) \<in> cmps \<Longrightarrow> tcb_vtable (tcb_override tcb tcb' cmps)

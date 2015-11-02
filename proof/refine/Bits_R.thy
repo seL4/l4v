@@ -61,7 +61,7 @@ lemma isCap_simps:
   "isArchObjectCap v = (\<exists>v0. v = ArchObjectCap v0)"
   "isThreadCap v = (\<exists>v0. v = ThreadCap v0)"
   "isCNodeCap v = (\<exists>v0 v1 v2 v3. v = CNodeCap v0 v1 v2 v3)"
-  "isAsyncEndpointCap v = (\<exists>v0 v1 v2 v3. v = AsyncEndpointCap v0 v1 v2 v3)"
+  "isNotificationCap v = (\<exists>v0 v1 v2 v3. v = NotificationCap v0 v1 v2 v3)"
   "isEndpointCap v = (\<exists>v0 v1 v2 v3 v4. v = EndpointCap v0 v1 v2 v3 v4)"
   "isUntypedCap v = (\<exists>v0 v1 f. v = UntypedCap v0 v1 f)"
   "isReplyCap v = (\<exists>v0 v1. v = ReplyCap v0 v1)"
@@ -94,8 +94,8 @@ lemma projectKO_ep:
   "(projectKO_opt ko = Some t) = (ko = KOEndpoint t)"
   by (cases ko) (auto simp: projectKO_opts_defs)
 
-lemma projectKO_aep:
-  "(projectKO_opt ko = Some t) = (ko = KOAEndpoint t)"
+lemma projectKO_ntfn:
+  "(projectKO_opt ko = Some t) = (ko = KONotification t)"
   by (cases ko) (auto simp: projectKO_opts_defs)
 
 lemma projectKO_ASID:
@@ -119,7 +119,7 @@ lemma projectKO_user_data:
      (auto simp: projectKO_opts_defs split: arch_kernel_object.splits)
 
 lemmas projectKOs =
-  projectKO_aep projectKO_ep projectKO_cte projectKO_tcb
+  projectKO_ntfn projectKO_ep projectKO_cte projectKO_tcb
   projectKO_ASID projectKO_PTE projectKO_PDE projectKO_user_data
   projectKO_eq projectKO_eq2
 
@@ -133,8 +133,8 @@ lemma capAligned_epI:
   apply (simp add: objBits_simps projectKOs capUntypedPtr_def isCap_simps)
   done
 
-lemma capAligned_aepI:
-  "aep_at' p s \<Longrightarrow> capAligned (AsyncEndpointCap p a b c)"
+lemma capAligned_ntfnI:
+  "ntfn_at' p s \<Longrightarrow> capAligned (NotificationCap p a b c)"
   apply (clarsimp simp: obj_at'_real_def capAligned_def
                         objBits_simps word_bits_def capUntypedPtr_def isCap_simps)
   apply (fastforce dest: ko_wp_at_norm
@@ -336,16 +336,16 @@ lemma ep'_cases_weak_wp:
   apply (simp, rule hoare_weaken_pre, rule assms, simp)+
   done
 
-lemma aep'_cases_weak_wp:
+lemma ntfn'_cases_weak_wp:
   assumes "\<lbrace>P_A\<rbrace> a \<lbrace>Q\<rbrace>"
   assumes "\<And>q. \<lbrace>P_B\<rbrace> b q \<lbrace>Q\<rbrace>"
   assumes "\<And>bdg. \<lbrace>P_C\<rbrace> c bdg \<lbrace>Q\<rbrace>"
   shows
   "\<lbrace>P_A and P_B and P_C\<rbrace>
     case ts of
-      IdleAEP \<Rightarrow> a
-    | WaitingAEP q \<Rightarrow> b q
-    | ActiveAEP bdg \<Rightarrow> c bdg \<lbrace>Q\<rbrace>"
+      IdleNtfn \<Rightarrow> a
+    | WaitingNtfn q \<Rightarrow> b q
+    | ActiveNtfn bdg \<Rightarrow> c bdg \<lbrace>Q\<rbrace>"
   apply (cases ts)
   apply (simp, rule hoare_weaken_pre, rule assms, simp)+
   done
@@ -526,7 +526,7 @@ next
   thus "tcb_at' (t + x - y) s" using tat by simp
 qed
 
-lemma set_ep_arch':  "\<lbrace>\<lambda>s. P (ksArchState s)\<rbrace> setEndpoint aep p \<lbrace>\<lambda>_ s. P (ksArchState s)\<rbrace>"
+lemma set_ep_arch':  "\<lbrace>\<lambda>s. P (ksArchState s)\<rbrace> setEndpoint ntfn p \<lbrace>\<lambda>_ s. P (ksArchState s)\<rbrace>"
   apply (simp add: setEndpoint_def setObject_def split_def)
   apply (wp updateObject_default_inv|simp)+
   done

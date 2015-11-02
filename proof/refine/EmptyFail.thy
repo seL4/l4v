@@ -86,13 +86,13 @@ lemma empty_fail_getIRQSlot [intro!, wp, simp]:
   "empty_fail (getIRQSlot irq)"
   by (simp add: getIRQSlot_def getInterruptState_def locateSlot_def)
 
-lemma empty_fail_getObject_aep [intro!, wp, simp]:
-  "empty_fail (getObject p :: async_endpoint kernel)"
+lemma empty_fail_getObject_ntfn [intro!, wp, simp]:
+  "empty_fail (getObject p :: Structures_H.notification kernel)"
   by (simp add: empty_fail_getObject)
 
-lemma empty_fail_getAsyncEP [intro!, wp, simp]:
-  "empty_fail (getAsyncEP ep)"
-  by (simp add: getAsyncEP_def)
+lemma empty_fail_getNotification [intro!, wp, simp]:
+  "empty_fail (getNotification ep)"
+  by (simp add: getNotification_def)
 
 lemma empty_fail_lookupIPCBuffer [intro!, wp, simp]:
   "empty_fail (lookupIPCBuffer a b)"

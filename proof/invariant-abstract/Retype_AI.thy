@@ -961,7 +961,7 @@ lemma no_gs_types_simps[simp]:
   "Untyped \<in> no_gs_types"
   "Structures_A.TCBObject \<in> no_gs_types"
   "Structures_A.EndpointObject \<in> no_gs_types"
-  "Structures_A.AsyncEndpointObject \<in> no_gs_types"
+  "Structures_A.NotificationObject \<in> no_gs_types"
   "ArchObject PageTableObj \<in> no_gs_types"
   "ArchObject PageDirectoryObj \<in> no_gs_types"
   "ArchObject ASIDPoolObj \<in> no_gs_types"
@@ -2310,7 +2310,7 @@ lemma valid_obj_default_object:
                        tcb_cap_cases_def valid_ipc_buffer_cap_def
                        word_bits_def)
      apply (simp add: valid_ep_def default_ep_def)
-    apply (simp add: valid_aep_def default_async_ep_def default_aep_def valid_bound_tcb_def)
+    apply (simp add: valid_ntfn_def default_notification_def default_ntfn_def valid_bound_tcb_def)
    apply (frule tyct)
    apply (clarsimp simp: valid_cs_def empty_cnode_def well_formed_cnode_n_def)
    apply safe
@@ -2662,16 +2662,16 @@ lemma valid_objs:
      apply (erule valid_cap_pres[unfolded s'_def ps_def])
      apply (rule cte_wp_at_tcbI, fastforce+)[1]
 
-   apply (fastforce simp: valid_tcb_state_def valid_bound_aep_def
+   apply (fastforce simp: valid_tcb_state_def valid_bound_ntfn_def
                    elim!: obj_at_pres[unfolded s'_def ps_def]
                    split: Structures_A.thread_state.splits option.splits)
 
     apply (fastforce simp: valid_ep_def
                   elim!: obj_at_pres[unfolded s'_def ps_def]
                   split: Structures_A.endpoint.splits)
-  apply (fastforce simp: valid_aep_def valid_bound_tcb_def
+  apply (fastforce simp: valid_ntfn_def valid_bound_tcb_def
                   elim!: obj_at_pres[unfolded s'_def ps_def]
-                 split: Structures_A.aep.splits option.splits)
+                 split: Structures_A.ntfn.splits option.splits)
   done
 
 
@@ -2683,7 +2683,7 @@ lemma refs_eq:
                    split: option.splits)
   apply (cases ty, simp_all add: tyunt default_object_def
                                  default_tcb_def default_ep_def
-                                 default_async_ep_def default_aep_def)
+                                 default_notification_def default_ntfn_def)
   done
 
 
@@ -2711,7 +2711,7 @@ lemma iflive:
   apply (clarsimp elim!: obj_atE split: split_if_asm)
    apply (cases ty, simp_all add: default_object_def tyunt
                                   default_tcb_def default_ep_def
-                                  default_async_ep_def default_aep_def)
+                                  default_notification_def default_ntfn_def)
   apply (frule(1) if_live_then_nonz_capD2[OF iflive_s])
   apply (simp add: ex_nonz_cap_to_def
                    cte_retype[unfolded s'_def ps_def])
@@ -3008,7 +3008,7 @@ lemma ran_null_filter:
 lemma valid_irq_handlers_def2:
   "valid_irq_handlers =
      (\<lambda>s. \<forall>cap \<in> ran (null_filter (caps_of_state s)).
-          \<forall>irq \<in> cap_irqs cap. interrupt_states s irq = irq_state.IRQNotifyAEP)"
+          \<forall>irq \<in> cap_irqs cap. interrupt_states s irq = irq_state.IRQSignal)"
   apply (rule ext)
   apply (simp add: valid_irq_handlers_def irq_issued_def
                    ran_null_filter)

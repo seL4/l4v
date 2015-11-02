@@ -70,9 +70,9 @@ section {* System call entry point *}
 fun
   perform_invocation :: "bool \<Rightarrow> bool \<Rightarrow> invocation \<Rightarrow> (data list,'z::state_ext) p_monad"
 where
-  "perform_invocation block call (InvokeAsyncEndpoint ep badge) =
+  "perform_invocation block call (InvokeNotification ep badge) =
     doE
-      without_preemption $ send_async_ipc ep badge;
+      without_preemption $ send_signal ep badge;
       returnOk []
     odE"
 | "perform_invocation _ _ _ = fail"
@@ -156,13 +156,13 @@ definition
         in
         case ep_cap
           of
-            AsyncEndpointCap ref badge rights \<Rightarrow>
+            NotificationCap ref badge rights \<Rightarrow>
              (if AllowRecv \<in> rights
               then doE
-                aep \<leftarrow> liftE $ get_async_ep ref;
-                boundTCB \<leftarrow> returnOk $ aep_bound_tcb aep;
+                ntfn \<leftarrow> liftE $ get_notification ref;
+                boundTCB \<leftarrow> returnOk $ ntfn_bound_tcb ntfn;
                 if boundTCB = Some thread \<or> boundTCB = None
-                then liftE $ receive_async_ipc thread ep_cap is_blocking
+                then liftE $ receive_signal thread ep_cap is_blocking
                 else flt
                odE
               else flt)

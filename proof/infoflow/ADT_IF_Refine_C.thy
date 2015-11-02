@@ -115,7 +115,7 @@ definition
   where
   "kernelEntry_C_if (fp :: bool) e tc \<equiv> do
     t \<leftarrow> gets (ksCurThread_' o globals);
-    setContext_C (to_user_context_C tc) t;
+    setArchTCB_C (arch_tcb_C (to_user_context_C tc)) t;
     exec_C \<Gamma> (callKernel_C_body_if e);
     ex \<leftarrow> gets ret__unsigned_long_';
     r \<leftarrow> return (if (ex = scast EXCEPTION_NONE) then Inr () else Inl ex);
@@ -298,7 +298,7 @@ lemma kernelEntry_corres_C:
        apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)  
       apply (rule corres_split)
          prefer 2
-         apply (rule setContext_C_corres, rule ccontext_rel_to_C)
+         apply (rule setArchTCB_C_corres, simp, rule ccontext_rel_to_C)
          apply simp
         apply (rule corres_split[OF _ ccorres_corres_u_xf, simplified bind_assoc])
             prefer 3

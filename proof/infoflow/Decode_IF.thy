@@ -223,8 +223,8 @@ lemma decode_tcb_invocation_reads_respects_f:
                            (decode_tcb_invocation label args (ThreadCap t) slot excaps)"
   unfolding decode_tcb_invocation_def decode_read_registers_def
   decode_write_registers_def decode_copy_registers_def
-  decode_tcb_configure_def decode_set_space_def decode_bind_aep_def
-  decode_set_ipc_buffer_def fun_app_def decode_unbind_aep_def
+  decode_tcb_configure_def decode_set_space_def decode_bind_notification_def
+  decode_set_ipc_buffer_def fun_app_def decode_unbind_notification_def
   apply (simp add: unlessE_def[symmetric] unlessE_whenE
         split del: split_if
              cong: invocation_label.case_cong)
@@ -235,8 +235,8 @@ lemma decode_tcb_invocation_reads_respects_f:
              respects_f[OF check_valid_ipc_buffer_rev]
              check_valid_ipc_buffer_inv
              respects_f[OF decode_set_priority_rev]
-             respects_f[OF get_async_ep_reads_respects]
-             respects_f[OF get_bound_aep_reads_respects']
+             respects_f[OF get_notification_reads_respects]
+             respects_f[OF get_bound_notification_reads_respects']
         | wp_once whenE_throwError_wp
         | wp_once hoare_drop_imps
         | wpc

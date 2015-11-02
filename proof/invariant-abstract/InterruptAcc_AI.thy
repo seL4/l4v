@@ -68,7 +68,7 @@ lemma dmo_maskInterrupt_invs:
   done
 
 lemma set_irq_state_invs[wp]:
-  "\<lbrace>\<lambda>s. invs s \<and> (state \<noteq> irq_state.IRQNotifyAEP \<longrightarrow> cap.IRQHandlerCap irq \<notin> ran (caps_of_state s))\<rbrace>
+  "\<lbrace>\<lambda>s. invs s \<and> (state \<noteq> irq_state.IRQSignal \<longrightarrow> cap.IRQHandlerCap irq \<notin> ran (caps_of_state s))\<rbrace>
       set_irq_state state irq
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: set_irq_state_def)

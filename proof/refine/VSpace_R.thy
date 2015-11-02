@@ -2366,7 +2366,7 @@ proof -
         apply (drule spec, drule spec, drule_tac x=capa in spec, drule (1) mp)
         apply (case_tac aa, simp_all)
          apply ((clarsimp simp: valid_cap_def obj_at_def a_type_def is_ep_def
-                                is_aep_def is_cap_table_def is_tcb_def
+                                is_ntfn_def is_cap_table_def is_tcb_def
                                 is_pg_cap_def
                         split: cap.splits Structures_A.kernel_object.splits
                                split_if_asm

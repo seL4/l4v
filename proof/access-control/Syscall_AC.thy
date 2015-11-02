@@ -25,7 +25,7 @@ where
                \<exists>ep. ko_at (Endpoint ep) epptr s \<and>
                     (can_grant \<longrightarrow>  (\<forall>r \<in> ep_q_refs_of ep. snd r = EPRecv \<longrightarrow> is_subject aag (fst r)) \<and> aag_has_auth_to aag Grant epptr)
              \<and> aag_has_auth_to aag SyncSend epptr
-   | Invocations_A.InvokeAsyncEndpoint ep badge \<Rightarrow> aag_has_auth_to aag AsyncSend ep
+   | Invocations_A.InvokeNotification ep badge \<Rightarrow> aag_has_auth_to aag Notify ep
    | Invocations_A.InvokeReply thread slot \<Rightarrow> is_subject aag thread \<and> is_subject aag (fst slot)
    | Invocations_A.InvokeTCB i' \<Rightarrow> tcb_inv_wf i' s \<and> authorised_tcb_inv aag i'
    | Invocations_A.InvokeDomain thread slot \<Rightarrow> False
@@ -44,19 +44,19 @@ lemma perform_invocation_pas_refined:
    \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
   apply (cases oper, simp_all)
   apply (simp add: authorised_invocation_def validE_R_def[symmetric] invs_valid_objs
-       | wp invoke_untyped_pas_refined send_ipc_pas_refined send_async_ipc_pas_refined
+       | wp invoke_untyped_pas_refined send_ipc_pas_refined send_signal_pas_refined
             do_reply_transfer_pas_refined invoke_tcb_pas_refined invoke_cnode_pas_refined
             invoke_irq_control_pas_refined invoke_irq_handler_pas_refined
             invoke_arch_pas_refined decode_cnode_invocation_auth_derived
        | fastforce)+
   done
 
-lemma aep_gives_obj_at:
-  "invs s \<Longrightarrow> (\<exists>aep. ko_at (AsyncEndpoint aep) aepptr s \<and> (\<forall>x\<in>aep_q_refs_of (aep_obj aep). (\<lambda>(t, rt). obj_at (\<lambda>tcb. ko_at tcb t s) t s) x)) = aep_at aepptr s"
+lemma ntfn_gives_obj_at:
+  "invs s \<Longrightarrow> (\<exists>ntfn. ko_at (Notification ntfn) ntfnptr s \<and> (\<forall>x\<in>ntfn_q_refs_of (ntfn_obj ntfn). (\<lambda>(t, rt). obj_at (\<lambda>tcb. ko_at tcb t s) t s) x)) = ntfn_at ntfnptr s"
   apply (rule iffI)
-   apply (clarsimp simp: obj_at_def is_aep)
-  apply (clarsimp simp: obj_at_def is_aep)
-  apply (drule (1) aep_queued_st_tcb_at [where P = \<top>, unfolded obj_at_def, simplified])
+   apply (clarsimp simp: obj_at_def is_ntfn)
+  apply (clarsimp simp: obj_at_def is_ntfn)
+  apply (drule (1) ntfn_queued_st_tcb_at [where P = \<top>, unfolded obj_at_def, simplified])
   apply clarsimp
   apply clarsimp
   apply (clarsimp simp: st_tcb_def2 dest!: get_tcb_SomeD)
@@ -68,7 +68,7 @@ lemma pi_cases:
      Invocations_A.InvokeUntyped i \<Rightarrow> perform_invocation block call (Invocations_A.InvokeUntyped i) 
     | Invocations_A.InvokeEndpoint ep badge canGrant 
       \<Rightarrow> perform_invocation block call (Invocations_A.InvokeEndpoint ep badge canGrant) 
-    |  Invocations_A.InvokeAsyncEndpoint ep badge \<Rightarrow> perform_invocation block call ( Invocations_A.InvokeAsyncEndpoint ep badge)
+    |  Invocations_A.InvokeNotification ep badge \<Rightarrow> perform_invocation block call ( Invocations_A.InvokeNotification ep badge)
     |  Invocations_A.InvokeTCB i \<Rightarrow> perform_invocation block call ( Invocations_A.InvokeTCB i)
     |  Invocations_A.InvokeDomain thread slot \<Rightarrow> perform_invocation block call ( Invocations_A.InvokeDomain thread slot)
     |  Invocations_A.InvokeReply thread slot \<Rightarrow> perform_invocation block call ( Invocations_A.InvokeReply thread slot)
@@ -92,14 +92,14 @@ lemma perform_invocation_respects:
   apply (rule hoare_pre)
   apply (wpc 
        | simp
-       | wp invoke_untyped_integrity send_ipc_integrity_autarch send_async_ipc_respects
+       | wp invoke_untyped_integrity send_ipc_integrity_autarch send_signal_respects
             do_reply_transfer_respects invoke_tcb_respects invoke_cnode_respects
             invoke_arch_respects invoke_irq_control_respects invoke_irq_handler_respects
        | wp_once hoare_pre_cont)+
   apply (clarsimp simp: authorised_invocation_def split: Invocations_A.invocation.splits)
   -- "EP case"
   apply (fastforce simp: obj_at_def is_tcb split: split_if_asm)
-  -- "AEP case"
+  -- "NTFN case"
   apply fastforce
   done
 
@@ -393,10 +393,10 @@ lemma lookup_slot_for_thread_cap_fault:
 lemma handle_wait_pas_refined:
   "\<lbrace>pas_refined aag and invs and is_subject aag \<circ> cur_thread\<rbrace> handle_wait is_blocking \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
   apply (simp add: handle_wait_def Let_def lookup_cap_def lookup_cap_def split_def)
-  apply (wp handle_fault_pas_refined receive_ipc_pas_refined receive_async_ipc_pas_refined
+  apply (wp handle_fault_pas_refined receive_ipc_pas_refined receive_signal_pas_refined
             get_cap_auth_wp [where aag=aag] lookup_slot_for_cnode_op_authorised
             lookup_slot_for_thread_authorised lookup_slot_for_thread_cap_fault
-            hoare_vcg_all_lift_R get_aep_wp
+            hoare_vcg_all_lift_R get_ntfn_wp
        | wpc | simp
        | rename_tac word1 word2 word3, rule_tac Q="\<lambda>rv s. invs s \<and> is_subject aag thread 
                      \<and> (pasSubject aag, Receive, pasObjectAbs aag word1) \<in> pasPolicy aag" 
@@ -419,8 +419,8 @@ lemma handle_wait_integrity:
      handle_wait is_blocking
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply (simp add: handle_wait_def Let_def lookup_cap_def lookup_cap_def split_def)
-  apply (wp handle_fault_integrity_autarch receive_ipc_integrity_autarch receive_async_ipc_integrity_autarch lookup_slot_for_thread_authorised lookup_slot_for_thread_cap_fault
-            get_cap_auth_wp [where aag=aag] get_aep_wp
+  apply (wp handle_fault_integrity_autarch receive_ipc_integrity_autarch receive_signal_integrity_autarch lookup_slot_for_thread_authorised lookup_slot_for_thread_cap_fault
+            get_cap_auth_wp [where aag=aag] get_ntfn_wp
        | wpc | simp
        | rule_tac Q="\<lambda>rv s. invs s \<and> is_subject aag thread 
                      \<and> (pasSubject aag, Receive, pasObjectAbs aag x31) \<in> pasPolicy aag" 
@@ -492,7 +492,7 @@ lemma handle_interrupt_pas_refined:
    \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
   apply (simp add: handle_interrupt_def)
   apply (rule hoare_pre)
-  apply (wp send_async_ipc_pas_refined get_cap_wp
+  apply (wp send_signal_pas_refined get_cap_wp
        | wpc
        | simp add: get_irq_slot_def get_irq_state_def)+
   done
@@ -523,7 +523,7 @@ lemma handle_interrupt_integrity_autarch:
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply (simp add: handle_interrupt_def  cong: irq_state.case_cong maskInterrupt_def ackInterrupt_def resetTimer_def )
   apply (rule hoare_pre)
-  apply (wp_once send_async_ipc_respects get_cap_auth_wp [where aag = aag] dmo_mol_respects
+  apply (wp_once send_signal_respects get_cap_auth_wp [where aag = aag] dmo_mol_respects
        | simp add: get_irq_slot_def get_irq_state_def ackInterrupt_def resetTimer_def
        | wp dmo_no_mem_respects
        | wpc)+
@@ -531,8 +531,8 @@ lemma handle_interrupt_integrity_autarch:
   done
 
 lemma hacky_ipc_Send:
-  "\<lbrakk> (pasObjectAbs aag (interrupt_irq_node s irq), AsyncSend, pasObjectAbs aag p) \<in> pasPolicy aag; pas_refined aag s; pasMaySendIrqs aag \<rbrakk>
-   \<Longrightarrow> aag_has_auth_to aag AsyncSend p"
+  "\<lbrakk> (pasObjectAbs aag (interrupt_irq_node s irq), Notify, pasObjectAbs aag p) \<in> pasPolicy aag; pas_refined aag s; pasMaySendIrqs aag \<rbrakk>
+   \<Longrightarrow> aag_has_auth_to aag Notify p"
   unfolding pas_refined_def 
   apply (clarsimp simp: policy_wellformed_def irq_map_wellformed_aux_def)
   apply (drule spec [where x = "pasIRQAbs aag irq"], drule spec [where x = "pasObjectAbs aag p"], erule mp)
@@ -541,13 +541,13 @@ lemma hacky_ipc_Send:
 
 
 lemma handle_interrupt_integrity:
-  "\<lbrace>integrity aag X st and pas_refined aag and invs and (\<lambda>s. pasMaySendIrqs aag \<or> interrupt_states s irq \<noteq> IRQNotifyAEP)
+  "\<lbrace>integrity aag X st and pas_refined aag and invs and (\<lambda>s. pasMaySendIrqs aag \<or> interrupt_states s irq \<noteq> IRQSignal)
       and (\<lambda>s. ct_active s \<longrightarrow> is_subject aag (cur_thread s))\<rbrace>
      handle_interrupt irq
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply (simp add: handle_interrupt_def maskInterrupt_def ackInterrupt_def resetTimer_def cong: irq_state.case_cong bind_cong)
   apply (rule hoare_pre)
-  apply (wp_once send_async_ipc_respects get_cap_wp dmo_mol_respects dmo_no_mem_respects
+  apply (wp_once send_signal_respects get_cap_wp dmo_mol_respects dmo_no_mem_respects
        | wpc
        | simp add: get_irq_slot_def get_irq_state_def ackInterrupt_def resetTimer_def)+
   apply clarsimp
@@ -700,9 +700,9 @@ lemma set_thread_state_restart_to_running_respects:
   apply (erule integrity_trans)
   apply (clarsimp simp: integrity_def obj_at_def st_tcb_at_def)
   apply (clarsimp dest!: get_tcb_SomeD)
-  apply (rule_tac aep'="tcb_bound_aep ya" in tro_tcb_activate [OF refl refl])
+  apply (rule_tac ntfn'="tcb_bound_notification ya" in tro_tcb_activate [OF refl refl])
   apply clarsimp
-  apply (simp add: tcb_bound_aep_reset_integrity_def)+
+  apply (simp add: tcb_bound_notification_reset_integrity_def)+
   done
 
 lemma activate_thread_respects:
@@ -960,7 +960,7 @@ lemma handle_interrupt_arch_state [wp]:
   unfolding handle_interrupt_def
   apply (rule hoare_pre)
   apply clarsimp
-  apply (wp get_cap_inv dxo_wp_weak send_async_ipc_arch_state | wpc | simp add: get_irq_state_def)+
+  apply (wp get_cap_inv dxo_wp_weak send_signal_arch_state | wpc | simp add: get_irq_state_def)+
   done
 
 lemmas sequence_x_mapM_x = mapM_x_def [symmetric]

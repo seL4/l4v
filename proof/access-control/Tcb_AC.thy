@@ -12,7 +12,7 @@ theory Tcb_AC
 imports Finalise_AC
 begin
 
-(* FIXME-AEP: The 'AsyncEndpointControl' case of the following definition needs to be changed. *)
+(* FIXME-NTFN: The 'NotificationControl' case of the following definition needs to be changed. *)
 
 definition
   authorised_tcb_inv :: "'a PAS \<Rightarrow> Invocations_A.tcb_invocation \<Rightarrow>  bool"
@@ -23,8 +23,8 @@ where
    | tcb_invocation.ThreadControl t sl ep priority croot vroot buf
           \<Rightarrow> is_subject aag t \<and>
             (\<forall>(cap, slot) \<in> (set_option croot \<union> set_option vroot \<union> (case_option {} (set_option \<circ> snd) buf)). pas_cap_cur_auth aag cap \<and> is_subject aag (fst slot))
-   | tcb_invocation.AsyncEndpointControl t aep \<Rightarrow> is_subject aag t \<and>
-             case_option True (\<lambda>a. \<forall>auth \<in> {Receive, Reset}. (pasSubject aag, auth, pasObjectAbs aag a) \<in> pasPolicy aag) aep
+   | tcb_invocation.NotificationControl t ntfn \<Rightarrow> is_subject aag t \<and>
+             case_option True (\<lambda>a. \<forall>auth \<in> {Receive, Reset}. (pasSubject aag, auth, pasObjectAbs aag a) \<in> pasPolicy aag) ntfn
    | tcb_invocation.ReadRegisters src susp n arch \<Rightarrow> is_subject aag src
    | tcb_invocation.WriteRegisters dest res values arch \<Rightarrow> is_subject aag dest
    | tcb_invocation.CopyRegisters dest src susp res frame int_regs arch \<Rightarrow>
@@ -73,7 +73,7 @@ lemma invoke_tcb_cases:
      tcb_invocation.Suspend t \<Rightarrow> invoke_tcb (tcb_invocation.Suspend t)
    | tcb_invocation.Resume t \<Rightarrow> invoke_tcb (tcb_invocation.Resume t)
    | tcb_invocation.ThreadControl t sl ep priority croot vroot buf \<Rightarrow> invoke_tcb (tcb_invocation.ThreadControl t sl ep priority croot vroot buf)
-   | tcb_invocation.AsyncEndpointControl t aep \<Rightarrow> invoke_tcb (tcb_invocation.AsyncEndpointControl t aep)
+   | tcb_invocation.NotificationControl t ntfn \<Rightarrow> invoke_tcb (tcb_invocation.NotificationControl t ntfn)
    | tcb_invocation.ReadRegisters src susp n arch \<Rightarrow> invoke_tcb (tcb_invocation.ReadRegisters src susp n arch)
    | tcb_invocation.WriteRegisters dest res values arch \<Rightarrow> invoke_tcb (tcb_invocation.WriteRegisters dest res values arch)
    | tcb_invocation.CopyRegisters dest src susp res frame int_regs arch \<Rightarrow> invoke_tcb (tcb_invocation.CopyRegisters dest src susp res frame int_regs arch))"
@@ -137,11 +137,11 @@ lemma thread_set_vrefs:
 lemma thread_set_pas_refined:
   assumes F: "(\<And>tcb. tcb_state (f tcb) = tcb_state tcb)"
       and G: "(\<And>tcb. \<forall>(getF, v)\<in>ran tcb_cap_cases. getF (f tcb) = getF tcb)"
-      and H: "(\<And>tcb. tcb_bound_aep (f tcb) = tcb_bound_aep tcb)"
+      and H: "(\<And>tcb. tcb_bound_notification (f tcb) = tcb_bound_notification tcb)"
   shows "\<lbrace>pas_refined aag\<rbrace> thread_set f t \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
   apply (simp add: pas_refined_def state_objs_to_policy_def)
   apply (rule hoare_pre)
-   apply (wps thread_set_thread_states_trivT[OF F] thread_set_caps_of_state_trivial[OF G] thread_set_thread_bound_aeps_trivT[OF H] thread_set_vrefs)
+   apply (wps thread_set_thread_states_trivT[OF F] thread_set_caps_of_state_trivial[OF G] thread_set_thread_bound_ntfns_trivT[OF H] thread_set_vrefs)
    apply wp
   apply simp
   done
@@ -287,14 +287,14 @@ lemma invoke_tcb_tc_respects_aag:
                  split: option.split_asm
        | rule conjI | erule pas_refined_refl)+ (*takes a while*)
 
-lemma invoke_tcb_unbind_aep_respects:
+lemma invoke_tcb_unbind_notification_respects:
   "\<lbrace>integrity aag X st and pas_refined aag
-       and einvs and tcb_inv_wf (tcb_invocation.AsyncEndpointControl t None) 
-       and simple_sched_action and K (authorised_tcb_inv aag (tcb_invocation.AsyncEndpointControl t None))\<rbrace>
-     invoke_tcb (tcb_invocation.AsyncEndpointControl t None)
+       and einvs and tcb_inv_wf (tcb_invocation.NotificationControl t None) 
+       and simple_sched_action and K (authorised_tcb_inv aag (tcb_invocation.NotificationControl t None))\<rbrace>
+     invoke_tcb (tcb_invocation.NotificationControl t None)
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>" 
   apply (clarsimp)
-  apply (wp unbind_async_endpoint_respects)
+  apply (wp unbind_notification_respects)
   apply (clarsimp simp: authorised_tcb_inv_def tcb_at_def pred_tcb_def2)
   apply (clarsimp split: option.split)
   apply (frule(1) bound_tcb_at_implies_reset[unfolded pred_tcb_def2, OF _ exI, OF _ conjI])
@@ -302,12 +302,12 @@ lemma invoke_tcb_unbind_aep_respects:
   apply simp
   done
 
-lemma sba_bind_respects:
+lemma sbn_bind_respects:
   "\<lbrace>integrity aag X st and bound_tcb_at (op = None) t 
-    and K ((pasSubject aag, Receive, pasObjectAbs aag aep) \<in> pasPolicy aag \<and> is_subject aag t)\<rbrace>
-       set_bound_aep t (Some aep)
+    and K ((pasSubject aag, Receive, pasObjectAbs aag ntfn) \<in> pasPolicy aag \<and> is_subject aag t)\<rbrace>
+       set_bound_notification t (Some ntfn)
    \<lbrace>\<lambda>rv. integrity aag X st \<rbrace>"
-  apply (simp add: set_bound_aep_def set_object_def)
+  apply (simp add: set_bound_notification_def set_object_def)
   apply wp
   apply clarsimp
   apply (erule integrity_trans)
@@ -315,35 +315,35 @@ lemma sba_bind_respects:
   done
 
 
-lemma bind_async_endpoint_respects:
-  "\<lbrace>integrity aag X st and pas_refined aag and bound_tcb_at (op = None) t and K (is_subject aag t \<and> (pasSubject aag, Receive, pasObjectAbs aag aepptr) \<in> pasPolicy aag)\<rbrace> bind_async_endpoint t aepptr \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
+lemma bind_notification_respects:
+  "\<lbrace>integrity aag X st and pas_refined aag and bound_tcb_at (op = None) t and K (is_subject aag t \<and> (pasSubject aag, Receive, pasObjectAbs aag ntfnptr) \<in> pasPolicy aag)\<rbrace> bind_notification t ntfnptr \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply (rule hoare_gen_asm)
-  apply (clarsimp simp: bind_async_endpoint_def)
-  apply (rule hoare_seq_ext[OF _ get_aep_sp])
-  apply (wp set_aep_respects hoare_vcg_imp_lift sba_bind_respects | wpc | clarsimp)+
+  apply (clarsimp simp: bind_notification_def)
+  apply (rule hoare_seq_ext[OF _ get_ntfn_sp])
+  apply (wp set_ntfn_respects hoare_vcg_imp_lift sbn_bind_respects | wpc | clarsimp)+
   apply fastforce
   done
 
-lemma invoke_tcb_bind_aep_respects:
+lemma invoke_tcb_bind_notification_respects:
   "\<lbrace>integrity aag X st and pas_refined aag
-      and einvs and tcb_inv_wf (tcb_invocation.AsyncEndpointControl t (Some aep))
-      and simple_sched_action and K (authorised_tcb_inv aag (tcb_invocation.AsyncEndpointControl t (Some aep)))\<rbrace>
-     invoke_tcb (tcb_invocation.AsyncEndpointControl t (Some aep))
+      and einvs and tcb_inv_wf (tcb_invocation.NotificationControl t (Some ntfn))
+      and simple_sched_action and K (authorised_tcb_inv aag (tcb_invocation.NotificationControl t (Some ntfn)))\<rbrace>
+     invoke_tcb (tcb_invocation.NotificationControl t (Some ntfn))
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (clarsimp)
-  apply (wp bind_async_endpoint_respects)
+  apply (wp bind_notification_respects)
   apply (clarsimp simp: authorised_tcb_inv_def)
   done
 
-lemma invoke_tcb_aep_control_respects[wp]:
+lemma invoke_tcb_ntfn_control_respects[wp]:
   "\<lbrace>integrity aag X st and pas_refined aag
-      and einvs and tcb_inv_wf (tcb_invocation.AsyncEndpointControl t aep)
-      and simple_sched_action and K (authorised_tcb_inv aag (tcb_invocation.AsyncEndpointControl t aep))\<rbrace>
-     invoke_tcb (tcb_invocation.AsyncEndpointControl t aep)
+      and einvs and tcb_inv_wf (tcb_invocation.NotificationControl t ntfn)
+      and simple_sched_action and K (authorised_tcb_inv aag (tcb_invocation.NotificationControl t ntfn))\<rbrace>
+     invoke_tcb (tcb_invocation.NotificationControl t ntfn)
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
-  apply (case_tac aep, simp_all del: invoke_tcb.simps tcb_inv_wf.simps K_def)
-  apply (wp invoke_tcb_bind_aep_respects invoke_tcb_unbind_aep_respects)
+  apply (case_tac ntfn, simp_all del: invoke_tcb.simps tcb_inv_wf.simps K_def)
+  apply (wp invoke_tcb_bind_notification_respects invoke_tcb_unbind_notification_respects)
   done
   
 lemma invoke_tcb_respects:
@@ -371,18 +371,18 @@ lemma hoare_st_refl: "(\<And>st. \<lbrace>P st\<rbrace> f \<lbrace>Q st\<rbrace>
   apply force
   done
 
-lemma bind_async_endpoint_pas_refined[wp]:
-  "\<lbrace>pas_refined aag and K (\<forall>auth \<in> {Receive, Reset}. (pasObjectAbs aag t, auth, pasObjectAbs aag aepptr) \<in> pasPolicy aag)\<rbrace> bind_async_endpoint t aepptr \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
-  apply (clarsimp simp: bind_async_endpoint_def)
-  apply (wp set_async_ep_pas_refined | wpc | simp)+
+lemma bind_notification_pas_refined[wp]:
+  "\<lbrace>pas_refined aag and K (\<forall>auth \<in> {Receive, Reset}. (pasObjectAbs aag t, auth, pasObjectAbs aag ntfnptr) \<in> pasPolicy aag)\<rbrace> bind_notification t ntfnptr \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
+  apply (clarsimp simp: bind_notification_def)
+  apply (wp set_notification_pas_refined | wpc | simp)+
   done    
 
-lemma invoke_tcb_aep_control_pas_refined[wp]:
-  "\<lbrace>pas_refined aag and tcb_inv_wf (tcb_invocation.AsyncEndpointControl t aep) and einvs and simple_sched_action 
-     and K (authorised_tcb_inv aag (tcb_invocation.AsyncEndpointControl t aep))\<rbrace> 
-     invoke_tcb (tcb_invocation.AsyncEndpointControl t aep) 
+lemma invoke_tcb_ntfn_control_pas_refined[wp]:
+  "\<lbrace>pas_refined aag and tcb_inv_wf (tcb_invocation.NotificationControl t ntfn) and einvs and simple_sched_action 
+     and K (authorised_tcb_inv aag (tcb_invocation.NotificationControl t ntfn))\<rbrace> 
+     invoke_tcb (tcb_invocation.NotificationControl t ntfn) 
    \<lbrace>\<lambda>_. pas_refined aag\<rbrace>"
-  apply (case_tac aep, simp_all del: K_def)
+  apply (case_tac ntfn, simp_all del: K_def)
    apply (safe intro!: hoare_gen_asm)
    apply (wp | simp add: authorised_tcb_inv_def)+
   done
@@ -501,23 +501,23 @@ lemma decode_set_priority_authorised:
   apply (simp add: is_none_def)
   done
 
-lemma decode_unbind_aep_authorised:
+lemma decode_unbind_notification_authorised:
   "\<lbrace>K (is_subject aag t)\<rbrace>
-    decode_unbind_aep (cap.ThreadCap t)
+    decode_unbind_notification (cap.ThreadCap t)
    \<lbrace>\<lambda>rv s. authorised_tcb_inv aag rv\<rbrace>, -"
-  unfolding decode_unbind_aep_def authorised_tcb_inv_def
+  unfolding decode_unbind_notification_def authorised_tcb_inv_def
   apply clarsimp
-  apply (wp gba_wp, clarsimp)
+  apply (wp gbn_wp, clarsimp)
   done
 
-lemma decode_bind_aep_authorised:
+lemma decode_bind_notification_authorised:
   "\<lbrace>K (is_subject aag t \<and> (\<forall>x \<in> set excaps. is_subject aag (fst (snd x)))
                       \<and> (\<forall>x \<in> set excaps. pas_cap_cur_auth aag (fst x)) )\<rbrace>
-    decode_bind_aep (cap.ThreadCap t) excaps
+    decode_bind_notification (cap.ThreadCap t) excaps
    \<lbrace>\<lambda>rv s. authorised_tcb_inv aag rv\<rbrace>, -"
-  unfolding decode_bind_aep_def authorised_tcb_inv_def
+  unfolding decode_bind_notification_def authorised_tcb_inv_def
   apply clarsimp
-  apply (wp gba_wp get_aep_wp whenE_throwError_wp | wpc | simp add:)+
+  apply (wp gbn_wp get_ntfn_wp whenE_throwError_wp | wpc | simp add:)+
   apply (clarsimp dest!: hd_in_set)
   apply (drule_tac x="hd excaps"  in bspec, simp)+
   apply (auto simp: aag_cap_auth_def cap_auth_conferred_def cap_rights_to_auth_def AllowRecv_def)
@@ -532,8 +532,8 @@ lemma decode_tcb_invocation_authorised:
   apply (rule hoare_pre)
   apply wpc
   apply (wp decode_registers_authorised decode_tcb_configure_authorised decode_set_priority_authorised
-            decode_set_ipc_buffer_authorised decode_set_space_authorised decode_bind_aep_authorised 
-            decode_unbind_aep_authorised)
+            decode_set_ipc_buffer_authorised decode_set_space_authorised decode_bind_notification_authorised 
+            decode_unbind_notification_authorised)
   apply (auto iff: authorised_tcb_inv_def)
   done
 

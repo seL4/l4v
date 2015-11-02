@@ -498,7 +498,7 @@ seL4_TCBObject
 ,
 seL4_EndpointObject
 ,
-seL4_AsyncEndpointObject
+seL4_NotificationObject
 ,
 seL4_CapTableObject
 ,
@@ -808,9 +808,9 @@ TCBSuspend
 ,
 TCBResume
 ,
-TCBBindAEP
+TCBBindNotification
 ,
-TCBUnbindAEP
+TCBUnbindNotification
 ,
 CNodeRevoke
 ,

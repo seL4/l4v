@@ -723,7 +723,7 @@ lemma arch_recycle_cap_valid_pdpt[wp]:
                     pageBits_def pd_bits_def)
   done
 
-crunch valid_pdpt_objs[wp]: ep_cancel_badged_sends "valid_pdpt_objs"
+crunch valid_pdpt_objs[wp]: cancel_badged_sends "valid_pdpt_objs"
   (simp: crunch_simps filterM_mapM wp: crunch_wps ignore: filterM)
 
 lemma recycle_cap_valid_pdpt[wp]:
@@ -780,7 +780,7 @@ lemma invoke_domain_valid_pdpt_objs[wp]:
 crunch valid_pdpt_objs[wp]: set_extra_badge, transfer_caps_loop "valid_pdpt_objs"
   (wp: transfer_caps_loop_pres)
 
-crunch valid_pdpt_objs[wp]: send_ipc, send_async_ipc,
+crunch valid_pdpt_objs[wp]: send_ipc, send_signal,
     do_reply_transfer, invoke_irq_control, invoke_irq_handler "valid_pdpt_objs"
   (wp: crunch_wps simp: crunch_simps
          ignore: clearMemory const_on_failure set_object)
@@ -1562,7 +1562,7 @@ lemma perform_invocation_valid_pdpt[wp]:
       perform_invocation blocking call i
          \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
   apply (cases i, simp_all)
-  apply (wp send_async_ipc_interrupt_states | simp)+
+  apply (wp send_signal_interrupt_states | simp)+
   apply (clarsimp simp: invocation_duplicates_valid_def)
   apply (wp | wpc | simp)+
   apply (simp add: arch_perform_invocation_def)

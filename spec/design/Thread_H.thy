@@ -62,7 +62,7 @@ defs isBlocked_def:
               Inactive \<Rightarrow>   True
             | BlockedOnReceive _ _ \<Rightarrow>   True
             | BlockedOnSend _ _ _ _ \<Rightarrow>   True
-            | BlockedOnAsyncEvent _ \<Rightarrow>   True
+            | BlockedOnNotification _ \<Rightarrow>   True
             | BlockedOnReply \<Rightarrow>   True
             | _ \<Rightarrow>   False
             )
@@ -80,7 +80,7 @@ od)"
 
 defs suspend_def:
 "suspend target\<equiv> (do
-    ipcCancel target;
+    cancelIPC target;
     setThreadState Inactive target;
     tcbSchedDequeue target
 od)"
@@ -89,7 +89,7 @@ defs restart_def:
 "restart target\<equiv> (do
     blocked \<leftarrow> isBlocked target;
     when blocked $ (do
-        ipcCancel target;
+        cancelIPC target;
         setupReplyMaster target;
         setThreadState Restart target;
         tcbSchedEnqueue target;
@@ -253,11 +253,11 @@ defs setThreadState_def:
             rescheduleRequired
 od)"
 
-defs getBoundAEP_def:
-"getBoundAEP \<equiv> threadGet tcbBoundAEP"
+defs getBoundNotification_def:
+"getBoundNotification \<equiv> threadGet tcbBoundNotification"
 
-defs setBoundAEP_def:
-"setBoundAEP aepptr tptr\<equiv> threadSet (\<lambda> t. t \<lparr> tcbBoundAEP := aepptr \<rparr>) tptr"
+defs setBoundNotification_def:
+"setBoundNotification ntfnPtr tptr\<equiv> threadSet (\<lambda> t. t \<lparr> tcbBoundNotification := ntfnPtr \<rparr>) tptr"
 
 defs prioToL1Index_def:
 "prioToL1Index prio \<equiv> fromIntegral $ prio `~shiftR~` wordRadix"

@@ -53,7 +53,7 @@ where
          if x = 0  then Some UntypedType
     else if x = 1  then Some TcbType
     else if x = 2  then Some EndpointType
-    else if x = 3  then Some AsyncEndpointType
+    else if x = 3  then Some NotificationType
     else if x = 4  then Some CNodeType
     else if x = 5  then Some (FrameType 12)
     else if x = 6  then Some (FrameType 16)
@@ -295,8 +295,8 @@ definition
                    (transform_intent_tcb_set_space args)
     | TCBSuspend \<Rightarrow> Some (TcbIntent TcbSuspendIntent)
     | TCBResume \<Rightarrow> Some (TcbIntent TcbResumeIntent)
-    | TCBBindAEP \<Rightarrow> Some (TcbIntent TcbBindAEPIntent)
-    | TCBUnbindAEP \<Rightarrow> Some (TcbIntent TcbUnbindAEPIntent)
+    | TCBBindNotification \<Rightarrow> Some (TcbIntent TcbBindNTFNIntent)
+    | TCBUnbindNotification \<Rightarrow> Some (TcbIntent TcbUnbindNTFNIntent)
     | CNodeRevoke \<Rightarrow>
           map_option CNodeIntent
                    (transform_cnode_index_and_depth CNodeRevokeIntent args)
@@ -380,8 +380,8 @@ lemma transform_tcb_intent_invocation:
    ((label = TCBSetSpace) = (ti = (TcbSetSpaceIntent (args ! 0) (args ! 1) (args ! 2)) \<and> length args \<ge> 3)) \<and>
    ((label = TCBSuspend) = (ti = TcbSuspendIntent)) \<and>
    ((label = TCBResume) = (ti = TcbResumeIntent)) \<and>
-   ((label = TCBBindAEP) = (ti = TcbBindAEPIntent)) \<and>
-   ((label = TCBUnbindAEP) = (ti = TcbUnbindAEPIntent))
+   ((label = TCBBindNotification) = (ti = TcbBindNTFNIntent)) \<and>
+   ((label = TCBUnbindNotification) = (ti = TcbUnbindNTFNIntent))
    ) \<and>
    (
     label \<noteq> InvalidInvocation \<and>
@@ -504,8 +504,8 @@ lemma transform_intent_isnot_TcbIntent:
           (label = TCBSetSpace \<longrightarrow> length args < 3) \<and>
           (label \<noteq> TCBSuspend) \<and>
           (label \<noteq> TCBResume) \<and>
-          (label \<noteq> TCBBindAEP) \<and>
-          (label \<noteq> TCBUnbindAEP))"
+          (label \<noteq> TCBBindNotification) \<and>
+          (label \<noteq> TCBUnbindNotification))"
   apply(rule iffI)
    apply(erule contrapos_np)
    apply(clarsimp simp: transform_intent_def)
@@ -586,8 +586,8 @@ where
         (free_range_of_untyped idx size_bits ptr)
     | Structures_A.EndpointCap ptr badge cap_rights_ \<Rightarrow>
         Types_D.EndpointCap ptr badge cap_rights_
-    | Structures_A.AsyncEndpointCap ptr badge cap_rights_ \<Rightarrow>
-        Types_D.AsyncEndpointCap ptr badge cap_rights_
+    | Structures_A.NotificationCap ptr badge cap_rights_ \<Rightarrow>
+        Types_D.NotificationCap ptr badge cap_rights_
     | Structures_A.ReplyCap ptr is_master \<Rightarrow>
         if is_master then Types_D.MasterReplyCap ptr else Types_D.ReplyCap ptr
     | Structures_A.CNodeCap ptr size_bits guard \<Rightarrow>
@@ -684,8 +684,8 @@ where
               (sender_badge payload) (sender_is_call payload)
               (sender_can_grant payload) False
 
-      | Structures_A.BlockedOnAsyncEvent ptr \<Rightarrow>
-          PendingAsyncRecvCap ptr
+      | Structures_A.BlockedOnNotification ptr \<Rightarrow>
+          PendingNtfnRecvCap ptr
 
       | Structures_A.Restart \<Rightarrow> RestartCap
 
@@ -694,14 +694,14 @@ where
       | _ \<Rightarrow> Types_D.NullCap
    "
 
-(* Create a "Bound AEP" cap based on the given thread's
+(* Create a "Bound NTFN" cap based on the given thread's
  * current state. *)
 
 definition
-  infer_tcb_bound_aep :: "obj_ref option \<Rightarrow> cdl_cap"
+  infer_tcb_bound_notification :: "obj_ref option \<Rightarrow> cdl_cap"
 where
-  "infer_tcb_bound_aep a \<equiv> case a of
-      Some aep \<Rightarrow> BoundAsyncCap aep
+  "infer_tcb_bound_notification a \<equiv> case a of
+      Some ntfn \<Rightarrow> BoundNotificationCap ntfn
     | _ \<Rightarrow> Types_D.NullCap"
 
 definition
@@ -782,7 +782,7 @@ where
                    tcb_caller_slot \<mapsto> (transform_cap $ tcb_caller tcb),
                    tcb_ipcbuffer_slot \<mapsto> (transform_cap $ tcb_ipcframe tcb),
                    tcb_pending_op_slot \<mapsto> (infer_tcb_pending_op ptr (tcb_state tcb)),
-                   tcb_boundaep_slot \<mapsto> (infer_tcb_bound_aep (tcb_bound_aep tcb))
+                   tcb_boundntfn_slot \<mapsto> (infer_tcb_bound_notification (tcb_bound_notification tcb))
                  ],
 
                  cdl_tcb_fault_endpoint = (of_bl (tcb_fault_handler tcb)),
@@ -885,7 +885,7 @@ definition
                 \<rparr>
          | Structures_A.TCB tcb \<Rightarrow> case opt_etcb of Some etcb \<Rightarrow> transform_tcb ms ref tcb etcb | None \<Rightarrow> undefined
          | Structures_A.Endpoint _ \<Rightarrow> Types_D.Endpoint
-         | Structures_A.AsyncEndpoint _ \<Rightarrow> Types_D.AsyncEndpoint
+         | Structures_A.Notification _ \<Rightarrow> Types_D.Notification
          | Structures_A.ArchObj (ARM_Structs_A.ASIDPool ap) \<Rightarrow>
                 Types_D.AsidPool \<lparr>cdl_asid_pool_caps = (transform_asid_pool_contents ap)\<rparr>
          | Structures_A.ArchObj (ARM_Structs_A.PageTable ptx) \<Rightarrow>

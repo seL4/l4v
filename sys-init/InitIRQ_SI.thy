@@ -18,29 +18,29 @@ begin
 
 lemma seL4_IRQHandler_SetEndpoint_irq_initialised_helper_sep:
   "\<lbrace>\<guillemotleft>irq_empty spec t irq \<and>*
-     si_cap_at t orig_caps spec aep_id \<and>*
+     si_cap_at t orig_caps spec ntfn_id \<and>*
      si_irq_cap_at irq_caps spec irq \<and>*
      si_objects \<and>* R\<guillemotright> and
    K(well_formed spec \<and>
-     cdl_objects spec aep_id = Some aep \<and>
-     is_aep aep \<and>
+     cdl_objects spec ntfn_id = Some ntfn \<and>
+     is_ntfn ntfn \<and>
      irq \<in> bound_irqs spec \<and>
 
-     opt_cap (cdl_irq_node spec irq, 0) spec = Some aep_cap \<and>
-     aep_id = cap_object aep_cap \<and>
+     opt_cap (cdl_irq_node spec irq, 0) spec = Some ntfn_cap \<and>
+     ntfn_id = cap_object ntfn_cap \<and>
 
      t (cdl_irq_node spec irq) = Some kernel_irq_id \<and>
-     t aep_id = Some kernel_aep_id \<and>
+     t ntfn_id = Some kernel_ntfn_id \<and>
      cdl_objects spec (cdl_irq_node spec irq) = Some spec_irq \<and>
 
      irq_caps irq = Some irq_handler_cptr \<and>
-     orig_caps aep_id = Some endpoint_cptr \<and>
+     orig_caps ntfn_id = Some endpoint_cptr \<and>
      irq_handler_cptr < 2 ^ si_cnode_size \<and>
      endpoint_cptr < 2 ^ si_cnode_size)\<rbrace>
      seL4_IRQHandler_SetEndpoint irq_handler_cptr endpoint_cptr
    \<lbrace>\<lambda>_.
     \<guillemotleft>irq_initialised spec t irq \<and>*
-     si_cap_at t orig_caps spec aep_id \<and>*
+     si_cap_at t orig_caps spec ntfn_id \<and>*
      si_irq_cap_at irq_caps spec irq \<and>*
      si_objects \<and>* R\<guillemotright>\<rbrace>"
   apply (rule hoare_gen_asm, clarsimp)
@@ -52,7 +52,7 @@ lemma seL4_IRQHandler_SetEndpoint_irq_initialised_helper_sep:
                         sep_conj_assoc sep_conj_exists)
   apply (frule (1) well_formed_irq_is_irq_node)
   apply (frule (1) well_formed_size_irq_node)
-  apply (frule (2) well_formed_irq_aep_cap)
+  apply (frule (2) well_formed_irq_ntfn_cap)
   apply (rule hoare_chain)
     apply (wp seL4_IRQHandler_SetEndpoint_wp [where
               root_tcb = root_tcb
@@ -61,10 +61,10 @@ lemma seL4_IRQHandler_SetEndpoint_irq_initialised_helper_sep:
            and root_size = si_cnode_size
            and irq = irq
            and irq_handler_slot = "unat (the (irq_caps irq))"
-           and endpoint_slot    = "unat (the (orig_caps (cap_object aep_cap)))"
+           and endpoint_slot    = "unat (the (orig_caps (cap_object ntfn_cap)))"
            and irq_id = "the (t (cdl_irq_node spec irq))"
            and old_cap = NullCap
-           and endpoint_cap = "AsyncEndpointCap (the (t (cap_object aep_cap))) 0 {AllowRead, AllowWrite}"
+           and endpoint_cap = "NotificationCap (the (t (cap_object ntfn_cap))) 0 {AllowRead, AllowWrite}"
            and R="object_empty_slots_initialised spec t (cdl_irq_node spec irq) \<and>*
                   object_fields_empty spec t     (cdl_irq_node spec irq) \<and>*
                  (si_cnode_id, unat seL4_CapInitThreadCNode) \<mapsto>c si_cnode_cap \<and>*
@@ -85,7 +85,7 @@ lemma seL4_IRQHandler_SetEndpoint_irq_initialised_helper_sep:
    apply (simp add: object_type_object_at)
   apply (simp add: object_fields_initialised_def object_initialised_general_def)
   apply (sep_drule sep_map_s_sep_map_c [where obj_id = kernel_irq_id
-         and cap = "AsyncEndpointCap kernel_aep_id 0 {AllowRead, AllowWrite}"
+         and cap = "NotificationCap kernel_ntfn_id 0 {AllowRead, AllowWrite}"
          and obj = "spec2s t spec_irq"])
    apply simp
    apply (frule (1) object_slots_opt_capI)
@@ -141,9 +141,9 @@ lemma seL4_IRQHandler_SetEndpoint_irq_initialised_sep:
               and x = "cap_object (the (opt_cap (cdl_irq_node spec irq, 0) spec))"
               and xs = "{obj_id. real_object_at obj_id spec}"]], simp+)
        apply (wp sep_wp: seL4_IRQHandler_SetEndpoint_irq_initialised_helper_sep [where t=t and spec=spec and irq=irq
-                and aep_cap = "the (opt_cap (cdl_irq_node spec irq, 0) spec)"
+                and ntfn_cap = "the (opt_cap (cdl_irq_node spec irq, 0) spec)"
                 and kernel_irq_id = "the (t (cdl_irq_node spec irq))"
-                and kernel_aep_id = "the (t (cap_object (the (opt_cap (cdl_irq_node spec irq, 0) spec))))"], simp)
+                and kernel_ntfn_id = "the (t (cap_object (the (opt_cap (cdl_irq_node spec irq, 0) spec))))"], simp)
       apply (rule conjI)
        apply sep_solve
       apply (fastforce simp: opt_cap_def irq_empty_def irq_initialised_general_def

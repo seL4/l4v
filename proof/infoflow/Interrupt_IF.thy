@@ -35,8 +35,8 @@ lemma invoke_irq_handler_reads_respects_f:
    apply (elim exE conjE, rename_tac cap')
    apply (drule_tac cap=cap' in silc_invD)
      apply assumption
-    apply(fastforce simp: intra_label_cap_def cap_points_to_label_def interrupt_derived_aep_cap_identical_refs)
-   apply(fastforce simp: slots_holding_overlapping_caps_def2 ctes_wp_at_def interrupt_derived_aep_cap_identical_refs)
+    apply(fastforce simp: intra_label_cap_def cap_points_to_label_def interrupt_derived_ntfn_cap_identical_refs)
+   apply(fastforce simp: slots_holding_overlapping_caps_def2 ctes_wp_at_def interrupt_derived_ntfn_cap_identical_refs)
   apply(clarsimp)
   apply(wp reads_respects_f[OF get_irq_slot_reads_respects, where Q="\<top>" and st=st] cap_delete_one_reads_respects_f | simp add: setInterruptMode_def)+
   apply(auto simp: authorised_irq_hdl_inv_def)[1]

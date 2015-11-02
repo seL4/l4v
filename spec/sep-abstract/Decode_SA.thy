@@ -34,9 +34,9 @@ definition
 where
   "decode_invocation label args cap_index slot cap excaps \<equiv> 
   case cap of
-    AsyncEndpointCap ptr badge rights \<Rightarrow>
+    NotificationCap ptr badge rights \<Rightarrow>
       if AllowSend \<in> rights then
-        returnOk $ InvokeAsyncEndpoint ptr badge
+        returnOk $ InvokeNotification ptr badge
       else throwError $ InvalidCapability 0
   | _ \<Rightarrow> 
       throwError $ InvalidCapability 0"

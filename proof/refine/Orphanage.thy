@@ -178,7 +178,7 @@ crunch no_orphans [wp]: getCurThread "no_orphans"
 
 crunch no_orphans [wp]: threadGet "no_orphans"
 
-crunch no_orphans [wp]: getAsyncEP "no_orphans"
+crunch no_orphans [wp]: getNotification "no_orphans"
 
 lemma no_orphans_ksReadyQueuesL1Bitmap_update[simp]:
   "no_orphans (s\<lparr> ksReadyQueuesL1Bitmap := x \<rparr>) = no_orphans s"
@@ -866,12 +866,12 @@ lemma schedule_no_orphans [wp]:
   apply (case_tac "tcbState k", (clarsimp simp: isRunning_def isRestart_def)+)
   done
 
-lemma setAsyncEP_no_orphans [wp]:
+lemma setNotification_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<rbrace>
-   setAsyncEP p aep
+   setNotification p ntfn
    \<lbrace> \<lambda>_ s. no_orphans s \<rbrace>"
   apply (rule no_orphans_lift)
-      apply (wp | clarsimp simp: setAsyncEP_def updateObject_default_def)+
+      apply (wp | clarsimp simp: setNotification_def updateObject_default_def)+
   done
 
 crunch no_orphans [wp]: doMachineOp "no_orphans"
@@ -879,7 +879,7 @@ crunch no_orphans [wp]: doMachineOp "no_orphans"
 
 crunch no_orphans [wp]: setMessageInfo "no_orphans"
 
-crunch no_orphans [wp]: completeAsyncIPC "no_orphans"
+crunch no_orphans [wp]: completeSignal "no_orphans"
 (simp: crunch_simps wp: crunch_wps)
 
 lemma possibleSwitchTo_almost_no_orphans [wp]:
@@ -1187,7 +1187,7 @@ lemma createObject_no_orphans:
           is_active_thread_state_def makeObject_tcb
           projectKO_opt_tcb isRunning_def isRestart_def
           APIType_capBits_def objBits_simps split:option.splits)+)[1]
-         apply ((wp createObjects'_wp_subst[where c = "makeObject::async_endpoint"]
+         apply ((wp createObjects'_wp_subst[where c = "makeObject::Structures_H.notification"]
                   createObjects_no_orphans[where sz = sz] | 
           clarsimp simp: projectKO_opt_tcb cte_wp_at_ctes_of projectKO_opt_ep
           is_active_thread_state_def makeObject_tcb
@@ -1414,11 +1414,11 @@ lemma mapM_x_match:
   "\<lbrace>I and V xs\<rbrace> mapM_x m xs \<lbrace>\<lambda>rv. Q\<rbrace> \<Longrightarrow> \<lbrace>I and V xs\<rbrace> mapM_x m xs \<lbrace>\<lambda>rv. Q\<rbrace>"
   by assumption
 
-lemma epCancelAll_no_orphans [wp]:
+lemma cancelAllIPC_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> valid_queues' s \<and> valid_objs' s \<rbrace>
-    epCancelAll epptr
+    cancelAllIPC epptr
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
-  unfolding epCancelAll_def
+  unfolding cancelAllIPC_def
   apply (wp sts_valid_objs' set_ep_valid_objs' sts_st_tcb'
             hoare_vcg_const_Ball_lift tcbSchedEnqueue_almost_no_orphans
              | wpc
@@ -1434,12 +1434,12 @@ lemma epCancelAll_no_orphans [wp]:
   apply (wp get_ep_sp' | clarsimp)+
   done
 
-lemma aepCancelAll_no_orphans [wp]:
+lemma cancelAllSignals_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> valid_queues' s \<and> valid_objs' s \<rbrace>
-    aepCancelAll aep
+    cancelAllSignals ntfn
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
-  unfolding aepCancelAll_def
-  apply (wp sts_valid_objs' set_aep_valid_objs' sts_st_tcb'
+  unfolding cancelAllSignals_def
+  apply (wp sts_valid_objs' set_ntfn_valid_objs' sts_st_tcb'
             hoare_vcg_const_Ball_lift tcbSchedEnqueue_almost_no_orphans
              | wpc
              | clarsimp simp: valid_tcb_state'_def)+
@@ -1448,34 +1448,34 @@ lemma aepCancelAll_no_orphans [wp]:
                 and I="no_orphans and (\<lambda>s. \<forall>t\<in>set list. tcb_at' t s)"
                 in mapM_x_inv_wp2)
     apply simp
-   apply (wp sts_valid_objs' set_aep_valid_objs' sts_st_tcb'
+   apply (wp sts_valid_objs' set_ntfn_valid_objs' sts_st_tcb'
             hoare_vcg_const_Ball_lift tcbSchedEnqueue_almost_no_orphans|
           clarsimp simp: valid_tcb_state'_def)+
-  apply (rule_tac Q="\<lambda>rv. no_orphans and valid_objs' and valid_queues' and ko_at' rv aep"
+  apply (rule_tac Q="\<lambda>rv. no_orphans and valid_objs' and valid_queues' and ko_at' rv ntfn"
                  in hoare_post_imp)
-   apply (fastforce simp: valid_obj'_def valid_aep'_def obj_at'_def projectKOs)
-  apply (wp get_aep_sp' | clarsimp)+
+   apply (fastforce simp: valid_obj'_def valid_ntfn'_def obj_at'_def projectKOs)
+  apply (wp get_ntfn_sp' | clarsimp)+
   done
 
-crunch no_orphans[wp]: setBoundAEP "no_orphans"
+crunch no_orphans[wp]: setBoundNotification "no_orphans"
 
-lemma unbindAsyncEndpoint_no_orphans[wp]:
+lemma unbindNotification_no_orphans[wp]:
   "\<lbrace>\<lambda>s. no_orphans s\<rbrace>
-    unbindAsyncEndpoint t 
+    unbindNotification t 
    \<lbrace> \<lambda>rv s. no_orphans s\<rbrace>"
-  unfolding unbindAsyncEndpoint_def
-  apply (rule hoare_seq_ext[OF _ gba_sp'])
-  apply (case_tac aepptr, simp_all, wp, simp)
-  apply (rule hoare_seq_ext[OF _ get_aep_sp'])
+  unfolding unbindNotification_def
+  apply (rule hoare_seq_ext[OF _ gbn_sp'])
+  apply (case_tac ntfnPtr, simp_all, wp, simp)
+  apply (rule hoare_seq_ext[OF _ get_ntfn_sp'])
   apply (wp | simp)+
   done
 
-lemma unbindMaybeAEP_no_orphans[wp]:
+lemma unbindMaybeNotification_no_orphans[wp]:
   "\<lbrace>\<lambda>s. no_orphans s\<rbrace>
-    unbindMaybeAEP a 
+    unbindMaybeNotification a 
    \<lbrace> \<lambda>rv s. no_orphans s\<rbrace>"
-  unfolding unbindMaybeAEP_def
-  by (wp getAsyncEP_wp | simp | wpc)+
+  unfolding unbindMaybeNotification_def
+  by (wp getNotification_wp | simp | wpc)+
 
 lemma finaliseCapTrue_standin_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> valid_queues' s \<and> valid_objs' s \<rbrace>
@@ -1496,21 +1496,21 @@ lemma cteDeleteOne_no_orphans [wp]:
 
 crunch valid_objs' [wp]: getThreadReplySlot "valid_objs'"
 
-lemma asyncIPCCancel_no_orphans [wp]:
+lemma cancelSignal_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> valid_queues' s \<and> valid_objs' s \<rbrace>
-   asyncIPCCancel t aep
+   cancelSignal t ntfn
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
-  unfolding asyncIPCCancel_def Let_def
+  unfolding cancelSignal_def Let_def
   apply (rule hoare_pre)
    apply (wp hoare_drop_imps setThreadState_not_active_no_orphans | wpc
           | clarsimp simp: is_active_thread_state_def isRestart_def isRunning_def)+
   done
 
-lemma ipcCancel_no_orphans [wp]:
+lemma cancelIPC_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> valid_queues' s \<and> valid_objs' s \<rbrace>
-   ipcCancel t
+   cancelIPC t
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
-  unfolding ipcCancel_def Let_def
+  unfolding cancelIPC_def Let_def
   apply (rule hoare_pre)
    apply (wp setThreadState_not_active_no_orphans hoare_drop_imps weak_if_wp
              threadSet_valid_queues' threadSet_valid_objs' threadSet_no_orphans | wpc
@@ -1528,13 +1528,13 @@ lemma asUser_almost_no_orphans:
 crunch almost_no_orphans[wp]: asUser "almost_no_orphans t"
   (simp: almost_no_orphans_disj all_queued_tcb_ptrs_def wp: hoare_vcg_all_lift hoare_vcg_disj_lift crunch_wps)
 
-lemma sendAsyncIPC_no_orphans [wp]:
+lemma sendSignal_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> valid_queues' s \<and> valid_objs' s \<and> sch_act_wf (ksSchedulerAction s) s\<rbrace>
-   sendAsyncIPC aepptr badge
+   sendSignal ntfnptr badge
    \<lbrace> \<lambda>_ s. no_orphans s \<rbrace>"
-  unfolding sendAsyncIPC_def
+  unfolding sendSignal_def
   apply (rule hoare_pre)
-   apply (wp  sts_st_tcb' gts_wp' getAsyncEP_wp asUser_almost_no_orphans | wpc | clarsimp)+
+   apply (wp  sts_st_tcb' gts_wp' getNotification_wp asUser_almost_no_orphans | wpc | clarsimp)+
   done
 
 lemma handleInterrupt_no_orphans [wp]:
@@ -1961,11 +1961,11 @@ lemma cteRevoke_no_orphans [wp]:
       apply auto
   done
 
-lemma epCancelBadgedSends_no_orphans [wp]:
+lemma cancelBadgedSends_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> valid_queues' s \<rbrace>
-   epCancelBadgedSends epptr badge
+   cancelBadgedSends epptr badge
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
-  unfolding epCancelBadgedSends_def
+  unfolding cancelBadgedSends_def
   apply (rule hoare_pre)
    apply (wp hoare_drop_imps | wpc | clarsimp)+
       apply (wp filterM_preserved tcbSchedEnqueue_almost_no_orphans gts_wp'
@@ -2037,11 +2037,11 @@ lemma doReplyTransfer_no_orphans[wp]:
   apply (clarsimp simp:invs'_def valid_state'_def valid_pspace'_def)
   done
 
-lemma asyncIPCCancel_valid_queues' [wp]:
+lemma cancelSignal_valid_queues' [wp]:
   "\<lbrace> \<lambda>s. valid_queues' s \<and> valid_objs' s \<rbrace>
-   asyncIPCCancel t aep
+   cancelSignal t ntfn
    \<lbrace> \<lambda>rv s. valid_queues' s \<rbrace>"
-  unfolding asyncIPCCancel_def Let_def
+  unfolding cancelSignal_def Let_def
   apply (rule hoare_pre)
    apply (wp hoare_drop_imps | wpc | clarsimp)+
   done
@@ -2143,9 +2143,9 @@ lemma tc_no_orphans:
   apply (auto simp: isCap_simps dest!: isValidVTableRootD)
   done
 
-lemma bindAsyncEndpoint_no_orphans[wp]:
-  "\<lbrace>no_orphans\<rbrace> bindAsyncEndpoint t aep \<lbrace>\<lambda>_. no_orphans\<rbrace>"
-  unfolding bindAsyncEndpoint_def
+lemma bindNotification_no_orphans[wp]:
+  "\<lbrace>no_orphans\<rbrace> bindNotification t ntfn \<lbrace>\<lambda>_. no_orphans\<rbrace>"
+  unfolding bindNotification_def
   by wp
 
 lemma invokeTCB_no_orphans [wp]:
@@ -2379,11 +2379,11 @@ lemma handleInvocation_no_orphans [wp]:
   by (auto simp: ct_in_state'_def pred_tcb_at'_def obj_at'_def invs'_def
                     cur_tcb'_def valid_state'_def valid_idle'_def)
 
-lemma receiveAsyncIPC_no_orphans [wp]:
+lemma receiveSignal_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<and> valid_queues' s \<rbrace>
-   receiveAsyncIPC thread cap isBlocking
+   receiveSignal thread cap isBlocking
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
-  unfolding receiveAsyncIPC_def
+  unfolding receiveSignal_def
   apply (wp hoare_drop_imps setThreadState_not_active_no_orphans | wpc
          | clarsimp simp: is_active_thread_state_def isRunning_def isRestart_def
                           doNBWaitFailedTransfer_def)+
@@ -2423,7 +2423,7 @@ notes if_cong[cong] shows
    handleWait isBlocking
    \<lbrace> \<lambda>rv . no_orphans \<rbrace>"
   unfolding handleWait_def
-  apply (clarsimp simp: whenE_def split del: split_if | wp hoare_drop_imps getAsyncEP_wp | wpc )+ (*takes a while*)
+  apply (clarsimp simp: whenE_def split del: split_if | wp hoare_drop_imps getNotification_wp | wpc )+ (*takes a while*)
      apply (rule_tac Q'="\<lambda>rv s. no_orphans s \<and> invs' s" in hoare_post_imp_R)
       apply (wp, fastforce)
     apply (rule_tac Q="\<lambda>rv s. no_orphans s \<and> invs' s" in hoare_post_imp)

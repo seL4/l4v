@@ -179,11 +179,11 @@ where
  * endpoint.
  *)
 definition
-  get_waiting_async_recv_threads :: "cdl_object_id \<Rightarrow> cdl_state \<Rightarrow> cdl_object_id set"
+  get_waiting_ntfn_recv_threads :: "cdl_object_id \<Rightarrow> cdl_state \<Rightarrow> cdl_object_id set"
 where
-  "get_waiting_async_recv_threads target state \<equiv>
+  "get_waiting_ntfn_recv_threads target state \<equiv>
      {x. \<exists>a. (cdl_objects state) x = Some (Tcb a) \<and>
-         (((cdl_tcb_caps a) tcb_pending_op_slot) = Some (PendingAsyncRecvCap target)) }"
+         (((cdl_tcb_caps a) tcb_pending_op_slot) = Some (PendingNtfnRecvCap target)) }"
 
 (* Get the set of threads waiting to receive on the given sync endpoint. *)
 definition
@@ -205,16 +205,16 @@ where
          (((cdl_tcb_caps a) tcb_pending_op_slot) = Some (PendingSyncSendCap target b call grant rights)) }"
 
 (*
- * Get the set of threads which are bound to the given aep, but are
+ * Get the set of threads which are bound to the given ntfn, but are
  * also waiting on sync IPC
  *)
 definition
-  get_waiting_sync_bound_aep_threads :: "cdl_object_id \<Rightarrow> cdl_state \<Rightarrow> cdl_object_id set"
+  get_waiting_sync_bound_ntfn_threads :: "cdl_object_id \<Rightarrow> cdl_state \<Rightarrow> cdl_object_id set"
 where
-  "get_waiting_sync_bound_aep_threads aep_id state \<equiv>
+  "get_waiting_sync_bound_ntfn_threads ntfn_id state \<equiv>
      {x. \<exists>a ep_id. (cdl_objects state) x = Some (Tcb a) \<and>
          (((cdl_tcb_caps a) tcb_pending_op_slot) = Some (PendingSyncRecvCap ep_id False)) \<and>
-         (((cdl_tcb_caps a) tcb_boundaep_slot) = Some (BoundAsyncCap aep_id))}"
+         (((cdl_tcb_caps a) tcb_boundntfn_slot) = Some (BoundNotificationCap ntfn_id))}"
 
 (*
  * Mark a thread blocked on IPC.
@@ -291,11 +291,11 @@ where
         \<sqinter> set_cap (receiver_id,tcb_pending_op_slot) RestartCap )
     od"
 
-(* Wake-up a thread waiting on an async endpoint. *)
+(* Wake-up a thread waiting on an notification. *)
 definition
-  do_async_transfer :: "cdl_object_id \<Rightarrow> unit k_monad"
+  do_notification_transfer :: "cdl_object_id \<Rightarrow> unit k_monad"
 where
-  "do_async_transfer receiver_id \<equiv> do
+  "do_notification_transfer receiver_id \<equiv> do
       set_cap (receiver_id,tcb_pending_op_slot) RunningCap;
       corrupt_tcb_intent receiver_id
    od"
@@ -309,29 +309,29 @@ where
 
 (* FIXME names *)
 definition
-  send_async_bound :: "cdl_object_id \<Rightarrow> unit k_monad"
+  send_signal_bound :: "cdl_object_id \<Rightarrow> unit k_monad"
 where
-  "send_async_bound aep_id \<equiv> do
-      bound_tcbs \<leftarrow> gets $ get_waiting_sync_bound_aep_threads aep_id;
+  "send_signal_bound ntfn_id \<equiv> do
+      bound_tcbs \<leftarrow> gets $ get_waiting_sync_bound_ntfn_threads ntfn_id;
       if (bound_tcbs \<noteq> {}) then do
           t \<leftarrow> select bound_tcbs;
           set_cap (t, tcb_pending_op_slot) NullCap;
-          do_async_transfer t
+          do_notification_transfer t
         od
       else return ()
     od"
 
 definition
-  send_async_ipc :: "cdl_object_id \<Rightarrow> unit k_monad"
+  send_signal :: "cdl_object_id \<Rightarrow> unit k_monad"
 where
-  "send_async_ipc ep_id \<equiv>
-    (do waiters \<leftarrow> gets $ get_waiting_async_recv_threads ep_id;
+  "send_signal ep_id \<equiv>
+    (do waiters \<leftarrow> gets $ get_waiting_ntfn_recv_threads ep_id;
           t \<leftarrow> option_select waiters;
           case t of
               None \<Rightarrow> return ()
-            | Some receiver \<Rightarrow> do_async_transfer receiver
+            | Some receiver \<Rightarrow> do_notification_transfer receiver
      od)
-            \<sqinter> send_async_bound ep_id"
+            \<sqinter> send_signal_bound ep_id"
 
 (*
  * Receive an async IPC.
@@ -339,11 +339,11 @@ where
  * We will either receive data or block waiting.
  *)
 definition
-  recv_async_ipc :: "cdl_object_id \<Rightarrow> cdl_cap \<Rightarrow> unit k_monad"
+  recv_signal :: "cdl_object_id \<Rightarrow> cdl_cap \<Rightarrow> unit k_monad"
 where
-  "recv_async_ipc tcb_id_receiver ep_cap  \<equiv> do
+  "recv_signal tcb_id_receiver ep_cap  \<equiv> do
      ep_id \<leftarrow> return $ cap_object ep_cap; 
-     block_thread_on_ipc tcb_id_receiver (PendingAsyncRecvCap ep_id) \<sqinter> corrupt_tcb_intent tcb_id_receiver
+     block_thread_on_ipc tcb_id_receiver (PendingNtfnRecvCap ep_id) \<sqinter> corrupt_tcb_intent tcb_id_receiver
    od"
 
 (*
@@ -416,11 +416,11 @@ where
     od"
 
 definition
-  invoke_async :: "cdl_async_invocation \<Rightarrow> unit k_monad"
+  invoke_notification :: "cdl_notification_invocation \<Rightarrow> unit k_monad"
 where
-  "invoke_async params \<equiv> case params of
-    AsyncMessage badge ep_id \<Rightarrow>
-      send_async_ipc ep_id"
+  "invoke_notification params \<equiv> case params of
+    Signal badge ep_id \<Rightarrow>
+      send_signal ep_id"
 
 definition
   invoke_reply :: "cdl_reply_invocation \<Rightarrow> unit k_monad"

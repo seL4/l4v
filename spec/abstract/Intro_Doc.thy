@@ -254,7 +254,7 @@ from an existing capability.  The newly created capability may have fewer rights
 \subsubsection{IPC Endpoints}
 
 The seL4 microkernel supports both \emph{synchronous} (\obj{EP}) and
-\emph{asynchronous} (\obj{AsyncEP}) IPC endpoints, used to facilitate
+\emph{asynchronous} (\obj{NTFN}) IPC endpoints, used to facilitate
 interprocess communication between threads. Capabilities to endpoints
 can be restricted to be send-only or receive-only. They can also
 specify whether capabilities can be passed through the endpoint.
@@ -266,7 +266,7 @@ has been received; similarly, a waiting thread will be blocked until a
 message is available (but see \meth{NBSend} above).
 
 When only notification of an event is required together with a very
-limited message, asynchronous endpoints can be used. Asynchronous
+limited message, notification objects can be used. Asynchronous
 endpoints have a single invocation:
 %
 \begin{description}
@@ -278,8 +278,8 @@ a receiver has received the notification.
 \end{description}
 %
 Additionally, the \meth{Wait} system call may be used with an
-asynchronous endpoint, allowing the calling thread to retrieve all set
-bits from the asynchronous endpoint. If no \meth{Notify} operations have
+notification object, allowing the calling thread to retrieve all set
+bits from the notification object. If no \meth{Notify} operations have
 taken place since the last \meth{Wait} call, the calling thread will
 block until the next \meth{Notify} takes place.
 
@@ -487,14 +487,14 @@ driver to access an interrupt source. \obj{IRQControl} has one method:
 An \obj{IRQHandler} object is used by driver application to handle
 interrupts for the device it manages. It has three methods:
 \begin{description}
-\item[\meth{SetEndpoint}] specifies the \obj{AsyncEP} that a
+\item[\meth{SetEndpoint}] specifies the \obj{NTFN} that a
   \meth{Notify} should be sent to when an interrupt occurs. The driver
   application usually \meth{Wait}-s on this endpoint for interrupts to
   process.
 \item[\meth{Ack}] informs the kernel that the userspace driver has finished
   processing the interrupt and the microkernel can send further pending
   or new interrupts to the application.
-\item[\meth{Clear}] de-registers the \obj{AsyncEP} from the
+\item[\meth{Clear}] de-registers the \obj{NTFN} from the
   \obj{IRQHandler} object.
 \end{description}
 

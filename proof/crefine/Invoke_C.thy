@@ -578,7 +578,7 @@ lemma hasRecycleRights_spec:
                    split: split_if bool.splits)
   apply (rule impI)
   apply (rule conjI)
-   -- "AEP"
+   -- "NTFN"
    apply clarsimp 
    apply (drule sym, drule (1) cap_get_tag_to_H)
    apply (clarsimp simp: hasRecycleRights_def to_bool_def 

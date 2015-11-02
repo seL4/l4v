@@ -525,13 +525,13 @@ lemma set_mrs_thread_states[wp]:
   apply (clarsimp simp: fun_upd_def[symmetric] thread_states_preserved)
   done
 
-lemma set_mrs_thread_bound_aeps[wp]:
-  "\<lbrace>\<lambda>s. P (thread_bound_aeps s)\<rbrace> set_mrs thread buf msgs \<lbrace>\<lambda>rv s. P (thread_bound_aeps s)\<rbrace>"
+lemma set_mrs_thread_bound_ntfns[wp]:
+  "\<lbrace>\<lambda>s. P (thread_bound_ntfns s)\<rbrace> set_mrs thread buf msgs \<lbrace>\<lambda>rv s. P (thread_bound_ntfns s)\<rbrace>"
   apply (simp add: set_mrs_def split_def set_object_def)
   apply (wp gets_the_wp get_wp put_wp mapM_x_wp' dmo_wp
        | wpc
        | simp split del: split_if add: zipWithM_x_mapM_x split_def store_word_offs_def no_irq_storeWord)+
-  apply (clarsimp simp: fun_upd_def[symmetric] thread_bound_aeps_preserved )
+  apply (clarsimp simp: fun_upd_def[symmetric] thread_bound_ntfns_preserved )
   done
 
 lemma set_mrs_pas_refined[wp]:

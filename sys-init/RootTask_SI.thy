@@ -577,7 +577,7 @@ lemma slots_tcb:
   apply (clarsimp simp: well_formed_tcb_def opt_cap_def slots_of_def opt_object_def)
   apply (drule (1) dom_eqD)
   apply (clarsimp simp: object_default_state_def2 dom_object_slots_default_tcb
-                        tcb_pending_op_slot_def tcb_boundaep_slot_def)
+                        tcb_pending_op_slot_def tcb_boundntfn_slot_def)
   done
 
 lemma object_at_dom_cdl_objects:
@@ -821,8 +821,8 @@ lemma opt_cap_has_slots:
   by (auto simp: object_at_def has_slots_def opt_cap_def slots_of_def opt_object_def object_slots_def
           split: option.splits cdl_object.splits)
 
-lemma well_formed_non_aep_in_real_object:
-  "\<lbrakk>well_formed spec; opt_cap (obj_id, slot) spec = Some cap; \<not>is_aep_cap cap; cap \<noteq> NullCap\<rbrakk>
+lemma well_formed_non_ntfn_in_real_object:
+  "\<lbrakk>well_formed spec; opt_cap (obj_id, slot) spec = Some cap; \<not>is_ntfn_cap cap; cap \<noteq> NullCap\<rbrakk>
   \<Longrightarrow> real_object_at obj_id spec"
   apply (frule opt_cap_cdl_objects, clarsimp)
   apply (frule (1) well_formed_well_formed_irq_node)
@@ -838,7 +838,7 @@ lemma irqhandler_cap_at_simp:
   apply (safe)
   apply (clarsimp simp: cap_at_def)
   apply (frule (2) well_formed_irqhandler_cap_in_cnode_at)
-  apply (frule (1) well_formed_non_aep_in_real_object, simp+)
+  apply (frule (1) well_formed_non_ntfn_in_real_object, simp+)
   done
 
 lemma orig_cap_rewrite_v2:

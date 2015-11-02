@@ -21,7 +21,7 @@ definition
   "has_recycle_rights cap \<equiv> case cap of
      NullCap \<Rightarrow> False
    | EndpointCap _ _ R \<Rightarrow> R = UNIV
-   | AsyncEndpointCap _ _ R \<Rightarrow> {Read,Write} \<subseteq> R
+   | NotificationCap _ _ R \<Rightarrow> {Read,Write} \<subseteq> R
    | FrameCap _ R _ _ _ \<Rightarrow> {Read,Write} \<subseteq> R
    | DomainCap \<Rightarrow> False
    | _ \<Rightarrow> True"

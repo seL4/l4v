@@ -875,24 +875,24 @@ proof
 qed
 
 fun
-  aepQ :: "aep \<Rightarrow> word32 list"
+  ntfnQ :: "ntfn \<Rightarrow> word32 list"
   where
-  "aepQ (WaitingAEP ts) = ts"
-  | "aepQ _ = []"
+  "ntfnQ (WaitingNtfn ts) = ts"
+  | "ntfnQ _ = []"
 
-lemma aep_queue_live:
+lemma ntfn_queue_live:
   assumes invs: "invs' s"
-  and     koat: "ko_at' aep p s"
-  shows   "\<forall>t \<in> set (aepQ (aepObj aep)). ko_wp_at' live' t s"
+  and     koat: "ko_at' ntfn p s"
+  shows   "\<forall>t \<in> set (ntfnQ (ntfnObj ntfn)). ko_wp_at' live' t s"
 proof
   fix t
-  assume tin: "t \<in> set (aepQ (aepObj aep))"
+  assume tin: "t \<in> set (ntfnQ (ntfnObj ntfn))"
   
   from invs koat tin show "ko_wp_at' live' t s"
     apply -
     apply (drule sym_refs_ko_atD')
      apply clarsimp
-    apply (cases "aepObj aep")
+    apply (cases "ntfnObj ntfn")
       apply (auto elim!: ko_wp_at'_weakenE [OF _ refs_of_live']
                   dest!: bspec)
     done
@@ -952,40 +952,40 @@ proof -
   qed
 qed
 
-lemma casync_endpoint_relation_restrict:
+lemma cnotification_relation_restrict:
   assumes vuc: "s \<turnstile>' capability.UntypedCap ptr bits idx"
   and    invs: "invs' s"
   and      rl: "\<forall>(p :: word32) P. ko_wp_at' P p s \<and> (\<forall>ko. P ko \<longrightarrow> live' ko) \<longrightarrow> p \<notin> {ptr..ptr + 2 ^ bits - 1}"
-  and    meps: "map_to_aeps (ksPSpace s) p = Some aep"
-  shows "casync_endpoint_relation (cslift s' |` (- Ptr ` {ptr..+2 ^ bits})) aep b = casync_endpoint_relation (cslift s') aep b"
+  and    meps: "map_to_ntfns (ksPSpace s) p = Some ntfn"
+  shows "cnotification_relation (cslift s' |` (- Ptr ` {ptr..+2 ^ bits})) ntfn b = cnotification_relation (cslift s') ntfn b"
 proof -
   from invs have "valid_objs' s" ..
-  with meps have vep: "valid_aep' aep s"  
+  with meps have vep: "valid_ntfn' ntfn s"  
     apply -
     apply (clarsimp simp add: map_comp_Some_iff projectKOs)
     apply (erule (1) valid_objsE')
     apply (simp add: valid_obj'_def)
     done
   
-  from meps have koat: "ko_at' aep p s" by (rule map_to_ko_atI') fact+
+  from meps have koat: "ko_at' ntfn p s" by (rule map_to_ko_atI') fact+
   
   show ?thesis
-  proof (cases "aepObj aep")
-    case (WaitingAEP ts)
+  proof (cases "ntfnObj ntfn")
+    case (WaitingNtfn ts)
     
     with vep have tats: "\<forall>t \<in> set ts. tcb_at' t s"
-      by (simp add: valid_aep'_def)
+      by (simp add: valid_ntfn'_def)
 
-    have tlive: "\<forall>t\<in>set ts. ko_wp_at' live' t s" using WaitingAEP invs koat
+    have tlive: "\<forall>t\<in>set ts. ko_wp_at' live' t s" using WaitingNtfn invs koat
       apply -
-      apply (drule (1) aep_queue_live)
+      apply (drule (1) ntfn_queue_live)
       apply simp
       done
     
-    show ?thesis using WaitingAEP
-      unfolding casync_endpoint_relation_def Let_def
+    show ?thesis using WaitingNtfn
+      unfolding cnotification_relation_def Let_def
       by (simp add: tcb_queue_relation_live_restrict [OF vuc tats tlive rl])
-  qed (simp_all add: casync_endpoint_relation_def Let_def)
+  qed (simp_all add: cnotification_relation_def Let_def)
 qed
 
 declare surj_Ptr[simp]
@@ -1509,7 +1509,7 @@ proof -
                                (?th (t_hrs_' (globals s')))"
     unfolding cpspace_relation_def 
     using cendpoint_relation_restrict [OF D.valid_untyped invs rl]
-      casync_endpoint_relation_restrict [OF D.valid_untyped invs rl]
+      cnotification_relation_restrict [OF D.valid_untyped invs rl]
     apply -
     apply (elim conjE)
     apply ((subst lift_t_typ_region_bytes,
@@ -1530,7 +1530,7 @@ proof -
                              map_comp_restrict_map_Some_iff)
       apply (simp add: cmap_relation_restrict_both_proj)
      apply (subst cmap_relation_cong[OF refl refl,
-                    where rel' = "casync_endpoint_relation (cslift s')"])     
+                    where rel' = "cnotification_relation (cslift s')"])     
       apply (clarsimp simp: restrict_map_Some_iff image_iff
                             map_comp_restrict_map_Some_iff)
      apply (simp add: cmap_relation_restrict_both_proj)

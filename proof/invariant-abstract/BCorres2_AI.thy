@@ -61,8 +61,8 @@ lemma obj_at[simp]: "obj_at a b (trans_state g s) = obj_at a b s"
 lemma valid_tcb_state[simp]: "valid_tcb_state a (trans_state g s) = valid_tcb_state a s"
   by (simp add: valid_tcb_state_def split: thread_state.splits)
 
-lemma valid_bound_aep[simp]: "valid_bound_aep a (trans_state g s) = valid_bound_aep a s"
-  by (simp add: valid_bound_aep_def split: option.splits)
+lemma valid_bound_ntfn[simp]: "valid_bound_ntfn a (trans_state g s) = valid_bound_ntfn a s"
+  by (simp add: valid_bound_ntfn_def split: option.splits)
   
 lemma valid_tcb_trans_state[simp]: "valid_tcb a b (trans_state g s) = valid_tcb a b s"
   apply (simp add: valid_tcb_def)
@@ -75,8 +75,8 @@ lemma valid_ep_trans_state[simp]: "valid_ep a (trans_state g s) = valid_ep a s"
   apply (simp add: valid_ep_def split: endpoint.splits)
   done
 
-lemma valid_aep_trans_state[simp]: "valid_aep a (trans_state g s) = valid_aep a s"
-  apply (simp add: valid_aep_def split: aep.splits)
+lemma valid_ntfn_trans_state[simp]: "valid_ntfn a (trans_state g s) = valid_ntfn a s"
+  apply (simp add: valid_ntfn_def split: ntfn.splits)
   done
 
 lemma valid_obj_trans_state[simp]: "valid_obj a b (trans_state g s) = valid_obj a b s"
@@ -438,7 +438,7 @@ lemma invoke_irq_handler_bcorres[wp]: "bcorres (invoke_irq_handler a) (invoke_ir
   apply (wp | simp)+
   done
 
-crunch (bcorres)bcorres[wp]: send_ipc,send_async_ipc,do_reply_transfer,arch_perform_invocation truncate_state (simp: gets_the_def swp_def ignore: freeMemory clearMemory get_register loadWord cap_fault_on_failure set_register storeWord lookup_error_on_failure getRestartPC getRegister mapME)
+crunch (bcorres)bcorres[wp]: send_ipc,send_signal,do_reply_transfer,arch_perform_invocation truncate_state (simp: gets_the_def swp_def ignore: freeMemory clearMemory get_register loadWord cap_fault_on_failure set_register storeWord lookup_error_on_failure getRestartPC getRegister mapME)
 
 
 lemma perform_invocation_bcorres[wp]: "bcorres (perform_invocation a b c) (perform_invocation a b c)"
@@ -473,7 +473,7 @@ lemma decode_copy_registers_bcorres[wp]: "bcorres (decode_copy_registers a (cap.
   apply (wp | wpc | simp)+
   done
 
-crunch (bcorres)bcorres[wp]: decode_set_ipc_buffer,decode_set_space,decode_set_priority,decode_bind_aep,decode_unbind_aep truncate_state
+crunch (bcorres)bcorres[wp]: decode_set_ipc_buffer,decode_set_space,decode_set_priority,decode_bind_notification,decode_unbind_notification truncate_state
 
 
 lemma decode_tcb_configure_bcorres[wp]: "bcorres (decode_tcb_configure b (cap.ThreadCap c) d e)
@@ -500,7 +500,7 @@ lemma ensure_safe_mapping_bcorres[wp]: "bcorres (ensure_safe_mapping a) (ensure_
 crunch (bcorres)bcorres[wp]: handle_invocation truncate_state (simp:  Syscall_A.syscall_def Let_def gets_the_def ignore: get_register Syscall_A.syscall cap_fault_on_failure set_register without_preemption const_on_failure)
 
 
-crunch (bcorres)bcorres[wp]: receive_ipc,receive_async_ipc,delete_caller_cap truncate_state
+crunch (bcorres)bcorres[wp]: receive_ipc,receive_signal,delete_caller_cap truncate_state
 
 lemma handle_vm_fault_bcorres[wp]: "bcorres (handle_vm_fault a b) (handle_vm_fault a b)"
   apply (cases b)

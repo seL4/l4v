@@ -299,8 +299,8 @@ lemma caps_of_state_transform_opt_cap_no_idle:
                         slots_of_def opt_object_def restrict_map_def
                         transform_def object_slots_def transform_objects_def
                         valid_irq_node_def obj_at_def is_cap_table_def
-                        transform_tcb_def tcb_slot_defs infer_tcb_bound_aep_def
-                        tcb_pending_op_slot_def tcb_cap_cases_def tcb_boundaep_slot_def
+                        transform_tcb_def tcb_slot_defs infer_tcb_bound_notification_def
+                        tcb_pending_op_slot_def tcb_cap_cases_def tcb_boundntfn_slot_def
                         bl_to_bin_tcb_cnode_index bl_to_bin_tcb_cnode_index_le0
                  split: split_if_asm option.splits)
   done
@@ -366,20 +366,20 @@ lemma dcorres_revoke_the_cap_corres:
   apply (clarsimp simp:finite_descendants_if_from_transform)
   done
 
-lemma valid_aep_after_remove_slot:
-  "\<lbrakk>valid_aep aep s'; aep_obj aep = (Structures_A.aep.WaitingAEP list)\<rbrakk>
-   \<Longrightarrow> valid_aep (aep_set_obj aep 
-           (case remove1 ptr list of [] \<Rightarrow> Structures_A.aep.IdleAEP 
-                            | a # lista \<Rightarrow> Structures_A.aep.WaitingAEP (remove1 ptr list))) s'"
-  apply (clarsimp simp: valid_aep_def distinct_remove1 
-                 split: aep.splits list.split_asm list.splits option.splits)
+lemma valid_ntfn_after_remove_slot:
+  "\<lbrakk>valid_ntfn ntfn s'; ntfn_obj ntfn = (Structures_A.ntfn.WaitingNtfn list)\<rbrakk>
+   \<Longrightarrow> valid_ntfn (ntfn_set_obj ntfn 
+           (case remove1 ptr list of [] \<Rightarrow> Structures_A.ntfn.IdleNtfn 
+                            | a # lista \<Rightarrow> Structures_A.ntfn.WaitingNtfn (remove1 ptr list))) s'"
+  apply (clarsimp simp: valid_ntfn_def distinct_remove1 
+                 split: ntfn.splits list.split_asm list.splits option.splits)
   by (metis (mono_tags) distinct.simps(2) distinct_length_2_or_more distinct_remove1 set_remove1)
 
-lemma finalise_ipc_cancel:
+lemma finalise_cancel_ipc:
   "dcorres dc \<top> (not_idle_thread ptr and invs and valid_etcbs)
-    (CSpace_D.ipc_cancel ptr)
-    (ipc_cancel ptr)"
-  apply (simp add:CSpace_D.ipc_cancel_def ipc_cancel_def get_thread_state_def thread_get_def)
+    (CSpace_D.cancel_ipc ptr)
+    (cancel_ipc ptr)"
+  apply (simp add:CSpace_D.cancel_ipc_def cancel_ipc_def get_thread_state_def thread_get_def)
   apply (rule dcorres_gets_the)
    apply (simp add:opt_object_tcb not_idle_thread_def transform_tcb_def, clarsimp)
    apply (frule(1) valid_etcbs_get_tcb_get_etcb)
@@ -389,7 +389,7 @@ lemma finalise_ipc_cancel:
    apply (case_tac "tcb_state obj'")
           apply (simp_all add:not_idle_thread_def infer_tcb_pending_op_def
             tcb_pending_op_slot_def[symmetric] tcb_replycap_slot_def[symmetric])
-      apply (simp add:blocked_ipc_cancel_def)
+      apply (simp add:blocked_cancel_ipc_def)
       apply (rule corres_guard_imp)
         apply (rule corres_symb_exec_r)
            apply (rule corres_symb_exec_r)
@@ -402,14 +402,14 @@ lemma finalise_ipc_cancel:
                      apply (simp add:K_bind_def when_def dc_def[symmetric])
                      apply (rule set_thread_state_corres)
                     apply (wp sts_only_idle sts_st_tcb_at' valid_ep_queue_subset |  clarsimp simp:not_idle_thread_def)+
-          apply (simp add:get_blocking_ipc_endpoint_def | wp)+
+          apply (simp add:get_blocking_object_def | wp)+
       apply (clarsimp dest!:get_tcb_rev simp:invs_def )
       apply (frule(1) valid_tcb_if_valid_state)
       apply (clarsimp simp:valid_tcb_def valid_tcb_state_def
        valid_state_def valid_pspace_def infer_tcb_pending_op_def
        st_tcb_at_def generates_pending_def obj_at_def dest!:get_tcb_SomeD)
       apply (rule tcb_at_cte_at_2,clarsimp simp:tcb_at_def dest!:get_tcb_rev,simp)
-     apply (simp add:blocked_ipc_cancel_def)
+     apply (simp add:blocked_cancel_ipc_def)
      apply (rule corres_guard_imp)
        apply (rule corres_symb_exec_r)
           apply (rule corres_symb_exec_r)
@@ -423,14 +423,14 @@ lemma finalise_ipc_cancel:
                     apply (rule set_thread_state_corres)
                    apply (wp sts_only_idle sts_st_tcb_at' valid_ep_queue_subset
                      | clarsimp simp:not_idle_thread_def)+
-         apply (simp add:get_blocking_ipc_endpoint_def | wp)+
+         apply (simp add:get_blocking_object_def | wp)+
      apply (clarsimp dest!:get_tcb_rev simp:invs_def)
      apply (frule(1) valid_tcb_if_valid_state)
      apply (clarsimp simp:valid_tcb_def valid_tcb_state_def
            valid_state_def valid_pspace_def infer_tcb_pending_op_def
            st_tcb_at_def generates_pending_def obj_at_def dest!:get_tcb_SomeD)
      apply (rule tcb_at_cte_at_2,clarsimp simp:tcb_at_def dest!:get_tcb_rev,simp)
-    apply (simp add:reply_ipc_cancel_def)
+    apply (simp add:reply_cancel_ipc_def)
     apply (rule corres_guard_imp)
       apply (rule corres_split[OF _ thread_set_fault_corres])
          apply (rule corres_symb_exec_r)
@@ -441,27 +441,27 @@ lemma finalise_ipc_cancel:
                      thread_set_cte_at|clarsimp)+
     apply (clarsimp simp: not_idle_thread_def
       tcb_at_cte_at_2[unfolded tcb_at_def])
-   apply (simp add:async_ipc_cancel_def)
+   apply (simp add:cancel_signal_def)
    apply (rule corres_guard_imp)
-     apply (rule_tac Q'="\<lambda>r. valid_aep r and op=s'" in corres_symb_exec_r)
+     apply (rule_tac Q'="\<lambda>r. valid_ntfn r and op=s'" in corres_symb_exec_r)
         apply (rule corres_symb_exec_r)
            apply (rule corres_dummy_return_pl)
-           apply (rule corres_split[ OF _ corres_dummy_set_async_ep])
+           apply (rule corres_split[ OF _ corres_dummy_set_notification])
              unfolding K_bind_def
              apply (rule corres_dummy_return_pr)
              apply (rule corres_split[OF _ dcorres_revoke_cap_unnecessary])
                unfolding K_bind_def
                apply (rule set_thread_state_corres)
-              apply (wp set_aep_valid_objs | clarsimp simp:not_idle_thread_def)+
-           apply (clarsimp simp:valid_def fail_def return_def split:Structures_A.aep.splits)+
+              apply (wp set_ntfn_valid_objs | clarsimp simp:not_idle_thread_def)+
+           apply (clarsimp simp:valid_def fail_def return_def split:Structures_A.ntfn.splits)+
            apply (clarsimp simp:invs_def)
            apply (frule(1) valid_tcb_if_valid_state)
            apply (clarsimp simp:valid_tcb_def tcb_at_cte_at_2
              valid_tcb_state_def invs_def valid_state_def valid_pspace_def
              st_tcb_at_def generates_pending_def obj_at_def infer_tcb_pending_op_def
              dest!:get_tcb_SomeD)
-           apply (simp add:valid_aep_after_remove_slot)
-          apply (wp | clarsimp split:Structures_A.aep.splits)+
+           apply (simp add:valid_ntfn_after_remove_slot)
+          apply (wp | clarsimp split:Structures_A.ntfn.splits)+
    apply (clarsimp simp:invs_def, frule(1) valid_tcb_if_valid_state)
    apply (clarsimp simp:valid_tcb_def tcb_at_cte_at_2 valid_tcb_state_def invs_def valid_state_def valid_pspace_def
         st_tcb_at_def generates_pending_def obj_at_def dest!:get_tcb_SomeD)
@@ -2631,18 +2631,18 @@ lemma dcorres_finalise_cap:
              apply (simp_all add: when_def)
        apply clarsimp
        apply (rule corres_rel_imp)
-        apply (rule corres_guard_imp[OF dcorres_ep_cancel_all])
+        apply (rule corres_guard_imp[OF dcorres_cancel_all_ipc])
          apply (clarsimp simp:invs_def valid_state_def)+
       apply (rule corres_rel_imp)
        apply (rule corres_guard_imp)
-         apply (rule corres_split[OF dcorres_aep_cancel_all dcorres_unbind_maybe_aep])
-          apply (wp unbind_maybe_aep_valid_etcbs | simp | wpc)+
+         apply (rule corres_split[OF dcorres_cancel_all_signals dcorres_unbind_maybe_notification])
+          apply (wp unbind_maybe_notification_valid_etcbs | simp | wpc)+
        apply ((clarsimp simp:invs_def valid_state_def)+)[2]
      apply (simp add:IpcCancel_A.suspend_def bind_assoc)
      apply clarsimp
      apply (rule corres_guard_imp)
-       apply (rule corres_split[OF _ dcorres_unbind_async_endpoint])
-         apply (rule corres_split[OF _ finalise_ipc_cancel])
+       apply (rule corres_split[OF _ dcorres_unbind_notification])
+         apply (rule corres_split[OF _ finalise_cancel_ipc])
            apply (rule corres_split)
               unfolding K_bind_def
               apply (rule dcorres_rhs_noop_above_True[OF tcb_sched_action_dcorres[where P=\<top> and P'=\<top>]])
@@ -2651,7 +2651,7 @@ lemma dcorres_finalise_cap:
              apply (rule set_cap_set_thread_state_inactive)
             apply wp
          apply (simp add:not_idle_thread_def)
-         apply (wp unbind_async_endpoint_invs | simp add: not_idle_thread_def)+
+         apply (wp unbind_notification_invs | simp add: not_idle_thread_def)+
      apply clarsimp
      apply (drule(1) thread_in_thread_cap_not_idle[OF invs_valid_global_refs])
      apply (simp add:not_idle_thread_def)
@@ -3601,7 +3601,7 @@ next
        apply clarsimp
       apply (erule caps_of_state_cteD)
      apply (clarsimp simp: obj_at_def dest!: get_tcb_SomeD)
-     apply (auto simp: infer_tcb_bound_aep_def)[1]
+     apply (auto simp: infer_tcb_bound_notification_def)[1]
     apply (clarsimp simp: obj_at_def is_cap_table_def)
     apply (clarsimp simp: opt_cap_cnode
                    split: Structures_A.kernel_object.split_asm)

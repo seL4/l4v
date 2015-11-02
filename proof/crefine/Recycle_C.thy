@@ -598,7 +598,7 @@ lemma ccorres_if_True_False_simps:
 lemmas cap_tag_values =
   cap_untyped_cap_def
   cap_endpoint_cap_def
-  cap_async_endpoint_cap_def
+  cap_notification_cap_def
   cap_reply_cap_def
   cap_cnode_cap_def
   cap_thread_cap_def
@@ -1220,10 +1220,10 @@ lemma cendpoint_relation_q_cong:
   apply clarsimp
   done
 
-lemma casync_endpoint_relation_q_cong:
-  "\<lbrakk>\<And>t rf. (t, rf) \<in> aep_q_refs_of' (aepObj aep) \<Longrightarrow>  hp (tcb_ptr_to_ctcb_ptr t) = hp' (tcb_ptr_to_ctcb_ptr t)\<rbrakk>
-      \<Longrightarrow>  casync_endpoint_relation hp aep aep' = casync_endpoint_relation hp' aep aep'"
-  apply (cases "aepObj aep", simp_all add: casync_endpoint_relation_def Let_def)
+lemma cnotification_relation_q_cong:
+  "\<lbrakk>\<And>t rf. (t, rf) \<in> ntfn_q_refs_of' (ntfnObj ntfn) \<Longrightarrow>  hp (tcb_ptr_to_ctcb_ptr t) = hp' (tcb_ptr_to_ctcb_ptr t)\<rbrakk>
+      \<Longrightarrow>  cnotification_relation hp ntfn ntfn' = cnotification_relation hp' ntfn ntfn'"
+  apply (cases "ntfnObj ntfn", simp_all add: cnotification_relation_def Let_def)
   apply (auto intro: iffD1[OF tcb_queue_relation'_cong[OF refl refl refl]])
   done
 
@@ -1248,19 +1248,19 @@ lemma ccorres_duplicate_guard:
   by (erule ccorres_guard_imp, auto)
 
 
-lemma ep_q_refs'_no_AEPBound[simp]:
-  "(x, AEPBound) \<notin> ep_q_refs_of' ep"
+lemma ep_q_refs'_no_NTFNBound[simp]:
+  "(x, NTFNBound) \<notin> ep_q_refs_of' ep"
   by (auto simp: ep_q_refs_of'_def split: endpoint.splits)
 
 
-lemma aep_q_refs'_no_AEPBound[simp]:
-  "(x, AEPBound) \<notin> aep_q_refs_of' aep"
-  by (auto simp: aep_q_refs_of'_def split: aep.splits)
+lemma ntfn_q_refs'_no_NTFNBound[simp]:
+  "(x, NTFNBound) \<notin> ntfn_q_refs_of' ntfn"
+  by (auto simp: ntfn_q_refs_of'_def split: ntfn.splits)
 
-lemma epCancelBadgedSends_ccorres:
+lemma cancelBadgedSends_ccorres:
   "ccorres dc xfdc (invs' and ep_at' ptr)
               (UNIV \<inter> {s. epptr_' s = Ptr ptr} \<inter> {s. badge_' s = bdg}) []
-       (epCancelBadgedSends ptr bdg) (Call epCancelBadgedSends_'proc)"
+       (cancelBadgedSends ptr bdg) (Call cancelBadgedSends_'proc)"
   apply (cinit lift: epptr_' badge_' simp: whileAnno_def)
    apply (simp add: list_case_return2
               cong: list.case_cong Structures_H.endpoint.case_cong call_ignore_cong
@@ -1313,9 +1313,9 @@ lemma epCancelBadgedSends_ccorres:
         apply (rule ccorres_symb_exec_r)
           apply (rule_tac xs=list in filterM_voodoo)
           apply (rule_tac P="\<lambda>xs s. (\<forall>x \<in> set xs \<union> set list.
-                   st_tcb_at' (\<lambda>st. isBlockedOnSend st \<and> blockingIPCEndpoint st = ptr) x s)
+                   st_tcb_at' (\<lambda>st. isBlockedOnSend st \<and> blockingObject st = ptr) x s)
                               \<and> distinct (xs @ list) \<and> ko_at' IdleEP ptr s
-                              \<and> (\<forall>p. \<forall>x \<in> set (xs @ list). \<forall>rf. (x, rf) \<notin> {r \<in> state_refs_of' s p. snd r \<noteq> AEPBound})
+                              \<and> (\<forall>p. \<forall>x \<in> set (xs @ list). \<forall>rf. (x, rf) \<notin> {r \<in> state_refs_of' s p. snd r \<noteq> NTFNBound})
                               \<and> valid_queues s \<and> pspace_aligned' s \<and> pspace_distinct' s
                               \<and> sch_act_wf (ksSchedulerAction s) s \<and> valid_objs' s"
                      and P'="\<lambda>xs. {s. ep_queue_relation' (cslift s) (xs @ list)
@@ -1410,7 +1410,7 @@ lemma epCancelBadgedSends_ccorres:
                 apply (rule ccorres_add_return, rule ccorres_split_nothrow[OF _ ceqv_refl])
                    apply (rule_tac rrel=dc and xf=xfdc
                                and P="\<lambda>s. (\<forall>t \<in> set (x @ a # lista). tcb_at' t s)
-                                          \<and> (\<forall>p. \<forall>t \<in> set (x @ a # lista). \<forall>rf. (t, rf) \<notin> {r \<in> state_refs_of' s p. snd r \<noteq> AEPBound})
+                                          \<and> (\<forall>p. \<forall>t \<in> set (x @ a # lista). \<forall>rf. (t, rf) \<notin> {r \<in> state_refs_of' s p. snd r \<noteq> NTFNBound})
                                           \<and> valid_queues s \<and> distinct (x @ a # lista)
                                           \<and> pspace_aligned' s \<and> pspace_distinct' s"
                               and P'="{s. ep_queue_relation' (cslift s) (x @ a # lista)
@@ -1443,7 +1443,7 @@ lemma epCancelBadgedSends_ccorres:
                     apply clarsimp
                     apply (drule(2) map_to_ko_atI2, drule ko_at_state_refs_ofD')
 
-                    apply (rule casync_endpoint_relation_q_cong)
+                    apply (rule cnotification_relation_q_cong)
                     apply (rule sym, erule restrict_map_eqI)
                     apply (clarsimp simp: image_iff)
                     apply (drule_tac x=p in spec)
@@ -1550,7 +1550,7 @@ lemma tcb_ptr_to_ctcb_ptr_force_fold:
 lemma coerce_memset_to_heap_update:
   "heap_update_list x (replicateHider (size_of (TYPE (tcb_C))) 0)
       = heap_update (tcb_Ptr x)
-             (tcb_C (user_context_C (FCP (\<lambda>x. 0)))
+             (tcb_C (arch_tcb_C (user_context_C (FCP (\<lambda>x. 0))))
                     (thread_state_C (FCP (\<lambda>x. 0)))
                     (NULL)
                     (fault_C (FCP (\<lambda>x. 0)))
@@ -1563,7 +1563,7 @@ lemma coerce_memset_to_heap_update:
                    final_pad_def size_td_lt_ti_typ_pad_combine Let_def size_of_def)
   apply (simp add: typ_info_simps 
                    user_context_C_tag_def thread_state_C_tag_def fault_C_tag_def
-                   lookup_fault_C_tag_def update_ti_t_ptr_0s
+                   lookup_fault_C_tag_def update_ti_t_ptr_0s arch_tcb_C_tag_def
                    ti_typ_pad_combine_empty_ti ti_typ_pad_combine_td 
                    ti_typ_combine_empty_ti ti_typ_combine_td       
                    align_of_def padup_def
@@ -1739,7 +1739,7 @@ lemma recycleCap_ccorres':
           apply (clarsimp simp: cap_get_tag_isCap[symmetric] isDomainCap[symmetric]
                       simp del: Collect_const isDomainCap dest!: cap_get_tag_to_H)
          apply (rule ccorres_rhs_assoc | csymbr)+
-         apply (ctac add: epCancelBadgedSends_ccorres)
+         apply (ctac add: cancelBadgedSends_ccorres)
         apply (rule ccorres_return_Skip)
        apply (rule ceqv_refl)
       apply (rule ccorres_return_C, simp+)[1]

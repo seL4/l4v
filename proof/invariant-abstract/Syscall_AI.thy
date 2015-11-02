@@ -76,7 +76,7 @@ primrec
 where
   "valid_invocation (Invocations_A.InvokeUntyped i) = valid_untyped_inv i" 
 | "valid_invocation (Invocations_A.InvokeEndpoint w w2 b) = (ep_at w and ex_nonz_cap_to w)"
-| "valid_invocation (Invocations_A.InvokeAsyncEndpoint w w2) = (aep_at w and ex_nonz_cap_to w)"
+| "valid_invocation (Invocations_A.InvokeNotification w w2) = (ntfn_at w and ex_nonz_cap_to w)"
 | "valid_invocation (Invocations_A.InvokeTCB i) = tcb_inv_wf i"
 | "valid_invocation (Invocations_A.InvokeDomain thread domain) = (tcb_at thread and (\<lambda>s. thread \<noteq> idle_thread s))"
 | "valid_invocation (Invocations_A.InvokeReply thread slot) =
@@ -319,7 +319,7 @@ lemma pinv_invs[wp]:
   "\<lbrace>invs and ct_active and valid_invocation i\<rbrace>
     perform_invocation blocking call i \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (case_tac i, simp_all)
-       apply (wp tcbinv_invs send_async_ipc_interrupt_states invoke_domain_invs
+       apply (wp tcbinv_invs send_signal_interrupt_states invoke_domain_invs
          | clarsimp simp:ct_in_state_def
          | erule st_tcb_ex_cap 
          | fastforce simp:ct_in_state_def | rule conjI)+
@@ -403,7 +403,7 @@ lemma sts_no_cap_asid[wp]:
 
 lemma sts_valid_inv[wp]:
   "\<lbrace>valid_invocation i\<rbrace> set_thread_state t st \<lbrace>\<lambda>rv. valid_invocation i\<rbrace>"
-  apply (case_tac i, simp_all add: aep_at_typ ep_at_typ 
+  apply (case_tac i, simp_all add: ntfn_at_typ ep_at_typ 
                                    sts_valid_untyped_inv sts_valid_arch_inv)
          apply (wp | simp)+
       apply (rename_tac tcb_invocation)
@@ -989,10 +989,10 @@ lemma invs_valid_tcb_ctable_strengthen:
   by (clarsimp simp: invs_valid_tcb_ctable)
 
 lemma hw_invs[wp]: "\<lbrace>invs and ct_active\<rbrace> handle_wait is_blocking \<lbrace>\<lambda>r. invs\<rbrace>"
-  apply (simp add: handle_wait_def Let_def ep_aep_cap_case_helper
+  apply (simp add: handle_wait_def Let_def ep_ntfn_cap_case_helper
     cong: if_cong)
-  apply (wp get_aep_wp | clarsimp)+
-  apply (wp delete_caller_cap_nonz_cap get_aep_wp hoare_vcg_ball_lift | simp)+
+  apply (wp get_ntfn_wp | clarsimp)+
+  apply (wp delete_caller_cap_nonz_cap get_ntfn_wp hoare_vcg_ball_lift | simp)+
      apply (rule hoare_vcg_E_elim)
       apply (simp add: lookup_cap_def lookup_slot_for_thread_def)
       apply wp
@@ -1014,7 +1014,7 @@ lemmas delete_caller_cap_tcb[wp]
   = tcb_at_typ_at [OF delete_caller_cap_typ_at]
 
 lemma hw_tcb[wp]: "\<lbrace>tcb_at t\<rbrace> handle_wait is_blocking \<lbrace>\<lambda>rv. tcb_at t\<rbrace>"
-  apply (simp add: handle_wait_def Let_def ep_aep_cap_case_helper
+  apply (simp add: handle_wait_def Let_def ep_ntfn_cap_case_helper
              cong: if_cong)
   apply (wp hoare_vcg_if_lift2 hoare_vcg_conj_lift hoare_drop_imps | wpc | simp)+
   done

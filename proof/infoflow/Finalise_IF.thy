@@ -151,9 +151,9 @@ lemma set_thread_state_reads_respects:
    apply (wp | simp)+
    done
 
-lemma set_bound_aep_reads_respects:
-  "reads_respects aag l (\<lambda>s. is_subject aag (cur_thread s)) (set_bound_aep ref aep)"
-  unfolding set_bound_aep_def fun_app_def
+lemma set_bound_notification_reads_respects:
+  "reads_respects aag l (\<lambda>s. is_subject aag (cur_thread s)) (set_bound_notification ref ntfn)"
+  unfolding set_bound_notification_def fun_app_def
   apply (rule pre_ev(5)[where Q=\<top>])
    apply(case_tac "aag_can_read aag ref \<or> aag_can_affect aag l ref")
     apply(wp set_object_reads_respects gets_the_ev)[1]
@@ -184,9 +184,9 @@ lemma set_thread_state_owned_reads_respects:
   apply (force elim: reads_equivE equiv_forE)
   done
 
-lemma set_bound_aep_owned_reads_respects:
-  "reads_respects aag l (\<lambda>s. is_subject aag ref) (set_bound_aep ref aep)"
-  apply (simp add:set_bound_aep_def fun_app_def)
+lemma set_bound_notification_owned_reads_respects:
+  "reads_respects aag l (\<lambda>s. is_subject aag ref) (set_bound_notification ref ntfn)"
+  apply (simp add:set_bound_notification_def fun_app_def)
   apply (wp set_object_reads_respects gets_the_ev)
   apply (force elim: reads_equivE equiv_forE)
   done
@@ -233,9 +233,9 @@ lemma set_thread_state_runnable_reads_respects:
    apply (wp thread_set_st_tcb_at | simp)+
    done
 
-lemma set_bound_aep_none_reads_respects:
-  "reads_respects aag l \<top> (set_bound_aep ref None)"
-  unfolding set_bound_aep_def fun_app_def
+lemma set_bound_notification_none_reads_respects:
+  "reads_respects aag l \<top> (set_bound_notification ref None)"
+  unfolding set_bound_notification_def fun_app_def
   apply (rule pre_ev(5)[where Q=\<top>])
    apply(case_tac "aag_can_read aag ref \<or> aag_can_affect aag l ref")
     apply(wp set_object_reads_respects gets_the_ev)[1]
@@ -805,14 +805,14 @@ lemma set_endpoint_valid_sched_action[wp]:
   by (wp valid_sched_action_lift)
 
 
-lemma ep_cancel_all_reads_respects:
-  "reads_respects aag l (pas_refined aag and K (is_subject aag epptr)) (ep_cancel_all epptr)"
-  unfolding ep_cancel_all_def fun_app_def
+lemma cancel_all_ipc_reads_respects:
+  "reads_respects aag l (pas_refined aag and K (is_subject aag epptr)) (cancel_all_ipc epptr)"
+  unfolding cancel_all_ipc_def fun_app_def
   apply (wp mapM_x_ev'' tcb_sched_action_reads_respects set_thread_state_runnable_reads_respects set_thread_state_pas_refined hoare_vcg_ball_lift mapM_x_wp set_thread_state_runnable_valid_sched_action set_endpoint_reads_respects get_ep_queue_reads_respects get_epq_SendEP_ret get_epq_RecvEP_ret get_endpoint_reads_respects get_endpoint_wp | wpc | clarsimp simp: ball_conj_distrib | rule subset_refl | wp_once hoare_drop_imps | assumption)+
   done
 (*
-lemma ep_cancel_all_reads_respects:
-  "reads_respects aag l (pas_refined aag and pas_cur_domain aag and valid_sched and valid_objs and (sym_refs \<circ> state_refs_of) and K ((pasSubject aag, Reset, pasObjectAbs aag epptr) \<in> pasPolicy aag)) (ep_cancel_all epptr)"
+lemma cancel_all_ipc_reads_respects:
+  "reads_respects aag l (pas_refined aag and pas_cur_domain aag and valid_sched and valid_objs and (sym_refs \<circ> state_refs_of) and K ((pasSubject aag, Reset, pasObjectAbs aag epptr) \<in> pasPolicy aag)) (cancel_all_ipc epptr)"
   apply(subst (asm) label_is_invisible[symmetric])
   apply(clarsimp simp: equiv_valid_def2 simp del: K_def)
   apply(rule_tac W="\<lambda> ep ep'. (\<not> ep_queue_invisible aag l ep \<or> \<not> ep_queue_invisible aag l ep') \<longrightarrow> ep = ep'" and Q="\<lambda> rv s. pas_refined aag s" in equiv_valid_rv_bind)
@@ -949,9 +949,9 @@ lemma ep_cancel_all_reads_respects:
   done
 *)
 
-lemma set_async_ep_reads_respects:
-  "reads_respects aag l \<top> (set_async_ep ptr aep)"
-  unfolding set_async_ep_def
+lemma set_notification_reads_respects:
+  "reads_respects aag l \<top> (set_notification ptr ntfn)"
+  unfolding set_notification_def
   apply(simp add: equiv_valid_def2)
   apply(rule equiv_valid_rv_bind)
     apply(rule equiv_valid_rv_guard_imp)
@@ -967,43 +967,43 @@ lemma set_async_ep_reads_respects:
   apply (rule get_object_inv)
   done
 
-lemma get_async_ep_reads_respects:
-  "reads_respects aag l (K (aag_can_read aag ptr \<or> aag_can_affect aag l ptr)) (get_async_ep ptr)"
-  unfolding get_async_ep_def
+lemma get_notification_reads_respects:
+  "reads_respects aag l (K (aag_can_read aag ptr \<or> aag_can_affect aag l ptr)) (get_notification ptr)"
+  unfolding get_notification_def
   apply(wp get_object_reads_respects hoare_vcg_all_lift | wpc | simp)+
   done
 
 
-fun aep_queue_invisible where
-  "aep_queue_invisible aag l (WaitingAEP list) = labels_are_invisible aag l ((pasObjectAbs aag) ` (set list))" |
-  "aep_queue_invisible aag l _ = True"
+fun ntfn_queue_invisible where
+  "ntfn_queue_invisible aag l (WaitingNtfn list) = labels_are_invisible aag l ((pasObjectAbs aag) ` (set list))" |
+  "ntfn_queue_invisible aag l _ = True"
 
 
-lemma not_aep_queue_invisible:
-  "\<lbrakk>\<not> aep_queue_invisible aag l eplist; eplist = WaitingAEP list\<rbrakk>  \<Longrightarrow>
+lemma not_ntfn_queue_invisible:
+  "\<lbrakk>\<not> ntfn_queue_invisible aag l eplist; eplist = WaitingNtfn list\<rbrakk>  \<Longrightarrow>
   (\<exists> t \<in> set list. aag_can_read aag t \<or> aag_can_affect aag l t)"
   apply(auto simp: labels_are_invisible_def)
   done
 
-lemma aep_queues_are_invisible_or_aeps_are_equal':
-  "\<lbrakk>(pasSubject aag, Reset, pasObjectAbs aag aepptr) \<in> pasPolicy aag;
-    ko_at (AsyncEndpoint aep) aepptr s;
-    ko_at (AsyncEndpoint aep') aepptr s';
+lemma ntfn_queues_are_invisible_or_ntfns_are_equal':
+  "\<lbrakk>(pasSubject aag, Reset, pasObjectAbs aag ntfnptr) \<in> pasPolicy aag;
+    ko_at (Notification ntfn) ntfnptr s;
+    ko_at (Notification ntfn') ntfnptr s';
     reads_equiv aag s s'; affects_equiv aag l s s';
     valid_objs s; sym_refs (state_refs_of s); valid_objs s';
     sym_refs (state_refs_of s'); pas_refined aag s; pas_refined aag s'\<rbrakk> \<Longrightarrow>
-  \<not> aep_queue_invisible aag l (aep_obj aep) \<longrightarrow> aep_obj aep = aep_obj aep'"
+  \<not> ntfn_queue_invisible aag l (ntfn_obj ntfn) \<longrightarrow> ntfn_obj ntfn = ntfn_obj ntfn'"
   apply(rule impI)
-  apply(case_tac "\<exists> list. aep_obj aep = WaitingAEP list")
+  apply(case_tac "\<exists> list. ntfn_obj ntfn = WaitingNtfn list")
    apply(erule exE)
-   apply(drule (1) not_aep_queue_invisible)
+   apply(drule (1) not_ntfn_queue_invisible)
    apply clarsimp
    apply(erule disjE)
     apply(drule_tac auth="Receive" and t="pasObjectAbs aag t" in reads_read_queued_thread_read_ep)
         apply blast
        apply(erule pas_refined_mem[rotated])
        apply(rule sta_ts)
-       apply(drule_tac P="receive_blocked_on aepptr" and s=s and t=t in aep_queued_st_tcb_at')
+       apply(drule_tac P="receive_blocked_on ntfnptr" and s=s and t=t in ntfn_queued_st_tcb_at')
            apply(simp)+
        apply(simp add: thread_states_def split: option.splits)
        apply(clarsimp simp: tcb_states_of_state_def st_tcb_def2 receive_blocked_on_tcb_st_to_auth)
@@ -1014,54 +1014,54 @@ lemma aep_queues_are_invisible_or_aeps_are_equal':
        apply blast
       apply(erule pas_refined_mem[rotated])
       apply(rule sta_ts)
-      apply(drule_tac P="receive_blocked_on aepptr" and s=s and t=t in aep_queued_st_tcb_at')
+      apply(drule_tac P="receive_blocked_on ntfnptr" and s=s and t=t in ntfn_queued_st_tcb_at')
           apply(simp)+
       apply(simp add: thread_states_def split: option.splits)
       apply(clarsimp simp: tcb_states_of_state_def st_tcb_def2 receive_blocked_on_tcb_st_to_auth)
      apply blast
     apply(erule conjE, assumption)
-   apply(drule_tac x=aepptr in reads_affects_equiv_kheap_eq, simp+)
+   apply(drule_tac x=ntfnptr in reads_affects_equiv_kheap_eq, simp+)
    apply(fastforce simp: obj_at_def)
-  apply(case_tac "aep_obj aep", auto)
+  apply(case_tac "ntfn_obj ntfn", auto)
   done
 
-lemma set_async_ep_equiv_but_for_labels:
-  "\<lbrace>equiv_but_for_labels aag L st and K (pasObjectAbs aag aepptr \<in> L)\<rbrace>
-   set_async_ep aepptr aep
+lemma set_notification_equiv_but_for_labels:
+  "\<lbrace>equiv_but_for_labels aag L st and K (pasObjectAbs aag ntfnptr \<in> L)\<rbrace>
+   set_notification ntfnptr ntfn
    \<lbrace>\<lambda>_. equiv_but_for_labels aag L st\<rbrace>"
-  unfolding set_async_ep_def
+  unfolding set_notification_def
   apply (wp set_object_equiv_but_for_labels get_object_wp)
   apply (clarsimp simp: asid_pool_at_kheap split: kernel_object.splits simp: obj_at_def)
   done
 
-lemma aep_cancel_all_reads_respects:
-  "reads_respects aag l (pas_refined aag and K (is_subject aag aepptr)) (aep_cancel_all aepptr)"
-  unfolding aep_cancel_all_def
-  apply ((wp mapM_x_ev'' tcb_sched_action_reads_respects set_thread_state_runnable_reads_respects set_thread_state_pas_refined hoare_vcg_ball_lift mapM_x_wp set_thread_state_runnable_valid_sched_action set_async_ep_reads_respects get_ep_queue_reads_respects get_epq_SendEP_ret get_epq_RecvEP_ret get_async_ep_reads_respects get_endpoint_wp set_async_ep_pas_refined hoare_vcg_all_lift | wpc | clarsimp simp: ball_conj_distrib | rule subset_refl | wp_once hoare_drop_imps | simp)+)[1]
+lemma cancel_all_signals_reads_respects:
+  "reads_respects aag l (pas_refined aag and K (is_subject aag ntfnptr)) (cancel_all_signals ntfnptr)"
+  unfolding cancel_all_signals_def
+  apply ((wp mapM_x_ev'' tcb_sched_action_reads_respects set_thread_state_runnable_reads_respects set_thread_state_pas_refined hoare_vcg_ball_lift mapM_x_wp set_thread_state_runnable_valid_sched_action set_notification_reads_respects get_ep_queue_reads_respects get_epq_SendEP_ret get_epq_RecvEP_ret get_notification_reads_respects get_endpoint_wp set_notification_pas_refined hoare_vcg_all_lift | wpc | clarsimp simp: ball_conj_distrib | rule subset_refl | wp_once hoare_drop_imps | simp)+)[1]
   done
 (*
   apply (wp hoare_vcg_all_lift)
-  apply(case_tac "aag_can_read aag aepptr \<or> aag_can_affect aag l aepptr")
-   apply((wp mapM_x_ev' set_thread_state_reads_respects set_async_ep_reads_respects
-             get_async_ep_reads_respects hoare_vcg_all_lift
+  apply(case_tac "aag_can_read aag ntfnptr \<or> aag_can_affect aag l ntfnptr")
+   apply((wp mapM_x_ev' set_thread_state_reads_respects set_notification_reads_respects
+             get_notification_reads_respects hoare_vcg_all_lift
 
          | wpc | simp)+)[1]
     apply (wp hoare_drop_imps)
    apply simp
    apply force
   apply(clarsimp simp: equiv_valid_def2 simp del: K_def)
-  apply(rule_tac W="\<lambda> aep aep'. (\<not> aep_queue_invisible aag l aep \<or> \<not> aep_queue_invisible aag l aep') \<longrightarrow> aep = aep'" and Q="\<top>\<top>" in equiv_valid_rv_bind)
-    apply(rule get_async_ep_revrv)
+  apply(rule_tac W="\<lambda> ntfn ntfn'. (\<not> ntfn_queue_invisible aag l ntfn \<or> \<not> ntfn_queue_invisible aag l ntfn') \<longrightarrow> ntfn = ntfn'" and Q="\<top>\<top>" in equiv_valid_rv_bind)
+    apply(rule get_notification_revrv)
    apply(case_tac "rv = rv'")
     apply(clarsimp)
     apply(fold equiv_valid_def2)
     apply(rule equiv_valid_guard_imp)
-     apply((wp mapM_x_ev' set_thread_state_reads_respects set_async_ep_reads_respects
-               get_async_ep_reads_respects hoare_vcg_all_lift
+     apply((wp mapM_x_ev' set_thread_state_reads_respects set_notification_reads_respects
+               get_notification_reads_respects hoare_vcg_all_lift
            | wpc | simp)+)[1]
     apply clarsimp+
     apply force
-   apply(clarsimp  split: async_ep.splits)
+   apply(clarsimp  split: notification.splits)
    apply(intro allI impI conjI)
            apply(fastforce intro: return_ev2)
           apply(subst bind_return_unit[where f="return ()"])
@@ -1074,9 +1074,9 @@ lemma aep_cancel_all_reads_respects:
                    apply(rule equiv_valid_2_guard_imp[OF mapM_x_ev2_r_invisible])
                       apply(rule modifies_at_mostI |
                             wp set_thread_state_equiv_but_for  | simp add: labels_are_invisible_def)+
-              apply(rule ev2_invisible_aep)
+              apply(rule ev2_invisible_ntfn)
                   apply (simp add: labels_are_invisible_def)+
-                apply(rule_tac P="\<top>" in modifies_at_mostI | wp set_async_ep_equiv_but_for_labels | simp  | wp_once hoare_drop_imps)+
+                apply(rule_tac P="\<top>" in modifies_at_mostI | wp set_notification_equiv_but_for_labels | simp  | wp_once hoare_drop_imps)+
          apply(fastforce intro: return_ev2)
         apply(subst bind_return_unit[where f="return ()"])
         apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and R'="\<top>\<top>" in equiv_valid_2_bind_pre)
@@ -1088,9 +1088,9 @@ lemma aep_cancel_all_reads_respects:
                  apply(rule equiv_valid_2_guard_imp[OF mapM_x_ev2_l_invisible])
                     apply(rule modifies_at_mostI |
                           wp set_thread_state_equiv_but_for | simp add: labels_are_invisible_def)+
-            apply(rule ev2_invisible_aep)
+            apply(rule ev2_invisible_ntfn)
                 apply (simp add: labels_are_invisible_def)+
-              apply((rule_tac P="\<top>" in modifies_at_mostI | wp set_async_ep_equiv_but_for_labels | simp | wp_once hoare_drop_imps)+)[7]
+              apply((rule_tac P="\<top>" in modifies_at_mostI | wp set_notification_equiv_but_for_labels | simp | wp_once hoare_drop_imps)+)[7]
        apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and R'="\<top>\<top>" in equiv_valid_2_bind_pre)
             apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and P=\<top> and P'=\<top> and R'="op =" in equiv_valid_2_bind_pre)
                  apply (simp add: op_eq_unit_taut)
@@ -1099,9 +1099,9 @@ lemma aep_cancel_all_reads_respects:
                 apply(rule equiv_valid_2_guard_imp[OF mapM_x_ev2_invisible])
                    apply(rule modifies_at_mostI |
                          wp set_thread_state_equiv_but_for | simp add: labels_are_invisible_def)+
-           apply(rule ev2_invisible_aep)
+           apply(rule ev2_invisible_ntfn)
                apply (simp add: labels_are_invisible_def)+
-             apply((rule_tac P="\<top>" in modifies_at_mostI | wp set_async_ep_equiv_but_for_labels | simp | wp_once hoare_drop_imps)+)[7]
+             apply((rule_tac P="\<top>" in modifies_at_mostI | wp set_notification_equiv_but_for_labels | simp | wp_once hoare_drop_imps)+)[7]
       apply(subst bind_return_unit[where f="return ()"])
       apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and R'="\<top>\<top>" in equiv_valid_2_bind_pre)
            apply(subst bind_return_unit[where f="return ()"])
@@ -1112,9 +1112,9 @@ lemma aep_cancel_all_reads_respects:
                apply(rule equiv_valid_2_guard_imp[OF mapM_x_ev2_l_invisible])
                   apply(rule modifies_at_mostI |
                         wp set_thread_state_equiv_but_for | simp add: labels_are_invisible_def)+
-          apply(rule ev2_invisible_aep)
+          apply(rule ev2_invisible_ntfn)
               apply (simp add: labels_are_invisible_def)+
-            apply((rule_tac P="\<top>" in modifies_at_mostI | wp set_async_ep_equiv_but_for_labels | simp | wp_once hoare_drop_imps)+)[7]
+            apply((rule_tac P="\<top>" in modifies_at_mostI | wp set_notification_equiv_but_for_labels | simp | wp_once hoare_drop_imps)+)[7]
      apply(fastforce intro: return_ev2)
     apply(subst bind_return_unit[where f="return ()"])
     apply(rule_tac Q="\<top>\<top>" and Q'="\<top>\<top>" and R'="\<top>\<top>" in equiv_valid_2_bind_pre)
@@ -1126,17 +1126,17 @@ lemma aep_cancel_all_reads_respects:
              apply(rule equiv_valid_2_guard_imp[OF mapM_x_ev2_r_invisible])
                 apply(rule modifies_at_mostI |
                       wp set_thread_state_equiv_but_for | simp add: labels_are_invisible_def)+
-        apply(rule ev2_invisible_aep)
+        apply(rule ev2_invisible_ntfn)
             apply (simp add: labels_are_invisible_def)+
-          apply((rule_tac P="\<top>" in modifies_at_mostI | wp set_async_ep_equiv_but_for_labels | simp  | wp_once hoare_drop_imps)+)[7]
+          apply((rule_tac P="\<top>" in modifies_at_mostI | wp set_notification_equiv_but_for_labels | simp  | wp_once hoare_drop_imps)+)[7]
    apply(fastforce intro: return_ev2)
   apply wp
   done
 *)
 
-lemma get_bound_aep_reads_respects':
-  "reads_respects aag l (K(is_subject aag thread)) (get_bound_aep thread)"
-  unfolding get_bound_aep_def thread_get_def
+lemma get_bound_notification_reads_respects':
+  "reads_respects aag l (K(is_subject aag thread)) (get_bound_notification thread)"
+  unfolding get_bound_notification_def thread_get_def
   apply (wp | simp)+
   apply clarify
   apply (rule requiv_get_tcb_eq)
@@ -1157,9 +1157,9 @@ lemma thread_get_reads_respects:
   apply (auto intro: reads_affects_equiv_get_tcb_eq)
   done
 
-lemma get_bound_aep_reads_respects:
-  "reads_respects aag l (\<lambda> s. aag_can_read aag thread \<or> aag_can_affect aag l thread) (get_bound_aep thread)"
-  unfolding get_bound_aep_def
+lemma get_bound_notification_reads_respects:
+  "reads_respects aag l (\<lambda> s. aag_can_read aag thread \<or> aag_can_affect aag l thread) (get_bound_notification thread)"
+  unfolding get_bound_notification_def
   apply(rule equiv_valid_guard_imp)
    apply(wp thread_get_reads_respects | simp)+
   done
@@ -1175,42 +1175,42 @@ apply (auto simp: aag_can_read_read)
   done
 
 lemma bound_tcb_at_eq:
-  "\<lbrakk>sym_refs (state_refs_of s); valid_objs s; kheap s aepptr = Some (AsyncEndpoint aep);
-    aep_bound_tcb aep = Some tcbptr; bound_tcb_at (op = (Some aepptr')) tcbptr s\<rbrakk>
-    \<Longrightarrow> aepptr = aepptr'"
-    apply (drule_tac x=aepptr in sym_refsD[rotated])
+  "\<lbrakk>sym_refs (state_refs_of s); valid_objs s; kheap s ntfnptr = Some (Notification ntfn);
+    ntfn_bound_tcb ntfn = Some tcbptr; bound_tcb_at (op = (Some ntfnptr')) tcbptr s\<rbrakk>
+    \<Longrightarrow> ntfnptr = ntfnptr'"
+    apply (drule_tac x=ntfnptr in sym_refsD[rotated])
    apply (fastforce simp: state_refs_of_def)
-  apply (auto simp: pred_tcb_at_def obj_at_def valid_obj_def valid_aep_def is_tcb
+  apply (auto simp: pred_tcb_at_def obj_at_def valid_obj_def valid_ntfn_def is_tcb
                     state_refs_of_def refs_of_rev
           simp del: refs_of_simps
              elim!: valid_objsE)
   done
 
-lemma unbind_maybe_aep_reads_respects:
+lemma unbind_maybe_notification_reads_respects:
   "reads_respects aag l 
-     (pas_refined aag and invs and K (is_subject aag aepptr))
-     (unbind_maybe_aep aepptr)"
-  apply (clarsimp simp: unbind_maybe_aep_def)
+     (pas_refined aag and invs and K (is_subject aag ntfnptr))
+     (unbind_maybe_notification ntfnptr)"
+  apply (clarsimp simp: unbind_maybe_notification_def)
 apply wp
-  apply (case_tac "aep_bound_tcb rv")
+  apply (case_tac "ntfn_bound_tcb rv")
    apply (clarsimp, wp)[1] 
-  -- "interesting case, aep is bound"
+  -- "interesting case, ntfn is bound"
   apply (clarsimp)
-   apply ((wp set_bound_aep_none_reads_respects set_async_ep_reads_respects 
-              get_async_ep_reads_respects
+   apply ((wp set_bound_notification_none_reads_respects set_notification_reads_respects 
+              get_notification_reads_respects
           | wpc
           | simp)+)
   done
 
-lemma unbind_async_endpoint_is_subj_reads_respects:
+lemma unbind_notification_is_subj_reads_respects:
   "reads_respects aag l (pas_refined aag and invs and K (is_subject aag t))
-       (unbind_async_endpoint t)"
-  apply (clarsimp simp: unbind_async_endpoint_def)
-  apply (wp set_bound_aep_owned_reads_respects set_async_ep_reads_respects 
-            get_async_ep_reads_respects get_bound_aep_reads_respects
-            gba_wp[unfolded get_bound_aep_def, simplified]
+       (unbind_notification t)"
+  apply (clarsimp simp: unbind_notification_def)
+  apply (wp set_bound_notification_owned_reads_respects set_notification_reads_respects 
+            get_notification_reads_respects get_bound_notification_reads_respects
+            gbn_wp[unfolded get_bound_notification_def, simplified]
        | wpc 
-       | simp add: get_bound_aep_def)+
+       | simp add: get_bound_notification_def)+
   apply (clarsimp)
   apply (rule bound_tcb_at_implies_read, auto)
   done
@@ -1218,15 +1218,15 @@ lemma unbind_async_endpoint_is_subj_reads_respects:
 lemma fast_finalise_reads_respects:
   "reads_respects aag l (pas_refined aag and invs and K (pas_cap_cur_auth aag cap) and
     K (fin \<longrightarrow> (case cap of EndpointCap r badge rights \<Rightarrow> is_subject aag r |
-                           AsyncEndpointCap r badge rights \<Rightarrow> is_subject aag r |
+                           NotificationCap r badge rights \<Rightarrow> is_subject aag r |
                             _ \<Rightarrow> True)))
   (fast_finalise cap fin)"
   apply(case_tac cap, simp_all)
-  apply(wp equiv_valid_guard_imp[OF ep_cancel_all_reads_respects]
-           equiv_valid_guard_imp[OF aep_cancel_all_reads_respects]
-           unbind_async_endpoint_is_subj_reads_respects
-           unbind_maybe_aep_reads_respects
-           get_async_ep_reads_respects get_aep_wp
+  apply(wp equiv_valid_guard_imp[OF cancel_all_ipc_reads_respects]
+           equiv_valid_guard_imp[OF cancel_all_signals_reads_respects]
+           unbind_notification_is_subj_reads_respects
+           unbind_maybe_notification_reads_respects
+           get_notification_reads_respects get_ntfn_wp
       | simp add: when_def 
       | wpc
       | intro conjI impI
@@ -1263,9 +1263,9 @@ lemma cap_delete_one_reads_respects_f:
   apply (auto simp: cte_wp_at_caps_of_state silc_inv_def)
   done
 
-lemma get_blocking_ipc_endpoint_reads_respects:
-  "reads_respects aag l \<top>  (get_blocking_ipc_endpoint state)"
-  unfolding get_blocking_ipc_endpoint_def
+lemma get_blocking_object_reads_respects:
+  "reads_respects aag l \<top>  (get_blocking_object state)"
+  unfolding get_blocking_object_def
   apply(rule equiv_valid_guard_imp)
    apply(wp | wpc | simp)+
    done
@@ -1273,7 +1273,7 @@ lemma get_blocking_ipc_endpoint_reads_respects:
 fun tcb_st_to_auth' where
   "tcb_st_to_auth' (BlockedOnSend x xa) = SyncSend" |
   "tcb_st_to_auth' (BlockedOnReceive x xa) = Receive" |
-  "tcb_st_to_auth' (BlockedOnAsyncEvent x) = Receive"
+  "tcb_st_to_auth' (BlockedOnNotification x) = Receive"
 
 
 
@@ -1282,7 +1282,7 @@ lemma owns_thread_blocked_reads_endpoint:
   "\<lbrakk>pas_refined aag s; invs s;
         st_tcb_at (\<lambda> y. y = state) tptr s;
         is_subject aag tptr;
-        state = (BlockedOnReceive x xa) \<or> state = (BlockedOnSend x xb) \<or> state = BlockedOnAsyncEvent x\<rbrakk> \<Longrightarrow> aag_can_read aag x"
+        state = (BlockedOnReceive x xa) \<or> state = (BlockedOnSend x xb) \<or> state = BlockedOnNotification x\<rbrakk> \<Longrightarrow> aag_can_read aag x"
   apply(rule_tac auth="tcb_st_to_auth' state" in reads_ep)
    apply(drule sym, simp, rule pas_refined_mem)
     apply(rule_tac s=s in sta_ts)
@@ -1298,11 +1298,11 @@ lemma st_tcb_at_sym:
   apply(auto simp: st_tcb_at_def obj_at_def)
   done
 
-lemma blocked_ipc_cancel_reads_respects:
+lemma blocked_cancel_ipc_reads_respects:
   "reads_respects aag l (pas_refined aag and invs and st_tcb_at (op = state) tptr and (\<lambda>_. (is_subject aag tptr)))
-    (blocked_ipc_cancel state tptr)"
-  unfolding blocked_ipc_cancel_def
-  apply(wp set_thread_state_owned_reads_respects set_endpoint_reads_respects get_ep_queue_reads_respects get_endpoint_reads_respects get_blocking_ipc_endpoint_reads_respects | simp add: get_blocking_ipc_endpoint_def | wpc)+
+    (blocked_cancel_ipc state tptr)"
+  unfolding blocked_cancel_ipc_def
+  apply(wp set_thread_state_owned_reads_respects set_endpoint_reads_respects get_ep_queue_reads_respects get_endpoint_reads_respects get_blocking_object_reads_respects | simp add: get_blocking_object_def | wpc)+
   apply(fastforce intro: aag_can_read_self owns_thread_blocked_reads_endpoint simp: st_tcb_at_sym)
   done
 
@@ -1369,12 +1369,12 @@ lemma thread_set_tcb_at:
   apply (clarsimp simp: get_tcb_def obj_at_def is_tcb_def split: option.splits Structures_A.kernel_object.splits)
   done
 
-lemma reply_ipc_cancel_reads_respects_f:
+lemma reply_cancel_ipc_reads_respects_f:
   notes gets_ev[wp del]
   shows
-  "reads_respects_f aag l (silc_inv aag st and pas_refined aag and invs and K (is_subject aag tptr)) (reply_ipc_cancel tptr)"
+  "reads_respects_f aag l (silc_inv aag st and pas_refined aag and invs and K (is_subject aag tptr)) (reply_cancel_ipc tptr)"
   apply (rule gen_asm_ev)
-  unfolding reply_ipc_cancel_def
+  unfolding reply_cancel_ipc_def
   apply (wp cap_delete_one_reads_respects_f[where st=st and aag=aag] select_singleton_ev select_inv select_wp
             reads_respects_f[OF get_cap_rev, where st=st and aag=aag] assert_wp
             reads_respects_f[OF thread_set_reads_respects, where st=st and aag=aag ]
@@ -1388,30 +1388,30 @@ lemma reply_ipc_cancel_reads_respects_f:
   apply(fastforce dest: descendants_of_owned)
   done
 
-lemma async_ipc_cancel_reads_respects:
-  "reads_respects aag l ((\<lambda>s. is_subject aag (cur_thread s)) and K (aag_can_read_label aag (pasObjectAbs aag aepptr) \<or>
-        aag_can_affect aag l aepptr)) (async_ipc_cancel threadptr aepptr)"
-  unfolding async_ipc_cancel_def
-  apply(wp set_thread_state_reads_respects set_async_ep_reads_respects get_async_ep_reads_respects hoare_drop_imps | wpc | simp)+
+lemma cancel_signal_reads_respects:
+  "reads_respects aag l ((\<lambda>s. is_subject aag (cur_thread s)) and K (aag_can_read_label aag (pasObjectAbs aag ntfnptr) \<or>
+        aag_can_affect aag l ntfnptr)) (cancel_signal threadptr ntfnptr)"
+  unfolding cancel_signal_def
+  apply(wp set_thread_state_reads_respects set_notification_reads_respects get_notification_reads_respects hoare_drop_imps | wpc | simp)+
   done
 
-lemma async_ipc_cancel_owned_reads_respects:
-  "reads_respects aag l (K (is_subject aag threadptr) and K (aag_can_read_label aag (pasObjectAbs aag aepptr) \<or>
-        aag_can_affect aag l aepptr)) (async_ipc_cancel threadptr aepptr)"
-  unfolding async_ipc_cancel_def
-  apply(wp set_thread_state_owned_reads_respects set_async_ep_reads_respects get_async_ep_reads_respects hoare_drop_imps | wpc | simp)+
+lemma cancel_signal_owned_reads_respects:
+  "reads_respects aag l (K (is_subject aag threadptr) and K (aag_can_read_label aag (pasObjectAbs aag ntfnptr) \<or>
+        aag_can_affect aag l ntfnptr)) (cancel_signal threadptr ntfnptr)"
+  unfolding cancel_signal_def
+  apply(wp set_thread_state_owned_reads_respects set_notification_reads_respects get_notification_reads_respects hoare_drop_imps | wpc | simp)+
   done
 
-lemma ipc_cancel_reads_respects_f:
+lemma cancel_ipc_reads_respects_f:
   "reads_respects_f aag l (silc_inv aag st and pas_refined aag and invs and
    (K (is_subject aag t)))
-    (ipc_cancel t)"
-  unfolding ipc_cancel_def
-  apply(wp reads_respects_f[OF blocked_ipc_cancel_reads_respects, where st=st and Q="\<top>"]
-           reply_ipc_cancel_reads_respects_f[where st=st]
-           reads_respects_f[OF async_ipc_cancel_owned_reads_respects, where st=st and Q="\<top>"]
+    (cancel_ipc t)"
+  unfolding cancel_ipc_def
+  apply(wp reads_respects_f[OF blocked_cancel_ipc_reads_respects, where st=st and Q="\<top>"]
+           reply_cancel_ipc_reads_respects_f[where st=st]
+           reads_respects_f[OF cancel_signal_owned_reads_respects, where st=st and Q="\<top>"]
            reads_respects_f[OF get_thread_state_rev, where st=st and Q="\<top>"] gts_wp
-       | wpc | simp add: blocked_ipc_cancel_def | erule conjE)+
+       | wpc | simp add: blocked_cancel_ipc_def | erule conjE)+
   apply(clarsimp simp: st_tcb_at_def obj_at_def)
   apply(rule owns_thread_blocked_reads_endpoint)
        apply (simp add: st_tcb_at_def obj_at_def | blast)+
@@ -1423,7 +1423,7 @@ lemma suspend_reads_respects_f:
   (K (is_subject aag thread))) (suspend thread)"
   unfolding suspend_def
   apply(wp reads_respects_f[OF set_thread_state_owned_reads_respects, where st=st and Q="\<top>"] reads_respects_f[OF tcb_sched_action_reads_respects, where st=st and Q=\<top>] set_thread_state_pas_refined| simp)+
-    apply(wp ipc_cancel_reads_respects_f[where st=st] ipc_cancel_silc_inv)
+    apply(wp cancel_ipc_reads_respects_f[where st=st] cancel_ipc_silc_inv)
   apply(simp)
   done
 
@@ -1462,14 +1462,14 @@ lemma deleting_irq_handler_reads_respects:
 lemma finalise_cap_reads_respects:
   "reads_respects_f aag l (silc_inv aag st and pas_refined aag and invs and cte_wp_at (op = cap) slot and K (pas_cap_cur_auth aag cap)
     and K (final \<longrightarrow> (case cap of EndpointCap r badge rights \<Rightarrow> is_subject aag r |
-                           AsyncEndpointCap r badge rights \<Rightarrow> is_subject aag r |
+                           NotificationCap r badge rights \<Rightarrow> is_subject aag r |
                             _ \<Rightarrow> True))) (finalise_cap cap final)"
   apply(case_tac cap, simp_all split del: split_if)
-            apply ((wp ep_cancel_all_reads_respects aep_cancel_all_reads_respects
+            apply ((wp cancel_all_ipc_reads_respects cancel_all_signals_reads_respects
                       suspend_reads_respects_f[where st=st] deleting_irq_handler_reads_respects
-                      unbind_async_endpoint_is_subj_reads_respects
-                      unbind_maybe_aep_reads_respects
-                      unbind_async_endpoint_invs unbind_maybe_aep_invs
+                      unbind_notification_is_subj_reads_respects
+                      unbind_maybe_notification_reads_respects
+                      unbind_notification_invs unbind_maybe_notification_invs
                   | simp add: when_def split del: split_if
                          add: invs_valid_objs invs_sym_refs aag_cap_auth_def
                               cap_auth_conferred_def cap_rights_to_auth_def
@@ -1860,95 +1860,95 @@ lemma set_irq_state_globals_equiv:
   apply(simp add: globals_equiv_interrupt_states_update)
   done
 
-lemma ep_cancel_all_globals_equiv':
+lemma cancel_all_ipc_globals_equiv':
   "\<lbrace> globals_equiv st and valid_ko_at_arm \<rbrace>
-   ep_cancel_all epptr
+   cancel_all_ipc epptr
    \<lbrace> \<lambda>_. globals_equiv st and valid_ko_at_arm \<rbrace>"
-  unfolding ep_cancel_all_def
+  unfolding cancel_all_ipc_def
   apply(wp mapM_x_wp[OF _ subset_refl] set_thread_state_globals_equiv
            set_endpoint_globals_equiv hoare_vcg_all_lift get_object_inv
            dxo_wp_weak | wpc | simp
         | wp_once hoare_drop_imps)+
   done
 
-lemma ep_cancel_all_globals_equiv:
+lemma cancel_all_ipc_globals_equiv:
   "\<lbrace> globals_equiv st and valid_ko_at_arm \<rbrace>
-   ep_cancel_all epptr
+   cancel_all_ipc epptr
    \<lbrace> \<lambda>_. globals_equiv st \<rbrace>"
-  apply(rule hoare_strengthen_post[OF ep_cancel_all_globals_equiv'])
+  apply(rule hoare_strengthen_post[OF cancel_all_ipc_globals_equiv'])
   by simp
 
-lemma set_async_ep_globals_equiv:
+lemma set_notification_globals_equiv:
   "\<lbrace> globals_equiv st and valid_ko_at_arm \<rbrace>
-  set_async_ep ptr aep
+  set_notification ptr ntfn
    \<lbrace> \<lambda>_. globals_equiv st \<rbrace>"
-  unfolding set_async_ep_def
+  unfolding set_notification_def
   apply(wp set_object_globals_equiv get_object_wp | simp)+
   apply(fastforce simp: valid_ko_at_arm_def obj_at_def)+
   done
 
-lemma set_async_ep_valid_ko_at_arm:
-  "\<lbrace> valid_ko_at_arm \<rbrace> set_async_ep ptr aep \<lbrace>\<lambda>_. valid_ko_at_arm\<rbrace>"
-  unfolding set_async_ep_def
+lemma set_notification_valid_ko_at_arm:
+  "\<lbrace> valid_ko_at_arm \<rbrace> set_notification ptr ntfn \<lbrace>\<lambda>_. valid_ko_at_arm\<rbrace>"
+  unfolding set_notification_def
   apply (wp get_object_wp)
   apply(fastforce simp: valid_ko_at_arm_def get_tcb_ko_at obj_at_def)
 done
 
-lemma aep_cancel_all_globals_equiv':
+lemma cancel_all_signals_globals_equiv':
   "\<lbrace> globals_equiv st and valid_ko_at_arm \<rbrace>
-   aep_cancel_all epptr
+   cancel_all_signals epptr
    \<lbrace> \<lambda>_. globals_equiv st and valid_ko_at_arm \<rbrace>"
-  unfolding aep_cancel_all_def
+  unfolding cancel_all_signals_def
   apply(wp mapM_x_wp[OF _ subset_refl] set_thread_state_globals_equiv
-           set_async_ep_valid_ko_at_arm dxo_wp_weak
-           set_async_ep_globals_equiv hoare_vcg_all_lift | wpc | simp
+           set_notification_valid_ko_at_arm dxo_wp_weak
+           set_notification_globals_equiv hoare_vcg_all_lift | wpc | simp
         | wp_once hoare_drop_imps)+
   done
 
-lemma aep_cancel_all_globals_equiv:
+lemma cancel_all_signals_globals_equiv:
   "\<lbrace> globals_equiv st and valid_ko_at_arm \<rbrace>
-   aep_cancel_all epptr
+   cancel_all_signals epptr
    \<lbrace> \<lambda>_. globals_equiv st \<rbrace>"
-  apply(rule hoare_strengthen_post[OF aep_cancel_all_globals_equiv'])
+  apply(rule hoare_strengthen_post[OF cancel_all_signals_globals_equiv'])
   by simp
 
-lemma unbind_async_endpoint_globals_equiv:
+lemma unbind_notification_globals_equiv:
   "\<lbrace>globals_equiv st and valid_ko_at_arm \<rbrace>
-   unbind_async_endpoint t
+   unbind_notification t
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
-  unfolding unbind_async_endpoint_def
-  by (wp gba_wp set_bound_aep_globals_equiv set_async_ep_valid_ko_at_arm 
-            set_async_ep_globals_equiv 
+  unfolding unbind_notification_def
+  by (wp gbn_wp set_bound_notification_globals_equiv set_notification_valid_ko_at_arm 
+            set_notification_globals_equiv 
           | wpc 
           | simp)+
 
-lemma unbind_async_endpoint_valid_ko_at_arm[wp]:
+lemma unbind_notification_valid_ko_at_arm[wp]:
   "\<lbrace>valid_ko_at_arm \<rbrace>
-   unbind_async_endpoint t
+   unbind_notification t
    \<lbrace>\<lambda>_. valid_ko_at_arm\<rbrace>"
-  unfolding unbind_async_endpoint_def
-  by (wp gba_wp set_bound_aep_valid_ko_at_arm set_async_ep_valid_ko_at_arm 
+  unfolding unbind_notification_def
+  by (wp gbn_wp set_bound_notification_valid_ko_at_arm set_notification_valid_ko_at_arm 
              
           | wpc 
           | simp)+
 
-lemma unbind_maybe_aep_globals_equiv:
+lemma unbind_maybe_notification_globals_equiv:
   "\<lbrace>globals_equiv st and valid_ko_at_arm \<rbrace>
-   unbind_maybe_aep a
+   unbind_maybe_notification a
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
-  unfolding unbind_maybe_aep_def
-  by (wp gba_wp set_bound_aep_globals_equiv set_async_ep_valid_ko_at_arm 
-            set_async_ep_globals_equiv get_aep_wp 
+  unfolding unbind_maybe_notification_def
+  by (wp gbn_wp set_bound_notification_globals_equiv set_notification_valid_ko_at_arm 
+            set_notification_globals_equiv get_ntfn_wp 
           | wpc 
           | simp)+
 
-lemma unbind_maybe_aep_valid_ko_at_arm[wp]:
+lemma unbind_maybe_notification_valid_ko_at_arm[wp]:
   "\<lbrace>valid_ko_at_arm \<rbrace>
-   unbind_maybe_aep a
+   unbind_maybe_notification a
    \<lbrace>\<lambda>_. valid_ko_at_arm\<rbrace>"
-  unfolding unbind_maybe_aep_def
-  by (wp gba_wp set_bound_aep_valid_ko_at_arm set_async_ep_valid_ko_at_arm 
-         get_aep_wp
+  unfolding unbind_maybe_notification_def
+  by (wp gbn_wp set_bound_notification_valid_ko_at_arm set_notification_valid_ko_at_arm 
+         get_ntfn_wp
           | wpc 
           | simp)+
 
@@ -1960,7 +1960,7 @@ lemma fast_finalise_globals_equiv:
    fast_finalise cap final
    \<lbrace> \<lambda>_. globals_equiv st \<rbrace>"
   apply(case_tac cap)
-  apply(clarsimp simp: when_def | wp ep_cancel_all_globals_equiv aep_cancel_all_globals_equiv unbind_maybe_aep_globals_equiv | rule conjI)+
+  apply(clarsimp simp: when_def | wp cancel_all_ipc_globals_equiv cancel_all_signals_globals_equiv unbind_maybe_notification_globals_equiv | rule conjI)+
   done
 
 lemma tcb_sched_action_enqueue_valid_ko_at_arm[wp]:

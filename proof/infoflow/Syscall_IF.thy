@@ -61,7 +61,7 @@ lemma recycle_cap_globals_equiv:
   unfolding recycle_cap_def
   apply (induct cap)
   apply simp_all
-  apply (wp ep_cancel_badged_sends_globals_equiv
+  apply (wp cancel_badged_sends_globals_equiv
             thread_set_globals_equiv' dxo_wp_weak
             arch_recycle_cap_globals_equiv
        | wpc
@@ -209,9 +209,9 @@ lemma recycle_cap_reads_respects:
      (recycle_cap is_final cap)"
   apply (rule gen_asm_ev)+
   apply (simp add: recycle_cap_def)
-  apply (wp ep_cancel_badged_sends_reads_respects thread_set_reads_respects
+  apply (wp cancel_badged_sends_reads_respects thread_set_reads_respects
             get_thread_state_rev ethread_set_reads_respects
-            get_bound_aep_reads_respects'
+            get_bound_notification_reads_respects'
     | simp add: when_def invs_valid_objs invs_sym_refs split: option.splits cap.splits
     | elim conjE
     | intro conjI impI allI
@@ -422,8 +422,8 @@ lemma perform_invocation_reads_respects_f_g:
                invoke_untyped_silc_inv
                reads_respects_f_g'[OF send_ipc_reads_respects_g]
                send_ipc_silc_inv
-               reads_respects_f_g'[OF send_async_ipc_reads_respects_g, where Q="\<top>"]
-               send_async_ipc_silc_inv
+               reads_respects_f_g'[OF send_signal_reads_respects_g, where Q="\<top>"]
+               send_signal_silc_inv
                do_reply_transfer_reads_respects_f_g
                invoke_tcb_reads_respects_f_g
                invoke_cnode_reads_respects_f_g
@@ -772,13 +772,13 @@ lemma handle_wait_reads_respects_f:
             reads_respects_f[OF receive_ipc_reads_respects, where st=st]
             delete_caller_cap_reads_respects_f[where st=st] 
             delete_caller_cap_silc_inv[where st=st]
-            reads_respects_f_inv[OF receive_async_ipc_reads_respects receive_async_ipc_silc_inv, where st=st]
+            reads_respects_f_inv[OF receive_signal_reads_respects receive_signal_silc_inv, where st=st]
             reads_respects_f[OF lookup_slot_for_thread_rev, where st=st and Q=\<top>]
             reads_respects_f_inv[OF get_cap_rev get_cap_silc_inv, where st=st]
             get_cap_auth_wp[where aag=aag]
-            reads_respects_f[OF get_async_ep_reads_respects, where st=st and Q=\<top>]
+            reads_respects_f[OF get_notification_reads_respects, where st=st and Q=\<top>]
             lookup_slot_for_thread_authorised
-            get_aep_wp
+            get_ntfn_wp
   shows
   "reads_respects_f aag l (silc_inv aag st and einvs and ct_active and
         pas_refined aag and pas_cur_domain aag and is_subject aag \<circ> cur_thread) (handle_wait is_blocking)"
@@ -811,7 +811,7 @@ lemma handle_wait_reads_respects_f:
              apply(rule reads_ep[where auth=Receive])
               apply(fastforce simp: aag_cap_auth_def cap_auth_conferred_def cap_rights_to_auth_def)+
         apply(wp reads_respects_f[OF handle_fault_reads_respects,where st=st])
-        apply (wp get_aep_wp get_cap_wp | wpc)+
+        apply (wp get_ntfn_wp get_cap_wp | wpc)+
        apply simp
        apply(rule hoare_pre)
         apply(rule PDPTEntries_AI.hoare_vcg_all_liftE)
@@ -831,13 +831,13 @@ lemma handle_wait_reads_respects_f:
 lemma handle_wait_globals_equiv:
   "\<lbrace>globals_equiv (st :: det_state) and invs and ct_active\<rbrace> handle_wait is_blocking \<lbrace>\<lambda>r. globals_equiv st\<rbrace>"
   unfolding handle_wait_def
-  apply (wp handle_fault_globals_equiv get_aep_wp
+  apply (wp handle_fault_globals_equiv get_ntfn_wp
         | wpc | simp add: Let_def)+
       apply (rule_tac Q="\<lambda>r s. invs s \<and> globals_equiv st s" and
                       E = "\<lambda>r s. valid_fault (CapFault (of_bl ep_cptr) True r)" in hoare_post_impErr)
         apply (rule hoare_vcg_E_elim)
          apply (wp lookup_cap_cap_fault receive_ipc_globals_equiv
-                   receive_async_ipc_globals_equiv delete_caller_cap_invs delete_caller_cap_globals_equiv
+                   receive_signal_globals_equiv delete_caller_cap_invs delete_caller_cap_globals_equiv
                 | wpc | simp add: Let_def invs_imps invs_valid_idle valid_fault_def
                 | rule_tac Q="\<lambda>rv s. invs s \<and> thread \<noteq> idle_thread s \<and> globals_equiv st s"
                            in hoare_strengthen_post, wp, 
@@ -909,7 +909,7 @@ lemma handle_interrupt_globals_equiv:
   unfolding handle_interrupt_def
   apply (wp dmo_maskInterrupt_globals_equiv
             dmo_return_globals_equiv
-            send_async_ipc_globals_equiv
+            send_signal_globals_equiv
             hoare_vcg_if_lift2
             hoare_drop_imps
             dxo_wp_weak
@@ -1096,7 +1096,7 @@ lemma perform_invocation_globals_equiv:
   apply (rule hoare_pre)
    apply (wp invoke_untyped_globals_equiv
              send_ipc_globals_equiv
-             send_async_ipc_globals_equiv
+             send_signal_globals_equiv
              do_reply_transfer_globals_equiv
              invoke_tcb_globals_equiv
              invoke_cnode_globals_equiv
@@ -1168,7 +1168,7 @@ lemma handle_event_globals_equiv:
        apply (wp handle_invocation_globals_equiv
                  hoare_weaken_pre[OF receive_ipc_globals_equiv,
                        where P="globals_equiv st and invs" and st1=st]
-                 hoare_weaken_pre[OF receive_async_ipc_globals_equiv,
+                 hoare_weaken_pre[OF receive_signal_globals_equiv,
                        where P="globals_equiv st and invs" and s1=st]
                  handle_fault_globals_equiv'
                  handle_wait_globals_equiv

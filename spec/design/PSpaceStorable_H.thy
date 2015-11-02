@@ -23,7 +23,7 @@ lemma UserData_singleton [simp]:
 datatype 
   kernel_object_type = 
     EndpointT
-  | AsyncEndpointT
+  | NotificationT
   | CTET
   | TCBT
   | UserDataT
@@ -34,7 +34,7 @@ primrec
   koTypeOf :: "kernel_object \<Rightarrow> kernel_object_type"
 where
   "koTypeOf (KOEndpoint e) = EndpointT"
-| "koTypeOf (KOAEndpoint e) = AsyncEndpointT"
+| "koTypeOf (KONotification e) = NotificationT"
 | "koTypeOf (KOCTE e) = CTET"
 | "koTypeOf (KOTCB e) = TCBT"
 | "koTypeOf (KOUserData) = UserDataT"

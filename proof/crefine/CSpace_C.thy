@@ -27,11 +27,11 @@ lemma maskCapRights_cap_cases:
                (\<lambda>_. capEPCanReceive c \<and> capAllowRead R)
                     (capEPCanSend_update
                           (\<lambda>_. capEPCanSend c \<and> capAllowWrite R) c)))
-  | AsyncEndpointCap _ _ _ _ \<Rightarrow>
-    return (capAEPCanReceive_update
-                        (\<lambda>_. capAEPCanReceive c \<and> capAllowRead R)
-                        (capAEPCanSend_update
-                          (\<lambda>_. capAEPCanSend c \<and> capAllowWrite R) c))
+  | NotificationCap _ _ _ _ \<Rightarrow>
+    return (capNtfnCanReceive_update
+                        (\<lambda>_. capNtfnCanReceive c \<and> capAllowRead R)
+                        (capNtfnCanSend_update
+                          (\<lambda>_. capNtfnCanSend c \<and> capAllowWrite R) c))
   | _ \<Rightarrow> return c)"
   apply (simp add: maskCapRights_def Let_def split del: split_if)
   apply (cases c, simp_all add: isCap_simps split del: split_if)
@@ -188,10 +188,10 @@ lemma to_bool_cap_rights_bf:
   by (subst to_bool_bf_to_bool_mask, 
       simp add: cap_rights_lift_def mask_def word_bw_assocs, simp)+
 
-lemma to_bool_aep_cap_bf:
-  "cap_lift c = Some (Cap_async_endpoint_cap cap) \<Longrightarrow> 
-  to_bool (capAEPCanSend_CL cap) = to_bool_bf (capAEPCanSend_CL cap) \<and>
-  to_bool (capAEPCanReceive_CL cap) = to_bool_bf (capAEPCanReceive_CL cap)"
+lemma to_bool_ntfn_cap_bf:
+  "cap_lift c = Some (Cap_notification_cap cap) \<Longrightarrow> 
+  to_bool (capNtfnCanSend_CL cap) = to_bool_bf (capNtfnCanSend_CL cap) \<and>
+  to_bool (capNtfnCanReceive_CL cap) = to_bool_bf (capNtfnCanReceive_CL cap)"
   apply (simp add:cap_lift_def Let_def split: split_if_asm)
   apply (subst to_bool_bf_to_bool_mask,
          clarsimp simp: cap_lift_thread_cap mask_def word_bw_assocs)+
@@ -263,14 +263,14 @@ lemma maskCapRights_ccorres [corres]:
             apply (rule imp_ignore)
             apply clarsimp
             apply (unfold ccap_relation_def)[1]
-            apply (simp add: cap_async_endpoint_cap_lift [THEN iffD1])
+            apply (simp add: cap_notification_cap_lift [THEN iffD1])
             apply (clarsimp simp: cap_to_H_def)
             apply (simp add: map_option_case split: option.splits)
             apply (clarsimp simp add: cap_to_H_def Let_def
                                split: cap_CL.splits split_if_asm)
-            apply (simp add: cap_async_endpoint_cap_lift_def)
+            apply (simp add: cap_notification_cap_lift_def)
             apply (simp add: ccap_rights_relation_def cap_rights_to_H_def
-                             to_bool_aep_cap_bf
+                             to_bool_ntfn_cap_bf
                              to_bool_mask_to_bool_bf to_bool_cap_rights_bf)
            apply (simp add: Collect_const_mem from_bool_def)
            apply csymbr
@@ -506,9 +506,9 @@ lemma ccorres_updateMDB_const [corres]:
   apply (clarsimp)
   done
 
-lemma cap_lift_capAEPBadge_mask_eq:
-  "cap_lift cap = Some (Cap_async_endpoint_cap ec)
-  \<Longrightarrow> capAEPBadge_CL ec && mask 28 = capAEPBadge_CL ec"
+lemma cap_lift_capNtfnBadge_mask_eq:
+  "cap_lift cap = Some (Cap_notification_cap ec)
+  \<Longrightarrow> capNtfnBadge_CL ec && mask 28 = capNtfnBadge_CL ec"
   unfolding cap_lift_def
   by (fastforce simp: Let_def mask_def word_bw_assocs split: split_if_asm)
 
@@ -531,9 +531,9 @@ lemma revokable_ccorres:
                 (if \<acute>ret__unsigned_long \<noteq> \<acute>unsigned_long_eret_2 then 1
                  else 0)
             ELSE
-              IF ret__unsigned_long = scast cap_async_endpoint_cap THEN
-                \<acute>ret__unsigned_long :== CALL cap_async_endpoint_cap_get_capAEPBadge(newCap);;
-                \<acute>unsigned_long_eret_2 :== CALL cap_async_endpoint_cap_get_capAEPBadge(srcCap);;
+              IF ret__unsigned_long = scast cap_notification_cap THEN
+                \<acute>ret__unsigned_long :== CALL cap_notification_cap_get_capNtfnBadge(newCap);;
+                \<acute>unsigned_long_eret_2 :== CALL cap_notification_cap_get_capNtfnBadge(srcCap);;
                 \<acute>newCapIsRevocable :==
                   (if \<acute>ret__unsigned_long \<noteq> \<acute>unsigned_long_eret_2 then 1
                    else 0)
@@ -563,9 +563,9 @@ lemma revokable_ccorres:
 	     rule ccorres_return, vcg, fastforce simp: cap_get_tag_isCap isCap_simps)
 	   apply (simp add: cap_get_tag_isCap isCap_simps ccorres_cond_iffs from_bool_def true_def false_def)
 	   apply (rule ccorres_return, vcg)
-	   apply (frule cap_get_tag_AsyncEndpointCap [where cap' = srcCap, THEN iffD1])
+	   apply (frule cap_get_tag_NotificationCap [where cap' = srcCap, THEN iffD1])
  	    apply (clarsimp simp: cap_get_tag_isCap isCap_simps is_simple_cap'_def)
- 	   apply (frule cap_get_tag_AsyncEndpointCap [where cap' = newCap, THEN iffD1])
+ 	   apply (frule cap_get_tag_NotificationCap [where cap' = newCap, THEN iffD1])
     	    apply (clarsimp simp: cap_get_tag_isCap isCap_simps)
 	   apply (fastforce simp: cap_get_tag_isCap isCap_simps)
 	 
@@ -716,7 +716,7 @@ definition
   "is_simple_cap_tag (tag :: word32) \<equiv>
       tag \<noteq> scast cap_null_cap \<and> tag \<noteq> scast cap_irq_control_cap
     \<and> tag \<noteq> scast cap_untyped_cap \<and> tag \<noteq> scast cap_reply_cap
-    \<and> tag \<noteq> scast cap_endpoint_cap \<and> tag \<noteq> scast cap_async_endpoint_cap
+    \<and> tag \<noteq> scast cap_endpoint_cap \<and> tag \<noteq> scast cap_notification_cap
     \<and> tag \<noteq> scast cap_thread_cap \<and> tag \<noteq> scast cap_cnode_cap
     \<and> tag \<noteq> scast cap_zombie_cap \<and> tag \<noteq> scast cap_small_frame_cap
     \<and> tag \<noteq> scast cap_frame_cap"
@@ -725,8 +725,8 @@ definition
   "cteInsert_newCapIsRevocable_if newCap srcCap \<equiv> (if (cap_get_tag newCap = scast cap_endpoint_cap)
              then (if (capEPBadge_CL (cap_endpoint_cap_lift newCap) = capEPBadge_CL (cap_endpoint_cap_lift srcCap)) 
                      then 0 else 1)
-             else if (cap_get_tag newCap = scast cap_async_endpoint_cap)
-                  then (if (capAEPBadge_CL (cap_async_endpoint_cap_lift newCap) = capAEPBadge_CL (cap_async_endpoint_cap_lift srcCap)) 
+             else if (cap_get_tag newCap = scast cap_notification_cap)
+                  then (if (capNtfnBadge_CL (cap_notification_cap_lift newCap) = capNtfnBadge_CL (cap_notification_cap_lift srcCap)) 
                      then 0 else 1)
              else if (cap_get_tag newCap = scast cap_irq_handler_cap)
                   then (if cap_get_tag srcCap = scast cap_irq_control_cap then 1 else 0)
@@ -744,9 +744,9 @@ lemma cteInsert_if_helper:
                \<acute>unsigned_long_eret_2 :== CALL cap_endpoint_cap_get_capEPBadge(srcCap);;
                \<acute>newCapIsRevocable :== (if \<acute>ret__unsigned_long \<noteq> \<acute>unsigned_long_eret_2 then 1 else 0)
              ELSE
-               IF rv = scast cap_async_endpoint_cap THEN
-                 \<acute>ret__unsigned_long :== CALL cap_async_endpoint_cap_get_capAEPBadge(newCap);;
-                 \<acute>unsigned_long_eret_2 :== CALL cap_async_endpoint_cap_get_capAEPBadge(srcCap);;
+               IF rv = scast cap_notification_cap THEN
+                 \<acute>ret__unsigned_long :== CALL cap_notification_cap_get_capNtfnBadge(newCap);;
+                 \<acute>unsigned_long_eret_2 :== CALL cap_notification_cap_get_capNtfnBadge(srcCap);;
                  \<acute>newCapIsRevocable :== (if \<acute>ret__unsigned_long \<noteq> \<acute>unsigned_long_eret_2 then 1 else 0)
                ELSE
                  IF rv = scast cap_irq_handler_cap THEN
@@ -2279,7 +2279,7 @@ lemma setIRQState_ccorres:
   apply clarsimp
   apply (simp add: from_bool_def)
   apply (cases irqState, simp_all)
-  apply (simp add: Kernel_C.IRQNotifyAEP_def Kernel_C.IRQInactive_def) 
+  apply (simp add: Kernel_C.IRQSignal_def Kernel_C.IRQInactive_def) 
   apply (simp add: Kernel_C.IRQTimer_def Kernel_C.IRQInactive_def) 
 done
 
@@ -2968,7 +2968,7 @@ definition
   "get_capSizeBits_CL \<equiv> \<lambda>cap. case cap of
       Some (Cap_untyped_cap c) \<Rightarrow> unat (cap_untyped_cap_CL.capBlockSize_CL c)
     | Some (Cap_endpoint_cap c) \<Rightarrow> 4
-    | Some (Cap_async_endpoint_cap c) \<Rightarrow> 4
+    | Some (Cap_notification_cap c) \<Rightarrow> 4
     | Some (Cap_cnode_cap c) \<Rightarrow> unat (capCNodeRadix_CL c) + 4
     | Some (Cap_thread_cap c) \<Rightarrow> 9
     | Some (Cap_small_frame_cap c) \<Rightarrow> 12
@@ -3019,7 +3019,7 @@ lemma cap_get_capSizeBits_spec:
   apply (case_tac "cap_lift cap", simp_all, case_tac "a",
                auto simp: cap_lift_def cap_tag_defs Let_def
                   cap_small_frame_cap_lift_def cap_frame_cap_lift_def
-                  cap_endpoint_cap_lift_def cap_async_endpoint_cap_lift_def
+                  cap_endpoint_cap_lift_def cap_notification_cap_lift_def
                   cap_cnode_cap_lift_def cap_thread_cap_lift_def
                   cap_zombie_cap_lift_def cap_page_table_cap_lift_def
                   cap_page_directory_cap_lift_def cap_asid_pool_cap_lift_def
@@ -3167,7 +3167,7 @@ definition
   "get_capPtr_CL \<equiv> \<lambda>cap. Ptr (case cap of
       Some (Cap_untyped_cap c) \<Rightarrow> cap_untyped_cap_CL.capPtr_CL c
     | Some (Cap_endpoint_cap c) \<Rightarrow> cap_endpoint_cap_CL.capEPPtr_CL c
-    | Some (Cap_async_endpoint_cap c) \<Rightarrow> cap_async_endpoint_cap_CL.capAEPPtr_CL c
+    | Some (Cap_notification_cap c) \<Rightarrow> cap_notification_cap_CL.capNtfnPtr_CL c
     | Some (Cap_cnode_cap c) \<Rightarrow> cap_cnode_cap_CL.capCNodePtr_CL c
     | Some (Cap_thread_cap c) \<Rightarrow> (cap_thread_cap_CL.capTCBPtr_CL c && ~~ mask (objBits (undefined :: tcb)))
     | Some (Cap_small_frame_cap c) \<Rightarrow> cap_small_frame_cap_CL.capFBasePtr_CL c
@@ -3196,7 +3196,7 @@ lemma cap_get_capPtr_spec:
   apply (case_tac "cap_lift cap", simp_all, case_tac "a",
                auto simp: cap_lift_def cap_tag_defs Let_def
                   cap_small_frame_cap_lift_def cap_frame_cap_lift_def
-                  cap_endpoint_cap_lift_def cap_async_endpoint_cap_lift_def
+                  cap_endpoint_cap_lift_def cap_notification_cap_lift_def
                   cap_cnode_cap_lift_def cap_thread_cap_lift_def
                   cap_zombie_cap_lift_def cap_page_table_cap_lift_def
                   cap_page_directory_cap_lift_def cap_asid_pool_cap_lift_def
@@ -3303,13 +3303,13 @@ lemma sameRegionAs_spec:
              apply (clarsimp simp: isArchCap_tag_def2)
            -- "capa is a NullCap"
             apply (simp add: cap_tag_defs from_bool_def false_def)
-          -- "capa is an AsyncEndpointCap"
+          -- "capa is an NotificationCap"
            apply (case_tac capb, simp_all add: cap_get_tag_isCap_unfolded_H_cap 
                         isCap_simps cap_tag_defs from_bool_def false_def)[1]
             apply (frule_tac cap'=cap_a in cap_get_tag_isCap_unfolded_H_cap(3))
             apply (frule_tac cap'=cap_b in cap_get_tag_isCap_unfolded_H_cap(3))
             apply (simp add: ccap_relation_def map_option_case)
-            apply (simp add: cap_async_endpoint_cap_lift)
+            apply (simp add: cap_notification_cap_lift)
             apply (simp add: cap_to_H_def)
             apply (clarsimp split: split_if)
            apply (frule_tac cap'=cap_b in cap_get_tag_isArchCap_unfolded_H_cap)
@@ -3529,7 +3529,7 @@ lemma sameRegionAs_EndpointCap:
          \<Longrightarrow> cap_get_tag capc = scast cap_endpoint_cap"
   apply (simp add: sameRegionAs_def Let_def)
   apply (case_tac capa;
-         simp add: isUntypedCap_def isEndpointCap_def isAsyncEndpointCap_def
+         simp add: isUntypedCap_def isEndpointCap_def isNotificationCap_def
              isCNodeCap_def isThreadCap_def isReplyCap_def isIRQControlCap_def
              isIRQHandlerCap_def isArchObjectCap_def)
   apply (clarsimp simp: ccap_relation_def map_option_case)
@@ -3541,21 +3541,21 @@ lemma sameRegionAs_EndpointCap:
   apply (case_tac "isZombieTCB_C (capZombieType_CL zombie_cap)"; simp add: Let_def)
   done
 
-lemma sameRegionAs_AsyncEndpointCap:
+lemma sameRegionAs_NotificationCap:
   shows "\<lbrakk>ccap_relation capa capc;
           RetypeDecls_H.sameRegionAs
-            (capability.AsyncEndpointCap x y z  u ) capa\<rbrakk>
-         \<Longrightarrow> cap_get_tag capc = scast cap_async_endpoint_cap"
+            (capability.NotificationCap x y z  u ) capa\<rbrakk>
+         \<Longrightarrow> cap_get_tag capc = scast cap_notification_cap"
   apply (simp add: sameRegionAs_def  Let_def)
   apply (case_tac capa;
-         simp add: isUntypedCap_def isEndpointCap_def isAsyncEndpointCap_def
+         simp add: isUntypedCap_def isEndpointCap_def isNotificationCap_def
              isCNodeCap_def isThreadCap_def isReplyCap_def isIRQControlCap_def
              isIRQHandlerCap_def isArchObjectCap_def)
   apply (clarsimp simp: ccap_relation_def map_option_case)
   apply (case_tac "cap_lift capc"; simp)
   apply (simp add: cap_to_H_def)
   apply (case_tac a; simp)
-   apply (simp add: cap_async_endpoint_cap_lift cap_async_endpoint_cap_lift_def)
+   apply (simp add: cap_notification_cap_lift cap_notification_cap_lift_def)
   apply (rename_tac zombie_cap)
   apply (case_tac "isZombieTCB_C (capZombieType_CL zombie_cap)"; simp add: Let_def)
   done
@@ -3616,7 +3616,7 @@ lemma isMDBParentOf_spec:
    apply clarsimp
    apply (frule cap_get_tag_EndpointCap)
    apply simp
-   apply (clarsimp simp: to_bool_def isAsyncEndpointCap_def isEndpointCap_def true_def) -- "badge of A is not 0 now"
+   apply (clarsimp simp: to_bool_def isNotificationCap_def isEndpointCap_def true_def) -- "badge of A is not 0 now"
 
 
    apply (subgoal_tac "cap_get_tag (cte_C.cap_C cte_b) = scast cap_endpoint_cap") --"needed also after"
@@ -3628,27 +3628,27 @@ lemma isMDBParentOf_spec:
    apply (clarsimp split: split_if_asm simp: if_distrib [where f=scast])
 
   apply (clarsimp, rule conjI)
-  --" cap_get_tag of cte_a is an async_endpoint"
+  --" cap_get_tag of cte_a is an notification"
    apply clarsimp
-   apply (frule cap_get_tag_AsyncEndpointCap)
+   apply (frule cap_get_tag_NotificationCap)
    apply simp
-   apply (clarsimp simp: to_bool_def isAsyncEndpointCap_def isEndpointCap_def true_def) -- "badge of A is not 0 now"
+   apply (clarsimp simp: to_bool_def isNotificationCap_def isEndpointCap_def true_def) -- "badge of A is not 0 now"
 
 
-   apply (subgoal_tac "cap_get_tag (cte_C.cap_C cte_b) = scast cap_async_endpoint_cap") --"needed also after"
+   apply (subgoal_tac "cap_get_tag (cte_C.cap_C cte_b) = scast cap_notification_cap") --"needed also after"
     prefer 2
-    apply (rule sameRegionAs_AsyncEndpointCap, assumption+)
+    apply (rule sameRegionAs_NotificationCap, assumption+)
 
    apply (rule conjI, simp)
    apply clarsimp
    apply (simp add: Let_def case_bool_If)
-   apply (frule_tac cap="(cap_to_H x2c)" in cap_get_tag_AsyncEndpointCap)
+   apply (frule_tac cap="(cap_to_H x2c)" in cap_get_tag_NotificationCap)
    apply (simp add: if_1_0_0 if_distrib [where f=scast])
 
   -- " main goal"
   apply clarsimp
   apply (simp add: to_bool_def)
-  apply (subgoal_tac "(\<not> (isEndpointCap (cap_to_H x2b))) \<and> ( \<not> (isAsyncEndpointCap (cap_to_H x2b)))")
+  apply (subgoal_tac "(\<not> (isEndpointCap (cap_to_H x2b))) \<and> ( \<not> (isNotificationCap (cap_to_H x2b)))")
    apply (clarsimp simp: true_def)
   apply (rule conjI)
    apply (clarsimp simp: cap_get_tag_isCap [symmetric])+
@@ -3667,24 +3667,24 @@ lemma updateCapData_spec:
 
   apply (case_tac cap, simp_all add: cap_get_tag_isCap_unfolded_H_cap 
                         isCap_simps from_bool_def isArchCap_tag_def2 cap_tag_defs Let_def)
-  -- "AsyncEndpointCap"
+  -- "NotificationCap"
      apply clarsimp
      apply (frule cap_get_tag_isCap_unfolded_H_cap(3))
-     apply (frule (1) iffD1[OF cap_get_tag_AsyncEndpointCap])
+     apply (frule (1) iffD1[OF cap_get_tag_NotificationCap])
      apply clarsimp
 
      apply (intro conjI impI)
-     -- "preserve is zero and capAEPBadge_CL \<dots> = 0"
+     -- "preserve is zero and capNtfnBadge_CL \<dots> = 0"
        apply clarsimp 
-       apply (clarsimp simp:cap_async_endpoint_cap_lift_def cap_lift_def cap_tag_defs)
+       apply (clarsimp simp:cap_notification_cap_lift_def cap_lift_def cap_tag_defs)
        apply (simp add: ccap_relation_def cap_lift_def cap_tag_defs cap_to_H_def)
-     -- "preserve is zero and capAEPBadge_CL \<dots> \<noteq> 0"
+     -- "preserve is zero and capNtfnBadge_CL \<dots> \<noteq> 0"
       apply clarsimp 
       apply (simp add: ccap_relation_NullCap_iff cap_tag_defs)
      -- "preserve is not zero"
      apply clarsimp
      apply (simp add: to_bool_def)
-     apply (case_tac "preserve_' x = 0 \<and> capAEPBadge_CL (cap_async_endpoint_cap_lift (cap_' x))= 0", 
+     apply (case_tac "preserve_' x = 0 \<and> capNtfnBadge_CL (cap_notification_cap_lift (cap_' x))= 0", 
             clarsimp)
      apply (simp add: if_not_P) 
      apply (simp add: ccap_relation_NullCap_iff cap_tag_defs)
@@ -3696,11 +3696,11 @@ lemma updateCapData_spec:
     apply clarsimp
 
     apply (intro impI conjI)
-    -- "preserve is zero and capAEPBadge_CL \<dots> = 0"
+    -- "preserve is zero and capNtfnBadge_CL \<dots> = 0"
       apply clarsimp
       apply (clarsimp simp:cap_endpoint_cap_lift_def cap_lift_def cap_tag_defs)
       apply (simp add: ccap_relation_def cap_lift_def cap_tag_defs cap_to_H_def)
-    -- "preserve is zero and capAEPBadge_CL \<dots> \<noteq> 0"
+    -- "preserve is zero and capNtfnBadge_CL \<dots> \<noteq> 0"
      apply clarsimp 
      apply (simp add: ccap_relation_NullCap_iff cap_tag_defs)
     -- "preserve is not zero"

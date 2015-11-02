@@ -29,7 +29,7 @@ abbreviation
 abbreviation
   ep_Ptr :: "word32 \<Rightarrow> endpoint_C ptr" where "ep_Ptr == Ptr"
 abbreviation
-  aep_Ptr :: "word32 \<Rightarrow> async_endpoint_C ptr" where "aep_Ptr == Ptr"
+  ntfn_Ptr :: "word32 \<Rightarrow> notification_C ptr" where "ntfn_Ptr == Ptr"
 abbreviation
   ap_Ptr :: "word32 \<Rightarrow> asid_pool_C ptr" where "ap_Ptr == Ptr"
 abbreviation
@@ -89,9 +89,9 @@ definition
    | _ \<Rightarrow> False"
 
 definition
-  isAsyncEndpointCap_C :: "cap_CL \<Rightarrow> bool" where
- "isAsyncEndpointCap_C v \<equiv> case v of
-  Cap_async_endpoint_cap aec \<Rightarrow> True
+  isNotificationCap_C :: "cap_CL \<Rightarrow> bool" where
+ "isNotificationCap_C v \<equiv> case v of
+  Cap_notification_cap aec \<Rightarrow> True
   | _ \<Rightarrow> False"
 
 definition
@@ -100,9 +100,9 @@ where
   "ep_at_C' p h \<equiv> Ptr p \<in> dom (clift h :: endpoint_C typ_heap)" -- "endpoint_lift is total"
 
 definition
-  aep_at_C' :: "word32 \<Rightarrow> heap_raw_state \<Rightarrow> bool"
-  where -- "async_endpoint_lift is total"
-  "aep_at_C' p h \<equiv> Ptr p \<in> dom (clift h :: async_endpoint_C typ_heap)"
+  ntfn_at_C' :: "word32 \<Rightarrow> heap_raw_state \<Rightarrow> bool"
+  where -- "notification_lift is total"
+  "ntfn_at_C' p h \<equiv> Ptr p \<in> dom (clift h :: notification_C typ_heap)"
 
 definition
   tcb_at_C' :: "word32 \<Rightarrow> heap_raw_state \<Rightarrow> bool"
@@ -162,7 +162,7 @@ where
   "capBits_C Cap_null_cap = 0"
 | "capBits_C (Cap_untyped_cap uc) = unat (capBlockSize_CL uc)" 
 | "capBits_C (Cap_endpoint_cap ec) = wordSizeCase 4 5"
-| "capBits_C (Cap_async_endpoint_cap aec) = wordSizeCase 4 5"
+| "capBits_C (Cap_notification_cap aec) = wordSizeCase 4 5"
 | "capBits_C (Cap_cnode_cap cnc) =  wordSizeCase 4 5"
 | "capBits_C (Cap_thread_cap tc) = 10"
 | "capBits_C (Cap_zombie_cap zc) =  (wordSizeCase 4 5)" 
@@ -173,7 +173,7 @@ capUntypedPtr_C :: "cap_CL \<Rightarrow> word32" where
   "capUntypedPtr_C cap \<equiv> case cap of
  (Cap_untyped_cap uc) \<Rightarrow> (capBlockSize_CL uc)
  |  Cap_endpoint_cap ep \<Rightarrow> (capEPPtr_CL ep)
- |  Cap_async_endpoint_cap aep \<Rightarrow> (capAEPPtr_CL aep)
+ |  Cap_notification_cap ntfn \<Rightarrow> (capNtfnPtr_CL ntfn)
  |  Cap_cnode_cap ccap \<Rightarrow> (capCNodePtr_CL ccap)
  |  Cap_reply_cap rc \<Rightarrow>  (cap_reply_cap_CL.capTCBPtr_CL rc)
  |  Cap_thread_cap tc \<Rightarrow>  (cap_thread_cap_CL.capTCBPtr_CL tc)
@@ -336,9 +336,9 @@ where
  | Cap_endpoint_cap ec \<Rightarrow>
     EndpointCap (capEPPtr_CL ec) (capEPBadge_CL ec) (to_bool(capCanSend_CL ec)) (to_bool(capCanReceive_CL ec))
                 (to_bool(capCanGrant_CL ec))
- | Cap_async_endpoint_cap aep \<Rightarrow>
-    AsyncEndpointCap (capAEPPtr_CL aep)(capAEPBadge_CL aep)(to_bool(capAEPCanSend_CL aep))
-                     (to_bool(capAEPCanReceive_CL aep))
+ | Cap_notification_cap ntfn \<Rightarrow>
+    NotificationCap (capNtfnPtr_CL ntfn)(capNtfnBadge_CL ntfn)(to_bool(capNtfnCanSend_CL ntfn))
+                     (to_bool(capNtfnCanReceive_CL ntfn))
  | Cap_reply_cap rc \<Rightarrow> ReplyCap (ctcb_ptr_to_tcb_ptr (Ptr (cap_reply_cap_CL.capTCBPtr_CL rc))) (to_bool (capReplyMaster_CL rc))
  | Cap_thread_cap tc \<Rightarrow>  ThreadCap(ctcb_ptr_to_tcb_ptr (Ptr (cap_thread_cap_CL.capTCBPtr_CL tc)))
  | Cap_irq_handler_cap ihc \<Rightarrow> IRQHandlerCap (ucast(capIRQ_CL ihc))
@@ -408,7 +408,7 @@ where
 lemma  c_valid_cap_simps [simp]:
   "cap_get_tag c = scast cap_small_frame_cap \<Longrightarrow> c_valid_cap c"
   "cap_get_tag c = scast cap_thread_cap \<Longrightarrow> c_valid_cap c"
-  "cap_get_tag c = scast cap_async_endpoint_cap \<Longrightarrow> c_valid_cap c"
+  "cap_get_tag c = scast cap_notification_cap \<Longrightarrow> c_valid_cap c"
   "cap_get_tag c = scast cap_endpoint_cap \<Longrightarrow> c_valid_cap c"
   "cap_get_tag c = scast cap_cnode_cap \<Longrightarrow> c_valid_cap c"
   "cap_get_tag c = scast cap_page_directory_cap \<Longrightarrow> c_valid_cap c"
@@ -440,9 +440,9 @@ lemma maxPrio_to_H:
   by (simp add: maxPriority_def seL4_MaxPrio_def numPriorities_def)
 
 abbreviation(input)
-  AsyncEndpointObject :: sword32
+  NotificationObject :: sword32
 where
-  "AsyncEndpointObject == seL4_NotificationObject"
+  "NotificationObject == seL4_NotificationObject"
 
 abbreviation(input)
   CapTableObject :: sword32

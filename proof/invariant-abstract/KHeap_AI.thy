@@ -19,9 +19,9 @@ lemma get_object_wp:
   apply (clarsimp simp: obj_at_def)
   done
 
-lemma get_aep_wp:
-  "\<lbrace>\<lambda>s. \<forall>aep. ko_at (AsyncEndpoint aep) aepptr s \<longrightarrow> P aep s\<rbrace> get_async_ep aepptr \<lbrace>P\<rbrace>"
-  apply (simp add: get_async_ep_def)
+lemma get_ntfn_wp:
+  "\<lbrace>\<lambda>s. \<forall>ntfn. ko_at (Notification ntfn) ntfnptr s \<longrightarrow> P ntfn s\<rbrace> get_notification ntfnptr \<lbrace>P\<rbrace>"
+  apply (simp add: get_notification_def)
   apply (wp get_object_wp | wpc)+
   apply clarsimp
   done
@@ -97,7 +97,7 @@ lemma valid_cap_same_type:
   apply (simp add: valid_cap_def split: cap.split arch_cap.split)
   apply (auto elim!: typ_at_same_type
                      untyped_same_type
-               simp: aep_at_typ ep_at_typ tcb_at_typ cap_table_at_typ
+               simp: ntfn_at_typ ep_at_typ tcb_at_typ cap_table_at_typ
               split: option.split sum.split)
   done
 
@@ -109,19 +109,19 @@ lemma valid_obj_same_type:
       apply (clarsimp simp add: valid_obj_def valid_cs_def)
       apply (drule (1) bspec)
       apply (erule (2) valid_cap_same_type)
-     apply (clarsimp simp add: valid_obj_def valid_tcb_def valid_bound_aep_def)
+     apply (clarsimp simp add: valid_obj_def valid_tcb_def valid_bound_ntfn_def)
      apply (fastforce elim: valid_cap_same_type typ_at_same_type
                       simp: valid_tcb_state_def ep_at_typ
-                            aep_at_typ tcb_at_typ
+                            ntfn_at_typ tcb_at_typ
                      split: Structures_A.thread_state.splits option.splits)
     apply (clarsimp simp add: valid_obj_def valid_ep_def)
     apply (fastforce elim: typ_at_same_type
                     simp: tcb_at_typ
                     split: Structures_A.endpoint.splits)
-   apply (clarsimp simp add: valid_obj_def valid_aep_def valid_bound_tcb_def)
+   apply (clarsimp simp add: valid_obj_def valid_ntfn_def valid_bound_tcb_def)
    apply (auto elim: typ_at_same_type
                    simp: tcb_at_typ
-                  split: Structures_A.aep.splits option.splits)
+                  split: Structures_A.ntfn.splits option.splits)
   apply (clarsimp simp add: valid_obj_def)
   done
 
@@ -194,25 +194,25 @@ lemma sts_ep_at_inv[wp]:
   apply (clarsimp simp: obj_at_def is_ep is_tcb get_tcb_def)
   done
 
-lemma sts_aep_at_inv[wp]:
-  "\<lbrace> aep_at ep \<rbrace> set_thread_state t s \<lbrace> \<lambda>rv. aep_at ep \<rbrace>"
+lemma sts_ntfn_at_inv[wp]:
+  "\<lbrace> ntfn_at ep \<rbrace> set_thread_state t s \<lbrace> \<lambda>rv. ntfn_at ep \<rbrace>"
   apply (simp add: set_thread_state_def)
   apply (wp | simp add: set_object_def)+
-  apply (clarsimp simp: obj_at_def is_aep is_tcb get_tcb_def)
+  apply (clarsimp simp: obj_at_def is_ntfn is_tcb get_tcb_def)
   done
 
-lemma sba_ep_at_inv[wp]:
-  "\<lbrace> ep_at ep \<rbrace> set_bound_aep t aep \<lbrace> \<lambda>rv. ep_at ep \<rbrace>"
-  apply (simp add: set_bound_aep_def)
+lemma sbn_ep_at_inv[wp]:
+  "\<lbrace> ep_at ep \<rbrace> set_bound_notification t ntfn \<lbrace> \<lambda>rv. ep_at ep \<rbrace>"
+  apply (simp add: set_bound_notification_def)
   apply (wp | simp add: set_object_def)+
   apply (clarsimp simp: obj_at_def is_ep is_tcb get_tcb_def)
   done
 
-lemma sba_aep_at_inv[wp]:
-  "\<lbrace> aep_at ep \<rbrace> set_bound_aep t aep \<lbrace> \<lambda>rv. aep_at ep \<rbrace>"
-  apply (simp add: set_bound_aep_def)
+lemma sbn_ntfn_at_inv[wp]:
+  "\<lbrace> ntfn_at ep \<rbrace> set_bound_notification t ntfn \<lbrace> \<lambda>rv. ntfn_at ep \<rbrace>"
+  apply (simp add: set_bound_notification_def)
   apply (wp | simp add: set_object_def)+
-  apply (clarsimp simp: obj_at_def is_aep is_tcb get_tcb_def)
+  apply (clarsimp simp: obj_at_def is_ntfn is_tcb get_tcb_def)
   done
 
 lemma prefix_to_eq:
@@ -321,8 +321,8 @@ lemma get_ep_inv[wp]: "\<lbrace>P\<rbrace> get_endpoint ep \<lbrace>\<lambda>rv.
   done
 
 
-lemma get_aep_inv[wp]: "\<lbrace>P\<rbrace> get_async_ep ep \<lbrace>\<lambda>rv. P\<rbrace>"
-  apply (simp add: get_async_ep_def)
+lemma get_ntfn_inv[wp]: "\<lbrace>P\<rbrace> get_notification ep \<lbrace>\<lambda>rv. P\<rbrace>"
+  apply (simp add: get_notification_def)
   apply wp
    defer
    apply (rule get_object_inv)
@@ -360,21 +360,21 @@ lemma get_ep_valid_ep[wp]:
       apply (wp | simp add: valid_obj_def)+
 done
 
-lemma get_aep_actual_aep[wp]:
-  "\<lbrace> aep_at aep \<rbrace> 
-   get_async_ep aep 
-   \<lbrace> \<lambda>rv. obj_at (\<lambda>k. k = AsyncEndpoint rv) aep \<rbrace>"
-   apply (clarsimp simp add: get_async_ep_def get_object_def bind_def 
+lemma get_ntfn_actual_ntfn[wp]:
+  "\<lbrace> ntfn_at ntfn \<rbrace> 
+   get_notification ntfn 
+   \<lbrace> \<lambda>rv. obj_at (\<lambda>k. k = Notification rv) ntfn \<rbrace>"
+   apply (clarsimp simp add: get_notification_def get_object_def bind_def 
                              valid_def gets_def get_def return_def fail_def 
-                             assert_def obj_at_def is_aep_def)
+                             assert_def obj_at_def is_ntfn_def)
    apply (case_tac y, simp_all add: return_def)
 done
 
-lemma get_aep_valid_aep[wp]:
-  "\<lbrace> valid_objs and aep_at aep \<rbrace> 
-   get_async_ep aep 
-   \<lbrace> valid_aep \<rbrace>"
-  apply (simp add: get_async_ep_def)
+lemma get_ntfn_valid_ntfn[wp]:
+  "\<lbrace> valid_objs and ntfn_at ntfn \<rbrace> 
+   get_notification ntfn 
+   \<lbrace> valid_ntfn \<rbrace>"
+  apply (simp add: get_notification_def)
   apply (rule hoare_seq_ext)
    prefer 2
    apply (rule hoare_pre_imp [OF _ get_object_valid])
@@ -421,31 +421,31 @@ lemma set_endpoint_cte_wp_at[wp]:
   done
 
 
-lemma set_aep_valid_objs:
-  "\<lbrace>valid_objs and valid_aep aep\<rbrace>
-  set_async_ep p aep
+lemma set_ntfn_valid_objs:
+  "\<lbrace>valid_objs and valid_ntfn ntfn\<rbrace>
+  set_notification p ntfn
   \<lbrace>\<lambda>rv. valid_objs\<rbrace>"
-  apply (simp add: set_async_ep_def)
+  apply (simp add: set_notification_def)
   apply (wp set_object_valid_objs)
   apply (rule hoare_strengthen_post [OF get_object_sp])
-  apply (clarsimp simp: valid_obj_def obj_at_def is_aep)
+  apply (clarsimp simp: valid_obj_def obj_at_def is_ntfn)
   apply (case_tac r, simp_all add: a_type_def)
   done
 
 
-lemma set_aep_aligned[wp]:
-  "\<lbrace>pspace_aligned\<rbrace> set_async_ep p aep \<lbrace>\<lambda>rv. pspace_aligned\<rbrace>"
-  apply (simp add: set_async_ep_def)
+lemma set_ntfn_aligned[wp]:
+  "\<lbrace>pspace_aligned\<rbrace> set_notification p ntfn \<lbrace>\<lambda>rv. pspace_aligned\<rbrace>"
+  apply (simp add: set_notification_def)
   apply (wp set_object_aligned)
   apply (rule hoare_strengthen_post [OF get_object_sp])
-  apply (clarsimp simp add: obj_at_def is_aep)
+  apply (clarsimp simp add: obj_at_def is_ntfn)
   apply (case_tac r, simp_all add: a_type_def)
   done
 
 
-lemma set_async_ep_typ_at [wp]:
-  "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> set_async_ep p' aep \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
-  apply (simp add: set_async_ep_def set_object_def)
+lemma set_notification_typ_at [wp]:
+  "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> set_notification p' ntfn \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
+  apply (simp add: set_notification_def set_object_def)
   apply wp
   apply (rule hoare_strengthen_post [OF get_object_sp])
   apply (case_tac r, simp_all)
@@ -453,17 +453,17 @@ lemma set_async_ep_typ_at [wp]:
   done
 
 
-lemma set_async_ep_cte_wp_at[wp]:
-  "\<lbrace>cte_wp_at P p\<rbrace> set_async_ep ep v \<lbrace>\<lambda>rv. cte_wp_at P p\<rbrace>"
-  apply (simp add: set_async_ep_def set_object_def get_object_def)
+lemma set_notification_cte_wp_at[wp]:
+  "\<lbrace>cte_wp_at P p\<rbrace> set_notification ep v \<lbrace>\<lambda>rv. cte_wp_at P p\<rbrace>"
+  apply (simp add: set_notification_def set_object_def get_object_def)
   apply wp
   apply (fastforce simp: cte_wp_at_cases)
   done
 
 
-lemma get_aep_ko:
-  "\<lbrace>\<top>\<rbrace> get_async_ep ep \<lbrace>\<lambda>rv. ko_at (AsyncEndpoint rv) ep\<rbrace>"
-  apply (simp add: get_async_ep_def)
+lemma get_ntfn_ko:
+  "\<lbrace>\<top>\<rbrace> get_notification ep \<lbrace>\<lambda>rv. ko_at (Notification rv) ep\<rbrace>"
+  apply (simp add: get_notification_def)
   apply wp
    prefer 2
    apply (rule get_object_sp)
@@ -480,13 +480,13 @@ lemma obj_set_prop_at:
   done
 
 
-lemma get_aep_sp: 
-  "\<lbrace>P\<rbrace> get_async_ep p \<lbrace>\<lambda>aep. ko_at (AsyncEndpoint aep) p and P\<rbrace>"
+lemma get_ntfn_sp: 
+  "\<lbrace>P\<rbrace> get_notification p \<lbrace>\<lambda>ntfn. ko_at (Notification ntfn) p and P\<rbrace>"
   apply wp
   apply (rule hoare_weaken_pre)
    apply (rule hoare_vcg_conj_lift)
-    apply (rule get_aep_ko)
-   apply (rule get_aep_inv)
+    apply (rule get_ntfn_ko)
+   apply (rule get_ntfn_inv)
   apply simp
   done
 
@@ -547,9 +547,9 @@ lemma set_object_pspace_in_kernel_window:
   apply (simp add: obj_bits_T)
   done
 
-lemma set_aep_kernel_window[wp]:
-  "\<lbrace>pspace_in_kernel_window\<rbrace> set_async_ep ptr val \<lbrace>\<lambda>rv. pspace_in_kernel_window\<rbrace>"
-  apply (simp add: set_async_ep_def)
+lemma set_ntfn_kernel_window[wp]:
+  "\<lbrace>pspace_in_kernel_window\<rbrace> set_notification ptr val \<lbrace>\<lambda>rv. pspace_in_kernel_window\<rbrace>"
+  apply (simp add: set_notification_def)
   apply (wp set_object_pspace_in_kernel_window get_object_wp)
   apply (clarsimp simp: obj_at_def a_type_def
                  split: Structures_A.kernel_object.split_asm)
@@ -631,7 +631,7 @@ where
 | "same_caps val (TCB tcb)           = (\<exists>tcb'. val = TCB tcb'
                                          \<and> (\<forall>(getF, t) \<in> ran tcb_cap_cases. getF tcb' = getF tcb))"
 | "same_caps val (Endpoint ep)       = is_ep val"
-| "same_caps val (AsyncEndpoint aep) = is_aep val"
+| "same_caps val (Notification ntfn) = is_ntfn val"
 | "same_caps val (ArchObj ao)        = (\<exists>ao'. val = ArchObj ao')"
 
 
@@ -640,7 +640,7 @@ lemma same_caps_more_simps[simp]:
  "same_caps (TCB tcb)     val       = (\<exists>tcb'. val = TCB tcb'
                                          \<and> (\<forall>(getF, t) \<in> ran tcb_cap_cases. getF tcb' = getF tcb))"
  "same_caps (Endpoint ep) val       = is_ep val"
- "same_caps (AsyncEndpoint aep) val = is_aep val"
+ "same_caps (Notification ntfn) val = is_ntfn val"
  "same_caps (ArchObj ao) val        = (\<exists>ao'. val = ArchObj ao')"
  by (cases val, (fastforce simp: is_obj_defs)+)+
 
@@ -726,11 +726,11 @@ lemma set_ep_zombies[wp]:
   done
 
 
-lemma set_aep_distinct[wp]:
+lemma set_ntfn_distinct[wp]:
   "\<lbrace>pspace_distinct\<rbrace> 
-  set_async_ep aep v 
+  set_notification ntfn v 
   \<lbrace>\<lambda>rv. pspace_distinct\<rbrace>"
-  apply (simp add: set_async_ep_def)
+  apply (simp add: set_notification_def)
   apply (wp set_object_distinct)
   apply (rule hoare_strengthen_post [OF get_object_sp])
   apply clarsimp
@@ -738,11 +738,11 @@ lemma set_aep_distinct[wp]:
   apply (case_tac ko, simp_all add: a_type_def)
   done
 
-lemma set_aep_refs_of[wp]:
-  "\<lbrace>\<lambda>s. P ((state_refs_of s) (aepptr := aep_q_refs_of (aep_obj aep) \<union> aep_bound_refs (aep_bound_tcb aep)))\<rbrace>
-     set_async_ep aepptr aep
+lemma set_ntfn_refs_of[wp]:
+  "\<lbrace>\<lambda>s. P ((state_refs_of s) (ntfnptr := ntfn_q_refs_of (ntfn_obj ntfn) \<union> ntfn_bound_refs (ntfn_bound_tcb ntfn)))\<rbrace>
+     set_notification ntfnptr ntfn
    \<lbrace>\<lambda>rv s. P (state_refs_of s)\<rbrace>"
-  apply (simp add: set_async_ep_def set_object_def)
+  apply (simp add: set_notification_def set_object_def)
   apply (rule hoare_seq_ext [OF _ get_object_sp])
   apply wp
   apply (clarsimp simp: state_refs_of_def
@@ -750,18 +750,18 @@ lemma set_aep_refs_of[wp]:
                 intro!: ext)
   done
 
-lemma set_aep_cur_tcb[wp]:
-  "\<lbrace>cur_tcb\<rbrace> set_async_ep aep v \<lbrace>\<lambda>rv. cur_tcb\<rbrace>"
-  apply (simp add: set_async_ep_def set_object_def)
+lemma set_ntfn_cur_tcb[wp]:
+  "\<lbrace>cur_tcb\<rbrace> set_notification ntfn v \<lbrace>\<lambda>rv. cur_tcb\<rbrace>"
+  apply (simp add: set_notification_def set_object_def)
   apply wp
   apply (rule hoare_strengthen_post [OF get_object_sp])
-  apply (auto simp: cur_tcb_def obj_at_def is_tcb is_aep)
+  apply (auto simp: cur_tcb_def obj_at_def is_tcb is_ntfn)
   done
 
 
-lemma set_aep_caps_of_state[wp]:
-  "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> set_async_ep p aep \<lbrace>\<lambda>r s. P (caps_of_state s)\<rbrace>"
-  apply (simp add: set_async_ep_def get_object_def bind_assoc set_object_def)
+lemma set_ntfn_caps_of_state[wp]:
+  "\<lbrace>\<lambda>s. P (caps_of_state s)\<rbrace> set_notification p ntfn \<lbrace>\<lambda>r s. P (caps_of_state s)\<rbrace>"
+  apply (simp add: set_notification_def get_object_def bind_assoc set_object_def)
   apply wp
   apply clarsimp
   apply (subst cte_wp_caps_of_lift)
@@ -786,45 +786,45 @@ lemma set_object_cap_refs_in_kernel_window:
   done
 
 
-crunch no_cdt[wp]: set_async_ep "\<lambda>s. P (cdt s)" 
+crunch no_cdt[wp]: set_notification "\<lambda>s. P (cdt s)" 
   (wp: crunch_wps)
 
 
-crunch no_revokable[wp]: set_async_ep "\<lambda>s. P (is_original_cap s)" 
+crunch no_revokable[wp]: set_notification "\<lambda>s. P (is_original_cap s)" 
   (wp: crunch_wps)
 
 
-lemma set_aep_mdb [wp]:
-  "\<lbrace>valid_mdb\<rbrace> set_async_ep p ep \<lbrace>\<lambda>r. valid_mdb\<rbrace>"
+lemma set_ntfn_mdb [wp]:
+  "\<lbrace>valid_mdb\<rbrace> set_notification p ep \<lbrace>\<lambda>r. valid_mdb\<rbrace>"
   by (wp valid_mdb_lift)
 
 
-lemma set_aep_iflive[wp]:
-  "\<lbrace>\<lambda>s. if_live_then_nonz_cap s \<and> (live (AsyncEndpoint aep) \<longrightarrow> ex_nonz_cap_to p s)\<rbrace>
-     set_async_ep p aep \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
-  apply (simp add: set_async_ep_def)
+lemma set_ntfn_iflive[wp]:
+  "\<lbrace>\<lambda>s. if_live_then_nonz_cap s \<and> (live (Notification ntfn) \<longrightarrow> ex_nonz_cap_to p s)\<rbrace>
+     set_notification p ntfn \<lbrace>\<lambda>rv. if_live_then_nonz_cap\<rbrace>"
+  apply (simp add: set_notification_def)
   apply wp
   apply (rule hoare_strengthen_post [OF get_object_sp])
-  apply (clarsimp elim!: obj_at_weakenE simp: is_aep_def
+  apply (clarsimp elim!: obj_at_weakenE simp: is_ntfn_def
                   split: Structures_A.kernel_object.splits)
   done
 
 
-lemma set_aep_ifunsafe[wp]:
-  "\<lbrace>if_unsafe_then_cap\<rbrace> set_async_ep p val \<lbrace>\<lambda>rv. if_unsafe_then_cap\<rbrace>"
-  apply (simp add: set_async_ep_def)
+lemma set_ntfn_ifunsafe[wp]:
+  "\<lbrace>if_unsafe_then_cap\<rbrace> set_notification p val \<lbrace>\<lambda>rv. if_unsafe_then_cap\<rbrace>"
+  apply (simp add: set_notification_def)
   apply wp
   apply (rule hoare_strengthen_post [OF get_object_sp])
-  apply (clarsimp elim!: obj_at_weakenE simp: is_aep_def)
+  apply (clarsimp elim!: obj_at_weakenE simp: is_ntfn_def)
   done
 
 
-lemma set_aep_zombies[wp]:
-  "\<lbrace>zombies_final\<rbrace> set_async_ep p val \<lbrace>\<lambda>rv. zombies_final\<rbrace>"
-  apply (simp add: set_async_ep_def)
+lemma set_ntfn_zombies[wp]:
+  "\<lbrace>zombies_final\<rbrace> set_notification p val \<lbrace>\<lambda>rv. zombies_final\<rbrace>"
+  apply (simp add: set_notification_def)
   apply wp
   apply (rule hoare_strengthen_post [OF get_object_sp])
-  apply (clarsimp elim!: obj_at_weakenE simp: is_aep_def)
+  apply (clarsimp elim!: obj_at_weakenE simp: is_ntfn_def)
   done
 
 
@@ -973,9 +973,9 @@ lemma as_user_typ_at[wp]:
   done
 
 
-lemma as_user_no_del_aep[wp]: 
-  "\<lbrace>aep_at p\<rbrace> as_user t m \<lbrace>\<lambda>rv. aep_at p\<rbrace>"
-  by (simp add: aep_at_typ, wp)
+lemma as_user_no_del_ntfn[wp]: 
+  "\<lbrace>ntfn_at p\<rbrace> as_user t m \<lbrace>\<lambda>rv. ntfn_at p\<rbrace>"
+  by (simp add: ntfn_at_typ, wp)
 
 
 lemma as_user_no_del_ep[wp]: 
@@ -988,9 +988,9 @@ lemma set_ep_tcb[wp]:
    \<lbrace> \<lambda>rv. tcb_at t \<rbrace>"
   by (simp add: tcb_at_typ) wp
 
-lemma set_aep_tcb[wp]:
+lemma set_ntfn_tcb[wp]:
   "\<lbrace> tcb_at t \<rbrace>
-   set_async_ep e v 
+   set_notification e v 
    \<lbrace> \<lambda>rv. tcb_at t \<rbrace>"
   by (simp add: tcb_at_typ) wp
 
@@ -1023,9 +1023,9 @@ lemma set_endpoint_obj_at:
   done
 
 
-lemma set_async_ep_obj_at:
-  "\<lbrace>\<lambda>s. P (AsyncEndpoint ep)\<rbrace> set_async_ep ptr ep \<lbrace>\<lambda>rv. obj_at P ptr\<rbrace>"
-  apply (simp add: set_async_ep_def)
+lemma set_notification_obj_at:
+  "\<lbrace>\<lambda>s. P (Notification ep)\<rbrace> set_notification ptr ep \<lbrace>\<lambda>rv. obj_at P ptr\<rbrace>"
+  apply (simp add: set_notification_def)
   apply (wp obj_set_prop_at)
   apply (rule hoare_drop_imps, wp)
   done
@@ -1066,20 +1066,20 @@ lemma set_ep_ex_cap[wp]:
   by (wp ex_nonz_cap_to_pres)
 
 
-lemma set_aep_st_tcb [wp]:
-  "\<lbrace>pred_tcb_at proj P t\<rbrace> set_async_ep aep x \<lbrace>\<lambda>rv. pred_tcb_at proj P t\<rbrace>"
-  apply (simp add: set_async_ep_def set_object_def get_object_def)
+lemma set_ntfn_st_tcb [wp]:
+  "\<lbrace>pred_tcb_at proj P t\<rbrace> set_notification ntfn x \<lbrace>\<lambda>rv. pred_tcb_at proj P t\<rbrace>"
+  apply (simp add: set_notification_def set_object_def get_object_def)
   apply wp
-  apply (clarsimp simp: pred_tcb_at_def obj_at_def is_aep)
+  apply (clarsimp simp: pred_tcb_at_def obj_at_def is_ntfn)
   done
 
 
-crunch it[wp]: set_async_ep "\<lambda>s. P (idle_thread s)"
+crunch it[wp]: set_notification "\<lambda>s. P (idle_thread s)"
   (wp: crunch_wps simp: crunch_simps)
 
 
-lemma set_async_ep_cap_to[wp]:
-  "\<lbrace>ex_nonz_cap_to p\<rbrace> set_async_ep p' val \<lbrace>\<lambda>rv. ex_nonz_cap_to p\<rbrace>"
+lemma set_notification_cap_to[wp]:
+  "\<lbrace>ex_nonz_cap_to p\<rbrace> set_notification p' val \<lbrace>\<lambda>rv. ex_nonz_cap_to p\<rbrace>"
   by (wp ex_nonz_cap_to_pres)
 
 
@@ -1092,69 +1092,69 @@ lemma set_endpoint_idle[wp]:
   done
 
 
-(* FIXME-AEP *)
+(* FIXME-NTFN *)
 
 lemma ep_redux_simps:
   "valid_ep (case xs of [] \<Rightarrow> Structures_A.IdleEP | y # ys \<Rightarrow> Structures_A.SendEP (y # ys))
         = (\<lambda>s. distinct xs \<and> (\<forall>t\<in>set xs. tcb_at t s))"
   "valid_ep (case xs of [] \<Rightarrow> Structures_A.IdleEP | y # ys \<Rightarrow> Structures_A.RecvEP (y # ys))
         = (\<lambda>s. distinct xs \<and> (\<forall>t\<in>set xs. tcb_at t s))"
-  "valid_aep (aep\<lparr>aep_obj := (case xs of [] \<Rightarrow> Structures_A.IdleAEP | y # ys \<Rightarrow> Structures_A.WaitingAEP (y # ys))\<rparr>)
+  "valid_ntfn (ntfn\<lparr>ntfn_obj := (case xs of [] \<Rightarrow> Structures_A.IdleNtfn | y # ys \<Rightarrow> Structures_A.WaitingNtfn (y # ys))\<rparr>)
         = (\<lambda>s. distinct xs \<and> (\<forall>t\<in>set xs. tcb_at t s)
-             \<and> (case aep_bound_tcb aep of
+             \<and> (case ntfn_bound_tcb ntfn of
                  Some t \<Rightarrow> tcb_at t s \<and> (case xs of y # ys \<Rightarrow> xs = [t] | _ \<Rightarrow> True)
                | _ \<Rightarrow> True))"
   "ep_q_refs_of (case xs of [] \<Rightarrow> Structures_A.IdleEP | y # ys \<Rightarrow> Structures_A.SendEP (y # ys))
         = (set xs \<times> {EPSend})"
   "ep_q_refs_of (case xs of [] \<Rightarrow> Structures_A.IdleEP | y # ys \<Rightarrow> Structures_A.RecvEP (y # ys))
         = (set xs \<times> {EPRecv})"
-  "aep_q_refs_of (case xs of [] \<Rightarrow> Structures_A.IdleAEP | y # ys \<Rightarrow> Structures_A.WaitingAEP (y # ys))
-        = (set xs \<times> {AEPAsync})"
+  "ntfn_q_refs_of (case xs of [] \<Rightarrow> Structures_A.IdleNtfn | y # ys \<Rightarrow> Structures_A.WaitingNtfn (y # ys))
+        = (set xs \<times> {NTFNSignal})"
   by (fastforce split: list.splits option.splits
-                 simp: valid_ep_def valid_aep_def valid_bound_tcb_def
+                 simp: valid_ep_def valid_ntfn_def valid_bound_tcb_def
                intro!: ext)+
 
-crunch it[wp]: set_async_ep "\<lambda>s. P (idle_thread s)"
+crunch it[wp]: set_notification "\<lambda>s. P (idle_thread s)"
   (wp: crunch_wps simp: crunch_simps)
 
 
-crunch arch[wp]: set_async_ep "\<lambda>s. P (arch_state s)"
+crunch arch[wp]: set_notification "\<lambda>s. P (arch_state s)"
   (wp: crunch_wps simp: crunch_simps)
 
 
-lemma set_async_ep_valid_arch [wp]:
-  "\<lbrace>valid_arch_state\<rbrace> set_async_ep aep p \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
+lemma set_notification_valid_arch [wp]:
+  "\<lbrace>valid_arch_state\<rbrace> set_notification ntfn p \<lbrace>\<lambda>_. valid_arch_state\<rbrace>"
   by (rule valid_arch_state_lift) wp
 
 
-crunch irq_node_inv[wp]: set_async_ep "\<lambda>s. P (interrupt_irq_node s)"
+crunch irq_node_inv[wp]: set_notification "\<lambda>s. P (interrupt_irq_node s)"
   (wp: crunch_wps)
 
 
-lemma set_async_ep_global_refs [wp]:
-  "\<lbrace>valid_global_refs\<rbrace> set_async_ep aep p \<lbrace>\<lambda>_. valid_global_refs\<rbrace>"
+lemma set_notification_global_refs [wp]:
+  "\<lbrace>valid_global_refs\<rbrace> set_notification ntfn p \<lbrace>\<lambda>_. valid_global_refs\<rbrace>"
   by (rule valid_global_refs_cte_lift) wp
 
 
-lemma set_async_ep_idle[wp]:
-  "\<lbrace>aep_at p and valid_idle\<rbrace>
-   set_async_ep p ep
+lemma set_notification_idle[wp]:
+  "\<lbrace>ntfn_at p and valid_idle\<rbrace>
+   set_notification p ep
    \<lbrace>\<lambda>_. valid_idle\<rbrace>"
-  apply (simp add: set_async_ep_def set_object_def get_object_def)
+  apply (simp add: set_notification_def set_object_def get_object_def)
   apply (wp hoare_drop_imp)
-  apply (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def is_aep_def)
+  apply (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def is_ntfn_def)
   done
 
 
-lemma set_async_ep_reply[wp]:
+lemma set_notification_reply[wp]:
   "\<lbrace>valid_reply_caps\<rbrace>
-   set_async_ep p ep
+   set_notification p ep
    \<lbrace>\<lambda>_. valid_reply_caps\<rbrace>"
   by (wp valid_reply_caps_st_cte_lift)
 
 
-lemma set_async_ep_reply_masters[wp]:
-  "\<lbrace>valid_reply_masters\<rbrace> set_async_ep p ep \<lbrace>\<lambda>_. valid_reply_masters\<rbrace>"
+lemma set_notification_reply_masters[wp]:
+  "\<lbrace>valid_reply_masters\<rbrace> set_notification p ep \<lbrace>\<lambda>_. valid_reply_masters\<rbrace>"
   by (wp valid_reply_masters_cte_lift)
 
 
@@ -1369,27 +1369,27 @@ lemma set_ep_vs_lookup_pages [wp]:
   done
 
 
-lemma set_aep_arch_objs [wp]:
-  "\<lbrace>valid_arch_objs\<rbrace> set_async_ep p aep \<lbrace>\<lambda>_. valid_arch_objs\<rbrace>"
-  unfolding set_async_ep_def
+lemma set_ntfn_arch_objs [wp]:
+  "\<lbrace>valid_arch_objs\<rbrace> set_notification p ntfn \<lbrace>\<lambda>_. valid_arch_objs\<rbrace>"
+  unfolding set_notification_def
   apply (wp set_object_arch_objs get_object_wp)
   apply (clarsimp simp: vs_refs_def obj_at_def a_type_def 
                   split: Structures_A.kernel_object.splits)
   done
 
 
-lemma set_aep_vs_lookup [wp]:
-  "\<lbrace>\<lambda>s. P (vs_lookup s)\<rbrace> set_async_ep p ep \<lbrace>\<lambda>_ s. P (vs_lookup s)\<rbrace>"
-  unfolding set_async_ep_def
+lemma set_ntfn_vs_lookup [wp]:
+  "\<lbrace>\<lambda>s. P (vs_lookup s)\<rbrace> set_notification p ep \<lbrace>\<lambda>_ s. P (vs_lookup s)\<rbrace>"
+  unfolding set_notification_def
   apply (wp set_object_vs_lookup get_object_wp)
   apply (clarsimp simp: vs_refs_def obj_at_def 
                   split: Structures_A.kernel_object.splits)
   done
 
 
-lemma set_aep_vs_lookup_pages [wp]:
-  "\<lbrace>\<lambda>s. P (vs_lookup_pages s)\<rbrace> set_async_ep p ep \<lbrace>\<lambda>_ s. P (vs_lookup_pages s)\<rbrace>"
-  unfolding set_async_ep_def
+lemma set_ntfn_vs_lookup_pages [wp]:
+  "\<lbrace>\<lambda>s. P (vs_lookup_pages s)\<rbrace> set_notification p ep \<lbrace>\<lambda>_ s. P (vs_lookup_pages s)\<rbrace>"
+  unfolding set_notification_def
   apply (wp set_object_vs_lookup_pages get_object_wp)
   apply (clarsimp simp: vs_refs_pages_def obj_at_def 
                   split: Structures_A.kernel_object.splits)
@@ -1422,13 +1422,13 @@ lemma sts_vs_lookup_pages [wp]:
                   split: Structures_A.kernel_object.splits option.splits)
   done
 
-crunch arch_objs[wp]: set_bound_aep "valid_arch_objs"
+crunch arch_objs[wp]: set_bound_notification "valid_arch_objs"
   (simp: vs_refs_def)
 
-crunch vs_lookup[wp]: set_bound_aep "\<lambda>s. P (vs_lookup s)"
+crunch vs_lookup[wp]: set_bound_notification "\<lambda>s. P (vs_lookup s)"
   (simp: vs_refs_def)
 
-crunch vs_lookup_pages[wp]: set_bound_aep "\<lambda>s. P (vs_lookup_pages s)"
+crunch vs_lookup_pages[wp]: set_bound_notification "\<lambda>s. P (vs_lookup_pages s)"
   (simp: vs_refs_pages_def)
 
 lemma thread_set_arch_objs [wp]:
@@ -1500,7 +1500,7 @@ lemmas set_endpoint_valid_irq_handlers[wp]
     = valid_irq_handlers_lift [OF set_ep_caps_of_state set_endpoint_interrupt_states]
 
 
-crunch irq_node[wp]: set_async_ep "\<lambda>s. P (interrupt_irq_node s)"
+crunch irq_node[wp]: set_notification "\<lambda>s. P (interrupt_irq_node s)"
 
 
 lemmas hoare_use_eq_irq_node = hoare_use_eq[where f=interrupt_irq_node]
@@ -1516,12 +1516,12 @@ lemmas cap_table_at_lift_irq =
   hoare_use_eq_irq_node [OF _ cap_table_at_lift_valid]
 
 
-crunch interrupt_states[wp]: set_async_ep "\<lambda>s. P (interrupt_states s)"
+crunch interrupt_states[wp]: set_notification "\<lambda>s. P (interrupt_states s)"
   (wp: crunch_wps)
 
 
-lemmas set_async_ep_irq_handlers[wp] =
-    valid_irq_handlers_lift [OF set_aep_caps_of_state set_async_ep_interrupt_states]
+lemmas set_notification_irq_handlers[wp] =
+    valid_irq_handlers_lift [OF set_ntfn_caps_of_state set_notification_interrupt_states]
 
 
 lemma valid_vs_lookup_lift:
@@ -1562,11 +1562,11 @@ lemma valid_arch_caps_lift:
   done
 
 
-lemma set_async_ep_arch_caps [wp]:
-  "\<lbrace>valid_arch_caps\<rbrace> set_async_ep ptr val \<lbrace>\<lambda>rv. valid_arch_caps\<rbrace>"
+lemma set_notification_arch_caps [wp]:
+  "\<lbrace>valid_arch_caps\<rbrace> set_notification ptr val \<lbrace>\<lambda>rv. valid_arch_caps\<rbrace>"
   apply (rule valid_arch_caps_lift)
   apply wp
-  apply (simp add: set_async_ep_def set_object_def)
+  apply (simp add: set_notification_def set_object_def)
   apply (wp get_object_wp)
   apply (clarsimp simp: obj_at_def empty_table_def split: Structures_A.kernel_object.split)
   done
@@ -1603,11 +1603,11 @@ lemma valid_ao_at_lift:
   by (wp hoare_vcg_ex_lift y valid_arch_obj_typ z)
 
 
-lemma set_async_ep_global_objs [wp]:
-  "\<lbrace>valid_global_objs\<rbrace> set_async_ep ptr val \<lbrace>\<lambda>rv. valid_global_objs\<rbrace>"
+lemma set_notification_global_objs [wp]:
+  "\<lbrace>valid_global_objs\<rbrace> set_notification ptr val \<lbrace>\<lambda>rv. valid_global_objs\<rbrace>"
   apply (rule valid_global_objs_lift)
       apply (wp valid_ao_at_lift)
-    apply (simp_all add: set_async_ep_def set_object_def)
+    apply (simp_all add: set_notification_def set_object_def)
     apply (wp get_object_wp)
     apply (clarsimp simp: obj_at_def)
    apply (wp get_object_wp)
@@ -1638,7 +1638,7 @@ lemmas set_object_v_ker_map
             [unfolded valid_kernel_mappings_if_pd_def]
 
 
-crunch v_ker_map[wp]: set_async_ep "valid_kernel_mappings"
+crunch v_ker_map[wp]: set_notification "valid_kernel_mappings"
   (ignore: set_object wp: set_object_v_ker_map crunch_wps)
 
 
@@ -1659,22 +1659,22 @@ lemma set_object_asid_map:
   done
 
 
-lemma set_aep_asid_map [wp]:
-  "\<lbrace>valid_asid_map\<rbrace> set_async_ep p aep \<lbrace>\<lambda>_. valid_asid_map\<rbrace>"
-  unfolding set_async_ep_def
+lemma set_ntfn_asid_map [wp]:
+  "\<lbrace>valid_asid_map\<rbrace> set_notification p ntfn \<lbrace>\<lambda>_. valid_asid_map\<rbrace>"
+  unfolding set_notification_def
   apply (wp set_object_asid_map get_object_wp)
   apply (clarsimp simp: vs_refs_def obj_at_def 
                   split: Structures_A.kernel_object.splits)
   done
 
 
-lemma set_async_ep_only_idle [wp]:
-  "\<lbrace>only_idle\<rbrace> set_async_ep p aep \<lbrace>\<lambda>_. only_idle\<rbrace>"
+lemma set_notification_only_idle [wp]:
+  "\<lbrace>only_idle\<rbrace> set_notification p ntfn \<lbrace>\<lambda>_. only_idle\<rbrace>"
   by (wp only_idle_lift)
 
 
 lemma set_endpoint_only_idle [wp]:
-  "\<lbrace>only_idle\<rbrace> set_endpoint p aep \<lbrace>\<lambda>_. only_idle\<rbrace>"
+  "\<lbrace>only_idle\<rbrace> set_endpoint p ntfn \<lbrace>\<lambda>_. only_idle\<rbrace>"
   by (wp only_idle_lift)
 
 
@@ -1692,9 +1692,9 @@ lemma set_object_equal_mappings:
   done
 
 
-lemma set_async_ep_equal_mappings[wp]:
-  "\<lbrace>equal_kernel_mappings\<rbrace> set_async_ep ptr val \<lbrace>\<lambda>rv. equal_kernel_mappings\<rbrace>"
-  unfolding set_async_ep_def
+lemma set_notification_equal_mappings[wp]:
+  "\<lbrace>equal_kernel_mappings\<rbrace> set_notification ptr val \<lbrace>\<lambda>rv. equal_kernel_mappings\<rbrace>"
+  unfolding set_notification_def
   by (wp set_object_equal_mappings get_object_wp | simp)+
 
 
@@ -1745,21 +1745,21 @@ lemma set_object_global_pd_mappings:
   done
 
 
-lemma set_aep_global_pd_mappings[wp]:
+lemma set_ntfn_global_pd_mappings[wp]:
   "\<lbrace>valid_global_pd_mappings and valid_global_objs\<rbrace>
-     set_async_ep p ep
+     set_notification p ep
    \<lbrace>\<lambda>rv. valid_global_pd_mappings\<rbrace>"
-  apply (simp add: set_async_ep_def)
+  apply (simp add: set_notification_def)
   apply (wp set_object_global_pd_mappings get_object_wp)
   apply (clarsimp simp: obj_at_def a_type_def
                  split: Structures_A.kernel_object.split_asm)
   done
 
-lemma set_aep_cap_refs_kernel_window[wp]:
-  "\<lbrace>cap_refs_in_kernel_window\<rbrace> set_async_ep p ep \<lbrace>\<lambda>rv. cap_refs_in_kernel_window\<rbrace>"
-  apply (simp add: set_async_ep_def)
+lemma set_ntfn_cap_refs_kernel_window[wp]:
+  "\<lbrace>cap_refs_in_kernel_window\<rbrace> set_notification p ep \<lbrace>\<lambda>rv. cap_refs_in_kernel_window\<rbrace>"
+  apply (simp add: set_notification_def)
   apply (wp set_object_cap_refs_in_kernel_window get_object_wp)
-  apply (clarsimp simp: obj_at_def is_aep
+  apply (clarsimp simp: obj_at_def is_ntfn
                  split: Structures_A.kernel_object.split_asm)
   done
 
@@ -1808,9 +1808,9 @@ lemma set_object_valid_ioc_no_caps:
   done
 
 
-lemma set_async_ep_valid_ioc[wp]:
-  "\<lbrace>valid_ioc\<rbrace> set_async_ep ptr val \<lbrace>\<lambda>_. valid_ioc\<rbrace>"
-  apply (simp add: set_async_ep_def)
+lemma set_notification_valid_ioc[wp]:
+  "\<lbrace>valid_ioc\<rbrace> set_notification ptr val \<lbrace>\<lambda>_. valid_ioc\<rbrace>"
+  apply (simp add: set_notification_def)
   apply (wp set_object_valid_ioc_no_caps get_object_inv)
   by (clarsimp simp: valid_def get_object_def simpler_gets_def assert_def
           return_def fail_def bind_def
@@ -1823,10 +1823,10 @@ lemma set_object_machine_state[wp]:
   by (simp add: set_object_def, wp, simp)
 
 
-lemma set_async_ep_valid_machine_state[wp]:
-  "\<lbrace>valid_machine_state\<rbrace> set_async_ep ptr val \<lbrace>\<lambda>_. valid_machine_state\<rbrace>"
+lemma set_notification_valid_machine_state[wp]:
+  "\<lbrace>valid_machine_state\<rbrace> set_notification ptr val \<lbrace>\<lambda>_. valid_machine_state\<rbrace>"
   apply (simp add: valid_machine_state_def in_user_frame_def obj_at_def
-                   set_async_ep_def set_object_def pred_conj_def)
+                   set_notification_def set_object_def pred_conj_def)
   apply (wp get_object_wp)
   apply (clarsimp simp: obj_at_def  split: Structures_A.kernel_object.splits)
   apply (drule_tac x=p in spec)
@@ -1851,7 +1851,7 @@ lemma valid_irq_states_triv:
 crunch valid_irq_states[wp]: set_object "valid_irq_states"
   (wp: valid_irq_states_triv)
 
-crunch valid_irq_states[wp]: set_async_ep "valid_irq_states"
+crunch valid_irq_states[wp]: set_notification "valid_irq_states"
   (wp: crunch_wps simp: crunch_simps)
 
 crunch valid_irq_states[wp]: set_endpoint "valid_irq_states"
@@ -1863,20 +1863,20 @@ crunch valid_irq_states[wp]: set_cap "valid_irq_states"
 crunch valid_irq_states[wp]: thread_set "valid_irq_states"
   (wp: crunch_wps simp: crunch_simps)
 
-crunch valid_irq_states[wp]: set_thread_state, set_bound_aep "valid_irq_states"
+crunch valid_irq_states[wp]: set_thread_state, set_bound_notification "valid_irq_states"
   (wp: crunch_wps simp: crunch_simps)
 
-lemma set_aep_minor_invs:
-  "\<lbrace>invs and aep_at ptr
-         and obj_at (\<lambda>ko. refs_of ko = aep_q_refs_of (aep_obj val) \<union> aep_bound_refs (aep_bound_tcb val)) ptr
-         and valid_aep val
-         and (\<lambda>s. \<forall>typ. (idle_thread s, typ) \<notin> aep_q_refs_of (aep_obj val))
-         and (\<lambda>s. live (AsyncEndpoint val) \<longrightarrow> ex_nonz_cap_to ptr s)\<rbrace>
-     set_async_ep ptr val
+lemma set_ntfn_minor_invs:
+  "\<lbrace>invs and ntfn_at ptr
+         and obj_at (\<lambda>ko. refs_of ko = ntfn_q_refs_of (ntfn_obj val) \<union> ntfn_bound_refs (ntfn_bound_tcb val)) ptr
+         and valid_ntfn val
+         and (\<lambda>s. \<forall>typ. (idle_thread s, typ) \<notin> ntfn_q_refs_of (ntfn_obj val))
+         and (\<lambda>s. live (Notification val) \<longrightarrow> ex_nonz_cap_to ptr s)\<rbrace>
+     set_notification ptr val
    \<lbrace>\<lambda>rv. invs\<rbrace>"
   apply (simp add: invs_def valid_state_def valid_pspace_def)
   apply (rule hoare_pre,
-         wp set_aep_valid_objs valid_irq_node_typ
+         wp set_ntfn_valid_objs valid_irq_node_typ
             valid_irq_handlers_lift set_object_global_pd_mappings)
   apply (clarsimp elim!: rsubst[where P=sym_refs]
                  intro!: ext
@@ -1945,7 +1945,7 @@ lemma sts_asid_map [wp]:
                   split: option.splits Structures_A.kernel_object.splits)
   done
 
-crunch asid_map[wp]: set_bound_aep "valid_asid_map"
+crunch asid_map[wp]: set_bound_notification "valid_asid_map"
   (simp: vs_refs_def)
 
 

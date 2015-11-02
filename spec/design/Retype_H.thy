@@ -43,15 +43,15 @@ defs finaliseCap_def:
   if isEndpointCap v1
   then let ptr = capEPPtr v1; final = v2
   in   (do
-    when final $ epCancelAll ptr;
+    when final $ cancelAllIPC ptr;
     return (NullCap, Nothing)
   od)
-  else if isAsyncEndpointCap v1
-  then let ptr = capAEPPtr v1; final = v2
+  else if isNotificationCap v1
+  then let ptr = capNtfnPtr v1; final = v2
   in   (do
     when final $ (do
-        unbindMaybeAEP ptr;
-        aepCancelAll ptr
+        unbindMaybeNotification ptr;
+        cancelAllSignals ptr
     od);
     return (NullCap, Nothing)
   od)
@@ -71,7 +71,7 @@ defs finaliseCap_def:
   then let tcb = capTCBPtr v1
   in   (do
     cte_ptr \<leftarrow> getThreadCSpaceRoot tcb;
-    unbindAsyncEndpoint tcb;
+    unbindNotification tcb;
     suspend tcb;
     return (Zombie cte_ptr ZombieTCB 5, Nothing)
   od)
@@ -109,7 +109,7 @@ defs recycleCap_def:
                 tcbPtr \<leftarrow> return ( (PPtr \<circ> fromPPtr) ptr);
                 tcb \<leftarrow> threadGet id tcbPtr;
                 flip haskell_assert []
-                    $ tcbState tcb = Inactive \<and> isNothing (tcbBoundAEP tcb);
+                    $ tcbState tcb = Inactive \<and> isNothing (tcbBoundNotification tcb);
                 flip haskell_assert []
                     $ Not (tcbQueued tcb);
                 curdom \<leftarrow> curDomain;
@@ -129,7 +129,7 @@ defs recycleCap_def:
   else if isEndpointCap cap
   then let ep = capEPPtr cap; b = capEPBadge cap
   in   (do
-    when (b \<noteq> 0) $ epCancelBadgedSends ep b;
+    when (b \<noteq> 0) $ cancelBadgedSends ep b;
     return cap
   od)
   else if isArchObjectCap cap
@@ -145,8 +145,8 @@ defs hasRecycleRights_def:
   | DomainCap \<Rightarrow>    False
   | (EndpointCap _ _ True True True) \<Rightarrow>    True
   | (EndpointCap _ _ _ _ _) \<Rightarrow>    False
-  | (AsyncEndpointCap _ _ True True) \<Rightarrow>    True
-  | (AsyncEndpointCap _ _ _ _) \<Rightarrow>    False
+  | (NotificationCap _ _ True True) \<Rightarrow>    True
+  | (NotificationCap _ _ _ _) \<Rightarrow>    False
   | (ArchObjectCap cap) \<Rightarrow>    ArchRetypeDecls_H.hasRecycleRights cap
   | _ \<Rightarrow>    True
   )"
@@ -166,9 +166,9 @@ defs sameRegionAs_def:
   else if isEndpointCap a \<and> isEndpointCap b
   then  
     capEPPtr a = capEPPtr b
-  else if isAsyncEndpointCap a \<and> isAsyncEndpointCap b
+  else if isNotificationCap a \<and> isNotificationCap b
   then  
-    capAEPPtr a = capAEPPtr b
+    capNtfnPtr a = capNtfnPtr b
   else if isCNodeCap a \<and> isCNodeCap b
   then  
     capCNodePtr a = capCNodePtr b \<and> capCNodeBits a = capCNodeBits b
@@ -225,11 +225,11 @@ defs updateCapData_def:
     else if
     True      then NullCap
     else undefined
-  else if isAsyncEndpointCap v6
+  else if isNotificationCap v6
   then let preserve = v4; new = v5; cap = v6
   in  
     if
-    Not preserve \<and> capAEPBadge cap = 0 then cap \<lparr> capAEPBadge := new && mask badgeBits \<rparr>
+    Not preserve \<and> capNtfnBadge cap = 0 then cap \<lparr> capNtfnBadge := new && mask badgeBits \<rparr>
     else if
     True      then NullCap
     else undefined
@@ -286,10 +286,10 @@ defs maskCapRights_def:
     capEPCanSend := capEPCanSend c \<and> capAllowWrite r,
     capEPCanReceive := capEPCanReceive c \<and> capAllowRead r,
     capEPCanGrant := capEPCanGrant c \<and> capAllowGrant r \<rparr>
-  else if isAsyncEndpointCap c
+  else if isNotificationCap c
   then   c \<lparr>
-    capAEPCanSend := capAEPCanSend c \<and> capAllowWrite r,
-    capAEPCanReceive := capAEPCanReceive c \<and> capAllowRead r \<rparr>
+    capNtfnCanSend := capNtfnCanSend c \<and> capAllowWrite r,
+    capNtfnCanReceive := capNtfnCanReceive c \<and> capAllowRead r \<rparr>
   else if isReplyCap c
   then   c
   else if isCNodeCap c
@@ -322,9 +322,9 @@ defs createObject_def:
             placeNewObject regionBase (makeObject ::endpoint) 0;
             return $ EndpointCap (PPtr $ fromPPtr regionBase) 0 True True True
         od)
-        | Some AsyncEndpointObject \<Rightarrow>   (do
-            placeNewObject (PPtr $ fromPPtr regionBase) (makeObject ::async_endpoint) 0;
-            return $ AsyncEndpointCap (PPtr $ fromPPtr regionBase) 0 True True
+        | Some NotificationObject \<Rightarrow>   (do
+            placeNewObject (PPtr $ fromPPtr regionBase) (makeObject ::notification) 0;
+            return $ NotificationCap (PPtr $ fromPPtr regionBase) 0 True True
         od)
         | Some CapTableObject \<Rightarrow>   (do
             placeNewObject (PPtr $ fromPPtr regionBase) (makeObject ::cte) userSize;
@@ -346,9 +346,9 @@ defs decodeInvocation_def:
   then  
     returnOk $ InvokeEndpoint
         (capEPPtr cap) (capEPBadge cap) (capEPCanGrant cap)
-  else if isAsyncEndpointCap cap \<and> capAEPCanSend cap
+  else if isNotificationCap cap \<and> capNtfnCanSend cap
   then   (
-    returnOk $ InvokeAsyncEndpoint (capAEPPtr cap) (capAEPBadge cap)
+    returnOk $ InvokeNotification (capNtfnPtr cap) (capNtfnBadge cap)
   )
   else if isReplyCap cap \<and> \<not> capReplyMaster cap
   then   (
@@ -397,8 +397,8 @@ defs performInvocation_def:
     sendIPC block call badge canGrant thread ep;
     return $ []
   od)
-  | (InvokeAsyncEndpoint ep badge) \<Rightarrow>    (doE
-    withoutPreemption $ sendAsyncIPC ep badge;
+  | (InvokeNotification ep badge) \<Rightarrow>    (doE
+    withoutPreemption $ sendSignal ep badge;
     returnOk $ []
   odE)
   | (InvokeReply thread slot) \<Rightarrow>    withoutPreemption $ (do
@@ -431,7 +431,7 @@ defs capUntypedPtr_def:
     NullCap \<Rightarrow>    error []
   | (UntypedCap p _ _) \<Rightarrow>    p
   | (EndpointCap ((* PPtr *) p) _ _ _ _) \<Rightarrow>    PPtr p
-  | (AsyncEndpointCap ((* PPtr *) p) _ _ _) \<Rightarrow>    PPtr p
+  | (NotificationCap ((* PPtr *) p) _ _ _) \<Rightarrow>    PPtr p
   | (ReplyCap ((* PPtr *) p) _) \<Rightarrow>    PPtr p
   | (CNodeCap ((* PPtr *) p) _ _ _) \<Rightarrow>    PPtr p
   | (ThreadCap ((* PPtr *) p)) \<Rightarrow>    PPtr p
@@ -448,7 +448,7 @@ defs capUntypedSize_def:
   | (UntypedCap _ b _) \<Rightarrow>    1 `~shiftL~` b
   | (CNodeCap _ c _ _) \<Rightarrow>    1 `~shiftL~` (objBits (undefined::cte) + c)
   | (EndpointCap _ _ _ _ _) \<Rightarrow>    1 `~shiftL~` objBits (undefined::endpoint)
-  | (AsyncEndpointCap _ _ _ _) \<Rightarrow>    1 `~shiftL~` objBits (undefined::async_endpoint)
+  | (NotificationCap _ _ _ _) \<Rightarrow>    1 `~shiftL~` objBits (undefined::notification)
   | (ThreadCap _) \<Rightarrow>    1 `~shiftL~` objBits (undefined::tcb)
   | (DomainCap ) \<Rightarrow>    1
   | (ArchObjectCap a) \<Rightarrow>    ArchRetypeDecls_H.capUntypedSize a

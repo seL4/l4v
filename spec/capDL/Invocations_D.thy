@@ -36,7 +36,7 @@ datatype cdl_tcb_invocation =
         "(cdl_cap \<times> cdl_cap_ref) option"
   | Suspend cdl_object_id
   | Resume cdl_object_id
-  | AsyncEndpointControl cdl_object_id "cdl_object_id option"
+  | NotificationControl cdl_object_id "cdl_object_id option"
 
 datatype cdl_irq_control_invocation =
     IssueIrqHandler cdl_irq cdl_cap_ref cdl_cap_ref
@@ -53,10 +53,10 @@ datatype cdl_endpoint_invocation =
      * so we need not track the "block" or "call" bits. *)
     SyncMessage cdl_badge bool cdl_object_id
 
-datatype cdl_async_invocation =
+datatype cdl_notification_invocation =
     (* data is not modelled currently at capDL level, so we avoid modelling
        the word32 that is actually included in the async message.  *)
-    AsyncMessage cdl_badge cdl_object_id
+    Signal cdl_badge cdl_object_id
 
 datatype cdl_reply_invocation =
     ReplyMessage cdl_object_id cdl_cap_ref
@@ -95,7 +95,7 @@ datatype cdl_domain_invocation =
 datatype cdl_invocation =
     InvokeUntyped cdl_untyped_invocation
   | InvokeEndpoint cdl_endpoint_invocation
-  | InvokeAsyncEndpoint cdl_async_invocation
+  | InvokeNotification cdl_notification_invocation
   | InvokeReply cdl_reply_invocation
   | InvokeTcb cdl_tcb_invocation
   | InvokeDomain cdl_domain_invocation

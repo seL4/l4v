@@ -1,5 +1,8 @@
-Built from git repo at /home/rafalk/repos/priority-bitmap/seL4/haskell by rafalk
+Built from git repo at /Users/dmatichuk/verification-rename/seL4/haskell by dmatichuk
 
 Generated from changeset:
-eb91e4b Merge commit 'd9802d179fd5c72e6180cb82be8bfde8bf570f50' into priority-bitmap
+b8c5581 reordered datatype constructors
 
+
+Warning - uncomitted changes used:
+ M src/SEL4/Object/Structures.lhs

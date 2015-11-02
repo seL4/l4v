@@ -27,7 +27,7 @@ crunch arm_global_pd[wp]: as_user, restart "\<lambda>s. P (arm_global_pd (arch_s
 section "valid global objs"
 
 crunch valid_global_objs[wp]: deleted_irq_handler "valid_global_objs"
-crunch valid_global_objs[wp]: ipc_cancel "valid_global_objs"
+crunch valid_global_objs[wp]: cancel_ipc "valid_global_objs"
   (wp: mapM_x_wp select_inv hoare_drop_imps hoare_vcg_if_lift2 dxo_wp_weak
    simp: unless_def
    ignore: empty_slot_ext)
@@ -54,26 +54,26 @@ lemma setup_reply_master_globals_equiv:
   apply clarsimp
 done
 
-crunch globals_equiv[wp]: get_async_ep "globals_equiv st"
+crunch globals_equiv[wp]: get_notification "globals_equiv st"
 
-lemma async_ipc_cancel_globals_equiv:
-  "\<lbrace>globals_equiv st and valid_ko_at_arm\<rbrace> async_ipc_cancel a b \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
-  unfolding async_ipc_cancel_def
-  apply (wp set_thread_state_globals_equiv get_async_ep_valid_ko_at_arm
-            set_async_ep_globals_equiv set_async_ep_valid_ko_at_arm | wpc | clarsimp simp: crunch_simps hoare_drop_imps)+
+lemma cancel_signal_globals_equiv:
+  "\<lbrace>globals_equiv st and valid_ko_at_arm\<rbrace> cancel_signal a b \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
+  unfolding cancel_signal_def
+  apply (wp set_thread_state_globals_equiv get_notification_valid_ko_at_arm
+            set_notification_globals_equiv set_notification_valid_ko_at_arm | wpc | clarsimp simp: crunch_simps hoare_drop_imps)+
   apply (rule hoare_pre)
    apply (wp hoare_drop_imps)
   apply simp
 done
 
-crunch globals_equiv[wp]: ipc_cancel "globals_equiv st"
-  (wp: mapM_x_wp select_inv hoare_drop_imps hoare_vcg_if_lift2 async_ipc_cancel_valid_ko_at_arm
+crunch globals_equiv[wp]: cancel_ipc "globals_equiv st"
+  (wp: mapM_x_wp select_inv hoare_drop_imps hoare_vcg_if_lift2 cancel_signal_valid_ko_at_arm
    simp: unless_def)
 
 crunch valid_ko_at_arm[wp]: setup_reply_master "valid_ko_at_arm"
 
 crunch globals_equiv[wp]: restart "globals_equiv st"
-  (wp: ipc_cancel_valid_ko_at_arm hoare_vcg_if_lift2 dxo_wp_weak hoare_drop_imps
+  (wp: cancel_ipc_valid_ko_at_arm hoare_vcg_if_lift2 dxo_wp_weak hoare_drop_imps
    ignore: reschedule_required possible_switch_to switch_if_required_to)
 
 lemma as_user_globals_equiv[wp]:
@@ -146,10 +146,10 @@ lemma finalise_cap_globals_equiv:
    \<lbrace>\<lambda> _. globals_equiv st\<rbrace>"
   apply (induct cap)
   apply (simp_all add:finalise_cap.simps)
-  apply (wp liftM_wp when_def ep_cancel_all_globals_equiv ep_cancel_all_valid_global_objs
-            aep_cancel_all_globals_equiv aep_cancel_all_valid_global_objs 
-            arch_finalise_cap_globals_equiv unbind_maybe_aep_globals_equiv
-            unbind_async_endpoint_globals_equiv
+  apply (wp liftM_wp when_def cancel_all_ipc_globals_equiv cancel_all_ipc_valid_global_objs
+            cancel_all_signals_globals_equiv cancel_all_signals_valid_global_objs 
+            arch_finalise_cap_globals_equiv unbind_maybe_notification_globals_equiv
+            unbind_notification_globals_equiv
             | simp add: valid_arch_state_ko_at_arm | intro impI conjI)+
   done
 
@@ -406,27 +406,27 @@ lemma no_cap_to_idle_thread: "invs s \<Longrightarrow> \<not> ex_nonz_cap_to (id
 
 crunch idle_thread'[wp]: restart "\<lambda>s. P (idle_thread s)" (wp: dxo_wp_weak)
 
-lemma bind_async_endpoint_globals_equiv:
+lemma bind_notification_globals_equiv:
   "\<lbrace>globals_equiv st and valid_ko_at_arm\<rbrace>
-   bind_async_endpoint t aepptr
+   bind_notification t ntfnptr
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
-  unfolding bind_async_endpoint_def
-  by (wp set_bound_aep_globals_equiv set_async_ep_globals_equiv
-            set_async_ep_valid_ko_at_arm | wpc | simp)+
+  unfolding bind_notification_def
+  by (wp set_bound_notification_globals_equiv set_notification_globals_equiv
+            set_notification_valid_ko_at_arm | wpc | simp)+
 
-lemma bind_async_endpoint_valid_ko_at_arm[wp]:
+lemma bind_notification_valid_ko_at_arm[wp]:
   "\<lbrace>valid_ko_at_arm\<rbrace>
-   bind_async_endpoint t aepptr
+   bind_notification t ntfnptr
    \<lbrace>\<lambda>_. valid_ko_at_arm\<rbrace>"
-  unfolding bind_async_endpoint_def
-  by (wp set_bound_aep_valid_ko_at_arm set_async_ep_valid_ko_at_arm | wpc | simp)+
+  unfolding bind_notification_def
+  by (wp set_bound_notification_valid_ko_at_arm set_notification_valid_ko_at_arm | wpc | simp)+
 
-lemma invoke_tcb_AEPControl_globals_equiv:
+lemma invoke_tcb_NotificationControl_globals_equiv:
   "\<lbrace>globals_equiv st and valid_ko_at_arm\<rbrace>
-   invoke_tcb (AsyncEndpointControl t aep)
+   invoke_tcb (NotificationControl t ntfn)
    \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
-  apply (case_tac aep, simp_all)
-  apply (wp unbind_async_endpoint_globals_equiv bind_async_endpoint_globals_equiv)
+  apply (case_tac ntfn, simp_all)
+  apply (wp unbind_notification_globals_equiv bind_notification_globals_equiv)
   done
 
 lemma invoke_tcb_globals_equiv:
@@ -445,7 +445,7 @@ lemma invoke_tcb_globals_equiv:
        apply (rename_tac word1 word2 bool1 bool2 bool3 bool4 arm_copy_register_sets)
        apply (rule_tac Q="\<lambda>_. valid_ko_at_arm and globals_equiv st and (\<lambda>s. word1 \<noteq> idle_thread s) 
                               and (\<lambda>s. word2 \<noteq> idle_thread s)" in hoare_strengthen_post)
-        apply (wp mapM_x_wp' as_user_globals_equiv invoke_tcb_AEPControl_globals_equiv 
+        apply (wp mapM_x_wp' as_user_globals_equiv invoke_tcb_NotificationControl_globals_equiv 
                | simp add: invs_valid_ko_at_arm 
                | intro conjI impI 
                | clarsimp simp: no_cap_to_idle_thread)+
@@ -520,7 +520,7 @@ lemma restart_reads_respects_f:
             setup_reply_master_pas_refined
             reads_respects_f[OF switch_if_required_to_reads_respects, where Q="\<top>"]
             reads_respects_f[OF tcb_sched_action_reads_respects, where Q="\<top>"]
-            ipc_cancel_reads_respects_f setup_reply_master_silc_inv ipc_cancel_silc_inv | simp)+
+            cancel_ipc_reads_respects_f setup_reply_master_silc_inv cancel_ipc_silc_inv | simp)+
 
     apply (simp add: get_thread_state_def thread_get_def)
     apply wp
@@ -530,7 +530,7 @@ lemma restart_reads_respects_f:
          rule conjI | assumption | clarsimp simp: reads_equiv_f_def)+
   done
 
-crunch cur_thread: ipc_cancel "\<lambda> s. P (cur_thread s)"
+crunch cur_thread: cancel_ipc "\<lambda> s. P (cur_thread s)"
   (wp: crunch_wps select_wp simp: crunch_simps)
 
 
@@ -633,15 +633,15 @@ lemma thread_set_tcb_fault_handler_update_only_timer_irq_inv:
   apply (wp only_timer_irq_pres | force)+
   done
 
-lemma bind_async_endpoint_reads_respects:
-  "reads_respects aag l (pas_refined aag and invs and K (is_subject aag t \<and> (\<forall>auth\<in>{Receive, Reset}. (pasSubject aag, auth, pasObjectAbs aag aepptr) \<in> pasPolicy aag)))
-       (bind_async_endpoint t aepptr)"
-  apply (clarsimp simp: bind_async_endpoint_def)
-  apply (wp set_bound_aep_owned_reads_respects set_async_ep_reads_respects 
-            get_async_ep_reads_respects get_bound_aep_reads_respects
-            gba_wp[unfolded get_bound_aep_def, simplified]
+lemma bind_notification_reads_respects:
+  "reads_respects aag l (pas_refined aag and invs and K (is_subject aag t \<and> (\<forall>auth\<in>{Receive, Reset}. (pasSubject aag, auth, pasObjectAbs aag ntfnptr) \<in> pasPolicy aag)))
+       (bind_notification t ntfnptr)"
+  apply (clarsimp simp: bind_notification_def)
+  apply (wp set_bound_notification_owned_reads_respects set_notification_reads_respects 
+            get_notification_reads_respects get_bound_notification_reads_respects
+            gbn_wp[unfolded get_bound_notification_def, simplified]
        | wpc 
-       | simp add: get_bound_aep_def)+
+       | simp add: get_bound_notification_def)+
   apply (clarsimp dest!: reads_ep)
   done
 
@@ -660,11 +660,11 @@ lemma invoke_tcb_reads_respects_f:
       apply(auto simp add: authorised_tcb_inv_def simp: idle_no_ex_cap[OF invs_valid_global_refs invs_valid_objs] det_getRestartPC det_getRegister)[1]
      defer
      apply((wp suspend_reads_respects_f[where st=st] restart_reads_respects_f[where st=st]  | simp add: authorised_tcb_inv_def)+)[2]
-    -- "AEPControl"
+    -- "NotificationControl"
    apply (rename_tac option)
    apply (case_tac option, simp_all)[1]
-    apply ((wp unbind_async_endpoint_is_subj_reads_respects unbind_async_endpoint_silc_inv
-          bind_async_endpoint_reads_respects 
+    apply ((wp unbind_notification_is_subj_reads_respects unbind_notification_silc_inv
+          bind_notification_reads_respects 
         | clarsimp simp: authorised_tcb_inv_def
         | rule_tac Q=\<top> and st=st in reads_respects_f)+)[2]
 -- "ThreadControl"
@@ -729,8 +729,8 @@ lemma decode_tcb_invocation_authorised_extra:
                               decode_tcb_configure_def
                               decode_set_priority_def
                               decode_set_ipc_buffer_def
-                              decode_bind_aep_def
-                              decode_unbind_aep_def
+                              decode_bind_notification_def
+                              decode_unbind_notification_def
                               split_def decode_set_space_def
                               
                          split del: split_if)+

@@ -946,7 +946,7 @@ lemma restart_ccorres:
     apply (rule ccorres_cond2[where R=\<top>])
       apply (simp add: to_bool_def Collect_const_mem)
      apply (rule ccorres_rhs_assoc)+
-     apply (ctac(no_vcg) add: ipcCancel_ccorres1[OF cteDeleteOne_ccorres])
+     apply (ctac(no_vcg) add: cancelIPC_ccorres1[OF cteDeleteOne_ccorres])
       apply (ctac(no_vcg) add: setupReplyMaster_ccorres)
        apply (ctac(no_vcg))
         apply (ctac(no_vcg) add: tcbSchedEnqueue_ccorres)
@@ -958,9 +958,9 @@ lemma restart_ccorres:
       apply (wp_once sch_act_wf_lift, wp tcb_in_cur_domain'_lift)
      apply (rule hoare_strengthen_post)
       apply (rule hoare_vcg_conj_lift)
-       apply (rule delete_one_conc_fr.ipcCancel_invs)
+       apply (rule delete_one_conc_fr.cancelIPC_invs)
 
-      apply (rule ipcCancel_tcb_at'[where t=thread])
+      apply (rule cancelIPC_tcb_at'[where t=thread])
      apply fastforce
     apply (rule ccorres_return_Skip)
    apply (wp hoare_drop_imps)
@@ -3249,7 +3249,7 @@ lemma decodeSetIPCBuffer_ccorres:
   apply clarsimp
   done
 
-lemma bindAEP_alignment_junk:
+lemma bindNTFN_alignment_junk:
   "is_aligned t 9 \<Longrightarrow> (t + 0x100) && ~~ mask 4 = (t + 0x100 :: word32)"
   apply (rule aligned_neg_mask)
   apply (erule aligned_add_aligned)
@@ -3257,37 +3257,37 @@ lemma bindAEP_alignment_junk:
   apply simp
   done
 
-lemma bindAsyncEndpoint_ccorres:
+lemma bindNotification_ccorres:
   "ccorres dc xfdc (invs' and tcb_at' tcb) 
     (UNIV \<inter> {s. tcb_' s = tcb_ptr_to_ctcb_ptr tcb}
-          \<inter> {s. aepptr_' s = aep_Ptr aepptr}) []
-   (bindAsyncEndpoint tcb aepptr)
-   (Call bindAsyncEndpoint_'proc)"
-  apply (cinit lift: tcb_' aepptr_' simp: bindAsyncEndpoint_def)
-   apply (rule ccorres_symb_exec_l [OF _ get_aep_inv' _ empty_fail_getAsyncEP])
-    apply (rule_tac P="invs' and ko_at' rv aepptr and tcb_at' tcb" and P'=UNIV 
+          \<inter> {s. ntfnPtr_' s = ntfn_Ptr ntfnptr}) []
+   (bindNotification tcb ntfnptr)
+   (Call bindNotification_'proc)"
+  apply (cinit lift: tcb_' ntfnPtr_' simp: bindNotification_def)
+   apply (rule ccorres_symb_exec_l [OF _ get_ntfn_inv' _ empty_fail_getNotification])
+    apply (rule_tac P="invs' and ko_at' rv ntfnptr and tcb_at' tcb" and P'=UNIV 
                     in ccorres_split_nothrow_novcg)
         apply (rule ccorres_from_vcg[where rrel=dc and xf=xfdc])
         apply (rule allI, rule conseqPre, vcg)
         apply (clarsimp)
-        apply (frule cmap_relation_aep)
+        apply (frule cmap_relation_ntfn)
         apply (erule (1) cmap_relation_ko_atE)
         apply (rule conjI)
          apply (erule h_t_valid_clift)
-        apply (clarsimp simp: setAsyncEP_def split_def)
+        apply (clarsimp simp: setNotification_def split_def)
         apply (rule bexI [OF _ setObject_eq])
             apply (simp add: rf_sr_def cstate_relation_def Let_def init_def
-                                    cpspace_relation_def update_aep_map_tos)
+                                    cpspace_relation_def update_ntfn_map_tos)
             apply (elim conjE)
             apply (intro conjI)
             -- "tcb relation"
-              apply (rule cpspace_relation_aep_update_aep, assumption+)
-               apply (clarsimp simp: casync_endpoint_relation_def Let_def
-                                     mask_def [where n=2] AEPState_Waiting_def)
-               apply (case_tac "aepObj rv")
+              apply (rule cpspace_relation_ntfn_update_ntfn, assumption+)
+               apply (clarsimp simp: cnotification_relation_def Let_def
+                                     mask_def [where n=2] NtfnState_Waiting_def)
+               apply (case_tac "ntfnObj rv")
                  apply ((clarsimp simp: option_to_ctcb_ptr_def  
                                   tcb_ptr_to_ctcb_ptr_def ctcb_offset_def obj_at'_def projectKOs
-                                  objBitsKO_def bindAEP_alignment_junk)+)[4]
+                                  objBitsKO_def bindNTFN_alignment_junk)+)[4]
              apply (simp add: carch_state_relation_def)
             apply (simp add: cmachine_state_relation_def)
            apply (simp add: h_t_valid_clift_Some_iff)
@@ -3296,7 +3296,7 @@ lemma bindAsyncEndpoint_ccorres:
         apply assumption
        apply ceqv
       apply (rule ccorres_move_c_guard_tcb)
-      apply (simp add: setBoundAEP_def)
+      apply (simp add: setBoundNotification_def)
       apply (rule_tac P'=\<top> and P=\<top> in threadSet_ccorres_lemma3[unfolded dc_def])
        apply vcg
       apply simp
@@ -3304,19 +3304,19 @@ lemma bindAsyncEndpoint_ccorres:
               apply (simp add: typ_heap_simps)+
       apply (simp add: ctcb_relation_def option_to_ptr_def option_to_0_def)
      apply simp
-     apply (wp get_aep_ko'| simp add: guard_is_UNIV_def)+
+     apply (wp get_ntfn_ko'| simp add: guard_is_UNIV_def)+
   done
 
-lemma invokeTCB_AEPControl_bind_ccorres:
+lemma invokeTCB_NotificationControl_bind_ccorres:
   "ccorres (cintr \<currency> (\<lambda>rv rv'. rv = [])) (liftxf errstate id (K ()) ret__unsigned_long_')
-    (invs' and tcb_inv_wf' (tcbinvocation.AsyncEndpointControl t (Some a)))
-    (UNIV \<inter> {s. tcb_' s = tcb_ptr_to_ctcb_ptr t} \<inter> {s. aepptr_' s = aep_Ptr a}) []
-    (invokeTCB (tcbinvocation.AsyncEndpointControl t (Some a)))
-    (Call invokeTCB_AEPControl_'proc)"
-  apply (cinit lift: tcb_' aepptr_')
+    (invs' and tcb_inv_wf' (tcbinvocation.NotificationControl t (Some a)))
+    (UNIV \<inter> {s. tcb_' s = tcb_ptr_to_ctcb_ptr t} \<inter> {s. ntfnPtr_' s = ntfn_Ptr a}) []
+    (invokeTCB (tcbinvocation.NotificationControl t (Some a)))
+    (Call invokeTCB_NotificationControl_'proc)"
+  apply (cinit lift: tcb_' ntfnPtr_')
    apply (clarsimp simp: option_to_0_def liftE_def)
    apply (rule ccorres_cond_true_seq)
-   apply (ctac(no_vcg) add: bindAsyncEndpoint_ccorres)
+   apply (ctac(no_vcg) add: bindNotification_ccorres)
     apply (rule ccorres_return_CE[unfolded returnOk_def, simplified])
       apply simp
      apply simp
@@ -3325,15 +3325,15 @@ lemma invokeTCB_AEPControl_bind_ccorres:
   apply (case_tac "a = 0", auto)
   done
 
-lemma invokeTCB_AEPControl_unbind_ccorres:
+lemma invokeTCB_NotificationControl_unbind_ccorres:
   "ccorres (cintr \<currency> (\<lambda>rv rv'. rv = [])) (liftxf errstate id (K ()) ret__unsigned_long_')
-    (invs' and tcb_inv_wf' (tcbinvocation.AsyncEndpointControl t None))
-    (UNIV \<inter> {s. tcb_' s = tcb_ptr_to_ctcb_ptr t} \<inter> {s. aepptr_' s = NULL}) []
-    (invokeTCB (tcbinvocation.AsyncEndpointControl t None))
-    (Call invokeTCB_AEPControl_'proc)" 
-  apply (cinit lift: tcb_' aepptr_')
+    (invs' and tcb_inv_wf' (tcbinvocation.NotificationControl t None))
+    (UNIV \<inter> {s. tcb_' s = tcb_ptr_to_ctcb_ptr t} \<inter> {s. ntfnPtr_' s = NULL}) []
+    (invokeTCB (tcbinvocation.NotificationControl t None))
+    (Call invokeTCB_NotificationControl_'proc)" 
+  apply (cinit lift: tcb_' ntfnPtr_')
    apply (clarsimp simp add: option_to_0_def liftE_def)
-   apply (ctac(no_vcg) add: unbindAsyncEndpoint_ccorres)
+   apply (ctac(no_vcg) add: unbindNotification_ccorres)
     apply (rule ccorres_return_CE[unfolded returnOk_def, simplified])
       apply simp
      apply simp
@@ -3342,27 +3342,27 @@ lemma invokeTCB_AEPControl_unbind_ccorres:
   apply (clarsimp simp: option_to_0_def)
   done
 
-lemma valid_objs_boundAEP_NULL:
-  "ko_at' tcb p s ==> valid_objs' s \<Longrightarrow> no_0_obj' s \<Longrightarrow> tcbBoundAEP tcb \<noteq> Some 0"
+lemma valid_objs_boundNTFN_NULL:
+  "ko_at' tcb p s ==> valid_objs' s \<Longrightarrow> no_0_obj' s \<Longrightarrow> tcbBoundNotification tcb \<noteq> Some 0"
   apply (drule(1) obj_at_valid_objs')
   apply (clarsimp simp: valid_tcb'_def projectKOs valid_obj'_def)
   done
 
-lemma decodeUnbindAEP_ccorres:
+lemma decodeUnbindNotification_ccorres:
   "ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
        (invs' and (\<lambda>s. ksCurThread s = thread) and ct_active' and sch_act_simple
               and valid_cap' cp and K (isThreadCap cp)
               and tcb_at' (capTCBPtr cp)
               and (\<lambda>s. \<forall>rf \<in> zobj_refs' cp. ex_nonz_cap_to' rf s))
        (UNIV \<inter> {s. ccap_relation cp (cap_' s)}) []
-     (decodeUnbindAEP cp >>= invocationCatch thread isBlocking isCall InvokeTCB)
-     (Call decodeUnbindAEP_'proc)"
-  apply (cinit' lift: cap_' simp: decodeUnbindAEP_def)
+     (decodeUnbindNotification cp >>= invocationCatch thread isBlocking isCall InvokeTCB)
+     (Call decodeUnbindNotification_'proc)"
+  apply (cinit' lift: cap_' simp: decodeUnbindNotification_def)
    apply csymbr
    apply csymbr
    apply (rule ccorres_Guard_Seq)
    apply (simp add: liftE_bindE bind_assoc)
-   apply (rule ccorres_pre_getBoundAEP)
+   apply (rule ccorres_pre_getBoundNotification)
    apply (rule_tac P="\<lambda>s. rv \<noteq> Some 0" in ccorres_cross_over_guard)
    apply (simp add: bindE_bind_linearise)
    apply wpc
@@ -3380,13 +3380,13 @@ lemma decodeUnbindAEP_ccorres:
    apply (rule ccorres_cond_false_seq)
    apply simp
    apply (ctac add: setThreadState_ccorres)
-     apply (ctac add: invokeTCB_AEPControl_unbind_ccorres)
+     apply (ctac add: invokeTCB_NotificationControl_unbind_ccorres)
         apply simp
         apply (rule ccorres_alternative2)
         apply (rule ccorres_return_CE, simp+)[1]
        apply (rule ccorres_return_C_errorE, simp+)[1]
       apply wp
-     apply (vcg exspec=invokeTCB_AEPControl_modifies)
+     apply (vcg exspec=invokeTCB_NotificationControl_modifies)
     apply simp
     apply (wp sts_invs_minor' hoare_case_option_wp sts_bound_tcb_at' | wpc | simp)+
    apply (vcg exspec=setThreadState_modifies)
@@ -3399,14 +3399,14 @@ lemma decodeUnbindAEP_ccorres:
                          option_to_ptr_def option_to_0_def ThreadState_Restart_def
                          mask_def rf_sr_ksCurThread valid_tcb_state'_def
                   elim!: pred_tcb'_weakenE
-                  dest!: valid_objs_boundAEP_NULL)
+                  dest!: valid_objs_boundNTFN_NULL)
   done
 
-lemma asyncEP_case_If_ptr:
-  "(case x of capability.AsyncEndpointCap a b c d \<Rightarrow> P a d | _ \<Rightarrow> Q) = (if (isAsyncEndpointCap x) then P (capAEPPtr x) (capAEPCanReceive x) else Q)" 
-  by (auto simp: isAsyncEndpointCap_def split: capability.splits)
+lemma nTFN_case_If_ptr:
+  "(case x of capability.NotificationCap a b c d \<Rightarrow> P a d | _ \<Rightarrow> Q) = (if (isNotificationCap x) then P (capNtfnPtr x) (capNtfnCanReceive x) else Q)" 
+  by (auto simp: isNotificationCap_def split: capability.splits)
 
-lemma decodeBindAEP_ccorres:
+lemma decodeBindNotification_ccorres:
   "interpret_excaps extraCaps' = excaps_map extraCaps \<Longrightarrow>
    ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
        (invs' and (\<lambda>s. ksCurThread s = thread) and ct_active' and sch_act_simple
@@ -3418,11 +3418,11 @@ lemma decodeBindAEP_ccorres:
               and K (isThreadCap cp))
        (UNIV \<inter> {s. ccap_relation cp (cap_' s)}
              \<inter> {s. extraCaps_' s = extraCaps'}) []
-     (decodeBindAEP cp extraCaps >>= invocationCatch thread isBlocking isCall InvokeTCB)
-     (Call decodeBindAEP_'proc)"
+     (decodeBindNotification cp extraCaps >>= invocationCatch thread isBlocking isCall InvokeTCB)
+     (Call decodeBindNotification_'proc)"
   using [[goals_limit=1]]
   apply (simp, rule ccorres_gen_asm)
-  apply (cinit lift: cap_' extraCaps_' simp: decodeBindAEP_def)
+  apply (cinit lift: cap_' extraCaps_' simp: decodeBindNotification_def)
    apply (rule ccorres_Guard_Seq)+
    apply (simp add: bind_assoc whenE_def bind_bindE_assoc interpret_excaps_test_null
                del: Collect_const cong: call_ignore_cong)
@@ -3436,7 +3436,7 @@ lemma decodeBindAEP_ccorres:
    apply csymbr
    apply (rule ccorres_Guard_Seq)
    apply (simp add: liftE_bindE bind_assoc cong: call_ignore_cong)
-   apply (rule ccorres_pre_getBoundAEP)
+   apply (rule ccorres_pre_getBoundNotification)
    apply (rule_tac P="\<lambda>s. rv \<noteq> Some 0" in ccorres_cross_over_guard)
    apply (simp add: bindE_bind_linearise cong: call_ignore_cong)
    apply wpc
@@ -3460,7 +3460,7 @@ lemma decodeBindAEP_ccorres:
      apply (simp add: cap_get_tag_isCap if_1_0_0 del: Collect_const cong: call_ignore_cong)
      apply (rule ccorres_assert2)
      apply (rule ccorres_Cond_rhs_Seq)
-      apply (rule_tac P="Q (capAEPPtr rva) (capAEPCanReceive rva) rva"for Q in ccorres_inst)
+      apply (rule_tac P="Q (capNtfnPtr rva) (capNtfnCanReceive rva) rva"for Q in ccorres_inst)
       apply (rule ccorres_rhs_assoc)+
       apply csymbr
       apply csymbr
@@ -3477,23 +3477,23 @@ lemma decodeBindAEP_ccorres:
        apply (rule conseqPre, vcg)
        apply (clarsimp simp: throwError_def return_def syscall_error_rel_def syscall_error_to_H_cases exception_defs)
       apply (clarsimp simp: to_bool_def)
-      apply (rule ccorres_pre_getAsyncEP)
-      apply (rename_tac aep)
+      apply (rule ccorres_pre_getNotification)
+      apply (rename_tac ntfn)
       apply (rule ccorres_rhs_assoc2)
       apply (rule ccorres_rhs_assoc2)
-      apply (rule_tac xf'="ret__int_'" and val="from_bool (aepBoundTCB aep \<noteq> None \<or>
-                                                    isWaitingAEP (aepObj aep))"
-                                       and R="ko_at' aep (capAEPPtr_CL (cap_async_endpoint_cap_lift aep_cap))
-                                                  and valid_aep' aep"
+      apply (rule_tac xf'="ret__int_'" and val="from_bool (ntfnBoundTCB ntfn \<noteq> None \<or>
+                                                    isWaitingNtfn (ntfnObj ntfn))"
+                                       and R="ko_at' ntfn (capNtfnPtr_CL (cap_notification_cap_lift ntfn_cap))
+                                                  and valid_ntfn' ntfn"
                                        and R'=UNIV
                                   in  ccorres_symb_exec_r_known_rv_UNIV)
          apply (rule conseqPre, vcg)
          apply (clarsimp simp: if_1_0_0)
 
-         apply (erule cmap_relationE1[OF cmap_relation_aep], erule ko_at_projectKO_opt)
-         apply (clarsimp simp: typ_heap_simps casync_endpoint_relation_def Let_def
-                               valid_aep'_def)
-         apply (case_tac "aepObj aep", simp_all add: isWaitingAEP_def option_to_ctcb_ptr_def
+         apply (erule cmap_relationE1[OF cmap_relation_ntfn], erule ko_at_projectKO_opt)
+         apply (clarsimp simp: typ_heap_simps cnotification_relation_def Let_def
+                               valid_ntfn'_def)
+         apply (case_tac "ntfnObj ntfn", simp_all add: isWaitingNtfn_def option_to_ctcb_ptr_def
                              false_def true_def split: option.split_asm split_if,
                          auto simp: neq_Nil_conv tcb_queue_relation'_def tcb_at_not_NULL[symmetric]
                                     tcb_at_not_NULL)[1]
@@ -3501,10 +3501,10 @@ lemma decodeBindAEP_ccorres:
        apply (rule_tac P="\<lambda>s. ksCurThread s = thread" in ccorres_cross_over_guard)
        apply (simp add: bindE_bind_linearise del: Collect_const)
        apply wpc
-         -- "IdleAEP"
+         -- "IdleNtfn"
          apply (simp add: case_option_If del: Collect_const)
          apply (rule ccorres_Cond_rhs_Seq)
-          apply (clarsimp simp: isWaitingAEP_def from_bool_neq_0)
+          apply (clarsimp simp: isWaitingNtfn_def from_bool_neq_0)
           apply (simp add: bindE_bind_linearise[symmetric] injection_handler_throwError
                            invocationCatch_use_injection_handler throwError_bind invocationCatch_def)
           apply (rule ccorres_from_vcg_split_throws[where P=\<top> and P'=UNIV])
@@ -3512,23 +3512,23 @@ lemma decodeBindAEP_ccorres:
           apply (rule conseqPre, vcg)
           apply (clarsimp simp: throwError_def return_def syscall_error_rel_def
                                 syscall_error_to_H_cases exception_defs)
-         apply (clarsimp simp: isWaitingAEP_def from_bool_neq_0 returnOk_bind)
-         apply (clarsimp simp: isWaitingAEP_def from_bool_neq_0 returnOk_bind
+         apply (clarsimp simp: isWaitingNtfn_def from_bool_neq_0 returnOk_bind)
+         apply (clarsimp simp: isWaitingNtfn_def from_bool_neq_0 returnOk_bind
                                ccorres_invocationCatch_Inr performInvocation_def)
          apply (ctac add: setThreadState_ccorres)
-           apply (ctac add: invokeTCB_AEPControl_bind_ccorres)
+           apply (ctac add: invokeTCB_NotificationControl_bind_ccorres)
               apply simp
               apply (rule ccorres_alternative2)
               apply (rule ccorres_return_CE, simp+)[1]
              apply (rule ccorres_return_C_errorE, simp+)[1]
             apply wp
-           apply (vcg exspec=invokeTCB_AEPControl_modifies)
+           apply (vcg exspec=invokeTCB_NotificationControl_modifies)
           apply simp
           apply (wp sts_invs_minor' hoare_case_option_wp sts_bound_tcb_at' | wpc | simp)+
          apply (vcg exspec=setThreadState_modifies)
         apply (simp add: case_option_If del: Collect_const)
         apply (rule ccorres_Cond_rhs_Seq)
-         apply (clarsimp simp: isWaitingAEP_def from_bool_neq_0)
+         apply (clarsimp simp: isWaitingNtfn_def from_bool_neq_0)
          apply (simp add: bindE_bind_linearise[symmetric] injection_handler_throwError
                           invocationCatch_use_injection_handler throwError_bind invocationCatch_def)
          apply (rule ccorres_from_vcg_split_throws[where P=\<top> and P'=UNIV])
@@ -3536,17 +3536,17 @@ lemma decodeBindAEP_ccorres:
          apply (rule conseqPre, vcg)
          apply (clarsimp simp: throwError_def return_def syscall_error_rel_def
                                syscall_error_to_H_cases exception_defs)
-        apply (clarsimp simp: isWaitingAEP_def from_bool_neq_0 returnOk_bind)
-        apply (clarsimp simp: isWaitingAEP_def from_bool_neq_0 returnOk_bind
+        apply (clarsimp simp: isWaitingNtfn_def from_bool_neq_0 returnOk_bind)
+        apply (clarsimp simp: isWaitingNtfn_def from_bool_neq_0 returnOk_bind
                               ccorres_invocationCatch_Inr performInvocation_def)
         apply (ctac add: setThreadState_ccorres)
-          apply (ctac add: invokeTCB_AEPControl_bind_ccorres)
+          apply (ctac add: invokeTCB_NotificationControl_bind_ccorres)
              apply simp
              apply (rule ccorres_alternative2)
              apply (rule ccorres_return_CE, simp+)[1]
             apply (rule ccorres_return_C_errorE, simp+)[1]
            apply wp
-          apply (vcg exspec=invokeTCB_AEPControl_modifies)
+          apply (vcg exspec=invokeTCB_NotificationControl_modifies)
          apply simp
          apply (wp sts_invs_minor' hoare_case_option_wp sts_bound_tcb_at' | wpc | simp)+
         apply (vcg exspec=setThreadState_modifies)
@@ -3558,10 +3558,10 @@ lemma decodeBindAEP_ccorres:
        apply (rule conseqPre, vcg)
        apply (clarsimp simp: throwError_def return_def syscall_error_rel_def
                              syscall_error_to_H_cases exception_defs)
-      apply (clarsimp simp add: guard_is_UNIV_def isWaitingAEP_def from_bool_0
+      apply (clarsimp simp add: guard_is_UNIV_def isWaitingNtfn_def from_bool_0
                                 ThreadState_Restart_def mask_def true_def
                                 rf_sr_ksCurThread capTCBPtr_eq)
-     apply (simp add: hd_conv_nth bindE_bind_linearise asyncEP_case_If_ptr throwError_bind invocationCatch_def)
+     apply (simp add: hd_conv_nth bindE_bind_linearise nTFN_case_If_ptr throwError_bind invocationCatch_def)
      apply (rule ccorres_from_vcg_split_throws[where P=\<top> and P'=UNIV])
       apply vcg
      apply (rule conseqPre, vcg)
@@ -3574,7 +3574,7 @@ lemma decodeBindAEP_ccorres:
   apply (rule conjI)
    apply safe[1]
                   apply (fastforce simp: invs'_def valid_state'_def valid_pspace'_def
-                                  dest!: valid_objs_boundAEP_NULL)
+                                  dest!: valid_objs_boundNTFN_NULL)
                  apply ((fastforce elim!: pred_tcb'_weakenE obj_at'_weakenE
                                     simp: ct_in_state'_def from_bool_0 isCap_simps excaps_map_def
                                           neq_Nil_conv obj_at'_def pred_tcb_at'_def valid_tcb_state'_def)+)[12]
@@ -3989,13 +3989,13 @@ lemma decodeTCBInvocation_ccorres:
     apply wp
    apply (rule ccorres_Cond_rhs)
     apply simp
-    apply (rule ccorres_add_returnOk, ctac(no_vcg) add: decodeBindAEP_ccorres)
+    apply (rule ccorres_add_returnOk, ctac(no_vcg) add: decodeBindNotification_ccorres)
       apply (rule ccorres_return_CE, simp+)[1]
      apply (rule ccorres_return_C_errorE, simp+)[1]
     apply wp
    apply (rule ccorres_Cond_rhs)
     apply simp
-    apply (rule ccorres_add_returnOk, ctac(no_vcg) add: decodeUnbindAEP_ccorres)
+    apply (rule ccorres_add_returnOk, ctac(no_vcg) add: decodeUnbindNotification_ccorres)
       apply (rule ccorres_return_CE, simp+)[1]
      apply (rule ccorres_return_C_errorE, simp+)[1]
     apply wp

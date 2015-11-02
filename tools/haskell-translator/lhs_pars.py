@@ -642,11 +642,11 @@ all_constructor_args = {}
 def named_newtype_transform (line, header, d):
 	bits = line.split('|')
 
-	constructors = dict ([get_type_map (bit) for bit in bits])
-	all_constructor_args.update(constructors)
-	
+	constructors = [get_type_map (bit) for bit in bits]
+	all_constructor_args.update(dict (constructors))
+
 	lines = []
-	for i, (name, map) in enumerate (constructors.iteritems()):
+	for i, (name, map) in enumerate (constructors):
 		if i == 0:
 			l = '    %s' % name
 		else:
@@ -659,10 +659,10 @@ def named_newtype_transform (line, header, d):
 			for bit in type.split():
 				d['typedeps'][bit] = 1
 		lines.append(l)
-	
+
 	names = {}
 	types = {}
-	for cons, map in constructors.iteritems():
+	for cons, map in constructors:
 		for i, (name, type) in enumerate(map):
 			names.setdefault (name, {})
 			names[name][cons] = i
@@ -671,21 +671,21 @@ def named_newtype_transform (line, header, d):
 	for name, map in names.iteritems():
 		lines.append ('')
 		lines.extend (named_extractor_definitions (name, map, types[name],
-					header, constructors))
+					header, dict (constructors)))
 	
 	for name, map in names.iteritems():
 		lines.append ('')
 		lines.extend (named_update_definitions (name, map, types[name],
-					header, constructors))
+					header, dict (constructors)))
 
-	for name, map in constructors.iteritems():
+	for name, map in constructors:
 		if map == []:
 			continue
 		lines.append ('')
 		lines.extend (named_constructor_translation (name, map, header))
 	
 	if len(constructors) > 1:
-		for name, map in constructors.iteritems():
+		for name, map in constructors:
 			lines.append ('')
 			check = named_constructor_check (name, map, header)
 			lines.extend (check)
@@ -697,16 +697,16 @@ def named_newtype_transform (line, header, d):
 				lines.extend (named_extractor_update_lemma (ex_name, up_name))
 
 	arities = [(name, len(map))
-			for (name, map) in constructors.iteritems()]
+			for (name, map) in constructors]
 
 	if (dict (arities)).values() == [1]:
-		[(cons, map)] = constructors.items()
+		[(cons, map)] = constructors
 		[(name, type)] = map
 		return type_wrapper_type (header, cons, type, d,
 			decons=(name, type))
 
 	set_instance_proofs (header, arities, d)
-	
+
 	d['body'] = [('datatype %s =' % header,
 			[(line, []) for line in lines])]
 	return d

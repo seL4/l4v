@@ -283,7 +283,7 @@ lemma OR_choice_empty_fail[wp]:
   "\<lbrakk>empty_fail f; empty_fail g\<rbrakk> \<Longrightarrow> empty_fail (OR_choice c f g)"
   by (simp add: OR_choice_def mk_ef_def split_def | wp)+
 
-crunch (empty_fail) empty_fail[wp]: decode_tcb_configure, decode_bind_aep, decode_unbind_aep
+crunch (empty_fail) empty_fail[wp]: decode_tcb_configure, decode_bind_notification, decode_unbind_notification
   (simp: cap.splits arch_cap.splits split_def)
 
 lemma decode_tcb_invocation_empty_fail[wp]:
@@ -343,7 +343,7 @@ crunch (empty_fail) empty_fail[wp]: maskInterrupt, empty_slot, setInterruptMode,
     setHardwareASID, setCurrentPD, finalise_cap, preemption_point,
     cap_swap_for_delete, decode_invocation
   (simp: Let_def catch_def split_def OR_choiceE_def mk_ef_def option.splits endpoint.splits
-         async_ep.splits thread_state.splits sum.splits cap.splits arch_cap.splits
+         notification.splits thread_state.splits sum.splits cap.splits arch_cap.splits
          kernel_object.splits vmpage_size.splits pde.splits bool.splits list.splits)
 
 crunch (empty_fail) empty_fail[wp]: setRegister, setNextPC
@@ -458,7 +458,7 @@ lemma schedule_empty_fail'[wp]:
 crunch (empty_fail) empty_fail[wp]: handle_event,activate_thread
   (simp: cap.splits arch_cap.splits split_def invocation_label.splits Let_def
          kernel_object.splits arch_kernel_obj.splits option.splits pde.splits pte.splits
-         bool.splits apiobject_type.splits aobject_type.splits async_ep.splits
+         bool.splits apiobject_type.splits aobject_type.splits notification.splits
          thread_state.splits endpoint.splits catch_def sum.splits cnode_invocation.splits
          page_table_invocation.splits page_invocation.splits asid_control_invocation.splits
          asid_pool_invocation.splits arch_invocation.splits irq_state.splits syscall.splits

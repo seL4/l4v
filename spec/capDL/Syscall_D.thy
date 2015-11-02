@@ -70,7 +70,7 @@ fun
 where
     "perform_invocation is_call can_block (InvokeUntyped untyped_params) = liftE (invoke_untyped untyped_params)"
   | "perform_invocation is_call can_block (InvokeEndpoint endpoint_params) = liftE (invoke_endpoint is_call can_block endpoint_params)"
-  | "perform_invocation is_call can_block (InvokeAsyncEndpoint async_params) = liftE (invoke_async async_params)"
+  | "perform_invocation is_call can_block (InvokeNotification ntfn_params) = liftE (invoke_notification ntfn_params)"
   | "perform_invocation is_call can_block (InvokeReply reply_params) = liftE (invoke_reply reply_params)"
   | "perform_invocation is_call can_block (InvokeTcb tcb_params) = (invoke_tcb tcb_params)"
   | "perform_invocation is_call can_block (InvokeDomain domain_params) = (invoke_domain domain_params)"
@@ -86,7 +86,7 @@ where
 definition ep_related_cap :: "cdl_cap \<Rightarrow> bool"
 where "ep_related_cap cap \<equiv> case cap of
  cdl_cap.EndpointCap o_id badge rights \<Rightarrow> True
-| cdl_cap.AsyncEndpointCap o_id badge rights \<Rightarrow> True
+| cdl_cap.NotificationCap o_id badge rights \<Rightarrow> True
 | cdl_cap.ReplyCap o_id \<Rightarrow> True
 | _ \<Rightarrow> False"
 
@@ -167,9 +167,9 @@ where
                 od) \<sqinter> throw
             else
               throw
-        | AsyncEndpointCap o_id badge rights \<Rightarrow>
+        | NotificationCap o_id badge rights \<Rightarrow>
             if Read \<in> rights then
-              (liftE $ recv_async_ipc tcb_id ep_cap) \<sqinter> throw
+              (liftE $ recv_signal tcb_id ep_cap) \<sqinter> throw
             else
               throw
         | _ \<Rightarrow>

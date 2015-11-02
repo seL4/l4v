@@ -371,7 +371,7 @@ where
     Structures_A.Untyped \<Rightarrow> UntypedType
   | Structures_A.TCBObject \<Rightarrow> TcbType
   | Structures_A.EndpointObject \<Rightarrow> EndpointType
-  | Structures_A.AsyncEndpointObject \<Rightarrow> AsyncEndpointType
+  | Structures_A.NotificationObject \<Rightarrow> NotificationType
   | Structures_A.CapTableObject \<Rightarrow> CNodeType
   | ArchObject SmallPageObj \<Rightarrow> FrameType 12
   | ArchObject LargePageObj \<Rightarrow> FrameType 16
@@ -417,8 +417,8 @@ lemma transform_default_tcb:
                    get_ipc_buffer_words_def)
   apply (simp add: transform_intent_def invocation_type_def fromEnum_def
                    enum_invocation_label toEnum_def)
-  apply (simp add: fun_eq_iff tcb_slot_defs tcb_pending_op_slot_def tcb_boundaep_slot_def)
-  apply (simp add: infer_tcb_pending_op_def infer_tcb_bound_aep_def guess_error_def default_etcb_def default_domain_def)
+  apply (simp add: fun_eq_iff tcb_slot_defs tcb_pending_op_slot_def tcb_boundntfn_slot_def)
+  apply (simp add: infer_tcb_pending_op_def infer_tcb_bound_notification_def guess_error_def default_etcb_def default_domain_def)
   done
 
 lemma transform_unat_map_empty:

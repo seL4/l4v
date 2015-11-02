@@ -130,9 +130,9 @@ defs createNewCaps_def:
             addrs \<leftarrow> createObjects regionBase numObjects (makeObject ::endpoint) 0;
             return $ map (\<lambda> addr. EndpointCap addr 0 True True True) addrs
         od)
-        | Some AsyncEndpointObject \<Rightarrow>   (do
-            addrs \<leftarrow> createObjects regionBase numObjects (makeObject ::async_endpoint) 0;
-            return $ map (\<lambda> addr. AsyncEndpointCap addr 0 True True) addrs
+        | Some NotificationObject \<Rightarrow>   (do
+            addrs \<leftarrow> createObjects regionBase numObjects (makeObject ::notification) 0;
+            return $ map (\<lambda> addr. NotificationCap addr 0 True True) addrs
         od)
         | Some ArchTypes_H.CapTableObject \<Rightarrow>   (do
             addrs \<leftarrow> createObjects regionBase numObjects (makeObject ::cte) userSize;

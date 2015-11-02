@@ -1845,7 +1845,7 @@ proof (intro impI allI)
   apply (simp add: rl projectKO_opt_retyp_same ko_def projectKOs Let_def
     cong: if_cong)
   apply (simp add: rl[where 'a = tcb, unfolded ko_def projectKOs, simplified]
-                   rl[where 'a=async_endpoint, unfolded ko_def projectKOs, simplified]
+                   rl[where 'a=notification, unfolded ko_def projectKOs, simplified]
                    rl[where 'a=pde, unfolded ko_def projectKOs, simplified]
                    rl[where 'a=pte, unfolded ko_def projectKOs, simplified]
                    rl[where 'a=asidpool, unfolded ko_def projectKOs, simplified]
@@ -1865,8 +1865,8 @@ proof (intro impI allI)
   done
 qed
 
-lemma createObjects_ccorres_aep:
-  defines "ko \<equiv> (KOAEndpoint (makeObject :: async_endpoint))"
+lemma createObjects_ccorres_ntfn:
+  defines "ko \<equiv> (KONotification (makeObject :: Structures_H.notification))"
   shows "\<forall>\<sigma> x. (\<sigma>, x) \<in> rf_sr \<and> ptr \<noteq> 0
   \<and> pspace_aligned' \<sigma> \<and> pspace_distinct' \<sigma>
   \<and> pspace_no_overlap' ptr sz \<sigma> \<and> (region_is_bytes ptr (n * 2 ^ objBitsKO ko) x) 
@@ -1875,7 +1875,7 @@ lemma createObjects_ccorres_aep:
   \<longrightarrow>
   (\<sigma>\<lparr>ksPSpace := foldr (\<lambda>addr. data_map_insert addr ko) (new_cap_addrs n ptr ko) (ksPSpace \<sigma>)\<rparr>,
    x\<lparr>globals := globals x
-                 \<lparr>t_hrs_' := hrs_htd_update (ptr_retyps (n) (Ptr ptr :: async_endpoint_C ptr))
+                 \<lparr>t_hrs_' := hrs_htd_update (ptr_retyps (n) (Ptr ptr :: notification_C ptr))
                        (hrs_mem_update
                          (heap_update_list ptr (replicate (n * 2 ^ objBitsKO ko) 0))
                          (t_hrs_' (globals x)))\<rparr>\<rparr>) \<in> rf_sr"
@@ -1887,7 +1887,7 @@ proof (intro impI allI)
   let ?thesis = "(\<sigma>\<lparr>ksPSpace := ?ks \<sigma>\<rparr>, x\<lparr>globals := globals x\<lparr>t_hrs_' := ?ks' x\<rparr>\<rparr>) \<in> rf_sr"
   let ?ks = "?ks \<sigma>"
   let ?ks' = "?ks' x"
-  let ?ptr = "Ptr ptr :: async_endpoint_C ptr"
+  let ?ptr = "Ptr ptr :: notification_C ptr"
 
   assume "?P \<sigma> x"
   hence rf: "(\<sigma>, x) \<in> rf_sr"
@@ -1903,14 +1903,14 @@ proof (intro impI allI)
     by (clarsimp simp:range_cover_def[where 'a=32, folded word_bits_def])+
 
   (* obj specific *)
-  have mko: "makeObjectKO (Inr (APIObjectType ArchTypes_H.apiobject_type.AsyncEndpointObject)) = Some ko" by (simp add: ko_def makeObjectKO_def)
+  have mko: "makeObjectKO (Inr (APIObjectType ArchTypes_H.apiobject_type.NotificationObject)) = Some ko" by (simp add: ko_def makeObjectKO_def)
 
   have relrl:
-    "casync_endpoint_relation (cslift x) makeObject (from_bytes (replicate (size_of TYPE(async_endpoint_C)) 0))"
-    unfolding casync_endpoint_relation_def
-    apply (simp add: Let_def makeObject_async_endpoint size_of_def async_endpoint_lift_def)
+    "cnotification_relation (cslift x) makeObject (from_bytes (replicate (size_of TYPE(notification_C)) 0))"
+    unfolding cnotification_relation_def
+    apply (simp add: Let_def makeObject_notification size_of_def notification_lift_def)
     apply (simp add: from_bytes_def)
-    apply (simp add: typ_info_simps async_endpoint_C_tag_def async_endpoint_lift_def 
+    apply (simp add: typ_info_simps notification_C_tag_def notification_lift_def 
       size_td_lt_final_pad size_td_lt_ti_typ_pad_combine Let_def size_of_def)
     apply (simp add: final_pad_def Let_def size_td_lt_ti_typ_pad_combine Let_def 
       size_of_def padup_def align_td_array' size_td_array update_ti_adjust_ti
@@ -1920,14 +1920,14 @@ proof (intro impI allI)
     apply (simp add: final_pad_def Let_def size_td_lt_ti_typ_pad_combine Let_def 
       size_of_def padup_def align_td_array' size_td_array update_ti_adjust_ti
       ti_typ_pad_combine_def Let_def ti_typ_combine_def empty_typ_info_def)
-    apply (simp add: update_ti_t_word32_0s AEPState_Idle_def option_to_ctcb_ptr_def)
+    apply (simp add: update_ti_t_word32_0s NtfnState_Idle_def option_to_ctcb_ptr_def)
     done
   
   (* /obj specific *)
 
   (* s/obj/obj'/ *)
-  have szo: "size_of TYPE(async_endpoint_C) = 2 ^ objBitsKO ko" by (simp add: size_of_def objBits_simps ko_def)
-  have szo': "n * (2 ^ objBitsKO ko) = n * size_of TYPE(async_endpoint_C)" using sz
+  have szo: "size_of TYPE(notification_C) = 2 ^ objBitsKO ko" by (simp add: size_of_def objBits_simps ko_def)
+  have szo': "n * (2 ^ objBitsKO ko) = n * size_of TYPE(notification_C)" using sz
     apply (subst szo)
     apply (simp add: power_add [symmetric])
     done  
@@ -1957,8 +1957,8 @@ proof (intro impI allI)
     apply (rule szo)
    apply (rule pspace_aligned_to_C[OF pal])
      apply assumption
-    apply (simp add: ko_def projectKO_opt_aep)
-   apply ((fastforce simp:objBitsKO_def projectKO_opt_aep ko_def 
+    apply (simp add: ko_def projectKO_opt_ntfn)
+   apply ((fastforce simp:objBitsKO_def projectKO_opt_ntfn ko_def 
                     split:kernel_object.split)+)[1]
   apply (simp add: ptr_add_to_new_cap_addrs [OF szo])
   apply (simp add: rl projectKO_opt_retyp_same ko_def projectKOs Let_def
@@ -1978,7 +1978,7 @@ proof (intro impI allI)
     apply (simp add: rl' cterl tag_disj_via_td_name h_t_valid_clift_Some_iff )
     apply (clarsimp simp: hrs_htd_update ptr_retyps_htd_safe_neg szo
                           kernel_data_refs_domain_eq_rotate
-                simp del: async_endpoint_C_size)
+                simp del: notification_C_size)
     done
 qed
 
@@ -2103,7 +2103,7 @@ proof (intro impI allI)
                    rl[where 'a=pte, unfolded ko_def projectKOs, simplified]
                    rl[where 'a=asidpool, unfolded ko_def projectKOs, simplified]
                    rl[where 'a=user_data, unfolded ko_def projectKOs,simplified]
-                   rl[where 'a=async_endpoint, unfolded ko_def projectKOs,
+                   rl[where 'a=notification, unfolded ko_def projectKOs,
                       simplified])
   apply (subst makeObject_cte[symmetric])
   apply (rule cmap_relation_retype
@@ -2291,7 +2291,7 @@ proof (intro impI allI)
                    rl[where 'a=pde, unfolded ko_def projectKOs, simplified]
                    rl[where 'a=asidpool, unfolded ko_def projectKOs, simplified]
                    rl[where 'a=user_data, unfolded ko_def projectKOs, simplified]
-                   rl[where 'a=async_endpoint, unfolded ko_def projectKOs, simplified]
+                   rl[where 'a=notification, unfolded ko_def projectKOs, simplified]
                    ko_def projectKOs cover[unfolded ko_def, simplified]
   )
   apply (erule cmap_relation_retype)
@@ -2443,7 +2443,7 @@ proof (intro impI allI)
                    rl[where 'a=pte, unfolded ko_def projectKOs, simplified]
                    rl[where 'a=asidpool, unfolded ko_def projectKOs, simplified]
                    rl[where 'a=user_data, unfolded ko_def projectKOs, simplified]
-                   rl[where 'a=async_endpoint, unfolded ko_def projectKOs, simplified]
+                   rl[where 'a=notification, unfolded ko_def projectKOs, simplified]
                    ko_def projectKOs cover[unfolded ko_def, simplified])
     apply (erule cmap_relation_retype)
     apply (insert relrl, auto)
@@ -2512,7 +2512,7 @@ definition
                                      (case x of ArchTypes_H.apiobject_type.Untyped \<Rightarrow> scast seL4_UntypedObject
                                               | ArchTypes_H.apiobject_type.TCBObject \<Rightarrow> scast seL4_TCBObject
                                               | ArchTypes_H.apiobject_type.EndpointObject \<Rightarrow> scast seL4_EndpointObject
-                                              | ArchTypes_H.apiobject_type.AsyncEndpointObject \<Rightarrow> scast seL4_NotificationObject
+                                              | ArchTypes_H.apiobject_type.NotificationObject \<Rightarrow> scast seL4_NotificationObject
                                               | ArchTypes_H.apiobject_type.CapTableObject \<Rightarrow> scast seL4_CapTableObject)
                             | ArchTypes_H.SmallPageObject \<Rightarrow> scast seL4_ARM_SmallPageObject
                             | ArchTypes_H.LargePageObject \<Rightarrow> scast seL4_ARM_LargePageObject  
@@ -2536,7 +2536,7 @@ definition
      (if (x = scast seL4_UntypedObject) then APIObjectType ArchTypes_H.apiobject_type.Untyped else (
       if (x = scast seL4_TCBObject) then APIObjectType ArchTypes_H.apiobject_type.TCBObject else (
        if (x = scast seL4_EndpointObject) then APIObjectType ArchTypes_H.apiobject_type.EndpointObject else (
-        if (x = scast seL4_NotificationObject) then APIObjectType ArchTypes_H.apiobject_type.AsyncEndpointObject else (
+        if (x = scast seL4_NotificationObject) then APIObjectType ArchTypes_H.apiobject_type.NotificationObject else (
          if (x = scast seL4_CapTableObject) then APIObjectType ArchTypes_H.apiobject_type.CapTableObject else (
           if (x = scast seL4_ARM_SmallPageObject) then ArchTypes_H.SmallPageObject else (
            if (x = scast seL4_ARM_LargePageObject) then ArchTypes_H.LargePageObject else (
@@ -2841,7 +2841,7 @@ lemma object_type_from_H_toAPIType_simps:
   "(object_type_from_H tp = scast seL4_UntypedObject) = (toAPIType tp = Some ArchTypes_H.apiobject_type.Untyped)"
   "(object_type_from_H tp = scast seL4_TCBObject) = (toAPIType tp = Some ArchTypes_H.apiobject_type.TCBObject)"
   "(object_type_from_H tp = scast seL4_EndpointObject) = (toAPIType tp = Some ArchTypes_H.apiobject_type.EndpointObject)"
-  "(object_type_from_H tp = scast seL4_NotificationObject) = (toAPIType tp = Some ArchTypes_H.apiobject_type.AsyncEndpointObject)"
+  "(object_type_from_H tp = scast seL4_NotificationObject) = (toAPIType tp = Some ArchTypes_H.apiobject_type.NotificationObject)"
   "(object_type_from_H tp = scast seL4_CapTableObject) = (toAPIType tp = Some ArchTypes_H.apiobject_type.CapTableObject)"
   "(object_type_from_H tp = scast seL4_ARM_SmallPageObject) = (tp = ArchTypes_H.SmallPageObject)"
   "(object_type_from_H tp = scast seL4_ARM_LargePageObject) = (tp = ArchTypes_H.LargePageObject)"
@@ -3172,9 +3172,9 @@ lemma cnc_tcb_helper:
       (t_hrs_'_update
         (\<lambda>a. hrs_mem_update (heap_update (Ptr &(p\<rightarrow>[''tcbTimeSlice_C'']) :: machine_word ptr) (5 :: machine_word))
               (hrs_mem_update
-                (heap_update ((Ptr &((Ptr &(p\<rightarrow>[''tcbContext_C''])
+                (heap_update ((Ptr &((Ptr &((Ptr &(p\<rightarrow>[''tcbArch_C'']) :: arch_tcb_C ptr)\<rightarrow>[''tcbContext_C''])
                      :: user_context_C ptr)\<rightarrow>[''registers_C''])) :: (word32[18]) ptr)
-                  (Arrays.update (h_val (hrs_mem a) ((Ptr &((Ptr &(p\<rightarrow>[''tcbContext_C''])
+                  (Arrays.update (h_val (hrs_mem a) ((Ptr &((Ptr &((Ptr &(p\<rightarrow>[''tcbArch_C'']) :: arch_tcb_C ptr)\<rightarrow>[''tcbContext_C''])
                        :: user_context_C ptr)\<rightarrow>[''registers_C''])) :: (word32[18]) ptr)) (unat CPSR) (0x150 :: word32)))
                    (hrs_htd_update (\<lambda>xa. ptr_retyps 5 (cte_Ptr (ctcb_ptr_to_tcb_ptr p)) (ptr_retyp p xa)) a)))) x)
              \<in> rf_sr"
@@ -3384,11 +3384,15 @@ proof -
     done
 
   let ?new_tcb =  "(from_bytes (replicate (size_of TYPE(tcb_C)) 0)
-                  \<lparr>tcbContext_C := tcbContext_C (from_bytes (replicate (size_of TYPE(tcb_C)) 0))
+                  \<lparr>tcbArch_C := tcbArch_C (from_bytes (replicate (size_of TYPE(tcb_C)) 0))
+                    \<lparr>tcbContext_C := tcbContext_C (tcbArch_C (from_bytes (replicate (size_of TYPE(tcb_C)) 0)))
                      \<lparr>registers_C :=
-                        Arrays.update (registers_C (tcbContext_C (from_bytes (replicate (size_of TYPE(tcb_C)) 0)))) (unat Kernel_C.CPSR)
-                         0x150\<rparr>, tcbTimeSlice_C := 5\<rparr>)"
+                        Arrays.update (registers_C (tcbContext_C (tcbArch_C (from_bytes (replicate (size_of TYPE(tcb_C)) 0))))) (unat Kernel_C.CPSR)
+                         0x150\<rparr>\<rparr>, tcbTimeSlice_C := 5\<rparr>)"
   
+  have help_me: "\<And>p v hm th. (heap_update p v hm, th) = hrs_mem_update (heap_update p v) (hm, th)"
+    by (simp add: hrs_mem_update_def)
+
   have "ptr_retyp p (snd (t_hrs_' (globals x))) \<Turnstile>\<^sub>t p" using cgp
     by (rule ptr_retyp_h_t_valid)
   hence "clift (hrs_mem (t_hrs_' (globals x)), ptr_retyp p (snd (t_hrs_' (globals x)))) p 
@@ -3396,40 +3400,24 @@ proof -
     by (simp add: lift_t_if h_val_def tcb0 hrs_mem_def)
   hence cl_tcb: "(cslift (x\<lparr>globals := ?gs\<rparr>) :: tcb_C typ_heap) = (cslift x)(p \<mapsto> ?new_tcb)"
     using cgp
-    apply (clarsimp simp add: hrs_mem_update_def hrs_htd_update_def split_def 
+    apply (clarsimp simp add: hrs_mem_update_def split_def hrs_htd_update_def
       heap_update_field' typ_heap_simps)
     apply (subst cslift_ptr_retyps_no_heap_other)
-       apply (simp add: empty' tcb_C_size)
-      apply (simp add: tag_disj_via_td_name)
-     apply (simp add: size_of_def word_bits_conv)
-    apply (simp add: lift_t_field_h_val fl_update export_tag_adjust_ti2 wf_lf_adjust_ti typ_uinfo_t_def)
-    apply (subst h_val_field_clift)
-       apply (simp add: hrs_mem_def)
-      apply simp
-     apply simp
+      apply (simp add: empty' tcb_C_size)
+     apply (simp add: tag_disj_via_td_name)
+    apply (simp add: size_of_def word_bits_conv)
+    apply (simp add: h_val_field_from_bytes hrs_mem_def[symmetric])
+    apply (simp add: clift_heap_update[where hp="(a, b)" for a b, unfolded hrs_mem_update_def split_def hrs_htd_def, simplified]
+                     ptr_retyp_h_t_valid)
     apply (simp add: h_val_clift hrs_mem_def)
     apply (rule ext)
     apply (case_tac "xa = p")
-     apply simp
-     apply (subst lift_t_retyp_heap_same)
-      apply assumption
-     apply (simp add: packed_heap_update_collapse)
-     apply (simp add: heap_update_def)
-     apply (subst heap_list_update')
-       apply simp
-      apply (simp, simp add: size_of_def word_bits_conv)
-     apply (simp add: h_val_def)
-     apply (subst heap_list_update')
-       apply simp
-      apply (simp, simp add: size_of_def word_bits_conv)
-     apply (simp add: typ_heap_simps)
-    apply (simp add: packed_heap_update_collapse)
-    apply (simp add: heap_update_def)
-    apply (subst lift_t_retyp_heap_same_nptr)
-       apply (simp only: surjective_pairing [symmetric])
-       apply (rule tdisj)
-      apply assumption
-     apply simp
+     apply (simp add: h_val_heap_update)
+    apply simp
+    apply (subst lift_t_retyp_heap_same_nptr')
+      apply (simp only: surjective_pairing [symmetric])
+      apply (rule tdisj)
+     apply assumption
     apply simp
     done
  
@@ -3519,10 +3507,11 @@ proof -
     done
 
   let ?tcb = "undefined
-    \<lparr>tcbContext_C := tcbContext_C undefined
+    \<lparr>tcbArch_C := tcbArch_C undefined
+     \<lparr>tcbContext_C := tcbContext_C (tcbArch_C undefined)
        \<lparr>registers_C :=
           foldr (\<lambda>n arr. Arrays.update arr n 0) [0..<18]
-           (registers_C (tcbContext_C undefined))\<rparr>,
+           (registers_C (tcbContext_C (tcbArch_C undefined)))\<rparr>\<rparr>,
        tcbState_C :=
          thread_state_C.words_C_update
           (\<lambda>_. foldr (\<lambda>n arr. Arrays.update arr n 0) [0..<3]
@@ -3542,7 +3531,7 @@ proof -
        tcbFaultHandler_C := 0, tcbIPCBuffer_C := 0,
        tcbSchedNext_C := tcb_Ptr 0, tcbSchedPrev_C := tcb_Ptr 0,
        tcbEPNext_C := tcb_Ptr 0, tcbEPPrev_C := tcb_Ptr 0,
-       boundAsyncEndpoint_C := aep_Ptr 0\<rparr>"
+       tcbBoundNotification_C := ntfn_Ptr 0\<rparr>"
   have fbtcb: "from_bytes (replicate (size_of TYPE(tcb_C)) 0) = ?tcb"
     apply (simp add: from_bytes_def)
     apply (simp add: typ_info_simps tcb_C_tag_def) 
@@ -3551,7 +3540,7 @@ proof -
     apply (simp add: update_ti_adjust_ti update_ti_t_word32_0s 
       typ_info_simps 
       user_context_C_tag_def thread_state_C_tag_def fault_C_tag_def
-      lookup_fault_C_tag_def update_ti_t_ptr_0s
+      lookup_fault_C_tag_def update_ti_t_ptr_0s arch_tcb_C_tag_def
       ti_typ_pad_combine_empty_ti ti_typ_pad_combine_td 
       ti_typ_combine_empty_ti ti_typ_combine_td       
       align_of_def padup_def
@@ -3607,7 +3596,7 @@ proof -
     apply (simp add: ko_wp_at'_def)
     done
 
-  have ep3 [simplified]: "\<And>p' list boundTCB. map_to_aeps (ksPSpace ?sp) p' = Some (Structures_H.async_endpoint.AEP (Structures_H.aep.WaitingAEP list) boundTCB)
+  have ep3 [simplified]: "\<And>p' list boundTCB. map_to_ntfns (ksPSpace ?sp) p' = Some (Structures_H.notification.NTFN (Structures_H.ntfn.WaitingNtfn list) boundTCB)
        \<Longrightarrow> ctcb_ptr_to_tcb_ptr p \<notin> set list"
     using symref pks pal pds
     apply -
@@ -3616,7 +3605,7 @@ proof -
      apply simp
     apply (drule (1) sym_refs_ko_atD')
     apply clarsimp
-    apply (drule_tac x="(ctcb_ptr_to_tcb_ptr p, AEPAsync)" in bspec, simp)
+    apply (drule_tac x="(ctcb_ptr_to_tcb_ptr p, NTFNSignal)" in bspec, simp)
     apply (simp add: ko_wp_at'_def)
     done
 
@@ -3680,10 +3669,10 @@ proof -
      apply (simp add: tcb_queue_update_other' del: tcb_queue_relation'_empty)
     apply (simp add: tcb_queue_update_other' ep2)
    apply clarsimp
-  -- "aep"
+  -- "ntfn"
    apply (erule iffD2 [OF cmap_relation_cong, OF refl refl, rotated -1])
-   apply (simp add: casync_endpoint_relation_def Let_def)
-     apply (subst aep.case_cong)
+   apply (simp add: cnotification_relation_def Let_def)
+     apply (subst ntfn.case_cong)
       apply (rule refl)
      apply (simp add: tcb_queue_update_other' del: tcb_queue_relation'_empty)
     apply (simp add: tcb_queue_update_other' del: tcb_queue_relation'_empty)
@@ -4430,7 +4419,7 @@ lemma getObjectSize_max_size:
          newType =  APIObjectType apiobject_type.CapTableObject \<longrightarrow> x < 28 \<rbrakk> \<Longrightarrow> getObjectSize newType x < word_bits"
   apply (clarsimp simp: getObjectSize_def ArchTypes_H.getObjectSize_def apiGetObjectSize_def)
   apply (clarsimp simp: apiGetObjectSize_def word_bits_def split: object_type.splits apiobject_type.splits)
-  apply (clarsimp simp: tcbBlockSizeBits_def epSizeBits_def aepSizeBits_def cteSizeBits_def pdBits_def pageBits_def ptBits_def)
+  apply (clarsimp simp: tcbBlockSizeBits_def epSizeBits_def ntfnSizeBits_def cteSizeBits_def pdBits_def pageBits_def ptBits_def)
   done
 
 lemma getObjectSize_min_size:
@@ -4439,7 +4428,7 @@ lemma getObjectSize_min_size:
     4 \<le> getObjectSize newType x"
   apply (clarsimp simp: getObjectSize_def ArchTypes_H.getObjectSize_def apiGetObjectSize_def)
   apply (clarsimp simp: apiGetObjectSize_def word_bits_def split: object_type.splits apiobject_type.splits)
-  apply (clarsimp simp: tcbBlockSizeBits_def epSizeBits_def aepSizeBits_def cteSizeBits_def pdBits_def pageBits_def ptBits_def)
+  apply (clarsimp simp: tcbBlockSizeBits_def epSizeBits_def ntfnSizeBits_def cteSizeBits_def pdBits_def pageBits_def ptBits_def)
   done
 
 (*
@@ -4567,7 +4556,7 @@ lemma ccorres_placeNewObject_endpoint:
   apply (clarsimp simp: no_fail_def)
   done
 
-lemma ccorres_placeNewObject_asyncendpoint:
+lemma ccorres_placeNewObject_notification:
   "ccorresG rf_sr \<Gamma> dc xfdc
    (pspace_aligned' and pspace_distinct' and pspace_no_overlap' regionBase 4
       and (\<lambda>s. 16 \<le> gsMaxObjectSize s)
@@ -4576,9 +4565,9 @@ lemma ccorres_placeNewObject_asyncendpoint:
       \<and> range_cover regionBase 4 4 1))
    ({s. region_actually_is_bytes regionBase 0x10 s})
     hs
-    (placeNewObject regionBase (makeObject :: async_endpoint) 0)
+    (placeNewObject regionBase (makeObject :: Structures_H.notification) 0)
     (CALL memzero(Ptr regionBase,0x10);;
-           (global_htd_update (\<lambda>_. (ptr_retyp (aep_Ptr regionBase)))))"
+           (global_htd_update (\<lambda>_. (ptr_retyp (ntfn_Ptr regionBase)))))"
   apply (rule ccorres_from_vcg_nofail)
   apply clarsimp
   apply (rule conseqPre)
@@ -4598,7 +4587,7 @@ lemma ccorres_placeNewObject_asyncendpoint:
                   elim!: ptr_retyp_htd_safe_neg)
   apply (rule bexI [OF _ placeNewObject_eq])
      apply (clarsimp simp: split_def new_cap_addrs_def)
-     apply (cut_tac createObjects_ccorres_aep [where ptr=regionBase and n="1" and sz="objBitsKO (KOAEndpoint makeObject)"])
+     apply (cut_tac createObjects_ccorres_ntfn [where ptr=regionBase and n="1" and sz="objBitsKO (KONotification makeObject)"])
      apply (erule_tac x=\<sigma> in allE, erule_tac x=x in allE)
      apply (clarsimp elim!:is_aligned_weaken simp: objBitsKO_def word_bits_def)+
      apply (clarsimp simp: split_def objBitsKO_def Let_def
@@ -4687,7 +4676,7 @@ lemma ccorres_placeNewObject_tcb:
      \<acute>tcb :== tcb_Ptr (regionBase + 0x100);;
         (global_htd_update (\<lambda>s. ptr_retyps 5 (cte_Ptr (ptr_val (tcb_' s) - 0x100)) \<circ> ptr_retyp (tcb_' s)));;
         (Guard C_Guard \<lbrace>hrs_htd \<acute>t_hrs \<Turnstile>\<^sub>t \<acute>tcb\<rbrace> 
-           (call (\<lambda>s. s\<lparr>context_' := Ptr &(tcb_' s\<rightarrow>[''tcbContext_C''])\<rparr>) Arch_initContext_'proc (\<lambda>s t. s\<lparr>globals := globals t\<rparr>) (\<lambda>s' s''. Basic (\<lambda>s. s))));;
+           (call (\<lambda>s. s\<lparr>context_' := Ptr &((Ptr &(tcb_' s\<rightarrow>[''tcbArch_C'']) :: arch_tcb_C ptr)\<rightarrow>[''tcbContext_C''])\<rparr>) Arch_initContext_'proc (\<lambda>s t. s\<lparr>globals := globals t\<rparr>) (\<lambda>s' s''. Basic (\<lambda>s. s))));;
         (Guard C_Guard \<lbrace>hrs_htd \<acute>t_hrs \<Turnstile>\<^sub>t \<acute>tcb\<rbrace>
            (Basic (\<lambda>s. globals_update (t_hrs_'_update (hrs_mem_update (heap_update (Ptr &((tcb_' s)\<rightarrow>[''tcbTimeSlice_C''])) (5::word32)))) s))))"
   apply -
@@ -4727,8 +4716,9 @@ lemma ccorres_placeNewObject_tcb:
         apply (clarsimp simp: hrs_htd_update)
        apply (clarsimp simp: CPSR_def word_sle_def)+
      apply (clarsimp simp: hrs_htd_update)
-     apply (rule h_t_valid_field[rotated], simp+)
+     apply (rule h_t_valid_field[rotated], simp+)+
     apply (clarsimp simp: hrs_htd_update)
+   apply (clarsimp simp: hrs_htd_update)
    apply (rule bexI [OF _ placeNewObject_eq])
       apply (clarsimp simp: split_def new_cap_addrs_def)
       apply (cut_tac \<sigma>=\<sigma>
@@ -4989,18 +4979,18 @@ lemma ccorres_apiType_split:
   "\<lbrakk> apiType = apiobject_type.Untyped \<Longrightarrow> ccorres rr xf P1 P1' hs X Y;
      apiType = apiobject_type.TCBObject \<Longrightarrow> ccorres rr xf P2 P2' hs X Y;
      apiType = apiobject_type.EndpointObject \<Longrightarrow> ccorres rr xf P3 P3' hs X Y;
-     apiType = apiobject_type.AsyncEndpointObject \<Longrightarrow> ccorres rr xf P4 P4' hs X Y;
+     apiType = apiobject_type.NotificationObject \<Longrightarrow> ccorres rr xf P4 P4' hs X Y;
      apiType = apiobject_type.CapTableObject \<Longrightarrow> ccorres rr xf P5 P5' hs X Y
    \<rbrakk> \<Longrightarrow> ccorres rr xf
          ((\<lambda>s. apiType = apiobject_type.Untyped \<longrightarrow> P1 s)
          and (\<lambda>s. apiType = apiobject_type.TCBObject \<longrightarrow> P2 s)
          and (\<lambda>s. apiType = apiobject_type.EndpointObject \<longrightarrow> P3 s)
-         and (\<lambda>s. apiType = apiobject_type.AsyncEndpointObject \<longrightarrow> P4 s)
+         and (\<lambda>s. apiType = apiobject_type.NotificationObject \<longrightarrow> P4 s)
          and (\<lambda>s. apiType = apiobject_type.CapTableObject \<longrightarrow> P5 s))
          ({s. apiType = apiobject_type.Untyped \<longrightarrow> s \<in> P1'}
          \<inter> {s. apiType = apiobject_type.TCBObject \<longrightarrow> s \<in> P2'}
          \<inter> {s. apiType = apiobject_type.EndpointObject \<longrightarrow> s \<in> P3'}
-         \<inter> {s. apiType = apiobject_type.AsyncEndpointObject \<longrightarrow> s \<in> P4'}
+         \<inter> {s. apiType = apiobject_type.NotificationObject \<longrightarrow> s \<in> P4'}
          \<inter> {s. apiType = apiobject_type.CapTableObject \<longrightarrow> s \<in> P5'})
          hs X Y"
   apply (case_tac apiType, simp_all)
@@ -5490,9 +5480,9 @@ lemma cep_relations_drop_fun_upd:
   "\<lbrakk> f x = Some v; tcbEPNext_C v' = tcbEPNext_C v; tcbEPPrev_C v' = tcbEPPrev_C v \<rbrakk>
       \<Longrightarrow> cendpoint_relation (f (x \<mapsto> v')) = cendpoint_relation f"
   "\<lbrakk> f x = Some v; tcbEPNext_C v' = tcbEPNext_C v; tcbEPPrev_C v' = tcbEPPrev_C v \<rbrakk>
-      \<Longrightarrow> casync_endpoint_relation (f (x \<mapsto> v')) = casync_endpoint_relation f"
+      \<Longrightarrow> cnotification_relation (f (x \<mapsto> v')) = cnotification_relation f"
   by (intro ext cendpoint_relation_upd_tcb_no_queues[where thread=x]
-                casync_endpoint_relation_upd_tcb_no_queues[where thread=x]
+                cnotification_relation_upd_tcb_no_queues[where thread=x]
           | simp split: split_if)+
 
 lemma threadSet_domain_ccorres [corres]:
@@ -5718,7 +5708,7 @@ proof -
                     epSizeBits_def word_bits_conv
                   elim!: is_aligned_no_wrap'   intro!: range_cover_simpleI)[1]
 
-       (* AsyncEndpoint *)
+       (* Notification *)
        apply (clarsimp simp: createObject_c_preconds_def)
        apply (clarsimp simp: getObjectSize_def objBits_simps
                   ArchTypes_H.getObjectSize_def apiGetObjectSize_def
@@ -5729,17 +5719,17 @@ proof -
          ccorres_rhs_assoc)
        apply (rule_tac
          A ="createObject_hs_preconds regionBase
-               (APIObjectType apiobject_type.AsyncEndpointObject)
+               (APIObjectType apiobject_type.NotificationObject)
                (unat (userSizea :: word32))" and
          A'="createObject_c_preconds1 regionBase
-               (APIObjectType apiobject_type.AsyncEndpointObject)
+               (APIObjectType apiobject_type.NotificationObject)
                (unat userSizea)" in
          ccorres_guard_imp2)
         apply (rule ccorres_Guard_Seq)+
         apply (rule ccorres_rhs_assoc2)
         apply (ccorres_remove_UNIV_guard)
         apply (simp add: hrs_htd_update)
-        apply (ctac (no_vcg) add: ccorres_placeNewObject_asyncendpoint)
+        apply (ctac (no_vcg) add: ccorres_placeNewObject_notification)
           apply (rule ccorres_symb_exec_r)
             apply (rule ccorres_return_C, simp, simp, simp)
            apply vcg
@@ -5747,8 +5737,8 @@ proof -
          apply wp
         apply (clarsimp simp: ccap_relation_def cap_to_H_def
             getObjectSize_def ArchTypes_H.getObjectSize_def
-            apiGetObjectSize_def aepSizeBits_def objBits_simps
-            Collect_const_mem cap_async_endpoint_cap_lift to_bool_def true_def
+            apiGetObjectSize_def ntfnSizeBits_def objBits_simps
+            Collect_const_mem cap_notification_cap_lift to_bool_def true_def
             dest!: range_cover.aligned split: option.splits)
        apply (clarsimp simp: createObject_hs_preconds_def)
        apply (frule invs_pspace_aligned')
@@ -5757,14 +5747,14 @@ proof -
        apply (frule invs_sym')
        apply (auto simp: getObjectSize_def objBits_simps
                    ArchTypes_H.getObjectSize_def apiGetObjectSize_def
-                   aepSizeBits_def word_bits_conv
+                   ntfnSizeBits_def word_bits_conv
                 elim!: is_aligned_no_wrap'  intro!: range_cover_simpleI)[1]
 
       (* CapTable *)
       apply (clarsimp simp: createObject_c_preconds_def)
       apply (clarsimp simp: getObjectSize_def objBits_simps
                   ArchTypes_H.getObjectSize_def apiGetObjectSize_def
-                  aepSizeBits_def word_bits_conv)
+                  ntfnSizeBits_def word_bits_conv)
       apply (clarsimp simp: Kernel_C_defs object_type_from_H_def
                  toAPIType_def ArchTypes_H.toAPIType_def nAPIObjects_def
                  word_sle_def word_sless_def zero_le_sint
@@ -5932,21 +5922,21 @@ lemma pspace_no_overlap_induce_endpoint:
             split: arch_kernel_object.split_asm)
   done
 
-lemma pspace_no_overlap_induce_async_endpoint:
+lemma pspace_no_overlap_induce_notification:
   "\<lbrakk>cpspace_relation (ksPSpace (s::kernel_state))
       (underlying_memory (ksMachineState s)) hp;
-    pspace_aligned' s; clift hp xa = Some (v::async_endpoint_C);
+    pspace_aligned' s; clift hp xa = Some (v::notification_C);
     is_aligned ptr bits; bits < word_bits;
     pspace_no_overlap' ptr bits s\<rbrakk>
-   \<Longrightarrow> {ptr_val xa..+size_of TYPE(async_endpoint_C)} \<inter> {ptr..+2 ^ bits} = {}"
+   \<Longrightarrow> {ptr_val xa..+size_of TYPE(notification_C)} \<inter> {ptr..+2 ^ bits} = {}"
   apply (clarsimp simp: cpspace_relation_def)
   apply (clarsimp simp: cmap_relation_def size_of_def)
-  apply (subgoal_tac "xa\<in>aep_Ptr ` dom (map_to_aeps (ksPSpace s))")
+  apply (subgoal_tac "xa\<in>ntfn_Ptr ` dom (map_to_ntfns (ksPSpace s))")
    prefer 2
    apply (simp add: domI)
   apply (thin_tac "S = dom K" for S K)+
   apply (thin_tac "\<forall>x\<in> S. K x" for S K)+
-  apply (clarsimp simp: image_def projectKO_opt_aep map_comp_def
+  apply (clarsimp simp: image_def projectKO_opt_ntfn map_comp_def
                  split: option.splits kernel_object.split_asm)
   apply (frule(1) pspace_no_overlapD')
   apply (subst intvl_range_conv)
@@ -6250,17 +6240,17 @@ assumes "cpspace_relation (ksPSpace s) (underlying_memory (ksMachineState (s::ke
   apply (erule(5) pspace_no_overlap_induce_endpoint[simplified])
   done
 
-lemma typ_bytes_cpspace_relation_clift_async_endpoint:
+lemma typ_bytes_cpspace_relation_clift_notification:
 assumes "cpspace_relation (ksPSpace s) (underlying_memory (ksMachineState (s::kernel_state))) hp"
   and "is_aligned ptr bits" "bits < word_bits"
   and "pspace_aligned' s"
   and "pspace_no_overlap' ptr bits s"
- shows "clift (hrs_htd_update (typ_region_bytes ptr bits) hp) = ((clift hp) :: (async_endpoint_C ptr \<rightharpoonup> async_endpoint_C))"
+ shows "clift (hrs_htd_update (typ_region_bytes ptr bits) hp) = ((clift hp) :: (notification_C ptr \<rightharpoonup> notification_C))"
   (is "?lhs = ?rhs")
   using assms
   apply -
   apply (rule lift_t_typ_region_bytes_none, simp_all)
-  apply (erule(5) pspace_no_overlap_induce_async_endpoint[simplified])
+  apply (erule(5) pspace_no_overlap_induce_notification[simplified])
   done
 
 lemma typ_bytes_cpspace_relation_clift_asid_pool:
@@ -6333,7 +6323,7 @@ lemma ccorres_typ_region_bytes_dummy:
       apply (simp add: invs_pspace_aligned')+
   apply (frule typ_bytes_cpspace_relation_clift_endpoint)
       apply (simp add: invs_pspace_aligned')+
-  apply (frule typ_bytes_cpspace_relation_clift_async_endpoint)
+  apply (frule typ_bytes_cpspace_relation_clift_notification)
       apply (simp add: invs_pspace_aligned')+
   apply (frule typ_bytes_cpspace_relation_clift_asid_pool)
       apply (simp add: invs_pspace_aligned')+

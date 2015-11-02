@@ -30,8 +30,8 @@ datatype invocation_label =
   | TCBSetSpace
   | TCBSuspend
   | TCBResume
-  | TCBBindAEP
-  | TCBUnbindAEP
+  | TCBBindNotification
+  | TCBUnbindNotification
   | CNodeRevoke
   | CNodeDelete
   | CNodeRecycle
@@ -104,8 +104,8 @@ definition
       TCBSetSpace,
       TCBSuspend,
       TCBResume,
-      TCBBindAEP,
-      TCBUnbindAEP,
+      TCBBindNotification,
+      TCBUnbindNotification,
       CNodeRevoke,
       CNodeDelete,
       CNodeRecycle,

@@ -20,7 +20,7 @@ declare word_neq_0_conv[simp del]
 
 lemma capUntypedPtr_simps [simp]:
   "capUntypedPtr (ThreadCap r) = r"
-  "capUntypedPtr (AsyncEndpointCap r badge a b) = r"
+  "capUntypedPtr (NotificationCap r badge a b) = r"
   "capUntypedPtr (EndpointCap r badge a b c) = r"
   "capUntypedPtr (Zombie r bits n) = r"
   "capUntypedPtr (ArchObjectCap x) = ArchRetypeDecls_H.capUntypedPtr x"
@@ -58,9 +58,9 @@ lemma getEndpoint_inv [wp]:
   "\<lbrace>P\<rbrace> getEndpoint ptr \<lbrace>\<lambda>rv. P\<rbrace>"
   by (simp add: getEndpoint_def getObject_inv loadObject_default_inv)
 
-lemma getAsyncEndpoint_inv [wp]:
-  "\<lbrace>P\<rbrace> getAsyncEP ptr \<lbrace>\<lambda>rv. P\<rbrace>"
-  by (simp add: getAsyncEP_def getObject_inv loadObject_default_inv)
+lemma getNotification_inv [wp]:
+  "\<lbrace>P\<rbrace> getNotification ptr \<lbrace>\<lambda>rv. P\<rbrace>"
+  by (simp add: getNotification_def getObject_inv loadObject_default_inv)
 
 lemma getSlotCap_inv [wp]: "\<lbrace>P\<rbrace> getSlotCap addr \<lbrace>\<lambda>rv. P\<rbrace>"
   by (simp add: getSlotCap_def, wp)
@@ -570,9 +570,9 @@ proof (unfold valid_badges_def, clarify)
             capEPBadge cap \<noteq> capEPBadge cap' \<longrightarrow> 
             capEPBadge cap' \<noteq> 0 \<longrightarrow> 
             mdbFirstBadged n') \<and>
-        (isAsyncEndpointCap cap \<longrightarrow> 
-            capAEPBadge cap \<noteq> capAEPBadge cap' \<longrightarrow> 
-            capAEPBadge cap' \<noteq> 0 \<longrightarrow> 
+        (isNotificationCap cap \<longrightarrow> 
+            capNtfnBadge cap \<noteq> capNtfnBadge cap' \<longrightarrow> 
+            capNtfnBadge cap' \<noteq> 0 \<longrightarrow> 
             mdbFirstBadged n')"
     using r c c' v by (fastforce simp: valid_badges_def)
 qed
@@ -660,7 +660,7 @@ definition
 where
  "capMasterCap cap \<equiv> case cap of
    EndpointCap ref bdg s r g \<Rightarrow> EndpointCap ref 0 True True True
- | AsyncEndpointCap ref bdg s r \<Rightarrow> AsyncEndpointCap ref 0 True True
+ | NotificationCap ref bdg s r \<Rightarrow> NotificationCap ref 0 True True
  | CNodeCap ref bits gd gs \<Rightarrow> CNodeCap ref bits 0 0
  | ThreadCap ref \<Rightarrow> ThreadCap ref
  | ReplyCap ref master \<Rightarrow> ReplyCap ref True
@@ -679,7 +679,7 @@ where
 
 lemma capMasterCap_simps[simp]:
   "capMasterCap (EndpointCap ref bdg s r g) = EndpointCap ref 0 True True True"
-  "capMasterCap (AsyncEndpointCap ref bdg s r) = AsyncEndpointCap ref 0 True True"
+  "capMasterCap (NotificationCap ref bdg s r) = NotificationCap ref 0 True True"
   "capMasterCap (CNodeCap ref bits gd gs) = CNodeCap ref bits 0 0"
   "capMasterCap (ThreadCap ref) = ThreadCap ref"
   "capMasterCap capability.NullCap = capability.NullCap"
@@ -705,9 +705,9 @@ lemma capMasterCap_eqDs1:
   "capMasterCap cap = EndpointCap ref bdg s r g
      \<Longrightarrow> bdg = 0 \<and> s \<and> r \<and> g
           \<and> (\<exists>bdg s r g. cap = EndpointCap ref bdg s r g)"
-  "capMasterCap cap = AsyncEndpointCap ref bdg s r
+  "capMasterCap cap = NotificationCap ref bdg s r
      \<Longrightarrow> bdg = 0 \<and> s \<and> r
-          \<and> (\<exists>bdg s r. cap = AsyncEndpointCap ref bdg s r)"
+          \<and> (\<exists>bdg s r. cap = NotificationCap ref bdg s r)"
   "capMasterCap cap = CNodeCap ref bits gd gs
      \<Longrightarrow> gd = 0 \<and> gs = 0 \<and> (\<exists>gd gs. cap = CNodeCap ref bits gd gs)"
   "capMasterCap cap = ThreadCap ref
@@ -746,7 +746,7 @@ definition
   capBadge :: "capability \<Rightarrow> word32 option"
 where
  "capBadge cap \<equiv> if isEndpointCap cap then Some (capEPBadge cap)
-                 else if isAsyncEndpointCap cap then Some (capAEPBadge cap)
+                 else if isNotificationCap cap then Some (capNtfnBadge cap)
                  else None"
 
 lemma capBadge_simps[simp]:
@@ -754,7 +754,7 @@ lemma capBadge_simps[simp]:
  "capBadge (NullCap)                          = None"
  "capBadge (DomainCap)                        = None"
  "capBadge (EndpointCap ref badge s r w)      = Some badge"
- "capBadge (AsyncEndpointCap ref badge s r)   = Some badge"
+ "capBadge (NotificationCap ref badge s r)   = Some badge"
  "capBadge (CNodeCap ref bits gd gs)          = None"
  "capBadge (ThreadCap ref)                    = None"
  "capBadge (Zombie ref b n)                   = None"
@@ -783,7 +783,7 @@ lemma isCap_Master:
   "isArchObjectCap (capMasterCap cap) = isArchObjectCap cap"
   "isThreadCap (capMasterCap cap) = isThreadCap cap"
   "isCNodeCap (capMasterCap cap) = isCNodeCap cap"
-  "isAsyncEndpointCap (capMasterCap cap) = isAsyncEndpointCap cap"
+  "isNotificationCap (capMasterCap cap) = isNotificationCap cap"
   "isEndpointCap (capMasterCap cap) = isEndpointCap cap"
   "isUntypedCap (capMasterCap cap) = isUntypedCap cap"
   "isReplyCap (capMasterCap cap) = isReplyCap cap"
@@ -924,7 +924,7 @@ lemma isMDBParent_Null [simp]:
 
 lemma capUntypedSize_simps [simp]:
   "capUntypedSize (ThreadCap r) = 1 << objBits (undefined::tcb)"
-  "capUntypedSize (AsyncEndpointCap r badge a b) = 1 << objBits (undefined::async_endpoint)"
+  "capUntypedSize (NotificationCap r badge a b) = 1 << objBits (undefined::Structures_H.notification)"
   "capUntypedSize (EndpointCap r badge a b c) = 1 << objBits (undefined::endpoint)"
   "capUntypedSize (Zombie r zs n) = 1 << (zBits zs)"
   "capUntypedSize NullCap = 0"

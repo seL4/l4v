@@ -31,7 +31,7 @@ definition domain_sep_inv where
     (\<forall> slot. \<not> cte_wp_at (op = DomainCap) slot s) \<and>
     (irqs \<or> (\<forall> irq slot. \<not> cte_wp_at (op = IRQControlCap) slot s
       \<and> \<not> cte_wp_at (op = (IRQHandlerCap irq)) slot s
-      \<and> interrupt_states s irq \<noteq> IRQNotifyAEP
+      \<and> interrupt_states s irq \<noteq> IRQSignal
       \<and> interrupt_states s = interrupt_states st))"
 
 definition domain_sep_inv_cap where
@@ -62,7 +62,7 @@ lemma domain_sep_inv_def2:
     (irqs \<or> (\<forall> irq slot. \<not> cte_wp_at (op = IRQControlCap) slot s
                             \<and> \<not> cte_wp_at (op = (IRQHandlerCap irq)) slot s)) \<and>
     (irqs \<or> (\<forall> irq.
-        interrupt_states s irq \<noteq> IRQNotifyAEP
+        interrupt_states s irq \<noteq> IRQSignal
         \<and> interrupt_states s = interrupt_states st)))"
   apply(fastforce simp: domain_sep_inv_def)
   done
@@ -85,7 +85,7 @@ lemma domain_sep_inv_wp:
   apply(rule disjI2)
   apply simp
   apply(intro allI conjI)
-   apply(erule_tac P1="\<lambda>x. x irq \<noteq> IRQNotifyAEP" in use_valid[OF _ irq_pres], assumption)
+   apply(erule_tac P1="\<lambda>x. x irq \<noteq> IRQSignal" in use_valid[OF _ irq_pres], assumption)
    apply blast
   apply(erule use_valid[OF _ irq_pres], assumption)
   apply blast
@@ -331,9 +331,9 @@ lemma set_endpoint_neg_cte_wp_at[wp]:
   apply(fastforce elim: cte_wp_atE intro: cte_wp_at_cteI cte_wp_at_tcbI)
   done
 
-lemma set_async_ep_neg_cte_wp_at[wp]:
-  "\<lbrace>\<lambda>s. \<not> cte_wp_at P slot s\<rbrace> set_async_ep a b \<lbrace>\<lambda>_ s. \<not> cte_wp_at P slot s\<rbrace>"
-  apply(simp add: set_async_ep_def)
+lemma set_notification_neg_cte_wp_at[wp]:
+  "\<lbrace>\<lambda>s. \<not> cte_wp_at P slot s\<rbrace> set_notification a b \<lbrace>\<lambda>_ s. \<not> cte_wp_at P slot s\<rbrace>"
+  apply(simp add: set_notification_def)
   apply(wp set_object_wp get_object_wp | simp)+
   apply(case_tac "a = fst slot")
    apply(clarsimp split: kernel_object.splits)
@@ -344,7 +344,7 @@ lemma set_async_ep_neg_cte_wp_at[wp]:
 crunch domain_sep_inv[wp]: set_endpoint "domain_sep_inv irqs st"
   (wp: domain_sep_inv_triv)
 
-crunch domain_sep_inv[wp]: set_async_ep "domain_sep_inv irqs st"
+crunch domain_sep_inv[wp]: set_notification "domain_sep_inv irqs st"
   (wp: domain_sep_inv_triv)
 
 lemma set_thread_state_neg_cte_wp_at[wp]:
@@ -364,9 +364,9 @@ lemma set_thread_state_neg_cte_wp_at[wp]:
   apply(fastforce elim: cte_wp_atE intro: cte_wp_at_cteI cte_wp_at_tcbI)
   done
 
-lemma set_bound_aep_neg_cte_wp_at[wp]:
-  "\<lbrace>\<lambda>s. \<not> cte_wp_at P slot s\<rbrace> set_bound_aep a b \<lbrace>\<lambda>_ s. \<not> cte_wp_at P slot s\<rbrace>"
-  apply(simp add: set_bound_aep_def)
+lemma set_bound_notification_neg_cte_wp_at[wp]:
+  "\<lbrace>\<lambda>s. \<not> cte_wp_at P slot s\<rbrace> set_bound_notification a b \<lbrace>\<lambda>_ s. \<not> cte_wp_at P slot s\<rbrace>"
+  apply(simp add: set_bound_notification_def)
   apply(wp set_object_wp get_object_wp dxo_wp_weak| simp)+
   apply(case_tac "a = fst slot")
    apply(clarsimp split: kernel_object.splits)
@@ -381,7 +381,7 @@ lemma set_bound_aep_neg_cte_wp_at[wp]:
   apply(fastforce elim: cte_wp_atE intro: cte_wp_at_cteI cte_wp_at_tcbI)
   done
 
-crunch domain_sep_inv[wp]: set_thread_state, set_bound_aep, get_bound_aep "domain_sep_inv irqs st"
+crunch domain_sep_inv[wp]: set_thread_state, set_bound_notification, get_bound_notification "domain_sep_inv irqs st"
   (wp: domain_sep_inv_triv)
 
 lemma thread_set_tcb_fault_update_neg_cte_wp_at[wp]:
@@ -413,11 +413,11 @@ lemma thread_set_tcb_fault_update_domain_sep_inv[wp]:
 crunch domain_sep_inv[wp]: cap_delete_one "domain_sep_inv irqs st"
   (wp: mapM_x_wp' hoare_unless_wp dxo_wp_weak ignore: tcb_sched_action reschedule_required simp: crunch_simps)
 
-lemma reply_ipc_cancel_domain_sep_inv[wp]:
+lemma reply_cancel_ipc_domain_sep_inv[wp]:
   "\<lbrace>domain_sep_inv irqs st\<rbrace>
-   reply_ipc_cancel t
+   reply_cancel_ipc t
    \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
-  apply(simp add: reply_ipc_cancel_def)
+  apply(simp add: reply_cancel_ipc_def)
   apply (wp select_wp)
   apply(rule hoare_strengthen_post[OF thread_set_tcb_fault_update_domain_sep_inv])
   apply auto
@@ -665,11 +665,11 @@ lemma recycle_cap_domain_sep_inv_cap[wp]:
   apply(auto simp: domain_sep_inv_cap_def)
   done
 
-lemma ep_cancel_badged_sends_domain_sep_inv[wp]:
+lemma cancel_badged_sends_domain_sep_inv[wp]:
   "\<lbrace>domain_sep_inv irqs st\<rbrace>
-   ep_cancel_badged_sends epptr badge
+   cancel_badged_sends epptr badge
    \<lbrace>\<lambda>rv. domain_sep_inv irqs st\<rbrace>"
-  apply(simp add: ep_cancel_badged_sends_def)
+  apply(simp add: cancel_badged_sends_def)
   apply(rule hoare_pre)
    apply(wp dxo_wp_weak mapM_wp | wpc | simp add: filterM_mapM | rule subset_refl | wp_once hoare_drop_imps)+
    done
@@ -836,7 +836,7 @@ crunch domain_sep_inv[wp]: set_mrs "domain_sep_inv irqs st"
    simp: crunch_simps)
 
 
-crunch domain_sep_inv[wp]: send_async_ipc "domain_sep_inv irqs st" (wp: dxo_wp_weak ignore:  switch_if_required_to)
+crunch domain_sep_inv[wp]: send_signal "domain_sep_inv irqs st" (wp: dxo_wp_weak ignore:  switch_if_required_to)
 
 crunch domain_sep_inv[wp]: copy_mrs, set_message_info "domain_sep_inv irqs st"
   (wp: crunch_wps)
@@ -963,7 +963,7 @@ lemma invoke_control_domain_sep_inv:
 
 
 
-crunch domain_sep_inv[wp]: receive_async_ipc "domain_sep_inv irqs st"
+crunch domain_sep_inv[wp]: receive_signal "domain_sep_inv irqs st"
 
 lemma domain_sep_inv_cap_ReplyCap[simp]:
   "domain_sep_inv_cap irqs (ReplyCap param_a param_b)"
@@ -1070,7 +1070,7 @@ lemma set_tl_subset:
    apply auto
   done
 
-crunch domain_sep_inv[wp]: complete_async_ipc "domain_sep_inv irqs st"
+crunch domain_sep_inv[wp]: complete_signal "domain_sep_inv irqs st"
 
 lemma receive_ipc_base_domain_sep_inv:
   "\<lbrace>domain_sep_inv irqs st and valid_objs and valid_mdb and
@@ -1098,9 +1098,9 @@ lemma receive_ipc_domain_sep_inv:
   unfolding receive_ipc_def
   apply (simp add: receive_ipc_def split: cap.splits, clarsimp)
   apply (rule hoare_seq_ext[OF _ get_endpoint_sp])
-  apply (rule hoare_seq_ext[OF _ gba_sp])
-  apply (case_tac aepptr, simp)
-  apply (wp receive_ipc_base_domain_sep_inv get_aep_wp | simp split: split_if option.splits)+
+  apply (rule hoare_seq_ext[OF _ gbn_sp])
+  apply (case_tac ntfnptr, simp)
+  apply (wp receive_ipc_base_domain_sep_inv get_ntfn_wp | simp split: split_if option.splits)+
   done
 
 lemma send_fault_ipc_domain_sep_inv:
@@ -1205,7 +1205,7 @@ lemma checked_cap_insert_domain_sep_inv:
   apply(erule (1) same_object_as_domain_sep_inv_cap)
   done
 
-crunch domain_sep_inv[wp]: bind_async_endpoint "domain_sep_inv irqs st"
+crunch domain_sep_inv[wp]: bind_notification "domain_sep_inv irqs st"
 
 lemma invoke_tcb_domain_sep_inv:
   "\<lbrace>domain_sep_inv irqs st and
@@ -1219,7 +1219,7 @@ lemma invoke_tcb_domain_sep_inv:
             | clarsimp)+)[3]
     defer
     apply((wp | simp )+)[2]
-  (* just AsyncEndpointControl and ThreadControl left *)
+  (* just NotificationControl and ThreadControl left *)
   apply (rename_tac option)
   apply (case_tac option)
   apply  ((wp | simp)+)[1]
@@ -1344,7 +1344,7 @@ lemma handle_wait_domain_sep_inv:
   apply (simp add: handle_wait_def Let_def lookup_cap_def split_def)
   apply (wp hoare_vcg_all_lift lookup_slot_for_thread_cap_fault
             receive_ipc_domain_sep_inv delete_caller_cap_domain_sep_inv
-            get_cap_wp get_aep_wp
+            get_cap_wp get_ntfn_wp
         | wpc | simp
         | rule_tac Q="\<lambda>rv. invs and (\<lambda>s. cur_thread s = thread)" in hoare_strengthen_post, wp, 
           clarsimp simp: invs_valid_objs invs_sym_refs)+

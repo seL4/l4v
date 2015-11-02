@@ -110,7 +110,7 @@ definition
     if cap_ep_badge cap = 0 \<and> \<not> preserve then
       badge_update w cap
     else NullCap
-  else if is_aep_cap cap then
+  else if is_ntfn_cap cap then
     if cap_ep_badge cap = 0 \<and> \<not> preserve then
       badge_update w cap
     else NullCap
@@ -427,17 +427,17 @@ where
 | "finalise_cap (UntypedCap r bits f)    final = return (NullCap, None)"
 | "finalise_cap (ReplyCap r m)           final = return (NullCap, None)"
 | "finalise_cap (EndpointCap r b R)      final =
-      (liftM (K (NullCap, None)) $ when final $ ep_cancel_all r)"
-| "finalise_cap (AsyncEndpointCap r b R) final = 
+      (liftM (K (NullCap, None)) $ when final $ cancel_all_ipc r)"
+| "finalise_cap (NotificationCap r b R) final = 
       (liftM (K (NullCap, None)) $ when final $ do
-          unbind_maybe_aep r;
-          aep_cancel_all r
+          unbind_maybe_notification r;
+          cancel_all_signals r
         od)"
 | "finalise_cap (CNodeCap r bits g)  final =
       return (if final then Zombie r (Some bits) (2 ^ bits) else NullCap, None)"
 | "finalise_cap (ThreadCap r)            final =
       do
-         when final $ unbind_async_endpoint r;
+         when final $ unbind_notification r;
          when final $ suspend r;
          return (if final then (Zombie r None 5) else NullCap, None)
       od"
@@ -459,7 +459,7 @@ definition
  "can_fast_finalise cap \<equiv> case cap of
     ReplyCap r m \<Rightarrow> True
   | EndpointCap r b R \<Rightarrow> True
-  | AsyncEndpointCap r b R \<Rightarrow> True
+  | NotificationCap r b R \<Rightarrow> True
   | NullCap \<Rightarrow> True
   | _ \<Rightarrow> False"
 
@@ -627,7 +627,7 @@ section {* Inserting and moving capabilities *}
 definition
   get_badge :: "cap \<Rightarrow> badge option" where
  "get_badge cap \<equiv> case cap of
-    AsyncEndpointCap oref badge cr \<Rightarrow> Some badge
+    NotificationCap oref badge cr \<Rightarrow> Some badge
   | EndpointCap oref badge cr      \<Rightarrow> Some badge
   | _                              \<Rightarrow> None"
 
@@ -676,8 +676,8 @@ where
      obj_ref_of c' + obj_size c' - 1 \<le> r + (1 << bits) - 1)"
 | "same_region_as (EndpointCap r b R) c' =
     (is_ep_cap c' \<and> obj_ref_of c' = r)"
-| "same_region_as (AsyncEndpointCap r b R) c' =
-    (is_aep_cap c' \<and> obj_ref_of c' = r)"
+| "same_region_as (NotificationCap r b R) c' =
+    (is_ntfn_cap c' \<and> obj_ref_of c' = r)"
 | "same_region_as (CNodeCap r bits g) c' =
     (is_cnode_cap c' \<and> obj_ref_of c' = r \<and> bits_of c' = bits)"
 | "same_region_as (ReplyCap n m) c' = (\<exists>m'. c' = ReplyCap n m')"
@@ -754,7 +754,7 @@ definition
    same_region_as c c' \<and>
    (case c of
       EndpointCap ref badge R \<Rightarrow> badge \<noteq> 0 \<longrightarrow> cap_ep_badge c' = badge \<and> \<not>original'
-    | AsyncEndpointCap ref badge R \<Rightarrow> badge \<noteq> 0 \<longrightarrow> cap_ep_badge c' = badge \<and> \<not>original'
+    | NotificationCap ref badge R \<Rightarrow> badge \<noteq> 0 \<longrightarrow> cap_ep_badge c' = badge \<and> \<not>original'
     | _ \<Rightarrow> True)"
 
 
@@ -776,7 +776,7 @@ definition
 
     dest_original \<leftarrow> return (if is_ep_cap new_cap then
                                 cap_ep_badge new_cap \<noteq> cap_ep_badge src_cap
-                             else if is_aep_cap new_cap then
+                             else if is_ntfn_cap new_cap then
                                 cap_ep_badge new_cap \<noteq> cap_ep_badge src_cap
                              else if \<exists>irq. new_cap = IRQHandlerCap irq then
                                 src_cap = IRQControlCap
@@ -826,8 +826,8 @@ definition
     (case tp of
           None \<Rightarrow> do
             st \<leftarrow> get_thread_state ptr;
-            aep \<leftarrow> get_bound_aep ptr;
-            assert (st = Inactive \<and> aep = None);
+            ntfn \<leftarrow> get_bound_notification ptr;
+            assert (st = Inactive \<and> ntfn = None);
             thread_set (tcb_registers_caps_merge default_tcb) ptr;
             do_extended_op (recycle_cap_ext ptr);
             return $ ThreadCap ptr
@@ -835,7 +835,7 @@ definition
         | Some sz \<Rightarrow> return $ CNodeCap ptr sz [])
   | EndpointCap ep b _ \<Rightarrow>
     do
-      when (b \<noteq> 0) $ ep_cancel_badged_sends ep b;
+      when (b \<noteq> 0) $ cancel_badged_sends ep b;
       return cap
     od
   | ArchObjectCap c \<Rightarrow> liftM ArchObjectCap $ arch_recycle_cap is_final c
@@ -865,7 +865,7 @@ definition
      NullCap \<Rightarrow> False
    | DomainCap \<Rightarrow> False
    | EndpointCap _ _ R \<Rightarrow> R = all_rights
-   | AsyncEndpointCap _ _ R \<Rightarrow> {AllowRead,AllowWrite} \<subseteq> R
+   | NotificationCap _ _ R \<Rightarrow> {AllowRead,AllowWrite} \<subseteq> R
    | ArchObjectCap (PageCap _ R _ _) \<Rightarrow> {AllowRead,AllowWrite} \<subseteq> R
    | _ \<Rightarrow> True"
 

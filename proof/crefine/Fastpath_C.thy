@@ -99,10 +99,10 @@ definition
     unlessE (isEndpointCap epCap \<and> capEPCanReceive epCap)
        $ throwError ();
 
-    bound_aep \<leftarrow> liftE $ getBoundAEP curThread;
-    active_aep \<leftarrow> liftE $ case bound_aep of None \<Rightarrow> return False
-      | Some aepptr \<Rightarrow> liftM isActive $ getAsyncEP aepptr;
-    unlessE (\<not> active_aep) $ throwError ();
+    bound_ntfn \<leftarrow> liftE $ getBoundNotification curThread;
+    active_ntfn \<leftarrow> liftE $ case bound_ntfn of None \<Rightarrow> return False
+      | Some ntfnptr \<Rightarrow> liftM isActive $ getNotification ntfnptr;
+    unlessE (\<not> active_ntfn) $ throwError ();
 
     ep \<leftarrow> liftE $ getEndpoint (capEPPtr epCap);
     unlessE (\<not> isSendEP ep) $ throwError ();
@@ -215,10 +215,10 @@ lemma setThreadState_obj_at_unchangedT:
   apply (clarsimp simp: obj_at'_def projectKOs x cong: if_cong)
   done
 
-lemma setBoundAEP_obj_at_unchangedT:
-  assumes x: "\<And>f. \<forall>tcb. P (tcbBoundAEP_update f tcb) = P tcb"
-  shows "\<lbrace>obj_at' P t\<rbrace> setBoundAEP t' ts \<lbrace>\<lambda>rv. obj_at' P t\<rbrace>"
-  apply (simp add: setBoundAEP_def)
+lemma setBoundNotification_obj_at_unchangedT:
+  assumes x: "\<And>f. \<forall>tcb. P (tcbBoundNotification_update f tcb) = P tcb"
+  shows "\<lbrace>obj_at' P t\<rbrace> setBoundNotification t' ts \<lbrace>\<lambda>rv. obj_at' P t\<rbrace>"
+  apply (simp add: setBoundNotification_def)
   apply (wp threadSet_obj_at'_strongish)
   apply (clarsimp simp: obj_at'_def projectKOs x cong: if_cong)
   done
@@ -226,8 +226,8 @@ lemma setBoundAEP_obj_at_unchangedT:
 lemmas setThreadState_obj_at_unchanged
     = setThreadState_obj_at_unchangedT[OF all_tcbI all_tcbI]
 
-lemmas setBoundAEP_obj_at_unchanged
-    = setBoundAEP_obj_at_unchangedT[OF all_tcbI]
+lemmas setBoundNotification_obj_at_unchanged
+    = setBoundNotification_obj_at_unchangedT[OF all_tcbI]
 
 lemma tcbSchedEnqueue_tcbContext[wp]:
   "\<lbrace>obj_at' (\<lambda>tcb. P (tcbContext tcb)) t\<rbrace>
@@ -237,11 +237,11 @@ lemma tcbSchedEnqueue_tcbContext[wp]:
   apply simp
   done
 
-lemma setAsyncEP_tcb:
+lemma setNotification_tcb:
   "\<lbrace>obj_at' (\<lambda>tcb::tcb. P tcb) t\<rbrace>
-  setAsyncEP aep e
+  setNotification ntfn e
   \<lbrace>\<lambda>_. obj_at' P t\<rbrace>"
-  apply (simp add: setAsyncEP_def)
+  apply (simp add: setNotification_def)
   apply (rule obj_at_setObject2)
   apply (clarsimp simp: updateObject_default_def in_monad)
   done
@@ -258,7 +258,7 @@ lemma setCTE_tcbContext:
 
 crunch tcbContext[wp]: deleteCallerCap "obj_at' (\<lambda>tcb. P (tcbContext tcb)) t"
   (wp: setEndpoint_obj_at_tcb' setThreadState_obj_at_unchanged
-       setAsyncEP_tcb crunch_wps setBoundAEP_obj_at_unchanged
+       setNotification_tcb crunch_wps setBoundNotification_obj_at_unchanged
       simp: crunch_simps unless_def)
 
 crunch ksArch[wp]: asUser "\<lambda>s. P (ksArchState s)"
@@ -1189,15 +1189,15 @@ lemma thread_state_ptr_set_tsType_np_spec:
   apply (auto simp: "StrictC'_thread_state_defs")
   done
 
-lemma thread_state_ptr_mset_blockingIPCEndpoint_tsType_spec:
+lemma thread_state_ptr_mset_blockingObject_tsType_spec:
   defines "ptr s \<equiv> cparent \<^bsup>s\<^esup>ts_ptr [''tcbState_C''] :: tcb_C ptr"
   shows
   "\<forall>s. \<Gamma>\<turnstile> \<lbrace>s. hrs_htd \<^bsup>s\<^esup>t_hrs \<Turnstile>\<^sub>t ptr s \<and> is_aligned (ep_ref_' s) 4
                          \<and> tsType_' s && mask 4 = tsType_' s\<rbrace>
-              Call thread_state_ptr_mset_blockingIPCEndpoint_tsType_'proc
+              Call thread_state_ptr_mset_blockingObject_tsType_'proc
        {t. (\<exists>thread_state.
                tsType_CL (thread_state_lift thread_state) = tsType_' s
-             \<and> blockingIPCEndpoint_CL (thread_state_lift thread_state) = ep_ref_' s
+             \<and> blockingObject_CL (thread_state_lift thread_state) = ep_ref_' s
              \<and> tcbQueued_CL (thread_state_lift thread_state)
                   = tcbQueued_CL (thread_state_lift (tcbState_C (the (cslift s (ptr s)))))
              \<and> cslift t = cslift s(ptr s \<mapsto> the (cslift s (ptr s))\<lparr>tcbState_C := thread_state\<rparr>))
@@ -1229,8 +1229,8 @@ lemma thread_state_ptr_set_blockingIPCDiminish_np_spec:
                   = tcbQueued_CL (thread_state_lift (tcbState_C tcb))
              \<and> tsType_CL (thread_state_lift ts)
                   = tsType_CL (thread_state_lift (tcbState_C tcb))
-             \<and> blockingIPCEndpoint_CL (thread_state_lift ts)
-                  = blockingIPCEndpoint_CL (thread_state_lift (tcbState_C tcb))
+             \<and> blockingObject_CL (thread_state_lift ts)
+                  = blockingObject_CL (thread_state_lift (tcbState_C tcb))
              \<and> cslift t = cslift s(ptr s \<mapsto> tcb\<lparr>tcbState_C := ts\<rparr>)
              \<and> types_proofs.cslift_all_but_tcb_C t s
              \<and> hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s))}"
@@ -1706,7 +1706,7 @@ lemma fastpath_dequeue_ccorres:
     apply (simp add: isRecvEP_def)
    apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
    apply simp
-   apply (rule casync_endpoint_relation_ep_queue [OF invs_sym'], assumption+)
+   apply (rule cnotification_relation_ep_queue [OF invs_sym'], assumption+)
      apply (simp add: isRecvEP_def)
     apply simp
    apply (erule (1) map_to_ko_atI')
@@ -1731,23 +1731,23 @@ lemma st_tcb_at_not_in_ep_queue:
    apply (fastforce simp: st_tcb_at'_def obj_at'_def projectKOs)+
   done
 
-lemma st_tcb_at_not_in_aep_queue:
-  "\<lbrakk> st_tcb_at' P t s; ko_at' aep aepptr s; sym_refs (state_refs_of' s); aepObj aep = WaitingAEP xs;
-     \<And>ts. P ts \<Longrightarrow> (aepptr, TCBAsync) \<notin> tcb_st_refs_of' ts \<rbrakk>
+lemma st_tcb_at_not_in_ntfn_queue:
+  "\<lbrakk> st_tcb_at' P t s; ko_at' ntfn ntfnptr s; sym_refs (state_refs_of' s); ntfnObj ntfn = WaitingNtfn xs;
+     \<And>ts. P ts \<Longrightarrow> (ntfnptr, TCBSignal) \<notin> tcb_st_refs_of' ts \<rbrakk>
       \<Longrightarrow> t \<notin> set xs"
   apply (drule(1) sym_refs_ko_atD')
   apply (clarsimp simp: st_tcb_at_refs_of_rev')
-  apply (drule_tac x="(t, AEPAsync)" in bspec, simp)
+  apply (drule_tac x="(t, NTFNSignal)" in bspec, simp)
   apply (fastforce simp: st_tcb_at'_def obj_at'_def projectKOs ko_wp_at'_def tcb_bound_refs'_def)
   done
 
-lemma casync_relation_double_fun_upd:
-  "\<lbrakk> casync_endpoint_relation mp aep aep'
-       = casync_endpoint_relation (mp(a := b)) aep aep';
-     casync_endpoint_relation (mp(a := b)) aep aep'
-       = casync_endpoint_relation (mp(a := b, c := d)) aep aep' \<rbrakk>
-   \<Longrightarrow> casync_endpoint_relation mp aep aep'
-         = casync_endpoint_relation (mp(a := b, c := d)) aep aep'"
+lemma cntfn_relation_double_fun_upd:
+  "\<lbrakk> cnotification_relation mp ntfn ntfn'
+       = cnotification_relation (mp(a := b)) ntfn ntfn';
+     cnotification_relation (mp(a := b)) ntfn ntfn'
+       = cnotification_relation (mp(a := b, c := d)) ntfn ntfn' \<rbrakk>
+   \<Longrightarrow> cnotification_relation mp ntfn ntfn'
+         = cnotification_relation (mp(a := b, c := d)) ntfn ntfn'"
   by simp
 
 lemma sym_refs_upd_ko_atD':
@@ -1771,7 +1771,7 @@ lemma sym_refs_upd_sD:
       \<Longrightarrow> \<exists>s'. sym_refs (state_refs_of' s')
                \<and> (\<forall>p' (ko' :: endpoint). ko_at' ko' p' s \<and> injectKO ko' \<noteq> injectKO ko
                           \<longrightarrow> ko_at' ko' p' s')
-               \<and> (\<forall>p' (ko' :: async_endpoint). ko_at' ko' p' s \<and> injectKO ko' \<noteq> injectKO ko
+               \<and> (\<forall>p' (ko' :: Structures_H.notification). ko_at' ko' p' s \<and> injectKO ko' \<noteq> injectKO ko
                           \<longrightarrow> ko_at' ko' p' s')
                \<and> (ko_at' koEx p s')"
   apply (rule exI, rule conjI)
@@ -1792,10 +1792,10 @@ lemma sym_refs_upd_tcb_sD:
       \<Longrightarrow> \<exists>s'. sym_refs (state_refs_of' s')
                \<and> (\<forall>p' (ko' :: endpoint).
                           ko_at' ko' p' s \<longrightarrow> ko_at' ko' p' s')
-               \<and> (\<forall>p' (ko' :: async_endpoint).
+               \<and> (\<forall>p' (ko' :: Structures_H.notification).
                           ko_at' ko' p' s \<longrightarrow> ko_at' ko' p' s')
                \<and> (st_tcb_at' (op = Running) p s')"
-  apply (drule(2) sym_refs_upd_sD[where koEx="makeObject\<lparr>tcbState := Running, tcbBoundAEP := tcbBoundAEP tcb\<rparr>"])
+  apply (drule(2) sym_refs_upd_sD[where koEx="makeObject\<lparr>tcbState := Running, tcbBoundNotification := tcbBoundNotification tcb\<rparr>"])
     apply (clarsimp dest!: ko_at_state_refs_ofD')
    apply (simp add: objBits_simps)
   apply (erule exEI)
@@ -1895,18 +1895,18 @@ lemma fastpath_enqueue_ccorres:
             simp_all add: Int_commute endpoint_not_idle_cases image_image)[1]
     apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
     apply simp
-    apply (rule casync_relation_double_fun_upd)
-     apply (rule casync_endpoint_relation_ep_queue, assumption+)
+    apply (rule cntfn_relation_double_fun_upd)
+     apply (rule cnotification_relation_ep_queue, assumption+)
         apply fastforce
        apply (simp add: isRecvEP_def)
       apply simp
      apply (fastforce dest!: map_to_ko_atI)
 
-    apply (rule casync_endpoint_relation_q_cong)
+    apply (rule cnotification_relation_q_cong)
     apply (clarsimp split: split_if)
-    apply (clarsimp simp: restrict_map_def aep_q_refs_of'_def
-                   split: split_if Structures_H.async_endpoint.split_asm Structures_H.aep.split_asm)
-    apply (erule notE[rotated], erule_tac aepptr=p and aep=a in st_tcb_at_not_in_aep_queue,
+    apply (clarsimp simp: restrict_map_def ntfn_q_refs_of'_def
+                   split: split_if Structures_H.notification.split_asm Structures_H.ntfn.split_asm)
+    apply (erule notE[rotated], erule_tac ntfnptr=p and ntfn=a in st_tcb_at_not_in_ntfn_queue,
            auto dest!: map_to_ko_atI)[1]
    apply (simp add: carch_state_relation_def typ_heap_simps'
                     cmachine_state_relation_def h_t_valid_clift_Some_iff)
@@ -1932,11 +1932,11 @@ lemma fastpath_enqueue_ccorres:
            auto)[1]
    apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
    apply simp
-   apply (rule casync_endpoint_relation_q_cong)
+   apply (rule cnotification_relation_q_cong)
    apply (clarsimp split: split_if)
-   apply (clarsimp simp: restrict_map_def aep_q_refs_of'_def
-                  split: split_if Structures_H.async_endpoint.split_asm Structures_H.aep.split_asm)
-   apply (erule notE[rotated], rule_tac aepptr=p and aep=a in st_tcb_at_not_in_aep_queue,
+   apply (clarsimp simp: restrict_map_def ntfn_q_refs_of'_def
+                  split: split_if Structures_H.notification.split_asm Structures_H.ntfn.split_asm)
+   apply (erule notE[rotated], rule_tac ntfnptr=p and ntfn=a in st_tcb_at_not_in_ntfn_queue,
           assumption+, auto dest!: map_to_ko_atI)[1]
   apply (simp add: carch_state_relation_def typ_heap_simps'
                    cmachine_state_relation_def h_t_valid_clift_Some_iff)
@@ -2174,42 +2174,42 @@ context kernel_m begin
 
 lemma obj_at_bound_tcb_grandD:
   "\<lbrakk> obj_at' P t s; valid_objs' s; no_0_obj' s; (s, s') \<in> rf_sr \<rbrakk>
-    \<Longrightarrow> \<exists>tcb tcb' aep aep'. ko_at' tcb t s \<and> P tcb
+    \<Longrightarrow> \<exists>tcb tcb' ntfn ntfn'. ko_at' tcb t s \<and> P tcb
        \<and> cslift s' (tcb_ptr_to_ctcb_ptr t) = Some tcb'
        \<and> ctcb_relation tcb tcb'
-       \<and> ((boundAsyncEndpoint_C tcb' = NULL) = (tcbBoundAEP tcb = None))
-       \<and> (tcbBoundAEP tcb \<noteq> None \<longrightarrow> ko_at' aep (the (tcbBoundAEP tcb)) s)
-       \<and> (tcbBoundAEP tcb \<noteq> None \<longrightarrow> cslift s' (boundAsyncEndpoint_C tcb') = Some aep')
-       \<and> (tcbBoundAEP tcb \<noteq> None \<longrightarrow> casync_endpoint_relation (cslift s') aep aep')"
+       \<and> ((tcbBoundNotification_C tcb' = NULL) = (tcbBoundNotification tcb = None))
+       \<and> (tcbBoundNotification tcb \<noteq> None \<longrightarrow> ko_at' ntfn (the (tcbBoundNotification tcb)) s)
+       \<and> (tcbBoundNotification tcb \<noteq> None \<longrightarrow> cslift s' (tcbBoundNotification_C tcb') = Some ntfn')
+       \<and> (tcbBoundNotification tcb \<noteq> None \<longrightarrow> cnotification_relation (cslift s') ntfn ntfn')"
   apply (clarsimp simp: pred_tcb_at'_def)
   apply (drule(1) obj_at_cslift_tcb, clarsimp)
   apply (rule exI, rule conjI, assumption)
   apply (clarsimp simp: ctcb_relation_def
                                  option_to_ptr_def option_to_0_def)
   apply (simp add: return_def split: option.split_asm)
-  apply (drule_tac s="aep_Ptr x"for x in sym)
+  apply (drule_tac s="ntfn_Ptr x"for x in sym)
   apply (drule(1) ko_at_valid_objs', clarsimp simp: projectKOs)
   apply (clarsimp simp: projectKOs valid_obj'_def valid_tcb'_def)
   apply (drule obj_at_ko_at', clarsimp)
   apply (rule conjI, clarsimp)
-  apply (rule cmap_relationE1[OF cmap_relation_aep], assumption, erule ko_at_projectKO_opt)
+  apply (rule cmap_relationE1[OF cmap_relation_ntfn], assumption, erule ko_at_projectKO_opt)
   apply auto
   done
 
-lemma casync_endpoint_relation_isActive:
-  "casync_endpoint_relation tcbs aep aep'
-       \<Longrightarrow> (async_endpoint_CL.state_CL (async_endpoint_lift aep') = scast AEPState_Active)
-     = EndpointDecls_H.isActive aep"
-  apply (clarsimp simp: casync_endpoint_relation_def Let_def)
-  apply (cases aep, simp)
-  apply (rename_tac aepa ooeuoue)
-  apply (case_tac aepa, simp_all add: async_endpoint_state_defs isActive_def)
+lemma cnotification_relation_isActive:
+  "cnotification_relation tcbs ntfn ntfn'
+       \<Longrightarrow> (notification_CL.state_CL (notification_lift ntfn') = scast NtfnState_Active)
+     = EndpointDecls_H.isActive ntfn"
+  apply (clarsimp simp: cnotification_relation_def Let_def)
+  apply (cases ntfn, simp)
+  apply (rename_tac ntfna ooeuoue)
+  apply (case_tac ntfna, simp_all add: notification_state_defs isActive_def)
   done
 
-lemma option_case_liftM_getAsyncEP_wp:
-  "\<lbrace>\<lambda>s. \<forall>rv. (case x of None \<Rightarrow> rv = v | Some p \<Rightarrow> obj_at' (\<lambda>aep. f aep = rv) p s)
-    \<longrightarrow> Q rv s\<rbrace> case x of None \<Rightarrow> return v | Some ptr \<Rightarrow> liftM f $ getAsyncEP ptr \<lbrace> Q \<rbrace>"
-  apply (rule hoare_pre, wpc, wp getAsyncEP_wp)
+lemma option_case_liftM_getNotification_wp:
+  "\<lbrace>\<lambda>s. \<forall>rv. (case x of None \<Rightarrow> rv = v | Some p \<Rightarrow> obj_at' (\<lambda>ntfn. f ntfn = rv) p s)
+    \<longrightarrow> Q rv s\<rbrace> case x of None \<Rightarrow> return v | Some ptr \<Rightarrow> liftM f $ getNotification ptr \<lbrace> Q \<rbrace>"
+  apply (rule hoare_pre, wpc, wp getNotification_wp)
   apply (auto simp: obj_at'_def)
   done
 
@@ -3035,18 +3035,18 @@ lemma fastpath_reply_wait_ccorres:
            apply simp
           apply (vcg exspec=slowpath_noreturn_spec)
          apply (simp del: Collect_const cong: call_ignore_cong)
-            apply (rule ccorres_pre_getBoundAEP)
+            apply (rule ccorres_pre_getBoundNotification)
            apply (rule ccorres_rhs_assoc2)
            apply (rule_tac xf'=ret__int_' and r'="\<lambda>rv rv'. rv' = from_bool rv"
                  in ccorres_split_nothrow)
-               apply (rule_tac P="bound_tcb_at' (op = bound_aep) curThread
+               apply (rule_tac P="bound_tcb_at' (op = bound_ntfn) curThread
                         and valid_objs' and no_0_obj'
                         and (\<lambda>s. curThread = ksCurThread s)" in ccorres_from_vcg[where P'=UNIV])
                apply (rule allI, rule conseqPre, vcg)
                apply (clarsimp simp: rf_sr_ksCurThread pred_tcb_at'_def)
                apply (drule(3) obj_at_bound_tcb_grandD, clarsimp simp: typ_heap_simps if_1_0_0 return_def)
-               apply (simp add: in_liftM Bex_def getAsyncEP_def getObject_return objBits_simps
-                                return_def casync_endpoint_relation_isActive
+               apply (simp add: in_liftM Bex_def getNotification_def getObject_return objBits_simps
+                                return_def cnotification_relation_isActive
                                 trans [OF eq_commute from_bool_eq_if])
               apply ceqv
              apply (simp only: from_bool_0)
@@ -3397,7 +3397,7 @@ lemma fastpath_reply_wait_ccorres:
                                valid_ep_typ_at_lift' threadSet_cte_wp_at'
                                   | simp)+
                     apply (vcg exspec=thread_state_ptr_set_blockingIPCDiminish_np_modifies
-                               exspec=thread_state_ptr_mset_blockingIPCEndpoint_tsType_modifies)
+                               exspec=thread_state_ptr_mset_blockingObject_tsType_modifies)
 
                      apply simp
                      apply (rule threadGet_wp)
@@ -3428,7 +3428,7 @@ lemma fastpath_reply_wait_ccorres:
              apply (simp add: syscall_from_H_def ccap_relation_reply_helper)
              apply (vcg exspec=endpoint_ptr_get_state_modifies)
             apply simp
-            apply (wp option_case_liftM_getAsyncEP_wp[unfolded fun_app_def])
+            apply (wp option_case_liftM_getNotification_wp[unfolded fun_app_def])
            apply (simp del: Collect_const)
            apply vcg
           apply (simp add: if_1_0_0 getSlotCap_def)
@@ -3495,7 +3495,7 @@ lemma fastpath_reply_wait_ccorres:
       apply (erule_tac  P=sym_refs in subst[rotated])
       apply (rule fun_upd_idem[symmetric])
       apply (clarsimp simp: tcb_bound_refs'_def)
-      apply (case_tac aepptr, simp_all)[1]
+      apply (case_tac ntfnptr, simp_all)[1]
       apply (clarsimp simp: set_eq_subset)
      apply (clarsimp simp: field_simps)
     apply (clarsimp simp: syscall_from_H_def[split_simps syscall.split]
@@ -4531,7 +4531,7 @@ lemma tcbSchedEnqueue_tcbPriority[wp]:
 
 crunch obj_at_prio[wp]: cteDeleteOne "obj_at' (\<lambda>tcb. P (tcbPriority tcb)) t"
   (wp: crunch_wps setEndpoint_obj_at_tcb'
-       setThreadState_obj_at_unchanged setAsyncEP_tcb setBoundAEP_obj_at_unchanged
+       setThreadState_obj_at_unchanged setNotification_tcb setBoundNotification_obj_at_unchanged
         simp: crunch_simps unless_def)
 
 context kernel_m begin
@@ -5479,7 +5479,7 @@ lemma monadic_rewrite_if_known:
 lemma receiveIPC_simple_rewrite:
   "monadic_rewrite True False
      ((\<lambda>_. isEndpointCap ep_cap \<and> \<not> isSendEP ep) and (ko_at' ep (capEPPtr ep_cap) and 
-      (\<lambda>s. \<forall>aepptr. bound_tcb_at' (op = (Some aepptr)) thread s \<longrightarrow> obj_at' (Not \<circ> isActive) aepptr s)))
+      (\<lambda>s. \<forall>ntfnptr. bound_tcb_at' (op = (Some ntfnptr)) thread s \<longrightarrow> obj_at' (Not \<circ> isActive) ntfnptr s)))
      (receiveIPC thread ep_cap True)
      (do
        setThreadState (BlockedOnReceive (capEPPtr ep_cap) (\<not> capEPCanSend ep_cap)) thread;
@@ -5490,14 +5490,14 @@ lemma receiveIPC_simple_rewrite:
   apply (rule monadic_rewrite_imp)
    apply (rule_tac rv=ep in monadic_rewrite_symb_exec_l_known,
           wp empty_fail_getEndpoint)
-    apply (rule monadic_rewrite_symb_exec_l, (wp | simp add: getBoundAEP_def)+)
+    apply (rule monadic_rewrite_symb_exec_l, (wp | simp add: getBoundNotification_def)+)
      apply (rule monadic_rewrite_symb_exec_l)
         apply (rule hoare_pre, wpc, wp, simp)
        apply (simp split: option.split)
       apply (rule monadic_rewrite_trans, rule monadic_rewrite_if_known[where X=False], simp)
       apply (rule monadic_rewrite_refl3[where P=\<top>])
       apply (cases ep, simp_all add: isSendEP_def)[1]
-     apply (wp getAsyncEP_wp gba_wp' getEndpoint_wp | wpc)+
+     apply (wp getNotification_wp gbn_wp' getEndpoint_wp | wpc)+
   apply (clarsimp simp: obj_at'_def projectKOs pred_tcb_at'_def)
   done
 
@@ -5515,7 +5515,7 @@ lemma cteDeleteOne_replycap_rewrite:
    apply (rule monadic_rewrite_symb_exec_l, wp empty_fail_getCTE)
     apply (rule_tac P="cteCap rv \<noteq> NullCap \<and> isReplyCap (cteCap rv)
                           \<and> \<not> isEndpointCap (cteCap rv)
-                          \<and> \<not> isAsyncEndpointCap (cteCap rv)"
+                          \<and> \<not> isNotificationCap (cteCap rv)"
              in monadic_rewrite_gen_asm)
     apply (simp add: finaliseCapTrue_standin_def
                      capRemovable_def)
@@ -5599,8 +5599,8 @@ lemma setCTE_obj_at_ep[wp]:
                         split_if_asm)
   done
 
-lemma setCTE_obj_at_aep[wp]:
-  "\<lbrace>obj_at' (P :: async_endpoint \<Rightarrow> bool) p\<rbrace> setCTE ptr cte \<lbrace>\<lambda>rv. obj_at' P p\<rbrace>"
+lemma setCTE_obj_at_ntfn[wp]:
+  "\<lbrace>obj_at' (P :: Structures_H.notification \<Rightarrow> bool) p\<rbrace> setCTE ptr cte \<lbrace>\<lambda>rv. obj_at' P p\<rbrace>"
   unfolding setCTE_def
   apply (rule obj_at_setObject2)
   apply (clarsimp simp: updateObject_cte typeError_def in_monad
@@ -6010,7 +6010,7 @@ lemma all_prio_not_inQ_not_tcbQueued: "\<lbrakk> obj_at' (\<lambda>a. (\<forall>
   apply (clarsimp simp: obj_at'_def inQ_def)
 done
 
-crunch aep_obj_at[wp]: setThreadState, emptySlot, asUser "obj_at' (P::(async_endpoint \<Rightarrow> bool)) aepptr"
+crunch ntfn_obj_at[wp]: setThreadState, emptySlot, asUser "obj_at' (P::(Structures_H.notification \<Rightarrow> bool)) ntfnptr"
   (ignore: getObject setObject wp: obj_at_setObject2 crunch_wps
      simp: crunch_simps updateObject_default_def in_monad)
 
@@ -6028,11 +6028,11 @@ lemma st_tcb_at_is_Reply_imp_not_tcbQueued: "\<And>s t.\<lbrakk> invs' s; st_tcb
   apply (clarsimp simp: valid_queues'_def obj_at'_def)
 done
 
-lemma valid_objs_aep_at_tcbBoundAEP:
-  "ko_at' tcb t s \<Longrightarrow> valid_objs' s \<Longrightarrow> tcbBoundAEP tcb \<noteq> None
-    \<Longrightarrow> aep_at' (the (tcbBoundAEP tcb)) s"
+lemma valid_objs_ntfn_at_tcbBoundNotification:
+  "ko_at' tcb t s \<Longrightarrow> valid_objs' s \<Longrightarrow> tcbBoundNotification tcb \<noteq> None
+    \<Longrightarrow> ntfn_at' (the (tcbBoundNotification tcb)) s"
   apply (drule(1) ko_at_valid_objs', simp add: projectKOs)
-  apply (simp add: valid_obj'_def valid_tcb'_def valid_bound_aep'_def)
+  apply (simp add: valid_obj'_def valid_tcb'_def valid_bound_ntfn'_def)
   apply clarsimp
   done
 
@@ -6054,14 +6054,14 @@ lemma asUser_tcb_at'_Q[wp]:
   "\<lbrace>\<lambda>s. Q (tcb_at' t s)\<rbrace> asUser a b \<lbrace>\<lambda>_ s. Q (tcb_at' t s)\<rbrace>"
   by (simp add: tcb_at_typ_at', wp)
 
-lemma active_aep_check_wp:
-  "\<lbrace>\<lambda>s. Q (\<exists>aepptr. bound_tcb_at' (op = (Some aepptr)) thread s
-      \<and> \<not> obj_at' (Not o isActive) aepptr s) s \<rbrace> do bound_aep \<leftarrow> getBoundAEP thread;
-      case bound_aep of None \<Rightarrow> return False
-       | Some aepptr \<Rightarrow> liftM EndpointDecls_H.isActive $ getAsyncEP aepptr
+lemma active_ntfn_check_wp:
+  "\<lbrace>\<lambda>s. Q (\<exists>ntfnptr. bound_tcb_at' (op = (Some ntfnptr)) thread s
+      \<and> \<not> obj_at' (Not o isActive) ntfnptr s) s \<rbrace> do bound_ntfn \<leftarrow> getBoundNotification thread;
+      case bound_ntfn of None \<Rightarrow> return False
+       | Some ntfnptr \<Rightarrow> liftM EndpointDecls_H.isActive $ getNotification ntfnptr
    od \<lbrace>Q\<rbrace>"
   apply (rule hoare_pre)
-   apply (wp getAsyncEP_wp gba_wp' | wpc)+
+   apply (wp getNotification_wp gbn_wp' | wpc)+
   apply (auto simp: pred_tcb_at'_def obj_at'_def projectKOs)
   done
 
@@ -6122,9 +6122,9 @@ lemma fastpath_callKernel_SysReplyWait_corres:
           apply (rename_tac ep_cap)
           apply (rule monadic_rewrite_if_rhs[rotated])
            apply (rule monadic_rewrite_alternative_l)
-            apply (rule monadic_rewrite_symb_exec_r[OF _ _ _ active_aep_check_wp, unfolded bind_assoc fun_app_def])
+            apply (rule monadic_rewrite_symb_exec_r[OF _ _ _ active_ntfn_check_wp, unfolded bind_assoc fun_app_def])
             apply (rule hoare_pre, (wp | wpc | simp)+)[1]
-           apply (unfold getBoundAEP_def)[1]
+           apply (unfold getBoundNotification_def)[1]
            apply (wp threadGet_wp)
           apply (rename_tac ep)
           apply (rule monadic_rewrite_if_rhs[rotated])
@@ -6206,7 +6206,7 @@ lemma fastpath_callKernel_SysReplyWait_corres:
                           apply (rule monadic_rewrite_symb_exec_l, wp empty_fail_getCTE)
                            apply (rename_tac ep_cap2)
                            apply (rule_tac P="cteCap ep_cap2 = cteCap ep_cap" in monadic_rewrite_gen_asm)
-                           apply (simp add: cap_case_EndpointCap_AsyncEndpointCap)
+                           apply (simp add: cap_case_EndpointCap_NotificationCap)
                            apply (rule monadic_rewrite_liftE)
                            apply (rule monadic_rewrite_trans)
                             apply (rule monadic_rewrite_bind)
@@ -6317,14 +6317,14 @@ lemma fastpath_callKernel_SysReplyWait_corres:
                                  | rule getCTE_wp' gts_wp' threadGet_wp
                                         getEndpoint_wp gets_wp
                                         user_getreg_wp user_getregs_wp
-                                        gets_the_wp gct_wp getAsyncEP_wp
-                                        return_wp liftM_wp gba_wp'
+                                        gets_the_wp gct_wp getNotification_wp
+                                        return_wp liftM_wp gbn_wp'
                                  | (simp only: curDomain_def, wp)[1])+
   apply (clarsimp simp: ct_in_state'_def pred_tcb_at')
   apply (subst tcb_at_cte_at_offset,
          erule obj_at'_weakenE[OF _ TrueI],
          simp add: tcb_cte_cases_def cte_level_bits_def tcbSlots)
-  apply (clarsimp simp: valid_objs_aep_at_tcbBoundAEP
+  apply (clarsimp simp: valid_objs_ntfn_at_tcbBoundNotification
                         invs_valid_objs' if_apply_def2)
   apply (frule cte_wp_at_valid_objs_valid_cap', clarsimp+)
   apply (rule conj_commute[THEN iffD1], rule context_conjI,

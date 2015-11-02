@@ -45,7 +45,7 @@ definition "cnode_a2_id = 7"
 definition "cnode_b_id = 5"
 definition "cnode_extra_id = 11"
 definition "ep_id = 12"
-definition "aep_id = 13"
+definition "ntfn_id = 13"
 definition "pd_a_id = 1"
 definition "pt_a_id = 8"
 definition "pd_b_id = 2"
@@ -54,7 +54,7 @@ definition "frame_a2_id = 4"
 definition "frame_b_id = 0"
 lemmas ids [simp] = tcb_a_id_def tcb_b_id_def cnode_a1_id_def
                     cnode_a2_id_def cnode_b_id_def cnode_extra_id_def
-                    ep_id_def aep_id_def pd_a_id_def pt_a_id_def pd_b_id_def
+                    ep_id_def ntfn_id_def pd_a_id_def pt_a_id_def pd_b_id_def
                     frame_a1_id_def frame_a2_id_def frame_b_id_def
 
 definition
@@ -65,7 +65,7 @@ definition
                    tcb_caller_slot \<mapsto> NullCap,
                    tcb_ipcbuffer_slot \<mapsto> FrameCap frame_a1_id {AllowRead, AllowWrite} small_frame_size Real None,
                    tcb_pending_op_slot \<mapsto> NullCap,
-                   tcb_boundaep_slot \<mapsto> NullCap],
+                   tcb_boundntfn_slot \<mapsto> NullCap],
    cdl_tcb_fault_endpoint = 0,
    cdl_tcb_intent = \<lparr>cdl_intent_op = None, cdl_intent_error = False, cdl_intent_cap = 0,
                      cdl_intent_extras = [], cdl_intent_recv_slot = None\<rparr>,
@@ -80,7 +80,7 @@ definition
                    tcb_caller_slot \<mapsto> NullCap,
                    tcb_ipcbuffer_slot \<mapsto> FrameCap frame_b_id {AllowRead, AllowWrite} small_section_size Real None,
                    tcb_pending_op_slot \<mapsto> NullCap,
-                   tcb_boundaep_slot \<mapsto> NullCap],
+                   tcb_boundntfn_slot \<mapsto> NullCap],
    cdl_tcb_fault_endpoint = 0,
    cdl_tcb_intent = \<lparr>cdl_intent_op = None, cdl_intent_error = False, cdl_intent_cap = 0,
                      cdl_intent_extras = [], cdl_intent_recv_slot = None\<rparr>,
@@ -109,7 +109,7 @@ definition
               3 \<mapsto> PageDirectoryCap pd_a_id Real None,
               4 \<mapsto> PageTableCap pt_a_id Real None,
               8 \<mapsto> FrameCap frame_a1_id {AllowRead, AllowWrite} small_frame_size Real None,
-              10 \<mapsto> AsyncEndpointCap aep_id 0 {Read},
+              10 \<mapsto> NotificationCap ntfn_id 0 {Read},
               11 \<mapsto> FrameCap frame_a2_id {AllowRead, AllowWrite} small_frame_size Real None,
               12 \<mapsto> IrqHandlerCap 4]"
 
@@ -128,7 +128,7 @@ definition
    new_cnode cnode_extra_size
              [0 \<mapsto> CNodeCap cnode_extra_id guard guard_size cnode_extra_size,
               1 \<mapsto> EndpointCap ep_id 0 UNIV,
-              2 \<mapsto> AsyncEndpointCap aep_id 0 {Read, Write}]"
+              2 \<mapsto> NotificationCap ntfn_id 0 {Read, Write}]"
 
 definition
   "pd_a \<equiv> \<lparr>cdl_page_directory_caps = new_cap_map pd_size [0 \<mapsto> PageTableCap pt_a_id Fake None]\<rparr>"
@@ -155,14 +155,14 @@ where
 definition
   "new_irq_node obj_id \<equiv>
     \<lparr> cdl_irq_node_caps = (\<lambda>slot. if slot = 0
-                                    then Some (AsyncEndpointCap obj_id 0 {Read, Write})
+                                    then Some (NotificationCap obj_id 0 {Read, Write})
                                     else None)\<rparr>"
 
 definition
   irq_objects :: cdl_heap
 where
   "irq_objects \<equiv>
-  \<lambda>obj_id. if obj_id = 0x104 then Some (IRQNode (new_irq_node aep_id))
+  \<lambda>obj_id. if obj_id = 0x104 then Some (IRQNode (new_irq_node ntfn_id))
            else if 0x100 \<le> obj_id \<and> obj_id < 0x200 then (Some (IRQNode empty_irq_node))
            else None"
 
@@ -172,7 +172,7 @@ lemma
   (\<lambda>obj_id. if 0x100 \<le> obj_id \<and> obj_id < 0x200
             then (Some (IRQNode empty_irq_node))
             else None) ++
-  (\<lambda>obj_id. if obj_id = 0x104 then Some (IRQNode (new_irq_node aep_id))
+  (\<lambda>obj_id. if obj_id = 0x104 then Some (IRQNode (new_irq_node ntfn_id))
            else None)"
   apply (rule ext)
   apply (clarsimp simp: irq_objects_def map_add_def)
@@ -195,8 +195,8 @@ definition
                   frame_a2_id \<mapsto> Frame empty_frame,
                   frame_b_id  \<mapsto> Frame empty_section,
                   ep_id       \<mapsto> Endpoint,
-                  aep_id      \<mapsto> AsyncEndpoint,
-                  0x104       \<mapsto> IRQNode (new_irq_node aep_id),
+                  ntfn_id      \<mapsto> Notification,
+                  0x104       \<mapsto> IRQNode (new_irq_node ntfn_id),
                   0x1FE       \<mapsto> IRQNode empty_irq_node],
    cdl_cdt = [(cnode_a2_id, 0)  \<mapsto> (cnode_extra_id, 1),
               (cnode_b_id,  4)  \<mapsto> (cnode_extra_id, 1),
@@ -378,7 +378,7 @@ lemma object_type_simps [simp]:
   "object_type (Tcb t) = TcbType"
   "object_type (CNode c) = CNodeType"
   "object_type (Endpoint) = EndpointType"
-  "object_type (AsyncEndpoint) = AsyncEndpointType"
+  "object_type (Notification) = NotificationType"
   "object_type (PageDirectory pd) = PageDirectoryType"
   "object_type (PageTable pt) = PageTableType"
   "object_type (Frame f) = FrameType (cdl_frame_size_bits f)"
@@ -424,7 +424,7 @@ lemma opt_cap_example_spec [simp]:
 
 lemma irq_objects_some_object:
   "irq_objects obj_id = Some obj \<Longrightarrow>
-  (obj_id = 0x104 \<and> obj = IRQNode (new_irq_node aep_id)) \<or> obj = IRQNode empty_irq_node"
+  (obj_id = 0x104 \<and> obj = IRQNode (new_irq_node ntfn_id)) \<or> obj = IRQNode empty_irq_node"
   by (clarsimp simp: irq_objects_def split: split_if_asm)
 
 (*
@@ -655,7 +655,7 @@ lemma real_object_at_example_spec:
   (obj_id = cnode_b_id) \<or>
   (obj_id = cnode_extra_id) \<or>
   (obj_id = ep_id) \<or>
-  (obj_id = aep_id) \<or>
+  (obj_id = ntfn_id) \<or>
   (obj_id = pd_a_id) \<or>
   (obj_id = pt_a_id) \<or>
   (obj_id = pd_b_id) \<or>
@@ -688,7 +688,7 @@ lemma real_object_at_example_spec_simp [simp]:
 
 lemma cdl_objects_example_spec_simps [simp]:
   "cdl_objects example_spec 4 = Some (Frame empty_frame)"
-  "cdl_objects example_spec 0xD = Some AsyncEndpoint"
+  "cdl_objects example_spec 0xD = Some Notification"
   "cdl_objects example_spec 0x1FE = Some (IRQNode empty_irq_node)"
   by (clarsimp simp: example_spec_def map_add_def)+
 
@@ -698,7 +698,7 @@ lemma well_formed_cap_to_object_example:
   apply (clarsimp simp: well_formed_cap_to_object_def is_orig_cap_example_spec)
   apply (intro conjI)
    apply (case_tac "obj_id = ep_id \<or>
-                    obj_id = aep_id \<or>
+                    obj_id = ntfn_id \<or>
                     obj_id = cnode_extra_id")
     apply (rule_tac x=cnode_extra_id in exI)
     apply (fastforce simp: cnode_at_example_spec cnode_extra_def

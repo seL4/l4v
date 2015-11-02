@@ -41,9 +41,9 @@ lemma ps_clear_upd_None:
 
 declare empty_fail_mapM_x[intro!,simp]
 
-lemma aepQueue_head_mask_4 :
-  "aepQueue_head_CL (async_endpoint_lift ko') && ~~ mask 4 = aepQueue_head_CL (async_endpoint_lift ko')"
-  unfolding async_endpoint_lift_def
+lemma ntfnQueue_head_mask_4 :
+  "ntfnQueue_head_CL (notification_lift ko') && ~~ mask 4 = ntfnQueue_head_CL (notification_lift ko')"
+  unfolding notification_lift_def
   by (clarsimp simp: mask_def word_bw_assocs)
 
 (* Levity: moved from Ipc_C (20090419 09:44:31) *) (* and remove from Syscall_C *)

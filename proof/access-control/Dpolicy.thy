@@ -24,7 +24,7 @@ where
     | cdl_cap.UntypedCap refs frange \<Rightarrow> {Control}
     | cdl_cap.EndpointCap oref badge r \<Rightarrow>
          cap_rights_to_auth r True
-    | cdl_cap.AsyncEndpointCap oref badge r \<Rightarrow>
+    | cdl_cap.NotificationCap oref badge r \<Rightarrow>
          cap_rights_to_auth (r - {AllowGrant}) False
     | cdl_cap.ReplyCap oref \<Rightarrow> {Control}
     | cdl_cap.MasterReplyCap oref \<Rightarrow> {Control}
@@ -34,7 +34,7 @@ where
     | cdl_cap.PendingSyncSendCap oref badge call grant fault \<Rightarrow>
                                {SyncSend} \<union> (if grant then {Access.Grant} else {})
     | cdl_cap.PendingSyncRecvCap oref fault \<Rightarrow> if fault then {} else {Receive}
-    | cdl_cap.PendingAsyncRecvCap oref \<Rightarrow> {Receive}
+    | cdl_cap.PendingNtfnRecvCap oref \<Rightarrow> {Receive}
     | cdl_cap.RestartCap \<Rightarrow> {}
     | cdl_cap.IrqControlCap \<Rightarrow> {Control}
     | cdl_cap.IrqHandlerCap irq \<Rightarrow> {Control}
@@ -44,7 +44,7 @@ where
     | cdl_cap.AsidControlCap \<Rightarrow> {Control}
     | cdl_cap.AsidPoolCap oref asid \<Rightarrow> {Control}
     | cdl_cap.ZombieCap ptr \<Rightarrow> {Control}
-    | cdl_cap.BoundAsyncCap word \<Rightarrow> {Receive, Reset}
+    | cdl_cap.BoundNotificationCap word \<Rightarrow> {Receive, Reset}
     | _ \<Rightarrow> {}"
 
 fun
@@ -53,7 +53,7 @@ where
   "cdl_obj_refs cdl_cap.NullCap = {}"
 | "cdl_obj_refs (cdl_cap.UntypedCap rs frange) = rs"
 | "cdl_obj_refs (cdl_cap.EndpointCap r b cr) = {r}"
-| "cdl_obj_refs (cdl_cap.AsyncEndpointCap r b cr) = {r}"
+| "cdl_obj_refs (cdl_cap.NotificationCap r b cr) = {r}"
 | "cdl_obj_refs (cdl_cap.ReplyCap r) = {r}"
 | "cdl_obj_refs (cdl_cap.MasterReplyCap r) = {r}"
 | "cdl_obj_refs (cdl_cap.CNodeCap r guard bits sz) = {r}"
@@ -61,7 +61,7 @@ where
 | "cdl_obj_refs (cdl_cap.DomainCap) = UNIV"
 | "cdl_obj_refs (cdl_cap.PendingSyncSendCap r badge call guard fault) = {r}"
 | "cdl_obj_refs (cdl_cap.PendingSyncRecvCap r fault) = {r}"
-| "cdl_obj_refs (cdl_cap.PendingAsyncRecvCap r) = {r}"
+| "cdl_obj_refs (cdl_cap.PendingNtfnRecvCap r) = {r}"
 | "cdl_obj_refs cdl_cap.RestartCap = {}"
 | "cdl_obj_refs cdl_cap.IrqControlCap = {}"
 | "cdl_obj_refs (cdl_cap.IrqHandlerCap irq) = {}"
@@ -71,7 +71,7 @@ where
 | "cdl_obj_refs (cdl_cap.AsidPoolCap p asid) = {p}"
 | "cdl_obj_refs cdl_cap.AsidControlCap = {}"
 | "cdl_obj_refs (cdl_cap.ZombieCap ptr) = {ptr}"
-| "cdl_obj_refs (cdl_cap.BoundAsyncCap word) = {word}"
+| "cdl_obj_refs (cdl_cap.BoundNotificationCap word) = {word}"
 | "cdl_obj_refs _ = {}"
 
 inductive_set
@@ -256,16 +256,16 @@ where
   "is_thread_state_cap cap \<equiv> case cap of
     cdl_cap.PendingSyncSendCap _ _ _ _ _ \<Rightarrow> True
   | cdl_cap.PendingSyncRecvCap _ _ \<Rightarrow> True
-  | cdl_cap.PendingAsyncRecvCap _ \<Rightarrow> True
+  | cdl_cap.PendingNtfnRecvCap _ \<Rightarrow> True
   | cdl_cap.RestartCap \<Rightarrow> True
   | cdl_cap.RunningCap \<Rightarrow> True
   | _ \<Rightarrow> False"
 
 definition
-  is_bound_aep_cap :: "cdl_cap \<Rightarrow> bool"
+  is_bound_ntfn_cap :: "cdl_cap \<Rightarrow> bool"
 where
-  "is_bound_aep_cap cap \<equiv> case cap of
-     BoundAsyncCap a \<Rightarrow> True
+  "is_bound_ntfn_cap cap \<equiv> case cap of
+     BoundNotificationCap a \<Rightarrow> True
    | _ \<Rightarrow> False"
 
 definition
@@ -285,9 +285,9 @@ lemma is_real_cap_infer_tcb_pending_op:
   "is_real_cap (infer_tcb_pending_op a tcb)"
   by (auto simp:infer_tcb_pending_op_def is_real_cap_def split:Structures_A.thread_state.splits)
 
-lemma is_real_cap_infer_tcb_bound_aep:
-  "is_real_cap (infer_tcb_bound_aep a)"
-  by (auto simp: infer_tcb_bound_aep_def is_real_cap_def split: cdl_cap.splits option.splits) 
+lemma is_real_cap_infer_tcb_bound_notification:
+  "is_real_cap (infer_tcb_bound_notification a)"
+  by (auto simp: infer_tcb_bound_notification_def is_real_cap_def split: cdl_cap.splits option.splits) 
 
 definition
   is_untyped_cap :: "cdl_cap \<Rightarrow> bool"
@@ -298,7 +298,7 @@ where
 
 lemma caps_of_state_transform_opt_cap_rev:
   "\<lbrakk> einvs s; opt_cap ptr (transform s) = Some cap;
-     is_real_cap cap; \<not> is_thread_state_cap cap; \<not> is_null_cap cap; \<not> is_bound_aep_cap cap \<rbrakk> \<Longrightarrow>
+     is_real_cap cap; \<not> is_thread_state_cap cap; \<not> is_null_cap cap; \<not> is_bound_ntfn_cap cap \<rbrakk> \<Longrightarrow>
      \<exists>cap' ptr'. cap = transform_cap cap' \<and> ptr = transform_cslot_ptr ptr' \<and>
                  caps_of_state s ptr' = Some cap'"
   apply clarify
@@ -330,7 +330,7 @@ lemma caps_of_state_transform_opt_cap_rev:
    apply (drule valid_etcbs_tcb_etcb [rotated], fastforce)
    apply clarsimp
    apply (clarsimp simp:transform_tcb_def tcb_slot_defs split:split_if_asm)
-         apply (clarsimp simp: is_null_cap_def is_bound_aep_cap_def infer_tcb_bound_aep_def 
+         apply (clarsimp simp: is_null_cap_def is_bound_ntfn_cap_def infer_tcb_bound_notification_def 
                          split: option.splits)
         apply (simp add:is_thread_state_cap_def infer_tcb_pending_op_def is_null_cap_def is_real_cap_def
                     split:Structures_A.thread_state.splits option.splits)
@@ -387,7 +387,7 @@ lemma opt_cap_None_word_bits:
     apply (rule power_strict_increasing, simp+)
    apply (frule valid_etcbs_tcb_etcb[rotated], fastforce)
    apply (clarsimp simp:transform_tcb_def tcb_slot_defs WordSetup.word_bits_def
-                        tcb_pending_op_slot_def tcb_boundaep_slot_def)
+                        tcb_pending_op_slot_def tcb_boundntfn_slot_def)
   apply (rename_tac arch_kernel_obj)
   apply (case_tac arch_kernel_obj; simp)
     apply (simp add:transform_asid_pool_contents_def transform_page_table_contents_def
@@ -441,23 +441,23 @@ lemma thread_states_transform:
                     case_tac "tcb_state a", (simp add:split_if_asm| erule disjE)+)
   done
 
-lemma thread_bound_aeps_transform:
-  "\<lbrakk> einvs s; thread_bound_aeps s oref = Some oref'; auth \<in> {Receive, Reset} \<rbrakk> \<Longrightarrow>
+lemma thread_bound_ntfns_transform:
+  "\<lbrakk> einvs s; thread_bound_ntfns s oref = Some oref'; auth \<in> {Receive, Reset} \<rbrakk> \<Longrightarrow>
          (oref, auth, oref') \<in> cdl_state_objs_to_policy (transform s)"
   apply clarify
-  apply (simp add: thread_bound_aeps_def  )
+  apply (simp add: thread_bound_ntfns_def  )
   apply (cases "get_tcb oref s")
    apply simp+
   apply (frule valid_etcbs_get_tcb_get_etcb[rotated], fastforce)
   apply clarsimp
-  apply (rule_tac cap="infer_tcb_bound_aep (tcb_bound_aep a)" in csta_caps[where ptr="(oref, tcb_boundaep_slot)"
+  apply (rule_tac cap="infer_tcb_bound_notification (tcb_bound_notification a)" in csta_caps[where ptr="(oref, tcb_boundntfn_slot)"
                           and auth=auth and oref=oref' and s="transform s", simplified])
-    apply (unfold tcb_boundaep_slot_def)
-    apply (rule opt_cap_tcb[where sl=6, unfolded tcb_boundaep_slot_def tcb_pending_op_slot_def tcb_slot_defs, simplified])
+    apply (unfold tcb_boundntfn_slot_def)
+    apply (rule opt_cap_tcb[where sl=6, unfolded tcb_boundntfn_slot_def tcb_pending_op_slot_def tcb_slot_defs, simplified])
       apply simp
      apply simp
     apply (rule notI, drule invs_valid_idle, simp add:valid_idle_def pred_tcb_def2)
-   apply (clarsimp simp: infer_tcb_bound_aep_def cdl_cap_auth_conferred_def)+
+   apply (clarsimp simp: infer_tcb_bound_notification_def cdl_cap_auth_conferred_def)+
   done
 
 lemma thread_state_cap_transform_tcb:
@@ -491,14 +491,14 @@ lemma thread_state_cap_transform_tcb:
   done
 
 
-lemma not_is_bound_aep_cap_transform_cap[simp]: "\<not>is_bound_aep_cap (transform_cap cn)"
-  apply (case_tac cn; simp add: is_bound_aep_cap_def)
+lemma not_is_bound_ntfn_cap_transform_cap[simp]: "\<not>is_bound_ntfn_cap (transform_cap cn)"
+  apply (case_tac cn; simp add: is_bound_ntfn_cap_def)
   apply (rename_tac foo)
   apply (case_tac foo; simp)
 done
 
-lemma thread_bound_aep_cap_transform_tcb:
-  "\<lbrakk> opt_cap ptr (transform s) = Some cap; is_bound_aep_cap cap \<rbrakk> \<Longrightarrow>
+lemma thread_bound_ntfn_cap_transform_tcb:
+  "\<lbrakk> opt_cap ptr (transform s) = Some cap; is_bound_ntfn_cap cap \<rbrakk> \<Longrightarrow>
      \<exists>tcb. get_tcb (fst ptr) s = Some tcb"
   apply (case_tac ptr)
   apply (simp add:opt_cap_def slots_of_def opt_object_def transform_def transform_objects_def)
@@ -513,10 +513,10 @@ lemma thread_bound_aep_cap_transform_tcb:
   apply (clarsimp simp:transform_cnode_contents_def)
   apply (rename_tac arch_obj)
   apply (case_tac arch_obj;clarsimp simp:transform_asid_pool_contents_def unat_map_def split:split_if_asm)
-  apply (clarsimp simp:transform_asid_pool_entry_def is_bound_aep_cap_def split:option.splits)
-     apply (clarsimp simp:transform_page_table_contents_def unat_map_def transform_pte_def is_bound_aep_cap_def
+  apply (clarsimp simp:transform_asid_pool_entry_def is_bound_ntfn_cap_def split:option.splits)
+     apply (clarsimp simp:transform_page_table_contents_def unat_map_def transform_pte_def is_bound_ntfn_cap_def
                    split:split_if_asm ARM_Structs_A.pte.splits)
-  apply (clarsimp simp:transform_page_directory_contents_def unat_map_def transform_pde_def is_bound_aep_cap_def
+  apply (clarsimp simp:transform_page_directory_contents_def unat_map_def transform_pde_def is_bound_ntfn_cap_def
                    split:split_if_asm ARM_Structs_A.pde.splits)
   done
 
@@ -535,25 +535,25 @@ lemma thread_states_transform_rev:
    apply (rename_tac arch_cap)
    apply (case_tac "arch_cap", simp_all split:split_if_asm)
   apply (case_tac "tcb_state tcb", auto simp:infer_tcb_pending_op_def cdl_cap_auth_conferred_def 
-                                             infer_tcb_bound_aep_def split: option.splits)
+                                             infer_tcb_bound_notification_def split: option.splits)
   done
 
-lemma thread_bound_aeps_transform_rev:
-  "\<lbrakk> einvs s; opt_cap ptr (transform s) = Some cap; is_bound_aep_cap cap;
+lemma thread_bound_ntfns_transform_rev:
+  "\<lbrakk> einvs s; opt_cap ptr (transform s) = Some cap; is_bound_ntfn_cap cap;
      oref \<in> cdl_obj_refs cap; auth \<in> cdl_cap_auth_conferred cap; (fst ptr) \<noteq> idle_thread s \<rbrakk> \<Longrightarrow>
-     thread_bound_aeps s (fst ptr) = Some oref"
-  apply (frule thread_bound_aep_cap_transform_tcb, simp)
+     thread_bound_ntfns s (fst ptr) = Some oref"
+  apply (frule thread_bound_ntfn_cap_transform_tcb, simp)
   apply (case_tac ptr)
-  apply (clarsimp simp:thread_bound_aeps_def)
+  apply (clarsimp simp:thread_bound_ntfns_def)
   apply (frule valid_etcbs_get_tcb_get_etcb[rotated], fastforce)
   apply (frule_tac sl=b in opt_cap_tcb, assumption, simp)
   apply (clarsimp split:split_if_asm)    
-    apply (case_tac "tcb"; simp add:is_thread_state_cap_def is_bound_aep_cap_def split:split_if_asm)
+    apply (case_tac "tcb"; simp add:is_thread_state_cap_def is_bound_ntfn_cap_def split:split_if_asm)
     apply (rename_tac arch_cap)
     apply (case_tac "arch_cap", simp_all split:split_if_asm)
    apply (clarsimp simp: infer_tcb_pending_op_def split: Structures_A.thread_state.splits)
-    apply (case_tac "tcb_bound_aep tcb", auto simp:infer_tcb_pending_op_def cdl_cap_auth_conferred_def 
-                                             infer_tcb_bound_aep_def split: option.splits)
+    apply (case_tac "tcb_bound_notification tcb", auto simp:infer_tcb_pending_op_def cdl_cap_auth_conferred_def 
+                                             infer_tcb_bound_notification_def split: option.splits)
    apply(case_tac tcb_state;simp)
   done
 
@@ -706,7 +706,7 @@ lemma state_vrefs_transform_rev:
     apply (clarsimp simp:transform_cnode_contents_def is_real_cap_transform)
    apply (frule valid_etcbs_tcb_etcb [rotated], fastforce)
    apply (clarsimp simp: transform_tcb_def is_real_cap_transform is_real_cap_infer_tcb_pending_op 
-                         is_real_cap_infer_tcb_bound_aep
+                         is_real_cap_infer_tcb_bound_notification
                    split:split_if_asm)
   apply (rename_tac arch_kernel_obj)
   apply (case_tac arch_kernel_obj, simp_all add:vs_refs_no_global_pts_def graph_of_def)
@@ -781,7 +781,7 @@ lemma state_objs_transform:
       apply (case_tac cap, (simp add:untyped_range_transform del:untyped_range.simps(1))+)
      apply (case_tac cap, (simp add:cdl_cap_auth_conferred_def)+)
     apply (rule thread_states_transform, simp+)
-apply (rule thread_bound_aeps_transform, simp+)
+apply (rule thread_bound_ntfns_transform, simp+)
    apply (simp add:fst_transform_cslot_ptr)
    apply (rule_tac slot="transform_cslot_ptr slot" and slot'="transform_cslot_ptr slot'"
                               and s="transform s" in csta_cdt)
@@ -813,13 +813,13 @@ lemma state_objs_transform_rev:
    apply (subgoal_tac "\<not> is_null_cap cap")
     prefer 2
     apply (clarsimp simp:is_null_cap_def split:cdl_cap.splits)
-   apply (rule_tac P="is_bound_aep_cap cap" in case_split)
+   apply (rule_tac P="is_bound_ntfn_cap cap" in case_split)
     apply simp
     apply (rule sta_bas)
-     apply (rule thread_bound_aeps_transform_rev, simp+)
+     apply (rule thread_bound_ntfns_transform_rev, simp+)
      apply (clarsimp simp: opt_cap_def transform_def transform_objects_def slots_of_def opt_object_def)
      apply (clarsimp simp: map_add_def object_slots_def)
-    apply (clarsimp simp: cdl_cap_auth_conferred_def is_bound_aep_cap_def split: cdl_cap.splits)
+    apply (clarsimp simp: cdl_cap_auth_conferred_def is_bound_ntfn_cap_def split: cdl_cap.splits)
    apply (frule caps_of_state_transform_opt_cap_rev, simp+)
    apply (rule_tac P="is_untyped_cap cap" in case_split)
     apply (subgoal_tac "a = Control")
@@ -953,7 +953,7 @@ lemma opt_cap_Some_asid_real:
      apply (clarsimp simp:transform_cnode_contents_def is_real_cap_transform)
     apply (clarsimp simp:transform_cnode_contents_def is_real_cap_transform)
    apply (frule valid_etcbs_tcb_etcb[rotated], fastforce)
-   apply (clarsimp simp: transform_tcb_def tcb_slot_defs is_real_cap_infer_tcb_bound_aep 
+   apply (clarsimp simp: transform_tcb_def tcb_slot_defs is_real_cap_infer_tcb_bound_notification 
                          is_real_cap_transform is_real_cap_infer_tcb_pending_op 
                   split: split_if_asm)
   apply (rename_tac arch_kernel_obj)
@@ -1007,8 +1007,8 @@ lemma state_asids_transform_rev:
   apply (erule cdl_state_asids_to_policy_aux.induct)
     apply (rule_tac P="is_thread_state_cap cap" in case_split)
      apply (clarsimp simp:is_thread_state_cap_def split:cdl_cap.splits)
-    apply (rule_tac P="is_bound_aep_cap cap" in case_split)
-     apply (clarsimp simp: is_bound_aep_cap_def split: cdl_cap.splits)
+    apply (rule_tac P="is_bound_ntfn_cap cap" in case_split)
+     apply (clarsimp simp: is_bound_ntfn_cap_def split: cdl_cap.splits)
     apply (rule_tac P="\<not> is_real_cap cap" in case_split)
      apply (clarsimp simp:opt_cap_Some_asid_real)
     apply (rule_tac P="is_null_cap cap" in case_split)
@@ -1068,8 +1068,8 @@ lemma state_irqs_transform_rev:
   apply (erule cdl_state_irqs_to_policy_aux.induct)
   apply (rule_tac P="is_thread_state_cap cap" in case_split)
    apply (clarsimp simp:is_thread_state_cap_def split:cdl_cap.splits)
-  apply (rule_tac P="is_bound_aep_cap cap" in case_split)
-   apply (clarsimp simp:is_bound_aep_cap_def split:cdl_cap.splits)
+  apply (rule_tac P="is_bound_ntfn_cap cap" in case_split)
+   apply (clarsimp simp:is_bound_ntfn_cap_def split:cdl_cap.splits)
   apply (rule_tac P="\<not> is_real_cap cap" in case_split)
    apply (clarsimp simp:is_real_cap_def split:cdl_cap.splits)
   apply (rule_tac P="is_null_cap cap" in case_split)

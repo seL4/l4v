@@ -50,8 +50,8 @@ where
           Invocations_D.Suspend target_tcb
       | Invocations_A.Resume target_tcb \<Rightarrow>
           Invocations_D.Resume target_tcb
-      | Invocations_A.AsyncEndpointControl target_tcb opt \<Rightarrow>
-          Invocations_D.AsyncEndpointControl target_tcb opt"
+      | Invocations_A.NotificationControl target_tcb opt \<Rightarrow>
+          Invocations_D.NotificationControl target_tcb opt"
 
 lemma decode_set_ipc_buffer_translate_tcb_invocation:
   "\<lbrakk>x \<noteq> [];excaps ! 0 = (a,b,c)\<rbrakk> \<Longrightarrow>
@@ -373,8 +373,8 @@ lemma decode_tcb_corres:
       apply (rule corres_alternate1[OF dcorres_returnOk])
       apply (simp add:translate_tcb_invocation_def)
 
-      (* TCBBindAEP *)
-      apply (clarsimp simp: decode_bind_aep_def dcorres_alternative_throw whenE_def)
+      (* TCBBindNotification *)
+      apply (clarsimp simp: decode_bind_notification_def dcorres_alternative_throw whenE_def)
       apply (rule dcorres_symb_exec_rE)
         apply (case_tac rv, simp)
          (* please continue scrolling *)
@@ -385,25 +385,25 @@ lemma decode_tcb_corres:
                      apply (rule corres_alternate2, rule dcorres_throw)
                     apply simp
                     apply (rule dcorres_symb_exec_rE)
-                      apply (case_tac "aep_obj rva", simp_all split del: split_if)[1]
-                        apply (case_tac "aep_bound_tcb rva", simp_all split del: split_if)[1]
+                      apply (case_tac "ntfn_obj rva", simp_all split del: split_if)[1]
+                        apply (case_tac "ntfn_bound_tcb rva", simp_all split del: split_if)[1]
                          apply (clarsimp simp: throw_on_none_def get_index_def dcorres_alternative_throw)
                          apply (case_tac "excaps' ! 0", clarsimp, rule corres_alternate1[OF dcorres_returnOk], simp add: translate_tcb_invocation_def hd_conv_nth)
                         apply (clarsimp simp: throw_on_none_def get_index_def dcorres_alternative_throw split del: split_if)+
-                      apply (case_tac "aep_bound_tcb rva", simp split del: split_if)[1]
+                      apply (case_tac "ntfn_bound_tcb rva", simp split del: split_if)[1]
                        apply (rename_tac rva word)
                        apply ((case_tac "excaps' ! 0",clarsimp, rule corres_alternate1[OF dcorres_returnOk], simp add: translate_tcb_invocation_def hd_conv_nth)
                                 | clarsimp simp: throw_on_none_def get_index_def dcorres_alternative_throw split del: split_if
-                                | wp get_aep_wp
+                                | wp get_ntfn_wp
                                 | (case_tac "excaps' ! 0", rule dcorres_alternative_throw)
                                 | (case_tac "AllowRead \<in> rights", simp))+
 
-     (* TCBUnbindAEP *)
-     apply (clarsimp simp: decode_unbind_aep_def dcorres_alternative_throw whenE_def)
+     (* TCBUnbindNotification *)
+     apply (clarsimp simp: decode_unbind_notification_def dcorres_alternative_throw whenE_def)
      apply (rule dcorres_symb_exec_rE)
        apply (case_tac rv, simp, rule dcorres_alternative_throw)
        apply (clarsimp, rule corres_alternate1[OF dcorres_returnOk], simp add: translate_tcb_invocation_def)
-      apply (wp gba_wp | clarsimp)+
+      apply (wp gbn_wp | clarsimp)+
 
           (* IRQSetMode *)
           apply (clarsimp simp: transform_intent_def)
@@ -440,7 +440,7 @@ lemma suspend_corres:
      (Tcb_D.suspend obj_id) (IpcCancel_A.suspend obj_id)"
   apply (rule corres_guard_imp)
     apply (clarsimp simp: IpcCancel_A.suspend_def Tcb_D.suspend_def)
-   apply (rule corres_split[OF _ finalise_ipc_cancel])
+   apply (rule corres_split[OF _ finalise_cancel_ipc])
      apply (rule dcorres_rhs_noop_below_True[OF tcb_sched_action_dcorres])
      apply (rule set_thread_state_corres)
      apply wp
@@ -559,7 +559,7 @@ lemma restart_corres:
     tcb_cspace_slot_def tcb_replycap_slot_def)
   apply (intro conjI impI)
        apply (rule corres_guard_imp)
-         apply (rule corres_split[OF _ finalise_ipc_cancel])
+         apply (rule corres_split[OF _ finalise_cancel_ipc])
            apply (rule corres_split[OF _ dcorres_setup_reply_master[unfolded tcb_replycap_slot_def] ])
             apply (rule dcorres_rhs_noop_below_True[OF dcorres_rhs_noop_below_True])
              apply (rule switch_if_required_to_dcorres)
@@ -705,9 +705,9 @@ lemma not_idle_after_restart [wp]:
            \<lbrace>\<lambda>rv. valid_idle \<rbrace>"
   apply (simp add:Tcb_A.restart_def)
   apply wp
-   apply (simp add:ipc_cancel_def)
-   apply (wp not_idle_after_blocked_ipc_cancel not_idle_after_reply_ipc_cancel
-   not_idle_thread_async_ipc_cancel | wpc)+
+   apply (simp add:cancel_ipc_def)
+   apply (wp not_idle_after_blocked_cancel_ipc not_idle_after_reply_cancel_ipc
+   not_idle_thread_cancel_signal | wpc)+
    apply (rule hoare_strengthen_post[where Q="\<lambda>r. st_tcb_at (op = r) obj_id'
                                                   and not_idle_thread obj_id' and invs"])
     apply (wp gts_sp)
@@ -807,7 +807,7 @@ lemma cnode_cap_unique_bits:
    apply (drule_tac x = ba in spec)
    apply (drule_tac x = c in spec)
    apply (drule(1) cte_wp_at_valid_objs_valid_cap)
-   apply (clarsimp simp:valid_cap_def obj_at_def is_ep_def is_aep_def is_cap_table_def,
+   apply (clarsimp simp:valid_cap_def obj_at_def is_ep_def is_ntfn_def is_cap_table_def,
           clarsimp split:Structures_A.kernel_object.split_asm)+
    apply (clarsimp simp:well_formed_cnode_n_def bits_of_def)
   apply simp
@@ -1547,41 +1547,41 @@ lemma invoke_tcb_corres_resume:
   apply (rule corres_guard_imp[OF restart_corres],clarsimp+)
   done
 
-lemma dcorres_bind_async_endpoint:
+lemma dcorres_bind_notification:
   "dcorres dc (\<lambda>_. True) (valid_etcbs and not_idle_thread t)
-   (Tcb_D.bind_async_endpoint t a) (Tcb_A.bind_async_endpoint t a)"
-  apply (clarsimp simp: Tcb_D.bind_async_endpoint_def Tcb_A.bind_async_endpoint_def
-                        get_async_ep_def get_object_def gets_def bind_assoc)
+   (Tcb_D.bind_notification t a) (Tcb_A.bind_notification t a)"
+  apply (clarsimp simp: Tcb_D.bind_notification_def Tcb_A.bind_notification_def
+                        get_notification_def get_object_def gets_def bind_assoc)
   apply (rule dcorres_absorb_get_r)
   apply (clarsimp simp: assert_def corres_free_fail split: Structures_A.kernel_object.splits)
   apply (rule corres_dummy_return_pl)
   apply (rule corres_guard_imp)
-    apply (rule corres_split[OF _ corres_dummy_set_async_ep], simp)
-      apply (rule set_bound_aep_corres)
-     apply (wp |simp add: not_idle_thread_def infer_tcb_bound_aep_def)+
+    apply (rule corres_split[OF _ corres_dummy_set_notification], simp)
+      apply (rule set_bound_notification_corres)
+     apply (wp |simp add: not_idle_thread_def infer_tcb_bound_notification_def)+
   done
 
 lemma invoke_tcb_corres_bind:
-  "\<lbrakk> t' = tcb_invocation.AsyncEndpointControl obj_id' (Some aepptr);
+  "\<lbrakk> t' = tcb_invocation.NotificationControl obj_id' (Some ntfnptr);
      t = translate_tcb_invocation t' \<rbrakk> \<Longrightarrow>
    dcorres (dc \<oplus> dc) \<top> (invs and not_idle_thread obj_id' and tcb_at obj_id' and valid_etcbs)
   (Tcb_D.invoke_tcb t) (Tcb_A.invoke_tcb t')"
   apply (clarsimp simp: Tcb_D.invoke_tcb_def translate_tcb_invocation_def)
   apply (rule corres_dummy_return_l)
   apply (rule corres_guard_imp)
-  apply (rule corres_split[OF corres_return_trivial dcorres_bind_async_endpoint])
+  apply (rule corres_split[OF corres_return_trivial dcorres_bind_notification])
   apply (wp | simp)+
   done
 
 lemma invoke_tcb_corres_unbind:
-  "\<lbrakk> t' = tcb_invocation.AsyncEndpointControl obj_id' None;
+  "\<lbrakk> t' = tcb_invocation.NotificationControl obj_id' None;
      t = translate_tcb_invocation t' \<rbrakk> \<Longrightarrow>
    dcorres (dc \<oplus> dc) \<top> (invs and not_idle_thread obj_id' and tcb_at obj_id' and valid_etcbs)
   (Tcb_D.invoke_tcb t) (Tcb_A.invoke_tcb t')" 
   apply (clarsimp simp: Tcb_D.invoke_tcb_def translate_tcb_invocation_def)
   apply (rule corres_dummy_return_l)
   apply (rule corres_guard_imp)
-  apply (rule corres_split[OF corres_return_trivial dcorres_unbind_async_endpoint])
+  apply (rule corres_split[OF corres_return_trivial dcorres_unbind_notification])
   apply (wp | simp)+
   done
 

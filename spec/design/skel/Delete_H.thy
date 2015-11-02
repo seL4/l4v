@@ -66,7 +66,7 @@ where
  "cteDeleteOne' x s =
 (\<lambda> cteDeleteOne.
 (\<lambda> deletingIRQHandler.
-(\<lambda> ipcCancel.
+(\<lambda> cancelIPC.
 (\<lambda> suspend.
 (\<lambda> finaliseCap.
 #INCLUDE_HASKELL SEL4/Object/CNode.lhs BODY cteDeleteOne
@@ -80,7 +80,7 @@ where
 )
 )
 (
-#INCLUDE_HASKELL SEL4/Object/Endpoint.lhs BODY ipcCancel
+#INCLUDE_HASKELL SEL4/Object/Endpoint.lhs BODY cancelIPC
 )
 )
 (
@@ -106,7 +106,7 @@ lemma cteDeleteOne_def:
   apply (rule ext)+
   apply (subst cteDeleteOne_def1)
   apply (subst cteDeleteOne'.simps)
-  apply (unfold finaliseCap_def suspend_def ipcCancel_def
+  apply (unfold finaliseCap_def suspend_def cancelIPC_def
                 deletingIRQHandler_def cteDeleteOne_def1)
   apply (rule refl)
   done
@@ -126,14 +126,14 @@ lemma card_reduce:
 lemma isCapDs:
   "isUntypedCap cap \<Longrightarrow> \<exists>ptr size freeIndex. cap = UntypedCap ptr size freeIndex"
   "isEndpointCap cap \<Longrightarrow> \<exists>ptr bdg cans canr cang. cap = EndpointCap ptr bdg cans canr cang"
-  "isAsyncEndpointCap cap \<Longrightarrow> \<exists>ptr bdg cans canr. cap = AsyncEndpointCap ptr bdg cans canr"
+  "isNotificationCap cap \<Longrightarrow> \<exists>ptr bdg cans canr. cap = NotificationCap ptr bdg cans canr"
   "isCNodeCap cap \<Longrightarrow> \<exists>ptr bits grd gsize. cap = CNodeCap ptr bits grd gsize"
   "isThreadCap cap \<Longrightarrow> \<exists>ptr. cap = ThreadCap ptr"
   "isArchObjectCap cap \<Longrightarrow> \<exists>archcap. cap = ArchObjectCap archcap"
   "isZombie cap \<Longrightarrow> \<exists>ptr bits num. cap = Zombie ptr bits num"
   apply (case_tac cap, simp_all add: isUntypedCap_def)
   apply (case_tac cap, simp_all add: isEndpointCap_def)
-  apply (case_tac cap, simp_all add: isAsyncEndpointCap_def)
+  apply (case_tac cap, simp_all add: isNotificationCap_def)
   apply (case_tac cap, simp_all add: isCNodeCap_def)
   apply (case_tac cap, simp_all add: isThreadCap_def)
   apply (case_tac cap, simp_all add: isArchObjectCap_def)

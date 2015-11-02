@@ -2880,11 +2880,11 @@ lemma irq_state_inv_invoke_domain[wp]: "\<lbrace>irq_state_inv st\<rbrace> invok
   done
 
 
-crunch irq_masks_of_state: bind_async_endpoint "\<lambda>s. P (irq_masks_of_state s)"
-crunch irq_state_of_state: bind_async_endpoint "\<lambda>s. P (irq_state_of_state s)"
+crunch irq_masks_of_state: bind_notification "\<lambda>s. P (irq_masks_of_state s)"
+crunch irq_state_of_state: bind_notification "\<lambda>s. P (irq_state_of_state s)"
 
-lemmas bind_async_endpoint_irq_state_inv[wp] = 
-  irq_state_inv_triv[OF bind_async_endpoint_irq_state_of_state bind_async_endpoint_irq_masks_of_state]
+lemmas bind_notification_irq_state_inv[wp] = 
+  irq_state_inv_triv[OF bind_notification_irq_state_of_state bind_notification_irq_masks_of_state]
 
 lemma invoke_tcb_irq_state_inv:
   "\<lbrace>(\<lambda>s. irq_state_inv st s) and domain_sep_inv False sta and

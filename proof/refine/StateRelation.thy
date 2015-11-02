@@ -92,8 +92,8 @@ where
 | "cap_relation (Structures_A.EndpointCap ref b r) c      = (c =
            Structures_H.EndpointCap ref b (AllowSend \<in> r)
              (AllowRecv \<in> r) (AllowGrant \<in> r))"
-| "cap_relation (Structures_A.AsyncEndpointCap ref b r) c = (c =
-           Structures_H.AsyncEndpointCap ref b (AllowSend \<in> r) (AllowRecv \<in> r))"
+| "cap_relation (Structures_A.NotificationCap ref b r) c = (c =
+           Structures_H.NotificationCap ref b (AllowSend \<in> r) (AllowRecv \<in> r))"
 | "cap_relation (Structures_A.CNodeCap ref n L) c    = (c =
            Structures_H.CNodeCap ref n (of_bl L) (length L))"
 | "cap_relation (Structures_A.ThreadCap ref) c            = (c =
@@ -122,14 +122,14 @@ where
   "asid_pool_relation \<equiv> \<lambda>p p'. p = inv ASIDPool p' o ucast"
 
 definition
-  aep_relation :: "Structures_A.async_ep \<Rightarrow> Structures_H.async_endpoint \<Rightarrow> bool"
+  ntfn_relation :: "Structures_A.notification \<Rightarrow> Structures_H.notification \<Rightarrow> bool"
 where
- "aep_relation \<equiv> \<lambda>aep aep'.
-    (case aep_obj aep of
-      Structures_A.IdleAEP       \<Rightarrow> aepObj aep' = Structures_H.IdleAEP
-    | Structures_A.WaitingAEP q  \<Rightarrow> aepObj aep' = Structures_H.WaitingAEP q
-    | Structures_A.ActiveAEP b \<Rightarrow> aepObj aep' = Structures_H.ActiveAEP b)
-  \<and> aep_bound_tcb aep = aepBoundTCB aep'"
+ "ntfn_relation \<equiv> \<lambda>ntfn ntfn'.
+    (case ntfn_obj ntfn of
+      Structures_A.IdleNtfn       \<Rightarrow> ntfnObj ntfn' = Structures_H.IdleNtfn
+    | Structures_A.WaitingNtfn q  \<Rightarrow> ntfnObj ntfn' = Structures_H.WaitingNtfn q
+    | Structures_A.ActiveNtfn b \<Rightarrow> ntfnObj ntfn' = Structures_H.ActiveNtfn b)
+  \<and> ntfn_bound_tcb ntfn = ntfnBoundTCB ntfn'"
 
 definition
   ep_relation :: "Structures_A.endpoint \<Rightarrow> Structures_H.endpoint \<Rightarrow> bool"
@@ -162,8 +162,8 @@ where
 | "thread_state_relation (Structures_A.BlockedOnSend oref sp) ts'
      = (ts' = Structures_H.BlockedOnSend oref (sender_badge sp)
                    (sender_can_grant sp) (sender_is_call sp))"
-| "thread_state_relation (Structures_A.BlockedOnAsyncEvent oref) ts'
-     = (ts' = Structures_H.BlockedOnAsyncEvent oref)"
+| "thread_state_relation (Structures_A.BlockedOnNotification oref) ts'
+     = (ts' = Structures_H.BlockedOnNotification oref)"
 
 definition
   tcb_relation :: "Structures_A.tcb \<Rightarrow> Structures_H.tcb \<Rightarrow> bool"
@@ -179,7 +179,7 @@ where
   \<and> cap_relation (tcb_reply tcb) (cteCap (tcbReply tcb'))
   \<and> cap_relation (tcb_caller tcb) (cteCap (tcbCaller tcb'))
   \<and> cap_relation (tcb_ipcframe tcb) (cteCap (tcbIPCBufferFrame tcb'))
-  \<and> tcb_bound_aep tcb = tcbBoundAEP tcb'"
+  \<and> tcb_bound_notification tcb = tcbBoundNotification tcb'"
 
 definition
   other_obj_relation :: "Structures_A.kernel_object \<Rightarrow> Structures_H.kernel_object \<Rightarrow> bool"
@@ -188,7 +188,7 @@ where
   (case (obj, obj') of
         (TCB tcb, KOTCB tcb') \<Rightarrow> tcb_relation tcb tcb'
       | (Endpoint ep, KOEndpoint ep') \<Rightarrow> ep_relation ep ep'
-      | (AsyncEndpoint aep, KOAEndpoint aep') \<Rightarrow> aep_relation aep aep'
+      | (Notification ntfn, KONotification ntfn') \<Rightarrow> ntfn_relation ntfn ntfn'
       | (ArchObj (ARM_Structs_A.ASIDPool pool), KOArch (KOASIDPool pool'))
              \<Rightarrow> asid_pool_relation pool pool'
       | _ \<Rightarrow> False)"
@@ -275,7 +275,7 @@ where
       else {(x, \<bottom>\<bottom>)})"
 | "obj_relation_cuts (TCB tcb) x = {(x, other_obj_relation)}"
 | "obj_relation_cuts (Endpoint ep) x = {(x, other_obj_relation)}"
-| "obj_relation_cuts (AsyncEndpoint aep) x = {(x, other_obj_relation)}"
+| "obj_relation_cuts (Notification ntfn) x = {(x, other_obj_relation)}"
 | "obj_relation_cuts (ArchObj ao) x = aobj_relation_cuts ao x"
 
 
@@ -408,7 +408,7 @@ definition
 where
   "irq_state_relation irq irq' \<equiv> case (irq, irq') of
      (irq_state.IRQInactive, irqstate.IRQInactive) \<Rightarrow> True
-   | (irq_state.IRQNotifyAEP, irqstate.IRQNotifyAEP) \<Rightarrow> True
+   | (irq_state.IRQSignal, irqstate.IRQSignal) \<Rightarrow> True
    | (irq_state.IRQTimer, irqstate.IRQTimer) \<Rightarrow> True
    | _ \<Rightarrow> False"
 
@@ -518,7 +518,7 @@ where
                     Structures_A.Untyped \<Rightarrow> APIObjectType ArchTypes_H.Untyped
                   | Structures_A.TCBObject \<Rightarrow> APIObjectType ArchTypes_H.TCBObject
                   | Structures_A.EndpointObject \<Rightarrow> APIObjectType ArchTypes_H.EndpointObject
-                  | Structures_A.AsyncEndpointObject \<Rightarrow> APIObjectType ArchTypes_H.AsyncEndpointObject
+                  | Structures_A.NotificationObject \<Rightarrow> APIObjectType ArchTypes_H.NotificationObject
                   | Structures_A.CapTableObject \<Rightarrow> APIObjectType ArchTypes_H.CapTableObject
                   | ArchObject ao \<Rightarrow> (case ao of
          SmallPageObj     \<Rightarrow> SmallPageObject
@@ -659,7 +659,7 @@ lemma replicate_length_cong:
 
 lemmas isCap_defs =
   isZombie_def isArchObjectCap_def
-  isThreadCap_def isCNodeCap_def isAsyncEndpointCap_def
+  isThreadCap_def isCNodeCap_def isNotificationCap_def
   isEndpointCap_def isUntypedCap_def isNullCap_def
   isIRQHandlerCap_def isIRQControlCap_def isReplyCap_def
   isPageCap_def isPageTableCap_def isPageDirectoryCap_def

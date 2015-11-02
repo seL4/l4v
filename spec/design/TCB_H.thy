@@ -12,7 +12,7 @@ chapter "Thread Control Blocks"
 
 theory TCB_H
 imports
-  AsyncEndpointDecls_H
+  NotificationDecls_H
   TCBDecls_H
   CNode_H
   VSpace_H
@@ -31,8 +31,8 @@ defs decodeTCBInvocation_def:
         | TCBSetPriority \<Rightarrow>   decodeSetPriority args cap
         | TCBSetIPCBuffer \<Rightarrow>   decodeSetIPCBuffer args cap slot extraCaps
         | TCBSetSpace \<Rightarrow>   decodeSetSpace args cap slot extraCaps
-        | TCBBindAEP \<Rightarrow>   decodeBindAEP cap extraCaps
-        | TCBUnbindAEP \<Rightarrow>   decodeUnbindAEP cap
+        | TCBBindNotification \<Rightarrow>   decodeBindNotification cap extraCaps
+        | TCBUnbindNotification \<Rightarrow>   decodeUnbindNotification cap
         | _ \<Rightarrow>   throw IllegalOperation
         )"
 
@@ -191,42 +191,42 @@ defs decodeSetSpace_def:
   | (_, _) \<Rightarrow>    throw TruncatedMessage
   )"
 
-defs decodeBindAEP_def:
-"decodeBindAEP cap extraCaps\<equiv> (doE
+defs decodeBindNotification_def:
+"decodeBindNotification cap extraCaps\<equiv> (doE
     whenE (null extraCaps) $ throw TruncatedMessage;
     tcb \<leftarrow> returnOk ( capTCBPtr cap);
-    aEP \<leftarrow> withoutFailure $ getBoundAEP tcb;
-    (case aEP of
+    ntfn \<leftarrow> withoutFailure $ getBoundNotification tcb;
+    (case ntfn of
           Some v3 \<Rightarrow>   throw IllegalOperation
         | None \<Rightarrow>   returnOk ()
         );
-    (aepptr, rights) \<leftarrow> (case fst (head extraCaps) of
-          AsyncEndpointCap ptr v4 v5 recv \<Rightarrow>   returnOk (ptr, recv)
+    (ntfnPtr, rights) \<leftarrow> (case fst (head extraCaps) of
+          NotificationCap ptr v4 v5 recv \<Rightarrow>   returnOk (ptr, recv)
         | _ \<Rightarrow>   throw IllegalOperation
         );
     whenE (Not rights) $ throw IllegalOperation;
-    aep \<leftarrow> withoutFailure $ getAsyncEP aepptr;
-    (case (aepObj aep, aepBoundTCB aep) of
-          (IdleAEP, None) \<Rightarrow>   returnOk ()
-        | (ActiveAEP _, None) \<Rightarrow>   returnOk ()
+    notification \<leftarrow> withoutFailure $ getNotification ntfnPtr;
+    (case (ntfnObj notification, ntfnBoundTCB notification) of
+          (IdleNtfn, None) \<Rightarrow>   returnOk ()
+        | (ActiveNtfn _, None) \<Rightarrow>   returnOk ()
         | _ \<Rightarrow>   throw IllegalOperation
         );
-    returnOk AsyncEndpointControl_ \<lparr>
-        aepTCB= tcb,
-        aepPtr= Just aepptr \<rparr>
+    returnOk NotificationControl_ \<lparr>
+        notificationTCB= tcb,
+        notificationPtr= Just ntfnPtr \<rparr>
 odE)"
 
-defs decodeUnbindAEP_def:
-"decodeUnbindAEP cap\<equiv> (doE
+defs decodeUnbindNotification_def:
+"decodeUnbindNotification cap\<equiv> (doE
     tcb \<leftarrow> returnOk ( capTCBPtr cap);
-    aEP \<leftarrow> withoutFailure $ getBoundAEP tcb;
-    (case aEP of
+    ntfn \<leftarrow> withoutFailure $ getBoundNotification tcb;
+    (case ntfn of
           None \<Rightarrow>   throw IllegalOperation
         | Some v7 \<Rightarrow>   returnOk ()
         );
-    returnOk AsyncEndpointControl_ \<lparr>
-        aepTCB= tcb,
-        aepPtr= Nothing \<rparr>
+    returnOk NotificationControl_ \<lparr>
+        notificationTCB= tcb,
+        notificationPtr= Nothing \<rparr>
 odE)"
 
 defs invokeTCB_def:
@@ -333,14 +333,14 @@ defs invokeTCB_def:
     when resumeTarget $ restart dest;
     return []
   od)
-  | (AsyncEndpointControl tcb (Some aepptr)) \<Rightarrow>   
+  | (NotificationControl tcb (Some ntfnPtr)) \<Rightarrow>   
   withoutPreemption $ (do
-    bindAsyncEndpoint tcb aepptr;
+    bindNotification tcb ntfnPtr;
     return []
   od)
-  | (AsyncEndpointControl tcb None) \<Rightarrow>   
+  | (NotificationControl tcb None) \<Rightarrow>   
   withoutPreemption $ (do
-    unbindAsyncEndpoint tcb;
+    unbindNotification tcb;
     return []
   od)
   )"

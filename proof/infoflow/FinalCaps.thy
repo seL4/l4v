@@ -998,11 +998,11 @@ lemma set_endpoint_silc_inv[wp]:
   apply(fastforce elim: cte_wp_atE intro: cte_wp_at_cteI cte_wp_at_tcbI)
   done
 
-lemma set_async_ep_silc_inv[wp]:
+lemma set_notification_silc_inv[wp]:
    "\<lbrace> silc_inv aag st \<rbrace> 
-    set_async_ep ptr aep
+    set_notification ptr ntfn
     \<lbrace> \<lambda> _. silc_inv aag st \<rbrace>"
-  unfolding set_async_ep_def
+  unfolding set_notification_def
   apply(rule silc_inv_pres)
     apply(wp set_object_wp get_object_wp)
     apply (simp split: kernel_object.splits)
@@ -1046,11 +1046,11 @@ lemma set_thread_state_silc_inv[wp]:
   apply(fastforce elim: cte_wp_atE intro: cte_wp_at_cteI cte_wp_at_tcbI)
   done
 
-lemma set_bound_aep_silc_inv[wp]:
+lemma set_bound_notification_silc_inv[wp]:
   "\<lbrace>silc_inv aag st\<rbrace>
-   set_bound_aep tptr aep
+   set_bound_notification tptr ntfn
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
-  unfolding set_bound_aep_def
+  unfolding set_bound_notification_def
   apply(rule silc_inv_pres)
     apply(wp set_object_wp|simp split del: split_if)+
     apply (simp split: kernel_object.splits)
@@ -1070,7 +1070,7 @@ lemma set_bound_aep_silc_inv[wp]:
   apply(fastforce elim: cte_wp_atE intro: cte_wp_at_cteI cte_wp_at_tcbI)
   done
 
-crunch silc_inv[wp]: fast_finalise, unbind_async_endpoint "silc_inv aag st"
+crunch silc_inv[wp]: fast_finalise, unbind_notification "silc_inv aag st"
   (ignore: set_object wp: crunch_wps simp: crunch_simps)
 
 lemma slots_holding_overlapping_caps_lift:
@@ -1161,11 +1161,11 @@ lemma thread_set_tcb_fault_update_silc_inv[wp]:
   done
 
 
-lemma reply_ipc_cancel_silc_inv:
+lemma reply_cancel_ipc_silc_inv:
   "\<lbrace>silc_inv aag st and pas_refined aag and K (is_subject aag t) \<rbrace>
-   reply_ipc_cancel t
+   reply_cancel_ipc t
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
-  unfolding reply_ipc_cancel_def
+  unfolding reply_cancel_ipc_def
   apply (wp cap_delete_one_silc_inv select_wp hoare_vcg_if_lift | simp)+
   (* there must be a better way to do this... *)
   apply (clarsimp simp: valid_def)
@@ -1185,30 +1185,30 @@ lemma reply_ipc_cancel_silc_inv:
   apply(fastforce elim: use_valid[OF _ thread_set_tcb_fault_update_silc_inv])
   done
 
-crunch silc_inv[wp]: async_ipc_cancel "silc_inv aag st"
+crunch silc_inv[wp]: cancel_signal "silc_inv aag st"
 
-lemma ipc_cancel_silc_inv:
+lemma cancel_ipc_silc_inv:
   "\<lbrace>silc_inv aag st and pas_refined aag and K (is_subject aag t) \<rbrace>
-   ipc_cancel t
+   cancel_ipc t
    \<lbrace> \<lambda>_. silc_inv aag st \<rbrace>"
-  unfolding ipc_cancel_def
-  apply(wp get_endpoint_wp reply_ipc_cancel_silc_inv get_thread_state_inv hoare_vcg_all_lift
+  unfolding cancel_ipc_def
+  apply(wp get_endpoint_wp reply_cancel_ipc_silc_inv get_thread_state_inv hoare_vcg_all_lift
        | wpc 
-       | simp(no_asm) add: blocked_ipc_cancel_def get_ep_queue_def
-                            get_blocking_ipc_endpoint_def
+       | simp(no_asm) add: blocked_cancel_ipc_def get_ep_queue_def
+                            get_blocking_object_def
        | wp_once hoare_drop_imps)+
   apply auto
   done
 
-lemma ipc_cancel_indirect_silc_inv:
+lemma cancel_ipc_indirect_silc_inv:
   "\<lbrace>silc_inv aag st and st_tcb_at receive_blocked t \<rbrace>
-    ipc_cancel t
+    cancel_ipc t
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
-  unfolding ipc_cancel_def
+  unfolding cancel_ipc_def
   apply (rule hoare_seq_ext[OF _ gts_sp])
   apply (rule hoare_name_pre_state)
    apply (clarsimp simp: st_tcb_def2 receive_blocked_def)
-  apply (simp add: blocked_ipc_cancel_def split: thread_state.splits)
+  apply (simp add: blocked_cancel_ipc_def split: thread_state.splits)
   apply (wp)
   apply simp
   done
@@ -1300,7 +1300,7 @@ crunch silc_inv[wp]: arch_finalise_cap "silc_inv aag st"
 lemma finalise_cap_silc_inv:
   "\<lbrace> silc_inv aag st and pas_refined aag and K (pas_cap_cur_auth aag cap)\<rbrace> finalise_cap cap final \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   apply(case_tac cap)
-            apply(wp ipc_cancel_silc_inv | simp split del: split_if add: suspend_def| clarsimp)+
+            apply(wp cancel_ipc_silc_inv | simp split del: split_if add: suspend_def| clarsimp)+
       apply(clarsimp simp: aag_cap_auth_Thread)
      apply(wp | simp split del: split_if | clarsimp split del: split_if)+
     apply(rule hoare_pre)
@@ -2340,12 +2340,12 @@ lemma set_mrs_silc_inv[wp]:
   apply(fastforce elim: cte_wp_atE intro: cte_wp_at_cteI cte_wp_at_tcbI)
   done
 
-crunch silc_inv[wp]: update_waiting_aep, set_message_info "silc_inv aag st"
+crunch silc_inv[wp]: update_waiting_ntfn, set_message_info "silc_inv aag st"
 
-lemma send_async_ipc_silc_inv[wp]: 
-  "\<lbrace>silc_inv aag st\<rbrace> send_async_ipc param_a param_b \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
-  unfolding send_async_ipc_def
-  apply (wp get_aep_wp gts_wp ipc_cancel_indirect_silc_inv | wpc | simp)+
+lemma send_signal_silc_inv[wp]: 
+  "\<lbrace>silc_inv aag st\<rbrace> send_signal param_a param_b \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
+  unfolding send_signal_def
+  apply (wp get_ntfn_wp gts_wp cancel_ipc_indirect_silc_inv | wpc | simp)+
   apply (clarsimp simp: receive_blocked_def pred_tcb_at_def obj_at_def)
   done
 
@@ -2542,8 +2542,8 @@ lemma arch_perform_invocation_silc_inv:
   apply(clarsimp simp: authorised_arch_inv_def valid_arch_inv_def split: arch_invocation.splits)
   done
 
-lemma interrupt_derived_aep_cap_identical_refs:
-  "\<lbrakk>interrupt_derived cap cap'; is_aep_cap cap\<rbrakk> \<Longrightarrow>
+lemma interrupt_derived_ntfn_cap_identical_refs:
+  "\<lbrakk>interrupt_derived cap cap'; is_ntfn_cap cap\<rbrakk> \<Longrightarrow>
    Structures_A.obj_refs cap = Structures_A.obj_refs cap' \<and>  
    cap_irqs cap = cap_irqs cap'"
   apply(case_tac cap)
@@ -2609,8 +2609,8 @@ lemma invoke_irq_handler_silc_inv:
    apply (elim exE conjE, rename_tac cap')
    apply (drule_tac cap=cap' in silc_invD)
      apply assumption
-    apply(fastforce simp: intra_label_cap_def cap_points_to_label_def interrupt_derived_aep_cap_identical_refs)
-   apply(fastforce simp: slots_holding_overlapping_caps_def2 ctes_wp_at_def interrupt_derived_aep_cap_identical_refs)
+    apply(fastforce simp: intra_label_cap_def cap_points_to_label_def interrupt_derived_ntfn_cap_identical_refs)
+   apply(fastforce simp: slots_holding_overlapping_caps_def2 ctes_wp_at_def interrupt_derived_ntfn_cap_identical_refs)
   apply(wp cap_delete_one_silc_inv | simp add: pas_refined_def irq_map_wellformed_aux_def authorised_irq_hdl_inv_def)+
   done
   
@@ -2637,7 +2637,7 @@ lemma invoke_irq_control_silc_inv:
   done
 
 
-crunch silc_inv[wp]: receive_async_ipc "silc_inv aag st"
+crunch silc_inv[wp]: receive_signal "silc_inv aag st"
 
 lemma setup_caller_cap_silc_inv:
   "\<lbrace>silc_inv aag st and K (is_subject aag sender \<and> is_subject aag receiver)\<rbrace>
@@ -2710,7 +2710,7 @@ lemma do_normal_transfer_silc_inv:
   apply(wp transfer_caps_empty_inv | simp)+
   done
 
-crunch silc_inv[wp]: do_fault_transfer, complete_async_ipc "silc_inv aag st"
+crunch silc_inv[wp]: do_fault_transfer, complete_signal "silc_inv aag st"
 
 (* doesn't need sym_refs *)
 lemma valid_ep_recv_dequeue':
@@ -2828,15 +2828,15 @@ lemma receive_ipc_silc_inv:
   apply (simp del: AllowSend_def split: cap.splits)
   apply clarsimp
   apply (rule hoare_seq_ext[OF _ get_endpoint_sp])
-  apply (rule hoare_seq_ext[OF _ gba_sp])
-  apply (case_tac aepptr, simp_all)
+  apply (rule hoare_seq_ext[OF _ gbn_sp])
+  apply (case_tac ntfnptr, simp_all)
   (* old receive case, not bound *)
    apply (rule hoare_pre, wp receive_ipc_base_silc_inv, clarsimp)
-  apply (rule hoare_seq_ext[OF _ get_aep_sp])
-  apply (case_tac "isActive aep", simp_all)
-  (* new aep-binding case *)
+  apply (rule hoare_seq_ext[OF _ get_ntfn_sp])
+  apply (case_tac "isActive ntfn", simp_all)
+  (* new ntfn-binding case *)
    apply (rule hoare_pre, wp, clarsimp)
-   (* old receive case, bound aep not active *)
+   (* old receive case, bound ntfn not active *)
   apply (rule hoare_pre, wp receive_ipc_base_silc_inv, clarsimp)
   done
 
@@ -2999,7 +2999,7 @@ lemma thread_set_tcb_fault_handler_update_invs:
   apply(wp itr_wps | simp)+
   done
 
-crunch silc_inv[wp]: bind_async_endpoint "silc_inv aag st"
+crunch silc_inv[wp]: bind_notification "silc_inv aag st"
 
 lemma invoke_tcb_silc_inv:
   notes static_imp_wp [wp]
@@ -3016,7 +3016,7 @@ lemma invoke_tcb_silc_inv:
             | clarsimp)+)[3]
     defer
     apply((wp suspend_silc_inv restart_silc_inv | simp add: authorised_tcb_inv_def)+)[2]
-  (* AsyncEndpointControl *)
+  (* NotificationControl *)
   apply (rename_tac option)
   apply (case_tac option)
   apply ((wp | simp)+)[2]
@@ -3130,7 +3130,7 @@ lemma handle_wait_silc_inv:
    handle_wait is_blocking
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   apply (simp add: handle_wait_def Let_def lookup_cap_def split_def)
-  apply (wp hoare_vcg_all_lift get_aep_wp delete_caller_cap_silc_inv
+  apply (wp hoare_vcg_all_lift get_ntfn_wp delete_caller_cap_silc_inv
             receive_ipc_silc_inv 
             lookup_slot_for_thread_authorised
             lookup_slot_for_thread_cap_fault

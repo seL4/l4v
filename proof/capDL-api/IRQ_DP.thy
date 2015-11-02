@@ -88,7 +88,7 @@ decode_irq_handler_invocation cap cap_ref caps (IrqHandlerClearIntent)
   apply (clarsimp)
 done
 
-lemma irq_inner_lemma: "\<lbrace>\<lambda>s. P i s \<and> a = (AsyncEndpointCap x y z) \<rbrace> case a of AsyncEndpointCap x xa xb \<Rightarrow> returnOk () | _ \<Rightarrow> throw \<lbrace>P\<rbrace>, -"
+lemma irq_inner_lemma: "\<lbrace>\<lambda>s. P i s \<and> a = (NotificationCap x y z) \<rbrace> case a of NotificationCap x xa xb \<Rightarrow> returnOk () | _ \<Rightarrow> throw \<lbrace>P\<rbrace>, -"
   apply (unfold validE_R_def)
   apply (rule hoare_name_pre_stateE)
   apply (clarsimp)
@@ -104,7 +104,7 @@ lemma validE_R_gen_asm_conj:
 
 lemma decode_invocation_irq_endpoint_rv':
 "\<lbrace>\<lambda>s. P (SetIrqHandler (the $ cdl_cap_irq cap) endpoint_cap endpoint_ptr) s \<and> caps = [(endpoint_cap, endpoint_ptr)]@xs \<and>
-  is_aep_cap endpoint_cap   \<rbrace>
+  is_ntfn_cap endpoint_cap   \<rbrace>
 decode_irq_handler_invocation cap cap_ref caps (IrqHandlerSetEndpointIntent)
 \<lbrace>P\<rbrace>, -"
   apply (rule validE_R_gen_asm_conj)
@@ -326,7 +326,7 @@ lemma seL4_IRQHandler_SetEndpoint_wp_helper:
 shows "\<lbrace>\<guillemotleft>root_tcb_id \<mapsto>f root_tcb  \<and>* (root_tcb_id, tcb_pending_op_slot) \<mapsto>c RunningCap \<and>* irq \<mapsto>irq obj \<and>* (obj, 0) \<mapsto>c cap' \<and>*
          cnode_id \<mapsto>f CNode (empty_cnode root_size) \<and>* (root_tcb_id, tcb_cspace_slot) \<mapsto>c cnode_cap  \<and>* (endpoint_ptr) \<mapsto>c endpoint_cap \<and>* irq_ptr \<mapsto>c irq_cap \<and>* R \<guillemotright>
               and K (\<not> ep_related_cap cap' \<and> \<not> ep_related_cap irq_cap \<and> \<not>is_untyped_cap endpoint_cap \<and> \<not>is_memory_cap endpoint_cap \<and> one_lvl_lookup cnode_cap WordSetup.word_bits root_size \<and>
-              guard_equal cnode_cap endpoint_cptr WordSetup.word_bits \<and> is_aep_cap endpoint_cap \<and>
+              guard_equal cnode_cap endpoint_cptr WordSetup.word_bits \<and> is_ntfn_cap endpoint_cap \<and>
               guard_equal cnode_cap irq_handler_cap WordSetup.word_bits \<and>
               is_cnode_cap cnode_cap \<and> is_irqhandler_cap irq_cap  )\<rbrace>
         seL4_IRQHandler_SetEndpoint irq_handler_cap endpoint_cptr
@@ -453,7 +453,7 @@ lemma seL4_IRQHandler_SetEndpoint_wp:
      is_tcb root_tcb \<and>
      cnode_id = cap_object cnode_cap \<and>
 
-     is_aep_cap endpoint_cap \<and>
+     is_ntfn_cap endpoint_cap \<and>
      is_cnode_cap cnode_cap \<and>
 
      \<not> ep_related_cap old_cap \<and>

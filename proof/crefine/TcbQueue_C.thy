@@ -17,7 +17,7 @@ begin
 
 lemma tcb_queueD:
   assumes queue_rel: "tcb_queue_relation getNext getPrev mp queue qprev qhead"
-  and     valid_aep: "distinct queue"
+  and     valid_ntfn: "distinct queue"
   and      in_queue: "tcbp \<in> set queue"
   and        cs_tcb: "mp (tcb_ptr_to_ctcb_ptr tcbp) = Some tcb"
   shows "(if tcbp = hd queue then getPrev tcb = qprev 
@@ -27,7 +27,7 @@ lemma tcb_queueD:
                   else (\<exists>n < (length queue) - 1. tcbp = queue ! n
                         \<and> getNext tcb = tcb_ptr_to_ctcb_ptr (queue ! Suc n)))"
   (is "?prev tcb queue qprev \<and> ?next tcb queue")
-  using queue_rel in_queue valid_aep 
+  using queue_rel in_queue valid_ntfn 
 proof (induct queue arbitrary: qprev qhead)
   case Nil
   thus ?case by simp
@@ -96,7 +96,7 @@ qed
 lemma tcb_queue_memberD:
   assumes queue_rel: "tcb_queue_relation getNext getPrev (cslift s') queue qprev qhead"
   and      in_queue: "tcbp \<in> set queue"
-  and     valid_aep: "\<forall>t\<in>set queue. tcb_at' t s"  
+  and     valid_ntfn: "\<forall>t\<in>set queue. tcb_at' t s"  
   and        rf_sr: "(s, s') \<in> rf_sr"
   shows "\<exists>tcb. cslift s' (tcb_ptr_to_ctcb_ptr tcbp) = Some tcb"
   using assms
@@ -109,7 +109,7 @@ lemma tcb_queue_memberD:
 lemma tcb_queue_valid_ptrsD:
   assumes in_queue: "tcbp \<in> set queue"
   and        rf_sr: "(s, s') \<in> rf_sr"
-  and    valid_aep: "\<forall>t\<in>set queue. tcb_at' t s" "distinct queue"  
+  and    valid_ntfn: "\<forall>t\<in>set queue. tcb_at' t s" "distinct queue"  
   and    queue_rel: "tcb_queue_relation getNext getPrev (cslift s') queue NULL qhead"
   shows "\<exists>tcb. cslift s' (tcb_ptr_to_ctcb_ptr tcbp) = Some tcb 
                \<and> (getPrev tcb \<noteq> NULL \<longrightarrow> s' \<Turnstile>\<^sub>c (getPrev tcb)
@@ -484,7 +484,7 @@ lemma tcb_queue_relation'_queue_rel:
 lemma tcb_queue_singleton_iff:
   assumes queue_rel: "tcb_queue_relation getNext getPrev mp queue NULL qhead" 
   and      in_queue: "tcbp \<in> set queue"
-  and    valid_aep: "\<forall>t\<in>set queue. tcb_at' t s" "distinct queue"
+  and    valid_ntfn: "\<forall>t\<in>set queue. tcb_at' t s" "distinct queue"
   and       cs_tcb: "mp (tcb_ptr_to_ctcb_ptr tcbp) = Some tcb"
   shows    "(queue = [tcbp]) = (getNext tcb = NULL \<and> getPrev tcb = NULL)"
 proof (rule iffI)
@@ -493,26 +493,26 @@ proof (rule iffI)
     by clarsimp
 next
   assume asms: "getNext tcb = NULL \<and> getPrev tcb = NULL"
-  hence "hd queue = tcbp" using queue_rel valid_aep in_queue cs_tcb
+  hence "hd queue = tcbp" using queue_rel valid_ntfn in_queue cs_tcb
     apply -
     apply (drule (3) tcb_queueD)
     apply (rule classical)
     apply clarsimp
-    apply (cut_tac x = "queue ! n" in bspec [OF tcb_queue_relation_not_NULL [OF  queue_rel valid_aep(1)]])
+    apply (cut_tac x = "queue ! n" in bspec [OF tcb_queue_relation_not_NULL [OF  queue_rel valid_ntfn(1)]])
     apply clarsimp
     apply simp
     done
-  moreover have "last queue = tcbp" using queue_rel valid_aep in_queue cs_tcb asms
+  moreover have "last queue = tcbp" using queue_rel valid_ntfn in_queue cs_tcb asms
     apply -
     apply (drule (3) tcb_queueD)
     apply (rule classical)
     apply clarsimp
-    apply (cut_tac x = "queue ! Suc n" in bspec [OF tcb_queue_relation_not_NULL [OF  queue_rel valid_aep(1)]])
+    apply (cut_tac x = "queue ! Suc n" in bspec [OF tcb_queue_relation_not_NULL [OF  queue_rel valid_ntfn(1)]])
     apply clarsimp
     apply simp
     done   
   moreover have "queue \<noteq> []" using in_queue by clarsimp
-  ultimately show "queue = [tcbp]" using valid_aep in_queue
+  ultimately show "queue = [tcbp]" using valid_ntfn in_queue
     apply clarsimp
     apply (simp add: hd_conv_nth last_conv_nth nth_eq_iff_index_eq)
     apply (cases queue)
@@ -558,7 +558,7 @@ lemma upd_unless_null_cong_helper:
 
 lemma tcbDequeue_update0:
   assumes in_queue: "tcbp \<in> set queue"
-  and    valid_aep: "\<forall>t\<in>set queue. tcb_at' t s" "distinct queue"
+  and    valid_ntfn: "\<forall>t\<in>set queue. tcb_at' t s" "distinct queue"
   and    queue_rel: "tcb_queue_relation tn tp mp queue qprev qhead" 
   and prev_not_queue: "ctcb_ptr_to_tcb_ptr qprev \<notin> set queue" 
   and       cs_tcb: "mp (tcb_ptr_to_ctcb_ptr tcbp) = Some tcb"
@@ -571,7 +571,7 @@ lemma tcbDequeue_update0:
             (if tcb_ptr_to_ctcb_ptr tcbp = qhead then tp tcb else qprev)
             (if tcb_ptr_to_ctcb_ptr tcbp = qhead then tn tcb else qhead)"
   (is "tcb_queue_relation tn tp ?mp (remove1 tcbp queue) (?qprev qprev qhead) (?qhead qhead)")
-  using queue_rel valid_aep prev_not_queue in_queue
+  using queue_rel valid_ntfn prev_not_queue in_queue
 proof (induct queue arbitrary: qprev qhead)
   case Nil
   thus ?case by simp
@@ -703,7 +703,7 @@ qed
 lemma tcbDequeue_update:
   assumes queue_rel: "tcb_queue_relation' tn tp mp queue qhead qend" 
   and      in_queue: "tcbp \<in> set queue"
-  and    valid_aep: "\<forall>t\<in>set queue. tcb_at' t s" "distinct queue"
+  and    valid_ntfn: "\<forall>t\<in>set queue. tcb_at' t s" "distinct queue"
   and       cs_tcb: "mp (tcb_ptr_to_ctcb_ptr tcbp) = Some tcb"
   and            f: "\<And>v f g. tn (tn_update f v) = f (tn v) \<and> tp (tp_update g v) = g (tp v)
                            \<and> tn (tp_update f v) = tn v \<and> tp (tn_update g v) = tp v"
@@ -726,7 +726,7 @@ proof -
   
   have if2: "(if tp tcb = NULL then tn tcb else qhead) = 
              (if tcb_ptr_to_ctcb_ptr tcbp = qhead then tn tcb else qhead)"
-    using tcb_queue_relation'_queue_rel [OF queue_rel] in_queue cs_tcb valid_aep
+    using tcb_queue_relation'_queue_rel [OF queue_rel] in_queue cs_tcb valid_ntfn
     apply -
     apply (cases queue)
      apply simp
@@ -736,13 +736,13 @@ proof -
     apply simp
     apply (elim conjE exE)
     apply (cut_tac x = "queue ! n" 
-      in bspec [OF tcb_queue_relation_not_NULL [OF  tcb_queue_relation'_queue_rel [OF queue_rel] valid_aep(1)]])
+      in bspec [OF tcb_queue_relation_not_NULL [OF  tcb_queue_relation'_queue_rel [OF queue_rel] valid_ntfn(1)]])
     apply (rule nth_mem)
     apply clarsimp
     apply clarsimp
     done
 
-  note null_not_in' = null_not_in [OF tcb_queue_relation'_queue_rel [OF queue_rel] valid_aep(1) valid_aep(2)]
+  note null_not_in' = null_not_in [OF tcb_queue_relation'_queue_rel [OF queue_rel] valid_ntfn(1) valid_ntfn(2)]
   
   show ?thesis
   proof (rule tcb_queue_relationI')
@@ -753,11 +753,11 @@ proof -
          (tn_update (\<lambda>_. tn tcb) (the (mp (tp tcb)))) mp))
      (remove1 tcbp queue) NULL
      (if tp tcb = NULL then tn tcb else qhead)"
-      using in_queue valid_aep tcb_queue_relation'_queue_rel [OF queue_rel] null_not_in' cs_tcb
+      using in_queue valid_ntfn tcb_queue_relation'_queue_rel [OF queue_rel] null_not_in' cs_tcb
       by (subst ne, subst if2, rule tcbDequeue_update0[rotated -1, OF f])
   next
     have r1: "(remove1 tcbp queue = []) = (tn tcb = NULL \<and> tp tcb = NULL)"
-      using in_queue tcb_queue_relation'_queue_rel [OF queue_rel] cs_tcb valid_aep null_not_in'
+      using in_queue tcb_queue_relation'_queue_rel [OF queue_rel] cs_tcb valid_ntfn null_not_in'
       apply -
       apply (subst tcb_queue_singleton_iff [symmetric], assumption+) 
       apply (fastforce simp: remove1_empty)      
@@ -765,8 +765,8 @@ proof -
     have "queue \<noteq> []" using in_queue by clarsimp
     thus "(if tn tcb = NULL then tp tcb else qend) =
           (if remove1 tcbp queue = [] then NULL else tcb_ptr_to_ctcb_ptr (last (remove1 tcbp queue)))"
-      using queue_rel in_queue cs_tcb valid_aep 
-	tcb_queue_relation_not_NULL [OF tcb_queue_relation'_queue_rel [OF queue_rel] valid_aep(1)]
+      using queue_rel in_queue cs_tcb valid_ntfn 
+	tcb_queue_relation_not_NULL [OF tcb_queue_relation'_queue_rel [OF queue_rel] valid_ntfn(1)]
       apply -
       apply (erule tcb_queue_relationE') 
       apply (frule (3) tcb_queueD)  
@@ -946,40 +946,40 @@ lemma cready_queues_relation_not_queue_ptrs:
   apply (rule same)
   done
 
-lemma aep_ep_disjoint:
+lemma ntfn_ep_disjoint:
   assumes  srs: "sym_refs (state_refs_of' s)"
   and     epat: "ko_at' ep epptr s"    
-  and    aepat: "ko_at' aep aepptr s"  
-  and  aepq: "isWaitingAEP (aepObj aep)"
+  and    ntfnat: "ko_at' ntfn ntfnptr s"  
+  and  ntfnq: "isWaitingNtfn (ntfnObj ntfn)"
   and   epq: "isSendEP ep \<or> isRecvEP ep"
-  shows  "set (epQueue ep) \<inter> set (aepQueue (aepObj aep)) = {}"
-  using srs epat aepat aepq epq
+  shows  "set (epQueue ep) \<inter> set (ntfnQueue (ntfnObj ntfn)) = {}"
+  using srs epat ntfnat ntfnq epq
   apply -
   apply (subst disjoint_iff_not_equal, intro ballI, rule notI)
   apply (drule sym_refs_ko_atD', clarsimp)+
   apply clarsimp
-  apply (clarsimp simp: isWaitingAEP_def isSendEP_def isRecvEP_def
-                 split: aep.splits endpoint.splits)
+  apply (clarsimp simp: isWaitingNtfn_def isSendEP_def isRecvEP_def
+                 split: ntfn.splits endpoint.splits)
    apply (drule bspec, fastforce simp: ko_wp_at'_def)+
    apply (fastforce simp: ko_wp_at'_def refs_of_rev')
   apply (drule bspec, fastforce simp: ko_wp_at'_def)+
   apply (fastforce simp: ko_wp_at'_def refs_of_rev')
   done
 
-lemma aep_aep_disjoint:
+lemma ntfn_ntfn_disjoint:
   assumes  srs: "sym_refs (state_refs_of' s)"
-  and    aepat: "ko_at' aep aepptr s"    
-  and   aepat': "ko_at' aep' aepptr' s"  
-  and     aepq: "isWaitingAEP (aepObj aep)"
-  and    aepq': "isWaitingAEP (aepObj aep')"
-  and      neq: "aepptr' \<noteq> aepptr"
-  shows  "set (aepQueue (aepObj aep)) \<inter> set (aepQueue (aepObj aep')) = {}"
-  using srs aepat aepat' aepq aepq' neq
+  and    ntfnat: "ko_at' ntfn ntfnptr s"    
+  and   ntfnat': "ko_at' ntfn' ntfnptr' s"  
+  and     ntfnq: "isWaitingNtfn (ntfnObj ntfn)"
+  and    ntfnq': "isWaitingNtfn (ntfnObj ntfn')"
+  and      neq: "ntfnptr' \<noteq> ntfnptr"
+  shows  "set (ntfnQueue (ntfnObj ntfn)) \<inter> set (ntfnQueue (ntfnObj ntfn')) = {}"
+  using srs ntfnat ntfnat' ntfnq ntfnq' neq
   apply -
   apply (subst disjoint_iff_not_equal, intro ballI, rule notI)
   apply (drule sym_refs_ko_atD', clarsimp)+
   apply clarsimp
-  apply (clarsimp simp: isWaitingAEP_def split: aep.splits)
+  apply (clarsimp simp: isWaitingNtfn_def split: ntfn.splits)
    apply (drule bspec, fastforce simp: ko_wp_at'_def)+
    apply (clarsimp simp: ko_wp_at'_def refs_of_rev')
   done
@@ -989,48 +989,48 @@ lemma tcb_queue_relation'_empty[simp]:
       (qend = tcb_Ptr 0 \<and> qhead = tcb_Ptr 0)"
   by (simp add: tcb_queue_relation'_def)
 
-lemma casync_endpoint_relation_aep_queue:
-  fixes aep :: "async_endpoint"
-  defines "qs \<equiv> if isWaitingAEP (aepObj aep) then set (aepQueue (aepObj aep)) else {}"  
-  assumes  aep: "casync_endpoint_relation (cslift t) aep' b"
+lemma cnotification_relation_ntfn_queue:
+  fixes ntfn :: "Structures_H.notification"
+  defines "qs \<equiv> if isWaitingNtfn (ntfnObj ntfn) then set (ntfnQueue (ntfnObj ntfn)) else {}"  
+  assumes  ntfn: "cnotification_relation (cslift t) ntfn' b"
   and      srs: "sym_refs (state_refs_of' s)"
-  and     koat: "ko_at' aep aepptr s"
-  and    koat': "ko_at' aep' aepptr' s"
+  and     koat: "ko_at' ntfn ntfnptr s"
+  and    koat': "ko_at' ntfn' ntfnptr' s"
   and     mpeq: "(cslift t' |` (- (tcb_ptr_to_ctcb_ptr ` qs))) = (cslift t |` (- (tcb_ptr_to_ctcb_ptr ` qs)))"  
-  and      neq: "aepptr' \<noteq> aepptr"
-  shows  "casync_endpoint_relation (cslift t') aep' b"
+  and      neq: "ntfnptr' \<noteq> ntfnptr"
+  shows  "cnotification_relation (cslift t') ntfn' b"
 proof -  
-    have rl: "\<And>p. \<lbrakk> p \<in> tcb_ptr_to_ctcb_ptr ` set (aepQueue (aepObj aep'));
-                    isWaitingAEP (aepObj aep); isWaitingAEP (aepObj aep')\<rbrakk>
+    have rl: "\<And>p. \<lbrakk> p \<in> tcb_ptr_to_ctcb_ptr ` set (ntfnQueue (ntfnObj ntfn'));
+                    isWaitingNtfn (ntfnObj ntfn); isWaitingNtfn (ntfnObj ntfn')\<rbrakk>
     \<Longrightarrow> cslift t p = cslift t' p" using srs koat' koat mpeq neq
     apply -
-    apply (drule (3) aep_aep_disjoint [OF _ koat koat'])
+    apply (drule (3) ntfn_ntfn_disjoint [OF _ koat koat'])
     apply (erule restrict_map_eqI [symmetric])
     apply (erule imageE)
     apply (fastforce simp: disjoint_iff_not_equal inj_eq qs_def)
     done
 
-  show ?thesis using aep rl mpeq unfolding casync_endpoint_relation_def 
+  show ?thesis using ntfn rl mpeq unfolding cnotification_relation_def 
     apply (simp add: Let_def)
-    apply (cases "aepObj aep'")
+    apply (cases "ntfnObj ntfn'")
        apply simp
       apply simp
-     apply (cases "isWaitingAEP (aepObj aep)")
-      apply (simp add: isWaitingAEP_def cong: tcb_queue_relation'_cong)
+     apply (cases "isWaitingNtfn (ntfnObj ntfn)")
+      apply (simp add: isWaitingNtfn_def cong: tcb_queue_relation'_cong)
      apply (simp add: qs_def)
     done
 qed
 
-lemma cpspace_relation_aep_update_aep:
-  fixes aep :: "async_endpoint"
-  defines "qs \<equiv> if isWaitingAEP (aepObj aep) then set (aepQueue (aepObj aep)) else {}"
-  assumes koat: "ko_at' aep aepptr s"
+lemma cpspace_relation_ntfn_update_ntfn:
+  fixes ntfn :: "Structures_H.notification"
+  defines "qs \<equiv> if isWaitingNtfn (ntfnObj ntfn) then set (ntfnQueue (ntfnObj ntfn)) else {}"
+  assumes koat: "ko_at' ntfn ntfnptr s"
   and     invs: "invs' s"
-  and      cp: "cpspace_aep_relation (ksPSpace s) (t_hrs_' (globals t))"
-  and     rel: "casync_endpoint_relation (cslift t') aep' async_endpoint" 
+  and      cp: "cpspace_ntfn_relation (ksPSpace s) (t_hrs_' (globals t))"
+  and     rel: "cnotification_relation (cslift t') ntfn' notification" 
   and    mpeq: "(cslift t' |` (- (tcb_ptr_to_ctcb_ptr ` qs))) = (cslift t |` (- (tcb_ptr_to_ctcb_ptr ` qs)))"
-  shows "cmap_relation (map_to_aeps (ksPSpace s(aepptr \<mapsto> KOAEndpoint aep')))
-           (cslift t(Ptr aepptr \<mapsto> async_endpoint)) Ptr (casync_endpoint_relation (cslift t'))"
+  shows "cmap_relation (map_to_ntfns (ksPSpace s(ntfnptr \<mapsto> KONotification ntfn')))
+           (cslift t(Ptr ntfnptr \<mapsto> notification)) Ptr (cnotification_relation (cslift t'))"
   using koat invs cp rel
   apply -
   apply (subst map_comp_update)
@@ -1038,7 +1038,7 @@ lemma cpspace_relation_aep_update_aep:
   apply (frule ko_at_projectKO_opt)  
   apply (rule cmap_relationE1, assumption+)
   apply (erule (3) cmap_relation_upd_relI)
-   apply (erule (1) casync_endpoint_relation_aep_queue [OF _ invs_sym' koat])
+   apply (erule (1) cnotification_relation_ntfn_queue [OF _ invs_sym' koat])
      apply (erule (1) map_to_ko_atI')
     apply (fold qs_def, rule mpeq)
    apply assumption
@@ -1059,33 +1059,33 @@ proof -
     done
 qed
 
-lemma casync_endpoint_relation_upd_tcb_no_queues:
+lemma cnotification_relation_upd_tcb_no_queues:
   assumes cs: "mp thread = Some tcb"
   and   next_pres: "option_map tcbEPNext_C \<circ> mp = option_map tcbEPNext_C \<circ> mp'"
   and   prev_pres: "option_map tcbEPPrev_C \<circ> mp = option_map tcbEPPrev_C \<circ> mp'"
-  shows "casync_endpoint_relation mp a b = casync_endpoint_relation mp' a b"
+  shows "cnotification_relation mp a b = cnotification_relation mp' a b"
 proof -  
   show ?thesis
-    unfolding casync_endpoint_relation_def 
+    unfolding cnotification_relation_def 
     apply (simp add: Let_def)
-    apply (cases "aepObj a")
+    apply (cases "ntfnObj a")
       apply (simp add: tcb_queue_relation'_def tcb_queue_relation_only_next_prev [OF next_pres prev_pres, symmetric])+
     done
 qed
 
-lemma cendpoint_relation_aep_queue:
+lemma cendpoint_relation_ntfn_queue:
   assumes   srs: "sym_refs (state_refs_of' s)"
-  and      koat: "ko_at' aep aepptr s"
-  and iswaiting: "isWaitingAEP (aepObj aep)"
-  and      mpeq: "(cslift t' |` (- (tcb_ptr_to_ctcb_ptr ` set (aepQueue (aepObj aep)))))
-  = (cslift t |` (- (tcb_ptr_to_ctcb_ptr ` set (aepQueue (aepObj aep)))))"  
+  and      koat: "ko_at' ntfn ntfnptr s"
+  and iswaiting: "isWaitingNtfn (ntfnObj ntfn)"
+  and      mpeq: "(cslift t' |` (- (tcb_ptr_to_ctcb_ptr ` set (ntfnQueue (ntfnObj ntfn)))))
+  = (cslift t |` (- (tcb_ptr_to_ctcb_ptr ` set (ntfnQueue (ntfnObj ntfn)))))"  
   and      koat': "ko_at' a epptr s"
   shows "cendpoint_relation (cslift t) a b = cendpoint_relation (cslift t') a b"
 proof -  
   have rl: "\<And>p. \<lbrakk> p \<in> tcb_ptr_to_ctcb_ptr ` set (epQueue a); isSendEP a \<or> isRecvEP a \<rbrakk>
     \<Longrightarrow> cslift t p = cslift t' p" using srs koat' koat iswaiting mpeq
     apply -
-    apply (drule (4) aep_ep_disjoint)
+    apply (drule (4) ntfn_ep_disjoint)
     apply (erule restrict_map_eqI [symmetric])
     apply (erule imageE)
     apply (clarsimp simp: disjoint_iff_not_equal inj_eq)
@@ -1107,7 +1107,7 @@ lemma update_tcb_map_tos:
   fixes P :: "tcb \<Rightarrow> bool"
   assumes at: "obj_at' P p s"
   shows   "map_to_eps (ksPSpace s(p \<mapsto> KOTCB ko)) = map_to_eps (ksPSpace s)"
-  and     "map_to_aeps (ksPSpace s(p \<mapsto> KOTCB ko)) = map_to_aeps (ksPSpace s)"
+  and     "map_to_ntfns (ksPSpace s(p \<mapsto> KOTCB ko)) = map_to_ntfns (ksPSpace s)"
   and     "map_to_pdes (ksPSpace s(p \<mapsto> KOTCB ko)) = map_to_pdes (ksPSpace s)"
   and     "map_to_ptes (ksPSpace s(p \<mapsto> KOTCB ko)) = map_to_ptes (ksPSpace s)"
   and     "map_to_asidpools (ksPSpace s(p \<mapsto> KOTCB ko)) = map_to_asidpools (ksPSpace s)"
@@ -1143,7 +1143,7 @@ lemma rf_sr_tcb_update_no_queue:
       apply (clarsimp intro!: ext)   
      apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
      apply simp 
-     apply (rule casync_endpoint_relation_upd_tcb_no_queues, assumption+) 
+     apply (rule cnotification_relation_upd_tcb_no_queues, assumption+) 
       apply (clarsimp intro!: ext)
      apply (clarsimp intro!: ext)       
     apply (erule cready_queues_relation_not_queue_ptrs)
@@ -1198,9 +1198,9 @@ lemma rf_sr_tcb_update_not_in_queue:
       apply blast
      apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
      apply clarsimp
-     apply (subgoal_tac "thread \<notin> (fst ` aep_q_refs_of' (aepObj a))")
-      apply (clarsimp simp: casync_endpoint_relation_def Let_def
-                     split: aep.splits)
+     apply (subgoal_tac "thread \<notin> (fst ` ntfn_q_refs_of' (ntfnObj a))")
+      apply (clarsimp simp: cnotification_relation_def Let_def
+                     split: ntfn.splits)
       apply (simp add: image_def tcb_queue_relation_not_in_q)[1]
      apply (drule(1) map_to_ko_atI')
      apply (drule sym_refs_ko_atD', clarsimp+)

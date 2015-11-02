@@ -47,7 +47,7 @@ where
             \<mapsto> (Structures_H.ArchObjectCap (ARMStructures_H.PageDirectoryCap Low_pd_ptr 
                                              (Some Low_asid)), MDB 0 (Low_tcb_ptr + 0x10) False False),
         (the_nat_to_bl_10 318) 
-            \<mapsto> (Structures_H.AsyncEndpointCap aep_ptr 0 True False,
+            \<mapsto> (Structures_H.NotificationCap ntfn_ptr 0 True False,
                MDB (Silc_cnode_ptr + 318 * 0x10) 0 False False))"
 
 definition
@@ -77,7 +77,7 @@ where
            \<mapsto> (Structures_H.ArchObjectCap (ARMStructures_H.PageDirectoryCap High_pd_ptr 
                                             (Some High_asid)), MDB 0 (High_tcb_ptr + 0x10) False False),
         (the_nat_to_bl_10 318)
-           \<mapsto> (Structures_H.AsyncEndpointCap aep_ptr 0 False True,
+           \<mapsto> (Structures_H.NotificationCap ntfn_ptr 0 False True,
                MDB 0 (Silc_cnode_ptr + 318 * 0x10) False False))"
 
 definition
@@ -92,7 +92,7 @@ where
                           then map_option (\<lambda>cte. KOCTE cte) (High_cte' (ucast (offs - base >> cte_level_bits))) else None"
 
 text {* We need a copy of boundary crossing caps owned by SilcLabel.
-        The only such cap is Low's cap to the async endpoint *}
+        The only such cap is Low's cap to the notification *}
 
 definition 
   Silc_capsH :: "cnode_index \<Rightarrow> (capability \<times> mdbnode) option"
@@ -102,7 +102,7 @@ where
       ( (the_nat_to_bl_10 2)
             \<mapsto> (Structures_H.CNodeCap Silc_cnode_ptr 10 2 10, Null_mdb),
         (the_nat_to_bl_10 318) 
-            \<mapsto> (Structures_H.AsyncEndpointCap aep_ptr 0 True False,
+            \<mapsto> (Structures_H.NotificationCap ntfn_ptr 0 True False,
                MDB (High_cnode_ptr + 318 * 0x10) (Low_cnode_ptr + 318 * 0x10) False False))"
 
 definition
@@ -116,12 +116,12 @@ where
   "Silc_cte \<equiv> \<lambda>base offs. if is_aligned offs cte_level_bits \<and> base \<le> offs \<and> offs \<le> base + 2 ^ 14 - 1
                           then map_option (\<lambda>cte. KOCTE cte) (Silc_cte' (ucast (offs - base >> cte_level_bits))) else None"
 
-text {* async endpoint between Low and High *}
+text {* notification between Low and High *}
 
 definition
-  aepH :: Structures_H.async_endpoint
+  ntfnH :: Structures_H.notification
 where
-  "aepH \<equiv> Structures_H.AEP (Structures_H.aep.WaitingAEP [High_tcb_ptr]) None"
+  "ntfnH \<equiv> Structures_H.NTFN (Structures_H.ntfn.WaitingNtfn [High_tcb_ptr]) None"
 
 
 text {* Low's VSpace (PageDirectory)*}
@@ -232,7 +232,7 @@ where
      (* tcbTimeSlice       = *) Low_time_slice
      (* tcbFaultHandler    = *) 0
      (* tcbIPCBuffer       = *) 0
-     (* tcbBoundAEP        = *) None
+     (* tcbBoundNotification        = *) None
      (* tcbContext         = *) undefined"
    
 
@@ -249,14 +249,14 @@ where
      (* tcbCaller          = *) (CTE NullCap Null_mdb)
      (* tcbIPCBufferFrame  = *) (CTE NullCap Null_mdb)
      (* tcbDomain          = *) High_domain
-     (* tcbState           = *) (BlockedOnAsyncEvent aep_ptr)
+     (* tcbState           = *) (BlockedOnNotification ntfn_ptr)
      (* tcbPriority        = *) High_prio
      (* tcbQueued          = *) False
      (* tcbFault           = *) None
      (* tcbTimeSlice       = *) High_time_slice
      (* tcbFaultHandler    = *) 0
      (* tcbIPCBuffer       = *) 0
-     (* tcbBoundAEP        = *) None
+     (* tcbBoundNotification        = *) None
      (* tcbContext         = *) undefined"
 
    
@@ -279,7 +279,7 @@ where
      (* tcbTimeSlice       = *) time_slice
      (* tcbFaultHandler    = *) 0
      (* tcbIPCBuffer       = *) 0
-     (* tcbBoundAEP        = *) None
+     (* tcbBoundNotification        = *) None
      (* tcbContext         = *) empty_context"
 
 definition
@@ -309,7 +309,7 @@ where
           option_update_range (Low_cte Low_cnode_ptr) \<circ>
           option_update_range (High_cte High_cnode_ptr) \<circ>
           option_update_range (Silc_cte Silc_cnode_ptr) \<circ>
-          option_update_range [aep_ptr \<mapsto> KOAEndpoint aepH] \<circ>
+          option_update_range [ntfn_ptr \<mapsto> KONotification ntfnH] \<circ>
           option_update_range [irq_cnode_ptr \<mapsto> KOCTE irq_cte] \<circ>
           option_update_range (Low_pdH Low_pd_ptr) \<circ>
           option_update_range (High_pdH High_pd_ptr) \<circ>
@@ -334,7 +334,7 @@ lemma s0_ptrs_aligned:
   "is_aligned High_tcb_ptr 9"
   "is_aligned Low_tcb_ptr 9"
   "is_aligned idle_tcb_ptr 9"
-  "is_aligned aep_ptr 4"
+  "is_aligned ntfn_ptr 4"
   "is_aligned irq_cnode_ptr 10"
   by (simp_all add: is_aligned_def s0_ptr_defs)
 
@@ -777,7 +777,7 @@ lemma dom_caps:
     done
 
 lemmas kh0H_obj_def = 
-  Low_cte_def High_cte_def Silc_cte_def aepH_def irq_cte_def Low_pdH_def
+  Low_cte_def High_cte_def Silc_cte_def ntfnH_def irq_cte_def Low_pdH_def
   High_pdH_def Low_ptH_def High_ptH_def Low_tcbH_def High_tcbH_def idle_tcbH_def
   global_pdH'_def
 
@@ -802,64 +802,64 @@ lemma kh0H_dom_distinct:
   "High_tcb_ptr \<notin> cnode_offs_range Silc_cnode_ptr"
   "Low_tcb_ptr \<notin> cnode_offs_range Silc_cnode_ptr"
   "irq_cnode_ptr \<notin> cnode_offs_range Silc_cnode_ptr"
-  "aep_ptr \<notin> cnode_offs_range Silc_cnode_ptr"
+  "ntfn_ptr \<notin> cnode_offs_range Silc_cnode_ptr"
   "init_globals_frame \<notin> cnode_offs_range Low_cnode_ptr"
   "idle_tcb_ptr \<notin> cnode_offs_range Low_cnode_ptr"
   "High_tcb_ptr \<notin> cnode_offs_range Low_cnode_ptr"
   "Low_tcb_ptr \<notin> cnode_offs_range Low_cnode_ptr"
   "irq_cnode_ptr \<notin> cnode_offs_range Low_cnode_ptr"
-  "aep_ptr \<notin> cnode_offs_range Low_cnode_ptr"
+  "ntfn_ptr \<notin> cnode_offs_range Low_cnode_ptr"
   "init_globals_frame \<notin> cnode_offs_range High_cnode_ptr"
   "idle_tcb_ptr \<notin> cnode_offs_range High_cnode_ptr"
   "High_tcb_ptr \<notin> cnode_offs_range High_cnode_ptr"
   "Low_tcb_ptr \<notin> cnode_offs_range High_cnode_ptr"
   "irq_cnode_ptr \<notin> cnode_offs_range High_cnode_ptr"
-  "aep_ptr \<notin> cnode_offs_range High_cnode_ptr"
+  "ntfn_ptr \<notin> cnode_offs_range High_cnode_ptr"
   "init_globals_frame \<notin> pd_offs_range Low_pd_ptr"
   "idle_tcb_ptr \<notin> pd_offs_range Low_pd_ptr"
   "High_tcb_ptr \<notin> pd_offs_range Low_pd_ptr"
   "Low_tcb_ptr \<notin> pd_offs_range Low_pd_ptr"
   "irq_cnode_ptr \<notin> pd_offs_range Low_pd_ptr"
-  "aep_ptr \<notin> pd_offs_range Low_pd_ptr"
+  "ntfn_ptr \<notin> pd_offs_range Low_pd_ptr"
   "init_globals_frame \<notin> pd_offs_range High_pd_ptr"
   "idle_tcb_ptr \<notin> pd_offs_range High_pd_ptr"
   "High_tcb_ptr \<notin> pd_offs_range High_pd_ptr"
   "Low_tcb_ptr \<notin> pd_offs_range High_pd_ptr"
   "irq_cnode_ptr \<notin> pd_offs_range High_pd_ptr"
-  "aep_ptr \<notin> pd_offs_range High_pd_ptr"
+  "ntfn_ptr \<notin> pd_offs_range High_pd_ptr"
   "init_globals_frame \<notin> pd_offs_range init_global_pd"
   "idle_tcb_ptr \<notin> pd_offs_range init_global_pd"
   "High_tcb_ptr \<notin> pd_offs_range init_global_pd"
   "Low_tcb_ptr \<notin> pd_offs_range init_global_pd"
   "irq_cnode_ptr \<notin> pd_offs_range init_global_pd"
-  "aep_ptr \<notin> pd_offs_range init_global_pd"
+  "ntfn_ptr \<notin> pd_offs_range init_global_pd"
   "init_globals_frame \<notin> pt_offs_range Low_pt_ptr"
   "idle_tcb_ptr \<notin> pt_offs_range Low_pt_ptr"
   "High_tcb_ptr \<notin> pt_offs_range Low_pt_ptr"
   "Low_tcb_ptr \<notin> pt_offs_range Low_pt_ptr"
   "irq_cnode_ptr \<notin> pt_offs_range Low_pt_ptr"
-  "aep_ptr \<notin> pt_offs_range Low_pt_ptr"
+  "ntfn_ptr \<notin> pt_offs_range Low_pt_ptr"
   "init_globals_frame \<notin> pt_offs_range High_pt_ptr"
   "idle_tcb_ptr \<notin> pt_offs_range High_pt_ptr"
   "High_tcb_ptr \<notin> pt_offs_range High_pt_ptr"
   "Low_tcb_ptr \<notin> pt_offs_range High_pt_ptr"
   "irq_cnode_ptr \<notin> pt_offs_range High_pt_ptr"
-  "aep_ptr \<notin> pt_offs_range High_pt_ptr"
+  "ntfn_ptr \<notin> pt_offs_range High_pt_ptr"
   "init_globals_frame \<notin> tcb_offs_range Low_tcb_ptr"
   "idle_tcb_ptr \<notin> tcb_offs_range Low_tcb_ptr"
   "High_tcb_ptr \<notin> tcb_offs_range Low_tcb_ptr"
   "irq_cnode_ptr \<notin> tcb_offs_range Low_tcb_ptr"
-  "aep_ptr \<notin> tcb_offs_range Low_tcb_ptr"
+  "ntfn_ptr \<notin> tcb_offs_range Low_tcb_ptr"
   "init_globals_frame \<notin> tcb_offs_range High_tcb_ptr"
   "idle_tcb_ptr \<notin> tcb_offs_range High_tcb_ptr"
   "Low_tcb_ptr \<notin> tcb_offs_range High_tcb_ptr"
   "irq_cnode_ptr \<notin> tcb_offs_range High_tcb_ptr"
-  "aep_ptr \<notin> tcb_offs_range High_tcb_ptr"
+  "ntfn_ptr \<notin> tcb_offs_range High_tcb_ptr"
   "init_globals_frame \<notin> tcb_offs_range idle_tcb_ptr"
   "High_tcb_ptr \<notin> tcb_offs_range idle_tcb_ptr"
   "Low_tcb_ptr \<notin> tcb_offs_range idle_tcb_ptr"
   "irq_cnode_ptr \<notin> tcb_offs_range idle_tcb_ptr"
-  "aep_ptr \<notin> tcb_offs_range idle_tcb_ptr"
+  "ntfn_ptr \<notin> tcb_offs_range idle_tcb_ptr"
   by (clarsimp simp: cnode_offs_range_def pd_offs_range_def pt_offs_range_def tcb_offs_range_def kh0H_obj_def s0_ptr_defs)+
 
 lemma kh0H_dom_sets_distinct:
@@ -944,49 +944,49 @@ lemma kh0H_dom_distinct':
   "length x = 10 \<Longrightarrow> Silc_cnode_ptr + of_bl x * 0x10 \<noteq> High_tcb_ptr"
   "length x = 10 \<Longrightarrow> Silc_cnode_ptr + of_bl x * 0x10 \<noteq> Low_tcb_ptr"
   "length x = 10 \<Longrightarrow> Silc_cnode_ptr + of_bl x * 0x10 \<noteq> irq_cnode_ptr"
-  "length x = 10 \<Longrightarrow> Silc_cnode_ptr + of_bl x * 0x10 \<noteq> aep_ptr"
+  "length x = 10 \<Longrightarrow> Silc_cnode_ptr + of_bl x * 0x10 \<noteq> ntfn_ptr"
   "length x = 10 \<Longrightarrow> Low_cnode_ptr + of_bl x * 0x10 \<noteq> init_globals_frame"
   "length x = 10 \<Longrightarrow> Low_cnode_ptr + of_bl x * 0x10 \<noteq> idle_tcb_ptr"
   "length x = 10 \<Longrightarrow> Low_cnode_ptr + of_bl x * 0x10 \<noteq> High_tcb_ptr"
   "length x = 10 \<Longrightarrow> Low_cnode_ptr + of_bl x * 0x10 \<noteq> Low_tcb_ptr"
   "length x = 10 \<Longrightarrow> Low_cnode_ptr + of_bl x * 0x10 \<noteq> irq_cnode_ptr"
-  "length x = 10 \<Longrightarrow> Low_cnode_ptr + of_bl x * 0x10 \<noteq> aep_ptr"
+  "length x = 10 \<Longrightarrow> Low_cnode_ptr + of_bl x * 0x10 \<noteq> ntfn_ptr"
   "length x = 10 \<Longrightarrow> High_cnode_ptr + of_bl x * 0x10 \<noteq> init_globals_frame"
   "length x = 10 \<Longrightarrow> High_cnode_ptr + of_bl x * 0x10 \<noteq> idle_tcb_ptr"
   "length x = 10 \<Longrightarrow> High_cnode_ptr + of_bl x * 0x10 \<noteq> High_tcb_ptr"
   "length x = 10 \<Longrightarrow> High_cnode_ptr + of_bl x * 0x10 \<noteq> Low_tcb_ptr"
   "length x = 10 \<Longrightarrow> High_cnode_ptr + of_bl x * 0x10 \<noteq> irq_cnode_ptr"
-  "length x = 10 \<Longrightarrow> High_cnode_ptr + of_bl x * 0x10 \<noteq> aep_ptr"
+  "length x = 10 \<Longrightarrow> High_cnode_ptr + of_bl x * 0x10 \<noteq> ntfn_ptr"
   "Low_pd_ptr + (ucast (y::12 word) << 2) \<noteq> init_globals_frame"
   "Low_pd_ptr + (ucast (y::12 word) << 2) \<noteq> idle_tcb_ptr"
   "Low_pd_ptr + (ucast (y::12 word) << 2) \<noteq> High_tcb_ptr"
   "Low_pd_ptr + (ucast (y::12 word) << 2) \<noteq> Low_tcb_ptr"
   "Low_pd_ptr + (ucast (y::12 word) << 2) \<noteq> irq_cnode_ptr"
-  "Low_pd_ptr + (ucast (y::12 word) << 2) \<noteq> aep_ptr"
+  "Low_pd_ptr + (ucast (y::12 word) << 2) \<noteq> ntfn_ptr"
   "High_pd_ptr + (ucast (y::12 word) << 2) \<noteq> init_globals_frame"
   "High_pd_ptr + (ucast (y::12 word) << 2) \<noteq> idle_tcb_ptr"
   "High_pd_ptr + (ucast (y::12 word) << 2) \<noteq> High_tcb_ptr"
   "High_pd_ptr + (ucast (y::12 word) << 2) \<noteq> Low_tcb_ptr"
   "High_pd_ptr + (ucast (y::12 word) << 2) \<noteq> irq_cnode_ptr"
-  "High_pd_ptr + (ucast (y::12 word) << 2) \<noteq> aep_ptr"
+  "High_pd_ptr + (ucast (y::12 word) << 2) \<noteq> ntfn_ptr"
   "init_global_pd + (ucast (y::12 word) << 2) \<noteq> init_globals_frame"
   "init_global_pd + (ucast (y::12 word) << 2) \<noteq> idle_tcb_ptr"
   "init_global_pd + (ucast (y::12 word) << 2) \<noteq> High_tcb_ptr"
   "init_global_pd + (ucast (y::12 word) << 2) \<noteq> Low_tcb_ptr"
   "init_global_pd + (ucast (y::12 word) << 2) \<noteq> irq_cnode_ptr"
-  "init_global_pd + (ucast (y::12 word) << 2) \<noteq> aep_ptr"
+  "init_global_pd + (ucast (y::12 word) << 2) \<noteq> ntfn_ptr"
   "Low_pt_ptr + (ucast (z::8 word) << 2) \<noteq> init_globals_frame"
   "Low_pt_ptr + (ucast (z::8 word) << 2) \<noteq> idle_tcb_ptr"
   "Low_pt_ptr + (ucast (z::8 word) << 2) \<noteq> High_tcb_ptr"
   "Low_pt_ptr + (ucast (z::8 word) << 2) \<noteq> Low_tcb_ptr"
   "Low_pt_ptr + (ucast (z::8 word) << 2) \<noteq> irq_cnode_ptr"
-  "Low_pt_ptr + (ucast (z::8 word) << 2) \<noteq> aep_ptr"
+  "Low_pt_ptr + (ucast (z::8 word) << 2) \<noteq> ntfn_ptr"
   "High_pt_ptr + (ucast (z::8 word) << 2) \<noteq> init_globals_frame"
   "High_pt_ptr + (ucast (z::8 word) << 2) \<noteq> idle_tcb_ptr"
   "High_pt_ptr + (ucast (z::8 word) << 2) \<noteq> High_tcb_ptr"
   "High_pt_ptr + (ucast (z::8 word) << 2) \<noteq> Low_tcb_ptr"
   "High_pt_ptr + (ucast (z::8 word) << 2) \<noteq> irq_cnode_ptr"
-  "High_pt_ptr + (ucast (z::8 word) << 2) \<noteq> aep_ptr"
+  "High_pt_ptr + (ucast (z::8 word) << 2) \<noteq> ntfn_ptr"
   apply (drule offs_in_range, fastforce simp: kh0H_dom_distinct)+
   apply (cut_tac x=y in offs_in_range(1), fastforce simp: kh0H_dom_distinct)+
   apply (cut_tac x=y in offs_in_range(2), fastforce simp: kh0H_dom_distinct)+
@@ -1002,7 +1002,7 @@ lemma not_disjointI:
 lemma kh0H_simps[simp]:
   "kh0H (init_irq_node_ptr + (ucast (irq::8 word) << cte_level_bits)) =
                 Some (KOCTE (CTE capability.NullCap Null_mdb))"
-  "kh0H aep_ptr = Some (KOAEndpoint aepH)"
+  "kh0H ntfn_ptr = Some (KONotification ntfnH)"
   "kh0H irq_cnode_ptr = Some (KOCTE irq_cte)"
   "kh0H Low_tcb_ptr = Some (KOTCB Low_tcbH)"
   "kh0H High_tcb_ptr = Some (KOTCB High_tcbH)"
@@ -1031,7 +1031,7 @@ lemma kh0H_simps[simp]:
 
 lemma kh0H_dom:
   "dom kh0H = {init_globals_frame, idle_tcb_ptr, High_tcb_ptr, Low_tcb_ptr,
-              irq_cnode_ptr, aep_ptr} \<union>
+              irq_cnode_ptr, ntfn_ptr} \<union>
              irq_node_offs_range \<union>
              cnode_offs_range Silc_cnode_ptr \<union>
              cnode_offs_range High_cnode_ptr \<union>
@@ -1060,7 +1060,7 @@ lemma kh0H_SomeD:
         x = idle_tcb_ptr \<and> y = KOTCB idle_tcbH \<or>
         x = High_tcb_ptr \<and> y = KOTCB High_tcbH \<or>
         x = Low_tcb_ptr \<and> y = KOTCB Low_tcbH \<or>
-        x = aep_ptr \<and> y = KOAEndpoint aepH \<or>
+        x = ntfn_ptr \<and> y = KONotification ntfnH \<or>
         x = irq_cnode_ptr \<and> y = KOCTE irq_cte \<or>
         x \<in> irq_node_offs_range \<and> y = KOCTE (CTE capability.NullCap Null_mdb) \<or>
         x \<in> cnode_offs_range Low_cnode_ptr \<and> Low_cte Low_cnode_ptr x \<noteq> None \<and> y = the (Low_cte Low_cnode_ptr x) \<or>
@@ -2024,19 +2024,19 @@ lemma kh0H_dom_distinct2:
   "Silc_cnode_ptr + 0x10 * (x && mask 10) \<noteq> High_tcb_ptr"
   "Silc_cnode_ptr + 0x10 * (x && mask 10) \<noteq> Low_tcb_ptr"
   "Silc_cnode_ptr + 0x10 * (x && mask 10) \<noteq> irq_cnode_ptr"
-  "Silc_cnode_ptr + 0x10 * (x && mask 10) \<noteq> aep_ptr"
+  "Silc_cnode_ptr + 0x10 * (x && mask 10) \<noteq> ntfn_ptr"
   "Low_cnode_ptr + 0x10 * (x && mask 10) \<noteq> init_globals_frame"
   "Low_cnode_ptr + 0x10 * (x && mask 10) \<noteq> idle_tcb_ptr"
   "Low_cnode_ptr + 0x10 * (x && mask 10) \<noteq> High_tcb_ptr"
   "Low_cnode_ptr + 0x10 * (x && mask 10) \<noteq> Low_tcb_ptr"
   "Low_cnode_ptr + 0x10 * (x && mask 10) \<noteq> irq_cnode_ptr"
-  "Low_cnode_ptr + 0x10 * (x && mask 10) \<noteq> aep_ptr"
+  "Low_cnode_ptr + 0x10 * (x && mask 10) \<noteq> ntfn_ptr"
   "High_cnode_ptr + 0x10 * (x && mask 10) \<noteq> init_globals_frame"
   "High_cnode_ptr + 0x10 * (x && mask 10) \<noteq> idle_tcb_ptr"
   "High_cnode_ptr + 0x10 * (x && mask 10) \<noteq> High_tcb_ptr"
   "High_cnode_ptr + 0x10 * (x && mask 10) \<noteq> Low_tcb_ptr"
   "High_cnode_ptr + 0x10 * (x && mask 10) \<noteq> irq_cnode_ptr"
-  "High_cnode_ptr + 0x10 * (x && mask 10) \<noteq> aep_ptr"
+  "High_cnode_ptr + 0x10 * (x && mask 10) \<noteq> ntfn_ptr"
   by (cut_tac x=x in cnode_offs_in_range2(1), fastforce simp: kh0H_dom_distinct
          | cut_tac x=x in cnode_offs_in_range2(2), fastforce simp: kh0H_dom_distinct
          | cut_tac x=x in cnode_offs_in_range2(3), fastforce simp: kh0H_dom_distinct)+
@@ -2089,8 +2089,8 @@ lemma valid_caps_s0H[simp]:
   "valid_cap' (CNodeCap Silc_cnode_ptr 10 2 10) s0H_internal"
   "valid_cap' (ArchObjectCap (PageDirectoryCap Low_pd_ptr (Some Low_asid))) s0H_internal"
   "valid_cap' (ArchObjectCap (PageDirectoryCap High_pd_ptr (Some High_asid))) s0H_internal"
-  "valid_cap' (AsyncEndpointCap aep_ptr 0 True False) s0H_internal"
-  "valid_cap' (AsyncEndpointCap aep_ptr 0 False True) s0H_internal"
+  "valid_cap' (NotificationCap ntfn_ptr 0 True False) s0H_internal"
+  "valid_cap' (NotificationCap ntfn_ptr 0 False True) s0H_internal"
   "valid_cap' (ReplyCap Low_tcb_ptr True) s0H_internal"
   "valid_cap' (ReplyCap High_tcb_ptr True) s0H_internal"
   apply (simp
@@ -2137,12 +2137,12 @@ lemma valid_caps_s0H[simp]:
    apply (clarsimp simp: High_pdH_def pd_offs_aligned pd_offs_min pd_offs_max s0_ptrs_aligned add.commute objBitsKO_def archObjSize_def)
    apply (rule pspace_distinctD''[OF _ s0H_pspace_distinct'])
    apply (simp add: High_pdH_def pd_offs_aligned pd_offs_min pd_offs_max s0_ptrs_aligned objBitsKO_def archObjSize_def add.commute)
-   apply (simp add: valid_cap'_def capAligned_def word_bits_def objBits_def s0_ptrs_aligned obj_at'_def projectKO_eq project_inject Low_asid_def asid_low_bits_def asid_bits_def objBitsKO_def aepH_def)
+   apply (simp add: valid_cap'_def capAligned_def word_bits_def objBits_def s0_ptrs_aligned obj_at'_def projectKO_eq project_inject Low_asid_def asid_low_bits_def asid_bits_def objBitsKO_def ntfnH_def)
    apply (rule pspace_distinctD''[OF _ s0H_pspace_distinct', simplified])
-   apply (simp add: aepH_def objBitsKO_def)
-   apply (simp add: valid_cap'_def capAligned_def word_bits_def objBits_def s0_ptrs_aligned obj_at'_def projectKO_eq project_inject Low_asid_def asid_low_bits_def asid_bits_def objBitsKO_def aepH_def)
+   apply (simp add: ntfnH_def objBitsKO_def)
+   apply (simp add: valid_cap'_def capAligned_def word_bits_def objBits_def s0_ptrs_aligned obj_at'_def projectKO_eq project_inject Low_asid_def asid_low_bits_def asid_bits_def objBitsKO_def ntfnH_def)
    apply (rule pspace_distinctD''[OF _ s0H_pspace_distinct'])
-   apply (simp add: aepH_def objBitsKO_def)
+   apply (simp add: ntfnH_def objBitsKO_def)
   by (simp
         | simp add: valid_cap'_def s0H_internal_def capAligned_def word_bits_def objBits_def s0_ptrs_aligned obj_at'_def projectKO_eq project_inject Low_asid_def asid_low_bits_def asid_bits_def,
           intro conjI,
@@ -2159,13 +2159,13 @@ lemma s0H_valid_objs':
   apply (elim disjE)
                 apply clarsimp
                apply (clarsimp simp: valid_obj'_def valid_tcb'_def kh0H_obj_def valid_tcb_state'_def default_domain_def maxDomain_def numDomains_def minBound_word default_priority_def tcb_cte_cases_def)
-              apply (clarsimp simp: valid_obj'_def valid_tcb'_def kh0H_obj_def valid_tcb_state'_def High_domain_def maxDomain_def numDomains_def minBound_word High_prio_def maxPriority_def numPriorities_def tcb_cte_cases_def High_capsH_def obj_at'_def projectKO_eq project_inject aepH_def)
+              apply (clarsimp simp: valid_obj'_def valid_tcb'_def kh0H_obj_def valid_tcb_state'_def High_domain_def maxDomain_def numDomains_def minBound_word High_prio_def maxPriority_def numPriorities_def tcb_cte_cases_def High_capsH_def obj_at'_def projectKO_eq project_inject ntfnH_def)
               apply (rule conjI)
                apply (simp add: is_aligned_def s0_ptr_defs objBitsKO_def)
               apply (rule pspace_distinctD'[OF _ s0H_pspace_distinct'])
-              apply (simp add: aepH_def)
+              apply (simp add: ntfnH_def)
              apply (clarsimp simp: valid_obj'_def valid_tcb'_def kh0H_obj_def valid_tcb_state'_def Low_domain_def maxDomain_def numDomains_def minBound_word Low_prio_def maxPriority_def numPriorities_def tcb_cte_cases_def Low_capsH_def)
-            apply (clarsimp simp: valid_obj'_def aepH_def valid_aep'_def obj_at'_def projectKO_eq project_inject aepH_def)
+            apply (clarsimp simp: valid_obj'_def ntfnH_def valid_ntfn'_def obj_at'_def projectKO_eq project_inject ntfnH_def)
             apply (rule conjI)
              apply (clarsimp simp: is_aligned_def s0_ptr_defs objBitsKO_def)
             apply (rule pspace_distinctD'[OF _ s0H_pspace_distinct'])
@@ -2289,7 +2289,7 @@ lemmas kh0H_all_obj_def' = kh0H_all_obj_def Low_cte_cte_def High_cte_cte_def Sil
 
 lemma map_to_ctes_kh0H_simps'[simp]:
   "map_to_ctes kh0H (Low_cnode_ptr + 0x13E0) = Some
-    (CTE (AsyncEndpointCap aep_ptr 0 True False) (MDB (Silc_cnode_ptr + 0x13E0) 0 False False))"
+    (CTE (NotificationCap ntfn_ptr 0 True False) (MDB (Silc_cnode_ptr + 0x13E0) 0 False False))"
   "map_to_ctes kh0H (Low_cnode_ptr + 0x30) = Some
     (CTE (ArchObjectCap (PageDirectoryCap Low_pd_ptr (Some Low_asid)))
          (MDB 0 (Low_tcb_ptr + 0x10) False False))"
@@ -2297,7 +2297,7 @@ lemma map_to_ctes_kh0H_simps'[simp]:
     (CTE (CNodeCap Low_cnode_ptr 10 2 10) (MDB 0 Low_tcb_ptr False False))"
   "map_to_ctes kh0H (Low_cnode_ptr + 0x10) = Some (CTE (ThreadCap Low_tcb_ptr) Null_mdb)"
   "map_to_ctes kh0H (High_cnode_ptr + 0x13E0) = Some
-    (CTE (AsyncEndpointCap aep_ptr 0 False True) (MDB 0 (Silc_cnode_ptr + 0x13E0) False False))"
+    (CTE (NotificationCap ntfn_ptr 0 False True) (MDB 0 (Silc_cnode_ptr + 0x13E0) False False))"
   "map_to_ctes kh0H (High_cnode_ptr + 0x30) = Some
     (CTE (ArchObjectCap (PageDirectoryCap High_pd_ptr (Some High_asid)))
          (MDB 0 (High_tcb_ptr + 0x10) False False))"
@@ -2305,7 +2305,7 @@ lemma map_to_ctes_kh0H_simps'[simp]:
     (CTE (CNodeCap High_cnode_ptr 10 2 10) (MDB 0 High_tcb_ptr False False))"
   "map_to_ctes kh0H (High_cnode_ptr + 0x10) = Some (CTE (ThreadCap High_tcb_ptr) Null_mdb)"
   "map_to_ctes kh0H (Silc_cnode_ptr + 0x13E0) = Some
-    (CTE (AsyncEndpointCap aep_ptr 0 True False)
+    (CTE (NotificationCap ntfn_ptr 0 True False)
          (MDB (High_cnode_ptr + 0x13E0) (Low_cnode_ptr + 0x13E0) False False))"
   "map_to_ctes kh0H (Silc_cnode_ptr + 0x20) = Some
     (CTE (CNodeCap Silc_cnode_ptr 10 2 10) Null_mdb)"
@@ -2681,13 +2681,13 @@ lemma s0H_valid_pspace':
               apply (elim disjE, (clarsimp simp: kh0H_all_obj_def Low_cte_cte_def High_cte_cte_def Silc_cte_cte_def isCap_simps cnode_offs_range_def sameRegionAs_def split: split_if_asm)+)[1]
              apply (intro conjI impI)
               apply (clarsimp simp: High_cte_cte_def kh0H_all_obj_def isCap_simps split: split_if_asm)
-             apply (drule(1) sameRegion_aep)
+             apply (drule(1) sameRegion_ntfn)
              apply (clarsimp simp: High_cte_cte_def kh0H_all_obj_def isCap_simps split: split_if_asm)
              apply (frule_tac x=p' in map_to_ctes_kh0H_SomeD)
              apply (elim disjE, (clarsimp simp: kh0H_all_obj_def High_cte_cte_def Low_cte_cte_def Silc_cte_cte_def split: split_if_asm)+)[1]
             apply (intro conjI impI)
              apply (clarsimp simp: Low_cte_cte_def kh0H_all_obj_def isCap_simps split: split_if_asm)
-            apply (drule(1) sameRegion_aep)
+            apply (drule(1) sameRegion_ntfn)
             apply (clarsimp simp: Low_cte_cte_def kh0H_all_obj_def isCap_simps split: split_if_asm)
             apply (frule_tac x=p' in map_to_ctes_kh0H_SomeD)
             apply (elim disjE, (clarsimp simp: kh0H_all_obj_def High_cte_cte_def Low_cte_cte_def Silc_cte_cte_def split: split_if_asm)+)[1]
@@ -2773,13 +2773,13 @@ lemma s0H_invs:
               apply (clarsimp simp: tcb_st_refs_of'_def idle_tcbH_def)
              apply (clarsimp simp: tcb_st_refs_of'_def High_tcbH_def)
              apply (rule conjI)
-              apply (clarsimp simp: aepH_def)
-             apply (clarsimp simp: objBitsKO_def aepH_def)
+              apply (clarsimp simp: ntfnH_def)
+             apply (clarsimp simp: objBitsKO_def ntfnH_def)
              apply (erule impE, simp add: is_aligned_def s0_ptr_defs)
              apply (erule notE, rule pspace_distinctD''[OF _ s0H_pspace_distinct'])
-             apply (simp add: objBitsKO_def aepH_def)
+             apply (simp add: objBitsKO_def ntfnH_def)
             apply (clarsimp simp: tcb_st_refs_of'_def Low_tcbH_def)
-           apply (clarsimp simp: aepH_def aep_q_refs_of'_def)
+           apply (clarsimp simp: ntfnH_def ntfn_q_refs_of'_def)
            apply (rule conjI)
             apply (clarsimp simp: tcb_st_refs_of'_def High_tcbH_def)
            apply (clarsimp simp: objBitsKO_def s0_ptrs_aligned)
@@ -3007,7 +3007,7 @@ lemma s0H_invs:
 
 lemma kh0_pspace_dom:
   "pspace_dom kh0 = {init_globals_frame, idle_tcb_ptr, High_tcb_ptr, Low_tcb_ptr,
-              irq_cnode_ptr, aep_ptr} \<union>
+              irq_cnode_ptr, ntfn_ptr} \<union>
              irq_node_offs_range \<union>
              cnode_offs_range Silc_cnode_ptr \<union>
              cnode_offs_range High_cnode_ptr \<union>
@@ -3040,7 +3040,7 @@ lemma kh0_pspace_dom:
    apply (rule_tac x=irq_cnode_ptr in exI)
    apply (clarsimp simp: kh0_def kh0_obj_def s0_ptr_defs image_def cte_map_def)
   apply (rule conjI)
-   apply (rule_tac x=aep_ptr in exI)
+   apply (rule_tac x=ntfn_ptr in exI)
    apply (clarsimp simp: kh0_def kh0_obj_def s0_ptr_defs image_def)
   apply (rule conjI)
    apply clarsimp
@@ -3159,7 +3159,7 @@ lemma s0_pspace_rel:
         apply (cut_tac x=ya in pd_offs_in_range(1))
         apply (clarsimp simp: pd_offs_range_def pde_relation_def pde_relation_aligned_def pde_relation'_def)
        apply (clarsimp simp: kh0H_obj_def irq_cnode_def cte_map_def cte_relation_def well_formed_cnode_n_def split: split_if_asm)
-      apply (clarsimp simp: kh0H_obj_def kh0_obj_def other_obj_relation_def aep_relation_def)
+      apply (clarsimp simp: kh0H_obj_def kh0_obj_def other_obj_relation_def ntfn_relation_def)
      apply (clarsimp simp: kh0H_obj_def kh0_obj_def cte_relation_def cte_map_def)
      apply (cut_tac dom_caps(1))[1]
      apply (frule_tac m="Silc_caps" in domI)

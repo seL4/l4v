@@ -63,10 +63,10 @@ text {*
      \end{list}}
 
 \glossaryentry
-  {aep, async\_ep, AsyncEndpoint}
+  {ntfn, async\_ep, Notification}
   {Asynchronous Communication Endpoint. A kernel object in seL4 for
   asynchronous message passing.}
-  {glos:aep}
+  {glos:ntfn}
 
 \glossaryentry
   {asid, asid pool}

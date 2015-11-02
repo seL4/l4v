@@ -530,8 +530,8 @@ lemma ccorres_get_registers:
    ccorres dc xfdc
      (P and Q and ct_in_state' \<top> and R)
      {s. \<exists>v. cslift s (ksCurThread_' (globals s)) = Some v
-              \<and> cptr_' s = index (registers_C (tcbContext_C v)) (unat capRegister)
-              \<and> msgInfo_' s = index (registers_C (tcbContext_C v)) (unat msgInfoRegister)} []
+              \<and> cptr_' s = index (registers_C (tcbContext_C (tcbArch_C v))) (unat capRegister)
+              \<and> msgInfo_' s = index (registers_C (tcbContext_C (tcbArch_C v))) (unat msgInfoRegister)} []
      m c"
   apply (rule ccorres_assume_pre)
   apply (clarsimp simp: ct_in_state'_def st_tcb_at'_def)
@@ -635,7 +635,7 @@ lemma entry_corres_C:
        apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)  
       apply (rule corres_split)
          prefer 2
-         apply (rule setContext_C_corres, rule ccontext_rel_to_C)
+         apply (rule setArchTCB_C_corres, simp, rule ccontext_rel_to_C)
          apply simp
         apply (rule corres_split)
            prefer 2
@@ -680,7 +680,7 @@ lemma ct_running'_C:
     ThreadState_BlockedOnReceive_def 
     ThreadState_BlockedOnSend_def 
     ThreadState_BlockedOnReply_def 
-    ThreadState_BlockedOnAsyncEvent_def 
+    ThreadState_BlockedOnNotification_def 
     ThreadState_Inactive_def 
     ThreadState_IdleThreadState_def 
     ThreadState_Restart_def)
@@ -992,10 +992,10 @@ lemma kernel_all_subset_kernel:
   apply (intro conjI)
    apply (simp_all add: kernel_global.kernel_call_C_def
                     kernel_call_C_def kernelEntry_C_def
-                    setContext_C_def
+                    setArchTCB_C_def
                     kernel_global.kernelEntry_C_def
                      exec_C_Basic
-                    kernel_global.setContext_C_def
+                    kernel_global.setArchTCB_C_def
                     kernel_call_H_def kernelEntry_def
                     getContext_C_def
                     check_active_irq_C_def checkActiveIRQ_C_def

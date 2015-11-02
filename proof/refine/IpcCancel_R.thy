@@ -15,28 +15,28 @@ imports
 begin
 
 
-crunch aligned'[wp]: epCancelAll pspace_aligned'
+crunch aligned'[wp]: cancelAllIPC pspace_aligned'
   (wp: crunch_wps mapM_x_wp' simp: unless_def)
-crunch distinct'[wp]: epCancelAll pspace_distinct'
+crunch distinct'[wp]: cancelAllIPC pspace_distinct'
   (wp: crunch_wps mapM_x_wp' simp: unless_def)
 
-crunch aligned'[wp]: aepCancelAll pspace_aligned'
+crunch aligned'[wp]: cancelAllSignals pspace_aligned'
   (wp: crunch_wps mapM_x_wp')
-crunch distinct'[wp]: aepCancelAll pspace_distinct'
+crunch distinct'[wp]: cancelAllSignals pspace_distinct'
   (wp: crunch_wps mapM_x_wp')
 
-lemma asyncIPCCancel_simple[wp]:
-  "\<lbrace>\<top>\<rbrace> asyncIPCCancel t aep \<lbrace>\<lambda>rv. st_tcb_at' simple' t\<rbrace>"
-  apply (simp add: asyncIPCCancel_def Let_def)
+lemma cancelSignal_simple[wp]:
+  "\<lbrace>\<top>\<rbrace> cancelSignal t ntfn \<lbrace>\<lambda>rv. st_tcb_at' simple' t\<rbrace>"
+  apply (simp add: cancelSignal_def Let_def)
   apply (wp setThreadState_st_tcb | simp)+
   done
 
-lemma asyncIPCCancel_pred_tcb_at':
+lemma cancelSignal_pred_tcb_at':
   "\<lbrace>pred_tcb_at' proj P t' and K (t \<noteq> t')\<rbrace>
-     asyncIPCCancel t aepptr
+     cancelSignal t ntfnptr
    \<lbrace>\<lambda>rv. pred_tcb_at' proj P t'\<rbrace>"
-  apply (simp add: asyncIPCCancel_def)
-  apply (wp sts_pred_tcb_neq' getAsyncEP_wp | wpc | clarsimp)+
+  apply (simp add: cancelSignal_def)
+  apply (wp sts_pred_tcb_neq' getNotification_wp | wpc | clarsimp)+
   done
 
 crunch pred_tcb_at'[wp]: emptySlot "pred_tcb_at' proj P t"
@@ -91,9 +91,9 @@ locale delete_one_conc_pre =
   assumes delete_one_tcbDomain_obj_at':
     "\<And>P. \<lbrace>obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t'\<rbrace> cteDeleteOne slot \<lbrace>\<lambda>_. obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t'\<rbrace>"
 
-lemma (in delete_one_conc_pre) ipcCancel_simple[wp]:
-  "\<lbrace>\<top>\<rbrace> ipcCancel t \<lbrace>\<lambda>rv. st_tcb_at' simple' t\<rbrace>"
-  apply (simp add: ipcCancel_def Let_def getThreadReplySlot_def
+lemma (in delete_one_conc_pre) cancelIPC_simple[wp]:
+  "\<lbrace>\<top>\<rbrace> cancelIPC t \<lbrace>\<lambda>rv. st_tcb_at' simple' t\<rbrace>"
+  apply (simp add: cancelIPC_def Let_def getThreadReplySlot_def
              cong: Structures_H.thread_state.case_cong list.case_cong)
   apply (rule hoare_seq_ext [OF _ gts_sp'])
   apply (rule hoare_pre)
@@ -101,7 +101,7 @@ lemma (in delete_one_conc_pre) ipcCancel_simple[wp]:
            | wp sts_st_tcb_at'_cases hoare_vcg_conj_lift
                 hoare_vcg_const_imp_lift delete_one_st_tcb_at
                 threadSet_pred_tcb_no_state
-                hoare_strengthen_post [OF asyncIPCCancel_simple]
+                hoare_strengthen_post [OF cancelSignal_simple]
            | simp
            | rule hoare_drop_imps
            | clarsimp elim!: pred_tcb'_weakenE)+
@@ -109,17 +109,17 @@ lemma (in delete_one_conc_pre) ipcCancel_simple[wp]:
              elim!: pred_tcb'_weakenE)
   done
 
-lemma (in delete_one_conc_pre) ipcCancel_st_tcb_at':
+lemma (in delete_one_conc_pre) cancelIPC_st_tcb_at':
   "\<lbrace>st_tcb_at' P t' and K (t \<noteq> t')\<rbrace>
-     ipcCancel t
+     cancelIPC t
    \<lbrace>\<lambda>rv. st_tcb_at' P t'\<rbrace>"
-  apply (simp add: ipcCancel_def Let_def getThreadReplySlot_def locateSlot_def
+  apply (simp add: cancelIPC_def Let_def getThreadReplySlot_def locateSlot_def
                    capHasProperty_def isCap_simps)
   apply (wp sts_pred_tcb_neq' hoare_drop_imps delete_one_reply_st_tcb_at
        | wpc | clarsimp)+
           apply (wp getCTE_wp | clarsimp)+
          apply (wp hoare_vcg_ex_lift threadSet_cte_wp_at' hoare_vcg_imp_lift
-                   asyncIPCCancel_pred_tcb_at' sts_pred_tcb_neq' getEndpoint_wp gts_wp'
+                   cancelSignal_pred_tcb_at' sts_pred_tcb_neq' getEndpoint_wp gts_wp'
                    threadSet_pred_tcb_no_state
               | wpc | clarsimp)+
   apply (auto simp: cte_wp_at_ctes_of isCap_simps)
@@ -127,7 +127,7 @@ lemma (in delete_one_conc_pre) ipcCancel_st_tcb_at':
 
 crunch typ_at'[wp]: emptySlot "\<lambda>s. P (typ_at' T p s)"
 
-crunch tcb_at'[wp]: asyncIPCCancel "tcb_at' t"
+crunch tcb_at'[wp]: cancelSignal "tcb_at' t"
   (wp: crunch_wps simp: crunch_simps)
 
 context delete_one_conc_pre
@@ -135,9 +135,9 @@ begin
 
 lemmas delete_one_typ_ats[wp] = typ_at_lifts [OF delete_one_typ_at]
 
-lemma ipcCancel_tcb_at'[wp]:
-  "\<lbrace>tcb_at' t\<rbrace> ipcCancel t' \<lbrace>\<lambda>_. tcb_at' t\<rbrace>"
-  apply (simp add: ipcCancel_def Let_def getThreadReplySlot_def)
+lemma cancelIPC_tcb_at'[wp]:
+  "\<lbrace>tcb_at' t\<rbrace> cancelIPC t' \<lbrace>\<lambda>_. tcb_at' t\<rbrace>"
+  apply (simp add: cancelIPC_def Let_def getThreadReplySlot_def)
   apply (wp delete_one_typ_ats hoare_drop_imps
        | simp add: o_def if_apply_def2 | wpc | assumption)+
   done
@@ -159,11 +159,11 @@ lemma invs_weak_sch_act_wf[elim!]:
 crunch tcb_at[wp]: set_endpoint "tcb_at t"
 crunch tcb_at'[wp]: setEndpoint "tcb_at' t"
 
-lemma blocked_ipc_cancel_corres:
+lemma blocked_cancel_ipc_corres:
   "\<lbrakk> st = Structures_A.BlockedOnReceive epPtr x \<or> 
      st = Structures_A.BlockedOnSend epPtr p; thread_state_relation st st' \<rbrakk> \<Longrightarrow>
    corres dc (invs and st_tcb_at (op = st) t) (invs' and st_tcb_at' (op = st') t)
-           (blocked_ipc_cancel st t)
+           (blocked_cancel_ipc st t)
            (do ep \<leftarrow> getEndpoint epPtr;
                y \<leftarrow> assert (\<not> (case ep of IdleEP \<Rightarrow> True | _ \<Rightarrow> False));
                ep' \<leftarrow>
@@ -173,7 +173,7 @@ lemma blocked_ipc_cancel_corres:
                y \<leftarrow> setEndpoint epPtr ep';
                setThreadState Structures_H.thread_state.Inactive t
             od)"  
-  apply (simp add: blocked_ipc_cancel_def gbep_ret)
+  apply (simp add: blocked_cancel_ipc_def gbep_ret)
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ get_ep_corres])
       apply (rule_tac F="ep \<noteq> IdleEP" in corres_gen_asm2)
@@ -300,33 +300,33 @@ lemma blocked_ipc_cancel_corres:
 
 lemma ac_corres:
   "corres dc 
-          (invs and st_tcb_at (op = (Structures_A.BlockedOnAsyncEvent aep)) t)
-          (invs' and st_tcb_at' (op = (BlockedOnAsyncEvent aep)) t) 
-          (async_ipc_cancel t aep)
-          (asyncIPCCancel t aep)"
-  apply (simp add: async_ipc_cancel_def asyncIPCCancel_def Let_def)
+          (invs and st_tcb_at (op = (Structures_A.BlockedOnNotification ntfn)) t)
+          (invs' and st_tcb_at' (op = (BlockedOnNotification ntfn)) t) 
+          (cancel_signal t ntfn)
+          (cancelSignal t ntfn)"
+  apply (simp add: cancel_signal_def cancelSignal_def Let_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split [OF _ get_aep_corres])
-      apply (rule_tac F="isWaitingAEP (aepObj aepaa)" in corres_gen_asm2)
-      apply (case_tac "aep_obj aepa")
-        apply (simp add: aep_relation_def isWaitingAEP_def)
-       apply (simp add: isWaitingAEP_def aep_relation_def split del: split_if)
+    apply (rule corres_split [OF _ get_ntfn_corres])
+      apply (rule_tac F="isWaitingNtfn (ntfnObj ntfnaa)" in corres_gen_asm2)
+      apply (case_tac "ntfn_obj ntfna")
+        apply (simp add: ntfn_relation_def isWaitingNtfn_def)
+       apply (simp add: isWaitingNtfn_def ntfn_relation_def split del: split_if)
        apply (rename_tac list)
        apply (rule_tac R="remove1 t list = []" in corres_cases)
         apply (simp del: dc_simp)
-        apply (rule corres_split [OF _ set_aep_corres])
+        apply (rule corres_split [OF _ set_ntfn_corres])
            apply (rule sts_corres)
            apply simp
-          apply (simp add: aep_relation_def)
+          apply (simp add: ntfn_relation_def)
          apply (wp)
        apply (simp add: list_case_If del: dc_simp)
-       apply (rule corres_split [OF _ set_aep_corres])
+       apply (rule corres_split [OF _ set_ntfn_corres])
           apply (rule sts_corres)
           apply simp
-         apply (clarsimp simp add: aep_relation_def neq_Nil_conv)
+         apply (clarsimp simp add: ntfn_relation_def neq_Nil_conv)
         apply (wp)
-      apply (simp add: isWaitingAEP_def aep_relation_def)
-     apply (wp getAsyncEP_wp)
+      apply (simp add: isWaitingNtfn_def ntfn_relation_def)
+     apply (wp getNotification_wp)
    apply (clarsimp simp: conj_comms st_tcb_at_tcb_at)
    apply (clarsimp simp: st_tcb_at_def obj_at_def)
    apply (erule pspace_valid_objsE)
@@ -345,9 +345,9 @@ lemma ac_corres:
    apply (drule sym, simp)
   apply (clarsimp simp: invs_weak_sch_act_wf)
   apply (drule sym_refs_st_tcb_atD', fastforce)
-  apply (fastforce simp: isWaitingAEP_def ko_wp_at'_def obj_at'_def projectKOs
-                         aep_bound_refs'_def
-                  split: async_endpoint.splits aep.splits option.splits)
+  apply (fastforce simp: isWaitingNtfn_def ko_wp_at'_def obj_at'_def projectKOs
+                         ntfn_bound_refs'_def
+                  split: Structures_H.notification.splits ntfn.splits option.splits)
   done
 
 lemma cte_map_tcb_2:
@@ -496,10 +496,10 @@ locale delete_one = delete_one_conc + delete_one_abs +
                (invs' and cte_at' (cte_map ptr))
           (cap_delete_one ptr) (cteDeleteOne (cte_map ptr))"
 
-lemma (in delete_one) reply_ipc_cancel_corres:
+lemma (in delete_one) reply_cancel_ipc_corres:
   "corres dc (einvs  and st_tcb_at awaiting_reply t)
              (invs' and st_tcb_at' awaiting_reply' t)
-      (reply_ipc_cancel t)
+      (reply_cancel_ipc t)
       (do y \<leftarrow> threadSet (\<lambda>tcb. tcb \<lparr> tcbFault := None \<rparr>) t;
           slot \<leftarrow> getThreadReplySlot t;
           callerCap \<leftarrow> liftM (mdbNext \<circ> cteMDBNode) (getCTE slot);
@@ -510,7 +510,7 @@ lemma (in delete_one) reply_ipc_cancel_corres:
               cteDeleteOne callerCap
           od)
        od)"
-  apply (simp add: reply_ipc_cancel_def getThreadReplySlot_def
+  apply (simp add: reply_cancel_ipc_def getThreadReplySlot_def
                    locateSlot_conv liftM_def cte_level_bits_def
                    tcbReplySlot_def
               del: split_paired_Ex)
@@ -577,30 +577,30 @@ lemma (in delete_one) reply_ipc_cancel_corres:
   apply (rule no_fail_pre, wp)
   done
 
-lemma (in delete_one) ipc_cancel_corres:
+lemma (in delete_one) cancel_ipc_corres:
   "corres dc (einvs and tcb_at t) (invs' and tcb_at' t)
-      (ipc_cancel t) (ipcCancel t)"
-  apply (simp add: ipc_cancel_def ipcCancel_def Let_def)
+      (cancel_ipc t) (cancelIPC t)"
+  apply (simp add: cancel_ipc_def cancelIPC_def Let_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ gts_corres])
       apply (rule_tac P="einvs and st_tcb_at (op = state) t" and 
                       P'="invs' and st_tcb_at' (op = statea) t" in corres_inst)
       apply (case_tac state, simp_all add: isTS_defs list_case_If)[1]
          apply (rule corres_guard_imp)
-           apply (rule blocked_ipc_cancel_corres)
+           apply (rule blocked_cancel_ipc_corres)
             apply fastforce
            apply fastforce
           apply simp
          apply simp
         apply (clarsimp simp add: isTS_defs list_case_If)
         apply (rule corres_guard_imp)
-          apply (rule blocked_ipc_cancel_corres)
+          apply (rule blocked_cancel_ipc_corres)
            apply fastforce
           apply fastforce
          apply simp
         apply simp
        apply (rule corres_guard_imp)
-         apply (rule reply_ipc_cancel_corres)
+         apply (rule reply_cancel_ipc_corres)
         apply (clarsimp elim!: st_tcb_weakenE)
        apply (clarsimp elim!: pred_tcb'_weakenE)
       apply (rule corres_guard_imp [OF ac_corres], simp+)
@@ -624,15 +624,15 @@ declare cart_singleton_empty [simp]
 
 declare cart_singleton_empty2[simp]
 
-crunch ksQ[wp]: setAsyncEP "\<lambda>s. P (ksReadyQueues s p)"
+crunch ksQ[wp]: setNotification "\<lambda>s. P (ksReadyQueues s p)"
   (wp: setObject_queues_unchanged_tcb updateObject_default_inv)
 
 lemma sch_act_simple_not_t[simp]: "sch_act_simple s \<Longrightarrow> sch_act_not t s"
   by (clarsimp simp: sch_act_simple_def)
 
-lemma asyncIPCCancel_invs':
-  "\<lbrace>invs' and st_tcb_at' (\<lambda>st. st = BlockedOnAsyncEvent aep) t and sch_act_not t\<rbrace>
-    asyncIPCCancel t aep \<lbrace>\<lambda>rv. invs'\<rbrace>"
+lemma cancelSignal_invs':
+  "\<lbrace>invs' and st_tcb_at' (\<lambda>st. st = BlockedOnNotification ntfn) t and sch_act_not t\<rbrace>
+    cancelSignal t ntfn \<lbrace>\<lambda>rv. invs'\<rbrace>"
   proof -
     have NIQ: "\<And>s. \<lbrakk> Invariants_H.valid_queues s; st_tcb_at' (Not \<circ> runnable') t s \<rbrakk>
                                          \<Longrightarrow> \<forall>x. t \<notin> set (ksReadyQueues s x)"
@@ -640,64 +640,64 @@ lemma asyncIPCCancel_invs':
                                 valid_queues_no_bitmap_def)
       apply (drule spec | drule(1) bspec | clarsimp simp: obj_at'_def inQ_def)+
       done
-    have AEPSN: "\<And>aep aep'.
-                    \<lbrace>\<lambda>s. sch_act_not (ksCurThread s) s \<rbrace> setAsyncEP aep aep'
+    have NTFNSN: "\<And>ntfn ntfn'.
+                    \<lbrace>\<lambda>s. sch_act_not (ksCurThread s) s \<rbrace> setNotification ntfn ntfn'
                     \<lbrace>\<lambda>_ s. sch_act_not (ksCurThread s) s\<rbrace>"
       apply (rule hoare_weaken_pre)
-       apply (wps setAsyncEP_ksCurThread)
+       apply (wps setNotification_ksCurThread)
        apply (wp, simp)
       done
     show ?thesis
-      apply (simp add: asyncIPCCancel_def invs'_def valid_state'_def Let_def)
+      apply (simp add: cancelSignal_def invs'_def valid_state'_def Let_def)
       apply (wp valid_irq_node_lift sts_sch_act' irqs_masked_lift
-                hoare_vcg_all_lift [OF setAsyncEP_ksQ] sts_valid_queues
-                setThreadState_ct_not_inQ AEPSN
-                hoare_vcg_all_lift setAsyncEP_ksQ
+                hoare_vcg_all_lift [OF setNotification_ksQ] sts_valid_queues
+                setThreadState_ct_not_inQ NTFNSN
+                hoare_vcg_all_lift setNotification_ksQ
               | simp add: valid_tcb_state'_def list_case_If split del: split_if)+
       apply (rule hoare_strengthen_post)
-       apply (rule get_aep_sp')
+       apply (rule get_ntfn_sp')
       apply (clarsimp simp: pred_tcb_at')
       apply (frule NIQ)
        apply (clarsimp simp: pred_tcb_at'_def obj_at'_def)
       apply (rule conjI)
-       apply (clarsimp simp: valid_aep'_def)
-       apply (case_tac "aepObj r", simp_all add: isWaitingAEP_def)
+       apply (clarsimp simp: valid_ntfn'_def)
+       apply (case_tac "ntfnObj r", simp_all add: isWaitingNtfn_def)
        apply (frule ko_at_valid_objs')
          apply (simp add: valid_pspace_valid_objs')
-        apply (clarsimp simp: projectKO_opt_aep split: kernel_object.splits)
-        apply (simp add: valid_obj'_def valid_aep'_def)
+        apply (clarsimp simp: projectKO_opt_ntfn split: kernel_object.splits)
+        apply (simp add: valid_obj'_def valid_ntfn'_def)
        apply (frule st_tcb_at_state_refs_ofD')
        apply (frule ko_at_state_refs_ofD')
        apply (rule conjI, erule delta_sym_refs)
-         apply (clarsimp simp: aep_bound_refs'_def split: split_if_asm)
+         apply (clarsimp simp: ntfn_bound_refs'_def split: split_if_asm)
         apply (clarsimp split: split_if_asm)
-          apply (fastforce simp: symreftype_inverse' aep_bound_refs'_def
-                                 tcb_bound_refs'_def aep_q_refs_of'_def
-                          split: aep.splits)
-         apply (fastforce simp: symreftype_inverse' aep_bound_refs'_def
+          apply (fastforce simp: symreftype_inverse' ntfn_bound_refs'_def
+                                 tcb_bound_refs'_def ntfn_q_refs_of'_def
+                          split: ntfn.splits)
+         apply (fastforce simp: symreftype_inverse' ntfn_bound_refs'_def
                                 tcb_bound_refs'_def)
-        apply (fastforce simp: symreftype_inverse' aep_bound_refs'_def
-                               tcb_bound_refs'_def aep_q_refs_of'_def remove1_empty
-                        split: aep.splits)
+        apply (fastforce simp: symreftype_inverse' ntfn_bound_refs'_def
+                               tcb_bound_refs'_def ntfn_q_refs_of'_def remove1_empty
+                        split: ntfn.splits)
        apply (rule conjI, clarsimp elim!: if_live_state_refsE)
        apply (fastforce simp: sym_refs_def dest!: idle'_no_refs)
-      apply (case_tac "aepObj r", simp_all)
+      apply (case_tac "ntfnObj r", simp_all)
       apply (frule obj_at_valid_objs', clarsimp)
-      apply (clarsimp simp: projectKOs valid_obj'_def valid_aep'_def)
+      apply (clarsimp simp: projectKOs valid_obj'_def valid_ntfn'_def)
       apply (rule conjI, clarsimp split: option.splits)
       apply (frule st_tcb_at_state_refs_ofD')
       apply (frule ko_at_state_refs_ofD')
       apply (rule conjI)
        apply (erule delta_sym_refs)
-        apply (fastforce simp: aep_bound_refs'_def split: split_if_asm)
+        apply (fastforce simp: ntfn_bound_refs'_def split: split_if_asm)
        apply (clarsimp split: split_if_asm)
-        apply (fastforce simp: symreftype_inverse' aep_bound_refs'_def tcb_bound_refs'_def
+        apply (fastforce simp: symreftype_inverse' ntfn_bound_refs'_def tcb_bound_refs'_def
                                set_eq_subset)
-       apply (fastforce simp: symreftype_inverse' aep_bound_refs'_def tcb_bound_refs'_def
+       apply (fastforce simp: symreftype_inverse' ntfn_bound_refs'_def tcb_bound_refs'_def
                               set_eq_subset)
       apply (rule conjI, clarsimp elim!: if_live_state_refsE)
       apply (rule conjI)
-       apply (case_tac "aepBoundTCB r")
+       apply (case_tac "ntfnBoundTCB r")
         apply (clarsimp elim!: if_live_state_refsE)+
             apply (rule conjI, clarsimp split: option.splits)
       apply (clarsimp dest!: idle'_no_refs)
@@ -724,7 +724,7 @@ lemma ep_redux_simps3:
   "ep_q_refs_of' (case xs of [] \<Rightarrow> IdleEP | y # ys \<Rightarrow> SendEP (y # ys))
         = (set xs \<times> {EPSend})"
   by (fastforce split: list.splits
-                simp: valid_ep_def valid_aep_def
+                simp: valid_ep_def valid_ntfn_def
               intro!: ext)+
 
 lemma setEndpoint_pde_mappings'[wp]:
@@ -784,8 +784,8 @@ apply (simp add: setEndpoint_def setObject_def split_def)
 apply (wp updateObject_default_inv | simp)+
 done
 
-lemma (in delete_one_conc) ipcCancel_invs[wp]:
-  shows "\<lbrace>tcb_at' t and invs'\<rbrace> ipcCancel t \<lbrace>\<lambda>rv. invs'\<rbrace>"
+lemma (in delete_one_conc) cancelIPC_invs[wp]:
+  shows "\<lbrace>tcb_at' t and invs'\<rbrace> cancelIPC t \<lbrace>\<lambda>rv. invs'\<rbrace>"
 proof -
   have P: "\<And>xs v f. (case xs of [] \<Rightarrow> return v | y # ys \<Rightarrow> return (f (y # ys)))
                          = return (case xs of [] \<Rightarrow> v | y # ys \<Rightarrow> f xs)"
@@ -820,7 +820,7 @@ proof -
               irqs_masked_lift sts_sch_act'
               hoare_vcg_all_lift [OF setEndpoint_ksQ]
               sts_valid_queues setThreadState_ct_not_inQ EPSCHN
-              hoare_vcg_all_lift setAsyncEP_ksQ
+              hoare_vcg_all_lift setNotification_ksQ
               | simp add: valid_tcb_state'_def split del: split_if
               | wpc)+
     apply (rule hoare_strengthen_post [OF get_ep_sp'])
@@ -879,7 +879,7 @@ proof -
       | simp add: o_def if_apply_def2
       | fastforce simp: inQ_def)+
   show ?thesis
-    apply (simp add:   ipcCancel_def crunch_simps
+    apply (simp add:   cancelIPC_def crunch_simps
                cong:   if_cong list.case_cong)
     apply (rule hoare_seq_ext [OF _ gts_sp'])
     apply (case_tac state,
@@ -888,18 +888,18 @@ proof -
                                 hoare_weaken_pre[OF Q]
                                 hoare_weaken_pre[OF R]
                                 hoare_weaken_pre[OF return_wp]
-                                hoare_weaken_pre[OF asyncIPCCancel_invs']
+                                hoare_weaken_pre[OF cancelSignal_invs']
                        elim!: invs_valid_objs' pred_tcb'_weakenE)
           apply (auto simp: pred_tcb_at'_def obj_at'_def
                       dest: invs_sch_act_wf')
   done
 qed
 
-lemma (in delete_one_conc_pre) ipcCancel_sch_act_simple[wp]:
+lemma (in delete_one_conc_pre) cancelIPC_sch_act_simple[wp]:
   "\<lbrace>sch_act_simple\<rbrace>
-    ipcCancel t
+    cancelIPC t
    \<lbrace>\<lambda>rv. sch_act_simple\<rbrace>"
-  apply (simp add: ipcCancel_def asyncIPCCancel_def Let_def
+  apply (simp add: cancelIPC_def cancelSignal_def Let_def
              cong: if_cong Structures_H.thread_state.case_cong)
   apply (wp hoare_drop_imps delete_one_sch_act_simple
        | simp add: getThreadReplySlot_def | wpcw
@@ -907,30 +907,30 @@ lemma (in delete_one_conc_pre) ipcCancel_sch_act_simple[wp]:
        | (rule_tac Q="\<lambda>rv. sch_act_simple" in hoare_post_imp, simp))+
   done
 
-lemma asyncIPCCancel_st_tcb_at:
+lemma cancelSignal_st_tcb_at:
   assumes x[simp]: "P Inactive" shows
   "\<lbrace>st_tcb_at' P t\<rbrace>
-     asyncIPCCancel t' aep
+     cancelSignal t' ntfn
    \<lbrace>\<lambda>rv. st_tcb_at' P t\<rbrace>"
-  apply (simp add: asyncIPCCancel_def Let_def list_case_If)
+  apply (simp add: cancelSignal_def Let_def list_case_If)
   apply (wp sts_st_tcb_at'_cases hoare_vcg_const_imp_lift
             hoare_drop_imp[where R="%rv s. P' rv" for P'])
    apply clarsimp+
   done
 
-lemma (in delete_one_conc_pre) ipcCancel_st_tcb_at:
+lemma (in delete_one_conc_pre) cancelIPC_st_tcb_at:
   assumes x[simp]: "\<And>st. simple' st \<longrightarrow> P st" shows
   "\<lbrace>st_tcb_at' P t\<rbrace>
-     ipcCancel t'
+     cancelIPC t'
    \<lbrace>\<lambda>rv. st_tcb_at' P t\<rbrace>"
-  apply (simp add: ipcCancel_def Let_def getThreadReplySlot_def
+  apply (simp add: cancelIPC_def Let_def getThreadReplySlot_def
              cong: if_cong Structures_H.thread_state.case_cong)
   apply (rule hoare_seq_ext [OF _ gts_sp'])
   apply (case_tac x, simp_all add: isTS_defs list_case_If
-                                   isBlockedOnAsyncEvent_def)
+                                   isBlockedOnNotification_def)
          apply (wp sts_st_tcb_at'_cases delete_one_st_tcb_at
                    threadSet_pred_tcb_no_state
-                   asyncIPCCancel_st_tcb_at hoare_drop_imps
+                   cancelSignal_st_tcb_at hoare_drop_imps
                 | clarsimp
                 )+
   done
@@ -951,43 +951,43 @@ lemma sts_sch_act_not[wp]:
   apply (wp hoare_drop_imps | simp | wpcw)+
   done
 
-crunch sch_act_not[wp]: asyncIPCCancel, setBoundAEP "sch_act_not t"
+crunch sch_act_not[wp]: cancelSignal, setBoundNotification "sch_act_not t"
   (wp: crunch_wps)
 
-lemma asyncIPCCancel_tcb_at_runnable':
+lemma cancelSignal_tcb_at_runnable':
   "t \<noteq> t' \<Longrightarrow>
-  \<lbrace>st_tcb_at' runnable' t'\<rbrace> asyncIPCCancel t aepptr \<lbrace>\<lambda>_. st_tcb_at' runnable' t'\<rbrace>"
+  \<lbrace>st_tcb_at' runnable' t'\<rbrace> cancelSignal t ntfnptr \<lbrace>\<lambda>_. st_tcb_at' runnable' t'\<rbrace>"
   (is "_ \<Longrightarrow> \<lbrace>?PRE\<rbrace> _ \<lbrace>_\<rbrace>")
-  apply (simp add: asyncIPCCancel_def)
+  apply (simp add: cancelSignal_def)
   apply (wp sts_pred_tcb_neq' | wpc | simp)+
   apply (rule_tac Q="\<lambda>_. ?PRE" in hoare_post_imp, fastforce)
   apply (wp)
   done
 
-lemma epCancelAll_tcb_at_runnable':
-  "\<lbrace>st_tcb_at' runnable' t\<rbrace> epCancelAll epptr \<lbrace>\<lambda>_. st_tcb_at' runnable' t\<rbrace>"
-  apply (clarsimp simp add: epCancelAll_def)
+lemma cancelAllIPC_tcb_at_runnable':
+  "\<lbrace>st_tcb_at' runnable' t\<rbrace> cancelAllIPC epptr \<lbrace>\<lambda>_. st_tcb_at' runnable' t\<rbrace>"
+  apply (clarsimp simp add: cancelAllIPC_def)
   apply (wp mapM_x_wp [OF _ subset_refl] sts_st_tcb' | wpc | simp)+
   apply (rule_tac Q="\<lambda>_. st_tcb_at' runnable' t" in hoare_post_imp, simp)
   apply (wp)
   done
 
-lemma aepCancelAll_tcb_at_runnable':
-  "\<lbrace>st_tcb_at' runnable' t\<rbrace> aepCancelAll aepptr \<lbrace>\<lambda>_. st_tcb_at' runnable' t\<rbrace>"
-  apply (clarsimp simp add: aepCancelAll_def)
+lemma cancelAllSignals_tcb_at_runnable':
+  "\<lbrace>st_tcb_at' runnable' t\<rbrace> cancelAllSignals ntfnptr \<lbrace>\<lambda>_. st_tcb_at' runnable' t\<rbrace>"
+  apply (clarsimp simp add: cancelAllSignals_def)
   apply (wp mapM_x_wp [OF _ subset_refl] sts_st_tcb' | wpc | simp)+
   apply (rule_tac Q="\<lambda>_. st_tcb_at' runnable' t" in hoare_post_imp, simp)
   apply (wp)
   done
 
-crunch st_tcb_at'[wp]: unbindAsyncEndpoint, bindAsyncEndpoint, unbindMaybeAEP "st_tcb_at' P p"
+crunch st_tcb_at'[wp]: unbindNotification, bindNotification, unbindMaybeNotification "st_tcb_at' P p"
 (wp: threadSet_pred_tcb_no_state ignore: threadSet)
 
 lemma (in delete_one_conc_pre) finaliseCap_tcb_at_runnable':
   "\<lbrace>st_tcb_at' runnable' t\<rbrace> finaliseCap cap final True \<lbrace>\<lambda>_. st_tcb_at' runnable' t\<rbrace>"
   apply (clarsimp simp add: finaliseCap_def Let_def)
-  apply (rule conjI | clarsimp | wp epCancelAll_tcb_at_runnable' getObject_aep_inv
-                                    aepCancelAll_tcb_at_runnable'
+  apply (rule conjI | clarsimp | wp cancelAllIPC_tcb_at_runnable' getObject_ntfn_inv
+                                    cancelAllSignals_tcb_at_runnable'
        | wpc)+
   done
 
@@ -1004,10 +1004,10 @@ lemma (in delete_one_conc_pre) cteDeleteOne_tcb_at_runnable':
 
 crunch pred_tcb_at'[wp]: getThreadReplySlot, getEndpoint "pred_tcb_at' proj st t"
 
-lemma (in delete_one_conc_pre) ipcCancel_tcb_at_runnable':
-  "\<lbrace>st_tcb_at' runnable' t'\<rbrace> ipcCancel t \<lbrace>\<lambda>_. st_tcb_at' runnable' t'\<rbrace>"
+lemma (in delete_one_conc_pre) cancelIPC_tcb_at_runnable':
+  "\<lbrace>st_tcb_at' runnable' t'\<rbrace> cancelIPC t \<lbrace>\<lambda>_. st_tcb_at' runnable' t'\<rbrace>"
   (is "\<lbrace>?PRE\<rbrace> _ \<lbrace>_\<rbrace>")
-  apply (clarsimp simp: ipcCancel_def Let_def)
+  apply (clarsimp simp: cancelIPC_def Let_def)
   apply (case_tac "t'=t")
    apply (rule_tac B="\<lambda>st. st_tcb_at' runnable' t and K (runnable' st)"
             in hoare_seq_ext)
@@ -1019,7 +1019,7 @@ lemma (in delete_one_conc_pre) ipcCancel_tcb_at_runnable':
           apply (rule_tac Q="\<lambda>rv. ?PRE" in hoare_post_imp, fastforce)
           apply (wp cteDeleteOne_tcb_at_runnable'
                     threadSet_pred_tcb_no_state
-                    asyncIPCCancel_tcb_at_runnable'
+                    cancelSignal_tcb_at_runnable'
                     sts_pred_tcb_neq'
                  | wpc | simp)+
     apply (rule_tac Q="\<lambda>rv. ?PRE" in hoare_post_imp, fastforce)
@@ -1028,12 +1028,12 @@ lemma (in delete_one_conc_pre) ipcCancel_tcb_at_runnable':
   apply (wp)
   done
 
-crunch ksCurDomain[wp]: asyncIPCCancel "\<lambda>s. P (ksCurDomain s)"
+crunch ksCurDomain[wp]: cancelSignal "\<lambda>s. P (ksCurDomain s)"
   (wp: crunch_wps)
 
-lemma (in delete_one_conc_pre) ipcCancel_ksCurDomain[wp]:
-  "\<lbrace>\<lambda>s. P (ksCurDomain s)\<rbrace> ipcCancel t \<lbrace>\<lambda>_ s. P (ksCurDomain s)\<rbrace>"
-apply (simp add: ipcCancel_def Let_def)
+lemma (in delete_one_conc_pre) cancelIPC_ksCurDomain[wp]:
+  "\<lbrace>\<lambda>s. P (ksCurDomain s)\<rbrace> cancelIPC t \<lbrace>\<lambda>_ s. P (ksCurDomain s)\<rbrace>"
+apply (simp add: cancelIPC_def Let_def)
 apply (wp hoare_vcg_conj_lift delete_one_ksCurDomain
      | wpc
      | rule hoare_drop_imps
@@ -1066,10 +1066,10 @@ apply fastforce
 done
 
 (* FIXME move *)
-lemma setBoundAEP_not_aep:
-  "(\<And>tcb aep. P (tcb\<lparr>tcbBoundAEP := aep\<rparr>) \<longleftrightarrow> P tcb)
-     \<Longrightarrow> \<lbrace>obj_at' P t'\<rbrace> setBoundAEP aep t \<lbrace>\<lambda>_. obj_at' P t'\<rbrace>"
-  apply (simp add: setBoundAEP_def)
+lemma setBoundNotification_not_ntfn:
+  "(\<And>tcb ntfn. P (tcb\<lparr>tcbBoundNotification := ntfn\<rparr>) \<longleftrightarrow> P tcb)
+     \<Longrightarrow> \<lbrace>obj_at' P t'\<rbrace> setBoundNotification ntfn t \<lbrace>\<lambda>_. obj_at' P t'\<rbrace>"
+  apply (simp add: setBoundNotification_def)
   apply (wp hoare_vcg_conj_lift
      | wpc
      | rule hoare_drop_imps
@@ -1085,42 +1085,42 @@ apply wps
 apply (wp setThreadState_not_st | simp)+
 done
 
-lemma setBoundAEP_tcb_in_cur_domain'[wp]:
-  "\<lbrace>tcb_in_cur_domain' t'\<rbrace> setBoundAEP st t \<lbrace>\<lambda>_. tcb_in_cur_domain' t'\<rbrace>"
+lemma setBoundNotification_tcb_in_cur_domain'[wp]:
+  "\<lbrace>tcb_in_cur_domain' t'\<rbrace> setBoundNotification st t \<lbrace>\<lambda>_. tcb_in_cur_domain' t'\<rbrace>"
   apply (simp add: tcb_in_cur_domain'_def)
   apply (rule hoare_pre)
   apply wps
-  apply (wp setBoundAEP_not_aep | simp)+
+  apply (wp setBoundNotification_not_ntfn | simp)+
   done
 
-lemma asyncIPCCancel_tcb_obj_at':
+lemma cancelSignal_tcb_obj_at':
   "(\<And>tcb st qd. P (tcb\<lparr>tcbState := st, tcbQueued := qd\<rparr>) \<longleftrightarrow> P tcb)
-     \<Longrightarrow> \<lbrace>obj_at' P t'\<rbrace> asyncIPCCancel t word \<lbrace>\<lambda>_. obj_at' P t'\<rbrace>"
-apply (simp add: asyncIPCCancel_def setAsyncEP_def)
-apply (wp setThreadState_not_st getAsyncEP_wp | wpc | simp)+
+     \<Longrightarrow> \<lbrace>obj_at' P t'\<rbrace> cancelSignal t word \<lbrace>\<lambda>_. obj_at' P t'\<rbrace>"
+apply (simp add: cancelSignal_def setNotification_def)
+apply (wp setThreadState_not_st getNotification_wp | wpc | simp)+
 done
 
-lemma (in delete_one_conc_pre) ipcCancel_tcbDomain_obj_at':
-  "\<lbrace>obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t'\<rbrace> ipcCancel t \<lbrace>\<lambda>_. obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t'\<rbrace>"
-apply (simp add: ipcCancel_def Let_def)
+lemma (in delete_one_conc_pre) cancelIPC_tcbDomain_obj_at':
+  "\<lbrace>obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t'\<rbrace> cancelIPC t \<lbrace>\<lambda>_. obj_at' (\<lambda>tcb. P (tcbDomain tcb)) t'\<rbrace>"
+apply (simp add: cancelIPC_def Let_def)
 apply (wp hoare_vcg_conj_lift
-          setThreadState_not_st delete_one_tcbDomain_obj_at' asyncIPCCancel_tcb_obj_at'
+          setThreadState_not_st delete_one_tcbDomain_obj_at' cancelSignal_tcb_obj_at'
      | wpc
      | rule hoare_drop_imps
      | simp add: getThreadReplySlot_def)+
 done
 
-lemma (in delete_one_conc_pre) ipcCancel_tcb_in_cur_domain':
-  "\<lbrace>tcb_in_cur_domain' t'\<rbrace> ipcCancel t \<lbrace>\<lambda>_. tcb_in_cur_domain' t'\<rbrace>"
+lemma (in delete_one_conc_pre) cancelIPC_tcb_in_cur_domain':
+  "\<lbrace>tcb_in_cur_domain' t'\<rbrace> cancelIPC t \<lbrace>\<lambda>_. tcb_in_cur_domain' t'\<rbrace>"
 apply (simp add: tcb_in_cur_domain'_def)
 apply (rule hoare_pre)
 apply wps
-apply (wp ipcCancel_tcbDomain_obj_at' | simp)+
+apply (wp cancelIPC_tcbDomain_obj_at' | simp)+
 done
 
-lemma (in delete_one_conc_pre) ipcCancel_sch_act_not:
-  "\<lbrace>sch_act_not t'\<rbrace> ipcCancel t \<lbrace>\<lambda>_. sch_act_not t'\<rbrace>"
-  apply (simp add: ipcCancel_def Let_def)
+lemma (in delete_one_conc_pre) cancelIPC_sch_act_not:
+  "\<lbrace>sch_act_not t'\<rbrace> cancelIPC t \<lbrace>\<lambda>_. sch_act_not t'\<rbrace>"
+  apply (simp add: cancelIPC_def Let_def)
   apply (wp hoare_vcg_conj_lift
             delete_one_sch_act_not
        | wpc
@@ -1129,12 +1129,12 @@ lemma (in delete_one_conc_pre) ipcCancel_sch_act_not:
        | rule hoare_drop_imps)+
   done
 
-lemma (in delete_one_conc_pre) ipcCancel_weak_sch_act_wf:
+lemma (in delete_one_conc_pre) cancelIPC_weak_sch_act_wf:
   "\<lbrace>\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>
-      ipcCancel t
+      cancelIPC t
    \<lbrace>\<lambda>rv s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>"
   apply (rule weak_sch_act_wf_lift_linear)
-  apply (wp ipcCancel_sch_act_not ipcCancel_tcb_in_cur_domain' ipcCancel_tcb_at_runnable')
+  apply (wp cancelIPC_sch_act_not cancelIPC_tcb_in_cur_domain' cancelIPC_tcb_at_runnable')
   done
 
 text {* The suspend operation, significant as called from delete *}
@@ -1160,16 +1160,16 @@ lemma sts_weak_sch_act_wf[wp]:
    apply (wp hoare_vcg_const_imp_lift threadSet_pred_tcb_at_state threadSet_tcbDomain_triv | simp)+
   done
 
-lemma sba_nosch[wp]:
-  "\<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace> setBoundAEP aep t \<lbrace>\<lambda>rv s. P (ksSchedulerAction s)\<rbrace>"
-  by (simp add: setBoundAEP_def, wp threadSet_nosch)
+lemma sbn_nosch[wp]:
+  "\<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace> setBoundNotification ntfn t \<lbrace>\<lambda>rv s. P (ksSchedulerAction s)\<rbrace>"
+  by (simp add: setBoundNotification_def, wp threadSet_nosch)
   
 
-lemma sba_weak_sch_act_wf[wp]:
+lemma sbn_weak_sch_act_wf[wp]:
   "\<lbrace>\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>
-   setBoundAEP aep t
+   setBoundNotification ntfn t
    \<lbrace>\<lambda>_ s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>"
-  by (wp weak_sch_act_wf_lift sba_st_tcb')
+  by (wp weak_sch_act_wf_lift sbn_st_tcb')
 
 
 lemma set_ep_weak_sch_act_wf[wp]:
@@ -1179,9 +1179,9 @@ lemma set_ep_weak_sch_act_wf[wp]:
   apply (wp weak_sch_act_wf_lift)
   done
 
-lemma setObject_aep_sa_unchanged[wp]:
+lemma setObject_ntfn_sa_unchanged[wp]:
   "\<lbrace>\<lambda>s. P (ksSchedulerAction s)\<rbrace>
-    setObject ptr (aep::async_endpoint)
+    setObject ptr (ntfn::Structures_H.notification)
    \<lbrace>\<lambda>rv s.  P (ksSchedulerAction s)\<rbrace>"
   apply (simp add: setObject_def split_def)
   apply (wp | simp add: updateObject_default_def)+
@@ -1189,7 +1189,7 @@ lemma setObject_aep_sa_unchanged[wp]:
 
 lemma setObject_oa_unchanged[wp]:
   "\<lbrace>\<lambda>s. obj_at' (\<lambda>tcb::tcb. P tcb) t s\<rbrace>
-    setObject ptr (aep::async_endpoint)
+    setObject ptr (ntfn::Structures_H.notification)
    \<lbrace>\<lambda>rv s.  obj_at' P t s\<rbrace>"
   apply (rule obj_at_setObject2)
   apply (clarsimp simp add: updateObject_type
@@ -1197,17 +1197,17 @@ lemma setObject_oa_unchanged[wp]:
                             in_monad)
   done
 
-lemma setAsyncEP_weak_sch_act_wf[wp]:
+lemma setNotification_weak_sch_act_wf[wp]:
   "\<lbrace>\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>
-    setAsyncEP aepptr aep
+    setNotification ntfnptr ntfn
    \<lbrace>\<lambda>_ s. weak_sch_act_wf (ksSchedulerAction s) s\<rbrace>"
 apply (wp hoare_vcg_all_lift hoare_convert_imp
           hoare_vcg_conj_lift
-     | simp add: setAsyncEP_def weak_sch_act_wf_def st_tcb_at'_def
+     | simp add: setNotification_def weak_sch_act_wf_def st_tcb_at'_def
                  tcb_in_cur_domain'_def)+
 apply (rule hoare_pre)
-apply (wps setObject_aep_cur_domain)
-apply (wp setObject_aep_obj_at'_tcb | simp)+
+apply (wps setObject_ntfn_cur_domain)
+apply (wp setObject_ntfn_obj_at'_tcb | simp)+
 done
 
 lemmas ipccancel_weak_sch_act_wfs
@@ -1366,9 +1366,9 @@ lemma updateObject_ep_inv:
   "\<lbrace>P\<rbrace> updateObject (obj::endpoint) ko p q n \<lbrace>\<lambda>rv. P\<rbrace>"
   by simp (rule updateObject_default_inv)
 
-lemma sba_valid_inQ_queues[wp]:
-  "\<lbrace>valid_inQ_queues\<rbrace> setBoundAEP aep t \<lbrace>\<lambda>rv. valid_inQ_queues\<rbrace>"
-  apply (simp add: setBoundAEP_def)
+lemma sbn_valid_inQ_queues[wp]:
+  "\<lbrace>valid_inQ_queues\<rbrace> setBoundNotification ntfn t \<lbrace>\<lambda>rv. valid_inQ_queues\<rbrace>"
+  apply (simp add: setBoundNotification_def)
   apply (wp threadSet_valid_inQ_queues [THEN hoare_strengthen_post])
    apply (clarsimp simp: sch_act_simple_def Invariants_H.valid_queues_def inQ_def)+
   done
@@ -1382,22 +1382,22 @@ lemma setEndpoint_valid_inQ_queues[wp]:
   apply simp
   done
 
-lemma set_aep_valid_inQ_queues[wp]:
-  "\<lbrace>valid_inQ_queues\<rbrace> setAsyncEP ptr aep \<lbrace>\<lambda>rv. valid_inQ_queues\<rbrace>"
-  apply (unfold setAsyncEP_def)
-  apply (rule setObject_aep_pre)
+lemma set_ntfn_valid_inQ_queues[wp]:
+  "\<lbrace>valid_inQ_queues\<rbrace> setNotification ptr ntfn \<lbrace>\<lambda>rv. valid_inQ_queues\<rbrace>"
+  apply (unfold setNotification_def)
+  apply (rule setObject_ntfn_pre)
   apply (simp add: valid_inQ_queues_def)
   apply (wp hoare_Ball_helper hoare_vcg_all_lift)
     apply (clarsimp simp: updateObject_default_def in_monad)
     apply (wp updateObject_default_inv | simp)+
     done
 
-crunch valid_inQ_queues[wp]: asyncIPCCancel valid_inQ_queues
+crunch valid_inQ_queues[wp]: cancelSignal valid_inQ_queues
   (ignore: updateObject setObject simp: updateObject_tcb_inv crunch_simps wp: crunch_wps)
 
-lemma (in delete_one_conc_pre) ipcCancel_valid_inQ_queues[wp]:
-  "\<lbrace>valid_inQ_queues\<rbrace> ipcCancel t \<lbrace>\<lambda>_. valid_inQ_queues\<rbrace>"
-  apply (simp add: ipcCancel_def Let_def getThreadReplySlot_def)
+lemma (in delete_one_conc_pre) cancelIPC_valid_inQ_queues[wp]:
+  "\<lbrace>valid_inQ_queues\<rbrace> cancelIPC t \<lbrace>\<lambda>_. valid_inQ_queues\<rbrace>"
+  apply (simp add: cancelIPC_def Let_def getThreadReplySlot_def)
   apply (wp hoare_drop_imps delete_one_inQ_queues threadSet_valid_inQ_queues | wpc | simp add:if_apply_def2 Fun.comp_def)+
    apply (clarsimp simp: valid_inQ_queues_def inQ_def)+
    done
@@ -1412,7 +1412,7 @@ lemma (in delete_one) suspend_corres:
         (IpcCancel_A.suspend t) (ThreadDecls_H.suspend t)"
   apply (simp add: IpcCancel_A.suspend_def Thread_H.suspend_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split_nor [OF _ ipc_cancel_corres])
+    apply (rule corres_split_nor [OF _ cancel_ipc_corres])
       apply (rule corres_split_nor [OF _ sts_corres])
          apply (rule tcbSchedDequeue_corres')
         apply simp
@@ -1425,15 +1425,15 @@ lemma no_refs_simple_strg':
   "st_tcb_at' simple' t s' \<and> P {} \<longrightarrow> st_tcb_at' (\<lambda>st. P (tcb_st_refs_of' st)) t s'"
   by (fastforce elim!: pred_tcb'_weakenE)+
 
-crunch it[wp]: asyncIPCCancel "\<lambda>s. P (ksIdleThread s)"
+crunch it[wp]: cancelSignal "\<lambda>s. P (ksIdleThread s)"
   (wp: crunch_wps simp: crunch_simps
         ignore: getObject setObject)
 
-lemma (in delete_one_conc_pre) ipcCancel_it[wp]:
+lemma (in delete_one_conc_pre) cancelIPC_it[wp]:
   "\<lbrace>\<lambda>s. P (ksIdleThread s)\<rbrace>
-   ipcCancel t  
+   cancelIPC t  
    \<lbrace>\<lambda>_ s. P (ksIdleThread s)\<rbrace>"
-  apply (simp add: ipcCancel_def Let_def getThreadReplySlot_def)
+  apply (simp add: cancelIPC_def Let_def getThreadReplySlot_def)
   apply (wp hoare_drop_imps delete_one_it | wpc | simp add:if_apply_def2 Fun.comp_def)+
   done
 
@@ -1495,19 +1495,19 @@ lemma setThreadState_oa_queued:
       by (simp add: not_obj_at' comp_def, wp hoare_convert_imp pos)
   qed
 
-lemma setBoundAEP_oa_queued:
+lemma setBoundNotification_oa_queued:
   "\<lbrace>\<lambda>s. P' (obj_at' (\<lambda>tcb. P (tcbQueued tcb) (tcbDomain tcb) (tcbPriority tcb)) t' s) \<rbrace>
-    setBoundAEP aep t
+    setBoundNotification ntfn t
    \<lbrace>\<lambda>_ s. P' (obj_at' (\<lambda>tcb. P (tcbQueued tcb) (tcbDomain tcb) (tcbPriority tcb)) t' s) \<rbrace>"
   (is "\<lbrace>\<lambda>s. P' (?Q P s)\<rbrace> _ \<lbrace>\<lambda>_ s. P' (?Q P s)\<rbrace>")
   proof (rule P_bool_lift [where P=P'])
     show pos:
-      "\<And>R. \<lbrace> ?Q R \<rbrace> setBoundAEP aep t \<lbrace>\<lambda>_. ?Q R \<rbrace>"
-      apply (simp add: setBoundAEP_def)
+      "\<And>R. \<lbrace> ?Q R \<rbrace> setBoundNotification ntfn t \<lbrace>\<lambda>_. ?Q R \<rbrace>"
+      apply (simp add: setBoundNotification_def)
       apply (wp threadSet_obj_at'_strongish)
       apply (clarsimp)
       done
-    show "\<lbrace>\<lambda>s. \<not> ?Q P s\<rbrace> setBoundAEP aep t \<lbrace>\<lambda>_ s. \<not> ?Q P s\<rbrace>"
+    show "\<lbrace>\<lambda>s. \<not> ?Q P s\<rbrace> setBoundNotification ntfn t \<lbrace>\<lambda>_ s. \<not> ?Q P s\<rbrace>"
       by (simp add: not_obj_at' comp_def, wp hoare_convert_imp pos)
   qed
 
@@ -1772,8 +1772,8 @@ lemma (in delete_one_conc) suspend_invs'[wp]:
   apply (wp_trace sts_tcbSchedDequeue_invs')
   apply (simp | strengthen no_refs_simple_strg')+
   apply (wp hoare_vcg_all_lift hoare_vcg_imp_lift
-            ipcCancel_simple [simplified] ipcCancel_invs
-            ipcCancel_it ipcCancel_tcb_at' ipcCancel_sch_act_simple)
+            cancelIPC_simple [simplified] cancelIPC_invs
+            cancelIPC_it cancelIPC_tcb_at' cancelIPC_sch_act_simple)
      apply simp+
   done
 
@@ -1787,7 +1787,7 @@ lemma (in delete_one_conc_pre) suspend_sch_act_simple[wp]:
   "\<lbrace>sch_act_simple\<rbrace>
   ThreadDecls_H.suspend t \<lbrace>\<lambda>rv. sch_act_simple\<rbrace>"
   apply (simp add: suspend_def when_def)
-  apply (wp ipcCancel_sch_act_simple | simp add: unless_def
+  apply (wp cancelIPC_sch_act_simple | simp add: unless_def
        | rule sch_act_simple_lift)+
   done
 
@@ -1811,7 +1811,7 @@ lemma (in delete_one_conc_pre) suspend_st_tcb_at':
    \<lbrace>\<lambda>rv. st_tcb_at' P t\<rbrace>"
   apply (simp add: suspend_def unless_def)
   apply (wp sts_st_tcb_at'_cases threadSet_pred_tcb_no_state
-            ipcCancel_st_tcb_at hoare_drop_imps
+            cancelIPC_st_tcb_at hoare_drop_imps
          | simp)+
   apply clarsimp
   done
@@ -1838,10 +1838,10 @@ lemma valid_queues_not_runnable'_not_ksQ:
 
 declare valid_queues_not_runnable'_not_ksQ[OF ByAssum, simp]
 
-lemma asyncIPCCancel_queues[wp]:
+lemma cancelSignal_queues[wp]:
   "\<lbrace>Invariants_H.valid_queues and st_tcb_at' (Not \<circ> runnable') t\<rbrace>
-   asyncIPCCancel t ae \<lbrace>\<lambda>_. Invariants_H.valid_queues \<rbrace>"
-  apply (simp add: asyncIPCCancel_def)
+   cancelSignal t ae \<lbrace>\<lambda>_. Invariants_H.valid_queues \<rbrace>"
+  apply (simp add: cancelSignal_def)
   apply (wp sts_valid_queues)
      apply (rule_tac Q="\<lambda>_ s. \<forall>p. t \<notin> set (ksReadyQueues s p)" in hoare_post_imp, simp)
      apply (wp hoare_vcg_all_lift)
@@ -1853,10 +1853,10 @@ lemma asyncIPCCancel_queues[wp]:
   apply (clarsimp)
   done
 
-lemma (in delete_one_conc_pre) ipcCancel_queues[wp]:
+lemma (in delete_one_conc_pre) cancelIPC_queues[wp]:
   "\<lbrace>Invariants_H.valid_queues and valid_objs' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s)\<rbrace>
-   ipcCancel t \<lbrace>\<lambda>rv. Invariants_H.valid_queues\<rbrace>"
-  apply (simp add: ipcCancel_def Let_def getThreadReplySlot_def
+   cancelIPC t \<lbrace>\<lambda>rv. Invariants_H.valid_queues\<rbrace>"
+  apply (simp add: cancelIPC_def Let_def getThreadReplySlot_def
              cong: Structures_H.thread_state.case_cong list.case_cong)
   apply (rule hoare_seq_ext [OF _ gts_sp'])
   apply (rule hoare_pre)
@@ -1976,7 +1976,7 @@ lemma sts_sch_act_not_ct[wp]:
    setThreadState st t \<lbrace>\<lambda>_ s. sch_act_not (ksCurThread s) s\<rbrace>"
   by (rule hoare_weaken_pre, wps tcbSchedEnqueue_ct', wp, simp)
 
-text {* Cancelling all IPC in an endpoint or asynchronous endpoint *}
+text {* Cancelling all IPC in an endpoint or notification object *}
 
 lemma ep_cancel_corres_helper:
   "corres dc ((\<lambda>s. \<forall>t \<in> set list. tcb_at t s) and valid_etcbs)
@@ -2015,7 +2015,7 @@ lemma ep_cancel_corres_helper:
 
 lemma ep_cancel_corres:
   "corres dc (invs and valid_sched and ep_at ep) (invs' and ep_at' ep)
-             (ep_cancel_all ep) (epCancelAll ep)"
+             (cancel_all_ipc ep) (cancelAllIPC ep)"
 proof -
   have P:
     "\<And>list.
@@ -2060,7 +2060,7 @@ proof -
       done
 
   show ?thesis
-    apply (simp add: ep_cancel_all_def epCancelAll_def)
+    apply (simp add: cancel_all_ipc_def cancelAllIPC_def)
     apply (rule corres_split' [OF _ _ get_endpoint_sp get_ep_sp'])
      apply (rule corres_guard_imp [OF get_ep_corres], simp+)
     apply (case_tac epa, simp_all add: ep_relation_def
@@ -2077,23 +2077,23 @@ proof -
 qed
 
 (* FIXME move *)
-lemma set_aep_tcb_obj_at' [wp]:
+lemma set_ntfn_tcb_obj_at' [wp]:
   "\<lbrace>obj_at' (P::tcb \<Rightarrow> bool) t\<rbrace>
-     setAsyncEP aep v
+     setNotification ntfn v
    \<lbrace>\<lambda>_. obj_at' P t\<rbrace>"
-apply (clarsimp simp: setAsyncEP_def, wp)
+apply (clarsimp simp: setNotification_def, wp)
 done
 
-lemma aep_cancel_corres:
-  "corres dc (invs and valid_sched and aep_at aep) (invs' and aep_at' aep)
-             (aep_cancel_all aep) (aepCancelAll aep)"
-  apply (simp add: aep_cancel_all_def aepCancelAll_def)
-  apply (rule corres_split' [OF _ _ get_aep_sp get_aep_sp'])
-   apply (rule corres_guard_imp [OF get_aep_corres])
+lemma ntfn_cancel_corres:
+  "corres dc (invs and valid_sched and ntfn_at ntfn) (invs' and ntfn_at' ntfn)
+             (cancel_all_signals ntfn) (cancelAllSignals ntfn)"
+  apply (simp add: cancel_all_signals_def cancelAllSignals_def)
+  apply (rule corres_split' [OF _ _ get_ntfn_sp get_ntfn_sp'])
+   apply (rule corres_guard_imp [OF get_ntfn_corres])
     apply simp+
-  apply (case_tac "aep_obj aepa", simp_all add: aep_relation_def)
+  apply (case_tac "ntfn_obj ntfna", simp_all add: ntfn_relation_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split [OF _ set_aep_corres])
+    apply (rule corres_split [OF _ set_ntfn_corres])
        apply (rule corres_split [OF rescheduleRequired_corres])
          apply (rule ep_cancel_corres_helper)
         apply (wp mapM_x_wp'[where 'b="det_ext state"]
@@ -2110,11 +2110,11 @@ lemma aep_cancel_corres:
                  tcbSchedEnqueue_not_st
             | (clarsimp simp: valid_tcb_state'_def)
             | fastforce elim: obj_at'_weakenE)+
-      apply (simp add: aep_relation_def)
-     apply (wp hoare_vcg_const_Ball_lift set_aep_aligned' set_aep_valid_objs'
+      apply (simp add: ntfn_relation_def)
+     apply (wp hoare_vcg_const_Ball_lift set_ntfn_aligned' set_ntfn_valid_objs'
                weak_sch_act_wf_lift_linear
           | simp)+
-   apply (clarsimp simp: invs'_def valid_state'_def invs_valid_pspace valid_obj_def valid_aep_def invs_weak_sch_act_wf valid_aep'_def valid_pspace'_def
+   apply (clarsimp simp: invs'_def valid_state'_def invs_valid_pspace valid_obj_def valid_ntfn_def invs_weak_sch_act_wf valid_ntfn'_def valid_pspace'_def
               valid_sched_def valid_sched_action_def valid_obj'_def projectKOs | erule obj_at_valid_objsE | drule ko_at_valid_objs')+
   done
 
@@ -2183,21 +2183,21 @@ lemma cancel_all_invs'_helper:
 lemma ep_q_refs_max:
   "\<lbrakk> ko_at' r p s; sym_refs (state_refs_of' s); r \<noteq> IdleEP \<rbrakk>
       \<Longrightarrow> (state_refs_of' s p \<subseteq> (set (epQueue r) \<times> {EPSend, EPRecv}))
-       \<and> (\<forall>x\<in>set (epQueue r). \<exists>aepptr. state_refs_of' s x \<subseteq>
-                                  {(p, TCBBlockedSend), (p, TCBBlockedRecv), (aepptr, TCBBound)})"
+       \<and> (\<forall>x\<in>set (epQueue r). \<exists>ntfnptr. state_refs_of' s x \<subseteq>
+                                  {(p, TCBBlockedSend), (p, TCBBlockedRecv), (ntfnptr, TCBBound)})"
   apply (frule(1) sym_refs_ko_atD')
   apply (drule ko_at_state_refs_ofD')
   apply (case_tac r)
     apply (clarsimp simp: st_tcb_at_refs_of_rev' tcb_bound_refs'_def
              | rule conjI | drule(1) bspec | drule st_tcb_at_state_refs_ofD'
-             | case_tac aepptr)+
+             | case_tac ntfnptr)+
   done
 
 crunch ct' [wp]: setEndpoint "\<lambda>s. P (ksCurThread s)"
   (wp: setObject_ep_ct ignore: setObject)
 
-crunch ct' [wp]: setAsyncEP "\<lambda>s. P (ksCurThread s)"
-  (wp: setObject_aep_ct ignore: setObject)
+crunch ct' [wp]: setNotification "\<lambda>s. P (ksCurThread s)"
+  (wp: setObject_ntfn_ct ignore: setObject)
 
 lemma tcbSchedEnqueue_cur_tcb'[wp]:
   "\<lbrace>cur_tcb'\<rbrace> tcbSchedEnqueue t \<lbrace>\<lambda>_. cur_tcb'\<rbrace>"
@@ -2275,27 +2275,27 @@ lemma ct_not_in_epQueue:
   using assms unfolding ct_in_state'_def
   by (rule not_in_epQueue)
 
-lemma not_in_aepQueue:
-  assumes ko_at:  "ko_at' r aep_ptr s" and
+lemma not_in_ntfnQueue:
+  assumes ko_at:  "ko_at' r ntfn_ptr s" and
           srefs:  "sym_refs (state_refs_of' s)" and
-          nidle:  "aepObj r \<noteq> IdleAEP \<and> (\<forall>b m. aepObj r \<noteq> ActiveAEP b)" and
+          nidle:  "ntfnObj r \<noteq> IdleNtfn \<and> (\<forall>b m. ntfnObj r \<noteq> ActiveNtfn b)" and
           st_act: "st_tcb_at' simple' t s"
-  shows   "t \<notin> set (aepQueue (aepObj r))"
+  shows   "t \<notin> set (ntfnQueue (ntfnObj r))"
   proof
-    assume t_epQ: "t \<in> set (aepQueue (aepObj r))"
+    assume t_epQ: "t \<in> set (ntfnQueue (ntfnObj r))"
 
     with ko_at nidle
-    have "(t, AEPAsync) \<in> state_refs_of' s aep_ptr"
-      by - (drule ko_at_state_refs_ofD', case_tac "aepObj r", (clarsimp)+)
+    have "(t, NTFNSignal) \<in> state_refs_of' s ntfn_ptr"
+      by - (drule ko_at_state_refs_ofD', case_tac "ntfnObj r", (clarsimp)+)
     with ko_at srefs
-    have "(aep_ptr, TCBAsync) \<in> state_refs_of' s t"
+    have "(ntfn_ptr, TCBSignal) \<in> state_refs_of' s t"
       apply -
       apply (frule(1) sym_refs_ko_atD')
       apply (drule ko_at_state_refs_ofD')
-      apply (case_tac "aepObj r")
-        apply (clarsimp simp: st_tcb_at_refs_of_rev' aep_bound_refs'_def
+      apply (case_tac "ntfnObj r")
+        apply (clarsimp simp: st_tcb_at_refs_of_rev' ntfn_bound_refs'_def
              | drule st_tcb_at_state_refs_ofD')+
-      apply (drule_tac x="(t, AEPAsync)" in bspec, clarsimp)
+      apply (drule_tac x="(t, NTFNSignal)" in bspec, clarsimp)
       apply (clarsimp simp: st_tcb_at_refs_of_rev' dest!: st_tcb_at_state_refs_ofD')
       done
 
@@ -2311,14 +2311,14 @@ lemma not_in_aepQueue:
       by (rule pred_tcb'_neq_contra) simp
   qed
 
-lemma ct_not_in_aepQueue:
-  assumes ko_at:  "ko_at' r aep_ptr s" and
+lemma ct_not_in_ntfnQueue:
+  assumes ko_at:  "ko_at' r ntfn_ptr s" and
           srefs:  "sym_refs (state_refs_of' s)" and
-          nidle:  "aepObj r \<noteq> IdleAEP \<and> (\<forall>b m. aepObj r \<noteq> ActiveAEP b)" and
+          nidle:  "ntfnObj r \<noteq> IdleNtfn \<and> (\<forall>b m. ntfnObj r \<noteq> ActiveNtfn b)" and
           st_act: "ct_in_state' simple' s"
-  shows   "ksCurThread s \<notin> set (aepQueue (aepObj r))"
+  shows   "ksCurThread s \<notin> set (ntfnQueue (ntfnObj r))"
   using assms unfolding ct_in_state'_def
-  by (rule not_in_aepQueue)
+  by (rule not_in_ntfnQueue)
 
 crunch valid_pspace'[wp]: rescheduleRequired "valid_pspace'"
 crunch valid_global_refs'[wp]: rescheduleRequired "valid_global_refs'"
@@ -2338,9 +2338,9 @@ lemma rescheduleRequired_all_invs_but_ct_not_inQ:
                    apply (auto simp: sch_act_wf_weak)
   done
 
-lemma epCancelAll_invs'[wp]:
-  "\<lbrace>invs'\<rbrace> epCancelAll ep_ptr \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: epCancelAll_def ep'_Idle_case_helper cong del: if_cong)
+lemma cancelAllIPC_invs'[wp]:
+  "\<lbrace>invs'\<rbrace> cancelAllIPC ep_ptr \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  apply (simp add: cancelAllIPC_def ep'_Idle_case_helper cong del: if_cong)
   apply (wp rescheduleRequired_all_invs_but_ct_not_inQ
             cancel_all_invs'_helper hoare_vcg_const_Ball_lift
             valid_global_refs_lift' valid_arch_state_lift'
@@ -2363,11 +2363,11 @@ lemma epCancelAll_invs'[wp]:
    apply (clarsimp dest!: symreftype_inverse' split: split_if_asm | drule(1) bspec subsetD)+
   done
 
-lemma aepCancelAll_invs'[wp]:
-  "\<lbrace>invs'\<rbrace> aepCancelAll aep \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: aepCancelAll_def)
-  apply (rule hoare_seq_ext [OF _ get_aep_sp'])
-  apply (case_tac "aepObj aepa", simp_all)
+lemma cancelAllSignals_invs'[wp]:
+  "\<lbrace>invs'\<rbrace> cancelAllSignals ntfn \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  apply (simp add: cancelAllSignals_def)
+  apply (rule hoare_seq_ext [OF _ get_ntfn_sp'])
+  apply (case_tac "ntfnObj ntfna", simp_all)
     apply (wp, simp)
    apply (wp, simp)
   apply (rule hoare_pre)
@@ -2375,33 +2375,33 @@ lemma aepCancelAll_invs'[wp]:
              cancel_all_invs'_helper hoare_vcg_const_Ball_lift
              valid_irq_node_lift ssa_invs' irqs_masked_lift
           | simp only: sch_act_wf.simps)+
-  apply (clarsimp simp: invs'_def valid_state'_def valid_aep'_def)
+  apply (clarsimp simp: invs'_def valid_state'_def valid_ntfn'_def)
   apply (frule obj_at_valid_objs', clarsimp)
-  apply (clarsimp simp: projectKOs valid_obj'_def valid_aep'_def)
+  apply (clarsimp simp: projectKOs valid_obj'_def valid_ntfn'_def)
   apply (drule(1) sym_refs_ko_atD')
   apply (rule conjI, clarsimp elim!: if_live_state_refsE)
   apply (rule conjI[rotated])
    apply (clarsimp elim!: if_live_state_refsE)
-   apply (drule_tac x="(x, AEPAsync)" in bspec)
+   apply (drule_tac x="(x, NTFNSignal)" in bspec)
     apply (clarsimp simp: st_tcb_at_refs_of_rev')+
    apply (drule st_tcb_at_state_refs_ofD')
    apply clarsimp
   apply (erule delta_sym_refs)
    apply (clarsimp split: split_if_asm)
   apply (clarsimp split: split_if_asm)
-   apply (fastforce simp: symreftype_inverse' aep_bound_refs'_def)
-  apply (drule_tac x="(x, AEPAsync)" in bspec)
+   apply (fastforce simp: symreftype_inverse' ntfn_bound_refs'_def)
+  apply (drule_tac x="(x, NTFNSignal)" in bspec)
    apply (clarsimp simp: st_tcb_at_refs_of_rev')+
   apply (drule st_tcb_at_state_refs_ofD')
-  apply (fastforce simp: symreftype_inverse' aep_bound_refs'_def tcb_bound_refs'_def)
+  apply (fastforce simp: symreftype_inverse' ntfn_bound_refs'_def tcb_bound_refs'_def)
   done
 
 crunch valid_objs'[wp]: tcbSchedEnqueue valid_objs'
   (simp: unless_def valid_tcb'_def tcb_cte_cases_def)
 
-lemma epCancelAll_valid_objs'[wp]:
-  "\<lbrace>valid_objs'\<rbrace> epCancelAll ep \<lbrace>\<lambda>rv. valid_objs'\<rbrace>"
-  apply (simp add: epCancelAll_def ep'_Idle_case_helper  cong del: if_cong)
+lemma cancelAllIPC_valid_objs'[wp]:
+  "\<lbrace>valid_objs'\<rbrace> cancelAllIPC ep \<lbrace>\<lambda>rv. valid_objs'\<rbrace>"
+  apply (simp add: cancelAllIPC_def ep'_Idle_case_helper  cong del: if_cong)
   apply (rule hoare_seq_ext [OF _ get_ep_sp'])
   apply (rule hoare_pre)
    apply (wp set_ep_valid_objs' setSchedulerAction_valid_objs')
@@ -2421,47 +2421,47 @@ lemma epCancelAll_valid_objs'[wp]:
   apply (case_tac epa, simp_all)
   done
 
-lemma aepCancelAll_valid_objs'[wp]:
-  "\<lbrace>valid_objs'\<rbrace> aepCancelAll aep \<lbrace>\<lambda>rv. valid_objs'\<rbrace>"
-  apply (simp add: aepCancelAll_def)
-  apply (rule hoare_seq_ext [OF _ get_aep_sp'])
-  apply (case_tac "aepObj aepa", simp_all)
+lemma cancelAllSignals_valid_objs'[wp]:
+  "\<lbrace>valid_objs'\<rbrace> cancelAllSignals ntfn \<lbrace>\<lambda>rv. valid_objs'\<rbrace>"
+  apply (simp add: cancelAllSignals_def)
+  apply (rule hoare_seq_ext [OF _ get_ntfn_sp'])
+  apply (case_tac "ntfnObj ntfna", simp_all)
     apply (wp, simp)
    apply (wp, simp)
   apply (rename_tac list)
   apply (rule_tac Q="\<lambda>rv s. valid_objs' s \<and> (\<forall>x\<in>set list. tcb_at' x s)"
                   in hoare_post_imp)
-   apply (simp add: valid_aep'_def)
+   apply (simp add: valid_ntfn'_def)
   apply (simp add: Ball_def)
   apply (wp setSchedulerAction_valid_objs' mapM_x_wp'
             sts_valid_objs' hoare_vcg_all_lift hoare_vcg_const_imp_lift
        | simp)+
    apply (simp add: valid_tcb_state'_def)
   apply (rule hoare_pre,
-         wp set_aep_valid_objs' hoare_vcg_all_lift hoare_vcg_const_imp_lift)
+         wp set_ntfn_valid_objs' hoare_vcg_all_lift hoare_vcg_const_imp_lift)
   apply clarsimp
   apply (frule(1) ko_at_valid_objs')
    apply (simp add: projectKOs)
-  apply (clarsimp simp: valid_obj'_def valid_aep'_def)
+  apply (clarsimp simp: valid_obj'_def valid_ntfn'_def)
   done
 
-lemma epCancelAll_st_tcb_at:
+lemma cancelAllIPC_st_tcb_at:
   assumes x[simp]: "P Restart" shows
-  "\<lbrace>st_tcb_at' P t\<rbrace> epCancelAll epptr \<lbrace>\<lambda>rv. st_tcb_at' P t\<rbrace>"
-  unfolding epCancelAll_def
+  "\<lbrace>st_tcb_at' P t\<rbrace> cancelAllIPC epptr \<lbrace>\<lambda>rv. st_tcb_at' P t\<rbrace>"
+  unfolding cancelAllIPC_def
   by (wp ep'_cases_weak_wp mapM_x_wp' sts_st_tcb_at'_cases | clarsimp)+
 
-lemmas epCancelAll_makes_simple[wp] =
-       epCancelAll_st_tcb_at [where P=simple', simplified]
+lemmas cancelAllIPC_makes_simple[wp] =
+       cancelAllIPC_st_tcb_at [where P=simple', simplified]
 
-lemma aepCancelAll_st_tcb_at:
+lemma cancelAllSignals_st_tcb_at:
   assumes x[simp]: "P Restart" shows
-  "\<lbrace>st_tcb_at' P t\<rbrace> aepCancelAll epptr \<lbrace>\<lambda>rv. st_tcb_at' P t\<rbrace>"
-  unfolding aepCancelAll_def
-  by (wp aep'_cases_weak_wp mapM_x_wp' sts_st_tcb_at'_cases | clarsimp)+
+  "\<lbrace>st_tcb_at' P t\<rbrace> cancelAllSignals epptr \<lbrace>\<lambda>rv. st_tcb_at' P t\<rbrace>"
+  unfolding cancelAllSignals_def
+  by (wp ntfn'_cases_weak_wp mapM_x_wp' sts_st_tcb_at'_cases | clarsimp)+
 
-lemmas aepCancelAll_makes_simple[wp] =
-       aepCancelAll_st_tcb_at [where P=simple', simplified]
+lemmas cancelAllSignals_makes_simple[wp] =
+       cancelAllSignals_st_tcb_at [where P=simple', simplified]
 
 lemma threadSet_not_tcb[wp]:
   "\<lbrace>ko_wp_at' (\<lambda>x. P x \<and> (projectKO_opt x = (None :: tcb option))) p\<rbrace>
@@ -2544,10 +2544,10 @@ lemma rescheduleRequired_unlive:
 lemmas setEndpoint_ko_wp_at'
     = setObject_ko_wp_at'[where 'a=endpoint, folded setEndpoint_def, simplified]
 
-lemma epCancelAll_unlive:
+lemma cancelAllIPC_unlive:
   "\<lbrace>valid_objs' and (\<lambda>s. sch_act_wf (ksSchedulerAction s) s)\<rbrace>
-      epCancelAll ep \<lbrace>\<lambda>rv. ko_wp_at' (Not \<circ> live') ep\<rbrace>"
-  apply (simp add: epCancelAll_def ep'_Idle_case_helper)
+      cancelAllIPC ep \<lbrace>\<lambda>rv. ko_wp_at' (Not \<circ> live') ep\<rbrace>"
+  apply (simp add: cancelAllIPC_def ep'_Idle_case_helper)
   apply (rule hoare_seq_ext [OF _ get_ep_sp'])
   apply (rule hoare_pre)
    apply (wp_trace cancelAll_unlive_helper setEndpoint_ko_wp_at'
@@ -2562,13 +2562,13 @@ lemma epCancelAll_unlive:
                  split: endpoint.split_asm)+
   done
 
-lemma aepCancelAll_unlive:
+lemma cancelAllSignals_unlive:
   "\<lbrace>\<lambda>s. valid_objs' s \<and> sch_act_wf (ksSchedulerAction s) s
-      \<and> obj_at' (\<lambda>ko. aepBoundTCB ko = None) aepptr s\<rbrace>
-      aepCancelAll aepptr \<lbrace>\<lambda>rv. ko_wp_at' (Not \<circ> live') aepptr\<rbrace>"
-  apply (simp add: aepCancelAll_def)
-  apply (rule hoare_seq_ext [OF _ get_aep_sp'])
-  apply (case_tac "aepObj aep", simp_all add: setAsyncEP_def)
+      \<and> obj_at' (\<lambda>ko. ntfnBoundTCB ko = None) ntfnptr s\<rbrace>
+      cancelAllSignals ntfnptr \<lbrace>\<lambda>rv. ko_wp_at' (Not \<circ> live') ntfnptr\<rbrace>"
+  apply (simp add: cancelAllSignals_def)
+  apply (rule hoare_seq_ext [OF _ get_ntfn_sp'])
+  apply (case_tac "ntfnObj ntfn", simp_all add: setNotification_def)
     apply wp
     apply (fastforce simp: obj_at'_real_def projectKOs
                      dest: obj_at_conj'
@@ -2581,10 +2581,10 @@ lemma aepCancelAll_unlive:
    apply (wp cancelAll_unlive_helper)
    apply (wp mapM_x_wp' setObject_ko_wp_at' hoare_vcg_const_Ball_lift,
           simp_all add: objBits_simps, simp_all)
-    apply (fold setAsyncEP_def, wp)
+    apply (fold setNotification_def, wp)
     apply (clarsimp simp: pred_tcb_at'_def obj_at'_def projectKOs)
    apply (simp add: projectKOs projectKO_opt_tcb)
-  apply (fastforce simp: ko_wp_at'_def valid_obj'_def valid_aep'_def
+  apply (fastforce simp: ko_wp_at'_def valid_obj'_def valid_ntfn'_def
                         obj_at'_def projectKOs 
                   elim: valid_objsE')+
   done
@@ -2598,7 +2598,7 @@ lemma insert_eqD:
   "A = insert a B \<Longrightarrow> a \<in> A"
   by blast
 
-lemma epCancelBadgedSends_filterM_helper':
+lemma cancelBadgedSends_filterM_helper':
   notes if_cong[cong del]
   shows
   "\<forall>ys.
@@ -2651,14 +2651,14 @@ lemma epCancelBadgedSends_filterM_helper':
                      split: split_if_asm)+
   done
 
-lemmas epCancelBadgedSends_filterM_helper
-    = spec [where x=Nil, OF epCancelBadgedSends_filterM_helper', simplified]
+lemmas cancelBadgedSends_filterM_helper
+    = spec [where x=Nil, OF cancelBadgedSends_filterM_helper', simplified]
 
-lemma epCancelBadgedSends_invs[wp]:
+lemma cancelBadgedSends_invs[wp]:
   notes if_cong[cong del]
   shows
-  "\<lbrace>invs'\<rbrace> epCancelBadgedSends epptr badge \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: epCancelBadgedSends_def)
+  "\<lbrace>invs'\<rbrace> cancelBadgedSends epptr badge \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  apply (simp add: cancelBadgedSends_def)
   apply (rule hoare_seq_ext [OF _ get_ep_sp'])
   apply (case_tac ep, simp_all)
     apply ((wp | simp)+)[2]
@@ -2670,7 +2670,7 @@ lemma epCancelBadgedSends_invs[wp]:
   apply (rule hoare_pre, wp valid_irq_node_lift irqs_masked_lift)
     apply simp
     apply (rule hoare_strengthen_post,
-           rule epCancelBadgedSends_filterM_helper[where epptr=epptr])
+           rule cancelBadgedSends_filterM_helper[where epptr=epptr])
     apply (clarsimp simp: ep_redux_simps3 fun_upd_def[symmetric])
     apply (clarsimp simp add: valid_ep'_def split: list.split)
     apply blast
@@ -2692,10 +2692,10 @@ lemma epCancelBadgedSends_invs[wp]:
 crunch state_refs_of[wp]: tcb_sched_action "\<lambda>s. P (state_refs_of s)"
 
 
-lemma ep_cancel_badged_sends_corres:
+lemma cancel_badged_sends_corres:
   "corres dc (invs and valid_sched and ep_at epptr) (invs' and ep_at' epptr)
-         (ep_cancel_badged_sends epptr bdg) (epCancelBadgedSends epptr bdg)"
-  apply (simp add: ep_cancel_badged_sends_def epCancelBadgedSends_def)
+         (cancel_badged_sends epptr bdg) (cancelBadgedSends epptr bdg)"
+  apply (simp add: cancel_badged_sends_def cancelBadgedSends_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ get_ep_corres get_endpoint_sp get_ep_sp',
                                  where Q="invs and valid_sched" and Q'=invs'])

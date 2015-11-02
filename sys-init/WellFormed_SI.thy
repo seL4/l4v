@@ -111,7 +111,7 @@ definition well_formed_cap :: "cdl_cap \<Rightarrow> bool"
 where
   "well_formed_cap cap \<equiv> (case cap of
       EndpointCap _ b _       \<Rightarrow> b < 2 ^ badge_bits
-    | AsyncEndpointCap _ b r  \<Rightarrow> (b < 2 ^ badge_bits) \<and> (r \<subseteq> {AllowRead, AllowWrite})
+    | NotificationCap _ b r  \<Rightarrow> (b < 2 ^ badge_bits) \<and> (r \<subseteq> {AllowRead, AllowWrite})
     | CNodeCap _ g gs sz      \<Rightarrow> (gs < guard_bits) \<and> (g < 2 ^ gs) \<and> (sz + gs \<le> 32)
     | TcbCap _                \<Rightarrow> True
     | FrameCap _ r _ _ ad     \<Rightarrow> r \<in> {vm_read_write, vm_read_only} \<and> ad = None
@@ -286,7 +286,7 @@ where
       (slot = tcb_replycap_slot \<longrightarrow> cap = NullCap \<or> cap = MasterReplyCap obj_id) \<and>
       (slot = tcb_caller_slot \<longrightarrow> cap = NullCap) \<and>
       (slot = tcb_pending_op_slot \<longrightarrow> cap = NullCap \<or> cap = RestartCap) \<and>
-      (slot = tcb_boundaep_slot \<longrightarrow> cap = NullCap) )) \<and>
+      (slot = tcb_boundntfn_slot \<longrightarrow> cap = NullCap) )) \<and>
      ((object_slots obj tcb_replycap_slot = Some (MasterReplyCap obj_id)) =
       (object_slots obj tcb_pending_op_slot = Some RestartCap))"
 
@@ -336,7 +336,7 @@ where
      obj_id \<in> irq_nodes spec \<longrightarrow>
      dom (object_slots obj) = {0} \<and>
      (object_slots obj slot = Some cap \<longrightarrow>
-     (cap \<noteq> NullCap \<longrightarrow> (is_aep_cap cap \<and> is_default_cap cap)))"
+     (cap \<noteq> NullCap \<longrightarrow> (is_ntfn_cap cap \<and> is_default_cap cap)))"
 
 definition well_formed_irq_table :: "cdl_state \<Rightarrow> bool"
 where
@@ -648,10 +648,10 @@ lemma well_formed_irq_node_in_irq_nodes:
   oops
 
 term real_object_at
-lemma well_formed_irq_node_cap_is_aep_cap:
+lemma well_formed_irq_node_cap_is_ntfn_cap:
   "\<lbrakk>well_formed spec; cdl_objects spec obj_id = Some obj; is_irq_node obj;
     object_slots obj slot = Some cap; cap \<noteq> NullCap\<rbrakk>
-  \<Longrightarrow> is_aep_cap cap"
+  \<Longrightarrow> is_ntfn_cap cap"
   apply (frule (3) well_formed_well_formed_cap_types_match)
 
   apply (clarsimp simp: well_formed_cap_types_match_def)
@@ -770,8 +770,8 @@ lemma default_ep_cap[simp]:
   by (simp add:is_default_cap_def default_cap_def
     cap_type_def)
 
-lemma default_aep_cap[simp]:
-  "is_default_cap (AsyncEndpointCap a 0 {AllowRead, AllowWrite})"
+lemma default_ntfn_cap[simp]:
+  "is_default_cap (NotificationCap a 0 {AllowRead, AllowWrite})"
   by (simp add:is_default_cap_def default_cap_def cap_type_def)
 
 lemma default_cap_well_formed_cap:
@@ -897,7 +897,7 @@ lemma well_formed_cap_to_non_empty_pt:
   done
 
 lemma dom_object_slots_default_tcb:
- "dom (object_slots (Tcb (default_tcb domain))) = {0..tcb_boundaep_slot}"
+ "dom (object_slots (Tcb (default_tcb domain))) = {0..tcb_boundntfn_slot}"
   by (clarsimp simp: object_slots_def default_tcb_def)
 
 lemma well_formed_tcb_has_fault:
@@ -927,7 +927,7 @@ lemma well_formed_object_domain:
 
 lemma well_formed_tcb_object_slots:
   "\<lbrakk>well_formed spec; cdl_objects spec obj_id = Some tcb; is_tcb tcb\<rbrakk>
-  \<Longrightarrow> dom (object_slots tcb) = {0..tcb_boundaep_slot}"
+  \<Longrightarrow> dom (object_slots tcb) = {0..tcb_boundntfn_slot}"
   apply (frule (1) well_formed_object_slots)
   apply (clarsimp simp: object_default_state_def2 is_tcb_def split: cdl_object.splits)
   apply (rule dom_object_slots_default_tcb)
@@ -987,7 +987,7 @@ lemma well_formed_tcb_cspace_cap_cap_data:
   done
 
 lemma well_formed_tcb_opt_cap:
-  "\<lbrakk>well_formed spec; tcb_at obj_id spec; slot \<in> {0..tcb_boundaep_slot}\<rbrakk>
+  "\<lbrakk>well_formed spec; tcb_at obj_id spec; slot \<in> {0..tcb_boundntfn_slot}\<rbrakk>
   \<Longrightarrow> \<exists>cap. opt_cap (obj_id, slot) spec = Some cap"
   apply (clarsimp simp: object_at_def)
   apply (drule (1) well_formed_object_slots)
@@ -1060,10 +1060,10 @@ lemma well_formed_tcb_pending_op_replycap:
   apply (clarsimp simp: well_formed_tcb_def opt_cap_def slots_of_def opt_object_def)
   done
 
-lemma well_formed_tcb_boundaep_cap:
+lemma well_formed_tcb_boundntfn_cap:
   "\<lbrakk>well_formed spec; tcb_at obj_id spec\<rbrakk>
-  \<Longrightarrow> opt_cap (obj_id, tcb_boundaep_slot) spec = Some NullCap"
-  apply (frule (1) well_formed_tcb_opt_cap [where slot=tcb_boundaep_slot], simp add: tcb_slot_defs)
+  \<Longrightarrow> opt_cap (obj_id, tcb_boundntfn_slot) spec = Some NullCap"
+  apply (frule (1) well_formed_tcb_opt_cap [where slot=tcb_boundntfn_slot], simp add: tcb_slot_defs)
   apply (elim exE)
   apply (clarsimp simp: object_at_def)
   apply (drule (1) well_formed_well_formed_tcb)
@@ -1199,7 +1199,7 @@ lemma object_at_real_object_at:
   "\<lbrakk>well_formed spec; cnode_at obj_id spec\<rbrakk> \<Longrightarrow> real_object_at obj_id spec"
   "\<lbrakk>well_formed spec; tcb_at obj_id spec\<rbrakk> \<Longrightarrow> real_object_at obj_id spec"
   "\<lbrakk>well_formed spec; ep_at obj_id spec\<rbrakk> \<Longrightarrow> real_object_at obj_id spec"
-  "\<lbrakk>well_formed spec; aep_at obj_id spec\<rbrakk> \<Longrightarrow> real_object_at obj_id spec"
+  "\<lbrakk>well_formed spec; ntfn_at obj_id spec\<rbrakk> \<Longrightarrow> real_object_at obj_id spec"
   "\<lbrakk>well_formed spec; table_at obj_id spec\<rbrakk> \<Longrightarrow> real_object_at obj_id spec"
   "\<lbrakk>well_formed spec; pd_at obj_id spec\<rbrakk> \<Longrightarrow> real_object_at obj_id spec"
   "\<lbrakk>well_formed spec; pt_at obj_id spec\<rbrakk> \<Longrightarrow> real_object_at obj_id spec"
@@ -1245,18 +1245,18 @@ lemma well_formed_object_slots_irq_node:
   apply (clarsimp simp: well_formed_irq_node_def)
   done
 
-lemma well_formed_irq_aep_cap:
+lemma well_formed_irq_ntfn_cap:
   "\<lbrakk>well_formed spec;
     irq \<in> bound_irqs spec;
-    opt_cap (cdl_irq_node spec irq, 0) spec = Some aep_cap\<rbrakk>
-  \<Longrightarrow> aep_cap = AsyncEndpointCap (cap_object aep_cap) 0 {AllowRead, AllowWrite}"
+    opt_cap (cdl_irq_node spec irq, 0) spec = Some ntfn_cap\<rbrakk>
+  \<Longrightarrow> ntfn_cap = NotificationCap (cap_object ntfn_cap) 0 {AllowRead, AllowWrite}"
   apply (frule opt_cap_cdl_objects, clarsimp)
   apply (frule (1) well_formed_object_slots_irq_node [where irq=irq])
   apply (frule (1) well_formed_well_formed_irq_node)
   apply (frule (1) well_formed_cdl_irq_node_irq_nodes)
   apply (clarsimp simp: well_formed_irq_node_def)
   apply (erule allE [where x=0])
-  apply (erule allE [where x=aep_cap])
+  apply (erule allE [where x=ntfn_cap])
   apply (fastforce simp: bound_irqs_def opt_cap_def slots_of_def opt_object_def
                          is_default_cap_def default_cap_def cap_object_def
                          cap_has_object_def
@@ -1279,7 +1279,7 @@ lemma well_formed_slots_of_used_irq_node:
 
 lemma well_formed_slot_0_of_used_irq_node:
   "\<lbrakk>well_formed spec; irq \<in> used_irqs spec\<rbrakk>
-  \<Longrightarrow> \<exists>aep_cap. slots_of (cdl_irq_node spec irq) spec 0 = Some aep_cap"
+  \<Longrightarrow> \<exists>ntfn_cap. slots_of (cdl_irq_node spec irq) spec 0 = Some ntfn_cap"
   apply (frule (1) well_formed_slots_of_used_irq_node)
   apply (clarsimp simp: dom_eq_singleton_conv)
   done
@@ -1338,14 +1338,14 @@ lemma well_formed_irq_node_is_bound:
 
 lemma well_formed_cap_object_cdl_irq_node:
   "\<lbrakk>well_formed spec; irq \<in> bound_irqs spec\<rbrakk>
-    \<Longrightarrow> \<exists>obj. is_aep obj \<and>
+    \<Longrightarrow> \<exists>obj. is_ntfn obj \<and>
               cdl_objects spec (cap_object (the (opt_cap (cdl_irq_node spec irq, 0) spec))) = Some obj"
   apply (frule well_formed_bound_irqs_are_used_irqs)
   apply (frule (1) well_formed_bound_irqs_have_irq_node, clarsimp)
   apply (frule well_formed_slot_0_of_used_irq_node [where irq=irq], fast)
   apply (clarsimp simp: opt_cap_def)
   apply (rename_tac cap)
-  apply (frule (1) well_formed_irq_aep_cap, simp add: opt_cap_def)
+  apply (frule (1) well_formed_irq_ntfn_cap, simp add: opt_cap_def)
   apply (frule well_formed_cap_object, simp add: opt_cap_def)
    apply (metis cap_has_object_simps(12))
   apply clarsimp

@@ -4522,7 +4522,7 @@ definition
   \<not> isUntypedCap cap \<and>
   \<not> isReplyCap cap \<and>
   \<not> isEndpointCap cap \<and>
-  \<not> isAsyncEndpointCap cap \<and>
+  \<not> isNotificationCap cap \<and>
   \<not> isThreadCap cap \<and>
   \<not> isCNodeCap cap \<and>
   \<not> isZombie cap \<and>
@@ -5093,8 +5093,8 @@ lemma safe_parent_not_ep':
   "\<lbrakk> safe_parent_for' m p cap; m p = Some (CTE src_cap n) \<rbrakk> \<Longrightarrow> \<not>isEndpointCap src_cap"
   by (auto simp: safe_parent_for'_def isCap_simps)
 
-lemma safe_parent_not_aep':
-  "\<lbrakk> safe_parent_for' m p cap; m p = Some (CTE src_cap n) \<rbrakk> \<Longrightarrow> \<not>isAsyncEndpointCap src_cap"
+lemma safe_parent_not_ntfn':
+  "\<lbrakk> safe_parent_for' m p cap; m p = Some (CTE src_cap n) \<rbrakk> \<Longrightarrow> \<not>isNotificationCap src_cap"
   by (auto simp: safe_parent_for'_def isCap_simps)
 
 lemma safe_parent_capClass:
@@ -5417,16 +5417,16 @@ lemma src_not_ep [simp]:
   "\<not>isEndpointCap src_cap"
   using safe_parent src by (rule safe_parent_not_ep')
 
-lemma src_not_aep [simp]:
-  "\<not>isAsyncEndpointCap src_cap"
-  using safe_parent src by (rule safe_parent_not_aep')
+lemma src_not_ntfn [simp]:
+  "\<not>isNotificationCap src_cap"
+  using safe_parent src by (rule safe_parent_not_ntfn')
 
 lemma c_not_ep [simp]:
   "\<not>isEndpointCap c'"
   using simple by (simp add: is_simple_cap'_def)
 
-lemma c_not_aep [simp]:
-  "\<not>isAsyncEndpointCap c'"
+lemma c_not_ntfn [simp]:
+  "\<not>isNotificationCap c'"
   using simple by (simp add: is_simple_cap'_def)
 
 lemma valid_badges' [simp]:
@@ -6101,7 +6101,7 @@ lemma updateCap_same_master:
    corres dc (valid_objs and pspace_aligned and pspace_distinct and
               cte_wp_at (\<lambda>c. cap_master_cap c = cap_master_cap cap \<and>
                              \<not>is_reply_cap c \<and> \<not>is_master_reply_cap c \<and>
-                             \<not>is_ep_cap c \<and> \<not>is_aep_cap c) slot)
+                             \<not>is_ep_cap c \<and> \<not>is_ntfn_cap c) slot)
              (pspace_aligned' and pspace_distinct' and cte_at' (cte_map slot))
      (set_cap cap slot)
      (updateCap (cte_map slot) cap')" (is "_ \<Longrightarrow> corres _ ?P ?P' _ _")
@@ -6200,8 +6200,8 @@ lemma updateCap_same_master:
          apply (drule is_ep_cap_relation)+
          apply (drule master_cap_ep)
          apply simp
-        apply (drule is_aep_cap_relation)+
-        apply (drule master_cap_aep)
+        apply (drule is_ntfn_cap_relation)+
+        apply (drule master_cap_ntfn)
         apply simp
        apply (simp add: in_set_cap_cte_at)
        apply(simp add: cdt_list_relation_def split del: split_if)

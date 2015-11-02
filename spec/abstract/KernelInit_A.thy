@@ -244,7 +244,7 @@ definition
 
     dest_original \<leftarrow> return (if is_ep_cap new_cap then
                                 cap_ep_badge new_cap \<noteq> cap_ep_badge src_cap
-                             else if is_aep_cap new_cap then
+                             else if is_ntfn_cap new_cap then
                                 cap_ep_badge new_cap \<noteq> cap_ep_badge src_cap
                              else if \<exists>irq. new_cap = IRQHandlerCap irq then
                                 src_cap = IRQControlCap

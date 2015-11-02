@@ -274,12 +274,12 @@ definition
                    | Structures_H.RecvEP q \<Rightarrow> Structures_A.RecvEP q"
 
 definition
-  "AEndpointMap aep \<equiv>
-      \<lparr> aep_obj = case aepObj aep of
-                       Structures_H.IdleAEP \<Rightarrow> Structures_A.IdleAEP
-                     | Structures_H.WaitingAEP q \<Rightarrow> Structures_A.WaitingAEP q
-                     | Structures_H.ActiveAEP b \<Rightarrow> Structures_A.ActiveAEP b
-      , aep_bound_tcb = aepBoundTCB aep \<rparr>"
+  "AEndpointMap ntfn \<equiv>
+      \<lparr> ntfn_obj = case ntfnObj ntfn of
+                       Structures_H.IdleNtfn \<Rightarrow> Structures_A.IdleNtfn
+                     | Structures_H.WaitingNtfn q \<Rightarrow> Structures_A.WaitingNtfn q
+                     | Structures_H.ActiveNtfn b \<Rightarrow> Structures_A.ActiveNtfn b
+      , ntfn_bound_tcb = ntfnBoundTCB ntfn \<rparr>"
 
 fun
   CapabilityMap :: "capability \<Rightarrow> cap"
@@ -289,8 +289,8 @@ fun
 | "CapabilityMap (capability.EndpointCap ref b sr rr gr) =
    cap.EndpointCap ref b {x. sr \<and> x = AllowSend \<or> rr \<and> x = AllowRecv \<or>
                              gr \<and> x = AllowGrant}"
-| "CapabilityMap (capability.AsyncEndpointCap ref b sr rr) =
-   cap.AsyncEndpointCap ref b {x. sr \<and> x = AllowSend \<or> rr \<and> x = AllowRecv}"
+| "CapabilityMap (capability.NotificationCap ref b sr rr) =
+   cap.NotificationCap ref b {x. sr \<and> x = AllowSend \<or> rr \<and> x = AllowRecv}"
 | "CapabilityMap (capability.CNodeCap ref n L l) =
    cap.CNodeCap ref n (bin_to_bl l (uint L))"
 | "CapabilityMap (capability.ThreadCap ref) = cap.ThreadCap ref"
@@ -363,8 +363,8 @@ where
                 \<lparr> sender_badge = badge,
                   sender_can_grant = grant,
                   sender_is_call = call \<rparr>"
-| "ThStateMap (Structures_H.thread_state.BlockedOnAsyncEvent oref) =
-              Structures_A.thread_state.BlockedOnAsyncEvent oref"
+| "ThStateMap (Structures_H.thread_state.BlockedOnNotification oref) =
+              Structures_A.thread_state.BlockedOnNotification oref"
 
 lemma thread_state_relation_ThStateMap:
   "thread_state_relation (ThStateMap ts) ts"
@@ -431,7 +431,7 @@ definition
       tcb_ipc_buffer = tcbIPCBuffer tcb,
       tcb_context = tcbContext tcb,
       tcb_fault = map_option FaultMap (tcbFault tcb),
-      tcb_bound_aep = tcbBoundAEP tcb\<rparr>"
+      tcb_bound_notification = tcbBoundNotification tcb\<rparr>"
 
 definition
  "absCNode sz h a \<equiv> CNode sz (%bl.
@@ -447,7 +447,7 @@ definition
   "absHeap ups cns h \<equiv> \<lambda>x.
      case h x of
        Some (KOEndpoint ep) \<Rightarrow> Some (Endpoint (EndpointMap ep))
-     | Some (KOAEndpoint aep) \<Rightarrow> Some (AsyncEndpoint (AEndpointMap aep))
+     | Some (KONotification ntfn) \<Rightarrow> Some (Notification (AEndpointMap ntfn))
      | Some KOKernelData \<Rightarrow> undefined (* forbidden by pspace_relation *)
      | Some KOUserData \<Rightarrow> map_option (ArchObj \<circ> DataPage) (ups x)
      | Some (KOTCB tcb) \<Rightarrow> Some (TCB (TcbMap tcb))
@@ -632,10 +632,10 @@ proof -
           apply (erule pspace_dom_relatedE[OF _ pspace_relation])
           apply (case_tac ko, simp_all add: other_obj_relation_def)
             apply (clarsimp simp add: cte_relation_def split: split_if_asm)
-           apply (clarsimp simp add: aep_relation_def AEndpointMap_def
-                    split: Structures_A.aep.splits)
+           apply (clarsimp simp add: ntfn_relation_def AEndpointMap_def
+                    split: Structures_A.ntfn.splits)
           apply (clarsimp simp add: AEndpointMap_def
-                   split: Structures_A.aep.splits)
+                   split: Structures_A.ntfn.splits)
           apply (rename_tac arch_kernel_obj)
           apply (case_tac arch_kernel_obj, simp_all add:other_obj_relation_def)
             apply (clarsimp simp add: pte_relation_def)
@@ -1747,13 +1747,13 @@ definition
 definition
   "irq_state_map s \<equiv> case s of
      irq_state.IRQInactive \<Rightarrow> irqstate.IRQInactive
-   | irq_state.IRQNotifyAEP \<Rightarrow> irqstate.IRQNotifyAEP
+   | irq_state.IRQSignal \<Rightarrow> irqstate.IRQSignal
    | irq_state.IRQTimer \<Rightarrow> irqstate.IRQTimer"
 
 definition
   "IRQStateMap s \<equiv> case s of
      irqstate.IRQInactive \<Rightarrow> irq_state.IRQInactive
-   | irqstate.IRQNotifyAEP \<Rightarrow> irq_state.IRQNotifyAEP
+   | irqstate.IRQSignal \<Rightarrow> irq_state.IRQSignal
    | irqstate.IRQTimer \<Rightarrow> irq_state.IRQTimer"
 
 lemma irq_state_map_inv:

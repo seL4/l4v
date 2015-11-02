@@ -30,10 +30,10 @@ lemma set_ep_valid_duplicate' [wp]:
       apply simp+
   done
 
-lemma set_aep_valid_duplicate' [wp]:
+lemma set_ntfn_valid_duplicate' [wp]:
   "\<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s)\<rbrace>
-  setAsyncEP ep v  \<lbrace>\<lambda>rv s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
-  apply (simp add:setAsyncEP_def)
+  setNotification ep v  \<lbrace>\<lambda>rv s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
+  apply (simp add:setNotification_def)
   apply (clarsimp simp: setObject_def split_def valid_def in_monad
                         projectKOs pspace_aligned'_def ps_clear_upd'
                         objBits_def[symmetric] lookupAround2_char1
@@ -109,7 +109,7 @@ lemma setTCB_valid_duplicates'[wp]:
      apply (erule valid_duplicates'_non_pd_pt_I[rotated 3],simp+)+
   done
 
-crunch valid_duplicates'[wp]: threadSet, setBoundAEP "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+crunch valid_duplicates'[wp]: threadSet, setBoundNotification "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
 (ignore: getObject setObject wp: setObject_ksInterrupt updateObject_default_inv)
 
 lemma tcbSchedEnqueue_valid_duplicates'[wp]:
@@ -1790,7 +1790,7 @@ crunch valid_duplicates'[wp]:
     ignore:getObject updateObject setObject)
 
 crunch valid_duplicates'[wp]:
-  deleteASIDPool, unbindAsyncEndpoint "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+  deleteASIDPool, unbindNotification "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
   (wp: crunch_wps simp: crunch_simps unless_def ignore:getObject setObject)
 
 lemma archFinaliseCap_valid_duplicates'[wp]:
@@ -1827,7 +1827,7 @@ crunch valid_duplicates'[wp]:
   (wp: crunch_wps simp: crunch_simps unless_def ignore:getObject setObject)
 
 crunch valid_duplicates'[wp]:
-  epCancelBadgedSends "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+  cancelBadgedSends "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
   (wp: crunch_wps filterM_preserved simp: crunch_simps unless_def 
     ignore:getObject setObject)
 
@@ -2240,7 +2240,7 @@ crunch valid_cap'[wp]:
     ignore:getObject setObject)
 
 crunch valid_duplicates'[wp]:
-  sendAsyncIPC "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+  sendSignal "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
 
 lemma invokeIRQControl_valid_duplicates'[wp]:
   "\<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s) \<rbrace> invokeIRQControl a
@@ -2640,7 +2640,7 @@ lemma tc_valid_duplicates':
                simp: isCap_simps)
   done
 
-crunch valid_duplicates' [wp]: performTransfer, unbindAsyncEndpoint, bindAsyncEndpoint "(\<lambda>s. vs_valid_duplicates' (ksPSpace s))"
+crunch valid_duplicates' [wp]: performTransfer, unbindNotification, bindNotification "(\<lambda>s. vs_valid_duplicates' (ksPSpace s))"
   (ignore: getObject threadSet wp: setObject_ksInterrupt updateObject_default_inv
     simp:crunch_simps)
 
@@ -2749,11 +2749,11 @@ lemma activate_sch_valid_duplicates'[wp]:
   done
 
 crunch valid_duplicates'[wp]:
-  receiveAsyncIPC "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
+  receiveSignal "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
 
 crunch valid_duplicates'[wp]:
   receiveIPC "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
-(wp: getAsyncEP_wp gba_wp')
+(wp: getNotification_wp gbn_wp')
 
 crunch valid_duplicates'[wp]:
   deleteCallerCap "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
@@ -2790,7 +2790,7 @@ lemma handleWait_valid_duplicates'[wp]:
   apply (simp add: handleWait_def cong: if_cong)
   apply (rule hoare_pre)
    apply wp
-       apply ((wp getAsyncEP_wp | wpc | simp add: whenE_def split del: split_if)+)[1]
+       apply ((wp getNotification_wp | wpc | simp add: whenE_def split del: split_if)+)[1]
 
       apply (rule_tac Q="\<lambda>rv s. vs_valid_duplicates' (ksPSpace s)"
 

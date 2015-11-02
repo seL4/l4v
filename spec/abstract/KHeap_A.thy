@@ -76,16 +76,16 @@ where
   "get_thread_state ref \<equiv> thread_get tcb_state ref"
 
 definition
-  get_bound_aep :: "obj_ref \<Rightarrow> (32 word option,'z::state_ext) s_monad" 
+  get_bound_notification :: "obj_ref \<Rightarrow> (32 word option,'z::state_ext) s_monad" 
 where
-  "get_bound_aep ref \<equiv> thread_get tcb_bound_aep ref"
+  "get_bound_notification ref \<equiv> thread_get tcb_bound_notification ref"
 
 definition
-  set_bound_aep :: "obj_ref \<Rightarrow> 32 word option \<Rightarrow> (unit, 'z::state_ext) s_monad" 
+  set_bound_notification :: "obj_ref \<Rightarrow> 32 word option \<Rightarrow> (unit, 'z::state_ext) s_monad" 
 where
-  "set_bound_aep ref aep \<equiv> do
+  "set_bound_notification ref ntfn \<equiv> do
      tcb \<leftarrow> gets_the $ get_tcb ref;
-     set_object ref (TCB (tcb \<lparr> tcb_bound_aep := aep \<rparr>))
+     set_object ref (TCB (tcb \<lparr> tcb_bound_notification := ntfn \<rparr>))
    od"
 
 definition set_thread_state_ext :: "obj_ref \<Rightarrow> unit det_ext_monad" where
@@ -137,21 +137,21 @@ where
    od"
 
 definition
-  get_async_ep :: "obj_ref \<Rightarrow> (async_ep,'z::state_ext) s_monad"
+  get_notification :: "obj_ref \<Rightarrow> (notification,'z::state_ext) s_monad"
 where
-  "get_async_ep ptr \<equiv> do
+  "get_notification ptr \<equiv> do
      kobj \<leftarrow> get_object ptr;
-     case kobj of AsyncEndpoint e \<Rightarrow> return e
+     case kobj of Notification e \<Rightarrow> return e
                  | _ \<Rightarrow> fail
    od"
 
 definition
-  set_async_ep :: "obj_ref \<Rightarrow> async_ep \<Rightarrow> (unit,'z::state_ext) s_monad"
+  set_notification :: "obj_ref \<Rightarrow> notification \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
-  "set_async_ep ptr aep \<equiv> do
+  "set_notification ptr ntfn \<equiv> do
      obj \<leftarrow> get_object ptr;
-     assert (case obj of AsyncEndpoint aep \<Rightarrow> True | _ \<Rightarrow> False);
-     set_object ptr (AsyncEndpoint aep)
+     assert (case obj of Notification ntfn \<Rightarrow> True | _ \<Rightarrow> False);
+     set_object ptr (Notification ntfn)
    od"
 
 

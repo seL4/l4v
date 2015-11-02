@@ -207,7 +207,7 @@ definition
   tcb_half :: "cdl_state \<Rightarrow> cdl_object \<Rightarrow> cdl_object"
 where
   "tcb_half spec obj = update_slots (\<lambda>slot.
-     if (slot = tcb_pending_op_slot \<or> slot = tcb_replycap_slot \<or> slot = tcb_boundaep_slot) \<and>
+     if (slot = tcb_pending_op_slot \<or> slot = tcb_replycap_slot \<or> slot = tcb_boundntfn_slot) \<and>
          object_slots obj slot \<noteq> None
      then Some NullCap else object_slots obj slot) obj"
 
@@ -411,7 +411,7 @@ lemma object_slot_emptyE:
 lemma spec2s_objects [simp]:
  "spec2s t Untyped = Untyped"
  "spec2s t Endpoint = Endpoint"
- "spec2s t AsyncEndpoint = AsyncEndpoint"
+ "spec2s t Notification = Notification"
  "spec2s t (Frame f) = Frame f"
   by (clarsimp simp: spec2s_def update_slots_def)+
 
@@ -576,7 +576,7 @@ lemma dom_object_slots_tcb_half [simp]:
 
 lemma object_slots_tcb_half:
   "object_slots (tcb_half spec obj) =
-   (\<lambda>slot. if (slot = tcb_pending_op_slot \<or> slot = tcb_replycap_slot \<or> slot = tcb_boundaep_slot) \<and> object_slots obj slot \<noteq> None
+   (\<lambda>slot. if (slot = tcb_pending_op_slot \<or> slot = tcb_replycap_slot \<or> slot = tcb_boundntfn_slot) \<and> object_slots obj slot \<noteq> None
      then Some NullCap else object_slots obj slot)"
   by (case_tac "has_slots obj", auto simp: tcb_half_def split: split_if_asm)
 

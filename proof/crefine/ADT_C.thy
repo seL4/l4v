@@ -54,10 +54,10 @@ definition
    else callKernel_C e"
 
 definition 
-  setContext_C :: "user_context_C \<Rightarrow> tcb_C ptr \<Rightarrow> (cstate,unit) nondet_monad"
+  setArchTCB_C :: "arch_tcb_C \<Rightarrow> tcb_C ptr \<Rightarrow> (cstate,unit) nondet_monad"
 where
-  "setContext_C ct thread \<equiv> 
-  exec_C \<Gamma> (\<acute>t_hrs :== hrs_mem_update (heap_update (Ptr &(thread\<rightarrow>[''tcbContext_C''])) ct) \<acute>t_hrs)"
+  "setArchTCB_C ct thread \<equiv> 
+  exec_C \<Gamma> (\<acute>t_hrs :== hrs_mem_update (heap_update (Ptr &(thread\<rightarrow>[''tcbArch_C''])) ct) \<acute>t_hrs)"
 
 lemma Basic_sem_eq:
   "\<Gamma>\<turnstile>\<langle>Basic f,s\<rangle> \<Rightarrow> s' = ((\<exists>t. s = Normal t \<and> s' = Normal (f t)) \<or> (\<forall>t. s \<noteq> Normal t \<and> s' = s))"
@@ -71,11 +71,11 @@ lemma Basic_sem_eq:
   apply (cases s, auto)
   done
 
-lemma setContext_C_corres:
-  "\<lbrakk> ccontext_relation tc tc'; t' = tcb_ptr_to_ctcb_ptr t \<rbrakk> \<Longrightarrow>
+lemma setArchTCB_C_corres:
+  "\<lbrakk> ccontext_relation tc (tcbContext_C tc'); t' = tcb_ptr_to_ctcb_ptr t \<rbrakk> \<Longrightarrow>
   corres_underlying rf_sr nf dc (tcb_at' t) \<top>
-    (threadSet (\<lambda>tcb. tcb \<lparr> tcbContext := tc \<rparr>) t) (setContext_C tc' t')"
-  apply (simp add: setContext_C_def exec_C_def Basic_sem_eq corres_underlying_def)
+    (threadSet (\<lambda>tcb. tcb \<lparr> tcbContext := tc \<rparr>) t) (setArchTCB_C tc' t')"
+  apply (simp add: setArchTCB_C_def exec_C_def Basic_sem_eq corres_underlying_def)
   apply clarsimp
   apply (simp add: threadSet_def bind_assoc split_def exec_gets)
   apply (drule (1) obj_at_cslift_tcb)
@@ -143,7 +143,7 @@ definition
   getContext_C :: "tcb_C ptr \<Rightarrow> cstate \<Rightarrow> user_context"
 where
   "getContext_C thread \<equiv> 
-   \<lambda>s. from_user_context_C (the (clift (t_hrs_' (globals s)) (Ptr &(thread\<rightarrow>[''tcbContext_C'']))))"
+   \<lambda>s. from_user_context_C (tcbContext_C (the (clift (t_hrs_' (globals s)) (Ptr &(thread\<rightarrow>[''tcbArch_C''])))))"
 
 lemma from_user_context_C:
   "ccontext_relation uc uc' \<Longrightarrow> from_user_context_C uc' = uc"
@@ -157,7 +157,7 @@ definition
   where
   "kernelEntry_C fp e tc \<equiv> do
     t \<leftarrow> gets (ksCurThread_' o globals);
-    setContext_C (to_user_context_C tc) t;
+    setArchTCB_C (arch_tcb_C (to_user_context_C tc)) t;
     if fp then callKernel_withFastpath_C e else callKernel_C e;
     t \<leftarrow> gets (ksCurThread_' o globals);
     gets $ getContext_C t
@@ -266,7 +266,7 @@ definition
   cirqstate_to_H :: "word32 \<Rightarrow> irqstate"
 where
   "cirqstate_to_H w \<equiv>
-   if w = scast Kernel_C.IRQNotifyAEP then irqstate.IRQNotifyAEP
+   if w = scast Kernel_C.IRQSignal then irqstate.IRQSignal
    else if w = scast Kernel_C.IRQTimer then irqstate.IRQTimer
    else irqstate.IRQInactive"
 
@@ -275,7 +275,7 @@ lemma cirqstate_cancel:
   apply (rule ext)
   apply (case_tac x)
   apply (auto simp: cirqstate_to_H_def Kernel_C.IRQInactive_def
-                    Kernel_C.IRQTimer_def Kernel_C.IRQNotifyAEP_def)
+                    Kernel_C.IRQTimer_def Kernel_C.IRQSignal_def)
   done
 
 definition
@@ -844,15 +844,15 @@ lemma cthread_state_rel_imp_eq:
   apply (simp add: cthread_state_relation_def split_def)
   apply (cases x)
   apply (cases y, simp_all add: ThreadState_BlockedOnReceive_def
-    ThreadState_BlockedOnReply_def ThreadState_BlockedOnAsyncEvent_def
+    ThreadState_BlockedOnReply_def ThreadState_BlockedOnNotification_def
     ThreadState_Running_def ThreadState_Inactive_def
     ThreadState_IdleThreadState_def ThreadState_BlockedOnSend_def
     ThreadState_Restart_def)+
   done
 
-lemma ksPSpace_valid_objs_tcbBoundAEP_nonzero:
+lemma ksPSpace_valid_objs_tcbBoundNotification_nonzero:
   "\<exists>s. ksPSpace s = ah \<and> no_0_obj' s \<and> valid_objs' s
-     \<Longrightarrow> map_to_tcbs ah p = Some tcb \<Longrightarrow> tcbBoundAEP tcb \<noteq> Some 0"
+     \<Longrightarrow> map_to_tcbs ah p = Some tcb \<Longrightarrow> tcbBoundNotification tcb \<noteq> Some 0"
   apply (clarsimp simp: map_comp_def split: option.splits)
   apply (erule(1) valid_objsE')
   apply (clarsimp simp: projectKOs valid_obj'_def valid_tcb'_def)
@@ -878,8 +878,8 @@ lemma cpspace_tcb_relation_unique:
    apply (rename_tac p x y)
    apply (cut_tac ctes)
    apply (drule_tac x=x in spec, drule_tac x=y in spec, erule impE, fastforce)
-   apply (frule ksPSpace_valid_objs_tcbBoundAEP_nonzero[OF vs])
-   apply (frule ksPSpace_valid_objs_tcbBoundAEP_nonzero[OF vs'])
+   apply (frule ksPSpace_valid_objs_tcbBoundNotification_nonzero[OF vs])
+   apply (frule ksPSpace_valid_objs_tcbBoundNotification_nonzero[OF vs'])
    apply (thin_tac "map_to_tcbs x y = Some z" for x y z)+
    apply (case_tac x, case_tac y, case_tac "the (clift ch (tcb_Ptr (p+0x100)))")
    apply (clarsimp simp: ctcb_relation_def ran_tcb_cte_cases)
@@ -909,46 +909,46 @@ lemma cpspace_ep_relation_unique:
            split: endpoint.splits)
   done
 
-lemma ksPSpace_valid_pspace_aepBoundTCB_nonzero:
+lemma ksPSpace_valid_pspace_ntfnBoundTCB_nonzero:
   "\<exists>s. ksPSpace s = ah \<and> valid_pspace' s
-     \<Longrightarrow> map_to_aeps ah p = Some aep \<Longrightarrow> aepBoundTCB aep \<noteq> Some 0"
+     \<Longrightarrow> map_to_ntfns ah p = Some ntfn \<Longrightarrow> ntfnBoundTCB ntfn \<noteq> Some 0"
   apply (clarsimp simp: map_comp_def valid_pspace'_def split: option.splits)
   apply (erule(1) valid_objsE')
-  apply (clarsimp simp: projectKOs valid_obj'_def valid_aep'_def)
+  apply (clarsimp simp: projectKOs valid_obj'_def valid_ntfn'_def)
   done
 
 lemma tcb_ptr_to_ctcb_ptr_inj:
   "tcb_ptr_to_ctcb_ptr x = tcb_ptr_to_ctcb_ptr y \<Longrightarrow> x = y"
   by (auto simp: tcb_ptr_to_ctcb_ptr_def ctcb_offset_def)
 
-lemma cpspace_aep_relation_unique:
-  assumes aeps: "cpspace_aep_relation ah ch" "cpspace_aep_relation ah' ch"
+lemma cpspace_ntfn_relation_unique:
+  assumes ntfns: "cpspace_ntfn_relation ah ch" "cpspace_ntfn_relation ah' ch"
       and   vs: "\<exists>s. ksPSpace s = ah \<and> valid_pspace' s"
       and   vs': "\<exists>s. ksPSpace s = ah' \<and> valid_pspace' s"
-  shows   "map_to_aeps ah' = map_to_aeps ah" 
-  using aeps
+  shows   "map_to_ntfns ah' = map_to_ntfns ah" 
+  using ntfns
   apply (clarsimp simp: cmap_relation_def)
   apply (drule inj_image_inv[OF inj_Ptr])+
   apply simp
   apply (rule ext)
-  apply (case_tac "x:dom (map_to_aeps ah)")
+  apply (case_tac "x:dom (map_to_ntfns ah)")
    apply (drule bspec, assumption)+
    apply (simp add: dom_def Collect_eq, drule_tac x=x in spec)
    apply (clarsimp)
-   apply (frule ksPSpace_valid_pspace_aepBoundTCB_nonzero[OF vs])
-   apply (frule ksPSpace_valid_pspace_aepBoundTCB_nonzero[OF vs'])
+   apply (frule ksPSpace_valid_pspace_ntfnBoundTCB_nonzero[OF vs])
+   apply (frule ksPSpace_valid_pspace_ntfnBoundTCB_nonzero[OF vs'])
    apply (cut_tac vs vs')
    apply (clarsimp simp: valid_pspace'_def)
    apply (frule (2) map_to_ko_atI)
    apply (frule_tac v=ya in map_to_ko_atI, simp+)
    apply (clarsimp dest!: obj_at_valid_objs' simp: projectKOs split: option.splits)
-   apply (thin_tac "map_to_aeps x y = Some z" for x y z)+
-   apply (case_tac y, case_tac ya, case_tac "the (clift ch (aep_Ptr x))")
-   by (auto simp: AEPState_Active_def AEPState_Idle_def AEPState_Waiting_def typ_heap_simps
-                     casync_endpoint_relation_def Let_def tcb_queue_rel'_clift_unique 
-                     option_to_ctcb_ptr_def valid_obj'_def valid_aep'_def valid_bound_tcb'_def 
+   apply (thin_tac "map_to_ntfns x y = Some z" for x y z)+
+   apply (case_tac y, case_tac ya, case_tac "the (clift ch (ntfn_Ptr x))")
+   by (auto simp: NtfnState_Active_def NtfnState_Idle_def NtfnState_Waiting_def typ_heap_simps
+                     cnotification_relation_def Let_def tcb_queue_rel'_clift_unique 
+                     option_to_ctcb_ptr_def valid_obj'_def valid_ntfn'_def valid_bound_tcb'_def 
                      kernel.tcb_at_not_NULL tcb_ptr_to_ctcb_ptr_inj
-              split: aep.splits option.splits) (* long *)
+              split: ntfn.splits option.splits) (* long *)
 
 (* FIXME: move *)
 lemma of_bool_inject[iff]: "of_bool a = of_bool b \<longleftrightarrow> a=b"
@@ -1050,7 +1050,7 @@ lemma cpspace_user_data_relation_unique:
   apply (fastforce simp: dom_def heap_to_page_data_def Collect_eq)
   done
 
-lemmas projectKO_opts = projectKO_opt_ep projectKO_opt_aep projectKO_opt_tcb
+lemmas projectKO_opts = projectKO_opt_ep projectKO_opt_ntfn projectKO_opt_tcb
                         projectKO_opt_pte projectKO_opt_pde projectKO_opt_cte
                         projectKO_opt_asidpool  projectKO_opt_user_data
 
@@ -1165,7 +1165,7 @@ proof -
   apply (clarsimp simp add: cpspace_relation_def)
   apply (drule (1) cpspace_cte_relation_unique)
   apply (drule (1) cpspace_ep_relation_unique)
-  apply (drule (1) cpspace_aep_relation_unique)
+  apply (drule (1) cpspace_ntfn_relation_unique)
     apply (fastforce intro: valid_pspaces)
    apply (fastforce intro: valid_pspaces)
   apply (drule (1) cpspace_pde_relation_unique)
@@ -1227,7 +1227,7 @@ lemma ksPSpace_eq_imp_valid_tcb'_eq:
 
   by (auto simp: ksPSpace_eq_imp_obj_at'_eq[OF ksPSpace]
                  ksPSpace_eq_imp_valid_cap'_eq[OF ksPSpace]
-                 valid_tcb'_def valid_tcb_state'_def valid_bound_aep'_def
+                 valid_tcb'_def valid_tcb_state'_def valid_bound_ntfn'_def
           split: thread_state.splits option.splits)
 
 lemma ksPSpace_eq_imp_valid_arch_obj'_eq:
@@ -1249,8 +1249,8 @@ lemma ksPSpace_eq_imp_valid_objs'_eq:
                      ksPSpace_eq_imp_valid_tcb'_eq[OF ksPSpace]
                      ksPSpace_eq_imp_valid_cap'_eq[OF ksPSpace]
                      ksPSpace_eq_imp_valid_arch_obj'_eq[OF ksPSpace]
-                     valid_aep'_def valid_cte'_def valid_bound_tcb'_def
-              split: kernel_object.splits endpoint.splits aep.splits option.splits)
+                     valid_ntfn'_def valid_cte'_def valid_bound_tcb'_def
+              split: kernel_object.splits endpoint.splits ntfn.splits option.splits)
 
 lemma ksPSpace_eq_imp_valid_pspace'_eq:
   assumes ksPSpace: "ksPSpace s' = ksPSpace s"
@@ -1519,15 +1519,15 @@ definition
    else callKernel_C e"
 
 definition 
-  setContext_C :: "user_context_C \<Rightarrow> tcb_C ptr \<Rightarrow> (cstate,unit) nondet_monad"
+  setArchTCB_C :: "arch_tcb_C \<Rightarrow> tcb_C ptr \<Rightarrow> (cstate,unit) nondet_monad"
 where
-  "setContext_C ct thread \<equiv> 
-  exec_C \<Gamma> (\<acute>t_hrs :== hrs_mem_update (heap_update (Ptr &(thread\<rightarrow>[''tcbContext_C''])) ct) \<acute>t_hrs)"
+  "setArchTCB_C ct thread \<equiv> 
+  exec_C \<Gamma> (\<acute>t_hrs :== hrs_mem_update (heap_update (Ptr &(thread\<rightarrow>[''tcbArch_C''])) ct) \<acute>t_hrs)"
 
 definition
   "kernelEntry_C fp e tc \<equiv> do
     t \<leftarrow> gets (ksCurThread_' o globals);
-    setContext_C (to_user_context_C tc) t;
+    setArchTCB_C (arch_tcb_C (to_user_context_C tc)) t;
     if fp then callKernel_withFastpath_C e else callKernel_C e;
     t \<leftarrow> gets (ksCurThread_' o globals);
     gets $ getContext_C t

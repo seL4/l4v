@@ -63,7 +63,7 @@ proof -
        apply (ctac(no_vcg) add: cteDeleteOne_ccorres[where w="-1"])
         apply (ctac(no_vcg) add: cteInsert_ccorres)
        apply (simp add: pred_conj_def)
-       apply (strengthen aep_badge_derived_enough_strg[unfolded o_def]
+       apply (strengthen ntfn_badge_derived_enough_strg[unfolded o_def]
                          invs_mdb_strengthen' valid_objs_invs'_strg)
        apply (wp cteDeleteOne_other_cap[unfolded o_def])[1]
       apply vcg
@@ -100,9 +100,9 @@ lemma invokeIRQHandler_ClearIRQHandler_ccorres:
   apply (clarsimp simp: cte_at_irq_node' ucast_nat_def)
   done
 
-lemma aep_case_can_send:
-  "(case cap of AsyncEndpointCap x1 x2 x3 x4 \<Rightarrow> f x3
-        | _ \<Rightarrow> v) = (if isAsyncEndpointCap cap then f (capAEPCanSend cap)
+lemma ntfn_case_can_send:
+  "(case cap of NotificationCap x1 x2 x3 x4 \<Rightarrow> f x3
+        | _ \<Rightarrow> v) = (if isNotificationCap cap then f (capNtfnCanSend cap)
                      else v)"
   by (cases cap, simp_all add: isCap_simps)
 
@@ -179,7 +179,7 @@ lemma decodeIRQHandlerInvocation_ccorres:
     apply (rule ccorres_if_lhs[rotated])
      apply (rule ccorres_Guard_Seq)+
      apply (rule ccorres_cond_false_seq)
-     apply (simp add: Let_def split_def aep_case_can_send
+     apply (simp add: Let_def split_def ntfn_case_can_send
                  del: Collect_const)
      apply (rule getSlotCap_ccorres_fudge_n[where vals=extraCaps and n=0])
      apply (rule ccorres_move_c_guard_cte)
@@ -201,8 +201,8 @@ lemma decodeIRQHandlerInvocation_ccorres:
         apply (simp add: exception_defs)
        apply (rule ccorres_rhs_assoc)+
        apply csymbr+
-       apply (subgoal_tac "(capAEPCanSend_CL (cap_async_endpoint_cap_lift aepCap) = 0)
-                              = (\<not> capAEPCanSend rv)")
+       apply (subgoal_tac "(capNtfnCanSend_CL (cap_notification_cap_lift ntfnCap) = 0)
+                              = (\<not> capNtfnCanSend rv)")
         apply (simp add: if_1_0_0 from_bool_0 hd_conv_nth del: Collect_const)
         apply (rule ccorres_Cond_rhs_Seq)
          apply (rule ccorres_split_throws)

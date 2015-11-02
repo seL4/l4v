@@ -50,24 +50,24 @@ instance
 
 end
 
-instantiation async_endpoint :: pre_storable
+instantiation notification :: pre_storable
 begin
 
 definition
-  projectKO_opt_aep:
-  "projectKO_opt e \<equiv> case e of KOAEndpoint e \<Rightarrow> Some e | _ \<Rightarrow> None"
+  projectKO_opt_ntfn:
+  "projectKO_opt e \<equiv> case e of KONotification e \<Rightarrow> Some e | _ \<Rightarrow> None"
 
 definition
-  injectKO_aep [simp]:
-  "injectKO e \<equiv> KOAEndpoint e"
+  injectKO_ntfn [simp]:
+  "injectKO e \<equiv> KONotification e"
 
 definition
-  koType_aep [simp]:
-  "koType (t::async_endpoint itself) \<equiv> AsyncEndpointT"
+  koType_ntfn [simp]:
+  "koType (t::notification itself) \<equiv> NotificationT"
 
 instance
   by (intro_classes,
-      auto simp: projectKO_opt_aep split: kernel_object.splits arch_kernel_object.splits)
+      auto simp: projectKO_opt_ntfn split: kernel_object.splits arch_kernel_object.splits)
 
 end
 
@@ -139,13 +139,13 @@ end
 
 
 lemmas projectKO_opts_defs = 
-  projectKO_opt_tcb projectKO_opt_cte projectKO_opt_aep projectKO_opt_ep projectKO_opt_user_data
+  projectKO_opt_tcb projectKO_opt_cte projectKO_opt_ntfn projectKO_opt_ep projectKO_opt_user_data
 
 lemmas injectKO_defs = 
-  injectKO_tcb injectKO_cte injectKO_aep injectKO_ep injectKO_user_data
+  injectKO_tcb injectKO_cte injectKO_ntfn injectKO_ep injectKO_user_data
 
 lemmas koType_defs = 
-  koType_tcb koType_cte koType_aep koType_ep koType_user_data
+  koType_tcb koType_cte koType_ntfn koType_ep koType_user_data
 
 -- -----------------------------------
 
@@ -180,29 +180,29 @@ instance
 end
 
 
-instantiation async_endpoint :: pspace_storable
+instantiation notification :: pspace_storable
 begin
 
-(* async_endpoint extra instance defs *)
+(* notification extra instance defs *)
 
 
 definition
-  makeObject_async_endpoint: "(makeObject :: async_endpoint)  \<equiv> AEP IdleAEP Nothing"
+  makeObject_notification: "(makeObject :: notification)  \<equiv> NTFN IdleNtfn Nothing"
 
 definition
-  loadObject_async_endpoint[simp]:
- "(loadObject p q n obj) :: async_endpoint kernel \<equiv>
+  loadObject_notification[simp]:
+ "(loadObject p q n obj) :: notification kernel \<equiv>
     loadObject_default p q n obj"
 
 definition
-  updateObject_async_endpoint[simp]:
- "updateObject (val :: async_endpoint) \<equiv>
+  updateObject_notification[simp]:
+ "updateObject (val :: notification) \<equiv>
     updateObject_default val"
 
 
 instance
   apply (intro_classes)
-  apply (case_tac ko, auto simp: projectKO_opt_aep updateObject_default_def 
+  apply (case_tac ko, auto simp: projectKO_opt_ntfn updateObject_default_def 
                                  in_monad projectKO_eq2 
                            split: kernel_object.splits)
   done
@@ -353,7 +353,7 @@ definition
         tcbTimeSlice= timeSlice,
         tcbFaultHandler= CPtr 0,
         tcbIPCBuffer= VPtr 0,
-        tcbBoundAEP= Nothing,
+        tcbBoundNotification= Nothing,
         tcbContext= newContext \<rparr>"
 
 definition

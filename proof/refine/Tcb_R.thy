@@ -61,16 +61,16 @@ lemma activate_corres:
   done
 
 
-lemma bind_async_endpoint_corres:
+lemma bind_notification_corres:
   "corres dc 
-         (invs and tcb_at t and aep_at a) (invs' and tcb_at' t and aep_at' a)
-         (bind_async_endpoint t a) (bindAsyncEndpoint t a)"
-  apply (simp add: bind_async_endpoint_def bindAsyncEndpoint_def)
+         (invs and tcb_at t and ntfn_at a) (invs' and tcb_at' t and ntfn_at' a)
+         (bind_notification t a) (bindNotification t a)"
+  apply (simp add: bind_notification_def bindNotification_def)
   apply (rule corres_guard_imp)
-    apply (rule corres_split[OF _ get_aep_corres])
-      apply (rule corres_split[OF _ set_aep_corres])
-         apply (rule sba_corres)
-        apply (clarsimp simp: aep_relation_def split: Structures_A.aep.splits)
+    apply (rule corres_split[OF _ get_ntfn_corres])
+      apply (rule corres_split[OF _ set_ntfn_corres])
+         apply (rule sbn_corres)
+        apply (clarsimp simp: ntfn_relation_def split: Structures_A.ntfn.splits)
        apply (wp)
    apply auto
   done
@@ -180,7 +180,7 @@ lemma idle_tsr:
   "thread_state_relation ts ts' \<Longrightarrow> idle' ts' = idle ts"
   by (case_tac ts, auto)
 
-crunch cur [wp]: ipcCancel cur_tcb'
+crunch cur [wp]: cancelIPC cur_tcb'
   (wp: crunch_wps simp: crunch_simps)
 
 crunch cur [wp]: setupReplyMaster cur_tcb'
@@ -216,7 +216,7 @@ lemma restart_corres:
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ gts_corres])
       apply (clarsimp simp add: runnable_tsr idle_tsr when_def)
-      apply (rule corres_split_nor [OF _ ipc_cancel_corres])
+      apply (rule corres_split_nor [OF _ cancel_ipc_corres])
         apply (rule corres_split_nor [OF _ setup_reply_master_corres])
           apply (rule corres_split_nor [OF _ sts_corres])
              apply (rule corres_split [OF switchIfRequiredTo_corres tcbSchedEnqueue_corres])
@@ -247,7 +247,7 @@ lemma restart_invs':
    ThreadDecls_H.restart t \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: restart_def isBlocked_def2 switchIfRequiredTo_def)
   apply (wp setThreadState_nonqueued_state_update
-            ipcCancel_simple setThreadState_st_tcb
+            cancelIPC_simple setThreadState_st_tcb
        | wp_once sch_act_simple_lift)+
       apply (wp hoare_convert_imp)
      apply (wp setThreadState_nonqueued_state_update
@@ -1443,8 +1443,8 @@ where
     = (x = tcbinvocation.Suspend a)"
 | "tcbinv_relation (tcb_invocation.Resume a) x
     = (x = tcbinvocation.Resume a)"
-| "tcbinv_relation (tcb_invocation.AsyncEndpointControl t aepptr) x
-    = (x = tcbinvocation.AsyncEndpointControl t aepptr)"
+| "tcbinv_relation (tcb_invocation.NotificationControl t ntfnptr) x
+    = (x = tcbinvocation.NotificationControl t ntfnptr)"
 
 primrec
   tcb_inv_wf' :: "tcbinvocation \<Rightarrow> kernel_state \<Rightarrow> bool"
@@ -1473,12 +1473,12 @@ where
 | "tcb_inv_wf' (tcbinvocation.CopyRegisters dest src suspend_source resume_target
                  trans_frame trans_int trans_arch)
              = (tcb_at' dest and tcb_at' src and ex_nonz_cap_to' src and ex_nonz_cap_to' dest)"
-| "tcb_inv_wf' (tcbinvocation.AsyncEndpointControl t aep)
+| "tcb_inv_wf' (tcbinvocation.NotificationControl t ntfn)
              = (tcb_at' t and ex_nonz_cap_to' t
-                  and (case aep of None \<Rightarrow> \<top>
-                          | Some aepptr \<Rightarrow> obj_at' (\<lambda>ko. aepBoundTCB ko = None
-                                           \<and> (\<forall>q. aepObj ko \<noteq> WaitingAEP q)) aepptr
-                                          and ex_nonz_cap_to' aepptr 
+                  and (case ntfn of None \<Rightarrow> \<top>
+                          | Some ntfnptr \<Rightarrow> obj_at' (\<lambda>ko. ntfnBoundTCB ko = None
+                                           \<and> (\<forall>q. ntfnObj ko \<noteq> WaitingNtfn q)) ntfnptr
+                                          and ex_nonz_cap_to' ntfnptr 
                                           and bound_tcb_at' (op = None) t) )"
 
 lemma tcbinv_corres:
@@ -1511,79 +1511,79 @@ lemma tcbinv_corres:
   apply (case_tac option)
    apply simp
    apply (rule corres_guard_imp)
-     apply (rule corres_split[OF _ unbind_async_endpoint_corres])
+     apply (rule corres_split[OF _ unbind_notification_corres])
        apply (rule corres_trivial, simp)
       apply wp
     apply (clarsimp)
    apply clarsimp
   apply simp
   apply (rule corres_guard_imp)
-    apply (rule corres_split[OF _ bind_async_endpoint_corres])
+    apply (rule corres_split[OF _ bind_notification_corres])
       apply (rule corres_trivial, simp)
      apply wp
    apply clarsimp
-   apply (clarsimp simp: obj_at_def is_aep)
+   apply (clarsimp simp: obj_at_def is_ntfn)
   apply (clarsimp simp: obj_at'_def projectKOs)
   done
 
-lemma tcbBoundAEP_caps_safe[simp]:
+lemma tcbBoundNotification_caps_safe[simp]:
   "\<forall>(getF, setF)\<in>ran tcb_cte_cases.
-     getF (tcbBoundAEP_update (\<lambda>_. Some aepptr) tcb) = getF tcb"
+     getF (tcbBoundNotification_update (\<lambda>_. Some ntfnptr) tcb) = getF tcb"
   by (case_tac tcb, simp add: tcb_cte_cases_def)
 
-lemma threadSet_tcbBoundAEP_valid_pspace:
-  "\<lbrace>valid_pspace' and aep_at' aepptr\<rbrace>
-     threadSet (tcbBoundAEP_update (\<lambda>_. Some aepptr)) t
+lemma threadSet_tcbBoundNotification_valid_pspace:
+  "\<lbrace>valid_pspace' and ntfn_at' ntfnptr\<rbrace>
+     threadSet (tcbBoundNotification_update (\<lambda>_. Some ntfnptr)) t
    \<lbrace>\<lambda>rv. valid_pspace'\<rbrace>"
   apply (simp add: valid_pspace'_def threadSet_def)
   apply (rule hoare_pre)
   apply (wp setObject_tcb_valid_objs getObject_tcb_wp)
   apply (auto simp: projectKOs obj_at'_def
-                    valid_obj'_def valid_tcb'_def valid_bound_aep'_def
+                    valid_obj'_def valid_tcb'_def valid_bound_ntfn'_def
                     tcb_cte_cases_def)
   done
 
-lemma threadSet_tcbBoundAEP_state_refs_of':
-  "\<lbrace>(\<lambda>s. P ((state_refs_of' s)(t := {(aepptr, TCBBound)} \<union> state_refs_of' s t)))
-       and obj_at' (\<lambda>tcb. tcbBoundAEP tcb = None) t\<rbrace>
-     threadSet (tcbBoundAEP_update (\<lambda>_. Some aepptr)) t
+lemma threadSet_tcbBoundNotification_state_refs_of':
+  "\<lbrace>(\<lambda>s. P ((state_refs_of' s)(t := {(ntfnptr, TCBBound)} \<union> state_refs_of' s t)))
+       and obj_at' (\<lambda>tcb. tcbBoundNotification tcb = None) t\<rbrace>
+     threadSet (tcbBoundNotification_update (\<lambda>_. Some ntfnptr)) t
    \<lbrace>\<lambda>_ s. P (state_refs_of' s)\<rbrace>"
   apply (simp add: threadSet_def)
   apply (wp getObject_tcb_wp)
   apply (auto simp: fun_upd_def obj_at'_def projectKOs state_refs_of'_def cong: if_cong)
   done
 
-lemma valid_bound_aep_lift:
+lemma valid_bound_ntfn_lift:
   assumes P: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at' T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at' T p s)\<rbrace>"
-  shows      "\<lbrace>\<lambda>s. valid_bound_aep' a s\<rbrace> f \<lbrace>\<lambda>rv s. valid_bound_aep' a s\<rbrace>"
-  apply (simp add: valid_bound_aep'_def, case_tac a, simp_all)
+  shows      "\<lbrace>\<lambda>s. valid_bound_ntfn' a s\<rbrace> f \<lbrace>\<lambda>rv s. valid_bound_ntfn' a s\<rbrace>"
+  apply (simp add: valid_bound_ntfn'_def, case_tac a, simp_all)
   apply (wp typ_at_lifts[OF P])
   done
 
-lemma bindAsyncEndpoint_invs':
+lemma bindNotification_invs':
   "\<lbrace>bound_tcb_at' (op = None) tcbptr
-       and ex_nonz_cap_to' aepptr
+       and ex_nonz_cap_to' ntfnptr
        and ex_nonz_cap_to' tcbptr
-       and obj_at' (\<lambda>aep. aepBoundTCB aep = None \<and> (\<forall>q. aepObj aep \<noteq> WaitingAEP q)) aepptr
+       and obj_at' (\<lambda>ntfn. ntfnBoundTCB ntfn = None \<and> (\<forall>q. ntfnObj ntfn \<noteq> WaitingNtfn q)) ntfnptr
        and invs'\<rbrace>
-    bindAsyncEndpoint tcbptr aepptr
+    bindNotification tcbptr ntfnptr
    \<lbrace>\<lambda>_. invs'\<rbrace>"
-  apply (simp add: bindAsyncEndpoint_def invs'_def valid_state'_def)
-  apply (rule hoare_seq_ext[OF _ get_aep_sp'])
-  apply (wp set_aep_valid_pspace' sba_sch_act' sba_valid_queues valid_irq_node_lift 
-            setBoundAEP_ct_not_inQ valid_bound_aep_lift
+  apply (simp add: bindNotification_def invs'_def valid_state'_def)
+  apply (rule hoare_seq_ext[OF _ get_ntfn_sp'])
+  apply (wp set_ntfn_valid_pspace' sbn_sch_act' sbn_valid_queues valid_irq_node_lift 
+            setBoundNotification_ct_not_inQ valid_bound_ntfn_lift
          | clarsimp dest!: global'_no_ex_cap)+
             apply simp_all
       apply (clarsimp simp: valid_pspace'_def)
-      apply (frule_tac P="\<lambda>k. k=aep" in obj_at_valid_objs', simp)
-      apply (clarsimp simp: valid_obj'_def projectKOs valid_aep'_def obj_at'_def
+      apply (frule_tac P="\<lambda>k. k=ntfn" in obj_at_valid_objs', simp)
+      apply (clarsimp simp: valid_obj'_def projectKOs valid_ntfn'_def obj_at'_def
                      dest!: pred_tcb_at'
-                     split: aep.splits)
+                     split: ntfn.splits)
      apply (rule conjI, rule impI, clarsimp dest!: pred_tcb_at' simp: obj_at'_def projectKOs)
      apply (clarsimp, erule delta_sym_refs)
-      apply (fastforce simp: aep_q_refs_of'_def obj_at'_def projectKOs  
+      apply (fastforce simp: ntfn_q_refs_of'_def obj_at'_def projectKOs  
                       dest!: symreftype_inverse'
-                      split: aep.splits split_if_asm)
+                      split: ntfn.splits split_if_asm)
      apply (clarsimp split: split_if_asm)
       apply (fastforce simp: tcb_st_refs_of'_def 
                       dest!: bound_tcb_at_state_refs_ofD' 
@@ -1593,20 +1593,20 @@ lemma bindAsyncEndpoint_invs':
     apply (clarsimp simp: obj_at'_def projectKOs)
    apply (clarsimp dest!: pred_tcb_at')
   apply (clarsimp simp: valid_pspace'_def)
-  apply (frule_tac P="\<lambda>k. k=aep" in obj_at_valid_objs', simp)
-  apply (clarsimp simp: valid_obj'_def projectKOs valid_aep'_def obj_at'_def
+  apply (frule_tac P="\<lambda>k. k=ntfn" in obj_at_valid_objs', simp)
+  apply (clarsimp simp: valid_obj'_def projectKOs valid_ntfn'_def obj_at'_def
                     dest!: pred_tcb_at'
-                    split: aep.splits)
+                    split: ntfn.splits)
   done
      
 
-lemma tcbaep_invs':
-  "\<lbrace>invs' and tcb_inv_wf' (tcbinvocation.AsyncEndpointControl tcb aepptr)\<rbrace>
-       invokeTCB (tcbinvocation.AsyncEndpointControl tcb aepptr)
+lemma tcbntfn_invs':
+  "\<lbrace>invs' and tcb_inv_wf' (tcbinvocation.NotificationControl tcb ntfnptr)\<rbrace>
+       invokeTCB (tcbinvocation.NotificationControl tcb ntfnptr)
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: invokeTCB_def)
-  apply (case_tac aepptr, simp_all)
-   apply (wp unbindAsyncEndpoint_invs bindAsyncEndpoint_invs' | simp)+
+  apply (case_tac ntfnptr, simp_all)
+   apply (wp unbindNotification_invs bindNotification_invs' | simp)+
   done
 
 lemma tcbinv_invs':
@@ -1624,7 +1624,7 @@ lemma tcbinv_invs':
                       dest!: global'_no_ex_cap)
       apply (wp tc_invs')
       apply (clarsimp split: option.split dest!: isCapDs)
-     apply (wp writereg_invs' readreg_invs' copyreg_invs' tcbaep_invs' | simp)+
+     apply (wp writereg_invs' readreg_invs' copyreg_invs' tcbntfn_invs' | simp)+
   done
 
 crunch_ignore (add: setNextPC getRestartPC)
@@ -2235,15 +2235,15 @@ lemma corres_splitEE':
   done
 
 
-lemma decode_bind_aep_corres:
+lemma decode_bind_notification_corres:
 notes if_cong[cong] shows
   "\<lbrakk> list_all2 (\<lambda>x y. cap_relation (fst x) (fst y)) extras extras' \<rbrakk> \<Longrightarrow>
     corres (ser \<oplus> tcbinv_relation)
       (invs and tcb_at t and (\<lambda>s. \<forall>x \<in> set extras. s \<turnstile> (fst x)))
       (invs' and tcb_at' t and (\<lambda>s. \<forall>x \<in> set extras'. s \<turnstile>' (fst x)))
-     (decode_bind_aep (cap.ThreadCap t) extras)
-     (decodeBindAEP (capability.ThreadCap t) extras')"
-  apply (simp add: decode_bind_aep_def decodeBindAEP_def)
+     (decode_bind_notification (cap.ThreadCap t) extras)
+     (decodeBindNotification (capability.ThreadCap t) extras')"
+  apply (simp add: decode_bind_notification_def decodeBindNotification_def)
   apply (simp add: null_def returnOk_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split_norE)
@@ -2253,13 +2253,13 @@ notes if_cong[cong] shows
              apply (rule corres_splitEE'[where r'="\<lambda>rv rv'. ((fst rv) = (fst rv')) \<and> ((snd rv') = (AllowRead \<in> (snd rv)))"])
                 apply (rule corres_split_norE)
                    apply (clarsimp split del: split_if)
-                   apply (rule corres_splitEE[where r'=aep_relation])
+                   apply (rule corres_splitEE[where r'=ntfn_relation])
                       apply (rule corres_trivial, simp split del: split_if)
-                      apply (simp add: aep_relation_def
-                                split: Structures_A.aep.splits Structures_H.aep.splits 
+                      apply (simp add: ntfn_relation_def
+                                split: Structures_A.ntfn.splits Structures_H.ntfn.splits 
                                        option.splits)
                      apply simp
-                     apply (rule get_aep_corres)
+                     apply (rule get_ntfn_corres)
                     apply wp
                   apply (rule corres_trivial, clarsimp simp: whenE_def returnOk_def)
                  apply (wp | simp add: whenE_def split del: split_if)+
@@ -2269,28 +2269,28 @@ notes if_cong[cong] shows
               apply (wp | wpc | simp)+
             apply (rule corres_trivial, simp split: option.splits add: returnOk_def)
            apply (wp | wpc | simp)+
-         apply (rule gba_corres)
-        apply (simp | wp gba_wp gba_wp')+
+         apply (rule gbn_corres)
+        apply (simp | wp gbn_wp gbn_wp')+
       apply (rule corres_trivial)
       apply (auto simp: returnOk_def whenE_def)[1]
      apply (simp add: whenE_def split del: split_if | wp)+
    apply (fastforce simp: valid_cap_def valid_cap'_def dest: hd_in_set)+
   done
 
-lemma decode_unbind_aep_corres:
+lemma decode_unbind_notification_corres:
   "corres (ser \<oplus> tcbinv_relation)
       (tcb_at t)
       (tcb_at' t)
-     (decode_unbind_aep (cap.ThreadCap t))
-     (decodeUnbindAEP (capability.ThreadCap t))"
-  apply (simp add: decode_unbind_aep_def decodeUnbindAEP_def)
+     (decode_unbind_notification (cap.ThreadCap t))
+     (decodeUnbindNotification (capability.ThreadCap t))"
+  apply (simp add: decode_unbind_notification_def decodeUnbindNotification_def)
   apply (rule corres_guard_imp)
     apply (rule corres_split_eqrE)
        apply (rule corres_trivial)
        apply (simp split: option.splits)
        apply (simp add: returnOk_def)
       apply simp
-      apply (rule gba_corres)
+      apply (rule gbn_corres)
      apply wp
    apply auto
   done
@@ -2318,8 +2318,8 @@ lemma decode_tcb_inv_corres:
              corres_guard_imp[OF decode_set_priority_corres]
              corres_guard_imp[OF decode_set_ipc_corres]
              corres_guard_imp[OF decode_set_space_corres]
-             corres_guard_imp[OF decode_bind_aep_corres]
-             corres_guard_imp[OF decode_unbind_aep_corres],
+             corres_guard_imp[OF decode_bind_notification_corres]
+             corres_guard_imp[OF decode_unbind_notification_corres],
          simp_all add: valid_cap_simps valid_cap_simps' invs_def valid_sched_def)
   apply (auto simp: list_all2_map1 list_all2_map2
              elim!: list_all2_mono)
@@ -2335,29 +2335,29 @@ lemma real_cte_at_not_tcb_at':
   apply (clarsimp elim!: tcb_real_cte_16)
   done
 
-lemma decodeBindAEP_wf:
+lemma decodeBindNotification_wf:
   "\<lbrace>invs' and tcb_at' t and ex_nonz_cap_to' t
          and (\<lambda>s. \<forall>x \<in> set extras. s \<turnstile>' (fst x) \<and> (\<forall>y \<in> zobj_refs' (fst x). ex_nonz_cap_to' y s))\<rbrace>
-     decodeBindAEP (capability.ThreadCap t) extras
+     decodeBindNotification (capability.ThreadCap t) extras
    \<lbrace>tcb_inv_wf'\<rbrace>,-"
-  apply (simp add: decodeBindAEP_def whenE_def
+  apply (simp add: decodeBindNotification_def whenE_def
              cong: list.case_cong split del: split_if)
   apply (rule hoare_pre)
-   apply (wp getAsyncEP_wp getObject_tcb_wp
+   apply (wp getNotification_wp getObject_tcb_wp
         | wpc
-        | simp add: threadGet_def getBoundAEP_def)+
+        | simp add: threadGet_def getBoundNotification_def)+
   apply (fastforce simp: valid_cap'_def[where c="capability.ThreadCap t"]
-                         is_aep invs_def valid_state'_def valid_pspace'_def
+                         is_ntfn invs_def valid_state'_def valid_pspace'_def
                          projectKOs null_def pred_tcb_at'_def obj_at'_def
                    dest!: global'_no_ex_cap hd_in_set)
   done
 
-lemma decodeUnbindAEP_wf:
+lemma decodeUnbindNotification_wf:
   "\<lbrace>invs' and tcb_at' t and ex_nonz_cap_to' t\<rbrace>
-     decodeUnbindAEP (capability.ThreadCap t)
+     decodeUnbindNotification (capability.ThreadCap t)
    \<lbrace>tcb_inv_wf'\<rbrace>,-"
-  apply (simp add: decodeUnbindAEP_def)
-  apply (wp getObject_tcb_wp | wpc | simp add: threadGet_def getBoundAEP_def)+
+  apply (simp add: decodeUnbindNotification_def)
+  apply (wp getObject_tcb_wp | wpc | simp add: threadGet_def getBoundNotification_def)+
   apply (auto simp: obj_at'_def pred_tcb_at'_def)
   done
 
@@ -2371,7 +2371,7 @@ lemma decodeTCBInv_wf:
               cong: if_cong invocation_label.case_cong split del: split_if)
   apply (rule hoare_pre)
    apply (wpc, wp decodeTCBConf_wf decodeReadReg_wf
-             decodeWriteReg_wf decodeCopyReg_wf decodeBindAEP_wf decodeUnbindAEP_wf)
+             decodeWriteReg_wf decodeCopyReg_wf decodeBindNotification_wf decodeUnbindNotification_wf)
   apply (clarsimp simp: real_cte_at')
   apply (fastforce simp: real_cte_at_not_tcb_at')
   done
@@ -2381,8 +2381,8 @@ lemma restart_makes_simple':
      restart t'
    \<lbrace>\<lambda>rv. st_tcb_at' simple' t\<rbrace>"
   apply (simp add: restart_def)
-  apply (wp sts_st_tcb_at'_cases ipcCancel_simple
-            ipcCancel_st_tcb_at static_imp_wp | simp)+
+  apply (wp sts_st_tcb_at'_cases cancelIPC_simple
+            cancelIPC_st_tcb_at static_imp_wp | simp)+
   apply (rule hoare_strengthen_post [OF isBlocked_inv])
   apply clarsimp
   done
@@ -2415,7 +2415,7 @@ lemma invokeTCB_makes_simple':
                                    performTransfer_def split_def
                                    getThreadBufferSlot_def
                         split del: split_if cong: if_cong option.case_cong)
-        defer 3 defer 3(* thread control, aep control *)
+        defer 3 defer 3(* thread control, ntfn control *)
         apply ((wp restart_makes_simple' suspend_makes_simple'
                   mapM_x_wp'
                      | simp cong: if_cong)+)[5]

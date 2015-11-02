@@ -12,7 +12,7 @@ theory Interrupt_H
 imports
   RetypeDecls_H
   ArchInterrupt_H
-  AsyncEndpoint_H
+  Notification_H
   CNode_H
   KI_Decls_H
 begin
@@ -77,7 +77,7 @@ defs invokeIRQControl_def:
 "invokeIRQControl x0\<equiv> (case x0 of
     (IssueIRQHandler irq handlerSlot controlSlot) \<Rightarrow>   
   withoutPreemption $ (do
-    setIRQState (IRQNotifyAEP) irq;
+    setIRQState (IRQSignal) irq;
     cteInsert (IRQHandlerCap irq) controlSlot handlerSlot
   od)
   | (InterruptControl invok) \<Rightarrow>   
@@ -89,7 +89,7 @@ defs decodeIRQHandlerInvocation_def:
     (case (invocationType label,extraCaps) of
           (IRQAckIRQ,_) \<Rightarrow>   returnOk $ AckIRQ irq
         | (IRQSetIRQHandler,(cap,slot)#_) \<Rightarrow>   (case cap of
-                  AsyncEndpointCap _ _ True _ \<Rightarrow>  
+                  NotificationCap _ _ True _ \<Rightarrow>  
                     returnOk $ SetIRQHandler irq cap slot
                 | _ \<Rightarrow>   throw $ InvalidCapability 0
                 )
@@ -126,7 +126,7 @@ defs deletingIRQHandler_def:
 "deletingIRQHandler irq\<equiv> (do
     slot \<leftarrow> getIRQSlot irq;
     cap \<leftarrow> getSlotCap slot;
-    haskell_assert (isAsyncEndpointCap cap \<or> isNullCap cap)
+    haskell_assert (isNotificationCap cap \<or> isNullCap cap)
         [];
     cteDeleteOne slot
 od)"
@@ -159,12 +159,12 @@ defs handleInterrupt_def:
 "handleInterrupt irq\<equiv> (do
     st \<leftarrow> getIRQState irq;
     (case st of
-          IRQNotifyAEP \<Rightarrow>   (do
+          IRQSignal \<Rightarrow>   (do
             slot \<leftarrow> getIRQSlot irq;
             cap \<leftarrow> getSlotCap slot;
             (case cap of
-                  AsyncEndpointCap _ _ True _ \<Rightarrow>  
-                    sendAsyncIPC (capAEPPtr cap) (capAEPBadge cap)
+                  NotificationCap _ _ True _ \<Rightarrow>  
+                    sendSignal (capNtfnPtr cap) (capNtfnBadge cap)
                 | _ \<Rightarrow>   doMachineOp $ debugPrint $
                     [] @ show irq
                 );

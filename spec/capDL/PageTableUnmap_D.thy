@@ -44,15 +44,15 @@ where
     case (cdl_tcb_caps t tcb_pending_op_slot) of
         Some (PendingSyncSendCap p _ _ _ _) \<Rightarrow> p = ep
       | Some (PendingSyncRecvCap p is_reply ) \<Rightarrow> p = ep \<and> \<not> is_reply
-      | Some (PendingAsyncRecvCap p) \<Rightarrow> p = ep
+      | Some (PendingNtfnRecvCap p) \<Rightarrow> p = ep
       | _ \<Rightarrow> False"
 
 
 -- "Cancel all pending IPCs currently blocked on this endpoint."
 definition
-  ep_cancel_all :: "cdl_object_id \<Rightarrow> unit k_monad"
+  cancel_all_ipc :: "cdl_object_id \<Rightarrow> unit k_monad"
 where
-  "ep_cancel_all ep \<equiv>
+  "cancel_all_ipc ep \<equiv>
     modify (\<lambda>s. s\<lparr>cdl_objects :=  map_option
         (\<lambda>obj. case obj of
             Tcb t \<Rightarrow>
@@ -63,53 +63,53 @@ where
            | _ \<Rightarrow> obj)
           \<circ> (cdl_objects s)\<rparr>)"
 
--- "Is the given thread bound to the given aep?"
+-- "Is the given thread bound to the given ntfn?"
 definition
-  is_thread_bound_to_aep :: "cdl_tcb \<Rightarrow> cdl_object_id \<Rightarrow> bool"
+  is_thread_bound_to_ntfn :: "cdl_tcb \<Rightarrow> cdl_object_id \<Rightarrow> bool"
 where
-  "is_thread_bound_to_aep t aep \<equiv>
-    case (cdl_tcb_caps t tcb_boundaep_slot) of
-        Some (BoundAsyncCap a) \<Rightarrow> a = aep
+  "is_thread_bound_to_ntfn t ntfn \<equiv>
+    case (cdl_tcb_caps t tcb_boundntfn_slot) of
+        Some (BoundNotificationCap a) \<Rightarrow> a = ntfn
       | _ \<Rightarrow> False"
 
--- "find all tcbs that are bound to a given aep"
+-- "find all tcbs that are bound to a given ntfn"
 definition
-  get_bound_aep_threads :: "cdl_object_id \<Rightarrow> cdl_state \<Rightarrow> cdl_object_id set"
+  get_bound_notification_threads :: "cdl_object_id \<Rightarrow> cdl_state \<Rightarrow> cdl_object_id set"
 where
-  "get_bound_aep_threads aep_id state \<equiv>
+  "get_bound_notification_threads ntfn_id state \<equiv>
      {x. \<exists>a. (cdl_objects state) x = Some (Tcb a) \<and>
-         (((cdl_tcb_caps a) tcb_boundaep_slot) = Some (BoundAsyncCap aep_id))}"
+         (((cdl_tcb_caps a) tcb_boundntfn_slot) = Some (BoundNotificationCap ntfn_id))}"
 
 definition
-  modify_bound_aep :: "cdl_tcb \<Rightarrow> cdl_cap \<Rightarrow> cdl_tcb"
+  modify_bound_ntfn :: "cdl_tcb \<Rightarrow> cdl_cap \<Rightarrow> cdl_tcb"
 where
-  "modify_bound_aep t cap \<equiv> t \<lparr> cdl_tcb_caps := (cdl_tcb_caps t)(tcb_boundaep_slot \<mapsto> cap)\<rparr>"
+  "modify_bound_ntfn t cap \<equiv> t \<lparr> cdl_tcb_caps := (cdl_tcb_caps t)(tcb_boundntfn_slot \<mapsto> cap)\<rparr>"
  
 
 abbreviation
-  do_unbind_aep :: "cdl_object_id \<Rightarrow> unit k_monad"
+  do_unbind_notification :: "cdl_object_id \<Rightarrow> unit k_monad"
 where
-  "do_unbind_aep tcb \<equiv> set_cap (tcb, tcb_boundaep_slot) NullCap"
+  "do_unbind_notification tcb \<equiv> set_cap (tcb, tcb_boundntfn_slot) NullCap"
 
 definition
-  unbind_async_endpoint :: "cdl_object_id \<Rightarrow> unit k_monad"
+  unbind_notification :: "cdl_object_id \<Rightarrow> unit k_monad"
 where
-  "unbind_async_endpoint tcb \<equiv> do
-     cap \<leftarrow> KHeap_D.get_cap (tcb, tcb_boundaep_slot);
+  "unbind_notification tcb \<equiv> do
+     cap \<leftarrow> KHeap_D.get_cap (tcb, tcb_boundntfn_slot);
      (case cap of
-      BoundAsyncCap _ \<Rightarrow> do_unbind_aep tcb
+      BoundNotificationCap _ \<Rightarrow> do_unbind_notification tcb
     | _ \<Rightarrow> return ())
    od"
   
 definition
-  unbind_maybe_aep :: "cdl_object_id \<Rightarrow> unit k_monad"
+  unbind_maybe_notification :: "cdl_object_id \<Rightarrow> unit k_monad"
 where
-  "unbind_maybe_aep aep_id \<equiv> do
-     bound_tcbs \<leftarrow> gets $ get_bound_aep_threads aep_id;
+  "unbind_maybe_notification ntfn_id \<equiv> do
+     bound_tcbs \<leftarrow> gets $ get_bound_notification_threads ntfn_id;
      t \<leftarrow> option_select bound_tcbs;
      (case t of
        None \<Rightarrow> return ()
-     | Some tcb \<Rightarrow> do_unbind_aep tcb)
+     | Some tcb \<Rightarrow> do_unbind_notification tcb)
   od"
 
 definition
@@ -117,13 +117,13 @@ definition
  "can_fast_finalise cap \<equiv> case cap of ReplyCap r \<Rightarrow> True
                        | MasterReplyCap r \<Rightarrow> True
                        | EndpointCap r b R \<Rightarrow> True
-                       | AsyncEndpointCap r b R \<Rightarrow> True
+                       | NotificationCap r b R \<Rightarrow> True
                        | NullCap \<Rightarrow> True
                        | RestartCap \<Rightarrow> True
                        | RunningCap \<Rightarrow> True
                        | PendingSyncSendCap r _ _ _ _ \<Rightarrow> True
                        | PendingSyncRecvCap r _ \<Rightarrow> True
-                       | PendingAsyncRecvCap r \<Rightarrow> True
+                       | PendingNtfnRecvCap r \<Rightarrow> True
                        | DomainCap \<Rightarrow> True
                        | PageDirectoryCap _ x _ \<Rightarrow> \<not>(x = Real)
                        | PageTableCap _ x _ \<Rightarrow> \<not>(x = Real)
@@ -139,15 +139,15 @@ where
 | "fast_finalise (ReplyCap r)             final = return ()"
 | "fast_finalise (MasterReplyCap r)       final = return ()"
 | "fast_finalise (EndpointCap r b R)      final =
-      (when final $ ep_cancel_all r)"
-| "fast_finalise (AsyncEndpointCap r b R) final =
+      (when final $ cancel_all_ipc r)"
+| "fast_finalise (NotificationCap r b R) final =
       (when final $ do
-            unbind_maybe_aep r;
-            ep_cancel_all r
+            unbind_maybe_notification r;
+            cancel_all_ipc r
           od)"
 | "fast_finalise (PendingSyncSendCap r _ _ _ _) final =  return()"
 | "fast_finalise (PendingSyncRecvCap r _)   final = return()"
-| "fast_finalise  (PendingAsyncRecvCap r) final = return()"
+| "fast_finalise  (PendingNtfnRecvCap r) final = return()"
 | "fast_finalise DomainCap final = return ()"
 | "fast_finalise (PageDirectoryCap _ x _) _ = (if x = Real then fail else return())"
 | "fast_finalise (PageTableCap _ x _) _ = (if x = Real then fail else return())"
@@ -167,9 +167,9 @@ definition
   | RunningCap \<Rightarrow> False
   | PendingSyncSendCap _ _ _ _ _ \<Rightarrow> False
   | PendingSyncRecvCap _ _ \<Rightarrow> False
-  | PendingAsyncRecvCap _ \<Rightarrow> False
+  | PendingNtfnRecvCap _ \<Rightarrow> False
   | DomainCap \<Rightarrow> False
-  | BoundAsyncCap _ \<Rightarrow> False
+  | BoundNotificationCap _ \<Rightarrow> False
   | IrqControlCap  \<Rightarrow> False
   | AsidControlCap \<Rightarrow> False
   | IOSpaceMasterCap \<Rightarrow> False

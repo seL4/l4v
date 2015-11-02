@@ -3915,8 +3915,8 @@ lemma cap_delete_one_valid_list[wp]: "\<lbrace>valid_list\<rbrace> cap_delete_on
 
 crunch valid_list[wp]: thread_set valid_list
 
-lemma reply_ipc_cancel_valid_list[wp]: "\<lbrace>valid_list\<rbrace> reply_ipc_cancel a \<lbrace>\<lambda>_. valid_list\<rbrace>"
-  unfolding reply_ipc_cancel_def
+lemma reply_cancel_ipc_valid_list[wp]: "\<lbrace>valid_list\<rbrace> reply_cancel_ipc a \<lbrace>\<lambda>_. valid_list\<rbrace>"
+  unfolding reply_cancel_ipc_def
   apply (wp select_wp hoare_drop_imps thread_set_mdb | simp)+
   done
 

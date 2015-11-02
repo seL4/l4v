@@ -98,7 +98,7 @@ datatype cdl_cap =
   (* Kernel object capabilities *)
   | UntypedCap cdl_object_set cdl_object_set
   | EndpointCap cdl_object_id cdl_badge "cdl_right set"
-  | AsyncEndpointCap cdl_object_id cdl_badge "cdl_right set"
+  | NotificationCap cdl_object_id cdl_badge "cdl_right set"
   | ReplyCap cdl_object_id (* The id of the tcb of the target thread *)
   | MasterReplyCap cdl_object_id
   | CNodeCap cdl_object_id cdl_cap_guard cdl_cap_guard_size cdl_size_bits
@@ -118,7 +118,7 @@ datatype cdl_cap =
      it is waiting for a reply or not
   *)
   | PendingSyncRecvCap cdl_object_id bool
-  | PendingAsyncRecvCap cdl_object_id
+  | PendingNtfnRecvCap cdl_object_id
 
   (* Indicate that the thread is ready for Reschedule *)
   | RestartCap
@@ -144,8 +144,8 @@ datatype cdl_cap =
   (* Zombie caps (representing objects mid-deletion) *)
   | ZombieCap cdl_object_id
 
-  (* Bound AEP caps signifying when a tcb is bound to an AEP *)
-  | BoundAsyncCap cdl_object_id
+  (* Bound NTFN caps signifying when a tcb is bound to an NTFN *)
+  | BoundNotificationCap cdl_object_id
 
 (* A mapping from capability identifiers to capabilities. *)
 
@@ -207,7 +207,7 @@ record cdl_irq_node =
  *)
 datatype cdl_object =
     Endpoint
-  | AsyncEndpoint
+  | Notification
   | Tcb cdl_tcb
   | CNode cdl_cnode
   | AsidPool cdl_asid_pool
@@ -247,7 +247,7 @@ translations
  *   on behalf of this thread.
  *
  * irq_node:
- *   Which IRQs are mapped to which async endpoints.
+ *   Which IRQs are mapped to which notifications.
  *
  * asid_table:
  *   The first level of the asid table, containing capabilities to all
@@ -273,7 +273,7 @@ where
     case x of
         Untyped \<Rightarrow> UntypedType
       | Endpoint \<Rightarrow> EndpointType
-      | AsyncEndpoint \<Rightarrow> AsyncEndpointType
+      | Notification \<Rightarrow> NotificationType
       | Tcb _ \<Rightarrow> TcbType
       | CNode _ \<Rightarrow> CNodeType
       | IRQNode _ \<Rightarrow> IRQNodeType
@@ -304,7 +304,7 @@ definition "tcb_replycap_slot   = (2 :: cdl_cnode_index)"
 definition "tcb_caller_slot     = (3 :: cdl_cnode_index)"
 definition "tcb_ipcbuffer_slot  = (4 :: cdl_cnode_index)"
 definition "tcb_pending_op_slot = (5 :: cdl_cnode_index)"
-definition "tcb_boundaep_slot  = (6 :: cdl_cnode_index)"
+definition "tcb_boundntfn_slot  = (6 :: cdl_cnode_index)"
 
 lemmas tcb_slot_defs =
   tcb_cspace_slot_def
@@ -313,7 +313,7 @@ lemmas tcb_slot_defs =
   tcb_caller_slot_def
   tcb_ipcbuffer_slot_def
   tcb_pending_op_slot_def
-  tcb_boundaep_slot_def
+  tcb_boundntfn_slot_def
 
 (*
  * Getters and setters for various data types.
@@ -335,14 +335,14 @@ where
   | "cap_objects (CNodeCap x _ _ _) = {x}"
   | "cap_objects (MasterReplyCap x) = {x}"
   | "cap_objects (ReplyCap x) = {x}"
-  | "cap_objects (AsyncEndpointCap x _ _) = {x}"
+  | "cap_objects (NotificationCap x _ _) = {x}"
   | "cap_objects (EndpointCap x _ _) = {x}"
   | "cap_objects (UntypedCap x a) = x"
   | "cap_objects (ZombieCap x) = {x}"
   | "cap_objects (PendingSyncSendCap x _ _ _ _) = {x}"
   | "cap_objects (PendingSyncRecvCap x _ ) = {x}"
-  | "cap_objects (PendingAsyncRecvCap x) = {x}"
-  | "cap_objects (BoundAsyncCap x) = {x}"
+  | "cap_objects (PendingNtfnRecvCap x) = {x}"
+  | "cap_objects (BoundNotificationCap x) = {x}"
 
 definition
   cap_has_object :: "cdl_cap \<Rightarrow> bool"
@@ -378,25 +378,25 @@ lemma cap_object_simps:
   "cap_object (CNodeCap x k l sz) = x"
   "cap_object (MasterReplyCap x) = x"
   "cap_object (ReplyCap x) = x"
-  "cap_object (AsyncEndpointCap x m n) = x"
+  "cap_object (NotificationCap x m n) = x"
   "cap_object (EndpointCap x p q) = x"
   "cap_object (ZombieCap x) = x"
   "cap_object (PendingSyncSendCap x s t u v) = x"
   "cap_object (PendingSyncRecvCap x t) = x"
-  "cap_object (PendingAsyncRecvCap x) = x"
-  "cap_object (BoundAsyncCap x) = x"
+  "cap_object (PendingNtfnRecvCap x) = x"
+  "cap_object (BoundNotificationCap x) = x"
   by (simp_all add:cap_object_def Nitpick.The_psimp cap_has_object_def)
 
 primrec (nonexhaustive) cap_badge :: "cdl_cap \<Rightarrow> cdl_badge"
 where
-    "cap_badge (AsyncEndpointCap _ x _) = x"
+    "cap_badge (NotificationCap _ x _) = x"
   | "cap_badge (EndpointCap _ x _) = x"
 
 definition
   update_cap_badge :: "cdl_badge \<Rightarrow> cdl_cap \<Rightarrow> cdl_cap"
 where
   "update_cap_badge x c \<equiv> case c of
-      AsyncEndpointCap f1 _ f3 \<Rightarrow> AsyncEndpointCap f1 x f3
+      NotificationCap f1 _ f3 \<Rightarrow> NotificationCap f1 x f3
     | EndpointCap f1 _ f3      \<Rightarrow> EndpointCap f1 x f3
     | _ \<Rightarrow> c"
 
@@ -405,7 +405,7 @@ definition
 where
   "cap_rights c \<equiv> case c of
       FrameCap _ x _ _ _ \<Rightarrow> x
-    | AsyncEndpointCap _ _ x \<Rightarrow> x
+    | NotificationCap _ _ x \<Rightarrow> x
     | EndpointCap _ _ x \<Rightarrow> x
     | _ \<Rightarrow> UNIV"
 
@@ -414,7 +414,7 @@ definition
 where
   "update_cap_rights r c \<equiv> case c of
       FrameCap f1 _ f2 f3 f4 \<Rightarrow> FrameCap f1 (validate_vm_rights r) f2 f3 f4
-    | AsyncEndpointCap f1 f2 _ \<Rightarrow> AsyncEndpointCap f1 f2 (r - {Grant})
+    | NotificationCap f1 f2 _ \<Rightarrow> NotificationCap f1 f2 (r - {Grant})
     | EndpointCap f1 f2 _ \<Rightarrow> EndpointCap f1 f2 r
     | _ \<Rightarrow> c"
 
@@ -525,7 +525,7 @@ where
   "cap_type x \<equiv> case x of
     UntypedCap _ _         \<Rightarrow> Some UntypedType
   | EndpointCap _ _ _      \<Rightarrow> Some EndpointType
-  | AsyncEndpointCap _ _ _ \<Rightarrow> Some AsyncEndpointType
+  | NotificationCap _ _ _ \<Rightarrow> Some NotificationType
   | TcbCap _               \<Rightarrow> Some TcbType
   | CNodeCap _ _ _ _       \<Rightarrow> Some CNodeType
   | AsidPoolCap _ _        \<Rightarrow> Some AsidPoolType
@@ -537,7 +537,7 @@ where
 
 abbreviation "is_untyped_cap cap    \<equiv> (cap_type cap = Some UntypedType)"
 abbreviation "is_ep_cap cap         \<equiv> (cap_type cap = Some EndpointType)"
-abbreviation "is_aep_cap cap        \<equiv> (cap_type cap = Some AsyncEndpointType)"
+abbreviation "is_ntfn_cap cap        \<equiv> (cap_type cap = Some NotificationType)"
 abbreviation "is_tcb_cap cap        \<equiv> (cap_type cap = Some TcbType)"
 abbreviation "is_cnode_cap cap      \<equiv> (cap_type cap = Some CNodeType)"
 abbreviation "is_asidpool_cap cap   \<equiv> (cap_type cap = Some AsidPoolType)"
@@ -550,7 +550,7 @@ definition   "is_irqcontrol_cap cap \<equiv> (cap = IrqControlCap)"
 lemma cap_type_simps [simp]:
   "is_untyped_cap    (UntypedCap a a')"
   "is_ep_cap         (EndpointCap b c d)"
-  "is_aep_cap        (AsyncEndpointCap e f g)"
+  "is_ntfn_cap        (NotificationCap e f g)"
   "is_tcb_cap        (TcbCap h)"
   "is_cnode_cap      (CNodeCap j k l m)"
   "is_asidpool_cap   (AsidPoolCap n p)"
@@ -588,7 +588,7 @@ lemma update_cap_guard_size [simp]:
 definition is_pending_cap :: "cdl_cap \<Rightarrow> bool"
 where "is_pending_cap c \<equiv> case c of
   PendingSyncRecvCap _ _ \<Rightarrow> True
-  | PendingAsyncRecvCap _ \<Rightarrow> True
+  | PendingNtfnRecvCap _ \<Rightarrow> True
   | PendingSyncSendCap _ _ _ _ _ \<Rightarrow> True
   | _ \<Rightarrow> False"
 
@@ -619,7 +619,7 @@ definition
   default_tcb :: "word8 \<Rightarrow> cdl_tcb"
 where
   "default_tcb current_domain = \<lparr>
-    cdl_tcb_caps = \<lambda>n. if n \<le> tcb_boundaep_slot then Some NullCap else None,
+    cdl_tcb_caps = \<lambda>n. if n \<le> tcb_boundntfn_slot then Some NullCap else None,
     cdl_tcb_fault_endpoint = 0,
     cdl_tcb_intent = \<lparr>
       cdl_intent_op = None,
@@ -640,7 +640,7 @@ where
     case x of
         UntypedType \<Rightarrow> Some Untyped
       | EndpointType \<Rightarrow> Some Endpoint
-      | AsyncEndpointType \<Rightarrow> Some AsyncEndpoint
+      | NotificationType \<Rightarrow> Some Notification
       | TcbType \<Rightarrow> Some (Tcb (default_tcb current_domain))
       | CNodeType \<Rightarrow> Some (CNode (empty_cnode y))
       | AsidPoolType \<Rightarrow> Some (AsidPool \<lparr> cdl_asid_pool_caps = empty_cap_map asid_low_bits \<rparr>)
@@ -658,7 +658,7 @@ where
   "default_cap t id_set sz \<equiv>
     case t of
         EndpointType \<Rightarrow> EndpointCap (pick id_set) 0 UNIV
-      | AsyncEndpointType \<Rightarrow> AsyncEndpointCap (THE i. i \<in> id_set) 0 {Read,Write}
+      | NotificationType \<Rightarrow> NotificationCap (THE i. i \<in> id_set) 0 {Read,Write}
       | TcbType \<Rightarrow> TcbCap (pick id_set)
       | CNodeType \<Rightarrow> CNodeCap (pick id_set) 0 0 sz
       | IRQNodeType \<Rightarrow> IrqHandlerCap undefined

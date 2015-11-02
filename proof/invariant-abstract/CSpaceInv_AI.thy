@@ -31,9 +31,9 @@ lemma get_thread_state_inv [simp]:
   apply simp
   done
 
-lemma get_bound_aep_inv[simp]:
-  "\<lbrace>P\<rbrace> get_bound_aep t \<lbrace>\<lambda>r. P\<rbrace>"
-  apply (simp add: get_bound_aep_def thread_get_def gets_the_def)
+lemma get_bound_notification_inv[simp]:
+  "\<lbrace>P\<rbrace> get_bound_notification t \<lbrace>\<lambda>r. P\<rbrace>"
+  apply (simp add: get_bound_notification_def thread_get_def gets_the_def)
   apply (wp, simp)
   done
 
@@ -148,7 +148,7 @@ lemma valid_thread_state_tcb_update:
   valid_tcb_state ts (s\<lparr>kheap := kheap s(t \<mapsto> TCB tcb)\<rparr>) = valid_tcb_state ts s"
   apply (unfold valid_tcb_state_def)
   apply (case_tac ts)
-  apply (simp_all add: obj_at_tcb_update is_ep_def is_tcb_def is_aep_def)
+  apply (simp_all add: obj_at_tcb_update is_ep_def is_tcb_def is_ntfn_def)
   done
 
 
@@ -217,7 +217,7 @@ lemma tcb_state_same_refs:
 
 lemma valid_idle_tcb_update:
   "\<lbrakk>valid_idle s; ko_at (TCB t) p s;
-    tcb_state t = tcb_state t'; tcb_bound_aep t = tcb_bound_aep t';
+    tcb_state t = tcb_state t'; tcb_bound_notification t = tcb_bound_notification t';
     valid_tcb p t' s \<rbrakk>
    \<Longrightarrow> valid_idle (s\<lparr>kheap := kheap s(p \<mapsto> TCB t')\<rparr>)"
   by (clarsimp simp: valid_idle_def pred_tcb_at_def obj_at_def)
@@ -369,9 +369,9 @@ lemma gts_st_tcb:
   apply (clarsimp simp: pred_tcb_at_def)
   done
 
-lemma gba_bound_tcb:
-  "\<lbrace>\<top>\<rbrace> get_bound_aep t \<lbrace>\<lambda>rv. bound_tcb_at (\<lambda>aep. rv = aep) t\<rbrace>"
-  apply (simp add: get_bound_aep_def thread_get_def)
+lemma gbn_bound_tcb:
+  "\<lbrace>\<top>\<rbrace> get_bound_notification t \<lbrace>\<lambda>rv. bound_tcb_at (\<lambda>ntfn. rv = ntfn) t\<rbrace>"
+  apply (simp add: get_bound_notification_def thread_get_def)
   apply wp
   apply (clarsimp simp: pred_tcb_at_def)
   done
@@ -389,7 +389,7 @@ definition
 where
  "cap_master_cap cap \<equiv> case cap of
    cap.EndpointCap ref bdg rghts \<Rightarrow> cap.EndpointCap ref 0 UNIV
- | cap.AsyncEndpointCap ref bdg rghts \<Rightarrow> cap.AsyncEndpointCap ref 0 UNIV
+ | cap.NotificationCap ref bdg rghts \<Rightarrow> cap.NotificationCap ref 0 UNIV
  | cap.CNodeCap ref bits gd \<Rightarrow> cap.CNodeCap ref bits []
  | cap.ThreadCap ref \<Rightarrow> cap.ThreadCap ref
  | cap.DomainCap \<Rightarrow> cap.DomainCap
@@ -412,9 +412,9 @@ lemma cap_master_cap_eqDs1:
   "cap_master_cap cap = cap.EndpointCap ref bdg rghts
      \<Longrightarrow> bdg = 0 \<and> rghts = UNIV
           \<and> (\<exists>bdg rghts. cap = cap.EndpointCap ref bdg rghts)"
-  "cap_master_cap cap = cap.AsyncEndpointCap ref bdg rghts
+  "cap_master_cap cap = cap.NotificationCap ref bdg rghts
      \<Longrightarrow> bdg = 0 \<and> rghts = UNIV
-          \<and> (\<exists>bdg rghts. cap = cap.AsyncEndpointCap ref bdg rghts)"
+          \<and> (\<exists>bdg rghts. cap = cap.NotificationCap ref bdg rghts)"
   "cap_master_cap cap = cap.CNodeCap ref bits gd
      \<Longrightarrow> gd = [] \<and> (\<exists>gd. cap = cap.CNodeCap ref bits gd)"
   "cap_master_cap cap = cap.ThreadCap ref
@@ -457,12 +457,12 @@ definition
 where
  "cap_badge cap \<equiv> case cap of
     cap.EndpointCap r badge rights \<Rightarrow> Some badge
-  | cap.AsyncEndpointCap r badge rights \<Rightarrow> Some badge
+  | cap.NotificationCap r badge rights \<Rightarrow> Some badge
   | _ \<Rightarrow> None"
 
 lemma cap_badge_simps [simp]:
  "cap_badge (cap.EndpointCap r badge rights)       = Some badge"
- "cap_badge (cap.AsyncEndpointCap r badge rights)  = Some badge"
+ "cap_badge (cap.NotificationCap r badge rights)  = Some badge"
  "cap_badge (cap.UntypedCap p n f)                 = None"
  "cap_badge (cap.NullCap)                          = None"
  "cap_badge (cap.DomainCap)                        = None"
@@ -1465,7 +1465,7 @@ lemma set_object_idle [wp]:
   "\<lbrace>valid_idle and
      (\<lambda>s. ko_at ko p s \<and> (\<not>is_tcb ko \<or> 
                    (ko = (TCB t) \<and> ko' = (TCB t') \<and>
-                    tcb_state t = tcb_state t' \<and> tcb_bound_aep t = tcb_bound_aep t')))\<rbrace>
+                    tcb_state t = tcb_state t' \<and> tcb_bound_notification t = tcb_bound_notification t')))\<rbrace>
    set_object p ko'
    \<lbrace>\<lambda>rv. valid_idle\<rbrace>"
   apply (simp add: set_object_def)

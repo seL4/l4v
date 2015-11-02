@@ -816,9 +816,9 @@ lemma set_ep_cte_wp_at [wp]:
   done
 
 
-lemma set_aep_cte_wp_at [wp]:
-  "\<lbrace>cte_wp_at P c\<rbrace> set_async_ep e p \<lbrace>\<lambda>_. cte_wp_at P c\<rbrace>"
-  apply (simp add: set_async_ep_def set_object_def get_object_def)
+lemma set_ntfn_cte_wp_at [wp]:
+  "\<lbrace>cte_wp_at P c\<rbrace> set_notification e p \<lbrace>\<lambda>_. cte_wp_at P c\<rbrace>"
+  apply (simp add: set_notification_def set_object_def get_object_def)
   apply wp
   apply (auto simp: cte_wp_at_cases)
   done
@@ -855,12 +855,12 @@ lemma suspend_not_recursive:
   done
 
 
-lemma unbind_aep_not_recursive:
+lemma unbind_notification_not_recursive:
   "\<lbrace>\<lambda>s. P (not_recursive_cspaces s)\<rbrace>
-     unbind_async_endpoint tcb
+     unbind_notification tcb
    \<lbrace>\<lambda>rv s. P (not_recursive_cspaces s)\<rbrace>"
   apply (simp add: not_recursive_cspaces_def cte_wp_at_caps_of_state)
-  apply (wp unbind_async_endpoint_caps_of_state)
+  apply (wp unbind_notification_caps_of_state)
   done
 
 
@@ -1062,11 +1062,11 @@ termination rec_del
    apply (clarsimp simp: in_monad cte_wp_at_caps_of_state
                          fst_cte_ptrs_def
                   split: split_if_asm)
-   apply (frule(1) use_valid [OF _ unbind_async_endpoint_caps_of_state],
+   apply (frule(1) use_valid [OF _ unbind_notification_caps_of_state],
           frule(1) use_valid [OF _ suspend_thread_cap])
    apply clarsimp
    apply (erule use_valid [OF _ suspend_not_recursive])
-   apply (erule use_valid [OF _ unbind_aep_not_recursive])
+   apply (erule use_valid [OF _ unbind_notification_not_recursive])
    apply simp
   apply (clarsimp simp: in_monad cte_wp_at_caps_of_state
                         fst_cte_ptrs_def zombie_cte_bits_def
@@ -1218,7 +1218,7 @@ lemma set_asid_pool_typ_at[wp]:
 
 lemma rec_del_typ_at:
   "\<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> rec_del call \<lbrace>\<lambda>_ s. P (typ_at T p s)\<rbrace>"
-  by (wp rec_del_preservation ep_cancel_all_typ_at aep_cancel_all_typ_at
+  by (wp rec_del_preservation cancel_all_ipc_typ_at cancel_all_signals_typ_at
            cap_swap_fd_typ_at empty_slot_typ_at set_cap_typ_at
            irq_state_independent_AI preemption_point_inv
        | simp)+
@@ -2704,7 +2704,7 @@ lemma finalise_cap_makes_halted:
     finalise_cap cap ex
    \<lbrace>\<lambda>rv s. \<forall>t \<in> obj_refs (fst rv). halted_if_tcb t s\<rbrace>"
   apply (case_tac cap, simp_all)
-            apply (wp unbind_async_endpoint_valid_objs
+            apply (wp unbind_notification_valid_objs
                  | clarsimp simp: o_def valid_cap_def cap_table_at_typ
                                   is_tcb obj_at_def 
                  | clarsimp simp: halted_if_tcb_def
@@ -2732,10 +2732,10 @@ lemma empty_slot_emptyable[wp]:
   done
 
 
-crunch emptyable[wp]: blocked_ipc_cancel "emptyable sl"
+crunch emptyable[wp]: blocked_cancel_ipc "emptyable sl"
   (ignore: set_thread_state wp: emptyable_lift sts_st_tcb_at_cases static_imp_wp)
 
-crunch emptyable[wp]: async_ipc_cancel "emptyable sl"
+crunch emptyable[wp]: cancel_signal "emptyable sl"
   (ignore: set_thread_state wp: emptyable_lift sts_st_tcb_at_cases static_imp_wp)
 
 
@@ -2754,9 +2754,9 @@ lemmas tcb_at_cte_at_2 = tcb_at_cte_at [where ref="tcb_cnode_index 2",
 declare thread_set_Pmdb [wp]
 
 
-lemma reply_ipc_cancel_emptyable[wp]:
-  "\<lbrace>invs and emptyable sl and valid_mdb\<rbrace> reply_ipc_cancel ptr \<lbrace>\<lambda>_. emptyable sl\<rbrace>"
-  apply (simp add: reply_ipc_cancel_def)
+lemma reply_cancel_ipc_emptyable[wp]:
+  "\<lbrace>invs and emptyable sl and valid_mdb\<rbrace> reply_cancel_ipc ptr \<lbrace>\<lambda>_. emptyable sl\<rbrace>"
+  apply (simp add: reply_cancel_ipc_def)
   apply (wp select_wp select_inv hoare_drop_imps | simp add: Ball_def)+
     apply (wp hoare_vcg_all_lift hoare_convert_imp thread_set_Pmdb
               thread_set_invs_trivial thread_set_emptyable thread_set_cte_at
@@ -2764,7 +2764,7 @@ lemma reply_ipc_cancel_emptyable[wp]:
   done
 
 
-crunch emptyable[wp]: ipc_cancel "emptyable sl"
+crunch emptyable[wp]: cancel_ipc "emptyable sl"
 
 
 lemma suspend_emptyable[wp]: 
@@ -2792,7 +2792,7 @@ lemma get_irq_slot_cte_at[wp]:
 
 crunch emptyable[wp]: finalise_cap "emptyable sl"
   (simp: crunch_simps lift: emptyable_lift 
-     wp: crunch_wps suspend_emptyable unbind_async_endpoint_invs unbind_maybe_aep_invs)
+     wp: crunch_wps suspend_emptyable unbind_notification_invs unbind_maybe_notification_invs)
 
 lemma cap_swap_for_delete_emptyable[wp]:
   "\<lbrace>emptyable sl and emptyable sl'\<rbrace> cap_swap_for_delete sl' sl \<lbrace>\<lambda>rv. emptyable sl\<rbrace>"
@@ -3326,16 +3326,16 @@ lemma cap_swap_fd_rvk_prog:
 lemmas empty_slot_rvk_prog' = empty_slot_rvk_prog[unfolded o_def]
 
 
-crunch rvk_prog: ipc_cancel "\<lambda>s. revoke_progress_ord m (\<lambda>x. option_map cap_to_rpo (caps_of_state s x))"
+crunch rvk_prog: cancel_ipc "\<lambda>s. revoke_progress_ord m (\<lambda>x. option_map cap_to_rpo (caps_of_state s x))"
   (simp: crunch_simps o_def unless_def is_final_cap_def tcb_cap_cases_def
      wp: hoare_drop_imps empty_slot_rvk_prog' select_wp
          thread_set_caps_of_state_trivial)
 
-crunch rvk_prog: ep_cancel_all "\<lambda>s. revoke_progress_ord m (\<lambda>x. option_map cap_to_rpo (caps_of_state s x))"
+crunch rvk_prog: cancel_all_ipc "\<lambda>s. revoke_progress_ord m (\<lambda>x. option_map cap_to_rpo (caps_of_state s x))"
   (simp: crunch_simps o_def unless_def is_final_cap_def
      wp: crunch_wps empty_slot_rvk_prog' select_wp)
 
-crunch rvk_prog: aep_cancel_all "\<lambda>s. revoke_progress_ord m (\<lambda>x. option_map cap_to_rpo (caps_of_state s x))"
+crunch rvk_prog: cancel_all_signals "\<lambda>s. revoke_progress_ord m (\<lambda>x. option_map cap_to_rpo (caps_of_state s x))"
   (simp: crunch_simps o_def unless_def is_final_cap_def
      wp: crunch_wps empty_slot_rvk_prog' select_wp)
 
@@ -3352,7 +3352,7 @@ lemma finalise_cap_rvk_prog:
    finalise_cap a b 
    \<lbrace>\<lambda>_ s. revoke_progress_ord m (\<lambda>x. map_option cap_to_rpo (caps_of_state s x))\<rbrace>"
   apply (case_tac a,simp_all add:liftM_def)
-    apply (wp ep_cancel_all_rvk_prog aep_cancel_all_rvk_prog
+    apply (wp cancel_all_ipc_rvk_prog cancel_all_signals_rvk_prog
       suspend_rvk_prog deleting_irq_handler_rvk_prog
       | clarsimp simp:is_final_cap_def comp_def)+
   done
@@ -4194,7 +4194,7 @@ lemma recycle_cap_appropriateness:
   "\<lbrace>valid_cap cap\<rbrace> recycle_cap is_final cap \<lbrace>\<lambda>rv s. appropriate_cte_cap rv = appropriate_cte_cap cap\<rbrace>"
   apply (simp add: recycle_cap_def)
   apply (rule hoare_pre)
-   apply (wp thread_get_wp gts_wp | wpc | simp add: get_bound_aep_def)+
+   apply (wp thread_get_wp gts_wp | wpc | simp add: get_bound_notification_def)+
    apply (simp add: arch_recycle_cap_def o_def split del: split_if)   
    apply (wp | wpc | simp add: | wp_once hoare_drop_imps)+
   apply (auto simp: appropriate_cte_cap_def fun_eq_iff valid_cap_def tcb_at_st_tcb_at pred_tcb_at_def)

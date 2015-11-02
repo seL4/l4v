@@ -75,7 +75,7 @@ crunch irq_masks[wp]: do_reply_transfer "\<lambda>s. P (irq_masks_of_state s)"
 crunch irq_masks[wp]: finalise_cap "\<lambda>s. P (irq_masks_of_state s)"
   (wp: select_wp crunch_wps dmo_wp simp: crunch_simps no_irq_setHardwareASID no_irq_setCurrentPD no_irq_invalidateTLB_ASID no_irq_invalidateTLB_VAASID no_irq_cleanByVA_PoU)
 
-crunch irq_masks[wp]: send_async_ipc "\<lambda>s. P (irq_masks_of_state s)"  
+crunch irq_masks[wp]: send_signal "\<lambda>s. P (irq_masks_of_state s)"  
   (wp: crunch_wps ignore: do_machine_op wp: dmo_wp simp: crunch_simps)
 
 lemma handle_interrupt_irq_masks:
@@ -176,7 +176,7 @@ lemma invoke_irq_control_irq_masks:
    apply(clarsimp simp: irq_control_inv_valid_def domain_sep_inv_def valid_def)+
   done
       
-crunch irq_masks[wp]: arch_perform_invocation, bind_async_endpoint "\<lambda>s. P (irq_masks_of_state s)"
+crunch irq_masks[wp]: arch_perform_invocation, bind_notification "\<lambda>s. P (irq_masks_of_state s)"
   (wp: dmo_wp crunch_wps simp: crunch_simps no_irq_cleanByVA_PoU no_irq_invalidateTLB_ASID no_irq_do_flush)
 
 crunch irq_masks[wp]: restart "\<lambda>s. P (irq_masks_of_state s)"
@@ -205,7 +205,7 @@ lemma invoke_tcb_irq_masks:
             | clarsimp)+)[3]
     defer
     apply((wp | simp )+)[2]
-  (* AsyncEndpointControl *)
+  (* NotificationControl *)
    apply (rename_tac option)
    apply (case_tac option)
     apply ((wp | simp)+)[2]

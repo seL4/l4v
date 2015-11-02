@@ -31,7 +31,7 @@ where
      = (\<lambda>s. ex_cte_cap_wp_to (is_cnode_cap) cte_ptr s
             \<and> (\<exists>ptr'. cte_wp_at (op = (cap.IRQHandlerCap irq)) ptr' s)
             \<and> cte_wp_at (interrupt_derived cap) cte_ptr s
-            \<and> s \<turnstile> cap \<and> is_aep_cap cap)"
+            \<and> s \<turnstile> cap \<and> is_ntfn_cap cap)"
 | "irq_handler_inv_valid (Invocations_A.SetMode irq trig pol) = \<top>"
 
 primrec
@@ -49,7 +49,7 @@ crunch inv[wp]: decode_irq_handler_invocation "P"
 
 lemma valid_irq_handlersD:
   "\<lbrakk>cte_wp_at (op = (IRQHandlerCap irq)) (a, b) s; valid_irq_handlers s\<rbrakk>  \<Longrightarrow>
-  interrupt_states s irq = IRQNotifyAEP"
+  interrupt_states s irq = IRQSignal"
   apply(auto simp: valid_irq_handlers_def cte_wp_at_caps_of_state irq_issued_def cap_irqs_def cap_irq_opt_def split: cap.splits)
   done
 
@@ -113,10 +113,10 @@ lemma is_up_8_32: "is_up (ucast :: word8 \<Rightarrow> word32)"
   by (simp add: is_up_def source_size_def target_size_def word_size)
 
 
-crunch mdb_inv[wp]: ep_cancel_all "\<lambda>s. P (cdt s)"
+crunch mdb_inv[wp]: cancel_all_ipc "\<lambda>s. P (cdt s)"
   (wp: fast_finalise_lift crunch_wps)
 
-crunch mdb_inv[wp]: aep_cancel_all "\<lambda>s. P (cdt s)"
+crunch mdb_inv[wp]: cancel_all_signals "\<lambda>s. P (cdt s)"
   (wp: fast_finalise_lift crunch_wps)
 
 crunch mdb_inv[wp]: fast_finalise "\<lambda>s. P (cdt s)"
@@ -162,7 +162,7 @@ lemma real_cte_emptyable_strg:
 
 
 lemma is_derived_use_interrupt:
-  "(is_aep_cap cap \<and> interrupt_derived cap cap') \<longrightarrow> (is_derived m p cap cap')"
+  "(is_ntfn_cap cap \<and> interrupt_derived cap cap') \<longrightarrow> (is_derived m p cap cap')"
   apply (clarsimp simp: is_cap_simps)
   apply (clarsimp simp: interrupt_derived_def is_derived_def)
   apply (clarsimp simp: cap_master_cap_def split: cap.split_asm)
@@ -217,7 +217,7 @@ lemmas set_irq_state_cte_cap_to[wp]
     = ex_cte_cap_to_pres [OF set_irq_state_mdb_cte_wp_at set_irq_state_irq_node]
 
 lemma set_irq_state_issued[wp]:
-  "\<lbrace>\<top>\<rbrace> set_irq_state irq_state.IRQNotifyAEP irq \<lbrace>\<lambda>rv. irq_issued irq\<rbrace>"
+  "\<lbrace>\<top>\<rbrace> set_irq_state irq_state.IRQSignal irq \<lbrace>\<lambda>rv. irq_issued irq\<rbrace>"
   apply (simp add: set_irq_state_def irq_issued_def)
   apply wp
   apply clarsimp
@@ -237,7 +237,7 @@ lemma no_cap_to_obj_with_diff_IRQHandler[simp]:
                           obj_ref_none_no_asid)
 
 lemma set_irq_state_valid_cap[wp]:
-  "\<lbrace>valid_cap cap\<rbrace> set_irq_state IRQNotifyAEP irq \<lbrace>\<lambda>rv. valid_cap cap\<rbrace>"
+  "\<lbrace>valid_cap cap\<rbrace> set_irq_state IRQSignal irq \<lbrace>\<lambda>rv. valid_cap cap\<rbrace>"
   apply (clarsimp simp: set_irq_state_def)
   apply (wp do_machine_op_valid_cap)
   apply (auto simp: valid_cap_def valid_untyped_def 
@@ -285,14 +285,14 @@ lemma invoke_irq_handler_invs':
     apply (wp valid_cap_typ [OF cap_delete_one_typ_at])
      apply (strengthen real_cte_tcb_valid)
      apply (wp real_cte_at_typ_valid [OF cap_delete_one_typ_at])
-     apply (rule_tac Q="\<lambda>rv s. is_aep_cap cap \<and> invs s
+     apply (rule_tac Q="\<lambda>rv s. is_ntfn_cap cap \<and> invs s
                               \<and> cte_wp_at (is_derived (cdt s) prod cap) prod s"
                 in hoare_post_imp)
       apply (clarsimp simp: is_cap_simps is_derived_def cte_wp_at_caps_of_state)
       apply (simp split: split_if_asm)
       apply (simp add: cap_master_cap_def split: cap.split_asm)
       apply (drule cte_wp_valid_cap [OF caps_of_state_cteD] | clarsimp)+
-      apply (clarsimp simp: cap_master_cap_simps valid_cap_def obj_at_def is_aep is_tcb is_cap_table
+      apply (clarsimp simp: cap_master_cap_simps valid_cap_def obj_at_def is_ntfn is_tcb is_cap_table
                      split: option.split_asm dest!:cap_master_cap_eqDs)
      apply (wp cap_delete_one_still_derived)
     apply simp
@@ -332,11 +332,11 @@ lemma resetTimer_invs[wp]:
   apply(erule use_valid, wp no_irq_resetTimer, assumption)
   done
 
-crunch interrupt_states[wp]: update_waiting_aep, async_ipc_cancel, blocked_ipc_cancel "\<lambda>s. P (interrupt_states s)" (wp: mapM_x_wp_inv)
+crunch interrupt_states[wp]: update_waiting_ntfn, cancel_signal, blocked_cancel_ipc "\<lambda>s. P (interrupt_states s)" (wp: mapM_x_wp_inv)
 
-lemma ipc_cancel_noreply_interrupt_states:
-  "\<lbrace>\<lambda>s. st_tcb_at (\<lambda>st. st \<noteq> BlockedOnReply) t s \<and> P (interrupt_states s) \<rbrace> ipc_cancel t \<lbrace> \<lambda>_ s. P (interrupt_states s) \<rbrace>"
-  apply (simp add: ipc_cancel_def)
+lemma cancel_ipc_noreply_interrupt_states:
+  "\<lbrace>\<lambda>s. st_tcb_at (\<lambda>st. st \<noteq> BlockedOnReply) t s \<and> P (interrupt_states s) \<rbrace> cancel_ipc t \<lbrace> \<lambda>_ s. P (interrupt_states s) \<rbrace>"
+  apply (simp add: cancel_ipc_def)
   apply (wp | wpc | simp)+
      apply (rule hoare_pre_cont)
     apply (wp)
@@ -345,15 +345,15 @@ lemma ipc_cancel_noreply_interrupt_states:
   apply (auto simp: pred_tcb_at_def obj_at_def)
   done
 
-lemma send_async_ipc_interrupt_states[wp_unsafe]:
-  "\<lbrace>\<lambda>s. P (interrupt_states s) \<and> valid_objs s\<rbrace> send_async_ipc a b \<lbrace>\<lambda>_ s. P (interrupt_states s)\<rbrace>"
-  apply (simp add: send_async_ipc_def)
-  apply (rule hoare_seq_ext [OF _ get_aep_sp])
+lemma send_signal_interrupt_states[wp_unsafe]:
+  "\<lbrace>\<lambda>s. P (interrupt_states s) \<and> valid_objs s\<rbrace> send_signal a b \<lbrace>\<lambda>_ s. P (interrupt_states s)\<rbrace>"
+  apply (simp add: send_signal_def)
+  apply (rule hoare_seq_ext [OF _ get_ntfn_sp])
   apply (rule hoare_pre)
-  apply (wp ipc_cancel_noreply_interrupt_states gts_wp hoare_vcg_all_lift thread_get_wp | wpc | simp)+
+  apply (wp cancel_ipc_noreply_interrupt_states gts_wp hoare_vcg_all_lift thread_get_wp | wpc | simp)+
   apply (clarsimp)
   apply (erule (1) obj_at_valid_objsE)
-  apply (clarsimp simp: valid_obj_def valid_aep_def obj_at_def is_tcb_def)
+  apply (clarsimp simp: valid_obj_def valid_ntfn_def obj_at_def is_tcb_def)
   apply (case_tac ko, simp_all)
   apply (auto simp: pred_tcb_at_def obj_at_def receive_blocked_def)
   done
@@ -363,7 +363,7 @@ lemma handle_interrupt_invs[wp]:
   "\<lbrace>invs\<rbrace> handle_interrupt irq \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: handle_interrupt_def ackInterrupt_def)
   apply (wp maskInterrupt_invs | wpc)+
-     apply (wp get_cap_wp send_async_ipc_interrupt_states)
+     apply (wp get_cap_wp send_signal_interrupt_states)
     apply (rule_tac Q="\<lambda>rv. invs and (\<lambda>s. st = interrupt_states s irq)" in hoare_post_imp)
      apply (clarsimp simp: ex_nonz_cap_to_def invs_valid_objs)
      apply (intro allI exI, erule cte_wp_at_weakenE)

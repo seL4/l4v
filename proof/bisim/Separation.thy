@@ -33,7 +33,7 @@ text {*
   separate_cnode_cap}, @{text separate_cap}, etc).
 
   a) A thread may only possess \emph{asynchronous end-point capabilities}
-  (@{text AsyncEndpointCap}).
+  (@{text NotificationCap}).
 
   b) Threads do not have caller capabilities. (A caller capability is a
   capability, placed in a special slot in the TCB, to allow replies. Since the
@@ -52,7 +52,7 @@ text {*
   The proof does show that the kernel API after reaching a state that
   satisifies @{text separate_state} is that of a static separation kernel,
   that is, it only provides system calls for sending and receiving on
-  asynchronous endpoints and otherwise exhibits no dynamic behaviour.
+  notification objects and otherwise exhibits no dynamic behaviour.
 
   Systems with such a setup satisfy the preconditions of our separate
   non-intereference proof, which shows that information travels only along
@@ -63,13 +63,13 @@ definition
   separate_cap :: "cap \<Rightarrow> bool"
 where
   "separate_cap cap \<equiv> case cap of
-                             AsyncEndpointCap ptr badge rights \<Rightarrow> rights \<subseteq> {AllowRecv, AllowSend}
+                             NotificationCap ptr badge rights \<Rightarrow> rights \<subseteq> {AllowRecv, AllowSend}
                            | NullCap                           \<Rightarrow> True
                            | _                                 \<Rightarrow> False"
 
 
 lemma separate_capE:
-  "\<lbrakk> separate_cap cap; cap = NullCap \<Longrightarrow> R; \<And>ptr badge rights. \<lbrakk> cap = AsyncEndpointCap ptr badge rights \<rbrakk> \<Longrightarrow> R \<rbrakk> \<Longrightarrow> R"
+  "\<lbrakk> separate_cap cap; cap = NullCap \<Longrightarrow> R; \<And>ptr badge rights. \<lbrakk> cap = NotificationCap ptr badge rights \<rbrakk> \<Longrightarrow> R \<rbrakk> \<Longrightarrow> R"
   unfolding separate_cap_def
   by (fastforce split: cap.splits)
 
@@ -125,12 +125,12 @@ lemma bisim_gen_asm_r:
 
 lemma bisim_separate_cap_cases:
   assumes nc: "cap = NullCap \<Longrightarrow> bisim R Pn Pn' m m'"
-  and     ac: "\<And>ptr badge rights. \<lbrakk> cap = AsyncEndpointCap ptr badge rights \<rbrakk>
+  and     ac: "\<And>ptr badge rights. \<lbrakk> cap = NotificationCap ptr badge rights \<rbrakk>
                \<Longrightarrow> bisim R (Pa ptr badge rights) (Pa' ptr badge rights) m m'"
   shows   "bisim R (\<lambda>s. (cap = NullCap \<longrightarrow> Pn s)
-                    \<and> (\<forall>ptr badge rights. cap = AsyncEndpointCap ptr badge rights \<longrightarrow> Pa ptr badge rights s))
+                    \<and> (\<forall>ptr badge rights. cap = NotificationCap ptr badge rights \<longrightarrow> Pa ptr badge rights s))
                    ((\<lambda>s. (cap = NullCap \<longrightarrow> Pn' s)
-                    \<and> (\<forall>ptr badge rights. cap = AsyncEndpointCap ptr badge rights \<longrightarrow> Pa' ptr badge rights s))
+                    \<and> (\<forall>ptr badge rights. cap = NotificationCap ptr badge rights \<longrightarrow> Pa' ptr badge rights s))
                        and K (separate_cap cap)) m m'"
   using assms
   apply -

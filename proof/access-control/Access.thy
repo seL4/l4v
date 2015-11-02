@@ -48,7 +48,7 @@ including get access the other rights, create, remove, etc.
 
 *}
 
-datatype auth = Control | Receive | SyncSend | AsyncSend
+datatype auth = Control | Receive | SyncSend | Notify
                     | Reset | Grant | Write | Read
                     | ASIDPoolMapsASID
 
@@ -121,7 +121,7 @@ Wellformedness of the agent authority function with respect to a label
   authority-equivalent to all agents that can receive on that
   endpoint.
 
-\item Anyone can send on any IRQ async endpoint.
+\item Anyone can send on any IRQ notification.
 
 \end{itemize}
 
@@ -135,7 +135,7 @@ where
    \<and> (\<forall>a. (agent, a, agent) \<in> aag)
    \<and> (\<forall>s r ep. (s, Grant, ep) \<in> aag \<and> (r, Receive, ep) \<in> aag
               \<longrightarrow> (s, Control, r) \<in> aag \<and> (r, Control, s) \<in> aag)
-   \<and> (maySendIrqs \<longrightarrow> (\<forall>irq aep. irq \<in> irqs \<and> (irq, AsyncSend, aep) \<in> aag \<longrightarrow> (agent, AsyncSend, aep) \<in> aag))"
+   \<and> (maySendIrqs \<longrightarrow> (\<forall>irq ntfn. irq \<in> irqs \<and> (irq, Notify, ntfn) \<in> aag \<longrightarrow> (agent, Notify, ntfn) \<in> aag))"
 
 abbreviation
   "pas_wellformed aag \<equiv> policy_wellformed (pasPolicy aag) (pasMaySendIrqs aag) (range (pasIRQAbs aag)) (pasSubject aag)"
@@ -224,7 +224,7 @@ where
   "cap_rights_to_auth r sync \<equiv>
      {Reset}
    \<union> (if AllowRead \<in> r then {Receive} else {})
-   \<union> (if AllowWrite \<in> r then (if sync then {SyncSend} else {AsyncSend}) else {})
+   \<union> (if AllowWrite \<in> r then (if sync then {SyncSend} else {Notify}) else {})
    \<union> (if AllowGrant \<in> r then UNIV else {})"
 
 definition
@@ -243,7 +243,7 @@ where
     | Structures_A.UntypedCap oref bits freeIndex \<Rightarrow> {Control}
     | Structures_A.EndpointCap oref badge r \<Rightarrow>
          cap_rights_to_auth r True
-    | Structures_A.AsyncEndpointCap oref badge r \<Rightarrow>
+    | Structures_A.NotificationCap oref badge r \<Rightarrow>
          cap_rights_to_auth (r - {AllowGrant}) False
     | Structures_A.ReplyCap oref m \<Rightarrow> {Control}
     | Structures_A.CNodeCap oref bits guard \<Rightarrow> {Control}
@@ -260,7 +260,7 @@ where
 fun
   tcb_st_to_auth :: "Structures_A.thread_state \<Rightarrow> (obj_ref \<times> auth) set"
 where
-  "tcb_st_to_auth (Structures_A.BlockedOnAsyncEvent aep) = {(aep, Receive)}"
+  "tcb_st_to_auth (Structures_A.BlockedOnNotification ntfn) = {(ntfn, Receive)}"
 | "tcb_st_to_auth (Structures_A.BlockedOnSend ep payl)
      = {(ep, SyncSend)} \<union> (if sender_can_grant payl then {(ep, Grant)} else {})"
 | "tcb_st_to_auth (Structures_A.BlockedOnReceive ep dim) = {(ep, Receive)}"
@@ -346,7 +346,7 @@ where
 | "obj_refs (cap.UntypedCap r s f) = {}"
 | "obj_refs (cap.CNodeCap r bits guard) = {r}"
 | "obj_refs (cap.EndpointCap r b cr) = {r}"
-| "obj_refs (cap.AsyncEndpointCap r b cr) = {r}"
+| "obj_refs (cap.NotificationCap r b cr) = {r}"
 | "obj_refs (cap.ThreadCap r) = {r}"
 | "obj_refs (cap.Zombie ptr b n) = {ptr}"
 | "obj_refs (cap.ArchObjectCap x) = aobj_ref' x"
@@ -433,10 +433,10 @@ definition
   "thread_states s = case_option {} tcb_st_to_auth \<circ> tcb_states_of_state s"
 
 definition
-  "thread_bound_aeps s \<equiv> \<lambda>p. case (get_tcb p s) of None \<Rightarrow> None | Some tcb \<Rightarrow> tcb_bound_aep tcb"
+  "thread_bound_ntfns s \<equiv> \<lambda>p. case (get_tcb p s) of None \<Rightarrow> None | Some tcb \<Rightarrow> tcb_bound_notification tcb"
 
 definition
-  "state_objs_to_policy s = state_bits_to_policy (caps_of_state s) (thread_states s) (thread_bound_aeps s) (cdt s) (state_vrefs s)"
+  "state_objs_to_policy s = state_bits_to_policy (caps_of_state s) (thread_states s) (thread_bound_ntfns s) (cdt s) (state_vrefs s)"
 
 lemmas state_objs_to_policy_mem = eqset_imp_iff[OF state_objs_to_policy_def]
 
@@ -461,8 +461,8 @@ lemma state_vrefs[iff]: "state_vrefs (f s) = state_vrefs s"
 lemma thread_states[iff]: "thread_states (f s) = thread_states s"
   by (simp add: thread_states_def pspace get_tcb_def swp_def tcb_states_of_state_def)
 
-lemma thread_bound_aeps[iff]: "thread_bound_aeps (f s) = thread_bound_aeps s"
-  by (simp add: thread_bound_aeps_def pspace get_tcb_def swp_def split: option.splits)
+lemma thread_bound_ntfns[iff]: "thread_bound_ntfns (f s) = thread_bound_ntfns s"
+  by (simp add: thread_bound_ntfns_def pspace get_tcb_def swp_def split: option.splits)
 
 (*
   lemma ipc_buffers_of_state[iff]: "ipc_buffers_of_state (f s) = ipc_buffers_of_state s"
@@ -483,10 +483,10 @@ lemma thread_states_preserved:
      \<Longrightarrow> thread_states (s\<lparr>kheap := kheap s(thread \<mapsto> TCB tcb')\<rparr>) = thread_states s"
   by (simp add: tcb_states_of_state_preserved thread_states_def)
 
-lemma thread_bound_aeps_preserved:
-  "\<lbrakk> get_tcb thread s = Some tcb; tcb_bound_aep tcb' = tcb_bound_aep tcb \<rbrakk>
-     \<Longrightarrow> thread_bound_aeps (s\<lparr>kheap := kheap s(thread \<mapsto> TCB tcb')\<rparr>) = thread_bound_aeps s"
-  by (auto simp:  thread_bound_aeps_def get_tcb_def split: option.splits)
+lemma thread_bound_ntfns_preserved:
+  "\<lbrakk> get_tcb thread s = Some tcb; tcb_bound_notification tcb' = tcb_bound_notification tcb \<rbrakk>
+     \<Longrightarrow> thread_bound_ntfns (s\<lparr>kheap := kheap s(thread \<mapsto> TCB tcb')\<rparr>) = thread_bound_ntfns s"
+  by (auto simp:  thread_bound_ntfns_def get_tcb_def split: option.splits)
 
 (* FIXME: move *)
 lemma null_filterI:
@@ -635,7 +635,7 @@ fun
 where
  "blocked_on ref (Structures_A.BlockedOnReceive ref' _)     = (ref = ref')"
   | "blocked_on ref (Structures_A.BlockedOnSend ref' _)     = (ref = ref')"
-  | "blocked_on ref (Structures_A.BlockedOnAsyncEvent ref') = (ref = ref')"
+  | "blocked_on ref (Structures_A.BlockedOnNotification ref') = (ref = ref')"
   | "blocked_on _ _ = False"
 
 lemma blocked_on_def2:
@@ -646,7 +646,7 @@ fun
   receive_blocked_on :: "obj_ref \<Rightarrow> Structures_A.thread_state \<Rightarrow> bool"
 where
    "receive_blocked_on ref (Structures_A.BlockedOnReceive ref' _)     = (ref = ref')"
-  | "receive_blocked_on ref (Structures_A.BlockedOnAsyncEvent ref') = (ref = ref')"
+  | "receive_blocked_on ref (Structures_A.BlockedOnNotification ref') = (ref = ref')"
   | "receive_blocked_on _ _ = False"
 
 lemma receive_blocked_on_def2:
@@ -686,18 +686,18 @@ change @{term "ko"} to @{term "ko'"} when the address of @{term "ko"}
 *}
 
 definition
-  tcb_bound_aep_reset_integrity :: "obj_ref option \<Rightarrow> obj_ref option
+  tcb_bound_notification_reset_integrity :: "obj_ref option \<Rightarrow> obj_ref option
     \<Rightarrow> 'a set \<Rightarrow> 'a PAS \<Rightarrow> bool"
 where
-  "tcb_bound_aep_reset_integrity aep aep' subjects aag
-    = ((aep = aep') (*NO CHANGE TO BOUND AEP *) 
-       \<or> (aep' = None \<and> aag_subjects_have_auth_to subjects aag Reset (the aep)) (* AEP IS UNBOUND *))" 
+  "tcb_bound_notification_reset_integrity ntfn ntfn' subjects aag
+    = ((ntfn = ntfn') (*NO CHANGE TO BOUND NTFN *) 
+       \<or> (ntfn' = None \<and> aag_subjects_have_auth_to subjects aag Reset (the ntfn)) (* NTFN IS UNBOUND *))" 
 
 definition direct_send :: "'a set \<Rightarrow> 'a PAS \<Rightarrow> obj_ref \<Rightarrow> tcb \<Rightarrow> bool"
 where
   "direct_send subjects aag ep tcb \<equiv> receive_blocked_on ep (tcb_state tcb) \<and> 
                                    (aag_subjects_have_auth_to subjects aag SyncSend ep 
-                                     \<or> aag_subjects_have_auth_to subjects aag AsyncSend ep)"
+                                     \<or> aag_subjects_have_auth_to subjects aag Notify ep)"
 
 abbreviation ep_recv_blocked :: "obj_ref \<Rightarrow> thread_state \<Rightarrow> bool"
 where
@@ -706,9 +706,9 @@ where
 
 definition indirect_send :: "'a set \<Rightarrow> 'a PAS \<Rightarrow> obj_ref \<Rightarrow> obj_ref \<Rightarrow> tcb \<Rightarrow> bool"
 where
-  "indirect_send subjects aag aep recv_ep tcb \<equiv> ep_recv_blocked recv_ep (tcb_state tcb) (* tcb is blocked on sync ep *)
-                                         \<and> (tcb_bound_aep tcb = Some aep)
-                                         \<and> aag_subjects_have_auth_to subjects aag AsyncSend aep"
+  "indirect_send subjects aag ntfn recv_ep tcb \<equiv> ep_recv_blocked recv_ep (tcb_state tcb) (* tcb is blocked on sync ep *)
+                                         \<and> (tcb_bound_notification tcb = Some ntfn)
+                                         \<and> aag_subjects_have_auth_to subjects aag Notify ntfn"
 
 inductive
   integrity_obj for aag activate subjects l' ko ko'
@@ -716,9 +716,9 @@ where
   tro_lrefl: "\<lbrakk> l' \<in> subjects \<rbrakk>
       \<Longrightarrow> integrity_obj aag activate subjects l' ko ko'"
 | tro_orefl: "\<lbrakk> ko = ko' \<rbrakk> \<Longrightarrow> integrity_obj aag activate subjects l' ko ko'"
-| tro_aep: "\<lbrakk> ko  = Some (AsyncEndpoint aep);
-              ko' = Some (AsyncEndpoint aep');
-              auth \<in> {Receive, AsyncSend, Reset};
+| tro_ntfn: "\<lbrakk> ko  = Some (Notification ntfn);
+              ko' = Some (Notification ntfn');
+              auth \<in> {Receive, Notify, Reset};
               (\<exists>s \<in> subjects. (s, auth, l') \<in> pasPolicy aag) \<rbrakk>
            \<Longrightarrow> integrity_obj aag activate subjects l' ko ko'"
 | tro_ep: "\<lbrakk> ko  = Some (Endpoint ep);
@@ -728,42 +728,42 @@ where
            \<Longrightarrow> integrity_obj aag activate subjects l' ko ko'"
 | tro_ep_unblock: "\<lbrakk> ko  = Some (Endpoint ep);
              ko' = Some (Endpoint ep');
-             \<exists>tcb aep. (tcb, Receive, pasObjectAbs aag aep) \<in> pasPolicy aag \<and> 
+             \<exists>tcb ntfn. (tcb, Receive, pasObjectAbs aag ntfn) \<in> pasPolicy aag \<and> 
                        (tcb, Receive, l') \<in> pasPolicy aag \<and> 
-                       aag_subjects_have_auth_to subjects aag AsyncSend aep \<rbrakk>
+                       aag_subjects_have_auth_to subjects aag Notify ntfn \<rbrakk>
            \<Longrightarrow> integrity_obj aag activate subjects l' ko ko'"
 
 | tro_tcb_send: "\<lbrakk> ko  = Some (TCB tcb);
                    ko' = Some (TCB tcb'); 
                    \<exists>ctxt'. tcb' = tcb \<lparr>tcb_context := ctxt', tcb_state := Structures_A.Running,
-                     tcb_bound_aep := aep'\<rparr>;
-                   tcb_bound_aep_reset_integrity (tcb_bound_aep tcb) aep' subjects aag;
+                     tcb_bound_notification := ntfn'\<rparr>;
+                   tcb_bound_notification_reset_integrity (tcb_bound_notification tcb) ntfn' subjects aag;
                    direct_send subjects aag ep tcb \<or> indirect_send subjects aag ep recv tcb \<rbrakk>
         \<Longrightarrow> integrity_obj aag activate subjects l' ko ko'"
 | tro_tcb_receive: "\<lbrakk> ko  = Some (TCB tcb);
                       ko' = Some (TCB tcb');
-                      tcb' = tcb \<lparr>tcb_state := new_st, tcb_bound_aep := aep'\<rparr>;
+                      tcb' = tcb \<lparr>tcb_state := new_st, tcb_bound_notification := ntfn'\<rparr>;
                       new_st = Structures_A.Running
                           \<or> (new_st = Structures_A.Inactive \<and>
                                   (send_is_call (tcb_state tcb) \<or> tcb_fault tcb \<noteq> None)); (* maybe something about can_grant here? *)
-                      tcb_bound_aep_reset_integrity (tcb_bound_aep tcb) aep' subjects aag;
+                      tcb_bound_notification_reset_integrity (tcb_bound_notification tcb) ntfn' subjects aag;
                       send_blocked_on ep (tcb_state tcb);
                       aag_subjects_have_auth_to subjects aag Receive ep \<rbrakk>
         \<Longrightarrow> integrity_obj aag activate subjects l' ko ko'"
 | tro_tcb_restart: "\<lbrakk> ko  = Some (TCB tcb);
                       ko' = Some (TCB tcb');
-                      tcb' = tcb\<lparr>tcb_context := tcb_context tcb', tcb_state := tcb_state tcb', tcb_bound_aep := aep'\<rparr>;
+                      tcb' = tcb\<lparr>tcb_context := tcb_context tcb', tcb_state := tcb_state tcb', tcb_bound_notification := ntfn'\<rparr>;
                       (tcb_state tcb' = Structures_A.Restart \<and> tcb_context tcb' = tcb_context tcb) \<or>                      
                       (* to handle activation *)
                       (tcb_state tcb' = Structures_A.Running \<and> tcb_context tcb' = (tcb_context tcb)(LR_svc := tcb_context tcb FaultInstruction));
-                      tcb_bound_aep_reset_integrity (tcb_bound_aep tcb) aep' subjects aag;
+                      tcb_bound_notification_reset_integrity (tcb_bound_notification tcb) ntfn' subjects aag;
                       blocked_on ep (tcb_state tcb);
                       aag_subjects_have_auth_to subjects aag Reset ep \<rbrakk>
         \<Longrightarrow> integrity_obj aag activate subjects l' ko ko'"
 | tro_tcb_unbind: "\<lbrakk> ko  = Some (TCB tcb);
                      ko' = Some (TCB tcb');
-                     tcb' = tcb \<lparr>tcb_bound_aep := None\<rparr>;
-                     tcb_bound_aep_reset_integrity (tcb_bound_aep tcb) None subjects aag \<rbrakk>
+                     tcb' = tcb \<lparr>tcb_bound_notification := None\<rparr>;
+                     tcb_bound_notification_reset_integrity (tcb_bound_notification tcb) None subjects aag \<rbrakk>
                  \<Longrightarrow> integrity_obj aag activate subjects l' ko ko'"
 | tro_asidpool_clear: "\<lbrakk> ko = Some (ArchObj (ARM_Structs_A.ASIDPool pool));
                          ko' = Some (ArchObj (ARM_Structs_A.ASIDPool pool'));
@@ -772,10 +772,10 @@ where
         \<Longrightarrow> integrity_obj aag activate subjects l' ko ko'"
 | tro_tcb_activate: "\<lbrakk> ko  = Some (TCB tcb);
                        ko' = Some (TCB tcb');
-                       tcb' = tcb \<lparr>tcb_context := (tcb_context tcb)(LR_svc := tcb_context tcb FaultInstruction), tcb_state := Structures_A.Running, tcb_bound_aep := aep'\<rparr>;
+                       tcb' = tcb \<lparr>tcb_context := (tcb_context tcb)(LR_svc := tcb_context tcb FaultInstruction), tcb_state := Structures_A.Running, tcb_bound_notification := ntfn'\<rparr>;
                        tcb_state tcb = Structures_A.Restart;
                        (* to handle unbind *)
-                       tcb_bound_aep_reset_integrity (tcb_bound_aep tcb) aep' subjects aag;
+                       tcb_bound_notification_reset_integrity (tcb_bound_notification tcb) ntfn' subjects aag;
                        activate \<rbrakk> (* Anyone can do this *)
         \<Longrightarrow> integrity_obj aag activate subjects l' ko ko'"
 
@@ -785,7 +785,7 @@ Assume two subjects can't interact. Then AINVS already implies that
 the ready queues of one won't change when the other is running.
 
 Assume two subjects can interact via an endpoint. (Probably an
-asynchronous endpoint for infoflow purposes.) Then the following says
+notification object for infoflow purposes.) Then the following says
 that the ready queues for the non-running subject can be extended by
 the running subject, e.g. by sending a message. Note these threads are
 added to the start of the queue.
@@ -969,11 +969,11 @@ lemma clear_asidpool_trans:
   apply auto
   done
 
-lemma tcb_bound_aep_reset_integrity_trans[elim]:
-  "\<lbrakk> tcb_bound_aep_reset_integrity aep aep' subjects aag;
-    tcb_bound_aep_reset_integrity aep' aep'' subjects aag \<rbrakk>
-    \<Longrightarrow> tcb_bound_aep_reset_integrity aep aep'' subjects aag"
-  by (auto simp: tcb_bound_aep_reset_integrity_def)
+lemma tcb_bound_notification_reset_integrity_trans[elim]:
+  "\<lbrakk> tcb_bound_notification_reset_integrity ntfn ntfn' subjects aag;
+    tcb_bound_notification_reset_integrity ntfn' ntfn'' subjects aag \<rbrakk>
+    \<Longrightarrow> tcb_bound_notification_reset_integrity ntfn ntfn'' subjects aag"
+  by (auto simp: tcb_bound_notification_reset_integrity_def)
 
 lemma tro_trans: (* this takes a long time to process *)
   "\<lbrakk>(\<forall>x. integrity_obj aag activate es (pasObjectAbs aag x) (kheap s x) (kheap s' x));
@@ -1316,9 +1316,9 @@ lemma as_user_thread_state[wp]:
   apply wp
   done
 
-lemma as_user_thread_bound_aep[wp]:
-  "\<lbrace>\<lambda>s. P (thread_bound_aeps s)\<rbrace> as_user t f \<lbrace>\<lambda>rv s. P (thread_bound_aeps s)\<rbrace>"
-  apply (simp add: as_user_def set_object_def split_def thread_bound_aeps_def)
+lemma as_user_thread_bound_ntfn[wp]:
+  "\<lbrace>\<lambda>s. P (thread_bound_ntfns s)\<rbrace> as_user t f \<lbrace>\<lambda>rv s. P (thread_bound_ntfns s)\<rbrace>"
+  apply (simp add: as_user_def set_object_def split_def thread_bound_ntfns_def)
   apply (wp get_object_wp)
   apply (clarsimp simp: thread_states_def get_tcb_def
                  elim!: rsubst[where P=P, OF _ ext] split: option.split)
@@ -1430,15 +1430,15 @@ lemma ep_rcv_queued_st_tcb_at:
   done
 
 (* FIXME: move. *)
-lemma aep_queued_st_tcb_at':
-  "\<And>P. \<lbrakk>ko_at (AsyncEndpoint aep) aepptr s; (t, rt) \<in> aep_q_refs_of (aep_obj aep);
+lemma ntfn_queued_st_tcb_at':
+  "\<And>P. \<lbrakk>ko_at (Notification ntfn) ntfnptr s; (t, rt) \<in> ntfn_q_refs_of (ntfn_obj ntfn);
          valid_objs s; sym_refs (state_refs_of s);
-         P (Structures_A.BlockedOnAsyncEvent aepptr) \<rbrakk>
+         P (Structures_A.BlockedOnNotification ntfnptr) \<rbrakk>
    \<Longrightarrow> st_tcb_at P t s"
-  apply (case_tac "aep_obj aep", simp_all)
+  apply (case_tac "ntfn_obj ntfn", simp_all)
   apply (frule(1) sym_refs_ko_atD)
   apply (clarsimp) 
-  apply (erule_tac y="(t, AEPAsync)" in my_BallE, clarsimp)
+  apply (erule_tac y="(t, NTFNSignal)" in my_BallE, clarsimp)
   apply (clarsimp simp: pred_tcb_at_def refs_of_rev elim!: obj_at_weakenE)+
   done
 
@@ -1615,7 +1615,7 @@ lemma integrity_mono:
    apply clarsimp
    apply (drule_tac x=x in spec)+
    apply (erule integrity_obj.cases[OF _ integrity_obj.intros],
-          auto simp: tcb_bound_aep_reset_integrity_def indirect_send_def direct_send_def)[1]
+          auto simp: tcb_bound_notification_reset_integrity_def indirect_send_def direct_send_def)[1]
    apply (blast intro: tro_asidpool_clear)
   apply (rule conjI)
    apply clarsimp

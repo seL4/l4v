@@ -97,10 +97,10 @@ lemma invs_valid_queues'[elim!]:
   by (simp add: invs'_def valid_state'_def)
 
 
-lemma aep_ptr_get_queue_spec:
-  "\<forall>s. \<Gamma> \<turnstile> {\<sigma>. s = \<sigma> \<and> \<sigma> \<Turnstile>\<^sub>c \<^bsup>\<sigma>\<^esup>aepptr} \<acute>ret__struct_tcb_queue_C :== PROC aep_ptr_get_queue(\<acute>aepptr) 
-       \<lbrace>head_C \<acute>ret__struct_tcb_queue_C = Ptr (aepQueue_head_CL (async_endpoint_lift (the (cslift s \<^bsup>s\<^esup>aepptr)))) \<and>
-        end_C \<acute>ret__struct_tcb_queue_C = Ptr (aepQueue_tail_CL (async_endpoint_lift (the (cslift s \<^bsup>s\<^esup>aepptr))))\<rbrace>"
+lemma ntfn_ptr_get_queue_spec:
+  "\<forall>s. \<Gamma> \<turnstile> {\<sigma>. s = \<sigma> \<and> \<sigma> \<Turnstile>\<^sub>c \<^bsup>\<sigma>\<^esup>ntfnPtr} \<acute>ret__struct_tcb_queue_C :== PROC ntfn_ptr_get_queue(\<acute>ntfnPtr) 
+       \<lbrace>head_C \<acute>ret__struct_tcb_queue_C = Ptr (ntfnQueue_head_CL (notification_lift (the (cslift s \<^bsup>s\<^esup>ntfnPtr)))) \<and>
+        end_C \<acute>ret__struct_tcb_queue_C = Ptr (ntfnQueue_tail_CL (notification_lift (the (cslift s \<^bsup>s\<^esup>ntfnPtr))))\<rbrace>"
   apply vcg
   apply clarsimp
   done
@@ -165,41 +165,41 @@ lemma tcbEPDequeue_spec:
   apply simp
   done
 
-lemma aep_ptr_set_queue_spec:
-  "\<forall>s. \<Gamma> \<turnstile> \<lbrace>s. s \<Turnstile>\<^sub>c \<acute>aepptr\<rbrace> Call aep_ptr_set_queue_'proc 
-           {t. (\<exists>aep'. async_endpoint_lift aep' = 
-  (async_endpoint_lift (the (cslift s (\<^bsup>s\<^esup>aepptr))))\<lparr> aepQueue_head_CL := ptr_val (head_C \<^bsup>s\<^esup>aep_queue) && ~~ mask 4,
-                                                      aepQueue_tail_CL := ptr_val (end_C \<^bsup>s\<^esup>aep_queue) && ~~ mask 4 \<rparr> \<and>
-             (cslift t :: async_endpoint_C typ_heap) = (cslift s)(\<^bsup>s\<^esup>aepptr \<mapsto> aep'))
-             \<and> cslift_all_but_async_endpoint_C t s \<and> (hrs_htd \<^bsup>t\<^esup>t_hrs) = (hrs_htd \<^bsup>s\<^esup>t_hrs)}"
+lemma ntfn_ptr_set_queue_spec:
+  "\<forall>s. \<Gamma> \<turnstile> \<lbrace>s. s \<Turnstile>\<^sub>c \<acute>ntfnPtr\<rbrace> Call ntfn_ptr_set_queue_'proc 
+           {t. (\<exists>ntfn'. notification_lift ntfn' = 
+  (notification_lift (the (cslift s (\<^bsup>s\<^esup>ntfnPtr))))\<lparr> ntfnQueue_head_CL := ptr_val (head_C \<^bsup>s\<^esup>ntfn_queue) && ~~ mask 4,
+                                                      ntfnQueue_tail_CL := ptr_val (end_C \<^bsup>s\<^esup>ntfn_queue) && ~~ mask 4 \<rparr> \<and>
+             (cslift t :: notification_C typ_heap) = (cslift s)(\<^bsup>s\<^esup>ntfnPtr \<mapsto> ntfn'))
+             \<and> cslift_all_but_notification_C t s \<and> (hrs_htd \<^bsup>t\<^esup>t_hrs) = (hrs_htd \<^bsup>s\<^esup>t_hrs)}"
   apply vcg
   apply (auto simp: split_def h_t_valid_clift_Some_iff)
   done
 
-lemma asyncIPCCancel_ccorres_helper:
-  "ccorres dc xfdc (invs' and st_tcb_at' (op = (BlockedOnAsyncEvent aep)) thread and ko_at' aep' aep)
+lemma cancelSignal_ccorres_helper:
+  "ccorres dc xfdc (invs' and st_tcb_at' (op = (BlockedOnNotification ntfn)) thread and ko_at' ntfn' ntfn)
         UNIV
         []
-        (setAsyncEP aep (aepObj_update
-          (\<lambda>_. if remove1 thread (aepQueue (aepObj aep')) = []
-           then aep.IdleAEP
-           else aepQueue_update (\<lambda>_. remove1 thread (aepQueue (aepObj aep'))) (aepObj aep')) aep'))
-        (\<acute>aep_queue :== CALL aep_ptr_get_queue(Ptr aep);;
-         \<acute>aep_queue :== CALL tcbEPDequeue(tcb_ptr_to_ctcb_ptr thread,\<acute>aep_queue);;
-         CALL aep_ptr_set_queue(Ptr aep,\<acute>aep_queue);;
-         IF head_C \<acute>aep_queue = NULL THEN
-           CALL async_endpoint_ptr_set_state(Ptr aep,
-           scast AEPState_Idle)
+        (setNotification ntfn (ntfnObj_update
+          (\<lambda>_. if remove1 thread (ntfnQueue (ntfnObj ntfn')) = []
+           then ntfn.IdleNtfn
+           else ntfnQueue_update (\<lambda>_. remove1 thread (ntfnQueue (ntfnObj ntfn'))) (ntfnObj ntfn')) ntfn'))
+        (\<acute>ntfn_queue :== CALL ntfn_ptr_get_queue(Ptr ntfn);;
+         \<acute>ntfn_queue :== CALL tcbEPDequeue(tcb_ptr_to_ctcb_ptr thread,\<acute>ntfn_queue);;
+         CALL ntfn_ptr_set_queue(Ptr ntfn,\<acute>ntfn_queue);;
+         IF head_C \<acute>ntfn_queue = NULL THEN
+           CALL notification_ptr_set_state(Ptr ntfn,
+           scast NtfnState_Idle)
          FI)"
   apply (rule ccorres_from_vcg)
   apply (rule allI, rule conseqPre, vcg)
   apply (clarsimp split del: split_if simp del: comp_def)
-  apply (frule (2) aep_blocked_in_queueD)
-  apply (frule (1) ko_at_valid_aep' [OF _ invs_valid_objs'])
+  apply (frule (2) ntfn_blocked_in_queueD)
+  apply (frule (1) ko_at_valid_ntfn' [OF _ invs_valid_objs'])
   apply (elim conjE)
-  apply (frule (1) valid_aep_isWaitingAEPD)
+  apply (frule (1) valid_ntfn_isWaitingNtfnD)
   apply (elim conjE)
-  apply (frule cmap_relation_aep)
+  apply (frule cmap_relation_ntfn)
   apply (erule (1) cmap_relation_ko_atE)  
   apply (rule conjI)
    apply (erule h_t_valid_clift)
@@ -208,7 +208,7 @@ lemma asyncIPCCancel_ccorres_helper:
   apply (rule conjI)
    apply (rule_tac x = \<sigma> in exI)
    apply (intro conjI, assumption+)
-   apply (drule (2) aep_to_ep_queue)
+   apply (drule (2) ntfn_to_ep_queue)
    apply (simp add: tcb_queue_relation'_def)
   apply (clarsimp simp: typ_heap_simps cong: imp_cong split del: split_if simp del: comp_def)  
   apply (frule null_ep_queue [simplified Fun.comp_def])
@@ -220,9 +220,9 @@ lemma asyncIPCCancel_ccorres_helper:
      apply (erule subsetD [rotated])
      apply clarsimp
     apply simp
-   apply (simp add: setAsyncEP_def split_def)
+   apply (simp add: setNotification_def split_def)
    apply (rule bexI [OF _ setObject_eq])
-       apply (simp add: remove1_empty  rf_sr_def cstate_relation_def Let_def cpspace_relation_def update_aep_map_tos)
+       apply (simp add: remove1_empty  rf_sr_def cstate_relation_def Let_def cpspace_relation_def update_ntfn_map_tos)
        apply (elim conjE)
        apply (intro conjI)
             -- "tcb relation"
@@ -231,12 +231,12 @@ lemma asyncIPCCancel_ccorres_helper:
            -- "ep relation"
            apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
            apply simp
-           apply (rule cendpoint_relation_aep_queue [OF invs_sym'], assumption+)
+           apply (rule cendpoint_relation_ntfn_queue [OF invs_sym'], assumption+)
            apply simp
            apply (erule (1) map_to_ko_atI')
-          -- "aep relation"
-          apply (rule cpspace_relation_aep_update_aep, assumption+)
-          apply (simp add: casync_endpoint_relation_def Let_def AEPState_Idle_def)
+          -- "ntfn relation"
+          apply (rule cpspace_relation_ntfn_update_ntfn, assumption+)
+          apply (simp add: cnotification_relation_def Let_def NtfnState_Idle_def)
           apply (simp add: carch_state_relation_def carch_globals_def)
          -- "queue relation"
          apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
@@ -253,10 +253,10 @@ lemma asyncIPCCancel_ccorres_helper:
    apply (rule ballI, erule bspec)
    apply (erule subsetD [rotated])
    apply clarsimp
-  apply (simp add: setAsyncEP_def split_def)
+  apply (simp add: setNotification_def split_def)
   apply (rule bexI [OF _ setObject_eq])
       apply (frule (1) st_tcb_at_h_t_valid)
-      apply (simp add: remove1_empty rf_sr_def cstate_relation_def Let_def cpspace_relation_def update_aep_map_tos)
+      apply (simp add: remove1_empty rf_sr_def cstate_relation_def Let_def cpspace_relation_def update_ntfn_map_tos)
       apply (elim conjE)
       apply (intro conjI)
            -- "tcb relation"
@@ -265,15 +265,15 @@ lemma asyncIPCCancel_ccorres_helper:
           -- "ep relation"
           apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
           apply simp
-          apply (rule cendpoint_relation_aep_queue)
+          apply (rule cendpoint_relation_ntfn_queue)
               apply fastforce
              apply assumption+
           apply simp
           apply (erule (1) map_to_ko_atI')
-         -- "aep relation"
-         apply (rule cpspace_relation_aep_update_aep, assumption+)
-          apply (simp add: casync_endpoint_relation_def Let_def isWaitingAEP_def
-                    split: aep.splits split del: split_if)
+         -- "ntfn relation"
+         apply (rule cpspace_relation_ntfn_update_ntfn, assumption+)
+          apply (simp add: cnotification_relation_def Let_def isWaitingNtfn_def
+                    split: ntfn.splits split del: split_if)
           apply (erule iffD1 [OF tcb_queue_relation'_cong [OF refl _ _ refl], rotated -1])
            apply (clarsimp simp add: Ptr_ptr_val h_t_valid_clift_Some_iff)
            apply (simp add: tcb_queue_relation'_next_mask_4)
@@ -730,10 +730,10 @@ lemma state_relation_queue_update_helper':
       apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
       apply simp
       apply (erule cendpoint_relation_upd_tcb_no_queues, simp+)
-     -- "aep relation"
+     -- "ntfn relation"
      apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
      apply simp
-     apply (erule casync_endpoint_relation_upd_tcb_no_queues, simp+)
+     apply (erule cnotification_relation_upd_tcb_no_queues, simp+)
     -- "ready queues"
     apply (simp add: cready_queues_relation_def Let_def
                      cready_queues_index_to_C_in_range
@@ -1903,7 +1903,7 @@ lemma isBlocked_spec:
   "\<forall>s. \<Gamma> \<turnstile> ({s} \<inter> {s. cslift s (thread_' s) \<noteq> None}) Call isBlocked_'proc 
        {s'. ret__unsigned_long_' s' = from_bool (tsType_CL (thread_state_lift (tcbState_C (the (cslift s (thread_' s))))) \<in> 
                             {scast ThreadState_BlockedOnReply, 
-                             scast ThreadState_BlockedOnAsyncEvent, scast ThreadState_BlockedOnSend, 
+                             scast ThreadState_BlockedOnNotification, scast ThreadState_BlockedOnSend, 
                              scast ThreadState_BlockedOnReceive, scast ThreadState_Inactive}) }"
   apply vcg
   apply (clarsimp simp: typ_heap_simps)
@@ -1986,7 +1986,7 @@ lemma rescheduleRequired_ccorres:
                  split: scheduler_action.split_asm)[1]
   done
 
-(* In order to remove the assumption 'sch_act_simple' from the lemma 'ipcCancel_ccorres1' below, in this lemma the same assumption has been replaced with the assumption 'valid_queues and weak_sch_act_wf (ksSchedulerAction s) s'. *)
+(* In order to remove the assumption 'sch_act_simple' from the lemma 'cancelIPC_ccorres1' below, in this lemma the same assumption has been replaced with the assumption 'valid_queues and weak_sch_act_wf (ksSchedulerAction s) s'. *)
 
 lemma rescheduleRequired_ccorres_valid_queues': 
   "ccorresG rf_sr \<Gamma> dc xfdc
@@ -2398,38 +2398,38 @@ lemma simp_list_case_return:
   "(case x of [] \<Rightarrow> return e | y # ys \<Rightarrow> return f) = return (if x = [] then e else f)"
   by (clarsimp split: list.splits)
   
-lemma asyncIPCCancel_ccorres [corres]:
+lemma cancelSignal_ccorres [corres]:
      "ccorres dc xfdc 
-      (invs' and st_tcb_at' (op = (Structures_H.thread_state.BlockedOnAsyncEvent aep)) thread)
-      (UNIV \<inter> {s. threadPtr_' s = tcb_ptr_to_ctcb_ptr thread} \<inter> {s. aepptr_' s = Ptr aep})
-      [] (asyncIPCCancel thread aep) (Call asyncIPCCancel_'proc)"
-  apply (cinit lift: threadPtr_' aepptr_' simp add: Let_def list_case_return cong add: call_ignore_cong)
+      (invs' and st_tcb_at' (op = (Structures_H.thread_state.BlockedOnNotification ntfn)) thread)
+      (UNIV \<inter> {s. threadPtr_' s = tcb_ptr_to_ctcb_ptr thread} \<inter> {s. ntfnPtr_' s = Ptr ntfn})
+      [] (cancelSignal thread ntfn) (Call cancelSignal_'proc)"
+  apply (cinit lift: threadPtr_' ntfnPtr_' simp add: Let_def list_case_return cong add: call_ignore_cong)
    apply (unfold fun_app_def)   
    apply (simp only: simp_list_case_return return_bind ccorres_seq_skip) 
-   apply (rule ccorres_pre_getAsyncEP)
+   apply (rule ccorres_pre_getNotification)
    apply (rule ccorres_assert)
    apply (rule ccorres_rhs_assoc2)
    apply (rule ccorres_rhs_assoc2)
    apply (rule ccorres_rhs_assoc2)
-   apply (ctac (no_vcg) add: asyncIPCCancel_ccorres_helper)
+   apply (ctac (no_vcg) add: cancelSignal_ccorres_helper)
      apply (ctac add: setThreadState_ccorres_valid_queues')
-    apply ((wp setAsyncEP_sch_act_not setAsyncEP_ksQ hoare_vcg_all_lift set_aep_valid_objs' | simp add: valid_tcb_state'_def split del: split_if)+)[1]
+    apply ((wp setNotification_sch_act_not setNotification_ksQ hoare_vcg_all_lift set_ntfn_valid_objs' | simp add: valid_tcb_state'_def split del: split_if)+)[1]
    apply (simp add: "StrictC'_thread_state_defs")
   apply (rule conjI, clarsimp, rule conjI, clarsimp)
-    apply (frule (1) ko_at_valid_aep'[OF _ invs_valid_objs'])
+    apply (frule (1) ko_at_valid_ntfn'[OF _ invs_valid_objs'])
    apply ((auto simp: obj_at'_def projectKOs st_tcb_at'_def invs'_def valid_state'_def
                      isTS_defs cte_wp_at_ctes_of "StrictC'_thread_state_defs"
-                     cthread_state_relation_def sch_act_wf_weak valid_aep'_def
+                     cthread_state_relation_def sch_act_wf_weak valid_ntfn'_def
              dest!: valid_queues_not_runnable'_not_ksQ[where t=thread] |
            clarsimp simp: eq_commute)+)[1]
    apply (clarsimp)
-   apply (frule (1) ko_at_valid_aep'[OF _ invs_valid_objs'])
-   apply (frule (2) aep_blocked_in_queueD)
+   apply (frule (1) ko_at_valid_ntfn'[OF _ invs_valid_objs'])
+   apply (frule (2) ntfn_blocked_in_queueD)
    apply (auto simp: obj_at'_def projectKOs st_tcb_at'_def invs'_def valid_state'_def
-                     isTS_defs cte_wp_at_ctes_of "StrictC'_thread_state_defs" valid_aep'_def
-                     cthread_state_relation_def sch_act_wf_weak isWaitingAEP_def
+                     isTS_defs cte_wp_at_ctes_of "StrictC'_thread_state_defs" valid_ntfn'_def
+                     cthread_state_relation_def sch_act_wf_weak isWaitingNtfn_def
              dest!: valid_queues_not_runnable'_not_ksQ[where t=thread] 
-             split: aep.splits option.splits
+             split: ntfn.splits option.splits
          |  clarsimp simp: eq_commute
          | drule_tac x=thread in bspec)+
   done
@@ -2476,7 +2476,7 @@ lemma ccorres_pre_getEndpoint [corres_pre]:
 
 lemma ep_blocked_in_queueD:
   "\<lbrakk> st_tcb_at' (\<lambda>st. (isBlockedOnSend st \<or> isBlockedOnReceive st)
-                      \<and> blockingIPCEndpoint st = ep) thread \<sigma>;
+                      \<and> blockingObject st = ep) thread \<sigma>;
                ko_at' ep' ep \<sigma>; invs' \<sigma> \<rbrakk>
    \<Longrightarrow> thread \<in> set (epQueue ep') \<and> (isSendEP ep' \<or> isRecvEP ep')"
   apply (drule sym_refs_st_tcb_atD')
@@ -2648,30 +2648,30 @@ proof -
   done
 qed
 
-lemma casync_endpoint_relation_ep_queue:
+lemma cnotification_relation_ep_queue:
   assumes   srs: "sym_refs (state_refs_of' s)"
   and      koat: "ko_at' ep epptr s"
   and iswaiting: "(isSendEP ep \<or> isRecvEP ep)"
   and      mpeq: "(mp' |` (- (tcb_ptr_to_ctcb_ptr ` set (epQueue ep))))
   = (mp |` (- (tcb_ptr_to_ctcb_ptr ` set (epQueue ep))))"  
-  and      koat': "ko_at' a aepptr s"
-  shows "casync_endpoint_relation mp a b = casync_endpoint_relation mp' a b"
+  and      koat': "ko_at' a ntfnPtr s"
+  shows "cnotification_relation mp a b = cnotification_relation mp' a b"
 proof -  
-  have rl: "\<And>p. \<lbrakk> p \<in> tcb_ptr_to_ctcb_ptr ` set (aepQueue (aepObj a));
-                  isWaitingAEP (aepObj a) \<rbrakk>
+  have rl: "\<And>p. \<lbrakk> p \<in> tcb_ptr_to_ctcb_ptr ` set (ntfnQueue (ntfnObj a));
+                  isWaitingNtfn (ntfnObj a) \<rbrakk>
     \<Longrightarrow> mp p = mp' p" using srs koat' koat iswaiting mpeq
     apply -
-    apply (drule (4) aep_ep_disjoint)  
+    apply (drule (4) ntfn_ep_disjoint)  
     apply (erule restrict_map_eqI [symmetric])
     apply (erule imageE)  
     apply (fastforce simp: disjoint_iff_not_equal inj_eq)
     done
 
   show ?thesis
-    unfolding casync_endpoint_relation_def using rl
+    unfolding cnotification_relation_def using rl
     apply (simp add: Let_def)
-    apply (cases "aepObj a")
-       apply (simp add: isWaitingAEP_def cong: tcb_queue_relation'_cong)+
+    apply (cases "ntfnObj a")
+       apply (simp add: isWaitingNtfn_def cong: tcb_queue_relation'_cong)+
     done
 qed
 
@@ -2685,12 +2685,12 @@ lemma epQueue_tail_mask_4 [simp]:
   unfolding endpoint_lift_def
   by (clarsimp simp: mask_def word_bw_assocs)
 
-(* Clag from asyncIPCCancel_ccorres_helper *)
+(* Clag from cancelSignal_ccorres_helper *)
 
-lemma ipcCancel_ccorres_helper:
+lemma cancelIPC_ccorres_helper:
   "ccorres dc xfdc (invs' and 
          st_tcb_at' (\<lambda>st. (isBlockedOnSend st \<or> isBlockedOnReceive st)
-                            \<and> blockingIPCEndpoint st = ep) thread
+                            \<and> blockingObject st = ep) thread
         and ko_at' ep' ep)
         {s. epptr_' s = Ptr ep}
         []
@@ -2746,10 +2746,10 @@ lemma ipcCancel_ccorres_helper:
            apply (rule cpspace_relation_ep_update_ep, assumption+)
             apply (simp add: cendpoint_relation_def Let_def EPState_Idle_def)
            apply simp
-           -- "aep relation"  
+           -- "ntfn relation"  
           apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
           apply simp
-          apply (rule casync_endpoint_relation_ep_queue [OF invs_sym'], assumption+)
+          apply (rule cnotification_relation_ep_queue [OF invs_sym'], assumption+)
            apply simp
           apply (erule (1) map_to_ko_atI')
          apply (simp add: heap_to_page_data_def Let_def)
@@ -2789,10 +2789,10 @@ lemma ipcCancel_ccorres_helper:
              tcb_queue_relation'_next_mask_4 tcb_queue_relation'_prev_mask_4 cong: tcb_queue_relation'_cong)
            apply (intro impI conjI, simp_all)[1]
           apply simp
-                -- "aep relation"       
+                -- "ntfn relation"       
          apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
          apply simp
-         apply (rule casync_endpoint_relation_ep_queue [OF invs_sym'], assumption+)
+         apply (rule cnotification_relation_ep_queue [OF invs_sym'], assumption+)
          apply simp
          apply (erule (1) map_to_ko_atI')
          -- "queue relation"
@@ -2840,7 +2840,7 @@ lemma getThreadState_ccorres_foo:
   apply (clarsimp simp: ctcb_relation_def obj_at'_def)
   done
 
-lemma ipcCancel_ccorres_reply_helper:
+lemma cancelIPC_ccorres_reply_helper:
   assumes cteDeleteOne_ccorres:
   "\<And>w slot. ccorres dc xfdc
    (invs' and cte_wp_at' (\<lambda>ct. w = -1 \<or> cteCap ct = NullCap
@@ -2939,7 +2939,7 @@ lemma ep_blocked_in_queueD_send:
   apply (cases ep', simp_all add: isSendEP_def isRecvEP_def)[1]
   done
 
-lemma ipcCancel_ccorres1:
+lemma cancelIPC_ccorres1:
   assumes cteDeleteOne_ccorres:
   "\<And>w slot. ccorres dc xfdc
    (invs' and cte_wp_at' (\<lambda>ct. w = -1 \<or> cteCap ct = NullCap
@@ -2950,7 +2950,7 @@ lemma ipcCancel_ccorres1:
   shows
   "ccorres dc xfdc (tcb_at' thread and invs')
                    (UNIV \<inter> {s. tptr_' s = tcb_ptr_to_ctcb_ptr thread}) []
-          (ipcCancel thread) (Call ipcCancel_'proc)"
+          (cancelIPC thread) (Call cancelIPC_'proc)"
   apply (cinit lift: tptr_' simp: Let_def cong: call_ignore_cong)
    apply (rule ccorres_move_c_guard_tcb)
    apply csymbr
@@ -2974,7 +2974,7 @@ lemma ipcCancel_ccorres1:
                 apply (rule ccorres_rhs_assoc2)
                 apply (rule ccorres_rhs_assoc2)
                 apply (rule ccorres_rhs_assoc2)
-                apply (ctac (no_vcg) add: ipcCancel_ccorres_helper)
+                apply (ctac (no_vcg) add: cancelIPC_ccorres_helper)
                   apply (ctac add: setThreadState_ccorres_valid_queues')
                  apply (wp hoare_vcg_all_lift set_ep_valid_objs' | simp add: valid_tcb_state'_def split del: split_if)+
                 apply (simp add: "StrictC'_thread_state_defs")
@@ -2998,8 +2998,8 @@ lemma ipcCancel_ccorres1:
            apply (rule ccorres_Guard ccorres_Guard_Seq)+
            apply (clarsimp simp del: dc_simp simp: of_int_sint)
            apply ccorres_remove_UNIV_guard
-           apply (rule ipcCancel_ccorres_reply_helper [OF cteDeleteOne_ccorres, unfolded dc_def])
-          -- "BlockedOnAsyncEvent"
+           apply (rule cancelIPC_ccorres_reply_helper [OF cteDeleteOne_ccorres, unfolded dc_def])
+          -- "BlockedOnNotification"
           apply (simp add: word_sle_def "StrictC'_thread_state_defs" ccorres_cond_iffs dc_def [symmetric] cong: call_ignore_cong)
           apply (rule ccorres_symb_exec_r)
             apply (ctac (no_vcg))
@@ -3025,7 +3025,7 @@ lemma ipcCancel_ccorres1:
           apply (rule ccorres_rhs_assoc2)
           apply (rule ccorres_rhs_assoc2)
           apply (rule ccorres_rhs_assoc2)
-          apply (ctac (no_vcg) add: ipcCancel_ccorres_helper)
+          apply (ctac (no_vcg) add: cancelIPC_ccorres_helper)
             apply (ctac add: setThreadState_ccorres_valid_queues')
            apply (wp hoare_vcg_all_lift set_ep_valid_objs' | simp add: valid_tcb_state'_def split del:split_if)+
        apply (simp add: "StrictC'_thread_state_defs")

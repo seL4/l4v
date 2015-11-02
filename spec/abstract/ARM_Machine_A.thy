@@ -79,12 +79,12 @@ definition
   "data_offset_to_nat \<equiv> unat"
 
 definition
-  combine_aep_badges :: "data \<Rightarrow> data \<Rightarrow> data" where
-  "combine_aep_badges \<equiv> bitOR"
+  combine_ntfn_badges :: "data \<Rightarrow> data \<Rightarrow> data" where
+  "combine_ntfn_badges \<equiv> bitOR"
 
 definition
-  combine_aep_msgs :: "data \<Rightarrow> data \<Rightarrow> data" where
-  "combine_aep_msgs \<equiv> bitOR"
+  combine_ntfn_msgs :: "data \<Rightarrow> data \<Rightarrow> data" where
+  "combine_ntfn_msgs \<equiv> bitOR"
 
 
 text {* These definitions will be unfolded automatically in proofs. *}

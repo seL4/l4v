@@ -9,14 +9,14 @@ case \x of root@(CNodeCap {}) -> _ ->  ---> let root = \x in
  if isCNodeCap root
  then ->1 else ->2
 
-case \x of cap@(EndpointCap { capEPCanSend = True }) -> cap@(AsyncEndpointCap { capAEPCanSend = True }) -> cap ->  ---> let cap = \x in
+case \x of cap@(EndpointCap { capEPCanSend = True }) -> cap@(NotificationCap { capNtfnCanSend = True }) -> cap ->  ---> let cap = \x in
  if isEndpointCap cap \<and> capEPCanSend cap
- then ->1 else if isAsyncEndpointCap cap \<and> capAEPCanSend cap
+ then ->1 else if isNotificationCap cap \<and> capNtfnCanSend cap
  then ->2 else ->3
 
-case \x of EndpointCap { \v0\EPCanReceive = True } -> AsyncEndpointCap { \v0\AEPCanReceive = True } -> _ ->  ---> let \v0\ = \x in
+case \x of EndpointCap { \v0\EPCanReceive = True } -> NotificationCap { \v0\NtfnCanReceive = True } -> _ ->  ---> let \v0\ = \x in
  if isEndpointCap \v0\ \<and> \v0\EPCanReceive \v0
- then ->1 else if isAsyncEndpointCap \v0\ \<and> \v0\AEPCanReceive \v0
+ then ->1 else if isNotificationCap \v0\ \<and> \v0\NtfnCanReceive \v0
  then ->2 else ->3
 
 case \x of (_, _, cap@(ThreadCap {capTCBCanWrite = True})) -> (_, _, cap@(CNodeCap {})) -> (_, capIndex, cap@(UntypedCap {})) -> (blocking, capIndex, cap@(ArchObjectCap {})) -> (True, ptr, cap) -> (False, _, _) ->  ---> let (blocking, capIndex, cap) = \x in if isThreadCap cap \<and> capTCBCanWrite cap
@@ -148,19 +148,19 @@ case \x of cap@(EndpointCap {}) -> _ ->  ---> let cap = \x in
  if isEndpointCap cap
  then ->1 else ->2
 
-case \x of (a@UntypedCap {}, b@UntypedCap {}) -> (a@EndpointCap {}, b@EndpointCap {}) -> (a@AsyncEndpointCap {}, b@AsyncEndpointCap {}) -> (a@CNodeCap {}, b@CNodeCap {}) -> (a@ThreadCap {}, b@ThreadCap {}) -> (a@FrameCap {}, b@FrameCap {}) -> (ArchObjectCap a, ArchObjectCap b) -> (_, _) ->  ---> let (a, b) = \x in
+case \x of (a@UntypedCap {}, b@UntypedCap {}) -> (a@EndpointCap {}, b@EndpointCap {}) -> (a@NotificationCap {}, b@NotificationCap {}) -> (a@CNodeCap {}, b@CNodeCap {}) -> (a@ThreadCap {}, b@ThreadCap {}) -> (a@FrameCap {}, b@FrameCap {}) -> (ArchObjectCap a, ArchObjectCap b) -> (_, _) ->  ---> let (a, b) = \x in
  if isUntypedCap a \<and> isUntypedCap b
  then ->1 else if isEndpointCap a \<and> isEndpointCap b
- then ->2 else if isAsyncEndpointCap a \<and> isAsyncEndpointCap b
+ then ->2 else if isNotificationCap a \<and> isNotificationCap b
  then ->3 else if isCNodeCap a \<and> isCNodeCap b
  then ->4 else if isThreadCap a \<and> isThreadCap b
  then ->5 else if isFrameCap a \<and> isFrameCap b
  then ->6 else if isArchObjectCap a \<and> isArchObjectCap b
  then let a = capCap a; b = capCap b in ->7 else ->8
 
-case \x of cap@(EndpointCap {capEPCanSend=True}) -> cap@(AsyncEndpointCap {capAEPCanSend=True}) -> cap@(ThreadCap {capTCBCanWrite=True}) -> cap@(CNodeCap {capCNodeCanModify=True}) -> cap@(UntypedCap {}) -> cap@(ArchObjectCap {}) -> _ ->  ---> let cap = \x in
+case \x of cap@(EndpointCap {capEPCanSend=True}) -> cap@(NotificationCap {capNtfnCanSend=True}) -> cap@(ThreadCap {capTCBCanWrite=True}) -> cap@(CNodeCap {capCNodeCanModify=True}) -> cap@(UntypedCap {}) -> cap@(ArchObjectCap {}) -> _ ->  ---> let cap = \x in
  if isEndpointCap cap \<and> capEPCanSend cap
- then ->1 else if isAsyncEndpointCap cap \<and> capAEPCanSend cap
+ then ->1 else if isNotificationCap cap \<and> capNtfnCanSend cap
  then ->2 else if isThreadCap cap \<and> capTCBCanWrite cap
  then ->3 else if isCNodeCap cap \<and> capCNodeCanModify cap
  then ->4 else if isUntypedCap cap
@@ -176,18 +176,18 @@ case \x of (CTE a@(UntypedCap {}) _, CTE b _) -> (CTE a mdbA, CTE b mdbB) ->  --
  if isUntypedCap a
  then ->1 else ->2 ))
 
-case \x of EndpointCap { capEPBadge = 0 } -> AsyncEndpointCap { capAEPBadge = 0 } -> EndpointCap {} -> (AsyncEndpointCap {}) -> _ ->  ---> let \v0\ = \x in
+case \x of EndpointCap { capEPBadge = 0 } -> NotificationCap { capNtfnBadge = 0 } -> EndpointCap {} -> (NotificationCap {}) -> _ ->  ---> let \v0\ = \x in
  if isEndpointCap \v0\ \<and> capEPBadge \v0\ = 0
- then ->1 else if isAsyncEndpointCap \v0\ \<and> capAEPBadge \v0\ = 0
+ then ->1 else if isNotificationCap \v0\ \<and> capNtfnBadge \v0\ = 0
  then ->2 else if isEndpointCap \v0
- then ->3 else if isAsyncEndpointCap \v0
+ then ->3 else if isNotificationCap \v0
  then ->4 else ->5
 
-case \x of (EndpointCap { capEPPtr = ptr }, True, _) -> (AsyncEndpointCap { capAEPPtr = ptr }, True, _) -> (cap@(CNodeCap {}), True, True) -> (ThreadCap { capTCBPtr = tcb }, True, True) -> (CNodeCap { capCNodePtr = cn }, True, False) -> (Zombie { zombieObject = Left (cn, n+1) }, _, False) -> (ThreadCap { capTCBPtr = tcb }, True, False) -> (Zombie { zombieObject = Right tcb }, True, False) -> (Zombie { zombieObject = Left (cn, n+1) }, _, True) -> (Zombie { zombieObject = Left (_, 0) }, True, _) -> (Zombie { zombieObject = Right tcb }, True, True) -> (ArchObjectCap { capCap = cap }, final, exposed) -> (FrameCap {}, _, _) -> (NullCap, _, _) -> (Zombie {}, False, _) -> (_, _, _) ->  ---> let (\v0\, \v1\, \v2\) = \x in
+case \x of (EndpointCap { capEPPtr = ptr }, True, _) -> (NotificationCap { capNtfnPtr = ptr }, True, _) -> (cap@(CNodeCap {}), True, True) -> (ThreadCap { capTCBPtr = tcb }, True, True) -> (CNodeCap { capCNodePtr = cn }, True, False) -> (Zombie { zombieObject = Left (cn, n+1) }, _, False) -> (ThreadCap { capTCBPtr = tcb }, True, False) -> (Zombie { zombieObject = Right tcb }, True, False) -> (Zombie { zombieObject = Left (cn, n+1) }, _, True) -> (Zombie { zombieObject = Left (_, 0) }, True, _) -> (Zombie { zombieObject = Right tcb }, True, True) -> (ArchObjectCap { capCap = cap }, final, exposed) -> (FrameCap {}, _, _) -> (NullCap, _, _) -> (Zombie {}, False, _) -> (_, _, _) ->  ---> let (\v0\, \v1\, \v2\) = \x in
  if isEndpointCap \v0\ \<and> \v1
  then let ptr = capEPPtr \v0
- in ->1 else if isAsyncEndpointCap \v0\ \<and> \v1
- then let ptr = capAEPPtr \v0
+ in ->1 else if isNotificationCap \v0\ \<and> \v1
+ then let ptr = capNtfnPtr \v0
  in ->2 else if isCNodeCap \v0\ \<and> \v1\ \<and> \v2
  then let cap = \v0
  in ->3 else if isThreadCap \v0\ \<and> \v1\ \<and> \v2
@@ -212,10 +212,10 @@ case \x of (EndpointCap { capEPPtr = ptr }, True, _) -> (AsyncEndpointCap { capA
  then ->14 else if isZombie \v0\ \<and> (\<not> \v1\)
  then ->15 else ->16
 
-case \x of (new, cap@(EndpointCap {})) -> (new, cap@(AsyncEndpointCap {})) -> (w, cap@(CNodeCap {})) -> (w, ArchObjectCap { capCap = aoCap }) -> (_, cap) ->  ---> let (new, cap) = \x;
+case \x of (new, cap@(EndpointCap {})) -> (new, cap@(NotificationCap {})) -> (w, cap@(CNodeCap {})) -> (w, ArchObjectCap { capCap = aoCap }) -> (_, cap) ->  ---> let (new, cap) = \x;
      w = new in
  if isEndpointCap cap
- then ->1 else if isAsyncEndpointCap cap
+ then ->1 else if isNotificationCap cap
  then ->2 else if isCNodeCap cap
  then ->3 else if isArchObjectCap cap
  then let aoCap = capCap cap
@@ -225,11 +225,11 @@ case \x of cap@(EndpointCap { capEPCanSend = True }) -> _ ->  ---> let cap = \x 
  if isEndpointCap cap \<and> capEPCanSend cap
  then ->1 else ->2
 
-case \x of (EndpointCap { capEPPtr = ptr }, True, _) -> (AsyncEndpointCap { capAEPPtr = ptr }, True, _) -> (cap@(CNodeCap {}), True, exposed) -> (ThreadCap { capTCBPtr = tcb }, True, exposed) -> (Zombie { capCTEPtr = ptr, capNumber = n+1 }, _, False) -> (Zombie { capCTEPtr = ptr, capNumber = n+1 }, _, True) -> (Zombie { capNumber = 0 }, True, _) -> (ArchObjectCap { capCap = cap }, final, exposed) -> (FrameCap {}, _, _) -> (NullCap, _, _) -> (Zombie {}, False, _) -> (_, _, _) ->  ---> let (\v0\, \v1\, \v2\) = \x in
+case \x of (EndpointCap { capEPPtr = ptr }, True, _) -> (NotificationCap { capNtfnPtr = ptr }, True, _) -> (cap@(CNodeCap {}), True, exposed) -> (ThreadCap { capTCBPtr = tcb }, True, exposed) -> (Zombie { capCTEPtr = ptr, capNumber = n+1 }, _, False) -> (Zombie { capCTEPtr = ptr, capNumber = n+1 }, _, True) -> (Zombie { capNumber = 0 }, True, _) -> (ArchObjectCap { capCap = cap }, final, exposed) -> (FrameCap {}, _, _) -> (NullCap, _, _) -> (Zombie {}, False, _) -> (_, _, _) ->  ---> let (\v0\, \v1\, \v2\) = \x in
  if isEndpointCap \v0\ \<and> \v1
  then let ptr = capEPPtr \v0
- in ->1 else if isAsyncEndpointCap \v0\ \<and> \v1
- then let ptr = capAEPPtr \v0
+ in ->1 else if isNotificationCap \v0\ \<and> \v1
+ then let ptr = capNtfnPtr \v0
  in ->2 else if isCNodeCap \v0\ \<and> \v1
  then let cap = \v0\; exposed = \v2
  in ->3 else if isThreadCap \v0\ \<and> \v1
@@ -258,11 +258,11 @@ case \x of 32 -> 64 -> _ ->  ---> if \x = 32
  then ->1 else if \x = 64
  then ->2 else ->3
 
-case \x of NullCap -> c@(UntypedCap {}) -> c@(EndpointCap {}) -> c@(AsyncEndpointCap {}) -> c@(CNodeCap {}) -> c@(ThreadCap {}) -> c@(FrameCap {}) -> ArchObjectCap {capCap = aoCap} -> c@(Zombie {}) ->  ---> let c = \x in
+case \x of NullCap -> c@(UntypedCap {}) -> c@(EndpointCap {}) -> c@(NotificationCap {}) -> c@(CNodeCap {}) -> c@(ThreadCap {}) -> c@(FrameCap {}) -> ArchObjectCap {capCap = aoCap} -> c@(Zombie {}) ->  ---> let c = \x in
  if isNullCap c
  then ->1 else if isUntypedCap c
  then ->2 else if isEndpointCap c
- then ->3 else if isAsyncEndpointCap c
+ then ->3 else if isNotificationCap c
  then ->4 else if isCNodeCap c
  then ->5 else if isThreadCap c
  then ->6 else if isFrameCap c
@@ -270,9 +270,9 @@ case \x of NullCap -> c@(UntypedCap {}) -> c@(EndpointCap {}) -> c@(AsyncEndpoin
  then let aoCap = capCap c
  in ->8 else (* assuming Zombie *) ->9
 
-case \x of (src@EndpointCap {}, new@EndpointCap {}) -> (src@AsyncEndpointCap {}, new@AsyncEndpointCap {}) -> (_, _) ->  ---> let (src, new) = \x in
+case \x of (src@EndpointCap {}, new@EndpointCap {}) -> (src@NotificationCap {}, new@NotificationCap {}) -> (_, _) ->  ---> let (src, new) = \x in
  if (isEndpointCap src \<and> isEndpointCap new)
- then ->1 else if (isAsyncEndpointCap src \<and> isAsyncEndpointCap new)
+ then ->1 else if (isNotificationCap src \<and> isNotificationCap new)
  then ->2 else ->3
 
 case \x of c2@(Zombie { capCTEPtr = ptr2 }) -> _ ->  ---> let c2 = \x;
@@ -280,11 +280,11 @@ case \x of c2@(Zombie { capCTEPtr = ptr2 }) -> _ ->  ---> let c2 = \x;
  if isZombie c2
  then ->1 else ->2
 
-case \x of (EndpointCap { capEPPtr = ptr }, True, _) -> (AsyncEndpointCap { capAEPPtr = ptr }, True, _) -> (cap@(CNodeCap {}), True, exposed) -> (ThreadCap { capTCBPtr = tcb }, True, exposed) -> (Zombie { capCTEPtr = ptr, capNumber = n+1 }, True, False) -> (Zombie { capCTEPtr = ptr, capNumber = n+1 }, True, True) -> (Zombie { capNumber = 0 }, True, _) -> (ArchObjectCap { capCap = cap }, final, exposed) -> (FrameCap {}, _, _) -> (NullCap, _, _) -> (Zombie {}, False, _) -> (_, _, _) ->  ---> let (\v0\, \v1\, \v2\) = \x in
+case \x of (EndpointCap { capEPPtr = ptr }, True, _) -> (NotificationCap { capNtfnPtr = ptr }, True, _) -> (cap@(CNodeCap {}), True, exposed) -> (ThreadCap { capTCBPtr = tcb }, True, exposed) -> (Zombie { capCTEPtr = ptr, capNumber = n+1 }, True, False) -> (Zombie { capCTEPtr = ptr, capNumber = n+1 }, True, True) -> (Zombie { capNumber = 0 }, True, _) -> (ArchObjectCap { capCap = cap }, final, exposed) -> (FrameCap {}, _, _) -> (NullCap, _, _) -> (Zombie {}, False, _) -> (_, _, _) ->  ---> let (\v0\, \v1\, \v2\) = \x in
  if isEndpointCap \v0\ \<and> \v1
  then let ptr = capEPPtr \v0
- in ->1 else if isAsyncEndpointCap \v0\ \<and> \v1
- then let ptr = capAEPPtr \v0
+ in ->1 else if isNotificationCap \v0\ \<and> \v1
+ then let ptr = capNtfnPtr \v0
  in ->2 else if isCNodeCap \v0\ \<and> \v1
  then let cap = \v0\; exposed = \v2
  in ->3 else if isThreadCap \v0\ \<and> \v1
@@ -304,21 +304,21 @@ case \x of (EndpointCap { capEPPtr = ptr }, True, _) -> (AsyncEndpointCap { capA
  then ->10 else if isZombie \v0\ \<and> (\<not> \v1\)
  then ->11 else ->12
 
-case \x of (src@EndpointCap {}, new@EndpointCap {}) -> (src@AsyncEndpointCap {}, new@AsyncEndpointCap {}) -> (_, _) ->  ---> let (src,new) = \x in
+case \x of (src@EndpointCap {}, new@EndpointCap {}) -> (src@NotificationCap {}, new@NotificationCap {}) -> (_, _) ->  ---> let (src,new) = \x in
  if isEndpointCap src & isEndpointCap new
  then ->1
- else if isAsyncEndpointCap src & isAsyncEndpointCap new
+ else if isNotificationCap src & isNotificationCap new
  then ->2
  else ->3
 
-case \x of EndpointCap { capEPBadge = 0 } -> AsyncEndpointCap { capAEPBadge = 0 } -> EndpointCap {} -> AsyncEndpointCap {} -> _ ->  ---> if isEndpointCap \x \<and> capEPBadge \x = 0
- then ->1 else if isAsyncEndpointCap \x \<and> capAEPBadge \x = 0
- then ->2 else if isEndpointCap \x then ->3 else if isAsyncEndpointCap \x
+case \x of EndpointCap { capEPBadge = 0 } -> NotificationCap { capNtfnBadge = 0 } -> EndpointCap {} -> NotificationCap {} -> _ ->  ---> if isEndpointCap \x \<and> capEPBadge \x = 0
+ then ->1 else if isNotificationCap \x \<and> capNtfnBadge \x = 0
+ then ->2 else if isEndpointCap \x then ->3 else if isNotificationCap \x
  then ->4 else ->5
 
-case \x of (_, cap@(EndpointCap {capEPCanSend=True})) -> (_, cap@(AsyncEndpointCap {capAEPCanSend=True})) -> (sl, cap@(ThreadCap {capTCBCanWrite=True})) -> (_, cap@(CNodeCap {capCNodeCanModify=True})) -> (slot, cap@(UntypedCap {})) -> (slot, cap@(ArchObjectCap {})) -> (_, _) ->  ---> let (slot, cap) = \x in
+case \x of (_, cap@(EndpointCap {capEPCanSend=True})) -> (_, cap@(NotificationCap {capNtfnCanSend=True})) -> (sl, cap@(ThreadCap {capTCBCanWrite=True})) -> (_, cap@(CNodeCap {capCNodeCanModify=True})) -> (slot, cap@(UntypedCap {})) -> (slot, cap@(ArchObjectCap {})) -> (_, _) ->  ---> let (slot, cap) = \x in
  if isEndpointCap cap \<and> capEPCanSend cap
- then ->1 else if isAsyncEndpointCap cap \<and> capAEPCanSend cap
+ then ->1 else if isNotificationCap cap \<and> capNtfnCanSend cap
  then ->2 else if isThreadCap cap \<and> capTCBCanWrite cap
  then let sl = slot
  in ->3 else if isCNodeCap cap \<and> capCNodeCanModify cap
@@ -326,26 +326,26 @@ case \x of (_, cap@(EndpointCap {capEPCanSend=True})) -> (_, cap@(AsyncEndpointC
  then ->5 else if isArchObjectCap cap
  then ->6 else ->7
 
-case \x of EndpointCap { capEPBadge = 0 } -> AsyncEndpointCap { capAEPBadge = 0 } -> EndpointCap { capEPBadge = badge } | badge /= 0 -> AsyncEndpointCap { capAEPBadge = badge } | badge /= 0 -> _ ->  ---> if isEndpointCap \x & capEPBadge \x = 0
+case \x of EndpointCap { capEPBadge = 0 } -> NotificationCap { capNtfnBadge = 0 } -> EndpointCap { capEPBadge = badge } | badge /= 0 -> NotificationCap { capNtfnBadge = badge } | badge /= 0 -> _ ->  ---> if isEndpointCap \x & capEPBadge \x = 0
  then ->1
- else if isAsyncEndpointCap \x & capAEPBadge \x = 0
+ else if isNotificationCap \x & capNtfnBadge \x = 0
  then ->2
  else if isEndpointCap \x
  then let badge = capEPBadge \x in
  ->3
- else if isAsyncEndpointCap \x
- then let badge = capAEPBadge \x in
+ else if isNotificationCap \x
+ then let badge = capNtfnBadge \x in
  ->4
  else ->5
 
-case \x of (_, NullCap) -> (a@(UntypedCap {}), b) -> (a@EndpointCap {}, b@EndpointCap {}) -> (a@AsyncEndpointCap {}, b@AsyncEndpointCap {}) -> (a@CNodeCap {}, b@CNodeCap {}) -> (a@ThreadCap {}, b@ThreadCap {}) -> (a@FrameCap {}, b@FrameCap {}) -> (ArchObjectCap a, ArchObjectCap b) -> (_, _) ->  ---> let (a,b) = \x in
+case \x of (_, NullCap) -> (a@(UntypedCap {}), b) -> (a@EndpointCap {}, b@EndpointCap {}) -> (a@NotificationCap {}, b@NotificationCap {}) -> (a@CNodeCap {}, b@CNodeCap {}) -> (a@ThreadCap {}, b@ThreadCap {}) -> (a@FrameCap {}, b@FrameCap {}) -> (ArchObjectCap a, ArchObjectCap b) -> (_, _) ->  ---> let (a,b) = \x in
  if b = NullCap
  then ->1
  else if isUntypedCap a
  then ->2
  else if isEndpointCap a & isEndpointCap b
  then ->3
- else if isAsyncEndpointCap a & isAsyncEndpointCap b
+ else if isNotificationCap a & isNotificationCap b
  then ->4
  else if isCNodeCap a & isCNodeCap b
  then ->5
@@ -358,19 +358,19 @@ case \x of (_, NullCap) -> (a@(UntypedCap {}), b) -> (a@EndpointCap {}, b@Endpoi
  ->8
  else ->9
 
-case \x of EndpointCap { capEPBadge = badge } | badge /= 0 -> AsyncEndpointCap { capAEPBadge = badge } | badge /= 0 -> _ ->  ---> if isEndpointCap \x & capEPBadge \x ~= 0
+case \x of EndpointCap { capEPBadge = badge } | badge /= 0 -> NotificationCap { capNtfnBadge = badge } | badge /= 0 -> _ ->  ---> if isEndpointCap \x & capEPBadge \x ~= 0
  then let badge = capEPBadge \x in
  ->1
- else if isAsyncEndpointCap \x & capAEPBadge \x ~= 0
- then let badge = capAEPBadge \x in
+ else if isNotificationCap \x & capNtfnBadge \x ~= 0
+ then let badge = capNtfnBadge \x in
  ->2
  else ->3
 
-case \x of (EndpointCap { capEPPtr = ptr }, True, _) -> (AsyncEndpointCap { capAEPPtr = ptr }, True, _) -> (cap@(CNodeCap {}), True, exposed) -> (ThreadCap { capTCBPtr = tcb }, True, exposed) -> (Zombie { capCTEPtr = ptr, capNumber = n+1 }, True, False) -> (z@(Zombie { capCTEPtr = ptr, capNumber = n+1 }), True, True) -> (Zombie { capNumber = 0 }, True, _) -> (ArchObjectCap { capCap = cap }, final, exposed) -> (FrameCap {}, _, _) -> (NullCap, _, _) -> (Zombie {}, False, _) -> (_, _, _) ->  ---> let (\v0\, \v1\, \v2\) = \x in
+case \x of (EndpointCap { capEPPtr = ptr }, True, _) -> (NotificationCap { capNtfnPtr = ptr }, True, _) -> (cap@(CNodeCap {}), True, exposed) -> (ThreadCap { capTCBPtr = tcb }, True, exposed) -> (Zombie { capCTEPtr = ptr, capNumber = n+1 }, True, False) -> (z@(Zombie { capCTEPtr = ptr, capNumber = n+1 }), True, True) -> (Zombie { capNumber = 0 }, True, _) -> (ArchObjectCap { capCap = cap }, final, exposed) -> (FrameCap {}, _, _) -> (NullCap, _, _) -> (Zombie {}, False, _) -> (_, _, _) ->  ---> let (\v0\, \v1\, \v2\) = \x in
  if isEndpointCap \v0\ \<and> \v1
  then let ptr = capEPPtr \v0
- in ->1 else if isAsyncEndpointCap \v0\ \<and> \v1
- then let ptr = capAEPPtr \v0
+ in ->1 else if isNotificationCap \v0\ \<and> \v1
+ then let ptr = capNtfnPtr \v0
  in ->2 else if isCNodeCap \v0\ \<and> \v1
  then let cap = \v0\; exposed = \v2
  in ->3 else if isThreadCap \v0\ \<and> \v1
@@ -435,12 +435,12 @@ case \x of Zombie {} -> cap@(UntypedCap {}) -> ReplyCap {} -> ArchObjectCap cap 
          | ArchObjectCap cap \<Rightarrow> ->4
          | _ \<Rightarrow> ->5
 
-case \x of (EndpointCap { capEPPtr = ptr }, True, _) -> (AsyncEndpointCap { capAEPPtr = ptr }, True, _) -> (cap@(CNodeCap {}), True, exposed) -> (ThreadCap { capTCBPtr = tcb }, True, exposed) -> (Zombie { capCTEPtr = ptr, capNumber = n+1 }, True, False) -> (z@(Zombie { capCTEPtr = ptr, capNumber = n+1 }), True, True) -> (Zombie { capNumber = 0 }, True, _) -> (IRQHandlerCap { capIRQ = irq }, True, _) -> (ArchObjectCap { capCap = cap }, final, exposed) -> (NullCap, _, _) -> (Zombie {}, False, _) -> (_, _, _) ->  --->     let (\v0\, \v1\, \v2\) = \x in
+case \x of (EndpointCap { capEPPtr = ptr }, True, _) -> (NotificationCap { capNtfnPtr = ptr }, True, _) -> (cap@(CNodeCap {}), True, exposed) -> (ThreadCap { capTCBPtr = tcb }, True, exposed) -> (Zombie { capCTEPtr = ptr, capNumber = n+1 }, True, False) -> (z@(Zombie { capCTEPtr = ptr, capNumber = n+1 }), True, True) -> (Zombie { capNumber = 0 }, True, _) -> (IRQHandlerCap { capIRQ = irq }, True, _) -> (ArchObjectCap { capCap = cap }, final, exposed) -> (NullCap, _, _) -> (Zombie {}, False, _) -> (_, _, _) ->  --->     let (\v0\, \v1\, \v2\) = \x in
      if isEndpointCap \v0\ \<and> \v1\
      then let ptr = capEPPtr \v0
  in ->1
-     else if isAsyncEndpointCap \v0\ \<and> \v1\
-     then let ptr = capAEPPtr \v0
+     else if isNotificationCap \v0\ \<and> \v1\
+     then let ptr = capNtfnPtr \v0
  in ->2
      else if isCNodeCap \v0\ \<and> \v1\
      then let cap = \v0\; exposed = \v2\ in ->3
@@ -468,14 +468,14 @@ case \x of (EndpointCap { capEPPtr = ptr }, True, _) -> (AsyncEndpointCap { capA
      then ->11
      else ->12
 
-case \x of (_, NullCap) -> (a@(UntypedCap {}), b) -> (a@EndpointCap {}, b@EndpointCap {}) -> (a@AsyncEndpointCap {}, b@AsyncEndpointCap {}) -> (a@CNodeCap {}, b@CNodeCap {}) -> (a@ThreadCap {}, b@ThreadCap {}) -> (IRQControlCap, IRQControlCap) -> (IRQHandlerCap a, IRQHandlerCap b) -> (ArchObjectCap a, ArchObjectCap b) -> (_, _) ->  --->let (a,b) = \x in
+case \x of (_, NullCap) -> (a@(UntypedCap {}), b) -> (a@EndpointCap {}, b@EndpointCap {}) -> (a@NotificationCap {}, b@NotificationCap {}) -> (a@CNodeCap {}, b@CNodeCap {}) -> (a@ThreadCap {}, b@ThreadCap {}) -> (IRQControlCap, IRQControlCap) -> (IRQHandlerCap a, IRQHandlerCap b) -> (ArchObjectCap a, ArchObjectCap b) -> (_, _) ->  --->let (a,b) = \x in
     if b = NullCap
     then ->1
     else if isUntypedCap a
     then ->2
     else if isEndpointCap a & isEndpointCap b
     then ->3
-    else if isAsyncEndpointCap a & isAsyncEndpointCap b
+    else if isNotificationCap a & isNotificationCap b
     then ->4
     else if isCNodeCap a & isCNodeCap b
     then ->5
@@ -490,10 +490,10 @@ case \x of (_, NullCap) -> (a@(UntypedCap {}), b) -> (a@EndpointCap {}, b@Endpoi
           ->9
     else ->10
 
-case \x of (preserve, new, cap@(EndpointCap {})) -> (preserve, new, cap@(AsyncEndpointCap {})) -> (_, w, cap@(CNodeCap {})) -> (p, w, ArchObjectCap { capCap = aoCap }) -> (_, _, cap) ->  --->let (\v0\, \v1\, \v2\ ) = \x in
+case \x of (preserve, new, cap@(EndpointCap {})) -> (preserve, new, cap@(NotificationCap {})) -> (_, w, cap@(CNodeCap {})) -> (p, w, ArchObjectCap { capCap = aoCap }) -> (_, _, cap) ->  --->let (\v0\, \v1\, \v2\ ) = \x in
     if isEndpointCap \v2\
     then let preserve = \v0\; new = \v1\; cap = \v2\ in ->1
-    else if isAsyncEndpointCap \v2\
+    else if isNotificationCap \v2\
     then let preserve = \v0\; new = \v1\; cap = \v2\ in ->2
     else if isCNodeCap \v2\
     then let w = \v1\; cap = \v2\ in ->3
@@ -501,11 +501,11 @@ case \x of (preserve, new, cap@(EndpointCap {})) -> (preserve, new, cap@(AsyncEn
     then let p = \v0\; w = \v1\; aoCap = capCap \v2\ in ->4
     else let cap = \v2\ in ->5
 
-case \x of NullCap -> c@(UntypedCap {}) -> c@(EndpointCap {}) -> c@(AsyncEndpointCap {}) -> c@(ReplyCap {}) -> c@(CNodeCap {}) -> c@(ThreadCap {}) -> c@IRQControlCap -> c@(IRQHandlerCap {}) -> ArchObjectCap {capCap = aoCap} -> c@(Zombie {}) ->  --->let c = \x in
+case \x of NullCap -> c@(UntypedCap {}) -> c@(EndpointCap {}) -> c@(NotificationCap {}) -> c@(ReplyCap {}) -> c@(CNodeCap {}) -> c@(ThreadCap {}) -> c@IRQControlCap -> c@(IRQHandlerCap {}) -> ArchObjectCap {capCap = aoCap} -> c@(Zombie {}) ->  --->let c = \x in
     if isNullCap c then ->1
     else if isUntypedCap c then ->2
     else if isEndpointCap c then ->3
-    else if isAsyncEndpointCap c then ->4
+    else if isNotificationCap c then ->4
     else if isReplyCap c then ->5
     else if isCNodeCap c then ->6
     else if isThreadCap c then ->7
@@ -661,10 +661,10 @@ case \x of ((index:bits:args), cap@(CNodeCap {capCNodeCanModify=True})) -> (_, (
     )
     else ->3
 
-case \x of ((src@EndpointCap {}), (new@EndpointCap {})) -> ((src@AsyncEndpointCap {}), (new@AsyncEndpointCap {})) -> (_, _) ->  ---> let (src, new) = \x in
+case \x of ((src@EndpointCap {}), (new@EndpointCap {})) -> ((src@NotificationCap {}), (new@NotificationCap {})) -> (_, _) ->  ---> let (src, new) = \x in
     if isEndpointCap src \<and> isEndpointCap new
     then ->1
-    else if isAsyncEndpointCap src \<and> isAsyncEndpointCap new
+    else if isNotificationCap src \<and> isNotificationCap new
     then ->2
     else ->3
 
@@ -720,12 +720,12 @@ case \x of (Zombie {}) -> cap@(UntypedCap {}) -> (ReplyCap {}) -> (ArchObjectCap
         in ->4
     else ->5
 
-case \x of ((EndpointCap { capEPPtr = ptr }), True) -> ((AsyncEndpointCap { capAEPPtr = ptr }), True) -> ((CNodeCap { capCNodePtr = ptr, capCNodeBits = bits }), True) -> ((ThreadCap { capTCBPtr = tcb}), True) -> (z@(Zombie {}), True) -> ((ArchObjectCap { capCap = cap }), final) -> ((IRQHandlerCap { capIRQ = irq }), True) -> (NullCap, _) -> ((Zombie {}), False) -> (_, _) ->  ---> let (\v0\, \v1\) = \x in
+case \x of ((EndpointCap { capEPPtr = ptr }), True) -> ((NotificationCap { capNtfnPtr = ptr }), True) -> ((CNodeCap { capCNodePtr = ptr, capCNodeBits = bits }), True) -> ((ThreadCap { capTCBPtr = tcb}), True) -> (z@(Zombie {}), True) -> ((ArchObjectCap { capCap = cap }), final) -> ((IRQHandlerCap { capIRQ = irq }), True) -> (NullCap, _) -> ((Zombie {}), False) -> (_, _) ->  ---> let (\v0\, \v1\) = \x in
     if isEndpointCap \v0\ \<and> \v1\
     then let ptr = capEPPtr \v0\
         in ->1
-    else if isAsyncEndpointCap \v0\ \<and> \v1\
-    then let ptr = capAEPPtr \v0\
+    else if isNotificationCap \v0\ \<and> \v1\
+    then let ptr = capNtfnPtr \v0\
         in ->2
     else if isCNodeCap \v0\ \<and> \v1\
     then let ptr = capCNodePtr \v0\; bits = capCNodeBits \v0\
@@ -748,14 +748,14 @@ case \x of ((EndpointCap { capEPPtr = ptr }), True) -> ((AsyncEndpointCap { capA
     then ->9
     else ->10
 
-case \x of (_, NullCap) -> (a@(UntypedCap {}), b) -> ((a@EndpointCap {}), (b@EndpointCap {})) -> ((a@AsyncEndpointCap {}), (b@AsyncEndpointCap {})) -> ((a@CNodeCap {}), (b@CNodeCap {})) -> ((a@ThreadCap {}), (b@ThreadCap {})) -> (IRQControlCap, IRQControlCap) -> ((IRQHandlerCap a), (IRQHandlerCap b)) -> ((ArchObjectCap a), (ArchObjectCap b)) -> (_, _) ->  ---> let (a, b) = \x in
+case \x of (_, NullCap) -> (a@(UntypedCap {}), b) -> ((a@EndpointCap {}), (b@EndpointCap {})) -> ((a@NotificationCap {}), (b@NotificationCap {})) -> ((a@CNodeCap {}), (b@CNodeCap {})) -> ((a@ThreadCap {}), (b@ThreadCap {})) -> (IRQControlCap, IRQControlCap) -> ((IRQHandlerCap a), (IRQHandlerCap b)) -> ((ArchObjectCap a), (ArchObjectCap b)) -> (_, _) ->  ---> let (a, b) = \x in
     if isNullCap b
     then ->1
     else if isUntypedCap a
     then ->2
     else if isEndpointCap a \<and> isEndpointCap b
     then ->3
-    else if isAsyncEndpointCap a \<and> isAsyncEndpointCap b
+    else if isNotificationCap a \<and> isNotificationCap b
     then ->4
     else if isCNodeCap a \<and> isCNodeCap b
     then ->5
@@ -773,11 +773,11 @@ case \x of (_, NullCap) -> (a@(UntypedCap {}), b) -> ((a@EndpointCap {}), (b@End
         )
     else ->10
 
-case \x of (preserve, new, cap@(EndpointCap {})) -> (preserve, new, cap@(AsyncEndpointCap {})) -> (_, w, cap@(CNodeCap {})) -> (p, w, (ArchObjectCap { capCap = aoCap })) -> (_, _, cap) ->  ---> let (\v0\, \v1\, \v2\) = \x in
+case \x of (preserve, new, cap@(EndpointCap {})) -> (preserve, new, cap@(NotificationCap {})) -> (_, w, cap@(CNodeCap {})) -> (p, w, (ArchObjectCap { capCap = aoCap })) -> (_, _, cap) ->  ---> let (\v0\, \v1\, \v2\) = \x in
     if isEndpointCap \v2\
     then let preserve = \v0\; new = \v1\; cap = \v2\
         in ->1
-    else if isAsyncEndpointCap \v2\
+    else if isNotificationCap \v2\
     then let preserve = \v0\; new = \v1\; cap = \v2\
         in ->2
     else if isCNodeCap \v2\
@@ -789,14 +789,14 @@ case \x of (preserve, new, cap@(EndpointCap {})) -> (preserve, new, cap@(AsyncEn
     else let cap = \v2\
     in ->5
 
-case \x of NullCap -> c@(UntypedCap {}) -> c@(EndpointCap {}) -> c@(AsyncEndpointCap {}) -> c@(ReplyCap {}) -> c@(CNodeCap {}) -> c@(ThreadCap {}) -> c@IRQControlCap -> c@(IRQHandlerCap {}) -> (ArchObjectCap {capCap = aoCap}) -> c@(Zombie {}) ->  ---> let c = \x; aoCap = capCap \x in
+case \x of NullCap -> c@(UntypedCap {}) -> c@(EndpointCap {}) -> c@(NotificationCap {}) -> c@(ReplyCap {}) -> c@(CNodeCap {}) -> c@(ThreadCap {}) -> c@IRQControlCap -> c@(IRQHandlerCap {}) -> (ArchObjectCap {capCap = aoCap}) -> c@(Zombie {}) ->  ---> let c = \x; aoCap = capCap \x in
     if isNullCap c
     then ->1
     else if isUntypedCap c
     then ->2
     else if isEndpointCap c
     then ->3
-    else if isAsyncEndpointCap c
+    else if isNotificationCap c
     then ->4
     else if isReplyCap c
     then ->5
@@ -814,10 +814,10 @@ case \x of NullCap -> c@(UntypedCap {}) -> c@(EndpointCap {}) -> c@(AsyncEndpoin
     then ->11
     else undefined
 
-case \x of cap@(EndpointCap {capEPCanSend=True}) -> cap@(AsyncEndpointCap {capAEPCanSend=True}) -> cap@(ReplyCap {capReplyMaster=False}) -> cap@(ThreadCap {capTCBCanWrite=True}) -> cap@(CNodeCap {capCNodeCanModify=True}) -> cap@(UntypedCap {}) -> IRQControlCap -> (IRQHandlerCap { capIRQ = irq }) -> (ArchObjectCap cap) -> _ ->  ---> let cap = \x in
+case \x of cap@(EndpointCap {capEPCanSend=True}) -> cap@(NotificationCap {capNtfnCanSend=True}) -> cap@(ReplyCap {capReplyMaster=False}) -> cap@(ThreadCap {capTCBCanWrite=True}) -> cap@(CNodeCap {capCNodeCanModify=True}) -> cap@(UntypedCap {}) -> IRQControlCap -> (IRQHandlerCap { capIRQ = irq }) -> (ArchObjectCap cap) -> _ ->  ---> let cap = \x in
     if isEndpointCap cap \<and> capEPCanSend cap
     then ->1
-    else if isAsyncEndpointCap cap \<and> capAEPCanSend cap
+    else if isNotificationCap cap \<and> capNtfnCanSend cap
     then ->2
     else if isReplyCap cap \<and> \<not> capReplyMaster cap
     then ->3
@@ -846,12 +846,12 @@ case \x of (EndpointCap { capEPPtr = p1 }, Just p2, _) | p1 == p2 -> (_, _, dest
       | _ \<Rightarrow> ->3
     )
 
-case \x of ((EndpointCap { capEPPtr = ptr }), final, _) -> ((AsyncEndpointCap { capAEPPtr = ptr }), final, _) -> ((ReplyCap {}), _, _) -> (_, _, True) -> ((CNodeCap { capCNodePtr = ptr, capCNodeBits = bits }), True, _) -> ((ThreadCap { capTCBPtr = tcb}), True, _) -> (z@(Zombie {}), True, _) -> ((ArchObjectCap { capCap = cap }), final, _) -> ((IRQHandlerCap { capIRQ = irq }), True, _) -> (NullCap, _, _) -> ((Zombie {}), False, _) -> (_, _, _) ->  ---> let (\v0\, \v1\, \v2\) = \x in
+case \x of ((EndpointCap { capEPPtr = ptr }), final, _) -> ((NotificationCap { capNtfnPtr = ptr }), final, _) -> ((ReplyCap {}), _, _) -> (_, _, True) -> ((CNodeCap { capCNodePtr = ptr, capCNodeBits = bits }), True, _) -> ((ThreadCap { capTCBPtr = tcb}), True, _) -> (z@(Zombie {}), True, _) -> ((ArchObjectCap { capCap = cap }), final, _) -> ((IRQHandlerCap { capIRQ = irq }), True, _) -> (NullCap, _, _) -> ((Zombie {}), False, _) -> (_, _, _) ->  ---> let (\v0\, \v1\, \v2\) = \x in
     if isEndpointCap \v0\
     then let ptr = capEPPtr \v0\; final = \v1\
         in ->1
-    else if isAsyncEndpointCap \v0\
-    then let ptr = capAEPPtr \v0\; final = \v1\
+    else if isNotificationCap \v0\
+    then let ptr = capNtfnPtr \v0\; final = \v1\
         in ->2
     else if isReplyCap \v0\
     then ->3
@@ -956,14 +956,14 @@ case \x of NullCap -> (CNodeCap {}) -> (ThreadCap {}) -> (Zombie { capZombiePtr 
         in ->6
     else ->7
 
-case \x of (_, NullCap) -> (a@(UntypedCap {}), b) -> ((a@EndpointCap {}), (b@EndpointCap {})) -> ((a@AsyncEndpointCap {}), (b@AsyncEndpointCap {})) -> ((a@CNodeCap {}), (b@CNodeCap {})) -> ((a@ThreadCap {}), (b@ThreadCap {})) -> (IRQControlCap, IRQControlCap) -> (IRQControlCap, (IRQHandlerCap {})) -> ((IRQHandlerCap a), (IRQHandlerCap b)) -> ((ArchObjectCap a), (ArchObjectCap b)) -> (_, _) ->  ---> let (a, b) = \x in
+case \x of (_, NullCap) -> (a@(UntypedCap {}), b) -> ((a@EndpointCap {}), (b@EndpointCap {})) -> ((a@NotificationCap {}), (b@NotificationCap {})) -> ((a@CNodeCap {}), (b@CNodeCap {})) -> ((a@ThreadCap {}), (b@ThreadCap {})) -> (IRQControlCap, IRQControlCap) -> (IRQControlCap, (IRQHandlerCap {})) -> ((IRQHandlerCap a), (IRQHandlerCap b)) -> ((ArchObjectCap a), (ArchObjectCap b)) -> (_, _) ->  ---> let (a, b) = \x in
     if isNullCap b
     then ->1
     else if isUntypedCap a
     then ->2
     else if isEndpointCap a \<and> isEndpointCap b
     then ->3
-    else if isAsyncEndpointCap a \<and> isAsyncEndpointCap b
+    else if isNotificationCap a \<and> isNotificationCap b
     then ->4
     else if isCNodeCap a \<and> isCNodeCap b
     then ->5
@@ -983,12 +983,12 @@ case \x of (_, NullCap) -> (a@(UntypedCap {}), b) -> ((a@EndpointCap {}), (b@End
         )
     else ->11
 
-case \x of (a@(UntypedCap {}), b) -> ((a@EndpointCap {}), (b@EndpointCap {})) -> ((a@AsyncEndpointCap {}), (b@AsyncEndpointCap {})) -> ((a@CNodeCap {}), (b@CNodeCap {})) -> ((a@ThreadCap {}), (b@ThreadCap {})) -> ((a@ReplyCap {}), (b@ReplyCap {})) -> (IRQControlCap, IRQControlCap) -> (IRQControlCap, (IRQHandlerCap {})) -> ((IRQHandlerCap a), (IRQHandlerCap b)) -> ((ArchObjectCap a), (ArchObjectCap b)) -> (_, _) ->  ---> let (a, b) = \x in
+case \x of (a@(UntypedCap {}), b) -> ((a@EndpointCap {}), (b@EndpointCap {})) -> ((a@NotificationCap {}), (b@NotificationCap {})) -> ((a@CNodeCap {}), (b@CNodeCap {})) -> ((a@ThreadCap {}), (b@ThreadCap {})) -> ((a@ReplyCap {}), (b@ReplyCap {})) -> (IRQControlCap, IRQControlCap) -> (IRQControlCap, (IRQHandlerCap {})) -> ((IRQHandlerCap a), (IRQHandlerCap b)) -> ((ArchObjectCap a), (ArchObjectCap b)) -> (_, _) ->  ---> let (a, b) = \x in
     if isUntypedCap a
     then ->1
     else if isEndpointCap a \<and> isEndpointCap b
     then ->2
-    else if isAsyncEndpointCap a \<and> isAsyncEndpointCap b
+    else if isNotificationCap a \<and> isNotificationCap b
     then ->3
     else if isCNodeCap a \<and> isCNodeCap b
     then ->4
@@ -1029,12 +1029,12 @@ case \x of NullCap -> c2@(Zombie { capZombiePtr = ptr2 }) -> _ ->  ---> let c2 =
         in ->2
     else ->3
 
-case \x of ((EndpointCap { capEPPtr = ptr }), final, _) -> ((AsyncEndpointCap { capAEPPtr = ptr }), final, _) -> ((ReplyCap {}), _, _) -> (NullCap, _, _) -> (_, _, True) -> ((CNodeCap { capCNodePtr = ptr, capCNodeBits = bits }), True, _) -> ((ThreadCap { capTCBPtr = tcb}), True, _) -> (z@(Zombie {}), True, _) -> ((ArchObjectCap { capCap = cap }), final, _) -> ((IRQHandlerCap { capIRQ = irq }), True, _) -> ((Zombie {}), False, _) -> (_, _, _) ->  ---> let (\v0\, \v1\, \v2\) = \x in
+case \x of ((EndpointCap { capEPPtr = ptr }), final, _) -> ((NotificationCap { capNtfnPtr = ptr }), final, _) -> ((ReplyCap {}), _, _) -> (NullCap, _, _) -> (_, _, True) -> ((CNodeCap { capCNodePtr = ptr, capCNodeBits = bits }), True, _) -> ((ThreadCap { capTCBPtr = tcb}), True, _) -> (z@(Zombie {}), True, _) -> ((ArchObjectCap { capCap = cap }), final, _) -> ((IRQHandlerCap { capIRQ = irq }), True, _) -> ((Zombie {}), False, _) -> (_, _, _) ->  ---> let (\v0\, \v1\, \v2\) = \x in
     if isEndpointCap \v0\
     then let ptr = capEPPtr \v0\; final = \v1\
         in ->1
-    else if isAsyncEndpointCap \v0\
-    then let ptr = capAEPPtr \v0\; final = \v1\
+    else if isNotificationCap \v0\
+    then let ptr = capNtfnPtr \v0\; final = \v1\
         in ->2
     else if isReplyCap \v0\
     then ->3
@@ -1123,10 +1123,10 @@ case \x of ((index:bits:args), cap@(CNodeCap {})) -> (_, (CNodeCap {})) -> (_, _
     )
     else ->3
 
-case \x of cap@(EndpointCap {capEPCanSend=True}) -> cap@(AsyncEndpointCap {capAEPCanSend=True}) -> cap@(ReplyCap {capReplyMaster=False}) -> cap@(ThreadCap {}) -> cap@(CNodeCap {}) -> cap@(UntypedCap {}) -> IRQControlCap -> (IRQHandlerCap { capIRQ = irq }) -> (ArchObjectCap cap) -> _ ->  ---> let cap = \x in
+case \x of cap@(EndpointCap {capEPCanSend=True}) -> cap@(NotificationCap {capNtfnCanSend=True}) -> cap@(ReplyCap {capReplyMaster=False}) -> cap@(ThreadCap {}) -> cap@(CNodeCap {}) -> cap@(UntypedCap {}) -> IRQControlCap -> (IRQHandlerCap { capIRQ = irq }) -> (ArchObjectCap cap) -> _ ->  ---> let cap = \x in
     if isEndpointCap cap \<and> capEPCanSend cap
     then ->1
-    else if isAsyncEndpointCap cap \<and> capAEPCanSend cap
+    else if isNotificationCap cap \<and> capNtfnCanSend cap
     then ->2
     else if isReplyCap cap \<and> \<not> capReplyMaster cap
     then ->3
@@ -1172,12 +1172,12 @@ case \x of ((Zombie { capZombieNumber = 0 }), _) -> ((Zombie { capZombiePtr = pt
         in ->3
     else ->4
 
-case \x of ((EndpointCap { capEPPtr = ptr }), final, _) -> ((AsyncEndpointCap { capAEPPtr = ptr }), final, _) -> ((ReplyCap {}), _, _) -> (NullCap, _, _) -> (DomainCap, _, _) -> (_, _, True) -> ((CNodeCap { capCNodePtr = ptr, capCNodeBits = bits }), True, _) -> ((ThreadCap { capTCBPtr = tcb}), True, _) -> (z@(Zombie {}), True, _) -> ((ArchObjectCap { capCap = cap }), final, _) -> ((IRQHandlerCap { capIRQ = irq }), True, _) -> ((Zombie {}), False, _) -> (_, _, _) ->  ---> let (\v0\, \v1\, \v2\) = \x in
+case \x of ((EndpointCap { capEPPtr = ptr }), final, _) -> ((NotificationCap { capNtfnPtr = ptr }), final, _) -> ((ReplyCap {}), _, _) -> (NullCap, _, _) -> (DomainCap, _, _) -> (_, _, True) -> ((CNodeCap { capCNodePtr = ptr, capCNodeBits = bits }), True, _) -> ((ThreadCap { capTCBPtr = tcb}), True, _) -> (z@(Zombie {}), True, _) -> ((ArchObjectCap { capCap = cap }), final, _) -> ((IRQHandlerCap { capIRQ = irq }), True, _) -> ((Zombie {}), False, _) -> (_, _, _) ->  ---> let (\v0\, \v1\, \v2\) = \x in
     if isEndpointCap \v0\
     then let ptr = capEPPtr \v0\; final = \v1\
         in ->1
-    else if isAsyncEndpointCap \v0\
-    then let ptr = capAEPPtr \v0\; final = \v1\
+    else if isNotificationCap \v0\
+    then let ptr = capNtfnPtr \v0\; final = \v1\
         in ->2
     else if isReplyCap \v0\
     then ->3
@@ -1223,7 +1223,7 @@ case \x of NullCap -> DomainCap -> (Zombie { capZombiePtr = ptr, capZombieType =
         in ->5
     else ->6
 
-case \x of NullCap -> DomainCap -> c@(UntypedCap {}) -> c@(EndpointCap {}) -> c@(AsyncEndpointCap {}) -> c@(ReplyCap {}) -> c@(CNodeCap {}) -> c@(ThreadCap {}) -> c@IRQControlCap -> c@(IRQHandlerCap {}) -> (ArchObjectCap {capCap = aoCap}) -> c@(Zombie {}) ->  ---> let c = \x; aoCap = capCap \x in
+case \x of NullCap -> DomainCap -> c@(UntypedCap {}) -> c@(EndpointCap {}) -> c@(NotificationCap {}) -> c@(ReplyCap {}) -> c@(CNodeCap {}) -> c@(ThreadCap {}) -> c@IRQControlCap -> c@(IRQHandlerCap {}) -> (ArchObjectCap {capCap = aoCap}) -> c@(Zombie {}) ->  ---> let c = \x; aoCap = capCap \x in
     if isNullCap c
     then ->1
     else if isDomainCap c
@@ -1232,7 +1232,7 @@ case \x of NullCap -> DomainCap -> c@(UntypedCap {}) -> c@(EndpointCap {}) -> c@
     then ->3
     else if isEndpointCap c
     then ->4
-    else if isAsyncEndpointCap c
+    else if isNotificationCap c
     then ->5
     else if isReplyCap c
     then ->6
@@ -1250,10 +1250,10 @@ case \x of NullCap -> DomainCap -> c@(UntypedCap {}) -> c@(EndpointCap {}) -> c@
     then ->12
     else undefined
 
-case \x of cap@(EndpointCap {capEPCanSend=True}) -> cap@(AsyncEndpointCap {capAEPCanSend=True}) -> cap@(ReplyCap {capReplyMaster=False}) -> cap@(ThreadCap {}) -> DomainCap -> cap@(CNodeCap {}) -> cap@(UntypedCap {}) -> IRQControlCap -> (IRQHandlerCap { capIRQ = irq }) -> (ArchObjectCap cap) -> _ ->  ---> let cap = \x in
+case \x of cap@(EndpointCap {capEPCanSend=True}) -> cap@(NotificationCap {capNtfnCanSend=True}) -> cap@(ReplyCap {capReplyMaster=False}) -> cap@(ThreadCap {}) -> DomainCap -> cap@(CNodeCap {}) -> cap@(UntypedCap {}) -> IRQControlCap -> (IRQHandlerCap { capIRQ = irq }) -> (ArchObjectCap cap) -> _ ->  ---> let cap = \x in
     if isEndpointCap cap \<and> capEPCanSend cap
     then ->1
-    else if isAsyncEndpointCap cap \<and> capAEPCanSend cap
+    else if isNotificationCap cap \<and> capNtfnCanSend cap
     then ->2
     else if isReplyCap cap \<and> \<not> capReplyMaster cap
     then ->3
@@ -1276,12 +1276,12 @@ case \x of cap@(EndpointCap {capEPCanSend=True}) -> cap@(AsyncEndpointCap {capAE
     else ->11
 
 
-case \x of (a@(UntypedCap {}), b) -> ((a@EndpointCap {}), (b@EndpointCap {})) -> ((a@AsyncEndpointCap {}), (b@AsyncEndpointCap {})) -> ((a@CNodeCap {}), (b@CNodeCap {})) -> ((a@ThreadCap {}), (b@ThreadCap {})) -> ((a@ReplyCap {}), (b@ReplyCap {})) -> (DomainCap, DomainCap) -> (IRQControlCap, IRQControlCap) -> (IRQControlCap, (IRQHandlerCap {})) -> ((IRQHandlerCap a), (IRQHandlerCap b)) -> ((ArchObjectCap a), (ArchObjectCap b)) -> (_, _) ->  ---> let (a, b) = \x in
+case \x of (a@(UntypedCap {}), b) -> ((a@EndpointCap {}), (b@EndpointCap {})) -> ((a@NotificationCap {}), (b@NotificationCap {})) -> ((a@CNodeCap {}), (b@CNodeCap {})) -> ((a@ThreadCap {}), (b@ThreadCap {})) -> ((a@ReplyCap {}), (b@ReplyCap {})) -> (DomainCap, DomainCap) -> (IRQControlCap, IRQControlCap) -> (IRQControlCap, (IRQHandlerCap {})) -> ((IRQHandlerCap a), (IRQHandlerCap b)) -> ((ArchObjectCap a), (ArchObjectCap b)) -> (_, _) ->  ---> let (a, b) = \x in
     if isUntypedCap a
     then ->1
     else if isEndpointCap a \<and> isEndpointCap b
     then ->2
-    else if isAsyncEndpointCap a \<and> isAsyncEndpointCap b
+    else if isNotificationCap a \<and> isNotificationCap b
     then ->3
     else if isCNodeCap a \<and> isCNodeCap b
     then ->4

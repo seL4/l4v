@@ -88,8 +88,8 @@ where
      (\<exists>i'. untypinv_relation i i' \<and> x = InvokeUntyped i')"
 | "inv_relation (Invocations_A.InvokeEndpoint w w2 b) x =
      (x = InvokeEndpoint w w2 b)"
-| "inv_relation (Invocations_A.InvokeAsyncEndpoint w w2) x = 
-     (x = InvokeAsyncEndpoint w w2)"
+| "inv_relation (Invocations_A.InvokeNotification w w2) x = 
+     (x = InvokeNotification w w2)"
 | "inv_relation (Invocations_A.InvokeReply w ptr) x = 
      (x = InvokeReply w (cte_map ptr))"
 | "inv_relation (Invocations_A.InvokeTCB i) x = 
@@ -117,7 +117,7 @@ primrec
 where
   "valid_invocation' (Invocations_H.InvokeUntyped i) = valid_untyped_inv' i"
 | "valid_invocation' (Invocations_H.InvokeEndpoint w w2 b) = (ep_at' w and ex_nonz_cap_to' w)"
-| "valid_invocation' (Invocations_H.InvokeAsyncEndpoint w w2) = (aep_at' w and ex_nonz_cap_to' w)"
+| "valid_invocation' (Invocations_H.InvokeNotification w w2) = (ntfn_at' w and ex_nonz_cap_to' w)"
 | "valid_invocation' (Invocations_H.InvokeTCB i) = tcb_inv_wf' i"
 | "valid_invocation' (Invocations_H.InvokeDomain thread domain) =
    (tcb_at' thread  and K (domain \<le> maxDomain))"
@@ -517,7 +517,7 @@ lemma pinv_corres:
                                sch_act_simple_def)
         apply (rule corres_guard_imp)
           apply (simp add: liftE_bindE)
-          apply (rule corres_split [OF _ send_async_ipc_corres])
+          apply (rule corres_split [OF _ send_signal_corres])
             apply (rule corres_trivial)
             apply (simp add: returnOk_def)
            apply wp
@@ -561,19 +561,19 @@ lemma pinv_corres:
    apply (clarsimp+)[2]
   done
 
-lemma sendAsyncIPC_tcb_at'[wp]:
+lemma sendSignal_tcb_at'[wp]:
   "\<lbrace>tcb_at' t\<rbrace>
-     sendAsyncIPC aepptr bdg
+     sendSignal ntfnptr bdg
    \<lbrace>\<lambda>rv. tcb_at' t\<rbrace>"
-  apply (simp add: sendAsyncIPC_def
-              cong: list.case_cong async_endpoint.case_cong)
-  apply (wp aep'_cases_weak_wp list_cases_weak_wp hoare_drop_imps | wpc | simp)+
+  apply (simp add: sendSignal_def
+              cong: list.case_cong Structures_H.notification.case_cong)
+  apply (wp ntfn'_cases_weak_wp list_cases_weak_wp hoare_drop_imps | wpc | simp)+
   done
 
 lemmas checkCap_inv_typ_at'
   = checkCap_inv[where P="\<lambda>s. P (typ_at' T p s)" for T p]
 
-crunch typ_at'[wp]: restart, bindAsyncEndpoint "\<lambda>s. P (typ_at' T p s)"
+crunch typ_at'[wp]: restart, bindNotification "\<lambda>s. P (typ_at' T p s)"
 crunch typ_at'[wp]: performTransfer "\<lambda>s. P (typ_at' T p s)"
 
 lemma invokeTCB_typ_at'[wp]:
@@ -629,7 +629,7 @@ lemma sts_cte_at[wp]:
   apply (wp|simp)+
   done
 
-crunch obj_at_aep[wp]: setThreadState "obj_at' (\<lambda>aep. P (aepBoundTCB aep) (aepObj aep)) aepptr"
+crunch obj_at_ntfn[wp]: setThreadState "obj_at' (\<lambda>ntfn. P (ntfnBoundTCB ntfn) (ntfnObj ntfn)) ntfnptr"
   (ignore: getObject setObject wp: obj_at_setObject2  crunch_wps
    simp: crunch_simps updateObject_default_def in_monad)
 
@@ -1710,25 +1710,25 @@ lemma hw_corres':
             apply (rule corres_guard_imp)
               apply (rename_tac rights)
               apply (case_tac "AllowRead \<in> rights"; simp)
-               apply (rule_tac r'=aep_relation in corres_splitEE)
+               apply (rule_tac r'=ntfn_relation in corres_splitEE)
                   apply (rule corres_if)
-                    apply (clarsimp simp: aep_relation_def)
-                   apply (clarsimp, rule receive_async_ipc_corres)
+                    apply (clarsimp simp: ntfn_relation_def)
+                   apply (clarsimp, rule receive_signal_corres)
                     prefer 3
                     apply (rule corres_trivial)
                     apply (clarsimp simp: lookup_failure_map_def)+
-                 apply (rule get_aep_corres)
-                apply (wp get_aep_wp getAsyncEP_wp | wpcw | simp)+
+                 apply (rule get_ntfn_corres)
+                apply (wp get_ntfn_wp getNotification_wp | wpcw | simp)+
               apply (clarsimp simp: lookup_failure_map_def)
              apply (clarsimp simp: valid_cap_def ct_in_state_def)
             apply (clarsimp simp: valid_cap'_def capAligned_def)
-           apply (wp get_aep_wp | wpcw | simp)+
+           apply (wp get_ntfn_wp | wpcw | simp)+
          apply (rule hoare_vcg_E_elim)
           apply (simp add: lookup_cap_def lookup_slot_for_thread_def)
           apply wp
            apply (simp add: split_def)
            apply (wp resolve_address_bits_valid_fault2)
-         apply (wp getAsyncEP_wp | wpcw | simp add: valid_fault_def whenE_def split del: split_if)+
+         apply (wp getNotification_wp | wpcw | simp add: valid_fault_def whenE_def split del: split_if)+
   apply (clarsimp simp add: ct_in_state_def  ct_in_state'_def conj_comms invs_valid_tcb_ctable 
                             invs_valid_objs tcb_at_invs invs_psp_aligned invs_cur)
   apply (clarsimp simp: invs'_def valid_state'_def valid_pspace'_def
@@ -1772,7 +1772,7 @@ lemma hw_invs'[wp]:
    handleWait isBlocking \<lbrace>\<lambda>r. invs'\<rbrace>"
   apply (simp add: handleWait_def cong: if_cong)
   apply (rule hoare_pre)
-   apply ((wp getAsyncEP_wp | wpc | simp)+)[1]
+   apply ((wp getNotification_wp | wpc | simp)+)[1]
                 apply (clarsimp simp: ct_in_state'_def)
                 apply ((wp deleteCallerCap_nonz_cap hoare_vcg_all_lift
                            deleteCallerCap_ksQ_ct'
@@ -1989,12 +1989,12 @@ lemma hr_invs'[wp]:
   done
 
 crunch ksCurThread[wp]: cteDeleteOne "\<lambda>s. P (ksCurThread s)"
-  (wp: crunch_wps setObject_ep_ct setObject_aep_ct
+  (wp: crunch_wps setObject_ep_ct setObject_ntfn_ct
        simp: crunch_simps unless_def ignore: setObject)
 
 crunch ksCurThread[wp]: handleReply "\<lambda>s. P (ksCurThread s)"
   (wp: crunch_wps transferCapsToSlots_pres1 setObject_ep_ct
-       setObject_aep_ct
+       setObject_ntfn_ct
         simp: unless_def crunch_simps
       ignore: transferCapsToSlots setObject getObject)
 

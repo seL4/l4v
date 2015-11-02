@@ -338,24 +338,24 @@ text {* Handle a message receive operation performed on an endpoint by a thread.
 If a sender is waiting then transfer the message, otherwise put the thread in
 the endpoint receiving queue. *}
 definition
-  isActive :: "async_ep \<Rightarrow> bool"
+  isActive :: "notification \<Rightarrow> bool"
 where
-  "isActive aep \<equiv> case aep_obj aep
-     of ActiveAEP _ \<Rightarrow> True
+  "isActive ntfn \<equiv> case ntfn_obj ntfn
+     of ActiveNtfn _ \<Rightarrow> True
       | _ \<Rightarrow> False" 
 
 
 text{* Helper function for performing async ipc when receiving on a normal
 endpoint *}
 definition
-  complete_async_ipc :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
+  complete_signal :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
-  "complete_async_ipc aepptr tcb \<equiv> do
-     aep \<leftarrow> get_async_ep aepptr;
-     case aep_obj aep of
-       ActiveAEP badge \<Rightarrow> do
+  "complete_signal ntfnptr tcb \<equiv> do
+     ntfn \<leftarrow> get_notification ntfnptr;
+     case ntfn_obj ntfn of
+       ActiveNtfn badge \<Rightarrow> do
            as_user tcb $ set_register badge_register badge;
-           set_async_ep aepptr $ aep_set_obj aep IdleAEP
+           set_notification ntfnptr $ ntfn_set_obj ntfn IdleNtfn
          od
      | _ \<Rightarrow> fail
    od"
@@ -374,11 +374,11 @@ where
                         | _ \<Rightarrow> fail);
      diminish \<leftarrow> return (AllowSend \<notin> rights);
      ep \<leftarrow> get_endpoint epptr;
-     aepptr \<leftarrow> get_bound_aep thread;
-     aep \<leftarrow> case_option (return default_async_ep) get_async_ep aepptr;
-     if (aepptr \<noteq> None \<and> isActive aep)
+     ntfnptr \<leftarrow> get_bound_notification thread;
+     ntfn \<leftarrow> case_option (return default_notification) get_notification ntfnptr;
+     if (ntfnptr \<noteq> None \<and> isActive ntfn)
      then 
-       complete_async_ipc (the aepptr) thread
+       complete_signal (the ntfnptr) thread
      else 
        case ep
          of IdleEP \<Rightarrow> case is_blocking of
@@ -424,22 +424,22 @@ section {* Asynchronous Message Transfers *}
 text {* Helper function to handle an asynchronous send operation in the case
 where a receiver is waiting. *}
 definition
-  update_waiting_aep :: "obj_ref \<Rightarrow> obj_ref list \<Rightarrow> obj_ref option \<Rightarrow> badge \<Rightarrow> 
+  update_waiting_ntfn :: "obj_ref \<Rightarrow> obj_ref list \<Rightarrow> obj_ref option \<Rightarrow> badge \<Rightarrow> 
                          (unit,'z::state_ext) s_monad"
 where
-  "update_waiting_aep aepptr queue bound_tcb badge \<equiv> do
+  "update_waiting_ntfn ntfnptr queue bound_tcb badge \<equiv> do
      assert (queue \<noteq> []);
      (dest,rest) \<leftarrow> return $ (hd queue, tl queue);
-     set_async_ep aepptr $ \<lparr>
-         aep_obj = (case rest of [] \<Rightarrow> IdleAEP | _ \<Rightarrow> WaitingAEP rest),
-         aep_bound_tcb = bound_tcb \<rparr>;
+     set_notification ntfnptr $ \<lparr>
+         ntfn_obj = (case rest of [] \<Rightarrow> IdleNtfn | _ \<Rightarrow> WaitingNtfn rest),
+         ntfn_bound_tcb = bound_tcb \<rparr>;
      set_thread_state dest Running;
      as_user dest $ set_register badge_register badge;
      do_extended_op (switch_if_required_to dest)
 
    od"
 
-text {* Handle a message send operation performed on an asynchronous endpoint.
+text {* Handle a message send operation performed on a notification object.
 If a receiver is waiting then transfer the message, otherwise combine the new
 message with whatever message is currently waiting. *}
 
@@ -452,60 +452,60 @@ where
      | _ \<Rightarrow> False"
 
 definition
-  send_async_ipc :: "obj_ref \<Rightarrow> badge \<Rightarrow> (unit,'z::state_ext) s_monad"
+  send_signal :: "obj_ref \<Rightarrow> badge \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
-  "send_async_ipc aepptr badge \<equiv> do
-    aep \<leftarrow> get_async_ep aepptr;
-    case (aep_obj aep, aep_bound_tcb aep) of
-          (IdleAEP, Some tcb) \<Rightarrow> do
+  "send_signal ntfnptr badge \<equiv> do
+    ntfn \<leftarrow> get_notification ntfnptr;
+    case (ntfn_obj ntfn, ntfn_bound_tcb ntfn) of
+          (IdleNtfn, Some tcb) \<Rightarrow> do
                   st \<leftarrow> get_thread_state tcb;
                   if (receive_blocked st)
                   then do
-                      ipc_cancel tcb;
+                      cancel_ipc tcb;
                       set_thread_state tcb Running;
                       as_user tcb $ set_register badge_register badge;
                       do_extended_op (switch_if_required_to tcb)
                     od
-                  else set_async_ep aepptr $ aep_set_obj aep (ActiveAEP badge)
+                  else set_notification ntfnptr $ ntfn_set_obj ntfn (ActiveNtfn badge)
             od
-       | (IdleAEP, None) \<Rightarrow> set_async_ep aepptr $ aep_set_obj aep (ActiveAEP badge)
-       | (WaitingAEP queue, bound_tcb) \<Rightarrow> update_waiting_aep aepptr queue bound_tcb badge 
-       | (ActiveAEP badge', _) \<Rightarrow> 
-           set_async_ep aepptr $ aep_set_obj aep $
-             ActiveAEP (combine_aep_badges badge badge')
+       | (IdleNtfn, None) \<Rightarrow> set_notification ntfnptr $ ntfn_set_obj ntfn (ActiveNtfn badge)
+       | (WaitingNtfn queue, bound_tcb) \<Rightarrow> update_waiting_ntfn ntfnptr queue bound_tcb badge 
+       | (ActiveNtfn badge', _) \<Rightarrow> 
+           set_notification ntfnptr $ ntfn_set_obj ntfn $
+             ActiveNtfn (combine_ntfn_badges badge badge')
    od"
 
   
-text {* Handle a receive operation performed on an asynchronous endpoint by a
+text {* Handle a receive operation performed on a notification object by a
 thread. If a message is waiting then perform the transfer, otherwise put the
 thread in the endpoint's receiving queue. *}
 definition
-  receive_async_ipc :: "obj_ref \<Rightarrow> cap \<Rightarrow> bool \<Rightarrow> (unit,'z::state_ext) s_monad"
+  receive_signal :: "obj_ref \<Rightarrow> cap \<Rightarrow> bool \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
-   "receive_async_ipc thread cap is_blocking \<equiv> do
-    aepptr \<leftarrow>
+   "receive_signal thread cap is_blocking \<equiv> do
+    ntfnptr \<leftarrow>
       case cap
-        of AsyncEndpointCap aepptr badge rights \<Rightarrow> return aepptr
+        of NotificationCap ntfnptr badge rights \<Rightarrow> return ntfnptr
          | _ \<Rightarrow> fail;
-    aep \<leftarrow> get_async_ep aepptr;
-    case aep_obj aep
-      of IdleAEP \<Rightarrow>
+    ntfn \<leftarrow> get_notification ntfnptr;
+    case ntfn_obj ntfn
+      of IdleNtfn \<Rightarrow>
                    case is_blocking of 
                      True \<Rightarrow> do
-                          set_thread_state thread (BlockedOnAsyncEvent aepptr);
-                          set_async_ep aepptr $ aep_set_obj aep $ WaitingAEP ([thread])
+                          set_thread_state thread (BlockedOnNotification ntfnptr);
+                          set_notification ntfnptr $ ntfn_set_obj ntfn $ WaitingNtfn ([thread])
                         od
                    | False \<Rightarrow> do_nbwait_failed_transfer thread 
-       | WaitingAEP queue \<Rightarrow> 
+       | WaitingNtfn queue \<Rightarrow> 
                    case is_blocking of 
                      True \<Rightarrow> do
-                          set_thread_state thread (BlockedOnAsyncEvent aepptr);
-                          set_async_ep aepptr $ aep_set_obj aep $ WaitingAEP (queue @ [thread])
+                          set_thread_state thread (BlockedOnNotification ntfnptr);
+                          set_notification ntfnptr $ ntfn_set_obj ntfn $ WaitingNtfn (queue @ [thread])
                         od
                    | False \<Rightarrow> do_nbwait_failed_transfer thread 
-       | ActiveAEP badge \<Rightarrow> do
+       | ActiveNtfn badge \<Rightarrow> do
                      as_user thread $ set_register badge_register badge;
-                     set_async_ep aepptr $ aep_set_obj aep IdleAEP 
+                     set_notification ntfnptr $ ntfn_set_obj ntfn IdleNtfn 
                    od
     od"
 

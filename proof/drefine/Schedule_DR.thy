@@ -27,7 +27,7 @@ lemma getActiveTCBs_subset:
   apply (clarsimp simp: transform_object_def transform_tcb_def)
   apply (clarsimp simp: infer_tcb_pending_op_def)
   apply (frule(1) valid_etcbs_tcb_etcb)
-  apply (case_tac "tcb_state y", auto simp: tcb_pending_op_slot_def tcb_boundaep_slot_def)
+  apply (case_tac "tcb_state y", auto simp: tcb_pending_op_slot_def tcb_boundntfn_slot_def)
   done
 
 
@@ -294,7 +294,7 @@ lemma schedule_resume_cur_thread_dcorres:
     apply (clarsimp simp: valid_sched_def valid_sched_action_def is_activatable_def invs_def valid_state_def
                           pred_tcb_at_def obj_at_def ct_in_cur_domain_def in_cur_domain_def)
     apply (frule(1) valid_etcbs_tcb_etcb)
-    apply (auto simp: transform_def transform_current_thread_def all_active_tcbs_def transform_objects_def active_tcbs_in_domain_def etcb_at_def tcb_boundaep_slot_def tcb_pending_op_slot_def
+    apply (auto simp: transform_def transform_current_thread_def all_active_tcbs_def transform_objects_def active_tcbs_in_domain_def etcb_at_def tcb_boundntfn_slot_def tcb_pending_op_slot_def
                           map_add_def restrict_map_def option_map_def transform_object_def transform_tcb_def valid_idle_def st_tcb_def2 get_tcb_def
                           transform_cnode_contents_def infer_tcb_pending_op_def transform_cap_def domIff st_tcb_at_kh_def obj_at_def only_idle_def
                     split: option.splits split_if Structures_A.kernel_object.splits Structures_A.thread_state.splits)[1]
@@ -316,7 +316,7 @@ lemma schedule_switch_thread_helper:
   apply (clarsimp simp: valid_idle_def pred_tcb_at_def)
   apply (drule_tac s="idle_thread s" in sym)
   apply (auto simp: transform_def transform_current_thread_def all_active_tcbs_def transform_objects_def active_tcbs_in_domain_def etcb_at_def
-                        map_add_def restrict_map_def option_map_def transform_object_def transform_tcb_def valid_idle_def pred_tcb_at_def get_tcb_def tcb_pending_op_slot_def tcb_boundaep_slot_def
+                        map_add_def restrict_map_def option_map_def transform_object_def transform_tcb_def valid_idle_def pred_tcb_at_def get_tcb_def tcb_pending_op_slot_def tcb_boundntfn_slot_def
                         transform_cnode_contents_def infer_tcb_pending_op_def transform_cap_def domIff st_tcb_at_kh_def obj_at_def only_idle_def
                   split: option.splits split_if Structures_A.kernel_object.splits Structures_A.thread_state.splits)
   done
@@ -387,7 +387,7 @@ lemma schedule_choose_new_thread_helper:
   apply (auto simp: transform_def transform_current_thread_def all_active_tcbs_def transform_objects_def active_tcbs_in_domain_def etcb_at_def
                        is_etcb_at_def
                         map_add_def restrict_map_def option_map_def transform_object_def transform_tcb_def valid_idle_def st_tcb_def2 get_tcb_def
-                        transform_cnode_contents_def infer_tcb_pending_op_def transform_cap_def domIff st_tcb_at_kh_def obj_at_def only_idle_def tcb_pending_op_slot_def tcb_boundaep_slot_def
+                        transform_cnode_contents_def infer_tcb_pending_op_def transform_cap_def domIff st_tcb_at_kh_def obj_at_def only_idle_def tcb_pending_op_slot_def tcb_boundntfn_slot_def
                   split: option.splits split_if Structures_A.kernel_object.splits Structures_A.thread_state.splits)
   done
 
@@ -680,7 +680,7 @@ lemma activate_thread_corres:
   apply (rule dcorres_absorb_get_l)
   apply (simp add:assert_opt_def when_def)
   apply (case_tac  "tcb_state obj'")
-         apply (clarsimp simp:infer_tcb_pending_op_def tcb_pending_op_slot_def tcb_boundaep_slot_def
+         apply (clarsimp simp:infer_tcb_pending_op_def tcb_pending_op_slot_def tcb_boundntfn_slot_def
            when_def pred_tcb_at_def ct_in_state_def obj_at_def
            dest!:get_tcb_SomeD)+
        apply (rule corres_guard_imp)
@@ -693,7 +693,7 @@ lemma activate_thread_corres:
        apply (simp add:invs_mdb pred_tcb_at_def obj_at_def invs_valid_idle
          generates_pending_def not_idle_thread_def)
       apply (clarsimp simp:infer_tcb_pending_op_def arch_activate_idle_thread_def
-             when_def pred_tcb_at_def ct_in_state_def obj_at_def tcb_pending_op_slot_def tcb_boundaep_slot_def
+             when_def pred_tcb_at_def ct_in_state_def obj_at_def tcb_pending_op_slot_def tcb_boundntfn_slot_def
              dest!:get_tcb_SomeD)+
   done
 

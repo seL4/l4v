@@ -2990,9 +2990,9 @@ lemma sts_sch_act_sane:
            | simp add: threadSet_sch_act_sane sane_update)+
   done
 
-lemma sba_sch_act_sane:
-  "\<lbrace>sch_act_sane\<rbrace> setBoundAEP aep t \<lbrace>\<lambda>_. sch_act_sane\<rbrace>"
-  apply (simp add: setBoundAEP_def)
+lemma sbn_sch_act_sane:
+  "\<lbrace>sch_act_sane\<rbrace> setBoundNotification ntfn t \<lbrace>\<lambda>_. sch_act_sane\<rbrace>"
+  apply (simp add: setBoundNotification_def)
   apply (wp | simp add: threadSet_sch_act_sane sane_update)+
   done
 lemma possibleSwitchTo_corres:

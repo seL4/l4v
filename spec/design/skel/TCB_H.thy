@@ -12,7 +12,7 @@ chapter "Thread Control Blocks"
 
 theory TCB_H
 imports
-  AsyncEndpointDecls_H
+  NotificationDecls_H
   TCBDecls_H
   CNode_H
   VSpace_H

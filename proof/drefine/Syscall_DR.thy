@@ -31,9 +31,9 @@ where
       | Invocations_A.InvokeEndpoint ep bdg grant \<Rightarrow>
           Invocations_D.InvokeEndpoint $
               SyncMessage bdg grant ep
-      | Invocations_A.InvokeAsyncEndpoint aep aebdg \<Rightarrow>
-          Invocations_D.InvokeAsyncEndpoint $
-              AsyncMessage aebdg aep
+      | Invocations_A.InvokeNotification ntfn aebdg \<Rightarrow>
+          Invocations_D.InvokeNotification $
+              Signal aebdg ntfn
       | Invocations_A.InvokeReply target_tcb reply_slot \<Rightarrow>
           Invocations_D.InvokeReply $
               ReplyMessage target_tcb (transform_cslot_ptr reply_slot)
@@ -128,12 +128,12 @@ lemma decode_invocation_endpointcap_corres:
   done
 
 (* Decoding Async Endpoint invocations is equivalent. *)
-lemma decode_invocation_asyncendpointcap_corres:
+lemma decode_invocation_notificationcap_corres:
   "\<lbrakk> Some intent = transform_intent (invocation_type label') args';
      invoked_cap_ref = transform_cslot_ptr invoked_cap_ref';
      invoked_cap = transform_cap invoked_cap';
      excaps = transform_cap_list excaps';
-     invoked_cap' = cap.AsyncEndpointCap a b c \<rbrakk> \<Longrightarrow>
+     invoked_cap' = cap.NotificationCap a b c \<rbrakk> \<Longrightarrow>
     dcorres (dc \<oplus> cdl_invocation_relation) \<top> \<top>
         (Decode_D.decode_invocation invoked_cap invoked_cap_ref excaps intent)
         (Decode_A.decode_invocation label' args' cap_index' invoked_cap_ref' invoked_cap' excaps')"
@@ -418,7 +418,7 @@ lemma transform_intent_thread_cap_None:
       transform_intent_tcb_read_registers_def transform_intent_tcb_write_registers_def transform_intent_tcb_copy_registers_def
       transform_intent_tcb_configure_def transform_intent_tcb_set_priority_def transform_intent_tcb_set_ipc_buffer_def 
       split:list.split_asm,wp)+
-    apply (clarsimp simp:transform_intent_def decode_set_space_def decode_bind_aep_def decode_unbind_aep_def  transform_intent_tcb_set_space_def
+    apply (clarsimp simp:transform_intent_def decode_set_space_def decode_bind_notification_def decode_unbind_notification_def  transform_intent_tcb_set_space_def
       split del:if_splits split:list.split_asm,wp
       | clarsimp simp: transform_intent_def)+
   done
@@ -585,7 +585,7 @@ lemma decode_invocation_corres:
            apply (rule corres_guard_imp,rule decode_invocation_untypedcap_corres,
                      (fastforce elim: cte_wp_at_weakenE)+)[1]
           apply (rule corres_guard_imp,rule decode_invocation_endpointcap_corres, fastforce+)[1]
-         apply (rule corres_guard_imp,rule decode_invocation_asyncendpointcap_corres, fastforce+)[1]
+         apply (rule corres_guard_imp,rule decode_invocation_notificationcap_corres, fastforce+)[1]
         apply (rule corres_guard_imp,rule decode_invocation_replycap_corres, fastforce+)[1]
        apply (rule corres_guard_imp,rule decode_invocation_cnodecap_corres, fastforce+)[1]
       apply (rule corres_guard_imp, rule decode_invocation_tcbcap_corres, fastforce+)[1]
@@ -705,11 +705,11 @@ lemma perform_invocation_corres:
       apply (clarsimp simp:ct_in_state_def obj_at_def pred_tcb_at_def not_idle_thread_def
         valid_state_def invs_def valid_idle_def)
 
-(* send_async_ipc *)
-    apply (clarsimp simp:invoke_async_def liftE_bindE)
+(* send_signal *)
+    apply (clarsimp simp:invoke_notification_def liftE_bindE)
     apply (clarsimp simp:liftE_def bind_assoc returnOk_def)
     apply (rule corres_guard_imp)
-      apply (rule corres_split[OF _ send_async_ipc_corres])
+      apply (rule corres_split[OF _ send_signal_corres])
       apply (rule corres_trivial)
       apply (simp add:dc_def corres_free_return)
       apply (wp | clarsimp)+
@@ -1166,7 +1166,7 @@ crunch idle[wp] : invoke_untyped "\<lambda>s. P (idle_thread s)"
 crunch idle[wp] : send_ipc "\<lambda>s. P (idle_thread s)"
   (wp: crunch_wps dxo_wp_weak simp: crunch_simps  ignore:clearMemory)
 
-crunch idle[wp] : send_async_ipc "\<lambda>s. P (idle_thread s)"
+crunch idle[wp] : send_signal "\<lambda>s. P (idle_thread s)"
   (wp: crunch_wps dxo_wp_weak simp: crunch_simps  ignore:clearMemory)
 
 crunch idle[wp] : do_reply_transfer "\<lambda>s. P (idle_thread s)"
@@ -1425,7 +1425,7 @@ lemma handle_invocation_corres:
    apply simp_all
    done
 
-crunch cur_thread[wp]: complete_async_ipc "\<lambda>s. P (cur_thread s)"
+crunch cur_thread[wp]: complete_signal "\<lambda>s. P (cur_thread s)"
 
 lemma receive_ipc_cur_thread:
   notes do_nbwait_failed_transfer_def[simp]
@@ -1447,7 +1447,7 @@ lemma receive_ipc_cur_thread:
           apply (rule_tac Q="\<lambda>r s. P (cur_thread s) \<and> tcb_at (hd list) s" in hoare_strengthen_post)
            apply wp
           apply (clarsimp simp:st_tcb_at_def tcb_at_def)
-         apply (wp get_aep_wp gba_wp | wpc | simp add: Ipc_A.isActive_def)+
+         apply (wp get_ntfn_wp gbn_wp | wpc | simp add: Ipc_A.isActive_def)+
    apply (rule_tac Q="\<lambda>r s. valid_ep r s \<and> P (cur_thread s)" in hoare_strengthen_post)
     apply (wp valid_ep_get_ep2)
    apply (clarsimp simp:valid_ep_def)
@@ -1516,7 +1516,7 @@ lemma handle_wait_corres:
              apply (clarsimp simp: valid_cap_def)
             apply wp
           apply (simp add:injection_handler_def)
-          apply (wp get_aep_wp |wpc)+
+          apply (wp get_ntfn_wp |wpc)+
           apply (simp only: conj_ac)
           apply wp
           apply (rule hoare_vcg_E_elim)
@@ -1544,11 +1544,11 @@ lemma handle_wait_corres:
       apply wp
     apply simp
    apply (clarsimp simp:emptyable_def not_idle_thread_def)
-  apply (clarsimp simp: liftE_bindE get_async_ep_def get_object_def gets_def bind_assoc)
+  apply (clarsimp simp: liftE_bindE get_notification_def get_object_def gets_def bind_assoc)
   apply (rule dcorres_absorb_get_r)
   apply (clarsimp simp: assert_def corres_free_fail split: Structures_A.kernel_object.splits)
   apply safe[1]
-    apply (rule corres_alternate1, clarsimp, rule corres_guard_imp[OF recv_async_ipc_corres], (clarsimp simp: transform_cap_def)+)+
+    apply (rule corres_alternate1, clarsimp, rule corres_guard_imp[OF recv_signal_corres], (clarsimp simp: transform_cap_def)+)+
   apply (rule corres_alternate2)
   apply clarsimp
   done

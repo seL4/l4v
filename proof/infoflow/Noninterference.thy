@@ -963,8 +963,8 @@ lemma partitionIntegrity_subjectAffects_obj:
      apply(erule_tac s=s' in pas_wellformed_pasSubject_update, simp+)
     apply(fastforce intro: affects_lrefl)
    apply fastforce
-  apply (case_tac "tcb_bound_aep tcb"; clarsimp)
-  apply (clarsimp simp: tcb_bound_aep_reset_integrity_def)
+  apply (case_tac "tcb_bound_notification tcb"; clarsimp)
+  apply (clarsimp simp: tcb_bound_notification_reset_integrity_def)
   apply (rule affects_reset)
      apply assumption
     apply (rule_tac s=s and t=x and x=a in bound_tcb_at_implies_receive)

@@ -366,7 +366,7 @@ lemma decode_invocation_bisim:
   done
 
 abbreviation 
-  "separate_inv c \<equiv> \<exists>ptr badge. c = InvokeAsyncEndpoint ptr badge"
+  "separate_inv c \<equiv> \<exists>ptr badge. c = InvokeNotification ptr badge"
 
 lemma perform_invocation_bisim:
   "bisim (dc \<oplus> op =) \<top> (\<top> and K (separate_inv c))
@@ -629,7 +629,7 @@ lemma handle_wait_bisim:
                    apply (case_tac rc, simp_all)[1]
                    apply (wp get_cap_wp' lsft_sep | simp add: lookup_cap_def split_def del:  hoare_True_E_R)+
                    apply (rule handle_fault_bisim)
-                   apply (wp get_aep_wp | wpc | simp)+
+                   apply (wp get_ntfn_wp | wpc | simp)+
                    apply (rule_tac Q' = "\<lambda>_. separate_state and valid_objs and tcb_at r" in hoare_post_imp_R)
                     prefer 2
                     apply simp
@@ -759,14 +759,14 @@ lemma set_mrs_separate_state [wp]:
   apply (wp | wpc | wps | simp )+
   done
 
-lemma send_async_ipc_separate_state [wp]:
-  "\<lbrace>separate_state\<rbrace> send_async_ipc a b \<lbrace>\<lambda>_. separate_state\<rbrace>"
-  unfolding send_async_ipc_def ipc_cancel_def
+lemma send_signal_separate_state [wp]:
+  "\<lbrace>separate_state\<rbrace> send_signal a b \<lbrace>\<lambda>_. separate_state\<rbrace>"
+  unfolding send_signal_def cancel_ipc_def
   apply (rule separate_state_pres)
   apply (rule hoare_pre)
-  apply (wp gts_wp get_aep_wp hoare_pre_cont[where a = "reply_ipc_cancel x" for x]
+  apply (wp gts_wp get_ntfn_wp hoare_pre_cont[where a = "reply_cancel_ipc x" for x]
         | wpc | wps
-        | simp add: update_waiting_aep_def)+
+        | simp add: update_waiting_ntfn_def)+
   apply (clarsimp)
   apply (simp add: receive_blocked_def)
   apply (case_tac st; clarsimp)
@@ -800,7 +800,7 @@ lemma separate_state_machine_state:
 crunch separate_state [wp]: set_thread_state "separate_state"
    (wp: separate_state_pres' crunch_wps simp: crunch_simps)
 
-crunch separate_state [wp]: set_async_ep "separate_state"
+crunch separate_state [wp]: set_notification "separate_state"
    (wp: separate_state_pres' crunch_wps simp: crunch_simps)
 
 crunch separate_state [wp]: "Syscall_SA.handle_event" "separate_state"

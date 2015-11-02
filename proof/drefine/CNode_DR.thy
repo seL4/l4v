@@ -52,7 +52,7 @@ lemma ex_cte_cap_to_not_idle:
 definition
   "cap_insert_dest_original cap src_cap
      = (if is_ep_cap cap then cap_ep_badge cap \<noteq> cap_ep_badge src_cap
-           else if is_aep_cap cap then cap_ep_badge cap \<noteq> cap_ep_badge src_cap
+           else if is_ntfn_cap cap then cap_ep_badge cap \<noteq> cap_ep_badge src_cap
                 else if \<exists>irq. cap = cap.IRQHandlerCap irq then src_cap = cap.IRQControlCap else is_untyped_cap cap)"
 
 lemma option_return_modify_modify:
@@ -839,15 +839,15 @@ lemma revoke_cap_corres:
   apply simp+
 done
 
-lemma ep_cancel_badged_sends_def':
-  "CSpace_D.ep_cancel_badged_sends ep badge =
+lemma cancel_badged_sends_def':
+  "CSpace_D.cancel_badged_sends ep badge =
   (  do s\<leftarrow>get;
      tcb_filter_modify {x. \<exists>tcb. (cdl_objects s) x = Some (Tcb tcb) \<and> is_thread_blocked_on_endpoint tcb ep}
        (\<lambda>x. (case x of Some (Tcb tcb ) \<Rightarrow>
           if get_tcb_ep_badge tcb = Some badge then Some (Tcb (remove_pending_operation tcb cdl_cap.RestartCap))
           else x))
   od)"
-  apply (simp add:CSpace_D.ep_cancel_badged_sends_def get_def simpler_modify_def tcb_filter_modify_def)
+  apply (simp add:CSpace_D.cancel_badged_sends_def get_def simpler_modify_def tcb_filter_modify_def)
   apply (clarsimp simp:bind_def)
   apply (rule ext)
   apply clarsimp
@@ -857,14 +857,14 @@ lemma ep_cancel_badged_sends_def':
   apply (clarsimp simp:option_map_def split:option.splits cdl_object.split)
 done
 
-lemma ep_cancel_badged_sends_def'':
-  "CSpace_D.ep_cancel_badged_sends ep badge =
+lemma cancel_badged_sends_def'':
+  "CSpace_D.cancel_badged_sends ep badge =
   (  do s\<leftarrow>get;
      tcb_filter_modify {x. \<exists>tcb. (cdl_objects s) x = Some (Tcb tcb) \<and> is_thread_blocked_on_endpoint tcb ep
         \<and> get_tcb_ep_badge tcb = Some badge}
        (\<lambda>x. (case x of Some (Tcb tcb) \<Rightarrow> Some (Tcb (remove_pending_operation tcb cdl_cap.RestartCap))))
   od)"
-  apply (simp add:CSpace_D.ep_cancel_badged_sends_def get_def simpler_modify_def tcb_filter_modify_def)
+  apply (simp add:CSpace_D.cancel_badged_sends_def get_def simpler_modify_def tcb_filter_modify_def)
   apply (clarsimp simp:bind_def)
   apply (rule ext)
   apply clarsimp
@@ -893,26 +893,26 @@ lemma ep_waiting_set_send_upd_kh:
   apply (clarsimp simp:ep_waiting_set_send_def obj_at_def is_ep_def)
 done
 
-lemma aep_waiting_set_upd_kh:
-  "ep_at epptr s \<Longrightarrow> (aep_waiting_set epptr (update_kheap (kheap s(epptr \<mapsto> kernel_object.Endpoint X)) s))
-    = (aep_waiting_set epptr s)"
+lemma ntfn_waiting_set_upd_kh:
+  "ep_at epptr s \<Longrightarrow> (ntfn_waiting_set epptr (update_kheap (kheap s(epptr \<mapsto> kernel_object.Endpoint X)) s))
+    = (ntfn_waiting_set epptr s)"
   apply (rule set_eqI)
-  apply (clarsimp simp:aep_waiting_set_def obj_at_def is_ep_def)
+  apply (clarsimp simp:ntfn_waiting_set_def obj_at_def is_ep_def)
 done
 
 lemma dcorres_ep_cancel_badge_sends:
   notes hoare_post_taut[wp]
   shows
   "dcorres dc \<top> (valid_state and valid_etcbs)
-    (CSpace_D.ep_cancel_badged_sends epptr word2)
-    (IpcCancel_A.ep_cancel_badged_sends epptr word2)"
-  apply (clarsimp simp:IpcCancel_A.ep_cancel_badged_sends_def)
+    (CSpace_D.cancel_badged_sends epptr word2)
+    (IpcCancel_A.cancel_badged_sends epptr word2)"
+  apply (clarsimp simp:IpcCancel_A.cancel_badged_sends_def)
   apply (rule dcorres_expand_pfx)
   apply clarsimp
   apply (rule_tac Q' = "\<lambda>r. op = s' and ko_at (kernel_object.Endpoint r) epptr and valid_ep r"
                 in corres_symb_exec_r)
      apply (case_tac rv)
-       apply (clarsimp simp: ep_cancel_badged_sends_def')
+       apply (clarsimp simp: cancel_badged_sends_def')
        apply (rule dcorres_absorb_get_l)
        apply (rule corres_guard_imp[OF filter_modify_empty_corres])
          apply (clarsimp simp:invs_def)
@@ -921,9 +921,9 @@ lemma dcorres_ep_cancel_badge_sends:
          apply (drule_tac x = x in eqset_imp_iff)
          apply (clarsimp simp: valid_state_def valid_ep_abstract_def none_is_sending_ep_def
                                none_is_receiving_ep_def)
-         apply (clarsimp simp: aep_waiting_set_lift ep_waiting_set_send_lift
+         apply (clarsimp simp: ntfn_waiting_set_lift ep_waiting_set_send_lift
                                ep_waiting_set_recv_lift)
-         apply (drule ep_not_waiting_aep[rotated])
+         apply (drule ep_not_waiting_ntfn[rotated])
           apply (simp add:valid_pspace_def)
          apply auto[1]
         apply simp+
@@ -931,7 +931,7 @@ lemma dcorres_ep_cancel_badge_sends:
       apply (rule_tac
         Q'="\<lambda>r s. s = (update_kheap ((kheap s')(epptr\<mapsto> (Endpoint Structures_A.endpoint.IdleEP))) s')"
         in dcorres_symb_exec_r)
-        apply (clarsimp simp: filterM_mapM ep_cancel_badged_sends_def')
+        apply (clarsimp simp: filterM_mapM cancel_badged_sends_def')
         apply (rule dcorres_absorb_get_l)
         apply (rule corres_dummy_return_l)
         apply (rule corres_underlying_split[where r'=dc])
@@ -942,9 +942,9 @@ lemma dcorres_ep_cancel_badge_sends:
                 apply (simp add:inj_on_def)
                apply (simp add:is_thread_blocked_on_sth[simplified])
                apply (subgoal_tac "valid_idle s' \<and> valid_etcbs s'")
-                apply (clarsimp simp: aep_waiting_set_lift ep_waiting_set_send_lift
+                apply (clarsimp simp: ntfn_waiting_set_lift ep_waiting_set_send_lift
                                       ep_waiting_set_recv_lift)
-                apply (subst aep_waiting_set_upd_kh)
+                apply (subst ntfn_waiting_set_upd_kh)
                  apply (simp add:obj_at_def is_ep_def)
                 apply (subst ep_waiting_set_send_upd_kh)
                  apply (simp add:obj_at_def is_ep_def)
@@ -953,7 +953,7 @@ lemma dcorres_ep_cancel_badge_sends:
                 apply (frule_tac epptr = epptr in get_endpoint_pick)
                  apply (simp add:obj_at_def)
                 apply (clarsimp simp:valid_ep_abstract_def none_is_receiving_ep_def)
-                apply (subst ep_not_waiting_aep)
+                apply (subst ep_not_waiting_ntfn)
                   apply (simp add:valid_state_def valid_pspace_def)
                  apply (simp add:obj_at_def)
                 apply (rule set_eqI)
@@ -990,7 +990,7 @@ lemma dcorres_ep_cancel_badge_sends:
                      apply (clarsimp simp:transform_objects_tcb not_idle_thread_def )
                      apply (clarsimp simp:transform_tcb_def transform_objects_def
                        get_tcb_ep_badge_def remove_pending_operation_def get_tcb_SomeD get_etcb_SomeD)
-                     apply (fastforce simp: restrict_map_def map_add_def tcb_pending_op_slot_def tcb_boundaep_slot_def map_def tcb_slot_defs)
+                     apply (fastforce simp: restrict_map_def map_add_def tcb_pending_op_slot_def tcb_boundntfn_slot_def map_def tcb_slot_defs)
                     apply (wp | simp)+
                 apply (clarsimp simp: simpler_modify_def corres_underlying_def return_def
                                       transform_def
@@ -1002,7 +1002,7 @@ lemma dcorres_ep_cancel_badge_sends:
                 apply (clarsimp simp: transform_cdt_kheap_update transform_current_thread_def
                                       transform_def)
                 apply (clarsimp simp:not_idle_thread_def transform_tcb_def transform_def
-                  get_tcb_ep_badge_def remove_pending_operation_def infer_tcb_pending_op_def infer_tcb_bound_aep_def tcb_pending_op_slot_def tcb_slot_defs tcb_boundaep_slot_def)
+                  get_tcb_ep_badge_def remove_pending_operation_def infer_tcb_pending_op_def infer_tcb_bound_notification_def tcb_pending_op_slot_def tcb_slot_defs tcb_boundntfn_slot_def)
                apply simp+
              apply (clarsimp simp:bind_assoc not_idle_thread_def)
              apply (wp sts_st_tcb_at_neq)
@@ -1035,7 +1035,7 @@ lemma dcorres_ep_cancel_badge_sends:
           apply (wp set_ep_exec_wp|clarsimp)+
       apply (rule dcorres_to_wp[where Q=\<top>,simplified])
       apply (rule corres_dummy_set_sync_ep)
-     apply (clarsimp simp: ep_cancel_badged_sends_def'')
+     apply (clarsimp simp: cancel_badged_sends_def'')
      apply (rule dcorres_absorb_get_l)
      apply (rule corres_guard_imp[OF filter_modify_empty_corres])
        apply (frule_tac epptr = epptr in get_endpoint_pick ,simp add:obj_at_def)
@@ -1044,16 +1044,16 @@ lemma dcorres_ep_cancel_badge_sends:
        apply (drule_tac x = x in eqset_imp_iff)
        apply (clarsimp simp: valid_state_def valid_ep_abstract_def none_is_sending_ep_def
                              none_is_receiving_ep_def)
-       apply (clarsimp simp: aep_waiting_set_lift ep_waiting_set_send_lift
+       apply (clarsimp simp: ntfn_waiting_set_lift ep_waiting_set_send_lift
                              ep_waiting_set_recv_lift image_def)
-       apply (drule ep_not_waiting_aep[rotated])
+       apply (drule ep_not_waiting_ntfn[rotated])
         apply (simp add:valid_pspace_def)
        apply (clarsimp simp: restrict_map_def transform_def transform_objects_def)
        apply (clarsimp simp: ep_waiting_set_recv_def restrict_map_def transform_def
          split:split_if_asm dest!:get_tcb_rev elim!: CollectE)
        apply (frule(1) valid_etcbs_get_tcb_get_etcb)
-       apply (clarsimp simp: transform_tcb_def transform_objects_def infer_tcb_bound_aep_def
-                             is_thread_blocked_on_endpoint_def infer_tcb_pending_op_def infer_tcb_bound_aep_def tcb_pending_op_slot_def tcb_boundaep_slot_def tcb_slot_defs
+       apply (clarsimp simp: transform_tcb_def transform_objects_def infer_tcb_bound_notification_def
+                             is_thread_blocked_on_endpoint_def infer_tcb_pending_op_def infer_tcb_bound_notification_def tcb_pending_op_slot_def tcb_boundntfn_slot_def tcb_slot_defs
                       dest!: get_tcb_SomeD get_etcb_SomeD)
        apply (clarsimp simp:get_tcb_ep_badge_def tcb_slot_defs tcb_pending_op_slot_def 
                       split: option.splits cdl_cap.splits)
@@ -1082,7 +1082,7 @@ lemma transform_default_tcb:
   apply (simp add:transform_intent_invalid_invocation)
   apply (simp add:get_ipc_buffer_words_def cdl_default_tcb_def guess_error_def 
                   data_to_message_info_def default_etcb_def default_domain_def tcb_slot_defs 
-                  tcb_boundaep_slot_def tcb_pending_op_slot_def infer_tcb_bound_aep_def)
+                  tcb_boundntfn_slot_def tcb_pending_op_slot_def infer_tcb_bound_notification_def)
   done
 
 lemma dcorres_list_all2_mapM_':
@@ -1411,7 +1411,7 @@ lemma delete_asid_pool_idle [wp]:
   apply clarsimp
 done
 
-crunch idle [wp]: ep_cancel_badged_sends "\<lambda>s. P (idle_thread s)"
+crunch idle [wp]: cancel_badged_sends "\<lambda>s. P (idle_thread s)"
   (wp: crunch_wps dxo_wp_weak filterM_preserved simp: crunch_simps)
 
 lemma arch_recycle_cap_idle[wp]:
@@ -2089,7 +2089,7 @@ lemma dcorres_thread_set_default_tcb:
      apply (clarsimp simp:transform_objects_def  restrict_map_def)
      apply (clarsimp simp:transform_tcb_def tcb_registers_caps_merge_def obj_tcb_def tcb_caps_merge_def
          cdl_default_tcb_def infer_tcb_pending_op_def Structures_A.default_tcb_def get_etcb_def 
-         tcb_slot_defs tcb_boundaep_slot_def tcb_pending_op_slot_def infer_tcb_bound_aep_def)
+         tcb_slot_defs tcb_boundntfn_slot_def tcb_pending_op_slot_def infer_tcb_bound_notification_def)
      apply simp_all
   apply (clarsimp simp: restrict_map_def map_add_def)
   done
@@ -2293,8 +2293,8 @@ lemma recycle_cap_idle_thread: "\<lbrace> \<lambda>s. P (idle_thread s) \<rbrace
 
 
 lemma dcorres_gba_no_effect:
-  "dcorres dc \<top> \<top> (return a) (get_bound_aep tcb)"
-  apply (clarsimp simp: get_bound_aep_def thread_get_def gets_the_def gets_def bind_assoc)
+  "dcorres dc \<top> \<top> (return a) (get_bound_notification tcb)"
+  apply (clarsimp simp: get_bound_notification_def thread_get_def gets_the_def gets_def bind_assoc)
   apply (rule dcorres_absorb_get_r)
    apply (clarsimp simp: assert_opt_def corres_free_fail split: Structures_A.kernel_object.splits option.splits)
   done

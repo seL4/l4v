@@ -86,7 +86,7 @@ crunch irq_state_of_state[wp]: arch_perform_invocation "\<lambda>(s::det_state).
 crunch irq_state_of_state[wp]: finalise_cap "\<lambda>(s::det_state). P (irq_state_of_state s)"
   (wp: select_wp modify_wp crunch_wps dmo_wp simp: crunch_simps invalidateTLB_ASID_def cleanCaches_PoU_def dsb_def invalidate_I_PoU_def clean_D_PoU_def)
 
-crunch irq_state_of_state[wp]: send_async_ipc "\<lambda>s. P (irq_state_of_state s)"
+crunch irq_state_of_state[wp]: send_signal "\<lambda>s. P (irq_state_of_state s)"
 
 crunch irq_state_of_state[wp]: cap_swap_for_delete "\<lambda>(s::det_state). P (irq_state_of_state s)"
 
@@ -1456,9 +1456,9 @@ lemma set_thread_state_globals_equiv:
                  split: option.splits kernel_object.splits)+
   done
 
-lemma set_bound_aep_globals_equiv:
-  "\<lbrace>globals_equiv s and valid_ko_at_arm\<rbrace> set_bound_aep ref ts \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
-  unfolding set_bound_aep_def
+lemma set_bound_notification_globals_equiv:
+  "\<lbrace>globals_equiv s and valid_ko_at_arm\<rbrace> set_bound_notification ref ts \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
+  unfolding set_bound_notification_def
   apply(wp set_object_globals_equiv dxo_wp_weak |simp)+
   apply (intro impI conjI allI)
   apply(clarsimp simp: valid_ko_at_arm_def obj_at_def tcb_at_def2 get_tcb_def is_tcb_def 
@@ -1485,14 +1485,14 @@ lemma set_thread_state_valid_ko_at_arm[wp]:
   apply(fastforce simp: valid_ko_at_arm_def get_tcb_ko_at obj_at_def)
   done
 
-lemma set_bound_aep_valid_ko_at_arm[wp]:
-  "\<lbrace>valid_ko_at_arm\<rbrace> set_bound_aep ref ts \<lbrace>\<lambda>_. valid_ko_at_arm\<rbrace>"
-  unfolding set_bound_aep_def
+lemma set_bound_notification_valid_ko_at_arm[wp]:
+  "\<lbrace>valid_ko_at_arm\<rbrace> set_bound_notification ref ts \<lbrace>\<lambda>_. valid_ko_at_arm\<rbrace>"
+  unfolding set_bound_notification_def
   apply(wp set_object_valid_ko_at_arm dxo_wp_weak |simp)+
   apply(fastforce simp: valid_ko_at_arm_def get_tcb_ko_at obj_at_def)
   done
 
-crunch globals_equiv: ep_cancel_badged_sends "globals_equiv s"
+crunch globals_equiv: cancel_badged_sends "globals_equiv s"
  (wp: filterM_preserved dxo_wp_weak ignore: reschedule_required tcb_sched_action)
 
 lemma thread_set_globals_equiv:

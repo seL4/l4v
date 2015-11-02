@@ -24,7 +24,7 @@ definition
 definition
   "option_to_ptr \<equiv> Ptr o option_to_0"
 
-(* used for bound aep/tcb *)
+(* used for bound ntfn/tcb *)
 definition
   "option_to_ctcb_ptr x \<equiv> case x of None \<Rightarrow> NULL | Some t \<Rightarrow> tcb_ptr_to_ctcb_ptr t"
 
@@ -141,9 +141,9 @@ abbreviation
   "map_to_eps hp \<equiv> projectKO_opt \<circ>\<^sub>m hp"
 
 abbreviation 
-  map_to_aeps :: "(word32 \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> word32 \<rightharpoonup> async_endpoint"
+  map_to_ntfns :: "(word32 \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> word32 \<rightharpoonup> notification"
   where
-  "map_to_aeps hp \<equiv> projectKO_opt \<circ>\<^sub>m hp"
+  "map_to_ntfns hp \<equiv> projectKO_opt \<circ>\<^sub>m hp"
 
 abbreviation 
   map_to_pdes :: "(word32 \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> word32 \<rightharpoonup> pde"
@@ -230,17 +230,17 @@ where
      = (tsType_CL (fst ts') = scast ThreadState_BlockedOnReply)"
 | "cthread_state_relation_lifted (Structures_H.BlockedOnReceive oref dimin) ts'
      = (tsType_CL (fst ts') = scast ThreadState_BlockedOnReceive \<and>
-        oref = blockingIPCEndpoint_CL (fst ts') \<and>
+        oref = blockingObject_CL (fst ts') \<and>
         dimin = to_bool (blockingIPCDiminishCaps_CL (fst ts')))"
 | "cthread_state_relation_lifted (Structures_H.BlockedOnSend oref badge cg isc) ts'
      = (tsType_CL (fst ts') = scast ThreadState_BlockedOnSend 
-        \<and> oref = blockingIPCEndpoint_CL (fst ts') 
+        \<and> oref = blockingObject_CL (fst ts') 
         \<and> badge = blockingIPCBadge_CL (fst ts')
         \<and> cg    = to_bool (blockingIPCCanGrant_CL (fst ts'))
         \<and> isc   = to_bool (blockingIPCIsCall_CL (fst ts')))"
-| "cthread_state_relation_lifted (Structures_H.BlockedOnAsyncEvent oref) ts'
-     = (tsType_CL (fst ts') = scast ThreadState_BlockedOnAsyncEvent
-        \<and> oref = blockingIPCEndpoint_CL (fst ts'))"
+| "cthread_state_relation_lifted (Structures_H.BlockedOnNotification oref) ts'
+     = (tsType_CL (fst ts') = scast ThreadState_BlockedOnNotification
+        \<and> oref = blockingObject_CL (fst ts'))"
 
 
 definition
@@ -306,14 +306,14 @@ where
        tcbFaultHandler atcb = tcbFaultHandler_C ctcb 
      \<and> cthread_state_relation (tcbState atcb) (tcbState_C ctcb, tcbFault_C ctcb)
      \<and> tcbIPCBuffer atcb    = tcbIPCBuffer_C ctcb
-     \<and> ccontext_relation (tcbContext atcb) (tcbContext_C ctcb)
+     \<and> ccontext_relation (tcbContext atcb) (tcbContext_C (tcbArch_C ctcb))
      \<and> tcbQueued atcb       = to_bool (tcbQueued_CL (thread_state_lift (tcbState_C ctcb)))
      \<and> ucast (tcbDomain atcb) = tcbDomain_C ctcb
      \<and> ucast (tcbPriority atcb) = tcbPriority_C ctcb
      \<and> tcbTimeSlice atcb    = unat (tcbTimeSlice_C ctcb)
      \<and> cfault_rel (tcbFault atcb) (fault_lift (tcbFault_C ctcb))
                   (lookup_fault_lift (tcbLookupFailure_C ctcb))
-     \<and> option_to_ptr (tcbBoundAEP atcb) = boundAsyncEndpoint_C ctcb"
+     \<and> option_to_ptr (tcbBoundNotification atcb) = tcbBoundNotification_C ctcb"
 
 abbreviation
   "ep_queue_relation' \<equiv> tcb_queue_relation' tcbEPNext_C tcbEPPrev_C"
@@ -321,33 +321,33 @@ abbreviation
 definition
   cendpoint_relation :: "tcb_C typ_heap \<Rightarrow> Structures_H.endpoint \<Rightarrow> endpoint_C \<Rightarrow> bool"
 where
-  "cendpoint_relation h aep cep \<equiv>
+  "cendpoint_relation h ntfn cep \<equiv>
      let cstate = state_CL (endpoint_lift cep);
          chead  = (Ptr o epQueue_head_CL o endpoint_lift) cep; 
          cend   = (Ptr o epQueue_tail_CL o endpoint_lift) cep in
-       case aep of
+       case ntfn of
          IdleEP \<Rightarrow> cstate = scast EPState_Idle \<and> ep_queue_relation' h [] chead cend 
        | SendEP q \<Rightarrow> cstate = scast EPState_Send \<and> ep_queue_relation' h q chead cend
        | RecvEP q \<Rightarrow> cstate = scast EPState_Recv \<and> ep_queue_relation' h q chead cend"
 
 definition
-  casync_endpoint_relation :: "tcb_C typ_heap \<Rightarrow> Structures_H.async_endpoint \<Rightarrow>
-                              async_endpoint_C \<Rightarrow> bool"
+  cnotification_relation :: "tcb_C typ_heap \<Rightarrow> Structures_H.notification \<Rightarrow>
+                              notification_C \<Rightarrow> bool"
 where
-  "casync_endpoint_relation h aaep caep \<equiv>
-     let caep'  = async_endpoint_lift caep;
-         cstate = async_endpoint_CL.state_CL caep';
-         chead  = (Ptr o aepQueue_head_CL) caep';
-         cend   = (Ptr o aepQueue_tail_CL) caep';
-         cbound = ((Ptr o aepBoundTCB_CL) caep' :: tcb_C ptr)
+  "cnotification_relation h antfn cntfn \<equiv>
+     let cntfn'  = notification_lift cntfn;
+         cstate = notification_CL.state_CL cntfn';
+         chead  = (Ptr o ntfnQueue_head_CL) cntfn';
+         cend   = (Ptr o ntfnQueue_tail_CL) cntfn';
+         cbound = ((Ptr o ntfnBoundTCB_CL) cntfn' :: tcb_C ptr)
      in
-       (case aepObj aaep of
-         IdleAEP \<Rightarrow> cstate = scast AEPState_Idle \<and> ep_queue_relation' h [] chead cend
-       | WaitingAEP q \<Rightarrow> cstate = scast AEPState_Waiting \<and> ep_queue_relation' h q chead cend
-       | ActiveAEP msgid \<Rightarrow> cstate = scast AEPState_Active \<and>
-                           msgid = aepMsgIdentifier_CL caep' \<and>
+       (case ntfnObj antfn of
+         IdleNtfn \<Rightarrow> cstate = scast NtfnState_Idle \<and> ep_queue_relation' h [] chead cend
+       | WaitingNtfn q \<Rightarrow> cstate = scast NtfnState_Waiting \<and> ep_queue_relation' h q chead cend
+       | ActiveNtfn msgid \<Rightarrow> cstate = scast NtfnState_Active \<and>
+                           msgid = ntfnMsgIdentifier_CL cntfn' \<and>
                            ep_queue_relation' h [] chead cend)
-       \<and> option_to_ctcb_ptr (aepBoundTCB aaep) = cbound"
+       \<and> option_to_ctcb_ptr (ntfnBoundTCB antfn) = cbound"
 
 definition
   "ap_from_vm_rights R \<equiv> case R of 
@@ -499,7 +499,7 @@ abbreviation
   "cpspace_ep_relation ah ch \<equiv> cmap_relation (map_to_eps ah) (clift ch) Ptr (cendpoint_relation (clift ch))"
 
 abbreviation
-  "cpspace_aep_relation ah ch \<equiv> cmap_relation (map_to_aeps ah) (clift ch) Ptr (casync_endpoint_relation (clift ch))"
+  "cpspace_ntfn_relation ah ch \<equiv> cmap_relation (map_to_ntfns ah) (clift ch) Ptr (cnotification_relation (clift ch))"
 
 abbreviation
   "cpspace_pde_relation ah ch \<equiv> cmap_relation (map_to_pdes ah) (clift ch) Ptr cpde_relation"
@@ -518,7 +518,7 @@ definition
   cpspace_relation :: "(word32 \<rightharpoonup> Structures_H.kernel_object) \<Rightarrow> (word32 \<Rightarrow> word8) \<Rightarrow> heap_raw_state \<Rightarrow> bool"
 where
   "cpspace_relation ah bh ch \<equiv>  
-  cpspace_cte_relation ah ch \<and> cpspace_tcb_relation ah ch \<and> cpspace_ep_relation ah ch \<and> cpspace_aep_relation ah ch \<and>
+  cpspace_cte_relation ah ch \<and> cpspace_tcb_relation ah ch \<and> cpspace_ep_relation ah ch \<and> cpspace_ntfn_relation ah ch \<and>
   cpspace_pde_relation ah ch \<and> cpspace_pte_relation ah ch \<and> cpspace_asidpool_relation ah ch \<and> cpspace_user_data_relation ah bh ch"
 
 abbreviation
@@ -550,7 +550,7 @@ fun
   irqstate_to_C :: "irqstate \<Rightarrow> word32"
   where
   "irqstate_to_C IRQInactive = scast Kernel_C.IRQInactive"
-  | "irqstate_to_C IRQNotifyAEP = scast Kernel_C.IRQNotifyAEP"
+  | "irqstate_to_C IRQSignal = scast Kernel_C.IRQSignal"
   | "irqstate_to_C IRQTimer = scast Kernel_C.IRQTimer"
 
 

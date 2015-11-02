@@ -18,7 +18,7 @@ consts
 sendIPC :: "bool \<Rightarrow> bool \<Rightarrow> machine_word \<Rightarrow> bool \<Rightarrow> machine_word \<Rightarrow> machine_word \<Rightarrow> unit kernel"
 
 consts
-isActive :: "async_endpoint \<Rightarrow> bool"
+isActive :: "notification \<Rightarrow> bool"
 
 consts
 receiveIPC :: "machine_word \<Rightarrow> capability \<Rightarrow> bool \<Rightarrow> unit kernel"
@@ -27,13 +27,13 @@ consts
 replyFromKernel :: "machine_word \<Rightarrow> (machine_word * machine_word list) \<Rightarrow> unit kernel"
 
 consts
-ipcCancel :: "machine_word \<Rightarrow> unit kernel"
+cancelIPC :: "machine_word \<Rightarrow> unit kernel"
 
 consts
-epCancelAll :: "machine_word \<Rightarrow> unit kernel"
+cancelAllIPC :: "machine_word \<Rightarrow> unit kernel"
 
 consts
-epCancelBadgedSends :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit kernel"
+cancelBadgedSends :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit kernel"
 
 consts
 getEndpoint :: "machine_word \<Rightarrow> endpoint kernel"

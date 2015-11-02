@@ -17,7 +17,7 @@ imports
   ThreadDecls_H
   CSpaceDecls_H
   FaultHandlerDecls_H
-  AsyncEndpoint_H
+  Notification_H
 begin
 
 #INCLUDE_HASKELL SEL4/Object/Endpoint.lhs bodies_only

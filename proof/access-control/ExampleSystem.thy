@@ -314,7 +314,7 @@ where
      tcb_ipc_buffer    = undefined,
      tcb_context       = undefined,
      tcb_fault         = undefined, 
-     tcb_bound_aep     = None \<rparr>"
+     tcb_bound_notification     = None \<rparr>"
 
 
 text {* T1's tcb *}
@@ -335,7 +335,7 @@ where
      tcb_ipc_buffer    = undefined,
      tcb_context       = undefined,
      tcb_fault         = undefined,
-     tcb_bound_aep     = None \<rparr>"
+     tcb_bound_notification     = None \<rparr>"
 
 definition
  "obj1_10 \<equiv> Structures_A.CNode 10 (Map.empty([] \<mapsto> cap.NullCap))"
@@ -541,9 +541,9 @@ lemma tcb_states_of_state_1:
   apply (simp add: kh1_def kh1_obj_def )
   done
 
-lemma thread_bound_aeps_1:
-  "thread_bound_aeps s1 = empty"
-  unfolding s1_def thread_bound_aeps_def
+lemma thread_bound_ntfns_1:
+  "thread_bound_ntfns s1 = empty"
+  unfolding s1_def thread_bound_ntfns_def
   apply (rule ext)
   apply (simp add: get_tcb_def)
   apply (simp add: kh1_def kh1_obj_def )
@@ -576,13 +576,13 @@ lemma "pas_refined Sys1PAS s1"
          apply (simp add: Sys1AuthGraph_def complete_AuthGraph_def Sys1AuthGraph_aux_def)
          apply (elim disjE conjE, auto simp: Sys1AgentMap_simps cap_auth_conferred_def cap_rights_to_auth_def)[1]
         apply (drule s1_caps_of_state, clarsimp)
-        apply (elim disjE, simp_all add: thread_bound_aeps_def)[1]
+        apply (elim disjE, simp_all add: thread_bound_ntfns_def)[1]
        apply (clarsimp simp: state_refs_of_def thread_states_def tcb_states_of_state_1
               Sys1AuthGraph_def Sys1AgentMap_simps
               complete_AuthGraph_def
               Sys1AuthGraph_aux_def
               split: if_splits)
-      apply (simp add:  thread_bound_aeps_1)
+      apply (simp add:  thread_bound_ntfns_1)
      apply (simp add: s1_def) (* this is OK because cdt is empty..*)
 
     apply (clarsimp simp: state_vrefs_def 
@@ -853,7 +853,7 @@ where
      tcb_ipc_buffer    = undefined,
      tcb_context       = undefined,
      tcb_fault         = undefined,
-     tcb_bound_aep     = None \<rparr>"
+     tcb_bound_notification     = None \<rparr>"
 
 
 text {* T1's tcb *}
@@ -874,7 +874,7 @@ where
      tcb_ipc_buffer    = undefined,
      tcb_context       = undefined,
      tcb_fault         = undefined,
-     tcb_bound_aep     = None \<rparr>"
+     tcb_bound_notification     = None \<rparr>"
 
 (* the boolean in BlockedOnReceive is True if the object can receive but not send.
 but Tom says it only matters if the sender can grant - which is not the case of the UT1 - I think *)
@@ -1065,9 +1065,9 @@ lemma domains_of_state_s2[simp]:
   apply simp
   done
 
-lemma thread_bound_aeps_2[simp]:
-  "thread_bound_aeps s2 = empty"
-  unfolding s2_def thread_bound_aeps_def
+lemma thread_bound_ntfns_2[simp]:
+  "thread_bound_ntfns s2 = empty"
+  unfolding s2_def thread_bound_ntfns_def
   apply (rule ext)
   apply (simp add: get_tcb_def)
   apply (simp add: kh2_def kh2_obj_def)

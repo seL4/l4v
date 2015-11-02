@@ -38,7 +38,7 @@ lemma magnitudeCheck_assert:
   done
 
 lemmas makeObject_simps =
-  makeObject_endpoint makeObject_async_endpoint makeObject_cte
+  makeObject_endpoint makeObject_notification makeObject_cte
   makeObject_tcb makeObject_user_data makeObject_pde makeObject_pte 
   makeObject_asidpool
 

@@ -82,16 +82,16 @@ lemma ep_cases_weak_wp:
   apply (simp, rule hoare_weaken_pre, rule assms, simp)+
   done
 
-lemma aep_cases_weak_wp:
+lemma ntfn_cases_weak_wp:
   assumes "\<lbrace>P_A\<rbrace> a \<lbrace>Q\<rbrace>" 
   assumes "\<And>q. \<lbrace>P_B\<rbrace> b q \<lbrace>Q\<rbrace>"
   assumes "\<And>bdg msg. \<lbrace>P_C\<rbrace> c bdg msg \<lbrace>Q\<rbrace>"
   shows 
   "\<lbrace>P_A and P_B and P_C\<rbrace> 
     case ts of 
-      Structures_A.IdleAEP \<Rightarrow> a
-    | Structures_A.WaitingAEP q \<Rightarrow> b q
-    | Structures_A.ActiveAEP bdg \<Rightarrow> c bdg msg \<lbrace>Q\<rbrace>"
+      Structures_A.IdleNtfn \<Rightarrow> a
+    | Structures_A.WaitingNtfn q \<Rightarrow> b q
+    | Structures_A.ActiveNtfn bdg \<Rightarrow> c bdg msg \<lbrace>Q\<rbrace>"
   apply (cases ts)
   apply (simp, rule hoare_weaken_pre, rule assms, simp)+
   done

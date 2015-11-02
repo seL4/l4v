@@ -77,7 +77,7 @@ where
         endpoint_cap_ref \<leftarrow> returnOk $ snd endpoint;
         irq \<leftarrow> liftE $ assert_opt $ cdl_cap_irq target;
         case endpoint_cap of
-              AsyncEndpointCap x _ _ \<Rightarrow> returnOk ()
+              NotificationCap x _ _ \<Rightarrow> returnOk ()
               | _                    \<Rightarrow> throw;
         returnOk $ SetIrqHandler irq endpoint_cap endpoint_cap_ref
       odE \<sqinter> throw
@@ -135,8 +135,8 @@ where
           None \<Rightarrow> return ()
         | Some cap \<Rightarrow> (
             case cap of
-              (AsyncEndpointCap obj _ rights) \<Rightarrow>
-                  if (Write \<in> rights) then send_async_ipc obj else return ()
+              (NotificationCap obj _ rights) \<Rightarrow>
+                  if (Write \<in> rights) then send_signal obj else return ()
               | _ \<Rightarrow> return ()
           )
     od

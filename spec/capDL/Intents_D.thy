@@ -62,7 +62,7 @@ type_synonym cdl_raw_usercontext = "word32 list"
 (* Kernel objects types. *)
 datatype cdl_object_type =
     EndpointType
-  | AsyncEndpointType
+  | NotificationType
   | TcbType
   | CNodeType
   | IRQNodeType
@@ -111,10 +111,10 @@ datatype cdl_tcb_intent =
  |  TcbSetIPCBufferIntent word32
     (* SetSpace: (target), fault_ep, (cspace_root), cspace_root_data, (vspace_root), vspace_root_data *)
  |  TcbSetSpaceIntent word32 cdl_raw_capdata cdl_raw_capdata
-    (* BindAEP: (target), (aep) *)
- |  TcbBindAEPIntent
-    (* UnbindAEP: (target) *)
- |  TcbUnbindAEPIntent
+    (* BindNTFN: (target), (ntfn) *)
+ |  TcbBindNTFNIntent
+    (* UnbindNTFN: (target) *)
+ |  TcbUnbindNTFNIntent
 
 datatype cdl_untyped_intent =
     (* Retype: (target), type, size_bits, (root), node_index, node_depth, node_offset, node_window, has_children *)
@@ -172,8 +172,8 @@ datatype cdl_asid_pool_intent =
     (* Assign: (target), (vroot) *)
     AsidPoolAssignIntent
 
-datatype cdl_async_endpoint_intent =
-    SendAsyncMessageIntent word32
+datatype cdl_notification_intent =
+    SendSignalIntent word32
 
 datatype cdl_endpoint_intent =
     SendMessageIntent "cdl_cptr list"
@@ -191,7 +191,7 @@ datatype cdl_intent =
   | PageDirectoryIntent cdl_page_directory_intent
   | AsidControlIntent cdl_asid_control_intent
   | AsidPoolIntent cdl_asid_pool_intent
-  | AsyncEndpointIntent cdl_async_endpoint_intent
+  | NotificationIntent cdl_notification_intent
   | EndpointIntent cdl_endpoint_intent
   | DomainIntent cdl_domain_intent
 

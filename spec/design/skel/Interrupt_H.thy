@@ -12,7 +12,7 @@ theory Interrupt_H
 imports
   RetypeDecls_H
   ArchInterrupt_H
-  AsyncEndpoint_H
+  Notification_H
   CNode_H
   KI_Decls_H
 begin

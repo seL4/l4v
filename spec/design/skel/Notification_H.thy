@@ -8,9 +8,9 @@
  * @TAG(GD_GPL)
  *)
 
-chapter "Asynchronous Endpoints"
+chapter "Notifications"
 
-theory AsyncEndpoint_H imports    "AsyncEndpointDecls_H"
+theory Notification_H imports    "NotificationDecls_H"
     "TCB_H"
   TCB_H
   ThreadDecls_H
@@ -18,6 +18,6 @@ theory AsyncEndpoint_H imports    "AsyncEndpointDecls_H"
   ObjectInstances_H
 begin
 
-#INCLUDE_HASKELL SEL4/Object/AsyncEndpoint.lhs bodies_only
+#INCLUDE_HASKELL SEL4/Object/Notification.lhs bodies_only
 
 end

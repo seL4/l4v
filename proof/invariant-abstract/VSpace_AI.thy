@@ -2679,7 +2679,7 @@ lemma valid_cap_obj_ref_pt_pd:
        \<Longrightarrow> (is_pt_cap cap \<longrightarrow> is_pt_cap cap')
          \<and> (is_pd_cap cap \<longrightarrow> is_pd_cap cap')"
   by (auto simp: is_cap_simps valid_cap_def
-                 obj_at_def is_ep is_aep is_cap_table
+                 obj_at_def is_ep is_ntfn is_cap_table
                  is_tcb a_type_def
           split: cap.split_asm split_if_asm
                  arch_cap.split_asm option.split_asm)
@@ -4738,9 +4738,9 @@ lemma set_mrs_tcb[wp]:
   by (simp add: tcb_at_typ, wp)
 
 
-lemma set_mrs_aep_at[wp]:
-  "\<lbrace> aep_at p \<rbrace> set_mrs receiver recv_buf mrs \<lbrace>\<lambda>rv. aep_at p \<rbrace>"
-  by (simp add: aep_at_typ, wp)
+lemma set_mrs_ntfn_at[wp]:
+  "\<lbrace> ntfn_at p \<rbrace> set_mrs receiver recv_buf mrs \<lbrace>\<lambda>rv. ntfn_at p \<rbrace>"
+  by (simp add: ntfn_at_typ, wp)
 
 
 lemmas set_mrs_redux =
@@ -4936,7 +4936,7 @@ lemma perform_page_invs [wp]:
      apply (drule spec, drule spec, drule_tac x=capa in spec, drule (1) mp)
      apply (case_tac aa, simp_all)
       apply ((clarsimp simp: valid_cap_def obj_at_def a_type_def is_ep_def
-                             is_aep_def is_cap_table_def is_tcb_def
+                             is_ntfn_def is_cap_table_def is_tcb_def
                              is_pg_cap_def
                      split: cap.splits Structures_A.kernel_object.splits
                             split_if_asm

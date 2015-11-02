@@ -19,8 +19,8 @@ section {* Example *}
 (* This example is a classic 'one way information flow'
    example, where information is allowed to flow from Low to High,
    but not the reverse. We consider a typical scenario where
-   shared memory and an async endpoint for notifications are used to
-   implement a ring-buffer. We consider the AEP to be in the domain of High,
+   shared memory and an notification for notifications are used to
+   implement a ring-buffer. We consider the NTFN to be in the domain of High,
    and the shared memory to be in the domain of Low. *)
 
 subsection {* We show that the authority graph does not let
@@ -35,9 +35,9 @@ abbreviation partition_label where
 definition Sys1AuthGraph :: "(auth_graph_label subject_label) auth_graph" where
   "Sys1AuthGraph \<equiv> 
    { (partition_label High,Read,partition_label Low),
-     (partition_label Low,AsyncSend,partition_label High),
+     (partition_label Low,Notify,partition_label High),
      (partition_label Low,Reset,partition_label High),
-     (SilcLabel,AsyncSend,partition_label High),
+     (SilcLabel,Notify,partition_label High),
      (SilcLabel,Reset,partition_label High)
    } \<union> {(x, a, y). x = y}"
 
@@ -143,7 +143,7 @@ subsection {* We show there exists a valid initial state associated to the
 text {*
 
 This example (modified from ../access-control/ExampleSystem) is a system Sys1 made
-of 2 main components Low and High, connected through an async endpoint AEP.
+of 2 main components Low and High, connected through an notification NTFN.
 Both Low and High contains:
 
   . one TCB
@@ -155,9 +155,9 @@ Both Low and High contains:
          one to the tcb
          one to the cnode itself
          one to the vspace
-         one to the aep 
+         one to the ntfn 
 
-Low can send to the aep while High can receive from it.
+Low can send to the ntfn while High can receive from it.
 
 Attempt to ASCII art:
 
@@ -165,7 +165,7 @@ Attempt to ASCII art:
           --------    ----                    ----   --------
           |       |   |  |                    |  |   |      |
           V       |   |  V    S         R     |  V   |      V
-Low_tcb(3079)-->Low_cnode(6)--->aep(9)<---High_cnode(7)<--High_tcb(3080)
+Low_tcb(3079)-->Low_cnode(6)--->ntfn(9)<---High_cnode(7)<--High_tcb(3080)
   |              |                               |          |
   V              |                               |          V
 Low_pd(3063)<-----                               -------> High_pd(3065)
@@ -189,7 +189,7 @@ the authority graph defined above and s0 is the state of Sys1 described above.
 subsubsection {* Defining the State *}
 
 
-definition "aep_ptr \<equiv> kernel_base + 0x10"
+definition "ntfn_ptr \<equiv> kernel_base + 0x10"
 
 definition "Low_tcb_ptr \<equiv> kernel_base + 0x200"
 definition "High_tcb_ptr = kernel_base + 0x400"
@@ -223,7 +223,7 @@ definition "Low_domain \<equiv> 0 :: word8"
 definition "High_domain \<equiv> 1 :: word8"
 
 lemmas s0_ptr_defs =
-  Low_cnode_ptr_def High_cnode_ptr_def Silc_cnode_ptr_def aep_ptr_def irq_cnode_ptr_def
+  Low_cnode_ptr_def High_cnode_ptr_def Silc_cnode_ptr_def ntfn_ptr_def irq_cnode_ptr_def
   Low_pd_ptr_def High_pd_ptr_def Low_pt_ptr_def High_pt_ptr_def Low_tcb_ptr_def
   High_tcb_ptr_def idle_tcb_ptr_def timer_irq_def Low_prio_def High_prio_def Low_time_slice_def
   Low_domain_def High_domain_def init_irq_node_ptr_def init_globals_frame_def init_global_pd_def
@@ -234,7 +234,7 @@ lemmas s0_ptr_defs =
 distinct ptrs_distinct [simp]:
   Low_tcb_ptr High_tcb_ptr idle_tcb_ptr
   Low_pt_ptr High_pt_ptr
-  shared_page_ptr aep_ptr
+  shared_page_ptr ntfn_ptr
   Low_pd_ptr High_pd_ptr
   Low_cnode_ptr High_cnode_ptr Silc_cnode_ptr irq_cnode_ptr
   init_globals_frame init_global_pd
@@ -386,7 +386,7 @@ where
             \<mapsto> Structures_A.ArchObjectCap (ARM_Structs_A.PageDirectoryCap Low_pd_ptr 
                                              (Some Low_asid)),
         (the_nat_to_bl_10 318) 
-            \<mapsto> Structures_A.AsyncEndpointCap aep_ptr 0 {AllowSend} )"
+            \<mapsto> Structures_A.NotificationCap ntfn_ptr 0 {AllowSend} )"
 
 definition
   Low_cnode :: Structures_A.kernel_object 
@@ -412,7 +412,7 @@ lemma Low_caps_ran:
                    Structures_A.CNodeCap Low_cnode_ptr 10 (the_nat_to_bl_10 2),
                    Structures_A.ArchObjectCap (ARM_Structs_A.PageDirectoryCap Low_pd_ptr 
                                               (Some Low_asid)),
-                   Structures_A.AsyncEndpointCap aep_ptr 0 {AllowSend},
+                   Structures_A.NotificationCap ntfn_ptr 0 {AllowSend},
                    Structures_A.NullCap}"
   apply (rule equalityI)
    apply (clarsimp simp: Low_caps_def fun_upd_def empty_cnode_def split: split_if_asm)
@@ -437,7 +437,7 @@ where
            \<mapsto> Structures_A.ArchObjectCap (ARM_Structs_A.PageDirectoryCap High_pd_ptr 
                                             (Some High_asid)),
         (the_nat_to_bl_10 318)
-           \<mapsto> Structures_A.AsyncEndpointCap aep_ptr 0 {AllowRecv}) "
+           \<mapsto> Structures_A.NotificationCap ntfn_ptr 0 {AllowRecv}) "
 
 definition 
   High_cnode :: Structures_A.kernel_object
@@ -449,7 +449,7 @@ lemma High_caps_ran:
                     Structures_A.CNodeCap High_cnode_ptr 10 (the_nat_to_bl_10 2),
                     Structures_A.ArchObjectCap (ARM_Structs_A.PageDirectoryCap High_pd_ptr 
                                                (Some High_asid)),
-                    Structures_A.AsyncEndpointCap aep_ptr 0 {AllowRecv},
+                    Structures_A.NotificationCap ntfn_ptr 0 {AllowRecv},
                     Structures_A.NullCap}"
   apply (rule equalityI)
    apply (clarsimp simp: High_caps_def ran_def empty_cnode_def split: split_if_asm)
@@ -460,7 +460,7 @@ lemma High_caps_ran:
   done
 
 text {* We need a copy of boundary crossing caps owned by SilcLabel.
-        The only such cap is Low's cap to the async endpoint *}
+        The only such cap is Low's cap to the notification *}
 
 definition 
   Silc_caps :: Structures_A.cnode_contents 
@@ -470,7 +470,7 @@ where
       ( (the_nat_to_bl_10 2)
             \<mapsto> Structures_A.CNodeCap Silc_cnode_ptr 10 (the_nat_to_bl_10 2),
         (the_nat_to_bl_10 318) 
-            \<mapsto> Structures_A.AsyncEndpointCap aep_ptr 0 {AllowSend} )"
+            \<mapsto> Structures_A.NotificationCap ntfn_ptr 0 {AllowSend} )"
 
 
 definition
@@ -480,7 +480,7 @@ where
 
 lemma Silc_caps_ran:
   "ran Silc_caps = {Structures_A.CNodeCap Silc_cnode_ptr 10 (the_nat_to_bl_10 2),
-                    Structures_A.AsyncEndpointCap aep_ptr 0 {AllowSend},
+                    Structures_A.NotificationCap ntfn_ptr 0 {AllowSend},
                     Structures_A.NullCap}"
   apply (rule equalityI)
    apply (clarsimp simp: Silc_caps_def ran_def empty_cnode_def)
@@ -489,12 +489,12 @@ lemma Silc_caps_ran:
   apply simp
   done
 
-text {* async endpoint between Low and High *}
+text {* notification between Low and High *}
 
 definition
-  aep :: Structures_A.kernel_object 
+  ntfn :: Structures_A.kernel_object 
 where
-  "aep \<equiv> Structures_A.AsyncEndpoint \<lparr>aep_obj = Structures_A.WaitingAEP [High_tcb_ptr], aep_bound_tcb=None\<rparr>"
+  "ntfn \<equiv> Structures_A.Notification \<lparr>ntfn_obj = Structures_A.WaitingNtfn [High_tcb_ptr], ntfn_bound_tcb=None\<rparr>"
 
 
 text {* Low's VSpace (PageDirectory)*}
@@ -584,7 +584,7 @@ where
      tcb_ipc_buffer    = 0,
      tcb_context       = undefined,
      tcb_fault         = None,
-     tcb_bound_aep     = None \<rparr>"
+     tcb_bound_notification     = None \<rparr>"
 
 definition
   Low_etcb :: etcb
@@ -607,12 +607,12 @@ where
      tcb_reply         = Structures_A.ReplyCap High_tcb_ptr True, (* master reply cap to itself *)
      tcb_caller        = Structures_A.NullCap,
      tcb_ipcframe      = Structures_A.NullCap,
-     tcb_state         = Structures_A.BlockedOnAsyncEvent aep_ptr,
+     tcb_state         = Structures_A.BlockedOnNotification ntfn_ptr,
      tcb_fault_handler = replicate word_bits False, 
      tcb_ipc_buffer    = 0,
      tcb_context       = undefined,
      tcb_fault         = None,
-     tcb_bound_aep     = None \<rparr>"
+     tcb_bound_notification     = None \<rparr>"
 
 definition
   High_etcb :: etcb
@@ -639,7 +639,7 @@ where
      tcb_ipc_buffer    = 0,
      tcb_context       = empty_context,
      tcb_fault         = None,
-     tcb_bound_aep     = None \<rparr>"
+     tcb_bound_notification     = None \<rparr>"
 
 
 definition
@@ -653,7 +653,7 @@ where
          (Low_cnode_ptr  \<mapsto> Low_cnode,
           High_cnode_ptr \<mapsto> High_cnode,
           Silc_cnode_ptr \<mapsto> Silc_cnode,
-          aep_ptr        \<mapsto> aep,
+          ntfn_ptr        \<mapsto> ntfn,
           irq_cnode_ptr  \<mapsto> irq_cnode,
           Low_pd_ptr     \<mapsto> Low_pd,
           High_pd_ptr    \<mapsto> High_pd,
@@ -734,7 +734,7 @@ lemma irq_node_offs_range_distinct[simp]:
   "Low_cnode_ptr \<notin> irq_node_offs_range"
   "High_cnode_ptr \<notin> irq_node_offs_range"
   "Silc_cnode_ptr \<notin> irq_node_offs_range"
-  "aep_ptr \<notin> irq_node_offs_range"
+  "ntfn_ptr \<notin> irq_node_offs_range"
   "irq_cnode_ptr \<notin> irq_node_offs_range"
   "Low_pd_ptr \<notin> irq_node_offs_range"
   "High_pd_ptr \<notin> irq_node_offs_range"
@@ -751,7 +751,7 @@ lemma irq_node_offs_distinct[simp]:
   "init_irq_node_ptr + (ucast (irq:: 8 word) << cte_level_bits) \<noteq> Low_cnode_ptr"
   "init_irq_node_ptr + (ucast (irq:: 8 word) << cte_level_bits) \<noteq> High_cnode_ptr"
   "init_irq_node_ptr + (ucast (irq:: 8 word) << cte_level_bits) \<noteq> Silc_cnode_ptr"
-  "init_irq_node_ptr + (ucast (irq:: 8 word) << cte_level_bits) \<noteq> aep_ptr"
+  "init_irq_node_ptr + (ucast (irq:: 8 word) << cte_level_bits) \<noteq> ntfn_ptr"
   "init_irq_node_ptr + (ucast (irq:: 8 word) << cte_level_bits) \<noteq> irq_cnode_ptr"
   "init_irq_node_ptr + (ucast (irq:: 8 word) << cte_level_bits) \<noteq> Low_pd_ptr"
   "init_irq_node_ptr + (ucast (irq:: 8 word) << cte_level_bits) \<noteq> High_pd_ptr"
@@ -766,7 +766,7 @@ lemma irq_node_offs_distinct[simp]:
   
 lemma kh0_dom:
   "dom kh0 = {init_globals_frame, init_global_pd, idle_tcb_ptr, High_tcb_ptr, Low_tcb_ptr,
-              High_pt_ptr, Low_pt_ptr, High_pd_ptr, Low_pd_ptr, irq_cnode_ptr, aep_ptr,
+              High_pt_ptr, Low_pt_ptr, High_pd_ptr, Low_pd_ptr, irq_cnode_ptr, ntfn_ptr,
               Silc_cnode_ptr, High_cnode_ptr, Low_cnode_ptr} \<union>
              irq_node_offs_range"
   apply (rule equalityI)
@@ -791,7 +791,7 @@ lemma kh0_SomeD:
         x = High_pd_ptr \<and> y = High_pd \<or>
         x = Low_pd_ptr \<and> y = Low_pd \<or>
         x = irq_cnode_ptr \<and> y = irq_cnode \<or>
-        x = aep_ptr \<and> y = aep \<or>
+        x = ntfn_ptr \<and> y = ntfn \<or>
         x = Silc_cnode_ptr \<and> y = Silc_cnode \<or>
         x = High_cnode_ptr \<and> y = High_cnode \<or>
         x = Low_cnode_ptr \<and> y = Low_cnode \<or>
@@ -802,7 +802,7 @@ lemma kh0_SomeD:
   done
 
 lemmas kh0_obj_def =
-  Low_cnode_def High_cnode_def Silc_cnode_def aep_def irq_cnode_def Low_pd_def
+  Low_cnode_def High_cnode_def Silc_cnode_def ntfn_def irq_cnode_def Low_pd_def
   High_pd_def Low_pt_def High_pt_def Low_tcb_def High_tcb_def idle_tcb_def
 
 definition exst0 :: "det_ext" where
@@ -858,7 +858,7 @@ subsubsection {* Defining the policy graph *}
 
 (* FIXME: should incorporate SharedPage above *)
 
-(* There is an AEP in the High label, a SharedPage in the Low label *)
+(* There is an NTFN in the High label, a SharedPage in the Low label *)
 
 definition
   Sys1AgentMap :: "(auth_graph_label subject_label) agent_map" 
@@ -869,7 +869,7 @@ where
             (* set the range of the shared_page to Low, default everything else to IRQ0 *)
      (Low_cnode_ptr := partition_label Low,
       High_cnode_ptr := partition_label High,
-      aep_ptr := partition_label High,
+      ntfn_ptr := partition_label High,
       irq_cnode_ptr := partition_label IRQ0,
       Silc_cnode_ptr := SilcLabel,
       Low_pd_ptr := partition_label Low,
@@ -883,7 +883,7 @@ where
 lemma Sys1AgentMap_simps:
   "Sys1AgentMap Low_cnode_ptr = partition_label Low"
       "Sys1AgentMap High_cnode_ptr = partition_label High"
-      "Sys1AgentMap aep_ptr = partition_label High"
+      "Sys1AgentMap ntfn_ptr = partition_label High"
       "Sys1AgentMap irq_cnode_ptr = partition_label IRQ0"
       "Sys1AgentMap Silc_cnode_ptr = SilcLabel"
       "Sys1AgentMap Low_pd_ptr = partition_label Low"
@@ -934,13 +934,13 @@ lemma s0_caps_of_state :
        { ((Low_cnode_ptr::obj_ref,(the_nat_to_bl_10 1)),  Structures_A.ThreadCap Low_tcb_ptr),
          ((Low_cnode_ptr::obj_ref,(the_nat_to_bl_10 2)),  Structures_A.CNodeCap Low_cnode_ptr 10 (the_nat_to_bl_10 2)),
          ((Low_cnode_ptr::obj_ref,(the_nat_to_bl_10 3)),  Structures_A.ArchObjectCap (ARM_Structs_A.PageDirectoryCap Low_pd_ptr (Some Low_asid))), 
-         ((Low_cnode_ptr::obj_ref,(the_nat_to_bl_10 318)),Structures_A.AsyncEndpointCap aep_ptr 0 {AllowSend}),
+         ((Low_cnode_ptr::obj_ref,(the_nat_to_bl_10 318)),Structures_A.NotificationCap ntfn_ptr 0 {AllowSend}),
          ((High_cnode_ptr::obj_ref,(the_nat_to_bl_10 1)),  Structures_A.ThreadCap High_tcb_ptr), 
          ((High_cnode_ptr::obj_ref,(the_nat_to_bl_10 2)),  Structures_A.CNodeCap High_cnode_ptr 10 (the_nat_to_bl_10 2)),
          ((High_cnode_ptr::obj_ref,(the_nat_to_bl_10 3)),  Structures_A.ArchObjectCap (ARM_Structs_A.PageDirectoryCap High_pd_ptr (Some High_asid))), 
-         ((High_cnode_ptr::obj_ref,(the_nat_to_bl_10 318)),Structures_A.AsyncEndpointCap  aep_ptr 0 {AllowRecv}) ,
+         ((High_cnode_ptr::obj_ref,(the_nat_to_bl_10 318)),Structures_A.NotificationCap  ntfn_ptr 0 {AllowRecv}) ,
          ((Silc_cnode_ptr::obj_ref,(the_nat_to_bl_10 2)),Structures_A.CNodeCap Silc_cnode_ptr 10 (the_nat_to_bl_10 2)),
-         ((Silc_cnode_ptr::obj_ref,(the_nat_to_bl_10 318)),Structures_A.AsyncEndpointCap aep_ptr 0 {AllowSend}),
+         ((Silc_cnode_ptr::obj_ref,(the_nat_to_bl_10 318)),Structures_A.NotificationCap ntfn_ptr 0 {AllowSend}),
          ((Low_tcb_ptr::obj_ref, (tcb_cnode_index 0)), Structures_A.CNodeCap Low_cnode_ptr 10 (the_nat_to_bl_10 2)),
          ((Low_tcb_ptr::obj_ref, (tcb_cnode_index 1)), Structures_A.ArchObjectCap (ARM_Structs_A.PageDirectoryCap Low_pd_ptr (Some Low_asid))),
          ((Low_tcb_ptr::obj_ref, (tcb_cnode_index 2)), Structures_A.ReplyCap Low_tcb_ptr True), 
@@ -965,7 +965,7 @@ lemma s0_caps_of_state :
   done
 
 lemma tcb_states_of_state_s0:
-  "tcb_states_of_state s0_internal = [High_tcb_ptr \<mapsto> Structures_A.thread_state.BlockedOnAsyncEvent aep_ptr,  Low_tcb_ptr \<mapsto> Structures_A.thread_state.Running, idle_tcb_ptr \<mapsto> Structures_A.thread_state.IdleThreadState ]"
+  "tcb_states_of_state s0_internal = [High_tcb_ptr \<mapsto> Structures_A.thread_state.BlockedOnNotification ntfn_ptr,  Low_tcb_ptr \<mapsto> Structures_A.thread_state.Running, idle_tcb_ptr \<mapsto> Structures_A.thread_state.IdleThreadState ]"
   unfolding s0_internal_def tcb_states_of_state_def
   apply (rule ext)
   apply (simp add: get_tcb_def)
@@ -973,8 +973,8 @@ lemma tcb_states_of_state_s0:
   done
 
 lemma thread_bounds_of_state_s0:
-  "thread_bound_aeps s0_internal = Map.empty"
-  unfolding s0_internal_def thread_bound_aeps_def
+  "thread_bound_ntfns s0_internal = Map.empty"
+  unfolding s0_internal_def thread_bound_ntfns_def
   apply (rule ext)
   apply (simp add: get_tcb_def)
   apply (simp add: kh0_def kh0_obj_def)
@@ -1198,21 +1198,21 @@ lemma valid_caps_s0[simp]:
   "s0_internal \<turnstile> CNodeCap Silc_cnode_ptr 10 (the_nat_to_bl_10 2)"
   "s0_internal \<turnstile> ArchObjectCap (PageDirectoryCap Low_pd_ptr (Some Low_asid))"
   "s0_internal \<turnstile> ArchObjectCap (PageDirectoryCap High_pd_ptr (Some High_asid))"
-  "s0_internal \<turnstile> AsyncEndpointCap aep_ptr 0 {AllowWrite}"
-  "s0_internal \<turnstile> AsyncEndpointCap aep_ptr 0 {AllowRead}"
+  "s0_internal \<turnstile> NotificationCap ntfn_ptr 0 {AllowWrite}"
+  "s0_internal \<turnstile> NotificationCap ntfn_ptr 0 {AllowRead}"
   "s0_internal \<turnstile> ReplyCap Low_tcb_ptr True"
   "s0_internal \<turnstile> ReplyCap High_tcb_ptr True"
   by (simp_all add: valid_cap_def s0_internal_def s0_ptr_defs cap_aligned_def is_aligned_def
                        word_bits_def cte_level_bits_def the_nat_to_bl_def
                        nat_to_bl_def Low_asid_def High_asid_def asid_low_bits_def asid_bits_def
                        obj_at_def kh0_def kh0_obj_def is_tcb_def is_cap_table_def a_type_def
-                       is_aep_def)
+                       is_ntfn_def)
 
 lemma valid_obj_s0[simp]:
   "valid_obj Low_cnode_ptr  Low_cnode s0_internal"
   "valid_obj High_cnode_ptr High_cnode s0_internal"
   "valid_obj Silc_cnode_ptr Silc_cnode s0_internal"
-  "valid_obj aep_ptr        aep s0_internal"
+  "valid_obj ntfn_ptr        ntfn s0_internal"
   "valid_obj irq_cnode_ptr  irq_cnode s0_internal"
   "valid_obj Low_pd_ptr     Low_pd s0_internal"
   "valid_obj High_pd_ptr    High_pd s0_internal"
@@ -1228,7 +1228,7 @@ lemma valid_obj_s0[simp]:
                apply (simp_all add: valid_obj_def kh0_obj_def)
               apply (simp add: valid_cs_def Low_caps_ran High_caps_ran Silc_caps_ran
                                valid_cs_size_def word_bits_def cte_level_bits_def)+
-           apply (simp add: valid_aep_def obj_at_def s0_internal_def kh0_def
+           apply (simp add: valid_ntfn_def obj_at_def s0_internal_def kh0_def
                             High_tcb_def is_tcb_def)
           apply (simp add: valid_cs_def valid_cs_size_def word_bits_def cte_level_bits_def)
           apply (simp add: well_formed_cnode_n_def)
@@ -1236,7 +1236,7 @@ lemma valid_obj_s0[simp]:
                                valid_vm_rights_def vm_kernel_only_def)+
      apply (clarsimp simp: valid_tcb_def tcb_cap_cases_def is_master_reply_cap_def
                            valid_ipc_buffer_cap_def valid_tcb_state_def
-           | simp add: obj_at_def s0_internal_def kh0_def kh0_obj_def is_aep_def)+
+           | simp add: obj_at_def s0_internal_def kh0_def kh0_obj_def is_ntfn_def)+
   apply (simp add: valid_vm_rights_def vm_kernel_only_def)
   done
 

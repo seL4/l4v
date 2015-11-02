@@ -68,7 +68,7 @@ definition
                    tcb_caller_slot \<mapsto> NullCap,
                    tcb_ipcbuffer_slot \<mapsto> FrameCap frame_id {AllowRead, AllowWrite} small_frame_size Real None,
                    tcb_pending_op_slot \<mapsto> NullCap,
-                   tcb_boundaep_slot \<mapsto> NullCap],
+                   tcb_boundntfn_slot \<mapsto> NullCap],
    cdl_tcb_fault_endpoint = 0,
    cdl_tcb_intent = \<lparr>cdl_intent_op = None,
                      cdl_intent_error = False,

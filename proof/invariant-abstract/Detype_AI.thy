@@ -494,15 +494,15 @@ proof (simp add: invs_def valid_state_def valid_pspace_def
         apply (clarsimp elim!: ranE)
         apply (erule valid_cap [OF _ valid_cap2])
         apply (fastforce intro!: cte_wp_at_tcbI)
-       apply (clarsimp simp: valid_tcb_state_def valid_bound_aep_def
+       apply (clarsimp simp: valid_tcb_state_def valid_bound_ntfn_def
                       split: Structures_A.thread_state.split_asm option.splits)
       apply (frule refs_of)
       apply (rename_tac endpoint)
       apply (case_tac endpoint, (fastforce simp: valid_ep_def)+)
      apply (frule refs_of)
-     apply (rename_tac async_ep async_ep_ext)
-     apply (case_tac "aep_obj async_ep_ext")
-       apply (auto simp: valid_aep_def aep_bound_refs_def split: option.splits)
+     apply (rename_tac notification ntfn_ext)
+     apply (case_tac "ntfn_obj ntfn_ext")
+       apply (auto simp: valid_ntfn_def ntfn_bound_refs_def split: option.splits)
     done
 
   show "valid_objs (detype (untyped_range cap) s)"

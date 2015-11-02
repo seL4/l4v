@@ -1833,7 +1833,6 @@ lemma register_from_H_inj:
 lemmas register_from_H_eq_iff[simp]
     = inj_on_iff [OF register_from_H_inj, simplified]
 
-
 lemma setRegister_ccorres:
   "ccorres dc xfdc \<top>
        (UNIV \<inter> \<lbrace>\<acute>thread = tcb_ptr_to_ctcb_ptr thread\<rbrace> \<inter> \<lbrace>\<acute>reg = register_from_H reg\<rbrace>
@@ -1856,7 +1855,7 @@ lemma setRegister_ccorres:
      apply (fastforce intro: typ_heap_simps)
     apply simp
    apply (erule(1) rf_sr_tcb_update_no_queue2,
-               (simp add: typ_heap_simps)+)
+               (simp add: typ_heap_simps')+)
     apply (rule ball_tcb_cte_casesI, simp+)
    apply (clarsimp simp: ctcb_relation_def ccontext_relation_def
                   split: split_if)

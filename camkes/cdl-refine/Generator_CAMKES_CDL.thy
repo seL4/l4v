@@ -133,7 +133,7 @@ where
      if conn_type c = seL4RPC then
        [(n @ ''_ep'', c, Types_D.Endpoint)]
      else if conn_type c = seL4Asynch then
-       [(n @ ''_aep'', c, Types_D.AsyncEndpoint)]
+       [(n @ ''_ntfn'', c, Types_D.Notification)]
      else
        []) (connections (composition spec)))"
 
@@ -361,9 +361,9 @@ where
                           [])
                       else if conn_type c = seL4Asynch then (
                         if fst (conn_from c) = instance then
-                          [Types_D.AsyncEndpointCap (the_id_of n) 0 W]
+                          [Types_D.NotificationCap (the_id_of n) 0 W]
                         else if fst (conn_to c) = instance then
-                          [Types_D.AsyncEndpointCap (the_id_of n) 0 R]
+                          [Types_D.NotificationCap (the_id_of n) 0 R]
                         else
                           [])
                       else
@@ -548,7 +548,7 @@ where
                       conn_type (snd conn) = seL4Asynch \<and>
                       edge_object edge = fst conn) \<and>
                     edge_subject edge = from \<and>
-                    edge_auth edge \<in> {AsyncSend, Reset}} \<union>
+                    edge_auth edge \<in> {Notify, Reset}} \<union>
 
      (* Receivers on seL4Asynch connections. *)
      {edge. \<exists>to. to \<in> fst ` set (components (composition spec)) \<and>
@@ -673,7 +673,7 @@ lemma tcb_objs_only_tcbs: "\<forall>(_, i) \<in> set (tcb_objs spec). case i of 
    by clarsimp+
 
 lemma ep_objs_only_eps:
-  "\<forall>(_, i) \<in> set (ep_objs spec). case i of Types_D.Endpoint \<Rightarrow> True | Types_D.AsyncEndpoint \<Rightarrow> True | _ \<Rightarrow> False"
+  "\<forall>(_, i) \<in> set (ep_objs spec). case i of Types_D.Endpoint \<Rightarrow> True | Types_D.Notification \<Rightarrow> True | _ \<Rightarrow> False"
   apply (clarsimp simp:ep_objs_def ep_objs'_def)
   by (metis cdl_object.simps(98) cdl_object.simps(99))
 
@@ -736,7 +736,7 @@ lemma generated_objects_disjoint:
 
 lemma only_endpoint_caps:
   "\<forall>cap \<in> ran (cap_map a xs). case cap of Types_D.EndpointCap _ _ _ \<Rightarrow> True
-                                        | Types_D.AsyncEndpointCap _ _ _ \<Rightarrow> True
+                                        | Types_D.NotificationCap _ _ _ \<Rightarrow> True
                                         | _ \<Rightarrow> False"
   apply (clarsimp simp:cap_map_def)
   apply (subst (asm) ran_distinct)
@@ -757,7 +757,7 @@ lemma only_endpoint_caps2:
   "\<forall>(name, cnode) \<in> set (cnode_objs spec). case cnode of
      Types_D.CNode c \<Rightarrow> (\<forall>cap \<in> ran (cdl_cnode_caps c). case cap of
        Types_D.EndpointCap _ _ _ \<Rightarrow> True
-     | Types_D.AsyncEndpointCap _ _ _ \<Rightarrow> True
+     | Types_D.NotificationCap _ _ _ \<Rightarrow> True
      | _ \<Rightarrow> False)
    | _ \<Rightarrow> False"
   apply (clarsimp simp:cnode_objs_def)
@@ -775,7 +775,7 @@ lemma generated_caps_limited:
                    (Map.ran (cdl_objects cdl)))).
        \<forall>cap \<in> (Map.ran (cdl_cnode_caps cnode)).
          case cap of Types_D.EndpointCap _ _ _ \<Rightarrow> True
-                   | Types_D.AsyncEndpointCap _ _ _ \<Rightarrow> True
+                   | Types_D.NotificationCap _ _ _ \<Rightarrow> True
                    | _ \<Rightarrow> False"
   apply (clarsimp simp:state_of_def)
   apply (rename_tac cap)

@@ -565,7 +565,7 @@ text {* Various proofs about the two recursive deletion operations.
 
 text {* Proving the termination of rec_del *}
 
-crunch typ_at[wp]: ipc_cancel "\<lambda>s. P (typ_at T p s)" 
+crunch typ_at[wp]: cancel_ipc "\<lambda>s. P (typ_at T p s)" 
   (wp: crunch_wps hoare_vcg_split_ifE simp: crunch_simps)
 
 declare split_if [split]
@@ -669,9 +669,9 @@ lemma suspend_ctes_of_thread:
   apply (case_tac cte, simp)
   done
 
-lemma unbindAsyncEndpoint_ctes_of_thread:
+lemma unbindNotification_ctes_of_thread:
   "\<lbrace>\<lambda>s. \<exists>node. ctes_of s x = Some (CTE (ThreadCap t) node)\<rbrace>
-     unbindAsyncEndpoint t
+     unbindNotification t
    \<lbrace>\<lambda>rv s. \<exists>node. ctes_of s x = Some (CTE (ThreadCap t) node)\<rbrace>" 
   by wp
 
@@ -682,15 +682,15 @@ lemma suspend_not_recursive_ctes:
   apply (simp only: suspend_def not_recursive_ctes_def cteCaps_of_def)
   apply (wp threadSet_ctes_of | simp add: unless_def del: o_apply)+
   apply (fold cteCaps_of_def)
-  apply (wp ipcCancel_cteCaps_of)
+  apply (wp cancelIPC_cteCaps_of)
   apply (clarsimp elim!: rsubst[where P=P] intro!: set_eqI)
   apply (clarsimp simp: cte_wp_at_ctes_of cteCaps_of_def)
   apply (auto simp: isCap_simps finaliseCap_def Let_def)
   done
 
-lemma unbindAsyncEndpoint_not_recursive_ctes:
+lemma unbindNotification_not_recursive_ctes:
   "\<lbrace>\<lambda>s. P (not_recursive_ctes s)\<rbrace>
-     unbindAsyncEndpoint t
+     unbindNotification t
    \<lbrace>\<lambda>rv s. P (not_recursive_ctes s)\<rbrace>"
   apply (simp only: not_recursive_ctes_def cteCaps_of_def)
   apply wp
@@ -830,11 +830,11 @@ termination finaliseSlot'
       apply simp
      apply (clarsimp simp: finaliseCap_def Let_def isCap_simps in_monad
                            getThreadCSpaceRoot_def locateSlot_conv)
-     apply (frule(1) use_valid [OF _ unbindAsyncEndpoint_ctes_of_thread, OF _ exI])
+     apply (frule(1) use_valid [OF _ unbindNotification_ctes_of_thread, OF _ exI])
      apply (frule(1) use_valid [OF _ suspend_ctes_of_thread])
      apply clarsimp
      apply (erule use_valid [OF _ suspend_not_recursive_ctes])
-     apply (erule use_valid [OF _ unbindAsyncEndpoint_not_recursive_ctes])
+     apply (erule use_valid [OF _ unbindNotification_not_recursive_ctes])
      apply simp
     apply (clarsimp simp: finaliseCap_def Let_def isCap_simps in_monad)
    apply (clarsimp simp: finaliseCap_def Let_def isCap_simps in_monad)
@@ -4339,12 +4339,12 @@ lemma isEPbadge_src:
   using src_derived
   by (clarsimp simp: isCap_simps weak_derived'_def)
 
-lemma isAEPsrc:
-  "isAsyncEndpointCap scap = isAsyncEndpointCap src_cap"
+lemma isNTFNsrc:
+  "isNotificationCap scap = isNotificationCap src_cap"
   by (rule master_srcI, rule isCap_Master)
 
-lemma isAEPbadge_src:
-  "isAsyncEndpointCap src_cap \<Longrightarrow> capAEPBadge scap = capAEPBadge src_cap"
+lemma isNTFNbadge_src:
+  "isNotificationCap src_cap \<Longrightarrow> capNtfnBadge scap = capNtfnBadge src_cap"
   using src_derived
   by (clarsimp simp: isCap_simps weak_derived'_def)
 
@@ -4356,17 +4356,17 @@ lemma isEPbadge_dest:
   "isEndpointCap dest_cap \<Longrightarrow> capEPBadge dcap = capEPBadge dest_cap"
   using dest_derived by (auto simp: weak_derived'_def isCap_simps)
 
-lemma isAEPdest:
-  "isAsyncEndpointCap dcap = isAsyncEndpointCap dest_cap"
+lemma isNTFNdest:
+  "isNotificationCap dcap = isNotificationCap dest_cap"
   using dest_derived by (auto simp: weak_derived'_def isCap_simps)
 
-lemma isAEPbadge_dest:
-  "isAsyncEndpointCap dest_cap \<Longrightarrow> capAEPBadge dcap = capAEPBadge dest_cap"
+lemma isNTFNbadge_dest:
+  "isNotificationCap dest_cap \<Longrightarrow> capNtfnBadge dcap = capNtfnBadge dest_cap"
   using dest_derived by (auto simp: weak_derived'_def isCap_simps)
 
 lemmas ep_simps = 
-  isEPsrc isEPbadge_src isAEPsrc isAEPbadge_src
-  isEPdest isEPbadge_dest isAEPdest isAEPbadge_dest
+  isEPsrc isEPbadge_src isNTFNsrc isNTFNbadge_src
+  isEPdest isEPbadge_dest isNTFNdest isNTFNbadge_dest
 
 end
 
@@ -4374,8 +4374,8 @@ lemma sameRegion_ep:
   "\<lbrakk> sameRegionAs cap cap'; isEndpointCap cap \<rbrakk> \<Longrightarrow> isEndpointCap cap'"
   by (auto simp: isCap_simps sameRegionAs_def3)
 
-lemma sameRegion_aep:
-  "\<lbrakk> sameRegionAs cap cap'; isAsyncEndpointCap cap \<rbrakk> \<Longrightarrow> isAsyncEndpointCap cap'"
+lemma sameRegion_ntfn:
+  "\<lbrakk> sameRegionAs cap cap'; isNotificationCap cap \<rbrakk> \<Longrightarrow> isNotificationCap cap'"
   by (auto simp: isCap_simps sameRegionAs_def3)
 
 lemma (in mdb_swap) cteSwap_valid_badges:
@@ -4388,7 +4388,7 @@ proof -
     apply (frule_tac p=p in n_cap)
     apply (frule_tac p=p' in n_cap)
     apply (drule badge_n)+
-    apply (clarsimp simp: s_d_swap_def sameRegion_aep sameRegion_ep 
+    apply (clarsimp simp: s_d_swap_def sameRegion_ntfn sameRegion_ep 
                           ep_simps region_simps 
                     split: split_if_asm)
        apply fastforce
@@ -6046,16 +6046,16 @@ lemma isFinal_zombie_lift:
   apply (wp y x isFinal_lift hoare_vcg_disj_lift)
   done
 
-crunch cte_wp_at'[wp]: epCancelAll "cte_wp_at' P p"
+crunch cte_wp_at'[wp]: cancelAllIPC "cte_wp_at' P p"
   (wp: crunch_wps mapM_x_wp simp: crunch_simps)
 
-crunch typ_at' [wp]: epCancelAll "\<lambda>s. P (typ_at' T p s)"
+crunch typ_at' [wp]: cancelAllIPC "\<lambda>s. P (typ_at' T p s)"
   (wp: crunch_wps mapM_x_wp simp: crunch_simps)
 
-crunch cte_wp_at'[wp]: aepCancelAll "cte_wp_at' P p"
+crunch cte_wp_at'[wp]: cancelAllSignals "cte_wp_at' P p"
   (wp: crunch_wps mapM_x_wp simp: crunch_simps)
 
-crunch typ_at' [wp]: aepCancelAll "\<lambda>s. P (typ_at' T p s)"
+crunch typ_at' [wp]: cancelAllSignals "\<lambda>s. P (typ_at' T p s)"
   (wp: crunch_wps mapM_x_wp simp: crunch_simps)
 
 crunch cte_wp_at'[wp]: doMachineOp "cte_wp_at' P p"
@@ -6205,8 +6205,8 @@ lemma cteDeleteOne_cap_to'[wp]:
   apply simp
   done
 
-lemmas setAsyncEP_cap_to'[wp]
-    = ex_cte_cap_to'_pres [OF setAsyncEP_cte_wp_at' setAsyncEP_irq_node']
+lemmas setNotification_cap_to'[wp]
+    = ex_cte_cap_to'_pres [OF setNotification_cte_wp_at' setNotification_irq_node']
 
 lemmas setEndpoint_cap_to'[wp]
     = ex_cte_cap_to'_pres [OF setEndpoint_cte_wp_at' setEndpoint_irq_node']
@@ -6214,12 +6214,12 @@ lemmas setEndpoint_cap_to'[wp]
 lemmas setThreadState_cap_to'[wp]
     = ex_cte_cap_to'_pres [OF setThreadState_cte_wp_at' setThreadState_irq_node']
 
-crunch cap_to'[wp]: asyncIPCCancel "ex_cte_cap_wp_to' P p"
+crunch cap_to'[wp]: cancelSignal "ex_cte_cap_wp_to' P p"
   (simp: crunch_simps wp: crunch_wps)
 
-lemma ipcCancel_cap_to'[wp]:
-  "\<lbrace>ex_cte_cap_wp_to' P p\<rbrace> ipcCancel t \<lbrace>\<lambda>rv. ex_cte_cap_wp_to' P p\<rbrace>"
-  apply (simp add: ipcCancel_def Let_def)
+lemma cancelIPC_cap_to'[wp]:
+  "\<lbrace>ex_cte_cap_wp_to' P p\<rbrace> cancelIPC t \<lbrace>\<lambda>rv. ex_cte_cap_wp_to' P p\<rbrace>"
+  apply (simp add: cancelIPC_def Let_def)
   apply (rule hoare_seq_ext [OF _ gts_sp'])
   apply (case_tac state, simp_all add: getThreadReplySlot_def locateSlot_conv)
           apply (wp ex_cte_cap_to'_pres [OF threadSet_cte_wp_at']
@@ -6903,7 +6903,7 @@ crunch st_tcb_at'[wp]: emptySlot "st_tcb_at' P t" (simp: case_Null_If)
 
 
 (* FIXME: move to Finalise_R *)
-crunch st_tcb_at'[wp]: "ArchRetypeDecls_H.finaliseCap", unbindMaybeAEP "st_tcb_at' P t"
+crunch st_tcb_at'[wp]: "ArchRetypeDecls_H.finaliseCap", unbindMaybeNotification "st_tcb_at' P t"
   (ignore: getObject setObject simp: crunch_simps
    wp: crunch_wps getObject_inv loadObject_default_inv)
 
@@ -6916,7 +6916,7 @@ lemma finaliseCap2_st_tcb_at':
                    getThreadCSpaceRoot deletingIRQHandler_def
              cong: if_cong split del: split_if)
   apply (rule hoare_pre)
-   apply ((wp epCancelAll_st_tcb_at aepCancelAll_st_tcb_at
+   apply ((wp cancelAllIPC_st_tcb_at cancelAllSignals_st_tcb_at
               suspend_st_tcb_at' cteDeleteOne_st_tcb_at getCTE_wp'
              | simp add: isCap_simps getSlotCap_def getIRQSlot_def
                          locateSlot_conv getInterruptState_def
@@ -6997,10 +6997,10 @@ lemma capSwap_rvk_prog:
   done
 
 lemmas setObject_ASID_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF setObject_ASID_ctes_of']
-lemmas epCancelAll_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF epCancelAll_ctes_of]
-lemmas aepCancelAll_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF aepCancelAll_ctes_of]
+lemmas cancelAllIPC_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF cancelAllIPC_ctes_of]
+lemmas cancelAllSignals_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF cancelAllSignals_ctes_of]
 lemmas setEndpoint_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF setEndpoint_ctes_of]
-lemmas setAsyncEP_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF setAsyncEP_ctes_of]
+lemmas setNotification_cteCaps_of[wp] = ctes_of_cteCaps_of_lift [OF setNotification_ctes_of]
 
 lemmas emptySlot_rvk_prog' = emptySlot_rvk_prog[unfolded o_def]
 lemmas threadSet_ctesCaps_of = ctes_of_cteCaps_of_lift[OF threadSet_ctes_of]
@@ -7012,7 +7012,7 @@ crunch rvk_prog': finaliseCap
     "\<lambda>s. revoke_progress_ord m (\<lambda>x. option_map capToRPO (cteCaps_of s x))"
   (wp: crunch_wps emptySlot_rvk_prog' threadSet_ctesCaps_of
        getObject_inv loadObject_default_inv 
-        simp: crunch_simps unless_def setBoundAEP_def
+        simp: crunch_simps unless_def setBoundNotification_def
       ignore: getObject setObject setCTE)
 
 lemmas finalise_induct3 = finaliseSlot'.induct[where P=
@@ -9461,7 +9461,7 @@ lemma recycleCap_valid[wp]:
   apply (simp add: recycleCap_def Let_def curDomain_def
              cong: zombie_type.case_cong split del: split_if cong: if_cong)
   apply (rule hoare_pre)
-   apply (wp typ_at_lifts [OF epCancelBadgedSends_typ_at']
+   apply (wp typ_at_lifts [OF cancelBadgedSends_typ_at']
               | wpc | wp_once hoare_drop_imps)+
   apply (auto simp: isCap_simps valid_cap'_def capAligned_def objBits_simps)
   done

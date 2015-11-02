@@ -505,7 +505,7 @@ lemma setObject_tcb_mdb' [wp]:
 
 lemma setObject_tcb_state_refs_of'[wp]:
   "\<lbrace>\<lambda>s. P ((state_refs_of' s) (t := tcb_st_refs_of' (tcbState v)
-                                  \<union> tcb_bound_refs' (tcbBoundAEP v)))\<rbrace>
+                                  \<union> tcb_bound_refs' (tcbBoundNotification v)))\<rbrace>
      setObject t (v :: tcb) \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
   by (wp setObject_state_refs_of',
       simp_all add: objBits_simps fun_upd_def)
@@ -527,7 +527,7 @@ lemma setObject_tcb_iflive':
 
 lemma setObject_tcb_idle':
   "\<lbrace>\<lambda>s. valid_idle' s \<and>
-     (t = ksIdleThread s \<longrightarrow> idle' (tcbState v) \<and> tcbBoundAEP v = None)\<rbrace>
+     (t = ksIdleThread s \<longrightarrow> idle' (tcbState v) \<and> tcbBoundNotification v = None)\<rbrace>
      setObject t (v :: tcb) \<lbrace>\<lambda>rv. valid_idle'\<rbrace>"
   apply (rule hoare_pre)
   apply (rule_tac P="\<top>" in setObject_idle')
@@ -677,9 +677,9 @@ lemma threadSet_valid_pspace'T_P:
   assumes z: "\<forall>tcb. (P \<longrightarrow> Q (tcbState tcb)) \<longrightarrow>
                      (\<forall>s. valid_tcb_state' (tcbState tcb) s
                               \<longrightarrow> valid_tcb_state' (tcbState (F tcb)) s)"
-  assumes v: "\<forall>tcb. (P \<longrightarrow> Q' (tcbBoundAEP tcb)) \<longrightarrow>
-                     (\<forall>s. valid_bound_aep' (tcbBoundAEP tcb) s
-                              \<longrightarrow> valid_bound_aep' (tcbBoundAEP (F tcb)) s)"
+  assumes v: "\<forall>tcb. (P \<longrightarrow> Q' (tcbBoundNotification tcb)) \<longrightarrow>
+                     (\<forall>s. valid_bound_ntfn' (tcbBoundNotification tcb) s
+                              \<longrightarrow> valid_bound_ntfn' (tcbBoundNotification (F tcb)) s)"
 
   assumes y: "\<forall>tcb. is_aligned (tcbIPCBuffer tcb) msg_align_bits
                       \<longrightarrow> is_aligned (tcbIPCBuffer (F tcb)) msg_align_bits"
@@ -718,15 +718,15 @@ lemmas threadSet_ifunsafe' =
 
 lemma threadSet_state_refs_of'_helper[simp]:
   "{r. (r \<in> tcb_st_refs_of' ts \<or>
-       r \<in> tcb_bound_refs' aepptr) \<and>
+       r \<in> tcb_bound_refs' ntfnptr) \<and>
       snd r = TCBBound} =
-   tcb_bound_refs' aepptr"
+   tcb_bound_refs' ntfnptr"
   by (auto simp: tcb_st_refs_of'_def tcb_bound_refs'_def
           split: thread_state.splits)
 
 lemma threadSet_state_refs_of'_helper'[simp]:
   "{r. (r \<in> tcb_st_refs_of' ts \<or>
-        r \<in> tcb_bound_refs' aepptr) \<and>
+        r \<in> tcb_bound_refs' ntfnptr) \<and>
        snd r \<noteq> TCBBound} =
    tcb_st_refs_of' ts"
   by (auto simp: tcb_st_refs_of'_def tcb_bound_refs'_def
@@ -736,9 +736,9 @@ lemma threadSet_state_refs_of'T_P:
   assumes x: "\<forall>tcb. (P' \<longrightarrow> Q (tcbState tcb)) \<longrightarrow>
                      tcb_st_refs_of' (tcbState (F tcb))
                        = f' (tcb_st_refs_of' (tcbState tcb))"
-  assumes y: "\<forall>tcb. (P' \<longrightarrow> Q' (tcbBoundAEP tcb)) \<longrightarrow>
-                     tcb_bound_refs' (tcbBoundAEP (F tcb))
-                       = g' (tcb_bound_refs' (tcbBoundAEP tcb))"
+  assumes y: "\<forall>tcb. (P' \<longrightarrow> Q' (tcbBoundNotification tcb)) \<longrightarrow>
+                     tcb_bound_refs' (tcbBoundNotification (F tcb))
+                       = g' (tcb_bound_refs' (tcbBoundNotification tcb))"
   shows
   "\<lbrace>\<lambda>s. P ((state_refs_of' s) (t := f' {r \<in> state_refs_of' s t. snd r \<noteq> TCBBound}
                                   \<union> g' {r \<in> state_refs_of' s t. snd r = TCBBound}))
@@ -764,7 +764,7 @@ lemma threadSet_iflive'T:
   assumes x: "\<forall>tcb. \<forall>(getF, setF) \<in> ran tcb_cte_cases. getF (F tcb) = getF tcb"
   shows
   "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s
-      \<and> ((\<exists>tcb. \<not> bound (tcbBoundAEP tcb) \<and> bound (tcbBoundAEP (F tcb))
+      \<and> ((\<exists>tcb. \<not> bound (tcbBoundNotification tcb) \<and> bound (tcbBoundNotification (F tcb))
               \<and> ko_at' tcb t s) \<longrightarrow> ex_nonz_cap_to' t s)
       \<and> ((\<exists>tcb. (tcbState tcb = Inactive \<or> tcbState tcb = IdleThreadState)
               \<and> tcbState (F tcb) \<noteq> Inactive
@@ -830,7 +830,7 @@ lemma threadSet_idle'T:
   "\<lbrace>\<lambda>s. valid_idle' s
       \<and> (t = ksIdleThread s \<longrightarrow>
           (\<forall>tcb. ko_at' tcb t s \<and> idle' (tcbState tcb) \<longrightarrow> idle' (tcbState (F tcb)))
-        \<and> (\<forall>tcb. ko_at' tcb t s \<and> tcbBoundAEP tcb = None \<longrightarrow> tcbBoundAEP (F tcb) = None))\<rbrace>
+        \<and> (\<forall>tcb. ko_at' tcb t s \<and> tcbBoundNotification tcb = None \<longrightarrow> tcbBoundNotification (F tcb) = None))\<rbrace>
      threadSet F t
    \<lbrace>\<lambda>rv. valid_idle'\<rbrace>"
   apply (simp add: threadSet_def)
@@ -991,7 +991,7 @@ lemma modifyReadyQueuesL1Bitmap_obj_at[wp]:
   apply (fastforce intro: obj_at'_pspaceI)
   done
 
-crunch valid_arch' [wp]: setThreadState, setBoundAEP valid_arch_state'
+crunch valid_arch' [wp]: setThreadState, setBoundNotification valid_arch_state'
   (ignore: getObject setObject simp: unless_def crunch_simps)
 
 crunch ksInterrupt'[wp]: threadSet "\<lambda>s. P (ksInterruptState s)"
@@ -1299,7 +1299,7 @@ lemma threadSet_invs_trivialT:
   assumes x: "\<forall>tcb. \<forall>(getF,setF) \<in> ran tcb_cte_cases. getF (F tcb) = getF tcb"
   assumes z: "\<forall>tcb. tcbState (F tcb) = tcbState tcb \<and> tcbDomain (F tcb) = tcbDomain tcb"
   assumes w: "\<forall>tcb. is_aligned (tcbIPCBuffer tcb) msg_align_bits \<longrightarrow> is_aligned (tcbIPCBuffer (F tcb)) msg_align_bits"
-  assumes a: "\<forall>tcb. tcbBoundAEP (F tcb) = tcbBoundAEP tcb"
+  assumes a: "\<forall>tcb. tcbBoundNotification (F tcb) = tcbBoundNotification tcb"
   assumes w: "\<forall>tcb. is_aligned (tcbIPCBuffer tcb) msg_align_bits \<longrightarrow> is_aligned (tcbIPCBuffer (F tcb)) msg_align_bits"
   assumes v: "\<forall>tcb. tcbDomain tcb \<le> maxDomain \<longrightarrow> tcbDomain (F tcb) \<le> maxDomain"
   assumes u: "\<forall>tcb. tcbPriority tcb \<le> maxPriority \<longrightarrow> tcbPriority (F tcb) \<le> maxPriority"
@@ -1678,19 +1678,19 @@ lemma gts_st_tcb_at'[wp]: "\<lbrace>st_tcb_at' P t\<rbrace> getThreadState t \<l
   apply simp
   done
   
-lemma gba_corres:
+lemma gbn_corres:
   "corres (op =) (tcb_at t) (tcb_at' t)
-          (get_bound_aep t) (getBoundAEP t)"
-  apply (simp add: get_bound_aep_def getBoundAEP_def)
+          (get_bound_notification t) (getBoundNotification t)"
+  apply (simp add: get_bound_notification_def getBoundNotification_def)
   apply (rule threadget_corres)
   apply (simp add: tcb_relation_def)
   done
 
-lemma gba_inv'[wp]: "\<lbrace>P\<rbrace> getBoundAEP t \<lbrace>\<lambda>rv. P\<rbrace>"
-  by (simp add: getBoundAEP_def) wp
+lemma gbn_inv'[wp]: "\<lbrace>P\<rbrace> getBoundNotification t \<lbrace>\<lambda>rv. P\<rbrace>"
+  by (simp add: getBoundNotification_def) wp
 
-lemma gba_wf'[wp]: "\<lbrace>tcb_at' t and invs'\<rbrace> getBoundAEP t \<lbrace>valid_bound_aep'\<rbrace>"
-  apply (simp add: getBoundAEP_def threadGet_def liftM_def)
+lemma gbn_wf'[wp]: "\<lbrace>tcb_at' t and invs'\<rbrace> getBoundNotification t \<lbrace>valid_bound_ntfn'\<rbrace>"
+  apply (simp add: getBoundNotification_def threadGet_def liftM_def)
   apply wp
   apply (rule hoare_chain)
     apply (rule getObject_valid_obj)
@@ -1700,8 +1700,8 @@ lemma gba_wf'[wp]: "\<lbrace>tcb_at' t and invs'\<rbrace> getBoundAEP t \<lbrace
   apply (simp add: valid_obj'_def valid_tcb'_def)
   done
 
-lemma gba_bound_tcb_at'[wp]: "\<lbrace>bound_tcb_at' P t\<rbrace> getBoundAEP t \<lbrace>\<lambda>rv s. P rv\<rbrace>"
-  apply (simp add: getBoundAEP_def threadGet_def liftM_def)
+lemma gbn_bound_tcb_at'[wp]: "\<lbrace>bound_tcb_at' P t\<rbrace> getBoundNotification t \<lbrace>\<lambda>rv s. P rv\<rbrace>"
+  apply (simp add: getBoundNotification_def threadGet_def liftM_def)
   apply wp
   apply (rule hoare_chain)
     apply (rule obj_at_getObject)
@@ -2227,12 +2227,12 @@ lemma sts_corres:
      apply (wp hoare_vcg_conj_lift[where Q'="\<top>\<top>"] | simp add: sch_act_simple_def)+
    done
 
-lemma sba_corres:
+lemma sbn_corres:
   "corres dc
           (tcb_at t)
           (tcb_at' t)
-          (set_bound_aep t aep) (setBoundAEP aep t)"
-  apply (simp add: set_bound_aep_def setBoundAEP_def)
+          (set_bound_notification t ntfn) (setBoundNotification ntfn t)"
+  apply (simp add: set_bound_notification_def setBoundNotification_def)
   apply (subst thread_set_def[simplified, symmetric])
   apply (rule threadset_corres, simp_all add:tcb_relation_def exst_same_def)
   done
@@ -2243,7 +2243,7 @@ crunch tcb'[wp]: rescheduleRequired "tcb_at' addr"
 crunch tcb'[wp]: tcbSchedDequeue "tcb_at' addr"
   (simp: crunch_simps)
 
-crunch tcb'[wp]: setThreadState, setBoundAEP "tcb_at' addr"
+crunch tcb'[wp]: setThreadState, setBoundNotification "tcb_at' addr"
 
 lemma valid_tcb_tcbQueued:
   "valid_tcb' (tcbQueued_update f tcb) = valid_tcb' tcb"
@@ -2284,11 +2284,11 @@ lemma sts_valid_objs':
   apply (clarsimp simp: valid_tcb'_def tcb_cte_cases_def)
   done
 
-lemma sba_valid_objs':
-  "\<lbrace>valid_objs' and valid_bound_aep' aep\<rbrace> 
-  setBoundAEP aep t 
+lemma sbn_valid_objs':
+  "\<lbrace>valid_objs' and valid_bound_ntfn' ntfn\<rbrace> 
+  setBoundNotification ntfn t 
   \<lbrace>\<lambda>rv. valid_objs'\<rbrace>"
-  apply (simp add: setBoundAEP_def)
+  apply (simp add: setBoundNotification_def)
   apply (wp threadSet_valid_objs')
      apply (simp add: valid_tcb'_def tcb_cte_cases_def)
   done
@@ -2344,14 +2344,14 @@ apply wp
 apply (simp add: ps_clear_def projectKOs obj_at'_def)
 done
   
-lemma sba'_valid_pspace'_inv[wp]:
-  "\<lbrace> valid_pspace' and tcb_at' t and valid_bound_aep' aep \<rbrace> 
-  setBoundAEP aep t
+lemma sbn'_valid_pspace'_inv[wp]:
+  "\<lbrace> valid_pspace' and tcb_at' t and valid_bound_ntfn' ntfn \<rbrace> 
+  setBoundNotification ntfn t
   \<lbrace> \<lambda>rv. valid_pspace' \<rbrace>"
   apply (simp add: valid_pspace'_def)
   apply (rule hoare_pre)
-   apply (wp sba_valid_objs')
-   apply (simp add: setBoundAEP_def threadSet_def bind_assoc valid_mdb'_def)
+   apply (wp sbn_valid_objs')
+   apply (simp add: setBoundNotification_def threadSet_def bind_assoc valid_mdb'_def)
    apply (wp getObject_obj_at_tcb | simp)+
   apply (clarsimp simp: valid_mdb'_def)
   apply (drule obj_at_ko_at')
@@ -2658,10 +2658,10 @@ lemma sts_sch_act[wp]:
   apply (auto simp: sch_act_simple_def)
   done
 
-lemma sba_sch_act':
+lemma sbn_sch_act':
   "\<lbrace>\<lambda>s. sch_act_wf (ksSchedulerAction s) s\<rbrace> 
-  setBoundAEP aep t  \<lbrace>\<lambda>rv s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
-  apply (simp add: setBoundAEP_def)
+  setBoundNotification ntfn t  \<lbrace>\<lambda>rv s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
+  apply (simp add: setBoundNotification_def)
   apply (wp threadSet_sch_act | simp)+
   done
 
@@ -2690,9 +2690,9 @@ lemma sts_sch_act_simple[wp]:
   apply (wp hoare_drop_imps | rule sch_act_simple_lift | simp)+
   done
 
-lemma sba_sch_act_simple[wp]:
-  "\<lbrace>sch_act_simple\<rbrace> setBoundAEP aep t \<lbrace>\<lambda>rv. sch_act_simple\<rbrace>"
-  apply (simp add: setBoundAEP_def)
+lemma sbn_sch_act_simple[wp]:
+  "\<lbrace>sch_act_simple\<rbrace> setBoundNotification ntfn t \<lbrace>\<lambda>rv. sch_act_simple\<rbrace>"
+  apply (simp add: setBoundNotification_def)
   apply (wp hoare_drop_imps | rule sch_act_simple_lift | simp)+
   done
 
@@ -3262,10 +3262,10 @@ lemma sts_valid_queues:
    apply (clarsimp simp: sch_act_simple_def Invariants_H.valid_queues_def inQ_def)+
   done
 
-lemma sba_valid_queues:
+lemma sbn_valid_queues:
   "\<lbrace>\<lambda>s. Invariants_H.valid_queues s\<rbrace>
-   setBoundAEP aep t \<lbrace>\<lambda>rv. Invariants_H.valid_queues\<rbrace>"
-  apply (simp add: setBoundAEP_def)
+   setBoundNotification ntfn t \<lbrace>\<lambda>rv. Invariants_H.valid_queues\<rbrace>"
+  apply (simp add: setBoundNotification_def)
   apply (wp threadSet_valid_queues [THEN hoare_strengthen_post])
    apply (clarsimp simp: sch_act_simple_def Invariants_H.valid_queues_def inQ_def)+
   done
@@ -3353,9 +3353,9 @@ lemma setThreadState_valid_queues'[wp]:
   apply (fastforce simp: inQ_def obj_at'_def pred_tcb_at'_def)
   done
 
-lemma setBoundAEP_valid_queues'[wp]:
-  "\<lbrace>\<lambda>s. valid_queues' s\<rbrace> setBoundAEP aep t \<lbrace>\<lambda>rv. valid_queues'\<rbrace>"
-  apply (simp add: setBoundAEP_def)
+lemma setBoundNotification_valid_queues'[wp]:
+  "\<lbrace>\<lambda>s. valid_queues' s\<rbrace> setBoundNotification ntfn t \<lbrace>\<lambda>rv. valid_queues'\<rbrace>"
+  apply (simp add: setBoundNotification_def)
   apply (wp threadSet_valid_queues')
   apply (fastforce simp: inQ_def obj_at'_def pred_tcb_at'_def)
   done
@@ -3391,9 +3391,9 @@ lemma threadSet_ksQ[wp]:
   "\<lbrace>\<lambda>s. P (ksReadyQueues s)\<rbrace> threadSet f t \<lbrace>\<lambda>rv s. P (ksReadyQueues s)\<rbrace>"
   by (simp add: threadSet_def | wp updateObject_default_inv)+
 
-lemma sba_ksQ:
-  "\<lbrace>\<lambda>s. P (ksReadyQueues s p)\<rbrace> setBoundAEP aep t \<lbrace>\<lambda>rv s. P (ksReadyQueues s p)\<rbrace>"
-  by (simp add: setBoundAEP_def, wp)
+lemma sbn_ksQ:
+  "\<lbrace>\<lambda>s. P (ksReadyQueues s p)\<rbrace> setBoundNotification ntfn t \<lbrace>\<lambda>rv s. P (ksReadyQueues s p)\<rbrace>"
+  by (simp add: setBoundNotification_def, wp)
 
 lemma sts_ksQ:
   "\<lbrace>\<lambda>s. sch_act_simple s \<and> P (ksReadyQueues s p)\<rbrace>
@@ -4032,17 +4032,17 @@ lemma setThreadState_st_tcb:
   apply (simp add: hoare_pre_cont)
   done
 
-lemma setBoundAEP_bound_tcb':
-  "\<lbrace>\<top>\<rbrace> setBoundAEP aep t \<lbrace>\<lambda>rv. bound_tcb_at' (\<lambda>s. s = aep) t\<rbrace>"
-  apply (simp add: setBoundAEP_def)
+lemma setBoundNotification_bound_tcb':
+  "\<lbrace>\<top>\<rbrace> setBoundNotification ntfn t \<lbrace>\<lambda>rv. bound_tcb_at' (\<lambda>s. s = ntfn) t\<rbrace>"
+  apply (simp add: setBoundNotification_def)
   apply (wp threadSet_pred_tcb_at_state | simp add: if_apply_def2)+
   done
 
-lemma setBoundAEP_bound_tcb:
-  "\<lbrace>\<lambda>s. P aep\<rbrace> setBoundAEP aep t \<lbrace>\<lambda>rv. bound_tcb_at' P t\<rbrace>"
-  apply (cases "P aep")
+lemma setBoundNotification_bound_tcb:
+  "\<lbrace>\<lambda>s. P ntfn\<rbrace> setBoundNotification ntfn t \<lbrace>\<lambda>rv. bound_tcb_at' P t\<rbrace>"
+  apply (cases "P ntfn")
    apply simp
-   apply (rule hoare_post_imp [OF _ setBoundAEP_bound_tcb'])
+   apply (rule hoare_post_imp [OF _ setBoundNotification_bound_tcb'])
    apply (erule pred_tcb'_weakenE, simp)
   apply (simp add: hoare_pre_cont)
   done
@@ -4051,7 +4051,7 @@ crunch ct'[wp]: rescheduleRequired "\<lambda>s. P (ksCurThread s)"
   (simp: unless_def)
 
 crunch ct'[wp]: tcbSchedDequeue "\<lambda>s. P (ksCurThread s)"
-crunch ct'[wp]: setThreadState, setBoundAEP "\<lambda>s. P (ksCurThread s)"
+crunch ct'[wp]: setThreadState, setBoundNotification "\<lambda>s. P (ksCurThread s)"
   (simp: crunch_simps)
 
 lemma ct_in_state'_decomp:
@@ -4092,12 +4092,12 @@ lemma sts_valid_idle'[wp]:
   apply (wp threadSet_idle', simp+)+
   done
 
-lemma sba_valid_idle'[wp]:
+lemma sbn_valid_idle'[wp]:
   "\<lbrace>valid_idle' and valid_pspace' and 
-    (\<lambda>s. t = ksIdleThread s \<longrightarrow> \<not>bound aep)\<rbrace>
-   setBoundAEP aep t
+    (\<lambda>s. t = ksIdleThread s \<longrightarrow> \<not>bound ntfn)\<rbrace>
+   setBoundNotification ntfn t
    \<lbrace>\<lambda>rv. valid_idle'\<rbrace>"
-  apply (simp add: setBoundAEP_def)
+  apply (simp add: setBoundNotification_def)
   apply (wp threadSet_idle', simp+)+
   done
 
@@ -4110,9 +4110,9 @@ lemma gts_sp':
   apply (clarsimp simp: obj_at'_def)
   done
 
-lemma gba_sp':
-  "\<lbrace>P\<rbrace> getBoundAEP t \<lbrace>\<lambda>rv. bound_tcb_at' (\<lambda>st. st = rv) t and P\<rbrace>"
-  apply (simp add: getBoundAEP_def threadGet_def)
+lemma gbn_sp':
+  "\<lbrace>P\<rbrace> getBoundNotification t \<lbrace>\<lambda>rv. bound_tcb_at' (\<lambda>st. st = rv) t and P\<rbrace>"
+  apply (simp add: getBoundNotification_def threadGet_def)
   apply wp
   apply (simp add: o_def pred_tcb_at'_def)
   apply (wp getObject_tcb_wp)
@@ -4171,24 +4171,24 @@ lemma sts_bound_tcb_at':
                | simp add: pred_tcb_at'_def)+
   done
 
-lemma sba_st_tcb':
+lemma sbn_st_tcb':
   "\<lbrace>st_tcb_at' P t\<rbrace> 
-  setBoundAEP aep t' 
+  setBoundNotification ntfn t' 
   \<lbrace>\<lambda>_. st_tcb_at' P t\<rbrace>"
   apply (cases "t = t'",
-         simp_all add: setBoundAEP_def
+         simp_all add: setBoundNotification_def
                   split del: split_if)
    apply ((wp threadSet_pred_tcb_at_state | simp)+)[1]
   apply (wp threadSet_obj_at'_really_strongest
               | simp add: pred_tcb_at'_def)+
   done
 
-lemma sba_bound_tcb_at':
-  "\<lbrace>if t = t' then K (P aep) else bound_tcb_at' P t\<rbrace> 
-  setBoundAEP aep t' 
+lemma sbn_bound_tcb_at':
+  "\<lbrace>if t = t' then K (P ntfn) else bound_tcb_at' P t\<rbrace> 
+  setBoundNotification ntfn t' 
   \<lbrace>\<lambda>_. bound_tcb_at' P t\<rbrace>"
   apply (cases "t = t'",
-         simp_all add: setBoundAEP_def
+         simp_all add: setBoundNotification_def
                   split del: split_if)
    apply ((wp threadSet_pred_tcb_at_state | simp)+)[1]
    apply (wp threadSet_obj_at'_really_strongest
@@ -4199,19 +4199,19 @@ crunch typ_at'[wp]: rescheduleRequired "\<lambda>s. P (typ_at' T p s)"
   (simp: unless_def)
 crunch typ_at'[wp]: tcbSchedDequeue "\<lambda>s. P (typ_at' T p s)"
 
-crunch typ_at'[wp]: setThreadState, setBoundAEP "\<lambda>s. P (typ_at' T p s)"
+crunch typ_at'[wp]: setThreadState, setBoundNotification "\<lambda>s. P (typ_at' T p s)"
   (wp: hoare_when_weak_wp)
 
 lemmas setThreadState_typ_ats[wp] = typ_at_lifts [OF setThreadState_typ_at']
-lemmas setBoundAEP_typ_ats[wp] = typ_at_lifts [OF setBoundAEP_typ_at']
+lemmas setBoundNotification_typ_ats[wp] = typ_at_lifts [OF setBoundNotification_typ_at']
 
-crunch aligned'[wp]: setThreadState, setBoundAEP pspace_aligned'
+crunch aligned'[wp]: setThreadState, setBoundNotification pspace_aligned'
   (wp: hoare_when_weak_wp)
 
-crunch distinct'[wp]: setThreadState, setBoundAEP pspace_distinct'
+crunch distinct'[wp]: setThreadState, setBoundNotification pspace_distinct'
   (wp: hoare_when_weak_wp)
 
-crunch cte_wp_at'[wp]: setThreadState, setBoundAEP "cte_wp_at' P p"
+crunch cte_wp_at'[wp]: setThreadState, setBoundNotification "cte_wp_at' P p"
   (wp: hoare_when_weak_wp simp: unless_def)
 
 lemma state_refs_of'_queues[simp]:
@@ -4230,12 +4230,12 @@ lemma setThreadState_state_refs_of'[wp]:
         | wp threadSet_state_refs_of')+
 
 
-lemma setBoundAEP_state_refs_of'[wp]:
-  "\<lbrace>\<lambda>s. P ((state_refs_of' s) (t := tcb_bound_refs' aep
+lemma setBoundNotification_state_refs_of'[wp]:
+  "\<lbrace>\<lambda>s. P ((state_refs_of' s) (t := tcb_bound_refs' ntfn
                                  \<union> {r \<in> state_refs_of' s t. snd r \<noteq> TCBBound}))\<rbrace>
-     setBoundAEP aep t
+     setBoundNotification ntfn t
    \<lbrace>\<lambda>rv s. P (state_refs_of' s)\<rbrace>"
-  by (simp add: setBoundAEP_def Un_commute fun_upd_def
+  by (simp add: setBoundNotification_def Un_commute fun_upd_def
         | wp threadSet_state_refs_of' )+
 
 lemma threadSet_ksCurThread[wp]:
@@ -4250,8 +4250,8 @@ lemma sts_cur_tcb'[wp]:
   apply (wp cur_tcb_lift)
   done
 
-lemma sba_cur_tcb'[wp]:
-  "\<lbrace>cur_tcb'\<rbrace> setBoundAEP aep t \<lbrace>\<lambda>rv. cur_tcb'\<rbrace>"
+lemma sbn_cur_tcb'[wp]:
+  "\<lbrace>cur_tcb'\<rbrace> setBoundNotification ntfn t \<lbrace>\<lambda>rv. cur_tcb'\<rbrace>"
   apply (wp cur_tcb_lift)
   done
 
@@ -4309,18 +4309,18 @@ lemma sts_iflive'[wp]:
    apply auto
  done
 
-lemma sba_iflive'[wp]:
+lemma sbn_iflive'[wp]:
   "\<lbrace>\<lambda>s. if_live_then_nonz_cap' s
-      \<and> (bound aep \<longrightarrow> ex_nonz_cap_to' t s)\<rbrace>
-     setBoundAEP aep t
+      \<and> (bound ntfn \<longrightarrow> ex_nonz_cap_to' t s)\<rbrace>
+     setBoundNotification ntfn t
    \<lbrace>\<lambda>rv. if_live_then_nonz_cap'\<rbrace>"
-  apply (simp add: setBoundAEP_def)
+  apply (simp add: setBoundNotification_def)
   apply (rule hoare_pre)
    apply (wp threadSet_iflive' | simp)+
   apply auto 
   done
 
-crunch ifunsafe'[wp]: setThreadState, setBoundAEP "if_unsafe_then_cap'"
+crunch ifunsafe'[wp]: setThreadState, setBoundNotification "if_unsafe_then_cap'"
   (simp: unless_def crunch_simps)
 
 lemma st_tcb_ex_cap'':
@@ -4332,15 +4332,15 @@ lemma st_tcb_ex_cap'':
 
 lemma bound_tcb_ex_cap'':
   "\<lbrakk> bound_tcb_at' P t s; if_live_then_nonz_cap' s;
-     \<And>aep. P aep \<Longrightarrow> bound aep \<rbrakk> \<Longrightarrow> ex_nonz_cap_to' t s"
+     \<And>ntfn. P ntfn \<Longrightarrow> bound ntfn \<rbrakk> \<Longrightarrow> ex_nonz_cap_to' t s"
   by (clarsimp simp: pred_tcb_at'_def obj_at'_real_def projectKOs
               elim!: ko_wp_at'_weakenE
                      if_live_then_nonz_capE')
 
-crunch arch' [wp]: setThreadState, setBoundAEP "\<lambda>s. P (ksArchState s)"
+crunch arch' [wp]: setThreadState, setBoundNotification "\<lambda>s. P (ksArchState s)"
   (ignore: getObject setObject simp: unless_def crunch_simps)
 
-crunch it' [wp]: setThreadState, setBoundAEP "\<lambda>s. P (ksIdleThread s)"
+crunch it' [wp]: setThreadState, setBoundNotification "\<lambda>s. P (ksIdleThread s)"
   (ignore: getObject setObject wp: getObject_inv_tcb
      simp: updateObject_default_def unless_def crunch_simps)
 
@@ -4354,35 +4354,35 @@ lemma sts_ctes_of [wp]:
   apply (wp threadSet_ctes_ofT | simp add: tcb_cte_cases_def)+
   done
 
-lemma sba_ctes_of [wp]:
-  "\<lbrace>\<lambda>s. P (ctes_of s)\<rbrace> setBoundAEP aep t \<lbrace>\<lambda>rv s. P (ctes_of s)\<rbrace>"
-  apply (simp add: setBoundAEP_def)
+lemma sbn_ctes_of [wp]:
+  "\<lbrace>\<lambda>s. P (ctes_of s)\<rbrace> setBoundNotification ntfn t \<lbrace>\<lambda>rv s. P (ctes_of s)\<rbrace>"
+  apply (simp add: setBoundNotification_def)
   apply (wp threadSet_ctes_ofT | simp add: tcb_cte_cases_def)+
   done
 
-crunch ksInterruptState[wp]: setThreadState, setBoundAEP "\<lambda>s. P (ksInterruptState s)"
+crunch ksInterruptState[wp]: setThreadState, setBoundNotification "\<lambda>s. P (ksInterruptState s)"
   (simp: unless_def crunch_simps)
 
-crunch gsMaxObjectSize[wp]: setThreadState, setBoundAEP "\<lambda>s. P (gsMaxObjectSize s)"
+crunch gsMaxObjectSize[wp]: setThreadState, setBoundNotification "\<lambda>s. P (gsMaxObjectSize s)"
   (simp: unless_def crunch_simps ignore: getObject setObject wp: setObject_ksPSpace_only updateObject_default_inv)
 
 lemmas setThreadState_irq_handlers[wp]
     = valid_irq_handlers_lift'' [OF sts_ctes_of setThreadState_ksInterruptState]
 
-lemmas setBoundAEP_irq_handlers[wp]
-    = valid_irq_handlers_lift'' [OF sba_ctes_of setBoundAEP_ksInterruptState]
+lemmas setBoundNotification_irq_handlers[wp]
+    = valid_irq_handlers_lift'' [OF sbn_ctes_of setBoundNotification_ksInterruptState]
 
 lemma sts_global_reds' [wp]:
   "\<lbrace>valid_global_refs'\<rbrace> setThreadState st t \<lbrace>\<lambda>_. valid_global_refs'\<rbrace>"
   by (rule valid_global_refs_lift') wp 
 
-lemma sba_global_reds' [wp]:
-  "\<lbrace>valid_global_refs'\<rbrace> setBoundAEP aep t \<lbrace>\<lambda>_. valid_global_refs'\<rbrace>"
+lemma sbn_global_reds' [wp]:
+  "\<lbrace>valid_global_refs'\<rbrace> setBoundNotification ntfn t \<lbrace>\<lambda>_. valid_global_refs'\<rbrace>"
   by (rule valid_global_refs_lift') wp
 
-crunch irq_states' [wp]: setThreadState, setBoundAEP valid_irq_states'
+crunch irq_states' [wp]: setThreadState, setBoundNotification valid_irq_states'
   (simp: unless_def crunch_simps)
-crunch pde_mappings' [wp]: setThreadState, setBoundAEP valid_pde_mappings'
+crunch pde_mappings' [wp]: setThreadState, setBoundNotification valid_pde_mappings'
   (simp: unless_def crunch_simps)
 
 lemma addToBitmap_ksMachine[wp]:
@@ -4399,10 +4399,10 @@ lemma tcbSchedEnqueue_ksMachine[wp]:
   "\<lbrace>\<lambda>s. P (ksMachineState s)\<rbrace> tcbSchedEnqueue x \<lbrace>\<lambda>_ s. P (ksMachineState s)\<rbrace>"
   by (simp add: tcbSchedEnqueue_def unless_def setQueue_def | wp)+
 
-crunch ksMachine[wp]: setThreadState, setBoundAEP "\<lambda>s. P (ksMachineState s)"
+crunch ksMachine[wp]: setThreadState, setBoundNotification "\<lambda>s. P (ksMachineState s)"
  (simp: crunch_simps)
 
-crunch pspace_domain_valid[wp]: setThreadState, setBoundAEP "pspace_domain_valid"
+crunch pspace_domain_valid[wp]: setThreadState, setBoundNotification "pspace_domain_valid"
   (simp: unless_def crunch_simps)
 
 lemma setThreadState_vms'[wp]:
@@ -4422,8 +4422,8 @@ lemma ct_not_inQ_removeFromBitmap[wp]:
              getReadyQueuesL1Bitmap_def getReadyQueuesL2Bitmap_def
   by (wp, clarsimp simp: ct_not_inQ_def)
 
-lemma setBoundAEP_vms'[wp]:
-  "\<lbrace>valid_machine_state'\<rbrace> setBoundAEP aep t \<lbrace>\<lambda>rv. valid_machine_state'\<rbrace>"
+lemma setBoundNotification_vms'[wp]:
+  "\<lbrace>valid_machine_state'\<rbrace> setBoundNotification ntfn t \<lbrace>\<lambda>rv. valid_machine_state'\<rbrace>"
   apply (simp add: valid_machine_state'_def pointerInUserData_def)
   apply (intro hoare_vcg_all_lift hoare_vcg_disj_lift, wp)
   done
@@ -4538,8 +4538,8 @@ lemma threadSet_tcbState_update_ct_not_inQ[wp]:
   apply (wp hoare_drop_imp)
   done
 
-lemma threadSet_tcbBoundAEP_update_ct_not_inQ[wp]:
-  "\<lbrace>ct_not_inQ\<rbrace> threadSet (tcbBoundAEP_update f) t \<lbrace>\<lambda>_. ct_not_inQ\<rbrace>"
+lemma threadSet_tcbBoundNotification_update_ct_not_inQ[wp]:
+  "\<lbrace>ct_not_inQ\<rbrace> threadSet (tcbBoundNotification_update f) t \<lbrace>\<lambda>_. ct_not_inQ\<rbrace>"
   apply (simp add: ct_not_inQ_def)
   apply (rule hoare_convert_imp [OF threadSet_no_sa])
   apply (simp add: threadSet_def)
@@ -4565,10 +4565,10 @@ lemma setThreadState_ct_not_inQ:
   apply (wp)
   done
 
-lemma setBoundAEP_ct_not_inQ:
-  "\<lbrace>ct_not_inQ\<rbrace> setBoundAEP aep t \<lbrace>\<lambda>_. ct_not_inQ\<rbrace>"
+lemma setBoundNotification_ct_not_inQ:
+  "\<lbrace>ct_not_inQ\<rbrace> setBoundNotification ntfn t \<lbrace>\<lambda>_. ct_not_inQ\<rbrace>"
   (is "\<lbrace>?PRE\<rbrace> _ \<lbrace>_\<rbrace>")
-  by (simp add: setBoundAEP_def, wp)
+  by (simp add: setBoundNotification_def, wp)
 
 crunch ct_not_inQ[wp]: setQueue "ct_not_inQ"
 
@@ -4634,14 +4634,14 @@ lemma addToBitmap_ct_idle_or_in_cur_domain'[wp]:
   "\<lbrace> ct_idle_or_in_cur_domain' \<rbrace> addToBitmap d p \<lbrace> \<lambda>_. ct_idle_or_in_cur_domain' \<rbrace>"
   apply (rule ct_idle_or_in_cur_domain'_lift)
   apply (wp hoare_vcg_disj_lift| rule obj_at_setObject2
-           | clarsimp simp: updateObject_default_def in_monad setAsyncEP_def)+
+           | clarsimp simp: updateObject_default_def in_monad setNotification_def)+
   done
 
 lemma removeFromBitmap_ct_idle_or_in_cur_domain'[wp]:
   "\<lbrace> ct_idle_or_in_cur_domain' \<rbrace> removeFromBitmap d p \<lbrace> \<lambda>_. ct_idle_or_in_cur_domain' \<rbrace>"
   apply (rule ct_idle_or_in_cur_domain'_lift)
   apply (wp hoare_vcg_disj_lift| rule obj_at_setObject2
-           | clarsimp simp: updateObject_default_def in_monad setAsyncEP_def)+
+           | clarsimp simp: updateObject_default_def in_monad setNotification_def)+
   done
 
 lemma tcbSchedEnqueue_ksCurDomain[wp]:
@@ -4706,25 +4706,25 @@ apply (simp add: setThreadState_def)
 apply (wp  | simp)+
 done
 
-lemma setBoundAEP_ct_idle_or_in_cur_domain'[wp]:
-  "\<lbrace>ct_idle_or_in_cur_domain'\<rbrace> setBoundAEP t a \<lbrace>\<lambda>rv. ct_idle_or_in_cur_domain'\<rbrace>"
-apply (simp add: setBoundAEP_def)
+lemma setBoundNotification_ct_idle_or_in_cur_domain'[wp]:
+  "\<lbrace>ct_idle_or_in_cur_domain'\<rbrace> setBoundNotification t a \<lbrace>\<lambda>rv. ct_idle_or_in_cur_domain'\<rbrace>"
+apply (simp add: setBoundNotification_def)
 apply (wp threadSet_ct_idle_or_in_cur_domain' hoare_drop_imps | simp)+
 done
 
-lemma setBoundAEP_ksCurDomain[wp]:
-  "\<lbrace> \<lambda>s. P (ksCurDomain s) \<rbrace> setBoundAEP st tptr \<lbrace>\<lambda>_ s. P (ksCurDomain s) \<rbrace>"
-apply (simp add: setBoundAEP_def)
+lemma setBoundNotification_ksCurDomain[wp]:
+  "\<lbrace> \<lambda>s. P (ksCurDomain s) \<rbrace> setBoundNotification st tptr \<lbrace>\<lambda>_ s. P (ksCurDomain s) \<rbrace>"
+apply (simp add: setBoundNotification_def)
 apply (wp  | simp)+
 done
 
-lemma setBoundAEP_ksDomSchedule[wp]:
-  "\<lbrace> \<lambda>s. P (ksDomSchedule s) \<rbrace> setBoundAEP st tptr \<lbrace>\<lambda>_ s. P (ksDomSchedule s) \<rbrace>"
-apply (simp add: setBoundAEP_def)
+lemma setBoundNotification_ksDomSchedule[wp]:
+  "\<lbrace> \<lambda>s. P (ksDomSchedule s) \<rbrace> setBoundNotification st tptr \<lbrace>\<lambda>_ s. P (ksDomSchedule s) \<rbrace>"
+apply (simp add: setBoundNotification_def)
 apply (wp  | simp)+
 done
 
-crunch ksDomScheduleIdx[wp]: rescheduleRequired, setBoundAEP "\<lambda>s. P (ksDomScheduleIdx s)"
+crunch ksDomScheduleIdx[wp]: rescheduleRequired, setBoundNotification "\<lambda>s. P (ksDomScheduleIdx s)"
 (ignore: setObject getObject getObject wp:crunch_wps hoare_unless_wp)
 
 lemma setThreadState_ksDomScheduleIdx[wp]:
@@ -4761,16 +4761,16 @@ lemma sts_invs_minor':
                   split: Structures_H.thread_state.splits)
   done
 
-lemma sba_invs_minor':
-  "\<lbrace>bound_tcb_at' (\<lambda>aep'. tcb_bound_refs' aep' = tcb_bound_refs' aep) t
-      and (\<lambda>s. bound aep \<longrightarrow> ex_nonz_cap_to' t s)
-      and (\<lambda>s. t = ksIdleThread s \<longrightarrow> \<not> bound aep)
+lemma sbn_invs_minor':
+  "\<lbrace>bound_tcb_at' (\<lambda>ntfn'. tcb_bound_refs' ntfn' = tcb_bound_refs' ntfn) t
+      and (\<lambda>s. bound ntfn \<longrightarrow> ex_nonz_cap_to' t s)
+      and (\<lambda>s. t = ksIdleThread s \<longrightarrow> \<not> bound ntfn)
       and invs'\<rbrace>
-     setBoundAEP aep t
+     setBoundNotification ntfn t
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def)
-  apply (wp irqs_masked_lift valid_irq_node_lift setBoundAEP_valid_queues' sba_valid_queues
-            setBoundAEP_ct_not_inQ sba_sch_act', simp_all)
+  apply (wp irqs_masked_lift valid_irq_node_lift setBoundNotification_valid_queues' sbn_valid_queues
+            setBoundNotification_ct_not_inQ sbn_sch_act', simp_all)
     apply clarsimp
    apply (clarsimp dest!: bound_tcb_at_state_refs_ofD'
                    elim!: rsubst[where P=sym_refs]
@@ -4780,7 +4780,7 @@ lemma sba_invs_minor':
   apply (frule obj_at_valid_objs')
    apply (clarsimp simp: valid_pspace'_def)
   apply (clarsimp simp: valid_obj'_def valid_tcb'_def projectKOs)
-  apply (clarsimp simp: valid_bound_aep'_def obj_at'_def projectKOs tcb_bound_refs'_def
+  apply (clarsimp simp: valid_bound_ntfn'_def obj_at'_def projectKOs tcb_bound_refs'_def
                  split: Structures_H.thread_state.splits option.splits)
   done
 
@@ -4821,33 +4821,33 @@ lemma sts_ct_in_state_neq':
   apply (erule (1) use_valid [OF _ setThreadState_ct'])
   done
 
-lemma sba_cap_to'[wp]:
-  "\<lbrace>ex_nonz_cap_to' p\<rbrace> setBoundAEP aep t \<lbrace>\<lambda>rv. ex_nonz_cap_to' p\<rbrace>"
+lemma sbn_cap_to'[wp]:
+  "\<lbrace>ex_nonz_cap_to' p\<rbrace> setBoundNotification ntfn t \<lbrace>\<lambda>rv. ex_nonz_cap_to' p\<rbrace>"
   by (wp ex_nonz_cap_to_pres')
 
-lemma sba_pred_tcb_neq':
+lemma sbn_pred_tcb_neq':
   "\<lbrace>pred_tcb_at' proj P t and K (t \<noteq> t')\<rbrace> 
-  setBoundAEP aep t' 
+  setBoundNotification ntfn t' 
   \<lbrace>\<lambda>_. pred_tcb_at' proj P t\<rbrace>"
-  apply (simp add: setBoundAEP_def)
+  apply (simp add: setBoundNotification_def)
   apply (wp threadSet_pred_tcb_at_state | simp)+
   done
 
-lemma sba_ct_in_state_neq':
+lemma sbn_ct_in_state_neq':
   "\<lbrace>(\<lambda>s. ksCurThread s \<noteq> t') and ct_in_state' P\<rbrace> 
-  setBoundAEP aep t' 
+  setBoundNotification ntfn t' 
   \<lbrace>\<lambda>_. ct_in_state' P\<rbrace>"
   apply (clarsimp simp add: valid_def ct_in_state'_def) 
-  apply (frule_tac P1="\<lambda>k. k \<noteq> t'" in use_valid [OF _ setBoundAEP_ct'])
+  apply (frule_tac P1="\<lambda>k. k \<noteq> t'" in use_valid [OF _ setBoundNotification_ct'])
    apply assumption
-  apply (rule use_valid [OF _ sba_pred_tcb_neq'], assumption)
+  apply (rule use_valid [OF _ sbn_pred_tcb_neq'], assumption)
   apply simp
-  apply (erule (1) use_valid [OF _ setBoundAEP_ct'])
+  apply (erule (1) use_valid [OF _ setBoundNotification_ct'])
   done
 
 lemmas isTS_defs =
   isRunning_def isBlockedOnSend_def isBlockedOnReceive_def
-  isBlockedOnAsyncEvent_def isBlockedOnReply_def
+  isBlockedOnNotification_def isBlockedOnReply_def
   isRestart_def isInactive_def
   isIdleThreadState_def
 
@@ -4859,11 +4859,11 @@ lemma sts_st_tcb_at'_cases:
   apply fastforce
   done
 
-lemma sba_bound_tcb_at'_cases:
-  "\<lbrace>\<lambda>s. ((t = t') \<longrightarrow> (P aep \<and> tcb_at' t' s)) \<and> ((t \<noteq> t') \<longrightarrow> bound_tcb_at' P t' s)\<rbrace>
-     setBoundAEP aep t
+lemma sbn_bound_tcb_at'_cases:
+  "\<lbrace>\<lambda>s. ((t = t') \<longrightarrow> (P ntfn \<and> tcb_at' t' s)) \<and> ((t \<noteq> t') \<longrightarrow> bound_tcb_at' P t' s)\<rbrace>
+     setBoundNotification ntfn t
    \<lbrace>\<lambda>rv. bound_tcb_at' P t'\<rbrace>"
-  apply (wp sba_bound_tcb_at')
+  apply (wp sbn_bound_tcb_at')
   apply fastforce
   done
 
@@ -4976,11 +4976,11 @@ lemma gts_wp':
   apply (clarsimp simp: pred_tcb_at'_def obj_at'_def)
   done
 
-lemma gba_wp':
-  "\<lbrace>\<lambda>s. \<forall>aep. bound_tcb_at' (op = aep) t s \<longrightarrow> P aep s\<rbrace> getBoundAEP t \<lbrace>P\<rbrace>"
+lemma gbn_wp':
+  "\<lbrace>\<lambda>s. \<forall>ntfn. bound_tcb_at' (op = ntfn) t s \<longrightarrow> P ntfn s\<rbrace> getBoundNotification t \<lbrace>P\<rbrace>"
   apply (rule hoare_post_imp)
    prefer 2
-   apply (rule gba_sp')
+   apply (rule gbn_sp')
   apply (clarsimp simp: pred_tcb_at'_def obj_at'_def)
   done
 

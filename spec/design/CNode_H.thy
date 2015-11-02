@@ -278,8 +278,8 @@ defs cteInsert_def:
         newCapIsRevocable \<leftarrow> return ( (case newCap of
                   EndpointCap _ _ _ _ _ \<Rightarrow>  
                     capEPBadge newCap \<noteq> capEPBadge srcCap
-                | AsyncEndpointCap _ _ _ _ \<Rightarrow>  
-                    capAEPBadge newCap \<noteq> capAEPBadge srcCap
+                | NotificationCap _ _ _ _ \<Rightarrow>  
+                    capNtfnBadge newCap \<noteq> capNtfnBadge srcCap
                 | IRQHandlerCap _ \<Rightarrow>   isIRQControlCap srcCap
                 | UntypedCap _ _ _ \<Rightarrow>   True
                 | _ \<Rightarrow>   False
@@ -512,10 +512,10 @@ defs isMDBParentOf_def:
         then let badge = capEPBadge a in
          
             (badge = capEPBadge b) \<and> (Not $ mdbFirstBadged mdbB)
-        else if isAsyncEndpointCap a & capAEPBadge a ~= 0
-        then let badge = capAEPBadge a in
+        else if isNotificationCap a & capNtfnBadge a ~= 0
+        then let badge = capNtfnBadge a in
          
-            (badge = capAEPBadge b) \<and> (Not $ mdbFirstBadged mdbB)
+            (badge = capNtfnBadge b) \<and> (Not $ mdbFirstBadged mdbB)
         else  True
         )
     else undefined

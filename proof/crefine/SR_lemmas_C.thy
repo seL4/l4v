@@ -82,7 +82,7 @@ lemma cap_get_tag_isCap0:
   assumes cr: "ccap_relation cap cap'"
   shows "(cap_get_tag cap' = scast cap_thread_cap) = isThreadCap cap
   \<and> (cap_get_tag cap' = scast cap_null_cap) = (cap = NullCap)
-  \<and> (cap_get_tag cap' = scast cap_async_endpoint_cap) = isAsyncEndpointCap cap
+  \<and> (cap_get_tag cap' = scast cap_notification_cap) = isNotificationCap cap
   \<and> (cap_get_tag cap' = scast cap_endpoint_cap) = isEndpointCap cap
   \<and> (cap_get_tag cap' = scast cap_irq_handler_cap) = isIRQHandlerCap cap
   \<and> (cap_get_tag cap' = scast cap_irq_control_cap) = isIRQControlCap cap
@@ -107,7 +107,7 @@ lemma cap_get_tag_isCap:
   assumes cr: "ccap_relation cap cap'"
   shows "(cap_get_tag cap' = scast cap_thread_cap) = (isThreadCap cap)"
   and "(cap_get_tag cap' = scast cap_null_cap) = (cap = NullCap)"
-  and "(cap_get_tag cap' = scast cap_async_endpoint_cap) = (isAsyncEndpointCap cap)"
+  and "(cap_get_tag cap' = scast cap_notification_cap) = (isNotificationCap cap)"
   and "(cap_get_tag cap' = scast cap_endpoint_cap) = (isEndpointCap cap)"
   and "(cap_get_tag cap' = scast cap_irq_handler_cap) = (isIRQHandlerCap cap)"
   and "(cap_get_tag cap' = scast cap_irq_control_cap) = (isIRQControlCap cap)"
@@ -143,14 +143,14 @@ lemma cap_get_tag_ThreadCap:
   apply (simp add: cap_get_tag_isCap isCap_simps)
   done
 
-lemma cap_get_tag_AsyncEndpointCap:
+lemma cap_get_tag_NotificationCap:
   assumes cr: "ccap_relation cap cap'"
-  shows "(cap_get_tag cap' = scast cap_async_endpoint_cap) = 
-  (cap = AsyncEndpointCap
-         (capAEPPtr_CL (cap_async_endpoint_cap_lift cap'))
-         (capAEPBadge_CL (cap_async_endpoint_cap_lift cap'))
-         (to_bool (capAEPCanSend_CL (cap_async_endpoint_cap_lift cap')))
-         (to_bool (capAEPCanReceive_CL (cap_async_endpoint_cap_lift cap'))))"
+  shows "(cap_get_tag cap' = scast cap_notification_cap) = 
+  (cap = NotificationCap
+         (capNtfnPtr_CL (cap_notification_cap_lift cap'))
+         (capNtfnBadge_CL (cap_notification_cap_lift cap'))
+         (to_bool (capNtfnCanSend_CL (cap_notification_cap_lift cap')))
+         (to_bool (capNtfnCanReceive_CL (cap_notification_cap_lift cap'))))"
   using cr
   apply -
   apply (rule iffI)
@@ -276,7 +276,7 @@ lemma cap_get_tag_DomainCap:
 lemmas cap_get_tag_to_H_iffs =
      cap_get_tag_NullCap
      cap_get_tag_ThreadCap
-     cap_get_tag_AsyncEndpointCap
+     cap_get_tag_NotificationCap
      cap_get_tag_EndpointCap
      cap_get_tag_CNodeCap
      cap_get_tag_IRQHandlerCap
@@ -356,7 +356,7 @@ definition
   tcb_no_ctes_proj :: "tcb \<Rightarrow> Structures_H.thread_state \<times> word32 \<times> word32 \<times> (ARMMachineTypes.register \<Rightarrow> word32) \<times> bool \<times> word8 \<times> word8 \<times> nat \<times> fault option \<times> word32 option"
   where
   "tcb_no_ctes_proj t \<equiv> (tcbState t, tcbFaultHandler t, tcbIPCBuffer t, tcbContext t, tcbQueued t,
-                            tcbPriority t, tcbDomain t, tcbTimeSlice t, tcbFault t, tcbBoundAEP t)"
+                            tcbPriority t, tcbDomain t, tcbTimeSlice t, tcbFault t, tcbBoundNotification t)"
 
 lemma tcb_cte_cases_proj_eq [simp]:
   "tcb_cte_cases p = Some (getF, setF) \<Longrightarrow> 
@@ -503,7 +503,7 @@ lemma fst_setCTE:
            (s' = s \<lparr> ksPSpace := ksPSpace s' \<rparr>);
            (ctes_of s' = ctes_of s(dest \<mapsto> cte));
            (map_to_eps (ksPSpace s) = map_to_eps (ksPSpace s'));
-           (map_to_aeps (ksPSpace s) = map_to_aeps (ksPSpace s'));
+           (map_to_ntfns (ksPSpace s) = map_to_ntfns (ksPSpace s'));
            (map_to_pdes (ksPSpace s) = map_to_pdes (ksPSpace s'));
            (map_to_ptes (ksPSpace s) = map_to_ptes (ksPSpace s'));
            (map_to_asidpools (ksPSpace s) = map_to_asidpools (ksPSpace s'));
@@ -537,15 +537,15 @@ proof -
     qed fact
     
     (* clag \<dots> *)
-    show "map_to_aeps (ksPSpace s) = map_to_aeps (ksPSpace s')"
+    show "map_to_ntfns (ksPSpace s) = map_to_ntfns (ksPSpace s')"
     proof (rule map_comp_eqI)
       fix x
       assume xin: "x \<in> dom (ksPSpace s')"
       then obtain ko where ko: "ksPSpace s x = Some ko" by (clarsimp simp: thms(3)[symmetric])
       moreover from xin obtain ko' where ko': "ksPSpace s' x = Some ko'" by clarsimp
-      ultimately have "(projectKO_opt ko' :: async_endpoint option) = projectKO_opt ko" using xin thms(4) ceq
-	      by - (drule (1) bspec, cases ko, auto simp: projectKO_opt_aep)
-      thus "(projectKO_opt (the (ksPSpace s' x)) :: async_endpoint option) = projectKO_opt (the (ksPSpace s x))" using ko ko' 
+      ultimately have "(projectKO_opt ko' :: Structures_H.notification option) = projectKO_opt ko" using xin thms(4) ceq
+	      by - (drule (1) bspec, cases ko, auto simp: projectKO_opt_ntfn)
+      thus "(projectKO_opt (the (ksPSpace s' x)) :: Structures_H.notification option) = projectKO_opt (the (ksPSpace s x))" using ko ko' 
 	      by simp
     qed fact
 
@@ -992,8 +992,8 @@ lemma cmap_relation_ep [intro]:
   unfolding rf_sr_def state_relation_def cstate_relation_def cpspace_relation_def
   by (simp add: Let_def)
 
-lemma cmap_relation_aep [intro]:
-  "(s, s') \<in> rf_sr \<Longrightarrow> cpspace_aep_relation (ksPSpace s) (t_hrs_' (globals s'))"
+lemma cmap_relation_ntfn [intro]:
+  "(s, s') \<in> rf_sr \<Longrightarrow> cpspace_ntfn_relation (ksPSpace s) (t_hrs_' (globals s'))"
   unfolding rf_sr_def state_relation_def cstate_relation_def cpspace_relation_def
   by (simp add: Let_def)
 
@@ -1204,32 +1204,32 @@ lemma ccap_relation_NullCap_iff:
   done
 
 (* MOVE *)
-lemma ko_at_valid_aep':
-  "\<lbrakk> ko_at' aep p s; valid_objs' s \<rbrakk> \<Longrightarrow> valid_aep' aep s"
+lemma ko_at_valid_ntfn':
+  "\<lbrakk> ko_at' ntfn p s; valid_objs' s \<rbrakk> \<Longrightarrow> valid_ntfn' ntfn s"
   apply (erule obj_atE')
   apply (erule (1) valid_objsE')
    apply (simp add: projectKOs valid_obj'_def)
    done
     
 (* MOVE *)
-lemma aep_blocked_in_queueD:
-  "\<lbrakk> st_tcb_at' (op = (Structures_H.thread_state.BlockedOnAsyncEvent aep)) thread \<sigma>; ko_at' aep' aep \<sigma>; invs' \<sigma> \<rbrakk> 
-   \<Longrightarrow> thread \<in> set (aepQueue (aepObj aep')) \<and> isWaitingAEP (aepObj aep')"
+lemma ntfn_blocked_in_queueD:
+  "\<lbrakk> st_tcb_at' (op = (Structures_H.thread_state.BlockedOnNotification ntfn)) thread \<sigma>; ko_at' ntfn' ntfn \<sigma>; invs' \<sigma> \<rbrakk> 
+   \<Longrightarrow> thread \<in> set (ntfnQueue (ntfnObj ntfn')) \<and> isWaitingNtfn (ntfnObj ntfn')"
   apply (drule sym_refs_st_tcb_atD')
    apply clarsimp
   apply (clarsimp simp: obj_at'_def ko_wp_at'_def projectKOs
-                        refs_of_rev'[where ko = "KOAEndpoint aep'", simplified])
-  apply (cases "aepObj aep'")
-    apply (simp_all add: isWaitingAEP_def)
+                        refs_of_rev'[where ko = "KONotification ntfn'", simplified])
+  apply (cases "ntfnObj ntfn'")
+    apply (simp_all add: isWaitingNtfn_def)
     done
 
 (* MOVE *)  
-lemma valid_aep_isWaitingAEPD:
-  "\<lbrakk> valid_aep' aep s; isWaitingAEP (aepObj aep) \<rbrakk>
-  \<Longrightarrow> (aepQueue (aepObj aep)) \<noteq> [] \<and> (\<forall>t\<in>set (aepQueue (aepObj aep)). tcb_at' t s)
-    \<and> distinct (aepQueue (aepObj aep))"
-  unfolding valid_aep'_def isWaitingAEP_def
-  by (clarsimp split: async_endpoint.splits aep.splits)
+lemma valid_ntfn_isWaitingNtfnD:
+  "\<lbrakk> valid_ntfn' ntfn s; isWaitingNtfn (ntfnObj ntfn) \<rbrakk>
+  \<Longrightarrow> (ntfnQueue (ntfnObj ntfn)) \<noteq> [] \<and> (\<forall>t\<in>set (ntfnQueue (ntfnObj ntfn)). tcb_at' t s)
+    \<and> distinct (ntfnQueue (ntfnObj ntfn))"
+  unfolding valid_ntfn'_def isWaitingNtfn_def
+  by (clarsimp split: Structures_H.notification.splits ntfn.splits)
 
 lemma cmap_relation_ko_atD:
   fixes ko :: "'a :: pspace_storable" and  mp :: "word32 \<rightharpoonup> 'a"
@@ -1261,25 +1261,25 @@ lemma cmap_relation_ko_atE:
   apply (erule (1) rl)
   done
   
-lemma aep_to_ep_queue:
-  assumes ko: "ko_at' aep' aep s"
-  and     waiting: "isWaitingAEP (aepObj aep')"
+lemma ntfn_to_ep_queue:
+  assumes ko: "ko_at' ntfn' ntfn s"
+  and     waiting: "isWaitingNtfn (ntfnObj ntfn')"
   and     rf: "(s, s') \<in> rf_sr"
-  shows "ep_queue_relation' (cslift s') (aepQueue (aepObj aep'))
-              (Ptr (aepQueue_head_CL
-                     (async_endpoint_lift (the (cslift s' (Ptr aep))))))
-              (Ptr (aepQueue_tail_CL
-                     (async_endpoint_lift (the (cslift s' (Ptr aep))))))"
+  shows "ep_queue_relation' (cslift s') (ntfnQueue (ntfnObj ntfn'))
+              (Ptr (ntfnQueue_head_CL
+                     (notification_lift (the (cslift s' (Ptr ntfn))))))
+              (Ptr (ntfnQueue_tail_CL
+                     (notification_lift (the (cslift s' (Ptr ntfn))))))"
 proof -
   from rf have
-    "cmap_relation (map_to_aeps (ksPSpace s)) (cslift s') Ptr (casync_endpoint_relation (cslift s'))"
-    by (rule cmap_relation_aep)
+    "cmap_relation (map_to_ntfns (ksPSpace s)) (cslift s') Ptr (cnotification_relation (cslift s'))"
+    by (rule cmap_relation_ntfn)
   
   thus ?thesis using ko waiting
     apply -
     apply (erule (1) cmap_relation_ko_atE)
-    apply (clarsimp simp: casync_endpoint_relation_def Let_def isWaitingAEP_def
-                   split: async_endpoint.splits aep.splits)
+    apply (clarsimp simp: cnotification_relation_def Let_def isWaitingNtfn_def
+                   split: Structures_H.notification.splits ntfn.splits)
     done
 qed
 
@@ -1513,11 +1513,11 @@ lemma map_to_ko_atI':
   done
 
 (* Levity: added (20090419 09:44:27) *)
-declare aepQueue_head_mask_4 [simp]
+declare ntfnQueue_head_mask_4 [simp]
 
-lemma aepQueue_tail_mask_4 [simp]:
-  "aepQueue_tail_CL (async_endpoint_lift ko') && ~~ mask 4 = aepQueue_tail_CL (async_endpoint_lift ko')"
-  unfolding async_endpoint_lift_def
+lemma ntfnQueue_tail_mask_4 [simp]:
+  "ntfnQueue_tail_CL (notification_lift ko') && ~~ mask 4 = ntfnQueue_tail_CL (notification_lift ko')"
+  unfolding notification_lift_def
   by (clarsimp simp: mask_def word_bw_assocs)
 
 lemma map_to_ctes_upd_tcb_no_ctes:
@@ -1533,16 +1533,16 @@ lemma map_to_ctes_upd_tcb_no_ctes:
   apply simp
   done
 
-lemma update_aep_map_tos:
-  fixes P :: "async_endpoint \<Rightarrow> bool"
+lemma update_ntfn_map_tos:
+  fixes P :: "Structures_H.notification \<Rightarrow> bool"
   assumes at: "obj_at' P p s"
-  shows   "map_to_eps (ksPSpace s(p \<mapsto> KOAEndpoint ko)) = map_to_eps (ksPSpace s)"
-  and     "map_to_tcbs (ksPSpace s(p \<mapsto> KOAEndpoint ko)) = map_to_tcbs (ksPSpace s)"
-  and     "map_to_ctes (ksPSpace s(p \<mapsto> KOAEndpoint ko)) = map_to_ctes (ksPSpace s)"
-  and     "map_to_pdes (ksPSpace s(p \<mapsto> KOAEndpoint ko)) = map_to_pdes (ksPSpace s)"
-  and     "map_to_ptes (ksPSpace s(p \<mapsto> KOAEndpoint ko)) = map_to_ptes (ksPSpace s)"
-  and     "map_to_asidpools (ksPSpace s(p \<mapsto> KOAEndpoint ko)) = map_to_asidpools (ksPSpace s)"
-  and     "map_to_user_data (ksPSpace s(p \<mapsto> KOAEndpoint ko)) = map_to_user_data (ksPSpace s)"
+  shows   "map_to_eps (ksPSpace s(p \<mapsto> KONotification ko)) = map_to_eps (ksPSpace s)"
+  and     "map_to_tcbs (ksPSpace s(p \<mapsto> KONotification ko)) = map_to_tcbs (ksPSpace s)"
+  and     "map_to_ctes (ksPSpace s(p \<mapsto> KONotification ko)) = map_to_ctes (ksPSpace s)"
+  and     "map_to_pdes (ksPSpace s(p \<mapsto> KONotification ko)) = map_to_pdes (ksPSpace s)"
+  and     "map_to_ptes (ksPSpace s(p \<mapsto> KONotification ko)) = map_to_ptes (ksPSpace s)"
+  and     "map_to_asidpools (ksPSpace s(p \<mapsto> KONotification ko)) = map_to_asidpools (ksPSpace s)"
+  and     "map_to_user_data (ksPSpace s(p \<mapsto> KONotification ko)) = map_to_user_data (ksPSpace s)"
   using at
   by (auto elim!: obj_atE' intro!: map_to_ctes_upd_other map_comp_eqI
     simp: projectKOs projectKO_opts_defs split: kernel_object.splits split_if_asm)+
@@ -1550,7 +1550,7 @@ lemma update_aep_map_tos:
 lemma update_ep_map_tos:
   fixes P :: "endpoint \<Rightarrow> bool"
   assumes at: "obj_at' P p s"
-  shows   "map_to_aeps (ksPSpace s(p \<mapsto> KOEndpoint ko)) = map_to_aeps (ksPSpace s)"
+  shows   "map_to_ntfns (ksPSpace s(p \<mapsto> KOEndpoint ko)) = map_to_ntfns (ksPSpace s)"
   and     "map_to_tcbs (ksPSpace s(p \<mapsto> KOEndpoint ko)) = map_to_tcbs (ksPSpace s)"
   and     "map_to_ctes (ksPSpace s(p \<mapsto> KOEndpoint ko)) = map_to_ctes (ksPSpace s)"
   and     "map_to_pdes (ksPSpace s(p \<mapsto> KOEndpoint ko)) = map_to_pdes (ksPSpace s)"
@@ -1565,7 +1565,7 @@ lemma update_tcb_map_tos:
   fixes P :: "tcb \<Rightarrow> bool"
   assumes at: "obj_at' P p s"
   shows   "map_to_eps (ksPSpace s(p \<mapsto> KOTCB ko)) = map_to_eps (ksPSpace s)"
-  and     "map_to_aeps (ksPSpace s(p \<mapsto> KOTCB ko)) = map_to_aeps (ksPSpace s)"
+  and     "map_to_ntfns (ksPSpace s(p \<mapsto> KOTCB ko)) = map_to_ntfns (ksPSpace s)"
   and     "map_to_pdes (ksPSpace s(p \<mapsto> KOTCB ko)) = map_to_pdes (ksPSpace s)"
   and     "map_to_ptes (ksPSpace s(p \<mapsto> KOTCB ko)) = map_to_ptes (ksPSpace s)"
   and     "map_to_asidpools (ksPSpace s(p \<mapsto> KOTCB ko)) = map_to_asidpools (ksPSpace s)"
@@ -1577,7 +1577,7 @@ lemma update_tcb_map_tos:
 lemma update_asidpool_map_tos:
   fixes P :: "asidpool \<Rightarrow> bool"
   assumes at: "obj_at' P p s"
-  shows   "map_to_aeps (ksPSpace s(p \<mapsto> KOArch (KOASIDPool ap))) = map_to_aeps (ksPSpace s)"
+  shows   "map_to_ntfns (ksPSpace s(p \<mapsto> KOArch (KOASIDPool ap))) = map_to_ntfns (ksPSpace s)"
   and     "map_to_tcbs (ksPSpace s(p \<mapsto> KOArch (KOASIDPool ap))) = map_to_tcbs (ksPSpace s)"
   and     "map_to_ctes (ksPSpace s(p \<mapsto> KOArch (KOASIDPool ap))) = map_to_ctes (ksPSpace s)"
   and     "map_to_pdes (ksPSpace s(p \<mapsto> KOArch (KOASIDPool ap))) = map_to_pdes (ksPSpace s)"
@@ -1603,7 +1603,7 @@ lemma update_pte_map_to_ptes:
 lemma update_pte_map_tos:
   fixes P :: "pte \<Rightarrow> bool"
   assumes at: "obj_at' P p s"
-  shows   "map_to_aeps (ksPSpace s(p \<mapsto> (KOArch (KOPTE pte)))) = map_to_aeps (ksPSpace s)"
+  shows   "map_to_ntfns (ksPSpace s(p \<mapsto> (KOArch (KOPTE pte)))) = map_to_ntfns (ksPSpace s)"
   and     "map_to_tcbs (ksPSpace s(p \<mapsto> (KOArch (KOPTE pte)))) = map_to_tcbs (ksPSpace s)"
   and     "map_to_ctes (ksPSpace s(p \<mapsto> (KOArch (KOPTE pte)))) = map_to_ctes (ksPSpace s)"
   and     "map_to_pdes (ksPSpace s(p \<mapsto> (KOArch (KOPTE pte)))) = map_to_pdes (ksPSpace s)"
@@ -1624,7 +1624,7 @@ lemma update_pde_map_to_pdes:
 lemma update_pde_map_tos:
   fixes P :: "pde \<Rightarrow> bool"
   assumes at: "obj_at' P p s"
-  shows   "map_to_aeps (ksPSpace s(p \<mapsto> (KOArch (KOPDE pde)))) = map_to_aeps (ksPSpace s)"
+  shows   "map_to_ntfns (ksPSpace s(p \<mapsto> (KOArch (KOPDE pde)))) = map_to_ntfns (ksPSpace s)"
   and     "map_to_tcbs (ksPSpace s(p \<mapsto> (KOArch (KOPDE pde)))) = map_to_tcbs (ksPSpace s)"
   and     "map_to_ctes (ksPSpace s(p \<mapsto> (KOArch (KOPDE pde)))) = map_to_ctes (ksPSpace s)"
   and     "map_to_ptes (ksPSpace s(p \<mapsto> (KOArch (KOPDE pde)))) = map_to_ptes (ksPSpace s)"
@@ -1674,7 +1674,7 @@ where
   | "thread_state_to_tsType (Structures_H.BlockedOnReply) = scast ThreadState_BlockedOnReply"
   | "thread_state_to_tsType (Structures_H.BlockedOnReceive oref dimin) = scast ThreadState_BlockedOnReceive"
   | "thread_state_to_tsType (Structures_H.BlockedOnSend oref badge cg isc) = scast ThreadState_BlockedOnSend"
-  | "thread_state_to_tsType (Structures_H.BlockedOnAsyncEvent oref) = scast ThreadState_BlockedOnAsyncEvent"
+  | "thread_state_to_tsType (Structures_H.BlockedOnNotification oref) = scast ThreadState_BlockedOnNotification"
 
 
 lemma ctcb_relation_thread_state_to_tsType:
@@ -1915,7 +1915,7 @@ lemma cap_get_tag_isCap_ArchObject:
 lemma cap_get_tag_isCap_unfolded_H_cap:
   shows "ccap_relation (capability.ThreadCap v0) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_thread_cap)"
   and "ccap_relation (capability.NullCap) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_null_cap)"
-  and "ccap_relation (capability.AsyncEndpointCap v4 v5 v6 v7) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_async_endpoint_cap) "
+  and "ccap_relation (capability.NotificationCap v4 v5 v6 v7) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_notification_cap) "
   and "ccap_relation (capability.EndpointCap v8 v9 v10 v11 v12) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_endpoint_cap)"
   and "ccap_relation (capability.IRQHandlerCap v13) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_irq_handler_cap)"
   and "ccap_relation (capability.IRQControlCap) cap' \<Longrightarrow> (cap_get_tag cap' = scast cap_irq_control_cap)"

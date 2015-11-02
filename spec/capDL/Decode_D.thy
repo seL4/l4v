@@ -123,9 +123,9 @@ where
              returnOk $ InvokeEndpoint (SyncMessage badge (Grant \<in> rights) o_id)
            else
              throw)
-       | AsyncEndpointCap o_id badge rights \<Rightarrow>
+       | NotificationCap o_id badge rights \<Rightarrow>
            (if Write \<in> rights then
-             returnOk $ InvokeAsyncEndpoint (AsyncMessage badge o_id)
+             returnOk $ InvokeNotification (Signal badge o_id)
            else
              throw)
        | ReplyCap o_id\<Rightarrow>

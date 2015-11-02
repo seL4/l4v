@@ -28,7 +28,7 @@ datatype apiobject_type =
     Untyped
   | TCBObject
   | EndpointObject
-  | AsyncEndpointObject
+  | NotificationObject
   | CapTableObject
   | ArchObject aobject_type
 
@@ -50,7 +50,7 @@ type_synonym cslot_ptr = "obj_ref \<times> cnode_index"
 
 text {* Capabilities. Capabilities represent explicit authority to perform some
 action and are required for all system calls. Capabilities to Endpoint,
-AsyncEndpoint, Thread and CNode objects allow manipulation of standard kernel
+Notification, Thread and CNode objects allow manipulation of standard kernel
 objects. Untyped capabilities allow the creation and removal of kernel objects
 from a memory region. Reply capabilities allow sending a one-off message to
 a thread waiting for a reply. IRQHandler and IRQControl caps allow a user to
@@ -67,7 +67,7 @@ datatype cap
          | UntypedCap obj_ref nat nat
            -- {* pointer, size in bits (i.e. @{text "size = 2^bits"}) and freeIndex (i.e. @{text "freeRef = obj_ref + (freeIndex * 2^4)"}) *}
          | EndpointCap obj_ref badge cap_rights
-         | AsyncEndpointCap obj_ref badge cap_rights
+         | NotificationCap obj_ref badge cap_rights
          | ReplyCap obj_ref bool
          | CNodeCap obj_ref nat "bool list"
            -- "CNode ptr, number of bits translated, guard"
@@ -101,13 +101,13 @@ primrec (nonexhaustive)
   cap_ep_badge :: "cap \<Rightarrow> badge"
 where
   "cap_ep_badge (EndpointCap _ badge _) = badge"
-| "cap_ep_badge (AsyncEndpointCap _ badge _) = badge"
+| "cap_ep_badge (NotificationCap _ badge _) = badge"
 
 primrec (nonexhaustive)
   cap_ep_ptr :: "cap \<Rightarrow> badge"
 where
   "cap_ep_ptr (EndpointCap obj_ref _ _) = obj_ref"
-| "cap_ep_ptr (AsyncEndpointCap obj_ref _ _) = obj_ref"
+| "cap_ep_ptr (NotificationCap obj_ref _ _) = obj_ref"
 
 definition
   bits_of :: "cap \<Rightarrow> nat" where
@@ -158,16 +158,16 @@ where
   "is_ep_cap (EndpointCap _ _ _) = True"
 | "is_ep_cap _                   = False"
 
-fun is_aep_cap :: "cap \<Rightarrow> bool"
+fun is_ntfn_cap :: "cap \<Rightarrow> bool"
 where
-  "is_aep_cap (AsyncEndpointCap _ _ _) = True"
-| "is_aep_cap _                        = False"
+  "is_ntfn_cap (NotificationCap _ _ _) = True"
+| "is_ntfn_cap _                        = False"
 
 primrec (nonexhaustive)
   cap_rights :: "cap \<Rightarrow> cap_rights"
 where
   "cap_rights (EndpointCap _ _ cr) = cr"
-| "cap_rights (AsyncEndpointCap _ _ cr) = cr"
+| "cap_rights (NotificationCap _ _ cr) = cr"
 | "cap_rights (ArchObjectCap acap) = acap_rights acap"
 
 text {* Various update functions for cap data common to various kinds of
@@ -177,8 +177,8 @@ definition
   "cap_rights_update cr' cap \<equiv>
    case cap of
      EndpointCap oref badge cr \<Rightarrow> EndpointCap oref badge cr'
-   | AsyncEndpointCap oref badge cr
-     \<Rightarrow> AsyncEndpointCap oref badge (cr' - {AllowGrant})
+   | NotificationCap oref badge cr
+     \<Rightarrow> NotificationCap oref badge (cr' - {AllowGrant})
    | ArchObjectCap acap \<Rightarrow> ArchObjectCap (acap_rights_update cr' acap)
    | _ \<Rightarrow> cap"
 
@@ -194,7 +194,7 @@ definition
   "badge_update data cap \<equiv>
    case cap of
      EndpointCap oref badge cr \<Rightarrow> EndpointCap oref (data && mask badge_bits) cr
-   | AsyncEndpointCap oref badge cr \<Rightarrow> AsyncEndpointCap oref (data && mask badge_bits) cr
+   | NotificationCap oref badge cr \<Rightarrow> NotificationCap oref (data && mask badge_bits) cr
    | _ \<Rightarrow> cap"
 
 
@@ -273,20 +273,20 @@ datatype endpoint
            | SendEP "obj_ref list"
            | RecvEP "obj_ref list"
 
-text {* AsyncEndpoints are asynchronous points of communication. Unlike regular
+text {* Notifications are asynchronous points of communication. Unlike regular
 endpoints, threads may block waiting to receive but not to send. Whenever a
-thread sends to an async endpoint, its message is stored in the endpoint
+thread sends to an notification, its message is stored in the endpoint
 immediately.
 *}
 
-datatype aep
-           = IdleAEP
-           | WaitingAEP "obj_ref list"
-           | ActiveAEP badge 
+datatype ntfn
+           = IdleNtfn
+           | WaitingNtfn "obj_ref list"
+           | ActiveNtfn badge 
 
-record async_ep = 
-  aep_obj :: aep
-  aep_bound_tcb :: "obj_ref option"
+record notification = 
+  ntfn_obj :: ntfn
+  ntfn_bound_tcb :: "obj_ref option"
 
 
 definition
@@ -294,14 +294,14 @@ definition
   "default_ep \<equiv> IdleEP"
 
 definition
-  default_aep :: aep where
-  "default_aep \<equiv> IdleAEP"
+  default_ntfn :: ntfn where
+  "default_ntfn \<equiv> IdleNtfn"
 
 definition
-  default_async_ep :: async_ep where
-  "default_async_ep \<equiv> \<lparr> 
-     aep_obj = default_aep,
-     aep_bound_tcb = None \<rparr>"
+  default_notification :: notification where
+  "default_notification \<equiv> \<lparr> 
+     ntfn_obj = default_ntfn,
+     ntfn_bound_tcb = None \<rparr>"
 
 
 text {* Thread Control Blocks are the in-kernel representation of a thread.
@@ -341,7 +341,7 @@ datatype thread_state
   | BlockedOnReceive obj_ref bool
   | BlockedOnSend obj_ref sender_payload
   | BlockedOnReply
-  | BlockedOnAsyncEvent obj_ref
+  | BlockedOnNotification obj_ref
   | IdleThreadState
 
 record tcb =
@@ -355,7 +355,7 @@ record tcb =
  tcb_ipc_buffer    :: vspace_ref
  tcb_context       :: user_context
  tcb_fault         :: "fault option"
- tcb_bound_aep     :: "obj_ref option"
+ tcb_bound_notification     :: "obj_ref option"
 
 
 text {* Determines whether a thread in a given state may be scheduled. *}
@@ -367,7 +367,7 @@ where
 | "runnable (Restart)               = True"
 | "runnable (BlockedOnReceive x y)  = False"
 | "runnable (BlockedOnSend x y)     = False"
-| "runnable (BlockedOnAsyncEvent x) = False"
+| "runnable (BlockedOnNotification x) = False"
 | "runnable (IdleThreadState)       = False"
 | "runnable (BlockedOnReply)        = False"
 
@@ -385,17 +385,17 @@ definition
       tcb_ipc_buffer = 0,
       tcb_context    = new_context,
       tcb_fault      = None, 
-      tcb_bound_aep  = None \<rparr>"
+      tcb_bound_notification  = None \<rparr>"
 
 text {*
-All kernel objects are CNodes, TCBs, Endpoints, AsyncEndpoints or architecture
+All kernel objects are CNodes, TCBs, Endpoints, Notifications or architecture
 specific.
 *}
 datatype kernel_object
          = CNode nat cnode_contents -- "size in bits, and contents"
          | TCB tcb
          | Endpoint endpoint
-         | AsyncEndpoint async_ep
+         | Notification notification
          | ArchObj arch_kernel_obj
 
 
@@ -417,7 +417,7 @@ where
                             else cte_level_bits)"
 | "obj_bits (TCB t) = 9"
 | "obj_bits (Endpoint ep) = 4"
-| "obj_bits (AsyncEndpoint aep) = 4"
+| "obj_bits (Notification ntfn) = 4"
 | "obj_bits (ArchObj ao) = arch_kobj_size ao"
 
 primrec (nonexhaustive)
@@ -426,7 +426,7 @@ where
   "obj_size NullCap = 0"
 | "obj_size (UntypedCap r bits f) = 1 << bits"
 | "obj_size (EndpointCap r b R) = 1 << obj_bits (Endpoint undefined)"
-| "obj_size (AsyncEndpointCap r b R) = 1 << obj_bits (AsyncEndpoint undefined)"
+| "obj_size (NotificationCap r b R) = 1 << obj_bits (Notification undefined)"
 | "obj_size (CNodeCap r bits g) = 1 << (cte_level_bits + bits)"
 | "obj_size (ThreadCap r) = 1 << obj_bits (TCB undefined)"
 | "obj_size (Zombie r zb n) = (case zb of None \<Rightarrow> 1 << obj_bits (TCB undefined)
@@ -451,20 +451,20 @@ type_synonym cdt = "cslot_ptr \<Rightarrow> cslot_ptr option"
 
 datatype irq_state =
    IRQInactive
- | IRQNotifyAEP
+ | IRQSignal
  | IRQTimer
 
 text {* The kernel state includes a heap, a capability derivation tree
 (CDT), a bitmap used to determine if a capability is the original
 capability to that object, a pointer to the current thread, a pointer
 to the system idle thread, the state of the underlying machine,
-per-irq pointers to cnodes (each containing one async endpoint through which
+per-irq pointers to cnodes (each containing one notification through which
 interrupts are delivered), an array recording which
 interrupts are used for which purpose, and the state of the
 architecture-specific kernel module.
 
 Note: for each irq, @{text "interrupt_irq_node irq"} points to a cnode which
-can contain the async endpoint cap through which interrupts are delivered. In
+can contain the notification cap through which interrupts are delivered. In
 C, this all lives in a single array. In the abstract spec though, to prove
 security, we can't have a single object accessible by everyone. Hence the need
 to separate irq handlers.
@@ -541,7 +541,7 @@ where
 | "obj_refs (UntypedCap r s f) = {}"
 | "obj_refs (CNodeCap r bits guard) = {r}"
 | "obj_refs (EndpointCap r b cr) = {r}"
-| "obj_refs (AsyncEndpointCap r b cr) = {r}"
+| "obj_refs (NotificationCap r b cr) = {r}"
 | "obj_refs (ThreadCap r) = {r}"
 | "obj_refs DomainCap = {}"
 | "obj_refs (Zombie ptr b n) = {ptr}"
@@ -559,7 +559,7 @@ where
 | "obj_ref_of (ReplyCap r m) = r"
 | "obj_ref_of (CNodeCap r bits guard) = r"
 | "obj_ref_of (EndpointCap r b cr) = r"
-| "obj_ref_of (AsyncEndpointCap r b cr) = r"
+| "obj_ref_of (NotificationCap r b cr) = r"
 | "obj_ref_of (ThreadCap r) = r"
 | "obj_ref_of (Zombie ptr b n) = ptr"
 | "obj_ref_of (ArchObjectCap x) = the (aobj_ref x)"

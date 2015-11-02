@@ -43,7 +43,7 @@ where
 | "irq_handler_inv_valid' (ClearIRQHandler irq) = \<top>"
 | "irq_handler_inv_valid' (SetIRQHandler irq cap cte_ptr)
      = (valid_cap' cap and valid_cap' (IRQHandlerCap irq)
-           and K (isAsyncEndpointCap cap)
+           and K (isNotificationCap cap)
            and cte_wp_at' (badge_derived' cap \<circ> cteCap) cte_ptr
            and (\<lambda>s. \<exists>ptr'. cte_wp_at' (\<lambda>cte. cteCap cte = IRQHandlerCap irq) ptr' s)
            and ex_cte_cap_wp_to' isCNodeCap cte_ptr)"
@@ -258,8 +258,8 @@ lemma invoke_irq_handler_corres:
    apply simp+
   done
 
-lemma aep_badge_derived_enough_strg:
-  "cte_wp_at' (\<lambda>cte. isAsyncEndpointCap cap \<and> badge_derived' cap (cteCap cte)) ptr s
+lemma ntfn_badge_derived_enough_strg:
+  "cte_wp_at' (\<lambda>cte. isNotificationCap cap \<and> badge_derived' cap (cteCap cte)) ptr s
         \<longrightarrow> cte_wp_at' (is_derived' ctes ptr cap \<circ> cteCap) ptr s"
   by (clarsimp simp: cte_wp_at_ctes_of isCap_simps
                      badge_derived'_def is_derived'_def vsCapRef_def)
@@ -303,7 +303,7 @@ lemma invoke_irq_handler_invs'[wp]:
       valid_machine_state'_def ct_not_inQ_def
       ct_in_current_domain_ksMachineState)
    apply (wp cteInsert_invs)
-   apply (strengthen aep_badge_derived_enough_strg isnt_irq_handler_strg)
+   apply (strengthen ntfn_badge_derived_enough_strg isnt_irq_handler_strg)
    apply (wp cteDeleteOne_other_cap[unfolded o_def])[1]
   apply (rename_tac word1 cap word2)
   apply (simp add: getInterruptState_def getIRQSlot_def locateSlot_conv)
@@ -362,7 +362,7 @@ lemma setIRQState_cte_cap_to'[wp]:
   done
 
 lemma setIRQState_issued[wp]:
-  "\<lbrace>K (st = IRQNotifyAEP)\<rbrace> setIRQState st irq \<lbrace>\<lambda>rv. irq_issued' irq\<rbrace>"
+  "\<lbrace>K (st = IRQSignal)\<rbrace> setIRQState st irq \<lbrace>\<lambda>rv. irq_issued' irq\<rbrace>"
   apply (simp add: setIRQState_def irq_issued'_def setInterruptState_def
                    getInterruptState_def)
   apply wp
@@ -574,7 +574,7 @@ lemma handle_interrupt_corres:
          apply (rule corres_split'[where r'=dc])
             apply (case_tac cap, simp_all add: when_False when_True doMachineOp_return)[1]
              apply (clarsimp simp add: when_def doMachineOp_return)
-             apply (rule corres_guard_imp, rule send_async_ipc_corres)
+             apply (rule corres_guard_imp, rule send_signal_corres)
               apply (clarsimp simp: valid_cap_def)
              apply (clarsimp simp: valid_cap'_def)
             apply (clarsimp simp: doMachineOp_return)

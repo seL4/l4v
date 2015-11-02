@@ -22,17 +22,17 @@ lemma lift_t_cslift:
 
 context kernel begin
 
-lemma ccorres_pre_getAsyncEP:
+lemma ccorres_pre_getNotification:
   assumes cc: "\<And>rv. ccorres r xf (P rv) (P' rv) hs (f rv) c"
   shows   "ccorres r xf 
-           (\<lambda>s. \<forall>aep. ko_at' aep p s \<longrightarrow> P aep s)
-           ({s'. \<forall>aep s. (s, s') \<in> rf_sr \<and> ko_at' aep p s \<longrightarrow> s' \<in> P' aep})
-           hs (getAsyncEP p >>= (\<lambda>rv. f rv)) c"
+           (\<lambda>s. \<forall>ntfn. ko_at' ntfn p s \<longrightarrow> P ntfn s)
+           ({s'. \<forall>ntfn s. (s, s') \<in> rf_sr \<and> ko_at' ntfn p s \<longrightarrow> s' \<in> P' ntfn})
+           hs (getNotification p >>= (\<lambda>rv. f rv)) c"
   apply (rule ccorres_guard_imp)
     apply (rule ccorres_symb_exec_l)
        defer
        apply wp[1]
-      apply (rule get_aep_sp')
+      apply (rule get_ntfn_sp')
      apply simp
     apply assumption
    defer

@@ -44,7 +44,7 @@ lemma one_on_true_eq_0[simp]: "(one_on_true P = 0) = (\<not> P)"
 lemma cap_cases_one_on_true_sum:
   "one_on_true (isZombie cap) + one_on_true (isArchObjectCap cap)
      + one_on_true (isThreadCap cap) + one_on_true (isCNodeCap cap)
-     + one_on_true (isAsyncEndpointCap cap) + one_on_true (isEndpointCap cap)
+     + one_on_true (isNotificationCap cap) + one_on_true (isEndpointCap cap)
      + one_on_true (isUntypedCap cap) + one_on_true (isReplyCap cap)
      + one_on_true (isIRQControlCap cap) + one_on_true (isIRQHandlerCap cap)
      + one_on_true (isNullCap cap) + one_on_true (isDomainCap cap) = 1"
@@ -75,21 +75,21 @@ lemma performInvocation_Endpoint_ccorres:
 
 (* This lemma now assumes 'weak_sch_act_wf (ksSchedulerAction s) s' in place of 'sch_act_simple'. *)
 
-lemma performInvocation_AsyncEndpoint_ccorres:
+lemma performInvocation_Notification_ccorres:
   "ccorres (K (K \<bottom>) \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
        (invs' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s))
-       (UNIV \<inter> {s. aep_' s = aep_Ptr aepptr}
+       (UNIV \<inter> {s. ntfn_' s = ntfn_Ptr ntfnptr}
              \<inter> {s. badge_' s = badge}
              \<inter> {s. message_' s = message}) []
-     (liftE (sendAsyncIPC aepptr badge))
-     (Call performInvocation_AsyncEndpoint_'proc)"
+     (liftE (sendSignal ntfnptr badge))
+     (Call performInvocation_Notification_'proc)"
   apply cinit
-   apply (ctac add: sendAsyncIPC_ccorres)
+   apply (ctac add: sendSignal_ccorres)
      apply (simp add: return_returnOk)
      apply (rule ccorres_return_CE, simp+)[1]
     apply wp
    apply simp
-   apply (vcg exspec=sendAsyncIPC_modifies)
+   apply (vcg exspec=sendSignal_modifies)
   apply simp
   done
 
@@ -226,7 +226,7 @@ lemma decodeInvocation_ccorres:
        apply csymbr
        apply csymbr
        apply (simp only: liftE_bindE[symmetric])
-       apply (ctac(no_vcg) add: performInvocation_AsyncEndpoint_ccorres)
+       apply (ctac(no_vcg) add: performInvocation_Notification_ccorres)
          apply (rule ccorres_alternative2)
          apply (rule ccorres_return_CE, simp+)[1]
         apply (rule ccorres_return_C_errorE, simp+)[1]
@@ -328,9 +328,9 @@ lemma decodeInvocation_ccorres:
   apply (rule conjI | clarsimp
               | drule(1) cap_get_tag_to_H
               | simp add: cap_endpoint_cap_lift_def
-                          cap_async_endpoint_cap_lift_def
+                          cap_notification_cap_lift_def
                           cap_reply_cap_lift_def cap_lift_endpoint_cap
-                          cap_lift_async_endpoint_cap cap_lift_reply_cap
+                          cap_lift_notification_cap cap_lift_reply_cap
                           from_bool_to_bool_and_1 word_size
                           order_le_less_trans[OF word_and_le1]
                           mask_eq_iff_w2p word_size ucast_ucast_mask
@@ -1204,14 +1204,14 @@ lemma deleteCallerCap_ccorres [corres]:
 
 
 (* FIXME: MOVE *)
-lemma cap_case_EndpointCap_AsyncEndpointCap:
+lemma cap_case_EndpointCap_NotificationCap:
   "(case cap of EndpointCap v0 v1 v2 v3 v4 \<Rightarrow> f v0 v1 v2 v3 v4 
-              | AsyncEndpointCap v0 v1 v2 v3  \<Rightarrow> g v0 v1 v2 v3
+              | NotificationCap v0 v1 v2 v3  \<Rightarrow> g v0 v1 v2 v3
               | _ \<Rightarrow> h)
    = (if isEndpointCap cap
       then f (capEPPtr cap)  (capEPBadge cap) (capEPCanSend cap) (capEPCanReceive cap) (capEPCanGrant cap) 
-      else if isAsyncEndpointCap cap
-           then g (capAEPPtr cap)  (capAEPBadge cap) (capAEPCanSend cap) (capAEPCanReceive cap)
+      else if isNotificationCap cap
+           then g (capNtfnPtr cap)  (capNtfnBadge cap) (capNtfnCanSend cap) (capNtfnCanReceive cap)
            else h)"
   by (simp add: isCap_simps
          split: capability.split)
@@ -1248,17 +1248,17 @@ lemma invs_valid_objs_strengthen:
 lemma ct_not_ksQ_strengthen:
   "thread = ksCurThread s \<and> ksCurThread s \<notin> set (ksReadyQueues s p) \<longrightarrow> thread \<notin> set (ksReadyQueues s p)" by fastforce
 
-lemma option_to_ctcb_ptr_valid_aep:
-  "valid_aep' aep s ==> (option_to_ctcb_ptr (aepBoundTCB aep) = NULL) = (aepBoundTCB aep = None)"
-  apply (cases "aepBoundTCB aep", simp_all add: option_to_ctcb_ptr_def)
-  apply (clarsimp simp: valid_aep'_def tcb_at_not_NULL)
+lemma option_to_ctcb_ptr_valid_ntfn:
+  "valid_ntfn' ntfn s ==> (option_to_ctcb_ptr (ntfnBoundTCB ntfn) = NULL) = (ntfnBoundTCB ntfn = None)"
+  apply (cases "ntfnBoundTCB ntfn", simp_all add: option_to_ctcb_ptr_def)
+  apply (clarsimp simp: valid_ntfn'_def tcb_at_not_NULL)
   done
 
 
-lemma deleteCallerCap_valid_aep'[wp]:
-  "\<lbrace>\<lambda>s. valid_aep' x s\<rbrace> deleteCallerCap c \<lbrace>\<lambda>rv s. valid_aep' x s\<rbrace>"
+lemma deleteCallerCap_valid_ntfn'[wp]:
+  "\<lbrace>\<lambda>s. valid_ntfn' x s\<rbrace> deleteCallerCap c \<lbrace>\<lambda>rv s. valid_ntfn' x s\<rbrace>"
   apply (wp hoare_vcg_ex_lift hoare_vcg_all_lift hoare_vcg_ball_lift hoare_vcg_imp_lift 
-            | simp add: valid_aep'_def split: aep.splits)+
+            | simp add: valid_ntfn'_def split: ntfn.splits)+
    apply auto
   done
 
@@ -1268,8 +1268,8 @@ lemma hoare_vcg_imp_liftE:
   done
 
 
-lemma not_obj_at'_aep:
-  "(\<not>obj_at' (P::Structures_H.async_endpoint \<Rightarrow> bool) t s) = (\<not> typ_at' AsyncEndpointT t s \<or> obj_at' (Not \<circ> P) t s)"
+lemma not_obj_at'_ntfn:
+  "(\<not>obj_at' (P::Structures_H.notification \<Rightarrow> bool) t s) = (\<not> typ_at' NotificationT t s \<or> obj_at' (Not \<circ> P) t s)"
   apply (simp add: obj_at'_real_def projectKOs typ_at'_def ko_wp_at'_def objBits_simps)
   apply (rule iffI)
    apply (clarsimp)
@@ -1301,7 +1301,7 @@ lemma handleWait_ccorres:
         apply (rule ccorres_Catch)
         apply csymbr
         apply (simp add: cap_get_tag_isCap del: Collect_const)
-        apply (clarsimp simp: cap_case_EndpointCap_AsyncEndpointCap 
+        apply (clarsimp simp: cap_case_EndpointCap_NotificationCap 
                               capFaultOnFailure_if_case_sum)
         apply (rule ccorres_cond_both' [where Q=\<top> and Q'=\<top>])
           apply clarsimp
@@ -1359,7 +1359,7 @@ lemma handleWait_ccorres:
            apply csymbr
            apply csymbr
            apply csymbr
-           apply (rename_tac thread epCPtr rv rva aepptr)
+           apply (rename_tac thread epCPtr rv rva ntfnptr)
            apply (rule_tac P="valid_cap' rv" in ccorres_cross_over_guard)
            apply (simp only: capFault_injection injection_handler_If injection_liftE 
                             injection_handler_throwError if_to_top_of_bind)
@@ -1369,13 +1369,13 @@ lemma handleWait_ccorres:
            apply csymbr
            apply (rule ccorres_if_lhs)
             
-            apply (rule ccorres_pre_getAsyncEP)
-            apply (rename_tac aep)
-            apply (rule_tac Q="valid_aep' aep and (\<lambda>s. thread = ksCurThread s)"
-                      and Q'="\<lambda>s. ret__unsigned_longa = ptr_val (option_to_ctcb_ptr (aepBoundTCB aep))"
+            apply (rule ccorres_pre_getNotification)
+            apply (rename_tac ntfn)
+            apply (rule_tac Q="valid_ntfn' ntfn and (\<lambda>s. thread = ksCurThread s)"
+                      and Q'="\<lambda>s. ret__unsigned_longa = ptr_val (option_to_ctcb_ptr (ntfnBoundTCB ntfn))"
                 in ccorres_if_cond_throws_break2)
-               apply (clarsimp simp: cap_get_tag_isCap[symmetric] cap_get_tag_AsyncEndpointCap
-                                     option_to_ctcb_ptr_valid_aep rf_sr_ksCurThread)
+               apply (clarsimp simp: cap_get_tag_isCap[symmetric] cap_get_tag_NotificationCap
+                                     option_to_ctcb_ptr_valid_ntfn rf_sr_ksCurThread)
                apply (auto simp: option_to_ctcb_ptr_def)[1]
               apply (rule ccorres_rhs_assoc)+
 
@@ -1405,7 +1405,7 @@ lemma handleWait_ccorres:
               apply clarsimp
 
              apply (simp add: liftE_bind) 
-             apply (ctac  add: receiveAsyncIPC_ccorres[unfolded dc_def])
+             apply (ctac  add: receiveSignal_ccorres[unfolded dc_def])
             apply clarsimp
             apply (vcg exspec=handleFault_modifies)
            apply (rule ccorres_cond_true_seq)
@@ -1490,16 +1490,16 @@ lemma handleWait_ccorres:
   apply (clarsimp dest: invs_valid_objs')
              apply (clarsimp simp: cfault_rel_def fault_cap_fault_lift 
                               lookup_fault_missing_capability_lift is_cap_fault_def)+
-         apply (clarsimp simp: cap_get_tag_AsyncEndpointCap)
-         apply (rule cmap_relationE1[OF cmap_relation_aep], assumption, erule ko_at_projectKO_opt)
-         apply (clarsimp simp: casync_endpoint_relation_def Let_def)
+         apply (clarsimp simp: cap_get_tag_NotificationCap)
+         apply (rule cmap_relationE1[OF cmap_relation_ntfn], assumption, erule ko_at_projectKO_opt)
+         apply (clarsimp simp: cnotification_relation_def Let_def)
         apply (clarsimp simp: cfault_rel_def fault_cap_fault_lift
                                  lookup_fault_missing_capability_lift is_cap_fault_def)+
-     apply (clarsimp simp: cap_get_tag_AsyncEndpointCap)
+     apply (clarsimp simp: cap_get_tag_NotificationCap)
      apply (simp add: ccap_relation_def to_bool_def)
-    apply (clarsimp simp: cap_get_tag_AsyncEndpointCap valid_cap'_def)
+    apply (clarsimp simp: cap_get_tag_NotificationCap valid_cap'_def)
     apply (drule obj_at_ko_at', clarsimp)
-    apply (rule cmap_relationE1[OF cmap_relation_aep], assumption, erule ko_at_projectKO_opt)
+    apply (rule cmap_relationE1[OF cmap_relation_ntfn], assumption, erule ko_at_projectKO_opt)
     apply (clarsimp simp: typ_heap_simps)
    apply (clarsimp simp: cfault_rel_def fault_cap_fault_lift
                             lookup_fault_missing_capability_lift is_cap_fault_def)+
@@ -1565,16 +1565,16 @@ lemma ccorres_pre_getIRQState:
   done
 
 (* FIXME: move *)  
-lemma ccorres_aep_cases:
-  assumes P: "\<And>p b send d. cap = AsyncEndpointCap p b send d \<Longrightarrow> ccorres r xf (P p b send d) (P' p b send d) hs (a cap) (c cap)"
-  assumes Q: "\<not>isAsyncEndpointCap cap \<Longrightarrow> ccorres r xf (Q cap) (Q' cap) hs (a cap) (c cap)"
+lemma ccorres_ntfn_cases:
+  assumes P: "\<And>p b send d. cap = NotificationCap p b send d \<Longrightarrow> ccorres r xf (P p b send d) (P' p b send d) hs (a cap) (c cap)"
+  assumes Q: "\<not>isNotificationCap cap \<Longrightarrow> ccorres r xf (Q cap) (Q' cap) hs (a cap) (c cap)"
   shows
-  "ccorres r xf (\<lambda>s. (\<forall>p b send d. cap = AsyncEndpointCap p b send d \<longrightarrow> P p b send d s) \<and> 
-                     (\<not>isAsyncEndpointCap cap \<longrightarrow> Q cap s)) 
-               ({s. \<forall>p b send d. cap = AsyncEndpointCap p b send d \<longrightarrow> s \<in> P' p b send d} \<inter> 
-                {s. \<not>isAsyncEndpointCap cap \<longrightarrow> s \<in> Q' cap}) 
+  "ccorres r xf (\<lambda>s. (\<forall>p b send d. cap = NotificationCap p b send d \<longrightarrow> P p b send d s) \<and> 
+                     (\<not>isNotificationCap cap \<longrightarrow> Q cap s)) 
+               ({s. \<forall>p b send d. cap = NotificationCap p b send d \<longrightarrow> s \<in> P' p b send d} \<inter> 
+                {s. \<not>isNotificationCap cap \<longrightarrow> s \<in> Q' cap}) 
                hs (a cap) (c cap)"
-  apply (cases "isAsyncEndpointCap cap")
+  apply (cases "isNotificationCap cap")
    apply (simp add: isCap_simps)
    apply (elim exE)
    apply (rule ccorres_guard_imp)
@@ -1641,7 +1641,7 @@ lemma handleInterrupt_ccorres:
     apply ctac
       apply csymbr
       apply csymbr
-      apply (rule ccorres_aep_cases)
+      apply (rule ccorres_ntfn_cases)
        apply (clarsimp cong: call_ignore_cong simp del: Collect_const)
        apply (rule_tac b=send in ccorres_case_bools)
         apply simp
@@ -1653,7 +1653,7 @@ lemma handleInterrupt_ccorres:
         apply (rule ccorres_rhs_assoc)+
         apply csymbr
         apply csymbr
-        apply (ctac (no_vcg) add: sendAsyncIPC_ccorres)
+        apply (ctac (no_vcg) add: sendSignal_ccorres)
          apply (ctac (no_vcg) add: maskInterrupt_ccorres)
           apply (ctac add: ackInterrupt_ccorres [unfolded dc_def])
          apply wp
@@ -1667,7 +1667,7 @@ lemma handleInterrupt_ccorres:
        apply (ctac (no_vcg) add: maskInterrupt_ccorres)
         apply (ctac add: ackInterrupt_ccorres [unfolded dc_def])
        apply wp
-      apply (rule_tac P=\<top> and P'="{s. ret__int_' s = 0 \<and> cap_get_tag cap \<noteq> scast cap_async_endpoint_cap}" in ccorres_inst)
+      apply (rule_tac P=\<top> and P'="{s. ret__int_' s = 0 \<and> cap_get_tag cap \<noteq> scast cap_notification_cap}" in ccorres_inst)
       apply (clarsimp simp: isCap_simps simp del: Collect_const)
       apply (case_tac rvb, simp_all del: Collect_const)[1]
                 prefer 3
@@ -1698,7 +1698,7 @@ lemma handleInterrupt_ccorres:
                      source_size_def target_size_def word_size
               intro: word_0_sle_from_less sless_positive)[1]
   apply (simp add: if_1_0_0 Collect_const_mem)
-  apply (clarsimp simp: Kernel_C.IRQTimer_def Kernel_C.IRQNotifyAEP_def
+  apply (clarsimp simp: Kernel_C.IRQTimer_def Kernel_C.IRQSignal_def
                         cte_wp_at_ctes_of)
   apply (erule(1) cmap_relationE1[OF cmap_relation_cte])
   apply (clarsimp simp: typ_heap_simps')

@@ -44,7 +44,7 @@ where
      party completes the rendezvous,
      the affects caused to t depend of course on the state of the endpoint.
      Since t is in l's domain, the ep better be too. *)
-  "\<lbrakk>(a, auth', ep) \<in> g; auth' \<in> {AsyncSend,SyncSend,Reset};
+  "\<lbrakk>(a, auth', ep) \<in> g; auth' \<in> {Notify,SyncSend,Reset};
     (t, auth, ep) \<in> g; auth \<in> {SyncSend, Receive}; 
    t \<in> subjectReads g l\<rbrakk>
    \<Longrightarrow> ep \<in> subjectReads g l" |
@@ -681,11 +681,11 @@ for g :: "'a auth_graph" and l :: "'a" where
     "\<lbrakk>(l,auth,l') \<in> g; auth \<in> {Control, Write}\<rbrakk> \<Longrightarrow>
      l' \<in> subjectAffects g l" |
   affects_ep:
-    "\<lbrakk>(l,auth,l') \<in> g; auth \<in> {Receive, AsyncSend, SyncSend, Reset}\<rbrakk> \<Longrightarrow>
+    "\<lbrakk>(l,auth,l') \<in> g; auth \<in> {Receive, Notify, SyncSend, Reset}\<rbrakk> \<Longrightarrow>
      l' \<in> subjectAffects g l" |
   (* ipc buffer is not necessary owned by thread *)
   affects_send:
-    "\<lbrakk>(l,auth,ep) \<in> g; auth \<in> {SyncSend, AsyncSend}; (l',Receive,ep) \<in> g;
+    "\<lbrakk>(l,auth,ep) \<in> g; auth \<in> {SyncSend, Notify}; (l',Receive,ep) \<in> g;
       (l',Write,l'') \<in> g\<rbrakk> \<Longrightarrow>
      l'' \<in> subjectAffects g l" |
   (* synchronous sends provide a back-channel from receiver to sender *)
@@ -700,11 +700,11 @@ for g :: "'a auth_graph" and l :: "'a" where
   (* if you alter an asid mapping, you affect the domain who owns that asid *)
   affects_asidpool_map:
     "(l,ASIDPoolMapsASID,l') \<in> g \<Longrightarrow> l' \<in> subjectAffects g l" |
-  (* if you are sending to an aep, which is bound to a tcb that is
+  (* if you are sending to an ntfn, which is bound to a tcb that is
      receive blocked on an ep, then you can affect that ep *)
   affects_ep_bound_trans:
-    "\<lbrakk>\<exists>tcb aep. (tcb, Receive, aep) \<in> g \<and> (tcb, Receive, ep) \<in> g \<and>
-                (l, AsyncSend, aep) \<in> g\<rbrakk> \<Longrightarrow>
+    "\<lbrakk>\<exists>tcb ntfn. (tcb, Receive, ntfn) \<in> g \<and> (tcb, Receive, ep) \<in> g \<and>
+                (l, Notify, ntfn) \<in> g\<rbrakk> \<Longrightarrow>
         ep \<in> subjectAffects g l"
 
 (* We define when the current subject can affect another domain whose label is
@@ -1493,15 +1493,15 @@ lemma auth_ipc_buffers_mem_Write':
    of what the current subject can read, and the domain l in reads_respects. 
    Such updates cannot be "observed" by reads_respects, which allows the two 
    code paths to potentially diverge from each other. This is important when, 
-   e.g. we look at async IPC. The actions taken during send_async_ipc cannot 
-   depend on the state of the async endpoint, so we could have the situation in
-   which in one execution the aep has someone queued on it but in the other it 
-   doesn't. This will occur only if the guy queued on the aep is not in the 
+   e.g. we look at async IPC. The actions taken during send_signal cannot 
+   depend on the state of the notification, so we could have the situation in
+   which in one execution the ntfn has someone queued on it but in the other it 
+   doesn't. This will occur only if the guy queued on the ntfn is not in the 
    domains the current subject is allowed to read from plus domain l (otherwise
    being reads_equiv aag and affects_equiv aag l would (with the invariants) 
    cause him to be on the queue in both scenarios). The update that happens to 
    this guy's threadstate in one execution but not the other, and the different
-   effects that occur to the aep in each case, therefore, should
+   effects that occur to the ntfn in each case, therefore, should
    not break reads_respects because they cannot be observed. We need to be able
    to reason about this, hence this machinery. 
 *)
