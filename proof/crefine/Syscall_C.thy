@@ -1462,10 +1462,10 @@ lemma handleWait_ccorres:
         apply vcg
        apply (rule conseqPre, vcg)
        apply clarsimp
-      apply (wp) 
+      apply (wp)
       apply clarsimp
       apply (rename_tac thread epCPtr)
-        apply (rule_tac Q="(\<lambda>rv s. invs' s \<and> st_tcb_at' simple' thread s
+        apply (rule_tac Q'="(\<lambda>rv s. invs' s \<and> st_tcb_at' simple' thread s
                \<and> sch_act_sane s \<and> (\<forall>p. thread \<notin> set (ksReadyQueues s p)) \<and> thread = ksCurThread s
                \<and> valid_cap' rv s)" in hoare_post_imp_R[rotated])
          apply (clarsimp simp: sch_act_sane_def)
