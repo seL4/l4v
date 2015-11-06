@@ -39,6 +39,7 @@ sig
 
   val get_function_callees : fn_info -> string -> string list;
   val get_topo_sorted_functions : fn_info -> string list list;
+  val set_autocorres_scope : fn_info -> string Symset.set -> fn_info;
 
   val fn_def_update_name : string -> function_def -> function_def;
   val fn_def_update_args : (string * typ) list -> function_def -> function_def;
@@ -115,34 +116,8 @@ datatype fn_info = FunctionInfo of {
  * We pre-calculate some information here to avoid having to
  * do it several times later.
  *)
-fun mk_function_info fn_info_dict =
+fun precalc_function_info const_to_function fn_info_dict function_callees =
 let
-  (* Construct a dictionary from the constant name of a function to its name. *)
-  val const_to_function =
-    map (fn (a, b) => (#raw_const b, a)) (Symtab.dest fn_info_dict)
-    |> Termtab.make
-
-  (* Get a function's direct callees, based on the list of constants that appear
-   * in its definition. *)
-  fun get_direct_callees function =
-  let
-    val body =
-      #definition function
-      |> Thm.concl_of
-      |> Utils.rhs_of
-  in
-    Term.fold_aterms (fn t => fn a =>
-          (Termtab.lookup const_to_function t
-          |> Option.map single
-          |> the_default []) @ a) body []
-    |> distinct (op =)
-  end
-  val function_callees =
-    fn_info_dict
-    |> Symtab.dest
-    |> map (apsnd get_direct_callees)
-    |> Symtab.make
-
   (*
    * Get a topologically sorted list of functions, based on the call graph.
    *)
@@ -187,6 +162,35 @@ in
     recursive_functions = recursive_functions
   }
 end
+
+fun mk_function_info fn_info_dict =
+let
+  (* Construct a dictionary from the constant name of a function to its name. *)
+  val const_to_function =
+    map (fn (a, b) => (#raw_const b, a)) (Symtab.dest fn_info_dict)
+    |> Termtab.make
+
+  (* Get a function's direct callees, based on the list of constants that appear
+   * in its definition. *)
+  fun get_direct_callees function =
+  let
+    val body =
+      #definition function
+      |> Thm.concl_of
+      |> Utils.rhs_of
+  in
+    Term.fold_aterms (fn t => fn a =>
+          (Termtab.lookup const_to_function t
+          |> Option.map single
+          |> the_default []) @ a) body []
+    |> distinct (op =)
+  end
+  val function_callees =
+    fn_info_dict
+    |> Symtab.dest
+    |> map (apsnd get_direct_callees)
+    |> Symtab.make
+in precalc_function_info const_to_function fn_info_dict function_callees end
 
 
 (* Generate a "function_info" from the C Parser's output. *)
@@ -248,6 +252,19 @@ in
   |> Symtab.make
   |> mk_function_info
 end
+
+(*
+ * Remove calls from a set of functions, potentially breaking some
+ * recursive function groups. Used for "scope" option.
+ *)
+fun set_autocorres_scope (FunctionInfo fn_info) scope_fns = let
+  val const_to_function = #const_to_function fn_info
+  val fn_info_dict = #function_info fn_info
+  val function_callees =
+        #function_callees fn_info
+        |> Symtab.map (fn f => fn callees =>
+                if Symset.contains scope_fns f then callees else [])
+  in precalc_function_info const_to_function fn_info_dict function_callees end
 
 (*
  * Misc getters for function information.

@@ -422,17 +422,30 @@ let
                   SOME (if Symset.contains all_functions (#name def) then def
                         else FunctionInfo.fn_def_update_is_simpl_wrapper true def)) fn_info
 
+  (* Don't consider function calls in un-translated functions. *)
+  val fn_info = FunctionInfo.set_autocorres_scope fn_info all_functions
+
   (* Disable heap lifting for all un-translated functions. *)
-  val no_heap_abs' = Symset.subtract all_functions all_simpl_functions
+  val untranslated_functions = Symset.subtract all_functions all_simpl_functions
   val conflicting_heap_lift_fns =
-      Symset.inter no_heap_abs' (Symset.make (these (!(#force_heap_abs opt))))
+      Symset.inter untranslated_functions (Symset.make (these (!(#force_heap_abs opt))))
   val _ = if not (Symset.is_empty conflicting_heap_lift_fns) then
             error ("autocorres: Functions marked 'force_heap_abs' but excluded from 'scope': "
                   ^ commas (Symset.dest conflicting_heap_lift_fns))
           else
             ()
 
-  val no_heap_abs = Symset.union (Symset.make no_heap_abs) no_heap_abs'
+  val no_heap_abs = Symset.union (Symset.make no_heap_abs) untranslated_functions
+
+  (* Disable word abstraction for all un-translated functions. *)
+  val unsigned_word_abs = these (!(#unsigned_word_abs opt)) |> Symset.make
+  val no_signed_word_abs = these (!(#no_signed_word_abs opt)) |> Symset.make
+  val conflicting_unsigned_abs_fns =
+        Symset.inter untranslated_functions unsigned_word_abs
+  val _ = if Symset.is_empty conflicting_unsigned_abs_fns then () else
+            error ("autocorres: Functions marked 'unsigned_word_abs' but excluded from 'scope': "
+                   ^ commas (Symset.dest conflicting_unsigned_abs_fns))
+  val no_signed_word_abs = Symset.union no_signed_word_abs untranslated_functions
 
   (*
    * Sanity check the C parser's output.
@@ -521,7 +534,7 @@ let
         if skip_word_abs then (lthy, fn_info) else
         WordAbstract.word_abstract
             filename prog_info fn_info
-            (these (!(#unsigned_word_abs opt))) (these (!(#no_signed_word_abs opt)))
+            unsigned_word_abs no_signed_word_abs
             (these (!(#trace_word_abs opt))) do_opt trace_opt
             (prefix "wa_" o make_function_name) lthy
 

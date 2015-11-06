@@ -157,8 +157,8 @@ fun word_abstract
       (filename: string)
       (prog_info: ProgramInfo.prog_info)
       (fn_info: FunctionInfo.fn_info)
-      (unsigned_abs: string list)
-      (no_signed_abs: string list)
+      (unsigned_abs: Symset.key Symset.set)
+      (no_signed_abs: Symset.key Symset.set)
       (trace_funcs: string list)
       (do_opt: bool)
       (trace_opt: bool)
@@ -168,9 +168,6 @@ let
   (*
    * Select the rules to translate each function.
    *)
-  val unsigned_abs = Symset.make unsigned_abs
-  val no_signed_abs = Symset.make no_signed_abs
-
   fun rules_for fn_name =
       (if Symset.contains unsigned_abs fn_name then word_abs else []) @
       (if Symset.contains no_signed_abs fn_name then [] else sword_abs)
