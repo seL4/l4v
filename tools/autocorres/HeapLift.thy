@@ -281,6 +281,15 @@ lemma L2Tcorres_exec_concrete [heap_abs]:
   apply simp
   done
 
+lemma L2Tcorres_exec_concrete_simpl [heap_abs]:
+  "L2Tcorres id A C \<Longrightarrow> L2Tcorres st (exec_concrete st (L2_call_L1 arg_xf gs ret_xf A)) (L2_call_L1 arg_xf gs ret_xf C)"
+  apply (clarsimp simp: L2Tcorres_def L2_call_L1_def)
+  apply (rule corresXF_exec_concrete)
+  apply (clarsimp simp: corresXF_def)
+  apply (monad_eq split: sum.splits simp add: select_f_def)
+  apply fastforce
+  done
+
 lemma L2Tcorres_exec_abstract [heap_abs]:
     "L2Tcorres st A C \<Longrightarrow> L2Tcorres id (exec_abstract st (L2_call A)) (L2_call C)"
   apply (clarsimp simp: L2_call_def L2Tcorres_def)

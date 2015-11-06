@@ -73,6 +73,28 @@ lemma L1corres_alt_def: "L1corres \<Gamma> = ccorresE (\<lambda>x. x) \<Gamma> \
   apply (clarsimp simp: L1corres_def ccorresE_def)
   done
 
+(* Wrapper for calling un-translated functions. *)
+definition
+  "L1_call_simpl Gamma proc
+    = do s \<leftarrow> get;
+         assert (Gamma \<turnstile> Call proc \<down> Normal s);
+         xs \<leftarrow> select {t. Gamma \<turnstile> \<langle>Call proc, Normal s\<rangle> \<Rightarrow> t};
+         case xs :: (_, strictc_errortype) xstate of
+             Normal s \<Rightarrow> liftE (put s)
+           | Abrupt s \<Rightarrow> do put s; throwError () od
+           | Fault ft \<Rightarrow> fail
+           | Stuck \<Rightarrow> fail
+      od"
+
+lemma L1corres_call_simpl:
+  "L1corres Gamma (L1_call_simpl Gamma proc) (Call proc)"
+  apply (clarsimp simp: L1corres_def L1_call_simpl_def in_monad
+                        exec_get assert_def)
+  apply (case_tac t, simp_all add: in_monad in_select)
+     apply (auto simp: in_monad snd_bind select_def)
+  done
+
+
 lemma L1corres_skip:
   "L1corres \<Gamma> L1_skip SKIP"
   apply (clarsimp simp: L1corres_alt_def)

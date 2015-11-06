@@ -62,7 +62,7 @@ let
    * right-hand-side will only include a measure if the function is actually
    * recursive.
    *)
-  val is_recursive = FunctionInfo.is_function_recursive fn_info fn_name
+  val is_recursive = FunctionInfo.is_function_recursive fn_info fn_name 
   val default_measure_var = @{term "rec_measure' :: nat"}
   val measure_term = Option.getOpt (measure, default_measure_var)
 

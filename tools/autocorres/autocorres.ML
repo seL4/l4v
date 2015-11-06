@@ -40,6 +40,10 @@ struct
  *                trace_word_abs = FUNC_NAMES,
  *                trace_opt,
  *                no_opt,
+ *
+ *                scope = FUNC_NAMES,
+ *                scope_depth = NUM,
+ *
  *                gen_word_heaps,
  *                statistics,
  *                keep_going
@@ -85,7 +89,7 @@ type autocorres_options = {
   (* Create some funky syntax for heap operations. *)
   heap_abs_syntax: bool option ref,
 
-  (* Allow set of functions to translated to be limited. *)
+  (* Only translate a subset of functions. *)
   scope: string list option ref,
   scope_depth: int option ref,
 
@@ -118,15 +122,9 @@ type autocorres_options = {
 (* Get all that the given function depends on, up to "depth" functions deep. *)
 fun get_function_deps get_callees roots depth =
 let
-  fun get_recursive_callees d root results =
-    if d = 0 orelse Symset.contains results root then
-      Symset.empty
-    else
-      fold (fn n => fn r => Symset.union (get_recursive_callees (d - 1) n r) r)
-          (get_callees root) (Symset.insert root results)
+  fun get_calleess fns = Symset.union_sets (fns :: map (Symset.make o get_callees) (Symset.dest fns))
 in
-  Symset.union_sets (map (fn root =>
-      get_recursive_callees depth root Symset.empty) roots)
+  funpow depth get_calleess (Symset.make roots)
 end
 
 (* Convert the given reference from "NONE" to "SOME x", emitting an
@@ -346,7 +344,7 @@ let
   (* Fetch basic program information. *)
   val prog_info = ProgramInfo.get_prog_info lthy filename
   val fn_info = FunctionInfo.init_fn_info lthy filename
-  val all_functions = Symset.make (Symtab.keys (FunctionInfo.get_functions fn_info))
+  val all_simpl_functions = Symset.make (Symtab.keys (FunctionInfo.get_functions fn_info))
 
   (* Process autocorres options. *)
   val keep_going = !(#keep_going opt) = SOME true
@@ -363,7 +361,7 @@ let
           else if not (!(#no_heap_abs opt) = NONE) andalso not (!(#skip_heap_abs opt) = NONE) then
               error "autocorres: no_heap_abs and skip_heap_abs cannot be used together."
           else ()
-  val no_heap_abs = if !(#skip_heap_abs opt) = SOME true then Symset.dest all_functions else these (!(#no_heap_abs opt))
+  val no_heap_abs = if !(#skip_heap_abs opt) = SOME true then Symset.dest all_simpl_functions else these (!(#no_heap_abs opt))
 
   (* Disallow referring to functions that don't exist. *)
   val funcs_in_options =
@@ -376,7 +374,7 @@ let
         @ these (!(#trace_heap_lift opt))
         @ these (!(#trace_word_abs opt))
   val invalid_functions =
-        Symset.subtract all_functions (Symset.make funcs_in_options)
+        Symset.subtract all_simpl_functions (Symset.make funcs_in_options)
   val _ =
     if Symset.card invalid_functions > 0 then
       error ("autocorres: no such function(s): " ^ commas (Symset.dest invalid_functions))
@@ -406,23 +404,35 @@ let
 
   (* (Finished processing options.) *)
 
-  (* Strip out functions that shouldn't be processed. *)
-  val fn_info =
+  (* Determine which functions should be translated. *)
+  val all_functions = 
     case !(#scope opt) of
-        NONE => fn_info
+        NONE => all_simpl_functions
       | SOME x =>
         let
           val scope_depth = the_default 2 (!(#scope_depth opt))
-          val valid_functions =
-            (get_function_deps (FunctionInfo.get_function_callees fn_info) x scope_depth)
-        in
-          FunctionInfo.map_fn_info (fn def =>
-            if Symset.contains valid_functions (#name def) then SOME def else NONE) fn_info
-          |> (fn fi => (let val fns = FunctionInfo.get_functions fi |> Symtab.dest |> map fst
-                            val _ = @{trace} ("autocorres scope: selected " ^ Int.toString (length fns) ^ " functions:")
-                        in map (fn f => @{trace} f) fns end; fi))
-        end
-  val all_functions = Symset.make (Symtab.keys (FunctionInfo.get_functions fn_info))
+          val funcs = get_function_deps (FunctionInfo.get_function_callees fn_info) x scope_depth
+          val _ = tracing ("autocorres scope: selected " ^ Int.toString (Symset.card funcs) ^ " functions:")
+          val _ = app (fn f => tracing ("  " ^ f)) (Symset.dest funcs)
+        in funcs end
+
+  (* Mark functions that shouldn't be processed.
+   * We will generate wrappers to call them (L1_call_simpl ... AC_call_simpl). *)
+  val fn_info = FunctionInfo.map_fn_info (fn def =>
+                  SOME (if Symset.contains all_functions (#name def) then def
+                        else FunctionInfo.fn_def_update_is_simpl_wrapper true def)) fn_info
+
+  (* Disable heap lifting for all un-translated functions. *)
+  val no_heap_abs' = Symset.subtract all_functions all_simpl_functions
+  val conflicting_heap_lift_fns =
+      Symset.inter no_heap_abs' (Symset.make (these (!(#force_heap_abs opt))))
+  val _ = if not (Symset.is_empty conflicting_heap_lift_fns) then
+            error ("autocorres: Functions marked 'force_heap_abs' but excluded from 'scope': "
+                  ^ commas (Symset.dest conflicting_heap_lift_fns))
+          else
+            ()
+
+  val no_heap_abs = Symset.union (Symset.make no_heap_abs) no_heap_abs'
 
   (*
    * Sanity check the C parser's output.
@@ -495,29 +505,32 @@ let
         SimplConv.translate_simpl
             filename fn_info
             do_opt trace_opt (prefix "l1_" o make_function_name) lthy
-    |> (fn (lthy, fn_info) =>
-        LocalVarExtract.translate_l2 filename fn_info do_opt trace_opt (prefix "l2_" o make_function_name) lthy)
-    |> (fn (lthy, fn_info) =>
+
+  val (lthy, fn_info) =
+        LocalVarExtract.translate_l2 filename fn_info do_opt trace_opt (prefix "l2_" o make_function_name) lthy
+
+  val force_heap_abs = Symset.make (these (!(#force_heap_abs opt)))
+  val (lthy, fn_info) =
         HeapLift.system_heap_lift filename fn_info
-            no_heap_abs (these (!(#force_heap_abs opt)))
+            no_heap_abs force_heap_abs
             make_lifted_globals_field_name heap_abs_syntax keep_going
             (these (!(#trace_heap_lift opt))) do_opt trace_opt
-            (prefix "hl_" o make_function_name) gen_word_heaps lthy)
-    |> (fn (lthy, fn_info) =>
+            (prefix "hl_" o make_function_name) gen_word_heaps lthy
+
+  val (lthy, fn_info) =
         if skip_word_abs then (lthy, fn_info) else
         WordAbstract.word_abstract
             filename fn_info (these (!(#unsigned_word_abs opt))) (these (!(#no_signed_word_abs opt)))
             (these (!(#trace_word_abs opt))) do_opt trace_opt
-            (prefix "wa_" o make_function_name) lthy)
-    |> (fn (lthy, fn_info) =>
+            (prefix "wa_" o make_function_name) lthy
+
+  val (lthy, fn_info) =
         TypeStrengthen.type_strengthen
             ts_rules ts_force filename fn_info make_function_name
-            keep_going do_opt lthy)
-    |> (fn (lthy, fn_info) =>
-        (lthy, fn_info))
+            keep_going do_opt lthy
 
   (* Save fn_info for future reference. *)
-  val _ = @{trace} "Saving function info to AutoCorresFunctionInfo."
+  val _ = tracing "Saving function info to AutoCorresFunctionInfo."
   val lthy = Local_Theory.background_theory (
 	  AutoCorresFunctionInfo.map (fn tbl =>
 	    Symtab.update (filename, fn_info) tbl)) lthy

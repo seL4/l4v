@@ -537,6 +537,7 @@ fun define_funcs
 
     (* Prove each of the predicates above, leaving any assumptions about called
      * functions unsolved. *)
+    val _ = @{trace} ("pred_thms", (Utils.zip3 (map (Thm.cterm_of ctxt) preds) fn_thms fn_def_thms))
     val pred_thms = map (
         fn (pred, thm, body_def) =>
           Thm.trivial (Thm.cterm_of ctxt' pred)

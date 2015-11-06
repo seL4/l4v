@@ -440,6 +440,22 @@ lemmas [ts_rule nondet] =
   liftE_measure_call
   split_distrib [where T=liftE]
 
+definition
+  "AC_call_L1 arg_xf gs ret_xf l1body
+    = liftM (\<lambda>rv. case rv of Inr v \<Rightarrow> v)
+        (L2_call_L1 arg_xf gs ret_xf l1body)"
+
+lemma liftE_L2_call_L1[ts_rule nondet]:
+  "L2_call_L1 arg_xf gs ret_xf l1body
+    = liftE (AC_call_L1 arg_xf gs ret_xf l1body)"
+  apply (simp add: AC_call_L1_def L2_call_L1_def
+                   liftE_def liftM_def bind_assoc)
+  apply (rule ext)
+  apply (simp add: exec_gets exec_get)
+  apply (rule bind_apply_cong[OF refl])+
+  apply (clarsimp simp: bind_assoc returnOk_def in_monad split: sum.splits)
+  done
+
 lemmas [ts_rule nondet unlift] =
   liftE_L2_seq        [symmetric]
   liftE_L2_condition  [symmetric]

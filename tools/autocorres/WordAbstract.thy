@@ -530,13 +530,13 @@ lemma corresTA_L2_condition:
 
 (* Backup rule to corresTA_L2_call. Converts the return type of the function call. *)
 lemma corresTA_L2_call':
-  "\<lbrakk> \<And>s. corresTA P f1 x1 A B;
-               valid_typ_abs_fn Q1 Q1' f1 f1';
-               valid_typ_abs_fn Q2 Q2' f2 f2'
-        \<rbrakk> \<Longrightarrow>
-        corresTA (\<lambda>s. P s) f2 x2
-           (L2_seq (L2_call A) (\<lambda>ret. (L2_seq (L2_guard (\<lambda>_. Q1' ret)) (\<lambda>_. L2_gets (\<lambda>_. f2 (f1' ret)) [''ret'']))))
-           (L2_call B)"
+  "\<lbrakk> corresTA P f1 x1 A B;
+     valid_typ_abs_fn Q1 Q1' f1 f1';
+     valid_typ_abs_fn Q2 Q2' f2 f2'
+   \<rbrakk> \<Longrightarrow>
+   corresTA (\<lambda>s. P s) f2 x2
+       (L2_seq (L2_call A) (\<lambda>ret. (L2_seq (L2_guard (\<lambda>_. Q1' ret)) (\<lambda>_. L2_gets (\<lambda>_. f2 (f1' ret)) [''ret'']))))
+       (L2_call B)"
   apply (clarsimp simp: L2_defs L2_call_def corresXF_def)
   apply (monad_eq split: sum.splits)
   apply (rule conjI)
@@ -728,6 +728,27 @@ lemma abstract_val_lambda:
            abstract_val (\<forall>v. P v) (\<lambda>v. a v) id (\<lambda>v. a' v)"
   by auto
 
+(* Rules for translating simpl wrappers. *)
+lemma corresTA_call_L1:
+  "abstract_val True arg_xf id arg_xf' \<Longrightarrow>
+   corresTA \<top> id id
+     (L2_call_L1 arg_xf gs ret_xf l1body)
+     (L2_call_L1 arg_xf' gs ret_xf l1body)"
+  apply (unfold corresTA_def abstract_val_def id_def)
+  apply (subst (asm) simp_thms)
+  apply (erule subst)
+  apply (rule corresXF_id[simplified id_def])
+  done
+
+lemma abstract_val_call_L1_args:
+  "abstract_val P x id x' \<Longrightarrow> abstract_val P y id y' \<Longrightarrow>
+   abstract_val P (x and y) id (x' and y')"
+  by simp
+
+lemma abstract_val_call_L1_arg:
+  "abs_var x id x' \<Longrightarrow> abstract_val P (\<lambda>s. f s = x) id (\<lambda>s. f s = x')"
+  by simp
+
 (* Variable abstraction *)
 
 lemma abstract_val_abs_var [consumes 1]:
@@ -830,6 +851,7 @@ lemmas [word_abs] =
   corresTA_L2_call'
   corresTA_L2_call
   corresTA_measure_call
+  corresTA_call_L1
 
 lemmas [word_abs] =
   abstract_val_tuple
@@ -839,6 +861,9 @@ lemmas [word_abs] =
   abstract_val_trivial
   abstract_val_of_int
   abstract_val_of_nat
+
+  abstract_val_call_L1_arg
+  abstract_val_call_L1_args
 
   abstract_val_abs_var_give_up
   abstract_val_abs_var_concretise

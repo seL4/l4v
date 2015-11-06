@@ -1457,6 +1457,30 @@ in
   final_thms
 end   
 
+(* For functions that are not translated, just generate a trivial wrapper. *)
+fun mk_l2corres_call_simpl_thm prog_info fn_info ctxt fn_name fn_args = let
+    val fn_def = Symtab.lookup (FunctionInfo.get_functions fn_info) fn_name |> the
+    val const = #const fn_def
+    val args = #args fn_def
+
+    (* Get return variables. *)
+    val (fn_input_vars, fn_ret_vars) = get_fn_input_output_vars prog_info fn_info fn_name
+    (* Get mapping from internal variable names to external arguments. *)
+    val m = Symtab.make (map fst args ~~ fn_args)
+    fun name_map_ext (n, T) = Symtab.lookup m n |> the
+
+    val arg_xf = mk_precond prog_info name_map_ext fn_input_vars
+    val ret_xf = mk_xf prog_info fn_ret_vars
+    val ex_xf = Abs ("s", #state_type prog_info, HOLogic.unit)
+
+    val thm = @{thm L2corres_L2_call_simpl}
+        WHERE (map (apsnd (Thm.cterm_of ctxt))
+            [("l1_f", betapply (const, Free ("rec_measure'", @{typ "nat"}))),
+             ("ex_xf", ex_xf), ("gs", #globals_getter prog_info),
+             ("ret_xf", ret_xf), ("arg_xf", arg_xf)])
+        OF [#definition fn_def]
+  in thm end
+
 (*
  * Translate all functions from L1 to L2 format.
  *)
@@ -1468,13 +1492,21 @@ let
   fun convert ctxt fn_name callee_terms measure_var fn_args = let
     (* Fetch the function body from L1. *)
     val l1_def = FunctionInfo.get_function_def fn_info fn_name
-    val l1_body_def = #definition l1_def WHERE [
-            ("rec_measure'", Thm.cterm_of ctxt measure_var)]
-  
-    val (thm, traces) = get_l2corres_thm ctxt prog_info fn_info do_opt trace_opt
-        fn_name callee_terms fn_args
-        (betapply (#const l1_def, measure_var)) l1_body_def
-  in (get_body_of_thm ctxt thm, thm, traces) end
+    in
+      if #is_simpl_wrapper (FunctionInfo.get_function_def fn_info fn_name)
+      then let
+        val thm = mk_l2corres_call_simpl_thm prog_info fn_info ctxt fn_name fn_args
+        val _ = @{trace} (fn_name, thm)
+        in (get_body_of_thm ctxt thm, thm, []) end
+      else let
+        val l1_body_def = #definition l1_def WHERE [
+                ("rec_measure'", Thm.cterm_of ctxt measure_var)]
+        val (thm, traces) = get_l2corres_thm ctxt prog_info fn_info do_opt trace_opt
+            fn_name callee_terms fn_args
+            (betapply (#const l1_def, measure_var)) l1_body_def
+        val _ = @{trace} (fn_name, thm)
+      in (get_body_of_thm ctxt thm, thm, traces) end
+    end
 
   (* Update function information. *)
   fun update_function_defs lthy fn_def =
