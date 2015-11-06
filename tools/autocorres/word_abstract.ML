@@ -155,6 +155,7 @@ end
 (* Convert a program by abstracting words. *)
 fun word_abstract
       (filename: string)
+      (prog_info: ProgramInfo.prog_info)
       (fn_info: FunctionInfo.fn_info)
       (unsigned_abs: string list)
       (no_signed_abs: string list)
@@ -400,7 +401,7 @@ let
     |> FunctionInfo.fn_def_update_args (map (apsnd (get_abs_type (rules_for (#name fn_def)))) (#args fn_def))
 in
   AutoCorresUtil.do_translation_phase
-    "WA"  filename (ProgramInfo.get_prog_info lthy filename) fn_info
+    "WA"  filename prog_info fn_info
     (fn fn_name => get_expected_fn_type (rules_for fn_name) fn_info fn_name)
     (fn ctxt => fn fn_name => get_expected_fn_thm (rules_for fn_name) fn_info ctxt fn_name)
     (fn fn_name => get_expected_fn_args (rules_for fn_name) fn_info fn_name)

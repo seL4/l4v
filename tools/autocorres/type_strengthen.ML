@@ -62,7 +62,7 @@ let
    * right-hand-side will only include a measure if the function is actually
    * recursive.
    *)
-  val is_recursive = FunctionInfo.is_function_recursive fn_info fn_name 
+  val is_recursive = FunctionInfo.is_function_recursive fn_info fn_name
   val default_measure_var = @{term "rec_measure' :: nat"}
   val measure_term = Option.getOpt (measure, default_measure_var)
 
@@ -567,12 +567,9 @@ end
 (* Run through every function, attempting to strengthen its type. *)
 fun type_strengthen (rules : Monad_Types.monad_type list)
                     (force_lift : Monad_Types.monad_type Symtab.table)
-                    filename fn_info (make_function_name : string -> string)
+                    filename prog_info fn_info (make_function_name : string -> string)
                     (keep_going : bool) (do_opt : bool) lthy =
 let
-  (* Get all function definitions. *)
-  val prog_info = ProgramInfo.get_prog_info lthy filename
-
   fun optcat xs = List.concat (map the_list xs)
 
   (* Fetch the body of every function. *)

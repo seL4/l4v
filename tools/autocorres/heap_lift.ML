@@ -373,6 +373,7 @@ in thm' end
 (* Convert a program to use a lifted heap. *)
 fun system_heap_lift
     (filename : string)
+    (prog_info : ProgramInfo.prog_info)
     (fn_info : FunctionInfo.fn_info)
     (no_heap_abs : Symset.key Symset.set)
     (force_heap_abs : Symset.key Symset.set)
@@ -386,8 +387,6 @@ fun system_heap_lift
     (gen_word_heaps : bool)
     lthy =
 let
-  val prog_info = ProgramInfo.get_prog_info lthy filename
-
   (* Create base definitions for the new program, including a new
    * "globals" record with a lifted heap. *)
   val (heap_info, lthy) = HeapLiftBase.setup prog_info fn_info make_lifted_globals_field_name gen_word_heaps lthy

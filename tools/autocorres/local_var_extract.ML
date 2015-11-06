@@ -1484,10 +1484,8 @@ fun mk_l2corres_call_simpl_thm prog_info fn_info ctxt fn_name fn_args = let
 (*
  * Translate all functions from L1 to L2 format.
  *)
-fun translate_l2 filename fn_info do_opt trace_opt l2_function_name lthy =
+fun translate_l2 filename prog_info fn_info do_opt trace_opt l2_function_name lthy =
 let
-  val prog_info = ProgramInfo.get_prog_info lthy filename
-
   (* Abstract the function, returning a corres theorem. *)
   fun convert ctxt fn_name callee_terms measure_var fn_args = let
     (* Fetch the function body from L1. *)
@@ -1496,7 +1494,6 @@ let
       if #is_simpl_wrapper (FunctionInfo.get_function_def fn_info fn_name)
       then let
         val thm = mk_l2corres_call_simpl_thm prog_info fn_info ctxt fn_name fn_args
-        val _ = @{trace} (fn_name, thm)
         in (get_body_of_thm ctxt thm, thm, []) end
       else let
         val l1_body_def = #definition l1_def WHERE [
@@ -1504,7 +1501,6 @@ let
         val (thm, traces) = get_l2corres_thm ctxt prog_info fn_info do_opt trace_opt
             fn_name callee_terms fn_args
             (betapply (#const l1_def, measure_var)) l1_body_def
-        val _ = @{trace} (fn_name, thm)
       in (get_body_of_thm ctxt thm, thm, traces) end
     end
 

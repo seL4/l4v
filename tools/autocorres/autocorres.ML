@@ -405,14 +405,14 @@ let
   (* (Finished processing options.) *)
 
   (* Determine which functions should be translated. *)
-  val all_functions = 
+  val all_functions =
     case !(#scope opt) of
         NONE => all_simpl_functions
       | SOME x =>
         let
           val scope_depth = the_default 2 (!(#scope_depth opt))
           val funcs = get_function_deps (FunctionInfo.get_function_callees fn_info) x scope_depth
-          val _ = tracing ("autocorres scope: selected " ^ Int.toString (Symset.card funcs) ^ " functions:")
+          val _ = tracing ("autocorres scope: selected " ^ Int.toString (Symset.card funcs) ^ " function(s):")
           val _ = app (fn f => tracing ("  " ^ f)) (Symset.dest funcs)
         in funcs end
 
@@ -503,15 +503,15 @@ let
   (* Do the translation. *)
   val (lthy, fn_info) =
         SimplConv.translate_simpl
-            filename fn_info
+            filename prog_info fn_info
             do_opt trace_opt (prefix "l1_" o make_function_name) lthy
 
   val (lthy, fn_info) =
-        LocalVarExtract.translate_l2 filename fn_info do_opt trace_opt (prefix "l2_" o make_function_name) lthy
+        LocalVarExtract.translate_l2 filename prog_info fn_info do_opt trace_opt (prefix "l2_" o make_function_name) lthy
 
   val force_heap_abs = Symset.make (these (!(#force_heap_abs opt)))
   val (lthy, fn_info) =
-        HeapLift.system_heap_lift filename fn_info
+        HeapLift.system_heap_lift filename prog_info fn_info
             no_heap_abs force_heap_abs
             make_lifted_globals_field_name heap_abs_syntax keep_going
             (these (!(#trace_heap_lift opt))) do_opt trace_opt
@@ -520,13 +520,14 @@ let
   val (lthy, fn_info) =
         if skip_word_abs then (lthy, fn_info) else
         WordAbstract.word_abstract
-            filename fn_info (these (!(#unsigned_word_abs opt))) (these (!(#no_signed_word_abs opt)))
+            filename prog_info fn_info
+            (these (!(#unsigned_word_abs opt))) (these (!(#no_signed_word_abs opt)))
             (these (!(#trace_word_abs opt))) do_opt trace_opt
             (prefix "wa_" o make_function_name) lthy
 
   val (lthy, fn_info) =
         TypeStrengthen.type_strengthen
-            ts_rules ts_force filename fn_info make_function_name
+            ts_rules ts_force filename prog_info fn_info make_function_name
             keep_going do_opt lthy
 
   (* Save fn_info for future reference. *)

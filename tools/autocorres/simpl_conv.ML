@@ -426,10 +426,8 @@ fun mk_l1corres_call_simpl_thm fn_info ctxt fn_name = let
  * correspondence between our generated specs and the original SIMPL
  * code).
  *)
-fun translate_simpl filename fn_info do_opt trace_opt l1_function_name lthy =
+fun translate_simpl filename prog_info fn_info do_opt trace_opt l1_function_name lthy =
 let
-  val prog_info = ProgramInfo.get_prog_info lthy filename
-
   (* Abstract the function to a new body with a proof of correspondence. *)
   fun convert ctxt fn_name callee_terms measure_var fn_args =
   let
@@ -438,7 +436,6 @@ let
       then (mk_l1corres_call_simpl_thm fn_info ctxt fn_name, [])
       else get_l1corres_thm prog_info fn_info ctxt do_opt trace_opt fn_name
                             callee_terms measure_var
-    val _ = @{trace} ("l1 convert", fn_name, thm)
   in (get_body_of_l1corres_thm thm, thm, opt_traces) end
 
   (* Update function information. *)
