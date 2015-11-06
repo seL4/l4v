@@ -58,6 +58,39 @@ method_setup determ =
 
    in SIMPLE_METHOD (DETERM tac) facts end)
 \<close>
+ 
+method_setup timeit =
+ \<open>Method_Closure.parse_method >> (fn m => fn ctxt => fn facts =>
+   let 
+     fun timed_tac st seq = Seq.make (fn () => Option.map (apsnd (timed_tac st)) 
+       (timeit (fn () => (Seq.pull seq))));
+
+     fun tac st' =
+       timed_tac st' (Method_Closure.method_evaluate m ctxt facts st')
+       |> Seq.map snd;
+
+   in SIMPLE_METHOD tac [] end)
+\<close>
+ 
+ 
+method_setup timeout =
+ \<open>Scan.lift Parse.int -- Method_Closure.parse_method >> (fn (i,m) => fn ctxt => fn facts =>
+   let 
+     fun str_of_goal th = Pretty.string_of (Goal_Display.pretty_goal ctxt th);
+     
+     fun limit st f x = TimeLimit.timeLimit (Time.fromSeconds i) f x 
+       handle TimeLimit.TimeOut => error ("Method timed out:\n" ^ (str_of_goal st));
+      
+     fun timed_tac st seq = Seq.make (limit st (fn () => Option.map (apsnd (timed_tac st)) 
+       (Seq.pull seq)));
+       
+   
+     fun tac st' =
+       timed_tac st' (Method_Closure.method_evaluate m ctxt facts st')
+       |> Seq.map snd;
+
+   in SIMPLE_METHOD tac [] end)
+\<close>
 
 method repeat_new methods m = (m ; (repeat_new \<open>m\<close>)?)
 
