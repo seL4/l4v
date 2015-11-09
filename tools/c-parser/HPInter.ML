@@ -160,7 +160,14 @@ in
   Symtab.fold foldthis table []
 end
 
-fun mkSpecFunction thy cse styargs (f : fninfo) = let
+fun extract_element_asms e =
+    case e of
+      Element.Assumes asms =>
+        map (fn (nm, [(t,_)]) => (nm, t)
+              | _ => raise Fail "extract_element_term: malformed Assumes") asms
+    | _ => raise Fail "extract_element_term: malformed element"
+
+fun mkSpecFunction thy gloc cse styargs (f : fninfo) = let
   open TermsTypes
   val {fname,...} = f
   val state_ty = hd styargs
@@ -170,14 +177,35 @@ fun mkSpecFunction thy cse styargs (f : fninfo) = let
   val t = Free("t", state_ty)
   val relbody = Modifies_Proofs.gen_modify_body thy state_ty s t mods
   val collect_t = mk_collect_t (mk_prod_ty (state_ty, state_ty))
-  val fbody = mk_Spec(styargs, collect_t $ list_mk_pabs([s,t], relbody))
+
+  fun parse_spec thy (_, e) = let
+    val lnm_strs = extract_element_asms e
+    fun innermap thy (((speclocalename_b,_), tstr)) = let
+      val speclocalename = Binding.name_of speclocalename_b
+        (* jump into an lthy corresponding to globloc to parse the tstr; this lthy
+           is dropped and not used again *)
+      val lthy = Named_Target.init gloc thy
+      val t = Syntax.read_term lthy tstr
+      val _ = tracing ("Read spec called "^speclocalename^
+                       (if speclocalename = "" then "" else " ")^
+                       "for function "^fname ^ " (" ^ tstr ^ ")")
+    in
+      t
+    end
+  in
+    map (innermap thy) lnm_strs
+  end
+
+  val spec_t = list_mk_conj (List.concat (map (parse_spec thy) (#spec f)))
+  val fbody =
+      mk_Spec(styargs, collect_t $ list_mk_pabs([s,t], mk_conj(spec_t, relbody)))
 in
   (fname, fbody, fbody)
 end
 
 
 (* compile bodies - turn a list of AST values into a term list *)
-fun compile_fninfos cse styargs compfn lthy (fninfo : fninfo list) = let
+fun compile_fninfos globloc cse styargs compfn lthy (fninfo : fninfo list) = let
   open HoarePackage
   fun partition (acc as (asts,specs)) fns =
       case fns of
@@ -189,7 +217,7 @@ fun compile_fninfos cse styargs compfn lthy (fninfo : fninfo list) = let
   val (asts,toSpec) = partition ([],[]) fninfo
 in
   compfn asts lthy @
-  map (mkSpecFunction (Proof_Context.theory_of lthy) cse styargs) toSpec
+  map (mkSpecFunction (Proof_Context.theory_of lthy) globloc cse styargs) toSpec
 end
 
 fun rhs_extras rhs =
@@ -278,14 +306,6 @@ fun asm_to_string tmw e =
     | _ => "??\n"
 ;
 
-fun extract_element_asms e =
-    case e of
-      Element.Assumes asms =>
-        map (fn (nm, [(t,_)]) => (nm, t)
-              | _ => raise Fail "extract_element_term: malformed Assumes") asms
-    | _ => raise Fail "extract_element_term: malformed element"
-;
-
 (* The following is modelled on the code in HoarePackage.procedures_definition
 *)
 fun make_function_definitions localename
@@ -309,7 +329,7 @@ let
   val name_specs = map (fn {fname,spec,...} => (fname,spec)) fninfo
   val thy = List.foldr (uncurry add_syntax) thy name_pars
   val lthy = Named_Target.init globloc thy
-  val name_body = compile_fninfos cse styargs compfn lthy fninfo
+  val name_body = compile_fninfos globloc cse styargs compfn lthy fninfo
   val _ = tracing "Translated all functions"
   val globs = extract_fixes globals_elems
 
