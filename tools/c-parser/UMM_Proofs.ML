@@ -422,8 +422,12 @@ fun umm_struct_calculation ((recname, flds), st, thy) = let
   val typ_info_TYPE = mk_typ_info_of recty
 
   (* make the definitions *)
-  val ([typnameitself_thm, typtag_thm], thy) =
-      Global_Theory.add_defs true [typnameitself_triple, typtag_triple] thy
+  val (typnameitself_thm, typtag_thm, thy) =
+      case Global_Theory.add_defs true
+                                  [typnameitself_triple, typtag_triple] thy
+       of
+          ([x,y], thy) => (x,y,thy)
+        | _ => raise Fail "UMM_Proofs: Bind error"
   val thy = add_data_thms [("typ_name_itself", [typnameitself_thm])] thy
 
   val _ = phase "MEMTYPE"
@@ -670,4 +674,3 @@ in
 end
 
 end; (* struct *)
-

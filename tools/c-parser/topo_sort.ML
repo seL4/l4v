@@ -20,7 +20,7 @@ sig
 
 end
 
-structure Topo_Sort :> TOPO_SORT =
+structure Topo_Sort : TOPO_SORT =
 struct
 
 fun dfs_finishes (cmp, neighbours) nodes = let
@@ -42,7 +42,7 @@ in
   recurse (Binaryset.empty cmp) [] (map Visit nodes)
 end
 
-fun fcons x [] = raise Fail "Should never happen"
+fun fcons _ [] = raise Fail "Should never happen"
   | fcons x (h::t) = (x::h) :: t
 fun dfs_trees (cmp, neighbours) nodes = let
   datatype 'a action = Visit of 'a | Initial of 'a
