@@ -134,7 +134,7 @@ definition
 
 text {*
 
-  This definition of \texttt{handle_wait} is almost identical to the abstract specification's definition
+  This definition of \texttt{handle_recv} is almost identical to the abstract specification's definition
   for the restricted capabilities. Also, a call to \texttt{delete_caller_cap} has been removed. They have
   the same behaviour under the restricted capabilities since there are no caller capabilities in
   \texttt{sep-abstract}.
@@ -142,8 +142,8 @@ text {*
 *}
 
 definition
-  handle_wait :: "bool \<Rightarrow> (unit,'z::state_ext) s_monad" where
-  "handle_wait is_blocking \<equiv> do
+  handle_recv :: "bool \<Rightarrow> (unit,'z::state_ext) s_monad" where
+  "handle_recv is_blocking \<equiv> do
      thread \<leftarrow> gets cur_thread;
 
      ep_cptr \<leftarrow> liftM data_to_cptr $ as_user thread $
@@ -202,11 +202,11 @@ where
           SysSend \<Rightarrow> handle_send True
         | SysNBSend \<Rightarrow> handle_send False
         | SysCall \<Rightarrow> handle_call
-        | SysWait \<Rightarrow> without_preemption $ handle_wait True
+        | SysRecv \<Rightarrow> without_preemption $ handle_recv True
         | SysYield \<Rightarrow> without_preemption handle_yield
         | SysReply \<Rightarrow> without_preemption handle_reply
-        | SysReplyWait \<Rightarrow> without_preemption $ handle_wait True
-        | SysNBWait \<Rightarrow> without_preemption $ handle_wait False)"
+        | SysReplyRecv \<Rightarrow> without_preemption $ handle_recv True
+        | SysNBRecv \<Rightarrow> without_preemption $ handle_recv False)"
 
 | "handle_event (UnknownSyscall n) = (without_preemption $ do
     thread \<leftarrow> gets cur_thread;

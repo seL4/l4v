@@ -147,9 +147,9 @@ where
   "
 
 definition
-  handle_wait :: "unit k_monad"
+  handle_recv :: "unit k_monad"
 where
-  "handle_wait \<equiv>
+  "handle_recv \<equiv>
     do
       (* Get the current thread. *)
       tcb_id \<leftarrow> gets_the cdl_current_thread;
@@ -203,14 +203,14 @@ where
       SysSend  \<Rightarrow> handle_invocation False True
     | SysNBSend \<Rightarrow> handle_invocation False False
     | SysCall \<Rightarrow> handle_invocation True True
-    | SysWait \<Rightarrow> liftE $ handle_wait
+    | SysRecv \<Rightarrow> liftE $ handle_recv
     | SysYield \<Rightarrow> returnOk ()
     | SysReply \<Rightarrow> liftE $ handle_reply
-    | SysReplyWait \<Rightarrow> liftE $ do
+    | SysReplyRecv \<Rightarrow> liftE $ do
         handle_reply;
-        handle_wait
+        handle_recv
       od
-    | SysNBWait \<Rightarrow> liftE $ handle_wait"
+    | SysNBRecv \<Rightarrow> liftE $ handle_recv"
 
 definition
   handle_event :: "event \<Rightarrow> unit preempt_monad"

@@ -361,9 +361,9 @@ where
    od"
 
 definition
-  do_nbwait_failed_transfer :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
+  do_nbrecv_failed_transfer :: "obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
-  "do_nbwait_failed_transfer thread = do as_user thread $ set_register badge_register 0; return () od"
+  "do_nbrecv_failed_transfer thread = do as_user thread $ set_register badge_register 0; return () od"
  
 definition
   receive_ipc :: "obj_ref \<Rightarrow> cap \<Rightarrow> bool \<Rightarrow> (unit,'z::state_ext) s_monad"
@@ -386,13 +386,13 @@ where
                   set_thread_state thread (BlockedOnReceive epptr diminish);
                   set_endpoint epptr (RecvEP [thread])
                 od
-              | False \<Rightarrow> do_nbwait_failed_transfer thread
+              | False \<Rightarrow> do_nbrecv_failed_transfer thread
             | RecvEP queue \<Rightarrow> case is_blocking of
               True \<Rightarrow> do
                   set_thread_state thread (BlockedOnReceive epptr diminish);
                   set_endpoint epptr (RecvEP (queue @ [thread]))
                 od
-              | False \<Rightarrow> do_nbwait_failed_transfer thread
+              | False \<Rightarrow> do_nbrecv_failed_transfer thread
           | SendEP q \<Rightarrow> do
               assert (q \<noteq> []);
               queue \<leftarrow> return $ tl q;
@@ -495,14 +495,14 @@ where
                           set_thread_state thread (BlockedOnNotification ntfnptr);
                           set_notification ntfnptr $ ntfn_set_obj ntfn $ WaitingNtfn ([thread])
                         od
-                   | False \<Rightarrow> do_nbwait_failed_transfer thread 
+                   | False \<Rightarrow> do_nbrecv_failed_transfer thread 
        | WaitingNtfn queue \<Rightarrow> 
                    case is_blocking of 
                      True \<Rightarrow> do
                           set_thread_state thread (BlockedOnNotification ntfnptr);
                           set_notification ntfnptr $ ntfn_set_obj ntfn $ WaitingNtfn (queue @ [thread])
                         od
-                   | False \<Rightarrow> do_nbwait_failed_transfer thread 
+                   | False \<Rightarrow> do_nbrecv_failed_transfer thread 
        | ActiveNtfn badge \<Rightarrow> do
                      as_user thread $ set_register badge_register badge;
                      set_notification ntfnptr $ ntfn_set_obj ntfn IdleNtfn 

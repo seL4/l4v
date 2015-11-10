@@ -120,7 +120,7 @@ to indicate if a reply is requested and the other to indicate if the
 send is blocking or not.
 
 The other direction is the reception of messages. This is done by
-performing a Wait operation on an endpoint kernel object. The receiver
+performing a Recv operation on an endpoint kernel object. The receiver
 is then blocked until a sender performs a Send operation on the
 endpoint object, resulting in a message transfer between the sender
 and the receiver. The receiver may also perform a Reply operation
@@ -129,7 +129,7 @@ non-blocking. When the receiver is a user-level server, it generally
 runs a loop waiting for messages. On handling a received message, the
 server will send a reply and then return to waiting. To avoid
 excessive switching between user and kernel mode, the kernel provides
-a ReplyWait operation, which is simply a Reply followed by Wait.
+a ReplyRecv operation, which is simply a Reply followed by Recv.
 
 Finally, the last event, @{text Yield}, enables the user to donate its
 remaining timeslice. *}
@@ -264,8 +264,8 @@ definition
  "delete_caller_cap t \<equiv> cap_delete_one (t, tcb_cnode_index 3)"
 
 definition
-  handle_wait :: "bool \<Rightarrow> (unit,'z::state_ext) s_monad" where
-  "handle_wait is_blocking \<equiv> do
+  handle_recv :: "bool \<Rightarrow> (unit,'z::state_ext) s_monad" where
+  "handle_recv is_blocking \<equiv> do
      thread \<leftarrow> gets cur_thread;
 
      ep_cptr \<leftarrow> liftM data_to_cptr $ as_user thread $
@@ -321,14 +321,14 @@ where
           SysSend \<Rightarrow> handle_send True
         | SysNBSend \<Rightarrow> handle_send False
         | SysCall \<Rightarrow> handle_call
-        | SysWait \<Rightarrow> without_preemption $ handle_wait True
+        | SysRecv \<Rightarrow> without_preemption $ handle_recv True
         | SysYield \<Rightarrow> without_preemption handle_yield
         | SysReply \<Rightarrow> without_preemption handle_reply
-        | SysReplyWait \<Rightarrow> without_preemption $ do
+        | SysReplyRecv \<Rightarrow> without_preemption $ do
             handle_reply;
-            handle_wait True
+            handle_recv True
           od
-        | SysNBWait \<Rightarrow> without_preemption $ handle_wait False)"
+        | SysNBRecv \<Rightarrow> without_preemption $ handle_recv False)"
 
 | "handle_event (UnknownSyscall n) = (without_preemption $ do
     thread \<leftarrow> gets cur_thread;
