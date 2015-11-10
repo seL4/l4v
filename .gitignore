@@ -10,6 +10,7 @@ spec/cspec/c/kernel_all.c_pp
 spec/cspec/c/parsetab.py
 spec/cspec/c/plat/
 spec/cspec/c/sources_list_updated
+spec/cspec/c/autoconf.h
 
 **/CFunDump.txt
 **/umm_types.txt
