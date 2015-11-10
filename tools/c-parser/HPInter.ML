@@ -171,6 +171,7 @@ fun mkSpecFunction thy gloc cse styargs (f : fninfo) = let
   open TermsTypes
   val {fname,...} = f
   val state_ty = hd styargs
+  val ctxt = thy2ctxt thy
   val mods = fname |> ProgramAnalysis.get_modifies cse
                    |> valOf |> Binaryset.listItems
   val s = Free("s", state_ty)
@@ -186,19 +187,71 @@ fun mkSpecFunction thy gloc cse styargs (f : fninfo) = let
            is dropped and not used again *)
       val lthy = Named_Target.init gloc thy
       val t = Syntax.read_term lthy tstr
-      val _ = tracing ("Read spec called "^speclocalename^
-                       (if speclocalename = "" then "" else " ")^
-                       "for function "^fname ^ " (" ^ tstr ^ ")")
+      val PQopt =
+        case t of
+          Const(@{const_name "hoarep"}, _) $ _ (* gamma *) $ _ $_ $ P $ _ $ Q $ _ =>
+            SOME (P,Q)
+        | _ =>
+          if String.isSuffix "modifies" speclocalename then NONE
+          else
+            let
+              val (f, args) = strip_comb t
+              val cstr = case f of Const(s, _) => "const: "^s
+                                 | Free(s, _) => "free: "^s
+                                 | _ => "huh?"
+            in
+              raise Fail ("parse_spec: bad specification " ^ speclocalename ^ " : " ^
+                          Syntax.string_of_term ctxt t ^ "\n(" ^
+                          cstr ^ " applied to " ^
+                          Int.toString (length args) ^ " arguments)")
+            end
     in
-      t
+      case PQopt of
+        NONE => NONE
+      | SOME (P0, Q0) =>
+        let
+          val elty0 = dest_set_type (type_of P0)
+          val sigma = valOf (TermsTypes.match_type_frees{pattern = elty0, m = state_ty})
+                      handle Option => raise Fail "Couldn't match state types"
+          val ptype = Syntax.string_of_typ ctxt
+          fun foldthis (ty1, ty2) acc = (ptype ty1 ^ " |-> " ^ ptype ty2) :: acc
+          val sigma_elts0 = TypTable.fold foldthis sigma []
+          val sigma_elts = String.concatWith ", " sigma_elts0
+          val _ = Feedback.informStr(0, "Sigma = " ^ sigma_elts)
+          val P = subst_frees sigma P0
+          val Q = subst_frees sigma Q0
+          val elty = dest_set_type (type_of P)
+
+          val _ = Feedback.informStr(0,
+            "Type of P : " ^ ptype (type_of P))
+          val _ = Feedback.informStr(0,
+            "Type of Q : " ^ ptype (type_of P))
+          val res =
+            mk_Un(mk_cross(mk_compl(P), mk_UNIV elty), mk_cross(mk_UNIV elty, Q))
+          val _ = Feedback.informStr(0, "Type of PQ combo: " ^ ptype (type_of res))
+        in
+          SOME res
+        end
     end
   in
-    map (innermap thy) lnm_strs
+    List.mapPartial (innermap thy) lnm_strs
   end
 
-  val spec_t = list_mk_conj (List.concat (map (parse_spec thy) (#spec f)))
-  val fbody =
-      mk_Spec(styargs, collect_t $ list_mk_pabs([s,t], mk_conj(spec_t, relbody)))
+  val mod_spec = collect_t $ list_mk_pabs([s,t], relbody)
+  fun typedterm t =
+    Syntax.string_of_term ctxt t ^ " :: " ^
+    Syntax.string_of_typ ctxt (type_of t)
+  val _ = Feedback.informStr(0, "modstr : " ^ typedterm mod_spec)
+  val otherspecs = List.concat (map (parse_spec thy) (#spec f))
+  fun appi f l = let
+    fun recurse i l = case l of [] => () | h::t => (f i h; recurse (i + 1) t)
+  in
+    recurse 0 l
+  end
+  val _ = appi (fn n => fn t => Feedback.informStr(0,
+    "spec#" ^ Int.toString n ^ ": " ^ typedterm t)) otherspecs
+  val spec_t = List.foldl mk_inter mod_spec otherspecs
+  val fbody = mk_Spec(styargs, spec_t)
 in
   (fname, fbody, fbody)
 end

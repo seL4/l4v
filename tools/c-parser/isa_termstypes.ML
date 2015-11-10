@@ -38,6 +38,7 @@ sig
   val dest_list_type : typ -> typ
 
   val mk_set_type : typ -> typ
+  val dest_set_type : typ -> typ
 
   val mk_prod_ty : typ * typ -> typ
   val list_mk_prod_ty : typ list -> typ (* unit when list is empty *)
@@ -46,10 +47,14 @@ sig
   val mk_numeral_type : int -> typ
   val dest_numeral_type : typ -> int
 
+  structure TypTable : TABLE where type key = typ
+  val match_type_frees : { pattern: typ, m : typ } -> typ TypTable.table option
   (* Terms *)
 
   (* -- core constructions *)
+  val subst_frees : typ TypTable.table -> term -> term
   val list_mk_comb : term * term list -> term
+  val strip_comb : term -> (term * term list)
 
   val mk_abs : term * term -> term
   val list_mk_abs : term list * term -> term
@@ -121,6 +126,9 @@ sig
   val mk_CARD : typ -> term
                 (* creates `card Univ` term, which prints specially *)
   val mk_collect_t : typ -> term
+  val mk_compl : term -> term
+  val mk_inter : term * term -> term
+  val mk_cross : term * term -> term
 
   (* -- numbers *)
   val mk_zero : typ -> term
@@ -172,6 +180,41 @@ fun typ_ord (ty1, ty2) =
                                        (list_ord string_ord)
                                        (tv1, tv2)
 
+structure TypTable = Table(struct type key = typ val ord = typ_ord end)
+
+fun match_type_frees {pattern,m} =
+  let
+    fun recurse (acc:typ TypTable.table) pmlist =
+      case pmlist of
+        [] => SOME acc
+      | (pty, mty) :: rest =>
+        let
+        in
+          case (pty, mty) of
+            (Type(op1, args1), Type(op2, args2)) =>
+              if op1 = op2 then recurse acc (ListPair.zip(args1,args2) @ rest)
+              else NONE
+          | (TFree _, _) => (case TypTable.lookup_key acc pty of
+                               NONE => recurse (TypTable.update(pty,mty) acc) rest
+                             | SOME (_, ty') => if typ_ord(ty',mty) = EQUAL then
+                                             recurse acc rest
+                                           else NONE)
+          | (TVar id1, TVar id2) => if id1 = id2 then recurse acc rest else NONE
+        end
+  in
+    recurse TypTable.empty [(pattern,m)]
+  end
+
+fun subst_frees tab tm =
+  let
+    fun mapthis ty =
+      case TypTable.lookup_key tab ty of
+        NONE => map_atyps mapthis ty
+      | SOME(_, ty') => ty'
+  in
+    Term.map_types mapthis tm
+  end
+
 
 (* standard types *)
 val prop = @{typ "prop"}
@@ -196,6 +239,10 @@ fun dest_prod_ty ty =
       Type("Product_Type.prod", [arg1, arg2]) => (arg1, arg2)
     | _ => raise TYPE("Type not a product", [ty], [])
 fun mk_set_type ty = Type(@{type_name "set"}, [ty])
+fun dest_set_type ty =
+  case ty of
+    Type(@{type_name "set"}, [e]) => e
+  | _ => raise TYPE("Type not a set", [ty], [])
 fun dest_list_type ty =
     case ty of
       Type("List.list", args) => hd args
@@ -250,6 +297,15 @@ val unit_value = @{term "Product_Type.Unity"}
 fun K_rec T = Abs ("x",T, Abs ("_",T, Bound 1))
 
 fun list_mk_comb(f, args) = List.foldl (fn (x,f) => f $ x) f args
+fun strip_comb t =
+  let
+    fun recurse acc t =
+      case t of
+        f $ x => recurse (x::acc) f
+      | _ => (t, List.rev acc)
+  in
+    recurse [] t
+  end
 
 val not_t = @{term "Not"}
 fun mk_neg t = not_t $ t
@@ -459,6 +515,23 @@ fun mk_CARD ty =
     Const(@{const_name "Finite_Set.card"}, mk_set_type ty --> nat) $ mk_UNIV ty
 fun list_mk_set ty list = List.foldl mk_insert (mk_empty ty) list
 
+(* have to spell out full-name, rather defeating point of const_name antiquote, because
+   something called SmallStep.inf gets in the way otherwise *)
+fun mk_inter(t1, t2) =
+  Const(@{const_name "Lattices.inf_class.inf"}, type_of t1 --> type_of t1 --> type_of t1) $ t1 $ t2
+
+fun mk_cross(t1, t2) =
+  let
+    val e1ty = dest_set_type (type_of t1)
+    val e2ty = dest_set_type (type_of t2)
+    val rty = mk_set_type (mk_prod_ty(e1ty, e2ty))
+  in
+    Const(@{const_name "Sigma"}, type_of t1 --> (e1ty --> type_of t2) --> rty) $
+    t1 $ mk_abs(Free("_", e1ty), t2)
+  end
+
+fun mk_compl t =
+  Const(@{const_name "uminus"}, type_of t --> type_of t) $ t
 
 (* numerals *)
 fun mk_zero ty = Const(@{const_name "Groups.zero_class.zero"}, ty)
