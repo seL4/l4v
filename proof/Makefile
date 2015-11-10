@@ -35,7 +35,7 @@ HEAPS += DBaseRefine DRefine DPolicy SepDSpec DSpecProofs
 HEAPS += Access InfoFlow InfoFlowC
 
 # Binary Verification
-HEAPS += SimplExportAndRefine SimplExportOnly
+HEAPS += SimplExportAndRefine
 
 # Separation Kernel Bisimilarity
 HEAPS += Bisim
@@ -58,4 +58,4 @@ include ../misc/isa-common.mk
 # SimplExportOnly is a bit special, because we need to *not* build an image.
 SimplExportOnly: c-kernel
 	$(ISABELLE_TOOL) build -v -c -d $(ROOT_PATH) $@
-
+.PHONY: SimplExportOnly
