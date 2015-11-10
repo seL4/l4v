@@ -92,7 +92,7 @@ defs receiveIPC_def:
                       blockingIPCDiminishCaps= diminish \<rparr>) thread;
                   setEndpoint epptr $ RecvEP [thread]
                 od)
-              | False \<Rightarrow>   doNBWaitFailedTransfer thread
+              | False \<Rightarrow>   doNBRecvFailedTransfer thread
               )
             | RecvEP queue \<Rightarrow>   (case isBlocking of
                 True \<Rightarrow>   (do
@@ -101,7 +101,7 @@ defs receiveIPC_def:
                       blockingIPCDiminishCaps= diminish \<rparr>) thread;
                   setEndpoint epptr $ RecvEP $ queue @ [thread]
                 od)
-              | False \<Rightarrow>   doNBWaitFailedTransfer thread
+              | False \<Rightarrow>   doNBRecvFailedTransfer thread
               )
             | SendEP (sender#queue) \<Rightarrow>   (do
                 setEndpoint epptr $ (case queue of

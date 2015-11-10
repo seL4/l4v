@@ -20,7 +20,7 @@ consts
 sendSignal :: "machine_word \<Rightarrow> machine_word \<Rightarrow> unit kernel"
 
 consts
-doNBWaitFailedTransfer :: "machine_word \<Rightarrow> unit kernel"
+doNBRecvFailedTransfer :: "machine_word \<Rightarrow> unit kernel"
 
 consts
 receiveSignal :: "machine_word \<Rightarrow> capability \<Rightarrow> bool \<Rightarrow> unit kernel"

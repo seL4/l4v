@@ -24,11 +24,11 @@ datatype syscall =
     SysSend
   | SysNBSend
   | SysCall
-  | SysWait
+  | SysRecv
   | SysReply
-  | SysReplyWait
+  | SysReplyRecv
   | SysYield
-  | SysNBWait
+  | SysNBRecv
 
 datatype event =
     SyscallEvent syscall

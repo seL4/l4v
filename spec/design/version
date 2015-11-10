@@ -1,8 +1,5 @@
-Built from git repo at /Users/dmatichuk/verification-rename/seL4/haskell by dmatichuk
+Built from git repo at /Users/kleing/verification/seL4/haskell by kleing
 
 Generated from changeset:
-b8c5581 reordered datatype constructors
+e7db597 haskell: Wait -> Recv
 
-
-Warning - uncomitted changes used:
- M src/SEL4/Object/Structures.lhs

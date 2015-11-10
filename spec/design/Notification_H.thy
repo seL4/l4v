@@ -60,8 +60,8 @@ defs sendSignal_def:
             )
 od)"
 
-defs doNBWaitFailedTransfer_def:
-"doNBWaitFailedTransfer thread \<equiv> asUser thread $ setRegister badgeRegister 0"
+defs doNBRecvFailedTransfer_def:
+"doNBRecvFailedTransfer thread \<equiv> asUser thread $ setRegister badgeRegister 0"
 
 defs receiveSignal_def:
 "receiveSignal thread cap isBlocking\<equiv> (do
@@ -74,7 +74,7 @@ defs receiveSignal_def:
                                          waitingOnNotification= ntfnPtr \<rparr> ) thread;
                       setNotification ntfnPtr $ ntfn \<lparr>ntfnObj := WaitingNtfn ([thread]) \<rparr>
                   od)
-                | False \<Rightarrow>   doNBWaitFailedTransfer thread
+                | False \<Rightarrow>   doNBRecvFailedTransfer thread
                 )
             | WaitingNtfn queue \<Rightarrow>   (case isBlocking of
                   True \<Rightarrow>   (do
@@ -82,7 +82,7 @@ defs receiveSignal_def:
                                          waitingOnNotification= ntfnPtr \<rparr> ) thread;
                       setNotification ntfnPtr $ ntfn \<lparr>ntfnObj := WaitingNtfn (queue @ [thread]) \<rparr>
                   od)
-                | False \<Rightarrow>   doNBWaitFailedTransfer thread
+                | False \<Rightarrow>   doNBRecvFailedTransfer thread
                 )
             | ActiveNtfn badge \<Rightarrow>   (do
                 asUser thread $ setRegister badgeRegister badge;

@@ -44,7 +44,7 @@ consts
 handleReply :: "unit kernel"
 
 consts
-handleWait :: "bool \<Rightarrow> unit kernel"
+handleRecv :: "bool \<Rightarrow> unit kernel"
 
 consts
 handleYield :: "unit kernel"
@@ -58,14 +58,14 @@ defs handleEvent_def:
           SysSend \<Rightarrow>   handleSend True
         | SysNBSend \<Rightarrow>   handleSend False
         | SysCall \<Rightarrow>   handleCall
-        | SysWait \<Rightarrow>   withoutPreemption $ handleWait True
+        | SysRecv \<Rightarrow>   withoutPreemption $ handleRecv True
         | SysReply \<Rightarrow>   withoutPreemption handleReply
-        | SysReplyWait \<Rightarrow>   withoutPreemption $ (do
+        | SysReplyRecv \<Rightarrow>   withoutPreemption $ (do
             handleReply;
-            handleWait True
+            handleRecv True
         od)
         | SysYield \<Rightarrow>   withoutPreemption handleYield
-        | SysNBWait \<Rightarrow>   withoutPreemption $ handleWait False
+        | SysNBRecv \<Rightarrow>   withoutPreemption $ handleRecv False
         )
   | Interrupt \<Rightarrow>    withoutPreemption $ (do
     active \<leftarrow> doMachineOp getActiveIRQ;
@@ -114,8 +114,8 @@ defs handleReply_def:
         )
 od)"
 
-defs handleWait_def:
-"handleWait isBlocking\<equiv> (do
+defs handleRecv_def:
+"handleRecv isBlocking\<equiv> (do
     thread \<leftarrow> getCurThread;
     epCPtr \<leftarrow> asUser thread $ liftM CPtr $ getRegister capRegister;
     (capFaultOnFailure epCPtr True $ (doE
