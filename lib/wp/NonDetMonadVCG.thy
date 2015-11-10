@@ -2141,25 +2141,29 @@ lemma validE_NF_condition [wp]:
 
 text {* Strengthen setup. *}
 
+context strengthen_implementation begin
+
 lemma strengthen_hoare [strg]:
-  "(\<And>r s. strengthen_imp (op \<longrightarrow>) (Q r s) (R r s))
-    \<Longrightarrow> strengthen_imp (op \<longrightarrow>) (\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>) (\<lbrace>P\<rbrace> f \<lbrace>R\<rbrace>)"
-  by (auto elim: hoare_strengthen_post)
+  "(\<And>r s. st F (op \<longrightarrow>) (Q r s) (R r s))
+    \<Longrightarrow> st F (op \<longrightarrow>) (\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>) (\<lbrace>P\<rbrace> f \<lbrace>R\<rbrace>)"
+  by (cases F, auto elim: hoare_strengthen_post)
 
 lemma strengthen_validE_R_cong[strg]:
-  "(\<And>r s. strengthen_imp (op \<longrightarrow>) (Q r s) (R r s))
-    \<Longrightarrow> strengthen_imp (op \<longrightarrow>) (\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, -) (\<lbrace>P\<rbrace> f \<lbrace>R\<rbrace>, -)"
-  by (auto intro: hoare_post_imp_R)
+  "(\<And>r s. st F (op \<longrightarrow>) (Q r s) (R r s))
+    \<Longrightarrow> st F (op \<longrightarrow>) (\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, -) (\<lbrace>P\<rbrace> f \<lbrace>R\<rbrace>, -)"
+  by (cases F, auto intro: hoare_post_imp_R)
 
 lemma strengthen_validE_cong[strg]:
-  "(\<And>r s. strengthen_imp (op \<longrightarrow>) (Q r s) (R r s))
-    \<Longrightarrow> (\<And>r s. strengthen_imp (op \<longrightarrow>) (S r s) (T r s))
-    \<Longrightarrow> strengthen_imp (op \<longrightarrow>) (\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, \<lbrace>S\<rbrace>) (\<lbrace>P\<rbrace> f \<lbrace>R\<rbrace>, \<lbrace>T\<rbrace>)"
-  by (auto elim: hoare_post_impErr)
+  "(\<And>r s. st F (op \<longrightarrow>) (Q r s) (R r s))
+    \<Longrightarrow> (\<And>r s. st F (op \<longrightarrow>) (S r s) (T r s))
+    \<Longrightarrow> st F (op \<longrightarrow>) (\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace>, \<lbrace>S\<rbrace>) (\<lbrace>P\<rbrace> f \<lbrace>R\<rbrace>, \<lbrace>T\<rbrace>)"
+  by (cases F, auto elim: hoare_post_impErr)
 
 lemma strengthen_validE_E_cong[strg]:
-  "(\<And>r s. strengthen_imp (op \<longrightarrow>) (S r s) (T r s))
-    \<Longrightarrow> strengthen_imp (op \<longrightarrow>) (\<lbrace>P\<rbrace> f -, \<lbrace>S\<rbrace>) (\<lbrace>P\<rbrace> f -, \<lbrace>T\<rbrace>)"
-  by (auto elim: hoare_post_impErr simp: validE_E_def)
+  "(\<And>r s. st F (op \<longrightarrow>) (S r s) (T r s))
+    \<Longrightarrow> st F (op \<longrightarrow>) (\<lbrace>P\<rbrace> f -, \<lbrace>S\<rbrace>) (\<lbrace>P\<rbrace> f -, \<lbrace>T\<rbrace>)"
+  by (cases F, auto elim: hoare_post_impErr simp: validE_E_def)
+
+end
 
 end

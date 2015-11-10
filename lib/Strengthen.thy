@@ -6,25 +6,118 @@ begin
 
 text {* Strengthen *}
 
-definition
-  "strengthen_imp rel x y = (x = y \<or> rel x y)"
+locale strengthen_implementation begin
 
-lemma strengthen_imp_refl:
-  "strengthen_imp rel x x"
-  by (simp add: strengthen_imp_def)
+definition "st P rel x y = (x = y \<or> (P \<and> rel x y) \<or> (\<not> P \<and> rel y x))"
 
-lemma strengthen_impI:
-  "rel x y \<Longrightarrow> strengthen_imp rel x y"
-  by (simp add: strengthen_imp_def)
+definition "failed == True"
 
-lemmas imp_to_strengthen = strengthen_impI[where rel="op \<longrightarrow>"]
+definition elim :: "prop \<Rightarrow> prop"
+where
+ "elim (P :: prop) == P"
+
+definition "oblig (P :: prop) == P"
+
+end
+
+notation strengthen_implementation.elim ("{elim| _ |}")
+notation strengthen_implementation.oblig ("{oblig| _ |}")
+notation strengthen_implementation.failed ("<strg-failed>")
+
+syntax 
+  "_ap_strg_bool" :: "['a, 'a] => 'a"  ("_ =strg<--|=> _")
+  "_ap_wkn_bool" :: "['a, 'a] => 'a"  ("_ =strg-->|=> _")
+  "_ap_ge_bool" :: "['a, 'a] => 'a"  ("_ =strg<=|=> _")
+  "_ap_le_bool" :: "['a, 'a] => 'a"  ("_ =strg>=|=> _")
+
+syntax(xsymbols) 
+  "_ap_strg_bool" :: "['a, 'a] => 'a"  ("_ =strg\<longleftarrow>|=> _")
+  "_ap_wkn_bool" :: "['a, 'a] => 'a"  ("_ =strg\<longrightarrow>|=> _")
+  "_ap_ge_bool" :: "['a, 'a] => 'a"  ("_ =strg\<le>|=> _")
+  "_ap_le_bool" :: "['a, 'a] => 'a"  ("_ =strg\<ge>|=> _")
+
+translations
+  "P =strg\<longleftarrow>|=> Q" == "CONST strengthen_implementation.st (CONST False) (CONST HOL.implies) P Q"
+  "P =strg\<longrightarrow>|=> Q" == "CONST strengthen_implementation.st (CONST True) (CONST HOL.implies) P Q"
+  "P =strg\<le>|=> Q" == "CONST strengthen_implementation.st (CONST False) (CONST Orderings.less_eq) P Q"
+  "P =strg\<ge>|=> Q" == "CONST strengthen_implementation.st (CONST True) (CONST Orderings.less_eq) P Q"
+
+context strengthen_implementation begin
+
+lemma failedI:
+  "<strg-failed>"
+  by (simp add: failed_def)
+
+lemma strengthen_refl:
+  "st P rel x x"
+  by (simp add: st_def)
+
+lemma strengthenI:
+  "rel x y \<Longrightarrow> st True rel x y"
+  "rel y x \<Longrightarrow> st False rel x y"
+  by (simp_all add: st_def)
+
+lemmas imp_to_strengthen = strengthenI(2)[where rel="op \<longrightarrow>"]
+lemmas rev_imp_to_strengthen = strengthenI(1)[where rel="op \<longrightarrow>"]
+lemmas ord_to_strengthen = strengthenI[where rel="op \<le>"]
 
 lemma use_strengthen_imp:
-  "strengthen_imp (op \<longrightarrow>) P Q \<Longrightarrow> P \<Longrightarrow> Q"
-  by (simp add: strengthen_imp_def)
+  "st False (op \<longrightarrow>) Q P \<Longrightarrow> P \<Longrightarrow> Q"
+  by (simp add: st_def)
+
+lemma strengthen_Not:
+  "st False rel x y \<Longrightarrow> st (\<not> True) rel x y"
+  "st True rel x y \<Longrightarrow> st (\<not> False) rel x y"
+  by auto
+
+lemmas gather =
+    swap_prems_eq[where A="PROP (Trueprop P)" and B="PROP (elim Q)" for P Q]
+    swap_prems_eq[where A="PROP (Trueprop P)" and B="PROP (oblig Q)" for P Q]
+
+lemma mk_True_imp:
+  "P \<equiv> True \<longrightarrow> P"
+  by simp
+
+lemma narrow_quant:
+  "(\<And>x. PROP P \<Longrightarrow> PROP (Q x)) \<equiv> (PROP P \<Longrightarrow> (\<And>x. PROP (Q x)))"
+  "(\<And>x. (R \<longrightarrow> S x)) \<equiv> PROP (Trueprop (R \<longrightarrow> (\<forall>x. S x)))"
+  "(\<And>x. (S x \<longrightarrow> R)) \<equiv> PROP (Trueprop ((\<exists>x. S x) \<longrightarrow> R))"
+  apply (simp_all add: atomize_all)
+  apply rule
+   apply assumption
+  apply assumption
+  done
 
 ML {*
 structure Make_Strengthen_Rule = struct
+
+fun binop_conv' cv1 cv2 = Conv.combination_conv (Conv.arg_conv cv1) cv2;
+
+val mk_elim = Conv.rewr_conv @{thm elim_def[symmetric]}
+val mk_oblig = Conv.rewr_conv @{thm oblig_def[symmetric]}
+
+fun count_vars t = Term.fold_aterms
+    (fn (Var v) => Termtab.map_default (Var v, 0) (fn x => x + 1)
+        | _ => I) t Termtab.empty
+
+fun gather_to_imp ctxt drule pattern = let
+    val pattern = (if drule then "D" :: pattern else pattern)
+    fun inner pat ct = case (head_of (Thm.term_of ct), pat) of
+        (@{term Pure.imp}, ("E" :: pat)) => binop_conv' mk_elim (inner pat) ct
+      | (@{term Pure.imp}, ("O" :: pat)) => binop_conv' mk_oblig (inner pat) ct
+      | (@{term Pure.imp}, _) => binop_conv' (Object_Logic.atomize ctxt) (inner (drop 1 pat)) ct
+      | (_, []) => Object_Logic.atomize ctxt ct
+      | (_, pat) => raise THM ("gather_to_imp: leftover pattern: " ^ commas pat, 1, [])
+    fun simp thms = Raw_Simplifier.rewrite ctxt false thms
+    fun ensure_imp ct = case (strip_comb (Thm.term_of ct) |> apsnd (map head_of)) of
+        (@{term Pure.imp}, []) => Conv.arg_conv ensure_imp ct
+      | (@{term HOL.Trueprop}, [@{term HOL.implies}]) => Conv.all_conv ct
+      | _ => Conv.rewr_conv @{thm mk_True_imp} ct
+    val gather = simp @{thms gather}
+        then_conv (if drule then Conv.all_conv else simp @{thms atomize_conjL})
+        then_conv simp @{thms atomize_imp}
+        then_conv ensure_imp
+  in Conv.fconv_rule (inner pattern then_conv gather) end
 
 fun imp_list t = let
     val (x, y) = Logic.dest_implies t
@@ -33,55 +126,74 @@ fun imp_list t = let
 fun mk_ex (xnm, T) t = HOLogic.exists_const T $ Term.lambda (Var (xnm, T)) t
 fun mk_all (xnm, T) t = HOLogic.all_const T $ Term.lambda (Var (xnm, T)) t
 
-fun do_mk ctxt thm = let
-    val atomize = Object_Logic.atomize_prems ctxt (Thm.cprop_of thm)
-    val thm2 = Thm.equal_elim atomize thm
-    val xs = imp_list (Thm.term_of (Thm.rhs_of atomize))
-    val xs = map HOLogic.dest_Trueprop xs
-      handle TERM _ => raise TERM ("Make_Strengthen_Rule.mk: Trueprop", xs)
-    val (concl :: rev_prems) = rev xs
-    val prem = fold (curry HOLogic.mk_conj) (rev rev_prems) @{term True}
-    val free_concl = Term.add_vars concl []
-    val free_prem = Term.add_vars prem []
-    val ord = prod_ord Term_Ord.indexname_ord Term_Ord.typ_ord
-    val ex_free_prem = Ord_List.subtract ord (Ord_List.make ord free_concl)
-        (Ord_List.make ord free_prem)
-    val ex_prem = fold mk_ex ex_free_prem prem
-    val imp = (@{term "strengthen_imp (op -->)"}
-        $ ex_prem $ concl)
-    val rule = @{term Trueprop} $ fold mk_all free_concl imp |> Thm.cterm_of ctxt
-  in Goal.prove_internal ctxt [] rule
-    (K (
-      REPEAT_DETERM (rtac @{thm allI} 1)
-      THEN rtac @{thm strengthen_impI} 1
-      THEN rtac @{thm impI} 1
-      THEN (REPEAT_DETERM (etac @{thm exE} 1))
-      THEN rtac thm2 1
-      THEN ALLGOALS (fn i => REPEAT_DETERM_N (length xs - i - 1) (dtac @{thm conjunct2} i))
-      THEN ALLGOALS (dtac @{thm conjunct1})
-      THEN ALLGOALS atac
-    ))
-      |> Object_Logic.rulify ctxt
+fun quantify_vars ctxt drule thm = let
+    val (lhs, rhs) = Thm.concl_of thm |> HOLogic.dest_Trueprop
+      |> HOLogic.dest_imp
+    val all_vars = count_vars (Thm.prop_of thm)
+    val new_vars = count_vars (if drule then rhs else lhs)
+    val quant = filter (fn v => Termtab.lookup new_vars v = Termtab.lookup all_vars v)
+            (Termtab.keys new_vars)
+        |> map (Thm.cterm_of ctxt)
+  in fold Thm.forall_intr quant thm
+    |> Conv.fconv_rule (Raw_Simplifier.rewrite ctxt false @{thms narrow_quant})
   end
 
-fun mk_thm ctxt thm = (HOLogic.dest_Trueprop (Thm.prop_of thm);
-        thm RS @{thm imp_to_strengthen})
-    handle TERM _ => do_mk ctxt thm
-    handle THM _ => raise THM ("Make_Strengthen_Rule.mk_thm:"
-        ^ " not impl or meta-impl", 1, [thm])
+fun mk_strg (typ, pat) ctxt thm = let
+    val drule = typ = "D" orelse typ = "D'"
+    val imp = gather_to_imp ctxt drule pat thm
+      |> (if typ = "I'" orelse typ = "D'"
+          then quantify_vars ctxt drule else I)
+  in if typ = "I" orelse typ = "I'"
+    then imp RS @{thm imp_to_strengthen}
+    else if drule then imp RS @{thm rev_imp_to_strengthen}
+    else if typ = "lhs" then imp RS @{thm ord_to_strengthen(1)}
+    else if typ = "rhs" then imp RS @{thm ord_to_strengthen(2)}
+    else raise THM ("mk_strg: unknown type: " ^ typ, 1, [thm])
+ end
+
+fun auto_mk ctxt thm = let
+    val concl_C = try (fst o dest_Const o head_of
+        o HOLogic.dest_Trueprop) (Thm.concl_of thm)
+  in case (Thm.nprems_of thm, concl_C) of
+    (_, SOME @{const_name failed}) => thm
+  | (_, SOME @{const_name st}) => thm
+  | (0, SOME @{const_name HOL.implies}) => (thm RS @{thm imp_to_strengthen}
+      handle THM _ => @{thm failedI})
+  | _ => mk_strg ("I'", []) ctxt thm
+  end
+
+fun mk_strg_args (SOME (typ, pat)) ctxt thm = mk_strg (typ, pat) ctxt thm
+  | mk_strg_args NONE ctxt thm = auto_mk ctxt thm
+
+val arg_pars = Scan.option (Scan.first (map Args.$$$ ["I", "I'", "D", "D'", "lhs", "rhs"])
+  -- Scan.repeat (Args.$$$ "E" || Args.$$$ "O" || Args.$$$ "_"))
+
+val setup =
+      Attrib.setup @{binding "mk_strg"}
+          ((Scan.lift arg_pars -- Args.context)
+              >> (fn (args, ctxt) => Thm.rule_attribute (K (mk_strg_args args ctxt))))
+          "put rule in 'strengthen' form"
 
 end
 *}
 
-ML {*
-Make_Strengthen_Rule.mk_thm @{context} @{thm nat.induct}
-*}
+end
+
+context strengthen_implementation begin
+
+lemma do_elim:
+  "PROP P \<Longrightarrow> PROP elim (PROP P)"
+  by (simp add: elim_def)
+
+lemma intro_oblig:
+  "PROP P \<Longrightarrow> PROP oblig (PROP P)"
+  by (simp add: oblig_def)
 
 ML {*
 
 structure Strengthen = struct
 
-structure Congs = Generic_Data
+structure Congs = Theory_Data
 (struct
     type T = thm list
     val empty = []
@@ -89,38 +201,49 @@ structure Congs = Generic_Data
     val merge = Thm.merge_thms;
 end);
 
+fun map_context_total f (Context.Theory t) = (Context.Theory (f t))
+  | map_context_total f (Context.Proof p)
+    = (Context.Proof (Context.raw_transfer (f (Proof_Context.theory_of p)) p))
+
 val strg_add = Thm.declaration_attribute 
-                    (fn thm =>                      
-                        (Congs.map (Thm.add_thm thm)));
+        (fn thm => map_context_total (Congs.map (Thm.add_thm thm)));
 
 val strg_del = Thm.declaration_attribute 
-                    (fn thm =>                      
-                        (Congs.map (Thm.del_thm thm))); 
+        (fn thm => map_context_total (Congs.map (Thm.del_thm thm)));
   
 val setup =
   Attrib.setup @{binding "strg"} (Attrib.add_del strg_add strg_del)
     "strengthening congruence rules";
 
-infix 1 THEN_ALL_NEW_SOLVED;
+val do_elim = SUBGOAL (fn (t, i) => case (head_of (Logic.strip_assums_concl t)) of
+    @{term elim} => etac @{thm do_elim} i
+  | _ => all_tac)
 
-(* Like THEN_ALL_NEW but insists at least one goal is solved
-   by the various applications of tac2. *)
-fun (tac1 THEN_ALL_NEW_SOLVED tac2) i st =
-  st |> (tac1 i THEN SOLVED' (fn _ => fn st' =>
-    Seq.INTERVAL tac2 i (i + Thm.nprems_of st' - Thm.nprems_of st) st') 52);
+infix 1 THEN_TRY_ALL_NEW;
+
+(* Like THEN_ALL_NEW but allows failure, although at least one subsequent
+   method must succeed. *)
+fun (tac1 THEN_TRY_ALL_NEW tac2) i st = let
+    fun inner b j st = if i > j then (if b then all_tac else no_tac) st
+      else ((tac2 j THEN inner true (j - 1)) ORELSE inner b (j - 1)) st
+  in st |> (tac1 i THEN (fn st' =>
+    inner false (i + Thm.nprems_of st' - Thm.nprems_of st) st')) end
 
 fun apply_strg ctxt congs rules = let
-  in resolve_tac ctxt rules
-    ORELSE' ((resolve_tac ctxt congs
-            THEN_ALL_NEW_SOLVED (fn i => TRY (apply_strg ctxt congs rules i)))
-        THEN_ALL_NEW rtac @{thm strengthen_imp_refl})
+  in TRY o resolve_tac ctxt @{thms strengthen_Not}
+    THEN' ((resolve_tac ctxt rules THEN_ALL_NEW do_elim)
+        ORELSE' (resolve_tac ctxt congs THEN_TRY_ALL_NEW (fn i => apply_strg ctxt congs rules i)))
   end
 
+fun do_strg ctxt congs rules
+    = apply_strg ctxt congs rules
+        THEN_ALL_NEW (TRY o resolve_tac ctxt @{thms strengthen_refl intro_oblig})
+
 fun strengthen ctxt thms = let
-    val congs = Congs.get (Context.Proof ctxt)
-    val rules = map (Make_Strengthen_Rule.mk_thm ctxt) thms
+    val congs = Congs.get (Proof_Context.theory_of ctxt)
+    val rules = map (Make_Strengthen_Rule.auto_mk ctxt) thms
   in rtac @{thm use_strengthen_imp}
-    THEN' apply_strg ctxt congs rules end
+    THEN' do_strg ctxt congs rules end
 
 val strengthen_args =
   Attrib.thms >> curry (fn (rules, ctxt) =>
@@ -133,6 +256,8 @@ end
 
 *}
 
+end
+
 setup "Strengthen.setup"
 
 method_setup strengthen = {* Strengthen.strengthen_args *}
@@ -140,142 +265,96 @@ method_setup strengthen = {* Strengthen.strengthen_args *}
 
 text {* Important strengthen congruence rules. *}
 
-lemma strengthen_imp_imp:
-  "strengthen_imp (op \<longrightarrow>) A B = (A \<longrightarrow> B)"
-  "strengthen_imp (swp (op \<longrightarrow>)) A B = (B \<longrightarrow> A)"
-  by (simp_all add: strengthen_imp_def swp_def)
+context strengthen_implementation begin
 
-context begin
+lemma strengthen_imp_imp[simp]:
+  "st True (op \<longrightarrow>) A B = (A \<longrightarrow> B)"
+  "st False (op \<longrightarrow>) A B = (B \<longrightarrow> A)"
+  by (simp_all add: st_def)
 
-private abbreviation(input)
-  "stimp_ord a \<equiv> strengthen_imp (op \<le>) (a :: 'a :: preorder)"
-private abbreviation(input)
-  "stimp_ord2 a \<equiv> strengthen_imp (swp (op \<le>)) (a :: 'a :: preorder)"
+abbreviation(input)
+  "st_ord t \<equiv> st t (op \<le> :: ('a :: preorder) \<Rightarrow> _)"
 
-lemma strengthen_imp_ord:
-  "stimp_ord A B = (A \<le> B)"
-  "stimp_ord2 A B = (B \<le> A)"
-  by (auto simp add: strengthen_imp_def swp_def)
-
-private declare strengthen_imp_ord[simp]
-private declare strengthen_imp_imp[simp]
+lemma strengthen_imp_ord[simp]:
+  "st_ord True A B = (A \<le> B)"
+  "st_ord False A B = (B \<le> A)"
+  by (auto simp add: st_def)
 
 lemma strengthen_imp_conj [strg]:
-  "\<lbrakk> strengthen_imp (op \<longrightarrow>) A A'; strengthen_imp (op \<longrightarrow>) B B' \<rbrakk>
-    \<Longrightarrow> strengthen_imp (op \<longrightarrow>) (A \<and> B) (A' \<and> B')"
-  by (simp add: strengthen_imp_imp)
-
-lemma strengthen_imp_conj2 [strg]:
-  "\<lbrakk> strengthen_imp (swp (op \<longrightarrow>)) A A'; strengthen_imp (swp (op \<longrightarrow>)) B B' \<rbrakk>
-    \<Longrightarrow> strengthen_imp (swp (op \<longrightarrow>)) (A \<and> B) (A' \<and> B')"
-  by simp
+  "\<lbrakk> B \<Longrightarrow> st F (op \<longrightarrow>) A A'; A' \<Longrightarrow> st F (op \<longrightarrow>) B B' \<rbrakk>
+    \<Longrightarrow> st F (op \<longrightarrow>) (A \<and> B) (A' \<and> B')"
+  by (cases F, auto)
 
 lemma strengthen_imp_disj [strg]:
-  "\<lbrakk> strengthen_imp (op \<longrightarrow>) A A'; strengthen_imp (op \<longrightarrow>) B B' \<rbrakk>
-    \<Longrightarrow> strengthen_imp (op \<longrightarrow>) (A \<or> B) (A' \<or> B')"
-  by simp
+  "\<lbrakk> \<not> B \<Longrightarrow> st F (op \<longrightarrow>) A A'; \<not> A' \<Longrightarrow> st F (op \<longrightarrow>) B B' \<rbrakk>
+    \<Longrightarrow> st F (op \<longrightarrow>) (A \<or> B) (A' \<or> B')"
+  by (cases F, auto)
 
-lemma strengthen_imp_disj2 [strg]:
-  "\<lbrakk> strengthen_imp (swp (op \<longrightarrow>)) A A'; strengthen_imp (swp (op \<longrightarrow>)) B B' \<rbrakk>
-    \<Longrightarrow> strengthen_imp (swp (op \<longrightarrow>)) (A \<or> B) (A' \<or> B')"
-  by simp
-
-lemma strengthen_imp [strg]:
-  "\<lbrakk> strengthen_imp (swp (op \<longrightarrow>)) X X'; strengthen_imp (op \<longrightarrow>) Y Y' \<rbrakk>
-    \<Longrightarrow> strengthen_imp (op \<longrightarrow>) (X \<longrightarrow> Y) (X' \<longrightarrow> Y')"
-  by simp
-
-lemma strengthen_imp2 [strg]:
-  "\<lbrakk> strengthen_imp (op \<longrightarrow>) X X'; strengthen_imp (swp (op \<longrightarrow>)) Y Y' \<rbrakk>
-    \<Longrightarrow> strengthen_imp (swp (op \<longrightarrow>)) (X \<longrightarrow> Y) (X' \<longrightarrow> Y')"
-  by simp
+lemma strengthen_imp_implies [strg]:
+  "\<lbrakk> st (\<not> F) (op \<longrightarrow>) X X'; X' \<Longrightarrow> st F (op \<longrightarrow>) Y Y' \<rbrakk>
+    \<Longrightarrow> st F (op \<longrightarrow>) (X \<longrightarrow> Y) (X' \<longrightarrow> Y')"
+  by (cases F, auto)
 
 lemma strengthen_all[strg]:
-  "\<lbrakk> \<And>x. strengthen_imp (op \<longrightarrow>) (P x) (Q x) \<rbrakk>
-    \<Longrightarrow> strengthen_imp (op \<longrightarrow>) (\<forall>x. P x) (\<forall>x. Q x)"
-  by auto
-
-lemma strengthen_all2[strg]:
-  "\<lbrakk> \<And>x. strengthen_imp (swp (op \<longrightarrow>)) (P x) (Q x) \<rbrakk>
-    \<Longrightarrow> strengthen_imp (swp (op \<longrightarrow>)) (\<forall>x. P x) (\<forall>x. Q x)"
-  by auto
+  "\<lbrakk> \<And>x. st F (op \<longrightarrow>) (P x) (Q x) \<rbrakk>
+    \<Longrightarrow> st F (op \<longrightarrow>) (\<forall>x. P x) (\<forall>x. Q x)"
+  by (cases F, auto)
 
 lemma strengthen_ex[strg]:
-  "\<lbrakk> \<And>x. strengthen_imp (op \<longrightarrow>) (P x) (Q x) \<rbrakk>
-    \<Longrightarrow> strengthen_imp (op \<longrightarrow>) (\<exists>x. P x) (\<exists>x. Q x)"
-  by auto
-
-lemma strengthen_ex2[strg]:
-  "\<lbrakk> \<And>x. strengthen_imp (swp (op \<longrightarrow>)) (P x) (Q x) \<rbrakk>
-    \<Longrightarrow> strengthen_imp (swp (op \<longrightarrow>)) (\<exists>x. P x) (\<exists>x. Q x)"
-  by auto
+  "\<lbrakk> \<And>x. st F (op \<longrightarrow>) (P x) (Q x) \<rbrakk>
+    \<Longrightarrow> st F (op \<longrightarrow>) (\<exists>x. P x) (\<exists>x. Q x)"
+  by (cases F, auto)
 
 lemma strengthen_Ball[strg]:
-  "\<lbrakk> \<And>x. strengthen_imp (op \<longrightarrow>) (P x) (Q x);
-        stimp_ord2 S S' \<rbrakk>
-    \<Longrightarrow> strengthen_imp (op \<longrightarrow>) (\<forall>x \<in> S. P x) (\<forall>x \<in> S. Q x)"
-  by auto
-
-lemma strengthen_Ball2[strg]:
-  "\<lbrakk> \<And>x. strengthen_imp (swp (op \<longrightarrow>)) (P x) (Q x);
-        stimp_ord S S' \<rbrakk>
-    \<Longrightarrow> strengthen_imp (swp (op \<longrightarrow>)) (\<forall>x \<in> S. P x) (\<forall>x \<in> S'. Q x)"
-  by auto
+  "\<lbrakk> st_ord (Not F) S S';
+        \<And>x. x \<in> S' \<Longrightarrow> st F (op \<longrightarrow>) (P x) (Q x) \<rbrakk>
+    \<Longrightarrow> st F (op \<longrightarrow>) (\<forall>x \<in> S. P x) (\<forall>x \<in> S'. Q x)"
+  by (cases F, auto)
 
 lemma strengthen_Bex[strg]:
-  "\<lbrakk> \<And>x. strengthen_imp (op \<longrightarrow>) (P x) (Q x);
-        stimp_ord2 S S' \<rbrakk>
-    \<Longrightarrow> strengthen_imp (op \<longrightarrow>) (\<exists>x \<in> S. P x) (\<exists>x \<in> S. Q x)"
-  by auto
-
-lemma strengthen_Bex2[strg]:
-  "\<lbrakk> \<And>x. strengthen_imp (swp (op \<longrightarrow>)) (P x) (Q x);
-        stimp_ord S S' \<rbrakk>
-    \<Longrightarrow> strengthen_imp (swp (op \<longrightarrow>)) (\<exists>x \<in> S. P x) (\<exists>x \<in> S. Q x)"
-  by auto
+  "\<lbrakk> st_ord F S S';
+        \<And>x. x \<in> S' \<Longrightarrow> st F (op \<longrightarrow>) (P x) (Q x) \<rbrakk>
+    \<Longrightarrow> st F (op \<longrightarrow>) (\<exists>x \<in> S. P x) (\<exists>x \<in> S'. Q x)"
+  by (cases F, auto)
 
 lemma strengthen_Collect[strg]:
-  "\<lbrakk> \<And>x. strengthen_imp (op \<longrightarrow>) (P x) (P' x) \<rbrakk>
-    \<Longrightarrow> stimp_ord {x. P x} {x. P' x}"
-  by auto
-
-lemma strengthen_Collect2[strg]:
-  "\<lbrakk> \<And>x. strengthen_imp (swp (op \<longrightarrow>)) (P x) (P' x) \<rbrakk>
-    \<Longrightarrow> stimp_ord2 {x. P x} {x. P' x}"
-  by auto
+  "\<lbrakk> \<And>x. st F (op \<longrightarrow>) (P x) (P' x) \<rbrakk>
+    \<Longrightarrow> st_ord F {x. P x} {x. P' x}"
+  by (cases F, auto)
 
 lemma strengthen_mem[strg]:
-  "\<lbrakk> strengthen_imp (op \<le>) S S' \<rbrakk>
-    \<Longrightarrow> strengthen_imp (op \<longrightarrow>) (x \<in> S) (x \<in> S')"
-  by auto
-
-lemma strengthen_mem2[strg]:
-  "\<lbrakk> strengthen_imp (swp (op \<le>)) S S' \<rbrakk>
-    \<Longrightarrow> strengthen_imp (swp (op \<longrightarrow>)) (x \<in> S) (x \<in> S')"
-  by auto
+  "\<lbrakk> st_ord F S S' \<rbrakk>
+    \<Longrightarrow> st F (op \<longrightarrow>) (x \<in> S) (x \<in> S')"
+  by (cases F, auto)
 
 lemma strengthen_ord[strg]:
-  "stimp_ord2 x x' \<Longrightarrow> stimp_ord y y'
-    \<Longrightarrow> strengthen_imp (op \<longrightarrow>) (x \<le> y) (x' \<le> y')"
-  by (simp, metis order_trans)
-
-lemma strengthen_ord2[strg]:
-  "stimp_ord x x' \<Longrightarrow> stimp_ord2 y y'
-    \<Longrightarrow> strengthen_imp (swp (op \<longrightarrow>)) (x \<le> y) (x' \<le> y')"
-  by (simp, metis order_trans)
+  "st_ord (\<not> F) x x' \<Longrightarrow> st_ord F y y'
+    \<Longrightarrow> st F (op \<longrightarrow>) (x \<le> y) (x' \<le> y')"
+  by (cases F, simp_all, (metis order_trans)+)
 
 lemma strengthen_strict_ord[strg]:
-  "stimp_ord2 x x' \<Longrightarrow> stimp_ord y y'
-    \<Longrightarrow> strengthen_imp (op \<longrightarrow>) (x < y) (x' < y')"
-  by (simp, metis order_le_less_trans order_less_le_trans)
+  "st_ord (\<not> F) x x' \<Longrightarrow> st_ord F y y'
+    \<Longrightarrow> st F (op \<longrightarrow>) (x < y) (x' < y')"
+  by (cases F, simp_all, (metis order_le_less_trans order_less_le_trans)+)
 
-lemma strengthen_strict_ord2[strg]:
-  "stimp_ord x x' \<Longrightarrow> stimp_ord2 y y'
-    \<Longrightarrow> strengthen_imp (swp (op \<longrightarrow>)) (x < y) (x' < y')"
-  by (simp, metis order_le_less_trans order_less_le_trans)
+lemma strengthen_image[strg]:
+  "st_ord F S S' \<Longrightarrow> st_ord F (f ` S) (f ` S')"
+  by (cases F, auto)
 
-(* FIXME: add image, revimage, restrict_map, Int, Un, all variants
-   of big set UN/INT syntax, all relevant order stuff, etc. *)
+lemma strengthen_vimage[strg]:
+  "st_ord F S S' \<Longrightarrow> st_ord F (f -` S) (f -` S')"
+  by (cases F, auto)
+
+lemma strengthen_Int[strg]:
+  "st_ord F A A' \<Longrightarrow> st_ord F B B' \<Longrightarrow> st_ord F (A \<inter> B) (A' \<inter> B')"
+  by (cases F, auto)
+
+lemma strengthen_Un[strg]:
+  "st_ord F A A' \<Longrightarrow> st_ord F B B' \<Longrightarrow> st_ord F (A \<union> B) (A' \<union> B')"
+  by (cases F, auto)
+
+(* FIXME: add all variants
+   of big set UN/INT syntax, maps, all relevant order stuff, etc. *)
 
 lemma imp_consequent:
   "P \<longrightarrow> Q \<longrightarrow> P" by simp
