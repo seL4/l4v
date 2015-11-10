@@ -1679,9 +1679,9 @@ lemma hw_corres':
                      and sch_act_sane
                      and (\<lambda>s. \<forall>p. ksCurThread s \<notin> set (ksReadyQueues s p)) 
                      and (\<lambda>s. ex_nonz_cap_to' (ksCurThread s) s))
-                    (handle_wait isBlocking) (handleWait isBlocking)"
-  (is "corres dc (?pre1) (?pre2) (handle_wait _) (handleWait _)")
-  apply (simp add: handle_wait_def handleWait_def liftM_bind Let_def
+                    (handle_recv isBlocking) (handleRecv isBlocking)"
+  (is "corres dc (?pre1) (?pre2) (handle_recv _) (handleRecv _)")
+  apply (simp add: handle_recv_def handleRecv_def liftM_bind Let_def
                    cap_register_def capRegister_def
              cong: if_cong cap.case_cong capability.case_cong bool.case_cong)
   apply (rule corres_guard_imp)
@@ -1739,7 +1739,7 @@ lemma hw_corres:
   "corres dc (einvs and ct_active)
              (invs' and ct_active' and sch_act_sane and
                     (\<lambda>s. \<forall>p. ksCurThread s \<notin> set (ksReadyQueues s p)))
-            (handle_wait isBlocking) (handleWait isBlocking)"
+            (handle_recv isBlocking) (handleRecv isBlocking)"
   apply (rule corres_guard_imp)
     apply (rule hw_corres')
    apply (clarsimp simp: ct_in_state_def)
@@ -1769,8 +1769,8 @@ lemma hw_invs'[wp]:
           and (\<lambda>s. ex_nonz_cap_to' (ksCurThread s) s)
           and (\<lambda>s. ksCurThread s \<noteq> ksIdleThread s)
           and (\<lambda>s. \<forall>p. ksCurThread s \<notin> set (ksReadyQueues s p))\<rbrace>
-   handleWait isBlocking \<lbrace>\<lambda>r. invs'\<rbrace>"
-  apply (simp add: handleWait_def cong: if_cong)
+   handleRecv isBlocking \<lbrace>\<lambda>r. invs'\<rbrace>"
+  apply (simp add: handleRecv_def cong: if_cong)
   apply (rule hoare_pre)
    apply ((wp getNotification_wp | wpc | simp)+)[1]
                 apply (clarsimp simp: ct_in_state'_def)
@@ -1806,8 +1806,8 @@ lemma hw_invs'[wp]:
               simp: ct_in_state'_def sch_act_sane_def)
   done
 
-lemma hw_tcb'[wp]: "\<lbrace>tcb_at' t\<rbrace> handleWait isBlocking \<lbrace>\<lambda>rv. tcb_at' t\<rbrace>"
-  apply (simp add: handleWait_def cong: if_cong)
+lemma hw_tcb'[wp]: "\<lbrace>tcb_at' t\<rbrace> handleRecv isBlocking \<lbrace>\<lambda>rv. tcb_at' t\<rbrace>"
+  apply (simp add: handleRecv_def cong: if_cong)
   apply (clarsimp simp add: whenE_def split del: split_if | wp  hoare_whenE_wp hoare_drop_imps
               | wpcw)+
   done
@@ -2201,8 +2201,8 @@ lemma handleReply_ct_not_ksQ:
 lemma hrw_corres:
   "corres dc (einvs and ct_running)
              (invs' and ct_running' and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
-         (do x \<leftarrow> handle_reply; handle_wait True od)
-         (do x \<leftarrow> handleReply; handleWait True od)"
+         (do x \<leftarrow> handle_reply; handle_recv True od)
+         (do x \<leftarrow> handleReply; handleRecv True od)"
   apply (rule corres_guard_imp)
     apply (rule corres_split_nor [OF _ hr_corres])
       apply (rule hw_corres')
@@ -2229,7 +2229,7 @@ proof -
     "\<And>isBlocking. corres dc (einvs and ct_running and (\<lambda>s. scheduler_action s = resume_cur_thread))
                (invs' and ct_running'
                       and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
-               (handle_wait isBlocking) (handleWait isBlocking)"
+               (handle_recv isBlocking) (handleRecv isBlocking)"
     apply (rule corres_guard_imp [OF hw_corres])
      apply (clarsimp simp: ct_in_state_def ct_in_state'_def
                      elim!: st_tcb_weakenE pred_tcb'_weakenE

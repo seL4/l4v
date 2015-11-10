@@ -384,7 +384,7 @@ lemma handle_invocation_irq_masks:
 
 crunch irq_masks[wp]: handle_reply "\<lambda>s. P (irq_masks_of_state s)"
 
-crunch irq_masks[wp]: handle_wait "\<lambda>s. P (irq_masks_of_state s)"
+crunch irq_masks[wp]: handle_recv "\<lambda>s. P (irq_masks_of_state s)"
   (wp: crunch_wps simp: crunch_simps)
 
 crunch irq_masks[wp]: handle_vm_fault "\<lambda>s. P (irq_masks_of_state s)"

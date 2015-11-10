@@ -40,7 +40,7 @@ lemma transfer_caps_loop_irq_state[wp]:
   apply(wp transfer_caps_loop_pres)
   done
 
-crunch irq_state_of_state[wp]: handle_wait "\<lambda>s. P (irq_state_of_state s)"
+crunch irq_state_of_state[wp]: handle_recv "\<lambda>s. P (irq_state_of_state s)"
   (wp: crunch_wps dmo_wp simp: crunch_simps maskInterrupt_def unless_def store_word_offs_def storeWord_def ignore: const_on_failure)
 
 crunch irq_state_of_state[wp]: handle_reply "\<lambda>s. P (irq_state_of_state s)"

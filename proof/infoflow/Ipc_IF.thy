@@ -817,7 +817,7 @@ lemma receive_signal_reads_respects:
             (pasSubject aag, Receive, pasObjectAbs aag ntfnptr)
              \<in> pasPolicy aag \<and> is_subject aag thread)))
          (receive_signal thread cap is_blocking)"
-  unfolding receive_signal_def fun_app_def do_nbwait_failed_transfer_def
+  unfolding receive_signal_def fun_app_def do_nbrecv_failed_transfer_def
   apply(wp set_notification_reads_respects set_thread_state_reads_respects 
            as_user_set_register_reads_respects' get_notification_reads_respects hoare_vcg_all_lift
        | wpc
@@ -1787,7 +1787,7 @@ lemma complete_signal_reads_respects:
   done
 
 lemma receive_ipc_base_reads_respects:
-  notes do_nbwait_failed_transfer_def[simp]
+  notes do_nbrecv_failed_transfer_def[simp]
   shows "reads_respects aag l
      (valid_objs
       and valid_global_refs
@@ -2504,7 +2504,7 @@ crunch globals_equiv[wp]: complete_signal "globals_equiv st"
 
 
 lemma receive_ipc_globals_equiv:
-  notes do_nbwait_failed_transfer_def[simp]
+  notes do_nbrecv_failed_transfer_def[simp]
   shows "\<lbrace>globals_equiv st and valid_objs and valid_arch_state and valid_global_refs and pspace_distinct and valid_global_objs and (\<lambda>s. thread \<noteq> idle_thread s)\<rbrace> 
      receive_ipc thread cap is_blocking
     \<lbrace>\<lambda>_. globals_equiv st\<rbrace>"
@@ -2615,7 +2615,7 @@ lemma receive_signal_globals_equiv:
      and pspace_distinct and (\<lambda>s. thread \<noteq> idle_thread s)\<rbrace> 
      receive_signal thread cap is_blocking
     \<lbrace>\<lambda>_. globals_equiv s\<rbrace>"
-  unfolding receive_signal_def fun_app_def do_nbwait_failed_transfer_def
+  unfolding receive_signal_def fun_app_def do_nbrecv_failed_transfer_def
   apply (rule hoare_pre)
   apply(wp set_notification_globals_equiv set_thread_state_globals_equiv
            as_user_globals_equiv get_ntfn_wp

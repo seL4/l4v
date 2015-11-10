@@ -647,7 +647,7 @@ lemma recv_signal_corres:
             apply  (rule corres_dummy_set_notification,simp)
           apply (wp|simp)+
         apply (clarsimp simp:st_tcb_at_def tcb_at_def obj_at_def get_tcb_rev)
-       apply (simp add: do_nbwait_failed_transfer_def)
+       apply (simp add: do_nbrecv_failed_transfer_def)
        apply (rule corres_guard_imp)
          apply (rule corres_alternate2)
          apply (rule corrupt_tcb_intent_as_user_corres)
@@ -664,7 +664,7 @@ lemma recv_signal_corres:
            apply  (rule corres_dummy_set_notification,simp)
          apply (wp|simp)+
        apply (clarsimp simp:st_tcb_at_def tcb_at_def obj_at_def get_tcb_rev)
-      apply (simp add: do_nbwait_failed_transfer_def)
+      apply (simp add: do_nbrecv_failed_transfer_def)
       apply (rule corres_guard_imp)
         apply (rule corres_alternate2)
         apply (rule corrupt_tcb_intent_as_user_corres)
@@ -2416,7 +2416,7 @@ lemma dcorres_receive_sync:
                       (Structures_A.thread_state.BlockedOnReceive word1 (AllowWrite \<notin> rights));
                        set_endpoint word1 (Structures_A.endpoint.RecvEP [thread])
                    od
-                | False \<Rightarrow> do_nbwait_failed_transfer thread
+                | False \<Rightarrow> do_nbrecv_failed_transfer thread
           | Structures_A.endpoint.SendEP q \<Rightarrow>
                 do assert (q \<noteq> []);
                    queue \<leftarrow> return $ tl q;
@@ -2443,7 +2443,7 @@ lemma dcorres_receive_sync:
                      (Structures_A.thread_state.BlockedOnReceive word1 (AllowWrite \<notin> rights));
                       set_endpoint word1 (Structures_A.endpoint.RecvEP (queue @ [thread]))
                    od
-              | False \<Rightarrow> do_nbwait_failed_transfer thread)"
+              | False \<Rightarrow> do_nbrecv_failed_transfer thread)"
   apply (clarsimp simp: receive_sync_def gets_def)
   apply (rule dcorres_absorb_get_l)
   apply (case_tac rv)
@@ -2463,7 +2463,7 @@ lemma dcorres_receive_sync:
          apply (rule corres_split[OF corres_dummy_set_sync_ep set_thread_state_block_on_receive_corres])
           apply (wp|simp)+
     apply (rule corres_alternate2)
-    apply (simp add: do_nbwait_failed_transfer_def)
+    apply (simp add: do_nbrecv_failed_transfer_def)
     apply (rule corres_guard_imp)
       apply (rule corrupt_tcb_intent_as_user_corres, simp, simp)
     apply (simp add: valid_state_def)
@@ -2557,7 +2557,7 @@ lemma dcorres_receive_sync:
      apply (rule corres_guard_imp)
        apply (rule corres_split[OF corres_dummy_set_sync_ep set_thread_state_block_on_receive_corres])
         apply (wp|simp)+
-  apply (simp add: do_nbwait_failed_transfer_def)
+  apply (simp add: do_nbrecv_failed_transfer_def)
   apply (rule corres_alternate2)
   apply (rule corres_guard_imp)
     apply (rule corrupt_tcb_intent_as_user_corres, (simp add: valid_state_def)+)

@@ -2768,7 +2768,7 @@ lemma set_tl_subset:
   done
 
 lemma receive_ipc_base_silc_inv:
-  notes do_nbwait_failed_transfer_def[simp]
+  notes do_nbrecv_failed_transfer_def[simp]
   shows "\<lbrace>silc_inv aag st and valid_objs and valid_mdb and pas_refined aag and
     sym_refs \<circ> state_refs_of and ko_at (Endpoint ep) epptr and
     K (is_subject aag receiver \<and> (pasSubject aag, Receive, pasObjectAbs aag epptr) \<in> pasPolicy aag)\<rbrace>
@@ -3124,12 +3124,12 @@ lemma handle_reply_silc_inv:
 
 crunch silc_inv: delete_caller_cap "silc_inv aag st"
 
-lemma handle_wait_silc_inv:
+lemma handle_recv_silc_inv:
   "\<lbrace>silc_inv aag st and invs and pas_refined aag and 
     is_subject aag \<circ> cur_thread\<rbrace>
-   handle_wait is_blocking
+   handle_recv is_blocking
    \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
-  apply (simp add: handle_wait_def Let_def lookup_cap_def split_def)
+  apply (simp add: handle_recv_def Let_def lookup_cap_def split_def)
   apply (wp hoare_vcg_all_lift get_ntfn_wp delete_caller_cap_silc_inv
             receive_ipc_silc_inv 
             lookup_slot_for_thread_authorised
@@ -3176,7 +3176,7 @@ lemma handle_event_silc_inv:
       apply(rule hoare_pre)
        apply(wpc 
             | wp handle_send_silc_inv[where st'=st'] handle_call_silc_inv[where st'=st']
-                 handle_wait_silc_inv handle_reply_silc_inv
+                 handle_recv_silc_inv handle_reply_silc_inv
                  handle_interrupt_silc_inv handle_vm_fault_silc_inv hy_inv
             | simp add: invs_valid_objs invs_mdb invs_sym_refs)+
      apply(rule_tac E="\<lambda>rv s. silc_inv aag st s \<and> invs s \<and> valid_fault rv \<and> is_subject aag thread" and R="Q" and Q=Q for Q in hoare_post_impErr)

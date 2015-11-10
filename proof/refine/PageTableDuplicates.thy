@@ -2784,10 +2784,10 @@ lemma hc_valid_duplicates'[wp]:
    \<lbrace>\<lambda>rv s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
   by (simp add: handleCall_def |  wp)+
 
-lemma handleWait_valid_duplicates'[wp]:
+lemma handleRecv_valid_duplicates'[wp]:
   "\<lbrace>(\<lambda>s. vs_valid_duplicates' (ksPSpace s))\<rbrace> 
-  handleWait isBlocking \<lbrace>\<lambda>r s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
-  apply (simp add: handleWait_def cong: if_cong)
+  handleRecv isBlocking \<lbrace>\<lambda>r s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
+  apply (simp add: handleRecv_def cong: if_cong)
   apply (rule hoare_pre)
    apply wp
        apply ((wp getNotification_wp | wpc | simp add: whenE_def split del: split_if)+)[1]

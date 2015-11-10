@@ -4096,7 +4096,7 @@ crunch valid_list[wp]: perform_invocation valid_list (wp: crunch_wps simp: crunc
 
 crunch valid_list[wp]: handle_invocation valid_list (wp: crunch_wps syscall_valid simp: crunch_simps ignore: without_preemption)
 
-crunch valid_list[wp]: handle_wait, handle_yield, handle_call valid_list (wp: crunch_wps simp: crunch_simps)
+crunch valid_list[wp]: handle_recv, handle_yield, handle_call valid_list (wp: crunch_wps simp: crunch_simps)
 
 lemma handle_vm_fault_valid_list[wp]:
 "\<lbrace>valid_list\<rbrace> handle_vm_fault thread fault \<lbrace>\<lambda>_.valid_list\<rbrace>"

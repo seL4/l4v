@@ -199,8 +199,8 @@ lemma handleUserLevelFault_ccorres:
 
 lemmas syscall_defs = 
   Kernel_C.SysSend_def Kernel_C.SysNBSend_def
-  Kernel_C.SysCall_def Kernel_C.SysWait_def Kernel_C.SysNBWait_def
-  Kernel_C.SysReply_def Kernel_C.SysReplyWait_def Kernel_C.SysYield_def
+  Kernel_C.SysCall_def Kernel_C.SysRecv_def Kernel_C.SysNBRecv_def
+  Kernel_C.SysReply_def Kernel_C.SysReplyRecv_def Kernel_C.SysYield_def
 
 lemma ct_active_not_idle'_strengthen:
   "invs' s \<and> ct_active' s \<longrightarrow> ksCurThread s \<noteq> ksIdleThread s"
@@ -325,12 +325,12 @@ lemma handleSyscall_ccorres:
              apply (simp add: invs'_def valid_state'_def)
             apply clarsimp
             apply (vcg exspec=handleInvocation_modifies)
-           -- "SysWait"
+           -- "SysRecv"
            apply (clarsimp simp: syscall_from_H_def syscall_defs)
            apply (rule ccorres_cond_empty |rule ccorres_cond_univ)+
            apply (simp add: liftE_bind)
            apply (subst ccorres_seq_skip'[symmetric])
-           apply (ctac (no_vcg) add: handleWait_ccorres)
+           apply (ctac (no_vcg) add: handleRecv_ccorres)
             apply (rule ccorres_returnOk_skip[unfolded returnOk_def, simplified])
            apply wp
           -- "SysReply"
@@ -341,13 +341,13 @@ lemma handleSyscall_ccorres:
           apply (ctac (no_vcg) add: handleReply_ccorres)
            apply (rule ccorres_returnOk_skip[unfolded returnOk_def, simplified])
           apply wp
-         -- "SysReplyWait"
+         -- "SysReplyRecv"
          apply (clarsimp simp: syscall_from_H_def syscall_defs)
          apply (rule ccorres_cond_empty |rule ccorres_cond_univ)+
          apply (simp add: liftE_bind bind_assoc)
          apply (ctac (no_vcg) add: handleReply_ccorres)
           apply (subst ccorres_seq_skip'[symmetric])
-          apply (ctac (no_vcg) add: handleWait_ccorres)
+          apply (ctac (no_vcg) add: handleRecv_ccorres)
            apply (rule ccorres_returnOk_skip[unfolded returnOk_def, simplified])
           apply wp[1]
          apply clarsimp
@@ -365,12 +365,12 @@ lemma handleSyscall_ccorres:
         apply (ctac (no_vcg) add: handleYield_ccorres)
          apply (rule ccorres_returnOk_skip[unfolded returnOk_def, simplified])
         apply wp
-       -- "SysNBWait"
+       -- "SysNBRecv"
        apply (clarsimp simp: syscall_from_H_def syscall_defs)
        apply (rule ccorres_cond_empty |rule ccorres_cond_univ)+
        apply (simp add: liftE_bind)
        apply (subst ccorres_seq_skip'[symmetric])
-       apply (ctac (no_vcg) add: handleWait_ccorres)
+       apply (ctac (no_vcg) add: handleRecv_ccorres)
         apply (rule ccorres_returnOk_skip[unfolded returnOk_def, simplified])
        apply wp
       -- " rest of body"
@@ -554,7 +554,7 @@ lemma callKernel_withFastpath_corres_C:
            (callKernel e) (callKernel_withFastpath_C e)"
   using no_fail_callKernel [of e] callKernel_corres_C [of e]
   apply (cases "e = SyscallEvent syscall.SysCall \<or>
-            e = SyscallEvent syscall.SysReplyWait")
+            e = SyscallEvent syscall.SysReplyRecv")
   apply (simp_all add: callKernel_withFastpath_C_def
                   del: Collect_const cong: call_ignore_cong)
   apply (erule ccorres_corres_u[rotated])
@@ -565,7 +565,7 @@ lemma callKernel_withFastpath_corres_C:
         apply (simp add: dc_def[symmetric])
         apply (ctac add: ccorres_get_registers[OF fastpath_call_ccorres_callKernel])
        apply (simp add: dc_def[symmetric])
-       apply (ctac add: ccorres_get_registers[OF fastpath_reply_wait_ccorres_callKernel])
+       apply (ctac add: ccorres_get_registers[OF fastpath_reply_recv_ccorres_callKernel])
       apply vcg
      apply (rule conseqPre, vcg, clarsimp)
     apply vcg

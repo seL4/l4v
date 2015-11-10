@@ -81,7 +81,7 @@ definition
     od
 
   odE <catch> (\<lambda>_. callKernel (SyscallEvent sysc))
-  | SysReplyWait \<Rightarrow> doE
+  | SysReplyRecv \<Rightarrow> doE
     curThread \<leftarrow> liftE $ getCurThread;
     mi \<leftarrow> liftE $ getMessageInfo curThread;
     cptr \<leftarrow> liftE $ asUser curThread $ getRegister capRegister;
@@ -2910,7 +2910,7 @@ lemma fastpath_reply_cap_check_ccorres:
   apply (simp split: bool.split split_if)
   done
 
-lemma fastpath_reply_wait_ccorres:
+lemma fastpath_reply_recv_ccorres:
   notes hoare_TrueI[simp]
   shows "ccorres dc xfdc
        (\<lambda>s. invs' s \<and> ct_in_state' (op = Running) s
@@ -2918,7 +2918,7 @@ lemma fastpath_reply_wait_ccorres:
                               \<and> tcbContext tcb msgInfoRegister = msginfo)
                      (ksCurThread s) s)
        (UNIV \<inter> {s. cptr_' s = cptr} \<inter> {s. msgInfo_' s = msginfo}) []
-       (fastpaths SysReplyWait) (Call fastpath_reply_wait_'proc)"
+       (fastpaths SysReplyRecv) (Call fastpath_reply_recv_'proc)"
   proof -
    have [simp]: "Kernel_C.tcbCaller = scast tcbCallerSlot"
      by (simp add:Kernel_C.tcbCaller_def tcbCallerSlot_def)
@@ -6065,15 +6065,15 @@ lemma active_ntfn_check_wp:
   apply (auto simp: pred_tcb_at'_def obj_at'_def projectKOs)
   done
 
-lemma fastpath_callKernel_SysReplyWait_corres:
+lemma fastpath_callKernel_SysReplyRecv_corres:
   "monadic_rewrite True False
      (invs' and ct_in_state' (op = Running) and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
-     (callKernel (SyscallEvent SysReplyWait)) (fastpaths SysReplyWait)"
+     (callKernel (SyscallEvent SysReplyRecv)) (fastpaths SysReplyRecv)"
   apply (rule monadic_rewrite_introduce_alternative)
    apply (simp add: callKernel_def)
   apply (rule monadic_rewrite_imp)
    apply (simp add: handleEvent_def handleReply_def
-                    handleWait_def liftE_bindE_handle liftE_handle
+                    handleRecv_def liftE_bindE_handle liftE_handle
                     bind_assoc getMessageInfo_def liftE_bind)
    apply (simp add: catch_liftE_bindE unlessE_throw_catch_If
                     unifyFailure_catch_If catch_liftE
@@ -6348,8 +6348,8 @@ lemma fastpath_callKernel_SysReplyWait_corres:
   apply (fastforce simp: cte_level_bits_def tcbSlots tcb_cte_cases_def obj_at_tcbs_of st_tcb_at_tcbs_of dest!: st_tcb_at_is_Reply_imp_not_tcbQueued[rotated])+
   done
 
-lemmas fastpath_reply_wait_ccorres_callKernel
-    = monadic_rewrite_ccorres_assemble[OF fastpath_reply_wait_ccorres fastpath_callKernel_SysReplyWait_corres]
+lemmas fastpath_reply_recv_ccorres_callKernel
+    = monadic_rewrite_ccorres_assemble[OF fastpath_reply_recv_ccorres fastpath_callKernel_SysReplyRecv_corres]
 
 end
 

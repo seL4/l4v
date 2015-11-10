@@ -3538,12 +3538,12 @@ lemma complete_signal_corres:
   done
 
 
-lemma do_nbwait_failed_transfer_corres:
+lemma do_nbrecv_failed_transfer_corres:
   "corres dc (tcb_at thread)
             (tcb_at' thread)
-            (do_nbwait_failed_transfer thread)
-            (doNBWaitFailedTransfer thread)"
-  unfolding do_nbwait_failed_transfer_def doNBWaitFailedTransfer_def
+            (do_nbrecv_failed_transfer thread)
+            (doNBRecvFailedTransfer thread)"
+  unfolding do_nbrecv_failed_transfer_def doNBRecvFailedTransfer_def
   by (simp add: badgeRegister_def badge_register_def, rule user_setreg_corres)
   
 lemma receive_ipc_corres:
@@ -3587,7 +3587,7 @@ lemma receive_ipc_corres:
                      apply (simp add: ep_relation_def)
                     apply simp
                    apply wp
-                 apply (rule corres_guard_imp, rule do_nbwait_failed_transfer_corres, simp)
+                 apply (rule corres_guard_imp, rule do_nbrecv_failed_transfer_corres, simp)
                  apply simp
                 apply (clarsimp simp add: invs_def valid_state_def valid_pspace_def
                valid_tcb_state_def st_tcb_at_tcb_at)
@@ -3670,7 +3670,7 @@ lemma receive_ipc_corres:
                    apply (simp add: ep_relation_def)
                   apply simp
                  apply wp
-               apply (rule corres_guard_imp, rule do_nbwait_failed_transfer_corres, simp)
+               apply (rule corres_guard_imp, rule do_nbrecv_failed_transfer_corres, simp)
                apply simp
               apply (clarsimp simp: valid_tcb_state_def)
              apply (clarsimp simp add: valid_tcb_state'_def)
@@ -3720,7 +3720,7 @@ lemma receive_signal_corres:
               apply (simp add: ntfn_relation_def)
              apply simp
             apply wp
-          apply (rule corres_guard_imp, rule do_nbwait_failed_transfer_corres, simp+)
+          apply (rule corres_guard_imp, rule do_nbrecv_failed_transfer_corres, simp+)
        -- "WaitingNtfn"
        apply (simp add: ntfn_relation_def)
        apply (rule corres_guard_imp)
@@ -3731,7 +3731,7 @@ lemma receive_signal_corres:
             apply simp
            apply wp
          apply (rule corres_guard_imp)
-           apply (rule do_nbwait_failed_transfer_corres, simp+)
+           apply (rule do_nbrecv_failed_transfer_corres, simp+)
       -- "ActiveNtfn"
       apply (simp add: ntfn_relation_def)
       apply (rule corres_guard_imp)
@@ -4180,7 +4180,7 @@ lemma ri_invs' [wp]:
       apply (simp add: valid_ep'_def)
       apply (wp sts_sch_act' hoare_vcg_const_Ball_lift valid_irq_node_lift
                 sts_valid_queues setThreadState_ct_not_inQ 
-           | simp add: doNBWaitFailedTransfer_def)+
+           | simp add: doNBRecvFailedTransfer_def)+
      apply (clarsimp simp: valid_tcb_state'_def pred_tcb_at')
      apply (rule conjI, clarsimp elim!: obj_at'_weakenE)
      apply (frule obj_at_valid_objs')
@@ -4209,7 +4209,7 @@ lemma ri_invs' [wp]:
      apply (simp add: valid_ep'_def)
      apply (wp sts_sch_act' valid_irq_node_lift
                sts_valid_queues setThreadState_ct_not_inQ
-          | simp add: doNBWaitFailedTransfer_def)+
+          | simp add: doNBRecvFailedTransfer_def)+
     apply (clarsimp simp: pred_tcb_at' valid_tcb_state'_def)
     apply (rule conjI, clarsimp elim!: obj_at'_weakenE)
     apply (subgoal_tac "t \<noteq> capEPPtr cap")
@@ -4303,7 +4303,7 @@ lemma rai_invs'[wp]:
     apply (rule hoare_pre)
      apply (wp valid_irq_node_lift sts_sch_act' typ_at_lifts
                sts_valid_queues setThreadState_ct_not_inQ
-            | simp add: valid_ntfn'_def doNBWaitFailedTransfer_def | wpc)+
+            | simp add: valid_ntfn'_def doNBRecvFailedTransfer_def | wpc)+
     apply (clarsimp simp: pred_tcb_at' valid_tcb_state'_def)
     apply (rule conjI, clarsimp elim!: obj_at'_weakenE)
     apply (subgoal_tac "capNtfnPtr cap \<noteq> t")
@@ -4339,7 +4339,7 @@ lemma rai_invs'[wp]:
   apply (rule hoare_pre)
    apply (wp hoare_vcg_const_Ball_lift valid_irq_node_lift sts_sch_act'
              sts_valid_queues setThreadState_ct_not_inQ typ_at_lifts
-        | simp add: valid_ntfn'_def doNBWaitFailedTransfer_def | wpc)+
+        | simp add: valid_ntfn'_def doNBRecvFailedTransfer_def | wpc)+
   apply (clarsimp simp: valid_tcb_state'_def)
   apply (frule_tac t=t in not_in_ntfnQueue)
      apply (simp)
@@ -4798,7 +4798,7 @@ lemma ri_makes_runnable_simple':
   apply wp
    apply (rename_tac ep q r)
    apply (case_tac ep, simp_all)
-     apply (wp sts_st_tcb_at'_cases | wpc | simp add: doNBWaitFailedTransfer_def)+
+     apply (wp sts_st_tcb_at'_cases | wpc | simp add: doNBRecvFailedTransfer_def)+
    apply (rename_tac list)
    apply (case_tac list, simp_all add: case_bool_If case_option_If
                             split del: split_if cong: if_cong)
@@ -4826,7 +4826,7 @@ lemma rai_makes_runnable_simple':
   apply (rule hoare_gen_asm)
   apply (simp add: receiveSignal_def)
   apply (rule hoare_pre)
-   by (wp sts_st_tcb_at'_cases getNotification_wp | wpc | simp add: doNBWaitFailedTransfer_def)+
+   by (wp sts_st_tcb_at'_cases getNotification_wp | wpc | simp add: doNBRecvFailedTransfer_def)+
 
 lemma sendSignal_st_tcb'_Running:
   "\<lbrace>st_tcb_at' (\<lambda>st. st = Running \<or> P st) t\<rbrace>

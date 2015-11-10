@@ -610,9 +610,9 @@ lemma bisim_guard_imp_both:
   "\<lbrakk> bisim r P P' m m'; \<And>s. R s \<Longrightarrow> P s \<and> P' s \<rbrakk> \<Longrightarrow> bisim r \<top> R m m'"
   unfolding bisim_underlying_def by auto
 
-lemma handle_wait_bisim:
-  "bisim op = \<top> (separate_state and cur_tcb and valid_objs) (handle_wait is_blocking) (Syscall_A.handle_wait is_blocking)"
-  unfolding handle_wait_def Syscall_A.handle_wait_def
+lemma handle_recv_bisim:
+  "bisim op = \<top> (separate_state and cur_tcb and valid_objs) (handle_recv is_blocking) (Syscall_A.handle_recv is_blocking)"
+  unfolding handle_recv_def Syscall_A.handle_recv_def
   apply (simp add: Let_def)
   apply (rule bisim_guard_imp_both)
    apply (rule bisim_split_refl)
@@ -661,19 +661,19 @@ lemma handle_event_bisim:
   apply (rule bisim_guard_imp_both, rule handle_invocation_bisim, simp)
   apply (rule bisim_guard_imp_both, rule handle_invocation_bisim, simp)
   apply (rule bisim_guard_imp_both, rule handle_invocation_bisim, simp)
-  apply (rule bisim_guard_imp_both, rule handle_wait_bisim, simp)
+  apply (rule bisim_guard_imp_both, rule handle_recv_bisim, simp)
   apply (rule bisim_guard_imp_both, rule handle_reply_bisim, simp)
 
   apply (rule bisim_guard_imp_both)
    apply (rule bisim_symb_exec_r_bs)
     apply (rule handle_reply_bisim)
-   apply (rule handle_wait_bisim)
+   apply (rule handle_recv_bisim)
   apply simp 
   
   apply (simp add: handle_yield_def Syscall_A.handle_yield_def)
   apply (rule bisim_guard_imp_both, rule bisim_refl', simp)
   
-  apply (rule bisim_guard_imp_both, rule handle_wait_bisim, simp)
+  apply (rule bisim_guard_imp_both, rule handle_recv_bisim, simp)
 
   apply (rule bisim_split_refl)
   apply (rule handle_fault_bisim)

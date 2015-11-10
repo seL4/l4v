@@ -5520,12 +5520,12 @@ lemma completeSignal_ccorres:
   apply (clarsimp)
   done 
 
-lemma doNBWaitFailedTransfer_ccorres[corres]:
+lemma doNBRecvFailedTransfer_ccorres[corres]:
   "ccorres dc xfdc
             \<top>
             (UNIV \<inter> {s. thread_' s = tcb_ptr_to_ctcb_ptr thread})
-            [] (doNBWaitFailedTransfer thread)
-            (Call doNBWaitFailedTransfer_'proc)"
+            [] (doNBRecvFailedTransfer thread)
+            (Call doNBRecvFailedTransfer_'proc)"
   apply (cinit lift: thread_')
    apply (ctac add: setRegister_ccorres)
   by (clarsimp simp: Kernel_C.badgeRegister_def State_H.badgeRegister_def
@@ -5654,7 +5654,7 @@ lemma receiveIPC_ccorres [corres]:
                apply wp
               apply (clarsimp simp: guard_is_UNIV_def)
              apply simp
-             apply (ctac add: doNBWaitFailedTransfer_ccorres[unfolded dc_def])
+             apply (ctac add: doNBRecvFailedTransfer_ccorres[unfolded dc_def])
             -- "IdleEP case"
             apply (rule ccorres_cond_true)
             apply csymbr
@@ -5681,7 +5681,7 @@ lemma receiveIPC_ccorres [corres]:
               apply wp
              apply (clarsimp simp: guard_is_UNIV_def)
             apply simp
-            apply (ctac add: doNBWaitFailedTransfer_ccorres[unfolded dc_def])
+            apply (ctac add: doNBRecvFailedTransfer_ccorres[unfolded dc_def])
            -- "SendEP case"
            apply (thin_tac "isBlockinga = from_bool P" for P)
            apply (rule ccorres_cond_false)
@@ -6495,7 +6495,7 @@ lemma receiveSignal_ccorres [corres]:
          apply wp
         apply (clarsimp simp: guard_is_UNIV_def)
        apply simp
-       apply (ctac add: doNBWaitFailedTransfer_ccorres[unfolded dc_def])
+       apply (ctac add: doNBRecvFailedTransfer_ccorres[unfolded dc_def])
       -- "ActiveNtfn case"
       apply (rename_tac badge)
       apply (rule ccorres_cond_false)
@@ -6563,7 +6563,7 @@ lemma receiveSignal_ccorres [corres]:
        apply wp
       apply (clarsimp simp: guard_is_UNIV_def)
      apply simp
-     apply (ctac add: doNBWaitFailedTransfer_ccorres[unfolded dc_def])
+     apply (ctac add: doNBRecvFailedTransfer_ccorres[unfolded dc_def])
     apply (clarsimp simp: guard_is_UNIV_def NtfnState_Active_def
                           NtfnState_Waiting_def NtfnState_Idle_def)
    apply (clarsimp simp: guard_is_UNIV_def)

@@ -1277,15 +1277,15 @@ lemma not_obj_at'_ntfn:
    apply (clarsimp)+
   done
  
-lemma handleWait_ccorres:
+lemma handleRecv_ccorres:
   shows
   "ccorres dc xfdc   
        (\<lambda>s. invs' s \<and> st_tcb_at' simple' (ksCurThread s) s
                \<and> sch_act_sane s \<and> (\<forall>p. ksCurThread s \<notin> set (ksReadyQueues s p)))
        {s. isBlocking_' s = from_bool isBlocking}
        []
-       (handleWait isBlocking) 
-       (Call handleWait_'proc)"
+       (handleRecv isBlocking) 
+       (Call handleRecv_'proc)"
   apply (cinit lift: isBlocking_')
    apply (rule ccorres_pre_getCurThread)
    apply (ctac)

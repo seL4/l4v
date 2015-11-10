@@ -2386,7 +2386,7 @@ lemma receiveSignal_no_orphans [wp]:
   unfolding receiveSignal_def
   apply (wp hoare_drop_imps setThreadState_not_active_no_orphans | wpc
          | clarsimp simp: is_active_thread_state_def isRunning_def isRestart_def
-                          doNBWaitFailedTransfer_def)+
+                          doNBRecvFailedTransfer_def)+
   done
   
 
@@ -2400,7 +2400,7 @@ lemma receiveIPC_no_orphans [wp]:
              hoare_vcg_all_lift sts_st_tcb' 
           | wpc
           | clarsimp simp: is_active_thread_state_def isRunning_def isRestart_def
-                           doNBWaitFailedTransfer_def)+
+                           doNBRecvFailedTransfer_def)+
   done
 
 crunch valid_objs' [wp]: getThreadCallerSlot "valid_objs'"
@@ -2417,12 +2417,12 @@ lemma remove_neg_strg:
   "(A \<and> B) \<longrightarrow> ((x \<longrightarrow> A) \<and> (\<not> x \<longrightarrow> B))"
   by blast
 
-lemma handleWait_no_orphans [wp]: 
+lemma handleRecv_no_orphans [wp]: 
 notes if_cong[cong] shows
   "\<lbrace> \<lambda>s. no_orphans s \<and> invs' s \<rbrace>
-   handleWait isBlocking
+   handleRecv isBlocking
    \<lbrace> \<lambda>rv . no_orphans \<rbrace>"
-  unfolding handleWait_def
+  unfolding handleRecv_def
   apply (clarsimp simp: whenE_def split del: split_if | wp hoare_drop_imps getNotification_wp | wpc )+ (*takes a while*)
      apply (rule_tac Q'="\<lambda>rv s. no_orphans s \<and> invs' s" in hoare_post_imp_R)
       apply (wp, fastforce)

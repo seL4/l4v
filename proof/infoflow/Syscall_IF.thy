@@ -765,7 +765,7 @@ lemma cte_wp_at_caps_of_state: "cte_wp_at \<top> a b \<Longrightarrow> cte_wp_at
   apply clarsimp
 done
 
-lemma handle_wait_reads_respects_f:
+lemma handle_recv_reads_respects_f:
   notes mywp =
             cap_fault_on_failure_ev' 
             receive_ipc_silc_inv[where st=st]
@@ -781,8 +781,8 @@ lemma handle_wait_reads_respects_f:
             get_ntfn_wp
   shows
   "reads_respects_f aag l (silc_inv aag st and einvs and ct_active and
-        pas_refined aag and pas_cur_domain aag and is_subject aag \<circ> cur_thread) (handle_wait is_blocking)"
-  apply (simp add: handle_wait_def Let_def lookup_cap_def split_def)
+        pas_refined aag and pas_cur_domain aag and is_subject aag \<circ> cur_thread) (handle_recv is_blocking)"
+  apply (simp add: handle_recv_def Let_def lookup_cap_def split_def)
   apply (wp mywp | wpc | assumption | simp | clarsimp)+
   apply(rule_tac Q="\<lambda>rv' s. invs s \<and> pas_refined aag s \<and> pas_cur_domain aag s 
                         \<and> s \<turnstile> EndpointCap x31 x32 x33 \<and> is_subject aag (cur_thread s) 
@@ -828,9 +828,9 @@ lemma handle_wait_reads_respects_f:
   apply (simp add: get_register_det invs_valid_objs tcb_at_invs)
   done
 
-lemma handle_wait_globals_equiv:
-  "\<lbrace>globals_equiv (st :: det_state) and invs and ct_active\<rbrace> handle_wait is_blocking \<lbrace>\<lambda>r. globals_equiv st\<rbrace>"
-  unfolding handle_wait_def
+lemma handle_recv_globals_equiv:
+  "\<lbrace>globals_equiv (st :: det_state) and invs and ct_active\<rbrace> handle_recv is_blocking \<lbrace>\<lambda>r. globals_equiv st\<rbrace>"
+  unfolding handle_recv_def
   apply (wp handle_fault_globals_equiv get_ntfn_wp
         | wpc | simp add: Let_def)+
       apply (rule_tac Q="\<lambda>r s. invs s \<and> globals_equiv st s" and
@@ -848,14 +848,14 @@ lemma handle_wait_globals_equiv:
     apply (wp delete_caller_cap_invs delete_caller_cap_globals_equiv | simp add: invs_imps invs_valid_idle ct_active_not_idle)+
   done
 
-lemma handle_wait_reads_respects_f_g:
+lemma handle_recv_reads_respects_f_g:
   "reads_respects_f_g aag l (silc_inv aag st and einvs and ct_active and
-        pas_refined aag and pas_cur_domain aag and is_subject aag \<circ> cur_thread) (handle_wait is_blocking)"
+        pas_refined aag and pas_cur_domain aag and is_subject aag \<circ> cur_thread) (handle_recv is_blocking)"
   apply (rule equiv_valid_guard_imp)
   apply (rule reads_respects_f_g)
-  apply (wp handle_wait_reads_respects_f[where st=st])
+  apply (wp handle_recv_reads_respects_f[where st=st])
   apply (rule doesnt_touch_globalsI)
-  apply (wp handle_wait_globals_equiv)
+  apply (wp handle_recv_globals_equiv)
   apply simp+
   done
 
@@ -987,7 +987,7 @@ lemma handle_event_reads_respects_f_g:
     apply (rename_tac syscall)
     apply (case_tac syscall, simp_all add: handle_send_def handle_call_def)
           apply ((wp handle_invocation_reads_respects_g[simplified]
-                  handle_wait_reads_respects_f_g[where st=st]
+                  handle_recv_reads_respects_f_g[where st=st]
                   handle_reply_valid_sched
                   reads_respects_f_g[OF reads_respects_f[where st=st and aag=aag and Q=\<top>, OF handle_yield_reads_respects] doesnt_touch_globalsI]
                   handle_reply_reads_respects_g handle_reply_silc_inv[where st=st]
@@ -1171,7 +1171,7 @@ lemma handle_event_globals_equiv:
                  hoare_weaken_pre[OF receive_signal_globals_equiv,
                        where P="globals_equiv st and invs" and s1=st]
                  handle_fault_globals_equiv'
-                 handle_wait_globals_equiv
+                 handle_recv_globals_equiv
                  handle_reply_globals_equiv
                  handle_interrupt_globals_equiv
                  handle_vm_fault_globals_equiv

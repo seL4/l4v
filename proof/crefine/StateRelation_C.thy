@@ -781,10 +781,10 @@ where
     SysSend \<Rightarrow> scast Kernel_C.SysSend
   | SysNBSend \<Rightarrow> scast Kernel_C.SysNBSend
   | SysCall \<Rightarrow> scast Kernel_C.SysCall
-  | SysWait \<Rightarrow> scast Kernel_C.SysWait
+  | SysRecv \<Rightarrow> scast Kernel_C.SysRecv
   | SysReply \<Rightarrow> scast Kernel_C.SysReply
-  | SysReplyWait \<Rightarrow> scast Kernel_C.SysReplyWait
-  | SysNBWait \<Rightarrow> scast Kernel_C.SysNBWait
+  | SysReplyRecv \<Rightarrow> scast Kernel_C.SysReplyRecv
+  | SysNBRecv \<Rightarrow> scast Kernel_C.SysNBRecv
   | SysYield \<Rightarrow> scast Kernel_C.SysYield"
 
 lemma (in kernel) cmap_relation_cs_atD:

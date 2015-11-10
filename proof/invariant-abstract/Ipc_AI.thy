@@ -2885,7 +2885,7 @@ lemma ri_invs':
   assumes ext_Q[wp]: "\<And>a (s::'a::state_ext state). \<lbrace>Q and valid_objs\<rbrace> do_extended_op (switch_if_required_to a) \<lbrace>\<lambda>_.Q\<rbrace>"
   assumes scc_Q[wp]: "\<And>a b. \<lbrace>valid_mdb and Q\<rbrace> setup_caller_cap a b \<lbrace>\<lambda>_.Q\<rbrace>"
   assumes dit_Q[wp]: "\<And>a b c d e f. \<lbrace>valid_mdb and valid_objs and Q\<rbrace> do_ipc_transfer a b c d e f \<lbrace>\<lambda>_.Q\<rbrace>"
-  assumes failed_transfer_Q[wp]: "\<And>a. \<lbrace>Q\<rbrace> do_nbwait_failed_transfer a \<lbrace>\<lambda>_. Q\<rbrace>"
+  assumes failed_transfer_Q[wp]: "\<And>a. \<lbrace>Q\<rbrace> do_nbrecv_failed_transfer a \<lbrace>\<lambda>_. Q\<rbrace>"
   notes dxo_wp_weak[wp del]
   shows
   "\<lbrace>(invs::'a::state_ext state \<Rightarrow> bool) and Q and st_tcb_at active t and ex_nonz_cap_to t
@@ -2907,8 +2907,8 @@ lemma ri_invs':
      apply (rule hoare_pre, wp valid_irq_node_typ)
       apply (simp add: valid_ep_def)
       apply (wp valid_irq_node_typ sts_only_idle 
-                failed_transfer_Q[simplified do_nbwait_failed_transfer_def, simplified] 
-            | simp add: do_nbwait_failed_transfer_def split del: split_if)+
+                failed_transfer_Q[simplified do_nbrecv_failed_transfer_def, simplified] 
+            | simp add: do_nbrecv_failed_transfer_def split del: split_if)+
      apply (clarsimp simp: st_tcb_at_tcb_at valid_tcb_state_def invs_def valid_state_def valid_pspace_def)
      apply (rule conjI, clarsimp elim!: obj_at_weakenE simp: is_ep_def)
      apply (rule conjI, clarsimp simp: st_tcb_at_reply_cap_valid)
@@ -2962,8 +2962,8 @@ lemma ri_invs':
    apply (simp add: invs_def valid_state_def valid_pspace_def)
    apply (rule hoare_pre)
     apply (wp hoare_vcg_const_Ball_lift valid_irq_node_typ sts_only_idle 
-              failed_transfer_Q[unfolded do_nbwait_failed_transfer_def, simplified]
-              | simp add: valid_ep_def do_nbwait_failed_transfer_def | wpc)+
+              failed_transfer_Q[unfolded do_nbrecv_failed_transfer_def, simplified]
+              | simp add: valid_ep_def do_nbrecv_failed_transfer_def | wpc)+
    apply (clarsimp simp: valid_tcb_state_def st_tcb_at_tcb_at)
    apply (frule ko_at_state_refs_ofD)
    apply (frule active_st_tcb_at_state_refs_ofD)
@@ -3080,7 +3080,7 @@ lemma rai_invs':
     apply (simp add: invs_def valid_state_def valid_pspace_def)
     apply (rule hoare_pre)
      apply (wp set_ntfn_valid_objs valid_irq_node_typ sts_only_idle
-              | simp add: valid_ntfn_def do_nbwait_failed_transfer_def | wpc)+
+              | simp add: valid_ntfn_def do_nbrecv_failed_transfer_def | wpc)+
     apply (clarsimp simp: valid_tcb_state_def st_tcb_at_tcb_at)
     apply (rule conjI, clarsimp elim!: obj_at_weakenE simp: is_ntfn_def)
     apply (rule conjI, clarsimp simp: st_tcb_at_reply_cap_valid)
@@ -3104,7 +3104,7 @@ lemma rai_invs':
    apply (rule hoare_pre)
     apply (wp set_ntfn_valid_objs hoare_vcg_const_Ball_lift
               valid_irq_node_typ sts_only_idle
-              | simp add: valid_ntfn_def do_nbwait_failed_transfer_def | wpc)+
+              | simp add: valid_ntfn_def do_nbrecv_failed_transfer_def | wpc)+
    apply (clarsimp simp: valid_tcb_state_def st_tcb_at_tcb_at)
    apply (rule conjI, clarsimp elim!: obj_at_weakenE simp: is_ntfn_def)
    apply (rule obj_at_valid_objsE, assumption+)
@@ -3376,7 +3376,7 @@ lemma rai_pred_tcb_neq:
   \<lbrace>\<lambda>rv. pred_tcb_at proj P t'\<rbrace>"
   apply (simp add: receive_signal_def)
   apply (rule hoare_pre)
-   by (wp sts_st_tcb_at_neq get_ntfn_wp | wpc | clarsimp simp add: do_nbwait_failed_transfer_def)+
+   by (wp sts_st_tcb_at_neq get_ntfn_wp | wpc | clarsimp simp add: do_nbrecv_failed_transfer_def)+
 
 crunch ct[wp]: set_mrs "\<lambda>s. P (cur_thread s)" 
   (wp: case_option_wp mapM_wp)
@@ -3500,7 +3500,7 @@ lemma ri_makes_simple:
    apply (case_tac x, simp_all)
      apply (rule hoare_pre, wpc)
        apply (wp sts_st_tcb_at_cases, simp)
-      apply (simp add: do_nbwait_failed_transfer_def, wp)
+      apply (simp add: do_nbrecv_failed_transfer_def, wp)
      apply clarsimp
     apply (rule hoare_seq_ext [OF _ assert_sp])
     apply (rule hoare_seq_ext [where B="\<lambda>s. st_tcb_at simple t'"])
@@ -3512,7 +3512,7 @@ lemma ri_makes_simple:
            | wpc | simp)+
      apply (fastforce simp: pred_tcb_at_def obj_at_def)
     apply (wp, simp)
-   apply (wp sts_st_tcb_at_cases | rule hoare_pre, wpc | simp add: do_nbwait_failed_transfer_def)+
+   apply (wp sts_st_tcb_at_cases | rule hoare_pre, wpc | simp add: do_nbrecv_failed_transfer_def)+
    apply (wp get_ntfn_wp | wpc | simp)+
   done
 
@@ -3524,7 +3524,7 @@ lemma rai_makes_simple:
   apply (rule hoare_gen_asm)
   apply (simp add: receive_signal_def)
   apply (rule hoare_pre)
-   by (wp get_ntfn_wp sts_st_tcb_at_cases | wpc | simp add: do_nbwait_failed_transfer_def)+
+   by (wp get_ntfn_wp sts_st_tcb_at_cases | wpc | simp add: do_nbrecv_failed_transfer_def)+
 
 
 lemma thread_set_Pmdb:

@@ -107,7 +107,7 @@ lemma receive_signal_pas_refined:
   apply (rule hoare_seq_ext [OF _ get_ntfn_sp])
   apply (rule hoare_pre)
   by (wp set_notification_pas_refined set_thread_state_pas_refined
-       | wpc | simp add: do_nbwait_failed_transfer_def)+
+       | wpc | simp add: do_nbrecv_failed_transfer_def)+
 
 
 subsection{* integrity *}
@@ -279,7 +279,7 @@ lemma receive_signal_integrity_autarch:
   apply (rule hoare_pre)
   apply (wp set_notification_respects[where auth=Receive] set_thread_state_integrity_autarch as_user_integrity_autarch
        | wpc 
-       | simp add: do_nbwait_failed_transfer_def)+
+       | simp add: do_nbrecv_failed_transfer_def)+
   done
 
 subsubsection{* Non-autarchy: the sender is running *}
@@ -1056,7 +1056,7 @@ where
                     True \<Rightarrow> do set_thread_state thread (BlockedOnReceive epptr (AllowSend \<notin> rights));
                         set_endpoint epptr (RecvEP [thread])
                       od
-                    | False \<Rightarrow> do_nbwait_failed_transfer thread
+                    | False \<Rightarrow> do_nbrecv_failed_transfer thread
                   | SendEP q \<Rightarrow>
                       do assert (q \<noteq> []);
                          queue \<leftarrow> return $ tl q;
@@ -1079,7 +1079,7 @@ where
                      True \<Rightarrow> do set_thread_state thread (BlockedOnReceive epptr (AllowSend \<notin> rights));
                          set_endpoint epptr (RecvEP (queue @ [thread]))
                       od
-                     | False \<Rightarrow> do_nbwait_failed_transfer thread"
+                     | False \<Rightarrow> do_nbrecv_failed_transfer thread"
 
 lemma receive_ipc_base_pas_refined:
   "\<lbrace>pas_refined aag and valid_objs and sym_refs \<circ> state_refs_of
@@ -1092,7 +1092,7 @@ lemma receive_ipc_base_pas_refined:
   apply (clarsimp simp: thread_get_def cong: endpoint.case_cong)
   apply (rule hoare_pre)
    apply (wp static_imp_wp set_thread_state_pas_refined get_endpoint_wp
-        | wpc | simp add: thread_get_def do_nbwait_failed_transfer_def split del: split_if)+
+        | wpc | simp add: thread_get_def do_nbrecv_failed_transfer_def split del: split_if)+
         apply (simp add:aag_cap_auth_def clas_no_asid cli_no_irqs)
         apply (rename_tac list sss data)
         apply (rule_tac Q="\<lambda>rv s. pas_refined aag s \<and> (sender_can_grant data \<longrightarrow> is_subject aag (hd list))"
@@ -1105,7 +1105,7 @@ lemma receive_ipc_base_pas_refined:
        apply (wp static_imp_wp do_ipc_transfer_pas_refined set_endpoint_pas_refined set_thread_state_pas_refined get_endpoint_wp
                  hoare_vcg_imp_lift [OF set_endpoint_get_tcb, unfolded disj_not1] hoare_vcg_all_lift
             | wpc
-            | simp add: thread_get_def get_thread_state_def do_nbwait_failed_transfer_def)+
+            | simp add: thread_get_def get_thread_state_def do_nbrecv_failed_transfer_def)+
   apply (clarsimp simp: tcb_at_def [symmetric] conj_ac tcb_at_st_tcb_at)
   apply (rule conjI)
    apply (rule impI)
@@ -1345,7 +1345,7 @@ lemma sts_receive_Inactive_respects:
   done
 
 lemma receive_ipc_base_integrity:
-  notes do_nbwait_failed_transfer_def[simp]
+  notes do_nbrecv_failed_transfer_def[simp]
   shows "\<lbrace>pas_refined aag
         and integrity aag X st
         and valid_objs and valid_mdb

@@ -1084,7 +1084,7 @@ lemma receive_ipc_base_domain_sep_inv:
           apply(rule_tac Q="\<lambda> r s. domain_sep_inv irqs st s" in hoare_strengthen_post)
           apply(wp do_ipc_transfer_domain_sep_inv hoare_vcg_all_lift | wpc | simp)+
      apply(wp hoare_vcg_imp_lift [OF set_endpoint_get_tcb, unfolded disj_not1] hoare_vcg_all_lift get_endpoint_wp
-         | wpc | simp add: do_nbwait_failed_transfer_def)+
+         | wpc | simp add: do_nbrecv_failed_transfer_def)+
   apply (clarsimp simp: conj_comms)
   apply (fastforce simp: valid_objs_def valid_obj_def obj_at_def
                          ep_redux_simps neq_Nil_conv valid_ep_def case_list_cons_cong)
@@ -1337,11 +1337,11 @@ lemma lookup_slot_for_thread_cap_fault:
   done
 
 
-lemma handle_wait_domain_sep_inv:
+lemma handle_recv_domain_sep_inv:
   "\<lbrace>domain_sep_inv irqs st and invs\<rbrace>
-   handle_wait is_blocking
+   handle_recv is_blocking
    \<lbrace>\<lambda>_. domain_sep_inv irqs st\<rbrace>"
-  apply (simp add: handle_wait_def Let_def lookup_cap_def split_def)
+  apply (simp add: handle_recv_def Let_def lookup_cap_def split_def)
   apply (wp hoare_vcg_all_lift lookup_slot_for_thread_cap_fault
             receive_ipc_domain_sep_inv delete_caller_cap_domain_sep_inv
             get_cap_wp get_ntfn_wp
@@ -1374,7 +1374,7 @@ lemma handle_event_domain_sep_inv:
       apply(rule hoare_pre)
        apply(wpc
             | wp handle_send_domain_sep_inv handle_call_domain_sep_inv
-                 handle_wait_domain_sep_inv handle_reply_domain_sep_inv
+                 handle_recv_domain_sep_inv handle_reply_domain_sep_inv
                  hy_inv
             | simp add: invs_valid_objs invs_mdb invs_sym_refs valid_fault_def)+
      apply(rule_tac E="\<lambda>rv s. domain_sep_inv irqs st s \<and> invs s \<and> valid_fault rv" and R="Q" and Q=Q for Q in hoare_post_impErr)

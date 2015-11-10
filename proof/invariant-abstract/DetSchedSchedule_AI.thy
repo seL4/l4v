@@ -2407,7 +2407,7 @@ lemma receive_ipc_valid_sched:
         apply (wp set_thread_state_sched_act_not_valid_sched | wpc)+
                  apply ((wp set_thread_state_sched_act_not_valid_sched
                             setup_caller_cap_sched_act_not_valid_sched
-                        | simp add: do_nbwait_failed_transfer_def)+)[2]
+                        | simp add: do_nbrecv_failed_transfer_def)+)[2]
                apply ((wp switch_if_required_to_valid_sched' sts_st_tcb_at' hoare_drop_imps
                           set_thread_state_runnable_valid_queues
                           set_thread_state_runnable_valid_sched_action
@@ -2423,7 +2423,7 @@ lemma receive_ipc_valid_sched:
                    wp hoare_drop_imps | wpc)+)[1]
           apply (wp hoare_vcg_imp_lift get_object_wp
                     set_thread_state_sched_act_not_valid_sched gbn_wp
-               | simp add: get_endpoint_def get_notification_def do_nbwait_failed_transfer_def
+               | simp add: get_endpoint_def get_notification_def do_nbrecv_failed_transfer_def
                | wpc
                | wp_once hoare_vcg_all_lift hoare_vcg_ex_lift)+
   apply (subst st_tcb_at_kh_simp[symmetric])+
@@ -2659,11 +2659,11 @@ lemma test:
 apply (simp add: invs_valid_tcb_ctable_strengthen)
 done
 
-lemma handle_wait_valid_sched:
+lemma handle_recv_valid_sched:
   "\<lbrace>valid_sched and valid_objs and ct_active and sym_refs \<circ> state_refs_of
       and ct_not_queued and scheduler_act_sane and invs\<rbrace>
-   handle_wait is_blocking \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
-  apply (simp add: handle_wait_def Let_def ep_ntfn_cap_case_helper
+   handle_recv is_blocking \<lbrace>\<lambda>rv. valid_sched\<rbrace>"
+  apply (simp add: handle_recv_def Let_def ep_ntfn_cap_case_helper
               cong: if_cong)
   apply (wp get_ntfn_wp handle_fault_valid_sched delete_caller_cap_not_queued receive_ipc_valid_sched receive_signal_valid_sched | simp)+
      apply (rule hoare_vcg_E_elim)
@@ -2678,12 +2678,12 @@ lemma handle_wait_valid_sched:
   apply (auto simp: objs_valid_tcb_ctable)
   done
 
-lemma handle_wait_valid_sched':
+lemma handle_recv_valid_sched':
   "\<lbrace>invs and valid_sched and ct_active and ct_not_queued and scheduler_act_sane\<rbrace>
-    handle_wait is_blocking
+    handle_recv is_blocking
    \<lbrace>\<lambda>_. valid_sched\<rbrace>"
   apply (rule hoare_pre)
-   apply (wp handle_wait_valid_sched)
+   apply (wp handle_recv_valid_sched)
   apply (simp add: invs_def valid_state_def valid_pspace_def)
   done
 
@@ -2960,9 +2960,9 @@ lemma handle_event_valid_sched:
   apply (cases e, simp_all)
       apply (rename_tac syscall)
       apply (case_tac syscall, simp_all add: handle_send_def handle_call_def)
-            apply ((rule hoare_pre, wp handle_invocation_valid_sched handle_wait_valid_sched handle_reply_valid_sched | fastforce simp: invs_valid_objs invs_sym_refs valid_sched_ct_not_queued)+)[5]
+            apply ((rule hoare_pre, wp handle_invocation_valid_sched handle_recv_valid_sched handle_reply_valid_sched | fastforce simp: invs_valid_objs invs_sym_refs valid_sched_ct_not_queued)+)[5]
        apply (wp handle_fault_valid_sched hvmf_active hoare_drop_imps
-                 handle_wait_valid_sched' handle_reply_valid_sched | wpc |
+                 handle_recv_valid_sched' handle_reply_valid_sched | wpc |
               clarsimp simp: ct_in_state_def valid_sched_ct_not_queued valid_fault_def
                                 valid_sched_ct_not_queued)+
   done

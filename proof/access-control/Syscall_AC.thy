@@ -390,9 +390,9 @@ lemma lookup_slot_for_thread_cap_fault:
   apply (erule (1) invs_valid_tcb_ctable)
   done
 
-lemma handle_wait_pas_refined:
-  "\<lbrace>pas_refined aag and invs and is_subject aag \<circ> cur_thread\<rbrace> handle_wait is_blocking \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
-  apply (simp add: handle_wait_def Let_def lookup_cap_def lookup_cap_def split_def)
+lemma handle_recv_pas_refined:
+  "\<lbrace>pas_refined aag and invs and is_subject aag \<circ> cur_thread\<rbrace> handle_recv is_blocking \<lbrace>\<lambda>rv. pas_refined aag\<rbrace>"
+  apply (simp add: handle_recv_def Let_def lookup_cap_def lookup_cap_def split_def)
   apply (wp handle_fault_pas_refined receive_ipc_pas_refined receive_signal_pas_refined
             get_cap_auth_wp [where aag=aag] lookup_slot_for_cnode_op_authorised
             lookup_slot_for_thread_authorised lookup_slot_for_thread_cap_fault
@@ -414,11 +414,11 @@ crunch respects[wp]: delete_caller_cap "integrity aag X st"
 lemma invs_mdb_strgs: "invs s \<longrightarrow> valid_mdb s"
   by(auto)
 
-lemma handle_wait_integrity:
+lemma handle_recv_integrity:
   "\<lbrace>integrity aag X st and pas_refined aag and einvs and is_subject aag \<circ> cur_thread\<rbrace>
-     handle_wait is_blocking
+     handle_recv is_blocking
    \<lbrace>\<lambda>rv. integrity aag X st\<rbrace>"
-  apply (simp add: handle_wait_def Let_def lookup_cap_def lookup_cap_def split_def)
+  apply (simp add: handle_recv_def Let_def lookup_cap_def lookup_cap_def split_def)
   apply (wp handle_fault_integrity_autarch receive_ipc_integrity_autarch receive_signal_integrity_autarch lookup_slot_for_thread_authorised lookup_slot_for_thread_cap_fault
             get_cap_auth_wp [where aag=aag] get_ntfn_wp
        | wpc | simp
@@ -609,7 +609,7 @@ lemma handle_event_pas_refined:
   apply (case_tac ev; simp)
       apply (rename_tac syscall)
       apply (case_tac syscall; simp add: handle_send_def handle_call_def)
-            apply ((wp handle_invocation_pas_refined handle_wait_pas_refined
+            apply ((wp handle_invocation_pas_refined handle_recv_pas_refined
                        handle_fault_pas_refined 
                      | simp | clarsimp)+)
      apply (fastforce simp: valid_fault_def)
@@ -658,7 +658,7 @@ lemma handle_event_integrity:
   apply (case_tac ev; simp)
       apply (rename_tac syscall)
       apply (case_tac syscall, simp_all add: handle_send_def handle_call_def)
-      apply (wp handle_wait_integrity handle_invocation_respects
+      apply (wp handle_recv_integrity handle_invocation_respects
                 handle_reply_respects handle_fault_integrity_autarch
                 handle_interrupt_integrity handle_vm_fault_integrity
                 handle_reply_pas_refined handle_vm_fault_valid_fault

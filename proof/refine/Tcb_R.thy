@@ -299,13 +299,8 @@ lemma suspend_cap_to'[wp]:
   apply (wp threadSet_cap_to' | simp)+
   done
 
-lemma
-  det_getRegister[simp]: "det (getRegister r)"
-  by (simp add: getRegister_def)
-
-lemma
-  det_setRegister[simp]: "det (setRegister r v)"
-  by (simp add: setRegister_def modify_def)
+declare det_getRegister[simp]
+declare det_setRegister[simp]
 
 lemma
   no_fail_getRegister[wp]: "no_fail \<top> (getRegister r)"

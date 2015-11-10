@@ -40,25 +40,25 @@ definition handleSyscall_C_body_if
                \<acute>ret__unsigned_long :== CALL handleInvocation(scast true,
                scast true)
              ELSE
-               IF s = Kernel_C.SysWait THEN
-                 CALL handleWait(scast true) ;;
+               IF s = Kernel_C.SysRecv THEN
+                 CALL handleRecv(scast true) ;;
                  \<acute>ret__unsigned_long :== scast EXCEPTION_NONE
                ELSE
                  IF s = Kernel_C.SysReply THEN
                    CALL handleReply() ;;
                    \<acute>ret__unsigned_long :== scast EXCEPTION_NONE
                  ELSE
-                   IF s = Kernel_C.SysReplyWait THEN
+                   IF s = Kernel_C.SysReplyRecv THEN
                      CALL handleReply();;
-                     CALL handleWait(scast true);;
+                     CALL handleRecv(scast true);;
                      \<acute>ret__unsigned_long :== scast EXCEPTION_NONE
                    ELSE
                      IF s = Kernel_C.SysYield THEN
                        CALL handleYield();;
                        \<acute>ret__unsigned_long :== scast EXCEPTION_NONE
                      ELSE
-                       IF s = Kernel_C.SysNBWait THEN
-                         CALL handleWait(scast false);;
+                       IF s = Kernel_C.SysNBRecv THEN
+                         CALL handleRecv(scast false);;
                          \<acute>ret__unsigned_long :== scast EXCEPTION_NONE
                        ELSE
                          IF True THEN
@@ -188,8 +188,8 @@ lemma handleEvent_ccorres:
            -- "SysCall"
            apply (simp add: handleCall_def)
            apply (ctac (no_vcg) add: handleInvocation_ccorres)
-          -- "SysWait"
-          apply (ctac (no_vcg) add: handleWait_ccorres)
+          -- "SysRecv"
+          apply (ctac (no_vcg) add: handleRecv_ccorres)
            apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg)
            apply (rule allI, rule conseqPre, vcg)
            apply (clarsimp simp: return_def)
@@ -200,11 +200,11 @@ lemma handleEvent_ccorres:
           apply (rule allI, rule conseqPre, vcg)
           apply (clarsimp simp: return_def)
          apply wp
-        -- "SysReplyWait"
+        -- "SysReplyRecv"
         apply (simp add: bind_assoc)
         apply (rule ccorres_rhs_assoc)+
         apply (ctac (no_vcg) add: handleReply_ccorres)
-         apply (ctac (no_vcg) add: handleWait_ccorres)
+         apply (ctac (no_vcg) add: handleRecv_ccorres)
           apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg)
           apply (rule allI, rule conseqPre, vcg)
           apply (clarsimp simp: return_def)
@@ -222,8 +222,8 @@ lemma handleEvent_ccorres:
         apply (rule allI, rule conseqPre, vcg)
         apply (clarsimp simp: return_def)
        apply wp
-      -- "SysNBWait"
-          apply (ctac (no_vcg) add: handleWait_ccorres)
+      -- "SysNBRecv"
+          apply (ctac (no_vcg) add: handleRecv_ccorres)
            apply (rule_tac P=\<top> and P'=UNIV in ccorres_from_vcg)
            apply (rule allI, rule conseqPre, vcg)
            apply (clarsimp simp: return_def)

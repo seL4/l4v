@@ -45,12 +45,12 @@ definition
 
 definition
   "callKernel_withFastpath_C e \<equiv>
-   if e = SyscallEvent syscall.SysCall \<or> e = SyscallEvent syscall.SysReplyWait
+   if e = SyscallEvent syscall.SysCall \<or> e = SyscallEvent syscall.SysReplyRecv
    then exec_C \<Gamma> (\<acute>cptr :== CALL getRegister(\<acute>ksCurThread, scast capRegister);;
                   \<acute>msgInfo :== CALL getRegister(\<acute>ksCurThread, scast msgInfoRegister);;
                    IF e = SyscallEvent syscall.SysCall
                    THEN CALL fastpath_call(\<acute>cptr, \<acute>msgInfo)
-                   ELSE CALL fastpath_reply_wait(\<acute>cptr, \<acute>msgInfo) FI)
+                   ELSE CALL fastpath_reply_recv(\<acute>cptr, \<acute>msgInfo) FI)
    else callKernel_C e"
 
 definition 
@@ -1510,12 +1510,12 @@ definition
 
 definition
   "callKernel_withFastpath_C e \<equiv>
-   if e = SyscallEvent syscall.SysCall \<or> e = SyscallEvent syscall.SysReplyWait
+   if e = SyscallEvent syscall.SysCall \<or> e = SyscallEvent syscall.SysReplyRecv
    then exec_C \<Gamma> (\<acute>cptr :== CALL getRegister(\<acute>ksCurThread, scast capRegister);;
                   \<acute>msgInfo :== CALL getRegister(\<acute>ksCurThread, scast msgInfoRegister);;
                    IF e = SyscallEvent syscall.SysCall
                    THEN CALL fastpath_call(\<acute>cptr, \<acute>msgInfo)
-                   ELSE CALL fastpath_reply_wait(\<acute>cptr, \<acute>msgInfo) FI)
+                   ELSE CALL fastpath_reply_recv(\<acute>cptr, \<acute>msgInfo) FI)
    else callKernel_C e"
 
 definition 
