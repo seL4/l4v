@@ -207,6 +207,7 @@ fun match_type_frees {pattern,m} =
                                              recurse acc rest
                                            else NONE)
           | (TVar id1, TVar id2) => if id1 = id2 then recurse acc rest else NONE
+          | _ => NONE
         end
   in
     recurse TypTable.empty [(pattern,m)]
@@ -230,7 +231,6 @@ val bool = @{typ "bool"}
 val bool3 = bool --> (bool --> bool)
 val nat = @{typ "nat"}
 val int = @{typ "int"}
-val numeral_ty = @{typ "num"}
 val char_ty = @{typ "char"}
 val string_ty = @{typ "string"}
 fun mk_itself_type ty = Type(@{type_name "itself"}, [ty])
@@ -341,11 +341,11 @@ fun unbeta{bv,body} =
     Free p => Term.absfree p body
   | _ => raise TERM ("Not a variable", [bv])
 
-fun mk_forall(v,t) = let
-  val Free (_,ty) = v
-in
-  Const(@{const_name "HOL.All"}, (ty --> bool) --> bool) $ mk_abs(v, t)
-end handle Bind => raise TERM ("Not a variable", [v])
+fun mk_forall(v,t) =
+  case v of
+      Free (_,ty) =>
+        Const(@{const_name "HOL.All"}, (ty --> bool) --> bool) $ mk_abs(v, t)
+    | _ => raise TERM ("Not a variable", [v])
 
 fun list_mk_forall(vs,t) = List.foldr mk_forall t vs
 
@@ -361,11 +361,11 @@ fun strip_forall t =
     (List.rev vs, Term.subst_bounds(vs,body))
   end
 
-fun mk_exists(v,t) = let
-  val Free(_,ty) = v
-in
-  Const(@{const_name "HOL.Ex"}, (ty --> bool) --> bool) $ mk_abs(v,t)
-end handle Bind => raise TERM ("Not a variable", [v])
+fun mk_exists(v,t) =
+  case v of
+      Free(_,ty) =>
+        Const(@{const_name "HOL.Ex"}, (ty --> bool) --> bool) $ mk_abs(v,t)
+    | _ => raise TERM ("Not a variable", [v])
 fun list_mk_exists(vs, b) = List.foldr mk_exists b vs
 
 fun mk_SOME t = let
@@ -575,13 +575,7 @@ fun mk_compl t =
 fun mk_zero ty = Const(@{const_name "Groups.zero_class.zero"}, ty)
 fun mk_one ty = Const(@{const_name "Groups.one_class.one"}, ty)
 
-val mk_numb = HOLogic.mk_numeral
 val mk_numeral = HOLogic.mk_number
-
-val number_of_name = @{const_name "Num.numeral_class.numeral"}
-val numeral_to_nat = Const(number_of_name, numeral_ty --> nat)
-val numeral_to_int = Const(number_of_name, numeral_ty --> int)
-val int_to_nat = @{term "Int.nat"}
 
 val mk_nat_numeral = mk_numeral nat
 val mk_int_numeral = mk_numeral int
@@ -592,7 +586,8 @@ fun calc acc base t =
         calc acc (base * 2) t'
     | Const(@{const_name "Num.num.Bit1"}, _) $ t' =>
         calc (acc + base) (base * 2) t'
-    | Const(@{const_name "Num.num.One"}, ty) => acc
+    | Const(@{const_name "Num.num.One"}, _) => acc
+    | _ => raise TERM ("Not a numeral", [t])
 
 fun numb_to_int t =
     case t of
@@ -649,57 +644,6 @@ end
 (* ----------------------------------------------------------------------
     useful functions on cterms
    ---------------------------------------------------------------------- *)
-
-val dest_comb = Thm.dest_comb
-
-fun cstrip_comb t = let
-  fun recurse acc t = let
-    val (f,x) = dest_comb t
-  in
-    recurse (x::acc) f
-  end handle CTERM _ => (t, acc)
-in
-  recurse [] t
-end
-
-fun hd_has_name s t = let
-  val (f, _) = cstrip_comb t
-  val t = Thm.term_of f
-in
-  case t of
-    Const(s', _) => s = s'
-  | _ => false
-end
-fun dest_binop ischeck t =
-    if ischeck t then let
-        val (_, args) = cstrip_comb t
-      in
-        (hd args, hd (tl args))
-      end handle Empty => raise CTERM ("doesn't have 2 arguments", [t])
-    else raise CTERM ("Has wrong head symbol", [t])
-fun ctotal f x = SOME (f x) handle CTERM _ => NONE
-
-fun strip_binop d t = let
-  fun recurse a tlist =
-      case tlist of
-        [] => List.rev a
-      | h::ts => let
-        in
-          case ctotal d h of
-            SOME (x,y) => recurse a (x::y::ts)
-          | NONE => recurse (h::a) ts
-        end
-in
-  recurse [] [t]
-end
-
-val is_pair = hd_has_name "Pair"
-val dest_pair = dest_binop is_pair
-val strip_pair = strip_binop dest_pair
-
-val is_seq = hd_has_name "Language.com.Seq"
-val dest_seq = dest_binop is_seq
-val strip_seq = strip_binop dest_seq
 
 val thy2ctxt = Context_Position.set_visible false o Proof_Context.init_global
 
