@@ -224,9 +224,12 @@ fun prove_all_modifies_goals_local csenv includeP tyargs lthy = let
                         NONE => Binaryset.empty String.compare
                       | SOME s => s
           val i = Binaryset.intersection(calls, failedsofar)
-          val translated = case Symtab.lookup (function_specs csenv) fname of
-                               NONE => true
-                             | SOME l => List.all (fn s => s <> Absyn.didnt_translate) l
+          fun fnspec s = case s of Absyn.fnspec _ => true | _ => false
+          val translated =
+            case Symtab.lookup (function_specs csenv) fname of
+              NONE => true
+            | SOME l => List.all (fn s => s <> Absyn.didnt_translate) l orelse
+                        List.all (not o fnspec) l
         in
           if Binaryset.isEmpty i andalso translated then let
               val thy = Proof_Context.theory_of lthy
@@ -254,7 +257,7 @@ fun prove_all_modifies_goals_local csenv includeP tyargs lthy = let
             in
               (Binaryset.add(failedsofar, fname), lthy)
             end
-          else (modifies_msg ("not attempted, as it is a DONT_TRANSLATE"); 
+          else (modifies_msg ("not attempted, as it is a DONT_TRANSLATE with a spec");
                 (Binaryset.add(failedsofar, fname), lthy))
         end
     end
