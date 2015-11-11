@@ -11,22 +11,61 @@
 chapter "Toplevel Refinement Statement"
 
 theory Refine_C
-imports Init_C Fastpath_C "../../lib/clib/CToCRefine"
-        "../../tools/autocorres/AutoCorres"
+imports "../../tools/autocorres/AutoCorres"
+        "../../tools/autocorres/L4VerifiedLinks"
+        Init_C Fastpath_C "../../lib/clib/CToCRefine"
+        "../../../../isabelle-hacks/insulin/Insulin"
 begin
 
+
 autocorres
-  [ts_rules = pure nondet, (* pure functions if possible, else nondet_monad *)
-   skip_heap_abs, skip_word_abs (* for compatibility *)
+  [
+   skip_heap_abs, skip_word_abs, (* for compatibility *)
+   scope = handleYield,
+   scope_depth = 0
   ] "c/kernel_all.c_pp"
 
 
 crunch ksQ[wp]: handleVMFault "\<lambda>s. P (ksReadyQueues s)"
   (ignore: getFAR getDFSR getIFSR)
 
+lemma rel_sum_comb_Inr:
+  "(\<lambda>_ _. False) \<oplus> (\<lambda>_ _. True) = (\<lambda>x y. isRight x \<and> isRight y)"
+  apply (rule ext)+
+  apply (case_tac x)
+  apply (auto simp: isRight_def)
+  done
+
+context kernel_all begin
+thm handleYield'_def
+    handleYield_def
+
+thm tcbSchedDequeue'_def
+thm handleSyscall'_def
+
+thm handleYield'_ac_corres[THEN ac_corres_ccorres_underlying, simplified, simplified rel_sum_comb_Inr]
+    kernel_m.handleYield_ccorres[simplified kernel.rf_sr_def dc_def xfdc_def[abs_def]]
+
+end
 
 context kernel_m
 begin
+
+lemma ccorres_dc_liftE:
+  "ccorres dc xf P P' hs H C \<Longrightarrow> ccorres (\<lambda>x y. isRight x \<and> isRight y) (Inr o xf) P P' hs (liftE H) C"
+  apply (clarsimp simp: ccorres_underlying_def isRight_def dc_def split: xstate.splits)
+  apply (drule (1) bspec)
+  apply (clarsimp simp: split_def liftE_def bind_def return_def unif_rrel_def)
+  apply (fastforce)
+  done
+
+thm kernel_all.handleYield'_ac_corres[THEN ac_corres_ccorres_underlying, simplified, simplified rel_sum_comb_Inr]
+    handleYield_ccorres[THEN ccorres_dc_liftE, simplified dc_def xfdc_def[abs_def] o_def]
+
+desugar_thm handleYield_ccorres[THEN ccorres_dc_liftE, simplified dc_def xfdc_def[abs_def] o_def] "ccorres "
+
+
+
 
 declare liftE_handle [simp]
 
