@@ -418,6 +418,12 @@ let
 
   (* Mark functions that shouldn't be processed.
    * We will generate wrappers to call them (L1_call_simpl ... AC_call_simpl). *)
+  val undefined_functions =
+        Symset.filter (fn f => #invented_body (FunctionInfo.get_function_def fn_info f)) all_simpl_functions
+  val all_functions = Symset.union all_functions undefined_functions
+  val untranslated_functions =
+        Symset.subtract (Symset.union all_functions undefined_functions) all_simpl_functions
+
   val fn_info = FunctionInfo.map_fn_info (fn def =>
                   SOME (if Symset.contains all_functions (#name def) then def
                         else FunctionInfo.fn_def_update_is_simpl_wrapper true def)) fn_info
@@ -426,7 +432,6 @@ let
   val fn_info = FunctionInfo.set_autocorres_scope fn_info all_functions
 
   (* Disable heap lifting for all un-translated functions. *)
-  val untranslated_functions = Symset.subtract all_functions all_simpl_functions
   val conflicting_heap_lift_fns =
       Symset.inter untranslated_functions (Symset.make (these (!(#force_heap_abs opt))))
   val _ = if not (Symset.is_empty conflicting_heap_lift_fns) then
