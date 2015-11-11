@@ -2,15 +2,8 @@ theory jiraver464
   imports "../CTranslation"
 begin 
 
-ML {* 
-val sup_name = @{const_name "sup"}
-val union_t = @{term "A Un B"} 
-val inter_t = @{term "A \<inter> B"}
-*}
-
+(* declare [[calculate_modifies_proofs=false]] *)
 install_C_file "jiraver464.c"
-
-thm SmallStep.step.cases
 
 print_locale f_spec
 context f_spec
@@ -21,6 +14,14 @@ end
 context jiraver464
 begin
   thm f_body_def
-end
+
+
+lemma f_modifies: 
+assumes "x_' \<sigma> < 3"
+shows "\<Gamma>\<turnstile>{\<sigma>} Call f_'proc {t. t may_only_modify_globals \<sigma> in [y]}"
+apply (vcg spec=modifies)
+oops
 
 end 
+
+end

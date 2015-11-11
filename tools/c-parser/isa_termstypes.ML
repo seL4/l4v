@@ -58,6 +58,7 @@ sig
 
   val mk_abs : term * term -> term
   val list_mk_abs : term list * term -> term
+  val unbeta : {bv : term, body : term } -> term
 
   val mk_TYPE : typ -> term
   val K_rec : typ -> term
@@ -83,9 +84,14 @@ sig
   val mk_conj : term * term -> term
   val list_mk_conj : term list -> term (* Fail on empty list *)
 
+  val mk_imp : term * term -> term
+
   val mk_cond : term * term * term -> term
   val mk_forall : term * term -> term
+  val strip_forall : term -> term list * term
+  val list_mk_forall : term list * term -> term
   val mk_exists : term * term -> term
+  val list_mk_exists : term list * term -> term
 
   val mk_SOME : term -> term (* Hilbert choice *)
 
@@ -297,15 +303,7 @@ val unit_value = @{term "Product_Type.Unity"}
 fun K_rec T = Abs ("x",T, Abs ("_",T, Bound 1))
 
 fun list_mk_comb(f, args) = List.foldl (fn (x,f) => f $ x) f args
-fun strip_comb t =
-  let
-    fun recurse acc t =
-      case t of
-        f $ x => recurse (x::acc) f
-      | _ => (t, List.rev acc)
-  in
-    recurse [] t
-  end
+val strip_comb = Term.strip_comb
 
 val not_t = @{term "Not"}
 fun mk_neg t = not_t $ t
@@ -320,17 +318,37 @@ end
 
 fun mk_abs (v, t) = lambda v t
 
+fun unbeta{bv,body} =
+  case bv of
+    Free p => Term.absfree p body
+  | _ => raise TERM ("Not a variable", [bv])
+
 fun mk_forall(v,t) = let
   val Free (_,ty) = v
 in
   Const(@{const_name "HOL.All"}, (ty --> bool) --> bool) $ mk_abs(v, t)
 end handle Bind => raise TERM ("Not a variable", [v])
 
+fun list_mk_forall(vs,t) = List.foldr mk_forall t vs
+
+fun strip_forall t =
+  let
+    fun recurse acc t =
+      case t of
+        Const(@{const_name "HOL.All"}, _) $ Abs(vnm, vty, body) =>
+          recurse (Free(vnm,vty)::acc) body
+      | _ => (acc, t)
+    val (vs, body) = recurse [] t
+  in
+    (List.rev vs, Term.subst_bounds(vs,body))
+  end
+
 fun mk_exists(v,t) = let
   val Free(_,ty) = v
 in
   Const(@{const_name "HOL.Ex"}, (ty --> bool) --> bool) $ mk_abs(v,t)
 end handle Bind => raise TERM ("Not a variable", [v])
+fun list_mk_exists(vs, b) = List.foldr mk_exists b vs
 
 fun mk_SOME t = let
   val ty = type_of t
@@ -345,6 +363,8 @@ fun list_mk_conj cs =
       [] => raise Fail "list_mk_conj: empty list"
     | [c] => c
     | c::cs => mk_conj(c,list_mk_conj cs)
+
+fun mk_imp(t1,t2) = Const(@{const_name "HOL.implies"}, bool --> bool --> bool) $ t1 $ t2
 
 fun mk_pair (t1,t2) = let
   val ty1 = type_of t1

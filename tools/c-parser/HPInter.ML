@@ -178,6 +178,14 @@ fun mkSpecFunction thy gloc cse styargs (f : fninfo) = let
   val t = Free("t", state_ty)
   val relbody = Modifies_Proofs.gen_modify_body thy state_ty s t mods
   val collect_t = mk_collect_t (mk_prod_ty (state_ty, state_ty))
+  fun typedterm t =
+    Syntax.string_of_term ctxt t ^ " :: " ^
+    Syntax.string_of_typ ctxt (type_of t)
+  fun appi f l = let
+    fun recurse i l = case l of [] => () | h::t => (f i h; recurse (i + 1) t)
+  in
+    recurse 0 l
+  end
 
   fun parse_spec thy (_, e) = let
     val lnm_strs = extract_element_asms e
@@ -186,16 +194,16 @@ fun mkSpecFunction thy gloc cse styargs (f : fninfo) = let
         (* jump into an lthy corresponding to globloc to parse the tstr; this lthy
            is dropped and not used again *)
       val lthy = Named_Target.init gloc thy
-      val t = Syntax.read_term lthy tstr
+      val tm = Syntax.read_term lthy tstr
+      val (vs, body) = strip_forall tm
       val PQopt =
-        case t of
+        case body of
           Const(@{const_name "hoarep"}, _) $ _ (* gamma *) $ _ $_ $ P $ _ $ Q $ _ =>
-            SOME (P,Q)
+            if String.isSuffix "modifies" speclocalename then NONE
+            else SOME (P,Q)
         | _ =>
-          if String.isSuffix "modifies" speclocalename then NONE
-          else
             let
-              val (f, args) = strip_comb t
+              val (f, args) = strip_comb tm
               val cstr = case f of Const(s, _) => "const: "^s
                                  | Free(s, _) => "free: "^s
                                  | _ => "huh?"
@@ -210,6 +218,8 @@ fun mkSpecFunction thy gloc cse styargs (f : fninfo) = let
         NONE => NONE
       | SOME (P0, Q0) =>
         let
+          val _ = appi (fn n => fn v =>
+                        Feedback.informStr(0, "var#"^Int.toString n^" "^typedterm v)) vs
           val elty0 = dest_set_type (type_of P0)
           val sigma = valOf (TermsTypes.match_type_frees{pattern = elty0, m = state_ty})
                       handle Option => raise Fail "Couldn't match state types"
@@ -218,16 +228,22 @@ fun mkSpecFunction thy gloc cse styargs (f : fninfo) = let
           val sigma_elts0 = TypTable.fold foldthis sigma []
           val sigma_elts = String.concatWith ", " sigma_elts0
           val _ = Feedback.informStr(0, "Sigma = " ^ sigma_elts)
-          val P = subst_frees sigma P0
-          val Q = subst_frees sigma Q0
-          val elty = dest_set_type (type_of P)
+          val P1 = subst_frees sigma P0
+          val Q1 = subst_frees sigma Q0
+          val P2 = List.foldr (fn (v, t) => unbeta{bv=v,body=t}) P1 vs
+          val Q2 = List.foldr (fn (v, t) => unbeta{bv=v,body=t}) Q1 vs
+          val _ = Feedback.informStr(0, "P2 : " ^ typedterm P2)
+          val _ = Feedback.informStr(0, "Q2 : " ^ typedterm Q2)
+          val P = list_mk_comb(P2, vs)
+          val Q = list_mk_comb(Q2, vs)
 
-          val _ = Feedback.informStr(0,
-            "Type of P : " ^ ptype (type_of P))
-          val _ = Feedback.informStr(0,
-            "Type of Q : " ^ ptype (type_of P))
-          val res =
-            mk_Un(mk_cross(mk_compl(P), mk_UNIV elty), mk_cross(mk_UNIV elty, Q))
+          val _ = Feedback.informStr(0, "P : " ^ typedterm P)
+          val _ = Feedback.informStr(0, "Q : " ^ typedterm Q)
+          val _ = Feedback.informStr(0, "s : " ^ typedterm s)
+          val _ = Feedback.informStr(0, "t : " ^ typedterm t)
+          val body_imp = list_mk_forall(vs, mk_imp(mk_IN(s,P), mk_IN(t,Q)))
+          val Pexists = list_mk_exists(vs, mk_IN(s,P))
+          val res = collect_t $ list_mk_pabs([s,t], mk_conj(body_imp, Pexists))
           val _ = Feedback.informStr(0, "Type of PQ combo: " ^ ptype (type_of res))
         in
           SOME res
@@ -238,16 +254,8 @@ fun mkSpecFunction thy gloc cse styargs (f : fninfo) = let
   end
 
   val mod_spec = collect_t $ list_mk_pabs([s,t], relbody)
-  fun typedterm t =
-    Syntax.string_of_term ctxt t ^ " :: " ^
-    Syntax.string_of_typ ctxt (type_of t)
   val _ = Feedback.informStr(0, "modstr : " ^ typedterm mod_spec)
   val otherspecs = List.concat (map (parse_spec thy) (#spec f))
-  fun appi f l = let
-    fun recurse i l = case l of [] => () | h::t => (f i h; recurse (i + 1) t)
-  in
-    recurse 0 l
-  end
   val _ = appi (fn n => fn t => Feedback.informStr(0,
     "spec#" ^ Int.toString n ^ ": " ^ typedterm t)) otherspecs
   val spec_t = List.foldl mk_inter mod_spec otherspecs

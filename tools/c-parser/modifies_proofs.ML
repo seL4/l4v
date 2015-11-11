@@ -184,7 +184,7 @@ fun munge_tactic ctxt goal tac = let
       else
          tac context st
 in
-  Goal.prove_future ctxt [] [] (TermsTypes.mk_prop goal) tacticfn
+  Goal.prove ctxt [] [] (TermsTypes.mk_prop goal) tacticfn
 end
 
 fun prove_all_modifies_goals_local csenv includeP tyargs lthy = let
@@ -200,6 +200,7 @@ fun prove_all_modifies_goals_local csenv includeP tyargs lthy = let
   val {callgraph,callers} = compute_callgraphs csenv
 
   fun do_one (fname, (failedsofar, lthy)) = let
+      val _ = tracing("Beginning modifies proof for singleton " ^ fname)
       val timer = Timer.startCPUTimer ()
 
       fun modifies_msg msg = let
@@ -234,17 +235,29 @@ fun prove_all_modifies_goals_local csenv includeP tyargs lthy = let
                 ALLGOALS (REPEAT_ALL_NEW (resolve_tac ctxt [exI, geq])) THEN
                 ALLGOALS (asm_full_simp_tac ctxt)
               end
+              fun fail() = (modifies_msg "failed" ;
+                            (Binaryset.add(failedsofar, fname), lthy))
+              fun prove() =
+                let
+                  val th = munge_tactic lthy goal tac
+                  val _ = tracing ("Forcing join on modifies proof for " ^ fname)
+                  val _ = Thm.join_proofs [th]
+                in
+                  th
+                end
             in
-              let
-                val th = munge_tactic lthy goal tac
-                val (_, lthy) =
+                case try prove () of
+                  NONE => (tracing ("Modifies proof for " ^ fname ^ "failed"); fail())
+                | SOME th =>
+                  let
+                    val (_, lthy) =
                       Local_Theory.note
                           ((Binding.name (fname ^ "_modifies"), []), [th])
                           lthy
-              in
-                (failedsofar, lthy) before
-                modifies_msg "successful"
-              end
+                  in
+                    (failedsofar, lthy) before
+                    modifies_msg "successful"
+                  end
             end
           else let
               val example = valOf (Binaryset.find (fn _ => true) i)

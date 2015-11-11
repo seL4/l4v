@@ -17,18 +17,20 @@ declare sep_conj_ac [simp add]
 install_C_file "spec_annotated_fn.c"
 
 
-print_locale spec_annotated_fn_global_addresses
+print_locale spec_annotated_fn
 print_locale Square_spec
 
 thm Square_spec_def
 
-context spec_annotated_fn_global_addresses
+context spec_annotated_fn
 begin
 
 thm Square_body_def
 thm Square_impl
 thm Square_spec_def
 thm \<Gamma>_def
+thm f_spec_def
+thm f_body_def
 
 end
 
@@ -38,10 +40,17 @@ apply vcg
 apply simp
 done
 
-lemma (in spec_annotated_fn_global_addresses)
+lemma (in spec_annotated_fn)
 shows "\<forall>n. \<Gamma> \<turnstile> \<lbrace> \<acute>n = n \<rbrace> \<acute>ret__unsigned :== PROC Square(\<acute>n)
                \<lbrace>\<acute>ret__unsigned = n * n \<rbrace>"
 apply vcg
+done
+
+lemma (in spec_annotated_fn)
+shows "\<forall>n. \<Gamma> \<turnstile> \<lbrace> \<acute>n = n \<rbrace> \<acute>ret__unsigned :== PROC f(\<acute>n) \<lbrace> \<acute>ret__unsigned = n * n \<rbrace>"
+apply vcg
+apply clarsimp
+apply (simp add: mex_def meq_def)
 done
 
 end
