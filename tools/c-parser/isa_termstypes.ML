@@ -59,6 +59,7 @@ sig
   val mk_abs : term * term -> term
   val list_mk_abs : term list * term -> term
   val unbeta : {bv : term, body : term } -> term
+  val variant : term list -> term -> term
 
   val mk_TYPE : typ -> term
   val K_rec : typ -> term
@@ -315,6 +316,23 @@ fun mk_cond (g,t,e) = let
 in
   Const(@{const_name "HOL.If"}, bool --> ty --> ty --> ty) $ g $ t $ e
 end
+
+fun vary v =
+  case v of
+    Free(vnm, vty) => Free(vnm ^ "'", vty)
+  | _ => raise TERM("Not a variable", [v])
+
+fun variant vs v =
+  case v of
+    Free _ =>
+    let
+      fun recurse v =
+        if List.exists (fn v' => v' = v) vs then recurse (vary v)
+        else v
+    in
+      recurse v
+    end
+  | _ => raise TERM ("Not a variable", [v])
 
 fun mk_abs (v, t) = lambda v t
 

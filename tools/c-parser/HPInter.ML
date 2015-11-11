@@ -230,6 +230,9 @@ fun mkSpecFunction thy gloc cse styargs (f : fninfo) = let
           val _ = Feedback.informStr(0, "Sigma = " ^ sigma_elts)
           val P1 = subst_frees sigma P0
           val Q1 = subst_frees sigma Q0
+          val vs = map (subst_frees sigma) vs
+          val s = variant vs s
+          val t = variant vs t
           val P2 = List.foldr (fn (v, t) => unbeta{bv=v,body=t}) P1 vs
           val Q2 = List.foldr (fn (v, t) => unbeta{bv=v,body=t}) Q1 vs
           val _ = Feedback.informStr(0, "P2 : " ^ typedterm P2)
