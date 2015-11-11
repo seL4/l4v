@@ -155,11 +155,11 @@ some reductions are removed from the list before conflicting reductions
 can be compared against them.  All reduce/reduce conflicts, however,
 can be generated given a list of the reduce/reduce conflicts generated
 by this method.
-	
+
    This can be done by taking the transitive closure of the relation given
 by the list.  If reduce/reduce (a,b) and reduce/reduce (b,c)  are true,
 then reduce/reduce (a,c) is true.   The relation is symmetric and transitive.
-		
+
 Adding shifts:
 
     Finally scan the list merging in shifts and resolving conflicts
@@ -301,7 +301,7 @@ is true.
 	     	  in ((pruneError actions,ERROR),gotos,errs1@errs2)
 		  end
 	 end
-   end			
+   end
 
 	val mkTable = fn (grammar as GRAMMAR{rules,terms,nonterms,start,
 				  precedence,termToString,noshift,
@@ -327,13 +327,13 @@ is true.
 		  fun zip (h::t,h'::t') = (h,h') :: zip(t,t')
 		    | zip (nil,nil) = nil
 		    | zip _ = let exception MkTable in raise MkTable end
-		
+
 		  fun unzip l =
 		   let fun f ((a,b,c)::r,j,k,l) = f(r,a::j,b::k,c::l)
 			 | f (nil,j,k,l) = (rev j,rev k,rev l)
 		   in f(l,nil,nil,nil)
 		   end
-		
+
 		   val (actions,gotos,errs) =
 			let val doState =
 		            computeActions(rules,precedence,graph,

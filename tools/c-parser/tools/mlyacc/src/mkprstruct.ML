@@ -33,7 +33,7 @@ functor mkPrintStruct(structure LrTable : LR_TABLE
 
       (* lineLength = approximately the largest number of characters to allow
 	 on a line when printing out an encode string *)
-	
+
       val lineLength = 72
 
       (* maxLength = length of a table entry.  All table entries are encoded
@@ -121,7 +121,7 @@ functor mkPrintStruct(structure LrTable : LR_TABLE
 		 | (SHIFT (STATE i)) => printInt (i+2)
 		 | ACCEPT => printInt 0
 		 | ERROR => printInt 1
-	
+
 	 val printTermAction = fn (T t,action) =>
 		(printInt (t+1); printAction action)
 

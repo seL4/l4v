@@ -50,7 +50,7 @@
 
     Data Structures:
     ----------------
-	
+
 	* The parser:
 
 	   The state stack has the type
@@ -195,7 +195,7 @@ local
              (println "Parse: state stack:";
               printStack(stack, 0);
               print("       state="
-                         ^ showState state	
+                         ^ showState state
                          ^ " next="
                          ^ showTerminal term
                          ^ " action="
@@ -215,7 +215,7 @@ local
 	fixError is called with the arguments of parseStep (lexv,stack,and
 	queue).  It returns the lexv, and a new stack and queue adjusted so
 	that the lexv can be parsed *)
-	
+
     val ssParse =
       fn (table,showTerminal,saction,fixError,arg) =>
 	let val prAction = prAction showTerminal
@@ -415,7 +415,7 @@ fun mkFixError({is_keyword,terms,errtermvalue,
 		 tryChange{lex=lexPair,stack=stack,
 			   pos=queuePos,orig=[],new=[tokAt(t,l)],
 			   leftPos=l,rightPos=l})
-			
+
 (* trySubst: try to substitute tokens for the current terminal;
        return a list of the successes  *)
 
@@ -447,7 +447,7 @@ fun mkFixError({is_keyword,terms,errtermvalue,
 			       SOME(tok::deleted,l,r',lp'')
 			  | NONE => NONE
 		   else NONE
-			
+
         fun tryPreferred((stack,lexPair),queuePos) =
 	    catList preferred_change (fn (delete,insert) =>
 	       if List.exists noShift delete then [] (* should give warning at
@@ -490,7 +490,7 @@ fun mkFixError({is_keyword,terms,errtermvalue,
 				 " with " ^ (showTerms new)
 		  in error ("syntax error: " ^ s,leftPos,rightPos)
 		  end
-		
+
 		  val _ =
 		      (if length l > 1 andalso DEBUG2 then
 			   (print "multiple fixes possible; could fix it by:\n";
@@ -519,7 +519,7 @@ fun mkFixError({is_keyword,terms,errtermvalue,
 					  end
 		      in f (rev stateList,n)
 		      end
-		
+
 		  val CHANGE {pos,orig,new,...} = change
 		  val (last,queueFront) = findNth pos
 		  val (stack,lexPair) = last

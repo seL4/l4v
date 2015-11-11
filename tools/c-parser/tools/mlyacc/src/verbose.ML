@@ -144,7 +144,7 @@ struct
 
                 val gotoTableSize = ref 0
                 val actionTableSize = ref 0
-		
+
 		val _ = if length errs > 0
 			   then (printSummary print errs;
 			         print "\n";

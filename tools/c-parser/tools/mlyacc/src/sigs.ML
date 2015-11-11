@@ -62,7 +62,7 @@ signature HEADER =
 		       NSHIFT of symbol list | POS of string | PURE |
 		       PARSE_ARG of string * string |
 		       TOKEN_SIG_INFO of string
-			
+
     datatype rule = RULE of {lhs : symbol, rhs : symbol list,
 		             code : string, prec : symbol option}
 
@@ -95,7 +95,7 @@ signature PARSE_GEN =
 
 signature GRAMMAR =
     sig
-	
+
 	datatype term = T of int
 	datatype nonterm = NT of int
 	datatype symbol = TERM of term | NONTERM of nonterm
@@ -138,7 +138,7 @@ signature INTGRAMMAR =
 
 	(* internal number of rule - convenient for producing LR graph *)
 
-		 num : int,	
+		 num : int,
 		 rulenum : int,
 		 precedence : int option}
 
@@ -328,7 +328,7 @@ signature LR_ERRS =
 			    not_reduced : int, start : int,nonshift : int}
 
      val printSummary : (string -> unit) -> err list -> unit
-				
+
   end
 
 (* PRINT_STRUCT: prints a structure which includes a value 'table' and a

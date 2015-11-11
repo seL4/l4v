@@ -125,7 +125,7 @@ functor EquivFun(A : EQUIV_ARG) : EQUIV =
 
          We then return the length of R, R, and the list that results from
          permuting SE by P.
-     *)	
+     *)
 
        type entry = A.entry
 

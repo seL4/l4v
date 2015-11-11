@@ -48,7 +48,7 @@ functor mkCore(structure IntGrammar : INTGRAMMAR) : CORE =
 				val eq = eqItem
 				val gt = gtItem
 			end)
-		
+
 		open ItemList
 		datatype core = CORE of item list * int
 

@@ -47,7 +47,7 @@ functor mkLook (structure IntGrammar : INTGRAMMAR) : LOOK =
 			val eq = eqNonterm
 			val gt = gtNonterm
 		end)
-	
+
 	val mkFuncs = fn {rules : rule list, nonterms : int,
 			  produces : nonterm -> rule list} =>
 
@@ -172,7 +172,7 @@ functor mkLook (structure IntGrammar : INTGRAMMAR) : LOOK =
 		   of true => nullable_string r
 		    | f => f)
 	| nullable_string nil = true
-	
+
     in {nullable = nullable, first = prefix}
     end
 end;

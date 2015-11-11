@@ -42,7 +42,7 @@ functor mkLalr ( structure IntGrammar : INTGRAMMAR
 
 	datatype tmpcore = TMPCORE of (item * term list ref) list * int
 	datatype lcore = LCORE of (item * term list) list * int
-	
+
 
 	 val prLcore =
 	  fn a as (SymbolToString,nontermToString,termToString,print) =>
@@ -136,7 +136,7 @@ functor mkLalr ( structure IntGrammar : INTGRAMMAR
 				 rule has proven to be nullable so far.
 				 Remember that the rhs has been reversed,
 				 implying that this is true initially *)
-				
+
 					(* A -> .z t B y, where y is nullable *)
 
 			      let fun f (NONTERM b :: (r as (TERM _ :: _))) =
@@ -154,7 +154,7 @@ functor mkLalr ( structure IntGrammar : INTGRAMMAR
 				    | f _ = raise Fail "f"
 			      in  f l
 			      end
-			
+
 		 	val check_rule = fn (rule as RULE {num,...}) =>
 			    let val pos = rule_pos rule
 			    in (print "look_pos: ";
@@ -219,10 +219,10 @@ functor mkLalr ( structure IntGrammar : INTGRAMMAR
 						raise Find)
 		    end
 		end
-			
+
 
 (* findRuleRefs: state -> rule -> lookahead refs for rule. *)
-		
+
 	       val findRuleRefs =
 		 let val shift = shift graph
 		 in fn state =>
@@ -240,7 +240,7 @@ functor mkLalr ( structure IntGrammar : INTGRAMMAR
 				      findRef(state,ITEM{rule=rule,
 							 dot=pos,
 							 rhsAfter=rhs})::result)
-				
+
 (* find first item of the form A -> x .B y, where y =*=> epsilon and
    x is not epsilon, or A -> x.  use scan' to pick up all refs after this
    point *)

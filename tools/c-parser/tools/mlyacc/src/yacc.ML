@@ -74,7 +74,7 @@ functor ParseGenFun(structure ParseGenParser : PARSE_GEN_PARSER
 			    dataStruct:string, (* name of structure in Misc *)
 						(* which holds parser data *)
 			    dataSig:string (* signature for this structure *)
-					
+
 		 	    }
 
     val DEBUG = true
@@ -109,7 +109,7 @@ functor ParseGenFun(structure ParseGenParser : PARSE_GEN_PARSER
 			  (* tokenInfo is the user inserted spec in
 			     the *_TOKEN sig*)
 			  tokenInfo : string option}
-			
+
     structure SymbolHash = Hash(type elem = string
 	    		        val gt = (op >) : string*string -> bool)
 
@@ -200,7 +200,7 @@ functor ParseGenFun(structure ParseGenParser : PARSE_GEN_PARSER
 		in app f terms
 		end;
 		sayln "end")
-			
+
     (* function to print signatures out - takes print function which
 	does not need to insert line breaks *)
 
@@ -223,7 +223,7 @@ functor ParseGenFun(structure ParseGenParser : PARSE_GEN_PARSER
 		  "\nsharing type " ^ dataStruct ^
 		  ".Token.token = Tokens.token\nsharing type " ^
 		  dataStruct ^ ".svalue = Tokens.svalue\nend\n")
-		
+
     (* function to print structure for error correction *)
 
     val printEC = fn (keyword : term list,
@@ -270,7 +270,7 @@ functor ParseGenFun(structure ParseGenParser : PARSE_GEN_PARSER
 	    say "_ => ";
 	    say (valueStruct ^ ".");
 	    sayln termvoid; sayln "end")
-	
+
 
 	  val printNames = fn () =>
 		let val f = fn term => (
@@ -289,7 +289,7 @@ functor ParseGenFun(structure ParseGenParser : PARSE_GEN_PARSER
 		    then r
 		    else t::r)
 		[] terms
-				
+
 	in  say "structure ";
 	    say ecStruct;
 	    sayln "=";
@@ -340,7 +340,7 @@ let val printAbsynRule = Absyn.printRule(say,sayln)
 				   PAPP(valueStruct^"."^ntvoid,
 					PVAR symNum)
 			      else WILD)
-			   else	
+			   else
 			       PAPP(valueStruct^"."^symString,
 			         if num=1 andalso pureActions
 				     then AS(PVAR symNum,PVAR symString)
@@ -573,7 +573,7 @@ let val printAbsynRule = Absyn.printRule(say,sayln)
 			        else (stmtError symbol; ~1))
 	     end
 	  end
-			
+
 	val nontermNum : string -> Header.symbol -> nonterm =
 	  let val nontermError = symError "nonterminal"
 	  in fn stmt =>
@@ -816,12 +816,12 @@ precedences of the rule and the terminal are equal.
 			   miscSig = name' ^ "_LRVALS",
 			   dataStruct = "ParserData",
 			   dataSig = "PARSER_DATA"}
-		
+
 	val (table,stateErrs,corePrint,errs) =
 		 MakeTable.mkTable(grammar,defaultReductions)
 
         val entries = ref 0 (* save number of action table entries here *)
-	
+
     in  let val result = TextIO.openOut (spec ^ ".sml")
  	    val sigs = TextIO.openOut (spec ^ ".sig")
 	    val pos = ref 0

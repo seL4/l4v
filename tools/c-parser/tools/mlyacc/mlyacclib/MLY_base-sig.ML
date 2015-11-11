@@ -58,7 +58,7 @@ signature LR_TABLE =
 			| ACCEPT
 			| ERROR
 	type table
-	
+
 	val numStates : table -> int
 	val numRules : table -> int
 	val describeActions : table -> state ->
@@ -273,7 +273,7 @@ signature PARSER =
 
          (* the type of the user-supplied argument to the parser *)
  	type arg
-	
+
 	(* type svalue is the type of semantic values for the semantic value
 	   stack
 	 *)

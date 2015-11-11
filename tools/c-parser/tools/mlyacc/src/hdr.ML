@@ -45,7 +45,7 @@ functor HeaderFun () : HEADER =
 	  fn (s : string,i : TextIO.instream ,errs : TextIO.outstream) =>
 	      {name=s,errStream=errs,inStream=i,
 	       errorOccurred = ref false}
-			
+
 	val errorOccurred = fn (s : inputSource) =>fn () => !(#errorOccurred s)
 
 	val pr = fn out : TextIO.outstream => fn s : string => TextIO.output(out,s)
@@ -80,7 +80,7 @@ functor HeaderFun () : HEADER =
 			   NSHIFT of symbol list | POS of string | PURE |
 			   PARSE_ARG of string * string |
 			   TOKEN_SIG_INFO of string
-			
+
 	datatype declData = DECL of
 			{eop : symbol list,
 			 keyword : symbol list,

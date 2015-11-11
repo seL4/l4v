@@ -56,7 +56,7 @@ structure IntGrammar : INTGRAMMAR =
 				 num: int,(* internal # assigned by coreutils *)
 				 rulenum: int,
 				 precedence: int option}
-		
+
 		val eqTerm = (op =)
 		val gtTerm = fn (T i,T j) => i>j
 
@@ -98,7 +98,7 @@ structure IntGrammar : INTGRAMMAR =
 					())
 			else ())
 		   end
-			
+
 		val prGrammar =
 			 fn (a as (symbolToString,nontermToString,print)) =>
 			     fn (GRAMMAR {rules,terms,nonterms,start,...}) =>
