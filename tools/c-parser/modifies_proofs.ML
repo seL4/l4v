@@ -184,7 +184,7 @@ fun munge_tactic ctxt goal tac = let
       else
          tac context st
 in
-  Goal.prove ctxt [] [] (TermsTypes.mk_prop goal) tacticfn
+  Goal.prove_future ctxt [] [] (TermsTypes.mk_prop goal) tacticfn
 end
 
 fun prove_all_modifies_goals_local csenv includeP tyargs lthy = let
@@ -224,8 +224,11 @@ fun prove_all_modifies_goals_local csenv includeP tyargs lthy = let
                         NONE => Binaryset.empty String.compare
                       | SOME s => s
           val i = Binaryset.intersection(calls, failedsofar)
+          val translated = case Symtab.lookup (function_specs csenv) fname of
+                               NONE => true
+                             | SOME l => List.all (fn s => s <> Absyn.didnt_translate) l
         in
-          if Binaryset.isEmpty i then let
+          if Binaryset.isEmpty i andalso translated then let
               val thy = Proof_Context.theory_of lthy
               val goal = gen_modify_goal thy tyargs gamma_t fname mvlist
               fun tac ctxt = let
@@ -235,31 +238,15 @@ fun prove_all_modifies_goals_local csenv includeP tyargs lthy = let
                 ALLGOALS (REPEAT_ALL_NEW (resolve_tac ctxt [exI, geq])) THEN
                 ALLGOALS (asm_full_simp_tac ctxt)
               end
-              fun fail() = (modifies_msg "failed" ;
-                            (Binaryset.add(failedsofar, fname), lthy))
-              fun prove() =
-                let
-                  val th = munge_tactic lthy goal tac
-                  val _ = tracing ("Forcing join on modifies proof for " ^ fname)
-                  val _ = Thm.join_proofs [th]
-                in
-                  th
-                end
-            in
-                case try prove () of
-                  NONE => (tracing ("Modifies proof for " ^ fname ^ "failed"); fail())
-                | SOME th =>
-                  let
-                    val (_, lthy) =
+              val th = munge_tactic lthy goal tac
+              val (_, lthy) =
                       Local_Theory.note
                           ((Binding.name (fname ^ "_modifies"), []), [th])
                           lthy
-                  in
-                    (failedsofar, lthy) before
-                    modifies_msg "successful"
-                  end
+            in
+              (failedsofar, lthy) before modifies_msg "successful"
             end
-          else let
+          else if translated then let
               val example = valOf (Binaryset.find (fn _ => true) i)
               val _ = modifies_msg
                           ("not attempted, as it calls a function ("
@@ -267,6 +254,8 @@ fun prove_all_modifies_goals_local csenv includeP tyargs lthy = let
             in
               (Binaryset.add(failedsofar, fname), lthy)
             end
+          else (modifies_msg ("not attempted, as it is a DONT_TRANSLATE"); 
+                (Binaryset.add(failedsofar, fname), lthy))
         end
     end
   exception NoMods of string Binaryset.set
