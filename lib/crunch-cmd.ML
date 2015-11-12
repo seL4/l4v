@@ -25,8 +25,10 @@ fun real_base_name name = name |> Long_Name.explode |> funkysplit |> Long_Name.i
 fun handle_int exn func = if Exn.is_interrupt exn then reraise exn else func
 
 val wp_sect = "wp";
+val wp_del_sect = "wp_del";
 val ignore_sect = "ignore";
 val simp_sect = "simp";
+val simp_del_sect = "simp_del";
 val lift_sect = "lift";
 val ignore_del_sect = "ignore_del";
 val unfold_sect = "unfold";
@@ -508,7 +510,13 @@ fun crunch_x atts extra prp_name wpigs consts ctxt =
 
         val wps' = wpigs |> filter (fn (s,_) => s = wp_sect) |> map #2
 
-        val simps = wpigs |> filter (fn (s,_) => s = simp_sect) |> map #2 
+        val wp_dels' = wpigs |> filter (fn (s,_) => s = wp_del_sect)
+                            |> map (const_name o #2)
+
+        val simps = wpigs |> filter (fn (s,_) => s = simp_sect) |> map #2
+                    |> maps (get_thms ctxt)
+
+        val simp_dels = wpigs |> filter (fn (s,_) => s = simp_del_sect) |> map #2
                     |> maps (get_thms ctxt)
 
         val igs = wpigs |> filter (fn (s,_) => s = ignore_sect) 
@@ -545,13 +553,19 @@ fun crunch_x atts extra prp_name wpigs consts ctxt =
         val _ = map (fn (const_term, const) => make_goal const_term const pre' extra' ctxt)
                     (const_terms ~~ full_const_names)
 
-        val (_, thms) = funkyfold (crunch {ctxt = ctxt, prp_name = prp_name, nmspce = nmspce, lifts = lifts,
+        val wp_dels = maps (get_thms ctxt) wp_dels';
+        val ctxt' = fold (fn thm => fn ctxt => Thm.proof_attributes [WeakestPre.wp_del] thm ctxt |> snd)
+                          wp_dels ctxt;
+
+        val ctxt'' = ctxt' delsimps simp_dels;
+
+        val (_, thms) = funkyfold (crunch {ctxt = ctxt'', prp_name = prp_name, nmspce = nmspce, lifts = lifts,
               wps = wps, igs = igs, simps = simps, ig_dels = ig_dels, unfolds = unfolds} pre' extra' [])
             full_const_names [];
 
         val atts' = map (Attrib.check_src ctxt) atts;
 
-        val ctxt' = fold (fn (name, thm) => add_thm thm atts' name) thms ctxt;
+        val ctxt''' = fold (fn (name, thm) => add_thm thm atts' name) thms ctxt;
     in
         Pretty.writeln
           (Pretty.big_list "proved:"
@@ -560,7 +574,7 @@ fun crunch_x atts extra prp_name wpigs consts ctxt =
                                       [Pretty.str (n ^ ": "),
                                        Syntax.pretty_term ctxt (Thm.prop_of t)])
                                 thms));
-        ctxt'
+        ctxt'''
     end
 
 end

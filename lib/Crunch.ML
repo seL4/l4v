@@ -162,7 +162,7 @@ val crunchP =
         (((Scan.optional (P.$$$ "(" |-- P.name --| P.$$$ ")") "" -- P.name
          -- Parse.opt_attribs --| P.$$$ ":") -- P.list1 P.name -- Scan.optional P.term ""
          -- Scan.optional
-           (P.$$$ "(" |-- read_sections [wp_sect,ignore_sect,simp_sect,lift_sect,ignore_del_sect,unfold_sect] --| P.$$$ ")")
+           (P.$$$ "(" |-- read_sections [wp_sect,wp_del_sect,ignore_sect,simp_sect,simp_del_sect,lift_sect,ignore_del_sect,unfold_sect] --| P.$$$ ")")
            []
         )
         >> (fn (((((crunch_instance, prp_name), att_srcs), consts), extra), wpigs) =>
