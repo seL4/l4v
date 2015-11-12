@@ -29,3 +29,10 @@ clz(unsigned int x)
 {
     return __builtin_clz(x);
 }
+
+
+/** MODIFIES:
+    FNSPEC
+        halt_spec: "\<Gamma> \<turnstile> {} Call halt_'proc {}"
+*/
+void halt(void);

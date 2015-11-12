@@ -225,11 +225,20 @@ fun prove_all_modifies_goals_local csenv includeP tyargs lthy = let
                       | SOME s => s
           val i = Binaryset.intersection(calls, failedsofar)
           fun fnspec s = case s of Absyn.fnspec _ => true | _ => false
-          val translated =
+          val has_definition =
+              isSome (Symtab.lookup (get_defined_functions csenv) fname)
+          val has_fnspec =
             case Symtab.lookup (function_specs csenv) fname of
-              NONE => true
-            | SOME l => List.all (fn s => s <> Absyn.didnt_translate) l orelse
-                        List.all (not o fnspec) l
+              NONE => false
+            | SOME l => List.exists fnspec l
+          (* even if there is no body; try to do a modifies proof in the
+             absence of specs as it is these that really confuse things.
+
+             You can write DONT_TRANSLATE on top of a function and provide just
+             a MODIFIES clause, and modifies proofs in these situations work.
+             This scenario may not be likely
+          *)
+          val translated = has_definition orelse not has_fnspec
         in
           if Binaryset.isEmpty i andalso translated then let
               val thy = Proof_Context.theory_of lthy
@@ -257,8 +266,10 @@ fun prove_all_modifies_goals_local csenv includeP tyargs lthy = let
             in
               (Binaryset.add(failedsofar, fname), lthy)
             end
-          else (modifies_msg ("not attempted, as it is a DONT_TRANSLATE with a spec");
-                (Binaryset.add(failedsofar, fname), lthy))
+          else
+            (modifies_msg ("not attempted, as it has a spec and no definition\
+                           \ (possibly because of DONT_TRANSLATE)");
+             (Binaryset.add(failedsofar, fname), lthy))
         end
     end
   exception NoMods of string Binaryset.set

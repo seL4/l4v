@@ -23,9 +23,8 @@ apply (vcg spec=modifies)
 oops
 
 thm clz_body_def
+thm halt_body_def
 
-end 
-
-term "{s. s = t \<and> P t}"
+end
 
 end
