@@ -1,6 +1,6 @@
 theory jiraver464
   imports "../CTranslation"
-begin 
+begin
 
 (* declare [[calculate_modifies_proofs=false]] *)
 install_C_file "jiraver464.c"
@@ -16,7 +16,7 @@ begin
   thm f_body_def
 
 
-lemma f_modifies: 
+lemma f_modifies:
 assumes "x_' \<sigma> < 3"
 shows "\<Gamma>\<turnstile>{\<sigma>} Call f_'proc {t. t may_only_modify_globals \<sigma> in [y]}"
 apply (vcg spec=modifies)
