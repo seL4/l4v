@@ -69,16 +69,6 @@ definition
 
 section "Thread Message Formats"
 
-text {* The number of message registers in a maximum length message. *}
-definition
-  number_of_mrs :: nat where
- "number_of_mrs \<equiv> 32"
-
-text {* The size of a user IPC buffer. *}
-definition
-  ipc_buffer_size :: vspace_ref where
- "ipc_buffer_size \<equiv> of_nat ((number_of_mrs + captransfer_size) * word_size)"
-
 definition
   load_word_offs :: "obj_ref \<Rightarrow> nat \<Rightarrow> (machine_word,'z::state_ext) s_monad" where
  "load_word_offs ptr offs \<equiv>
