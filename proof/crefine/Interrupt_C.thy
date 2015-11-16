@@ -56,6 +56,7 @@ proof -
     by (clarsimp)
   show ?thesis
   apply (cinit lift: irq_' slot_' cap_')
+   apply (rule ccorres_move_array_assertion_irq)
    apply (simp only:)
    apply (ctac(no_vcg) add: getIRQSlot_ccorres)
      apply (rule ccorres_Guard_Seq)
@@ -74,8 +75,10 @@ proof -
    apply (simp add: guard_is_UNIV_def ghost_assertion_data_get_def
                     ghost_assertion_data_set_def)
   apply (clarsimp simp: cte_at_irq_node' ucast_nat_def)
-  apply (clarsimp simp: invs_pspace_aligned' cte_wp_at_ctes_of badge_derived'_def)
-  apply (drule valid_globals_ex_cte_cap_irq[where irq=irq], clarsimp+)
+  apply (cut_tac x=irq in unat_lt2p)
+  apply (clarsimp simp: invs_pspace_aligned' cte_wp_at_ctes_of badge_derived'_def
+                        Collect_const_mem unat_gt_0)
+  apply (drule valid_globals_ex_cte_cap_irq[where irq=irq], auto)
   done
 qed
 
@@ -85,6 +88,7 @@ lemma invokeIRQHandler_ClearIRQHandler_ccorres:
       (invokeIRQHandler (ClearIRQHandler irq))
       (Call invokeIRQHandler_ClearIRQHandler_'proc)"
   apply (cinit lift: irq_')
+   apply (rule ccorres_move_array_assertion_irq)
    apply (simp only: )
    apply (ctac(no_vcg) add: getIRQSlot_ccorres)
      apply (rule ccorres_Guard_Seq)
@@ -98,6 +102,8 @@ lemma invokeIRQHandler_ClearIRQHandler_ccorres:
    apply (simp add: guard_is_UNIV_def ghost_assertion_data_get_def
                     ghost_assertion_data_set_def)
   apply (clarsimp simp: cte_at_irq_node' ucast_nat_def)
+  apply (cut_tac x=irq in unat_lt2p)
+  apply (clarsimp simp: Collect_const_mem unat_gt_0)
   done
 
 lemma ntfn_case_can_send:

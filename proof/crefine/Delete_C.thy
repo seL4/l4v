@@ -16,7 +16,8 @@ context kernel_m
 begin
 
 lemma ccorres_drop_cutMon:
-  "ccorres rvr xf P P' hs f g \<Longrightarrow> ccorres rvr xf P P' hs (cutMon Q f) g"
+  "ccorres_underlying sr Gamm r xf arrel axf P P' hs f g
+    \<Longrightarrow> ccorres_underlying sr Gamm r xf arrel axf P P' hs (cutMon Q f) g"
   apply (clarsimp simp: ccorres_underlying_def
                         cutMon_def fail_def
                  split: split_if_asm)
@@ -25,7 +26,8 @@ lemma ccorres_drop_cutMon:
   done
 
 lemma ccorres_drop_cutMon_bind:
-  "ccorres rvr xf P P' hs (f >>= f') g \<Longrightarrow> ccorres rvr xf P P' hs (cutMon Q f >>= f') g"
+  "ccorres_underlying sr Gamm r xf arrel axf P P' hs (f >>= f') g
+    \<Longrightarrow> ccorres_underlying sr Gamm r xf arrel axf P P' hs (cutMon Q f >>= f') g"
   apply (clarsimp simp: ccorres_underlying_def
                         cutMon_def fail_def bind_def
                  split: split_if_asm)
@@ -34,7 +36,8 @@ lemma ccorres_drop_cutMon_bind:
   done
 
 lemma ccorres_drop_cutMon_bindE:
-  "ccorres rvr xf P P' hs (f >>=E f') g \<Longrightarrow> ccorres rvr xf P P' hs (cutMon Q f >>=E f') g"
+  "ccorres_underlying sr Gamm r xf arrel axf P P' hs (f >>=E f') g
+    \<Longrightarrow> ccorres_underlying sr Gamm r xf arrel axf P P' hs (cutMon Q f >>=E f') g"
   apply (clarsimp simp: ccorres_underlying_def
                         cutMon_def fail_def bind_def bindE_def lift_def
                  split: split_if_asm)
@@ -43,8 +46,8 @@ lemma ccorres_drop_cutMon_bindE:
   done
 
 lemma ccorres_cutMon:
-  "(\<And>s. Q s \<Longrightarrow> ccorres rvr xf P P' hs (cutMon (op = s) f) g)
-        \<Longrightarrow> ccorres rvr xf P P' hs (cutMon Q f) g"
+  "(\<And>s. Q s \<Longrightarrow> ccorres_underlying sr Gamm r xf arrel axf P P' hs (cutMon (op = s) f) g)
+        \<Longrightarrow> ccorres_underlying sr Gamm r xf arrel axf P P' hs (cutMon Q f) g"
   apply (clarsimp simp: ccorres_underlying_def
                         cutMon_def fail_def bind_def
                  split: split_if_asm)
@@ -328,10 +331,87 @@ lemma ccorres_Cond_rhs_Seq_ret_int:
   apply simp
   done
 
+(* it's a little painful to have to do this from first principles *)
+lemma ccorres_cutMon_stateAssert:
+  "\<lbrakk> Q s \<Longrightarrow> ccorres_underlying sr Gamm r xf arrel axf P P' hs
+      (cutMon (op = s) (a ())) c \<rbrakk> \<Longrightarrow>
+   ccorres_underlying sr Gamm r xf arrel axf (\<lambda>s. Q s \<longrightarrow> P s) P' hs
+      (cutMon (op = s) (stateAssert Q [] >>= a)) c"
+  apply (simp add: cutMon_walk_bind)
+  apply (cases "\<not> Q s")
+   apply (simp add: stateAssert_def cutMon_def exec_get assert_def
+                    ccorres_fail'
+              cong: if_cong[OF eq_commute])
+  apply (rule ccorres_guard_imp2)
+   apply (rule ccorres_drop_cutMon_bind)
+   apply (rule ccorres_symb_exec_l)
+      apply (rule ccorres_cutMon)
+      apply (simp add: stateAssert_def exec_get return_def)
+     apply (wp | simp)+
+  done
+
+lemma valid_Zombie_number_word_bits:
+  "valid_cap' cap s \<Longrightarrow> isZombie cap
+    \<Longrightarrow> capZombieNumber cap < 2 ^ word_bits"
+  apply (clarsimp simp: valid_cap'_def isCap_simps)
+  apply (erule order_le_less_trans)
+  apply (rule order_le_less_trans[OF zombieCTEs_le])
+  apply simp
+  done
+
+lemma of_nat_less_t2n:
+  "of_nat i < (2 :: ('a :: len) word) ^ n
+    \<Longrightarrow> n < len_of TYPE('a) \<and> unat (of_nat i :: 'a word) < 2 ^ n"
+  apply (cases "n < len_of TYPE('a)")
+   apply (simp add: word_less_nat_alt)
+  apply (simp add: power_overflow)
+  done
+
+lemma ccorres_cutMon_locateSlotCap_Zombie:
+  "\<lbrakk> (capZombiePtr cap + 2 ^ cte_level_bits * n, s) \<in> fst (locateSlotCap cap n s)
+    \<Longrightarrow> ccorres_underlying rf_sr Gamm r xf arrel axf
+      Q Q' hs
+      (cutMon (op = s) (a (capZombiePtr cap + 2 ^ cte_level_bits * n))) c \<rbrakk>
+    \<Longrightarrow> ccorres_underlying rf_sr Gamm r xf arrel axf
+      (Q and valid_cap' cap and (\<lambda>_. isZombie cap \<and> n = of_nat (capZombieNumber cap - 1)))
+      {s. array_assertion (cte_Ptr (capZombiePtr cap)) (capZombieNumber cap - 1)
+           (hrs_htd (t_hrs_' (globals s))) \<longrightarrow> s \<in> Q'} hs
+      (cutMon (op = s) (locateSlotCap cap n >>= a)) c"
+  apply (simp add: locateSlot_conv in_monad cutMon_walk_bind)
+  apply (rule ccorres_gen_asm)
+  apply (rule ccorres_guard_imp2)
+   apply (rule ccorres_drop_cutMon_bind)
+   apply (rule ccorres_symb_exec_l)
+      apply (rule ccorres_cutMon)
+      apply (clarsimp simp: in_monad stateAssert_def)
+      apply (rule_tac P="\<lambda>s'. (capZombieType cap \<noteq> ZombieTCB \<longrightarrow>
+           (case gsCNodes s' (capUntypedPtr cap) of None \<Rightarrow> False
+                | Some n \<Rightarrow> of_nat (capZombieNumber cap - 1) < 2 ^ n))"
+              in ccorres_cross_over_guard)
+      apply (clarsimp simp: isCap_simps)
+      apply assumption
+     apply (wp | simp)+
+  apply (clarsimp simp: isCap_simps stateAssert_def in_monad)
+  apply (cases "capZombieType cap = ZombieTCB")
+   apply (clarsimp simp: valid_cap_simps')
+   apply (drule(1) rf_sr_tcb_ctes_array_assertion[
+       where tcb="tcb_ptr_to_ctcb_ptr t" for t, simplified])
+   apply (simp add: tcb_cnode_index_defs array_assertion_shrink_right)
+  apply clarsimp
+  apply (rule conjI)
+   apply blast
+  apply (clarsimp split: option.split_asm dest!: of_nat_less_t2n)
+  apply (drule(1) rf_sr_gsCNodes_array_assertion)
+  apply (erule notE, erule array_assertion_shrink_right)
+  apply (frule valid_Zombie_number_word_bits, simp+)
+  apply (simp add: unat_arith_simps unat_of_nat word_bits_def
+                   valid_cap_simps')
+  done
+
 lemma reduceZombie_ccorres1:
   assumes fs_cc:
     "\<And>slot. \<lbrakk> capZombieNumber cap \<noteq> 0; exp;
-               (slot, s) \<in> fst (locateSlot (capZombiePtr cap)
+               (slot, s) \<in> fst (locateSlotCap cap
                                (fromIntegral (capZombieNumber cap - 1)) s) \<rbrakk> \<Longrightarrow>
      ccorres (cintr \<currency> (\<lambda>(success, irqopt) (success', irq'). success' = from_bool success \<and> irq_opt_relation irqopt irq'))
      (liftxf errstate finaliseSlot_ret_C.status_C (\<lambda>v. (success_C v, finaliseSlot_ret_C.irq_C v))
@@ -348,6 +428,7 @@ lemma reduceZombie_ccorres1:
   apply (cinit' lift: slot_' immediate_')
    apply (simp add: from_bool_0
                del: Collect_const)
+   apply (rule_tac P="capZombieNumber cap < 2 ^ word_bits" in ccorres_gen_asm)
    apply (rule ccorres_move_c_guard_cte)
    apply (rule_tac xf'=ret__unsigned_long_' and val="capZombiePtr cap"
                  and R="cte_wp_at' (\<lambda>cte. cteCap cte = cap) slot and invs'"
@@ -412,16 +493,18 @@ lemma reduceZombie_ccorres1:
         apply clarsimp
        apply wp
       apply (rule ccorres_if_lhs)
-       apply (simp add: Let_def liftE_bindE locateSlot_conv
-                        cutMon_walk_bindE Collect_True
+       apply (simp add: Let_def liftE_bindE
                    del: Collect_const)
-       apply (rule ccorres_rhs_assoc)+
-       apply (rule ccorres_move_c_guard_cte)
+       apply (rule ccorres_cutMon_locateSlotCap_Zombie)
+       apply (simp add: cutMon_walk_bindE Collect_True
+                   del: Collect_const)
+       apply (rule ccorres_rhs_assoc
+                   ccorres_move_c_guard_cte
+                   ccorres_Guard_Seq)+
        apply csymbr
        apply (ctac(no_vcg, no_simp) add: cteDelete_ccorres1)
           apply (rule ccorres_guard_imp2)
-           apply (rule fs_cc, clarsimp+)
-           apply (clarsimp simp: locateSlot_conv return_def)
+           apply (rule fs_cc, clarsimp+)[1]
           apply simp
          apply (rule ccorres_drop_cutMon)
          apply (simp add: Collect_False
@@ -579,14 +662,16 @@ lemma reduceZombie_ccorres1:
       apply (rule ccorres_inst[where P=\<top> and P'=UNIV])
       apply simp
      apply (simp add: guard_is_UNIV_def Collect_const_mem)
-     apply (clarsimp simp: from_bool_def false_def
+     apply (clarsimp simp: from_bool_def false_def isCap_simps
                            size_of_def cte_level_bits_def)
+     apply (simp only: word_bits_def unat_of_nat unat_arith_simps, simp)
     apply (simp add: guard_is_UNIV_def)+
   apply (clarsimp simp: cte_wp_at_ctes_of)
   apply (clarsimp simp: isCap_simps)
+  apply (frule ctes_of_valid', clarsimp+)
+  apply (frule valid_Zombie_number_word_bits, clarsimp+)
   apply (frule(1) ex_Zombie_to2, clarsimp+)
   apply (clarsimp simp: cte_level_bits_def)
-  apply (frule ctes_of_valid', clarsimp+)
   apply (frule_tac n="v2 - 1" in valid_Zombie_cte_at')
    apply (fastforce simp add: valid_cap'_def)
   apply (frule_tac n=0 in valid_Zombie_cte_at')

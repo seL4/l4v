@@ -105,6 +105,7 @@ lemma performPageTableInvocationUnmap_ccorres:
       apply simp
      apply (clarsimp simp: carch_state_relation_def cmachine_state_relation_def
                            h_t_valid_clift_Some_iff
+                           cvariable_array_map_const_add_map_option[where f="tcb_no_ctes_proj"]
                     dest!: ksPSpace_update_eq_ExD)
     apply (simp add: cte_wp_at_ctes_of)
     apply (wp mapM_x_wp' | wpc | simp)+
@@ -123,6 +124,7 @@ lemma performPageTableInvocationUnmap_ccorres:
                  dest!: diminished_capMaster)
   apply (drule spec[where x=0], clarsimp)
   done
+
 lemma cap_case_PageDirectoryCap2:
   "(case cap of ArchObjectCap (PageDirectoryCap pd mapdata)
                    \<Rightarrow> f pd mapdata | _ \<Rightarrow> g)
@@ -157,7 +159,7 @@ proof -
  \<longrightarrow>
   (\<sigma>\<lparr>ksPSpace := foldr (\<lambda>addr. data_map_insert addr (KOArch (KOASIDPool makeObject))) (new_cap_addrs (Suc 0) frame (KOArch (KOASIDPool makeObject))) (ksPSpace \<sigma>)\<rparr>,
    x\<lparr>globals := globals x
-                 \<lparr>t_hrs_' := hrs_htd_update (ptr_retyp (ap_Ptr frame))
+                 \<lparr>t_hrs_' := hrs_htd_update (ptr_retyps_gen 1 (ap_Ptr frame) False)
                        (hrs_mem_update
                          (heap_update_list frame (replicate (2 ^ pageBits) 0))
                          (t_hrs_' (globals x)))\<rparr>\<rparr>) \<in> rf_sr"
@@ -253,9 +255,11 @@ proof -
   have mko: "makeObjectKO (Inl (KOArch (KOASIDPool f))) = Some ko" by (simp add: ko_def makeObjectKO_def)
   
 
-  note rl = projectKO_opt_retyp_other [OF rc pal pno']
+  note rl = projectKO_opt_retyp_other [OF rc pal pno' ko_def]
   note cterl = retype_ctes_helper[OF pal pdst pno' al' 
     le_refl range_cover_sz'[where 'a=32, folded word_bits_def, OF rc] mko rc,simplified]
+  note ht_rl = clift_eq_h_t_valid_eq[OF rl', OF tag_disj_via_td_name, simplified]
+    uinfo_array_tag_n_m_not_le_typ_name
 
   have guard: 
     "\<forall>n<2 ^ (pageBits - objBitsKO ko). c_guard (CTypesDefs.ptr_add ?ptr (of_nat n))"
@@ -271,19 +275,15 @@ proof -
 
   have cslift_ptr_retyp_helper:
    "\<forall>x\<Colon>asid_pool_C ptr\<in>dom (cslift x). is_aligned (ptr_val x) (objBitsKO ko)
-   \<Longrightarrow> clift (hrs_htd_update (ptr_retyp (ap_Ptr frame))
+   \<Longrightarrow> clift (hrs_htd_update (ptr_retyps_gen 1 (ap_Ptr frame) False)
            (hrs_mem_update (heap_update_list frame (replicate ((2\<Colon>nat) ^ pageBits) (0\<Colon>word8)))
              (t_hrs_' (globals x)))) =
    (\<lambda>y\<Colon>asid_pool_C ptr.
        if y \<in> (CTypesDefs.ptr_add (ap_Ptr frame) \<circ> of_nat) ` {k\<Colon>nat. k < (2\<Colon>nat) ^ (pageBits - objBitsKO ko)}
        then Some (from_bytes (replicate (size_of TYPE(asid_pool_C)) (0\<Colon>word8))) else cslift x y)"
-    apply (subst cslift_ptr_retyp_memset_same' 
-      [where m = "objBitsKO ko", OF guard _ szo , simplified ptr_retyp,simplified ptr_retyp,symmetric])
-      apply (rule range_cover_rel[OF rc])
-       apply simp
-      apply (simp add:objBits_simps ko_def archObjSize_def)
-     apply simp
-    apply simp
+    using guard
+    apply (subst clift_ptr_retyps_gen_memset_same, simp_all add: szo szko)
+    apply (simp add: szo empty szko)
     done
 
   from rf have "cpspace_relation (ksPSpace \<sigma>) (underlying_memory (ksMachineState \<sigma>)) (t_hrs_' (globals x))" 
@@ -293,11 +293,11 @@ proof -
     apply -
     apply (clarsimp simp: rl' cterl[unfolded ko_def] tag_disj_via_td_name
                  foldr_upd_app_if [folded data_map_insert_def] cte_C_size tcb_C_size)
-    apply (subst cslift_ptr_retyp_helper)
+    apply (subst cslift_ptr_retyp_helper[simplified])
      apply (erule pspace_aligned_to_C [OF pal])
       apply (simp add: projectKOs ko_def)
      apply (simp add: ko_def projectKOs objBits_simps archObjSize_def)
-    apply (simp add: ptr_add_to_new_cap_addrs [OF szo])
+    apply (simp add: ptr_add_to_new_cap_addrs [OF szo] ht_rl)
     apply (simp add: rl[unfolded ko_def] projectKO_opt_retyp_same ko_def projectKOs cong: if_cong)
     apply (simp add:objBits_simps archObjSize_def)
     apply (erule cmap_relation_retype)
@@ -305,11 +305,15 @@ proof -
     done
 
   thus ?thesis using rf empty kdr
-    apply (simp add: rf_sr_def cstate_relation_def Let_def rl'  tag_disj_via_td_name)
+    apply (simp add: rf_sr_def cstate_relation_def Let_def rl' tag_disj_via_td_name
+                     ko_def[symmetric])
     apply (simp add: carch_state_relation_def cmachine_state_relation_def)
     apply (simp add: rl' cterl tag_disj_via_td_name h_t_valid_clift_Some_iff tcb_C_size)
-    apply (clarsimp simp: hrs_htd_update ptr_retyp_htd_safe_neg szo szko
-                          kernel_data_refs_domain_eq_rotate)
+    apply (clarsimp simp: hrs_htd_update ptr_retyps_htd_safe_neg szo szko
+                          kernel_data_refs_domain_eq_rotate
+                          cvariable_array_ptr_retyps[OF szo]
+                          foldr_upd_app_if [folded data_map_insert_def]
+                          rl empty projectKOs)
     done
   qed
 
@@ -353,7 +357,8 @@ proof -
   apply (erule iffD1[OF rf_sr_upd,rotated -1 ])
    apply simp_all
   apply (simp add: hrs_htd_update_def hrs_mem_update_def split_def)
-  apply (simp add: pageBits_def ARMSmallPageBits_def del:replicate_numeral)
+  apply (simp add: pageBits_def ARMSmallPageBits_def ptr_retyps_gen_def
+              del:replicate_numeral)
   done
 qed
 
@@ -595,6 +600,7 @@ lemma decodeARMPageTableInvocation_ccorres:
        (invs' and (\<lambda>s. ksCurThread s = thread) and ct_active' and sch_act_simple
               and (excaps_in_mem extraCaps \<circ> ctes_of)
               and cte_wp_at' (diminished' (ArchObjectCap cp) \<circ> cteCap) slot
+              and valid_cap' (ArchObjectCap cp)
               and (\<lambda>s. \<forall>v \<in> set extraCaps. ex_cte_cap_wp_to' isCNodeCap (snd v) s)
               and sysargs_rel args buffer)
        (UNIV \<inter> {s. label_' s = label}
@@ -864,6 +870,20 @@ lemma decodeARMPageTableInvocation_ccorres:
                         to_bool_def cap_page_table_cap_lift_def
                         typ_heap_simps' shiftl_t2n[where n=2] field_simps
                  elim!: ccap_relationE)
+  apply (clarsimp simp: neq_Nil_conv[where xs=extraCaps]
+                        excaps_in_mem_def slotcap_in_mem_def)
+  apply (cut_tac p="snd (hd extraCaps)" in ctes_of_valid', simp, clarsimp)
+  apply (clarsimp simp: eq_commute[where a="cteCap cte" for cte])
+  apply (clarsimp dest!: sym[where s="cteCap cte" for cte])
+  apply clarsimp
+thm ctes_of_valid'
+thm slotcap_in_mem_def
+find_theorems excaps_in_mem valid_cap'
+  apply (frule ctes_of_valid', clarsimp)
+  apply (simp add: diminished_valid'[THEN sym] valid_cap_simps')
+find_theorems diminished' valid_cap'
+find_theorems array_assertion pde_Ptr
+  apply (subst array_assertion_abs_pd, erule conjI)
   apply (clarsimp simp: rf_sr_ksCurThread mask_def[where n=4]
                         "StrictC'_thread_state_defs"
                         ccap_relation_def cap_to_H_def
@@ -877,7 +897,7 @@ lemma decodeARMPageTableInvocation_ccorres:
         rule is_aligned_andI2,
         simp add: is_aligned_def,
         simp)+
-  apply (clarsimp simp: attribsFromWord_def)
+  apply (clarsimp simp: attribsFromWord_def split: split_if)
   apply word_bitwise
   apply clarsimp
   done

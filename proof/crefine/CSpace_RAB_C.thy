@@ -615,7 +615,7 @@ lemma add_mask_lower_bits:
    apply simp
   apply simp
   done
-    
+
 lemma tcb_ptr_to_ctcb_ptr_mask [simp]:
   assumes tcbat: "tcb_at' thread s"
   shows   "ptr_val (tcb_ptr_to_ctcb_ptr thread) && 0xFFFFFE00 = thread"

@@ -1230,7 +1230,7 @@ lemma deleteASID_ccorres:
               apply (simp add: option_to_ptr_def option_to_0_def)
              apply (simp add: asid_low_bits_def)
             apply (simp add: carch_state_relation_def cmachine_state_relation_def 
-                             carch_globals_def
+                             carch_globals_def update_asidpool_map_tos
                              typ_heap_simps)
            apply (rule ccorres_pre_getCurThread)
            apply (ctac add: setVMRoot_ccorres)
@@ -1312,6 +1312,17 @@ lemma findPDForASID_nonzero:
   apply (wp | wpc | simp only: o_def simp_thms)+
   done
 
+lemma unat_shiftr_le_bound:
+  "2 ^ (len_of TYPE('a :: len) - n) - 1 \<le> bound \<Longrightarrow> 0 < n
+    \<Longrightarrow> unat ((x :: 'a word) >> n) \<le> bound"
+  apply (erule order_trans[rotated], simp)
+  apply (rule nat_le_Suc_less_imp)
+  apply (rule unat_less_helper, simp)
+  apply (rule shiftr_less_t2n3)
+   apply simp
+  apply simp
+  done
+
 lemma pageTableMapped_ccorres:
   "ccorres (\<lambda>rv rv'. rv' = option_to_ptr rv \<and> rv \<noteq> Some 0) ret__ptr_to_struct_pde_C_'
            (invs' and K (asid \<le> mask asid_bits))
@@ -1330,6 +1341,8 @@ lemma pageTableMapped_ccorres:
        apply csymbr
        apply (rule_tac xf'=pde_' and r'=cpde_relation in ccorres_split_nothrow_novcg)
            apply (rule ccorres_add_return2, rule ccorres_pre_getObject_pde)
+           apply (rule ccorres_move_array_assertion_pd
+             | (rule ccorres_flip_Guard, rule ccorres_move_array_assertion_pd))+
            apply (rule_tac P="ko_at' x (lookup_pd_slot rv vaddr) and no_0_obj'
                             and page_directory_at' rv"
                          in ccorres_from_vcg[where P'=UNIV])
@@ -1339,10 +1352,6 @@ lemma pageTableMapped_ccorres:
            apply (erule cmap_relationE1[OF rf_sr_cpde_relation],
                   erule ko_at_projectKO_opt)
            apply (clarsimp simp: typ_heap_simps' shiftl_t2n field_simps)
-           apply (erule clift_array_assertion_imp, simp+)
-           apply (rule_tac x=0 in exI, simp add: unat_def[symmetric])
-           apply (rule unat_le_helper, simp)
-           apply ((thin_tac P for P)+, word_bitwise)
           apply ceqv
          apply (rule_tac P="rv \<noteq> 0" in ccorres_gen_asm)
          apply csymbr+
@@ -1372,20 +1381,21 @@ lemma pageTableMapped_ccorres:
        apply (rule ccorres_return_C, simp+)
       apply vcg
      apply (wp hoare_drop_imps findPDForASID_nonzero)
-    apply (simp add: guard_is_UNIV_def word_sle_def)
+    apply (simp add: guard_is_UNIV_def word_sle_def pdBits_def pageBits_def
+                     unat_gt_0 unat_shiftr_le_bound)
    apply (simp add: guard_is_UNIV_def option_to_0_def option_to_ptr_def)
   apply auto[1]
   done
 
-
-lemma pageTableMapped_aligned:
-  "\<lbrace>valid_objs'\<rbrace> pageTableMapped asid vaddr ptPtr
-   \<lbrace>\<lambda>rv s. case rv of Some x \<Rightarrow> is_aligned x pdBits | _ \<Rightarrow> True\<rbrace>"
+lemma pageTableMapped_pd:
+  "\<lbrace>\<top>\<rbrace> pageTableMapped asid vaddr ptPtr
+   \<lbrace>\<lambda>rv s. case rv of Some x \<Rightarrow> page_directory_at' x s | _ \<Rightarrow> True\<rbrace>"
   apply (simp add: pageTableMapped_def)
-  apply (wp getPDE_wp | wpc)+
-  apply (simp add: validE_R_def[symmetric])
-  apply (rule hoare_post_imp_R, rule findPDForASID_aligned)
-  apply (clarsimp split: split_if)
+  apply (rule hoare_pre)
+   apply (wp getPDE_wp hoare_vcg_all_lift_R | wpc)+
+   apply (rule hoare_post_imp_R, rule findPDForASID_page_directory_at'_simple)
+   apply (clarsimp split: split_if)
+  apply simp
   done
 
 lemma unmapPageTable_ccorres:
@@ -1402,6 +1412,7 @@ lemma unmapPageTable_ccorres:
     apply (rule ccorres_rhs_assoc)+
     apply (rule ccorres_Guard_Seq)+
     apply csymbr
+    apply (rule ccorres_move_array_assertion_pd)
     apply csymbr
     apply csymbr
     apply (rule ccorres_split_nothrow_novcg_dc)
@@ -1416,13 +1427,16 @@ lemma unmapPageTable_ccorres:
      apply wp
     apply (fastforce simp: guard_is_UNIV_def Collect_const_mem Let_def
       shiftl_t2n field_simps lookup_pd_slot_def)
-   apply (rule_tac Q="\<lambda>rv s. (case rv of Some pd \<Rightarrow> is_aligned pd pdBits | _ \<Rightarrow> True) \<and> invs' s"
+   apply (rule_tac Q="\<lambda>rv s. (case rv of Some pd \<Rightarrow> page_directory_at' pd s | _ \<Rightarrow> True) \<and> invs' s"
              in hoare_post_imp)
     apply (clarsimp simp: lookup_pd_slot_def Let_def
-                          mask_add_aligned less_kernelBase_valid_pde_offset'')
-   apply (wp pageTableMapped_aligned)
+                          mask_add_aligned less_kernelBase_valid_pde_offset''
+                          page_directory_at'_def)
+   apply (wp pageTableMapped_pd)
   apply (clarsimp simp: word_sle_def lookup_pd_slot_def
-                        Let_def shiftl_t2n field_simps)
+                        Let_def shiftl_t2n field_simps
+                        Collect_const_mem pdBits_def pageBits_def)
+  apply (simp add: unat_shiftr_le_bound unat_eq_0)
   done
 
 lemma return_Null_ccorres:
@@ -1756,10 +1770,11 @@ lemma of_int_uint_ucast:
 lemma getIRQSlot_ccorres_stuff:
   "\<lbrakk> (s, s') \<in> rf_sr \<rbrakk> \<Longrightarrow>
    CTypesDefs.ptr_add (intStateIRQNode_' (globals s')) (uint (irq :: word8))
-     = Ptr (irq_node' s + 2 ^ objBits (x :: cte) * ucast irq)"
+     = Ptr (irq_node' s + 2 ^ cte_level_bits * ucast irq)"
   apply (clarsimp simp add: rf_sr_def cstate_relation_def Let_def
                             cinterrupt_relation_def)
-  apply (simp add: objBits_simps size_of_def mult.commute mult.left_commute of_int_uint_ucast )
+  apply (simp add: objBits_simps cte_level_bits_def
+                   size_of_def mult.commute mult.left_commute of_int_uint_ucast )
   done
 
 lemma deletingIRQHandler_ccorres:
@@ -1771,10 +1786,11 @@ lemma deletingIRQHandler_ccorres:
                    cong: call_ignore_cong)
    apply (rule_tac r'="\<lambda>rv rv'. rv' = Ptr rv"
                 and xf'="slot_'" in ccorres_split_nothrow)
+       apply (rule ccorres_move_array_assertion_irq)
        apply (rule ccorres_from_vcg[where P=\<top> and P'=UNIV])
        apply (rule allI, rule conseqPre, vcg)
        apply (clarsimp simp: getIRQSlot_def liftM_def getInterruptState_def
-                             locateSlot_def)
+                             locateSlot_conv)
        apply (simp add: bind_def simpler_gets_def return_def
           ucast_nat_def uint_up_ucast is_up)
        apply (erule getIRQSlot_ccorres_stuff)
@@ -1793,7 +1809,10 @@ lemma deletingIRQHandler_ccorres:
   apply (clarsimp simp: cap_get_tag_isCap ghost_assertion_data_get_def
                         ghost_assertion_data_set_def)
   apply (simp add: cap_tag_defs)
-  apply (clarsimp simp: cte_wp_at_ctes_of)
+  apply (cut_tac x=irq in unat_lt2p)
+  apply (clarsimp simp: cte_wp_at_ctes_of Collect_const_mem
+                        irq_opt_relation_def maxIRQ_def
+                        unat_gt_0)
   done
 
 lemma Zombie_new_spec:
@@ -2022,6 +2041,7 @@ lemma finaliseCap_ccorres:
    apply clarsimp
    apply (frule cap_get_tag_to_H, erule(1) cap_get_tag_isCap [THEN iffD2])
    apply (clarsimp simp: isCap_simps from_bool_def false_def)
+   apply (clarsimp simp: tcb_cnode_index_defs ptr_add_assertion_def)
   apply clarsimp
   apply (frule cap_get_tag_to_H, erule(1) cap_get_tag_isCap [THEN iffD2])
   apply (frule(1) ccap_relation_IRQHandler_mask)

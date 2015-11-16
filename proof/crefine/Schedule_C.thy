@@ -1041,15 +1041,16 @@ lemma threadSet_timeSlice_ccorres [corres]:
   apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
   apply (clarsimp simp: cmachine_state_relation_def carch_state_relation_def cpspace_relation_def)
   apply (clarsimp simp: update_tcb_map_tos typ_heap_simps')
-  apply (simp add: map_to_ctes_upd_tcb_no_ctes tcb_cte_cases_def)
-  apply (simp add: cep_relations_drop_fun_upd)
+  apply (simp add: map_to_ctes_upd_tcb_no_ctes tcb_cte_cases_def
+                   map_to_tcbs_upd)
+  apply (simp add: cep_relations_drop_fun_upd cvariable_relation_upd_const
+                   ko_at_projectKO_opt)
   apply (rule conjI)
    defer
    apply (erule cready_queues_relation_not_queue_ptrs)
     apply (rule ext, simp split: split_if)
    apply (rule ext, simp split: split_if)
   apply (drule ko_at_projectKO_opt)
-  apply (subst map_to_tcbs_upd)
   apply (erule (2) cmap_relation_upd_relI)
     apply (simp add: ctcb_relation_def)
    apply assumption

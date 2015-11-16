@@ -38,8 +38,7 @@ lemma cancelSignal_st_tcb':
 
 lemma cancelIPC_st_tcb_at':
   "\<lbrace>\<lambda>s. t\<noteq>t' \<and> st_tcb_at' P t' s\<rbrace> cancelIPC t \<lbrace>\<lambda>_. st_tcb_at' P t'\<rbrace>"
-  apply (simp add: cancelIPC_def Let_def getThreadReplySlot_def locateSlot_def)
-  apply (rule hoare_pre)
+  apply (simp add: cancelIPC_def Let_def getThreadReplySlot_def locateSlot_conv)
    apply (wp sts_pred_tcb_neq' getEndpoint_wp cteDeleteOne_Reply getCTE_wp'|wpc)+
           apply (rule hoare_strengthen_post [where Q="\<lambda>_. st_tcb_at' P t'"])
            apply (wp threadSet_st_tcb_at2)

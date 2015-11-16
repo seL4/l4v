@@ -151,8 +151,7 @@ done
 lemma lookupSlotForCNodeOp_ccorres':
   "ccorres 
    (syscall_error_rel \<currency>  (\<lambda>w w'. w'= Ptr w \<and> depth \<le> word_bits)) lookupSlot_xf
-   (\<lambda>s.  valid_pspace' s \<and> s  \<turnstile>' root \<and> depth < 2 ^ word_bits
-        \<and> (isCNodeCap root \<longrightarrow> gsCNodes s (capCNodePtr root) = Some (capCNodeBits root)))
+   (\<lambda>s.  valid_pspace' s \<and> s  \<turnstile>' root \<and> depth < 2 ^ word_bits)
    (UNIV \<inter> {s. capptr_' s = capptr} \<inter>
             {s. to_bool (isSource_' s) = isSource}  \<inter> 
             {s. ccap_relation root (root_' s)} \<inter>
@@ -275,8 +274,7 @@ lemma lookupSlotForCNodeOp_ccorres':
 lemma lookupSlotForCNodeOp_ccorres:
   "ccorres 
    (syscall_error_rel \<currency>  (\<lambda>w w'. w'= Ptr w \<and> depth \<le> word_bits)) lookupSlot_xf
-   (\<lambda>s.  invs' s \<and> s  \<turnstile>' root \<and> depth < 2 ^ word_bits
-        \<and> (isCNodeCap root \<longrightarrow> gsCNodes s (capCNodePtr root) = Some (capCNodeBits root)))
+   (\<lambda>s.  invs' s \<and> s  \<turnstile>' root \<and> depth < 2 ^ word_bits)
    (UNIV \<inter> {s. capptr_' s = capptr} \<inter>
             {s. to_bool (isSource_' s) = isSource}  \<inter> 
             {s. ccap_relation root (root_' s)} \<inter>
@@ -290,8 +288,7 @@ lemma lookupSlotForCNodeOp_ccorres:
 lemma lookupSourceSlot_ccorres':
   "ccorres 
    (syscall_error_rel \<currency> (\<lambda>w w'. w'= Ptr w \<and> depth \<le> word_bits)) lookupSlot_xf
-   (\<lambda>s.  valid_pspace' s \<and> s  \<turnstile>' root \<and>  depth < 2 ^ word_bits
-        \<and> (isCNodeCap root \<longrightarrow> gsCNodes s (capCNodePtr root) = Some (capCNodeBits root)))
+   (\<lambda>s.  valid_pspace' s \<and> s  \<turnstile>' root \<and>  depth < 2 ^ word_bits)
    (UNIV \<inter> {s. capptr_' s = capptr} \<inter>
             {s. ccap_relation root (root_' s)} \<inter>
             {s. depth_' s = of_nat depth} ) [] 
@@ -308,8 +305,7 @@ lemma lookupSourceSlot_ccorres':
 lemma lookupSourceSlot_ccorres:
   "ccorres 
    (syscall_error_rel \<currency> (\<lambda>w w'. w'= Ptr w \<and> depth \<le> word_bits)) lookupSlot_xf
-   (\<lambda>s.  invs' s \<and> s  \<turnstile>' root \<and>  depth < 2 ^ word_bits
-        \<and> (isCNodeCap root \<longrightarrow> gsCNodes s (capCNodePtr root) = Some (capCNodeBits root)))
+   (\<lambda>s.  invs' s \<and> s  \<turnstile>' root \<and>  depth < 2 ^ word_bits)
    (UNIV \<inter> {s. capptr_' s = capptr} \<inter>
             {s. ccap_relation root (root_' s)} \<inter>
             {s. depth_' s = of_nat depth} ) [] 
@@ -322,8 +318,7 @@ lemma lookupSourceSlot_ccorres:
 lemma lookupTargetSlot_ccorres':
   "ccorres 
    (syscall_error_rel \<currency>  (\<lambda>w w'. w'= Ptr w \<and> depth \<le> word_bits)) lookupSlot_xf
-   (\<lambda>s.  valid_pspace' s \<and> s  \<turnstile>' root \<and>  depth < 2 ^ word_bits
-        \<and> (isCNodeCap root \<longrightarrow> gsCNodes s (capCNodePtr root) = Some (capCNodeBits root)))
+   (\<lambda>s.  valid_pspace' s \<and> s  \<turnstile>' root \<and>  depth < 2 ^ word_bits)
    (UNIV \<inter> {s. capptr_' s = capptr} \<inter>
             {s. ccap_relation root (root_' s)} \<inter>
             {s. depth_' s = of_nat depth} ) [] 
@@ -340,8 +335,7 @@ lemma lookupTargetSlot_ccorres':
 lemma lookupTargetSlot_ccorres:
   "ccorres 
    (syscall_error_rel \<currency>  (\<lambda>w w'. w'= Ptr w \<and> depth \<le> word_bits)) lookupSlot_xf
-   (\<lambda>s.  invs' s \<and> s  \<turnstile>' root \<and>  depth < 2 ^ word_bits
-         \<and> (isCNodeCap root \<longrightarrow> gsCNodes s (capCNodePtr root) = Some (capCNodeBits root)))
+   (\<lambda>s.  invs' s \<and> s  \<turnstile>' root \<and>  depth < 2 ^ word_bits)
   (UNIV \<inter> {s. capptr_' s = capptr} \<inter>
             {s. ccap_relation root (root_' s)} \<inter>
             {s. depth_' s = of_nat depth} ) [] 
@@ -354,8 +348,7 @@ lemma lookupTargetSlot_ccorres:
 lemma lookupPivotSlot_ccorres:
   "ccorres 
    (syscall_error_rel \<currency>  (\<lambda>w w'. w'= Ptr w \<and> depth \<le> word_bits)) lookupSlot_xf
-   (\<lambda>s.  invs' s \<and> s  \<turnstile>' root \<and>  depth < 2 ^ word_bits
-        \<and> (isCNodeCap root \<longrightarrow> gsCNodes s (capCNodePtr root) = Some (capCNodeBits root)))
+   (\<lambda>s.  invs' s \<and> s  \<turnstile>' root \<and>  depth < 2 ^ word_bits)
    (UNIV \<inter> {s. capptr_' s = capptr} \<inter>
             {s. ccap_relation root (root_' s)} \<inter>
             {s. depth_' s = of_nat depth} ) [] 

@@ -569,8 +569,8 @@ lemma clearMemory_setObject_PTE_ccorres:
        apply (rule cmap_relation_updI, simp_all)[1]
        apply (simp add: cpte_relation_def Let_def pte_lift_def
                         fcp_beta pte_get_tag_def pte_tag_defs)
-      apply (simp add: carch_state_relation_def cmachine_state_relation_def
-                       typ_heap_simps)
+       apply (simp add: carch_state_relation_def cmachine_state_relation_def
+                        typ_heap_simps update_pte_map_tos)
       apply csymbr
      apply (rule ccorres_Guard)
      apply (ctac add: cleanCacheRange_PoU_ccorres)
@@ -833,7 +833,8 @@ lemma arch_recycleCap_ccorres:
         apply (simp add: cpde_relation_def Let_def pde_lift_def
                          fcp_beta pde_get_tag_def pde_tag_defs)
        apply (simp add: carch_state_relation_def cmachine_state_relation_def
-                        typ_heap_simps pde_stored_asid_update_valid_offset)
+                        typ_heap_simps pde_stored_asid_update_valid_offset
+                        update_pde_map_tos)
       apply csymbr
       apply (rule ccorres_Guard_Seq)+
       apply (ctac(no_vcg) add: cleanCacheRange_PoU_ccorres)

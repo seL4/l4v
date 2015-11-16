@@ -1503,18 +1503,29 @@ lemma rf_sr_tcb_ctes_array_assertion:
   apply (simp add: mask_def)
   done
 
+lemma rf_sr_tcb_ctes_array_assertion2:
+  "\<lbrakk> (s, s') \<in> rf_sr; tcb_at' tcb s \<rbrakk>
+    \<Longrightarrow> array_assertion (cte_Ptr tcb)
+        (unat tcbCNodeEntries) (hrs_htd (t_hrs_' (globals s')))"
+  apply (frule(1) rf_sr_tcb_ctes_array_assertion[where
+      tcb="tcb_ptr_to_ctcb_ptr t" for t, simplified])
+  apply (simp add: ptr_val_tcb_ptr_mask')
+  done
+
 lemma array_assertion_abs_tcb_ctes:
-  "\<forall>s s'. (s, s') \<in> rf_sr \<and> tcb_at' (ctcb_ptr_to_tcb_ptr (tcb s')) s \<and> (n \<le> unat tcbCNodeEntries)
-    \<longrightarrow> array_assertion (cte_Ptr (ptr_val (tcb s') && 0xFFFFFE00)) n (hrs_htd (t_hrs_' (globals s')))"
-  apply (clarsimp, drule(1) rf_sr_tcb_ctes_array_assertion)
-  apply (erule array_assertion_shrink_right)
-  apply simp
+  "\<forall>s s'. (s, s') \<in> rf_sr \<and> tcb_at' (ctcb_ptr_to_tcb_ptr (tcb s')) s \<and> (n s' \<le> unat tcbCNodeEntries)
+    \<longrightarrow> (x s' = 0 \<or> array_assertion (cte_Ptr (ptr_val (tcb s') && 0xFFFFFE00)) (n s') (hrs_htd (t_hrs_' (globals s'))))"
+  "\<forall>s s'. (s, s') \<in> rf_sr \<and> tcb_at' tcb' s \<and> (n s' \<le> unat tcbCNodeEntries)
+    \<longrightarrow> (x s' = 0 \<or> array_assertion (cte_Ptr tcb') (n s') (hrs_htd (t_hrs_' (globals s'))))"
+  apply (safe intro!: disjCI2)
+   apply (drule(1) rf_sr_tcb_ctes_array_assertion rf_sr_tcb_ctes_array_assertion2
+     | erule array_assertion_shrink_right | simp)+
   done
 
 lemma array_assertion_abs_tcb_ctes_add:
   "\<forall>s s'. (s, s') \<in> rf_sr \<and> tcb_at' (ctcb_ptr_to_tcb_ptr (tcb s')) s
-        \<and> (n \<ge> 0 \<and> (case strong of True \<Rightarrow> n + 1 | False \<Rightarrow> n) \<le> uint tcbCNodeEntries)
-    \<longrightarrow> ptr_add_assertion (cte_Ptr (ptr_val (tcb s') && 0xFFFFFE00)) n
+        \<and> (n s' \<ge> 0 \<and> (case strong of True \<Rightarrow> n s' + 1 | False \<Rightarrow> n s') \<le> uint tcbCNodeEntries)
+    \<longrightarrow> ptr_add_assertion (cte_Ptr (ptr_val (tcb s') && 0xFFFFFE00)) (n s')
                 strong (hrs_htd (t_hrs_' (globals s')))"
   apply (clarsimp, drule(1) rf_sr_tcb_ctes_array_assertion)
   apply (simp add: ptr_add_assertion_positive, rule disjCI2)
@@ -1522,11 +1533,27 @@ lemma array_assertion_abs_tcb_ctes_add:
   apply (cases strong, simp_all add: unat_def)
   done
 
+lemma array_assertion_abs_to_const:
+  "\<forall>s s'. (s, s') \<in> rf_sr \<and> P s \<and> P' s'
+    \<longrightarrow> (Suc 0 = 0 \<or> array_assertion (ptr s s') (n s s') (htd s s'))
+    \<Longrightarrow> \<forall>s s'. (s, s') \<in> rf_sr \<and> P s \<and> P' s'
+        \<longrightarrow> array_assertion (ptr s s') (n s s') (htd s s')"
+  by simp
+
+lemmas ccorres_move_array_assertions
+    = ccorres_move_Guard_Seq ccorres_move_Guard
+      ccorres_move_Guard_Seq[OF array_assertion_abs_to_const]
+      ccorres_move_Guard[OF array_assertion_abs_to_const]
+
 lemmas ccorres_move_array_assertion_tcb_ctes [corres_pre]
-    = ccorres_move_Guard_Seq [OF array_assertion_abs_tcb_ctes]
-      ccorres_move_Guard [OF array_assertion_abs_tcb_ctes]
-      ccorres_move_Guard_Seq [OF array_assertion_abs_tcb_ctes_add]
-      ccorres_move_Guard [OF array_assertion_abs_tcb_ctes_add]
+    = ccorres_move_array_assertions [OF array_assertion_abs_tcb_ctes(1)]
+      ccorres_move_array_assertions [OF array_assertion_abs_tcb_ctes(2)]
+      ccorres_move_Guard_Seq[OF array_assertion_abs_tcb_ctes_add]
+      ccorres_move_Guard[OF array_assertion_abs_tcb_ctes_add]
+
+lemma ptr_add_assertion_positive_helper:
+  "n == m \<Longrightarrow> 0 \<le> sint m \<Longrightarrow> 0 \<le> sint n"
+  by simp
 
 lemma c_guard_abs_tcb_ctes:
   fixes p :: "cte_C ptr"
@@ -1563,6 +1590,19 @@ lemma c_guard_abs_pte:
 
 lemmas ccorres_move_c_guard_pte = ccorres_move_c_guards [OF c_guard_abs_pte]
 
+lemma array_assertion_abs_pt:
+  "\<forall>s s'. (s, s') \<in> rf_sr \<and> (page_table_at' pd s)
+        \<and> (n s' \<le> 2 ^ (ptBits - 2) \<and> (x s' \<noteq> 0 \<longrightarrow> n s' \<noteq> 0))
+    \<longrightarrow> (x s' = 0 \<or> array_assertion (pte_Ptr pd) (n s') (hrs_htd (t_hrs_' (globals s'))))"
+  apply (intro allI impI disjCI2, clarsimp)
+  apply (drule(1) page_table_at_rf_sr, clarsimp)
+  apply (erule clift_array_assertion_imp, simp_all add: ptBits_def pageBits_def)
+  apply (rule_tac x=0 in exI, simp)
+  done
+
+lemmas ccorres_move_array_assertion_pt
+    = ccorres_move_array_assertions[OF array_assertion_abs_pt]
+
 lemma c_guard_abs_pde:
   "\<forall>s s'. (s, s') \<in> rf_sr \<and> pde_at' (ptr_val p) s \<and> True
               \<longrightarrow> s' \<Turnstile>\<^sub>c (p :: pde_C ptr)"
@@ -1575,6 +1615,19 @@ lemma c_guard_abs_pde:
 
 lemmas ccorres_move_c_guard_pde = ccorres_move_c_guards [OF c_guard_abs_pde]
 
+lemma array_assertion_abs_pd:
+  "\<forall>s s'. (s, s') \<in> rf_sr \<and> (page_directory_at' pd s)
+        \<and> (n s' \<le> 2 ^ (pdBits - 2) \<and> (x s' \<noteq> 0 \<longrightarrow> n s' \<noteq> 0))
+    \<longrightarrow> (x s' = 0 \<or> array_assertion (pde_Ptr pd) (n s') (hrs_htd (t_hrs_' (globals s'))))"
+  apply (intro allI impI disjCI2, clarsimp)
+  apply (drule(1) page_directory_at_rf_sr, clarsimp)
+  apply (erule clift_array_assertion_imp, simp_all add: pdBits_def pageBits_def)
+  apply (rule_tac x=0 in exI, simp)
+  done
+
+lemmas ccorres_move_array_assertion_pd
+    = ccorres_move_array_assertions[OF array_assertion_abs_pd]
+
 lemma move_c_guard_ap:
   "\<forall>s s'. (s, s') \<in> rf_sr \<and> asid_pool_at' (ptr_val p) s \<and> True
               \<longrightarrow> s' \<Turnstile>\<^sub>c (p :: asid_pool_C ptr)"
@@ -1586,6 +1639,20 @@ lemma move_c_guard_ap:
   done
 
 lemmas ccorres_move_c_guard_ap = ccorres_move_c_guards [OF move_c_guard_ap]
+
+lemma array_assertion_abs_irq:
+  "\<forall>s s'. (s, s') \<in> rf_sr \<and> True
+        \<and> (n s' \<le> 256 \<and> (x s' \<noteq> 0 \<longrightarrow> n s' \<noteq> 0))
+    \<longrightarrow> (x s' = 0 \<or> array_assertion (intStateIRQNode_' (globals s'))
+            (n s') (hrs_htd (t_hrs_' (globals s'))))"
+  apply (intro allI impI disjCI2)
+  apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
+  apply (clarsimp simp: h_t_valid_clift_Some_iff)
+  apply (erule clift_array_assertion_imp, (simp add: exI[where x=0])+)
+  done
+
+lemmas ccorres_move_array_assertion_irq
+    = ccorres_move_array_assertions [OF array_assertion_abs_irq]
 
 lemma ccorres_move_const_guard:
   "ccorres_underlying rf_sr Gamm rrel xf arrel axf P P' hs m c

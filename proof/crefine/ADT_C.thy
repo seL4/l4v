@@ -100,7 +100,8 @@ lemma setArchTCB_C_corres:
   apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def cpspace_relation_def
                         carch_state_relation_def cmachine_state_relation_def
                         typ_heap_simps' update_tcb_map_tos)
-  apply (simp add: map_to_ctes_upd_tcb_no_ctes map_to_tcbs_upd tcb_cte_cases_def)
+  apply (simp add: map_to_ctes_upd_tcb_no_ctes map_to_tcbs_upd tcb_cte_cases_def
+                   cvariable_relation_upd_const ko_at_projectKO_opt)
   apply (simp add: cep_relations_drop_fun_upd)
   apply (rule conjI)
    defer

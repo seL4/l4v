@@ -393,7 +393,7 @@ lemma invokeCNodeSaveCaller_ccorres:
        (invokeCNode (SaveCaller destSlot)) 
   (Call invokeCNodeSaveCaller_'proc)" 
   apply (cinit lift: destSlot_'  simp del: return_bind cong:call_ignore_cong)
-   apply (simp split del: split_if  del: Collect_const cong:call_ignore_cong)
+   apply (simp add: Collect_True split del: split_if  del: Collect_const cong:call_ignore_cong)
    apply (simp only: liftE_def)
    apply (rule ccorres_Guard_Seq)+
    apply (simp only: bind_assoc)
@@ -446,8 +446,12 @@ lemma invokeCNodeSaveCaller_ccorres:
     apply wp
    apply vcg
   apply (clarsimp simp: word_sle_def cte_wp_at_ctes_of
-                        tcb_aligned' cur_tcb'_def)
-done
+                        tcb_aligned' cur_tcb'_def
+                        tcb_cnode_index_defs ptr_add_assertion_positive)
+  apply (frule(1) rf_sr_tcb_ctes_array_assertion2[rotated])
+  apply (simp add: tcb_cnode_index_defs array_assertion_shrink_right
+                   rf_sr_ksCurThread)
+  done
 
 
 

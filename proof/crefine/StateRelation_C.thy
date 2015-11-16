@@ -664,6 +664,9 @@ where
        ghost_size_rel (ghost'state_' cstate) (gsMaxObjectSize astate) \<and>
        ksWorkUnitsCompleted_' cstate = ksWorkUnitsCompleted astate \<and>
        h_t_valid (hrs_htd (t_hrs_' cstate)) c_guard
+         (ptr_coerce (intStateIRQNode_' cstate) :: (cte_C[256]) ptr) \<and>
+       {ptr_val (intStateIRQNode_' cstate) ..+ 2 ^ (8 + cte_level_bits)} \<subseteq> kernel_data_refs \<and>
+       h_t_valid (hrs_htd (t_hrs_' cstate)) c_guard
          (pd_Ptr (symbol_table ''armKSGlobalPD'')) \<and>
        ptr_span (pd_Ptr (symbol_table ''armKSGlobalPD'')) \<subseteq> kernel_data_refs \<and>
        htd_safe domain (hrs_htd (t_hrs_' cstate)) \<and>

@@ -567,6 +567,7 @@ lemma invokeTCB_ThreadControl_ccorres:
    apply csymbr
    apply (simp add: liftE_bindE case_option_If2 thread_control_flag_defs
                     word_ao_dist if_and_helper if_n_0_0
+                    tcb_cnode_index_defs[THEN ptr_add_assertion_positive[OF ptr_add_assertion_positive_helper]]
                del: Collect_const cong: call_ignore_cong if_cong)
    apply (rule_tac P="ptr_val (tcb_ptr_to_ctcb_ptr target) && ~~ mask 4
                           = ptr_val (tcb_ptr_to_ctcb_ptr target)
@@ -607,10 +608,10 @@ lemma invokeTCB_ThreadControl_ccorres:
                            (* bits of tcb_inv_wf' *)
                      in ccorres_guard_imp2[where A'=UNIV])
           apply (rule ccorres_Cond_rhs_Seq)
-           apply (simp only: if_True split_def bindE_assoc)
+           apply (simp only: if_True Collect_True split_def bindE_assoc)
            apply (rule ccorres_rhs_assoc)+
            apply csymbr
-           apply (rule ccorres_Guard_Seq)+
+           apply (rule ccorres_move_array_assertion_tcb_ctes ccorres_Guard_Seq)+
            apply csymbr
            apply (simp add: liftE_bindE[symmetric] bindE_assoc
                             getThreadBufferSlot_def
@@ -701,7 +702,7 @@ lemma invokeTCB_ThreadControl_ccorres:
           apply (rule ccorres_return_CE)
             apply (simp+)[3]
          apply (clarsimp simp: inQ_def Collect_const_mem cintr_def
-                               exception_defs)
+                               exception_defs tcb_cnode_index_defs)
          apply (simp add: tcbBuffer_def tcbIPCBufferSlot_def word_sle_def
                           cte_level_bits_def from_bool_def true_def size_of_def)
          apply (clarsimp simp: case_option_If2 if_n_0_0)
@@ -711,7 +712,7 @@ lemma invokeTCB_ThreadControl_ccorres:
         apply (rule ccorres_Cond_rhs_Seq)
          apply (rule ccorres_rhs_assoc)+
          apply csymbr
-         apply (rule ccorres_Guard_Seq)+
+         apply (rule ccorres_move_array_assertion_tcb_ctes ccorres_Guard_Seq)+
          apply (simp add: split_def getThreadVSpaceRoot_def locateSlot_conv
                           bindE_assoc
                      del: Collect_const)
@@ -781,7 +782,7 @@ lemma invokeTCB_ThreadControl_ccorres:
        apply (rule ccorres_Cond_rhs_Seq)
         apply (rule ccorres_rhs_assoc)+
         apply csymbr
-        apply (rule ccorres_Guard_Seq)+
+        apply (rule ccorres_move_array_assertion_tcb_ctes ccorres_Guard_Seq)+
         apply (simp add: split_def getThreadCSpaceRoot_def locateSlot_conv
                          bindE_assoc
                     del: Collect_const)
@@ -803,7 +804,8 @@ lemma invokeTCB_ThreadControl_ccorres:
            apply (clarsimp simp: guard_is_UNIV_def from_bool_def true_def
                                  word_sle_def if_1_0_0 Collect_const_mem
                                  option_to_0_def Kernel_C.tcbVTable_def tcbVTableSlot_def
-                                 cte_level_bits_def size_of_def cintr_def)
+                                 cte_level_bits_def size_of_def cintr_def
+                                 tcb_cnode_index_defs)
           apply (thin_tac "ccorres a1 a2 a3 a4 a5 a6 a7" for a1 a2 a3 a4 a5 a6 a7)
           apply (rule ccorres_rhs_assoc)+
           apply (rule checkCapAt_ccorres2)
@@ -881,7 +883,7 @@ lemma setupReplyMaster_ccorres:
         (UNIV \<inter> {s. thread_' s = tcb_ptr_to_ctcb_ptr t}) []
         (setupReplyMaster t) (Call setupReplyMaster_'proc)"
   apply (cinit lift: thread_')
-   apply (rule ccorres_Guard_Seq)+
+   apply (rule ccorres_move_array_assertion_tcb_ctes ccorres_Guard_Seq)+
    apply ctac
      apply (simp del: Collect_const add: dc_def[symmetric])
      apply (rule ccorres_pre_getCTE)
@@ -927,13 +929,14 @@ lemma setupReplyMaster_ccorres:
          apply simp
         apply (simp add: cmachine_state_relation_def 
                          h_t_valid_clift_Some_iff
-                         carch_state_relation_def carch_globals_def)
+                         carch_state_relation_def carch_globals_def
+                         cvariable_array_map_const_add_map_option[where f="tcb_no_ctes_proj"])
        apply (wp | simp)+
      apply (clarsimp simp: guard_is_UNIV_def)
     apply (wp | simp add: locateSlot_conv)+
    apply vcg
   apply (clarsimp simp: word_sle_def cte_wp_at_ctes_of
-                        tcbReplySlot_def tcbReply_def)
+                        tcb_cnode_index_defs tcbReplySlot_def)
   done
 
 lemma restart_ccorres:
@@ -1584,28 +1587,6 @@ lemma lookupIPCBuffer_Some_0:
   apply (rule hoare_vcg_prop , simp add:hoare_TrueI)
   done
 
-lemma storeWordUser_array_ipcBuffer_ccorres:
-  "ccorres dc xfdc (valid_ipc_buffer_ptr' ptr and valid_pspace' and (\<lambda>s. off < 2 ^ msg_align_bits))
-              (UNIV \<inter> {s. ptr' s = Ptr ptr} \<inter> {s. off = of_int (n' s) * 4}
-                    \<inter> {s. n'' s = Suc (nat (n' s))} \<inter> {s. w' s = w}) hs
-      (storeWordUser (ptr + off) w)
-      (Guard C_Guard \<lbrace>hrs_htd \<acute>t_hrs \<Turnstile>\<^sub>t \<acute>(\<lambda>s. ptr_add (ptr' s) (n' s))\<rbrace>
-        (Guard gname \<lbrace>array_assertion \<acute>(\<lambda>s. ptr' s) \<acute>(\<lambda>s. n'' s) (hrs_htd \<acute>t_hrs)\<rbrace>
-          (Basic (\<lambda>s. globals_update (t_hrs_'_update
-           (hrs_mem_update (heap_update (ptr_add (ptr' s) (n' s)) (w' s)))) s))))"
-  apply (rule ccorres_guard_imp2)
-   apply (rule ccorres_second_Guard)
-   apply (rule storeWordUser_ccorres)
-  apply (clarsimp simp: Collect_const_mem)
-  apply (subst valid_ipc_buffer_ptr_array, simp+)
-    defer
-   apply simp
-   defer
-  apply (clarsimp simp: valid_ipc_buffer_ptr'_def msg_align_bits
-                        is_aligned_add[OF is_aligned_weaken]
-                        is_aligned_mult_triv2[where n=2, simplified])
-  sorry
-find_theorems lookupIPCBuffer valid_ipc_buffer_ptr'
 lemma asUser_valid_ipc_buffer_ptr':
   "\<lbrace> valid_ipc_buffer_ptr' p \<rbrace> asUser t m \<lbrace> \<lambda>rv s. valid_ipc_buffer_ptr' p s \<rbrace>"
   by (simp add: valid_ipc_buffer_ptr'_def, wp, auto simp: valid_ipc_buffer_ptr'_def)
@@ -1742,33 +1723,43 @@ shows
                                 apply (rule ccorres_guard_imp2)
                                  apply (rule ccorres_add_return,
                                         ctac add: getRegister_ccorres_defer[where thread=target])
-                                   apply (rule storeWordUser_array_ipcBuffer_ccorres)
+                                   apply (rule ccorres_move_array_assertion_ipc_buffer
+                                            | (rule ccorres_flip_Guard,
+                                                rule ccorres_move_array_assertion_ipc_buffer))+
+                                   apply (rule storeWordUser_ccorres)
                                   apply wp
                                  apply (vcg exspec=getRegister_modifies)
                                 apply (clarsimp simp: obj_at'_weakenE[OF _ TrueI]
-                                                      word_size)
+                                                      word_size unat_gt_0 option_to_ptr_def
+                                                      option_to_0_def)
                                 apply (intro conjI[rotated] impI allI)
-                                      apply (simp add: n_msgRegisters_def n_frameRegisters_def
-                                                       word_less_nat_alt)
-                                      apply (subst unat_add_lem[THEN iffD1], simp_all add: unat_of_nat)[1]
-                                     apply (erule sym)
-                                    apply (simp add: option_to_ptr_def option_to_0_def
+                                       apply (simp add: n_msgRegisters_def n_frameRegisters_def
+                                                        word_less_nat_alt)
+                                       apply (subst unat_add_lem[THEN iffD1], simp_all add: unat_of_nat)[1]
+                                      prefer 3
+                                      apply (erule sym)
+                                     apply (simp add: n_msgRegisters_def msg_registers_convs
+                                                      msg_align_bits msgMaxLength_def)
+                                     apply (simp(no_asm) add: unat_arith_simps unat_of_nat
+                                                        cong: if_cong, simp)
+                                    apply (simp add: n_msgRegisters_def msg_registers_convs
+                                                     msg_align_bits msgMaxLength_def)
+                                    apply (simp(no_asm) add: unat_arith_simps unat_of_nat
+                                                       cong: if_cong, simp)
+                                   apply (simp add: option_to_ptr_def option_to_0_def
                                                     msg_registers_convs upto_enum_word wordSize_def'
-                                               del: upt.simps)
-                                   apply (simp add: option_to_ptr_def option_to_0_def)
+                                              del: upt.simps)
                                   apply (rule frame_gp_registers_convs)
                                   apply (simp add: frame_gp_registers_convs less_diff_conv)
                                   apply (subst iffD1 [OF unat_add_lem])
                                    apply (simp add: n_msgRegisters_def n_frameRegisters_def
-
                                                     word_le_nat_alt unat_of_nat)
                                   apply (simp add: n_frameRegisters_def n_msgRegisters_def
                                                    unat_of_nat)
-                                 apply (simp add: msg_registers_convs n_msgRegisters_def
-                                                  msgMaxLength_def n_frameRegisters_def
-                                                  upto_enum_word_nth msg_align_bits
-                                                  )
-                                 apply (simp add: unat_word_ariths word_less_nat_alt unat_of_nat)
+                                 apply (clarsimp simp: valid_ipc_buffer_ptr'_def)
+                                 apply (erule aligned_add_aligned)
+                                  apply (rule is_aligned_mult_triv2[where n=2, simplified])
+                                 apply (simp add: msg_align_bits_def)
                                 apply (clarsimp simp: getRegister_def submonad_asUser.guarded_gets
                                                       obj_at'_weakenE[OF _ TrueI])
                                 apply (clarsimp simp: asUser_fetch_def simpler_gets_def
@@ -1843,32 +1834,43 @@ shows
                                  apply (rule ccorres_guard_imp2)
                                   apply (rule ccorres_add_return,
                                          ctac add: getRegister_ccorres_defer[where thread=target])
-                                    apply (rule storeWordUser_array_ipcBuffer_ccorres)
+                                    apply (rule ccorres_move_array_assertion_ipc_buffer
+                                             | (rule ccorres_flip_Guard,
+                                                 rule ccorres_move_array_assertion_ipc_buffer))+
+                                    apply (rule storeWordUser_ccorres)
                                    apply wp
                                   apply (vcg exspec=getRegister_modifies)
                                  apply (clarsimp simp: obj_at'_weakenE[OF _ TrueI]
-                                                       word_size)
+                                                       word_size unat_gt_0 option_to_ptr_def
+                                                       option_to_0_def)
                                  apply (intro conjI[rotated] impI allI)
-                                       apply (simp add: n_frameRegisters_def n_msgRegisters_def
-                                                        length_msgRegisters word_of_nat_less
-                                                        n_gpRegisters_def)
-                                      apply (erule sym)
-                                     apply (simp add: option_to_ptr_def option_to_0_def
-                                                      msg_registers_convs upto_enum_word
-                                                      n_msgRegisters_def n_frameRegisters_def
-                                                      n_gpRegisters_def msgMaxLength_def msgLengthBits_def
-                                                 del: upt.simps upt_rec_numeral)
-                                     apply (simp add: min_def split: split_if_asm)
-                                    apply (simp add: option_to_ptr_def option_to_0_def)
+                                        apply (simp add: n_frameRegisters_def n_msgRegisters_def
+                                                         length_msgRegisters word_of_nat_less
+                                                         n_gpRegisters_def)
+                                       prefer 3
+                                       apply (erule sym)
+                                      apply (simp add: n_frameRegisters_def n_msgRegisters_def msg_registers_convs
+                                                       msg_align_bits msgMaxLength_def)
+                                      apply (simp(no_asm) add: unat_arith_simps unat_of_nat
+                                                         cong: if_cong, simp)
+                                     apply (simp add: n_frameRegisters_def n_msgRegisters_def msg_registers_convs
+                                                      msg_align_bits msgMaxLength_def)
+                                     apply (simp(no_asm) add: unat_arith_simps unat_of_nat
+                                                        cong: if_cong, simp)
+                                    apply (simp add: option_to_ptr_def option_to_0_def
+                                                     msg_registers_convs upto_enum_word
+                                                     n_msgRegisters_def n_frameRegisters_def
+                                                     n_gpRegisters_def msgMaxLength_def msgLengthBits_def
+                                                del: upt.simps upt_rec_numeral)
+                                    apply (simp add: min_def split: split_if_asm)
                                    apply (rule frame_gp_registers_convs)
                                    apply (simp add: frame_gp_registers_convs n_msgRegisters_def n_frameRegisters_def
                                                     n_gpRegisters_def msgMaxLength_def msgLengthBits_def
                                                     unat_of_nat)
-                                  apply (simp add: msg_registers_convs n_msgRegisters_def
-                                                   msgMaxLength_def n_frameRegisters_def
-                                                   upto_enum_word_nth msg_align_bits
-                                                   )
-                                  apply (simp add: unat_word_ariths word_less_nat_alt unat_of_nat)
+                                  apply (clarsimp simp: valid_ipc_buffer_ptr'_def,
+                                         erule aligned_add_aligned)
+                                   apply (rule is_aligned_mult_triv2[where n=2, simplified])
+                                  apply (simp add: msg_align_bits_def)
                                  apply (clarsimp simp: getRegister_def submonad_asUser.guarded_gets
                                                        obj_at'_weakenE[OF _ TrueI])
                                  apply (clarsimp simp: asUser_fetch_def simpler_gets_def
@@ -2614,6 +2616,17 @@ lemma scast_mask_8:
   "scast (mask 8 :: sword32) = (mask 8 :: word32)"
   by (clarsimp simp: mask_def)
 
+lemma tcb_at_capTCBPtr_CL:
+  "ccap_relation cp cap \<Longrightarrow> valid_cap' cp s
+    \<Longrightarrow> isThreadCap cp
+    \<Longrightarrow> tcb_at' (cap_thread_cap_CL.capTCBPtr_CL
+        (cap_thread_cap_lift cap) && 0xFFFFFE00) s"
+  apply (clarsimp simp: cap_get_tag_isCap[symmetric]
+                        valid_cap_simps'
+                 dest!: cap_get_tag_to_H)
+  apply (frule ctcb_ptr_to_tcb_ptr_mask[OF tcb_aligned'], simp add: mask_def)
+  done
+
 lemma decodeTCBConfigure_ccorres:
   notes tl_drop_1[simp] scast_mask_8 [simp]
   shows
@@ -2813,16 +2826,21 @@ lemma decodeTCBConfigure_ccorres:
                           apply (rule ceqv_tuple2, ceqv, ceqv)
                          apply (rule_tac P="P (fst rv') (snd rv')"
                                     and P'="P' (fst rv') (snd rv')" for P P' in ccorres_inst)
-                         apply (clarsimp simp del: Collect_const)
+                         apply (clarsimp simp:
+                                               tcb_cnode_index_defs[THEN ptr_add_assertion_positive[OF ptr_add_assertion_positive_helper]]
+                                     simp del: Collect_const)
                          apply csymbr
-                         apply (rule ccorres_Guard_Seq)+
+                         apply (rule ccorres_move_array_assertion_tcb_ctes ccorres_Guard_Seq)+
                          apply (simp add: decodeSetSpace_def injection_bindE[OF refl]
                                           split_def del: Collect_const)
                          apply (simp add: injection_liftE[OF refl] bindE_assoc
                                           liftM_def getThreadCSpaceRoot
                                           getThreadVSpaceRoot del: Collect_const)
                          apply (simp add: liftE_bindE del: Collect_const)
+                         apply (rule ccorres_rhs_assoc)+
                          apply (ctac add: slotCapLongRunningDelete_ccorres)
+                           apply (rule ccorres_move_array_assertion_tcb_ctes)
+                           apply (simp del: Collect_const)
                            apply csymbr
                            apply (clarsimp simp add: if_1_0_0 from_bool_0
                                            simp del: Collect_const)
@@ -2837,8 +2855,12 @@ lemma decodeTCBConfigure_ccorres:
                              apply wp
                            apply (rule ccorres_rhs_assoc)+
                            apply csymbr
-                           apply (rule ccorres_Guard_Seq)+
+                           apply (simp del: Collect_const)
+                           apply (rule ccorres_move_array_assertion_tcb_ctes ccorres_Guard_Seq
+                                       ccorres_rhs_assoc)+
                            apply (ctac add: slotCapLongRunningDelete_ccorres)
+                             apply (rule ccorres_move_array_assertion_tcb_ctes)
+                             apply (simp del: Collect_const)
                              apply csymbr
                              apply (clarsimp simp add: if_1_0_0 from_bool_0
                                              simp del: Collect_const)
@@ -3018,6 +3040,7 @@ lemma decodeTCBConfigure_ccorres:
    apply (frule invs_mdb')
    apply (simp add: maxPriority_def numPriorities_def)
    apply (fold max_word_def[where 'a=8, simplified])
+   apply (frule(2) tcb_at_capTCBPtr_CL)
    apply (auto simp: ct_in_state'_def valid_mdb'_def valid_mdb_ctes_def
                      cte_wp_at_ctes_of no_0_def valid_tcb_state'_def
               elim!: pred_tcb'_weakenE
@@ -3274,6 +3297,7 @@ lemma decodeSetIPCBuffer_ccorres:
    apply (clarsimp simp: excaps_in_mem_def slotcap_in_mem_def)
    apply (rule conjI, clarsimp simp: sysargs_rel_n_def n_msgRegisters_def)
    apply (frule invs_mdb')
+   apply (frule(2) tcb_at_capTCBPtr_CL)
    apply (auto simp: isCap_simps valid_cap'_def valid_mdb'_def valid_tcb_state'_def
                      valid_mdb_ctes_def no_0_def excaps_map_def
                elim: pred_tcb'_weakenE dest!: st_tcb_at_idle_thread'
@@ -3738,14 +3762,19 @@ lemma decodeSetSpace_ccorres:
            apply ctac
              apply (rule ccorres_assert2)
              apply csymbr
-             apply (rule ccorres_Guard_Seq)+
              apply (simp add: decodeSetSpace_def injection_bindE[OF refl]
-                              split_def del: Collect_const)
+                              split_def
+                              tcb_cnode_index_defs[THEN ptr_add_assertion_positive[OF ptr_add_assertion_positive_helper]]
+                         del: Collect_const)
+             apply (rule ccorres_move_array_assertion_tcb_ctes ccorres_Guard_Seq
+                         ccorres_rhs_assoc)+
              apply (simp add: injection_liftE[OF refl] bindE_assoc
                               liftM_def getThreadCSpaceRoot
                               getThreadVSpaceRoot del: Collect_const)
              apply (simp add: liftE_bindE bind_assoc del: Collect_const)
              apply (ctac add: slotCapLongRunningDelete_ccorres)
+               apply (rule ccorres_move_array_assertion_tcb_ctes)
+               apply (simp del: Collect_const)
                apply csymbr
                apply (clarsimp simp add: if_1_0_0 from_bool_0
                                simp del: Collect_const)
@@ -3759,8 +3788,13 @@ lemma decodeSetSpace_ccorres:
                  apply wp
                apply (rule ccorres_rhs_assoc)+
                apply csymbr
-               apply (rule ccorres_Guard_Seq)+
+              apply (simp add: tcb_cnode_index_defs[THEN ptr_add_assertion_positive[OF ptr_add_assertion_positive_helper]]
+                          del: Collect_const)
+              apply (rule ccorres_move_array_assertion_tcb_ctes ccorres_Guard_Seq
+                          ccorres_rhs_assoc)+
                apply (ctac add: slotCapLongRunningDelete_ccorres)
+                 apply (rule ccorres_move_array_assertion_tcb_ctes)
+                 apply (simp del: Collect_const)
                  apply csymbr
                  apply (clarsimp simp add: if_1_0_0 from_bool_0
                                  simp del: Collect_const)
@@ -3904,6 +3938,7 @@ lemma decodeSetSpace_ccorres:
    apply (rule conjI, clarsimp simp: sysargs_rel_n_def n_msgRegisters_def)
    apply (rule conjI, clarsimp simp: sysargs_rel_n_def n_msgRegisters_def)
    apply (rule conjI, clarsimp simp: sysargs_rel_n_def n_msgRegisters_def)
+   apply (frule(2) tcb_at_capTCBPtr_CL)
    apply (auto simp: isCap_simps valid_tcb_state'_def
               elim!: pred_tcb'_weakenE
               dest!: st_tcb_at_idle_thread' interpret_excaps_eq)[1]

@@ -1147,7 +1147,7 @@ lemma scast_ucast_add_one [simp]:
 
 lemma valid_ipc_buffer_ptr_array:
   "valid_ipc_buffer_ptr' (ptr_val p) s \<Longrightarrow> (s, s') \<in> rf_sr
-    \<Longrightarrow> n < 2 ^ (msg_align_bits - 2)
+    \<Longrightarrow> n \<le> 2 ^ (msg_align_bits - 2)
     \<Longrightarrow> n \<noteq> 0
     \<Longrightarrow> array_assertion (p :: word32 ptr) n (hrs_htd (t_hrs_' (globals s')))"
   apply (clarsimp simp: valid_ipc_buffer_ptr'_def typ_at_to_obj_at_arches)
@@ -1171,6 +1171,17 @@ lemma valid_ipc_buffer_ptr_array:
    apply simp
   apply (simp add: msg_align_bits pageBits_def)
   done
+
+lemma array_assertion_valid_ipc_buffer_ptr_abs:
+  "\<forall>s s'. (s, s') \<in> rf_sr \<and> (valid_ipc_buffer_ptr' (ptr_val (p s)) s)
+        \<and> (n s' \<le> 2 ^ (msg_align_bits - 2) \<and> (x s' \<noteq> 0 \<longrightarrow> n s' \<noteq> 0))
+    \<longrightarrow> (x s' = 0 \<or> array_assertion (p s :: word32 ptr) (n s') (hrs_htd (t_hrs_' (globals s'))))"
+  apply (intro allI impI disjCI2, clarsimp)
+  apply (erule(1) valid_ipc_buffer_ptr_array, simp_all)
+  done
+
+lemmas ccorres_move_array_assertion_ipc_buffer
+    = ccorres_move_array_assertions [OF array_assertion_valid_ipc_buffer_ptr_abs]
 
 lemma getSyscallArg_ccorres_foo:
   "ccorres (\<lambda>a rv. rv = args ! n) ret__unsigned_long_'

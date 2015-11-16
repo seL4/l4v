@@ -1502,7 +1502,18 @@ lemma modify_machinestate_assert_cnodes_swap:
     y \<leftarrow> stateAssert (\<lambda>s. \<not> cNodePartialOverlap (gsCNodes s) S) []; g od
     = do y \<leftarrow> stateAssert (\<lambda>s. \<not> cNodePartialOverlap (gsCNodes s) S) [];
         x \<leftarrow> modify (ksMachineState_update f); g od"
-  sorry
+  by (simp add: fun_eq_iff exec_modify stateAssert_def
+                bind_assoc exec_get assert_def)
+
+lemma h_t_array_valid_typ_region_bytes:
+  "h_t_array_valid htd (p :: ('a :: c_type) ptr) n
+    \<Longrightarrow> {ptr_val p..+n * size_of TYPE('a)} \<inter> {ptr..+2 ^ bits} = {}
+    \<Longrightarrow> h_t_array_valid (typ_region_bytes ptr bits htd) p n"
+  apply (clarsimp simp: h_t_array_valid_def)
+  apply (subst valid_footprint_typ_region_bytes)
+   apply (simp add: uinfo_array_tag_n_m_def typ_uinfo_t_def typ_info_word)
+  apply (simp add: field_simps)
+  done
 
 lemma cvariable_array_map_relation_detype:
   "cvariable_array_map_relation mp szs ptrfun htd
@@ -1513,10 +1524,7 @@ lemma cvariable_array_map_relation_detype:
         szs ptrfun (typ_region_bytes ptr bits htd)"
   apply (clarsimp simp: cvariable_array_map_relation_def restrict_map_def)
   apply (elim allE, (drule(1) mp)+)
-  apply (clarsimp simp: h_t_array_valid_def)
-  apply (subst valid_footprint_typ_region_bytes)
-   apply (simp add: uinfo_array_tag_n_m_def typ_uinfo_t_def typ_info_word)
-  apply (simp add: field_simps)
+  apply (simp add: h_t_array_valid_typ_region_bytes)
   done
 
 lemma deleteObjects_ccorres':
@@ -1641,6 +1649,11 @@ proof -
 
   have s_ksPSpace_adjust: "ksPSpace_update ?psu s = s\<lparr>ksPSpace := ?psu (ksPSpace s)\<rparr>"
     by simp
+
+  from invs have "valid_global_refs' s" by fastforce
+  with cte
+  have ptr_refs: "kernel_data_refs \<inter> {ptr..ptr + 2 ^ bits - 1} = {}"
+    by (fastforce simp: valid_global_refs'_def valid_refs'_def cte_wp_at_ctes_of ran_def)
 
   (* calculation starts here *)
   have cs: "cpspace_relation (ksPSpace s) (underlying_memory (ksMachineState s))
@@ -1775,11 +1788,7 @@ proof -
   {
     assume "s' \<Turnstile>\<^sub>c (Ptr::(32 word \<Rightarrow> (pde_C[4096]) ptr)) (symbol_table ''armKSGlobalPD'')"
     moreover
-    from invs have "valid_global_refs' s" by fastforce
-    with cte
-    have "kernel_data_refs \<inter> {ptr..ptr + 2 ^ bits - 1} = {}"
-      by (fastforce simp: valid_global_refs'_def valid_refs'_def cte_wp_at_ctes_of ran_def)
-    with sr have "ptr_span (pd_Ptr (symbol_table ''armKSGlobalPD''))
+    from sr ptr_refs have "ptr_span (pd_Ptr (symbol_table ''armKSGlobalPD''))
       \<inter> {ptr..ptr + 2 ^ bits - 1} = {}"
       by (fastforce simp: rf_sr_def cstate_relation_def Let_def)
     ultimately    
@@ -1863,10 +1872,6 @@ proof -
       apply (clarsimp simp: objBits_simps projectKOs objBitsT_simps)
       done
 
-    have lies: "\<And>p n. gsCNodes s p = Some n \<Longrightarrow> is_aligned p (n + cte_level_bits)
-        \<and> n + cte_level_bits < word_bits"
-      sorry
-
     note upto_rew = upto_intvl_eq[OF al, THEN eqset_imp_iff, symmetric, simplified]
 
     from cNodePartial[simplified upto_rew] have cn_no_overlap:
@@ -1874,7 +1879,7 @@ proof -
           \<Longrightarrow> {p ..+ 2 ^ (n + cte_level_bits)} \<inter> {ptr..+2 ^ bits} = {}"
       apply (simp add: cNodePartialOverlap_def)
       apply (elim allE, drule(1) mp)
-      apply (frule lies, clarify)
+      apply clarsimp
       apply (frule base_member_set, simp add: word_bits_def)
       apply (clarsimp simp only: upto_intvl_eq[symmetric] field_simps)
       apply blast
@@ -1909,6 +1914,16 @@ proof -
                   if_flip[symmetric, where F=None])
     done
 
+   moreover from sr have
+     "h_t_valid (typ_region_bytes ptr bits (hrs_htd (t_hrs_' (globals s'))))
+       c_guard (ptr_coerce (intStateIRQNode_' (globals s')) :: (cte_C[256]) ptr)"
+    apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
+    apply (simp add: h_t_valid_typ_region_bytes)
+    apply (simp add: upto_intvl_eq al)
+    apply (rule disjoint_subset[OF _ ptr_refs])
+    apply (simp add: cinterrupt_relation_def cte_level_bits_def)
+    done
+
   ultimately
   show "(?t, globals_update
                (%x. ghost'state_'_update (gs_clear_region ptr bits)
@@ -1918,7 +1933,6 @@ proof -
                        psu_restrict h2pd_eq[simplified ks'] cpspace_relation_def
                        carch_state_relation_def cmachine_state_relation_def
                        hrs_htd_update htd_safe_typ_region_bytes)
-
 qed
 
 abbreviation (input)
