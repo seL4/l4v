@@ -262,7 +262,9 @@ fun mkSpecFunction thy gloc cse styargs (f : fninfo) = let
   val _ = appi (fn n => fn t => Feedback.informStr(0,
     "spec#" ^ Int.toString n ^ ": " ^ typedterm t)) otherspecs
   val spec_t = List.foldl mk_inter mod_spec otherspecs
-  val fbody = mk_Spec(styargs, spec_t)
+  val fbody = Const(@{const_name "guarded_spec_body"},
+                    @{typ "strictc_errortype"} --> type_of spec_t -->
+                    mk_com_ty styargs) $ @{const "ImpossibleSpec"}  $ spec_t
 in
   (fname, fbody, fbody)
 end

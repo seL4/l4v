@@ -65,6 +65,27 @@ definition
 where
   "cchaos upd \<equiv> Spec { (s0,s) . \<exists>v. s = upd v s0 }"
 
+definition
+  "guarded_spec_body F R = Guard F (fst ` R) (Spec R)"
+  
+lemma guarded_spec_body_wp [vcg_hoare]:
+"P \<subseteq>
+{s. (\<forall>t. (s,t) \<in> R \<longrightarrow> t \<in> Q) \<and> (Ft \<notin> F \<longrightarrow> (\<exists>t. (s,t) \<in> R))}
+\<Longrightarrow> \<Gamma>,\<Theta>\<turnstile>\<^bsub>/F \<^esub> P (guarded_spec_body Ft R) Q, A"
+apply (simp add: guarded_spec_body_def)
+apply (cases "Ft \<in> F")
+apply (erule HoarePartialDef.Guarantee)
+apply (rule HoarePartialDef.conseqPre, rule HoarePartialDef.Spec)
+apply auto[1]
+apply (rule HoarePartialDef.conseqPre, rule HoarePartialDef.Guard[where P=P])
+apply (rule HoarePartialDef.conseqPre, rule HoarePartialDef.Spec)
+apply auto[1]
+apply simp
+apply (erule order_trans)
+apply (auto simp: image_def Bex_def)
+done
+  
+  
 ML_file "tools/mlyacc/mlyacclib/MLY_base-sig.ML"
 ML_file "tools/mlyacc/mlyacclib/MLY_join.ML"
 ML_file "tools/mlyacc/mlyacclib/MLY_lrtable.ML"

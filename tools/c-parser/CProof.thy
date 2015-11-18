@@ -359,6 +359,7 @@ datatype strictc_errortype =
        | OwnershipError
        | UndefinedFunction
        | AdditionalError string
+       | ImpossibleSpec
 
 lemmas hrs_simps = hrs_mem_update_def hrs_mem_def hrs_htd_update_def
     hrs_htd_def
