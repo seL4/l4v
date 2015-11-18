@@ -259,12 +259,19 @@ fun mkSpecFunction thy gloc cse styargs (f : fninfo) = let
   val mod_spec = collect_t $ list_mk_pabs([s,t], relbody)
   val _ = Feedback.informStr(0, "modstr : " ^ typedterm mod_spec)
   val otherspecs = List.concat (map (parse_spec thy) (#spec f))
-  val _ = appi (fn n => fn t => Feedback.informStr(0,
-    "spec#" ^ Int.toString n ^ ": " ^ typedterm t)) otherspecs
-  val spec_t = List.foldl mk_inter mod_spec otherspecs
-  val fbody = Const(@{const_name "guarded_spec_body"},
+  val fbody =
+    if null otherspecs then
+      mk_Spec(styargs, mod_spec)
+    else
+      let
+        val _ = appi (fn n => fn t => Feedback.informStr(0,
+                       "spec#" ^ Int.toString n ^ ": " ^ typedterm t)) otherspecs
+        val spec_t = List.foldl mk_inter mod_spec otherspecs
+      in
+        Const(@{const_name "guarded_spec_body"},
                     @{typ "strictc_errortype"} --> type_of spec_t -->
                     mk_com_ty styargs) $ @{const "ImpossibleSpec"}  $ spec_t
+      end
 in
   (fname, fbody, fbody)
 end

@@ -14,13 +14,10 @@ end
 context jiraver464
 begin
   thm f_body_def
+  thm f_modifies
 
-
-lemma f_modifies:
-assumes "x_' \<sigma> < 3"
-shows "\<Gamma>\<turnstile>{\<sigma>} Call f_'proc {t. t may_only_modify_globals \<sigma> in [y]}"
-apply (vcg spec=modifies)
-oops
+thm clz_body_def
+thm clz_modifies
 
 thm clz_body_def
 thm halt_body_def
