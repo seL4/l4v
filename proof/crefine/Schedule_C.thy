@@ -431,23 +431,14 @@ lemma queue_in_range_pre:
 
 lemmas queue_in_range' = queue_in_range_pre[unfolded numDomains_def numPriorities_def, simplified]
 
-(**** FIXME FIXME FIXME ***)
-(* As per JIRA VER-464, the C Parser does not handle
-   DONT_TRANSLATE+MODIFIES+FNSPEC correctly. This is the spec given in util.h
-   in seL4 for clz. We do not get that spec back at present.
-   In order to have a working build until the C parser is fixed, we sorry this
-   proof. My apologies.
-*)
-context notes [[quick_and_dirty]] begin
 lemma clz_spec:
   "\<forall>s. \<Gamma> \<turnstile> {\<sigma>. s = \<sigma> \<and> x_' s \<noteq> 0} Call clz_'proc
        \<lbrace>\<acute>ret__int = of_nat (word_clz (x_' s)) \<rbrace>"
-  using clz_spec.clz_spec[where symbol_table=symbol_table]
-  sorry
-(* FIXME: C parser generates weird things for functions annotated with
-   FNSPEC+MODIFIES+DONT_TRANSLATE *)
-end
-(**** FIXME FIXME FIXME ***)
+  apply (rule allI, rule conseqPre, vcg)
+  apply clarsimp
+  apply (rule_tac x="ret__int_'_update f x" for f in exI)
+  apply (simp add: mex_def meq_def)
+  done
 
 lemma l1index_to_prio_spec:
   "\<forall>s. \<Gamma> \<turnstile> {s} Call l1index_to_prio_'proc
