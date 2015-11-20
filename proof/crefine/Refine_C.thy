@@ -64,6 +64,20 @@ thm kernel_all.handleYield'_ac_corres[THEN ac_corres_ccorres_underlying, simplif
 
 thm ccorres_underlying_def corres_underlying_def
 
+text \<open>
+  Slignt weakening of corres_underlying.
+  Here we assume termination for the abstract program.
+\<close>
+definition 
+  my_corres_underlying :: "(('s \<times> 't) set) \<Rightarrow> bool \<Rightarrow>
+                        ('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> ('t \<Rightarrow> bool)
+           \<Rightarrow> ('s, 'a) nondet_monad \<Rightarrow> ('t, 'b) nondet_monad \<Rightarrow> bool"
+where
+ "my_corres_underlying srel nf rrel G G' \<equiv> \<lambda>m m'. \<forall>(s, s') \<in> srel. G s \<and> G' s' \<longrightarrow>
+           \<not> snd (m s) \<longrightarrow>
+           (\<forall>(r', t') \<in> fst (m' s'). \<exists>(r, t) \<in> fst (m s). (t, t') \<in> srel \<and> rrel r r') \<and> 
+           (nf \<longrightarrow> \<not> snd (m' s') )"
+
 
 text \<open>
   From AutoCorres @{term ac_corres}, obtain @{term ccorres}.
@@ -76,6 +90,23 @@ lemma autocorres_to_ccorres:
    ccorres dc xfdc P (Collect arg_rel) [] dspec_f (Call f_'proc)"
   apply (drule ac_corres_ccorres_underlying)
   apply (clarsimp simp: ccorres_underlying_def corres_underlying_def rf_sr_def Ball_def liftE_def)
+  apply (erule allE, erule allE, erule_tac P="cstate_relation _ _" in impE, assumption)
+  apply clarsimp
+  apply (erule allE, erule impE, rule_tac P="arg_rel _" and Q="\<not>snd _" in conjI, assumption, assumption)
+  apply (erule allE, erule allE, erule_tac P="\<Gamma>\<turnstile>\<^sub>h \<langle>_, _\<rangle> \<Rightarrow> _" in impE, assumption)
+  apply (rename_tac s s' n ret)
+  apply (case_tac ret; (simp; fail)?)
+  apply (clarsimp simp: in_liftE[simplified liftE_def])
+  apply (erule allE, erule allE, erule_tac P="_ \<in> fst _" in impE, assumption)
+  apply (auto simp: unif_rrel_def)
+  done
+
+lemma autocorres_to_ccorres_alt:
+  "\<lbrakk> ac_corres globals \<Gamma> ret_xf arg_rel (liftE ac_f) (Call f_'proc);
+     my_corres_underlying {(s, s'). cstate_relation s s'} True R P \<top> dspec_f ac_f \<rbrakk> \<Longrightarrow>
+   ccorres dc xfdc P (Collect arg_rel) [] dspec_f (Call f_'proc)"
+  apply (drule ac_corres_ccorres_underlying)
+  apply (clarsimp simp: ccorres_underlying_def my_corres_underlying_def rf_sr_def Ball_def liftE_def)
   apply (erule allE, erule allE, erule_tac P="cstate_relation _ _" in impE, assumption)
   apply clarsimp
   apply (erule allE, erule impE, rule_tac P="arg_rel _" and Q="\<not>snd _" in conjI, assumption, assumption)
@@ -100,20 +131,6 @@ lemma EpsE:
    apply (metis someI)
   apply metis
   done
-
-text \<open>
-  Slignt weakening of corres_underlying.
-  Here we assume termination for the abstract program.
-\<close>
-definition 
-  my_corres_underlying :: "(('s \<times> 't) set) \<Rightarrow> bool \<Rightarrow>
-                        ('a \<Rightarrow> 'b \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> ('t \<Rightarrow> bool)
-           \<Rightarrow> ('s, 'a) nondet_monad \<Rightarrow> ('t, 'b) nondet_monad \<Rightarrow> bool"
-where
- "my_corres_underlying srel nf rrel G G' \<equiv> \<lambda>m m'. \<forall>(s, s') \<in> srel. G s \<and> G' s' \<longrightarrow>
-           \<not> snd (m s) \<longrightarrow>
-           (\<forall>(r', t') \<in> fst (m' s'). \<exists>(r, t) \<in> fst (m s). (t, t') \<in> srel \<and> rrel r r') \<and> 
-           (nf \<longrightarrow> \<not> snd (m' s') )"
 
 thm AC_call_L1_def L2_call_L1_def L1_call_simpl_def
 
