@@ -150,6 +150,10 @@ fun simpl_conv'
           prove_term [] @{thm L1corres_spec}
             (fn _ => mk_l1 @{term "L1_spec"} [s])
 
+      | (Const (@{const_name guarded_spec_body}, _) $ _ $ s) =>
+          prove_term [] @{thm L1corres_guarded_spec}
+            (fn _ => mk_l1 @{term "L1_spec"} [s])
+
       (*
        * "call": This is primarily what is output by the C parser. We
        * accept input terms of the form:

@@ -171,6 +171,13 @@ lemma L1corres_spec:
   apply (rule terminates.Spec)
   done
 
+lemma L1corres_guarded_spec:
+  "L1corres \<Gamma> (L1_spec R) (guarded_spec_body F R)"
+  apply (clarsimp simp: L1corres_alt_def ccorresE_def L1_spec_def guarded_spec_body_def)
+  apply (force simp: liftE_def spec_def bind_def return_def
+               elim: exec_Normal_elim_cases intro: terminates.Guard terminates.Spec)
+  done
+
 lemma liftE_get_bindE:
   "(liftE get >>=E B) = (\<lambda>s. B s s)"
   apply (monad_eq simp: Ball_def Bex_def)
