@@ -510,8 +510,7 @@ fun crunch_x atts extra prp_name wpigs consts ctxt =
 
         val wps' = wpigs |> filter (fn (s,_) => s = wp_sect) |> map #2
 
-        val wp_dels' = wpigs |> filter (fn (s,_) => s = wp_del_sect)
-                            |> map (const_name o #2)
+        val wp_dels' = wpigs |> filter (fn (s,_) => s = wp_del_sect) |> map #2
 
         val simps = wpigs |> filter (fn (s,_) => s = simp_sect) |> map #2
                     |> maps (get_thms ctxt)
