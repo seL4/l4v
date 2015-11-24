@@ -175,8 +175,7 @@ where
     od"
 
 (*
- * Get the set of threads waiting to receive on the given async
- * endpoint.
+ * Get the set of threads waiting to receive on the given notification.
  *)
 definition
   get_waiting_ntfn_recv_threads :: "cdl_object_id \<Rightarrow> cdl_state \<Rightarrow> cdl_object_id set"
@@ -301,13 +300,12 @@ where
    od"
 
 (*
- * Send an async IPC.
+ * Signal on a notification.
  *
- * If someone is blocked on the endpoint, we wake them up. Otherwise,
+ * If someone is blocked on the notifications, we wake them up. Otherwise,
  * this is a no-op.
  *)
 
-(* FIXME names *)
 definition
   send_signal_bound :: "cdl_object_id \<Rightarrow> unit k_monad"
 where
@@ -321,6 +319,7 @@ where
       else return ()
     od"
 
+(* FIXME names *)
 definition
   send_signal :: "cdl_object_id \<Rightarrow> unit k_monad"
 where
@@ -334,7 +333,7 @@ where
             \<sqinter> send_signal_bound ep_id"
 
 (*
- * Receive an async IPC.
+ * Receive a signal (receive from a notification).
  *
  * We will either receive data or block waiting.
  *)

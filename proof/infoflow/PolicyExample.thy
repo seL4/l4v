@@ -12,9 +12,9 @@ theory PolicyExample
 imports Noninterference
 begin
 
-(* This first example shows how async and sync endpoints differ.
-   Sync endpoints tend to spray information in all directions, while
-   async ones are unidirectional.
+(* This first example_auth_graphample shows how notifications and endpoints differ.
+   Endpoints tend to spray information in all directions, while
+   notifications are unidirectional.
 
    This example is a subset of the SAC example from access *)
 datatype auth_graph_label = T | NTFN1 | NTFN2 | CTR | C | EP | RM

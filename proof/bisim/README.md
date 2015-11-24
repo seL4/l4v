@@ -2,8 +2,8 @@ Separation Kernel Bisimilarity
 ==============================
 
 This proof establishes that seL4, if configured fully statically with 1-level
-CSpaces and async endpoint caps only, is bi-similar to a static separation
-kernel that has no other system calls than asynchronous notification.
+CSpaces and notification caps only, is bi-similar to a static separation
+kernel that has no other system calls than signalling notifications.
 
 Building
 --------

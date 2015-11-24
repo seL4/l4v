@@ -2,9 +2,8 @@ Static Separation Kernel API
 ============================
 
 This specification is a cut-down version of the seL4 abstract specification
-that removes all system calls apart from asynchronous endpoint notification.
-The resulting kernel is a classic static separation kernel without any
-dynamism.
+that removes all system calls apart from notifications. The resulting kernel
+is a classic static separation kernel without any dynamism.
 
 A proof that seL4 is equivalent to this cut-down version if configured
 appropriately can be found in the `proof` directory under

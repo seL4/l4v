@@ -32,7 +32,7 @@ text {*
   separate_state} below (which indirectly depends on further predicates @{text
   separate_cnode_cap}, @{text separate_cap}, etc).
 
-  a) A thread may only possess \emph{asynchronous end-point capabilities}
+  a) A thread may only possess \emph{notification capabilities}
   (@{text NotificationCap}).
 
   b) Threads do not have caller capabilities. (A caller capability is a

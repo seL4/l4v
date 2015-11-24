@@ -1489,21 +1489,22 @@ lemma auth_ipc_buffers_mem_Write':
   done
 
 (*   
-   We define here some machinery for reasoning about updates that occur outside 
-   of what the current subject can read, and the domain l in reads_respects. 
-   Such updates cannot be "observed" by reads_respects, which allows the two 
-   code paths to potentially diverge from each other. This is important when, 
-   e.g. we look at async IPC. The actions taken during send_signal cannot 
-   depend on the state of the notification, so we could have the situation in
-   which in one execution the ntfn has someone queued on it but in the other it 
-   doesn't. This will occur only if the guy queued on the ntfn is not in the 
-   domains the current subject is allowed to read from plus domain l (otherwise
-   being reads_equiv aag and affects_equiv aag l would (with the invariants) 
-   cause him to be on the queue in both scenarios). The update that happens to 
-   this guy's threadstate in one execution but not the other, and the different
-   effects that occur to the ntfn in each case, therefore, should
-   not break reads_respects because they cannot be observed. We need to be able
-   to reason about this, hence this machinery. 
+   We define here some machinery for reasoning about updates that occur
+   outside of what the current subject can read, and the domain l in
+   reads_respects. Such updates cannot be "observed" by reads_respects, which
+   allows the two code paths to potentially diverge from each other. This is
+   important when, e.g. we look at notifications/signals. The actions taken
+   during send_signal cannot depend on the state of the notification, so we
+   could have the situation in which in one execution the ntfn has someone
+   queued on it but in the other it doesn't. This will occur only if the party
+   queued on the ntfn is not in the domains the current subject is allowed to
+   read from plus domain l (otherwise being reads_equiv aag and affects_equiv
+   aag l would (with the invariants) cause him to be on the queue in both
+   scenarios). The update that happens to this party's threadstate in one
+   execution but not the other, and the different effects that occur to the
+   ntfn in each case, therefore, should not break reads_respects because they
+   cannot be observed. We need to be able to reason about this, hence this
+   machinery.
 *)
 definition equiv_but_for_labels where
   "equiv_but_for_labels aag L s s' \<equiv> states_equiv_for (\<lambda> x. pasObjectAbs aag x \<notin> L) (\<lambda> x. pasIRQAbs aag x \<notin> L) (\<lambda> x. pasASIDAbs aag x \<notin> L) (\<lambda> x. pasDomainAbs aag x \<notin> L) (\<lambda> x. ptr_range x 12) s s' \<and> cur_thread s = cur_thread s' \<and> cur_domain s = cur_domain s' \<and> scheduler_action s = scheduler_action s' \<and> work_units_completed s = work_units_completed s' \<and> equiv_irq_state (machine_state s) (machine_state s')"

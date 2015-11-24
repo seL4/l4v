@@ -117,7 +117,7 @@ subsubsection{* autarchy *}
 text{*
 
   For the case when the currently-running thread owns the receiver
-  (i.e. receiver last to the async IPC rendezvous or sender owns
+  (i.e. receiver last to the notification rendezvous or sender owns
   receiver).
 
 *}

@@ -154,7 +154,7 @@ where
          | _                         \<Rightarrow> False)"
 
 (* Original caps must have default rights,
- * and original (async) endpoint caps must not be badged.
+ * and original endpoint + notification caps must not be badged.
  *)
 definition
   is_copyable_cap :: "cdl_cap \<Rightarrow> bool"

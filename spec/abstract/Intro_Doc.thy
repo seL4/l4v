@@ -251,26 +251,26 @@ from an existing capability.  The newly created capability may have fewer rights
   also resets most aspects of the object to its initial state.
 \end{description}
 
-\subsubsection{IPC Endpoints}
+\subsubsection{IPC Endpoints and Notifications}
 
-The seL4 microkernel supports both \emph{synchronous} (\obj{EP}) and
-\emph{asynchronous} (\obj{NTFN}) IPC endpoints, used to facilitate
+The seL4 microkernel supports \emph{synchronous} IPC (\obj{EP}) endpoints, 
+used to facilitate
 interprocess communication between threads. Capabilities to endpoints
 can be restricted to be send-only or receive-only. They can also
 specify whether capabilities can be passed through the endpoint.
 
-Synchronous endpoints allow both data and capabilities to be
+Endpoints allow both data and capabilities to be
 transferred between threads, depending on the rights on the endpoint
 capability.  Sending a message will block the sender until the message
 has been received; similarly, a waiting thread will be blocked until a
 message is available (but see \meth{NBSend} above).
 
-When only notification of an event is required together with a very
-limited message, notification objects can be used. Asynchronous
-endpoints have a single invocation:
+When only notification of an event is required, notification objects can
+be used. These have the following invocations:
 %
 \begin{description}
-\item[\meth{Notify}] simply sets the given set of bits in the endpoint.
+\item[\meth{Notify}] simply sets the given set of semaphore bits in the
+notification object.
 Multiple \meth{Notify} system calls without an intervening \meth{Recv}
 result in the bits being ``or-ed'' with any bits already set. As such,
 \meth{Notify} is always non-blocking, and has no indication of whether
@@ -279,9 +279,10 @@ a receiver has received the notification.
 %
 Additionally, the \meth{Recv} system call may be used with an
 notification object, allowing the calling thread to retrieve all set
-bits from the notification object. If no \meth{Notify} operations have
-taken place since the last \meth{Recv} call, the calling thread will
-block until the next \meth{Notify} takes place.
+bits from the notification object. By default, if no \meth{Notify}
+operations have taken place since the last \meth{Recv} call, the
+calling thread will block until the next \meth{Notify} takes place.
+There is also a non-blocking (polling) variant of this invocaction.
 
 \subsubsection{\obj{TCB}}
 

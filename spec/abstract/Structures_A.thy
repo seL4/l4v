@@ -273,11 +273,9 @@ datatype endpoint
            | SendEP "obj_ref list"
            | RecvEP "obj_ref list"
 
-text {* Notifications are asynchronous points of communication. Unlike regular
-endpoints, threads may block waiting to receive but not to send. Whenever a
-thread sends to an notification, its message is stored in the endpoint
-immediately.
-*}
+text {* Notifications are sets of binary semaphores (stored in the
+\emph{badge word}). Unlike endpoints, threads may choose to block waiting to
+receive, but not to send. *}
 
 datatype ntfn
            = IdleNtfn

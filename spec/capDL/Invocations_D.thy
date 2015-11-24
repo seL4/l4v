@@ -54,8 +54,7 @@ datatype cdl_endpoint_invocation =
     SyncMessage cdl_badge bool cdl_object_id
 
 datatype cdl_notification_invocation =
-    (* data is not modelled currently at capDL level, so we avoid modelling
-       the word32 that is actually included in the async message.  *)
+    (* badge (notification word) and notification object *)
     Signal cdl_badge cdl_object_id
 
 datatype cdl_reply_invocation =

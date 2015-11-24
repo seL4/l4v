@@ -87,7 +87,7 @@ where
         od
   od"
 
-text {* Cancel all message operations on threads queued in an asynchronous
+text {* Cancel all message operations on threads queued in a notification
 endpoint. *}
 
 text {* Miscellaneous NTFN binding stuff

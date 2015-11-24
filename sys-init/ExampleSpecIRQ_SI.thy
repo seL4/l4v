@@ -201,7 +201,7 @@ definition
    cdl_cdt = [(cnode_a2_id, 0)  \<mapsto> (cnode_extra_id, 1),
               (cnode_b_id,  4)  \<mapsto> (cnode_extra_id, 1),
               (cnode_a2_id, 10) \<mapsto> (cnode_extra_id, 2)], (* All caps are orig caps,
-                                                            except the endpoint and async endpoint. *)
+                                                            except endpoints and notifications. *)
    cdl_current_thread = undefined,
    cdl_irq_node = example_irq_node,
    cdl_asid_table = undefined,

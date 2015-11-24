@@ -345,7 +345,7 @@ where
       | _ \<Rightarrow> False" 
 
 
-text{* Helper function for performing async ipc when receiving on a normal
+text{* Helper function for performing \emph{signal} when receiving on a normal
 endpoint *}
 definition
   complete_signal :: "obj_ref \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
@@ -421,7 +421,7 @@ where
 
 section {* Asynchronous Message Transfers *}
 
-text {* Helper function to handle an asynchronous send operation in the case
+text {* Helper function to handle a signal operation in the case
 where a receiver is waiting. *}
 definition
   update_waiting_ntfn :: "obj_ref \<Rightarrow> obj_ref list \<Rightarrow> obj_ref option \<Rightarrow> badge \<Rightarrow> 

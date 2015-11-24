@@ -63,9 +63,10 @@ text {*
      \end{list}}
 
 \glossaryentry
-  {ntfn, async\_ep, Notification}
-  {Asynchronous Communication Endpoint. A kernel object in seL4 for
-  asynchronous message passing.}
+  {ntfn, Notification}
+  {A \emph{notification} object. A kernel object in seL4 consisting
+	of a set of binary semaphores, used for sending (signalling)
+	notifications to other threads.}
   {glos:ntfn}
 
 \glossaryentry
@@ -161,11 +162,11 @@ text {*
 
 \glossaryentry
   {ipc}
-  {Inter Process Communication. In seL4: sending short messages
-  between threads. The kernel supports both synchronous and
-  asynchronous message passing. To communicate via IPC in seL4, the
+  {Inter Process Communication. In seL4: sending short synchronous messages
+  between threads. To communicate via IPC in seL4, the
   receiver listens at an endpoint object and the sender sends to the
-  same endpoint object.}
+  same endpoint object. There is a separate mechanism for
+  notifications between threads.}
   {}
 
 \glossaryentry
