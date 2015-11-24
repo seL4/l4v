@@ -839,13 +839,18 @@ fun reduce_set_mem ctxt x S = let
      else (); t'
   end
 
+
+fun is_spec_body_const @{const_name Spec} = true
+  | is_spec_body_const @{const_name guarded_spec_body} = true
+  | is_spec_body_const c = false
+
 fun has_reads body = exists_Const (fn (s, T) =>
     snd (strip_type T) = @{typ heap_raw_state}
-        orelse s = @{const_name Spec}) body
+        orelse is_spec_body_const s) body
 
 fun has_reads_globals (params : export_params) body = exists_Const (fn (s, T) =>
     snd (strip_type T) = @{typ heap_raw_state}
-  orelse s = @{const_name Spec}
+  orelse is_spec_body_const s
   orelse #rw_global_accs params s <> NONE
   orelse #const_globals params (Const (s, T)) <> NONE
   ) body
@@ -1049,9 +1054,10 @@ fun emit_func_body ctxt outfile eparams name = let
   in emit outfile "";
     emit outfile ("Function " ^ full_nm ^ " " ^ space_pad_list inputs
                 ^ " " ^ space_pad_list outputs);
-    case body of Const (@{const_name Spec}, _) $ _
-        => ()
-    | _ => (emit outfile ("1 Basic Ret 0");
+    if (try (head_of #> dest_Const #> fst #> is_spec_body_const) body)
+        = SOME true
+    then ()
+    else (emit outfile ("1 Basic Ret 0");
           emit_body ctxt outfile eparams body 2 "1" ("ErrExc", "ErrExc")
             |> snd |> prefix "EntryPoint " |> emit outfile
           handle TERM (s, ts) => raise TERM ("emit_func_body: " ^ name ^ ": " ^ s, body :: @{term True} :: ts)
