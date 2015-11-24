@@ -790,8 +790,6 @@ lemma list_map_length_is_None [simp]:
   apply (simp add: list_map_def)
   done
 
-find_theorems h_t_valid intvl
-
 lemma list_map_append_one:
   "list_map (xs @ [x]) = [length xs \<mapsto> x] ++ list_map xs"
   by (simp add: list_map_def)
