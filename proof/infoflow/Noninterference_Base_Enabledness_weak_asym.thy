@@ -333,10 +333,6 @@ locale noninterference_policy =
 
 context noninterference_policy begin
 
-
-thm uwr_equiv_rel
-find_theorems name: equiv_def
-
 abbreviation uwr2 :: "'s \<Rightarrow> 'd \<Rightarrow> 's \<Rightarrow> bool" ("(_/ \<sim>_\<sim>/ _)" [50,100,50] 1000) 
 where "s \<sim>u\<sim> t \<equiv> (s,t) \<in> uwr u"
 
