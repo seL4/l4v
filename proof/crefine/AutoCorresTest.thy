@@ -22,15 +22,26 @@ autocorres
   ] "c/kernel_all.c_pp"
 
 (* "nontrivial" functions translated *)
-
 ML {*
 Find_Theorems.find_theorems @{context} NONE (SOME 999) true
   [(true, Find_Theorems.Name "kernel_all_global_addresses."),
    (true, Find_Theorems.Name "_body_def"),
    (false, Find_Theorems.Pattern (Thm.term_of @{cpat "_ \<equiv> Spec _"})),
    (false, Find_Theorems.Pattern (Thm.term_of @{cpat "_ \<equiv> TRY SKIP CATCH SKIP END"}))]
-|> snd |> map (Facts.string_of_ref o fst) |> sort_strings |> app writeln
+|> apsnd (map (Facts.string_of_ref o fst) #> sort_strings #> app writeln)
 *}
+
+(* "nontrivial" substitutes *)
+ML {*
+Find_Theorems.find_theorems @{context} NONE (SOME 999) true
+  [(true, Find_Theorems.Name "kernel_all_substitute."),
+   (true, Find_Theorems.Name "_body_def"),
+   (false, Find_Theorems.Pattern (Thm.term_of @{cpat "_ \<equiv> Spec _"})),
+   (false, Find_Theorems.Pattern (Thm.term_of @{cpat "_ \<equiv> TRY SKIP CATCH SKIP END"}))]
+|> apsnd (map (Facts.string_of_ref o fst) #> sort_strings #> app writeln)
+*}
+
+find_theorems name:"kernel_all_global_addresses." name:"_body_def"
 
 context kernel_all begin
 (* simple case study: handleYield *)
@@ -130,30 +141,70 @@ lemma EpsE:
 
 thm AC_call_L1_def L2_call_L1_def L1_call_simpl_def
 
+thm kernel_all.rescheduleRequired'_def[unfolded AC_call_L1_def L2_call_L1_def L1_call_simpl_def]
+
+lemma in_AC_call_simpl:
+  fixes r s s' arg_pred globals ret_xf \<Gamma> f_'proc
+  shows "(r, s') \<in> fst (AC_call_L1 arg_pred globals ret_xf (L1_call_simpl \<Gamma> f_'proc) s) \<Longrightarrow>
+         \<exists>cs cs'. s = globals cs \<and> arg_pred cs \<and>
+                  \<Gamma> \<turnstile> Call f_'proc \<down> Normal cs \<and>
+                  \<Gamma> \<turnstile> \<langle>Call f_'proc, Normal cs\<rangle> \<Rightarrow> Normal cs' \<and>
+                  s' = globals cs' \<and> r = ret_xf cs'"
+  apply (clarsimp simp: AC_call_L1_def L2_call_L1_def L1_call_simpl_def)
+  apply (monad_eq simp: liftM_def select_def select_f_def liftE_def split: xstate.splits sum.splits)
+  apply (rename_tac cs cs' status)
+  apply (case_tac status)
+  apply auto
+  done
+
+lemma ccorres_to_corres_partial:
+  assumes ac_def: "ac_f \<equiv> AC_call_L1 arg_rel globals ret_xf (L1_call_simpl \<Gamma> f_'proc)"
+  assumes arg_rel_local: "\<And>gs. \<exists>s. globals s = gs \<and> arg_rel s"
+  shows "\<lbrakk> ccorres R ret_xf P (Collect arg_rel) [] dspec_f (Call f_'proc) \<rbrakk> \<Longrightarrow>
+         my_corres_underlying {(s, s'). cstate_relation s s'} False R P \<top> dspec_f ac_f"
+  by (fastforce simp: unif_rrel_def ac_def my_corres_underlying_def ccorres_underlying_def rf_sr_def
+                intro: EHOther dest: in_AC_call_simpl)
+
 lemma ccorres_to_corres:
   assumes ac_def: "ac_f \<equiv> AC_call_L1 arg_rel globals ret_xf (L1_call_simpl \<Gamma> f_'proc)"
   assumes arg_rel_local: "\<And>gs. \<exists>s. globals s = gs \<and> arg_rel s"
-  shows "\<lbrakk> ccorres dc xfdc P (Collect arg_rel) [] dspec_f (Call f_'proc) \<rbrakk> \<Longrightarrow>
+  shows "\<lbrakk> ccorres R ret_xf P (Collect arg_rel) [] dspec_f (Call f_'proc) \<rbrakk> \<Longrightarrow>
          my_corres_underlying {(s, s'). cstate_relation s s'} True R P \<top> dspec_f ac_f"
-  apply (clarsimp simp: ac_def AC_call_L1_def L2_call_L1_def L1_call_simpl_def my_corres_underlying_def ccorres_underlying_def rf_sr_def)
+  apply (clarsimp simp: ac_def my_corres_underlying_def ccorres_underlying_def rf_sr_def Ball_def Bex_def)
   apply (rename_tac s gs')
-  apply (erule_tac x=s in allE, erule_tac x="SOME s'. globals s' = gs' \<and> arg_rel s'" in allE)
+  apply (rule conjI)
+   -- "proof for return values"
+   apply (fastforce simp: unif_rrel_def intro: EHOther dest: in_AC_call_simpl)
+
+  -- "proof for fail bit is trickier"
+  apply (clarsimp simp: AC_call_L1_def L2_call_L1_def L1_call_simpl_def)
+  apply (clarsimp simp: select_f_def)
+  apply (subst (asm) snd_bind)+
+  apply (clarsimp simp: select_def split: sum.splits prod.splits)
+  apply (clarsimp simp: Bex_def get_def)
   apply (erule impE)
-   apply (rule EpsE)
+   -- "oops... @{term ccorres} doesn't give us @{term terminates}"
+   subgoal sorry
+  apply (erule disjE)
+  apply (erule allE, erule allE, erule impE, fastforce)
+  apply (erule impE, fastforce)
+   apply (monad_eq split: xstate.splits sum.splits)
+    apply (case_tac xa; clarsimp)
+    apply (drule EHOther, fastforce)
     apply blast
-   using arg_rel_local apply blast
-  apply (erule impE)
-   apply simp
-   apply (rule EpsE)
-    apply blast
-   using arg_rel_local apply blast
-  (* now we have to symbolically execute the program, which is complicated *)
-  find_theorems exec_handlers
-  oops
+   apply (drule EHOther, fastforce)
+   apply blast
+  apply (monad_eq split: xstate.splits)
+  apply (erule allE, erule allE, erule impE, fastforce)
+  apply (erule impE, fastforce)
+  apply (drule EHAbrupt[OF _ EHEmpty])
+  apply blast
+  done
 
 
-
-
+lemma ccorres_rrel_nat_unit:
+  "ccorres op = (\<lambda>s. ()) st_P arg_P hs m c = ccorres dc xfdc st_P arg_P hs m c"
+  by (simp add: ccorres_underlying_def dc_def xfdc_def unif_rrel_def cong del: xstate.case_cong)
 
 (* NB: this is a lie *)
 lemma \<Gamma>_eq: "kernel_all_global_addresses.\<Gamma> symbol_table = kernel_all_substitute.\<Gamma> symbol_table domain"
@@ -169,25 +220,40 @@ lemma getCurThread_corres:
 thm tcbSchedDequeue_ccorres
 lemma tcbSchedDequeue_corres:
   "tcb_ptr_to_ctcb_ptr ct = ct' \<Longrightarrow>
-   corres_underlying {(x, y). cstate_relation x y} True (op=)
+   my_corres_underlying {(x, y). cstate_relation x y} True (op=)
      (Invariants_H.valid_queues and valid_queues' and tcb_at' ct and valid_objs') \<top>
      (tcbSchedDequeue ct) (kernel_all.tcbSchedDequeue' symbol_table ct')"
-  sorry
+  apply (rule ccorres_to_corres)
+    apply (simp add: kernel_all.tcbSchedDequeue'_def \<Gamma>_eq)
+   apply (rule_tac x="undefined \<lparr> globals := gs, tcb_' := ct' \<rparr>" in exI)
+   apply simp
+  apply (clarsimp simp: ccorres_rrel_nat_unit tcbSchedDequeue_ccorres[simplified])
+  done
 
 thm tcbSchedAppend_ccorres
 lemma tcbSchedAppend_corres:
   "tcb_ptr_to_ctcb_ptr ct = ct' \<Longrightarrow>
-   corres_underlying {(x, y). cstate_relation x y} True (op=)
+   my_corres_underlying {(x, y). cstate_relation x y} True (op=)
      (Invariants_H.valid_queues and tcb_at' ct and valid_objs') \<top>
      (tcbSchedAppend ct) (kernel_all.tcbSchedAppend' symbol_table ct')"
-  sorry
+  apply (rule ccorres_to_corres)
+    apply (simp add: kernel_all.tcbSchedAppend'_def \<Gamma>_eq)
+   apply (rule_tac x="undefined \<lparr> globals := gs, tcb_' := ct' \<rparr>" in exI)
+   apply simp
+  apply (clarsimp simp: ccorres_rrel_nat_unit tcbSchedAppend_ccorres[simplified])
+  done
 
 thm rescheduleRequired_ccorres
 lemma rescheduleRequired_corres:
-  "corres_underlying {(x, y). cstate_relation x y} True (op=)
-     (Invariants_H.valid_queues (*and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s)*) and valid_objs') \<top>
+  "my_corres_underlying {(x, y). cstate_relation x y} True (op=)
+     (Invariants_H.valid_queues and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s) and valid_objs') \<top>
      rescheduleRequired (kernel_all.rescheduleRequired' symbol_table)"
-  sorry
+  apply (rule ccorres_to_corres)
+    apply (simp add: kernel_all.rescheduleRequired'_def \<Gamma>_eq)
+   apply (rule_tac x="undefined \<lparr> globals := gs \<rparr>" in exI)
+   apply simp
+  apply (clarsimp simp: ccorres_rrel_nat_unit rescheduleRequired_ccorres[simplified])
+  done
 
 lemma handleYield_alt_def:
   "handleYield \<equiv> do thread \<leftarrow> getCurThread;
@@ -198,6 +264,7 @@ lemma handleYield_alt_def:
                   od"
   sorry
 
+(* TODO: port to my_corres_UL *)
 lemma (* handleYield_ccorres: *)
   "ccorres dc xfdc (invs' and ct_active') UNIV [] handleYield (Call handleYield_'proc)"
   apply (rule autocorres_to_ccorres[where arg_rel = \<top>, simplified Collect_True])
