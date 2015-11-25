@@ -85,6 +85,17 @@ where
            (\<forall>(r', t') \<in> fst (m' s'). \<exists>(r, t) \<in> fst (m s). (t, t') \<in> srel \<and> rrel r r') \<and> 
            (nf \<longrightarrow> \<not> snd (m' s') )"
 
+text \<open>
+  Strengthening of ccorres_underlying. Sorried; for testing purposes only.
+\<close>
+lemma ccorres_underlying_idealised_def:
+  "ccorres_underlying srel \<Gamma> rrel xf arrel axf G G' hs \<equiv>
+  \<lambda>m c. \<forall>(s, s')\<in>srel.
+            G s \<and> s' \<in> G' \<and> \<not> snd (m s) \<longrightarrow>
+            \<Gamma> \<turnstile> c \<down> Normal s' \<and>
+            (\<forall>n t. \<Gamma>\<turnstile>\<^sub>h \<langle>c # hs,s'\<rangle> \<Rightarrow> (n, t) \<longrightarrow>
+                   (case t of Normal s'' \<Rightarrow> \<exists>(r, t)\<in>fst (m s). (t, s'') \<in> srel \<and> unif_rrel (n = length hs) rrel xf arrel axf r s'' | _ \<Rightarrow> False))"
+  sorry
 
 text \<open>
   From AutoCorres @{term ac_corres}, obtain @{term ccorres}.
@@ -95,54 +106,34 @@ lemma autocorres_to_ccorres:
   "\<lbrakk> ac_corres globals \<Gamma> ret_xf arg_rel (liftE ac_f) (Call f_'proc);
      corres_underlying {(s, s'). cstate_relation s s'} True R P \<top> dspec_f ac_f \<rbrakk> \<Longrightarrow>
    ccorres dc xfdc P (Collect arg_rel) [] dspec_f (Call f_'proc)"
-  apply (drule ac_corres_ccorres_underlying)
-  apply (clarsimp simp: ccorres_underlying_def corres_underlying_def rf_sr_def Ball_def liftE_def)
-  apply (erule allE, erule allE, erule_tac P="cstate_relation _ _" in impE, assumption)
-  apply clarsimp
-  apply (erule allE, erule impE, rule_tac P="arg_rel _" and Q="\<not>snd _" in conjI, assumption, assumption)
-  apply (erule allE, erule allE, erule_tac P="\<Gamma>\<turnstile>\<^sub>h \<langle>_, _\<rangle> \<Rightarrow> _" in impE, assumption)
-  apply (rename_tac s s' n ret)
-  apply (case_tac ret; (simp; fail)?)
-  apply (clarsimp simp: in_liftE[simplified liftE_def])
-  apply (erule allE, erule allE, erule_tac P="_ \<in> fst _" in impE, assumption)
-  apply (auto simp: unif_rrel_def)
-  done
+  by (fastforce simp: ccorres_underlying_def corres_underlying_def rf_sr_def Ball_def
+                      liftE_def in_liftE[simplified liftE_def] unif_rrel_def
+                dest: ac_corres_ccorres_underlying split: xstate.splits)
 
 lemma autocorres_to_ccorres_alt:
   "\<lbrakk> ac_corres globals \<Gamma> ret_xf arg_rel (liftE ac_f) (Call f_'proc);
      my_corres_underlying {(s, s'). cstate_relation s s'} True R P \<top> dspec_f ac_f \<rbrakk> \<Longrightarrow>
    ccorres dc xfdc P (Collect arg_rel) [] dspec_f (Call f_'proc)"
-  apply (drule ac_corres_ccorres_underlying)
-  apply (clarsimp simp: ccorres_underlying_def my_corres_underlying_def rf_sr_def Ball_def liftE_def)
-  apply (erule allE, erule allE, erule_tac P="cstate_relation _ _" in impE, assumption)
-  apply clarsimp
-  apply (erule allE, erule impE, rule_tac P="arg_rel _" and Q="\<not>snd _" in conjI, assumption, assumption)
-  apply (erule allE, erule allE, erule_tac P="\<Gamma>\<turnstile>\<^sub>h \<langle>_, _\<rangle> \<Rightarrow> _" in impE, assumption)
-  apply (rename_tac s s' n ret)
-  apply (case_tac ret; (simp; fail)?)
-  apply (clarsimp simp: in_liftE[simplified liftE_def])
-  apply (erule allE, erule allE, erule_tac P="_ \<in> fst _" in impE, assumption)
-  apply (auto simp: unif_rrel_def)
-  done
+  by (fastforce simp: ccorres_underlying_def my_corres_underlying_def rf_sr_def Ball_def liftE_def
+                      liftE_def in_liftE[simplified liftE_def] unif_rrel_def
+                dest: ac_corres_ccorres_underlying split: xstate.splits)
+
+text \<open>Consistent with proposed ccorres change...\<close>
+lemma
+  "\<lbrakk> ac_corres globals \<Gamma> ret_xf arg_rel (liftE ac_f) (Call f_'proc);
+     my_corres_underlying {(s, s'). cstate_relation s s'} True R P \<top> dspec_f ac_f \<rbrakk> \<Longrightarrow>
+   ccorres dc xfdc P (Collect arg_rel) [] dspec_f (Call f_'proc)"
+  by (fastforce simp: ccorres_underlying_idealised_def my_corres_underlying_def rf_sr_def Ball_def liftE_def
+                      liftE_def in_liftE[simplified liftE_def] unif_rrel_def
+                dest: ac_corres_ccorres_underlying split: xstate.splits)
+
 
 text \<open>
   From @{term ccorres} obtain @{term corres}.
   This is for exporting existing ccorres theorems to be used
   in AutoCorres-based corres proofs.
 \<close>
-lemma EpsE:
-  "\<lbrakk> \<And>x. f x \<Longrightarrow> P x;
-     (\<And>x. \<not> f x) \<Longrightarrow> (\<And>y. P y)
-   \<rbrakk> \<Longrightarrow> P (Eps f)"
-  apply (case_tac "\<exists>x. f x")
-   apply (metis someI)
-  apply metis
-  done
-
 thm AC_call_L1_def L2_call_L1_def L1_call_simpl_def
-
-thm kernel_all.rescheduleRequired'_def[unfolded AC_call_L1_def L2_call_L1_def L1_call_simpl_def]
-
 lemma in_AC_call_simpl:
   fixes r s s' arg_pred globals ret_xf \<Gamma> f_'proc
   shows "(r, s') \<in> fst (AC_call_L1 arg_pred globals ret_xf (L1_call_simpl \<Gamma> f_'proc) s) \<Longrightarrow>
@@ -159,7 +150,6 @@ lemma in_AC_call_simpl:
 
 lemma ccorres_to_corres_partial:
   assumes ac_def: "ac_f \<equiv> AC_call_L1 arg_rel globals ret_xf (L1_call_simpl \<Gamma> f_'proc)"
-  assumes arg_rel_local: "\<And>gs. \<exists>s. globals s = gs \<and> arg_rel s"
   shows "\<lbrakk> ccorres R ret_xf P (Collect arg_rel) [] dspec_f (Call f_'proc) \<rbrakk> \<Longrightarrow>
          my_corres_underlying {(s, s'). cstate_relation s s'} False R P \<top> dspec_f ac_f"
   by (fastforce simp: unif_rrel_def ac_def my_corres_underlying_def ccorres_underlying_def rf_sr_def
@@ -167,38 +157,52 @@ lemma ccorres_to_corres_partial:
 
 lemma ccorres_to_corres:
   assumes ac_def: "ac_f \<equiv> AC_call_L1 arg_rel globals ret_xf (L1_call_simpl \<Gamma> f_'proc)"
-  assumes arg_rel_local: "\<And>gs. \<exists>s. globals s = gs \<and> arg_rel s"
   shows "\<lbrakk> ccorres R ret_xf P (Collect arg_rel) [] dspec_f (Call f_'proc) \<rbrakk> \<Longrightarrow>
          my_corres_underlying {(s, s'). cstate_relation s s'} True R P \<top> dspec_f ac_f"
   apply (clarsimp simp: ac_def my_corres_underlying_def ccorres_underlying_def rf_sr_def Ball_def Bex_def)
-  apply (rename_tac s gs')
   apply (rule conjI)
    -- "proof for return values"
    apply (fastforce simp: unif_rrel_def intro: EHOther dest: in_AC_call_simpl)
 
   -- "proof for fail bit is trickier"
   apply (clarsimp simp: AC_call_L1_def L2_call_L1_def L1_call_simpl_def)
-  apply (clarsimp simp: select_f_def)
-  apply (subst (asm) snd_bind)+
-  apply (clarsimp simp: select_def split: sum.splits prod.splits)
+  apply (clarsimp simp: select_f_def select_def snd_bind split: sum.splits prod.splits)
   apply (clarsimp simp: Bex_def get_def)
   apply (erule impE)
    -- "oops... @{term ccorres} doesn't give us @{term terminates}"
    subgoal sorry
   apply (erule disjE)
-  apply (erule allE, erule allE, erule impE, fastforce)
-  apply (erule impE, fastforce)
    apply (monad_eq split: xstate.splits sum.splits)
-    apply (case_tac xa; clarsimp)
     apply (drule EHOther, fastforce)
     apply blast
    apply (drule EHOther, fastforce)
    apply blast
   apply (monad_eq split: xstate.splits)
-  apply (erule allE, erule allE, erule impE, fastforce)
-  apply (erule impE, fastforce)
-  apply (drule EHAbrupt[OF _ EHEmpty])
-  apply blast
+  apply (fastforce dest: EHAbrupt[OF _ EHEmpty])
+  done
+
+text \<open>With proposed alternative ccorres...\<close>
+lemma
+  assumes ac_def: "ac_f \<equiv> AC_call_L1 arg_rel globals ret_xf (L1_call_simpl \<Gamma> f_'proc)"
+  shows "\<lbrakk> ccorres R ret_xf P (Collect arg_rel) [] dspec_f (Call f_'proc) \<rbrakk> \<Longrightarrow>
+         my_corres_underlying {(s, s'). cstate_relation s s'} True R P \<top> dspec_f ac_f"
+  apply (clarsimp simp: ac_def my_corres_underlying_def ccorres_underlying_idealised_def rf_sr_def Ball_def Bex_def)
+  apply (rule conjI)
+   -- "proof for return values"
+   apply (fastforce simp: unif_rrel_def intro: EHOther dest: in_AC_call_simpl)
+
+  -- "proof for fail bit is trickier"
+  apply (clarsimp simp: AC_call_L1_def L2_call_L1_def L1_call_simpl_def)
+  apply (clarsimp simp: select_f_def select_def snd_bind split: sum.splits prod.splits)
+  apply (clarsimp simp: Bex_def get_def)
+  apply (erule disjE)
+   apply (monad_eq split: xstate.splits sum.splits)
+    apply (drule EHOther, fastforce)
+    apply blast
+   apply (drule EHOther, fastforce)
+   apply blast
+  apply (monad_eq split: xstate.splits)
+  apply (fastforce dest: EHAbrupt[OF _ EHEmpty])
   done
 
 
