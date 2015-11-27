@@ -114,7 +114,7 @@ lemma autocorres_to_ccorres_alt:
   "\<lbrakk> ac_corres globals \<Gamma> ret_xf arg_rel (liftE ac_f) (Call f_'proc);
      my_corres_underlying {(s, s'). cstate_relation s s'} True R P \<top> dspec_f ac_f \<rbrakk> \<Longrightarrow>
    ccorres dc xfdc P (Collect arg_rel) [] dspec_f (Call f_'proc)"
-  by (fastforce simp: ccorres_underlying_def my_corres_underlying_def rf_sr_def Ball_def liftE_def
+  by (fastforce simp: ccorres_underlying_def my_corres_underlying_def rf_sr_def Ball_def
                       liftE_def in_liftE[simplified liftE_def] unif_rrel_def
                 dest: ac_corres_ccorres_underlying split: xstate.splits)
 
@@ -123,7 +123,7 @@ lemma
   "\<lbrakk> ac_corres globals \<Gamma> ret_xf arg_rel (liftE ac_f) (Call f_'proc);
      my_corres_underlying {(s, s'). cstate_relation s s'} True R P \<top> dspec_f ac_f \<rbrakk> \<Longrightarrow>
    ccorres dc xfdc P (Collect arg_rel) [] dspec_f (Call f_'proc)"
-  by (fastforce simp: ccorres_underlying_idealised_def my_corres_underlying_def rf_sr_def Ball_def liftE_def
+  by (fastforce simp: ccorres_underlying_idealised_def my_corres_underlying_def rf_sr_def Ball_def
                       liftE_def in_liftE[simplified liftE_def] unif_rrel_def
                 dest: ac_corres_ccorres_underlying split: xstate.splits)
 

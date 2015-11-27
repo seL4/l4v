@@ -7319,7 +7319,7 @@ lemma cap_swap_corres:
     apply wp
    apply (rule no_fail_pre, wp)
    apply (clarsimp simp: cte_wp_at'_def)
-  apply (rule corres_no_failI)
+  apply (rule corres_no_failI, erule FalseE)
    apply (rule no_fail_pre)
     apply (wp hoare_weak_lift_imp getCTE_wp' updateCap_no_0 updateCap_ctes_of_wp|
            simp add: cte_wp_at_ctes_of)+

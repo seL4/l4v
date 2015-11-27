@@ -1223,7 +1223,7 @@ lemma tcbSchedDequeue_corres':
   apply (case_tac queued)
    defer
    apply (simp add: unless_def when_def)
-   apply (rule corres_no_failI)
+   apply (rule corres_no_failI, erule FalseE)
     apply (rule no_fail_pre, wp)
    apply (clarsimp simp: in_monad ethread_get_def get_etcb_def set_tcb_queue_def is_etcb_at_def state_relation_def gets_the_def gets_def get_def return_def bind_def assert_opt_def get_tcb_queue_def modify_def put_def)
    apply (subgoal_tac "t \<notin> set (ready_queues a (tcb_domain y) (tcb_priority y))")

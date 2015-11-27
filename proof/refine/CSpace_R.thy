@@ -938,7 +938,7 @@ lemma cap_move_corres:
     apply wp
    apply (rule no_fail_pre, wp)
    apply (clarsimp simp add: cte_wp_at_ctes_of)
-  apply (rule corres_no_failI)
+  apply (rule corres_no_failI, erule FalseE)
    apply (rule no_fail_pre, wp hoare_weak_lift_imp)
    apply (clarsimp simp add: cte_wp_at_ctes_of)
    apply (drule invs_mdb')
@@ -3579,12 +3579,12 @@ lemma ensureNoChildren_wp:
 
 lemma set_cap_pspace_corres:
   "cap_relation cap (cteCap cte) \<Longrightarrow>
-   corres_underlying {(s, s'). pspace_relations (ekheap (s)) (kheap s) (ksPSpace s')} True dc
+   corres_underlying {(s, s'). pspace_relations (ekheap (s)) (kheap s) (ksPSpace s')} False True dc
       (pspace_distinct and pspace_aligned and valid_objs and cte_at p)
       (pspace_aligned' and pspace_distinct' and cte_at' (cte_map p))
       (set_cap cap p)
       (setCTE (cte_map p) cte)"
-  apply (rule corres_no_failI)
+  apply (rule corres_no_failI, erule FalseE)
    apply (rule no_fail_pre, wp)
    apply simp
   apply clarsimp
@@ -3622,7 +3622,7 @@ lemma ghost_relation_of_heap:
   done
 
 lemma corres_caps_decomposition:
-  assumes x: "corres_underlying {(s, s'). pspace_relations (ekheap (s)) (kheap s) (ksPSpace s')} True r P P' f g"
+  assumes x: "corres_underlying {(s, s'). pspace_relations (ekheap (s)) (kheap s) (ksPSpace s')} False True r P P' f g"
   assumes u: "\<And>P. \<lbrace>\<lambda>s. P (new_caps s)\<rbrace> f \<lbrace>\<lambda>rv s. P (caps_of_state s)\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_mdb s)\<rbrace> f \<lbrace>\<lambda>rv s. P (cdt s)\<rbrace>"
              "\<And>P. \<lbrace>\<lambda>s. P (new_list s)\<rbrace> f \<lbrace>\<lambda>rv s. P (cdt_list (s))\<rbrace>"
@@ -3738,14 +3738,14 @@ proof -
 qed
 
 lemma getCTE_symb_exec_r:
-  "corres_underlying sr nf dc \<top> (cte_at' p) (return ()) (getCTE p)"
-  apply (rule corres_no_failI, wp)
+  "corres_underlying sr False nf' dc \<top> (cte_at' p) (return ()) (getCTE p)"
+  apply (rule corres_no_failI, erule FalseE, wp)
   apply (clarsimp simp: return_def
                  elim!: use_valid [OF _ getCTE_inv])
   done
 
 lemma updateMDB_symb_exec_r:
-  "corres_underlying {(s, s'). pspace_relations (ekheap s) (kheap s) (ksPSpace s')} nf dc
+  "corres_underlying {(s, s'). pspace_relations (ekheap s) (kheap s) (ksPSpace s')} False nf' dc
         \<top> (pspace_aligned' and pspace_distinct' and (no_0 \<circ> ctes_of) and (\<lambda>s. p \<noteq> 0 \<longrightarrow> cte_at' p s))
         (return ()) (updateMDB p m)"
   using no_fail_updateMDB [of p m]
@@ -3804,7 +3804,7 @@ lemma setCTE_gsCNodes[wp]:
   done
 
 lemma set_original_symb_exec_l':
-  "corres_underlying {(s, s'). f (ekheap s) (kheap s) s'} nf dc P P' (set_original p b) (return x)"
+  "corres_underlying {(s, s'). f (ekheap s) (kheap s) s'} False nf' dc P P' (set_original p b) (return x)"
   by (simp add: corres_underlying_def return_def set_original_def in_monad Bex_def)
 
 lemma setCTE_schedule_index[wp]:

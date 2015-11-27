@@ -1487,7 +1487,7 @@ lemma empty_slot_corres:
   apply (rule corres_split'[where r'=dc, OF _ opt_deleted_irq_corres])
     defer
     apply wp
-  apply (rule corres_no_failI)
+  apply (rule corres_no_failI, erule FalseE)
    apply (rule no_fail_pre, wp static_imp_wp)
    apply (clarsimp simp: cte_wp_at_ctes_of)
    apply (drule invs_mdb')
@@ -2099,7 +2099,7 @@ lemma final_cap_corres:
    apply (erule final_cap_corres')
   apply (subst bind_return[symmetric],
          rule corres_symb_exec_r)
-     apply (rule corres_no_failI)
+     apply (rule corres_no_failI, erule FalseE)
       apply wp
      apply (clarsimp simp: in_monad is_final_cap_def simpler_gets_def)
     apply (wp isFinalCapability_inv)
@@ -4183,7 +4183,7 @@ lemma set_thread_all_corres:
   corres dc (obj_at (same_caps (TCB tcb)) ptr and is_etcb_at ptr)
             (obj_at' (P :: 'a \<Rightarrow> bool) ptr)
             (set_thread_all ptr tcb etcb) (setObject ptr ob')"
-  apply (rule corres_no_failI)
+  apply (rule corres_no_failI, erule FalseE)
    apply (rule no_fail_pre)
     apply wp
     apply (rule x)
@@ -4267,7 +4267,7 @@ lemma thread_gets_the_all_corres:
   shows      "corres (\<lambda>(tcb, etcb) tcb'. tcb_relation tcb tcb' \<and> etcb_relation etcb tcb')
                 (tcb_at t and is_etcb_at t) (tcb_at' t)
                 (thread_gets_the_all t) (getObject t)"
-  apply (rule corres_no_failI)
+  apply (rule corres_no_failI, erule FalseE)
    apply wp
   apply (clarsimp simp add: gets_def get_def return_def bind_def get_tcb_def thread_gets_the_all_def threadGet_def ethread_get_def gets_the_def assert_opt_def get_etcb_def is_etcb_at_def tcb_at_def liftM_def split: option.splits Structures_A.kernel_object.splits)
   apply (frule in_inv_by_hoareD [OF getObject_inv_tcb])

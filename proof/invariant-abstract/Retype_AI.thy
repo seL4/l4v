@@ -1198,7 +1198,7 @@ declare store_pde_state_refs_of [wp]
 
 (* FIXME: move to Machine_R.thy *)
 lemma clearMemory_corres:
-  "corres_underlying Id True dc \<top> (\<lambda>_. is_aligned y 2)
+  "corres_underlying Id False True dc \<top> (\<lambda>_. is_aligned y 2)
      (clearMemory y a) (clearMemory y a)"
   apply (rule corres_Id)
    apply simp+

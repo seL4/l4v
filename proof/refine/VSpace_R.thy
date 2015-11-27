@@ -419,7 +419,7 @@ lemma find_free_hw_asid_corres:
             apply (rule corres_split [OF _ invalidate_asid_ext_corres])
               apply (rule corres_split' [where r'=dc])
                  apply (rule corres_trivial, rule corres_machine_op)
-                 apply (rule corres_no_failI)
+                 apply (rule corres_no_failI, erule FalseE)
                   apply (rule no_fail_invalidateTLB_ASID)
                  apply fastforce
                 apply (rule corres_split)
@@ -531,7 +531,7 @@ lemma hv_corres:
        prefer 2
        apply simp
        apply (rule corres_as_user')
-       apply (rule corres_no_failI [where R="op ="])
+       apply (rule corres_no_failI [where R="op ="], erule FalseE)
         apply (rule no_fail_getRestartPC)
        apply fastforce
       apply (rule corres_splitEE)
@@ -1682,7 +1682,7 @@ definition
    | ArchInvocation_A.flush_type.Unify \<Rightarrow> ArchRetypeDecls_H.flush_type.Unify"
 
 lemma do_flush_corres:
-  "corres_underlying Id nf dc \<top> \<top>
+  "corres_underlying Id nf nf' dc \<top> \<top>
              (do_flush typ start end pstart) (doFlush (flush_type_map typ) start end pstart)"
   apply (simp add: do_flush_def doFlush_def)
   apply (cases "typ", simp_all add: flush_type_map_def)

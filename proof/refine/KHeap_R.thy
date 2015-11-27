@@ -128,7 +128,7 @@ lemma no_fail_getPDE [wp]:
 
 lemma corres_get_tcb:
   "corres (tcb_relation \<circ> the) (tcb_at t) (tcb_at' t) (gets (get_tcb t)) (getObject t)"
-  apply (rule corres_no_failI)
+  apply (rule corres_no_failI, erule FalseE)
    apply wp
   apply (clarsimp simp add: gets_def get_def return_def bind_def get_tcb_def)
   apply (frule in_inv_by_hoareD [OF getObject_inv_tcb])
@@ -884,7 +884,7 @@ lemma no_fail_getEndpoint [wp]:
 lemma get_ep_corres:
   "corres ep_relation (ep_at ptr) (ep_at' ptr)
      (get_endpoint ptr) (getEndpoint ptr)"
-  apply (rule corres_no_failI)
+  apply (rule corres_no_failI, erule FalseE)
    apply wp
   apply (simp add: get_endpoint_def getEndpoint_def get_object_def 
                    getObject_def bind_assoc)
@@ -1008,7 +1008,7 @@ lemma set_other_obj_corres:
   corres dc (obj_at (\<lambda>ko. a_type ko = a_type ob) ptr and obj_at (same_caps ob) ptr)
             (obj_at' (P :: 'a \<Rightarrow> bool) ptr)
             (set_object ptr ob) (setObject ptr ob')"
-  apply (rule corres_no_failI)
+  apply (rule corres_no_failI, erule FalseE)
    apply (rule no_fail_pre)
     apply wp
     apply (rule x)
@@ -1144,7 +1144,7 @@ lemma no_fail_getNotification [wp]:
 lemma get_ntfn_corres:
   "corres ntfn_relation (ntfn_at ptr) (ntfn_at' ptr)
      (get_notification ptr) (getNotification ptr)"
-  apply (rule corres_no_failI)
+  apply (rule corres_no_failI, erule FalseE)
    apply wp
   apply (simp add: get_notification_def getNotification_def get_object_def 
                    getObject_def bind_assoc)

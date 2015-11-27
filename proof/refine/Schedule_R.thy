@@ -277,7 +277,7 @@ lemma tcbSchedAppend_corres:
    apply (rule no_fail_pre, wp, simp)
   apply (case_tac queued)
    apply (simp add: unless_def when_def)
-   apply (rule corres_no_failI)
+   apply (rule corres_no_failI, erule FalseE)
     apply (rule no_fail_pre, wp)
    apply (clarsimp simp: in_monad ethread_get_def gets_the_def bind_assoc
                          assert_opt_def exec_gets is_etcb_at_def get_etcb_def get_tcb_queue_def
@@ -2043,7 +2043,7 @@ lemma get_sa_corres':
 
 lemma corres_assert_ret:
   "corres dc (\<lambda>s. P) \<top> (assert P) (return ())"
-  apply (rule corres_no_failI)
+  apply (rule corres_no_failI, erule FalseE)
    apply simp
   apply (simp add: assert_def return_def fail_def)
   done
@@ -2073,8 +2073,8 @@ crunch cur[wp]: tcbSchedEnqueue cur_tcb'
 lemma corres_noop3:
   assumes x: "\<And>s s'. \<lbrakk>P s; P' s'; (s, s') \<in> sr\<rbrakk>  \<Longrightarrow> \<lbrace>op = s\<rbrace> f \<exists>\<lbrace>\<lambda>r. op = s\<rbrace>"
   assumes y: "\<And>s s'. \<lbrakk>P s; P' s'; (s, s') \<in> sr\<rbrakk> \<Longrightarrow> \<lbrace>op = s'\<rbrace> g \<lbrace>\<lambda>r. op = s'\<rbrace>"
-  assumes z: "nf \<Longrightarrow> no_fail P' g"
-  shows      "corres_underlying sr nf dc P P' f g"
+  assumes z: "nf' \<Longrightarrow> no_fail P' g"
+  shows      "corres_underlying sr nf nf' dc P P' f g"
   apply (clarsimp simp: corres_underlying_def)
   apply (rule conjI)
    apply clarsimp
@@ -2094,10 +2094,10 @@ lemma corres_noop3:
   done
 
 lemma corres_symb_exec_l':
-  assumes z: "\<And>rv. corres_underlying sr nf r (Q' rv) P' (x rv) y"
+  assumes z: "\<And>rv. corres_underlying sr nf nf' r (Q' rv) P' (x rv) y"
   assumes x: "\<And>s. P s \<Longrightarrow> \<lbrace>op = s\<rbrace> m \<exists>\<lbrace>\<lambda>r. op = s\<rbrace>"
   assumes y: "\<lbrace>Q\<rbrace> m \<lbrace>Q'\<rbrace>"
-  shows      "corres_underlying sr nf r (P and Q) P' (m >>= (\<lambda>rv. x rv)) y"
+  shows      "corres_underlying sr nf nf' r (P and Q) P' (m >>= (\<lambda>rv. x rv)) y"
   apply (rule corres_guard_imp)
     apply (subst gets_bind_ign[symmetric], rule corres_split)
        apply (rule z)
@@ -2111,11 +2111,11 @@ lemma corres_symb_exec_l':
    done
 
 lemma corres_symb_exec_r':
-  assumes z: "\<And>rv. corres_underlying sr nf r P (P'' rv) x (y rv)"
+  assumes z: "\<And>rv. corres_underlying sr nf nf' r P (P'' rv) x (y rv)"
   assumes y: "\<lbrace>P'\<rbrace> m \<lbrace>P''\<rbrace>"
   assumes x: "\<And>s. Q' s \<Longrightarrow> \<lbrace>op = s\<rbrace> m \<lbrace>\<lambda>r. op = s\<rbrace>"
-  assumes nf: "nf \<Longrightarrow> no_fail R' m"
-  shows      "corres_underlying sr nf r P (P' and Q' and R') x (m >>= (\<lambda>rv. y rv))"
+  assumes nf: "nf' \<Longrightarrow> no_fail R' m"
+  shows      "corres_underlying sr nf nf' r P (P' and Q' and R') x (m >>= (\<lambda>rv. y rv))"
   apply (rule corres_guard_imp)
     apply (subst gets_bind_ign[symmetric], rule corres_split)
        apply (rule z)
