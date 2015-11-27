@@ -11,7 +11,7 @@
 theory ADT_C
 imports
   Schedule_C
-  "../refine/BCorres2_AI"
+  "../invariant-abstract/BCorres2_AI"
 begin
 
 definition
