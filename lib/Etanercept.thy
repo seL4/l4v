@@ -404,15 +404,9 @@ ML {*
               in (vs', "(1 + " ^ s ^ ")")
             end
         | Const (@{const_name numeral}, _) $ a =>
-            (* XXX: Clagged from c-parser *)
-            let fun calc acc base t = case t of
-                    Const (@{const_name "Num.num.Bit0"}, _) $ t' => calc acc (base * 2) t'
-                  | Const (@{const_name "Num.num.Bit1"}, _) $ t' => calc (acc + base) (base * 2) t'
-                  | Const (@{const_name "Num.num.One"}, _) => acc + base
-                  | _ => error "unexpected numeric literal case (BUG)";
-                val v = calc 0 1 a;
-                val suffix = if v > exp 2 32 - 1 then "ull" else ""
-              in (vs, "(" ^ string_of_int (calc 0 1 a) ^ suffix ^ ")")
+            let val a' = HOLogic.dest_num a
+                val suffix = if a' > exp 2 32 - 1 then "ull" else ""
+              in (vs, "(" ^ string_of_int a' ^ suffix ^ ")")
             end
         | _ => raise TERM ("unsupported subterm ", [t])
     end
@@ -577,7 +571,7 @@ lemma "(x::64 word) div 0 = 0"
   by (simp add: word_arith_nat_defs(6))
 
 text {* Test we can handle large literals. *}
-lemma "(x::64 word) > 0xcafebeefcafebeef"
+lemma "0xdeadbeeffacecafe > 0xdeadbeeffacade00 + (x::64 word)"
   word_refute
   oops
 
