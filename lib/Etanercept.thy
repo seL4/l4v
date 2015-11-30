@@ -515,6 +515,8 @@ ML {*
   end
 *}
 
+
+text {* Basic examples *}
 lemma "True \<and> False"
   word_refute
   oops
@@ -526,8 +528,9 @@ lemma "(x::32 word) = 0"
   word_refute
   oops
 
-word_refute
+word_refute -- "requires a proof state"
 
+text {* Can deal with top-level quantified vars *}
 lemma "\<And>x. (x::32 word) \<noteq> y\<^sub>1 \<and> y \<ge> x"
   word_refute
   oops
@@ -546,6 +549,11 @@ lemma "\<And>(x::32 word) y. x = y"
 
 text {* Previously, this example would give us a tautological comparison warning from Clang. *}
 lemma "y = y \<and> (x::32 word) << y = x"
+  word_refute
+  oops
+
+text {* Also works for nats (approximated with uint64) *}
+lemma "(x :: nat) = 0"
   word_refute
   oops
 
@@ -652,5 +660,12 @@ lemma "(ucast (x * y :: 16 word) :: 32 signed word) \<ge> 0"
   using [[word_refute_cflags="-O3"]]
   word_refute
   by simp
+
+
+text {* Unsupported constructs *}
+lemma "(x :: 1 word) = 0" -- "bad word size"
+  quickcheck[random]
+  word_refute
+  oops
 
 end
