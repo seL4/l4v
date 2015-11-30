@@ -154,20 +154,6 @@ ML {*
       indexOf' 0 xs x
     end
 
-  (* FIXME: ugh *)
-  fun type_supported [typ] =
-    (case typ of
-        @{typ 8} => true
-      | @{typ "8 signed"} => true
-      | @{typ 16} => true
-      | @{typ "16 signed"} => true
-      | @{typ 32} => true
-      | @{typ "32 signed"} => true
-      | @{typ 64} => true
-      | @{typ "64 signed"} => true
-      | _ => false)
-    | type_supported _ = false
-
   (* Find a previously seen variable's index or register a newly discovered variable. *)
   fun var_index vs v =
     case indexOf vs v of
@@ -177,190 +163,100 @@ ML {*
   (* The C symbol for the nth variable. *)
   fun to_var n = "v" ^ Int.toString n
 
-  fun min_of (Var (_, Type (@{type_name "Word.word"}, [@{typ "8 signed"}]))) = "INT8_MIN"
-    | min_of (Var (_, Type (@{type_name "Word.word"}, [@{typ "16 signed"}]))) = "INT16_MIN"
-    | min_of (Var (_, Type (@{type_name "Word.word"}, [@{typ "32 signed"}]))) = "INT32_MIN"
-    | min_of (Var (_, Type (@{type_name "Word.word"}, [@{typ "64 signed"}]))) = "INT64_MIN"
-    | min_of (Var (_, Type (@{type_name "Word.word"}, _))) = "0"
-    | min_of (Var (_, Type (@{type_name "SignedWords.signed"}, [@{typ 8}]))) = "INT8_MIN"
-    | min_of (Var (_, Type (@{type_name "SignedWords.signed"}, [@{typ 16}]))) = "INT16_MIN"
-    | min_of (Var (_, Type (@{type_name "SignedWords.signed"}, [@{typ 32}]))) = "INT32_MIN"
-    | min_of (Var (_, Type (@{type_name "SignedWords.signed"}, [@{typ 64}]))) = "INT64_MIN"
-    | min_of (Var (_, Type (@{type_name nat}, _))) = "0"
-    | min_of (Var (_, Type (@{type_name int}, _))) = "INTMAX_MIN"
-    | min_of (Free (_, Type (@{type_name "Word.word"}, [@{typ "8 signed"}]))) = "INT8_MIN"
-    | min_of (Free (_, Type (@{type_name "Word.word"}, [@{typ "16 signed"}]))) = "INT16_MIN"
-    | min_of (Free (_, Type (@{type_name "Word.word"}, [@{typ "32 signed"}]))) = "INT32_MIN"
-    | min_of (Free (_, Type (@{type_name "Word.word"}, [@{typ "64 signed"}]))) = "INT64_MIN"
-    | min_of (Free (_, Type (@{type_name "Word.word"}, _))) = "0"
-    | min_of (Free (_, Type (@{type_name "SignedWords.signed"}, [@{typ 8}]))) = "INT8_MIN"
-    | min_of (Free (_, Type (@{type_name "SignedWords.signed"}, [@{typ 16}]))) = "INT16_MIN"
-    | min_of (Free (_, Type (@{type_name "SignedWords.signed"}, [@{typ 32}]))) = "INT32_MIN"
-    | min_of (Free (_, Type (@{type_name "SignedWords.signed"}, [@{typ 64}]))) = "INT64_MIN"
-    | min_of (Free (_, Type (@{type_name nat}, _))) = "0"
-    | min_of (Free (_, Type (@{type_name int}, _))) = "INTMAX_MIN"
-    | min_of _ = error "unsupported type (BUG)"
-
-  fun max_of (Var (_, Type (@{type_name "Word.word"}, [@{typ 8}]))) = "UINT8_MAX"
-    | max_of (Var (_, Type (@{type_name "Word.word"}, [@{typ "8 signed"}]))) = "INT8_MAX"
-    | max_of (Var (_, Type (@{type_name "Word.word"}, [@{typ 16}]))) = "UINT16_MAX"
-    | max_of (Var (_, Type (@{type_name "Word.word"}, [@{typ "16 signed"}]))) = "INT16_MAX"
-    | max_of (Var (_, Type (@{type_name "Word.word"}, [@{typ 32}]))) = "UINT32_MAX"
-    | max_of (Var (_, Type (@{type_name "Word.word"}, [@{typ "32 signed"}]))) = "INT32_MAX"
-    | max_of (Var (_, Type (@{type_name "Word.word"}, [@{typ 64}]))) = "UINT64_MAX"
-    | max_of (Var (_, Type (@{type_name "Word.word"}, [@{typ "64 signed"}]))) = "INT64_MAX"
-    | max_of (Var (_, Type (@{type_name "SignedWords.signed"}, [@{typ 8}]))) = "INT8_MAX"
-    | max_of (Var (_, Type (@{type_name "SignedWords.signed"}, [@{typ 16}]))) = "INT16_MAX"
-    | max_of (Var (_, Type (@{type_name "SignedWords.signed"}, [@{typ 32}]))) = "INT32_MAX"
-    | max_of (Var (_, Type (@{type_name "SignedWords.signed"}, [@{typ 64}]))) = "INT64_MAX"
-    | max_of (Var (_, Type (@{type_name nat}, _))) = "UINTMAX_MAX"
-    | max_of (Var (_, Type (@{type_name int}, _))) = "INTMAX_MAX"
-    | max_of (Free (_, Type (@{type_name "Word.word"}, [@{typ 8}]))) = "UINT8_MAX"
-    | max_of (Free (_, Type (@{type_name "Word.word"}, [@{typ "8 signed"}]))) = "INT8_MAX"
-    | max_of (Free (_, Type (@{type_name "Word.word"}, [@{typ 16}]))) = "UINT16_MAX"
-    | max_of (Free (_, Type (@{type_name "Word.word"}, [@{typ "16 signed"}]))) = "INT16_MAX"
-    | max_of (Free (_, Type (@{type_name "Word.word"}, [@{typ 32}]))) = "UINT32_MAX"
-    | max_of (Free (_, Type (@{type_name "Word.word"}, [@{typ "32 signed"}]))) = "INT32_MAX"
-    | max_of (Free (_, Type (@{type_name "Word.word"}, [@{typ 64}]))) = "UINT64_MAX"
-    | max_of (Free (_, Type (@{type_name "Word.word"}, [@{typ "64 signed"}]))) = "INT64_MAX"
-    | max_of (Free (_, Type (@{type_name "SignedWords.signed"}, [@{typ 8}]))) = "INT8_MAX"
-    | max_of (Free (_, Type (@{type_name "SignedWords.signed"}, [@{typ 16}]))) = "INT16_MAX"
-    | max_of (Free (_, Type (@{type_name "SignedWords.signed"}, [@{typ 32}]))) = "INT32_MAX"
-    | max_of (Free (_, Type (@{type_name "SignedWords.signed"}, [@{typ 64}]))) = "INT64_MAX"
-    | max_of (Free (_, Type (@{type_name nat}, _))) = "UINTMAX_MAX"
-    | max_of (Free (_, Type (@{type_name int}, _))) = "INTMAX_MAX"
-    | max_of _ = error "unsupported type (BUG)"
-
-  fun type_of (Var (_, Type (@{type_name "Word.word"}, [@{typ 8}]))) = "uint8_t"
-    | type_of (Var (_, Type (@{type_name "Word.word"}, [@{typ "8 signed"}]))) = "int8_t"
-    | type_of (Var (_, Type (@{type_name "Word.word"}, [@{typ 16}]))) = "uint16_t"
-    | type_of (Var (_, Type (@{type_name "Word.word"}, [@{typ "16 signed"}]))) = "int16_t"
-    | type_of (Var (_, Type (@{type_name "Word.word"}, [@{typ 32}]))) = "uint32_t"
-    | type_of (Var (_, Type (@{type_name "Word.word"}, [@{typ "32 signed"}]))) = "int32_t"
-    | type_of (Var (_, Type (@{type_name "Word.word"}, [@{typ 64}]))) = "uint64_t"
-    | type_of (Var (_, Type (@{type_name "Word.word"}, [@{typ "64 signed"}]))) = "int64_t"
-    | type_of (Var (_, Type (@{type_name "SignedWords.signed"}, [@{typ 8}]))) = "int8_t"
-    | type_of (Var (_, Type (@{type_name "SignedWords.signed"}, [@{typ 16}]))) = "int16_t"
-    | type_of (Var (_, Type (@{type_name "SignedWords.signed"}, [@{typ 32}]))) = "int32_t"
-    | type_of (Var (_, Type (@{type_name "SignedWords.signed"}, [@{typ 64}]))) = "int64_t"
-    | type_of (Var (_, Type (@{type_name nat}, _))) = "uintmax_t"
-    | type_of (Var (_, Type (@{type_name int}, _))) = "intmax_t"
-    | type_of (Free (_, Type (@{type_name "Word.word"}, [@{typ 8}]))) = "uint8_t"
-    | type_of (Free (_, Type (@{type_name "Word.word"}, [@{typ "8 signed"}]))) = "int8_t"
-    | type_of (Free (_, Type (@{type_name "Word.word"}, [@{typ 16}]))) = "uint16_t"
-    | type_of (Free (_, Type (@{type_name "Word.word"}, [@{typ "16 signed"}]))) = "int16_t"
-    | type_of (Free (_, Type (@{type_name "Word.word"}, [@{typ 32}]))) = "uint32_t"
-    | type_of (Free (_, Type (@{type_name "Word.word"}, [@{typ "32 signed"}]))) = "int32_t"
-    | type_of (Free (_, Type (@{type_name "Word.word"}, [@{typ 64}]))) = "uint64_t"
-    | type_of (Free (_, Type (@{type_name "Word.word"}, [@{typ "64 signed"}]))) = "int64_t"
-    | type_of (Free (_, Type (@{type_name "SignedWords.signed"}, [@{typ 8}]))) = "int8_t"
-    | type_of (Free (_, Type (@{type_name "SignedWords.signed"}, [@{typ 16}]))) = "int16_t"
-    | type_of (Free (_, Type (@{type_name "SignedWords.signed"}, [@{typ 32}]))) = "int32_t"
-    | type_of (Free (_, Type (@{type_name "SignedWords.signed"}, [@{typ 64}]))) = "int64_t"
-    | type_of (Free (_, Type (@{type_name nat}, _))) = "uintmax_t"
-    | type_of (Free (_, Type (@{type_name int}, _))) = "intmax_t"
-    | type_of _ = error "unsupported type (BUG)"
-
-  fun name_of (Var ((name, _), _)) = safe_name name
-    | name_of (Free (name, _)) = safe_name name
+  fun name_of (Free (name, _)) = safe_name name
     | name_of _ = error "unexpected variable (BUG)"
 
-  fun format_of (Var (_, Type (@{type_name "Word.word"}, [@{typ 8}]))) = "PRIu8"
-    | format_of (Var (_, Type (@{type_name "Word.word"}, [@{typ "8 signed"}]))) = "PRId8"
-    | format_of (Var (_, Type (@{type_name "Word.word"}, [@{typ 16}]))) = "PRIu16"
-    | format_of (Var (_, Type (@{type_name "Word.word"}, [@{typ "16 signed"}]))) = "PRId16"
-    | format_of (Var (_, Type (@{type_name "Word.word"}, [@{typ 32}]))) = "PRIu32"
-    | format_of (Var (_, Type (@{type_name "Word.word"}, [@{typ "32 signed"}]))) = "PRId32"
-    | format_of (Var (_, Type (@{type_name "Word.word"}, [@{typ 64}]))) = "PRIu64"
-    | format_of (Var (_, Type (@{type_name "Word.word"}, [@{typ "64 signed"}]))) = "PRId64"
-    | format_of (Var (_, Type (@{type_name "SignedWords.signed"}, [@{typ 8}]))) = "PRId8"
-    | format_of (Var (_, Type (@{type_name "SignedWords.signed"}, [@{typ 16}]))) = "PRId16"
-    | format_of (Var (_, Type (@{type_name "SignedWords.signed"}, [@{typ 32}]))) = "PRId32"
-    | format_of (Var (_, Type (@{type_name "SignedWords.signed"}, [@{typ 64}]))) = "PRId64"
-    | format_of (Var (_, Type (@{type_name nat}, _))) = "PRIuMAX"
-    | format_of (Var (_, Type (@{type_name int}, _))) = "PRIdMAX"
-    | format_of (Free (_, Type (@{type_name "Word.word"}, [@{typ 8}]))) = "PRIu8"
-    | format_of (Free (_, Type (@{type_name "Word.word"}, [@{typ "8 signed"}]))) = "PRId8"
-    | format_of (Free (_, Type (@{type_name "Word.word"}, [@{typ 16}]))) = "PRIu16"
-    | format_of (Free (_, Type (@{type_name "Word.word"}, [@{typ "16 signed"}]))) = "PRId16"
-    | format_of (Free (_, Type (@{type_name "Word.word"}, [@{typ 32}]))) = "PRIu32"
-    | format_of (Free (_, Type (@{type_name "Word.word"}, [@{typ "32 signed"}]))) = "PRId32"
-    | format_of (Free (_, Type (@{type_name "Word.word"}, [@{typ 64}]))) = "PRIu64"
-    | format_of (Free (_, Type (@{type_name "Word.word"}, [@{typ "64 signed"}]))) = "PRId64"
-    | format_of (Free (_, Type (@{type_name "SignedWords.signed"}, [@{typ 8}]))) = "PRId8"
-    | format_of (Free (_, Type (@{type_name "SignedWords.signed"}, [@{typ 16}]))) = "PRId16"
-    | format_of (Free (_, Type (@{type_name "SignedWords.signed"}, [@{typ 32}]))) = "PRId32"
-    | format_of (Free (_, Type (@{type_name "SignedWords.signed"}, [@{typ 64}]))) = "PRId64"
-    | format_of (Free (_, Type (@{type_name nat}, _))) = "PRIuMAX"
-    | format_of (Free (_, Type (@{type_name int}, _))) = "PRIdMAX"
-    | format_of _ = error "unsupported type (BUG)"
 
-  fun cast_to _ @{typ "8 signed word \<Rightarrow> 8 signed word"} = "int8_t"
-    | cast_to _ @{typ "8 signed word \<Rightarrow> 8 word"} = "uint8_t"
-    | cast_to _ @{typ "8 signed word \<Rightarrow> 16 signed word"} = "int16_t"
-    | cast_to _ @{typ "8 signed word \<Rightarrow> 16 word"} = "uint16_t"
-    | cast_to _ @{typ "8 signed word \<Rightarrow> 32 signed word"} = "int32_t"
-    | cast_to _ @{typ "8 signed word \<Rightarrow> 32 word"} = "uint32_t"
-    | cast_to _ @{typ "8 signed word \<Rightarrow> 64 signed word"} = "int64_t"
-    | cast_to _ @{typ "8 signed word \<Rightarrow> 64 word"} = "uint64_t"
-    | cast_to _ @{typ "8 word \<Rightarrow> 8 signed word"} = "int8_t"
-    | cast_to _ @{typ "8 word \<Rightarrow> 8 word"} = "uint8_t"
-    | cast_to _ @{typ "8 word \<Rightarrow> 16 signed word"} = "int16_t"
-    | cast_to _ @{typ "8 word \<Rightarrow> 16 word"} = "uint16_t"
-    | cast_to _ @{typ "8 word \<Rightarrow> 32 signed word"} = "int32_t"
-    | cast_to _ @{typ "8 word \<Rightarrow> 32 word"} = "uint32_t"
-    | cast_to _ @{typ "8 word \<Rightarrow> 64 signed word"} = "int64_t"
-    | cast_to _ @{typ "8 word \<Rightarrow> 64 word"} = "uint64_t"
-    | cast_to _ @{typ "16 signed word \<Rightarrow> 8 signed word"} = "int8_t"
-    | cast_to _ @{typ "16 signed word \<Rightarrow> 8 word"} = "uint8_t"
-    | cast_to _ @{typ "16 signed word \<Rightarrow> 16 signed word"} = "int16_t"
-    | cast_to _ @{typ "16 signed word \<Rightarrow> 16 word"} = "uint16_t"
-    | cast_to _ @{typ "16 signed word \<Rightarrow> 32 signed word"} = "int32_t"
-    | cast_to _ @{typ "16 signed word \<Rightarrow> 32 word"} = "uint32_t"
-    | cast_to _ @{typ "16 signed word \<Rightarrow> 64 signed word"} = "int64_t"
-    | cast_to _ @{typ "16 signed word \<Rightarrow> 64 word"} = "uint64_t"
-    | cast_to _ @{typ "16 word \<Rightarrow> 8 signed word"} = "int8_t"
-    | cast_to _ @{typ "16 word \<Rightarrow> 8 word"} = "uint8_t"
-    | cast_to _ @{typ "16 word \<Rightarrow> 16 signed word"} = "int16_t"
-    | cast_to _ @{typ "16 word \<Rightarrow> 16 word"} = "uint16_t"
-    | cast_to _ @{typ "16 word \<Rightarrow> 32 signed word"} = "int32_t"
-    | cast_to _ @{typ "16 word \<Rightarrow> 32 word"} = "uint32_t"
-    | cast_to _ @{typ "16 word \<Rightarrow> 64 signed word"} = "int64_t"
-    | cast_to _ @{typ "16 word \<Rightarrow> 64 word"} = "uint64_t"
-    | cast_to _ @{typ "32 signed word \<Rightarrow> 8 signed word"} = "int8_t"
-    | cast_to _ @{typ "32 signed word \<Rightarrow> 8 word"} = "uint8_t"
-    | cast_to _ @{typ "32 signed word \<Rightarrow> 16 signed word"} = "int16_t"
-    | cast_to _ @{typ "32 signed word \<Rightarrow> 16 word"} = "uint16_t"
-    | cast_to _ @{typ "32 signed word \<Rightarrow> 32 signed word"} = "int32_t"
-    | cast_to _ @{typ "32 signed word \<Rightarrow> 32 word"} = "uint32_t"
-    | cast_to _ @{typ "32 signed word \<Rightarrow> 64 signed word"} = "int64_t"
-    | cast_to _ @{typ "32 signed word \<Rightarrow> 64 word"} = "uint64_t"
-    | cast_to _ @{typ "32 word \<Rightarrow> 8 signed word"} = "int8_t"
-    | cast_to _ @{typ "32 word \<Rightarrow> 8 word"} = "uint8_t"
-    | cast_to _ @{typ "32 word \<Rightarrow> 16 signed word"} = "int16_t"
-    | cast_to _ @{typ "32 word \<Rightarrow> 16 word"} = "uint16_t"
-    | cast_to _ @{typ "32 word \<Rightarrow> 32 signed word"} = "int32_t"
-    | cast_to _ @{typ "32 word \<Rightarrow> 32 word"} = "uint32_t"
-    | cast_to _ @{typ "32 word \<Rightarrow> 64 signed word"} = "int64_t"
-    | cast_to _ @{typ "32 word \<Rightarrow> 64 word"} = "uint64_t"
-    | cast_to _ @{typ "64 signed word \<Rightarrow> 8 signed word"} = "int8_t"
-    | cast_to _ @{typ "64 signed word \<Rightarrow> 8 word"} = "uint8_t"
-    | cast_to _ @{typ "64 signed word \<Rightarrow> 16 signed word"} = "int16_t"
-    | cast_to _ @{typ "64 signed word \<Rightarrow> 16 word"} = "uint16_t"
-    | cast_to _ @{typ "64 signed word \<Rightarrow> 32 signed word"} = "int32_t"
-    | cast_to _ @{typ "64 signed word \<Rightarrow> 32 word"} = "uint32_t"
-    | cast_to _ @{typ "64 signed word \<Rightarrow> 64 signed word"} = "int64_t"
-    | cast_to _ @{typ "64 signed word \<Rightarrow> 64 word"} = "uint64_t"
-    | cast_to _ @{typ "64 word \<Rightarrow> 8 signed word"} = "int8_t"
-    | cast_to _ @{typ "64 word \<Rightarrow> 8 word"} = "uint8_t"
-    | cast_to _ @{typ "64 word \<Rightarrow> 16 signed word"} = "int16_t"
-    | cast_to _ @{typ "64 word \<Rightarrow> 16 word"} = "uint16_t"
-    | cast_to _ @{typ "64 word \<Rightarrow> 32 signed word"} = "int32_t"
-    | cast_to _ @{typ "64 word \<Rightarrow> 32 word"} = "uint32_t"
-    | cast_to _ @{typ "64 word \<Rightarrow> 64 signed word"} = "int64_t"
-    | cast_to _ @{typ "64 word \<Rightarrow> 64 word"} = "uint64_t"
-    | cast_to st t = error ("unsupported ucast/scast result type: " ^
-        Pretty.string_of (Syntax.pretty_typ (Proof.context_of st) t))
+  (* Types that we know about. *)
+  type IntInfo = { isa_type: typ,
+                   c_type:   string,
+                   c_min:    string,
+                   c_max:    string,
+                   c_printf: string
+                 }
+  val type_info : IntInfo Typtab.table =
+    [
+      { isa_type = @{typ "8 word"},
+        c_type = "uint8_t",
+        c_min = "((uint8_t)0)",
+        c_max = "UINT8_MAX",
+        c_printf = "PRIu8"
+      },
+      { isa_type = @{typ "16 word"},
+        c_type = "uint16_t",
+        c_min = "((uint16_t)0)",
+        c_max = "UINT16_MAX",
+        c_printf = "PRIu16"
+      },
+      { isa_type = @{typ "32 word"},
+        c_type = "uint32_t",
+        c_min = "((uint32_t)0)",
+        c_max = "UINT32_MAX",
+        c_printf = "PRIu32"
+      },
+      { isa_type = @{typ "64 word"},
+        c_type = "uint64_t",
+        c_min = "((uint64_t)0)",
+        c_max = "UINT64_MAX",
+        c_printf = "PRIu64"
+      },
+      { isa_type = @{typ "nat"},
+        c_type = "uint64_t",
+        c_min = "((uint64_t)0)",
+        c_max = "UINT64_MAX",
+        c_printf = "PRIu64"
+      },
+
+      { isa_type = @{typ "8 signed word"},
+        c_type = "int8_t",
+        c_min = "INT8_MIN",
+        c_max = "INT8_MAX",
+        c_printf = "PRId8"
+      },
+      { isa_type = @{typ "16 signed word"},
+        c_type = "int16_t",
+        c_min = "INT16_MIN",
+        c_max = "INT16_MAX",
+        c_printf = "PRId16"
+      },
+      { isa_type = @{typ "32 signed word"},
+        c_type = "int32_t",
+        c_min = "INT32_MIN",
+        c_max = "INT32_MAX",
+        c_printf = "PRId32"
+      },
+      { isa_type = @{typ "64 signed word"},
+        c_type = "int64_t",
+        c_min = "INT64_MIN",
+        c_max = "INT64_MAX",
+        c_printf = "PRId64"
+      },
+      { isa_type = @{typ "int"},
+        c_type = "int64_t",
+        c_min = "INT64_MIN",
+        c_max = "INT64_MAX",
+        c_printf = "PRId64"
+      }
+    ] |> (fn infos => Typtab.make (map (fn info => (#isa_type info, info)) infos))
+
+  fun lookup_info f expect_success t =
+    let val severity = if expect_success then " (BUG)" else ""
+    in case t of
+           Free (_, ty) => (case Typtab.lookup type_info ty of
+                                SOME info => f info
+                             | NONE => raise TYPE ("etanercept: unsupported type" ^ severity, [ty], [t]))
+         | _ => raise TERM ("etanercept: unsupported term" ^ severity, [t]) end
+
+  val min_of = lookup_info #c_min true
+  val max_of = lookup_info #c_max true
+  val type_of = lookup_info #c_type true
+  val format_of = lookup_info #c_printf true
+
+  fun cast_to _ (Type ("fun", [from, to])) =
+        (case try (lookup_info #c_type false) (Free ("_", to)) of
+             SOME c_type => c_type
+           | NONE => raise TYPE ("etanercept: unsupported ucast/scast result type", [to], []))
+    | cast_to _ T = raise TYPE ("etanercept: strange ucast/scast type (BUG)", [T], [])
 
   (* A printf format string for printing the variables. *)
   fun format_string vs =
@@ -505,14 +401,14 @@ ML {*
             let val (vs', s) = tr vs a
               in (vs', "((" ^ cast_to state typ ^ ")" ^ s ^ ")")
             end
-        | Free (name, Type (@{type_name "Word.word"}, typs)) =>
-            if type_supported typs
+        | Free (name, T as Type (@{type_name "Word.word"}, typs)) =>
+            if Typtab.defined type_info T
               then let val (vs', n) = var_index vs t
                      in (vs', to_var n)
                    end
               else error ("unsupported word width of variable " ^ name)
-        | Var ((name, _), Type (@{type_name "Word.word"}, typs)) =>
-            if type_supported typs
+        | Var ((name, _), T as Type (@{type_name "Word.word"}, typs)) =>
+            if Typtab.defined type_info T
               then let val (vs', n) = var_index vs t
                      in (vs', to_var n)
                    end
