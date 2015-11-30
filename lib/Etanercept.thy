@@ -14,7 +14,7 @@ theory Etanercept imports
   SignedWords
   WordBitwiseSigned
 keywords
-  "etanercept" :: diag
+  "word_refute" :: diag
 begin
 
 text {*
@@ -576,7 +576,7 @@ ML {*
       | NONE => writeln "no available C compiler"
 
   (* Install the command itself. *)
-  val _ = Outer_Syntax.command @{command_keyword etanercept}
+  val _ = Outer_Syntax.command @{command_keyword word_refute}
             "Construct a C program to find counter-examples to word propositions"
               (Scan.succeed [] >> (fn _ => Toplevel.keep_proof refute))
 
@@ -584,34 +584,34 @@ ML {*
 *}
 
 lemma "True \<and> False"
-  etanercept
+  word_refute
   oops
 
 lemma "(x::32 word) = 0"
-  etanercept
+  word_refute
   oops
 
-etanercept
+word_refute
 
 lemma "\<And>x. (x::32 word) \<noteq> y\<^sub>1 \<and> y \<ge> x"
-  etanercept
+  word_refute
   oops
 
 lemma "(x::8 word) = y"
-  etanercept
+  word_refute
   oops
 
 lemma "(x::64 word) < y"
-  etanercept
+  word_refute
   oops
 
 lemma "\<And>(x::32 word) y. x = y"
-  etanercept
+  word_refute
   oops
 
 text {* Previously, this example would give us a tautological comparison warning from Clang. *}
 lemma "y = y \<and> (x::32 word) << y = x"
-  etanercept
+  word_refute
   oops
 
 text {* Example that partially demonstrates Etanercept's utility. *}
@@ -621,7 +621,7 @@ lemma "(x::8 word) > y \<or> x < y + y + y + y"
   (* quickcheck[random] takes a little while *)
     quickcheck[random]
   (* Etanercept immediately finds the trivial counterexample *)
-    etanercept
+    word_refute
   oops
 
 text {* Example that demonstrates one of Etanercept's weaknesses. *}
@@ -629,7 +629,7 @@ lemma "(x::32 word) div y = x"
   (* The naive exploration strategy means we wait for Etanercept to try every value of y before
    * moving x beyond 0.
    *)
-    etanercept
+  word_refute
   oops
 
 text {*
@@ -638,72 +638,72 @@ text {*
   discovery of a counter-example.
 *}
 lemma "(x::64 word) \<ge> y \<and> x \<ge> y + y"
-  etanercept
+  word_refute
   oops
 
 text {* Various cases that test our handling of numeric literals. *}
 lemma "(x::32 word) && 45 = 0"
-  etanercept
+  word_refute
   oops
 lemma "(x::32 word) < 45"
-  etanercept
+  word_refute
   oops
 lemma "(x::32 word) < 0"
-  etanercept
+  word_refute
   oops
 lemma "(x::32 word) < 1"
-  etanercept
+  word_refute
   oops
 lemma "(x::32 word) < 0x45"
-  etanercept
+  word_refute
   oops
 
 text {* Test something non-trivial that we shouldn't be able to refute. *}
 lemma "(x::32 word) && 1 = 1 \<and> x && (~~ 1) = 0 \<longrightarrow> x = 1"
-  etanercept
+  word_refute
   apply word_bitwise
   done
 lemma "(x::32 signed word) && 1 = 1 \<and> x && (~~ 1) = 0 \<longrightarrow> x = 1"
-  etanercept
+  word_refute
   apply word_bitwise_signed
   done
 
 text {* Test that division by zero is correctly modelled with Isabelle's semantics. *}
 lemma "(x::64 word) div 0 = 0"
-  etanercept
+  word_refute
   by (simp add: word_arith_nat_defs(6))
 
 text {* Test we can handle large literals. *}
 lemma "(x::64 word) > 0xcafebeefcafebeef"
-  etanercept
+  word_refute
   oops
 
 text {* Test some casting operations. *}
 lemma "(ucast::32 signed word \<Rightarrow> 32 word) (x::32 signed word) = (y::32 word)"
-  etanercept
+  word_refute
   oops
 lemma "ucast (x::32 word) = (y:: 8 word)"
-  etanercept
+  word_refute
   oops
 lemma "ucast (x::32 word) = (y::32 word)"
-  etanercept
+  word_refute
   oops
 lemma "scast (x::32 signed word) = (y::8 word)"
-  etanercept
+  word_refute
   oops
 
 text {* Try some things we shouldn't be able to refute. *}
 lemma "(x::64 word) >> 0 = x"
-  etanercept
+  word_refute
   by simp
 lemma "(x::64 word) >> 1 = x div 2"
-  etanercept
+  word_refute
   apply simp
   apply (rule shiftr_div_2n_w[where n=1, simplified])
   apply (simp add:word_size)
   done
 lemma "(x::64 word) << 1 = x * 2"
-  etanercept
+  word_refute
   apply (subst shiftl_t2n)
   apply simp
   done
