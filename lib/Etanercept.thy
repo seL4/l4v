@@ -89,7 +89,8 @@ ML {*
     end
 
   (* Exponentiation. *)
-  fun exp base n = Real.floor (Math.pow (Real.fromInt base, Real.fromInt n))
+  fun exp _    0 = 1
+    | exp base n = if n mod 2 = 0 then exp (base*base) (n div 2) else base * exp base (n - 1)
 
   (* Strip whitespace from the end of a string. *)
   fun rstrip s =
