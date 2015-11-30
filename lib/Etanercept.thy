@@ -139,9 +139,9 @@ ML {*
           in
             if ret = 0
               then tmp
-              else error "failed to compile generated program (BUG)"
+              else error "Etanercept: failed to compile generated program (BUG)"
           end
-      | NONE => error "no available C compiler"
+      | NONE => error "Etanercept: no available C compiler"
 
   (* Mapping between Isabelle and C variables. *)
   fun var_index (vs, sz) v =
@@ -159,7 +159,7 @@ ML {*
         #> map (apsnd to_var)
 
   fun name_of (Free (name, _)) = safe_name name
-    | name_of _ = error "unexpected variable (BUG)"
+    | name_of t = raise TERM ("Etanercept: unexpected variable (BUG)", [t])
 
 
   (* Types that we know about. *)
@@ -240,7 +240,7 @@ ML {*
            Free (_, ty) => (case Typtab.lookup type_info ty of
                                 SOME info => f info
                              | NONE => raise TYPE ("etanercept: unsupported type" ^ severity, [ty], [t]))
-         | _ => raise TERM ("etanercept: unsupported term" ^ severity, [t]) end
+         | _ => raise TERM ("Etanercept: unsupported term" ^ severity, [t]) end
 
   val min_of = lookup_info #c_min true
   val max_of = lookup_info #c_max true
@@ -250,8 +250,8 @@ ML {*
   fun cast_to _ (Type ("fun", [from, to])) =
         (case try (lookup_info #c_type false) (Free ("_", to)) of
              SOME c_type => c_type
-           | NONE => raise TYPE ("etanercept: unsupported ucast/scast result type", [to], []))
-    | cast_to _ T = raise TYPE ("etanercept: strange ucast/scast type (BUG)", [T], [])
+           | NONE => raise TYPE ("Etanercept: unsupported ucast/scast result type", [to], []))
+    | cast_to _ T = raise TYPE ("Etanercept: strange ucast/scast type (BUG)", [T], [])
 
   (* A printf format string for printing the variables. *)
   fun format_string vs =
@@ -465,7 +465,7 @@ ML {*
           end
           handle TimeLimit.TimeOut =>
             warning "Etanercept: timed out")
-      | NONE => writeln "no available C compiler"
+      | NONE => error "Etanercept: no available C compiler"
 
   (* Install the command itself. *)
   val _ = Outer_Syntax.command @{command_keyword word_refute}
