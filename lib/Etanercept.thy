@@ -143,25 +143,20 @@ ML {*
           end
       | NONE => error "no available C compiler"
 
-  (* Find index of x in xs *)
-  fun indexOf xs x =
-    let
-      fun indexOf' i xs x = 
-        case xs of
-            [] => NONE
-          | (y::ys) => if x = y then SOME i else indexOf' (i + 1) ys x
-    in
-      indexOf' 0 xs x
-    end
-
-  (* Find a previously seen variable's index or register a newly discovered variable. *)
-  fun var_index vs v =
-    case indexOf vs v of
-        NONE => (vs @ [v], length vs)
-      | SOME n => (vs, n)
+  (* Mapping between Isabelle and C variables. *)
+  fun var_index (vs, sz) v =
+        case Termtab.lookup vs v of
+            NONE => ((Termtab.update_new (v, sz) vs, sz+1), sz)
+          | SOME n => ((vs, sz), n)
+  val empty_var_index = (Termtab.empty, 0)
 
   (* The C symbol for the nth variable. *)
   fun to_var n = "v" ^ Int.toString n
+  (* Create variable list from mapping *)
+  val var_index_list =
+        fst #> Termtab.dest
+        #> sort (int_ord o apply2 snd)
+        #> map (apsnd to_var)
 
   fun name_of (Free (name, _)) = safe_name name
     | name_of _ = error "unexpected variable (BUG)"
@@ -260,46 +255,31 @@ ML {*
 
   (* A printf format string for printing the variables. *)
   fun format_string vs =
-    case vs of
-        [] => ""
-      | (y::ys) => "\" " ^ name_of y ^ " = %\" " ^ format_of y ^ " \"\\n\" " ^ format_string ys
+    var_index_list vs
+    |> map (fn (var, c_var) => "\" " ^ name_of var ^ " = %\" " ^ format_of var ^ " \"\\n\" ")
+    |> String.concat
 
   (* The variables as a list of arguments to be passed to a C function. *)
   fun as_args vs =
-    let
-      fun as_args' n vs =
-        case vs of
-            [] => ""
-          | (_::ys) => ", " ^ to_var n ^ as_args' (n + 1) ys
-    in
-      as_args' 0 vs
-    end
+    var_index_list vs
+    |> map (fn (var, c_var) => ", " ^ c_var)
+    |> String.concat
 
   (* Initialisation for the variables. *)
   fun loop_header vs =
-    let
-      fun loop_header' i vs =
-        case vs of
-            [] => ""
-          | (y::ys) => type_of y ^ " " ^ to_var i ^ ";\n" ^
-                       "for (" ^ to_var i ^ " = " ^ min_of y ^ "; ; " ^ to_var i ^ "++) {\n" ^
-                       loop_header' (i + 1) ys
-    in
-      loop_header' 0 vs
-    end
+    var_index_list vs
+    |> map (fn (var, c_var) =>
+              type_of var ^ " " ^ c_var ^ ";\n" ^
+              "for (" ^ c_var ^ " = " ^ min_of var ^ "; ; " ^ c_var ^ "++) {\n")
+    |> String.concat
 
   (* Per-variable loop termination. *)
   fun loop_footer vs =
-    let
-      fun loop_footer' i vs =
-        case vs of
-            [] => ""
-          | (y::ys) => loop_footer' (i + 1) ys ^
-                       "if (" ^ to_var i ^ " == " ^ max_of y ^ ") { break; }\n" ^
-                       "}\n"
-    in
-      loop_footer' 0 vs
-    end
+    var_index_list vs
+    |> rev
+    |> map (fn (var, c_var) =>
+              "if (" ^ c_var ^ " == " ^ max_of var ^ ") { break; }\n}\n")
+    |> String.concat
 
   (* Translate an Isabelle term into the equivalent C expression, collecting discovered variables
    * along the way.
@@ -401,34 +381,14 @@ ML {*
             let val (vs', s) = tr vs a
               in (vs', "((" ^ cast_to state typ ^ ")" ^ s ^ ")")
             end
-        | Free (name, T as Type (@{type_name "Word.word"}, typs)) =>
+        | Free (name, T) =>
             if Typtab.defined type_info T
               then let val (vs', n) = var_index vs t
                      in (vs', to_var n)
                    end
-              else error ("unsupported word width of variable " ^ name)
-        | Var ((name, _), T as Type (@{type_name "Word.word"}, typs)) =>
-            if Typtab.defined type_info T
-              then let val (vs', n) = var_index vs t
-                     in (vs', to_var n)
-                   end
-              else error ("unsupported word width of variable " ^ name)
-        | Free (_, Type (@{type_name nat}, _)) =>
-            let val (vs', n) = var_index vs t
-              in (vs', to_var n)
-            end
-        | Var (_, Type (@{type_name nat}, _)) =>
-            let val (vs', n) = var_index vs t
-              in (vs', to_var n)
-            end
-        | Free (_, Type (@{type_name int}, _)) =>
-            let val (vs', n) = var_index vs t
-              in (vs', to_var n)
-            end
-        | Var (_, Type (@{type_name int}, _)) =>
-            let val (vs', n) = var_index vs t
-              in (vs', to_var n)
-            end
+              else (case T of Type ("Word.word", _) =>
+                                   raise TYPE ("unsupported word width of variable " ^ name, [T], [])
+                            | _ => raise TYPE ("unsupported type of variable " ^ name, [T], []))
         | @{const HOL.conj} $ a $ b =>
             let val (vs', s1, s2) = bin_op a b
               in (vs', "(" ^ s1 ^ " && " ^ s2 ^ ")")
@@ -454,7 +414,7 @@ ML {*
                 val suffix = if v > exp 2 32 - 1 then "ull" else ""
               in (vs, "(" ^ string_of_int (calc 0 1 a) ^ suffix ^ ")")
             end
-        | _ => error ("unsupported subterm " ^ Pretty.string_of (Syntax.pretty_term (Proof.context_of state) t))
+        | _ => raise TERM ("unsupported subterm ", [t])
     end
 
   (* Construct a C program to match the current goal state. *)
@@ -464,7 +424,7 @@ ML {*
       val {goal = g, ...} = Proof.raw_goal state;
       val (_, g') = Subgoal.focus (Proof.context_of state) 1 g
       val (gi, _) = Logic.goal_params (Thm.prop_of g') 1
-      val (vars, expr) = translate state [] gi
+      val (vars, expr) = translate state empty_var_index gi
     in
       "#include <inttypes.h>\n" ^
       "#include <limits.h>\n" ^
@@ -664,8 +624,7 @@ lemma "(ucast (x * y :: 16 word) :: 32 signed word) \<ge> 0"
 
 text {* Unsupported constructs *}
 lemma "(x :: 1 word) = 0" -- "bad word size"
-  quickcheck[random]
-  word_refute
+  (* word_refute *)
   oops
 
 end
