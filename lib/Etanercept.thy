@@ -13,6 +13,7 @@ theory Etanercept imports
   NICTACompat
   SignedWords
   WordBitwiseSigned
+  "ml-helpers/TermPatternAntiquote"
 keywords
   "word_refute" :: diag
 begin
@@ -297,79 +298,79 @@ ML {*
           @{term "Trueprop"} $ t' => tr vs t'
         | @{term "True"} => (vs, "true")
         | @{term "False"} => (vs, "false")
-        | Const (@{const_name HOL.eq}, _) $ a $ b =>
+        | @{term_pat "?a = ?b"} =>
             let val (vs', s1, s2) = bin_op a b
               in (vs', "(" ^ s1 ^ " == " ^ s2 ^ ")")
             end
-        | Const (@{const_name HOL.Not}, _) $ a =>
+        | @{term_pat "\<not> ?a"} =>
             let val (vs', s) = tr vs a
               in (vs', "(!" ^ s ^ ")")
             end
-        | Const (@{const_name less}, _) $ a $ b =>
+        | @{term_pat "?a < ?b"} =>
             let val (vs', s1, s2) = bin_op a b
               in (vs', "(" ^ s1 ^ " < " ^ s2 ^ ")")
             end
-        | Const (@{const_name less_eq}, _) $ a $ b =>
+        | @{term_pat "?a \<le> ?b"} =>
             let val (vs', s1, s2) = bin_op a b
               in (vs', "(" ^ s1 ^ " <= " ^ s2 ^ ")")
             end
-        | Const (@{const_name plus}, _) $ a $ b =>
+        | @{term_pat "?a + ?b"} =>
             let val (vs', s1, s2) = bin_op a b
               in (vs', "(" ^ s1 ^ " + " ^ s2 ^ ")")
             end
-        | Const (@{const_name minus}, _) $ a $ b =>
+        | @{term_pat "?a - ?b"} =>
             let val (vs', s1, s2) = bin_op a b
               in (vs', "(" ^ s1 ^ " - " ^ s2 ^ ")")
             end
-        | Const (@{const_name times}, _) $ a $ b =>
+        | @{term_pat "?a * ?b"} =>
             let val (vs', s1, s2) = bin_op a b
               in (vs', "(" ^ s1 ^ " * " ^ s2 ^ ")")
             end
-        | Const (@{const_name uminus}, _) $ a =>
+        | @{term_pat "- ?a"} =>
             let val (vs', s) = tr vs a
               in (vs', "(-" ^ s ^ ")")
             end
-        | Const (@{const_name div}, _) $ a $ b =>
+        | @{term_pat "?a div ?b"} =>
             let val (vs', s1, s2) = bin_op a b
               in (vs', "(" ^ s2 ^ " == 0 ? 0 : (" ^ s1 ^ " / " ^ s2 ^ "))")
             end
-        | Const (@{const_name mod}, _) $ a $ b =>
+        | @{term_pat "?a mod ?b"} =>
             let val (vs', s1, s2) = bin_op a b
               in (vs', "(" ^ s2 ^ " == 0 ? " ^ s1 ^ " : (" ^ s1 ^ " % " ^ s2 ^ "))")
             end
-        | Const (@{const_name HOL.implies}, _) $ a $ b =>
+        | @{term_pat "?a \<longrightarrow> ?b"} =>
             let val (vs', s1, s2) = bin_op a b
               in (vs', "((!" ^ s1 ^ ") || (" ^ s2 ^ "))")
             end
-        | Const (@{const_name Bits.shiftl}, _) $ a $ b =>
+        | @{term_pat "shiftl ?a ?b"} =>
             let val (vs', s1, s2) = bin_op a b
               in (vs', "(" ^ s1 ^ " << " ^ s2 ^ ")")
             end
-        | Const (@{const_name Bits.shiftr}, _) $ a $ b =>
+        | @{term_pat "shiftr ?a ?b"} =>
             let val (vs', s1, s2) = bin_op a b
               in (vs', "(" ^ s1 ^ " >> " ^ s2 ^ ")")
             end
-        | Const (@{const_name Bits.bitAND}, _) $ a $ b =>
+        | @{term_pat "?a && ?b"} =>
             let val (vs', s1, s2) = bin_op a b
               in (vs', "(" ^ s1 ^ " & " ^ s2 ^ ")")
             end
-        | Const (@{const_name Bits.bitOR}, _) $ a $ b =>
+        | @{term_pat "?a || ?b"} =>
             let val (vs', s1, s2) = bin_op a b
               in (vs', "(" ^ s1 ^ " | " ^ s2 ^ ")")
             end
-        | Const (@{const_name Bits.bitXOR}, _) $ a $ b =>
+        | @{term_pat "?a xor ?b"} =>
             let val (vs', s1, s2) = bin_op a b
               in (vs', "(" ^ s1 ^ " ^ " ^ s2 ^ ")")
             end
-        | Const (@{const_name Bits.bitNOT}, _) $ a =>
+        | @{term_pat "NOT ?a"} =>
             let val (vs', s) = tr vs a
               in (vs', "(~" ^ s ^ ")")
             end
-        | Const (@{const_name Bits.test_bit}, _) $ a $ b =>
+        | @{term_pat "test_bit ?a ?b"} =>
             let val (vs', s1, s2) = bin_op a b
               in (vs', "(" ^ s1 ^ " ^ & (1ULL << " ^ s2 ^ "))")
             end
-        | Const (@{const_name Bits.lsb}, _) $ a =>
+        | @{term_pat "lsb ?a"} =>
             let val (vs', s) = tr vs a
               in (vs', "(" ^ s ^ " & 1)")
             end
@@ -389,21 +390,21 @@ ML {*
               else (case T of Type ("Word.word", _) =>
                                    raise TYPE ("unsupported word width of variable " ^ name, [T], [])
                             | _ => raise TYPE ("unsupported type of variable " ^ name, [T], []))
-        | @{const HOL.conj} $ a $ b =>
+        | @{term_pat "?a \<and> ?b"} =>
             let val (vs', s1, s2) = bin_op a b
               in (vs', "(" ^ s1 ^ " && " ^ s2 ^ ")")
             end
-        | @{const HOL.disj} $ a $ b => 
+        | @{term_pat "?a \<or> ?b"} => 
             let val (vs', s1, s2) = bin_op a b
               in (vs', "(" ^ s1 ^ " || " ^ s2 ^ ")")
             end
-        | Const (@{const_name Groups.zero}, _) => (vs, "(0)")
-        | Const (@{const_name Groups.one}, _) => (vs, "(1)")
-        | Const (@{const_name Suc}, _) $ a =>
+        | @{term_pat "0"} => (vs, "(0)")
+        | @{term_pat "1"} => (vs, "(1)")
+        | @{term_pat "Suc ?a"} =>
             let val (vs', s) = tr vs a
               in (vs', "(1 + " ^ s ^ ")")
             end
-        | Const (@{const_name numeral}, _) $ a =>
+        | @{term_pat "numeral ?a"} =>
             let val a' = HOLogic.dest_num a
                 val suffix = if a' > exp 2 32 - 1 then "ull" else ""
               in (vs, "(" ^ string_of_int a' ^ suffix ^ ")")
