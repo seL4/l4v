@@ -21,6 +21,14 @@ text {*
   This theory implements a tool for refuting word propositions. It works by constructing a C program
   that exhaustively explores the state space of your proposition.
 
+  Usage:
+    Run the "word_refute" command in a proof.
+  Options:
+    These are config options which can be set using "declare" or "using".
+    - word_refute_debug        enable verbose debugging output
+    - word_refute_timeout      timeout, in seconds
+    - word_refute_cflags       C compiler options
+
   It is currently a work in progress and has the following known issues:
    - Temporary files are just left for Isabelle to clean up when it exits. Should we be attempting
      to remove these ourselves?
@@ -47,7 +55,29 @@ ML {*
   struct
 
   (* Toggle this to enable debugging output. *)
-  val debug = false
+  val config_debug = let
+    val (config, setup) = Attrib.config_bool (Binding.name "word_refute_debug") (K false)
+  in
+    Context.>>(Context.map_theory setup);
+    config
+  end
+
+  (* Timeout, in seconds. *)
+  val config_timeout = let
+    val (config, setup) = Attrib.config_real (Binding.name "word_refute_timeout") (K 60.0)
+  in
+    Context.>>(Context.map_theory setup);
+    config
+  end
+  (* C compiler options. *)
+  val config_cflags = let
+    val (config, setup) = Attrib.config_string (Binding.name "word_refute_cflags") (K "-O3")
+  in
+    Context.>>(Context.map_theory setup);
+    config
+  end
+
+  fun debug_log ctxt str = if Config.get ctxt config_debug then tracing str else ()
 
   (* XXX: Clagged from metis *)
   fun dropWhile p =
@@ -96,13 +126,15 @@ ML {*
     end
 
   (* Compile a C program. *)
-  fun compile file =
+  fun compile ctxt file =
     case cc of
         SOME compiler =>
           let
             val serial = serial_string ();
             val tmp = File.shell_path (File.tmp_path (Path.explode ("etanercept" ^ serial ^ ".exe")));
-            val (_, ret) = Isabelle_System.bash_output (compiler ^ " -O3 -o " ^ tmp ^ " " ^ file)
+            val cmd = compiler ^ " -o " ^ tmp ^ " " ^ file ^ " " ^ Config.get ctxt config_cflags
+            val _ = debug_log ctxt ("Compiling: " ^ cmd)
+            val (_, ret) = Isabelle_System.bash_output cmd
           in
             if ret = 0
               then tmp
@@ -557,22 +589,25 @@ ML {*
   fun refute st =
     case cc of
         SOME _ =>
-          let
+         (let
+            val ctxt = Proof.context_of (Toplevel.proof_of st);
             val program = make_program st;
             val serial = serial_string ();
             val tmp = File.tmp_path (Path.explode ("etanercept" ^ serial ^ ".c"));
             val _ = File.write tmp program;
-            val aout = compile (File.shell_path tmp);
-            val (msg, ret) = Isabelle_System.bash_output aout
+            val aout = compile ctxt (File.shell_path tmp);
+            val _ = debug_log ctxt
+                      ("Program:\n" ^ program ^ "\nWritten to: " ^ File.shell_path tmp ^ "\nCompiled to: " ^ aout)
+            val (msg, ret) = TimeLimit.timeLimit (Config.get ctxt config_timeout |> Time.fromReal)
+                               Isabelle_System.bash_output aout
           in
-            if debug
-               then writeln ("Program:\n" ^ program ^ "\nWritten to: " ^ File.shell_path tmp ^ "\nCompiled to: " ^ aout)
-               else ();
             (if ret = 0
               then msg
               else "Etanercept found no counter example")
             |> writeln
           end
+          handle TimeLimit.TimeOut =>
+            warning "Etanercept: timed out")
       | NONE => writeln "no available C compiler"
 
   (* Install the command itself. *)
@@ -588,6 +623,9 @@ lemma "True \<and> False"
   oops
 
 lemma "(x::32 word) = 0"
+  word_refute
+
+  using [[word_refute_debug]]
   word_refute
   oops
 
@@ -707,5 +745,15 @@ lemma "(x::64 word) << 1 = x * 2"
   apply (subst shiftl_t2n)
   apply simp
   done
+
+text {* C translation pitfalls *}
+lemma "(ucast (x * y :: 16 word) :: 32 signed word) \<ge> 0"
+  text {* A naive translation fails due to semantic mismatch *}
+  using [[word_refute_cflags="-O0"]]
+  word_refute
+  text {* But many compilers optimise the UB away *}
+  using [[word_refute_cflags="-O3"]]
+  word_refute
+  by simp
 
 end
