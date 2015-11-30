@@ -452,30 +452,31 @@ lemma monadic_rewrite_to_eq:
 
 lemma corres_underlyingI:
   assumes rv: "\<And>s t rv' t'. \<lbrakk>(s, t) \<in> R; P s; P' t; (rv', t') \<in> fst (c t)\<rbrakk> \<Longrightarrow> \<exists>(rv, s') \<in> fst (a s). (s', t') \<in> R \<and> r rv rv'"
-  and     nf: "\<And>s t. \<lbrakk>(s, t) \<in> R; P s; P' t; F\<rbrakk> \<Longrightarrow> \<not> snd (c t)"
-  shows  "corres_underlying R F r P P' a c"
+  and     nf: "\<And>s t. \<lbrakk>(s, t) \<in> R; P s; P' t; nf'\<rbrakk> \<Longrightarrow> \<not> snd (c t)"
+  shows  "corres_underlying R nf nf' r P P' a c"
   unfolding corres_underlying_def using rv nf by (auto simp: split_def)
 
 lemma corres_underlyingE:
-  assumes cul: "corres_underlying R F r P P' a c"
+  assumes cul: "corres_underlying R nf nf' r P P' a c"
   and     xin: "(s, t) \<in> R" "P s" "P' t" "(rv', t') \<in> fst (c t)"
-  and      rl: "\<And>s' rv. \<lbrakk>F \<longrightarrow> \<not> snd (c t); (rv, s') \<in> fst (a s); (s', t') \<in> R; r rv rv'\<rbrakk> \<Longrightarrow> Q"
+  and      rl: "\<And>s' rv. \<lbrakk>nf' \<longrightarrow> \<not> snd (c t); (rv, s') \<in> fst (a s); (s', t') \<in> R; r rv rv'\<rbrakk> \<Longrightarrow> Q"
+  and      nf: "nf \<longrightarrow> \<not> snd (a s)"
   shows   "Q"
-  using cul xin
+  using cul xin nf
   unfolding corres_underlying_def by (fastforce simp: split_def intro: rl)
 
 (* Above here is generic *)
 lemma monadic_rewrite_corres:
-  assumes cu: "corres_underlying R F r P P' a' c"
+  assumes cu: "corres_underlying R False nf' r P P' a' c"
   and     me: "monadic_rewrite False True Q a a'"
-  shows   "corres_underlying R F r (P and Q) P' a c"
+  shows   "corres_underlying R False nf' r (P and Q) P' a c"
 proof (rule corres_underlyingI)
   fix s t rv' t' 
   assume st: "(s, t) \<in> R" and pq: "(P and Q) s" and pt: "P' t" and ct: "(rv', t') \<in> fst (c t)"
   from pq have Ps: "P s" and Qs: "Q s" by simp_all
 
   from cu st Ps pt ct obtain s' rv where 
-     as': "(rv, s') \<in> fst (a' s)" and rest: "F \<longrightarrow> \<not> snd (c t)" "(s', t') \<in> R" "r rv rv'"
+     as': "(rv, s') \<in> fst (a' s)" and rest: "nf' \<longrightarrow> \<not> snd (c t)" "(s', t') \<in> R" "r rv rv'"
     by (fastforce elim: corres_underlyingE)
   
   from me st Qs as' have as: "(rv, s') \<in> fst (a s)"
@@ -484,7 +485,7 @@ proof (rule corres_underlyingI)
   with rest show "\<exists>(rv, s')\<in>fst (a s). (s', t') \<in> R \<and> r rv rv'" by auto
 next
   fix s t
-  assume "(s, t) \<in> R" "(P and Q) s" "P' t" "F" 
+  assume "(s, t) \<in> R" "(P and Q) s" "P' t" "nf'" 
   thus "\<not> snd (c t)" using cu
     by (fastforce simp: corres_underlying_def split_def)
 qed

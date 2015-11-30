@@ -87,7 +87,8 @@ lemma ac_corres_ccorres_underlying:
  * assuming we don't use the extraction functions.
  *)
 lemma corres_impl_corresXF:
-  "corres_underlying {(a, b). a = st b} True (dc \<oplus> dc) \<top> P G G' \<Longrightarrow> corresXF st (\<lambda>_ _. ()) (\<lambda>_ _. ()) P G G'"
+  "corres_underlying {(a, b). a = st b} nf True (dc \<oplus> dc) \<top> P G G' \<Longrightarrow>
+   corresXF st (\<lambda>_ _. ()) (\<lambda>_ _. ()) P G G'"
   apply (rule corresXF_I)
     apply (clarsimp simp: corres_underlying_def corresXF_def)
     apply (erule allE, erule (1) impE)
@@ -99,7 +100,8 @@ lemma corres_impl_corresXF:
   done
 
 lemma corresXF_impl_corres:
-  "\<lbrakk> corresXF st (\<lambda>_ _. ()) (\<lambda>_ _. ()) P G G'; no_fail \<top> G \<rbrakk> \<Longrightarrow> corres_underlying {(a, b). a = st b} True (dc \<oplus> dc) \<top> P G G'"
+  "\<lbrakk> corresXF st (\<lambda>_ _. ()) (\<lambda>_ _. ()) P G G'; no_fail \<top> G \<rbrakk> \<Longrightarrow>
+   corres_underlying {(a, b). a = st b} nf True (dc \<oplus> dc) \<top> P G G'"
   apply (clarsimp simp: corres_underlying_def corresXF_def no_fail_def)
   apply (erule allE, erule (1) impE)
   apply clarsimp
