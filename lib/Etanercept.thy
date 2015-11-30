@@ -116,7 +116,7 @@ ML {*
     |> String.concat
 
   (* Find a C compiler. Prefer Clang. *)
-  val cc =
+  fun cc () =
     let
       val (clang, r1) = Isabelle_System.bash_output "which clang";
       val (gcc, r2) = Isabelle_System.bash_output "which gcc"
@@ -128,7 +128,7 @@ ML {*
 
   (* Compile a C program. *)
   fun compile ctxt file =
-    case cc of
+    case cc () of
         SOME compiler =>
           let
             val serial = serial_string ();
@@ -438,28 +438,25 @@ ML {*
 
   (* Try to refute the current goal by using a C program to find a counter example. *)
   fun refute st =
-    case cc of
-        SOME _ =>
-         (let
-            val ctxt = Proof.context_of (Toplevel.proof_of st);
-            val program = make_program st;
-            val serial = serial_string ();
-            val tmp = File.tmp_path (Path.explode ("etanercept" ^ serial ^ ".c"));
-            val _ = File.write tmp program;
-            val aout = compile ctxt (File.shell_path tmp);
-            val _ = debug_log ctxt
-                      ("Program:\n" ^ program ^ "\nWritten to: " ^ File.shell_path tmp ^ "\nCompiled to: " ^ aout)
-            val (msg, ret) = TimeLimit.timeLimit (Config.get ctxt config_timeout |> Time.fromReal)
-                               Isabelle_System.bash_output aout
-          in
-            (if ret = 0
-              then msg
-              else "Etanercept found no counter example")
-            |> writeln
-          end
-          handle TimeLimit.TimeOut =>
-            warning "Etanercept: timed out")
-      | NONE => error "Etanercept: no available C compiler"
+        let
+          val ctxt = Proof.context_of (Toplevel.proof_of st);
+          val program = make_program st;
+          val serial = serial_string ();
+          val tmp = File.tmp_path (Path.explode ("etanercept" ^ serial ^ ".c"));
+          val _ = File.write tmp program;
+          val aout = compile ctxt (File.shell_path tmp);
+          val _ = debug_log ctxt
+                    ("Program:\n" ^ program ^ "\nWritten to: " ^ File.shell_path tmp ^ "\nCompiled to: " ^ aout)
+          val (msg, ret) = TimeLimit.timeLimit (Config.get ctxt config_timeout |> Time.fromReal)
+                             Isabelle_System.bash_output aout
+        in
+          (if ret = 0
+             then msg
+             else "Etanercept found no counter example")
+          |> writeln
+        end
+        handle TimeLimit.TimeOut =>
+          warning "Etanercept: timed out"
 
   (* Install the command itself. *)
   val _ = Outer_Syntax.command @{command_keyword word_refute}
