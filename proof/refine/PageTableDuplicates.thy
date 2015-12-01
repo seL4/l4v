@@ -1838,227 +1838,24 @@ crunch valid_duplicates'[wp]:
 
 declare withoutPreemption_lift [wp del]
 
-lemma reduceZombie_valid_duplicates_spec':
-  assumes fin:
-  "\<And>s'' rv. \<lbrakk>\<not> (isZombie cap \<and> capZombieNumber cap = 0); \<not> (isZombie cap \<and> \<not> exposed); isZombie cap \<and> exposed;
-              (Inr rv, s'')
-              \<in> fst ((withoutPreemption $ locateSlotCap cap (fromIntegral (capZombieNumber cap - 1))) st)\<rbrakk>
-             \<Longrightarrow> s'' \<turnstile> \<lbrace>\<lambda>s. invs' s \<and> (vs_valid_duplicates' (ksPSpace s)) \<and> sch_act_simple s
-                                   \<and> cte_wp_at' (\<lambda>cte. isZombie (cteCap cte)) slot s
-                                   \<and> ex_cte_cap_to' rv s\<rbrace>
-                         finaliseSlot rv False
-                \<lbrace>\<lambda>rva s. invs' s \<and> (vs_valid_duplicates' (ksPSpace s)) \<and> sch_act_simple s
-                            \<and> (fst rva \<longrightarrow> cte_wp_at' (\<lambda>cte. removeable' rv s (cteCap cte)) rv s)
-                            \<and> (\<forall>irq sl'. snd rva = Some irq \<longrightarrow> sl' \<noteq> rv \<longrightarrow> cteCaps_of s sl' \<noteq> Some (IRQHandlerCap irq))\<rbrace>,
-                \<lbrace>\<lambda>rv s. invs' s \<and> (vs_valid_duplicates' (ksPSpace s)) \<and> sch_act_simple s\<rbrace>"
-  shows
-  "st \<turnstile> \<lbrace>\<lambda>s.
-      invs' s \<and> vs_valid_duplicates' (ksPSpace s) \<and>sch_act_simple s
-              \<and> (exposed \<or> ex_cte_cap_to' slot s)
-              \<and> cte_wp_at' (\<lambda>cte. cteCap cte = cap) slot s
-              \<and> (exposed \<or> p = slot \<or>
-                  cte_wp_at' (\<lambda>cte. (P and isZombie) (cteCap cte)
-                                  \<or> (\<exists>zb n cp. cteCap cte = Zombie p zb n
-                                       \<and> P cp \<and> (isZombie cp \<longrightarrow> capZombiePtr cp \<noteq> p))) p s)\<rbrace>
-       reduceZombie cap slot exposed
-   \<lbrace>\<lambda>rv s.
-      invs' s \<and> vs_valid_duplicates' (ksPSpace s) \<and> sch_act_simple s
-              \<and> (exposed \<or> ex_cte_cap_to' slot s)
-              \<and> (exposed \<or> p = slot \<or>
-                  cte_wp_at' (\<lambda>cte. (P and isZombie) (cteCap cte)
-                                  \<or> (\<exists>zb n cp. cteCap cte = Zombie p zb n
-                                       \<and> P cp \<and> (isZombie cp \<longrightarrow> capZombiePtr cp \<noteq> p))) p s)\<rbrace>,
-   \<lbrace>\<lambda>rv s. invs' s \<and> vs_valid_duplicates' (ksPSpace s) \<and> sch_act_simple s\<rbrace>"
-  apply (unfold reduceZombie_def cteDelete_def Let_def
-                split_def fst_conv snd_conv haskell_fail_def
-                case_Zombie_assert_fold)
-  apply (rule hoare_pre_spec_validE)
-   apply (wp hoare_vcg_disj_lift | simp)+
-       apply (wp capSwap_cte_wp_cteCap getCTE_wp' | simp)+
-           apply (wp shrink_zombie_invs')[1]
-          apply (wp | simp)+
-         apply (rule getCTE_wp)
-        apply (wp | simp)+
-      apply (rule_tac Q="\<lambda>cte s. rv = capZombiePtr cap +
-                                      of_nat (capZombieNumber cap) * 16 - 16
-                              \<and> cte_wp_at' (\<lambda>c. c = cte) slot s \<and> invs' s
-                              \<and> vs_valid_duplicates' (ksPSpace s) \<and> sch_act_simple s"
-                  in hoare_post_imp)
-       apply (clarsimp simp: cte_wp_at_ctes_of mult.commute mult.left_commute dest!: isCapDs)
-       apply (simp add: field_simps)
-      apply (wp getCTE_cte_wp_at)
-      apply simp
-      apply wp[1]
-     apply (rule spec_strengthen_postE)
-      apply (rule_tac Q="\<lambda>fc s. rv = capZombiePtr cap +
-                                      of_nat (capZombieNumber cap) * 16 - 16"
-                 in spec_valid_conj_liftE1)
-       apply wp[1]
-      apply (rule fin, assumption+)
-     apply clarsimp
-    apply (simp add: locateSlot_conv)
-    apply ((wp | simp)+)[2]
-  apply (clarsimp simp: cte_wp_at_ctes_of)
-  apply (rule conjI)
-   apply (clarsimp dest!: isCapDs)
-   apply (rule conjI)
-    apply (erule(1) ex_Zombie_to)
-     apply clarsimp
-    apply clarsimp
-   apply clarsimp
-  apply (clarsimp simp: cte_level_bits_def isCap_simps)
-  apply (auto elim: ex_Zombie_to2)
-  done
-
-lemma finaliseSlot_valid_duplicates_spec':
-  "st \<turnstile> \<lbrace>\<lambda>s.
-      invs' s \<and> vs_valid_duplicates' (ksPSpace s) \<and> sch_act_simple s
-              \<and> (exposed \<or> ex_cte_cap_to' slot s)
-              \<and> (exposed \<or> p = slot \<or>
-                  cte_wp_at' (\<lambda>cte. (P and isZombie) (cteCap cte)
-                                  \<or> (\<exists>zb n cp. cteCap cte = Zombie p zb n
-                                       \<and> P cp \<and> (isZombie cp \<longrightarrow> capZombiePtr cp \<noteq> p))) p s)\<rbrace>
-       finaliseSlot' slot exposed
-   \<lbrace>\<lambda>rv s.
-      invs' s \<and> vs_valid_duplicates' (ksPSpace s) \<and> sch_act_simple s
-              \<and> (exposed \<or> p = slot \<or>
-                  cte_wp_at' (\<lambda>cte. (P and isZombie) (cteCap cte)
-                                  \<or> (\<exists>zb n cp. cteCap cte = Zombie p zb n
-                                       \<and> P cp \<and> (isZombie cp \<longrightarrow> capZombiePtr cp \<noteq> p))) p s)
-              \<and> (fst rv \<longrightarrow> cte_wp_at' (\<lambda>cte. removeable' slot s (cteCap cte)) slot s)
-              \<and> (\<forall>irq sl'. snd rv = Some irq \<longrightarrow> sl' \<noteq> slot \<longrightarrow> cteCaps_of s sl' \<noteq> Some (IRQHandlerCap irq))\<rbrace>,
-   \<lbrace>\<lambda>rv s. invs' s \<and> vs_valid_duplicates' (ksPSpace s) \<and> sch_act_simple s\<rbrace>"
-proof (induct arbitrary: P p rule: finalise_spec_induct2)
-  case (1 sl exp s Q q)
-  let ?P = "\<lambda>cte. (Q and isZombie) (cteCap cte)
-                     \<or> (\<exists>zb n cp. cteCap cte = Zombie q zb n
-                          \<and> Q cp \<and> (isZombie cp \<longrightarrow> capZombiePtr cp \<noteq> q))"
-  note hyps = "1.hyps"[folded reduceZombie_def[unfolded cteDelete_def finaliseSlot_def]]
-  have Q: "\<And>x y n. {x :: word32} = (\<lambda>x. y + x * 0x10) ` {0 ..< n} \<Longrightarrow> n = 1"
-    apply (drule sym)
-    apply (case_tac "1 < n")
-     apply (frule_tac x = "y + 0 * 0x10" in eqset_imp_iff)
-     apply (frule_tac x = "y + 1 * 0x10" in eqset_imp_iff)
-     apply (subst(asm) imageI, simp)
-      apply (erule order_less_trans[rotated], simp)
-     apply (subst(asm) imageI, simp)
-     apply simp
-    apply (simp add: linorder_not_less)
-    apply (case_tac "n < 1")
-     apply simp
-    apply simp
-    done
-  have R: "\<And>n. n \<noteq> 0 \<Longrightarrow> {0 .. n - 1} = {0 ..< n :: word32}"
-    apply safe
-     apply simp
-     apply (erule(1) minus_one_helper5)
-    apply simp
-    apply (erule minus_one_helper3)
-    done
-  have final_IRQHandler_no_copy:
-    "\<And>irq sl sl' s. \<lbrakk> isFinal (IRQHandlerCap irq) sl (cteCaps_of s); sl \<noteq> sl' \<rbrakk> \<Longrightarrow> cteCaps_of s sl' \<noteq> Some (IRQHandlerCap irq)"
-    apply (clarsimp simp: isFinal_def sameObjectAs_def2 isCap_simps)
-    apply fastforce
-    done
-  show ?case
-    apply (subst finaliseSlot'.simps)
-    apply (fold reduceZombie_def[unfolded cteDelete_def finaliseSlot_def])
-    apply (unfold split_def)
-    apply (rule hoare_pre_spec_validE)
-     apply (wp | simp)+
-         apply (wp make_zombie_invs' updateCap_cte_wp_at_cases
-                   hoare_vcg_disj_lift)[1]
-        apply (wp hyps, assumption+)  
-          apply ((wp preemptionPoint_invE preemptionPoint_invR|simp)+)[1]
-         apply (rule spec_strengthen_postE [OF reduceZombie_valid_duplicates_spec'])
-          prefer 2
-          apply fastforce
-         apply (rule hoare_pre_spec_validE,
-                rule spec_strengthen_postE)
-          apply (unfold finaliseSlot_def)[1]
-           apply (rule hyps[where P="\<top>" and p=sl], (assumption | rule refl)+)
-          apply clarsimp
-         apply (clarsimp simp: cte_wp_at_ctes_of)
-        apply (wp, simp)
-        apply (wp make_zombie_invs' updateCap_ctes_of_wp updateCap_cap_to'
-                  hoare_vcg_disj_lift updateCap_cte_wp_at_cases)
-       apply simp
-       apply (rule hoare_strengthen_post)
-        apply (rule_tac Q="\<lambda>fin s. invs' s \<and> vs_valid_duplicates' (ksPSpace s)
-                                 \<and> sch_act_simple s
-                                 \<and> s \<turnstile>' (fst fin)
-                                 \<and> (exp \<or> ex_cte_cap_to' sl s)
-                                 \<and> cte_wp_at' (\<lambda>cte. cteCap cte = cteCap rv) sl s
-                                 \<and> (q = sl \<or> exp \<or> cte_wp_at' (?P) q s)"
-                   in hoare_vcg_conj_lift)
-         apply (wp hoare_vcg_disj_lift finaliseCap_invs[where sl=sl])
-         apply (rule finaliseCap_zombie_cap')
-        apply (rule hoare_vcg_conj_lift)
-         apply (rule finaliseCap_cte_refs)
-        apply (rule finaliseCap_replaceable[where slot=sl])
-       apply clarsimp
-       apply (erule disjE[where P="F \<and> G" for F G])
-        apply (clarsimp simp: capRemovable_def cte_wp_at_ctes_of)
-        apply (rule conjI, clarsimp)
-        apply (clarsimp simp: final_IRQHandler_no_copy)
-       apply (clarsimp dest!: isCapDs)
-       apply (rule conjI)
-        apply (clarsimp simp: capRemovable_def)
-        apply (rule conjI)
-         apply (clarsimp simp: cte_wp_at_ctes_of)
-         apply (rule conjI, clarsimp)
-         apply (case_tac "cteCap rv",
-                simp_all add: isCap_simps removeable'_def
-                              fun_eq_iff[where f="cte_refs' cap" for cap]
-                              fun_eq_iff[where f=tcb_cte_cases]
-                              tcb_cte_cases_def
-                              word_neq_0_conv[symmetric])[1]
-        apply (clarsimp simp: cte_wp_at_ctes_of)
-        apply (rule conjI, clarsimp)
-        apply (case_tac "cteCap rv",
-               simp_all add: isCap_simps removeable'_def
-                             fun_eq_iff[where f="cte_refs' cap" for cap]
-                             fun_eq_iff[where f=tcb_cte_cases]
-                             tcb_cte_cases_def)[1]
-         apply (frule Q)
-         apply clarsimp
-        apply (subst(asm) R)
-         apply (drule valid_capAligned [OF ctes_of_valid'])
-          apply fastforce
-         apply (simp add: capAligned_def word_bits_def objBits_simps)
-        apply (frule Q)
-        apply clarsimp
-       apply (clarsimp simp: cte_wp_at_ctes_of capRemovable_def)
-       apply (subgoal_tac "final_matters' (cteCap rv) \<and> \<not> isUntypedCap (cteCap rv)")
-        apply clarsimp
-        apply (rule conjI)
-         apply clarsimp
-        apply clarsimp
-       apply (case_tac "cteCap rv",
-              simp_all add: isCap_simps final_matters'_def)[1]
-      apply (wp isFinalCapability_inv static_imp_wp | simp | wp_once isFinal[where x=sl])+
-     apply (wp getCTE_wp')
-    apply (clarsimp simp: cte_wp_at_ctes_of disj_ac)
-    apply (rule conjI, clarsimp simp: removeable'_def)
-    apply (clarsimp simp: conj_comms invs_pspace_aligned' invs_valid_objs')
-    apply (rule conjI, erule ctes_of_valid', clarsimp)
-    apply (rule conjI, clarsimp)
-    apply (fastforce)
-    done
-qed
+lemma valid_duplicates_finalise_prop_stuff:
+  "no_cte_prop (vs_valid_duplicates' \<circ> ksPSpace) = vs_valid_duplicates' \<circ> ksPSpace"
+  "finalise_prop_stuff (vs_valid_duplicates' \<circ> ksPSpace)"
+  by (simp_all add: no_cte_prop_def finalise_prop_stuff_def
+                    setCTE_valid_duplicates' o_def)
 
 lemma finaliseSlot_valid_duplicates'[wp]:
   "\<lbrace>\<lambda>s. invs' s \<and> vs_valid_duplicates' (ksPSpace s) \<and> sch_act_simple s 
     \<and> (\<not> exposed \<longrightarrow> ex_cte_cap_to' slot s) \<rbrace>
   finaliseSlot slot exposed
   \<lbrace>\<lambda>_ s. invs' s \<and> vs_valid_duplicates' (ksPSpace s) \<and> sch_act_simple s \<rbrace>"
-  apply (unfold finaliseSlot_def)
-  apply wp
-  apply (rule hoare_pre,rule use_spec)
-   apply (rule spec_strengthen_postE)
-    apply (rule finaliseSlot_valid_duplicates_spec'[where p=slot])
-   apply clarsimp
-  apply clarsimp
+  unfolding finaliseSlot_def
+  apply (rule validE_valid, rule hoare_pre,
+    rule hoare_post_impErr, rule use_spec)
+     apply (rule finaliseSlot_invs'[where p=slot and slot=slot and Pr="vs_valid_duplicates' o ksPSpace"])
+      apply (simp_all add: valid_duplicates_finalise_prop_stuff)
+   apply (wp | simp add: o_def)+
+   apply (auto dest: cte_wp_at_valid_objs_valid_cap')
   done
 
 lemma cteDelete_valid_duplicates':

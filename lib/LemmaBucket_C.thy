@@ -1179,12 +1179,4 @@ lemma field_lookup_array:
     auto simp add: take_map o_def listsum_triv size_of_def)
   done
 
-lemma array_not_sub_type:
-  "\<not> TYPE(('a :: c_type)['b :: finite]) <\<^sub>\<tau> TYPE('a)"
-  sorry
-
-lemma field_of_t_array:
-  "field_of_t p' p = (\<exists>i. p' = array_ptr_index p True i)"
-  sorry
-
 end

@@ -1,9 +1,5 @@
 Built from git repo at /home/tsewell/dev/verification/seL4/haskell by tsewell
 
 Generated from changeset:
-c2bdc09 Hopefully final array change: resolveAddressBits.
+f7b60e9 Final patch to lookupSlot variants.
 
-
-Warning - uncomitted changes used:
- M src/SEL4/Object/CNode.lhs
-?? ../rbuild/

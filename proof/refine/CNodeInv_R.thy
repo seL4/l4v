@@ -6424,22 +6424,59 @@ lemma updateCap_sch_act_simple[wp]:
   "\<lbrace>sch_act_simple\<rbrace> updateCap slot newCap \<lbrace>\<lambda>_. sch_act_simple\<rbrace>"
   by (simp add: sch_act_simple_def, wp)
 
+definition
+  "no_cte_prop P = (if \<forall>sl cte. \<lbrace>P\<rbrace> setCTE sl cte \<lbrace>\<lambda>_. P\<rbrace> then P else \<top>)"
+
+lemma no_cte_prop_top:
+  "no_cte_prop \<top> = \<top>"
+  by (simp add: no_cte_prop_def)
+
+definition
+  "finalise_prop_stuff P
+    = ((\<forall>s f. P (ksWorkUnitsCompleted_update f s) = P s)
+    \<and> irq_state_independent_H P
+    \<and> (\<forall>s f. P (ksInterruptState_update f s) = P s)
+    \<and> (\<forall>s f. P (ksMachineState_update (irq_state_update f) s) = P s)
+    \<and> (\<forall>s f. P (ksMachineState_update (irq_masks_update f) s) = P s))"
+
+lemma setCTE_no_cte_prop:
+  "\<lbrace>no_cte_prop P\<rbrace> setCTE sl cte \<lbrace>\<lambda>_. no_cte_prop P\<rbrace>"
+  by (simp add: no_cte_prop_def hoare_vcg_prop)
+
+lemma setInterruptState_no_cte_prop:
+  "\<lbrace>no_cte_prop P and K (finalise_prop_stuff P)\<rbrace> setInterruptState st \<lbrace>\<lambda>_. no_cte_prop P\<rbrace>"
+  apply (simp add: setInterruptState_def, wp)
+  apply (clarsimp simp: finalise_prop_stuff_def no_cte_prop_def)
+  done
+
+lemma dmo_maskInterrupt_no_cte_prop:
+  "\<lbrace>no_cte_prop P and K (finalise_prop_stuff P)\<rbrace>
+    doMachineOp (maskInterrupt m irq) \<lbrace>\<lambda>_. no_cte_prop P\<rbrace>"
+  apply (wp dmo_maskInterrupt)
+  apply (clarsimp simp: no_cte_prop_def finalise_prop_stuff_def)
+  done
+
+crunch no_cte_prop[wp]: emptySlot, capSwapForDelete "no_cte_prop P"
+  (ignore: doMachineOp wp: dmo_maskInterrupt_no_cte_prop)
+
 lemma reduceZombie_invs'':
   assumes fin:
   "\<And>s'' rv. \<lbrakk>\<not> (isZombie cap \<and> capZombieNumber cap = 0); \<not> (isZombie cap \<and> \<not> exposed); isZombie cap \<and> exposed;
               (Inr rv, s'')
               \<in> fst ((withoutPreemption $ locateSlotCap cap (fromIntegral (capZombieNumber cap - 1))) st)\<rbrakk>
-             \<Longrightarrow> s'' \<turnstile> \<lbrace>\<lambda>s. invs' s \<and> sch_act_simple s
+             \<Longrightarrow> s'' \<turnstile> \<lbrace>\<lambda>s. no_cte_prop Q s \<and> invs' s \<and> sch_act_simple s
                                    \<and> cte_wp_at' (\<lambda>cte. isZombie (cteCap cte)) slot s
                                    \<and> ex_cte_cap_to' rv s\<rbrace>
                          finaliseSlot rv False
-                \<lbrace>\<lambda>rva s. invs' s \<and> sch_act_simple s
+                \<lbrace>\<lambda>rva s. no_cte_prop Q s \<and> invs' s \<and> sch_act_simple s
                             \<and> (fst rva \<longrightarrow> cte_wp_at' (\<lambda>cte. removeable' rv s (cteCap cte)) rv s)
                             \<and> (\<forall>irq sl'. snd rva = Some irq \<longrightarrow> sl' \<noteq> rv \<longrightarrow> cteCaps_of s sl' \<noteq> Some (IRQHandlerCap irq))\<rbrace>,
-                \<lbrace>\<lambda>rv s. invs' s \<and> sch_act_simple s\<rbrace>"
+                \<lbrace>\<lambda>rv s. no_cte_prop Q s \<and> invs' s \<and> sch_act_simple s\<rbrace>"
+  assumes stuff:
+    "finalise_prop_stuff Q"
   shows
   "st \<turnstile> \<lbrace>\<lambda>s.
-      invs' s \<and> sch_act_simple s
+      no_cte_prop Q s \<and> invs' s \<and> sch_act_simple s
               \<and> (exposed \<or> ex_cte_cap_to' slot s)
               \<and> cte_wp_at' (\<lambda>cte. cteCap cte = cap) slot s
               \<and> (exposed \<or> p = slot \<or>
@@ -6448,13 +6485,13 @@ lemma reduceZombie_invs'':
                                        \<and> P cp \<and> (isZombie cp \<longrightarrow> capZombiePtr cp \<noteq> p))) p s)\<rbrace>
        reduceZombie cap slot exposed
    \<lbrace>\<lambda>rv s.
-      invs' s \<and> sch_act_simple s
+      no_cte_prop Q s \<and> invs' s \<and> sch_act_simple s
               \<and> (exposed \<or> ex_cte_cap_to' slot s)
               \<and> (exposed \<or> p = slot \<or>
                   cte_wp_at' (\<lambda>cte. (P and isZombie) (cteCap cte)
                                   \<or> (\<exists>zb n cp. cteCap cte = Zombie p zb n
                                        \<and> P cp \<and> (isZombie cp \<longrightarrow> capZombiePtr cp \<noteq> p))) p s)\<rbrace>,
-   \<lbrace>\<lambda>rv s. invs' s \<and> sch_act_simple s\<rbrace>"
+   \<lbrace>\<lambda>rv s. no_cte_prop Q s \<and> invs' s \<and> sch_act_simple s\<rbrace>"
   apply (unfold reduceZombie_def cteDelete_def Let_def
                 split_def fst_conv snd_conv haskell_fail_def
                 case_Zombie_assert_fold)
@@ -6468,7 +6505,7 @@ lemma reduceZombie_invs'':
       apply (rule_tac Q="\<lambda>cte s. rv = capZombiePtr cap +
                                       of_nat (capZombieNumber cap) * 16 - 16
                               \<and> cte_wp_at' (\<lambda>c. c = cte) slot s \<and> invs' s
-                              \<and> sch_act_simple s"
+                              \<and> no_cte_prop Q s \<and> sch_act_simple s"
                   in hoare_post_imp)
        apply (clarsimp simp: cte_wp_at_ctes_of mult.commute mult.left_commute dest!: isCapDs)
        apply (simp add: field_simps)
@@ -6481,7 +6518,7 @@ lemma reduceZombie_invs'':
                  in spec_valid_conj_liftE1)
        apply wp[1]
       apply (rule fin, assumption+)
-     apply clarsimp
+     apply (clarsimp simp: stuff)
     apply (simp add: locateSlot_conv)
     apply ((wp | simp)+)[2]
   apply (clarsimp simp: cte_wp_at_ctes_of)
@@ -6508,6 +6545,15 @@ lemma preemptionPoint_invs [wp]:
   "\<lbrace>invs'\<rbrace> preemptionPoint \<lbrace>\<lambda>_. invs'\<rbrace>"
   by (wp preemptionPoint_inv | clarsimp)+
 
+lemma preemptionPoint_no_cte_prop [wp]:
+  "\<lbrace>no_cte_prop P and K (finalise_prop_stuff P)\<rbrace> preemptionPoint \<lbrace>\<lambda>_. no_cte_prop P\<rbrace>"
+  apply (rule hoare_gen_asm)
+  apply (subgoal_tac "irq_state_independent_H (no_cte_prop P)")
+   apply (simp add: preemptionPoint_def whenE_def)
+   apply (wp | simp add: setWorkUnits_def getWorkUnits_def modifyWorkUnits_def | wpc)+
+    apply (auto simp: no_cte_prop_def finalise_prop_stuff_def)
+  done
+
 lemmas preemptionPoint_invR =
   valid_validE_R [OF preemptionPoint_inv]
 
@@ -6523,8 +6569,13 @@ lemma ex_cte_cap_to'_wu [simp, intro!]:
   by (simp add: ex_cte_cap_to'_def)
 
 lemma finaliseSlot_invs':
+  assumes finaliseCap:
+    "\<And>cap final sl. \<lbrace>no_cte_prop Pr and invs' and sch_act_simple
+        and cte_wp_at' (\<lambda>cte. cteCap cte = cap) sl\<rbrace> finaliseCap cap final False \<lbrace>\<lambda>rv. no_cte_prop Pr\<rbrace>"
+  and stuff: "finalise_prop_stuff Pr"
+  shows
   "st \<turnstile> \<lbrace>\<lambda>s.
-      invs' s \<and> sch_act_simple s 
+      no_cte_prop Pr s \<and> invs' s \<and> sch_act_simple s 
               \<and> (exposed \<or> ex_cte_cap_to' slot s)
               \<and> (exposed \<or> p = slot \<or>
                   cte_wp_at' (\<lambda>cte. (P and isZombie) (cteCap cte)
@@ -6532,14 +6583,14 @@ lemma finaliseSlot_invs':
                                        \<and> P cp \<and> (isZombie cp \<longrightarrow> capZombiePtr cp \<noteq> p))) p s)\<rbrace>
        finaliseSlot' slot exposed
    \<lbrace>\<lambda>rv s.
-      invs' s \<and> sch_act_simple s
+      no_cte_prop Pr s \<and> invs' s \<and> sch_act_simple s
               \<and> (exposed \<or> p = slot \<or>
                   cte_wp_at' (\<lambda>cte. (P and isZombie) (cteCap cte)
                                   \<or> (\<exists>zb n cp. cteCap cte = Zombie p zb n
                                        \<and> P cp \<and> (isZombie cp \<longrightarrow> capZombiePtr cp \<noteq> p))) p s)
               \<and> (fst rv \<longrightarrow> cte_wp_at' (\<lambda>cte. removeable' slot s (cteCap cte)) slot s)
               \<and> (\<forall>irq sl'. snd rv = Some irq \<longrightarrow> sl' \<noteq> slot \<longrightarrow> cteCaps_of s sl' \<noteq> Some (IRQHandlerCap irq))\<rbrace>,
-   \<lbrace>\<lambda>rv s. invs' s \<and> sch_act_simple s\<rbrace>"
+   \<lbrace>\<lambda>rv s. no_cte_prop Pr s \<and> invs' s \<and> sch_act_simple s\<rbrace>"
 proof (induct arbitrary: P p rule: finalise_spec_induct2)
   case (1 sl exp s Q q)
   let ?P = "\<lambda>cte. (Q and isZombie) (cteCap cte)
@@ -6572,6 +6623,10 @@ proof (induct arbitrary: P p rule: finalise_spec_induct2)
     apply (clarsimp simp: isFinal_def sameObjectAs_def2 isCap_simps)
     apply fastforce
     done
+  from stuff have stuff':
+    "finalise_prop_stuff (no_cte_prop Pr)"
+    by (simp add: no_cte_prop_def finalise_prop_stuff_def)
+  note stuff'[unfolded finalise_prop_stuff_def, simp]
   show ?case
     apply (subst finaliseSlot'.simps)
     apply (fold reduceZombie_def[unfolded cteDelete_def finaliseSlot_def])
@@ -6580,9 +6635,12 @@ proof (induct arbitrary: P p rule: finalise_spec_induct2)
      apply (wp | simp)+
          apply (wp make_zombie_invs' updateCap_cte_wp_at_cases
                    hoare_vcg_disj_lift)[1]
-        apply (wp hyps, assumption+)  
-          apply ((wp preemptionPoint_invE preemptionPoint_invR| clarsimp simp: sch_act_simple_def)+)[1]
-         apply (rule spec_strengthen_postE [OF reduceZombie_invs''])
+        apply (wp hyps, assumption+)
+
+          apply ((wp preemptionPoint_invE preemptionPoint_invR
+              | clarsimp simp: sch_act_simple_def
+              | simp cong: kernel_state.fold_congs machine_state.fold_congs)+)[1]
+         apply (rule spec_strengthen_postE [OF reduceZombie_invs''[OF _ stuff]])
           prefer 2
           apply fastforce
          apply (rule hoare_pre_spec_validE,
@@ -6598,10 +6656,11 @@ proof (induct arbitrary: P p rule: finalise_spec_induct2)
        apply (rule hoare_strengthen_post)
         apply (rule_tac Q="\<lambda>fin s. invs' s \<and> sch_act_simple s \<and> s \<turnstile>' (fst fin)
                                  \<and> (exp \<or> ex_cte_cap_to' sl s)
+                                 \<and> no_cte_prop Pr s
                                  \<and> cte_wp_at' (\<lambda>cte. cteCap cte = cteCap rv) sl s
                                  \<and> (q = sl \<or> exp \<or> cte_wp_at' (?P) q s)"
                    in hoare_vcg_conj_lift)
-         apply (wp hoare_vcg_disj_lift finaliseCap_invs[where sl=sl])
+         apply (wp hoare_vcg_disj_lift finaliseCap finaliseCap_invs[where sl=sl])
          apply (rule finaliseCap_zombie_cap')
         apply (rule hoare_vcg_conj_lift)
          apply (rule finaliseCap_cte_refs)
@@ -6664,10 +6723,11 @@ lemma finaliseSlot_invs'':
                  \<and> (\<forall>irq sl'. snd rv = Some irq \<longrightarrow> sl' \<noteq> slot \<longrightarrow> cteCaps_of s sl' \<noteq> Some (capability.IRQHandlerCap irq))\<rbrace>,
    \<lbrace>\<lambda>rv s. invs' s \<and> sch_act_simple s\<rbrace>"
   unfolding finaliseSlot_def
-  apply (rule hoare_pre, rule use_spec)
-   apply (rule spec_strengthen_postE)
-    apply (rule finaliseSlot_invs'[where P="\<top>" and p=slot])
-   apply clarsimp
+  apply (rule hoare_pre, rule hoare_post_impErr, rule use_spec)
+     apply (rule finaliseSlot_invs'[where P="\<top>" and Pr="\<top>" and p=slot])
+      apply (simp_all add: no_cte_prop_top)
+    apply wp
+   apply (simp add: finalise_prop_stuff_def)
   apply clarsimp
   done
 
@@ -6714,12 +6774,21 @@ lemma finaliseSlot_cte_wp_at:
   unfolding finaliseSlot_def
   apply (rule hoare_pre, unfold validE_R_def)
    apply (rule hoare_post_impErr, rule use_spec)
-     apply (rule finaliseSlot_invs'[where P=P and p=p])
-    apply (clarsimp simp: cte_wp_at_ctes_of)
-    apply fastforce
-   apply simp
+     apply (rule finaliseSlot_invs'[where P=P and Pr=\<top> and p=p])
+      apply (simp_all add: no_cte_prop_top finalise_prop_stuff_def)
+    apply wp
+   apply (clarsimp simp: cte_wp_at_ctes_of)
+   apply fastforce
   apply (clarsimp simp: cte_wp_at_ctes_of)
   done
+
+lemmas reduceZombie_invs'
+    = reduceZombie_invs''[where Q=\<top>, simplified no_cte_prop_top simp_thms
+         finalise_prop_stuff_def irq_state_independent_H_def,
+         OF drop_spec_validE TrueI,
+         OF hoare_weaken_preE,
+         OF finaliseSlot_invs'',
+         THEN use_specE']
 
 lemma reduceZombie_invs:
   "\<lbrace>\<lambda>s. invs' s \<and> sch_act_simple s \<and> (\<not> exposed \<longrightarrow> ex_cte_cap_to' slot s)
@@ -6727,17 +6796,8 @@ lemma reduceZombie_invs:
      reduceZombie cap slot exposed
    \<lbrace>\<lambda>rv s. invs' s\<rbrace>"
   apply (rule validE_valid)
-  apply (rule_tac E="\<lambda>rv s. invs' s \<and> sch_act_simple s" in hoare_post_impErr)
-    defer
-    apply assumption
-   apply simp
-  apply (rule hoare_pre, rule use_spec)
-   apply (rule spec_strengthen_postE)
-    apply (rule reduceZombie_invs''[where p=slot])
-    apply (wp finaliseSlot_invs'')
-    apply simp
-   apply clarsimp
-  apply clarsimp
+  apply (rule hoare_post_impErr, rule hoare_pre, rule reduceZombie_invs'[where p=slot])
+     apply clarsimp+
   done
 
 lemma reduceZombie_cap_to:
@@ -6746,13 +6806,9 @@ lemma reduceZombie_cap_to:
      reduceZombie cap slot exposed
    \<lbrace>\<lambda>rv s. \<not> exposed \<longrightarrow> ex_cte_cap_to' slot s\<rbrace>, -"
   apply (rule validE_validE_R, rule hoare_pre,
-         rule hoare_post_impErr, rule use_spec)
-     apply (rule reduceZombie_invs''[where p=slot])
-     apply (wp finaliseSlot_invs'')
-     apply simp
-    apply clarsimp
-   apply simp
-  apply clarsimp
+         rule hoare_post_impErr)
+     apply (rule reduceZombie_invs'[where p=slot])
+     apply clarsimp+
   done
 
 lemma reduceZombie_sch_act_simple:
@@ -6761,13 +6817,9 @@ lemma reduceZombie_sch_act_simple:
      reduceZombie cap slot exposed
    \<lbrace>\<lambda>rv. sch_act_simple\<rbrace>"
   apply (rule validE_valid, rule hoare_pre,
-         rule hoare_post_impErr, rule use_spec)
-     apply (rule reduceZombie_invs''[where p=slot])
-     apply (wp finaliseSlot_invs'')
-     apply simp
-    apply clarsimp
-   apply simp
-  apply clarsimp
+         rule hoare_post_impErr)
+     apply (rule reduceZombie_invs'[where p=slot])
+     apply clarsimp+
   done
 
 lemma cteDelete_invs':
