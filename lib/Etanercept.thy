@@ -197,10 +197,10 @@ ML {*
         c_printf = "PRIu64"
       },
       { isa_type = @{typ "nat"},
-        c_type = "uint64_t",
-        c_min = "((uint64_t)0)",
-        c_max = "UINT64_MAX",
-        c_printf = "PRIu64"
+        c_type = "uintmax_t",
+        c_min = "((uintmax_t)0)",
+        c_max = "UINTMAX_MAX",
+        c_printf = "PRIuMAX"
       },
 
       { isa_type = @{typ "8 signed word"},
@@ -228,10 +228,10 @@ ML {*
         c_printf = "PRId64"
       },
       { isa_type = @{typ "int"},
-        c_type = "int64_t",
-        c_min = "INT64_MIN",
-        c_max = "INT64_MAX",
-        c_printf = "PRId64"
+        c_type = "intmax_t",
+        c_min = "INTMAX_MIN",
+        c_max = "INTMAX_MAX",
+        c_printf = "PRIdMAX"
       }
     ] |> (fn infos => Typtab.make (map (fn info => (#isa_type info, info)) infos))
 
