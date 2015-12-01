@@ -1,3 +1,4 @@
+
 (*
  * Copyright 2014, General Dynamics C4 Systems
  *
@@ -13,6 +14,7 @@ imports
   SyscallArgs_C
   Delete_C
   Syscall_C
+  "../refine/RAB_FN"
   "../../lib/clib/MonadicRewrite_C"
 begin
 
@@ -5460,14 +5462,6 @@ lemma capability_case_Null_ReplyCap:
              else if isNullCap cap then f else h)"
   by (simp add: isCap_simps split: capability.split)
 
-end
-
-definition
- "only_cnode_caps ctes =
-    option_map ((\<lambda>x. if isCNodeCap x then CTE x nullMDBNode else makeObject) o cteCap) o ctes"
-
-context kernel_m begin
-
 lemma in_getCTE_slot:
   "(\<exists>s. (rv, s) \<in> fst (getCTE slot s)) = (is_aligned slot cte_level_bits)"
   apply (simp add: getCTE_assert_opt exec_gets assert_opt_member)
@@ -5485,6 +5479,8 @@ lemma in_getCTE_slot:
   apply (simp add: map_to_ctes_def Let_def objBits_simps cte_level_bits_def)
   done
 
+end
+
 lemma inj2_assert_opt:
   "(assert_opt v s = assert_opt v' s') = (v = v' \<and> (v' = None \<or> s = s'))"
   by (simp add: assert_opt_def return_def fail_def split: option.split)
@@ -5501,136 +5497,9 @@ lemma gets_the_eq2:
   "(gets_the f s = gets_the g s') = (f s = g s' \<and> (g s' = None \<or> s = s'))"
   by (simp add: gets_the_def exec_gets inj2_assert_opt)
 
-lemma getCTE_bind_gets_the:
-  "\<lbrakk> \<And>rv. \<exists>s. (rv, s) \<in> fst (getCTE slot s)
-           \<Longrightarrow> \<exists>fn. f rv = gets_the (fn o xf);
-      \<exists>v. \<forall>rv. \<not> isCNodeCap (cteCap rv) \<longrightarrow> f rv = v;
-      \<exists>f'. \<forall>rv. isCNodeCap (cteCap rv) \<longrightarrow> f rv = f' (cteCap rv);
-      xf' o xf = only_cnode_caps o ctes_of
-     \<rbrakk> \<Longrightarrow>
-    \<exists>fn. (getCTE slot >>= f)
-       = (gets_the (fn o xf))"
-  apply (case_tac "is_aligned slot cte_level_bits")
-   apply (simp add: in_getCTE_slot)
-   apply (clarsimp dest!: all_rv_choice_fn_eq)
-   apply (clarsimp simp: getCTE_assert_opt bind_assoc)
-   apply (rule_tac x="\<lambda>x. case (xf' x) slot of None \<Rightarrow> None
-                          | Some cte \<Rightarrow> fn cte x" in exI)
-   apply (clarsimp simp: exec_gets gets_the_def
-                         assert_opt_def only_cnode_caps_def
-                         fun_eq_iff[where f="xf' o xf"]
-                         fun_eq_iff[where f="bind a b" for a b]
-                 intro!: ext)
-   apply (case_tac "ctes_of x slot", simp_all)
-   apply (simp add: exec_gets assert_opt_def only_cnode_caps_def
-                    makeObject_cte
-             split: split_if)
-  apply (subgoal_tac "getCTE slot = fail")
-   apply (simp add: gets_the_asserts ex_const_function)
-  apply (rule ext)
-  apply (subgoal_tac "\<forall>rv. \<not> (\<exists>s. (rv, s) \<in> fst (getCTE slot s))")
-   apply (clarsimp simp: getCTE_assert_opt fun_eq_iff exec_gets
-                         assert_opt_member)
-   apply (simp add: assert_opt_def split: option.split)
-  apply (simp add: in_getCTE_slot)
-  done
-
-lemma getSlotCap_bind_gets_the:
-  "\<lbrakk> \<And>rv. (rv, s) \<in> fst (getSlotCap slot s)
-          \<Longrightarrow> \<exists>fn. f rv s = gets_the (fn o xf) s;
-     \<exists>v. \<forall>rv. \<not> isCNodeCap rv \<longrightarrow> f rv = v;
-     xf' o xf = only_cnode_caps o ctes_of
-     \<rbrakk> \<Longrightarrow>
-    \<exists>fn. (getSlotCap slot >>= f) s
-       = (gets_the (fn o xf)) s"
-  sorry (*
-  apply (simp add: getSlotCap_def in_monad)
-  apply (rule getCTE_bind_gets_the)
-     apply fastforce
-    apply clarsimp
-   apply fastforce
-  apply assumption
-  done
-*)
-
-lemma gets_the_stateAssert:
-  "stateAssert P xs = gets_the (\<lambda>s. if P s then Some () else None)"
-  by (simp add: stateAssert_def gets_def gets_the_def
-                assert_opt_def fun_eq_iff exec_get
-                assert_def
-         split: split_if option.split)
-
-lemma ex_const_function2:
-  "\<exists>f. \<forall>s. f (f' s) (g' s) = v"
-  by force
-
-lemma gets_the_eq_bind2:
-  "\<lbrakk> \<exists>fn. f = gets_the (fn o fn');
-         \<And>rv. (rv, s) \<in> fst (f s)
-             \<Longrightarrow> \<exists>fn. g rv s = gets_the (fn o fn') s \<rbrakk>
-     \<Longrightarrow> \<exists>fn. (f >>= g) s = gets_the (fn o fn') s"
-  
-  sorry
-
 lemma return_gets_the:
   "return x = gets_the (\<lambda>_. Some x)"
   by (simp add: gets_the_def assert_opt_def)
-
-lemma gets_the_returns2:
-  "(return x s = gets_the f s) = (f s = Some x)"
-  "(returnOk x s = gets_the g s) = (g s = Some (Inr x))"
-  "(throwError x s = gets_the h s) = (h s = Some (Inl x))"
-  by (auto simp add: returnOk_def throwError_def
-                     return_gets_the gets_the_eq2)
-
-lemmas gets_the_fail2 = gets_the_fail[where f="\<lambda>_. None", simplified]
-
-lemma resolveAddressBits_ctes_of_equality:
-  "\<exists>fn. (resolveAddressBits cap cptr bits s)
-         = gets_the (fn o (\<lambda>s. (only_cnode_caps (ctes_of s), gsCNodes s))) s"
-proof (induct cap cptr bits rule: resolveAddressBits.induct)
-  case (1 acap acptr abits)
-
-  show ?case
-    apply (subst resolveAddressBits.simps)
-    apply (clarsimp simp: gets_the_returns2 exI
-                          assertE_def gets_the_asserts(1)
-                   split: split_if simp del: imp_disjL)
-    apply (simp add: gets_the_fail2 gets_the_eq2 exI
-                del: imp_disjL)
-    apply (clarsimp simp only: liftE_bindE locateSlot_conv bind_assoc)
-    apply (rule gets_the_eq_bind2)
-     apply (simp add: gets_the_stateAssert gets_the_eq o_def)
-     apply (rule_tac x="split y" for y in exI, simp)
-    apply (clarsimp simp: gets_the_returns2 exI
-                          assertE_def whenE_def unlessE_def
-                          gets_the_asserts locateSlot_conv
-                          liftE_bindE gets_the_stateAssert
-                   split: split_if simp del: imp_disjL)
-    apply (rule_tac xf'=fst in getSlotCap_bind_gets_the)
-      apply (clarsimp simp: gets_the_returns2
-                            exI unlessE_def
-                    split: capability.split split_if)
-      apply (rule "1.hyps", (rule conjI refl | assumption
-                             | simp add: in_monad locateSlot_conv gets_the_stateAssert)+)
-     apply (simp add: cnode_cap_case_if)
-    apply (simp add: o_def)
-    done
-qed
-
-definition
-  "resolveAddressBits_functional
-      = (\<lambda>cap cptr bits. SOME fn. resolveAddressBits cap cptr bits
-                      = gets_the (fn o (only_cnode_caps o ctes_of)))"
-
-lemma resolveAddressBits_def_functional:
-  "resolveAddressBits cap cptr bits
-       = gets_the (resolveAddressBits_functional cap cptr bits o (only_cnode_caps o ctes_of))"
-  unfolding resolveAddressBits_functional_def
-  using resolveAddressBits_ctes_of_equality[of cap cptr bits]
-  apply (elim exE)
-  apply (erule_tac P="\<lambda>fn. ra = gets_the (fn o (only_cnode_caps o ctes_of))" for ra in someI)
-  done
 
 lemma injection_handler_catch:
   "catch (injection_handler f x) y
@@ -5810,6 +5679,9 @@ crunch obj_at_ep[wp]: emptySlot "obj_at' (P :: endpoint \<Rightarrow> bool) p"
 
 crunch nosch[wp]: emptySlot "\<lambda>s. P (ksSchedulerAction s)"
 
+crunch gsCNodes[wp]: emptySlot, asUser "\<lambda>s. P (gsCNodes s)"
+  (wp: crunch_wps)
+
 crunch ctes_of[wp]: attemptSwitchTo "\<lambda>s. P (ctes_of s)"
   (wp: crunch_wps)
 
@@ -5917,59 +5789,6 @@ lemma tcb_at_cte_at_offset:
   apply simp
   done
 
-end
-
-lemma no_fail_getSlotCap_fun:
-  "\<lbrakk> \<And>rv s. (rv, s) \<in> fst (getSlotCap p s) \<Longrightarrow> no_fail (P rv) (f rv) \<rbrakk>
-      \<Longrightarrow> no_fail (\<lambda>s. \<exists>rv. ctes_of s p = Some rv \<and> P (cteCap rv) s)
-             (getSlotCap p >>= f)"
-  apply (simp add: getSlotCap_def in_monad)
-  apply (clarsimp simp: no_fail_def snd_bind in_getCTE2 Ball_def
-                        no_failD[OF no_fail_getCTE] cte_wp_at_ctes_of)
-  apply fastforce
-  done
-
-lemma resolveAddressBits_no_fail:
-  "no_fail (valid_objs' and valid_cap' c)
-       (resolveAddressBits c cptr bits)"
-proof (induct c cptr bits
-           rule: resolveAddressBits.induct)
-  case (1 cap ptr n)
-  show ?case
-    apply (subst resolveAddressBits.simps)
-    apply (simp add: Let_def locateSlot_conv split_def unlessE_def
-                     whenE_def assertE_def if_to_top_of_bindE
-                     liftE_bindE
-                del: resolveAddressBits.simps split del: split_if
-               cong: if_cong capability.case_cong)
-    apply (rule no_fail_pre)
-     apply (wp no_fail_getSlotCap_fun
-                  | simp del: resolveAddressBits.simps | wpc)+
-          apply (rule "1.hyps",
-                 (rule refl conjI
-                   | simp add: in_monad locateSlot_conv)+)
-         apply wp
-    apply (clarsimp simp: if_apply_def2 isCap_simps valid_cap_simps'
-                simp del: imp_disjL)
-    apply (drule spec, drule real_cte_at')
-    apply (clarsimp simp: cte_wp_at_ctes_of cte_level_bits_def)
-    apply (frule(1) ctes_of_valid')
-    apply (fastforce simp: valid_cap_simps')
-    done
-qed
-
-context kernel_m begin
-
-lemma resolveAddressBits_functional_Some:
-  "valid_objs' s \<and> s \<turnstile>' c
-      \<longrightarrow> resolveAddressBits_functional c cptr bits (only_cnode_caps (ctes_of s)) \<noteq> None"
-  using resolveAddressBits_no_fail[where c=c and cptr=cptr and bits=bits]
-  apply (clarsimp simp: resolveAddressBits_def_functional gets_the_def
-                        no_fail_def exec_gets assert_opt_def fail_def
-                 split: option.split_asm)
-  apply fastforce
-  done
-
 lemma attemptSwitchTo_rewrite2:
   "monadic_rewrite True True
       (\<lambda>s. obj_at' (\<lambda>tcb. tcbPriority tcb = curPrio) ct s
@@ -5991,18 +5810,6 @@ lemma emptySlot_cte_wp_at_cteCap:
   apply (simp add: tree_cte_cteCap_eq[unfolded o_def])
   apply (wp emptySlot_cteCaps_of)
   apply (clarsimp split: split_if)
-  done
-
-lemma resolveAddressBits_functional_real_cte_at':
-  "[| resolveAddressBits_functional c ptr bits (only_cnode_caps (ctes_of s)) = Some val;
-      isRight val; valid_objs' s; valid_cap' c s |]
-     ==> real_cte_at' (fst (theRight val)) s"
-  using resolveAddressBits_real_cte_at'[where cap=c and addr=ptr and depth=bits]
-  apply (clarsimp simp: resolveAddressBits_def_functional isRight_def)
-  apply (drule use_validE_R[rotated])
-    apply fastforce
-   apply (fastforce simp add: gets_the_member)
-  apply simp
   done
 
 lemma real_cte_at_tcbs_of_neq:
@@ -6243,6 +6050,23 @@ lemma emptySlot_tcb_at'[wp]:
   "\<lbrace>\<lambda>s. Q (tcb_at' t s)\<rbrace> emptySlot a b \<lbrace>\<lambda>_ s. Q (tcb_at' t s)\<rbrace>"
   by (simp add: tcb_at_typ_at', wp)
 
+lemmas cnode_caps_gsCNodes_lift
+    = hoare_lift_Pf2[where P="\<lambda>gs s. cnode_caps_gsCNodes (f s) gs" and f=gsCNodes for f]
+    hoare_lift_Pf2[where P="\<lambda>gs s. Q s \<longrightarrow> cnode_caps_gsCNodes (f s) gs" and f=gsCNodes for f Q]
+
+lemma monadic_rewrite_option_cases:
+  "\<lbrakk> v = None \<Longrightarrow> monadic_rewrite F E Q a b; \<And>x. v = Some x \<Longrightarrow> monadic_rewrite F E (R x) a b \<rbrakk>
+     \<Longrightarrow> monadic_rewrite F E (\<lambda>s. (v = None \<longrightarrow> Q s) \<and> (\<forall>x. v = Some x \<longrightarrow> R x s)) a b"
+  by (cases v, simp_all)
+
+lemma resolveAddressBitsFn_eq_name_slot:
+  "monadic_rewrite F E (\<lambda>s. (isCNodeCap cap \<longrightarrow> cte_wp_at' (\<lambda>cte. cteCap cte = cap) (slot s) s)
+        \<and> valid_objs' s \<and> cnode_caps_gsCNodes' s)
+    (resolveAddressBits cap capptr bits)
+    (gets (resolveAddressBitsFn cap capptr bits o only_cnode_caps o ctes_of))"
+  apply (rule monadic_rewrite_imp, rule resolveAddressBitsFn_eq)
+  apply auto
+  done
 
 crunch bound_tcb_at'_Q[wp]: asUser "\<lambda>s. Q (bound_tcb_at' P t s)"
   (simp: crunch_simps wp: threadSet_pred_tcb_no_state crunch_wps)
@@ -6265,7 +6089,8 @@ lemma active_ntfn_check_wp:
 
 lemma fastpath_callKernel_SysReplyRecv_corres:
   "monadic_rewrite True False
-     (invs' and ct_in_state' (op = Running) and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread))
+     (invs' and ct_in_state' (op = Running) and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)
+         and cnode_caps_gsCNodes')
      (callKernel (SyscallEvent SysReplyRecv)) (fastpaths SysReplyRecv)"
   apply (rule monadic_rewrite_introduce_alternative)
    apply (simp add: callKernel_def)
@@ -6298,7 +6123,6 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                         locateSlot_conv liftE_bindE bindE_bind_linearise
                         capFaultOnFailure_def rethrowFailure_injection
                         injection_handler_catch bind_bindE_assoc
-                        resolveAddressBits_def_functional
                         getThreadCallerSlot_def bind_assoc
                         getSlotCap_def
                         case_bool_If o_def
@@ -6308,8 +6132,12 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
        apply (rule monadic_rewrite_symb_exec_r, wp)
         apply (rename_tac "cTableCTE")
 
+        apply (rule monadic_rewrite_transverse,
+               rule monadic_rewrite_bind_head,
+               rule resolveAddressBitsFn_eq)
         apply (rule monadic_rewrite_symb_exec_r, (wp | simp)+)
          apply (rename_tac "rab_ret")
+
          apply (rule_tac P="isRight rab_ret" in monadic_rewrite_cases[rotated])
           apply (case_tac rab_ret, simp_all add: isRight_def)[1]
           apply (rule monadic_rewrite_alternative_l)
@@ -6397,10 +6225,14 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                           apply simp
                           apply (rule monadic_rewrite_trans,
                                  rule monadic_rewrite_bindE[OF _ monadic_rewrite_refl])
-                            apply (rule_tac v=rab_ret
-                                       in monadic_rewrite_gets_the_known_v)
+                            apply (rule_tac slot="\<lambda>s. ksCurThread s + 2 ^ cte_level_bits * tcbCTableSlot"
+                                in resolveAddressBitsFn_eq_name_slot)
                            apply wp
-                          apply (simp add: return_bindE)
+                          apply (rule monadic_rewrite_trans)
+                           apply (rule_tac rv=rab_ret
+                                 in monadic_rewrite_gets_known[where m="NonDetMonad.lift f"
+                                    for f, folded bindE_def])
+                          apply (simp add: NonDetMonad.lift_def isRight_case_sum)
                           apply (rule monadic_rewrite_symb_exec_l, wp empty_fail_getCTE)
                            apply (rename_tac ep_cap2)
                            apply (rule_tac P="cteCap ep_cap2 = cteCap ep_cap" in monadic_rewrite_gen_asm)
@@ -6426,8 +6258,8 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                                    Arch_switchToThread_pred_tcb')[2]
                        apply (simp add: catch_liftE)
                        apply (wp setEndpoint_obj_at_tcb' threadSet_pred_tcb_at_state[unfolded if_bool_eq_conj])
-                      apply simp
-                      apply (strengthen imp_consequent[of "st_tcb_at' P t s" for P t s])
+                      apply (simp cong: rev_conj_cong)
+                      apply (strengthen imp_consequent[where Q="tcb_at' t s" for t s])
                       apply (unfold setSchedulerAction_def)[3]
                       apply ((wp setThreadState_oa_queued user_getreg_rv setThreadState_no_sch_change
                                  setThreadState_obj_at_unchanged
@@ -6438,6 +6270,8 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                                  user_getreg_inv asUser_typ_ats
                                  asUser_obj_at_not_queued asUser_obj_at' mapM_x_wp'
                                  static_imp_wp hoare_vcg_all_lift hoare_vcg_imp_lift
+                                 static_imp_wp cnode_caps_gsCNodes_lift
+                                 hoare_vcg_ex_lift
                              | simp
                              | clarsimp simp: obj_at'_weakenE[OF _ TrueI])+)
                         apply (wp getCTE_wp' gts_imp')
@@ -6524,12 +6358,13 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
          simp add: tcb_cte_cases_def cte_level_bits_def tcbSlots)
   apply (clarsimp simp: valid_objs_ntfn_at_tcbBoundNotification
                         invs_valid_objs' if_apply_def2)
+  apply (clarsimp simp: invs_valid_objs')
+  apply (rule conjI[rotated])
+   apply (fastforce elim: cte_wp_at_weakenE')
+  apply (clarsimp simp: isRight_def)
   apply (frule cte_wp_at_valid_objs_valid_cap', clarsimp+)
-  apply (rule conj_commute[THEN iffD1], rule context_conjI,
-           rule resolveAddressBits_functional_Some[unfolded not_None_eq, rule_format])
-   apply clarsimp
-  apply clarsimp
-  apply (frule resolveAddressBits_functional_real_cte_at', clarsimp+)
+  apply (frule resolveAddressBitsFn_real_cte_at',
+    (clarsimp | erule cte_wp_at_weakenE')+)
   apply (frule real_cte_at', clarsimp)
   apply (frule cte_wp_at_valid_objs_valid_cap', clarsimp,
          clarsimp simp: isCap_simps, simp add: valid_cap_simps')
@@ -6540,14 +6375,33 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
   apply (subst tcb_at_cte_at_offset,
          assumption, simp add: tcb_cte_cases_def cte_level_bits_def tcbSlots)
   apply (clarsimp simp: inj_case_bool cte_wp_at_ctes_of
-                         length_msgRegisters
+                        length_msgRegisters
                         n_msgRegisters_def order_less_imp_le
+                        tcb_at_invs' invs_mdb'
                  split: bool.split)
-  apply (fastforce simp: cte_level_bits_def tcbSlots tcb_cte_cases_def obj_at_tcbs_of st_tcb_at_tcbs_of dest!: st_tcb_at_is_Reply_imp_not_tcbQueued[rotated])+
+  apply (clarsimp simp: obj_at_tcbs_of tcbSlots
+                        cte_level_bits_def)
+  apply (frule(1) st_tcb_at_is_Reply_imp_not_tcbQueued)
+  apply (auto simp: obj_at_tcbs_of tcbSlots
+                        cte_level_bits_def)
   done
 
 lemmas fastpath_reply_recv_ccorres_callKernel
     = monadic_rewrite_ccorres_assemble[OF fastpath_reply_recv_ccorres fastpath_callKernel_SysReplyRecv_corres]
+
+lemma cnode_caps_gsCNodes_from_sr:
+  "valid_objs s \<Longrightarrow> (s, s') \<in> state_relation
+    \<Longrightarrow> cnode_caps_gsCNodes' s'"
+  apply (clarsimp simp: cnode_caps_gsCNodes_def only_cnode_caps_def
+                        o_def ran_map_option)
+  apply (safe, simp_all)
+  apply (clarsimp elim!: ranE)
+  apply (frule(1) pspace_relation_cte_wp_atI[rotated])
+   apply clarsimp
+  apply (clarsimp simp: is_cap_simps)
+  apply (frule(1) cte_wp_at_valid_objs_valid_cap)
+  apply (clarsimp simp: valid_cap_simps cap_table_at_gsCNodes_eq)
+  done
 
 end
 

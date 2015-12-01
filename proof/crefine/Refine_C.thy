@@ -574,7 +574,7 @@ lemma callKernel_withFastpath_corres_C:
   apply (frule(1) obj_at_cslift_tcb[OF tcb_at_invs'])
   apply (clarsimp simp: typ_heap_simps' ct_in_state'_def
                         "StrictC'_register_defs" word_sle_def word_sless_def)
-  apply (auto elim!: pred_tcb'_weakenE)
+  apply (auto elim!: pred_tcb'_weakenE cnode_caps_gsCNodes_from_sr[rotated])
   done
 
 lemma threadSet_all_invs_triv':
