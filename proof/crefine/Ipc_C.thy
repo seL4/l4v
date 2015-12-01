@@ -2026,7 +2026,6 @@ lemma loadCapTransfer_ccorres [corres]:
     apply (ctac (no_vcg) add: ccorres_return_C)
    apply (wp capTransferFromWords_inv | simp)+
   apply (clarsimp simp: word_size)
-  apply (clarsimp simp: valid_ipc_buffer_ptr'_def wordSize_def')
   apply (simp add: seL4_MsgLengthBits_def 
                    seL4_MsgExtraCapBits_def
                    seL4_MsgMaxLength_def
@@ -2036,38 +2035,13 @@ lemma loadCapTransfer_ccorres [corres]:
                    Collect_const_mem msg_align_bits)
   apply (frule(1) valid_ipc_buffer_ptr_array[where p="Ptr p'" for p', simplified],
     rule order_refl, simp_all add: msg_align_bits)
+  apply (clarsimp simp: valid_ipc_buffer_ptr'_def wordSize_def')
   apply (subst array_assertion_shrink_left_add_div, assumption)
    apply (simp add: msgMaxLength_def msgExtraCaps_def msgMaxExtraCaps_def msgExtraCapBits_def
                     shiftL_nat)
+  apply simp
   apply (erule aligned_add_aligned, simp_all add: is_aligned_def)
   done
-
-(* FIXME: is getExtraCPtr ever called? 
-lemma getExtraCPtr_ccorres [corres]:
-  "ccorres (op =) ret__unsigned_long_'
-           (valid_pspace' and valid_ipc_buffer_ptr' buffer)
-           (UNIV \<inter> \<lbrace>\<acute>bufferPtr = Ptr buffer\<rbrace> \<inter> \<lbrace>unat \<acute>i = i\<rbrace>) hs
-           (getExtraCPtr buffer i)
-           (Call getExtraCPtr_'proc)"
-  apply (cinit lift: bufferPtr_' i_')
-   apply (rule ccorres_add_return2)
-   apply (rule ccorres_pre_loadWordUser)
-   apply (rule_tac P="valid_ipc_buffer_ptr' buffer" and
-     P'= "{s. cslift s (Ptr (buffer + (8 + msgMaxLength * 4 + ia * 4)))
-                 = Some rv}"
-     in ccorres_from_vcg_throws)
-   apply (rule allI, rule conseqPre, vcg)
-   apply (clarsimp simp: return_def seL4_MsgMaxLength_def msgMaxLength_def typ_heap_simps')
-  apply (clarsimp simp: bufferCPtrOffset_def word_size msgMaxLength_def
-                        seL4_MsgLengthBits_def  Types_H.msgLengthBits_def
-                        field_simps)
-  apply (clarsimp simp: valid_ipc_buffer_ptr'_def wordSize_def')
-  apply (erule aligned_add_aligned, simp_all add: word_bits_def)
-   apply (rule_tac n=2 in aligned_add_aligned, simp_all add: word_bits_def)
-    apply (rule is_aligned_mult_triv2 [where n = 2, simplified])
-   apply (simp add: is_aligned_def)
-done
-*)
 
 lemma loadCapTransfer_ctReceiveDepth:
   "\<lbrace>\<top>\<rbrace> loadCapTransfer buffer \<lbrace>\<lambda>rv s. ctReceiveDepth rv < 2 ^ word_bits\<rbrace>"
@@ -4103,6 +4077,7 @@ lemma cteDeleteOne_tcbFault:
             isFinalCapability_inv unbindMaybeNotification_tcbFault
             static_imp_wp
           | wpc | simp add: Let_def)+
+  apply (clarsimp split: split_if)
   done
 
 lemma transferCapsToSlots_local_slots:
@@ -5124,7 +5099,8 @@ lemma sendIPC_ccorres [corres]:
        apply wp
       apply (clarsimp simp: guard_is_UNIV_def)
      apply (rule ccorres_return_Skip)
-    apply (clarsimp simp: EPState_Recv_def EPState_Send_def EPState_Idle_def)
+    apply (clarsimp simp: EPState_Recv_def EPState_Send_def EPState_Idle_def
+                   split: split_if)
     apply (frule(1) ko_at_valid_objs'[OF _ invs_valid_objs'])
      apply (clarsimp simp: projectKO_opt_ep split: kernel_object.split_asm)
     apply (subgoal_tac "epptr \<noteq> thread \<and> bound_tcb_at' (\<lambda>x. tcb_bound_refs' x =
@@ -5140,17 +5116,15 @@ lemma sendIPC_ccorres [corres]:
                              projectKOs invs'_def valid_state'_def
                              st_tcb_at'_def valid_tcb_state'_def ko_wp_at'_def
                              isBlockedOnSend_def projectKO_opt_tcb
-                      split: split_if_asm)
+                      split: split_if_asm split_if)
        apply (rule conjI, simp, rule impI, clarsimp simp: valid_pspace_valid_objs') 
        apply (erule delta_sym_refs)
-        apply (clarsimp split: split_if_asm)+
-       apply (rule conjI)
+        apply (clarsimp split: split_if_asm
+                        dest!: symreftype_inverse')+
         apply (clarsimp simp: pred_tcb_at'_def obj_at'_def tcb_bound_refs'_def
                               projectKOs eq_sym_conv 
-                       dest!: symreftype_inverse')
-       apply clarsimp
-       apply (rule conjI)
-        apply (clarsimp dest!: symreftype_inverse')
+                       dest!: symreftype_inverse'
+                       split: split_if_asm)
        apply (clarsimp simp: pred_tcb_at'_def obj_at'_def projectKOs 
                              tcb_bound_refs'_def eq_sym_conv)
       apply (clarsimp simp: obj_at'_def state_refs_of'_def projectKOs)
@@ -5656,7 +5630,7 @@ lemma receiveIPC_ccorres [corres]:
                           split: Structures_H.ntfn.split_asm Structures_H.notification.splits)
           apply ceqv
          apply (rule ccorres_cond[where R=\<top>])
-           apply simp
+           apply (simp add: Collect_const_mem)
           apply (ctac add: completeSignal_ccorres[unfolded dc_def])
          apply (rule_tac xf'=ret__unsigned_long_'
                      and val="case ep of IdleEP \<Rightarrow> scast EPState_Idle
@@ -5932,7 +5906,8 @@ lemma receiveIPC_ccorres [corres]:
           apply (case_tac "tcbState obj", clarsimp+)[1]
          apply (clarsimp simp: guard_is_UNIV_def)+
         apply (wp getNotification_wp | wpc)+
-       apply (clarsimp simp add: guard_is_UNIV_def option_to_ptr_def option_to_0_def)
+       apply (clarsimp simp add: guard_is_UNIV_def option_to_ptr_def option_to_0_def
+                          split: split_if)
       apply (wp gbn_wp' | simp add: guard_is_UNIV_def)+
   apply (auto simp:  isCap_simps valid_cap'_def)
   done
@@ -6161,7 +6136,7 @@ lemma sendSignal_ccorres [corres]:
        apply (rule_tac P="(ret__unsigned_long = scast ThreadState_BlockedOnReceive)
                  = receiveBlocked rv" in ccorres_gen_asm2)
        apply (rule ccorres_cond[where R=\<top>])
-         apply simp
+         apply (simp add: Collect_const_mem)
         apply (rule ccorres_rhs_assoc)+
         apply simp
         apply (ctac(no_vcg) add: cancelIPC_ccorres1[OF cteDeleteOne_ccorres])
@@ -6179,8 +6154,8 @@ lemma sendSignal_ccorres [corres]:
       apply (clarsimp simp: guard_is_UNIV_def option_to_ctcb_ptr_def
                             State_H.badgeRegister_def Kernel_C.badgeRegister_def
                             ARMMachineTypes.badgeRegister_def Kernel_C.R0_def
-                            "StrictC'_thread_state_defs"less_mask_eq)
-      apply (rule conjI[rotated], clarsimp+)
+                            "StrictC'_thread_state_defs"less_mask_eq
+                            Collect_const_mem)
       apply (case_tac ts, simp_all add: receiveBlocked_def typ_heap_simps
                        cthread_state_relation_def "StrictC'_thread_state_defs")[1]
       -- "ActiveNtfn case"
@@ -6621,7 +6596,7 @@ lemma receiveSignal_ccorres [corres]:
     apply (clarsimp simp: guard_is_UNIV_def NtfnState_Active_def
                           NtfnState_Waiting_def NtfnState_Idle_def)
    apply (clarsimp simp: guard_is_UNIV_def)
-  apply clarsimp
+  apply (clarsimp split: split_if)
   apply (rule conjI)
    apply (clarsimp dest!: st_tcb_strg'[rule_format] 
                     simp: isNotificationCap_def valid_cap'_def obj_at'_def projectKOs
@@ -6639,7 +6614,7 @@ lemma receiveSignal_ccorres [corres]:
                            valid_tcb_state'_def ko_wp_at'_def
                            isBlockedOnNotification_def projectKO_opt_tcb
                      elim: delta_sym_refs
-                    split: split_if_asm)
+                    split: split_if_asm split_if)
     apply (auto simp: obj_at'_def state_refs_of'_def projectKOs ntfn_bound_refs'_def)[1]
    apply (rename_tac list)
    apply (subgoal_tac "state_refs_of' s (capNtfnPtr cap) = (set list) \<times> {NTFNSignal} 
@@ -6650,7 +6625,7 @@ lemma receiveSignal_ccorres [corres]:
                           valid_tcb_state'_def ko_wp_at'_def
                           isBlockedOnNotification_def projectKO_opt_tcb
                     elim: delta_sym_refs
-                   split: split_if_asm)
+                   split: split_if_asm split_if)
    apply (frule(1) sym_refs_obj_atD' [OF _ invs_sym'])
    apply (rule conjI, clarsimp simp: ko_wp_at'_def dest!: ntfnBound_state_refs_equivalence)
    apply (clarsimp simp: st_tcb_at'_def ko_wp_at'_def obj_at'_def projectKOs

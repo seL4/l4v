@@ -3204,11 +3204,11 @@ lemma fastpath_reply_recv_ccorres:
                apply (simp add: getThreadVSpaceRoot_def locateSlot_conv
                                 getThreadCallerSlot_def
                            del: Collect_const cong: if_cong call_ignore_cong)
-           apply (rule ccorres_abstract_ksCurThread, ceqv)
-           apply (rename_tac ksCurThread_y)
-           apply (rule ccorres_move_const_guard
-                       ccorres_move_c_guard_tcb_ctes2
-                       ccorres_move_array_assertion_tcb_ctes)+
+               apply (rule ccorres_abstract_ksCurThread, ceqv)
+               apply (rename_tac ksCurThread_y)
+               apply (rule ccorres_move_const_guard
+                           ccorres_move_c_guard_tcb_ctes2
+                           ccorres_move_array_assertion_tcb_ctes)+
                apply (rule_tac xf'="ksCurThread_' \<circ> globals"
                            and val="tcb_ptr_to_ctcb_ptr curThread"
                            in ccorres_abstract_known)
@@ -3255,8 +3255,8 @@ lemma fastpath_reply_recv_ccorres:
                      apply (rule slowpath_ccorres, simp+)
                   apply (vcg exspec=slowpath_noreturn_spec)
                  apply (simp del: Collect_const cong: call_ignore_cong)
-             apply (rule ccorres_move_c_guard_tcb_ctes3 ccorres_move_const_guards
-                         ccorres_move_array_assertion_tcb_ctes)+
+                 apply (rule ccorres_move_c_guard_tcb_ctes3 ccorres_move_const_guards
+                             ccorres_move_array_assertion_tcb_ctes)+
                  apply (rule_tac var="newVTable_'" and var_update="newVTable_'_update"
                                 in getCTE_h_val_ccorres_split[where P=\<top>])
                    apply simp
@@ -3282,17 +3282,17 @@ lemma fastpath_reply_recv_ccorres:
                                in ccorres_gen_asm2)
                    apply (simp add: ccap_relation_pd_helper cap_get_tag_isCap_ArchObject2
                                     ccap_relation_reply_helper
-                                  ptr_add_assertion_positive
+                                    ptr_add_assertion_positive
                            del: Collect_const WordSetup.ptr_add_def cong: call_ignore_cong)
-                 apply (rule ccorres_move_array_assertion_pd
-                      | (rule ccorres_flip_Guard ccorres_flip_Guard2,
-                          rule ccorres_move_array_assertion_pd))+
+                   apply (rule ccorres_move_array_assertion_pd
+                        | (rule ccorres_flip_Guard ccorres_flip_Guard2,
+                            rule ccorres_move_array_assertion_pd))+
                    apply (rule stored_hw_asid_get_ccorres_split[where P=\<top>], ceqv)
-                 apply (rule ccorres_abstract_ksCurThread, ceqv)
-                 apply (rename_tac ksCurThread_x)
-                 apply (rule_tac P="ksCurThread_y = ksCurThread_x" in ccorres_gen_asm)
-                 apply (rule ccorres_move_c_guard_tcb
-                             ccorres_move_const_guard)+
+                   apply (rule ccorres_abstract_ksCurThread, ceqv)
+                   apply (rename_tac ksCurThread_x)
+                   apply (rule_tac P="ksCurThread_y = ksCurThread_x" in ccorres_gen_asm)
+                   apply (rule ccorres_move_c_guard_tcb
+                               ccorres_move_const_guard)+
                    apply (rule ccorres_symb_exec_l3[OF _ threadGet_inv _ empty_fail_threadGet])
                     apply (rule ccorres_symb_exec_l3[OF _ threadGet_inv _ empty_fail_threadGet])
                      apply (rename_tac curPrio destPrio)
@@ -3332,7 +3332,7 @@ lemma fastpath_reply_recv_ccorres:
                                        to_bool_def
                                   del: Collect_const cong: call_ignore_cong)
 
-                    apply (rule ccorres_move_c_guard_tcb ccorres_move_const_guard)+
+                  apply (rule ccorres_move_c_guard_tcb ccorres_move_const_guard)+
                   apply (rule ccorres_symb_exec_l3[OF _ curDomain_inv _])
                     prefer 3
                     apply (simp only: curDomain_def, rule empty_fail_gets)
@@ -5539,9 +5539,11 @@ lemma doReplyTransfer_simple:
 lemma monadic_rewrite_if_known:
   "monadic_rewrite F E ((\<lambda>s. C = X) and \<top>) (if C then f else g) (if X then f else g)"
   apply (rule monadic_rewrite_gen_asm)
-  apply simp
+  apply (simp split del: split_if)
   apply (rule monadic_rewrite_refl)
   done
+
+context kernel_m begin
 
 lemma receiveIPC_simple_rewrite:
   "monadic_rewrite True False
@@ -6358,7 +6360,6 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
          simp add: tcb_cte_cases_def cte_level_bits_def tcbSlots)
   apply (clarsimp simp: valid_objs_ntfn_at_tcbBoundNotification
                         invs_valid_objs' if_apply_def2)
-  apply (clarsimp simp: invs_valid_objs')
   apply (rule conjI[rotated])
    apply (fastforce elim: cte_wp_at_weakenE')
   apply (clarsimp simp: isRight_def)

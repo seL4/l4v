@@ -1279,6 +1279,7 @@ lemma not_obj_at'_ntfn:
   done
  
 lemma handleRecv_ccorres:
+  notes rf_sr_upd_safe[simp del]
   shows
   "ccorres dc xfdc   
        (\<lambda>s. invs' s \<and> st_tcb_at' simple' (ksCurThread s) s
@@ -1334,11 +1335,11 @@ lemma handleRecv_ccorres:
 
               apply vcg
              apply (rule conseqPre, vcg)
-             apply clarsimp
+             apply (clarsimp simp: rf_sr_upd_safe)
 
             apply vcg
            apply (rule conseqPre, vcg)
-           apply clarsimp
+           apply (clarsimp simp: rf_sr_upd_safe)
 
           apply (simp add: liftE_bind)
           apply (ctac)
@@ -1399,11 +1400,11 @@ lemma handleRecv_ccorres:
 
                  apply vcg
                 apply (rule conseqPre, vcg)
-                apply clarsimp
+                apply (clarsimp simp: rf_sr_upd_safe)
 
                apply vcg
               apply (rule conseqPre, vcg)
-              apply clarsimp
+              apply (clarsimp simp: rf_sr_upd_safe)
 
              apply (simp add: liftE_bind) 
              apply (ctac  add: receiveSignal_ccorres[unfolded dc_def])
@@ -1427,10 +1428,10 @@ lemma handleRecv_ccorres:
 
                apply vcg
               apply (rule conseqPre, vcg)
-              apply clarsimp
+              apply (clarsimp simp: rf_sr_upd_safe)
              apply vcg
             apply (rule conseqPre, vcg)
-            apply clarsimp
+            apply (clarsimp simp: rf_sr_upd_safe)
            apply (vcg exspec=handleFault_modifies)
        apply (rule ccorres_cond_univ)
         apply (simp add: capFaultOnFailure_def rethrowFailure_def
@@ -1444,10 +1445,10 @@ lemma handleRecv_ccorres:
             apply (ctac add: handleFault_ccorres[unfolded dc_def])
            apply vcg
           apply (rule conseqPre, vcg)
-          apply clarsimp
+          apply (clarsimp simp: rf_sr_upd_safe)
         apply vcg
         apply (rule conseqPre, vcg)
-        apply clarsimp
+        apply (clarsimp simp: rf_sr_upd_safe)
 
        apply clarsimp
        apply (rule ccorres_add_return2)
@@ -1462,7 +1463,7 @@ lemma handleRecv_ccorres:
          apply (vcg exspec=handleFault_modifies)
         apply vcg
        apply (rule conseqPre, vcg)
-       apply clarsimp
+       apply (clarsimp simp: rf_sr_upd_safe)
       apply (wp)
       apply clarsimp
       apply (rename_tac thread epCPtr)
@@ -1480,17 +1481,15 @@ lemma handleRecv_ccorres:
     apply wp
    apply vcg
   
-  apply (clarsimp simp add: sch_act_sane_def simp del: rf_sr_upd_safe)
+  apply (clarsimp simp add: sch_act_sane_def)
   apply (simp add: cap_get_tag_isCap[symmetric] del: rf_sr_upd_safe)
   apply (simp add: Kernel_C.capRegister_def State_H.capRegister_def ct_in_state'_def
                    ARMMachineTypes.capRegister_def Kernel_C.R0_def
-                   tcb_at_invs'
-              del: rf_sr_upd_safe)
+                   tcb_at_invs')
+  apply (frule invs_valid_objs')
   apply (frule tcb_aligned'[OF tcb_at_invs'])
+  apply clarsimp
   apply (intro conjI impI allI)
-  apply (drule(1) pred_tcb_at')
-  apply fastforce
-  apply (clarsimp dest: invs_valid_objs')
              apply (clarsimp simp: cfault_rel_def fault_cap_fault_lift 
                               lookup_fault_missing_capability_lift is_cap_fault_def)+
          apply (clarsimp simp: cap_get_tag_NotificationCap)

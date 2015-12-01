@@ -279,12 +279,6 @@ next
     have imp_rem': "\<And>P R X. P \<and> R \<Longrightarrow> P \<and> R \<and> (P \<and> R \<longrightarrow> X = X)" by clarsimp    
     note conj_refl_r = conjI [OF _ refl]    
 
-(*
-    have locateSlot_in_monad:
-      "\<And>a b p off s. ((a, b) \<in> fst (locateSlot p off s)) = (a = p + 0x10 * off \<and> b = s)"
-       by (simp add: locateSlot_def return_def bind_def objBits_simps)
-*)
-
     have getSlotCap_in_monad:
       "\<And>a b p rs s. ((a, b) \<in> fst (getSlotCap p s)) = 
       (option_map cteCap (ctes_of s p) = Some a 

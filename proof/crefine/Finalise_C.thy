@@ -1313,8 +1313,8 @@ lemma findPDForASID_nonzero:
   done
 
 lemma unat_shiftr_le_bound:
-  "2 ^ (len_of TYPE('a :: len) - n) - 1 \<le> bound \<Longrightarrow> 0 < n
-    \<Longrightarrow> unat ((x :: 'a word) >> n) \<le> bound"
+  "2 ^ (len_of TYPE('a :: len) - n) - 1 \<le> bnd \<Longrightarrow> 0 < n
+    \<Longrightarrow> unat ((x :: 'a word) >> n) \<le> bnd"
   apply (erule order_trans[rotated], simp)
   apply (rule nat_le_Suc_less_imp)
   apply (rule unat_less_helper, simp)

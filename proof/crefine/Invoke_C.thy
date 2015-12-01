@@ -2973,7 +2973,7 @@ shows
                 apply (clarsimp simp: upto_enum_def word_le_nat_alt[symmetric]
                                split: option.split_asm split_if_asm)
                 apply (drule spec, drule mp, erule conjI, rule order_refl)
-                apply simp
+                apply clarsimp
                apply (simp del: Collect_const)
                apply (vcg exspec=lookupTargetSlot_modifies)
               apply simp

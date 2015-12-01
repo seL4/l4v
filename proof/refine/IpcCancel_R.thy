@@ -113,7 +113,7 @@ lemma (in delete_one_conc_pre) cancelIPC_st_tcb_at':
   "\<lbrace>st_tcb_at' P t' and K (t \<noteq> t')\<rbrace>
      cancelIPC t
    \<lbrace>\<lambda>rv. st_tcb_at' P t'\<rbrace>"
-  apply (simp add: cancelIPC_def Let_def getThreadReplySlot_def locateSlot_def
+  apply (simp add: cancelIPC_def Let_def getThreadReplySlot_def locateSlot_conv
                    capHasProperty_def isCap_simps)
   apply (wp sts_pred_tcb_neq' hoare_drop_imps delete_one_reply_st_tcb_at
        | wpc | clarsimp)+

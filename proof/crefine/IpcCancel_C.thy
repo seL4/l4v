@@ -2904,7 +2904,7 @@ lemma cancelIPC_ccorres_reply_helper:
                         ghost_assertion_data_set_def cap_tag_defs)
       apply (simp add: locateSlot_conv, wp)
      apply vcg
-    apply (rule_tac Q="\<lambda>rv. invs'" in hoare_post_imp)
+    apply (rule_tac Q="\<lambda>rv. tcb_at' thread and invs'" in hoare_post_imp)
      apply (clarsimp simp: cte_wp_at_ctes_of capHasProperty_def cap_get_tag_isCap ucast_id)
     apply (wp hoare_vcg_all_lift threadSet_invs_trivial
                | wp_once hoare_drop_imps | simp)+
@@ -2986,7 +2986,7 @@ lemma cancelIPC_ccorres1:
            apply (rule ccorres_Guard ccorres_Guard_Seq)+
            apply (clarsimp simp del: dc_simp simp: of_int_sint)
            apply ccorres_remove_UNIV_guard
-           apply (rule cancelIPC_ccorres_reply_helper [OF cteDeleteOne_ccorres, unfolded dc_def])
+           apply (rule cancelIPC_ccorres_reply_helper [OF cteDeleteOne_ccorres])
           -- "BlockedOnNotification"
           apply (simp add: word_sle_def "StrictC'_thread_state_defs" ccorres_cond_iffs dc_def [symmetric] cong: call_ignore_cong)
           apply (rule ccorres_symb_exec_r)
