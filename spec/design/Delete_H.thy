@@ -82,7 +82,7 @@ odE))
   else if isZombie v5 \<and> v6
   then let z = v5; ptr = capZombiePtr z; n = capZombieNumber z
   in   (doE
-    endSlot \<leftarrow> withoutPreemption $ locateSlot ptr (fromIntegral (n - 1));
+    endSlot \<leftarrow> withoutPreemption $ locateSlotCap z (fromIntegral (n - 1));
     cteDelete endSlot False;
     ourCTE  \<leftarrow> withoutPreemption $ getCTE slot;
     (let c2 = (cteCap ourCTE) in

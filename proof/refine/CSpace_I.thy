@@ -73,67 +73,28 @@ lemma cap_case_CNodeCap:
       = (if isCNodeCap cap then P else Q)"
   by (cases cap, simp_all add: isCap_simps)
 
-lemma rab_inv' [wp]:
-  "\<lbrace>P\<rbrace> resolveAddressBits cap addr depth \<lbrace>\<lambda>rv. P\<rbrace>"
-proof (induct rule: resolveAddressBits.induct)
-  case (1 cap addr depth)
+lemma resolveAddressBits_inv_induct:
+  shows
+  "s \<turnstile> \<lbrace>P\<rbrace>
+     resolveAddressBits cap cref depth
+   \<lbrace>\<lambda>rv. P\<rbrace>,\<lbrace>\<lambda>rv. P\<rbrace>"
+proof (induct arbitrary: s rule: resolveAddressBits.induct)
+  case (1 cap fn cref depth)
   show ?case
     apply (subst resolveAddressBits.simps)
-    apply (simp only: Let_def split: split_if)
-    apply (rule conjI)
-     prefer 2
-     apply clarsimp
-     apply wp[1]
-    apply (unfold valid_def)
-    apply (intro allI impI ballI)
-    apply clarify
-    apply (rename_tac r s')
-    apply (case_tac r)
-     prefer 2
-     apply (simp only: in_bindE_R K_bind_def)
-     apply (elim exE conjE)
-     apply (simp only: split: split_if_asm)
-      apply (clarsimp simp add: in_monad unlessE_def locateSlot_def 
-                      split: split_if_asm)     
-     apply (simp only: in_bindE_R K_bind_def)
-     apply (elim exE conjE)
-     apply (simp only: cap_case_CNodeCap split: split_if_asm)
-      apply (drule_tac cap=nextCap in isCapDs(4), elim exE)
-      apply (drule (11) "1.hyps" [OF refl])
-        apply (assumption | rule refl)+
-      apply (simp add: valid_def)
-      apply (erule allE, erule (1) impE)
-      apply (clarsimp simp: in_monad unlessE_def locateSlot_def 
-                      split: split_if_asm)
-      apply (drule in_inv_by_hoareD [OF getSlotCap_inv])
-      apply simp
-      apply (drule (1) bspec)
-      apply simp
-     apply (clarsimp simp: in_monad unlessE_def locateSlot_def 
-                     split: split_if_asm)
-     apply (drule in_inv_by_hoareD [OF getSlotCap_inv])
-     apply simp
-    apply (simp only: K_bind_def)
-    apply (drule in_bindE_L, erule disjE, elim exE conjE)+
-              apply (simp only: split: split_if_asm)
-               apply (clarsimp simp: in_monad)
-              apply (drule in_bindE_L, erule disjE, elim exE conjE)+
-               apply (simp only: cap_case_CNodeCap split: split_if_asm)
-                apply (drule_tac cap=nextCap in isCapDs(4), elim exE)
-                apply (drule (11) "1.hyps" [OF refl])
-                  apply assumption+
-                apply (simp add: valid_def)
-                apply (erule allE, erule (1) impE)
-                apply (clarsimp simp: in_monad unlessE_def locateSlot_def 
-                                split: split_if_asm)
-                apply (drule in_inv_by_hoareD [OF getSlotCap_inv])
-                apply simp
-                apply (drule (1) bspec)
-                apply simp
-               apply (auto simp: in_monad unlessE_def locateSlot_def 
-                           split: split_if_asm)
-    done
+    apply (simp add: Let_def split_def cap_case_CNodeCap[unfolded isCap_simps]
+               split del: split_if cong: if_cong)
+    apply (rule hoare_pre_spec_validE)
+     apply ((elim exE | wp_once spec_strengthen_postE[OF "1.hyps"])+,
+              (rule refl conjI | simp add: in_monad split del: split_if)+)
+            apply (wp | simp add: locateSlot_conv split del: split_if
+                      | wp_once hoare_drop_imps)+
+  done
 qed
+
+lemma rab_inv' [wp]:
+  "\<lbrace>P\<rbrace> resolveAddressBits cap addr depth \<lbrace>\<lambda>rv. P\<rbrace>"
+  by (rule validE_valid, rule use_specE', rule resolveAddressBits_inv_induct)
 
 lemmas rab_inv'' [wp] = rab_inv' [folded resolveAddressBits_decl_def]
 

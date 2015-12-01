@@ -2031,7 +2031,7 @@ lemma doReplyTransfer_st_tcb_at_active:
 lemma hr_ct_active'[wp]:
   "\<lbrace>invs' and ct_active'\<rbrace> handleReply \<lbrace>\<lambda>rv. ct_active'\<rbrace>"
   apply (simp add: handleReply_def getSlotCap_def getCurThread_def
-                   getThreadCallerSlot_def locateSlot_def)
+                   getThreadCallerSlot_def locateSlot_conv)
   apply (rule hoare_seq_ext)
    apply (rule ct_in_state'_decomp)
     apply ((wp hoare_drop_imps | wpc | simp)+)[1]
@@ -2112,7 +2112,7 @@ lemma doReplyTransfer_sane:
 
 lemma handleReply_sane:
   "\<lbrace>sch_act_sane\<rbrace> handleReply \<lbrace>\<lambda>rv. sch_act_sane\<rbrace>"
-  apply (simp add: handleReply_def getSlotCap_def getThreadCallerSlot_def locateSlot_def)
+  apply (simp add: handleReply_def getSlotCap_def getThreadCallerSlot_def locateSlot_conv)
   apply (rule hoare_pre) 
    apply (wp haskell_assert_wp doReplyTransfer_sane getCTE_wp'| wpc)+
   apply (clarsimp simp: cte_wp_at_ctes_of) 

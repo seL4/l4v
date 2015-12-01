@@ -55,11 +55,18 @@ lemma typ_uinfo_array_tag_n_m_eq:
   by (simp add: typ_uinfo_t_def typ_info_array array_tag_def
                 uinfo_array_tag_n_m_eq)
 
+text {* Alternative to h_t_valid for arrays. This allows reasoning
+about arrays of variable width. *}
+definition
+  h_t_array_valid :: "heap_typ_desc \<Rightarrow> ('a :: c_type) ptr \<Rightarrow> nat \<Rightarrow> bool"
+where
+  "h_t_array_valid htd ptr n = valid_footprint htd (ptr_val ptr) (uinfo_array_tag_n_m TYPE ('a) n n)"
+
 text {* Assertion that pointer p is within an array that continues
 for at least n more elements. *}
 definition
   "array_assertion (p :: ('a :: c_type) ptr) n htd
-    = (\<exists>q i j. valid_footprint htd (ptr_val q) (uinfo_array_tag_n_m TYPE ('a) j j)
+    = (\<exists>q i j. h_t_array_valid htd q j
         \<and> p = ptr_add q (int i) \<and> i < j \<and> i + n \<le> j)"
 
 lemma array_assertion_shrink_right:
@@ -80,14 +87,17 @@ lemma array_assertion_shrink_leftI:
   apply (simp add: ptr_add_def)
   done
 
+lemma h_t_array_valid:
+  "h_t_valid htd gd (p :: (('a :: wf_type)['b :: finite]) ptr)
+    \<Longrightarrow> h_t_array_valid htd (ptr_coerce p :: 'a ptr) (CARD('b))"
+  by (clarsimp simp: h_t_valid_def h_t_array_valid_def
+                     typ_uinfo_array_tag_n_m_eq)
+
 lemma array_ptr_valid_array_assertionD:
   "h_t_valid htd gd (p :: (('a :: wf_type)['b :: finite]) ptr)
     \<Longrightarrow> array_assertion (ptr_coerce p :: 'a ptr) (CARD('b)) htd"
-  apply (clarsimp simp: h_t_valid_def array_assertion_def
-                        typ_uinfo_array_tag_n_m_eq)
-  apply (rule_tac x="ptr_coerce p" in exI, rule_tac x="0" in exI)
-  apply (rule_tac x="CARD('b)" in exI)
-  apply simp
+  apply (clarsimp simp: array_assertion_def dest!: h_t_array_valid)
+  apply (fastforce intro: exI[where x=0])
   done
 
 lemma array_ptr_valid_array_assertionI:
@@ -132,6 +142,45 @@ lemma ptr_add_assertion_uint[simp]:
         (case strong of True \<Rightarrow> Suc (unat offs) | False \<Rightarrow> unat offs) htd)"
   by (simp add: ptr_add_assertion_positive uint_0_iff unat_def
          split: bool.split)
+
+text {* Ignore char and void pointers. The C standard specifies that arithmetic on
+char and void pointers doesn't create any special checks. *}
+
+definition
+  ptr_add_assertion' :: "('a :: c_type) ptr \<Rightarrow> int \<Rightarrow> bool \<Rightarrow> heap_typ_desc \<Rightarrow> bool"
+where
+  "ptr_add_assertion' ptr offs strong htd = (typ_uinfo_t TYPE('a) = typ_uinfo_t TYPE(word8)
+    \<or> typ_uinfo_t TYPE ('a) = typ_uinfo_t TYPE(unit)
+    \<or> ptr_add_assertion ptr offs strong htd)"
+
+(* Useful for clearing away these assumptions. *)
+lemma td_diff_from_typ_name:
+  "typ_name td \<noteq> typ_name td' \<Longrightarrow> td \<noteq> td'"
+  by clarsimp
+
+lemma typ_name_void:
+  "typ_name (typ_uinfo_t TYPE(unit)) = ''unit''"
+ by (simp add: typ_uinfo_t_def)
+
+lemmas ptr_add_assertion' = ptr_add_assertion'_def td_diff_from_typ_name typ_name_void
+
+text {* Mechanism for retyping a range of memory to a non-constant array size. *}
+
+definition
+  ptr_arr_retyps :: "nat \<Rightarrow> ('a :: c_type) ptr \<Rightarrow> heap_typ_desc \<Rightarrow> heap_typ_desc"
+where
+  "ptr_arr_retyps n p \<equiv>
+    htd_update_list (ptr_val p)
+        (map (\<lambda>i. list_map (typ_slice_t (uinfo_array_tag_n_m TYPE('a) n n) i))
+            [0..<n * size_of TYPE('a)])"
+
+lemma ptr_arr_retyps_to_retyp:
+  "n = CARD('b :: finite)
+    \<Longrightarrow> ptr_arr_retyps n (p :: ('c :: wf_type) ptr) = ptr_retyp (ptr_coerce p :: ('c['b]) ptr)"
+  apply (rule ext)
+  apply (simp add: ptr_arr_retyps_def ptr_retyp_def typ_slices_def
+                   typ_uinfo_array_tag_n_m_eq)
+  done
 
 end
 

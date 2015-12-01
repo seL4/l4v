@@ -149,7 +149,7 @@ defs initInterruptController_def:
         setInterruptState $ InterruptState (ptrFromPAddr frame) irqTable;
         timerIRQ \<leftarrow> doMachineOp configureTimer;
         setIRQState IRQTimer timerIRQ;
-        slot \<leftarrow> locateSlot (capCNodePtr rootCNCap) biCapIRQC;
+        slot \<leftarrow> locateSlotCap rootCNCap biCapIRQC;
         insertInitCap slot IRQControlCap
     od);
     returnOk IRQControlCap
@@ -196,7 +196,7 @@ defs getIRQState_def:
 defs getIRQSlot_def:
 "getIRQSlot irq\<equiv> (do
     node \<leftarrow> liftM intStateIRQNode getInterruptState;
-    locateSlot node (fromIntegral $ fromEnum irq)
+    locateSlotBasic node (fromIntegral $ fromEnum irq)
 od)"
 
 

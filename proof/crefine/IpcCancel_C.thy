@@ -2806,21 +2806,6 @@ lemma cancelIPC_ccorres_helper:
   apply assumption
    done
 
-(* CLAG *)
-lemma locateSlot_ccorres [corres]:
-  assumes gl: "\<And>v s. globals (xfu v s) = globals s" -- "for state rel. preservation"
-  and     fg: "\<And>v s. xf (xfu (\<lambda>_. v) s) = v"
-  shows "ccorres (\<lambda>v v'. v' = Ptr v) xf \<top> {_. cnode = cnode' \<and> offset = offset'} hs (locateSlot cnode offset)
-                              (Basic (\<lambda>s. xfu (\<lambda>_. Ptr (cnode' + offset' * of_nat (size_of TYPE(cte_C))) :: cte_C ptr) s))"
-  unfolding locateSlot_def using gl fg  
-  apply -
-  apply (simp add: size_of_def split del: split_if)
-  apply (rule ccorres_return)
-  apply (rule conseqPre)
-   apply vcg
-  apply (clarsimp simp: fg objBits_simps)
-  done
-
 declare empty_fail_get[iff]
 
 lemma getThreadState_ccorres_foo:
@@ -2861,10 +2846,13 @@ lemma cancelIPC_ccorres_reply_helper:
            od)
       od)
      (CALL fault_null_fault_ptr_new(Ptr &(tcb_ptr_to_ctcb_ptr thread\<rightarrow>[''tcbFault_C'']));;
-      (\<acute>slot :==
+      (Guard MemorySafety
+               \<lbrace>ptr_add_assertion (cte_Ptr (ptr_val (tcb_ptr_to_ctcb_ptr thread) && 0xFFFFFE00))
+                 (sint Kernel_C.tcbReply) False (hrs_htd \<acute>t_hrs)\<rbrace>
+        (\<acute>slot :==
          cte_Ptr
           ((ptr_val (tcb_ptr_to_ctcb_ptr thread) && 0xFFFFFE00) +
-           of_int (sint Kernel_C.tcbReply) * of_nat (size_of TYPE(cte_C)));;
+           of_int (sint Kernel_C.tcbReply) * of_nat (size_of TYPE(cte_C))));;
        (Guard C_Guard {s. s \<Turnstile>\<^sub>c slot_' s}
          (\<acute>ret__unsigned_long :== CALL mdb_node_get_mdbNext(h_val (hrs_mem \<acute>t_hrs)
                   (mdb_Ptr &(\<acute>slot\<rightarrow>[''cteMDBNode_C'']))));;
@@ -2921,7 +2909,7 @@ lemma cancelIPC_ccorres_reply_helper:
     apply (wp hoare_vcg_all_lift threadSet_invs_trivial
                | wp_once hoare_drop_imps | simp)+
    apply (clarsimp simp: guard_is_UNIV_def tcbReplySlot_def
-                         Kernel_C.tcbReply_def mask_def)
+                         Kernel_C.tcbReply_def mask_def tcbCNodeEntries_def)
   apply (fastforce simp: pred_tcb_at' inQ_def tcb_aligned'[OF pred_tcb_at'])
   done
 

@@ -1468,6 +1468,89 @@ lemma c_guard_abs_tcb:
 
 lemmas ccorres_move_c_guard_tcb [corres_pre] = ccorres_move_c_guards [OF c_guard_abs_tcb]
 
+lemma h_t_array_valid_array_assertion:
+  "h_t_array_valid htd ptr n \<Longrightarrow> 0 < n
+    \<Longrightarrow> array_assertion ptr n htd"
+  apply (simp add: array_assertion_def)
+  apply (fastforce intro: exI[where x=0])
+  done
+
+lemma cte_array_relation_array_assertion:
+  "gsCNodes s p = Some n \<Longrightarrow> cte_array_relation s cstate
+    \<Longrightarrow> array_assertion (cte_Ptr p) (2 ^ n) (hrs_htd (t_hrs_' cstate))"
+  apply (rule h_t_array_valid_array_assertion)
+   apply (clarsimp simp: cvariable_array_map_relation_def)
+  apply simp
+  done
+
+lemma rf_sr_gsCNodes_array_assertion:
+  "gsCNodes s p = Some n \<Longrightarrow> (s, s') \<in> rf_sr
+    \<Longrightarrow>  array_assertion (cte_Ptr p) (2 ^ n) (hrs_htd (t_hrs_' (globals s')))"
+  by (clarsimp simp: rf_sr_def cstate_relation_def Let_def
+                     cte_array_relation_array_assertion)
+
+lemma rf_sr_tcb_ctes_array_assertion:
+  "\<lbrakk> (s, s') \<in> rf_sr; tcb_at' (ctcb_ptr_to_tcb_ptr tcb) s \<rbrakk>
+    \<Longrightarrow> array_assertion (cte_Ptr (ptr_val tcb && 0xFFFFFE00))
+        (unat tcbCNodeEntries) (hrs_htd (t_hrs_' (globals s')))"
+  apply (rule h_t_array_valid_array_assertion, simp_all add: tcbCNodeEntries_def)
+  apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
+                        cvariable_array_map_relation_def
+                        cpspace_relation_def)
+  apply (drule obj_at_ko_at', clarsimp)
+  apply (drule spec, drule mp, rule exI, erule ko_at_projectKO_opt)
+  apply (frule ptr_val_tcb_ptr_mask)
+  apply (simp add: mask_def)
+  done
+
+lemma array_assertion_abs_tcb_ctes:
+  "\<forall>s s'. (s, s') \<in> rf_sr \<and> tcb_at' (ctcb_ptr_to_tcb_ptr (tcb s')) s \<and> (n \<le> unat tcbCNodeEntries)
+    \<longrightarrow> array_assertion (cte_Ptr (ptr_val (tcb s') && 0xFFFFFE00)) n (hrs_htd (t_hrs_' (globals s')))"
+  apply (clarsimp, drule(1) rf_sr_tcb_ctes_array_assertion)
+  apply (erule array_assertion_shrink_right)
+  apply simp
+  done
+
+lemma array_assertion_abs_tcb_ctes_add:
+  "\<forall>s s'. (s, s') \<in> rf_sr \<and> tcb_at' (ctcb_ptr_to_tcb_ptr (tcb s')) s
+        \<and> (n \<ge> 0 \<and> (case strong of True \<Rightarrow> n + 1 | False \<Rightarrow> n) \<le> uint tcbCNodeEntries)
+    \<longrightarrow> ptr_add_assertion (cte_Ptr (ptr_val (tcb s') && 0xFFFFFE00)) n
+                strong (hrs_htd (t_hrs_' (globals s')))"
+  apply (clarsimp, drule(1) rf_sr_tcb_ctes_array_assertion)
+  apply (simp add: ptr_add_assertion_positive, rule disjCI2)
+  apply (erule array_assertion_shrink_right)
+  apply (cases strong, simp_all add: unat_def)
+  done
+
+lemmas ccorres_move_array_assertion_tcb_ctes [corres_pre]
+    = ccorres_move_Guard_Seq [OF array_assertion_abs_tcb_ctes]
+      ccorres_move_Guard [OF array_assertion_abs_tcb_ctes]
+      ccorres_move_Guard_Seq [OF array_assertion_abs_tcb_ctes_add]
+      ccorres_move_Guard [OF array_assertion_abs_tcb_ctes_add]
+
+lemma c_guard_abs_tcb_ctes:
+  fixes p :: "cte_C ptr"
+  shows "\<forall>s s'. (s, s') \<in> rf_sr \<and> tcb_at' (ctcb_ptr_to_tcb_ptr (tcb s')) s
+    \<and> (n < ucast tcbCNodeEntries) \<longrightarrow> s' \<Turnstile>\<^sub>c cte_Ptr (((ptr_val (tcb s') && 0xFFFFFE00)
+        + n * 0x10))"
+  apply (clarsimp)
+  apply (rule c_guard_abs_cte[rule_format], intro conjI, simp_all)
+  apply (simp add: cte_at'_obj_at', rule disjI2)
+  apply (frule ptr_val_tcb_ptr_mask)
+  apply (rule_tac x="n * 0x10" in bexI)
+   apply (simp add: mask_def)
+  apply (simp add: word_less_nat_alt tcbCNodeEntries_def tcb_cte_cases_def)
+  apply (case_tac "unat n", simp_all add: unat_eq_of_nat, rename_tac n_rem)
+  apply (case_tac "n_rem", simp_all add: unat_eq_of_nat, (rename_tac n_rem)?)+
+  done
+
+lemmas ccorres_move_c_guard_tcb_ctes [corres_pre] = ccorres_move_c_guards  [OF c_guard_abs_tcb_ctes]
+
+lemma cvariable_array_map_const_add_map_option:
+  "cvariable_array_map_relation m (\<lambda>_. n)
+        = cvariable_array_map_relation (map_option f o m) (\<lambda>_. n)"
+  by (simp add: cvariable_array_map_relation_def fun_eq_iff)
+
 lemma c_guard_abs_pte:
   "\<forall>s s'. (s, s') \<in> rf_sr \<and> pte_at' (ptr_val p) s \<and> True
               \<longrightarrow> s' \<Turnstile>\<^sub>c (p :: pte_C ptr)"
@@ -1529,8 +1612,6 @@ lemma liftM_exs_valid:
   apply simp
   done
 
-
-
 lemma ceqv_trans:
   "\<lbrakk> ceqv \<Gamma> xf' rv' t t' c c'; ceqv \<Gamma> xf' rv' t t' c' c'' \<rbrakk> \<Longrightarrow> ceqv \<Gamma> xf' rv' t t' c c''"
   unfolding ceqv_def by auto
@@ -1578,14 +1659,28 @@ lemma ceqv_guard_into_seq:
   "ceqv \<Gamma> xf v s s' (Guard Err S (a ;; b)) (Guard Err S a ;; b)"
   by (auto simp: ceqv_def elim!: exec_elim_cases intro: exec.intros)
 
+lemma ceqv_Seq_Skip_cases:
+  "\<lbrakk> \<And>s'. ceqv \<Gamma> xf v s s' a a'; \<And>s. ceqv \<Gamma> xf v s s' b c; xpres xf v \<Gamma> a;
+        (c = Skip \<and> c' = a' \<or> c' = (a' ;; c)) \<rbrakk> \<Longrightarrow>
+     ceqv \<Gamma> xf v s s' (a ;; b) c'"
+  by (metis Seq_ceqv ceqv_remove_eqv_skip')
+
+lemma finish_ceqv_Seq_Skip_cases:
+  "(Skip = Skip \<and> x = x \<or> x = y)"
+  "(y = Skip \<and> (x ;; y) = z \<or> (x ;; y) = (x ;; y))"
+  by simp_all
+
 ML {*
 fun tac ctxt =
   rtac @{thm ccorres_abstract[where xf'="\<lambda>s. ()"]} 1
   THEN (REPEAT_DETERM
-    ((resolve_tac ctxt @{thms ceqv_remove_eqv_skip'} 1
-        THEN SOLVED' (REPEAT_ALL_NEW (resolve_tac ctxt @{thms ceqv_Guard_UNIV[THEN iffD2] ceqv_refl})) 1)
-     ORELSE resolve_tac ctxt @{thms While_ceqv[OF impI, OF refl] Cond_ceqv[OF impI, OF refl] Seq_ceqv ceqv_Guard_UNIV[THEN iffD2] ceqv_refl} 1
-     ORELSE (CHANGED (simp_tac (ctxt addsimps @{thms xpres_def} |> Splitter.del_split @{thm "split_if"}) 1))))
+    (resolve_tac ctxt @{thms While_ceqv[OF impI, OF refl] Cond_ceqv[OF impI, OF refl]
+            ceqv_Seq_Skip_cases ceqv_Guard_UNIV[THEN iffD2]
+            Guard_ceqv[OF impI, OF refl] ceqv_refl
+            finish_ceqv_Seq_Skip_cases} 1
+        ORELSE (rtac @{thm xpresI} THEN' simp_tac (ctxt |> Splitter.del_split @{thm "split_if"})) 1
+    ))
+  THEN simp_tac (put_simpset HOL_basic_ss ctxt addsimps @{thms com.case}) 1
 *}
 
 end

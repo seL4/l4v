@@ -513,28 +513,20 @@ od)"
 
 defs getThreadCSpaceRoot_def:
 "getThreadCSpaceRoot thread\<equiv> (
-        locateSlot (PPtr $ fromPPtr thread) tcbCTableSlot
+        locateSlotTCB thread tcbCTableSlot
 )"
 
 defs getThreadVSpaceRoot_def:
-"getThreadVSpaceRoot thread\<equiv> (
-        locateSlot (PPtr $ fromPPtr thread) tcbVTableSlot
-)"
+"getThreadVSpaceRoot thread \<equiv> locateSlotTCB thread tcbVTableSlot"
 
 defs getThreadReplySlot_def:
-"getThreadReplySlot thread\<equiv> (
-        locateSlot (PPtr $ fromPPtr thread) tcbReplySlot
-)"
+"getThreadReplySlot thread \<equiv> locateSlotTCB thread tcbReplySlot"
 
 defs getThreadCallerSlot_def:
-"getThreadCallerSlot thread\<equiv> (
-        locateSlot (PPtr $ fromPPtr thread) tcbCallerSlot
-)"
+"getThreadCallerSlot thread \<equiv> locateSlotTCB thread tcbCallerSlot"
 
 defs getThreadBufferSlot_def:
-"getThreadBufferSlot thread\<equiv> (
-        locateSlot (PPtr $ fromPPtr thread) tcbIPCBufferSlot
-)"
+"getThreadBufferSlot thread \<equiv> locateSlotTCB thread tcbIPCBufferSlot"
 
 defs threadGet_def:
 "threadGet f tptr \<equiv> liftM f $ getObject tptr"

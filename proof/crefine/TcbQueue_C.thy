@@ -1101,6 +1101,12 @@ proof -
     done
 qed
 
+lemma cvariable_relation_upd_const:
+  "m x \<noteq> None
+    \<Longrightarrow> cvariable_array_map_relation (m (x \<mapsto> y)) (\<lambda>x. n)
+        = cvariable_array_map_relation m (\<lambda>x. n)"
+  by (auto simp: fun_eq_iff cvariable_array_map_relation_def)
+
 lemma rf_sr_tcb_update_no_queue: 
   "\<lbrakk> (s, s') \<in> rf_sr; ko_at' tcb thread s; 
   (cslift t :: tcb_C typ_heap) = (cslift s')(tcb_ptr_to_ctcb_ptr thread \<mapsto> ctcb);
@@ -1120,6 +1126,7 @@ lemma rf_sr_tcb_update_no_queue:
   apply (frule (1) cmap_relation_ko_atD) 
   apply (erule obj_atE')
   apply (clarsimp simp: projectKOs)
+  apply (clarsimp simp: map_comp_update projectKO_opt_tcb cvariable_relation_upd_const)
   apply (intro conjI)
        apply (clarsimp simp: cmap_relation_def map_comp_update projectKO_opts_defs inj_eq)
       apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
@@ -1170,6 +1177,7 @@ lemma rf_sr_tcb_update_not_in_queue:
   apply (frule (1) cmap_relation_ko_atD)
   apply (erule obj_atE')
   apply (clarsimp simp: projectKOs)
+  apply (clarsimp simp: map_comp_update projectKO_opt_tcb cvariable_relation_upd_const)
   apply (subgoal_tac "\<forall>rf. \<not> ko_wp_at' (\<lambda>ko. rf \<in> refs_of' ko) thread s")
   prefer 2
    apply (auto simp: obj_at'_def ko_wp_at'_def)[1]

@@ -119,7 +119,7 @@ defs createITPDPTs_def:
     pdPPtr \<leftarrow> allocRegion pdBits;
     doKernelOp $ placeNewObject (ptrFromPAddr pdPPtr) (makeObject::pde) pdSize;
     pdCap \<leftarrow> returnOk $ ArchObjectCap $ PageDirectoryCap (ptrFromPAddr pdPPtr) (Just itASID);
-    slot  \<leftarrow> doKernelOp $ locateSlot (capCNodePtr rootCNCap) biCapITPD;
+    slot  \<leftarrow> doKernelOp $ locateSlotCap rootCNCap biCapITPD;
     doKernelOp $ insertInitCap slot $ pdCap;
     slotBefore \<leftarrow> noInitFailure $ gets $ initSlotPosCur;
     btmVPtr \<leftarrow> returnOk ( vptrStart `~shiftR~` (pdSize + pageBits) `~shiftL~` (pdSize + pageBits));
@@ -145,7 +145,7 @@ defs writeITPDPTs_def:
       ptSlots \<leftarrow> noInitFailure $ gets $ bifUIPTCaps \<circ> initBootInfo;
       doKernelOp $ (
           (flip mapM) ptSlots (\<lambda> pos. (do
-              slot \<leftarrow> locateSlot (capCNodePtr rootCNCap) pos;
+              slot \<leftarrow> locateSlotCap rootCNCap pos;
               cte \<leftarrow> getCTE slot;
               mapITPTCap pdCap (cteCap cte)
           od)
@@ -154,15 +154,15 @@ defs writeITPDPTs_def:
       frameSlots \<leftarrow> noInitFailure $ gets $ bifUIFrameCaps \<circ> initBootInfo;
       doKernelOp $ (do
            (flip mapM) frameSlots (\<lambda> pos. (do
-              slot \<leftarrow> locateSlot (capCNodePtr rootCNCap) pos;
+              slot \<leftarrow> locateSlotCap rootCNCap pos;
               cte \<leftarrow> getCTE slot;
               mapITFrameCap pdCap (cteCap cte)
            od)
                                               );
-           slot \<leftarrow> locateSlot (capCNodePtr rootCNCap) biCapITIPCBuf;
+           slot \<leftarrow> locateSlotCap rootCNCap biCapITIPCBuf;
            cte \<leftarrow> getCTE slot;
            mapITFrameCap pdCap (cteCap cte);
-           slot \<leftarrow> locateSlot (capCNodePtr rootCNCap) biCapBIFrame;
+           slot \<leftarrow> locateSlotCap rootCNCap biCapBIFrame;
            cte \<leftarrow> getCTE slot;
            mapITFrameCap pdCap (cteCap cte)
       od)
@@ -174,10 +174,10 @@ defs createITASIDPool_def:
 "createITASIDPool rootCNCap\<equiv> (doE
     apPPtr \<leftarrow> allocRegion $ objBits (undefined ::asidpool);
     doKernelOp $ placeNewObject (ptrFromPAddr apPPtr) (makeObject::asidpool) 0;
-    slot \<leftarrow> doKernelOp $ locateSlot (capCNodePtr rootCNCap) biCapITASIDPool;
+    slot \<leftarrow> doKernelOp $ locateSlotCap rootCNCap biCapITASIDPool;
     asidPoolCap \<leftarrow> returnOk $ ArchObjectCap $ ASIDPoolCap (ptrFromPAddr apPPtr) 0;
     doKernelOp $ insertInitCap slot asidPoolCap;
-    slot \<leftarrow> doKernelOp $ locateSlot (capCNodePtr rootCNCap) biCapASIDControl;
+    slot \<leftarrow> doKernelOp $ locateSlotCap rootCNCap biCapASIDControl;
     asidControlCap \<leftarrow> returnOk $ ArchObjectCap $ ASIDControlCap;
     doKernelOp $ insertInitCap slot asidControlCap;
     returnOk asidPoolCap
@@ -263,7 +263,7 @@ defs createIPCBufferFrame_def:
       pptr \<leftarrow> allocFrame;
       doKernelOp $ doMachineOp $ clearMemory (ptrFromPAddr pptr) (1 `~shiftL~` pageBits);
       cap \<leftarrow> createITFrameCap (ptrFromPAddr pptr) vptr (Just itASID) False;
-      slot \<leftarrow> doKernelOp $ locateSlot (capCNodePtr rootCNCap) biCapITIPCBuf;
+      slot \<leftarrow> doKernelOp $ locateSlotCap rootCNCap biCapITIPCBuf;
       doKernelOp $ insertInitCap slot cap;
       bootInfo \<leftarrow> noInitFailure $ gets (initBootInfo);
       bootInfo' \<leftarrow> returnOk ( bootInfo \<lparr> bifIPCBufVPtr := vptr\<rparr>);
@@ -284,7 +284,7 @@ defs createBIFrame_def:
           \<rparr>);
       doKernelOp $ doMachineOp $ clearMemory (ptrFromPAddr pptr) (1 `~shiftL~` pageBits);
       cap \<leftarrow> createITFrameCap (ptrFromPAddr pptr) vptr (Just itASID) False;
-      slot \<leftarrow> doKernelOp $ locateSlot (capCNodePtr rootCNCap) biCapBIFrame;
+      slot \<leftarrow> doKernelOp $ locateSlotCap rootCNCap biCapBIFrame;
       doKernelOp $ insertInitCap slot cap;
       returnOk cap
 odE)"

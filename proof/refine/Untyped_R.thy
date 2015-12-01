@@ -88,6 +88,29 @@ lemma corres_compute_free_index:
   apply simp
   done
 
+lemma mapM_x_stateAssert:
+  "mapM_x (\<lambda>x. stateAssert (f x) (ss x)) xs
+    = stateAssert (\<lambda>s. \<forall>x \<in> set xs. f x s) []"
+  apply (induct xs)
+   apply (simp add: mapM_x_Nil)
+  apply (simp add: mapM_x_Cons)
+  apply (simp add: fun_eq_iff stateAssert_def bind_assoc exec_get assert_def)
+  done
+
+lemma mapM_locate_eq:
+    "isCNodeCap cap
+    \<Longrightarrow> mapM (\<lambda>x. locateSlotCap cap x) xs
+        = (do stateAssert (\<lambda>s. case gsCNodes s (capUntypedPtr cap) of None \<Rightarrow> xs = [] | Some n
+                \<Rightarrow> \<forall>x \<in> set xs. x < 2 ^ n) [];
+            return (map (\<lambda>x. (capCNodePtr cap) + 2 ^ cte_level_bits * x) xs) od)"
+  apply (clarsimp simp: isCap_simps)
+  apply (simp add: locateSlot_conv objBits_simps cte_level_bits_def
+                   liftM_def[symmetric] mapM_liftM_const isCap_simps)
+  apply (simp add: liftM_def mapM_discarded mapM_x_stateAssert)
+  apply (intro bind_cong refl arg_cong2[where f=stateAssert] ext)
+  apply (simp split: option.split)
+  done
+
 lemma dec_untyped_inv_corres:
   assumes cap_rel: "list_all2 cap_relation cs cs'"
   shows "corres
@@ -153,8 +176,6 @@ next
     apply (rule_tac x="unat v - 5" in exI)
     apply arith
     done
-  have R: "\<And>cptr xs. mapM (\<lambda>x. locateSlot cptr x) xs = return (map (\<lambda>x. cptr + 2 ^ cte_level_bits * x) xs)"
-    by (simp add: locateSlot_def mapM_return objBits_simps cte_level_bits_def)
   have S: "\<And>x (y :: ('g :: len) word) (z :: 'g word) bits. \<lbrakk> bits < len_of TYPE('g); x < 2 ^ bits \<rbrakk> \<Longrightarrow> toEnum x = (of_nat x :: 'g word)"
     apply (rule toEnum_of_nat)
     apply (erule order_less_trans)
@@ -264,7 +285,7 @@ next
                 apply (fold neq0_conv)
                 apply (simp add: unat_eq_0 cap_aligned_def)
                apply (clarsimp simp:fromAPIType_def)
-               apply (clarsimp simp:liftE_bindE R)
+               apply (clarsimp simp:liftE_bindE mapM_locate_eq)
                apply (subgoal_tac "unat (arg4 + arg5) = unat arg4 + unat arg5")
                 prefer 2
                 apply (clarsimp simp:not_less)
@@ -275,46 +296,55 @@ next
                  apply arith
                 apply (rule power_strict_increasing, simp add: word_bits_conv)
                 apply simp
-               apply (frule_tac bits2 = "bits_of rva" in YUCK)
-                   apply (simp)
-                  apply (simp add: word_bits_conv)
+               apply (rule_tac P'="valid_cap rva" in corres_stateAssert_implied)
+                apply (frule_tac bits2 = "bits_of rva" in YUCK)
+                    apply (simp)
+                   apply (simp add: word_bits_conv)
+                  apply (simp add: word_le_nat_alt)
                  apply (simp add: word_le_nat_alt)
-                apply (simp add: word_le_nat_alt)
-               apply (simp add:liftE_bindE[symmetric] free_index_of_def)
-               apply (rule corres_split_norE)
-                  apply (subst liftE_bindE)+
-                  apply (rule corres_split[OF _ corres_compute_free_index])
-                    apply (rule_tac F ="free_index \<le> 2 ^ n" in corres_gen_asm)
-                    apply (rule whenE_throwError_corres)
-                      apply (clarsimp simp:shiftL_nat word_less_nat_alt shiftr_div_2n')+
-                     apply (simp add: word_of_nat_le another)
-                     apply (drule_tac x = freeIndex in unat_of_nat32[OF le_less_trans])
-                      apply (simp add:ty_size shiftR_nat)+
-                     apply (simp add:unat_of_nat32 le_less_trans[OF div_le_dividend]
-                         le_less_trans[OF diff_le_self])
-                    apply (rule corres_returnOkTT)
-                    apply (clarsimp simp:ty_size getFreeRef_def get_free_ref_def is_cap_simps)
-                   apply (rule hoare_strengthen_post[OF compute_free_index_wp])
+                apply (simp add:liftE_bindE[symmetric] free_index_of_def)
+                apply (rule corres_split_norE)
+                   apply (subst liftE_bindE)+
+                   apply (rule corres_split[OF _ corres_compute_free_index])
+                     apply (rule_tac F ="free_index \<le> 2 ^ n" in corres_gen_asm)
+                     apply (rule whenE_throwError_corres)
+                       apply (clarsimp simp:shiftL_nat word_less_nat_alt shiftr_div_2n')+
+                      apply (simp add: word_of_nat_le another)
+                      apply (drule_tac x = freeIndex in unat_of_nat32[OF le_less_trans])
+                       apply (simp add:ty_size shiftR_nat)+
+                      apply (simp add:unat_of_nat32 le_less_trans[OF div_le_dividend]
+                          le_less_trans[OF diff_le_self])
+                     apply (rule corres_returnOkTT)
+                     apply (clarsimp simp:ty_size getFreeRef_def get_free_ref_def is_cap_simps)
+                    apply (rule hoare_strengthen_post[OF compute_free_index_wp])
+                    apply simp
                    apply simp
-                  apply simp
-                  apply wp
-                 apply (clarsimp simp:is_cap_simps  simp del:ser_def)
-                 apply (simp add: mapME_x_map_simp  del: ser_def)
-                 apply (rule_tac P = "valid_cap (cap.CNodeCap r bits g) and invs" in corres_guard_imp [where P' = invs'])
-                   apply (rule mapME_x_corres_inv [OF _ _ _ refl])
-                     apply (simp del: ser_def)
-                     apply (rule ensure_empty_corres)
-                     apply (clarsimp simp: is_cap_simps)
+                   apply wp
+                  apply (clarsimp simp:is_cap_simps  simp del:ser_def)
+                  apply (simp add: mapME_x_map_simp  del: ser_def)
+                  apply (rule_tac P = "valid_cap (cap.CNodeCap r bits g) and invs" in corres_guard_imp [where P' = invs'])
+                    apply (rule mapME_x_corres_inv [OF _ _ _ refl])
+                      apply (simp del: ser_def)
+                      apply (rule ensure_empty_corres)
+                      apply (clarsimp simp: is_cap_simps)
+                     apply (simp, wp)
                     apply (simp, wp)
-                   apply (simp, wp)
-                   apply clarsimp
-                  apply (clarsimp simp add: xs is_cap_simps bits_of_def valid_cap_def)
-                  apply (erule cap_table_at_cte_at)
-                  apply (simp add: nat_to_cref_def word_bits_conv)
-                 apply simp
-                apply (wp mapME_x_inv_wp
-                          validE_R_validE[OF valid_validE_R[OF ensure_empty_inv]]
-                          validE_R_validE[OF valid_validE_R[OF ensureEmpty_inv]])
+                    apply clarsimp
+                   apply (clarsimp simp add: xs is_cap_simps bits_of_def valid_cap_def)
+                   apply (erule cap_table_at_cte_at)
+                   apply (simp add: nat_to_cref_def word_bits_conv)
+                  apply simp
+                 apply (wp mapME_x_inv_wp
+                           validE_R_validE[OF valid_validE_R[OF ensure_empty_inv]]
+                           validE_R_validE[OF valid_validE_R[OF ensureEmpty_inv]])
+               apply (clarsimp simp: is_cap_simps valid_cap_simps
+                                     cap_table_at_gsCNodes bits_of_def
+                                     linorder_not_less)
+               apply (erule order_le_less_trans)
+               apply (rule minus_one_helper)
+                apply (simp add: word_le_nat_alt)
+               apply (simp add: unat_arith_simps)
+              apply wp
             apply simp
            apply (rule corres_returnOkTT)
            apply (rule crel)
@@ -360,7 +390,7 @@ lemma decodeUntyped_inv[wp]:
    apply (wp mapME_x_inv_wp hoare_drop_imps constOnFailure_wp
              mapM_wp'
                | wpcw
-               | simp add: lookupTargetSlot_def)+
+               | simp add: lookupTargetSlot_def locateSlot_conv)+
   done
 
 
@@ -624,13 +654,6 @@ lemma dui_sp_helper':
   apply simp
   done
 
-lemma mapM_locate_eq:
-  "mapM (locateSlot x) xs = return (map (\<lambda>y. x + y * 16) xs)"
-  apply (induct xs)
-   apply (simp add: mapM_def sequence_def)
-  apply (simp add: mapM_Cons locateSlot_def objBits_simps mult.commute mult.left_commute)
-  done
-
 lemma map_ensure_empty':
   "\<lbrace>\<lambda>s. (\<forall>slot \<in> set slots. cte_wp_at' (\<lambda>cte. cteCap cte = NullCap) slot s) \<longrightarrow> P s\<rbrace>
      mapME_x ensureEmptySlot slots
@@ -695,6 +718,10 @@ lemma empty_descendants_range_in':
   "\<lbrakk>descendants_of' slot m = {}\<rbrakk> \<Longrightarrow> descendants_range_in' S slot m "
   by (clarsimp simp:descendants_range_in'_def)
 
+lemma liftE_validE_R:
+  "\<lbrace>P\<rbrace> f \<lbrace>Q\<rbrace> \<Longrightarrow> \<lbrace>P\<rbrace> liftE f \<lbrace>Q\<rbrace>,-"
+  by (wp, simp)
+
 lemma decodeUntyped_wf[wp]:
   "\<lbrace>invs' and cte_wp_at' (\<lambda>cte. cteCap cte = UntypedCap w sz idx) slot
           and sch_act_simple
@@ -706,20 +733,23 @@ lemma decodeUntyped_wf[wp]:
   using [[ hypsubst_thin = true ]]
   apply (simp add: decodeUntypedInvocation_def unlessE_def[symmetric]
                    unlessE_whenE rangeCheck_def whenE_def[symmetric]
-                   mapM_locate_eq returnOk_liftE[symmetric] Let_def
+                   returnOk_liftE[symmetric] Let_def
                    cap_case_CNodeCap_True_throw
                 split del: split_if cong: if_cong list.case_cong)
   apply (rule list_case_throw_validE_R)
-   apply (clarsimp split del: split_if split: list.splits)
-   apply (intro conjI impI allI)
-    apply ((rule hoare_pre,wp)+)[6]
-   apply clarify
-   apply (rule validE_R_sp[OF map_ensure_empty'] validE_R_sp[OF whenE_throwError_sp]
+  apply (clarsimp split del: split_if split: list.splits)
+  apply (intro conjI impI allI)
+   apply ((rule hoare_pre,wp)+)[6]
+  apply clarify
+  apply (rule validE_R_sp[OF map_ensure_empty'] validE_R_sp[OF whenE_throwError_sp]
      validE_R_sp[OF dui_sp_helper'])+
-   apply (rule hoare_pre)
-   apply (wp validE_R_sp[OF map_ensure_empty'])+
-   apply (wp whenE_throwError_wp validE_R_sp[OF map_ensure_empty'] checkFreeIndex_wp)
-   apply (clarsimp simp:cte_wp_at_ctes_of not_less shiftL_nat)
+  apply (case_tac "\<not> isCNodeCap nodeCap")
+   apply (simp add: validE_R_def)
+  apply (simp add: mapM_locate_eq bind_liftE_distrib bindE_assoc
+                         returnOk_liftE[symmetric])
+  apply (rule validE_R_sp, rule liftE_validE_R, rule stateAssert_sp)
+  apply (rule hoare_pre, wp whenE_throwError_wp checkFreeIndex_wp map_ensure_empty')
+  apply (clarsimp simp:cte_wp_at_ctes_of not_less shiftL_nat)
    apply (rename_tac ty us b e srcNode list dimNode s cte)
    apply (case_tac cte)
    apply clarsimp
@@ -838,7 +868,8 @@ lemma decodeUntyped_wf[wp]:
      apply (erule range_cover.sz)
     apply (simp add:range_cover_def)
    apply (simp add:empty_descendants_range_in')
-   apply (clarsimp simp:image_def isCap_simps nullPointer_def word_size)
+   apply (clarsimp simp:image_def isCap_simps nullPointer_def word_size
+                        cte_level_bits_def field_simps)
    apply (drule_tac x = x in spec)+
    apply simp
   apply (clarsimp simp:of_nat_shiftR fromIntegral_def toInteger_nat
@@ -846,7 +877,8 @@ lemma decodeUntyped_wf[wp]:
   apply (frule_tac n = "unat e" and bits = "(APIType_capBits (toEnum (unat ty)) (unat us))"
        in range_cover_stuff[rotated -1])
    apply (simp add:unat_1_0)+
-  apply (clarsimp simp:getFreeRef_def)
+  apply (clarsimp simp:getFreeRef_def
+                        cte_level_bits_def field_simps)
   apply (intro conjI)
    apply clarsimp
     apply (drule cte_wp_at_caps_descendants_range_inI'

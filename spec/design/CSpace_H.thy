@@ -89,7 +89,7 @@ where
             depthMismatchBitsFound= levelBits \<rparr>;
         offset \<leftarrow> returnOk ( (fromCPtr capptr `~shiftR~` (bits-levelBits)) &&
                    (mask radixBits));
-        slot \<leftarrow> withoutFailure $ locateSlot (capCNodePtr nodeCap) offset;
+        slot \<leftarrow> withoutFailure $ locateSlotCap nodeCap offset;
         bitsLeft \<leftarrow> returnOk ( bits - levelBits);
         if (bitsLeft = 0)
           then returnOk (slot, 0)

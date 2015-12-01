@@ -711,11 +711,11 @@ proof -
        apply (wp | simp)+
     done
   show ?thesis
-    unfolding set_vm_root_def setVMRoot_def locateSlot_def
+    unfolding set_vm_root_def setVMRoot_def locateSlot_conv
                      getThreadVSpaceRoot_def 
     apply (rule corres_guard_imp)
       apply (rule corres_split' [where r'="op = \<circ> cte_map"])
-         apply (simp add: tcbVTableSlot_def cte_map_def objBits_def
+         apply (simp add: tcbVTableSlot_def cte_map_def objBits_def cte_level_bits_def
                           objBitsKO_def tcb_cnode_index_def to_bl_1 of_bl_True)
         apply (rule_tac R="\<lambda>thread_root. valid_arch_state and valid_asid_map and
                                          valid_arch_objs and valid_vs_lookup and
@@ -1120,7 +1120,7 @@ proof -
         apply (wp | simp)+
     done
   show ?thesis
-  apply (simp add: set_vm_root_for_flush_def setVMRootForFlush_def getThreadVSpaceRoot_def locateSlot_def)
+  apply (simp add: set_vm_root_for_flush_def setVMRootForFlush_def getThreadVSpaceRoot_def locateSlot_conv)
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ gct_corres])
       apply (rule corres_split [where R="\<lambda>_. pd_at_asid asid pd and K (asid \<noteq> 0 \<and> asid \<le> mask asid_bits)
@@ -1141,7 +1141,8 @@ proof -
          apply (case_tac rv, simp_all add: isCap_simps[simplified] X[simplified])[1]
          apply (rename_tac arch_cap)
          apply (case_tac arch_cap, auto simp: X[simplified] split: option.splits)[1]
-        apply (simp add: cte_map_def objBits_simps tcb_cnode_index_def tcbVTableSlot_def to_bl_1)
+        apply (simp add: cte_map_def objBits_simps tcb_cnode_index_def
+                         tcbVTableSlot_def to_bl_1 cte_level_bits_def)
        apply wp
    apply (clarsimp simp: cur_tcb_def)
    apply (erule tcb_at_cte_at)

@@ -2139,7 +2139,7 @@ lemma deleteCallerCap_ct_not_ksQ:
           and (\<lambda>s. ksCurThread s \<notin> set (ksReadyQueues s p))\<rbrace>
    deleteCallerCap t
    \<lbrace>\<lambda>rv s. ksCurThread s \<notin> set (ksReadyQueues s p)\<rbrace>"
-  apply (simp add: deleteCallerCap_def getSlotCap_def getThreadCallerSlot_def locateSlot_def)
+  apply (simp add: deleteCallerCap_def getSlotCap_def getThreadCallerSlot_def locateSlot_conv)
   apply (wp getThreadCallerSlot_inv cteDeleteOne_ct_not_ksQ getCTE_wp)
   apply (clarsimp simp: cte_wp_at_ctes_of)
   done
@@ -2604,7 +2604,7 @@ lemma setupCallerCap_sch_act [wp]:
   "\<lbrace>\<lambda>s. sch_act_not t s \<and> sch_act_wf (ksSchedulerAction s) s\<rbrace> 
   setupCallerCap t r \<lbrace>\<lambda>_ s. sch_act_wf (ksSchedulerAction s) s\<rbrace>"
   apply (simp add: setupCallerCap_def getSlotCap_def getThreadCallerSlot_def
-            getThreadReplySlot_def locateSlot_def)
+            getThreadReplySlot_def locateSlot_conv)
   apply (wp getCTE_wp' sts_sch_act' hoare_drop_imps hoare_vcg_all_lift)
   apply clarsimp
   done
@@ -3953,7 +3953,7 @@ lemma setupCallerCap_vp[wp]:
   "\<lbrace>valid_pspace' and tcb_at' sender and tcb_at' rcvr\<rbrace>
    setupCallerCap sender rcvr \<lbrace>\<lambda>rv. valid_pspace'\<rbrace>"
   apply (simp add: valid_pspace'_def setupCallerCap_def getThreadCallerSlot_def
-                   getThreadReplySlot_def locateSlot_def getSlotCap_def)
+                   getThreadReplySlot_def locateSlot_conv getSlotCap_def)
   apply (wp getCTE_wp)
   apply (rule_tac Q="\<lambda>_. valid_pspace' and
                          tcb_at' sender and tcb_at' rcvr"
@@ -3972,7 +3972,7 @@ lemma setupCallerCap_iflive[wp]:
    setupCallerCap sender rcvr
    \<lbrace>\<lambda>rv. if_live_then_nonz_cap'\<rbrace>"
   unfolding setupCallerCap_def getThreadCallerSlot_def
-            getThreadReplySlot_def locateSlot_def
+            getThreadReplySlot_def locateSlot_conv
   by (wp getSlotCap_cte_wp_at
           | simp add: unique_master_reply_cap'
           | strengthen eq_imp_strg)+
@@ -3983,13 +3983,13 @@ lemma setupCallerCap_ifunsafe[wp]:
    setupCallerCap sender rcvr
    \<lbrace>\<lambda>rv. if_unsafe_then_cap'\<rbrace>"
   unfolding setupCallerCap_def getThreadCallerSlot_def
-            getThreadReplySlot_def locateSlot_def
+            getThreadReplySlot_def locateSlot_conv
   apply (wp getSlotCap_cte_wp_at
        | simp add: unique_master_reply_cap' | strengthen eq_imp_strg)+
    apply (rule_tac Q="\<lambda>rv. valid_objs' and tcb_at' rcvr and ex_nonz_cap_to' rcvr"
                 in hoare_post_imp)
     apply (clarsimp simp: ex_nonz_tcb_cte_caps' tcbCallerSlot_def
-                          objBits_def objBitsKO_def dom_def)
+                          objBits_def objBitsKO_def dom_def cte_level_bits_def)
    apply (wp sts_valid_objs' | simp)+
      apply (clarsimp simp: valid_tcb_state'_def)+
   done
@@ -3998,7 +3998,7 @@ lemma setupCallerCap_global_refs'[wp]:
   "\<lbrace>valid_global_refs'\<rbrace>
    setupCallerCap sender rcvr \<lbrace>\<lambda>rv. valid_global_refs'\<rbrace>"
   unfolding setupCallerCap_def getThreadCallerSlot_def
-            getThreadReplySlot_def locateSlot_def
+            getThreadReplySlot_def locateSlot_conv
   by (wp getSlotCap_cte_wp_at
     | simp add: o_def unique_master_reply_cap'
     | strengthen eq_imp_strg
@@ -4017,7 +4017,7 @@ lemma setupCallerCap_irq_handlers'[wp]:
    setupCallerCap sender rcvr
    \<lbrace>\<lambda>rv. valid_irq_handlers'\<rbrace>"
   unfolding setupCallerCap_def getThreadCallerSlot_def
-            getThreadReplySlot_def locateSlot_def
+            getThreadReplySlot_def locateSlot_conv
   by (wp hoare_drop_imps | simp)+
 
 lemma cteInsert_cap_to':
@@ -4439,7 +4439,7 @@ lemma setupCallerCap_cap_to' [wp]:
 lemma setupCaller_pred_tcb_recv':
   "\<lbrace>pred_tcb_at' proj P r and K (s \<noteq> r)\<rbrace> setupCallerCap s r \<lbrace>\<lambda>_. pred_tcb_at' proj P r\<rbrace>"
   apply (simp add: setupCallerCap_def getThreadCallerSlot_def getSlotCap_def
-                   getThreadReplySlot_def locateSlot_def) 
+                   getThreadReplySlot_def locateSlot_conv) 
   apply (wp getCTE_wp' hoare_drop_imps hoare_vcg_all_lift sts_pred_tcb_neq')
   apply clarsimp
   done

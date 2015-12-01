@@ -161,19 +161,19 @@ lemma le_32_mask_eq:
   apply (erule le_less_trans) apply simp
 done
 
-
-declare scast_id [simp]
 declare Kernel_C.cte_C_size[simp del] 
 
 lemma resolveAddressBits_ccorres [corres]:
   shows "ccorres (lookup_failure_rel \<currency> 
     (\<lambda>(cte, bits) (cte', bits'). cte' = Ptr cte \<and> bits = unat bits' \<and> bits'\<le> 32)) rab_xf
-  (valid_pspace' and valid_cap' cap' and K (guard' \<le> 32))
+  (valid_pspace' and valid_cap' cap'
+        and K (guard' \<le> 32))
   ({s. ccap_relation cap' (nodeCap_' s)} \<inter>
   {s. capptr_' s = cptr'} \<inter> {s. unat (n_bits_' s) = guard'}) [] 
   (resolveAddressBits cap' cptr' guard') (Call resolveAddressBits_'proc)"
+  (is "ccorres ?rvr rab_xf ?P ?P' [] ?rab ?rab'")
 proof (cases "isCNodeCap cap'")
-  case False    
+  case False
   
   note Collect_const [simp del]
     
@@ -219,13 +219,12 @@ next
      apply csymbr+
      apply (simp add: cap_get_tag_isCap split del: split_if)
      apply (thin_tac "ret__unsigned_long = X" for X)
-     apply (rule ccorres_split_throws [where P = "valid_pspace' and valid_cap' cap' and K (guard' \<le> 32)"])
+     apply (rule ccorres_split_throws [where P = "?P"])
       apply (rule_tac G' = "\<lambda>w_rightsMask. ({s. nodeCap_' s = nodeCap} 
                               \<inter> {s. unat (n_bits_' s) = guard'})"
          in ccorres_abstract  [where xf' = w_rightsMask_'])
        apply (rule ceqv_refl)
-      apply (rule_tac r' = "(lookup_failure_rel \<currency> 
-          (\<lambda>(cte, bits) (cte', bits'). cte' = Ptr cte \<and> bits = unat bits' \<and> bits' \<le> 32))" in
+      apply (rule_tac r' = "?rvr" in
           ccorres_rel_imp [where xf' = rab_xf])
        defer
        apply (case_tac x)
@@ -237,8 +236,8 @@ next
        apply clarsimp
       apply simp
      apply (clarsimp simp: cap_get_tag_isCap to_bool_def)
-  -- "Main thm" 
-  proof (induct cap' cptr' guard' arbitrary: rv' rule: resolveAddressBits.induct [case_names ind])
+  -- "Main thm"
+  proof (induct cap' cptr' guard' rule: resolveAddressBits.induct [case_names ind])
     case (ind cap cptr guard)
 
     note conj_refl = conjI [OF refl refl]
@@ -246,9 +245,11 @@ next
     have imp_rem': "\<And>P R X. P \<and> R \<Longrightarrow> P \<and> R \<and> (P \<and> R \<longrightarrow> X = X)" by clarsimp    
     note conj_refl_r = conjI [OF _ refl]    
 
+(*
     have locateSlot_in_monad:
       "\<And>a b p off s. ((a, b) \<in> fst (locateSlot p off s)) = (a = p + 0x10 * off \<and> b = s)"
        by (simp add: locateSlot_def return_def bind_def objBits_simps)
+*)
 
     have getSlotCap_in_monad:
       "\<And>a b p rs s. ((a, b) \<in> fst (getSlotCap p s)) = 
@@ -263,10 +264,14 @@ next
        apply (simp add: cte_wp_at_ctes_of)
        done
 
-    note ih0 = ind.hyps [simplified, simplified in_monad locateSlot_in_monad, simplified, simplified getSlotCap_in_monad,
-      OF refl ind.prems(1) conj_refl conj_refl conj_refl _ conj_refl _ _ conj_refl conj_refl conj_refl]
-    note ih = ih0 [OF conj_refl_r imp_rem' imp_rem  _ conj_refl_r] 
-      
+    note ih = ind.hyps[simplified, simplified in_monad
+        getSlotCap_in_monad locateSlot_conv stateAssert_def, simplified]
+
+    have gsCNodes: "\<And>s bits p x P. bits < 32 \<Longrightarrow>
+        (case gsCNodes (s \<lparr> gsCNodes := [p \<mapsto> bits ] \<rparr>) p of None \<Rightarrow> False
+            | Some n \<Rightarrow> (x && mask bits :: word32) < 2 ^ n) \<or> P"
+      by (clarsimp simp: word_size and_mask_less_size)
+
     have case_into_if:
       "\<And>c f g. (case c of CNodeCap _ _ _ _ \<Rightarrow> f | _ \<Rightarrow> g) = (if isCNodeCap c then f else g)"
       by (case_tac c, simp_all add: isCap_simps)
@@ -291,7 +296,7 @@ next
       apply (simp add: cap_get_tag_isCap)
       apply simp
       done
-     
+
     have rbD: "\<And>radixBits cap cap'. \<lbrakk> radixBits = capCNodeRadix_CL (cap_cnode_cap_lift cap');
                        ccap_relation cap cap'; isCNodeCap cap \<rbrakk>
           \<Longrightarrow> unat radixBits = capCNodeBits cap \<and> capCNodeBits cap < 32"
@@ -454,8 +459,14 @@ next
          apply (rule ccorres_Guard_Seq)+
          apply csymbr
          apply csymbr
-         apply (ctac pre: ccorres_liftE_Seq)
-           apply (erule_tac t = slot in ssubst)    
+         apply (simp only: locateSlotCap_def Let_def if_True)
+         apply (rule ccorres_liftE_Seq)
+         apply (rule ccorres_split_nothrow)
+             apply (rule locateSlotCNode_ccorres[where xf="slot_'" and xfu="slot_'_update"],
+                    simp+)[1]
+            apply ceqv
+           apply (rename_tac rv slot)
+           apply (erule_tac t = slot in ssubst)
            apply (rule ccorres_if_cond_throws [OF cond3], assumption+)
              apply (rule ccorres_rhs_assoc)+
              apply csymbr+
@@ -482,19 +493,16 @@ next
                 apply (rule ccte_relation_ccap_relation)
                 apply (erule (2) rf_sr_cte_relation)
                apply (elim conjE)
-               apply (rule_tac nodeCap1 = "nodeCapa" in ih)
-                      apply simp
-                     apply simp 
-                    apply simp
-                   apply simp
-                  apply assumption
+               apply (rule_tac nodeCap1 = "nodeCapa" in ih,
+                    (simp | rule conjI refl gsCNodes)+)[1]
+                   apply (clarsimp simp: cte_level_bits_def field_simps isCap_simps, fast)
+                  apply (rule refl)
                  apply assumption
-                apply assumption             
+                apply assumption
                apply assumption
               apply vcg
-             apply (simp add: getSlotCap_def)
-             apply (strengthen imp_consequent)
-             apply (wp getCTE_ctes_of)
+             apply (simp add: getSlotCap_def imp_conjR)
+             apply (wp getCTE_ctes_of | (wp_once hoare_drop_imps))+
             apply (clarsimp simp: Collect_const_mem if_then_simps lookup_fault_lifts cong: imp_cong conj_cong)
             apply vcg
            apply (vcg strip_guards=true)
@@ -536,18 +544,17 @@ next
           apply (subgoal_tac "capCNodeBits cap \<noteq> 0")
            apply (clarsimp simp: linorder_not_less cap_simps)
           apply (clarsimp simp: isCap_simps valid_cap'_def)
-thm valid_cap'_def
-         apply (rule disjCI2)
-         defer
+         apply (clarsimp simp: linorder_not_less cap_simps)
+         apply (clarsimp simp: isCap_simps valid_cap'_def)
         apply (clarsimp simp: linorder_not_less cap_simps)
         apply (clarsimp simp: isCap_simps valid_cap'_def)
-        apply simp
+        apply arith
        apply (simp add: word_sle_def)
       apply (subgoal_tac "(0x1F :: word32) = mask 5")
-       apply (erule ssubst [where t = "0x1F"])
-       apply (subst word_mod_2p_is_mask [symmetric])
-        apply simp
-       apply (simp add: unat_word_ariths)
+      apply (erule ssubst [where t = "0x1F"])
+      apply (subst word_mod_2p_is_mask [symmetric])
+       apply simp
+      apply (simp add: unat_word_ariths)
       apply (simp add: mask_def)
       done
   qed

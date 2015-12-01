@@ -220,20 +220,53 @@ lemma errsyscall_errstate [simp]:
   unfolding errstate_def
   by simp
 
-lemma locateSlot_ccorres [corres]:
+lemma array_assertion_abs_cnode_ctes:
+  "\<forall>s s'. (s, s') \<in> rf_sr \<and> (\<exists>n. gsCNodes s p = Some n \<and> n' \<le> 2 ^ n) \<and> True
+    \<longrightarrow> (x s' = 0 \<or> array_assertion (cte_Ptr p) n' (hrs_htd (t_hrs_' (globals s'))))"
+  apply (clarsimp, drule(1) rf_sr_gsCNodes_array_assertion)
+  apply (metis array_assertion_shrink_right)
+  done
+
+lemmas ccorres_move_array_assertion_cnode_ctes [corres_pre]
+    = ccorres_move_Guard_Seq [OF array_assertion_abs_cnode_ctes]
+      ccorres_move_Guard [OF array_assertion_abs_cnode_ctes]
+
+lemma locateSlotCNode_ccorres [corres]:
   assumes gl: "\<And>v s. globals (xfu v s) = globals s" -- "for state rel. preservation"
   and     fg: "\<And>v s. xf (xfu (\<lambda>_. v) s) = v"
-  shows "ccorres (\<lambda>v v'. v' = Ptr v) xf \<top> {_. cnode = cnode' \<and> offset = offset'} hs (locateSlot cnode offset)
-                              (Basic (\<lambda>s. xfu (\<lambda>_. Ptr (cnode' + offset' * of_nat (size_of TYPE(cte_C))) :: cte_C ptr) s))"
-  unfolding locateSlot_def using gl fg  
+  shows "ccorres (\<lambda>v v'. v' = Ptr v) xf \<top> {_. cnode = cnode' \<and> offset = offset'} hs
+    (locateSlotCNode cnode offset)
+    (Guard MemorySafety
+          {s. x s = 0 \<or> array_assertion (cte_Ptr cnode') (unat offset') (hrs_htd (t_hrs_' (globals s)))}
+          (Basic (\<lambda>s. xfu (\<lambda>_. cte_Ptr (cnode' + offset'
+              * of_nat (size_of TYPE(cte_C)))) s)))"
+  apply (simp add: locateSlot_conv split del: split_if)
+  apply (rule ccorres_guard_imp2)
+   apply (rule_tac P="cnode = cnode' \<and> offset = offset'" in ccorres_gen_asm2)
+   apply (rule ccorres_stateAssert)
+   apply (rule ccorres_move_array_assertion_cnode_ctes)
+   apply (rule ccorres_return[where R="\<top>" and R'=UNIV])
+   apply (rule conseqPre, vcg)
+   apply (clarsimp simp: fg rf_sr_def gl cte_level_bits_def field_simps)
+  apply (clarsimp simp: Collect_const_mem split: option.split_asm)
+  apply (rule unat_le_helper, simp)
+  done
+
+lemma locateSlotTCB_ccorres [corres]:
+  assumes gl: "\<And>v s. globals (xfu v s) = globals s" -- "for state rel. preservation"
+  and     fg: "\<And>v s. xf (xfu (\<lambda>_. v) s) = v"
+  shows "ccorres (\<lambda>v v'. v' = Ptr v) xf \<top> {_. cnode = cnode' \<and> offset = offset'} hs
+    (locateSlotTCB cnode offset)
+    (Basic (\<lambda>s. xfu (\<lambda>_. Ptr (cnode' + offset' * of_nat (size_of TYPE(cte_C))) :: cte_C ptr) s))"
+  unfolding locateSlot_conv using gl fg
   apply -
   apply (simp add: size_of_def split del: split_if)
   apply (rule ccorres_return)
   apply (rule conseqPre)
    apply vcg
-  apply (clarsimp simp: fg objBits_simps)
+  apply (clarsimp simp: fg objBits_simps cte_level_bits_def)
   done
-  
+
 lemma getSlotCap_h_val_ccorres [corres]:
   fixes p :: "cstate \<Rightarrow> cte_C ptr"
   assumes gl: "\<And>v s. globals (xfu v s) = globals s" -- "for state rel. preservation"

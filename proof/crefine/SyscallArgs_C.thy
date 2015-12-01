@@ -799,9 +799,12 @@ lemma lookupIPCBuffer_ccorres:
        apply (rule threadGet_tcbIpcBuffer_ccorres)
       apply ceqv
      apply (simp add: getThreadBufferSlot_def locateSlot_conv
+                      cte_C_size word_sle_def Collect_True
                  del: Collect_const)
+     apply ccorres_remove_UNIV_guard
      apply (rule ccorres_getSlotCap_cte_at)
-     apply (rule ccorres_move_c_guard_cte)
+     apply (rule ccorres_move_array_assertion_tcb_ctes
+                 ccorres_move_c_guard_tcb_ctes)+
      apply (ctac (no_vcg))
        apply csymbr
        apply (rule_tac b="isArchObjectCap rva \<and> isPageCap (capCap rva)" in ccorres_case_bools')
@@ -1218,19 +1221,11 @@ lemma getSyscallArg_ccorres_foo:
       apply (simp add: return_def split del: split_if)
       apply (rule allI, rule conseqPre, vcg)
       apply (clarsimp split del: split_if)
-      apply (rule conjI)
-       apply (clarsimp simp: CTypesDefs.ptr_add_def)
-       apply (frule (1) user_word_at_cross_over)
-        apply simp
-       apply (clarsimp simp: mult.commute mult.left_commute ucast_nat_def')
-      apply (clarsimp simp: CTypesDefs.ptr_add_def)
-      apply (subst valid_ipc_buffer_ptr_array, assumption+)
-        apply (simp add: unat_def[symmetric] msg_align_bits
-                         msgMaxLength_def unat_arith_simps)
-       apply simp
-      apply (frule (1) user_word_at_cross_over)
-       apply simp
-      apply (clarsimp simp: mult.commute mult.left_commute ucast_nat_def)
+      apply (frule(1) user_word_at_cross_over, rule refl)
+      apply (clarsimp simp: ptr_add_def mult.commute
+                            msgMaxLength_def)
+      apply (safe intro!: disjCI2 elim!: valid_ipc_buffer_ptr_array,
+        simp_all add: unatSuc2 add.commute msg_align_bits)[1]
      apply wp[1]
     apply (rule_tac P="\<exists>b. buffer = Some b" in hoare_gen_asm)
     apply (clarsimp simp: option_to_ptr_def option_to_0_def)

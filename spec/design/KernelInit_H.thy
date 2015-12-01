@@ -159,19 +159,19 @@ defs createInitialThread_def:
       tcbPPtr \<leftarrow> returnOk ( ptrFromPAddr tcb');
       doKernelOp $ (do
          placeNewObject tcbPPtr (makeObject::tcb) 0;
-         srcSlot \<leftarrow> locateSlot (capCNodePtr rootCNCap) biCapITCNode;
+         srcSlot \<leftarrow> locateSlotCap rootCNCap biCapITCNode;
          destSlot \<leftarrow> getThreadCSpaceRoot tcbPPtr;
          cteInsert rootCNCap srcSlot destSlot;
-         srcSlot \<leftarrow> locateSlot (capCNodePtr rootCNCap) biCapITPD;
+         srcSlot \<leftarrow> locateSlotCap rootCNCap biCapITPD;
          destSlot \<leftarrow> getThreadVSpaceRoot tcbPPtr;
          cteInsert itPDCap srcSlot destSlot;
-         srcSlot \<leftarrow> locateSlot (capCNodePtr rootCNCap) biCapITIPCBuf;
+         srcSlot \<leftarrow> locateSlotCap rootCNCap biCapITIPCBuf;
          destSlot \<leftarrow> getThreadBufferSlot tcbPPtr;
          cteInsert ipcBufferCap srcSlot destSlot;
          threadSet (\<lambda> t. t\<lparr>tcbIPCBuffer := ipcBufferVPtr\<rparr>) tcbPPtr;
          activateInitialThread tcbPPtr entry biFrameVPtr;
          cap \<leftarrow> return $ ThreadCap tcbPPtr;
-         slot \<leftarrow> locateSlot (capCNodePtr rootCNCap) biCapITTCB;
+         slot \<leftarrow> locateSlotCap rootCNCap biCapITTCB;
          insertInitCap slot cap
       od);
       returnOk ()
@@ -251,7 +251,7 @@ defs makeRootCNode_def:
       frame \<leftarrow> liftME ptrFromPAddr $ allocRegion (levelBits + slotBits);
       rootCNCap \<leftarrow> doKernelOp $ createObject (fromAPIType CapTableObject) frame levelBits;
       rootCNCap \<leftarrow> returnOk $ rootCNCap \<lparr>capCNodeGuardSize := 32 - levelBits\<rparr>;
-      slot \<leftarrow> doKernelOp $ locateSlot (capCNodePtr rootCNCap) biCapITCNode;
+      slot \<leftarrow> doKernelOp $ locateSlotCap rootCNCap biCapITCNode;
       doKernelOp $ insertInitCap slot rootCNCap;
       returnOk rootCNCap
 odE)"
@@ -261,7 +261,7 @@ defs provideCap_def:
     currSlot \<leftarrow> noInitFailure $ gets initSlotPosCur;
     maxSlot \<leftarrow> noInitFailure $ gets initSlotPosMax;
     whenE (currSlot \<ge> maxSlot) $ throwError InitFailure;
-    slot \<leftarrow> doKernelOp $ locateSlot (capCNodePtr rootCNodeCap) currSlot;
+    slot \<leftarrow> doKernelOp $ locateSlotCap rootCNodeCap currSlot;
     doKernelOp $ insertInitCap slot cap;
     noInitFailure $ modify (\<lambda> st. st \<lparr> initSlotPosCur := currSlot + 1 \<rparr>)
 odE)"

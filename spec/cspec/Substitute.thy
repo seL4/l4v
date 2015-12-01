@@ -329,7 +329,7 @@ fun mk_bool true = @{term True} | mk_bool false = @{term False}
 
 val guard_acc_ptr_adds = com_rewrite
   (fn t => (t, acc_ptr_adds t |> map (fn (p, n, strong) => let
-    val assn = Const (@{const_name ptr_add_assertion},
+    val assn = Const (@{const_name ptr_add_assertion'},
             fastype_of p --> @{typ "int \<Rightarrow> bool \<Rightarrow> heap_typ_desc \<Rightarrow> bool"})
         $ p $ n $ mk_bool strong
         $ @{term "hrs_htd (t_hrs_' (globals (s :: globals myvars)))"}

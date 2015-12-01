@@ -1401,7 +1401,7 @@ lemma deleteObjects_valid_duplicates'[wp]:
    \<lbrace>\<lambda>r s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
   apply (rule hoare_gen_asm)
   apply (clarsimp simp:deleteObjects_def2)
-  apply (wp|simp)+
+  apply (wp hoare_drop_imps|simp)+
   apply clarsimp
   apply (simp add:deletionIsSafe_def)
   apply (erule valid_duplicates_deleteObjects_helper)
@@ -1749,7 +1749,7 @@ lemma setVMRoot_vs_entry_align[wp]:
    apply (rule hoare_post_imp[where Q = "\<lambda>r. ko_wp_at' (\<lambda>a. P (vs_entry_align a)) p"])
     apply (simp)
    apply (wp|simp)+
-  apply (simp add:getThreadVSpaceRoot_def locateSlot_def)
+  apply (simp add:getThreadVSpaceRoot_def locateSlot_conv)
   done
 
 crunch ko_wp_at'[wp]:
@@ -1842,7 +1842,7 @@ lemma reduceZombie_valid_duplicates_spec':
   assumes fin:
   "\<And>s'' rv. \<lbrakk>\<not> (isZombie cap \<and> capZombieNumber cap = 0); \<not> (isZombie cap \<and> \<not> exposed); isZombie cap \<and> exposed;
               (Inr rv, s'')
-              \<in> fst ((withoutPreemption $ locateSlot (capZombiePtr cap) (fromIntegral (capZombieNumber cap - 1))) st)\<rbrakk>
+              \<in> fst ((withoutPreemption $ locateSlotCap cap (fromIntegral (capZombieNumber cap - 1))) st)\<rbrakk>
              \<Longrightarrow> s'' \<turnstile> \<lbrace>\<lambda>s. invs' s \<and> (vs_valid_duplicates' (ksPSpace s)) \<and> sch_act_simple s
                                    \<and> cte_wp_at' (\<lambda>cte. isZombie (cteCap cte)) slot s
                                    \<and> ex_cte_cap_to' rv s\<rbrace>
@@ -1906,9 +1906,8 @@ lemma reduceZombie_valid_duplicates_spec':
      apply clarsimp
     apply clarsimp
    apply clarsimp
-  apply (clarsimp simp: cte_level_bits_def dest!: isCapDs)
-  apply (erule(1) ex_Zombie_to2)
-   apply clarsimp+
+  apply (clarsimp simp: cte_level_bits_def isCap_simps)
+  apply (auto elim: ex_Zombie_to2)
   done
 
 lemma finaliseSlot_valid_duplicates_spec':
@@ -2292,11 +2291,11 @@ lemma invokeCNode_valid_duplicates'[wp]:
     apply (simp add:invs_valid_objs' invs_pspace_aligned')
    apply (simp add:invokeCNode_def)
    apply (wp getSlotCap_inv hoare_drop_imp
-     |simp add:locateSlot_def getThreadCallerSlot_def
+     |simp add:locateSlot_conv getThreadCallerSlot_def
      |wpc)+
   apply (simp add:cteDelete_def invokeCNode_def)
   apply (wp getSlotCap_inv hoare_drop_imp
-     |simp add:locateSlot_def getThreadCallerSlot_def
+     |simp add:locateSlot_conv getThreadCallerSlot_def
     whenE_def split_def
      |wpc)+
   apply (rule hoare_pre)

@@ -3994,12 +3994,12 @@ lemma setup_reply_master_corres:
   "corres dc (einvs and tcb_at t) (invs' and tcb_at' t)
        (setup_reply_master t) (setupReplyMaster t)"
   apply (simp add: setupReplyMaster_def setup_reply_master_def)
-  apply (simp add: locateSlot_def tcbReplySlot_def objBits_def objBitsKO_def)
+  apply (simp add: locateSlot_conv tcbReplySlot_def objBits_def objBitsKO_def)
   apply (simp add: nullMDBNode_def, fold initMDBNode_def)
   apply (rule_tac F="t + 0x20 = cte_map (t, tcb_cnode_index 2)"
                in corres_req)
    apply (clarsimp simp: tcb_cnode_index_def2 cte_map_nat_to_cref)
-  apply clarsimp
+  apply (clarsimp simp: cte_level_bits_def)
   apply (rule stronger_corres_guard_imp)
     apply (rule corres_split [OF _ get_cap_corres])
       apply (rule corres_when)
@@ -4041,7 +4041,7 @@ lemma setupReplyMaster_valid_mdb:
    \<lbrace>valid_mdb' and valid_pspace' and tcb_at' t\<rbrace>
    setupReplyMaster t
    \<lbrace>\<lambda>rv. valid_mdb'\<rbrace>"
-  apply (clarsimp simp: setupReplyMaster_def locateSlot_def
+  apply (clarsimp simp: setupReplyMaster_def locateSlot_conv
                         nullMDBNode_def)
   apply (fold initMDBNode_def)
   apply (wp setCTE_valid_mdb getCTE_wp')
@@ -4071,7 +4071,7 @@ lemma setupReplyMaster_valid_objs [wp]:
   "\<lbrace> valid_objs' and pspace_aligned' and pspace_distinct' and tcb_at' t\<rbrace>
   setupReplyMaster t
   \<lbrace>\<lambda>_. valid_objs'\<rbrace>"
-  apply (simp add: setupReplyMaster_def locateSlot_def)
+  apply (simp add: setupReplyMaster_def locateSlot_conv)
   apply (wp setCTE_valid_objs getCTE_wp')
   apply (clarsimp)
   apply (frule obj_at_aligned')
@@ -4086,13 +4086,13 @@ lemma setupReplyMaster_wps[wp]:
    \<lbrace>\<lambda>s. P ((cteCaps_of s)(slot \<mapsto> (capability.ReplyCap t True))) \<and> P (cteCaps_of s)\<rbrace>
       setupReplyMaster t
    \<lbrace>\<lambda>rv s. P (cteCaps_of s)\<rbrace>"
-  apply (simp_all add: setupReplyMaster_def locateSlot_def)
+  apply (simp_all add: setupReplyMaster_def locateSlot_conv)
    apply (wp hoare_drop_imps
             | simp add: o_def
             | rule hoare_strengthen_post [OF getCTE_sp])+
   apply (clarsimp elim!: rsubst[where P=P] intro!: ext)
   apply (clarsimp simp: tcbReplySlot_def objBits_def objBitsKO_def
-                        tcb_cnode_index_def2 cte_map_nat_to_cref)
+                        tcb_cnode_index_def2 cte_map_nat_to_cref cte_level_bits_def)
   done
 
 crunch no_0_obj'[wp]: setupReplyMaster no_0_obj'
@@ -4112,9 +4112,10 @@ lemma setupReplyMaster_ifunsafe'[wp]:
    \<lbrace>if_unsafe_then_cap' and ex_cte_cap_to' slot\<rbrace>
      setupReplyMaster t
    \<lbrace>\<lambda>rv s. if_unsafe_then_cap' s\<rbrace>"
-  apply (simp add: ifunsafe'_def3 setupReplyMaster_def locateSlot_def)
+  apply (simp add: ifunsafe'_def3 setupReplyMaster_def locateSlot_conv)
   apply (wp getCTE_wp')
-  apply (clarsimp simp: ex_cte_cap_to'_def cte_wp_at_ctes_of cteCaps_of_def)
+  apply (clarsimp simp: ex_cte_cap_to'_def cte_wp_at_ctes_of cteCaps_of_def
+                        cte_level_bits_def objBits_simps)
   apply (drule_tac x=crefa in spec)
   apply (rule conjI)
    apply clarsimp
@@ -4126,7 +4127,7 @@ lemma setupReplyMaster_ifunsafe'[wp]:
 
 lemma setupReplyMaster_iflive'[wp]:
   "\<lbrace>if_live_then_nonz_cap'\<rbrace> setupReplyMaster t \<lbrace>\<lambda>rv. if_live_then_nonz_cap'\<rbrace>"
-  apply (simp add: setupReplyMaster_def locateSlot_def)
+  apply (simp add: setupReplyMaster_def locateSlot_conv)
   apply (wp setCTE_iflive' getCTE_wp')
   apply (clarsimp elim!: cte_wp_at_weakenE')
   done
@@ -4136,7 +4137,7 @@ lemma setupReplyMaster_global_refs[wp]:
       \<and> ex_nonz_cap_to' thread s \<and> valid_objs' s\<rbrace>
     setupReplyMaster thread
    \<lbrace>\<lambda>rv. valid_global_refs'\<rbrace>"
-  apply (simp add: setupReplyMaster_def locateSlot_def)
+  apply (simp add: setupReplyMaster_def locateSlot_conv)
   apply (wp getCTE_wp')
   apply (clarsimp simp: capRange_def cte_wp_at_ctes_of objBits_simps)
   apply (clarsimp simp: ex_nonz_cap_to'_def cte_wp_at_ctes_of)
@@ -4245,7 +4246,7 @@ lemma setupReplyMaster_cte_wp_at'':
   "\<lbrace>cte_wp_at' (\<lambda>cte. P (cteCap cte)) p and K (\<not> P NullCap)\<rbrace>
      setupReplyMaster t
    \<lbrace>\<lambda>rv s. cte_wp_at' (P \<circ> cteCap) p s\<rbrace>"
-  apply (simp add: setupReplyMaster_def locateSlot_def tree_cte_cteCap_eq)
+  apply (simp add: setupReplyMaster_def locateSlot_conv tree_cte_cteCap_eq)
   apply (wp getCTE_wp')
   apply (fastforce simp: cte_wp_at_ctes_of cteCaps_of_def)
   done
@@ -6009,12 +6010,12 @@ lemma getSlotCap_cap_to2:
 
 lemma locateSlot_cap_to'[wp]:
   "\<lbrace>\<lambda>s. isCNodeCap cap \<and> (\<forall>r \<in> cte_refs' cap (irq_node' s). ex_cte_cap_wp_to' P r s)\<rbrace>
-     locateSlot (capCNodePtr cap) (v && mask (capCNodeBits cap))
+     locateSlotCNode (capCNodePtr cap) (v && mask (capCNodeBits cap))
    \<lbrace>ex_cte_cap_wp_to' P\<rbrace>"
-  apply (simp add: locateSlot_def)
+  apply (simp add: locateSlot_conv)
   apply wp
   apply (clarsimp dest!: isCapDs valid_capAligned
-                   simp: objBits_simps mult.commute capAligned_def)
+                   simp: objBits_simps mult.commute capAligned_def cte_level_bits_def)
   apply (erule bspec)
   apply (case_tac "bits < word_bits")
    apply simp
@@ -6039,7 +6040,7 @@ proof (induct arbitrary: s rule: resolveAddressBits.induct)
      apply ((elim exE | wp_once spec_strengthen_postE[OF "1.hyps"])+,
               (rule refl conjI | simp add: in_monad split del: split_if del: cte_refs'.simps)+)
             apply (wp getSlotCap_cap_to2
-                     | simp    add: assertE_def split_def whenE_def
+                     | simp    add: assertE_def split_def whenE_def locateSlotCap_def
                         split del: split_if | simp add: imp_conjL[symmetric]
                      | wp_once hoare_drop_imps)+
     apply (clarsimp simp: P)

@@ -16,7 +16,7 @@ text {* Establishing that the invariants are maintained
         when a region of memory is detyped, that is,
         removed from the model. *}
 
-definition 
+definition
   "descendants_range_in' S p \<equiv> 
   \<lambda>m. \<forall>p' \<in> descendants_of' p m. \<forall>c n. m p' = Some (CTE c n) \<longrightarrow> capRange c \<inter> S = {}"
 
@@ -107,6 +107,12 @@ defs ksASIDMapSafe_def:
   "ksASIDMapSafe \<equiv> \<lambda>s. \<forall>asid hw_asid pd. 
      armKSASIDMap (ksArchState s) asid = Some (hw_asid,pd) \<longrightarrow> page_directory_at' pd s"
 
+defs cNodePartialOverlap_def:
+  "cNodePartialOverlap \<equiv> \<lambda>cns inRange. \<exists>p n. cns p = Some n
+    \<and> (\<not> is_aligned p (cte_level_bits + n)
+      \<or> cte_level_bits + n \<ge> word_bits
+      \<or> (\<not> {p .. p + 2 ^ (cte_level_bits + n) - 1} \<subseteq> {p. inRange p}
+        \<and> \<not> {p .. p + 2 ^ (cte_level_bits + n) - 1} \<subseteq> {p. \<not> inRange p}))"
 
 (* FIXME: move *)
 lemma deleteObjects_def2:
@@ -114,6 +120,7 @@ lemma deleteObjects_def2:
    deleteObjects ptr bits = do
      stateAssert (deletionIsSafe ptr bits) [];
      doMachineOp (freeMemory ptr bits);
+     stateAssert (\<lambda>s. \<not> cNodePartialOverlap (gsCNodes s) (\<lambda>x. x \<in> {ptr .. ptr + 2 ^ bits - 1})) [];
      modify (\<lambda>s. s \<lparr> ksPSpace := \<lambda>x. if x \<in> {ptr .. ptr + 2 ^ bits - 1}
                                         then None else ksPSpace s x,
                      gsUserPages := \<lambda>x. if x \<in> {ptr .. ptr + 2 ^ bits - 1}
@@ -128,8 +135,9 @@ lemma deleteObjects_def2:
   apply (simp add: bind_assoc[symmetric])
   apply (rule bind_cong[rotated], rule refl)
   apply (simp add: bind_assoc modify_modify gets_modify_def)
-  apply (rule_tac f=modify in arg_cong)
-  apply (rule ext)
+  apply (rule ext, simp add: exec_modify stateAssert_def assert_def bind_assoc exec_get
+                             NOT_eq[symmetric] mask_in_range)
+  apply (clarsimp simp: simpler_modify_def)
   apply (simp add: data_map_filterWithKey_def split: split_if_asm)
   apply (rule arg_cong2[where f=gsCNodes_update])
    apply (simp add: NOT_eq[symmetric] mask_in_range ext)
@@ -145,6 +153,7 @@ lemma deleteObjects_def3:
      assert (is_aligned ptr bits);
      stateAssert (deletionIsSafe ptr bits) [];
      doMachineOp (freeMemory ptr bits);
+     stateAssert (\<lambda>s. \<not> cNodePartialOverlap (gsCNodes s) (\<lambda>x. x \<in> {ptr .. ptr + 2 ^ bits - 1})) [];
      modify (\<lambda>s. s \<lparr> ksPSpace := \<lambda>x. if x \<in> {ptr .. ptr + 2 ^ bits - 1}
                                               then None else ksPSpace s x,
                      gsUserPages := \<lambda>x. if x \<in> {ptr .. ptr + 2 ^ bits - 1}
@@ -563,6 +572,39 @@ lemma ekheap_relation_detype:
    ekheap_relation (\<lambda>x. if P x then None else (ekh x)) (\<lambda>x. if P x then None else (kh x))"
   by (fastforce simp add: ekheap_relation_def split: split_if_asm)
 
+lemma cap_table_at_gsCNodes_eq:
+  "(s, s') \<in> state_relation
+    \<Longrightarrow> (gsCNodes s' ptr = Some bits) = cap_table_at bits ptr s"
+  apply (clarsimp simp: state_relation_def ghost_relation_def
+                        obj_at_def is_cap_table)
+  apply blast
+  done
+
+lemma cNodeNoPartialOverlap:
+  "corres dc (\<lambda>s. \<exists>cref. cte_wp_at (op = (cap.UntypedCap base magnitude idx)) cref s
+                     \<and> valid_objs s \<and> pspace_aligned s)
+     \<top>
+    (return x) (stateAssert (\<lambda>s. \<not> cNodePartialOverlap (gsCNodes s)
+       (\<lambda>x. base \<le> x \<and> x \<le> base + 2 ^ magnitude - 1)) [])"
+  apply (simp add: stateAssert_def assert_def)
+  apply (rule corres_symb_exec_r[OF _ get_sp])
+    apply (rule corres_req[rotated], subst if_P, assumption)
+     apply simp
+    apply (clarsimp simp: cNodePartialOverlap_def)
+    apply (drule(1) cte_wp_valid_cap)
+    apply (clarsimp simp: valid_cap_def valid_untyped_def cap_table_at_gsCNodes_eq
+                          obj_at_def is_cap_table)
+    apply (frule(1) pspace_alignedD)
+    apply simp
+    apply (elim allE, drule(1) mp, simp add: obj_range_def valid_obj_def cap_aligned_def)
+    apply (erule is_aligned_get_word_bits[where 'a=32, folded word_bits_def])
+     apply (clarsimp simp: is_aligned_no_overflow)
+     apply (blast intro: order_trans)
+    apply (simp add: is_aligned_no_overflow power_overflow word_bits_def)
+   apply wp
+  done
+
+
 declare wrap_ext_det_ext_ext_def[simp]
 
 
@@ -613,10 +655,14 @@ lemma detype_corres:
            valid_global_refs s" and
          Q'="\<lambda>_ s. s \<turnstile>' capability.UntypedCap base magnitude idx \<and>
                         valid_pspace' s" in corres_split')
-     apply (rule corres_guard_imp)
-       apply (rule corres_machine_op[OF corres_Id], simp+)
-       apply (rule no_fail_freeMemory, simp+)
-     apply (frule (2) is_aligned_weaken)
+     apply (rule corres_bind_return)
+     apply (rule corres_guard_imp[where r=dc])
+       apply (rule corres_split[OF cNodeNoPartialOverlap])
+         apply (rule corres_machine_op[OF corres_Id], simp+)
+         apply (rule no_fail_freeMemory, simp+)
+        apply (wp hoare_vcg_ex_lift)
+      apply auto[1]
+     apply (auto elim: is_aligned_weaken)
     apply (rule corres_modify)
     apply (simp add: valid_pspace'_def)
     apply (rule state_relation_null_filterE, assumption,
@@ -657,7 +703,7 @@ lemma detype_corres:
     apply (simp add: valid_mdb_def)
    apply (wp hoare_vcg_ex_lift hoare_vcg_ball_lift | wps |
           simp add: invs_def valid_state_def valid_pspace_def
-                    descendants_range_def)+
+                    descendants_range_def | wp_once hoare_drop_imps)+
   done
 
 
@@ -1566,22 +1612,6 @@ lemma deleteObjects_invs':
      deleteObjects ptr bits
    \<lbrace>\<lambda>rv. invs'\<rbrace>"
 proof -
-  have 1: "\<And>f g h. (\<lambda>s. s\<lparr>ksPSpace := f (ksPSpace s),
-                          gsUserPages := g (gsUserPages s),
-                          gsCNodes := h (gsCNodes s)\<rparr>) =
-             (ksPSpace_update f \<circ> gsUserPages_update g \<circ> gsCNodes_update h)"
-    by (rule ext) simp
-
-  have 2: "\<And>f g h i.
-           ksPSpace_update g \<circ> gsUserPages_update h \<circ> gsCNodes_update i \<circ>
-           ksMachineState_update f =
-           gsUserPages_update h \<circ> gsCNodes_update i \<circ>
-           ksMachineState_update f \<circ> ksPSpace_update g"
-    by (rule ext) simp
-
-  have 3: "\<And>f. ksPSpace_update f = (\<lambda>s. s\<lparr>ksPSpace := f (ksPSpace s)\<rparr>)"
-    by (rule ext) simp
-
   show ?thesis
   apply (rule hoare_pre)
   apply (rule_tac G="is_aligned ptr bits \<and> 2 \<le> bits \<and> bits \<le> word_bits"
@@ -1589,19 +1619,17 @@ proof -
   apply (clarsimp simp add: deleteObjects_def2)
   apply (simp add: freeMemory_def bind_assoc doMachineOp_bind
                    empty_fail_mapM_x ef_storeWord)
-  apply (subst 1)
   apply (simp add: bind_assoc[where f="\<lambda>_. modify f" for f, symmetric])
   apply (simp add: word_size_def mapM_x_storeWord_step doMachineOp_modify
                    modify_modify)
-  apply (simp add: bind_assoc 2 intvl_range_conv'[where 'a=32, folded word_bits_def] mask_def field_simps)
-  apply (wp hoare_drop_imps)
+  apply (simp add: bind_assoc intvl_range_conv'[where 'a=32, folded word_bits_def] mask_def field_simps)
+  apply (wp)
+  apply (simp cong: if_cong)
   apply (subgoal_tac "is_aligned ptr bits \<and> 2 \<le> bits \<and> bits < word_bits",simp)
-   apply (rule impI)
-   apply (subgoal_tac "delete_locale s ptr bits p idx")
-    apply (subst 3)
-    apply (rule delete_locale.delete_invs'[simplified field_simps])
-    apply assumption
-   apply (simp add: delete_locale_def)
+   apply clarsimp
+   apply (frule(2) delete_locale.intro, simp_all)[1]
+   apply (rule subst[rotated, where P=invs'], erule delete_locale.delete_invs')
+   apply (simp add: field_simps)
   apply clarsimp
   apply (drule invs_valid_objs')
   apply (drule (1) cte_wp_at_valid_objs_valid_cap')

@@ -899,7 +899,7 @@ proof (induct rule: finalise_spec_induct)
            apply (simp(no_asm))
            apply (rule "1.hyps", (assumption | rule refl)+)
           apply (wp wp hoare_drop_imps isFinalCapability_inv
-                    | simp)+
+                    | simp add: locateSlot_conv)+
     done
 qed
 
@@ -6428,7 +6428,7 @@ lemma reduceZombie_invs'':
   assumes fin:
   "\<And>s'' rv. \<lbrakk>\<not> (isZombie cap \<and> capZombieNumber cap = 0); \<not> (isZombie cap \<and> \<not> exposed); isZombie cap \<and> exposed;
               (Inr rv, s'')
-              \<in> fst ((withoutPreemption $ locateSlot (capZombiePtr cap) (fromIntegral (capZombieNumber cap - 1))) st)\<rbrakk>
+              \<in> fst ((withoutPreemption $ locateSlotCap cap (fromIntegral (capZombieNumber cap - 1))) st)\<rbrakk>
              \<Longrightarrow> s'' \<turnstile> \<lbrace>\<lambda>s. invs' s \<and> sch_act_simple s
                                    \<and> cte_wp_at' (\<lambda>cte. isZombie (cteCap cte)) slot s
                                    \<and> ex_cte_cap_to' rv s\<rbrace>
@@ -6493,8 +6493,7 @@ lemma reduceZombie_invs'':
     apply clarsimp
    apply clarsimp
   apply (clarsimp simp: cte_level_bits_def dest!: isCapDs)
-  apply (erule(1) ex_Zombie_to2)
-   apply clarsimp+
+  apply (auto elim: ex_Zombie_to2)
   done
 
 lemma invs'_wu [simp, intro!]:
@@ -7052,7 +7051,7 @@ proof (induct rule: finalise_induct3)
            apply (erule rpo_trans)
            apply (rule rvk_prog_modify_map[unfolded o_def])
            apply (clarsimp simp: cteCaps_of_def capToRPO_def dest!: isCapDs)
-          apply ((wp | simp)+)[2]
+          apply ((wp | simp add: locateSlot_conv)+)[2]
         apply (rule drop_spec_validE)
         apply simp
         apply (rule_tac Q="\<lambda>rv s. revoke_progress_ord m (option_map capToRPO \<circ> cteCaps_of s)
@@ -7283,20 +7282,30 @@ lemma cte_map_replicate:
   "cte_map (ptr, replicate bits False) = ptr"
   by (simp add: cte_map_def)
 
-lemma spec_corres_locate:
-  "\<lbrakk> P s \<Longrightarrow> valid_cap (cap.Zombie p zb (Suc n)) s \<and> valid_objs s;
-      spec_corres s r P P' f (f' (cte_map (p, nat_to_cref (zombie_cte_bits zb) n))) \<rbrakk>
-    \<Longrightarrow> spec_corres s r P P' f (locateSlot p (of_nat n) >>= f')"
+lemma spec_corres_locate_Zombie:
+  "\<lbrakk> P s \<Longrightarrow> valid_cap (cap.Zombie ptr bits (Suc n)) s;
+      spec_corres s r P P' f (f' (cte_map (ptr, nat_to_cref (zombie_cte_bits bits) n))) \<rbrakk>
+    \<Longrightarrow> spec_corres s r P P' f (locateSlotCap (Zombie ptr (zbits_map bits) (Suc n)) (of_nat n) >>= f')"
   unfolding spec_corres_def
-  apply (rule corres_assume_pre, clarsimp)
-  apply (simp add: locateSlot_conv cte_level_bits_def)
-  apply (frule cte_at_nat_to_cref_zbits, rule lessI)
-  apply (subst(asm) cte_map_nat_to_cref)
-    apply (drule valid_Zombie_n_less_cte_bits)
-    apply simp
-   apply (clarsimp simp: valid_cap_def cap_aligned_def word_bits_def
-                   split: option.split_asm)
-  apply (simp add: mult.commute)
+  apply (simp add: locateSlot_conv cte_level_bits_def stateAssert_def bind_assoc)
+  apply (rule corres_symb_exec_r[OF _ get_sp])
+    apply (rule corres_assume_pre, clarsimp)
+    apply (frule cte_at_nat_to_cref_zbits, rule lessI)
+    apply (subst(asm) cte_map_nat_to_cref)
+      apply (drule valid_Zombie_n_less_cte_bits)
+      apply simp
+     apply (clarsimp simp: valid_cap_def cap_aligned_def word_bits_def
+                     split: option.split_asm)
+    apply (simp add: mult.commute cte_level_bits_def)
+    apply (clarsimp simp: isCap_simps valid_cap_def)
+    apply (simp only: assert_def, subst if_P)
+     apply (cases bits, simp_all add: zbits_map_def)
+     apply (clarsimp simp: cap_table_at_gsCNodes)
+     apply (rule word_of_nat_less)
+     apply (simp add: cap_aligned_def)
+    apply (erule corres_guard_imp, simp_all)
+   apply wp
+  apply (rule no_fail_pre, wp)
   done
 
 lemma spec_corres_req:
@@ -7648,7 +7657,7 @@ next
     by (rule ext, simp)
   show ?case
     apply (simp only: rec_del_concrete_unfold cap_relation.simps)
-    apply (simp add: reduceZombie_def Let_def locateSlot_conv
+    apply (simp add: reduceZombie_def Let_def
                      liftE_bindE
                 del: pred_conj_app)
     apply (subst rec_del_simps_ext)
@@ -7662,7 +7671,9 @@ next
       apply (clarsimp simp: valid_cap_def cap_aligned_def word_bits_def
                      split: option.split_asm)
      apply (simp add: cte_level_bits_def)
-    apply (simp add: locateSlot_conv spec_corres_liftME2 pred_conj_assoc)
+    apply (simp add: spec_corres_liftME2 pred_conj_assoc)
+    apply (rule spec_corres_locate_Zombie)
+     apply (auto dest: cte_wp_valid_cap)[1]
     apply (rule_tac F="n < 2 ^ (word_bits - cte_level_bits)" in spec_corres_req)
      apply clarsimp
      apply (drule cte_wp_valid_cap, clarsimp)
@@ -9375,7 +9386,7 @@ lemma inv_cnode_corres:
     apply clarsimp
    apply clarsimp
    apply (rename_tac prod)
-   apply (simp add: getThreadCallerSlot_def locateSlot_def objBits_simps)
+   apply (simp add: getThreadCallerSlot_def locateSlot_conv objBits_simps cte_level_bits_def)
    apply (rule corres_guard_imp)
      apply (rule corres_split [OF _ gct_corres])
         apply (subgoal_tac "thread + 0x10 * tcbCallerSlot = cte_map (thread, tcb_cnode_index 3)")
@@ -9612,7 +9623,7 @@ lemma invokeCNode_invs' [wp]:
       apply (clarsimp simp:cte_wp_at_ctes_of)
       apply (erule weak_derived_sym')
      defer
-     apply (simp add: getSlotCap_def getThreadCallerSlot_def locateSlot_def)
+     apply (simp add: getSlotCap_def getThreadCallerSlot_def locateSlot_conv)
      apply (rule hoare_pre)
       apply (wp haskell_fail_wp getCTE_wp|wpc)+
      apply (clarsimp simp: cte_wp_at_ctes_of)
@@ -9665,8 +9676,7 @@ proof (induct rule: finalise_spec_induct)
            apply (rule spec_strengthen_postE)
             apply (rule "1.hyps", (assumption|rule refl)+)
            apply simp
-          apply (wp hoare_drop_imps hoare_vcg_all_lift)
-    apply simp
+          apply (wp hoare_drop_imps hoare_vcg_all_lift | simp add: locateSlot_conv)+
     done
 qed
 

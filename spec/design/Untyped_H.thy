@@ -69,7 +69,7 @@ where
     rangeCheck nodeWindow 1 retypeFanOutLimit;
     rangeCheck nodeWindow 1 $ nodeSize - nodeOffset;
     slots \<leftarrow> withoutFailure $
-        mapM (locateSlot $ capCNodePtr nodeCap)
+        mapM (locateSlotCap nodeCap)
             [nodeOffset  .e.  nodeOffset+nodeWindow - 1];
     mapME_x ensureEmptySlot slots;
     freeIndex \<leftarrow> withoutFailure $ constOnFailure (capFreeIndex cap) $ (doE

@@ -455,10 +455,12 @@ lemma ccorres_updateCap [corres]:
    apply (clarsimp simp: cte_wp_at_ctes_of)
    apply (frule (1) rf_sr_ctes_of_clift)
    apply (clarsimp simp add: rf_sr_def cstate_relation_def 
-     Let_def cpspace_relation_def)
+     Let_def cpspace_relation_def
+     cvariable_array_map_const_add_map_option[where f="tcb_no_ctes_proj"])
    apply (simp add:typ_heap_simps)
    apply (rule conjI)
     apply (erule (3) cpspace_cte_relation_upd_capI)
+   apply (frule_tac f="ksPSpace" in arg_cong)
    apply (erule_tac t = s' in ssubst)
    apply (simp add: heap_to_page_data_def)
    apply (rule conjI)
@@ -494,7 +496,8 @@ lemma ccorres_updateMDB_const [corres]:
    apply (erule bexI [rotated])
    apply (frule (1) rf_sr_ctes_of_clift)    
    apply (clarsimp simp add: rf_sr_def cstate_relation_def typ_heap_simps
-     Let_def cpspace_relation_def)
+     Let_def cpspace_relation_def
+     cvariable_array_map_const_add_map_option[where f="tcb_no_ctes_proj"])
    apply (rule conjI)
     apply (erule (3) cspace_cte_relation_upd_mdbI)
    apply (erule_tac t = s' in ssubst)
@@ -642,7 +645,8 @@ lemma ccorres_updateMDB_set_mdbNext [corres]:
     apply (rule fst_setCTE [OF ctes_of_cte_at], assumption)
     apply (erule bexI [rotated])
     apply (clarsimp simp add: rf_sr_def cstate_relation_def 
-      Let_def cpspace_relation_def cte_wp_at_ctes_of heap_to_page_data_def)
+      Let_def cpspace_relation_def cte_wp_at_ctes_of heap_to_page_data_def
+     cvariable_array_map_const_add_map_option[where f="tcb_no_ctes_proj"])
     apply (rule conjI)
      apply (erule (2) cspace_cte_relation_upd_mdbI)
      apply (simp add: cmdbnode_relation_def)
@@ -688,7 +692,8 @@ lemma ccorres_updateMDB_set_mdbPrev [corres]:
    apply (rule fst_setCTE [OF ctes_of_cte_at], assumption)
    apply (erule bexI [rotated])
    apply (clarsimp simp add: rf_sr_def cstate_relation_def 
-     Let_def cpspace_relation_def cte_wp_at_ctes_of heap_to_page_data_def)
+     Let_def cpspace_relation_def cte_wp_at_ctes_of heap_to_page_data_def
+     cvariable_array_map_const_add_map_option[where f="tcb_no_ctes_proj"])
    apply (rule conjI)   
     apply (erule (2) cspace_cte_relation_upd_mdbI)
     apply (simp add: cmdbnode_relation_def)   
@@ -930,7 +935,8 @@ show "ccorresG rf_sr \<Gamma> dc xfdc (cte_wp_at' (\<lambda>cte. \<exists>i. cte
    apply (erule bexI [rotated])
    apply (clarsimp simp: cte_wp_at_ctes_of)
    apply (frule (1) rf_sr_ctes_of_clift)
-   apply (clarsimp simp add: rf_sr_def cstate_relation_def Let_def)
+   apply (clarsimp simp add: rf_sr_def cstate_relation_def Let_def
+     cvariable_array_map_const_add_map_option[where f="tcb_no_ctes_proj"])
    apply (simp add:cpspace_relation_def)
    apply (clarsimp simp:typ_heap_simps')
    apply (rule conjI)
@@ -2062,6 +2068,7 @@ lemma emptySlot_helper:
       prefer 2
       apply (erule_tac t = s' in ssubst)
       apply (simp add: carch_state_relation_def cmachine_state_relation_def h_t_valid_clift_Some_iff
+                       cvariable_array_map_const_add_map_option[where f="tcb_no_ctes_proj"]
                   cong: lifth_update)
       apply (erule (1) setCTE_tcb_case)
    
@@ -2091,6 +2098,7 @@ lemma emptySlot_helper:
     apply (erule_tac t = s' in ssubst)
     apply (simp add: carch_state_relation_def cmachine_state_relation_def 
                      h_t_valid_clift_Some_iff
+                     cvariable_array_map_const_add_map_option[where f="tcb_no_ctes_proj"]
                 cong: lifth_update)
     apply (erule (1) setCTE_tcb_case)
  
@@ -3190,10 +3198,9 @@ lemma cap_get_capPtr_spec:
                                           cap_lift_asid_control_cap word_sle_def
                                           cap_lift_irq_control_cap cap_lift_null_cap
                                           mask_def objBits_simps cap_lift_domain_cap
+                                          ptr_add_assertion_positive
                                    dest!: sym [where t = "cap_get_tag cap" for cap]
                                    split: vmpage_size.splits)+
-  sorry (*
-    weak array assertion with zero width?
   (* XXX: slow. there should be a rule for this *)
   apply (case_tac "cap_lift cap", simp_all, case_tac "a",
                auto simp: cap_lift_def cap_tag_defs Let_def
@@ -3203,7 +3210,7 @@ lemma cap_get_capPtr_spec:
                   cap_zombie_cap_lift_def cap_page_table_cap_lift_def
                   cap_page_directory_cap_lift_def cap_asid_pool_cap_lift_def
                   Let_def cap_untyped_cap_lift_def  split: split_if_asm)
-  done *)
+  done
 
 lemma ccap_relation_get_capPtr_not_physical:
   "\<lbrakk> ccap_relation hcap ccap; capClass hcap \<noteq> PhysicalClass \<rbrakk> \<Longrightarrow>

@@ -362,17 +362,18 @@ proof (induct rule: resolveAddressBits.induct)
     apply (simp only: in_bindE_R K_bind_def)
     apply (elim exE conjE)
     apply (simp only: split: split_if_asm)
-     apply (clarsimp simp: in_monad locateSlot_def)
+     apply (clarsimp simp: in_monad locateSlot_conv stateAssert_def)
      apply (cases cap)
        apply (simp_all add: isCap_defs)[12]
-     apply (clarsimp simp add: valid_cap'_def objBits_simps)
+     apply (clarsimp simp add: valid_cap'_def objBits_simps cte_level_bits_def
+                        split: option.split_asm)
     apply (simp only: in_bindE_R K_bind_def)
     apply (elim exE conjE)
     apply (simp only: cap_case_CNodeCap split: split_if_asm)
      apply (drule_tac cap=nextCap in isCapDs(4), elim exE)
      apply (simp only: in_bindE_R K_bind_def)
      apply (frule (12) 1 [OF refl], (assumption | rule refl)+)
-     apply (clarsimp simp: in_monad locateSlot_def objBits_simps)
+     apply (clarsimp simp: in_monad locateSlot_conv objBits_simps stateAssert_def)
      apply (cases cap)
        apply (simp_all add: isCap_defs)[12]
      apply (frule in_inv_by_hoareD [OF getSlotCap_inv])
@@ -382,11 +383,11 @@ proof (induct rule: resolveAddressBits.induct)
      apply (erule allE, erule impE, blast)
      apply (drule (1) bspec)
      apply simp
-    apply (clarsimp simp: in_monad locateSlot_def objBits_simps)
+    apply (clarsimp simp: in_monad locateSlot_conv objBits_simps stateAssert_def)
     apply (cases cap)
      apply (simp_all add: isCap_defs)[12]
     apply (frule in_inv_by_hoareD [OF getSlotCap_inv])
-    apply (clarsimp simp: valid_cap'_def)
+    apply (clarsimp simp: valid_cap'_def cte_level_bits_def)
     done
 qed
 
@@ -499,9 +500,28 @@ lemma cap_relation_Null2 [simp]:
   "cap_relation c NullCap = (c = cap.NullCap)"
   by (cases c) auto
 
-lemma cnode_cap_case_if:
-  "(case c of CNodeCap _ _ _ _ \<Rightarrow> f | _ \<Rightarrow> g) = (if isCNodeCap c then f else g)"
-  by (auto simp: isCap_simps split: capability.splits)
+lemmas cnode_cap_case_if = cap_case_CNodeCap
+
+lemma corres_stateAssert_assume_stronger:
+  "\<lbrakk> corres_underlying sr nf r P Q f (g ());
+    \<And>s s'. \<lbrakk> (s, s') \<in> sr; P s; Q s' \<rbrakk> \<Longrightarrow> P' s' \<rbrakk> \<Longrightarrow>
+   corres_underlying sr nf r P Q f (stateAssert P' [] >>= g)"
+  apply (clarsimp simp: bind_assoc stateAssert_def)
+  apply (rule corres_symb_exec_r [OF _ get_sp])
+    apply (rule_tac F="P' x" in corres_req)
+     apply clarsimp
+    apply (auto elim: corres_guard_imp)[1]
+   apply wp
+  apply (rule no_fail_pre, wp)
+  done
+
+lemma cap_table_at_gsCNodes:
+  "cap_table_at bits ptr s \<Longrightarrow> (s, s') \<in> state_relation
+    \<Longrightarrow> gsCNodes s' ptr = Some bits"
+  apply (clarsimp simp: state_relation_def ghost_relation_def
+                        obj_at_def is_cap_table)
+  apply blast
+  done
 
 declare resolve_address_bits'.simps[simp del]
 
@@ -585,14 +605,18 @@ proof (induct a arbitrary: c' cref' bits rule: resolve_address_bits'.induct)
         apply (clarsimp simp: guard_mask_shift unlessE_whenE)
         apply (cases "length cref < cbits + length guard")
          apply (clarsimp simp: lookup_failure_map_def)
-        apply (simp add: guard_mask_shift locateSlot_def returnOk_liftE [symmetric])
+        apply (simp add: liftE_bindE[where a="locateSlotCap a b" for a b])
+        apply (simp add: locateSlot_conv)
+        apply (rule corres_stateAssert_assume_stronger[rotated])
+         apply (clarsimp simp: valid_cap_def cap_table_at_gsCNodes isCap_simps)
+         apply (rule and_mask_less_size, simp add: word_bits_def word_size cte_level_bits_def)
         apply (cases "length cref = cbits + length guard")
          apply clarsimp
          apply (rule corres_noopE)
           prefer 2
           apply (rule no_fail_pre, wp)[1]
          apply wp
-         apply (clarsimp simp: objBits_simps)
+         apply (clarsimp simp: objBits_simps cte_level_bits_def)
          apply (erule (2) valid_CNodeCapE)
          apply (erule (3) cte_map_shift')
          apply simp
@@ -605,11 +629,11 @@ proof (induct a arbitrary: c' cref' bits rule: resolve_address_bits'.induct)
            apply clarsimp
            apply (rule corres_guard_imp)
              apply (rule getSlotCap_corres)
-             apply (simp add: objBits_simps)
+             apply (simp add: objBits_simps cte_level_bits_def)
              apply (erule (1) cte_map_shift)
                apply simp
               apply assumption
-             apply assumption
+             apply (simp add: cte_level_bits_def)
             apply clarsimp
             apply (clarsimp simp: valid_cap_def)
             apply (erule cap_table_at_cte_at)
@@ -637,11 +661,11 @@ proof (induct a arbitrary: c' cref' bits rule: resolve_address_bits'.induct)
            apply (subst drop_drop [symmetric])
            apply simp
           apply wp
-          apply (clarsimp simp: objBits_simps)
+          apply (clarsimp simp: objBits_simps cte_level_bits_def)
           apply (erule (1) cte_map_shift)
             apply simp
            apply assumption
-          apply assumption
+          apply (simp add: cte_level_bits_def)
          apply wp
          apply clarsimp
          apply (rule hoare_chain)
@@ -678,13 +702,13 @@ lemma rab_corres:
 
 lemma getThreadCSpaceRoot:
   "getThreadCSpaceRoot t = return t"
-  by (simp add: getThreadCSpaceRoot_def locateSlot_def
+  by (simp add: getThreadCSpaceRoot_def locateSlot_conv
                 tcbCTableSlot_def)
 
 lemma getThreadVSpaceRoot:
   "getThreadVSpaceRoot t = return (t+16)"
-  by (simp add: getThreadVSpaceRoot_def locateSlot_def objBits_simps
-                tcbVTableSlot_def shiftl_t2n)
+  by (simp add: getThreadVSpaceRoot_def locateSlot_conv objBits_simps
+                tcbVTableSlot_def shiftl_t2n cte_level_bits_def)
 
 lemma getSlotCap_tcb_corres:
   "corres (\<lambda>t c. cap_relation (tcb_ctable t) c)
@@ -752,14 +776,14 @@ lemmas rab_cte_at' [wp] = resolveAddressBits_cte_at' [folded validE_R_def]
 lemma lookupSlot_cte_at_wp[wp]:
   "\<lbrace>valid_objs'\<rbrace> lookupSlotForThread t addr \<lbrace>\<lambda>rv. cte_at' rv\<rbrace>, \<lbrace>\<lambda>r. \<top>\<rbrace>"
   apply (simp add: lookupSlotForThread_def)
-  apply (simp add: getThreadCSpaceRoot_def locateSlot_def tcbCTableSlot_def)
+  apply (simp add: getThreadCSpaceRoot_def locateSlot_conv tcbCTableSlot_def)
   apply (wp | simp add: split_def)+
   done
 
 lemma lookupSlot_inv[wp]:
   "\<lbrace>P\<rbrace> lookupSlotForThread t addr \<lbrace>\<lambda>_. P\<rbrace>"
   apply (simp add: lookupSlotForThread_def)
-  apply (simp add: getThreadCSpaceRoot_def locateSlot_def tcbCTableSlot_def)
+  apply (simp add: getThreadCSpaceRoot_def locateSlot_conv tcbCTableSlot_def)
   apply (wp | simp add: split_def)+
   done
 

@@ -2015,6 +2015,24 @@ lemma update_typ_at:
       simp_all add: objBits_def objBitsT_koTypeOf[symmetric] ps_clear_upd
                del: objBitsT_koTypeOf)
 
+lemma ptr_val_tcb_ptr_mask:
+  "obj_at' (P :: tcb \<Rightarrow> bool) thread s
+      \<Longrightarrow> ptr_val (tcb_ptr_to_ctcb_ptr thread) && (~~ mask 9)
+                  = thread"
+  apply (clarsimp simp: obj_at'_def tcb_ptr_to_ctcb_ptr_def projectKOs)
+  apply (simp add: is_aligned_add_helper ctcb_offset_def objBits_simps)
+  done
+
+lemmas ptr_val_tcb_ptr_mask'
+    = ptr_val_tcb_ptr_mask[unfolded mask_def, simplified]
+
+lemma typ_uinfo_t_diff_from_typ_name:
+  "typ_name (typ_info_t TYPE ('a :: c_type)) \<noteq> typ_name (typ_info_t TYPE('b :: c_type))
+    \<Longrightarrow> typ_uinfo_t (at :: 'a itself) \<noteq> typ_uinfo_t (bt :: 'b itself)"
+  by (clarsimp simp: typ_uinfo_t_def td_diff_from_typ_name)
+
+declare ptr_add_assertion'[simp] typ_uinfo_t_diff_from_typ_name[simp]
+
 end
 end
 

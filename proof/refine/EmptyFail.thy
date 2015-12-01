@@ -84,7 +84,7 @@ lemma empty_fail_insertNewCap [intro!, wp, simp]:
         
 lemma empty_fail_getIRQSlot [intro!, wp, simp]:
   "empty_fail (getIRQSlot irq)"
-  by (simp add: getIRQSlot_def getInterruptState_def locateSlot_def)
+  by (simp add: getIRQSlot_def getInterruptState_def locateSlot_conv)
 
 lemma empty_fail_getObject_ntfn [intro!, wp, simp]:
   "empty_fail (getObject p :: Structures_H.notification kernel)"
@@ -97,7 +97,7 @@ lemma empty_fail_getNotification [intro!, wp, simp]:
 lemma empty_fail_lookupIPCBuffer [intro!, wp, simp]:
   "empty_fail (lookupIPCBuffer a b)"
   by (clarsimp simp: lookupIPCBuffer_def ArchVSpace_H.lookupIPCBuffer_def
-                     Let_def getThreadBufferSlot_def locateSlot_def)
+                     Let_def getThreadBufferSlot_def locateSlot_conv)
 
 lemma empty_fail_updateObject_default [intro!, wp, simp]:
   "empty_fail (updateObject_default v ko a b c)"

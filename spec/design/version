@@ -1,5 +1,15 @@
-Built from git repo at /Users/kleing/verification/seL4/haskell by kleing
+Built from git repo at /home/tsewell/dev/verification/seL4/haskell by tsewell
 
 Generated from changeset:
-e7db597 haskell: Wait -> Recv
+3960010 Weaken the lookupSlot assertion for the IRQ node.
 
+
+Warning - uncomitted changes used:
+ M src/SEL4/Kernel/CSpace.lhs
+ M src/SEL4/Kernel/Init.lhs
+ M src/SEL4/Kernel/VSpace/ARM.lhs
+ M src/SEL4/Model/PSpace.lhs
+ M src/SEL4/Object/CNode.lhs
+ M src/SEL4/Object/Interrupt.lhs
+ M src/SEL4/Object/Untyped.lhs
+?? ../rbuild/

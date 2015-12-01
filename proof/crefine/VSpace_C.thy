@@ -359,6 +359,7 @@ lemma storeHWASID_ccorres:
                            carch_state_relation_def pd_at_asid'_def
                            fun_upd_def[symmetric] carch_globals_def
                            order_le_less_trans[OF word_and_le1]
+                           ptr_add_assertion_positive
                            array_assertion_shrink_right
                            arg_cong[where f="\<lambda>x. 2 ^ x", OF meta_eq_to_obj_eq, OF asid_low_bits_def])
      apply (subgoal_tac "ucast hw_asid <s (256 :: sword32) \<and> ucast hw_asid < (256 :: sword32)
@@ -456,6 +457,7 @@ lemma invalidateASID_ccorres:
      apply (clarsimp simp: typ_heap_simps)
      apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                            cpspace_relation_def
+                           ptr_add_assertion_positive
                            array_assertion_shrink_right)
      apply (clarsimp simp: typ_heap_simps cmachine_state_relation_def
                            carch_state_relation_def pd_at_asid'_def carch_globals_def
@@ -1504,17 +1506,6 @@ lemma armv_contextSwitch_ccorres:
   done
 
 (* FIXME: move *)
-lemma ptr_val_tcb_ptr_mask:
-  "obj_at' (P :: tcb \<Rightarrow> bool) thread s
-      \<Longrightarrow> ptr_val (tcb_ptr_to_ctcb_ptr thread) && (~~ mask 9)
-                  = thread"
-  apply (clarsimp simp: obj_at'_def tcb_ptr_to_ctcb_ptr_def projectKOs)
-  apply (simp add: is_aligned_add_helper ctcb_offset_def objBits_simps)
-  done
-
-lemmas ptr_val_tcb_ptr_mask'
-    = ptr_val_tcb_ptr_mask[unfolded mask_def, simplified]
-
 lemma ccorres_h_t_valid_armKSGlobalPD:
   "ccorres r xf P P' hs f (f' ;; g') \<Longrightarrow>
    ccorres r xf P P' hs f 
@@ -1528,22 +1519,13 @@ lemma ccorres_h_t_valid_armKSGlobalPD:
   apply (simp add:rf_sr_def cstate_relation_def Let_def)
   done
 
-lemma array_assertion_abs_tcb_ctes:
-  "\<forall>s s'. (s, s') \<in> rf_sr \<and> tcb_at' (ctcb_ptr_to_tcb_ptr (tcb s')) s \<and> (of_nat n < tcbCNodeEntries)
-    \<longrightarrow> array_assertion (cte_Ptr (ptr_val (tcb s') && 0xFFFFFE00)) n (hrs_htd (t_hrs_' (globals s')))"
-  (* going to need to assert this too, sigh *)
-  sorry
-
-lemmas ccorres_move_array_assertion_tcb_ctes [corres_pre]
-    = ccorres_move_Guard_Seq [OF array_assertion_abs_tcb_ctes]
-      ccorres_move_Guard [OF array_assertion_abs_tcb_ctes]
-
 lemma setVMRoot_ccorres:
   "ccorres dc xfdc (all_invs_but_ct_idle_or_in_cur_domain' and tcb_at' thread) (UNIV \<inter> {s. tcb_' s = tcb_ptr_to_ctcb_ptr thread}) []
        (setVMRoot thread) (Call setVMRoot_'proc)"
   apply (cinit lift: tcb_')
+   apply simp
    apply (rule ccorres_move_array_assertion_tcb_ctes)
-   apply (rule ccorres_move_c_guard_cte)
+   apply (rule ccorres_move_c_guard_tcb_ctes)
    apply (simp add: getThreadVSpaceRoot_def locateSlot_conv)
    apply (ctac)
      apply csymbr
@@ -1706,7 +1688,7 @@ lemma setVMRootForFlush_ccorres:
                         mask_def[where n="Suc 0"] true_def to_bool_def
                         allRights_def size_of_def cte_level_bits_def
                         tcbVTableSlot_def Kernel_C.tcbVTable_def invs'_invs_no_cicd)
-  apply (clarsimp simp: rf_sr_ksCurThread)
+  apply (clarsimp simp: rf_sr_ksCurThread ptr_add_assertion_positive)
   apply (subst array_assertion_abs_tcb_ctes, simp add: tcb_cnode_index_defs,
     fastforce intro: tcb_at_invs')+
   apply (clarsimp simp: rf_sr_ksCurThread ptr_val_tcb_ptr_mask' [OF tcb_at_invs'])
@@ -2267,25 +2249,27 @@ lemma ccorres_name_pre_C:
   apply simp
   done
 
+lemma ccorres_flip_Guard:
+  assumes cc: "ccorres_underlying sr \<Gamma> r xf arrel axf A C hs a (Guard F S (Guard F1 S1 c))"
+  shows "ccorres_underlying sr \<Gamma> r xf arrel axf A C hs a (Guard F1 S1 (Guard F S c))"
+  apply (rule ccorres_name_pre_C)
+  using cc
+  apply (case_tac "s \<in> (S1 \<inter> S)")
+   apply (clarsimp simp: ccorres_underlying_def)
+   apply (erule exec_handlers.cases;
+    fastforce elim!: exec_Normal_elim_cases intro: exec_handlers.intros exec.Guard)
+  apply (clarsimp simp: ccorres_underlying_def)
+  apply (case_tac "s \<in> S")
+   apply (fastforce intro: exec.Guard exec.GuardFault exec_handlers.intros)
+  apply (fastforce intro: exec.Guard exec.GuardFault exec_handlers.intros)
+  done
+
 lemma ccorres_second_Guard:
   assumes cc: "ccorres_underlying sr \<Gamma> r xf arrel axf A C' hs a (Guard F1 S1 c)"
   shows "ccorres_underlying sr \<Gamma> r xf arrel axf A (C' \<inter> S) hs a (Guard F1 S1 (Guard F S c))"
-  apply (rule ccorres_name_pre_C)
-  apply (rule ccorres_guard_imp)
-    apply (rule_tac xf'=id in ccorres_abstract)
-    apply (rule Guard_ceqv, rule impI, rule refl)
-    apply (rule_tac x'="{_. rv' \<in> S}" in Guard_ceqv)
-      apply (clarsimp simp: Collect_const_mem)
-     apply (rule ceqv_refl)
-    apply (rule_tac P="rv' = s" in ccorres_gen_asm2)
-    apply simp
-    apply (rule_tac xf'=xfdc in ccorres_abstract)
-     apply (rule Guard_ceqv, rule impI, rule refl)
-     apply (rule ceqv_Guard_UNIV[THEN iffD2])
-     apply (rule ceqv_refl)
-    apply (rule cc)
-   apply simp
-  apply simp
+  apply (rule ccorres_flip_Guard)
+  apply (rule ccorres_Guard)
+  apply (rule cc)
   done
 
 lemma clift_array_assertion_imp:
@@ -2298,7 +2282,7 @@ lemma clift_array_assertion_imp:
   apply clarsimp
   apply (drule h_t_valid_clift)
   apply (drule array_ptr_valid_array_assertionD)
-  apply (drule_tac j=i in array_assertion_shrink_left, simp)
+  apply (drule_tac j=i in array_assertion_shrink_leftD, simp)
   apply (erule array_assertion_shrink_right)
   apply simp
   done
@@ -2315,8 +2299,8 @@ lemma multiple_add_less_nat:
   done
 
 lemma large_ptSlot_array_constraint:
-  "is_aligned (ptSlot :: word32) 6 \<Longrightarrow> n < 16
-    \<Longrightarrow> \<exists>i. ptSlot = (ptSlot && ~~ mask ptBits) + of_nat i * 4 \<and> i + n \<le> 255"
+  "is_aligned (ptSlot :: word32) 6 \<Longrightarrow> n \<le> limit - 240 \<and> 240 \<le> limit
+    \<Longrightarrow> \<exists>i. ptSlot = (ptSlot && ~~ mask ptBits) + of_nat i * 4 \<and> i + n \<le> limit"
   apply (rule_tac x="unat ((ptSlot && mask ptBits) >> 2)" in exI)
   apply (simp add: shiftl_t2n[where n=2, symmetric, THEN trans[rotated],
                    OF mult.commute, simplified])
@@ -2325,28 +2309,25 @@ lemma large_ptSlot_array_constraint:
          rule word_plus_and_or_coroll2[symmetric, where w="mask ptBits"])
    apply (simp, rule aligned_neg_mask[THEN sym], rule is_aligned_andI1,
           erule is_aligned_weaken, simp)
-  apply (rule less_Suc_eq_le[THEN iffD1])
-  apply (rule_tac x="2 ^ 4" in multiple_add_less_nat, simp_all)[1]
-    apply (rule unat_less_helper, simp)
-    apply (rule order_less_le_trans, rule shiftr_less_t2n[where m="ptBits - 2"])
-     apply (rule order_le_less_trans, rule word_and_le1, simp add: mask_def ptBits_def pageBits_def)
-    apply (simp add: ptBits_def pageBits_def)
-   apply (simp add: is_aligned_def[where n=4, simplified, symmetric])
-  apply (rule is_aligned_shiftr, rule is_aligned_andI1, simp)
+  apply (clarsimp simp add: le_diff_conv2)
+  apply (erule order_trans[rotated], simp)
+  apply (rule unat_le_helper)
+  apply (simp add: is_aligned_mask mask_def ptBits_def pageBits_def)
+  apply (word_bitwise, simp?)
   done
 
 lemma large_pdSlot_array_constraint:
-  "is_aligned pd pdBits \<Longrightarrow> vmsz_aligned vptr ARMSuperSection \<Longrightarrow> n < 16
-    \<Longrightarrow> \<exists>i. lookup_pd_slot pd vptr = pd + of_nat i * 4 \<and> i + n \<le> 4095"
+  "is_aligned pd pdBits \<Longrightarrow> vmsz_aligned vptr ARMSuperSection \<Longrightarrow> n \<le> limit - 4080 \<and> 4080 \<le> limit
+    \<Longrightarrow> \<exists>i. lookup_pd_slot pd vptr = pd + of_nat i * 4 \<and> i + n \<le> limit"
   apply (rule_tac x="unat (vptr >> 20)" in exI)
   apply (rule conjI)
    apply (simp add: lookup_pd_slot_def shiftl_t2n)
-  apply (rule less_Suc_eq_le[THEN iffD1])
-  apply (rule_tac x="2 ^ 4" in multiple_add_less_nat, simp_all)[1]
-   apply (rule unat_less_helper, simp)
-   apply (rule order_less_le_trans, rule shiftr_less_t2n3[where m=12], simp+)
-  apply (simp add: is_aligned_def[where n=4, simplified, symmetric]
-                   vmsz_aligned_def is_aligned_shiftr)
+  apply (clarsimp simp add: le_diff_conv2)
+  apply (erule order_trans[rotated], simp)
+  apply (rule unat_le_helper)
+  apply (simp add: is_aligned_mask mask_def pdBits_def pageBits_def
+                   vmsz_aligned_def)
+  apply (word_bitwise, simp?)
   done
 
 lemma findPDForASID_page_directory_at'_simple[wp]:
@@ -2358,6 +2339,52 @@ lemma findPDForASID_page_directory_at'_simple[wp]:
   apply auto
   done
 
+lemma array_assertion_abs_pte_16:
+  "\<forall>s s'. (s, s') \<in> rf_sr \<and> (page_table_at' (ptSlot && ~~ mask ptBits) s
+        \<and> is_aligned ptSlot 6) \<and> (n s' \<le> 16 \<and> (x s' \<noteq> 0 \<longrightarrow> n s' \<noteq> 0))
+    \<longrightarrow> (x s' = 0 \<or> array_assertion (pte_Ptr ptSlot) (n s') (hrs_htd (t_hrs_' (globals s'))))"
+  apply (intro allI impI disjCI2, clarsimp)
+  apply (drule(1) page_table_at_rf_sr, clarsimp)
+  apply (erule clift_array_assertion_imp, simp_all)
+  apply (rule large_ptSlot_array_constraint, simp_all)
+  done
+
+lemmas array_assertion_abs_pte_16_const = array_assertion_abs_pte_16[where x="\<lambda>_. Suc 0",
+    simplified nat.simps simp_thms]
+
+lemmas ccorres_move_array_assertion_pte_16
+    = ccorres_move_Guard_Seq [OF array_assertion_abs_pte_16]
+      ccorres_move_Guard [OF array_assertion_abs_pte_16]
+      ccorres_move_Guard_Seq [OF array_assertion_abs_pte_16]
+      ccorres_move_Guard [OF array_assertion_abs_pte_16]
+      ccorres_move_Guard_Seq [OF array_assertion_abs_pte_16_const]
+      ccorres_move_Guard [OF array_assertion_abs_pte_16_const]
+      ccorres_move_Guard_Seq [OF array_assertion_abs_pte_16_const]
+      ccorres_move_Guard [OF array_assertion_abs_pte_16_const]
+
+lemma array_assertion_abs_pde_16:
+  "\<forall>s s'. (s, s') \<in> rf_sr \<and> (page_directory_at' pd s
+        \<and> vmsz_aligned vptr ARMSuperSection) \<and> (n s' \<le> 16 \<and> (x s' \<noteq> 0 \<longrightarrow> n s' \<noteq> 0))
+    \<longrightarrow> (x s' = 0 \<or> array_assertion (pde_Ptr (lookup_pd_slot pd vptr)) (n s') (hrs_htd (t_hrs_' (globals s'))))"
+  apply (intro allI impI disjCI2, clarsimp)
+  apply (frule(1) page_directory_at_rf_sr, clarsimp)
+  apply (erule clift_array_assertion_imp, simp_all)
+  apply (rule large_pdSlot_array_constraint, simp_all add: page_directory_at'_def)
+  done
+
+lemmas array_assertion_abs_pde_16_const = array_assertion_abs_pde_16[where x="\<lambda>_. Suc 0",
+    simplified nat.simps simp_thms]
+
+lemmas ccorres_move_array_assertion_pde_16
+    = ccorres_move_Guard_Seq [OF array_assertion_abs_pde_16]
+      ccorres_move_Guard [OF array_assertion_abs_pde_16]
+      ccorres_move_Guard_Seq [OF array_assertion_abs_pde_16]
+      ccorres_move_Guard [OF array_assertion_abs_pde_16]
+      ccorres_move_Guard_Seq [OF array_assertion_abs_pde_16_const]
+      ccorres_move_Guard [OF array_assertion_abs_pde_16_const]
+      ccorres_move_Guard_Seq [OF array_assertion_abs_pde_16_const]
+      ccorres_move_Guard [OF array_assertion_abs_pde_16_const]
+
 lemma unmapPage_ccorres:
   "ccorres dc xfdc (invs' and (\<lambda>s. 2 ^ pageBitsForSize sz \<le> gsMaxObjectSize s)
                           and (\<lambda>_. asid \<le> mask asid_bits \<and> vmsz_aligned' vptr sz
@@ -2367,9 +2394,14 @@ lemma unmapPage_ccorres:
       (unmapPage sz asid vptr pptr) (Call unmapPage_'proc)"
   apply (rule ccorres_gen_asm)
   apply (cinit lift: page_size_' asid_' vptr_' pptr_')
-   apply (simp add: ignoreFailure_liftM del: Collect_const)
+   apply (simp add: ignoreFailure_liftM ptr_add_assertion_positive
+                    Collect_True
+               del: Collect_const)
+   apply ccorres_remove_UNIV_guard
    apply csymbr
    apply (ctac add: findPDForASID_ccorres)
+      apply (rename_tac pdPtr pd')
+      apply (rule_tac P="page_directory_at' pdPtr" in ccorres_cross_over_guard)
       apply (simp add: liftE_bindE Collect_False bind_bindE_assoc
                   del: Collect_const)
       apply (rule ccorres_splitE_novcg[where r'=dc and xf'=xfdc])
@@ -2448,21 +2480,13 @@ lemma unmapPage_ccorres:
                         apply clarsimp
                         apply (rule ccorres_guard_imp2)
                          apply csymbr
-                         apply (rule ccorres_Guard)
-                         apply (rule ccorres_second_Guard)
+                         apply (rule ccorres_move_array_assertion_pte_16)
+                         apply (rule ccorres_flip_Guard, rule ccorres_move_array_assertion_pte_16)
                          apply (rule storePTE_Basic_ccorres)
                          apply (simp add: cpte_relation_def Let_def)
                         apply clarsimp
-                        apply (drule(1) page_table_at_rf_sr, clarsimp)
-                        apply (simp add: clift_array_assertion_imp unat_of_nat
-                                         upto_enum_step_def large_ptSlot_array_constraint)
-                        apply (subst clift_array_assertion_imp, assumption,
-                              simp_all add: unat_of_nat
-                                            upto_enum_step_def)[1]
-                         apply (simp add: large_ptSlot_array_constraint)
-                        apply (simp add: upto_enum_step_def
-                                     upto_enum_word
-                                del: upt.simps)
+                        apply (simp add: unat_of_nat upto_enum_word of_nat_gt_0
+                                         upto_enum_step_def del: upt.simps)
                        apply (simp add: upto_enum_step_def)
                       apply (rule allI, rule conseqPre, vcg)
                       apply clarsimp
@@ -2472,13 +2496,16 @@ lemma unmapPage_ccorres:
                   apply (rule ccorres_handlers_weaken2)
                   apply (rule ccorres_move_c_guard_pte)
                   apply csymbr
-                  apply (rule ccorres_move_c_guard_pte, ccorres_remove_UNIV_guard)
-                  apply (rule ccorres_move_c_guard_pte, ccorres_remove_UNIV_guard)
-                  apply (ctac add: cleanCacheRange_PoU_ccorres[unfolded dc_def])
+                  apply (rule ccorres_move_c_guard_pte ccorres_move_array_assertion_pte_16)+
+                  apply (rule ccorres_add_return2, 
+                    ctac(no_vcg) add: cleanCacheRange_PoU_ccorres[unfolded dc_def])
+                   apply (rule ccorres_move_array_assertion_pte_16, rule ccorres_return_Skip')
+                  apply wp
                  apply (rule_tac P="is_aligned ptSlot 6" in hoare_gen_asm)
                  apply (rule hoare_strengthen_post)
                   apply (rule hoare_vcg_conj_lift)
-                   apply (rule_tac P="\<lambda>s. 2 ^ pageBitsForSize sz \<le> gsMaxObjectSize s"
+                   apply (rule_tac P="\<lambda>s. page_table_at' (ptSlot && ~~ mask ptBits) s
+                         \<and> 2 ^ pageBitsForSize sz \<le> gsMaxObjectSize s"
                       in mapM_x_wp')
                    apply wp[1]
                   apply (rule mapM_x_accumulate_checks)
@@ -2550,7 +2577,7 @@ lemma unmapPage_ccorres:
            apply csymbr
            apply csymbr
            apply csymbr
-           apply (case_tac "pd = pde_Ptr (lookup_pd_slot rv vptr)")
+           apply (case_tac "pd = pde_Ptr (lookup_pd_slot pdPtr vptr)")
             prefer 2
             apply (simp, rule ccorres_empty)
            apply (simp add: gen_framesize_to_H_def dc_def[symmetric]
@@ -2574,22 +2601,20 @@ lemma unmapPage_ccorres:
              apply (ccorres_remove_UNIV_guard)
              apply (rule ccorres_rhs_assoc2,
                  rule ccorres_split_nothrow_novcg)
-                 apply (rule_tac P="is_aligned rv pdBits" in ccorres_gen_asm)
-                 apply (rule_tac F="\<lambda>_. page_directory_at' rv" in ccorres_mapM_x_while)
+                 apply (rule_tac P="is_aligned pdPtr pdBits" in ccorres_gen_asm)
+                 apply (rule_tac F="\<lambda>_. page_directory_at' pdPtr" in ccorres_mapM_x_while)
                      apply clarsimp
                      apply (rule ccorres_guard_imp2)
                       apply csymbr
-                      apply (rule ccorres_second_Guard)
+                      apply (rule ccorres_move_array_assertion_pde_16)
+                      apply (rule ccorres_flip_Guard, rule ccorres_move_array_assertion_pde_16)
                       apply (rule storePDE_Basic_ccorres)
                       apply (simp add: cpde_relation_def Let_def
                                     pde_lift_pde_invalid)
                      apply clarsimp
-                     apply (drule(1) page_directory_at_rf_sr, clarsimp)
-                     apply (simp add: unat_def[symmetric] unat_of_nat
+                     apply (simp add: unat_of_nat of_nat_gt_0
                                       upto_enum_step_def upto_enum_word)
-                     apply (subst clift_array_assertion_imp, assumption, simp_all)[1]
-                      apply (rule large_pdSlot_array_constraint, simp_all)[1]
-                      apply (simp add: vmsz_aligned'_def vmsz_aligned_def)
+                     apply (simp add: vmsz_aligned'_def vmsz_aligned_def)
                      apply (clarsimp simp: lookup_pd_slot_def Let_def
                                         mask_add_aligned field_simps)
                      apply (erule less_kernelBase_valid_pde_offset')
@@ -2604,13 +2629,16 @@ lemma unmapPage_ccorres:
                apply (rule ccorres_handlers_weaken2)
                apply (rule ccorres_move_c_guard_pde)
                apply csymbr
-               apply (rule ccorres_move_c_guard_pde, ccorres_remove_UNIV_guard)
-               apply (rule ccorres_move_c_guard_pde, ccorres_remove_UNIV_guard)
-               apply (ctac add: cleanCacheRange_PoU_ccorres[unfolded dc_def])
-              apply (rule_tac P="is_aligned rv pdBits" in hoare_gen_asm)
+               apply (rule ccorres_move_c_guard_pde ccorres_move_array_assertion_pde_16)+
+               apply (rule ccorres_add_return2)
+               apply (ctac(no_vcg) add: cleanCacheRange_PoU_ccorres[unfolded dc_def])
+                apply (rule ccorres_move_array_assertion_pde_16, rule ccorres_return_Skip')
+               apply wp
+              apply (rule_tac P="is_aligned pdPtr pdBits" in hoare_gen_asm)
               apply (rule hoare_strengthen_post)
                apply (rule hoare_vcg_conj_lift)
-                apply (rule_tac P="\<lambda>s. 2 ^ pageBitsForSize sz \<le> gsMaxObjectSize s"
+                apply (rule_tac P="\<lambda>s. page_directory_at' pdPtr s
+                      \<and> 2 ^ pageBitsForSize sz \<le> gsMaxObjectSize s"
                    in mapM_x_wp')
                 apply wp[1]
                apply (rule mapM_x_accumulate_checks)
@@ -2620,7 +2648,7 @@ lemma unmapPage_ccorres:
                 apply (simp add: objBits_simps archObjSize_def)
                apply (simp add: typ_at_to_obj_at_arches[symmetric])
                apply wp
-              apply clarsimp
+              apply (clarsimp simp: vmsz_aligned_def vmsz_aligned'_def)
               apply (subgoal_tac "P" for P)
                apply (frule bspec, erule hd_in_set)
                apply (frule bspec, erule last_in_set)
@@ -2653,13 +2681,18 @@ lemma unmapPage_ccorres:
     apply (wp hoare_vcg_const_imp_lift_R)
    apply (simp add: Collect_const_mem)
    apply (vcg exspec=findPDForASID_modifies)
+  apply (clarsimp simp: invs_arch_state' invs_no_0_obj' invs_valid_objs'
+                        is_aligned_weaken[OF _ pbfs_atleast_pageBits]
+                        vmsz_aligned'_def)
   apply (auto simp: invs_arch_state' invs_no_0_obj' invs_valid_objs' vmsz_aligned'_def 
-                         is_aligned_weaken[OF _ pbfs_atleast_pageBits] is_aligned_weaken
-                         pageBitsForSize_def gen_framesize_to_H_def 
-                         Collect_const_mem vm_page_size_defs word_sle_def 
-                         ccHoarePost_def typ_heap_simps pageBits_def 
-             split: vmpage_size.splits 
-         | unat_arith)+
+                        is_aligned_weaken[OF _ pbfs_atleast_pageBits]
+                        pageBitsForSize_def gen_framesize_to_H_def 
+                        Collect_const_mem vm_page_size_defs word_sle_def 
+                        ccHoarePost_def typ_heap_simps pageBits_def 
+            dest!: page_directory_at_rf_sr
+            elim!: clift_array_assertion_imp
+            split: vmpage_size.splits
+    | unat_arith)+
   done
 
 (* FIXME: move *)
@@ -2745,7 +2778,8 @@ lemma updateCap_frame_mapped_addr_ccorres:
    apply (rule conjI)
     apply (erule (1) setCTE_tcb_case)
    apply (simp add: carch_state_relation_def cmachine_state_relation_def
-                    typ_heap_simps h_t_valid_clift_Some_iff)
+                    typ_heap_simps h_t_valid_clift_Some_iff
+                    cvariable_array_map_const_add_map_option[where f="tcb_no_ctes_proj"])
   apply (clarsimp simp: cte_wp_at_ctes_of)
   done
 
@@ -3234,7 +3268,8 @@ lemma setObjectASID_Basic_ccorres:
   apply (simp add: cready_queues_relation_def
                    carch_state_relation_def
                    cmachine_state_relation_def
-                   Let_def typ_heap_simps)
+                   Let_def typ_heap_simps
+                   update_asidpool_map_tos)
   done
 
 lemma performASIDPoolInvocation_ccorres:
@@ -3302,7 +3337,8 @@ lemma performASIDPoolInvocation_ccorres:
               apply (rule conjI)
                apply (erule (1) setCTE_tcb_case)
               apply (simp add: carch_state_relation_def cmachine_state_relation_def
-                               typ_heap_simps h_t_valid_clift_Some_iff)
+                               typ_heap_simps h_t_valid_clift_Some_iff
+                               cvariable_array_map_const_add_map_option[where f="tcb_no_ctes_proj"])
              apply (clarsimp simp: cte_wp_at_ctes_of)
             apply ceqv
            apply (rule ccorres_move_c_guard_cte)

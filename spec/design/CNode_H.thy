@@ -95,7 +95,16 @@ consts
 ensureEmptySlot :: "machine_word \<Rightarrow> ( syscall_error , unit ) kernel_f"
 
 consts
-locateSlot :: "machine_word \<Rightarrow> machine_word \<Rightarrow> (machine_word) kernel"
+locateSlotBasic :: "machine_word \<Rightarrow> machine_word \<Rightarrow> (machine_word) kernel"
+
+consts
+locateSlotTCB :: "machine_word \<Rightarrow> machine_word \<Rightarrow> (machine_word) kernel"
+
+consts
+locateSlotCNode :: "machine_word \<Rightarrow> machine_word \<Rightarrow> (machine_word) kernel"
+
+consts
+locateSlotCap :: "capability \<Rightarrow> machine_word \<Rightarrow> (machine_word) kernel"
 
 consts
 getCTE :: "machine_word \<Rightarrow> cte kernel"
@@ -408,7 +417,7 @@ defs reduceZombie_def:
   else if isZombie v5 \<and> v6
   then let z = v5; ptr = capZombiePtr z; n = capZombieNumber z
   in   (doE
-    endSlot \<leftarrow> withoutPreemption $ locateSlot ptr (fromIntegral (n - 1));
+    endSlot \<leftarrow> withoutPreemption $ locateSlotCap z (fromIntegral (n - 1));
     cteDelete endSlot False;
     ourCTE  \<leftarrow> withoutPreemption $ getCTE slot;
     (let c2 = (cteCap ourCTE) in
@@ -489,7 +498,7 @@ od)"
 
 defs setupReplyMaster_def:
 "setupReplyMaster thread\<equiv> (do
-    slot \<leftarrow> locateSlot (PPtr $ fromPPtr thread) tcbReplySlot;
+    slot \<leftarrow> locateSlotTCB thread tcbReplySlot;
     oldCTE \<leftarrow> getCTE slot;
     when (isNullCap $ cteCap oldCTE) $ (do
         stateAssert (noReplyCapsFor thread)
@@ -548,11 +557,38 @@ defs ensureEmptySlot_def:
         unlessE (isNullCap $ cteCap cte) $ throw DeleteFirst
 odE)"
 
-defs locateSlot_def:
-"locateSlot cnode offset\<equiv> (do
+defs locateSlotBasic_def:
+"locateSlotBasic cnode offset\<equiv> (do
         slotSize \<leftarrow> return ( 1 `~shiftL~` objBits (undefined::cte));
         return $ PPtr $ fromPPtr $ cnode + PPtr (slotSize * offset)
 od)"
+
+defs locateSlotTCB_def:
+"locateSlotTCB tcb offset\<equiv> locateSlotBasic (PPtr $ fromPPtr tcb) offset"
+
+defs locateSlotCNode_def:
+"locateSlotCNode cnode offset\<equiv> (do
+        flip stateAssert []
+            (\<lambda> s. (case gsCNodes s (fromPPtr cnode) of
+                  None \<Rightarrow>   False
+                | Some n \<Rightarrow>   offset < 2 ^ n)
+                );
+        locateSlotBasic cnode offset
+od)"
+
+defs locateSlotCap_def:
+"locateSlotCap x0 offset\<equiv> (let cap = x0 in
+  if isCNodeCap cap
+  then   locateSlotCNode (capCNodePtr cap) offset
+  else if isThreadCap cap
+  then   locateSlotTCB (capTCBPtr cap) offset
+  else if isZombie cap
+  then   (case capZombieType cap of
+      ZombieTCB \<Rightarrow>   locateSlotTCB (PPtr $ fromPPtr $ capZombiePtr cap) offset
+    | ZombieCNode v8 \<Rightarrow>   locateSlotCNode (capZombiePtr cap) offset
+    )
+  else   haskell_fail []
+  )"
 
 defs getCTE_def:
 "getCTE \<equiv> getObject"

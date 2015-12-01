@@ -61,7 +61,7 @@ definition
     \<Rightarrow> (word32 \<Rightarrow> ('c :: c_type) ptr) \<Rightarrow> heap_typ_desc \<Rightarrow> bool"
 where
   "cvariable_array_map_relation amap szs ptrfun htd
-    \<equiv> \<forall>p v. amap p = Some v \<longrightarrow> array_assertion (ptrfun p) (szs v) htd"
+    \<equiv> \<forall>p v. amap p = Some v \<longrightarrow> h_t_array_valid htd (ptrfun p) (szs v)"
 
 definition
   asid_map_pd_to_hwasids :: "(asid \<rightharpoonup> hw_asid \<times> obj_ref) \<Rightarrow> (obj_ref \<Rightarrow> hw_asid set)"
@@ -573,6 +573,11 @@ abbreviation
     \<equiv> cvariable_array_map_relation (gsCNodes astate) (\<lambda>n. 2 ^ n)
         cte_Ptr (hrs_htd (t_hrs_' cstate))"
 
+abbreviation
+  "tcb_cte_array_relation astate cstate
+    \<equiv> cvariable_array_map_relation (map_to_tcbs (ksPSpace astate))
+        (\<lambda>x. 5) cte_Ptr (hrs_htd (t_hrs_' cstate))"
+
 fun
   irqstate_to_C :: "irqstate \<Rightarrow> word32"
   where
@@ -654,6 +659,7 @@ where
        carch_state_relation (ksArchState astate) cstate \<and>
        cmachine_state_relation (ksMachineState astate) cstate \<and>
        cte_array_relation astate cstate \<and>
+       tcb_cte_array_relation astate cstate \<and>
        apsnd fst (ghost'state_' cstate) = (gsUserPages astate, gsCNodes astate) \<and>
        ghost_size_rel (ghost'state_' cstate) (gsMaxObjectSize astate) \<and>
        ksWorkUnitsCompleted_' cstate = ksWorkUnitsCompleted astate \<and>

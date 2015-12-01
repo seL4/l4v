@@ -42,6 +42,9 @@ consts
 deletionIsSafe :: "machine_word \<Rightarrow> nat \<Rightarrow> kernel_state \<Rightarrow> bool"
 
 consts
+cNodePartialOverlap :: "(machine_word \<Rightarrow> nat option) \<Rightarrow> (machine_word \<Rightarrow> bool) \<Rightarrow> bool"
+
+consts
 ksASIDMapSafe :: "kernel_state \<Rightarrow> bool"
 
 consts
@@ -141,6 +144,8 @@ defs deleteObjects_def:
         modify (\<lambda> ks. ks \<lparr> ksPSpace := ps'\<rparr>);
         modify (\<lambda> ks. ks \<lparr> gsUserPages := (\<lambda> x. if inRange x
                                    then Nothing else gsUserPages ks x) \<rparr>);
+        stateAssert (\<lambda> x. Not (cNodePartialOverlap (gsCNodes x) inRange))
+            [];
         modify (\<lambda> ks. ks \<lparr> gsCNodes := (\<lambda> x. if inRange x
                                    then Nothing else gsCNodes ks x) \<rparr>);
         stateAssert ksASIDMapSafe []

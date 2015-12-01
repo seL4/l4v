@@ -84,12 +84,10 @@ lemma neq_types_not_typ_slice_eq:
   using ladder_set_self[where s=s and n=k]
   by clarsimp
 
-lemma h_t_valid_typ_region_bytes:
-  fixes p :: "'a :: c_type ptr"
-  assumes neq_byte: "typ_uinfo_t TYPE('a) \<noteq> typ_uinfo_t TYPE (word8)"
-  shows "typ_region_bytes ptr bits hp,g \<Turnstile>\<^sub>t p =
-   ({ptr_val p ..+ size_of (TYPE ('a))} \<inter> {ptr ..+ 2 ^ bits} = {} \<and> hp,g \<Turnstile>\<^sub>t p)"
-  unfolding h_t_valid_def
+lemma valid_footprint_typ_region_bytes:
+  assumes neq_byte: "td \<noteq> typ_uinfo_t TYPE (word8)"
+  shows "valid_footprint (typ_region_bytes ptr bits hp) p td =
+   ({p ..+ size_td td} \<inter> {ptr ..+ 2 ^ bits} = {} \<and> valid_footprint hp p td)"
   apply (clarsimp simp: valid_footprint_def Let_def)
   apply (rule iffI)
   apply clarsimp
@@ -107,12 +105,12 @@ lemma h_t_valid_typ_region_bytes:
                   split: split_if_asm)
   apply clarsimp
   apply (drule spec, drule (1) mp)
-  apply (subgoal_tac "ptr_val p + of_nat y \<notin> {ptr..+2 ^ bits}")
+  apply (subgoal_tac "p + of_nat y \<notin> {ptr..+2 ^ bits}")
   apply (simp add: typ_bytes_region_out)
   apply clarsimp
   apply (drule intvlD)
   apply (clarsimp simp: disjoint_iff_not_equal )
-  apply (drule_tac x = "ptr_val p + of_nat y" in bspec)
+  apply (drule_tac x = "p + of_nat y" in bspec)
    apply (rule intvlI)
    apply (simp add: size_of_def)
   apply (drule_tac x = "ptr + of_nat k" in bspec)
@@ -120,6 +118,14 @@ lemma h_t_valid_typ_region_bytes:
   apply simp
   done
 
+lemma h_t_valid_typ_region_bytes:
+  fixes p :: "'a :: c_type ptr"
+  assumes neq_byte: "typ_uinfo_t TYPE('a) \<noteq> typ_uinfo_t TYPE (word8)"
+  shows "typ_region_bytes ptr bits hp,g \<Turnstile>\<^sub>t p =
+   ({ptr_val p ..+ size_of (TYPE ('a))} \<inter> {ptr ..+ 2 ^ bits} = {} \<and> hp,g \<Turnstile>\<^sub>t p)"
+  unfolding h_t_valid_def
+  by (simp add: valid_footprint_typ_region_bytes[OF neq_byte]
+                size_of_def)
 
 lemma proj_d_lift_state_hrs_htd_update [simp]:  
   "proj_d (lift_state (hrs_htd_update f hp)) = f (hrs_htd hp)"
@@ -437,12 +443,11 @@ qed
 
 lemma tcb_ptr_to_ctcb_ptr_in_range':
   fixes tcb :: tcb
-  assumes tat: "ko_at' tcb (ctcb_ptr_to_tcb_ptr x) s"
+  assumes al: "is_aligned (ctcb_ptr_to_tcb_ptr x) 9"
   shows "{ptr_val x ..+ size_of TYPE (tcb_C)} 
           \<subseteq> {ctcb_ptr_to_tcb_ptr x..+2 ^ objBits tcb}"
-proof -  
-  from tat have al: "is_aligned (ctcb_ptr_to_tcb_ptr x) 9" by (clarsimp elim!: obj_atE' simp: projectKOs objBits_simps)
-  hence "ctcb_ptr_to_tcb_ptr x \<le> ctcb_ptr_to_tcb_ptr x + 2 ^ 9 - 1"
+proof -
+  from al have "ctcb_ptr_to_tcb_ptr x \<le> ctcb_ptr_to_tcb_ptr x + 2 ^ 9 - 1"
     by (rule is_aligned_no_overflow)
     
   moreover from al have "ctcb_ptr_to_tcb_ptr x \<le> ctcb_ptr_to_tcb_ptr x + 2 ^ 8"
@@ -561,7 +566,7 @@ proof -
       done
     
     from koat show "{ptr_val x..+size_of TYPE(tcb_C)} \<subseteq> {ctcb_ptr_to_tcb_ptr x..+2 ^ objBits tcb}"
-      by (rule tcb_ptr_to_ctcb_ptr_in_range')
+      by (metis tcb_ptr_to_ctcb_ptr_in_range' tcb_aligned' obj_at'_weakenE)
   qed
 qed
 
@@ -1484,6 +1489,36 @@ lemma map_comp_restrict_map:
   "(f \<circ>\<^sub>m (restrict_map m S)) = (restrict_map (f \<circ>\<^sub>m m) S)"
   by (rule ext, simp add: restrict_map_def map_comp_def)
 
+lemma size_td_uinfo_array_tag_n_m[simp]:
+  "size_td (uinfo_array_tag_n_m (ta :: ('a :: c_type) itself) n m)
+    = size_of (TYPE('a)) * n"
+  apply (induct n)
+   apply (simp add: uinfo_array_tag_n_m_def)
+  apply (simp add: uinfo_array_tag_n_m_def size_of_def)
+  done
+
+lemma modify_machinestate_assert_cnodes_swap:
+  "do x \<leftarrow> modify (ksMachineState_update f);
+    y \<leftarrow> stateAssert (\<lambda>s. \<not> cNodePartialOverlap (gsCNodes s) S) []; g od
+    = do y \<leftarrow> stateAssert (\<lambda>s. \<not> cNodePartialOverlap (gsCNodes s) S) [];
+        x \<leftarrow> modify (ksMachineState_update f); g od"
+  sorry
+
+lemma cvariable_array_map_relation_detype:
+  "cvariable_array_map_relation mp szs ptrfun htd
+    \<Longrightarrow> ptrfun = (Ptr :: _ \<Rightarrow> ('a :: c_type ptr))
+    \<Longrightarrow> \<forall>p v. mp p = Some v \<longrightarrow> p \<notin> {ptr ..+ 2 ^ bits}
+        \<longrightarrow> {p ..+ szs v * size_of TYPE('a)} \<inter> {ptr ..+ 2 ^ bits} = {}
+    \<Longrightarrow> cvariable_array_map_relation (mp |` (- {ptr..+2 ^ bits}))
+        szs ptrfun (typ_region_bytes ptr bits htd)"
+  apply (clarsimp simp: cvariable_array_map_relation_def restrict_map_def)
+  apply (elim allE, (drule(1) mp)+)
+  apply (clarsimp simp: h_t_array_valid_def)
+  apply (subst valid_footprint_typ_region_bytes)
+   apply (simp add: uinfo_array_tag_n_m_def typ_uinfo_t_def typ_info_word)
+  apply (simp add: field_simps)
+  done
+
 lemma deleteObjects_ccorres':
   notes if_cong[cong]
   shows
@@ -1510,7 +1545,10 @@ lemma deleteObjects_ccorres':
    apply (clarsimp simp:cte_wp_at_ctes_of)
   apply (clarsimp simp: mapM_x_storeWord_step intvl_range_conv
              intvl_range_conv[where 'a=32, folded word_bits_def]
-             doMachineOp_modify modify_modify o_def ksPSpace_ksMSu_comm)
+             doMachineOp_modify modify_modify o_def ksPSpace_ksMSu_comm
+             bind_assoc modify_machinestate_assert_cnodes_swap
+             modify_modify_bind)
+  apply (rule ccorres_stateAssert_fwd)
   apply (rule ccorres_stateAssert_after)
   apply (rule ccorres_from_vcg)
   apply (rule allI, rule conseqPre, vcg)
@@ -1520,6 +1558,9 @@ lemma deleteObjects_ccorres':
    apply (rule conjI [OF refl refl])
   apply (clarsimp simp: simpler_modify_def)
 proof -
+  let ?mmu = "(\<lambda>h x. if ptr \<le> x \<and> x \<le> ptr + 2 ^ bits - 1 then 0 else h x)"
+  let ?psu = "(\<lambda>h x. if ptr \<le> x \<and> x \<le> ptr + 2 ^ bits - 1 then None else h x)"
+
   fix s s'
   assume al: "is_aligned ptr bits"
     and cte: "cte_wp_at' (\<lambda>cte. cteCap cte = UntypedCap ptr bits idx) p s"
@@ -1527,40 +1568,37 @@ proof -
     and invs: "invs' s" and "ct_active' s"
     and "sch_act_simple s" and wb: "bits < word_bits" and b2: "2 \<le> bits"
     and "deletionIsSafe ptr bits s"
+    and cNodePartial: "\<not> cNodePartialOverlap (gsCNodes s)
+        (\<lambda>x. ptr \<le> x \<and> x \<le> ptr + 2 ^ bits - 1)"
     and sr: "(s, s') \<in> rf_sr"
     and safe_asids:
           "ksASIDMapSafe
-            (gsCNodes_update
-              (\<lambda>_ x. if ptr \<le> x \<and> x \<le> ptr + 2 ^ bits - 1 then None
-                     else gsCNodes s x)
+            (gsCNodes_update (\<lambda>_. ?psu (gsCNodes s))
               (gsUserPages_update
-                (\<lambda>_ x. if ptr \<le> x \<and> x \<le> ptr + 2 ^ bits - 1 then None
-                       else gsUserPages s x)
+                (\<lambda>_. ?psu (gsUserPages s))
                 (ksMachineState_update
-                  (underlying_memory_update
-                    (\<lambda>m x. if ptr \<le> x \<and> x \<le> ptr + 2 ^ bits - 1 then 0
-                           else m x))
-                  (s\<lparr>ksPSpace :=
-                      (\<lambda>x. if ptr \<le> x \<and> x \<le> ptr + 2 ^ bits - 1 then None
-                           else ksPSpace s x)\<rparr>))))" (is "ksASIDMapSafe ?t")
+                  (underlying_memory_update ?mmu)
+                  (s\<lparr>ksPSpace := ?psu (ksPSpace s) \<rparr>))))" (is "ksASIDMapSafe ?t")
 
   interpret D: delete_locale s ptr bits p
     apply (unfold_locales)
       apply fact+
     done
 
-  let ?mmu = "(\<lambda>h x. if ptr \<le> x \<and> x \<le> ptr + 2 ^ bits - 1 then 0 else h x)"
-  let ?psu = "(\<lambda>h x. if ptr \<le> x \<and> x \<le> ptr + 2 ^ bits - 1 then None else h x)"
 
   let ?ks = "?psu (ksPSpace s)"
   let ?ks' = "ksPSpace s |` (- {ptr..+2 ^ bits})"
-  have ks': "?ks = ?ks'"
-    apply (rule ext)
+
+  have psu_restrict: "\<forall>h. ?psu h = h |` (- {ptr..+2 ^ bits})"
+    apply (intro allI ext)
     apply (subst upto_intvl_eq [OF al])
     apply (clarsimp)
     done
 
+  have ks': "?ks = ?ks'" by (simp add: psu_restrict)
+
   let ?th = "hrs_htd_update (typ_region_bytes ptr bits)"
+  let ?th_s = "?th (t_hrs_' (globals s'))"
   
   have map_to_ctes_delete':
     "map_to_ctes ?ks' = ctes_of s |` (- {ptr..+2 ^ bits})" using invs
@@ -1595,12 +1633,21 @@ proof -
   note cmap_array = cmap_array[simplified, simplified objBitsT_simps b2
         ptBits_def pdBits_def pageBits_def word_bits_def, simplified]
 
+  note pspace_distinct' = invs_pspace_distinct'[OF invs] and
+       pspace_aligned' = invs_pspace_aligned'[OF invs] and
+       valid_objs' = invs_valid_objs'[OF invs] and
+       valid_untyped'_def2 =
+         valid_untyped'[OF pspace_distinct' pspace_aligned' al]
+
+  have s_ksPSpace_adjust: "ksPSpace_update ?psu s = s\<lparr>ksPSpace := ?psu (ksPSpace s)\<rparr>"
+    by simp
+
+  (* calculation starts here *)
   have cs: "cpspace_relation (ksPSpace s) (underlying_memory (ksMachineState s))
                              (t_hrs_' (globals s'))"
     using sr
     by (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
-  hence "cpspace_relation ?ks' (underlying_memory (ksMachineState s))
-                               (?th (t_hrs_' (globals s')))"
+  hence "cpspace_relation ?ks' (underlying_memory (ksMachineState s)) ?th_s"
     unfolding cpspace_relation_def 
     using cendpoint_relation_restrict [OF D.valid_untyped invs rl]
       cnotification_relation_restrict [OF D.valid_untyped invs rl]
@@ -1649,7 +1696,7 @@ proof -
     and  tlive: "\<And>p. \<forall>t \<in> set (ksReadyQueues s p). ko_wp_at' live' t s"
     by auto
   from sr have
-    "cready_queues_relation (clift (?th (t_hrs_' (globals s'))))
+    "cready_queues_relation (clift ?th_s)
         (ksReadyQueues_' (globals s')) (ksReadyQueues s)"
     unfolding cready_queues_relation_def rf_sr_def cstate_relation_def
               cpspace_relation_def
@@ -1701,7 +1748,7 @@ proof -
       done
 
     have "set_option \<circ> (pde_stored_asid \<circ>\<^sub>m cslift s' \<circ>\<^sub>m pd_pointer_to_asid_slot) =
-      set_option \<circ> (pde_stored_asid \<circ>\<^sub>m clift (hrs_htd_update (typ_region_bytes ptr bits) (t_hrs_' (globals s'))) \<circ>\<^sub>m
+      set_option \<circ> (pde_stored_asid \<circ>\<^sub>m clift ?th_s \<circ>\<^sub>m
             pd_pointer_to_asid_slot)"
       apply -
       apply (rule ext)
@@ -1744,19 +1791,7 @@ proof -
       done
   }
 
-  ultimately have psp_in_sr:
-    "(s\<lparr>ksPSpace := ?ks\<rparr>, globals_update (t_hrs_'_update ?th) s')  \<in> rf_sr"
-    using sr untyped_cap_rf_sr_ptr_bits_domain[OF cte invs sr]
-    by (clarsimp simp: rf_sr_def cstate_relation_def Let_def ks'
-                       carch_state_relation_def cmachine_state_relation_def
-                       hrs_htd_update htd_safe_typ_region_bytes)
-
-  note pspace_distinct' = invs_pspace_distinct'[OF invs] and
-       pspace_aligned' = invs_pspace_aligned'[OF invs] and
-       valid_objs' = invs_valid_objs'[OF invs] and
-       valid_untyped'_def2 =
-         valid_untyped'[OF pspace_distinct' pspace_aligned' al]
-
+  moreover
   have h2pd_eq:
        "heap_to_page_data (?psu (ksPSpace s))
                           (?mmu (underlying_memory (ksMachineState s))) =
@@ -1810,40 +1845,80 @@ proof -
     apply simp
     done
 
-  have s_ksPSpace_adjust: "ksPSpace_update ?psu s = s\<lparr>ksPSpace := ?psu (ksPSpace s)\<rparr>"
-    by simp
+  moreover {
+    from D.valid_untyped invs have tcb_no_overlap:
+      "\<And>p v. map_to_tcbs (ksPSpace s) p = Some v
+        \<Longrightarrow> p \<notin> {ptr..+2 ^ bits}
+        \<Longrightarrow> {p ..+ 2 ^ objBitsT TCBT} \<inter> {ptr..+2 ^ bits} = {}"
+      apply (clarsimp simp: valid_cap'_def)
+      apply (drule(1) map_to_ko_atI')
+      apply (clarsimp simp: obj_at'_def valid_untyped'_def2)
+      apply (elim allE, drule(1) mp)
+      apply (clarsimp simp only: obj_range'_def upto_intvl_eq[symmetric] al)
+      apply (subgoal_tac "objBitsKO ko = objBitsT TCBT")
+       apply (subgoal_tac "p \<in> {p ..+ 2 ^ objBitsT TCBT}")
+        apply simp
+        apply blast
+       apply (simp add: upto_intvl_eq)
+      apply (clarsimp simp: objBits_simps projectKOs objBitsT_simps)
+      done
 
-  from psp_in_sr
-  have msu_in_sr:
-       "(ksMachineState_update (underlying_memory_update ?mmu)
-           (ksPSpace_update ?psu s),
-         globals_update (t_hrs_'_update ?th) s') \<in> rf_sr"
-    apply (simp add: rf_sr_def)
-    apply (clarsimp simp add: cstate_relation_def Let_def)
-    apply (rule conjI[rotated])
-     apply (simp add: cmachine_state_relation_def
-                      s_ksPSpace_adjust)
-    apply (clarsimp simp add: cpspace_relation_def h2pd_eq)
-    done
+    have lies: "\<And>p n. gsCNodes s p = Some n \<Longrightarrow> is_aligned p (n + cte_level_bits)
+        \<and> n + cte_level_bits < word_bits"
+      sorry
 
-  (* FIXME: source out? *)
-  have gsu_in_sr: "\<And>s s'.
-    (s,s') \<in> rf_sr \<Longrightarrow>
-    (gsCNodes_update ?psu (gsUserPages_update ?psu s),
-     globals_update (ghost'state_'_update (gs_clear_region ptr bits)) s')
-    \<in> rf_sr"
+    note upto_rew = upto_intvl_eq[OF al, THEN eqset_imp_iff, symmetric, simplified]
+
+    from cNodePartial[simplified upto_rew] have cn_no_overlap:
+      "\<And>p n. gsCNodes s p = Some n \<Longrightarrow> p \<notin> {ptr..+2 ^ bits}
+          \<Longrightarrow> {p ..+ 2 ^ (n + cte_level_bits)} \<inter> {ptr..+2 ^ bits} = {}"
+      apply (simp add: cNodePartialOverlap_def)
+      apply (elim allE, drule(1) mp)
+      apply (frule lies, clarify)
+      apply (frule base_member_set, simp add: word_bits_def)
+      apply (clarsimp simp only: upto_intvl_eq[symmetric] field_simps)
+      apply blast
+      done
+
+    from sr have "cvariable_array_map_relation (gsCNodes s|\<^bsub>(- {ptr..+2 ^ bits})\<^esub>) (op ^ 2) cte_Ptr
+       (typ_region_bytes ptr bits (hrs_htd (t_hrs_' (globals s'))))"
+      "cvariable_array_map_relation (map_to_tcbs (ksPSpace s|\<^bsub>(- {ptr..+2 ^ bits})\<^esub>)) (\<lambda>x. 5) cte_Ptr
+       (typ_region_bytes ptr bits (hrs_htd (t_hrs_' (globals s'))))"
+      apply (simp_all add: map_comp_restrict_map rf_sr_def cstate_relation_def Let_def)
+       apply (rule cvariable_array_map_relation_detype, clarsimp+)
+       apply (drule(1) cn_no_overlap)
+       apply (simp add: cte_level_bits_def power_add)
+      apply (rule cvariable_array_map_relation_detype, clarsimp+)
+      apply (drule(1) tcb_no_overlap)
+      apply (erule disjoint_subset[rotated])
+      apply (rule intvl_start_le)
+      apply (simp add: objBitsT_simps)
+      done
+  }
+
+  moreover from sr
+    have "apsnd fst (gs_clear_region ptr bits (ghost'state_' (globals s'))) =
+        (gsUserPages s|\<^bsub>(- {ptr..+2 ^ bits})\<^esub>, gsCNodes s|\<^bsub>(- {ptr..+2 ^ bits})\<^esub>)
+        \<and> ghost_size_rel (gs_clear_region ptr bits (ghost'state_' (globals s')))
+            (gsMaxObjectSize s)"
     apply (case_tac "ghost'state_' (globals s')")
     apply (simp add: rf_sr_def cstate_relation_def Let_def gs_clear_region_def
                   upto_intvl_eq[OF al] carch_state_relation_def
                   cmachine_state_relation_def ghost_size_rel_def
-                  ghost_assertion_data_get_def)
+                  ghost_assertion_data_get_def restrict_map_def
+                  if_flip[symmetric, where F=None])
     done
 
-  from gsu_in_sr[OF msu_in_sr]
+  ultimately
   show "(?t, globals_update
                (%x. ghost'state_'_update (gs_clear_region ptr bits)
                       (t_hrs_'_update ?th x)) s') \<in> rf_sr"
-    by (case_tac s, simp add: o_def)
+    using sr untyped_cap_rf_sr_ptr_bits_domain[OF cte invs sr]
+    by (clarsimp simp: rf_sr_def cstate_relation_def Let_def
+                       psu_restrict h2pd_eq[simplified ks'] cpspace_relation_def
+                       carch_state_relation_def cmachine_state_relation_def
+                       hrs_htd_update htd_safe_typ_region_bytes)
+
 qed
 
 abbreviation (input)
