@@ -515,8 +515,9 @@ lemma select_ext_fap:
   by (simp add: select_ext_def get_def gets_def bind_def assert_def return_def)
 
 lemma lookup_pt_slot_no_fail_corres[simp]:
-  "lookupPTSlot_nofail pt vptr = lookup_pt_slot_no_fail pt vptr"
-  by (simp add: lookup_pt_slot_no_fail_def lookupPTSlot_nofail_def mask_def)
+  "lookupPTSlotFromPT pt vptr
+    = (do stateAssert (page_table_at' pt) []; return (lookup_pt_slot_no_fail pt vptr) od)"
+  by (simp add: lookup_pt_slot_no_fail_def lookupPTSlotFromPT_def mask_def checkPTAt_def)
 
 lemma page_base_corres[simp]:
   "pageBase vaddr vmsize = page_base vaddr vmsize"
@@ -544,13 +545,16 @@ lemma resolve_vaddr_corres:
                            \<and> vs_valid_duplicates' (ksPSpace s)"
                 in corres_split[OF _ get_master_pde_corres])
       apply (case_tac rv, simp_all add: pde_relation'_def)[1]
-      apply (rule stronger_corres_guard_imp)
-        apply (rule corres_split[OF _ get_master_pte_corres])
-          apply (rule corres_trivial)
-          apply (case_tac rva, simp_all add: pte_relation'_def)[1]
-         apply (wp get_master_pte_inv)
-       apply (clarsimp simp: page_table_pte_at_lookupI)
-      apply (clarsimp simp: page_table_pte_at_lookupI' page_table_at_state_relation)
+      apply (rule corres_stateAssert_assume_stronger)
+       apply (rule stronger_corres_guard_imp)
+         apply (rule corres_split[OF _ get_master_pte_corres])
+           apply (rule corres_trivial)
+           apply (case_tac rva, simp_all add: pte_relation'_def)[1]
+          apply (wp get_master_pte_inv)
+        apply (clarsimp simp: page_table_pte_at_lookupI)
+       apply (clarsimp simp: page_table_pte_at_lookupI' page_table_at_state_relation)
+      apply clarsimp
+      apply (erule(3) page_table_at_state_relation)
      apply wp
    apply (clarsimp simp: page_directory_pde_at_lookupI less_kernel_base_mapping_slots)
   apply (clarsimp simp: page_directory_pde_at_lookupI' page_directory_at_state_relation)
@@ -1567,7 +1571,7 @@ lemma lookupPTSlot_page_table_at':
   \<lbrace>\<lambda>rv s. page_table_at' (rv && ~~ mask ptBits) s\<rbrace>,-"
   apply (simp add:lookupPTSlot_def)
   apply (wp getPDE_wp|wpc|simp add:checkPTAt_def)+
-  apply (clarsimp simp:ptBits_def)
+  apply (clarsimp simp:ptBits_def lookup_pt_slot_no_fail_def)
   apply (subst vaddr_segment_nonsense3[unfolded pt_bits_def,simplified])
    apply (simp add:page_table_at'_def ptBits_def pageBits_def)
   apply simp
@@ -1676,7 +1680,7 @@ lemma lookupPTSlot_aligned:
   apply (erule(1) valid_objsE')
   apply (clarsimp simp:projectKO_opt_pde
     split:Structures_H.kernel_object.splits arch_kernel_object.splits)
-  apply (simp add:valid_obj'_def)
+  apply (simp add:valid_obj'_def lookup_pt_slot_no_fail_def)
   apply (rule aligned_add_aligned)
     apply (rule is_aligned_ptrFromPAddr_aligned[where m = 6,THEN iffD2])
      apply simp

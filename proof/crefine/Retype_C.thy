@@ -6316,19 +6316,23 @@ lemma aligned_intvl_disjointI:
 end
 
 definition
-  "cnodes_retype_have_size ptr sz bits cns
+  "cnodes_retype_have_size R bits cns
     = (\<forall>ptr' sz'. cns ptr' = Some sz'
         \<longrightarrow> is_aligned ptr' (cte_level_bits + sz')
-            \<and> ({ptr' ..+ 2 ^ (cte_level_bits + sz')} \<inter> {ptr .. (ptr &&~~ mask sz) + (2 ^ sz - 1)} = {}
+            \<and> ({ptr' ..+ 2 ^ (cte_level_bits + sz')} \<inter> R = {}
                 \<or> cte_level_bits + sz' = bits))"
+
+lemma cnodes_retype_have_size_mono:
+  "cnodes_retype_have_size T bits cns \<and> S \<subseteq> T
+    \<longrightarrow> cnodes_retype_have_size S bits cns"
+  by (auto simp add: cnodes_retype_have_size_def)
 
 context kernel_m begin
 
 lemma gsCNodes_typ_region_bytes:
   "cvariable_array_map_relation (gsCNodes \<sigma>) (op ^ 2) cte_Ptr (hrs_htd hrs)
-    \<Longrightarrow> cnodes_retype_have_size ptr' sz' bits (gsCNodes \<sigma>)
-    \<Longrightarrow> {ptr..+2 ^ bits} \<subseteq> {ptr'..(ptr' && ~~ mask sz') + 2 ^ sz' - 1}
-    \<Longrightarrow> 0 \<notin> {ptr'..(ptr' && ~~ mask sz') + 2 ^ sz' - 1} \<Longrightarrow> is_aligned ptr bits
+    \<Longrightarrow> cnodes_retype_have_size {ptr..+2 ^ bits} bits (gsCNodes \<sigma>)
+    \<Longrightarrow> 0 \<notin> {ptr..+2 ^ bits} \<Longrightarrow> is_aligned ptr bits
     \<Longrightarrow> clift (hrs_htd_update (typ_region_bytes ptr bits) hrs)
         = (clift hrs :: cte_C ptr \<Rightarrow> _)
     \<Longrightarrow> cvariable_array_map_relation (gsCNodes \<sigma>) (op ^ 2) cte_Ptr
@@ -6344,16 +6348,12 @@ lemma gsCNodes_typ_region_bytes:
   prefer 2
    apply (simp add: cte_C_size cte_level_bits_def power_add)
   apply (clarsimp simp add: upto_intvl_eq[symmetric] field_simps)
-  apply (erule disjE)
-   apply blast
-  apply clarsimp
   apply (case_tac "p \<in> {ptr ..+ 2 ^ bits}")
    apply (drule h_t_array_first_element_at[where p="Ptr p" and gd=c_guard for p,
        unfolded h_t_array_valid_def, simplified])
      apply simp
     apply (rule is_aligned_c_guard[where m=2], simp+)
        apply clarsimp
-       apply (drule(1) subsetD, simp)
       apply (simp add: align_of_def)
      apply (simp add: size_of_def cte_level_bits_def power_add)
     apply (simp add: cte_level_bits_def)
@@ -6400,10 +6400,10 @@ lemma ccorres_typ_region_bytes_dummy:
      AnyGamma dc xfdc
      (invs' and ct_active' and sch_act_simple and
       pspace_no_overlap' ptr bits and
-      (cnodes_retype_have_size ptr' sz' bits o gsCNodes)
+      (cnodes_retype_have_size S bits o gsCNodes)
       and K (bits < word_bits \<and> is_aligned ptr bits \<and> 2 \<le> bits
-         \<and> 0 \<notin> {ptr'..(ptr' && ~~ mask sz') + 2 ^ sz' - 1}
-         \<and> {ptr..+2 ^ bits} \<subseteq> {ptr'..(ptr' && ~~ mask sz') + 2 ^ sz' - 1}
+         \<and> 0 \<notin> {ptr..+2 ^ bits}
+         \<and> {ptr ..+ 2 ^ bits} \<subseteq> S
          \<and> kernel_data_refs \<inter> {ptr..+2 ^ bits} = {}))
      UNIV hs
      (return ())
@@ -6440,6 +6440,7 @@ lemma ccorres_typ_region_bytes_dummy:
   apply (simp add: cpspace_relation_def htd_safe_typ_region_bytes)
   apply (simp add: h_t_valid_clift_Some_iff)
   apply (simp add: hrs_htd_update gsCNodes_typ_region_bytes
+                   cnodes_retype_have_size_mono[where T=S]
                    tcb_ctes_typ_region_bytes[OF _ _ invs_pspace_aligned'])
   apply (simp add: cmap_array_typ_region_bytes_triv
                invs_pspace_aligned' pdBits_def pageBits_def ptBits_def
@@ -7144,9 +7145,9 @@ lemma createObject_gsCNodes_p:
 
 lemma createObject_cnodes_have_size:
   "\<lbrace>\<lambda>s. is_aligned ptr (APIType_capBits newType userSize)
-      \<and> cnodes_retype_have_size ptr' sz (APIType_capBits newType userSize) (gsCNodes s)\<rbrace>
+      \<and> cnodes_retype_have_size R (APIType_capBits newType userSize) (gsCNodes s)\<rbrace>
     createObject newType ptr userSize
-  \<lbrace>\<lambda>rv s. cnodes_retype_have_size ptr' sz (APIType_capBits newType userSize) (gsCNodes s)\<rbrace>"
+  \<lbrace>\<lambda>rv s. cnodes_retype_have_size R (APIType_capBits newType userSize) (gsCNodes s)\<rbrace>"
   apply (simp add: createObject_def)
   apply (rule hoare_pre)
    apply (wp mapM_x_wp' | wpc | simp add: createObjects_def)+
@@ -7186,7 +7187,8 @@ shows  "ccorres dc xfdc
                   and caps_no_overlap'' ptr sz
                   and caps_overlap_reserved' {ptr .. ptr + of_nat (length destSlots) * 2^ (getObjectSize newType userSize) - 1}
                   and (\<lambda>s. descendants_range_in' {ptr..(ptr && ~~ mask sz) + 2 ^ sz - 1} srcSlot (ctes_of s))
-                  and (cnodes_retype_have_size ptr sz (APIType_capBits newType userSize) o gsCNodes)
+                  and cnodes_retype_have_size {ptr .. ptr + of_nat (length destSlots) * 2^ (getObjectSize newType userSize) - 1}
+                      (APIType_capBits newType userSize) o gsCNodes
                   and invs'
                   and (K (srcSlot \<notin> set destSlots
                     \<and> destSlots \<noteq> []
@@ -7257,7 +7259,8 @@ shows  "ccorres dc xfdc
            apply (simp only: dc_def[symmetric] hrs_htd_update)
            apply ((rule ccorres_Guard_Seq[where S=UNIV])+)?
            apply (rule ccorres_split_nothrow,
-                rule ccorres_typ_region_bytes_dummy[where ptr'=ptr and sz'=sz], ceqv)
+                rule_tac S="{ptr .. ptr + of_nat (length destSlots) * 2^ (getObjectSize newType userSize) - 1}"
+                  in ccorres_typ_region_bytes_dummy, ceqv)
              apply (rule ccorres_Guard_Seq)+
              apply (ctac (no_vcg) add:createObject_ccorres)
               apply (rule ccorres_move_array_assertion_cnode_ctes
@@ -7407,17 +7410,23 @@ shows  "ccorres dc xfdc
        apply clarsimp
        apply (simp add: range_cover_not_in_neqD)
        apply (intro conjI)
-                         apply (simp add: word_bits_def range_cover_def)
-                        apply (clarsimp simp: cte_wp_at_ctes_of invs'_def valid_state'_def
-                                              valid_global_refs'_def cte_at_valid_cap_sizes_0)
-                       apply (erule range_cover_le,simp)
-                      apply (drule_tac p = "n" in range_cover_no_0)
-                        apply (simp add:field_simps shiftl_t2n)+
-                     apply (erule caps_no_overlap''_le)
-                      apply (simp add:range_cover.sz[where 'a=32, folded word_bits_def])+
-                    apply (erule caps_no_overlap''_le2)
-                     apply (erule range_cover_compare_offset,simp+)
-                    apply (simp add:range_cover_tail_mask[OF range_cover_le] range_cover_head_mask[OF range_cover_le])
+                          apply (simp add: word_bits_def range_cover_def)
+                         apply (clarsimp simp: cte_wp_at_ctes_of invs'_def valid_state'_def
+                                               valid_global_refs'_def cte_at_valid_cap_sizes_0)
+                        apply (erule range_cover_le,simp)
+                       apply (drule_tac p = "n" in range_cover_no_0)
+                         apply (simp add:field_simps shiftl_t2n)+
+                      apply (erule caps_no_overlap''_le)
+                       apply (simp add:range_cover.sz[where 'a=32, folded word_bits_def])+
+                     apply (erule caps_no_overlap''_le2)
+                      apply (erule range_cover_compare_offset,simp+)
+                     apply (simp add:range_cover_tail_mask[OF range_cover_le] range_cover_head_mask[OF range_cover_le])
+                    apply (rule contra_subsetD)
+                     apply (rule order_trans[rotated], erule range_cover_cell_subset,
+                       erule of_nat_mono_maybe[rotated], simp)
+                     apply (simp add: upto_intvl_eq shiftl_t2n mult.commute
+                                      aligned_add_aligned[OF range_cover.aligned is_aligned_mult_triv2])
+                    apply simp
                    apply (simp add:cte_wp_at_no_0)
                   apply (rule disjoint_subset2[where B="{ptr .. foo}" for foo, rotated], simp add: Int_commute)
                   apply (rule order_trans[rotated], erule_tac p="Suc n" in range_cover_subset, simp+)
@@ -7452,9 +7461,12 @@ shows  "ccorres dc xfdc
              apply (clarsimp simp:blah)
             apply blast
            apply (erule descendants_range_in_subseteq')
-           apply (clarsimp simp:range_cover_compare_offset blah)
-          apply (rule order_trans[rotated], erule_tac x="of_nat (Suc n)" in range_cover_cell_subset)
-           apply (rule of_nat_mono_maybe, simp+)
+           apply (clarsimp simp: blah)
+           apply (rule order_trans[rotated], erule_tac x="of_nat n" in range_cover_bound'')
+            apply (simp add: word_less_nat_alt unat_of_nat)
+           apply (simp add: shiftl_t2n field_simps)
+          apply (rule order_trans[rotated],
+            erule_tac p="Suc n" in range_cover_subset, simp_all)[1]
           apply (simp add: upto_intvl_eq shiftl_t2n mult.commute
                    aligned_add_aligned[OF range_cover.aligned is_aligned_mult_triv2])
          apply (erule cte_wp_at_weakenE')
@@ -7500,10 +7512,13 @@ shows  "ccorres dc xfdc
    apply (simp add: intvl_range_conv[OF range_cover.aligned range_cover_sz']
                     order_trans[OF _ APIType_capBits_min])
    apply (intro conjI)
-          apply (simp add: word_bits_def range_cover_def)
-         apply (clarsimp simp:rf_sr_def cstate_relation_def Let_def)
-         apply (erule pspace_no_overlap'_le)
-          apply (simp add:range_cover.sz[where 'a=32, simplified] word_bits_def)+
+           apply (simp add: word_bits_def range_cover_def)
+          apply (clarsimp simp:rf_sr_def cstate_relation_def Let_def)
+          apply (erule pspace_no_overlap'_le)
+           apply (simp add:range_cover.sz[where 'a=32, simplified] word_bits_def)+
+         apply (erule contra_subsetD[rotated])
+         apply (rule order_trans[rotated], rule range_cover_subset'[where n=1],
+           erule range_cover_le, simp_all, (clarsimp simp: neq_Nil_conv)+)[1]
         apply (rule disjoint_subset2[rotated])
          apply (simp add:Int_ac)
         apply (erule range_cover_subset[where p = 0,simplified])
@@ -7514,10 +7529,7 @@ shows  "ccorres dc xfdc
       apply (frule range_cover_bound''[where x = "of_nat (length destSlots) - 1"])
        apply (simp add: range_cover_not_zero[rotated])
       apply (simp add:field_simps)
-     apply (cut_tac x=num in unat_lt2p, simp)
-     apply (rule order_trans[rotated], erule_tac x="of_nat 0" in range_cover_cell_subset)
-      apply (rule of_nat_mono_maybe, simp_all)[1]
-     apply simp
+     apply (erule range_cover_subset[where p=0, simplified], simp_all)[1]
     apply clarsimp
     apply (drule_tac x = k in spec)
     apply simp

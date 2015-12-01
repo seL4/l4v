@@ -72,7 +72,7 @@ lemma capFaultOnFailure_empty_fail [intro!, wp, simp]:
   apply (simp add: capFaultOnFailure_def)
   done
 
-crunch (empty_fail) empty_fail[intro!, wp, simp]: locateSlot
+crunch (empty_fail) empty_fail[intro!, wp, simp]: locateSlotCap
 
 lemma resolveAddressBits_spec_empty_fail:
   notes spec_empty_fail_bindE'[wp_split]

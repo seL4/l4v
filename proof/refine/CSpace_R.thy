@@ -6010,7 +6010,7 @@ lemma getSlotCap_cap_to2:
 
 lemma locateSlot_cap_to'[wp]:
   "\<lbrace>\<lambda>s. isCNodeCap cap \<and> (\<forall>r \<in> cte_refs' cap (irq_node' s). ex_cte_cap_wp_to' P r s)\<rbrace>
-     locateSlotCNode (capCNodePtr cap) (v && mask (capCNodeBits cap))
+     locateSlotCNode (capCNodePtr cap) n (v && mask (capCNodeBits cap))
    \<lbrace>ex_cte_cap_wp_to' P\<rbrace>"
   apply (simp add: locateSlot_conv)
   apply wp

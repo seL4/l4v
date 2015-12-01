@@ -19,6 +19,9 @@ imports
   Config_H
 begin
 
-#INCLUDE_HASKELL SEL4/Object/Untyped.lhs
+consts
+  cNodeOverlap :: "(machine_word \<Rightarrow> nat option) \<Rightarrow> (machine_word \<Rightarrow> bool) \<Rightarrow> bool"
+
+#INCLUDE_HASKELL SEL4/Object/Untyped.lhs NOT cNodeOverlap
 
 end

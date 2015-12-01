@@ -1461,7 +1461,7 @@ proof -
     apply (rule_tac P = "cap = capability.UntypedCap (ptr && ~~ mask sz) sz idx" 
        in hoare_gen_asm)
     apply simp
-    apply (wp getSlotCap_wp 
+    apply (wp getSlotCap_wp hoare_drop_imps
       deleteObject_no_overlap deleteObjects_invs_derivatives[where idx = idx and p = cref])
   using cte_wp_at' misc cover desc_range 
         invokeUntyped_proofs.not_0_ptr[OF pf] invokeUntyped_proofs.vc'[OF pf]
@@ -1648,7 +1648,7 @@ lemma lookupPTSlot_aligned:
   apply (wp getPDE_wp)
   apply (clarsimp simp:obj_at'_def vmsz_aligned'_def)
   apply (clarsimp simp:projectKO_def fail_def 
-    projectKO_opt_pde return_def
+    projectKO_opt_pde return_def lookup_pt_slot_no_fail_def
     split:option.splits Structures_H.kernel_object.splits
     arch_kernel_object.splits)
   apply (erule(1) valid_objsE')

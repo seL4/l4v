@@ -9,7 +9,7 @@
  *)
 
 theory CSpace_RAB_C
-imports CSpaceAcc_C
+imports CSpaceAcc_C "../../lib/clib/MonadicRewrite_C"
 begin
 
 context kernel
@@ -161,6 +161,40 @@ lemma le_32_mask_eq:
   apply (erule le_less_trans) apply simp
 done
 
+(* FIXME: move, duplicated in CSpace_C *)
+lemma ccorres_cases:
+  assumes P:    " P \<Longrightarrow> ccorres_underlying sr \<Gamma> r xf ar axf G G' hs a b"
+  assumes notP: "\<not>P \<Longrightarrow> ccorres_underlying sr \<Gamma> r xf ar axf H H' hs a b"
+  shows "ccorres_underlying sr \<Gamma> r xf ar axf (\<lambda>s. (P \<longrightarrow> G s) \<and> (\<not>P \<longrightarrow> H s))
+                      ({s. P \<longrightarrow> s \<in> G'} \<inter> {s. \<not>P \<longrightarrow> s \<in> H'})
+                      hs a b"
+  apply (cases P, auto simp: P notP)
+  done
+
+lemma monadic_rewrite_stateAssert:
+  "monadic_rewrite F E P (stateAssert P xs) (return ())"
+  by (simp add: stateAssert_def monadic_rewrite_def exec_get)
+
+lemma ccorres_locateSlotCap_push:
+  "ccorres_underlying sr \<Gamma> r xf ar axf P P' hs
+    (a >>=E (\<lambda>x. locateSlotCap cp n >>= (\<lambda>p. b p x))) c
+    \<Longrightarrow> (\<And>P. \<lbrace>P\<rbrace> a \<lbrace>\<lambda>_. P\<rbrace>, - )
+    \<Longrightarrow> ccorres_underlying sr \<Gamma> r xf ar axf P P' hs
+    (locateSlotCap cp n >>= (\<lambda>p. a >>=E (\<lambda>x. b p x))) c"
+  apply (simp add: locateSlot_conv)
+  apply (rule ccorres_guard_imp2)
+   apply (rule ccorres_stateAssert)
+   apply (erule monadic_rewrite_ccorres_assemble)
+   apply (rule monadic_rewrite_bindE[OF monadic_rewrite_refl])
+    apply (rule monadic_rewrite_transverse)
+     apply (rule monadic_rewrite_bind_head)
+     apply (rule monadic_rewrite_stateAssert)
+    apply simp
+    apply (rule monadic_rewrite_refl)
+   apply assumption
+  apply simp
+  done
+
 declare Kernel_C.cte_C_size[simp del] 
 
 lemma resolveAddressBits_ccorres [corres]:
@@ -267,9 +301,10 @@ next
     note ih = ind.hyps[simplified, simplified in_monad
         getSlotCap_in_monad locateSlot_conv stateAssert_def, simplified]
 
-    have gsCNodes: "\<And>s bits p x P. bits < 32 \<Longrightarrow>
+    have gsCNodes: "\<And>s bits p x P Q. bits = capCNodeBits cap \<Longrightarrow> capCNodeBits cap < 32 \<Longrightarrow>
         (case gsCNodes (s \<lparr> gsCNodes := [p \<mapsto> bits ] \<rparr>) p of None \<Rightarrow> False
-            | Some n \<Rightarrow> (x && mask bits :: word32) < 2 ^ n) \<or> P"
+            | Some n \<Rightarrow> ((n = capCNodeBits cap \<or> Q n))
+                \<and> (x && mask bits :: word32) < 2 ^ n) \<or> P"
       by (clarsimp simp: word_size and_mask_less_size)
 
     have case_into_if:
@@ -357,7 +392,7 @@ next
        apply (simp add: word_less_nat_alt word_le_nat_alt unat_sub)
       apply (simp add: mask_def)
       done
-    
+
     have cond2: "\<And>nb (radixBits :: word32) (guardBits :: word32).
       \<lbrakk> unat nb = guard; unat radixBits = capCNodeBits cap; capCNodeBits cap < 32; capCNodeGuardSize cap < 32;
       unat guardBits = capCNodeGuardSize cap \<rbrakk> \<Longrightarrow> 
@@ -367,11 +402,12 @@ next
 
     have cond3: "\<And>nb (radixBits :: word32) (guardBits :: word32).
       \<lbrakk> unat nb = guard; unat radixBits = capCNodeBits cap; capCNodeBits cap < 32; capCNodeGuardSize cap < 32;
-      unat guardBits = capCNodeGuardSize cap \<rbrakk> \<Longrightarrow> 
+      unat guardBits = capCNodeGuardSize cap;
+      \<not> guard < capCNodeBits cap + capCNodeGuardSize cap \<rbrakk> \<Longrightarrow>
       \<forall>s s'. (s, s') \<in> rf_sr \<and> True \<and> True \<longrightarrow>
-                (guard \<le> capCNodeBits cap + capCNodeGuardSize cap) = (s' \<in> \<lbrace>nb \<le> radixBits + guardBits\<rbrace>)"
+                (guard = capCNodeBits cap + capCNodeGuardSize cap) = (s' \<in> \<lbrace>nb \<le> radixBits + guardBits\<rbrace>)"
       by (simp add: Collect_const_mem word_le_nat_alt unat_word_ariths)
-            
+
     have cond4: 
       "\<And>rva nodeCapb ret__unsigned_long.
       \<lbrakk> ccap_relation rva nodeCapb; ret__unsigned_long = cap_get_tag nodeCapb\<rbrakk>
@@ -446,13 +482,20 @@ next
        apply (csymbr | rule iffD2 [OF ccorres_seq_skip])+
        apply (rule ccorres_Guard_Seq)+
        apply csymbr
+       -- "handle the stateAssert in locateSlotCap very carefully"
+       apply (simp(no_asm) only: liftE_bindE[where a="locateSlotCap a b" for a b])
+       apply (rule ccorres_locateSlotCap_push[rotated])
+        apply (simp add: unlessE_def)
+        apply (rule hoare_pre, wp, simp)
        -- "Convert guardBits, radixBits and capGuard to their Haskell versions"
        apply (drule (2) cgD, drule (2) rbD, drule (2) gbD)
        apply (elim conjE)
-       apply (rule ccorres_gen_asm [where P = "guard \<le> 32"]) 
+       apply (rule ccorres_gen_asm [where P = "guard \<le> 32"])
        apply (rule ccorres_split_unless_throwError_cond [OF cond1], assumption+)
          apply (rule rab_failure_case_ccorres, vcg, rule conseqPre, vcg)
          apply clarsimp
+        apply (rule ccorres_locateSlotCap_push[rotated])
+         apply (rule hoare_pre, wp whenE_throwError_wp, simp)
         apply (rule ccorres_split_when_throwError_cond [OF cond2], assumption+)
           apply (rule rab_failure_case_ccorres, vcg, rule conseqPre, vcg)
           apply clarsimp
@@ -460,13 +503,13 @@ next
          apply csymbr
          apply csymbr
          apply (simp only: locateSlotCap_def Let_def if_True)
-         apply (rule ccorres_liftE_Seq)
          apply (rule ccorres_split_nothrow)
              apply (rule locateSlotCNode_ccorres[where xf="slot_'" and xfu="slot_'_update"],
                     simp+)[1]
             apply ceqv
            apply (rename_tac rv slot)
            apply (erule_tac t = slot in ssubst)
+           apply (simp del: Collect_const)
            apply (rule ccorres_if_cond_throws [OF cond3], assumption+)
              apply (rule ccorres_rhs_assoc)+
              apply csymbr+
@@ -475,6 +518,7 @@ next
             apply (rule ccorres_basic_srnoop2, simp)
             apply csymbr
             apply (ctac pre: ccorres_liftE_Seq)
+              apply (rename_tac rva nodeCapa)
               apply csymbr
               apply (rule ccorres_if_cond_throws2 [OF cond4], assumption+)
                 apply (rule ccorres_rhs_assoc)+
@@ -506,7 +550,7 @@ next
             apply (clarsimp simp: Collect_const_mem if_then_simps lookup_fault_lifts cong: imp_cong conj_cong)
             apply vcg
            apply (vcg strip_guards=true)
-          apply (simp add: locateSlot_conv cte_level_bits_def)
+          apply (simp add: locateSlot_conv)
           apply wp
          apply vcg
         apply (vcg strip_guards=true)
@@ -514,13 +558,15 @@ next
       apply (rule conjI)
       -- "Haskell guard"
        apply (thin_tac "unat n_bits = guard")
-       apply clarsimp -- "take a while"
+       apply (clarsimp simp del: imp_disjL) -- "take a while"
        apply (intro impI conjI allI)
            apply fastforce
           apply clarsimp
           apply arith
-         apply clarsimp
-        apply (erule (1) valid_cap_cte_at') 
+         apply (clarsimp simp: isCap_simps cte_level_bits_def
+                               option.split[where P="\<lambda>x. x"])
+        apply (clarsimp simp: isCap_simps valid_cap_simps' cte_level_bits_def
+                              real_cte_at')
        apply (clarsimp simp: isCap_simps valid_cap'_def)
        -- "C guard" 
       apply (frule (1) cgD [OF refl], frule (1) rbD [OF refl], frule (1) gbD [OF refl])

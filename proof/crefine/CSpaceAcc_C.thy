@@ -235,7 +235,7 @@ lemma locateSlotCNode_ccorres [corres]:
   assumes gl: "\<And>v s. globals (xfu v s) = globals s" -- "for state rel. preservation"
   and     fg: "\<And>v s. xf (xfu (\<lambda>_. v) s) = v"
   shows "ccorres (\<lambda>v v'. v' = Ptr v) xf \<top> {_. cnode = cnode' \<and> offset = offset'} hs
-    (locateSlotCNode cnode offset)
+    (locateSlotCNode cnode bits offset)
     (Guard MemorySafety
           {s. x s = 0 \<or> array_assertion (cte_Ptr cnode') (unat offset') (hrs_htd (t_hrs_' (globals s)))}
           (Basic (\<lambda>s. xfu (\<lambda>_. cte_Ptr (cnode' + offset'

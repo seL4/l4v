@@ -77,6 +77,9 @@ where
         guardBits \<leftarrow> returnOk ( capCNodeGuardSize nodeCap);
         levelBits \<leftarrow> returnOk ( radixBits + guardBits);
         haskell_assertE (levelBits \<noteq> 0) [];
+        offset \<leftarrow> returnOk ( (fromCPtr capptr `~shiftR~` (bits-levelBits)) &&
+                   (mask radixBits));
+        slot \<leftarrow> withoutFailure $ locateSlotCap nodeCap offset;
         guard \<leftarrow> returnOk ( (fromCPtr capptr `~shiftR~` (bits-guardBits)) &&
                    (mask guardBits));
         unlessE (guardBits \<le> bits \<and> guard = capCNodeGuard nodeCap)
@@ -87,9 +90,6 @@ where
         whenE (levelBits > bits) $ throw $ DepthMismatch_ \<lparr>
             depthMismatchBitsLeft= bits,
             depthMismatchBitsFound= levelBits \<rparr>;
-        offset \<leftarrow> returnOk ( (fromCPtr capptr `~shiftR~` (bits-levelBits)) &&
-                   (mask radixBits));
-        slot \<leftarrow> withoutFailure $ locateSlotCap nodeCap offset;
         bitsLeft \<leftarrow> returnOk ( bits - levelBits);
         if (bitsLeft = 0)
           then returnOk (slot, 0)

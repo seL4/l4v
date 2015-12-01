@@ -1086,13 +1086,12 @@ lemma handleReply_ccorres:
        apply (rule allI, rule conseqPre, vcg)
        apply (clarsimp simp: return_def word_sle_def)
        apply (frule aligned_neg_mask) 
-       apply (simp add: mask_def tcbCallerSlot_def Kernel_C.tcbCaller_def  
-              cte_level_bits_def size_of_def)
-       apply (simp add: rf_sr_ksCurThread) 
-       apply (subst ptr_val_tcb_ptr_mask')
-        apply (rule tcb_at_invs', simp) 
-       apply simp
-
+       apply (frule tcb_at_invs')
+       apply (simp add: mask_def tcbCallerSlot_def
+              cte_level_bits_def size_of_def
+              ptr_add_assertion_positive
+              tcb_cnode_index_defs rf_sr_ksCurThread
+              rf_sr_tcb_ctes_array_assertion2[THEN array_assertion_shrink_right])
       apply ceqv
 
      apply (simp del: Collect_const)
@@ -1166,13 +1165,14 @@ lemma handleReply_ccorres:
 
 lemma deleteCallerCap_ccorres [corres]:
   "ccorres dc xfdc   
-       (\<lambda>s. invs' s \<and> is_aligned receiver 9)
+       (\<lambda>s. invs' s \<and> tcb_at' receiver s)
        (UNIV \<inter> {s. receiver_' s = tcb_ptr_to_ctcb_ptr receiver})
        []
        (deleteCallerCap receiver) 
        (Call deleteCallerCap_'proc)"
   apply (cinit lift: receiver_')
    apply (simp only: getThreadCallerSlot_def locateSlot_conv)
+   apply (rule ccorres_move_array_assertion_tcb_ctes ccorres_Guard_Seq)+
    apply (rule_tac P="\<lambda>_. is_aligned receiver 9" and r'="\<lambda> a c. cte_Ptr a = c" 
                    and xf'="callerSlot_'" and P'=UNIV in ccorres_split_nothrow_novcg)
        apply (rule ccorres_from_vcg)
@@ -1199,7 +1199,8 @@ lemma deleteCallerCap_ccorres [corres]:
    apply (simp add: guard_is_UNIV_def ghost_assertion_data_get_def
                         ghost_assertion_data_set_def)
   apply (clarsimp simp: cte_wp_at_ctes_of cap_get_tag_isCap[symmetric]
-                        cap_tag_defs)
+                        cap_tag_defs tcb_cnode_index_defs word_sle_def
+                        tcb_aligned')
   done
 
 
@@ -1483,7 +1484,9 @@ lemma handleRecv_ccorres:
   apply (simp add: cap_get_tag_isCap[symmetric] del: rf_sr_upd_safe)
   apply (simp add: Kernel_C.capRegister_def State_H.capRegister_def ct_in_state'_def
                    ARMMachineTypes.capRegister_def Kernel_C.R0_def
+                   tcb_at_invs'
               del: rf_sr_upd_safe)
+  apply (frule tcb_aligned'[OF tcb_at_invs'])
   apply (intro conjI impI allI)
   apply (drule(1) pred_tcb_at')
   apply fastforce
@@ -1611,10 +1614,16 @@ lemma getIRQSlot_ccorres3:
   apply (simp add: getIRQSlot_def locateSlot_conv liftM_def getInterruptState_def)
   apply (rule ccorres_symb_exec_l'[OF _ _ gets_sp])
     apply (rule ccorres_guard_imp2, assumption)
-    apply (clarsimp simp: getIRQSlot_ccorres_stuff[where x=undefined]
+    apply (clarsimp simp: getIRQSlot_ccorres_stuff
                           objBits_simps cte_level_bits_def
                           ucast_nat_def uint_ucast uint_up_ucast is_up)
    apply wp
+  done
+
+lemma ucast_eq_0[OF refl]:
+  "c = ucast \<Longrightarrow> is_up c \<Longrightarrow> (c x = 0) = (x = 0)"
+  apply (frule(1) inj_ucast)
+  apply (drule inj_eq[where x=x and y=0], simp)
   done
 
 lemma handleInterrupt_ccorres:
@@ -1637,7 +1646,7 @@ lemma handleInterrupt_ccorres:
     apply (rule getIRQSlot_ccorres3)
     apply (rule ccorres_getSlotCap_cte_at)
     apply (rule_tac P="cte_at' rva" in ccorres_cross_over_guard)
-    apply (rule ccorres_Guard_Seq)+
+    apply (rule ccorres_move_array_assertion_irq ccorres_move_c_guard_cte)+
     apply ctac
       apply csymbr
       apply csymbr
@@ -1703,6 +1712,10 @@ lemma handleInterrupt_ccorres:
   apply (erule(1) cmap_relationE1[OF cmap_relation_cte])
   apply (clarsimp simp: typ_heap_simps')
   apply (simp add: cap_get_tag_isCap)
+  apply (cut_tac x=irq in unat_lt2p)
+  apply (simp add: ucast_eq_0 is_up_def source_size_def
+                   target_size_def word_size unat_gt_0
+      | subst array_assertion_abs_irq[rule_format, OF conjI])+
   apply (clarsimp simp: isCap_simps)
   apply (frule cap_get_tag_isCap_unfolded_H_cap)
   apply (frule cap_get_tag_to_H, assumption)

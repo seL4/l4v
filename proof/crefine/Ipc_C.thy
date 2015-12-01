@@ -6058,7 +6058,7 @@ lemma sendSignal_dequeue_ccorres_helper:
             apply (clarsimp simp: is_aligned_neg_mask
                            dest!: is_aligned_tcb_ptr_to_ctcb_ptr
                        split del: split_if)
-           apply clarsimp
+           apply (clarsimp split: split_if)
           apply simp
          -- "queue relation"
          apply (rule cready_queues_relation_null_queue_ptrs, assumption+)
@@ -6338,7 +6338,8 @@ proof -
   thus ?thesis using vp srs cp rel mpeq unfolding cmap_relation_def
     apply -
     apply (elim conjE)
-    apply (clarsimp elim!: obj_atE' simp: map_comp_update projectKO_opts_defs)
+    apply (clarsimp elim!: obj_atE' simp: map_comp_update projectKO_opts_defs
+                   split: split_if)
     apply (drule (1) bspec [OF _ domI])
     apply simp
     apply (erule(1) cnotification_relation_ntfn_queue [OF _ _ koat'])
@@ -6472,7 +6473,8 @@ lemma receiveSignal_enqueue_ccorres_helper:
          apply (rule cpspace_relation_ntfn_update_ntfn', assumption+)
            apply (case_tac "ntfn", simp_all)[1]
           apply (clarsimp simp: cnotification_relation_def Let_def
-                                mask_def [where n=2] NtfnState_Waiting_def)
+                                mask_def [where n=2] NtfnState_Waiting_def
+                         split: split_if)
           apply (fastforce simp: tcb_queue_relation'_def is_aligned_neg_mask)
          apply (simp add: isWaitingNtfn_def)
         -- "queue relation"

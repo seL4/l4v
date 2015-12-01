@@ -120,6 +120,9 @@ consts
 lookupPTSlot :: "machine_word \<Rightarrow> vptr \<Rightarrow> ( lookup_failure , (machine_word) ) kernel_f"
 
 consts
+lookupPTSlotFromPT :: "machine_word \<Rightarrow> vptr \<Rightarrow> (machine_word) kernel"
+
+consts
 lookupPDSlot :: "machine_word \<Rightarrow> vptr \<Rightarrow> machine_word"
 
 consts
@@ -208,9 +211,6 @@ labelToFlushType :: "machine_word \<Rightarrow> flush_type"
 
 consts
 pageBase :: "vptr \<Rightarrow> vmpage_size \<Rightarrow> vptr"
-
-consts
-lookupPTSlot_nofail :: "machine_word \<Rightarrow> vptr \<Rightarrow> machine_word"
 
 consts
 resolveVAddr :: "machine_word \<Rightarrow> vptr \<Rightarrow> ((vmpage_size * paddr) option) kernel"

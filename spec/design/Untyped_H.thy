@@ -19,6 +19,9 @@ imports
   Config_H
 begin
 
+consts
+  cNodeOverlap :: "(machine_word \<Rightarrow> nat option) \<Rightarrow> (machine_word \<Rightarrow> bool) \<Rightarrow> bool"
+
 definition
 getFreeRef :: "machine_word \<Rightarrow> nat \<Rightarrow> machine_word"
 where
@@ -106,6 +109,10 @@ where
     when (base = freeRegionBase) $
         deleteObjects base (capBlockSize cap);
     totalObjectSize \<leftarrow> return ( (length destSlots) `~shiftL~` (getObjectSize newType userSize));
+    stateAssert (\<lambda> x. Not (cNodeOverlap (gsCNodes x)
+            (\<lambda> x. fromPPtr freeRegionBase \<le> x
+                \<and> x \<le> fromPPtr freeRegionBase + fromIntegral totalObjectSize - 1)))
+        [];
     freeRef \<leftarrow> return ( freeRegionBase + PPtr (fromIntegral totalObjectSize));
     updateCap srcSlot (cap \<lparr>capFreeIndex := getFreeIndex base freeRef\<rparr>);
     createNewObjects newType srcSlot destSlots freeRegionBase userSize

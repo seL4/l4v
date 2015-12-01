@@ -743,9 +743,9 @@ lemma lookupPDSlot_spec:
 lemma lookupPTSlot_nofail_spec:
   "\<forall>s. \<Gamma> \<turnstile>  \<lbrace>s. array_assertion (pt_' s) (2 ^ (ptBits - 2)) (hrs_htd (\<acute>t_hrs))\<rbrace>
   Call lookupPTSlot_nofail_'proc
-  \<lbrace>  \<acute>ret__ptr_to_struct_pte_C =  Ptr (lookupPTSlot_nofail (ptr_val (pt_' s))  (vptr_' s)) \<rbrace>"
+  \<lbrace>  \<acute>ret__ptr_to_struct_pte_C =  Ptr (lookup_pt_slot_no_fail (ptr_val (pt_' s))  (vptr_' s)) \<rbrace>"
   apply vcg
-  apply (clarsimp simp: lookupPTSlot_nofail_def)
+  apply (clarsimp simp: )
   apply (simp add: ArchVSpaceAcc_A.lookup_pt_slot_no_fail_def)
   apply (subst array_assertion_shrink_right, assumption)
    apply (rule order_less_imp_le, rule unat_less_helper, simp)
@@ -847,7 +847,8 @@ lemma lookupPTSlot_ccorres:
     apply (simp add: lookup_fault_missing_capability_lift)
     apply (simp add: mask_def)
    apply (rule ccorres_rhs_assoc)+
-   apply (simp add:liftE_bindE checkPTAt_def)
+   apply (simp add: checkPTAt_def bind_liftE_distrib liftE_bindE
+                    returnOk_liftE[symmetric])
    apply (rule ccorres_stateAssert)
    apply (rule_tac P="page_table_at' (ptrFromPAddr (pdeTable rv))
          and ko_at' rv (lookup_pd_slot pd vptr)
@@ -862,7 +863,7 @@ lemma lookupPTSlot_ccorres:
                   split: pde.split_asm)
    apply (subst array_ptr_valid_array_assertionI, erule h_t_valid_clift, simp+)
     apply (rule unat_le_helper, rule order_trans[OF word_and_le1], simp)
-   apply (simp add: word32_shift_by_2)
+   apply (simp add: word32_shift_by_2 lookup_pt_slot_no_fail_def)
   apply (clarsimp simp: Collect_const_mem h_t_valid_clift)
   apply (frule(1) page_directory_at_rf_sr, clarsimp)
   apply (subst array_ptr_valid_array_assertionI, erule h_t_valid_clift, simp+)
@@ -2280,27 +2281,18 @@ lemma findPDForASID_page_directory_at'_simple[wp]:
   done
 
 lemma array_assertion_abs_pte_16:
-  "\<forall>s s'. (s, s') \<in> rf_sr \<and> (page_table_at' (ptSlot && ~~ mask ptBits) s
-        \<and> is_aligned ptSlot 6) \<and> (n s' \<le> 16 \<and> (x s' \<noteq> 0 \<longrightarrow> n s' \<noteq> 0))
-    \<longrightarrow> (x s' = 0 \<or> array_assertion (pte_Ptr ptSlot) (n s') (hrs_htd (t_hrs_' (globals s'))))"
+  "\<forall>s s'. (s, s') \<in> rf_sr \<and> (page_table_at' (ptr_val ptPtr && ~~ mask ptBits) s
+        \<and> is_aligned (ptr_val ptPtr) 6) \<and> (n s' \<le> 16 \<and> (x s' \<noteq> 0 \<longrightarrow> n s' \<noteq> 0))
+    \<longrightarrow> (x s' = 0 \<or> array_assertion (ptPtr :: pte_C ptr) (n s') (hrs_htd (t_hrs_' (globals s'))))"
   apply (intro allI impI disjCI2, clarsimp)
   apply (drule(1) page_table_at_rf_sr, clarsimp)
+  apply (cases ptPtr, simp)
   apply (erule clift_array_assertion_imp, simp_all)
   apply (rule large_ptSlot_array_constraint, simp_all)
   done
 
-lemmas array_assertion_abs_pte_16_const = array_assertion_abs_pte_16[where x="\<lambda>_. Suc 0",
-    simplified nat.simps simp_thms]
-
 lemmas ccorres_move_array_assertion_pte_16
-    = ccorres_move_Guard_Seq [OF array_assertion_abs_pte_16]
-      ccorres_move_Guard [OF array_assertion_abs_pte_16]
-      ccorres_move_Guard_Seq [OF array_assertion_abs_pte_16]
-      ccorres_move_Guard [OF array_assertion_abs_pte_16]
-      ccorres_move_Guard_Seq [OF array_assertion_abs_pte_16_const]
-      ccorres_move_Guard [OF array_assertion_abs_pte_16_const]
-      ccorres_move_Guard_Seq [OF array_assertion_abs_pte_16_const]
-      ccorres_move_Guard [OF array_assertion_abs_pte_16_const]
+    = ccorres_move_array_assertions [OF array_assertion_abs_pte_16]
 
 lemma array_assertion_abs_pde_16:
   "\<forall>s s'. (s, s') \<in> rf_sr \<and> (page_directory_at' pd s

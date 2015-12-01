@@ -7300,7 +7300,8 @@ lemma spec_corres_locate_Zombie:
     apply (clarsimp simp: isCap_simps valid_cap_def)
     apply (simp only: assert_def, subst if_P)
      apply (cases bits, simp_all add: zbits_map_def)
-     apply (clarsimp simp: cap_table_at_gsCNodes)
+     apply (clarsimp simp: cap_table_at_gsCNodes isCap_simps
+                           zbits_map_def)
      apply (rule word_of_nat_less)
      apply (simp add: cap_aligned_def)
     apply (erule corres_guard_imp, simp_all)

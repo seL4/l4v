@@ -565,14 +565,19 @@ defs lookupPTSlot_def:
     (case pde of
           PageTablePDE _ _ _ \<Rightarrow>   (doE
             pt \<leftarrow> returnOk ( ptrFromPAddr $ pdeTable pde);
-            ptIndex \<leftarrow> returnOk ( fromVPtr $ vptr `~shiftR~` 12 && 0xff);
-            ptSlot \<leftarrow> returnOk ( pt + (PPtr $ ptIndex `~shiftL~` 2));
-            withoutFailure $ checkPTAt pt;
-            returnOk ptSlot
+            withoutFailure $ lookupPTSlotFromPT pt vptr
           odE)
         | _ \<Rightarrow>   throw $ MissingCapability 20
         )
 odE)"
+
+defs lookupPTSlotFromPT_def:
+"lookupPTSlotFromPT pt vptr\<equiv> (do
+    ptIndex \<leftarrow> return ( fromVPtr $ vptr `~shiftR~` 12 && 0xff);
+    ptSlot \<leftarrow> return ( pt + (PPtr $ ptIndex `~shiftL~` 2));
+    checkPTAt pt;
+    return ptSlot
+od)"
 
 defs lookupPDSlot_def:
 "lookupPDSlot pd vptr \<equiv>
@@ -993,11 +998,6 @@ defs labelToFlushType_def:
 defs pageBase_def:
 "pageBase vaddr magnitude\<equiv> vaddr && (complement $ mask (pageBitsForSize magnitude))"
 
-defs lookupPTSlot_nofail_def:
-"lookupPTSlot_nofail pt vptr \<equiv>
-    let ptIndex = fromVPtr $ (vptr `~shiftR~` 12) && mask 8
-    in pt + (PPtr $ ptIndex `~shiftL~` 2)"
-
 defs resolveVAddr_def:
 "resolveVAddr pd vaddr\<equiv> (do
     pdSlot \<leftarrow> return ( lookupPDSlot pd vaddr);
@@ -1007,7 +1007,7 @@ defs resolveVAddr_def:
         | SuperSectionPDE frame v23 v24 v25 v26 v27 \<Rightarrow>   return $ Just (ARMSuperSection, frame)
         | PageTablePDE table v28 v29 \<Rightarrow>   (do
             pt \<leftarrow> return ( ptrFromPAddr table);
-            pteSlot \<leftarrow> return ( lookupPTSlot_nofail pt vaddr);
+            pteSlot \<leftarrow> lookupPTSlotFromPT pt vaddr;
             pte \<leftarrow> getObject pteSlot;
             (case pte of
                   LargePagePTE frame v9 v10 v11 v12 \<Rightarrow>   return $ Just (ARMLargePage, frame)

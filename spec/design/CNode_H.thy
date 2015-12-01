@@ -101,7 +101,7 @@ consts
 locateSlotTCB :: "machine_word \<Rightarrow> machine_word \<Rightarrow> (machine_word) kernel"
 
 consts
-locateSlotCNode :: "machine_word \<Rightarrow> machine_word \<Rightarrow> (machine_word) kernel"
+locateSlotCNode :: "machine_word \<Rightarrow> nat \<Rightarrow> machine_word \<Rightarrow> (machine_word) kernel"
 
 consts
 locateSlotCap :: "capability \<Rightarrow> machine_word \<Rightarrow> (machine_word) kernel"
@@ -567,11 +567,11 @@ defs locateSlotTCB_def:
 "locateSlotTCB tcb offset\<equiv> locateSlotBasic (PPtr $ fromPPtr tcb) offset"
 
 defs locateSlotCNode_def:
-"locateSlotCNode cnode offset\<equiv> (do
+"locateSlotCNode cnode bits offset\<equiv> (do
         flip stateAssert []
             (\<lambda> s. (case gsCNodes s (fromPPtr cnode) of
                   None \<Rightarrow>   False
-                | Some n \<Rightarrow>   offset < 2 ^ n)
+                | Some n \<Rightarrow>   n = bits \<and> offset < 2 ^ n)
                 );
         locateSlotBasic cnode offset
 od)"
@@ -579,13 +579,13 @@ od)"
 defs locateSlotCap_def:
 "locateSlotCap x0 offset\<equiv> (let cap = x0 in
   if isCNodeCap cap
-  then   locateSlotCNode (capCNodePtr cap) offset
+  then   locateSlotCNode (capCNodePtr cap) (capCNodeBits cap) offset
   else if isThreadCap cap
   then   locateSlotTCB (capTCBPtr cap) offset
   else if isZombie cap
   then   (case capZombieType cap of
       ZombieTCB \<Rightarrow>   locateSlotTCB (PPtr $ fromPPtr $ capZombiePtr cap) offset
-    | ZombieCNode v8 \<Rightarrow>   locateSlotCNode (capZombiePtr cap) offset
+    | ZombieCNode bits \<Rightarrow>   locateSlotCNode (capZombiePtr cap) bits offset
     )
   else   haskell_fail []
   )"

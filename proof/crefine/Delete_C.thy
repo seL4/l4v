@@ -397,10 +397,11 @@ lemma ccorres_cutMon_locateSlotCap_Zombie:
    apply (drule(1) rf_sr_tcb_ctes_array_assertion[
        where tcb="tcb_ptr_to_ctcb_ptr t" for t, simplified])
    apply (simp add: tcb_cnode_index_defs array_assertion_shrink_right)
-  apply clarsimp
+  apply (clarsimp simp: option.split[where P="\<lambda>x. x"])
   apply (rule conjI)
+   apply clarsimp
    apply blast
-  apply (clarsimp split: option.split_asm dest!: of_nat_less_t2n)
+  apply (clarsimp dest!: of_nat_less_t2n)
   apply (drule(1) rf_sr_gsCNodes_array_assertion)
   apply (erule notE, erule array_assertion_shrink_right)
   apply (frule valid_Zombie_number_word_bits, simp+)

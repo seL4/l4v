@@ -2399,12 +2399,14 @@ lemma obj_at_aligned':
 lemma locateSlot_conv:
   "locateSlotBasic A B = return (A + 2 ^ cte_level_bits * B)"
   "locateSlotTCB = locateSlotBasic"
-  "locateSlotCNode A B = (do
-    x \<leftarrow> stateAssert (\<lambda>s. case (gsCNodes s A) of None \<Rightarrow> False | Some n \<Rightarrow> B < 2 ^ n) [];
+  "locateSlotCNode A bits B = (do
+    x \<leftarrow> stateAssert (\<lambda>s. case (gsCNodes s A) of None \<Rightarrow> False | Some n \<Rightarrow> n = bits \<and> B < 2 ^ n) [];
     locateSlotBasic A B od)"
   "locateSlotCap c B = (do
     x \<leftarrow> stateAssert (\<lambda>s. ((isCNodeCap c \<or> (isZombie c \<and> capZombieType c \<noteq> ZombieTCB))
-            \<and> (case gsCNodes s (capUntypedPtr c) of None \<Rightarrow> False | Some n \<Rightarrow> B < 2 ^ n))
+            \<and> (case gsCNodes s (capUntypedPtr c) of None \<Rightarrow> False
+                | Some n \<Rightarrow> (isCNodeCap c \<and> n = capCNodeBits c
+                    \<or> isZombie c \<and> n = zombieCTEBits (capZombieType c)) \<and> B < 2 ^ n))
         \<or> isThreadCap c \<or> (isZombie c \<and> capZombieType c = ZombieTCB)) [];
     locateSlotBasic (capUntypedPtr c) B od)"
   apply (simp_all add: locateSlotCap_def locateSlotTCB_def fun_eq_iff)
@@ -2413,6 +2415,7 @@ lemma locateSlot_conv:
   apply (cases c, simp_all add: locateSlotCNode_def isZombie_def isThreadCap_def
                                 isCNodeCap_def capUntypedPtr_def stateAssert_def
                                 bind_assoc exec_get locateSlotTCB_def
+                                objBits_simps
                          split: zombie_type.split)
   done
 

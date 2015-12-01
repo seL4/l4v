@@ -1082,14 +1082,12 @@ lemma lookup_pt_slot_corres:
        apply (simp,rule get_pde_corres')
       apply simp
      apply simp
-    apply (case_tac rv, simp_all add: lookup_failure_map_def 
+    apply (case_tac rv, simp_all add: lookup_failure_map_def lookupPTSlotFromPT_def
                                       pde_relation_aligned_def
                                split: Hardware_H.pde.splits)[1]
-    apply (clarsimp simp:checkPTAt_def stateAssert_def)
-    apply (simp add:liftE_bindE bind_assoc)
-    apply (rule corres_noopE)
-     apply (simp add:validE_def returnOk_def | wp)+
-    apply (rule no_fail_pre, wp)
+    apply (simp add: returnOk_liftE checkPTAt_def)
+    apply (rule corres_stateAssert_implied[where P=\<top>, simplified])
+     apply simp
     apply clarsimp
     apply (rule page_table_at_state_relation)
        apply simp+
