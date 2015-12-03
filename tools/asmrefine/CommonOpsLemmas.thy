@@ -8,14 +8,18 @@ begin
 lemma fold_all_htd_updates':
   "ptr_retyp (p :: ('a :: c_type) ptr)
     = all_htd_updates TYPE('a) 1 (ptr_val p) 1" 
+  "(if P then (f :: heap_typ_desc \<Rightarrow> heap_typ_desc) else g) s
+    = (if P then f s else g s)"
   "\<lbrakk> n < 2 ^ 32 \<rbrakk> \<Longrightarrow>
     ptr_retyps n p = all_htd_updates TYPE('a) 1 (ptr_val p) (of_nat n)" 
   "\<lbrakk> n < 2 ^ 32 \<rbrakk> \<Longrightarrow>
     ptr_retyps (2 ^ n) p = all_htd_updates TYPE('a) 3 (ptr_val p) (of_nat n)"
   "n < 2 ^ 32 \<Longrightarrow> typ_clear_region x n = all_htd_updates TYPE(word32) 0 x (of_nat n)"
   "n < 2 ^ 32 \<Longrightarrow> typ_region_bytes x n = all_htd_updates TYPE(word32) 2 x (of_nat n)"
-  "(if P then (f :: heap_typ_desc \<Rightarrow> heap_typ_desc) else g) s
-    = (if P then f s else g s)"
+  "\<lbrakk> n < 2 ^ 32 \<rbrakk> \<Longrightarrow>
+    ptr_arr_retyps n p = all_htd_updates TYPE('a) 4 (ptr_val p) (of_nat n)" 
+  "\<lbrakk> n < 2 ^ 32 \<rbrakk> \<Longrightarrow>
+    ptr_arr_retyps (2 ^ n) p = all_htd_updates TYPE('a) 5 (ptr_val p) (of_nat n)"
   by (simp_all add: all_htd_updates_def unat_of_nat fun_eq_iff of_nat_neq_0)
 
 lemma unat_lt2p_word32:
@@ -23,7 +27,7 @@ lemma unat_lt2p_word32:
   by (rule order_less_le_trans, rule unat_lt2p, simp)
 
 lemmas fold_all_htd_updates
-    = fold_all_htd_updates' fold_all_htd_updates'(2-5)[OF unat_lt2p_word32]
+    = fold_all_htd_updates' fold_all_htd_updates'(3-)[OF unat_lt2p_word32]
 
 lemma signed_div_range_check:
   assumes len: "size a > 1"
@@ -70,6 +74,39 @@ proof -
     apply (safe, simp_all add: word_size sint_int_min)
     done
 qed
+
+lemma ptr_add_assertion_uintD:
+  "ptr_add_assertion ptr (uint (x :: ('a :: len) word)) strong htd
+    \<longrightarrow> (x = 0 \<or> array_assertion ptr (if strong then unat (x + 1) else unat x) htd)"
+  using unat_lt2p[where x=x]
+  by (simp add: ptr_add_assertion_def uint_0_iff Word.unat_def[symmetric]
+                unat_plus_if_size linorder_not_less word_size
+                le_Suc_eq array_assertion_shrink_right
+           del: unat_lt2p)
+
+lemma sint_uint_sless_0_if:
+  "sint x = (if x <s 0 then - uint (- x) else uint (x :: ('a :: len) word))"
+  apply (simp add: word_sint_msb_eq word_sless_alt
+                   word_size uint_word_ariths)
+  apply (clarsimp simp: zmod_zminus1_eq_if uint_0_iff)
+  done
+
+lemma ptr_add_assertion_sintD:
+  "ptr_add_assertion ptr (sint (x :: ('a :: len) word)) strong htd
+    \<longrightarrow> (x = 0 \<or> (x <s 0 \<and> array_assertion (ptr +\<^sub>p sint x)
+            (unat (- x)) htd)
+        \<or> (0 <s x \<and> array_assertion ptr (if strong then unat (x + 1) else unat x) htd))"
+  using unat_lt2p[where x=x]
+  apply (simp add: ptr_add_assertion_def word_sless_alt
+                   sint_uint_sless_0_if[THEN arg_cong[where f="\<lambda>x. - x"]]
+                   sint_uint_sless_0_if[THEN arg_cong[where f=nat]]
+                   Word.unat_def[symmetric]
+                   unat_plus_if_size le_Suc_eq linorder_not_less
+                   word_size
+           del: unat_lt2p)
+  apply (simp add: array_assertion_shrink_right)
+  apply auto
+  done
 
 end
 

@@ -580,6 +580,7 @@ val opers = Symtab.make [
       ("ShiftRight", @{const_name "bvlshr"}),
       ("SignedShiftRight", @{const_name "bvashr"}),
       ("PValid", @{const_name pvalid}),
+      ("PArrayValid", @{const_name parray_valid}),
       ("PAlignValid", @{const_name palign_valid}),
       ("PGlobalValid", @{const_name pglobal_valid}),
       ("PWeakValid", @{const_name pweak_valid}),

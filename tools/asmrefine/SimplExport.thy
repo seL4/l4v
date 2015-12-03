@@ -138,6 +138,11 @@ fun enums ctxt csenv = let
     |> Symtab.make |> Symtab.lookup
   end
 
+fun thm_to_rew thm
+    = ((Thm.concl_of thm |> HOLogic.dest_Trueprop |> HOLogic.dest_eq)
+        handle TERM _ => (Thm.concl_of thm |> Logic.dest_equals))
+    handle TERM _ => (Thm.concl_of thm |> HOLogic.dest_Trueprop |> HOLogic.dest_imp)
+
 fun cons_field_upds ctxt csenv = let
   val simps = ProgramAnalysis.get_senv csenv
     |> maps (fn (tp, vs) => map (pair tp o fst) vs)
@@ -151,7 +156,7 @@ fun cons_field_upds ctxt csenv = let
     |> maps (fn (_, [t]) => [t]
               | (tp, ts) => ts @ Proof_Context.get_thms ctxt
           (tp ^ "_accupd_diff"))
-  val rews = map (Thm.concl_of #> HOLogic.dest_Trueprop #> HOLogic.dest_eq) (simps @ accups)
+  val rews = map thm_to_rew (simps @ accups)
   in Pattern.rewrite_term (Proof_Context.theory_of ctxt) rews [] end
 
 type export_params = {cons_field_upds: term -> term,
@@ -534,13 +539,7 @@ fun phase2_convert_global ctxt params accs
   in SOME (t', t_thm) end
     | _ => NONE
 
-fun convert_fetch_ph2 ctxt params [] (t as (Const (@{const_name CTypesDefs.ptr_add}, T) $ _ $ _))
-    = convert_fetch_ph2 ctxt params [] (ptr_simp_term ctxt "ptr_add"
-        (head_of t $ Free ("p", domain_type T) $ Free ("n", @{typ int})) t)
-  | convert_fetch_ph2 ctxt params [] (t as (Const (@{const_name field_lvalue}, T) $ _ $ s))
-    = convert_fetch_ph2 ctxt params [] (ptr_simp_term ctxt "field_lvalue"
-        (head_of t $ Free ("p", domain_type T) $ s) t)
-  | convert_fetch_ph2 ctxt params ((Const (@{const_name Arrays.index}, _) $ i) :: accs)
+fun convert_fetch_ph2 ctxt params ((Const (@{const_name Arrays.index}, _) $ i) :: accs)
             (t as (Const (@{const_name fupdate}, _) $ _ $ _ $ _)) = let
         val xs = dest_array_init (#cons_field_upds (params : export_params) t)
       in case (try dest_nat i) of
@@ -659,6 +658,12 @@ and convert_ph3 ctxt params (Const (@{const_name Collect}, _) $ S $ x)
     = convert_op ctxt params "And" "Bool" [betapply (S, x), betapply (T, x)]
   | convert_ph3 ctxt params (Const (@{const_name Ptr}, _) $ p) = convert_ph3 ctxt params p
   | convert_ph3 ctxt params (Const (@{const_name ptr_val}, _) $ p) = convert_ph3 ctxt params p
+  | convert_ph3 ctxt params (t as (Const (@{const_name CTypesDefs.ptr_add}, T) $ _ $ _))
+    = convert_ph3 ctxt params (ptr_simp_term ctxt "ptr_add"
+        (head_of t $ Free ("p", domain_type T) $ Free ("n", @{typ int})) t)
+  | convert_ph3 ctxt params (t as (Const (@{const_name field_lvalue}, T) $ _ $ s))
+    = convert_ph3 ctxt params (ptr_simp_term ctxt "field_lvalue"
+        (head_of t $ Free ("p", domain_type T) $ s) t)
   | convert_ph3 ctxt params (Const (@{const_name store_word32}, _) $ p $ w $ m)
         = convert_op ctxt params "MemUpdate" "Mem" [m, p, w]
   | convert_ph3 ctxt params (Const (@{const_name store_word8}, _) $ p $ w $ m)
@@ -691,6 +696,18 @@ and convert_ph3 ctxt params (Const (@{const_name Collect}, _) $ S $ x)
   | convert_ph3 ctxt params (Const (@{const_name h_t_valid}, _) $ htd
             $ Const (@{const_name c_guard}, _) $ p)
         = convert_op ctxt params "PValid" "Bool" [htd, ptr_to_typ p, p]
+  | convert_ph3 ctxt params (Const (@{const_name array_assertion}, _) $ p $ n $ htd)
+        = convert_op ctxt params "PArrayValid" "Bool"
+            [htd, ptr_to_typ p, p, @{term "of_nat :: nat => word32"} $ n]
+  | convert_ph3 ctxt params (Const (@{const_name ptr_add_assertion'}, assT)
+            $ p $ n $ str $ htd)
+        = convert_ph3 ctxt params let val T = dest_ptr_type (fastype_of p)
+            val ass' = (Const (@{const_name ptr_add_assertion}, assT)) $ p $ n $ str $ htd
+            val ass'' = Pattern.rewrite_term (Proof_Context.theory_of ctxt)
+              (map thm_to_rew @{thms ptr_add_assertion_uintD ptr_add_assertion_sintD
+                                     if_True if_False}) [] ass'
+          in if T = @{typ unit} orelse T = @{typ word8}
+            then @{term True} else ass'' end
   | convert_ph3 ctxt params (Const (@{const_name ptr_inverse_safe}, _) $ p $ htd)
         = convert_op ctxt params "PGlobalValid" "Bool" [htd, ptr_to_typ p, p]
   | convert_ph3 ctxt params (Const (@{const_name ptr_safe}, _) $ p $ htd)
@@ -1045,7 +1062,8 @@ fun emit_func_body ctxt outfile eparams name = let
     val body = Proof_Context.get_thm ctxt (name ^ "_body_def")
             |> simplify (put_simpset HOL_basic_ss ctxt
                 addsimps @{thms switch.simps fst_conv snd_conv
-                                insert_iff empty_iff})
+                                insert_iff empty_iff
+                                ptr_add_assertion_def if_True if_False})
             |> Thm.concl_of |> Logic.dest_equals |> snd
         handle ERROR _ => @{term "Spec S"}
 

@@ -87,7 +87,9 @@ where
         then typ_clear_region y (unat z)
         else if x = 1 then ptr_retyps (unat z) (Ptr y :: 'a ptr)
         else if x = 2 then typ_region_bytes y (unat z)
-        else ptr_retyps (2 ^ unat z) (Ptr y :: 'a ptr))"
+        else if x = 3 then ptr_retyps (2 ^ unat z) (Ptr y :: 'a ptr)
+        else if x = 4 then ptr_arr_retyps (unat z) (Ptr y :: 'a ptr)
+        else ptr_arr_retyps (2 ^ unat z) (Ptr y :: 'a ptr))"
 
 type_synonym ghost_assertions = "word64 \<Rightarrow> word32"
 
@@ -112,6 +114,10 @@ definition
 
 definition
   "pglobal_valid htd (v :: ('a :: mem_type) itself) x = ptr_inverse_safe (Ptr x :: 'a ptr) htd"
+
+definition
+  "parray_valid htd (v :: ('a :: c_type) itself) x n
+    = array_assertion (Ptr x :: 'a ptr) (unat n) htd"
 
 end
 

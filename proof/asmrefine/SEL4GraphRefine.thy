@@ -16,6 +16,8 @@ imports "../../tools/asmrefine/ProveGraphRefine"
 
 begin
 
+declare ptr_add_assertion_uint[simp del]
+
 ML {*
 val funs = ParseGraph.funs @{theory} "CFunDump.txt"
 *}
@@ -63,13 +65,19 @@ lemma snd_snd_gs_new_frames_new_cnodes[simp]:
   "snd (snd ((if P then f else g) gs)) = (if P then snd (snd (f gs)) else snd (snd (g gs)))"
   by (simp_all add: gs_new_frames_def gs_new_cnodes_def gs_clear_region_def)
 
-(*
-ML {* val nm = "Kernel_C.resolveVAddr" *}
+ML {* val nm = "Kernel_C.cancelIPC" *}
 
+(*
 local_setup {*  define_graph_fun_short funs nm *}
 
 ML {*
     val ctxt = @{context}
+    val hints = SimplToGraphProof.mk_hints funs ctxt nm
+    val init_thm = SimplToGraphProof.simpl_to_graph_upto_subgoals funs hints nm
+        ctxt
+*}
+
+ML {*
     val v = ProveSimplToGraphGoals.test_graph_refine_proof funs (csenv ()) ctxt nm
 *}
 *)

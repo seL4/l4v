@@ -148,9 +148,21 @@ lemma unat_ucast_if_up:
   apply (simp add: is_up_def source_size_def target_size_def word_size)
   done
 
+(* FIXME: these 2 duplicated from crefine *)
 lemma Collect_const_mem:
   "(x \<in> (if P then UNIV else {})) = P"
   by simp
+
+lemma typ_uinfo_t_diff_from_typ_name:
+  "typ_name (typ_info_t TYPE ('a :: c_type)) \<noteq> typ_name (typ_info_t TYPE('b :: c_type))
+    \<Longrightarrow> typ_uinfo_t (at :: 'a itself) \<noteq> typ_uinfo_t (bt :: 'b itself)"
+  by (clarsimp simp: typ_uinfo_t_def td_diff_from_typ_name)
+
+lemmas ptr_add_assertion_unfold_numeral
+    = ptr_add_assertion_def[where offs="numeral n" for n, simplified]
+      ptr_add_assertion_def[where offs="uminus (numeral n)" for n, simplified]
+      ptr_add_assertion_def[where offs=0, simplified]
+      ptr_add_assertion_def[where offs=1, simplified]
 
 definition word32_truncate_nat :: "nat => word32 \<Rightarrow> word32"
 where
@@ -556,6 +568,23 @@ fun unat_mono_tac ctxt = resolve_tac ctxt @{thms unat_mono_intro}
         })
         THEN_ALL_NEW except_tac ctxt "unat_mono_tac: unsolved")
 
+fun dest_ptr_add_assertion ctxt = SUBGOAL (fn (t, i) =>
+    if Term.exists_Const (fn (s, _) => s = @{const_name parray_valid}) t
+        then (full_simp_tac (ctxt addsimps @{thms ptr_add_assertion'
+            typ_uinfo_t_diff_from_typ_name parray_valid_def
+            ptr_add_assertion_unfold_numeral
+            extra_sle_sless_unfolds})
+          THEN_ALL_NEW TRY o REPEAT_ALL_NEW (dresolve_tac ctxt
+            @{thms ptr_add_assertion_uintD[rule_format]
+                   ptr_add_assertion_sintD[rule_format]})
+          THEN_ALL_NEW SUBGOAL (fn (t, i) =>
+            if Term.exists_Const (fn (s, _) => s = @{const_name ptr_add_assertion}
+                orelse s = @{const_name ptr_add_assertion'}) t
+            then except_tac ctxt "dest_ptr_add_assertion" i
+            else all_tac)
+        ) i
+    else all_tac)
+
 fun tactic_check' (ss, t) = (ss, tactic_check (hd ss) t)
 
 fun graph_refine_proof_tacs csenv ctxt = let
@@ -607,13 +636,16 @@ fun graph_refine_proof_tacs csenv ctxt = let
                 addsimprocs [fold_of_nat_eq_Ifs_simproc, unfold_assertion_data_get_set]
             ) i)),
         (["step 3: split into goals with safe steps",
-            "also derive ptr_safe assumptions from h_t_valid"],
+            "also derive ptr_safe assumptions from h_t_valid",
+            "and adjust ptr_add_assertion facts"],
         (TRY o safe_goal_tac ctxt)
             THEN_ALL_NEW (TRY o DETERM
                 o REPEAT_ALL_NEW (dtac @{thm h_t_valid_orig_and_ptr_safe}))
             THEN_ALL_NEW (TRY o safe_goal_tac ctxt)),
-        (["step 4: split up memory write problems."],
-        decompose_mem_goals false ctxt),
+        (["step 4: split up memory write problems",
+          "and expand ptr_add_assertion if needed."],
+        decompose_mem_goals false ctxt
+          THEN_ALL_NEW dest_ptr_add_assertion ctxt),
         (["step 5: normalise memory reads"],
         normalise_mem_accs ctxt),
         (["step 6: explicitly apply some inequalities"],
