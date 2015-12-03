@@ -95,7 +95,7 @@ lemma ptr_add_assertion_sintD:
   "ptr_add_assertion ptr (sint (x :: ('a :: len) word)) strong htd
     \<longrightarrow> (x = 0 \<or> (x <s 0 \<and> array_assertion (ptr +\<^sub>p sint x)
             (unat (- x)) htd)
-        \<or> (0 <s x \<and> array_assertion ptr (if strong then unat (x + 1) else unat x) htd))"
+        \<or> (x \<noteq> 0 \<and> \<not> x <s 0 \<and> array_assertion ptr (if strong then unat (x + 1) else unat x) htd))"
   using unat_lt2p[where x=x]
   apply (simp add: ptr_add_assertion_def word_sless_alt
                    sint_uint_sless_0_if[THEN arg_cong[where f="\<lambda>x. - x"]]
@@ -105,7 +105,7 @@ lemma ptr_add_assertion_sintD:
                    word_size
            del: unat_lt2p)
   apply (simp add: array_assertion_shrink_right)
-  apply auto
+  apply (auto simp: linorder_not_less)
   done
 
 end

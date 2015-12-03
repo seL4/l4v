@@ -577,6 +577,7 @@ fun dest_ptr_add_assertion ctxt = SUBGOAL (fn (t, i) =>
           THEN_ALL_NEW TRY o REPEAT_ALL_NEW (dresolve_tac ctxt
             @{thms ptr_add_assertion_uintD[rule_format]
                    ptr_add_assertion_sintD[rule_format]})
+          THEN_ALL_NEW TRY o safe_goal_tac ctxt
           THEN_ALL_NEW SUBGOAL (fn (t, i) =>
             if Term.exists_Const (fn (s, _) => s = @{const_name ptr_add_assertion}
                 orelse s = @{const_name ptr_add_assertion'}) t
