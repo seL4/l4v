@@ -374,7 +374,7 @@ end
 
 text {* Test case. *}
 
-lemma foo:
+lemma 
   assumes x: "\<And>x. P x \<longrightarrow> Q x"
   shows "{x. x \<noteq> None \<and> P (the x)} \<subseteq> {y. \<forall>x. y = Some x \<longrightarrow> Q x}"
   apply (strengthen x)
