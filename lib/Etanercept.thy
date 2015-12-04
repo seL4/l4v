@@ -29,7 +29,6 @@ text {*
     These are config options which can be set using "declare" or "using".
     - word_refute_debug        enable verbose debugging output
     - word_refute_timeout      timeout, in seconds
-    - word_refute_cflags       C compiler options
 
   It is currently a work in progress and has the following known issues:
    - Temporary files are just left for Isabelle to clean up when it exits. Should we be attempting
@@ -69,13 +68,12 @@ ML {*
     Context.>>(Context.map_theory setup);
     config
   end
-  (* C compiler options. *)
-  val config_cflags = let
-    val (config, setup) = Attrib.config_string (Binding.name "word_refute_cflags") (K "-O3")
-  in
-    Context.>>(Context.map_theory setup);
-    config
-  end
+
+  (* C compiler options. Rationale:
+   *   -O3: search for counterexamples faster
+   *   -fwrapv: match HOL-Word semantics for signed overflow
+   *)
+  val config_cflags = "-O3 -fwrapv"
 
   fun debug_log ctxt str = if Config.get ctxt config_debug then tracing str else ()
 
@@ -133,7 +131,7 @@ ML {*
           let
             val serial = serial_string ();
             val tmp = File.shell_path (File.tmp_path (Path.explode ("etanercept" ^ serial ^ ".exe")));
-            val cmd = compiler ^ " -o " ^ tmp ^ " " ^ file ^ " " ^ Config.get ctxt config_cflags
+            val cmd = compiler ^ " " ^ config_cflags ^ " -o " ^ tmp ^ " " ^ file
             val _ = debug_log ctxt ("Compiling: " ^ cmd)
             val (_, ret) = Isabelle_System.bash_output cmd
           in
@@ -602,13 +600,14 @@ lemma "(x::64 word) << 1 = x * 2"
   apply simp
   done
 
+text {* Test that our compiler setup permits signed overflow *}
+lemma "(x :: 32 signed word) < x + 1"
+  word_refute -- "should find INT_MAX"
+  oops
+
 text {* C translation pitfalls *}
 lemma "(ucast (x * y :: 16 word) :: 32 signed word) \<ge> 0"
   text {* A naive translation fails due to semantic mismatch *}
-  using [[word_refute_cflags="-O0"]]
-  word_refute
-  text {* But many compilers optimise the UB away *}
-  using [[word_refute_cflags="-O3"]]
   word_refute
   by simp
 
