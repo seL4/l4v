@@ -665,6 +665,7 @@ fun graph_refine_proof_tacs csenv ctxt = let
                         ucast_nat_def of_int_sint_scast
                         ptr_val_inj[symmetric]
                         fold_all_htd_updates
+                        array_assertion_shrink_right
                 }
                 delsimps @{thms ptr_val_inj}
             )),

@@ -109,10 +109,12 @@ fun gather_to_imp ctxt drule pattern = let
       | (_, []) => Object_Logic.atomize ctxt ct
       | (_, pat) => raise THM ("gather_to_imp: leftover pattern: " ^ commas pat, 1, [])
     fun simp thms = Raw_Simplifier.rewrite ctxt false thms
-    fun ensure_imp ct = case (strip_comb (Thm.term_of ct) |> apsnd (map head_of)) of
-        (@{term Pure.imp}, []) => Conv.arg_conv ensure_imp ct
+    fun ensure_imp ct = case strip_comb (Thm.term_of ct) |> apsnd (map head_of)
+     of
+        (@{term Pure.imp}, _) => Conv.arg_conv ensure_imp ct
       | (@{term HOL.Trueprop}, [@{term HOL.implies}]) => Conv.all_conv ct
-      | _ => Conv.rewr_conv @{thm mk_True_imp} ct
+      | (@{term HOL.Trueprop}, _) => Conv.arg_conv (Conv.rewr_conv @{thm mk_True_imp}) ct
+      | _ => raise CTERM ("gather_to_imp", [ct])
     val gather = simp @{thms gather}
         then_conv (if drule then Conv.all_conv else simp @{thms atomize_conjL})
         then_conv simp @{thms atomize_imp}
@@ -178,6 +180,15 @@ end
 *}
 
 end
+
+setup Make_Strengthen_Rule.setup
+
+text {* Quick test. *}
+
+lemmas foo = nat.induct[mk_strg I O O]
+    nat.induct[mk_strg D O]
+    nat.induct[mk_strg I' E]
+    exI[mk_strg I'] exI[mk_strg I]
 
 context strengthen_implementation begin
 
