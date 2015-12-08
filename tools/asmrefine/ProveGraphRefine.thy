@@ -729,6 +729,12 @@ fun test_all_graph_refine_proofs_after funs csenv ctxt nm = let
       handle TERM _ => err s | TYPE _ => err s | THM _ => err s) ss
   in "success" end
 
+fun test_all_graph_refine_proofs_parallel funs csenv ctxt = let
+    val ss = Symtab.keys funs
+    val _ = Par_List.map (test_graph_refine_proof_with_def funs csenv ctxt
+      #> writeln) ss
+  in "success" end
+
 end
 *}
 
