@@ -324,7 +324,7 @@ lemma switchToThread_ccorres:
   done
 
 lemma get_tsType_ccorres2:
-  "ccorres (\<lambda>r r'. r' = thread_state_to_tsType r) ret__unsigned_long_' (tcb_at' thread)
+  "ccorres (\<lambda>r r'. r' = thread_state_to_tsType r) ret__unsigned_' (tcb_at' thread)
            (UNIV \<inter> {s. f s = tcb_ptr_to_ctcb_ptr thread} \<inter> 
             {s. cslift s (Ptr &(f s\<rightarrow>[''tcbState_C''])) = Some (thread_state_' s)}) []
   (getThreadState thread) (Call thread_state_get_tsType_'proc)"
@@ -431,12 +431,12 @@ lemma queue_in_range_pre:
 
 lemmas queue_in_range' = queue_in_range_pre[unfolded numDomains_def numPriorities_def, simplified]
 
-lemma clz_spec:
-  "\<forall>s. \<Gamma> \<turnstile> {\<sigma>. s = \<sigma> \<and> x_' s \<noteq> 0} Call clz_'proc
-       \<lbrace>\<acute>ret__int = of_nat (word_clz (x_' s)) \<rbrace>"
+lemma clzl_spec:
+  "\<forall>s. \<Gamma> \<turnstile> {\<sigma>. s = \<sigma> \<and> x_' s \<noteq> 0} Call clzl_'proc
+       \<lbrace>\<acute>ret__long = of_nat (word_clz (x_' s)) \<rbrace>"
   apply (rule allI, rule conseqPre, vcg)
   apply clarsimp
-  apply (rule_tac x="ret__int_'_update f x" for f in exI)
+  apply (rule_tac x="ret__long_'_update f x" for f in exI)
   apply (simp add: mex_def meq_def)
   done
 
@@ -696,7 +696,7 @@ proof -
      apply (rule ccorres_rhs_assoc)+
      apply (rule ccorres_Guard_Seq)
      apply (rule ccorres_pre_getReadyQueuesL2Bitmap)
-     apply (rename_tac l2)
+     apply (rename_tac l2) 
      apply (rule ccorres_pre_getQueue)
      apply (rule_tac P="queue \<noteq> []" in ccorres_cross_over_guard_no_st)
      apply (rule ccorres_symb_exec_l)

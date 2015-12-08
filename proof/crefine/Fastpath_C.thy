@@ -433,7 +433,7 @@ lemma lookup_fp_ccorres':
      apply (clarsimp simp del: Collect_const cong: call_ignore_cong)
      apply (rule_tac P="valid_cap' cap and valid_objs'"
                 and P'="UNIV \<inter> {s. ccap_relation cap (cap_' s) \<and> isCNodeCap cap}
-                             \<inter> {s. bits___unsigned_long_' s = 32 - of_nat bits \<and> bits \<le> 32 \<and> bits \<noteq> 0}"
+                             \<inter> {s. bits_' s = 32 - of_nat bits \<and> bits \<le> 32 \<and> bits \<noteq> 0}"
                    in ccorres_inst)
      apply (thin_tac "isCNodeCap cap")
      defer
@@ -465,7 +465,7 @@ lemma lookup_fp_ccorres':
       by (simp add: cap_get_tag_def)
 
     show ?case
-    apply (cinitlift cap_' bits___unsigned_long_')
+    apply (cinitlift cap_' bits_')
     apply (rename_tac cbits ccap)
     apply (elim conjE)
     apply (rule_tac F="capCNodePtr_CL (cap_cnode_cap_lift ccap)
@@ -1272,14 +1272,14 @@ lemma thread_state_ptr_set_blockingIPCDiminish_np_spec:
 lemma mdb_node_ptr_mset_mdbNext_mdbRevocable_mdbFirstBadged_spec:
   defines "ptr s \<equiv> cparent \<^bsup>s\<^esup>node_ptr [''cteMDBNode_C''] :: cte_C ptr"
   shows
-  "\<forall>s. \<Gamma>\<turnstile> \<lbrace>s. hrs_htd \<^bsup>s\<^esup>t_hrs \<Turnstile>\<^sub>t ptr s \<and> is_aligned (mdbNext_' s) 4
-                         \<and> mdbRevocable_' s && mask 1 = mdbRevocable_' s
-                         \<and> mdbFirstBadged_' s && mask 1 = mdbFirstBadged_' s\<rbrace>
+  "\<forall>s. \<Gamma>\<turnstile> \<lbrace>s. hrs_htd \<^bsup>s\<^esup>t_hrs \<Turnstile>\<^sub>t ptr s \<and> is_aligned (mdbNext___unsigned_long_' s) 4
+                         \<and> mdbRevocable___unsigned_long_' s && mask 1 = mdbRevocable___unsigned_long_' s
+                         \<and> mdbFirstBadged___unsigned_long_' s && mask 1 = mdbFirstBadged___unsigned_long_' s\<rbrace>
               Call mdb_node_ptr_mset_mdbNext_mdbRevocable_mdbFirstBadged_'proc
        {t. (\<exists>mdb_node.
                mdb_node_lift mdb_node = mdb_node_lift (cteMDBNode_C (the (cslift s (ptr s))))
-                           \<lparr> mdbNext_CL := mdbNext_' s, mdbRevocable_CL := mdbRevocable_' s,
-                             mdbFirstBadged_CL := mdbFirstBadged_' s \<rparr>
+                           \<lparr> mdbNext_CL := mdbNext___unsigned_long_' s, mdbRevocable_CL := mdbRevocable___unsigned_long_' s,
+                             mdbFirstBadged_CL := mdbFirstBadged___unsigned_long_' s \<rparr>
              \<and> cslift t = cslift s(ptr s \<mapsto> the (cslift s (ptr s)) \<lparr> cteMDBNode_C := mdb_node \<rparr>))
              \<and> types_proofs.cslift_all_but_cte_C t s
              \<and> hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s))}"
@@ -1293,7 +1293,7 @@ lemma mdb_node_ptr_mset_mdbNext_mdbRevocable_mdbFirstBadged_spec:
   apply (subst parent_update_child, erule typ_heap_simps', simp+)
   apply (clarsimp simp: typ_heap_simps')
   apply (rule exI, rule conjI[OF _ refl])
-  apply (simp add: mdb_node_lift_def word_ao_dist shiftr_over_or_dist)
+  apply (simp add: mdb_node_lift_def word_ao_dist shiftr_over_or_dist ucast_id)
   apply (fold limited_and_def)
   apply (simp add: limited_and_simps)
   done
@@ -1302,11 +1302,11 @@ lemma mdb_node_ptr_mset_mdbNext_mdbRevocable_mdbFirstBadged_spec:
 lemma mdb_node_ptr_set_mdbPrev_np_spec:
   defines "ptr s \<equiv> cparent \<^bsup>s\<^esup>node_ptr [''cteMDBNode_C''] :: cte_C ptr"
   shows
-  "\<forall>s. \<Gamma>\<turnstile> \<lbrace>s. hrs_htd \<^bsup>s\<^esup>t_hrs \<Turnstile>\<^sub>t ptr s \<and> is_aligned (mdbPrev_' s) 4\<rbrace>
+  "\<forall>s. \<Gamma>\<turnstile> \<lbrace>s. hrs_htd \<^bsup>s\<^esup>t_hrs \<Turnstile>\<^sub>t ptr s \<and> is_aligned (mdbPrev___unsigned_long_' s) 4\<rbrace>
               Call mdb_node_ptr_set_mdbPrev_np_'proc
        {t. (\<exists>mdb_node.
                mdb_node_lift mdb_node = mdb_node_lift (cteMDBNode_C (the (cslift s (ptr s))))
-                           \<lparr> mdbPrev_CL := mdbPrev_' s \<rparr>
+                           \<lparr> mdbPrev_CL := mdbPrev___unsigned_long_' s \<rparr>
              \<and> cslift t = cslift s(ptr s \<mapsto> the (cslift s (ptr s)) \<lparr> cteMDBNode_C := mdb_node \<rparr>))
              \<and> types_proofs.cslift_all_but_cte_C t s
              \<and> hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s))}"
@@ -1326,12 +1326,12 @@ lemma mdb_node_ptr_set_mdbPrev_np_spec:
 lemma cap_reply_cap_ptr_new_np_spec2:
   defines "ptr s \<equiv> cparent \<^bsup>s\<^esup>cap_ptr [''cap_C''] :: cte_C ptr"
   shows
-  "\<forall>s. \<Gamma>\<turnstile> \<lbrace>s. hrs_htd \<^bsup>s\<^esup>t_hrs \<Turnstile>\<^sub>t ptr s \<and> is_aligned (capTCBPtr_' s) 8
-                    \<and> capReplyMaster_' s && 1 = capReplyMaster_' s\<rbrace>
+  "\<forall>s. \<Gamma>\<turnstile> \<lbrace>s. hrs_htd \<^bsup>s\<^esup>t_hrs \<Turnstile>\<^sub>t ptr s \<and> is_aligned (capTCBPtr___unsigned_long_' s) 8
+                    \<and> capReplyMaster___unsigned_long_' s && 1 = capReplyMaster___unsigned_long_' s\<rbrace>
               Call cap_reply_cap_ptr_new_np_'proc
        {t. (\<exists>cap.
-               cap_lift cap = Some (Cap_reply_cap \<lparr> capReplyMaster_CL = capReplyMaster_' s,
-                                                         capTCBPtr_CL = capTCBPtr_' s \<rparr>)
+               cap_lift cap = Some (Cap_reply_cap \<lparr> capReplyMaster_CL = capReplyMaster___unsigned_long_' s,
+                                                         capTCBPtr_CL = capTCBPtr___unsigned_long_' s \<rparr>)
              \<and> cslift t = cslift s(ptr s \<mapsto> the (cslift s (ptr s)) \<lparr> cte_C.cap_C := cap \<rparr>))
              \<and> types_proofs.cslift_all_but_cte_C t s
              \<and> hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s))}"
@@ -1834,8 +1834,8 @@ lemma fastpath_enqueue_ccorres:
                 and K (\<not> isSendEP ep) and valid_pspace' and cur_tcb')
          UNIV hs
      (setEndpoint epptr (case ep of IdleEP \<Rightarrow> RecvEP [thread] | RecvEP ts \<Rightarrow> RecvEP (ts @ [thread])))
-     (\<acute>ret__unsigned_long :== CALL endpoint_ptr_get_epQueue_tail(epptr');;
-      \<acute>endpointTail :== tcb_Ptr \<acute>ret__unsigned_long;;
+     (\<acute>ret__unsigned :== CALL endpoint_ptr_get_epQueue_tail(epptr');;
+      \<acute>endpointTail :== tcb_Ptr \<acute>ret__unsigned;;
       IF \<acute>endpointTail = tcb_Ptr 0 THEN
          (Guard C_Guard \<lbrace>hrs_htd \<acute>t_hrs \<Turnstile>\<^sub>t \<acute>ksCurThread\<rbrace>
             (ptr_basic_update (\<lambda>s. tcb_Ptr_Ptr &((ksCurThread_' (globals s))\<rightarrow>[''tcbEPPrev_C''])) (\<lambda>_. NULL)));;
@@ -2073,8 +2073,8 @@ lemma cap_reply_cap_ptr_new_np_updateCap_ccorres:
   "ccorres dc xfdc
         (cte_at' ptr and tcb_at' thread)
         (UNIV \<inter> {s. cap_ptr_' s = cap_Ptr &(cte_Ptr ptr \<rightarrow> [''cap_C''])}
-              \<inter> {s. capTCBPtr_' s = ptr_val (tcb_ptr_to_ctcb_ptr thread)}
-              \<inter> {s. capReplyMaster_' s = from_bool m}) []
+              \<inter> {s. capTCBPtr___unsigned_long_' s = ptr_val (tcb_ptr_to_ctcb_ptr thread)}
+              \<inter> {s. capReplyMaster___unsigned_long_' s = from_bool m}) []
      (updateCap ptr (ReplyCap thread m))
      (Call cap_reply_cap_ptr_new_np_'proc)"
   apply (rule ccorres_from_vcg, rule allI)
@@ -2167,7 +2167,7 @@ lemma cap_page_directory_cap_get_capPDBasePtr_spec2:
   "\<forall>s. \<Gamma>\<turnstile> \<lbrace>s. True\<rbrace>
      Call cap_page_directory_cap_get_capPDBasePtr_'proc
    \<lbrace>cap_get_tag \<^bsup>s\<^esup>cap = scast cap_page_directory_cap
-       \<longrightarrow> \<acute>ret__unsigned_long = capPDBasePtr_CL (cap_page_directory_cap_lift \<^bsup>s\<^esup>cap)\<rbrace>"
+       \<longrightarrow> \<acute>ret__unsigned = capPDBasePtr_CL (cap_page_directory_cap_lift \<^bsup>s\<^esup>cap)\<rbrace>"
   apply (hoare_rule HoarePartial.ProcNoRec1)
   apply vcg
   apply (clarsimp simp: word_sle_def word_sless_def
@@ -2423,7 +2423,7 @@ apply (simp add: getThreadCSpaceRoot_def locateSlot_conv
          apply (simp add: ccap_relation_ep_helpers
                      del: Collect_const cong: call_ignore_cong)
          apply (rule ccorres_rhs_assoc2, rule ccorres_rhs_assoc2)
-         apply (rule_tac xf'="\<lambda>s. (dest_' s, ret__unsigned_long_' s)"
+         apply (rule_tac xf'="\<lambda>s. (dest_' s, ret__unsigned_' s)"
                       and r'="\<lambda>ep v. snd v = scast EPState_Recv = isRecvEP ep
                                \<and> (isRecvEP ep \<longrightarrow> epQueue ep \<noteq> []
                                           \<and> fst v = tcb_ptr_to_ctcb_ptr (hd (epQueue ep)))"
@@ -2466,7 +2466,7 @@ apply (simp add: getThreadCSpaceRoot_def locateSlot_conv
             apply ceqv
            apply (rename_tac pd_cap pd_cap_c)
            apply (rule ccorres_symb_exec_r)
-             apply (rule_tac xf'=ret__unsigned_long_' in ccorres_abstract, ceqv)
+             apply (rule_tac xf'=ret__unsigned_' in ccorres_abstract, ceqv)
              apply (rename_tac pd_cap_c_ptr_maybe)
              apply csymbr+
              apply (simp add: isValidVTableRoot_conv from_bool_0
@@ -2526,7 +2526,7 @@ apply (simp add: getThreadCSpaceRoot_def locateSlot_conv
                 apply (vcg exspec=slowpath_noreturn_spec)
                apply (simp del: Collect_const cong: call_ignore_cong)
                apply (rule ccorres_rhs_assoc)+
-               apply (rule_tac xf'="ret__unsigned_long_'"
+               apply (rule_tac xf'="ret__unsigned_'"
                             and r'="\<lambda>rv rv'. rv' = from_bool (blockingIPCDiminishCaps rv)"
                              in ccorres_split_nothrow)
                    apply (rule_tac P="ko_at' send_ep (capEPPtr (theRight luRet))
@@ -3175,7 +3175,7 @@ lemma fastpath_reply_recv_ccorres:
              apply (csymbr, csymbr)
              apply (simp add: ccap_relation_ep_helpers
                          del: Collect_const cong: call_ignore_cong)
-             apply (rule_tac xf'="ret__unsigned_long_'"
+             apply (rule_tac xf'="ret__unsigned_'"
                           and r'="\<lambda>ep v. (v = scast EPState_Send) = isSendEP ep"
                          in ccorres_split_nothrow)
                  apply (rule ccorres_add_return2)
@@ -3263,7 +3263,7 @@ lemma fastpath_reply_recv_ccorres:
                   apply ceqv
                  apply (rename_tac pd_cap pd_cap_c)
                  apply (rule ccorres_symb_exec_r)
-                   apply (rule_tac xf'=ret__unsigned_long_' in ccorres_abstract, ceqv)
+                   apply (rule_tac xf'=ret__unsigned_' in ccorres_abstract, ceqv)
                    apply (rename_tac pd_cap_c_ptr_maybe)
                    apply csymbr+
                    apply (simp add: isValidVTableRoot_conv from_bool_0
@@ -3395,14 +3395,14 @@ lemma fastpath_reply_recv_ccorres:
                                          cvariable_relation_upd_const ko_at_projectKO_opt)
                        apply ceqv
                       apply (rule ccorres_rhs_assoc2, rule ccorres_rhs_assoc2)
-                      apply (rule_tac xf'=xfdc and r'=dc in ccorres_split_nothrow)
+                      apply (rule_tac xf'=xfdc and r'=dc in ccorres_split_nothrow) 
                           apply (rule fastpath_enqueue_ccorres[unfolded o_def,simplified])
                           apply simp
                          apply ceqv
                         apply (simp add: liftM_def del: Collect_const cong: call_ignore_cong)
                         apply (rule ccorres_move_c_guard_tcb_ctes3)
                         apply (rule_tac r'="\<lambda>rv rv'. rv' = mdbPrev (cteMDBNode rv)"
-                                    and xf'=ret__unsigned_long_' in ccorres_split_nothrow)
+                                    and xf'=ret__unsigned_' in ccorres_split_nothrow)
                             apply (rule_tac P="tcb_at' curThread
                                             and K (curThread = ksCurThread_x)
                                             and (\<lambda>s. ksCurThread s = ksCurThread_x)"

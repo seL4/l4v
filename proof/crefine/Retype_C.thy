@@ -2489,9 +2489,9 @@ lemma ccorres_to_vcg_nf:
   done
 
 lemma mdb_node_get_mdbNext_heap_ccorres:
-  "ccorres (op =) ret__unsigned_long_' \<top> UNIV hs
+  "ccorres (op =) ret__unsigned_' \<top> UNIV hs
   (liftM (mdbNext \<circ> cteMDBNode) (getCTE parent))
-  (\<acute>ret__unsigned_long :== CALL mdb_node_get_mdbNext(h_val
+  (\<acute>ret__unsigned :== CALL mdb_node_get_mdbNext(h_val
                            (hrs_mem \<acute>t_hrs)
                            (Ptr &((Ptr parent :: cte_C ptr) \<rightarrow>[''cteMDBNode_C'']))))"
   apply (simp add: ccorres_liftM_simp)

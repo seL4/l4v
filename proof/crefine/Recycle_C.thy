@@ -737,7 +737,7 @@ lemma arch_recycleCap_ccorres:
        apply (simp add: storePTE_def)
        apply (ctac add: clearMemory_setObject_PTE_ccorres)
       apply csymbr
-      apply (rule_tac P="ret__unsigned_long = from_bool (capPTMappedAddress cp \<noteq> None)"
+      apply (rule_tac P="ret__unsigned = from_bool (capPTMappedAddress cp \<noteq> None)"
                    in ccorres_gen_asm2)
       apply wpc
        apply (simp add: false_def)
@@ -840,7 +840,7 @@ lemma arch_recycleCap_ccorres:
       apply (ctac(no_vcg) add: cleanCacheRange_PoU_ccorres)
        apply csymbr
        apply (rule_tac P="capPDBasePtr_CL (cap_page_directory_cap_lift cap) = capPDBasePtr cp
-                              \<and> ret__unsigned_long = from_bool (capPDMappedASID cp \<noteq> None)"
+                              \<and> ret__unsigned = from_bool (capPDMappedASID cp \<noteq> None)"
                      in ccorres_gen_asm2)
        apply wpc
         apply (simp add: false_def)
@@ -1267,7 +1267,7 @@ lemma cancelBadgedSends_ccorres:
               cong: list.case_cong Structures_H.endpoint.case_cong call_ignore_cong
                del: Collect_const)
    apply (rule ccorres_pre_getEndpoint)
-   apply (rule_tac R="ko_at' rv ptr" and xf'="ret__unsigned_long_'"
+   apply (rule_tac R="ko_at' rv ptr" and xf'="ret__unsigned_'"
                and val="case rv of RecvEP q \<Rightarrow> scast EPState_Recv | IdleEP \<Rightarrow> scast EPState_Idle
                                 | SendEP q \<Rightarrow> scast EPState_Send"
                in ccorres_symb_exec_r_known_rv_UNIV[where R'=UNIV])
@@ -1788,7 +1788,7 @@ lemma cteRecycle_ccorres:
                    del: Collect_const)
        apply (rule ccorres_pre_getCTE)
        apply (rule ccorres_move_c_guard_cte)
-       apply (rule_tac xf'=ret__unsigned_long_'
+       apply (rule_tac xf'=ret__unsigned_'
                      and F="\<lambda>v. (v = scast cap_null_cap) = (cteCap x = NullCap)"
                      and R="cte_wp_at' (op = x) slot"
                   in ccorres_symb_exec_r_abstract_UNIV[where R'=UNIV])

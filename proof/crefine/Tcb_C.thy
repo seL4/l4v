@@ -890,7 +890,7 @@ lemma setupReplyMaster_ccorres:
      apply (rule ccorres_move_c_guard_cte)
      apply (rule_tac F="\<lambda>rv'. (rv' = scast cap_null_cap) = (cteCap oldCTE = NullCap)"
                  and R="cte_wp_at' (op = oldCTE) rv"
-               and xf'=ret__unsigned_long_'
+               and xf'=ret__unsigned_'
                   in ccorres_symb_exec_r_abstract_UNIV[where R'=UNIV])
         apply (rule conseqPre, vcg)
         apply (clarsimp simp: cte_wp_at_ctes_of)
@@ -973,7 +973,7 @@ lemma restart_ccorres:
 lemma setNextPC_ccorres:
   "ccorres dc xfdc \<top>
        (UNIV \<inter> \<lbrace>\<acute>thread = tcb_ptr_to_ctcb_ptr thread\<rbrace>
-             \<inter> {s. v_' s = val}) []
+             \<inter> {s. v___unsigned_long_' s = val}) []
        (asUser thread (setNextPC val))
        (Call setNextPC_'proc)"
   apply (cinit')

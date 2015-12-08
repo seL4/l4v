@@ -149,7 +149,7 @@ lemma scast_EXCPT_NONE [simp]: "scast EXCEPTION_NONE = EXCEPTION_NONE"
 
 lemma pageBitsForSize_spec:
   "\<forall>s. \<Gamma> \<turnstile> \<lbrace>s. \<acute>pagesize && mask 2 = \<acute>pagesize\<rbrace> Call pageBitsForSize_'proc 
-   \<lbrace> \<acute>ret__unsigned = of_nat (pageBitsForSize (gen_framesize_to_H \<^bsup>s\<^esup>pagesize)) \<rbrace>"
+   \<lbrace> \<acute>ret__unsigned_long = of_nat (pageBitsForSize (gen_framesize_to_H \<^bsup>s\<^esup>pagesize)) \<rbrace>"
   apply vcg
   apply clarsimp
   apply (clarsimp simp: pageBitsForSize_def gen_framesize_to_H_def 

@@ -300,7 +300,7 @@ lemma cancelAllIPC_ccorres:
    (cancelAllIPC epptr) (Call cancelAllIPC_'proc)"
   apply (cinit lift: epptr_')
    apply (rule ccorres_symb_exec_l [OF _ getEndpoint_inv _ empty_fail_getEndpoint])
-    apply (rule_tac xf'=ret__unsigned_long_'
+    apply (rule_tac xf'=ret__unsigned_'
                 and val="case rv of IdleEP \<Rightarrow> scast EPState_Idle
                             | RecvEP _ \<Rightarrow> scast EPState_Recv | SendEP _ \<Rightarrow> scast EPState_Send"
                 and R="ko_at' rv epptr"
@@ -434,7 +434,7 @@ lemma cancelAllSignals_ccorres:
    (cancelAllSignals ntfnptr) (Call cancelAllSignals_'proc)"
   apply (cinit lift: ntfnPtr_')
    apply (rule ccorres_symb_exec_l [OF _ get_ntfn_inv' _ empty_fail_getNotification])
-    apply (rule_tac xf'=ret__unsigned_long_'
+    apply (rule_tac xf'=ret__unsigned_'
                 and val="case ntfnObj rv of IdleNtfn \<Rightarrow> scast NtfnState_Idle
                             | ActiveNtfn _ \<Rightarrow> scast NtfnState_Active | WaitingNtfn _ \<Rightarrow> scast NtfnState_Waiting"
                 and R="ko_at' rv ntfnptr"
@@ -1819,7 +1819,7 @@ lemma Zombie_new_spec:
   "\<forall>s. \<Gamma>\<turnstile> ({s} \<inter> {s. type_' s = 32 \<or> type_' s < 31}) Call Zombie_new_'proc
           {s'. cap_zombie_cap_lift (ret__struct_cap_C_' s') =
                 \<lparr> capZombieID_CL = \<^bsup>s\<^esup>ptr && ~~ mask (if \<^bsup>s\<^esup>type = (1 << 5) then 5 else unat (\<^bsup>s\<^esup>type + 1))
-                                    || \<^bsup>s\<^esup>number && mask (if \<^bsup>s\<^esup>type = (1 << 5) then 5 else unat (\<^bsup>s\<^esup>type + 1)),
+                                    || \<^bsup>s\<^esup>number___unsigned_long && mask (if \<^bsup>s\<^esup>type = (1 << 5) then 5 else unat (\<^bsup>s\<^esup>type + 1)),
                   capZombieType_CL = \<^bsup>s\<^esup>type && mask 6 \<rparr>
                \<and> cap_get_tag (ret__struct_cap_C_' s') = scast cap_zombie_cap}"
   apply vcg

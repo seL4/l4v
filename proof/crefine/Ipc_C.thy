@@ -1073,7 +1073,7 @@ lemma setMRs_lookup_failure_ccorres:
   done
 
 lemma setMRs_syscall_error_ccorres:
-  "ccorres (\<lambda>r r'. r = r' && mask msgLengthBits) ret__unsigned_'
+  "ccorres (\<lambda>r r'. r = r' && mask msgLengthBits) ret__unsigned_long_'
      (valid_pspace'
                and (case buf of None \<Rightarrow> \<top> | Some x \<Rightarrow> valid_ipc_buffer_ptr' x)
                and (\<lambda>_. msg = snd (msgFromSyscallError err)))
@@ -1084,7 +1084,7 @@ lemma setMRs_syscall_error_ccorres:
                        = Some err\<rbrace>) hs
      (setMRs thread buf msg)
      (Call setMRs_syscall_error_'proc)"
-  (is "ccorres ?r ret__unsigned_' ?P ?P' hs ?a ?c")
+  (is "ccorres ?r ret__unsigned_long_' ?P ?P' hs ?a ?c")
   apply (rule ccorres_gen_asm)
   apply (cinit')
    apply (rule_tac xf' = "\<lambda>s. current_syscall_error_' (globals s)"
@@ -1254,7 +1254,7 @@ lemma copyMRs_ccorres [corres]:
 notes
   wordSize_def'[simp]
 shows
-  "ccorres (\<lambda>r r'. r = r' && mask msgLengthBits) ret__unsigned_'
+  "ccorres (\<lambda>r r'. r = r' && mask msgLengthBits) ret__unsigned_long_'
     (valid_pspace' and tcb_at' sender and tcb_at' receiver
         and (case sendBuffer of None \<Rightarrow> \<top> | Some x \<Rightarrow> valid_ipc_buffer_ptr' x)
         and (case recvBuffer of None \<Rightarrow> \<top> | Some x \<Rightarrow> valid_ipc_buffer_ptr' x)
@@ -1457,7 +1457,7 @@ lemma asUser_obj_at_elsewhere:
   done
 
 lemma setMRs_fault_ccorres [corres]:
-  "ccorres (\<lambda>r r'. r = r' && mask msgLengthBits) ret__unsigned_'
+  "ccorres (\<lambda>r r'. r = r' && mask msgLengthBits) ret__unsigned_long_'
            (valid_pspace' and obj_at' (\<lambda>tcb. tcbFault tcb = Some ft) sender
                           and tcb_at' receiver
                           and (case buffer of Some x \<Rightarrow> valid_ipc_buffer_ptr' x | None \<Rightarrow> \<top>)
@@ -1471,7 +1471,7 @@ lemma setMRs_fault_ccorres [corres]:
 proof -
   let ?obj_at_ft = "obj_at' (\<lambda>tcb. tcbFault tcb = Some ft) sender"
   note symb_exec_r_fault = ccorres_symb_exec_r_known_rv_UNIV
-          [where xf'=ret__unsigned_long_' and R="?obj_at_ft" and R'=UNIV]
+          [where xf'=ret__unsigned_' and R="?obj_at_ft" and R'=UNIV]
 
   show ?thesis
     apply (unfold K_def)
@@ -1876,7 +1876,7 @@ lemma doFaultTransfer_ccorres [corres]:
                   | VMFault _ _ \<Rightarrow> 2 | UnknownSyscallException _ \<Rightarrow> 3
                   | UserException _ _ \<Rightarrow> 4"
               in ccorres_symb_exec_r_known_rv_UNIV
-                   [where xf'=ret__unsigned_long_' and R'=UNIV])
+                   [where xf'=ret__unsigned_' and R'=UNIV])
        apply (rule conseqPre, vcg, clarsimp)
        apply (drule(1) obj_at_cslift_tcb)
        apply (clarsimp simp: typ_heap_simps' ctcb_relation_def
@@ -2383,19 +2383,19 @@ lemma transferCapsLoop_ccorres:
              (Guard ArrayBounds \<lbrace>\<acute>i < 3\<rbrace> (\<acute>slot :== index (excaprefs_C caps) (unat \<acute>i));;
               Guard C_Guard \<lbrace>hrs_htd \<acute>t_hrs \<Turnstile>\<^sub>t \<acute>slot\<rbrace>
                (\<acute>cap :== h_val (hrs_mem \<acute>t_hrs) (cap_Ptr &(\<acute>slot\<rightarrow>[''cap_C''])));;
-              \<acute>ret__unsigned_long :== CALL cap_get_capType(\<acute>cap);;
-              \<acute>ret__int :== (if \<acute>ret__unsigned_long = scast cap_endpoint_cap then 1 else 0);;
+              \<acute>ret__unsigned :== CALL cap_get_capType(\<acute>cap);;
+              \<acute>ret__int :== (if \<acute>ret__unsigned = scast cap_endpoint_cap then 1 else 0);;
               IF \<acute>ret__int \<noteq> 0 THEN
-                \<acute>ret__unsigned_long :== CALL cap_endpoint_cap_get_capEPPtr(\<acute>cap);;
-                \<acute>ret__int :== (if ep_Ptr \<acute>ret__unsigned_long = option_to_ptr ep then 1 else 0)
+                \<acute>ret__unsigned :== CALL cap_endpoint_cap_get_capEPPtr(\<acute>cap);;
+                \<acute>ret__int :== (if ep_Ptr \<acute>ret__unsigned = option_to_ptr ep then 1 else 0)
               FI;;
               IF \<acute>ret__int \<noteq> 0 THEN
-                \<acute>ret__unsigned_long :== CALL cap_endpoint_cap_get_capEPBadge(\<acute>cap);;
-                CALL setExtraBadge(Ptr rcv_buffer,\<acute>ret__unsigned_long,\<acute>i);;
-                \<acute>ret__unsigned_long :== CALL message_info_get_msgCapsUnwrapped(\<acute>info);;
+                \<acute>ret__unsigned :== CALL cap_endpoint_cap_get_capEPBadge(\<acute>cap);;
+                CALL setExtraBadge(Ptr rcv_buffer, ucast \<acute>ret__unsigned,\<acute>i);;
+                \<acute>ret__unsigned :== CALL message_info_get_msgCapsUnwrapped(\<acute>info);;
                 Guard ShiftError \<lbrace>unat \<acute>i < 31 \<and> 0 <=s (1 :: sword32)\<rbrace>
                  (\<acute>info :== CALL message_info_set_msgCapsUnwrapped(\<acute>info,
-                  \<acute>ret__unsigned_long || scast ((1 :: sword32) << unat \<acute>i)))
+                  \<acute>ret__unsigned || scast ((1 :: sword32) << unat \<acute>i)))
               ELSE
                 lvar_nondet_init dc_ret_' dc_ret_'_update;;
                 IF \<acute>destSlot = cte_Ptr 0 THEN
@@ -2409,8 +2409,8 @@ lemma transferCapsLoop_ccorres:
                 IF deriveCap_ret_C.status_C \<acute>dc_ret \<noteq> scast EXCEPTION_NONE THEN
                   break_C
                 FI;;
-                \<acute>ret__unsigned_long :== CALL cap_get_capType(deriveCap_ret_C.cap_C \<acute>dc_ret);;
-                IF \<acute>ret__unsigned_long = scast cap_null_cap THEN
+                \<acute>ret__unsigned :== CALL cap_get_capType(deriveCap_ret_C.cap_C \<acute>dc_ret);;
+                IF \<acute>ret__unsigned = scast cap_null_cap THEN
                   break_C
                 FI;;
                 CALL cteInsert(deriveCap_ret_C.cap_C \<acute>dc_ret,\<acute>slot,\<acute>destSlot);;
@@ -3078,6 +3078,39 @@ next
     done
 qed
 
+lemma ccorres_sequenceE_while':
+  fixes axf :: "globals myvars \<Rightarrow> 'e" shows
+  "\<lbrakk>\<And>ys. length ys < length xs \<Longrightarrow>
+        ccorres_underlying sr \<Gamma> (inr_rrel (\<lambda>rv rv'. r' (ys @ [rv]) rv')) xf'
+                            (inl_rrel arrel) axf
+                            (F (length ys)) (Q \<inter> {s. i_' s = of_nat (length ys) \<and> r' ys (xf' s)}) hs
+                            (xs ! length ys) body;
+    \<And>n. P n = (n < of_nat (length xs));
+    \<And>s. s \<in> Q \<Longrightarrow> \<Gamma>\<turnstile>\<^bsub>/UNIV\<^esub> {s} body (Q \<inter> {t. i_' t = i_' s}),UNIV;
+    \<And>n. n < length xs \<Longrightarrow> \<lbrace>F n\<rbrace> xs ! n \<lbrace>\<lambda>_. F (Suc n)\<rbrace>, -;
+     length xs < 2 ^ word_bits;
+     \<forall>s f. xf' (i_'_update f s) = xf' s
+                 \<and> ((i_'_update f s \<in> Q) = (s \<in> Q))
+                 \<and> (\<forall>s'. ((s', i_'_update f s) \<in> sr) = ((s', s) \<in> sr)) \<rbrakk>
+    \<Longrightarrow> ccorres_underlying sr \<Gamma> (inr_rrel (\<lambda>rv (i', rv'). r' rv rv' \<and> i' = of_nat (length xs)))
+                  (\<lambda>s. (i_' s, xf' s)) arrel axf
+                  (F 0) (Q \<inter> {s. r' [] (xf' s)}) hs
+          (sequenceE xs)
+          (Basic (\<lambda>s. i_'_update (\<lambda>_. 0) s) ;;
+           While {s. P (i_' s)} (body;;
+             Basic (\<lambda>s. i_'_update (\<lambda>_. i_' s + 1) s)))"
+  apply (rule ccorres_guard_imp2)
+   apply (rule ccorres_symb_exec_r)
+     apply (rule ccorres_sequenceE_while_gen'[where i=0, simplified, where xf_update=i_'_update],
+            (assumption | simp)+)
+       apply (simp add: word_bits_def)
+      apply simp+
+    apply vcg
+   apply (rule conseqPre, vcg)
+   apply clarsimp
+  apply simp
+  done
+
 lemma lookupExtraCaps_ccorres:
   notes if_cong[cong] min_simps [simp del]
   shows
@@ -3140,7 +3173,7 @@ proof -
                                       (case buffer of Some x \<Rightarrow> valid_ipc_buffer_ptr' x | _ \<Rightarrow> \<top>) s \<and>
                                        (\<forall>m < length rv. user_word_at (rv ! m)
                                                      (x2 + (of_nat m + (msgMaxLength + 2)) * 4) s)"
-                          in ccorres_sequenceE_while)
+                          in ccorres_sequenceE_while')
                   apply (simp add: split_def)
                   apply (rule ccorres_rhs_assoc)+
                   apply (rule ccorres_guard_imp2)
@@ -3577,7 +3610,7 @@ lemma doIPCTransfer_ccorres [corres]:
     apply (rename_tac fault)
     apply (rule ccorres_move_c_guard_tcb)
     apply (rule_tac val="case_option (scast fault_null_fault) fault_to_fault_tag fault"
-                and xf'=ret__unsigned_long_'
+                and xf'=ret__unsigned_'
                 and R="\<lambda>s. \<exists>t. ko_at' t sender s \<and> tcbFault t = fault"
                  in ccorres_symb_exec_r_known_rv_UNIV [where R'=UNIV])
        apply (vcg, clarsimp)
@@ -3650,7 +3683,7 @@ lemma handleFaultReply_ccorres [corres]:
      apply (rule ccorres_move_c_guard_tcb)
      apply (rule ccorres_symb_exec_r)
        apply (rule_tac val="fault_to_fault_tag f"
-                   and xf'=ret__unsigned_long_'
+                   and xf'=ret__unsigned_'
                    and R="\<lambda>s. \<exists>t. ko_at' t r s \<and> tcbFault t = Some f"
                    and R'="\<lbrace>cfault_rel (Some f) (fault_lift \<acute>fault)
                         (lookup_fault_lift (h_val (hrs_mem \<acute>t_hrs)
@@ -4184,7 +4217,7 @@ proof -
    apply (rename_tac fault)
    apply (rule ccorres_move_c_guard_tcb)
    apply (rule_tac val="case_option (scast fault_null_fault) fault_to_fault_tag fault"
-               and xf'=ret__unsigned_long_'
+               and xf'=ret__unsigned_'
                and R="\<lambda>s. \<exists>t. ko_at' t receiver s \<and> tcbFault t = fault"
                 in ccorres_symb_exec_r_known_rv_UNIV [where R'=UNIV])
       apply (vcg, clarsimp)
@@ -4901,7 +4934,7 @@ lemma sendIPC_ccorres [corres]:
    apply (unfold sendIPC_def)[1]
    apply (rule ccorres_pre_getEndpoint)
    apply (rename_tac ep)
-   apply (rule_tac xf'=ret__unsigned_long_'
+   apply (rule_tac xf'=ret__unsigned_'
                and val="case ep of IdleEP \<Rightarrow> scast EPState_Idle
                            | RecvEP _ \<Rightarrow> scast EPState_Recv
                            | SendEP _ \<Rightarrow> scast EPState_Send"
@@ -4982,7 +5015,7 @@ lemma sendIPC_ccorres [corres]:
                apply (rule ccorres_move_c_guard_tcb [simplified])
                apply (rule_tac val="case_option (scast fault_null_fault)
                                                 fault_to_fault_tag fault"
-                           and xf'=ret__unsigned_long_'
+                           and xf'=ret__unsigned_'
                            and R="\<lambda>s. \<exists>t. ko_at' t thread s \<and> tcbFault t = fault"
                             in ccorres_symb_exec_r_known_rv_UNIV [where R'=UNIV])
                   apply (rule conseqPre, vcg, clarsimp)
@@ -5484,7 +5517,7 @@ lemma completeSignal_ccorres:
    apply simp
    apply (rule ccorres_rhs_assoc)+
    apply (rule ccorres_pre_getNotification, rename_tac ntfn)
-   apply (rule_tac xf'=ret__unsigned_long_'
+   apply (rule_tac xf'=ret__unsigned_'
                 and val="case ntfnObj ntfn of IdleNtfn \<Rightarrow> scast NtfnState_Idle
                                   | WaitingNtfn _ \<Rightarrow> scast NtfnState_Waiting
                                   | ActiveNtfn _ \<Rightarrow> scast NtfnState_Active"
@@ -5573,7 +5606,7 @@ lemma receiveIPC_ccorres [corres]:
    apply (rule ccorres_pre_getEndpoint)
    apply (rename_tac ep)
    apply (simp only: ccorres_seq_skip)
-   apply (rule_tac xf'=ret__unsigned_long_'
+   apply (rule_tac xf'=ret__unsigned_'
                and val="capEPPtr cap"
                and R=\<top>
                 in ccorres_symb_exec_r_known_rv_UNIV[where R'=UNIV])
@@ -5583,7 +5616,7 @@ lemma receiveIPC_ccorres [corres]:
       apply (simp add: cap_endpoint_cap_lift ccap_relation_def cap_to_H_def)
      apply ceqv
     apply csymbr
-    apply (rule_tac xf'=ret__unsigned_long_'
+    apply (rule_tac xf'=ret__unsigned_'
                 and F="\<lambda>rv. to_bool rv = capEPCanSend cap"
                 and R=\<top>
                  in ccorres_symb_exec_r_abstract_UNIV[where R'=UNIV])
@@ -5632,7 +5665,7 @@ lemma receiveIPC_ccorres [corres]:
          apply (rule ccorres_cond[where R=\<top>])
            apply (simp add: Collect_const_mem)
           apply (ctac add: completeSignal_ccorres[unfolded dc_def])
-         apply (rule_tac xf'=ret__unsigned_long_'
+         apply (rule_tac xf'=ret__unsigned_'
                      and val="case ep of IdleEP \<Rightarrow> scast EPState_Idle
                              | RecvEP _ \<Rightarrow> scast EPState_Recv
                              | SendEP _ \<Rightarrow> scast EPState_Send"
@@ -5796,7 +5829,7 @@ lemma receiveIPC_ccorres [corres]:
                    apply (rule ccorres_move_c_guard_tcb [simplified])
                    apply (rule_tac val="case_option (scast fault_null_fault)
                                                     fault_to_fault_tag fault"
-                               and xf'=ret__unsigned_long_'
+                               and xf'=ret__unsigned_'
                                and R="\<lambda>s. \<exists>t. ko_at' t sender s \<and> tcbFault t = fault"
                                 in ccorres_symb_exec_r_known_rv_UNIV [where R'=UNIV])
                       apply (rule conseqPre, vcg, clarsimp)
@@ -6095,7 +6128,7 @@ lemma sendSignal_ccorres [corres]:
      (Call sendSignal_'proc)"
   apply (cinit lift: ntfnPtr_' badge_')
    apply (rule ccorres_pre_getNotification, rename_tac ntfn)
-   apply (rule_tac xf'=ret__unsigned_long_'
+   apply (rule_tac xf'=ret__unsigned_'
                and val="case ntfnObj ntfn of IdleNtfn \<Rightarrow> scast NtfnState_Idle
                                  | WaitingNtfn _ \<Rightarrow> scast NtfnState_Waiting
                                  | ActiveNtfn _ \<Rightarrow> scast NtfnState_Active"
@@ -6113,7 +6146,7 @@ lemma sendSignal_ccorres [corres]:
       -- "IdleNtfn case"
       apply (rule ccorres_cond_true)
       apply (rule ccorres_rhs_assoc)+
-      apply (rule_tac xf'=ret__unsigned_long_'
+      apply (rule_tac xf'=ret__unsigned_'
                  and val="ptr_val (option_to_ctcb_ptr (ntfnBoundTCB ntfn))"
                  and R="ko_at' ntfn ntfnptr"
                  in ccorres_symb_exec_r_known_rv_UNIV[where R'=UNIV])
@@ -6133,7 +6166,7 @@ lemma sendSignal_ccorres [corres]:
        apply (rule ccorres_Guard_Seq)
        apply csymbr
        apply (rule ccorres_abstract_cleanup)
-       apply (rule_tac P="(ret__unsigned_long = scast ThreadState_BlockedOnReceive)
+       apply (rule_tac P="(ret__unsigned = scast ThreadState_BlockedOnReceive)
                  = receiveBlocked rv" in ccorres_gen_asm2)
        apply (rule ccorres_cond[where R=\<top>])
          apply (simp add: Collect_const_mem)
@@ -6477,7 +6510,7 @@ lemma receiveSignal_ccorres [corres]:
   apply (rule ccorres_gen_asm)
   apply (cinit lift: thread_' cap_' isBlocking_')
    apply (rule ccorres_pre_getNotification, rename_tac ntfn)
-   apply (rule_tac xf'=ret__unsigned_long_'
+   apply (rule_tac xf'=ret__unsigned_'
                and val="capNtfnPtr cap"
                and R=\<top>
                 in ccorres_symb_exec_r_known_rv_UNIV[where R'=UNIV])
@@ -6487,7 +6520,7 @@ lemma receiveSignal_ccorres [corres]:
       apply (simp add: cap_notification_cap_lift ccap_relation_def cap_to_H_def)
      apply ceqv
     apply csymbr
-    apply (rule_tac xf'=ret__unsigned_long_'
+    apply (rule_tac xf'=ret__unsigned_'
                 and val="case ntfnObj ntfn of IdleNtfn \<Rightarrow> scast NtfnState_Idle
                                   | WaitingNtfn _ \<Rightarrow> scast NtfnState_Waiting
                                   | ActiveNtfn _ \<Rightarrow> scast NtfnState_Active"
@@ -6531,7 +6564,7 @@ lemma receiveSignal_ccorres [corres]:
       apply (rule ccorres_cond_true)
       apply (intro ccorres_rhs_assoc)
       apply (rule_tac val=badge
-                  and xf'=ret__unsigned_long_'
+                  and xf'=ret__unsigned_'
                   and R="ko_at' ntfn (capNtfnPtr cap)"
                    in ccorres_symb_exec_r_known_rv_UNIV [where R'=UNIV])
          apply (vcg, clarsimp)

@@ -743,7 +743,7 @@ lemma decodeCNodeInvocation_ccorres:
                       apply (rule ccorres_move_c_guard_cte)
                       apply (rule ccorres_pre_getCTE)
                       apply (rule ccorres_add_return)
-                      apply (rule_tac xf'=ret__unsigned_long_'
+                      apply (rule_tac xf'=ret__unsigned_'
                                    and r'="\<lambda>_ rv'. (rv' = scast cap_null_cap)
                                               = (cteCap rvb = NullCap)"
                                     in ccorres_split_nothrow)
@@ -1245,7 +1245,7 @@ lemma decodeCNodeInvocation_ccorres:
                                 apply (simp add: liftE_bindE liftM_def del: Collect_const)
                                 apply (rule ccorres_pre_getCTE)
                                 apply (rule ccorres_symb_exec_r)
-                                  apply (rule_tac xf'=ret__unsigned_long_' in ccorres_abstract, ceqv)
+                                  apply (rule_tac xf'=ret__unsigned_' in ccorres_abstract, ceqv)
                                   apply (rule_tac P="(rv' = scast cap_null_cap) = (cteCap rvc = NullCap)"
                                                 in ccorres_gen_asm2)
                                   apply (simp del: Collect_const)
@@ -1265,7 +1265,7 @@ lemma decodeCNodeInvocation_ccorres:
                                   apply (rule ccorres_pre_getCTE)
                                   apply (rule ccorres_move_c_guard_cte)
                                   apply (rule ccorres_symb_exec_r)
-                                    apply (rule_tac xf'=ret__unsigned_long_' in ccorres_abstract, ceqv)
+                                    apply (rule_tac xf'=ret__unsigned_' in ccorres_abstract, ceqv)
                                     apply (rule_tac P="(rv'a = scast cap_null_cap) = (cteCap x = NullCap)"
                                                   in ccorres_gen_asm2)
                                     apply (simp del: Collect_const)

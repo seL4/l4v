@@ -108,9 +108,9 @@ lemma cap_zombie_cap_get_capZombieNumber_spec:
 
 lemma cap_zombie_cap_set_capZombieNumber_spec:
   "\<forall>cap s. \<Gamma>\<turnstile> \<lbrace>s. ccap_relation cap \<acute>cap \<and> isZombie cap \<and> capAligned cap
-                     \<and> unat (n___unsigned_long_' s) \<le> zombieCTEs (capZombieType cap)\<rbrace>
+                     \<and> unat (n_' s) \<le> zombieCTEs (capZombieType cap)\<rbrace>
      Call cap_zombie_cap_set_capZombieNumber_'proc
-   {s'. ccap_relation (capZombieNumber_update (\<lambda>_. unat (n___unsigned_long_' s)) cap)
+   {s'. ccap_relation (capZombieNumber_update (\<lambda>_. unat (n_' s)) cap)
                (ret__struct_cap_C_' s')}"
   apply vcg
   apply (rule context_conjI, simp add: cap_get_tag_isCap)
@@ -442,7 +442,7 @@ lemma reduceZombie_ccorres1:
      apply ceqv
     apply csymbr
     apply (rule ccorres_move_c_guard_cte)
-    apply (rule_tac xf'=n___unsigned_long_' and val="of_nat (capZombieNumber cap)"
+    apply (rule_tac xf'=n_' and val="of_nat (capZombieNumber cap)"
                  and R="cte_wp_at' (\<lambda>cte. cteCap cte = cap) slot and invs'"
                in ccorres_symb_exec_r_known_rv_UNIV[where R'=UNIV])
        apply (rule conseqPre, vcg)
@@ -514,7 +514,7 @@ lemma reduceZombie_ccorres1:
          apply (rule ccorres_symb_exec_l[OF _ getCTE_inv _ empty_fail_getCTE])
           apply (rule_tac F="\<lambda>rv'. \<exists>cp. ccap_relation (cteCap rv) cp
                                       \<and> rv' = cap_get_tag cp"
-                      and xf'=ret__unsigned_long_'
+                      and xf'=ret__unsigned_'
                       and R="cte_wp_at' (op = rv) slot"
                        in ccorres_symb_exec_r_abstract_UNIV[where R'=UNIV])
              apply (rule conseqPre, vcg)
@@ -576,7 +576,7 @@ lemma reduceZombie_ccorres1:
                apply (rule ccorres_fail)
               apply (rule ccorres_rhs_assoc)+
               apply (rule ccorres_move_c_guard_cte)
-              apply (rule_tac xf'=ret__unsigned_long_'
+              apply (rule_tac xf'=ret__unsigned_'
                           and val="case_zombie_type ZombieTCB_C of_nat (capZombieType (cteCap rv))"
                              and R="cte_wp_at' (op = rv) slot and invs'"
                           in ccorres_symb_exec_r_known_rv_UNIV[where R'=UNIV])
@@ -735,7 +735,7 @@ proof (induct rule: finaliseSlot'.induct[where ?a0.0=slot and ?a1.0=exposed and 
      apply (rule ccorres_cutMon, simp only: cutMon_walk_if)
      apply (rule ccorres_symb_exec_r)
        apply (rule iffD1 [OF ccorres_expand_while_iff_Seq])
-       apply (rule_tac xf'=ret__unsigned_long_' in ccorres_abstract)
+       apply (rule_tac xf'=ret__unsigned_' in ccorres_abstract)
         apply ceqv
        apply (rule_tac P="(rv' = scast cap_null_cap) = (cteCap rv = NullCap)"
                     in ccorres_gen_asm2)
@@ -969,7 +969,7 @@ proof (induct rule: cteRevoke.induct[where ?a0.0=slot and ?a1.0=s])
      apply (rule ccorres_symb_exec_l'
                        [OF _ getCTE_inv _ empty_fail_getCTE])
       apply (rule ccorres_move_c_guard_cte)
-      apply (rule_tac xf'=ret__unsigned_long_' and val="mdbNext (cteMDBNode rv)"
+      apply (rule_tac xf'=ret__unsigned_' and val="mdbNext (cteMDBNode rv)"
                     and R="cte_wp_at' (op = rv) slot'"
                      in ccorres_symb_exec_r_known_rv_UNIV[where R'=UNIV])
          apply vcg

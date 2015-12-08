@@ -856,7 +856,7 @@ lemma handleInvocation_ccorres:
                                 ccorres_cond_iffs ts_Restart_case_helper'
                            del: Collect_const cong: bind_cong)
                apply (rule ccorres_rhs_assoc2,
-                      rule_tac xf'="length___unsigned_long_'"
+                      rule_tac xf'="length_'"
                             and r'="\<lambda>rv rv'. unat rv' = length rv"
                             in ccorres_split_nothrow)
                    apply (rule ccorres_add_return2)
@@ -894,7 +894,7 @@ lemma handleInvocation_ccorres:
                      apply (rule getThreadState_ccorres_foo)
                      apply csymbr
                      apply (rule ccorres_abstract_cleanup)
-                     apply (rule_tac P="ret__unsigned_long = thread_state_to_tsType rvg"
+                     apply (rule_tac P="ret__unsigned = thread_state_to_tsType rvg"
                                  in ccorres_gen_asm2)
                      apply (simp add: thread_state_to_tsType_eq_Restart from_bool_0
                                  del: Collect_const add: Collect_const[symmetric])
@@ -1374,7 +1374,7 @@ lemma handleRecv_ccorres:
             apply (rule ccorres_pre_getNotification)
             apply (rename_tac ntfn)
             apply (rule_tac Q="valid_ntfn' ntfn and (\<lambda>s. thread = ksCurThread s)"
-                      and Q'="\<lambda>s. ret__unsigned_longa = ptr_val (option_to_ctcb_ptr (ntfnBoundTCB ntfn))"
+                      and Q'="\<lambda>s. ret__unsigneda = ptr_val (option_to_ctcb_ptr (ntfnBoundTCB ntfn))"
                 in ccorres_if_cond_throws_break2)
                apply (clarsimp simp: cap_get_tag_isCap[symmetric] cap_get_tag_NotificationCap
                                      option_to_ctcb_ptr_valid_ntfn rf_sr_ksCurThread)

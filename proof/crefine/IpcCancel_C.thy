@@ -1024,14 +1024,14 @@ lemma rf_sr_drop_bitmaps_enqueue_helper:
      cbitmap_L1_relation ksqL1upd' ksqL1upd ; cbitmap_L2_relation ksqL2upd' ksqL2upd \<rbrakk>
    \<Longrightarrow>
    ((\<sigma>\<lparr>ksReadyQueues := ksqupd, ksReadyQueuesL1Bitmap := ksqL1upd, ksReadyQueuesL2Bitmap := ksqL2upd\<rparr>,
-     \<sigma>'\<lparr>idx___unsigned_' := i', queue_' := queue_upd',
+     \<sigma>'\<lparr>idx_' := i', queue_' := queue_upd',
         globals := t_hrs_'_update f
           (globals \<sigma>'
              \<lparr>ksReadyQueuesL1Bitmap_' := ksqL1upd',
               ksReadyQueuesL2Bitmap_' := ksqL2upd',
               ksReadyQueues_' := ksqupd'\<rparr>)\<rparr>) \<in> rf_sr) =
    ((\<sigma>\<lparr>ksReadyQueues := ksqupd\<rparr>,
-     \<sigma>'\<lparr>idx___unsigned_' := i', queue_' := queue_upd',
+     \<sigma>'\<lparr>idx_' := i', queue_' := queue_upd',
         globals := t_hrs_'_update f
           (globals \<sigma>' \<lparr>ksReadyQueues_' := ksqupd'\<rparr>)\<rparr>) \<in> rf_sr)"
   unfolding rf_sr_def cstate_relation_def Let_def
@@ -1068,7 +1068,7 @@ proof -
   show ?thesis
   apply (cinit lift: tcb_')
    apply (rule_tac r'="\<lambda>rv rv'. rv = to_bool rv'"
-               and xf'="ret__unsigned_long_'" in ccorres_split_nothrow)
+               and xf'="ret__unsigned_'" in ccorres_split_nothrow)
        apply (rule threadGet_vcg_corres)
        apply (rule allI, rule conseqPre, vcg)
        apply clarsimp
@@ -1278,7 +1278,7 @@ lemma rf_sr_drop_bitmaps_dequeue_helper_L2:
    \<Longrightarrow>
 ((\<sigma>\<lparr>ksReadyQueues := ksqupd,
    ksReadyQueuesL2Bitmap := ksqL2upd\<rparr>,
- \<sigma>'\<lparr>idx___unsigned_' := i',
+ \<sigma>'\<lparr>idx_' := i',
    queue_' := queue_upd',
    globals := globals \<sigma>'
      \<lparr>ksReadyQueuesL2Bitmap_' := ksqL2upd',
@@ -1286,7 +1286,7 @@ lemma rf_sr_drop_bitmaps_dequeue_helper_L2:
          \<in> rf_sr)
  =
 ((\<sigma>\<lparr>ksReadyQueues := ksqupd\<rparr>,
- \<sigma>'\<lparr>idx___unsigned_' := i',
+ \<sigma>'\<lparr>idx_' := i',
    queue_' := queue_upd',
    globals := globals \<sigma>'
      \<lparr>ksReadyQueues_' := ksqupd'\<rparr>\<rparr>) \<in> rf_sr)
@@ -1302,7 +1302,7 @@ lemma rf_sr_drop_bitmaps_dequeue_helper:
 ((\<sigma>\<lparr>ksReadyQueues := ksqupd,
    ksReadyQueuesL2Bitmap := ksqL2upd,
    ksReadyQueuesL1Bitmap := ksqL1upd\<rparr>,
- \<sigma>'\<lparr>idx___unsigned_' := i',
+ \<sigma>'\<lparr>idx_' := i',
    queue_' := queue_upd',
    globals := globals \<sigma>'
      \<lparr>ksReadyQueuesL2Bitmap_' := ksqL2upd',
@@ -1311,7 +1311,7 @@ lemma rf_sr_drop_bitmaps_dequeue_helper:
          \<in> rf_sr)
  =
 ((\<sigma>\<lparr>ksReadyQueues := ksqupd\<rparr>,
- \<sigma>'\<lparr>idx___unsigned_' := i',
+ \<sigma>'\<lparr>idx_' := i',
    queue_' := queue_upd',
    globals := globals \<sigma>'
      \<lparr>ksReadyQueues_' := ksqupd'\<rparr>\<rparr>) \<in> rf_sr)
@@ -1418,7 +1418,7 @@ proof -
   show ?thesis
   apply (cinit lift: tcb_')
    apply (rule_tac r'="\<lambda>rv rv'. rv = to_bool rv'"
-              and xf'="ret__unsigned_long_'" in ccorres_split_nothrow)
+              and xf'="ret__unsigned_'" in ccorres_split_nothrow)
        apply (rule threadGet_vcg_corres)
        apply (rule allI, rule conseqPre, vcg)
        apply clarsimp
@@ -1754,7 +1754,7 @@ proof -
   show ?thesis
   apply (cinit lift: tcb_')
    apply (rule_tac r'="\<lambda>rv rv'. rv = to_bool rv'"
-               and xf'="ret__unsigned_long_'" in ccorres_split_nothrow)
+               and xf'="ret__unsigned_'" in ccorres_split_nothrow)
        apply (rule threadGet_vcg_corres)
        apply (rule allI, rule conseqPre, vcg)
        apply clarsimp
@@ -1986,45 +1986,6 @@ lemma rescheduleRequired_ccorres:
                  split: scheduler_action.split_asm)[1]
   done
 
-(* In order to remove the assumption 'sch_act_simple' from the lemma 'cancelIPC_ccorres1' below, in this lemma the same assumption has been replaced with the assumption 'valid_queues and weak_sch_act_wf (ksSchedulerAction s) s'. *)
-
-lemma rescheduleRequired_ccorres_valid_queues': 
-  "ccorresG rf_sr \<Gamma> dc xfdc
-    (valid_queues and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s) and valid_objs')
-    UNIV []
-    rescheduleRequired
-    (Call rescheduleRequired_'proc)"
-  apply cinit
-   apply (rule ccorres_symb_exec_l)
-      apply (rule ccorres_split_nothrow_novcg[where r'=dc and xf'=xfdc])
-          apply (simp add: scheduler_action_case_switch_to_if
-                      cong: if_weak_cong split del: split_if)
-          apply (rule_tac R="\<lambda>s. action = ksSchedulerAction s \<and> weak_sch_act_wf (ksSchedulerAction s) s" in ccorres_cond)
-            apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
-                                  cscheduler_action_relation_def)
-            apply (clarsimp simp: weak_sch_act_wf_def tcb_at_max_word tcb_at_not_NULL
-                           split: scheduler_action.split_asm dest!: pred_tcb_at')
-           apply (ctac add: tcbSchedEnqueue_ccorres)
-          apply (rule ccorres_return_Skip)
-         apply ceqv
-        apply (rule ccorres_from_vcg[where P=\<top> and P'=UNIV])
-        apply (rule allI, rule conseqPre, vcg)
-        apply (clarsimp simp: setSchedulerAction_def simpler_modify_def)
-        apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
-                              cscheduler_action_relation_def
-                              carch_state_relation_def cmachine_state_relation_def
-                              max_word_def)
-       apply wp
-      apply (simp add: guard_is_UNIV_def)
-     apply wp
-   apply (simp add: getSchedulerAction_def)
-  apply (clarsimp simp: weak_sch_act_wf_def rf_sr_def cstate_relation_def
-                        Let_def cscheduler_action_relation_def)
-  apply (auto simp: tcb_at_not_NULL tcb_at_max_word
-                    tcb_at_not_NULL[THEN not_sym] tcb_at_max_word[THEN not_sym]
-                 split: scheduler_action.split_asm)
-  done
-
 lemma getCurDomain_ccorres:
   "ccorres (op = \<circ> ucast) curDom_'
        \<top> UNIV hs curDomain (\<acute>curDom :== \<acute>ksCurDomain)"
@@ -2205,7 +2166,7 @@ lemma scheduleTCB_ccorres_valid_queues'_pre:
        apply (intro allI impI)
        apply (unfold mem_simps)[1]
        apply assumption
-      apply (ctac add: rescheduleRequired_ccorres_valid_queues')
+      apply (ctac add: rescheduleRequired_ccorres)
      prefer 4
      apply (rule ccorres_symb_exec_l)
         apply (rule ccorres_pre_getCurThread) 
@@ -2854,9 +2815,9 @@ lemma cancelIPC_ccorres_reply_helper:
           ((ptr_val (tcb_ptr_to_ctcb_ptr thread) && 0xFFFFFE00) +
            of_int (sint Kernel_C.tcbReply) * of_nat (size_of TYPE(cte_C))));;
        (Guard C_Guard {s. s \<Turnstile>\<^sub>c slot_' s}
-         (\<acute>ret__unsigned_long :== CALL mdb_node_get_mdbNext(h_val (hrs_mem \<acute>t_hrs)
+         (\<acute>ret__unsigned :== CALL mdb_node_get_mdbNext(h_val (hrs_mem \<acute>t_hrs)
                   (mdb_Ptr &(\<acute>slot\<rightarrow>[''cteMDBNode_C'']))));;
-        (\<acute>callerCap___ptr_to_struct_cte_C :== cte_Ptr \<acute>ret__unsigned_long;;
+        (\<acute>callerCap___ptr_to_struct_cte_C :== cte_Ptr \<acute>ret__unsigned;;
          IF \<acute>callerCap___ptr_to_struct_cte_C \<noteq> NULL THEN
            Basic (globals_update (ghost'state_'_update
               (ghost_assertion_data_set cteDeleteOne_'proc (ucast cap_reply_cap)
@@ -2878,7 +2839,7 @@ lemma cancelIPC_ccorres_reply_helper:
      apply ctac
        apply (simp (no_asm) only: liftM_def bind_assoc return_bind del: Collect_const)
        apply (rule ccorres_pre_getCTE)
-       apply (rule_tac xf'=ret__unsigned_long_' and val="mdbNext (cteMDBNode x)"
+       apply (rule_tac xf'=ret__unsigned_' and val="mdbNext (cteMDBNode x)"
                       and R="cte_wp_at' (op = x) rv and invs'"
                        in ccorres_symb_exec_r_known_rv_UNIV[where R'=UNIV])
           apply vcg
@@ -2944,7 +2905,7 @@ lemma cancelIPC_ccorres1:
    apply csymbr
    apply (rule getThreadState_ccorres_foo)
    apply (rule ccorres_symb_exec_r)
-     apply (rule_tac xf'=ret__unsigned_long_' in ccorres_abstract, ceqv)
+     apply (rule_tac xf'=ret__unsigned_' in ccorres_abstract, ceqv)
      apply (rule_tac P="rv' = thread_state_to_tsType rv" in ccorres_gen_asm2)
      apply wpc
             -- "BlockedOnReceive"

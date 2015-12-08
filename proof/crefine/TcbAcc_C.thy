@@ -54,7 +54,7 @@ lemma threadGet_eq:
   done
 
 lemma get_tsType_ccorres [corres]:
-  "ccorres (\<lambda>r r'. r' = thread_state_to_tsType r) ret__unsigned_long_' (tcb_at' thread)
+  "ccorres (\<lambda>r r'. r' = thread_state_to_tsType r) ret__unsigned_' (tcb_at' thread)
            (UNIV \<inter> {s. thread_state_ptr_' s = Ptr &(tcb_ptr_to_ctcb_ptr thread\<rightarrow>[''tcbState_C''])}) []
   (getThreadState thread) (Call thread_state_ptr_get_tsType_'proc)"
   unfolding getThreadState_def 
@@ -208,12 +208,12 @@ lemma is_aligned_tcb_ptr_to_ctcb_ptr:
   done
 
 lemma sanitiseRegister_spec:
-  "\<forall>s v r. \<Gamma> \<turnstile> ({s} \<inter> \<lbrace>\<acute>v = v\<rbrace> \<inter> \<lbrace>\<acute>reg = register_from_H r\<rbrace>)
+  "\<forall>s v r. \<Gamma> \<turnstile> ({s} \<inter> \<lbrace>\<acute>v___unsigned_long = v\<rbrace> \<inter> \<lbrace>\<acute>reg = register_from_H r\<rbrace>)
                 Call sanitiseRegister_'proc
                 \<lbrace>\<acute>ret__unsigned_long = sanitiseRegister r v\<rbrace>"
   apply vcg
   apply (auto simp: C_register_defs State_H.sanitiseRegister_def
-                        ARMMachineTypes.sanitiseRegister_def word_0_sle_from_less
+                    ARMMachineTypes.sanitiseRegister_def word_0_sle_from_less
                  split: register.split)
   done
 

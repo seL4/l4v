@@ -523,31 +523,31 @@ lemma cap_lift_capEPBadge_mask_eq:
 
 lemma revokable_ccorres:
   "\<lbrakk>ccap_relation cap newCap; cmdbnode_relation rva srcMDB;
-  ccap_relation rvb srcCap; ret__unsigned_long = cap_get_tag newCap \<rbrakk> \<Longrightarrow>
+  ccap_relation rvb srcCap; ret__unsigned = cap_get_tag newCap \<rbrakk> \<Longrightarrow>
   ccorres (\<lambda>a c. from_bool a = c) newCapIsRevocable_'
            (\<lambda>_. capMasterCap cap = capMasterCap rvb \<or> is_simple_cap' cap) UNIV hs
            (return (revokable' rvb cap))
-           (IF ret__unsigned_long = scast cap_endpoint_cap THEN
-              \<acute>ret__unsigned_long :== CALL cap_endpoint_cap_get_capEPBadge(newCap);;
-              \<acute>unsigned_long_eret_2 :== CALL cap_endpoint_cap_get_capEPBadge(srcCap);;
+           (IF ret__unsigned = scast cap_endpoint_cap THEN
+              \<acute>ret__unsigned :== CALL cap_endpoint_cap_get_capEPBadge(newCap);;
+              \<acute>unsigned_eret_2 :== CALL cap_endpoint_cap_get_capEPBadge(srcCap);;
               \<acute>newCapIsRevocable :==
-                (if \<acute>ret__unsigned_long \<noteq> \<acute>unsigned_long_eret_2 then 1
+                (if \<acute>ret__unsigned \<noteq> \<acute>unsigned_eret_2 then 1
                  else 0)
             ELSE
-              IF ret__unsigned_long = scast cap_notification_cap THEN
-                \<acute>ret__unsigned_long :== CALL cap_notification_cap_get_capNtfnBadge(newCap);;
-                \<acute>unsigned_long_eret_2 :== CALL cap_notification_cap_get_capNtfnBadge(srcCap);;
+              IF ret__unsigned = scast cap_notification_cap THEN
+                \<acute>ret__unsigned :== CALL cap_notification_cap_get_capNtfnBadge(newCap);;
+                \<acute>unsigned_eret_2 :== CALL cap_notification_cap_get_capNtfnBadge(srcCap);;
                 \<acute>newCapIsRevocable :==
-                  (if \<acute>ret__unsigned_long \<noteq> \<acute>unsigned_long_eret_2 then 1
+                  (if \<acute>ret__unsigned \<noteq> \<acute>unsigned_eret_2 then 1
                    else 0)
               ELSE
-                IF ret__unsigned_long = scast cap_irq_handler_cap THEN
-                  \<acute>ret__unsigned_long :== CALL cap_get_capType(srcCap);;
+                IF ret__unsigned = scast cap_irq_handler_cap THEN
+                  \<acute>ret__unsigned :== CALL cap_get_capType(srcCap);;
                   \<acute>newCapIsRevocable :==
-                    (if \<acute>ret__unsigned_long = scast cap_irq_control_cap then 1
+                    (if \<acute>ret__unsigned = scast cap_irq_control_cap then 1
                      else 0)
                 ELSE
-                  IF ret__unsigned_long = scast cap_untyped_cap THEN
+                  IF ret__unsigned = scast cap_untyped_cap THEN
                     \<acute>newCapIsRevocable :== scast true
                   ELSE
                     IF True THEN
@@ -739,24 +739,24 @@ definition
 
 lemma cteInsert_if_helper:
   assumes cgt: "rv = cap_get_tag newCap"
-  and     rul: "\<And>s g. (s \<in> Q) = (s\<lparr> ret__unsigned_long_' := undefined,
-  unsigned_long_eret_2_':= undefined \<rparr> \<in> Q')" 
+  and     rul: "\<And>s g. (s \<in> Q) = (s\<lparr> ret__unsigned_' := undefined,
+  unsigned_eret_2_':= undefined \<rparr> \<in> Q')" 
   shows "\<Gamma> \<turnstile>\<^bsub>/UNIV\<^esub> {s. (cap_get_tag srcCap = cap_get_tag newCap 
                           \<or> is_simple_cap_tag (cap_get_tag newCap)) \<and>
             (s\<lparr>newCapIsRevocable_' := cteInsert_newCapIsRevocable_if newCap srcCap\<rparr> \<in> Q)}
           (IF rv = scast cap_endpoint_cap THEN
-               \<acute>ret__unsigned_long :== CALL cap_endpoint_cap_get_capEPBadge(newCap);;
-               \<acute>unsigned_long_eret_2 :== CALL cap_endpoint_cap_get_capEPBadge(srcCap);;
-               \<acute>newCapIsRevocable :== (if \<acute>ret__unsigned_long \<noteq> \<acute>unsigned_long_eret_2 then 1 else 0)
+               \<acute>ret__unsigned :== CALL cap_endpoint_cap_get_capEPBadge(newCap);;
+               \<acute>unsigned_eret_2 :== CALL cap_endpoint_cap_get_capEPBadge(srcCap);;
+               \<acute>newCapIsRevocable :== (if \<acute>ret__unsigned \<noteq> \<acute>unsigned_eret_2 then 1 else 0)
              ELSE
                IF rv = scast cap_notification_cap THEN
-                 \<acute>ret__unsigned_long :== CALL cap_notification_cap_get_capNtfnBadge(newCap);;
-                 \<acute>unsigned_long_eret_2 :== CALL cap_notification_cap_get_capNtfnBadge(srcCap);;
-                 \<acute>newCapIsRevocable :== (if \<acute>ret__unsigned_long \<noteq> \<acute>unsigned_long_eret_2 then 1 else 0)
+                 \<acute>ret__unsigned :== CALL cap_notification_cap_get_capNtfnBadge(newCap);;
+                 \<acute>unsigned_eret_2 :== CALL cap_notification_cap_get_capNtfnBadge(srcCap);;
+                 \<acute>newCapIsRevocable :== (if \<acute>ret__unsigned \<noteq> \<acute>unsigned_eret_2 then 1 else 0)
                ELSE
                  IF rv = scast cap_irq_handler_cap THEN
-                   \<acute>ret__unsigned_long :== CALL cap_get_capType(srcCap);;
-                   \<acute>newCapIsRevocable :== (if \<acute>ret__unsigned_long = scast cap_irq_control_cap then 1 else 0)
+                   \<acute>ret__unsigned :== CALL cap_get_capType(srcCap);;
+                   \<acute>newCapIsRevocable :== (if \<acute>ret__unsigned = scast cap_irq_control_cap then 1 else 0)
                  ELSE
                    IF rv = scast cap_untyped_cap THEN
                      \<acute>newCapIsRevocable :== scast true
@@ -1179,6 +1179,7 @@ lemma cteInsert_ccorres:
                 \<inter> {s. destSlot_' s = Ptr dest} \<inter> {s. srcSlot_' s = Ptr src} \<inter> {s. ccap_relation cap (newCap_' s)}) []
              (cteInsert cap src dest)
              (Call cteInsert_'proc)"
+thm cteInsert_body_def
   apply (cinit (no_ignore_call) lift: destSlot_' srcSlot_' newCap_' 
     simp del: return_bind simp add: Collect_const)
    apply (rule ccorres_move_c_guard_cte)
@@ -1200,7 +1201,7 @@ lemma cteInsert_ccorres:
                  apply (rule ccorres_move_c_guard_cte)
                  apply (ctac(no_vcg))
                   apply csymbr
-                  apply (erule_tac t = ret__unsigned_long in ssubst)
+                  apply (erule_tac t = ret__unsigned in ssubst)
                   apply (rule ccorres_cond_both [where R = \<top>, simplified])
                     apply (erule mdbNext_not_zero_eq)
                    apply csymbr
@@ -2023,14 +2024,14 @@ lemma emptySlot_helper:
             FI;;
             IF mdbNext_CL (mdb_node_lift mdbNode) \<noteq> 0 THEN
               Guard C_Guard \<lbrace>hrs_htd \<acute>t_hrs \<Turnstile>\<^sub>t  nextcte\<rbrace>
-               (\<acute>ret__unsigned_long :== CALL mdb_node_get_mdbFirstBadged(h_val (hrs_mem \<acute>t_hrs)
+               (\<acute>ret__unsigned :== CALL mdb_node_get_mdbFirstBadged(h_val (hrs_mem \<acute>t_hrs)
                nextmdb));;
-              \<acute>ret__int :== (if \<acute>ret__unsigned_long \<noteq> 0 then 1 else 0);;
+              \<acute>ret__int :== (if \<acute>ret__unsigned \<noteq> 0 then 1 else 0);;
               IF \<acute>ret__int \<noteq> 0 THEN
                 SKIP
               ELSE
-                \<acute>ret__unsigned_long :== CALL mdb_node_get_mdbFirstBadged(mdbNode);;
-                \<acute>ret__int :== (if \<acute>ret__unsigned_long \<noteq> 0 then 1 else 0)
+                \<acute>ret__unsigned :== CALL mdb_node_get_mdbFirstBadged(mdbNode);;
+                \<acute>ret__int :== (if \<acute>ret__unsigned \<noteq> 0 then 1 else 0)
               FI;;
               Guard C_Guard \<lbrace>hrs_htd \<acute>t_hrs \<Turnstile>\<^sub>t  nextcte\<rbrace>
                (CALL mdb_node_ptr_set_mdbFirstBadged(nextmdb,scast \<acute>ret__int))
@@ -2377,7 +2378,7 @@ lemma emptySlot_ccorres:
     -- "*** link between abstract and concrete conditionals ***"
 
       apply clarsimp
-      apply (subgoal_tac "\<exists> cap'. ret__unsigned_long = cap_get_tag cap'  
+      apply (subgoal_tac "\<exists> cap'. ret__unsigned = cap_get_tag cap'  
                           \<and> ccap_relation (cteCap rv) cap'   ")
        apply (insert not_NullCap_eq_not_cap_null_cap)[1]
        apply (clarsimp)
@@ -2414,9 +2415,9 @@ lemma emptySlot_ccorres:
 
       -- "--- instruction: assignements on C side"
       apply csymbr
-      apply (erule_tac t = ret__unsigned_long in ssubst)
+      apply (erule_tac t = ret__unsigned in ssubst)
       apply csymbr
-      apply (erule_tac t = ret__unsigned_long in ssubst)
+      apply (erule_tac t = ret__unsigned in ssubst)
       apply csymbr
       -- "--- instruction: updateMDB (mdbPrev rva) (mdbNext_update \<dots>) but with Ptr\<dots>\<noteq> NULL on C side"
       apply (simp only:Ptr_not_null_pointer_not_zero) --"replaces Ptr p \<noteq> NULL with p\<noteq>0"
@@ -3009,8 +3010,8 @@ lemma generic_frame_cap_size[simp]:
 
 lemma cap_get_capSizeBits_spec:
   "\<forall>s. \<Gamma> \<turnstile> {s}
-       \<acute>ret__unsigned :== PROC cap_get_capSizeBits(\<acute>cap)
-       \<lbrace>\<acute>ret__unsigned = of_nat (get_capSizeBits_CL (cap_lift \<^bsup>s\<^esup>cap))\<rbrace>"
+       \<acute>ret__unsigned_long :== PROC cap_get_capSizeBits(\<acute>cap)
+       \<lbrace>\<acute>ret__unsigned_long = of_nat (get_capSizeBits_CL (cap_lift \<^bsup>s\<^esup>cap))\<rbrace>"
   apply vcg
   apply (clarsimp simp: get_capSizeBits_CL_def)
   apply (intro conjI impI)

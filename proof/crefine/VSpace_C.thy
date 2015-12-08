@@ -835,7 +835,7 @@ lemma lookupPTSlot_ccorres:
    apply csymbr
    apply csymbr
    apply (rule ccorres_abstract_cleanup)
-   apply (rule_tac P="(ret__unsigned_long = scast pde_pde_coarse) = (isPageTablePDE rv)"
+   apply (rule_tac P="(ret__unsigned = scast pde_pde_coarse) = (isPageTablePDE rv)"
                in ccorres_gen_asm2)
    apply (rule ccorres_cond2'[where R=\<top>])
      apply (clarsimp simp: Collect_const_mem)

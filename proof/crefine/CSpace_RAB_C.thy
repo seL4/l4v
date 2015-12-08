@@ -252,7 +252,7 @@ next
      apply (erule_tac t = capptr in ssubst)
      apply csymbr+
      apply (simp add: cap_get_tag_isCap split del: split_if)
-     apply (thin_tac "ret__unsigned_long = X" for X)
+     apply (thin_tac "ret__unsigned = X" for X)
      apply (rule ccorres_split_throws [where P = "?P"])
       apply (rule_tac G' = "\<lambda>w_rightsMask. ({s. nodeCap_' s = nodeCap} 
                               \<inter> {s. unat (n_bits_' s) = guard'})"

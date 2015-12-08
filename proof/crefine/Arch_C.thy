@@ -778,7 +778,7 @@ lemma decodeARMPageTableInvocation_ccorres:
                           del: Collect_const)
               apply (rule_tac Q'="\<lambda>s. \<exists>v. cslift s (pde_Ptr (capPDBasePtr (capCap (fst (extraCaps ! 0)))
                                                              + (args ! 0 >> 20 << 2))) = Some v
-                                      \<and> cpde_relation rva v \<and> ret__unsigned_long_' s = pde_get_tag v"
+                                      \<and> cpde_relation rva v \<and> ret__unsigned_' s = pde_get_tag v"
                           in ccorres_if_cond_throws2[rotated -1, where Q=\<top>])
                  apply vcg
                 apply clarsimp
@@ -2467,7 +2467,7 @@ lemma resolveVAddr_ccorres:
    apply (rule ccorres_pre_getObject_pde)
    apply csymbr+
    apply (rule ccorres_abstract_cleanup)
-   apply (rule_tac P="(ret__unsigned_long = scast pde_pde_coarse) = (isPageTablePDE rv)"
+   apply (rule_tac P="(ret__unsigned = scast pde_pde_coarse) = (isPageTablePDE rv)"
                in ccorres_gen_asm2)
    apply (rule_tac P="isPageTablePDE rv" in ccorres_cases)
     apply (clarsimp simp: pde_tag_defs)
@@ -2484,7 +2484,7 @@ lemma resolveVAddr_ccorres:
     apply (rule ccorres_rhs_assoc)+
     apply csymbr
     apply (rule ccorres_abstract_cleanup)
-    apply (rule_tac P="(ret__unsigned_long = word1)" in ccorres_gen_asm2)
+    apply (rule_tac P="(ret__unsigned = word1)" in ccorres_gen_asm2)
     apply (rule ccorres_stateAssert)
     apply (rule_tac val="Ptr (ptrFromPAddr word1)" and R=\<top>
                   in ccorres_symb_exec_r_known_rv_UNIV[where xf'=pt_' and R'=UNIV])
@@ -2514,7 +2514,7 @@ lemma resolveVAddr_ccorres:
                elim: clift_array_assertion_imp)[1]
    apply (rule_tac P'="{s. \<exists>v. cslift s (pde_Ptr (lookup_pd_slot pd vaddr)) = Some v
                                 \<and> cpde_relation rv v
-                                \<and> ret__unsigned_long = pde_get_tag v}"
+                                \<and> ret__unsigned = pde_get_tag v}"
               in ccorres_from_vcg_might_throw[where P=\<top>])
    apply (rule allI, rule conseqPre, vcg)
    apply clarsimp
@@ -3314,9 +3314,9 @@ lemma injection_handler_liftE:
   by (simp add:injection_handler_def)
 
 lemma pageBase_spec:
-"\<forall>s. \<Gamma> \<turnstile> \<lbrace>s. \<acute>size && mask 2 = \<acute>size\<rbrace>
+"\<forall>s. \<Gamma> \<turnstile> \<lbrace>s. \<acute>size___unsigned_long && mask 2 = \<acute>size___unsigned_long\<rbrace>
   Call pageBase_'proc
-  \<lbrace> \<acute>ret__unsigned_long = \<^bsup>s\<^esup>vaddr && ~~ (2 ^ pageBitsForSize (gen_framesize_to_H \<^bsup>s\<^esup>size) - 1)\<rbrace>"
+  \<lbrace> \<acute>ret__unsigned_long = \<^bsup>s\<^esup>vaddr && ~~ (2 ^ pageBitsForSize (gen_framesize_to_H \<^bsup>s\<^esup>size___unsigned_long) - 1)\<rbrace>"
   apply vcg
   apply (simp add:pageBitsForSize_def split:vmpage_size.splits)
   done
