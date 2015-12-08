@@ -558,10 +558,10 @@ lemma add_cont_step:
 lemma simpl_to_graph_Cond:
   "\<lbrakk> nn = NextNode m; GGamma gf = Some gfc; function_graph gfc m = Some (Cond l r cond);
         eq_impl nn eqs (\<lambda>gst sst. l \<noteq> r \<longrightarrow> cond gst = (sst \<in> C)) (P \<inter> I);
-        simpl_to_graph SGamma GGamma gf l (add_cont c con) (Suc n) Q (P \<inter> C) I eqs2 out_eqs;
         eq_impl nn eqs eqs2 (P \<inter> I \<inter> C);
-        simpl_to_graph SGamma GGamma gf r (add_cont d con) (Suc n) Q (P \<inter> - C) I eqs3 out_eqs;
-        eq_impl nn eqs eqs3 (P \<inter> I \<inter> (- C)) \<rbrakk>
+        simpl_to_graph SGamma GGamma gf l (add_cont c con) (Suc n) Q (P \<inter> C) I eqs2 out_eqs;
+        eq_impl nn eqs eqs3 (P \<inter> I \<inter> (- C));
+        simpl_to_graph SGamma GGamma gf r (add_cont d con) (Suc n) Q (P \<inter> - C) I eqs3 out_eqs \<rbrakk>
     \<Longrightarrow> simpl_to_graph SGamma GGamma gf nn (add_cont (com.Cond C c d) con) n Q P I eqs out_eqs"
   apply clarsimp
   apply (rule_tac S=C in simpl_to_graph_cases)
@@ -1246,8 +1246,8 @@ lemma simpl_to_graph_Err_cond:
   "\<lbrakk> nn = NextNode m; GGamma fname = Some gf;
       function_graph gf m = Some (node.Cond l Err Check);
       eq_impl nn eqs (\<lambda>gst sst. Check gst) (P \<inter> I);
-      simpl_to_graph SGamma GGamma fname l com n traces P I eqs2 out_eqs;
-      eq_impl nn eqs eqs2 (P \<inter> I) \<rbrakk>
+      eq_impl nn eqs eqs2 (P \<inter> I);
+      simpl_to_graph SGamma GGamma fname l com n traces P I eqs2 out_eqs \<rbrakk>
     \<Longrightarrow> simpl_to_graph SGamma GGamma fname nn com n traces P I eqs out_eqs"
   apply (rule_tac i=1 and j=0 in simpl_to_graph_step_general[rotated -1])
     apply simp
