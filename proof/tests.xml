@@ -34,7 +34,7 @@
     </sequence>
 
     <!-- DSpec / DRefine -->
-    <sequence depends="DSpec">
+    <sequence depends="DSpec Refine">
         <test name="DBaseRefine">make DBaseRefine</test>
         <test name="DRefine">make DRefine</test>
     </sequence>
@@ -43,7 +43,7 @@
     <sequence depends="AInvs">
         <test name="Access">make Access</test>
         <test name="InfoFlow">make InfoFlow</test>
-        <test name="InfoFlowC" depends="CBaseRefine">make InfoFlowC</test>
+        <test name="InfoFlowC" depends="CRefine">make InfoFlowC</test>
     </sequence>
 
     <!-- Access Control and capDL -->
