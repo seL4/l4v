@@ -33,9 +33,10 @@ FASTPATH=yes
 CSPEC_DIR=..
 CONFIG_DOMAIN_SCHEDULE=config.c
 
-.PHONY: newdefault
-
-newdefault: kernel_all.c_pp theories
+# called by ../../spec/Makefile
+cspec: kernel_all.c_pp ${UMM_TYPES} theories
+# theories is defined in seL4 makefile
+.PHONY: cspec
 
 # Create "umm_types" if necessary.
 ${UMM_TYPES}: kernel_all.c_pp
