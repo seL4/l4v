@@ -152,11 +152,12 @@ def run_test(test, status_queue, verbose=False):
     atexit.register(lambda: kill_family(process.pid))
 
     # Setup an alarm at the timeout.
-    was_timeout = False
+    was_timeout = [False] # Wrap in list to prevent do_timeout getting the wrong variable scope
     def do_timeout():
-        was_timeout = True
+        was_timeout[0] = True
         kill_family(process.pid)
     timer = threading.Timer(test.timeout, do_timeout)
+    timer.start()
 
     # Wait for the command to finish.
     with memusage.process_poller(process.pid) as m:
@@ -166,14 +167,14 @@ def run_test(test, status_queue, verbose=False):
     # Cancel the alarm. Small race here (if the timer fires just after the
     # process finished), but the returncode of our process should still be 0,
     # and hence we won't interpret the result as a timeout.
-    if not was_timeout:
+    if not was_timeout[0]:
         timer.cancel()
 
     if output == None:
         output = ""
     if process.returncode == 0:
         status = "pass"
-    elif was_timeout:
+    elif was_timeout[0]:
         status = "TIMEOUT"
     else:
         status = "FAILED"
@@ -187,7 +188,7 @@ def run_test(test, status_queue, verbose=False):
 def print_test_line_start(test_name, legacy=False):
     if legacy:
         return
-    print("  Running %-25s " % (test_name + " ..."))
+    print("  Started %-25s " % (test_name + " ..."))
     sys.stdout.flush()
 
 def print_test_line(test_name, color, status, time_taken, mem, legacy=False):
@@ -300,7 +301,23 @@ def main():
     # Output status.
     status_queue = Queue.Queue()
 
+    # If run from a tty and -v is off, we also track
+    # current jobs on the bottom line of the tty.
+    # We cache this status line to help us wipe it later.
+    tty_status_line = [""]
+    def wipe_tty_status():
+        if tty_status_line[0]:
+            print(" " * len(tty_status_line[0]) + "\r", end="")
+            sys.stdout.flush()
+            tty_status_line[0] = ""
+
     while tests_queue or current_jobs:
+        # Update status line with pending jobs.
+        if current_jobs and os.isatty(sys.stdout.fileno()):
+            tty_status_line[0] = "Running: " + ", ".join(sorted(current_jobs.keys()))
+            print(tty_status_line[0] + "\r", end="")
+            sys.stdout.flush()
+
         popped_test = False
         # Check if we have a job slot.
         if len(current_jobs) < args.jobs:
@@ -310,6 +327,7 @@ def main():
                 if t.depends.issubset(passed_tests):
                     test_thread = threading.Thread(target=run_test, name=t.name,
                                                    args=(t, status_queue, args.verbose))
+                    wipe_tty_status()
                     print_test_line_start(t.name, args.legacy_status)
                     test_thread.start()
                     current_jobs[t.name] = test_thread
@@ -318,6 +336,7 @@ def main():
                     break
                 # Non-blocked but depends on a failed test. Remove it.
                 if len(t.depends & failed_tests) > 0:
+                    wipe_tty_status()
                     print_test_line(t.name, ANSI_YELLOW, "skipped", None, None, args.legacy_status)
                     failed_tests.add(t.name)
                     del tests_queue[i]
@@ -332,6 +351,7 @@ def main():
 
                 status, log, time_taken, mem = info['status'], info['output'], info['real_time'], info['mem_usage']
                 # Print result.
+                wipe_tty_status()
                 if status != 'pass':
                     failed_tests.add(name)
                     failed_test_log.append((name, log, time_taken))
@@ -340,8 +360,8 @@ def main():
                     passed_tests.add(name)
                     print_test_line(name, ANSI_GREEN, status, time_taken, mem, args.legacy_status)
         except Queue.Empty:
-            # Nothing to do
             pass
+    wipe_tty_status()
 
     # Print failure summaries unless requested not to.
     if not args.brief and len(failed_test_log) > 0:
