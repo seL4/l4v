@@ -51,7 +51,7 @@ ANSI_BOLD = "\033[1m"
 
 def output_color(color, s):
     """Wrap the given string in the given color."""
-    if os.isatty(sys.stdout.fileno()):
+    if sys.stdout.isatty():
         return color + s + ANSI_RESET
     return s
 
@@ -296,7 +296,7 @@ def main():
     failed_test_log = []
 
     # Use a simple list to store the pending queue. We track the dependencies separately.
-    tests_queue = [t for t in tests_to_run]
+    tests_queue = tests_to_run[:]
     # Current jobs.
     current_jobs = {}
     # Output status.
@@ -314,12 +314,11 @@ def main():
 
     while tests_queue or current_jobs:
         # Update status line with pending jobs.
-        if current_jobs and os.isatty(sys.stdout.fileno()):
+        if current_jobs and sys.stdout.isatty():
             tty_status_line[0] = "Running: " + ", ".join(sorted(current_jobs.keys()))
             print(tty_status_line[0] + "\r", end="")
             sys.stdout.flush()
 
-        popped_test = False
         # Check if we have a job slot.
         if len(current_jobs) < args.jobs:
             # Find the first non-blocked test and handle it.
