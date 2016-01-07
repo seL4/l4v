@@ -157,7 +157,8 @@ def run_test(test, status_queue, verbose=False):
         was_timeout[0] = True
         kill_family(process.pid)
     timer = threading.Timer(test.timeout, do_timeout)
-    timer.start()
+    if test.timeout > 0:
+        timer.start()
 
     # Wait for the command to finish.
     with memusage.process_poller(process.pid) as m:
