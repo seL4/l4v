@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 #
-# Copyright 2015, NICTA
+# Copyright 2016, NICTA
 #
 # This software may be distributed and modified according to the terms of
 # the BSD 2-Clause license. Note that NO WARRANTY is provided.
@@ -11,5 +11,5 @@
 # @TAG(NICTA_BSD)
 #
 
-from .exception import IsaSymbolsException
-from .isasymbols import Symbol, make_translator, Translator
+class IsaSymbolsException(Exception):
+    pass

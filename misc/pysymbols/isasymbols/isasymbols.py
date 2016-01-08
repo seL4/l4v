@@ -12,9 +12,7 @@
 #
 
 import codecs, collections, numbers, re, types
-
-class IsaSymbolsException(Exception):
-    pass
+from .exception import IsaSymbolsException
 
 class Symbol(object):
     def __init__(self, ascii_text, code_point, group=None, font=None,
