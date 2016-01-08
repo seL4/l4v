@@ -13,3 +13,4 @@
 
 from .exception import IsaSymbolsException
 from .isasymbols import Symbol, make_translator, Translator
+from .proof import Proof
