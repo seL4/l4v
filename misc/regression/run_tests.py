@@ -314,7 +314,7 @@ def main():
 
     while tests_queue or current_jobs:
         # Update status line with pending jobs.
-        if current_jobs and sys.stdout.isatty():
+        if current_jobs and sys.stdout.isatty() and not args.verbose:
             tty_status_line[0] = "Running: " + ", ".join(sorted(current_jobs.keys()))
             print(tty_status_line[0] + "\r", end="")
             sys.stdout.flush()
