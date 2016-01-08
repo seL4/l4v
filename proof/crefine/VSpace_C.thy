@@ -1716,9 +1716,9 @@ definition
 lemma doFlush_ccorres:
   "ccorres dc xfdc (\<lambda>s. vs \<le> ve \<and> ps \<le> ps + (ve - vs) \<and> vs && mask 5 = ps && mask 5
         \<and> unat (ve - vs) \<le> gsMaxObjectSize s)
-     (\<lbrace>flushtype_relation t \<acute>label___int\<rbrace> \<inter> \<lbrace>\<acute>start = vs\<rbrace> \<inter> \<lbrace>\<acute>end = ve\<rbrace> \<inter> \<lbrace>\<acute>pstart = ps\<rbrace>) []
+     (\<lbrace>flushtype_relation t \<acute>invLabel___int\<rbrace> \<inter> \<lbrace>\<acute>start = vs\<rbrace> \<inter> \<lbrace>\<acute>end = ve\<rbrace> \<inter> \<lbrace>\<acute>pstart = ps\<rbrace>) []
      (doMachineOp (doFlush t vs ve ps)) (Call doFlush_'proc)" 
-  apply (cinit' lift: label___int_' start_' end_' pstart_')
+  apply (cinit' lift: invLabel___int_' start_' end_' pstart_')
    apply (unfold doMachineOp_bind doFlush_def)
    apply (rule ccorres_Guard_Seq)
    apply (rule ccorres_basic_srnoop)
@@ -1770,12 +1770,12 @@ lemma performPageFlush_ccorres:
               and (\<lambda>s. ps \<le> ps + (ve - vs) \<and> vs && mask 5 = ps && mask 5
                   \<and> unat (ve - vs) \<le> gsMaxObjectSize s))
        (\<lbrace>\<acute>pd = Ptr pd\<rbrace> \<inter> \<lbrace>\<acute>asid = asid\<rbrace> \<inter> 
-               \<lbrace>\<acute>start = vs\<rbrace> \<inter> \<lbrace>\<acute>end =  ve\<rbrace> \<inter> \<lbrace>\<acute>pstart = ps\<rbrace> \<inter> \<lbrace>flushtype_relation typ \<acute>label___int \<rbrace>)
+               \<lbrace>\<acute>start = vs\<rbrace> \<inter> \<lbrace>\<acute>end =  ve\<rbrace> \<inter> \<lbrace>\<acute>pstart = ps\<rbrace> \<inter> \<lbrace>flushtype_relation typ \<acute>invLabel___int \<rbrace>)
        []
        (liftE (performPageInvocation (PageFlush typ vs ve ps pd asid)))
        (Call performPageFlush_'proc)"
   apply (simp only: liftE_liftM ccorres_liftM_simp)
-  apply (cinit lift: pd_' asid_' start_' end_' pstart_' label___int_')
+  apply (cinit lift: pd_' asid_' start_' end_' pstart_' invLabel___int_')
    apply (unfold when_def)
    apply (rule ccorres_cond_seq)
    apply (rule ccorres_cond2[where R=\<top>])
@@ -1860,15 +1860,15 @@ lemma setRegister_ccorres:
   done
 
 lemma wordFromMessageInfo_spec:
-  defines "mil s \<equiv> message_info_lift \<^bsup>s\<^esup>mi"
+  defines "mil s \<equiv> seL4_MessageInfo_lift \<^bsup>s\<^esup>mi"
   shows "\<forall>s. \<Gamma> \<turnstile> {s} Call wordFromMessageInfo_'proc
-                  \<lbrace>\<acute>ret__unsigned_long = (msgLabel_CL (mil s) << 12)
-                                      || (msgCapsUnwrapped_CL (mil s) << 9)
-                                      || (msgExtraCaps_CL (mil s) << 7)
-                                      || msgLength_CL (mil s)\<rbrace>"
+                  \<lbrace>\<acute>ret__unsigned_long = (label_CL (mil s) << 12)
+                                      || (capsUnwrapped_CL (mil s) << 9)
+                                      || (extraCaps_CL (mil s) << 7)
+                                      || length_CL (mil s)\<rbrace>"
   unfolding mil_def
   apply vcg
-  apply (simp add: message_info_lift_def mask_shift_simps word_sless_def word_sle_def)
+  apply (simp add: seL4_MessageInfo_lift_def mask_shift_simps word_sless_def word_sle_def)
   apply word_bitwise
   done
 
@@ -1961,12 +1961,12 @@ lemma performPageDirectoryInvocationFlush_ccorres:
               and (\<lambda>s. ps \<le> ps + (ve - vs) \<and> vs && mask 5 = ps && mask 5
                   \<and> unat (ve - vs) \<le> gsMaxObjectSize s))
        (\<lbrace>\<acute>pd = Ptr pd\<rbrace> \<inter> \<lbrace>\<acute>asid = asid\<rbrace> \<inter> 
-               \<lbrace>\<acute>start = vs\<rbrace> \<inter> \<lbrace>\<acute>end =  ve\<rbrace> \<inter> \<lbrace>\<acute>pstart = ps\<rbrace> \<inter> \<lbrace>flushtype_relation typ \<acute>label___int \<rbrace>)
+               \<lbrace>\<acute>start = vs\<rbrace> \<inter> \<lbrace>\<acute>end =  ve\<rbrace> \<inter> \<lbrace>\<acute>pstart = ps\<rbrace> \<inter> \<lbrace>flushtype_relation typ \<acute>invLabel___int \<rbrace>)
        []
        (liftE (performPageDirectoryInvocation (PageDirectoryFlush typ vs ve ps pd asid)))
        (Call performPDFlush_'proc)"
   apply (simp only: liftE_liftM ccorres_liftM_simp)
-  apply (cinit lift: pd_' asid_' start_' end_' pstart_' label___int_')
+  apply (cinit lift: pd_' asid_' start_' end_' pstart_' invLabel___int_')
    apply (unfold when_def)
    apply (rule ccorres_cond_seq)
    apply (rule ccorres_cond2[where R=\<top>])

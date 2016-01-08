@@ -156,15 +156,15 @@ lemma decodeIRQHandlerInvocation_ccorres:
               and (\<lambda>s. \<forall>v \<in> set extraCaps.
                              ex_cte_cap_wp_to' isCNodeCap (snd v) s))
        (UNIV
-            \<inter> {s. label_' s = label} 
-            \<inter> {s. unat (length_' s) = length args} 
+            \<inter> {s. invLabel_' s = label} 
+            \<inter> {s. unat (length___unsigned_long_' s) = length args} 
             \<inter> {s. irq_' s = ucast irq}
-            \<inter> {s. extraCaps_' s = extraCaps'}
+            \<inter> {s. excaps_' s = extraCaps'}
             \<inter> {s. buffer_' s = option_to_ptr buffer}) []
      (decodeIRQHandlerInvocation label args irq extraCaps
             >>= invocationCatch thread isBlocking isCall InvokeIRQHandler)
      (Call decodeIRQHandlerInvocation_'proc)"
-  apply (cinit' lift: label_' length_' irq_' extraCaps_' buffer_' 
+  apply (cinit' lift: invLabel_' length___unsigned_long_' irq_' excaps_' buffer_' 
            simp: decodeIRQHandlerInvocation_def invocation_eq_use_types)
    apply (rule ccorres_Cond_rhs)
     apply (simp add: returnOk_bind ccorres_invocationCatch_Inr)
@@ -407,14 +407,14 @@ lemma decodeIRQControlInvocation_ccorres:
               and (\<lambda>s. \<forall>v \<in> set extraCaps. s \<turnstile>' fst v)
               and sysargs_rel args buffer)
        (UNIV
-            \<inter> {s. label_' s = label} \<inter> {s. srcSlot_' s = cte_Ptr slot}
-            \<inter> {s. unat (length_' s) = length args}
-            \<inter> {s. extraCaps_' s = extraCaps'}
+            \<inter> {s. invLabel_' s = label} \<inter> {s. srcSlot_' s = cte_Ptr slot}
+            \<inter> {s. unat (length___unsigned_long_' s) = length args}
+            \<inter> {s. excaps_' s = extraCaps'}
             \<inter> {s. buffer_' s = option_to_ptr buffer}) []
      (decodeIRQControlInvocation label args slot (map fst extraCaps)
             >>= invocationCatch thread isBlocking isCall InvokeIRQControl)
      (Call decodeIRQControlInvocation_'proc)"
-  apply (cinit' lift: label_' srcSlot_' length_' extraCaps_' buffer_')
+  apply (cinit' lift: invLabel_' srcSlot_' length___unsigned_long_' excaps_' buffer_')
    apply (simp add: decodeIRQControlInvocation_def invocation_eq_use_types
                del: Collect_const
               cong: StateSpace.state.fold_congs globals.fold_congs)

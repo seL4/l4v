@@ -268,12 +268,12 @@ lemma is_cap_fault_simp: "is_cap_fault cf = (\<exists> x. cf=Fault_cap_fault x)"
 
 
 definition
-  message_info_to_H :: "message_info_C \<Rightarrow> Types_H.message_info"
+  message_info_to_H :: "seL4_MessageInfo_C \<Rightarrow> Types_H.message_info"
   where
-  "message_info_to_H mi \<equiv> Types_H.message_info.MI (msgLength_CL (message_info_lift mi))
-                                                  (msgExtraCaps_CL (message_info_lift mi))
-                                                  (msgCapsUnwrapped_CL (message_info_lift mi))
-                                                  (msgLabel_CL (message_info_lift mi))"
+  "message_info_to_H mi \<equiv> Types_H.message_info.MI (length_CL (seL4_MessageInfo_lift mi))
+                                                  (extraCaps_CL (seL4_MessageInfo_lift mi))
+                                                  (capsUnwrapped_CL (seL4_MessageInfo_lift mi))
+                                                  (label_CL (seL4_MessageInfo_lift mi))"
 
 
 fun
