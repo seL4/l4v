@@ -96,7 +96,6 @@ def kill_family(parent_pid):
         else:
             process_list.append(child)
 
-
     # Now SIGKILL everyone.
     process_list.reverse()
     for p in process_list:
@@ -148,8 +147,12 @@ def run_test(test, status_queue, verbose=False):
             print(output)
         return (False, "ERROR", output, datetime.datetime.now() - start_time, peak_mem_usage)
 
-    # If our program exits for some reason, attempt to kill the process.
-    atexit.register(lambda: kill_family(process.pid))
+    # If we exit for some reason, attempt to kill our test processes.
+    process_running = True
+    def emergency_stop():
+        if process_running:
+            kill_family(process.pid)
+    atexit.register(emergency_stop)
 
     # Setup an alarm at the timeout.
     was_timeout = [False] # Wrap in list to prevent do_timeout getting the wrong variable scope
@@ -164,6 +167,7 @@ def run_test(test, status_queue, verbose=False):
     with memusage.process_poller(process.pid) as m:
         (output, _) = process.communicate()
         peak_mem_usage = m.peak_mem_usage()
+    process_running = False
 
     # Cancel the alarm. Small race here (if the timer fires just after the
     # process finished), but the returncode of our process should still be 0,
