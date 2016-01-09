@@ -62,8 +62,8 @@ definition
   bind :: "('s, 'a) nondet_monad \<Rightarrow> ('a \<Rightarrow> ('s, 'b) nondet_monad) \<Rightarrow> 
            ('s, 'b) nondet_monad" (infixl ">>=" 60)
   where
-  "bind f g \<equiv> \<lambda>s. (\<Union>(fst ` split g ` fst (f s)),
-                   True \<in> snd ` split g ` fst (f s) \<or> snd (f s))"
+  "bind f g \<equiv> \<lambda>s. (\<Union>(fst ` case_prod g ` fst (f s)),
+                   True \<in> snd ` case_prod g ` fst (f s) \<or> snd (f s))"
 
 text {*
   Sometimes it is convenient to write @{text bind} in reverse order.
@@ -99,7 +99,7 @@ text {*
 *}
 definition
   select :: "'a set \<Rightarrow> ('s,'a) nondet_monad" where
-  "select A \<equiv> \<lambda>s. (A <*> {s}, False)"
+  "select A \<equiv> \<lambda>s. (A \<times> {s}, False)"
 
 definition
   alternative :: "('s,'a) nondet_monad \<Rightarrow> ('s,'a) nondet_monad \<Rightarrow> 
@@ -180,7 +180,7 @@ lemma simpler_modify_def:
 text {* Execute the given monad when the condition is true, 
   return @{text "()"} otherwise. *}
 definition
-  when :: "bool \<Rightarrow> ('s, unit) nondet_monad \<Rightarrow> 
+  "when" :: "bool \<Rightarrow> ('s, unit) nondet_monad \<Rightarrow> 
            ('s, unit) nondet_monad" where 
   "when P m \<equiv> if P then m else return ()"
 
