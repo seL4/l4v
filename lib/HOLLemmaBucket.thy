@@ -320,7 +320,7 @@ lemma le_imp_diff_le:
   shows "j \<le> k \<Longrightarrow> j - n \<le> k" by simp
 
 lemma image_Collect2:
-  "split f ` {x. P (fst x) (snd x)} = {f x y |x y. P x y}"
+  "case_prod f ` {x. P (fst x) (snd x)} = {f x y |x y. P x y}"
   by (subst image_Collect) simp
 
 lemma image_id':
@@ -668,11 +668,7 @@ lemma neq_Nil_lengthI:
   "Suc 0 \<le> length xs \<Longrightarrow> xs \<noteq> []"
   by (cases xs, auto)
 
-lemma ex_with_length:
-  "\<exists>x. length x = n"
-  apply (rule exI[where x="replicate n arbitrary"])
-  apply simp
-  done
+lemmas ex_with_length = Ex_list_of_length
 
 lemma in_singleton:
   "S = {x} \<Longrightarrow> x \<in> S"
@@ -758,7 +754,7 @@ lemma sum_all_ex [simp]:
   apply (metis Inl_not_Inr sum.exhaust)
   done
 
-lemma split_distrib: "split (\<lambda>a b. T (f a b)) = (\<lambda>x. T (split (\<lambda>a b. f a b) x))"
+lemma split_distrib: "case_prod (\<lambda>a b. T (f a b)) = (\<lambda>x. T (case_prod (\<lambda>a b. f a b) x))"
   apply (clarsimp simp: split_def)
   done
 

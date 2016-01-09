@@ -133,10 +133,13 @@ simproc_setup
 simproc_setup
   unsigned_norm_neg1 ("-numeral (num.Bit1 num)::'a::len word") = {* unsigned_norm true *}
 
+declare word_pow_0 [simp]
+
 lemma minus_one_norm:
  "(-1 :: ('a :: len) word)
-    = of_nat (2 ^ len_of TYPE('a) - 1)"
+    = of_nat (2 ^ len_of TYPE('a) - 1)" 
   by (simp add:of_nat_diff)
+
 lemma "f (7 :: 2 word) = f 3"
   apply simp
   done
@@ -154,7 +157,6 @@ lemma "f (-1) = f (13 :: 'a::len word)"
   oops
 
 lemma "f (-2) = f (8589934590 :: word32)"
-  using [[simp_trace]]
   apply simp
   done
 
