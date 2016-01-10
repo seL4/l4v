@@ -825,7 +825,7 @@ where
   | ThreadCap ptr \<Rightarrow>
       liftME InvokeTCB $ decode_tcb_invocation label args cap slot excaps
   | DomainCap \<Rightarrow>
-      liftME (split InvokeDomain) $ decode_domain_invocation label args excaps
+      liftME (case_prod InvokeDomain) $ decode_domain_invocation label args excaps
   | CNodeCap ptr bits _ \<Rightarrow>
       liftME InvokeCNode $ decode_cnode_invocation label args cap (map fst excaps)
   | UntypedCap ptr sz fi \<Rightarrow>
