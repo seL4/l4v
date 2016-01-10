@@ -225,7 +225,7 @@ fun append_used_rule rule used_rules = used_rules := !used_rules @ [rule]
 
 fun add_extra_rule rule extra_rules = extra_rules := !extra_rules @ [rule]
 
-fun resolve_ruleset_tac _ rs used_rules_ref n t =
+fun resolve_ruleset_tac ctxt rs used_rules_ref n t =
   let fun append_rule rule thm = Seq.map (fn thm => (append_used_rule rule used_rules_ref; thm)) thm;
   in case
     Thm.cprem_of t n |> Thm.term_of |> snd (#trips rs) (Thm.theory_of_thm t)
@@ -234,18 +234,19 @@ fun resolve_ruleset_tac _ rs used_rules_ref n t =
   of Const (@{const_name Trueprop}, _) $
       (Const (@{const_name triple_judgement}, _) $ _ $ f $ _) => let
         val ts = Net.unify_term (#1 (#rules rs)) f |> order_list |> rev;
-        val combapps = Seq.maps (fn combapp => Seq.map (fn combapp' => (combapp, combapp')) (rtac combapp n t))
+        val combapps = Seq.maps (fn combapp => Seq.map 
+                                      (fn combapp' => (combapp, combapp')) (resolve_tac ctxt [combapp] n t))
                                 (Seq.of_list (#combs rs)) |> Seq.list_of |> Seq.of_list;
-        fun per_rule_tac t = (fn thm => append_rule t (rtac t n thm)) ORELSE
+        fun per_rule_tac t = (fn thm => append_rule t (resolve_tac ctxt [t] n thm)) ORELSE
                              (fn _ => Seq.maps (fn combapp => append_rule t
-                                        (append_rule (#1 combapp) (rtac t n (#2 combapp)))) combapps);
+                                        (append_rule (#1 combapp) (resolve_tac ctxt [t] n (#2 combapp)))) combapps);
       in FIRST (map per_rule_tac ts) ORELSE
-         FIRST (map (fn split => fn thm => append_rule split (rtac split n thm)) (#splits rs)) end t
-    | _ => FIRST (map (fn rule => fn thm => append_rule rule (rtac rule n thm))
+         FIRST (map (fn split => fn thm => append_rule split (resolve_tac ctxt [split] n thm)) (#splits rs)) end t
+    | _ => FIRST (map (fn rule => fn thm => append_rule rule (resolve_tac ctxt [rule] n thm))
                       (map snd (#3 (#rules rs)) @ #splits rs)) t end;
 
 fun pretty_rule ctxt rule =
-  Pretty.big_list (Thm.get_name_hint rule) [Display.pretty_thm ctxt rule]
+  Pretty.big_list (Thm.get_name_hint rule) [Thm.pretty_thm ctxt rule]
            |> Pretty.string_of;
 
 fun trace_used_thms false _ _ = Seq.empty
