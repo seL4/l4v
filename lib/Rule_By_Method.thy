@@ -204,18 +204,20 @@ val parse_flags = Args.mode "schematic" -- Args.mode "raw_prop" >> (fn (b,b') =>
 
 val parse_method = Method_Closure.method_text o apfst (Config.put_generic Method.old_section_parser true)
 
-fun tac m ctxt = Method_Closure.method_evaluate m ctxt [] #> Seq.map snd;
+fun tac m ctxt =
+  Method.NO_CONTEXT_TACTIC ctxt
+    (Method_Closure.method_evaluate m ctxt []);
 
 val (rule_prems_by_method : attribute context_parser) = Scan.lift parse_flags :-- (fn flags => 
   position (Scan.repeat1 
     (with_rule_prems (not (#vars flags)) parse_method || 
       Scan.lift (Args.$$$ "_" >> (K Method.succeed_text))))) >> 
-        (fn (flags,(ms,pos)) => Thm.rule_attribute (fn context =>
+        (fn (flags,(ms,pos)) => Thm.rule_attribute [] (fn context =>
           rule_by_tac (Context.proof_of context) flags (K all_tac) (map tac ms) pos))
 
 val (rule_concl_by_method : attribute context_parser) = Scan.lift parse_flags :-- (fn flags => 
   position (with_rule_prems (not (#vars flags)) parse_method)) >> 
-    (fn (flags,(m,pos)) => Thm.rule_attribute (fn context =>
+    (fn (flags,(m,pos)) => Thm.rule_attribute [] (fn context =>
       rule_by_tac (Context.proof_of context) flags (tac m) [] pos))
 
 val _ = Theory.setup 

@@ -1175,6 +1175,7 @@ lemma list_cases_weak_wp:
   apply (simp, rule hoare_weaken_pre, rule assms, simp)+
   done
 
+
 lemmas hoare_FalseE_R = hoare_FalseE[where E="\<top>\<top>", folded validE_R_def]
 
 lemma hoare_vcg_if_lift2:

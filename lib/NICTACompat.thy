@@ -17,7 +17,6 @@ imports
   "~~/src/HOL/Word/WordBitwise"
   SignedWords
   NICTATools
-  Eisbach_Compat
 begin
 
 (* all theories should import from NICTACompat rather than any ancestors *)
@@ -182,5 +181,10 @@ lemma bin_nth_minus_Bit0[simp]:
 lemma bin_nth_minus_Bit1[simp]:
   "0 < n \<Longrightarrow> bin_nth (numeral (num.Bit1 w)) n = bin_nth (numeral w) (n - 1)"
   by (cases n, simp_all)
+
+abbreviation (input)
+  split   :: "('a \<Rightarrow> 'b \<Rightarrow> 'c) \<Rightarrow> 'a \<times> 'b \<Rightarrow> 'c"
+where
+  "split == case_prod"
 
 end

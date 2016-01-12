@@ -1426,7 +1426,7 @@ lemmas hoare_wp_simps [wp_split] =
   vcg_rhs_simps [THEN hoare_post_eqE2] vcg_rhs_simps [THEN hoare_post_eqE_R]
   if_apply_reduct if_apply_reductE if_apply_reductE_R TrueI
 
-schematic_lemma if_apply_test: "\<lbrace>?Q\<rbrace> (if A then returnOk else K fail) x \<lbrace>P\<rbrace>,\<lbrace>E\<rbrace>"
+schematic_goal if_apply_test: "\<lbrace>?Q\<rbrace> (if A then returnOk else K fail) x \<lbrace>P\<rbrace>,\<lbrace>E\<rbrace>"
   apply (wp | unfold K_def)+
   done
 

@@ -66,7 +66,7 @@ let
    * we can produce a "warning" icon in Isabelle/jEdit. *)
   val _ =
     if length results > 0 then
-      warning (message results |> Pretty.str_of)
+      warning (message results |> Pretty.string_of)
     else ()
 in
   (false, ("", []))

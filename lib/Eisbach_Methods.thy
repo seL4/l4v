@@ -24,7 +24,12 @@ section \<open>Debugging methods\<close>
 method print_concl = (match conclusion in P for P \<Rightarrow> \<open>print_term P\<close>)
 
 method_setup print_raw_goal = \<open>Scan.succeed (fn ctxt => fn facts => 
-  (fn st => (Output.writeln (Display.string_of_thm ctxt st); Seq.single ([],st))))\<close>
+  (fn (ctxt, st) => (Output.writeln (Thm.string_of_thm ctxt st); 
+    Seq.make_results (Seq.single (ctxt, st)))))\<close>
+
+ML \<open>fun method_evaluate text ctxt facts = 
+  Method.NO_CONTEXT_TACTIC ctxt
+    (Method_Closure.method_evaluate text ctxt facts)\<close>
 
 
 method_setup print_headgoal = 
@@ -39,42 +44,39 @@ section \<open>Simple Combinators\<close>
 method_setup defer_tac = \<open>Scan.succeed (fn _ => SIMPLE_METHOD (defer_tac 1))\<close>
 
 method_setup all =
- \<open>Method_Closure.parse_method >> (fn m => fn ctxt => fn facts =>
+ \<open>Method_Closure.method_text >> (fn m => fn ctxt => fn facts =>
    let
      fun tac i st' =
        Goal.restrict i 1 st'
-       |> Method_Closure.method_evaluate m ctxt facts
-       |> Seq.map (Goal.unrestrict i o snd)
+       |> method_evaluate m ctxt facts
+       |> Seq.map (Goal.unrestrict i)
 
    in SIMPLE_METHOD (ALLGOALS tac) facts end)
 \<close>
 
 method_setup determ =
- \<open>Method_Closure.parse_method >> (fn m => fn ctxt => fn facts =>
+ \<open>Method_Closure.method_text >> (fn m => fn ctxt => fn facts =>
    let
-     fun tac st' =
-       Method_Closure.method_evaluate m ctxt facts st'
-       |> Seq.map snd
+     fun tac st' = method_evaluate m ctxt facts st'
 
    in SIMPLE_METHOD (DETERM tac) facts end)
 \<close>
  
 method_setup timeit =
- \<open>Method_Closure.parse_method >> (fn m => fn ctxt => fn facts =>
+ \<open>Method_Closure.method_text >> (fn m => fn ctxt => fn facts =>
    let 
      fun timed_tac st seq = Seq.make (fn () => Option.map (apsnd (timed_tac st)) 
        (timeit (fn () => (Seq.pull seq))));
 
      fun tac st' =
-       timed_tac st' (Method_Closure.method_evaluate m ctxt facts st')
-       |> Seq.map snd;
+       timed_tac st' (method_evaluate m ctxt facts st');
 
    in SIMPLE_METHOD tac [] end)
 \<close>
  
  
 method_setup timeout =
- \<open>Scan.lift Parse.int -- Method_Closure.parse_method >> (fn (i,m) => fn ctxt => fn facts =>
+ \<open>Scan.lift Parse.int -- Method_Closure.method_text >> (fn (i,m) => fn ctxt => fn facts =>
    let 
      fun str_of_goal th = Pretty.string_of (Goal_Display.pretty_goal ctxt th);
      
@@ -84,10 +86,8 @@ method_setup timeout =
      fun timed_tac st seq = Seq.make (limit st (fn () => Option.map (apsnd (timed_tac st)) 
        (Seq.pull seq)));
        
-   
      fun tac st' =
-       timed_tac st' (Method_Closure.method_evaluate m ctxt facts st')
-       |> Seq.map snd;
+       timed_tac st' (method_evaluate m ctxt facts st');
 
    in SIMPLE_METHOD tac [] end)
 \<close>
@@ -99,10 +99,10 @@ text \<open>The following @{text fails} and @{text succeeds} methods protect the
       The @{text fails} method inverts success, only succeeding if the given method would fail.\<close>
 
 method_setup fails =
- \<open>Method_Closure.parse_method >> (fn m => fn ctxt => fn facts =>
+ \<open>Method_Closure.method_text >> (fn m => fn ctxt => fn facts =>
    let
      fun fail_tac st' = 
-       (case Seq.pull (Method_Closure.method_evaluate m ctxt facts st') of
+       (case Seq.pull (method_evaluate m ctxt facts st') of
           SOME _ => Seq.empty
         | NONE => Seq.single st')
 
@@ -110,10 +110,10 @@ method_setup fails =
 \<close>
 
 method_setup succeeds =
- \<open>Method_Closure.parse_method >> (fn m => fn ctxt => fn facts =>
+ \<open>Method_Closure.method_text >> (fn m => fn ctxt => fn facts =>
    let
      fun can_tac st' = 
-       (case Seq.pull (Method_Closure.method_evaluate m ctxt facts st') of
+       (case Seq.pull (method_evaluate m ctxt facts st') of
           SOME (st'',_) => Seq.single st'
         | NONE => Seq.empty)
 
