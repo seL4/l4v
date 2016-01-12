@@ -1974,22 +1974,15 @@ lemma simpler_updateObject_def:
           tcbIPCBufferSlot_def
           tcbCallerSlot_def tcbReplySlot_def
           tcbCTableSlot_def tcbVTableSlot_def)
-   apply (intro conjI impI)
-     apply simp_all
-        apply (clarsimp simp:alignCheck_def unless_def when_def not_less[symmetric]
-          alignError_def is_aligned_mask magnitudeCheck_def 
-          cte_update_def return_def tcbIPCBufferSlot_def
-          tcbCallerSlot_def tcbReplySlot_def
-          tcbCTableSlot_def tcbVTableSlot_def objBits_simps
-          cteSizeBits_def split:option.splits,
-          (fastforce simp:return_def fail_def bind_def | intro conjI)+)+
-        apply (clarsimp simp:alignCheck_def unless_def when_def not_less[symmetric]
-          alignError_def is_aligned_mask magnitudeCheck_def 
-          cte_update_def return_def tcbIPCBufferSlot_def
-          tcbCallerSlot_def tcbReplySlot_def bind_def fail_def
-          tcbCTableSlot_def tcbVTableSlot_def objBits_simps
-          cteSizeBits_def split:option.splits)+
-   done
+   by (intro conjI impI;
+        clarsimp simp:alignCheck_def unless_def when_def not_less[symmetric]
+         alignError_def is_aligned_mask magnitudeCheck_def 
+         cte_update_def return_def tcbIPCBufferSlot_def
+         tcbCallerSlot_def tcbReplySlot_def
+         tcbCTableSlot_def tcbVTableSlot_def objBits_simps
+         cteSizeBits_def split:option.splits;
+          fastforce simp:return_def fail_def bind_def)+
+
 
 lemma setCTE_def2:
  "(setCTE src cte) =
@@ -3696,8 +3689,7 @@ lemma new_cap_object_commute:
    apply (intro conjI exI)
      apply (clarsimp simp: no_0_def)
     apply (clarsimp simp: weak_valid_dlist_def modify_map_def Let_def)
-    apply (intro conjI impI)
-      apply fastforce+
+    subgoal by (intro conjI impI; fastforce)
    apply (clarsimp simp:valid_nullcaps_def)
    apply (frule_tac x = "p" in spec)
    apply (case_tac ctec)

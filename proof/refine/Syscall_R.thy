@@ -594,12 +594,12 @@ lemma invokeTCB_typ_at'[wp]:
   done
 
 lemmas invokeTCB_typ_ats[wp] = typ_at_lifts [OF invokeTCB_typ_at']
-
+term Interrupt_H.performIRQControl
 crunch typ_at'[wp]: doReplyTransfer "\<lambda>s. P (typ_at' T p s)"
   (wp: hoare_drop_imps)
 lemmas doReplyTransfer_typ_ats[wp] = typ_at_lifts [OF doReplyTransfer_typ_at']
-crunch typ_at'[wp]: invokeIRQControl "\<lambda>s. P (typ_at' T p s)"
-lemmas invokeIRQControl_typ_ats[wp] = typ_at_lifts [OF invokeIRQControl_typ_at']
+crunch typ_at'[wp]: "InterruptDecls_H.performIRQControl" "\<lambda>s. P (typ_at' T p s)"
+lemmas invokeIRQControl_typ_ats[wp] = typ_at_lifts [OF InterruptDecls_H_performIRQControl_typ_at']
 crunch typ_at'[wp]: invokeIRQHandler "\<lambda>s. P (typ_at' T p s)"
 lemmas invokeIRQHandler_typ_ats[wp] = typ_at_lifts [OF invokeIRQHandler_typ_at']
 
@@ -688,7 +688,7 @@ lemma diminished_ReplyCap' [simp]:
   apply (rule iffI)
    apply (clarsimp simp: diminished'_def maskCapRights_def Let_def split del: split_if)
    apply (cases cap, simp_all add: isCap_simps)[1]
-   apply (simp add: ArchRetype_H.maskCapRights_def split: arch_capability.splits)
+   apply (simp add: ArchRetype_H.maskCapRights_def isPageCap_def split: arch_capability.splits)
   apply (simp add: diminished'_def maskCapRights_def isCap_simps Let_def)
   done
 
@@ -2393,11 +2393,11 @@ proof -
 qed
 
 lemma inv_irq_IRQInactive:
-  "\<lbrace>\<top>\<rbrace> invokeIRQControl irqcontrol_invocation 
+  "\<lbrace>\<top>\<rbrace> performIRQControl irqcontrol_invocation 
   -, \<lbrace>\<lambda>rv s. intStateIRQTable (ksInterruptState s) rv \<noteq> irqstate.IRQInactive\<rbrace>"
-  apply (simp add: invokeIRQControl_def)
+  apply (simp add: performIRQControl_def)
   apply (rule hoare_pre)
-   apply (wpc|wp|simp add: invokeInterruptControl_def)+
+   apply (wpc|wp|simp add: ArchInterrupt_H.performIRQControl_def)+
   done
 
 lemma inv_arch_IRQInactive:

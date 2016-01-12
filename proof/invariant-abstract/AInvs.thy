@@ -118,7 +118,7 @@ lemma some_get_page_info_kmapsD:
                          kernel_mappings_slots_eq
                   split: option.splits Structures_A.kernel_object.splits
                          arch_kernel_obj.splits
-                         ARM_Structs_A.pde.splits ARM_Structs_A.pte.splits)
+                         Arch_Structs_A.pde.splits Arch_Structs_A.pte.splits)
       apply (rule conjI, rule_tac x=ARMLargePage in exI, simp)
       apply (simp add: valid_pde_kernel_mappings_def obj_at_def
                        valid_pt_kernel_mappings_def)
@@ -181,7 +181,7 @@ lemma some_get_page_info_umapsD:
    apply (simp add: obj_at_def)
   apply (simp add: valid_arch_obj_def)
   apply (drule bspec, simp)
-  apply (simp split: ARM_Structs_A.pde.splits)
+  apply (simp split: Arch_Structs_A.pde.splits)
      apply (rename_tac rs pd pt_ref rights w)
      apply (subgoal_tac
         "((rs, pd_ref) \<rhd>1
@@ -199,7 +199,7 @@ lemma some_get_page_info_umapsD:
     apply (simp add: get_pt_info_def get_pt_entry_def)
     apply (drule_tac x="(ucast ((p >> 12) && mask 8))" in spec)
     apply (clarsimp simp: obj_at_def valid_arch_obj_def
-      split: ARM_Structs_A.pte.splits)
+      split: Arch_Structs_A.pte.splits)
      apply (clarsimp simp: pspace_aligned_def)
      apply (drule_tac x = "(Platform.ptrFromPAddr b)" in  bspec, fastforce)
      apply (drule is_aligned_ptrFromPAddrD)

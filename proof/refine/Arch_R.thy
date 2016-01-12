@@ -524,13 +524,13 @@ lemma page_base_corres[simp]:
   by (clarsimp simp: pageBase_def page_base_def complement_def)
 
 lemma flush_type_map:
-  "InvocationLabels_H.isPageFlush (invocation_type (mi_label mi))
-   \<or> InvocationLabels_H.isPDFlush (invocation_type (mi_label mi))
+  "ArchLabelFuns_H.isPageFlushLabel (invocation_type (mi_label mi))
+   \<or> ArchLabelFuns_H.isPDFlushLabel (invocation_type (mi_label mi))
   \<Longrightarrow> labelToFlushType (mi_label mi) =
           flush_type_map (label_to_flush_type (invocation_type (mi_label mi)))"
   by (clarsimp simp: label_to_flush_type_def labelToFlushType_def flush_type_map_def
-                        InvocationLabels_H.isPageFlush_def InvocationLabels_H.isPDFlush_def
-                 split: ArchInvocation_A.flush_type.splits invocation_label.splits)
+                        ArchLabelFuns_H.isPageFlushLabel_def ArchLabelFuns_H.isPDFlushLabel_def
+                 split: ArchInvocation_A.flush_type.splits invocation_label.splits arch_invocation_label.splits)
 
 lemma resolve_vaddr_corres:
   "\<lbrakk> is_aligned pd pd_bits; vaddr < kernel_base \<rbrakk> \<Longrightarrow>
@@ -561,7 +561,7 @@ lemma resolve_vaddr_corres:
   done
 
 lemma dec_arch_inv_page_flush_corres:
-  "InvocationLabels_H.isPageFlush (invocation_type (mi_label mi)) \<Longrightarrow>
+  "ArchLabelFuns_H.isPageFlushLabel (invocation_type (mi_label mi)) \<Longrightarrow>
    corres (ser \<oplus> archinv_relation)
            (invs and
             valid_cap (cap.ArchObjectCap (arch_cap.PageCap word seta vmpage_size option)) and
@@ -619,8 +619,8 @@ lemma dec_arch_inv_page_flush_corres:
       apply (rule corres_returnOk)
       apply (clarsimp simp: archinv_relation_def page_invocation_map_def
                             label_to_flush_type_def labelToFlushType_def flush_type_map_def
-                            InvocationLabels_H.isPageFlush_def
-                     split: ArchRetypeDecls_H.flush_type.splits invocation_label.splits)
+                            ArchLabelFuns_H.isPageFlushLabel_def
+                     split: ArchRetypeDecls_H.flush_type.splits invocation_label.splits arch_invocation_label.splits)
      apply wp
    apply (fastforce simp: valid_cap_def mask_def)
   apply auto
@@ -656,11 +656,11 @@ lemma vs_refs_pages_ptI:
   done
 
 lemmas vs_refs_pages_pt_largeI
-    = vs_refs_pages_ptI[where pte="ARM_Structs_A.pte.LargePagePTE x y z" for x y z,
+    = vs_refs_pages_ptI[where pte="Arch_Structs_A.pte.LargePagePTE x y z" for x y z,
         unfolded pte_ref_pages_def, simplified, OF _ refl]
 
 lemmas vs_refs_pages_pt_smallI
-    = vs_refs_pages_ptI[where pte="ARM_Structs_A.pte.SmallPagePTE x y z" for x y z,
+    = vs_refs_pages_ptI[where pte="Arch_Structs_A.pte.SmallPagePTE x y z" for x y z,
         unfolded pte_ref_pages_def, simplified, OF _ refl]
 
 lemma vs_refs_pages_pdI:
@@ -673,11 +673,11 @@ lemma vs_refs_pages_pdI:
   done
 
 lemmas vs_refs_pages_pd_sectionI
-    = vs_refs_pages_pdI[where pde="ARM_Structs_A.pde.SectionPDE x y z w" for x y z w,
+    = vs_refs_pages_pdI[where pde="Arch_Structs_A.pde.SectionPDE x y z w" for x y z w,
         unfolded pde_ref_pages_def, simplified, OF _ refl]
 
 lemmas vs_refs_pages_pd_supersectionI
-    = vs_refs_pages_pdI[where pde="ARM_Structs_A.pde.SuperSectionPDE x y z" for x y z,
+    = vs_refs_pages_pdI[where pde="Arch_Structs_A.pde.SuperSectionPDE x y z" for x y z,
         unfolded pde_ref_pages_def, simplified, OF _ refl]
 
 lemma get_master_pde_sp:
@@ -841,8 +841,8 @@ shows
               split del: split_if)
   apply (cases arch_cap)
       apply (simp add: isCap_simps split del: split_if)
-      apply (cases "invocation_type (mi_label mi) \<noteq> ARMASIDPoolAssign")
-       apply (simp split: invocation_label.split)
+      apply (cases "invocation_type (mi_label mi) \<noteq> ArchInvocationLabel ARMASIDPoolAssign")
+       apply (simp split: invocation_label.split arch_invocation_label.split)
       apply (rename_tac word1 word2)
       apply (cases "excaps", simp)
       apply (cases "excaps'", simp)
@@ -895,8 +895,8 @@ shows
        apply (clarsimp simp: valid_cap_def)
       apply auto[1]
      apply (simp add: isCap_simps split del: split_if)
-     apply (cases "invocation_type (mi_label mi) \<noteq> ARMASIDControlMakePool")
-      apply (simp split: invocation_label.split)
+     apply (cases "invocation_type (mi_label mi) \<noteq> ArchInvocationLabel ARMASIDControlMakePool")
+      apply (simp split: invocation_label.split arch_invocation_label.split)
      apply (subgoal_tac "length excaps' = length excaps")
       prefer 2
       apply (simp add: list_all2_iff)
@@ -981,7 +981,7 @@ shows
      apply fastforce
     apply (rename_tac word cap_rights vmpage_size option)
     apply (simp add: isCap_simps split del: split_if)
-    apply (cases "invocation_type (mi_label mi) = ARMPageMap")
+    apply (cases "invocation_type (mi_label mi) = ArchInvocationLabel ARMPageMap")
      apply (case_tac "\<not>(2 < length args \<and> excaps \<noteq> [])")
       apply (auto split: list.split)[1]
      apply (simp add: Let_def neq_Nil_conv)
@@ -1055,7 +1055,7 @@ shows
         apply (wp hoare_drop_imps)
       apply (clarsimp simp: invs_def valid_state_def)
      apply fastforce
-    apply (cases "invocation_type (mi_label mi) = ARMPageRemap")
+    apply (cases "invocation_type (mi_label mi) = ArchInvocationLabel ARMPageRemap")
      apply (case_tac "\<not>(1 < length args \<and> excaps \<noteq> [])")
       apply (auto split: list.split)[1]
      apply (simp add: Let_def split: list.split)
@@ -1127,24 +1127,24 @@ shows
      apply fastforce
 
     apply (simp split del: split_if)
-    apply (cases "invocation_type (mi_label mi) = ARMPageUnmap")
+    apply (cases "invocation_type (mi_label mi) = ArchInvocationLabel ARMPageUnmap")
      apply simp
      apply (rule corres_returnOk)
      apply (clarsimp simp: archinv_relation_def page_invocation_map_def)
-    apply (cases "InvocationLabels_H.isPageFlush (invocation_type (mi_label mi))")
-     apply (clarsimp simp: InvocationLabels_H.isPageFlush_def split del: split_if)
-     apply (clarsimp split: invocation_label.splits split del: split_if)
-        apply (rule dec_arch_inv_page_flush_corres,
-               clarsimp simp: InvocationLabels_H.isPageFlush_def)+
-    apply (clarsimp simp: InvocationLabels_H.isPageFlush_def split del: split_if)
-    apply (cases "invocation_type (mi_label mi) = ARMPageGetAddress")
+    apply (cases "ArchLabelFuns_H.isPageFlushLabel (invocation_type (mi_label mi))")
+     apply (clarsimp simp: ArchLabelFuns_H.isPageFlushLabel_def split del: split_if)
+     apply (clarsimp split: invocation_label.splits arch_invocation_label.splits split del: split_if)
+        apply (rule dec_arch_inv_page_flush_corres, 
+                clarsimp simp: ArchLabelFuns_H.isPageFlushLabel_def)+
+    apply (clarsimp simp: ArchLabelFuns_H.isPageFlushLabel_def split del: split_if)
+    apply (cases "invocation_type (mi_label mi) = ArchInvocationLabel ARMPageGetAddress")
      apply simp
      apply (rule corres_returnOk)
      apply (clarsimp simp: archinv_relation_def page_invocation_map_def)
-    apply (clarsimp split: invocation_label.splits split del: split_if)
+    apply (clarsimp split: invocation_label.splits arch_invocation_label.splits split del: split_if)
    apply (simp add: isCap_simps split del: split_if)
-   apply (simp split: invocation_label.split split del: split_if)
-   apply (intro conjI impI)
+   apply (simp split: invocation_label.split arch_invocation_label.splits split del: split_if)
+   apply (intro conjI impI allI)
     apply (simp split: list.split, intro conjI impI allI, simp_all)[1]
     apply (clarsimp simp: neq_Nil_conv)
     apply (rule whenE_throwError_corres_initial, simp+)
@@ -1215,7 +1215,7 @@ shows
           erule invs_pspace_aligned', clarsimp+)
    apply (simp add: isCap_simps)
   apply (simp add: isCap_simps split del: split_if)
-  apply (cases "InvocationLabels_H.isPDFlush (invocation_type (mi_label mi))")
+  apply (cases "ArchLabelFuns_H.isPDFlushLabel (invocation_type (mi_label mi))")
    apply (clarsimp split del: split_if)
    apply (cases args, simp)
    apply (rename_tac a0 as)
@@ -1733,7 +1733,7 @@ lemma createMappingEntires_valid_slots_duplicated'[wp]:
    done
 
 lemma arch_decodeARMPageFlush_wf:
-  "InvocationLabels_H.isPageFlush (invocation_type label) \<Longrightarrow>
+  "ArchLabelFuns_H.isPageFlushLabel (invocation_type label) \<Longrightarrow>
        \<lbrace>invs' and
         valid_cap'
          (capability.ArchObjectCap (arch_capability.PageCap word vmrights vmpage_size option)) and
@@ -1785,7 +1785,7 @@ lemma arch_decodeInvocation_wf[wp]:
       apply assumption
      apply (simp add: decodeARMMMUInvocation_def ArchRetype_H.decodeInvocation_def 
                        Let_def split_def isCap_simps 
-                  cong: if_cong invocation_label.case_cong list.case_cong prod.case_cong
+                  cong: if_cong invocation_label.case_cong arch_invocation_label.case_cong list.case_cong prod.case_cong
                   split del: split_if)
      apply (rule hoare_pre) 
       apply ((wp whenE_throwError_wp ensureEmptySlot_stronger|
@@ -1830,7 +1830,7 @@ lemma arch_decodeInvocation_wf[wp]:
     apply (simp add: decodeARMMMUInvocation_def ArchRetype_H.decodeInvocation_def 
                        Let_def split_def isCap_simps
                 cong: if_cong split del: split_if)
-    apply (cases "invocation_type label = ARMPageMap")
+    apply (cases "invocation_type label = ArchInvocationLabel ARMPageMap")
      apply (rename_tac word vmrights vmpage_size option)
      apply (simp add: split_def split del: split_if
                 cong: list.case_cong prod.case_cong)
@@ -1856,7 +1856,7 @@ lemma arch_decodeInvocation_wf[wp]:
      apply (simp add:vmsz_aligned_def)
      apply (erule order_le_less_trans[rotated])
      apply (erule is_aligned_no_overflow'[simplified field_simps])
-    apply (cases "invocation_type label = ARMPageRemap")
+    apply (cases "invocation_type label = ArchInvocationLabel ARMPageRemap")
      apply (rename_tac word vmrights vmpage_size option)
      apply (simp add: split_def invs_valid_objs' split del: split_if
                 cong: list.case_cong prod.case_cong)
@@ -1883,26 +1883,26 @@ lemma arch_decodeInvocation_wf[wp]:
                            vmsz_aligned'_def pdBits_def pageBits_def vmsz_aligned_def
                     dest!: diminished_capMaster)
      apply (erule is_aligned_addrFromPPtr_n, case_tac vmpage_size, simp_all)[1]
-    apply (cases "invocation_type label = ARMPageUnmap")
+    apply (cases "invocation_type label = ArchInvocationLabel ARMPageUnmap")
      apply (simp split del: split_if)
      apply (rule hoare_pre, wp) 
      apply (clarsimp simp: valid_arch_inv'_def valid_page_inv'_def)
      apply (thin_tac "Ball S P" for S P)
      apply (erule cte_wp_at_weakenE')
      apply (clarsimp simp: is_arch_update'_def isCap_simps dest!: diminished_capMaster)
-    apply (cases "InvocationLabels_H.isPageFlush (invocation_type label)")
-     apply (clarsimp simp: InvocationLabels_H.isPageFlush_def split: invocation_label.splits)
+    apply (cases "ArchLabelFuns_H.isPageFlushLabel (invocation_type label)")
+     apply (clarsimp simp: ArchLabelFuns_H.isPageFlushLabel_def split: invocation_label.splits arch_invocation_label.splits)
         apply (rule arch_decodeARMPageFlush_wf,
-               clarsimp simp: InvocationLabels_H.isPageFlush_def)+
-    apply (cases "invocation_type label = ARMPageGetAddress")
+               clarsimp simp: ArchLabelFuns_H.isPageFlushLabel_def)+
+    apply (cases "invocation_type label = ArchInvocationLabel ARMPageGetAddress")
      apply (simp split del: split_if)
      apply (rule hoare_pre, wp)
      apply (clarsimp simp: valid_arch_inv'_def valid_page_inv'_def)
-    apply (simp add: InvocationLabels_H.isPageFlush_def throwError_R'
-              split: invocation_label.split_asm)
+    apply (simp add: ArchLabelFuns_H.isPageFlushLabel_def throwError_R'
+              split: invocation_label.split_asm arch_invocation_label.split_asm)
    apply (simp add: decodeARMMMUInvocation_def ArchRetype_H.decodeInvocation_def 
                     Let_def split_def isCap_simps vs_entry_align_def
-               cong: if_cong list.case_cong invocation_label.case_cong prod.case_cong
+               cong: if_cong list.case_cong invocation_label.case_cong arch_invocation_label.case_cong prod.case_cong
                split del: split_if)
    apply (rename_tac word option)
    apply (rule hoare_pre)
@@ -1948,7 +1948,7 @@ lemma arch_decodeInvocation_wf[wp]:
    apply (erule order_le_less_trans[rotated])
    apply (rule word_and_le2)
    apply (simp add: decodeARMMMUInvocation_def ArchRetype_H.decodeInvocation_def isCap_simps Let_def)
-  apply(cases "isPDFlush (invocation_type label)", simp_all)
+  apply(cases "ArchLabelFuns_H.isPDFlushLabel (invocation_type label)", simp_all)
   apply(cases args, simp_all)
   apply(rule hoare_pre, wp)
    defer

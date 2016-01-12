@@ -1034,7 +1034,7 @@ lemma cap_move_corres:
   apply (drule updateCap_stuff, clarsimp)
   apply (subgoal_tac "pspace_distinct' b \<and> pspace_aligned' b")
    prefer 2
-   apply fastforce
+   subgoal by fastforce
   apply (thin_tac "ctes_of t = s" for t s)+
   apply (thin_tac "ksMachineState t = p" for t p)+
   apply (thin_tac "ksCurThread t = p" for t p)+
@@ -1076,7 +1076,7 @@ lemma cap_move_corres:
    apply clarsimp
    apply (subgoal_tac "null_filter (caps_of_state a) (aa,bb) \<noteq> None")
     prefer 2
-    apply (clarsimp simp: null_filter_def split: if_splits)
+    subgoal by (clarsimp simp: null_filter_def split: if_splits)
    apply clarsimp
    apply (subgoal_tac "cte_at (aa,bb) a")
     prefer 2
@@ -1093,7 +1093,7 @@ lemma cap_move_corres:
       apply fastforce
      apply fastforce
     apply clarsimp
-   apply (simp add: null_filter_def split: if_splits)
+   subgoal by (simp add: null_filter_def split: if_splits)
   apply (subgoal_tac "mdb_move (ctes_of b) (cte_map ptr) src_cap src_node (cte_map ptr') cap' old_dest_node")
    prefer 2
    apply (rule mdb_move.intro)
@@ -1165,7 +1165,7 @@ lemma cap_move_corres:
       apply(simp, fastforce, simp)
    apply(fastforce split: option.splits)
   apply(case_tac "ctes_of b (cte_map (aa, bb))")
-   apply(clarsimp simp: modify_map_def split: split_if_asm)
+   subgoal by (clarsimp simp: modify_map_def split: split_if_asm)
   apply(case_tac ab)
   apply(frule mdb_move.m'_next)
     apply(simp, fastforce)
@@ -1184,15 +1184,14 @@ lemma cap_move_corres:
   apply(case_tac "next_slot (aa, bb) (cdt_list (a)) (cdt a) = Some ptr")
    apply(frule(3) cte_at_next_slot)
    apply(erule_tac x=aa in allE, erule_tac x=bb in allE)
-   apply(clarsimp simp: cte_map_inj_eq valid_pspace_def split: split_if_asm)
+   subgoal by (clarsimp simp: cte_map_inj_eq valid_pspace_def split: split_if_asm)
   apply(simp)
   apply(case_tac "next_slot (aa, bb) (cdt_list (a)) (cdt a)")
    apply(simp)
   apply(frule(3) cte_at_next_slot)
   apply(frule(3) cte_at_next_slot')
   apply(erule_tac x=aa in allE, erule_tac x=bb in allE)
-  apply(clarsimp simp: cte_map_inj_eq valid_pspace_def split: split_if_asm)
-  done
+  by(clarsimp simp: cte_map_inj_eq valid_pspace_def split: split_if_asm)
 
 lemmas cur_tcb_lift =
   hoare_lift_Pf [where f = ksCurThread and P = tcb_at', folded cur_tcb'_def]
@@ -2558,15 +2557,15 @@ proof -
     defer
     apply (clarsimp simp:modify_map_cases dest0 src0)
     apply (clarsimp simp:revokable'_def badge_derived'_def)
-    apply (case_tac src_cap,auto simp:isCap_simps sameRegionAs_def)[1]
+    subgoal by (case_tac src_cap,auto simp:isCap_simps sameRegionAs_def)
   apply (clarsimp simp:modify_map_cases valid_badges_def)
     apply (frule_tac x=src in spec, erule_tac x=word1 in allE, erule allE, erule impE)
     apply fastforce
     apply simp
     apply (clarsimp simp:mdb_next_unfold badge_derived'_def split: split_if_asm)
     apply (thin_tac "All P" for P)
-    apply (cases src_cap,
-       auto simp:mdb_next_unfold isCap_simps sameRegionAs_def Let_def split: if_splits)[1]
+    subgoal by (cases src_cap,
+       auto simp:mdb_next_unfold isCap_simps sameRegionAs_def Let_def split: if_splits)
   apply (case_tac "word1 = p'")
      apply (clarsimp simp:modify_map_cases valid_badges_def mdb_next_unfold src0 dest0 no0)+
   apply (case_tac "p = dest")
@@ -2575,8 +2574,7 @@ proof -
   apply (rename_tac capability mdbnode)
   apply clarsimp
   apply (drule_tac x = p in spec,drule_tac x = "mdbNext mdbnode" in spec)
-  apply (auto simp:isCap_simps sameRegionAs_def)
-  done
+  by (auto simp:isCap_simps sameRegionAs_def)
 
   from badge
   have isUntyped_eq: "isUntypedCap cap = isUntypedCap src_cap"
@@ -2623,7 +2621,7 @@ proof -
     apply (case_tac "p = src")
      apply (clarsimp simp:modify_map_def split:if_splits)
      apply (drule capRange_untyped)
-     apply (case_tac cap,auto simp:isCap_simps badge_derived'_def)[1]
+     subgoal by (case_tac cap,auto simp:isCap_simps badge_derived'_def)
     apply (clarsimp simp:modify_map_def split:if_splits)
     apply (drule_tac x = word1 in spec)
     apply (drule_tac x = src in spec)
@@ -2639,8 +2637,7 @@ proof -
    apply (drule_tac x = p' in spec)
    apply (clarsimp simp:modify_map_def split:if_splits)
     apply ((case_tac z,fastforce)+)[5]
-   apply fastforce+
-   done
+   by fastforce+
 
   show "valid_nullcaps ?C"
   using is_der vn cofs vd no0
@@ -4323,7 +4320,7 @@ lemma arch_update_setCTE_mdb:
    apply (clarsimp split: split_if_asm)
      apply (clarsimp simp: isCap_simps)
     prefer 2
-    apply fastforce
+    subgoal by fastforce
    apply (erule_tac x=pa in allE)
    apply (erule_tac x=p in allE)
    apply simp
@@ -4340,14 +4337,14 @@ lemma arch_update_setCTE_mdb:
    apply (drule sym [where s="capMasterCap cap"])
    apply (frule masterCap.intro)
    apply (clarsimp simp: masterCap.isUntypedCap split: split_if_asm)
-      apply fastforce
-     apply fastforce
+      subgoal by fastforce
+     subgoal by fastforce
     apply (erule_tac x=pa in allE)
     apply (erule_tac x=p in allE)
     apply fastforce
    apply (erule_tac x=pa in allE)
    apply (erule_tac x=p' in allE)
-   apply fastforce
+   subgoal by fastforce
   apply (rule conjI)
    apply (cases oldcte)
    apply (clarsimp simp: is_arch_update'_def)
@@ -4360,19 +4357,19 @@ lemma arch_update_setCTE_mdb:
      apply (clarsimp simp: masterCap.sameRegionAs)
      apply (simp add: masterCap.sameRegionAs is_chunk_def mdb_next_trans_next_pres
                       mdb_next_rtrans_next_pres)
-     apply fastforce
+     subgoal by fastforce
     apply (erule_tac x=pa in allE)
     apply (erule_tac x=p in allE)
     apply (clarsimp simp: masterCap.sameRegionAs)
     apply (simp add: masterCap.sameRegionAs is_chunk_def mdb_next_trans_next_pres
                      mdb_next_rtrans_next_pres)
-    apply fastforce
+    subgoal by fastforce
    apply (erule_tac x=pa in allE)
    apply (erule_tac x=p' in allE)
    apply clarsimp
    apply (simp add: masterCap.sameRegionAs is_chunk_def mdb_next_trans_next_pres
                     mdb_next_rtrans_next_pres)
-   apply fastforce
+   subgoal by fastforce
   apply (rule conjI)
    apply (clarsimp simp: is_arch_update'_def untyped_mdb'_def arch_update_descendants'
                    simp del: fun_upd_apply)
@@ -4970,7 +4967,7 @@ lemma cins_corres_simple:
   apply(case_tac "ca=src")
    apply(simp)
    apply(clarsimp simp: modify_map_def)
-   apply(fastforce split: split_if_asm)
+   subgoal by(fastforce split: split_if_asm)
   apply(case_tac "ca = dest")
    apply(simp)
    apply(case_tac "next_slot src (cdt_list (a)) (cdt a)")
@@ -5014,8 +5011,7 @@ lemma cins_corres_simple:
         apply(simp_all)[6]
    apply(drule cte_map_inj_eq)
        apply(simp_all)[6]
-  apply(fastforce)
-  done
+  by(fastforce)
 
 declare split_if [split]
 
@@ -5035,10 +5031,9 @@ lemma safe_parent_for_capRange_capBits:
   apply (clarsimp simp: safe_parent_for'_def)
   apply (erule disjE)
    apply (clarsimp simp: capRange_def)
-  apply (auto simp: sameRegionAs_def2 isCap_simps capRange_def
+  by (auto simp: sameRegionAs_def2 isCap_simps capRange_def
                     capMasterCap_def capRange_Master objBits_simps
          split:capability.splits arch_capability.splits)
-  done
 
 lemma safe_parent_Null:
   "\<lbrakk> m src = Some (CTE NullCap n); safe_parent_for' m src c' \<rbrakk> \<Longrightarrow> False"
@@ -5100,10 +5095,9 @@ lemma safe_parent_not_ntfn':
 
 lemma safe_parent_capClass:
   "\<lbrakk> safe_parent_for' m p cap; m p = Some (CTE src_cap n) \<rbrakk> \<Longrightarrow> capClass cap = capClass src_cap"
-  apply (auto simp: safe_parent_for'_def isCap_simps sameRegionAs_def2 capRange_Master capRange_def
+  by (auto simp: safe_parent_for'_def isCap_simps sameRegionAs_def2 capRange_Master capRange_def
            capMasterCap_def
            split: capability.splits arch_capability.splits)
-  done
 
 locale mdb_insert_simple' = mdb_insert_simple +
   fixes n'

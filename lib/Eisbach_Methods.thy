@@ -239,37 +239,18 @@ section \<open>Utility methods\<close>
 
 subsection \<open>Finding a goal based on successful application of a method\<close>
 
-text \<open>This method works by creating "tagged" subgoals in order to use the + operator
-      to iterate over all goals without looping indefinitely.
-      Effectively this looks like a while-loop, which breaks out when either
-      the "end" subgoal is found or when the method succeeds and the "success"
-      subgoal is found.\<close>
-
 context begin
 
-private definition "goal_tag (x :: unit) \<equiv> Trueprop True"
+method_setup find_goal =
+ \<open>Method_Closure.parse_method >> (fn m => fn ctxt => fn facts =>
+   let
+     fun prefer_first i = SELECT_GOAL 
+       (fn st' =>
+         (case Seq.pull (Method_Closure.method_evaluate m ctxt facts st') of
+           SOME ((_, st''),_) => Seq.single st''
+         | NONE => Seq.empty)) i THEN prefer_tac i
 
-private lemma goal_tagI: "PROP goal_tag x"
-  unfolding goal_tag_def
-  by simp
-
-private method make_tag_goal for tag_id :: unit = (rule thin_rl[of "PROP goal_tag tag_id"])
-
-private method clear_tagged_goal for tag_id :: unit  = (rule goal_tagI[of tag_id])
-
-private definition "goals_end \<equiv> ()"
-private definition "method_succeed \<equiv> ()"
-private definition "method_failure \<equiv> ()"
-
-
-method find_goal methods m = 
-  (make_tag_goal goals_end, 
-   defer_tac,
-   (fails \<open>clear_tagged_goal method_succeed | clear_tagged_goal goals_end\<close>,
-     (((m)[1],make_tag_goal method_succeed) 
-     | defer_tac))+,
-   clear_tagged_goal method_succeed,
-   all \<open>(clear_tagged_goal goals_end)?\<close>)
+   in SIMPLE_METHOD (FIRSTGOAL prefer_first) facts end)\<close>
 
 end
 

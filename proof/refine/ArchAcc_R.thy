@@ -331,7 +331,7 @@ lemma get_master_pde_corres:
       projectKOs and_not_mask_twice)
     apply (simp add: bind_assoc exec_gets)
     apply (clarsimp simp: pde_at_def obj_at_def)
-    apply (clarsimp split:ARM_Structs_A.pde.splits)
+    apply (clarsimp split:Arch_Structs_A.pde.splits)
     apply (intro conjI impI)
   -- "master_pde = InvaliatePTE"
        apply (clarsimp simp add: a_type_def return_def get_pd_def
@@ -603,7 +603,7 @@ lemma get_master_pte_corres:
       projectKOs and_not_mask_twice)
     apply (simp add: bind_assoc exec_gets)
     apply (clarsimp simp: pte_at_def obj_at_def)
-    apply (clarsimp split:ARM_Structs_A.pte.splits)
+    apply (clarsimp split:Arch_Structs_A.pte.splits)
     apply (intro conjI impI)
   -- "master_pde = InvaliatePTE"
       apply (clarsimp simp add: a_type_def return_def get_pt_def
@@ -1190,10 +1190,10 @@ lemma arch_cap_rights_update:
    cap_relation (cap.ArchObjectCap (acap_rights_update (acap_rights c \<inter> msk) c))
                  (ArchRetypeDecls_H.maskCapRights (rights_mask_map msk) c')"
   apply (cases c, simp_all add: ArchRetype_H.maskCapRights_def
-                                acap_rights_update_def Let_def)
+                                acap_rights_update_def Let_def isCap_simps)
   apply (simp add: maskVMRights_def vmrights_map_def rights_mask_map_def
                    validate_vm_rights_def vm_read_write_def vm_read_only_def
-                   vm_kernel_only_def)
+                   vm_kernel_only_def )
   done
 
 lemma arch_deriveCap_inv:
@@ -1237,7 +1237,7 @@ definition
   "vmattributes_map \<equiv> \<lambda>R. VMAttributes (PageCacheable \<in> R) (ParityEnabled \<in> R) (XNever \<in> R)"
 
 definition 
-  mapping_map :: "ARM_Structs_A.pte \<times> word32 list + ARM_Structs_A.pde \<times> word32 list \<Rightarrow> 
+  mapping_map :: "Arch_Structs_A.pte \<times> word32 list + Arch_Structs_A.pde \<times> word32 list \<Rightarrow> 
                   Hardware_H.pte \<times> word32 list + Hardware_H.pde \<times> word32 list \<Rightarrow> bool"
 where
   "mapping_map \<equiv> pte_relation' \<otimes> (op =) \<oplus> pde_relation' \<otimes> (op =)"
@@ -1281,7 +1281,7 @@ lemma create_mapping_entries_corres:
   done
 
 lemma pte_relation'_Invalid_inv [simp]:
-  "pte_relation' x Hardware_H.pte.InvalidPTE = (x = ARM_Structs_A.pte.InvalidPTE)"
+  "pte_relation' x Hardware_H.pte.InvalidPTE = (x = Arch_Structs_A.pte.InvalidPTE)"
   by (cases x) auto
 
 definition

@@ -1414,7 +1414,7 @@ lemma setSchedulerAction_invs'[wp]:
   done
 
 consts
-  copyregsets_map :: "arm_copy_register_sets \<Rightarrow> copy_register_sets"
+  copyregsets_map :: "arch_copy_register_sets \<Rightarrow> copy_register_sets"
 
 primrec
   tcbinv_relation :: "tcb_invocation \<Rightarrow> tcbinvocation \<Rightarrow> bool"

@@ -370,18 +370,18 @@ where valid_cap'_def:
             \<and> (case b of ZombieTCB \<Rightarrow> tcb_at' r s | ZombieCNode n \<Rightarrow> n \<noteq> 0
                     \<and> (\<forall>addr. real_cte_at' (r + 16 * (addr && mask n)) s))
   | Structures_H.ArchObjectCap ac \<Rightarrow> (case ac of
-    ARMStructures_H.ASIDPoolCap pool asid \<Rightarrow>
+    ArchStructures_H.ASIDPoolCap pool asid \<Rightarrow>
     typ_at' (ArchT ASIDPoolT) pool s \<and> is_aligned asid asid_low_bits \<and> asid \<le> 2^asid_bits - 1
-  | ARMStructures_H.ASIDControlCap \<Rightarrow> True
-  | ARMStructures_H.PageCap ref rghts sz mapdata \<Rightarrow> ref \<noteq> 0 \<and>
+  | ArchStructures_H.ASIDControlCap \<Rightarrow> True
+  | ArchStructures_H.PageCap ref rghts sz mapdata \<Rightarrow> ref \<noteq> 0 \<and>
     (\<forall>p < 2 ^ (pageBitsForSize sz - pageBits). typ_at' UserDataT (ref + p * 2 ^ pageBits) s) \<and>
     (case mapdata of None \<Rightarrow> True | Some (asid, ref) \<Rightarrow>
             0 < asid \<and> asid \<le> 2 ^ asid_bits - 1 \<and> vmsz_aligned' ref sz \<and> ref < kernelBase)
-  | ARMStructures_H.PageTableCap ref mapdata \<Rightarrow>
+  | ArchStructures_H.PageTableCap ref mapdata \<Rightarrow>
     page_table_at' ref s \<and>
     (case mapdata of None \<Rightarrow> True | Some (asid, ref) \<Rightarrow>
             0 < asid \<and> asid \<le> 2^asid_bits - 1 \<and> ref < kernelBase)
-  | ARMStructures_H.PageDirectoryCap ref mapdata \<Rightarrow>
+  | ArchStructures_H.PageDirectoryCap ref mapdata \<Rightarrow>
     page_directory_at' ref s \<and>
     case_option True (\<lambda>asid. 0 < asid \<and> asid \<le> 2^asid_bits - 1) mapdata))"
 

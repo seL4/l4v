@@ -1810,12 +1810,11 @@ lemma timer_tick_valid_sched[wp]:
            | wp gts_wp reschedule_required_valid_sched tcb_sched_action_append_valid_blocked
            | wpc | rule hoare_strengthen_post, rule dec_domain_time_valid_sched,
                                       simp add: valid_sched_def valid_sched_action_def)+
-  apply (fastforce simp: valid_sched_def valid_etcbs_def valid_queues_def pred_tcb_weakenE
+  by (fastforce simp: valid_sched_def valid_etcbs_def valid_queues_def pred_tcb_weakenE
          valid_sched_action_def weak_valid_sched_action_def etcb_at_def is_etcb_at_def
          get_etcb_def in_cur_domain_def ct_in_cur_domain_2_def switch_in_cur_domain_def
          valid_idle_etcb_2_def
          split: option.splits)
-  done
 
 lemma cancel_badged_sends_filterM_valid_etcbs[wp]:
    "\<lbrace>valid_etcbs\<rbrace>
@@ -2192,10 +2191,9 @@ lemma possible_switch_to_not_queued:
    \<lbrace>\<lambda>_. not_queued t\<rbrace>"
   apply (simp add: possible_switch_to_def reschedule_required_def
                    set_scheduler_action_def tcb_sched_action_def | wp | wpc)+
-  apply (fastforce simp: etcb_at_def tcb_sched_enqueue_def simple_sched_action_def
+  by (fastforce simp: etcb_at_def tcb_sched_enqueue_def simple_sched_action_def
                          not_queued_def scheduler_act_not_def
                    split: option.splits)
-  done
 
 
 crunch sched_act_not[wp]: attempt_switch_to, switch_if_required_to

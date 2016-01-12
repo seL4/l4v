@@ -1902,7 +1902,7 @@ lemma other_obj_relation_KOCTE[simp]:
   "\<not> other_obj_relation ko (KOCTE cte)"
   by (simp add: other_obj_relation_def
          split: Structures_A.kernel_object.splits
-                ARM_Structs_A.arch_kernel_obj.splits)
+                Arch_Structs_A.arch_kernel_obj.splits)
 
 lemma cte_map_pulls_tcb_to_abstract:
   "\<lbrakk> y = cte_map z; pspace_relation (kheap s) (ksPSpace s');
@@ -1915,7 +1915,7 @@ lemma cte_map_pulls_tcb_to_abstract:
   apply (erule(1) obj_relation_cutsE, simp_all)
   apply (clarsimp simp: other_obj_relation_def
                  split: Structures_A.kernel_object.split_asm
-                        ARM_Structs_A.arch_kernel_obj.split_asm)
+                        Arch_Structs_A.arch_kernel_obj.split_asm)
   apply (drule tcb_cases_related2)
   apply clarsimp
   apply (frule(1) cte_wp_at_tcbI [OF _ _ TrueI, where t="(a, b)" for a b, simplified])
@@ -2194,7 +2194,7 @@ lemma pspace_relation_cte_wp_atI':
   apply (erule(1) obj_relation_cutsE, simp_all)
   apply (simp add: other_obj_relation_def
             split: Structures_A.kernel_object.split_asm
-                   ARM_Structs_A.arch_kernel_obj.split_asm)
+                   Arch_Structs_A.arch_kernel_obj.split_asm)
   apply (subgoal_tac "n = x - y", clarsimp)
    apply (drule tcb_cases_related2, clarsimp)
    apply (intro exI, rule conjI)
@@ -2925,7 +2925,7 @@ lemma updateMDB_pspace_relation:
    apply (rule pspace_dom_relatedE, assumption+)
    apply (rule obj_relation_cutsE, assumption+, simp_all)[1]
    apply (clarsimp split: Structures_A.kernel_object.split_asm
-                          ARM_Structs_A.arch_kernel_obj.split_asm
+                          Arch_Structs_A.arch_kernel_obj.split_asm
                     simp: other_obj_relation_def)
    apply (frule(1) tcb_cte_cases_aligned_helpers(1))
    apply (frule(1) tcb_cte_cases_aligned_helpers(2))

@@ -360,7 +360,7 @@ lemma obj_bits_api_def3:
 
 
 definition
-  "retype_addrs \<equiv> \<lambda>ptr' ty n us. map (\<lambda>p. ptr_add ptr' (p * 2 ^ obj_bits_api ty us))
+  "retype_addrs \<equiv> \<lambda>(ptr' :: obj_ref) ty n us. map (\<lambda>p. ptr_add ptr' (p * 2 ^ obj_bits_api ty us))
                                            [0..< n]"
 
 lemma retype_addrs_base [simp]:

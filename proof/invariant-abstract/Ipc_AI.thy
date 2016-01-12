@@ -151,13 +151,14 @@ lemma update_cap_data_closedform:
    | cap.IRQControlCap \<Rightarrow> cap.IRQControlCap
    | cap.IRQHandlerCap irq \<Rightarrow> cap.IRQHandlerCap irq
    | cap.Zombie r b n \<Rightarrow> cap.Zombie r b n
-   | cap.ArchObjectCap cap \<Rightarrow> cap.ArchObjectCap (arch_update_cap_data w cap))"
+   | cap.ArchObjectCap cap \<Rightarrow> cap.ArchObjectCap cap)"
   apply (cases cap,
          simp_all only: cap.simps update_cap_data_def is_ep_cap.simps if_False if_True
                         is_ntfn_cap.simps is_cnode_cap.simps is_arch_cap_def word_size
                         cap_ep_badge.simps badge_update_def o_def cap_rights_update_def
                         simp_thms cap_rights.simps Let_def split_def
                         the_cnode_cap_def fst_conv snd_conv fun_app_def the_arch_cap_def
+                        arch_update_cap_data_def
                   cong: if_cong)
   apply auto
   done

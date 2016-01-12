@@ -1599,8 +1599,7 @@ shows
        apply(clarsimp)
       apply(simp)
      apply(clarsimp)
-     apply(drule cte_map_inj_eq)
-          apply(simp_all add: cte_wp_at_caps_of_state)[6]
+     apply(drule cte_map_inj_eq; simp add: cte_wp_at_caps_of_state)
     apply(clarsimp)
     apply(case_tac z)
     apply(clarsimp simp: state_relation_def cdt_list_relation_def)
@@ -3046,7 +3045,7 @@ lemma inv_untyped_corres_helper1:
     apply (rule conjI)
      apply clarsimp
      apply (rule conjI)
-      apply fastforce
+      subgoal by fastforce
      apply (clarsimp simp: cte_wp_at_caps_of_state is_cap_simps valid_cap_def)
     apply (fastforce simp: image_def)
    apply (rule hoare_pre)
