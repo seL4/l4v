@@ -13,7 +13,6 @@ theory NICTATools
 imports 
 (* Apply_Trace_Cmd *) 
   Solves_Tac
-  "subgoal_focus/Subgoal_Focus"
   "subgoal_focus/Subgoal_Methods"
   Rule_By_Method
   Eisbach_Methods

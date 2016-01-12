@@ -14,7 +14,6 @@
 
 theory Eisbach_Methods
 imports "~~/src/HOL/Eisbach/Eisbach_Tools" 
-        "subgoal_focus/Subgoal_Focus"
         "subgoal_focus/Subgoal_Methods"
 begin
 
