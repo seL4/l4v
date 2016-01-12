@@ -15,7 +15,7 @@ Data types for syscall invocations
 chapter "Kernel Object Invocations"
 
 theory Invocations_A
-imports ArchInvocation_A
+imports "./$L4V_ARCH/ArchInvocation_A"
 begin
 
 text {* These datatypes encode the arguments to the available system calls. *}
@@ -32,24 +32,21 @@ datatype cnode_invocation =
 datatype untyped_invocation =
     Retype cslot_ptr obj_ref obj_ref apiobject_type nat "cslot_ptr list"
 
-datatype arm_copy_register_sets =
-    ARMNoExtraRegisters
-
 datatype tcb_invocation =
-    WriteRegisters word32 bool "word32 list" arm_copy_register_sets
-  | ReadRegisters word32 bool word32 arm_copy_register_sets
-  | CopyRegisters word32 word32 bool bool bool bool arm_copy_register_sets
-  | ThreadControl word32 cslot_ptr
+    WriteRegisters machine_word bool "machine_word list" arch_copy_register_sets
+  | ReadRegisters machine_word bool machine_word arch_copy_register_sets
+  | CopyRegisters machine_word machine_word bool bool bool bool arch_copy_register_sets
+  | ThreadControl machine_word cslot_ptr
                   (tc_new_fault_ep: "cap_ref option") (tc_new_priority: "word8 option")
                   (tc_new_croot: "(cap * cslot_ptr) option") (tc_new_vroot: "(cap * cslot_ptr) option")
                   (tc_new_buffer: "(vspace_ref * (cap * cslot_ptr) option) option")
-  | Suspend "word32"
-  | Resume "word32"
+  | Suspend "obj_ref"
+  | Resume "obj_ref"
   | NotificationControl "obj_ref" "obj_ref option"
 
 datatype irq_control_invocation =
     IRQControl irq cslot_ptr cslot_ptr
-  | InterruptControl arch_interrupt_control
+  | ArchInvokeIRQControl arch_irq_control_invocation
 
 datatype irq_handler_invocation =
     ACKIrq irq
@@ -59,8 +56,8 @@ datatype irq_handler_invocation =
 
 datatype invocation =
     InvokeUntyped untyped_invocation
-  | InvokeEndpoint obj_ref word32 bool
-  | InvokeNotification obj_ref word32
+  | InvokeEndpoint obj_ref machine_word bool
+  | InvokeNotification obj_ref machine_word
   | InvokeReply obj_ref cslot_ptr
   | InvokeTCB tcb_invocation
   | InvokeDomain obj_ref word8

@@ -17,7 +17,7 @@ chapter "Storable Object Instances"
 theory ObjectInstances_H
 imports
   Structures_H
-  State_H
+  "./$L4V_ARCH/State_H"
   PSpaceStorable_H
   Config_H
 begin

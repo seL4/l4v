@@ -15,7 +15,7 @@
 theory VSpace_H
 imports
   CNode_H
-  ArchVSpace_H
+  "./$L4V_ARCH/ArchVSpace_H"
   KernelInitMonad_H
 begin
 
@@ -35,7 +35,7 @@ od)"
 definition
 initCPU :: "unit kernel"
 where
-"initCPU \<equiv> ArchVSpaceDecls_H.activateGlobalPD"
+"initCPU \<equiv> ArchVSpaceDecls_H.activateGlobalVSpace"
 
 definition
 createIPCBufferFrame :: "capability \<Rightarrow> vptr \<Rightarrow> capability kernel_init"

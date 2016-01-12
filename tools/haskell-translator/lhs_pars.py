@@ -1217,6 +1217,11 @@ def enum_instance_proofs (header, canonical, d):
 			lines.append ('    @ (map %s enum)' % cons)
 		lines[-1] = lines[-1] + '"'
 	lines.append ('')
+        for cons in cons_one_arg:
+                        lines.append('lemma %s_map_distinct[simp]: "distinct (map %s enum)"' % (cons, cons))
+                        lines.append('  apply (simp add: distinct_map)')
+                        lines.append('  by (meson injI %s.inject)' % header)
+        lines.append ('')
 	lines.append ('definition')
 	lines.append ('  "enum_class.enum_all (P :: %s \<Rightarrow> bool) \<longleftrightarrow> Ball UNIV P"' \
 				  % header)
@@ -1233,11 +1238,11 @@ def enum_instance_proofs (header, canonical, d):
 		lines.append ('  apply (simp_all add: enum_%s enum_all_%s_def enum_ex_%s_def' \
 					  % (header, header, header))
 		lines.append ('    distinct_map_enum)')
+                lines.append ('  done')
 	else:
 		lines.append ('  apply (simp_all add: enum_%s enum_all_%s_def enum_ex_%s_def)' \
 					  % (header, header, header))
-		lines.append ('  apply fast')
-	lines.append ('  done')
+		lines.append ('  by fast+')
 	lines.append ('end')
 	lines.append ('')
 	lines.append ('instantiation %s :: enum_alt' % header)
@@ -1275,9 +1280,12 @@ def no_proofs (header, canonical, d):
 	return ([], [])
 no_proofs.order = 6
 
+# FIXME "Bounded" emits enum proofs even if something already has enum proofs
+# generated due to "Enum"
+
 instance_proof_table = {
 	'Eq': no_proofs,
-	'Bounded': enum_instance_proofs,
+	'Bounded': no_proofs, #enum_instance_proofs,
 	'Enum': enum_instance_proofs,
 	'Ix': no_proofs,
 	'Ord': no_proofs,
@@ -2296,9 +2304,9 @@ def all_constructor_conv (cases):
 			conv.append (('| %s \<Rightarrow> ' % pat, i))
 	return conv
 
-word_getter = re.compile (r"([a-zA-Z]+)")
+word_getter = re.compile (r"([a-zA-Z0-9]+)")
 
-record_getter = re.compile (r"([a-zA-Z]+\s*{[a-zA-Z0-9'\s=\,_\(\):\]\[]*})")
+record_getter = re.compile (r"([a-zA-Z0-9]+\s*{[a-zA-Z0-9'\s=\,_\(\):\]\[]*})")
 
 def extended_pattern_conv(cases):
 	conv = [('case \\x of', None)]

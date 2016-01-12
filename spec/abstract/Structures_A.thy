@@ -17,8 +17,8 @@ chapter "Basic Data Structures"
 
 theory Structures_A
 imports
-  ARM_Structs_A
-  "../machine/MachineOps"
+  "./$L4V_ARCH/Arch_Structs_A"
+  "../machine/$L4V_ARCH/MachineOps"
 begin
 
 text {*
@@ -379,7 +379,7 @@ definition
       tcb_caller   = NullCap,
       tcb_ipcframe = NullCap,
       tcb_state    = Inactive,
-      tcb_fault_handler = to_bl (0::word32),
+      tcb_fault_handler = to_bl (0::machine_word),
       tcb_ipc_buffer = 0,
       tcb_context    = new_context,
       tcb_fault      = None, 
@@ -419,7 +419,7 @@ where
 | "obj_bits (ArchObj ao) = arch_kobj_size ao"
 
 primrec (nonexhaustive)
-  obj_size :: "cap \<Rightarrow> word32"
+  obj_size :: "cap \<Rightarrow> machine_word"
 where
   "obj_size NullCap = 0"
 | "obj_size (UntypedCap r bits f) = 1 << bits"

@@ -16,9 +16,9 @@ chapter "Types visible in the API"
 
 theory Types_H
 imports
-  State_H
+  "./$L4V_ARCH/State_H"
   "../../lib/Lib"
-  ArchTypes_H
+  "./$L4V_ARCH/ArchTypes_H"
 begin
 
 #INCLUDE_HASKELL SEL4/API/Types.lhs Arch=ArchTypes_H all_bits NOT wordsFromBootInfo messageInfoFromWord wordFromMessageInfo

@@ -416,7 +416,7 @@ defs performInvocation_def:
     returnOk $ []
   odE)
   | (InvokeIRQControl invok) \<Rightarrow>    (doE
-    invokeIRQControl invok;
+    performIRQControl invok;
     returnOk $ []
   odE)
   | (InvokeIRQHandler invok) \<Rightarrow>    (doE

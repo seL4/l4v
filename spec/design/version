@@ -1,5 +1,5 @@
-Built from git repo at /home/tsewell/dev/verification/seL4/haskell by tsewell
+Built from git repo at /Users/dmatichuk/verification-x64/seL4/haskell by dmatichuk
 
 Generated from changeset:
-f7b60e9 Final patch to lookupSlot variants.
+607b2e1 refactor haskell to allow for multiple architectures
 

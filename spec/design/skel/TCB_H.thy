@@ -16,7 +16,7 @@ imports
   TCBDecls_H
   CNode_H
   VSpace_H
-  ArchTCB_H
+  "./$L4V_ARCH/ArchTCB_H"
 begin
 
 #INCLUDE_HASKELL SEL4/Object/TCB.lhs Arch=ArchTCB_H bodies_only NOT liftFnMaybe assertDerived asUser

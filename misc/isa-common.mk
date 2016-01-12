@@ -33,6 +33,9 @@ endif
 ifndef ISABELLE_OUTPUT
   export ISABELLE_OUTPUT=$(shell ${ISABELLE_TOOL} getenv -b ISABELLE_OUTPUT)
 endif
+ifndef L4V_ARCH
+  export L4V_ARCH=ARM
+endif
 
 # Setup rules for the heaps.
 $(HEAPS): .FORCE

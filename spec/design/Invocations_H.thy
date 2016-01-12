@@ -11,8 +11,8 @@
 theory Invocations_H
 imports
   Structures_H
-  ArchRetypeDecls_H
-  InvocationLabels_H
+  "./$L4V_ARCH/ArchRetypeDecls_H"
+  "./$L4V_ARCH/ArchLabelFuns_H"
 begin
 
 datatype tcbinvocation =
@@ -760,13 +760,8 @@ lemma retypeNewSizeBits_retypeNewSizeBits_update [simp]:
   by (cases v) simp
 
 datatype irqcontrol_invocation =
-    InterruptControl ArchRetypeDecls_H.interrupt_control
-  | IssueIRQHandler irq machine_word machine_word
-
-primrec
-  interruptControlArch :: "irqcontrol_invocation \<Rightarrow> ArchRetypeDecls_H.interrupt_control"
-where
-  "interruptControlArch (InterruptControl v0) = v0"
+    IssueIRQHandler irq machine_word machine_word
+  | ArchInvokeIRQControl ArchRetypeDecls_H.irqcontrol_invocation
 
 primrec
   issueHandlerSlot :: "irqcontrol_invocation \<Rightarrow> machine_word"
@@ -784,9 +779,9 @@ where
   "issueHandlerControllerSlot (IssueIRQHandler v0 v1 v2) = v2"
 
 primrec
-  interruptControlArch_update :: "(ArchRetypeDecls_H.interrupt_control \<Rightarrow> ArchRetypeDecls_H.interrupt_control) \<Rightarrow> irqcontrol_invocation \<Rightarrow> irqcontrol_invocation"
+  archIRQControlInvocation :: "irqcontrol_invocation \<Rightarrow> ArchRetypeDecls_H.irqcontrol_invocation"
 where
-  "interruptControlArch_update f (InterruptControl v0) = InterruptControl (f v0)"
+  "archIRQControlInvocation (ArchInvokeIRQControl v0) = v0"
 
 primrec
   issueHandlerSlot_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> irqcontrol_invocation \<Rightarrow> irqcontrol_invocation"
@@ -803,28 +798,33 @@ primrec
 where
   "issueHandlerControllerSlot_update f (IssueIRQHandler v0 v1 v2) = IssueIRQHandler v0 v1 (f v2)"
 
-abbreviation (input)
-  InterruptControl_trans :: "(ArchRetypeDecls_H.interrupt_control) \<Rightarrow> irqcontrol_invocation" ("InterruptControl'_ \<lparr> interruptControlArch= _ \<rparr>")
+primrec
+  archIRQControlInvocation_update :: "(ArchRetypeDecls_H.irqcontrol_invocation \<Rightarrow> ArchRetypeDecls_H.irqcontrol_invocation) \<Rightarrow> irqcontrol_invocation \<Rightarrow> irqcontrol_invocation"
 where
-  "InterruptControl_ \<lparr> interruptControlArch= v0 \<rparr> == InterruptControl v0"
+  "archIRQControlInvocation_update f (ArchInvokeIRQControl v0) = ArchInvokeIRQControl (f v0)"
 
 abbreviation (input)
   IssueIRQHandler_trans :: "(irq) \<Rightarrow> (machine_word) \<Rightarrow> (machine_word) \<Rightarrow> irqcontrol_invocation" ("IssueIRQHandler'_ \<lparr> issueHandlerIRQ= _, issueHandlerSlot= _, issueHandlerControllerSlot= _ \<rparr>")
 where
   "IssueIRQHandler_ \<lparr> issueHandlerIRQ= v0, issueHandlerSlot= v1, issueHandlerControllerSlot= v2 \<rparr> == IssueIRQHandler v0 v1 v2"
 
-definition
-  isInterruptControl :: "irqcontrol_invocation \<Rightarrow> bool"
+abbreviation (input)
+  ArchInvokeIRQControl_trans :: "(ArchRetypeDecls_H.irqcontrol_invocation) \<Rightarrow> irqcontrol_invocation" ("ArchInvokeIRQControl'_ \<lparr> archIRQControlInvocation= _ \<rparr>")
 where
- "isInterruptControl v \<equiv> case v of
-    InterruptControl v0 \<Rightarrow> True
-  | _ \<Rightarrow> False"
+  "ArchInvokeIRQControl_ \<lparr> archIRQControlInvocation= v0 \<rparr> == ArchInvokeIRQControl v0"
 
 definition
   isIssueIRQHandler :: "irqcontrol_invocation \<Rightarrow> bool"
 where
  "isIssueIRQHandler v \<equiv> case v of
     IssueIRQHandler v0 v1 v2 \<Rightarrow> True
+  | _ \<Rightarrow> False"
+
+definition
+  isArchInvokeIRQControl :: "irqcontrol_invocation \<Rightarrow> bool"
+where
+ "isArchInvokeIRQControl v \<equiv> case v of
+    ArchInvokeIRQControl v0 \<Rightarrow> True
   | _ \<Rightarrow> False"
 
 datatype irqhandler_invocation =
