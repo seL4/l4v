@@ -327,8 +327,10 @@ def main():
         if len(current_jobs) < args.jobs:
             # Find the first non-blocked test and handle it.
             for i, t in enumerate(tests_queue):
+                # Leave out dependencies that were excluded at the command line.
+                real_depends = t.depends & set(tests_to_run)
                 # Non-blocked and open. Start it.
-                if t.depends.issubset(passed_tests):
+                if real_depends.issubset(passed_tests):
                     test_thread = threading.Thread(target=run_test, name=t.name,
                                                    args=(t, status_queue, args.verbose))
                     wipe_tty_status()
@@ -339,12 +341,16 @@ def main():
                     del tests_queue[i]
                     break
                 # Non-blocked but depends on a failed test. Remove it.
-                if len(t.depends & failed_tests) > 0:
+                if len(real_depends & failed_tests) > 0:
                     wipe_tty_status()
                     print_test_line(t.name, ANSI_YELLOW, "skipped", None, None, args.legacy_status)
                     failed_tests.add(t.name)
                     del tests_queue[i]
                     break
+
+        # Sanity check
+        if tests_queue and not current_jobs:
+            raise RuntimeError('INTERNAL ERROR: stuck queue. Remaining tests: ' + repr(t.name for t in tests_queue))
 
         # Wait for jobs to complete.
         try:
