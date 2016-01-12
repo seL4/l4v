@@ -2355,7 +2355,7 @@ lemma not_snd_bindD':
 lemma snd_bind [monad_eq]:
   "snd ((a >>= b) s) = (snd (a s) \<or> (\<exists>r s'. (r, s') \<in> fst (a s) \<and> snd (b r s')))"
   apply (clarsimp simp add: bind_def Bex_def image_def)
-  apply (subst surjective_pairing, subst Pair_eq, force)
+  apply (subst surjective_pairing, subst prod.inject, force)
   done
 
 lemma in_lift [monad_eq]:
