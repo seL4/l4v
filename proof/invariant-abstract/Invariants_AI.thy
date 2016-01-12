@@ -1548,108 +1548,108 @@ lemmas valid_cap_ref_simps' =
 
 (*Pure wizardry*)
 lemma valid_cap_ref_simps :
-  "valid_cap_ref NullCap (s\<Colon>'z_1\<Colon>state_ext state) = True \<and>
-valid_cap_ref (UntypedCap (x\<Colon>word32) (xa\<Colon>nat) (xb\<Colon>nat)) (sa\<Colon>'z_1\<Colon>state_ext state) =
-(valid_untyped (UntypedCap x xa xb) sa \<and> xb \<le> (2\<Colon>nat) ^ xa \<and> x \<noteq> (0\<Colon>word32)) \<and>
-valid_cap_ref (EndpointCap (xc\<Colon>word32) (xd\<Colon>word32) (xe\<Colon>rights set))
- (sb\<Colon>'z_1\<Colon>state_ext state) =
+  "valid_cap_ref NullCap (s::'z_1::state_ext state) = True \<and>
+valid_cap_ref (UntypedCap (x::word32) (xa::nat) (xb::nat)) (sa::'z_1::state_ext state) =
+(valid_untyped (UntypedCap x xa xb) sa \<and> xb \<le> (2::nat) ^ xa \<and> x \<noteq> (0::word32)) \<and>
+valid_cap_ref (EndpointCap (xc::word32) (xd::word32) (xe::rights set))
+ (sb::'z_1::state_ext state) =
 ep_at xc sb \<and>
-valid_cap_ref (NotificationCap (xf\<Colon>word32) (xg\<Colon>word32) (xh\<Colon>rights set))
- (sc\<Colon>'z_1\<Colon>state_ext state) =
+valid_cap_ref (NotificationCap (xf::word32) (xg::word32) (xh::rights set))
+ (sc::'z_1::state_ext state) =
 ntfn_at xf sc \<and>
-valid_cap_ref (ReplyCap (xi\<Colon>word32) (xj\<Colon>bool)) (sd\<Colon>'z_1\<Colon>state_ext state) =
+valid_cap_ref (ReplyCap (xi::word32) (xj::bool)) (sd::'z_1::state_ext state) =
 tcb_at xi sd \<and>
-valid_cap_ref (CNodeCap (xk\<Colon>word32) (xl\<Colon>nat) (xm\<Colon>bool list))
- (se\<Colon>'z_1\<Colon>state_ext state) =
+valid_cap_ref (CNodeCap (xk::word32) (xl::nat) (xm::bool list))
+ (se::'z_1::state_ext state) =
 cap_table_at xl xk se \<and>
-valid_cap_ref (ThreadCap (xn\<Colon>word32)) (sf\<Colon>'z_1\<Colon>state_ext state) = tcb_at xn sf \<and>
-valid_cap_ref DomainCap (sp\<Colon>'z_1\<Colon>state_ext state) = True \<and>
-valid_cap_ref IRQControlCap (sg\<Colon>'z_1\<Colon>state_ext state) = True \<and>
-valid_cap_ref (IRQHandlerCap (xo\<Colon>word8)) (sh\<Colon>'z_1\<Colon>state_ext state) = True \<and>
-valid_cap_ref (Zombie (xp\<Colon>word32) (xq\<Colon>nat option) (xr\<Colon>nat))
- (si\<Colon>'z_1\<Colon>state_ext state) =
-(case xq of None \<Rightarrow> tcb_at xp si | Some (b\<Colon>nat) \<Rightarrow> cap_table_at b xp si) \<and>
-valid_cap_ref (ArchObjectCap (ASIDPoolCap (xs\<Colon>word32) (xt\<Colon>word32)))
- (sj\<Colon>'z_1\<Colon>state_ext state) =
+valid_cap_ref (ThreadCap (xn::word32)) (sf::'z_1::state_ext state) = tcb_at xn sf \<and>
+valid_cap_ref DomainCap (sp::'z_1::state_ext state) = True \<and>
+valid_cap_ref IRQControlCap (sg::'z_1::state_ext state) = True \<and>
+valid_cap_ref (IRQHandlerCap (xo::word8)) (sh::'z_1::state_ext state) = True \<and>
+valid_cap_ref (Zombie (xp::word32) (xq::nat option) (xr::nat))
+ (si::'z_1::state_ext state) =
+(case xq of None \<Rightarrow> tcb_at xp si | Some (b::nat) \<Rightarrow> cap_table_at b xp si) \<and>
+valid_cap_ref (ArchObjectCap (ASIDPoolCap (xs::word32) (xt::word32)))
+ (sj::'z_1::state_ext state) =
 asid_pool_at xs sj \<and>
-valid_cap_ref (ArchObjectCap ASIDControlCap) (sk\<Colon>'z_1\<Colon>state_ext state) = True \<and>
+valid_cap_ref (ArchObjectCap ASIDControlCap) (sk::'z_1::state_ext state) = True \<and>
 valid_cap_ref
  (ArchObjectCap
-   (PageCap (xu\<Colon>word32) (xv\<Colon>rights set) (xw\<Colon>vmpage_size)
-     (xx\<Colon>(word32 \<times> word32) option)))
- (sl\<Colon>'z_1\<Colon>state_ext state) =
+   (PageCap (xu::word32) (xv::rights set) (xw::vmpage_size)
+     (xx::(word32 \<times> word32) option)))
+ (sl::'z_1::state_ext state) =
 typ_at (AArch (AIntData xw)) xu sl \<and>
 valid_cap_ref
- (ArchObjectCap (PageTableCap (xy\<Colon>word32) (xz\<Colon>(word32 \<times> word32) option)))
- (sm\<Colon>'z_1\<Colon>state_ext state) =
+ (ArchObjectCap (PageTableCap (xy::word32) (xz::(word32 \<times> word32) option)))
+ (sm::'z_1::state_ext state) =
 page_table_at xy sm \<and>
-valid_cap_ref (ArchObjectCap (PageDirectoryCap (ya\<Colon>word32) (yb\<Colon>word32 option)))
- (sn\<Colon>'z_1\<Colon>state_ext state) =
+valid_cap_ref (ArchObjectCap (PageDirectoryCap (ya::word32) (yb::word32 option)))
+ (sn::'z_1::state_ext state) =
 page_directory_at ya sn"
   by (rule valid_cap_ref_simps')
 
 lemmas valid_cap_simps' = valid_cap_def[split_simps cap.split arch_cap.split]
 
 lemma valid_cap_simps :
-  "(s\<Colon>'z_1\<Colon>state_ext state) \<turnstile> NullCap = (cap_aligned NullCap \<and> True) \<and>
-(sa\<Colon>'z_1\<Colon>state_ext state) \<turnstile> UntypedCap (x\<Colon>word32) (xa\<Colon>nat) (xb\<Colon>nat) =
+  "(s::'z_1::state_ext state) \<turnstile> NullCap = (cap_aligned NullCap \<and> True) \<and>
+(sa::'z_1::state_ext state) \<turnstile> UntypedCap (x::word32) (xa::nat) (xb::nat) =
 (cap_aligned (UntypedCap x xa xb) \<and>
  valid_untyped (UntypedCap x xa xb) sa \<and>
- (4\<Colon>nat) \<le> xa \<and> xb \<le> (2\<Colon>nat) ^ xa \<and> x \<noteq> (0\<Colon>word32)) \<and>
-(sb\<Colon>'z_1\<Colon>state_ext state) \<turnstile> EndpointCap (xc\<Colon>word32) (xd\<Colon>word32) (xe\<Colon>rights set) =
+ (4::nat) \<le> xa \<and> xb \<le> (2::nat) ^ xa \<and> x \<noteq> (0::word32)) \<and>
+(sb::'z_1::state_ext state) \<turnstile> EndpointCap (xc::word32) (xd::word32) (xe::rights set) =
 (cap_aligned (EndpointCap xc xd xe) \<and> ep_at xc sb) \<and>
-(sc\<Colon>'z_1\<Colon>state_ext state) \<turnstile> NotificationCap (xf\<Colon>word32) (xg\<Colon>word32)
-                        (xh\<Colon>rights set) =
+(sc::'z_1::state_ext state) \<turnstile> NotificationCap (xf::word32) (xg::word32)
+                        (xh::rights set) =
 (cap_aligned (NotificationCap xf xg xh) \<and> ntfn_at xf sc \<and> AllowGrant \<notin> xh) \<and>
-(sd\<Colon>'z_1\<Colon>state_ext state) \<turnstile> ReplyCap (xi\<Colon>word32) (xj\<Colon>bool) =
+(sd::'z_1::state_ext state) \<turnstile> ReplyCap (xi::word32) (xj::bool) =
 (cap_aligned (ReplyCap xi xj) \<and> tcb_at xi sd) \<and>
-(se\<Colon>'z_1\<Colon>state_ext state) \<turnstile> CNodeCap (xk\<Colon>word32) (xl\<Colon>nat) (xm\<Colon>bool list) =
+(se::'z_1::state_ext state) \<turnstile> CNodeCap (xk::word32) (xl::nat) (xm::bool list) =
 (cap_aligned (CNodeCap xk xl xm) \<and>
- cap_table_at xl xk se \<and> xl \<noteq> (0\<Colon>nat) \<and> length xm \<le> (32\<Colon>nat)) \<and>
-(sf\<Colon>'z_1\<Colon>state_ext state) \<turnstile> ThreadCap (xn\<Colon>word32) =
+ cap_table_at xl xk se \<and> xl \<noteq> (0::nat) \<and> length xm \<le> (32::nat)) \<and>
+(sf::'z_1::state_ext state) \<turnstile> ThreadCap (xn::word32) =
 (cap_aligned (ThreadCap xn) \<and> tcb_at xn sf) \<and>
-(sp\<Colon>'z_1\<Colon>state_ext state) \<turnstile> DomainCap = (cap_aligned DomainCap \<and> True) \<and>
-(sg\<Colon>'z_1\<Colon>state_ext state) \<turnstile> IRQControlCap = (cap_aligned IRQControlCap \<and> True) \<and>
-(sh\<Colon>'z_1\<Colon>state_ext state) \<turnstile> IRQHandlerCap (xo\<Colon>word8) =
+(sp::'z_1::state_ext state) \<turnstile> DomainCap = (cap_aligned DomainCap \<and> True) \<and>
+(sg::'z_1::state_ext state) \<turnstile> IRQControlCap = (cap_aligned IRQControlCap \<and> True) \<and>
+(sh::'z_1::state_ext state) \<turnstile> IRQHandlerCap (xo::word8) =
 (cap_aligned (IRQHandlerCap xo) \<and> xo \<le> maxIRQ) \<and>
-(si\<Colon>'z_1\<Colon>state_ext state) \<turnstile> Zombie (xp\<Colon>word32) (xq\<Colon>nat option) (xr\<Colon>nat) =
+(si::'z_1::state_ext state) \<turnstile> Zombie (xp::word32) (xq::nat option) (xr::nat) =
 (cap_aligned (Zombie xp xq xr) \<and>
- (case xq of None \<Rightarrow> tcb_at xp si \<and> xr \<le> (5\<Colon>nat)
-  | Some (b\<Colon>nat) \<Rightarrow> cap_table_at b xp si \<and> xr \<le> (2\<Colon>nat) ^ b \<and> b \<noteq> (0\<Colon>nat))) \<and>
-(sj\<Colon>'z_1\<Colon>state_ext state) \<turnstile> ArchObjectCap (ASIDPoolCap (xs\<Colon>word32) (xt\<Colon>word32)) =
+ (case xq of None \<Rightarrow> tcb_at xp si \<and> xr \<le> (5::nat)
+  | Some (b::nat) \<Rightarrow> cap_table_at b xp si \<and> xr \<le> (2::nat) ^ b \<and> b \<noteq> (0::nat))) \<and>
+(sj::'z_1::state_ext state) \<turnstile> ArchObjectCap (ASIDPoolCap (xs::word32) (xt::word32)) =
 (cap_aligned (ArchObjectCap (ASIDPoolCap xs xt)) \<and>
  asid_pool_at xs sj \<and>
- is_aligned xt asid_low_bits \<and> xt \<le> (2\<Colon>word32) ^ asid_bits - (1\<Colon>word32)) \<and>
-(sk\<Colon>'z_1\<Colon>state_ext state) \<turnstile> ArchObjectCap ASIDControlCap =
+ is_aligned xt asid_low_bits \<and> xt \<le> (2::word32) ^ asid_bits - (1::word32)) \<and>
+(sk::'z_1::state_ext state) \<turnstile> ArchObjectCap ASIDControlCap =
 (cap_aligned (ArchObjectCap ASIDControlCap) \<and> True) \<and>
-(sl\<Colon>'z_1\<Colon>state_ext state) \<turnstile> ArchObjectCap
-                        (PageCap (xu\<Colon>word32) (xv\<Colon>rights set) (xw\<Colon>vmpage_size)
-                          (xx\<Colon>(word32 \<times> word32) option)) =
+(sl::'z_1::state_ext state) \<turnstile> ArchObjectCap
+                        (PageCap (xu::word32) (xv::rights set) (xw::vmpage_size)
+                          (xx::(word32 \<times> word32) option)) =
 (cap_aligned (ArchObjectCap (PageCap xu xv xw xx)) \<and>
  typ_at (AArch (AIntData xw)) xu sl \<and>
  xv \<in> valid_vm_rights \<and>
  (case xx of None \<Rightarrow> True
-  | Some (asid, ref\<Colon>word32) \<Rightarrow>
-      (0\<Colon>word32) < asid \<and>
-      asid \<le> (2\<Colon>word32) ^ asid_bits - (1\<Colon>word32) \<and>
+  | Some (asid, ref::word32) \<Rightarrow>
+      (0::word32) < asid \<and>
+      asid \<le> (2::word32) ^ asid_bits - (1::word32) \<and>
       vmsz_aligned ref xw \<and> ref < kernel_base)) \<and>
-(sm\<Colon>'z_1\<Colon>state_ext state) \<turnstile> ArchObjectCap
-                        (PageTableCap (xy\<Colon>word32)
-                          (xz\<Colon>(word32 \<times> word32) option)) =
+(sm::'z_1::state_ext state) \<turnstile> ArchObjectCap
+                        (PageTableCap (xy::word32)
+                          (xz::(word32 \<times> word32) option)) =
 (cap_aligned (ArchObjectCap (PageTableCap xy xz)) \<and>
  page_table_at xy sm \<and>
  (case xz of None \<Rightarrow> True
-  | Some (asid, vref\<Colon>word32) \<Rightarrow>
-      (0\<Colon>word32) < asid \<and>
-      asid \<le> (2\<Colon>word32) ^ asid_bits - (1\<Colon>word32) \<and>
+  | Some (asid, vref::word32) \<Rightarrow>
+      (0::word32) < asid \<and>
+      asid \<le> (2::word32) ^ asid_bits - (1::word32) \<and>
       vref < kernel_base \<and> is_aligned vref (pageBitsForSize ARMSection))) \<and>
-(sn\<Colon>'z_1\<Colon>state_ext state) \<turnstile> ArchObjectCap
-                        (PageDirectoryCap (ya\<Colon>word32) (yb\<Colon>word32 option)) =
+(sn::'z_1::state_ext state) \<turnstile> ArchObjectCap
+                        (PageDirectoryCap (ya::word32) (yb::word32 option)) =
 (cap_aligned (ArchObjectCap (PageDirectoryCap ya yb)) \<and>
  page_directory_at ya sn \<and>
  (case yb of None \<Rightarrow> True
-  | Some (asid\<Colon>word32) \<Rightarrow>
-      (0\<Colon>word32) < asid \<and> asid \<le> (2\<Colon>word32) ^ asid_bits - (1\<Colon>word32)))"
+  | Some (asid::word32) \<Rightarrow>
+      (0::word32) < asid \<and> asid \<le> (2::word32) ^ asid_bits - (1::word32)))"
  by (rule valid_cap_simps')
 
 

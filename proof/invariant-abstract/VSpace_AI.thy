@@ -3373,7 +3373,7 @@ lemma pd_shifting_again:
 
 lemma pd_shifting_again2:
   "is_aligned (pd::word32) pd_bits \<Longrightarrow>
-   pd + (ucast (ae\<Colon>12 word) << 2) && mask pd_bits = (ucast ae << 2)"
+   pd + (ucast (a::12 word) << 2) && mask pd_bits = (ucast ae << 2)"
   apply (rule conjunct1, erule is_aligned_add_helper)
   apply (rule ucast_less_shiftl_helper)
    apply (simp add: word_bits_def)

@@ -177,7 +177,7 @@ lemma thread_set_split_out_set_bound_notification:
   apply (auto dest!: get_tcb_SomeD, auto simp: get_tcb_def f)
   done
 
-schematic_lemma tcb_ipcframe_in_cases:
+schematic_goal tcb_ipcframe_in_cases:
   "(tcb_ipcframe, ?x) \<in> ran tcb_cap_cases"
   by (fastforce simp add: ran_tcb_cap_cases)
 

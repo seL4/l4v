@@ -1012,7 +1012,7 @@ lemma set_cap_zombies':
   apply (simp add: zombies_final_def2 cte_wp_at_caps_of_state)
   apply (rule hoare_pre, wp)
   apply clarsimp
-  apply (metis Int_commute Pair_eq)
+  apply (metis Int_commute prod.inject)
   done
 
 fun ex_zombie_refs :: "(cap \<times> cap) \<Rightarrow> obj_ref set"

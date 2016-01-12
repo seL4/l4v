@@ -2534,7 +2534,7 @@ lemmas thread_set_final_cap =
     final_cap_lift [OF thread_set_caps_of_state_trivial]
 
 
-schematic_lemma no_cap_to_obj_with_diff_ref_lift:
+schematic_goal no_cap_to_obj_with_diff_ref_lift:
   "\<lbrace>\<lambda>s. ?P (caps_of_state s)\<rbrace> f \<lbrace>\<lambda>rv s. ?P (caps_of_state s)\<rbrace>
    \<Longrightarrow> \<lbrace>no_cap_to_obj_with_diff_ref cap S\<rbrace>
           f

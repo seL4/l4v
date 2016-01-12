@@ -3165,7 +3165,7 @@ lemma set_pd_unmap_mappings:
   apply (simp add: vs_refs_def)
   subgoal premises prems for s x r x3
     apply (cases "x \<in> kernel_mapping_slots")
-    proof goals
+    proof goal_cases
      case False
      with prems show ?thesis
      apply -
