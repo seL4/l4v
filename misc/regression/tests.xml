@@ -52,7 +52,7 @@
 <testsuite timeout="3600">
 
     <!-- Build Isabelle. -->
-    <test name="isabelle" cwd="../../">isabelle build -b -v HOL-Word</test>
+    <test name="isabelle" cwd="../../">isabelle/bin/isabelle build -b -v HOL-Word</test>
 
     <!-- Ensure that all of our XML files are strictly correct. -->
     <test name="tests-xml-correct" cwd="../../">
