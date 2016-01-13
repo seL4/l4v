@@ -30,6 +30,7 @@ import sys
 import testspec
 import threading
 import traceback
+import xml.etree.ElementTree as ET
 
 # Try importing psutil.
 PS_UTIL_AVAILABLE = False
@@ -249,6 +250,8 @@ def main():
             help="emulate legacy (sequential code) status lines")
     parser.add_argument("-v", "--verbose", action="store_true",
             help="print test output")
+    parser.add_argument("--junit-report", metavar="FILE",
+            help="write JUnit-style test report")
     parser.add_argument("tests", metavar="TESTS",
             help="tests to run (defaults to all tests)",
             nargs="*")
@@ -297,7 +300,7 @@ def main():
     print("Running %d test(s)..." % len(tests_to_run))
     failed_tests = set()
     passed_tests = set()
-    failed_test_log = []
+    test_results = {}
 
     # Use a simple list to store the pending queue. We track the dependencies separately.
     tests_queue = tests_to_run[:]
@@ -356,11 +359,12 @@ def main():
                 del current_jobs[name]
 
                 status, log, time_taken, mem = info['status'], info['output'], info['real_time'], info['mem_usage']
+                test_results[name] = info
+
                 # Print result.
                 wipe_tty_status()
                 if status != 'pass':
                     failed_tests.add(name)
-                    failed_test_log.append((name, log, time_taken))
                     print_test_line(name, ANSI_RED, "%s *" % status, time_taken, mem, args.legacy_status)
                 else:
                     passed_tests.add(name)
@@ -370,21 +374,50 @@ def main():
     wipe_tty_status()
 
     # Print failure summaries unless requested not to.
-    if not args.brief and len(failed_test_log) > 0:
+    if not args.brief and len(failed_tests) > 0:
         LINE_LIMIT = 40
         def print_line():
             print("".join(["-" for x in range(72)]))
         print("")
-        for (failed_test, log, _) in failed_test_log:
+        # Sort failed_tests according to tests_to_run
+        for test_name in tests_to_run:
+            if test_name not in failed_tests:
+                continue
+            if test_name not in test_results:
+                continue
+
             print_line()
-            print("TEST FAILURE: %s" % failed_test)
+            print("TEST FAILURE: %s" % test_name)
             print("")
-            log = log.rstrip("\n") + "\n"
+            log = test_results[test_name]['output'].rstrip("\n") + "\n"
             lines = log.split("\n")
             if len(lines) > LINE_LIMIT:
                 lines = ["..."] + lines[-LINE_LIMIT:]
             print("\n".join(lines))
         print_line()
+
+    # Print JUnit-style test report.
+    # reference: https://github.com/notnoop/hudson-tools/blob/master/toJunitXML/sample-junit.xml
+    if args.junit_report is not None:
+        testsuite = ET.Element("testsuite")
+        for t in tests_to_run:
+            if t.name not in test_results:
+                # test was skipped
+                testcase = ET.SubElement(testsuite, "testcase",
+                                         classname="", name=t.name, time="0")
+                ET.SubElement(testcase, "error", type="error").text = "Dependency failed"
+            else:
+                info = test_results[t.name]
+                testcase = ET.SubElement(testsuite, "testcase",
+                                         classname="", name=t.name, time='%f' % info['real_time'].total_seconds())
+                if info['status'] == "FAILED":
+                    ET.SubElement(testcase, "failure", type="failure").text = "Build failed"
+                elif info['status'] == "TIMEOUT":
+                    ET.SubElement(testcase, "error", type="timeout").text = "Timed out"
+                # did we capture output?
+                if not args.verbose:
+                    ET.SubElement(testcase, "system-out").text = info['output']
+        ET.ElementTree(testsuite).write(args.junit_report)
 
     # Print summary.
     print(("\n\n"
