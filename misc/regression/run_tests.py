@@ -348,10 +348,6 @@ def main():
                     del tests_queue[i]
                     break
 
-        # Sanity check
-        if tests_queue and not current_jobs:
-            raise RuntimeError('INTERNAL ERROR: stuck queue. Remaining tests: ' + repr(t.name for t in tests_queue))
-
         # Wait for jobs to complete.
         try:
             while True:
