@@ -331,7 +331,7 @@ def main():
             # Find the first non-blocked test and handle it.
             for i, t in enumerate(tests_queue):
                 # Leave out dependencies that were excluded at the command line.
-                real_depends = t.depends & set(tests_to_run)
+                real_depends = t.depends & set(t.name for t in tests_to_run)
                 # Non-blocked and open. Start it.
                 if real_depends.issubset(passed_tests):
                     test_thread = threading.Thread(target=run_test, name=t.name,
