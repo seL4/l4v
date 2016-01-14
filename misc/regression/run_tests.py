@@ -380,16 +380,16 @@ def main():
             print("".join(["-" for x in range(72)]))
         print("")
         # Sort failed_tests according to tests_to_run
-        for test_name in tests_to_run:
-            if test_name not in failed_tests:
+        for t in tests_to_run:
+            if t.name not in failed_tests:
                 continue
-            if test_name not in test_results:
+            if t.name not in test_results:
                 continue
 
             print_line()
-            print("TEST FAILURE: %s" % test_name)
+            print("TEST FAILURE: %s" % t.name)
             print("")
-            log = test_results[test_name]['output'].rstrip("\n") + "\n"
+            log = test_results[t.name]['output'].rstrip("\n") + "\n"
             lines = log.split("\n")
             if len(lines) > LINE_LIMIT:
                 lines = ["..."] + lines[-LINE_LIMIT:]
