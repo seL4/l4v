@@ -26,15 +26,15 @@ where
 | "irq_handler_inv_relation (Invocations_A.SetMode irq trig pol) x = (x = SetMode irq trig pol)"
 
 consts
-  interrupt_control_relation :: "arch_interrupt_control \<Rightarrow> interrupt_control \<Rightarrow> bool"
+  interrupt_control_relation :: "arch_irq_control_invocation \<Rightarrow> ArchRetypeDecls_H.irqcontrol_invocation \<Rightarrow> bool"
 
 primrec
   irq_control_inv_relation :: "irq_control_invocation \<Rightarrow> irqcontrol_invocation \<Rightarrow> bool"
 where
   "irq_control_inv_relation (Invocations_A.IRQControl irq slot slot') x
        = (x = IssueIRQHandler irq (cte_map slot) (cte_map slot'))"
-| "irq_control_inv_relation (Invocations_A.InterruptControl ivk) x
-       = (\<exists>ivk'. x = InterruptControl ivk' \<and> interrupt_control_relation ivk ivk')"
+| "irq_control_inv_relation (Invocations_A.ArchIRQControl ivk) x
+       = (\<exists>ivk'. x = ArchIRQControl ivk' \<and> interrupt_control_relation ivk ivk')"
 
 primrec
   irq_handler_inv_valid' :: "irqhandler_invocation \<Rightarrow> kernel_state \<Rightarrow> bool"
@@ -52,7 +52,7 @@ where
 primrec
   irq_control_inv_valid' :: "irqcontrol_invocation \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
-  "irq_control_inv_valid' (InterruptControl ivk) = \<bottom>"
+  "irq_control_inv_valid' (ArchIRQControl ivk) = \<bottom>"
 | "irq_control_inv_valid' (IssueIRQHandler irq ptr ptr') =
        (cte_wp_at' (\<lambda>cte. cteCap cte = NullCap) ptr and
         cte_wp_at' (\<lambda>cte. cteCap cte = IRQControlCap) ptr' and
@@ -136,7 +136,7 @@ lemma decode_irq_control_corres:
      (decode_irq_control_invocation label args slot caps)
      (decodeIRQControlInvocation label args (cte_map slot) caps')"
   apply (clarsimp simp: decode_irq_control_invocation_def decodeIRQControlInvocation_def
-                        decodeInterruptControl_def arch_decode_interrupt_control_def
+                        ArchInterrupt_H.decodeIRQControlInvocation_def arch_decode_irq_control_invocation_def
              split del: split_if cong: if_cong
                  split: invocation_label.split)
   apply (cases caps, simp split: list.split)
@@ -165,7 +165,7 @@ lemma decode_irq_control_corres:
   done
 
 crunch inv[wp]: decodeIRQControlInvocation "P"
-  (simp: crunch_simps decodeInterruptControl_def)
+  (simp: crunch_simps ArchInterrupt_H.decodeIRQControlInvocation_def)
 
 (* Levity: added (20090201 10:50:27) *)
 declare ensureEmptySlot_stronger [wp]
@@ -197,7 +197,7 @@ lemma decode_irq_control_valid'[wp]:
   apply (rule hoare_pre)
    apply (wp ensureEmptySlot_stronger isIRQActive_wp
              whenE_throwError_wp
-                | simp add: decodeInterruptControl_def | wpc
+                | simp add: ArchInterrupt_H.decodeIRQControlInvocation_def | wpc
                 | wp_once hoare_drop_imps)+
   apply (clarsimp simp: minIRQ_def maxIRQ_def
                         toEnum_of_nat word_le_nat_alt unat_of_nat)
@@ -348,7 +348,7 @@ lemma invoke_irq_control_corres:
    apply (case_tac ctea)
    apply (clarsimp simp: isCap_simps sameRegionAs_def3)
    apply (auto dest: valid_irq_handlers_ctes_ofD)[1]
-  apply (clarsimp simp: arch_invoke_irq_control_def invokeInterruptControl_def)
+  apply (clarsimp simp: arch_invoke_irq_control_def ArchInterrupt_H.invokeIRQControl_def)
   done
 
 crunch valid_cap'[wp]: setIRQState "valid_cap' cap"

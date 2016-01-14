@@ -279,9 +279,9 @@ where
 
 text "ARM does not support additional interrupt control operations"
 definition
-  arch_decode_interrupt_control ::
-  "data list \<Rightarrow> cap list \<Rightarrow> (arch_interrupt_control,'z::state_ext) se_monad" where
-  "arch_decode_interrupt_control d cs \<equiv> throwError IllegalOperation"
+  arch_decode_irq_control_invocation ::
+  "data \<Rightarrow> data list \<Rightarrow> cslot_ptr \<Rightarrow> cap list \<Rightarrow> (arch_irq_control_invocation,'z::state_ext) se_monad" where
+  "arch_decode_irq_control_invocation label args slot excaps \<equiv> throwError IllegalOperation"
 
 section "CNode"
 
@@ -645,10 +645,7 @@ definition
         returnOk $ IRQControl irqv dest_slot src_slot
       odE
     else throwError TruncatedMessage
-  else if invocation_type label = IRQInterruptControl
-    then liftME InterruptControl
-         $ arch_decode_interrupt_control args cps
-  else throwError IllegalOperation)"
+  else liftME ArchIRQControl $ arch_decode_irq_control_invocation label args src_slot cps)"
 
 definition
   data_to_bool :: "data \<Rightarrow> bool"

@@ -42,7 +42,6 @@ datatype invocation_label =
   | CNodeRotate
   | CNodeSaveCaller
   | IRQIssueIRQHandler
-  | IRQInterruptControl
   | IRQAckIRQ
   | IRQSetIRQHandler
   | IRQClearIRQHandler
@@ -116,7 +115,6 @@ definition
       CNodeRotate,
       CNodeSaveCaller,
       IRQIssueIRQHandler,
-      IRQInterruptControl,
       IRQAckIRQ,
       IRQSetIRQHandler,
       IRQClearIRQHandler,

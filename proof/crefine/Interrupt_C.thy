@@ -367,13 +367,13 @@ lemma Platform_maxIRQ:
   "Platform.maxIRQ = scast Kernel_C.maxIRQ"
   by (simp add: Platform.maxIRQ_def Kernel_C.maxIRQ_def)
 
-lemma Arch_decodeInterruptControl_ccorres:
+lemma Arch_decodeIRQControlInvocation_ccorres:
   "ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
       \<top> UNIV []
-     (decodeInterruptControl args extraCaps
-        >>= invocationCatch thread isBlocking isCall (InvokeIRQControl o InterruptControl))
-     (Call Arch_decodeInterruptControl_'proc)"
-  apply (cinit' simp: decodeInterruptControl_def)
+     (ArchInterrupt_H.decodeIRQControlInvocation label args srcSlot extraCaps
+        >>= invocationCatch thread isBlocking isCall (InvokeIRQControl o ArchIRQControl))
+     (Call Arch_decodeIRQControlInvocation_'proc)"
+  apply (cinit' simp: ArchInterrupt_H.decodeIRQControlInvocation_def)
    apply (simp add: throwError_bind invocationCatch_def
               cong: StateSpace.state.fold_congs globals.fold_congs)
    apply (rule syscall_error_throwError_ccorres_n)
@@ -395,6 +395,10 @@ lemma maxIRQ_ucast_scast [simp]:
   "ucast (scast Kernel_C.maxIRQ :: word8) = scast Kernel_C.maxIRQ"
   by (clarsimp simp: Kernel_C.maxIRQ_def)
 
+lemma decodeIRQ_arch_helper: "x \<noteq> invocation_label.IRQIssueIRQHandler \<Longrightarrow> 
+         (case x of invocation_label.IRQIssueIRQHandler \<Rightarrow> f | _ \<Rightarrow> g) = g"
+  by (clarsimp split: invocation_label.splits)
+  
 lemma decodeIRQControlInvocation_ccorres:
   notes if_cong[cong] tl_drop_1[simp]
   shows
@@ -524,19 +528,15 @@ lemma decodeIRQControlInvocation_ccorres:
      apply wp
     apply (simp add: Collect_const_mem all_ex_eq_helper)
     apply (vcg exspec=getSyscallArg_modifies)
-   apply (rule ccorres_Cond_rhs)
-    apply (simp add: liftME_invocationCatch)
-    apply (rule ccorres_add_returnOk)
-    apply (ctac add: Arch_decodeInterruptControl_ccorres)
-       apply (rule ccorres_return_CE, simp+)[1]
-      apply (rule ccorres_return_C_errorE, simp+)[1]
-     apply wp
-    apply vcg
-   apply (rule ccorres_equals_throwError)
-    apply (fastforce simp: throwError_bind invocationCatch_def
-                   split: invocation_label.split)
-   apply (rule syscall_error_throwError_ccorres_n)
-   apply (simp add: syscall_error_to_H_cases)
+   apply (clarsimp simp: decodeIRQ_arch_helper)
+   apply (simp add: liftME_invocationCatch)
+   apply (rule ccorres_add_returnOk)
+   apply (ctac add: Arch_decodeIRQControlInvocation_ccorres)
+      apply (rule ccorres_return_CE, simp+)[1]
+     apply (rule ccorres_return_C_errorE, simp+)[1]
+    apply wp
+   apply vcg
+  apply (simp add: syscall_error_to_H_cases)
   apply (clarsimp simp: if_1_0_0 interpret_excaps_test_null excaps_map_def
                         Collect_const_mem word_sless_def word_sle_def
                         ThreadState_Restart_def unat_of_nat mask_def

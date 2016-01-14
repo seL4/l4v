@@ -1968,7 +1968,7 @@ lemma invokeIRQControl_no_orphans [wp]:
   "\<lbrace> \<lambda>s. no_orphans s \<rbrace>
    invokeIRQControl i
    \<lbrace> \<lambda>rv s. no_orphans s \<rbrace>"
-  apply (cases i, simp_all add: invokeIRQControl_def invokeInterruptControl_def)
+  apply (cases i, simp_all add: invokeIRQControl_def ArchInterrupt_H.invokeIRQControl_def)
   apply (wp | clarsimp)+
   done
 

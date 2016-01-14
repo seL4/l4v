@@ -428,12 +428,12 @@ lemma transform_intent_irq_control_None:
       \<Longrightarrow> \<lbrace>op = s\<rbrace> Decode_A.decode_invocation label args cap_i slot cap excaps \<lbrace>\<lambda>r. \<bottom>\<rbrace>, \<lbrace>\<lambda>x. op = s\<rbrace>"
   apply (clarsimp simp:Decode_A.decode_invocation_def)
     apply wp
-  apply (clarsimp simp:decode_irq_control_invocation_def split del:if_splits)
+  apply (clarsimp simp:decode_irq_control_invocation_def arch_decode_irq_control_invocation_def split del:if_splits)
   apply (case_tac "invocation_type label")
     apply (clarsimp,wp)+
     apply (clarsimp simp:transform_intent_issue_irq_handler_def transform_intent_def split:list.split_asm split del:if_splits,wp)
-    apply (clarsimp simp:arch_decode_interrupt_control_def,wp)+
-done
+    apply (clarsimp simp:arch_decode_irq_control_invocation_def,wp)+
+  done
 
 lemma transform_intent_irq_handler_None:
   "\<lbrakk>transform_intent (invocation_type label) args = None; cap = cap.IRQHandlerCap w\<rbrakk>

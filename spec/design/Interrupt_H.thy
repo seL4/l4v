@@ -68,9 +68,7 @@ defs decodeIRQControlInvocation_def:
             returnOk $ IssueIRQHandler irq destSlot srcSlot
           odE)
         | (IRQIssueIRQHandler,_,_) \<Rightarrow>   throw TruncatedMessage
-        | (IRQInterruptControl,_,_) \<Rightarrow>   liftME InterruptControl $
-            ArchInterrupt_H.decodeInterruptControl args extraCaps
-        | _ \<Rightarrow>   throw IllegalOperation
+        | _ \<Rightarrow>   liftME ArchIRQControl $ ArchInterrupt_H.decodeIRQControlInvocation label args srcSlot extraCaps
         )"
 
 defs invokeIRQControl_def:
@@ -80,8 +78,8 @@ defs invokeIRQControl_def:
     setIRQState (IRQSignal) irq;
     cteInsert (IRQHandlerCap irq) controlSlot handlerSlot
   od)
-  | (InterruptControl invok) \<Rightarrow>   
-    ArchInterrupt_H.invokeInterruptControl invok
+  | (ArchIRQControl invok) \<Rightarrow>   
+    ArchInterrupt_H.invokeIRQControl invok
   )"
 
 defs decodeIRQHandlerInvocation_def:

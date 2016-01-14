@@ -37,7 +37,7 @@ where
 primrec
   irq_control_inv_valid :: "irq_control_invocation \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
-  "irq_control_inv_valid (Invocations_A.InterruptControl ivk) = \<bottom>"
+  "irq_control_inv_valid (Invocations_A.ArchIRQControl ivk) = \<bottom>"
 | "irq_control_inv_valid (Invocations_A.IRQControl irq ptr ptr') =
        (cte_wp_at (op = cap.NullCap) ptr and
         cte_wp_at (op = cap.IRQControlCap) ptr'
@@ -72,7 +72,7 @@ crunch inv[wp]: is_irq_active "P"
 lemma decode_irq_control_invocation_inv[wp]:
   "\<lbrace>P\<rbrace> decode_irq_control_invocation label args slot caps \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (simp add: decode_irq_control_invocation_def Let_def
-                   arch_decode_interrupt_control_def whenE_def, safe)
+                   arch_decode_irq_control_invocation_def whenE_def, safe)
   apply (wp | simp)+
   done
 
@@ -85,7 +85,7 @@ lemma decode_irq_control_valid[wp]:
    \<lbrace>irq_control_inv_valid\<rbrace>,-"
   apply (simp add: decode_irq_control_invocation_def Let_def split_def
                    lookup_target_slot_def whenE_def
-                   arch_decode_interrupt_control_def
+                   arch_decode_irq_control_invocation_def
                  split del: split_if cong: if_cong)
   apply (rule hoare_pre)
    apply (wp ensure_empty_stronger | simp add: cte_wp_at_eq_simp

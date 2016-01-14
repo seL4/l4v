@@ -606,7 +606,7 @@ datatype invocation =
   | InvokeASIDControl asidcontrol_invocation
   | InvokeASIDPool asidpool_invocation
 
-typedecl interrupt_control
+typedecl irqcontrol_invocation
 
 datatype copy_register_sets =
     ARMNoExtraRegisters

@@ -49,7 +49,7 @@ datatype tcb_invocation =
 
 datatype irq_control_invocation =
     IRQControl irq cslot_ptr cslot_ptr
-  | InterruptControl arch_interrupt_control
+  | ArchIRQControl arch_irq_control_invocation
 
 datatype irq_handler_invocation =
     ACKIrq irq

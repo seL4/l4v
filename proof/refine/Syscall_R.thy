@@ -2397,7 +2397,7 @@ lemma inv_irq_IRQInactive:
   -, \<lbrace>\<lambda>rv s. intStateIRQTable (ksInterruptState s) rv \<noteq> irqstate.IRQInactive\<rbrace>"
   apply (simp add: invokeIRQControl_def)
   apply (rule hoare_pre)
-   apply (wpc|wp|simp add: invokeInterruptControl_def)+
+   apply (wpc|wp|simp add: ArchInterrupt_H.invokeIRQControl_def)+
   done
 
 lemma inv_arch_IRQInactive:

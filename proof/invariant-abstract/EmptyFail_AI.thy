@@ -334,8 +334,8 @@ lemma arch_decode_ARMASIDPoolAssign_empty_fail:
 lemma arch_decode_invocation_empty_fail[wp]:
   "empty_fail (arch_decode_invocation label b c d e f)"
   apply (case_tac "invocation_type label")
-  prefer 44  
-  prefer 45
+  prefer 43  
+  prefer 44
   apply ((simp add: arch_decode_ARMASIDControlMakePool_empty_fail arch_decode_ARMASIDPoolAssign_empty_fail)+)[2]  
   by ((simp add: arch_decode_invocation_def Let_def split: arch_cap.splits cap.splits option.splits | wp | intro conjI impI allI)+)
 

@@ -23,7 +23,7 @@ definition "page_bits \<equiv> pageBits"
 text {* The ARM architecture does not provide any additional operations on its
 interrupt controller. *}
 definition
-  arch_invoke_irq_control :: "arch_interrupt_control \<Rightarrow> (unit,'z::state_ext) p_monad" where
+  arch_invoke_irq_control :: "arch_irq_control_invocation \<Rightarrow> (unit,'z::state_ext) p_monad" where
   "arch_invoke_irq_control aic \<equiv> fail"
 
 text {* Switch to a thread's virtual address space context and write its IPC

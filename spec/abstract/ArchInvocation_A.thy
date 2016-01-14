@@ -70,6 +70,6 @@ datatype arch_invocation
      | InvokeASIDPool asid_pool_invocation
 
 -- "There are no additional interrupt control operations on ARM."
-typedecl arch_interrupt_control
+typedecl arch_irq_control_invocation
 
 end
