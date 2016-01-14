@@ -405,18 +405,19 @@ def main():
                 # test was skipped
                 testcase = ET.SubElement(testsuite, "testcase",
                                          classname="", name=t.name, time="0")
-                ET.SubElement(testcase, "error", type="error").text = "Dependency failed"
+                ET.SubElement(testcase, "error", type="error").text = (
+                    "Failed dependencies: " + ', '.join(t.depends & failed_tests))
             else:
                 info = test_results[t.name]
                 testcase = ET.SubElement(testsuite, "testcase",
                                          classname="", name=t.name, time='%f' % info['real_time'].total_seconds())
                 if info['status'] == "FAILED":
-                    ET.SubElement(testcase, "failure", type="failure").text = "Build failed"
+                    ET.SubElement(testcase, "failure", type="failure").text = info['output']
                 elif info['status'] == "TIMEOUT":
-                    ET.SubElement(testcase, "error", type="timeout").text = "Timed out"
-                # did we capture output?
-                if not args.verbose:
-                    ET.SubElement(testcase, "system-out").text = info['output']
+                    ET.SubElement(testcase, "error", type="timeout").text = info['output']
+                else:
+                    if not args.verbose:
+                        ET.SubElement(testcase, "system-out").text = info['output']
         ET.ElementTree(testsuite).write(args.junit_report)
 
     # Print summary.
