@@ -13,7 +13,7 @@ imports Corres
 begin
 
 crunch_ignore (add:
-  bind return when get gets fail
+  bind return "when" get gets fail
   assert put modify unless select
   alternative assert_opt gets_the
   returnOk throwError lift bindE

@@ -357,7 +357,7 @@ lemma setObject_cte_wp_at2':
    apply (erule exEI [where 'a=word32])
    apply (clarsimp simp: ps_clear_upd' lookupAround2_char1)
    apply (drule(1) x)
-    apply (clarsimp simp: lookupAround2_char1 Pair_fst_snd_eq)
+    apply (clarsimp simp: lookupAround2_char1 prod_eqI)
    apply (fastforce dest: bspec [OF _ ranI])
   apply (erule disjEI)
    apply (clarsimp simp: ps_clear_upd' lookupAround2_char1
@@ -370,7 +370,7 @@ lemma setObject_cte_wp_at2':
   apply (frule updateObject_type)
   apply (case_tac ba, simp_all)
   apply (drule(1) x)
-   apply (clarsimp simp: Pair_fst_snd_eq lookupAround2_char1)
+   apply (clarsimp simp: prod_eqI lookupAround2_char1)
   apply (fastforce dest: bspec [OF _ ranI])
   done
 
@@ -1230,7 +1230,7 @@ lemma setObject_valid_objs':
   apply (drule spec, erule mp)
   apply (drule(1) x)
     apply (simp add: ranI)
-   apply (simp add: Pair_fst_snd_eq lookupAround2_char1)
+   apply (simp add: prod_eqI lookupAround2_char1)
   apply (clarsimp elim!: ranE split: split_if_asm simp: ranI)
   done
 

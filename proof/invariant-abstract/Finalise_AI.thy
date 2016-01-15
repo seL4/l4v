@@ -2121,8 +2121,8 @@ lemma pd_shifting_again5:
 
 lemma pd_shifting_kernel_mapping_slots:
   "\<lbrakk>is_aligned word pd_bits;
-    (sl :: word32) \<le> (kernel_base >> (20\<Colon>nat)) - (1\<Colon>word32)\<rbrakk>
-   \<Longrightarrow> ucast ((sl << (2\<Colon>nat)) + word && mask pd_bits >> (2\<Colon>nat))
+    (sl :: word32) \<le> (kernel_base >> (20::nat)) - (1::word32)\<rbrakk>
+   \<Longrightarrow> ucast ((sl << (2::nat)) + word && mask pd_bits >> (2::nat))
       \<notin> kernel_mapping_slots"
   apply (subst pd_shifting_again5)
     apply assumption+

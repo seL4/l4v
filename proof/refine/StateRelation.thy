@@ -472,7 +472,7 @@ lemma cap_relation_case':
             | _ \<Rightarrow> cap_relation cap cap')"
   by (simp split: cap.split arch_cap.split)
 
-schematic_lemma cap_relation_case:
+schematic_goal cap_relation_case:
   "cap_relation cap cap' = ?P"
   apply (subst cap_relation_case')
   apply (clarsimp cong: cap.case_cong arch_cap.case_cong)

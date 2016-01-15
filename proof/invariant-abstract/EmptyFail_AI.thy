@@ -136,7 +136,7 @@ lemma put_empty_fail[wp]:
 
 
 crunch_ignore (empty_fail)
-  (add: bind bindE lift liftE liftM when whenE unless unlessE return fail assert_opt
+  (add: bind bindE lift liftE liftM "when" whenE unless unlessE return fail assert_opt
         mapM mapM_x sequence_x catch handleE invalidateTLB_ASID_impl
         invalidateTLB_VAASID_impl cleanByVA_impl cleanByVA_PoU_impl invalidateByVA_impl
         invalidateByVA_I_impl invalidate_I_PoU_impl cleanInvalByVA_impl branchFlush_impl
