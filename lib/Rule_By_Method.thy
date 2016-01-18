@@ -1,5 +1,5 @@
 theory Rule_By_Method
-imports "~~/src/HOL/Eisbach/Eisbach_Tools"
+imports Main "~~/src/HOL/Eisbach/Eisbach_Tools"
 begin
 
 ML \<open>

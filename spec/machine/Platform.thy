@@ -12,6 +12,7 @@ chapter "Platform Definitions"
 
 theory Platform
 imports
+  "../../lib/Defs"
   "../../lib/Lib"
   "../../lib/WordEnum"
 begin
