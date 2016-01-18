@@ -1,5 +1,5 @@
 Built from git repo at /net/nfshome/export/home/insecure/jbeeren/work/test/seL4/haskell by jbeeren
 
 Generated from changeset:
-6e169c1 archirq: rename missed label to invLabel
+e11bb32 archirq: fix x86 invLabel
 
