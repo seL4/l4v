@@ -18,9 +18,9 @@ TOOLPREFIX ?= arm-none-eabi-
 
 ifeq ($(L4V_ARCH),ARM)
     ARCH=arm
-    ARMV=armv6
-    PLAT=imx31
-    CPU=arm1136jf-s
+    ARMV=armv7-a
+    PLAT=imx6
+    CPU=cortex-a9
     CONFIG_DOMAIN_SCHEDULE=config_arm.c
 endif
 

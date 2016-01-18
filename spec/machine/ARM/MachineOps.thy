@@ -337,6 +337,14 @@ definition
 where "flushBTAC \<equiv> machine_op_lift flushBTAC_impl"
 
 consts
+  initIRQController_impl :: "unit machine_rest_monad"
+definition
+  initIRQController :: "unit machine_monad"
+where "initIRQController \<equiv> machine_op_lift initIRQController_impl"
+
+
+
+consts
   writeContextID_impl :: "unit machine_rest_monad"
 definition
   writeContextID :: "unit machine_monad"
@@ -400,10 +408,12 @@ where
   modify (\<lambda>s. s \<lparr> irq_masks := (irq_masks s) (irq := m) \<rparr>)"
 
 text {* Does nothing on imx31 *}
+consts
+  ackInterrupt_impl :: "irq \<Rightarrow> unit machine_rest_monad"
 definition
   ackInterrupt :: "irq \<Rightarrow> unit machine_monad"
 where
-  "ackInterrupt \<equiv> \<lambda>irq. return ()"
+  "ackInterrupt irq \<equiv> machine_op_lift (ackInterrupt_impl irq)"
 
 definition
   lineStart :: "machine_word \<Rightarrow> machine_word"

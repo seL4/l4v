@@ -19,7 +19,10 @@ imports
   ArchVSpaceDecls_H
 begin
 
-#INCLUDE_HASKELL SEL4/Kernel/VSpace/ARM.lhs bodies_only ArchInv=ArchRetypeDecls_H ArchLabels=ArchInvocationLabels_H NOT checkPDAt checkPTAt checkPDASIDMapMembership checkValidMappingSize
+defs vptrFromPPtr_def:
+"vptrFromPPtr ptr ≡ returnOk $ ptr + 0x20000000"
+
+#INCLUDE_HASKELL SEL4/Kernel/VSpace/ARM.lhs bodies_only ArchInv=ArchRetypeDecls_H ArchLabels=ArchInvocationLabels_H NOT checkPDAt checkPTAt checkPDASIDMapMembership checkValidMappingSize vptrFromPPtr
 
 defs checkValidMappingSize_def:
   "checkValidMappingSize sz \<equiv> stateAssert

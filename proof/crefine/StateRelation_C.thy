@@ -587,7 +587,7 @@ fun
 
 
 definition
-  cinterrupt_relation :: "interrupt_state \<Rightarrow> cte_C ptr \<Rightarrow> (word32[64]) \<Rightarrow> bool"
+  cinterrupt_relation :: "interrupt_state \<Rightarrow> cte_C ptr \<Rightarrow> (word32[160]) \<Rightarrow> bool"
 where
   "cinterrupt_relation airqs cnode cirqs \<equiv>
      cnode = Ptr (intStateIRQNode airqs) \<and>

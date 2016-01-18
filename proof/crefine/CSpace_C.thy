@@ -3278,6 +3278,23 @@ lemma ucast_ucast_mask_eq:
   apply (simp add: ucast_ucast_mask)
   done
 
+lemma ucast_up_eq:
+  "\<lbrakk> ucast x = (ucast y::'b::len word); 
+    len_of TYPE('a) \<le> len_of TYPE ('b) \<rbrakk>
+  \<Longrightarrow> ucast x = (ucast y::'a::len word)"
+  apply (subst (asm) bang_eq)
+  apply (fastforce simp: nth_ucast word_size intro: word_eqI)
+  done
+
+lemma ucast_up_neq:
+  "\<lbrakk> ucast x \<noteq> (ucast y::'b::len word); 
+    len_of TYPE('b) \<le> len_of TYPE ('a) \<rbrakk>
+  \<Longrightarrow> ucast x \<noteq> (ucast y::'a::len word)"
+  apply (clarsimp)
+  apply (drule ucast_up_eq)
+    apply simp+
+  done
+
 lemma sameRegionAs_spec:
   "\<forall>capa capb. \<Gamma> \<turnstile> \<lbrace>ccap_relation capa \<acute>cap_a \<and>
                      ccap_relation capb \<acute>cap_b \<and>
@@ -3322,10 +3339,13 @@ lemma sameRegionAs_spec:
            apply (simp add: cap_irq_handler_cap_lift)
            apply (simp add: cap_to_H_def)
            apply (clarsimp simp: up_ucast_inj_eq c_valid_cap_def
-                                 cl_valid_cap_def
-                          split: split_if bool.split)
-           apply (drule ucast_ucast_mask_eq, simp)
-           apply (simp add: ucast_ucast_mask)
+                                 cl_valid_cap_def mask_twice
+                          split: split_if bool.split
+                          | intro impI conjI
+                          | simp )+
+               apply (drule ucast_ucast_mask_eq, simp)
+               apply (simp add: ucast_ucast_mask)
+              apply (erule ucast_up_neq,simp)
           apply (frule_tac cap'=cap_b in cap_get_tag_isArchCap_unfolded_H_cap)
           apply (clarsimp simp: isArchCap_tag_def2)
          -- "capa is an EndpointCap"

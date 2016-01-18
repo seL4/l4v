@@ -72,9 +72,9 @@ consts
   nopBIFrameData :: biframe_data
 
 definition
-  runInit :: "'a kernel_init \<Rightarrow> 'b kernel"
+  runInit :: "word32 \<Rightarrow> 'a kernel_init \<Rightarrow> 'b kernel"
 where
-  "runInit doInit \<equiv> do
+  "runInit initOffset doInit \<equiv> do
     ks \<leftarrow> get;
     initData \<leftarrow> return \<lparr> initFreeMemory = [],
                    initSlotPosCur = 0,

@@ -358,12 +358,11 @@ lemma send_signal_interrupt_states[wp_unsafe]:
   apply (auto simp: pred_tcb_at_def obj_at_def receive_blocked_def)
   done
 
-
 lemma handle_interrupt_invs[wp]:
   "\<lbrace>invs\<rbrace> handle_interrupt irq \<lbrace>\<lambda>_. invs\<rbrace>"
-  apply (simp add: handle_interrupt_def ackInterrupt_def)
+  apply (simp add: handle_interrupt_def)
   apply (wp maskInterrupt_invs | wpc)+
-     apply (wp get_cap_wp send_signal_interrupt_states)
+     apply (wp get_cap_wp send_signal_interrupt_states )
     apply (rule_tac Q="\<lambda>rv. invs and (\<lambda>s. st = interrupt_states s irq)" in hoare_post_imp)
      apply (clarsimp simp: ex_nonz_cap_to_def invs_valid_objs)
      apply (intro allI exI, erule cte_wp_at_weakenE)

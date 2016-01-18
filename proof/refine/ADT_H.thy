@@ -42,7 +42,7 @@ definition
   where
   "Init_H \<equiv>
    ({empty_context} \<times> snd `
-      fst (initKernel (VPtr initEntry) (map PPtr initFrames) (PPtr initOffset)
+      fst (initKernel (VPtr initEntry) (PPtr initOffset) (map PPtr initFrames)
                       (map PPtr initKernelFrames) initBootFrames
                       (newKernelState initDataStart))) \<times>
     {UserMode} \<times> {None}"

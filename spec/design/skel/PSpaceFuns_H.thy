@@ -17,7 +17,12 @@ imports
   "../../lib/DataMap"
 begin
 
-#INCLUDE_HASKELL SEL4/Model/PSpace.lhs decls_only Data.Map=DataMap NOT PSpace ptrBits ptrBitsForSize lookupAround maybeToMonad lookupAround2 typeError alignError alignCheck sizeCheck objBits
+definition deleteRange :: "( machine_word , 'a ) DataMap.map ⇒ machine_word ⇒ nat ⇒ ( machine_word , 'a ) DataMap.map"
+where "deleteRange m ptr bits ≡
+        let inRange = (λx. x && ((- mask bits) - 1) = fromPPtr ptr) in
+        data_map_filterWithKey (λ x _. Not (inRange x)) m"
+
+#INCLUDE_HASKELL SEL4/Model/PSpace.lhs decls_only Data.Map=DataMap NOT PSpace ptrBits ptrBitsForSize lookupAround maybeToMonad lookupAround2 typeError alignError alignCheck sizeCheck objBits deleteRange
 
 consts
 lookupAround2 :: "('k :: {linorder,finite}) \<Rightarrow> ( 'k , 'a ) DataMap.map \<Rightarrow> (('k * 'a) option * 'k option)"

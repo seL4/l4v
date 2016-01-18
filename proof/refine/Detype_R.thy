@@ -134,7 +134,7 @@ lemma deleteObjects_def2:
   apply (rule bind_eqI, rule ext)
   apply (simp add: bind_assoc[symmetric])
   apply (rule bind_cong[rotated], rule refl)
-  apply (simp add: bind_assoc modify_modify gets_modify_def)
+  apply (simp add: bind_assoc modify_modify deleteRange_def gets_modify_def)
   apply (rule ext, simp add: exec_modify stateAssert_def assert_def bind_assoc exec_get
                              NOT_eq[symmetric] mask_in_range)
   apply (clarsimp simp: simpler_modify_def)

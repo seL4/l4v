@@ -805,7 +805,7 @@ lemma addrFromPPtr_spec:
   apply vcg
   apply (simp add: addrFromPPtr_def 
                    Platform.addrFromPPtr_def physMappingOffset_def
-                   kernelBase_addr_def physBase_def)
+                   kernelBase_addr_def physBase_def )
   done
   
 

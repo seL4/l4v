@@ -364,6 +364,11 @@ ptBits :: "nat"
 where
 "ptBits \<equiv> pageBits - 2"
 
+definition
+physBase :: "paddr"
+where
+"physBase \<equiv> toPAddr Platform.physBase"
+
 
 (* vmrights instance proofs *)
 (*<*)
