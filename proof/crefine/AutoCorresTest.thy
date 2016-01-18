@@ -21,55 +21,14 @@ autocorres
    scope_depth = 0
   ] "c/kernel_all.c_pp"
 
-(* "nontrivial" functions translated *)
-ML {*
-Find_Theorems.find_theorems @{context} NONE (SOME 999) true
-  [(true, Find_Theorems.Name "kernel_all_global_addresses."),
-   (true, Find_Theorems.Name "_body_def"),
-   (false, Find_Theorems.Pattern (Thm.term_of @{cpat "_ \<equiv> Spec _"})),
-   (false, Find_Theorems.Pattern (Thm.term_of @{cpat "_ \<equiv> TRY SKIP CATCH SKIP END"}))]
-|> apsnd (map (Facts.string_of_ref o fst) #> sort_strings #> app writeln)
-*}
-
-(* "nontrivial" substitutes *)
-ML {*
-Find_Theorems.find_theorems @{context} NONE (SOME 999) true
-  [(true, Find_Theorems.Name "kernel_all_substitute."),
-   (true, Find_Theorems.Name "_body_def"),
-   (false, Find_Theorems.Pattern (Thm.term_of @{cpat "_ \<equiv> Spec _"})),
-   (false, Find_Theorems.Pattern (Thm.term_of @{cpat "_ \<equiv> TRY SKIP CATCH SKIP END"}))]
-|> apsnd (map (Facts.string_of_ref o fst) #> sort_strings #> app writeln)
-*}
-
-find_theorems name:"kernel_all_global_addresses." name:"_body_def"
-
-context kernel_all begin
-(* simple case study: handleYield *)
-thm hy_corres
-thm kernel_m.handleYield_ccorres
-
-thm state_relation_def
-thm kernel.rf_sr_def
-thm state_rel.cstate_relation_def
-end
+find_theorems
+  handleSyscall_'proc
+  Substitute.kernel_all_substitute.\<Gamma>
 
 
-
-lemma rel_sum_comb_Inr:
-  "(\<lambda>_ _. False) \<oplus> (\<lambda>_ _. True) = (\<lambda>x y. isRight x \<and> isRight y)"
-  apply (rule ext)+
-  apply (case_tac x)
-  apply (auto simp: isRight_def)
-  done
+subsection \<open>Proof frameworks\<close>
 
 context kernel_m begin
-
-thm kernel_all.handleYield'_ac_corres
-    handleYield_ccorres
-thm kernel_all.handleYield'_ac_corres[THEN ac_corres_ccorres_underlying, simplified, simplified rel_sum_comb_Inr]
-    handleYield_ccorres[simplified rf_sr_def dc_def xfdc_def[abs_def]]
-
-thm ccorres_underlying_def corres_underlying_def
 
 text \<open>
   Strengthening of ccorres_underlying. Sorried; for testing purposes only.
@@ -179,16 +138,47 @@ lemma ccorres_rrel_nat_unit:
   "ccorres op = (\<lambda>s. ()) st_P arg_P hs m c = ccorres dc xfdc st_P arg_P hs m c"
   by (simp add: ccorres_underlying_def dc_def xfdc_def unif_rrel_def cong del: xstate.case_cong)
 
-(* NB: this is a lie *)
+(* FIXME: this is a lie *)
 lemma \<Gamma>_eq: "kernel_all_global_addresses.\<Gamma> symbol_table = kernel_all_substitute.\<Gamma> symbol_table domain"
   sorry
 
-(* test case: handleYield *)
 
+
+subsection \<open>Case study: handleYield\<close>
+
+(* AutoCorres translation of handleYield *)
+thm kernel_all.handleYield'_def
+
+(* handleYield calls un-translated functions, such as tcbSchedDequeue *)
+thm tcbSchedDequeue_body_def
+(* AutoCorres produces a monadic wrapper of the SIMPL code *)
+thm kernel_all.tcbSchedDequeue'_def
+    kernel_all.tcbSchedDequeue'_def[unfolded AC_call_L1_def L2_call_L1_def L1_call_simpl_def]
+
+
+text \<open>
+  First, create some corres versions of ccorres rules.
+\<close>
+thm getCurThread_ccorres
 lemma getCurThread_corres:
   "corres_underlying {(x, y). cstate_relation x y} True True (\<lambda>ct ct'. tcb_ptr_to_ctcb_ptr ct = ct') invs' (\<lambda>_. True) getCurThread (gets ksCurThread_')"
   apply (simp add: getCurThread_def cstate_relation_def)
   by metis
+
+thm ccorres_pre_getCurThread
+lemma corres_pre_getCurThread:
+  assumes cc: "\<And>rv rv'. rv' = tcb_ptr_to_ctcb_ptr rv \<Longrightarrow>
+                  corres_underlying {(x, y). cstate_relation x y} True True R (P rv) (P' rv) (f rv) (f' rv')"
+  shows   "corres_underlying {(x, y). cstate_relation x y} True True R
+                  (\<lambda>s. \<forall>rv. ksCurThread s = rv \<longrightarrow> P rv s)
+                  (\<lambda>s. \<forall>rv. ksCurThread_' s = tcb_ptr_to_ctcb_ptr rv \<longrightarrow> P' rv s)
+                  (getCurThread >>= f) (gets ksCurThread_' >>= f')"
+  (* ugly but works -- corres_symb_exec_l doesn't *)
+  using cc
+  apply (clarsimp simp: corres_underlying_def getCurThread_def)
+  apply monad_eq
+  apply (clarsimp simp: cstate_relation_def Let_def)
+  done
 
 thm tcbSchedDequeue_ccorres
 lemma tcbSchedDequeue_corres:
@@ -222,6 +212,11 @@ lemma rescheduleRequired_corres:
   apply (clarsimp simp: ccorres_rrel_nat_unit rescheduleRequired_ccorres[simplified])
   done
 
+text \<open>
+  This spec (one extra getCurThread) is easier to prove.
+  Doing the corres proof on handleYield_def requires reasoning about modifies
+  for tcbSchedDequeue.
+\<close>
 lemma handleYield_alt_def:
   "handleYield \<equiv> do thread \<leftarrow> getCurThread;
                      tcbSchedDequeue thread;
@@ -230,76 +225,65 @@ lemma handleYield_alt_def:
                      rescheduleRequired
                   od"
   sorry
+(* ... matches this \<longrightarrow> *) thm kernel_all.handleYield'_def
 
+
+(* ugly modifies rules *)
+thm tcbSchedDequeue_modifies
+desugar_thm tcbSchedDequeue_modifies "["
+
+
+text \<open>Existing ccorres proof, for reference\<close>
+lemma
+  "ccorres dc xfdc
+       (invs' and ct_active')
+       UNIV
+       []
+       (handleYield)
+       (Call handleYield_'proc)"
+  apply cinit
+   apply (rule ccorres_pre_getCurThread)
+   apply (ctac add: tcbSchedDequeue_ccorres)
+     apply (ctac  add: tcbSchedAppend_ccorres)
+       apply (ctac add: rescheduleRequired_ccorres)
+      apply (wp weak_sch_act_wf_lift_linear tcbSchedAppend_valid_objs')
+     apply (vcg exspec= tcbSchedAppend_modifies)
+    apply (wp weak_sch_act_wf_lift_linear tcbSchedDequeue_valid_queues)
+   apply (vcg exspec= tcbSchedDequeue_modifies)
+  apply (clarsimp simp: tcb_at_invs' invs_valid_objs'
+                        valid_objs'_maxPriority valid_objs'_maxDomain)
+  apply (auto simp: obj_at'_def st_tcb_at'_def ct_in_state'_def valid_objs'_maxDomain)
+  done
+
+
+text \<open>ccorres proof using AutoCorres\<close>
 lemma (* handleYield_ccorres: *)
   "ccorres dc xfdc (invs' and ct_active') UNIV [] handleYield (Call handleYield_'proc)"
   apply (rule autocorres_to_ccorres[where arg_rel = \<top>, simplified Collect_True])
    apply (subst \<Gamma>_eq[symmetric])
    apply (rule kernel_all.handleYield'_ac_corres)
   apply (simp add: handleYield_alt_def kernel_all.handleYield'_def)
-  apply (rule corres_split')
-     apply (fastforce intro: corres_guard_imp getCurThread_corres)
-    apply (rule corres_split')
-       apply (erule tcbSchedDequeue_corres)
-      apply (rule corres_split')
-         apply (fastforce intro: corres_guard_imp getCurThread_corres)
-        apply (rule corres_split')
-           apply (rule tcbSchedAppend_corres)
-           apply assumption
-          apply (rule rescheduleRequired_corres)
-         apply (wp tcbSchedAppend_valid_objs')[1]
-          defer -- "weak_sch_act_wf"
-         defer -- "runnable"
-        apply wp[1]
-       apply wp[1]
-       apply (simp add: invs_queues tcb_at_invs' invs_valid_objs')
-      apply wp[1]
-     apply wp[1]
-     apply clarsimp
-     defer (* invs' *)
+
+  apply (rule corres_guard_imp)
+    apply (rule corres_pre_getCurThread)
+    apply (rule corres_split[OF _ tcbSchedDequeue_corres])
+       apply (rule corres_split[OF _ getCurThread_corres])
+         apply (rule corres_split[OF _ tcbSchedAppend_corres])
+            apply (rule rescheduleRequired_corres)
+           apply simp
+          apply ((wp weak_sch_act_wf_lift_linear tcbSchedAppend_valid_objs' | simp)+)[5]
+     apply (clarsimp simp: pred_conj_def)
+     apply wps
+     apply (wp tcbSchedDequeue_invs' tcbSchedDequeue_typ_at' tcbSchedDequeue_valid_queues tcbSchedDequeue_valid_objs' weak_sch_act_wf_lift_linear)[1]
     apply wp[1]
-   apply wp[1]
-   apply (simp add: invs_queues tcb_at_invs' invs_valid_objs' invs_valid_queues')
-  apply wp[1]
-  oops
-
-lemma
-  "corres_underlying {(s, s'). cstate_relation s s'}
-     True True dc (invs' and ct_active'(* and (\<lambda>s. ksSchedulerAction s = ResumeCurrentThread)*))
-     (\<lambda>_. True) handleYield (kernel_all.handleYield' symbol_table)"
-  apply (unfold handleYield_def kernel_all.handleYield'_def)
-  apply (rule corres_split')
-
-     apply (clarsimp simp: getCurThread_def cstate_relation_def Let_def)
-     apply assumption
-
-    apply (rule corres_split')
-    thm tcbSchedDequeue_ccorres
-  thm getCurThread_ccorres
-  thm tcb_ptr_to_ctcb_ptr_def
-  oops
-
-end
-
-
-
-
-context kernel_m
-begin
-
-lemma ccorres_dc_liftE:
-  "ccorres dc xf P P' hs H C \<Longrightarrow> ccorres (\<lambda>x y. isRight x \<and> isRight y) (Inr o xf) P P' hs (liftE H) C"
-  apply (clarsimp simp: ccorres_underlying_def isRight_def dc_def split: xstate.splits)
-  apply (drule (1) bspec)
-  apply (clarsimp simp: split_def liftE_def bind_def return_def unif_rrel_def)
-  apply (fastforce)
+   apply (clarsimp simp: invs_valid_objs' invs_queues invs_valid_queues' tcb_at_invs'
+                         valid_objs'_maxPriority valid_objs'_maxDomain)
+   apply (drule ct_active_runnable')
+   apply (clarsimp simp: obj_at'_def st_tcb_at'_def ct_in_state'_def)
+  apply clarsimp
   done
 
-thm kernel_all.handleYield'_ac_corres[THEN ac_corres_ccorres_underlying, simplified, simplified rel_sum_comb_Inr]
-    handleYield_ccorres[THEN ccorres_dc_liftE, simplified dc_def xfdc_def[abs_def] o_def]
-
-desugar_thm handleYield_ccorres[THEN ccorres_dc_liftE, simplified dc_def xfdc_def[abs_def] o_def] "ccorres "
-
 end
+
 
 end
