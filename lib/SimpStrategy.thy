@@ -59,7 +59,7 @@ lemma Eq_TrueI_ByAssum:
 simproc_setup simp_strategy_ByAssum ("simp_strategy ByAssum b") =
   {* K (fn ss => fn ct => let
       val b = Thm.dest_arg ct
-      val t = cterm_instantiate [(@{cpat "?P :: bool"}, b)]
+      val t = Thm.instantiate ([],[((("P",0),@{typ bool}), b)])
         @{thm Eq_TrueI_ByAssum}
       val prems = Raw_Simplifier.prems_of ss
     in get_first (try (fn p => p RS t)) prems end) *}
@@ -87,18 +87,26 @@ lemma simp_strategy_Eq_True:
 ML {*
 fun simp_strategy_True_conv ct = case Thm.term_of ct of
     (Const (@{const_name simp_strategy}, _) $ _ $ @{term True})
-      => cterm_instantiate [(@{cpat "?name :: nat"}, Thm.dest_arg1 ct)]
+      => Thm.instantiate ([], [((("name",0), @{typ nat}), Thm.dest_arg1 ct)])
           @{thm simp_strategy_Eq_True}
   | _ => Conv.all_conv ct
 
 fun new_simp_strategy thy (name : term) ss rewr_True =
-  Simplifier.simproc_global_i thy ("simp_strategy_" ^ fst (dest_Const name))
-    [@{term simp_strategy} $ name $ @{term x}]
-    (fn ctxt => fn t => Thm.cterm_of ctxt t
-        |> (Conv.arg_conv (Simplifier.rewrite (put_simpset ss ctxt))
+let
+  val ctxt = Proof_Context.init_global thy;
+  val ss = Simplifier.make_simproc ctxt ("simp_strategy_" ^ fst (dest_Const name))
+    {lhss = [@{term simp_strategy} $ name $ @{term x}],
+     identifier = [],
+     proc = (fn _ => fn ctxt' => fn ct => 
+        ct
+        |> (Conv.arg_conv (Simplifier.rewrite (put_simpset ss ctxt'))
           then_conv (if rewr_True then simp_strategy_True_conv
                       else Conv.all_conv))
         |> (fn c => if Thm.is_reflexive c then NONE else SOME c))
+     }
+in
+  ss
+end
 *}
 
 end
