@@ -17,6 +17,11 @@ imports
   "../../lib/DataMap"
 begin
 
+definition deleteRange :: "( machine_word , 'a ) DataMap.map \<Rightarrow> machine_word \<Rightarrow> nat \<Rightarrow> ( machine_word , 'a ) DataMap.map"
+where "deleteRange m ptr bits \<equiv> 
+        let inRange = (\<lambda> x. x && ((- mask bits) - 1) = fromPPtr ptr) in
+        data_map_filterWithKey (\<lambda> x _. Not (inRange x)) m"
+
 consts
 newPSpace :: "pspace"
 
@@ -34,7 +39,6 @@ placeNewObject :: "machine_word \<Rightarrow> ('a :: pspace_storable) \<Rightarr
 
 consts
 placeNewObject' :: "machine_word \<Rightarrow> kernel_object \<Rightarrow> nat \<Rightarrow> unit kernel"
-
 
 consts
 deleteObjects :: "machine_word \<Rightarrow> nat \<Rightarrow> unit kernel"
@@ -128,11 +132,6 @@ defs placeNewObject'_def:
         ps' \<leftarrow> return ( ps \<lparr> psMap := map' \<rparr>);
         modify (\<lambda> ks. ks \<lparr> ksPSpace := ps'\<rparr>)
 od)"
-
-definition deleteRange :: "( machine_word , 'a ) DataMap.map \<Rightarrow> machine_word \<Rightarrow> nat \<Rightarrow> ( machine_word , 'a ) DataMap.map"
-where "deleteRange m ptr bits \<equiv>
-        let inRange = (\<lambda>x. x && ((- mask bits) - 1) = fromPPtr ptr) in
-        data_map_filterWithKey (\<lambda> x _. Not (inRange x)) m"
 
 defs deleteObjects_def:
 "deleteObjects ptr bits\<equiv> (do

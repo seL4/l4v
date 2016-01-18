@@ -829,9 +829,18 @@ lemma resetTimer_invs'[wp]:
    apply clarsimp+
   done
 
+lemma dmo_ackInterrupt[wp]: 
+"\<lbrace>invs'\<rbrace> doMachineOp (ackInterrupt irq) \<lbrace>\<lambda>y. invs'\<rbrace>"
+  apply (wp dmo_invs' no_irq_ackInterrupt)
+  apply safe
+   apply (drule_tac Q="\<lambda>_ m'. underlying_memory m' p = underlying_memory m p"
+          in use_valid)
+     apply ((clarsimp simp: ackInterrupt_def machine_op_lift_def
+                           machine_rest_lift_def split_def | wp)+)[3]
+  done
 lemma hint_invs[wp]:
   "\<lbrace>invs'\<rbrace> handleInterrupt irq \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (simp add: handleInterrupt_def getSlotCap_def ackInterrupt_def
+  apply (simp add: handleInterrupt_def getSlotCap_def
              cong: irqstate.case_cong)
   apply (wp dmo_maskInterrupt_True getCTE_wp' 
          | wpc | simp)+

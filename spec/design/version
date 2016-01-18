@@ -1,7 +1,7 @@
 Built from git repo at /Users/xgao/verification/seL4/haskell by xgao
 
 Generated from changeset:
-d65037c l4v-proof-porting: make c-parser happy
+0823b6b l4v-proof-porting: Common changed to Platform and deleteRange changed for proof simpilicity
 
 Warning - uncomitted changes used:
- M src/SEL4/Machine/Hardware/ARM.lhs
+ M src/SEL4/Kernel/Init.lhs

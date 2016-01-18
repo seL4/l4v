@@ -19,6 +19,9 @@ imports
   ArchVSpaceDecls_H
 begin
 
+defs vptrFromPPtr_def:
+"vptrFromPPtr ptr \<equiv> returnOk $ ptr + 0x20000000"
+
 defs kernelBase_def:
 "kernelBase \<equiv> VPtr 0xf0000000"
 
@@ -300,9 +303,6 @@ defs createITFrameCap_def:
              capVPMappedAddress= addr \<rparr>);
     returnOk $ ArchObjectCap $ frame
 odE)"
-
-defs vptrFromPPtr_def:
-"vptrFromPPtr ptr \<equiv> returnOk $ ptr + 0x20000000"
 
 defs createFramesOfRegion_def:
 "createFramesOfRegion rootCNCap region doMap\<equiv> (doE

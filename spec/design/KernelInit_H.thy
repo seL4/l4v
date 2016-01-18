@@ -209,7 +209,7 @@ defs createUntypedObject_def:
     freemem \<leftarrow> noInitFailure $ gets initFreeMemory;
     (flip mapME) (take maxNumFreememRegions freemem)
         (\<lambda> reg. (
-            (\<lambda> f. foldME f [4  .e.  (finiteBitSize (undefined::machine_word)) - 2] reg)
+            (\<lambda> f. foldME f reg [4  .e.  (finiteBitSize (undefined::machine_word)) - 2])
                 (\<lambda> reg bits. (doE
                     reg' \<leftarrow> (if Not (isAligned (regStartPAddr reg) (bits + 1))
                                 \<and> (regEndPAddr reg) - (regStartPAddr reg) \<ge> bit bits
