@@ -1929,7 +1929,7 @@ lemma distinct_zombies_copyE:
 
 lemmas distinct_zombies_sameE
     = distinct_zombies_copyE [where y=x and x=x for x, simplified,
-                              OF _ _ _ _ _ TrueI]
+                              OF _ _ _ _ _]
 
 lemma capBits_Master:
   "capBits (capMasterCap cap) = capBits cap"
@@ -1959,7 +1959,7 @@ lemma distinct_zombies_copyMasterE:
 
 lemmas distinct_zombies_sameMasterE
     = distinct_zombies_copyMasterE[where x=x and y=x for x, simplified,
-                                   OF _ _ _ TrueI]
+                                   OF _ _ _]
 
 lemma isZombie_capClass: "isZombie cap \<Longrightarrow> capClass cap = PhysicalClass"
   by (clarsimp simp: isCap_simps)
