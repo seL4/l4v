@@ -23,7 +23,11 @@ import datetime
 import fnmatch
 import memusage
 import os
-import Queue
+try:
+    import Queue
+except:
+    import queue
+    Queue = queue
 import signal
 import subprocess
 import sys
