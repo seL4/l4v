@@ -196,7 +196,7 @@ method safe_meta_conjuncts =
       (PRIMITIVE 
         (Conv.gconv_rule ((Conv.top_sweep_conv (K (Conv.rewr_conv @{thm conjunction'_def[symmetric]})) @{context})) 1)))\<close>
 
-method safe_fold_subgoals = (fold_subgoals, safe_meta_conjuncts)
+method safe_fold_subgoals = (fold_subgoals (prefix), safe_meta_conjuncts)
 
 lemma atomize_conj' [atomize]: "(A &^& B) == Trueprop (A & B)" 
   by (simp add: conjunction'_def, rule atomize_conj)

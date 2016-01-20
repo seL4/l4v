@@ -10,7 +10,7 @@ begin
 ML \<open>
 signature SUBGOAL_METHODS =
 sig
-  val fold_subgoals: Proof.context -> thm -> thm
+  val fold_subgoals: Proof.context -> bool -> thm -> thm
   val unfold_subgoals_tac: Proof.context -> tactic
   val distinct_subgoals: Proof.context -> thm -> thm
 end;
@@ -50,7 +50,9 @@ val strip_params = Term.strip_all_vars;
 val strip_prems = Logic.strip_imp_prems o Term.strip_all_body;
 val strip_concl = Logic.strip_imp_concl o Term.strip_all_body;
 
-fun fold_subgoals ctxt raw_st =
+
+
+fun fold_subgoals ctxt prefix raw_st =
   if Thm.nprems_of raw_st < 2 then raw_st
   else
     let
@@ -70,6 +72,9 @@ fun fold_subgoals ctxt raw_st =
       val premss = map (strip_shift) subgoals;
 
       val common_prems = max_common_prefix (op aconv) premss;
+
+      val common_params = if prefix then common_params else [];
+      val common_prems = if prefix then common_prems else [];
 
       fun mk_concl subgoal =
         let
@@ -99,9 +104,7 @@ fun fold_subgoals ctxt raw_st =
             |> Drule.forall_intr_list common_params'
             |> push_outer_params inner_ctxt';
         in
-          Thm.bicompose NONE {flatten = false, match = false, incremented = false}
-            (false, rule', 0) 1
-          #> Seq.hd
+          (fn st => Thm.implies_elim st rule')
         end;
 
       fun solve_subgoals rule' st =
@@ -188,7 +191,8 @@ fun subgoal_cases ctxt st =
 val _ =
   Theory.setup
    (Method.setup @{binding fold_subgoals}
-      (Scan.succeed (fn ctxt => SIMPLE_METHOD (PRIMITIVE (fold_subgoals ctxt))))
+      (Scan.lift (Args.mode "prefix") >> (fn prefix => fn ctxt =>
+         SIMPLE_METHOD (PRIMITIVE (fold_subgoals ctxt prefix))))
       "lift all subgoals over common premises/params" #>
     Method.setup @{binding unfold_subgoals}
       (Scan.succeed (fn ctxt => SIMPLE_METHOD (unfold_subgoals_tac ctxt)))
@@ -206,4 +210,5 @@ val _ =
 
 end;
 \<close>
+
 end
