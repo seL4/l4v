@@ -674,6 +674,11 @@ where
   "s \<turnstile> c' parentOf c \<equiv>
   \<exists>cte' cte. s c = Some cte \<and> s c' = Some cte' \<and> isMDBParentOf cte' cte"
 
+
+context 
+notes [[inductive_defs =true]]
+begin
+
 inductive
   subtree :: "cte_heap \<Rightarrow> word32 \<Rightarrow> word32 \<Rightarrow> bool" ("_ \<turnstile> _ \<rightarrow> _" [60,0,60] 61)
   for s :: cte_heap and c :: word32
@@ -683,6 +688,8 @@ where
  |
   trans_parent:
   "\<lbrakk> s \<turnstile> c \<rightarrow> c'; s \<turnstile> c' \<leadsto> c''; c'' \<noteq> 0; s \<turnstile> c parentOf c'' \<rbrakk> \<Longrightarrow> s \<turnstile> c \<rightarrow> c''"
+
+end
 
 definition
   "descendants_of' c s \<equiv> {c'. s \<turnstile> c \<rightarrow> c'}"
