@@ -1286,7 +1286,7 @@ lemma invocation_eq_use_type:
   apply (simp add: enum_invocation_label)
   done
 
-lemmas all_invocation_label_defs = invocation_label_defs arch_invocation_label_defs
+lemmas all_invocation_label_defs = invocation_label_defs arch_invocation_label_defs sel4_arch_invocation_label_defs
 
 lemmas invocation_eq_use_types
     = all_invocation_label_defs[THEN invocation_eq_use_type, simplified,
