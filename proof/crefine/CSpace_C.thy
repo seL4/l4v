@@ -34,7 +34,7 @@ lemma maskCapRights_cap_cases:
                           (\<lambda>_. capNtfnCanSend c \<and> capAllowWrite R) c))
   | _ \<Rightarrow> return c)"
   apply (simp add: maskCapRights_def Let_def split del: split_if)
-  apply (cases c, simp_all add: isCap_simps split del: split_if)
+  apply (cases c; simp add: isCap_simps split del: split_if)
   done
 
 
@@ -85,84 +85,74 @@ lemma small_frame_cap_rights [simp]:
   \<Longrightarrow> cap_small_frame_cap_CL.capFVMRights_CL (cap_small_frame_cap_lift cap) && mask 2 =
      cap_small_frame_cap_CL.capFVMRights_CL (cap_small_frame_cap_lift cap)"
   apply (simp add: cap_small_frame_cap_lift_def)
-  apply (simp add: cap_lift_def cap_tag_defs mask_def word_bw_assocs)
-  done
+  by (simp add: cap_lift_def cap_tag_defs mask_def word_bw_assocs)
 
 lemma frame_cap_rights [simp]:
   "cap_get_tag cap = scast cap_frame_cap
   \<Longrightarrow> cap_frame_cap_CL.capFVMRights_CL (cap_frame_cap_lift cap) && mask 2 =
      cap_frame_cap_CL.capFVMRights_CL (cap_frame_cap_lift cap)"
   apply (simp add: cap_frame_cap_lift_def)
-  apply (simp add: cap_lift_def cap_tag_defs mask_def word_bw_assocs)
-  done
+  by (simp add: cap_lift_def cap_tag_defs mask_def word_bw_assocs)
 
 lemma Arch_maskCapRights_ccorres [corres]:
   "ccorres ccap_relation ret__struct_cap_C_'
-           \<top>
-           (UNIV \<inter> \<lbrace>ccap_relation (ArchObjectCap arch_cap) \<acute>cap\<rbrace> \<inter> 
-                   \<lbrace>ccap_rights_relation R \<acute>cap_rights_mask\<rbrace>) 
-           []
-           (return (ArchRetypeDecls_H.maskCapRights R arch_cap))
-           (Call Arch_maskCapRights_'proc)"
+  \<top>
+  (UNIV \<inter> \<lbrace>ccap_relation (ArchObjectCap arch_cap) \<acute>cap\<rbrace> \<inter>
+  \<lbrace>ccap_rights_relation R \<acute>cap_rights_mask\<rbrace>)
+  []
+  (return (ArchRetypeDecls_H.maskCapRights R arch_cap))
+  (Call Arch_maskCapRights_'proc)"
   apply (cinit' (trace) lift: cap_' cap_rights_mask_')
    apply csymbr
    apply (unfold ArchRetype_H.maskCapRights_def)
    apply (simp only: Let_def)
    apply (case_tac "cap_get_tag cap = scast cap_small_frame_cap")
     apply (clarsimp simp add: ccorres_cond_iffs cap_get_tag_isCap isCap_simps)
-    apply (rule ccorres_from_vcg_throws [where P=\<top> and P'=UNIV]) 
-    apply (rule allI, rule conseqPre, vcg) 
-    apply (clarsimp simp: cap_get_tag_isCap isCap_simps) 
+    apply (rule ccorres_from_vcg_throws [where P=\<top> and P'=UNIV])
+    apply (rule allI, rule conseqPre, vcg)
+    apply (clarsimp simp: cap_get_tag_isCap isCap_simps)
     apply (clarsimp simp: return_def)
-    apply (unfold ccap_relation_def)[1] 
+    apply (unfold ccap_relation_def)[1]
     apply (simp add: cap_small_frame_cap_lift [THEN iffD1])
     apply (clarsimp simp: cap_to_H_def)
     apply (simp add: map_option_case split: option.splits)
     apply (clarsimp simp add: cap_to_H_def Let_def split: cap_CL.splits split_if_asm)
-       apply (simp add: cap_small_frame_cap_lift_def) 
+       apply (simp add: cap_small_frame_cap_lift_def)
        apply (simp add: ccap_rights_relation_def)
-      apply (simp add: cap_small_frame_cap_lift_def) 
+      apply (simp add: cap_small_frame_cap_lift_def)
       apply (simp add: ccap_rights_relation_def)
      apply (simp add: pageSize_def)
     apply (simp add: pageSize_def)
    apply (clarsimp simp add: cap_get_tag_isCap isCap_simps)
    apply (rule conjI, clarsimp)
-   apply (simp add: ccorres_cond_iffs)
-   apply (rule ccorres_guard_imp)
-     apply (csymbr)
-     apply (case_tac "cap_get_tag cap = scast cap_frame_cap")
-      apply (clarsimp simp add: ccorres_cond_iffs cap_get_tag_isCap isCap_simps)
-      apply (rule ccorres_from_vcg_throws [where P=\<top> and P'=UNIV]) 
-      apply (rule allI, rule conseqPre, vcg) 
-      apply (clarsimp simp: cap_get_tag_isCap isCap_simps) 
-      apply (clarsimp simp: return_def)
-      apply (unfold ccap_relation_def)[1] 
-      apply (simp add: cap_frame_cap_lift [THEN iffD1])
-      apply (clarsimp simp: cap_to_H_def)
-      apply (simp add: map_option_case split: option.splits)
-      apply (clarsimp simp add: isCap_simps pageSize_def cap_to_H_def Let_def
-                         split: cap_CL.splits split_if_asm)
-       apply (simp add: cap_frame_cap_lift_def) 
-       apply (simp add: ccap_rights_relation_def) 
-
+    apply (simp add: ccorres_cond_iffs)
+    apply (rule ccorres_guard_imp)
+      apply (csymbr)
+      apply (case_tac "cap_get_tag cap = scast cap_frame_cap")
+       apply (clarsimp simp add: ccorres_cond_iffs cap_get_tag_isCap isCap_simps)
+       apply (rule ccorres_from_vcg_throws [where P=\<top> and P'=UNIV])
+       apply (rule allI, rule conseqPre, vcg)
+       apply (clarsimp simp: cap_get_tag_isCap isCap_simps)
+       apply (clarsimp simp: return_def)
+       apply (unfold ccap_relation_def)[1]
+       apply (simp add: cap_frame_cap_lift [THEN iffD1])
+       apply (clarsimp simp: cap_to_H_def)
+       apply (simp add: map_option_case split: option.splits)
+       apply (clarsimp simp add: isCap_simps pageSize_def cap_to_H_def Let_def
+                          split: cap_CL.splits split_if_asm)
+        apply (simp add: cap_frame_cap_lift_def)
+        apply (simp add: ccap_rights_relation_def)
+        apply (simp add: c_valid_cap_def cl_valid_cap_def cap_lift_frame_cap)
+       apply (simp add: cap_frame_cap_lift_def)
+       apply (simp add: ccap_rights_relation_def)
        apply (simp add: c_valid_cap_def cl_valid_cap_def cap_lift_frame_cap)
-
-      apply (simp add: cap_frame_cap_lift_def) 
-      apply (simp add: ccap_rights_relation_def) 
-
-      apply (simp add: c_valid_cap_def cl_valid_cap_def cap_lift_frame_cap)
-
-     apply (clarsimp simp add: cap_get_tag_isCap isCap_simps)
-     apply (rule conjI, clarsimp)
-     apply (simp add: ccorres_cond_iffs)
-     apply (rule ccorres_from_vcg_throws)
-     apply (rule allI, rule conseqPre, vcg)
-     apply (clarsimp simp add: return_def)
-     apply (cases arch_cap, simp_all)[1]
-    apply simp
-   apply clarsimp
-  apply clarsimp
-  done
+      apply (clarsimp simp add: cap_get_tag_isCap isCap_simps)+
+   apply (simp add: ccorres_cond_iffs)
+   apply (rule ccorres_from_vcg_throws)
+   apply (rule allI, rule conseqPre, vcg)
+   apply (clarsimp simp add: return_def)
+   apply (cases arch_cap)
+       by (clarsimp simp add: cap_get_tag_isCap isCap_simps)+
 
 lemma to_bool_mask_to_bool_bf:
   "to_bool (x && mask (Suc 0)) = to_bool_bf (x::word32)"
@@ -465,10 +455,9 @@ lemma ccorres_updateCap [corres]:
    apply (simp add: heap_to_page_data_def)
    apply (rule conjI)
     apply (erule (1) setCTE_tcb_case)
-   apply (simp add: carch_state_relation_def cmachine_state_relation_def
-                    typ_heap_simps)
-  apply clarsimp
-  done
+   subgoal by (simp add: carch_state_relation_def cmachine_state_relation_def
+                         typ_heap_simps)
+  by clarsimp
 
 lemma ccorres_updateMDB_const [corres]:
   fixes ptr :: "cstate \<Rightarrow> cte_C ptr" and val :: "cstate \<Rightarrow> mdb_node_C"
@@ -582,9 +571,8 @@ lemma revokable_ccorres:
     	  apply (clarsimp simp: cap_get_tag_isCap isCap_simps is_simple_cap'_def)
 	 apply (fastforce simp: cap_get_tag_isCap isCap_simps)
 
-	apply (clarsimp simp: cap_get_tag_isCap isCap_simps ccorres_cond_iffs from_bool_def true_def false_def,
+	by (clarsimp simp: cap_get_tag_isCap isCap_simps ccorres_cond_iffs from_bool_def true_def false_def,
 	  rule ccorres_return, vcg, fastforce simp: cap_get_tag_isCap isCap_simps)+
-  done
 
 lemma from_bool_mask_simp [simp]:
   "((from_bool r) :: word32) && mask (Suc 0) = from_bool r"
@@ -651,13 +639,13 @@ lemma ccorres_updateMDB_set_mdbNext [corres]:
      apply (erule (2) cspace_cte_relation_upd_mdbI)
      apply (simp add: cmdbnode_relation_def)
  
-     apply (case_tac "v_' s' = 0", simp+)[1]
+     subgoal for _ s' by (cases "v_' s' = 0"; simp)
 
     apply (erule_tac t = s'a in ssubst)
     apply simp
     apply (rule conjI)
      apply (erule (1) setCTE_tcb_case) 
-    apply (simp add: carch_state_relation_def cmachine_state_relation_def
+    subgoal by (simp add: carch_state_relation_def cmachine_state_relation_def
                      typ_heap_simps h_t_valid_clift_Some_iff)
    apply clarsimp
    done
@@ -698,7 +686,7 @@ lemma ccorres_updateMDB_set_mdbPrev [corres]:
     apply (erule (2) cspace_cte_relation_upd_mdbI)
     apply (simp add: cmdbnode_relation_def)   
 
-    apply (case_tac "v_' s' = 0", simp+)[1]
+    subgoal for _ s' by (cases "v_' s' = 0"; simp)
    
    apply (erule_tac t = s'a in ssubst)
    apply (simp add: carch_state_relation_def cmachine_state_relation_def h_t_valid_clift_Some_iff)
@@ -951,12 +939,12 @@ show "ccorresG rf_sr \<Gamma> dc xfdc (cte_wp_at' (\<lambda>cte. \<exists>i. cte
       cap_get_tag_def cap_to_H_def)
     apply (simp add:mask_def[where n = 5,simplified,symmetric]
        word_bool_alg.conj_disj_distrib2 mask_twice)
-    apply (simp add:ib')
+    subgoal by (simp add:ib')
    apply (erule_tac t = s' in ssubst)
    apply clarsimp
    apply (rule conjI)
     apply (erule (1) setCTE_tcb_case)
-   apply (simp add: carch_state_relation_def cmachine_state_relation_def
+   subgoal by (simp add: carch_state_relation_def cmachine_state_relation_def
                    typ_heap_simps')
   apply (clarsimp simp:cte_wp_at_ctes_of)
   done
@@ -2080,13 +2068,13 @@ lemma emptySlot_helper:
      apply (subgoal_tac "mdbFirstBadged_CL (mdb_node_lift mdbNode) && mask (Suc 0) = 
                          mdbFirstBadged_CL (mdb_node_lift mdbNode)")
       prefer 2
-      apply (simp add: mdb_node_lift_def mask_def word_bw_assocs)
+      subgoal by (simp add: mdb_node_lift_def mask_def word_bw_assocs)
      apply (subgoal_tac "mdbFirstBadged_CL (cteMDBNode_CL y) && mask (Suc 0) = 
                          mdbFirstBadged_CL (cteMDBNode_CL y)")
       prefer 2 
       apply (drule cteMDBNode_CL_lift [symmetric])
-      apply (simp add: mdb_node_lift_def mask_def word_bw_assocs)
-     apply (simp add: to_bool_def mask_def)
+      subgoal by (simp add: mdb_node_lift_def mask_def word_bw_assocs)
+     subgoal by (simp add: to_bool_def mask_def)
    -- "\<dots> \<exists>x\<in>fst \<dots>" 
    apply clarsimp
    apply (rule fst_setCTE [OF ctes_of_cte_at], assumption )
@@ -2110,12 +2098,12 @@ lemma emptySlot_helper:
    apply (subgoal_tac "mdbFirstBadged_CL (mdb_node_lift mdbNode) && mask (Suc 0) = 
                        mdbFirstBadged_CL (mdb_node_lift mdbNode)")
     prefer 2
-    apply (simp add: mdb_node_lift_def mask_def word_bw_assocs)
+    subgoal by (simp add: mdb_node_lift_def mask_def word_bw_assocs)
    apply (subgoal_tac "mdbFirstBadged_CL (cteMDBNode_CL y) && mask (Suc 0) = 
                        mdbFirstBadged_CL (cteMDBNode_CL y)")
     prefer 2 
     apply (drule cteMDBNode_CL_lift [symmetric])
-    apply (simp add: mdb_node_lift_def mask_def word_bw_assocs)
+    subgoal by (simp add: mdb_node_lift_def mask_def word_bw_assocs)
    apply (simp add: to_bool_def mask_def split: split_if)
 
   -- "trivial case where mdbNext rva = 0"
@@ -2381,7 +2369,7 @@ lemma emptySlot_ccorres:
       apply (subgoal_tac "\<exists> cap'. ret__unsigned = cap_get_tag cap'  
                           \<and> ccap_relation (cteCap rv) cap'   ")
        apply (insert not_NullCap_eq_not_cap_null_cap)[1]
-       apply (clarsimp)
+       subgoal by (clarsimp)
       apply assumption
 (*      apply clarsimp
       apply (subgoal_tac "\<exists> cap'. ret__unsigned_long = cap_get_tag cap'  
@@ -2678,54 +2666,57 @@ lemma Arch_sameRegionAs_spec:
   apply clarsimp
 
   apply (simp add: ArchRetype_H.sameRegionAs_def)
-  
-  apply (case_tac capa, simp_all add: cap_get_tag_isCap_unfolded_H_cap isCap_simps)
+  subgoal for capa capb cap_b cap_a  
+  apply (cases capa; simp add: cap_get_tag_isCap_unfolded_H_cap isCap_simps)
 
   -- "capa is ASIDPoolCap"
-      apply (case_tac capb, simp_all add: cap_get_tag_isCap_unfolded_H_cap 
-                         isCap_simps cap_tag_defs from_bool_def false_def)[1]
+      apply (cases capb; simp add: cap_get_tag_isCap_unfolded_H_cap 
+                         isCap_simps cap_tag_defs from_bool_def false_def)
       -- "capb is also ASIDPoolCap"
-       apply (frule_tac cap'=cap_a in cap_get_tag_isCap_unfolded_H_cap(13))
-       apply (frule_tac cap'=cap_b in cap_get_tag_isCap_unfolded_H_cap(13))
+       apply (frule cap_get_tag_isCap_unfolded_H_cap(13)[where cap'=cap_a])
+       apply (frule cap_get_tag_isCap_unfolded_H_cap(13)[where cap'=cap_b])
        apply (frule cap_get_tag_isCap_unfolded_H_cap)
        apply (simp add: ccap_relation_def  map_option_case)
        apply (simp add: cap_asid_pool_cap_lift)
        apply (simp add: cap_to_H_def)
-       apply (case_tac "capASIDPool_CL (cap_asid_pool_cap_lift cap_a) = 
-                        capASIDPool_CL (cap_asid_pool_cap_lift cap_b)", simp+)
+       apply (cases "capASIDPool_CL (cap_asid_pool_cap_lift cap_a) = 
+                        capASIDPool_CL (cap_asid_pool_cap_lift cap_b)"; simp)
 
       -- "capb is ASIDControlCap"
+      subgoal for \<dots> vmpage_size option
       apply clarsimp
-      apply (rename_tac vmpage_size option)
-      apply (case_tac "vmpage_size=ARMSmallPage")
-       apply (frule_tac cap'=cap_b in cap_get_tag_isCap_unfolded_H_cap(16), 
+      apply (cases "vmpage_size=ARMSmallPage")
+       apply (frule cap_get_tag_isCap_unfolded_H_cap(16)[where cap'=cap_b], 
               assumption, simp add: cap_tag_defs)
-      apply (frule_tac cap'=cap_b in cap_get_tag_isCap_unfolded_H_cap(17), 
+      apply (frule cap_get_tag_isCap_unfolded_H_cap(17)[where cap'=cap_b], 
              assumption, simp add: cap_tag_defs)
-
+      done
+     
   -- "capa is ASIDControlCap"
-     apply (case_tac capb, simp_all add: cap_get_tag_isCap_unfolded_H_cap 
-                        isCap_simps cap_tag_defs from_bool_def false_def true_def)[1]
+     apply (cases capb; simp add: cap_get_tag_isCap_unfolded_H_cap 
+                        isCap_simps cap_tag_defs from_bool_def false_def true_def)
      -- " capb is PageCap"
-     apply (rename_tac vmpage_size option)
+     subgoal for \<dots> vmpage_size option
      apply (case_tac "vmpage_size=ARMSmallPage")
       apply (frule_tac cap'=cap_b in cap_get_tag_isCap_unfolded_H_cap(16), 
              assumption, simp add: cap_tag_defs)
      apply (frule_tac cap'=cap_b in cap_get_tag_isCap_unfolded_H_cap(17), 
              assumption, simp add: cap_tag_defs)
+     done
 
   -- "capa is PageCap"
-    apply (rename_tac vmpage_size option)
-    apply (case_tac "vmpage_size=ARMSmallPage")
+    subgoal for \<dots> vmpage_size option
+    apply (cases "vmpage_size=ARMSmallPage")
     -- "capa is a small frame"
-     apply (frule_tac cap'=cap_a in cap_get_tag_isCap_unfolded_H_cap(16), assumption)
-     apply (case_tac capb, simp_all add: cap_get_tag_isCap_unfolded_H_cap 
-                        isCap_simps cap_tag_defs from_bool_def false_def true_def)[1]
-     -- " capb is PageCap"
-     apply (rename_tac vmpage_sizea optiona)
-     apply (case_tac "vmpage_sizea=ARMSmallPage")
+     apply (frule cap_get_tag_isCap_unfolded_H_cap(16)[where cap' = cap_a], assumption)
+     apply (cases capb; simp add: cap_get_tag_isCap_unfolded_H_cap 
+                        isCap_simps cap_tag_defs from_bool_def false_def true_def)
+   -- " capb is PageCap"
+
+     subgoal for \<dots> vmpage_sizea optiona
+     apply (cases "vmpage_sizea=ARMSmallPage")
       -- "capb is a small frame"
-      apply (frule_tac cap'=cap_b in cap_get_tag_isCap_unfolded_H_cap(16), 
+      apply (frule cap_get_tag_isCap_unfolded_H_cap(16)[where cap'=cap_b], 
              assumption, simp add: cap_tag_defs)
       apply (intro conjI)
           apply (simp add:Kernel_C.ARMSmallPage_def)
@@ -2752,14 +2743,14 @@ lemma Arch_sameRegionAs_spec:
      apply (intro conjI)
          apply (simp add:Kernel_C.ARMSmallPage_def)
         apply (simp add: gen_framesize_to_H_def)
-       apply (simp add:cap_frame_cap_lift_def cap_lift_def cap_tag_defs mask_def word_bw_assocs)
+       subgoal by (simp add:cap_frame_cap_lift_def cap_lift_def cap_tag_defs mask_def word_bw_assocs)
       apply (simp add: pageBitsForSize_def)
-      apply (case_tac "gen_framesize_to_H (capFSize_CL (cap_frame_cap_lift cap_b))", simp_all)[1]
+      apply (cases "gen_framesize_to_H (capFSize_CL (cap_frame_cap_lift cap_b))"; simp)
 
 
       apply (subgoal_tac "capFSize_CL (cap_frame_cap_lift cap_b) \<noteq> scast Kernel_C.ARMSmallPage")
        prefer 2
-       apply (drule_tac c'=cap_b in ccap_relation_c_valid_cap)
+       apply (drule ccap_relation_c_valid_cap[where c'= cap_b])
        apply (simp add: cap_frame_cap_lift [unfolded cap_tag_defs, simplified])
        apply (simp add: c_valid_cap_def cl_valid_cap_def)
 
@@ -2767,7 +2758,7 @@ lemma Arch_sameRegionAs_spec:
      apply (clarsimp simp: if_distrib [where f=scast])
      apply (simp add: cap_get_tag_PageCap_frame [unfolded cap_tag_defs, simplified]) 
      apply (thin_tac "ccap_relation x cap_b" for x)
-     apply (frule_tac cap'=cap_a in cap_get_tag_isCap_unfolded_H_cap(16)[simplified], simp)
+     apply (frule cap_get_tag_isCap_unfolded_H_cap(16)[simplified, where cap'=cap_a], simp)
      apply (simp add: cap_get_tag_PageCap_small_frame) 
      apply (thin_tac "ccap_relation x cap_a" for x)
      apply clarsimp
@@ -2782,12 +2773,12 @@ lemma Arch_sameRegionAs_spec:
 
      apply (simp add: gen_framesize_to_H_is_framesize_to_H_if_not_ARMSmallPage)
      apply (simp add: Kernel_C.ARMSmallPage_def gen_framesize_to_H_def)
-     apply (simp add: field_simps)
+     by (simp add: field_simps)
 
     -- "capa is a frame"
-    apply (frule_tac cap'=cap_a in cap_get_tag_isCap_unfolded_H_cap(17), assumption)
+    apply (frule cap_get_tag_isCap_unfolded_H_cap(17)[where cap' = cap_a], assumption)
     apply (subgoal_tac "capFSize_CL (cap_frame_cap_lift cap_a) && mask 2 = capFSize_CL (cap_frame_cap_lift cap_a)")
-     prefer 2 apply (simp add:cap_frame_cap_lift_def cap_lift_def cap_tag_defs mask_def word_bw_assocs)
+     prefer 2 subgoal by (simp add:cap_frame_cap_lift_def cap_lift_def cap_tag_defs mask_def word_bw_assocs)
 
      apply (frule_tac cap'=cap_a in cap_get_tag_isCap_unfolded_H_cap(17)[simplified], simp)
 
@@ -2797,24 +2788,24 @@ lemma Arch_sameRegionAs_spec:
        apply (simp add: cap_frame_cap_lift)
        apply (simp add: c_valid_cap_def cl_valid_cap_def)
   
-    apply (case_tac capb, simp_all add: cap_get_tag_isCap_unfolded_H_cap 
-                       isCap_simps cap_tag_defs from_bool_def false_def true_def)[1]
+    apply (cases capb; simp add: cap_get_tag_isCap_unfolded_H_cap 
+                       isCap_simps cap_tag_defs from_bool_def false_def true_def)
     -- " capb is PageCap"
-    apply (rename_tac vmpage_sizea optiona)
-    apply (case_tac "vmpage_sizea=ARMSmallPage")
+    subgoal for \<dots> vmpage_sizea optiona
+  
+    apply (cases "vmpage_sizea=ARMSmallPage")
      -- "capb is a small frame"
-     apply (frule_tac cap'=cap_b in cap_get_tag_isCap_unfolded_H_cap(16), 
+     apply (frule cap_get_tag_isCap_unfolded_H_cap(16)[where cap'=cap_b], 
             assumption, simp add: cap_tag_defs)
      apply (simp add: Let_def)
-     apply clarsimp
 
      apply (intro conjI)
         apply (simp add: pageBitsForSize_def)
-        apply (case_tac "gen_framesize_to_H (capFSize_CL (cap_frame_cap_lift cap_a))", simp_all)[1]
+        apply (cases "gen_framesize_to_H (capFSize_CL (cap_frame_cap_lift cap_a))"; simp)
        apply (simp add: mask_def Kernel_C.ARMSmallPage_def)
       apply (simp add: Kernel_C.ARMSmallPage_def gen_framesize_to_H_def)
 
-     apply (frule_tac cap'=cap_a in cap_get_tag_isCap_unfolded_H_cap(17)[simplified], simp)
+     apply (frule cap_get_tag_isCap_unfolded_H_cap(17)[simplified, where cap'=cap_a], simp)
      apply (simp add: cap_tag_defs)
      apply (simp add: cap_get_tag_PageCap_small_frame [unfolded cap_tag_defs, simplified]) 
      apply (simp add: cap_get_tag_PageCap_frame [unfolded cap_tag_defs, simplified]) 
@@ -2826,7 +2817,7 @@ lemma Arch_sameRegionAs_spec:
      apply (cut_tac x="(pageBitsForSize (gen_framesize_to_H (capFSize_CL (cap_frame_cap_lift cap_a))))" 
               in unat_of_nat32)
       apply (simp add: pageBitsForSize_def)
-      apply (case_tac "gen_framesize_to_H (capFSize_CL (cap_frame_cap_lift cap_a))", simp_all add: word_bits_def)[1]
+      apply (cases "gen_framesize_to_H (capFSize_CL (cap_frame_cap_lift cap_a))"; simp add: word_bits_def)
      apply clarsimp
      apply (thin_tac "unat x = y" for x y)
 
@@ -2835,27 +2826,27 @@ lemma Arch_sameRegionAs_spec:
      apply (simp add: field_simps)
 
     -- "capb is a frame"
-    apply (frule_tac cap'=cap_b in cap_get_tag_isCap_unfolded_H_cap(17), 
+    apply (frule cap_get_tag_isCap_unfolded_H_cap(17)[where cap'=cap_b], 
            assumption, simp add: cap_tag_defs)
 
     apply (subgoal_tac "capFSize_CL (cap_frame_cap_lift cap_b) \<noteq> scast Kernel_C.ARMSmallPage")
      prefer 2
-     apply (drule_tac c'=cap_b in ccap_relation_c_valid_cap [unfolded cap_tag_defs])
+     apply (drule ccap_relation_c_valid_cap [unfolded cap_tag_defs, where c'=cap_b])
      apply (simp add: cap_frame_cap_lift [unfolded cap_tag_defs, simplified])
      apply (simp add: c_valid_cap_def cl_valid_cap_def)
 
-    apply clarsimp
-    apply (frule_tac cap'=cap_a in cap_get_tag_isCap_unfolded_H_cap(17)[simplified], simp)
+
+    apply (frule cap_get_tag_isCap_unfolded_H_cap(17)[simplified, where cap'=cap_a], simp)
     apply (simp add: cap_tag_defs)
     apply (drule (1) iffD1 [OF cap_get_tag_PageCap_frame [unfolded cap_tag_defs, simplified]])+
     apply clarify
 
     apply (intro conjI)
         apply (simp add: pageBitsForSize_def)
-        apply (case_tac "gen_framesize_to_H (capFSize_CL (cap_frame_cap_lift cap_a))", simp_all)[1]
-       apply (simp add:cap_frame_cap_lift_def cap_lift_def cap_tag_defs mask_def word_bw_assocs)
+        apply (cases "gen_framesize_to_H (capFSize_CL (cap_frame_cap_lift cap_a))"; simp)
+       subgoal by (simp add:cap_frame_cap_lift_def cap_lift_def cap_tag_defs mask_def word_bw_assocs)
       apply (simp add: pageBitsForSize_def)
-      apply (case_tac "gen_framesize_to_H (capFSize_CL (cap_frame_cap_lift cap_b))", simp_all)[1]
+      apply (case_tac "gen_framesize_to_H (capFSize_CL (cap_frame_cap_lift cap_b))"; simp)
     apply (simp add: Let_def) 
     apply (simp add: if_0_1_eq if_distrib [where f=scast])
 
@@ -2863,57 +2854,60 @@ lemma Arch_sameRegionAs_spec:
     apply (cut_tac x="(pageBitsForSize (gen_framesize_to_H (capFSize_CL (cap_frame_cap_lift cap_a))))" 
              in unat_of_nat32)
      apply (simp add: pageBitsForSize_def)
-     apply (case_tac "gen_framesize_to_H (capFSize_CL (cap_frame_cap_lift cap_a))", simp_all add: word_bits_def)[1]
+     apply (cases "gen_framesize_to_H (capFSize_CL (cap_frame_cap_lift cap_a))"; simp add: word_bits_def)
     apply clarsimp
     apply (cut_tac x="(pageBitsForSize (gen_framesize_to_H (capFSize_CL (cap_frame_cap_lift cap_b))))" 
              in unat_of_nat32)
      apply (simp add: pageBitsForSize_def)
-     apply (case_tac "gen_framesize_to_H (capFSize_CL (cap_frame_cap_lift cap_b))", simp_all add: word_bits_def)[1]
+     apply (cases "gen_framesize_to_H (capFSize_CL (cap_frame_cap_lift cap_b))"; simp add: word_bits_def)
     apply clarsimp
 
     apply (simp add: gen_framesize_to_H_is_framesize_to_H_if_not_ARMSmallPage)
-    apply (simp add: field_simps)
+    by (simp add: field_simps)
+   done
 
   -- "capa is PageTableCap"
-   apply (case_tac capb, simp_all add: cap_get_tag_isCap_unfolded_H_cap 
-                      isCap_simps cap_tag_defs from_bool_def false_def true_def)[1]
+   apply (cases capb; simp_all add: cap_get_tag_isCap_unfolded_H_cap 
+                      isCap_simps cap_tag_defs from_bool_def false_def true_def)
     -- " capb is PageCap"
-    apply (rename_tac vmpage_size option)
-    apply (case_tac "vmpage_size=ARMSmallPage")
-     apply (frule_tac cap'=cap_b in cap_get_tag_isCap_unfolded_H_cap(16),   
+    subgoal for \<dots> vmpage_size option
+    apply (cases "vmpage_size=ARMSmallPage")
+     apply (frule cap_get_tag_isCap_unfolded_H_cap(16)[where cap'=cap_b],   
                       assumption, simp add: cap_tag_defs)
-    apply (frule_tac cap'=cap_b in cap_get_tag_isCap_unfolded_H_cap(17), 
+    by (frule cap_get_tag_isCap_unfolded_H_cap(17)[where cap'=cap_b], 
             assumption, simp add: cap_tag_defs)
    -- " capb is a PageTableCap"
+   subgoal
    apply (frule_tac cap'=cap_a in cap_get_tag_isCap_unfolded_H_cap(14))
    apply (frule_tac cap'=cap_b in cap_get_tag_isCap_unfolded_H_cap(14))
    apply (frule cap_get_tag_isCap_unfolded_H_cap)
    apply (simp add: ccap_relation_def  map_option_case)
    apply (simp add: cap_page_table_cap_lift)
    apply (simp add: cap_to_H_def)
-   apply (case_tac "capPTBasePtr_CL (cap_page_table_cap_lift cap_a) = 
-                    capPTBasePtr_CL (cap_page_table_cap_lift cap_b)", simp+)
+   by (cases "capPTBasePtr_CL (cap_page_table_cap_lift cap_a) = 
+                    capPTBasePtr_CL (cap_page_table_cap_lift cap_b)"; simp)
 
   -- "capa is PageDirectoryCap"
-  apply (case_tac capb, simp_all add: cap_get_tag_isCap_unfolded_H_cap 
-                      isCap_simps cap_tag_defs from_bool_def false_def true_def)[1]
+  apply (cases capb; simp add: cap_get_tag_isCap_unfolded_H_cap 
+                      isCap_simps cap_tag_defs from_bool_def false_def true_def)
    -- " capb is PageCap"
-   apply (rename_tac vmpage_size option)
-   apply (case_tac "vmpage_size=ARMSmallPage")
-    apply (frule_tac cap'=cap_b in cap_get_tag_isCap_unfolded_H_cap(16), 
+   subgoal for \<dots> vmpage_size option
+   apply (cases "vmpage_size=ARMSmallPage")
+    apply (frule cap_get_tag_isCap_unfolded_H_cap(16)[where cap'=cap_b], 
             assumption, simp add: cap_tag_defs)
-   apply (frule_tac cap'=cap_b in cap_get_tag_isCap_unfolded_H_cap(17), 
+   by (frule cap_get_tag_isCap_unfolded_H_cap(17)[where cap'=cap_b], 
            assumption, simp add: cap_tag_defs)
   -- " capb is a PageDirectoryCap"
+  subgoal
   apply (frule_tac cap'=cap_a in cap_get_tag_isCap_unfolded_H_cap(15))
   apply (frule_tac cap'=cap_b in cap_get_tag_isCap_unfolded_H_cap(15))
   apply (frule cap_get_tag_isCap_unfolded_H_cap)
   apply (simp add: ccap_relation_def  map_option_case)
   apply (simp add: cap_page_directory_cap_lift)
   apply (simp add: cap_to_H_def)
-  apply (case_tac "capPDBasePtr_CL (cap_page_directory_cap_lift cap_a) = 
-                   capPDBasePtr_CL (cap_page_directory_cap_lift cap_b)", simp+)
-
+  by (cases "capPDBasePtr_CL (cap_page_directory_cap_lift cap_a) = 
+                   capPDBasePtr_CL (cap_page_directory_cap_lift cap_b)"; simp)
+  done
 done
 
 definition
@@ -2969,8 +2963,7 @@ lemma generic_frame_cap_get_capFVMRights_spec:
   apply (clarsimp simp: generic_frame_cap_get_capFVMRights_CL_def
                         cap_lift_small_frame_cap cap_lift_frame_cap
                         cap_small_frame_cap_lift_def cap_frame_cap_lift_def)
-  apply (simp add: cap_lift_def Let_def Kernel_C.VMNoAccess_def split: split_if)
-  done
+  by (simp add: cap_lift_def Let_def Kernel_C.VMNoAccess_def split: split_if)
 
 definition
   get_capSizeBits_CL :: "cap_CL option \<Rightarrow> nat" where
@@ -2995,8 +2988,7 @@ lemma frame_cap_size [simp]:
   \<Longrightarrow> cap_frame_cap_CL.capFSize_CL (cap_frame_cap_lift cap) && mask 2 =
      cap_frame_cap_CL.capFSize_CL (cap_frame_cap_lift cap)"
   apply (simp add: cap_frame_cap_lift_def)
-  apply (simp add: cap_lift_def cap_tag_defs mask_def word_bw_assocs)
-  done
+  by (simp add: cap_lift_def cap_tag_defs mask_def word_bw_assocs)
 
 lemma generic_frame_cap_size[simp]:
   "cap_get_tag cap = scast cap_frame_cap \<or> cap_get_tag cap = scast cap_small_frame_cap
@@ -3004,10 +2996,9 @@ lemma generic_frame_cap_size[simp]:
      generic_frame_cap_get_capFSize_CL (cap_lift cap)"
   apply (simp add: generic_frame_cap_get_capFSize_CL_def)
   apply (erule disjE)
-   apply (simp add: cap_lift_def cap_tag_defs mask_def word_bw_assocs)
-  apply (simp add: cap_lift_def cap_tag_defs mask_def Kernel_C.ARMSmallPage_def)
-  done
-
+   subgoal by (simp add: cap_lift_def cap_tag_defs mask_def word_bw_assocs)
+  by (simp add: cap_lift_def cap_tag_defs mask_def Kernel_C.ARMSmallPage_def)
+ 
 lemma cap_get_capSizeBits_spec:
   "\<forall>s. \<Gamma> \<turnstile> {s}
        \<acute>ret__unsigned_long :== PROC cap_get_capSizeBits(\<acute>cap)
@@ -3025,7 +3016,7 @@ lemma cap_get_capSizeBits_spec:
                                               cap_lift_domain_cap
                                        dest!: sym [where t = "cap_get_tag cap" for cap])+
   (* slow *)
-  apply (case_tac "cap_lift cap", simp_all, case_tac "a",
+  by (case_tac "cap_lift cap", simp_all, case_tac "a",
                auto simp: cap_lift_def cap_tag_defs Let_def
                   cap_small_frame_cap_lift_def cap_frame_cap_lift_def
                   cap_endpoint_cap_lift_def cap_notification_cap_lift_def
@@ -3033,41 +3024,39 @@ lemma cap_get_capSizeBits_spec:
                   cap_zombie_cap_lift_def cap_page_table_cap_lift_def
                   cap_page_directory_cap_lift_def cap_asid_pool_cap_lift_def
                   Let_def cap_untyped_cap_lift_def  split: split_if_asm)
-  done
 
 lemma ccap_relation_get_capSizeBits_physical:
+  notes unfolds = ccap_relation_def get_capSizeBits_CL_def cap_lift_def
+                  cap_tag_defs cap_to_H_def objBits_def objBitsKO_simps
+                  Let_def field_simps mask_def asid_low_bits_def ArchRetype_H.capUntypedSize_def
+  shows
   "\<lbrakk> ccap_relation hcap ccap; capClass hcap = PhysicalClass;
             capAligned hcap \<rbrakk> \<Longrightarrow>
    2 ^ get_capSizeBits_CL (cap_lift ccap) = capUntypedSize hcap"
   apply (case_tac hcap, simp_all)
         defer 4 (* zombie caps second last *)
         defer 4 (* arch caps last *)
-        apply (frule cap_get_tag_isCap_unfolded_H_cap,
-               clarsimp simp: ccap_relation_def get_capSizeBits_CL_def cap_lift_def
-                              cap_tag_defs cap_to_H_def objBits_def objBitsKO_simps
-                              Let_def field_simps mask_def
-                       split: split_if_asm)+
+        apply fold_subgoals[5]
+        subgoal by (frule cap_get_tag_isCap_unfolded_H_cap,
+                     clarsimp simp: unfolds
+                             split: split_if_asm)+
+   apply (frule cap_get_tag_isCap_unfolded_H_cap)
+   apply (clarsimp simp: unfolds split: split_if_asm)
    apply (rule arg_cong [OF less_mask_eq[where n=5, unfolded mask_def, simplified]])
    apply (simp add: capAligned_def objBits_simps word_bits_conv word_less_nat_alt)
-  apply (rename_tac arch_capability)
-  apply (case_tac arch_capability, simp_all)
+  subgoal for arch_capability
+  apply (cases arch_capability; simp)
      defer 2 (* page caps last *)
-     apply ((frule cap_get_tag_isCap_unfolded_H_cap,
-               clarsimp simp: ccap_relation_def get_capSizeBits_CL_def cap_lift_def
-                              cap_tag_defs cap_to_H_def Let_def field_simps
-                              asid_low_bits_def ArchRetype_H.capUntypedSize_def
-                       split: split_if_asm)+)[3]
+     apply fold_subgoals[3]
+     subgoal by ((frule cap_get_tag_isCap_unfolded_H_cap,
+               clarsimp simp: unfolds
+                       split: split_if_asm)+)
   apply (rename_tac vmpage_size option)
   apply (case_tac "vmpage_size = ARMSmallPage", simp_all)
    apply (frule cap_get_tag_isCap_unfolded_H_cap(16), simp)
-   apply (clarsimp simp: ccap_relation_def get_capSizeBits_CL_def cap_lift_def
-                         cap_tag_defs cap_to_H_def objBits_def objBitsKO_simps
-                         ArchRetype_H.capUntypedSize_def Let_def field_simps
-                  split: split_if_asm)
-  apply (frule cap_get_tag_isCap_unfolded_H_cap(17), simp,
-         clarsimp simp: ccap_relation_def get_capSizeBits_CL_def cap_lift_def
-                        cap_tag_defs cap_to_H_def objBits_def objBitsKO_simps
-                        ArchRetype_H.capUntypedSize_def field_simps
+   subgoal by (clarsimp simp: unfolds split: split_if_asm)
+  by (frule cap_get_tag_isCap_unfolded_H_cap(17), simp,
+         clarsimp simp: unfolds
                         pageBitsForSize_spec gen_framesize_to_H_def
                         c_valid_cap_def cl_valid_cap_def framesize_to_H_def
                         generic_frame_cap_get_capFSize_CL_def
@@ -3078,9 +3067,8 @@ lemma ccap_relation_get_capSizeBits_untyped:
   "\<lbrakk> ccap_relation (UntypedCap word bits idx) ccap \<rbrakk> \<Longrightarrow>
    get_capSizeBits_CL (cap_lift ccap) = bits"
   apply (frule cap_get_tag_isCap_unfolded_H_cap)
-  apply (clarsimp simp: get_capSizeBits_CL_def ccap_relation_def
+  by (clarsimp simp: get_capSizeBits_CL_def ccap_relation_def
                         map_option_case cap_to_H_def cap_lift_def cap_tag_defs)
-  done
 
 definition
   get_capZombieBits_CL :: "cap_zombie_cap_CL \<Rightarrow> word32" where
@@ -3092,8 +3080,8 @@ lemma get_capSizeBits_valid_shift:
   "\<lbrakk> ccap_relation hcap ccap; capAligned hcap \<rbrakk> \<Longrightarrow>
    get_capSizeBits_CL (cap_lift ccap) < 32"
   unfolding get_capSizeBits_CL_def
-  apply (case_tac hcap,
-         simp_all add: cap_get_tag_isCap_unfolded_H_cap cap_lift_def cap_tag_defs)
+  apply (cases hcap;
+         simp add: cap_get_tag_isCap_unfolded_H_cap cap_lift_def cap_tag_defs)
      (* zombie *)
      apply (clarsimp simp: Let_def split: split_if)
      apply (frule cap_get_tag_isCap_unfolded_H_cap)
@@ -3203,7 +3191,7 @@ lemma cap_get_capPtr_spec:
                                    dest!: sym [where t = "cap_get_tag cap" for cap]
                                    split: vmpage_size.splits)+
   (* XXX: slow. there should be a rule for this *)
-  apply (case_tac "cap_lift cap", simp_all, case_tac "a",
+  by (case_tac "cap_lift cap", simp_all, case_tac "a",
                auto simp: cap_lift_def cap_tag_defs Let_def
                   cap_small_frame_cap_lift_def cap_frame_cap_lift_def
                   cap_endpoint_cap_lift_def cap_notification_cap_lift_def
@@ -3211,7 +3199,6 @@ lemma cap_get_capPtr_spec:
                   cap_zombie_cap_lift_def cap_page_table_cap_lift_def
                   cap_page_directory_cap_lift_def cap_asid_pool_cap_lift_def
                   Let_def cap_untyped_cap_lift_def  split: split_if_asm)
-  done
 
 lemma ccap_relation_get_capPtr_not_physical:
   "\<lbrakk> ccap_relation hcap ccap; capClass hcap \<noteq> PhysicalClass \<rbrakk> \<Longrightarrow>
@@ -3232,48 +3219,50 @@ lemmas ctcb_ptr_to_tcb_ptr_mask
     = ctcb_ptr_to_tcb_ptr_mask'[simplified objBits_simps, simplified]
 
 lemma ccap_relation_get_capPtr_physical:
+  notes unfolds = ccap_relation_def get_capPtr_CL_def cap_lift_def
+                  cap_tag_defs cap_to_H_def get_capZombiePtr_CL_def
+                  get_capZombieBits_CL_def Let_def objBits_simps
+                  capAligned_def
+  shows
   "\<lbrakk> ccap_relation hcap ccap; capClass hcap = PhysicalClass; capAligned hcap \<rbrakk> \<Longrightarrow>
      get_capPtr_CL (cap_lift ccap)
         = Ptr (capUntypedPtr hcap)"
-  apply (case_tac hcap, simp_all add: isCap_simps)
+  apply (cases hcap; simp add: isCap_simps)
         defer 4
         defer 4
-        apply (frule cap_get_tag_isCap_unfolded_H_cap,
-               clarsimp simp: ccap_relation_def get_capPtr_CL_def cap_lift_def
-                              cap_tag_defs cap_to_H_def get_capZombiePtr_CL_def
-                              get_capZombieBits_CL_def Let_def objBits_simps
-                              capAligned_def
-                       split: split_if_asm dest!: ctcb_ptr_to_tcb_ptr_mask)+
+        apply fold_subgoals[5]
+        subgoal by (frule cap_get_tag_isCap_unfolded_H_cap,
+                    clarsimp simp: unfolds
+                    split: split_if_asm dest!: ctcb_ptr_to_tcb_ptr_mask)+
+   apply (frule cap_get_tag_isCap_unfolded_H_cap)
+   apply (clarsimp simp: unfolds split: split_if_asm dest!: ctcb_ptr_to_tcb_ptr_mask)
    apply (rule arg_cong [OF less_mask_eq])
    apply (simp add: capAligned_def word_bits_conv objBits_simps
                     word_less_nat_alt)
-  apply (rename_tac arch_capability)
-  apply (case_tac arch_capability, simp_all)
+  subgoal for arch_capability
+  apply (cases arch_capability; simp)
      defer 2 (* page caps last *)
-     apply ((frule cap_get_tag_isCap_unfolded_H_cap,
-               clarsimp simp: ccap_relation_def get_capPtr_CL_def cap_lift_def
-                              cap_tag_defs cap_to_H_def
-                       split: split_if_asm)+)[3]
+     apply fold_subgoals[3]
+     subgoal by ((frule cap_get_tag_isCap_unfolded_H_cap,
+                  clarsimp simp: unfolds split: split_if_asm)+)
   defer
-  apply (rename_tac vmpage_size option)
-  apply (case_tac "vmpage_size = ARMSmallPage", simp_all)
-   apply (frule cap_get_tag_isCap_unfolded_H_cap(16), simp)
-   apply (clarsimp simp: ccap_relation_def get_capPtr_CL_def cap_lift_def
+   subgoal for \<dots> vmpage_size option
+   apply (cases "vmpage_size = ARMSmallPage"; simp?)
+    apply (frule cap_get_tag_isCap_unfolded_H_cap(16), simp)
+    subgoal by (clarsimp simp: unfolds split: split_if_asm)
+   by (frule cap_get_tag_isCap_unfolded_H_cap(17), simp,
+          clarsimp simp: unfolds
                          cap_tag_defs cap_to_H_def
-                  split: split_if_asm)
-  apply (frule cap_get_tag_isCap_unfolded_H_cap(17), simp,
-         clarsimp simp: ccap_relation_def get_capPtr_CL_def cap_lift_def
-                        cap_tag_defs cap_to_H_def
-                 split: split_if_asm)+
+                  split: split_if_asm)+
+  done
   done
 
 lemma ccap_relation_get_capPtr_untyped:
   "\<lbrakk> ccap_relation (UntypedCap word bits idx) ccap \<rbrakk> \<Longrightarrow>
    get_capPtr_CL (cap_lift ccap) = Ptr word"
   apply (frule cap_get_tag_isCap_unfolded_H_cap)
-  apply (clarsimp simp: get_capPtr_CL_def ccap_relation_def
+  by (clarsimp simp: get_capPtr_CL_def ccap_relation_def
                         map_option_case cap_to_H_def cap_lift_def cap_tag_defs)
-  done
 
 lemma cap_get_tag_isArchCap_unfolded_H_cap:
   "ccap_relation (capability.ArchObjectCap a_cap) cap' \<Longrightarrow>
@@ -3832,7 +3821,6 @@ done
 
 
 
-
 lemma cap_small_frame_cap_set_capFMappedASID_spec:
   "\<forall>s. \<Gamma> \<turnstile> \<lbrace>s. cap_get_tag \<^bsup>s\<^esup>cap = scast cap_small_frame_cap\<rbrace>
     Call cap_small_frame_cap_set_capFMappedASID_'proc
@@ -3880,9 +3868,9 @@ lemma Arch_deriveCap_ccorres:
     apply (rule context_conjI)
      apply (simp add: cap_get_tag_isCap_ArchObject)
     apply (clarsimp simp: returnOk_def return_def)
-    apply (simp add: ccap_relation_def cap_lift_def Let_def
-                     cap_tag_defs cap_to_H_def
-                     cap_page_table_cap_lift_def)
+    subgoal by (simp add: ccap_relation_def cap_lift_def Let_def
+                          cap_tag_defs cap_to_H_def
+                          cap_page_table_cap_lift_def)
    apply wpc
     apply (clarsimp simp: cap_get_tag_isCap_ArchObject
                           ccorres_cond_iffs)
@@ -3895,10 +3883,10 @@ lemma Arch_deriveCap_ccorres:
                           errstate_def syscall_error_rel_def
                           syscall_error_to_H_cases
                           exception_defs)
-    apply (simp add: ccap_relation_def cap_lift_def Let_def
-                     cap_tag_defs cap_to_H_def to_bool_def
-                     cap_page_table_cap_lift_def
-              split: split_if_asm)
+    subgoal by (simp add: ccap_relation_def cap_lift_def Let_def
+                          cap_tag_defs cap_to_H_def to_bool_def
+                          cap_page_table_cap_lift_def
+                   split: split_if_asm)
    apply wpc
     apply (clarsimp simp: cap_get_tag_isCap_ArchObject
                           ccorres_cond_iffs)
@@ -3908,9 +3896,9 @@ lemma Arch_deriveCap_ccorres:
     apply (rule context_conjI)
      apply (simp add: cap_get_tag_isCap_ArchObject)
     apply (clarsimp simp: returnOk_def return_def)
-    apply (simp add: ccap_relation_def cap_lift_def Let_def
-                     cap_tag_defs cap_to_H_def
-                     cap_page_directory_cap_lift_def)
+    subgoal by  (simp add: ccap_relation_def cap_lift_def Let_def
+                          cap_tag_defs cap_to_H_def
+                          cap_page_directory_cap_lift_def)
    apply wpc
     apply (clarsimp simp: cap_get_tag_isCap_ArchObject
                           ccorres_cond_iffs)
@@ -3923,10 +3911,10 @@ lemma Arch_deriveCap_ccorres:
                           errstate_def syscall_error_rel_def
                           syscall_error_to_H_cases
                           exception_defs)
-    apply (simp add: ccap_relation_def cap_lift_def Let_def
-                     cap_tag_defs cap_to_H_def to_bool_def
-                     cap_page_directory_cap_lift_def
-              split: split_if_asm)
+    subgoal by (simp add: ccap_relation_def cap_lift_def Let_def
+                          cap_tag_defs cap_to_H_def to_bool_def
+                          cap_page_directory_cap_lift_def
+                   split: split_if_asm)
    apply wpc
     apply (clarsimp simp: cap_get_tag_isCap_ArchObject
                           ccorres_cond_iffs)
@@ -3938,9 +3926,9 @@ lemma Arch_deriveCap_ccorres:
      apply (rule context_conjI)
       apply (simp add: cap_get_tag_isCap_ArchObject)
      apply (clarsimp simp: returnOk_def return_def isCap_simps)
-     apply (simp add: ccap_relation_def cap_lift_def Let_def
-                      cap_tag_defs cap_to_H_def to_bool_def
-                      cap_small_frame_cap_lift_def asidInvalid_def)
+     subgoal by  (simp add: ccap_relation_def cap_lift_def Let_def
+                            cap_tag_defs cap_to_H_def to_bool_def
+                            cap_small_frame_cap_lift_def asidInvalid_def)
     apply (clarsimp simp: ccorres_cond_iffs)
     apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])
     apply (rule allI, rule conseqPre, vcg)
@@ -3948,9 +3936,9 @@ lemma Arch_deriveCap_ccorres:
     apply (rule context_conjI)
      apply (simp add: cap_get_tag_isCap_ArchObject)
     apply (clarsimp simp: returnOk_def return_def isCap_simps)
-    apply (simp add: ccap_relation_def cap_lift_def Let_def
-                     cap_tag_defs cap_to_H_def to_bool_def
-                     cap_frame_cap_lift_def asidInvalid_def c_valid_cap_def cl_valid_cap_def)
+    subgoal by (simp add: ccap_relation_def cap_lift_def Let_def
+                          cap_tag_defs cap_to_H_def to_bool_def
+                          cap_frame_cap_lift_def asidInvalid_def c_valid_cap_def cl_valid_cap_def)
    apply (simp add: cap_get_tag_isCap_ArchObject
                     ccorres_cond_iffs)
    apply (rule ccorres_from_vcg_throws[where P=\<top> and P'=UNIV])

@@ -2147,10 +2147,9 @@ proof (intro impI allI)
      apply (simp add:szo cte_C_size cte_level_bits_def)
      apply (erule disjoint_subset)
      apply (simp add: ptBits_def pageBits_def del: replicate_numeral)
-    apply (simp add:szo ptr_retyps_htd_safe_neg hrs_htd_def
+    by (simp add:szo ptr_retyps_htd_safe_neg hrs_htd_def
       kernel_data_refs_domain_eq_rotate ptBits_def pageBits_def
       Int_ac del: replicate_numeral)
-    done
 qed
 
 lemma createObjects_ccorres_pde:
@@ -2433,8 +2432,7 @@ abbreviation(input)
 
 lemma object_type_to_from_H [simp]: "object_type_to_H (object_type_from_H x) = x"
   apply (clarsimp simp: object_type_from_H_def object_type_to_H_def Kernel_C_defs)
-  apply (clarsimp split: object_type.splits apiobject_type.splits simp: Kernel_C_defs)
- done
+  by (clarsimp split: object_type.splits apiobject_type.splits simp: Kernel_C_defs)
 
 declare ptr_retyps_one[simp]
 
@@ -2552,18 +2550,17 @@ lemma insertNewCap_ccorres_helper:
    apply (rule conjI)
     apply (erule (2) cmap_relation_updI)
     apply (simp add: ccap_relation_def ccte_relation_def cte_lift_def)
-    apply (simp add: cte_to_H_def option_map_Some_eq2 mdb_node_to_H_def to_bool_mask_to_bool_bf is_aligned_neg_mask
+    subgoal by (simp add: cte_to_H_def option_map_Some_eq2 mdb_node_to_H_def to_bool_mask_to_bool_bf is_aligned_neg_mask
       c_valid_cte_def true_def
       split: option.splits)
-   apply simp
+   subgoal by simp
    apply (erule_tac t = s' in ssubst)
    apply (simp cong: lifth_update)
    apply (rule conjI)
     apply (erule (1) setCTE_tcb_case)  
-   apply (simp add: carch_state_relation_def cmachine_state_relation_def
+   by (simp add: carch_state_relation_def cmachine_state_relation_def
                     typ_heap_simps
                     cvariable_array_map_const_add_map_option[where f="tcb_no_ctes_proj"])
-  done
 
 lemma insertNewCap_ccorres [corres]:
   "ccorres dc xfdc (pspace_aligned' and valid_mdb')
@@ -4190,8 +4187,8 @@ lemma copyGlobalMappings_ccorres:
                                    update_pde_map_to_pdes
                                    carray_map_relation_upd_triv)
              apply (erule(2) cmap_relation_updI)
-              apply simp
-             apply simp
+              subgoal by simp
+             subgoal by simp
             apply (clarsimp simp: carch_state_relation_def
                                   cmachine_state_relation_def
                                   typ_heap_simps map_comp_eq
@@ -4202,19 +4199,19 @@ lemma copyGlobalMappings_ccorres:
                    simp add: mask_add_aligned)
             apply (simp add: iffD2[OF mask_eq_iff_w2p] word_size pdBits_def pageBits_def)
             apply (subst(asm) iffD2[OF mask_eq_iff_w2p])
-              apply (simp add: word_size)
+              subgoal by (simp add: word_size)
              apply (simp only: word32_shift_by_2)
              apply (rule shiftl_less_t2n)
               apply (rule of_nat_power)
-               apply simp
-              apply simp
-             apply simp
+               subgoal by simp
+              subgoal by simp
+             subgoal by simp
             apply (simp add: word32_shift_by_2)
             apply (drule arg_cong[where f="\<lambda>x. x >> 2"], subst(asm) shiftl_shiftr_id)
-              apply (simp add: word_bits_def)
+              subgoal by (simp add: word_bits_def)
              apply (rule of_nat_power)
-              apply (simp add: word_bits_def)
-             apply (simp add: word_bits_def)
+              subgoal by (simp add: word_bits_def)
+             subgoal by (simp add: word_bits_def)
             apply simp
            apply clarsimp
            apply (drule(1) valid_pde_mappings_ko_atD')+
@@ -5442,10 +5439,9 @@ lemma threadSet_domain_ccorres [corres]:
    apply (rule ext, simp split: split_if)
   apply (drule ko_at_projectKO_opt)
   apply (erule (2) cmap_relation_upd_relI)
-    apply (simp add: ctcb_relation_def)
+    subgoal by (simp add: ctcb_relation_def)
    apply assumption
-  apply simp
-  done
+  by simp
 
 lemma createObject_ccorres:
   notes APITypecapBits_simps[simp] =
@@ -5842,7 +5838,7 @@ lemma pspace_no_overlap_induce_endpoint:
   apply (clarsimp simp: cmap_relation_def)
   apply (subgoal_tac "xa\<in>ep_Ptr ` dom (map_to_eps (ksPSpace s))")
    prefer 2
-   apply (simp add: domI)
+   subgoal by (simp add: domI)
   apply (thin_tac "S = dom K" for S K)+
   apply (thin_tac "\<forall>x\<in> S. K x" for S K)+
   apply (clarsimp simp: image_def projectKO_opt_ep map_comp_def
@@ -6110,7 +6106,7 @@ lemma pspace_no_overlap_induce_pde:
   apply (clarsimp simp:cmap_relation_def)
   apply (subgoal_tac "xa\<in>pde_Ptr ` dom (map_to_pdes (ksPSpace s))")
     prefer 2
-    apply (simp add:domI)
+    subgoal by (simp add:domI)
   apply (thin_tac "S = dom K" for S K)+
   apply (thin_tac "\<forall>x\<in> S. K x" for S K)+
   apply (clarsimp simp:image_def projectKO_opt_pde
@@ -6123,8 +6119,7 @@ lemma pspace_no_overlap_induce_pde:
     apply (drule(1) pspace_alignedD')
     apply (simp add:objBits_simps archObjSize_def split:arch_kernel_object.split_asm)
    apply (simp add:word_bits_conv)
-  apply (simp add:objBits_simps archObjSize_def split:arch_kernel_object.split_asm)
-  done
+  by (simp add:objBits_simps archObjSize_def split:arch_kernel_object.split_asm)
 
 
 lemma typ_bytes_cpspace_relation_clift_tcb:
@@ -7307,9 +7302,10 @@ shows  "ccorres dc xfdc
                    invs_ksCurDomain_maxDomain')
             apply (subst intvl_range_conv)
               apply (rule aligned_add_aligned[OF range_cover.aligned],assumption)
-               apply (simp add:is_aligned_shiftl_self)
-              apply (simp_all add:range_cover_sz'[where 'a=32, folded word_bits_def]
-                              word_bits_def range_cover_def)[2]
+               subgoal by (simp add:is_aligned_shiftl_self)
+              apply fold_subgoals[2]
+              subgoal by (simp_all add:range_cover_sz'[where 'a=32, folded word_bits_def]
+                                   word_bits_def range_cover_def)+
             apply (simp add: range_cover_not_in_neqD)
             apply (intro conjI)
                   apply (drule_tac p = n in range_cover_no_0)
@@ -7318,16 +7314,19 @@ shows  "ccorres dc xfdc
                  apply (simp add: unat_arith_simps unat_of_nat, simp split: split_if)
                  apply (intro impI, erule order_trans[rotated], simp)
                 apply (erule pspace_no_overlap'_le)
-                 apply (simp add:range_cover.sz[where 'a=32, folded word_bits_def])+
+                 apply fold_subgoals[2]
+                 subgoal by (simp add:range_cover.sz[where 'a=32, folded word_bits_def])+
                apply (rule range_cover_one)
                  apply (rule aligned_add_aligned[OF range_cover.aligned],assumption)
                   apply (simp add:is_aligned_shiftl_self)
-                 apply (simp add:range_cover_sz'[where 'a=32, folded word_bits_def] range_cover.sz[where 'a=32, folded word_bits_def])+
+                 apply fold_subgoals[2]
+                 subgoal by (simp add:range_cover_sz'[where 'a=32, folded word_bits_def] range_cover.sz[where 'a=32, folded word_bits_def])+
                apply (simp add:  word_bits_def range_cover_def)
               apply (rule range_cover_full)
                apply (rule aligned_add_aligned[OF range_cover.aligned],assumption)
                 apply (simp add:is_aligned_shiftl_self)
-               apply (simp add:range_cover_sz'[where 'a=32, folded word_bits_def] range_cover.sz[where 'a=32, folded word_bits_def])+
+               apply fold_subgoals[2]
+               subgoal by (simp add:range_cover_sz'[where 'a=32, folded word_bits_def] range_cover.sz[where 'a=32, folded word_bits_def])+
              apply (erule disjoint_subset[rotated])
              apply (rule_tac p1 = n in subset_trans[OF _ range_cover_subset])
                 apply (simp add:field_simps shiftl_t2n)
@@ -7345,13 +7344,13 @@ shows  "ccorres dc xfdc
             apply (simp add:unat_eq_def)
            apply (simp add: cte_C_size)
           apply (rule word_of_nat_less)
-          apply (case_tac newType,simp_all add: objBits_simps
-               APIType_capBits_def range_cover_def split:apiobject_type.splits)[1]
+          subgoal by (case_tac newType,simp_all add: objBits_simps
+               APIType_capBits_def range_cover_def split:apiobject_type.splits)
          apply clarsimp
          apply (subst range_cover.unat_of_nat_n)
           apply (erule range_cover_le)
-          apply simp
-         apply (simp add:word_unat.Rep_inverse')
+          subgoal by simp
+         subgoal by (simp add:word_unat.Rep_inverse')
         apply clarsimp
         apply (rule conseqPre, vcg exspec=insertNewCap_modifies exspec=createObject_modifies)
         apply clarsimp
@@ -7376,8 +7375,9 @@ shows  "ccorres dc xfdc
        apply (frule range_cover.range_cover_n_less)
        apply (subst upt_enum_offset_trivial)
          apply (rule minus_one_helper[OF word_of_nat_le])
-          apply ((simp add:word_bits_conv minus_one_norm
-                           range_cover_not_zero[rotated])+)[3]
+          apply fold_subgoals[3]
+          subgoal by (simp add:word_bits_conv minus_one_norm
+                           range_cover_not_zero[rotated])+
        apply (simp add: intvl_range_conv aligned_add_aligned[OF range_cover.aligned]
               is_aligned_shiftl_self range_cover_sz')
        apply (subst intvl_range_conv)
@@ -7410,8 +7410,8 @@ shows  "ccorres dc xfdc
        apply clarsimp
        apply (simp add: range_cover_not_in_neqD)
        apply (intro conjI)
-                          apply (simp add: word_bits_def range_cover_def)
-                         apply (clarsimp simp: cte_wp_at_ctes_of invs'_def valid_state'_def
+                          subgoal by (simp add: word_bits_def range_cover_def)
+                         subgoal by (clarsimp simp: cte_wp_at_ctes_of invs'_def valid_state'_def
                                                valid_global_refs'_def cte_at_valid_cap_sizes_0)
                         apply (erule range_cover_le,simp)
                        apply (drule_tac p = "n" in range_cover_no_0)
@@ -7426,31 +7426,31 @@ shows  "ccorres dc xfdc
                        erule of_nat_mono_maybe[rotated], simp)
                      apply (simp add: upto_intvl_eq shiftl_t2n mult.commute
                                       aligned_add_aligned[OF range_cover.aligned is_aligned_mult_triv2])
-                    apply simp
+                    subgoal by simp
                    apply (simp add:cte_wp_at_no_0)
                   apply (rule disjoint_subset2[where B="{ptr .. foo}" for foo, rotated], simp add: Int_commute)
                   apply (rule order_trans[rotated], erule_tac p="Suc n" in range_cover_subset, simp+)
-                  apply (simp add: upto_intvl_eq shiftl_t2n mult.commute
+                  subgoal by (simp add: upto_intvl_eq shiftl_t2n mult.commute
                                    aligned_add_aligned[OF range_cover.aligned is_aligned_mult_triv2])
                  apply (drule_tac x = 0 in spec)
-                 apply simp
+                 subgoal by simp
                 apply (erule caps_overlap_reserved'_subseteq)
-                apply (clarsimp simp:range_cover_compare_offset blah)
+                subgoal by (clarsimp simp:range_cover_compare_offset blah)
                apply (erule descendants_range_in_subseteq')
-               apply (clarsimp simp:range_cover_compare_offset blah)
+               subgoal by (clarsimp simp:range_cover_compare_offset blah)
               apply (erule caps_overlap_reserved'_subseteq)
               apply (clarsimp simp:range_cover_compare_offset blah)
               apply (frule_tac x = "of_nat n" in range_cover_bound3)
-               apply (simp add:word_of_nat_less range_cover.unat_of_nat_n blah)
-              apply (simp add:field_simps shiftl_t2n blah)
+               subgoal by (simp add:word_of_nat_less range_cover.unat_of_nat_n blah)
+              subgoal by (simp add:field_simps shiftl_t2n blah)
              apply (simp add:shiftl_t2n field_simps)
              apply (rule contra_subsetD)
               apply (rule_tac x1 = 0 in subset_trans[OF _ range_cover_cell_subset,rotated ])
                 apply (erule_tac p = n in range_cover_offset[rotated])
-                apply simp
+                subgoal by simp
                apply simp
                apply (rule less_diff_gt0)
-               apply (simp add:word_of_nat_less range_cover.unat_of_nat_n blah)
+               subgoal by (simp add:word_of_nat_less range_cover.unat_of_nat_n blah)
               apply (clarsimp simp:field_simps)
                apply (clarsimp simp:valid_idle'_def pred_tcb_at'_def 
                dest!:invs_valid_idle' elim!:obj_atE')
@@ -7458,23 +7458,26 @@ shows  "ccorres dc xfdc
              apply (erule_tac x = "ksIdleThread s" in in_empty_interE[rotated])
               prefer 2
               apply (simp add:Int_ac)
-             apply (clarsimp simp:blah)
-            apply blast
+             subgoal by (clarsimp simp:blah)
+            subgoal by blast
            apply (erule descendants_range_in_subseteq')
            apply (clarsimp simp: blah)
            apply (rule order_trans[rotated], erule_tac x="of_nat n" in range_cover_bound'')
-            apply (simp add: word_less_nat_alt unat_of_nat)
-           apply (simp add: shiftl_t2n field_simps)
+            subgoal by (simp add: word_less_nat_alt unat_of_nat)
+           subgoal by (simp add: shiftl_t2n field_simps)
           apply (rule order_trans[rotated],
             erule_tac p="Suc n" in range_cover_subset, simp_all)[1]
-          apply (simp add: upto_intvl_eq shiftl_t2n mult.commute
+          subgoal by (simp add: upto_intvl_eq shiftl_t2n mult.commute
                    aligned_add_aligned[OF range_cover.aligned is_aligned_mult_triv2])
          apply (erule cte_wp_at_weakenE')
          apply (clarsimp simp:shiftl_t2n field_simps)
          apply (erule subsetD)
          apply (erule subsetD[rotated])
          apply (rule_tac p1 = n in subset_trans[OF _ range_cover_subset])
-            apply (simp add:field_simps )+
+            prefer 2
+            apply (simp add:field_simps )
+           apply fold_subgoals[2]
+           subgoal by (simp add:field_simps )+
         apply (clarsimp simp: word_shiftl_add_distrib)
         apply (clarsimp simp:blah field_simps shiftl_t2n)
         apply (drule word_eq_zeroI)
@@ -7484,24 +7487,24 @@ shows  "ccorres dc xfdc
        apply (rule conjI)
         apply (drule_tac n = "x+1" and gbits = 4 in range_cover_not_zero_shift[OF _ range_cover_le,rotated])
            apply simp
-          apply (case_tac newType, simp_all add: objBits_simps
-                       APIType_capBits_def range_cover_def split:apiobject_type.splits)[1]
-         apply simp
-        apply (simp add:word_of_nat_plus word_shiftl_add_distrib field_simps shiftl_t2n)
+          subgoal by (case_tac newType; simp add: objBits_simps
+                       APIType_capBits_def range_cover_def split:apiobject_type.splits)
+         subgoal by simp
+        subgoal by (simp add:word_of_nat_plus word_shiftl_add_distrib field_simps shiftl_t2n)
        apply (drule_tac x = "Suc x" in spec)
-       apply (clarsimp simp:field_simps)
+       subgoal by (clarsimp simp:field_simps)
       apply clarsimp
       apply (subst range_cover.unat_of_nat_n)
        apply (erule range_cover_le)
        apply simp
       apply (simp add:word_unat.Rep_inverse')
-      apply (clarsimp simp:range_cover.range_cover_n_less[where 'a=32, folded word_bits_def])
-     apply clarsimp
+      subgoal by (clarsimp simp:range_cover.range_cover_n_less[where 'a=32, folded word_bits_def])
+     subgoal by clarsimp
     apply vcg
    apply (rule conseqPre, vcg, clarsimp)
    apply (frule(1) ghost_assertion_size_logic)
    apply (drule range_cover_sz')
-   apply (intro conjI impI, simp_all add: o_def word_of_nat_less)[1]
+   subgoal by (intro conjI impI; simp add: o_def word_of_nat_less)
   apply (rule conjI)
    apply (frule range_cover.aligned)
    apply (frule range_cover_full[OF range_cover.aligned])
@@ -7512,32 +7515,34 @@ shows  "ccorres dc xfdc
    apply (simp add: intvl_range_conv[OF range_cover.aligned range_cover_sz']
                     order_trans[OF _ APIType_capBits_min])
    apply (intro conjI)
-           apply (simp add: word_bits_def range_cover_def)
+           subgoal by (simp add: word_bits_def range_cover_def)
           apply (clarsimp simp:rf_sr_def cstate_relation_def Let_def)
           apply (erule pspace_no_overlap'_le)
-           apply (simp add:range_cover.sz[where 'a=32, simplified] word_bits_def)+
+           apply fold_subgoals[2]
+           subgoal by (simp add:range_cover.sz[where 'a=32, simplified] word_bits_def)+
          apply (erule contra_subsetD[rotated])
-         apply (rule order_trans[rotated], rule range_cover_subset'[where n=1],
-           erule range_cover_le, simp_all, (clarsimp simp: neq_Nil_conv)+)[1]
+         subgoal by (rule order_trans[rotated], rule range_cover_subset'[where n=1],
+           erule range_cover_le, simp_all, (clarsimp simp: neq_Nil_conv)+)
         apply (rule disjoint_subset2[rotated])
          apply (simp add:Int_ac)
         apply (erule range_cover_subset[where p = 0,simplified])
-         apply simp+
-       apply (simp add: Int_commute shiftl_t2n mult.commute)
+         subgoal by simp
+        subgoal by simp
+       subgoal by (simp add: Int_commute shiftl_t2n mult.commute)
       apply (erule cte_wp_at_weakenE')
       apply (clarsimp simp:blah word_and_le2 shiftl_t2n field_simps)
       apply (frule range_cover_bound''[where x = "of_nat (length destSlots) - 1"])
-       apply (simp add: range_cover_not_zero[rotated])
-      apply (simp add:field_simps)
-     apply (erule range_cover_subset[where p=0, simplified], simp_all)[1]
+       subgoal by (simp add: range_cover_not_zero[rotated])
+      subgoal by (simp add:field_simps)
+     subgoal by (erule range_cover_subset[where p=0, simplified]; simp)
     apply clarsimp
     apply (drule_tac x = k in spec)
     apply simp
     apply (drule(1) bspec[OF _ nth_mem])+
-    apply (clarsimp simp:field_simps)
+    subgoal by (clarsimp simp:field_simps)
    apply clarsimp
    apply (drule(1) bspec[OF _ nth_mem])+
-   apply (clarsimp simp:cte_wp_at_ctes_of)
+   subgoal by (clarsimp simp:cte_wp_at_ctes_of)
   apply clarsimp
   apply (frule range_cover_sz')
   apply (frule(1) range_cover_gsMaxObjectSize, fastforce, assumption)
@@ -7546,13 +7551,14 @@ shows  "ccorres dc xfdc
   apply (simp add: o_def)
   apply (case_tac newType,simp_all add:object_type_from_H_def Kernel_C_defs
              nAPIObjects_def APIType_capBits_def o_def split:apiobject_type.splits)[1]
-          apply (simp add:unat_eq_def word_unat.Rep_inverse' word_less_nat_alt)
-         apply (clarsimp simp:objBits_simps,unat_arith)
-        apply (clarsimp simp: objBits_simps unat_eq_def word_unat.Rep_inverse'
-                              word_less_nat_alt)+
-     apply (clarsimp simp: ARMSmallPageBits_def ARMLargePageBits_def
+          subgoal by (simp add:unat_eq_def word_unat.Rep_inverse' word_less_nat_alt)
+         subgoal by (clarsimp simp:objBits_simps,unat_arith)
+        apply fold_subgoals[3]
+        subgoal by (clarsimp simp: objBits_simps unat_eq_def word_unat.Rep_inverse'
+                                  word_less_nat_alt)+
+     
+     by (clarsimp simp: ARMSmallPageBits_def ARMLargePageBits_def
                            ARMSectionBits_def ARMSuperSectionBits_def)+
-  done
 
 end
 

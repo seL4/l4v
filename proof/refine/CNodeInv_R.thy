@@ -548,8 +548,7 @@ lemma decodeCNodeInvocation_inv[wp]:
                              Let_def whenE_def unlessE_def cnode_invok_case_cleanup
                   split del: split_if cong del: if_cong)[6]
         apply fold_subgoals[6]
-        subgoal 
-        apply unfold_subgoals
+        subgoal
         by (safe intro!: hoare_pre[where P=P],
                 (wp hoare_drop_imps | simp | wpcw)+)
   apply (elim disjE exE conjE,

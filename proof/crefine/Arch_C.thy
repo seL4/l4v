@@ -11,7 +11,7 @@
 theory Arch_C
 imports Recycle_C
 begin
-
+\<open>
 (* FIXME: move *)
 lemma of_bool_from_bool: "of_bool = from_bool"
   by (rule ext, simp add: from_bool_def split: bool.split)

@@ -1001,8 +1001,8 @@ lemma frame_gp_registers_convs:
   "n < length State_H.gpRegisters \<Longrightarrow>
      index gpRegisters n = register_from_H (State_H.gpRegisters ! n)"
   apply (simp_all add: State_H.gpRegisters_def State_H.frameRegisters_def
-                       ARMMachineTypes.gpRegisters_def n_gpRegisters_def
-                       ARMMachineTypes.frameRegisters_def n_frameRegisters_def
+                       MachineTypes.gpRegisters_def n_gpRegisters_def
+                       MachineTypes.frameRegisters_def n_frameRegisters_def
                        frameRegisters_def gpRegisters_def msgRegisters_unfold
                        fupdate_def Arrays.update_def toEnum_def
                        upto_enum_def fromEnum_def enum_register)
@@ -1455,7 +1455,7 @@ lemma invokeTCB_WriteRegisters_ccorres[where S=UNIV]:
                                       n_frameRegisters_def)
                 apply arith
                apply (simp add: State_H.gpRegisters_def word_bits_def
-                                ARMMachineTypes.gpRegisters_def)
+                                MachineTypes.gpRegisters_def)
               apply simp
              apply (rule ceqv_refl)
             apply (ctac(no_vcg) add: getRestartPC_ccorres)
@@ -1550,7 +1550,7 @@ lemma msg_registers_convs:
   "n < length State_H.msgRegisters \<Longrightarrow>
      index msgRegisters n = register_from_H (State_H.msgRegisters ! n)"
   apply (simp_all add: msgRegisters_unfold
-                       ARMMachineTypes.msgRegisters_def n_msgRegisters_def
+                       MachineTypes.msgRegisters_def n_msgRegisters_def
                        msgRegisters_def fupdate_def Arrays.update_def)
   apply (auto simp: less_Suc_eq fcp_beta)
   done
@@ -1963,7 +1963,7 @@ shows
                  apply simp
                  apply (wp lookupIPCBuffer_Some_0 | wp_once hoare_drop_imps)+
                 apply (simp add: Collect_const_mem State_H.badgeRegister_def
-                                 ARMMachineTypes.badgeRegister_def
+                                 MachineTypes.badgeRegister_def
                                  "StrictC'_register_defs")
                 apply (vcg exspec=lookupIPCBuffer_modifies)
                apply (simp add: false_def)
@@ -2396,7 +2396,7 @@ lemma ccap_relation_gen_framesize_to_H:
        \<Longrightarrow> gen_framesize_to_H (generic_frame_cap_get_capFSize_CL (cap_lift cap'))
                  = capVPSize (capCap cap)"
   apply (clarsimp simp: isCap_simps)
-  apply (case_tac "sz = ARMMachineTypes.ARMSmallPage")
+  apply (case_tac "sz = MachineTypes.ARMSmallPage")
    apply (frule cap_get_tag_PageCap_small_frame)
    apply (simp add: cap_get_tag_isCap isCap_simps
                     pageSize_def cap_lift_small_frame_cap
