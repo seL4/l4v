@@ -760,8 +760,8 @@ lemma retypeNewSizeBits_retypeNewSizeBits_update [simp]:
   by (cases v) simp
 
 datatype irqcontrol_invocation =
-    IssueIRQHandler irq machine_word machine_word
-  | ArchInvokeIRQControl ArchRetypeDecls_H.irqcontrol_invocation
+    ArchIRQControl ArchRetypeDecls_H.irqcontrol_invocation
+  | IssueIRQHandler irq machine_word machine_word
 
 primrec
   issueHandlerSlot :: "irqcontrol_invocation \<Rightarrow> machine_word"
@@ -779,9 +779,9 @@ where
   "issueHandlerControllerSlot (IssueIRQHandler v0 v1 v2) = v2"
 
 primrec
-  archIRQControlInvocation :: "irqcontrol_invocation \<Rightarrow> ArchRetypeDecls_H.irqcontrol_invocation"
+  archIRQControl :: "irqcontrol_invocation \<Rightarrow> ArchRetypeDecls_H.irqcontrol_invocation"
 where
-  "archIRQControlInvocation (ArchInvokeIRQControl v0) = v0"
+  "archIRQControl (ArchIRQControl v0) = v0"
 
 primrec
   issueHandlerSlot_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> irqcontrol_invocation \<Rightarrow> irqcontrol_invocation"
@@ -799,32 +799,32 @@ where
   "issueHandlerControllerSlot_update f (IssueIRQHandler v0 v1 v2) = IssueIRQHandler v0 v1 (f v2)"
 
 primrec
-  archIRQControlInvocation_update :: "(ArchRetypeDecls_H.irqcontrol_invocation \<Rightarrow> ArchRetypeDecls_H.irqcontrol_invocation) \<Rightarrow> irqcontrol_invocation \<Rightarrow> irqcontrol_invocation"
+  archIRQControl_update :: "(ArchRetypeDecls_H.irqcontrol_invocation \<Rightarrow> ArchRetypeDecls_H.irqcontrol_invocation) \<Rightarrow> irqcontrol_invocation \<Rightarrow> irqcontrol_invocation"
 where
-  "archIRQControlInvocation_update f (ArchInvokeIRQControl v0) = ArchInvokeIRQControl (f v0)"
+  "archIRQControl_update f (ArchIRQControl v0) = ArchIRQControl (f v0)"
+
+abbreviation (input)
+  ArchIRQControl_trans :: "(ArchRetypeDecls_H.irqcontrol_invocation) \<Rightarrow> irqcontrol_invocation" ("ArchIRQControl'_ \<lparr> archIRQControl= _ \<rparr>")
+where
+  "ArchIRQControl_ \<lparr> archIRQControl= v0 \<rparr> == ArchIRQControl v0"
 
 abbreviation (input)
   IssueIRQHandler_trans :: "(irq) \<Rightarrow> (machine_word) \<Rightarrow> (machine_word) \<Rightarrow> irqcontrol_invocation" ("IssueIRQHandler'_ \<lparr> issueHandlerIRQ= _, issueHandlerSlot= _, issueHandlerControllerSlot= _ \<rparr>")
 where
   "IssueIRQHandler_ \<lparr> issueHandlerIRQ= v0, issueHandlerSlot= v1, issueHandlerControllerSlot= v2 \<rparr> == IssueIRQHandler v0 v1 v2"
 
-abbreviation (input)
-  ArchInvokeIRQControl_trans :: "(ArchRetypeDecls_H.irqcontrol_invocation) \<Rightarrow> irqcontrol_invocation" ("ArchInvokeIRQControl'_ \<lparr> archIRQControlInvocation= _ \<rparr>")
+definition
+  isArchIRQControl :: "irqcontrol_invocation \<Rightarrow> bool"
 where
-  "ArchInvokeIRQControl_ \<lparr> archIRQControlInvocation= v0 \<rparr> == ArchInvokeIRQControl v0"
+ "isArchIRQControl v \<equiv> case v of
+    ArchIRQControl v0 \<Rightarrow> True
+  | _ \<Rightarrow> False"
 
 definition
   isIssueIRQHandler :: "irqcontrol_invocation \<Rightarrow> bool"
 where
  "isIssueIRQHandler v \<equiv> case v of
     IssueIRQHandler v0 v1 v2 \<Rightarrow> True
-  | _ \<Rightarrow> False"
-
-definition
-  isArchInvokeIRQControl :: "irqcontrol_invocation \<Rightarrow> bool"
-where
- "isArchInvokeIRQControl v \<equiv> case v of
-    ArchInvokeIRQControl v0 \<Rightarrow> True
   | _ \<Rightarrow> False"
 
 datatype irqhandler_invocation =

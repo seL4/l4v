@@ -262,9 +262,10 @@ lemma pac_corres:
    apply (intro conjI)
           apply (clarsimp)
          apply (erule(1) caps_of_state_valid)
-        apply (fastforce simp:cte_wp_at_caps_of_state
+        subgoal by (fastforce simp:cte_wp_at_caps_of_state
                 descendants_range_def2 empty_descendants_range_in)
-       apply (clarsimp simp:invs_def valid_state_def)+
+       apply fold_subgoals[2]
+       subgoal by (clarsimp simp:invs_def valid_state_def)+
      apply (clarsimp simp:cte_wp_at_caps_of_state)
     apply (drule detype_locale.non_null_present)
      apply (fastforce simp:cte_wp_at_caps_of_state)
@@ -339,8 +340,7 @@ lemma pac_corres:
         apply (clarsimp simp: invs'_def valid_state'_def if_unsafe_then_cap'_def cte_wp_at_ctes_of)
        apply fastforce
       apply simp
-     apply (fastforce simp:cte_wp_at_ctes_of)+
-  done
+     by (fastforce simp:cte_wp_at_ctes_of)+
 
 definition
   archinv_relation :: "arch_invocation \<Rightarrow> ArchRetypeDecls_H.invocation \<Rightarrow> bool"
@@ -1057,7 +1057,7 @@ shows
      apply fastforce
     apply (cases "invocation_type (mi_label mi) = ArchInvocationLabel ARMPageRemap")
      apply (case_tac "\<not>(1 < length args \<and> excaps \<noteq> [])")
-      apply (auto split: list.split)[1]
+      subgoal by (auto split: list.split)
      apply (simp add: Let_def split: list.split)
      apply (case_tac args, simp) 
      apply (clarsimp simp: split_def)
@@ -1141,7 +1141,7 @@ shows
      apply simp
      apply (rule corres_returnOk)
      apply (clarsimp simp: archinv_relation_def page_invocation_map_def)
-    apply (clarsimp split: invocation_label.splits arch_invocation_label.splits split del: split_if)
+    subgoal by (clarsimp split: invocation_label.splits arch_invocation_label.splits split del: split_if)
    apply (simp add: isCap_simps split del: split_if)
    apply (simp split: invocation_label.split arch_invocation_label.splits split del: split_if)
    apply (intro conjI impI allI)
@@ -1265,7 +1265,7 @@ shows
           simp add: cte_wp_at_caps_of_state, simp+)
         apply (clarsimp simp: cte_wp_at_ctes_of)
         apply (drule(1) valid_global_refsD_with_objSize)
-        apply (clarsimp simp: is_page_cap_def split: cap.split_asm)
+        subgoal by (clarsimp simp: is_page_cap_def split: cap.split_asm)
        apply (wp hoare_drop_imps)
     apply (clarsimp simp: invs_def valid_state_def valid_pspace_def valid_cap_simps mask_2pm1
                           valid_arch_state_def valid_arch_caps_def linorder_not_le
@@ -1431,12 +1431,12 @@ lemma setTCB_pdpt_bits'[wp]:
   apply (frule pspace_storable_class.updateObject_type[where v = tcb,simplified])
   apply (clarsimp simp:ko_wp_at'_def)
   apply (intro conjI)
-   apply (clarsimp simp:updateObject_default_def assert_def bind_def 
+   subgoal by (clarsimp simp:updateObject_default_def assert_def bind_def 
     alignCheck_def in_monad when_def alignError_def magnitudeCheck_def
     assert_opt_def return_def fail_def typeError_def objBits_simps
     vs_entry_align_def
-    split:if_splits option.splits Structures_H.kernel_object.splits)
-   apply (erule(1) ps_clear_updE)+
+    split:if_splits option.splits Structures_H.kernel_object.splits,
+    ((erule(1) ps_clear_updE)+))
   apply (clarsimp)
   apply (erule(1) ps_clear_updE)
   done
@@ -2038,8 +2038,8 @@ lemma performASIDControlInvocation_st_tcb_at':
     apply (drule (1) cte_cap_in_untyped_range)
         apply (fastforce simp add: cte_wp_at_ctes_of)
        apply assumption+
-      apply (clarsimp simp: invs'_def valid_state'_def if_unsafe_then_cap'_def cte_wp_at_ctes_of)
-     apply fastforce
+      subgoal by (clarsimp simp: invs'_def valid_state'_def if_unsafe_then_cap'_def cte_wp_at_ctes_of)
+     subgoal by fastforce
     apply simp
    apply (rule conjI,assumption)
   apply (clarsimp simp:invs_valid_pspace' objBits_simps archObjSize_def
@@ -2245,11 +2245,10 @@ lemma performASIDControlInvocation_invs' [wp]:
    apply (simp add:pageBits_def)
   apply (frule_tac cte="CTE (capability.UntypedCap a b c) m" for a b c m in valid_global_refsD', clarsimp)
   apply (simp add: is_aligned_neg_mask_eq Int_commute)
-  apply (auto simp:empty_descendants_range_in' objBits_simps
+  by (auto simp:empty_descendants_range_in' objBits_simps
                     archObjSize_def asid_low_bits_def word_bits_def pageBits_def
                     range_cover_full descendants_range'_def2 is_aligned_mask
                     null_filter_descendants_of'[OF null_filter_simp'])
-  done
 
 lemma doFlush_underlying_memory[wp]:
   "\<lbrace> \<lambda>m'. underlying_memory m' p = um \<rbrace>

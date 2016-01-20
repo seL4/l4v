@@ -202,16 +202,16 @@ lemma dlist':
       apply clarsimp
       apply (frule_tac x=src in spec, erule allE, erule (1) impE)
       apply fastforce
-     apply fastforce
-    apply fastforce
+     subgoal by fastforce
+    subgoal by fastforce
    apply (rule conjI, clarsimp)
     apply fastforce
    apply (clarsimp, rule conjI, fastforce)
    apply (clarsimp, rule conjI)
     apply clarsimp
     apply (frule_tac x=src in spec, erule allE, erule (1) impE)
-    apply fastforce
-   apply fastforce
+    subgoal by fastforce
+   subgoal by fastforce
   apply (clarsimp simp: modify_map_def nullPointer_def split: split_if_asm)
      apply (case_tac z)
      apply (clarsimp, rule conjI, fastforce)
@@ -219,15 +219,15 @@ lemma dlist':
      apply (clarsimp, rule conjI)
       apply clarsimp
       apply (frule_tac x=src in spec, erule allE, erule (1) impE)
-      apply fastforce
+      subgoal by fastforce
      apply (clarsimp, rule conjI)
       apply clarsimp
       apply (frule_tac x=src in spec, erule allE, erule (1) impE)
-      apply fastforce
-     apply fastforce
+      subgoal by fastforce
+     subgoal by fastforce
     apply (case_tac z)
-    apply fastforce
-   apply fastforce
+    subgoal by fastforce
+   subgoal by fastforce
   apply (rule conjI)
    apply (clarsimp simp: next_prev_0)
    apply fastforce
@@ -236,12 +236,12 @@ lemma dlist':
   apply (clarsimp, rule conjI)
    apply clarsimp
    apply (frule_tac x=src in spec, erule allE, erule (1) impE)
-   apply fastforce
+   subgoal by fastforce
   apply (clarsimp, rule conjI)
    apply clarsimp
    apply (frule_tac x=src in spec, erule allE, erule (1) impE)
-   apply fastforce
-  apply fastforce
+   subgoal by fastforce
+  subgoal by fastforce
   done
 
 lemma src_no_child [iff]:
@@ -1071,7 +1071,7 @@ lemma cap_move_corres:
     apply (erule_tac x="snd ptr" in allE)
     apply simp
     apply (erule impE)
-     apply (clarsimp simp: cte_wp_at_caps_of_state null_filter_def split: split_if_asm)
+     subgoal by (clarsimp simp: cte_wp_at_caps_of_state null_filter_def split: split_if_asm)
     apply simp
    apply clarsimp
    apply (subgoal_tac "null_filter (caps_of_state a) (aa,bb) \<noteq> None")
@@ -1152,7 +1152,7 @@ lemma cap_move_corres:
       apply fastforce
      apply fastforce
     apply fastforce
-   apply clarsimp
+   subgoal by clarsimp
   apply(clarsimp simp: cdt_list_relation_def)
 
   apply(subst next_slot_eq2)
@@ -1173,11 +1173,11 @@ lemma cap_move_corres:
    apply(simp)
   apply(case_tac "(aa, bb) = ptr'")
    apply(case_tac "next_slot ptr (cdt_list (a)) (cdt a)")
-    apply(simp)
+    subgoal by(simp)
    apply(simp)
    apply(erule_tac x="fst ptr" in allE)
    apply(erule_tac x="snd ptr" in allE)
-   apply(clarsimp split: split_if_asm)
+   subgoal by(clarsimp split: split_if_asm)
   apply(frule invs_mdb, frule invs_valid_pspace)
   apply(frule finite_depth)
   apply simp
@@ -1187,7 +1187,7 @@ lemma cap_move_corres:
    subgoal by (clarsimp simp: cte_map_inj_eq valid_pspace_def split: split_if_asm)
   apply(simp)
   apply(case_tac "next_slot (aa, bb) (cdt_list (a)) (cdt a)")
-   apply(simp)
+   subgoal by(simp)
   apply(frule(3) cte_at_next_slot)
   apply(frule(3) cte_at_next_slot')
   apply(erule_tac x=aa in allE, erule_tac x=bb in allE)
@@ -1528,9 +1528,8 @@ lemma untyped_c':
   using partial_is_derived'
   apply -
    apply (case_tac "isUntypedCap src_cap")
-     apply (clarsimp simp:isCap_simps freeIndex_update_def is_derived'_def
+     by (clarsimp simp:isCap_simps freeIndex_update_def is_derived'_def
        badge_derived'_def capMasterCap_def split:if_splits capability.splits)+
-  done
 
 lemma capRange_c':
   "capRange c' = capRange src_cap"
@@ -4869,12 +4868,12 @@ lemma cins_corres_simple:
          apply clarsimp
          apply (subgoal_tac "\<exists>cap' node'. ctes_of b (cte_map (aa,bb)) = Some (CTE cap' node')")
           prefer 2
-          apply (clarsimp simp: modify_map_def split: split_if_asm)
+          subgoal by (clarsimp simp: modify_map_def split: split_if_asm)
          apply clarsimp
          apply (drule set_cap_caps_of_state_monad)+
          apply (subgoal_tac "null_filter (caps_of_state a) (aa,bb) \<noteq> None")
           prefer 2
-          apply (clarsimp simp: cte_wp_at_caps_of_state null_filter_def split: if_splits)
+          subgoal by (clarsimp simp: cte_wp_at_caps_of_state null_filter_def split: if_splits)
          apply clarsimp
          apply (subgoal_tac "cte_at (aa,bb) a")
           prefer 2
@@ -4883,7 +4882,7 @@ lemma cins_corres_simple:
          apply (subgoal_tac "mdbRevocable node = mdbRevocable node'")
           apply clarsimp
          apply (subgoal_tac "cte_map (aa,bb) \<noteq> cte_map dest")
-          apply (clarsimp simp: modify_map_def split: split_if_asm)
+          subgoal by (clarsimp simp: modify_map_def split: split_if_asm)
          apply (erule (5) cte_map_inj)
          apply (rule set_untyped_cap_as_full_corres)
          apply simp+
@@ -4894,8 +4893,8 @@ lemma cins_corres_simple:
          apply (case_tac rv',clarsimp simp:cte_wp_at_ctes_of maskedAsFull_def)
         apply (wp getCTE_wp' get_cap_wp)
      apply clarsimp
-     apply (fastforce elim: cte_wp_at_weakenE)
-    apply (clarsimp simp: cte_wp_at'_def)
+     subgoal by (fastforce elim: cte_wp_at_weakenE)
+    subgoal by (clarsimp simp: cte_wp_at'_def)
    apply (thin_tac "ctes_of s = t" for s t)+
    apply (thin_tac "pspace_relation s t" for s t)+
    apply (thin_tac "machine_state t = s" for t s)+
@@ -4906,7 +4905,7 @@ lemma cins_corres_simple:
    apply (clarsimp simp: in_set_cap_cte_at_swp)
    apply (subgoal_tac "cte_at src a \<and> safe_parent_for (cdt a) src c src_cap")
     prefer 2
-    apply (fastforce simp: cte_wp_at_def safe_parent_for_masked_as_full)
+    subgoal by (fastforce simp: cte_wp_at_def safe_parent_for_masked_as_full)
    apply (erule conjE)
 
    apply (subgoal_tac "mdb_insert (ctes_of b) (cte_map src) (maskedAsFull src_cap' c') src_node

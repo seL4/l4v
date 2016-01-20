@@ -7696,20 +7696,19 @@ lemma cap_swap_corres:
     apply(erule cte_wp_at_weakenE, simp)
    apply(rule conjI)
     apply(rule cte_map_inj)
-         apply(simp_all)[6]
+         apply simp_all[6]
     apply(erule cte_wp_at_weakenE, simp)
    apply(rule conjI)
     apply(frule mdb_swap.m_exists)
      apply(simp)
     apply(clarsimp)
      apply(frule_tac cte="CTE src_cap src_node" in valid_mdbD2')
-      apply(clarsimp)
+      subgoal by (clarsimp)
      apply(simp add: valid_mdb'_def)
     apply(clarsimp)
     apply(drule cte_map_inj_eq)
          apply(rule cte_at_next_slot')
-            apply(simp_all)[4]
-        apply(simp_all)[5]
+            apply(simp_all)[9]
     apply(erule cte_wp_at_weakenE, simp)
    apply(frule mdb_swap.m_exists)
     apply(simp)
@@ -7720,8 +7719,7 @@ lemma cap_swap_corres:
    apply(clarsimp)
    apply(drule cte_map_inj_eq)
          apply(rule cte_at_next_slot')
-           apply(simp_all)[4]
-        apply(simp_all)[5]
+           apply(simp_all)[9]
     apply(erule cte_wp_at_weakenE, simp)
   apply(rule cte_at_next_slot)
      apply(simp_all)

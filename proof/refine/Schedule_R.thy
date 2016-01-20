@@ -2604,11 +2604,10 @@ lemma schedule_corres:
      apply (simp add:valid_sched_def)
     apply (simp add:valid_sched_def)
    apply simp
-  apply (fastforce simp: invs'_def cur_tcb'_def valid_state'_def st_tcb_at'_def
+  by (fastforce simp: invs'_def cur_tcb'_def valid_state'_def st_tcb_at'_def
                          sch_act_wf_def  valid_pspace'_def valid_objs'_maxDomain
                          valid_objs'_maxPriority comp_def
                    split: scheduler_action.splits)
-  done
 
 lemma ssa_all_invs_but_ct_not_inQ':
   "\<lbrace>all_invs_but_ct_not_inQ' and sch_act_wf sa and 

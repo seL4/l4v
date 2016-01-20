@@ -1515,21 +1515,21 @@ lemma fastpath_mi_check:
   "((mi && mask 9) + 3) && ~~ mask 3 = 0
       = (msgExtraCaps (messageInfoFromWord mi) = 0
             \<and> msgLength (messageInfoFromWord mi) \<le> scast n_msgRegisters
-            \<and> msgLength_CL (message_info_lift (message_info_C (FCP (K mi))))
+            \<and> length_CL (seL4_MessageInfo_lift (seL4_MessageInfo_C (FCP (K mi))))
                   \<le> scast n_msgRegisters)"
   (is "?P = (?Q \<and> ?R \<and> ?S)")
 proof -
   have le_Q: "?P = (?Q \<and> ?S)"
     apply (simp add: mask_def messageInfoFromWord_def Let_def
                      msgExtraCapBits_def msgLengthBits_def
-                     message_info_lift_def fcp_beta n_msgRegisters_def)
+                     seL4_MessageInfo_lift_def fcp_beta n_msgRegisters_def)
     apply word_bitwise
     apply blast
     done
   have Q_R: "?S \<Longrightarrow> ?R"
     apply (clarsimp simp: messageInfoFromWord_def Let_def msgLengthBits_def
                           msgExtraCapBits_def mask_def n_msgRegisters_def
-                          message_info_lift_def fcp_beta)
+                          seL4_MessageInfo_lift_def fcp_beta)
     apply (subst if_not_P, simp_all)
     apply (simp add: msgMaxLength_def linorder_not_less)
     apply (erule order_trans, simp)
@@ -1540,8 +1540,8 @@ qed
 
 lemma messageInfoFromWord_raw_spec:
   "\<forall>s. \<Gamma>\<turnstile> {s} Call messageInfoFromWord_raw_'proc
-       \<lbrace>\<acute>ret__struct_message_info_C
-    = (message_info_C (FCP (K \<^bsup>s\<^esup>w)))\<rbrace>"
+       \<lbrace>\<acute>ret__struct_seL4_MessageInfo_C
+    = (seL4_MessageInfo_C (FCP (K \<^bsup>s\<^esup>w)))\<rbrace>"
   apply vcg
   apply (clarsimp simp: word_sless_def word_sle_def)
   apply (case_tac v)
@@ -1549,12 +1549,12 @@ lemma messageInfoFromWord_raw_spec:
   done
 
 lemma mi_check_messageInfo_raw:
-  "msgLength_CL (message_info_lift (message_info_C (FCP (K mi))))
+  "length_CL (seL4_MessageInfo_lift (seL4_MessageInfo_C (FCP (K mi))))
                   \<le> scast n_msgRegisters
-    \<Longrightarrow> message_info_lift (message_info_C (FCP (K mi)))
+    \<Longrightarrow> seL4_MessageInfo_lift (seL4_MessageInfo_C (FCP (K mi)))
         = mi_from_H (messageInfoFromWord mi)"
   apply (simp add: messageInfoFromWord_def Let_def mi_from_H_def
-                   message_info_lift_def fcp_beta msgLengthBits_def msgExtraCapBits_def
+                   seL4_MessageInfo_lift_def fcp_beta msgLengthBits_def msgExtraCapBits_def
                    msgMaxExtraCaps_def shiftL_nat)
   apply (subst if_not_P)
    apply (simp add: linorder_not_less msgMaxLength_def n_msgRegisters_def)
@@ -1568,7 +1568,7 @@ lemma fastpath_mi_check_spec:
   "\<forall>s. \<Gamma> \<turnstile> \<lbrace>s. True\<rbrace> Call fastpath_mi_check_'proc
            \<lbrace>(\<acute>ret__int = 0) = (msgExtraCaps (messageInfoFromWord \<^bsup>s\<^esup>msgInfo) = 0
               \<and> msgLength (messageInfoFromWord \<^bsup>s\<^esup>msgInfo) \<le> scast n_msgRegisters
-              \<and> message_info_lift (message_info_C (FCP (K \<^bsup>s\<^esup>msgInfo)))
+              \<and> seL4_MessageInfo_lift (seL4_MessageInfo_C (FCP (K \<^bsup>s\<^esup>msgInfo)))
                   = mi_from_H (messageInfoFromWord \<^bsup>s\<^esup>msgInfo))\<rbrace>"
   apply (rule allI, rule conseqPre, vcg)
   apply (clarsimp simp: seL4_MsgLengthBits_def seL4_MsgExtraCapBits_def
@@ -2102,7 +2102,7 @@ lemma fastpath_copy_mrs_ccorres:
 notes min_simps [simp del]
 shows
   "ccorres dc xfdc (\<top> and (\<lambda>_. ln <= length State_H.msgRegisters))
-     (UNIV \<inter> {s. unat (length_' s) = ln}
+     (UNIV \<inter> {s. unat (length___unsigned_long_' s) = ln}
            \<inter> {s. src_' s = tcb_ptr_to_ctcb_ptr src}
            \<inter> {s. dest_' s = tcb_ptr_to_ctcb_ptr dest}) []
      (forM_x (take ln State_H.msgRegisters)
@@ -2110,7 +2110,7 @@ shows
                     asUser dest (setRegister r v) od))
      (Call fastpath_copy_mrs_'proc)"
   apply (rule ccorres_gen_asm)
-  apply (cinit' lift: length_' src_' dest_' simp: word_sle_def word_sless_def)
+  apply (cinit' lift: length___unsigned_long_' src_' dest_' simp: word_sle_def word_sless_def)
    apply (unfold whileAnno_def)
    apply (rule ccorres_rel_imp)
     apply (rule_tac F="K \<top>" in ccorres_mapM_x_while)

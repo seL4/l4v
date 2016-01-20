@@ -134,7 +134,7 @@ datatype cdl_irq_control_intent =
     (* IssueIrqHandler: (target), irq, (root), index, depth *)
     IrqControlIssueIrqHandlerIntent word8 word32 word32
     (* InterruptControl *)
- |  IrqControlInterruptControlIntent
+ |  IrqControlArchIrqControlIntent
 
 datatype cdl_page_table_intent =
     (* Map: (target), (pd), vaddr, attr *)

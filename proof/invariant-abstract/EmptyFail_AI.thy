@@ -336,8 +336,9 @@ lemma arch_decode_invocation_empty_fail[wp]:
   apply (find_goal \<open>match premises in "_ = ArchInvocationLabel _" \<Rightarrow> \<open>-\<close>\<close>)
   apply (rename_tac alabel)
   apply (case_tac alabel; simp)
-  apply (find_goal \<open>erule arch_decode_ARMASIDControlMakePool_empty_fail\<close>)
-  apply (find_goal \<open>erule arch_decode_ARMASIDPoolAssign_empty_fail\<close>)
+  apply (find_goal \<open>succeeds \<open>erule arch_decode_ARMASIDControlMakePool_empty_fail\<close>\<close>)
+  apply (find_goal \<open>succeeds \<open>erule arch_decode_ARMASIDPoolAssign_empty_fail\<close>\<close>)
+  apply ((simp add: arch_decode_ARMASIDControlMakePool_empty_fail arch_decode_ARMASIDPoolAssign_empty_fail)+)[2]  
   by ((simp add: arch_decode_invocation_def Let_def split: arch_cap.splits cap.splits option.splits | wp | intro conjI impI allI)+)
 
 crunch (empty_fail) empty_fail[wp]: maskInterrupt, empty_slot, setInterruptMode,

@@ -263,9 +263,9 @@ where
 
 text "ARM does not support additional interrupt control operations"
 definition
-  arch_decode_irq_control ::
+  arch_decode_irq_control_invocation ::
   "data \<Rightarrow> data list \<Rightarrow> cslot_ptr \<Rightarrow> cap list \<Rightarrow> (arch_irq_control_invocation,'z::state_ext) se_monad" where
-  "arch_decode_irq_control label args src_slot cps \<equiv> throwError IllegalOperation"
+  "arch_decode_irq_control_invocation label args slot excaps \<equiv> throwError IllegalOperation"
 
 definition
   arch_data_to_obj_type :: "nat \<Rightarrow> aobject_type option" where

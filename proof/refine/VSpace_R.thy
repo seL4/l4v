@@ -1033,7 +1033,7 @@ lemma delete_asid_pool_corres:
                apply clarsimp
                apply (subgoal_tac "base \<le> base + xa")
                 apply (simp add: valid_vs_lookup_def asid_high_bits_of_def)
-                apply (fastforce intro: vs_lookup_pages_vs_lookupI)
+                subgoal by (fastforce intro: vs_lookup_pages_vs_lookupI)
                apply (erule is_aligned_no_wrap')
                 apply (simp add: asid_low_bits_word_bits)
                apply (simp add: asid_low_bits_word_bits)

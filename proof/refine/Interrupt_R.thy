@@ -25,13 +25,19 @@ where
        (\<exists>cap'. x = SetIRQHandler irq cap' (cte_map ptr) \<and> cap_relation cap cap')"
 | "irq_handler_inv_relation (Invocations_A.SetMode irq trig pol) x = (x = SetMode irq trig pol)"
 
+
+consts
+  interrupt_control_relation :: "arch_irq_control_invocation \<Rightarrow> ArchRetypeDecls_H.irqcontrol_invocation \<Rightarrow> bool"
+
+
 primrec
   irq_control_inv_relation :: "irq_control_invocation \<Rightarrow> irqcontrol_invocation \<Rightarrow> bool"
 where
   "irq_control_inv_relation (Invocations_A.IRQControl irq slot slot') x
        = (x = IssueIRQHandler irq (cte_map slot) (cte_map slot'))"
-| "irq_control_inv_relation (Invocations_A.ArchInvokeIRQControl z) x
-       = (x = Invocations_H.ArchInvokeIRQControl ARMNoArchIRQControl)"
+| "irq_control_inv_relation (Invocations_A.ArchIRQControl ivk) x
+       = (\<exists>ivk'. x = ArchIRQControl ivk' \<and> interrupt_control_relation ivk ivk')"
+
 
 primrec
   irq_handler_inv_valid' :: "irqhandler_invocation \<Rightarrow> kernel_state \<Rightarrow> bool"
@@ -49,12 +55,12 @@ where
 primrec
   irq_control_inv_valid' :: "irqcontrol_invocation \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
- "irq_control_inv_valid' (IssueIRQHandler irq ptr ptr') =
+  "irq_control_inv_valid' (ArchIRQControl ivk) = \<bottom>"
+| "irq_control_inv_valid' (IssueIRQHandler irq ptr ptr') =
        (cte_wp_at' (\<lambda>cte. cteCap cte = NullCap) ptr and
         cte_wp_at' (\<lambda>cte. cteCap cte = IRQControlCap) ptr' and
         ex_cte_cap_to' ptr and real_cte_at' ptr and
         (Not o irq_issued' irq) and K (irq \<le> maxIRQ))"
-| "irq_control_inv_valid' (ArchInvokeIRQControl _) = \<bottom>"
 
 lemma data_to_bool_toBool[simp]:
   "data_to_bool dat = toBool dat"
@@ -125,17 +131,18 @@ lemma whenE_rangeCheck_eq:
     (whenE (x < fromIntegral y \<or> fromIntegral z < x)
       (throwError (RangeError (fromIntegral y) (fromIntegral z))))"
   by (simp add: rangeCheck_def unlessE_whenE ucast_id linorder_not_le[symmetric])
-thm decodeIRQControl_def
+
 lemma decode_irq_control_corres:
   "list_all2 cap_relation caps caps' \<Longrightarrow>
    corres (ser \<oplus> irq_control_inv_relation)
      (invs and (\<lambda>s. \<forall>cp \<in> set caps. s \<turnstile> cp)) (invs' and (\<lambda>s. \<forall>cp \<in> set caps'. s \<turnstile>' cp))
      (decode_irq_control_invocation label args slot caps)
      (decodeIRQControlInvocation label args (cte_map slot) caps')"
-  unfolding decode_irq_control_invocation_def decodeIRQControlInvocation_def
-            decodeIRQControl_def arch_decode_irq_control_def
-  apply (cases "invocation_type label";
-          clarsimp split del: split_if cong: if_cong)
+  apply (clarsimp simp: decode_irq_control_invocation_def decodeIRQControlInvocation_def
+                        ArchInterrupt_H.decodeIRQControlInvocation_def arch_decode_irq_control_invocation_def
+             split del: split_if cong: if_cong
+                 split: invocation_label.split)
+
   apply (cases caps, simp split: list.split)
   apply (case_tac "\<exists>n. length args = Suc (Suc (Suc n))")
    apply (clarsimp simp: list_all2_Cons1 Let_def split_def liftE_bindE
@@ -161,8 +168,9 @@ lemma decode_irq_control_corres:
   apply arith
   done
 
-crunch inv[wp]: decodeIRQControlInvocation "P"
-  (simp: crunch_simps)
+
+crunch inv[wp]: "InterruptDecls_H.decodeIRQControlInvocation"  "P"
+  (simp: crunch_simps ArchInterrupt_H.decodeIRQControlInvocation_def)
 
 (* Levity: added (20090201 10:50:27) *)
 declare ensureEmptySlot_stronger [wp]
@@ -194,7 +202,7 @@ lemma decode_irq_control_valid'[wp]:
   apply (rule hoare_pre)
    apply (wp ensureEmptySlot_stronger isIRQActive_wp
              whenE_throwError_wp
-                | simp add: decodeIRQControl_def | wpc
+                | simp add: ArchInterrupt_H.decodeIRQControlInvocation_def | wpc
                 | wp_once hoare_drop_imps)+
   apply (clarsimp simp: minIRQ_def maxIRQ_def
                         toEnum_of_nat word_le_nat_alt unat_of_nat)
@@ -345,6 +353,7 @@ lemma invoke_irq_control_corres:
    apply (case_tac ctea)
    apply (clarsimp simp: isCap_simps sameRegionAs_def3)
    apply (auto dest: valid_irq_handlers_ctes_ofD)[1]
+  apply (clarsimp simp: arch_invoke_irq_control_def ArchInterrupt_H.performIRQControl_def)
   done
 
 crunch valid_cap'[wp]: setIRQState "valid_cap' cap"

@@ -32,7 +32,7 @@ where
   "invoke_irq_control (IRQControl irq handler_slot control_slot) = 
      liftE (do set_irq_state IRQSignal irq;
                cap_insert (IRQHandlerCap irq) control_slot handler_slot od)"
-| "invoke_irq_control (ArchInvokeIRQControl invok) =
+| "invoke_irq_control (ArchIRQControl invok) =
      arch_invoke_irq_control invok"
 
 text {* The IRQHandler capability may be used to configure how interrupts on an

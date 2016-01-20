@@ -791,17 +791,17 @@ lemma ccorres_break_return:
   done
 
 lemma messageInfoFromWord_spec:
-  "\<forall>s. \<Gamma> \<turnstile> {s} Call messageInfoFromWord_'proc {t. message_info_lift (ret__struct_message_info_C_' t) = 
-            \<lparr>msgLabel_CL = (w_' s >> 12) && 0xFFFFF, msgCapsUnwrapped_CL = (w_' s >> 9) && 7,
-                 msgExtraCaps_CL = (w_' s >> 7) && 3, msgLength_CL = let v = w_' s && 0x7F in if v > msgMaxLength then msgMaxLength else v\<rparr>}"
+  "\<forall>s. \<Gamma> \<turnstile> {s} Call messageInfoFromWord_'proc {t. seL4_MessageInfo_lift (ret__struct_seL4_MessageInfo_C_' t) = 
+            \<lparr>label_CL = (w_' s >> 12) && 0xFFFFF, capsUnwrapped_CL = (w_' s >> 9) && 7,
+                 extraCaps_CL = (w_' s >> 7) && 3, length_CL = let v = w_' s && 0x7F in if v > msgMaxLength then msgMaxLength else v\<rparr>}"
   apply vcg
-  apply (simp add: message_info_lift_def Let_def msgMaxLength_def mask_def word_sle_def
+  apply (simp add: seL4_MessageInfo_lift_def Let_def msgMaxLength_def mask_def word_sle_def
                    word_sless_def seL4_MsgMaxLength_def
          split: split_if)
   done
 
 lemma messageInfoFromWord_ccorres [corres]:
-  "ccorres (\<lambda>r r'. r = message_info_to_H r') ret__struct_message_info_C_' \<top> {s. w_' s = w} []
+  "ccorres (\<lambda>r r'. r = message_info_to_H r') ret__struct_seL4_MessageInfo_C_' \<top> {s. w_' s = w} []
            (return (messageInfoFromWord w)) (Call messageInfoFromWord_'proc)"
   apply (rule ccorres_from_spec_modifies [where P = \<top>, simplified])
       apply (rule messageInfoFromWord_spec)
@@ -816,10 +816,10 @@ lemma messageInfoFromWord_ccorres [corres]:
   done
 
 lemma getMessageInfo_ccorres:  
-  "ccorres (\<lambda>r r'. r = message_info_to_H r') ret__struct_message_info_C_' 
+  "ccorres (\<lambda>r r'. r = message_info_to_H r') ret__struct_seL4_MessageInfo_C_' 
            (tcb_at' sender) UNIV hs (getMessageInfo sender)
            (\<acute>ret__unsigned_long :== CALL getRegister(tcb_ptr_to_ctcb_ptr sender,scast Kernel_C.msgInfoRegister);;
-            \<acute>ret__struct_message_info_C :== CALL messageInfoFromWord(\<acute>ret__unsigned_long))"
+            \<acute>ret__struct_seL4_MessageInfo_C :== CALL messageInfoFromWord(\<acute>ret__unsigned_long))"
   unfolding getMessageInfo_def
   apply simp
   apply (rule ccorres_guard_imp2)
@@ -2392,9 +2392,9 @@ lemma transferCapsLoop_ccorres:
               IF \<acute>ret__int \<noteq> 0 THEN
                 \<acute>ret__unsigned :== CALL cap_endpoint_cap_get_capEPBadge(\<acute>cap);;
                 CALL setExtraBadge(Ptr rcv_buffer, ucast \<acute>ret__unsigned,\<acute>i);;
-                \<acute>ret__unsigned :== CALL message_info_get_msgCapsUnwrapped(\<acute>info);;
+                \<acute>ret__unsigned :== CALL seL4_MessageInfo_get_capsUnwrapped(\<acute>info);;
                 Guard ShiftError \<lbrace>unat \<acute>i < 31 \<and> 0 <=s (1 :: sword32)\<rbrace>
-                 (\<acute>info :== CALL message_info_set_msgCapsUnwrapped(\<acute>info,
+                 (\<acute>info :== CALL seL4_MessageInfo_set_capsUnwrapped(\<acute>info,
                   \<acute>ret__unsigned || scast ((1 :: sword32) << unat \<acute>i)))
               ELSE
                 lvar_nondet_init dc_ret_' dc_ret_'_update;;
@@ -2796,7 +2796,7 @@ next
              apply (fold shiftl_1)[1]
              apply (subst and_mask_eq_iff_shiftr_0[THEN iffD2],
                   subst shiftl_shiftr2, simp, simp)
-             apply (simp add: message_info_lift_def word_bw_assocs
+             apply (simp add: seL4_MessageInfo_lift_def word_bw_assocs
                               word_sle_def t2n_mask_eq_if)
              apply (simp add: mask_def)
             apply (rule conjI)
@@ -2906,7 +2906,7 @@ lemma lookupExtraCaps_srcs2:
 lemma transferCaps_ccorres [corres]: 
   notes if_cong[cong]
   shows
-  "ccorres (\<lambda>r r'. r = message_info_to_H r') ret__struct_message_info_C_'
+  "ccorres (\<lambda>r r'. r = message_info_to_H r') ret__struct_seL4_MessageInfo_C_'
     (valid_pspace' and tcb_at' receiver
      and (case_option \<top> valid_ipc_buffer_ptr') receiveBuffer
      and (excaps_in_mem caps \<circ> ctes_of)
@@ -3022,13 +3022,13 @@ lemma getMessageInfo_msgLength:
   done
 
 definition
-  mi_from_H :: "Types_H.message_info \<Rightarrow> message_info_CL"
+  mi_from_H :: "Types_H.message_info \<Rightarrow> seL4_MessageInfo_CL"
 where
  "mi_from_H mi \<equiv>
-     \<lparr> msgLabel_CL = msgLabel mi,
-       msgCapsUnwrapped_CL = msgCapsUnwrapped mi,
-       msgExtraCaps_CL = msgExtraCaps mi,
-       msgLength_CL = msgLength mi \<rparr>"
+     \<lparr> label_CL = msgLabel mi,
+       capsUnwrapped_CL = msgCapsUnwrapped mi,
+       extraCaps_CL = msgExtraCaps mi,
+       length_CL = msgLength mi \<rparr>"
 
 lemma ccorres_add_returnOk2:
   "ccorres_underlying rf_sr G r xf arrel axf P P' hs (a >>=E returnOk) c
@@ -3125,7 +3125,7 @@ lemma lookupExtraCaps_ccorres:
              and (\<lambda>s. unat (msgExtraCaps info) <= 3))
       (UNIV \<inter> {s. thread_' s = tcb_ptr_to_ctcb_ptr thread}
             \<inter> {s. bufferPtr_' s = option_to_ptr buffer}
-            \<inter> {s. message_info_lift (info_' s) = mi_from_H info
+            \<inter> {s. seL4_MessageInfo_lift (info_' s) = mi_from_H info
                   }) []
       (lookupExtraCaps thread buffer info) (Call lookupExtraCaps_'proc)"
 proof -
@@ -3392,14 +3392,14 @@ proof -
                    lookupExtraCaps_length
                     | simp)+
        apply (clarsimp simp: guard_is_UNIV_def Collect_const_mem)
-       apply (clarsimp simp: message_info_lift_def message_info_to_H_def mask_def
+       apply (clarsimp simp: seL4_MessageInfo_lift_def message_info_to_H_def mask_def
                              msgLengthBits_def word_bw_assocs)
       apply (wp getMessageInfo_le3 getMessageInfo_msgLength[unfolded K_def] static_imp_wp
                   | simp)+
      apply (simp add: Collect_const_mem)
     apply (auto simp: excaps_in_mem_def valid_ipc_buffer_ptr'_def
                       option_to_0_def option_to_ptr_def
-                      message_info_lift_def mi_from_H_def message_info_to_H_def
+                      seL4_MessageInfo_lift_def mi_from_H_def message_info_to_H_def
                split: option.split)
     done
 qed

@@ -23,6 +23,17 @@ abbreviation (input)
 where
  "performIRQControl \<equiv> InterruptDecls_H.performIRQControl"
 
+abbreviation (input)
+  "decodeIRQControlInvocation"
+  :: "32 word
+      \<Rightarrow> 32 word list
+         \<Rightarrow> 32 word
+            \<Rightarrow> capability list
+               \<Rightarrow> KernelStateData_H.kernel_state
+                  \<Rightarrow> ((syscall_error + Invocations_H.irqcontrol_invocation) \<times> KernelStateData_H.kernel_state) set \<times> bool"
+where
+  "decodeIRQControlInvocation \<equiv> InterruptDecls_H.decodeIRQControlInvocation"
+
 defs decodeIRQControlInvocation_def:
 "decodeIRQControlInvocation label args srcSlot extraCaps \<equiv>
     (case (invocationType label, args, extraCaps) of
@@ -37,7 +48,7 @@ defs decodeIRQControlInvocation_def:
             returnOk $ IssueIRQHandler irq destSlot srcSlot
           odE)
         | (IRQIssueIRQHandler,_,_) \<Rightarrow>   throw TruncatedMessage
-        | _ \<Rightarrow>   liftME ArchInvokeIRQControl $ ArchInterruptDecls_H.decodeIRQControl label args srcSlot extraCaps
+        | _ \<Rightarrow>   liftME ArchIRQControl $ ArchInterruptDecls_H.decodeIRQControlInvocation label args srcSlot extraCaps
         )"
 
 defs performIRQControl_def:
@@ -47,7 +58,8 @@ defs performIRQControl_def:
     setIRQState (IRQSignal) irq;
     cteInsert (IRQHandlerCap irq) controlSlot handlerSlot
   od)
-  | (ArchInvokeIRQControl i) \<Rightarrow>    ArchInterruptDecls_H.performIRQControl i
+  | (ArchIRQControl invok) \<Rightarrow>   
+    ArchInterruptDecls_H.performIRQControl invok
   )"
 
 defs decodeIRQHandlerInvocation_def:

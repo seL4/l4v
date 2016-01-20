@@ -12,6 +12,6 @@ theory ArchInterrupt_H
 imports "../RetypeDecls_H" "../CNode_H" "../InterruptDecls_H" ArchInterruptDecls_H
 begin
 
-#INCLUDE_HASKELL SEL4/Object/Interrupt/ARM.lhs bodies_only Arch=ArchRetypeDecls_H
+#INCLUDE_HASKELL SEL4/Object/Interrupt/ARM.lhs bodies_only ArchInv=ArchRetypeDecls_H
 
 end

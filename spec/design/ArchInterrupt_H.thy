@@ -8,15 +8,19 @@
  * @TAG(GD_GPL)
  *)
 
-theory ArchInterruptDecls_H
-imports "../RetypeDecls_H" "../CNode_H" 
+theory ArchInterrupt_H
+imports RetypeDecls_H
 begin
 
-consts
+definition
 decodeIRQControlInvocation :: "machine_word \<Rightarrow> machine_word list \<Rightarrow> machine_word \<Rightarrow> capability list \<Rightarrow> ( syscall_error , ArchRetypeDecls_H.irqcontrol_invocation ) kernel_f"
+where
+"decodeIRQControlInvocation arg1 arg2 arg3 arg4 \<equiv> throw IllegalOperation"
 
-consts
-performIRQControl :: "ArchRetypeDecls_H.irqcontrol_invocation \<Rightarrow> unit kernel_p"
+definition
+invokeIRQControl :: "ArchRetypeDecls_H.irqcontrol_invocation \<Rightarrow> unit kernel_p"
+where
+"invokeIRQControl arg1 \<equiv> haskell_fail []"
 
 
 end

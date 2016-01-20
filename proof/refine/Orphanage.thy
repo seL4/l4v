@@ -1930,8 +1930,7 @@ lemma tc_no_orphans:
                threadSet_no_orphans hoare_vcg_const_imp_lift_R
                static_imp_wp
           | wpc | clarsimp)+
-  apply (auto simp: isCap_simps dest!: isValidVTableRootD)
-  done
+  by (auto simp: isCap_simps dest!: isValidVTableRootD)
 
 lemma bindNotification_no_orphans[wp]:
   "\<lbrace>no_orphans\<rbrace> bindNotification t ntfn \<lbrace>\<lambda>_. no_orphans\<rbrace>"

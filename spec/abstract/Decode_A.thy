@@ -34,8 +34,6 @@ user and the kernel, along with the preconditions on each argument.
 *}
 
 
-
-
 section "CNode"
 
 text {* This definition decodes CNode invocations. *}
@@ -398,7 +396,7 @@ definition
         returnOk $ IRQControl irqv dest_slot src_slot
       odE
     else throwError TruncatedMessage
-  else liftME ArchInvokeIRQControl $ arch_decode_irq_control label args src_slot cps)"
+  else liftME ArchIRQControl $ arch_decode_irq_control_invocation label args src_slot cps)"
 
 definition
   data_to_bool :: "data \<Rightarrow> bool"

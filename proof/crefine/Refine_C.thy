@@ -43,8 +43,6 @@ lemma handleInterruptEntry_ccorres:
     apply (rule_tac P="rv \<noteq> Some 0xFF" in ccorres_gen_asm)
     apply wpc
      apply (simp add: irqInvalid_def)
-     apply (rule ccorres_rhs_assoc)
-     apply simp
      apply (rule ccorres_symb_exec_r)
        apply (ctac (no_vcg) add: schedule_ccorres)
         apply (rule ccorres_add_return2)

@@ -36,15 +36,23 @@
      Sets and sequences may be arbitrarily nested, and a "testsuite" is
      just a "set".
 
-     Tags may have the attributes "cwd" (current working directory),
-     "timeout" (real-time timeout in seconds) or "depends" (a
-     space-separated list of tests that the current test depends on).
+     Tags may have the attributes:
+        * cwd: current working directory (default: location of tests.xml)
+        * timeout: real-time timeout, in seconds (default: none)
+        * depends: space-separated list of tests that must run first
+
+     If a timeout is specified for a testsuite, then each test in that
+     testsuite will be allowed the full timeout period.
+
+     Note that if you specify tests to run at the command line, then
+     dependencies will be calculated, but non-specified tests will not
+     be run even if the specified tests depend on them.
 
   -->
 <testsuite timeout="3600">
 
     <!-- Build Isabelle. -->
-    <test name="isabelle" cwd="../../">isabelle build -b -v HOL-Word</test>
+    <test name="isabelle" cwd="../../">isabelle/bin/isabelle build -b -v HOL-Word</test>
 
     <!-- Ensure that all of our XML files are strictly correct. -->
     <test name="tests-xml-correct" cwd="../../">

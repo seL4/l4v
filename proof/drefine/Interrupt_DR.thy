@@ -18,9 +18,8 @@ lemma decode_irq_control_error_corres:
       (throwError e)
       (Decode_A.decode_irq_control_invocation label args slot (map fst excaps))"
   apply (unfold decode_irq_control_invocation_def)
-  apply (cases "invocation_type label", simp_all)
+  apply (cases "invocation_type label"; simp add: arch_decode_irq_control_invocation_def)
    apply (simp add: transform_intent_def transform_intent_issue_irq_handler_def split: list.splits)
-  apply (simp add: transform_intent_def)
   done
 
 (* Interrupt Control Invocations *)
@@ -91,9 +90,7 @@ lemma decode_irq_control_corres:
    apply wp
    apply (cases excaps', auto)[1]
    apply wp[1]
-  apply (cases "invocation_type label' = IRQInterruptControl")
-   apply (clarsimp simp: arch_decode_interrupt_control_def transform_intent_def)
-  apply clarsimp
+  apply (clarsimp simp: arch_decode_irq_control_invocation_def transform_intent_def)
   apply (rule corres_guard_imp)
     apply (cases ui)
      apply (auto simp: dcorres_alternative_throw)

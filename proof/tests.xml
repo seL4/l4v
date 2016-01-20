@@ -19,14 +19,14 @@
 -->
 <testsuite timeout="3600" depends="isabelle">
     <!-- Refine -->
-    <sequence depends="ASpec ExecSpec" timeout="14400">
+    <sequence depends="ASpec ExecSpec">
         <test name="AInvs">make AInvs</test>
         <test name="BaseRefine">make BaseRefine</test>
         <test name="Refine">make Refine</test>
     </sequence>
 
     <!-- CRefine -->
-    <sequence timeout="14400" depends="CParser">
+    <sequence timeout="7200" depends="CParser">
         <test name="CKernel">make CKernel</test>
         <test name="CSpec">make CSpec</test>
         <test name="CBaseRefine" depends="Refine">make CBaseRefine</test>
@@ -57,7 +57,7 @@
     </sequence>
 
     <!-- Binary Verification -->
-    <sequence depends="CSpec" timeout="9000">
+    <sequence depends="CSpec">
         <test name="SimplExportAndRefine">make SimplExportAndRefine</test>
     </sequence>
 

@@ -1,5 +1,5 @@
 Built from git repo at /Users/dmatichuk/verification-x64/seL4/haskell by dmatichuk
 
 Generated from changeset:
-607b2e1 refactor haskell to allow for multiple architectures
+3238a2f Merge commit 'e11bb32f7858a23403929cf3a5be04ab75a2991f' into arch_split
 

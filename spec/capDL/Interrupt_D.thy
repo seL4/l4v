@@ -47,7 +47,7 @@ where
           dest_slot_cap_ref \<leftarrow> lookup_slot_for_cnode_op cnode_cap index (unat depth);
           returnOk $ IssueIrqHandler irq target_ref dest_slot_cap_ref
         odE \<sqinter> throw
-    | IrqControlInterruptControlIntent \<Rightarrow> throw
+    | IrqControlArchIrqControlIntent \<Rightarrow> throw
   "
 
 definition

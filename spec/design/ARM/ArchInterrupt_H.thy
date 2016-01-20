@@ -12,8 +12,8 @@ theory ArchInterrupt_H
 imports "../RetypeDecls_H" "../CNode_H" "../InterruptDecls_H" ArchInterruptDecls_H
 begin
 
-defs decodeIRQControl_def:
-"decodeIRQControl arg1 arg2 arg3 arg4 \<equiv> throw IllegalOperation"
+defs decodeIRQControlInvocation_def:
+"decodeIRQControlInvocation arg1 arg2 arg3 arg4 \<equiv> throw IllegalOperation"
 
 defs performIRQControl_def:
 "performIRQControl arg1 \<equiv> haskell_fail []"

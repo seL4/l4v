@@ -327,8 +327,6 @@ definition
     | IRQIssueIRQHandler \<Rightarrow>
           map_option IrqControlIntent
                    (transform_intent_issue_irq_handler args)
-    | IRQInterruptControl \<Rightarrow>
-          Some (IrqControlIntent IrqControlInterruptControlIntent)
     | IRQAckIRQ \<Rightarrow> Some (IrqHandlerIntent IrqHandlerAckIntent)
     | IRQSetIRQHandler \<Rightarrow> Some (IrqHandlerIntent IrqHandlerSetEndpointIntent)
     | IRQClearIRQHandler \<Rightarrow> Some (IrqHandlerIntent IrqHandlerClearIntent)
@@ -396,7 +394,6 @@ lemma transform_tcb_intent_invocation:
     label \<noteq> CNodeRotate \<and>
     label \<noteq> CNodeSaveCaller \<and>
     label \<noteq> IRQIssueIRQHandler \<and>
-    label \<noteq> IRQInterruptControl \<and>
     label \<noteq> IRQAckIRQ \<and>
     label \<noteq> IRQSetIRQHandler \<and>
     label \<noteq> IRQClearIRQHandler \<and>

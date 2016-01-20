@@ -277,7 +277,7 @@ lemma decode_irq_control_invocation_rev:
   apply (wp ensure_empty_rev lookup_slot_for_cnode_op_rev 
             is_irq_active_rev whenE_inv
         | wp_once hoare_drop_imps 
-        | simp add: Let_def arch_decode_interrupt_control_def)+
+        | simp add: Let_def arch_decode_irq_control_invocation_def)+
   apply safe
        apply simp+
     apply(blast intro: aag_Control_into_owns_irq)
