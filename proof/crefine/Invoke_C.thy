@@ -11,7 +11,7 @@
 theory Invoke_C
 imports Recycle_C "../../lib/clib/MonadicRewrite_C"
 begin
-\<open>
+
 context kernel_m
 begin
 

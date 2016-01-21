@@ -319,7 +319,7 @@ lemma invokeIRQControl_ccorres:
       (UNIV \<inter> {s. irq_' s = ucast irq}
                   \<inter> {s. controlSlot_' s = cte_Ptr parent}
                   \<inter> {s. handlerSlot_' s = cte_Ptr slot}) []
-      (invokeIRQControl (IssueIRQHandler irq slot parent))
+      (performIRQControl (IssueIRQHandler irq slot parent))
       (Call invokeIRQControl_'proc)"
   apply (rule ccorres_gen_asm)
   apply (cinit lift: irq_' controlSlot_' handlerSlot_')
@@ -367,10 +367,11 @@ lemma Platform_maxIRQ:
   "Platform.maxIRQ = scast Kernel_C.maxIRQ"
   by (simp add: Platform.maxIRQ_def Kernel_C.maxIRQ_def)
 
+
 lemma Arch_decodeIRQControlInvocation_ccorres:
   "ccorres (intr_and_se_rel \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
       \<top> UNIV []
-     (ArchInterrupt_H.decodeIRQControlInvocation label args srcSlot extraCaps
+     (ArchInterruptDecls_H.decodeIRQControlInvocation label args srcSlot extraCaps
         >>= invocationCatch thread isBlocking isCall (InvokeIRQControl o ArchIRQControl))
      (Call Arch_decodeIRQControlInvocation_'proc)"
   apply (cinit' simp: ArchInterrupt_H.decodeIRQControlInvocation_def)

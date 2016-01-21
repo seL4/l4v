@@ -3651,7 +3651,7 @@ qed
 
 end
 
-datatype tcb_state_regs = TCBStateRegs "thread_state" "ARMMachineTypes.register \<Rightarrow> machine_word"
+datatype tcb_state_regs = TCBStateRegs "thread_state" "MachineTypes.register \<Rightarrow> machine_word"
 
 definition
  "tsrContext tsr \<equiv> case tsr of TCBStateRegs ts regs \<Rightarrow> regs"
@@ -4524,8 +4524,7 @@ lemma oblivious_getObject_ksPSpace_cte[simp]:
              cong: Structures_H.kernel_object.case_cong)
   apply (intro oblivious_bind,
          simp_all split: Structures_H.kernel_object.split split_if)
-  apply (safe intro!: oblivious_bind, simp_all)
-  done
+  by (safe intro!: oblivious_bind, simp_all)
 
 lemma oblivious_doMachineOp[simp]:
   "\<lbrakk> \<forall>s. ksMachineState (f s) = ksMachineState s;
@@ -4542,7 +4541,7 @@ lemma oblivious_setVMRoot_schact:
   "oblivious (ksSchedulerAction_update f) (setVMRoot t)"
   apply (simp add: setVMRoot_def getThreadVSpaceRoot_def locateSlot_conv
                    getSlotCap_def getCTE_def armv_contextSwitch_def)
-  apply (safe intro!: oblivious_bind oblivious_bindE oblivious_catch
+  by (safe intro!: oblivious_bind oblivious_bindE oblivious_catch
              | simp_all add: liftE_def getHWASID_def
                              findPDForASID_def liftME_def loadHWASID_def
                              findPDForASIDAssert_def checkPDAt_def
@@ -4552,7 +4551,6 @@ lemma oblivious_setVMRoot_schact:
                              invalidateHWASIDEntry_def storeHWASID_def
                              checkPDNotInASIDMap_def armv_contextSwitch_def
                       split: capability.split arch_capability.split option.split)+
-  done
 
 lemma oblivious_switchToThread_schact:
   "oblivious (ksSchedulerAction_update f) (ThreadDecls_H.switchToThread t)"
@@ -4562,9 +4560,8 @@ lemma oblivious_switchToThread_schact:
                    getQueue_def setQueue_def storeWordUser_def
                    pointerInUserData_def isRunnable_def isBlocked_def
                    getThreadState_def tcbSchedDequeue_def bitmap_fun_defs)
-  apply (safe intro!: oblivious_bind
+  by (safe intro!: oblivious_bind
               | simp_all add: oblivious_setVMRoot_schact)+
-  done
 
 lemma schedule_rewrite:
   notes hoare_TrueI[simp]
@@ -5413,8 +5410,8 @@ lemma fastpath_callKernel_SysCall_corres:
                   apply (clarsimp split: split_if)
                   apply (rule ext)
                   apply (simp add: badgeRegister_def msgInfoRegister_def
-                                   ARMMachineTypes.badgeRegister_def
-                                   ARMMachineTypes.msgInfoRegister_def
+                                   MachineTypes.badgeRegister_def
+                                   MachineTypes.msgInfoRegister_def
                             split: split_if)
                  apply simp
                 apply (wp | simp cong: if_cong bool.case_cong
@@ -6339,8 +6336,8 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                       apply (clarsimp split: split_if)
                       apply (rule ext)
                       apply (simp add: badgeRegister_def msgInfoRegister_def
-                                       ARMMachineTypes.msgInfoRegister_def
-                                       ARMMachineTypes.badgeRegister_def
+                                       MachineTypes.msgInfoRegister_def
+                                       MachineTypes.badgeRegister_def
                                 split: split_if)
                      apply simp
                     apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps

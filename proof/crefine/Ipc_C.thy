@@ -2535,7 +2535,7 @@ next
      apply (simp_all add:isCap_simps)
     apply (rename_tac acap)
     apply (case_tac acap)
-     apply (clarsimp simp:ArchRetype_H.maskCapRights_def)+
+     apply (clarsimp simp:ArchRetype_H.maskCapRights_def isPageCap_def)+
     done
 
   have is_the_ep_deriveCap:
@@ -2557,7 +2557,7 @@ next
      apply (simp_all add:maskCapRights_def isCap_simps)
     apply (rename_tac acap)
     apply (case_tac acap)
-     apply (simp add:ArchRetype_H.maskCapRights_def)+
+     apply (simp add:ArchRetype_H.maskCapRights_def isPageCap_def)+
     done
   note split_if[split del]
   note if_cong[cong]
