@@ -376,7 +376,7 @@ let
           else if not (!(#no_heap_abs opt) = NONE) andalso not (!(#skip_heap_abs opt) = NONE) then
               error "autocorres: no_heap_abs and skip_heap_abs cannot be used together."
           else ()
-  val no_heap_abs = if !(#skip_heap_abs opt) = SOME true then Symset.dest all_simpl_functions else these (!(#no_heap_abs opt))
+  val no_heap_abs = these (!(#no_heap_abs opt))
 
   (* Disallow referring to functions that don't exist. *)
   val funcs_in_options =
@@ -544,6 +544,7 @@ let
 
   val force_heap_abs = Symset.make (these (!(#force_heap_abs opt)))
   val (lthy, fn_info) =
+        if !(#skip_heap_abs opt) = SOME true then (lthy, fn_info) else
         HeapLift.system_heap_lift filename prog_info fn_info
             no_heap_abs force_heap_abs
             make_lifted_globals_field_name heap_abs_syntax keep_going

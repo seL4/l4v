@@ -474,7 +474,8 @@ let
     val l2_thm = the (AutoCorresData.get_thm thy filename "L2corres" fn_name)
           handle Option => raise SimplConv.FunctionNotFound fn_name
     val hl_thm = the (AutoCorresData.get_thm thy filename "HLcorres" fn_name)
-          handle Option => raise SimplConv.FunctionNotFound fn_name
+          handle Option => (@{thm L2Tcorres_trivial_from_local_var_extract} OF [l2_thm]
+                            handle THM _ => l2_thm) (* catch this failure below *)
     val wa_thm = the (AutoCorresData.get_thm thy filename "WAcorres" fn_name)
           (* If there is no WAcorres thm, it is probably because word_abstract
            * was disabled using no_word_abs.
