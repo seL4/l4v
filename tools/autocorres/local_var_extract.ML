@@ -1209,12 +1209,16 @@ in
   fn_params_typ ---> mk_l2monadT (#globals_type prog_info) (#return_type fn_def) @{typ unit}
 end
 
+(* Avoid clashes with fixed free variables such as C-parser's "symbol_table".
+ * TODO: our hardcoding of "rec_measure'" may also lead to problems. Check later. *)
+fun to_free_var_name lthy x = if Variable.is_fixed lthy x then to_free_var_name lthy (x ^ "'") else x
+
 (* Get arguments passed into the function. *)
-fun get_expected_l2_fn_args prog_info fn_info fn_name =
+fun get_expected_l2_fn_args lthy prog_info fn_info fn_name =
 let
   val fn_def = FunctionInfo.get_function_def fn_info fn_name
 in
-  map (apfst ProgramInfo.demangle_name) (#args fn_def)
+  map (apfst (to_free_var_name lthy o ProgramInfo.demangle_name)) (#args fn_def)
 end
 
 fun get_expected_l2_fn_thm prog_info fn_info ctxt fn_name fn_free fn_args _ measure_var =
@@ -1507,7 +1511,7 @@ let
   (* Update function information. *)
   fun update_function_defs lthy fn_def =
     FunctionInfo.fn_def_update_const (Utils.get_term lthy (l2_function_name (#name fn_def))) fn_def
-    |> FunctionInfo.fn_def_update_args (map (apfst ProgramInfo.demangle_name) (#args fn_def))
+    |> FunctionInfo.fn_def_update_args (map (apfst (to_free_var_name lthy o ProgramInfo.demangle_name)) (#args fn_def))
     |> FunctionInfo.fn_def_update_definition (
         (the (AutoCorresData.get_def (Proof_Context.theory_of lthy)
             filename "L2def" (#name fn_def))))
@@ -1515,7 +1519,7 @@ in
   AutoCorresUtil.do_translation_phase "L2" filename prog_info fn_info
     (get_expected_l2_fn_type prog_info fn_info)
     (get_expected_l2_fn_thm prog_info fn_info)
-    (get_expected_l2_fn_args prog_info fn_info)
+    (get_expected_l2_fn_args lthy prog_info fn_info)
     l2_function_name
     convert
     l2_monad_mono

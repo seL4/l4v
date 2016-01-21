@@ -43,6 +43,7 @@ struct
  *
  *                scope = FUNC_NAMES,
  *                scope_depth = NUM,
+ *                c_locale = "STRING",
  *
  *                gen_word_heaps,
  *                statistics,
@@ -92,6 +93,9 @@ type autocorres_options = {
   (* Only translate a subset of functions. *)
   scope: string list option ref,
   scope_depth: int option ref,
+
+  (* Do the translation in this locale (and use functions in this locale) *)
+  c_locale: string option ref,
 
   (* Store detailed traces for conversions of the selected functions. *)
   trace_heap_lift : string list option ref,
@@ -174,6 +178,11 @@ val scope_depth_parser =
   nat_opt "scope_depth" "integer" >>
   (fn value => none_to_some (#scope_depth) value "autocorres: scope option specified multiple times")
 
+val c_locale_parser =
+  named_option Parse.text "c_locale" "locale name" >>
+  (fn funcs => none_to_some (#c_locale) funcs
+                 "autocorres: c_locale option specified multiple times")
+
 val ts_force_parser =
   ((Parse.reserved "ts_force" |--
       expect "\"ts_force\"" "rule name"
@@ -238,22 +247,22 @@ val keep_going_parser =
   (fn _ => none_to_some (#keep_going) true "autocorres: keep_going option specified multiple times")
 
 val lifted_globals_field_prefix_parser =
-  named_option Parse.text "lifted_globals_field_prefix" "function names" >>
+  named_option Parse.text "lifted_globals_field_prefix" "string" >>
   (fn funcs => none_to_some (#lifted_globals_field_prefix) funcs
                  "autocorres: lifted_globals_field_prefix option specified multiple times")
 
 val lifted_globals_field_suffix_parser =
-  named_option Parse.text "lifted_globals_field_suffix" "function names" >>
+  named_option Parse.text "lifted_globals_field_suffix" "string" >>
   (fn funcs => none_to_some (#lifted_globals_field_suffix) funcs
                  "autocorres: lifted_globals_field_suffix option specified multiple times")
 
 val function_name_prefix_parser =
-  named_option Parse.text "function_name_prefix" "function names" >>
+  named_option Parse.text "function_name_prefix" "string" >>
   (fn funcs => none_to_some (#function_name_prefix) funcs
                  "autocorres: function_name_prefix option specified multiple times")
 
 val function_name_suffix_parser =
-  named_option Parse.text "function_name_suffix" "function names" >>
+  named_option Parse.text "function_name_suffix" "string" >>
   (fn funcs => none_to_some (#function_name_suffix) funcs
                  "autocorres: function_name_suffix option specified multiple times")
 
@@ -275,6 +284,7 @@ fun default_opts _ = {
     heap_abs_syntax = ref NONE,
     scope = ref NONE,
     scope_depth = ref NONE,
+    c_locale = ref NONE,
     trace_heap_lift = ref NONE,
     trace_word_abs = ref NONE,
     no_opt = ref NONE,
@@ -303,6 +313,7 @@ let
      heap_abs_syntax_parser ||
      scope_parser ||
      scope_depth_parser ||
+     c_locale_parser ||
      trace_heap_lift_parser ||
      trace_word_abs_parser ||
      no_opt_parser ||
@@ -339,7 +350,11 @@ let
 
   (* Enter into the correct context. *)
   val {base = locale_name,...} = OS.Path.splitBaseExt (OS.Path.file filename)
-  val lthy = Named_Target.begin (locale_name, Position.none) thy
+  val locale_name = case !(#c_locale opt) of NONE => locale_name
+                                           | SOME l => l
+  val lthy = case try (Named_Target.begin (locale_name, Position.none)) thy of
+                 SOME lthy => lthy
+               | NONE => error ("autocorres: no such locale: " ^ locale_name)
 
   (* Fetch basic program information. *)
   val prog_info = ProgramInfo.get_prog_info lthy filename

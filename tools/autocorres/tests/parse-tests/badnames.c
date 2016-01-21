@@ -27,3 +27,7 @@ int bad_names(void)
     return globals + P + R + A + B + myvars + L1_skip + L2_skip + L1_modify + L2_modify + adglobs_addr;
 }
 
+/* Also used to kill local_var_extract. */
+int bad_vars(int symbol_table) {
+  return symbol_table;
+}
