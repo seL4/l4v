@@ -1953,14 +1953,14 @@ proof -
   apply (rule_tac x="of_nat x" in exI)
   apply (simp add: unat_sub_if_size range_cover.unat_of_nat_n[OF cover])
   apply (rule nat_le_Suc_less_imp)
-  apply (metis le_unat_uoi nat_less_le not_leE)
+  apply (metis le_unat_uoi nat_less_le not_le_imp_less)
   done
 
   have new_caps_adds_fold:
     "map (\<lambda>n. ptr + 2 ^ objBitsKO ko * n) [0.e.2 ^ gbits * of_nat n - 1] =
      new_cap_addrs (2 ^ gbits * n) ptr ko"
     apply (simp add: new_cap_addrs_def shiftl_t2n)
-    apply (subgoal_tac "1 \<le> (2\<Colon>word32) ^ gbits * of_nat n")
+    apply (subgoal_tac "1 \<le> (2::word32) ^ gbits * of_nat n")
      apply (simp add: upto_enum_red' o_def)
      apply (rule arg_cong2[where f=map, OF refl])
      apply (rule arg_cong2[where f=upt, OF refl])
@@ -3815,7 +3815,7 @@ lemma threadSet_cte_wp_at2'T:
    apply (subst conj_commute)
    apply (rule setObject_cte_wp_at2')
     apply (clarsimp simp: updateObject_default_def projectKOs in_monad objBits_simps
-                          obj_at'_def objBits_simps in_magnitude_check Pair_fst_snd_eq)
+                          obj_at'_def objBits_simps in_magnitude_check prod_eq_iff)
     apply (case_tac tcba, clarsimp simp: bspec_split [OF spec [OF x]])
    apply (clarsimp simp: updateObject_default_def in_monad bind_def
                          projectKOs)

@@ -1136,7 +1136,7 @@ lemma cap_move_corres:
    apply simp
    apply (rule conjI)
     apply clarsimp
-    apply (subst inj_on_image_set_diff)
+    apply (subst inj_on_image_set_diff15)
        apply (rule inj_on_descendants_cte_map)
           apply fastforce
          apply fastforce
