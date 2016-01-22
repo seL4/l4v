@@ -676,7 +676,7 @@ where
 
 
 context 
-notes [[inductive_defs =true]]
+notes [[inductive_internals =true]]
 begin
 
 inductive
