@@ -182,6 +182,7 @@ def run_test(test, status_queue, verbose=False):
 
     if output == None:
         output = ""
+    output = output.decode()
     if process.returncode == 0:
         status = "pass"
     elif was_timeout[0]:
