@@ -21,7 +21,7 @@ Example usage:
     p.apply('simp')
     p.apply('simp')
     p.done()
-    print p
+    print(p)
 '''
 
 import StringIO

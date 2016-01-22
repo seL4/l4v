@@ -394,7 +394,7 @@ def main():
             print_line()
             print("TEST FAILURE: %s" % t.name)
             print("")
-            log = test_results[t.name]['output'].rstrip(b"\n") + b"\n"
+            log = test_results[t.name]['output'].rstrip("\n") + "\n"
             lines = log.split("\n")
             if len(lines) > LINE_LIMIT:
                 lines = ["..."] + lines[-LINE_LIMIT:]
