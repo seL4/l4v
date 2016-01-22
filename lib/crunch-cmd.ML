@@ -444,7 +444,7 @@ fun crunch cfg pre extra stack const' thms =
               val ctxt''' = ctxt'' |> Variable.auto_fixes goal_prop2
               val _ = writeln ("attempting: " ^ Syntax.string_of_term ctxt''' goal_prop2);
  
-            in (Goal.prove ctxt''' [] [] goal_prop2
+            in (Goal.prove_future ctxt''' [] [] goal_prop2
                   ( (*DupSkip.goal_prove_wrapper *) (fn _ => 
                   resolve_tac ctxt''' [unfold_rule] 1
                     THEN maybe_cheat_tac ctxt'''
