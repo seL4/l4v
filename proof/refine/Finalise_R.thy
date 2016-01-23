@@ -149,7 +149,7 @@ lemma no_0_no_0_lhs_rtrancl [simp]:
 
 
 locale mdb_empty = 
-  mdb_ptr: mdb_ptr m _ _ slot s_cap s_node
+  mdb_ptr?: mdb_ptr m _ _ slot s_cap s_node
     for m slot s_cap s_node +
 
   fixes n

@@ -1505,7 +1505,7 @@ proof (simp add: invs'_def valid_state'_def valid_pspace'_def
     done
 
   from cdm show "ksCurDomain s \<le> maxDomain" .
-  from vds show "ksDomSchedule s = [] \<Longrightarrow> False" by clarsimp
+(*  from vds show "ksDomSchedule s = [] \<Longrightarrow> False" by clarsimp*)
 qed (clarsimp)
 
 lemma (in delete_locale) delete_ko_wp_at':
