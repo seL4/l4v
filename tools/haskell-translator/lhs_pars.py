@@ -928,7 +928,7 @@ def instance_transform(d):
             defs_dict[d2['defined']] = d2
     d['instance_defs'] = defs_dict
     d['deriving'] = [classname]
-    if not typename in all_type_arities:
+    if typename not in all_type_arities:
         sys.stderr.write('FAIL: attempting %s\n' % d['defined'])
         sys.stderr.write('(typename %r)\n' % typename)
         sys.stderr.write('when reading %s\n' % filename)
@@ -1494,7 +1494,7 @@ def bracket_dollar_lambdas((line, children)):
 
 
 def zipWith_transforms(line, children):
-    if not 'zipWithM_' in line:
+    if 'zipWithM_' not in line:
         children = [zipWith_transforms(l, c) for (l, c) in children]
         return (line, children)
 
@@ -2065,7 +2065,7 @@ def guarded_body_transform(body, div):
 
 
 def lhs_transform(line):
-    if not '(' in line:
+    if '(' not in line:
         return line
 
     [left, right] = line.split('\<equiv>')
@@ -2086,7 +2086,7 @@ def lhs_transform(line):
 
 
 def lhs_de_underscore(line):
-    if not '_' in line:
+    if '_' not in line:
         return line
 
     [left, right] = line.split('\<equiv>')
@@ -2487,10 +2487,10 @@ def get_supplied_transform_table():
     result = {}
 
     for line, n, children in tree:
-        if (not 'conv:' in line) or len(children) != 2:
+        if ('conv:' not in line) or len(children) != 2:
             sys.stderr.write ('WARN: supplied line %d dropped\n' \
              % n)
-            if not 'conv:' in line:
+            if 'conv:' not in line:
                 sys.stderr.write('\t\t(token "conv:" missing)\n')
             if len(children) != 2:
                 sys.stderr.write('\t\t(%d children != 2)\n' % len(children))
