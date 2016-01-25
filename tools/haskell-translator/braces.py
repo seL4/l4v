@@ -125,10 +125,10 @@ class BracedString:
                 for i, bit in enumerate(bits)]
 
     def startswith(self, s):
-        return self.s.startswith('%s' % s)
+        return self.s.startswith(s)
 
     def endswith(self, s):
-        return self.s.endswith('%s' % s)
+        return self.s.endswith(s)
 
     def map(self, fn):
         new_s = ''
