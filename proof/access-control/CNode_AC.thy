@@ -983,8 +983,8 @@ lemma store_pde_pas_refined[wp]:
               split: split_if_asm)
   done
 
-lemmas pde_ref_simps = pde_ref_def[split_simps ARM_Structs_A.pde.split]
-    pde_ref2_def[split_simps ARM_Structs_A.pde.split]
+lemmas pde_ref_simps = pde_ref_def[split_simps Arch_Structs_A.pde.split]
+    pde_ref2_def[split_simps Arch_Structs_A.pde.split]
 
 lemma set_asid_pool_st_vrefs[wp]:
   "\<lbrace>\<lambda>s. P ((state_vrefs s) (p := (\<lambda>(r, p). (p, VSRef (ucast r)
@@ -1336,8 +1336,6 @@ lemma update_cap_obj_refs_subset:
   apply (case_tac cap,
          simp_all add: update_cap_data_closedform
                 split: split_if_asm)
-  apply (rename_tac arch_cap)
-  apply (case_tac arch_cap, simp_all add: aobj_ref_cases arch_update_cap_data_def)
   done
 
 (* FIXME: move *)
@@ -1378,13 +1376,13 @@ lemma update_cap_cap_auth_conferred_subset:
 
 lemma update_cap_cli:
   "cap_links_irq aag l (update_cap_data b w cap) = cap_links_irq aag l cap"
-  unfolding update_cap_data_def
+  unfolding update_cap_data_def arch_update_cap_data_def
   apply (cases cap, simp_all add: is_cap_simps cli_no_irqs badge_update_def the_cnode_cap_def Let_def)
   done
 
 lemma untyped_range_update_cap_data [simp]:
   "untyped_range (update_cap_data b w c) = untyped_range c"
-  unfolding update_cap_data_def
+  unfolding update_cap_data_def arch_update_cap_data_def
   by (cases c, simp_all add: is_cap_simps badge_update_def Let_def the_cnode_cap_def)
 
 end

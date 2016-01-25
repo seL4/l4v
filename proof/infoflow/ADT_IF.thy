@@ -1347,7 +1347,7 @@ definition
   where
   "check_active_irq_A_if \<equiv> {((tc, s), irq, (tc', s')). ((irq, tc'), s') \<in> fst (check_active_irq_if tc s)}"
 
-abbreviation internal_state_if :: "((ARMMachineTypes.register \<Rightarrow> 32 word) \<times> 'a) \<times> sys_mode
+abbreviation internal_state_if :: "((MachineTypes.register \<Rightarrow> 32 word) \<times> 'a) \<times> sys_mode
     \<Rightarrow> 'a" where
   "internal_state_if \<equiv> \<lambda>s. (snd (fst s))"
 

@@ -775,7 +775,7 @@ lemma send_signal_reads_respects:
                            intro!: BlockedOnReceive_inj)
            apply assumption
           apply distinct_subgoals
-         apply fold_subgoals
+         apply (fold_subgoals (prefix))
      apply (frule st_tcb_at_tcb_at)
      subgoal bound_ntfn premises prems for st s ntfn x sta
        prefer 2

@@ -692,8 +692,7 @@ lemma weak_derived_overlaps':
    apply simp
   apply(simp add: copy_of_def split: split_if_asm add: same_object_as_def split: cap.splits)
        apply((case_tac cap; simp)+)[5]
-  apply(simp split: arch_cap.splits cap.splits)
-     apply (rename_tac arch_cap, case_tac arch_cap; simp)+
+  subgoal for arch1 arch2 by (cases arch1; cases arch2; simp)
   done
   
 
@@ -2912,8 +2911,7 @@ lemma same_object_as_cap_points_to_label:
      apply(case_tac cap, simp_all)
     apply(case_tac cap, simp_all)
    apply(case_tac cap, simp_all)
-  apply(simp split: arch_cap.splits cap.splits)
-    apply(rename_tac arch, case_tac arch; simp)+
+  subgoal for arch1 arch2 by (cases arch1; cases arch2; simp)
   done
 
 lemma same_object_as_slots_holding_overlapping_caps:
@@ -2926,8 +2924,7 @@ lemma same_object_as_slots_holding_overlapping_caps:
      apply(case_tac cap, simp_all)
     apply(case_tac cap, simp_all)
    apply(case_tac cap, simp_all)
-  apply(simp split: arch_cap.splits cap.splits)
-     apply(rename_tac arch, case_tac arch; simp)+
+  subgoal for arch1 arch2 by (cases arch1; cases arch2; simp)
   done
 
 lemma checked_cap_insert_silc_inv:
