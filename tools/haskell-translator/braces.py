@@ -147,8 +147,8 @@ class BracedString:
 
     def discard_enclosing_braces(self):
         """If the string consists of one braced expression,
-		discard the redundant enclosing braces. Otherwise
-		return the string."""
+                discard the redundant enclosing braces. Otherwise
+                return the string."""
         if len(self.bits) > 1:
             return self
 

@@ -64,7 +64,7 @@ def splitList(list, pred):
 
 
 def takeWhile(list, pred):
-    """Returns the initial portion of the list where each 
+    """Returns the initial portion of the list where each
 element matches pred"""
     limit = 0
 
@@ -97,8 +97,8 @@ def get_defs(filename):
 
 def top_transform(input):
     """Top level transform, deals with lhs artefacts, divides
-	the code up into a series of seperate definitions, and
-	passes these definitions through the definition transforms."""
+        the code up into a series of seperate definitions, and
+        passes these definitions through the definition transforms."""
     to_process = []
     comments = []
     for n, line in enumerate(input):
@@ -124,20 +124,20 @@ def top_transform(input):
     defs = create_defs(def_tree)
     defs = group_defs(defs)
 
-    # 	Forget about the comments for now
+    #   Forget about the comments for now
 
-    #	defs_plus_comments = [(d['line'], d) for d in defs] + comments
-    #	defs_plus_comments.sort()
-    #	defs = []
-    #	prev_comments = []
-    #	for term in defs_plus_comments:
-    #		if term[1] == 'C':
-    #			prev_comments.append(term[2])
-    #		else:
-    #			d = term[1]
-    #			d['comments'] = prev_comments
-    #			defs.append(d)
-    #			prev_comments = []
+    # defs_plus_comments = [(d['line'], d) for d in defs] + comments
+    # defs_plus_comments.sort()
+    # defs = []
+    # prev_comments = []
+    # for term in defs_plus_comments:
+    #     if term[1] == 'C':
+    #         prev_comments.append(term[2])
+    #     else:
+    #         d = term[1]
+    #         d['comments'] = prev_comments
+    #         defs.append(d)
+    #         prev_comments = []
 
     # apply def_transform and cut out any None return values
     defs = [defs_transform(d) for d in defs]
@@ -150,7 +150,7 @@ def top_transform(input):
 
 def get_lines(defs, call):
     """Gets the output lines needed for this call from
-	all the potential output generated at parse time."""
+        all the potential output generated at parse time."""
 
     if call.restr:
         defs = [d for d in defs if d['type'] == 'comments' \
@@ -168,8 +168,8 @@ def get_lines(defs, call):
 
 def offside_tree(input):
     """Breaks lines up into a tree based on the offside rule.
-	Each line gets as children the lines following it up until
-	the next line whose indent is less or equal."""
+        Each line gets as children the lines following it up until
+        the next line whose indent is less or equal."""
     if input == []:
         return []
     head, head_n = input[0]
@@ -191,8 +191,8 @@ def offside_tree(input):
 
 def discard_n(tree):
     """Takes a tree containing tuples (line, n, children) and
-	discards the n terms, returning a tree with tuples
-	(line, children)"""
+        discards the n terms, returning a tree with tuples
+        (line, children)"""
     result = []
     for (line, n, children) in tree:
         result.append((line, discard_n(children)))
@@ -201,7 +201,7 @@ def discard_n(tree):
 
 def flatten_tree(tree):
     """Returns a tree to the set of numbered lines it was
-	drawn from."""
+        drawn from."""
     result = []
     for (line, children) in tree:
         result.append(line)
@@ -219,9 +219,9 @@ def create_defs(tree):
 
 def group_defs(defs):
     """Takes a file broken into a series of definitions, and locates
-	multiple definitions of constants, caused by type signatures or
-	pattern matching, and accumulates to a single object per genuine
-	definition"""
+        multiple definitions of constants, caused by type signatures or
+        pattern matching, and accumulates to a single object per genuine
+        definition"""
     defgroups = []
     defined = ''
     for d in defs:
@@ -239,7 +239,7 @@ def group_defs(defs):
 
 def create_def(elt):
     """Takes an element of an offside tree and creates
-	a definition object."""
+        a definition object."""
     (line, n, children) = elt
     children = discard_n(children)
     return create_def_2(line, children, n)
@@ -276,8 +276,8 @@ primrecs = get_primrecs()
 
 def defs_transform(d):
     """Transforms the set of definitions for a function. This
-	may include its type signature, and may include the special
-	case of multiple definitions."""
+        may include its type signature, and may include the special
+        case of multiple definitions."""
     # the first tokens of the first line in the first definition
     if d['type'] == 'newtype':
         return newtype_transform(d)
@@ -393,7 +393,7 @@ def def_lines(d, call):
 
 def type_sig_transform(tree_element):
     """Performs transformations on a type signature line
-	preceding a function declaration or some such."""
+        preceding a function declaration or some such."""
 
     line = reduce_to_single_line(tree_element)
     (pre, post) = line.split('::')
@@ -417,7 +417,7 @@ hand_classes = {'Bits': ['HS_bit'],
 
 def type_transform(string):
     """Performs transformations on a type signature, whether
-	part of a type signature line or occuring in a function."""
+        part of a type signature line or occuring in a function."""
 
     # deal with type classes by recursion
     bits = string.split('=>', 1)
@@ -571,9 +571,9 @@ def constructor_reversing(tokens):
 
 def newtype_transform(d):
     """Takes a Haskell style newtype/data type declaration, whose
-	options are divided with | and each of whose options has named
-	elements, and forms a datatype statement and definitions for
-	the named extractors and their update functions."""
+        options are divided with | and each of whose options has named
+        elements, and forms a datatype statement and definitions for
+        the named extractors and their update functions."""
     if len(d['body']) != 1:
         print '--- newtype long body ---'
         print d
@@ -625,8 +625,8 @@ def typename_transform(line, header, d):
         d['typedeps'][bit] = 1
     lines = [
         'type_synonym %s = "%s"' % (header, oldtype),
-        #		'translations (* TYPE 1 *)',
-        #		'"%s" <=(type) "%s"' % (oldtype, header)
+        # translations (* TYPE 1 *)',
+        # "%s" <=(type) "%s"' % (oldtype, header)
     ]
     d['body'] = [(line, []) for line in lines]
     return d
@@ -862,8 +862,8 @@ def type_wrapper_type(header, cons, rhs, d, decons=None):
         return d
     lines = [
         'type_synonym %s = "%s"' % (header, rhs),
-        #		'translations (* TYPE 2 *)',
-        #		'"%s" <=(type) "%s"' % (header, rhs),
+        # translations (* TYPE 2 *)',
+        # "%s" <=(type) "%s"' % (header, rhs),
         '',
         'definition',
         '  %s :: "%s \\<Rightarrow> %s"' % (cons, header, header),
@@ -1371,8 +1371,8 @@ def bij_instance (classname, typename, constructor, fns):
 
 def get_type_map (string):
     """Takes Haskell named record syntax and produces
-    a map (in the form of a list of tuples) defining
-    the converted types of the names."""
+        a map (in the form of a list of tuples) defining
+        the converted types of the names."""
     bits = string.split(None, 1)
     header = bits[0].strip()
     if len(bits) == 1:
@@ -2314,8 +2314,8 @@ def all_constructor_patterns(cases):
 
 def is_constructor_pattern(pat):
     """A constructor pattern takes the form Cons var1 var2 ...,
-	characterised by all alphanumeric names, the constructor starting
-	with an uppercase alphabetic char and the vars with lowercase."""
+        characterised by all alphanumeric names, the constructor starting
+        with an uppercase alphabetic char and the vars with lowercase."""
     bits = pat.split()
     for bit in bits:
         if (not bit.isalnum()) and (not bit == '_'):
@@ -2530,7 +2530,7 @@ quotes_getter = re.compile('"[^"]+"')
 
 def detect_recursion(body):
     """Detects whether any of the bodies of the definitions of this
-	function recursively refer to it."""
+        function recursively refer to it."""
     single_lines = [reduce_to_single_line(elt) for elt in body]
     single_lines = [''.join(quotes_getter.split(l)) for l in single_lines]
     bits = [line.split(None, 1) for line in single_lines]
@@ -2571,9 +2571,9 @@ def is_variable_name(string):
 
 def pattern_match_transform(body):
     """Converts a body containing possibly multiple definitions
-	and containing pattern matches into a normal Isabelle definition
-	followed by a big Haskell case expression which is resolved
-	elsewhere."""
+        and containing pattern matches into a normal Isabelle definition
+        followed by a big Haskell case expression which is resolved
+        elsewhere."""
     splits = []
     for (line, children) in body:
         string = braces.str(line, '(', ')')
@@ -2662,7 +2662,7 @@ def pattern_match_transform(body):
 
 def get_lambda_body_lines(d):
     """Returns lines equivalent to the body of the function as
-	a lambda expression."""
+        a lambda expression."""
     fn = d['defined']
 
     [(line, children)] = d['body']
