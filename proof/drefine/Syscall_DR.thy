@@ -226,7 +226,7 @@ lemma decode_domain_corres:
      (Decode_A.decode_domain_invocation label' args' excaps')"
   apply (unfold Tcb_D.decode_domain_invocation_def Decode_A.decode_domain_invocation_def)
   apply (unfold transform_cap_list_def)
-  apply (case_tac "invocation_type label'"; simp)
+  apply (case_labels "invocation_type label'"; simp)
                                             apply (clarsimp simp: transform_intent_def option_map_def
                                                             split: option.splits)+
                   defer
@@ -475,7 +475,7 @@ lemma transform_intent_arch_cap_None:
   apply (clarsimp simp:Decode_A.decode_invocation_def)
     apply wp
   apply (case_tac arch_cap)
-    apply (case_tac "invocation_type label")
+    apply (case_labels "invocation_type label")
       apply (simp_all add:arch_decode_invocation_def split del:if_splits)
       apply wp
     apply (clarsimp split:if_splits | rule conjI)+
@@ -483,14 +483,14 @@ lemma transform_intent_arch_cap_None:
         apply (clarsimp split:cap.splits | rule conjI | wp)+
         apply (clarsimp split:arch_cap.splits | rule conjI | wp)+
         apply ((clarsimp simp:transform_intent_def | wp) +)[2]
-    apply (case_tac "invocation_type label")
+    apply (case_labels "invocation_type label")
       apply (simp_all add:arch_decode_invocation_def split del:if_splits)
       apply wp
       apply (case_tac "excaps ! 0")
         apply (clarsimp simp:transform_intent_def transform_cnode_index_and_depth_def split:list.split_asm)
         apply wp
-    apply (case_tac "invocation_type label")
-      apply (simp_all add:arch_decode_invocation_def InvocationLabels_H.isPageFlush_def  split del:if_splits)
+    apply (case_labels "invocation_type label")
+      apply (simp_all add:arch_decode_invocation_def isPageFlushLabel_def  split del:if_splits)
        apply (wp)
         apply (clarsimp simp:transform_intent_def transform_intent_page_map_def split:list.split_asm )
       apply wp
@@ -499,7 +499,7 @@ lemma transform_intent_arch_cap_None:
         apply (clarsimp simp:transform_intent_def
           transform_intent_page_remap_def split:list.split_asm)
         apply ((clarsimp simp:transform_intent_def | wp)+)
-    apply (case_tac "invocation_type label")
+    apply (case_labels "invocation_type label")
       apply (simp_all)
       apply (intro conjI impI | wp)+
       apply (clarsimp | rule conjI)+
@@ -510,8 +510,8 @@ lemma transform_intent_arch_cap_None:
      apply ((clarsimp simp:transform_intent_def 
        split:list.split_asm
      | wp)+)[1]
-     apply (case_tac "invocation_type label")
-      apply (simp_all add: isPDFlush_def)
+     apply (case_labels "invocation_type label")
+      apply (simp_all add: isPDFlushLabel_def)
      apply (wp)
 done
 

@@ -216,7 +216,7 @@ lemma decode_tcb_cap_label_not_match:
 lemma is_cnode_cap_update_cap_data:
   "Structures_A.is_cnode_cap (CSpace_A.update_cap_data x w a) \<Longrightarrow> is_cnode_cap a"
   apply (case_tac a)
-    apply (clarsimp simp:update_cap_data_def is_arch_cap_def badge_update_def
+    apply (clarsimp simp:update_cap_data_def arch_update_cap_data_def is_arch_cap_def badge_update_def
       is_cap_simps split:split_if_asm)+
 done
 
@@ -226,7 +226,7 @@ lemma update_cnode_cap_data:
   apply (clarsimp simp:is_cap_simps)
   apply (clarsimp split:if_splits)
     apply (simp add:cdl_update_cnode_cap_data_def CSpace_D.update_cap_data_def)
-  apply (clarsimp simp: update_cap_data_def split:if_splits)
+  apply (clarsimp simp: update_cap_data_def arch_update_cap_data_def split:if_splits)
   apply ((cases ab,simp_all add:badge_update_def)+)[2]
   apply (clarsimp simp:is_cap_simps the_cnode_cap_def word_size split:split_if_asm simp:Let_def)
   apply (clarsimp simp:cdl_update_cnode_cap_data_def WordSetup.word_bits_def of_drop_to_bl
@@ -246,7 +246,7 @@ lemma decode_tcb_corres:
   apply (drule sym, frule transform_tcb_intent_invocation)
   apply (unfold transform_cap_def)
   apply (unfold transform_cap_list_def)
-  apply(case_tac "invocation_type label'")
+  apply(case_labels "invocation_type label'")
                                             apply(simp_all)
                                                   (* TCBReadRegisters *)
               apply(clarsimp simp: decode_read_registers_def split: list.split)

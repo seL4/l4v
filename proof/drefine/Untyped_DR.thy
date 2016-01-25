@@ -410,10 +410,10 @@ lemma transform_default_tcb:
         = Tcb (Types_D.default_tcb domain)"
   apply (simp add: transform_tcb_def default_tcb_def Types_D.default_tcb_def)
   apply (simp add: transform_full_intent_def Let_def new_context_def
-                   cap_register_def ARMMachineTypes.capRegister_def
+                   cap_register_def MachineTypes.capRegister_def
                    get_tcb_mrs_def
                    Suc_le_eq get_tcb_message_info_def msg_info_register_def
-                   ARMMachineTypes.msgInfoRegister_def data_to_message_info_def
+                   MachineTypes.msgInfoRegister_def data_to_message_info_def
                    get_ipc_buffer_words_def)
   apply (simp add: transform_intent_def invocation_type_def fromEnum_def
                    enum_invocation_label toEnum_def)
@@ -1789,7 +1789,7 @@ lemma decode_untyped_corres:
      (Decode_A.decode_untyped_invocation label' args' slot' cap' (map fst excaps'))"
   apply (simp add: transform_intent_def option_map_Some_eq2
                    transform_intent_untyped_retype_def
-            split: invocation_label.split_asm list.split_asm
+            split: invocation_label.split_asm arch_invocation_label.split_asm list.split_asm
                    option.split_asm)
   apply (cases ui)
   apply (drule transform_translate_type[where 'a=det_ext])

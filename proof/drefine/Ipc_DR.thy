@@ -709,7 +709,7 @@ lemma receive_blocked_waiting_syncs:
     apply (subst (asm) handy_enum_lemma3)+
     apply clarsimp
    apply (case_tac "x \<noteq> idle_thread s")
-    apply (clarsimp simp: transform_object_def split: Structures_A.kernel_object.splits ARM_Structs_A.arch_kernel_obj.splits option.splits nat.splits)
+    apply (clarsimp simp: transform_object_def split: Structures_A.kernel_object.splits Arch_Structs_A.arch_kernel_obj.splits option.splits nat.splits)
      apply (frule_tac ptr=x in valid_etcbs_tcb_etcb, simp+)
     apply (clarsimp simp add: transform_tcb_def tcb_pending_op_slot_def tcb_boundntfn_slot_def infer_tcb_bound_notification_def split: option.splits)
     apply (frule_tac tcb="x2a" in  bound_tcb_fold, simp)

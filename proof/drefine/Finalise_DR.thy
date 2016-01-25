@@ -908,28 +908,28 @@ done
 definition pd_pt_relation :: "word32\<Rightarrow>word32\<Rightarrow>word32\<Rightarrow>'z::state_ext state\<Rightarrow>bool"
 where "pd_pt_relation pd pt offset s \<equiv>
   \<exists>fun u v ref. ( kheap s pd = Some (ArchObj (arch_kernel_obj.PageDirectory fun))
-  \<and> page_table_at pt s \<and> fun (ucast (offset && mask pd_bits >> 2)) = ARM_Structs_A.pde.PageTablePDE ref u v
+  \<and> page_table_at pt s \<and> fun (ucast (offset && mask pd_bits >> 2)) = Arch_Structs_A.pde.PageTablePDE ref u v
   \<and> pt = Platform.ptrFromPAddr ref )"
 
 definition pd_section_relation :: "word32\<Rightarrow>word32\<Rightarrow>word32\<Rightarrow>'z::state_ext state\<Rightarrow>bool"
 where "pd_section_relation pd pt offset s \<equiv>
   \<exists>fun u v ref1 ref2. ( kheap s pd = Some (ArchObj (arch_kernel_obj.PageDirectory fun))
-  \<and> fun (ucast (offset && mask pd_bits >> 2)) = ARM_Structs_A.pde.SectionPDE ref1 u ref2 v
+  \<and> fun (ucast (offset && mask pd_bits >> 2)) = Arch_Structs_A.pde.SectionPDE ref1 u ref2 v
   \<and> pt = Platform.ptrFromPAddr ref1 )"
 
 definition pd_super_section_relation :: "word32\<Rightarrow>word32\<Rightarrow>word32\<Rightarrow>'z::state_ext state\<Rightarrow>bool"
 where "pd_super_section_relation pd pt offset s \<equiv>
   \<exists>fun u v ref1. ( kheap s pd = Some (ArchObj (arch_kernel_obj.PageDirectory fun))
-  \<and> fun (ucast (offset && mask pd_bits >> 2)) = ARM_Structs_A.pde.SuperSectionPDE ref1 u v
+  \<and> fun (ucast (offset && mask pd_bits >> 2)) = Arch_Structs_A.pde.SuperSectionPDE ref1 u v
   \<and> pt = Platform.ptrFromPAddr ref1 )"
 
 definition pt_page_relation :: "word32\<Rightarrow>word32\<Rightarrow>word32\<Rightarrow>vmpage_size set\<Rightarrow>'z::state_ext state\<Rightarrow>bool"
 where "pt_page_relation pt page offset S s \<equiv>
   \<exists>fun. (kheap s pt = Some (ArchObj (arch_kernel_obj.PageTable fun)))
   \<and> (case fun (ucast (offset && mask pt_bits >> 2)) of
-    ARM_Structs_A.pte.LargePagePTE ref fun1 fun2 \<Rightarrow>
+    Arch_Structs_A.pte.LargePagePTE ref fun1 fun2 \<Rightarrow>
         page = Platform.ptrFromPAddr ref \<and> ARMLargePage \<in> S
-  | ARM_Structs_A.pte.SmallPagePTE ref fun1 fun2 \<Rightarrow>
+  | Arch_Structs_A.pte.SmallPagePTE ref fun1 fun2 \<Rightarrow>
         page = Platform.ptrFromPAddr ref \<and> ARMSmallPage \<in> S
   | _ \<Rightarrow> False)"
 
@@ -944,7 +944,7 @@ lemma slot_with_pt_frame_relation:
   apply (clarsimp simp:not_idle_thread_def has_slots_def object_slots_def)
   apply (clarsimp simp:transform_page_table_contents_def transform_pte_def unat_map_def ucast_def)
   apply (simp add:word_of_int_nat[OF uint_ge_0,simplified] )
-  apply (clarsimp simp:mask_pt_bits_less split:ARM_Structs_A.pte.split_asm)
+  apply (clarsimp simp:mask_pt_bits_less split:Arch_Structs_A.pte.split_asm)
 done
 
 lemma below_kernel_base:
@@ -1024,7 +1024,7 @@ lemma opt_cap_page:"\<lbrakk>valid_idle s;pt_page_relation a pg x S s \<rbrakk>\
   apply (frule(1) page_table_not_idle)
   apply (clarsimp simp:transform_objects_def not_idle_thread_def page_directory_not_idle
     restrict_map_def object_slots_def)
-  apply (clarsimp simp:transform_page_table_contents_def unat_map_def split:ARM_Structs_A.pte.split_asm | rule conjI )+
+  apply (clarsimp simp:transform_page_table_contents_def unat_map_def split:Arch_Structs_A.pte.split_asm | rule conjI )+
     apply (clarsimp simp:transform_page_table_contents_def unat_map_def transform_pte_def)
     apply (simp add:word_of_int_nat[OF uint_ge_0,simplified] ucast_def mask_pt_bits_less)+
     apply (clarsimp simp:transform_page_table_contents_def unat_map_def transform_pte_def)
@@ -1042,7 +1042,7 @@ lemma opt_cap_section:
     apply (frule(1) page_directory_not_idle)
     apply (clarsimp simp:transform_objects_def not_idle_thread_def page_directory_not_idle
     restrict_map_def object_slots_def)
-    apply (clarsimp simp:transform_page_directory_contents_def unat_map_def split:ARM_Structs_A.pte.split_asm | rule conjI)+
+    apply (clarsimp simp:transform_page_directory_contents_def unat_map_def split:Arch_Structs_A.pte.split_asm | rule conjI)+
       apply (clarsimp simp:transform_page_directory_contents_def unat_map_def transform_pde_def unat_def[symmetric] below_kernel_base)
       apply (simp add:word_of_int_nat[OF uint_ge_0,simplified] ucast_def unat_def mask_pt_bits_less)+
     apply (simp add:mask_pd_bits_less)
@@ -1051,7 +1051,7 @@ lemma opt_cap_section:
   apply (frule(1) page_directory_not_idle)
   apply (clarsimp simp:transform_objects_def not_idle_thread_def page_directory_not_idle
     restrict_map_def object_slots_def)
-  apply (clarsimp simp:transform_page_directory_contents_def unat_map_def split:ARM_Structs_A.pte.split_asm | rule conjI)+
+  apply (clarsimp simp:transform_page_directory_contents_def unat_map_def split:Arch_Structs_A.pte.split_asm | rule conjI)+
   apply (clarsimp simp:transform_page_directory_contents_def unat_map_def transform_pde_def unat_def[symmetric] below_kernel_base)
   apply (simp add:word_of_int_nat[OF uint_ge_0,simplified] ucast_def unat_def mask_pt_bits_less)+
   apply (simp add:mask_pd_bits_less)
@@ -1150,7 +1150,7 @@ lemma dcorres_delete_cap_simple_set_pt:
        and pt_page_relation (ptr && ~~ mask pt_bits) pg_id ptr UNIV
        and valid_idle and ko_at (ArchObj (arch_kernel_obj.PageTable fun)) (ptr && ~~ mask pt_bits))
     (delete_cap_simple (ptr && ~~ mask pt_bits, unat (ptr && mask pt_bits >> 2)))
-    (set_pt (ptr && ~~ mask pt_bits) (fun(ucast (ptr && mask pt_bits >> 2) := ARM_Structs_A.pte.InvalidPTE)))"
+    (set_pt (ptr && ~~ mask pt_bits) (fun(ucast (ptr && mask pt_bits >> 2) := Arch_Structs_A.pte.InvalidPTE)))"
   apply (simp add:delete_cap_simple_def set_pt_def gets_the_def gets_def bind_assoc get_object_def)
   apply (rule dcorres_absorb_get_l)
   apply (rule dcorres_absorb_get_r)
@@ -1242,7 +1242,7 @@ lemma dcorres_delete_cap_simple_set_pde:
          or pd_super_section_relation (ptr && ~~ mask pd_bits) oid ptr)
     and valid_idle and ko_at (ArchObj (arch_kernel_obj.PageDirectory fun)) (ptr && ~~ mask pd_bits))
              (delete_cap_simple (ptr && ~~ mask pd_bits, unat (ptr && mask pd_bits >> 2)))
-             (set_pd (ptr && ~~ mask pd_bits) (fun(ucast (ptr && mask pd_bits >> 2) := ARM_Structs_A.pde.InvalidPDE)))"
+             (set_pd (ptr && ~~ mask pd_bits) (fun(ucast (ptr && mask pd_bits >> 2) := Arch_Structs_A.pde.InvalidPDE)))"
   apply (simp add:delete_cap_simple_def set_pd_def gets_the_def gets_def bind_assoc get_object_def)
   apply (rule dcorres_absorb_get_l)
   apply (rule dcorres_absorb_get_r)
@@ -1285,7 +1285,7 @@ lemma dcorres_delete_cap_simple_section:
   "dcorres dc \<top> (invs and pd_section_relation (lookup_pd_slot pd v && ~~ mask pd_bits) oid
                     (lookup_pd_slot pd v) and  K (is_aligned pd pd_bits \<and> v < kernel_base))
            (delete_cap_simple (cdl_lookup_pd_slot pd v))
-           (store_pde (lookup_pd_slot pd v) ARM_Structs_A.pde.InvalidPDE)"
+           (store_pde (lookup_pd_slot pd v) Arch_Structs_A.pde.InvalidPDE)"
   apply (clarsimp simp:store_pde_def transform_pd_slot_ref_def
     lookup_pd_slot_def)
   apply (rule corres_gen_asm2)
@@ -1304,6 +1304,8 @@ lemma dcorres_delete_cap_simple_section:
   done
 
 lemma large_frame_range_helper:
+  fixes t :: word32
+  shows
   "t \<in> set [0 , 4 .e. 0x3C] \<Longrightarrow> t < 0x40"
   apply (clarsimp simp: upto_enum_step_def)
   apply (subgoal_tac "x < 0x10")
@@ -1330,6 +1332,8 @@ lemma zip_map_eqv:
 done
 
 lemma page_directory_address_eq:
+  fixes ptr :: word32
+  shows
   "\<lbrakk>is_aligned ptr 6; t \<in> set [0 , 4 .e. 0x3C]\<rbrakk> \<Longrightarrow> ptr && ~~ mask pd_bits = ptr + t && ~~ mask pd_bits"
   apply (drule large_frame_range_helper)
   using mask_lower_twice[where m = 14 and n = 6 and x= ptr,symmetric]
@@ -1346,6 +1350,8 @@ lemma page_directory_address_eq:
 done
 
 lemma page_table_address_eq:
+  fixes ptr :: word32
+  shows
   "\<lbrakk>is_aligned ptr 6; t \<in> set [0 , 4 .e. 0x3C]\<rbrakk> \<Longrightarrow> ptr && ~~ mask pt_bits = ptr + t && ~~ mask pt_bits"
   apply (drule large_frame_range_helper)
   using mask_lower_twice[where m = 10 and n = 6 and x= ptr,symmetric]
@@ -1520,7 +1526,7 @@ lemma remain_pd_either_section_relation:
   "\<lbrakk>\<forall>y \<in> set ys. is_aligned y 2;ptr\<notin> set ys;is_aligned ptr 2\<rbrakk>
    \<Longrightarrow> \<lbrace>\<lambda>s. \<forall>y\<in> set ys. (pd_super_section_relation (y && ~~ mask pd_bits) pg_id y s \<or>
     pd_section_relation (y && ~~ mask pd_bits) pg_id y s) \<rbrace>
-    store_pde ptr ARM_Structs_A.pde.InvalidPDE
+    store_pde ptr Arch_Structs_A.pde.InvalidPDE
    \<lbrace>\<lambda>r s. \<forall>y\<in>set ys.
      (pd_super_section_relation (y && ~~ mask pd_bits) pg_id y s \<or>
      pd_section_relation (y && ~~ mask pd_bits) pg_id y s)\<rbrace>"
@@ -1578,7 +1584,7 @@ lemma dcorres_store_invalid_pde_super_section:
    and invs
    and K (ucast (ptr && mask pd_bits >> 2) \<notin> kernel_mapping_slots))
   (delete_cap_simple (ptr && ~~ mask pd_bits, unat (ptr && mask pd_bits >> 2)))
-  (store_pde ptr ARM_Structs_A.pde.InvalidPDE)"
+  (store_pde ptr Arch_Structs_A.pde.InvalidPDE)"
   apply simp
   apply (rule corres_gen_asm2)
   apply (rule corres_guard_imp)
@@ -1594,7 +1600,7 @@ lemma dcorres_store_invalid_pte:
   "dcorres dc \<top> (pt_page_relation (ptr && ~~ mask pt_bits) pg_id ptr UNIV
    and invs )
   (delete_cap_simple (ptr && ~~ mask pt_bits, unat (ptr && mask pt_bits >> 2)))
-  (store_pte ptr ARM_Structs_A.pte.InvalidPTE)"
+  (store_pte ptr Arch_Structs_A.pte.InvalidPTE)"
   apply (rule corres_guard_imp)
     apply (simp add:store_pte_def)
     apply (rule corres_symb_exec_r)
@@ -1649,10 +1655,10 @@ lemma dcorres_store_pte_non_sense:
 
 lemma store_pde_non_sense_wp:
   "\<lbrace>\<lambda>s. (\<exists>f. ko_at (ArchObj (arch_kernel_obj.PageDirectory f)) (slot && ~~ mask pd_bits) s
-    \<and> (\<forall>slot\<in>set xs. f (ucast (slot && mask pd_bits >> 2)) = ARM_Structs_A.pde.InvalidPDE)) \<rbrace>
-  store_pde x ARM_Structs_A.pde.InvalidPDE
+    \<and> (\<forall>slot\<in>set xs. f (ucast (slot && mask pd_bits >> 2)) = Arch_Structs_A.pde.InvalidPDE)) \<rbrace>
+  store_pde x Arch_Structs_A.pde.InvalidPDE
    \<lbrace>\<lambda>r s. (\<exists>f. ko_at (ArchObj (arch_kernel_obj.PageDirectory f)) (slot && ~~ mask pd_bits) s
-    \<and> (\<forall>slot\<in>set xs. f (ucast (slot && mask pd_bits >> 2)) = ARM_Structs_A.pde.InvalidPDE))\<rbrace>"
+    \<and> (\<forall>slot\<in>set xs. f (ucast (slot && mask pd_bits >> 2)) = Arch_Structs_A.pde.InvalidPDE))\<rbrace>"
   apply (simp add:store_pde_def get_object_def get_pde_def set_pd_def set_object_def)
   apply wp
   apply (clarsimp simp:obj_at_def split:Structures_A.kernel_object.splits arch_kernel_object.splits)
@@ -1661,10 +1667,10 @@ lemma store_pde_non_sense_wp:
 lemma dcorres_store_invalid_pde_tail_super_section:
   "dcorres dc \<top> (valid_idle and
     (\<lambda>s. \<exists>f. ko_at (ArchObj (arch_kernel_obj.PageDirectory f)) (slot && ~~ mask pd_bits) s
-    \<and> (\<forall>slot\<in> set slots. f (ucast (slot && mask pd_bits >> 2)) = ARM_Structs_A.pde.InvalidPDE))
+    \<and> (\<forall>slot\<in> set slots. f (ucast (slot && mask pd_bits >> 2)) = Arch_Structs_A.pde.InvalidPDE))
     and K (\<forall>sl\<in> set slots. sl && ~~ mask pd_bits = slot && ~~ mask pd_bits))
   (return a)
-  (mapM (swp store_pde ARM_Structs_A.pde.InvalidPDE) slots)"
+  (mapM (swp store_pde Arch_Structs_A.pde.InvalidPDE) slots)"
   proof (induct slots arbitrary:a)
     case Nil
     show ?case
@@ -1689,10 +1695,10 @@ qed
 
 lemma store_pte_non_sense_wp:
   "\<lbrace>\<lambda>s. (\<exists>f. ko_at (ArchObj (arch_kernel_obj.PageTable f)) (slot && ~~ mask pt_bits) s
-    \<and> (\<forall>slot\<in>set xs. f (ucast (slot && mask pt_bits >> 2)) = ARM_Structs_A.pte.InvalidPTE)) \<rbrace>
-  store_pte x ARM_Structs_A.pte.InvalidPTE
+    \<and> (\<forall>slot\<in>set xs. f (ucast (slot && mask pt_bits >> 2)) = Arch_Structs_A.pte.InvalidPTE)) \<rbrace>
+  store_pte x Arch_Structs_A.pte.InvalidPTE
    \<lbrace>\<lambda>r s. (\<exists>f. ko_at (ArchObj (arch_kernel_obj.PageTable f)) (slot && ~~ mask pt_bits) s
-    \<and> (\<forall>slot\<in>set xs. f (ucast (slot && mask pt_bits >> 2)) = ARM_Structs_A.pte.InvalidPTE))\<rbrace>"
+    \<and> (\<forall>slot\<in>set xs. f (ucast (slot && mask pt_bits >> 2)) = Arch_Structs_A.pte.InvalidPTE))\<rbrace>"
   apply (simp add:store_pte_def get_object_def
     get_pte_def set_pt_def set_object_def)
   apply wp
@@ -1703,10 +1709,10 @@ lemma store_pte_non_sense_wp:
 lemma dcorres_store_invalid_pte_tail_large_page:
   "dcorres dc \<top> (valid_idle and
     (\<lambda>s. \<exists>f. ko_at (ArchObj (arch_kernel_obj.PageTable f)) (slot && ~~ mask pt_bits) s
-    \<and> (\<forall>slot\<in> set slots. f (ucast (slot && mask pt_bits >> 2)) = ARM_Structs_A.pte.InvalidPTE))
+    \<and> (\<forall>slot\<in> set slots. f (ucast (slot && mask pt_bits >> 2)) = Arch_Structs_A.pte.InvalidPTE))
     and K (\<forall>sl\<in> set slots. sl && ~~ mask pt_bits = slot && ~~ mask pt_bits))
   (return a)
-  (mapM (swp store_pte ARM_Structs_A.pte.InvalidPTE) slots)"
+  (mapM (swp store_pte Arch_Structs_A.pte.InvalidPTE) slots)"
   proof (induct slots arbitrary:a)
     case Nil
     show ?case
@@ -1758,7 +1764,7 @@ lemma dcorres_unmap_large_section:
            and (pd_super_section_relation ((lookup_pd_slot ptr v) && ~~ mask pd_bits)
                pg_id (lookup_pd_slot ptr v)))
      (delete_cap_simple (cdl_lookup_pd_slot ptr v))
-     (mapM (swp store_pde ARM_Structs_A.pde.InvalidPDE) 
+     (mapM (swp store_pde Arch_Structs_A.pde.InvalidPDE) 
            (map (\<lambda>x. x + lookup_pd_slot ptr v) [0 , 4 .e. 0x3C]))"
   apply (subst mapM_Cons_split)
    apply (simp add:upto_enum_step_def upto_enum_def)
@@ -1866,14 +1872,14 @@ lemma dcorres_unmap_large_section:
 lemma pt_page_relation_weaken:
   "\<lbrakk> pt_page_relation a b c S s; S \<subseteq> T \<rbrakk> \<Longrightarrow> pt_page_relation a b c T s"
   apply (clarsimp simp: pt_page_relation_def)
-  apply (auto split: ARM_Structs_A.pte.split)
+  apply (auto split: Arch_Structs_A.pte.split)
   done
 
 lemma pt_page_relation_univ:
   "pt_page_relation a b c {ARMLargePage} s
   \<Longrightarrow> pt_page_relation a b c UNIV s"
   apply (clarsimp simp:pt_page_relation_def)
-  apply (clarsimp split: ARM_Structs_A.pte.splits)
+  apply (clarsimp split: Arch_Structs_A.pte.splits)
   done
 
 lemma dcorres_unmap_large_page:
@@ -1881,7 +1887,7 @@ lemma dcorres_unmap_large_page:
     \<Longrightarrow> dcorres dc \<top> (invs and valid_pdpt_objs
           and pt_page_relation (ptr && ~~ mask pt_bits) pg_id ptr {ARMLargePage})
      (delete_cap_simple (transform_pt_slot_ref ptr))
-     (mapM (swp store_pte ARM_Structs_A.pte.InvalidPTE) (map (\<lambda>x. x + ptr) [0 , 4 .e. 0x3C]))"
+     (mapM (swp store_pte Arch_Structs_A.pte.InvalidPTE) (map (\<lambda>x. x + ptr) [0 , 4 .e. 0x3C]))"
   apply (subst mapM_Cons_split)
    apply (simp add:upto_enum_step_def upto_enum_def)
   apply (simp add: PageTableUnmap_D.unmap_page_def)
@@ -1959,7 +1965,7 @@ lemma dcorres_unmap_large_page:
     apply simp
    apply fastforce
   apply (clarsimp split:if_splits
-    ARM_Structs_A.pte.split_asm)
+    Arch_Structs_A.pte.split_asm)
   apply (rule ccontr)
   apply (erule_tac x = "ucast (ptr + of_nat x * 4 && mask pt_bits >> 2)"
     in in_empty_interE)
@@ -2036,7 +2042,7 @@ lemma check_mapping_pptr_pt_relation:
   apply (clarsimp simp: a_type_def pt_page_relation_def
                  split: Structures_A.kernel_object.split_asm split_if_asm
                         arch_kernel_obj.split_asm)
-  apply (simp split: ARM_Structs_A.pte.split_asm)
+  apply (simp split: Arch_Structs_A.pte.split_asm)
   done
 
 lemma check_mapping_pptr_section_relation:
@@ -2050,7 +2056,7 @@ lemma check_mapping_pptr_section_relation:
   apply (clarsimp simp: a_type_def pd_section_relation_def pd_super_section_relation_def
                  split: Structures_A.kernel_object.split_asm split_if_asm
                         arch_kernel_obj.split_asm
-                        ARM_Structs_A.pde.split_asm)
+                        Arch_Structs_A.pde.split_asm)
 done
 
 lemma check_mapping_pptr_super_section_relation:
@@ -2063,7 +2069,7 @@ lemma check_mapping_pptr_super_section_relation:
   apply (clarsimp simp: a_type_def pd_section_relation_def pd_super_section_relation_def
                  split: Structures_A.kernel_object.split_asm split_if_asm
                         arch_kernel_obj.split_asm
-                        ARM_Structs_A.pde.split_asm)
+                        Arch_Structs_A.pde.split_asm)
 done
 
 lemma lookup_pt_slot_aligned:
@@ -2248,7 +2254,7 @@ lemma dcorres_unmap_page_table_store_pde:
     and valid_idle and K (is_aligned pd 14 \<and> vptr < kernel_base) 
     and pd_pt_relation (lookup_pd_slot pd vptr && ~~ mask pd_bits) pt_id (lookup_pd_slot pd vptr) )
            (delete_cap_simple (cdl_lookup_pd_slot pd vptr))
-           (store_pde (lookup_pd_slot pd vptr) ARM_Structs_A.pde.InvalidPDE)"
+           (store_pde (lookup_pd_slot pd vptr) Arch_Structs_A.pde.InvalidPDE)"
   apply (rule corres_guard_imp)
     apply (rule corres_gen_asm2)
     apply (subst dcorres_lookup_pd_slot,assumption)
@@ -2317,7 +2323,7 @@ lemma cleanCacheRange_PoU_underlying_memory[wp]:
 done
 
 lemma valid_pde_pt_at:
-  "\<lbrakk>valid_pde (ARM_Structs_A.pde.PageTablePDE word1 se word2) s \<and> pspace_aligned s\<rbrakk>
+  "\<lbrakk>valid_pde (Arch_Structs_A.pde.PageTablePDE word1 se word2) s \<and> pspace_aligned s\<rbrakk>
   \<Longrightarrow> (ptrFromPAddr word1, unat ((vaddr >> 12) && 0xFF)) =
   transform_pt_slot_ref (ptrFromPAddr word1 + ((vaddr >> 12) && 0xFF << 2))"
   apply (clarsimp simp :transform_pt_slot_ref_def )
@@ -3188,7 +3194,7 @@ lemma get_ipc_buffer_words_irq_state_independent[intro!, simp]:
   apply (rule ext, rule ext)
   apply (simp add: get_ipc_buffer_words_def)
   apply (case_tac "tcb_ipcframe x", simp_all)
-  apply (clarsimp split: ARM_Structs_A.arch_cap.splits)
+  apply (clarsimp split: Arch_Structs_A.arch_cap.splits)
   apply (rule arg_cong[where f=the])
   apply (rule evalMonad_mapM_cong)
     apply (simp add: evalMonad_def)
