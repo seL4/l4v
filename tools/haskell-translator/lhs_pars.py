@@ -16,6 +16,7 @@ import os
 
 
 class Call:
+
     def __init__(self):
         self.restr = None
         self.decls_only = False
@@ -103,8 +104,8 @@ def top_transform(input):
     comments = []
     for n, line in enumerate(input):
         if '\t' in line:
-            sys.stderr.write('WARN: tab in line %d, %s.\n' % \
-             (n, filename))
+            sys.stderr.write('WARN: tab in line %d, %s.\n' %
+                             (n, filename))
         if line.startswith('> '):
             if '--' in line:
                 line = line.split('--')[0].strip()
@@ -153,8 +154,8 @@ def get_lines(defs, call):
         all the potential output generated at parse time."""
 
     if call.restr:
-        defs = [d for d in defs if d['type'] == 'comments' \
-           or call.restr(d)]
+        defs = [d for d in defs if d['type'] == 'comments'
+                or call.restr(d)]
 
     output = []
     for d in defs:
@@ -379,7 +380,7 @@ def def_lines(d, call):
         else:
             if 'primrec' in d:
                 return comments + ['primrec'] + typesig \
-                 + ['where'] + body
+                    + ['where'] + body
             if typesig:
                 return comments + ['definition'] + typesig + ['where'] + body
             else:
@@ -766,8 +767,8 @@ def named_extractor_update_lemma(ex_name, up_name):
 def named_extractor_definitions(name, map, type, header, constructors):
     lines = []
     lines.append('primrec')
-    lines.append ('  %s :: "%s \<Rightarrow> %s"' \
-      % (name, header, type))
+    lines.append('  %s :: "%s \<Rightarrow> %s"'
+                 % (name, header, type))
     lines.append('where')
     is_first = True
     for cons, i in map.iteritems():
@@ -791,8 +792,8 @@ def named_update_definitions(name, map, type, header, constructors):
     ra = '\<Rightarrow>'
     if len(type.split()) > 1:
         type = '(%s)' % type
-    lines.append ('  %s_update :: "(%s %s %s) %s %s %s %s"' \
-      % (name, type, ra, type, ra, header, ra, header))
+    lines.append('  %s_update :: "(%s %s %s) %s %s %s %s"'
+                 % (name, type, ra, type, ra, header, ra, header))
     lines.append('where')
     is_first = True
     for cons, i in map.iteritems():
@@ -872,21 +873,21 @@ def type_wrapper_type(header, cons, rhs, d, decons=None):
     ]
     if decons:
         (decons, decons_type) = decons
-        lines.extend ([
-        '',
-        'definition',
-        '  %s :: "%s \\<Rightarrow> %s"' % (decons, header, header),
-        'where',
-        '  %s_def[simp]:' % decons,
-        ' "%s \\<equiv> id"' % decons,
-        '',
-        'definition'
-        '  %s_update :: "(%s \\<Rightarrow> %s) \\<Rightarrow> %s \\<Rightarrow> %s"' \
-         % (decons, header, header, header, header),
-        'where',
-        '  %s_update_def[simp]:' % decons,
-        ' "%s_update f y \<equiv> f y"' % decons,
-        ''
+        lines.extend([
+            '',
+            'definition',
+            '  %s :: "%s \\<Rightarrow> %s"' % (decons, header, header),
+            'where',
+            '  %s_def[simp]:' % decons,
+            ' "%s \\<equiv> id"' % decons,
+            '',
+            'definition'
+            '  %s_update :: "(%s \\<Rightarrow> %s) \\<Rightarrow> %s \\<Rightarrow> %s"'
+            % (decons, header, header, header, header),
+            'where',
+            '  %s_update_def[simp]:' % decons,
+            ' "%s_update f y \<equiv> f y"' % decons,
+            ''
         ])
         lines.extend(named_constructor_translation(cons, [(decons, decons_type)
                                                           ], header))
@@ -906,7 +907,7 @@ def instance_transform(d):
         return None
     if typename == '()':
         print "Warning: discarding class instance 'unit :: %s'"\
-         % classname
+            % classname
         return None
     if len(bits) == 3:
         if children == []:
@@ -985,8 +986,8 @@ def finite_instance_proofs(header, cons):
     lines.append('')
     lines.append('instance %s :: finite' % header)
     lines.append('  apply (intro_classes)')
-    lines.append ('  apply (rule_tac f="%s" in finite_surj_type)' \
-         % cons)
+    lines.append('  apply (rule_tac f="%s" in finite_surj_type)'
+                 % cons)
     lines.append('  apply (safe, case_tac x, simp_all)')
     lines.append('  done')
 
@@ -1056,8 +1057,8 @@ def serialisable_instance_proofs(header, canonical, d):
     lines.append('instance %s :: serialisable' % header)
     lines.append('  apply intro_classes')
     lines.append('  apply (case_tac w)')
-    lines.append ('  apply (simp_all add: serialisable_%s_defs loader_simps)' \
-      % header)
+    lines.append('  apply (simp_all add: serialisable_%s_defs loader_simps)'
+                 % header)
     lines.append('  done')
 
     return (lines, [])
@@ -1092,7 +1093,7 @@ def storable_instance_proofs(header, canonical, d):
             bits[1] = 'x ' + bits[1].strip()[1:]
         bits = bits[1].split(None, 1)
         body[0] = '  objBits_%s: "objBits (%s :: %s) %s' \
-          % (header, bits[0], header, bits[1])
+            % (header, bits[0], header, bits[1])
         extradefs.extend(body)
 
     extradefs.append('')
@@ -1102,7 +1103,7 @@ def storable_instance_proofs(header, canonical, d):
         bits = body[0].split('makeObject')
         assert bits[0].strip() == '"'
         body[0] = '  makeObject_%s: "(makeObject :: %s) %s' \
-          % (header, header, bits[1])
+            % (header, header, bits[1])
         extradefs.extend(body)
 
     extradefs.extend(['', 'definition', ])
@@ -1124,7 +1125,7 @@ def storable_instance_proofs(header, canonical, d):
         assert bits[0].strip() == '"'
         bits = bits[1].split(None, 1)
         body[0] = ' "updateObject (%s :: %s) %s' \
-          % (bits[0], header, bits[1])
+            % (bits[0], header, bits[1])
         extradefs.extend(body)
     else:
         extradefs.extend([
@@ -1160,7 +1161,7 @@ def pspace_storable_instance_proofs(header, canonical, d):
             bits[1] = 'x ' + bits[1].strip()[1:]
         bits = bits[1].split(None, 1)
         body[0] = '  objBits_%s: "objBits (%s :: %s) %s' \
-          % (header, bits[0], header, bits[1])
+            % (header, bits[0], header, bits[1])
         extradefs.extend(body)
 
     extradefs.append('')
@@ -1170,7 +1171,7 @@ def pspace_storable_instance_proofs(header, canonical, d):
         bits = body[0].split('makeObject')
         assert bits[0].strip() == '"'
         body[0] = '  makeObject_%s: "(makeObject :: %s) %s' \
-          % (header, header, bits[1])
+            % (header, header, bits[1])
         extradefs.extend(body)
 
     extradefs.extend(['', 'definition', ])
@@ -1192,7 +1193,7 @@ def pspace_storable_instance_proofs(header, canonical, d):
         assert bits[0].strip() == '"'
         bits = bits[1].split(None, 1)
         body[0] = ' "updateObject (%s :: %s) %s' \
-          % (bits[0], header, bits[1])
+            % (bits[0], header, bits[1])
         extradefs.extend(body)
     else:
         extradefs.extend([
@@ -1233,10 +1234,10 @@ def enum_instance_proofs (header, canonical, d):
     if len(canonical) == 1:
         [(_, (cons, n))] = canonical 
         assert n == 1
-        lines.append ('instantiation %s :: enum begin' % header)
-        lines.append ('definition')
-        lines.append ('  enum_%s: "enum_class.enum \<equiv> map %s enum"' \
-                % (header, cons))
+        lines.append('instantiation %s :: enum begin' % header)
+        lines.append('definition')
+        lines.append('  enum_%s: "enum_class.enum \<equiv> map %s enum"' \
+                     % (header, cons))
 
     else:
         cons_no_args = [cons for i, (cons, n) in canonical if n == 0]
@@ -1260,45 +1261,45 @@ def enum_instance_proofs (header, canonical, d):
         lines.append('lemma %s_map_distinct[simp]: "distinct (map %s enum)"' % (cons, cons))
         lines.append('  apply (simp add: distinct_map)')
         lines.append('  by (meson injI %s.inject)' % header)
-    lines.append ('')
-    lines.append ('definition')
-    lines.append ('  "enum_class.enum_all (P :: %s \<Rightarrow> bool) \<longleftrightarrow> Ball UNIV P"' \
+    lines.append('')
+    lines.append('definition')
+    lines.append('  "enum_class.enum_all (P :: %s \<Rightarrow> bool) \<longleftrightarrow> Ball UNIV P"' \
             % header)
-    lines.append ('')
-    lines.append ('definition')
-    lines.append ('  "enum_class.enum_ex (P :: %s \<Rightarrow> bool) \<longleftrightarrow> Bex UNIV P"' \
+    lines.append('')
+    lines.append('definition')
+    lines.append('  "enum_class.enum_ex (P :: %s \<Rightarrow> bool) \<longleftrightarrow> Bex UNIV P"' \
             % header)
-    lines.append ('')
-    lines.append ('  instance')
-    lines.append ('  apply intro_classes')
-    lines.append ('   apply (safe, simp)')
-    lines.append ('   apply (case_tac x)')
+    lines.append('')
+    lines.append('  instance')
+    lines.append('  apply intro_classes')
+    lines.append('   apply (safe, simp)')
+    lines.append('   apply (case_tac x)')
     if len(canonical) == 1:
-        lines.append ('  apply (simp_all add: enum_%s enum_all_%s_def enum_ex_%s_def' \
+        lines.append('  apply (simp_all add: enum_%s enum_all_%s_def enum_ex_%s_def' \
                 % (header, header, header))
-        lines.append ('    distinct_map_enum)')
-            lines.append ('  done')
+        lines.append('    distinct_map_enum)')
+        lines.append('  done')
     else:
-        lines.append ('  apply (simp_all add: enum_%s enum_all_%s_def enum_ex_%s_def)' \
+        lines.append('  apply (simp_all add: enum_%s enum_all_%s_def enum_ex_%s_def)' \
                 % (header, header, header))
-        lines.append ('  by fast+')
-    lines.append ('end')
-    lines.append ('')
-    lines.append ('instantiation %s :: enum_alt' % header)
-    lines.append ('begin')
-    lines.append ('definition')
-    lines.append ('  enum_alt_%s: "enum_alt \<equiv> ' % header)
-    lines.append ('    alt_from_ord (enum :: %s list)"' % header)
-    lines.append ('instance ..')
-    lines.append ('end')
-    lines.append ('')
-    lines.append ('instantiation %s :: enumeration_both' % header)
-    lines.append ('begin')
-    lines.append ('instance by (intro_classes, simp add: enum_alt_%s)' \
+        lines.append('  by fast+')
+    lines.append('end')
+    lines.append('')
+    lines.append('instantiation %s :: enum_alt' % header)
+    lines.append('begin')
+    lines.append('definition')
+    lines.append('  enum_alt_%s: "enum_alt \<equiv> ' % header)
+    lines.append('    alt_from_ord (enum :: %s list)"' % header)
+    lines.append('instance ..')
+    lines.append('end')
+    lines.append('')
+    lines.append('instantiation %s :: enumeration_both' % header)
+    lines.append('begin')
+    lines.append('instance by (intro_classes, simp add: enum_alt_%s)' \
             % header)
-    lines.append ('end')
-    lines.append ('')
-    lines.append ('(*>*)')
+    lines.append('end')
+    lines.append('')
+    lines.append('(*>*)')
 
     return (lines, [])
 
@@ -1360,7 +1361,7 @@ def bij_instance (classname, typename, constructor, fns):
         fstr2 = fstr % names2
         L.append ('  %s_%s: "%s \<equiv>' % (fname, typename, fstr1))
         for name in names:
-            L.append ("    case %s of %s %s' \<Rightarrow>" \
+            L.append("    case %s of %s %s' \<Rightarrow>" \
                 % (name, constructor, name))
         if cast_return:
             L.append ('      %s (%s)"' % (constructor, fstr2))
@@ -1411,7 +1412,7 @@ def body_transform(body, defined, sig, nopattern=False):
 
     if '(' in line.split('=')[0] and not nopattern:
         [(line, children)] = \
-         pattern_match_transform ([(line, children)])
+            pattern_match_transform([(line, children)])
 
     if 'liftIO' in reduce_to_single_line((line, children)):
         # liftIO is the translation boundary for current
@@ -1527,7 +1528,7 @@ def zipWith_transforms(line, children):
         if ',' in internal:
             bits = internal.split(',')
             l = '%s(zipE4 (%s) (%s) (%s))' \
-             % (ws, sndlast, bits[0], bits[-1])
+                % (ws, sndlast, bits[0], bits[-1])
         else:
             l = '%s(zipE3 (%s) (%s))' % (ws, sndlast, internal)
     else:
@@ -1535,7 +1536,7 @@ def zipWith_transforms(line, children):
         if ',' in internal:
             bits = internal.split(',')
             l = '%s(zipE2 (%s) (%s) (%s))' \
-             % (ws, bits[0], bits[1], last)
+                % (ws, bits[0], bits[1], last)
         else:
             l = '%s(zipE1 (%s) (%s))' % (ws, internal, last)
 
@@ -1572,7 +1573,7 @@ def type_assertion_transform_inner(line):
     type = m.expand('\\2').strip()
     type = type_transform(type)
     return line[:m.start()] + '(%s::%s)' % (var, type) \
-     + type_assertion_transform_inner (line[m.end():])
+        + type_assertion_transform_inner(line[m.end():])
 
 
 def type_assertion_transform(line, children):
@@ -1757,7 +1758,7 @@ def do_clause_pattern(line, children, type, n=0):
         return default
     (left, right) = line.split('<-', 1)
     if ':' not in left and '[' not in left \
-     and len(left.split()) == 1:
+            and len(left.split()) == 1:
         return default
     left = left.strip()
 
@@ -1798,7 +1799,7 @@ def do_clause_pattern(line, children, type, n=0):
             new_line = lead_ws(line) + new_left + ' <- ' + right
             extra = []
         return do_clause_pattern (new_line, children, type, n + 1) \
-         + extra
+            + extra
     for lhs in left_start_table:
         if left.startswith(lhs):
             left = left[len(lhs):]
@@ -1828,7 +1829,7 @@ def split_on_unmatched_bracket(elts, n=None):
                     frag2 = ' ' * len(frag1) + line[j:]
                     new_elts = elts[:i] + [(frag1, [])]
                     oth_elts = [(frag2, children)] \
-                     + elts[i + 1:]
+                        + elts[i + 1:]
                     return (new_elts, oth_elts, n)
         c, other_c, n = split_on_unmatched_bracket(children, n)
         if other_c:
@@ -1948,8 +1949,8 @@ def case_clauses_transform((line, children)):
             x = str(bits[0]) + ':: ' + type_transform(str(bits[1]))
 
     if children and children[-1][0].strip().startswith('where'):
-        sys.stderr.write ('Warning: where clause in case: %r\n' \
-           % line)
+        sys.stderr.write('Warning: where clause in case: %r\n'
+                         % line)
         return (beforecase + '(* case removed *) undefined', [])
         where_clause = where_clause_transform(children[-1])
         children = children[:-1]
@@ -2024,7 +2025,7 @@ def case_clauses_transform((line, children)):
 
     if has_trailing_string(',', new_children[-1]):
         new_children[-1] = \
-         remove_trailing_string (',', new_children[-1])
+            remove_trailing_string(',', new_children[-1])
         new_children.append((ws + '),', []))
     else:
         new_children.append((ws + ')', []))
@@ -2488,8 +2489,8 @@ def get_supplied_transform_table():
 
     for line, n, children in tree:
         if ('conv:' not in line) or len(children) != 2:
-            sys.stderr.write ('WARN: supplied line %d dropped\n' \
-             % n)
+            sys.stderr.write('WARN: supplied line %d dropped\n'
+                             % n)
             if 'conv:' not in line:
                 sys.stderr.write('\t\t(token "conv:" missing)\n')
             if len(children) != 2:
@@ -2521,8 +2522,8 @@ supplied_transforms_usage = dict([(
 def warn_supplied_usage():
     for (key, usage) in supplied_transforms_usage.iteritems():
         if not usage:
-            sys.stderr.write ('WARN: supplied conv unused: %s\n' \
-              % key[0])
+            sys.stderr.write('WARN: supplied conv unused: %s\n'
+                             % key[0])
 
 
 quotes_getter = re.compile('"[^"]+"')
@@ -2584,7 +2585,7 @@ def pattern_match_transform(body):
             elif children and leading_bar.match(children[0][0]):
                 string = string + ' ='
                 children = \
-                 guarded_body_transform (children, ' = ')
+                    guarded_body_transform(children, ' = ')
             elif children and children[0][1] == []:
                 (moreline, _) = children.pop(0)
                 string = string + ' ' + moreline.strip()

@@ -10,6 +10,7 @@
 
 
 class BracedString:
+
     def __init__(self, s, l, r, bits=None):
         if bits is None:
             bits = self._get_bits(s, l, r)
@@ -56,8 +57,8 @@ class BracedString:
                 bits = self.bits + other.bits
             else:
                 bits = self.bits[:-1] + \
-                 [self.bits[-1] + other.bits[0]] + \
-                 other.bits[1:]
+                    [self.bits[-1] + other.bits[0]] + \
+                    other.bits[1:]
             return BracedString(self.s + other.s, self.l, self.r, bits)
 
         return BracedString(self.s + other, self.l, self.r)
