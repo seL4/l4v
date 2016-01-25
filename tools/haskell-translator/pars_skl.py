@@ -10,6 +10,8 @@
 """Parser for skeletons of theory files which are completed
 by inserting parsed Haskell."""
 
+from __future__ import print_function
+from __future__ import absolute_import
 import sys
 import lhs_pars
 import os
@@ -95,7 +97,7 @@ for line in instructions:
             try:
                 parsed = lhs_pars.parse(call)
             except:
-                print "%s -X-> %s" % (input, output)
+                print("%s -X-> %s" % (input, output))
                 raise
 
             if bits[0] == '#INCLUDE_HASKELL_PREPARSE':
@@ -116,7 +118,7 @@ for line in instructions:
         changed = 1
     if changed:
         if not quiet:
-            print instruct
+            print(instruct)
         try:
             os.unlink(output)
         except:

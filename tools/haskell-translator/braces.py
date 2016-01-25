@@ -1,3 +1,4 @@
+from __future__ import print_function
 #
 # Copyright 2014, NICTA
 #
@@ -172,9 +173,9 @@ str = BracedString
 
 if __name__ == '__main__':
     x = BracedString('a => b => c => (d => (e, f))', '(', ')')
-    print x.split('=>')
-    print x.split(',')
-    print 1, x.split('=>', 1)
-    print 2, x.split('=>', 2)
-    print 3, x.split('=>', 3)
-    print[y.split() for y in x.split('=>')]
+    print(x.split('=>'))
+    print(x.split(','))
+    print(1, x.split('=>', 1))
+    print(2, x.split('=>', 2))
+    print(3, x.split('=>', 3))
+    print([y.split() for y in x.split('=>')])

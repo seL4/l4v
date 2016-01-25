@@ -8,11 +8,18 @@
 # @TAG(NICTA_BSD)
 #
 
+from __future__ import print_function
+from __future__ import absolute_import
 import braces
 import re
 import sys
 import copy
 import os
+import six
+from six.moves import map
+from six.moves import range
+from six.moves import zip
+from functools import reduce
 
 
 class Call:
@@ -297,8 +304,8 @@ def defs_transform(d):
         d['body'] = pattern_match_transform(d['body'])
 
     if len(d['body']) == 0:
-        print
-        print d
+        print()
+        print(d)
         assert 0
 
     d['body'] = body_transform(d['body'], d['defined'], d.get('sig', None))
@@ -308,7 +315,7 @@ def defs_transform(d):
 def def_lines(d, call):
     """Produces the set of lines associated with a definition."""
     if 'arch_promotion' in d and not call.archdefs:
-        print d
+        print(d)
         return []
 
     if call.all_bits:
@@ -371,8 +378,8 @@ def def_lines(d, call):
                 else:
                     defname = '%s_def' % d['defined']
                 if 'primrec' in d:
-                    print 'warning body-only primrec:'
-                    print body[0]
+                    print('warning body-only primrec:')
+                    print(body[0])
                     return comments + ['primrec'] + body
                 return comments + ['defs %s:' % defname] + body
             else:
@@ -400,10 +407,10 @@ def type_sig_transform(tree_element):
     (pre, post) = line.split('::')
     result = type_transform(post)
     if '[pp' in result:
-        print line
-        print pre
-        print post
-        print result
+        print(line)
+        print(pre)
+        print(post)
+        print(result)
         assert 0
     line = pre + ':: "' + result + '"'
 
@@ -442,7 +449,7 @@ def type_transform(string):
             var_annotes.setdefault(var, [])
             var_annotes[var].extend(names)
         transformed = type_transform(bits[1])
-        for (var, insts) in var_annotes.iteritems():
+        for (var, insts) in six.iteritems(var_annotes):
             if len(insts) == 1:
                 newvar = '(%s :: %s)' % (var, insts[0])
             else:
@@ -565,8 +572,8 @@ def constructor_reversing(tokens):
         comma = braces.str(',', '+', '+')
         return [lbrack, tokens[1], comma, tokens[2], rbrack, tokens[0]]
     else:
-        print "Error parsing " + filename
-        print "Can't deal with %s" % tokens
+        print("Error parsing " + filename)
+        print("Can't deal with %s" % tokens)
         sys.exit(1)
 
 
@@ -576,8 +583,8 @@ def newtype_transform(d):
         elements, and forms a datatype statement and definitions for
         the named extractors and their update functions."""
     if len(d['body']) != 1:
-        print '--- newtype long body ---'
-        print d
+        print('--- newtype long body ---')
+        print(d)
     [(line, children)] = d['body']
 
     if children and children[-1][0].lstrip().startswith('deriving'):
@@ -665,7 +672,7 @@ def simple_newtype_transform(line, header, d):
 
         arities.append((str(bits[0]), len(bits[1:])))
 
-    if (dict(arities)).values() == [1] and header not in dontwrap:
+    if list((dict(arities)).values()) == [1] and header not in dontwrap:
         return type_wrapper_type(header, last_lhs, last_rhs, d)
 
     d['body'] = [('datatype %s =' % header, [(line, []) for line in lines])]
@@ -707,12 +714,12 @@ def named_newtype_transform(line, header, d):
             names[name][cons] = i
             types[name] = type
 
-    for name, map in names.iteritems():
+    for name, map in six.iteritems(names):
         lines.append('')
         lines.extend(named_extractor_definitions(name, map, types[name],
                                                  header, dict(constructors)))
 
-    for name, map in names.iteritems():
+    for name, map in six.iteritems(names):
         lines.append('')
         lines.extend(named_update_definitions(name, map, types[name], header,
                                               dict(constructors)))
@@ -730,14 +737,14 @@ def named_newtype_transform(line, header, d):
             lines.extend(check)
 
     if len(constructors) == 1:
-        for ex_name, _ in names.iteritems():
-            for up_name, _ in names.iteritems():
+        for ex_name, _ in six.iteritems(names):
+            for up_name, _ in six.iteritems(names):
                 lines.append('')
                 lines.extend(named_extractor_update_lemma(ex_name, up_name))
 
     arities = [(name, len(map)) for (name, map) in constructors]
 
-    if (dict(arities)).values() == [1]:
+    if list((dict(arities)).values()) == [1]:
         [(cons, map)] = constructors
         [(name, type)] = map
         return type_wrapper_type(header, cons, type, d, decons=(name, type))
@@ -771,7 +778,7 @@ def named_extractor_definitions(name, map, type, header, constructors):
                  % (name, header, type))
     lines.append('where')
     is_first = True
-    for cons, i in map.iteritems():
+    for cons, i in six.iteritems(map):
         if is_first:
             l = '  "%s (%s' % (name, cons)
             is_first = False
@@ -796,7 +803,7 @@ def named_update_definitions(name, map, type, header, constructors):
                  % (name, type, ra, type, ra, header, ra, header))
     lines.append('where')
     is_first = True
-    for cons, i in map.iteritems():
+    for cons, i in six.iteritems(map):
         if is_first:
             l = '  "%s_update f (%s' % (name, cons)
             is_first = False
@@ -903,11 +910,10 @@ def instance_transform(d):
     classname = bits[1]
     typename = type_conv(bits[2])
     if classname == 'Show':
-        print "Warning: discarding class instance '%s :: Show'" % typename
+        print("Warning: discarding class instance '%s :: Show'" % typename)
         return None
     if typename == '()':
-        print "Warning: discarding class instance 'unit :: %s'"\
-            % classname
+        print("Warning: discarding class instance 'unit :: %s'" % classname)
         return None
     if len(bits) == 3:
         if children == []:
@@ -955,7 +961,7 @@ def set_instance_proofs(header, constructor_arities, d):
     classes = d.get('deriving', [])
     instance_proof_fns = [instance_proof_table[classname]
                           for classname in classes]
-    instance_proof_fns = dict([(f, 1) for f in instance_proof_fns]).keys()
+    instance_proof_fns = list(dict([(f, 1) for f in instance_proof_fns]).keys())
     instance_proof_fns.sort(lambda x, y: cmp(x.order, y.order))
     for f in instance_proof_fns:
         (npfs, nexs) = f(header, canonical, d)
@@ -1380,10 +1386,10 @@ def get_type_map (string):
         return (header, [])
     actual_map = bits[1].strip()
     if not (actual_map.startswith('{') and actual_map.endswith('}')):
-        print 'Error in ' + filename
-        print 'Expected "A { blah :: blah etc }"'
-        print 'However { and } not found correctly'
-        print 'When parsing %s' % string
+        print('Error in ' + filename)
+        print('Expected "A { blah :: blah etc }"')
+        print('However { and } not found correctly')
+        print('When parsing %s' % string)
         sys.exit(1)
     actual_map = actual_map[1:-1]
 
@@ -1480,7 +1486,8 @@ def body_transform(body, defined, sig, nopattern=False):
 dollar_lambda_regex = re.compile(r"\$\s*\\<lambda>")
 
 
-def bracket_dollar_lambdas((line, children)):
+def bracket_dollar_lambdas(xxx_todo_changeme):
+    (line, children) = xxx_todo_changeme
     if dollar_lambda_regex.search(line):
         [left, right] = dollar_lambda_regex.split(line)
         line = '%s(\<lambda>%s' % (left, right)
@@ -1582,14 +1589,16 @@ def type_assertion_transform(line, children):
     return (type_assertion_transform_inner(line), children)
 
 
-def where_clause_guarded_body((line, children)):
+def where_clause_guarded_body(xxx_todo_changeme1):
+    (line, children) = xxx_todo_changeme1
     if children and leading_bar.match(children[0][0]):
         return (line + ' =', guarded_body_transform(children, ' = '))
     else:
         return (line, children)
 
 
-def where_clause_transform((line, children)):
+def where_clause_transform(xxx_todo_changeme2):
+    (line, children) = xxx_todo_changeme2
     ws = line.split('where', 1)[0]
     if line.strip() != 'where':
         assert line.strip().startswith('where')
@@ -1603,7 +1612,7 @@ def where_clause_transform((line, children)):
         (l, c),
         None,
         type=0) for (l, c) in children]
-    children = map(where_clause_guarded_body, children)
+    children = list(map(where_clause_guarded_body, children))
     for i, (l, c) in enumerate(children):
         l2 = braces.str(l, '(', ')')
         if len(l2.split('=')[0].split()) > 1:
@@ -1639,26 +1648,27 @@ def order_let_children(L):
     todo = dict(enumerate(L))
     n = len(todo)
     while n:
-        todo_keys = todo.keys()
+        todo_keys = list(todo.keys())
         for key in todo_keys:
             depstodo = [dep
-                        for dep in deps.get(key, {}).keys() if dep not in done]
+                        for dep in list(deps.get(key, {}).keys()) if dep not in done]
             if depstodo == []:
                 L2.append(todo.pop(key))
                 done[key] = 1
         if len(todo) == n:
-            print "No progress resolving let deps"
-            print
-            print todo.values()
-            print
-            print "Dependencies:"
-            print deps
+            print("No progress resolving let deps")
+            print()
+            print(list(todo.values()))
+            print()
+            print("Dependencies:")
+            print(deps)
             assert 0
         n = len(todo)
     return L2
 
 
-def do_clauses_transform((line, children), rawsig, type=None):
+def do_clauses_transform(xxx_todo_changeme3, rawsig, type=None):
+    (line, children) = xxx_todo_changeme3
     if children and children[-1][0].lstrip().startswith('where'):
         where_clause = where_clause_transform(children[-1])
         where_clause = [do_clauses_transform(
@@ -1808,8 +1818,8 @@ def do_clause_pattern(line, children, type, n=0):
             nl = ('%s <- %s %s $ %s' % (left, lM, tab, right))
             return do_clause_pattern(nl, children, type, n + 1)
 
-    print line
-    print left
+    print(line)
+    print(left)
     assert 0
 
 
@@ -1852,7 +1862,8 @@ def monad_type_acquire(sig, type=0):
     return type
 
 
-def monad_type_transform((line, type)):
+def monad_type_transform(xxx_todo_changeme4):
+    (line, type) = xxx_todo_changeme4
     split = None
     if 'withoutError' in line:
         split = 'withoutError'
@@ -1932,7 +1943,8 @@ def monad_type_transform((line, type)):
     return (line, type)
 
 
-def case_clauses_transform((line, children)):
+def case_clauses_transform(xxx_todo_changeme5):
+    (line, children) = xxx_todo_changeme5
     children = [case_clauses_transform(child) for child in children]
 
     if not line.endswith(' of'):
@@ -1988,7 +2000,7 @@ def case_clauses_transform((line, children)):
 
     cases = tuple(cases)
     if not cases:
-        print line
+        print(line)
     conv = get_case_conv(cases)
     if conv == '<X>':
         sys.stderr.write('Warning: blanked case in caseconvs\n')
@@ -2183,14 +2195,16 @@ leading_bar = re.compile(r"\s*\|")
 type_assertion = re.compile(r"\(([^(]*)::([^)]*)\)")
 
 
-def run_regexes((line, children), _regexes=regexes):
+def run_regexes(xxx_todo_changeme6, _regexes=regexes):
+    (line, children) = xxx_todo_changeme6
     for re, s in _regexes:
         line = re.sub(s, line)
     children = [run_regexes(elt, _regexes=_regexes) for elt in children]
     return ((line, children))
 
 
-def run_ext_regexes((line, children)):
+def run_ext_regexes(xxx_todo_changeme7):
+    (line, children) = xxx_todo_changeme7
     for re, s, add_re, add_s in ext_regexes:
         m = re.search(line)
         if m is None:
@@ -2293,7 +2307,7 @@ def get_case_conv_table():
                 if (not all_constructor_patterns(cases) and
                         not is_extended_pattern(cases)):
                     render_caseconv(cases, to_case, f2)
-        except Exception, e:
+        except Exception as e:
             sys.stderr.write('Error parsing %r\n' % line)
             sys.stderr.write('%s\n ' % e)
             sys.exit(1)
@@ -2409,7 +2423,7 @@ def extended_pattern_conv(cases):
             record = reduce_record_pattern(record)
             pat = left + record + right
         if '{' in pat:
-            print pat
+            print(pat)
         assert '{' not in pat
         bits = word_getter.split(pat)
         bits = [constructor_conv_table.get(bit, bit) for bit in bits]
@@ -2516,11 +2530,11 @@ def print_tree(tree, indent=0):
 
 supplied_transform_table = get_supplied_transform_table()
 supplied_transforms_usage = dict([(
-    key, 0) for key in supplied_transform_table.iterkeys()])
+    key, 0) for key in six.iterkeys(supplied_transform_table)])
 
 
 def warn_supplied_usage():
-    for (key, usage) in supplied_transforms_usage.iteritems():
+    for (key, usage) in six.iteritems(supplied_transforms_usage):
         if not usage:
             sys.stderr.write('WARN: supplied conv unused: %s\n'
                              % key[0])
@@ -2590,11 +2604,11 @@ def pattern_match_transform(body):
                 (moreline, _) = children.pop(0)
                 string = string + ' ' + moreline.strip()
             else:
-                print
-                print line
-                print
+                print()
+                print(line)
+                print()
                 for child in children:
-                    print child
+                    print(child)
                 assert 0
 
         [lead, tail] = string.split('=', 1)
@@ -2636,8 +2650,8 @@ def pattern_match_transform(body):
         else:
             line = line + '%s ' % name
     if blanks == []:
-        print splits
-        print common
+        print(splits)
+        print(common)
     if len(blanks) == 1:
         line = line + '= case x%d of' % blanks[0]
     else:
@@ -2688,7 +2702,8 @@ def get_lambda_body_lines(d):
     return lines
 
 
-def add_trailing_string(s, (line, children)):
+def add_trailing_string(s, xxx_todo_changeme8):
+    (line, children) = xxx_todo_changeme8
     if children == []:
         return (line + s, children)
     else:
@@ -2696,7 +2711,8 @@ def add_trailing_string(s, (line, children)):
         return (line, children[0:-1] + [modified])
 
 
-def remove_trailing_string(s, (line, children), _handled=False):
+def remove_trailing_string(s, xxx_todo_changeme9, _handled=False):
+    (line, children) = xxx_todo_changeme9
     if not _handled:
         try:
             return remove_trailing_string(s, (line, children), _handled=True)
@@ -2715,14 +2731,16 @@ def remove_trailing_string(s, (line, children), _handled=False):
         return (line, children[0:-1] + [modified])
 
 
-def get_trailing_string(n, (line, children)):
+def get_trailing_string(n, xxx_todo_changeme10):
+    (line, children) = xxx_todo_changeme10
     if children == []:
         return line[-n:]
     else:
         return get_trailing_string(n, children[-1])
 
 
-def has_trailing_string(s, (line, children)):
+def has_trailing_string(s, xxx_todo_changeme11):
+    (line, children) = xxx_todo_changeme11
     if children == []:
         return line.endswith(s)
     else:
@@ -2747,10 +2765,10 @@ def ensure_type_ordering(defs):
                 i = j
                 deps = typedefs[i]['typedeps']
             final_typedefs.append(typedefs.pop(i))
-        except Exception, e:
-            print 'Exception hit ordering types:'
+        except Exception as e:
+            print('Exception hit ordering types:')
             for td in typedefs:
-                print '  - %s' % td['typename']
+                print('  - %s' % td['typename'])
             raise e
 
     return final_typedefs + other
@@ -2761,7 +2779,8 @@ def lead_ws(string):
     return string[:amount]
 
 
-def adjust_ws((line, children), n):
+def adjust_ws(xxx_todo_changeme12, n):
+    (line, children) = xxx_todo_changeme12
     if n > 0:
         line = ' ' * n + line
     else:
