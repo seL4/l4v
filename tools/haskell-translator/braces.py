@@ -11,7 +11,7 @@
 
 class BracedString:
     def __init__(self, s, l, r, bits=None):
-        if bits == None:
+        if bits is None:
             bits = self._get_bits(s, l, r)
         self.bits = bits
         self.s = s

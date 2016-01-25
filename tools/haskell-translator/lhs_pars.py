@@ -141,7 +141,7 @@ def top_transform(input):
 
     # apply def_transform and cut out any None return values
     defs = [defs_transform(d) for d in defs]
-    defs = [d for d in defs if d != None]
+    defs = [d for d in defs if d is not None]
 
     defs = ensure_type_ordering(defs)
 
@@ -212,7 +212,7 @@ def flatten_tree(tree):
 
 def create_defs(tree):
     defs = [create_def(elt) for elt in tree]
-    defs = [d for d in defs if d != None]
+    defs = [d for d in defs if d is not None]
 
     return defs
 
@@ -919,12 +919,12 @@ def instance_transform(d):
         assert bits[3:] == ['where']
         defs = children
     defs = [create_def_2(l, c, 0) for (l, c) in defs]
-    defs = [d2 for d2 in defs if d2 != None]
+    defs = [d2 for d2 in defs if d2 is not None]
     defs = group_defs(defs)
     defs = [defs_transform(d2) for d2 in defs]
     defs_dict = {}
     for d2 in defs:
-        if d2 != None:
+        if d2 is not None:
             defs_dict[d2['defined']] = d2
     d['instance_defs'] = defs_dict
     d['deriving'] = [classname]
@@ -1673,7 +1673,7 @@ def do_clauses_transform((line, children), rawsig, type=None):
             line = line + ' ' + l.strip()
             children = children[1:]
 
-    if type == None:
+    if type is None:
         if not rawsig:
             type = 0
             sig = None
@@ -1813,7 +1813,7 @@ def do_clause_pattern(line, children, type, n=0):
 
 
 def split_on_unmatched_bracket(elts, n=None):
-    if n == None:
+    if n is None:
         elts, other_elts, n = split_on_unmatched_bracket(elts, 0)
         return (elts, other_elts)
 
@@ -2005,12 +2005,12 @@ def case_clauses_transform((line, children)):
     conv = subs_nums_and_x(conv, x)
 
     new_line = beforecase + '(' + conv[0][0]
-    assert conv[0][1] == None
+    assert conv[0][1] is None
 
     ws = lead_ws(children[0][0])
     new_children = []
     for (header, endnum) in conv[1:]:
-        if endnum == None:
+        if endnum is None:
             new_children.append((ws + header, []))
         else:
             if (len(bodies) <= endnum):
@@ -2192,7 +2192,7 @@ def run_regexes((line, children), _regexes=regexes):
 def run_ext_regexes((line, children)):
     for re, s, add_re, add_s in ext_regexes:
         m = re.search(line)
-        if m == None:
+        if m is None:
             continue
         before = line[:m.start()]
         substituted = m.expand(s)
@@ -2237,9 +2237,9 @@ def get_case_rhs(rhs):
         conv.extend([(bit, None) for bit in bits[:-1]])
         conv.append((bits[-1], num))
 
-    conv = [(s, n) for (s, n) in conv if s != '' or n != None]
+    conv = [(s, n) for (s, n) in conv if s != '' or n is not None]
 
-    if conv[0][1] != None:
+    if conv[0][1] is not None:
         sys.stderr.write('%r\n' % conv[0][1])
         sys.stderr.write(
             'For technical reasons the first line of this case conversion must be split with \\n: \n')
@@ -2626,11 +2626,11 @@ def pattern_match_transform(body):
         if term == '_':
             common[i] = 'x%d' % i
 
-    blanks = [i for (i, n) in enumerate(common) if n == None]
+    blanks = [i for (i, n) in enumerate(common) if n is None]
 
     line = '%s ' % function
     for i, name in enumerate(common):
-        if name == None:
+        if name is None:
             line = line + 'x%d ' % i
         else:
             line = line + '%s ' % name
