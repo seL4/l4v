@@ -498,11 +498,12 @@ def reduce_to_single_line(tree_element):
     return ' '.join(inner(tree_element, []))
 
 
-conv_table = {'Maybe': 'option',
-              'Bool': 'bool',
-              'Word': 'machine_word',
-              'Int': 'nat',
-              'String': 'unit list'}
+type_conv_table = {
+ 'Maybe': 'option',
+ 'Bool': 'bool',
+ 'Word': 'machine_word',
+ 'Int': 'nat',
+ 'String': 'unit list'}
 
 
 def type_conv(string):
@@ -511,19 +512,23 @@ def type_conv(string):
         # ignore compound types, type_transform will descend into em
         result = string
     elif '.' in string:
+        # qualified references
         bits = string.split('.')
         typename = bits[-1]
         module = reduce(lambda x, y: x + '.' + y, bits[:-1])
         typename = type_conv(typename)
         result = module + '.' + typename
     elif string[0].islower():
+        # type variable
         result = "'%s" % string
     elif string[0] == '[' and string[-1] == ']':
+        # list
         inner = type_conv(string[1:-1])
         result = '%s list' % inner
-    elif str(string) in conv_table:
-        result = conv_table[str(string)]
+    elif str(string) in type_conv_table:
+        result = type_conv_table[str(string)]
     else:
+        # convert StudlyCaps to lower_with_underscores
         was_lower = False
         s = ''
         for c in string:
@@ -533,7 +538,7 @@ def type_conv(string):
                 s = s + c.lower()
             was_lower = c.islower()
         result = s
-        conv_table[str(string)] = result
+        type_conv_table[str(string)] = result
 
     return braces.clone(result, string)
 
