@@ -193,13 +193,13 @@ def offside_tree(input):
     return result
 
 
-def discard_n(tree):
+def discard_line_numbers(tree):
     """Takes a tree containing tuples (line, n, children) and
         discards the n terms, returning a tree with tuples
         (line, children)"""
     result = []
     for (line, n, children) in tree:
-        result.append((line, discard_n(children)))
+        result.append((line, discard_line_numbers(children)))
     return result
 
 
@@ -245,7 +245,7 @@ def create_def(elt):
     """Takes an element of an offside tree and creates
         a definition object."""
     (line, n, children) = elt
-    children = discard_n(children)
+    children = discard_line_numbers(children)
     return create_def_2(line, children, n)
 
 
@@ -2502,7 +2502,7 @@ def get_supplied_transform_table():
                 sys.stderr.write('\t\t(%d children != 2)\n' % len(children))
             continue
 
-        children = discard_n(children)
+        children = discard_line_numbers(children)
 
         [before, after] = children
 
