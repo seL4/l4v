@@ -229,7 +229,7 @@ def group_defs(defs):
     defgroups = []
     defined = ''
     for d in defs:
-        this_defines = d.get('actual_fn', d['defined'])
+        this_defines = d['defined']
         if d['type'] != 'definitions':
             this_defines = ''
         if this_defines == defined and this_defines:
@@ -369,10 +369,7 @@ def def_lines(d, call):
                 return []
         elif call.bodies_only:
             if 'sig' in d:
-                if 'actual_fn' in d:
-                    defname = '%s_def' % d['actual_fn']
-                else:
-                    defname = '%s_def' % d['defined']
+                defname = '%s_def' % d['defined']
                 if 'primrec' in d:
                     print('warning body-only primrec:')
                     print(body[0])
