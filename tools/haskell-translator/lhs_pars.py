@@ -255,17 +255,18 @@ def create_def_2(line, children, n):
     if lead[0] in ['import', 'module', 'class']:
         return
     elif lead[0] == 'instance':
-        d['type'] = 'instance'
-        d['defined'] = lead[2]
-        return d
+        type = 'instance'
+        defined = lead[2]
     elif lead[0] in ['type', 'newtype', 'data']:
-        d['type'] = 'newtype'
-        d['defined'] = lead[1]
-        return d
+        type = 'newtype'
+        defined = lead[1]
     else:
-        d['type'] = 'definitions'
-        d['defined'] = lead[0]
-        return d
+        type = 'definitions'
+        defined = lead[0]
+
+    d['type'] = type
+    d['defined'] = defined
+    return d
 
 
 def get_primrecs():
