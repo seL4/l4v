@@ -2358,10 +2358,7 @@ def get_case_conv(cases):
     if is_extended_pattern(cases):
         return extended_pattern_conv(cases)
 
-    if cases in case_conv_table:
-        return case_conv_table[cases]
-
-    return None
+    return case_conv_table.get(cases)
 
 
 constructor_conv_table = {
