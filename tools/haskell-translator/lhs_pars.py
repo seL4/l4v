@@ -972,12 +972,6 @@ def set_instance_proofs(header, constructor_arities, d):
         if n == 1:
             pfs.extend(finite_instance_proofs(header, cons))
 
-    if 0:  # serialising going away
-        if d['type'] == 'newtype':
-            (npfs, nexs) = serialisable_instance_proofs(header, canonical, d)
-            pfs.extend(npfs)
-            exs.extend(nexs)
-
     if pfs:
         lead = '(* %s instance proofs *)' % header
         d['instance_proofs'] = [(lead, [(line, []) for line in pfs])]
@@ -998,75 +992,8 @@ def finite_instance_proofs(header, cons):
 
     return (lines, [])
 
-
-def serialisable_instance_proofs(header, canonical, d):
-    lines = []
-    lines.append('')
-    lines.append('instance %s :: to_from_byte ..' % header)
-    lines.append('')
-    lines.append('defs (overloaded)')
-    lines.append('  to_byte_%s: "to_byte x \<equiv> case x of' % header)
-    # a canonical ordering of the constructors.
-    for i, (cons, n) in canonical:
-        if i == 0:
-            l = '    %s' % cons
-        else:
-            l = '  | %s' % cons
-        for j in range(n):
-            l = l + ' v%d' % j
-        if len(canonical) > 1:
-            l = l + ' \<Rightarrow> [%d]' % i
-        else:
-            l = l + ' \<Rightarrow> []'
-        for j in range(n):
-            l = l + ' @ (to_byte v%d)' % j
-
-        lines.append(l)
-    lines[-1] = lines[-1] + '"'
-    loaders = []
-    for i, (cons, n) in canonical:
-        if n == 0:
-            loaders.append(['   Some (%s, bs)' % cons])
-            continue
-        l1 = '   (loader'
-        for _ in range(n - 1):
-            l1 = l1 + ' -w- loader'
-        l1 = l1 + ') bs'
-        l2 = '    -\<longrightarrow> (\<lambda> (v0'
-        for j in range(1, n):
-            l2 = l2 + ', v%d' % j
-        l2 = l2 + '). %s v0' % cons
-        for j in range(1, n):
-            l2 = l2 + ' v%d' % j
-        l2 = l2 + ')'
-        loaders.append([l1, l2])
-    if len(loaders) == 1:
-        lines.append('  loader_%s: "loader bs \<equiv>' % header)
-        lines.extend(loaders[0])
-        lines[-1] = lines[-1] + '"'
-    else:
-        lines.append('  loader_%s: "loader bs_ \<equiv>' % header)
-        lines.append('  case bs_ of [] \<Rightarrow> None')
-        lines.append('| b#bs \<Rightarrow>')
-        for i, _ in canonical:
-            if i == 0:
-                lines.append('  if b = 0 then')
-            else:
-                lines.append('  else if b = %d then' % i)
-            lines.extend(loaders[i])
-        lines.append('  else None"')
-    lines.append('')
-    lines.append('lemmas serialisable_%s_defs =' % header)
-    lines.append('  to_byte_%s loader_%s' % (header, header))
-    lines.append('')
-    lines.append('instance %s :: serialisable' % header)
-    lines.append('  apply intro_classes')
-    lines.append('  apply (case_tac w)')
-    lines.append('  apply (simp_all add: serialisable_%s_defs loader_simps)'
-                 % header)
-    lines.append('  done')
-
-    return (lines, [])
+# wondering where the serialisable proofs went? see
+# commit 21361f073bbafcfc985934e563868116810d9fa2 for last known occurence.
 
 # leave type tags 0..11 for explicit use outside of this script
 next_type_tag = 12
