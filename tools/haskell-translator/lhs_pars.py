@@ -489,11 +489,13 @@ def type_bit_transform(bit):
 
 
 def reduce_to_single_line(tree_element):
-    (line, children) = tree_element
-    for child in children:
-        cline = reduce_to_single_line(child)
-        line = line + ' ' + cline.strip()
-    return line
+    def inner(tree_element, acc):
+        (line, children) = tree_element
+        acc.append(line)
+        for child in children:
+            inner(child, acc)
+        return acc
+    return ' '.join(inner(tree_element, []))
 
 
 conv_table = {'Maybe': 'option',
