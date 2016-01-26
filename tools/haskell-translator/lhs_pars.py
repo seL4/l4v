@@ -252,13 +252,13 @@ def create_def(elt):
 def create_def_2(line, children, n):
     d = {'body': [(line, children)], 'line': n}
     lead = line.split(None, 3)
-    if lead[0] in {'import': True, 'module': True, 'class': True}:
+    if lead[0] in ['import', 'module', 'class']:
         return
     elif lead[0] == 'instance':
         d['type'] = 'instance'
         d['defined'] = lead[2]
         return d
-    elif lead[0] in {'type': True, 'newtype': True, 'data': True}:
+    elif lead[0] in ['type', 'newtype', 'data']:
         d['type'] = 'newtype'
         d['defined'] = lead[1]
         return d
