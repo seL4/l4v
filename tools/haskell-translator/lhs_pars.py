@@ -84,10 +84,6 @@ element matches pred"""
     return list[0:limit]
 
 
-def emptyList(l):
-    return l == ''
-
-
 def get_defs(filename):
     if filename in file_defs:
         return file_defs[filename]
@@ -959,10 +955,9 @@ def set_instance_proofs(header, constructor_arities, d):
     canonical = list(enumerate(constructor_arities))
 
     classes = d.get('deriving', [])
-    instance_proof_fns = [instance_proof_table[classname]
-                          for classname in classes]
-    instance_proof_fns = list(dict([(f, 1) for f in instance_proof_fns]).keys())
-    instance_proof_fns.sort(lambda x, y: cmp(x.order, y.order))
+    instance_proof_fns = set(
+            sorted((instance_proof_table[classname] for classname in classes),
+                   key=lambda x: x.order))
     for f in instance_proof_fns:
         (npfs, nexs) = f(header, canonical, d)
         pfs.extend(npfs)
@@ -1634,7 +1629,7 @@ def order_let_children(L):
     single_lines = [reduce_to_single_line(elt) for elt in L]
     keys = [str(braces.str(line, '(', ')').split('=')[0]).split()[0]
             for line in single_lines]
-    keys = dict([(key, n) for (n, key) in enumerate(keys)])
+    keys = dict((key, n) for (n, key) in enumerate(keys))
     bits = [varname_re.findall(line) for line in single_lines]
     deps = {}
     for i, bs in enumerate(bits):
@@ -2273,8 +2268,7 @@ def get_case_rhs(rhs):
 
 
 def render_caseconv(cases, conv, f):
-    bits = [bit.rstrip() for bit in conv.split('\\n')]
-    bits = [bit for bit in bits if bit != '']
+    bits = [bit for bit in conv.split('\\n') if bit != '']
     assert bits
     casestr = 'case \\x of ' + ' -> '.join(cases) + ' -> '
     f.write('%s --->' % casestr)
@@ -2288,8 +2282,8 @@ def get_case_conv_table():
     f = open('caseconvs')
     f2 = open('caseconvs-useful', 'w')
     result = {}
-    input = [line.rstrip() for line in f]
-    input = ["\\n".join(lines) for lines in splitList(input, emptyList)]
+    input = map(str.rstrip, f)
+    input = ("\\n".join(lines) for lines in splitList(input, lambda s: s == ''))
 
     for line in input:
         if line.strip() == '':
@@ -2529,8 +2523,8 @@ def print_tree(tree, indent=0):
 
 
 supplied_transform_table = get_supplied_transform_table()
-supplied_transforms_usage = dict([(
-    key, 0) for key in six.iterkeys(supplied_transform_table)])
+supplied_transforms_usage = dict((
+    key, 0) for key in six.iterkeys(supplied_transform_table))
 
 
 def warn_supplied_usage():
