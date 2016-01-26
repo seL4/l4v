@@ -271,8 +271,7 @@ def create_def_2(line, children, n):
 def get_primrecs():
     f = open('primrecs')
     keys = [line.strip() for line in f]
-    pairs = [(key, True) for key in keys if key != '']
-    return dict(pairs)
+    return set(key for key in keys if key != '')
 
 
 primrecs = get_primrecs()
