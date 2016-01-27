@@ -74,21 +74,6 @@ for line in instructions:
                 n = bits.index('NOT')
                 m = dict([(name, 1) for name in bits[n + 1:]])
                 call.restr = lambda x: not x['defined'] in m
-            if 'NOTBODY' in bits:
-                n = [i for (i, s) in enumerate(bits) if s == 'NOTBODY']
-                l = [bits[i + 1] for i in n]
-                M = dict([(name, 1) for name in l])
-                prev = call.restr
-                if prev:
-
-                    def restr(x):
-                        if actual_fn(x) in M:
-                            return False
-                        else:
-                            return prev(x)
-                else:
-                    restr = lambda x: actual_fn(x) not in M
-                call.restr = restr
             if call.body:
                 assert bits[-2] == 'BODY'
                 fn = bits[-1]
