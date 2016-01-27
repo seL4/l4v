@@ -31,13 +31,15 @@ class TestEnv():
         self.pwd = pwd
         self.cwd = "."
         self.timeout = 0
+        self.cpu_timeout = 0
         self.depends = set()
 
 class Test():
-    def __init__(self, name, command, timeout=0, cwd="", depends=None):
+    def __init__(self, name, command, timeout=0, cpu_timeout=0, cwd="", depends=None):
         self.name = name
         self.command = command
         self.timeout = timeout
+        self.cpu_timeout = cpu_timeout
         self.cwd = cwd
 
         if depends == None:
@@ -53,6 +55,12 @@ def parse_attributes(tag, env, strict=True):
         except:
             if strict:
                 raise
+    if tag.get("cpu-timeout"):
+        try:
+            env.cpu_timeout = float(tag.get("cpu-timeout"))
+        except:
+            if strict:
+                raise
     if tag.get("cwd"):
         env.cwd = tag.get("cwd")
     if tag.get("depends"):
@@ -64,6 +72,7 @@ def parse_test(doc, env, strict=True):
     parse_attributes(doc, env, strict=strict)
     return Test(doc.get("name"), doc.text.strip(),
             timeout=env.timeout,
+            cpu_timeout=env.cpu_timeout,
             cwd=os.path.normpath(os.path.join(env.pwd, env.cwd)),
             depends=env.depends)
 
@@ -347,8 +356,8 @@ def main():
 
     # Print results
     for test in tests:
-        print("\"%s\" [timeout=%d, parents=%s, cwd=%s]" % (
-            test.command, test.timeout, ",".join(test.depends), test.cwd))
+        print("\"%s\" [timeout=%d, cpu-timeout=%g, parents=%s, cwd=%s]" % (
+            test.command, test.timeout, test.cpu_timeout, ",".join(test.depends), test.cwd))
 
 
 if __name__ == "__main__":

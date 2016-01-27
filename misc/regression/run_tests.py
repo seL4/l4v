@@ -12,14 +12,13 @@
 #
 # Very simple command-line test runner.
 #
-# Ignores timeouts.
-#
 
 from __future__ import print_function
 
 import argparse
 import atexit
 import datetime
+import cpuusage
 import fnmatch
 import memusage
 import os
@@ -29,19 +28,20 @@ import subprocess
 import sys
 import testspec
 import threading
+import time
 import traceback
 import xml.etree.ElementTree as ET
 
-# Try importing psutil.
-PS_UTIL_AVAILABLE = False
 try:
     import psutil
-    from psutil import NoSuchProcess
-    PS_UTIL_AVAILABLE = True
     if not hasattr(psutil.Process, "children") and hasattr(psutil.Process, "get_children"):
+        # psutil API change
         psutil.Process.children = psutil.Process.get_children
 except ImportError:
-    pass
+    print("Error: failed to import psutil module.\n"
+          "To install psutil, try:\n"
+          "  pip install --user psutil", file=sys.stderr)
+    sys.exit(2)
 
 ANSI_RESET = "\033[0m"
 ANSI_RED = "\033[31;1m"
@@ -71,27 +71,24 @@ def which(file):
 # are looking at it, but not where a PID has been reused.
 #
 def kill_family(parent_pid):
-    if not PS_UTIL_AVAILABLE:
-        return
-
     # Find process.
     try:
         process = psutil.Process(parent_pid)
-    except NoSuchProcess:
+    except psutil.NoSuchProcess:
         # Race. Nothing more to do.
         return
 
     # SIGSTOP everyone first.
     try:
         process.suspend()
-    except NoSuchProcess:
+    except psutil.NoSuchProcess:
         # Race. Nothing more to do.
         return
     process_list = [process]
     for child in process.children(recursive=True):
         try:
             child.suspend()
-        except NoSuchProcess:
+        except psutil.NoSuchProcess:
             # Race.
             pass
         else:
@@ -105,10 +102,11 @@ def kill_family(parent_pid):
 #
 # Run a single test.
 #
-# Return a tuple of (success, log, time_taken, memory_usage).
+# Return a dict of (name, status, output, cpu time, elapsed time, memory usage).
+# This is placed onto the given queue.
 #
 # Log only contains the output if verbose is *false*; otherwise, the
-# log is output to stdout where we can't easily get  to it.
+# log is output to stdout where we can't easily get to it.
 #
 def run_test(test, status_queue, verbose=False):
     # Construct the base command.
@@ -138,6 +136,7 @@ def run_test(test, status_queue, verbose=False):
 
     # Start the command.
     peak_mem_usage = None
+    cpu_usage = None
     try:
         process = subprocess.Popen(command,
                 stdout=output, stderr=subprocess.STDOUT, stdin=subprocess.PIPE,
@@ -157,6 +156,7 @@ def run_test(test, status_queue, verbose=False):
 
     # Setup an alarm at the timeout.
     was_timeout = [False] # Wrap in list to prevent do_timeout getting the wrong variable scope
+    was_cpu_timeout = [False] # as above
     def do_timeout():
         was_timeout[0] = True
         kill_family(process.pid)
@@ -164,11 +164,31 @@ def run_test(test, status_queue, verbose=False):
     if test.timeout > 0:
         timer.start()
 
-    # Wait for the command to finish.
-    with memusage.process_poller(process.pid) as m:
-        (output, _) = process.communicate()
-        peak_mem_usage = m.peak_mem_usage()
-    process_running = False
+    with cpuusage.process_poller(process.pid) as c:
+        # Also set a CPU timeout. We poll the cpu usage periodically.
+        def cpu_timeout():
+            interval = min(0.5, test.cpu_timeout / 10.0)
+            while process_running:
+                if c.cpu_usage() > test.cpu_timeout:
+                    was_cpu_timeout[0] = True
+                    kill_family(process.pid)
+                    break
+                time.sleep(interval)
+
+        if test.cpu_timeout > 0:
+            cpu_timer = threading.Thread(target=cpu_timeout)
+            cpu_timer.daemon = True
+            cpu_timer.start()
+
+        with memusage.process_poller(process.pid) as m:
+            # Wait for the command to finish.
+            (output, _) = process.communicate()
+            peak_mem_usage = m.peak_mem_usage()
+            cpu_usage = c.cpu_usage()
+
+        process_running = False
+        if test.cpu_timeout > 0:
+            cpu_timer.join()
 
     # Cancel the alarm. Small race here (if the timer fires just after the
     # process finished), but the returncode of our process should still be 0,
@@ -180,7 +200,7 @@ def run_test(test, status_queue, verbose=False):
         output = ""
     if process.returncode == 0:
         status = "pass"
-    elif was_timeout[0]:
+    elif was_timeout[0] or was_cpu_timeout[0]:
         status = "TIMEOUT"
     else:
         status = "FAILED"
@@ -188,6 +208,7 @@ def run_test(test, status_queue, verbose=False):
                       'status': status,
                       'output': output,
                       'real_time': datetime.datetime.now() - start_time,
+                      'cpu_time': cpu_usage,
                       'mem_usage': peak_mem_usage})
 
 # Print a status line.
@@ -197,15 +218,21 @@ def print_test_line_start(test_name, legacy=False):
     print("  Started %-25s " % (test_name + " ..."))
     sys.stdout.flush()
 
-def print_test_line(test_name, color, status, time_taken, mem, legacy=False):
-    if mem:
+def print_test_line(test_name, color, status, real_time, cpu_time, mem, legacy=False):
+    if mem is not None:
         # Report memory usage in gigabytes.
         mem = '%5.2fGB' % round(float(mem) / 1024 / 1024 / 1024, 2)
-    if time_taken:
-        # Strip milliseconds for better printing.
-        time_taken = datetime.timedelta(seconds=int(time_taken.total_seconds()))
-        time_taken = '%8s' % time_taken
-    extras = ', '.join(filter(None, [time_taken, mem]))
+
+    if real_time is not None:
+        # Format times as H:MM:SS; strip milliseconds for better printing.
+        real_time = datetime.timedelta(seconds=int(real_time.total_seconds()))
+        real_time = '%8s real' % real_time
+
+    if cpu_time is not None:
+        cpu_time = datetime.timedelta(seconds=int(cpu_time))
+        cpu_time = '%8s cpu' % cpu_time
+
+    extras = ', '.join(filter(None, [real_time, cpu_time, mem]))
 
     # Print status line.
     if legacy:
@@ -246,6 +273,7 @@ def main():
             help="list known tests")
     parser.add_argument("--legacy", action="store_true",
             help="use legacy 'IsaMakefile' specs")
+    # --legacy-status used by top-level regression-v2 script
     parser.add_argument("--legacy-status", action="store_true",
             help="emulate legacy (sequential code) status lines")
     parser.add_argument("-v", "--verbose", action="store_true",
@@ -284,17 +312,6 @@ def main():
         if len(bad_names) > 0:
             parser.error("Unknown test names: %s" % (", ".join(sorted(bad_names))))
         tests_to_run = [t for t in tests if t.name in desired_names]
-
-    # If running at least one test, and psutil is not available, print a warning.
-    if len(tests_to_run) > 0 and not PS_UTIL_AVAILABLE:
-        print("\n"
-              "Warning: 'psutil' module not available. Processes may not be correctly\n"
-              "stopped. Run\n"
-              "\n"
-              "    pip install --user psutil\n"
-              "\n"
-              "to install.\n"
-              "\n")
 
     # Run the tests.
     print("Running %d test(s)..." % len(tests_to_run))
@@ -346,7 +363,7 @@ def main():
                 # Non-blocked but depends on a failed test. Remove it.
                 if len(real_depends & failed_tests) > 0:
                     wipe_tty_status()
-                    print_test_line(t.name, ANSI_YELLOW, "skipped", None, None, args.legacy_status)
+                    print_test_line(t.name, ANSI_YELLOW, "skipped", None, None, None, args.legacy_status)
                     failed_tests.add(t.name)
                     del tests_queue[i]
                     break
@@ -358,17 +375,17 @@ def main():
                 name = info['name']
                 del current_jobs[name]
 
-                status, log, time_taken, mem = info['status'], info['output'], info['real_time'], info['mem_usage']
+                status, log, real_time, cpu_time, mem = info['status'], info['output'], info['real_time'], info['cpu_time'], info['mem_usage']
                 test_results[name] = info
 
                 # Print result.
                 wipe_tty_status()
                 if status != 'pass':
                     failed_tests.add(name)
-                    print_test_line(name, ANSI_RED, "%s *" % status, time_taken, mem, args.legacy_status)
+                    print_test_line(name, ANSI_RED, "%s *" % status, real_time, cpu_time, mem, args.legacy_status)
                 else:
                     passed_tests.add(name)
-                    print_test_line(name, ANSI_GREEN, status, time_taken, mem, args.legacy_status)
+                    print_test_line(name, ANSI_GREEN, status, real_time, cpu_time, mem, args.legacy_status)
         except Queue.Empty:
             pass
     wipe_tty_status()
