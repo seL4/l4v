@@ -1,4 +1,3 @@
-from __future__ import print_function
 #
 # Copyright 2014, NICTA
 #
@@ -9,8 +8,26 @@ from __future__ import print_function
 # @TAG(NICTA_BSD)
 #
 
+from __future__ import print_function
+
 
 class BracedString:
+    """A string split into components based on delimiters (usually braces).
+
+    When l occurs in the string, create a new component whose contents are
+    the rest of the string until the matching r.
+
+    When l = ( and r = ), this has the approximate behavior of splitting
+    the string into the components of a Haskell function application,
+    where each individual component, if not containing the delimiters, can
+    be split on white space to determine the arguments of the function.
+
+    This behaves exactly like a str, except for split, map, and
+    discard_enclosing_braces.
+
+    Invariant: a component either has no delimiters, or is surrounded by
+    delimiters.
+    """
 
     def __init__(self, s, l, r, bits=None):
         if bits is None:
@@ -21,18 +38,18 @@ class BracedString:
         self.r = r
 
     def _get_bits(self, s, l, r):
-        i = 0
+        nesting_depth = 0
         bits = ['']
         for c in s:
             if c == l:
-                if i == 0:
+                if nesting_depth == 0:
                     if bits[-1]:
                         bits.append('')
-                i = i + 1
+                nesting_depth = nesting_depth + 1
             bits[-1] = bits[-1] + c
             if c == r:
-                i = i - 1
-                if i == 0:
+                nesting_depth = nesting_depth - 1
+                if nesting_depth == 0:
                     if bits[-1]:
                         bits.append('')
         if not bits[-1]:
@@ -82,7 +99,18 @@ class BracedString:
     def __len__(self):
         return len(self.s)
 
-    def split(self, str=None, num=-2, braces=False):
+    def split(self, str=None, num=-2, braces=False, original=True):
+        """Split into multiple BracedStrings, using `str` as a delimiter, and
+        into a maximum of `num` components.
+
+        If `braces` is true (defaults to false), braces will also count as a
+        delimiter, and each braced component will become a single element of
+        the output.
+
+        Otherwise, each braced pair will not be split into a separate
+        component, but splitting will ignore the contents inside the
+        delimiter.
+        """
         if braces:
             bits = []
             bbs = []
@@ -102,6 +130,8 @@ class BracedString:
                     bits.extend(n_bits)
                     bbs.extend([[b] for b in n_bits])
         else:
+            # s is the original string, but with delimited substrings replaced
+            # with just the delimiters
             s = ''
             internals = []
             for bit in self.bits:
@@ -110,18 +140,30 @@ class BracedString:
                     internals.append(bit)
                 else:
                     s = s + bit
+            # split on the thing, secure in the knowledge that it won't mess
+            # up things inside delimiters.
             bits1 = s.split(str, num)
             bits = []
             bbs = []
             for bit in bits1:
+                # Invariant: if self.{l,r} not in bit, bit remains whole.
+
+                # split on delimiters, which we inserted earlier
                 bits2 = bit.split(self.l + self.r)
                 meshed = [bits2.pop(0)]
                 while bits2:
+                    # If this list has more elements, then we need to insert,
+                    # where each delimiter pair was, the corresponding
+                    # contents which we stored in `internals`.
                     meshed.append(internals.pop(0))
+                    # then we add in the next component of the string, which
+                    # was after that delimiter pair.
                     meshed.append(bits2.pop(0))
+                # remove empty strings
                 meshed = [s for s in meshed if s != '']
                 bbs.append(meshed)
                 bits.append(''.join(meshed))
+
         return [BracedString(bit, self.l, self.r, bbs[i])
                 for i, bit in enumerate(bits)]
 
@@ -132,6 +174,11 @@ class BracedString:
         return self.s.endswith(s)
 
     def map(self, fn):
+        """Apply a function to each component of this braced string.
+
+        For delimited components, the delimiters will not be passed to the
+        function.
+        """
         new_s = ''
         new_bits = []
 
