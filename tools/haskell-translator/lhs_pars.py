@@ -29,7 +29,6 @@ class Call:
         self.decls_only = False
         self.instanceproofs = False
         self.bodies_only = False
-        self.archdefs = False
         self.bad_type_assignment = False
 
 
@@ -311,10 +310,6 @@ def defs_transform(d):
 
 def def_lines(d, call):
     """Produces the set of lines associated with a definition."""
-    if 'arch_promotion' in d and not call.archdefs:
-        print(d)
-        return []
-
     if call.all_bits:
         L = []
         if 'comments' in d:

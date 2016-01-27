@@ -63,9 +63,7 @@ for line in instructions:
             call.moduletranslations = dict([bit.split('=')
                                             for bit in bits if '=' in bit])
             call.body = 'BODY' in bits
-            if 'defsincludingarch' in bits:
-                call.decls_only = True
-                call.archdefs = True
+
             if 'ONLY' in bits:
                 n = bits.index('ONLY')
                 m = dict([(name, 1) for name in bits[n + 1:]])
