@@ -613,8 +613,10 @@ def newtype_transform(d):
     line = bits[1]
 
     if op == 'type':
+        # type synonym
         return typename_transform(line, header, d)
     elif line.find('{') == -1:
+        # not a record
         return simple_newtype_transform(line, header, d)
     else:
         return named_newtype_transform(line, header, d)
@@ -628,6 +630,7 @@ def typename_transform(line, header, d):
         call.bad_type_assignment = True
         return
     if oldtype.startswith('Data.Word.Word'):
+        # take off the prefix, leave Word32 or Word64 etc
         oldtype = oldtype[10:]
     oldtype = type_conv(oldtype)
     bits = oldtype.split()
