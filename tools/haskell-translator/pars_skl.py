@@ -27,9 +27,6 @@ def create_find_source():
 find_source = create_find_source()
 bad_type_assignment = False
 
-def actual_fn(d):
-    return d.get('actual_fn', d['defined'])
-
 
 if sys.argv[1] == '-q':
     instructions = open(sys.argv[2])
@@ -75,7 +72,7 @@ for line in instructions:
                 call.body = True
                 assert bits[-2] == 'BODY'
                 fn = bits[-1]
-                call.restr = lambda x: actual_fn(x) == fn
+                call.restr = lambda x: x['defined'] == fn
 
             try:
                 parsed = lhs_pars.parse(call)
