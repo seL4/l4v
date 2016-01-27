@@ -30,6 +30,7 @@ class Call:
         self.instanceproofs = False
         self.bodies_only = False
         self.bad_type_assignment = False
+        self.body = False
 
 
 def parse(call):

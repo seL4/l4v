@@ -62,17 +62,17 @@ for line in instructions:
             call.bodies_only = 'bodies_only' in bits
             call.moduletranslations = dict([bit.split('=')
                                             for bit in bits if '=' in bit])
-            call.body = 'BODY' in bits
 
             if 'ONLY' in bits:
                 n = bits.index('ONLY')
                 m = dict([(name, 1) for name in bits[n + 1:]])
                 call.restr = lambda x: x['defined'] in m
-            if 'NOT' in bits:
+            elif 'NOT' in bits:
                 n = bits.index('NOT')
                 m = dict([(name, 1) for name in bits[n + 1:]])
                 call.restr = lambda x: not x['defined'] in m
-            if call.body:
+            elif 'BODY' in bits:
+                call.body = True
                 assert bits[-2] == 'BODY'
                 fn = bits[-1]
                 call.restr = lambda x: actual_fn(x) == fn
