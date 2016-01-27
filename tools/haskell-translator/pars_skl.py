@@ -62,11 +62,11 @@ for line in instructions:
 
             if 'ONLY' in bits:
                 n = bits.index('ONLY')
-                m = dict([(name, 1) for name in bits[n + 1:]])
+                m = set(bits[n + 1:])
                 call.restr = lambda x: x['defined'] in m
             elif 'NOT' in bits:
                 n = bits.index('NOT')
-                m = dict([(name, 1) for name in bits[n + 1:]])
+                m = set(bits[n + 1:])
                 call.restr = lambda x: not x['defined'] in m
             elif 'BODY' in bits:
                 call.body = True

@@ -600,7 +600,7 @@ def newtype_transform(d):
     bits = line.split('=', 1)
     header = type_conv(bits[0].strip())
     d['typename'] = header
-    d['typedeps'] = {}
+    d['typedeps'] = set()
     if len(bits) == 1:
         # line of form 'data Blah' introduces unknown type?
         d['body'] = [('typedecl %s' % header, [])]
@@ -631,7 +631,7 @@ def typename_transform(line, header, d):
     oldtype = type_conv(oldtype)
     bits = oldtype.split()
     for bit in bits:
-        d['typedeps'][bit] = 1
+        d['typedeps'].add(bit)
     lines = [
         'type_synonym %s = "%s"' % (header, oldtype),
         # translations (* TYPE 1 *)',
@@ -668,7 +668,7 @@ def simple_newtype_transform(line, header, d):
             if ' ' in typename:
                 typename = '"%s"' % typename
             l = l + ' ' + typename
-            d['typedeps'][typename] = 1
+            d['typedeps'].add(typename)
         lines.append(l)
 
         arities.append((str(bits[0]), len(bits[1:])))
@@ -704,7 +704,7 @@ def named_newtype_transform(line, header, d):
             else:
                 l = l + ' "' + type + '"'
             for bit in type.split():
-                d['typedeps'][bit] = 1
+                d['typedeps'].add(bit)
         lines.append(l)
 
     names = {}
