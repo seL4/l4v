@@ -30,6 +30,7 @@ class Call:
         self.instanceproofs = False
         self.bodies_only = False
         self.archdefs = False
+        self.bad_type_assignment = False
 
 
 def parse(call):
@@ -623,7 +624,8 @@ def typename_transform(line, header, d):
     try:
         [oldtype] = line.split()
     except:
-        sys.stderr.write('Warning: type assignment %s\n' % d['body'])
+        sys.stderr.write('Warning: type assignment with parameters not supported %s\n' % d['body'])
+        call.bad_type_assignment = True
         return
     if oldtype.startswith('Data.Word.Word'):
         oldtype = oldtype[10:]

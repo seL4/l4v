@@ -25,7 +25,7 @@ def create_find_source():
 
 
 find_source = create_find_source()
-
+bad_type_assignment = False
 
 def actual_fn(d):
     return d.get('actual_fn', d['defined'])
@@ -100,6 +100,7 @@ for line in instructions:
                 print("%s -X-> %s" % (input, output))
                 raise
 
+            bad_type_assignment |= call.bad_type_assignment
             if bits[0] == '#INCLUDE_HASKELL_PREPARSE':
                 pass
             else:
@@ -127,4 +128,8 @@ for line in instructions:
     else:
         os.unlink(output_tmp)
 
+if bad_type_assignment and not quiet:
+    print("Note: for type assignments with parameters, define "
+          "the type explicitly in the theory skeleton",
+          file=sys.stderr)
 lhs_pars.warn_supplied_usage()
