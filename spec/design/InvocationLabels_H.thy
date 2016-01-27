@@ -45,7 +45,6 @@ datatype invocation_label =
   | IRQAckIRQ
   | IRQSetIRQHandler
   | IRQClearIRQHandler
-  | IRQSetMode
   | DomainSetSet
   | ArchInvocationLabel ArchInvocationLabels_H.arch_invocation_label
 
@@ -81,7 +80,6 @@ definition
       IRQAckIRQ,
       IRQSetIRQHandler,
       IRQClearIRQHandler,
-      IRQSetMode,
       DomainSetSet
     ]
     @ (map ArchInvocationLabel enum)"

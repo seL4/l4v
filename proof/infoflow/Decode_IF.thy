@@ -273,7 +273,7 @@ lemma decode_irq_control_invocation_rev:
       (args \<noteq> [] \<longrightarrow>
        (pasSubject aag, Control, pasIRQAbs aag (ucast (args ! 0)))
        \<in> pasPolicy aag))) (decode_irq_control_invocation label args slot caps)"
-  unfolding decode_irq_control_invocation_def
+  unfolding decode_irq_control_invocation_def arch_check_irq_def
   apply (wp ensure_empty_rev lookup_slot_for_cnode_op_rev 
             is_irq_active_rev whenE_inv
         | wp_once hoare_drop_imps 
@@ -292,7 +292,7 @@ lemma decode_irq_control_invocation_rev:
 (* this one doesn't read from the state at all *)
 lemma decode_irq_handler_invocation_rev:
   "reads_equiv_valid_inv A aag \<top>
-      (decode_irq_handler_invocation label args irq cps)"
+      (decode_irq_handler_invocation label irq cps)"
   unfolding decode_irq_handler_invocation_def
   apply (wp | simp add: split_def Let_def | rule conjI impI)+
   done

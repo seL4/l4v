@@ -405,12 +405,6 @@ definition
 where
   "ackInterrupt \<equiv> \<lambda>irq. return ()"
 
-text {* Does nothing on imx31 *}
-definition
-  setInterruptMode :: "irq \<Rightarrow> bool \<Rightarrow> bool \<Rightarrow> unit machine_monad"
-where
-  "setInterruptMode \<equiv> \<lambda>irq levelTrigger polarityLow. return ()"
-
 definition
   lineStart :: "machine_word \<Rightarrow> machine_word"
 where

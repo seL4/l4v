@@ -52,7 +52,6 @@ datatype irq_handler_invocation =
     ACKIrq irq
   | SetIRQHandler irq cap cslot_ptr
   | ClearIRQHandler irq
-  | SetMode irq bool bool
 
 datatype invocation =
     InvokeUntyped untyped_invocation

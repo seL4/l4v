@@ -377,6 +377,12 @@ text {* The following two definitions decode system calls for the
 interrupt controller and interrupt handlers *}
 
 definition
+  arch_check_irq :: "data \<Rightarrow> (unit,'z::state_ext) se_monad"
+where
+  "arch_check_irq irq \<equiv> whenE (irq > ucast maxIRQ) $
+              throwError (RangeError 0 (ucast maxIRQ))"
+
+definition
   decode_irq_control_invocation :: "data \<Rightarrow> data list \<Rightarrow> cslot_ptr \<Rightarrow> cap list
                                      \<Rightarrow> (irq_control_invocation,'z::state_ext) se_monad" where
  "decode_irq_control_invocation label args src_slot cps \<equiv>
@@ -384,8 +390,7 @@ definition
     then if length args \<ge> 3 \<and> length cps \<ge> 1
       then let x = args ! 0; index = args ! 1; depth = args ! 2;
                cnode = cps ! 0; irqv = ucast x in doE
-        whenE (x > ucast maxIRQ) $ 
-          throwError (RangeError 0 (ucast maxIRQ));
+        arch_check_irq x;
         irq_active \<leftarrow> liftE $ is_irq_active irqv;
         whenE irq_active $ throwError RevokeFirst;
 
@@ -404,9 +409,9 @@ where
   "data_to_bool d \<equiv> d \<noteq> 0" 
 
 definition
-  decode_irq_handler_invocation :: "data \<Rightarrow> data list \<Rightarrow> irq \<Rightarrow> (cap \<times> cslot_ptr) list
+  decode_irq_handler_invocation :: "data \<Rightarrow> irq \<Rightarrow> (cap \<times> cslot_ptr) list
                                      \<Rightarrow> (irq_handler_invocation,'z::state_ext) se_monad" where
- "decode_irq_handler_invocation label args irq cps \<equiv>
+ "decode_irq_handler_invocation label irq cps \<equiv>
   if invocation_type label = IRQAckIRQ
     then returnOk $ ACKIrq irq
   else if invocation_type label = IRQSetIRQHandler
@@ -418,11 +423,6 @@ definition
     else throwError TruncatedMessage
   else if invocation_type label = IRQClearIRQHandler
     then returnOk $ ClearIRQHandler irq
-  else if invocation_type label = IRQSetMode
-    then if length args \<ge> 2
-      then let trig = args ! 0; pol = args ! 1 in 
-        returnOk $ SetMode irq (data_to_bool trig) (data_to_bool pol)
-      else throwError TruncatedMessage
   else throwError IllegalOperation"
 
 section "Untyped"
@@ -558,7 +558,7 @@ where
         $ decode_irq_control_invocation label args slot (map fst excaps)
   | IRQHandlerCap irq \<Rightarrow>
       liftME InvokeIRQHandler
-        $ decode_irq_handler_invocation label args irq excaps
+        $ decode_irq_handler_invocation label irq excaps
   | ThreadCap ptr \<Rightarrow>
       liftME InvokeTCB $ decode_tcb_invocation label args cap slot excaps
   | DomainCap \<Rightarrow>

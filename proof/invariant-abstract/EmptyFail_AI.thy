@@ -341,7 +341,7 @@ lemma arch_decode_invocation_empty_fail[wp]:
   apply ((simp add: arch_decode_ARMASIDControlMakePool_empty_fail arch_decode_ARMASIDPoolAssign_empty_fail)+)[2]  
   by ((simp add: arch_decode_invocation_def Let_def split: arch_cap.splits cap.splits option.splits | wp | intro conjI impI allI)+)
 
-crunch (empty_fail) empty_fail[wp]: maskInterrupt, empty_slot, setInterruptMode,
+crunch (empty_fail) empty_fail[wp]: maskInterrupt, empty_slot,
     setHardwareASID, setCurrentPD, finalise_cap, preemption_point,
     cap_swap_for_delete, decode_invocation
   (simp: Let_def catch_def split_def OR_choiceE_def mk_ef_def option.splits endpoint.splits

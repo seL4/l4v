@@ -23,7 +23,6 @@ where
 | "irq_handler_inv_relation (Invocations_A.ClearIRQHandler irq) x = (x = ClearIRQHandler irq)"
 | "irq_handler_inv_relation (Invocations_A.SetIRQHandler irq cap ptr) x =
        (\<exists>cap'. x = SetIRQHandler irq cap' (cte_map ptr) \<and> cap_relation cap cap')"
-| "irq_handler_inv_relation (Invocations_A.SetMode irq trig pol) x = (x = SetMode irq trig pol)"
 
 
 consts
@@ -50,7 +49,6 @@ where
            and cte_wp_at' (badge_derived' cap \<circ> cteCap) cte_ptr
            and (\<lambda>s. \<exists>ptr'. cte_wp_at' (\<lambda>cte. cteCap cte = IRQHandlerCap irq) ptr' s)
            and ex_cte_cap_wp_to' isCNodeCap cte_ptr)"
-| "irq_handler_inv_valid' (SetMode irq trig pol) = \<top>"
 
 primrec
   irq_control_inv_valid' :: "irqcontrol_invocation \<Rightarrow> kernel_state \<Rightarrow> bool"
@@ -70,8 +68,8 @@ lemma decode_irq_handler_corres:
   "\<lbrakk> list_all2 cap_relation (map fst caps) (map fst caps');
     list_all2 (\<lambda>p pa. snd pa = cte_map (snd p)) caps caps' \<rbrakk> \<Longrightarrow>
    corres (ser \<oplus> irq_handler_inv_relation) invs invs'
-     (decode_irq_handler_invocation label args irq caps)
-     (decodeIRQHandlerInvocation label args irq caps')"
+     (decode_irq_handler_invocation label irq caps)
+     (decodeIRQHandlerInvocation label irq caps')"
   apply (simp add: decode_irq_handler_invocation_def decodeIRQHandlerInvocation_def
                  split del: split_if)
   apply (cases caps)
@@ -91,7 +89,7 @@ lemma decode_irq_handler_valid'[wp]:
         \<and> (\<forall>cap \<in> set caps. ex_cte_cap_wp_to' isCNodeCap (snd cap) s)
         \<and> (\<forall>cap \<in> set caps. cte_wp_at' (badge_derived' (fst cap) \<circ> cteCap) (snd cap) s)
         \<and> s \<turnstile>' IRQHandlerCap irq\<rbrace>
-     decodeIRQHandlerInvocation label args irq caps
+     decodeIRQHandlerInvocation label irq caps
    \<lbrace>irq_handler_inv_valid'\<rbrace>,-"
   apply (simp add: decodeIRQHandlerInvocation_def Let_def split_def
                split del: split_if)
@@ -139,6 +137,7 @@ lemma decode_irq_control_corres:
      (decode_irq_control_invocation label args slot caps)
      (decodeIRQControlInvocation label args (cte_map slot) caps')"
   apply (clarsimp simp: decode_irq_control_invocation_def decodeIRQControlInvocation_def
+                        arch_check_irq_def ArchInterrupt_H.checkIRQ_def
                         ArchInterrupt_H.decodeIRQControlInvocation_def arch_decode_irq_control_invocation_def
              split del: split_if cong: if_cong
                  split: invocation_label.split)
@@ -147,7 +146,7 @@ lemma decode_irq_control_corres:
   apply (case_tac "\<exists>n. length args = Suc (Suc (Suc n))")
    apply (clarsimp simp: list_all2_Cons1 Let_def split_def liftE_bindE
                          lookup_target_slot_def lookupTargetSlot_def
-                         whenE_rangeCheck_eq length_Suc_conv)
+                         whenE_rangeCheck_eq length_Suc_conv checkIRQ_def)
    apply (rule corres_guard_imp)
      apply (rule whenE_throwError_corres)
        apply (simp add: minIRQ_def maxIRQ_def)
@@ -195,7 +194,7 @@ lemma decode_irq_control_valid'[wp]:
         \<and> cte_wp_at' (\<lambda>cte. cteCap cte = IRQControlCap) slot s\<rbrace>
      decodeIRQControlInvocation label args slot caps
    \<lbrace>irq_control_inv_valid'\<rbrace>,-"
-  apply (simp add: decodeIRQControlInvocation_def Let_def split_def
+  apply (simp add: decodeIRQControlInvocation_def Let_def split_def checkIRQ_def
                    rangeCheck_def unlessE_whenE
                 split del: split_if cong: if_cong list.case_cong
                                           invocation_label.case_cong)
@@ -221,9 +220,6 @@ lemma valid_globals_ex_cte_cap_irq:
    apply blast
   apply (simp add: global_refs'_def cte_level_bits_def)
   done
-
-
-declare setInterruptMode_def[simp] MachineOps.setInterruptMode_def[simp]
 
 lemma invoke_irq_handler_corres:
   "irq_handler_inv_relation i i' \<Longrightarrow>

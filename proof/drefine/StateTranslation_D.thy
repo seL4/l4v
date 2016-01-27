@@ -251,14 +251,6 @@ definition
 where
   "to_bool w \<equiv> w \<noteq> 0"
 
-definition
-  transform_intent_irq_set_mode :: "word32 list \<Rightarrow> cdl_irq_handler_intent option"
-where
-  "transform_intent_irq_set_mode args = 
-     (case args of
-       trig#pol#_ \<Rightarrow> Some (IrqHandlerSetModeIntent (to_bool trig) (to_bool pol))
-     | _ \<Rightarrow> Nothing)"
-
 (* A dispatch function that converts the user's message label
  * and IPC buffer into an intent by dispatching on the message label.
  * For malformed messages etc., we return None.
@@ -329,7 +321,6 @@ definition
     | IRQAckIRQ \<Rightarrow> Some (IrqHandlerIntent IrqHandlerAckIntent)
     | IRQSetIRQHandler \<Rightarrow> Some (IrqHandlerIntent IrqHandlerSetEndpointIntent)
     | IRQClearIRQHandler \<Rightarrow> Some (IrqHandlerIntent IrqHandlerClearIntent)
-    | IRQSetMode \<Rightarrow> option_map IrqHandlerIntent (transform_intent_irq_set_mode args)
     | ArchInvocationLabel ARMPageTableMap \<Rightarrow>
                           map_option PageTableIntent
                                    (transform_intent_page_table_map args)

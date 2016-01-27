@@ -32,7 +32,7 @@ where
             \<and> (\<exists>ptr'. cte_wp_at (op = (cap.IRQHandlerCap irq)) ptr' s)
             \<and> cte_wp_at (interrupt_derived cap) cte_ptr s
             \<and> s \<turnstile> cap \<and> is_ntfn_cap cap)"
-| "irq_handler_inv_valid (Invocations_A.SetMode irq trig pol) = \<top>"
+
 
 primrec
   irq_control_inv_valid :: "irq_control_invocation \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
@@ -58,7 +58,7 @@ lemma decode_irq_handler_valid[wp]:
         \<and> (\<forall>cap \<in> set caps. \<forall>r \<in> cte_refs (fst cap) (interrupt_irq_node s). ex_cte_cap_to r s)
         \<and> (\<forall>cap \<in> set caps. ex_cte_cap_wp_to is_cnode_cap (snd cap) s)
         \<and> (\<forall>cap \<in> set caps. cte_wp_at (interrupt_derived (fst cap)) (snd cap) s)\<rbrace>
-     decode_irq_handler_invocation label args irq caps
+     decode_irq_handler_invocation label irq caps
    \<lbrace>irq_handler_inv_valid\<rbrace>,-"
   apply (simp add: decode_irq_handler_invocation_def Let_def split_def
                   split del: split_if cong: if_cong)
@@ -71,7 +71,7 @@ crunch inv[wp]: is_irq_active "P"
 
 lemma decode_irq_control_invocation_inv[wp]:
   "\<lbrace>P\<rbrace> decode_irq_control_invocation label args slot caps \<lbrace>\<lambda>rv. P\<rbrace>"
-  apply (simp add: decode_irq_control_invocation_def Let_def
+  apply (simp add: decode_irq_control_invocation_def Let_def arch_check_irq_def
                    arch_decode_irq_control_invocation_def whenE_def, safe)
   apply (wp | simp)+
   done
@@ -84,7 +84,7 @@ lemma decode_irq_control_valid[wp]:
      decode_irq_control_invocation label args slot caps
    \<lbrace>irq_control_inv_valid\<rbrace>,-"
   apply (simp add: decode_irq_control_invocation_def Let_def split_def
-                   lookup_target_slot_def whenE_def
+                   lookup_target_slot_def whenE_def arch_check_irq_def
                    arch_decode_irq_control_invocation_def
                  split del: split_if cong: if_cong)
   apply (rule hoare_pre)
@@ -300,7 +300,7 @@ lemma invoke_irq_handler_invs':
       apply (clarsimp simp: valid_state_def invs_def appropriate_cte_cap_def
                             is_cap_simps)
       apply (erule cte_wp_at_weakenE, simp add: is_derived_use_interrupt)
-     apply (wp| simp add: setInterruptMode_def)+
+     apply (wp| simp add: )+
   done
 qed
 

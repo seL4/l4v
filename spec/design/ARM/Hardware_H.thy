@@ -350,11 +350,6 @@ where
 "pageColourBits \<equiv> Platform.pageColourBits"
 
 definition
-setInterruptMode :: "irq \<Rightarrow> bool \<Rightarrow> bool \<Rightarrow> unit machine_monad"
-where
-"setInterruptMode arg1 arg2 arg3 \<equiv> return ()"
-
-definition
 clearExMonitor :: "unit machine_monad"
 where
 "clearExMonitor\<equiv> return ()"
