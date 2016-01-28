@@ -133,6 +133,10 @@ definition
   is_arch_cap :: "cap \<Rightarrow> bool" where
   "is_arch_cap cap \<equiv> case cap of ArchObjectCap _ \<Rightarrow> True | _ \<Rightarrow> False"
 
+context 
+notes [[function_internals =true]]
+begin
+
 fun is_cnode_cap :: "cap \<Rightarrow> bool"
 where
   "is_cnode_cap (CNodeCap _ _ _) = True"
@@ -169,6 +173,7 @@ where
   "cap_rights (EndpointCap _ _ cr) = cr"
 | "cap_rights (NotificationCap _ _ cr) = cr"
 | "cap_rights (ArchObjectCap acap) = acap_rights acap"
+end
 
 text {* Various update functions for cap data common to various kinds of
 cap are defined here. *}

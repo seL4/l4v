@@ -255,7 +255,7 @@ lemma irq_state_IRQSignal_NullCap:
   apply (frule(1) valid_global_refsD2)
   apply (case_tac cap, simp_all add: cap_range_def global_refs_def)
   apply (safe, simp_all)
-  apply (clarsimp simp: valid_irq_node_def inj_on_iff[where f="interrupt_irq_node s"])
+  apply (clarsimp simp: valid_irq_node_def inj_on_eq_iff[where f="interrupt_irq_node s"])
   apply (simp add: valid_irq_handlers_def)
   apply (drule bspec, erule ranI)
   apply (simp add: irq_issued_def)

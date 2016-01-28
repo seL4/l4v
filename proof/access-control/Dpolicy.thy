@@ -244,7 +244,7 @@ lemma transform_cslot_pre_onto:
   apply (clarsimp simp:transform_cslot_ptr_def transform_cslot_ptr_rev_def)
   apply (clarsimp simp:nat_to_bl_def bin_bl_bin' bintrunc_mod2p)
   apply (subst int_mod_eq')
-    apply (clarsimp simp: not_leE)
+    apply (clarsimp simp: not_le_imp_less)
    apply (drule iffD2[OF zless_int])
    apply (clarsimp)
   apply simp
@@ -379,7 +379,7 @@ lemma opt_cap_None_word_bits:
      apply (metis gr0I le_antisym less_eq_Suc_le less_eq_nat.simps(1)
                   lt_word_bits_lt_pow zero_less_Suc)
     apply (clarsimp simp:option_map_join_def nat_to_bl_def)
-    apply (drule not_leE)
+    apply (drule not_le_imp_less)
     apply (subgoal_tac "b < 2 ^ WordSetup.word_bits")
      apply simp
     apply (rule less_trans)
