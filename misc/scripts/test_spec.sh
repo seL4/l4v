@@ -18,9 +18,6 @@ BASE="${SCRIPT_DIR}/../.."
 # Haskell translator directory
 HASKELL_TRANS="${BASE}/tools/haskell-translator"
 
-# Load custom config.
-. ${HASKELL_TRANS}/CONFIG
-
 # Isabelle skeleton files.
 SKEL="${BASE}/spec/design/skel"
 MSKEL="${BASE}/spec/design/m-skel"
@@ -29,7 +26,10 @@ then
 	echo "Could not find directory: $SKEL"
 	exit 1
 fi
-NAMES=`ls $SKEL`
+
+ARCHES=("ARM")
+
+NAMES=`cd $SKEL; ls *.thy`
 
 # Output specification.
 SPEC="${BASE}/spec/design"
@@ -51,15 +51,37 @@ case $(uname -s) in
 		;;
 esac
 trap "rm -rf $SPEC_TMP" EXIT
+mkdir -p "$SPEC_TMP/machine"
 
 # Generate list of files to generate.
+
 function send_filenames () {
+        local arch=${1}
+
+        local archnames=`cd $SKEL/${arch}; ls *.thy`
+        local archmnames=`cd $MSKEL/${arch}; ls *.thy`
+        mkdir -p "$SPEC_TMP/${arch}" 
+        mkdir -p "$SPEC_TMP/machine/${arch}"
+ 
+        # Theory files common to all haskell specifications
 	for NAME in $NAMES
 	do
 		echo "$SKEL/$NAME --> $SPEC_TMP/$NAME"
 	done
-	echo "$MSKEL/ARMMachineTypes.thy --> $SPEC_TMP/ARMMachineTypes.thy"
+
+        # Arch-specific haskell specifications
+        for NAME in ${archnames}
+        do
+                echo "$SKEL/${arch}/$NAME --> $SPEC_TMP/${arch}/$NAME"
+        done
+
+        # Arch-specific machine theories, imported by haskell and abstract
+        for MNAME in ${archmnames}
+        do
+                echo "$MSKEL/${arch}/$MNAME --> $SPEC_TMP/machine/${arch}/$MNAME"
+        done
 }
+
 
 # Assert files $1 and $2 are the same.
 function test_files () {
@@ -76,18 +98,37 @@ function test_files () {
 
 # Assert that all the files in $NAMES are identical.
 function test_filenames () {
-	for NAME in $NAMES
+        local tmpthys=`cd $SPEC_TMP; find . -name "*.thy" | grep -v "./machine"`
+       
+	for tmpthy in $tmpthys
 	do
-		test_files "$SPEC_TMP/$NAME" "$SPEC/$NAME"
+                local tmpthy=${tmpthy:2}
+		test_files "$SPEC_TMP/$tmpthy" "$SPEC/$tmpthy"
 	done
-	test_files "$SPEC_TMP/ARMMachineTypes.thy" "$MACH/ARMMachineTypes.thy"
+
+        local tmpmthys=`cd "$SPEC_TMP/machine"; find . -name "*.thy"`
+
+	for tmpthy in $tmpmthys
+	do
+                local tmpthy=${tmpthy:2}
+		test_files "$SPEC_TMP/machine/$tmpthy" "$MACH/$tmpthy"
+	done
+
+ 
 }
 
 # Generate spec.
 cd ${HASKELL_TRANS}
 export L4CAP="${BASE}/../seL4/haskell"
 echo "Generating spec from haskell..."
-send_filenames | python pars_skl.py -q /dev/stdin
+
+for ARCH in ${ARCHES[@]}
+do
+        L4CPP="-DTARGET=$ARCH -DTARGET_$ARCH -DPLATFORM=QEmu -DPLATFORM_QEmu"
+        export L4CPP
+        cd ${HASKELL_TRANS}
+        send_filenames ${ARCH} | python pars_skl.py -q /dev/stdin
+done
 
 # Ensure committed files match generated files.
 echo "Testing conformity of spec to haskell..."
