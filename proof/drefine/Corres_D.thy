@@ -48,12 +48,12 @@ lemma OR_choiceE_OR[simp]: "(OR_choiceE c (f :: ('a + 'b,unit) s_monad) g) = (f 
 (* state relation as set, in (simp split_def) normal form *)
 abbreviation
 dcorres ::
-    "('a\<Colon>type \<Rightarrow> 'b\<Colon>type \<Rightarrow> bool)
+    "('a::type \<Rightarrow> 'b::type \<Rightarrow> bool)
      \<Rightarrow> (cdl_state \<Rightarrow> bool)
        \<Rightarrow> (det_state \<Rightarrow> bool)
-         \<Rightarrow> 'a\<Colon>type k_monad
+         \<Rightarrow> 'a::type k_monad
            \<Rightarrow> (det_state
-              \<Rightarrow> ('b\<Colon>type \<times> det_state) set \<times>
+              \<Rightarrow> ('b::type \<times> det_state) set \<times>
                 bool)
              \<Rightarrow> bool"
 where

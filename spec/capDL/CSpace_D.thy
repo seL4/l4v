@@ -305,7 +305,7 @@ lemma use_option_form_bind:
   apply (rule ext)
   apply (simp add: monadic_rel_optionation_form_def monadic_option_dest_def
                    bind_def split_def)
-  apply (simp add: relcomp_unfold ex_option image_def Pair_fst_snd_eq Bex_def)
+  apply (simp add: relcomp_unfold ex_option image_def prod_eq_iff Bex_def)
   apply fastforce
   done
 

@@ -2161,7 +2161,7 @@ lemma reschedule_required_dcorres: "dcorres dc P P' (return ()) reschedule_requi
   apply (clarsimp simp: reschedule_required_def)
   apply (rule dcorres_symb_exec_r)
     apply (rule dcorres_symb_exec_r)
-      apply (clarsimp simp: set_scheduler_action_def switch_thread_def modify_def bind_def return_def get_def put_def corres_underlying_def)
+      apply (clarsimp simp: set_scheduler_action_def (*switch_thread_def*) modify_def bind_def return_def get_def put_def corres_underlying_def)
      apply (case_tac "\<exists>t. rv = switch_thread t")
       apply (clarsimp | wp)+
     apply (clarsimp split: Deterministic_A.scheduler_action.splits | rule tcb_sched_action_transform | wp )+

@@ -450,11 +450,11 @@ proof -
              apply simp
              apply (subst subset_inj_on map_lift_over_f_eq[OF subset_inj_on],
                     assumption, fastforce)+
-             apply (simp add: inj_on_iff[where f="transform_cslot_ptr"]
+             apply (simp add: inj_on_eq_iff[where f="transform_cslot_ptr"]
                               ranI domI map_option_eq_Some[THEN trans [OF eq_commute]])
-             apply (auto simp: inj_on_iff[where f="transform_cslot_ptr"]
+             apply (auto simp: inj_on_eq_iff[where f="transform_cslot_ptr"]
                                ranI domI,
-                    auto simp: inj_on_iff[where f="transform_cslot_ptr"]
+                    auto simp: inj_on_eq_iff[where f="transform_cslot_ptr"]
                                ranI domI map_lift_over_eq_Some)[1]
             apply (clarsimp simp: no_cdt_loop_mloop)
             apply (rule_tac s=s' in transform_cdt_slot_inj_on_cte_at[where P=\<top>])
