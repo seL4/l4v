@@ -22,7 +22,7 @@ from six.moves import zip
 from functools import reduce
 
 
-class Call:
+class Call(object):
 
     def __init__(self):
         self.restr = None
