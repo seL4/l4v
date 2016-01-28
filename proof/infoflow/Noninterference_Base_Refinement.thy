@@ -15,8 +15,8 @@ begin
 
 (* we assume the same initial state for both systems *)
 locale noninterference_refinement = 
-   abs: complete_unwinding_system A s0 dom uwr policy out schedDomain +
-   conc: noninterference_system C s0 dom uwr policy out schedDomain
+   abs?: complete_unwinding_system A s0 dom uwr policy out schedDomain +
+   conc?: noninterference_system C s0 dom uwr policy out schedDomain
    for A :: "('a,'s,'e) data_type"
    and s0 :: "'s"
    and dom :: "'e \<Rightarrow> 's \<Rightarrow> 'd"      

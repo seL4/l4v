@@ -1799,7 +1799,7 @@ lemma handle_preemption_globals_equiv[wp]: "\<lbrace>globals_equiv st and invs\<
   apply (wp handle_interrupt_globals_equiv dmo_getActiveIRQ_globals_equiv crunch_wps | simp add: crunch_simps)+
   done
 
-lemmas handle_preemption_idle_equiv[wp] = idle_globals_lift[OF handle_preemption_globals_equiv invs_pd_not_idle_thread,simplified, OF TrueI]
+lemmas handle_preemption_idle_equiv[wp] = idle_globals_lift[OF handle_preemption_globals_equiv invs_pd_not_idle_thread,simplified]
 
 lemma schedule_if_globals_equiv_scheduler[wp]: "\<lbrace>globals_equiv_scheduler st and invs\<rbrace> schedule_if tc \<lbrace>\<lambda>_. globals_equiv_scheduler st\<rbrace>"
   apply (simp add: schedule_if_def)
@@ -1809,7 +1809,7 @@ lemma schedule_if_globals_equiv_scheduler[wp]: "\<lbrace>globals_equiv_scheduler
   apply (wp | simp)+
   done
 
-lemmas schedule_if_idle_equiv[wp] = idle_globals_lift_scheduler[OF schedule_if_globals_equiv_scheduler invs_pd_not_idle_thread,simplified, OF TrueI]
+lemmas schedule_if_idle_equiv[wp] = idle_globals_lift_scheduler[OF schedule_if_globals_equiv_scheduler invs_pd_not_idle_thread,simplified]
 
 lemma not_in_global_refs_vs_lookup:
   "\<lbrakk>(\<exists>\<unrhd>p) s; valid_vs_lookup s; valid_global_refs s;
