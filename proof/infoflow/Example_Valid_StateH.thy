@@ -44,7 +44,7 @@ where
         (the_nat_to_bl_10 2)
             \<mapsto> (Structures_H.CNodeCap Low_cnode_ptr 10 2 10, MDB 0 Low_tcb_ptr False False), 
         (the_nat_to_bl_10 3)
-            \<mapsto> (Structures_H.ArchObjectCap (ARMStructures_H.PageDirectoryCap Low_pd_ptr 
+            \<mapsto> (Structures_H.ArchObjectCap (ArchStructures_H.PageDirectoryCap Low_pd_ptr 
                                              (Some Low_asid)), MDB 0 (Low_tcb_ptr + 0x10) False False),
         (the_nat_to_bl_10 318) 
             \<mapsto> (Structures_H.NotificationCap ntfn_ptr 0 True False,
@@ -74,7 +74,7 @@ where
         (the_nat_to_bl_10 2)
             \<mapsto> (Structures_H.CNodeCap High_cnode_ptr 10 2 10, MDB 0 High_tcb_ptr False False),
         (the_nat_to_bl_10 3)
-           \<mapsto> (Structures_H.ArchObjectCap (ARMStructures_H.PageDirectoryCap High_pd_ptr 
+           \<mapsto> (Structures_H.ArchObjectCap (ArchStructures_H.PageDirectoryCap High_pd_ptr 
                                             (Some High_asid)), MDB 0 (High_tcb_ptr + 0x10) False False),
         (the_nat_to_bl_10 318)
            \<mapsto> (Structures_H.NotificationCap ntfn_ptr 0 False True,
@@ -136,7 +136,7 @@ definition
   Low_ptH :: "word32 \<Rightarrow> word32 \<Rightarrow> Structures_H.kernel_object option"
 where
   "Low_ptH \<equiv>
-     \<lambda>base. (map_option (\<lambda>x. Structures_H.KOArch (ARMStructures_H.KOPTE (Low_pt'H x)))) \<circ>
+     \<lambda>base. (map_option (\<lambda>x. Structures_H.KOArch (ArchStructures_H.KOPTE (Low_pt'H x)))) \<circ>
             (\<lambda>offs. if is_aligned offs 2 \<and> base \<le> offs \<and> offs \<le> base + 2 ^ 10 - 1
                     then Some (ucast (offs - base >> 2)) else None)"
 
@@ -164,7 +164,7 @@ definition
   Low_pdH :: "word32 \<Rightarrow> word32 \<Rightarrow> Structures_H.kernel_object option"
 where
   "Low_pdH \<equiv>
-     \<lambda>base. (map_option (\<lambda>x. Structures_H.KOArch (ARMStructures_H.KOPDE (Low_pd'H x)))) \<circ>
+     \<lambda>base. (map_option (\<lambda>x. Structures_H.KOArch (ArchStructures_H.KOPDE (Low_pd'H x)))) \<circ>
             (\<lambda>offs. if is_aligned offs 2 \<and> base \<le> offs \<and> offs \<le> base + 2 ^ 14 - 1
                     then Some (ucast (offs - base >> 2)) else None)"
 
@@ -185,7 +185,7 @@ definition
   High_ptH :: "word32 \<Rightarrow> word32 \<Rightarrow> Structures_H.kernel_object option"
 where
   "High_ptH \<equiv>
-     \<lambda>base. (map_option (\<lambda>x. Structures_H.KOArch (ARMStructures_H.KOPTE (High_pt'H x)))) \<circ>
+     \<lambda>base. (map_option (\<lambda>x. Structures_H.KOArch (ArchStructures_H.KOPTE (High_pt'H x)))) \<circ>
             (\<lambda>offs. if is_aligned offs 2 \<and> base \<le> offs \<and> offs \<le> base + 2 ^ 10 - 1
                     then Some (ucast (offs - base >> 2)) else None)"
 
@@ -207,7 +207,7 @@ definition
   High_pdH :: "word32 \<Rightarrow> word32 \<Rightarrow> Structures_H.kernel_object option" 
 where
   "High_pdH \<equiv>
-     \<lambda>base. (map_option (\<lambda>x. Structures_H.KOArch (ARMStructures_H.KOPDE (High_pd'H x)))) \<circ>
+     \<lambda>base. (map_option (\<lambda>x. Structures_H.KOArch (ArchStructures_H.KOPDE (High_pd'H x)))) \<circ>
             (\<lambda>offs. if is_aligned offs 2 \<and> base \<le> offs \<and> offs \<le> base + 2 ^ 14 - 1
                     then Some (ucast (offs - base >> 2)) else None)"
 
@@ -296,7 +296,7 @@ definition
   global_pdH' :: "word32 \<Rightarrow> word32 \<Rightarrow> Structures_H.kernel_object option"
 where
   "global_pdH' \<equiv> \<lambda>base.
-     (map_option (\<lambda>x. Structures_H.KOArch (ARMStructures_H.KOPDE (global_pdH (x::12 word))))) \<circ>
+     (map_option (\<lambda>x. Structures_H.KOArch (ArchStructures_H.KOPDE (global_pdH (x::12 word))))) \<circ>
      (\<lambda>offs. if is_aligned offs 2 \<and> base \<le> offs \<and> offs \<le> base + 2 ^ 14 - 1
              then Some (ucast (offs - base >> 2)) else None)"
 
