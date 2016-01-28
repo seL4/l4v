@@ -474,7 +474,8 @@ let
     val l2_thm = the (AutoCorresData.get_thm thy filename "L2corres" fn_name)
           handle Option => raise SimplConv.FunctionNotFound fn_name
     val hl_thm = the (AutoCorresData.get_thm thy filename "HLcorres" fn_name)
-          handle Option => raise SimplConv.FunctionNotFound fn_name
+          handle Option => (@{thm L2Tcorres_trivial_from_local_var_extract} OF [l2_thm]
+                            handle THM _ => l2_thm) (* catch this failure below *)
     val wa_thm = the (AutoCorresData.get_thm thy filename "WAcorres" fn_name)
           (* If there is no WAcorres thm, it is probably because word_abstract
            * was disabled using no_word_abs.
@@ -567,12 +568,9 @@ end
 (* Run through every function, attempting to strengthen its type. *)
 fun type_strengthen (rules : Monad_Types.monad_type list)
                     (force_lift : Monad_Types.monad_type Symtab.table)
-                    filename fn_info (make_function_name : string -> string)
+                    filename prog_info fn_info (make_function_name : string -> string)
                     (keep_going : bool) (do_opt : bool) lthy =
 let
-  (* Get all function definitions. *)
-  val prog_info = ProgramInfo.get_prog_info lthy filename
-
   fun optcat xs = List.concat (map the_list xs)
 
   (* Fetch the body of every function. *)

@@ -373,9 +373,10 @@ in thm' end
 (* Convert a program to use a lifted heap. *)
 fun system_heap_lift
     (filename : string)
+    (prog_info : ProgramInfo.prog_info)
     (fn_info : FunctionInfo.fn_info)
-    (no_heap_abs : string list)
-    (force_heap_abs : string list)
+    (no_heap_abs : Symset.key Symset.set)
+    (force_heap_abs : Symset.key Symset.set)
     (make_lifted_globals_field_name : string -> string)
     (heap_abs_syntax : bool)
     (keep_going : bool)
@@ -386,8 +387,6 @@ fun system_heap_lift
     (gen_word_heaps : bool)
     lthy =
 let
-  val prog_info = ProgramInfo.get_prog_info lthy filename
-
   (* Create base definitions for the new program, including a new
    * "globals" record with a lifted heap. *)
   val (heap_info, lthy) = HeapLiftBase.setup prog_info fn_info make_lifted_globals_field_name gen_word_heaps lthy
@@ -438,8 +437,8 @@ let
   (* Determine which functions cannot be lifted. *)
   val unliftable_functions =
         get_unliftable_functions lthy prog_info fn_info
-        |> Symset.union (Symset.make no_heap_abs)
-        |> Symset.subtract (Symset.make force_heap_abs)
+        |> Symset.union no_heap_abs
+        |> Symset.subtract force_heap_abs
 
   (* TODO: explain why each function in the list isn't being lifted. *)
   val _ =
@@ -524,19 +523,20 @@ let
     |> (fn prop =>
          (* HACK: valid_struct_field currently works only for packed types,
           * so typecheck the prop first *)
-         let val _ = Syntax.check_term lthy prop in
-         [Goal.prove_future lthy [] [] prop
-            (fn params =>
-               (rtac @{thm valid_struct_fieldI} 1) THEN
-               (* Need some extra thms from the records package for our struct type. *)
-               (EqSubst.eqsubst_tac lthy [0]
-                  [hd (Proof_Context.get_thms lthy (struct_name ^ "_idupdates")) RS @{thm sym}] 1
-                  THEN asm_full_simp_tac lthy 1) THEN
-               (FIRST (Proof_Context.get_thms lthy (struct_name ^ "_fold_congs")
-                       |> map (fn t => rtac (t OF @{thms refl refl}) 1))
-                  THEN asm_full_simp_tac lthy 1) THEN
-               (REPEAT (subgoal_solver_tac (#context params))))]
-         end handle _ => [])
+         case try (Syntax.check_term lthy) prop of
+           SOME _ =>
+             [Goal.prove_future lthy [] [] prop
+                (fn params =>
+                   (rtac @{thm valid_struct_fieldI} 1) THEN
+                   (* Need some extra thms from the records package for our struct type. *)
+                   (EqSubst.eqsubst_tac lthy [0]
+                      [hd (Proof_Context.get_thms lthy (struct_name ^ "_idupdates")) RS @{thm sym}] 1
+                      THEN asm_full_simp_tac lthy 1) THEN
+                   (FIRST (Proof_Context.get_thms lthy (struct_name ^ "_fold_congs")
+                           |> map (fn t => rtac (t OF @{thms refl refl}) 1))
+                      THEN asm_full_simp_tac lthy 1) THEN
+                   (REPEAT (subgoal_solver_tac (#context params))))]
+           | NONE => [])
 
   (* Generate "valid_struct_field_legacy" for each field of each struct. *)
   fun mk_valid_struct_field_legacy_thm typ (field_info : HeapLiftBase.field_info) =
@@ -687,8 +687,13 @@ let
           ((K (CHANGED ((rtac_all rules 1) APPEND (fo_tac)))) THEN_ALL_NEW solve_tac) 1))
             ORELSE (print_n_tac error_printed THEN no_tac))
 
-    val tactics = map (fn rule => (rule, rtac rule 1)) rules
-                  @ [(@{thm fun_app_def}, fo_tac)]
+    val tactics =
+        if #is_simpl_wrapper fn_def
+        then (* Solver for trivial simpl wrappers. *)
+             [(@{thm L2Tcorres_id}, rtac @{thm L2Tcorres_id} 1)]
+        else map (fn rule => (rule, rtac rule 1)) rules
+             @ [(@{thm fun_app_def}, fo_tac)]
+
     val replay_failure_start = 1
     val replay_failures = Unsynchronized.ref replay_failure_start
     val (thm, trace) =

@@ -124,6 +124,11 @@ Less common options (mainly for debugging):
   * `scope`: Only parse the given functions and their
     callees, up to depth `scope_depth`.
 
+  * `c_locale`: Run in this locale, rather than the default locale
+    used by the C-parser. This locale must behave like the C-parser
+    one except that the function bodies may be different.
+    This option is for interfacing with the seL4 proofs.
+
   * `trace_heap_lift = FUNC_NAMES`: Trace the _heap abstraction_
     process for each of the given functions. The traces
     are stored in the Isabelle theory and can be quite large.
@@ -160,6 +165,7 @@ is as follows:
         keep_going,
         scope = o p q,
         scope_depth = 5,
+        c_locale = "my_locale",
         trace_heap_lift = c d,
         trace_word_abs = f h i,
         no_opt,

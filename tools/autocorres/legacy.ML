@@ -17,9 +17,8 @@ fun mk_l1corres_trivial_thm fn_info ctxt fn_name = let
     val impl_thm = Proof_Context.get_thm ctxt (fn_name ^ "_impl")
     val gamma = safe_mk_meta_eq impl_thm |> Thm.concl_of |> Logic.dest_equals
         |> fst |> (fn (f $ _) => f | t => raise TERM ("gamma", [t]))
-    val thy = Proof_Context.theory_of ctxt
-    val thm = @{thm L1corres_trivial}
-        WHERE [("proc", cterm_of thy const), ("Gamma", cterm_of thy gamma)]
+    val thm = @{thm L1corres_call_simpl}
+        WHERE [("proc", Thm.cterm_of ctxt const), ("Gamma", Thm.cterm_of ctxt gamma)]
     val body = SimplConv.get_body_of_l1corres_thm thm
     val term = Abs ("measure", @{typ nat}, body)
   in (term, thm) end
@@ -30,8 +29,8 @@ fun get_ext_l1corres_thm prog_info fn_info ctxt fn_name = let
         val (term, thm) = mk_l1corres_trivial_thm fn_info ctxt nm
       in (nm, (false, term, thm)) end
     val callee_tab = Symtab.make (map fake_callee callees)
-  in SimplConv.get_l1corres_thm prog_info fn_info Symtab.empty ctxt fn_name
-    callee_tab @{term "ameasure :: nat"}
+  in SimplConv.get_l1corres_thm prog_info fn_info ctxt true false fn_name
+    callee_tab @{term "ameasure :: nat"} |> fst
   end
 
 fun mk_l2corres_trivial_thm fn_info ctxt gs fn_name = let
@@ -42,7 +41,6 @@ fun mk_l2corres_trivial_thm fn_info ctxt gs fn_name = let
     val impl_thm = Proof_Context.get_thm ctxt (fn_name ^ "_impl")
     val gamma = safe_mk_meta_eq impl_thm |> Thm.concl_of |> Logic.dest_equals
         |> fst |> (fn (f $ _) => f | t => raise TERM ("gamma", [t]))
-    val thy = Proof_Context.theory_of ctxt
     val (sT, gsT) = case strip_type (fastype_of gs) of
         ([sT], gsT) => (sT, gsT) | _ => raise TERM ("mk_l2corres_trivial_thm", [gs])
     val ex_xf = Abs ("s", sT, HOLogic.unit)
@@ -51,7 +49,7 @@ fun mk_l2corres_trivial_thm fn_info ctxt gs fn_name = let
       | set_domain_type t = raise TERM ("set_domain_type", [t])
     val params = Symtab.lookup (#proc_info (Hoare.get_data ctxt))
       (fn_name ^ "_'proc") |> the |> #params
-      |> map (apsnd (Proof_Context.read_const_proper ctxt true #> set_domain_type))
+      |> map (apsnd (Proof_Context.read_const {proper=true, strict=true} ctxt #> set_domain_type))
     val arg_accs = filter (fn p => fst p = HoarePackage.In) params |> map snd
     val ret_accs = filter (fn p => fst p = HoarePackage.Out) params |> map snd
 
@@ -60,11 +58,11 @@ fun mk_l2corres_trivial_thm fn_info ctxt gs fn_name = let
     val arg_frees = map (fn (s, T) => Var ((s, 0), T)) args
     val arg_v = HOLogic.mk_tuple arg_frees
 
-    val thm = @{thm L1L2corres_trivial}
-        WHERE (map (apsnd (cterm_of thy))
+    val thm = @{thm L2corres_L2_call_simpl}
+        WHERE (map (apsnd (Thm.cterm_of ctxt))
             [("proc", const), ("Gamma", gamma), ("ex_xf", ex_xf), ("gs", gs),
              ("ret_xf", ret_xf), ("arg_fn", arg_xf), ("args", arg_v)])
-    val body = LocalVarExtract.get_body_of_thm thm
+    val body = LocalVarExtract.get_body_of_thm ctxt thm
     val term = fold_rev Term.lambda (@{term "ameasure :: nat"} :: arg_frees) body
   in (term, thm) end
 
@@ -76,17 +74,16 @@ fun get_ext_l2corres_thm prog_info fn_info ctxt gs fn_name l1_body = let
     val callee_tab = Symtab.make (map fake_callee callees)
     val args = Symtab.lookup (FunctionInfo.get_functions fn_info) fn_name
         |> the |> #args
-    val thm = LocalVarExtract.get_l2corres_thm ctxt prog_info fn_info Symtab.empty fn_name
+    val (thm, _) = LocalVarExtract.get_l2corres_thm ctxt prog_info fn_info true false fn_name
         callee_tab (map Free args) l1_body @{thm refl}
-    val body = LocalVarExtract.get_body_of_thm thm
+    val body = LocalVarExtract.get_body_of_thm ctxt thm
   in (body, Drule.generalize ([], map fst args) thm) end
 
 fun get_ext_type_strengthen_thm ctxt prog_info fn_info fn_name body = let
     val rules = Monad_Types.get_ordered_rules ["nondet"] (Context.Proof @{context})
         |> hd
-    val thy = Proof_Context.theory_of ctxt
-    val res = TypeStrengthen.perform_lift_and_polish ctxt prog_info fn_info rules []
-        ((@{thm refl} WHERE [("t", cterm_of thy body)]) |> mk_meta_eq)
+    val res = TypeStrengthen.perform_lift_and_polish ctxt prog_info fn_info rules true
+        ((@{thm refl} WHERE [("t", Thm.cterm_of ctxt body)]) |> mk_meta_eq)
         fn_name
     val args = Symtab.lookup (FunctionInfo.get_functions fn_info) fn_name
         |> the |> #args
@@ -117,6 +114,3 @@ fun method prog_info fn_info globals
         prog_info fn_info globals ctxt 1))
 
 end
-
-
-

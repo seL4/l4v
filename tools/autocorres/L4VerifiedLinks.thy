@@ -63,8 +63,8 @@ lemma ccorresE_ccorres_underlying':
   done
 
 lemma ac_corres_ccorres_underlying:
-  "\<lbrakk> ac_corres st \<Gamma> rx (\<lambda>s. s \<in> G) A B \<rbrakk> \<Longrightarrow>
-      ccorres_underlying {(a, b). a = st b} \<Gamma> ((\<lambda>_ _. False) \<oplus> (\<lambda>r s. r = rx s)) Inr ((\<lambda>_ _. False) \<oplus>  (\<lambda>r s. r = rx s)) Inr \<top> G [] A B"
+  "ac_corres st \<Gamma> rx G A B \<Longrightarrow>
+   ccorres_underlying {(a, b). a = st b} \<Gamma> ((\<lambda>_ _. False) \<oplus> (\<lambda>r s. r = rx s)) Inr ((\<lambda>_ _. False) \<oplus> (\<lambda>r s. r = rx s)) Inr (\<lambda>_. True) (Collect G) [] A B"
   apply (clarsimp simp: ac_corres_def ccorres_underlying_def)
   apply (erule allE, erule impE, force)
   apply clarsimp
