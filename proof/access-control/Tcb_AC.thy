@@ -498,7 +498,7 @@ lemma decode_set_priority_authorised:
   apply (cases msg)
    apply simp_all
   apply (wp validE_validE_R[OF throwError_wp] OR_choice_E_weak_wp)+
-  apply (simp add: is_none_def)
+  apply simp
   done
 
 lemma decode_unbind_notification_authorised:
