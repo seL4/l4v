@@ -98,9 +98,9 @@ ML {*
 
      fun sep_match_trivial_tac ctxt =
         let  val sepcancel = (flip (sep_apply_tactic ctxt)) (SepCancel_Rules.get ctxt |> rev)
-             fun f x = x |> rotate_prems ~1 |> etac |> sepcancel
+             fun f x = x |> rotate_prems ~1 |> (fn x => [x]) |>  eresolve0_tac |> sepcancel
              val sep_thms = map f [@{thm sep_wand_trivial}, @{thm sep_wand_match}]
-        in sep_wand_rule_tac (rtac @{thm sep_rule} THEN' FIRST' sep_thms) ctxt
+        in sep_wand_rule_tac (resolve0_tac [@{thm sep_rule}] THEN' FIRST' sep_thms) ctxt
      end; 
      
     fun sep_safe_method ctxt = SIMPLE_METHOD' (sep_match_trivial_tac ctxt)

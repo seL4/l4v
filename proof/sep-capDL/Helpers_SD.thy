@@ -82,7 +82,7 @@ lemma restrict_map_comp' [simp]:
 
 lemma nat_list_not_UNIV [simp]:
   "set (xs::nat list) \<noteq> UNIV"
-  by (metis finite'_code(1) finite'_def infinite_UNIV_nat)
+  by (metis finite'_code(1) Cardinality.finite'_def infinite_UNIV_nat)
 
 (***********************************
  * End of generic Isabelle lemmas. *

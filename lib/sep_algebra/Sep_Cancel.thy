@@ -33,17 +33,17 @@ lemma sep_wand_lens_simple: "(\<And>s. T s = (Q \<and>* R) s) \<Longrightarrow> 
 done
 
 
-schematic_lemma schem_impAny: " (?C \<and>* B) s \<Longrightarrow> A s" by (erule sep_mp)
+schematic_goal schem_impAny: " (?C \<and>* B) s \<Longrightarrow> A s" by (erule sep_mp)
 
 ML {* 
 
    fun sep_cancel_tactic ctxt concl  = 
        let val thms = rev (SepCancel_Rules.get ctxt)
-           val tac  =  atac ORELSE'
+           val tac  =  assume_tac ctxt ORELSE'
                        eresolve_tac ctxt [@{thm sep_mp}, @{thm sep_conj_empty}, @{thm sep_empty_conj}]
                        ORELSE' sep_erule_tactic ctxt thms
            val direct_tac = eresolve_tac ctxt thms
-           val safe_sep_wand_tac = rotator' ctxt (rtac @{thm sep_wand_lens_simple}) (etac @{thm sep_conj_sep_impl_safe'})
+           val safe_sep_wand_tac = rotator' ctxt (resolve0_tac [@{thm sep_wand_lens_simple}]) (eresolve0_tac [@{thm sep_conj_sep_impl_safe'}])
            fun sep_cancel_tactic_inner true   = sep_erule_full_tac' tac ctxt |
                sep_cancel_tactic_inner false  = sep_erule_full_tac tac ctxt               
    in sep_cancel_tactic_inner concl ORELSE'

@@ -39,12 +39,12 @@ ML {*
    end; 
 
    fun sep_mp_solver ctxt  =
-    let val sep_mp = sep_apply_tactic ctxt (dtac @{thm sep_mp_gen}) ((rev o SepCancel_Rules.get) ctxt)
+    let val sep_mp = sep_apply_tactic ctxt (dresolve0_tac [@{thm sep_mp_gen}]) ((rev o SepCancel_Rules.get) ctxt)
         val taclist = [sep_drule_comb_tac false [@{thm sep_empty_imp}] ctxt,
                        sep_drule_tac sep_mp ctxt,
                        sep_drule_tac (sep_drule_tactic ctxt [@{thm sep_impl_simpl}]) ctxt,
                        sep_wand_frame_drule ctxt ]
-        val check = DETERM o (sep_drule_tac (sep_select_tactic (dtac @{thm sep_wand_frame_lens}) [1] ctxt) ctxt)
+        val check = DETERM o (sep_drule_tac (sep_select_tactic (dresolve0_tac [@{thm sep_wand_frame_lens}]) [1] ctxt) ctxt)
          
    in  CHANGED_PROP o (check THEN_ALL_NEW REPEAT_ALL_NEW ( FIRST' taclist) )
    end;
