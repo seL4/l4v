@@ -99,7 +99,7 @@ class BracedString:
     def __len__(self):
         return len(self.s)
 
-    def split(self, str=None, num=-2, braces=False, original=True):
+    def split(self, str=None, num=-2, braces=False):
         """Split into multiple BracedStrings, using `str` as a delimiter, and
         into a maximum of `num` components.
 
