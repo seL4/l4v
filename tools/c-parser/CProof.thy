@@ -134,8 +134,10 @@ apply(rule intvl_self)
 apply simp
 done
 
-defs
-c_guard_def:  "c_guard \<equiv> \<lambda>p. ptr_aligned p \<and> c_null_guard p"
+overloading c_guard_def \<equiv> c_guard begin
+definition
+c_guard_def:  "c_guard_def \<equiv> \<lambda>p. ptr_aligned p \<and> c_null_guard p"
+end
 
 definition
 c_fnptr_guard_def: "c_fnptr_guard (fnptr::unit ptr) \<equiv> ptr_val fnptr \<noteq> 0"
