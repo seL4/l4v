@@ -142,8 +142,8 @@ where
 
 | fa5: "access_ti_pair (DTPair t nm) = access_ti t"
 
-text {* access_ti\<^sub>0 overlays the representation of an object on a
-        list of zero bytes *}
+text \<open>@{text access_ti\<^sub>0} overlays the representation of an object on a
+        list of zero bytes\<close>
 
 definition access_ti\<^sub>0 :: "'a typ_info \<Rightarrow> ('a \<Rightarrow> byte list)" where
   "access_ti\<^sub>0 t \<equiv> \<lambda>v. access_ti t v (replicate (size_td t) 0)"

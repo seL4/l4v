@@ -239,7 +239,7 @@ lemma intvl_self_offset:
   shows False
 proof -
   let ?j = "2^len_of TYPE('a) - x"
-  from b have b': "of_nat x + of_nat ?j  = (0::'a::len word)" by simp
+  from b have b': "of_nat x + of_nat ?j  = (0::'a::len word)" using of_nat_2p by auto
   moreover from a b have "?j < n" by arith
   with b b' c show  ?thesis by (force simp: intvl_def)
 qed

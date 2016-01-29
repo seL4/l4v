@@ -158,8 +158,8 @@ lemmas fl_simps = fl_final_pad fl_ti_pad_combine
 lemma access_ti_props_simps [simp]:
   "\<forall>g x. access_ti (adjust_ti (tag::'a typ_info) (f::'b \<Rightarrow> 'a) g) x = access_ti tag (f x)"
   "\<forall>g x. access_ti_struct (map_td_struct (\<lambda>n algn d. update_desc f g d) (st::'a field_desc typ_struct)) x = access_ti_struct st (f x)"
-  "\<forall>g x. access_ti_list (map_td_list (\<lambda>n algn d. update_desc f g d) (ts\<Colon>('a field_desc typ_desc, char list) dt_pair list)) x = access_ti_list ts (f x)"
-  "\<forall>g x. access_ti_pair (map_td_pair (\<lambda>n algn d. update_desc f g d) (k\<Colon>('a field_desc typ_desc, char list) dt_pair)) x = access_ti_pair k (f x)"
+  "\<forall>g x. access_ti_list (map_td_list (\<lambda>n algn d. update_desc f g d) (ts::('a field_desc typ_desc, char list) dt_pair list)) x = access_ti_list ts (f x)"
+  "\<forall>g x. access_ti_pair (map_td_pair (\<lambda>n algn d. update_desc f g d) (k::('a field_desc typ_desc, char list) dt_pair)) x = access_ti_pair k (f x)"
 unfolding adjust_ti_def
 apply(induct tag and st and ts and k)
      apply (auto simp: update_desc_def)
@@ -235,8 +235,8 @@ lemma field_names_adjust_ti:
   shows
   "wf_fd ti \<longrightarrow> field_names (adjust_ti (ti::'a typ_info) f g) t = field_names ti t"
   "wf_fd_struct st \<longrightarrow> field_names_struct ((map_td_struct (\<lambda>n algn d. update_desc f g d) (st::'a field_desc typ_struct))) t = field_names_struct st t"
-  "wf_fd_list ts \<longrightarrow> field_names_list (map_td_list (\<lambda>n algn d. update_desc f g d) (ts\<Colon>('a field_desc typ_desc, char list) dt_pair list)) t = field_names_list ts t"
-  "wf_fd_pair x \<longrightarrow> field_names_pair (map_td_pair (\<lambda>n algn d. update_desc f g d) (x\<Colon>('a field_desc typ_desc, char list) dt_pair)) t = field_names_pair x t" using assms
+  "wf_fd_list ts \<longrightarrow> field_names_list (map_td_list (\<lambda>n algn d. update_desc f g d) (ts::('a field_desc typ_desc, char list) dt_pair list)) t = field_names_list ts t"
+  "wf_fd_pair x \<longrightarrow> field_names_pair (map_td_pair (\<lambda>n algn d. update_desc f g d) (x::('a field_desc typ_desc, char list) dt_pair)) t = field_names_pair x t" using assms
 apply(induct ti and st and ts and x)
      apply(auto simp: adjust_ti_def)
 done
