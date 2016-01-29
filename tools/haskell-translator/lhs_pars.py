@@ -214,7 +214,7 @@ def discard_line_numbers(tree):
         discards the n terms, returning a tree with tuples
         (line, children)"""
     result = []
-    for (line, n, children) in tree:
+    for (line, _, children) in tree:
         result.append((line, discard_line_numbers(children)))
     return result
 
@@ -1633,8 +1633,7 @@ def do_clauses_transform(xxx_todo_changeme3, rawsig, type=None):
             type = 0
             sig = None
         else:
-            sig = flatten_tree([rawsig])
-            sig = ' '.join(sig)
+            sig = ' '.join(flatten_tree([rawsig]))
             type = monad_type_acquire(sig)
     (line, type) = monad_type_transform((line, type))
     if children == []:
@@ -1673,7 +1672,7 @@ def do_clauses_transform(xxx_todo_changeme3, rawsig, type=None):
     children = [(l, c) for (l, c) in children if l.strip() or c]
 
     children2 = []
-    for i, (l, c) in enumerate(children):
+    for (l, c) in children:
         if l.lstrip().startswith('let '):
             if '=' not in l:
                 extra = reduce_to_single_line(c[0])
@@ -1908,11 +1907,11 @@ def case_clauses_transform(xxx_todo_changeme5):
         sys.stderr.write('Warning: where clause in case: %r\n'
                          % line)
         return (beforecase + '(* case removed *) undefined', [])
-        where_clause = where_clause_transform(children[-1])
-        children = children[:-1]
-        (in_stmt, l) = where_clause[-1]
-        l.append(case_clauses_transform((line, children)))
-        return where_clause
+        # where_clause = where_clause_transform(children[-1])
+        # children = children[:-1]
+        # (in_stmt, l) = where_clause[-1]
+        # l.append(case_clauses_transform((line, children)))
+        # return where_clause
 
     cases = []
     bodies = []
@@ -1942,7 +1941,8 @@ def case_clauses_transform(xxx_todo_changeme5):
         cases.append(case)
         bodies.append((tail, c))
 
-    cases = tuple(cases)
+    cases = tuple(cases) # used as key of a dict later, needs to be hashable
+                         # (since lists are mutable, they aren't)
     if not cases:
         print(line)
     conv = get_case_conv(cases)
@@ -2239,7 +2239,7 @@ def get_case_conv_table():
             continue
         try:
             if '---X>' in line:
-                [from_case, blah] = line.split('---X>')
+                [from_case, _] = line.split('---X>')
                 cases = get_case_lhs(from_case)
                 result[cases] = "<X>"
             else:
@@ -2324,7 +2324,6 @@ unique_ids_per_file = {}
 
 
 def get_next_unique_id():
-    global filename
     id = unique_ids_per_file.get(filename, 1)
     unique_ids_per_file[filename] = id + 1
     return id
@@ -2453,7 +2452,7 @@ def get_supplied_transform_table():
 
         children = discard_line_numbers(children)
 
-        [before, after] = children
+        before, after = children
 
         before = convert_to_stripped_tuple(before[0], before[1])
 
