@@ -1,5 +1,3 @@
-(* @TAG(OTHER_LGPL) *)
-
 (*  Author:      Norbert Schirmer
     Maintainer:  Norbert Schirmer, norbert.schirmer at web de
     License:     LGPL

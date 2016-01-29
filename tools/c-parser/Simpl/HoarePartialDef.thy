@@ -1,5 +1,3 @@
-(* @TAG(OTHER_LGPL) *)
-
 (*
     Author:      Norbert Schirmer
     Maintainer:  Norbert Schirmer, norbert.schirmer at web de
@@ -69,7 +67,7 @@ where
  "\<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/F\<^esub> P c Q,A \<equiv> (\<forall>(P,p,Q,A)\<in>\<Theta>. \<Gamma>\<Turnstile>n:\<^bsub>/F\<^esub> P (Call p) Q,A) \<longrightarrow> \<Gamma> \<Turnstile>n:\<^bsub>/F\<^esub> P c Q,A"
 
 
-notation (ascii)
+notation (ASCII)
   valid  ("_|='/_/ _ _ _,_"  [61,60,1000, 20, 1000,1000] 60) and
   cvalid  ("_,_|='/_/ _ _ _,_"  [61,60,60,1000, 20, 1000,1000] 60) and
   nvalid  ("_|=_:'/_/ _ _ _,_"  [61,60,60,1000, 20, 1000,1000] 60) and

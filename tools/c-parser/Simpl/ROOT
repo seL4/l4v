@@ -1,5 +1,3 @@
-(* @TAG(OTHER_LGPL) *)
-
 chapter AFP
 
 session Simpl (AFP) = HOL +

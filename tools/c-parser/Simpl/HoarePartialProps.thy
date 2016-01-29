@@ -1,5 +1,3 @@
-(* @TAG(OTHER_LGPL) *)
-
 (*
     Author:      Norbert Schirmer
     Maintainer:  Norbert Schirmer, norbert.schirmer at web de
@@ -1232,16 +1230,13 @@ lemma exec_noSpec_no_Stuck:
  assumes procs_subset_\<Gamma>: "\<forall>p \<in> dom \<Gamma>. procs (the (\<Gamma> p)) \<subseteq> dom \<Gamma>"
  assumes s_no_Stuck: "s\<noteq>Stuck"
  shows "t\<noteq>Stuck"
-  using exec noSpec_c procs_subset s_no_Stuck
-  proof (induct) 
-    case (Call p bdy s t) with noSpec_\<Gamma> procs_subset_\<Gamma> show ?case 
-      apply -
-      apply (drule bspec [where x=p])
-      apply  fastforce
-      apply (drule bspec [where x=p])
-      apply (auto)
-      done
-  qed fastforce+
+using exec noSpec_c procs_subset s_no_Stuck proof induct
+  case (Call p bdy s t) with noSpec_\<Gamma> procs_subset_\<Gamma> show ?case
+    by (auto dest!: bspec [of _ _ p])
+next
+  case (DynCom c s t) then show ?case
+   by auto blast
+qed auto
 
 lemma execn_noSpec_no_Stuck:
  assumes exec: "\<Gamma>\<turnstile>\<langle>c,s\<rangle> =n\<Rightarrow> t"
@@ -1251,18 +1246,13 @@ lemma execn_noSpec_no_Stuck:
  assumes procs_subset_\<Gamma>: "\<forall>p \<in> dom \<Gamma>. procs (the (\<Gamma> p)) \<subseteq> dom \<Gamma>"
  assumes s_no_Stuck: "s\<noteq>Stuck"
  shows "t\<noteq>Stuck"
-  using exec noSpec_c procs_subset s_no_Stuck
-  proof (induct)
-     case (Call p bdy n s t) with noSpec_\<Gamma> procs_subset_\<Gamma> show ?case 
-      apply -
-      apply (drule bspec [where x=p])
-      apply  fastforce
-      apply (drule bspec [where x=p])
-      apply (auto)
-      done
-  qed fastforce+
-
-
+using exec noSpec_c procs_subset s_no_Stuck proof induct
+  case (Call p bdy n s t) with noSpec_\<Gamma> procs_subset_\<Gamma> show ?case
+    by (auto dest!: bspec [of _ _ p])
+next
+  case (DynCom c s t) then show ?case
+    by auto blast
+qed auto
 
 lemma LiberalConseq_noguards_nothrows_sound:
 assumes spec: "\<forall>Z. \<forall>n. \<Gamma>,\<Theta>\<Turnstile>n:\<^bsub>/F\<^esub> (P' Z) c (Q' Z),(A' Z)"
