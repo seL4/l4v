@@ -1449,11 +1449,15 @@ lemma find_pd_for_asid_lookup_pd_wp:
 lemma aligned_sum_less_kernel_base:
   "vmsz_aligned p sz
     \<Longrightarrow> (p + 2 ^ pageBitsForSize sz - 1 < kernel_base) = (p < kernel_base)"
-  apply (simp add: kernel_base_less_observation vmsz_aligned_def)
-  apply (subgoal_tac "pageBitsForSize sz \<le> 28")
-   apply (subst mask_lower_twice[symmetric], assumption)
-   apply (subst add_diff_eq[symmetric], subst is_aligned_add_helper, assumption, simp_all)
-  apply (cases sz, simp_all)
+  apply (rule iffI)
+   apply (rule le_less_trans)
+    apply (rule is_aligned_no_overflow)
+    apply (simp add: vmsz_aligned_def)
+   apply simp
+  apply (simp add:field_simps[symmetric])
+  apply (erule gap_between_aligned)
+    apply (simp add: vmsz_aligned_def)+
+   apply (case_tac sz,simp_all add:kernel_base_def is_aligned_def)+
   done
 
 lemma arch_decode_inv_wf[wp]:

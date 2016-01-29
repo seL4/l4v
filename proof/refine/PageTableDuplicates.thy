@@ -620,7 +620,7 @@ lemma global_pd_offset:
    apply simp
   apply (frule_tac d1 = "kernelBase >> 20 << 2" and p1 = "ptr" 
     in is_aligned_add_helper[THEN conjunct2])
-   apply (simp add:kernelBase_def)
+   apply (simp add:Platform.kernelBase_def kernelBase_def)
   apply simp
   done
 
@@ -628,7 +628,7 @@ lemma globalPDEWindow_neg_mask:
   "\<lbrakk>x && ~~ mask (vs_ptr_align a) = y && ~~ mask (vs_ptr_align a);is_aligned ptr pdBits\<rbrakk>
   \<Longrightarrow> y \<in> {ptr + (kernelBase >> 20 << 2)..ptr + (2 ^ (pdBits) - 1)} 
   \<Longrightarrow> x \<in> {ptr + (kernelBase >> 20 << 2)..ptr + (2 ^ (pdBits) - 1)}"
-  apply (clarsimp simp:kernelBase_def)
+  apply (clarsimp simp:kernelBase_def Platform.kernelBase_def)
   apply (intro conjI)
    apply (rule_tac y = "y &&~~ mask (vs_ptr_align a)" in order_trans)
     apply (rule is_aligned_le_mask)
@@ -714,7 +714,7 @@ lemma copyGlobalMappings_ksPSpace_stable:
        apply (clarsimp simp:blah)
        apply (intro conjI)
         apply (rule word_plus_mono_right)
-         apply (simp add:kernelBase_def pdBits_def pageBits_def)
+         apply (simp add:Platform.kernelBase_def kernelBase_def pdBits_def pageBits_def)
          apply (word_bitwise,simp)
         apply (rule is_aligned_no_wrap'[OF ptr_al])
         apply (simp add:pdBits_def pageBits_def)
@@ -729,7 +729,7 @@ lemma copyGlobalMappings_ksPSpace_stable:
      have offset_bound:
        "\<And>x. \<lbrakk>is_aligned ptr 14;ptr + (kernelBase >> 20 << 2) \<le> x; x \<le> ptr + 0x3FFF\<rbrakk>
         \<Longrightarrow> x - ptr < 0x4000"
-        apply (clarsimp simp: kernelBase_def field_simps)
+        apply (clarsimp simp: Platform.kernelBase_def kernelBase_def field_simps)
         apply unat_arith
         done
 
@@ -773,10 +773,10 @@ lemma copyGlobalMappings_ksPSpace_stable:
        apply (rule conjI)
         apply (rule le_shiftr[where u="kernelBase >> 18" and n=2, simplified shiftr_shiftr, simplified])
         apply (rule word_le_minus_mono_left[where x=ptr and y="(kernelBase >> 18) + ptr", simplified])
-         apply (simp add: kernelBase_def field_simps)
+         apply (simp add: Platform.kernelBase_def kernelBase_def field_simps)
         apply (simp add:field_simps)
         apply (erule is_aligned_no_wrap')
-        apply (simp add: kernelBase_def pdBits_def pageBits_def)
+        apply (simp add: Platform.kernelBase_def kernelBase_def pdBits_def pageBits_def)
        apply (drule le_m1_iff_lt[THEN iffD1,THEN iffD2,rotated])
         apply simp
        apply (drule le_shiftr[where u = "x - ptr" and n = 2])
@@ -904,7 +904,7 @@ lemma copyGlobalMappings_ksPSpace_concrete:
        apply simp
       apply (frule_tac d1 = "kernelBase >> 20 << 2" and p1 = "ptr" 
         in is_aligned_add_helper[THEN conjunct2])
-       apply (simp add:kernelBase_def)
+       apply (simp add:Platform.kernelBase_def kernelBase_def)
       apply simp
       done
       
@@ -932,13 +932,13 @@ lemma copyGlobalMappings_ksPSpace_concrete:
      apply (rule le_less_trans[OF word_and_le1])
      apply simp
     apply (frule_tac d1 = "kernelBase >> 20 << 2" in is_aligned_add_helper[THEN conjunct2])
-     apply (simp add:kernelBase_def)
+     apply (simp add:Platform.kernelBase_def kernelBase_def)
     apply (simp add:field_simps)
     apply (frule_tac d1 = "0x3FFF" and p1="ptr" in is_aligned_add_helper[THEN conjunct2])
      apply simp
     apply (frule_tac d1 = "kernelBase >> 20 << 2" and p1 = "ptr" 
       in is_aligned_add_helper[THEN conjunct2])
-     apply (simp add:kernelBase_def)
+     apply (simp add:Platform.kernelBase_def kernelBase_def)
     apply simp
     apply (cut_tac copyGlobalMappings_ksPSpace_sameD)
        apply simp
@@ -1911,8 +1911,8 @@ lemma mapM_x_storePDE_update_invalid:
   \<lbrace>\<lambda>y s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
 proof -
   have word_le_significant_bits:
-  "\<And>x p. x \<le> (0xEFF::word32)
-  \<Longrightarrow> (p && mask 6) + ((x << 2) && ~~ mask 6) >> 2 \<le> 0xEFF"
+  "\<And>x p. x \<le> (0xDFF::word32)
+  \<Longrightarrow> (p && mask 6) + ((x << 2) && ~~ mask 6) >> 2 \<le> 0xDFF"
    apply (simp add:mask_def)
    apply (word_bitwise)
    apply simp
@@ -1925,7 +1925,7 @@ proof -
    apply (clarsimp simp:archObjSize_def pageBits_def pdBits_def)
    apply (drule_tac x = x in spec)
     apply (clarsimp dest!:plus_one_helper
-      simp:kernelBase_def le_less_trans field_simps)
+      simp:Platform.kernelBase_def kernelBase_def le_less_trans field_simps)
   apply (clarsimp simp:valid_cap'_def 
     objBits_simps archObjSize_def)
   apply (subst vs_valid_duplicates'_def)
@@ -1945,7 +1945,7 @@ proof -
    apply (subst (asm) mask_out_sub_mask)
    apply (simp add:field_simps)
    apply (drule_tac x = "((x && mask 6) + ((xa << 2) && ~~ mask 6)) >> 2" in spec)
-    apply (clarsimp simp: kernelBase_def word_le_significant_bits)
+    apply (clarsimp simp: Platform.kernelBase_def kernelBase_def word_le_significant_bits)
    apply (subst (asm) shiftr_shiftl1)
     apply simp
    apply (simp add:mask_lower_twice)

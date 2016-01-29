@@ -15,9 +15,6 @@ imports ArchRetypeDecls_H "../InvocationLabels_H"
 begin
 
 consts
-kernelBase :: "vptr"
-
-consts
 globalsBase :: "vptr"
 
 consts

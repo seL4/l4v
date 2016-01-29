@@ -369,6 +369,11 @@ physBase :: "paddr"
 where
 "physBase \<equiv> toPAddr Platform.physBase"
 
+definition
+kernelBase :: "vptr"
+where
+"kernelBase \<equiv> Platform.kernelBase"
+
 
 (* vmrights instance proofs *)
 (*<*)

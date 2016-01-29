@@ -4136,14 +4136,14 @@ lemma copyGlobalMappings_ccorres:
                                 \<and> is_aligned rv pdBits \<and> valid_pde_mappings' s
                                 \<and> page_directory_at' pd s
                                 \<and> page_directory_at' (armKSGlobalPD (ksArchState s)) s"
-              and i="0xF00"
+              and i="0xE00"
                in ccorres_mapM_x_while')
         apply (clarsimp simp del: Collect_const)
         apply (rule ccorres_guard_imp2)
          apply (rule ccorres_pre_getObject_pde)
          apply (simp add: storePDE_def del: Collect_const)
          apply (rule_tac P="\<lambda>s. ko_at' rva (armKSGlobalPD (ksArchState s)
-                                              + ((0xF00 + of_nat n) << 2)) s
+                                              + ((0xE00 + of_nat n) << 2)) s
                                     \<and> page_directory_at' pd s \<and> valid_pde_mappings' s
                                     \<and> page_directory_at' (armKSGlobalPD (ksArchState s)) s"
                     and P'="{s. i_' s = of_nat (3840 + n)

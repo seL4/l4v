@@ -2194,11 +2194,6 @@ lemma h_t_valid_and_cslift_and_c_guard_field_mdbNext_CL:
 done
 
 
-
-
-
-
-
 lemma valid_mdb_Prev_neq_Next_better: 
     "\<lbrakk> valid_mdb' s; ctes_of s p = Some cte \<rbrakk> \<Longrightarrow>  mdbPrev (cteMDBNode cte) \<noteq> 0   \<longrightarrow>
      (mdbNext (cteMDBNode cte)) \<noteq> (mdbPrev (cteMDBNode cte))"
@@ -2227,20 +2222,83 @@ done
 
 definition
   irq_opt_relation_def:
-  "irq_opt_relation (airq :: word8 option) (cirq :: word32) \<equiv>
+  "irq_opt_relation (airq :: word8 option) (cirq :: word16) \<equiv>
        case airq of
-         Some irq \<Rightarrow> (cirq = ucast irq \<and> irq \<noteq> scast irqInvalid \<and> ucast irq \<le> (scast maxIRQ :: word32))
+         Some irq \<Rightarrow> (cirq = ucast irq \<and> irq \<noteq> scast irqInvalid \<and> ucast irq \<le> (scast maxIRQ :: word16))
        | None \<Rightarrow> cirq = scast irqInvalid"
+
+lemma unat_ucast_8_16:
+  fixes x :: "word8"
+  shows "unat (ucast x :: word16) = unat x"
+  unfolding ucast_def unat_def
+  apply (subst int_word_uint)
+  apply (subst mod_pos_pos_trivial)
+    apply simp
+   apply (rule lt2p_lem)
+   apply simp
+  apply simp
+  done
+
+lemma unat_ucast_less_no_overflow:
+  "\<lbrakk>n < 2 ^ len_of TYPE('a); unat f < n\<rbrakk> \<Longrightarrow> (f::('a::len) word) < of_nat n"
+  apply (erule order_le_less_trans[OF _ of_nat_mono_maybe,rotated])
+    apply assumption
+  apply simp
+  done
+
+lemma unat_ucast_less_no_overflow_simp:
+  "n < 2 ^ len_of TYPE('a) \<Longrightarrow> (unat f < n) = ((f::('a::len) word) < of_nat n)"
+  apply (rule iffI)
+    apply (simp add:unat_ucast_less_no_overflow)
+  apply (simp add:unat_less_helper)
+  done
+
+lemma unat_ucast_no_overflow_le:
+  assumes no_overflow : "unat b < (2\<Colon>nat) ^ len_of TYPE('a)"
+  and upward_cast: "len_of TYPE('a) < len_of TYPE('b)"
+  shows  "(ucast (f::('a::len) word) < (b :: ('b :: len) word)) = (unat f < unat b)"
+  proof -
+    have LR: "ucast f < b \<Longrightarrow> unat f < unat b"
+      apply (rule unat_less_helper)
+      apply (simp add:ucast_nat_def)
+      apply (rule_tac 'b1 = 'b in  ucast_less_ucast[THEN iffD1])
+      apply (rule upward_cast)
+      apply (simp add: ucast_ucast_mask less_mask_eq word_less_nat_alt
+        unat_power_lower[OF upward_cast] no_overflow)
+      done
+    have RL: "unat f < unat b \<Longrightarrow> ucast f < b"
+      proof-
+      assume ineq: "unat f < unat b"
+      have ucast_rewrite: "ucast (f::('a::len) word) < 
+          ((ucast (ucast b ::('a::len) word)) :: ('b :: len) word)"
+        apply (simp add: ucast_less_ucast upward_cast)
+        apply (simp add: ucast_nat_def[symmetric])
+        apply (rule unat_ucast_less_no_overflow[OF no_overflow ineq])
+        done
+      thus ?thesis
+        apply (rule order_less_le_trans)
+        apply (simp add:ucast_ucast_mask word_and_le2)
+        done
+   qed
+   thus ?thesis by (simp add:RL LR iffI)
+qed
+
 
 
 lemma setIRQState_ccorres:
   "ccorres dc xfdc
-          (\<top> and (\<lambda>s. ucast irq \<le> (scast maxIRQ :: word32)))
+          (\<top> and (\<lambda>s. ucast irq \<le> (scast maxIRQ :: word16)))
           (UNIV \<inter> {s. irqState_' s = irqstate_to_C irqState} 
-                \<inter> {s. irq_' s = ucast irq}  )
+                \<inter> {s. irq_' s = (ucast irq :: word16)}  )
           []
          (setIRQState irqState irq)
          (Call setIRQState_'proc )"
+proof -
+  have is_up_8_16[simp]: "is_up (ucast :: word8 \<Rightarrow> word16)"
+  by (simp add: is_up_def source_size_def target_size_def word_size)
+
+
+show ?thesis
   apply (rule ccorres_gen_asm)
   apply (cinit simp del: return_bind)
    apply (rule ccorres_symb_exec_l)
@@ -2256,11 +2314,15 @@ lemma setIRQState_ccorres:
           apply (clarsimp simp: simpler_modify_def) 
           apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                                 carch_state_relation_def cmachine_state_relation_def)
-          apply (simp add: cinterrupt_relation_def maxIRQ_def
-                           word_sless_msb_less order_le_less_trans
-                           word_0_sle_from_less[OF order_le_less_trans])
-          apply (clarsimp simp: unat_ucast_8_32 word_le_nat_alt
-                         split: split_if)
+          apply (simp add: cinterrupt_relation_def maxIRQ_def)
+          apply (clarsimp simp: unat_ucast_8_16 word_sless_msb_less order_le_less_trans
+                            unat_ucast_no_overflow_le word_le_nat_alt ucast_ucast_b 
+                         split: split_if )
+          apply (rule word_0_sle_from_less)
+
+          apply (rule order_less_le_trans[where y = 160])
+           apply (simp add: unat_ucast_no_overflow_le)
+          apply simp
          apply ceqv
  
         apply (ctac add:  maskInterrupt_ccorres)
@@ -2277,14 +2339,13 @@ lemma setIRQState_ccorres:
   apply (simp add: from_bool_def)
   apply (cases irqState, simp_all)
   apply (simp add: Kernel_C.IRQSignal_def Kernel_C.IRQInactive_def) 
-  apply (simp add: Kernel_C.IRQTimer_def Kernel_C.IRQInactive_def) 
-done
-
-
+  apply (simp add: Kernel_C.IRQTimer_def Kernel_C.IRQInactive_def)  
+  done
+qed
 
 
 lemma deletedIRQHandler_ccorres:
-  "ccorres dc xfdc (\<lambda>s. ucast irq \<le> (scast maxIRQ :: word32)) (UNIV\<inter> {s. irq_' s = ucast irq}) []
+  "ccorres dc xfdc (\<lambda>s. ucast irq \<le> (scast maxIRQ :: 16 word)) (UNIV\<inter> {s. irq_' s = ucast irq}) []
          (deletedIRQHandler irq)
          (Call deletedIRQHandler_'proc )"
   apply (cinit simp del: return_bind)
@@ -2296,18 +2357,17 @@ lemma deletedIRQHandler_opt_ccorres:
   "irq_opt_relation irq cirq \<Longrightarrow>
     ccorres dc xfdc \<top> UNIV [SKIP] 
      (case irq of None \<Rightarrow> return () | Some a \<Rightarrow> deletedIRQHandler a) 
-     (IF cirq \<noteq> scast irqInvalid THEN CALL deletedIRQHandler (cirq)  FI) "
+     (IF ucast cirq \<noteq> irqInvalid THEN CALL deletedIRQHandler (cirq)  FI) "
   apply (simp only: irq_opt_relation_def)
   apply (cases irq)
-   apply clarsimp
+   apply (clarsimp simp:irqInvalid_def)
    apply (simp add: ccorres_cond_iffs)
    apply (rule ccorres_return_Skip )
-  
-  apply (subgoal_tac " ucast cirq \<noteq> (scast irqInvalid :: word32)")
-   prefer 2
-   apply clarsimp
-   apply (clarsimp simp: irqInvalid_def Kernel_C.maxIRQ_def)
   apply clarsimp
+  apply (subgoal_tac " ucast cirq \<noteq> irqInvalid")
+   prefer 2
+   apply (clarsimp simp: irqInvalid_def Kernel_C.maxIRQ_def)
+   apply (word_bitwise,simp) (* So annoy that signed word ucast mixed with word ucast *)
   apply (simp add: ccorres_cond_iffs)
   apply (rule ccorres_guard_imp2)
    apply (ctac add: deletedIRQHandler_ccorres)
@@ -2336,6 +2396,7 @@ ML_command {*show_abbrevs true*}
 ML_command {*show_abbrevs false*}
 
 *)
+
 
 lemma emptySlot_ccorres:
   "ccorres dc xfdc 
@@ -2436,6 +2497,7 @@ lemma emptySlot_ccorres:
                   add: ccorres_updateMDB_const [unfolded const_def])
 
                   -- "the case irq "
+
                   apply (erule deletedIRQHandler_opt_ccorres [unfolded dc_def]) 
 
                 -- "Haskell pre/post for y \<leftarrow> updateMDB slot (\<lambda>a. nullMDBNode);"
