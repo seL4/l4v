@@ -218,7 +218,7 @@ def print_test_line_start(test_name, legacy=False):
     print("  Started %-25s " % (test_name + " ..."))
     sys.stdout.flush()
 
-def print_test_line(test_name, color, status, real_time, cpu_time, mem, legacy=False):
+def print_test_line(test_name, color, status, real_time=None, cpu_time=None, mem=None, legacy=False):
     if mem is not None:
         # Report memory usage in gigabytes.
         mem = '%5.2fGB' % round(float(mem) / 1024 / 1024 / 1024, 2)
@@ -363,7 +363,7 @@ def main():
                 # Non-blocked but depends on a failed test. Remove it.
                 if len(real_depends & failed_tests) > 0:
                     wipe_tty_status()
-                    print_test_line(t.name, ANSI_YELLOW, "skipped", None, None, None, args.legacy_status)
+                    print_test_line(t.name, ANSI_YELLOW, "skipped", legacy=args.legacy_status)
                     failed_tests.add(t.name)
                     del tests_queue[i]
                     break
@@ -372,20 +372,23 @@ def main():
         try:
             while True:
                 info = status_queue.get(block=True, timeout=0.1337) # Built-in pause
-                name = info['name']
-                del current_jobs[name]
+                name, status = info['name'], info['status']
 
-                status, log, real_time, cpu_time, mem = info['status'], info['output'], info['real_time'], info['cpu_time'], info['mem_usage']
                 test_results[name] = info
+                del current_jobs[name]
 
                 # Print result.
                 wipe_tty_status()
                 if status != 'pass':
                     failed_tests.add(name)
-                    print_test_line(name, ANSI_RED, "%s *" % status, real_time, cpu_time, mem, args.legacy_status)
+                    status += " *"
+                    colour = ANSI_RED
                 else:
                     passed_tests.add(name)
-                    print_test_line(name, ANSI_GREEN, status, real_time, cpu_time, mem, args.legacy_status)
+                    colour = ANSI_GREEN
+                print_test_line(name, colour, status,
+                                real_time=info['real_time'], cpu_time=info['cpu_time'], mem=info['mem_usage'],
+                                legacy=args.legacy_status)
         except Queue.Empty:
             pass
     wipe_tty_status()
