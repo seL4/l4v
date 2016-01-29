@@ -23,7 +23,11 @@ import datetime
 import fnmatch
 import memusage
 import os
-import Queue
+try:
+    import Queue
+except:
+    import queue
+    Queue = queue
 import signal
 import subprocess
 import sys
@@ -178,6 +182,7 @@ def run_test(test, status_queue, verbose=False):
 
     if output == None:
         output = ""
+    output = output.decode()
     if process.returncode == 0:
         status = "pass"
     elif was_timeout[0]:
