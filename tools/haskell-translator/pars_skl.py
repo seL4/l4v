@@ -63,16 +63,16 @@ for line in instructions:
             if 'ONLY' in bits:
                 n = bits.index('ONLY')
                 m = set(bits[n + 1:])
-                call.restr = lambda x: x['defined'] in m
+                call.restr = lambda x: x.defined in m
             elif 'NOT' in bits:
                 n = bits.index('NOT')
                 m = set(bits[n + 1:])
-                call.restr = lambda x: not x['defined'] in m
+                call.restr = lambda x: not x.defined in m
             elif 'BODY' in bits:
                 call.body = True
                 assert bits[-2] == 'BODY'
                 fn = bits[-1]
-                call.restr = lambda x: x['defined'] == fn
+                call.restr = lambda x: x.defined == fn
 
             try:
                 parsed = lhs_pars.parse(call)
