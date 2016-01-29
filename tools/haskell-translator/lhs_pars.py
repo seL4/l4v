@@ -13,7 +13,6 @@ from __future__ import absolute_import
 import braces
 import re
 import sys
-import copy
 import os
 import six
 from six.moves import map
