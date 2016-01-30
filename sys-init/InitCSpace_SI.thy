@@ -34,7 +34,7 @@ lemma map_of_zip_is_Some2:
   \<Longrightarrow> (y \<in> set ys) = (\<exists>x. map_of (zip xs ys) x = Some y)"
   apply (subst ran_map_of_zip [symmetric, where xs=xs and ys=ys], simp+)
   apply (rule)
-   apply (metis map_of_is_SomeD ranE)
+   apply (metis map_of_SomeD ranE)
   apply (clarsimp simp: ran_def)
   done
 
