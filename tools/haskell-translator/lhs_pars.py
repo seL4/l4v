@@ -677,9 +677,7 @@ def simple_newtype_transform(line, header, d):
         for bit in bits[1:]:
             if bit.startswith('('):
                 bit = bit[1:-1]
-                typename = type_transform(str(bit))
-            else:
-                typename = type_conv(str(bit))
+            typename = type_transform(str(bit))
             if len(bits) == 2:
                 last_rhs = typename
             if ' ' in typename:
