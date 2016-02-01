@@ -17,33 +17,34 @@
      format.
 
 -->
-<testsuite timeout="3600" depends="isabelle">
+
+<testsuite cpu-timeout="3600" depends="isabelle">
     <!-- Refine -->
     <sequence depends="ASpec ExecSpec">
-        <test name="AInvs">make AInvs</test>
+        <test name="AInvs" cpu-timeout="7200">make AInvs</test>
         <test name="BaseRefine">make BaseRefine</test>
-        <test name="Refine">make Refine</test>
+        <test name="Refine" cpu-timeout="10800">make Refine</test>
     </sequence>
 
     <!-- CRefine -->
-    <sequence timeout="7200" depends="CParser">
-        <test name="CKernel">make CKernel</test>
-        <test name="CSpec">make CSpec</test>
-        <test name="CBaseRefine" depends="Refine">make CBaseRefine</test>
-        <test name="CRefine">make CRefine</test>
+    <sequence depends="CParser">
+        <test name="CKernel" cpu-timeout="3600">make CKernel</test>
+        <test name="CSpec" cpu-timeout="3600">make CSpec</test>
+        <test name="CBaseRefine" depends="Refine" cpu-timeout="14400">make CBaseRefine</test>
+        <test name="CRefine" cpu-timeout="25200">make CRefine</test>
     </sequence>
 
     <!-- DSpec / DRefine -->
     <sequence depends="DSpec Refine">
         <test name="DBaseRefine">make DBaseRefine</test>
-        <test name="DRefine">make DRefine</test>
+        <test name="DRefine" cpu-timeout="7200">make DRefine</test>
     </sequence>
 
     <!-- Access Control -->
     <sequence depends="AInvs">
         <test name="Access">make Access</test>
-        <test name="InfoFlow">make InfoFlow</test>
-        <test name="InfoFlowC" depends="CRefine">make InfoFlowC</test>
+        <test name="InfoFlow" cpu-timeout="7200">make InfoFlow</test>
+        <test name="InfoFlowC" depends="CRefine" cpu-timeout="10800">make InfoFlowC</test>
     </sequence>
 
     <!-- Access Control and capDL -->
@@ -58,17 +59,17 @@
 
     <!-- Binary Verification -->
     <sequence depends="CSpec">
-        <test name="SimplExportAndRefine">make SimplExportAndRefine</test>
+        <test name="SimplExportAndRefine" cpu-timeout="14400">make SimplExportAndRefine</test>
     </sequence>
 
     <!-- Separation Logic. -->
-    <sequence>
+    <sequence cpu-timeout="600">
         <test name="SepTactics">make SepTactics</test>
         <test name="SepTacticsExamples">make SepTacticsExamples</test>
     </sequence>
 
     <!-- Separation Logic on capDL. -->
-    <sequence depends="DSpec">
+    <sequence depends="DSpec" cpu-timeout="600">
         <test name="SepDSpec">make SepDSpec</test>
         <test name="DSpecProofs">make DSpecProofs</test>
     </sequence>
