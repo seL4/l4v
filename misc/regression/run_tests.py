@@ -220,8 +220,9 @@ def run_test(test, status_queue, verbose=False):
 def print_test_line_start(test_name, legacy=False):
     if legacy:
         return
-    print("  Started %-25s " % (test_name + " ..."))
-    sys.stdout.flush()
+    if sys.stdout.isatty():
+        print("  Started %-25s " % (test_name + " ..."))
+        sys.stdout.flush()
 
 def print_test_line(test_name, color, status, real_time=None, cpu_time=None, mem=None, legacy=False):
     if mem is not None:
