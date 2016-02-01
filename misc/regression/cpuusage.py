@@ -32,6 +32,7 @@ import subprocess
 import sys
 import threading
 import time
+import warnings
 
 try:
     import psutil
@@ -60,6 +61,7 @@ class Poller(threading.Thread):
         self.pid = pid
         self.finished = False
         self.started = threading.Semaphore(0)
+        self.proc = None
 
         # Reported stat.
         self.cpu = 0.0
@@ -76,12 +78,13 @@ class Poller(threading.Thread):
 
             # Fetch process's usage.
             try:
-                p = psutil.Process(self.pid)
-                total += sum(p.cpu_times())
+                if self.proc is None:
+                    self.proc = psutil.Process(self.pid)
+                total += sum(self.proc.cpu_times())
 
                 # Fetch children's usage.
                 new_current_children = {}
-                for c in p.children(recursive=True):
+                for c in self.proc.children(recursive=True):
                     try:
                         t = sum(c.cpu_times())
                         new_current_children[(c.pid, c.create_time())] = t
@@ -101,10 +104,17 @@ class Poller(threading.Thread):
                 self.current_children = new_current_children
                 total += self.old_children_cpu
 
-            except psutil.AccessDenied:
-                pass
+            except psutil.AccessDenied as err:
+                warnings.warn("access denied: pid=%d" % err.pid, RuntimeWarning)
+
             if total < self.cpu:
-                raise AssertionError("cpu non-monotonic: %f -> %f" % (self.cpu, total))
+                try:
+                    cmd = repr(' '.join(self.proc.cmdline()))
+                except Exception:
+                    cmd = '??'
+                warnings.warn("cpu non-monotonic: %.15f -> %.15f, pid=%d, cmd=%s" %
+                              (self.cpu, total, self.pid, cmd),
+                              RuntimeWarning)
             return total
 
         # Fetch a sample, and notify others that we have started.
