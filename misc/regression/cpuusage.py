@@ -107,7 +107,10 @@ class Poller(threading.Thread):
             except psutil.AccessDenied as err:
                 warnings.warn("access denied: pid=%d" % err.pid, RuntimeWarning)
 
-            if total < self.cpu:
+            # Add 1 ns allowance for floating-point rounding, which may occur when we
+            # sum the children's times in a different order from one update to the next.
+            # (Floating point epsilon is about 1e-15.)
+            if total + 1e-9 < self.cpu:
                 try:
                     cmd = repr(' '.join(self.proc.cmdline()))
                 except Exception:
