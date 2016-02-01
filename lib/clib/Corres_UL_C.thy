@@ -529,9 +529,9 @@ lemma ccorres_False:
   done
 
 lemmas ccorres_master_split_hs = ccorres_master_split [OF _ refl]
+
 lemmas ccorres_master_split_nohs
-    = ccorres_master_split [where hs'=Nil, simplified,
-                            OF _ _ ccorres_empty[where P=\<top>]]
+    = ccorres_master_split [where hs'=Nil and E = "\<lambda>_ _. True", simplified]
 
 lemma stronger_ccorres_guard_imp:
   assumes x: "ccorres_underlying sr \<Gamma> r xf arrel axf Q Q' hs f g"
