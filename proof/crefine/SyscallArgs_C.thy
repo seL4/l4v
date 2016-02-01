@@ -57,7 +57,7 @@ declare psubset_singleton[simp]
 lemma gts_eq:
   "st_tcb_at' (\<lambda>st. st = state) t s
      \<Longrightarrow> (getThreadState t s = return state s)"
-  apply (simp add: Pair_fst_snd_eq return_def)
+  apply (simp add: prod_eq_iff return_def)
   apply (subst conj_commute, rule context_conjI)
    apply (rule no_failD[OF no_fail_getThreadState])
    apply (erule pred_tcb_at')

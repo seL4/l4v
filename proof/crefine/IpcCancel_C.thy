@@ -27,6 +27,14 @@ lemma word_and_notzeroD:
 context kernel_m
 begin
 
+(* TODO: move *)
+lemma mod_lemma: "[| (0::nat) < c; r < b |] ==> b * (q mod c) + r < b * c"
+  apply (cut_tac m = q and n = c in mod_less_divisor)
+  apply (drule_tac [2] m = "q mod c" in less_imp_Suc_add, auto)
+  apply (erule_tac P = "%x. lhs < rhs x" for lhs rhs in ssubst)
+  apply (simp add: add_mult_distrib2)
+  done
+
 lemma cready_queues_index_to_C_in_range':
   assumes prems: "qdom \<le> ucast maxDom" "prio \<le> ucast maxPrio"
   shows "cready_queues_index_to_C qdom prio < numDomains * numPriorities"

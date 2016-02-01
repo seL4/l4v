@@ -226,7 +226,7 @@ proof -
   have pno': "pspace_no_overlap' frame (objBitsKO ko) \<sigma>" 
     by (simp add:objBits_simps pno ko_def archObjSize_def al)
   
-  have al': "is_aligned frame (objBitsKO (ko\<Colon>kernel_object))"
+  have al': "is_aligned frame (objBitsKO (ko::kernel_object))"
     by (simp add:objBits_simps ko_def archObjSize_def al)
 
   (* s/obj/obj'/ *)

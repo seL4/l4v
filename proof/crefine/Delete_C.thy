@@ -688,7 +688,7 @@ lemma induction_setup_helper:
         \<Longrightarrow> Q s slot exposed"
   by auto
 
-schematic_lemma finaliseSlot_ccorres_induction_helper:
+schematic_goal finaliseSlot_ccorres_induction_helper:
   "\<And>s slot exposed. ?P s slot exposed
         \<Longrightarrow> ccorres (cintr \<currency> (\<lambda>(success, irqopt) (success', irq'). success' = from_bool success \<and> irq_opt_relation irqopt irq'))
      (liftxf errstate finaliseSlot_ret_C.status_C (\<lambda>v. (success_C v, finaliseSlot_ret_C.irq_C v))

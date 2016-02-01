@@ -1826,7 +1826,7 @@ lemma register_from_H_inj:
 
 (* FIXME: move *)
 lemmas register_from_H_eq_iff[simp]
-    = inj_on_iff [OF register_from_H_inj, simplified]
+    = inj_on_eq_iff [OF register_from_H_inj, simplified]
 
 lemma setRegister_ccorres:
   "ccorres dc xfdc \<top>

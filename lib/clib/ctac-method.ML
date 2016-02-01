@@ -63,7 +63,7 @@ fun prim_trace_tac b depth s ctxt t thm = prim_trace_tac' b depth s ctxt (fn _ =
  are inifinite, for example *)
 fun nres_trace_tac ctxt s t thm = let
     val r    = t thm
-    fun p1 (t, s) = s ^ "  ALT:\n" ^ Display.string_of_thm ctxt t ^ "\n"
+    fun p1 (t, s) = s ^ "  ALT:\n" ^ Thm.string_of_thm ctxt t ^ "\n"
     val _    = tracing (foldl p1 s (Seq.list_of r))
 in
     r
@@ -333,24 +333,24 @@ fun apply_ceqv_xpres_rules ctxt _ n = DETERM
           (warning ("apply_ceqv_xpres_rules: no rule applied"
                      ^ " - see CtacImpl.apply_ceqv_xpres_rules_trace");
              apply_ceqv_xpres_rules_trace := t;
-             rtac ceqv_xpres_FalseI n)) n));
+             resolve_tac ctxt [ceqv_xpres_FalseI] n)) n));
 
 fun addcongs thms ss = foldl (uncurry Simplifier.add_cong) ss thms
 fun delsplits thms ss = foldl (uncurry Splitter.del_split) ss thms
 
 fun solve_ceqv_xpres_rewrite_basic ctxt n = DETERM
   (safe_simp_tac (addcongs [ceqv_xpres_rewrite_basic_left_cong] (put_simpset HOL_basic_ss ctxt)) n
-      THEN rtac ceqv_xpres_rewrite_basic_refl n);
+      THEN resolve_tac ctxt [ceqv_xpres_rewrite_basic_refl] n);
 
 fun solve_ceqv_xpres_basic_preserves ctxt n = DETERM
-  ((rtac ceqv_xpres_basic_preserves_TrueI n
+  ((resolve_tac ctxt [ceqv_xpres_basic_preserves_TrueI] n
        THEN SOLVE' (safe_simp_tac ctxt) n)
-     ORELSE rtac ceqv_xpres_basic_preserves_FalseI n);
+     ORELSE resolve_tac ctxt [ceqv_xpres_basic_preserves_FalseI] n);
 
 fun solve_ceqv_xpres_lvar ctxt n = DETERM
-  ((rtac ceqv_xpres_lvar_nondet_init_TrueI n
+  ((resolve_tac ctxt [ceqv_xpres_lvar_nondet_init_TrueI] n
        THEN SOLVE' (safe_simp_tac ctxt) n)
-     ORELSE rtac ceqv_xpres_lvar_nondet_init_FalseI n);
+     ORELSE resolve_tac ctxt [ceqv_xpres_lvar_nondet_init_FalseI] n);
 
 fun abstract_upds ctxt t = let
     val sT = domain_type (fastype_of t)
@@ -390,11 +390,11 @@ fun ceqv_restore_args_tac ctxt = SUBGOAL (fn (t, n) => case
       in Abs ("s", sT, updC $ Abs ("x", dummyT, accC $ Bound 1)
             $ (f $ Bound 0)) end
       val g = fold add_upd new_upds f |> Syntax.check_term ctxt |> Thm.cterm_of ctxt
-      val thm = cterm_instantiate [(@{cpat "?f :: ?'a => ?'a"}, Thm.cterm_of ctxt f),
-              (@{cpat "?g :: ?'a => ?'a"}, g)]
+      val thm = infer_instantiate ctxt [(("f",0), Thm.cterm_of ctxt f),
+              (("g",0), g)]
           @{thm ceqv_xpres_call_restore_argsI}
           |> Drule.generalize ([], map (dest_Free #> fst) xs)
-    in rtac thm n THEN simp_tac ctxt n end)
+    in resolve_tac ctxt [thm] n THEN simp_tac ctxt n end)
 
 fun ceqv2_consts_and_tacs ctxt = map (apfst (fst o dest_Const)) [
   (@{term ceqv_xpres}, apply_ceqv_xpres_rules ctxt),
@@ -415,8 +415,8 @@ fun ceqv2_all_tacs ctxt = SUBGOAL (fn (t, n) =>
 
 fun ceqv2_tac ctxt n = let
 in
-  rtac ceqv_xpres_ceqvI n THEN
-    SELECT_GOAL (REPEAT_DETERM (etac thin_rl 1)
+  resolve_tac ctxt [ceqv_xpres_ceqvI] n THEN
+    SELECT_GOAL (REPEAT_DETERM (eresolve_tac ctxt [thin_rl] 1)
        THEN REPEAT_DETERM (ceqv2_all_tacs ctxt 1)) n
 end;
 
@@ -440,7 +440,7 @@ fun corres_pre_lift_tac lift_thm trace depth ctxt xf =
     val var_name = (unsuffix "_'" base_xf handle Fail _ => "rv")
 in if base_xf = "globals"
    then resolve_tac ctxt [my_thm ctxt "ccorres_special_trim_Int"]
-   else EVERY' [TRY o rtac (my_thm ctxt "ccorres_introduce_UNIV_Int_when_needed"),
+   else EVERY' [TRY o resolve_tac ctxt [my_thm ctxt "ccorres_introduce_UNIV_Int_when_needed"],
                 Rule_Insts.res_inst_tac ctxt [((("xf'", 0), Position.none), xf)] [] (my_thm ctxt "ccorres_tmp_lift1"),
                 rename_fresh_tac var_name,
                 resolve_tac ctxt [my_thm ctxt lift_thm],
@@ -731,9 +731,8 @@ fun instantiate_xf_type ctxt tp which thms = let
     val ctp = Thm.ctyp_of ctxt tp
     fun inst_type_vars thm = let
         val (Const ("Pure.all", _) $ Abs (_, tpv, _)) = nth (Thm.prems_of thm) which
-        val ctpv = Thm.ctyp_of ctxt tpv
     in
-        Thm.instantiate ([(ctpv, ctp)], []) thm
+        Thm.instantiate ([(dest_TVar tpv, ctp)], []) thm
     end;
 in
     map inst_type_vars thms
@@ -780,7 +779,7 @@ fun corres_trim_lvar_nondet_init_tac trace depth ctxt known_guard = let
                                                      else "ccorres_lift_rhs_remove_lvar_init_unknown_guard")
     in
               prim_trace_tac' (#trace_this trace) depth "LVAR_INIT" ctxt
-                                          ((rtac remove_lvar_init)
+                                          ((resolve_tac ctxt [remove_lvar_init])
                                                      THEN_ALL_NEW (ccorres_norename_cleanup trace depth ctxt)) i
     end;
 in

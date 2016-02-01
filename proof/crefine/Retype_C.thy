@@ -2412,7 +2412,7 @@ definition
                if (x = scast seL4_ARM_PageDirectoryObject) then ArchTypes_H.PageDirectoryObject else
                 undefined)))))))))))"
 
-theorems Kernel_C_defs =
+lemmas Kernel_C_defs =
   seL4_UntypedObject_def
   seL4_TCBObject_def
   seL4_EndpointObject_def
@@ -4785,8 +4785,8 @@ end
 
 definition "placeNewObject_with_memset regionBase us \<equiv> 
   (do x \<leftarrow> placeNewObject regionBase UserData us;
-      doMachineOp (mapM_x (\<lambda>p\<Colon>word32. storeWord p (0\<Colon>word32))
-               [regionBase , regionBase + (4\<Colon>word32) .e. regionBase + (2\<Colon>word32) ^ (pageBits + us) - (1\<Colon>word32)])
+      doMachineOp (mapM_x (\<lambda>p::word32. storeWord p (0::word32))
+               [regionBase , regionBase + (4::word32) .e. regionBase + (2::word32) ^ (pageBits + us) - (1::word32)])
    od)"
 
 crunch gsMaxObjectSize[wp]: placeNewObject_with_memset, createObject "\<lambda>s. P (gsMaxObjectSize s)"

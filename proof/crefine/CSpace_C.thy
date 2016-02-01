@@ -790,7 +790,7 @@ lemmas cteInsert_if_helper' = cteInsert_if_helper [OF _ forget_Q']
   *)
 declare word_neq_0_conv [simp del]
 
-schematic_lemma ccap_relation_tag_Master:
+schematic_goal ccap_relation_tag_Master:
   "\<And>ccap. \<lbrakk> ccap_relation cap ccap \<rbrakk>
       \<Longrightarrow> cap_get_tag ccap = 
             case_capability ?a ?b ?c ?d ?e ?f ?g
@@ -992,7 +992,7 @@ lemma capBlockSize_CL_maxSize:
   done
 
 lemma t2p_shiftr:
-  "\<lbrakk>b\<le> a;a < word_bits \<rbrakk> \<Longrightarrow> (2\<Colon>word32) ^ a >> b = 2 ^ (a - b)"
+  "\<lbrakk>b\<le> a;a < word_bits \<rbrakk> \<Longrightarrow> (2::word32) ^ a >> b = 2 ^ (a - b)"
   apply (subst shiftr_w2p)
    apply (simp add:word_bits_def)
   apply (subst shiftr_w2p[where x = "a - b"])

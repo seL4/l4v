@@ -1841,7 +1841,7 @@ lemma user_word_at_cross_over:
    apply (simp add: shiftr_over_and_dist mask_def pageBits_def uint_and)
    apply (insert int_and_leR [where a="uint (p >> 2)" and b=1023], clarsimp)[1]
   apply (simp add: field_lvalue_def
-            field_lookup_offset_eq[OF trans, OF _ arg_cong[where f=Some, symmetric], OF _ pair_collapse]
+            field_lookup_offset_eq[OF trans, OF _ arg_cong[where f=Some, symmetric], OF _ prod.collapse]
             word32_shift_by_2 shiftr_shiftl1 is_aligned_andI1)
   apply (drule_tac x="ucast (p >> 2)" in spec)
   apply (simp add: byte_to_word_heap_def Let_def ucast_ucast_mask)
@@ -1885,7 +1885,7 @@ lemma user_memory_cross_over:
                    hrs_mem_def)
   apply (cut_tac p=ptr in unat_mask_2_less_4)
   apply (subgoal_tac "(ptr && ~~ mask 2) + (ptr && mask 2) = ptr")
-   apply (subgoal_tac "!n x. n < 4 \<longrightarrow> (unat (x\<Colon>word32) = n) = (x = of_nat n)")
+   apply (subgoal_tac "!n x. n < 4 \<longrightarrow> (unat (x::word32) = n) = (x = of_nat n)")
     apply (auto simp add: eval_nat_numeral unat_eq_0 add.commute
                 elim!: less_SucE)[1]
     apply (clarsimp simp add: unat32_eq_of_nat word_bits_def)
