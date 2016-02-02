@@ -2375,7 +2375,7 @@ proof -
 
   show ?thesis
     apply (rule stepwise_graph_refineI)
-    apply (simp add: Pair_fst_snd_eq)
+    apply (simp add: prod_eq_iff)
     apply (case_tac "\<exists>N. (\<forall>i \<ge> N. tr i = None) \<or> (\<forall>i \<ge> N. tr' i = None)")
      apply clarsimp
       apply (cut_tac n="Suc N" and m="n" and otr="Some (tr, tr')" in induct)

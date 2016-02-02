@@ -65,7 +65,7 @@ lemma L2_unknown_bind [L2opt]:
    apply force
   apply (clarsimp simp: image_def)
   apply (rule iffI)
-   apply (clarsimp simp: Pair_fst_snd_eq)
+   apply (clarsimp simp: prod_eq_iff)
    apply metis
   apply force
   done

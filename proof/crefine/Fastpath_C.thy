@@ -949,7 +949,7 @@ lemma heap_relation_user_word_at_cross_over:
    apply (simp add: shiftr_over_and_dist mask_def pageBits_def uint_and)
    apply (insert int_and_leR [where a="uint (p >> 2)" and b=1023], clarsimp)[1]
   apply (simp add: field_lvalue_def
-            field_lookup_offset_eq[OF trans, OF _ arg_cong[where f=Some, symmetric], OF _ pair_collapse]
+            field_lookup_offset_eq[OF trans, OF _ arg_cong[where f=Some, symmetric], OF _ prod.collapse]
             word32_shift_by_2 shiftr_shiftl1 is_aligned_neg_mask_eq is_aligned_andI1)
   apply (drule_tac x="ucast (p >> 2)" in spec)
   apply (simp add: byte_to_word_heap_def Let_def ucast_ucast_mask)
@@ -3933,7 +3933,7 @@ definition
 lemma getCTE_assert_opt:
   "getCTE p = gets (\<lambda>s. ctes_of s p) >>= assert_opt"
   apply (intro ext)
-  apply (simp add: exec_gets assert_opt_def Pair_fst_snd_eq
+  apply (simp add: exec_gets assert_opt_def prod_eq_iff
                    fail_def return_def
             split: option.split)
   apply (rule conjI)
@@ -4794,7 +4794,7 @@ lemma setCTE_assert_modify:
    apply simp
   apply (clarsimp simp: assert_opt_def split: option.split)
   apply (rule trans [OF bind_apply_cong[OF _ refl] fun_cong[OF fail_bind]])
-  apply (simp add: fail_def Pair_fst_snd_eq)
+  apply (simp add: fail_def prod_eq_iff)
   apply (rule context_conjI)
    apply (rule ccontr, clarsimp elim!: nonemptyE)
    apply (frule(1) updateObject_cte_is_tcb_or_cte[OF _ refl])
