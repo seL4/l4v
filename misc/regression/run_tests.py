@@ -18,6 +18,7 @@ from __future__ import print_function
 import argparse
 import atexit
 import datetime
+import collections
 import cpuusage
 import fnmatch
 import memusage
@@ -112,7 +113,7 @@ def kill_family(parent_pid):
 # Log only contains the output if verbose is *false*; otherwise, the
 # log is output to stdout where we can't easily get to it.
 #
-def run_test(test, status_queue, verbose=False):
+def run_test(test, status_queue, verbose=False, stuck_timeout=None):
     # Construct the base command.
     command = ["bash", "-c", test.command]
 
@@ -169,14 +170,46 @@ def run_test(test, status_queue, verbose=False):
         timer.start()
 
     with cpuusage.process_poller(process.pid) as c:
+        # Inactivity timeout
+        low_cpu_usage = 0.05 # 5% -- FIXME: hardcoded
+        cpu_history = collections.deque() # sliding window
+        last_cpu_usage = 0
+        cpu_usage_total = [0] # workaround for variable scope
+
         # Also set a CPU timeout. We poll the cpu usage periodically.
         def cpu_timeout():
             interval = min(0.5, test.cpu_timeout / 10.0)
             while process_running:
-                if c.cpu_usage() > test.cpu_timeout:
-                    was_cpu_timeout[0] = True
+                cpu_usage = c.cpu_usage()
+
+                if stuck_timeout:
+                    # append to window
+                    now = time.time()
+                    if not cpu_history:
+                        cpu_history.append((time.time(), cpu_usage / interval))
+                    else:
+                        real_interval = now - cpu_history[-1][0]
+                        cpu_increment = cpu_usage - last_cpu_usage
+                        cpu_history.append((now, cpu_increment / real_interval))
+                    cpu_usage_total[0] += cpu_history[-1][1]
+
+                    # pop from window, ensuring that window covers at least stuck_timeout interval
+                    while len(cpu_history) > 1 and cpu_history[1][0] + stuck_timeout <= now:
+                        cpu_usage_total[0] -= cpu_history[0][1]
+                        cpu_history.popleft()
+
+                    if (now - cpu_history[0][0] >= stuck_timeout and
+                        cpu_usage_total[0] / len(cpu_history) < low_cpu_usage):
+                        was_cpu_timeout[0] = 'stuck'
+                        kill_family(process.pid)
+                        break
+
+                if cpu_usage > test.cpu_timeout:
+                    was_cpu_timeout[0] = 'total'
                     kill_family(process.pid)
                     break
+
+                last_cpu_usage = cpu_usage
                 time.sleep(interval)
 
         if test.cpu_timeout > 0:
@@ -206,7 +239,10 @@ def run_test(test, status_queue, verbose=False):
     if process.returncode == 0:
         status = "pass"
     elif was_timeout[0] or was_cpu_timeout[0]:
-        status = "TIMEOUT"
+        if was_cpu_timeout[0] == 'stuck':
+            status = "STUCK for %gs" % stuck_timeout
+        else:
+            status = "TIMEOUT"
     else:
         status = "FAILED"
     status_queue.put({'name': test.name,
@@ -286,6 +322,8 @@ def main():
             help="print test output")
     parser.add_argument("--junit-report", metavar="FILE",
             help="write JUnit-style test report")
+    parser.add_argument("--stuck-timeout", type=int, default=600, metavar='N',
+            help="timeout tests if not using CPU for N seconds (default: %(default))")
     parser.add_argument("tests", metavar="TESTS",
             help="tests to run (defaults to all tests)",
             nargs="*")
@@ -358,7 +396,7 @@ def main():
                 # Non-blocked and open. Start it.
                 if real_depends.issubset(passed_tests):
                     test_thread = threading.Thread(target=run_test, name=t.name,
-                                                   args=(t, status_queue, args.verbose))
+                                                   args=(t, status_queue, args.verbose, args.stuck_timeout))
                     wipe_tty_status()
                     print_test_line_start(t.name, args.legacy_status)
                     test_thread.start()
@@ -387,7 +425,7 @@ def main():
                 wipe_tty_status()
                 if status != 'pass':
                     failed_tests.add(name)
-                    status += " *"
+                    status += " * "
                     colour = ANSI_RED
                 else:
                     passed_tests.add(name)
@@ -441,6 +479,8 @@ def main():
                     ET.SubElement(testcase, "failure", type="failure").text = info['output']
                 elif info['status'] == "TIMEOUT":
                     ET.SubElement(testcase, "error", type="timeout").text = info['output']
+                elif "STUCK" in info['status']:
+                    ET.SubElement(testcase, "error", type="stuck").text = info['output']
                 else:
                     if not args.verbose:
                         ET.SubElement(testcase, "system-out").text = info['output']
