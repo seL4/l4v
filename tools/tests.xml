@@ -17,13 +17,13 @@
      format.
 
 -->
-<testsuite timeout="3600" depends="isabelle">
+<testsuite cpu-timeout="600" depends="isabelle">
 
     <!-- C Parser -->
     <set cwd="c-parser">
         <sequence>
             <test name="CParser">isabelle env make -f IsaMakefile CParser</test>
-            <test name="CParserTest">isabelle env make -f IsaMakefile cparser_test</test>
+            <test name="CParserTest" cpu-timeout="7200">isabelle env make -f IsaMakefile cparser_test</test>
         </sequence>
         <test name="CParserTools">isabelle env make -f IsaMakefile cparser_tools</test>
     </set>
@@ -34,8 +34,8 @@
 
         <set depends="AutoCorres">
             <test name="AutoCorresDoc">make AutoCorresDoc</test>
-            <test name="AutoCorresTest">make AutoCorresTest</test>
-            <test name="AutoCorresSEL4" depends="CBaseRefine" timeout="14400">
+            <test name="AutoCorresTest" cpu-timeout="3600">make AutoCorresTest</test>
+            <test name="AutoCorresSEL4" depends="CBaseRefine" cpu-timeout="21600">
                 make AutoCorresSEL4
             </test>
         </set>
