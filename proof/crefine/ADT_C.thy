@@ -758,7 +758,7 @@ lemma ps_clear_is_aligned_ksPSpace_None:
    apply (simp add: mask_2pm1)
    apply (erule is_aligned_no_overflow')
   apply (drule mp)
-   apply (case_tac "(0\<Colon>word32)<2^n")
+   apply (case_tac "(0::word32)<2^n")
     apply (frule le_m1_iff_lt[of "(2::word32)^n" d, THEN iffD1])
     apply (simp add: mask_2pm1[symmetric])
     apply (erule (1) is_aligned_no_wrap')
@@ -1070,8 +1070,8 @@ lemma map_to_cnes_eq:
   shows
   "ctes_of s' = ctes_of s \<Longrightarrow>
    map_to_tcbs (ksPSpace s') = map_to_tcbs (ksPSpace s) \<Longrightarrow>
-   (projectKO_opt\<Colon>kernel_object\<rightharpoonup>cte) \<circ>\<^sub>m ksPSpace s' =
-   (projectKO_opt\<Colon>kernel_object\<rightharpoonup>cte) \<circ>\<^sub>m ksPSpace s"
+   (projectKO_opt::kernel_object\<rightharpoonup>cte) \<circ>\<^sub>m ksPSpace s' =
+   (projectKO_opt::kernel_object\<rightharpoonup>cte) \<circ>\<^sub>m ksPSpace s"
   apply (rule ext)
   apply (simp add: fun_eq_iff)
   apply (drule_tac x=x in spec)
@@ -1375,9 +1375,9 @@ lemma (in kernel_m) cstate_to_H_correct:
                    using cstate_rel
                    apply (clarsimp simp: cstate_relation_def Let_def)
                   using cstate_rel
-                  apply (clarsimp simp: cstate_relation_def Let_def Pair_fst_snd_eq)
+                  apply (clarsimp simp: cstate_relation_def Let_def prod_eq_iff)
                  using cstate_rel
-                 apply (clarsimp simp: cstate_relation_def Let_def Pair_fst_snd_eq)
+                 apply (clarsimp simp: cstate_relation_def Let_def prod_eq_iff)
                 using cstate_rel
                 apply (fastforce simp: cstate_relation_def Let_def ghost_size_rel_def unat_eq_0
                             split: split_if)
