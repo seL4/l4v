@@ -107,8 +107,8 @@ class Poller(threading.Thread):
             except psutil.AccessDenied as err:
                 warnings.warn("access denied: pid=%d" % err.pid, RuntimeWarning)
 
-            # Add 1 ns allowance for floating-point rounding, which may occur when we
-            # sum the children's times in a different order from one update to the next.
+            # Add 1 ns allowance for floating-point rounding, which occurs when we
+            # accumulate current_children times for dead processes into reaped_cpu.
             # (Floating point epsilon is about 1e-15.)
             if total + 1e-9 < self.cpu:
                 try:
