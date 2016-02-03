@@ -28,8 +28,8 @@
 
     <!-- CRefine -->
     <sequence depends="CParser">
-        <test name="CKernel" cpu-timeout="3600">make CKernel</test>
-        <test name="CSpec" cpu-timeout="3600">make CSpec</test>
+        <test name="CKernel">make CKernel</test>
+        <test name="CSpec">make CSpec</test>
         <test name="CBaseRefine" depends="Refine" cpu-timeout="14400">make CBaseRefine</test>
         <test name="CRefine" cpu-timeout="25200">make CRefine</test>
     </sequence>
@@ -63,13 +63,13 @@
     </sequence>
 
     <!-- Separation Logic. -->
-    <sequence cpu-timeout="600">
+    <sequence>
         <test name="SepTactics">make SepTactics</test>
         <test name="SepTacticsExamples">make SepTacticsExamples</test>
     </sequence>
 
     <!-- Separation Logic on capDL. -->
-    <sequence depends="DSpec" cpu-timeout="600">
+    <sequence depends="DSpec">
         <test name="SepDSpec">make SepDSpec</test>
         <test name="DSpecProofs">make DSpecProofs</test>
     </sequence>

@@ -17,7 +17,7 @@
      format.
 
 -->
-<testsuite cpu-timeout="600" depends="isabelle">
+<testsuite cpu-timeout="3600" depends="isabelle">
 
     <!-- C Parser -->
     <set cwd="c-parser">
@@ -34,7 +34,7 @@
 
         <set depends="AutoCorres">
             <test name="AutoCorresDoc">make AutoCorresDoc</test>
-            <test name="AutoCorresTest" cpu-timeout="3600">make AutoCorresTest</test>
+            <test name="AutoCorresTest">make AutoCorresTest</test>
             <test name="AutoCorresSEL4" depends="CBaseRefine" cpu-timeout="21600">
                 make AutoCorresSEL4
             </test>
