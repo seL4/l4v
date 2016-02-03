@@ -1151,23 +1151,23 @@ lemma extras_inter'[dest!]: "(t,mode) \<in> has_srel_state (lift_fst_rel srel) i
                            abs.step_adt conc.step_adt)
      apply (clarsimp simp: global_automaton_if_def)
      apply (elim disjE exE conjE,simp_all)
-     apply (rule step_corres_bothE[OF  corres_kernel_call kernel_call_invs],assumption+,auto)[1]
-              apply (rule step_corres_bothE[OF  corres_kernel_call kernel_call_invs_sched],assumption+,auto)[1]              
-            apply (rule step_corres_bothE[OF  corres_handle_preemption handle_preemption_invs],assumption+,auto)[1]
-           apply (rule step_corres_bothE[OF  corres_schedule schedule_invs],assumption+,auto)[1]
-          apply (rule step_corres_both'E[OF  corres_kernel_exit kernel_exit_invs],assumption+,auto)[1]
+     apply (rule step_corres_bothE[OF  corres_kernel_call conc.kernel_call_invs],assumption+,auto)[1]
+              apply (rule step_corres_bothE[OF  corres_kernel_call conc.kernel_call_invs_sched],assumption+,auto)[1]
+            apply (rule step_corres_bothE[OF  corres_handle_preemption conc.handle_preemption_invs],assumption+,auto)[1]
+           apply (rule step_corres_bothE[OF  corres_schedule conc.schedule_invs],assumption+,auto)[1]
+          apply (rule step_corres_both'E[OF  corres_kernel_exit conc.kernel_exit_invs],assumption+,auto)[1]
          apply (rule preservesE[OF conc.check_active_irq_invs],assumption+)
-         apply (rule step_corres_bothE[OF corres_check_active_irq check_active_irq_invs],assumption+,clarsimp)
+         apply (rule step_corres_bothE[OF corres_check_active_irq conc.check_active_irq_invs],assumption+,clarsimp)
          apply (rule preservesE[OF abs.check_active_irq_invs],assumption+)
-         apply (rule_tac s'="(ac,be)" in step_corres_bothE[OF corres_do_user_op do_user_op_invs_entry],assumption+,auto)[1]
+         apply (rule_tac s'="(ac,be)" in step_corres_bothE[OF corres_do_user_op conc.do_user_op_invs_entry],assumption+,auto)[1]
          apply (rule preservesE[OF conc.check_active_irq_invs],assumption+)
-         apply (rule step_corres_bothE[OF corres_check_active_irq check_active_irq_invs],assumption+,clarsimp)
+         apply (rule step_corres_bothE[OF corres_check_active_irq conc.check_active_irq_invs],assumption+,clarsimp)
          apply (rule preservesE[OF abs.check_active_irq_invs],assumption+)
-         apply (rule_tac s'="(ac,be)" in step_corres_bothE[OF corres_do_user_op do_user_op_invs],assumption+,auto)[1]
-         apply (rule step_corres_bothE[OF corres_check_active_irq check_active_irq_invs_entry],assumption+,auto)[1]
-         apply (rule step_corres_bothE[OF corres_check_active_irq_idle check_active_irq_idle_invs_entry],assumption+,auto)[1]
+         apply (rule_tac s'="(ac,be)" in step_corres_bothE[OF corres_do_user_op conc.do_user_op_invs],assumption+,auto)[1]
+         apply (rule step_corres_bothE[OF corres_check_active_irq conc.check_active_irq_invs_entry],assumption+,auto)[1]
+         apply (rule step_corres_bothE[OF corres_check_active_irq_idle conc.check_active_irq_idle_invs_entry],assumption+,auto)[1]
         apply (rule preservesE[OF conc.check_active_irq_idle_invs],assumption+)
-        apply (rule step_corres_bothE[OF corres_check_active_irq_idle check_active_irq_idle_invs],assumption+,auto)[1]
+        apply (rule step_corres_bothE[OF corres_check_active_irq_idle conc.check_active_irq_idle_invs],assumption+,auto)[1]
     apply (fastforce intro!: srel_Fin simp: lift_fst_rel_def)
     done
 
@@ -1194,7 +1194,7 @@ lemma extras_inter'[dest!]: "(t,mode) \<in> has_srel_state (lift_fst_rel srel) i
     apply (rule abs.ADT_invs)
      apply (rule conc.ADT_invs)
      apply (rule fw_sim_abs_conc)
-    apply (clarsimp simp: step_adt global_automaton_if_def lift_fst_rel_def)
+    apply (clarsimp simp: conc.step_adt global_automaton_if_def lift_fst_rel_def)
     apply (case_tac ba,simp_all)
          apply (rule step_corres_exE[OF corres_check_active_irq],assumption+)
          apply (rule preservesE[OF conc.check_active_irq_invs],assumption+)
