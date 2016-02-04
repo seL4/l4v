@@ -71,7 +71,7 @@ fun proof_body_descend' (_,("",_,body)) = fold (append o proof_body_descend') (t
 
 fun used_facts thm = fold (append o proof_body_descend') (thms_of (Thm.proof_body_of thm)) []
 
-fun raw_primitive_text f = Method.Basic (fn ctxt => (Method.METHOD (K (fn thm => Seq.single (f thm)))))
+fun raw_primitive_text f = Method.Basic (fn _ => (Method.METHOD (K (fn thm => Seq.single (f thm)))))
     
 
 (*Find local facts from new hyps*)
@@ -130,7 +130,8 @@ end
 fun method_error kind pos state =
   Seq.single (Proof_Display.method_error kind pos (Proof.raw_goal state));
 
-fun apply args f text = Proof.assert_backward #> refine args f text #> Seq.map_result (Proof.using_facts []);
+fun apply args f text = Proof.assert_backward #> refine args f text #> 
+  Seq.maps_results (Proof.apply ((raw_primitive_text I),(Position.none, Position.none)));
 
 fun apply_results args f (text, range) =
   Seq.APPEND (apply args f text, method_error "" (Position.set_range range));
