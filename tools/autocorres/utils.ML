@@ -193,13 +193,14 @@ fun contains_subterm needle haysack =
  *)
 fun named_cterm_instantiate values thm =
 let
+  val ctxt = Proof_Context.init_global (Thm.theory_of_thm thm)
   fun match name ((name', _), _) = name = name'
   fun getvar name =
     (case find_first (match name) (Term.add_vars (Thm.prop_of thm) []) of
-          SOME var => Thm.cterm_of (Proof_Context.init_global (Thm.theory_of_thm thm)) (Var var)
+          SOME var =>  #1 var
         | NONE => raise THM ("named_cterm_instantiate: " ^ name, 0, [thm]));
 in
-  cterm_instantiate (map (apfst getvar) values) thm
+  infer_instantiate ctxt (map (apfst getvar) values) thm
 end
 
 (*
@@ -226,9 +227,9 @@ let
 
   (* Get instantiations. *)
   val insts = map_filter (fn Var var =>
-    Option.map (fn x => (Thm.cterm_of ctxt (Var var), x)) (f var)) all_vars
+    Option.map (fn x => (#1 var, x)) (f var)) all_vars
 in
-  cterm_instantiate insts thm
+  infer_instantiate ctxt insts thm
 end
 
 (*
@@ -299,7 +300,7 @@ let
 in
   Thm.cterm_of ctxt renamed_prop
   |> Goal.init
-  |> rtac new_thm 1
+  |> resolve_tac ctxt [new_thm] 1
   |> Seq.hd
   |> Goal.finish ctxt
 end
@@ -332,7 +333,7 @@ fun abs_over_tuple [] body =
   | abs_over_tuple [(var_name, abs_term)] body =
       abs_over var_name abs_term body
   | abs_over_tuple ((var_name, abs_term)::xs) body =
-     HOLogic.mk_split (abs_over var_name abs_term (abs_over_tuple xs body))
+     HOLogic.mk_case_prod (abs_over var_name abs_term (abs_over_tuple xs body))
 
 (*
  * Construct a term with the given args, replacing type variables in "term"
@@ -373,7 +374,7 @@ fun commas l =
   map Pretty.str l
   |> Pretty.commas
   |> Pretty.enclose "" ""
-  |> Pretty.str_of
+  |> Pretty.unformatted_string_of
 
 (* Make a list of conjunctions. *)
 fun mk_conj_list [] = @{term "HOL.True"}
@@ -510,7 +511,7 @@ let
       THEN auto_tac ctxt
     fun prove_termination lthy =
       Function.prove_termination NONE
-        (Function_Common.termination_prover_tac lthy) lthy
+        (Function_Common.termination_prover_tac false lthy) lthy
 
     (* Get the list of function bindings. *)
     val function_bindings = map (fn (name, _, _) =>
@@ -620,7 +621,7 @@ val metis_tac = Metis_Tactic.metis_tac
         ATP_Proof_Reconstruct.partial_type_encs
         ATP_Proof_Reconstruct.default_metis_lam_trans
 fun metis_insert_tac ctxt rules =
-  (Method.insert_tac rules) THEN' (metis_tac ctxt [])
+  (Method.insert_tac ctxt rules) THEN' (metis_tac ctxt [])
 
 (*
  * Decoding and parsing Isabelle terms into ML terms.
@@ -805,6 +806,7 @@ end
  *)
 fun inst_args vals thm =
 let
+  val ctxt = Proof_Context.init_global (Thm.theory_of_thm thm)
   (* Fetch schematic variables on the LHS, stripping away locale assumptions
    * and locale fixed variables first. *)
   val vars = Thm.cprop_of thm
@@ -813,8 +815,9 @@ let
     |> Drule.strip_comb
     |> snd
     |> filter (Thm.term_of #> is_Var)
+    |> map (#1 o dest_Var o Thm.term_of)
 in
-  Drule.cterm_instantiate ((take (length vals) vars) ~~ vals) thm
+  Drule.infer_instantiate ctxt ((take (length vals) vars) ~~ vals) thm
 end
 
 (*
@@ -833,11 +836,11 @@ let
 
   (* Instantiate "thm" with the matched values. *)
   val inst = map (fn (var_name, (var_type, value)) =>
-        (Thm.cterm_of ctxt (Var (var_name, var_type)), Thm.cterm_of ctxt value))
+        (var_name, Thm.cterm_of ctxt value))
       (Vartab.dest tenv)
-  val new_thm = cterm_instantiate inst thm
+  val new_thm = infer_instantiate ctxt inst thm
 in
-  rtac new_thm n goal_thm
+  resolve_tac ctxt [new_thm] n goal_thm
 end
 handle Pattern.MATCH => Seq.empty
 
@@ -895,7 +898,7 @@ let
   val const_def' = Primitive_Defs.dest_def lthy Term.is_Const
                                            (K false) (K false) const_def
                    |> snd
-  fun def_const thy = Thm.add_def lthy true true (Binding.name const_name, const_def') thy
+  fun def_const thy = Thm.add_def (Proof_Context.defs_context lthy) true true (Binding.name const_name, const_def') thy
   val ((_, thm), lthy) = Local_Theory.raw_theory_result def_const lthy
   val (_, lthy') = define_lemma thm_name thm lthy
 in
@@ -911,9 +914,9 @@ fun expand_type_abbrevs ctxt t = Thm.typ_of (Thm.ctyp_of ctxt t)
 fun instantiate_normalize_from_env ctxt env =
 let
   fun prep_type (x, (S, ty)) =
-    (Thm.ctyp_of ctxt (TVar (x, S)), Thm.ctyp_of ctxt ty)
+    ((x,S), Thm.ctyp_of ctxt ty)
   fun prep_term (x, (T, t)) =
-    (Thm.cterm_of ctxt (Var (x, T)), Thm.cterm_of ctxt t)
+    ((x,T), Thm.cterm_of ctxt t)
   val term_vals = Vartab.dest (Envir.term_env env)
   val typ_vals = Vartab.dest (Envir.type_env env)
 in
@@ -999,7 +1002,7 @@ fun exec_background f lthy =
 
 (* Assert no flex flex pairs in the given theorem. *)
 fun no_flexflex_tac thm =
-  if not (null (#tpairs (Thm.rep_thm thm))) then
+  if not (null (Thm.tpairs_of thm)) then
     (raise THM ("Flex-flex pairs in goal", 1, [thm]))
   else
     all_tac thm
@@ -1032,7 +1035,7 @@ fun trace_rule ctxt goal rule =
     val _ = Goal_Display.string_of_goal ctxt goal |> tracing
     val _ = (case guess_thm_name ctxt rule of
         SOME x => Pretty.str x
-      | NONE => Display.pretty_thm_item ctxt rule)
+      | NONE => Thm.pretty_thm_item ctxt rule)
       |> Pretty.string_of |> tracing
   in
     ()
