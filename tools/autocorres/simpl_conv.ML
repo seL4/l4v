@@ -96,7 +96,7 @@ fun simpl_conv'
         val subproofs = map snd subterms';
         val new_term = (result_term converted_terms);
       in
-        (new_term, (rtac base_thm 1) THEN (EVERY subproofs))
+        (new_term, (resolve_tac ctxt [base_thm] 1) THEN (EVERY subproofs))
       end
 
     (* Construct a "L1 monad" term with the given arguments applied to it. *)
@@ -203,9 +203,9 @@ fun simpl_conv'
                   (* Generate the term. *)
                   (mk_l1 @{term "L1_call"}
                       [a, term', c, absdummy state_type d],
-                   rtac (if is_rec orelse not target_rec then
-                            @{thm L1corres_reccall} else @{thm L1corres_call}) 1
-                   THEN rtac thm 1)
+                   resolve_tac ctxt [if is_rec orelse not target_rec then
+                                     @{thm L1corres_reccall} else @{thm L1corres_call}] 1
+                   THEN resolve_tac ctxt [thm] 1)
                 end
           end
 
@@ -343,7 +343,7 @@ fun get_l1corres_thm prog_info fn_info ctxt do_opt trace_opt fn_name
   val (monad, tactic) =
     if is_recursive then
       (Utils.mk_term thy @{term "L1_recguard"} [measure_var, monad],
-        (rtac @{thm L1corres_recguard} 1 THEN tactic))
+        (resolve_tac ctxt @{thms L1corres_recguard} 1 THEN tactic))
     else
       (monad, tactic)
 
@@ -357,8 +357,8 @@ in
   |> Goal.init
   |> apply_tac "unfold SIMPL body"
         (case impl_thm of
-            NONE => (rtac @{thm L1corres_undefined_call} 1)
-          | SOME thm => ((rtac @{thm L1corres_Call} 1) THEN (rtac thm 1) THEN tactic))
+            NONE => (resolve_tac ctxt @{thms L1corres_undefined_call} 1)
+          | SOME thm => ((resolve_tac ctxt @{thms L1corres_Call} 1) THEN (resolve_tac ctxt [thm] 1) THEN tactic))
   |> Goal.finish ctxt
   (* Apply simplifications to the L1 term. *)
   |> cleanup_thm ctxt do_opt trace_opt prog_info fn_name
@@ -384,16 +384,17 @@ let
     val tac =
         REPEAT (EqSubst.eqsubst_tac lthy [0]
                 [@{thm monad_mono_alt_def}, @{thm all_conj_distrib} RS @{thm sym}] 1)
-        THEN rtac @{thm allI} 1 THEN rtac @{thm nat.induct} 1
+        THEN resolve_tac lthy @{thms allI} 1 THEN resolve_tac lthy @{thms nat.induct} 1
           THEN EVERY (map (fn expand =>
-                              TRY (rtac @{thm conjI} 1)
+                              TRY (resolve_tac lthy @{thms conjI} 1)
                               THEN expand 1
-                              THEN rtac @{thm monad_mono_step_L1_recguard_0} 1) func_expand)
-        THEN REPEAT (etac @{thm conjE} 1)
+                              THEN resolve_tac lthy @{thms monad_mono_step_L1_recguard_0} 1) func_expand)
+        THEN REPEAT (eresolve_tac lthy @{thms conjE} 1)
         THEN EVERY (map (fn expand =>
-                            TRY (rtac @{thm conjI} 1)
+                            TRY (resolve_tac lthy @{thms conjI} 1)
                             THEN expand 1
-                            THEN REPEAT (FIRST (atac 1 :: map (fn t => rtac t 1) @{thms L1_monad_mono_step_rules})))
+                            THEN REPEAT (FIRST [assume_tac lthy 1,
+                                                resolve_tac lthy @{thms L1_monad_mono_step_rules} 1]))
                         func_expand)
 in
   Goal.prove lthy [] [] mono_thm (K tac)

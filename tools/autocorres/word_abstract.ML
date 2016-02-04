@@ -224,9 +224,9 @@ let
         |> fold (fn t => fn v => Logic.all t v) (rev (fn_args @ map fst arg_pairs))
         |> Thm.cterm_of ctxt
         |> Goal.init
-        |> Utils.apply_tac "move precond to assumption" (rtac @{thm corresTA_precond_to_asm} 1)
-        |> Utils.apply_tac "split precond" (REPEAT (CHANGED (etac @{thm conjE} 1)))
-        |> Utils.apply_tac "create schematic precond" (rtac @{thm corresTA_precond_to_guard} 1)
+        |> Utils.apply_tac "move precond to assumption" (resolve_tac ctxt @{thms corresTA_precond_to_asm} 1)
+        |> Utils.apply_tac "split precond" (REPEAT (CHANGED (eresolve_tac ctxt @{thms conjE} 1)))
+        |> Utils.apply_tac "create schematic precond" (resolve_tac ctxt @{thms corresTA_precond_to_guard} 1)
         |> Utils.apply_tac "unfold RHS" (CHANGED (Utils.unfold_once_tac ctxt (Utils.abs_def ctxt old_body_def) 1))
 
     (*
@@ -243,7 +243,7 @@ let
     (* Standard tactics. *)
     fun my_rtac ctxt thm n =
         Utils.trace_if_success ctxt thm (
-          DETERM (EVERY' (rtac thm :: replicate (Rule_Cases.get_consumes thm) (assume_tac ctxt)) n))
+          DETERM (EVERY' (resolve_tac ctxt [thm] :: replicate (Rule_Cases.get_consumes thm) (assume_tac ctxt)) n))
 
     (* Apply a conversion to the abstract/concrete side of the given "abstract_val" term. *)
     fun wa_conc_body_conv conv =
@@ -295,12 +295,12 @@ let
         (Const (@{const_name "Trueprop"}, _) $
             (Const (@{const_name "abstract_val"}, _) $ _ $ _ $ _ $ (
                 Abs (_, _, _)))) =>
-                    rtac @{thm abstract_val_lambda} n thm
+                    resolve_tac ctxt @{thms abstract_val_lambda} n thm
       | _ => no_tac thm
 
     (* All tactics we try, in the order we should try them. *)
     val step_tacs =
-        [(@{thm imp_refl}, atac 1)]
+        [(@{thm imp_refl}, assume_tac ctxt 1)]
         @ (map (fn thm => (thm, my_rtac ctxt thm 1)) rules)
         @ (map (fn thm => (thm, make_fo_tac (my_rtac ctxt thm) ctxt 1)) fo_rules)
         @ [(@{thm abstract_val_lambda}, lambda_tac 1)]
@@ -345,7 +345,7 @@ let
 
     (* Gather statistics. *)
     val _ = Statistics.gather ctxt "WA" fn_name
-        (Drule.gen_all (Variable.maxidx_of ctxt) thm
+        (Variable.gen_all ctxt thm
           |> Thm.prop_of
           |> HOLogic.dest_Trueprop
           |> (fn t => Utils.term_nth_arg t 3))
@@ -374,7 +374,7 @@ let
 
     (* Gather post-optimisation statistics. *)
     val _ = Statistics.gather ctxt "WAsimp" fn_name
-        (Drule.gen_all (Variable.maxidx_of ctxt) thm
+        (Variable.gen_all ctxt thm
           |> Thm.prop_of
           |> HOLogic.dest_Trueprop
           |> (fn t => Utils.term_nth_arg t 3))
@@ -382,11 +382,11 @@ let
     (* Extract the abstract term out of a L2Tcorres thm. *)
     fun dest_corresWA_term_abs (_ $ _ $ _ $ t $ _ ) = t
     fun get_body_of_thm thm =
-        Thm.concl_of (Drule.gen_all (Variable.maxidx_of ctxt) thm)
+        Thm.concl_of (Variable.gen_all ctxt thm)
         |> HOLogic.dest_Trueprop
         |> dest_corresWA_term_abs
   in
-    (get_body_of_thm thm, Drule.gen_all (Variable.maxidx_of ctxt) thm,
+    (get_body_of_thm thm, Variable.gen_all ctxt thm,
      (if member (op =) trace_funcs fn_name then [("WA", AutoCorresData.RuleTrace trace)] else []) @ opt_traces)
   end
 

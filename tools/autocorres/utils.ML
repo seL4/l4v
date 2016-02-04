@@ -1047,6 +1047,30 @@ fun trace_rule ctxt goal rule =
 fun trace_if_success ctxt thm tac goal =
   (tac THEN (fn y => (trace_rule ctxt goal thm; all_tac y))) goal
 
+(* Get the type a pointer points to. *)
+fun dest_ptrT T = dest_Type T |> snd |> hd
+fun mk_ptrT T = Type (@{type_name "ptr"}, [T])
+
+(* Get / dest an option type. *)
+fun dest_optionT (Type ("Option.option", [x])) = x
+fun mk_optionT T = Type (@{type_name "option"}, [T])
+
+(* Construct other terms. *)
+fun mk_the T t = Const (@{const_name "the"}, mk_optionT T --> T) $ t
+fun mk_Some T t = Const (@{const_name "Some"}, T --> mk_optionT T) $ t
+fun mk_fun_upd rangeT domT f src dest =
+  Const (@{const_name "fun_upd"}, (rangeT --> domT) --> rangeT --> domT --> rangeT --> domT)
+    $ f $ src $ dest
+
+(* Succeed only if there are no subgoals. *)
+fun solved_tac thm =
+  if Thm.nprems_of thm = 0 then Seq.single thm else Seq.empty
+
+(* Convenience function for making simprocs. *)
+fun mk_simproc' ctxt (name : string, pats : string list, proc : Proof.context -> cterm -> thm option) = let
+  in Simplifier.make_simproc ctxt name
+       {lhss = map (Proof_Context.read_term_pattern ctxt) pats,
+        proc = K proc, identifier = []} end
 
 end
 
@@ -1078,22 +1102,3 @@ in
   | (x::xs) => (warning ("Multiple unifiers! Arbitrarily selecting the first. "
       ^ (PolyML.makestring (x::xs))); x)
 end
-
-(* Get the type a pointer points to. *)
-fun dest_ptrT T = dest_Type T |> snd |> hd
-fun mk_ptrT T = Type (@{type_name "ptr"}, [T])
-
-(* Get / dest an option type. *)
-fun dest_optionT (Type ("Option.option", [x])) = x
-fun mk_optionT T = Type (@{type_name "option"}, [T])
-
-(* Construct other terms. *)
-fun mk_the T t = Const (@{const_name "the"}, mk_optionT T --> T) $ t
-fun mk_Some T t = Const (@{const_name "Some"}, T --> mk_optionT T) $ t
-fun mk_fun_upd rangeT domT f src dest =
-  Const (@{const_name "fun_upd"}, (rangeT --> domT) --> rangeT --> domT --> rangeT --> domT)
-    $ f $ src $ dest
-
-(* Succeed only if there are no subgoals. *)
-fun solved_tac thm =
-  if Thm.nprems_of thm = 0 then Seq.single thm else Seq.empty

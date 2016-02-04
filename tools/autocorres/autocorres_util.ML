@@ -541,7 +541,7 @@ fun define_funcs
         fn (pred, thm, body_def) =>
           Thm.trivial (Thm.cterm_of ctxt' pred)
           |> Utils.apply_tac "unfold body" (Hypsubst.stac ctxt' body_def 1)
-          |> Utils.apply_tac "apply rule" (rtac thm 1)
+          |> Utils.apply_tac "apply rule" (resolve_tac ctxt' [thm] 1)
           |> Goal.norm_result ctxt
           |> singleton (Variable.export ctxt' ctxt)
         )
@@ -560,8 +560,9 @@ fun define_funcs
       |> (fn thm =>
         if is_recursive then (
           Utils.apply_tac "start induction"
-                (rtac (@{thm recguard_induct} WHERE [
-                    ("n", Thm.cterm_of ctxt' measure_var)]) 1) thm
+                (resolve_tac ctxt'
+                    [@{thm recguard_induct} WHERE [
+                     ("n", Thm.cterm_of ctxt' measure_var)]] 1) thm
           |> Utils.apply_tac "unfold bodies"
               (EVERY (map (fn x => (EqSubst.eqsubst_tac ctxt' [1] [x] 1)) (rev fn_def_thms)))
           |> Utils.apply_tac "solve induction base cases"

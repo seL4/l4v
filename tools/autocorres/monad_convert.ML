@@ -212,7 +212,8 @@ fun monad_convert_tac (ctxt : Proof.context) (monad_name : string) (do_opt : boo
 
     (* Make variables schematic *)
     val translate_thm' = Goal.prove ctxt (sort_distinct string_ord m_vars) []
-                                    (term_of_thm translate_thm) (K (rtac translate_thm 1))
+                                         (term_of_thm translate_thm)
+                                         (K (resolve_tac ctxt [translate_thm] 1))
 
     val result = EqSubst.eqsubst_tac ctxt [0] [translate_thm'] n state
   in

@@ -382,7 +382,7 @@ let
     |> (fn goal_state => if is_recursive then
       goal_state
       |> apply_tac "start induction"
-          (rtac @{thm recguard_induct} 1)
+          (resolve_tac lthy @{thms recguard_induct} 1)
       |> apply_tac "(base case) split subgoals"
           (TRY (REPEAT_ALL_NEW (Tactic.match_tac lthy [@{thm conjI}]) 1))
       |> apply_tac "(base case) solve base cases"
@@ -419,10 +419,10 @@ let
     |> apply_tac "inserting hypothesis"
         (cut_tac thm 1)
     |> apply_tac "normalising into rule format"
-        ((REPEAT (rtac @{thm allI} 1))
-        THEN (REPEAT (etac @{thm conjE} 1))
-        THEN (REPEAT (etac @{thm allE} 1)))
-    |> apply_tac "solving goal" (atac 1)
+        ((REPEAT (resolve_tac lthy @{thms allI} 1))
+        THEN (REPEAT (eresolve_tac lthy @{thms conjE} 1))
+        THEN (REPEAT (eresolve_tac lthy @{thms allE} 1)))
+    |> apply_tac "solving goal" (assume_tac lthy 1)
     |> Goal.finish lthy
     |> Object_Logic.rulify lthy
   val new_thms = map (prove_partial_pred rewrite_thm) final_props

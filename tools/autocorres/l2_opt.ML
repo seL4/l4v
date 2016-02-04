@@ -57,9 +57,9 @@ fun solve_simp_expr_tac ctxt =
           val schematic_remains = Term.exists_subterm Term.is_Var (Thm.prop_of simplified)
         in
           if schematic_remains then
-            (rtac @{thm simp_expr_triv} 1) thm
+            (resolve_tac ctxt @{thms simp_expr_triv} 1) thm
           else
-            ((rtac simp_expr_thm 1) THEN (rtac simplified 1)) thm
+            ((resolve_tac ctxt [simp_expr_thm] 1) THEN (resolve_tac ctxt [simplified] 1)) thm
         end
       | _ => no_tac thm)
     )) ctxt
@@ -76,7 +76,7 @@ fun solve_simp_expr_const_tac ctxt thm =
     no_tac thm
   else
     SOLVES (
-      (rtac @{thm simp_expr_solve_constant} 1)
+      (resolve_tac ctxt @{thms simp_expr_solve_constant} 1)
       THEN (Clasimp.clarsimp_tac (map_opt_simpset true ctxt) 1)) thm
 
 (*
@@ -99,7 +99,7 @@ fun simp_monad_equiv_pre_tac ctxt =
           (* Perform basic simplification of the term. *)
           val simp_thm = Simplifier.asm_full_rewrite (map_opt_simpset false ctxt) (Thm.cterm_of ctxt P)
         in
-          (rtac (@{thm monad_equiv_weaken_pre''} OF [simp_thm]) 1
+          (resolve_tac ctxt [@{thm monad_equiv_weaken_pre''} OF [simp_thm]] 1
             ORELSE (fn t => raise (CTERM ("failed to prove goal", [Thm.cprem_of t 1])))) thm
         end
     | _ =>
@@ -119,8 +119,8 @@ let
   val goal = @{mk_term "?L == ?R" (L)} (Thm.term_of ct)
     |> Thm.cterm_of ctxt
     |> Goal.init
-    |> Utils.apply_tac "Creating object-level equality." (rtac @{thm eq_reflection} 1)
-    |> Utils.apply_tac "Creating 'monad_equiv' goal." (rtac @{thm monad_equiv_eq} 1)
+    |> Utils.apply_tac "Creating object-level equality." (resolve_tac ctxt @{thms eq_reflection} 1)
+    |> Utils.apply_tac "Creating 'monad_equiv' goal." (resolve_tac ctxt @{thms monad_equiv_eq} 1)
 
   (* Print a diagnostic if this branch fails. *)
   val num_failures = ref 0
@@ -167,14 +167,14 @@ end
  * also disappear.)
  *)
 val l2_gets_bind_thm = mk_meta_eq @{thm L2_gets_bind}
-fun l2_gets_bind_simproc' ctxt term =
+fun l2_gets_bind_simproc' ctxt cterm =
 let
   fun is_simple (_ $ Abs (_, _, Bound _)) = true
     | is_simple (_ $ Abs (_, _, Free _)) = true
     | is_simple (_ $ Abs (_, _, Const _)) = true
     | is_simple _ = false
 in
-  case term of
+  case Thm.term_of cterm of
     (Const (@{const_name "L2_seq"}, _) $ lhs $ Abs (_, _, rhs)) =>
       let
         fun count_var_usage (a $ b) = count_var_usage a + count_var_usage b
@@ -191,15 +191,14 @@ in
     | _ => NONE
 end
 val l2_gets_bind_simproc =
-  Raw_Simplifier.mk_simproc "L2_gets_bind_simproc"
-      [@{cpat "L2_seq (L2_gets (%_. ?A) ?n) ?B"}]
-      l2_gets_bind_simproc'
+  Utils.mk_simproc' @{context}
+    ("L2_gets_bind_simproc", ["L2_seq (L2_gets (%_. ?A) ?n) ?B"], l2_gets_bind_simproc')
 
 (* Simproc to clean up guards. *)
-fun l2_guard_simproc' ss ctxt term =
+fun l2_guard_simproc' ss ctxt cterm =
 let
   val simp_thm = Simplifier.asm_full_rewrite
-      (Simplifier.add_cong @{thm HOL.conj_cong} (put_simpset ss ctxt)) (Thm.cterm_of ctxt term)
+      (Simplifier.add_cong @{thm HOL.conj_cong} (put_simpset ss ctxt)) cterm
   val [lhs, rhs] = Thm.prop_of (Drule.eta_contraction_rule simp_thm) |> Term.strip_comb |> snd
 in
   if Term_Ord.fast_term_ord (lhs, rhs) = EQUAL then
@@ -208,8 +207,7 @@ in
     SOME simp_thm
 end
 fun l2_guard_simproc ss =
-  Raw_Simplifier.mk_simproc "L2_guard_simproc"
-    [@{cpat "L2_guard ?G"}] (l2_guard_simproc' ss)
+  Utils.mk_simproc' @{context} ("L2_guard_simproc", ["L2_guard ?G"], l2_guard_simproc' ss)
 
 (*
  * Adjust "case_prod commands so that constructs such as:
