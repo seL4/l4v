@@ -370,6 +370,8 @@ def main():
     # --legacy-status used by top-level regression-v2 script
     parser.add_argument("--legacy-status", action="store_true",
             help="emulate legacy (sequential code) status lines")
+    parser.add_argument("-x", "--exclude", action="append", metavar="TEST", default=[],
+            help="exclude tests (one -x per test)")
     parser.add_argument("-v", "--verbose", action="store_true",
             help="print test output")
     parser.add_argument("--junit-report", metavar="FILE",
@@ -408,6 +410,11 @@ def main():
         if len(bad_names) > 0:
             parser.error("Unknown test names: %s" % (", ".join(sorted(bad_names))))
         tests_to_run = [t for t in tests if t.name in desired_names]
+    args.exclude = set(args.exclude)
+    bad_names = args.exclude - set(args.tests)
+    if bad_names:
+        parser.error("Unknown test names: %s" % (", ".join(sorted(bad_names))))
+    tests_to_run = [t for t in tests_to_run if t.name not in args.exclude]
 
     # Run the tests.
     print("Running %d test(s)..." % len(tests_to_run))
