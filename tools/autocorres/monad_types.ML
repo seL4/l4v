@@ -32,17 +32,19 @@ type monad_type = {
 
   (*
    * Type conversion rules.
+   * While we store full contexts, we are really only interested in their simpsets.
+   * The rest of the context data is unused.
    *)
 
   (* Rules for converting L2_monad to your monad. *)
-  lift_rules : simpset,
+  lift_rules : unit Thmtab.table,
 
   (* Rules for converting your monad back to L2_monad.
      You need these rules if you want to use monad_convert. *)
-  unlift_rules : simpset,
+  unlift_rules : unit Thmtab.table,
 
   (* Any extra simplifications that are applied after conversion. *)
-  polish_rules : simpset,
+  polish_rules : unit Thmtab.table,
 
   (* Decide whether a term is written in your monad.
      A usual way is to check that the term starts with <L2_call_lift> (see below). *)
@@ -96,9 +98,9 @@ fun update_mt_unlift_rules f = update_mt_rules I f I
 fun update_mt_polish_rules f = update_mt_rules I I f
 
 fun merge_mt (mt1 : monad_type, mt2 : monad_type) =
-  mt1 |> update_mt_rules (fn ss => merge_ss (ss, #lift_rules mt2))
-                         (fn ss => merge_ss (ss, #unlift_rules mt2))
-                         (fn ss => merge_ss (ss, #polish_rules mt2))
+  mt1 |> update_mt_rules (fn ss => Thmtab.merge op= (ss, #lift_rules mt2))
+                         (fn ss => Thmtab.merge op= (ss, #unlift_rules mt2))
+                         (fn ss => Thmtab.merge op= (ss, #polish_rules mt2))
 
 (* TODO: figure out how to do this with Theory_Data *)
 structure TSRules = Generic_Data
@@ -118,14 +120,17 @@ fun update_the_mt (name : Symtab.key) (f : monad_type -> monad_type) (t : TSRule
 
 fun change_TSRules update_rules update_simps name thms =
   TSRules.map (update_the_mt name (update_rules
-    (fn ss => simpset_of (update_simps (put_simpset ss @{context}, thms)))))
+    (fn thmset => update_simps thmset thms)))
 
-val add_lift_rules = change_TSRules update_mt_lift_rules (op addsimps)
-val del_lift_rules = change_TSRules update_mt_lift_rules (op delsimps)
-val add_unlift_rules = change_TSRules update_mt_unlift_rules (op addsimps)
-val del_unlift_rules = change_TSRules update_mt_unlift_rules (op delsimps)
-val add_polish_rules = change_TSRules update_mt_polish_rules (op addsimps)
-val del_polish_rules = change_TSRules update_mt_polish_rules (op delsimps)
+fun thmset_adds set thms = fold Thmtab.update (map (fn thm => (thm, ())) thms) set
+fun thmset_dels set thms = fold Thmtab.delete thms set
+
+val add_lift_rules = change_TSRules update_mt_lift_rules thmset_adds
+val del_lift_rules = change_TSRules update_mt_lift_rules thmset_dels
+val add_unlift_rules = change_TSRules update_mt_unlift_rules thmset_adds
+val del_unlift_rules = change_TSRules update_mt_unlift_rules thmset_dels
+val add_polish_rules = change_TSRules update_mt_polish_rules thmset_adds
+val del_polish_rules = change_TSRules update_mt_polish_rules thmset_dels
 
 val ts_attrib : attribute context_parser =
   Scan.lift (Parse.name --
@@ -178,9 +183,9 @@ fun new_monad_type
         (* TODO: it seems that we could use empty_ss instead of HOL_basic_ss,
                  but then Isabelle throws all the rules away when we cross
                  theory boundaries or merge theories. Investigate. *)
-        lift_rules = HOL_basic_ss,
-        unlift_rules = HOL_basic_ss,
-        polish_rules = HOL_ss, (* We put standard HOL lemmas in polish set. *)
+        lift_rules = Thmtab.empty,
+        unlift_rules = Thmtab.empty,
+        polish_rules = Thmtab.empty,
         valid_term = valid_term,
         precedence = precedence,
         L2_simp_rules = L2_simp_rules,
@@ -199,11 +204,14 @@ fun new_monad_type
 fun get_monad_type (name : string) (ctxt : Context.generic) : monad_type option =
   Symtab.lookup (TSRules.get ctxt) name
 
+fun monad_type_rules (rules : monad_type) =
+  { lift_rules = #lift_rules rules |> Thmtab.dest |> map fst,
+    unlift_rules = #unlift_rules rules |> Thmtab.dest |> map fst,
+    polish_rules = #polish_rules rules |> Thmtab.dest |> map fst }
+
 fun get_monad_type_rules (name : string) (ctxt : Context.generic) =
   get_monad_type name ctxt
-  |> Option.map (fn t => { lift_rules = #lift_rules t |> dest_ss |> #simps,
-                           unlift_rules = #unlift_rules t |> dest_ss |> #simps,
-                           polish_rules = #polish_rules t |> dest_ss |> #simps })
+  |> Option.map monad_type_rules
 
 
 (* Get rules ordered by precedence. If only_use is empty, return all rules. *)
