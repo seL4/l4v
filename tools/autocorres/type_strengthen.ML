@@ -281,9 +281,7 @@ let
 
   (* When lifting, also lift our callees. *)
   val rule_set' = Monad_Types.update_mt_lift_rules
-      (fn x =>
-        merge_ss (x, #lift_rules rule_set)
-        |> simpset_map lthy (fn ctxt => ctxt addsimps (callee_proofs @ mono_thms)))
+      (fn thms => Monad_Types.thmset_adds thms (callee_proofs @ mono_thms))
       rule_set
 
   (*
