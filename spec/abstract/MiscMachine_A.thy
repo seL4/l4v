@@ -15,33 +15,47 @@ Utilities for the machine level which are not machine-dependent.
 chapter "Machine Accessor Functions"
 
 theory MiscMachine_A
-imports "./$L4V_ARCH/Machine_A"
+imports "./$L4V_ARCH/Machine_A" "../machine/MachineExports"
 begin
 
-text {* Miscellaneous definitions of constants used in modelling machine
-operations. *}
+unqualify_types (in "$L4V_ARCH")
+  user_context 
+  register 
+  data 
+  obj_ref
+  asid_index
+  asid_pool_index
+  cap_ref
+  length_type
+  vspace_ref
+  data_offset
 
-definition
-  nat_to_cref :: "nat \<Rightarrow> nat \<Rightarrow> cap_ref" where
-  "nat_to_cref ln n \<equiv> drop (word_bits - ln)
-                           (to_bl (of_nat n :: machine_word))"
 
-definition
- "msg_info_register \<equiv> msgInfoRegister"
-definition
- "msg_registers \<equiv> msgRegisters"
-definition
- "cap_register \<equiv> capRegister"
-definition
- "badge_register \<equiv> badgeRegister"
-definition
- "frame_registers \<equiv> frameRegisters"
-definition
- "gp_registers \<equiv> gpRegisters"
-definition
- "exception_message \<equiv> exceptionMessage"
-definition
- "syscall_message \<equiv> syscallMessage"
+unqualify_consts (in "$L4V_ARCH")
+  "nat_to_cref :: nat \<Rightarrow> nat \<Rightarrow> cap_ref"
+  "msg_info_register :: register"
+  "msg_registers :: register list"
+  "cap_register :: register"
+  "badge_register :: register"
+  "frame_registers :: register list"
+  "gp_registers :: register list"
+  "exception_message :: register list"
+  "syscall_message :: register list"
+
+  "new_context :: user_context"
+  "slot_bits :: nat"
+  "oref_to_data   :: obj_ref \<Rightarrow> data"
+  "data_to_oref   :: data \<Rightarrow> obj_ref"
+  "vref_to_data   :: vspace_ref \<Rightarrow> data"
+  "data_to_vref   :: data \<Rightarrow> vspace_ref"
+  "nat_to_len     :: nat \<Rightarrow> length_type"
+  "data_to_nat    :: data \<Rightarrow> nat"
+  "data_to_16     :: data \<Rightarrow> 16 word"
+  "data_to_cptr :: data \<Rightarrow> cap_ref"
+  "data_offset_to_nat :: data_offset \<Rightarrow> nat"
+  "combine_ntfn_badges :: data \<Rightarrow> data \<Rightarrow> data"
+  "combine_ntfn_msgs :: data \<Rightarrow> data \<Rightarrow> data" 
+
 
 type_synonym 'a user_monad = "(user_context, 'a) nondet_monad"
 
@@ -56,5 +70,6 @@ definition
 definition
   set_register :: "register \<Rightarrow> data \<Rightarrow> unit user_monad" where
   "set_register r v \<equiv> modify (\<lambda>uc. uc (r := v))"
+
 
 end

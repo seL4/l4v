@@ -18,6 +18,10 @@ theory Schedule_A
 imports "./$L4V_ARCH/Arch_A"
 begin
 
+unqualify_consts (in "$L4V_ARCH")
+  "arch_switch_to_thread :: obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
+  "arch_switch_to_idle_thread :: (unit,'z::state_ext) s_monad"
+
 abbreviation
   "idle st \<equiv> st = Structures_A.IdleThreadState"
 

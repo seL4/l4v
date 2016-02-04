@@ -14,7 +14,10 @@ theory Platform
 imports
   "../../../lib/Lib"
   "../../../lib/WordEnum"
+  Setup_Locale
 begin
+
+context ARM begin
 
 text {*
   This theory lists platform-specific types and basic constants, in particular
@@ -68,5 +71,7 @@ definition
 definition
   maxIRQ :: "irq" where
   "maxIRQ \<equiv> 63"
+
+end
 
 end

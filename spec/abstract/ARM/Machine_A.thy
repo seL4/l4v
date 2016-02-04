@@ -22,6 +22,8 @@ imports
   "../../machine/$L4V_ARCH/MachineTypes"
 begin
 
+context ARM begin
+
 text {*
   The specification is written with abstract type names for object
   references, user pointers, word-based data, cap references, and so
@@ -108,5 +110,33 @@ type_synonym user_context = "register \<Rightarrow> data"
 definition
   new_context :: "user_context" where
   "new_context \<equiv> (\<lambda>r. 0) (CPSR := 0x150)"
+
+text {* Miscellaneous definitions of constants used in modelling machine
+operations. *}
+
+definition
+  nat_to_cref :: "nat \<Rightarrow> nat \<Rightarrow> cap_ref" where
+  "nat_to_cref ln n \<equiv> drop (word_bits - ln)
+                           (to_bl (of_nat n :: machine_word))"
+
+definition
+ "msg_info_register \<equiv> msgInfoRegister"
+definition
+ "msg_registers \<equiv> msgRegisters"
+definition
+ "cap_register \<equiv> capRegister"
+definition
+ "badge_register \<equiv> badgeRegister"
+definition
+ "frame_registers \<equiv> frameRegisters"
+definition
+ "gp_registers \<equiv> gpRegisters"
+definition
+ "exception_message \<equiv> exceptionMessage"
+definition
+ "syscall_message \<equiv> syscallMessage"
+
+
+end
 
 end

@@ -23,6 +23,23 @@ imports
   "~~/src/HOL/Library/Prefix_Order"
 begin
 
+unqualify_consts (in "$L4V_ARCH")
+  "arch_update_cap_data :: data \<Rightarrow> arch_cap \<Rightarrow> cap"
+  "arch_derive_cap :: arch_cap \<Rightarrow> (arch_cap,'z::state_ext) se_monad"
+  "arch_finalise_cap :: arch_cap \<Rightarrow> bool \<Rightarrow> (cap,'z::state_ext) s_monad"
+  "arch_is_physical :: arch_cap \<Rightarrow> bool"
+  "arch_same_region_as :: arch_cap \<Rightarrow> arch_cap \<Rightarrow> bool"
+  "same_aobject_as :: arch_cap \<Rightarrow> arch_cap \<Rightarrow> bool"
+  "arch_has_recycle_rights :: arch_cap \<Rightarrow> bool"
+  "arch_recycle_cap :: bool \<Rightarrow> arch_cap \<Rightarrow> (arch_cap,'z::state_ext) s_monad"
+
+  "msg_max_length :: nat"
+  "cap_transfer_data_size :: nat"
+  "msg_max_extra_caps :: nat"
+  "msg_align_bits :: nat"
+
+
+
 text {* This theory develops an abstract model of \emph{capability
 spaces}, or CSpace, in seL4. The CSpace of a thread can be thought of
 as the set of all capabilities it has access to. More precisely, it
@@ -632,11 +649,6 @@ definition
   | EndpointCap oref badge cr      \<Rightarrow> Some badge
   | _                              \<Rightarrow> None"
 
-text {* For some purposes capabilities to physical objects are treated
-differently to others. *}
-definition
-  arch_is_physical :: "arch_cap \<Rightarrow> bool" where
-  "arch_is_physical cap \<equiv> case cap of ASIDControlCap \<Rightarrow> False | _ \<Rightarrow> True"
 
 definition
   is_physical :: "cap \<Rightarrow> bool" where
@@ -686,8 +698,7 @@ definition
     | (ArchObjectCap ac, ArchObjectCap ac') \<Rightarrow> same_aobject_as ac ac'
     | _ \<Rightarrow> same_region_as cp cp')"
 
-(* Proofs don't want to see this definition *)
-declare same_aobject_as_def[simp]
+
 
 text {*
 The function @{text "should_be_parent_of"}
@@ -888,5 +899,11 @@ definition
         | ReplyCap _ False \<Rightarrow> cap_move cap src_slot slot
         | _ \<Rightarrow> fail) od
   | RecycleCall slot \<Rightarrow> cap_recycle slot"
+
+
+section "Cap classification used to define invariants"
+
+datatype capclass =
+  PhysicalClass | ReplyClass "obj_ref" | IRQClass | ASIDMasterClass | NullClass | DomainClass
 
 end

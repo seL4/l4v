@@ -18,6 +18,8 @@ theory ArchVSpaceAcc_A
 imports "../KHeap_A"
 begin
 
+context ARM begin
+
 text {* 
   This part of the specification is fairly concrete as the machine architecture
   is visible to the user in seL4 and therefore needs to be described.
@@ -183,6 +185,8 @@ definition
 where
   "lookup_pt_slot_no_fail pt vptr \<equiv> 
      let pt_index = ((vptr >> 12) && 0xff) 
-     in pt + (pt_index << 2)" 
+     in pt + (pt_index << 2)"
+
+end
 
 end

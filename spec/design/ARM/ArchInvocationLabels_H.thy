@@ -11,8 +11,10 @@
 chapter "Architecture-specific Invocation Labels"
 
 theory ArchInvocationLabels_H
-imports "../../../lib/Enumeration"
+imports "../../../lib/Enumeration" "../../machine/ARM/Setup_Locale"
 begin
+
+qualify ARM
 
 text {*
   An enumeration of arch-specific system call labels.
@@ -89,6 +91,6 @@ instance by (intro_classes, simp add: enum_alt_arch_invocation_label)
 end
 
 (*>*)
-
+end_qualify
 
 end

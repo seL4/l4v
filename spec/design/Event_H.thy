@@ -11,7 +11,7 @@
 chapter "Kernel Events"
 
 theory Event_H
-imports "../machine/$L4V_ARCH/MachineTypes"
+imports "../machine/MachineExports"
 begin
 
 text {*

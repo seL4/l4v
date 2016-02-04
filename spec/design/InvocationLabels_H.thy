@@ -18,6 +18,10 @@ text {*
   An enumeration of all system call labels.
 *}
 
+unqualify_types (in "$L4V_ARCH")
+  arch_invocation_label
+
+
 datatype invocation_label =
     InvalidInvocation
   | UntypedRetype
@@ -47,7 +51,7 @@ datatype invocation_label =
   | IRQClearIRQHandler
   | IRQSetMode
   | DomainSetSet
-  | ArchInvocationLabel ArchInvocationLabels_H.arch_invocation_label
+  | ArchInvocationLabel arch_invocation_label
 
 (* invocation_label instance proofs *)
 (*<*)

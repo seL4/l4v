@@ -21,6 +21,8 @@ imports
   ArchVMRights_A
 begin
 
+context ARM begin
+
 text {*
 This theory provides architecture-specific definitions and datatypes 
 including architecture-specific capabilities and objects.
@@ -182,6 +184,10 @@ currently active page directory. The second component of
 @{text "arm_asid_map"} values is the address of that page directory.
 *}
 
+end
+
+qualify ARM
+
 record arch_state =
   arm_globals_frame :: obj_ref
   arm_asid_table    :: "word8 \<rightharpoonup> obj_ref"
@@ -192,6 +198,10 @@ record arch_state =
   arm_global_pts    :: "obj_ref list"
   arm_kernel_vspace :: arm_vspace_region_uses
 
+end_qualify
+
+context ARM begin
+
 definition
   pd_bits :: "nat" where
   "pd_bits \<equiv> pageBits + 2"
@@ -199,5 +209,24 @@ definition
 definition
   pt_bits :: "nat" where
   "pt_bits \<equiv> pageBits - 2"
+
+
+section "Type declarations for invariant definitions"
+
+datatype aa_type =
+    AASIDPool
+  | APageTable
+  | APageDirectory
+  | AIntData vmpage_size
+
+definition aa_type :: "arch_kernel_obj \<Rightarrow> aa_type"
+where 
+ "aa_type ao \<equiv> (case ao of
+           PageTable pt             \<Rightarrow> APageTable
+         | PageDirectory pd         \<Rightarrow> APageDirectory
+         | DataPage sz              \<Rightarrow> AIntData sz
+         | ASIDPool f \<Rightarrow> AASIDPool)"
+
+end
 
 end

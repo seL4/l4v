@@ -18,6 +18,8 @@ theory Init_A
 imports "../Retype_A"
 begin
 
+context ARM begin
+
 text {* 
   This is not a specification of true kernel
   initialisation. This theory describes a dummy initial state only, to
@@ -111,6 +113,8 @@ definition
     arch_state = init_arch_state,
     exst = ext_init 
   \<rparr>"
+
+end
 
 
 end

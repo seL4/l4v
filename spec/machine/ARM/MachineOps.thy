@@ -14,7 +14,7 @@ theory MachineOps
 imports
   "../../../lib/WordSetup"
   "../../../lib/wp/NonDetMonad"
-  MachineTypes
+  "../MachineMonad"
 begin
 
 section "Wrapping and Lifting Machine Operations"
@@ -34,66 +34,8 @@ text {*
   All this is done only to avoid a large number of axioms (2 for each operation).
 *}
 
-definition
-  ignore_failure :: "('s,unit) nondet_monad \<Rightarrow> ('s,unit) nondet_monad"
-  where 
-  "ignore_failure f \<equiv> 
-  \<lambda>s. if fst (f s) = {} then ({((),s)},False) else (fst (f s), False)"
 
-text {* The wrapper doesn't do anything for usual operations: *}
-lemma failure_consistent:
-  "\<lbrakk> empty_fail f; no_fail \<top> f \<rbrakk> \<Longrightarrow> ignore_failure f = f"
-  apply (simp add: ignore_failure_def empty_fail_def no_fail_def)
-  apply (rule ext)
-  apply (auto intro: prod_eqI)
-  done
-  
-text {* And it has the desired properties *}
-lemma ef_ignore_failure [simp]:
-  "empty_fail (ignore_failure f)"
-  by (simp add: empty_fail_def ignore_failure_def)
-
-lemma no_fail_ignore_failure [simp, intro!]:
-  "no_fail \<top> (ignore_failure f)"
-  by (simp add: no_fail_def ignore_failure_def)
-
-
-type_synonym 'a machine_rest_monad = "(machine_state_rest, 'a) nondet_monad"
-
-definition
-  machine_rest_lift :: "'a machine_rest_monad \<Rightarrow> 'a machine_monad"
-where
-  "machine_rest_lift f \<equiv> do
-    mr \<leftarrow> gets machine_state_rest;
-    (r, mr') \<leftarrow> select_f (f mr);
-    modify (\<lambda>s. s \<lparr> machine_state_rest := mr' \<rparr>);
-    return r
-  od"
-
-lemma ef_machine_rest_lift [simp, intro!]:
-  "empty_fail f \<Longrightarrow> empty_fail (machine_rest_lift f)"
-  apply (clarsimp simp: empty_fail_def machine_rest_lift_def simpler_gets_def 
-                        select_f_def bind_def simpler_modify_def return_def)
-  apply force
-  done
-    
-lemma no_fail_machine_state_rest [intro!]:
-  "no_fail P f \<Longrightarrow> no_fail (P o machine_state_rest) (machine_rest_lift f)"
-  apply (simp add: no_fail_def machine_rest_lift_def simpler_gets_def 
-                        select_f_def bind_def simpler_modify_def return_def)
-  apply force
-  done
- 
-lemma no_fail_machine_state_rest_T [simp, intro!]:
-  "no_fail \<top> f \<Longrightarrow> no_fail \<top> (machine_rest_lift f)"
-  apply (drule no_fail_machine_state_rest)
-  apply (simp add: o_def)
-  done
-
-
-definition
-  "machine_op_lift \<equiv> machine_rest_lift o ignore_failure"
-
+qualify ARM
 
 section "The Operations"
 
@@ -372,6 +314,10 @@ where
   debugPrint_def[simp]:
  "debugPrint \<equiv> \<lambda>message. return ()"
 
+end_qualify
+
+context ARM begin
+
 
 -- "Interrupt controller operations"
 
@@ -545,14 +491,13 @@ definition
   mapM_x (\<lambda>p. storeWord p 0) [ptr, ptr + word_size  .e.  ptr + 2 ^ bits - 1]"
 
 
+
+
 section "User Monad"
 
 type_synonym user_context = "register \<Rightarrow> machine_word"
 
 type_synonym 'a user_monad = "(user_context, 'a) nondet_monad"
-
-translations
-  (type) "'a user_monad" <= (type) "(register \<Rightarrow> machine_word, 'a) nondet_monad"
 
 definition
   getRegister :: "register \<Rightarrow> machine_word user_monad" 
@@ -569,5 +514,11 @@ definition
 
 definition
   "setNextPC \<equiv> setRegister LR_svc"
+
+end
+
+translations
+  (type) "'a ARM.user_monad" <= (type) "(ARM.register \<Rightarrow> ARM.machine_word, 'a) nondet_monad"
+
 
 end

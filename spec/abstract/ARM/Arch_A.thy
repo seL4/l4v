@@ -18,6 +18,8 @@ theory Arch_A
 imports "../TcbAcc_A"
 begin
 
+context ARM begin
+
 definition "page_bits \<equiv> pageBits"
 
 text {* The ARM architecture does not provide any additional operations on its
@@ -232,5 +234,7 @@ definition
         | InvokeASIDPool oper \<Rightarrow> perform_asid_pool_invocation oper;
     return $ []
 od"
+
+end
 
 end

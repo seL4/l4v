@@ -18,8 +18,28 @@ chapter "Basic Data Structures"
 theory Structures_A
 imports
   "./$L4V_ARCH/Arch_Structs_A"
-  "../machine/$L4V_ARCH/MachineOps"
-begin
+  "../machine/MachineExports"
+
+begin     
+
+unqualify_types (in "$L4V_ARCH")
+  aobject_type 
+  arch_cap 
+  vm_rights
+  arch_kernel_obj
+  arch_state
+        
+
+unqualify_consts (in "$L4V_ARCH")
+  "acap_rights :: arch_cap \<Rightarrow> vm_rights"
+  "acap_rights_update :: vm_rights \<Rightarrow> arch_cap \<Rightarrow> arch_cap"
+  "arch_kobj_size :: arch_kernel_obj \<Rightarrow> nat"
+  "arch_obj_size :: arch_cap \<Rightarrow> nat"
+  "aobj_ref :: arch_cap \<rightharpoonup> obj_ref"
+  "asid_high_bits :: nat"
+  "asid_low_bits :: nat"
+
+
 
 text {*
   User mode can request these objects to be created by retype:
