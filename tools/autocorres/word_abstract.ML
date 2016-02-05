@@ -190,8 +190,7 @@ let
     val old_body_def =
         #definition old_fn
         (* Instantiate the arguments. *)
-        |> Utils.inst_args (map (Thm.cterm_of ctxt) (measure_var :: conc_args))
-    val old_body = Utils.rhs_of (Thm.prop_of old_body_def)
+        |> Utils.inst_args ctxt (map (Thm.cterm_of ctxt) (measure_var :: conc_args))
 
     (* Get old body definition with function arguments. *)
     val old_term = betapplys (#const old_fn, measure_var :: conc_args)

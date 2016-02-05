@@ -191,9 +191,8 @@ fun contains_subterm needle haysack =
  *
  * (from records package)
  *)
-fun named_cterm_instantiate values thm =
+fun named_cterm_instantiate ctxt values thm =
 let
-  val ctxt = Proof_Context.init_global (Thm.theory_of_thm thm)
   fun match name ((name', _), _) = name = name'
   fun getvar name =
     (case find_first (match name) (Term.add_vars (Thm.prop_of thm) []) of
@@ -804,9 +803,8 @@ end
  *
  * return the "thm" with arguments instantiated.
  *)
-fun inst_args vals thm =
+fun inst_args ctxt vals thm =
 let
-  val ctxt = Proof_Context.init_global (Thm.theory_of_thm thm)
   (* Fetch schematic variables on the LHS, stripping away locale assumptions
    * and locale fixed variables first. *)
   val vars = Thm.cprop_of thm
@@ -1073,10 +1071,6 @@ fun mk_simproc' ctxt (name : string, pats : string list, proc : Proof.context ->
         proc = K proc, identifier = []} end
 
 end
-
-(* Shortcut for "named_cterm_instantiate". *)
-infix 0 WHERE;
-fun a WHERE b = Utils.named_cterm_instantiate b a;
 
 (* Insist the the given tactic solves a subgoal. *)
 fun SOLVES tac = (((K tac) THEN_ALL_NEW (K no_tac)) 1)

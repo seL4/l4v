@@ -561,8 +561,9 @@ fun define_funcs
         if is_recursive then (
           Utils.apply_tac "start induction"
                 (resolve_tac ctxt'
-                    [@{thm recguard_induct} WHERE [
-                     ("n", Thm.cterm_of ctxt' measure_var)]] 1) thm
+                    [Utils.named_cterm_instantiate ctxt'
+                        [("n", Thm.cterm_of ctxt' measure_var)] @{thm recguard_induct}]
+                    1) thm
           |> Utils.apply_tac "unfold bodies"
               (EVERY (map (fn x => (EqSubst.eqsubst_tac ctxt' [1] [x] 1)) (rev fn_def_thms)))
           |> Utils.apply_tac "solve induction base cases"

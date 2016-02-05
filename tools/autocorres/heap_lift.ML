@@ -141,7 +141,7 @@ end
 fun mk_first_order ctxt ct =
 let
   fun expand_conv ct =
-    Utils.named_cterm_instantiate
+    Utils.named_cterm_instantiate ctxt
         [("a", Thm.dest_fun ct),("b", Thm.dest_arg ct)] @{lemma "a b == (a $ b)" by simp}
 in
   Conv.bottom_conv (K (Conv.try_conv expand_conv)) ctxt ct
@@ -607,15 +607,12 @@ let
   (* Convert to new heap format. *)
   fun convert ctxt fn_name callee_terms measure_var fn_args =
   let
-    val thy = Proof_Context.theory_of ctxt
-
     (* Fetch the function definition. *)
     val fn_def = FunctionInfo.get_function_def fn_info fn_name
     val l2_body_def =
         #definition fn_def
         (* Instantiate the arguments. *)
-        |> Utils.inst_args (map (Thm.cterm_of ctxt) (measure_var :: fn_args))
-    val l2_body = Utils.rhs_of (Thm.prop_of l2_body_def)
+        |> Utils.inst_args ctxt (map (Thm.cterm_of ctxt) (measure_var :: fn_args))
 
     (* Get L2 body definition with function arguments. *)
     val l2_term = betapplys (#const fn_def, measure_var :: fn_args)

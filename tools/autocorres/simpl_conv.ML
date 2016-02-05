@@ -239,7 +239,7 @@ let
     case ret_var_setter of
         SOME _ =>
           (* Prepend the L1_init code. *)
-          Utils.named_cterm_instantiate
+          Utils.named_cterm_instantiate ctxt
             [("X", Thm.cterm_of ctxt (the ret_var_setter)),
              ("X'", Thm.cterm_of ctxt (the ret_var_getter))]
             (try_unify [

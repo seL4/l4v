@@ -191,16 +191,16 @@ let
       = assume_rec_lifted ctxt prog_info fn_info rule_set fn_thm fn_name
 
   (* Extract the term from our function definition. *)
-  val fn_thm' = fn_thm WHERE [("rec_measure'",
-      Thm.cterm_of ctxt' measure_var)]
-    handle THM _ => fn_thm
+  val fn_thm' = Utils.named_cterm_instantiate ctxt
+                    [("rec_measure'", Thm.cterm_of ctxt' measure_var)] fn_thm
+                handle THM _ => fn_thm
   val ct = Thm.prop_of fn_thm' |> Utils.rhs_of |> Thm.cterm_of ctxt'
 
   (* Rewrite the term using the given rewrite rules. *)
   val t = Thm.term_of ct
   val thm = case Monad_Convert.monad_rewrite ctxt rule_set thms true t of
                 SOME t => t
-              | NONE => @{thm reflexive} WHERE [("x", ct)]
+              | NONE => Utils.named_cterm_instantiate ctxt [("x", ct)] @{thm reflexive}
 
   (* Convert "def == old_body" and "old_body == new_body" into "def == new_body". *)
   val thm_ml = Thm.transitive fn_thm' thm

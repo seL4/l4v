@@ -1057,7 +1057,7 @@ in
             val tracked_vars = (body_reads UNION read_vars UNION loop_iterators)
             val invariant_precond = abs_over_tuple_vars name_map loop_iterators
                   (mk_precond prog_info name_map tracked_vars)
-            val base_thm = Utils.named_cterm_instantiate [
+            val base_thm = Utils.named_cterm_instantiate ctxt [
                   ("P", Thm.cterm_of ctxt invariant_precond),
                   ("A", Thm.cterm_of ctxt new_body)
                 ] @{thm L2corres_while}
@@ -1468,8 +1468,8 @@ let
   fun convert ctxt fn_name callee_terms measure_var fn_args = let
     (* Fetch the function body from L1. *)
     val l1_def = FunctionInfo.get_function_def fn_info fn_name
-    val l1_body_def = #definition l1_def WHERE [
-            ("rec_measure'", Thm.cterm_of ctxt measure_var)]
+    val l1_body_def = Utils.named_cterm_instantiate ctxt
+                        [("rec_measure'", Thm.cterm_of ctxt measure_var)] (#definition l1_def)
   
     val (thm, traces) = get_l2corres_thm ctxt prog_info fn_info do_opt trace_opt
         fn_name callee_terms fn_args
