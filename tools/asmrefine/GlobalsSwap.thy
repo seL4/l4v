@@ -847,16 +847,17 @@ lemma global_data_implies_ptr_inverse_safe:
 
 ML {*
 fun add_globals_swap_rewrites member_thms ctxt = let
+    fun cpat pat = Thm.cterm_of ctxt (Proof_Context.read_term_pattern ctxt pat)
     val gav = Proof_Context.get_thm ctxt "global_acc_valid"
     val glv = Proof_Context.get_thm ctxt "globals_list_valid"
     val gld = Proof_Context.get_thm ctxt "globals_list_distinct"
-    val acc = [Thm.trivial @{cterm "PROP P"}, gav, glv, gld]
+    val acc = [Thm.trivial (cpat "PROP ?P"), gav, glv, gld]
         MRS @{thm globals_swap_access_mem2}
-    val upd = [Thm.trivial @{cterm "PROP P"}, gav, glv, gld]
+    val upd = [Thm.trivial (cpat "PROP ?P"), gav, glv, gld]
         MRS @{thm globals_swap_update_mem2}
     val cg_with_swap = [gav, gld]
         MRS @{thm const_globals_in_memory_to_h_val_with_swap}
-    val pinv_safe = [Thm.trivial @{cterm "PROP P"}, gld, glv]
+    val pinv_safe = [Thm.trivial (cpat "PROP ?P"), gld, glv]
         MRS @{thm global_data_implies_ptr_inverse_safe}
     val empty_ctxt = put_simpset HOL_basic_ss ctxt
     fun unfold_mem thm = let
