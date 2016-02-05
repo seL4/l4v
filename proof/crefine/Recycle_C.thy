@@ -798,7 +798,7 @@ lemma arch_recycleCap_ccorres:
         apply (erule subsetD, simp)
         apply (erule subsetD[rotated], rule intvl_start_le)
         apply simp
-       apply (clarsimp simp: split_def upto_enum_word kernelBase_def
+       apply (clarsimp simp: split_def upto_enum_word kernelBase_def Platform.kernelBase_def
                        cong: StateSpace.state.fold_congs globals.fold_congs)
        apply (erule_tac S="{x. valid_pde_mapping_offset' (x && mask pdBits)}"
                   in mapM_x_store_memset_ccorres_assist[unfolded split_def],

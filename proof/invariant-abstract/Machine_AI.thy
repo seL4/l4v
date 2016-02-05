@@ -619,7 +619,7 @@ lemma getActiveIRQ_le_maxIRQ':
 
 (* FIXME: follows already from getActiveIRQ_le_maxIRQ *)
 lemma getActiveIRQ_neq_Some0xFF':
-  "\<lbrace>\<top>\<rbrace> getActiveIRQ \<lbrace>\<lambda>rv s. rv \<noteq> Some 0xFF\<rbrace>"
+  "\<lbrace>\<top>\<rbrace> getActiveIRQ \<lbrace>\<lambda>rv s. rv \<noteq> Some 0x3FF\<rbrace>"
   apply (simp add: getActiveIRQ_def)
   apply (wp alternative_wp select_wp)
   apply simp

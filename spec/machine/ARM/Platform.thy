@@ -23,7 +23,7 @@ text {*
   addresses, as well as the range of IRQs on the platform.
 *}
 
-type_synonym irq = word8
+type_synonym irq = "10 word"
 type_synonym paddr = word32
 
 abbreviation (input) "toPAddr \<equiv> id"

@@ -4118,7 +4118,7 @@ lemma copyGlobalMappings_ccorres:
    apply (rule ccorres_h_t_valid_armKSGlobalPD)
    apply csymbr
    apply (rule ccorres_Guard_Seq)+
-   apply (simp add: kernelBase_def objBits_simps archObjSize_def
+   apply (simp add: kernelBase_def Platform.kernelBase_def objBits_simps archObjSize_def
                     whileAnno_def word_sle_def word_sless_def
                     Collect_True              del: Collect_const)
    apply (rule_tac xf'="\<lambda>_. ()" in ccorres_abstract)
@@ -4146,7 +4146,7 @@ lemma copyGlobalMappings_ccorres:
                                               + ((0xE00 + of_nat n) << 2)) s
                                     \<and> page_directory_at' pd s \<and> valid_pde_mappings' s
                                     \<and> page_directory_at' (armKSGlobalPD (ksArchState s)) s"
-                    and P'="{s. i_' s = of_nat (3840 + n)
+                    and P'="{s. i_' s = of_nat (3584 + n)
                                     \<and> is_aligned (symbol_table ''armKSGlobalPD'') pdBits}"
                     in setObject_ccorres_helper)
            apply (rule conseqPre, vcg)

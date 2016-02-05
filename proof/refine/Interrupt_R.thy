@@ -207,10 +207,14 @@ lemma decode_irq_control_valid'[wp]:
                         toEnum_of_nat word_le_nat_alt unat_of_nat)
   done
 
+lemma irq_nodes_global_refs:
+    "irq_node' s + (ucast (irq:: 10 word)) * 0x10 \<in> global_refs' s"
+    by (simp add: global_refs'_def mult.commute mult.left_commute)
+
 lemma valid_globals_ex_cte_cap_irq:
   "\<lbrakk> ex_cte_cap_wp_to' isCNodeCap ptr s; valid_global_refs' s;
          valid_objs' s \<rbrakk>
-       \<Longrightarrow> ptr \<noteq> intStateIRQNode (ksInterruptState s) + 2 ^ cte_level_bits * ucast (irq :: word8)"
+       \<Longrightarrow> ptr \<noteq> intStateIRQNode (ksInterruptState s) + 2 ^ cte_level_bits * ucast (irq :: 10 word)"
   apply (clarsimp simp: cte_wp_at_ctes_of ex_cte_cap_wp_to'_def)
   apply (drule(1) ctes_of_valid'[rotated])
   apply (drule(1) valid_global_refsD')
@@ -218,7 +222,8 @@ lemma valid_globals_ex_cte_cap_irq:
    apply (clarsimp simp: isCap_simps)
   apply (subgoal_tac "irq_node' s + 2 ^ cte_level_bits * ucast irq \<in> global_refs' s")
    apply blast
-  apply (simp add: global_refs'_def cte_level_bits_def)
+  apply (simp add: global_refs'_def cte_level_bits_def 
+    mult.commute mult.left_commute)
   done
 
 lemma invoke_irq_handler_corres:

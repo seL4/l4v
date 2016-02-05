@@ -18,7 +18,7 @@ definition handleInterruptEntry_C_body_if (*:: "(globals myvars, int, l4c_errort
 "handleInterruptEntry_C_body_if \<equiv> (
       (\<acute>irq :== CALL getActiveIRQ();;
        (Guard SignedArithmetic \<lbrace>True\<rbrace>
-         (IF (ucast \<acute>irq :: word32) \<noteq> (ucast ((ucast (-1 :: word8)) :: word32)) THEN
+         (IF (ucast \<acute>irq :: word32) \<noteq> (ucast ((ucast (-1 :: word10)) :: word32)) THEN
             CALL handleInterrupt(\<acute>irq)
           FI)));;
        \<acute>ret__unsigned_long :== scast EXCEPTION_NONE)"

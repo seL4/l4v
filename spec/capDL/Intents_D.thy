@@ -130,7 +130,7 @@ datatype cdl_irq_handler_intent =
 
 datatype cdl_irq_control_intent =
     (* IssueIrqHandler: (target), irq, (root), index, depth *)
-    IrqControlIssueIrqHandlerIntent word8 word32 word32
+    IrqControlIssueIrqHandlerIntent "10 word" word32 word32
     (* InterruptControl *)
  |  IrqControlArchIrqControlIntent
 

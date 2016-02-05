@@ -2222,20 +2222,21 @@ done
 
 definition
   irq_opt_relation_def:
-  "irq_opt_relation (airq :: word8 option) (cirq :: word16) \<equiv>
+  "irq_opt_relation (airq :: (10 word) option) (cirq :: word16) \<equiv>
        case airq of
          Some irq \<Rightarrow> (cirq = ucast irq \<and> irq \<noteq> scast irqInvalid \<and> ucast irq \<le> (scast maxIRQ :: word16))
        | None \<Rightarrow> cirq = scast irqInvalid"
 
-lemma unat_ucast_8_16:
-  fixes x :: "word8"
-  shows "unat (ucast x :: word16) = unat x"
+lemma unat_ucast_up_simp[simp]:
+  fixes x :: "'a::len word"
+  assumes uc :"len_of TYPE('a) \<le> len_of TYPE('b)"
+  shows "unat (ucast x :: 'b::len word) = unat x"
   unfolding ucast_def unat_def
   apply (subst int_word_uint)
   apply (subst mod_pos_pos_trivial)
     apply simp
    apply (rule lt2p_lem)
-   apply simp
+   apply (simp add: uc)
   apply simp
   done
 
@@ -2315,7 +2316,7 @@ show ?thesis
           apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                                 carch_state_relation_def cmachine_state_relation_def)
           apply (simp add: cinterrupt_relation_def maxIRQ_def)
-          apply (clarsimp simp: unat_ucast_8_16 word_sless_msb_less order_le_less_trans
+          apply (clarsimp simp:  word_sless_msb_less order_le_less_trans
                             unat_ucast_no_overflow_le word_le_nat_alt ucast_ucast_b 
                          split: split_if )
           apply (rule word_0_sle_from_less)
@@ -3399,12 +3400,15 @@ lemma sameRegionAs_spec:
            apply (frule_tac cap'=cap_b in cap_get_tag_isCap_unfolded_H_cap(5))
            apply (simp add: ccap_relation_def map_option_case)
            apply (simp add: cap_irq_handler_cap_lift)
+thm cap_to_H_def
+thm cl_valid_cap_def
            apply (simp add: cap_to_H_def)
            apply (clarsimp simp: up_ucast_inj_eq c_valid_cap_def
                                  cl_valid_cap_def mask_twice
                           split: split_if bool.split
                           | intro impI conjI
                           | simp )+
+thm ucast_ucast_mask_eq
                apply (drule ucast_ucast_mask_eq, simp)
                apply (simp add: ucast_ucast_mask)
               apply (erule ucast_up_neq,simp)

@@ -2521,9 +2521,8 @@ lemma shiftr_eqD:
   apply (simp add: and_not_mask[symmetric] is_aligned_neg_mask_eq)
   done
 
-(*
 lemma kernel_base_ge_observation:
-  "(kernel_base \<le> x) = (x && ~~ mask 28 = kernel_base)"
+  "(kernel_base \<le> x) = (x && ~~ mask 29 = kernel_base)"
   apply (subst mask_in_range)
    apply (simp add: kernel_base_def is_aligned_def)
   apply (simp add: kernel_base_def)
@@ -2531,9 +2530,9 @@ lemma kernel_base_ge_observation:
 
 
 lemma kernel_base_less_observation:
-  "(x < kernel_base) = (x && ~~ mask 28 \<noteq> kernel_base)"
+  "(x < kernel_base) = (x && ~~ mask 29 \<noteq> kernel_base)"
   apply (simp add: linorder_not_le[symmetric] kernel_base_ge_observation)
-*)
+  done
 
 lemma vptr_shifting_helper_magic:
   "(x = 0) \<or> (x < 2 ^ 4 \<and> vmsz_aligned (vptr::word32) ARMSuperSection)

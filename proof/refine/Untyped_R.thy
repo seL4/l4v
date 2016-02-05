@@ -673,7 +673,7 @@ lemma map_ensure_empty':
   done
 
 lemma irq_nodes_global:
-  "\<forall>irq :: word8. irq_node' s + (ucast irq) * 16 \<in> global_refs' s"
+  "irq_node' s + (ucast (irq :: 10 word)) * 16 \<in> global_refs' s"
   by (simp add: global_refs'_def mult.commute mult.left_commute)
 
 lemma valid_global_refsD2':

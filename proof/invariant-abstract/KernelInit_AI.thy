@@ -96,25 +96,28 @@ lemma mask_pde_mapping_bits:
   "mask 20 = 2^pde_mapping_bits - 1"
   by (simp add: mask_def pde_mapping_bits_def)
 
+
+
 lemma init_irq_ptrs_ineqs:
   "init_irq_node_ptr + (ucast (irq :: irq) << cte_level_bits) \<ge> init_irq_node_ptr"
   "init_irq_node_ptr + (ucast (irq :: irq) << cte_level_bits) + 2 ^ cte_level_bits - 1
-                \<le> init_irq_node_ptr + 2 ^ 12 - 1"
+                \<le> init_irq_node_ptr + 2 ^ 14 - 1"
   "init_irq_node_ptr + (ucast (irq :: irq) << cte_level_bits)
-                \<le> init_irq_node_ptr + 2 ^ 12 - 1"
+                \<le> init_irq_node_ptr + 2 ^ 14 - 1"
 proof -
-  have P: "ucast irq < (2 ^ (12 - cte_level_bits) :: word32)"
-    apply (rule order_le_less_trans[OF ucast_le_ucast_8_32[THEN iffD2, OF word_n1_ge]])
+  have P: "ucast irq < (2 ^ (14 - cte_level_bits) :: word32)"
+    apply (rule order_le_less_trans[OF 
+        ucast_le_ucast[where 'a=10 and 'b=32,simplified,THEN iffD2, OF word_n1_ge]])
     apply (simp add: cte_level_bits_def minus_one_norm)
     done
   show "init_irq_node_ptr + (ucast (irq :: irq) << cte_level_bits) \<ge> init_irq_node_ptr"
-    apply (rule is_aligned_no_wrap'[where sz=12])
+    apply (rule is_aligned_no_wrap'[where sz=14])
      apply (simp add: is_aligned_def init_irq_node_ptr_def kernel_base_def)
     apply (rule shiftl_less_t2n[OF P])
     apply simp
     done
   show Q: "init_irq_node_ptr + (ucast (irq :: irq) << cte_level_bits) + 2 ^ cte_level_bits - 1
-                \<le> init_irq_node_ptr + 2 ^ 12 - 1"
+                \<le> init_irq_node_ptr + 2 ^ 14 - 1"
     apply (simp only: add_diff_eq[symmetric] add.assoc)
     apply (rule word_add_le_mono2)
      apply (simp only: trans [OF shiftl_t2n mult.commute])
@@ -123,7 +126,7 @@ proof -
         word_bits_def kernel_base_def init_irq_node_ptr_def)
     done
   show "init_irq_node_ptr + (ucast (irq :: irq) << cte_level_bits)
-                \<le> init_irq_node_ptr + 2 ^ 12 - 1"
+                \<le> init_irq_node_ptr + 2 ^ 14 - 1"
     apply (simp only: add_diff_eq[symmetric])
     apply (rule word_add_le_mono2)
      apply (rule minus_one_helper3, rule shiftl_less_t2n[OF P])
@@ -144,6 +147,7 @@ lemmas init_irq_ptrs_all_ineqs[unfolded init_irq_node_ptr_def cte_level_bits_def
      init_irq_ptrs_less_ineqs[THEN less_imp_neq]
      init_irq_ptrs_less_ineqs[THEN less_imp_neq, THEN not_sym]
 
+lemmas ucast_le_ucast_10_32 = ucast_le_ucast[where 'a=10 and 'b=32,simplified]
 lemma init_irq_ptrs_eq:
   "((ucast (irq :: irq) << cte_level_bits)
         = (ucast (irq' :: irq) << cte_level_bits :: word32))
@@ -153,7 +157,7 @@ lemma init_irq_ptrs_eq:
   apply (erule_tac bnd="ucast (max_word :: irq) + 1"
               in shift_distinct_helper[rotated 3],
          safe intro!: plus_one_helper2,
-         simp_all add: ucast_le_ucast_8_32 up_ucast_inj_eq,
+         simp_all add: ucast_le_ucast_10_32 up_ucast_inj_eq,
          simp_all add: cte_level_bits_def word_bits_def up_ucast_inj_eq
                        max_word_def)
   done
@@ -225,6 +229,7 @@ lemmas cte_wp_at_caps_of_state_eq
 
 lemma invs_A:
   "invs init_A_st"
+
   apply (simp add: invs_def)
   apply (rule conjI)
    prefer 2
@@ -235,7 +240,7 @@ lemma invs_A:
    apply (rule conjI)
     apply (clarsimp simp: kernel_base_def valid_objs_def state_defs
                           valid_obj_def valid_vm_rights_def vm_kernel_only_def
-                          dom_if_Some cte_level_bits_def init_irq_ptrs_all_ineqs)
+                          dom_if_Some cte_level_bits_def)
     apply (rule conjI)
      apply (clarsimp simp: valid_tcb_def tcb_cap_cases_def is_master_reply_cap_def 
                            valid_cap_def obj_at_def valid_tcb_state_def 

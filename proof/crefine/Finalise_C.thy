@@ -1766,7 +1766,7 @@ lemma of_int_uint_ucast:
 
 lemma getIRQSlot_ccorres_stuff:
   "\<lbrakk> (s, s') \<in> rf_sr \<rbrakk> \<Longrightarrow>
-   CTypesDefs.ptr_add (intStateIRQNode_' (globals s')) (uint (irq :: word8))
+   CTypesDefs.ptr_add (intStateIRQNode_' (globals s')) (uint (irq :: 10 word))
      = Ptr (irq_node' s + 2 ^ cte_level_bits * ucast irq)"
   apply (clarsimp simp add: rf_sr_def cstate_relation_def Let_def
                             cinterrupt_relation_def)
@@ -1774,7 +1774,7 @@ lemma getIRQSlot_ccorres_stuff:
                    size_of_def mult.commute mult.left_commute of_int_uint_ucast )
   done
 
-
+declare[[show_types]]
 lemma deletingIRQHandler_ccorres:
   "ccorres dc xfdc (invs' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s))
                    (UNIV \<inter> {s. irq_opt_relation (Some irq) (irq_' s)}) []
@@ -1809,10 +1809,10 @@ lemma deletingIRQHandler_ccorres:
   apply (clarsimp simp: cap_get_tag_isCap ghost_assertion_data_get_def
                         ghost_assertion_data_set_def)
   apply (simp add: cap_tag_defs)
-  apply (cut_tac x=irq in unat_lt2p)
   apply (clarsimp simp: cte_wp_at_ctes_of Collect_const_mem
-                        irq_opt_relation_def maxIRQ_def uint_0_iff
-                        unat_gt_0 uint_up_ucast is_up unat_def[symmetric])
+                        irq_opt_relation_def maxIRQ_def)
+  apply (drule word_le_nat_alt[THEN iffD1])
+  apply (clarsimp simp:uint_0_iff unat_gt_0 uint_up_ucast is_up unat_def[symmetric])
   done
 
 lemma Zombie_new_spec:
@@ -1836,12 +1836,12 @@ lemma mod_mask_drop:
                 word_bw_assocs)
 
 lemma irq_opt_relation_Some_ucast:
-  "\<lbrakk> x && mask 8 = x; ucast x \<le> (scast Kernel_C.maxIRQ :: word8) \<or> x \<le> (scast Kernel_C.maxIRQ :: word32) \<rbrakk>
-    \<Longrightarrow> irq_opt_relation (Some (ucast x)) (ucast ((ucast x)::word8))"
-  using ucast_ucast_mask[where x=x and 'a=8, symmetric]
+  "\<lbrakk> x && mask 10 = x; ucast x \<le> (scast Kernel_C.maxIRQ :: 10 word) \<or> x \<le> (scast Kernel_C.maxIRQ :: word32) \<rbrakk>
+    \<Longrightarrow> irq_opt_relation (Some (ucast x)) (ucast ((ucast x):: 10 word))"
+  using ucast_ucast_mask[where x=x and 'a=10, symmetric]
   apply (simp add: irq_opt_relation_def)
   apply (rule conjI, clarsimp simp: irqInvalid_def Kernel_C.maxIRQ_def)
-  apply (simp only: unat_arith_simps unat_ucast_8_16)
+  apply (simp only: unat_arith_simps )
   apply (clarsimp simp: word_le_nat_alt Kernel_C.maxIRQ_def)
   done
 
@@ -1864,7 +1864,7 @@ lemma mask_eq_ucast_eq:
   done
 
 lemma irq_opt_relation_Some_ucast':
-  "\<lbrakk> x && mask 8 = x; ucast x \<le> (scast Kernel_C.maxIRQ :: word8) \<or> x \<le> (scast Kernel_C.maxIRQ :: word32) \<rbrakk>
+  "\<lbrakk> x && mask 10 = x; ucast x \<le> (scast Kernel_C.maxIRQ :: 10 word) \<or> x \<le> (scast Kernel_C.maxIRQ :: word32) \<rbrakk>
     \<Longrightarrow> irq_opt_relation (Some (ucast x)) (ucast x)"
   apply (rule_tac P = "%y. irq_opt_relation (Some (ucast x)) y" in subst[rotated])
   apply (rule irq_opt_relation_Some_ucast[rotated])
@@ -1876,7 +1876,7 @@ done
 
 lemma ccap_relation_IRQHandler_mask:
   "\<lbrakk> ccap_relation acap ccap; isIRQHandlerCap acap \<rbrakk>
-    \<Longrightarrow> capIRQ_CL (cap_irq_handler_cap_lift ccap) && mask 8
+    \<Longrightarrow> capIRQ_CL (cap_irq_handler_cap_lift ccap) && mask 10
         = capIRQ_CL (cap_irq_handler_cap_lift ccap)"
   apply (simp only: cap_get_tag_isCap[symmetric])
   apply (drule ccap_relation_c_valid_cap)

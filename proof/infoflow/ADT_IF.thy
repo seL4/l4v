@@ -1537,7 +1537,7 @@ locale invariant_over_ADT_if =
 locale valid_initial_state_noenabled = invariant_over_ADT_if +
   fixes s0_internal :: det_state
   fixes initial_aag :: "'a subject_label PAS"
-  fixes timer_irq :: word8
+  fixes timer_irq :: "10 word"
   fixes current_aag
   fixes s0 :: observable_if
   fixes s0_context :: user_context
@@ -1584,7 +1584,7 @@ locale valid_initial_state = valid_initial_state_noenabled +
        assumes ADT_A_if_Init_Fin_serial:
        "Init_Fin_serial (ADT_A_if utf) s0 (full_invs_if \<inter> {s. step_restrict s})"
 
-function (domintros) next_irq_state :: "nat \<Rightarrow> (word8 \<Rightarrow> bool) \<Rightarrow> nat" where
+function (domintros) next_irq_state :: "nat \<Rightarrow> (10 word \<Rightarrow> bool) \<Rightarrow> nat" where
   "next_irq_state cur masks = (if irq_at cur masks = None then next_irq_state (Suc cur) masks else cur)"
   by(pat_completeness, auto)
 
@@ -3021,8 +3021,15 @@ lemma handle_event_irq_state_inv:
       apply simp
       apply(rename_tac syscall)
       apply(case_tac syscall)
-             apply(simp add: handle_send_def handle_call_def | wp handle_invocation_irq_state_inv)+
-  by((simp | wp_trace add: irq_state_inv_triv hy_inv | blast | (elim conjE, (intro conjI | assumption)+))+)
+             apply ((simp add: handle_send_def handle_call_def
+               | wp handle_invocation_irq_state_inv)+)[1]
+            apply((simp | wp_trace add: irq_state_inv_triv hy_inv 
+             | blast | (elim conjE, (intro conjI | assumption)+))+)[1]
+           apply ((simp add: handle_send_def handle_call_def
+               | wp handle_invocation_irq_state_inv)+)[2]
+  apply((simp | wp_trace add: irq_state_inv_triv hy_inv 
+    | blast | (elim conjE, (intro conjI | assumption)+))+)
+  done
 
 lemma schedule_if_irq_state_inv:
   "\<lbrace>irq_state_inv st\<rbrace> schedule_if tc \<lbrace>\<lambda>_. irq_state_inv st\<rbrace>"

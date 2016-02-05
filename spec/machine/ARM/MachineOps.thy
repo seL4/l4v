@@ -396,7 +396,7 @@ where
     is_masked \<leftarrow> gets $ irq_masks;
     modify (\<lambda>s. s \<lparr> irq_state := irq_state s + 1 \<rparr>);
     active_irq \<leftarrow> gets $ irq_oracle \<circ> irq_state;
-    if is_masked active_irq \<or> active_irq = 0xFF
+    if is_masked active_irq \<or> active_irq = 0x3FF
     then return None
     else return ((Some active_irq) :: irq option)
   od"
@@ -407,7 +407,6 @@ where
   "maskInterrupt m irq \<equiv> 
   modify (\<lambda>s. s \<lparr> irq_masks := (irq_masks s) (irq := m) \<rparr>)"
 
-text {* Does nothing on imx31 *}
 consts
   ackInterrupt_impl :: "irq \<Rightarrow> unit machine_rest_monad"
 definition

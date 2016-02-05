@@ -1017,7 +1017,7 @@ lemma st_tcb:
                  dest: live_notRange)
 
 lemma irq_nodes_global:
-    "\<forall>irq :: word8. irq_node' s + (ucast irq) * 16 \<in> global_refs' s"
+    "\<forall>irq :: 10 word. irq_node' s + (ucast irq) * 16 \<in> global_refs' s"
     by (simp add: global_refs'_def mult.commute mult.left_commute)
 
 lemma global_refs:
@@ -1033,7 +1033,7 @@ lemma global_refs2:
   using global_refs by blast 
 
 lemma irq_nodes_range:
-    "\<forall>irq :: word8. irq_node' s + (ucast irq) * 16 \<notin> base_bits"
+    "\<forall>irq :: 10 word. irq_node' s + (ucast irq) * 16 \<notin> base_bits"
   using irq_nodes_global global_refs
   by blast
 

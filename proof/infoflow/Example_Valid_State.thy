@@ -666,7 +666,7 @@ where
           init_global_pd \<mapsto> ArchObj (PageDirectory global_pd))"
 
 lemma irq_node_offs_min:
-  "init_irq_node_ptr \<le> init_irq_node_ptr + (ucast (irq:: 8 word) << cte_level_bits)"
+  "init_irq_node_ptr \<le> init_irq_node_ptr + (ucast (irq:: 10 word) << cte_level_bits)"
   apply (rule_tac sz=28 in word32_plus_mono_right_split)
    apply (simp add: unat_word_ariths mask_def shiftl_t2n s0_ptr_defs cte_level_bits_def)
    apply (cut_tac x=irq and 'a=32 in ucast_less)
@@ -676,7 +676,7 @@ lemma irq_node_offs_min:
   done
 
 lemma irq_node_offs_max:
-  "init_irq_node_ptr + (ucast (irq:: 8 word) << cte_level_bits) < init_irq_node_ptr + 0x1000"
+  "init_irq_node_ptr + (ucast (irq:: 10 word) << cte_level_bits) < init_irq_node_ptr + 0x4000"
   apply (simp add: s0_ptr_defs cte_level_bits_def shiftl_t2n)
   apply (cut_tac x=irq and 'a=32 in ucast_less)
    apply simp
@@ -684,13 +684,13 @@ lemma irq_node_offs_max:
   done
 
 definition irq_node_offs_range where
-  "irq_node_offs_range \<equiv> {x. init_irq_node_ptr \<le> x \<and> x < init_irq_node_ptr + 0x1000}
+  "irq_node_offs_range \<equiv> {x. init_irq_node_ptr \<le> x \<and> x < init_irq_node_ptr + 0x4000}
                          \<inter> {x. is_aligned x cte_level_bits}"
 
 
 
 lemma irq_node_offs_in_range:
-  "init_irq_node_ptr + (ucast (irq:: 8 word) << cte_level_bits)
+  "init_irq_node_ptr + (ucast (irq:: 10 word) << cte_level_bits)
      \<in> irq_node_offs_range"
   apply (clarsimp simp: irq_node_offs_min irq_node_offs_max irq_node_offs_range_def)
   apply (rule is_aligned_add[OF _ is_aligned_shift])
@@ -702,7 +702,7 @@ lemma irq_node_offs_range_correct:
     \<Longrightarrow> \<exists>irq. x = init_irq_node_ptr + (ucast (irq:: 8 word) << cte_level_bits)"
   apply (clarsimp simp: irq_node_offs_min irq_node_offs_max irq_node_offs_range_def
                         s0_ptr_defs cte_level_bits_def)
-  apply (rule_tac x="ucast ((x - 0xF0003000) >> 4)" in exI)
+  apply (rule_tac x="ucast ((x - 0xE0008000) >> 4)" in exI)
   apply (clarsimp simp: ucast_ucast_mask)
   apply (subst aligned_shiftr_mask_shiftl)
    apply (rule aligned_sub_aligned)
@@ -723,7 +723,7 @@ lemma irq_node_offs_range_correct:
   apply (subst add_mask_lower_bits)
     apply (simp add: is_aligned_def)
    apply clarsimp
-  apply (cut_tac x=x and y="0xF0003FFF" and n=12 in neg_mask_mono_le)
+  apply (cut_tac x=x and y="0xE000BFFF" and n=12 in neg_mask_mono_le)
    apply (force dest: word_less_sub_1)
   apply (drule_tac n=12 in aligned_le_sharp)
    apply (simp add: is_aligned_def)
@@ -745,7 +745,10 @@ lemma irq_node_offs_range_distinct[simp]:
   "idle_tcb_ptr \<notin> irq_node_offs_range"
   "init_globals_frame \<notin> irq_node_offs_range"
   "init_global_pd \<notin> irq_node_offs_range"
-  by (simp_all add: s0_ptr_defs irq_node_offs_range_def)
+  apply auto
+thm irq_node_offs_range_def
+  apply (simp add:irq_node_offs_range_def s0_ptr_defs)
+  apply (simp_all add: s0_ptr_defs irq_node_offs_range_def)
 
 lemma irq_node_offs_distinct[simp]:
   "init_irq_node_ptr + (ucast (irq:: 8 word) << cte_level_bits) \<noteq> Low_cnode_ptr"

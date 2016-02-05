@@ -1093,8 +1093,12 @@ lemma pageBitsForSize_le_t28:
   "pageBitsForSize sz \<le> 28"
   by (cases sz, simp_all)
 
+lemma pageBitsForSize_le_t29:
+  "pageBitsForSize sz \<le> 29"
+  by (cases sz, simp_all)
+
 lemmas vmsz_aligned_t2n_neg_mask
-    = x_t2n_sub_1_neg_mask[OF _ pageBitsForSize_le_t28, folded vmsz_aligned_def]
+    = x_t2n_sub_1_neg_mask[OF _ pageBitsForSize_le_t29, folded vmsz_aligned_def]
 
 
 lemma decode_arch_invocation_authorised:
@@ -1153,7 +1157,8 @@ lemma decode_arch_invocation_authorised:
                 validate_vm_rights_def vm_read_write_def vm_read_only_def
                 vm_kernel_only_def)
   -- "Remap"
-   apply (clarsimp simp: cap_auth_conferred_def is_page_cap_def pas_refined_all_auth_is_owns)
+   apply (clarsimp simp: cap_auth_conferred_def 
+     is_page_cap_def pas_refined_all_auth_is_owns)
    apply (rule conjI, fastforce)
    apply clarsimp
    apply (drule (1) bspec)

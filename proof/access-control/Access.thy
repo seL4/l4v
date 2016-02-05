@@ -36,7 +36,7 @@ the grant bit set.
 
 type_synonym 'a agent_map = "obj_ref \<Rightarrow> 'a"
 type_synonym 'a agent_asid_map = "asid \<Rightarrow> 'a"
-type_synonym 'a agent_irq_map = "word8 \<Rightarrow> 'a"
+type_synonym 'a agent_irq_map = "10 word \<Rightarrow> 'a"
 
 text{*
 

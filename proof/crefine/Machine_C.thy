@@ -19,13 +19,13 @@ imports "../../lib/clib/Ctac"
 begin
 
 locale kernel_m = kernel +
-
+(*
 assumes configureTimer_ccorres:
   "ccorres (op =) ret__unsigned_char_'
            \<top> UNIV []
            (doMachineOp configureTimer)
            (Call configureTimer_'proc)"
-
+*)
 assumes resetTimer_ccorres:
   "ccorres dc xfdc \<top> UNIV []
            (doMachineOp resetTimer)
@@ -152,10 +152,12 @@ assumes getFAR_ccorres:
            (Call getFAR_'proc)"
 
 assumes getActiveIRQ_ccorres:
-  "ccorres (\<lambda>a c. case a of None \<Rightarrow> c = 255 | Some x \<Rightarrow> c = ucast x \<and> c \<noteq> 0xFF) 
-           ret__unsigned_long_' \<top> UNIV []
-           (doMachineOp getActiveIRQ)
-           (Call getActiveIRQ_'proc)"
+"ccorres (\<lambda>(a\<Colon>10 word option) c\<Colon>16 word.
+     case a of None \<Rightarrow> c = (0xFFFF\<Colon>16 word)
+     | Some (x\<Colon>10 word) \<Rightarrow> c = ucast x \<and> c \<noteq> (0xFFFF\<Colon>16 word))
+     (\<lambda>t. irq_' (s\<lparr>globals := globals t, irq_' := ret__unsigned_short_' t\<rparr> ))
+     \<top> UNIV hs
+ (doMachineOp getActiveIRQ) (Call getActiveIRQ_'proc)"
 
 (* This is not very correct, however our current implementation of Hardware in haskell is stateless *)
 assumes isIRQPending_ccorres:
