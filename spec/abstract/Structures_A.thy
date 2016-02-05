@@ -22,7 +22,7 @@ imports
 
 begin     
 
-unqualify_types (in "$L4V_ARCH")
+unqualify_types (in Arch)
   aobject_type 
   arch_cap 
   vm_rights
@@ -30,7 +30,7 @@ unqualify_types (in "$L4V_ARCH")
   arch_state
         
 
-unqualify_consts (in "$L4V_ARCH")
+unqualify_consts (in Arch)
   "acap_rights :: arch_cap \<Rightarrow> vm_rights"
   "acap_rights_update :: vm_rights \<Rightarrow> arch_cap \<Rightarrow> arch_cap"
   "arch_kobj_size :: arch_kernel_obj \<Rightarrow> nat"

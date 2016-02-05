@@ -19,7 +19,7 @@ theory Machine_A
 imports
   "../../../lib/WordSetup"
   "../../../lib/wp/NonDetMonad"
-  "../../machine/$L4V_ARCH/MachineTypes"
+  "../../machine/MachineExports"
 begin
 
 context ARM begin

@@ -12,6 +12,48 @@ theory Invariants_AI
 imports "./$L4V_ARCH/ArchInvariants_AI"
 begin
 
+context Arch begin
+
+unqualify_types
+  aa_type
+
+unqualify_consts
+  "atyp_at :: aa_type \<Rightarrow> obj_ref \<Rightarrow> ('z :: state_ext) state \<Rightarrow> bool"
+  "aobj_at :: (arch_kernel_obj \<Rightarrow> bool) \<Rightarrow> obj_ref \<Rightarrow> ('z :: state_ext) state \<Rightarrow> bool"
+  "aa_type :: arch_kernel_obj \<Rightarrow> aa_type"
+  "wellformed_acap :: arch_cap \<Rightarrow> bool"
+  "valid_arch_cap :: arch_cap \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+  "valid_arch_cap_ref :: arch_cap \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+  "acap_class :: arch_cap \<Rightarrow> capclass"
+  "valid_ipc_buffer_cap :: cap \<Rightarrow> obj_ref \<Rightarrow> bool"
+  "wellformed_arch_obj :: arch_kernel_obj \<Rightarrow> bool"
+  "valid_asid_map :: 'z::state_ext state \<Rightarrow> bool"
+  "not_kernel_window :: 'z::state_ext state \<Rightarrow> obj_ref set"
+  "global_refs :: 'z::state_ext state \<Rightarrow> obj_ref set"
+  "arch_obj_bits_type :: aa_type \<Rightarrow> nat"
+
+  "valid_arch_state :: 'z::state_ext state \<Rightarrow> bool"
+  "valid_irq_states :: 'z::state_ext state \<Rightarrow> bool"
+  "valid_machine_state :: 'z::state_ext state \<Rightarrow> bool"
+  "valid_arch_objs :: 'z::state_ext state \<Rightarrow> bool"
+  "valid_arch_caps :: 'z::state_ext state \<Rightarrow> bool"
+  "valid_global_objs :: 'z::state_ext state \<Rightarrow> bool"
+  "valid_kernel_mappings :: 'z::state_ext state \<Rightarrow> bool"
+  "equal_kernel_mappings :: 'z::state_ext state \<Rightarrow> bool"
+  "valid_global_pd_mappings :: 'z::state_ext state \<Rightarrow> bool"
+  "pspace_in_kernel_window :: 'z::state_ext state \<Rightarrow> bool"
+
+unqualify_facts
+  valid_arch_sizes
+  aobj_bits_T
+  valid_arch_cap_def2
+  idle_global[intro!]
+  valid_ipc_buffer_cap_null
+  valid_arch_cap_atyp
+  valid_arch_obj_atyp
+
+end
+
 -- ---------------------------------------------------------------------------
 section "Invariant Definitions for Abstract Spec"
 
@@ -144,6 +186,26 @@ where
 
 abbreviation
   "typ_at T \<equiv> obj_at (\<lambda>ob. a_type ob = T)"
+
+context Arch begin
+
+lemma aobj_at_def2:
+  "aobj_at P p = obj_at (\<lambda>ob. case ob of ArchObj ao \<Rightarrow> P ao | _ \<Rightarrow> False) p" 
+  unfolding obj_at_def[abs_def] aobj_at_def[abs_def]
+  apply (rule ext)
+  apply safe
+  by (auto split: kernel_object.splits)
+
+lemma atyp_at_def2:
+  "atyp_at T p = typ_at (AArch T) p"
+  unfolding aobj_at_def2 a_type_def obj_at_def[abs_def]
+  apply (rule ext)
+  apply safe
+  by (auto split: kernel_object.splits split_if_asm)
+
+unqualify_facts aobj_at_def2 atyp_at_def2
+
+end
 
 
 text {* cte with property at *}
@@ -447,20 +509,7 @@ where
 
 
 
-definition
-  pd_at_asid :: "asid \<Rightarrow> obj_ref \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
-where
-  "pd_at_asid asid pd \<equiv> \<lambda>s.
-         ([VSRef (asid && mask asid_low_bits) (Some AASIDPool),
-           VSRef (ucast (asid_high_bits_of asid)) None] \<rhd> pd) s"
 
-definition
-  valid_asid_map :: "'z::state_ext state \<Rightarrow> bool"
-where
-  "valid_asid_map \<equiv>
-   \<lambda>s. dom (arm_asid_map (arch_state s)) \<subseteq> {0 .. mask asid_bits} \<and>
-       (\<forall>(asid, hwasid, pd) \<in> graph_of (arm_asid_map (arch_state s)).
-            pd_at_asid asid pd s \<and> asid \<noteq> 0)"
 
 datatype reftype
   = TCBWaitingSend | TCBWaitingRecv | TCBBlockedSend | TCBBlockedRecv
@@ -598,12 +647,18 @@ where
                          then Some (THE cap. fst (get_cap p s) = {(cap, s)})
                          else None)"
 
+context Arch begin
+
 lemma arch_caps_of_state_def2:
   "arch_caps_of_state s = (\<lambda>p. case caps_of_state s p of Some (ArchObjectCap ac) \<Rightarrow> Some ac | _ \<Rightarrow> None)"
   apply (simp add: arch_caps_of_state_def caps_of_state_def)
   apply (rule ext)
   apply (simp split: if_splits cap.splits)
   by (safe; simp)
+
+unqualify_facts arch_caps_of_state_def2
+
+end
 
 primrec
   cte_refs :: "cap \<Rightarrow> (irq \<Rightarrow> obj_ref) \<Rightarrow> cslot_ptr set"
@@ -788,8 +843,7 @@ text "caps point at objects in the kernel window"
 definition
   cap_refs_in_kernel_window :: "'z::state_ext state \<Rightarrow> bool"
 where
- "cap_refs_in_kernel_window \<equiv> \<lambda>s. valid_refs
-         {x. arm_kernel_vspace (arch_state s) x \<noteq> ArmVSpaceKernelWindow} s"
+ "cap_refs_in_kernel_window \<equiv> \<lambda>s. valid_refs (not_kernel_window s) s"
 
 
 definition
@@ -812,12 +866,6 @@ definition
   valid_irq_handlers :: "'z::state_ext state \<Rightarrow> bool"
 where
   "valid_irq_handlers \<equiv> \<lambda>s. \<forall>cap \<in> ran (caps_of_state s). \<forall>irq \<in> cap_irqs cap. irq_issued irq s"
-
-definition valid_irq_masks :: "(word8 \<Rightarrow> irq_state) \<Rightarrow> (word8 \<Rightarrow> bool) \<Rightarrow> bool" where
-  "valid_irq_masks table masked \<equiv> \<forall>irq. table irq = IRQInactive \<longrightarrow> masked irq"
-definition valid_irq_states :: "'z::state_ext state \<Rightarrow> bool" where
-  "valid_irq_states \<equiv> \<lambda>s.
-    valid_irq_masks (interrupt_states s) (irq_masks (machine_state s))"
 
 
 
@@ -954,8 +1002,7 @@ lemma valid_bound_tcb_Some[simp]:
   "valid_bound_tcb (Some x) = tcb_at x"
   by (auto simp: valid_bound_tcb_def)
 
-lemmas wellformed_cap_simps =
-  wellformed_acap_simps wellformed_cap_def[split_simps cap.split]
+lemmas wellformed_cap_simps = wellformed_cap_def[split_simps cap.split]
 
 lemmas valid_cap_ref_simps =
   valid_cap_ref_def[split_simps cap.split]
@@ -1011,7 +1058,7 @@ lemma obj_at_eq_helper:
   done
 
 lemmas a_type_simps =
-  a_type_def[split_simps Structures_A.kernel_object.split arch_kernel_obj.split]
+  a_type_def[split_simps Structures_A.kernel_object.split]
 
 lemma tcb_at_typ:
   "tcb_at = typ_at ATCB"
@@ -1116,12 +1163,13 @@ lemma ran_tcb_cnode_map:
    {tcb_vtable t, tcb_ctable t, tcb_caller t, tcb_reply t, tcb_ipcframe t}"
   by (fastforce simp: tcb_cnode_map_def)
 
+
 lemma st_tcb_idle_cap_valid_Null [simp]:
   "st_tcb_at (idle or inactive) (fst sl) s \<longrightarrow>
    tcb_cap_valid cap.NullCap sl s"
   by (fastforce simp: tcb_cap_valid_def tcb_cap_cases_def
-                     pred_tcb_at_def obj_at_def
-                     valid_ipc_buffer_cap_def)
+                      pred_tcb_at_def obj_at_def
+                      valid_ipc_buffer_cap_null)
 
 
  
@@ -1410,12 +1458,23 @@ lemma zombies_finalD:
   apply (clarsimp simp: cte_wp_at_def)
   done
 
+
+context Arch begin
+
+lemma physical_arch_cap_has_ref: 
+  "acap_class arch_cap = PhysicalClass \<Longrightarrow> \<exists>y. aobj_ref arch_cap = Some y"
+  by (cases arch_cap; simp)
+
+unqualify_facts physical_arch_cap_has_ref
+
+end
+
 lemma physical_valid_cap_not_empty_range:
   "\<lbrakk>valid_cap cap s; cap_class cap = PhysicalClass\<rbrakk> \<Longrightarrow> cap_range cap \<noteq> {}"
   apply (case_tac cap)
    apply (simp_all add:cap_range_def valid_cap_simps cap_aligned_def is_aligned_no_overflow)
   apply (rename_tac arch_cap)
-  apply (case_tac arch_cap,simp_all)
+  apply (clarsimp simp: physical_arch_cap_has_ref)
   done
 
 lemma valid_ioc_def2:
@@ -1490,18 +1549,11 @@ lemma only_idleI:
   "(\<And>t. st_tcb_at idle t s \<Longrightarrow> t = idle_thread s) \<Longrightarrow> only_idle s"
   by (simp add: only_idle_def)
 
-lemmas cap_asid_simps [simp] =
-  cap_asid_def [split_simps cap.split arch_cap.split option.split prod.split]
-
-
 
 lemma obj_at_weakenE:
   "\<lbrakk> obj_at P r s; \<And>ko. P ko \<Longrightarrow> P' ko \<rbrakk> \<Longrightarrow> obj_at P' r s"
   by (clarsimp simp: obj_at_def)
 
-lemma idle_global[intro!]:
-  "idle_thread s \<in> global_refs s"
-  by (simp add: global_refs_def)
 
 lemma valid_refs_def2:
   "valid_refs R = (\<lambda>s. \<forall>c \<in> ran (caps_of_state s). R \<inter> cap_range c = {})"
@@ -1581,25 +1633,27 @@ lemma cte_wp_at_pspaceI:
   "\<lbrakk> cte_wp_at P slot s; kheap s = kheap s' \<rbrakk> \<Longrightarrow> cte_wp_at P slot s'"
   by (simp add: cte_wp_at_cases)
 
+context Arch begin
+
+lemma valid_arch_cap_pspaceI:
+  "\<lbrakk> valid_arch_cap acap s; kheap s = kheap s' \<rbrakk> \<Longrightarrow> valid_arch_cap acap s'"
+  unfolding valid_arch_cap_def
+  by (auto intro: aobj_at_pspaceI split: arch_cap.split)
+
+
+unqualify_facts valid_arch_cap_pspaceI valid_arch_obj_pspaceI
+
+end
+ 
+
 lemma valid_cap_pspaceI:
   "\<lbrakk> s \<turnstile> cap; kheap s = kheap s' \<rbrakk> \<Longrightarrow> s' \<turnstile> cap"
-  unfolding valid_cap_def valid_arch_cap_def
+  unfolding valid_cap_def 
   apply (cases cap)
-   by  (auto intro: obj_at_pspaceI aobj_at_pspaceI cte_wp_at_pspaceI
-           simp: obj_range_def valid_untyped_def pred_tcb_at_def
-          split: arch_cap.split option.split sum.split)
+  by (auto intro: obj_at_pspaceI cte_wp_at_pspaceI valid_arch_cap_pspaceI
+            simp: obj_range_def valid_untyped_def pred_tcb_at_def
+           split: option.split sum.split)
 
-lemma valid_arch_obj_pspaceI:
-  "\<lbrakk> valid_arch_obj obj s; kheap s = kheap s' \<rbrakk> \<Longrightarrow> valid_arch_obj obj s'"
-  apply (cases obj, simp_all)
-    apply (simp add: aobj_at_def)
-   apply (erule allEI)
-   apply (rename_tac "fun" x)
-   apply (case_tac "fun x", simp_all add: aobj_at_def)
-  apply (erule ballEI)
-  apply (rename_tac "fun" x)
-  apply (case_tac "fun x", simp_all add: aobj_at_def)
-  done
 
 (* FIXME-NTFN: ugly proof *)
 lemma valid_obj_pspaceI:
@@ -1829,20 +1883,6 @@ lemma valid_cs_sizeE [elim]:
   shows "R"
   using assms
   by (auto simp: valid_cs_size_def well_formed_cnode_n_def)
-
-lemmas  pageBitsForSize_simps[simp] =
-        pageBitsForSize_def[split_simps vmpage_size.split]
-
-lemma arch_kobj_size_bounded:
-  "arch_kobj_size obj < word_bits"
-  apply (cases obj, simp_all add: word_bits_conv pageBits_def)
-  apply (rename_tac vmpage_size)
-  apply (case_tac vmpage_size, simp_all)
-  done
-
-lemma valid_arch_sizes:
-  "obj_bits (ArchObj obj) < word_bits"
-  by (simp add: arch_kobj_size_bounded)
 
 lemma valid_obj_sizes:
   assumes vp: "valid_objs s"
@@ -2109,14 +2149,15 @@ lemma length_helper:
 lemma pspace_typ_at:
   "kheap s p = Some obj \<Longrightarrow> \<exists>T. typ_at T p s"
   by (clarsimp simp: obj_at_def)
+  
 
 lemma obj_bits_T:
   "obj_bits v = obj_bits_type (a_type v)"
   apply (cases v, simp_all add: obj_bits_type_def a_type_def)
-   apply (clarsimp simp: obj_bits.simps well_formed_cnode_n_def
+   apply (clarsimp simp: obj_bits.simps well_formed_cnode_n_def 
                          length_set_helper length_helper cte_level_bits_def)
-  apply (rename_tac arch_kernel_obj)
-  by (case_tac arch_kernel_obj, simp_all add: obj_bits.simps aa_type_def arch_obj_bits_type_def)
+  apply (rule aobj_bits_T)
+  done
 
 
 lemma obj_range_T:
@@ -2154,6 +2195,8 @@ lemma valid_untyped_typ:
 lemma cap_aligned_Null [simp]:
   "cap_aligned (cap.NullCap)"
   by (simp add: cap_aligned_def word_bits_def is_aligned_def)
+
+
 
 lemma atyp_at_typ_at: 
   assumes P: "\<lbrace>\<lambda>s. P (typ_at (AArch T) p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at (AArch T) p s)\<rbrace>"
@@ -2265,10 +2308,6 @@ lemma wf_cs_upd:
    apply (erule domI)
   apply (rule refl)
   done
-
-lemma pageBits_clb_less_word_bits [simp]:
-  "pageBits - cte_level_bits < word_bits"
-  by (rule less_imp_diff_less, simp)
 
 lemma obj_atE:
   "\<lbrakk> obj_at P p s; \<And>ko. \<lbrakk> kheap s p = Some ko; P ko \<rbrakk> \<Longrightarrow> R \<rbrakk> \<Longrightarrow> R"
@@ -2484,7 +2523,7 @@ lemma cte_wp_cte_at:
   "cte_wp_at P p s \<Longrightarrow> cte_at p s"
   by (auto simp add: cte_wp_at_cases)
 
-locale pspace_update_eq =
+locale pspace_update_eq = Arch!: arch_pspace_update_eq +
   fixes f :: "'z::state_ext state \<Rightarrow> 'c::state_ext state"
   assumes pspace: "kheap (f s) = kheap s"
 begin
@@ -2496,10 +2535,6 @@ lemma valid_space_update [iff]:
 lemma obj_at_update [iff]:
   "obj_at P p (f s) = obj_at P p s"
   by (fastforce intro: obj_at_pspaceI simp: pspace)
-
-lemma in_user_frame_update[iff]:
-  "in_user_frame p (f s) = in_user_frame p s"
-  by (simp add: in_user_frame_def)
 
 lemma cte_wp_at_update [iff]:
   "cte_wp_at P p (f s) = cte_wp_at P p s"

@@ -197,11 +197,17 @@ lemma unlessE_bcorres[wp]: "bcorres f f' \<Longrightarrow> bcorres (unlessE P f)
   apply (clarsimp simp add: unlessE_def | wp)+
   done
 
+
 lemma throw_on_false_bcorres[wp]: "bcorres f f' \<Longrightarrow>  bcorres (throw_on_false e f) (throw_on_false e f')"
   apply (simp add: throw_on_false_def | wp)+
   done
 
-crunch (bcorres)bcorres[wp]: "IpcCancel_A.suspend",deleting_irq_handler,arch_finalise_cap truncate_state (simp: gets_the_def swp_def ignore: gets_the ignore: setCurrentPD setHardwareASID throw_on_false)
+context Arch begin
+  crunch (bcorres)bcorres[wp]: arch_finalise_cap truncate_state (simp: swp_def)
+  unqualify_facts arch_finalise_cap_bcorres[wp]
+end
+
+crunch (bcorres)bcorres[wp]: "IpcCancel_A.suspend",deleting_irq_handler truncate_state (simp: gets_the_def swp_def ignore: gets_the ignore: throw_on_false)
 
 lemma finalise_cap_bcorres[wp]: "bcorres (finalise_cap a b) (finalise_cap a b)"
   apply (cases a)

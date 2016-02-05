@@ -18,7 +18,9 @@ theory MiscMachine_A
 imports "./$L4V_ARCH/Machine_A" "../machine/MachineExports"
 begin
 
-unqualify_types (in "$L4V_ARCH")
+context Arch begin
+
+unqualify_types
   user_context 
   register 
   data 
@@ -31,7 +33,7 @@ unqualify_types (in "$L4V_ARCH")
   data_offset
 
 
-unqualify_consts (in "$L4V_ARCH")
+unqualify_consts
   "nat_to_cref :: nat \<Rightarrow> nat \<Rightarrow> cap_ref"
   "msg_info_register :: register"
   "msg_registers :: register list"
@@ -54,7 +56,9 @@ unqualify_consts (in "$L4V_ARCH")
   "data_to_cptr :: data \<Rightarrow> cap_ref"
   "data_offset_to_nat :: data_offset \<Rightarrow> nat"
   "combine_ntfn_badges :: data \<Rightarrow> data \<Rightarrow> data"
-  "combine_ntfn_msgs :: data \<Rightarrow> data \<Rightarrow> data" 
+  "combine_ntfn_msgs :: data \<Rightarrow> data \<Rightarrow> data"
+
+end
 
 
 type_synonym 'a user_monad = "(user_context, 'a) nondet_monad"

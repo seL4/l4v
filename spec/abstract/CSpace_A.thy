@@ -23,7 +23,7 @@ imports
   "~~/src/HOL/Library/Prefix_Order"
 begin
 
-unqualify_consts (in "$L4V_ARCH")
+unqualify_consts (in Arch)
   "arch_update_cap_data :: data \<Rightarrow> arch_cap \<Rightarrow> cap"
   "arch_derive_cap :: arch_cap \<Rightarrow> (arch_cap,'z::state_ext) se_monad"
   "arch_finalise_cap :: arch_cap \<Rightarrow> bool \<Rightarrow> (cap,'z::state_ext) s_monad"
@@ -37,7 +37,6 @@ unqualify_consts (in "$L4V_ARCH")
   "cap_transfer_data_size :: nat"
   "msg_max_extra_caps :: nat"
   "msg_align_bits :: nat"
-
 
 
 text {* This theory develops an abstract model of \emph{capability

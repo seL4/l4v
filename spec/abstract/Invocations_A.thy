@@ -18,7 +18,7 @@ theory Invocations_A
 imports "./$L4V_ARCH/ArchInvocation_A"
 begin
 
-unqualify_types (in "$L4V_ARCH")
+unqualify_types (in Arch)
   arch_copy_register_sets
   arch_irq_control_invocation
   arch_invocation

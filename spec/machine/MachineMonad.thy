@@ -12,14 +12,18 @@
 theory MachineMonad
 imports "./$L4V_ARCH/MachineTypes"
 begin
+
+context Arch begin
   
-unqualify_types (in "$L4V_ARCH")
+unqualify_types
   machine_state
   machine_state_rest
 
-unqualify_consts (in "$L4V_ARCH")
+unqualify_consts
   "machine_state_rest :: machine_state \<Rightarrow> machine_state_rest"
   "machine_state_rest_update :: (machine_state_rest \<Rightarrow> machine_state_rest) \<Rightarrow> machine_state \<Rightarrow> machine_state"
+
+end
 
 text {*
   The machine monad is used for operations on the state defined above.

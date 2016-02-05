@@ -8,6 +8,7 @@ imports Main
 keywords "unqualify_facts" :: thy_decl and "unqualify_consts" :: thy_decl and "unqualify_types" :: thy_decl
 begin
 
+
 ML \<open>
 
 local
@@ -27,46 +28,48 @@ fun make_binding b =
     val pos = Binding.pos_of b;
   in make_binding_raw (nm, pos) end
 
-val parse_opt_target = Parse.opt_target >> 
-  (map_option (apfst (fn raw_nm =>
-          case try (unprefix "$") raw_nm of SOME nm' => getenv_strict nm' | NONE => raw_nm)))
-
-val unqualify_parse = parse_opt_target -- Scan.option (Args.parens Parse.name) -- Scan.repeat1 Parse.binding
 
 in
 
 val _ =
   Outer_Syntax.command @{command_keyword unqualify_facts} "unqualify facts"
-    (unqualify_parse >> (fn ((target,qual),bs) =>
+    (Parse.opt_target -- Scan.option (Args.parens Parse.name) -- Parse.xthms1 >> 
+      (fn ((target,qual),rfs) =>
       Toplevel.local_theory NONE target (fn lthy =>
       let                            
         val facts = Proof_Context.facts_of lthy;
 
-        fun retrieve b = Facts.retrieve (Context.Proof lthy) facts (Binding.name_of b, Binding.pos_of b);
+        val nms =  
+          map (fn (rf, atts) => (Facts.select rf []; ((Facts.name_of_ref rf, Facts.pos_of_ref rf), atts))) rfs;
+
+        fun retrieve ((nm, pos), _)  = Facts.retrieve (Context.Proof lthy) facts (nm, pos);
 
 
-        val thmss = map (`retrieve) bs
-          |> map (fn ({thms, ...}, b) => (make_binding b, thms));
+        val thmss = map (`retrieve) nms
+          |> map (fn ({thms, static, ...}, b) => 
+            (if not static then error ("Can't unqualify dynamic fact: " ^ (fst (fst b)) ^ Position.here (snd (fst b)))
+            else (apfst make_binding_raw b, thms)));
+
+        val naming = Sign.naming_of (Proof_Context.theory_of lthy)
+          |> the_default I (map_option Name_Space.mandatory_path qual);
 
         val lthy' = Local_Theory.background_theory (fn thy =>
           let
-            val naming = the_default I (map_option Name_Space.mandatory_path qual) Name_Space.global_naming;
             val thy' = Context.theory_map (Name_Space.map_naming (K naming)) thy;
-            val export = Morphism.fact (Local_Theory.standard_morphism lthy (Proof_Context.init_global thy));
+            val global_ctxt = (Proof_Context.init_global thy);
+            val morph = Local_Theory.standard_morphism lthy global_ctxt;
+            val thmss' = map (fn ((b, att),thms) => ((b, []), [(thms, Attrib.check_attribs global_ctxt att)])) thmss; 
           in
-            fold (fn (b, thms) => Global_Theory.store_thms (b,export thms) #> snd) thmss thy'
+            snd (Attrib.global_notes Thm.lemmaK (Attrib.transform_facts morph thmss') thy')
           end) lthy
 
        in
        lthy'
        end)))
 
-val k = Parse.for_fixes
-
-
 val _ =
   Outer_Syntax.command @{command_keyword unqualify_consts} "unqualify consts"
-    (parse_opt_target -- Scan.option (Args.parens Parse.name) -- 
+    (Parse.opt_target -- Scan.option (Args.parens Parse.name) -- 
       Scan.repeat1 (Parse.position Parse.term) >> (fn ((target,qual),bs) =>
       Toplevel.local_theory NONE target (fn lthy =>
       let
@@ -83,9 +86,11 @@ val _ =
 
         val ts' = map (apsnd (Syntax.check_term lthy) o apfst make_binding_raw o get_const) ts;
 
+        val naming = Sign.naming_of (Proof_Context.theory_of lthy)
+          |> the_default I (map_option Name_Space.mandatory_path qual);
+
         val lthy' = Local_Theory.background_theory (fn thy =>
           let
-            val naming = the_default I (map_option Name_Space.mandatory_path qual) Name_Space.global_naming;
             val thy' = Context.theory_map (Name_Space.map_naming (K naming)) thy;
             val export = Morphism.term (Local_Theory.standard_morphism lthy (Proof_Context.init_global thy));
   
@@ -93,9 +98,8 @@ val _ =
             fold (fn (b, t) =>
               let
                 val b' = make_binding b;
-                val nm = Binding.name_of b';
               in
-               Sign.add_abbrev nm (b', export t) #> snd
+               Sign.add_abbrev Print_Mode.input (b', export t) #> snd
               end) ts' thy'
           end) lthy
 
@@ -106,7 +110,7 @@ val _ =
 
 val _ =
   Outer_Syntax.command @{command_keyword unqualify_types} "unqualify types"
-    (parse_opt_target -- Scan.option (Args.parens Parse.name) -- 
+    (Parse.opt_target -- Scan.option (Args.parens Parse.name) -- 
       Scan.repeat1 (Parse.position Parse.typ) >> (fn ((target,qual),bs) =>
       Toplevel.local_theory NONE target (fn lthy =>
       let
@@ -126,9 +130,11 @@ val _ =
 
         val Ts' = map (apsnd check_Ts o apfst make_binding_raw o get_type) Ts;
 
+        val naming = Sign.naming_of (Proof_Context.theory_of lthy)
+          |> the_default I (map_option Name_Space.mandatory_path qual);
+
         val lthy' = Local_Theory.background_theory (fn thy =>
           let
-            val naming = the_default I (map_option Name_Space.mandatory_path qual) Name_Space.global_naming;
             val thy' = Context.theory_map (Name_Space.map_naming (K naming)) thy;
           in
             fold (fn (b, (T,frees)) =>

@@ -12,13 +12,15 @@
 theory MachineExports
 imports "./$L4V_ARCH/MachineOps"
 begin
+
+context Arch begin
   
-unqualify_types (in "$L4V_ARCH")
+unqualify_types
   machine_word 
   vmfault_type
   irq
 
-unqualify_consts (in "$L4V_ARCH")
+unqualify_consts
   "getActiveIRQ :: (irq option) machine_monad"
   "maskInterrupt :: bool \<Rightarrow> irq \<Rightarrow> unit machine_monad"
   "freeMemory :: machine_word \<Rightarrow> nat \<Rightarrow> unit machine_monad"
@@ -36,5 +38,11 @@ unqualify_consts (in "$L4V_ARCH")
   "gpRegisters :: register list"
   "frameRegisters :: register list"
   "setInterruptMode :: irq \<Rightarrow> bool \<Rightarrow> bool \<Rightarrow> unit machine_monad"
+  "ackInterrupt :: irq \<Rightarrow> unit machine_monad"
+  "resetTimer :: unit machine_monad"
+  "maxIRQ :: irq"
+  "minIRQ :: irq"
+
+end
 
 end

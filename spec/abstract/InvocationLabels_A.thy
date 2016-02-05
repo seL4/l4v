@@ -16,15 +16,9 @@ chapter "Kernel Object Invocations"
 
 theory InvocationLabels_A
 imports
-  "./$L4V_ARCH/Machine_A"
+  MiscMachine_A
   "../design/$L4V_ARCH/ArchLabelFuns_H"
 begin
-
-unqualify_types (in "$L4V_ARCH") 
-  data
-
-unqualify_consts (in "$L4V_ARCH") 
-  "data_to_nat :: data \<Rightarrow> nat"
 
 definition
   invocation_type :: "data \<Rightarrow> invocation_label"

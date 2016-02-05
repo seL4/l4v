@@ -22,7 +22,7 @@ imports
   "./$L4V_ARCH/ArchRetype_A"
 begin
 
-unqualify_consts (in "$L4V_ARCH")
+unqualify_consts (in Arch)
   "arch_default_cap :: aobject_type \<Rightarrow> obj_ref \<Rightarrow> nat \<Rightarrow> arch_cap"
   "default_arch_object :: aobject_type \<Rightarrow> nat \<Rightarrow> arch_kernel_obj"
   "init_arch_objects :: apiobject_type \<Rightarrow> obj_ref \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> obj_ref list \<Rightarrow> (unit,'z::state_ext) s_monad"

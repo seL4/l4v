@@ -18,7 +18,7 @@ text {*
   An enumeration of all system call labels.
 *}
 
-unqualify_types (in "$L4V_ARCH")
+unqualify_types (in Arch)
   arch_invocation_label
 
 

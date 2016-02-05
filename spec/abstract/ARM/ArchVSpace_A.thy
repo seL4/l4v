@@ -475,10 +475,6 @@ check_mapping_pptr :: "obj_ref \<Rightarrow> vmpage_size \<Rightarrow> (obj_ref 
      | _ \<Rightarrow> False
    od"
 
-text {* Raise an exception if a property does not hold. *}
-definition
-throw_on_false :: "'e \<Rightarrow> (bool,'z::state_ext) s_monad \<Rightarrow> ('e + unit,'z::state_ext) s_monad" where
-"throw_on_false ex f \<equiv> doE v \<leftarrow> liftE f; unlessE v $ throwError ex odE"
 
 definition
   "last_byte_pte x \<equiv> let pte_bits = 2 in x + ((1 << pte_bits) - 1)"

@@ -159,9 +159,9 @@ fun end_global_qualify thy =
      |> map_facts_of nm (fold (fn (b, nm) => (Symtab.update (nm, b))) facts)
      |> map_consts_of nm (fold (fn (b, nm) => (Symtab.update (nm, b))) consts)
      |> map_types_of nm (fold (fn (b, nm) => (Symtab.update (nm, b))) types)
-     |> (fn thy => fold (Global_Theory.hide_fact true o fst) (Symtab.dest (get_facts_of thy nm)) thy)
-     |> (fn thy => fold (Sign.hide_const true o fst) (Symtab.dest (get_consts_of thy nm)) thy)
-     |> (fn thy => fold (Sign.hide_type true o fst) (Symtab.dest (get_types_of thy nm)) thy)
+     |> (fn thy => fold (Global_Theory.hide_fact false o fst) (Symtab.dest (get_facts_of thy nm)) thy)
+     |> (fn thy => fold (Sign.hide_const false o fst) (Symtab.dest (get_consts_of thy nm)) thy)
+     |> (fn thy => fold (Sign.hide_type false o fst) (Symtab.dest (get_types_of thy nm)) thy)
      |> Data.map (apfst (K NONE))
 
     val lthy = Named_Target.begin (nm, Position.none) thy';
