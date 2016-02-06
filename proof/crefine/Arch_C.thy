@@ -3963,13 +3963,12 @@ lemma Arch_decodeInvocation_ccorres:
                apply vcg
               apply (rule ccorres_rhs_assoc)+
               apply csymbr
-              apply (rule ccorres_move_const_guard)+
               apply csymbr
               apply (simp add: if_1_0_0 objBits_simps archObjSize_def
                           del: Collect_const)
               apply (elim conjE)
               apply (subgoal_tac "(capBlockSize_CL (cap_untyped_cap_lift untyped')
-                                            = scast (Kernel_C.asidLowBits + 2))
+                                            = 0xC)
                                       = (capBlockSize (fst (extraCaps ! 0)) = pageBits)
                                   ")
                prefer 2
