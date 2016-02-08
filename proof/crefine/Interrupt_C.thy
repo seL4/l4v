@@ -394,12 +394,13 @@ lemma decodeIRQ_arch_helper: "x \<noteq> invocation_label.IRQIssueIRQHandler \<L
          (case x of invocation_label.IRQIssueIRQHandler \<Rightarrow> f | _ \<Rightarrow> g) = g"
   by (clarsimp split: invocation_label.splits)
 
+
 lemma Arch_checkIRQ_ccorres:
   "ccorres (syscall_error_rel \<currency> (\<lambda>r r'. irq \<le> scast Kernel_C.maxIRQ)) 
            (liftxf errstate id undefined ret__unsigned_long_')
-   \<top> (UNIV \<inter> \<lbrace>irq = (\<acute>irq)\<rbrace>) []
+   \<top> (UNIV \<inter> \<lbrace>irq = \<acute>irq___unsigned_long\<rbrace>) []
    (checkIRQ irq) (Call Arch_checkIRQ_'proc)"
-  apply (cinit lift: irq_')
+  apply (cinit lift: irq___unsigned_long_' )
    apply (simp add: rangeCheck_def unlessE_def Platform.minIRQ_def checkIRQ_def
                     ucast_nat_def word_le_nat_alt[symmetric]
                     linorder_not_le[symmetric] Platform_maxIRQ

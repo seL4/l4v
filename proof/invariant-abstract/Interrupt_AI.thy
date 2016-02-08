@@ -69,12 +69,23 @@ lemma decode_irq_handler_valid[wp]:
 
 crunch inv[wp]: is_irq_active "P"
 
+
+
 lemma decode_irq_control_invocation_inv[wp]:
   "\<lbrace>P\<rbrace> decode_irq_control_invocation label args slot caps \<lbrace>\<lambda>rv. P\<rbrace>"
   apply (simp add: decode_irq_control_invocation_def Let_def arch_check_irq_def
                    arch_decode_irq_control_invocation_def whenE_def, safe)
   apply (wp | simp)+
   done
+
+lemma unat_mask:
+  "unat ((a::word32) && mask 16) = (unat a) mod (2^16)"
+  by (simp add:word_mod_2p_is_mask[symmetric] unat_word_ariths)
+
+lemma mod_le:
+  "\<lbrakk>b < c;b dvd c\<rbrakk>  \<Longrightarrow> (a mod b \<le> a mod (c::nat))"
+  apply (subst mod_mod_cancel[symmetric],simp)
+  by simp
 
 lemma decode_irq_control_valid[wp]:
   "\<lbrace>\<lambda>s. invs s \<and> (\<forall>cap \<in> set caps. s \<turnstile> cap)
@@ -92,7 +103,8 @@ lemma decode_irq_control_valid[wp]:
                  | wp_once hoare_drop_imps)+
   apply (clarsimp simp: linorder_not_less word_le_nat_alt unat_ucast
                         maxIRQ_def)
-  apply (cases caps, auto)
+  apply (cut_tac mod_le[where b = "2^10" and c = "2^16" and a = "unat (args ! 0)" ,simplified])
+  apply (cases caps, auto simp:unat_mask)
   done
 
 

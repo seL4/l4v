@@ -379,7 +379,7 @@ interrupt controller and interrupt handlers *}
 definition
   arch_check_irq :: "data \<Rightarrow> (unit,'z::state_ext) se_monad"
 where
-  "arch_check_irq irq \<equiv> whenE (irq > ucast maxIRQ) $
+  "arch_check_irq irq \<equiv> whenE (irq && mask 16 > ucast maxIRQ) $
               throwError (RangeError 0 (ucast maxIRQ))"
 
 definition
@@ -389,7 +389,7 @@ definition
   (if invocation_type label = IRQIssueIRQHandler
     then if length args \<ge> 3 \<and> length cps \<ge> 1
       then let x = args ! 0; index = args ! 1; depth = args ! 2;
-               cnode = cps ! 0; irqv = ucast x in doE
+               cnode = cps ! 0; irqv = ucast (x && mask 16) in doE
         arch_check_irq x;
         irq_active \<leftarrow> liftE $ is_irq_active irqv;
         whenE irq_active $ throwError RevokeFirst;

@@ -38,8 +38,8 @@ defs decodeIRQControlInvocation_def:
 "decodeIRQControlInvocation label args srcSlot extraCaps \<equiv>
     (case (invocationType label, args, extraCaps) of
           (IRQIssueIRQHandler, irqW#index#depth#_, cnode#_) \<Rightarrow>   (doE
-            ArchInterruptDecls_H.checkIRQ irqW;
-            irq \<leftarrow> returnOk ( toEnum (fromIntegral irqW) ::irq);
+            ArchInterruptDecls_H.checkIRQ (irqW && mask 16);
+            irq \<leftarrow> returnOk ( toEnum (fromIntegral (irqW && mask 16)) ::irq);
             irqActive \<leftarrow> withoutFailure $ isIRQActive irq;
             whenE irqActive $ throw RevokeFirst;
             destSlot \<leftarrow> lookupTargetSlot cnode

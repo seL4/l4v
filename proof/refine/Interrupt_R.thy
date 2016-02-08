@@ -153,6 +153,7 @@ lemma decode_irq_control_corres:
       apply (simp add: minIRQ_def ucast_nat_def)
      apply (simp add: linorder_not_less)
      apply (simp add: maxIRQ_def word_le_nat_alt toEnum_of_nat)
+
      apply (simp add: ucast_nat_def)
      apply (rule corres_split_eqr [OF _ is_irq_active_corres])
        apply (rule whenE_throwError_corres, simp, simp)
