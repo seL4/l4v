@@ -3153,6 +3153,7 @@ lemma handle_recv_silc_inv:
 lemma handle_interrupt_silc_inv:
   "\<lbrace>silc_inv aag st\<rbrace> handle_interrupt irq \<lbrace>\<lambda>_. silc_inv aag st\<rbrace>"
   unfolding handle_interrupt_def
+  apply (rule hoare_if)  
   apply(wp | wpc | simp | wp_once hoare_drop_imps)+
   done
 

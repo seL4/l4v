@@ -550,24 +550,29 @@ lemma timerTick_corres:
   apply simp
   done
 
+lemmas corres_eq_trivial = corres_Id[where f = h and g = h for h, simplified]
+thm corres_Id
+
 lemma handle_interrupt_corres:
   "corres dc 
      (einvs) (invs' and (\<lambda>s. intStateIRQTable (ksInterruptState s) irq \<noteq> IRQInactive))
      (handle_interrupt irq) (handleInterrupt irq)"
   (is "corres dc (einvs) ?P' ?f ?g")
-  apply (simp add: handle_interrupt_def handleInterrupt_def)
+  apply (simp add: handle_interrupt_def handleInterrupt_def )
+  apply (rule conjI[rotated]; rule impI)
+  
   apply (rule corres_guard_imp)
     apply (rule corres_split [OF _ get_irq_state_corres,
                               where R="\<lambda>rv. einvs"
-                                and R'="\<lambda>rv. invs' and (\<lambda>s. rv \<noteq> IRQInactive)"])
+                                and R'="\<lambda>rv. invs' and (\<lambda>s. rv \<noteq> IRQInactive)"])    
       defer
-      apply (wp getIRQState_prop getIRQState_inv)
-    apply simp+
-  apply (rule corres_gen_asm2)
-  apply (rule corres_split'[where r'=dc, rotated])
-     apply (rule corres_machine_op)
-     apply (rule corres_Id, simp+)
-     apply wp
+      apply (wp getIRQState_prop getIRQState_inv do_machine_op_bind doMachineOp_bind | simp add: do_machine_op_bind doMachineOp_bind )+
+      apply (rule corres_guard_imp)
+apply (rule corres_split)
+    apply (rule corres_machine_op, rule corres_eq_trivial ; (simp add: dc_def no_fail_maskInterrupt no_fail_bind no_fail_ackInterrupt)+)+
+    apply ((wp | simp)+)[4]
+    apply (rule corres_gen_asm2)
+
   apply (case_tac st, simp_all add: irq_state_relation_def split: irqstate.split_asm)
    apply (simp add: getSlotCap_def bind_assoc)
    apply (rule corres_guard_imp)
@@ -577,24 +582,29 @@ lemma handle_interrupt_corres:
                                  where R="\<lambda>rv. einvs and valid_cap rv"
                                   and R'="\<lambda>rv. invs' and valid_cap' (cteCap rv)"])
          apply (rule corres_split'[where r'=dc])
-            apply (case_tac cap, simp_all add: when_False when_True doMachineOp_return)[1]
+            apply (case_tac xb, simp_all add: when_False doMachineOp_return )[1]
              apply (clarsimp simp add: when_def doMachineOp_return)
              apply (rule corres_guard_imp, rule send_signal_corres)
-              apply (clarsimp simp: valid_cap_def)
-             apply (clarsimp simp: valid_cap'_def)
-            apply (clarsimp simp: doMachineOp_return)
-           apply (rule corres_machine_op)
-           apply (rule corres_Id, simp+)
-           apply (wp | simp)+
+              apply (clarsimp simp: valid_cap_def valid_cap'_def do_machine_op_bind doMachineOp_bind)+
+              apply ( rule corres_split)
+              apply (rule corres_machine_op, rule corres_eq_trivial ; (simp add:  no_fail_maskInterrupt no_fail_bind no_fail_ackInterrupt)+)+
+            apply ((wp |simp)+)
+            apply clarsimp
+   apply fastforce
+        
+            
+
+   apply (rule corres_guard_imp)
+   apply (rule corres_split)
+   apply simp
+     apply (rule corres_split [OF corres_machine_op timerTick_corres])
+       apply (rule corres_eq_trivial, simp+)
+       apply (rule corres_machine_op)
+       apply (rule corres_eq_trivial, (simp add: no_fail_ackInterrupt)+)
+       apply wp
     apply clarsimp
    apply clarsimp
-   apply fastforce
-  apply (rule corres_guard_imp)
-    apply (rule corres_split [OF corres_machine_op timerTick_corres])
-      apply (rule corres_Id, simp+)
-      apply wp
-   apply (clarsimp simp: invs_def valid_state_def valid_sched_def 
-                         valid_sched_action_def weak_valid_sched_action_def)+
+
   done
 
 lemma invs_ChooseNewThread:
@@ -847,16 +857,20 @@ lemma dmo_ackInterrupt[wp]:
 lemma hint_invs[wp]:
   "\<lbrace>invs'\<rbrace> handleInterrupt irq \<lbrace>\<lambda>rv. invs'\<rbrace>"
   apply (simp add: handleInterrupt_def getSlotCap_def
-             cong: irqstate.case_cong)
-  apply (wp dmo_maskInterrupt_True getCTE_wp' 
-         | wpc | simp)+
+  cong: irqstate.case_cong)
+  apply (rule conjI; rule impI)
+  
+   apply (wp dmo_maskInterrupt_True getCTE_wp'
+    | wpc | simp add: doMachineOp_bind )+
     apply (rule_tac Q="\<lambda>rv. invs'" in hoare_post_imp)
      apply (clarsimp simp: cte_wp_at_ctes_of ex_nonz_cap_to'_def)
      apply fastforce
     apply (wp threadSet_invs_trivial | simp add: inQ_def)+
-  apply (rule hoare_strengthen_post, rule getIRQState_inv)
-  apply (auto simp add: tcb_at_invs')
+
+  apply (wp hoare_post_comb_imp_conj hoare_drop_imp getIRQState_inv)
+  apply (assumption)
   done
+  
 
 crunch st_tcb_at'[wp]: timerTick "st_tcb_at' P t"
   (wp: threadSet_pred_tcb_no_state)
@@ -864,7 +878,7 @@ crunch st_tcb_at'[wp]: timerTick "st_tcb_at' P t"
 lemma handleInterrupt_runnable:
   "\<lbrace>st_tcb_at' runnable' t\<rbrace> handleInterrupt irq \<lbrace>\<lambda>_. st_tcb_at' runnable' t\<rbrace>"
   apply (simp add: handleInterrupt_def)
-  apply (rule hoare_pre)
+  apply (rule conjI; rule impI)  
    apply (wp sai_st_tcb' hoare_vcg_all_lift hoare_drop_imps 
              threadSet_pred_tcb_no_state getIRQState_inv haskell_fail_wp
           |wpc|simp)+

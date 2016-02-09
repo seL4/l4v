@@ -1,4 +1,4 @@
-Built from git repo at /home/xgao/verification/seL4/haskell by xgao
+Built from git repo at /home/spacekitteh/verification/seL4/haskell by spacekitteh
 
 Generated from changeset:
-007e805 fix for asmrefine
+0d0cf20 Fixed comments due to buggy haskell translator

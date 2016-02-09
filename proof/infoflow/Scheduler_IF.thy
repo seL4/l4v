@@ -2167,16 +2167,22 @@ lemma ackInterrupt_reads_respects_scheduler:
   done
 
 
+  
 lemma handle_interrupt_reads_respects_scheduler:
-        "reads_respects_scheduler aag l (invs and guarded_pas_domain aag and pas_refined aag and valid_sched and domain_sep_inv False st) (handle_interrupt irq)"
-  apply (simp add: handle_interrupt_def)
-  apply (wp | rule ackInterrupt_reads_respects_scheduler)+
-     apply (rule_tac Q="rv = IRQTimer \<or> rv = IRQInactive" in gen_asm_ev(2))
-     apply (elim disjE)
-      apply (wp timer_tick_reads_respects_scheduler 
+        "reads_respects_scheduler aag l (invs and guarded_pas_domain aag and pas_refined aag and valid_sched and domain_sep_inv False st and K (irq \<le> maxIRQ)) (handle_interrupt irq)"
+  apply (simp add: handle_interrupt_def )
+  apply (rule conjI; rule impI )
+   apply (rule gen_asm_ev)
+   apply simp
+  apply (wp modify_wp | simp )+
+  apply (rule ackInterrupt_reads_respects_scheduler)
+     apply (rule_tac Q="rv = IRQTimer \<or> rv = IRQInactive" in gen_asm_ev(2))     
+     apply (elim disjE)     
+      apply (wp timer_tick_reads_respects_scheduler        
+        ackInterrupt_reads_respects_scheduler
         dmo_resetTimer_reads_respects_scheduler
         get_irq_state_reads_respects_scheduler_trivial 
-        fail_ev irq_inactive_or_timer | simp add: | wpc)+
+        fail_ev irq_inactive_or_timer | simp )+      
    apply force
   done
 

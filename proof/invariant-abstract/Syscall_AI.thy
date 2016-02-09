@@ -1253,7 +1253,7 @@ lemma he_invs[wp]:
   apply (case_tac e, simp_all)
       apply (rename_tac syscall)
       apply (case_tac syscall, simp_all)
-      apply ((rule hoare_pre, wp hvmf_active hr_invs hy_inv) | 
+      apply ((rule hoare_pre, wp hvmf_active hr_invs hy_inv ) | 
                  wpc | wp hoare_drop_imps hoare_vcg_all_lift |
                  fastforce simp: tcb_at_invs ct_in_state_def valid_fault_def
                          elim!: st_tcb_ex_cap)+

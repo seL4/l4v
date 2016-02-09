@@ -82,22 +82,27 @@ definition timer_tick :: "unit det_ext_monad" where
 
 definition
   handle_interrupt :: "irq \<Rightarrow> (unit,'z::state_ext) s_monad" where
- "handle_interrupt irq \<equiv> do
-  st \<leftarrow> get_irq_state irq;
-  case st of
-    IRQSignal \<Rightarrow> do
-      slot \<leftarrow> get_irq_slot irq;
-      cap \<leftarrow> get_cap slot;
-      when (is_ntfn_cap cap \<and> AllowSend \<in> cap_rights cap)
-        $ send_signal (obj_ref_of cap) (cap_ep_badge cap); 
-      do_machine_op $ maskInterrupt True irq
+ "handle_interrupt irq \<equiv> 
+   if (irq > maxIRQ) then do_machine_op $ do
+    maskInterrupt True irq;
+    ackInterrupt irq
     od
-  | IRQTimer \<Rightarrow> do
-      do_extended_op timer_tick;
-      do_machine_op resetTimer
-    od
-  | IRQInactive \<Rightarrow> fail (* not meant to be able to get IRQs from inactive lines *);
-  do_machine_op $ ackInterrupt irq
-  od"
+  else do
+   st \<leftarrow> get_irq_state irq;
+   case st of
+     IRQSignal \<Rightarrow> do
+       slot \<leftarrow> get_irq_slot irq;
+       cap \<leftarrow> get_cap slot;
+       when (is_ntfn_cap cap \<and> AllowSend \<in> cap_rights cap)
+         $ send_signal (obj_ref_of cap) (cap_ep_badge cap); 
+       do_machine_op $ maskInterrupt True irq
+     od
+   | IRQTimer \<Rightarrow> do
+       do_extended_op timer_tick;
+       do_machine_op resetTimer
+     od
+   | IRQInactive \<Rightarrow> fail (* not meant to be able to get IRQs from inactive lines *);
+   do_machine_op $ ackInterrupt irq
+   od"
 
 end
