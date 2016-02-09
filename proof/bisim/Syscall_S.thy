@@ -659,16 +659,18 @@ lemma handle_event_bisim:
   apply (case_tac syscall, simp_all)[1]
 
   apply (rule bisim_guard_imp_both, rule handle_invocation_bisim, simp)
-  apply (rule bisim_guard_imp_both, rule handle_invocation_bisim, simp)
-  apply (rule bisim_guard_imp_both, rule handle_invocation_bisim, simp)
-  apply (rule bisim_guard_imp_both, rule handle_recv_bisim, simp)
-  apply (rule bisim_guard_imp_both, rule handle_reply_bisim, simp)
-
   apply (rule bisim_guard_imp_both)
    apply (rule bisim_symb_exec_r_bs)
     apply (rule handle_reply_bisim)
    apply (rule handle_recv_bisim)
   apply simp 
+
+  apply (rule bisim_guard_imp_both, rule handle_invocation_bisim, simp)
+  apply (rule bisim_guard_imp_both, rule handle_invocation_bisim, simp)
+  apply (rule bisim_guard_imp_both, rule handle_recv_bisim, simp)
+  apply (rule bisim_guard_imp_both, rule handle_reply_bisim, simp)
+
+
   
   apply (simp add: handle_yield_def Syscall_A.handle_yield_def)
   apply (rule bisim_guard_imp_both, rule bisim_refl', simp)

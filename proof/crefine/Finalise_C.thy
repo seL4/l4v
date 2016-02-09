@@ -1774,7 +1774,6 @@ lemma getIRQSlot_ccorres_stuff:
                    size_of_def mult.commute mult.left_commute of_int_uint_ucast )
   done
 
-declare[[show_types]]
 lemma deletingIRQHandler_ccorres:
   "ccorres dc xfdc (invs' and (\<lambda>s. weak_sch_act_wf (ksSchedulerAction s) s))
                    (UNIV \<inter> {s. irq_opt_relation (Some irq) (irq_' s)}) []

@@ -424,6 +424,26 @@ lemma checkIRQ_ret_good:
   apply (rule hoare_pre,wp)
   by (clarsimp simp: Kernel_C.maxIRQ_def split: split_if)
 
+lemma toEnum_of_ucast:
+  "len_of TYPE('b) \<le> len_of TYPE('a) \<Longrightarrow> 
+  (toEnum (unat (b::('b :: len word))):: ('a :: len word)) = of_nat (unat b)"
+  apply (subst toEnum_of_nat)
+   apply (rule less_le_trans[OF unat_lt2p])
+   apply (simp add:power2_nat_le_eq_le)
+  apply simp
+  done
+
+lemma unat_ucast_mask:
+  "len_of TYPE('b) \<le> len_of TYPE('a) \<Longrightarrow> (unat (ucast (a :: ('a :: len) word) :: ('b :: len) word)) = unat (a && mask (len_of TYPE('b)))"
+  apply (subst ucast_mask_drop[symmetric])
+   apply (rule le_refl)
+  apply (simp add:unat_ucast)
+  apply (subst nat_mod_eq')
+   apply (rule less_le_trans[OF word_unat_mask_lt le_refl])
+   apply (simp add: word_size)
+  apply simp
+  done
+
 lemma decodeIRQControlInvocation_ccorres:
   notes if_cong[cong] tl_drop_1[simp]
   shows
@@ -444,7 +464,7 @@ lemma decodeIRQControlInvocation_ccorres:
             >>= invocationCatch thread isBlocking isCall InvokeIRQControl)
      (Call decodeIRQControlInvocation_'proc)"
   apply (cinit' lift: invLabel_' srcSlot_' length___unsigned_long_' excaps_' buffer_')
-   apply (simp add: decodeIRQControlInvocation_def invocation_eq_use_types
+   apply (simp add: decodeIRQControlInvocation_def invocation_eq_use_types 
                del: Collect_const
               cong: StateSpace.state.fold_congs globals.fold_congs)
    apply (rule ccorres_Cond_rhs)
@@ -594,10 +614,13 @@ lemma decodeIRQControlInvocation_ccorres:
                         rf_sr_ksCurThread ccap_rights_relation_def
                         rightsFromWord_wordFromRights)
   apply (simp cong: conj_cong)
-  apply (simp add: Kernel_C.maxIRQ_def toEnum_of_nat word_le_nat_alt
-                   ucast_nat_def ucast_ucast_mask mask_eq_ucast_eq
-                   less_mask_eq[unfolded word_less_nat_alt])
-  done
 
+  apply (clarsimp simp add: Kernel_C.maxIRQ_def toEnum_of_nat word_le_nat_alt
+                   ucast_nat_def ucast_ucast_mask mask_eq_ucast_eq unat_ucast_mask
+                   less_mask_eq[unfolded word_less_nat_alt])
+   
+  apply (subst ucast_mask_drop)
+  apply (simp add:mask_def)+
+  done
 end
 end

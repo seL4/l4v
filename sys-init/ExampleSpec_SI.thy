@@ -49,15 +49,15 @@ lemma well_formed_empty:
 \<rparr>"
   by (clarsimp simp: well_formed_def well_formed_orig_caps_unique_def
                      well_formed_irqhandler_caps_unique_def well_formed_irqhandler_caps_def
-                     well_formed_irq_table_def ucast_8_32_inj
+                     well_formed_irq_table_def down_ucast_inj is_down
                      well_formed_fake_pt_caps_unique_def irq_nodes_def object_at_def
                      opt_cap_def slots_of_def opt_object_def bound_irqs_def)
 
 
-definition "tcb_id = 1000"
-definition "cnode_id = 1001"
-definition "pd_id = 1002"
-definition "frame_id = 1003"
+definition "tcb_id = 2000"
+definition "cnode_id = 2001"
+definition "pd_id = 2002"
+definition "frame_id = 2003"
 lemmas object_id_defs = tcb_id_def cnode_id_def pd_id_def frame_id_def
 
 definition
@@ -198,10 +198,10 @@ lemma well_formed_cap_example [simp]:
               split: cdl_cap.splits split_if_asm)
 
 lemma range_example_irq_node:
-  "range example_irq_node = {x. x \<le> 0xFF}"
+  "range example_irq_node = {x. x \<le> 0x3FF}"
   apply (clarsimp simp: irq_nodes_def example_spec_def example_irq_node_def)
   apply (subst ucast_range_less, simp+)
-  apply (subst word_less_sub_le [where 'a = 32 and n=8, simplified])
+  apply (subst word_less_sub_le [where 'a = 32 and n=10, simplified])
   apply simp
   done
 
@@ -210,8 +210,8 @@ lemma irq_cnodes_example_spec [simp]:
   by (clarsimp simp: irq_nodes_def range_example_irq_node
                      object_at_def is_irq_node_def example_spec_def)
 
-lemma example_irq_node_less_255:
-  "example_irq_node irq = obj_id \<Longrightarrow> obj_id \<le> 255"
+lemma example_irq_node_less_3FF:
+  "example_irq_node irq = obj_id \<Longrightarrow> obj_id \<le> 0x3FF"
   apply (insert range_example_irq_node)
   apply (auto simp: image_def)
   done
@@ -223,7 +223,7 @@ lemma well_formed_irqhandler_caps_example:
                         empty_cap_map_def opt_cap_def slots_of_def opt_object_def
                         example_tcb_def
                  split: split_if_asm)
-  apply (drule example_irq_node_less_255, simp)+
+  apply (drule example_irq_node_less_3FF, simp)+
   done
 
 lemma well_formed_cdt_example [simp]:
@@ -325,9 +325,9 @@ lemma well_formed_irq_table_example [simp]:
   "well_formed_irq_table example_spec"
   apply (clarsimp simp: well_formed_irq_table_def)
   apply (rule conjI)
-  apply (clarsimp simp: well_formed_irq_table_def example_irq_node_def ucast_8_32_inj)
+  apply (clarsimp simp: well_formed_irq_table_def example_irq_node_def down_ucast_inj is_down)
   apply clarsimp
-  apply (cut_tac irq=irq in example_irq_node_less_255, simp)
+  apply (cut_tac irq=irq in example_irq_node_less_3FF, simp)
   apply (clarsimp simp: example_spec_def object_id_defs split: split_if_asm)
   done
 

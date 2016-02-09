@@ -304,7 +304,7 @@ definition
   kh0H :: "(word32 \<rightharpoonup> Structures_H.kernel_object)"
 where 
   "kh0H \<equiv> (option_update_range
-           (\<lambda>x. if \<exists>irq::8 word. init_irq_node_ptr + (ucast irq << cte_level_bits) = x
+           (\<lambda>x. if \<exists>irq::10 word. init_irq_node_ptr + (ucast irq << cte_level_bits) = x
                 then Some (KOCTE (CTE capability.NullCap Null_mdb)) else None) \<circ>
           option_update_range (Low_cte Low_cnode_ptr) \<circ>
           option_update_range (High_cte High_cnode_ptr) \<circ>
@@ -1000,7 +1000,7 @@ lemma not_disjointI:
   by fastforce
 
 lemma kh0H_simps[simp]:
-  "kh0H (init_irq_node_ptr + (ucast (irq::8 word) << cte_level_bits)) =
+  "kh0H (init_irq_node_ptr + (ucast (irq::10 word) << cte_level_bits)) =
                 Some (KOCTE (CTE capability.NullCap Null_mdb))"
   "kh0H ntfn_ptr = Some (KONotification ntfnH)"
   "kh0H irq_cnode_ptr = Some (KOCTE irq_cte)"
@@ -1018,6 +1018,7 @@ lemma kh0H_simps[simp]:
   "kh0H (High_pt_ptr + (ucast (z:: 8 word) << 2)) = High_ptH High_pt_ptr (High_pt_ptr + (ucast (z:: 8 word) << 2))"
       apply (clarsimp simp: kh0H_def option_update_range_def)
       apply fastforce
+     apply (simp add:kh0H_def)
      apply (clarsimp simp: kh0H_def option_update_range_def kh0H_dom_distinct not_in_range_None)+
      by ((clarsimp simp: kh0H_def option_update_range_def kh0H_dom_distinct kh0H_dom_distinct' not_in_range_None offs_in_range | simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD1] not_in_range_None | simp add: offs_in_range kh0H_dom_sets_distinct[THEN orthD2] not_in_range_None)+,
             rule conjI,
@@ -1095,7 +1096,7 @@ where
   "s0H_internal \<equiv>  \<lparr>
     ksPSpace = kh0H,
     gsUserPages = (\<lambda>x. if x = init_globals_frame then Some ARMSmallPage else None),
-    gsCNodes = (\<lambda>x. if \<exists>irq::8 word. init_irq_node_ptr + (ucast irq << cte_level_bits) = x
+    gsCNodes = (\<lambda>x. if \<exists>irq::10 word. init_irq_node_ptr + (ucast irq << cte_level_bits) = x
           then Some 0 else None)
          (Low_cnode_ptr  \<mapsto> 10,
           High_cnode_ptr \<mapsto> 10,
@@ -1277,7 +1278,7 @@ lemma gt_imp_neq:
 lemma map_to_ctes_kh0H:
   "map_to_ctes kh0H = 
           (option_update_range
-           (\<lambda>x. if \<exists>irq::8 word. init_irq_node_ptr + (ucast irq << cte_level_bits) = x
+           (\<lambda>x. if \<exists>irq::10 word. init_irq_node_ptr + (ucast irq << cte_level_bits) = x
                 then Some (CTE NullCap Null_mdb) else None) \<circ>
           option_update_range (Low_cte_cte Low_cnode_ptr) \<circ>
           option_update_range (High_cte_cte High_cnode_ptr) \<circ>
@@ -1413,7 +1414,7 @@ lemma map_to_ctes_kh0H:
    apply (drule shiftl_less_t2n'[where n=4])
     apply simp
    apply simp
-   apply (drule plus_one_helper[where n="0xFFF", simplified])
+   apply (drule plus_one_helper[where n="0x3FFF", simplified])
    apply (elim disjE)
          apply (unat_arith+)[6]
    apply (drule WordLemmaBucket.int_not_emptyD)
@@ -1546,7 +1547,7 @@ lemma tcb_offs_in_rangeI:
   by (simp add: tcb_offs_range_def)
 
 lemma map_to_ctes_kh0H_simps[simp]:
-  "map_to_ctes kh0H (init_irq_node_ptr + (ucast (irq::8 word) << cte_level_bits)) =
+  "map_to_ctes kh0H (init_irq_node_ptr + (ucast (irq::10 word) << cte_level_bits)) =
                 Some (CTE NullCap Null_mdb)"
   "map_to_ctes kh0H irq_cnode_ptr = Some (CTE NullCap Null_mdb)"
   "length x = 10 \<Longrightarrow> map_to_ctes kh0H (Low_cnode_ptr + of_bl x * 0x10) = Low_cte_cte Low_cnode_ptr (Low_cnode_ptr + of_bl x * 0x10)"
@@ -2175,11 +2176,17 @@ lemma s0H_valid_objs':
          apply (clarsimp simp: valid_obj'_def Low_cte_def Low_cte'_def Low_capsH_def empty_cte_def valid_cte'_def split: split_if_asm)
         apply (clarsimp simp: valid_obj'_def High_cte_def High_cte'_def High_capsH_def empty_cte_def valid_cte'_def split: split_if_asm)
        apply (clarsimp simp: valid_obj'_def Silc_cte_def Silc_cte'_def Silc_capsH_def empty_cte_def valid_cte'_def split: split_if_asm)
-      apply (clarsimp simp: valid_obj'_def global_pdH'_def valid_mapping'_def s0_ptr_defs is_aligned_def Platform.addrFromPPtr_def Platform.ptrFromPAddr_def physMappingOffset_def kernelBase_addr_def physBase_def split: split_if_asm)
-     apply (clarsimp simp: valid_obj'_def High_pdH_def High_pd'H_def valid_pde'_def valid_mapping'_def s0_ptr_defs is_aligned_def Platform.addrFromPPtr_def Platform.ptrFromPAddr_def ptBits_def pageBits_def physMappingOffset_def kernelBase_addr_def physBase_def split: split_if_asm)
-    apply (clarsimp simp: valid_obj'_def Low_pdH_def Low_pd'H_def valid_pde'_def valid_mapping'_def s0_ptr_defs is_aligned_def Platform.addrFromPPtr_def Platform.ptrFromPAddr_def ptBits_def pageBits_def physMappingOffset_def kernelBase_addr_def physBase_def split: split_if_asm)
-   apply (clarsimp simp: valid_obj'_def High_ptH_def High_pt'H_def valid_mapping'_def s0_ptr_defs is_aligned_def Platform.addrFromPPtr_def Platform.ptrFromPAddr_def physMappingOffset_def kernelBase_addr_def physBase_def split: split_if_asm)
-  apply (clarsimp simp: valid_obj'_def Low_ptH_def Low_pt'H_def valid_mapping'_def s0_ptr_defs is_aligned_def Platform.addrFromPPtr_def Platform.ptrFromPAddr_def physMappingOffset_def kernelBase_addr_def physBase_def split: split_if_asm)
+      apply (clarsimp simp: valid_obj'_def global_pdH'_def valid_mapping'_def s0_ptr_defs is_aligned_def Platform.addrFromPPtr_def Platform.ptrFromPAddr_def
+        physMappingOffset_def Platform.kernelBase_def Platform.physBase_def
+        kernelBase_addr_def physBase_def split: split_if_asm)
+     apply (clarsimp simp: valid_obj'_def High_pdH_def High_pd'H_def valid_pde'_def valid_mapping'_def s0_ptr_defs is_aligned_def Platform.addrFromPPtr_def 
+       Platform.kernelBase_def Platform.physBase_def Platform.ptrFromPAddr_def ptBits_def pageBits_def physMappingOffset_def kernelBase_addr_def physBase_def split: split_if_asm)
+    apply (clarsimp simp: valid_obj'_def Low_pdH_def Low_pd'H_def valid_pde'_def valid_mapping'_def s0_ptr_defs is_aligned_def Platform.addrFromPPtr_def 
+      Platform.ptrFromPAddr_def Platform.physBase_def ptBits_def pageBits_def physMappingOffset_def kernelBase_addr_def physBase_def split: split_if_asm)
+   apply (clarsimp simp: valid_obj'_def High_ptH_def High_pt'H_def valid_mapping'_def s0_ptr_defs is_aligned_def Platform.addrFromPPtr_def
+     Platform.ptrFromPAddr_def Platform.kernelBase_def Platform.physBase_def physMappingOffset_def kernelBase_addr_def physBase_def split: split_if_asm)
+  apply (clarsimp simp: valid_obj'_def Low_ptH_def Low_pt'H_def valid_mapping'_def s0_ptr_defs is_aligned_def Platform.addrFromPPtr_def
+    Platform.physBase_def Platform.ptrFromPAddr_def physMappingOffset_def kernelBase_addr_def physBase_def split: split_if_asm)
   done
 
 lemmas the_nat_to_bl_simps =
@@ -3101,6 +3108,18 @@ lemma shiftl_shiftr_2_word12[simp]:
   apply simp
   done
 
+lemma shiftl_shiftr_2_word10[simp]:
+  "ucast (((ucast (x:: 10 word) << 2)::word32) >> 2) = x"
+  apply (subst shiftl_shiftr_id)
+    apply simp
+   apply (cut_tac ucast_less[where x=x])
+    apply (erule less_trans)
+    apply simp
+   apply simp
+  apply (rule ucast_ucast_id)
+  apply simp
+  done
+
 lemma shiftl_shiftr_2_word8[simp]:
   "ucast (((ucast (x:: 8 word) << 2)::word32) >> 2) = x"
   apply (subst shiftl_shiftr_id)
@@ -3218,7 +3237,7 @@ lemma s0_srel: "(s0_internal, s0H_internal) \<in> state_relation"
                apply (subgoal_tac "a \<notin> irq_node_offs_range")
                 prefer 2
                 apply (clarsimp simp: irq_node_offs_range_def s0_ptr_defs cte_level_bits_def)
-                apply (erule_tac x="ucast (a - 0xF0003000 >> 4)" in allE)
+                apply (erule_tac x="ucast (a - 0xE0008000 >> 4)" in allE)
                 apply (subst(asm) ucast_ucast_len)
                  apply (rule shiftr_less_t2n)
                  apply (rule word_less_sub_right)

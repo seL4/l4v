@@ -280,7 +280,8 @@ lemma decode_irq_control_invocation_rev:
         | simp add: Let_def arch_decode_irq_control_invocation_def)+
   apply safe
        apply simp+
-    apply(blast intro: aag_Control_into_owns_irq)
+    apply (simp add:ucast_mask_drop)
+    apply(blast intro: aag_Control_into_owns_irq )
    apply(drule_tac x="caps ! 0" in bspec)
     apply(fastforce intro: bang_0_in_set)
    apply(drule (1) is_cnode_into_is_subject)
