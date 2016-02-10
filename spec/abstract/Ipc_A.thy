@@ -83,18 +83,18 @@ where
 type_synonym transfer_caps_data = "(cap \<times> cslot_ptr) list \<times> cslot_ptr list"
 
 fun
-  transfer_caps_loop :: "obj_ref option \<Rightarrow> bool \<Rightarrow> obj_ref \<Rightarrow> nat
+  transfer_caps_loop :: "obj_ref option \<Rightarrow> obj_ref \<Rightarrow> nat
                           \<Rightarrow> (cap \<times> cslot_ptr) list \<Rightarrow> cslot_ptr list
                           \<Rightarrow> message_info \<Rightarrow> (message_info,'z::state_ext) s_monad"
 where
-  "transfer_caps_loop ep diminish rcv_buffer n [] slots
+  "transfer_caps_loop ep rcv_buffer n [] slots
       mi = return (MI (mi_length mi) (of_nat n) (mi_caps_unwrapped mi)
                         (mi_label mi))"
-| "transfer_caps_loop ep diminish rcv_buffer n ((cap, slot) # morecaps)
+| "transfer_caps_loop ep rcv_buffer n ((cap, slot) # morecaps)
          slots mi =
   const_on_failure (MI (mi_length mi) (of_nat n) (mi_caps_unwrapped mi)
                        (mi_label mi)) (doE
-    transfer_rest \<leftarrow> returnOk $ transfer_caps_loop ep diminish
+    transfer_rest \<leftarrow> returnOk $ transfer_caps_loop ep
          rcv_buffer (n + 1) morecaps;
     if (is_ep_cap cap \<and> ep = Some (obj_ref_of cap))
     then doE
@@ -104,7 +104,7 @@ where
     odE
     else if slots \<noteq> []
     then doE
-      cap' \<leftarrow> derive_cap slot (if diminish then remove_rights {AllowWrite} cap else cap);
+      cap' \<leftarrow> derive_cap slot cap;
       whenE (cap' = NullCap) $ throwError undefined;
       liftE $ cap_insert cap' slot (hd slots);
       liftE $ transfer_rest (tl slots) mi
@@ -115,16 +115,16 @@ where
 
 definition
   transfer_caps :: "message_info \<Rightarrow> (cap \<times> cslot_ptr) list \<Rightarrow>
-                   obj_ref option \<Rightarrow> obj_ref \<Rightarrow> obj_ref option \<Rightarrow> bool \<Rightarrow>
+                   obj_ref option \<Rightarrow> obj_ref \<Rightarrow> obj_ref option \<Rightarrow>
                    (message_info,'z::state_ext) s_monad"
 where
-  "transfer_caps info caps endpoint receiver recv_buffer diminish \<equiv> do
+  "transfer_caps info caps endpoint receiver recv_buffer \<equiv> do
      dest_slots \<leftarrow> get_receive_slots receiver recv_buffer;
      mi' \<leftarrow> return $ MI (mi_length info) 0 0 (mi_label info);
      case recv_buffer of
        None \<Rightarrow> return mi'
      | Some receive_buffer \<Rightarrow>
-         transfer_caps_loop endpoint diminish receive_buffer 0 caps dest_slots mi'
+         transfer_caps_loop endpoint receive_buffer 0 caps dest_slots mi'
    od"
 
 section {* Fault Handling *}
@@ -202,16 +202,16 @@ definition
   do_normal_transfer :: "obj_ref \<Rightarrow> obj_ref option \<Rightarrow> obj_ref option
                                     \<Rightarrow> data \<Rightarrow> bool \<Rightarrow> obj_ref
                                     \<Rightarrow> obj_ref option
-                                    \<Rightarrow> bool \<Rightarrow> (unit,'z::state_ext) s_monad"
+                                    \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
  "do_normal_transfer sender sbuf endpoint badge grant
-                     receiver rbuf diminish \<equiv>
+                     receiver rbuf  \<equiv>
   do
     mi \<leftarrow> get_message_info sender;
     caps \<leftarrow> if grant then lookup_extra_caps sender sbuf mi <catch> K (return [])
       else return [];
     mrs_transferred \<leftarrow> copy_mrs sender sbuf receiver rbuf (mi_length mi);
-    mi' \<leftarrow> transfer_caps mi caps endpoint receiver rbuf diminish;
+    mi' \<leftarrow> transfer_caps mi caps endpoint receiver rbuf;
     set_message_info receiver $ MI mrs_transferred (mi_extra_caps mi')
                                    (mi_caps_unwrapped mi') (mi_label mi);
     as_user receiver $ set_register badge_register badge
@@ -220,10 +220,10 @@ where
 text {* Transfer a message either involving a fault or not. *}
 definition
   do_ipc_transfer :: "obj_ref \<Rightarrow> obj_ref option \<Rightarrow>
-                       badge \<Rightarrow> bool \<Rightarrow> obj_ref \<Rightarrow> bool \<Rightarrow> (unit,'z::state_ext) s_monad"
+                       badge \<Rightarrow> bool \<Rightarrow> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
   "do_ipc_transfer sender ep badge grant
-     receiver diminish \<equiv> do
+     receiver \<equiv> do
 
      recv_buffer \<leftarrow> lookup_ipc_buffer True receiver;
      fault \<leftarrow> thread_get tcb_fault sender;
@@ -232,7 +232,7 @@ where
         of None \<Rightarrow> do
             send_buffer \<leftarrow> lookup_ipc_buffer False sender;
             do_normal_transfer sender send_buffer ep badge grant
-                           receiver recv_buffer diminish
+                           receiver recv_buffer
             od
          | Some f \<Rightarrow> do_fault_transfer badge sender receiver recv_buffer
    od"
@@ -247,7 +247,7 @@ where
     fault \<leftarrow> thread_get tcb_fault receiver;
     case fault of
       None \<Rightarrow> do
-         do_ipc_transfer sender None 0 True receiver False;
+         do_ipc_transfer sender None 0 True receiver;
          cap_delete_one slot;
          set_thread_state receiver Running;
          do_extended_op (attempt_switch_to receiver)
@@ -315,22 +315,22 @@ where
        | (IdleEP, False) \<Rightarrow> return ()
        | (SendEP queue, False) \<Rightarrow> return ()
        | (RecvEP (dest # queue), _) \<Rightarrow> do
-             set_endpoint epptr $ (case queue of [] \<Rightarrow> IdleEP
-                                                | _ \<Rightarrow> RecvEP queue);
-             recv_state \<leftarrow> get_thread_state dest;
-             diminish \<leftarrow> (case recv_state
-                           of BlockedOnReceive x d \<Rightarrow> return d
-                            | _ \<Rightarrow> fail);
-             do_ipc_transfer thread (Some epptr) badge
-                             can_grant dest diminish;
-             set_thread_state dest Running;
-             do_extended_op (attempt_switch_to dest);
-             fault \<leftarrow> thread_get tcb_fault thread;
-             when (call \<or> fault \<noteq> None) $
-               if can_grant \<and> \<not> diminish
-               then setup_caller_cap thread dest
-               else set_thread_state thread Inactive
-           od
+                set_endpoint epptr $ (case queue of [] \<Rightarrow> IdleEP
+                                                     | _ \<Rightarrow> RecvEP queue);
+                recv_state \<leftarrow> get_thread_state dest;
+                case recv_state
+                  of (BlockedOnReceive x) \<Rightarrow> 
+                  do_ipc_transfer thread (Some epptr) badge
+                             can_grant dest
+                  | _ \<Rightarrow> fail;
+                set_thread_state dest Running;
+                do_extended_op (attempt_switch_to dest);
+                fault \<leftarrow> thread_get tcb_fault thread;
+                when (call \<or> fault \<noteq> None) $
+                  if can_grant
+                  then setup_caller_cap thread dest
+                  else set_thread_state thread Inactive
+                od
        | (RecvEP [], _) \<Rightarrow> fail
    od"
 
@@ -372,7 +372,6 @@ where
      (epptr,rights) \<leftarrow> (case cap
                        of EndpointCap ref badge rights \<Rightarrow> return (ref,rights)
                         | _ \<Rightarrow> fail);
-     diminish \<leftarrow> return (AllowSend \<notin> rights);
      ep \<leftarrow> get_endpoint epptr;
      ntfnptr \<leftarrow> get_bound_notification thread;
      ntfn \<leftarrow> case_option (return default_notification) get_notification ntfnptr;
@@ -383,13 +382,13 @@ where
        case ep
          of IdleEP \<Rightarrow> case is_blocking of
               True \<Rightarrow> do
-                  set_thread_state thread (BlockedOnReceive epptr diminish);
+                  set_thread_state thread (BlockedOnReceive epptr);
                   set_endpoint epptr (RecvEP [thread])
                 od
               | False \<Rightarrow> do_nbrecv_failed_transfer thread
             | RecvEP queue \<Rightarrow> case is_blocking of
               True \<Rightarrow> do
-                  set_thread_state thread (BlockedOnReceive epptr diminish);
+                  set_thread_state thread (BlockedOnReceive epptr);
                   set_endpoint epptr (RecvEP (queue @ [thread]))
                 od
               | False \<Rightarrow> do_nbrecv_failed_transfer thread
@@ -405,11 +404,11 @@ where
                         | _ \<Rightarrow> fail);
               do_ipc_transfer sender (Some epptr)
                         (sender_badge data) (sender_can_grant data)
-                        thread diminish;
+                        thread;
               fault \<leftarrow> thread_get tcb_fault sender;
               if ((sender_is_call data) \<or> (fault \<noteq> None))
               then
-                if sender_can_grant data \<and> \<not> diminish
+                if sender_can_grant data
                 then setup_caller_cap sender thread
                 else set_thread_state sender Inactive
               else do
@@ -448,7 +447,7 @@ definition
   receive_blocked :: "thread_state \<Rightarrow> bool"
 where
   "receive_blocked st \<equiv> case st of
-       BlockedOnReceive _ _ \<Rightarrow> True
+       BlockedOnReceive _ \<Rightarrow> True
      | _ \<Rightarrow> False"
 
 definition

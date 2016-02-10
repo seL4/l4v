@@ -219,7 +219,7 @@ lemma cancel_ipc_tcb [wp]:
 
 
 lemma gbep_ret:
-  "\<lbrakk> st = Structures_A.BlockedOnReceive epPtr x \<or> 
+  "\<lbrakk> st = Structures_A.BlockedOnReceive epPtr \<or> 
      st = Structures_A.BlockedOnSend epPtr p \<rbrakk> \<Longrightarrow>
   get_blocking_object st = return epPtr"
   by (auto simp add: get_blocking_object_def)
@@ -301,7 +301,7 @@ lemma ep_redux_simps2:
 lemma gbi_ep_sp:
   "\<lbrace>P\<rbrace>
      get_blocking_object st
-   \<lbrace>\<lambda>ep. P and K ((\<exists>d. st = Structures_A.BlockedOnReceive ep d)
+   \<lbrace>\<lambda>ep. P and K ((st = Structures_A.BlockedOnReceive ep)
                     \<or> (\<exists>d. st = Structures_A.BlockedOnSend ep d))\<rbrace>"
   apply (cases st, simp_all add: get_blocking_object_def)
    apply (wp | simp)+

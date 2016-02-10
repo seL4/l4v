@@ -47,8 +47,6 @@ definition
     destFault \<leftarrow>
     unlessE (destPrio \<ge> curPrio) $ throwError ();
     unlessE (capEPCanGrant epCap) $ throwError ();
-    destST \<leftarrow> liftE $ getThreadState dest;
-    unlessE (\<not> blockingIPCDiminishCaps destST) $ throwError ();
     asidMap \<leftarrow> liftE $ gets $ armKSASIDMap o ksArchState;
     unlessE (\<exists>v. {hwasid. (hwasid, pd) \<in> ran asidMap} = {v})
         $ throwError ();
@@ -132,8 +130,7 @@ definition
     unlessE (callerDom = curDom) $ throwError ();
 
     liftE $ do
-      threadSet (tcbState_update (\<lambda>_. BlockedOnReceive (capEPPtr epCap)
-                                        (\<not> capEPCanSend epCap))) curThread;
+      threadSet (tcbState_update (\<lambda>_. BlockedOnReceive (capEPPtr epCap))) curThread;
       setEndpoint (capEPPtr epCap)
            (case ep of IdleEP \<Rightarrow> RecvEP [curThread] | RecvEP ts \<Rightarrow> RecvEP (ts @ [curThread]));
       mdbPrev \<leftarrow> liftM (mdbPrev o cteMDBNode) $ getCTE callerSlot;
@@ -1240,35 +1237,6 @@ lemma thread_state_ptr_mset_blockingObject_tsType_spec:
            simp_all add: mask_eq_x_eq_0)
   done
 
-lemma thread_state_ptr_set_blockingIPCDiminish_np_spec:
-  defines "ptr s \<equiv> cparent \<^bsup>s\<^esup>ts_ptr [''tcbState_C''] :: tcb_C ptr"
-  shows
-  "\<forall>s. \<Gamma>\<turnstile> \<lbrace>s. hrs_htd \<^bsup>s\<^esup>t_hrs \<Turnstile>\<^sub>t ptr s \<and> dim_' s && 1 = dim_' s\<rbrace>
-              Call thread_state_ptr_set_blockingIPCDiminish_np_'proc
-       {t. \<exists>tcb ts. cslift s (ptr s) = Some tcb
-             \<and> blockingIPCDiminishCaps_CL (thread_state_lift ts) = dim_' s
-             \<and> tcbQueued_CL (thread_state_lift ts)
-                  = tcbQueued_CL (thread_state_lift (tcbState_C tcb))
-             \<and> tsType_CL (thread_state_lift ts)
-                  = tsType_CL (thread_state_lift (tcbState_C tcb))
-             \<and> blockingObject_CL (thread_state_lift ts)
-                  = blockingObject_CL (thread_state_lift (tcbState_C tcb))
-             \<and> cslift t = cslift s(ptr s \<mapsto> tcb\<lparr>tcbState_C := ts\<rparr>)
-             \<and> types_proofs.cslift_all_but_tcb_C t s
-             \<and> hrs_htd (t_hrs_' (globals t)) = hrs_htd (t_hrs_' (globals s))}"
-  apply (intro allI, rule conseqPre, vcg)
-  apply (clarsimp simp: ptr_def)
-  apply (frule h_t_valid_c_guard_cparent, simp+)
-   apply (simp add: typ_uinfo_t_def)
-  apply (clarsimp simp: h_t_valid_clift_Some_iff)
-  apply (frule clift_subtype, simp+)
-  apply (clarsimp simp: typ_heap_simps')
-  apply (subst parent_update_child, erule typ_heap_simps', simp+)
-  apply (clarsimp simp: typ_heap_simps' word_sle_def)
-  apply (rule exI, intro conjI[rotated], rule refl)
-     apply (simp_all add: thread_state_lift_def)
-  done
-
 lemma mdb_node_ptr_mset_mdbNext_mdbRevocable_mdbFirstBadged_spec:
   defines "ptr s \<equiv> cparent \<^bsup>s\<^esup>node_ptr [''cteMDBNode_C''] :: cte_C ptr"
   shows
@@ -2335,7 +2303,7 @@ lemma fastpath_call_ccorres:
     done
 
   show ?thesis
-  using [[goals_limit = 1]]
+  using [[goals_limit = 3]] 
   apply (cinit lift: cptr_' msgInfo_')
      apply (simp add: catch_liftE_bindE unlessE_throw_catch_If
                       unifyFailure_catch_If catch_liftE
@@ -2518,46 +2486,11 @@ apply (simp add: getThreadCSpaceRoot_def locateSlot_conv
                            del: Collect_const cong: call_ignore_cong)
                apply (rule ccorres_Cond_rhs_Seq)
                 apply simp
-                apply (rule ccorres_cond_true_seq)
                 apply (rule ccorres_split_throws)
                  apply (fold dc_def)[1]
                  apply (rule ccorres_call_hSkip)
                    apply (rule slowpath_ccorres, simp+)
                 apply (vcg exspec=slowpath_noreturn_spec)
-               apply (simp del: Collect_const cong: call_ignore_cong)
-               apply (rule ccorres_rhs_assoc)+
-               apply (rule_tac xf'="ret__unsigned_'"
-                            and r'="\<lambda>rv rv'. rv' = from_bool (blockingIPCDiminishCaps rv)"
-                             in ccorres_split_nothrow)
-                   apply (rule_tac P="ko_at' send_ep (capEPPtr (theRight luRet))
-                                       and (sym_refs o state_refs_of')"
-                            in ccorres_from_vcg[where P'=UNIV])
-                   apply (rule allI, rule conseqPre, vcg)
-                   apply (clarsimp simp: isRecvEP_endpoint_case
-                                         neq_Nil_conv)
-                   apply (drule(1) sym_refs_ko_atD')
-                   apply (clarsimp simp: typ_heap_simps' ep_q_refs_of'_def
-                                         isRecvEP_endpoint_case
-                                         st_tcb_at_refs_of_rev'
-                                         st_tcb_at'_def)
-                   apply (drule(1) obj_at_cslift_tcb)
-                   apply (clarsimp simp: typ_heap_simps' getThreadState_def)
-                   apply (rule rev_bexI, erule threadGet_eq)
-                   apply (clarsimp simp: ctcb_relation_def isBlockedOnReceive_def
-                                         cthread_state_relation_def)
-                   apply (simp add: thread_state_lift_def word_size)
-                  apply ceqv
-                 apply (rename_tac send_state send_state_c)
-                 apply csymbr
-                 apply (simp add: if_1_0_0 ccap_relation_ep_helpers from_bool_0
-                             del: Collect_const cong: call_ignore_cong)
-                 apply (rule ccorres_Cond_rhs_Seq)
-                  apply simp
-                  apply (rule ccorres_split_throws)
-                   apply (fold dc_def)[1]
-                   apply (rule ccorres_call_hSkip)
-                     apply (rule slowpath_ccorres, simp+)
-                  apply (vcg exspec=slowpath_noreturn_spec)
                  apply (simp add: ccap_relation_pd_helper cap_get_tag_isCap_ArchObject2
                          del: Collect_const WordSetup.ptr_add_def cong: call_ignore_cong)
                  apply csymbr
@@ -2576,7 +2509,6 @@ apply (simp add: getThreadCSpaceRoot_def locateSlot_conv
                   apply (simp add: pde_stored_asid_def asid_map_pd_to_hwasids_def
                                    to_bool_def
                               del: Collect_const cong: call_ignore_cong)
-(*                  apply (rule ccorres_abstract_ksCurThread, ceqv) *)
                   apply (rule ccorres_move_c_guard_tcb ccorres_move_const_guard)+
                   apply (rule ccorres_symb_exec_l3[OF _ curDomain_inv _])
                     prefer 3
@@ -2819,10 +2751,6 @@ apply (simp add: getThreadCSpaceRoot_def locateSlot_conv
                  apply simp
                  apply wp[1]
                 apply simp
-                apply (rule gts_wp')
-               apply (simp del: Collect_const)
-               apply (vcg exspec=thread_state_ptr_get_blockingIPCDiminishCaps_modifies)
-              apply simp
               apply (rule threadGet_wp)
              apply simp
              apply (rule threadGet_wp)
@@ -3362,7 +3290,6 @@ lemma fastpath_reply_recv_ccorres:
                                 del: Collect_const cong: call_ignore_cong)
                        apply simp
 
-                    apply (rule ccorres_rhs_assoc2, rule ccorres_rhs_assoc2)
                     apply (rule_tac xf'=xfdc and r'=dc in ccorres_split_nothrow)
                         apply (rule_tac P="capAligned (theRight luRet)" in ccorres_gen_asm)
                         apply (rule_tac P=\<top> and P'="\<lambda>s. ksCurThread s = curThread"
@@ -3372,8 +3299,6 @@ lemma fastpath_reply_recv_ccorres:
                                               h_t_valid_clift_Some_iff)
                         apply (clarsimp simp: capAligned_def isCap_simps objBits_simps
                                               "StrictC'_thread_state_defs" mask_def)
-                        apply (simp add: ccap_relation_ep_helpers)
-                        apply (clarsimp simp: if_distrib[where f=scast] if_Const_helper[where Con="\<lambda>x. x && 1", symmetric])
                         apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                                               typ_heap_simps')
                         apply (rule conjI)
@@ -3529,8 +3454,7 @@ lemma fastpath_reply_recv_ccorres:
                                threadSet_state_refs_of' threadSet_ctes_of
                                valid_ep_typ_at_lift' threadSet_cte_wp_at'
                                   | simp)+
-                    apply (vcg exspec=thread_state_ptr_set_blockingIPCDiminish_np_modifies
-                               exspec=thread_state_ptr_mset_blockingObject_tsType_modifies)
+                    apply (vcg exspec=thread_state_ptr_mset_blockingObject_tsType_modifies)
 
                      apply simp
                      apply (rule threadGet_wp)
@@ -4294,7 +4218,7 @@ lemma setVMRoot_isolatable:
   done
 
 lemma transferCaps_simple:
-  "transferCaps mi [] ep receiver rcvrBuf diminish =
+  "transferCaps mi [] ep receiver rcvrBuf =
         do
           getReceiveSlots receiver rcvrBuf;
           return (mi\<lparr>msgExtraCaps := 0, msgCapsUnwrapped := 0\<rparr>)
@@ -4308,7 +4232,7 @@ lemma transferCaps_simple:
 
 lemma transferCaps_simple_rewrite:
   "monadic_rewrite True True ((\<lambda>_. caps = []) and \<top>)
-   (transferCaps mi caps ep r rBuf diminish)
+   (transferCaps mi caps ep r rBuf)
    (return (mi \<lparr> msgExtraCaps := 0, msgCapsUnwrapped := 0 \<rparr>))"
   apply (rule monadic_rewrite_gen_asm)
   apply (rule monadic_rewrite_imp)
@@ -4333,7 +4257,7 @@ lemma doIPCTransfer_simple_rewrite:
                       \<le> of_nat (length State_H.msgRegisters))
       and obj_at' (\<lambda>tcb. tcbFault tcb = None
                \<and> tcbContext tcb msgInfoRegister = msgInfo) sender)
-   (doIPCTransfer sender ep badge True rcvr diminish)
+   (doIPCTransfer sender ep badge True rcvr)
    (do rv \<leftarrow> mapM_x (\<lambda>r. do v \<leftarrow> asUser sender (getRegister r);
                              asUser rcvr (setRegister r v)
                           od)
@@ -5299,10 +5223,6 @@ lemma fastpath_callKernel_SysCall_corres:
               apply (rule monadic_rewrite_if_rhs[rotated])
                apply (rule monadic_rewrite_alternative_l)
               apply (simp add: isRight_case_sum)
-              apply (rule monadic_rewrite_symb_exec_r [OF gts_inv' no_fail_getThreadState])
-               apply (rename_tac "destState")
-               apply (rule monadic_rewrite_if_rhs[rotated])
-                apply (rule monadic_rewrite_alternative_l)
                apply (rule monadic_rewrite_symb_exec_r [OF gets_inv non_fail_gets])
                 apply (rule monadic_rewrite_if_rhs[rotated])
                  apply (rule monadic_rewrite_alternative_l)
@@ -5328,8 +5248,10 @@ lemma fastpath_callKernel_SysCall_corres:
                      apply (rule_tac P="epQueue send_ep \<noteq> []" in monadic_rewrite_gen_asm)
                      apply (simp add: isRecvEP_endpoint_case list_case_helper bind_assoc)
                      apply (rule monadic_rewrite_bind_tail)
-                      apply (rule_tac x=destState in monadic_rewrite_symb_exec,
-                             wp empty_fail_getThreadState)
+                     apply (elim conjE)
+                     apply (match premises in "isEndpointCap ep" for ep \<Rightarrow> 
+                       \<open>rule monadic_rewrite_symb_exec[where x="BlockedOnReceive (capEPPtr ep)"]\<close>,
+                        wp empty_fail_getThreadState)
                      apply (rule monadic_rewrite_symb_exec2, (wp | simp)+)
                       apply (rule monadic_rewrite_bind)
                         apply (rule_tac msgInfo=msgInfo in doIPCTransfer_simple_rewrite)
@@ -5367,7 +5289,7 @@ lemma fastpath_callKernel_SysCall_corres:
                         apply (simp add: setSchedulerAction_def)
                         apply wp[1]
                        apply (simp cong: if_cong conj_cong add: if_bool_simps)
-                       apply (simp_all only:)[4]
+                       apply (simp_all only:)[5]
                        apply ((wp setThreadState_oa_queued[of _ "\<lambda>a _ _. \<not> a"]
                                  setThreadState_obj_at_unchanged
                                  asUser_obj_at_unchanged mapM_x_wp'
@@ -5392,6 +5314,7 @@ lemma fastpath_callKernel_SysCall_corres:
                    apply (rule_tac P="\<lambda>s. ksSchedulerAction s = ResumeCurrentThread
                                       \<and> tcb_at' thread s"
                              and F=True and E=False in monadic_rewrite_weaken)
+                  apply simp
                  apply (rule monadic_rewrite_isolate_final)
                    apply (simp add: isRight_case_sum cong: list.case_cong)
                   apply (clarsimp simp: fun_eq_iff if_flip
@@ -5437,7 +5360,7 @@ lemma fastpath_callKernel_SysCall_corres:
                         n_msgRegisters_def order_less_imp_le
                         ep_q_refs_of'_def st_tcb_at_refs_of_rev'
                   cong: if_cong)
-  apply (rename_tac blockedThread ys tcba tcbb st v tcbc)
+  apply (rename_tac blockedThread ys tcba tcbb v tcbc)
   apply (frule invs_mdb')
   apply (thin_tac "Ball S P" for S P)+
   apply (clarsimp simp: invs'_def valid_state'_def)
@@ -5518,7 +5441,7 @@ lemma doReplyTransfer_simple:
          assert (mdbPrev mdbnode \<noteq> 0 \<and> mdbNext mdbnode = 0);
          parentCTE \<leftarrow> getCTE (mdbPrev mdbnode);
          assert (isReplyCap (cteCap parentCTE) \<and> capReplyMaster (cteCap parentCTE));
-         doIPCTransfer sender Nothing 0 True receiver False;
+         doIPCTransfer sender Nothing 0 True receiver;
          cteDeleteOne slot;
          setThreadState Running receiver;
          attemptSwitchTo receiver
@@ -5548,7 +5471,7 @@ lemma receiveIPC_simple_rewrite:
       (\<lambda>s. \<forall>ntfnptr. bound_tcb_at' (op = (Some ntfnptr)) thread s \<longrightarrow> obj_at' (Not \<circ> isActive) ntfnptr s)))
      (receiveIPC thread ep_cap True)
      (do
-       setThreadState (BlockedOnReceive (capEPPtr ep_cap) (\<not> capEPCanSend ep_cap)) thread;
+       setThreadState (BlockedOnReceive (capEPPtr ep_cap)) thread;
        setEndpoint (capEPPtr ep_cap) (RecvEP (case ep of RecvEP q \<Rightarrow> (q @ [thread]) | _ \<Rightarrow> [thread]))
       od)"
   apply (rule monadic_rewrite_gen_asm)

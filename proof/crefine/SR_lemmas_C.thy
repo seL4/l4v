@@ -1678,7 +1678,7 @@ where
   | "thread_state_to_tsType (Structures_H.Inactive) = scast ThreadState_Inactive"
   | "thread_state_to_tsType (Structures_H.IdleThreadState) = scast ThreadState_IdleThreadState"
   | "thread_state_to_tsType (Structures_H.BlockedOnReply) = scast ThreadState_BlockedOnReply"
-  | "thread_state_to_tsType (Structures_H.BlockedOnReceive oref dimin) = scast ThreadState_BlockedOnReceive"
+  | "thread_state_to_tsType (Structures_H.BlockedOnReceive oref) = scast ThreadState_BlockedOnReceive"
   | "thread_state_to_tsType (Structures_H.BlockedOnSend oref badge cg isc) = scast ThreadState_BlockedOnSend"
   | "thread_state_to_tsType (Structures_H.BlockedOnNotification oref) = scast ThreadState_BlockedOnNotification"
 

@@ -1272,7 +1272,7 @@ lemma get_blocking_object_reads_respects:
 
 fun tcb_st_to_auth' where
   "tcb_st_to_auth' (BlockedOnSend x xa) = SyncSend" |
-  "tcb_st_to_auth' (BlockedOnReceive x xa) = Receive" |
+  "tcb_st_to_auth' (BlockedOnReceive x) = Receive" |
   "tcb_st_to_auth' (BlockedOnNotification x) = Receive"
 
 
@@ -1282,7 +1282,7 @@ lemma owns_thread_blocked_reads_endpoint:
   "\<lbrakk>pas_refined aag s; invs s;
         st_tcb_at (\<lambda> y. y = state) tptr s;
         is_subject aag tptr;
-        state = (BlockedOnReceive x xa) \<or> state = (BlockedOnSend x xb) \<or> state = BlockedOnNotification x\<rbrakk> \<Longrightarrow> aag_can_read aag x"
+        state = (BlockedOnReceive x) \<or> state = (BlockedOnSend x xb) \<or> state = BlockedOnNotification x\<rbrakk> \<Longrightarrow> aag_can_read aag x"
   apply(rule_tac auth="tcb_st_to_auth' state" in reads_ep)
    apply(drule sym, simp, rule pas_refined_mem)
     apply(rule_tac s=s in sta_ts)
@@ -1992,7 +1992,7 @@ crunch valid_ko_at_arm[wp]: set_mrs "valid_ko_at_arm" (wp: mapM_x_wp' simp: zipW
 crunch globals_equiv[wp]: deleted_irq_handler "globals_equiv st"
 
 lemma transfer_caps_valid_ko_at_arm[wp]:
-  "\<lbrace> valid_ko_at_arm \<rbrace> transfer_caps a b c d e f\<lbrace>\<lambda>_. valid_ko_at_arm\<rbrace>"
+  "\<lbrace> valid_ko_at_arm \<rbrace> transfer_caps a b c d e \<lbrace>\<lambda>_. valid_ko_at_arm\<rbrace>"
   unfolding transfer_caps_def
   apply (wp | wpc)+
   apply (wp transfer_caps_loop_pres cap_insert_valid_ko_at_arm)

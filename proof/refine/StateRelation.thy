@@ -157,8 +157,8 @@ where
      = (ts' = Structures_H.IdleThreadState)"
 | "thread_state_relation (Structures_A.BlockedOnReply) ts'
      = (ts' = Structures_H.BlockedOnReply)"
-| "thread_state_relation (Structures_A.BlockedOnReceive oref dimin) ts'
-     = (ts' = Structures_H.BlockedOnReceive oref dimin)"
+| "thread_state_relation (Structures_A.BlockedOnReceive oref) ts'
+     = (ts' = Structures_H.BlockedOnReceive oref)"
 | "thread_state_relation (Structures_A.BlockedOnSend oref sp) ts'
      = (ts' = Structures_H.BlockedOnSend oref (sender_badge sp)
                    (sender_can_grant sp) (sender_is_call sp))"

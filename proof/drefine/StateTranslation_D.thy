@@ -663,7 +663,7 @@ definition
 where
   "infer_tcb_pending_op ptr t \<equiv>
     case t of
-        Structures_A.BlockedOnReceive ptr diminish \<Rightarrow>
+        Structures_A.BlockedOnReceive ptr \<Rightarrow>
           PendingSyncRecvCap ptr False
 
       |Structures_A.BlockedOnReply \<Rightarrow>

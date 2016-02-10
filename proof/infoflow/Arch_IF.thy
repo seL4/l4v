@@ -36,7 +36,7 @@ crunch irq_state_of_state[wp]: set_extra_badge "\<lambda>s. P (irq_state_of_stat
 
 
 lemma transfer_caps_loop_irq_state[wp]:
-  "\<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace> transfer_caps_loop a b c d e f g \<lbrace>\<lambda>_ s. P (irq_state_of_state s)\<rbrace>"
+  "\<lbrace>\<lambda>s. P (irq_state_of_state s)\<rbrace> transfer_caps_loop a b c d e f \<lbrace>\<lambda>_ s. P (irq_state_of_state s)\<rbrace>"
   apply(wp transfer_caps_loop_pres)
   done
 

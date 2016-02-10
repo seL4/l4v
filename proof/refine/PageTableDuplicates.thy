@@ -144,7 +144,7 @@ crunch valid_duplicates'[wp]: getReceiveSlots "\<lambda>s. vs_valid_duplicates' 
 
 lemma transferCapsToSlots_duplicates'[wp]:
  "\<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s)\<rbrace> 
-  transferCapsToSlots ep diminish buffer n caps slots mi
+  transferCapsToSlots ep buffer n caps slots mi
   \<lbrace>\<lambda>rv s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
   by (rule transferCapsToSlots_pres1,wp)
 

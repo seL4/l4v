@@ -407,7 +407,7 @@ definition
   valid_tcb_state :: "Structures_A.thread_state \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
   "valid_tcb_state ts s \<equiv> case ts of
-    Structures_A.BlockedOnReceive ref d \<Rightarrow> ep_at ref s
+    Structures_A.BlockedOnReceive ref \<Rightarrow> ep_at ref s
   | Structures_A.BlockedOnSend ref sp \<Rightarrow> ep_at ref s
   | Structures_A.BlockedOnNotification ref \<Rightarrow> ntfn_at ref s
   | _ \<Rightarrow> True"
@@ -435,7 +435,7 @@ where
                                   \<or> (halted st \<and> (c = cap.NullCap)))),
     tcb_cnode_index 3 \<mapsto> (tcb_caller, tcb_caller_update,
                           (\<lambda>_ st. case st of
-                                    Structures_A.BlockedOnReceive e d \<Rightarrow>
+                                    Structures_A.BlockedOnReceive e \<Rightarrow>
                                       (op = cap.NullCap)
                                   | _ \<Rightarrow> is_reply_cap or (op = cap.NullCap))),
     tcb_cnode_index 4 \<mapsto> (tcb_ipcframe, tcb_ipcframe_update,
@@ -942,7 +942,7 @@ where
   | (Structures_A.Restart)               => {}
   | (Structures_A.BlockedOnReply)        => {}
   | (Structures_A.IdleThreadState)       => {}
-  | (Structures_A.BlockedOnReceive x b)  => {(x, TCBBlockedRecv)}
+  | (Structures_A.BlockedOnReceive x)  => {(x, TCBBlockedRecv)}
   | (Structures_A.BlockedOnSend x payl)  => {(x, TCBBlockedSend)}
   | (Structures_A.BlockedOnNotification x) => {(x, TCBSignal)}"
 
@@ -1784,7 +1784,7 @@ lemma tcb_cap_cases_simps[simp]:
   "tcb_cap_cases (tcb_cnode_index 3) =
    Some (tcb_caller, tcb_caller_update,
          (\<lambda>_ st. case st of
-                   Structures_A.BlockedOnReceive e d \<Rightarrow> (op = cap.NullCap)
+                   Structures_A.BlockedOnReceive e \<Rightarrow> (op = cap.NullCap)
                  | _ \<Rightarrow> is_reply_cap or (op = cap.NullCap)))"
   "tcb_cap_cases (tcb_cnode_index 4) =
    Some (tcb_ipcframe, tcb_ipcframe_update,
@@ -1799,7 +1799,7 @@ lemma ran_tcb_cap_cases:
                                        (is_master_reply_cap c \<and> obj_ref_of c = t)
                                      \<or> (halted st \<and> (c = cap.NullCap)))),
      (tcb_caller, tcb_caller_update, (\<lambda>_ st. case st of
-                                       Structures_A.BlockedOnReceive e d \<Rightarrow>
+                                       Structures_A.BlockedOnReceive e \<Rightarrow>
                                          (op = cap.NullCap)
                                      | _ \<Rightarrow> is_reply_cap or (op = cap.NullCap))),
      (tcb_ipcframe, tcb_ipcframe_update, (\<lambda>_ _. is_arch_cap or (op = cap.NullCap)))}"
@@ -1985,7 +1985,7 @@ lemma tcb_st_refs_of_simps[simp]:
  "tcb_st_refs_of (Structures_A.Restart)               = {}"
  "tcb_st_refs_of (Structures_A.BlockedOnReply)        = {}"
  "tcb_st_refs_of (Structures_A.IdleThreadState)       = {}"
- "\<And>x. tcb_st_refs_of (Structures_A.BlockedOnReceive x b)  = {(x, TCBBlockedRecv)}"
+ "\<And>x. tcb_st_refs_of (Structures_A.BlockedOnReceive x)  = {(x, TCBBlockedRecv)}"
  "\<And>x. tcb_st_refs_of (Structures_A.BlockedOnSend x payl)  = {(x, TCBBlockedSend)}"
  "\<And>x. tcb_st_refs_of (Structures_A.BlockedOnNotification x) = {(x, TCBSignal)}"
   by (auto simp: tcb_st_refs_of_def)
@@ -2027,7 +2027,7 @@ lemma refs_of_simps[simp]:
 
 lemma refs_of_rev:
  "(x, TCBBlockedRecv) \<in> refs_of ko =
-    (\<exists>tcb. ko = TCB tcb \<and> (\<exists>b.  tcb_state tcb = Structures_A.BlockedOnReceive x b))"
+    (\<exists>tcb. ko = TCB tcb \<and> (tcb_state tcb = Structures_A.BlockedOnReceive x))"
  "(x, TCBBlockedSend) \<in> refs_of ko =
     (\<exists>tcb. ko = TCB tcb \<and> (\<exists>pl. tcb_state tcb = Structures_A.BlockedOnSend    x pl))"
  "(x, TCBSignal) \<in> refs_of ko =
@@ -2056,7 +2056,7 @@ lemma refs_of_rev:
 
 lemma st_tcb_at_refs_of_rev:
   "obj_at (\<lambda>ko. (x, TCBBlockedRecv) \<in> refs_of ko) t s
-     = st_tcb_at (\<lambda>ts. \<exists>b.  ts = Structures_A.BlockedOnReceive x b ) t s"
+     = st_tcb_at (\<lambda>ts. ts = Structures_A.BlockedOnReceive x) t s"
   "obj_at (\<lambda>ko. (x, TCBBlockedSend) \<in> refs_of ko) t s
      = st_tcb_at (\<lambda>ts. \<exists>pl. ts = Structures_A.BlockedOnSend x pl   ) t s"
   "obj_at (\<lambda>ko. (x, TCBSignal) \<in> refs_of ko) t s
@@ -5114,7 +5114,7 @@ locale invs_locale =
   assumes sts_ex_inv[wp]: "\<And>a b. \<lbrace>ex_inv\<rbrace> set_thread_state a b \<lbrace>\<lambda>_.ex_inv\<rbrace>"
 
   assumes setup_caller_cap_ex_inv[wp]: "\<And>send receive. \<lbrace>ex_inv and valid_mdb\<rbrace> setup_caller_cap send receive \<lbrace>\<lambda>_.ex_inv\<rbrace>"
-  assumes do_ipc_transfer_ex_inv[wp]: "\<And>a b c d e f. \<lbrace>ex_inv and valid_objs and valid_mdb\<rbrace> do_ipc_transfer a b c d e f \<lbrace>\<lambda>_.ex_inv\<rbrace>"
+  assumes do_ipc_transfer_ex_inv[wp]: "\<And>a b c d e. \<lbrace>ex_inv and valid_objs and valid_mdb\<rbrace> do_ipc_transfer a b c d e \<lbrace>\<lambda>_.ex_inv\<rbrace>"
 
   assumes thread_set_ex_inv[wp]: "\<And>a b. \<lbrace>ex_inv\<rbrace> thread_set a b \<lbrace>\<lambda>_.ex_inv\<rbrace>"
 
