@@ -264,7 +264,7 @@ val unfold_assertion_data_get_set = Simplifier.simproc_global_i
 *}
 
 ML {*
-fun wrap_tac tac i t = let
+fun wrap_tac tac i t = if Thm.nprems_of t = 0 then no_tac t else let
     val t' = Goal.restrict i 1 t
     val r = tac 1 t'
   in case Seq.pull r of NONE => Seq.empty
@@ -338,6 +338,8 @@ fun prove_ptr_safe reason ctxt = DETERM o
     (TRY o REPEAT_ALL_NEW (eqsubst_either_wrap_tac ctxt
                 @{thms array_ptr_index_coerce}
             )
+        THEN_ALL_NEW asm_full_simp_tac (ctxt addsimps
+            @{thms word_sle_msb_le word_sless_msb_less})
         THEN_ALL_NEW asm_simp_tac (ctxt addsimps
             @{thms ptr_safe_field[unfolded typ_uinfo_t_def]
                    ptr_safe_Array_element unat_less_helper
