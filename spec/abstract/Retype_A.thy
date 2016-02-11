@@ -27,28 +27,28 @@ section "Creating Caps"
 text {* The original capability created when an object of a given type is
 created with a particular address and size. *}
 primrec
-  default_cap :: "apiobject_type  \<Rightarrow> obj_ref \<Rightarrow> nat \<Rightarrow> cap"
+  default_cap :: "apiobject_type  \<Rightarrow> obj_ref \<Rightarrow> nat \<Rightarrow> bool \<Rightarrow> cap"
 where
-  "default_cap CapTableObject oref s = CNodeCap oref s []"
-| "default_cap Untyped oref s = UntypedCap oref s 0"
-| "default_cap TCBObject oref s = ThreadCap oref"
-| "default_cap EndpointObject oref s = EndpointCap oref 0 UNIV"
-| "default_cap NotificationObject oref s =
+  "default_cap CapTableObject oref s _ = CNodeCap oref s []"
+| "default_cap Untyped oref s dev = UntypedCap dev oref s 0"
+| "default_cap TCBObject oref s _ = ThreadCap oref"
+| "default_cap EndpointObject oref s _ = EndpointCap oref 0 UNIV"
+| "default_cap NotificationObject oref s _ =
      NotificationCap oref 0 {AllowRead, AllowWrite}"
-| "default_cap (ArchObject aobj) oref s = ArchObjectCap (arch_default_cap aobj oref s)"
+| "default_cap (ArchObject aobj) oref s dev = ArchObjectCap (arch_default_cap aobj oref s dev)"
 
 text {* Create and install a new capability to a newly created object. *}
 definition
   create_cap ::
-  "apiobject_type \<Rightarrow> nat \<Rightarrow> cslot_ptr \<Rightarrow> cslot_ptr \<times> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
+  "apiobject_type \<Rightarrow> nat \<Rightarrow> cslot_ptr \<Rightarrow> bool \<Rightarrow> cslot_ptr \<times> obj_ref \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
-  "create_cap type bits untyped \<equiv> \<lambda>(dest,oref). do
+  "create_cap type bits untyped is_device \<equiv> \<lambda>(dest,oref). do
     dest_p \<leftarrow> gets (\<lambda>s. cdt s dest);
     cdt \<leftarrow> gets cdt;
     set_cdt (cdt (dest \<mapsto> untyped));
     do_extended_op (create_cap_ext untyped dest dest_p);
     set_original dest True;
-    set_cap (default_cap type oref bits) dest
+    set_cap (default_cap type oref bits is_device) dest
    od"
 
 section "Creating Objects"
@@ -120,14 +120,13 @@ definition
   od"
 
 
-
 text {* Untyped capabilities confer authority to the Retype method. This
 clears existing objects from a region, creates new objects of the requested type,
 initialises them and installs new capabilities to them. *}
 fun
   invoke_untyped :: "untyped_invocation \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
-"invoke_untyped (Retype src_slot base free_region_base new_type obj_sz slots) =
+"invoke_untyped (Retype src_slot base free_region_base new_type obj_sz slots is_device) =
 do
   cap \<leftarrow> get_cap src_slot;
 
@@ -138,12 +137,12 @@ do
   (* Update the untyped cap to track the amount of space used. *)
   total_object_size \<leftarrow> return $ (of_nat (length slots) << (obj_bits_api new_type obj_sz));
   free_ref \<leftarrow> return $ free_region_base + total_object_size;
-  set_cap (UntypedCap base (bits_of cap) (unat (free_ref - base))) src_slot;
+  set_cap (UntypedCap is_device base (bits_of cap) (unat (free_ref - base))) src_slot;
 
   (* Create new objects. *)
   orefs \<leftarrow> retype_region free_region_base (length slots) obj_sz new_type;
-  init_arch_objects new_type free_region_base (length slots) obj_sz orefs;
-  sequence_x (map (create_cap new_type obj_sz src_slot) (zip slots orefs))
+  init_arch_objects new_type free_region_base (length slots) obj_sz orefs is_device;
+  sequence_x (map (create_cap new_type obj_sz src_slot is_device) (zip slots orefs))
 od"
 
 end

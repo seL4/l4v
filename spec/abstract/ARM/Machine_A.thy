@@ -36,7 +36,7 @@ type_synonym data_offset        = "12 word"
 type_synonym data               = machine_word
 type_synonym cap_ref            = "bool list" 
 type_synonym length_type        = machine_word
-type_synonym asid_pool_index    = "10 word"
+type_synonym asid_pool_index    = "9 word"
 type_synonym asid_index         = "8 word" (* FIXME: better name? *)
 
 text {* With the definitions above, most conversions between abstract

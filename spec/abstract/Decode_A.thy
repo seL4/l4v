@@ -524,10 +524,14 @@ where
   max_count \<leftarrow> returnOk ( untyped_free_bytes >> object_size);
   whenE (unat max_count < node_window) $
         throwError $ NotEnoughMemory $ untyped_free_bytes;
-  (ptr, block_size) \<leftarrow> case cap of 
-                        UntypedCap p n f \<Rightarrow> returnOk (p,n) 
+
+  not_frame \<leftarrow> returnOk (\<not> is_frame_type new_type);
+  (ptr, is_device) \<leftarrow> case cap of 
+                        UntypedCap dev p n f \<Rightarrow> returnOk (p,dev) 
                       | _ \<Rightarrow> fail;
-  returnOk $ Retype slot ptr aligned_free_ref new_type user_obj_size slots
+  whenE (is_device \<and> not_frame \<and> new_type \<noteq> Untyped) $ 
+           throwError $ InvalidArgument 1; 
+  returnOk $ Retype slot ptr aligned_free_ref new_type user_obj_size slots is_device
 odE"
 
 section "Toplevel invocation decode."
@@ -565,7 +569,7 @@ where
       liftME (case_prod InvokeDomain) $ decode_domain_invocation label args excaps
   | CNodeCap ptr bits _ \<Rightarrow>
       liftME InvokeCNode $ decode_cnode_invocation label args cap (map fst excaps)
-  | UntypedCap ptr sz fi \<Rightarrow>
+  | UntypedCap dev ptr sz fi \<Rightarrow>
       liftME InvokeUntyped $ decode_untyped_invocation label args slot cap (map fst excaps)
   | ArchObjectCap arch_cap \<Rightarrow>
       liftME InvokeArchObject $ 

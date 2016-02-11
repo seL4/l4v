@@ -32,6 +32,13 @@ datatype apiobject_type =
   | CapTableObject
   | ArchObject aobject_type
 
+definition 
+  is_frame_type :: "apiobject_type \<Rightarrow> bool"
+where
+  "is_frame_type obj \<equiv> case obj of 
+        ArchObject aobj \<Rightarrow> arch_is_frame_type aobj
+      | _ \<Rightarrow> False"
+
 
 text {* These allow more informative type signatures for IPC operations. *}
 type_synonym badge = data
@@ -64,8 +71,8 @@ authority but cannot be replaced until the deletion is finished.
 
 datatype cap
          = NullCap
-         | UntypedCap obj_ref nat nat
-           -- {* pointer, size in bits (i.e. @{text "size = 2^bits"}) and freeIndex (i.e. @{text "freeRef = obj_ref + (freeIndex * 2^4)"}) *}
+         | UntypedCap bool obj_ref nat nat
+           -- {* device flag, pointer, size in bits (i.e. @{text "size = 2^bits"}) and freeIndex (i.e. @{text "freeRef = obj_ref + (freeIndex * 2^4)"}) *}
          | EndpointCap obj_ref badge cap_rights
          | NotificationCap obj_ref badge cap_rights
          | ReplyCap obj_ref bool
@@ -112,13 +119,13 @@ where
 definition
   bits_of :: "cap \<Rightarrow> nat" where
   "bits_of cap \<equiv> case cap of
-    UntypedCap _ bits _ \<Rightarrow> bits
+    UntypedCap _ _ bits _ \<Rightarrow> bits
   | CNodeCap _ radix_bits _ \<Rightarrow> radix_bits"
 
 definition
   free_index_of :: "cap \<Rightarrow> nat" where
   "free_index_of cap \<equiv> case cap of
-    UntypedCap _ _ free_index \<Rightarrow> free_index"
+    UntypedCap _ _ _ free_index \<Rightarrow> free_index"
 
 definition
   is_reply_cap :: "cap \<Rightarrow> bool" where
@@ -154,7 +161,7 @@ where
 
 fun is_untyped_cap :: "cap \<Rightarrow> bool"
 where
-  "is_untyped_cap (UntypedCap _ _ _) = True"
+  "is_untyped_cap (UntypedCap _ _ _ _) = True"
 | "is_untyped_cap _                  = False"
 
 fun is_ep_cap :: "cap \<Rightarrow> bool"
@@ -427,7 +434,7 @@ primrec (nonexhaustive)
   obj_size :: "cap \<Rightarrow> machine_word"
 where
   "obj_size NullCap = 0"
-| "obj_size (UntypedCap r bits f) = 1 << bits"
+| "obj_size (UntypedCap dev r bits f) = 1 << bits"
 | "obj_size (EndpointCap r b R) = 1 << obj_bits (Endpoint undefined)"
 | "obj_size (NotificationCap r b R) = 1 << obj_bits (Notification undefined)"
 | "obj_size (CNodeCap r bits g) = 1 << (cte_level_bits + bits)"
@@ -541,7 +548,7 @@ where
 | "obj_refs (ReplyCap r m) = {}"
 | "obj_refs IRQControlCap = {}"
 | "obj_refs (IRQHandlerCap irq) = {}"
-| "obj_refs (UntypedCap r s f) = {}"
+| "obj_refs (UntypedCap dev r s f) = {}"
 | "obj_refs (CNodeCap r bits guard) = {r}"
 | "obj_refs (EndpointCap r b cr) = {r}"
 | "obj_refs (NotificationCap r b cr) = {r}"
@@ -558,7 +565,7 @@ text {*
 primrec (nonexhaustive)
   obj_ref_of :: "cap \<Rightarrow> obj_ref"
 where
-  "obj_ref_of (UntypedCap r s f) = r"
+  "obj_ref_of (UntypedCap dev r s f) = r"
 | "obj_ref_of (ReplyCap r m) = r"
 | "obj_ref_of (CNodeCap r bits guard) = r"
 | "obj_ref_of (EndpointCap r b cr) = r"
@@ -570,7 +577,7 @@ where
 primrec (nonexhaustive)
   cap_bits_untyped :: "cap \<Rightarrow> nat"
 where
-  "cap_bits_untyped (UntypedCap r s f) = s"
+  "cap_bits_untyped (UntypedCap dev r s f) = s"
 
 definition
   "tcb_cnode_map tcb \<equiv>

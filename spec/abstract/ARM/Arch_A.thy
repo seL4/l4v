@@ -173,7 +173,7 @@ perform_page_invocation :: "page_invocation \<Rightarrow> (unit,'z::state_ext) s
   od
 | PageUnmap cap ct_slot \<Rightarrow> 
     case cap of
-      PageCap p R vp_size vp_mapped_addr \<Rightarrow> do
+      PageCap dev p R vp_size vp_mapped_addr \<Rightarrow> do
         case vp_mapped_addr of
             Some (asid, vaddr) \<Rightarrow> unmap_page vp_size asid vaddr p
           | None \<Rightarrow> return ();

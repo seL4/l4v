@@ -195,7 +195,7 @@ where
 | "fast_finalise (Zombie r b n)           final = fail"
 | "fast_finalise IRQControlCap            final = fail"
 | "fast_finalise (IRQHandlerCap irq)      final = fail"
-| "fast_finalise (UntypedCap r n f)       final = fail"
+| "fast_finalise (UntypedCap dev r n f)       final = fail"
 | "fast_finalise (ArchObjectCap a)        final = fail"
 
 text {* The optional IRQ stored in a capability, presented either as an optional

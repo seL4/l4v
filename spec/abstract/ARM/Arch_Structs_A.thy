@@ -42,23 +42,23 @@ along with capabilities for page directories, page tables, and page mappings. *}
 datatype arch_cap =
    ASIDPoolCap obj_ref asid
  | ASIDControlCap
- | PageCap obj_ref cap_rights vmpage_size "(asid * vspace_ref) option"
+ | PageCap bool obj_ref cap_rights vmpage_size "(asid * vspace_ref) option"
  | PageTableCap obj_ref "(asid * vspace_ref) option"
  | PageDirectoryCap obj_ref "asid option"
 
 definition
   is_page_cap :: "arch_cap \<Rightarrow> bool" where
-  "is_page_cap c \<equiv> \<exists>x0 x1 x2 x3. c = PageCap x0 x1 x2 x3"
+  "is_page_cap c \<equiv> \<exists>x0 x1 x2 x3 x4. c = PageCap x0 x1 x2 x3 x4"
 
 definition
   asid_high_bits :: nat where
   "asid_high_bits \<equiv> 8"
 definition
   asid_low_bits :: nat where
-  "asid_low_bits \<equiv> 10 :: nat"
+  "asid_low_bits \<equiv> 9 :: nat"
 definition
   asid_bits :: nat where
-  "asid_bits \<equiv> 18 :: nat"
+  "asid_bits \<equiv> 17 :: nat"
 
 section {* Architecture-specific objects *}
 
@@ -84,7 +84,7 @@ datatype pte =
  | SmallPagePTE obj_ref vm_attributes cap_rights
 
 datatype arch_kernel_obj =
-   ASIDPool "10 word \<rightharpoonup> obj_ref"
+   ASIDPool "9 word \<rightharpoonup> obj_ref"
  | PageTable "word8 \<Rightarrow> pte"
  | PageDirectory "12 word \<Rightarrow> pde"
  | DataPage vmpage_size
@@ -94,9 +94,18 @@ primrec
 where
   "arch_obj_size (ASIDPoolCap p as) = pageBits"
 | "arch_obj_size ASIDControlCap = 0"
-| "arch_obj_size (PageCap x rs sz as4) = pageBitsForSize sz"
+| "arch_obj_size (PageCap dev x rs sz as4) = pageBitsForSize sz"
 | "arch_obj_size (PageDirectoryCap x as2) = 14"
 | "arch_obj_size (PageTableCap x as3) = 10"
+
+primrec
+  arch_cap_is_device :: "arch_cap \<Rightarrow> bool"
+where
+  "arch_cap_is_device (PageCap dev x rs sz as4) = dev"
+| "arch_cap_is_device ASIDControlCap = False"
+| "arch_cap_is_device (ASIDPoolCap p as) = False"
+| "arch_cap_is_device (PageTableCap x as3) = False"
+| "arch_cap_is_device (PageDirectoryCap x as2) = False"
 
 primrec
   arch_kobj_size :: "arch_kernel_obj \<Rightarrow> nat"
@@ -111,19 +120,19 @@ primrec
 where
   "aobj_ref (ASIDPoolCap p as) = Some p"
 | "aobj_ref ASIDControlCap = None"
-| "aobj_ref (PageCap x rs sz as4) = Some x"
+| "aobj_ref (PageCap dev x rs sz as4) = Some x"
 | "aobj_ref (PageDirectoryCap x as2) = Some x"
 | "aobj_ref (PageTableCap x as3) = Some x"
 
 primrec (nonexhaustive)
   acap_rights :: "arch_cap \<Rightarrow> cap_rights"
 where
- "acap_rights (PageCap x rs sz as) = rs"
+ "acap_rights (PageCap dev x rs sz as) = rs"
 
 definition
   acap_rights_update :: "cap_rights \<Rightarrow> arch_cap \<Rightarrow> arch_cap" where
  "acap_rights_update rs ac \<equiv> case ac of
-    PageCap x rs' sz as \<Rightarrow> PageCap x (validate_vm_rights rs) sz as
+    PageCap dev x rs' sz as \<Rightarrow> PageCap dev x (validate_vm_rights rs) sz as
   | _                   \<Rightarrow> ac"
 
 section {* Architecture-specific object types and default objects *}
@@ -139,12 +148,22 @@ datatype
   | ASIDPoolObj
 
 definition
-  arch_default_cap :: "aobject_type \<Rightarrow> obj_ref \<Rightarrow> nat \<Rightarrow> arch_cap" where
- "arch_default_cap tp r n \<equiv> case tp of
-  SmallPageObj \<Rightarrow> PageCap r vm_read_write ARMSmallPage None
-  | LargePageObj \<Rightarrow> PageCap r vm_read_write ARMLargePage None
-  | SectionObj \<Rightarrow> PageCap r vm_read_write ARMSection None
-  | SuperSectionObj \<Rightarrow> PageCap r vm_read_write ARMSuperSection None
+  arch_is_frame_type :: "aobject_type \<Rightarrow> bool"
+where
+  "arch_is_frame_type aobj \<equiv> case aobj of
+         SmallPageObj \<Rightarrow> True
+       | LargePageObj \<Rightarrow> True
+       | SectionObj \<Rightarrow> True
+       | SuperSectionObj \<Rightarrow> True
+       | _ \<Rightarrow> False"
+  
+definition
+  arch_default_cap :: "aobject_type \<Rightarrow> obj_ref \<Rightarrow> nat \<Rightarrow> bool \<Rightarrow> arch_cap" where
+ "arch_default_cap tp r n dev \<equiv> case tp of
+  SmallPageObj \<Rightarrow> PageCap dev r vm_read_write ARMSmallPage None
+  | LargePageObj \<Rightarrow> PageCap dev r vm_read_write ARMLargePage None
+  | SectionObj \<Rightarrow> PageCap dev r vm_read_write ARMSection None
+  | SuperSectionObj \<Rightarrow> PageCap dev r vm_read_write ARMSuperSection None
   | PageTableObj \<Rightarrow> PageTableCap r None
   | PageDirectoryObj \<Rightarrow> PageDirectoryCap r None
   | ASIDPoolObj \<Rightarrow> ASIDPoolCap r 0" (* unused *)

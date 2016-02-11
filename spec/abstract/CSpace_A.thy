@@ -65,12 +65,12 @@ definition
   free_index_update :: "(nat \<Rightarrow> nat) \<Rightarrow> cap \<Rightarrow> cap"
 where
   "free_index_update g cap \<equiv>
-   case cap of UntypedCap ref sz f \<Rightarrow> UntypedCap ref sz (g f) | _ \<Rightarrow> cap"
+   case cap of UntypedCap dev ref sz f \<Rightarrow> UntypedCap dev ref sz (g f) | _ \<Rightarrow> cap"
 
 primrec (nonexhaustive)
   untyped_sz_bits :: "cap \<Rightarrow> nat"
 where
-  "untyped_sz_bits (UntypedCap ref sz f) = sz"
+  "untyped_sz_bits (UntypedCap dev ref sz f) = sz"
 
 abbreviation
   max_free_index_update :: "cap \<Rightarrow> cap"
@@ -93,7 +93,7 @@ derive_cap :: "cslot_ptr \<Rightarrow> cap \<Rightarrow> (cap,'z::state_ext) se_
 "derive_cap slot cap \<equiv>
  case cap of
     ArchObjectCap c \<Rightarrow> liftME ArchObjectCap $ arch_derive_cap c
-    | UntypedCap ptr sz f \<Rightarrow> doE ensure_no_children slot; returnOk cap odE
+    | UntypedCap dev ptr sz f \<Rightarrow> doE ensure_no_children slot; returnOk cap odE
     | Zombie ptr n sz \<Rightarrow> returnOk NullCap
     | ReplyCap ptr m \<Rightarrow> returnOk NullCap
     | IRQControlCap \<Rightarrow> returnOk NullCap
@@ -425,7 +425,7 @@ fun
   finalise_cap :: "cap \<Rightarrow> bool \<Rightarrow> (cap \<times> irq option,'z::state_ext) s_monad"
 where
   "finalise_cap NullCap                  final = return (NullCap, None)"
-| "finalise_cap (UntypedCap r bits f)    final = return (NullCap, None)"
+| "finalise_cap (UntypedCap dev r bits f)    final = return (NullCap, None)"
 | "finalise_cap (ReplyCap r m)           final = return (NullCap, None)"
 | "finalise_cap (EndpointCap r b R)      final =
       (liftM (K (NullCap, None)) $ when final $ cancel_all_ipc r)"
@@ -653,7 +653,7 @@ fun
   same_region_as :: "cap \<Rightarrow> cap \<Rightarrow> bool"
 where
   "same_region_as NullCap c' = False"
-| "same_region_as (UntypedCap r bits free) c' =
+| "same_region_as (UntypedCap dev r bits free) c' =
     (is_physical c' \<and>
      r \<le> obj_ref_of c' \<and>
      obj_ref_of c' \<le> obj_ref_of c' + obj_size c' - 1 \<and>
@@ -681,7 +681,7 @@ definition
   same_object_as :: "cap \<Rightarrow> cap \<Rightarrow> bool" where
  "same_object_as cp cp' \<equiv>
    (case (cp, cp') of
-      (UntypedCap r bits free, _) \<Rightarrow> False
+      (UntypedCap dev r bits free, _) \<Rightarrow> False
     | (IRQControlCap, IRQHandlerCap n) \<Rightarrow> False
     | (ArchObjectCap ac, ArchObjectCap ac') \<Rightarrow> same_aobject_as ac ac'
     | _ \<Rightarrow> same_region_as cp cp')"
