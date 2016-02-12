@@ -616,29 +616,7 @@ lemma simpl_to_graph_While_lemma:
   apply (blast intro: step.intros add_cont_step)
   done
 
-lemma simpl_to_graph_While_UNIV:
-  assumes ps: "nn = NextNode m" "GGamma f = Some gf" "function_graph gf m = Some (Cond l r cond)"
-        "eq_impl nn eqs (\<lambda>gst sst. cond gst = (sst \<in> C)) I"
-   and ss_eq: "eq_impl nn eqs eqs2 (I \<inter> C)"
-      and ss: "\<And>k S. \<lbrakk> simpl_to_graph SGamma GGamma f nn (add_cont (com.While C c) con) (Suc (n + k)) (S # tS) UNIV I eqs out_eqs \<rbrakk>
-        \<Longrightarrow> simpl_to_graph SGamma GGamma f l (add_cont (c ;; com.While C c) con) (Suc (n + k)) (S # tS) C I eqs2 out_eqs"
-   and ex_eq: "eq_impl nn eqs eqs3 (I \<inter> - C)"
-      and ex: "simpl_to_graph SGamma GGamma f r (add_cont com.Skip con) (Suc n) tS (- C) I eqs3 out_eqs"
-  shows "simpl_to_graph SGamma GGamma f nn (add_cont (com.While C c) con) n tS P I eqs out_eqs"
-  apply (rule simpl_to_graph_weaken)
-   apply (rule simpl_to_graph_While_lemma[where P=UNIV], (rule ps)+)
-     apply (simp, rule ps)
-    apply simp
-    apply (rule simpl_to_graph_weaken, erule ss)
-    apply (clarsimp simp: ss_eq[THEN eq_implD])
-   apply (rule simpl_to_graph_weaken, rule ex)
-   apply (clarsimp simp: ex_eq[THEN eq_implD])
-  apply simp
-  done
-
-lemma simpl_to_graph_While_Guard:
-  fixes c' F G
-  defines "c == c' ;; com.Guard F G com.Skip"
+lemma simpl_to_graph_While_inst:
   assumes ps: "nn = NextNode m" "GGamma f = Some gf" "function_graph gf m = Some (Cond l r cond)"
         "eq_impl nn eqs (\<lambda>gst sst. cond gst = (sst \<in> C)) (I \<inter> G)"
    and ss_eq: "eq_impl nn eqs eqs2 (I \<inter> G \<inter> C)"
@@ -1962,18 +1940,38 @@ fun check_while_assums t = let
   in length hyps < 2 orelse raise TERM ("check_while_assums: too many", []);
     () end
 
+fun get_while_body_guard C c = case c of
+    Const (@{const_name com.Seq}, _) $ _ $ last => let
+    val setT = fastype_of C
+    fun mk_int (x, y) = Const (fst (dest_Const @{term "op Int"}),
+        setT --> setT --> setT) $ x $ y
+    fun build_guard (Const (@{const_name Guard}, _) $ _ $ G
+        $ Const (@{const_name com.Skip}, _))
+      = G
+      | build_guard (Const (@{const_name Guard}, _) $ _ $ G $ c)
+      = mk_int (G, build_guard c)
+      | build_guard _ = error ""
+    val G = case try build_guard last of SOME G => G
+      | NONE => Const (fst (dest_Const @{term "UNIV"}), setT)
+  in G end
+  | _ => Const (fst (dest_Const @{term "UNIV"}, fastype_of C))
+
 fun simpl_to_graph_While_tac hints nm ctxt =
     simp_tac (simpl_ss ctxt)
   THEN' SUBGOAL (fn (t, i) => let
     val t = HOLogic.dest_Trueprop (Logic.strip_assums_concl
         (Envir.beta_eta_contract t))
-    val _ = get_while t
+    val (_, Cond, body) = get_while t
+    val gd = get_while_body_guard Cond body
     val skel = simpl_to_graph_skel hints nm t
     val ct = Thm.cterm_of ctxt (HOLogic.mk_Trueprop skel)
+    val rl_inst = cterm_instantiate [(@{cpat "?G :: ?'a set"},
+        Thm.cterm_of ctxt gd)]
+      @{thm simpl_to_graph_While_inst}
   in
     rtac (Thm.trivial ct |> Drule.generalize ([], ["n", "trS"])) i
-        THEN resolve_tac ctxt @{thms simpl_to_graph_While_Guard[OF refl]
-                simpl_to_graph_While_UNIV[OF refl]} i
+        THEN resolve_tac ctxt [rl_inst] i
+        THEN resolve_tac ctxt @{thms refl} i
         THEN inst_graph_tac ctxt i
   end handle TERM _ => no_tac)
 

@@ -701,7 +701,8 @@ fun simpl_to_graph_thm funs csenv ctxt nm = let
     val _ = if Thm.nprems_of res_thm = 0 then ()
         else raise THM ("simpl_to_graph_thm: unsolved subgoals", 1, [res_thm])
     (* FIXME: make the hidden assumptions of the thm appear again *)
-  in res_thm end
+  in res_thm end handle TERM (s, ts) => raise TERM ("simpl_to_graph_thm: " ^ nm
+        ^ ": " ^ s, ts)
 
 fun test_graph_refine_proof funs csenv ctxt nm = case
     Symtab.lookup funs nm of SOME (_, _, NONE) => ("skipped " ^ nm, @{thm TrueI})
@@ -712,7 +713,9 @@ fun test_graph_refine_proof funs csenv ctxt nm = case
         |> Seq.hd
     val succ = case Thm.nprems_of res_thm of 0 => "success on "
         | n => string_of_int n ^ " failed goals: "
-  in (succ ^ nm, res_thm) end
+  in (succ ^ nm, res_thm) end handle TERM (s, ts) => raise TERM ("test_graph_refine_proof: " ^ nm
+        ^ ": " ^ s, ts)
+
 
 fun test_graph_refine_proof_with_def funs csenv ctxt nm = case
     Symtab.lookup funs nm of SOME (_, _, NONE) => "skipped " ^ nm
