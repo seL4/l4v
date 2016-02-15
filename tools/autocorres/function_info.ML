@@ -229,7 +229,7 @@ let
     val (definition, invented) =
         (Proof_Context.get_thms ctxt (name ^ "_body_def"), false)
         handle ERROR _ =>
-          ([Thm.instantiate ([((("a", 0), []), Thm.ctyp_of ctxt myvars_typ)], [])
+          ([Thm.instantiate ([((("'a", 0), ["HOL.type"]), Thm.ctyp_of ctxt myvars_typ)], [])
                             @{thm undefined_function_body_def}], true)
   in
     {
