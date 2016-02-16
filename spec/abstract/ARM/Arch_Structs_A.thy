@@ -52,10 +52,10 @@ definition
 
 definition
   asid_high_bits :: nat where
-  "asid_high_bits \<equiv> 8"
+  "asid_high_bits \<equiv> 7"
 definition
   asid_low_bits :: nat where
-  "asid_low_bits \<equiv> 9 :: nat"
+  "asid_low_bits \<equiv> 10 :: nat"
 definition
   asid_bits :: nat where
   "asid_bits \<equiv> 17 :: nat"
@@ -84,7 +84,7 @@ datatype pte =
  | SmallPagePTE obj_ref vm_attributes cap_rights
 
 datatype arch_kernel_obj =
-   ASIDPool "9 word \<rightharpoonup> obj_ref"
+   ASIDPool "10 word \<rightharpoonup> obj_ref"
  | PageTable "word8 \<Rightarrow> pte"
  | PageDirectory "12 word \<Rightarrow> pde"
  | DataPage vmpage_size
@@ -203,7 +203,7 @@ currently active page directory. The second component of
 
 record arch_state =
   arm_globals_frame :: obj_ref
-  arm_asid_table    :: "word8 \<rightharpoonup> obj_ref"
+  arm_asid_table    :: "7 word \<rightharpoonup> obj_ref"
   arm_hwasid_table  :: "hw_asid \<rightharpoonup> asid"
   arm_next_asid     :: hw_asid
   arm_asid_map      :: "asid \<rightharpoonup> (hw_asid \<times> obj_ref)"

@@ -132,7 +132,7 @@ lemma obj_size_relation:
                          split: option.splits sum.splits)
   apply (rename_tac arch_cap)
   apply (case_tac arch_cap,
-         simp_all add: objBits_def ArchRetype_H.capUntypedSize_def asid_low_bits_def
+    simp_all add: objBits_def ArchRetype_H.capUntypedSize_def asid_low_bits_def
                        pageBits_def)
   done
 

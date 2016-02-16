@@ -186,7 +186,6 @@ lemma valid_ipc_buffer_cap_0[simp]:
   "valid_ipc_buffer_cap cap 0"
   by (simp add: valid_ipc_buffer_cap_def split: cap.split arch_cap.split)
 
-(* FIXME-NTFN: needs assumption for tcb_bound_notification *)
 lemma thread_set_valid_objs_triv:
   assumes x: "\<And>tcb. \<forall>(getF, v) \<in> ran tcb_cap_cases.
                   getF (f tcb) = getF tcb"

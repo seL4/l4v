@@ -63,18 +63,18 @@ lemma isCap_simps:
   "isCNodeCap v = (\<exists>v0 v1 v2 v3. v = CNodeCap v0 v1 v2 v3)"
   "isNotificationCap v = (\<exists>v0 v1 v2 v3. v = NotificationCap v0 v1 v2 v3)"
   "isEndpointCap v = (\<exists>v0 v1 v2 v3 v4. v = EndpointCap v0 v1 v2 v3 v4)"
-  "isUntypedCap v = (\<exists>v0 v1 f. v = UntypedCap v0 v1 f)"
+  "isUntypedCap v = (\<exists>d v0 v1 f. v = UntypedCap d v0 v1 f)"
   "isReplyCap v = (\<exists>v0 v1. v = ReplyCap v0 v1)"
   "isIRQControlCap v = (v = IRQControlCap)"
   "isIRQHandlerCap v = (\<exists>v0. v = IRQHandlerCap v0)"
   "isNullCap v = (v = NullCap)"
   "isDomainCap v = (v = DomainCap)"
-  "isPageCap w = (\<exists>v0 v1 v2 v3. w = PageCap v0 v1 v2 v3)"
+  "isPageCap w = (\<exists>d v0 v1 v2 v3. w = PageCap d v0 v1 v2 v3)"
   "isPageTableCap w = (\<exists>v0 v1. w = PageTableCap v0 v1)"
   "isPageDirectoryCap w = (\<exists>v0 v1. w = PageDirectoryCap v0 v1)"
   "isASIDControlCap w = (w = ASIDControlCap)"
   "isASIDPoolCap w = (\<exists>v0 v1. w = ASIDPoolCap v0 v1)"
-  "isArchPageCap cap = (\<exists>ref rghts sz data. cap = ArchObjectCap (PageCap ref rghts sz data))"
+  "isArchPageCap cap = (\<exists>d ref rghts sz data. cap = ArchObjectCap (PageCap d ref rghts sz data))"
   by (auto simp: isCap_defs split: capability.splits arch_capability.splits)
 
 lemma untyped_not_null [simp]:

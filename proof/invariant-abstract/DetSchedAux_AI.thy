@@ -24,7 +24,7 @@ crunch rqueues[wp]: update_cdt_list "\<lambda>s. P (ready_queues s)"
 crunch schedact[wp]: update_cdt_list "\<lambda>s. P (scheduler_action s)"
 crunch cur_domain[wp]: update_cdt_list "\<lambda>s. P (cur_domain s)"
 
-crunch exst[wp]: init_arch_objects "\<lambda>s. P (exst s)" (wp: crunch_wps)
+crunch exst[wp]: init_arch_objects "\<lambda>s. P (exst s)" (wp: crunch_wps simp: unless_def)
 
 crunch ekheap[wp]: create_cap, cap_insert "\<lambda>s :: det_ext state. P (ekheap s)" (wp: crunch_wps)
 
@@ -34,10 +34,10 @@ crunch schedact[wp]: create_cap, cap_insert "\<lambda>s :: det_ext state. P (sch
 
 crunch cur_domain[wp]: create_cap, cap_insert "\<lambda>s :: det_ext state. P (cur_domain s)" (wp: crunch_wps)
 
-crunch ct[wp]: init_arch_objects "\<lambda>s. P (cur_thread s)" (wp: crunch_wps)
+crunch ct[wp]: init_arch_objects "\<lambda>s. P (cur_thread s)" (wp: crunch_wps simp: unless_def)
 
 
-lemma create_cap_ct[wp]: "\<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> create_cap a b c d \<lbrace>\<lambda>r s. P (cur_thread s)\<rbrace>"
+lemma create_cap_ct[wp]: "\<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> create_cap a b c e d \<lbrace>\<lambda>r s. P (cur_thread s)\<rbrace>"
   apply (simp add: create_cap_def)
   apply (rule hoare_pre)
    apply (wp dxo_wp_weak | wpc | simp)+
@@ -46,7 +46,7 @@ lemma create_cap_ct[wp]: "\<lbrace>\<lambda>s. P (cur_thread s)\<rbrace> create_
 
 
 
-crunch st_tcb_at[wp]: init_arch_objects "st_tcb_at Q t" (wp: mapM_x_wp')
+crunch st_tcb_at[wp]: init_arch_objects "st_tcb_at Q t" (wp: mapM_x_wp' simp: unless_def)
 
 crunch valid_etcbs[wp]: create_cap,cap_insert,init_arch_objects,set_cap valid_etcbs (wp: valid_etcbs_lift set_cap_typ_at)
 
@@ -173,7 +173,7 @@ lemma typ_at_pred_tcb_at_lift:
 
 
 lemma create_cap_no_pred_tcb_at: "\<lbrace>\<lambda>s. \<not> pred_tcb_at proj P t s\<rbrace>
-          create_cap apiobject_type nat' prod' x
+          create_cap apiobject_type nat' prod' dev x
           \<lbrace>\<lambda>r s. \<not> pred_tcb_at proj P t s\<rbrace>"
   apply (rule typ_at_pred_tcb_at_lift)
   apply wp
@@ -365,7 +365,7 @@ crunch scheduler_action[wp]: invoke_untyped "\<lambda>s :: det_ext state. P (sch
 
 crunch cur_domain[wp]: invoke_untyped "\<lambda>s :: det_ext state. P (cur_domain s)" (wp: crunch_wps simp: detype_def detype_ext_def wrap_ext_det_ext_ext_def mapM_x_defsym ignore: freeMemory)
 
-crunch idle_thread[wp]: invoke_untyped "\<lambda>s. P (idle_thread s)" (wp: crunch_wps dxo_wp_weak simp: detype_def detype_ext_def wrap_ext_det_ext_ext_def mapM_x_defsym  ignore: freeMemory retype_region_ext)
+crunch idle_thread[wp]: invoke_untyped "\<lambda>s. P (idle_thread s)" (wp: crunch_wps dxo_wp_weak simp: detype_def unless_def detype_ext_def wrap_ext_det_ext_ext_def mapM_x_defsym  ignore: freeMemory retype_region_ext)
 
 lemma valid_idle_etcb_lift:
   assumes "\<And>P t. \<lbrace>\<lambda>s. etcb_at P t s\<rbrace> f \<lbrace>\<lambda>r s. etcb_at P t s\<rbrace>"

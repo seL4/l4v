@@ -1426,8 +1426,8 @@ lemma invs_untyped_children[elim!]:
                      untyped_mdb_alt)
 
 lemma delete_objects_invs[wp]:
-  "\<lbrace>(\<lambda>s. \<exists>slot. cte_wp_at (op = (cap.UntypedCap ptr bits f)) slot s
-    \<and> descendants_range (cap.UntypedCap ptr bits f) slot s) and
+  "\<lbrace>(\<lambda>s. \<exists>slot. cte_wp_at (op = (cap.UntypedCap dev ptr bits f)) slot s
+    \<and> descendants_range (cap.UntypedCap dev ptr bits f) slot s) and
     invs and ct_active\<rbrace>
     delete_objects ptr bits \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: delete_objects_def)
@@ -1448,18 +1448,18 @@ lemma delete_objects_invs[wp]:
 
 
 lemma dmo_valid_cap[wp]:
-  "\<lbrace>\<lambda>s. s \<turnstile> cap.UntypedCap base magnitude idx\<rbrace>
+  "\<lbrace>\<lambda>s. s \<turnstile> cap.UntypedCap dev base magnitude idx\<rbrace>
    do_machine_op f
-   \<lbrace>\<lambda>rv s. s \<turnstile> cap.UntypedCap base magnitude idx\<rbrace>"
+   \<lbrace>\<lambda>rv s. s \<turnstile> cap.UntypedCap dev base magnitude idx\<rbrace>"
   by (simp add: do_machine_op_def split_def | wp)+
 
 
 lemma cte_map_not_null_outside':
-  "\<lbrakk>cte_wp_at (op = (cap.UntypedCap q n m)) p' s;
-    descendants_range (cap.UntypedCap q n m) p' s; untyped_children_in_mdb s;
+  "\<lbrakk>cte_wp_at (op = (cap.UntypedCap dev q n m)) p' s;
+    descendants_range (cap.UntypedCap dev q n m) p' s; untyped_children_in_mdb s;
     if_unsafe_then_cap s; valid_global_refs s;
     cte_wp_at (op \<noteq> cap.NullCap) p s\<rbrakk>
-   \<Longrightarrow> fst p \<notin> untyped_range (cap.UntypedCap q n m)"
+   \<Longrightarrow> fst p \<notin> untyped_range (cap.UntypedCap dev q n m)"
   by (erule (1) cte_map_not_null_outside, simp_all)
 
 lemma refl_spec[simp]:

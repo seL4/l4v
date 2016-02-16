@@ -66,7 +66,7 @@ datatype capability =
   | Zombie machine_word zombie_type nat
   | ArchObjectCap arch_capability
   | ReplyCap machine_word bool
-  | UntypedCap machine_word nat nat
+  | UntypedCap bool machine_word nat nat
   | CNodeCap machine_word nat machine_word nat
   | IRQControlCap
 
@@ -88,7 +88,7 @@ where
 primrec
   capPtr :: "capability \<Rightarrow> machine_word"
 where
-  "capPtr (UntypedCap v0 v1 v2) = v0"
+  "capPtr (UntypedCap v0 v1 v2 v3) = v1"
 
 primrec
   capZombieNumber :: "capability \<Rightarrow> nat"
@@ -118,12 +118,12 @@ where
 primrec
   capFreeIndex :: "capability \<Rightarrow> nat"
 where
-  "capFreeIndex (UntypedCap v0 v1 v2) = v2"
+  "capFreeIndex (UntypedCap v0 v1 v2 v3) = v3"
 
 primrec
   capBlockSize :: "capability \<Rightarrow> nat"
 where
-  "capBlockSize (UntypedCap v0 v1 v2) = v1"
+  "capBlockSize (UntypedCap v0 v1 v2 v3) = v2"
 
 primrec
   capEPCanReceive :: "capability \<Rightarrow> bool"
@@ -154,6 +154,11 @@ primrec
   capIRQ :: "capability \<Rightarrow> irq"
 where
   "capIRQ (IRQHandlerCap v0) = v0"
+
+primrec
+  capIsDevice :: "capability \<Rightarrow> bool"
+where
+  "capIsDevice (UntypedCap v0 v1 v2 v3) = v0"
 
 primrec
   capCNodeGuardSize :: "capability \<Rightarrow> nat"
@@ -204,7 +209,7 @@ where
 primrec
   capPtr_update :: "(machine_word \<Rightarrow> machine_word) \<Rightarrow> capability \<Rightarrow> capability"
 where
-  "capPtr_update f (UntypedCap v0 v1 v2) = UntypedCap (f v0) v1 v2"
+  "capPtr_update f (UntypedCap v0 v1 v2 v3) = UntypedCap v0 (f v1) v2 v3"
 
 primrec
   capZombieNumber_update :: "(nat \<Rightarrow> nat) \<Rightarrow> capability \<Rightarrow> capability"
@@ -234,12 +239,12 @@ where
 primrec
   capFreeIndex_update :: "(nat \<Rightarrow> nat) \<Rightarrow> capability \<Rightarrow> capability"
 where
-  "capFreeIndex_update f (UntypedCap v0 v1 v2) = UntypedCap v0 v1 (f v2)"
+  "capFreeIndex_update f (UntypedCap v0 v1 v2 v3) = UntypedCap v0 v1 v2 (f v3)"
 
 primrec
   capBlockSize_update :: "(nat \<Rightarrow> nat) \<Rightarrow> capability \<Rightarrow> capability"
 where
-  "capBlockSize_update f (UntypedCap v0 v1 v2) = UntypedCap v0 (f v1) v2"
+  "capBlockSize_update f (UntypedCap v0 v1 v2 v3) = UntypedCap v0 v1 (f v2) v3"
 
 primrec
   capEPCanReceive_update :: "(bool \<Rightarrow> bool) \<Rightarrow> capability \<Rightarrow> capability"
@@ -270,6 +275,11 @@ primrec
   capIRQ_update :: "(irq \<Rightarrow> irq) \<Rightarrow> capability \<Rightarrow> capability"
 where
   "capIRQ_update f (IRQHandlerCap v0) = IRQHandlerCap (f v0)"
+
+primrec
+  capIsDevice_update :: "(bool \<Rightarrow> bool) \<Rightarrow> capability \<Rightarrow> capability"
+where
+  "capIsDevice_update f (UntypedCap v0 v1 v2 v3) = UntypedCap (f v0) v1 v2 v3"
 
 primrec
   capCNodeGuardSize_update :: "(nat \<Rightarrow> nat) \<Rightarrow> capability \<Rightarrow> capability"
@@ -338,9 +348,9 @@ where
   "ReplyCap_ \<lparr> capTCBPtr= v0, capReplyMaster= v1 \<rparr> == ReplyCap v0 v1"
 
 abbreviation (input)
-  UntypedCap_trans :: "(machine_word) \<Rightarrow> (nat) \<Rightarrow> (nat) \<Rightarrow> capability" ("UntypedCap'_ \<lparr> capPtr= _, capBlockSize= _, capFreeIndex= _ \<rparr>")
+  UntypedCap_trans :: "(bool) \<Rightarrow> (machine_word) \<Rightarrow> (nat) \<Rightarrow> (nat) \<Rightarrow> capability" ("UntypedCap'_ \<lparr> capIsDevice= _, capPtr= _, capBlockSize= _, capFreeIndex= _ \<rparr>")
 where
-  "UntypedCap_ \<lparr> capPtr= v0, capBlockSize= v1, capFreeIndex= v2 \<rparr> == UntypedCap v0 v1 v2"
+  "UntypedCap_ \<lparr> capIsDevice= v0, capPtr= v1, capBlockSize= v2, capFreeIndex= v3 \<rparr> == UntypedCap v0 v1 v2 v3"
 
 abbreviation (input)
   CNodeCap_trans :: "(machine_word) \<Rightarrow> (nat) \<Rightarrow> (machine_word) \<Rightarrow> (nat) \<Rightarrow> capability" ("CNodeCap'_ \<lparr> capCNodePtr= _, capCNodeBits= _, capCNodeGuard= _, capCNodeGuardSize= _ \<rparr>")
@@ -414,7 +424,7 @@ definition
   isUntypedCap :: "capability \<Rightarrow> bool"
 where
  "isUntypedCap v \<equiv> case v of
-    UntypedCap v0 v1 v2 \<Rightarrow> True
+    UntypedCap v0 v1 v2 v3 \<Rightarrow> True
   | _ \<Rightarrow> False"
 
 definition

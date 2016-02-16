@@ -73,7 +73,7 @@ lemma asid_low_high_bits:
    apply (cases "n < 10")
     using prems(1)
    apply fastforce
-   apply (cases "n < 18")
+   apply (cases "n < 17")
      using prems(2)[where n="n - 10"]
      apply fastforce
    using prems(3-)
@@ -730,7 +730,7 @@ lemma ex_asid_high_bits_plus:
   apply (rule conjI)
    prefer 2
    apply arith
-  apply (subgoal_tac "n < 18", simp)
+  apply (subgoal_tac "n < 17", simp)
   apply (clarsimp simp add: linorder_not_le [symmetric])
   done
 
@@ -748,7 +748,7 @@ lemma asid_high_bits_shl:
   apply (rule conjI)
    prefer 2
    apply simp
-  apply (subgoal_tac "n < 18", simp)
+  apply (subgoal_tac "n < 17", simp)
   apply (clarsimp simp add: linorder_not_le [symmetric])
   done
   
@@ -1506,7 +1506,7 @@ definition
       and (\<lambda>s. \<exists>slot. cte_wp_at (\<lambda>cap. same_refs m cap s) slot s)
       and (\<lambda>s. \<exists>pd. pd_at_asid asid pd s)
   | ArchInvocation_A.PageUnmap cap ptr \<Rightarrow>
-     \<lambda>s. \<exists>r R sz m. cap = Arch_Structs_A.PageCap r R sz m \<and>
+     \<lambda>s. \<exists>dev r R sz m. cap = Arch_Structs_A.PageCap dev r R sz m \<and>
          case_option True (valid_unmap sz) m \<and>
          cte_wp_at (is_arch_diminished (cap.ArchObjectCap cap)) ptr s \<and>
          s \<turnstile> (cap.ArchObjectCap cap)
@@ -4304,8 +4304,8 @@ lemma store_pte_unmap_page:
          clarsimp simp: pde_ref_def pte_ref_pages_def pde_ref_pages_def 
                         is_aligned_add_helper less_le_trans[OF ucast_less] 
                         shiftl_less_t2n'[where m=8 and n=2, simplified]  
-                 dest!: graph_ofD ucast_up_inj[where 'a=10 and 'b=32, simplified] 
-                        ucast_up_inj[where 'a=8 and 'b=32, simplified]
+                 dest!: graph_ofD ucast_up_inj[where 'a=10 (*asid_low_bits*)and 'b=32, simplified] 
+                        ucast_up_inj[where 'a=7 (*asid_high_bits*) and 'b=32, simplified]
                  split: split_if_asm  Arch_Structs_A.pde.splits Arch_Structs_A.pte.splits)
 
 crunch pd_at: flush_page "\<lambda>s. P (ko_at (ArchObj (PageDirectory pd)) x s)"
@@ -4400,6 +4400,7 @@ apply (clarsimp simp: vs_lookup_def vs_asid_refs_def
                    not_le ucast_less_ucast[symmetric, where 'a=12 and 'b=32]
                    mask_asid_low_bits_ucast_ucast pde_ref_pages_def pte_ref_pages_def
             split: split_if_asm)
+  using [[show_types, show_consts]]
   done
 
 lemma kernel_slot_impossible_vs_lookup_pages:

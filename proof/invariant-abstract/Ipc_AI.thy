@@ -145,7 +145,7 @@ lemma update_cap_data_closedform:
        else cap.CNodeCap r bits ((\<lambda>g''. drop (size g'' - unat ((w >> 3) && mask 5)) (to_bl g'')) ((w >> 8) && mask 18))
    | cap.ThreadCap r \<Rightarrow> cap.ThreadCap r
    | cap.DomainCap \<Rightarrow> cap.DomainCap
-   | cap.UntypedCap p n idx \<Rightarrow> cap.UntypedCap p n idx
+   | cap.UntypedCap d p n idx \<Rightarrow> cap.UntypedCap d p n idx
    | cap.NullCap \<Rightarrow> cap.NullCap
    | cap.ReplyCap t m \<Rightarrow> cap.ReplyCap t m
    | cap.IRQControlCap \<Rightarrow> cap.IRQControlCap
@@ -177,7 +177,7 @@ lemma ensure_no_children_wp:
 
 
 lemma cap_asid_PageCap_None [simp]:
-  "cap_asid (cap.ArchObjectCap (arch_cap.PageCap r R pgsz None)) = None"
+  "cap_asid (cap.ArchObjectCap (arch_cap.PageCap d r R pgsz None)) = None"
   by (simp add: cap_asid_def)
 
 
@@ -1691,17 +1691,18 @@ lemma lookup_ipc_buffer_in_user_frame[wp]:
   apply (simp add: lookup_ipc_buffer_def)
   apply (wp get_cap_wp thread_get_wp | wpc | simp)+
   apply (clarsimp simp add: obj_at_def is_tcb)
-  apply (subgoal_tac "in_user_frame (xa + (tcb_ipc_buffer tcb &&
-                                           mask (pageBitsForSize xc))) s", simp)
+  apply (rename_tac dev p R sz m)
+  apply (subgoal_tac "in_user_frame (p + (tcb_ipc_buffer tcb &&
+                                           mask (pageBitsForSize sz))) s", simp)
   apply (drule (1) cte_wp_valid_cap)
   apply (clarsimp simp add: valid_cap_def cap_aligned_def in_user_frame_def)
   apply (thin_tac "case_option a b c" for a b c)
-  apply (rule_tac x=xc in exI)
-  apply (subgoal_tac "(xa + (tcb_ipc_buffer tcb && mask (pageBitsForSize xc)) &&
-            ~~ mask (pageBitsForSize xc)) = xa", simp)
+  apply (rule_tac x=sz in exI)
+  apply (subgoal_tac "(p + (tcb_ipc_buffer tcb && mask (pageBitsForSize sz)) &&
+            ~~ mask (pageBitsForSize sz)) = p", simp)
   apply (rule is_aligned_add_helper[THEN conjunct2], assumption)
   apply (rule and_mask_less')
-  apply (case_tac xc, simp_all)
+  apply (case_tac sz, simp_all)
   done
 
 

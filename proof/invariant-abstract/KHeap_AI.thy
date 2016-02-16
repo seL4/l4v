@@ -85,8 +85,8 @@ lemma cte_at_same_type:
 
 
 lemma untyped_same_type:
-  "\<lbrakk>valid_untyped (cap.UntypedCap r n f) s; a_type k = a_type ko; kheap s p = Some ko\<rbrakk>
-  \<Longrightarrow> valid_untyped (cap.UntypedCap r n f) (s\<lparr>kheap := kheap s(p \<mapsto> k)\<rparr>)"
+  "\<lbrakk>valid_untyped (cap.UntypedCap dev r n f) s; a_type k = a_type ko; kheap s p = Some ko\<rbrakk>
+  \<Longrightarrow> valid_untyped (cap.UntypedCap dev r n f) (s\<lparr>kheap := kheap s(p \<mapsto> k)\<rparr>)"
   unfolding valid_untyped_def
   by (clarsimp simp: obj_range_def obj_bits_T)
 

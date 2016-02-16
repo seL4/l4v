@@ -644,7 +644,7 @@ consts
 sameObjectAs :: "arch_capability \<Rightarrow> arch_capability \<Rightarrow> bool"
 
 consts
-createObject :: "object_type \<Rightarrow> machine_word \<Rightarrow> nat \<Rightarrow> arch_capability kernel"
+createObject :: "object_type \<Rightarrow> machine_word \<Rightarrow> nat \<Rightarrow> bool \<Rightarrow> arch_capability kernel"
 
 consts
 decodeInvocation :: "machine_word \<Rightarrow> machine_word list \<Rightarrow> cptr \<Rightarrow> machine_word \<Rightarrow> arch_capability \<Rightarrow> (capability * machine_word) list \<Rightarrow> ( syscall_error , ArchRetypeDecls_H.invocation ) kernel_f"

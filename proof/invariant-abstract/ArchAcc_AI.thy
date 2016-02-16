@@ -394,7 +394,7 @@ crunch inv[wp]: get_master_pte P
 crunch inv[wp]: get_master_pde P
 
 lemma ucast_mask_asid_low_bits [simp]:
-  "ucast ((asid::word32) && mask asid_low_bits) = (ucast asid :: 10 word)"
+  "ucast ((asid::word32) && mask asid_low_bits) = (ucast asid :: 9 word)"
   apply (rule word_eqI)
   apply (simp add: word_size nth_ucast asid_low_bits_def)
   done

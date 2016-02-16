@@ -73,8 +73,8 @@ where
         arch_capability.ASIDPoolCap x y)"
 | "acap_relation (arch_cap.ASIDControlCap) c              = (c =
         arch_capability.ASIDControlCap)"
-| "acap_relation (arch_cap.PageCap word rghts sz data) c  = (c =
-        arch_capability.PageCap word (vmrights_map rghts) sz data)"
+| "acap_relation (arch_cap.PageCap dev word rghts sz data) c  = (c =
+        arch_capability.PageCap dev word (vmrights_map rghts) sz data)"
 | "acap_relation (arch_cap.PageTableCap word data) c      = (c =
         arch_capability.PageTableCap word data)"
 | "acap_relation (arch_cap.PageDirectoryCap word data) c  = (c =
@@ -87,8 +87,8 @@ where
            Structures_H.NullCap)"
 | "cap_relation Structures_A.DomainCap c                  = (c =
            Structures_H.DomainCap)"
-| "cap_relation (Structures_A.UntypedCap ref n f) c       = (c =
-           Structures_H.UntypedCap ref n f)"
+| "cap_relation (Structures_A.UntypedCap dev ref n f) c       = (c =
+           Structures_H.UntypedCap dev ref n f)"
 | "cap_relation (Structures_A.EndpointCap ref b r) c      = (c =
            Structures_H.EndpointCap ref b (AllowSend \<in> r)
              (AllowRecv \<in> r) (AllowGrant \<in> r))"
@@ -117,7 +117,7 @@ where
                                \<and> cs y = Some cap \<and> cap_relation cap (cteCap cte)"
 
 definition
-  asid_pool_relation :: "(10 word \<rightharpoonup> word32) \<Rightarrow> ArchStructures_H.asidpool \<Rightarrow> bool"
+  asid_pool_relation :: "(9 word \<rightharpoonup> word32) \<Rightarrow> ArchStructures_H.asidpool \<Rightarrow> bool"
 where
   "asid_pool_relation \<equiv> \<lambda>p p'. p = inv ASIDPool p' o ucast"
 

@@ -62,7 +62,7 @@ consts
 provideCap :: "capability \<Rightarrow> capability \<Rightarrow> unit kernel_init"
 
 consts
-provideUntypedCap :: "capability \<Rightarrow> paddr \<Rightarrow> word8 \<Rightarrow> machine_word \<Rightarrow> unit kernel_init"
+provideUntypedCap :: "capability \<Rightarrow> bool \<Rightarrow> paddr \<Rightarrow> word8 \<Rightarrow> machine_word \<Rightarrow> unit kernel_init"
 
 consts
 coverOf :: "region list \<Rightarrow> region"

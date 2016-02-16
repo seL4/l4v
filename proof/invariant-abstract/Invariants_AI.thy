@@ -196,10 +196,10 @@ subsection "Valid caps and objects"
 primrec
   untyped_range :: "cap \<Rightarrow> word32 set"
 where
-  "untyped_range (cap.UntypedCap p n f)                 = {p..p + (1 << n) - 1}"
+  "untyped_range (cap.UntypedCap dev p n f)             = {p..p + (1 << n) - 1}"
 | "untyped_range (cap.NullCap)                          = {}"
 | "untyped_range (cap.EndpointCap r badge rights)       = {}"
-| "untyped_range (cap.NotificationCap r badge rights)  = {}"
+| "untyped_range (cap.NotificationCap r badge rights)   = {}"
 | "untyped_range (cap.CNodeCap r bits guard)            = {}"
 | "untyped_range (cap.ThreadCap r)                      = {}"
 | "untyped_range (cap.DomainCap)                        = {}"
@@ -212,7 +212,7 @@ where
 primrec
   usable_untyped_range :: "cap \<Rightarrow> word32 set"
 where
- "usable_untyped_range (cap.UntypedCap p n f) =
+ "usable_untyped_range (cap.UntypedCap _ p n f) =
   (if f < 2^n  then {p+of_nat f .. p + 2 ^ n - 1} else {})"
 
 definition
@@ -234,7 +234,7 @@ primrec
   cap_bits :: "cap \<Rightarrow> nat"
 where
   "cap_bits cap.NullCap = 0"
-| "cap_bits (cap.UntypedCap r b f) = b"
+| "cap_bits (cap.UntypedCap dev r b f) = b"
 | "cap_bits (cap.EndpointCap r b R) = obj_bits (Endpoint undefined)"
 | "cap_bits (cap.NotificationCap r b R) = obj_bits (Notification undefined)"
 | "cap_bits (cap.CNodeCap r b m) = cte_level_bits + b"
@@ -247,6 +247,13 @@ where
 | "cap_bits (cap.IRQControlCap) = 0"
 | "cap_bits (cap.IRQHandlerCap irq) = 0"
 | "cap_bits (cap.ArchObjectCap x) = arch_obj_size x"
+
+fun 
+  cap_is_device :: "cap \<Rightarrow> bool"
+where
+  "cap_is_device (cap.UntypedCap dev r b f) = dev"
+| "cap_is_device (cap.ArchObjectCap x) = arch_cap_is_device x"
+| "cap_is_device _ = False"
 
 definition
   "cap_aligned c \<equiv>
@@ -280,7 +287,7 @@ where
    case ac of
      Arch_Structs_A.ASIDPoolCap r as
        \<Rightarrow> is_aligned as asid_low_bits \<and> as \<le> 2^asid_bits - 1
-   | Arch_Structs_A.PageCap r rghts sz mapdata \<Rightarrow> rghts \<in> valid_vm_rights \<and>
+   | Arch_Structs_A.PageCap dev r rghts sz mapdata \<Rightarrow> rghts \<in> valid_vm_rights \<and>
      case_option True (wellformed_mapdata sz) mapdata
    | Arch_Structs_A.PageTableCap r (Some mapdata) \<Rightarrow>
      wellformed_mapdata ARMSection mapdata
@@ -293,7 +300,7 @@ definition
 where
   "wellformed_cap c \<equiv>
   case c of
-    Structures_A.UntypedCap p sz idx \<Rightarrow> sz \<ge> 4
+    Structures_A.UntypedCap dev p sz idx \<Rightarrow> sz \<ge> 4
   | Structures_A.NotificationCap r badge rights \<Rightarrow> AllowGrant \<notin> rights
   | Structures_A.CNodeCap r bits guard \<Rightarrow> bits \<noteq> 0 \<and> length guard \<le> 32
   | Structures_A.IRQHandlerCap irq \<Rightarrow> irq \<le> maxIRQ
@@ -307,7 +314,7 @@ definition
 where
   "valid_cap_ref c s \<equiv> case c of
     Structures_A.NullCap \<Rightarrow> True
-  | Structures_A.UntypedCap p b idx \<Rightarrow> valid_untyped c s \<and> idx \<le> 2^ b \<and> p \<noteq> 0
+  | Structures_A.UntypedCap dev p b idx \<Rightarrow> valid_untyped c s \<and> idx \<le> 2^ b \<and> p \<noteq> 0
   | Structures_A.EndpointCap r badge rights \<Rightarrow> ep_at r s
   | Structures_A.NotificationCap r badge rights \<Rightarrow> ntfn_at r s
   | Structures_A.CNodeCap r bits guard \<Rightarrow> cap_table_at bits r s
@@ -321,7 +328,7 @@ where
   | Structures_A.ArchObjectCap ac \<Rightarrow> (case ac of
     Arch_Structs_A.ASIDPoolCap r as \<Rightarrow> typ_at (AArch AASIDPool) r s
   | Arch_Structs_A.ASIDControlCap \<Rightarrow> True
-  | Arch_Structs_A.PageCap r rghts sz mapdata \<Rightarrow> typ_at (AArch (AIntData sz)) r s
+  | Arch_Structs_A.PageCap dev r rghts sz mapdata \<Rightarrow> typ_at (AArch (AIntData sz)) r s
   | Arch_Structs_A.PageTableCap r mapdata \<Rightarrow> typ_at (AArch APageTable) r s
   | Arch_Structs_A.PageDirectoryCap r mapdata\<Rightarrow>typ_at(AArch APageDirectory) r s)"
 
@@ -331,7 +338,7 @@ definition
 where
   "valid_cap c s \<equiv> cap_aligned c \<and> (case c of
     Structures_A.NullCap \<Rightarrow> True
-  | Structures_A.UntypedCap p b f \<Rightarrow> valid_untyped c s \<and> 4 \<le> b \<and> f \<le> 2 ^ b \<and> p \<noteq> 0
+  | Structures_A.UntypedCap dev p b f \<Rightarrow> valid_untyped c s \<and> 4 \<le> b \<and> f \<le> 2 ^ b \<and> p \<noteq> 0
   | Structures_A.EndpointCap r badge rights \<Rightarrow> ep_at r s
   | Structures_A.NotificationCap r badge rights \<Rightarrow>
          ntfn_at r s \<and> AllowGrant \<notin> rights
@@ -350,7 +357,7 @@ where
          typ_at (AArch AASIDPool) r s \<and> is_aligned as asid_low_bits
            \<and> as \<le> 2^asid_bits - 1
   | Arch_Structs_A.ASIDControlCap \<Rightarrow> True
-  | Arch_Structs_A.PageCap r rghts sz mapdata \<Rightarrow>
+  | Arch_Structs_A.PageCap dev r rghts sz mapdata \<Rightarrow>
     typ_at (AArch (AIntData sz)) r s \<and> rghts \<in> valid_vm_rights \<and>
     (case mapdata of None \<Rightarrow> True | Some (asid, ref) \<Rightarrow> 0 < asid \<and> asid \<le> 2^asid_bits - 1
                                              \<and> vmsz_aligned ref sz \<and> ref < kernel_base)
@@ -374,7 +381,7 @@ primrec
 where
   "acap_class (arch_cap.ASIDPoolCap x y)      = PhysicalClass"
 | "acap_class (arch_cap.ASIDControlCap)       = ASIDMasterClass"
-| "acap_class (arch_cap.PageCap x y sz z)     = PhysicalClass"
+| "acap_class (arch_cap.PageCap dev x y sz z) = PhysicalClass"
 | "acap_class (arch_cap.PageTableCap x y)     = PhysicalClass"
 | "acap_class (arch_cap.PageDirectoryCap x y) = PhysicalClass"
 
@@ -382,7 +389,7 @@ primrec
   cap_class :: "cap \<Rightarrow> capclass"
 where
   "cap_class (cap.NullCap)                          = NullClass"
-| "cap_class (cap.UntypedCap p n f)                 = PhysicalClass"
+| "cap_class (cap.UntypedCap dev p n f)             = PhysicalClass"
 | "cap_class (cap.EndpointCap ref badge r)          = PhysicalClass"
 | "cap_class (cap.NotificationCap ref badge r)     = PhysicalClass"
 | "cap_class (cap.CNodeCap ref n bits)              = PhysicalClass"
@@ -446,8 +453,8 @@ definition
 where
   "valid_ipc_buffer_cap c bufptr \<equiv>
          case c of
-              cap.ArchObjectCap (arch_cap.PageCap ref rghts sz mapdata) \<Rightarrow>
-                   is_aligned bufptr msg_align_bits
+              cap.ArchObjectCap (arch_cap.PageCap dev ref rghts sz mapdata) \<Rightarrow>
+                   is_aligned bufptr msg_align_bits \<and> bufptr \<noteq> 0 \<longrightarrow> \<not> dev
 
             | _ \<Rightarrow> True"
 
@@ -660,7 +667,7 @@ abbreviation
   "ref \<rhd>* ref' \<equiv> \<lambda>s. (ref,ref') \<in> vs_lookup_trans s"
 
 definition
-  vs_asid_refs :: "(word8 \<rightharpoonup> obj_ref) \<Rightarrow> vs_chain set"
+  vs_asid_refs :: "(7 word \<rightharpoonup> obj_ref) \<Rightarrow> vs_chain set"
 where
   "vs_asid_refs t \<equiv> (\<lambda>(r,p). ([VSRef (ucast r) None], p)) ` graph_of t"
 
@@ -877,7 +884,7 @@ where
           \<exists>pt. ko_at (ArchObj (PageTable pt)) p s \<and> (\<forall>x. aligned_pte (pt x)))"
 
 definition
-  valid_asid_table :: "(word8 \<rightharpoonup> obj_ref) \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
+  valid_asid_table :: "(7 word \<rightharpoonup> obj_ref) \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
   "valid_asid_table table \<equiv> \<lambda>s. (\<forall>p \<in> ran table. asid_pool_at p s) \<and>
                                 inj_on table (dom table)"
@@ -1064,7 +1071,7 @@ where
 primrec
   cte_refs :: "cap \<Rightarrow> (irq \<Rightarrow> obj_ref) \<Rightarrow> cslot_ptr set"
 where
-  "cte_refs (cap.UntypedCap p n fr) f                = {}"
+  "cte_refs (cap.UntypedCap dev p n fr) f            = {}"
 | "cte_refs (cap.NullCap) f                          = {}"
 | "cte_refs (cap.EndpointCap r badge rights) f       = {}"
 | "cte_refs (cap.NotificationCap r badge rights) f  = {}"
@@ -1275,6 +1282,7 @@ definition valid_irq_states :: "'z::state_ext state \<Rightarrow> bool" where
   "valid_irq_states \<equiv> \<lambda>s.
     valid_irq_masks (interrupt_states s) (irq_masks (machine_state s))"
 
+(* FIXME: SELFOUR-421 - how does this change? *)
 text "caps point at objects in the kernel window"
 definition
   cap_refs_in_kernel_window :: "'z::state_ext state \<Rightarrow> bool"
@@ -1295,29 +1303,29 @@ where
      Some [VSRef (vptr >> 20) (Some APageDirectory),
            VSRef (asid && mask asid_low_bits) (Some AASIDPool),
            VSRef (ucast (asid_high_bits_of asid)) None]
- | Structures_A.ArchObjectCap (Arch_Structs_A.PageCap word rights ARMSmallPage (Some (asid, vptr))) \<Rightarrow>
+ | Structures_A.ArchObjectCap (Arch_Structs_A.PageCap dev word rights ARMSmallPage (Some (asid, vptr))) \<Rightarrow>
      Some [VSRef ((vptr >> 12) && mask 8) (Some APageTable),
            VSRef (vptr >> 20) (Some APageDirectory),
            VSRef (asid && mask asid_low_bits) (Some AASIDPool),
            VSRef (ucast (asid_high_bits_of asid)) None]
- | Structures_A.ArchObjectCap (Arch_Structs_A.PageCap word rights ARMLargePage (Some (asid, vptr))) \<Rightarrow>
+ | Structures_A.ArchObjectCap (Arch_Structs_A.PageCap dev word rights ARMLargePage (Some (asid, vptr))) \<Rightarrow>
      Some [VSRef ((vptr >> 12) && mask 8) (Some APageTable),
            VSRef (vptr >> 20) (Some APageDirectory),
            VSRef (asid && mask asid_low_bits) (Some AASIDPool),
            VSRef (ucast (asid_high_bits_of asid)) None]
- | Structures_A.ArchObjectCap (Arch_Structs_A.PageCap word rights ARMSection (Some (asid, vptr))) \<Rightarrow>
+ | Structures_A.ArchObjectCap (Arch_Structs_A.PageCap dev word rights ARMSection (Some (asid, vptr))) \<Rightarrow>
      Some [VSRef (vptr >> 20) (Some APageDirectory),
            VSRef (asid && mask asid_low_bits) (Some AASIDPool),
            VSRef (ucast (asid_high_bits_of asid)) None]
- | Structures_A.ArchObjectCap (Arch_Structs_A.PageCap word rights ARMSuperSection (Some (asid, vptr))) \<Rightarrow>
+ | Structures_A.ArchObjectCap (Arch_Structs_A.PageCap dev word rights ARMSuperSection (Some (asid, vptr))) \<Rightarrow>
      Some [VSRef (vptr >> 20) (Some APageDirectory),
            VSRef (asid && mask asid_low_bits) (Some AASIDPool),
            VSRef (ucast (asid_high_bits_of asid)) None]
  | _ \<Rightarrow> None"
 
 definition
-  "is_pg_cap cap \<equiv> \<exists>p R sz m. cap =
-   cap.ArchObjectCap (arch_cap.PageCap p R sz m)"
+  "is_pg_cap cap \<equiv> \<exists>dev p R sz m. cap =
+   cap.ArchObjectCap (arch_cap.PageCap dev p R sz m)"
 
 definition
   "is_pd_cap c \<equiv>
@@ -1328,7 +1336,7 @@ definition
 
 definition
   "cap_asid cap \<equiv> case cap of
-    Structures_A.ArchObjectCap (Arch_Structs_A.PageCap _ _ _ (Some (asid, _))) \<Rightarrow> Some asid
+    Structures_A.ArchObjectCap (Arch_Structs_A.PageCap _ _ _ _ (Some (asid, _))) \<Rightarrow> Some asid
   | Structures_A.ArchObjectCap (Arch_Structs_A.PageTableCap _ (Some (asid, _))) \<Rightarrow> Some asid
   | Structures_A.ArchObjectCap (Arch_Structs_A.PageDirectoryCap _ (Some asid)) \<Rightarrow> Some asid
   | _ \<Rightarrow> None"
@@ -1549,8 +1557,8 @@ lemmas valid_cap_ref_simps' =
 (*Pure wizardry*)
 lemma valid_cap_ref_simps :
   "valid_cap_ref NullCap (s::'z_1::state_ext state) = True \<and>
-valid_cap_ref (UntypedCap (x::word32) (xa::nat) (xb::nat)) (sa::'z_1::state_ext state) =
-(valid_untyped (UntypedCap x xa xb) sa \<and> xb \<le> (2::nat) ^ xa \<and> x \<noteq> (0::word32)) \<and>
+valid_cap_ref (UntypedCap (dev::bool) (x::word32) (xa::nat) (xb::nat)) (sa::'z_1::state_ext state) =
+(valid_untyped (UntypedCap dev x xa xb) sa \<and> xb \<le> (2::nat) ^ xa \<and> x \<noteq> (0::word32)) \<and>
 valid_cap_ref (EndpointCap (xc::word32) (xd::word32) (xe::rights set))
  (sb::'z_1::state_ext state) =
 ep_at xc sb \<and>
@@ -1575,7 +1583,7 @@ asid_pool_at xs sj \<and>
 valid_cap_ref (ArchObjectCap ASIDControlCap) (sk::'z_1::state_ext state) = True \<and>
 valid_cap_ref
  (ArchObjectCap
-   (PageCap (xu::word32) (xv::rights set) (xw::vmpage_size)
+   (PageCap (dev::bool) (xu::word32) (xv::rights set) (xw::vmpage_size)
      (xx::(word32 \<times> word32) option)))
  (sl::'z_1::state_ext state) =
 typ_at (AArch (AIntData xw)) xu sl \<and>
@@ -1592,9 +1600,9 @@ lemmas valid_cap_simps' = valid_cap_def[split_simps cap.split arch_cap.split]
 
 lemma valid_cap_simps :
   "(s::'z_1::state_ext state) \<turnstile> NullCap = (cap_aligned NullCap \<and> True) \<and>
-(sa::'z_1::state_ext state) \<turnstile> UntypedCap (x::word32) (xa::nat) (xb::nat) =
-(cap_aligned (UntypedCap x xa xb) \<and>
- valid_untyped (UntypedCap x xa xb) sa \<and>
+(sa::'z_1::state_ext state) \<turnstile> UntypedCap (dev::bool) (x::word32) (xa::nat) (xb::nat) =
+(cap_aligned (UntypedCap dev x xa xb) \<and>
+ valid_untyped (UntypedCap dev x xa xb) sa \<and>
  (4::nat) \<le> xa \<and> xb \<le> (2::nat) ^ xa \<and> x \<noteq> (0::word32)) \<and>
 (sb::'z_1::state_ext state) \<turnstile> EndpointCap (xc::word32) (xd::word32) (xe::rights set) =
 (cap_aligned (EndpointCap xc xd xe) \<and> ep_at xc sb) \<and>
@@ -1623,9 +1631,9 @@ lemma valid_cap_simps :
 (sk::'z_1::state_ext state) \<turnstile> ArchObjectCap ASIDControlCap =
 (cap_aligned (ArchObjectCap ASIDControlCap) \<and> True) \<and>
 (sl::'z_1::state_ext state) \<turnstile> ArchObjectCap
-                        (PageCap (xu::word32) (xv::rights set) (xw::vmpage_size)
+                        (PageCap (dev::bool) (xu::word32) (xv::rights set) (xw::vmpage_size)
                           (xx::(word32 \<times> word32) option)) =
-(cap_aligned (ArchObjectCap (PageCap xu xv xw xx)) \<and>
+(cap_aligned (ArchObjectCap (PageCap dev xu xv xw xx)) \<and>
  typ_at (AArch (AIntData xw)) xu sl \<and>
  xv \<in> valid_vm_rights \<and>
  (case xx of None \<Rightarrow> True
@@ -2993,8 +3001,8 @@ lemma valid_untyped_T:
 
 lemma valid_untyped_typ:
   assumes P: "\<And>P T p. \<lbrace>\<lambda>s. P (typ_at T p s)\<rbrace> f \<lbrace>\<lambda>rv s. P (typ_at T p s)\<rbrace>"
-  shows "\<lbrace>valid_untyped (cap.UntypedCap r n fr)\<rbrace> f
-         \<lbrace>\<lambda>rv. valid_untyped (cap.UntypedCap r n fr)\<rbrace>"
+  shows "\<lbrace>valid_untyped (cap.UntypedCap dev r n fr)\<rbrace> f
+         \<lbrace>\<lambda>rv. valid_untyped (cap.UntypedCap dev r n fr)\<rbrace>"
   unfolding valid_untyped_T
   apply (rule hoare_vcg_all_lift)
   apply (rule hoare_vcg_all_lift)
@@ -3159,7 +3167,7 @@ lemma is_cap_simps':
   "is_cnode_cap cap = (\<exists>r bits g. cap = cap.CNodeCap r bits g)"
   "is_thread_cap cap = (\<exists>r. cap = cap.ThreadCap r)"
   "is_domain_cap cap = (cap = cap.DomainCap)"
-  "is_untyped_cap cap = (\<exists>r bits f. cap = cap.UntypedCap r bits f)"
+  "is_untyped_cap cap = (\<exists>dev r bits f. cap = cap.UntypedCap dev r bits f)"
   "is_ep_cap cap = (\<exists>r b R. cap = cap.EndpointCap r b R)"
   "is_ntfn_cap cap = (\<exists>r b R. cap = cap.NotificationCap r b R)"
   "is_zombie cap = (\<exists>r b n. cap = cap.Zombie r b n)"
@@ -3803,8 +3811,8 @@ lemma obj_at_default_cap_valid:
   "\<lbrakk>obj_at (\<lambda>ko. ko = default_object ty us) x s;
    ty = CapTableObject \<Longrightarrow> 0 < us;
    ty \<noteq> Untyped; ty \<noteq> ArchObject ASIDPoolObj;
-   cap_aligned (default_cap ty x us)\<rbrakk>
-  \<Longrightarrow> s \<turnstile> default_cap ty x us"
+   cap_aligned (default_cap ty x us dev)\<rbrakk>
+  \<Longrightarrow> s \<turnstile> default_cap ty x us dev"
   unfolding valid_cap_def
   by (clarsimp elim!: obj_at_weakenE
       simp: default_object_def dom_empty_cnode well_formed_cnode_n_def
@@ -3816,7 +3824,7 @@ lemma obj_at_default_cap_valid:
             option.splits)
 
 lemma obj_ref_default [simp]:
-  "obj_ref_of (default_cap ty x us) = x"
+  "obj_ref_of (default_cap ty x us dev) = x"
   by (cases ty,
       auto simp: arch_default_cap_def
           split: Arch_Structs_A.aobject_type.split)

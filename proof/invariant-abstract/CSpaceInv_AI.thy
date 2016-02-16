@@ -394,10 +394,10 @@ where
  | cap.ThreadCap ref \<Rightarrow> cap.ThreadCap ref
  | cap.DomainCap \<Rightarrow> cap.DomainCap
  | cap.ReplyCap ref master \<Rightarrow> cap.ReplyCap ref True
- | cap.UntypedCap ref n f \<Rightarrow> cap.UntypedCap ref n 0
+ | cap.UntypedCap dev ref n f \<Rightarrow> cap.UntypedCap dev ref n 0
  | cap.ArchObjectCap acap \<Rightarrow> cap.ArchObjectCap (case acap of
-      arch_cap.PageCap ref rghts sz mapdata \<Rightarrow>
-         arch_cap.PageCap ref UNIV sz None
+      arch_cap.PageCap dev ref rghts sz mapdata \<Rightarrow>
+         arch_cap.PageCap dev ref UNIV sz None
     | arch_cap.ASIDPoolCap pool asid \<Rightarrow>
          arch_cap.ASIDPoolCap pool 0
     | arch_cap.PageTableCap ptr data \<Rightarrow>
@@ -429,14 +429,14 @@ lemma cap_master_cap_eqDs1:
      \<Longrightarrow> cap = cap.IRQHandlerCap irq"
   "cap_master_cap cap = cap.Zombie ref tp n
      \<Longrightarrow> cap = cap.Zombie ref tp n"
-  "cap_master_cap cap = cap.UntypedCap ref bits 0
-     \<Longrightarrow> \<exists>f. cap = cap.UntypedCap ref bits f"
+  "cap_master_cap cap = cap.UntypedCap dev ref bits 0
+     \<Longrightarrow> \<exists>f. cap = cap.UntypedCap dev ref bits f"
   "cap_master_cap cap = cap.ReplyCap ref master
      \<Longrightarrow> master = True
           \<and> (\<exists>master. cap = cap.ReplyCap ref master)"
-  "cap_master_cap cap = cap.ArchObjectCap (arch_cap.PageCap ref rghts sz mapdata)
+  "cap_master_cap cap = cap.ArchObjectCap (arch_cap.PageCap dev ref rghts sz mapdata)
      \<Longrightarrow> rghts = UNIV \<and> mapdata = None
-          \<and> (\<exists>rghts mapdata. cap = cap.ArchObjectCap (arch_cap.PageCap ref rghts sz mapdata))"
+          \<and> (\<exists>rghts mapdata. cap = cap.ArchObjectCap (arch_cap.PageCap dev ref rghts sz mapdata))"
   "cap_master_cap cap = cap.ArchObjectCap arch_cap.ASIDControlCap
      \<Longrightarrow> cap = cap.ArchObjectCap arch_cap.ASIDControlCap"
   "cap_master_cap cap = cap.ArchObjectCap (arch_cap.ASIDPoolCap pool asid)
@@ -462,8 +462,8 @@ where
 
 lemma cap_badge_simps [simp]:
  "cap_badge (cap.EndpointCap r badge rights)       = Some badge"
- "cap_badge (cap.NotificationCap r badge rights)  = Some badge"
- "cap_badge (cap.UntypedCap p n f)                 = None"
+ "cap_badge (cap.NotificationCap r badge rights)   = Some badge"
+ "cap_badge (cap.UntypedCap dev p n f)             = None"
  "cap_badge (cap.NullCap)                          = None"
  "cap_badge (cap.DomainCap)                        = None"
  "cap_badge (cap.CNodeCap r bits guard)            = None"
@@ -2013,6 +2013,7 @@ lemma set_cap_cap_refs_in_kernel_window[wp]:
   apply wp
   done
 
+(* FIXME: SELFOUR-421 - how does this change? *)
 lemma cap_refs_in_kernel_windowD:
   "\<lbrakk> caps_of_state s ptr = Some cap; cap_refs_in_kernel_window s \<rbrakk>
    \<Longrightarrow> \<forall>ref \<in> cap_range cap.
@@ -2626,7 +2627,7 @@ lemma as_user_only_idle :
 
 
 lemma valid_cap_imp_valid_vm_rights:
-  "valid_cap (cap.ArchObjectCap (arch_cap.PageCap mw rs sz m)) s \<Longrightarrow>
+  "valid_cap (cap.ArchObjectCap (arch_cap.PageCap dev mw rs sz m)) s \<Longrightarrow>
    rs \<in> valid_vm_rights"
 by (simp add: valid_cap_def valid_vm_rights_def)
 

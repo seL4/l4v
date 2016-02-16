@@ -233,7 +233,7 @@ defs mapITFrameCap_def:
                      | _ \<Rightarrow>   haskell_fail $ [] @ (show frameCap)
                      );
     (frame,vptr) \<leftarrow> (case frameCap' of
-                                PageCap frame' _ _ (Some (_, vptr')) \<Rightarrow>   return (frame', vptr')
+                                PageCap _ frame' _ _ (Some (_, vptr')) \<Rightarrow>   return (frame', vptr')
                               | _ \<Rightarrow>   haskell_fail $ [] @ (show frameCap)
                               );
     offset \<leftarrow> return ( fromVPtr $ vptr `~shiftR~` pageBitsForSize ARMSection);
@@ -294,6 +294,7 @@ defs createITFrameCap_def:
                     | None \<Rightarrow>   Nothing
                     ));
     frame \<leftarrow> returnOk ( PageCap_ \<lparr>
+             capVPIsDevice= False,
              capVPBasePtr= pptr,
              capVPRights= VMReadWrite,
              capVPSize= sz,
@@ -797,7 +798,8 @@ defs isValidVTableRoot_def:
 
 defs checkValidIPCBuffer_def:
 "checkValidIPCBuffer vptr x1\<equiv> (case x1 of
-    (ArchObjectCap (PageCap _ _ _ _)) \<Rightarrow>    (doE
+    (ArchObjectCap (PageCap isDevice _ _ _ _)) \<Rightarrow>    (doE
+    whenE isDevice $ throw IllegalOperation;
     whenE (vptr && mask msgAlignBits \<noteq> 0) $ throw AlignmentError;
     returnOk ()
     odE)

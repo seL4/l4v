@@ -1986,7 +1986,7 @@ lemma thread_set_state_eq_valid_sched:
   apply (wp thread_set_state_eq_valid_queues thread_set_state_eq_valid_blocked thread_set_state_eq_valid_sched_action thread_set_state_eq_ct_in_cur_domain | simp)+
   done
 
-crunch valid_sched[wp]: arch_recycle_cap valid_sched (wp: crunch_wps)
+crunch valid_sched[wp]: arch_recycle_cap valid_sched (wp: crunch_wps simp: unless_def)
 
 crunch exst[wp]: thread_set "\<lambda>s. P (exst s)"
 

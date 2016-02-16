@@ -223,7 +223,7 @@ where
             whenE (free_set = {}) $ throwError DeleteFirst;
             free \<leftarrow> liftE $ select_ext (\<lambda>_. free_asid_select asid_table) free_set;
             base \<leftarrow> returnOk (ucast free << asid_low_bits);
-            (p,n) \<leftarrow> (case untyped of UntypedCap dev p n f \<Rightarrow> returnOk (p,n) 
+            (p,n) \<leftarrow> (case untyped of UntypedCap False p n f \<Rightarrow> returnOk (p,n) 
                                     | _ \<Rightarrow> throwError $ InvalidCapability 1);
             frame \<leftarrow> (if n = pageBits
                       then doE

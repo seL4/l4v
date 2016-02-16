@@ -1204,20 +1204,20 @@ lemma clearMemory_corres:
    apply simp+
   done
 
-
+thm crunch_simps
 (* These also prove facts about copy_global_mappings *)
 crunch pspace_aligned[wp]: init_arch_objects "pspace_aligned"
-  (ignore: clearMemory wp: crunch_wps)
+  (ignore: clearMemory wp: crunch_wps simp: unless_def)
 crunch pspace_distinct[wp]: init_arch_objects "pspace_distinct"
-  (ignore: clearMemory wp: crunch_wps)
+  (ignore: clearMemory wp: crunch_wps simp: unless_def)
 crunch mdb_inv[wp]: init_arch_objects "\<lambda>s. P (cdt s)"
-  (ignore: clearMemory wp: crunch_wps)
+  (ignore: clearMemory wp: crunch_wps simp: unless_def)
 crunch valid_mdb[wp]: init_arch_objects "valid_mdb"
-  (ignore: clearMemory wp: crunch_wps)
+  (ignore: clearMemory wp: crunch_wps simp: unless_def)
 crunch cte_wp_at[wp]: init_arch_objects "\<lambda>s. P (cte_wp_at P' p s)"
-  (ignore: clearMemory wp: crunch_wps)
+  (ignore: clearMemory wp: crunch_wps simp: unless_def)
 crunch typ_at[wp]: init_arch_objects "\<lambda>s. P (typ_at T p s)"
-  (ignore: clearMemory wp: crunch_wps)
+  (ignore: clearMemory wp: crunch_wps simp: unless_def)
 
 lemma mdb_cte_at_store_pde[wp]:
   "\<lbrace>\<lambda>s. mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) (cdt s)\<rbrace>
@@ -1277,7 +1277,7 @@ lemma get_pde_wellformed[wp]:
 
 
 crunch valid_objs[wp]: init_arch_objects "valid_objs"
-  (ignore: clearMemory wp: crunch_wps)
+  (ignore: clearMemory wp: crunch_wps simp: unless_def)
 
 
 lemma set_pd_arch_state[wp]:
@@ -1286,7 +1286,7 @@ lemma set_pd_arch_state[wp]:
 
 
 crunch valid_arch_state[wp]: init_arch_objects "valid_arch_state"
-  (ignore: clearMemory set_object wp: crunch_wps)
+  (ignore: clearMemory set_object wp: crunch_wps simp: unless_def)
 
 
 lemmas init_arch_objects_valid_cap[wp] = valid_cap_typ [OF init_arch_objects_typ_at]
@@ -1323,9 +1323,9 @@ lemma do_machine_op_return_foo:
 
 lemma create_word_objects_vms[wp]:
   "\<lbrace>valid_machine_state\<rbrace>
-   create_word_objects ptr bits sz
+   create_word_objects ptr bits sz dev
    \<lbrace>\<lambda>_. valid_machine_state\<rbrace>"
-  apply (clarsimp simp: create_word_objects_def
+  apply (clarsimp simp: create_word_objects_def unless_def
     reserve_region_def mapM_x_mapM do_machine_op_return_foo)
   apply (rule hoare_pre)
   apply wp
@@ -1341,9 +1341,9 @@ lemma create_word_objects_vms[wp]:
 
 lemma create_word_objects_valid_irq_states[wp]:
   "\<lbrace>valid_irq_states\<rbrace>
-   create_word_objects ptr bits sz
+   create_word_objects ptr bits sz dev
    \<lbrace>\<lambda>_. valid_irq_states\<rbrace>"
-  apply (clarsimp simp: create_word_objects_def
+  apply (clarsimp simp: create_word_objects_def unless_def
     reserve_region_def mapM_x_mapM do_machine_op_return_foo)
   apply (rule hoare_pre)
   apply wp
@@ -1358,7 +1358,7 @@ lemma create_word_objects_valid_irq_states[wp]:
   done
 
 lemma create_word_objects_invs[wp]:
-  "\<lbrace>invs\<rbrace> create_word_objects ptr bits sz \<lbrace>\<lambda>_. invs\<rbrace>"
+  "\<lbrace>invs\<rbrace> create_word_objects ptr bits sz dev \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add:invs_def valid_state_def)
   apply (rule hoare_pre)
    apply (rule hoare_strengthen_post)
@@ -1368,7 +1368,7 @@ lemma create_word_objects_invs[wp]:
     apply clarsimp
     apply assumption
    apply (clarsimp simp: create_word_objects_def reserve_region_def
-                        split_def do_machine_op_def)
+                        split_def do_machine_op_def unless_def)
    apply wp
   apply (simp add: invs_def cur_tcb_def valid_state_def)
   done
@@ -1818,7 +1818,7 @@ lemma init_arch_objects_invs_from_restricted:
   "\<lbrace>post_retype_invs new_type refs
          and (\<lambda>s. global_refs s \<inter> set refs = {})
          and K (\<forall>ref \<in> set refs. is_aligned ref (obj_bits_api new_type obj_sz))\<rbrace>
-     init_arch_objects new_type ptr bits obj_sz refs
+     init_arch_objects new_type ptr bits obj_sz refs dev
    \<lbrace>\<lambda>_. invs\<rbrace>"
   apply (simp add: init_arch_objects_def)
   apply (rule hoare_pre)

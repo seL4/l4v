@@ -209,7 +209,7 @@ primrec
 where
   "zobj_refs' NullCap                        = {}"
 | "zobj_refs' DomainCap                      = {}"
-| "zobj_refs' (UntypedCap r n f)             = {}"
+| "zobj_refs' (UntypedCap d r n f)           = {}"
 | "zobj_refs' (EndpointCap r badge x y z)    = {r}"
 | "zobj_refs' (NotificationCap r badge x y) = {r}"
 | "zobj_refs' (CNodeCap r b g gsz)           = {}"
@@ -236,7 +236,7 @@ where
 primrec
   cte_refs' :: "capability \<Rightarrow> word32 \<Rightarrow> word32 set"
 where
-  "cte_refs' (UntypedCap p n f) x                 = {}"
+  "cte_refs' (UntypedCap d p n f) x               = {}"
 | "cte_refs' (NullCap) x                          = {}"
 | "cte_refs' (DomainCap) x                        = {}"
 | "cte_refs' (EndpointCap ref badge s r g) x      = {}"
@@ -278,7 +278,7 @@ primrec
 where
   "acapBits (ASIDPoolCap x y) = asidLowBits + 2"
 | "acapBits ASIDControlCap = asidHighBits + 2"
-| "acapBits (PageCap x y sz z) = pageBitsForSize sz"
+| "acapBits (PageCap d x y sz z) = pageBitsForSize sz"
 | "acapBits (PageTableCap x y) = 10"
 | "acapBits (PageDirectoryCap x y) = 14"
 
@@ -293,7 +293,7 @@ primrec
 where
   "capBits NullCap = 0"
 | "capBits DomainCap = 0"
-| "capBits (UntypedCap r b f) = b"
+| "capBits (UntypedCap d r b f) = b"
 | "capBits (EndpointCap r b x y z) = objBits (undefined::endpoint)"
 | "capBits (NotificationCap r b x y) = objBits (undefined::Structures_H.notification)"
 | "capBits (CNodeCap r b g gs) = objBits (undefined::cte) + b"
@@ -314,13 +314,13 @@ definition
 primrec (nonexhaustive)
   usableUntypedRange :: "capability \<Rightarrow> word32 set"
 where
- "usableUntypedRange (UntypedCap p n f) =
+ "usableUntypedRange (UntypedCap d p n f) =
     (if f < 2^n then {p+of_nat f .. p + 2 ^ n - 1} else {})"
 
 definition
-  "valid_untyped' ptr bits idx s \<equiv>
+  "valid_untyped' d ptr bits idx s \<equiv>
   \<forall>ptr'. \<not> ko_wp_at' (\<lambda>ko. {ptr .. ptr + 2 ^ bits - 1} \<subset> obj_range' ptr' ko
-  \<or> obj_range' ptr' ko \<inter> usableUntypedRange(UntypedCap ptr bits idx) \<noteq> {}) ptr' s"
+  \<or> obj_range' ptr' ko \<inter> usableUntypedRange(UntypedCap d ptr bits idx) \<noteq> {}) ptr' s"
 
 definition
   page_table_at' :: "word32 \<Rightarrow> kernel_state \<Rightarrow> bool"
@@ -354,8 +354,8 @@ where valid_cap'_def:
   (case c of
     Structures_H.NullCap \<Rightarrow> True
   | Structures_H.DomainCap \<Rightarrow> True
-  | Structures_H.UntypedCap r n f \<Rightarrow>
-      valid_untyped' r n f s \<and> r \<noteq> 0 \<and> 4\<le> n \<and> n \<le> 30 \<and> f \<le> 2^n \<and>  is_aligned (of_nat f :: word32) 4
+  | Structures_H.UntypedCap d r n f \<Rightarrow>
+      valid_untyped' d r n f s \<and> r \<noteq> 0 \<and> 4\<le> n \<and> n \<le> 30 \<and> f \<le> 2^n \<and>  is_aligned (of_nat f :: word32) 4
   | Structures_H.EndpointCap r badge x y z \<Rightarrow> ep_at' r s
   | Structures_H.NotificationCap r badge x y \<Rightarrow> ntfn_at' r s
   | Structures_H.CNodeCap r bits guard guard_sz \<Rightarrow>
@@ -373,7 +373,7 @@ where valid_cap'_def:
     ArchStructures_H.ASIDPoolCap pool asid \<Rightarrow>
     typ_at' (ArchT ASIDPoolT) pool s \<and> is_aligned asid asid_low_bits \<and> asid \<le> 2^asid_bits - 1
   | ArchStructures_H.ASIDControlCap \<Rightarrow> True
-  | ArchStructures_H.PageCap ref rghts sz mapdata \<Rightarrow> ref \<noteq> 0 \<and>
+  | ArchStructures_H.PageCap d ref rghts sz mapdata \<Rightarrow> ref \<noteq> 0 \<and>
     (\<forall>p < 2 ^ (pageBitsForSize sz - pageBits). typ_at' UserDataT (ref + p * 2 ^ pageBits) s) \<and>
     (case mapdata of None \<Rightarrow> True | Some (asid, ref) \<Rightarrow>
             0 < asid \<and> asid \<le> 2 ^ asid_bits - 1 \<and> vmsz_aligned' ref sz \<and> ref < kernelBase)
@@ -584,7 +584,7 @@ definition
 function (sequential)
   untypedRange :: "capability \<Rightarrow> word32 set"
 where
-   "untypedRange (UntypedCap p n f) = {p .. p + 2 ^ n - 1}"
+   "untypedRange (UntypedCap d p n f) = {p .. p + 2 ^ n - 1}"
 |  "untypedRange c = {}"
   by pat_completeness auto
 
@@ -595,7 +595,7 @@ primrec
 where
   "acapClass (ASIDPoolCap x y)      = PhysicalClass"
 | "acapClass ASIDControlCap         = ASIDMasterClass"
-| "acapClass (PageCap x y sz z)     = PhysicalClass"
+| "acapClass (PageCap d x y sz z)   = PhysicalClass"
 | "acapClass (PageTableCap x y)     = PhysicalClass"
 | "acapClass (PageDirectoryCap x y) = PhysicalClass"
 
@@ -604,7 +604,7 @@ primrec
 where
   "capClass (NullCap)                          = NullClass"
 | "capClass (DomainCap)                        = DomainClass"
-| "capClass (UntypedCap p n f)                 = PhysicalClass"
+| "capClass (UntypedCap d p n f)               = PhysicalClass"
 | "capClass (EndpointCap ref badge s r g)      = PhysicalClass"
 | "capClass (NotificationCap ref badge s r)   = PhysicalClass"
 | "capClass (CNodeCap ref bits g gs)           = PhysicalClass"
@@ -730,7 +730,7 @@ definition
 definition
   isArchPageCap :: "capability \<Rightarrow> bool"
 where
- "isArchPageCap cap \<equiv> case cap of ArchObjectCap (PageCap ref rghts sz data) \<Rightarrow> True | _ \<Rightarrow> False"
+ "isArchPageCap cap \<equiv> case cap of ArchObjectCap (PageCap d ref rghts sz data) \<Rightarrow> True | _ \<Rightarrow> False"
 
 definition
   distinct_zombie_caps :: "(word32 \<Rightarrow> capability option) \<Rightarrow> bool"
@@ -1213,176 +1213,6 @@ locale mdb_order = mdb_next +
   assumes no_0: "no_0 m"
   assumes chain: "mdb_chain_0 m"
 
--- ---------------------------------------------------------------------------
-section "Alternate split rules for preserving subgoal order"
-
-lemma capability_splits[split]:
-  "P (case capability of capability.ThreadCap x \<Rightarrow> f1 x
-     | capability.NullCap \<Rightarrow> f2
-     | capability.NotificationCap x xa xb xc \<Rightarrow> f3 x xa xb xc
-     | capability.IRQHandlerCap x \<Rightarrow> f4 x
-     | capability.EndpointCap x xa xb xc xd \<Rightarrow> f5 x xa xb xc xd
-     | capability.DomainCap \<Rightarrow> f6
-     | capability.Zombie x xa xb \<Rightarrow> f7 x xa xb
-     | capability.ArchObjectCap x \<Rightarrow> f8 x
-     | capability.ReplyCap x xa \<Rightarrow> f9 x xa
-     | capability.UntypedCap x xa xb \<Rightarrow> f10 x xa xb
-     | capability.CNodeCap x xa xb xc \<Rightarrow> f11 x xa xb xc
-     | capability.IRQControlCap \<Rightarrow> f12) =
-  ((\<forall>x1. capability = capability.ThreadCap x1 \<longrightarrow> P (f1 x1)) \<and>
-   (capability = capability.NullCap \<longrightarrow> P f2) \<and>
-   (\<forall>x31 x32 x33 x34.
-       capability =
-       capability.NotificationCap x31 x32 x33 x34 \<longrightarrow>
-       P (f3 x31 x32 x33 x34)) \<and>
-   (\<forall>x4. capability = capability.IRQHandlerCap x4 \<longrightarrow>
-         P (f4 x4)) \<and>
-   (\<forall>x51 x52 x53 x54 x55.
-       capability =
-       capability.EndpointCap x51 x52 x53 x54 x55 \<longrightarrow>
-       P (f5 x51 x52 x53 x54 x55)) \<and>
-   (capability = capability.DomainCap \<longrightarrow> P f6) \<and>
-   (\<forall>x71 x72 x73.
-       capability = capability.Zombie x71 x72 x73 \<longrightarrow>
-       P (f7 x71 x72 x73)) \<and>
-   (\<forall>x8. capability = capability.ArchObjectCap x8 \<longrightarrow>
-         P (f8 x8)) \<and>
-   (\<forall>x91 x92.
-       capability = capability.ReplyCap x91 x92 \<longrightarrow>
-       P (f9 x91 x92)) \<and>
-   (\<forall>x101 x102 x103.
-       capability = capability.UntypedCap x101 x102 x103 \<longrightarrow>
-       P (f10 x101 x102 x103)) \<and>
-   (\<forall>x111 x112 x113 x114.
-       capability = capability.CNodeCap x111 x112 x113 x114 \<longrightarrow>
-       P (f11 x111 x112 x113 x114)) \<and>
-   (capability = capability.IRQControlCap \<longrightarrow> P f12))"
-  "P (case capability of capability.ThreadCap x \<Rightarrow> f1 x
-     | capability.NullCap \<Rightarrow> f2
-     | capability.NotificationCap x xa xb xc \<Rightarrow> f3 x xa xb xc
-     | capability.IRQHandlerCap x \<Rightarrow> f4 x
-     | capability.EndpointCap x xa xb xc xd \<Rightarrow> f5 x xa xb xc xd
-     | capability.DomainCap \<Rightarrow> f6
-     | capability.Zombie x xa xb \<Rightarrow> f7 x xa xb
-     | capability.ArchObjectCap x \<Rightarrow> f8 x
-     | capability.ReplyCap x xa \<Rightarrow> f9 x xa
-     | capability.UntypedCap x xa xb \<Rightarrow> f10 x xa xb
-     | capability.CNodeCap x xa xb xc \<Rightarrow> f11 x xa xb xc
-     | capability.IRQControlCap \<Rightarrow> f12) =
-  (\<not> ((\<exists>x1. capability = capability.ThreadCap x1 \<and>
-             \<not> P (f1 x1)) \<or>
-       capability = capability.NullCap \<and> \<not> P f2 \<or>
-       (\<exists>x31 x32 x33 x34.
-           capability =
-           capability.NotificationCap x31 x32 x33 x34 \<and>
-           \<not> P (f3 x31 x32 x33 x34)) \<or>
-       (\<exists>x4. capability = capability.IRQHandlerCap x4 \<and>
-             \<not> P (f4 x4)) \<or>
-       (\<exists>x51 x52 x53 x54 x55.
-           capability =
-           capability.EndpointCap x51 x52 x53 x54 x55 \<and>
-           \<not> P (f5 x51 x52 x53 x54 x55)) \<or>
-       capability = capability.DomainCap \<and> \<not> P f6 \<or>
-       (\<exists>x71 x72 x73.
-           capability = capability.Zombie x71 x72 x73 \<and>
-           \<not> P (f7 x71 x72 x73)) \<or>
-       (\<exists>x8. capability = capability.ArchObjectCap x8 \<and>
-             \<not> P (f8 x8)) \<or>
-       (\<exists>x91 x92.
-           capability = capability.ReplyCap x91 x92 \<and>
-           \<not> P (f9 x91 x92)) \<or>
-       (\<exists>x101 x102 x103.
-           capability = capability.UntypedCap x101 x102 x103 \<and>
-           \<not> P (f10 x101 x102 x103)) \<or>
-       (\<exists>x111 x112 x113 x114.
-           capability =
-           capability.CNodeCap x111 x112 x113 x114 \<and>
-           \<not> P (f11 x111 x112 x113 x114)) \<or>
-       capability = capability.IRQControlCap \<and> \<not> P f12))"
-  by (case_tac capability; simp)+
-  
-lemma thread_state_splits[split]:
-  " P (case thread_state of
-     Structures_H.thread_state.BlockedOnReceive x \<Rightarrow> f1 x
-     | Structures_H.thread_state.BlockedOnReply \<Rightarrow> f2
-     | Structures_H.thread_state.BlockedOnNotification x \<Rightarrow> f3 x
-     | Structures_H.thread_state.Running \<Rightarrow> f4
-     | Structures_H.thread_state.Inactive \<Rightarrow> f5
-     | Structures_H.thread_state.IdleThreadState \<Rightarrow> f6
-     | Structures_H.thread_state.BlockedOnSend x xa xb xc \<Rightarrow>
-         f7 x xa xb xc
-     | Structures_H.thread_state.Restart \<Rightarrow> f8) =
-  ((\<forall>x11.
-       thread_state =
-       Structures_H.thread_state.BlockedOnReceive x11 \<longrightarrow>
-       P (f1 x11)) \<and>
-   (awaiting_reply' thread_state \<longrightarrow> P f2) \<and>
-   (\<forall>x3. thread_state =
-         Structures_H.thread_state.BlockedOnNotification x3 \<longrightarrow>
-         P (f3 x3)) \<and>
-   (thread_state = Structures_H.thread_state.Running \<longrightarrow>
-    P f4) \<and>
-   (thread_state = Structures_H.thread_state.Inactive \<longrightarrow>
-    P f5) \<and>
-   (idle' thread_state \<longrightarrow> P f6) \<and>
-   (\<forall>x71 x72 x73 x74.
-       thread_state =
-       Structures_H.thread_state.BlockedOnSend x71 x72 x73
-        x74 \<longrightarrow>
-       P (f7 x71 x72 x73 x74)) \<and>
-   (thread_state = Structures_H.thread_state.Restart \<longrightarrow> P f8))"
-  "P (case thread_state of
-     Structures_H.thread_state.BlockedOnReceive x \<Rightarrow> f1 x
-     | Structures_H.thread_state.BlockedOnReply \<Rightarrow> f2
-     | Structures_H.thread_state.BlockedOnNotification x \<Rightarrow> f3 x
-     | Structures_H.thread_state.Running \<Rightarrow> f4
-     | Structures_H.thread_state.Inactive \<Rightarrow> f5
-     | Structures_H.thread_state.IdleThreadState \<Rightarrow> f6
-     | Structures_H.thread_state.BlockedOnSend x xa xb xc \<Rightarrow>
-         f7 x xa xb xc
-     | Structures_H.thread_state.Restart \<Rightarrow> f8) =
-  (\<not> ((\<exists>x11.
-           thread_state =
-           Structures_H.thread_state.BlockedOnReceive x11 \<and>
-           \<not> P (f1 x11)) \<or>
-       awaiting_reply' thread_state \<and> \<not> P f2 \<or>
-       (\<exists>x3. thread_state =
-             Structures_H.thread_state.BlockedOnNotification
-              x3 \<and>
-             \<not> P (f3 x3)) \<or>
-       thread_state = Structures_H.thread_state.Running \<and>
-       \<not> P f4 \<or>
-       thread_state = Structures_H.thread_state.Inactive \<and>
-       \<not> P f5 \<or>
-       idle' thread_state \<and> \<not> P f6 \<or>
-       (\<exists>x71 x72 x73 x74.
-           thread_state =
-           Structures_H.thread_state.BlockedOnSend x71 x72 x73
-            x74 \<and>
-           \<not> P (f7 x71 x72 x73 x74)) \<or>
-       thread_state = Structures_H.thread_state.Restart \<and>
-       \<not> P f8))"
-  by (case_tac thread_state; simp)+
-  
-lemma ntfn_splits[split]:
-  " P (case ntfn of Structures_H.ntfn.IdleNtfn \<Rightarrow> f1
-     | Structures_H.ntfn.ActiveNtfn x \<Rightarrow> f2 x
-     | Structures_H.ntfn.WaitingNtfn x \<Rightarrow> f3 x) =
-  ((ntfn = Structures_H.ntfn.IdleNtfn \<longrightarrow> P f1) \<and>
-   (\<forall>x2. ntfn = Structures_H.ntfn.ActiveNtfn x2 \<longrightarrow>
-         P (f2 x2)) \<and>
-   (\<forall>x3. ntfn = Structures_H.ntfn.WaitingNtfn x3 \<longrightarrow>
-         P (f3 x3)))"
-  "P (case ntfn of Structures_H.ntfn.IdleNtfn \<Rightarrow> f1
-     | Structures_H.ntfn.ActiveNtfn x \<Rightarrow> f2 x
-     | Structures_H.ntfn.WaitingNtfn x \<Rightarrow> f3 x) =
-  (\<not> (ntfn = Structures_H.ntfn.IdleNtfn \<and> \<not> P f1 \<or>
-       (\<exists>x2. ntfn = Structures_H.ntfn.ActiveNtfn x2 \<and>
-             \<not> P (f2 x2)) \<or>
-       (\<exists>x3. ntfn = Structures_H.ntfn.WaitingNtfn x3 \<and>
-             \<not> P (f3 x3))))"
-  by (case_tac ntfn; simp)+
--- ---------------------------------------------------------------------------
 section "Lemmas"
 
 lemma valid_bound_ntfn'_None[simp]:
@@ -1871,8 +1701,8 @@ lemma cte_wp_at'_pspaceI:
   done
 
 lemma valid_untyped'_pspaceI:
-  "\<lbrakk>ksPSpace s = ksPSpace s'; valid_untyped' p n idx s\<rbrakk>
-  \<Longrightarrow> valid_untyped' p n idx s'"
+  "\<lbrakk>ksPSpace s = ksPSpace s'; valid_untyped' d p n idx s\<rbrakk>
+  \<Longrightarrow> valid_untyped' d p n idx s'"
   by (simp add: valid_untyped'_def ko_wp_at'_def ps_clear_def)
 
 lemma typ_at'_pspaceI:
@@ -2541,7 +2371,7 @@ lemma koType_obj_range':
 
 lemma typ_at_lift_valid_untyped':
   assumes P: "\<And>T p. \<lbrace>\<lambda>s. \<not>typ_at' T p s\<rbrace> f \<lbrace>\<lambda>rv s. \<not>typ_at' T p s\<rbrace>"
-  shows "\<lbrace>\<lambda>s. valid_untyped' p n idx s\<rbrace> f \<lbrace>\<lambda>rv s. valid_untyped' p n idx s\<rbrace>"
+  shows "\<lbrace>\<lambda>s. valid_untyped' d p n idx s\<rbrace> f \<lbrace>\<lambda>rv s. valid_untyped' d p n idx s\<rbrace>"
   apply (clarsimp simp: valid_untyped'_def split del:split_if)
   apply (rule hoare_vcg_all_lift)
   apply (clarsimp simp: valid_def split del:split_if)
@@ -2571,7 +2401,6 @@ lemma typ_at_lift_valid_cap':
   shows      "\<lbrace>\<lambda>s. valid_cap' cap s\<rbrace> f \<lbrace>\<lambda>rv s. valid_cap' cap s\<rbrace>"
   apply (simp add: valid_cap'_def)
   apply wp
-  thm capability.splits capability_splits
   apply (case_tac cap;
          simp add: valid_cap'_def P [where P=id, simplified] typ_at_lift_tcb'
                    hoare_vcg_prop typ_at_lift_ep'

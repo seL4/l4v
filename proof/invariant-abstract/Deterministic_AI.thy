@@ -3861,7 +3861,7 @@ lemma create_cap_valid_list[wp]:
   notes split_paired_All[simp del] split_paired_Ex[simp del]
   shows
   "\<lbrace>valid_list \<rbrace>
-      create_cap tp sz p x \<lbrace>\<lambda>rv. valid_list\<rbrace>"
+      create_cap tp sz p dev x \<lbrace>\<lambda>rv. valid_list\<rbrace>"
   apply (case_tac x)
   apply (simp add: create_cap_def)
   apply(simp add: set_cdt_def update_cdt_list_def set_cdt_list_def bind_assoc create_cap_ext_def bind_assoc)
@@ -4066,7 +4066,7 @@ interpretation retype_region_ext_extended: is_extended "retype_region_ext a b"
   apply wp
   done
 
-crunch valid_list[wp]: invoke_untyped valid_list (wp: crunch_wps simp: mapM_x_def_bak)
+crunch valid_list[wp]: invoke_untyped valid_list (wp: crunch_wps simp: mapM_x_def_bak unless_def)
 
 crunch valid_list[wp]: invoke_irq_control valid_list
 crunch valid_list[wp]: invoke_irq_handler valid_list

@@ -1911,8 +1911,8 @@ lemma final_cap_pd_slot_eq:
 
 lemma is_arch_update_reset_page:
   "is_arch_update
-     (cap.ArchObjectCap (arch_cap.PageCap p r sz m))
-     (cap.ArchObjectCap (arch_cap.PageCap p r' sz m'))"
+     (cap.ArchObjectCap (arch_cap.PageCap dev p r sz m))
+     (cap.ArchObjectCap (arch_cap.PageCap dev p r' sz m'))"
   apply (simp add: is_arch_update_def is_arch_cap_def cap_master_cap_def)
   done
 
@@ -2365,9 +2365,9 @@ lemma dmo_replaceable_or_arch_update [wp]:
   done
 
 lemma replaceable_or_arch_update_pg:
-  " (case (vs_cap_ref (cap.ArchObjectCap (arch_cap.PageCap word fun vm_pgsz y))) of None \<Rightarrow> True | Some ref \<Rightarrow> \<not> (ref \<unrhd> word) s)
-  \<longrightarrow> replaceable_or_arch_update s slot (cap.ArchObjectCap (arch_cap.PageCap word fun vm_pgsz None))
-                (cap.ArchObjectCap (arch_cap.PageCap word fun vm_pgsz y))"
+  " (case (vs_cap_ref (cap.ArchObjectCap (arch_cap.PageCap dev word fun vm_pgsz y))) of None \<Rightarrow> True | Some ref \<Rightarrow> \<not> (ref \<unrhd> word) s)
+  \<longrightarrow> replaceable_or_arch_update s slot (cap.ArchObjectCap (arch_cap.PageCap dev word fun vm_pgsz None))
+                (cap.ArchObjectCap (arch_cap.PageCap dev word fun vm_pgsz y))"
   unfolding replaceable_or_arch_update_def
   apply (auto simp: is_cap_simps is_arch_update_def cap_master_cap_simps)
   done
@@ -2447,11 +2447,11 @@ lemma arch_cap_recycle_replaceable:
        | strengthen replaceable_reset_pt_strg [OF refl] invs_valid_objs
                     replaceable_or_arch_update_pg invs_valid_asid_table
        | simp add: replaceable_or_arch_update_same swp_def if_distrib
-                   if_apply_def2
+                   if_apply_def2 unless_def
        | wp_once hoare_drop_imps )+)[1]
       apply (simp add:arch_finalise_cap_def)
       apply ((wpc | wp valid_case_option_post_wp unmap_page_unmapped
-                      hoare_vcg_all_lift hoare_vcg_imp_lift K_valid)+)[2]
+                      hoare_vcg_all_lift hoare_vcg_imp_lift K_valid | simp add: unless_def)+)[2]
       -- "PagetableCap case"
     apply ((simp only: replaceable_or_arch_update_pg
        | wp arch_finalise_case_no_lookup arch_finalise_pt_pd_empty
@@ -2643,7 +2643,7 @@ lemma cap_recycle_replaceable:
 
 crunch caps_of_state[wp]: recycle_cap "\<lambda>s. P (caps_of_state s)"
   (ignore: filterM set_object thread_set clearMemory recycle_cap_ext
-     simp: filterM_mapM crunch_simps tcb_registers_caps_merge_def
+     simp: filterM_mapM crunch_simps tcb_registers_caps_merge_def unless_def
        wp: crunch_wps thread_set_caps_of_state_trivial2)
 
 lemmas recycle_cap_cte_wp_at[wp] =
@@ -2651,7 +2651,7 @@ lemmas recycle_cap_cte_wp_at[wp] =
 
 crunch irq_node[wp]: recycle_cap "\<lambda>s. P (interrupt_irq_node s)"
   (ignore: filterM clearMemory recycle_cap_ext
-     simp: filterM_mapM crunch_simps
+     simp: filterM_mapM crunch_simps unless_def
        wp: crunch_wps)
 
 lemmas recycle_cap_cte_cap_to[wp] =
@@ -2659,7 +2659,7 @@ lemmas recycle_cap_cte_cap_to[wp] =
 
 crunch typ_at[wp]: recycle_cap "\<lambda>s. P (typ_at T p s)"
   (ignore: filterM clearMemory recycle_cap_ext
-     simp: filterM_mapM crunch_simps
+     simp: filterM_mapM crunch_simps unless_def
        wp: crunch_wps)
 
 
@@ -3018,7 +3018,7 @@ lemma arch_recycle_cap_invs:
              mapM_x_wp'[where P="\<lambda>s. Q (typ_at T p s)" for Q T p]
              store_pte_typ_at static_imp_wp
            | simp add: fun_upd_def[symmetric] cte_wp_at_caps_of_state
-                       valid_cap_simps
+                       valid_cap_simps unless_def
            | wpc)+)
   apply (case_tac slot)
   apply clarsimp
@@ -3311,7 +3311,7 @@ lemma arch_recycle_cap_valid[wp]:
            | wp_once hoare_vcg_conj_lift
            | wp_once hoare_vcg_all_lift
            | wp_once hoare_drop_imps
-           | simp add: swp_def)+
+           | clarsimp simp add: swp_def unless_def)+
   apply force
   done
 

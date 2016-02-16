@@ -550,7 +550,7 @@ definition
 where
  "final_matters cap \<equiv> case cap of
     Structures_A.NullCap \<Rightarrow> False
-  | Structures_A.UntypedCap p b f \<Rightarrow> False
+  | Structures_A.UntypedCap dev p b f \<Rightarrow> False
   | Structures_A.EndpointCap r badge rights \<Rightarrow> True
   | Structures_A.NotificationCap r badge rights \<Rightarrow> True
   | Structures_A.CNodeCap r bits guard \<Rightarrow> True
@@ -563,7 +563,7 @@ where
   | Structures_A.ArchObjectCap ac \<Rightarrow> (case ac of
     Arch_Structs_A.ASIDPoolCap r as \<Rightarrow> True
   | Arch_Structs_A.ASIDControlCap \<Rightarrow> False
-  | Arch_Structs_A.PageCap r rghts sz mapdata \<Rightarrow> False
+  | Arch_Structs_A.PageCap dev r rghts sz mapdata \<Rightarrow> False
   | Arch_Structs_A.PageTableCap r mapdata \<Rightarrow> True
   | Arch_Structs_A.PageDirectoryCap r mapdata \<Rightarrow> True)"
 
@@ -889,7 +889,7 @@ end
 
 definition
   "cap_vptr cap \<equiv> case cap of 
-    Structures_A.ArchObjectCap (Arch_Structs_A.PageCap _ _ _ (Some (_, vptr))) \<Rightarrow> Some vptr
+    Structures_A.ArchObjectCap (Arch_Structs_A.PageCap _ _ _ _ (Some (_, vptr))) \<Rightarrow> Some vptr
   | Structures_A.ArchObjectCap (Arch_Structs_A.PageTableCap _ (Some (_, vptr))) \<Rightarrow> Some vptr
   | _ \<Rightarrow> None"
 
@@ -923,7 +923,7 @@ lemma the_arch_cap_ArchObjectCap[simp]:
 
 
 lemma is_page_cap_PageCap[simp]:
-  "is_page_cap (arch_cap.PageCap ref rghts pgsiz mapdata)"
+  "is_page_cap (arch_cap.PageCap dev ref rghts pgsiz mapdata)"
   by (simp add: is_page_cap_def)
 
 
@@ -937,8 +937,8 @@ lemma cap_master_cap_simps:
   "cap_master_cap (cap.NotificationCap ref bdg rghts) = cap.NotificationCap ref 0 UNIV"
   "cap_master_cap (cap.CNodeCap ref bits gd)           = cap.CNodeCap ref bits []"
   "cap_master_cap (cap.ThreadCap ref)                  = cap.ThreadCap ref"
-  "cap_master_cap (cap.ArchObjectCap (arch_cap.PageCap ref rghts sz mapdata)) =
-         cap.ArchObjectCap (arch_cap.PageCap ref UNIV sz None)"
+  "cap_master_cap (cap.ArchObjectCap (arch_cap.PageCap dev ref rghts sz mapdata)) =
+         cap.ArchObjectCap (arch_cap.PageCap dev ref UNIV sz None)"
   "cap_master_cap (cap.ArchObjectCap (arch_cap.ASIDPoolCap pool asid)) =
          cap.ArchObjectCap (arch_cap.ASIDPoolCap pool 0)"
   "cap_master_cap (cap.ArchObjectCap (arch_cap.PageTableCap ptr x)) =
@@ -949,7 +949,7 @@ lemma cap_master_cap_simps:
          cap.ArchObjectCap arch_cap.ASIDControlCap"
   "cap_master_cap (cap.NullCap)           = cap.NullCap"
   "cap_master_cap (cap.DomainCap)         = cap.DomainCap"
-  "cap_master_cap (cap.UntypedCap r n f)  = cap.UntypedCap r n 0"
+  "cap_master_cap (cap.UntypedCap dev r n f)  = cap.UntypedCap dev r n 0"
   "cap_master_cap (cap.ReplyCap r m)      = cap.ReplyCap r True"
   "cap_master_cap (cap.IRQControlCap)     = cap.IRQControlCap"
   "cap_master_cap (cap.IRQHandlerCap irq) = cap.IRQHandlerCap irq"
@@ -984,7 +984,7 @@ lemma aobj_ref_cases:
   (case acap of 
     arch_cap.ASIDPoolCap w1 w2 \<Rightarrow> Some w1 
   | arch_cap.ASIDControlCap \<Rightarrow> None
-  | arch_cap.PageCap w s sz opt \<Rightarrow> Some w
+  | arch_cap.PageCap dev w s sz opt \<Rightarrow> Some w
   | arch_cap.PageTableCap w opt \<Rightarrow> Some w
   | arch_cap.PageDirectoryCap w opt \<Rightarrow> Some w)"
   apply (subst aobj_ref_cases')
@@ -2140,7 +2140,7 @@ lemma set_untyped_cap_as_full_valid_mdb:
 
 
 lemma free_index_update_simps[simp]:
-  "free_index_update g (cap.UntypedCap ref sz f) = cap.UntypedCap ref sz (g f)"
+  "free_index_update g (cap.UntypedCap dev ref sz f) = cap.UntypedCap dev ref sz (g f)"
    by (simp add:free_index_update_def)
 
 
@@ -2161,21 +2161,21 @@ lemma set_free_index_valid_mdb:
   apply (simp)
   apply (frule(1) caps_of_state_valid)
   proof(intro conjI impI)
-  fix s bits f r
+  fix s bits f r dev
   assume mdb:"untyped_mdb (cdt s) (caps_of_state s)"
-  assume cstate:"caps_of_state s cref = Some (cap.UntypedCap r bits f)" (is "?m cref = Some ?srccap")
-  show "untyped_mdb (cdt s) (caps_of_state s(cref \<mapsto> cap.UntypedCap r bits idx))"
+  assume cstate:"caps_of_state s cref = Some (cap.UntypedCap dev r bits f)" (is "?m cref = Some ?srccap")
+  show "untyped_mdb (cdt s) (caps_of_state s(cref \<mapsto> cap.UntypedCap dev r bits idx))"
   apply (rule untyped_mdb_update_free_index
      [where capa = ?srccap and m = "caps_of_state s" and src = cref,
        unfolded free_index_update_def,simplified,THEN iffD2])
    apply (simp add:cstate mdb)+
   done
   assume inc: "untyped_inc (cdt s) (caps_of_state s)"
-  have untyped_range_simp: "untyped_range (cap.UntypedCap r bits f) = untyped_range (cap.UntypedCap r bits idx)"
+  have untyped_range_simp: "untyped_range (cap.UntypedCap dev r bits f) = untyped_range (cap.UntypedCap dev r bits idx)"
     by simp
-  assume valid: "s \<turnstile> cap.UntypedCap r bits f"
+  assume valid: "s \<turnstile> cap.UntypedCap dev r bits f"
   assume cmp: "f \<le> idx" "idx \<le> 2 ^ bits"
-  have subset_range: "usable_untyped_range (cap.UntypedCap r bits idx) \<subseteq> usable_untyped_range (cap.UntypedCap r bits f)"
+  have subset_range: "usable_untyped_range (cap.UntypedCap dev r bits idx) \<subseteq> usable_untyped_range (cap.UntypedCap dev r bits f)"
     using cmp valid
    apply (clarsimp simp:valid_cap_def cap_aligned_def)
    apply (rule word_plus_mono_right)
@@ -2194,7 +2194,7 @@ lemma set_free_index_valid_mdb:
   done
 
   note blah[simp del] = untyped_range.simps usable_untyped_range.simps
-  show "untyped_inc (cdt s) (caps_of_state s(cref \<mapsto> cap.UntypedCap r bits idx))"
+  show "untyped_inc (cdt s) (caps_of_state s(cref \<mapsto> cap.UntypedCap dev r bits idx))"
   using inc cstate
   apply (unfold untyped_inc_def)
    apply (intro allI impI)
@@ -2230,11 +2230,11 @@ lemma set_free_index_valid_mdb:
    apply clarsimp+
   done
   assume "ut_revocable (is_original_cap s) (caps_of_state s)"
-  thus "ut_revocable (is_original_cap s) (caps_of_state s(cref \<mapsto> cap.UntypedCap r bits idx))"
+  thus "ut_revocable (is_original_cap s) (caps_of_state s(cref \<mapsto> cap.UntypedCap dev r bits idx))"
   using cstate
   by (fastforce simp:ut_revocable_def)
   assume "reply_caps_mdb (cdt s) (caps_of_state s)"
-  thus "reply_caps_mdb (cdt s) (caps_of_state s(cref \<mapsto> cap.UntypedCap r bits idx))"
+  thus "reply_caps_mdb (cdt s) (caps_of_state s(cref \<mapsto> cap.UntypedCap dev r bits idx))"
   using cstate
   apply (simp add:reply_caps_mdb_def del:split_paired_All split_paired_Ex)
   apply (intro allI impI conjI)
@@ -2246,7 +2246,7 @@ lemma set_free_index_valid_mdb:
   apply clarsimp
   done
   assume "reply_masters_mdb (cdt s) (caps_of_state s)"
-  thus "reply_masters_mdb (cdt s) (caps_of_state s(cref \<mapsto> cap.UntypedCap r bits idx))"
+  thus "reply_masters_mdb (cdt s) (caps_of_state s(cref \<mapsto> cap.UntypedCap dev r bits idx))"
    apply (simp add:reply_masters_mdb_def del:split_paired_All split_paired_Ex)
    apply (intro allI impI ballI)
    apply (erule exE)
@@ -2257,8 +2257,8 @@ lemma set_free_index_valid_mdb:
    done
   assume mdb:"mdb_cte_at (swp (cte_wp_at (op \<noteq> cap.NullCap)) s) (cdt s)"
   and desc_inc:"descendants_inc (cdt s) (caps_of_state s)"
-  and cte:"caps_of_state s cref = Some (cap.UntypedCap r bits f)"
-  show "descendants_inc (cdt s) (caps_of_state s(cref \<mapsto> cap.UntypedCap r bits idx))"
+  and cte:"caps_of_state s cref = Some (cap.UntypedCap dev r bits f)"
+  show "descendants_inc (cdt s) (caps_of_state s(cref \<mapsto> cap.UntypedCap dev r bits idx))"
    using mdb cte
    apply (clarsimp simp:swp_def cte_wp_at_caps_of_state)
    apply (erule descendants_inc_minor[OF desc_inc])

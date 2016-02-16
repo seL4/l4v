@@ -915,7 +915,6 @@ lemma tc_invs:
        | rule conjI)+
   done
 
-(* FIXME-NTFN *)
 primrec
   tcb_inv_wf  :: "tcb_invocation \<Rightarrow> 'z::state_ext state \<Rightarrow> bool"
 where
@@ -1178,7 +1177,7 @@ lemma check_valid_ipc_buffer_inv:
              cong: cap.case_cong arch_cap.case_cong
              split del: split_if)
   apply (rule hoare_pre)
-   apply (wp | simp split del: split_if | wpcw)+
+   apply (wp | simp add: whenE_def split del: split_if | wpcw)+
   done
 
 lemma check_valid_ipc_buffer_wp:
@@ -1192,7 +1191,7 @@ lemma check_valid_ipc_buffer_wp:
              cong: cap.case_cong arch_cap.case_cong
              split del: split_if)
   apply (rule hoare_pre)
-   apply (wp | simp split del: split_if | wpc)+
+   apply (wp | simp add: whenE_def split del: split_if | wpc)+
   apply (clarsimp simp: is_cap_simps is_cnode_or_valid_arch_def
                         valid_ipc_buffer_cap_def)
   done
@@ -1419,7 +1418,9 @@ crunch inv[wp]:  decode_unbind_notification P
 lemma decode_bind_notification_inv[wp]:
   "\<lbrace>P\<rbrace> decode_bind_notification cap excaps \<lbrace>\<lambda>_. P\<rbrace>"
   unfolding decode_bind_notification_def
-  by (rule hoare_pre) (wp get_ntfn_wp gbn_wp | wpc | clarsimp simp: whenE_def split del: split_if)+
+  by (rule hoare_pre) 
+     (wp get_ntfn_wp gbn_wp | wpc 
+    | clarsimp simp: whenE_def split del: split_if)+
 
 lemma decode_tcb_inv_inv:
   "\<lbrace>P\<rbrace> decode_tcb_invocation label args (cap.ThreadCap t) slot extras \<lbrace>\<lambda>rv. P\<rbrace>"

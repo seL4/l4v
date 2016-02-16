@@ -710,7 +710,7 @@ lemma arch_recycle_cap_valid_pdpt[wp]:
   apply (simp add: arch_recycle_cap_def
              cong: arch_cap.case_cong split del: split_if)
   apply (rule hoare_pre)
-   apply (wp |wpc | simp)+
+   apply (wp |wpc | simp add: unless_def)+
      apply (simp add:swp_def)
      apply (wp mapM_x_store_pte_valid_pdpt2 static_imp_wp)
     apply (simp add:swp_def)
@@ -806,13 +806,13 @@ lemma detype_valid_pdpt[elim!]:
   by (auto simp add: detype_def ran_def)
 
 crunch valid_pdpt_objs[wp]: create_word_objects, create_cap "valid_pdpt_objs"
-  (ignore: clearMemory simp: crunch_simps)
+  (ignore: clearMemory simp: crunch_simps unless_def)
 
 lemma init_arch_objects_valid_pdpt:
   "\<lbrace>valid_pdpt_objs and pspace_aligned and valid_arch_state
            and K (orefs = retype_addrs ptr type n us)
            and K (range_cover ptr sz (obj_bits_api type us) n)\<rbrace>
-     init_arch_objects type ptr n obj_sz orefs
+     init_arch_objects type ptr n obj_sz orefs dev
    \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
   apply (rule hoare_gen_asm)+
   apply (simp add: init_arch_objects_def)
@@ -852,11 +852,11 @@ lemma invoke_untyped_valid_pdpt[wp]:
   apply (rule hoare_name_pre_state)
   apply (cases uinv)
   apply (clarsimp simp del:invoke_untyped.simps)
-  apply (rename_tac s cref oref ptr tp us slots sz idx)
+  apply (rename_tac s cref oref ptr tp us slots dev sz idx)
   proof -
-    fix s cref oref ptr tp us slots sz idx
-    assume cte_wp_at : "cte_wp_at (\<lambda>c. c = cap.UntypedCap (ptr && ~~ mask sz) sz idx) (cref,oref) s"
-     have cte_at: "cte_wp_at (op = (cap.UntypedCap (ptr && ~~ mask sz) sz idx)) (cref,oref) s" (is "?cte_cond s")
+    fix s cref oref ptr tp us slots dev sz idx
+    assume cte_wp_at : "cte_wp_at (\<lambda>c. c = cap.UntypedCap dev (ptr && ~~ mask sz) sz idx) (cref,oref) s"
+     have cte_at: "cte_wp_at (op = (cap.UntypedCap dev (ptr && ~~ mask sz) sz idx)) (cref,oref) s" (is "?cte_cond s")
        using cte_wp_at by (simp add:cte_wp_at_caps_of_state)
     assume desc_range: "ptr = ptr && ~~ mask sz \<longrightarrow> descendants_range_in {ptr..ptr + 2 ^ sz - 1} (cref,oref) s"
     assume  misc     : "distinct slots" "tp = Invariants_AI.CapTableObject \<longrightarrow> 0 < (us::nat)"
@@ -868,7 +868,7 @@ lemma invoke_untyped_valid_pdpt[wp]:
     assume cover : "range_cover ptr sz (obj_bits_api tp us) (length slots)"
     assume vslot : "slots\<noteq> []"
 
-    have pf : "invoke_untyped_proofs s (cref,oref) ptr tp us slots sz idx"
+    have pf : "invoke_untyped_proofs s (cref,oref) ptr tp us slots sz idx dev"
       using  cte_wp_at desc_range misc cover vslot
       apply (clarsimp simp:invoke_untyped_proofs_def cte_wp_at_caps_of_state)
       apply (drule(1) bspec)
@@ -975,9 +975,9 @@ lemma invoke_untyped_valid_pdpt[wp]:
     have usable_range_subset:
       "ptr && ~~ mask sz \<noteq> ptr
       \<Longrightarrow>usable_untyped_range
-                     (cap.UntypedCap (ptr && ~~ mask sz) sz
+                     (cap.UntypedCap dev (ptr && ~~ mask sz) sz
                        (unat (ptr + (of_nat (length slots) << obj_bits_api tp us) - (ptr && ~~ mask sz))))
-                    \<subseteq> usable_untyped_range (cap.UntypedCap (ptr && ~~ mask sz) sz idx)"
+                    \<subseteq> usable_untyped_range (cap.UntypedCap dev (ptr && ~~ mask sz) sz idx)"
       apply (simp_all add:blah field_simps)
       apply (clarsimp simp:shiftl_t2n  add.assoc[symmetric] neg_mask_add_mask )
       apply (simp add:field_simps)
@@ -1018,7 +1018,7 @@ lemma invoke_untyped_valid_pdpt[wp]:
        apply (simp add:is_aligned_mask)+
       done
 
-    have detype_locale:"ptr && ~~ mask sz = ptr \<Longrightarrow> detype_locale (cap.UntypedCap (ptr && ~~ mask sz) sz idx) (cref,oref) s"
+    have detype_locale:"ptr && ~~ mask sz = ptr \<Longrightarrow> detype_locale (cap.UntypedCap dev (ptr && ~~ mask sz) sz idx) (cref,oref) s"
       using cte_at descendants_range misc
       by (simp add:detype_locale_def cte_at descendants_range_def2 blah invs_untyped_children)
 
@@ -1072,13 +1072,13 @@ lemma invoke_untyped_valid_pdpt[wp]:
       apply simp
       done
 
-    note set_cap_free_index_invs_spec = set_free_index_invs[where cap = "cap.UntypedCap (ptr && ~~ mask sz) sz idx"
+    note set_cap_free_index_invs_spec = set_free_index_invs[where cap = "cap.UntypedCap dev (ptr && ~~ mask sz) sz idx"
       ,unfolded free_index_update_def free_index_of_def,simplified]
 
     note msimp[simp add] =  misc neg_mask_add_mask
     show
       "\<lbrace>op = s\<rbrace>
-          invoke_untyped (Invocations_A.untyped_invocation.Retype (cref, oref) (ptr && ~~ mask sz) ptr tp us slots)
+          invoke_untyped (Invocations_A.untyped_invocation.Retype (cref, oref) (ptr && ~~ mask sz) ptr tp us slots dev)
       \<lbrace>\<lambda>rv. valid_pdpt_objs\<rbrace>"
     apply (clarsimp simp:mapM_x_def[symmetric])
     apply (case_tac "ptr && ~~ mask sz \<noteq> ptr ")
@@ -1088,7 +1088,7 @@ lemma invoke_untyped_valid_pdpt[wp]:
       init_arch_objects_valid_pdpt[where sz = sz]
       retype_region_invs_extras[where sz = sz]
       retype_region_ret_folded | simp)+
-    apply (rule_tac P = "cap = cap.UntypedCap (ptr && ~~ mask sz) sz idx" in hoare_gen_asm)
+    apply (rule_tac P = "cap = cap.UntypedCap dev (ptr && ~~ mask sz) sz idx" in hoare_gen_asm)
     apply (clarsimp simp:conj_comms bits_of_def region_in_kernel_window_def)
     apply (wp set_cap_no_overlap hoare_vcg_ball_lift set_cap_free_index_invs_spec
               set_cap_cte_wp_at set_cap_descendants_range_in set_cap_caps_no_overlap
@@ -1109,12 +1109,12 @@ lemma invoke_untyped_valid_pdpt[wp]:
       init_arch_objects_valid_pdpt[where sz = sz]
       retype_region_invs_extras[where sz = sz]
       retype_region_ret_folded | simp)+
-    apply (rule_tac P = "cap = cap.UntypedCap (ptr && ~~ mask sz) sz idx" in hoare_gen_asm)
+    apply (rule_tac P = "cap = cap.UntypedCap dev (ptr && ~~ mask sz) sz idx" in hoare_gen_asm)
     apply (clarsimp simp:conj_comms bits_of_def region_in_kernel_window_def)
     apply (wp set_cap_no_overlap set_untyped_cap_invs_simple
               set_cap_cte_wp_at set_cap_caps_no_overlap
               set_untyped_cap_caps_overlap_reserved get_cap_wp)
-   apply (rule_tac P = "cap = cap.UntypedCap ptr sz idx" in hoare_gen_asm)
+   apply (rule_tac P = "cap = cap.UntypedCap dev ptr sz idx" in hoare_gen_asm)
    apply (clarsimp simp:bits_of_def delete_objects_rewrite)
    apply (wp get_cap_wp)
   apply (clarsimp simp:cte_wp_at_caps_of_state untyped_range.simps)

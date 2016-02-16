@@ -62,7 +62,7 @@ defs finaliseCap_def:
     unmapPageTable a v ptr;
     return NullCap
   od)
-  | ((PageCap ptr _ s (Some (a, v))), _) \<Rightarrow>    (do
+  | ((PageCap _ ptr _ s (Some (a, v))), _) \<Rightarrow>    (do
         unmapPage s a v ptr;
         return NullCap
   od)
@@ -71,7 +71,7 @@ defs finaliseCap_def:
 
 defs resetMemMapping_def:
 "resetMemMapping x0\<equiv> (case x0 of
-    (PageCap p rts sz _) \<Rightarrow>    PageCap p rts sz Nothing
+    (PageCap dev p rts sz _) \<Rightarrow>    PageCap dev p rts sz Nothing
   | (PageTableCap ptr _) \<Rightarrow>    PageTableCap ptr Nothing
   | (PageDirectoryCap ptr _) \<Rightarrow>    PageDirectoryCap ptr Nothing
   | cap \<Rightarrow>    cap
@@ -80,8 +80,9 @@ defs resetMemMapping_def:
 defs recycleCap_def:
 "recycleCap is_final x1 \<equiv> (let cap = x1 in
   if isPageCap cap
-  then   (do
-      doMachineOp $ clearMemory (capVPBasePtr cap)
+  then let isDevice = capVPIsDevice cap
+  in   (do
+      unless isDevice $ doMachineOp $ clearMemory (capVPBasePtr cap)
           (1 `~shiftL~` (pageBitsForSize $ capVPSize cap));
       finaliseCap cap is_final;
       return $ resetMemMapping cap
@@ -154,7 +155,7 @@ defs recycleCap_def:
 
 defs hasRecycleRights_def:
 "hasRecycleRights x0\<equiv> (case x0 of
-    (PageCap _ rights _ _) \<Rightarrow>    rights = VMReadWrite
+    (PageCap _ _ rights _ _) \<Rightarrow>    rights = VMReadWrite
   | _ \<Rightarrow>    True
   )"
 
@@ -197,53 +198,54 @@ defs sameObjectAs_def:
   in  
     (ptrA = capVPBasePtr b) \<and> (capVPSize a = capVPSize b)
         \<and> (ptrA \<le> ptrA + bit (pageBitsForSize $ capVPSize a) - 1)
+        \<and> (capVPIsDevice a = capVPIsDevice b)
   else   sameRegionAs a b
   )"
 
 definition
-"createPageObject ptr numPages\<equiv> (do
+"createPageObject ptr numPages isDevice\<equiv> (do
     addrs \<leftarrow> placeNewObject ptr UserData numPages;
-    doMachineOp $ initMemory (PPtr $ fromPPtr ptr) (1 `~shiftL~` (pageBits + numPages) );
+    unless isDevice $ doMachineOp $ initMemory (PPtr $ fromPPtr ptr) (1 `~shiftL~` (pageBits + numPages) );
     return addrs
 od)"
 
 defs createObject_def:
-"createObject t regionBase arg3 \<equiv>
+"createObject t regionBase arg3 isDevice \<equiv>
     let funupd = (\<lambda> f x v y. if y = x then v else f y) in
     let pointerCast = PPtr \<circ> fromPPtr
     in (case t of 
         ArchTypes_H.APIObjectType v1 \<Rightarrow> 
             haskell_fail []
         | ArchTypes_H.SmallPageObject \<Rightarrow>  (do
-            createPageObject regionBase 0;
+            createPageObject regionBase 0 isDevice;
             modify (\<lambda> ks. ks \<lparr> gsUserPages :=
               funupd (gsUserPages ks)
                      (fromPPtr regionBase) (Just ARMSmallPage)\<rparr>);
-            return $ PageCap (pointerCast regionBase)
+            return $ PageCap isDevice (pointerCast regionBase)
                   VMReadWrite ARMSmallPage Nothing
         od)
         | ArchTypes_H.LargePageObject \<Rightarrow>  (do
-            createPageObject regionBase 4;
+            createPageObject regionBase 4 isDevice;
             modify (\<lambda> ks. ks \<lparr> gsUserPages :=
               funupd (gsUserPages ks)
                      (fromPPtr regionBase) (Just ARMLargePage)\<rparr>);
-            return $ PageCap (pointerCast regionBase)
+            return $ PageCap isDevice (pointerCast regionBase)
                   VMReadWrite ARMLargePage Nothing
         od)
         | ArchTypes_H.SectionObject \<Rightarrow>  (do
-            createPageObject regionBase 8;
+            createPageObject regionBase 8 isDevice;
             modify (\<lambda> ks. ks \<lparr> gsUserPages :=
               funupd (gsUserPages ks)
                      (fromPPtr regionBase) (Just ARMSection)\<rparr>);
-            return $ PageCap (pointerCast regionBase)
+            return $ PageCap isDevice (pointerCast regionBase)
                   VMReadWrite ARMSection Nothing
         od)
         | ArchTypes_H.SuperSectionObject \<Rightarrow>  (do
-            createPageObject regionBase 12;
+            createPageObject regionBase 12 isDevice;
             modify (\<lambda> ks. ks \<lparr> gsUserPages :=
               funupd (gsUserPages ks)
                      (fromPPtr regionBase) (Just ARMSuperSection)\<rparr>);
-            return $ PageCap (pointerCast regionBase)
+            return $ PageCap isDevice (pointerCast regionBase)
                   VMReadWrite ARMSuperSection Nothing
         od)
         | ArchTypes_H.PageTableObject \<Rightarrow>  (do
@@ -277,7 +279,7 @@ defs performInvocation_def:
 
 defs capUntypedPtr_def:
 "capUntypedPtr x0\<equiv> (case x0 of
-    (PageCap ((* PPtr *) p) _ _ _) \<Rightarrow>    PPtr p
+    (PageCap _ ((* PPtr *) p) _ _ _) \<Rightarrow>    PPtr p
   | (PageTableCap ((* PPtr *) p) _) \<Rightarrow>    PPtr p
   | (PageDirectoryCap ((* PPtr *) p) _) \<Rightarrow>    PPtr p
   | ASIDControlCap \<Rightarrow>    error []
@@ -286,7 +288,7 @@ defs capUntypedPtr_def:
 
 defs capUntypedSize_def:
 "capUntypedSize x0\<equiv> (case x0 of
-    (PageCap _ _ sz _) \<Rightarrow>    1 `~shiftL~` pageBitsForSize sz
+    (PageCap _ _ _ sz _) \<Rightarrow>    1 `~shiftL~` pageBitsForSize sz
   | (PageTableCap _ _) \<Rightarrow>    1 `~shiftL~` 10
   | (PageDirectoryCap _ _) \<Rightarrow>    1 `~shiftL~` 14
   | (ASIDControlCap ) \<Rightarrow>    1 `~shiftL~` (asidHighBits + 2)

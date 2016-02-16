@@ -68,7 +68,7 @@ consts
 cteRecycle :: "machine_word \<Rightarrow> unit kernel_p"
 
 consts
-createNewObjects :: "object_type \<Rightarrow> machine_word \<Rightarrow> machine_word list \<Rightarrow> machine_word \<Rightarrow> nat \<Rightarrow> unit kernel"
+createNewObjects :: "object_type \<Rightarrow> machine_word \<Rightarrow> machine_word list \<Rightarrow> machine_word \<Rightarrow> nat \<Rightarrow> bool \<Rightarrow> unit kernel"
 
 consts
 insertNewCap :: "machine_word \<Rightarrow> machine_word \<Rightarrow> capability \<Rightarrow> unit kernel"
@@ -290,7 +290,7 @@ defs cteInsert_def:
                 | NotificationCap _ _ _ _ \<Rightarrow>  
                     capNtfnBadge newCap \<noteq> capNtfnBadge srcCap
                 | IRQHandlerCap _ \<Rightarrow>   isIRQControlCap srcCap
-                | UntypedCap _ _ _ \<Rightarrow>   True
+                | UntypedCap _ _ _ _ \<Rightarrow>   True
                 | _ \<Rightarrow>   False
                 ));
         newMDB \<leftarrow> return ( srcMDB \<lparr>
@@ -458,11 +458,11 @@ defs cteRecycle_def:
 odE)"
 
 defs createNewObjects_def:
-"createNewObjects newType srcSlot destSlots regionBase userSizeBits\<equiv> (do
+"createNewObjects newType srcSlot destSlots regionBase userSizeBits isDevice\<equiv> (do
     objectSizeBits \<leftarrow> return ( getObjectSize newType userSizeBits);
     zipWithM_x (\<lambda> num slot. (do
       cap \<leftarrow> createObject newType
-              (PPtr (num `~shiftL~` objectSizeBits) + regionBase) userSizeBits;
+              (PPtr (num `~shiftL~` objectSizeBits) + regionBase) userSizeBits isDevice;
       insertNewCap srcSlot slot cap
     od)
                                    )

@@ -879,9 +879,10 @@ case \x of ((EndpointCap { capEPPtr = ptr }), final, _) -> ((NotificationCap { c
     then ->11
     else ->12
 
-case \x of (cap@PageCap {}) -> (cap@PageTableCap { capPTBasePtr = ptr }) -> (cap@PageDirectoryCap { capPDBasePtr = ptr }) -> ASIDControlCap -> (cap@ASIDPoolCap { capASIDBase = base, capASIDPool = ptr }) ->  ---> let cap = \x in
+case \x of (cap@PageCap { capVPIsDevice = isDevice }) -> (cap@PageTableCap { capPTBasePtr = ptr }) -> (cap@PageDirectoryCap { capPDBasePtr = ptr }) -> ASIDControlCap -> (cap@ASIDPoolCap { capASIDBase = base, capASIDPool = ptr }) ->  ---> let cap = \x in
     if isPageCap cap
-    then ->1
+    then let isDevice = capVPIsDevice cap
+        in ->1
     else if isPageTableCap cap
     then let ptr = capPTBasePtr cap
         in ->2
@@ -1607,4 +1608,5 @@ case \x of cap@(PageCap {}) -> cap@(PDPointerTableCap {}) -> cap@(PageDirectoryC
   else ->9
 
 case \x of (ArchInvocationLabel X64PDPTMap, vaddr':attr:_, (vspaceCap,_):_) -> (ArchInvocationLabel X64PDPTMap, _, _) -> (ArchInvocationLabel X64PDPTUnmap, _, _) -> _ ->  ---X>
+
 
