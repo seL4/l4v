@@ -8,6 +8,8 @@
 # @TAG(GD_GPL)
 #
 
+SHELL=bash
+
 ## Targets
 images: ASpec CKernel
 default: images test

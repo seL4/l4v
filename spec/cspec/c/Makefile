@@ -15,6 +15,7 @@ PARSERPATH=../../../tools/c-parser/standalone-parser
 PATH:=${PARSERPATH}:${PATH}
 export PATH
 TOOLPREFIX ?= arm-none-eabi-
+SHELL=bash
 
 ifeq ($(L4V_ARCH),ARM)
     ARCH=arm
