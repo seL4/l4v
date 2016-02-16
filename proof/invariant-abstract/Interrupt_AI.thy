@@ -78,7 +78,7 @@ lemma decode_irq_control_invocation_inv[wp]:
   apply (wp | simp)+
   done
 
-lemma unat_mask:
+lemma unat_mask_32_16_is_mod:
   "unat ((a::word32) && mask 16) = (unat a) mod (2^16)"
   by (simp add:word_mod_2p_is_mask[symmetric] unat_word_ariths)
 
@@ -104,7 +104,7 @@ lemma decode_irq_control_valid[wp]:
   apply (clarsimp simp: linorder_not_less word_le_nat_alt unat_ucast
                         maxIRQ_def)
   apply (cut_tac mod_le[where b = "2^10" and c = "2^16" and a = "unat (args ! 0)" ,simplified])
-  apply (cases caps, auto simp:unat_mask)
+  apply (cases caps, auto simp:unat_mask_32_16_is_mod)
   done
 
 

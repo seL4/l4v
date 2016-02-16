@@ -2227,63 +2227,8 @@ definition
          Some irq \<Rightarrow> (cirq = ucast irq \<and> irq \<noteq> scast irqInvalid \<and> ucast irq \<le> (scast maxIRQ :: word16))
        | None \<Rightarrow> cirq = scast irqInvalid"
 
-lemma unat_ucast_up_simp[simp]:
-  fixes x :: "'a::len word"
-  assumes uc :"len_of TYPE('a) \<le> len_of TYPE('b)"
-  shows "unat (ucast x :: 'b::len word) = unat x"
-  unfolding ucast_def unat_def
-  apply (subst int_word_uint)
-  apply (subst mod_pos_pos_trivial)
-    apply simp
-   apply (rule lt2p_lem)
-   apply (simp add: uc)
-  apply simp
-  done
 
-lemma unat_ucast_less_no_overflow:
-  "\<lbrakk>n < 2 ^ len_of TYPE('a); unat f < n\<rbrakk> \<Longrightarrow> (f::('a::len) word) < of_nat n"
-  apply (erule order_le_less_trans[OF _ of_nat_mono_maybe,rotated])
-    apply assumption
-  apply simp
-  done
-
-lemma unat_ucast_less_no_overflow_simp:
-  "n < 2 ^ len_of TYPE('a) \<Longrightarrow> (unat f < n) = ((f::('a::len) word) < of_nat n)"
-  apply (rule iffI)
-    apply (simp add:unat_ucast_less_no_overflow)
-  apply (simp add:unat_less_helper)
-  done
-
-lemma unat_ucast_no_overflow_le:
-  assumes no_overflow : "unat b < (2\<Colon>nat) ^ len_of TYPE('a)"
-  and upward_cast: "len_of TYPE('a) < len_of TYPE('b)"
-  shows  "(ucast (f::('a::len) word) < (b :: ('b :: len) word)) = (unat f < unat b)"
-  proof -
-    have LR: "ucast f < b \<Longrightarrow> unat f < unat b"
-      apply (rule unat_less_helper)
-      apply (simp add:ucast_nat_def)
-      apply (rule_tac 'b1 = 'b in  ucast_less_ucast[THEN iffD1])
-      apply (rule upward_cast)
-      apply (simp add: ucast_ucast_mask less_mask_eq word_less_nat_alt
-        unat_power_lower[OF upward_cast] no_overflow)
-      done
-    have RL: "unat f < unat b \<Longrightarrow> ucast f < b"
-      proof-
-      assume ineq: "unat f < unat b"
-      have ucast_rewrite: "ucast (f::('a::len) word) < 
-          ((ucast (ucast b ::('a::len) word)) :: ('b :: len) word)"
-        apply (simp add: ucast_less_ucast upward_cast)
-        apply (simp add: ucast_nat_def[symmetric])
-        apply (rule unat_ucast_less_no_overflow[OF no_overflow ineq])
-        done
-      thus ?thesis
-        apply (rule order_less_le_trans)
-        apply (simp add:ucast_ucast_mask word_and_le2)
-        done
-   qed
-   thus ?thesis by (simp add:RL LR iffI)
-qed
-
+declare unat_ucast_up_simp[simp]
 
 
 lemma setIRQState_ccorres:
@@ -3400,15 +3345,12 @@ lemma sameRegionAs_spec:
            apply (frule_tac cap'=cap_b in cap_get_tag_isCap_unfolded_H_cap(5))
            apply (simp add: ccap_relation_def map_option_case)
            apply (simp add: cap_irq_handler_cap_lift)
-thm cap_to_H_def
-thm cl_valid_cap_def
            apply (simp add: cap_to_H_def)
            apply (clarsimp simp: up_ucast_inj_eq c_valid_cap_def
                                  cl_valid_cap_def mask_twice
                           split: split_if bool.split
                           | intro impI conjI
                           | simp )+
-thm ucast_ucast_mask_eq
                apply (drule ucast_ucast_mask_eq, simp)
                apply (simp add: ucast_ucast_mask)
               apply (erule ucast_up_neq,simp)

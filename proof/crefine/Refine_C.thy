@@ -30,7 +30,9 @@ apply (rule hoare_post_imp)
 apply (rule schedule_invs')
 done
 
-(* FIXME: This is cheating (Xin) *)
+(* FIXME: This is cheating since ucast from 10 to 16 will never give us 0xFFFF.
+          However type of 10 word is from irq oracle so it is the oracle that matters not this lemma.
+   (Xin) *)
 lemma ucast_not_helper_cheating:
   fixes a:: "10 word"
   assumes a: "ucast a \<noteq> (0xFFFF :: word16)"

@@ -209,8 +209,8 @@ lemma decode_irq_control_valid'[wp]:
   done
 
 lemma irq_nodes_global_refs:
-    "irq_node' s + (ucast (irq:: 10 word)) * 0x10 \<in> global_refs' s"
-    by (simp add: global_refs'_def mult.commute mult.left_commute)
+  "irq_node' s + (ucast (irq:: 10 word)) * 0x10 \<in> global_refs' s"
+  by (simp add: global_refs'_def mult.commute mult.left_commute)
 
 lemma valid_globals_ex_cte_cap_irq:
   "\<lbrakk> ex_cte_cap_wp_to' isCNodeCap ptr s; valid_global_refs' s;

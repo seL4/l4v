@@ -129,12 +129,6 @@ definition
       {(s, b, (tc,s'))|s b tc s' r. ((r,tc),s') \<in> fst (split (kernelEntry_C_if fp e) s) \<and>
                    b = (case r of Inl x \<Rightarrow> True | Inr x \<Rightarrow> False)}"
 
-(* FIXME: This is cheating (Xin) *)
-lemma ucast_not_helper_cheating_unsigned:
-  fixes a:: "10 word"
-  assumes a: "ucast a \<noteq> (0xFFFF :: word16)"
-  shows "ucast (ucast a :: word16) \<noteq> (0xFFFF::32 word)"
-  by (word_bitwise)
 
 lemma handleInterrupt_ccorres:
   "ccorres (K dc \<currency> dc) (liftxf errstate id (K ()) ret__unsigned_long_')
@@ -143,6 +137,11 @@ lemma handleInterrupt_ccorres:
            []
            (handleEvent Interrupt)
            (handleInterruptEntry_C_body_if)"
+proof -
+  have ucast_not_helper_cheating_unsigned:
+    "\<And>a. ucast (a::10 word) \<noteq> (0xFFFF :: word16) \<Longrightarrow> ucast (ucast a :: word16) \<noteq> (0xFFFF::32 word)"
+    by (word_bitwise)
+  show ?thesis
   apply (rule ccorres_guard_imp2)
    apply (simp add: handleEvent_def minus_one_norm handleInterruptEntry_C_body_if_def)
    apply (clarsimp simp: liftE_def bind_assoc)
@@ -168,6 +167,7 @@ lemma handleInterrupt_ccorres:
    apply (wp getActiveIRQ_le_maxIRQ getActiveIRQ_neq_Some0xFF | simp)+
   apply (clarsimp simp: invs'_def valid_state'_def)
   done
+qed
 
 lemma handleEvent_ccorres:
   notes K_def[simp del]

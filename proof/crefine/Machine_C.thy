@@ -19,13 +19,6 @@ imports "../../lib/clib/Ctac"
 begin
 
 locale kernel_m = kernel +
-(*
-assumes configureTimer_ccorres:
-  "ccorres (op =) ret__unsigned_char_'
-           \<top> UNIV []
-           (doMachineOp configureTimer)
-           (Call configureTimer_'proc)"
-*)
 assumes resetTimer_ccorres:
   "ccorres dc xfdc \<top> UNIV []
            (doMachineOp resetTimer)
