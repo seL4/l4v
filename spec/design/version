@@ -1,8 +1,5 @@
-Built from git repo at /Users/xgao/verification/seL4/haskell by xgao
+Built from git repo at /home/xgao/verification/seL4/haskell by xgao
 
 Generated from changeset:
-9cd1d08 redo last commit and please squash
+007e805 fix for asmrefine
 
-
-Warning - uncomitted changes used:
- M src/SEL4/Object/Interrupt.lhs
