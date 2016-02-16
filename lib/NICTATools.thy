@@ -18,6 +18,7 @@ imports
   Rule_By_Method
   Eisbach_Methods
   "~~/src/HOL/Eisbach/Eisbach_Tools"
+  Insulin
 begin
 
 section "Detect unused meta-forall"
