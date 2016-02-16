@@ -1604,7 +1604,7 @@ lemma unique_table_refsD:
 lemma table_cap_ref_vs_cap_ref_Some:
   "table_cap_ref x = Some y \<Longrightarrow> vs_cap_ref x = Some y"
   by (clarsimp simp: table_cap_ref_def vs_cap_ref_def 
-              split: Structures_A.cap.splits ARM_Structs_A.arch_cap.splits)
+              split: Structures_A.cap.splits Arch_Structs_A.arch_cap.splits)
 
 
 lemma set_cap_valid_vs_lookup:

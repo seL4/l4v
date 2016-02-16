@@ -16,6 +16,8 @@ imports
   "c/arch/object/structures_proofs"
   "c/api/types_defs"
   "c/api/types_proofs"
+  "c/arch/api/shared_types_defs"
+  "c/arch/api/shared_types_proofs"
 begin
 
 end

@@ -329,8 +329,7 @@ lemma invoke_cnode_irq_masks:
 fun irq_of_handler_inv where
   "irq_of_handler_inv (ACKIrq irq) = irq" |
   "irq_of_handler_inv (ClearIRQHandler irq) = irq" |
-  "irq_of_handler_inv (SetIRQHandler irq _ _) = irq" |
-  "irq_of_handler_inv (SetMode irq _ _) = irq"
+  "irq_of_handler_inv (SetIRQHandler irq _ _) = irq"
 
 crunch irq_masks[wp]: invoke_domain "\<lambda>s. P (irq_masks_of_state s)"
 

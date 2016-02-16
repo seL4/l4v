@@ -21,7 +21,7 @@ lemma get_mi_corres: "corres (op = \<circ> message_info_map)
   apply (rule corres_guard_imp)
     apply (unfold get_message_info_def getMessageInfo_def fun_app_def)
     apply (simp add: State_H.msgInfoRegister_def
-             ARMMachineTypes.msgInfoRegister_def msg_info_register_def)
+             MachineTypes.msgInfoRegister_def msg_info_register_def)
     apply (rule corres_split_eqr [OF _ user_getreg_corres])
        apply (rule corres_trivial, simp add: message_info_from_data_eqv)
       apply (wp | simp)+
@@ -657,8 +657,8 @@ next
     apply clarsimp
     apply (intro conjI)
      apply (drule(1) bspec,clarsimp)+
-    apply (case_tac "capa = aa")
-     apply ((clarsimp split:if_splits simp:masked_as_full_def is_cap_simps)+)[2]
+    subgoal for \<dots> aa _ _ capa
+     by (case_tac "capa = aa"; clarsimp split:if_splits simp:masked_as_full_def is_cap_simps)
    apply (case_tac "isEndpointCap (fst y) \<and> capEPPtr (fst y) = the ep \<and> (\<exists>y. ep = Some y)")
     apply (clarsimp simp:conj_comms split del:split_if)
    apply (subst if_not_P)
@@ -682,8 +682,7 @@ next
   apply (rule conjI)
    apply clarsimp+
   apply (case_tac "cteCap cteb = ab")
-   apply (clarsimp simp: isCap_simps maskedAsFull_def split:if_splits)+
-  done
+   by (clarsimp simp: isCap_simps maskedAsFull_def split:if_splits)+
 qed
 
 declare constOnFailure_wp [wp]
@@ -846,8 +845,7 @@ lemma transferCapsToSlots_presM:
   apply (rule conjI | clarsimp)+
   apply (case_tac "cteCap cteb \<noteq> aa")
    apply (clarsimp simp:maskedAsFull_def isCap_simps )
-  apply (clarsimp simp:maskedAsFull_def split:split_if_asm)
-  done
+  by (clarsimp simp:maskedAsFull_def split:split_if_asm)
 
 lemmas transferCapsToSlots_pres2
     = transferCapsToSlots_presM[where vo=False and emx=True
@@ -1305,8 +1303,7 @@ lemma capRights_Null_eq [simp]:
 lemma updateCapData_not_nullD:
   "updateCapData p d cap \<noteq> NullCap \<Longrightarrow> cap \<noteq> NullCap"
   apply (cases cap)
-  apply (simp_all add: updateCapData_def isCap_simps)
-  done
+  by (simp_all add: updateCapData_def isCap_simps)
 
 lemma cte_wp_at_orth':
   "\<lbrakk> cte_wp_at' (\<lambda>c. P c) p s; cte_wp_at' (\<lambda>c. \<not> P c) p s \<rbrakk> \<Longrightarrow> False"
@@ -2060,7 +2057,7 @@ lemma handle_fault_reply_registers_corres:
            (do y \<leftarrow> as_user t
                 (zipWithM_x
                   (\<lambda>r v. set_register r
-                          (ARMMachineTypes.sanitiseRegister r v))
+                          (MachineTypes.sanitiseRegister r v))
                   msg_template msg);
                return (label = 0)
             od)
@@ -2768,7 +2765,7 @@ proof -
         apply (drule(1) sym_refs_obj_atD[where P="\<lambda>ob. ob = e" for e])
         apply (clarsimp simp: st_tcb_at_refs_of_rev st_tcb_at_reply_cap_valid st_tcb_at_caller_cap_null)
         apply (fastforce simp: st_tcb_def2 valid_sched_def valid_sched_action_def)
-       apply (auto simp: valid_ep'_def invs'_def valid_state'_def split: list.split)[1]
+       subgoal by (auto simp: valid_ep'_def invs'_def valid_state'_def split: list.split)
       apply wp
     apply (clarsimp)+
   apply (rule corres_guard_imp)
@@ -2852,9 +2849,9 @@ proof -
        apply (clarsimp simp: st_tcb_at_refs_of_rev st_tcb_at_reply_cap_valid
                              st_tcb_at_caller_cap_null)
        apply (fastforce simp: st_tcb_def2 valid_sched_def valid_sched_action_def)
-      apply (auto simp: valid_ep'_def
-                  split: list.split)[1]
-       apply (clarsimp simp: invs'_def valid_state'_def)+
+      subgoal by (auto simp: valid_ep'_def
+                      split: list.split; 
+                  clarsimp simp: invs'_def valid_state'_def)
      apply wp
    apply (clarsimp)+
   done
@@ -4370,10 +4367,10 @@ lemma rai_invs'[wp]:
 
 lemma zobj_refs_maskCapRights[simp]:
   "zobj_refs' (maskCapRights msk cap) = zobj_refs' cap"
-  by (cases cap,
-      simp_all add: maskCapRights_def isCap_simps
+  by (cases cap;
+      clarsimp
+          simp add: maskCapRights_def isCap_simps
                     Let_def ArchRetype_H.maskCapRights_def
-         split del: split_if
              split: arch_capability.split)
 
 lemma getCTE_cap_to_refs[wp]:
@@ -4570,7 +4567,7 @@ lemma si_invs'[wp]:
                      simp: tcb_bound_refs'_def)
     apply (clarsimp simp: set_eq_subset)
    apply (rule conjI, erule delta_sym_refs)
-     apply (fastforce simp: obj_at'_def projectKOs symreftype_inverse'
+     subgoal by (fastforce simp: obj_at'_def projectKOs symreftype_inverse'
                      split: split_if_asm)
     apply (fastforce simp: tcb_bound_refs'_def symreftype_inverse'
                     split: split_if_asm)
@@ -4657,8 +4654,8 @@ lemma sts_invs_minor'':
    apply (drule obj_at_valid_objs')
     apply (clarsimp simp: valid_pspace'_def)
    apply (clarsimp simp: valid_obj'_def valid_tcb'_def projectKOs)
-   apply (fastforce simp: valid_tcb_state'_def
-                  split: Structures_H.thread_state.splits)
+   subgoal by (fastforce simp: valid_tcb_state'_def
+                        split: Structures_H.thread_state.splits)
   apply (rule conjI)
    apply (clarsimp dest!: st_tcb_at_state_refs_ofD'
                    elim!: rsubst[where P=sym_refs]

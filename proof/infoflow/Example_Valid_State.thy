@@ -383,7 +383,7 @@ where
         (the_nat_to_bl_10 2)
             \<mapsto> Structures_A.CNodeCap Low_cnode_ptr 10 (the_nat_to_bl_10 2), 
         (the_nat_to_bl_10 3)
-            \<mapsto> Structures_A.ArchObjectCap (ARM_Structs_A.PageDirectoryCap Low_pd_ptr 
+            \<mapsto> Structures_A.ArchObjectCap (Arch_Structs_A.PageDirectoryCap Low_pd_ptr 
                                              (Some Low_asid)),
         (the_nat_to_bl_10 318) 
             \<mapsto> Structures_A.NotificationCap ntfn_ptr 0 {AllowSend} )"
@@ -410,7 +410,7 @@ lemma in_ran_If [simp]:
 lemma Low_caps_ran:
   "ran Low_caps = {Structures_A.ThreadCap Low_tcb_ptr,
                    Structures_A.CNodeCap Low_cnode_ptr 10 (the_nat_to_bl_10 2),
-                   Structures_A.ArchObjectCap (ARM_Structs_A.PageDirectoryCap Low_pd_ptr 
+                   Structures_A.ArchObjectCap (Arch_Structs_A.PageDirectoryCap Low_pd_ptr 
                                               (Some Low_asid)),
                    Structures_A.NotificationCap ntfn_ptr 0 {AllowSend},
                    Structures_A.NullCap}"
@@ -434,7 +434,7 @@ where
         (the_nat_to_bl_10 2)
             \<mapsto> Structures_A.CNodeCap High_cnode_ptr 10 (the_nat_to_bl_10 2),
         (the_nat_to_bl_10 3)
-           \<mapsto> Structures_A.ArchObjectCap (ARM_Structs_A.PageDirectoryCap High_pd_ptr 
+           \<mapsto> Structures_A.ArchObjectCap (Arch_Structs_A.PageDirectoryCap High_pd_ptr 
                                             (Some High_asid)),
         (the_nat_to_bl_10 318)
            \<mapsto> Structures_A.NotificationCap ntfn_ptr 0 {AllowRecv}) "
@@ -447,7 +447,7 @@ where
 lemma High_caps_ran:
   "ran High_caps = {Structures_A.ThreadCap High_tcb_ptr,
                     Structures_A.CNodeCap High_cnode_ptr 10 (the_nat_to_bl_10 2),
-                    Structures_A.ArchObjectCap (ARM_Structs_A.PageDirectoryCap High_pd_ptr 
+                    Structures_A.ArchObjectCap (Arch_Structs_A.PageDirectoryCap High_pd_ptr 
                                                (Some High_asid)),
                     Structures_A.NotificationCap ntfn_ptr 0 {AllowRecv},
                     Structures_A.NullCap}"
@@ -500,23 +500,23 @@ where
 text {* Low's VSpace (PageDirectory)*}
 
 definition
-  Low_pt' :: "word8 \<Rightarrow> ARM_Structs_A.pte " 
+  Low_pt' :: "word8 \<Rightarrow> Arch_Structs_A.pte " 
 where
-  "Low_pt' \<equiv> (\<lambda>_. ARM_Structs_A.InvalidPTE)
-            (0 := ARM_Structs_A.SmallPagePTE shared_page_ptr {} vm_read_write)"
+  "Low_pt' \<equiv> (\<lambda>_. Arch_Structs_A.InvalidPTE)
+            (0 := Arch_Structs_A.SmallPagePTE shared_page_ptr {} vm_read_write)"
 
 definition 
   Low_pt :: Structures_A.kernel_object 
 where
-  "Low_pt \<equiv> Structures_A.ArchObj (ARM_Structs_A.PageTable Low_pt')"
+  "Low_pt \<equiv> Structures_A.ArchObj (Arch_Structs_A.PageTable Low_pt')"
 
 
 definition
-  Low_pd' :: "12 word \<Rightarrow> ARM_Structs_A.pde " 
+  Low_pd' :: "12 word \<Rightarrow> Arch_Structs_A.pde " 
 where
   "Low_pd' \<equiv> 
     global_pd
-     (0 := ARM_Structs_A.PageTablePDE 
+     (0 := Arch_Structs_A.PageTablePDE 
               (Platform.addrFromPPtr Low_pt_ptr) 
               {}
               undefined )"
@@ -527,32 +527,32 @@ if it's right *)
 definition
   Low_pd :: Structures_A.kernel_object 
 where
-  "Low_pd \<equiv> Structures_A.ArchObj (ARM_Structs_A.PageDirectory Low_pd')"
+  "Low_pd \<equiv> Structures_A.ArchObj (Arch_Structs_A.PageDirectory Low_pd')"
 
 
 text {* High's VSpace (PageDirectory)*}
 
 
 definition
-  High_pt' :: "word8 \<Rightarrow> ARM_Structs_A.pte " 
+  High_pt' :: "word8 \<Rightarrow> Arch_Structs_A.pte " 
 where
   "High_pt' \<equiv> 
-    (\<lambda>_. ARM_Structs_A.InvalidPTE)
-     (0 := ARM_Structs_A.SmallPagePTE shared_page_ptr {} vm_read_only)"
+    (\<lambda>_. Arch_Structs_A.InvalidPTE)
+     (0 := Arch_Structs_A.SmallPagePTE shared_page_ptr {} vm_read_only)"
 
 
 definition
   High_pt :: Structures_A.kernel_object 
 where
-  "High_pt \<equiv> Structures_A.ArchObj (ARM_Structs_A.PageTable High_pt')"
+  "High_pt \<equiv> Structures_A.ArchObj (Arch_Structs_A.PageTable High_pt')"
 
 
 definition
-  High_pd' :: "12 word \<Rightarrow> ARM_Structs_A.pde " 
+  High_pd' :: "12 word \<Rightarrow> Arch_Structs_A.pde " 
 where
   "High_pd' \<equiv>
     global_pd
-     (0 := ARM_Structs_A.PageTablePDE  
+     (0 := Arch_Structs_A.PageTablePDE  
              (Platform.addrFromPPtr High_pt_ptr) 
              {}
              undefined )" 
@@ -563,7 +563,7 @@ if it's right *)
 definition
   High_pd :: Structures_A.kernel_object 
 where
-  "High_pd \<equiv> Structures_A.ArchObj (ARM_Structs_A.PageDirectory High_pd')"
+  "High_pd \<equiv> Structures_A.ArchObj (Arch_Structs_A.PageDirectory High_pd')"
 
 
 text {* Low's tcb *}
@@ -575,7 +575,7 @@ where
    Structures_A.TCB \<lparr> 
      tcb_ctable        = Structures_A.CNodeCap Low_cnode_ptr 10 (the_nat_to_bl_10 2),
      tcb_vtable        = Structures_A.ArchObjectCap 
-                           (ARM_Structs_A.PageDirectoryCap Low_pd_ptr (Some Low_asid)),
+                           (Arch_Structs_A.PageDirectoryCap Low_pd_ptr (Some Low_asid)),
      tcb_reply         = Structures_A.ReplyCap Low_tcb_ptr True, (* master reply cap to itself *)
      tcb_caller        = Structures_A.NullCap,
      tcb_ipcframe      = Structures_A.NullCap,
@@ -603,7 +603,7 @@ where
    Structures_A.TCB \<lparr> 
      tcb_ctable        = Structures_A.CNodeCap High_cnode_ptr 10 (the_nat_to_bl_10 2) ,
      tcb_vtable        = Structures_A.ArchObjectCap 
-                           (ARM_Structs_A.PageDirectoryCap High_pd_ptr (Some High_asid)),
+                           (Arch_Structs_A.PageDirectoryCap High_pd_ptr (Some High_asid)),
      tcb_reply         = Structures_A.ReplyCap High_tcb_ptr True, (* master reply cap to itself *)
      tcb_caller        = Structures_A.NullCap,
      tcb_ipcframe      = Structures_A.NullCap,
@@ -933,21 +933,21 @@ lemma s0_caps_of_state :
      (p,cap) \<in>  
        { ((Low_cnode_ptr::obj_ref,(the_nat_to_bl_10 1)),  Structures_A.ThreadCap Low_tcb_ptr),
          ((Low_cnode_ptr::obj_ref,(the_nat_to_bl_10 2)),  Structures_A.CNodeCap Low_cnode_ptr 10 (the_nat_to_bl_10 2)),
-         ((Low_cnode_ptr::obj_ref,(the_nat_to_bl_10 3)),  Structures_A.ArchObjectCap (ARM_Structs_A.PageDirectoryCap Low_pd_ptr (Some Low_asid))), 
+         ((Low_cnode_ptr::obj_ref,(the_nat_to_bl_10 3)),  Structures_A.ArchObjectCap (Arch_Structs_A.PageDirectoryCap Low_pd_ptr (Some Low_asid))), 
          ((Low_cnode_ptr::obj_ref,(the_nat_to_bl_10 318)),Structures_A.NotificationCap ntfn_ptr 0 {AllowSend}),
          ((High_cnode_ptr::obj_ref,(the_nat_to_bl_10 1)),  Structures_A.ThreadCap High_tcb_ptr), 
          ((High_cnode_ptr::obj_ref,(the_nat_to_bl_10 2)),  Structures_A.CNodeCap High_cnode_ptr 10 (the_nat_to_bl_10 2)),
-         ((High_cnode_ptr::obj_ref,(the_nat_to_bl_10 3)),  Structures_A.ArchObjectCap (ARM_Structs_A.PageDirectoryCap High_pd_ptr (Some High_asid))), 
+         ((High_cnode_ptr::obj_ref,(the_nat_to_bl_10 3)),  Structures_A.ArchObjectCap (Arch_Structs_A.PageDirectoryCap High_pd_ptr (Some High_asid))), 
          ((High_cnode_ptr::obj_ref,(the_nat_to_bl_10 318)),Structures_A.NotificationCap  ntfn_ptr 0 {AllowRecv}) ,
          ((Silc_cnode_ptr::obj_ref,(the_nat_to_bl_10 2)),Structures_A.CNodeCap Silc_cnode_ptr 10 (the_nat_to_bl_10 2)),
          ((Silc_cnode_ptr::obj_ref,(the_nat_to_bl_10 318)),Structures_A.NotificationCap ntfn_ptr 0 {AllowSend}),
          ((Low_tcb_ptr::obj_ref, (tcb_cnode_index 0)), Structures_A.CNodeCap Low_cnode_ptr 10 (the_nat_to_bl_10 2)),
-         ((Low_tcb_ptr::obj_ref, (tcb_cnode_index 1)), Structures_A.ArchObjectCap (ARM_Structs_A.PageDirectoryCap Low_pd_ptr (Some Low_asid))),
+         ((Low_tcb_ptr::obj_ref, (tcb_cnode_index 1)), Structures_A.ArchObjectCap (Arch_Structs_A.PageDirectoryCap Low_pd_ptr (Some Low_asid))),
          ((Low_tcb_ptr::obj_ref, (tcb_cnode_index 2)), Structures_A.ReplyCap Low_tcb_ptr True), 
          ((Low_tcb_ptr::obj_ref, (tcb_cnode_index 3)), Structures_A.NullCap),
          ((Low_tcb_ptr::obj_ref, (tcb_cnode_index 4)), Structures_A.NullCap),
          ((High_tcb_ptr::obj_ref, (tcb_cnode_index 0)), Structures_A.CNodeCap High_cnode_ptr 10 (the_nat_to_bl_10 2)),
-         ((High_tcb_ptr::obj_ref, (tcb_cnode_index 1)), Structures_A.ArchObjectCap (ARM_Structs_A.PageDirectoryCap High_pd_ptr (Some High_asid))),
+         ((High_tcb_ptr::obj_ref, (tcb_cnode_index 1)), Structures_A.ArchObjectCap (Arch_Structs_A.PageDirectoryCap High_pd_ptr (Some High_asid))),
          ((High_tcb_ptr::obj_ref, (tcb_cnode_index 2)), Structures_A.ReplyCap High_tcb_ptr True),
          ((High_tcb_ptr::obj_ref, (tcb_cnode_index 3)), Structures_A.NullCap),
          ((High_tcb_ptr::obj_ref, (tcb_cnode_index 4)), Structures_A.NullCap)} "
@@ -1599,11 +1599,11 @@ lemma valid_kernel_mappings_s0[simp]:
   "valid_kernel_mappings s0_internal"
   apply (clarsimp simp: valid_kernel_mappings_def s0_internal_def ran_def
                  valid_kernel_mappings_if_pd_def split: Structures_A.kernel_object.splits
-                                                        ARM_Structs_A.arch_kernel_obj.splits)
+                                                        Arch_Structs_A.arch_kernel_obj.splits)
   apply (drule kh0_SomeD)
   apply (clarsimp simp: arch_state0_def kernel_mapping_slots_def)
   apply (erule disjE | simp add: pde_ref_def s0_ptr_defs kh0_obj_def High_pd'_def Low_pd'_def
-                          split: split_if_asm ARM_Structs_A.pde.splits)+
+                          split: split_if_asm Arch_Structs_A.pde.splits)+
   done
 
 lemma equal_kernel_mappings_s0[simp]:

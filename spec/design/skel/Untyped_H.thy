@@ -16,6 +16,7 @@ imports
   CSpaceDecls_H
   CNode_H
   Invocations_H
+  InvocationLabels_H
   Config_H
 begin
 

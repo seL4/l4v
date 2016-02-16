@@ -50,10 +50,15 @@ lemma corresTA_trivial: "corresTA (\<lambda>_. True) (\<lambda>x. x) (\<lambda>x
   apply (auto intro: corresXF_I)
   done
 
-(* Dummy precondition for more convenient usage *)
+(* Dummy preconditions for more convenient usage *)
+lemma L2Tcorres_trivial_from_local_var_extract:
+  "L2corres st rx ex P A C \<Longrightarrow> L2Tcorres id A A"
+  by (rule L2Tcorres_id)
+
 lemma corresTA_trivial_from_heap_lift:
   "L2Tcorres st A C \<Longrightarrow> corresTA (\<lambda>_. True) (\<lambda>x. x) (\<lambda>x. x) A A"
   by (rule corresTA_trivial)
+
 
 lemma corresXF_from_L2_call:
   "L2_call c_WA = A \<Longrightarrow> corresXF (\<lambda>s. s) (\<lambda>rv s. rv) y (\<lambda>_. True) A c_WA"

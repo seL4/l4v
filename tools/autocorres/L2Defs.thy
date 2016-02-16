@@ -92,6 +92,34 @@ where
   "L2corres st ret_xf ex_xf P A C
        \<equiv> corresXF st (\<lambda>_. ret_xf) (\<lambda>_. ex_xf) P A C"
 
+(* Wrapper for calling un-translated functions. *)
+definition
+  "L2_call_L1 arg_xf gs ret_xf l1body
+    = do cur_gs \<leftarrow> get;
+        s \<leftarrow> select {s. gs s = cur_gs \<and> arg_xf s};
+        (rv, s') \<leftarrow> select_f (l1body s);
+        put (gs s');
+        case rv of Inl _ \<Rightarrow> fail
+            | Inr _ \<Rightarrow> return (Inr (ret_xf s') :: (unit + _))
+    od"
+
+lemma L2corres_L2_call_L1:
+  "L2corres gs ret_xf ex_xf arg_xf
+     (L2_call_L1 arg_xf gs ret_xf f) f"
+  apply (clarsimp simp: L2corres_def corresXF_def L2_call_L1_def
+                 split: sum.split)
+  apply (clarsimp simp: snd_bind in_monad exec_get select_def)
+  apply (clarsimp simp: select_f_def snd_bind put_def split: sum.split_asm)
+  apply (fastforce simp: return_def)
+  done
+
+lemma L2corres_L2_call_simpl:
+  "l1_f \<equiv> simpl_f \<Longrightarrow>
+   L2corres gs ret_xf ex_xf arg_xf
+     (L2_call_L1 arg_xf gs ret_xf simpl_f) l1_f"
+  by (simp add: L2corres_L2_call_L1)
+
+
 lemma empty_set_exists [simp]: "(\<forall>a. a \<noteq> {}) = False"
   apply blast
   done

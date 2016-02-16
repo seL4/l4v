@@ -1517,24 +1517,24 @@ lemma empty_slot_corres:
   apply (drule (4) updateMDB_the_lot, elim conjE)
   apply clarsimp
   apply (drule_tac s'=s''a and c=cap.NullCap in set_cap_not_quite_corres)
-                     apply simp
-                    apply simp
-                   apply simp
-                  apply fastforce
-                 apply fastforce
-                apply fastforce
-               apply fastforce
-              apply fastforce
+                     subgoal by simp
+                    subgoal by simp
+                   subgoal by simp
+                  subgoal by fastforce
+                 subgoal by fastforce
+                subgoal by fastforce
+               subgoal by fastforce
+              subgoal by fastforce
              apply fastforce
-            apply fastforce
-           apply fastforce
-          apply fastforce
+            subgoal by fastforce
+           subgoal by fastforce
+          subgoal by fastforce
          apply (erule cte_wp_at_weakenE, rule TrueI)
         apply assumption
-       apply simp
-      apply simp
-     apply simp
-    apply simp
+       subgoal by simp
+      subgoal by simp
+     subgoal by simp
+    subgoal by simp
    apply (rule refl)
   apply clarsimp
   apply (drule updateCap_stuff, elim conjE, erule (1) impE)
@@ -1563,11 +1563,10 @@ lemma empty_slot_corres:
    apply (rule mdb_empty.intro)
    apply (rule mdb_ptr.intro)
     apply (rule vmdb.intro)
-    apply (simp add: invs'_def valid_state'_def valid_pspace'_def valid_mdb'_def)
+    subgoal by (simp add: invs'_def valid_state'_def valid_pspace'_def valid_mdb'_def)
    apply (rule mdb_ptr_axioms.intro)
-   apply simp
-  
-   apply (clarsimp simp: ghost_relation_typ_at set_cap_a_type_inv)
+   subgoal by simp
+  apply (clarsimp simp: ghost_relation_typ_at set_cap_a_type_inv)
   apply (simp add: pspace_relations_def)
   apply (rule conjI)
    prefer 2
@@ -1576,16 +1575,16 @@ lemma empty_slot_corres:
     apply(frule invs_valid_pspace, frule invs_mdb)
     apply(subgoal_tac "no_mloop (cdt a) \<and> finite_depth (cdt a)")
      prefer 2
-     apply(simp add: finite_depth valid_mdb_def)
+     subgoal by(simp add: finite_depth valid_mdb_def)
     apply(subgoal_tac "valid_mdb_ctes (ctes_of b)")
      prefer 2
-     apply(simp add: mdb_empty_def mdb_ptr_def vmdb_def)
+     subgoal by(simp add: mdb_empty_def mdb_ptr_def vmdb_def)
     apply(clarsimp simp: valid_pspace_def)
 
     apply(case_tac "cdt a slot")
      apply(simp add: next_slot_eq[OF mdb_empty_abs'.next_slot_no_parent])
      apply(case_tac "next_slot (aa, bb) (cdt_list a) (cdt a)")
-      apply(simp)
+      subgoal by (simp)
      apply(clarsimp)
      apply(frule(1) mdb_empty.n_next)
      apply(clarsimp)
@@ -1598,8 +1597,8 @@ lemma empty_slot_corres:
      apply(subgoal_tac "(ab, bc) = slot")
       prefer 2
       apply(drule_tac cte="CTE s_cap s_node" in valid_mdbD2')
-        apply(clarsimp simp: valid_mdb_ctes_def no_0_def)
-       apply(frule invs_mdb', simp)
+        subgoal by (clarsimp simp: valid_mdb_ctes_def no_0_def)
+       subgoal by (frule invs_mdb', simp)
       apply(clarsimp)
       apply(rule cte_map_inj_eq)
            apply(assumption)
@@ -1612,7 +1611,7 @@ lemma empty_slot_corres:
 
     apply(simp add: next_slot_eq[OF mdb_empty_abs'.next_slot] split del: split_if)
     apply(case_tac "next_slot (aa, bb) (cdt_list a) (cdt a)")
-     apply(simp)
+     subgoal by (simp)
     apply(case_tac "(aa, bb) = slot", simp)
     apply(case_tac "next_slot (aa, bb) (cdt_list a) (cdt a) = Some slot")
      apply(simp)
@@ -1627,7 +1626,7 @@ lemma empty_slot_corres:
       apply(simp)
      apply(drule_tac cte="CTE cap' node'" in valid_mdbD1')
        apply(fastforce simp: valid_mdb_ctes_def no_0_def)
-      apply(simp add: valid_mdb'_def)
+      subgoal by (simp add: valid_mdb'_def)
      apply(clarsimp)
     apply(simp)
     apply(frule(1) mdb_empty.n_next)
@@ -1648,25 +1647,25 @@ lemma empty_slot_corres:
           apply(drule(3) cte_at_next_slot)
           apply(assumption)+
      apply(simp)
-    apply(simp)
+    subgoal by (simp)
    apply (simp add: revokable_relation_def)
    apply (clarsimp simp: in_set_cap_cte_at)   
    apply (rule conjI)
     apply clarsimp
     apply (drule(1) mdb_empty.n_revokable)
-    apply clarsimp
+    subgoal by clarsimp
    apply clarsimp
    apply (drule (1) mdb_empty.n_revokable)
    apply (subgoal_tac "null_filter (caps_of_state a) (aa,bb) \<noteq> None")
     prefer 2
     apply (drule set_cap_caps_of_state_monad)
-    apply (force simp: null_filter_def)
+    subgoal by (force simp: null_filter_def)
    apply clarsimp
    apply (subgoal_tac "cte_at (aa, bb) a")
     prefer 2
     apply (drule null_filter_caps_of_stateD, erule cte_wp_cte_at)
    apply (drule (2) cte_map_inj_ps, fastforce)
-   apply simp
+   subgoal by simp
   apply (clarsimp simp add: cdt_relation_def)
   apply (subst mdb_empty_abs.descendants, assumption)
   apply (subst mdb_empty.descendants, assumption)
@@ -1683,11 +1682,11 @@ lemma empty_slot_corres:
        apply fastforce
       apply fastforce
      apply fastforce
-    apply simp
-   apply simp
+    subgoal by simp
+   subgoal by simp
   apply simp
   apply (subgoal_tac "cte_map slot \<notin> descendants_of' (cte_map (aa,bb)) (ctes_of b)")  
-   apply simp
+   subgoal by simp
   apply (erule_tac x=aa in allE, erule allE, erule (1) impE)
   apply (drule_tac s="cte_map ` u" for u in sym)
   apply clarsimp
@@ -2079,15 +2078,14 @@ lemma final_cap_corres':
    apply (rule classical)
    apply (frule(1) zombies_finalD2[OF _ _ _ invs_zombies],
           simp?, clarsimp, assumption+)
-   apply (clarsimp simp: sameObjectAs_def3 isCap_simps valid_cap_def
+   subgoal by (clarsimp simp: sameObjectAs_def3 isCap_simps valid_cap_def
                          obj_at_def is_obj_defs a_type_def final_matters'_def
                   split: cap.split_asm arch_cap.split_asm
                          option.split_asm split_if_asm,
           simp_all add: is_cap_defs)
   apply (rule classical)
-  apply (clarsimp simp: cap_irqs_def cap_irq_opt_def sameObjectAs_def3 isCap_simps
+  by (clarsimp simp: cap_irqs_def cap_irq_opt_def sameObjectAs_def3 isCap_simps
                  split: cap.split_asm)
-  done
 
 lemma final_cap_corres:
   "corres (\<lambda>rv rv'. final_matters' (cteCap cte) \<longrightarrow> rv = rv')
@@ -2194,10 +2192,11 @@ lemma unbindNotification_invs[wp]:
   apply (wp sbn'_valid_pspace'_inv sbn_sch_act' sbn_valid_queues valid_irq_node_lift 
             irqs_masked_lift setBoundNotification_ct_not_inQ | clarsimp)+
           defer 5
-          apply (auto simp: pred_tcb_at' valid_pspace'_def projectKOs valid_obj'_def valid_ntfn'_def
+          apply (fold_subgoals (prefix))[8]
+          subgoal by (auto simp: pred_tcb_at' valid_pspace'_def projectKOs valid_obj'_def valid_ntfn'_def
                             ko_wp_at'_def
                      elim!: obj_atE' valid_objsE' if_live_then_nonz_capE'
-                     split: option.splits ntfn.splits)[8]
+                     split: option.splits ntfn.splits)
   apply (clarsimp elim!: obj_atE' simp: projectKOs)
   apply (rule conjI)
    apply (clarsimp elim!: obj_atE' valid_objsE' 
@@ -2208,15 +2207,14 @@ lemma unbindNotification_invs[wp]:
    apply (fastforce simp: state_refs_of'_def
                    split: split_if_asm)
   apply (clarsimp split: split_if_asm)
-   apply (fastforce simp: state_refs_of'_def tcb_st_refs_of'_def tcb_bound_refs'_def
+   subgoal by (fastforce simp: state_refs_of'_def tcb_st_refs_of'_def tcb_bound_refs'_def
                            ntfn_q_refs_of'_def
                    dest!: pred_tcb_at' bound_tcb_at_state_refs_ofD'
                    split: thread_state.splits ntfn.splits split_if_asm)
-  apply (fastforce simp: tcb_ntfn_is_bound'_def state_refs_of'_def ntfn_q_refs_of'_def
+  by (fastforce simp: tcb_ntfn_is_bound'_def state_refs_of'_def ntfn_q_refs_of'_def
                          ntfn_bound_refs'_def tcb_st_refs_of'_def tcb_bound_refs'_def ko_wp_at'_def
                   split: option.splits split_if_asm ntfn.splits
                   dest!: sym_refs_bound_tcb_atD')
-  done
 
 lemma ntfn_bound_tcb_at':
   "\<lbrakk>sym_refs (state_refs_of' s); valid_objs' s; ko_at' ntfn ntfnptr s; 
@@ -2243,20 +2241,22 @@ lemma unbindMaybeNotification_invs[wp]:
   apply safe[1]
            defer 3
            defer 7
-           apply (auto simp: pred_tcb_at' valid_pspace'_def projectKOs valid_obj'_def valid_ntfn'_def
+           apply (fold_subgoals (prefix))[8]
+           subgoal premises prems using prems by (auto simp: pred_tcb_at' valid_pspace'_def projectKOs valid_obj'_def valid_ntfn'_def
                              ko_wp_at'_def
                       elim!: obj_atE' valid_objsE' if_live_then_nonz_capE'
-                      split: option.splits ntfn.splits)[8]
+                      split: option.splits ntfn.splits)
    apply (rule delta_sym_refs, assumption)
-    apply ((fastforce simp: symreftype_inverse' ntfn_q_refs_of'_def 
+    apply (fold_subgoals (prefix))[2]
+    subgoal premises prems using prems by (fastforce simp: symreftype_inverse' ntfn_q_refs_of'_def 
                     split: ntfn.splits split_if_asm
-                     dest!: ko_at_state_refs_ofD')+)[2]
+                     dest!: ko_at_state_refs_ofD')+
   apply (rule delta_sym_refs, assumption)
    apply (clarsimp split: split_if_asm)
    apply (frule ko_at_state_refs_ofD', simp)
   apply (clarsimp split: split_if_asm)
    apply (frule_tac P="op = (Some ntfnptr)" in ntfn_bound_tcb_at', simp_all add: valid_pspace'_def)[1]
-   apply (fastforce simp: ntfn_q_refs_of'_def state_refs_of'_def tcb_ntfn_is_bound'_def 
+   subgoal by (fastforce simp: ntfn_q_refs_of'_def state_refs_of'_def tcb_ntfn_is_bound'_def 
                           tcb_st_refs_of'_def
                    dest!: bound_tcb_at_state_refs_ofD'
                    split: ntfn.splits thread_state.splits)
@@ -2305,7 +2305,7 @@ lemma invalidateASIDEntry_invs' [wp]:
                     inj_on_fun_upd_elsewhere
                     valid_asid_map'_def
                     ct_idle_or_in_cur_domain'_def tcb_in_cur_domain'_def)
-   apply (auto elim!: subset_inj_on)[1]
+   subgoal by (auto elim!: subset_inj_on)
   apply (clarsimp simp: invs'_def valid_state'_def)
   apply (rule conjI)
    apply (simp add: valid_global_refs'_def
@@ -3286,9 +3286,9 @@ lemma cteDeleteOne_invs[wp]:
                      del: disjCI)
     apply (rule disjI2)
     apply (rule conjI)
-     apply auto[1]
-    apply (auto dest!: isCapDs simp: pred_tcb_at'_def obj_at'_def projectKOs
-                                     ko_wp_at'_def)[1]
+     subgoal by auto
+    subgoal by (auto dest!: isCapDs simp: pred_tcb_at'_def obj_at'_def projectKOs
+                                     ko_wp_at'_def)
    apply (wp isFinalCapability_inv getCTE_wp' static_imp_wp
         | wp_once isFinal[where x=ptr])+
   apply (fastforce simp: cte_wp_at_ctes_of)
@@ -4039,14 +4039,14 @@ lemma arch_recycle_cap_corres:
      apply (clarsimp simp: upto_enum_step_def)
      apply (erule page_table_pte_atI[simplified shiftl_t2n mult.commute mult.left_commute,simplified])
       apply (simp add: ptBits_def pageBits_def pt_bits_stuff)
-      apply (simp add: word_less_nat_alt unat_of_nat)
+      apply (simp add: word_less_nat_alt word_le_nat_alt unat_of_nat)
      apply clarsimp
     apply (cases slot, clarsimp)
     apply (intro exI, erule cte_wp_at_weakenE)
     apply (clarsimp simp: is_cap_simps word32_shift_by_2 upto_enum_step_def)
     apply (rule conjunct2[OF is_aligned_add_helper[OF _ shiftl_less_t2n]],
            simp_all add: pt_bits_def pageBits_def ptBits_def)[1]
-    apply (simp add: word_less_nat_alt unat_of_nat)
+    apply (simp add: word_less_nat_alt word_le_nat_alt unat_of_nat)
    apply clarsimp
    apply (clarsimp simp: valid_cap'_def page_table_at'_def shiftl_t2n mult.commute mult.left_commute)
    apply (rule conjI[rotated])
@@ -4054,7 +4054,7 @@ lemma arch_recycle_cap_corres:
    apply (clarsimp simp: upto_enum_step_def)
    apply (drule spec, erule mp)
    apply (simp add: ptBits_def pageBits_def)
-   apply (simp add: word_less_nat_alt unat_of_nat)
+   apply (simp add: word_less_nat_alt word_le_nat_alt unat_of_nat)
   -- "PageDirectory"
   apply (rule corres_guard_imp)
     apply (rule corres_split)
@@ -4227,8 +4227,7 @@ lemma set_thread_all_corres:
   apply (clarsimp simp: obj_at'_def)
   apply (clarsimp simp: projectKOs)
   apply (insert e is_t)
-  apply (clarsimp simp: a_type_def other_obj_relation_def etcb_relation_def is_other_obj_relation_type split: Structures_A.kernel_object.splits Structures_H.kernel_object.splits ARM_Structs_A.arch_kernel_obj.splits)
-  done
+  by (clarsimp simp: a_type_def other_obj_relation_def etcb_relation_def is_other_obj_relation_type split: Structures_A.kernel_object.splits Structures_H.kernel_object.splits Arch_Structs_A.arch_kernel_obj.splits)
 
 lemma tcb_update_all_corres':
   assumes tcbs: "tcb_relation tcb tcb' \<Longrightarrow> tcb_relation tcbu tcbu'"

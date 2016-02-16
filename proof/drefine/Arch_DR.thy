@@ -25,7 +25,7 @@ definition
 definition
  "transform_page_table_inv invok \<equiv> case invok of
     ArchInvocation_A.PageTableMap cap slot pde slot' \<Rightarrow>
-      if (\<exists>oref attribs. pde = ARM_Structs_A.PageTablePDE (addrFromPPtr oref) attribs 0
+      if (\<exists>oref attribs. pde = Arch_Structs_A.PageTablePDE (addrFromPPtr oref) attribs 0
                 \<and> is_pt_cap cap \<and> oref \<in> obj_refs cap)
       then Some (cdl_page_table_invocation.PageTableMap (transform_cap cap)
                       (make_arch_duplicate (transform_cap cap))
@@ -156,7 +156,7 @@ lemma dcorres_lookup_pt_slot:
     lookup_pt_slot_def liftE_bindE dcorres_lookup_pd_slot)
   apply (rule corres_guard_imp)
     apply (rule corres_split[OF _ dcorres_get_pde])
-      apply (rule_tac F = "case rv' of ARM_Structs_A.pde.PageTablePDE ptab x xa \<Rightarrow>
+      apply (rule_tac F = "case rv' of Arch_Structs_A.pde.PageTablePDE ptab x xa \<Rightarrow>
         is_aligned (Platform.ptrFromPAddr ptab) 10 | _ \<Rightarrow> True"
         in corres_gen_asm2)
       apply (case_tac rv')
@@ -176,7 +176,7 @@ lemma dcorres_lookup_pt_slot:
     apply (rule hoare_strengthen_post[where Q = "\<lambda>r. valid_pde r and pspace_aligned"] )
      apply (wp get_pde_valid)
     apply (clarsimp simp:valid_pde_def dest!:pt_aligned
-      split:ARM_Structs_A.pde.splits)
+      split:Arch_Structs_A.pde.splits)
    apply simp
   apply auto
   done
@@ -195,7 +195,7 @@ lemma lookup_pt_slot_aligned_6':
   apply wp
     apply simp+
   apply (clarsimp simp:valid_pde_def dest!:pt_aligned
-    split:ARM_Structs_A.pde.splits)
+    split:Arch_Structs_A.pde.splits)
   apply (erule aligned_add_aligned)
    apply (rule is_aligned_shiftl)
    apply (rule is_aligned_andI1)
@@ -223,7 +223,7 @@ lemma create_mapping_entries_dcorres:
 proof -
 
   have aligned_4_hd:
-    "\<And>r. is_aligned r 6 \<Longrightarrow> hd [r , r + 4 .e. r + 0x3C] = r"
+    "\<And>r :: word32. is_aligned r 6 \<Longrightarrow> hd [r , r + 4 .e. r + 0x3C] = r"
     apply (subgoal_tac "r \<le> r + 0x3C")
      apply (clarsimp simp: upto_enum_step_def less_def | intro conjI)+
       apply fastforce
@@ -373,7 +373,7 @@ proof -
         apply (rule dcorres_injection_handler_rhs)
         apply (simp add: lookup_pt_slot_def liftE_bindE)
         apply (rule corres_symb_exec_r[OF _ get_pde_sp get_pde_inv], simp_all)[1]
-        apply (clarsimp simp add: corres_alternate2 split: ARM_Structs_A.pde.split)
+        apply (clarsimp simp add: corres_alternate2 split: Arch_Structs_A.pde.split)
         apply (rule corres_alternate1)
         apply (rule corres_from_rdonly, simp_all)[1]
           apply (wp select_wp | simp)+
@@ -420,7 +420,7 @@ proof -
         apply (rule dcorres_injection_handler_rhs)
         apply (simp add: lookup_pt_slot_def liftE_bindE)
         apply (rule corres_symb_exec_r[OF _ get_pde_sp get_pde_inv], simp_all)[1]
-        apply (clarsimp simp add: corres_alternate2 split: ARM_Structs_A.pde.split)
+        apply (clarsimp simp add: corres_alternate2 split: Arch_Structs_A.pde.split)
         apply (rename_tac word1 set word2)
         apply (rule corres_alternate1)
         apply (rule corres_from_rdonly, simp_all)[1]
@@ -521,7 +521,7 @@ qed
 
 schematic_goal get_master_pde_invalid_sp:
   "\<lbrace>P\<rbrace> get_master_pde p
-  \<lbrace>\<lambda>pde s. pde = ARM_Structs_A.pde.InvalidPDE \<longrightarrow>
+  \<lbrace>\<lambda>pde s. pde = Arch_Structs_A.pde.InvalidPDE \<longrightarrow>
     (\<exists>pd. ko_at (ArchObj (arch_kernel_obj.PageDirectory pd)) (?p && ~~ mask pd_bits) s \<and>
      pde = pd (ucast (?p && mask pd_bits >> 2))) \<and> P s\<rbrace>"
   apply (simp add:get_master_pde_def)
@@ -549,6 +549,8 @@ lemma shiftl_mod:
  *)
 
 lemma decode_invocation_archcap_corres:
+  notes label_split_asm = invocation_label.split_asm arch_invocation_label.split_asm
+  shows
   "\<lbrakk> Some intent = transform_intent (invocation_type label') args';
      invoked_cap_ref = transform_cslot_ptr invoked_cap_ref';
      invoked_cap = transform_cap invoked_cap';
@@ -573,7 +575,7 @@ proof (induct x)
     apply (clarsimp simp: get_asid_pool_intent_def transform_intent_def
                           option_map_Some_eq2 throw_opt_def
                           decode_asid_pool_invocation_def
-               split del: split_if split: invocation_label.split_asm list.split_asm)
+               split del: split_if split: label_split_asm list.split_asm)
     apply (simp add: split_beta corres_alternate2
                      liftE_bindE corres_symb_exec_in_gets
                      corres_whenE_throwError_split_rhs
@@ -630,7 +632,7 @@ next
                           option_map_Some_eq2 throw_opt_def
                           decode_asid_control_invocation_def
                           transform_cnode_index_and_depth_def
-               split del: split_if split: invocation_label.split_asm list.split_asm)
+               split del: split_if split: label_split_asm list.split_asm)
     apply (simp add: split_beta corres_alternate2
                      liftE_bindE corres_symb_exec_in_gets
                      corres_whenE_throwError_split_rhs
@@ -691,7 +693,7 @@ next
                           decode_page_invocation_def
                           transform_intent_page_map_def
                           transform_intent_page_remap_def
-               split del: split_if split: invocation_label.split_asm list.split_asm,
+               split del: split_if split: label_split_asm list.split_asm,
            simp_all add: split_beta corres_alternate2
                          liftE_bindE corres_symb_exec_in_gets
                          corres_whenE_throwError_split_rhs
@@ -704,7 +706,7 @@ next
                              gets_the_def bind_assoc corres_symb_exec_in_gets
                              assert_opt_def)
         apply (clarsimp simp: neq_Nil_conv valid_cap_simps obj_at_def
-                              opt_object_page_directory invs_valid_idle label_to_flush_type_def InvocationLabels_H.isPageFlush_def
+                              opt_object_page_directory invs_valid_idle label_to_flush_type_def isPageFlushLabel_def
                        dest!: a_type_pdD)+
        apply (rule_tac r'=dc and P'="I" and Q'="\<lambda>rv. I and (\<exists>\<rhd> (lookup_pd_slot rv x21 && ~~ mask pd_bits))" for I
                 in corres_alternative_throw_splitE[OF _ _ returnOk_wp[where x="()"], simplified])
@@ -835,10 +837,10 @@ next
     apply (safe)
     apply blast
     apply (metis flush.exhaust)
-    apply (clarsimp simp: InvocationLabels_H.isPageFlush_def)+
+    apply (clarsimp simp: isPageFlushLabel_def)+
     apply (rule corres_returnOk,clarsimp simp:arch_invocation_relation_def 
        translate_arch_invocation_def transform_page_inv_def |
-       clarsimp simp: InvocationLabels_H.isPageFlush_def)+
+       clarsimp simp: isPageFlushLabel_def)+
     done
 next
   case (PageTableCap ptr asid)
@@ -851,7 +853,7 @@ next
                           decode_page_table_invocation_def
                           transform_intent_page_table_map_def
                split del: split_if
-               split: invocation_label.split_asm list.split_asm)
+               split: label_split_asm list.split_asm)
      apply (simp add: throw_on_none_def transform_cap_list_def
        get_index_def split_beta alternative_refl
        transform_mapping_def corres_whenE_throwError_split_rhs corres_alternate2
@@ -909,14 +911,14 @@ next
   apply (simp add: Decode_D.decode_invocation_def
   decode_invocation_def arch_decode_invocation_def
   get_page_directory_intent_def transform_intent_def
-  isPDFlush_def
+  isPDFlushLabel_def
   split del: split_if)
   apply (clarsimp simp: get_page_directory_intent_def transform_intent_def
            option_map_Some_eq2 throw_opt_def decode_page_directory_invocation_def 
-    split: invocation_label.split_asm  cdl_intent.splits
-           InvocationLabels_H.invocation_label.splits)
+    split: label_split_asm  cdl_intent.splits
+           InvocationLabels_H.invocation_label.splits arch_invocation_label.splits)
      apply (clarsimp simp: neq_Nil_conv valid_cap_simps obj_at_def
-     Let_unfold opt_object_page_directory invs_valid_idle label_to_flush_type_def InvocationLabels_H.isPDFlush_def InvocationLabels_H.isPageFlush_def
+     Let_unfold opt_object_page_directory invs_valid_idle label_to_flush_type_def isPDFlushLabel_def isPageFlushLabel_def
      dest!: a_type_pdD)+
      apply (safe)
          apply (simp_all add: Let_unfold)
@@ -1357,7 +1359,7 @@ lemma store_pte_page_inv_entries_safe:
   "\<lbrace>page_inv_entries_safe (Inl (ab, bb)) and valid_pdpt_objs\<rbrace>
    store_pte (hd bb) ab
    \<lbrace>\<lambda>rv s. (\<exists>f. ko_at (ArchObj (arch_kernel_obj.PageTable f)) (hd bb && ~~ mask pt_bits)  s
-    \<and> (\<forall>slot\<in>set (tl bb). f (ucast (slot && mask pt_bits >> 2)) = ARM_Structs_A.pte.InvalidPTE))
+    \<and> (\<forall>slot\<in>set (tl bb). f (ucast (slot && mask pt_bits >> 2)) = Arch_Structs_A.pte.InvalidPTE))
     \<and> (\<forall>sl\<in>set (tl bb). sl && ~~ mask pt_bits = hd bb && ~~ mask pt_bits)\<rbrace>"
   apply (simp add:store_pte_def set_pt_def set_object_def)
   apply (wp get_object_wp)
@@ -1401,7 +1403,7 @@ lemma store_pde_page_inv_entries_safe:
   "\<lbrace>page_inv_entries_safe (Inr (ab, bb)) and valid_pdpt_objs\<rbrace>
    store_pde (hd bb) ab
    \<lbrace>\<lambda>rv s. (\<exists>f. ko_at (ArchObj (arch_kernel_obj.PageDirectory f)) (hd bb && ~~ mask pd_bits)  s
-    \<and> (\<forall>slot\<in>set (tl bb). f (ucast (slot && mask pd_bits >> 2)) = ARM_Structs_A.pde.InvalidPDE))
+    \<and> (\<forall>slot\<in>set (tl bb). f (ucast (slot && mask pd_bits >> 2)) = Arch_Structs_A.pde.InvalidPDE))
     \<and> (\<forall>sl\<in>set (tl bb). sl && ~~ mask pd_bits = hd bb && ~~ mask pd_bits)\<rbrace>"
   apply (simp add:store_pde_def set_pd_def set_object_def)
   apply (wp get_object_wp)
@@ -1561,7 +1563,7 @@ lemma pte_check_if_mapped_corres:
   apply (case_tac y, simp_all add: in_monad)
   apply (rename_tac arch_kernel_obj)
   apply (case_tac arch_kernel_obj, simp_all add: in_monad)
-  apply (clarsimp split: ARM_Structs_A.pte.splits)
+  apply (clarsimp split: Arch_Structs_A.pte.splits)
     apply (simp_all add: get_pte_def get_pt_def get_object_def in_monad bind_assoc split: kernel_object.splits arch_kernel_obj.splits)
     apply clarsimp
     apply (case_tac y, simp_all add: in_monad)
@@ -1580,7 +1582,7 @@ lemma pde_check_if_mapped_corres:
   apply (case_tac y, simp_all add: in_monad)
   apply (rename_tac arch_kernel_obj)
   apply (case_tac arch_kernel_obj, simp_all add: in_monad)
-  apply (clarsimp split: ARM_Structs_A.pde.splits)
+  apply (clarsimp split: Arch_Structs_A.pde.splits)
      apply (simp_all add: get_pde_def get_pd_def get_object_def in_monad bind_assoc)
      apply clarsimp
      apply (case_tac y, simp_all add: in_monad)
@@ -1839,8 +1841,8 @@ proof -
         "CSpaceAcc_A.descendants_of cref (cdt s') = {}"
         "caps_of_state s' cref = Some cap"
         "cap = cap.UntypedCap frame pageBits idx"
-        "is_aligned (base::word32) ARM_Structs_A.asid_low_bits"
-        "base < 2 ^ ARM_Structs_A.asid_bits"
+        "is_aligned (base::word32) Arch_Structs_A.asid_low_bits"
+        "base < 2 ^ Arch_Structs_A.asid_bits"
   assume relation:"arch_invocation_relation (InvokeAsidControl asid_inv)
          (arch_invocation.InvokeASIDControl (asid_control_invocation.MakePool frame cnode_ref cref base))"
   assume asid_para: "asid_inv' = asid_control_invocation.MakePool frame cnode_ref cref base"

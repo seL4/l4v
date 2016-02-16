@@ -235,12 +235,9 @@ lemma derive_cap_zobjrefs:
 lemma update_cap_objrefs:
   "\<lbrakk> update_cap_data P dt cap \<noteq> cap.NullCap \<rbrakk> \<Longrightarrow>
      obj_refs (update_cap_data P dt cap) = obj_refs cap"
-  apply (case_tac cap,
+  by (case_tac cap,
       simp_all add: update_cap_data_closedform
              split: split_if_asm)
-  apply (rename_tac arch_cap)
-  apply (case_tac arch_cap, simp_all add: aobj_ref_cases arch_update_cap_data_def)
-  done
 
 
 lemma update_cap_zobjrefs:
@@ -278,8 +275,8 @@ lemma update_cap_data_mask_Null [simp]:
   "(update_cap_data P x (mask_cap m c) = cap.NullCap) = (update_cap_data P x c = cap.NullCap)"
   unfolding update_cap_data_def mask_cap_def
   apply (cases c)
-  apply (auto simp add: the_cnode_cap_def Let_def is_cap_simps cap_rights_update_def badge_update_def)
-  done
+  by (auto simp add: the_cnode_cap_def Let_def is_cap_simps cap_rights_update_def badge_update_def
+                        arch_update_cap_data_def)
 
 
 lemma cap_master_update_cap_data:
@@ -1321,7 +1318,7 @@ lemma copy_of_cap_range:
   apply (cases cap', simp_all add: same_object_as_def)
        apply (clarsimp simp: is_cap_simps bits_of_def cap_range_def
                       split: cap.split_asm)+
-  apply (subgoal_tac "\<exists>acap . cap = cap.ArchObjectCap acap", clarsimp)
+  apply (rename_tac acap' acap)
    apply (case_tac acap, simp_all)
        apply (clarsimp split: arch_cap.split_asm cap.split_asm)+
   done
@@ -1942,7 +1939,7 @@ lemma copy_of_zobj_refs:
   apply (cases cap', simp_all add: same_object_as_def)
        apply (clarsimp simp: is_cap_simps bits_of_def
                       split: cap.split_asm)+
-  apply (subgoal_tac "\<exists>acap . cap = cap.ArchObjectCap acap", clarsimp)
+  apply (rename_tac acap' acap)
    apply (case_tac acap, simp_all)
        apply (clarsimp split: arch_cap.split_asm cap.split_asm)+
   done
@@ -1960,22 +1957,15 @@ lemma copy_of_is_zombie:
 lemma copy_of_reply_cap:
   "copy_of (cap.ReplyCap t False) cap \<Longrightarrow> cap = cap.ReplyCap t False"
   apply (clarsimp simp: copy_of_def is_cap_simps)
-  apply (cases cap, simp_all add: same_object_as_def)
-  apply (rename_tac arch_cap)
-  apply (case_tac arch_cap, simp_all)
-  done
+  by (cases cap, simp_all add: same_object_as_def)
 
 
 lemma copy_of_cap_irqs:
   "copy_of cap cap' \<Longrightarrow> cap_irqs cap = cap_irqs cap'"
   apply (clarsimp simp: copy_of_def cap_irqs_def split: split_if_asm)
   apply (cases cap', simp_all add: same_object_as_def)
-       apply (clarsimp simp: is_cap_simps bits_of_def cap_range_def
+       by (clarsimp simp: is_cap_simps bits_of_def cap_range_def
                       split: cap.split_asm)+
-  apply (rename_tac arch_cap)
-  apply (case_tac arch_cap, simp_all)
-      apply (clarsimp split: arch_cap.split_asm cap.split_asm)+
-  done
 
 
 lemma cap_swap_valid_idle[wp]:

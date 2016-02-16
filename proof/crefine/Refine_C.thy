@@ -43,8 +43,6 @@ lemma handleInterruptEntry_ccorres:
     apply (rule_tac P="rv \<noteq> Some 0xFF" in ccorres_gen_asm)
     apply wpc
      apply (simp add: irqInvalid_def)
-     apply (rule ccorres_rhs_assoc)
-     apply simp
      apply (rule ccorres_symb_exec_r)
        apply (ctac (no_vcg) add: schedule_ccorres)
         apply (rule ccorres_add_return2)
@@ -543,7 +541,7 @@ lemma ccorres_get_registers:
   apply (drule(1) obj_at_cslift_tcb, clarsimp simp: obj_at'_def projectKOs)
   apply (clarsimp simp: ctcb_relation_def ccontext_relation_def
                         State_H.msgInfoRegister_def State_H.capRegister_def
-                        ARMMachineTypes.msgInfoRegister_def ARMMachineTypes.capRegister_def
+                        MachineTypes.msgInfoRegister_def MachineTypes.capRegister_def
                         "StrictC'_register_defs")
   done
 

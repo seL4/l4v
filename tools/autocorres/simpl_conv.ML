@@ -400,7 +400,20 @@ in
   Goal.prove lthy [] [] mono_thm (K tac)
   |> split_conj
 end
-    
+
+
+(* For functions that are not translated, just generate a trivial wrapper. *)
+fun mk_l1corres_call_simpl_thm fn_info ctxt fn_name = let
+    val info = Symtab.lookup (FunctionInfo.get_functions fn_info) fn_name
+        |> the
+    val const = #const info
+    val impl_thm = Proof_Context.get_thm ctxt (fn_name ^ "_impl")
+    val gamma = safe_mk_meta_eq impl_thm |> Thm.concl_of |> Logic.dest_equals
+        |> fst |> (fn (f $ _) => f | t => raise TERM ("gamma", [t]))
+    val thm = @{thm L1corres_call_simpl}
+        WHERE [("proc", Thm.cterm_of ctxt const), ("Gamma", Thm.cterm_of ctxt gamma)]
+  in thm end
+
 
 (*
  * Top level translation from SIMPL to a monadic spec.
@@ -414,15 +427,16 @@ end
  * correspondence between our generated specs and the original SIMPL
  * code).
  *)
-fun translate_simpl filename fn_info do_opt trace_opt l1_function_name lthy =
+fun translate_simpl filename prog_info fn_info do_opt trace_opt l1_function_name lthy =
 let
-  val prog_info = ProgramInfo.get_prog_info lthy filename
-
   (* Abstract the function to a new body with a proof of correspondence. *)
   fun convert ctxt fn_name callee_terms measure_var fn_args =
   let
-    val (thm, opt_traces) = get_l1corres_thm prog_info fn_info ctxt do_opt trace_opt fn_name
-                                             callee_terms measure_var
+    val (thm, opt_traces) =
+      if #is_simpl_wrapper (FunctionInfo.get_function_def fn_info fn_name)
+      then (mk_l1corres_call_simpl_thm fn_info ctxt fn_name, [])
+      else get_l1corres_thm prog_info fn_info ctxt do_opt trace_opt fn_name
+                            callee_terms measure_var
   in (get_body_of_l1corres_thm thm, thm, opt_traces) end
 
   (* Update function information. *)

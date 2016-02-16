@@ -23,18 +23,20 @@ where
 | "irq_handler_inv_relation (Invocations_A.ClearIRQHandler irq) x = (x = ClearIRQHandler irq)"
 | "irq_handler_inv_relation (Invocations_A.SetIRQHandler irq cap ptr) x =
        (\<exists>cap'. x = SetIRQHandler irq cap' (cte_map ptr) \<and> cap_relation cap cap')"
-| "irq_handler_inv_relation (Invocations_A.SetMode irq trig pol) x = (x = SetMode irq trig pol)"
+
 
 consts
-  interrupt_control_relation :: "arch_interrupt_control \<Rightarrow> interrupt_control \<Rightarrow> bool"
+  interrupt_control_relation :: "arch_irq_control_invocation \<Rightarrow> ArchRetypeDecls_H.irqcontrol_invocation \<Rightarrow> bool"
+
 
 primrec
   irq_control_inv_relation :: "irq_control_invocation \<Rightarrow> irqcontrol_invocation \<Rightarrow> bool"
 where
   "irq_control_inv_relation (Invocations_A.IRQControl irq slot slot') x
        = (x = IssueIRQHandler irq (cte_map slot) (cte_map slot'))"
-| "irq_control_inv_relation (Invocations_A.InterruptControl ivk) x
-       = (\<exists>ivk'. x = InterruptControl ivk' \<and> interrupt_control_relation ivk ivk')"
+| "irq_control_inv_relation (Invocations_A.ArchIRQControl ivk) x
+       = (\<exists>ivk'. x = ArchIRQControl ivk' \<and> interrupt_control_relation ivk ivk')"
+
 
 primrec
   irq_handler_inv_valid' :: "irqhandler_invocation \<Rightarrow> kernel_state \<Rightarrow> bool"
@@ -47,12 +49,11 @@ where
            and cte_wp_at' (badge_derived' cap \<circ> cteCap) cte_ptr
            and (\<lambda>s. \<exists>ptr'. cte_wp_at' (\<lambda>cte. cteCap cte = IRQHandlerCap irq) ptr' s)
            and ex_cte_cap_wp_to' isCNodeCap cte_ptr)"
-| "irq_handler_inv_valid' (SetMode irq trig pol) = \<top>"
 
 primrec
   irq_control_inv_valid' :: "irqcontrol_invocation \<Rightarrow> kernel_state \<Rightarrow> bool"
 where
-  "irq_control_inv_valid' (InterruptControl ivk) = \<bottom>"
+  "irq_control_inv_valid' (ArchIRQControl ivk) = \<bottom>"
 | "irq_control_inv_valid' (IssueIRQHandler irq ptr ptr') =
        (cte_wp_at' (\<lambda>cte. cteCap cte = NullCap) ptr and
         cte_wp_at' (\<lambda>cte. cteCap cte = IRQControlCap) ptr' and
@@ -67,8 +68,8 @@ lemma decode_irq_handler_corres:
   "\<lbrakk> list_all2 cap_relation (map fst caps) (map fst caps');
     list_all2 (\<lambda>p pa. snd pa = cte_map (snd p)) caps caps' \<rbrakk> \<Longrightarrow>
    corres (ser \<oplus> irq_handler_inv_relation) invs invs'
-     (decode_irq_handler_invocation label args irq caps)
-     (decodeIRQHandlerInvocation label args irq caps')"
+     (decode_irq_handler_invocation label irq caps)
+     (decodeIRQHandlerInvocation label irq caps')"
   apply (simp add: decode_irq_handler_invocation_def decodeIRQHandlerInvocation_def
                  split del: split_if)
   apply (cases caps)
@@ -88,7 +89,7 @@ lemma decode_irq_handler_valid'[wp]:
         \<and> (\<forall>cap \<in> set caps. ex_cte_cap_wp_to' isCNodeCap (snd cap) s)
         \<and> (\<forall>cap \<in> set caps. cte_wp_at' (badge_derived' (fst cap) \<circ> cteCap) (snd cap) s)
         \<and> s \<turnstile>' IRQHandlerCap irq\<rbrace>
-     decodeIRQHandlerInvocation label args irq caps
+     decodeIRQHandlerInvocation label irq caps
    \<lbrace>irq_handler_inv_valid'\<rbrace>,-"
   apply (simp add: decodeIRQHandlerInvocation_def Let_def split_def
                split del: split_if)
@@ -136,14 +137,16 @@ lemma decode_irq_control_corres:
      (decode_irq_control_invocation label args slot caps)
      (decodeIRQControlInvocation label args (cte_map slot) caps')"
   apply (clarsimp simp: decode_irq_control_invocation_def decodeIRQControlInvocation_def
-                        decodeInterruptControl_def arch_decode_interrupt_control_def
+                        arch_check_irq_def ArchInterrupt_H.checkIRQ_def
+                        ArchInterrupt_H.decodeIRQControlInvocation_def arch_decode_irq_control_invocation_def
              split del: split_if cong: if_cong
                  split: invocation_label.split)
+
   apply (cases caps, simp split: list.split)
   apply (case_tac "\<exists>n. length args = Suc (Suc (Suc n))")
    apply (clarsimp simp: list_all2_Cons1 Let_def split_def liftE_bindE
                          lookup_target_slot_def lookupTargetSlot_def
-                         whenE_rangeCheck_eq length_Suc_conv)
+                         whenE_rangeCheck_eq length_Suc_conv checkIRQ_def)
    apply (rule corres_guard_imp)
      apply (rule whenE_throwError_corres)
        apply (simp add: minIRQ_def maxIRQ_def)
@@ -164,8 +167,9 @@ lemma decode_irq_control_corres:
   apply arith
   done
 
-crunch inv[wp]: decodeIRQControlInvocation "P"
-  (simp: crunch_simps decodeInterruptControl_def)
+
+crunch inv[wp]: "InterruptDecls_H.decodeIRQControlInvocation"  "P"
+  (simp: crunch_simps ArchInterrupt_H.decodeIRQControlInvocation_def)
 
 (* Levity: added (20090201 10:50:27) *)
 declare ensureEmptySlot_stronger [wp]
@@ -190,14 +194,14 @@ lemma decode_irq_control_valid'[wp]:
         \<and> cte_wp_at' (\<lambda>cte. cteCap cte = IRQControlCap) slot s\<rbrace>
      decodeIRQControlInvocation label args slot caps
    \<lbrace>irq_control_inv_valid'\<rbrace>,-"
-  apply (simp add: decodeIRQControlInvocation_def Let_def split_def
+  apply (simp add: decodeIRQControlInvocation_def Let_def split_def checkIRQ_def
                    rangeCheck_def unlessE_whenE
                 split del: split_if cong: if_cong list.case_cong
                                           invocation_label.case_cong)
   apply (rule hoare_pre)
    apply (wp ensureEmptySlot_stronger isIRQActive_wp
              whenE_throwError_wp
-                | simp add: decodeInterruptControl_def | wpc
+                | simp add: ArchInterrupt_H.decodeIRQControlInvocation_def | wpc
                 | wp_once hoare_drop_imps)+
   apply (clarsimp simp: minIRQ_def maxIRQ_def
                         toEnum_of_nat word_le_nat_alt unat_of_nat)
@@ -216,9 +220,6 @@ lemma valid_globals_ex_cte_cap_irq:
    apply blast
   apply (simp add: global_refs'_def cte_level_bits_def)
   done
-
-
-declare setInterruptMode_def[simp] MachineOps.setInterruptMode_def[simp]
 
 lemma invoke_irq_handler_corres:
   "irq_handler_inv_relation i i' \<Longrightarrow>
@@ -331,8 +332,8 @@ lemma invoke_irq_control_corres:
    corres (intr \<oplus> dc) (einvs and irq_control_inv_valid i)
              (invs' and irq_control_inv_valid' i')
      (invoke_irq_control i)
-     (invokeIRQControl i')"
-  apply (cases i, simp_all add: invokeIRQControl_def)
+     (performIRQControl i')"
+  apply (cases i, simp_all add: performIRQControl_def)
    apply (rule corres_guard_imp)
      apply (rule corres_split_nor [OF _ set_irq_state_corres])
         apply (rule cins_corres_simple)
@@ -348,7 +349,7 @@ lemma invoke_irq_control_corres:
    apply (case_tac ctea)
    apply (clarsimp simp: isCap_simps sameRegionAs_def3)
    apply (auto dest: valid_irq_handlers_ctes_ofD)[1]
-  apply (clarsimp simp: arch_invoke_irq_control_def invokeInterruptControl_def)
+  apply (clarsimp simp: arch_invoke_irq_control_def ArchInterrupt_H.performIRQControl_def)
   done
 
 crunch valid_cap'[wp]: setIRQState "valid_cap' cap"
@@ -370,8 +371,8 @@ lemma setIRQState_issued[wp]:
   done
 
 lemma invoke_irq_control_invs'[wp]:
-  "\<lbrace>invs' and irq_control_inv_valid' i\<rbrace> invokeIRQControl i \<lbrace>\<lambda>rv. invs'\<rbrace>"
-  apply (cases i, simp_all add: invokeIRQControl_def)
+  "\<lbrace>invs' and irq_control_inv_valid' i\<rbrace> performIRQControl i \<lbrace>\<lambda>rv. invs'\<rbrace>"
+  apply (cases i, simp_all add: performIRQControl_def)
   apply (rule hoare_pre)
    apply (wp cteInsert_simple_invs | simp add: cte_wp_at_ctes_of)+
   apply (clarsimp simp: cte_wp_at_ctes_of IRQHandler_valid'
@@ -450,8 +451,6 @@ lemma tcbSchedAppend_invs_but_ct_not_inQ':
   "\<lbrace>invs' and st_tcb_at' runnable' t \<rbrace>
    tcbSchedAppend t \<lbrace>\<lambda>_. all_invs_but_ct_not_inQ'\<rbrace>"
   apply (simp add: invs'_def valid_state'_def)
-thm ct_idle_or_in_cur_domain'_lift2
-thm valid_queues_def
   apply (wp sch_act_wf_lift valid_irq_node_lift irqs_masked_lift
             valid_irq_handlers_lift' cur_tcb_lift ct_idle_or_in_cur_domain'_lift2
        | simp add: cteCaps_of_def 

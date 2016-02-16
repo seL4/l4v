@@ -17,10 +17,10 @@ chapter "Kernel Data Structures"
 theory Structures_H
 imports
   Config_H
-  State_H
+  "./$L4V_ARCH/State_H"
   Fault_H
   Types_H
-  ARMStructures_H
+  "./$L4V_ARCH/ArchStructures_H"
 begin
 
 datatype zombie_type =

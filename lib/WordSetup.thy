@@ -38,7 +38,7 @@ definition
   "is_aligned ptr n \<equiv> 2^n dvd unat ptr"
 
 definition
-  ptr_add :: "word32 \<Rightarrow> nat \<Rightarrow> word32" where
+  ptr_add :: "'a :: len word \<Rightarrow> nat \<Rightarrow> 'a word" where
   "ptr_add ptr n \<equiv> ptr + of_nat n"
 
 definition

@@ -22,7 +22,7 @@ begin
 
 type_synonym kernel_object = Structures_A.kernel_object
 type_synonym tcb = Structures_A.tcb
-type_synonym pte = ARM_Structs_A.pte
+type_synonym pte = Arch_Structs_A.pte
 
 (* Transform an abstract-spec cap ptr to a capDL one. This is currently
  * a no-op; however, it is conceivable that the capDL cptr representation could
@@ -251,19 +251,10 @@ definition
 where
   "to_bool w \<equiv> w \<noteq> 0"
 
-definition
-  transform_intent_irq_set_mode :: "word32 list \<Rightarrow> cdl_irq_handler_intent option"
-where
-  "transform_intent_irq_set_mode args = 
-     (case args of
-       trig#pol#_ \<Rightarrow> Some (IrqHandlerSetModeIntent (to_bool trig) (to_bool pol))
-     | _ \<Rightarrow> Nothing)"
-
 (* A dispatch function that converts the user's message label
  * and IPC buffer into an intent by dispatching on the message label.
  * For malformed messages etc., we return None.
 *)
-
 
 definition
   transform_intent :: "invocation_label \<Rightarrow> word32 list \<Rightarrow> cdl_intent option" where
@@ -327,37 +318,34 @@ definition
     | IRQIssueIRQHandler \<Rightarrow>
           map_option IrqControlIntent
                    (transform_intent_issue_irq_handler args)
-    | IRQInterruptControl \<Rightarrow>
-          Some (IrqControlIntent IrqControlInterruptControlIntent)
     | IRQAckIRQ \<Rightarrow> Some (IrqHandlerIntent IrqHandlerAckIntent)
     | IRQSetIRQHandler \<Rightarrow> Some (IrqHandlerIntent IrqHandlerSetEndpointIntent)
     | IRQClearIRQHandler \<Rightarrow> Some (IrqHandlerIntent IrqHandlerClearIntent)
-    | IRQSetMode \<Rightarrow> option_map IrqHandlerIntent (transform_intent_irq_set_mode args)
-    | ARMPageTableMap \<Rightarrow>
-          map_option PageTableIntent
-                   (transform_intent_page_table_map args)
-    | ARMPageTableUnmap \<Rightarrow> Some (PageTableIntent PageTableUnmapIntent) 
-    | ARMPageMap \<Rightarrow>
-          map_option PageIntent
-                   (transform_intent_page_map args)
-    | ARMPageRemap \<Rightarrow>
-          map_option PageIntent
-                   (transform_intent_page_remap args)
-    | ARMPageUnmap \<Rightarrow> Some (PageIntent PageUnmapIntent)
-    | ARMPageClean_Data \<Rightarrow> Some (PageIntent PageFlushCachesIntent )
-    | ARMPageInvalidate_Data  \<Rightarrow> Some (PageIntent PageFlushCachesIntent )
-    | ARMPageCleanInvalidate_Data \<Rightarrow> Some (PageIntent PageFlushCachesIntent )
-    | ARMPageUnify_Instruction \<Rightarrow> Some (PageIntent PageFlushCachesIntent )
-    | ARMPageGetAddress \<Rightarrow> Some (PageIntent PageGetAddressIntent )
-    | ARMPDClean_Data \<Rightarrow> Some (PageDirectoryIntent PageDirectoryFlushIntent )
-    | ARMPDInvalidate_Data \<Rightarrow>  Some (PageDirectoryIntent PageDirectoryFlushIntent )
-    | ARMPDCleanInvalidate_Data \<Rightarrow>  Some (PageDirectoryIntent PageDirectoryFlushIntent)
-    | ARMPDUnify_Instruction \<Rightarrow>  Some (PageDirectoryIntent PageDirectoryFlushIntent )
-    | ARMASIDControlMakePool \<Rightarrow>
-          map_option AsidControlIntent
-                   (transform_cnode_index_and_depth AsidControlMakePoolIntent args)
-    | ARMASIDPoolAssign \<Rightarrow> Some (AsidPoolIntent AsidPoolAssignIntent )
-    | Domainsetset \<Rightarrow> map_option DomainIntent (transform_intent_domain args)"
+    | ArchInvocationLabel ARMPageTableMap \<Rightarrow>
+                          map_option PageTableIntent
+                                   (transform_intent_page_table_map args)
+    | ArchInvocationLabel ARMPageTableUnmap \<Rightarrow> Some (PageTableIntent PageTableUnmapIntent) 
+    | ArchInvocationLabel ARMPageMap \<Rightarrow>
+                          map_option PageIntent
+                                   (transform_intent_page_map args)
+    | ArchInvocationLabel ARMPageRemap \<Rightarrow>
+                          map_option PageIntent
+                                   (transform_intent_page_remap args)
+    | ArchInvocationLabel ARMPageUnmap \<Rightarrow> Some (PageIntent PageUnmapIntent)
+    | ArchInvocationLabel ARMPageClean_Data \<Rightarrow> Some (PageIntent PageFlushCachesIntent )
+    | ArchInvocationLabel ARMPageInvalidate_Data  \<Rightarrow> Some (PageIntent PageFlushCachesIntent )
+    | ArchInvocationLabel ARMPageCleanInvalidate_Data \<Rightarrow> Some (PageIntent PageFlushCachesIntent )
+    | ArchInvocationLabel ARMPageUnify_Instruction \<Rightarrow> Some (PageIntent PageFlushCachesIntent )
+    | ArchInvocationLabel ARMPageGetAddress \<Rightarrow> Some (PageIntent PageGetAddressIntent )
+    | ArchInvocationLabel ARMPDClean_Data \<Rightarrow> Some (PageDirectoryIntent PageDirectoryFlushIntent )
+    | ArchInvocationLabel ARMPDInvalidate_Data \<Rightarrow>  Some (PageDirectoryIntent PageDirectoryFlushIntent )
+    | ArchInvocationLabel ARMPDCleanInvalidate_Data \<Rightarrow>  Some (PageDirectoryIntent PageDirectoryFlushIntent)
+    | ArchInvocationLabel ARMPDUnify_Instruction \<Rightarrow>  Some (PageDirectoryIntent PageDirectoryFlushIntent )
+    | ArchInvocationLabel ARMASIDControlMakePool \<Rightarrow>
+                          map_option AsidControlIntent
+                                  (transform_cnode_index_and_depth AsidControlMakePoolIntent args)
+    | ArchInvocationLabel ARMASIDPoolAssign \<Rightarrow> Some (AsidPoolIntent AsidPoolAssignIntent )
+    | DomainSetSet \<Rightarrow> map_option DomainIntent (transform_intent_domain args)"
 
 lemmas transform_intent_tcb_defs =
   transform_intent_tcb_read_registers_def
@@ -396,30 +384,29 @@ lemma transform_tcb_intent_invocation:
     label \<noteq> CNodeRotate \<and>
     label \<noteq> CNodeSaveCaller \<and>
     label \<noteq> IRQIssueIRQHandler \<and>
-    label \<noteq> IRQInterruptControl \<and>
     label \<noteq> IRQAckIRQ \<and>
     label \<noteq> IRQSetIRQHandler \<and>
     label \<noteq> IRQClearIRQHandler \<and>
-    label \<noteq> ARMPageTableMap \<and>
-    label \<noteq> ARMPageTableUnmap \<and>
-    label \<noteq> ARMPageMap \<and>
-    label \<noteq> ARMPageUnmap \<and>
-    label \<noteq> ARMPageClean_Data \<and>
-    label \<noteq> ARMPageInvalidate_Data \<and>
-    label \<noteq> ARMPageCleanInvalidate_Data \<and>
-    label \<noteq> ARMPageUnify_Instruction \<and>
-    label \<noteq> ARMPageGetAddress \<and>
-    label \<noteq> ARMPDClean_Data \<and>
-    label \<noteq> ARMPDInvalidate_Data \<and>
-    label \<noteq> ARMPDCleanInvalidate_Data \<and>
-    label \<noteq> ARMPDUnify_Instruction \<and>
-    label \<noteq> ARMASIDControlMakePool \<and>
+    label \<noteq> ArchInvocationLabel ARMPageTableMap \<and>
+    label \<noteq> ArchInvocationLabel ARMPageTableUnmap \<and>
+    label \<noteq> ArchInvocationLabel ARMPageMap \<and>
+    label \<noteq> ArchInvocationLabel ARMPageUnmap \<and>
+    label \<noteq> ArchInvocationLabel ARMPageClean_Data \<and>
+    label \<noteq> ArchInvocationLabel ARMPageInvalidate_Data \<and>
+    label \<noteq> ArchInvocationLabel ARMPageCleanInvalidate_Data \<and>
+    label \<noteq> ArchInvocationLabel ARMPageUnify_Instruction \<and>
+    label \<noteq> ArchInvocationLabel ARMPageGetAddress \<and>
+    label \<noteq> ArchInvocationLabel ARMPDClean_Data \<and>
+    label \<noteq> ArchInvocationLabel ARMPDInvalidate_Data \<and>
+    label \<noteq> ArchInvocationLabel ARMPDCleanInvalidate_Data \<and>
+    label \<noteq> ArchInvocationLabel ARMPDUnify_Instruction \<and>
+    label \<noteq> ArchInvocationLabel ARMASIDControlMakePool \<and>
     label \<noteq> DomainSetSet)"
   apply(intro conjI)
    apply(rule iffI,
          simp add: transform_intent_def transform_intent_tcb_defs split: list.split_asm,
-         simp add: transform_intent_def transform_intent_tcb_defs split: invocation_label.split_asm list.split_asm)+
-  apply(simp add: transform_intent_def transform_intent_tcb_defs split: invocation_label.split_asm)+
+         simp add: transform_intent_def transform_intent_tcb_defs split: invocation_label.split_asm arch_invocation_label.split_asm list.split_asm)+
+  apply(simp add: transform_intent_def transform_intent_tcb_defs split: invocation_label.split_asm arch_invocation_label.split_asm)+
 done
 
 lemma transform_intent_isnot_UntypedIntent:
@@ -436,13 +423,13 @@ lemma transform_intent_isnot_UntypedIntent:
    apply (clarsimp simp: transform_type_def)
    apply (simp add: linorder_not_less eval_nat_numeral le_Suc_eq unat_arith_simps)
   apply(erule disjE)
-   apply(auto simp: transform_intent_def option_map_def split: invocation_label.split option.split_asm)[1]
+   apply(auto simp: transform_intent_def option_map_def split: invocation_label.split arch_invocation_label.split option.split_asm)[1]
   apply (erule disjE)
    apply (auto simp: transform_intent_def transform_intent_untyped_retype_def
          option_map_def split: invocation_label.split option.split_asm list.split)[1]
   apply clarsimp
   apply (clarsimp simp: transform_intent_def transform_type_def transform_intent_untyped_retype_def)
-  apply (clarsimp simp: option_map_def split: invocation_label.splits option.splits list.splits)
+  apply (clarsimp simp: option_map_def split: invocation_label.splits arch_invocation_label.splits option.splits list.splits)
   apply (clarsimp simp: transform_type_def split: split_if_asm)
   done
 
@@ -465,6 +452,9 @@ lemmas transform_intent_cnode_defs =
   transform_intent_cnode_mutate_def
   transform_intent_cnode_rotate_def
 
+method case_labels for label :: invocation_label = 
+  (cases label, find_goal \<open>match premises in "label = ArchInvocationLabel x" for x \<Rightarrow> \<open>cases x\<close>\<close>)
+
 lemma transform_intent_isnot_CNodeIntent:
       "(\<not> (\<exists> ui. Some (CNodeIntent ui) = transform_intent label args))
        = ((label = CNodeRevoke \<longrightarrow> length args < 2) \<and>
@@ -486,7 +476,7 @@ lemma transform_intent_isnot_CNodeIntent:
                             split: list.split)
            prefer 10
            apply(clarify)
-           apply(case_tac label)
+           apply(case_labels label)
            apply(clarsimp simp: transform_intent_def
                       option_map_def transform_intent_cnode_defs
                       split: list.split_asm option.split_asm)+
@@ -509,15 +499,15 @@ lemma transform_intent_isnot_TcbIntent:
   apply(rule iffI)
    apply(erule contrapos_np)
    apply(clarsimp simp: transform_intent_def)
-   apply(case_tac label)
+   apply(case_labels label)
                                     apply(simp_all)
          apply(fastforce simp: transform_intent_tcb_defs
                               option_map_def
                         split: list.split)+
   apply(unfold transform_intent_def)
-  apply(case_tac label, simp_all add: option_map_def split: option.split)
-  apply (auto simp: transform_intent_tcb_defs
-                 split:  list.splits)
+  apply(case_labels label, simp_all add: option_map_def split: option.split)
+  apply (auto simp: transform_intent_tcb_defs 
+                 split:  list.splits arch_invocation_label.splits)
 done
 
 (*
@@ -603,15 +593,15 @@ where
     | Structures_A.Zombie ptr _ _ \<Rightarrow>
         Types_D.ZombieCap ptr
     | Structures_A.ArchObjectCap arch_cap \<Rightarrow> (case arch_cap of
-          ARM_Structs_A.ASIDControlCap \<Rightarrow>
+          Arch_Structs_A.ASIDControlCap \<Rightarrow>
             Types_D.AsidControlCap
-        | ARM_Structs_A.ASIDPoolCap ptr asid \<Rightarrow>
+        | Arch_Structs_A.ASIDPoolCap ptr asid \<Rightarrow>
             Types_D.AsidPoolCap ptr (fst $ (transform_asid asid))
-        | ARM_Structs_A.PageCap ptr cap_rights_ sz mp \<Rightarrow>
+        | Arch_Structs_A.PageCap ptr cap_rights_ sz mp \<Rightarrow>
             Types_D.FrameCap ptr cap_rights_ (pageBitsForSize sz) Real (transform_mapping mp)
-        | ARM_Structs_A.PageTableCap ptr mp \<Rightarrow>
+        | Arch_Structs_A.PageTableCap ptr mp \<Rightarrow>
             Types_D.PageTableCap ptr Real (transform_mapping mp)
-        | ARM_Structs_A.PageDirectoryCap ptr mp \<Rightarrow>
+        | Arch_Structs_A.PageDirectoryCap ptr mp \<Rightarrow>
             Types_D.PageDirectoryCap ptr Real (option_map transform_asid mp)
         )
   "
@@ -823,19 +813,19 @@ declare transform_paddr_def[simp]
  * This transforms the references to frames into frame caps.
  *)
 definition
-  transform_pte :: "ARM_Structs_A.pte \<Rightarrow> cdl_cap"
+  transform_pte :: "Arch_Structs_A.pte \<Rightarrow> cdl_cap"
 where
   "transform_pte pte \<equiv> case pte of
-           ARM_Structs_A.InvalidPTE \<Rightarrow> cdl_cap.NullCap
-         | ARM_Structs_A.LargePagePTE ref _ rights_ \<Rightarrow>
+           Arch_Structs_A.InvalidPTE \<Rightarrow> cdl_cap.NullCap
+         | Arch_Structs_A.LargePagePTE ref _ rights_ \<Rightarrow>
              Types_D.FrameCap (transform_paddr ref) rights_
                               (pageBitsForSize ARMLargePage) Fake None
-         | ARM_Structs_A.SmallPagePTE ref _ rights_ \<Rightarrow>
+         | Arch_Structs_A.SmallPagePTE ref _ rights_ \<Rightarrow>
              Types_D.FrameCap (transform_paddr ref) rights_
                               (pageBitsForSize ARMSmallPage) Fake None"
 
 definition
-  transform_page_table_contents :: "(word8 \<Rightarrow> ARM_Structs_A.pte) \<Rightarrow> (nat \<Rightarrow> cdl_cap option)"
+  transform_page_table_contents :: "(word8 \<Rightarrow> Arch_Structs_A.pte) \<Rightarrow> (nat \<Rightarrow> cdl_cap option)"
 where
   "transform_page_table_contents M \<equiv> unat_map (Some o transform_pte o M)"
 
@@ -845,27 +835,27 @@ where
  * This transforms the references to frames into PageTable or Frame caps.
  *)
 definition
-  transform_pde :: "ARM_Structs_A.pde \<Rightarrow> cdl_cap"
+  transform_pde :: "Arch_Structs_A.pde \<Rightarrow> cdl_cap"
 where
   "transform_pde pde \<equiv> case pde of
-           ARM_Structs_A.InvalidPDE \<Rightarrow> cdl_cap.NullCap
-         | ARM_Structs_A.PageTablePDE ref _ _ \<Rightarrow>
+           Arch_Structs_A.InvalidPDE \<Rightarrow> cdl_cap.NullCap
+         | Arch_Structs_A.PageTablePDE ref _ _ \<Rightarrow>
              Types_D.PageTableCap (transform_paddr ref) Fake None
-         | ARM_Structs_A.SectionPDE ref _ _ rights_ \<Rightarrow>
+         | Arch_Structs_A.SectionPDE ref _ _ rights_ \<Rightarrow>
              Types_D.FrameCap (transform_paddr ref) rights_
                               (pageBitsForSize ARMSection) Fake None
-         | ARM_Structs_A.SuperSectionPDE ref _ rights_ \<Rightarrow>
+         | Arch_Structs_A.SuperSectionPDE ref _ rights_ \<Rightarrow>
              Types_D.FrameCap (transform_paddr ref) rights_
                               (pageBitsForSize ARMSuperSection) Fake None"
 
 definition
-  kernel_pde_mask ::  "(12 word \<Rightarrow> ARM_Structs_A.pde) \<Rightarrow> (12 word \<Rightarrow> ARM_Structs_A.pde)"
+  kernel_pde_mask ::  "(12 word \<Rightarrow> Arch_Structs_A.pde) \<Rightarrow> (12 word \<Rightarrow> Arch_Structs_A.pde)"
 where
   "kernel_pde_mask M \<equiv> \<lambda>x.
-  if (ucast (kernel_base >> 20)) \<le> x then ARM_Structs_A.InvalidPDE else M x"
+  if (ucast (kernel_base >> 20)) \<le> x then Arch_Structs_A.InvalidPDE else M x"
 
 definition
-  transform_page_directory_contents :: "(12 word \<Rightarrow> ARM_Structs_A.pde) \<Rightarrow> (nat \<Rightarrow> cdl_cap option)"
+  transform_page_directory_contents :: "(12 word \<Rightarrow> Arch_Structs_A.pde) \<Rightarrow> (nat \<Rightarrow> cdl_cap option)"
 where
   "transform_page_directory_contents M \<equiv> unat_map (Some o transform_pde o kernel_pde_mask M)"
 
@@ -886,17 +876,17 @@ definition
          | Structures_A.TCB tcb \<Rightarrow> case opt_etcb of Some etcb \<Rightarrow> transform_tcb ms ref tcb etcb | None \<Rightarrow> undefined
          | Structures_A.Endpoint _ \<Rightarrow> Types_D.Endpoint
          | Structures_A.Notification _ \<Rightarrow> Types_D.Notification
-         | Structures_A.ArchObj (ARM_Structs_A.ASIDPool ap) \<Rightarrow>
+         | Structures_A.ArchObj (Arch_Structs_A.ASIDPool ap) \<Rightarrow>
                 Types_D.AsidPool \<lparr>cdl_asid_pool_caps = (transform_asid_pool_contents ap)\<rparr>
-         | Structures_A.ArchObj (ARM_Structs_A.PageTable ptx) \<Rightarrow>
+         | Structures_A.ArchObj (Arch_Structs_A.PageTable ptx) \<Rightarrow>
                 Types_D.PageTable \<lparr>cdl_page_table_caps = (transform_page_table_contents ptx)\<rparr>
-         | Structures_A.ArchObj (ARM_Structs_A.PageDirectory pd) \<Rightarrow>
+         | Structures_A.ArchObj (Arch_Structs_A.PageDirectory pd) \<Rightarrow>
                 Types_D.PageDirectory \<lparr>cdl_page_directory_caps = (transform_page_directory_contents pd)\<rparr>
-         | Structures_A.ArchObj (ARM_Structs_A.DataPage sz) \<Rightarrow>
+         | Structures_A.ArchObj (Arch_Structs_A.DataPage sz) \<Rightarrow>
                 Types_D.Frame \<lparr>cdl_frame_size_bits = pageBitsForSize sz\<rparr>"
 
 lemmas transform_object_simps [simp] =
-  transform_object_def [split_simps Structures_A.kernel_object.split ARM_Structs_A.arch_kernel_obj.split]
+  transform_object_def [split_simps Structures_A.kernel_object.split Arch_Structs_A.arch_kernel_obj.split]
 
 (* Lifts a map over a function, returning the empty map if that
    function would be insufficiently injective *)

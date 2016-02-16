@@ -517,12 +517,17 @@ definition create_cap_ext where
 definition next_revoke_cap where
 "next_revoke_cap \<equiv> (\<lambda>slot ext. the (next_child slot (cdt_list ext)))"
 
-definition free_asid_select where
-"free_asid_select \<equiv> (\<lambda> asid_table. fst (hd ((filter (\<lambda> (x,y). x \<le> 2 ^ asid_high_bits - 1 \<and> y = None) (assocs asid_table))))) :: (word8 \<rightharpoonup> word32) \<Rightarrow> word8"
+definition
+  free_asid_select :: "(asid_index \<rightharpoonup> machine_word) \<Rightarrow> asid_index"
+where
+  "free_asid_select \<equiv> (\<lambda>asid_table.
+     fst (hd ((filter (\<lambda> (x,y). x \<le> 2 ^ asid_high_bits - 1 \<and> y = None) (assocs asid_table)))))"
 
-definition free_asid_pool_select where
-"free_asid_pool_select \<equiv> (\<lambda> pool base. fst (hd ((filter (\<lambda> (x,y). x \<le> 2 ^ asid_low_bits - 1 \<and> ucast x + base \<noteq> 0 \<and> y = None) (assocs pool))))) :: (10 word \<rightharpoonup> word32) \<Rightarrow> word32 \<Rightarrow> 10 word"
-
+definition
+  free_asid_pool_select :: "(asid_pool_index \<rightharpoonup> machine_word) \<Rightarrow> machine_word \<Rightarrow> asid_pool_index"
+where
+  "free_asid_pool_select \<equiv> (\<lambda>pool base.
+     fst (hd ((filter (\<lambda> (x,y). x \<le> 2 ^ asid_low_bits - 1 \<and> ucast x + base \<noteq> 0 \<and> y = None) (assocs pool)))))"
 
 definition update_work_units where
   "update_work_units \<equiv>
@@ -538,6 +543,7 @@ definition work_units_limit_reached where
      return (work_units_limit \<le> work_units)
    od"
 
+(* FIXME: Should this move to Machine_A? *)
 text {* The lowest virtual address in the kernel window. The kernel reserves the
 virtual addresses from here up in every virtual address space. *}
 definition
@@ -545,7 +551,7 @@ definition
   "kernel_base \<equiv> 0xf0000000"
 
 definition
-  idle_thread_ptr :: word32 where
+  idle_thread_ptr :: vspace_ref where
   "idle_thread_ptr = kernel_base + 0x1000"
 
 text {*

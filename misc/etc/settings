@@ -26,10 +26,13 @@ JEDIT_JAVA_OPTIONS="-Xms128m -Xmx4096m -Xss4m"
 # show brackets in jEdit
 ISABELLE_JEDIT_OPTIONS="-m brackets"
 
+# Everyone most likely wants ARM
+: ${L4V_ARCH:="ARM"}
+
 # Heap input locations. We have a unique set of heap files for each copy of
 # Isabelle the user has checked out, so that users can have multiple sessions
 # running at the same time without too many problems.
-USER_HEAPS=${OVERRIDE_USER_HEAPS:-"$ISABELLE_HOME_USER/heaps${ISABELLE_HOME//\//-}"}
+USER_HEAPS=${OVERRIDE_USER_HEAPS:-"$ISABELLE_HOME_USER/heaps-${L4V_ARCH}${ISABELLE_HOME//\//-}"}
 ISABELLE_OUTPUT=${OVERRIDE_ISABELLE_OUTPUT:-"$USER_HEAPS"}
 ISABELLE_PATH=${OVERRIDE_ISABELLE_PATH:-"$USER_HEAPS"}
 ISABELLE_BROWSER_INFO=${OVERRIDE_ISABELLE_BROWSER_INFO:-"$ISABELLE_HOME_USER/browser_info"}

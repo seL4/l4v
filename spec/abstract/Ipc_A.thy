@@ -52,7 +52,7 @@ where
 | "get_extra_cptrs None mi = return []"
 
 definition
-  get_extra_cptr :: "word32 \<Rightarrow> nat \<Rightarrow> (cap_ref,'z::state_ext) s_monad"
+  get_extra_cptr :: "obj_ref \<Rightarrow> nat \<Rightarrow> (cap_ref,'z::state_ext) s_monad"
 where
   "get_extra_cptr buffer n \<equiv> liftM data_to_cptr
       (load_word_offs buffer (n + buffer_cptr_index))"
@@ -75,7 +75,7 @@ Capability unwrapping allows a client to efficiently demonstrate to a server
 that it possesses authority to two or more services that server provides.
 *}
 definition
-  set_extra_badge :: "word32 \<Rightarrow> word32 \<Rightarrow> nat \<Rightarrow> (unit,'z::state_ext) s_monad"
+  set_extra_badge :: "obj_ref \<Rightarrow> machine_word \<Rightarrow> nat \<Rightarrow> (unit,'z::state_ext) s_monad"
 where
   "set_extra_badge buffer badge n \<equiv>
       store_word_offs buffer (buffer_cptr_index + n) badge"

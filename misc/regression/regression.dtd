@@ -11,21 +11,25 @@
 <!ELEMENT testsuite (set|sequence|test)+>
 <!ATTLIST testsuite cwd CDATA #IMPLIED>
 <!ATTLIST testsuite timeout CDATA #IMPLIED>
+<!ATTLIST testsuite cpu-timeout CDATA #IMPLIED>
 <!ATTLIST testsuite depends NMTOKENS #IMPLIED>
 
 <!ELEMENT set (set|sequence|test)+>
 <!ATTLIST set cwd CDATA #IMPLIED>
 <!ATTLIST set timeout CDATA #IMPLIED>
+<!ATTLIST set cpu-timeout CDATA #IMPLIED>
 <!ATTLIST set depends NMTOKENS #IMPLIED>
 
 <!ELEMENT sequence (set|sequence|test)+>
 <!ATTLIST sequence cwd CDATA #IMPLIED>
 <!ATTLIST sequence timeout CDATA #IMPLIED>
+<!ATTLIST sequence cpu-timeout CDATA #IMPLIED>
 <!ATTLIST sequence depends NMTOKENS #IMPLIED>
 
 <!ELEMENT test ANY>
 <!ATTLIST test name ID #REQUIRED>
 <!ATTLIST test cwd CDATA #IMPLIED>
 <!ATTLIST test timeout CDATA #IMPLIED>
+<!ATTLIST test cpu-timeout CDATA #IMPLIED>
 <!ATTLIST test depends NMTOKENS #IMPLIED>
 

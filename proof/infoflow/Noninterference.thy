@@ -1590,10 +1590,14 @@ lemma small_Step_partitionIntegrity:
     partitionIntegrity (current_aag (internal_state_if s)) (internal_state_if s)
            (internal_state_if t)"
   apply(case_tac "sys_mode_of s")
-       apply(simp_all add: part_def split: if_splits add: Step_ADT_A_if_def_global_automaton_if global_automaton_if_def | safe )+
-          apply fold_subgoals[5]
-          subgoal by (fastforce dest: ADT_A_if_reachable_invs_if simp: invs_if_def intro: user_small_Step_partitionIntegrity check_active_irq_A_if_partitionIntegrity)+
-     apply (fastforce dest: ADT_A_if_reachable_invs_if simp: invs_if_def not_schedule_modes_KernelEntry intro: kernel_call_A_if_partitionIntegrity)+
+       apply(simp_all add: part_def split: if_splits
+              add: Step_ADT_A_if_def_global_automaton_if global_automaton_if_def | safe )+
+          apply (fold_subgoals (prefix))[5]
+          subgoal premises prems by (fastforce dest: ADT_A_if_reachable_invs_if simp: invs_if_def
+            intro: user_small_Step_partitionIntegrity check_active_irq_A_if_partitionIntegrity)+
+     apply (fastforce dest: ADT_A_if_reachable_invs_if
+       simp: invs_if_def not_schedule_modes_KernelEntry
+       intro: kernel_call_A_if_partitionIntegrity)+
    defer
    apply(clarsimp simp: kernel_exit_A_if_def)
    apply(erule use_valid, wp, simp add: partitionIntegrity_refl)

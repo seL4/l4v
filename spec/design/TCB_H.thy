@@ -16,7 +16,7 @@ imports
   TCBDecls_H
   CNode_H
   VSpace_H
-  ArchTCB_H
+  "./$L4V_ARCH/ArchTCB_H"
 begin
 
 defs decodeTCBInvocation_def:

@@ -1209,12 +1209,16 @@ in
   fn_params_typ ---> mk_l2monadT (#globals_type prog_info) (#return_type fn_def) @{typ unit}
 end
 
+(* Avoid clashes with fixed free variables such as C-parser's "symbol_table".
+ * TODO: our hardcoding of "rec_measure'" may also lead to problems. Check later. *)
+fun to_free_var_name lthy x = if Variable.is_fixed lthy x then to_free_var_name lthy (x ^ "'") else x
+
 (* Get arguments passed into the function. *)
-fun get_expected_l2_fn_args prog_info fn_info fn_name =
+fun get_expected_l2_fn_args lthy prog_info fn_info fn_name =
 let
   val fn_def = FunctionInfo.get_function_def fn_info fn_name
 in
-  map (apfst ProgramInfo.demangle_name) (#args fn_def)
+  map (apfst (to_free_var_name lthy o ProgramInfo.demangle_name)) (#args fn_def)
 end
 
 fun get_expected_l2_fn_thm prog_info fn_info ctxt fn_name fn_free fn_args _ measure_var =
@@ -1457,29 +1461,57 @@ in
   final_thms
 end   
 
+(* For functions that are not translated, just generate a trivial wrapper. *)
+fun mk_l2corres_call_simpl_thm prog_info fn_info ctxt fn_name fn_args = let
+    val fn_def = Symtab.lookup (FunctionInfo.get_functions fn_info) fn_name |> the
+    val const = #const fn_def
+    val args = #args fn_def
+
+    (* Get return variables. *)
+    val (fn_input_vars, fn_ret_vars) = get_fn_input_output_vars prog_info fn_info fn_name
+    (* Get mapping from internal variable names to external arguments. *)
+    val m = Symtab.make (map fst args ~~ fn_args)
+    fun name_map_ext (n, T) = Symtab.lookup m n |> the
+
+    val arg_xf = mk_precond prog_info name_map_ext fn_input_vars
+    val ret_xf = mk_xf prog_info fn_ret_vars
+    val ex_xf = Abs ("s", #state_type prog_info, HOLogic.unit)
+
+    val thm = @{thm L2corres_L2_call_simpl}
+        WHERE (map (apsnd (Thm.cterm_of ctxt))
+            [("l1_f", betapply (const, Free ("rec_measure'", @{typ "nat"}))),
+             ("ex_xf", ex_xf), ("gs", #globals_getter prog_info),
+             ("ret_xf", ret_xf), ("arg_xf", arg_xf)])
+        OF [#definition fn_def]
+  in thm end
+
 (*
  * Translate all functions from L1 to L2 format.
  *)
-fun translate_l2 filename fn_info do_opt trace_opt l2_function_name lthy =
+fun translate_l2 filename prog_info fn_info do_opt trace_opt l2_function_name lthy =
 let
-  val prog_info = ProgramInfo.get_prog_info lthy filename
-
   (* Abstract the function, returning a corres theorem. *)
   fun convert ctxt fn_name callee_terms measure_var fn_args = let
     (* Fetch the function body from L1. *)
     val l1_def = FunctionInfo.get_function_def fn_info fn_name
-    val l1_body_def = Utils.named_cterm_instantiate ctxt
-                        [("rec_measure'", Thm.cterm_of ctxt measure_var)] (#definition l1_def)
-  
-    val (thm, traces) = get_l2corres_thm ctxt prog_info fn_info do_opt trace_opt
-        fn_name callee_terms fn_args
-        (betapply (#const l1_def, measure_var)) l1_body_def
-  in (get_body_of_thm ctxt thm, thm, traces) end
+    in
+      if #is_simpl_wrapper (FunctionInfo.get_function_def fn_info fn_name)
+      then let
+        val thm = mk_l2corres_call_simpl_thm prog_info fn_info ctxt fn_name fn_args
+        in (get_body_of_thm ctxt thm, thm, []) end
+      else let
+        val l1_body_def = Utils.named_cterm_instantiate ctxt
+                          [("rec_measure'", Thm.cterm_of ctxt measure_var)] (#definition l1_def)
+        val (thm, traces) = get_l2corres_thm ctxt prog_info fn_info do_opt trace_opt
+            fn_name callee_terms fn_args
+            (betapply (#const l1_def, measure_var)) l1_body_def
+      in (get_body_of_thm ctxt thm, thm, traces) end
+    end
 
   (* Update function information. *)
   fun update_function_defs lthy fn_def =
     FunctionInfo.fn_def_update_const (Utils.get_term lthy (l2_function_name (#name fn_def))) fn_def
-    |> FunctionInfo.fn_def_update_args (map (apfst ProgramInfo.demangle_name) (#args fn_def))
+    |> FunctionInfo.fn_def_update_args (map (apfst (to_free_var_name lthy o ProgramInfo.demangle_name)) (#args fn_def))
     |> FunctionInfo.fn_def_update_definition (
         (the (AutoCorresData.get_def (Proof_Context.theory_of lthy)
             filename "L2def" (#name fn_def))))
@@ -1487,7 +1519,7 @@ in
   AutoCorresUtil.do_translation_phase "L2" filename prog_info fn_info
     (get_expected_l2_fn_type prog_info fn_info)
     (get_expected_l2_fn_thm prog_info fn_info)
-    (get_expected_l2_fn_args prog_info fn_info)
+    (get_expected_l2_fn_args lthy prog_info fn_info)
     l2_function_name
     convert
     l2_monad_mono

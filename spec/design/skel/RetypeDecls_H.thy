@@ -12,7 +12,7 @@ chapter "Function Declarations for Retyping Objects"
 
 theory RetypeDecls_H
 imports
-  ArchRetypeDecls_H
+  "./$L4V_ARCH/ArchRetypeDecls_H"
   Structures_H
   FaultMonad_H
   Invocations_H

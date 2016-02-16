@@ -1133,7 +1133,7 @@ lemma create_mappings_empty [wp]:
 
 lemma empty_pde_atI:
   "\<lbrakk> ko_at (ArchObj (PageDirectory pd)) (p && ~~ mask pd_bits) s;
-     pd (ucast (p && mask pd_bits >> 2)) = ARM_Structs_A.InvalidPDE \<rbrakk> \<Longrightarrow>
+     pd (ucast (p && mask pd_bits >> 2)) = Arch_Structs_A.InvalidPDE \<rbrakk> \<Longrightarrow>
    empty_pde_at p s"
   by (fastforce simp add: empty_pde_at_def)
 
@@ -1318,7 +1318,7 @@ lemma create_mapping_entries_same_refs:
      apply (clarsimp simp: cte_wp_at_caps_of_state diminished_def 
                            mask_cap_def cap_rights_update_def)
      apply (clarsimp split: Structures_A.cap.splits )
-     apply (clarsimp simp: acap_rights_update_def split: ARM_Structs_A.arch_cap.splits)
+     apply (clarsimp simp: acap_rights_update_def split: Arch_Structs_A.arch_cap.splits)
      apply (frule (1) vs_lookup_and_unique_refs)
          apply (simp_all add: table_cap_ref_def obj_refs_def)[4]     
      apply (frule_tac p=pd and p'="Platform.ptrFromPAddr x" in vs_lookup_step)
@@ -1353,7 +1353,7 @@ lemma create_mapping_entries_same_refs:
     apply (clarsimp simp: cte_wp_at_caps_of_state diminished_def 
                           mask_cap_def cap_rights_update_def)
     apply (clarsimp split: Structures_A.cap.splits )
-    apply (clarsimp simp: acap_rights_update_def split: ARM_Structs_A.arch_cap.splits)
+    apply (clarsimp simp: acap_rights_update_def split: Arch_Structs_A.arch_cap.splits)
     apply (frule (1) vs_lookup_and_unique_refs)
         apply (simp_all add: table_cap_ref_def obj_refs_def)[4]     
     apply (frule_tac p=pd and p'="Platform.ptrFromPAddr x" in vs_lookup_step)
@@ -1380,7 +1380,7 @@ lemma create_mapping_entries_same_refs:
    apply (clarsimp simp: cte_wp_at_caps_of_state diminished_def 
                          mask_cap_def cap_rights_update_def)
    apply (clarsimp split: Structures_A.cap.splits )
-   apply (clarsimp simp: acap_rights_update_def split: ARM_Structs_A.arch_cap.splits)
+   apply (clarsimp simp: acap_rights_update_def split: Arch_Structs_A.arch_cap.splits)
    apply (frule (1) vs_lookup_and_unique_refs)
        apply (simp_all add: table_cap_ref_def obj_refs_def)[4]     
    apply (drule (1) ref_is_unique)
@@ -1394,7 +1394,7 @@ lemma create_mapping_entries_same_refs:
    apply (clarsimp simp: cte_wp_at_caps_of_state diminished_def 
                          mask_cap_def cap_rights_update_def)
    apply (clarsimp split: Structures_A.cap.splits )
-   apply (clarsimp simp: acap_rights_update_def split: ARM_Structs_A.arch_cap.splits)
+   apply (clarsimp simp: acap_rights_update_def split: Arch_Structs_A.arch_cap.splits)
    apply (frule (1) vs_lookup_and_unique_refs)
        apply (simp_all add: table_cap_ref_def obj_refs_def)[4]     
    apply (drule (1) ref_is_unique)
@@ -1555,7 +1555,7 @@ lemma arch_decode_inv_wf[wp]:
     apply (clarsimp simp:diminished_def)
     apply (simp add: arch_decode_invocation_def Let_def split_def 
                 cong: if_cong split del: split_if)
-    apply (cases "invocation_type label = ARMPageMap")
+    apply (cases "invocation_type label = ArchInvocationLabel ARMPageMap")
      apply (rename_tac word rights vmpage_size option)
      apply (simp split del: split_if)
      apply (rule hoare_pre)
@@ -1584,7 +1584,7 @@ lemma arch_decode_inv_wf[wp]:
                        elim: is_aligned_weaken split: vmpage_size.split
                      intro!: is_aligned_addrFromPPtr pbfs_atleast_pageBits,
             (fastforce intro: diminished_pd_self)+)[1]
-    apply (cases "invocation_type label = ARMPageRemap")
+    apply (cases "invocation_type label = ArchInvocationLabel ARMPageRemap")
      apply (rename_tac word rights vmpage_size option)
      apply (simp split del: split_if)
      apply (rule hoare_pre)
@@ -1608,7 +1608,7 @@ lemma arch_decode_inv_wf[wp]:
                  elim: is_aligned_weaken 
                intro!: is_aligned_addrFromPPtr pbfs_atleast_pageBits,
             fastforce+)[1]
-    apply (cases "invocation_type label = ARMPageUnmap")
+    apply (cases "invocation_type label = ArchInvocationLabel ARMPageUnmap")
      apply (simp split del: split_if)
      apply (rule hoare_pre, wp)
      apply (clarsimp simp: valid_arch_inv_def valid_page_inv_def)
@@ -1620,7 +1620,7 @@ lemma arch_decode_inv_wf[wp]:
       apply (fastforce simp: vmsz_aligned_def elim: is_aligned_weaken intro!: pbfs_atleast_pageBits)
      apply (erule cte_wp_at_weakenE)
      apply (clarsimp simp: is_arch_diminished_def is_cap_simps)
-    apply (cases "isPageFlush (invocation_type label)")
+    apply (cases "isPageFlushLabel (invocation_type label)")
      apply (simp split del: split_if)
      apply (rule hoare_pre)
       apply (wp whenE_throwError_wp static_imp_wp hoare_drop_imps)
@@ -1628,7 +1628,7 @@ lemma arch_decode_inv_wf[wp]:
         apply (wp find_pd_for_asid_pd_at_asid | wpc)+
      apply (clarsimp simp: valid_cap_def mask_def)
     apply (simp split del: split_if)
-    apply (cases "invocation_type label = ARMPageGetAddress")
+    apply (cases "invocation_type label = ArchInvocationLabel ARMPageGetAddress")
      apply (simp split del: split_if)
      apply (rule hoare_pre, wp)
      apply (clarsimp simp: valid_arch_inv_def valid_page_inv_def)
@@ -1654,7 +1654,7 @@ lemma arch_decode_inv_wf[wp]:
           apply (erule impE)
            apply clarsimp
           apply (erule impE)
-           apply (clarsimp split:ARM_Structs_A.pde.splits)
+           apply (clarsimp split:Arch_Structs_A.pde.splits)
           apply assumption
          apply ((wp whenE_throwError_wp hoare_vcg_all_lift_R
                     find_pd_for_asid_lookup_slot [unfolded lookup_pd_slot_def Let_def]
@@ -1707,7 +1707,7 @@ lemma arch_decode_inv_wf[wp]:
     apply (simp add: kernel_base_def)
    apply (clarsimp simp: cte_wp_at_def is_arch_diminished_def is_cap_simps)
   apply (simp add: arch_decode_invocation_def Let_def  split del: split_if)
-  apply (cases "isPDFlush (invocation_type label)")
+  apply (cases "isPDFlushLabel (invocation_type label)")
    apply (simp split del: split_if)
    apply (rule hoare_pre)
     apply (wp whenE_throwError_wp static_imp_wp hoare_drop_imp | wpc | simp)+

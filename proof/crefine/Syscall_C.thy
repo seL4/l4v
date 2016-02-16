@@ -132,18 +132,18 @@ lemma decodeInvocation_ccorres:
                    \<inter> {s. block_' s = from_bool isBlocking}
                    \<inter> {s. call_' s = from_bool isCall}
                    \<inter> {s. block_' s = from_bool isBlocking}
-                   \<inter> {s. label_' s = label}
-                   \<inter> {s. unat (length_' s) = length args}
+                   \<inter> {s. invLabel_' s = label}
+                   \<inter> {s. unat (length___unsigned_long_' s) = length args}
                    \<inter> {s. capIndex_' s = cptr}
                    \<inter> {s. slot_' s = cte_Ptr slot}
-                   \<inter> {s. extraCaps_' s = extraCaps'}
+                   \<inter> {s. excaps_' s = extraCaps'}
                    \<inter> {s. ccap_relation cp (cap_' s)}
                    \<inter> {s. buffer_' s = option_to_ptr buffer}) []
        (decodeInvocation label args cptr slot cp extraCaps
               >>= invocationCatch thread isBlocking isCall id)
        (Call decodeInvocation_'proc)"
-  apply (cinit' lift: call_' block_' label_' length_'
-                      capIndex_' slot_' extraCaps_' cap_' buffer_')
+  apply (cinit' lift: call_' block_' invLabel_' length___unsigned_long_'
+                      capIndex_' slot_' excaps_' cap_' buffer_')
    apply csymbr
    apply (simp add: cap_get_tag_isCap decodeInvocation_def
               cong: if_cong StateSpace.state.fold_congs
@@ -429,11 +429,11 @@ lemma getMessageInfo_ccorres:
 
 lemma messageInfoFromWord_spec:
   "\<forall>s. \<Gamma> \<turnstile> {s} Call messageInfoFromWord_'proc
-            {s'. message_info_lift (ret__struct_message_info_C_' s')
+            {s'. seL4_MessageInfo_lift (ret__struct_seL4_MessageInfo_C_' s')
                   = mi_from_H (messageInfoFromWord (w_' s))}"
   apply (rule allI, rule conseqPost, rule messageInfoFromWord_spec[rule_format])
    apply simp_all
-  apply (clarsimp simp: message_info_lift_def mi_from_H_def
+  apply (clarsimp simp: seL4_MessageInfo_lift_def mi_from_H_def
                         messageInfoFromWord_def Let_def
                         Types_H.msgLengthBits_def Types_H.msgExtraCapBits_def
                         Types_H.msgMaxExtraCaps_def shiftL_nat)
@@ -511,7 +511,7 @@ lemma thread_state_to_tsType_eq_Restart:
 
 lemma wordFromMessageInfo_spec:
   "\<forall>s. \<Gamma>\<turnstile> {s} Call wordFromMessageInfo_'proc
-      {s'. \<forall>mi. message_info_lift (mi_' s) = mi_from_H mi
+      {s'. \<forall>mi. seL4_MessageInfo_lift (mi_' s) = mi_from_H mi
                    \<longrightarrow> ret__unsigned_long_' s' = wordFromMessageInfo mi}" 
   apply (rule allI, rule conseqPost, rule wordFromMessageInfo_spec2[rule_format])
    prefer 2
@@ -519,7 +519,7 @@ lemma wordFromMessageInfo_spec:
   apply (clarsimp simp: wordFromMessageInfo_def Let_def Types_H.msgExtraCapBits_def
                         Types_H.msgLengthBits_def Types_H.msgMaxExtraCaps_def
                         shiftL_nat)
-  apply (clarsimp simp: mi_from_H_def message_info_lift_def
+  apply (clarsimp simp: mi_from_H_def seL4_MessageInfo_lift_def
                         word_bw_comms word_bw_assocs word_bw_lcs)
   done
 
@@ -779,8 +779,8 @@ lemma invs_queues_imp:
   by clarsimp
 
 (* FIXME: move *)
-lemma msgLength_CL_from_H [simp]:
-  "msgLength_CL (mi_from_H mi) = msgLength mi"
+lemma length_CL_from_H [simp]:
+  "length_CL (mi_from_H mi) = msgLength mi"
   by (simp add: mi_from_H_def)
 
 lemma getMRs_length:
@@ -856,7 +856,7 @@ lemma handleInvocation_ccorres:
                                 ccorres_cond_iffs ts_Restart_case_helper'
                            del: Collect_const cong: bind_cong)
                apply (rule ccorres_rhs_assoc2,
-                      rule_tac xf'="length_'"
+                      rule_tac xf'="length___unsigned_long_'"
                             and r'="\<lambda>rv rv'. unat rv' = length rv"
                             in ccorres_split_nothrow)
                    apply (rule ccorres_add_return2)
@@ -1014,9 +1014,9 @@ lemma handleInvocation_ccorres:
     apply wp
    apply (clarsimp simp: Collect_const_mem)
    apply (simp add: Kernel_C.msgInfoRegister_def State_H.msgInfoRegister_def
-                    ARMMachineTypes.msgInfoRegister_def Kernel_C.R1_def
+                    MachineTypes.msgInfoRegister_def Kernel_C.R1_def
                     Kernel_C.capRegister_def State_H.capRegister_def
-                    ARMMachineTypes.capRegister_def Kernel_C.R0_def)
+                    MachineTypes.capRegister_def Kernel_C.R0_def)
    apply (clarsimp simp: cfault_rel_def option_to_ptr_def)
    apply (simp add: fault_cap_fault_lift is_cap_fault_def)
    apply (frule lookup_failure_rel_fault_lift, assumption)
@@ -1484,7 +1484,7 @@ lemma handleRecv_ccorres:
   apply (clarsimp simp add: sch_act_sane_def)
   apply (simp add: cap_get_tag_isCap[symmetric] del: rf_sr_upd_safe)
   apply (simp add: Kernel_C.capRegister_def State_H.capRegister_def ct_in_state'_def
-                   ARMMachineTypes.capRegister_def Kernel_C.R0_def
+                   MachineTypes.capRegister_def Kernel_C.R0_def
                    tcb_at_invs')
   apply (frule invs_valid_objs')
   apply (frule tcb_aligned'[OF tcb_at_invs'])

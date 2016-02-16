@@ -188,7 +188,7 @@ lemma clas_update_map_data_strg:
   unfolding cap_links_asid_slot_def
   by (fastforce simp: is_cap_simps update_map_data_def)
 
-lemmas pte_ref_simps = pte_ref_def[split_simps ARM_Structs_A.pte.split]
+lemmas pte_ref_simps = pte_ref_def[split_simps Arch_Structs_A.pte.split]
 
 lemmas store_pde_pas_refined_simple
     = store_pde_pas_refined[where pde=InvalidPDE, simplified pde_ref_simps, simplified]
@@ -240,7 +240,7 @@ lemma perform_page_table_invocation_pas_refined [wp]:
   done
 
 definition
-  authorised_slots :: "'a PAS \<Rightarrow> ARM_Structs_A.pte \<times> (obj_ref list) + ARM_Structs_A.pde \<times> (obj_ref list) \<Rightarrow> bool"
+  authorised_slots :: "'a PAS \<Rightarrow> Arch_Structs_A.pte \<times> (obj_ref list) + Arch_Structs_A.pde \<times> (obj_ref list) \<Rightarrow> bool"
 where
  "authorised_slots aag m \<equiv> case m of
     Inl (pte, slots) \<Rightarrow> (\<forall>x. pte_ref pte = Some x \<longrightarrow> (\<forall>a \<in> (snd (snd x)). \<forall>p \<in> ptr_range (fst x) (fst (snd x)).(aag_has_auth_to aag a p)))
@@ -267,7 +267,7 @@ lemma ptrFromPAddr_inj: "inj Platform.ptrFromPAddr"
   by (auto intro: injI simp: Platform.ptrFromPAddr_def)
 
 lemma vs_refs_no_global_pts_pdI:
-  "\<lbrakk>pd (ucast r) = ARM_Structs_A.pde.PageTablePDE x a b;
+  "\<lbrakk>pd (ucast r) = Arch_Structs_A.pde.PageTablePDE x a b;
     ((ucast r)::12 word) < ucast (kernel_base >> 20) \<rbrakk> \<Longrightarrow>
         (Platform.ptrFromPAddr x, VSRef (r && mask 12)
                   (Some APageDirectory), Control)
@@ -315,6 +315,8 @@ lemma lookup_pt_slot_authorised:
   done
 
 lemma is_aligned_6_masks:
+  fixes p :: word32
+  shows
   "\<lbrakk> is_aligned p 6; bits = pt_bits \<or> bits = pd_bits \<rbrakk>
         \<Longrightarrow> \<forall>x \<in> set [0, 4 .e. 0x3C]. x + p && ~~ mask bits = p && ~~ mask bits"
   apply clarsimp
@@ -428,8 +430,8 @@ lemma unmap_page_respects:
                    | wpc
                    | simp add: is_aligned_6_masks is_aligned_mask[symmetric] cleanByVA_PoU_def
                    | wp_once hoare_drop_imps
-                     mapM_set'' [where f = "(\<lambda>a. store_pte a ARM_Structs_A.pte.InvalidPTE)" and I = "\<lambda>x s. is_subject aag (x && ~~ mask pt_bits)" and Q = "integrity aag X st"]
-                     mapM_set'' [where f = "(\<lambda>a. store_pde a ARM_Structs_A.pde.InvalidPDE)" and I = "\<lambda>x s. is_subject aag (x && ~~ mask pd_bits)" and Q = "integrity aag X st"]
+                     mapM_set'' [where f = "(\<lambda>a. store_pte a Arch_Structs_A.pte.InvalidPTE)" and I = "\<lambda>x s. is_subject aag (x && ~~ mask pt_bits)" and Q = "integrity aag X st"]
+                     mapM_set'' [where f = "(\<lambda>a. store_pde a Arch_Structs_A.pde.InvalidPDE)" and I = "\<lambda>x s. is_subject aag (x && ~~ mask pd_bits)" and Q = "integrity aag X st"]
                    | wp_once hoare_drop_imps[where R="\<lambda>rv s. rv"])+
   done
 
@@ -1136,6 +1138,8 @@ lemma decode_arch_invocation_authorised:
    -- "PageCap"
    apply (clarsimp simp: valid_cap_simps cli_no_irqs)
    apply (cases "invocation_type label", simp_all)
+   apply (rename_tac archlabel)
+   apply (case_tac archlabel, simp_all)
      -- "Map"
    apply (clarsimp simp: cap_auth_conferred_def is_cap_simps is_page_cap_def pas_refined_all_auth_is_owns)
      apply (rule conjI)
@@ -1162,11 +1166,13 @@ lemma decode_arch_invocation_authorised:
    apply (simp add: aag_cap_auth_def cli_no_irqs)
    -- "PageTableCap"
    apply (cases "invocation_type label", simp_all)
+   apply (rename_tac archlabel)
+   apply (case_tac archlabel, simp_all)
    -- "PTMap"
    apply (clarsimp simp: aag_cap_auth_def cli_no_irqs cap_links_asid_slot_def cap_auth_conferred_def is_page_cap_def
      pde_ref2_def pas_refined_all_auth_is_owns pas_refined_refl pd_shifting [folded pd_bits_14] )
   -- "Unmap"
-   apply (rename_tac word option)
+   apply (rename_tac word option archlabel)
    apply (clarsimp simp: aag_cap_auth_def cli_no_irqs cap_links_asid_slot_def cap_auth_conferred_def is_page_cap_def
      pde_ref2_def pas_refined_all_auth_is_owns pas_refined_refl  )
    apply (subgoal_tac "x && ~~ mask pt_bits = word")

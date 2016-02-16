@@ -875,8 +875,7 @@ proof
     apply (drule sym_refs_ko_atD')
      apply clarsimp
     apply (cases ep)
-    apply (auto elim!: ko_wp_at'_weakenE [OF _ refs_of_live'])
-    done
+    by (auto elim!: ko_wp_at'_weakenE [OF _ refs_of_live'])
 qed
 
 fun
@@ -1366,10 +1365,9 @@ lemma valid_untyped':
   apply (cut_tac is_aligned_no_overflow[OF al])
   apply (clarsimp simp add: obj_range'_def)
   apply (frule is_aligned_no_overflow)
-  apply (metis al intvl_range_conv' le_m1_iff_lt less_is_non_zero_p1
+  by (metis al intvl_range_conv' le_m1_iff_lt less_is_non_zero_p1
                nat_le_linear power_overflow sub_wrap add_0
                add_0_right word_add_increasing word_less_1 word_less_sub_1)
-  done
 
 lemma hrs_ghost_update_comm:
   "(t_hrs_'_update f \<circ> ghost'state_'_update g) =
@@ -1964,10 +1962,9 @@ lemma deleteObjects_ccorres[corres]:
                     hrs_ghost_update_comm[simplified o_def])
   apply clarsimp
   apply (frule(2) untyped_cap_rf_sr_ptr_bits_domain)
-  apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def
+  by (clarsimp simp: rf_sr_def cstate_relation_def Let_def
                         kernel_data_refs_domain_eq_rotate htd_safe_typ_region_bytes
                         untyped_cap_rf_sr_ptr_bits_domain)
-  done
 
 end  
 end  

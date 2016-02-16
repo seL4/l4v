@@ -40,6 +40,11 @@ struct
  *                trace_word_abs = FUNC_NAMES,
  *                trace_opt,
  *                no_opt,
+ *
+ *                scope = FUNC_NAMES,
+ *                scope_depth = NUM,
+ *                c_locale = "STRING",
+ *
  *                gen_word_heaps,
  *                statistics,
  *                keep_going
@@ -85,9 +90,12 @@ type autocorres_options = {
   (* Create some funky syntax for heap operations. *)
   heap_abs_syntax: bool option ref,
 
-  (* Allow set of functions to translated to be limited. *)
+  (* Only translate a subset of functions. *)
   scope: string list option ref,
   scope_depth: int option ref,
+
+  (* Do the translation in this locale (and use functions in this locale) *)
+  c_locale: string option ref,
 
   (* Store detailed traces for conversions of the selected functions. *)
   trace_heap_lift : string list option ref,
@@ -118,15 +126,9 @@ type autocorres_options = {
 (* Get all that the given function depends on, up to "depth" functions deep. *)
 fun get_function_deps get_callees roots depth =
 let
-  fun get_recursive_callees d root results =
-    if d = 0 orelse Symset.contains results root then
-      Symset.empty
-    else
-      fold (fn n => fn r => Symset.union (get_recursive_callees (d - 1) n r) r)
-          (get_callees root) (Symset.insert root results)
+  fun get_calleess fns = Symset.union_sets (fns :: map (Symset.make o get_callees) (Symset.dest fns))
 in
-  Symset.union_sets (map (fn root =>
-      get_recursive_callees depth root Symset.empty) roots)
+  funpow depth get_calleess (Symset.make roots)
 end
 
 (* Convert the given reference from "NONE" to "SOME x", emitting an
@@ -175,6 +177,11 @@ val scope_parser =
 val scope_depth_parser =
   nat_opt "scope_depth" "integer" >>
   (fn value => none_to_some (#scope_depth) value "autocorres: scope option specified multiple times")
+
+val c_locale_parser =
+  named_option Parse.text "c_locale" "locale name" >>
+  (fn funcs => none_to_some (#c_locale) funcs
+                 "autocorres: c_locale option specified multiple times")
 
 val ts_force_parser =
   ((Parse.reserved "ts_force" |--
@@ -240,22 +247,22 @@ val keep_going_parser =
   (fn _ => none_to_some (#keep_going) true "autocorres: keep_going option specified multiple times")
 
 val lifted_globals_field_prefix_parser =
-  named_option Parse.text "lifted_globals_field_prefix" "function names" >>
+  named_option Parse.text "lifted_globals_field_prefix" "string" >>
   (fn funcs => none_to_some (#lifted_globals_field_prefix) funcs
                  "autocorres: lifted_globals_field_prefix option specified multiple times")
 
 val lifted_globals_field_suffix_parser =
-  named_option Parse.text "lifted_globals_field_suffix" "function names" >>
+  named_option Parse.text "lifted_globals_field_suffix" "string" >>
   (fn funcs => none_to_some (#lifted_globals_field_suffix) funcs
                  "autocorres: lifted_globals_field_suffix option specified multiple times")
 
 val function_name_prefix_parser =
-  named_option Parse.text "function_name_prefix" "function names" >>
+  named_option Parse.text "function_name_prefix" "string" >>
   (fn funcs => none_to_some (#function_name_prefix) funcs
                  "autocorres: function_name_prefix option specified multiple times")
 
 val function_name_suffix_parser =
-  named_option Parse.text "function_name_suffix" "function names" >>
+  named_option Parse.text "function_name_suffix" "string" >>
   (fn funcs => none_to_some (#function_name_suffix) funcs
                  "autocorres: function_name_suffix option specified multiple times")
 
@@ -277,6 +284,7 @@ fun default_opts _ = {
     heap_abs_syntax = ref NONE,
     scope = ref NONE,
     scope_depth = ref NONE,
+    c_locale = ref NONE,
     trace_heap_lift = ref NONE,
     trace_word_abs = ref NONE,
     no_opt = ref NONE,
@@ -305,6 +313,7 @@ let
      heap_abs_syntax_parser ||
      scope_parser ||
      scope_depth_parser ||
+     c_locale_parser ||
      trace_heap_lift_parser ||
      trace_word_abs_parser ||
      no_opt_parser ||
@@ -341,12 +350,16 @@ let
 
   (* Enter into the correct context. *)
   val {base = locale_name,...} = OS.Path.splitBaseExt (OS.Path.file filename)
-  val lthy = Named_Target.begin (locale_name, Position.none) thy
+  val locale_name = case !(#c_locale opt) of NONE => locale_name
+                                           | SOME l => l
+  val lthy = case try (Named_Target.begin (locale_name, Position.none)) thy of
+                 SOME lthy => lthy
+               | NONE => error ("autocorres: no such locale: " ^ locale_name)
 
   (* Fetch basic program information. *)
   val prog_info = ProgramInfo.get_prog_info lthy filename
   val fn_info = FunctionInfo.init_fn_info lthy filename
-  val all_functions = Symset.make (Symtab.keys (FunctionInfo.get_functions fn_info))
+  val all_simpl_functions = Symset.make (Symtab.keys (FunctionInfo.get_functions fn_info))
 
   (* Process autocorres options. *)
   val keep_going = !(#keep_going opt) = SOME true
@@ -363,7 +376,7 @@ let
           else if not (!(#no_heap_abs opt) = NONE) andalso not (!(#skip_heap_abs opt) = NONE) then
               error "autocorres: no_heap_abs and skip_heap_abs cannot be used together."
           else ()
-  val no_heap_abs = if !(#skip_heap_abs opt) = SOME true then Symset.dest all_functions else these (!(#no_heap_abs opt))
+  val no_heap_abs = these (!(#no_heap_abs opt))
 
   (* Disallow referring to functions that don't exist. *)
   val funcs_in_options =
@@ -376,7 +389,7 @@ let
         @ these (!(#trace_heap_lift opt))
         @ these (!(#trace_word_abs opt))
   val invalid_functions =
-        Symset.subtract all_functions (Symset.make funcs_in_options)
+        Symset.subtract all_simpl_functions (Symset.make funcs_in_options)
   val _ =
     if Symset.card invalid_functions > 0 then
       error ("autocorres: no such function(s): " ^ commas (Symset.dest invalid_functions))
@@ -406,23 +419,53 @@ let
 
   (* (Finished processing options.) *)
 
-  (* Strip out functions that shouldn't be processed. *)
-  val fn_info =
+  (* Determine which functions should be translated. *)
+  val all_functions =
     case !(#scope opt) of
-        NONE => fn_info
+        NONE => all_simpl_functions
       | SOME x =>
         let
           val scope_depth = the_default 2 (!(#scope_depth opt))
-          val valid_functions =
-            (get_function_deps (FunctionInfo.get_function_callees fn_info) x scope_depth)
-        in
-          FunctionInfo.map_fn_info (fn def =>
-            if Symset.contains valid_functions (#name def) then SOME def else NONE) fn_info
-          |> (fn fi => (let val fns = FunctionInfo.get_functions fi |> Symtab.dest |> map fst
-                            val _ = @{trace} ("autocorres scope: selected " ^ Int.toString (length fns) ^ " functions:")
-                        in map (fn f => @{trace} f) fns end; fi))
-        end
-  val all_functions = Symset.make (Symtab.keys (FunctionInfo.get_functions fn_info))
+          val funcs = get_function_deps (FunctionInfo.get_function_callees fn_info) x scope_depth
+          val _ = tracing ("autocorres scope: selected " ^ Int.toString (Symset.card funcs) ^ " function(s):")
+          val _ = app (fn f => tracing ("  " ^ f)) (Symset.dest funcs)
+        in funcs end
+
+  (* Mark functions that shouldn't be processed.
+   * We will generate wrappers to call them (L1_call_simpl ... AC_call_simpl). *)
+  val undefined_functions =
+        Symset.filter (fn f => #invented_body (FunctionInfo.get_function_def fn_info f)) all_simpl_functions
+  val all_functions = Symset.union all_functions undefined_functions
+  val untranslated_functions =
+        Symset.subtract (Symset.union all_functions undefined_functions) all_simpl_functions
+
+  val fn_info = FunctionInfo.map_fn_info (fn def =>
+                  SOME (if Symset.contains all_functions (#name def) then def
+                        else FunctionInfo.fn_def_update_is_simpl_wrapper true def)) fn_info
+
+  (* Don't consider function calls in un-translated functions. *)
+  val fn_info = FunctionInfo.set_autocorres_scope fn_info all_functions
+
+  (* Disable heap lifting for all un-translated functions. *)
+  val conflicting_heap_lift_fns =
+      Symset.inter untranslated_functions (Symset.make (these (!(#force_heap_abs opt))))
+  val _ = if not (Symset.is_empty conflicting_heap_lift_fns) then
+            error ("autocorres: Functions marked 'force_heap_abs' but excluded from 'scope': "
+                  ^ commas (Symset.dest conflicting_heap_lift_fns))
+          else
+            ()
+
+  val no_heap_abs = Symset.union (Symset.make no_heap_abs) untranslated_functions
+
+  (* Disable word abstraction for all un-translated functions. *)
+  val unsigned_word_abs = these (!(#unsigned_word_abs opt)) |> Symset.make
+  val no_signed_word_abs = these (!(#no_signed_word_abs opt)) |> Symset.make
+  val conflicting_unsigned_abs_fns =
+        Symset.inter untranslated_functions unsigned_word_abs
+  val _ = if Symset.is_empty conflicting_unsigned_abs_fns then () else
+            error ("autocorres: Functions marked 'unsigned_word_abs' but excluded from 'scope': "
+                   ^ commas (Symset.dest conflicting_unsigned_abs_fns))
+  val no_signed_word_abs = Symset.union no_signed_word_abs untranslated_functions
 
   (*
    * Sanity check the C parser's output.
@@ -493,31 +536,36 @@ let
   (* Do the translation. *)
   val (lthy, fn_info) =
         SimplConv.translate_simpl
-            filename fn_info
+            filename prog_info fn_info
             do_opt trace_opt (prefix "l1_" o make_function_name) lthy
-    |> (fn (lthy, fn_info) =>
-        LocalVarExtract.translate_l2 filename fn_info do_opt trace_opt (prefix "l2_" o make_function_name) lthy)
-    |> (fn (lthy, fn_info) =>
-        HeapLift.system_heap_lift filename fn_info
-            no_heap_abs (these (!(#force_heap_abs opt)))
+
+  val (lthy, fn_info) =
+        LocalVarExtract.translate_l2 filename prog_info fn_info do_opt trace_opt (prefix "l2_" o make_function_name) lthy
+
+  val force_heap_abs = Symset.make (these (!(#force_heap_abs opt)))
+  val (lthy, fn_info) =
+        if !(#skip_heap_abs opt) = SOME true then (lthy, fn_info) else
+        HeapLift.system_heap_lift filename prog_info fn_info
+            no_heap_abs force_heap_abs
             make_lifted_globals_field_name heap_abs_syntax keep_going
             (these (!(#trace_heap_lift opt))) do_opt trace_opt
-            (prefix "hl_" o make_function_name) gen_word_heaps lthy)
-    |> (fn (lthy, fn_info) =>
+            (prefix "hl_" o make_function_name) gen_word_heaps lthy
+
+  val (lthy, fn_info) =
         if skip_word_abs then (lthy, fn_info) else
         WordAbstract.word_abstract
-            filename fn_info (these (!(#unsigned_word_abs opt))) (these (!(#no_signed_word_abs opt)))
+            filename prog_info fn_info
+            unsigned_word_abs no_signed_word_abs
             (these (!(#trace_word_abs opt))) do_opt trace_opt
-            (prefix "wa_" o make_function_name) lthy)
-    |> (fn (lthy, fn_info) =>
+            (prefix "wa_" o make_function_name) lthy
+
+  val (lthy, fn_info) =
         TypeStrengthen.type_strengthen
-            ts_rules ts_force filename fn_info make_function_name
-            keep_going do_opt lthy)
-    |> (fn (lthy, fn_info) =>
-        (lthy, fn_info))
+            ts_rules ts_force filename prog_info fn_info make_function_name
+            keep_going do_opt lthy
 
   (* Save fn_info for future reference. *)
-  val _ = @{trace} "Saving function info to AutoCorresFunctionInfo."
+  val _ = tracing "Saving function info to AutoCorresFunctionInfo."
   val lthy = Local_Theory.background_theory (
 	  AutoCorresFunctionInfo.map (fn tbl =>
 	    Symtab.update (filename, fn_info) tbl)) lthy

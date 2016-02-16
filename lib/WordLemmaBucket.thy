@@ -599,11 +599,10 @@ lemma upto_enum_red2:
   apply (subst word_le_nat_alt, simp)
   done
 
-(* FIXME: WordEnum.upto_enum_step_def is fixed to word32. *)
 lemma upto_enum_step_red:
-  assumes szv: "sz < word_bits"
+  assumes szv: "sz < len_of (TYPE('a))"
   and   usszv: "us \<le> sz"
-  shows "[0 , 2 ^ us .e. 2 ^ sz - 1] =
+  shows "[0 :: 'a :: len word , 2 ^ us .e. 2 ^ sz - 1] =
   map (\<lambda>x. of_nat x * 2 ^ us) [0 ..< 2 ^ (sz - us)]" using szv
   unfolding upto_enum_step_def
   apply (subst if_not_P)
@@ -615,10 +614,9 @@ lemma upto_enum_step_red:
   apply simp
   apply (subst upto_enum_red)
   apply (simp del: upt.simps)
-  apply (subst Suc_div_unat_helper [where 'a = 32, folded word_bits_def, OF szv usszv, symmetric])
+  apply (subst Suc_div_unat_helper [where 'a = 'a, folded word_bits_def, OF szv usszv, symmetric])
   apply clarsimp
   apply (subst toEnum_of_nat)
-   apply (subst word_bits_len_of)
    apply (erule order_less_trans)
    using szv
    apply simp
@@ -1919,7 +1917,7 @@ qed
 lemma distinct_prop_enum:
   "\<lbrakk> \<And>x y. \<lbrakk> x \<le> stop; y \<le> stop; x \<noteq> y \<rbrakk>
              \<Longrightarrow> P x y \<rbrakk>
-     \<Longrightarrow> distinct_prop P [(0 :: word32) .e. stop]"
+     \<Longrightarrow> distinct_prop P [0 :: 'a :: len word .e. stop]"
   apply (simp add: upto_enum_def distinct_prop_map
               del: upt.simps)
   apply (rule distinct_prop_distinct)
@@ -2146,8 +2144,8 @@ lemma upto_enum_step_shift:
   done
 
 lemma upto_enum_step_shift_red:
-  "\<lbrakk> is_aligned p sz; sz < word_bits; us \<le> sz \<rbrakk>
-     \<Longrightarrow> [p, p + 2 ^ us .e. p + 2 ^ sz - 1]
+  "\<lbrakk> is_aligned p sz; sz < len_of (TYPE('a)); us \<le> sz \<rbrakk>
+     \<Longrightarrow> [p :: 'a :: len word, p + 2 ^ us .e. p + 2 ^ sz - 1]
           = map (\<lambda>x. p + of_nat x * 2 ^ us) [0 ..< 2 ^ (sz - us)]"
   apply (subst upto_enum_step_shift, assumption)
   apply (simp add: upto_enum_step_red)

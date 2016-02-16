@@ -1515,21 +1515,21 @@ lemma fastpath_mi_check:
   "((mi && mask 9) + 3) && ~~ mask 3 = 0
       = (msgExtraCaps (messageInfoFromWord mi) = 0
             \<and> msgLength (messageInfoFromWord mi) \<le> scast n_msgRegisters
-            \<and> msgLength_CL (message_info_lift (message_info_C (FCP (K mi))))
+            \<and> length_CL (seL4_MessageInfo_lift (seL4_MessageInfo_C (FCP (K mi))))
                   \<le> scast n_msgRegisters)"
   (is "?P = (?Q \<and> ?R \<and> ?S)")
 proof -
   have le_Q: "?P = (?Q \<and> ?S)"
     apply (simp add: mask_def messageInfoFromWord_def Let_def
                      msgExtraCapBits_def msgLengthBits_def
-                     message_info_lift_def fcp_beta n_msgRegisters_def)
+                     seL4_MessageInfo_lift_def fcp_beta n_msgRegisters_def)
     apply word_bitwise
     apply blast
     done
   have Q_R: "?S \<Longrightarrow> ?R"
     apply (clarsimp simp: messageInfoFromWord_def Let_def msgLengthBits_def
                           msgExtraCapBits_def mask_def n_msgRegisters_def
-                          message_info_lift_def fcp_beta)
+                          seL4_MessageInfo_lift_def fcp_beta)
     apply (subst if_not_P, simp_all)
     apply (simp add: msgMaxLength_def linorder_not_less)
     apply (erule order_trans, simp)
@@ -1540,8 +1540,8 @@ qed
 
 lemma messageInfoFromWord_raw_spec:
   "\<forall>s. \<Gamma>\<turnstile> {s} Call messageInfoFromWord_raw_'proc
-       \<lbrace>\<acute>ret__struct_message_info_C
-    = (message_info_C (FCP (K \<^bsup>s\<^esup>w)))\<rbrace>"
+       \<lbrace>\<acute>ret__struct_seL4_MessageInfo_C
+    = (seL4_MessageInfo_C (FCP (K \<^bsup>s\<^esup>w)))\<rbrace>"
   apply vcg
   apply (clarsimp simp: word_sless_def word_sle_def)
   apply (case_tac v)
@@ -1549,12 +1549,12 @@ lemma messageInfoFromWord_raw_spec:
   done
 
 lemma mi_check_messageInfo_raw:
-  "msgLength_CL (message_info_lift (message_info_C (FCP (K mi))))
+  "length_CL (seL4_MessageInfo_lift (seL4_MessageInfo_C (FCP (K mi))))
                   \<le> scast n_msgRegisters
-    \<Longrightarrow> message_info_lift (message_info_C (FCP (K mi)))
+    \<Longrightarrow> seL4_MessageInfo_lift (seL4_MessageInfo_C (FCP (K mi)))
         = mi_from_H (messageInfoFromWord mi)"
   apply (simp add: messageInfoFromWord_def Let_def mi_from_H_def
-                   message_info_lift_def fcp_beta msgLengthBits_def msgExtraCapBits_def
+                   seL4_MessageInfo_lift_def fcp_beta msgLengthBits_def msgExtraCapBits_def
                    msgMaxExtraCaps_def shiftL_nat)
   apply (subst if_not_P)
    apply (simp add: linorder_not_less msgMaxLength_def n_msgRegisters_def)
@@ -1568,7 +1568,7 @@ lemma fastpath_mi_check_spec:
   "\<forall>s. \<Gamma> \<turnstile> \<lbrace>s. True\<rbrace> Call fastpath_mi_check_'proc
            \<lbrace>(\<acute>ret__int = 0) = (msgExtraCaps (messageInfoFromWord \<^bsup>s\<^esup>msgInfo) = 0
               \<and> msgLength (messageInfoFromWord \<^bsup>s\<^esup>msgInfo) \<le> scast n_msgRegisters
-              \<and> message_info_lift (message_info_C (FCP (K \<^bsup>s\<^esup>msgInfo)))
+              \<and> seL4_MessageInfo_lift (seL4_MessageInfo_C (FCP (K \<^bsup>s\<^esup>msgInfo)))
                   = mi_from_H (messageInfoFromWord \<^bsup>s\<^esup>msgInfo))\<rbrace>"
   apply (rule allI, rule conseqPre, vcg)
   apply (clarsimp simp: seL4_MsgLengthBits_def seL4_MsgExtraCapBits_def
@@ -2102,7 +2102,7 @@ lemma fastpath_copy_mrs_ccorres:
 notes min_simps [simp del]
 shows
   "ccorres dc xfdc (\<top> and (\<lambda>_. ln <= length State_H.msgRegisters))
-     (UNIV \<inter> {s. unat (length_' s) = ln}
+     (UNIV \<inter> {s. unat (length___unsigned_long_' s) = ln}
            \<inter> {s. src_' s = tcb_ptr_to_ctcb_ptr src}
            \<inter> {s. dest_' s = tcb_ptr_to_ctcb_ptr dest}) []
      (forM_x (take ln State_H.msgRegisters)
@@ -2110,7 +2110,7 @@ shows
                     asUser dest (setRegister r v) od))
      (Call fastpath_copy_mrs_'proc)"
   apply (rule ccorres_gen_asm)
-  apply (cinit' lift: length_' src_' dest_' simp: word_sle_def word_sless_def)
+  apply (cinit' lift: length___unsigned_long_' src_' dest_' simp: word_sle_def word_sless_def)
    apply (unfold whileAnno_def)
    apply (rule ccorres_rel_imp)
     apply (rule_tac F="K \<top>" in ccorres_mapM_x_while)
@@ -3651,7 +3651,7 @@ qed
 
 end
 
-datatype tcb_state_regs = TCBStateRegs "thread_state" "ARMMachineTypes.register \<Rightarrow> machine_word"
+datatype tcb_state_regs = TCBStateRegs "thread_state" "MachineTypes.register \<Rightarrow> machine_word"
 
 definition
  "tsrContext tsr \<equiv> case tsr of TCBStateRegs ts regs \<Rightarrow> regs"
@@ -4524,8 +4524,7 @@ lemma oblivious_getObject_ksPSpace_cte[simp]:
              cong: Structures_H.kernel_object.case_cong)
   apply (intro oblivious_bind,
          simp_all split: Structures_H.kernel_object.split split_if)
-  apply (safe intro!: oblivious_bind, simp_all)
-  done
+  by (safe intro!: oblivious_bind, simp_all)
 
 lemma oblivious_doMachineOp[simp]:
   "\<lbrakk> \<forall>s. ksMachineState (f s) = ksMachineState s;
@@ -4542,7 +4541,7 @@ lemma oblivious_setVMRoot_schact:
   "oblivious (ksSchedulerAction_update f) (setVMRoot t)"
   apply (simp add: setVMRoot_def getThreadVSpaceRoot_def locateSlot_conv
                    getSlotCap_def getCTE_def armv_contextSwitch_def)
-  apply (safe intro!: oblivious_bind oblivious_bindE oblivious_catch
+  by (safe intro!: oblivious_bind oblivious_bindE oblivious_catch
              | simp_all add: liftE_def getHWASID_def
                              findPDForASID_def liftME_def loadHWASID_def
                              findPDForASIDAssert_def checkPDAt_def
@@ -4552,7 +4551,6 @@ lemma oblivious_setVMRoot_schact:
                              invalidateHWASIDEntry_def storeHWASID_def
                              checkPDNotInASIDMap_def armv_contextSwitch_def
                       split: capability.split arch_capability.split option.split)+
-  done
 
 lemma oblivious_switchToThread_schact:
   "oblivious (ksSchedulerAction_update f) (ThreadDecls_H.switchToThread t)"
@@ -4562,9 +4560,8 @@ lemma oblivious_switchToThread_schact:
                    getQueue_def setQueue_def storeWordUser_def
                    pointerInUserData_def isRunnable_def isBlocked_def
                    getThreadState_def tcbSchedDequeue_def bitmap_fun_defs)
-  apply (safe intro!: oblivious_bind
+  by (safe intro!: oblivious_bind
               | simp_all add: oblivious_setVMRoot_schact)+
-  done
 
 lemma schedule_rewrite:
   notes hoare_TrueI[simp]
@@ -5413,8 +5410,8 @@ lemma fastpath_callKernel_SysCall_corres:
                   apply (clarsimp split: split_if)
                   apply (rule ext)
                   apply (simp add: badgeRegister_def msgInfoRegister_def
-                                   ARMMachineTypes.badgeRegister_def
-                                   ARMMachineTypes.msgInfoRegister_def
+                                   MachineTypes.badgeRegister_def
+                                   MachineTypes.msgInfoRegister_def
                             split: split_if)
                  apply simp
                 apply (wp | simp cong: if_cong bool.case_cong
@@ -6339,8 +6336,8 @@ lemma fastpath_callKernel_SysReplyRecv_corres:
                       apply (clarsimp split: split_if)
                       apply (rule ext)
                       apply (simp add: badgeRegister_def msgInfoRegister_def
-                                       ARMMachineTypes.msgInfoRegister_def
-                                       ARMMachineTypes.badgeRegister_def
+                                       MachineTypes.msgInfoRegister_def
+                                       MachineTypes.badgeRegister_def
                                 split: split_if)
                      apply simp
                     apply (clarsimp simp: cte_wp_at_ctes_of isCap_simps

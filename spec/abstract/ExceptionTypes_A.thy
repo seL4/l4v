@@ -34,7 +34,7 @@ datatype lookup_failure
      | GuardMismatch nat "bool list"
 
 datatype fault
-         = CapFault word32 bool lookup_failure
+         = CapFault obj_ref bool lookup_failure
          | VMFault data "data list"
          | UnknownSyscallException data
          | UserException data data

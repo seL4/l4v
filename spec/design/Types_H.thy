@@ -16,9 +16,9 @@ chapter "Types visible in the API"
 
 theory Types_H
 imports
-  State_H
+  "./$L4V_ARCH/State_H"
   "../../lib/Lib"
-  ArchTypes_H
+  "./$L4V_ARCH/ArchTypes_H"
 begin
 
 type_synonym object_type = "ArchTypes_H.object_type"

@@ -32,7 +32,7 @@ where
   "invoke_irq_control (IRQControl irq handler_slot control_slot) = 
      liftE (do set_irq_state IRQSignal irq;
                cap_insert (IRQHandlerCap irq) control_slot handler_slot od)"
-| "invoke_irq_control (InterruptControl invok) =
+| "invoke_irq_control (ArchIRQControl invok) =
      arch_invoke_irq_control invok"
 
 text {* The IRQHandler capability may be used to configure how interrupts on an
@@ -53,7 +53,6 @@ where
      irq_slot \<leftarrow> get_irq_slot irq;
      cap_delete_one irq_slot
    od)"
-| "invoke_irq_handler (SetMode irq trig pol) = (do_machine_op $ setInterruptMode irq trig pol)"
 
 text {* Handle an interrupt occurence. Timing and scheduling details are not
 included in this model, so no scheduling action needs to be taken on timer

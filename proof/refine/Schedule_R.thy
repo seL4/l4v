@@ -202,7 +202,7 @@ lemma st_tcb_at_coerce_abstract:
   apply (clarsimp simp: st_tcb_at_def obj_at_def other_obj_relation_def
                         tcb_relation_def
                  split: Structures_A.kernel_object.split_asm
-                        ARM_Structs_A.arch_kernel_obj.split_asm)
+                        Arch_Structs_A.arch_kernel_obj.split_asm)
   apply fastforce
   done
 
@@ -2604,11 +2604,10 @@ lemma schedule_corres:
      apply (simp add:valid_sched_def)
     apply (simp add:valid_sched_def)
    apply simp
-  apply (fastforce simp: invs'_def cur_tcb'_def valid_state'_def st_tcb_at'_def
+  by (fastforce simp: invs'_def cur_tcb'_def valid_state'_def st_tcb_at'_def
                          sch_act_wf_def  valid_pspace'_def valid_objs'_maxDomain
                          valid_objs'_maxPriority comp_def
                    split: scheduler_action.splits)
-  done
 
 lemma ssa_all_invs_but_ct_not_inQ':
   "\<lbrace>all_invs_but_ct_not_inQ' and sch_act_wf sa and 

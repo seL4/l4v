@@ -15,6 +15,7 @@ Monitors the peak memory usage of a process and its children. Usage is similar
 to the UNIX `time` utility.
 '''
 
+from __future__ import print_function
 import subprocess, sys, threading, time
 
 PSUTIL_NOT_AVAILABLE=False
@@ -124,8 +125,8 @@ def process_poller(pid):
 
 def main():
     if len(sys.argv) <= 1 or sys.argv[1] in ['-?', '--help']:
-        print >>sys.stderr, 'Usage: %s command args...\n Measure peak memory ' \
-            'usage of a command' % sys.argv[0]
+        print('Usage: %s command args...\n Measure peak memory ' \
+            'usage of a command' % sys.argv[0], out=sys.stderr)
         return -1
 
     if PSUTIL_NOT_AVAILABLE:
@@ -140,7 +141,7 @@ def main():
     try:
         p = subprocess.Popen(sys.argv[1:])
     except OSError:
-        print >>sys.stderr, 'command not found'
+        print('command not found', out=sys.stderr)
         return -1
 
     high = 0
@@ -152,7 +153,7 @@ def main():
         # The user Ctrl-C-ed us. Fake an error return code.
         p.returncode = -1
 
-    print >>sys.stderr, 'Peak usage %d bytes' % high
+    print('Peak usage %d bytes' % high, out=sys.stderr)
 
     return p.returncode
 

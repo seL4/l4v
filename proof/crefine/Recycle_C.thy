@@ -236,7 +236,7 @@ lemma clearMemory_PageCap_ccorres:
        apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def cpspace_relation_def)
        apply (erule cmap_relationE1, simp(no_asm) add: heap_to_page_data_def Let_def)
         apply fastforce
-       apply (simp add: pageBits_def typ_heap_simps)
+       subgoal by (simp add: pageBits_def typ_heap_simps)
       apply (clarsimp simp: rf_sr_def cstate_relation_def Let_def)
       apply (clarsimp simp: cpspace_relation_def typ_heap_simps
                             clift_foldl_hrs_mem_update foldl_id
@@ -244,7 +244,7 @@ lemma clearMemory_PageCap_ccorres:
                             cmachine_state_relation_def
                             foldl_fun_upd_const[unfolded fun_upd_def])
       apply (subst help_force_intvl_range_conv, assumption)
-        apply (simp add: pageBitsForSize_def split: vmpage_size.split)
+        subgoal by (simp add: pageBitsForSize_def split: vmpage_size.split)
        apply assumption
       apply (subst heap_to_page_data_update_region)
        apply (drule map_to_user_data_aligned, clarsimp)
@@ -281,14 +281,14 @@ lemma clearMemory_PageCap_ccorres:
                simp_all add: word_bits_def)[1]
          apply (insert pageBitsForSize_32 [of sz])[1]
          apply (erule order_le_less_trans [rotated])        
-         apply simp        
-        apply (simp add: pageBits_def shiftl_t2n field_simps)
+         subgoal by simp        
+        subgoal by (simp add: pageBits_def shiftl_t2n field_simps)
        apply clarsimp
        apply (drule_tac x="of_nat n" in spec)
        apply (simp add: of_nat_power[where 'a=32, folded word_bits_def])
        apply (rule exI)
-       apply (simp add: pageBits_def ko_at_projectKO_opt[OF user_data_at_ko])
-      apply simp
+       subgoal by (simp add: pageBits_def ko_at_projectKO_opt[OF user_data_at_ko])
+      subgoal by simp
      apply csymbr
      apply (ctac add: cleanCacheRange_PoU_ccorres[unfolded dc_def])
     apply wp
@@ -297,13 +297,12 @@ lemma clearMemory_PageCap_ccorres:
   apply (clarsimp simp: word_bits_def valid_cap'_def
                         capAligned_def word_of_nat_less)
   apply (frule is_aligned_addrFromPPtr_n, simp add: pageBitsForSize_def split: vmpage_size.splits)
-  apply (clarsimp simp: is_aligned_no_overflow'[where n=12, simplified]
+  by (clarsimp simp: is_aligned_no_overflow'[where n=12, simplified]
                         is_aligned_no_overflow'[where n=16, simplified]
                         is_aligned_no_overflow'[where n=20, simplified]
                         is_aligned_no_overflow'[where n=24, simplified] pageBits_def
                         field_simps is_aligned_mask[symmetric] mask_AND_less_0
                         pageBitsForSize_def split: vmpage_size.splits)
-  done
 
 lemma coerce_memset_to_heap_update_asidpool:
   "heap_update_list x (replicateHider 4096 0)
@@ -625,13 +624,12 @@ lemma resetMemMapping_spec:
       asidInvalid_def)[7]
   apply (clarsimp split: capability.splits cap_CL.splits option.splits)
   apply (rename_tac arch_capability)
-  apply (case_tac arch_capability,
+  by (case_tac arch_capability,
         auto simp: resetMemMapping_def cap_to_H_def
         cap_small_frame_cap_lift_def cap_frame_cap_lift_def
         cap_page_table_cap_lift_def cap_page_directory_cap_lift_def
         cap_lift_def cap_tag_values Let_def
         split: cap_CL.splits split_if_asm)
-  done
 
 lemma ccorres_return_C_seq:
   "\<lbrakk>\<And>s f. xf (global_exn_var_'_update f (xfu (\<lambda>_. v s) s)) = v s; \<And>s f. globals (xfu f s) = globals s; wfhandlers hs\<rbrakk>
@@ -660,8 +658,7 @@ lemma arch_recycleCap_ccorres_helper:
     apply csymbr -- "C reset mem mapping"
     apply (rule ccorres_return_C_seq, simp_all)[1]
    apply wp
-  apply (clarsimp elim!: ccap_relationE simp: option_map_Some_eq2 ccap_relation_def)
-  done
+  by (clarsimp elim!: ccap_relationE simp: option_map_Some_eq2 ccap_relation_def)
 
 lemma arch_recycleCap_ccorres_helper':
   notes Collect_const [simp del]
@@ -690,8 +687,7 @@ lemma arch_recycleCap_ccorres_helper':
   apply (rule ccorres_return_C_seq, simp_all)[1]
    apply vcg
   apply wp
-  apply (clarsimp simp: from_bool_0 ccap_relation_def option_map_Some_eq2)
-  done
+  by (clarsimp simp: from_bool_0 ccap_relation_def option_map_Some_eq2)
 
 lemma arch_recycleCap_ccorres:
   notes Collect_const [simp del]
@@ -830,9 +826,9 @@ lemma arch_recycleCap_ccorres:
         apply (simp add: cpspace_relation_def typ_heap_simps update_pde_map_tos
                          update_pde_map_to_pdes carray_map_relation_upd_triv)
         apply (rule cmap_relation_updI, simp_all)[1]
-        apply (simp add: cpde_relation_def Let_def pde_lift_def
+        subgoal by (simp add: cpde_relation_def Let_def pde_lift_def
                          fcp_beta pde_get_tag_def pde_tag_defs)
-       apply (simp add: carch_state_relation_def cmachine_state_relation_def
+       subgoal by (simp add: carch_state_relation_def cmachine_state_relation_def
                         typ_heap_simps pde_stored_asid_update_valid_offset
                         update_pde_map_tos)
       apply csymbr
@@ -966,7 +962,7 @@ lemma arch_recycleCap_ccorres:
              apply (subst fcp_beta)
               apply (simp add: asid_low_bits_def, unat_arith)
              apply simp
-            apply (simp add: carch_state_relation_def cmachine_state_relation_def
+            subgoal by (simp add: carch_state_relation_def cmachine_state_relation_def
                              typ_heap_simps)
            apply (rule ccorres_from_vcg[where P=\<top> and P'=UNIV])
            apply (rule allI, rule conseqPre, vcg)
@@ -989,9 +985,9 @@ lemma arch_recycleCap_ccorres:
             apply (simp add: mask_def asid_bits_def
                              word_and_le1)
            apply (erule array_relation_update[unfolded fun_upd_def])
-             apply simp
-            apply (simp add: option_to_ptr_def option_to_0_def)
-           apply (simp add: asid_high_bits_def)
+             subgoal by simp
+            subgoal by (simp add: option_to_ptr_def option_to_0_def)
+           subgoal by (simp add: asid_high_bits_def)
           apply wp
          apply (simp add: guard_is_UNIV_def)
         apply (wp typ_at_lifts [OF deleteASIDPool_typ_at'])
@@ -1066,8 +1062,7 @@ lemma arch_recycleCap_ccorres:
                         mask_def[where n=asid_bits]
                         valid_arch_state'_def page_directory_at'_def
                  elim!: ccap_relationE cong: conj_cong split: split_if_asm)
-   apply (auto simp: page_directory_at'_def dest!: spec[where x=0])[2]
-  done
+   by (auto simp: page_directory_at'_def dest!: spec[where x=0])[2]
 
 lemma ccap_relation_get_capZombiePtr_CL:
   "\<lbrakk> ccap_relation cap cap'; isZombie cap; capAligned cap \<rbrakk>
@@ -1301,7 +1296,7 @@ lemma cancelBadgedSends_ccorres:
           apply (erule ko_at_projectKO_opt)
          apply (clarsimp simp: typ_heap_simps setEndpoint_def)
          apply (rule rev_bexI)
-          apply (rule setObject_eq, simp_all add: objBits_simps)[1]
+          apply (rule setObject_eq; simp add: objBits_simps)[1]
          apply (clarsimp simp: rf_sr_def cstate_relation_def
                                Let_def carch_state_relation_def
                                cmachine_state_relation_def
@@ -1310,7 +1305,7 @@ lemma cancelBadgedSends_ccorres:
                                update_ep_map_tos)
          apply (erule(1) cpspace_relation_ep_update_ep2)
           apply (simp add: cendpoint_relation_def endpoint_state_defs)
-         apply simp
+         subgoal by simp
         apply (rule ccorres_symb_exec_r)
           apply (rule_tac xs=list in filterM_voodoo)
           apply (rule_tac P="\<lambda>xs s. (\<forall>x \<in> set xs \<union> set list.
@@ -1348,8 +1343,8 @@ lemma cancelBadgedSends_ccorres:
                  cpspace_relation_def
                  update_ep_map_tos)
                apply (erule(1) cpspace_relation_ep_update_ep2)
-                apply (simp add: cendpoint_relation_def Let_def)
-               apply simp
+                subgoal by (simp add: cendpoint_relation_def Let_def)
+               subgoal by simp
               apply (clarsimp simp: tcb_at_not_NULL[OF pred_tcb_at']
                                     setEndpoint_def)
               apply (rule rev_bexI, rule setObject_eq,
@@ -1363,9 +1358,9 @@ lemma cancelBadgedSends_ccorres:
                apply (simp add: cendpoint_relation_def Let_def)
                apply (subgoal_tac "tcb_at' (last (a # list)) \<sigma> \<and> tcb_at' a \<sigma>")
                 apply (clarsimp simp: is_aligned_neg_mask [OF is_aligned_tcb_ptr_to_ctcb_ptr[where P=\<top>]])
-                apply (simp add: tcb_queue_relation'_def EPState_Send_def mask_def)
-               apply (auto split: split_if)[1]
-              apply simp
+                subgoal by (simp add: tcb_queue_relation'_def EPState_Send_def mask_def)
+               subgoal by (auto split: split_if)
+              subgoal by simp
              apply (ctac add: rescheduleRequired_ccorres[unfolded dc_def])
             apply (rule hoare_pre, wp weak_sch_act_wf_lift_linear set_ep_valid_objs')
             apply (clarsimp simp: weak_sch_act_wf_def sch_act_wf_def)
@@ -1397,7 +1392,7 @@ lemma cancelBadgedSends_ccorres:
                apply (clarsimp simp: tcb_queue_relation'_def use_tcb_queue_relation2
                                      tcb_queue_relation2_concat)
                apply (clarsimp simp: typ_heap_simps split: list.split)
-              apply (simp add: rf_sr_def)
+              subgoal by (simp add: rf_sr_def)
              apply simp
             apply ceqv
            apply (rule_tac P="b=blockingIPCBadge rva" in ccorres_gen_asm2)
@@ -1422,13 +1417,16 @@ lemma cancelBadgedSends_ccorres:
                    apply (clarsimp simp: ball_Un)
                    apply (rule exI, rule conjI)
                     apply (rule exI, erule conjI)
-                    apply (intro conjI[rotated], assumption, (fastforce intro: pred_tcb_at') +)[1]
+                    apply (intro conjI[rotated]) 
+                    apply (assumption)
+                    apply (fold_subgoals (prefix))[3]
+                    subgoal premises prems using prems by (fastforce intro: pred_tcb_at')+
                    apply (clarsimp simp: return_def rf_sr_def cstate_relation_def Let_def)
                    apply (rule conjI)
                     apply (clarsimp simp: cpspace_relation_def)
                     apply (rule conjI, erule ctcb_relation_null_queue_ptrs)
                      apply (rule null_ep_queue)
-                     apply (simp add: o_def)
+                     subgoal by (simp add: o_def)
                     apply (rule conjI)
                      apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
                      apply clarsimp
@@ -1439,7 +1437,7 @@ lemma cancelBadgedSends_ccorres:
                      apply (drule ko_at_state_refs_ofD')
                      apply clarsimp
                      apply (drule_tac x=p in spec)
-                     apply fastforce
+                     subgoal by fastforce
                     apply (erule iffD1 [OF cmap_relation_cong, OF refl refl, rotated -1])
                     apply clarsimp
                     apply (drule(2) map_to_ko_atI2, drule ko_at_state_refs_ofD')
@@ -1448,7 +1446,7 @@ lemma cancelBadgedSends_ccorres:
                     apply (rule sym, erule restrict_map_eqI)
                     apply (clarsimp simp: image_iff)
                     apply (drule_tac x=p in spec)
-                    apply fastforce
+                    subgoal by fastforce
                    apply (rule conjI)
                     apply (erule cready_queues_relation_not_queue_ptrs,
                            auto dest: null_ep_schedD[unfolded o_def] simp: o_def)[1]
@@ -1478,7 +1476,7 @@ lemma cancelBadgedSends_ccorres:
           apply (clarsimp simp: pred_tcb_at' ball_Un)
           apply (rule conjI)
            apply (clarsimp split: split_if)
-           apply (fastforce simp: valid_tcb_state'_def valid_objs'_maxDomain
+           subgoal by (fastforce simp: valid_tcb_state'_def valid_objs'_maxDomain
                                   valid_objs'_maxPriority dest: pred_tcb_at')
           apply (clarsimp simp: tcb_at_not_NULL [OF pred_tcb_at'])
           apply (clarsimp simp: typ_heap_simps st_tcb_at'_def)
@@ -1493,22 +1491,22 @@ lemma cancelBadgedSends_ccorres:
            apply (rename_tac word)
            apply (frule_tac x=word in tcbSchedEnqueue_cslift_precond_discharge)
               apply simp
-             apply clarsimp
-            apply clarsimp
-           apply clarsimp
+             subgoal by clarsimp
+            subgoal by clarsimp
+           subgoal by clarsimp
           apply clarsimp
           apply (rule conjI)
            apply (frule(3) tcbSchedEnqueue_cslift_precond_discharge)
-           apply clarsimp
+           subgoal by clarsimp
           apply clarsimp
           apply (rule context_conjI)
            apply (clarsimp simp: tcb_queue_relation'_def)
            apply (erule iffD2[OF ep_queue_relation_shift[rule_format], rotated -1])
-           apply simp
+           subgoal by simp
           apply (rule_tac x="x @ a # lista" in exI)
           apply (clarsimp simp: ball_Un)
           apply (rule conjI, fastforce)
-          apply (clarsimp simp: remove1_append)
+          subgoal by (clarsimp simp: remove1_append)
          apply vcg
         apply (rule conseqPre, vcg)
         apply clarsimp
@@ -1524,7 +1522,7 @@ lemma cancelBadgedSends_ccorres:
    apply (erule cmap_relationE1[OF cmap_relation_ep], erule ko_at_projectKO_opt)
    apply (clarsimp simp: typ_heap_simps)
    apply (clarsimp simp: cendpoint_relation_def Let_def)
-   apply (clarsimp simp: tcb_queue_relation'_def neq_Nil_conv
+   subgoal by (clarsimp simp: tcb_queue_relation'_def neq_Nil_conv
                   split: split_if_asm)
   apply clarsimp
   apply (frule ko_at_valid_objs', clarsimp)
@@ -1533,14 +1531,13 @@ lemma cancelBadgedSends_ccorres:
   apply (frule sym_refs_ko_atD', clarsimp)
   apply (clarsimp simp: st_tcb_at_refs_of_rev')
   apply (rule conjI)
-   apply (auto simp: isBlockedOnSend_def elim!: pred_tcb'_weakenE)[1]
+   subgoal by (auto simp: isBlockedOnSend_def elim!: pred_tcb'_weakenE)
   apply (rule conjI)
    apply (clarsimp split: split_if)
    apply (drule sym_refsD, clarsimp)
    apply (drule(1) bspec)+
-   apply (auto simp: obj_at'_def projectKOs state_refs_of'_def pred_tcb_at'_def tcb_bound_refs'_def 
+   by (auto simp: obj_at'_def projectKOs state_refs_of'_def pred_tcb_at'_def tcb_bound_refs'_def 
               dest!: symreftype_inverse')
-  done
 
 
 lemma tcb_ptr_to_ctcb_ptr_force_fold:
@@ -1660,15 +1657,15 @@ lemma recycleCap_ccorres':
           apply (rule conjI)
            apply (simp add: size_of_def)
            apply (drule is_aligned_no_wrap'[OF is_aligned_tcb_ptr_to_ctcb_ptr, where off="0x8B"])
-            apply simp
+            subgoal by simp
            apply (simp add: field_simps tcb_ptr_to_ctcb_ptr_def ctcb_offset_def)
 
           apply (rule conjI)
            apply (erule aligned_add_aligned)
              apply (clarsimp simp: is_aligned_def)
-            apply simp
+            subgoal by simp
           apply (rule conjI)
-           apply (clarsimp simp: is_aligned_def size_of_def)
+           subgoal by (clarsimp simp: is_aligned_def size_of_def)
           apply (clarsimp simp: typ_heap_simps' CPSR_def)
           apply (simp add: word_of_nat[symmetric] word_unat.Abs_inverse
                            unats_def max_size[simplified addr_card, simplified]
@@ -1680,7 +1677,7 @@ lemma recycleCap_ccorres':
                       cong: if_weak_cong)+) (*
              apply (clarsimp split: Structures_H.thread_state.split_asm)
             apply simp *)
-           apply (rule ball_tcb_cte_casesI, simp_all)[1]
+           subgoal by (rule ball_tcb_cte_casesI, simp_all)
           apply (clarsimp simp: ctcb_relation_def makeObject_tcb minBound_word
                                 fault_lift_null_fault fault_null_fault_def
                                 fault_get_tag_def fcp_beta cfault_rel_def
@@ -1691,7 +1688,7 @@ lemma recycleCap_ccorres':
                                 newContext_def2 option_to_ptr_def option_to_0_def
                                 rf_sr_ksCurDomain)
           apply (clarsimp simp add: timeSlice_def is_cap_fault_def)
-          apply (case_tac r, simp_all add: "StrictC'_register_defs")[1]
+          subgoal for \<dots> r by (cases r, simp_all add: "StrictC'_register_defs")
          apply csymbr
          apply (rule ccorres_return_C, simp+)[1]
         apply wp
@@ -1706,11 +1703,11 @@ lemma recycleCap_ccorres':
                              isZombieTCB_C_def ZombieTCB_C_def)
        apply (rule sym, rule is_aligned_neg_mask)
         apply (erule aligned_add_aligned[where m=8], simp_all)[1]
-        apply (simp add: is_aligned_def)
-       apply simp
+        subgoal by (simp add: is_aligned_def)
+       subgoal by simp
       apply vcg
      apply (rule conseqPre, vcg)
-     apply clarsimp
+     subgoal by clarsimp
     apply (simp add: isZombieTCB_C_def ZombieTCB_C_def
                      Let_def
                 del: Collect_const)
@@ -1754,7 +1751,7 @@ lemma recycleCap_ccorres':
   apply (simp add: ccap_zombie_radix_less4 isArchObjectCap_Cap_capCap cap_get_tag_isCap
                    isArchCap_T_isArchObjectCap from_bool_neq_0 from_bool_0)
   apply (intro conjI impI, simp_all add: cap_get_tag_isCap[symmetric])
-     apply (clarsimp simp: isZombieTCB_C_def ZombieTCB_C_def
+     by (clarsimp simp: isZombieTCB_C_def ZombieTCB_C_def
                            valid_cap'_def ctcb_ptr_to_tcb_ptr_def
                            ctcb_offset_def get_capZombiePtr_CL_def
                            get_capZombieBits_CL_def valid_cap'_def
@@ -1763,7 +1760,6 @@ lemma recycleCap_ccorres':
                  simp del: isDomainCap
                     dest!: cap_get_tag_to_H
                     split: split_if_asm)+
-  done
 
 lemma recycleCap_ccorres:
   "ccorres ccap_relation ret__struct_cap_C_'

@@ -2039,11 +2039,11 @@ crunch valid_duplicates'[wp]:
   sendSignal "\<lambda>s. vs_valid_duplicates' (ksPSpace s)"
 
 lemma invokeIRQControl_valid_duplicates'[wp]:
-  "\<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s) \<rbrace> invokeIRQControl a
+  "\<lbrace>\<lambda>s. vs_valid_duplicates' (ksPSpace s) \<rbrace> performIRQControl a
   \<lbrace>\<lambda>_ s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
-  apply (simp add:invokeIRQControl_def invokeInterruptControl_def)
+  apply (simp add:performIRQControl_def )
   apply (rule hoare_pre)
-  apply (wp|wpc | simp add:invokeInterruptControl_def)+
+  apply (wp|wpc | simp add:ArchInterrupt_H.performIRQControl_def)+
   apply fastforce
  done
 
@@ -2052,7 +2052,7 @@ lemma invokeIRQHandler_valid_duplicates'[wp]:
   \<lbrace>\<lambda>_ s. vs_valid_duplicates' (ksPSpace s)\<rbrace>"
   apply (simp add:invokeIRQHandler_def)
   apply (rule hoare_pre)
-  apply (wp|wpc | simp add:invokeInterruptControl_def)+
+  apply (wp|wpc | simp add:ArchInterrupt_H.performIRQControl_def)+
   done
 
 lemma invokeCNode_valid_duplicates'[wp]:

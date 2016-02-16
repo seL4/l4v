@@ -112,15 +112,15 @@ lemma decodeDomainInvocation_ccorres:
                              s \<turnstile>' fst v)
               and sysargs_rel args buffer)
        (UNIV
-             \<inter> {s. unat (length_' s) = length args}
-             \<inter> {s. extraCaps_' s = extraCaps'}
+             \<inter> {s. unat (length___unsigned_long_' s) = length args}
+             \<inter> {s. excaps_' s = extraCaps'}
              \<inter> {s. call_' s = from_bool isCall}
-             \<inter> {s. label_' s = lab}
+             \<inter> {s. invLabel_' s = lab}
              \<inter> {s. buffer_' s = option_to_ptr buffer}) []
        (decodeDomainInvocation lab args extraCaps
            >>= invocationCatch thread isBlocking isCall (uncurry InvokeDomain))
   (Call decodeDomainInvocation_'proc)"
-  apply (cinit' lift: length_' extraCaps_' call_' label_' buffer_'
+  apply (cinit' lift: length___unsigned_long_' excaps_' call_' invLabel_' buffer_'
                 simp: decodeDomainInvocation_def list_case_If2 whenE_def)
    apply (rule ccorres_Cond_rhs_Seq)
     apply (simp add: throwError_bind invocationCatch_def invocation_eq_use_types
@@ -635,11 +635,11 @@ lemma decodeCNodeInvocation_ccorres:
                              s \<turnstile>' fst v)
               and sysargs_rel args buffer)
        (UNIV 
-             \<inter> {s. unat (length_' s) = length args}
+             \<inter> {s. unat (length___unsigned_long_' s) = length args}
              \<inter> {s. ccap_relation cp (cap_' s)} 
-             \<inter> {s. extraCaps_' s = extraCaps'}
+             \<inter> {s. excaps_' s = extraCaps'}
              \<inter> {s. call_' s = from_bool isCall}
-             \<inter> {s. label_' s = lab} 
+             \<inter> {s. invLabel_' s = lab} 
              \<inter> {s. buffer_' s = option_to_ptr buffer}) [] 
        (decodeCNodeInvocation lab args cp (map fst extraCaps)
            >>= invocationCatch thread isBlocking isCall InvokeCNode) 
@@ -648,8 +648,8 @@ lemma decodeCNodeInvocation_ccorres:
    apply (simp add: decodeCNodeInvocation_def
               cong: conj_cong)
    apply (rule ccorres_fail')
-  apply (cinit' (no_subst_asm) lift: length_' cap_' extraCaps_'
-                                     call_' label_' buffer_')
+  apply (cinit' (no_subst_asm) lift: length___unsigned_long_' cap_' excaps_'
+                                     call_' invLabel_' buffer_')
    apply (clarsimp simp: word_less_nat_alt decodeCNodeInvocation_def
                          list_case_If2 invocation_eq_use_types
                          label_in_CNodeInv_ranges[unfolded word_less_nat_alt]
@@ -1492,19 +1492,19 @@ context kernel_m begin
 
 lemma wordFromMessageInfo_spec:
   "\<forall>s. \<Gamma> \<turnstile> {s} Call wordFromMessageInfo_'proc 
-           \<lbrace>\<acute>ret__unsigned_long = index (message_info_C.words_C (mi_' s)) (unat 0)\<rbrace>"
+           \<lbrace>\<acute>ret__unsigned_long = index (seL4_MessageInfo_C.words_C (mi_' s)) (unat 0)\<rbrace>"
   apply (hoare_rule HoarePartial.ProcNoRec1)
   apply vcg
   apply (simp add: word_sless_def word_sle_def)
   done
 
-lemma message_info_lift_def2:
-  "message_info_lift message_info \<equiv>
-  \<lparr>msgLabel_CL = (index (message_info_C.words_C message_info) 0 >> 12) && mask 20,
-   msgCapsUnwrapped_CL = (index (message_info_C.words_C message_info) 0 >> 9) && mask 3,
-   msgExtraCaps_CL = (index (message_info_C.words_C message_info) 0 >> 7) && mask 2,
-   msgLength_CL = (index (message_info_C.words_C message_info) 0 >> 0) && mask 7\<rparr>"
-  apply (simp add: message_info_lift_def mask_def)
+lemma seL4_MessageInfo_lift_def2:
+  "seL4_MessageInfo_lift message_info \<equiv>
+  \<lparr>label_CL = (index (seL4_MessageInfo_C.words_C message_info) 0 >> 12) && mask 20,
+   capsUnwrapped_CL = (index (seL4_MessageInfo_C.words_C message_info) 0 >> 9) && mask 3,
+   extraCaps_CL = (index (seL4_MessageInfo_C.words_C message_info) 0 >> 7) && mask 2,
+   length_CL = (index (seL4_MessageInfo_C.words_C message_info) 0 >> 0) && mask 7\<rparr>"
+  apply (simp add: seL4_MessageInfo_lift_def mask_def)
   done
 
 lemma globals_update_id:
@@ -2477,11 +2477,11 @@ shows
                              s \<turnstile>' fst v)
               and sysargs_rel args buffer)
        (UNIV 
-             \<inter> {s. label_' s = label}
-             \<inter> {s. unat (length_' s) = length args}
+             \<inter> {s. invLabel_' s = label}
+             \<inter> {s. unat (length___unsigned_long_' s) = length args}
              \<inter> {s. ccap_relation cp (cap_' s)}
              \<inter> {s. slot_' s = cte_Ptr slot}
-             \<inter> {s. extraCaps_' s = extraCaps'}
+             \<inter> {s. excaps_' s = extraCaps'}
              \<inter> {s. call_' s = from_bool isCall}
              \<inter> {s. buffer_' s = option_to_ptr buffer})
        []
@@ -2490,7 +2490,7 @@ shows
            >>= invocationCatch thread isBlocking isCall InvokeUntyped) 
   (Call decodeUntypedInvocation_'proc)"
   apply (rule ccorres_name_pre)
-  apply (cinit' lift: label_' length_' cap_' slot_' extraCaps_' call_' buffer_'
+  apply (cinit' lift: invLabel_' length___unsigned_long_' cap_' slot_' excaps_' call_' buffer_'
                 simp: decodeUntypedInvocation_def list_case_If2
                       invocation_eq_use_types)
    apply (rule ccorres_Cond_rhs_Seq)
@@ -3110,11 +3110,11 @@ shows
                              s \<turnstile>' fst v)
               and sysargs_rel args buffer)
        (UNIV 
-             \<inter> {s. label_' s = label}
-             \<inter> {s. unat (length_' s) = length args}
+             \<inter> {s. invLabel_' s = label}
+             \<inter> {s. unat (length___unsigned_long_' s) = length args}
              \<inter> {s. ccap_relation cp (cap_' s)}
              \<inter> {s. slot_' s = cte_Ptr slot}
-             \<inter> {s. extraCaps_' s = extraCaps'}
+             \<inter> {s. excaps_' s = extraCaps'}
              \<inter> {s. call_' s = from_bool isCall}
              \<inter> {s. buffer_' s = option_to_ptr buffer})
        []

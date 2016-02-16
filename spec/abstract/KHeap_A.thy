@@ -76,12 +76,12 @@ where
   "get_thread_state ref \<equiv> thread_get tcb_state ref"
 
 definition
-  get_bound_notification :: "obj_ref \<Rightarrow> (32 word option,'z::state_ext) s_monad" 
+  get_bound_notification :: "obj_ref \<Rightarrow> (obj_ref option,'z::state_ext) s_monad" 
 where
   "get_bound_notification ref \<equiv> thread_get tcb_bound_notification ref"
 
 definition
-  set_bound_notification :: "obj_ref \<Rightarrow> 32 word option \<Rightarrow> (unit, 'z::state_ext) s_monad" 
+  set_bound_notification :: "obj_ref \<Rightarrow> obj_ref option \<Rightarrow> (unit, 'z::state_ext) s_monad" 
 where
   "set_bound_notification ref ntfn \<equiv> do
      tcb \<leftarrow> gets_the $ get_tcb ref;

@@ -187,7 +187,7 @@ where
         (the_nat_to_bl_10 2)
             \<mapsto> Structures_A.CNodeCap 6 undefined undefined, 
         (the_nat_to_bl_10 3)
-            \<mapsto> Structures_A.ArchObjectCap (ARM_Structs_A.PageDirectoryCap 3063 
+            \<mapsto> Structures_A.ArchObjectCap (Arch_Structs_A.PageDirectoryCap 3063 
                                              (Some asid1_3063)),
         (the_nat_to_bl_10 318) 
             \<mapsto> Structures_A.EndpointCap  9 0 {AllowSend} )"
@@ -210,7 +210,7 @@ where
         (the_nat_to_bl_10 2)
             \<mapsto> Structures_A.CNodeCap 7 undefined undefined,
         (the_nat_to_bl_10 3)
-           \<mapsto> Structures_A.ArchObjectCap (ARM_Structs_A.PageDirectoryCap 3065 
+           \<mapsto> Structures_A.ArchObjectCap (Arch_Structs_A.PageDirectoryCap 3065 
                                             (Some asid1_3065)),
         (the_nat_to_bl_10 318)
            \<mapsto> Structures_A.EndpointCap  9 0 {AllowRecv}) "
@@ -232,22 +232,22 @@ where
 text {* UT1's VSpace (PageDirectory)*}
 
 definition
-  pt1_3072 :: "word8 \<Rightarrow> ARM_Structs_A.pte " 
+  pt1_3072 :: "word8 \<Rightarrow> Arch_Structs_A.pte " 
 where
-  "pt1_3072 \<equiv> (\<lambda>_. ARM_Structs_A.InvalidPTE)" 
+  "pt1_3072 \<equiv> (\<lambda>_. Arch_Structs_A.InvalidPTE)" 
 
 definition 
   obj1_3072 :: Structures_A.kernel_object 
 where
-  "obj1_3072 \<equiv> Structures_A.ArchObj (ARM_Structs_A.PageTable pt1_3072)"
+  "obj1_3072 \<equiv> Structures_A.ArchObj (Arch_Structs_A.PageTable pt1_3072)"
 
 
 definition
-  pd1_3063 :: "12 word \<Rightarrow> ARM_Structs_A.pde " 
+  pd1_3063 :: "12 word \<Rightarrow> Arch_Structs_A.pde " 
 where
   "pd1_3063 \<equiv> 
-    (\<lambda>_. ARM_Structs_A.InvalidPDE)
-     (0 := ARM_Structs_A.PageTablePDE 
+    (\<lambda>_. Arch_Structs_A.InvalidPDE)
+     (0 := Arch_Structs_A.PageTablePDE 
               (Platform.addrFromPPtr 3072) 
               undefined
               undefined )"
@@ -258,31 +258,31 @@ if it's right *)
 definition
   obj1_3063 :: Structures_A.kernel_object 
 where
-  "obj1_3063 \<equiv> Structures_A.ArchObj (ARM_Structs_A.PageDirectory pd1_3063)"
+  "obj1_3063 \<equiv> Structures_A.ArchObj (Arch_Structs_A.PageDirectory pd1_3063)"
 
 
 text {* T1's VSpace (PageDirectory)*}
 
 
 definition
-  pt1_3077 :: "word8 \<Rightarrow> ARM_Structs_A.pte " 
+  pt1_3077 :: "word8 \<Rightarrow> Arch_Structs_A.pte " 
 where
   "pt1_3077 \<equiv> 
-    (\<lambda>_. ARM_Structs_A.InvalidPTE)"
+    (\<lambda>_. Arch_Structs_A.InvalidPTE)"
 
 
 definition
   obj1_3077 :: Structures_A.kernel_object 
 where
-  "obj1_3077 \<equiv> Structures_A.ArchObj (ARM_Structs_A.PageTable pt1_3077)"
+  "obj1_3077 \<equiv> Structures_A.ArchObj (Arch_Structs_A.PageTable pt1_3077)"
 
 
 definition
-  pd1_3065 :: "12 word \<Rightarrow> ARM_Structs_A.pde " 
+  pd1_3065 :: "12 word \<Rightarrow> Arch_Structs_A.pde " 
 where
   "pd1_3065 \<equiv>
-    (\<lambda>_. ARM_Structs_A.InvalidPDE)
-     (0 := ARM_Structs_A.PageTablePDE  
+    (\<lambda>_. Arch_Structs_A.InvalidPDE)
+     (0 := Arch_Structs_A.PageTablePDE  
              (Platform.addrFromPPtr 3077) 
              undefined
              undefined )" 
@@ -293,7 +293,7 @@ if it's right *)
 definition
   obj1_3065 :: Structures_A.kernel_object 
 where
-  "obj1_3065 \<equiv> Structures_A.ArchObj (ARM_Structs_A.PageDirectory pd1_3065)"
+  "obj1_3065 \<equiv> Structures_A.ArchObj (Arch_Structs_A.PageDirectory pd1_3065)"
 
 
 text {* UT1's tcb *}
@@ -305,7 +305,7 @@ where
    Structures_A.TCB \<lparr> 
      tcb_ctable        = Structures_A.CNodeCap 6 undefined undefined ,
      tcb_vtable        = Structures_A.ArchObjectCap 
-                           (ARM_Structs_A.PageDirectoryCap 3063 (Some asid1_3063)),
+                           (Arch_Structs_A.PageDirectoryCap 3063 (Some asid1_3063)),
      tcb_reply         = Structures_A.ReplyCap 3079 True, (* master reply cap to itself *)
      tcb_caller        = Structures_A.NullCap,
      tcb_ipcframe      = Structures_A.NullCap,
@@ -326,7 +326,7 @@ where
    Structures_A.TCB \<lparr> 
      tcb_ctable        = Structures_A.CNodeCap 7 undefined undefined ,
      tcb_vtable        = Structures_A.ArchObjectCap 
-                           (ARM_Structs_A.PageDirectoryCap 3065 (Some asid1_3065)),
+                           (Arch_Structs_A.PageDirectoryCap 3065 (Some asid1_3065)),
      tcb_reply         = Structures_A.ReplyCap 3080 True, (* master reply cap to itself *)
      tcb_caller        = Structures_A.NullCap,
      tcb_ipcframe      = Structures_A.NullCap,
@@ -496,19 +496,19 @@ lemma s1_caps_of_state :
      (p,cap) \<in>  
        { ((6::obj_ref,(the_nat_to_bl_10 1)),  Structures_A.ThreadCap 3079),
          ((6::obj_ref,(the_nat_to_bl_10 2)),  Structures_A.CNodeCap 6 undefined undefined),
-         ((6::obj_ref,(the_nat_to_bl_10 3)),  Structures_A.ArchObjectCap (ARM_Structs_A.PageDirectoryCap 3063 (Some asid1_3063))), 
+         ((6::obj_ref,(the_nat_to_bl_10 3)),  Structures_A.ArchObjectCap (Arch_Structs_A.PageDirectoryCap 3063 (Some asid1_3063))), 
          ((6::obj_ref,(the_nat_to_bl_10 318)),Structures_A.EndpointCap  9 0 {AllowSend}),
          ((7::obj_ref,(the_nat_to_bl_10 1)),  Structures_A.ThreadCap 3080), 
          ((7::obj_ref,(the_nat_to_bl_10 2)),  Structures_A.CNodeCap 7 undefined undefined),
-         ((7::obj_ref,(the_nat_to_bl_10 3)),  Structures_A.ArchObjectCap (ARM_Structs_A.PageDirectoryCap 3065 (Some asid1_3065))), 
+         ((7::obj_ref,(the_nat_to_bl_10 3)),  Structures_A.ArchObjectCap (Arch_Structs_A.PageDirectoryCap 3065 (Some asid1_3065))), 
          ((7::obj_ref,(the_nat_to_bl_10 318)),Structures_A.EndpointCap  9 0 {AllowRecv}) ,
          ((3079::obj_ref, (tcb_cnode_index 0)), Structures_A.CNodeCap 6 undefined undefined ),
-         ((3079::obj_ref, (tcb_cnode_index 1)), Structures_A.ArchObjectCap (ARM_Structs_A.PageDirectoryCap 3063 (Some asid1_3063))),
+         ((3079::obj_ref, (tcb_cnode_index 1)), Structures_A.ArchObjectCap (Arch_Structs_A.PageDirectoryCap 3063 (Some asid1_3063))),
          ((3079::obj_ref, (tcb_cnode_index 2)), Structures_A.ReplyCap 3079 True), 
          ((3079::obj_ref, (tcb_cnode_index 3)), Structures_A.NullCap),
          ((3079::obj_ref, (tcb_cnode_index 4)), Structures_A.NullCap),
          ((3080::obj_ref, (tcb_cnode_index 0)), Structures_A.CNodeCap 7 undefined undefined ),
-         ((3080::obj_ref, (tcb_cnode_index 1)), Structures_A.ArchObjectCap (ARM_Structs_A.PageDirectoryCap 3065 (Some asid1_3065))),
+         ((3080::obj_ref, (tcb_cnode_index 1)), Structures_A.ArchObjectCap (Arch_Structs_A.PageDirectoryCap 3065 (Some asid1_3065))),
          ((3080::obj_ref, (tcb_cnode_index 2)), Structures_A.ReplyCap 3080 True),
          ((3080::obj_ref, (tcb_cnode_index 3)), Structures_A.NullCap),
          ((3080::obj_ref, (tcb_cnode_index 4)), Structures_A.NullCap)} "
@@ -727,7 +727,7 @@ where
         (the_nat_to_bl_10 2)
             \<mapsto> Structures_A.CNodeCap 6 undefined undefined, 
         (the_nat_to_bl_10 3)
-            \<mapsto> Structures_A.ArchObjectCap (ARM_Structs_A.PageDirectoryCap 3063 
+            \<mapsto> Structures_A.ArchObjectCap (Arch_Structs_A.PageDirectoryCap 3063 
                                              (Some asid2_3063)),
         (the_nat_to_bl_10 4)
             \<mapsto> Structures_A.CNodeCap 5 undefined undefined )"
@@ -750,7 +750,7 @@ where
         (the_nat_to_bl_10 2)
             \<mapsto> Structures_A.CNodeCap 7 undefined undefined,
         (the_nat_to_bl_10 3)
-           \<mapsto> Structures_A.ArchObjectCap (ARM_Structs_A.PageDirectoryCap 3065 
+           \<mapsto> Structures_A.ArchObjectCap (Arch_Structs_A.PageDirectoryCap 3065 
                                             (Some asid2_3065)),
         (the_nat_to_bl_10 4)
             \<mapsto> Structures_A.CNodeCap 5 undefined undefined) "
@@ -772,22 +772,22 @@ where
 text {* UT2's VSpace (PageDirectory)*}
 
 definition
-  pt2_3072 :: "word8 \<Rightarrow> ARM_Structs_A.pte " 
+  pt2_3072 :: "word8 \<Rightarrow> Arch_Structs_A.pte " 
 where
-  "pt2_3072 \<equiv> (\<lambda>_. ARM_Structs_A.InvalidPTE)"
+  "pt2_3072 \<equiv> (\<lambda>_. Arch_Structs_A.InvalidPTE)"
 
 definition 
   obj2_3072 :: Structures_A.kernel_object 
 where
-  "obj2_3072 \<equiv> Structures_A.ArchObj (ARM_Structs_A.PageTable pt2_3072)"
+  "obj2_3072 \<equiv> Structures_A.ArchObj (Arch_Structs_A.PageTable pt2_3072)"
 
 
 definition
-  pd2_3063 :: "12 word \<Rightarrow> ARM_Structs_A.pde " 
+  pd2_3063 :: "12 word \<Rightarrow> Arch_Structs_A.pde " 
 where
   "pd2_3063 \<equiv> 
-    (\<lambda>_. ARM_Structs_A.InvalidPDE)
-     (0 := ARM_Structs_A.PageTablePDE 
+    (\<lambda>_. Arch_Structs_A.InvalidPDE)
+     (0 := Arch_Structs_A.PageTablePDE 
               (Platform.addrFromPPtr 3072) 
               undefined
               undefined )"
@@ -798,30 +798,30 @@ if it's right *)
 definition
   obj2_3063 :: Structures_A.kernel_object 
 where
-  "obj2_3063 \<equiv> Structures_A.ArchObj (ARM_Structs_A.PageDirectory pd2_3063)"
+  "obj2_3063 \<equiv> Structures_A.ArchObj (Arch_Structs_A.PageDirectory pd2_3063)"
 
 
 text {* T1's VSpace (PageDirectory)*}
 
 
 definition
-  pt2_3077 :: "word8 \<Rightarrow> ARM_Structs_A.pte " 
+  pt2_3077 :: "word8 \<Rightarrow> Arch_Structs_A.pte " 
 where
   "pt2_3077 \<equiv> 
-    (\<lambda>_. ARM_Structs_A.InvalidPTE)"
+    (\<lambda>_. Arch_Structs_A.InvalidPTE)"
 
 definition
   obj2_3077 :: Structures_A.kernel_object 
 where
-  "obj2_3077 \<equiv> Structures_A.ArchObj (ARM_Structs_A.PageTable pt2_3077)"
+  "obj2_3077 \<equiv> Structures_A.ArchObj (Arch_Structs_A.PageTable pt2_3077)"
 
 
 definition
-  pd2_3065 :: "12 word \<Rightarrow> ARM_Structs_A.pde " 
+  pd2_3065 :: "12 word \<Rightarrow> Arch_Structs_A.pde " 
 where
   "pd2_3065 \<equiv>
-    (\<lambda>_. ARM_Structs_A.InvalidPDE)
-     (0 := ARM_Structs_A.PageTablePDE  
+    (\<lambda>_. Arch_Structs_A.InvalidPDE)
+     (0 := Arch_Structs_A.PageTablePDE  
              (Platform.addrFromPPtr 3077) 
              undefined
              undefined )" 
@@ -832,7 +832,7 @@ if it's right *)
 definition
   obj2_3065 :: Structures_A.kernel_object 
 where
-  "obj2_3065 \<equiv> Structures_A.ArchObj (ARM_Structs_A.PageDirectory pd2_3065)"
+  "obj2_3065 \<equiv> Structures_A.ArchObj (Arch_Structs_A.PageDirectory pd2_3065)"
 
 
 text {* UT1's tcb *}
@@ -844,7 +844,7 @@ where
    Structures_A.TCB \<lparr> 
      tcb_ctable        = Structures_A.CNodeCap 6 undefined undefined ,
      tcb_vtable        = Structures_A.ArchObjectCap 
-                           (ARM_Structs_A.PageDirectoryCap 3063 (Some asid2_3063)),
+                           (Arch_Structs_A.PageDirectoryCap 3063 (Some asid2_3063)),
      tcb_reply         = Structures_A.ReplyCap 3079 True, (* master reply cap to itself *)
      tcb_caller        = Structures_A.NullCap,
      tcb_ipcframe      = Structures_A.NullCap,
@@ -865,7 +865,7 @@ where
    Structures_A.TCB \<lparr> 
      tcb_ctable        = Structures_A.CNodeCap 7 undefined undefined ,
      tcb_vtable        = Structures_A.ArchObjectCap 
-                           (ARM_Structs_A.PageDirectoryCap 3065 (Some asid2_3065)),
+                           (Arch_Structs_A.PageDirectoryCap 3065 (Some asid2_3065)),
      tcb_reply         = Structures_A.ReplyCap 3080 True, (* master reply cap to itself *)
      tcb_caller        = Structures_A.NullCap,
      tcb_ipcframe      = Structures_A.NullCap,
@@ -1008,19 +1008,19 @@ lemma s2_caps_of_state :
      (p,cap) \<in>  
        { ((6::obj_ref,(the_nat_to_bl_10 1)),  Structures_A.ThreadCap 3079),
          ((6::obj_ref,(the_nat_to_bl_10 2)),  Structures_A.CNodeCap 6 undefined undefined),
-         ((6::obj_ref,(the_nat_to_bl_10 3)),  Structures_A.ArchObjectCap (ARM_Structs_A.PageDirectoryCap 3063 (Some asid2_3063))), 
+         ((6::obj_ref,(the_nat_to_bl_10 3)),  Structures_A.ArchObjectCap (Arch_Structs_A.PageDirectoryCap 3063 (Some asid2_3063))), 
          ((6::obj_ref,(the_nat_to_bl_10 4)),  Structures_A.CNodeCap 5 undefined undefined),
          ((7::obj_ref,(the_nat_to_bl_10 1)),  Structures_A.ThreadCap 3080), 
          ((7::obj_ref,(the_nat_to_bl_10 2)),  Structures_A.CNodeCap 7 undefined undefined),
-         ((7::obj_ref,(the_nat_to_bl_10 3)),  Structures_A.ArchObjectCap (ARM_Structs_A.PageDirectoryCap 3065 (Some asid2_3065))), 
+         ((7::obj_ref,(the_nat_to_bl_10 3)),  Structures_A.ArchObjectCap (Arch_Structs_A.PageDirectoryCap 3065 (Some asid2_3065))), 
          ((7::obj_ref,(the_nat_to_bl_10 4)),  Structures_A.CNodeCap 5 undefined undefined),
          ((3079::obj_ref, (tcb_cnode_index 0)), Structures_A.CNodeCap 6 undefined undefined ),
-         ((3079::obj_ref, (tcb_cnode_index 1)), Structures_A.ArchObjectCap (ARM_Structs_A.PageDirectoryCap 3063 (Some asid2_3063))),
+         ((3079::obj_ref, (tcb_cnode_index 1)), Structures_A.ArchObjectCap (Arch_Structs_A.PageDirectoryCap 3063 (Some asid2_3063))),
          ((3079::obj_ref, (tcb_cnode_index 2)), Structures_A.ReplyCap 3079 True),
          ((3079::obj_ref, (tcb_cnode_index 3)), Structures_A.NullCap),
          ((3079::obj_ref, (tcb_cnode_index 4)), Structures_A.NullCap),
          ((3080::obj_ref, (tcb_cnode_index 0)), Structures_A.CNodeCap 7 undefined undefined ),
-         ((3080::obj_ref, (tcb_cnode_index 1)), Structures_A.ArchObjectCap (ARM_Structs_A.PageDirectoryCap 3065 (Some asid2_3065))),
+         ((3080::obj_ref, (tcb_cnode_index 1)), Structures_A.ArchObjectCap (Arch_Structs_A.PageDirectoryCap 3065 (Some asid2_3065))),
          ((3080::obj_ref, (tcb_cnode_index 2)), Structures_A.ReplyCap 3080 True),
          ((3080::obj_ref, (tcb_cnode_index 3)), Structures_A.NullCap),
          ((3080::obj_ref, (tcb_cnode_index 4)), Structures_A.NullCap)} "

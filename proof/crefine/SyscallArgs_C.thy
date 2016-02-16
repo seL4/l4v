@@ -1286,11 +1286,11 @@ lemma invocation_eq_use_type:
   apply (simp add: enum_invocation_label)
   done
 
-lemmas all_invocation_label_defs = invocation_label_defs arch_invocation_label_defs
+lemmas all_invocation_label_defs = invocation_label_defs arch_invocation_label_defs sel4_arch_invocation_label_defs
 
 lemmas invocation_eq_use_types
     = all_invocation_label_defs[THEN invocation_eq_use_type, simplified,
-                            unfolded enum_invocation_label, simplified]
+                            unfolded enum_invocation_label enum_arch_invocation_label, simplified]
 
 lemma ccorres_equals_throwError:
   "\<lbrakk> f = throwError v; ccorres_underlying sr Gamm rr xf arr axf P P' hs (throwError v) c \<rbrakk>

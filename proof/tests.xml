@@ -17,33 +17,34 @@
      format.
 
 -->
-<testsuite timeout="3600" depends="isabelle">
+
+<testsuite cpu-timeout="3600" depends="isabelle">
     <!-- Refine -->
-    <sequence depends="ASpec ExecSpec" timeout="14400">
-        <test name="AInvs">make AInvs</test>
+    <sequence depends="ASpec ExecSpec">
+        <test name="AInvs" cpu-timeout="7200">make AInvs</test>
         <test name="BaseRefine">make BaseRefine</test>
-        <test name="Refine">make Refine</test>
+        <test name="Refine" cpu-timeout="10800">make Refine</test>
     </sequence>
 
     <!-- CRefine -->
-    <sequence timeout="14400" depends="CParser">
+    <sequence depends="CParser">
         <test name="CKernel">make CKernel</test>
         <test name="CSpec">make CSpec</test>
-        <test name="CBaseRefine" depends="Refine">make CBaseRefine</test>
-        <test name="CRefine">make CRefine</test>
+        <test name="CBaseRefine" depends="Refine" cpu-timeout="14400">make CBaseRefine</test>
+        <test name="CRefine" cpu-timeout="25200">make CRefine</test>
     </sequence>
 
     <!-- DSpec / DRefine -->
     <sequence depends="DSpec Refine">
         <test name="DBaseRefine">make DBaseRefine</test>
-        <test name="DRefine">make DRefine</test>
+        <test name="DRefine" cpu-timeout="7200">make DRefine</test>
     </sequence>
 
     <!-- Access Control -->
     <sequence depends="AInvs">
         <test name="Access">make Access</test>
-        <test name="InfoFlow">make InfoFlow</test>
-        <test name="InfoFlowC" depends="CRefine">make InfoFlowC</test>
+        <test name="InfoFlow" cpu-timeout="7200">make InfoFlow</test>
+        <test name="InfoFlowC" depends="CRefine" cpu-timeout="10800">make InfoFlowC</test>
     </sequence>
 
     <!-- Access Control and capDL -->
@@ -57,8 +58,8 @@
     </sequence>
 
     <!-- Binary Verification -->
-    <sequence depends="CSpec" timeout="9000">
-        <test name="SimplExportAndRefine">make SimplExportAndRefine</test>
+    <sequence depends="CSpec">
+        <test name="SimplExportAndRefine" cpu-timeout="14400">make SimplExportAndRefine</test>
     </sequence>
 
     <!-- Separation Logic. -->

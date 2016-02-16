@@ -577,8 +577,7 @@ lemma cap_table_at_gsCNodes_eq:
     \<Longrightarrow> (gsCNodes s' ptr = Some bits) = cap_table_at bits ptr s"
   apply (clarsimp simp: state_relation_def ghost_relation_def
                         obj_at_def is_cap_table)
-  apply blast
-  done
+  by blast
 
 lemma cNodeNoPartialOverlap:
   "corres dc (\<lambda>s. \<exists>cref. cte_wp_at (op = (cap.UntypedCap base magnitude idx)) cref s
@@ -641,7 +640,7 @@ lemma detype_corres:
    apply (clarsimp simp: valid_pspace'_def pspace_distinct'_def
                          pspace_aligned'_def)
    apply (rule conjI)
-    apply fastforce
+    subgoal by fastforce
    apply (clarsimp simp add: pspace_distinct'_def ps_clear_def
                              dom_if_None Diff_Int_distrib)
   apply (simp add: delete_objects_def)
@@ -1389,8 +1388,7 @@ proof (simp add: invs'_def valid_state'_def valid_pspace'_def
                      page_table_at'_def
                      page_table_refs'_def
                      page_directory_at'_def)
-    apply fastforce
-    done
+    by fastforce
 
   show "valid_irq_node' (irq_node' s) ?s"
     using virq irq_nodes_range
@@ -1974,22 +1972,15 @@ lemma simpler_updateObject_def:
           tcbIPCBufferSlot_def
           tcbCallerSlot_def tcbReplySlot_def
           tcbCTableSlot_def tcbVTableSlot_def)
-   apply (intro conjI impI)
-     apply simp_all
-        apply (clarsimp simp:alignCheck_def unless_def when_def not_less[symmetric]
-          alignError_def is_aligned_mask magnitudeCheck_def 
-          cte_update_def return_def tcbIPCBufferSlot_def
-          tcbCallerSlot_def tcbReplySlot_def
-          tcbCTableSlot_def tcbVTableSlot_def objBits_simps
-          cteSizeBits_def split:option.splits,
-          (fastforce simp:return_def fail_def bind_def | intro conjI)+)+
-        apply (clarsimp simp:alignCheck_def unless_def when_def not_less[symmetric]
-          alignError_def is_aligned_mask magnitudeCheck_def 
-          cte_update_def return_def tcbIPCBufferSlot_def
-          tcbCallerSlot_def tcbReplySlot_def bind_def fail_def
-          tcbCTableSlot_def tcbVTableSlot_def objBits_simps
-          cteSizeBits_def split:option.splits)+
-   done
+   by (intro conjI impI;
+        clarsimp simp:alignCheck_def unless_def when_def not_less[symmetric]
+         alignError_def is_aligned_mask magnitudeCheck_def 
+         cte_update_def return_def tcbIPCBufferSlot_def
+         tcbCallerSlot_def tcbReplySlot_def
+         tcbCTableSlot_def tcbVTableSlot_def objBits_simps
+         cteSizeBits_def split:option.splits;
+          fastforce simp:return_def fail_def bind_def)+
+
 
 lemma setCTE_def2:
  "(setCTE src cte) =
@@ -2372,11 +2363,10 @@ lemma locateCTE_cte_no_fail:
      assert_opt_def assert_def in_fail snd_fail fail_set split:option.splits)
   apply (clarsimp simp:cte_check_def ObjectInstances_H.loadObject_cte)
   apply (drule in_singleton)
-  apply (auto simp: objBits_simps cteSizeBits_def alignError_def
+  by (auto simp: objBits_simps cteSizeBits_def alignError_def
     alignCheck_def in_monad is_aligned_mask magnitudeCheck_def
     typeError_def
     cong: if_cong split: if_splits option.splits kernel_object.splits)
-  done
 
 lemma not_in_new_cap_addrs:
   "\<lbrakk>is_aligned ptr (objBitsKO obj + us);
@@ -3696,8 +3686,7 @@ lemma new_cap_object_commute:
    apply (intro conjI exI)
      apply (clarsimp simp: no_0_def)
     apply (clarsimp simp: weak_valid_dlist_def modify_map_def Let_def)
-    apply (intro conjI impI)
-      apply fastforce+
+    subgoal by (intro conjI impI; fastforce)
    apply (clarsimp simp:valid_nullcaps_def)
    apply (frule_tac x = "p" in spec)
    apply (case_tac ctec)
@@ -3977,7 +3966,7 @@ lemma createNewCaps_pspace_no_overlap':
                 copyGlobalMappings_pspace_no_overlap'[where sz = sz] | assumption)+
            apply (intro conjI range_cover_le[where n = "Suc n"] | simp)+
             apply ((simp add:objBits_simps pageBits_def range_cover_def word_bits_def)+)[5]
-       apply ((clarsimp simp: apiGetObjectSize_def Types_H.getObjectSize_def
+       by ((clarsimp simp: apiGetObjectSize_def Types_H.getObjectSize_def
                               Types_H.toAPIType_def ArchTypes_H.toAPIType_def tcbBlockSizeBits_def
                               ArchTypes_H.getObjectSize_def objBits_simps epSizeBits_def ntfnSizeBits_def
                               cteSizeBits_def pageBits_def ptBits_def archObjSize_def pdBits_def
@@ -3989,7 +3978,6 @@ lemma createNewCaps_pspace_no_overlap':
                     copyGlobalMappings_pspace_no_overlap'
                | assumption | clarsimp simp: word_bits_def
                | intro conjI range_cover_le[where n = "Suc n"] range_cover.aligned)+)[6]
- done
 
 lemma objSize_eq_capBits: 
   "Types_H.getObjectSize ty us = APIType_capBits ty us"

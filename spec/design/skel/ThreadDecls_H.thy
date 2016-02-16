@@ -15,7 +15,7 @@ imports
   Structures_H
   FaultMonad_H
   KernelInitMonad_H
-  ArchThreadDecls_H
+  "./$L4V_ARCH/ArchThreadDecls_H"
 begin
 
 #INCLUDE_HASKELL SEL4/Kernel/Thread.lhs decls_only NOT transferCapsToSlots

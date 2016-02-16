@@ -13,14 +13,19 @@ imports RetypeDecls_H
 begin
 
 definition
-decodeInterruptControl :: "machine_word list \<Rightarrow> capability list \<Rightarrow> ( syscall_error , interrupt_control ) kernel_f"
+decodeIRQControlInvocation :: "machine_word \<Rightarrow> machine_word list \<Rightarrow> machine_word \<Rightarrow> capability list \<Rightarrow> ( syscall_error , ArchRetypeDecls_H.irqcontrol_invocation ) kernel_f"
 where
-"decodeInterruptControl arg1 arg2 \<equiv> throw IllegalOperation"
+"decodeIRQControlInvocation arg1 arg2 arg3 arg4 \<equiv> throw IllegalOperation"
 
 definition
-invokeInterruptControl :: "interrupt_control \<Rightarrow> unit kernel_p"
+invokeIRQControl :: "ArchRetypeDecls_H.irqcontrol_invocation \<Rightarrow> unit kernel_p"
 where
-"invokeInterruptControl arg1 \<equiv> haskell_fail []"
+"invokeIRQControl arg1 \<equiv> haskell_fail []"
+
+definition
+checkIRQ :: "machine_word \<Rightarrow> ( syscall_error , unit ) kernel_f"
+where
+"checkIRQ irq\<equiv> rangeCheck irq (fromEnum minIRQ) (fromEnum maxIRQ)"
 
 
 end

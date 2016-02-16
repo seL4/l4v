@@ -298,25 +298,24 @@ crunch (empty_fail) empty_fail[wp]: find_pd_for_asid, get_master_pde, check_vp_a
 lemmas empty_fail_return[wp]
 
 lemma arch_decode_ARMASIDControlMakePool_empty_fail:
-  "invocation_type label = ARMASIDControlMakePool
+  "invocation_type label = ArchInvocationLabel ARMASIDControlMakePool
     \<Longrightarrow> empty_fail (arch_decode_invocation label b c d e f)"
   apply (simp add: arch_decode_invocation_def Let_def)
   apply (intro impI conjI allI)
-   apply (simp add: isPageFlush_def isPDFlush_def split: arch_cap.splits)+
+   apply (simp add: isPageFlushLabel_def isPDFlushLabel_def split: arch_cap.splits)+
    apply (rule impI)
    apply (simp add: split_def)
    apply wp
     apply simp
    apply (subst bindE_assoc[symmetric])
    apply (rule empty_fail_bindE)
-    apply (fastforce simp: empty_fail_def whenE_def throwError_def select_ext_def bindE_def bind_def return_def returnOk_def lift_def liftE_def fail_def gets_def get_def assert_def select_def split: split_if_asm)
-   apply (simp add: Let_def split: cap.splits arch_cap.splits option.splits | wp | intro conjI impI allI)+
-   done
+    subgoal by (fastforce simp: empty_fail_def whenE_def throwError_def select_ext_def bindE_def bind_def return_def returnOk_def lift_def liftE_def fail_def gets_def get_def assert_def select_def split: split_if_asm)
+   by (simp add: Let_def split: cap.splits arch_cap.splits option.splits | wp | intro conjI impI allI)+
 
 lemma arch_decode_ARMASIDPoolAssign_empty_fail:
-  "invocation_type label = ARMASIDPoolAssign
+  "invocation_type label = ArchInvocationLabel ARMASIDPoolAssign
     \<Longrightarrow> empty_fail (arch_decode_invocation label b c d e f)"
-  apply (simp add: arch_decode_invocation_def split_def Let_def isPageFlush_def isPDFlush_def split: arch_cap.splits cap.splits option.splits | intro impI allI)+
+  apply (simp add: arch_decode_invocation_def split_def Let_def isPageFlushLabel_def isPDFlushLabel_def split: arch_cap.splits cap.splits option.splits | intro impI allI)+
   apply (rule empty_fail_bindE)
    apply simp
   apply (rule empty_fail_bindE)
@@ -327,19 +326,22 @@ lemma arch_decode_ARMASIDPoolAssign_empty_fail:
    apply ((simp | wp)+)[1]
   apply (subst bindE_assoc[symmetric])
   apply (rule empty_fail_bindE)
-   apply (fastforce simp: empty_fail_def whenE_def throwError_def select_def bindE_def bind_def return_def returnOk_def lift_def liftE_def select_ext_def select_def gets_def get_def assert_def fail_def)
+   subgoal by (fastforce simp: empty_fail_def whenE_def throwError_def select_def bindE_def bind_def return_def returnOk_def lift_def liftE_def select_ext_def select_def gets_def get_def assert_def fail_def)
   apply wp
   done
 
 lemma arch_decode_invocation_empty_fail[wp]:
   "empty_fail (arch_decode_invocation label b c d e f)"
   apply (case_tac "invocation_type label")
-  prefer 44  
-  prefer 45
+  apply (find_goal \<open>match premises in "_ = ArchInvocationLabel _" \<Rightarrow> \<open>-\<close>\<close>)
+  apply (rename_tac alabel)
+  apply (case_tac alabel; simp)
+  apply (find_goal \<open>succeeds \<open>erule arch_decode_ARMASIDControlMakePool_empty_fail\<close>\<close>)
+  apply (find_goal \<open>succeeds \<open>erule arch_decode_ARMASIDPoolAssign_empty_fail\<close>\<close>)
   apply ((simp add: arch_decode_ARMASIDControlMakePool_empty_fail arch_decode_ARMASIDPoolAssign_empty_fail)+)[2]  
   by ((simp add: arch_decode_invocation_def Let_def split: arch_cap.splits cap.splits option.splits | wp | intro conjI impI allI)+)
 
-crunch (empty_fail) empty_fail[wp]: maskInterrupt, empty_slot, setInterruptMode,
+crunch (empty_fail) empty_fail[wp]: maskInterrupt, empty_slot,
     setHardwareASID, setCurrentPD, finalise_cap, preemption_point,
     cap_swap_for_delete, decode_invocation
   (simp: Let_def catch_def split_def OR_choiceE_def mk_ef_def option.splits endpoint.splits

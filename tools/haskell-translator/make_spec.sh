@@ -34,8 +34,6 @@ function find_dir () {
 
 TRANSLATOR=$(find_dir "tools/haskell-translator")
 
-. "$TRANSLATOR/CONFIG"
-
 SPEC=$(find_dir "spec/design")
 
 if [[ -z $L4CAP ]]
@@ -76,21 +74,60 @@ then
   (cd $L4CAP && git status --short) >> $SPEC/version
 fi
 
-NAMES=`ls $SKEL`
+ARCHES=("ARM")
 
+NAMES=`cd $SKEL; ls *.thy`
+
+SPECNONARCH="/tmp/make_spec_temp_nonarch_$$"
 TMPFILE="/tmp/make_spec_temp_$$"
 
 function send_filenames () {
+        local arch=${1}
+        local archnames=`cd $SKEL/${arch}; ls *.thy`
+        local archmnames=`cd $MSKEL/${arch}; ls *.thy`
+        mkdir -p "$SPECNONARCH/${arch}"
+        
+        # Theory files common to all haskell specifications
 	for NAME in $NAMES
 	do
-		echo "$SKEL/$NAME --> $SPEC/$NAME"
+		echo "$SKEL/$NAME --> $SPECNONARCH/${arch}/$NAME"
 	done
-	echo "$MSKEL/ARMMachineTypes.thy --> $MACH/ARMMachineTypes.thy"
+
+        # Arch-specific haskell specifications
+        for NAME in ${archnames}
+        do
+                echo "$SKEL/${arch}/$NAME --> $SPEC/${arch}/$NAME"
+        done
+
+        # Arch-specific machine theories, imported by haskell and abstract
+        for MNAME in ${archmnames}
+        do
+                echo "$MSKEL/${arch}/$MNAME --> $MACH/${arch}/$MNAME"
+        done
 }
 
-send_filenames > $TMPFILE
+# Ensure that non-arch-specific theories are identical after preprocessing
+for ARCH in ${ARCHES[@]}
+do
+        send_filenames $ARCH > $TMPFILE
+        L4CPP="-DTARGET=$ARCH -DTARGET_$ARCH -DPLATFORM=QEmu -DPLATFORM_QEmu"
+        export L4CPP
+        cd $TRANSLATOR
+        python pars_skl.py $TMPFILE
+done
 
-cd $TRANSLATOR
-python pars_skl.py $TMPFILE
+for ARCH in ${ARCHES[@]}
+do 
+    specdiff=`diff "$SPECNONARCH/${ARCHES[0]}" "$SPECNONARCH/$ARCH"`
+    if [ -n "${specdiff}" ]; then
+        echo "Non arch-specific haskell translations differ:" 1>&2
+        echo "${specdiff}" 1>&2
+        exit 1
+    fi
+done
 
-rm $TMPFILE
+for thy in $SPECNONARCH/${ARCHES[0]}/*.thy; do rsync -c "$thy" "$SPEC/"; done
+
+rm -r $SPECNONARCH
+rm -r $TMPFILE
+
