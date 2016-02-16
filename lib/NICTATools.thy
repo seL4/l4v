@@ -19,6 +19,7 @@ imports
   Eisbach_Methods
   "~~/src/HOL/Eisbach/Eisbach_Tools"
   Insulin
+  ShowTypes
 begin
 
 section "Detect unused meta-forall"
