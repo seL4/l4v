@@ -100,7 +100,8 @@ let
 
   val deps = case query of SOME (raw_query,pos) => 
     let
-      val q = Find_Theorems.read_query (Position.advance_offset 1 pos) raw_query;
+      val pos' = perhaps (try (Position.advance_offset 1)) pos;
+      val q = Find_Theorems.read_query pos' raw_query;
       val results = Find_Theorems.find_theorems_cmd ctxt (SOME thm) (SOME 1000000000) false q 
                     |> snd
                     |> map fact_ref_to_name;

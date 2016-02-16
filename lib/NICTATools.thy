@@ -11,7 +11,7 @@
 (* Miscellaneous Isabelle tools. *)
 theory NICTATools
 imports 
-(* Apply_Trace_Cmd *) 
+  Apply_Trace_Cmd
   Solves_Tac
   "subgoal_focus/Subgoal_Focus"
   "subgoal_focus/Subgoal_Methods"
