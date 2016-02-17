@@ -76,7 +76,7 @@ def which(file):
 # We attempt to handle races where a PID goes away while we
 # are looking at it, but not where a PID has been reused.
 #
-def kill_family(parent_pid):
+def kill_family(grace_period, parent_pid):
     # Find process.
     try:
         process = psutil.Process(parent_pid)
@@ -84,21 +84,35 @@ def kill_family(parent_pid):
         # Race. Nothing more to do.
         return
 
-    # SIGSTOP everyone first.
-    try:
-        process.suspend()
-    except psutil.NoSuchProcess:
-        # Race. Nothing more to do.
-        return
     process_list = [process]
     for child in process.children(recursive=True):
+        process_list.append(child)
+
+    # Grace period for processes to clean up.
+    if grace_period > 0:
+        for p in process_list[:]:
+            try:
+                p.send_signal(signal.SIGINT)
+            except psutil.NoSuchProcess:
+                # Race
+                process_list.remove(p)
+
+        # Sleep up to grace_period, but possibly shorter
+        slept = 0
+        intvl = min(grace_period, 1.0)
+        while slept < grace_period:
+            if not process.is_running():
+                break
+            time.sleep(intvl)
+            slept += intvl
+
+    # SIGSTOP everyone first.
+    for p in process_list[:]:
         try:
-            child.suspend()
+            p.suspend()
         except psutil.NoSuchProcess:
             # Race.
-            pass
-        else:
-            process_list.append(child)
+            process_list.remove(p)
 
     # Now SIGKILL everyone.
     process_list.reverse()
@@ -140,7 +154,7 @@ status_maxlen = max(len(s) for s in status_name[1:]) + len(" *")
 # log is output to stdout where we can't easily get to it.
 #
 # kill_switch is a threading.Event that is set if the --fail-fast feature is triggered.
-def run_test(test, status_queue, kill_switch, verbose=False, stuck_timeout=None):
+def run_test(test, status_queue, kill_switch, verbose=False, stuck_timeout=None, grace_period=0):
     # Construct the base command.
     command = ["bash", "-c", test.command]
 
@@ -192,14 +206,14 @@ def run_test(test, status_queue, kill_switch, verbose=False, stuck_timeout=None)
     # If we exit for some reason, attempt to kill our test processes.
     def emergency_stop():
         if test_status[0] is RUNNING:
-            kill_family(process.pid)
+            kill_family(grace_period, process.pid)
     atexit.register(emergency_stop)
 
     # Setup a timer for the timeout.
     def do_timeout():
         if test_status[0] is RUNNING:
             test_status[0] = TIMEOUT
-            kill_family(process.pid)
+            kill_family(grace_period, process.pid)
     timer = threading.Timer(test.timeout, do_timeout)
     if test.timeout > 0:
         timer.start()
@@ -213,7 +227,7 @@ def run_test(test, status_queue, kill_switch, verbose=False, stuck_timeout=None)
                 if test_status[0] is not RUNNING:
                     break
                 test_status[0] = CANCELLED
-                kill_family(process.pid)
+                kill_family(grace_period, process.pid)
     kill_switch_thread = threading.Thread(target=watch_kill_switch)
     kill_switch_thread.daemon = True
     kill_switch_thread.start()
@@ -250,12 +264,12 @@ def run_test(test, status_queue, kill_switch, verbose=False, stuck_timeout=None)
                     if (now - cpu_history[0][0] >= stuck_timeout and
                         cpu_usage_total[0] / len(cpu_history) < low_cpu_usage):
                         test_status[0] = STUCK
-                        kill_family(process.pid)
+                        kill_family(grace_period, process.pid)
                         break
 
                 if cpu_usage > test.cpu_timeout:
                     test_status[0] = CPU_TIMEOUT
-                    kill_family(process.pid)
+                    kill_family(grace_period, process.pid)
                     break
 
                 last_cpu_usage = cpu_usage
@@ -378,6 +392,8 @@ def main():
             help="write JUnit-style test report")
     parser.add_argument("--stuck-timeout", type=int, default=600, metavar='N',
             help="timeout tests if not using CPU for N seconds (default: 600)")
+    parser.add_argument("--grace-period", type=float, default=5, metavar='N',
+            help="notify processes N seconds before killing them (default: 5)")
     parser.add_argument("tests", metavar="TESTS",
             help="tests to run (defaults to all tests)",
             nargs="*")
@@ -470,7 +486,7 @@ def main():
                 if real_depends.issubset(passed_tests):
                     test_thread = threading.Thread(target=run_test, name=t.name,
                                                    args=(t, status_queue, kill_switch,
-                                                         args.verbose, args.stuck_timeout))
+                                                         args.verbose, args.stuck_timeout, args.grace_period))
                     wipe_tty_status()
                     print_test_line_start(t.name, args.legacy_status)
                     test_thread.start()
